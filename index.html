@@ -244,8 +244,7 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
 <div class="bg" aria-hidden="true">
   <div class="sky" id="sky"></div>
   <svg class="flight" id="flightSvg" preserveAspectRatio="none">
-    <defs><clipPath id="trailClip"><rect id="trailRect" x="0" y="0" width="4000" height="0"/></clipPath></defs>
-    <g clip-path="url(#trailClip)"><path id="trailPath" d=""/></g>
+    <path id="trailPath" d=""/>
   </svg>
   <div class="plane" id="plane">
     <svg viewBox="0 0 120 70">
@@ -645,9 +644,9 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
 <script>
 /* ============================================================
    ACHTERGRONDVLUCHT
-   Het vliegtuigje dwarrelt van boven naar beneden en zwenkt daarbij
-   van links naar rechts. Het volgt de scroll van de pagina en heeft
-   dus geen eigen ruimte nodig.
+   Het vliegtuigje dwarrelt van boven naar beneden en zwenkt van links
+   naar rechts, maar wijkt uit zodra er tekst of een kaart in de weg zit.
+   Het volgt de scroll van de pagina en heeft geen eigen ruimte nodig.
    ============================================================ */
 (function(){
   'use strict';
@@ -670,37 +669,60 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
   var sky = document.getElementById('sky'),
       svg = document.getElementById('flightSvg'),
       pathEl = document.getElementById('trailPath'),
-      rect = document.getElementById('trailRect'),
       plane = document.getElementById('plane'),
       note = document.getElementById('note'),
       noteYear = note.querySelector('b'),
       noteText = note.querySelector('span'),
-      W = innerWidth, H = innerHeight, noteIdx = -1, ticking = false;
+      W = innerWidth, H = innerHeight,
+      HALF = 30, PAD = 22, NOTEHALF = 96,
+      curX = null, curOp = 0, noteOp = 0, noteIdx = -1, ticking = false;
 
   var ROOM = [251,246,241];
   function mix(a,b,t){ return 'rgb('+Math.round(a[0]+(b[0]-a[0])*t)+','+Math.round(a[1]+(b[1]-a[1])*t)+','+Math.round(a[2]+(b[2]-a[2])*t)+')'; }
 
+  /* alles waar het vliegtuigje omheen moet */
+  var obstacleSel = 'header, .hero .wrap, .fill-text, .morph .panels, .morph .blob, ' +
+                    '.stack-head, .stack-card, .stats .wrap, .finale .wrap, .gate-in, footer .wrap';
+  var obstacles = Array.prototype.slice.call(document.querySelectorAll(obstacleSel));
+  var boxes = [];
+  function measure(){
+    boxes.length = 0;
+    for (var i=0;i<obstacles.length;i++){
+      var r = obstacles[i].getBoundingClientRect();
+      if (r.bottom > -60 && r.top < H+60 && r.width > 4) boxes.push(r);
+    }
+  }
+  /* de bezette breedte op een bepaalde hoogte, of null als daar niets staat */
+  function spanAt(y, halfHeight){
+    var L = Infinity, R = -Infinity;
+    for (var i=0;i<boxes.length;i++){
+      var r = boxes[i];
+      if (r.bottom > y - halfHeight && r.top < y + halfHeight){
+        if (r.left < L) L = r.left;
+        if (r.right > R) R = r.right;
+      }
+    }
+    return L === Infinity ? null : [L - PAD, R + PAD];
+  }
+  /* de dichtstbijzijnde vrije plek naast de inhoud */
+  function freeX(want, y, halfW, halfH){
+    var sp = spanAt(y, halfH);
+    if (!sp || want < sp[0] || want > sp[1]) return {x:want, ok:true};
+    var left = sp[0] - halfW, right = sp[1] + halfW;
+    var leftFits = left > halfW + 6, rightFits = right < W - halfW - 6;
+    if (leftFits && rightFits) return {x: (want - sp[0] <= sp[1] - want) ? left : right, ok:true};
+    if (leftFits) return {x:left, ok:true};
+    if (rightFits) return {x:right, ok:true};
+    return {x:want, ok:false};   /* geen ruimte: even niet laten zien */
+  }
+
   /* de dwarrelbaan: rustig zakken, ondertussen heen en weer zwenken */
-  function point(f){
+  function want(f){
     return {
-      x: W*0.5 + Math.sin(f*Math.PI*3.1 + 0.7)*W*0.26 + Math.sin(f*Math.PI*8.3)*W*0.025,
-      y: H*0.06 + f*H*0.84
+      x: W*0.5 + Math.sin(f*Math.PI*3.1 + 0.7)*W*0.34 + Math.sin(f*Math.PI*8.3)*W*0.03,
+      y: H*0.08 + f*H*0.80
     };
   }
-
-  function buildTrail(){
-    W = innerWidth; H = innerHeight;
-    svg.setAttribute('viewBox','0 0 '+W+' '+H);
-    rect.setAttribute('width', String(W));
-    var d = '', n = 90;
-    for (var i=0;i<=n;i++){
-      var pt = point(i/n);
-      d += (i ? ' L' : 'M') + pt.x.toFixed(1) + ' ' + pt.y.toFixed(1);
-    }
-    pathEl.setAttribute('d', d);
-  }
-
-  /* hoever we door de pagina zijn, met de hero en het slot buiten beschouwing */
   function flightProgress(){
     var y = scrollY || pageYOffset;
     var start = H*0.35;
@@ -710,15 +732,42 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
 
   function frame(){
     ticking = false;
+    W = innerWidth; H = innerHeight;
+    svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    measure();
+
     var f = flightProgress();
-    var a = point(f), b = point(Math.min(f+0.006, 1));
-    var ang = Math.atan2(b.y-a.y, b.x-a.x)*180/Math.PI;
-    var flutter = Math.sin(f*Math.PI*24)*2.6;
+    var w0 = want(f);
+    var spot = freeX(w0.x, w0.y, HALF, HALF);
+    if (curX === null) curX = spot.x;
+    curX += (spot.x - curX) * 0.16;          /* zacht uitwijken in plaats van springen */
 
-    plane.style.transform = 'translate3d('+a.x+'px,'+a.y+'px,0) rotate('+(ang+flutter)+'deg)';
-    rect.setAttribute('height', String(a.y + 3));
+    /* stand van de neus: richting waarin hij daadwerkelijk beweegt */
+    var wn = want(Math.min(f+0.006,1));
+    var sn = freeX(wn.x, wn.y, HALF, HALF);
+    var ang = Math.atan2(wn.y - w0.y, sn.x - spot.x)*180/Math.PI;
+    if (!isFinite(ang)) ang = 90;
+    ang = clamp(ang, 20, 160) + Math.sin(f*Math.PI*24)*2.6;
 
-    /* korte notitie bij het huidige moment, vlak onder het vliegtuigje */
+    var wantOp = spot.ok ? 0.72 : 0;
+    curOp += (wantOp - curOp) * 0.14;
+    plane.style.opacity = curOp.toFixed(3);
+    plane.style.transform = 'translate3d('+curX+'px,'+w0.y+'px,0) rotate('+ang+'deg)';
+
+    /* stippelstaartje achter het vliegtuigje aan, ook langs de inhoud */
+    var d = '', steps = 26, span = 0.22;
+    for (var i=steps;i>=0;i--){
+      var ff = f - (i/steps)*span;
+      if (ff < 0) continue;
+      var pw = want(ff);
+      var ps = freeX(pw.x, pw.y, HALF, HALF);
+      if (!ps.ok) { d = ''; continue; }
+      d += (d ? ' L' : 'M') + ps.x.toFixed(1) + ' ' + pw.y.toFixed(1);
+    }
+    pathEl.setAttribute('d', d);
+    pathEl.setAttribute('stroke-opacity', String(0.13*curOp/0.72));
+
+    /* korte notitie bij het moment, alleen als daar ook plek is */
     var per = 1/moments.length;
     var idx = clamp(Math.floor(f/per), 0, moments.length-1);
     var t = (f - idx*per)/per;
@@ -727,9 +776,12 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
       noteYear.textContent = moments[idx][0];
       noteText.textContent = moments[idx][1];
     }
-    var fade = clamp(Math.sin(clamp(t,0,1)*Math.PI)*1.6, 0, 1);
-    note.style.opacity = String(fade*0.75);
-    note.style.transform = 'translate('+clamp(a.x, W*0.20, W*0.80)+'px,'+(a.y+40)+'px) translateX(-50%)';
+    var noteY = w0.y + 46;
+    var nSpot = freeX(curX, noteY, NOTEHALF, 34);
+    var fade = clamp(Math.sin(clamp(t,0,1)*Math.PI)*1.6, 0, 1) * (nSpot.ok && spot.ok ? 1 : 0);
+    noteOp += (fade*0.75 - noteOp) * 0.14;
+    note.style.opacity = noteOp.toFixed(3);
+    note.style.transform = 'translate('+nSpot.x+'px,'+noteY+'px) translateX(-50%)';
 
     /* de lucht kleurt heel licht mee met het moment */
     var hi = Math.min(idx+1, moments.length-1);
@@ -740,8 +792,9 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
 
   function onScroll(){ if (!ticking){ ticking = true; requestAnimationFrame(frame); } }
   addEventListener('scroll', onScroll, {passive:true});
-  addEventListener('resize', function(){ buildTrail(); onScroll(); });
-  buildTrail();
+  addEventListener('resize', onScroll);
+  /* ook zonder te scrollen even bijwerken, want secties schuiven en plakken */
+  setInterval(onScroll, 250);
   frame();
 })();
 </script>
