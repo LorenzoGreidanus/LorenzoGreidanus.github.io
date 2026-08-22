@@ -644,26 +644,27 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
 <script>
 /* ============================================================
    ACHTERGRONDVLUCHT
-   Het vliegtuigje dwarrelt van boven naar beneden en zwenkt van links
-   naar rechts, maar wijkt uit zodra er tekst of een kaart in de weg zit.
-   Het volgt de scroll van de pagina en heeft geen eigen ruimte nodig.
+   Het vliegtuigje volgt een vaste, vloeiende baan door de vrije strook
+   naast de tekstkolom, met af en toe een looping. Het raakt de inhoud
+   nooit, omdat de baan buiten de kolom ligt en niet per frame verspringt.
    ============================================================ */
 (function(){
   'use strict';
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
   var clamp = function(v,a,b){ return v<a?a:(v>b?b:v); };
+  var smooth = function(t){ return t*t*(3-2*t); };
 
   var moments = [
-    ['300.000 v.Chr.','De eerste Homo sapiens in Afrika. Nog geen schrift.',[252,222,214],.22],
-    ['10.000 v.Chr.','Landbouw. Mensen blijven op een plek wonen.',[234,152,54],.12],
-    ['3300 v.Chr.','Spijkerschrift in Mesopotamie. Hier begint de geschiedenis.',[234,152,54],.18],
-    ['218 v.Chr.','Hannibal trekt met olifanten over de Alpen.',[242,103,73],.16],
-    ['1492','Columbus bereikt Amerika.',[131,165,242],.20],
-    ['1667','De Ruyter vaart de Theems op naar Chatham.',[131,165,242],.24],
-    ['1789','De Franse Revolutie.',[32,78,207],.13],
-    ['1940 tot 1945','Bezetting, en op 5 mei 1945 de bevrijding.',[32,78,207],.18],
-    ['Nu','De vraag van vandaag, terug in de klas.',[131,165,242],.10]
+    ['300.000 v.Chr.','Eerste Homo sapiens',[252,222,214],.22],
+    ['10.000 v.Chr.','Landbouw en vaste dorpen',[234,152,54],.12],
+    ['3300 v.Chr.','Het schrift, hier begint de geschiedenis',[234,152,54],.18],
+    ['218 v.Chr.','Hannibal over de Alpen',[242,103,73],.16],
+    ['1492','Columbus bereikt Amerika',[131,165,242],.20],
+    ['1667','De Ruyter op de Theems',[131,165,242],.24],
+    ['1789','De Franse Revolutie',[32,78,207],.13],
+    ['1940 tot 1945','Bezetting en bevrijding',[32,78,207],.18],
+    ['Nu','Terug in de klas',[131,165,242],.10]
   ];
 
   var sky = document.getElementById('sky'),
@@ -673,128 +674,125 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
       note = document.getElementById('note'),
       noteYear = note.querySelector('b'),
       noteText = note.querySelector('span'),
-      W = innerWidth, H = innerHeight,
-      HALF = 30, PAD = 22, NOTEHALF = 96,
-      curX = null, curOp = 0, noteOp = 0, noteIdx = -1, ticking = false;
+      W = 0, H = 0, gutter = 0, planeW = 0, halfW = 0, noteW = 0, active = false,
+      noteIdx = -1, ticking = false;
 
+  var LEGS = 4;                       /* aantal overtochten, links en rechts om en om */
   var ROOM = [251,246,241];
   function mix(a,b,t){ return 'rgb('+Math.round(a[0]+(b[0]-a[0])*t)+','+Math.round(a[1]+(b[1]-a[1])*t)+','+Math.round(a[2]+(b[2]-a[2])*t)+')'; }
 
-  /* alles waar het vliegtuigje omheen moet */
-  var obstacleSel = 'header, .hero .wrap, .fill-text, .morph .panels, .morph .blob, ' +
-                    '.stack-head, .stack-card, .stats .wrap, .finale .wrap, .gate-in, footer .wrap';
-  var obstacles = Array.prototype.slice.call(document.querySelectorAll(obstacleSel));
-  var boxes = [];
+  /* de vrije strook naast de tekstkolom opmeten */
   function measure(){
-    boxes.length = 0;
-    for (var i=0;i<obstacles.length;i++){
-      var r = obstacles[i].getBoundingClientRect();
-      if (r.bottom > -60 && r.top < H+60 && r.width > 4) boxes.push(r);
+    W = innerWidth; H = innerHeight;
+    svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    var col = Math.min(W - 40, 1120);
+    gutter = (W - col)/2;
+    planeW = Math.min(gutter*0.55, 52);
+    halfW = planeW/2;
+    active = planeW >= 28;
+    noteW = Math.min(gutter - 26, 170);
+    plane.style.display = active ? 'block' : 'none';
+    note.style.display = (active && noteW >= 92) ? 'block' : 'none';
+    if (active){
+      plane.style.width = planeW + 'px';
+      plane.style.marginLeft = (-halfW) + 'px';
+      plane.style.marginTop = (-(planeW*70/120)/2) + 'px';
+      note.style.width = noteW + 'px';
     }
-  }
-  /* de bezette breedte op een bepaalde hoogte, of null als daar niets staat */
-  function spanAt(y, halfHeight){
-    var L = Infinity, R = -Infinity;
-    for (var i=0;i<boxes.length;i++){
-      var r = boxes[i];
-      if (r.bottom > y - halfHeight && r.top < y + halfHeight){
-        if (r.left < L) L = r.left;
-        if (r.right > R) R = r.right;
-      }
-    }
-    return L === Infinity ? null : [L - PAD, R + PAD];
-  }
-  /* de dichtstbijzijnde vrije plek naast de inhoud */
-  function freeX(want, y, halfW, halfH){
-    var sp = spanAt(y, halfH);
-    if (!sp || want < sp[0] || want > sp[1]) return {x:want, ok:true};
-    var left = sp[0] - halfW, right = sp[1] + halfW;
-    var leftFits = left > halfW + 6, rightFits = right < W - halfW - 6;
-    if (leftFits && rightFits) return {x: (want - sp[0] <= sp[1] - want) ? left : right, ok:true};
-    if (leftFits) return {x:left, ok:true};
-    if (rightFits) return {x:right, ok:true};
-    return {x:want, ok:false};   /* geen ruimte: even niet laten zien */
   }
 
-  /* de dwarrelbaan: rustig zakken, ondertussen heen en weer zwenken */
-  function want(f){
-    return {
-      x: W*0.5 + Math.sin(f*Math.PI*3.1 + 0.7)*W*0.34 + Math.sin(f*Math.PI*8.3)*W*0.03,
-      y: H*0.08 + f*H*0.80
-    };
+  /* de baan: per etappe een kant, met een looping halverwege */
+  function pos(f){
+    f = clamp(f,0,1);
+    var lf = f*LEGS, i = Math.min(Math.floor(lf), LEGS-1), t = lf - i;
+    var side = (i % 2 === 0) ? 1 : -1;                 /* eerst rechts, dan links */
+    var cx = side > 0 ? W - gutter*0.5 : gutter*0.5;
+    var amp = Math.min(gutter*0.18, 16);
+    var r   = Math.min(gutter*0.26, 28);
+
+    var x = cx + Math.sin(t*Math.PI*2.1)*amp*side;
+    var y = H*0.10 + f*H*0.76;
+
+    /* looping tussen 34 en 56 procent van de etappe */
+    if (t > 0.34 && t < 0.56){
+      var u = (t - 0.34)/0.22;
+      x += Math.sin(u*Math.PI*2)*r*side;
+      y -= (1 - Math.cos(u*Math.PI*2))*r*0.55;
+    }
+    /* aan het eind uit beeld vliegen, aan het begin weer binnenkomen */
+    if (t > 0.88 && i < LEGS-1){ var e = (t-0.88)/0.12; x += side*W*0.55*e*e; }
+    if (t < 0.12 && i > 0){ var e2 = 1 - t/0.12; x += side*W*0.55*e2*e2; }
+
+    return {x:x, y:y, leg:i, t:t, side:side, cx:cx};
   }
+
+  function visibility(t, i){
+    var inFade  = (i > 0) ? smooth(clamp(t/0.12, 0, 1)) : 1;
+    var outFade = (i < LEGS-1) ? smooth(clamp((1-t)/0.12, 0, 1)) : 1;
+    return Math.min(inFade, outFade);
+  }
+
   function flightProgress(){
     var y = scrollY || pageYOffset;
-    var start = H*0.35;
-    var end = document.documentElement.scrollHeight - H*1.9;
+    var start = H*0.30;
+    var end = document.documentElement.scrollHeight - H*1.8;
     return clamp((y - start)/Math.max(end - start, 1), 0, 1);
   }
 
   function frame(){
     ticking = false;
-    W = innerWidth; H = innerHeight;
-    svg.setAttribute('viewBox','0 0 '+W+' '+H);
-    measure();
+    if (!active){ pathEl.setAttribute('d',''); note.style.opacity = '0'; return; }
 
     var f = flightProgress();
-    var w0 = want(f);
-    var spot = freeX(w0.x, w0.y, HALF, HALF);
-    if (curX === null) curX = spot.x;
-    curX += (spot.x - curX) * 0.16;          /* zacht uitwijken in plaats van springen */
+    var a = pos(f);
+    var eps = 0.0025;
+    var b = pos(Math.min(f + eps, 1));
+    if (b.leg !== a.leg) b = pos(Math.max(f - eps, 0));
+    var dx = (b.leg === a.leg && f + eps <= 1) ? (b.x - a.x) : (a.x - b.x);
+    var dy = (b.leg === a.leg && f + eps <= 1) ? (b.y - a.y) : (a.y - b.y);
+    var ang = Math.atan2(dy, dx)*180/Math.PI;
 
-    /* stand van de neus: richting waarin hij daadwerkelijk beweegt */
-    var wn = want(Math.min(f+0.006,1));
-    var sn = freeX(wn.x, wn.y, HALF, HALF);
-    var ang = Math.atan2(wn.y - w0.y, sn.x - spot.x)*180/Math.PI;
-    if (!isFinite(ang)) ang = 90;
-    ang = clamp(ang, 20, 160) + Math.sin(f*Math.PI*24)*2.6;
+    var vis = visibility(a.t, a.leg);
+    plane.style.opacity = (0.72*vis).toFixed(3);
+    plane.style.transform = 'translate3d('+a.x+'px,'+a.y+'px,0) rotate('+ang+'deg)';
 
-    var wantOp = spot.ok ? 0.72 : 0;
-    curOp += (wantOp - curOp) * 0.14;
-    plane.style.opacity = curOp.toFixed(3);
-    plane.style.transform = 'translate3d('+curX+'px,'+w0.y+'px,0) rotate('+ang+'deg)';
-
-    /* stippelstaartje achter het vliegtuigje aan, ook langs de inhoud */
-    var d = '', steps = 26, span = 0.22;
-    for (var i=steps;i>=0;i--){
-      var ff = f - (i/steps)*span;
+    /* stippelstaartje, alleen binnen dezelfde etappe */
+    var d = '', steps = 22, span = 0.05;
+    for (var k = steps; k >= 1; k--){
+      var ff = f - (k/steps)*span;
       if (ff < 0) continue;
-      var pw = want(ff);
-      var ps = freeX(pw.x, pw.y, HALF, HALF);
-      if (!ps.ok) { d = ''; continue; }
-      d += (d ? ' L' : 'M') + ps.x.toFixed(1) + ' ' + pw.y.toFixed(1);
+      var pp = pos(ff);
+      if (pp.leg !== a.leg) { d = ''; continue; }
+      d += (d ? ' L' : 'M') + pp.x.toFixed(1) + ' ' + pp.y.toFixed(1);
     }
+    if (d) d += ' L' + a.x.toFixed(1) + ' ' + a.y.toFixed(1);
     pathEl.setAttribute('d', d);
-    pathEl.setAttribute('stroke-opacity', String(0.13*curOp/0.72));
+    pathEl.setAttribute('stroke-opacity', (0.15*vis).toFixed(3));
 
-    /* korte notitie bij het moment, alleen als daar ook plek is */
+    /* korte notitie, netjes in dezelfde vrije strook */
     var per = 1/moments.length;
     var idx = clamp(Math.floor(f/per), 0, moments.length-1);
-    var t = (f - idx*per)/per;
+    var tt = (f - idx*per)/per;
     if (idx !== noteIdx){
       noteIdx = idx;
       noteYear.textContent = moments[idx][0];
       noteText.textContent = moments[idx][1];
     }
-    var noteY = w0.y + 46;
-    var nSpot = freeX(curX, noteY, NOTEHALF, 34);
-    var fade = clamp(Math.sin(clamp(t,0,1)*Math.PI)*1.6, 0, 1) * (nSpot.ok && spot.ok ? 1 : 0);
-    noteOp += (fade*0.75 - noteOp) * 0.14;
-    note.style.opacity = noteOp.toFixed(3);
-    note.style.transform = 'translate('+nSpot.x+'px,'+noteY+'px) translateX(-50%)';
+    var fade = clamp(Math.sin(clamp(tt,0,1)*Math.PI)*1.5, 0, 1) * vis;
+    note.style.opacity = (fade*0.75).toFixed(3);
+    note.style.transform = 'translate('+a.cx+'px,'+(a.y + planeW*0.7 + 14)+'px) translateX(-50%)';
 
     /* de lucht kleurt heel licht mee met het moment */
     var hi = Math.min(idx+1, moments.length-1);
     var ca = moments[idx][2], cb = moments[hi][2];
-    var wgt = moments[idx][3] + (moments[hi][3]-moments[idx][3])*t;
-    sky.style.backgroundColor = mix(ROOM, [ca[0]+(cb[0]-ca[0])*t, ca[1]+(cb[1]-ca[1])*t, ca[2]+(cb[2]-ca[2])*t], wgt);
+    var wgt = moments[idx][3] + (moments[hi][3]-moments[idx][3])*tt;
+    sky.style.backgroundColor = mix(ROOM, [ca[0]+(cb[0]-ca[0])*tt, ca[1]+(cb[1]-ca[1])*tt, ca[2]+(cb[2]-ca[2])*tt], wgt);
   }
 
   function onScroll(){ if (!ticking){ ticking = true; requestAnimationFrame(frame); } }
   addEventListener('scroll', onScroll, {passive:true});
-  addEventListener('resize', onScroll);
-  /* ook zonder te scrollen even bijwerken, want secties schuiven en plakken */
-  setInterval(onScroll, 250);
+  addEventListener('resize', function(){ measure(); onScroll(); });
+  measure();
   frame();
 })();
 </script>
