@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-<!-- versie 2026-08-23-e -->
+<!-- versie 2026-08-23-f -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Geschiedenis die leeft &middot; Lorenzo Greidanus</title>
@@ -285,10 +285,12 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
 @media(prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
   *{animation:none !important;transition:none !important}
-  .up,.hero-name span,.hero .hand,.hero-sub,.scroll-hint{opacity:1;transform:none}
-  /* het invullen van de woorden blijft aan: dat volgt je scrollpositie
-     en is dus geen animatie. Zonder overgang kleurt elk woord in een keer. */
+  .hero-name span,.hero .hand,.hero-sub,.scroll-hint{opacity:1;transform:none}
+  /* Wat je iets vertelt blijft aan: woorden die invullen, cijfers die oplopen
+     en blokken die verschijnen. Alleen het schuiven en kantelen gaat eruit. */
   .fill-text w{transition:none}
+  .up{transform:none;transition:opacity .5s linear !important}
+  .up.in{opacity:1}
 }
 
 </style>
@@ -518,7 +520,7 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
 
   /* ---------- opkomen bij binnenscrollen ---------- */
   var ups = document.querySelectorAll('.up');
-  if ('IntersectionObserver' in window && !reduced) {
+  if ('IntersectionObserver' in window) {
     var io = new IntersectionObserver(function(es){
       es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
     }, {threshold:.15});
@@ -531,10 +533,10 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
   var counters = document.querySelectorAll('[data-count]');
   function runCounter(el){
     var target = parseInt(el.dataset.count,10), suffix = el.dataset.suffix || '', t0 = null;
-    if (reduced) { el.textContent = target + suffix; return; }
+    var duur = reduced ? 800 : 1100;
     function tick(ts){
       if (!t0) t0 = ts;
-      var p = clamp((ts-t0)/1100, 0, 1);
+      var p = clamp((ts-t0)/duur, 0, 1);
       var eased = 1 - Math.pow(1-p, 3);
       el.textContent = Math.round(target*eased) + suffix;
       if (p < 1) requestAnimationFrame(tick);
