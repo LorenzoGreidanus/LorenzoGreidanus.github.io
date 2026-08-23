@@ -52,21 +52,37 @@ a{color:inherit}
   background:linear-gradient(90deg,var(--crab),var(--amber),var(--ocean),var(--vista));}
 
 /* ============================================================
-   ACHTERGROND: het papieren vliegtuigje dwarrelt naar beneden
+   ACHTERGROND EN TIJDBALK
    ============================================================ */
-.bg{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+.bg{position:fixed;inset:0;z-index:-1;pointer-events:none}
 .bg .sky{position:absolute;inset:0;background:var(--room);transition:background-color .35s linear}
-.bg svg.flight{position:absolute;inset:0;width:100%;height:100%}
-.bg svg.flight path{fill:none;stroke:var(--ink);stroke-opacity:.13;stroke-width:2;
-  stroke-linecap:round;stroke-dasharray:1 15}
-.plane{position:absolute;left:0;top:0;width:52px;margin:-15px 0 0 -26px;will-change:transform;opacity:.72}
-.plane svg{width:100%;height:auto;display:block;filter:drop-shadow(0 8px 14px rgba(20,34,76,.10))}
-@media(max-width:700px){.plane{width:42px;margin:-12px 0 0 -21px}}
-.note{position:absolute;left:0;top:0;width:min(300px,72vw);text-align:center;opacity:0;
-  transform:translate(-50%,0);will-change:transform,opacity}
-.note b{display:block;font-size:1.05rem;font-weight:600;letter-spacing:-.02em;color:var(--ocean);opacity:.75}
-.note span{display:block;margin-top:2px;font-size:.79rem;line-height:1.45;color:var(--muted);opacity:.8}
-@media(prefers-reduced-motion:reduce){.bg .plane,.bg .note,.bg svg.flight{display:none}}
+
+.timebar{position:fixed;left:0;right:0;bottom:0;z-index:45;padding:12px 0 18px;
+  background:linear-gradient(to top, rgba(251,246,241,.97) 40%, rgba(251,246,241,.72) 78%, rgba(251,246,241,0));
+  backdrop-filter:blur(6px);opacity:0;transform:translateY(14px);pointer-events:none;
+  transition:opacity .45s var(--ease),transform .45s var(--ease)}
+.timebar.show{opacity:1;transform:none;pointer-events:auto}
+.tb-in{width:min(100% - 40px, var(--max));margin-inline:auto;position:relative;padding-top:38px}
+.tb-label{position:absolute;top:0;left:0;white-space:nowrap;transform:translateX(-50%);
+  transition:left .25s var(--ease)}
+.tb-label b{font-size:.95rem;font-weight:600;letter-spacing:-.01em;color:var(--ocean)}
+.tb-label span{margin-left:9px;font-size:.8rem;color:var(--muted)}
+@media(max-width:620px){.tb-label span{display:none}}
+.tb-rail{position:relative;height:20px}
+.tb-line{position:absolute;top:8px;left:0;right:0;height:3px;border-radius:999px;background:rgba(20,34,76,.13)}
+.tb-fill{position:absolute;top:8px;left:0;height:3px;border-radius:999px;background:var(--crab);width:0}
+.tb-tick{position:absolute;top:4px;width:11px;height:11px;margin-left:-5.5px;padding:0;border-radius:50%;
+  background:var(--room);border:2px solid rgba(20,34,76,.20);transition:all .25s var(--ease)}
+.tb-tick:hover{border-color:var(--ocean);transform:scale(1.2)}
+.tb-tick.on{background:var(--crab);border-color:var(--crab)}
+.tb-tick i{position:absolute;bottom:20px;left:50%;translate:-50% 0;white-space:nowrap;font-style:normal;
+  font-size:.7rem;font-weight:600;color:var(--ink);background:rgba(251,246,241,.94);padding:4px 9px;
+  border-radius:999px;opacity:0;transition:opacity .2s var(--ease);pointer-events:none;
+  box-shadow:0 4px 12px rgba(20,34,76,.10)}
+.tb-tick:hover i{opacity:1}
+.tb-dot{position:absolute;top:1px;width:17px;height:17px;margin-left:-8.5px;border-radius:50%;
+  background:var(--crab);box-shadow:0 0 0 5px rgba(242,103,73,.15)}
+@media(prefers-reduced-motion:reduce){.timebar{position:static;opacity:1;transform:none;padding:30px 0}}
 
 /* ============================================================
    NAVIGATIE, verschijnt na de hero
@@ -190,7 +206,7 @@ header.show{transform:none}
 /* ============================================================
    7. DOORGANG NAAR DE SITE
    ============================================================ */
-.gate{min-height:78svh;display:grid;place-items:center;text-align:center;background:var(--ocean);color:var(--room);padding:70px 0}
+.gate{min-height:78svh;padding-bottom:110px;display:grid;place-items:center;text-align:center;background:var(--ocean);color:var(--room);padding:70px 0}
 .gate-in{display:grid;justify-items:center;gap:20px}
 .ring{position:relative;width:104px;height:104px}
 .ring svg{width:104px;height:104px;transform:rotate(-90deg)}
@@ -241,22 +257,17 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
 </head>
 <body>
 
-<div class="bg" aria-hidden="true">
-  <div class="sky" id="sky"></div>
-  <svg class="flight" id="flightSvg" preserveAspectRatio="none">
-    <path id="trailPath" d=""/>
-  </svg>
-  <div class="plane" id="plane">
-    <svg viewBox="0 0 120 70">
-      <g stroke="#14224C" stroke-opacity=".30" stroke-width="1.1" stroke-linejoin="round">
-        <path d="M112 34 L10 10 L46 38 Z" fill="#FBF6F1"/>
-        <path d="M112 34 L46 38 L18 62 Z" fill="#F1E7E0"/>
-        <path d="M46 38 L112 34 L58 49 Z" fill="#E4D8D0"/>
-      </g>
-      <path d="M46 38 L112 34" stroke="#14224C" stroke-opacity=".18" stroke-width="1" fill="none"/>
-    </svg>
+<div class="bg" aria-hidden="true"><div class="sky" id="sky"></div></div>
+
+<div class="timebar" id="timebar">
+  <div class="tb-in">
+    <div class="tb-label" id="tbLabel"><b></b><span></span></div>
+    <div class="tb-rail" id="tbRail">
+      <div class="tb-line"></div>
+      <div class="tb-fill" id="tbFill"></div>
+      <div class="tb-dot" id="tbDot"></div>
+    </div>
   </div>
-  <div class="note" id="note"><b></b><span></span></div>
 </div>
 
 <div class="progress" aria-hidden="true"><i id="bar"></i></div>
@@ -643,17 +654,15 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
 
 <script>
 /* ============================================================
-   ACHTERGRONDVLUCHT
-   Het vliegtuigje volgt een vaste, vloeiende baan door de vrije strook
-   naast de tekstkolom, met af en toe een looping. Het raakt de inhoud
-   nooit, omdat de baan buiten de kolom ligt en niet per frame verspringt.
+   TIJDBALK
+   Onderin loopt een balk mee met hoever je door de pagina bent. Scrollen
+   is reizen door de tijd: de balk vult zich, het jaartal loopt mee en je
+   kunt op een moment tikken om er meteen heen te springen.
    ============================================================ */
 (function(){
   'use strict';
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
   var clamp = function(v,a,b){ return v<a?a:(v>b?b:v); };
-  var smooth = function(t){ return t*t*(3-2*t); };
+  var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   var moments = [
     ['300.000 v.Chr.','Eerste Homo sapiens',[252,222,214],.22],
@@ -668,132 +677,79 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
   ];
 
   var sky = document.getElementById('sky'),
-      svg = document.getElementById('flightSvg'),
-      pathEl = document.getElementById('trailPath'),
-      plane = document.getElementById('plane'),
-      note = document.getElementById('note'),
-      noteYear = note.querySelector('b'),
-      noteText = note.querySelector('span'),
-      W = 0, H = 0, gutter = 0, planeW = 0, halfW = 0, noteW = 0, active = false,
-      noteIdx = -1, ticking = false;
+      barEl = document.getElementById('timebar'),
+      rail = document.getElementById('tbRail'),
+      fillEl = document.getElementById('tbFill'),
+      dot = document.getElementById('tbDot'),
+      label = document.getElementById('tbLabel'),
+      labYear = label.querySelector('b'),
+      labText = label.querySelector('span'),
+      ticks = [], idxNow = -1, ticking = false;
 
-  var LEGS = 4;                       /* aantal overtochten, links en rechts om en om */
   var ROOM = [251,246,241];
   function mix(a,b,t){ return 'rgb('+Math.round(a[0]+(b[0]-a[0])*t)+','+Math.round(a[1]+(b[1]-a[1])*t)+','+Math.round(a[2]+(b[2]-a[2])*t)+')'; }
 
-  /* de vrije strook naast de tekstkolom opmeten */
-  function measure(){
-    W = innerWidth; H = innerHeight;
-    svg.setAttribute('viewBox','0 0 '+W+' '+H);
-    var col = Math.min(W - 40, 1120);
-    gutter = (W - col)/2;
-    planeW = Math.min(gutter*0.55, 52);
-    halfW = planeW/2;
-    active = planeW >= 28;
-    noteW = Math.min(gutter - 26, 170);
-    plane.style.display = active ? 'block' : 'none';
-    note.style.display = (active && noteW >= 92) ? 'block' : 'none';
-    if (active){
-      plane.style.width = planeW + 'px';
-      plane.style.marginLeft = (-halfW) + 'px';
-      plane.style.marginTop = (-(planeW*70/120)/2) + 'px';
-      note.style.width = noteW + 'px';
-    }
+  /* waar op de pagina hoort een punt op de balk bij */
+  function range(){
+    var start = innerHeight*0.55;
+    var end = document.documentElement.scrollHeight - innerHeight*1.75;
+    return [start, Math.max(end, start + 1)];
+  }
+  function progress(){
+    var r = range();
+    return clamp(((scrollY || pageYOffset) - r[0])/(r[1]-r[0]), 0, 1);
   }
 
-  /* de baan: per etappe een kant, met een looping halverwege */
-  function pos(f){
-    f = clamp(f,0,1);
-    var lf = f*LEGS, i = Math.min(Math.floor(lf), LEGS-1), t = lf - i;
-    var side = (i % 2 === 0) ? 1 : -1;                 /* eerst rechts, dan links */
-    var cx = side > 0 ? W - gutter*0.5 : gutter*0.5;
-    var amp = Math.min(gutter*0.18, 16);
-    var r   = Math.min(gutter*0.26, 28);
+  /* de momenten op de balk zetten */
+  moments.forEach(function(m,i){
+    var pct = (i/(moments.length-1))*100;
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tb-tick';
+    b.style.left = pct + '%';
+    b.innerHTML = '<i>' + m[0] + '</i>';
+    b.setAttribute('aria-label','Naar ' + m[0] + ', ' + m[1]);
+    b.addEventListener('click', function(){
+      var r = range();
+      scrollTo({top: r[0] + (r[1]-r[0])*(i/(moments.length-1)), behavior: reduced ? 'auto' : 'smooth'});
+    });
+    rail.appendChild(b); ticks.push(b);
+  });
 
-    var x = cx + Math.sin(t*Math.PI*2.1)*amp*side;
-    var y = H*0.10 + f*H*0.76;
-
-    /* looping tussen 34 en 56 procent van de etappe */
-    if (t > 0.34 && t < 0.56){
-      var u = (t - 0.34)/0.22;
-      x += Math.sin(u*Math.PI*2)*r*side;
-      y -= (1 - Math.cos(u*Math.PI*2))*r*0.55;
-    }
-    /* aan het eind uit beeld vliegen, aan het begin weer binnenkomen */
-    if (t > 0.88 && i < LEGS-1){ var e = (t-0.88)/0.12; x += side*W*0.55*e*e; }
-    if (t < 0.12 && i > 0){ var e2 = 1 - t/0.12; x += side*W*0.55*e2*e2; }
-
-    return {x:x, y:y, leg:i, t:t, side:side, cx:cx};
-  }
-
-  function visibility(t, i){
-    var inFade  = (i > 0) ? smooth(clamp(t/0.12, 0, 1)) : 1;
-    var outFade = (i < LEGS-1) ? smooth(clamp((1-t)/0.12, 0, 1)) : 1;
-    return Math.min(inFade, outFade);
-  }
-
-  function flightProgress(){
-    var y = scrollY || pageYOffset;
-    var start = H*0.30;
-    var end = document.documentElement.scrollHeight - H*1.8;
-    return clamp((y - start)/Math.max(end - start, 1), 0, 1);
-  }
-
-  function frame(){
+  function paint(){
     ticking = false;
-    if (!active){ pathEl.setAttribute('d',''); note.style.opacity = '0'; return; }
+    var p = progress();
+    var pos = p*100;
+    fillEl.style.width = pos + '%';
+    dot.style.left = pos + '%';
+    label.style.left = clamp(pos, 6, 94) + '%';
 
-    var f = flightProgress();
-    var a = pos(f);
-    var eps = 0.0025;
-    var b = pos(Math.min(f + eps, 1));
-    if (b.leg !== a.leg) b = pos(Math.max(f - eps, 0));
-    var dx = (b.leg === a.leg && f + eps <= 1) ? (b.x - a.x) : (a.x - b.x);
-    var dy = (b.leg === a.leg && f + eps <= 1) ? (b.y - a.y) : (a.y - b.y);
-    var ang = Math.atan2(dy, dx)*180/Math.PI;
-
-    var vis = visibility(a.t, a.leg);
-    plane.style.opacity = (0.72*vis).toFixed(3);
-    plane.style.transform = 'translate3d('+a.x+'px,'+a.y+'px,0) rotate('+ang+'deg)';
-
-    /* stippelstaartje, alleen binnen dezelfde etappe */
-    var d = '', steps = 22, span = 0.05;
-    for (var k = steps; k >= 1; k--){
-      var ff = f - (k/steps)*span;
-      if (ff < 0) continue;
-      var pp = pos(ff);
-      if (pp.leg !== a.leg) { d = ''; continue; }
-      d += (d ? ' L' : 'M') + pp.x.toFixed(1) + ' ' + pp.y.toFixed(1);
+    var seg = 1/(moments.length-1);
+    var idx = clamp(Math.round(p/seg), 0, moments.length-1);
+    if (idx !== idxNow){
+      idxNow = idx;
+      labYear.textContent = moments[idx][0];
+      labText.textContent = moments[idx][1];
+      for (var i=0;i<ticks.length;i++) ticks[i].classList.toggle('on', i <= idx);
     }
-    if (d) d += ' L' + a.x.toFixed(1) + ' ' + a.y.toFixed(1);
-    pathEl.setAttribute('d', d);
-    pathEl.setAttribute('stroke-opacity', (0.15*vis).toFixed(3));
 
-    /* korte notitie, netjes in dezelfde vrije strook */
-    var per = 1/moments.length;
-    var idx = clamp(Math.floor(f/per), 0, moments.length-1);
-    var tt = (f - idx*per)/per;
-    if (idx !== noteIdx){
-      noteIdx = idx;
-      noteYear.textContent = moments[idx][0];
-      noteText.textContent = moments[idx][1];
-    }
-    var fade = clamp(Math.sin(clamp(tt,0,1)*Math.PI)*1.5, 0, 1) * vis;
-    note.style.opacity = (fade*0.75).toFixed(3);
-    note.style.transform = 'translate('+a.cx+'px,'+(a.y + planeW*0.7 + 14)+'px) translateX(-50%)';
+    /* de achtergrond kleurt heel licht mee met het tijdvak */
+    var lo = clamp(Math.floor(p/seg), 0, moments.length-1),
+        hi = Math.min(lo+1, moments.length-1),
+        t = clamp((p - lo*seg)/seg, 0, 1);
+    var ca = moments[lo][2], cb = moments[hi][2];
+    var wgt = moments[lo][3] + (moments[hi][3]-moments[lo][3])*t;
+    sky.style.backgroundColor = mix(ROOM, [ca[0]+(cb[0]-ca[0])*t, ca[1]+(cb[1]-ca[1])*t, ca[2]+(cb[2]-ca[2])*t], wgt);
 
-    /* de lucht kleurt heel licht mee met het moment */
-    var hi = Math.min(idx+1, moments.length-1);
-    var ca = moments[idx][2], cb = moments[hi][2];
-    var wgt = moments[idx][3] + (moments[hi][3]-moments[idx][3])*tt;
-    sky.style.backgroundColor = mix(ROOM, [ca[0]+(cb[0]-ca[0])*tt, ca[1]+(cb[1]-ca[1])*tt, ca[2]+(cb[2]-ca[2])*tt], wgt);
+    /* alleen zichtbaar tijdens de reis zelf */
+    var y = scrollY || pageYOffset, r = range();
+    barEl.classList.toggle('show', reduced || (y > r[0] - innerHeight*0.35 && y < r[1] + innerHeight*0.9));
   }
 
-  function onScroll(){ if (!ticking){ ticking = true; requestAnimationFrame(frame); } }
+  function onScroll(){ if (!ticking){ ticking = true; requestAnimationFrame(paint); } }
   addEventListener('scroll', onScroll, {passive:true});
-  addEventListener('resize', function(){ measure(); onScroll(); });
-  measure();
-  frame();
+  addEventListener('resize', onScroll);
+  paint();
 })();
 </script>
 </body>
