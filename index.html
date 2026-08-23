@@ -1,222 +1,866 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-<!-- Leerlingomgeving, versie 1.0 -->
+<!-- versie 2026-08-23-f -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Geschiedenis oefenen &middot; meneer Greidanus</title>
-<meta name="description" content="Oefenen met geschiedenis: bronnen onderzoeken, tijdvakken sorteren, handeldrijven en onderhandelen. Zonder inloggen.">
+<title>Geschiedenis die leeft &middot; Lorenzo Greidanus</title>
+<meta name="description" content="Een scrollverhaal over mijn onderwijs: geschiedenis die begint bij een vraag uit het nu.">
 <meta name="theme-color" content="#FBF6F1">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%23204ECF'/><text x='50' y='68' font-family='Poppins,Arial' font-size='46' font-weight='600' fill='%23FBF6F1' text-anchor='middle'>LG</text></svg>">
+
 <style>
-:root{--crab:#F26749;--amber:#EA9836;--ocean:#204ECF;--vista:#83A5F2;--sand:#FCDED6;--room:#FBF6F1;
-  --ink:#14224C;--muted:#5b6480;--max:1120px;--ease:cubic-bezier(.22,.61,.36,1)}
+/* ============================================================
+   MERKKLEUREN, uit het merkboek
+   ============================================================ */
+:root{
+  --crab:#F26749;
+  --amber:#EA9836;
+  --ocean:#204ECF;
+  --vista:#83A5F2;
+  --sand:#FCDED6;
+  --room:#FBF6F1;
+  --ink:#14224C;
+  --muted:#5b6480;
+  --max:1120px;
+  --ease:cubic-bezier(.22,.61,.36,1);
+}
+
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
-body{margin:0;background:var(--room);color:var(--ink);line-height:1.6;
-  font-family:'Poppins',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;-webkit-font-smoothing:antialiased}
-h1,h2,h3{margin:0;font-weight:600;line-height:1.12;letter-spacing:-.02em}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;background:var(--room);overflow-x:clip}
+body{
+  margin:0;background:transparent;color:var(--ink);
+  font-family:'Poppins',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;
+  line-height:1.6;-webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{font-weight:600;margin:0;line-height:1.05;letter-spacing:-.025em}
 p{margin:0}
 a{color:inherit}
-button{font:inherit;color:inherit;cursor:pointer}
-.wrap{width:min(100% - 28px,var(--max));margin-inline:auto}
-.hand{font-family:'Caveat',cursive;font-weight:600;color:var(--crab)}
-.eyebrow{font-size:.72rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.wrap{width:min(100% - 40px, var(--max));margin-inline:auto}
+.hand{font-family:'Caveat',cursive;font-weight:600;line-height:1;color:var(--crab)}
+.eyebrow{
+  font-size:.72rem;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);
+}
 
-header{padding:14px 0;border-bottom:1px solid rgba(20,34,76,.08);background:#fff}
-.hd{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.mark{display:flex;align-items:center;gap:10px;font-weight:600;text-decoration:none}
-.mark i{width:34px;height:34px;border-radius:11px;background:var(--ocean);color:var(--room);
-  display:grid;place-items:center;font-style:normal;font-size:.8rem}
-.hd a.docent{font-size:.83rem;color:var(--muted);text-decoration:underline;text-underline-offset:4px}
+/* voortgangsbalk in de merkkleuren */
+.progress{position:fixed;inset:0 0 auto 0;height:4px;z-index:60;background:transparent;pointer-events:none}
+.progress i{display:block;height:100%;width:0%;
+  background:linear-gradient(90deg,var(--crab),var(--amber),var(--ocean),var(--vista));}
 
-/* ---------- kop ---------- */
-.top{padding:44px 0 10px;text-align:center}
-.top h1{font-size:clamp(2rem,6vw,3.2rem);margin:6px 0 12px}
-.top p{max-width:48ch;margin:0 auto;color:var(--muted);font-size:1.03rem}
+/* ============================================================
+   ACHTERGROND EN TIJDBALK
+   ============================================================ */
+.bg{position:fixed;inset:0;z-index:-1;pointer-events:none}
+.bg .sky{position:absolute;inset:0;background:var(--room);transition:background-color .35s linear}
 
-/* ---------- niveaukiezer ---------- */
-.niveaubalk{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;margin:26px 0 6px}
-.niveauknop{background:#fff;border:2px solid rgba(20,34,76,.12);border-radius:999px;padding:11px 20px;
-  font-weight:600;font-size:.92rem;transition:all .18s var(--ease)}
-.niveauknop:hover{border-color:var(--vista)}
-.niveauknop.on{background:var(--ocean);border-color:var(--ocean);color:var(--room)}
-.niveauhint{text-align:center;font-size:.85rem;color:var(--muted);margin-top:8px;min-height:22px}
+.timebar{position:fixed;left:0;right:0;bottom:0;z-index:45;
+  padding:12px 0 calc(18px + env(safe-area-inset-bottom, 0px));
+  background:linear-gradient(to top, rgba(251,246,241,.97) 40%, rgba(251,246,241,.72) 78%, rgba(251,246,241,0));
+  backdrop-filter:blur(6px);opacity:0;transform:translateY(14px);pointer-events:none;
+  will-change:transform,opacity;
+  transition:opacity .45s var(--ease),transform .45s var(--ease)}
+.timebar.show{opacity:1;transform:none;pointer-events:auto}
+.tb-in{width:min(100% - 40px, var(--max));margin-inline:auto;position:relative;padding-top:38px}
+.tb-label{position:absolute;top:0;left:0;white-space:nowrap;transform:translateX(-50%);
+  transition:left .25s var(--ease)}
+.tb-ico{width:17px;height:17px;vertical-align:-3px;margin-right:8px;fill:none;stroke:var(--ocean);
+  stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;opacity:.7}
+.tb-label b{font-size:.95rem;font-weight:600;letter-spacing:-.01em;color:var(--ocean)}
+.tb-label span{margin-left:9px;font-size:.8rem;color:var(--muted)}
+@media(max-width:620px){.tb-label span{display:none}}
+.tb-rail{position:relative;height:20px}
+.tb-line{position:absolute;top:8px;left:0;right:0;height:3px;border-radius:999px;background:rgba(20,34,76,.13)}
+.tb-fill{position:absolute;top:8px;left:0;height:3px;border-radius:999px;background:var(--crab);width:0}
+.tb-tick{position:absolute;top:4px;width:11px;height:11px;margin-left:-5.5px;padding:0;border-radius:50%;
+  background:var(--room);border:2px solid rgba(20,34,76,.20);transition:all .25s var(--ease)}
+.tb-tick:hover{border-color:var(--ocean);transform:scale(1.2)}
+.tb-tick::after{content:"";position:absolute;left:50%;top:50%;translate:-50% -50%;
+  width:34px;height:38px}   /* onzichtbaar aanraakvlak, makkelijker te tikken */
+.tb-tick.on{background:var(--crab);border-color:var(--crab)}
+.tb-tick i{position:absolute;bottom:20px;left:50%;translate:-50% 0;white-space:nowrap;font-style:normal;
+  font-size:.7rem;font-weight:600;color:var(--ink);background:rgba(251,246,241,.94);padding:4px 9px;
+  border-radius:999px;opacity:0;transition:opacity .2s var(--ease);pointer-events:none;
+  box-shadow:0 4px 12px rgba(20,34,76,.10)}
+.tb-tick:hover i{opacity:1}
+@media(max-width:620px){
+  .tb-tick{width:9px;height:9px;margin-left:-4.5px;top:5px}
+  .tb-label b{font-size:.9rem}
+}
+.tb-dot{position:absolute;top:1px;width:17px;height:17px;margin-left:-8.5px;border-radius:50%;
+  background:var(--crab);box-shadow:0 0 0 5px rgba(242,103,73,.15)}
+@media(max-width:820px){
+  .timebar{backdrop-filter:none;background:linear-gradient(to top, rgba(251,246,241,1) 55%, rgba(251,246,241,.85) 82%, rgba(251,246,241,0))}
+}
+@media(prefers-reduced-motion:reduce){.timebar{opacity:1;transform:none}}
 
-/* ---------- spellen ---------- */
-.spellen{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;padding:26px 0 20px}
-.spel{background:#fff;border:1px solid rgba(20,34,76,.08);border-radius:26px;padding:24px;
-  display:flex;flex-direction:column;box-shadow:0 14px 34px rgba(20,34,76,.06);
-  transition:transform .18s var(--ease),box-shadow .18s var(--ease)}
-.spel:hover{transform:translateY(-4px);box-shadow:0 20px 46px rgba(20,34,76,.10)}
-.spel .tegel{width:56px;height:56px;border-radius:18px;display:grid;place-items:center;margin-bottom:16px}
-.spel .tegel svg{width:28px;height:28px;fill:none;stroke:#FBF6F1;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.spel h3{font-size:1.28rem}
-.spel .wat{margin-top:8px;color:var(--muted);font-size:.95rem;flex:1}
-.spel .leer{display:inline-block;margin-top:14px;font-size:.78rem;font-weight:600;padding:6px 13px;
-  border-radius:999px;background:var(--sand)}
-.spel .tijd{font-size:.78rem;color:var(--muted);margin-top:10px}
-.speelknop{display:block;text-align:center;text-decoration:none;margin-top:18px;background:var(--crab);color:#fff;
-  font-weight:600;padding:14px 20px;border-radius:999px;box-shadow:0 8px 0 rgba(20,34,76,.10);
-  transition:transform .16s var(--ease)}
-.speelknop:hover{transform:translateY(-2px)}
-.spel.binnenkort{opacity:.72}
-.spel.binnenkort .speelknop{background:#fff;color:var(--muted);border:1.5px solid rgba(20,34,76,.14);
-  box-shadow:none;cursor:default}
+/* ============================================================
+   NAVIGATIE, verschijnt na de hero
+   ============================================================ */
+header{
+  position:fixed;top:0;left:0;right:0;z-index:50;padding:12px 0;
+  background:rgba(251,246,241,.75);backdrop-filter:blur(14px) saturate(1.4);
+  border-bottom:1px solid rgba(20,34,76,.08);
+  transform:translateY(-100%);transition:transform .45s var(--ease);
+}
+header.show{transform:none}
+.nav-in{display:flex;align-items:center;justify-content:space-between}
+.mark{display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:600;font-size:.95rem}
+.mark i{width:32px;height:32px;border-radius:10px;background:var(--ocean);color:var(--room);
+  display:flex;align-items:center;justify-content:center;font-style:normal;font-size:.78rem}
+.nav-cta{text-decoration:none;background:var(--ocean);color:var(--room);font-weight:600;font-size:.88rem;
+  padding:9px 18px;border-radius:999px;transition:background .2s var(--ease)}
+.nav-cta:hover{background:#1a41ae}
 
-/* ---------- uitleg ---------- */
-.uitleg{background:#fff;border:1px solid rgba(20,34,76,.08);border-radius:26px;padding:26px;margin:26px 0 60px}
-.uitleg h2{font-size:1.3rem;margin-bottom:14px}
-.stappen{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
-.stap b{display:block;font-size:.98rem;margin-bottom:3px}
-.stap span{font-size:.9rem;color:var(--muted)}
-.stap i{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:9px;background:var(--ocean);
-  color:var(--room);font-style:normal;font-size:.8rem;font-weight:600;margin-bottom:9px}
+/* ============================================================
+   1. HERO
+   ============================================================ */
+.hero{min-height:100svh;display:grid;place-items:center;text-align:center;position:relative;padding:90px 0 40px}
+.hero-name{font-size:clamp(2.9rem,12vw,8.5rem);line-height:.92}
+.hero-name span{display:inline-block;opacity:0;transform:translateY(.5em) rotate(2deg);
+  animation:rise .9s var(--ease) forwards}
+@keyframes rise{to{opacity:1;transform:none}}
+.hero .hand{font-size:clamp(1.4rem,4vw,2.1rem);opacity:0;animation:rise .8s var(--ease) .1s forwards}
+.hero-sub{max-width:34ch;margin:22px auto 0;color:var(--muted);font-size:clamp(1rem,2.2vw,1.15rem);
+  opacity:0;animation:rise .9s var(--ease) .75s forwards}
+.hero-orbs{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:-1}
+.orb{position:absolute;border-radius:50%;filter:blur(2px);opacity:.55}
+.orb.o1{width:22vw;height:22vw;min-width:150px;min-height:150px;background:var(--vista);top:12%;left:6%}
+.orb.o2{width:14vw;height:14vw;min-width:100px;min-height:100px;background:var(--sand);bottom:16%;right:9%}
+.orb.o3{width:9vw;height:9vw;min-width:70px;min-height:70px;background:var(--amber);top:22%;right:18%;opacity:.4}
+.scroll-hint{position:absolute;bottom:26px;left:50%;translate:-50% 0;display:grid;justify-items:center;gap:8px;
+  font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);opacity:0;
+  animation:rise .8s var(--ease) 1.2s forwards}
+.scroll-hint b{display:block;width:1px;height:34px;background:linear-gradient(var(--muted),transparent)}
 
-footer{padding:28px 0 44px;font-size:.84rem;color:var(--muted);text-align:center}
-.strip{display:flex;height:7px;width:150px;border-radius:999px;overflow:hidden;margin:0 auto 12px}
+/* ============================================================
+   2. TEKST DIE INVULT
+   ============================================================ */
+.filler{height:230vh;position:relative}
+.filler .pin{position:-webkit-sticky;position:sticky;top:0;height:100svh;display:grid;place-items:center;padding:70px 0 96px}
+.fill-text{font-size:clamp(1.6rem,5.2vw,3.6rem);font-weight:600;line-height:1.22;letter-spacing:-.02em;
+  max-width:22ch;text-align:left}
+.fill-text w{color:rgba(20,34,76,.14);transition:color .25s linear}
+.fill-text w.on{color:var(--ink)}
+.fill-text w.hl.on{color:var(--crab)}
+
+/* ============================================================
+   3. VASTGEPRIKTE BLOB MET DRIE PANELEN
+   ============================================================ */
+.morph{height:360vh;position:relative}
+.morph .pin{position:-webkit-sticky;position:sticky;top:0;height:100svh;display:grid;
+  grid-template-columns:1fr 1fr;align-items:center;gap:40px;
+  width:min(100% - 40px,var(--max));margin-inline:auto}
+@media(max-width:820px){
+  .morph .pin{grid-template-columns:1fr;gap:18px;place-content:center;text-align:center;
+    padding:76px 0 104px}
+  .blobwrap{width:min(300px,74vw)}
+  .blob{width:min(232px,58vw)}
+  .blob-ico{width:28px;height:28px;margin-bottom:4px}
+  .blob .numlbl{font-size:1.15rem}
+  .panels{min-height:250px}
+}
+/* liggend scherm of lage vensters: alles een maatje kleiner */
+@media(max-height:760px) and (max-width:820px){
+  .blobwrap{width:min(230px,52vw)}
+  .blob{width:min(180px,42vw)}
+  .blob .num{font-size:2.2rem}
+  .blob .numlbl{font-size:1rem}
+  .panels{min-height:210px}
+}
+.blobwrap{position:relative;width:min(440px,86vw);aspect-ratio:1;justify-self:center;display:grid;place-items:center}
+.blob{
+  width:min(340px,64vw);aspect-ratio:1;
+  border-radius:58% 42% 46% 54% / 48% 52% 48% 52%;
+  display:grid;place-items:center;color:var(--room);
+  box-shadow:0 26px 60px rgba(20,34,76,.18);
+  will-change:transform,background-color,border-radius;
+}
+.blob-in{display:grid;justify-items:center;gap:2px;text-align:center;padding:10px;
+  width:82%;max-width:82%}
+.blob-ico{width:34px;height:34px;fill:none;stroke:currentColor;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round;opacity:.9;margin-bottom:6px}
+.blob .num{font-size:clamp(2.8rem,7.5vw,4.6rem);font-weight:600;letter-spacing:-.04em;line-height:1}
+.blob .numlbl{font-family:'Caveat',cursive;font-size:clamp(1rem,3.4vw,1.35rem);opacity:.92;
+  line-height:1.15;text-wrap:balance}
+
+/* meter om de blob: hoever je in deze stap bent */
+.blobring{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);pointer-events:none}
+.blobring circle{fill:none;stroke-linecap:round}
+.blobring .rtrack{stroke:rgba(20,34,76,.10);stroke-width:2}
+.blobring .rarc{stroke:var(--crab);stroke-width:3;transition:stroke .4s var(--ease)}
+
+.panels{position:relative;min-height:290px}
+.panel{position:absolute;inset:0;display:grid;align-content:center;gap:14px;
+  opacity:0;transform:translateY(22px);transition:opacity .4s var(--ease),transform .4s var(--ease);pointer-events:none}
+.panel.on{opacity:1;transform:none;pointer-events:auto}
+.panel h2{font-size:clamp(1.7rem,4.4vw,3rem)}
+.panel p{color:var(--muted);max-width:38ch;font-size:1.02rem}
+@media(max-width:820px){.panel p{margin-inline:auto}}
+
+/* ============================================================
+   4. STAPELENDE KAARTEN
+   ============================================================ */
+.stack-head{padding:110px 0 20px;text-align:center}
+.stack-head h2{font-size:clamp(1.9rem,5vw,3.2rem);margin-top:10px}
+.stack{padding-bottom:22vh}
+.stack-card{
+  position:-webkit-sticky;position:sticky;top:16vh;background:#fff;border-radius:30px;padding:clamp(28px,4.5vw,52px);
+  border:1px solid rgba(20,34,76,.08);box-shadow:0 24px 60px rgba(20,34,76,.10);
+  margin-bottom:14vh;will-change:transform;
+}
+.stack-card:nth-child(1){top:14vh}
+.stack-card:nth-child(2){top:16vh}
+.stack-card:nth-child(3){top:18vh}
+.stack-card:nth-child(4){top:20vh}
+.sc-top{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+.sc-tile{width:52px;height:52px;border-radius:18px 18px 18px 6px;display:grid;place-items:center;flex:none}
+.sc-tile svg{width:26px;height:26px;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.sc-top h3{font-size:clamp(1.2rem,3vw,1.7rem)}
+.stack-card p{color:var(--muted);max-width:52ch}
+.sc-tag{display:inline-block;margin-top:18px;font-size:.8rem;font-weight:600;padding:7px 14px;border-radius:999px}
+
+/* ============================================================
+   5. CIJFERS
+   ============================================================ */
+.stats{padding:110px 0 120px;text-align:center}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:34px;margin-top:44px}
+.stat b{display:block;font-size:clamp(2.6rem,7vw,4.4rem);font-weight:600;letter-spacing:-.04em;line-height:1}
+.stat span{display:block;margin-top:8px;color:var(--muted);font-size:.94rem}
+
+/* ============================================================
+   6. AFSLUITING, achtergrond kleurt mee
+   ============================================================ */
+.finale{min-height:100svh;display:grid;place-items:center;text-align:center;padding:110px 0;
+  background:var(--room);transition:none}
+.finale h2{font-size:clamp(2rem,6.5vw,4.4rem);max-width:16ch;margin-inline:auto}
+.finale p{margin:20px auto 0;max-width:40ch}
+.btn{display:inline-block;margin-top:32px;text-decoration:none;font-weight:600;
+  padding:15px 30px;border-radius:999px;background:var(--crab);color:#fff;
+  box-shadow:0 12px 0 rgba(20,34,76,.12);transition:transform .18s var(--ease),box-shadow .18s var(--ease)}
+.btn:hover{transform:translateY(-3px);box-shadow:0 15px 0 rgba(20,34,76,.14)}
+.btn:active{transform:translateY(1px);box-shadow:0 7px 0 rgba(20,34,76,.12)}
+
+/* ============================================================
+   7. DOORGANG NAAR DE SITE
+   ============================================================ */
+.gate{min-height:78svh;display:grid;place-items:center;text-align:center;background:var(--ocean);color:var(--room);padding:70px 0 110px}
+.gate-in{display:grid;justify-items:center;gap:20px}
+.ring{position:relative;width:104px;height:104px}
+.ring svg{width:104px;height:104px;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:5;stroke-linecap:round}
+.ring .track{stroke:rgba(251,246,241,.22)}
+.ring .fill{stroke:var(--sand);stroke-dasharray:295;stroke-dashoffset:295;transition:stroke-dashoffset .12s linear}
+.ring .arrow{position:absolute;inset:0;display:grid;place-items:center}
+.ring .arrow svg{width:26px;height:26px;transform:none;fill:none;stroke:var(--room);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+@media(prefers-reduced-motion:no-preference){ .ring .arrow{animation:nudge 1.8s ease-in-out infinite} }
+@keyframes nudge{0%,100%{transform:translateY(-3px)}50%{transform:translateY(3px)}}
+.gate h3{font-size:clamp(1.3rem,3.6vw,2rem)}
+.gate p{color:#dfe7ff;max-width:34ch;font-size:.98rem}
+.gate a.plain{color:var(--sand);font-weight:600;font-size:.92rem;text-underline-offset:5px}
+
+/* doekje dat over het scherm trekt tijdens de overgang */
+.veil{position:fixed;inset:0;z-index:80;background:var(--ocean);opacity:0;pointer-events:none;
+  transition:opacity .5s var(--ease)}
+.veil.on{opacity:1}
+
+footer{padding:40px 0 54px;font-size:.86rem;color:var(--muted)}
+.foot-in{display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;align-items:center}
+.strip{display:flex;height:8px;width:170px;border-radius:999px;overflow:hidden}
 .strip i{flex:1}
-a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offset:3px;border-radius:10px}
-@media(prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+
+/* opkomen bij binnenscrollen */
+.up{opacity:0;transform:translateY(26px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
+.up.in{opacity:1;transform:none}
+
+a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:8px}
+
+/* ============================================================
+   RUSTIGE VARIANT: alles zichtbaar, niets beweegt
+   ============================================================ */
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *{animation:none !important;transition:none !important}
+  .hero-name span,.hero .hand,.hero-sub,.scroll-hint{opacity:1;transform:none}
+  /* Wat je iets vertelt blijft aan: woorden die invullen, cijfers die oplopen
+     en blokken die verschijnen. Alleen het schuiven en kantelen gaat eruit. */
+  .fill-text w{transition:none}
+  .up{transform:none;transition:opacity .5s linear !important}
+  .up.in{opacity:1}
+}
+
 </style>
 </head>
 <body>
 
-<header>
-  <div class="wrap hd">
-    <a class="mark" href="./"><i>LG</i> Geschiedenis oefenen</a>
-    <a class="docent" href="../over.html">Voor docenten</a>
+<div class="bg" aria-hidden="true"><div class="sky" id="sky"></div></div>
+
+<div class="timebar" id="timebar">
+  <div class="tb-in">
+    <div class="tb-label" id="tbLabel"><svg class="tb-ico" id="tbIco" viewBox="0 0 24 24"></svg><b></b><span></span></div>
+    <div class="tb-rail" id="tbRail">
+      <div class="tb-line"></div>
+      <div class="tb-fill" id="tbFill"></div>
+      <div class="tb-dot" id="tbDot"></div>
+    </div>
+  </div>
+</div>
+
+<div class="progress" aria-hidden="true"><i id="bar"></i></div>
+
+<header id="topnav">
+  <div class="wrap nav-in">
+    <a class="mark" href="#top"><i>LG</i> Lorenzo Greidanus</a>
+    <a class="nav-cta" href="over.html">Naar mijn site</a>
   </div>
 </header>
 
-<section class="top wrap">
-  <p class="hand" style="font-size:1.7rem">welkom</p>
-  <h1>Oefenen met geschiedenis</h1>
-  <p>Kies hieronder een spel. Je hoeft niet in te loggen en er wordt niets van je opgeslagen. Alles werkt op je telefoon, tablet en op de computer.</p>
-
-  <div class="niveaubalk" id="niveaubalk" role="group" aria-label="Kies je niveau"></div>
-  <p class="niveauhint" id="niveauhint">Kies eerst je niveau, dan staan de spellen meteen goed.</p>
+<!-- ============================ 1. HERO ============================ -->
+<section class="hero" id="top">
+  <div class="hero-orbs" aria-hidden="true">
+    <span class="orb o1"></span><span class="orb o2"></span><span class="orb o3"></span>
+  </div>
+  <div class="wrap">
+    <p class="hand">geschiedenis, maar dan</p>
+    <h1 class="hero-name" id="heroName">Die leeft</h1>
+    <p class="hero-sub">Scroll mee door de manier waarop ik lesgeef, van de eerste vraag tot de laatste minuut.</p>
+  </div>
+  <div class="scroll-hint"><span>Scroll</span><b></b></div>
 </section>
 
-<div class="wrap">
-  <div class="spellen" id="spellen"></div>
+<!-- ============================ 2. TEKST DIE INVULT ============================ -->
+<section class="filler" id="fill">
+  <div class="pin">
+    <p class="fill-text" id="fillText"
+       data-text="Het verleden is geen rij jaartallen. Het is het antwoord op een vraag die vandaag nog steeds gesteld wordt."
+       data-highlight="vandaag"></p>
+  </div>
+</section>
 
-  <section class="uitleg">
-    <h2>Hoe werkt het?</h2>
-    <div class="stappen">
-      <div class="stap"><i>1</i><b>Kies je niveau</b><span>Je docent zegt welk niveau je moet kiezen. Weet je het niet zeker, begin dan bij het middelste.</span></div>
-      <div class="stap"><i>2</i><b>Speel het spel</b><span>Je krijgt bij elke keuze meteen te horen wat er klopt en waarom. Fouten maken hoort erbij.</span></div>
-      <div class="stap"><i>3</i><b>Laat het zien</b><span>Aan het eind zie je jouw resultaat. Maak er een schermfoto van als je docent daarom vraagt.</span></div>
+<!-- ============================ 3. VASTGEPRIKTE BLOB ============================ -->
+<section class="morph" id="morph">
+  <div class="pin">
+    <div class="blobwrap">
+      <svg class="blobring" viewBox="0 0 200 200" aria-hidden="true">
+        <circle class="rtrack" cx="100" cy="100" r="94"/>
+        <circle class="rarc" id="blobArc" cx="100" cy="100" r="94" stroke-dasharray="590" stroke-dashoffset="590"/>
+      </svg>
+      <div class="blob" id="blob">
+        <div class="blob-in">
+          <svg class="blob-ico" id="blobIco" viewBox="0 0 24 24"></svg>
+          <span class="num" id="blobNum">01</span>
+          <span class="numlbl" id="blobLbl">begin bij nu</span>
+        </div>
+      </div>
+</div>
+    <div class="panels">
+      <article class="panel on" data-stage="0">
+        <span class="eyebrow">stap een</span>
+        <h2>Begin bij nu</h2>
+        <p>Elke les opent met iets uit hun eigen wereld: een nieuwsbericht, een ruzie op het plein, een filmpje. Pas als de vraag van hen is, gaan we terug in de tijd.</p>
+      </article>
+      <article class="panel" data-stage="1">
+        <span class="eyebrow">stap twee</span>
+        <h2>Werk met bronnen</h2>
+        <p>Leerlingen lezen niet over geschiedenis, ze onderzoeken hem. Een brief, een foto, een spotprent. Wie schreef dit, voor wie, en wat wordt er weggelaten?</p>
+      </article>
+      <article class="panel" data-stage="2">
+        <span class="eyebrow">stap drie</span>
+        <h2>Maak het zichtbaar</h2>
+        <p>Ik check onderweg wat er blijft hangen, met beurten in plaats van duimen omhoog. Zo weet ik precies wie de volgende stap aankan en wie nog even mee moet.</p>
+      </article>
     </div>
-  </section>
+  </div>
+</section>
+
+<!-- ============================ 4. STAPELENDE KAARTEN ============================ -->
+<div class="wrap stack-head up">
+  <span class="eyebrow">waar het op rust</span>
+  <h2>Vier vaste bodems</h2>
 </div>
 
-<footer>
-  <div class="strip" aria-hidden="true">
-    <i style="background:var(--crab)"></i><i style="background:var(--amber)"></i><i style="background:var(--ocean)"></i><i style="background:var(--vista)"></i><i style="background:var(--sand)"></i>
+<div class="wrap stack" id="stack">
+  <article class="stack-card">
+    <div class="sc-top">
+      <div class="sc-tile" style="background:var(--ocean)">
+        <svg viewBox="0 0 24 24" stroke="#FBF6F1"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H11v16H5.5A2.5 2.5 0 0 1 3 17.5z"/><path d="M21 6.5A2.5 2.5 0 0 0 18.5 4H13v16h5.5a2.5 2.5 0 0 0 2.5-2.5z"/></svg>
+      </div>
+      <h3>Geschiedenis die leeft</h3>
+    </div>
+    <p>Van een vraag uit het nu terug naar de bron. Het verleden krijgt een reden om er te zijn, en leerlingen krijgen een reden om mee te denken.</p>
+    <span class="sc-tag" style="background:var(--sand)">Vakinhoud</span>
+  </article>
+
+  <article class="stack-card">
+    <div class="sc-top">
+      <div class="sc-tile" style="background:var(--crab)">
+        <svg viewBox="0 0 24 24" stroke="#fff"><path d="M20 6 9 17l-5-5"/></svg>
+      </div>
+      <h3>Formatief evalueren</h3>
+    </div>
+    <p>Feed up, feed back en feed forward. Leerlingen weten waar ze staan, wat de volgende stap is en hoe ze die zetten. Een cijfer komt pas daarna.</p>
+    <span class="sc-tag" style="background:var(--sand)">Didactiek</span>
+  </article>
+
+  <article class="stack-card">
+    <div class="sc-top">
+      <div class="sc-tile" style="background:var(--amber)">
+        <svg viewBox="0 0 24 24" stroke="#14224C"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      </div>
+      <h3>Digitaal en mediawijs</h3>
+    </div>
+    <p>Van AI-tools tot bronnenonderzoek online. Techniek is een middel dat tijd bespaart of iets zichtbaar maakt, en nooit het doel van de les.</p>
+    <span class="sc-tag" style="background:var(--sand)">Gereedschap</span>
+  </article>
+
+  <article class="stack-card">
+    <div class="sc-top">
+      <div class="sc-tile" style="background:var(--vista)">
+        <svg viewBox="0 0 24 24" stroke="#14224C"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 5.5a3 3 0 0 1 0 5.4M18.2 20a6.4 6.4 0 0 0-2.3-4.9"/></svg>
+      </div>
+      <h3>Structuur en relatie</h3>
+    </div>
+    <p>Vaste routines, duidelijke verwachtingen en persoonlijke aandacht. Rust in de klas is geen doel op zich, het is de ruimte waarin leren begint.</p>
+    <span class="sc-tag" style="background:var(--sand)">Klimaat</span>
+  </article>
+</div>
+
+<!-- ============================ 5. CIJFERS ============================ -->
+<section class="stats">
+  <div class="wrap up">
+    <span class="eyebrow">een gemiddelde les</span>
+    <div class="stats-grid">
+      <div class="stat"><b data-count="50" data-suffix=" min">0</b><span>lestijd, van start tot afsluiting</span></div>
+      <div class="stat"><b data-count="15" data-suffix=" min">0</b><span>maximaal dat ik zelf aan het woord ben</span></div>
+      <div class="stat"><b data-count="3" data-suffix="x">0</b><span>momenten waarop ik check of het landt</span></div>
+      <div class="stat"><b data-count="1" data-suffix="">0</b><span>vraag uit het nu waar alles mee begint</span></div>
+    </div>
   </div>
-  meneer Greidanus &middot; <span id="jaar">2026</span>
+</section>
+
+<!-- ============================ 6. AFSLUITING ============================ -->
+<section class="finale" id="finale">
+  <div class="wrap">
+    <p class="hand" style="font-size:clamp(1.3rem,3.6vw,2rem)">en dan</p>
+    <h2 id="finaleTitle">Gaan ze de klas uit met een vraag</h2>
+    <p id="finaleText">Niet met een lijstje jaartallen, maar met iets waar ze thuis nog over doorpraten.</p>
+    <a class="btn" href="over.html#contact">Neem contact op</a>
+  </div>
+</section>
+
+<!-- ============================ 7. DOORGANG ============================ -->
+<section class="gate" id="gate">
+  <div class="gate-in">
+    <div class="ring" aria-hidden="true">
+      <svg viewBox="0 0 104 104">
+        <circle class="track" cx="52" cy="52" r="47"></circle>
+        <circle class="fill" id="ringFill" cx="52" cy="52" r="47"></circle>
+      </svg>
+      <span class="arrow"><svg viewBox="0 0 24 24"><path d="M12 4v15M6 13l6 6 6-6"/></svg></span>
+    </div>
+    <h3 id="gateTitle">Blijf scrollen</h3>
+    <p id="gateText">Nog even doorscrollen en je komt op mijn site terecht.</p>
+    <a class="plain" href="over.html">Of ga er meteen naartoe</a>
+  </div>
+</section>
+
+<div class="veil" id="veil" aria-hidden="true"></div>
+
+<footer>
+  <div class="wrap foot-in">
+    <div class="strip" aria-hidden="true">
+      <i style="background:var(--crab)"></i><i style="background:var(--amber)"></i><i style="background:var(--ocean)"></i><i style="background:var(--vista)"></i><i style="background:var(--sand)"></i>
+    </div>
+    <span>&copy; <span id="jaar">2026</span> Lorenzo Greidanus &middot; Docent geschiedenis</span>
+  </div>
 </footer>
 
 <script>
-/* ============================================================================
-   LEERLINGOMGEVING
-   Kies je niveau, en alle knoppen hieronder krijgen dat niveau mee in de link.
-   Een spel toevoegen doe je in SPELLEN hieronder.
-   ============================================================================ */
-
-var NIVEAUS = [
-  { id:'bb',  kort:'vmbo-bb',        hint:'Kortere teksten, minder keuzes en altijd een hint.' },
-  { id:'kgt', kort:'vmbo-kgt en tl', hint:'De gewone versie, met een hint als je erom vraagt.' },
-  { id:'hv',  kort:'havo en vwo',    hint:'Meer keuzes, minder hulp en extra verdieping.' }
-];
-
-var SPELLEN = [
-  { bestand:'bronnenlab.html', naam:'Bronnenlab', kleur:'#204ECF',
-    ico:'<circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/><path d="M8 9.5h5M8 12h3.5"/>',
-    wat:'Je bekijkt een brief, een foto, een spotprent en een affiche. Bij elke bron stel je drie vragen: wie maakte dit, wanneer, en wat zie je juist niet?',
-    leer:'Bronnen onderzoeken', tijd:'ongeveer 15 minuten' },
-
-  { bestand:'tijdvakken.html', naam:'Tijdvakken sorteren', kleur:'#83A5F2',
-    ico:'<path d="M3 6h18M3 12h18M3 18h18"/><circle cx="8" cy="6" r="2" fill="#FBF6F1" stroke="none"/><circle cx="15" cy="12" r="2" fill="#FBF6F1" stroke="none"/><circle cx="11" cy="18" r="2" fill="#FBF6F1" stroke="none"/>',
-    wat:'Sleep gebeurtenissen naar het juiste tijdvak. Elke ronde komen er meer vakken bij, dus je moet steeds preciezer kijken.',
-    leer:'Tijd en volgorde', tijd:'ongeveer 10 minuten' },
-
-  { bestand:'feodalisme.html', naam:'Feodalisme', kleur:'#EA9836',
-    ico:'<path d="M4 17l-1-9 5.5 4L12 4l3.5 8L21 8l-1 9z"/><path d="M4.5 20h15"/>',
-    wat:'Je bent heer, ridder of boer in de middeleeuwen. Elk jaar maak je keuzes over arbeid, bescherming en oogst. Je merkt vanzelf waarom niemand het alleen redt.',
-    leer:'Middeleeuwen', tijd:'ongeveer 15 minuten' },
-
-  { bestand:'handel.html', naam:'De handelsroute', kleur:'#204ECF',
-    ico:'<path d="M3.5 16.5h17L18 21H6z"/><path d="M12 16.5V3"/><path d="M13.5 5l5.5 8h-5.5z"/>',
-    wat:'Vaar met de VOC of de Hanze tussen havens. Koop waar het goedkoop is en verkoop waar het duur is, maar pas op: door jouw eigen handel verandert de prijs.',
-    leer:'Handel en economie', tijd:'ongeveer 20 minuten' },
-
-  { bestand:'vergadering.html', naam:'De vergadering', kleur:'#F26749',
-    ico:'<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17M3.5 12h17"/>',
-    wat:'Het is 1672 en Frankrijk valt binnen. Jij bent Holland en betaalt het meeste, maar alle zeven gewesten moeten ja zeggen. Praat, geef toe en overtuig.',
-    leer:'De Republiek', tijd:'ongeveer 20 minuten' },
-
-  { bestand:'', naam:'Bouw je stad', kleur:'#83A5F2',
-    ico:'<path d="M3 21V10l5-3 5 3v11"/><path d="M13 21V13l4-2 4 2v8"/><path d="M7 21v-4h2v4"/>',
-    wat:'Bouw vanaf het jaar 1150 je eigen middeleeuwse stad, met een muur, een markt en een kerk. Wat je bouwt, bepaalt wie er komt wonen.',
-    leer:'Steden', tijd:'binnenkort te spelen' }
-];
-
 (function(){
   'use strict';
+  var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   document.getElementById('jaar').textContent = new Date().getFullYear();
 
-  var gekozen = null;
-  var balk = document.getElementById('niveaubalk');
-  var hint = document.getElementById('niveauhint');
-  var vak = document.getElementById('spellen');
+  var clamp = function(v,a,b){ return v<a?a:(v>b?b:v); };
 
-  NIVEAUS.forEach(function(n){
-    var b = document.createElement('button');
-    b.className = 'niveauknop'; b.type = 'button'; b.textContent = n.kort;
-    b.addEventListener('click', function(){
-      gekozen = n;
-      Array.prototype.forEach.call(balk.children, function(c){ c.classList.remove('on'); });
-      b.classList.add('on');
-      hint.textContent = n.hint;
-      tekenSpellen();
-      /* zodat je de keuze terugziet als je op deel klikt of de pagina deelt */
-      history.replaceState(null, '', '?n=' + n.id);
-    });
-    balk.appendChild(b);
+  /* ---------- hero: naam letter voor letter ---------- */
+  var name = document.getElementById('heroName');
+  var letters = name.textContent.split('');
+  name.textContent = '';
+  letters.forEach(function(ch,i){
+    var s = document.createElement('span');
+    s.textContent = ch === ' ' ? '\u00A0' : ch;
+    s.style.animationDelay = (0.18 + i*0.045) + 's';
+    name.appendChild(s);
   });
 
-  function tekenSpellen(){
-    vak.innerHTML = '';
-    SPELLEN.forEach(function(sp){
-      var kaart = document.createElement('article');
-      kaart.className = 'spel' + (sp.bestand ? '' : ' binnenkort');
-      var link = sp.bestand + (gekozen ? '?n=' + gekozen.id : '');
-      kaart.innerHTML =
-        '<div class="tegel" style="background:' + sp.kleur + '"><svg viewBox="0 0 24 24">' + sp.ico + '</svg></div>' +
-        '<h3>' + sp.naam + '</h3>' +
-        '<p class="wat">' + sp.wat + '</p>' +
-        '<span class="leer">' + sp.leer + '</span>' +
-        '<p class="tijd">' + sp.tijd + '</p>' +
-        (sp.bestand
-          ? '<a class="speelknop" href="' + link + '">Start' + (gekozen ? ' op ' + gekozen.kort : '') + '</a>'
-          : '<span class="speelknop">Binnenkort</span>');
-      vak.appendChild(kaart);
-    });
+  /* ---------- tekst opdelen in woorden ---------- */
+  var ft = document.getElementById('fillText');
+  var words = ft.dataset.text.split(' ');
+  var hl = ft.dataset.highlight;
+  words.forEach(function(w){
+    var el = document.createElement('w');
+    el.textContent = w;
+    if (w.replace(/[^a-zA-Z]/g,'') === hl) el.className = 'hl';
+    ft.appendChild(el);
+    ft.appendChild(document.createTextNode(' '));
+  });
+  var wordEls = ft.querySelectorAll('w');
+
+  /* ---------- kleuren mengen ---------- */
+  function hex(h){ return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]; }
+  var C = { crab:hex('#F26749'), amber:hex('#EA9836'), ocean:hex('#204ECF'), vista:hex('#83A5F2'), room:hex('#FBF6F1') };
+  function mix(a,b,t){
+    return 'rgb(' + Math.round(a[0]+(b[0]-a[0])*t) + ',' + Math.round(a[1]+(b[1]-a[1])*t) + ',' + Math.round(a[2]+(b[2]-a[2])*t) + ')';
   }
 
-  /* niveau uit de link overnemen, zodat een docent een kant-en-klare link kan delen */
-  var m = /[?&]n=([^&]+)/.exec(location.search);
-  if (m){
-    for (var i = 0; i < NIVEAUS.length; i++){
-      if (NIVEAUS[i].id === m[1]){ balk.children[i].click(); break; }
-    }
+  /* ---------- opkomen bij binnenscrollen ---------- */
+  var ups = document.querySelectorAll('.up');
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function(es){
+      es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, {threshold:.15});
+    ups.forEach(function(el){ io.observe(el); });
+  } else {
+    ups.forEach(function(el){ el.classList.add('in'); });
   }
-  tekenSpellen();
+
+  /* ---------- tellers ---------- */
+  var counters = document.querySelectorAll('[data-count]');
+  function runCounter(el){
+    var target = parseInt(el.dataset.count,10), suffix = el.dataset.suffix || '', t0 = null;
+    var duur = reduced ? 800 : 1100;
+    function tick(ts){
+      if (!t0) t0 = ts;
+      var p = clamp((ts-t0)/duur, 0, 1);
+      var eased = 1 - Math.pow(1-p, 3);
+      el.textContent = Math.round(target*eased) + suffix;
+      if (p < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+  if ('IntersectionObserver' in window) {
+    var io2 = new IntersectionObserver(function(es){
+      es.forEach(function(e){ if(e.isIntersecting){ runCounter(e.target); io2.unobserve(e.target); } });
+    }, {threshold:.6});
+    counters.forEach(function(el){ io2.observe(el); });
+  } else {
+    counters.forEach(runCounter);
+  }
+
+  /* ---------- doorgang: doorscrollen aan het eind opent de site ---------- */
+  var veil = document.getElementById('veil');
+  var ringFill = document.getElementById('ringFill');
+  var CIRC = 295, NEEDED = 900, charge = 0, armed = false, going = false;
+
+  setTimeout(function(){ armed = true; }, 900); /* niet meteen na het laden */
+
+  function atBottom(){
+    return (innerHeight + (scrollY || pageYOffset)) >= document.documentElement.scrollHeight - 4;
+  }
+  function paintRing(){
+    ringFill.style.strokeDashoffset = String(CIRC * (1 - charge/NEEDED));
+  }
+  function addCharge(delta){
+    if (going || !armed || delta <= 0 || !atBottom()) return;
+    charge = clamp(charge + delta, 0, NEEDED);
+    paintRing();
+    if (charge >= NEEDED) leave();
+  }
+  function leave(){
+    going = true;
+    document.getElementById('gateTitle').textContent = 'Onderweg';
+    document.getElementById('gateText').textContent = 'Een moment.';
+    if (reduced) { location.href = 'over.html'; return; }
+    veil.classList.add('on');
+    setTimeout(function(){ location.href = 'over.html?from=landing'; }, 480);
+  }
+
+  addEventListener('wheel', function(e){ addCharge(e.deltaY); }, {passive:true});
+
+  var lastTouch = null;
+  addEventListener('touchstart', function(e){ lastTouch = e.touches[0].clientY; }, {passive:true});
+  addEventListener('touchmove', function(e){
+    var y = e.touches[0].clientY;
+    if (lastTouch !== null) addCharge((lastTouch - y) * 1.6);
+    lastTouch = y;
+  }, {passive:true});
+  addEventListener('touchend', function(){ lastTouch = null; }, {passive:true});
+
+  addEventListener('keydown', function(e){
+    if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') addCharge(150);
+  });
+
+  /* terugkomen met de terugknop: alles weer op nul */
+  addEventListener('pageshow', function(){
+    going = false; charge = 0; paintRing(); veil.classList.remove('on');
+  });
+
+
+
+
+  /* ---------- scrollmotor, één lus voor alles ---------- */
+  var bar     = document.getElementById('bar');
+  var nav     = document.getElementById('topnav');
+  var fill    = document.getElementById('fill');
+  var morph   = document.getElementById('morph');
+  var blob    = document.getElementById('blob');
+  var blobNum = document.getElementById('blobNum');
+  var blobIco = document.getElementById('blobIco');
+  var blobLbl = document.getElementById('blobLbl');
+  var blobArc = document.getElementById('blobArc');
+  var blobIn  = document.querySelector('.blob-in');
+
+  /* per stap: handschriftlabel en icoontje */
+  var stages = [
+    { label:'begin bij nu', arc:'#F26749',
+      ico:'<path d="M20.5 12a8.5 8.5 0 1 1-3.2-6.6"/><path d="M12 7.5v5l3 2"/>' },
+    { label:'graaf in de bron', arc:'#EA9836',
+      ico:'<circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/><path d="M8 9.5h5M8 12h3.5"/>' },
+    { label:'maak het zichtbaar', arc:'#204ECF',
+      ico:'<path d="M3 12.5l5 5L21 5"/><path d="M3 19h8"/>', }
+  ];
+  var panels  = morph.querySelectorAll('.panel');
+  var cards   = document.querySelectorAll('.stack-card');
+  var finale  = document.getElementById('finale');
+  var orbs    = document.querySelectorAll('.orb');
+  var hero    = document.querySelector('.hero');
+  var stage   = -1;
+
+  function sectionProgress(el){
+    var r = el.getBoundingClientRect();
+    var total = r.height - innerHeight;
+    if (total <= 0) return clamp(1 - (r.bottom/innerHeight), 0, 1);
+    return clamp(-r.top/total, 0, 1);
+  }
+
+  var shapes = [
+    '58% 42% 46% 54% / 48% 52% 48% 52%',
+    '42% 58% 62% 38% / 56% 44% 56% 44%',
+    '50% 50% 38% 62% / 44% 60% 40% 56%'
+  ];
+
+  function frame(){
+    var y = scrollY || pageYOffset;
+    var docH = document.documentElement.scrollHeight - innerHeight;
+
+    /* voortgangsbalk */
+    bar.style.width = (docH > 0 ? (y/docH)*100 : 0) + '%';
+
+    /* navigatie na de hero */
+    nav.classList.toggle('show', y > innerHeight * 0.85);
+
+    /* hero: bollen bewegen mee, inhoud zakt zacht weg */
+    if (y < innerHeight * 1.2) {
+      orbs[0].style.transform = 'translate3d(0,' + (y*0.22) + 'px,0)';
+      orbs[1].style.transform = 'translate3d(0,' + (y*-0.14) + 'px,0)';
+      orbs[2].style.transform = 'translate3d(0,' + (y*0.34) + 'px,0)';
+      hero.style.opacity = String(clamp(1 - y/(innerHeight*0.85), 0, 1));
+    }
+
+    /* woorden vullen zich */
+    var pf = sectionProgress(fill);
+    var reach = pf * (wordEls.length + 6) - 3;
+    for (var i = 0; i < wordEls.length; i++) {
+      wordEls[i].classList.toggle('on', i < reach);
+    }
+
+    /* blob morft en wisselt van paneel */
+    var pm = sectionProgress(morph);
+    var seg = clamp(pm * 3, 0, 2.999);
+    var idx = Math.floor(seg);
+    var t   = seg - idx;
+    var pair = [[C.crab, C.amber], [C.amber, C.ocean], [C.ocean, C.vista]][idx];
+    blob.style.backgroundColor = mix(pair[0], pair[1], t);
+    blob.style.borderRadius = shapes[idx];
+    var spin = pm*26 - 8;
+    blob.style.transform = 'rotate(' + spin + 'deg) scale(' + (0.9 + Math.sin(pm*Math.PI)*0.12) + ')';
+    blobIn.style.transform = 'rotate(' + (-spin) + 'deg)';   /* tekst blijft rechtop */
+    /* de meter om de blob laat zien hoever je in deze stap bent */
+    blobArc.style.strokeDashoffset = String(590*(1-t));
+    if (idx !== stage) {
+      stage = idx;
+      blobNum.textContent = '0' + (idx+1);
+      blobIco.innerHTML = stages[idx].ico;
+      blobLbl.textContent = stages[idx].label;
+      blobArc.style.stroke = stages[idx].arc;
+      for (var p = 0; p < panels.length; p++) panels[p].classList.toggle('on', p === idx);
+    }
+
+    /* kaarten zakken iets weg zodra de volgende eroverheen komt */
+    for (var c = 0; c < cards.length; c++) {
+      var r = cards[c].getBoundingClientRect();
+      var stuck = clamp((innerHeight*0.16 - r.top) / (innerHeight*0.5), 0, 1);
+      cards[c].style.transform = 'scale(' + (1 - stuck*0.055) + ') translateY(' + (stuck*-10) + 'px)';
+      cards[c].style.filter = 'brightness(' + (1 - stuck*0.05) + ')';
+    }
+
+    /* slot kleurt van room naar diep oceaanblauw */
+    var fr = finale.getBoundingClientRect();
+    var pfin = clamp(1 - (fr.top / innerHeight), 0, 1);
+    finale.style.backgroundColor = mix(C.room, C.ocean, pfin);
+    var textT = clamp((pfin - 0.45) / 0.35, 0, 1);
+    var inkToRoom = mix([20,34,76], C.room, textT);
+    document.getElementById('finaleTitle').style.color = inkToRoom;
+    document.getElementById('finaleText').style.color = mix([91,100,128], [223,231,255], textT);
+    finale.querySelector('.hand').style.color = mix(C.crab, [252,222,214], textT);
+  }
+
+  /* Ook hier een doorlopende lus in plaats van alleen scroll-events: op Android
+     lopen die achter, waardoor de stappen bij de blob konden blijven hangen. */
+  var lastScroll = -1, lastH = innerHeight;
+  (function loop(){
+    var y = scrollY || pageYOffset;
+    if (y !== lastScroll || innerHeight !== lastH){
+      if (!atBottom() && charge > 0) { charge = Math.max(0, charge - 60); paintRing(); }
+      lastScroll = y; lastH = innerHeight;
+      frame();
+    }
+    requestAnimationFrame(loop);
+  })();
+  paintRing();
+  frame();
+})();
+</script>
+
+<script>
+/* ============================================================
+   TIJDBALK
+   Onderin loopt een balk mee met hoever je door de pagina bent. Scrollen
+   is reizen door de tijd: de balk vult zich, het jaartal loopt mee en je
+   kunt op een moment tikken om er meteen heen te springen.
+   ============================================================ */
+(function(){
+  'use strict';
+  var clamp = function(v,a,b){ return v<a?a:(v>b?b:v); };
+  var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* per moment: jaartal, gebeurtenis, tint, sterkte van de tint, icoontje */
+  var moments = [
+    ['300.000 v.Chr.','De eerste Homo sapiens in Afrika',[252,222,214],.22,
+      '<ellipse cx="10.5" cy="14.5" rx="4" ry="6"/><circle cx="15" cy="7.5" r="1.3"/><circle cx="17.6" cy="10" r="1.1"/><circle cx="7.4" cy="6.6" r="1.2"/>'],
+    ['10.000 v.Chr.','Landbouw en de eerste dorpen',[234,152,54],.12,
+      '<path d="M12 21v-8"/><path d="M12 13c0-3 2-5 5-5 0 3-2 5-5 5z"/><path d="M12 15.5c0-2.6-1.9-4.5-4.5-4.5 0 2.6 1.9 4.5 4.5 4.5z"/>'],
+    ['3300 v.Chr.','Het schrift, hier begint de geschiedenis',[234,152,54],.20,
+      '<rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4.5"/>'],
+    ['508 v.Chr.','Democratie in Athene',[131,165,242],.14,
+      '<path d="M5 4.5h14M4 20h16"/><path d="M8.5 4.5V20M15.5 4.5V20"/>'],
+    ['476','Einde van het West-Romeinse Rijk',[242,103,73],.18,
+      '<path d="M5 20v-8a7 7 0 0 1 14 0v8"/><path d="M9.5 20v-6M14.5 20v-6"/>'],
+    ['800','Karel de Grote tot keizer gekroond',[234,152,54],.16,
+      '<path d="M4 17l-1-9 5.5 4L12 4l3.5 8L21 8l-1 9z"/><path d="M4.5 20h15"/>'],
+    ['1348','De pest bereikt West-Europa',[32,78,207],.14,
+      '<path d="M6.5 3h11M6.5 21h11"/><path d="M8.5 3v3l3.5 6 3.5-6V3M8.5 21v-3l3.5-6 3.5 6v3"/>'],
+    ['1450','De boekdrukkunst van Gutenberg',[234,152,54],.14,
+      '<path d="M3 5h6.5A2.5 2.5 0 0 1 12 7.5V20a2.5 2.5 0 0 0-2.5-2H3z"/><path d="M21 5h-6.5A2.5 2.5 0 0 0 12 7.5V20a2.5 2.5 0 0 1 2.5-2H21z"/>'],
+    ['1492','Columbus bereikt Amerika',[131,165,242],.20,
+      '<path d="M3.5 16.5h17L18 21H6z"/><path d="M12 16.5V3"/><path d="M13.5 5l5.5 8h-5.5z"/>'],
+    ['1568','Begin van de Tachtigjarige Oorlog',[242,103,73],.16,
+      '<path d="M12 3l8 3v6c0 5-3.7 7.9-8 9-4.3-1.1-8-4-8-9V6z"/>'],
+    ['1602','Oprichting van de VOC',[131,165,242],.22,
+      '<path d="M12 7.5V21"/><path d="M8.5 11.5H5.5c0 5 3 8 6.5 9 3.5-1 6.5-4 6.5-9h-3"/><circle cx="12" cy="5" r="2"/>'],
+    ['1789','De Franse Revolutie',[242,103,73],.16,
+      '<path d="M12 2.5c2 2.2 3 4.2 3 6a3 3 0 0 1-6 0c0-1.8 1-3.8 3-6z"/><path d="M10 12h4l-.8 9h-2.4z"/>'],
+    ['1914','Begin van de Eerste Wereldoorlog',[32,78,207],.16,
+      '<path d="M4.5 15a7.5 7.5 0 0 1 15 0"/><rect x="3" y="15" width="18" height="2.6" rx="1.3"/>'],
+    ['1940 tot 1945','Bezetting en bevrijding',[32,78,207],.22,
+      '<path d="M2.5 12.5c2.2-2.4 4.4-2.4 6.6 0 2.2-2.4 4.4-2.4 6.6 0"/><path d="M9 17.5c2.2-2.4 4.4-2.4 6.6 0 1.5-1.6 3-2.1 4.5-1.5"/>'],
+    ['1969','De eerste mens op de maan',[131,165,242],.16,
+      '<path d="M12 2.5c3 3.2 4.2 6.8 4.2 10L12 16l-4.2-3.5c0-3.2 1.2-6.8 4.2-10z"/><circle cx="12" cy="9" r="1.7"/><path d="M7.8 13l-2.8 4 3-1M16.2 13l2.8 4-3-1"/>'],
+    ['1989','Val van de Berlijnse Muur',[131,165,242],.14,
+      '<path d="M3 8h18M3 13h18M3 18h18"/><path d="M9 3.5V8M16 3.5V8M6 8v5M13 8v5M20 8v5M9 13v5M16 13v5"/>'],
+    ['Nu','Terug in de klas',[131,165,242],.10,
+      '<path d="M9.5 18.5h5M10.5 21h3"/><path d="M12 3a6 6 0 0 1 3.8 10.6c-.6.6-1 1.4-1 2.2h-5.6c0-.8-.4-1.6-1-2.2A6 6 0 0 1 12 3z"/>']
+  ];
+
+  var sky = document.getElementById('sky'),
+      barEl = document.getElementById('timebar'),
+      rail = document.getElementById('tbRail'),
+      fillEl = document.getElementById('tbFill'),
+      dot = document.getElementById('tbDot'),
+      label = document.getElementById('tbLabel'),
+      labIco = document.getElementById('tbIco'),
+      labYear = label.querySelector('b'),
+      labText = label.querySelector('span'),
+      ticks = [], idxNow = -1;
+
+  var ROOM = [251,246,241];
+  function mix(a,b,t){ return 'rgb('+Math.round(a[0]+(b[0]-a[0])*t)+','+Math.round(a[1]+(b[1]-a[1])*t)+','+Math.round(a[2]+(b[2]-a[2])*t)+')'; }
+
+  /* waar op de pagina hoort een punt op de balk bij */
+  function range(){
+    var start = innerHeight*0.55;
+    var end = document.documentElement.scrollHeight - innerHeight*1.75;
+    return [start, Math.max(end, start + 1)];
+  }
+  function progress(){
+    var r = range();
+    return clamp(((scrollY || pageYOffset) - r[0])/(r[1]-r[0]), 0, 1);
+  }
+
+  /* de momenten op de balk zetten */
+  moments.forEach(function(m,i){
+    var pct = (i/(moments.length-1))*100;
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tb-tick';
+    b.style.left = pct + '%';
+    b.innerHTML = '<i>' + m[0] + '</i>';
+    b.setAttribute('aria-label','Naar ' + m[0] + ', ' + m[1]);
+    b.addEventListener('click', function(){
+      var r = range();
+      scrollTo({top: r[0] + (r[1]-r[0])*(i/(moments.length-1)), behavior: reduced ? 'auto' : 'smooth'});
+    });
+    rail.appendChild(b); ticks.push(b);
+  });
+
+  function paint(){
+    var p = progress();
+    var pos = p*100;
+    fillEl.style.width = pos + '%';
+    dot.style.left = pos + '%';
+
+    var seg = 1/(moments.length-1);
+    var idx = clamp(Math.round(p/seg), 0, moments.length-1);
+    if (idx !== idxNow){
+      idxNow = idx;
+      labIco.innerHTML = moments[idx][4];
+      labYear.textContent = moments[idx][0];
+      labText.textContent = moments[idx][1];
+      for (var i=0;i<ticks.length;i++) ticks[i].classList.toggle('on', i <= idx);
+    }
+
+    /* pas positioneren als de tekst er staat, anders meet je de vorige breedte */
+    var railW = rail.offsetWidth, labW = label.offsetWidth;
+    label.style.left = clamp(railW*p, labW/2 + 2, railW - labW/2 - 2) + 'px';
+
+    /* de achtergrond kleurt heel licht mee met het tijdvak */
+    var lo = clamp(Math.floor(p/seg), 0, moments.length-1),
+        hi = Math.min(lo+1, moments.length-1),
+        t = clamp((p - lo*seg)/seg, 0, 1);
+    var ca = moments[lo][2], cb = moments[hi][2];
+    var wgt = moments[lo][3] + (moments[hi][3]-moments[lo][3])*t;
+    sky.style.backgroundColor = mix(ROOM, [ca[0]+(cb[0]-ca[0])*t, ca[1]+(cb[1]-ca[1])*t, ca[2]+(cb[2]-ca[2])*t], wgt);
+
+    /* alleen zichtbaar tijdens de reis zelf */
+    var y = scrollY || pageYOffset, r = range();
+    barEl.classList.toggle('show', reduced || (y > r[0] - innerHeight*0.35 && y < r[1] + innerHeight*0.9));
+  }
+
+  /* Android Chrome levert scroll-events met vertraging tijdens een flick en terwijl
+     de adresbalk in- en uitschuift. Een doorlopende lus houdt de balk daarom
+     gelijk met de pagina. Hij staat vanzelf stil op een verborgen tabblad. */
+  var lastP = -1;
+  (function loop(){
+    var p = progress();
+    if (p !== lastP){ lastP = p; paint(); }
+    requestAnimationFrame(loop);
+  })();
+  addEventListener('resize', function(){ lastP = -1; });
 })();
 </script>
 </body>
