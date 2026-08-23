@@ -57,7 +57,8 @@ a{color:inherit}
 .bg{position:fixed;inset:0;z-index:-1;pointer-events:none}
 .bg .sky{position:absolute;inset:0;background:var(--room);transition:background-color .35s linear}
 
-.timebar{position:fixed;left:0;right:0;bottom:0;z-index:45;padding:12px 0 18px;
+.timebar{position:fixed;left:0;right:0;bottom:0;z-index:45;
+  padding:12px 0 calc(18px + env(safe-area-inset-bottom, 0px));
   background:linear-gradient(to top, rgba(251,246,241,.97) 40%, rgba(251,246,241,.72) 78%, rgba(251,246,241,0));
   backdrop-filter:blur(6px);opacity:0;transform:translateY(14px);pointer-events:none;
   transition:opacity .45s var(--ease),transform .45s var(--ease)}
@@ -76,6 +77,8 @@ a{color:inherit}
 .tb-tick{position:absolute;top:4px;width:11px;height:11px;margin-left:-5.5px;padding:0;border-radius:50%;
   background:var(--room);border:2px solid rgba(20,34,76,.20);transition:all .25s var(--ease)}
 .tb-tick:hover{border-color:var(--ocean);transform:scale(1.2)}
+.tb-tick::after{content:"";position:absolute;left:50%;top:50%;translate:-50% -50%;
+  width:34px;height:38px}   /* onzichtbaar aanraakvlak, makkelijker te tikken */
 .tb-tick.on{background:var(--crab);border-color:var(--crab)}
 .tb-tick i{position:absolute;bottom:20px;left:50%;translate:-50% 0;white-space:nowrap;font-style:normal;
   font-size:.7rem;font-weight:600;color:var(--ink);background:rgba(251,246,241,.94);padding:4px 9px;
@@ -133,7 +136,7 @@ header.show{transform:none}
    2. TEKST DIE INVULT
    ============================================================ */
 .filler{height:230vh;position:relative}
-.filler .pin{position:sticky;top:0;height:100svh;display:grid;place-items:center}
+.filler .pin{position:sticky;top:0;height:100svh;display:grid;place-items:center;padding:70px 0 96px}
 .fill-text{font-size:clamp(1.6rem,5.2vw,3.6rem);font-weight:600;line-height:1.22;letter-spacing:-.02em;
   max-width:22ch;text-align:left}
 .fill-text w{color:rgba(20,34,76,.14);transition:color .25s linear}
@@ -148,16 +151,61 @@ header.show{transform:none}
   grid-template-columns:1fr 1fr;align-items:center;gap:40px;
   width:min(100% - 40px,var(--max));margin-inline:auto}
 @media(max-width:820px){
-  .morph .pin{grid-template-columns:1fr;gap:24px;place-content:center;text-align:center}
+  .morph .pin{grid-template-columns:1fr;gap:18px;place-content:center;text-align:center;
+    padding:76px 0 104px}
+  .blobwrap{width:min(300px,74vw)}
+  .blob{width:min(232px,58vw)}
+  .blob-ico{width:28px;height:28px;margin-bottom:4px}
+  .blob .numlbl{font-size:1.15rem}
+  .panels{min-height:250px}
 }
+/* liggend scherm of lage vensters: alles een maatje kleiner */
+@media(max-height:760px) and (max-width:820px){
+  .blobwrap{width:min(230px,52vw)}
+  .blob{width:min(180px,42vw)}
+  .blob .num{font-size:2.2rem}
+  .blob .numlbl{font-size:1rem}
+  .panels{min-height:210px}
+}
+.blobwrap{position:relative;width:min(440px,86vw);aspect-ratio:1;justify-self:center;display:grid;place-items:center}
 .blob{
-  width:min(380px,72vw);aspect-ratio:1;justify-self:center;
+  width:min(340px,64vw);aspect-ratio:1;
   border-radius:58% 42% 46% 54% / 48% 52% 48% 52%;
   display:grid;place-items:center;color:var(--room);
   box-shadow:0 26px 60px rgba(20,34,76,.18);
   will-change:transform,background-color,border-radius;
 }
-.blob .num{font-size:clamp(3.4rem,9vw,6rem);font-weight:600;letter-spacing:-.04em}
+.blob-in{display:grid;justify-items:center;gap:2px;text-align:center;padding:10px}
+.blob-ico{width:34px;height:34px;fill:none;stroke:currentColor;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round;opacity:.9;margin-bottom:6px}
+.blob .num{font-size:clamp(2.8rem,7.5vw,4.6rem);font-weight:600;letter-spacing:-.04em;line-height:1}
+.blob .numlbl{font-family:'Caveat',cursive;font-size:1.35rem;opacity:.92}
+
+/* meter om de blob: hoever je in deze stap bent */
+.blobring{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);pointer-events:none}
+.blobring circle{fill:none;stroke-linecap:round}
+.blobring .rtrack{stroke:rgba(20,34,76,.10);stroke-width:2}
+.blobring .rarc{stroke:var(--crab);stroke-width:3;transition:stroke .4s var(--ease)}
+
+/* kernwoorden die om de blob heen zweven */
+.orbit{position:absolute;font-size:.8rem;font-weight:600;padding:8px 15px;border-radius:999px;
+  background:#fff;color:var(--ink);box-shadow:0 8px 20px rgba(20,34,76,.12);white-space:nowrap;
+  opacity:0;transform:translateY(10px) scale(.94);
+  transition:opacity .45s var(--ease),transform .45s var(--ease)}
+.orbit.on{opacity:1;transform:none}
+.orbit.o1{top:6%;left:-2%}
+.orbit.o2{top:44%;right:-6%}
+.orbit.o3{bottom:6%;left:12%}
+@media(max-width:820px){
+  .orbit{font-size:.74rem;padding:6px 12px}
+  .orbit.o1{left:0;top:2%}.orbit.o2{right:0;top:46%}.orbit.o3{left:6%;bottom:2%}
+}
+@media(prefers-reduced-motion:no-preference){
+  .orbit.on.o1{animation:bobA 6s ease-in-out infinite}
+  .orbit.on.o2{animation:bobA 7.2s ease-in-out infinite .5s}
+  .orbit.on.o3{animation:bobA 6.6s ease-in-out infinite 1s}
+}
+@keyframes bobA{0%,100%{translate:0 0}50%{translate:0 -8px}}
 .panels{position:relative;min-height:290px}
 .panel{position:absolute;inset:0;display:grid;align-content:center;gap:14px;
   opacity:0;transform:translateY(22px);transition:opacity .4s var(--ease),transform .4s var(--ease);pointer-events:none}
@@ -310,7 +358,22 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
 <!-- ============================ 3. VASTGEPRIKTE BLOB ============================ -->
 <section class="morph" id="morph">
   <div class="pin">
-    <div class="blob" id="blob"><span class="num" id="blobNum">01</span></div>
+    <div class="blobwrap">
+      <svg class="blobring" viewBox="0 0 200 200" aria-hidden="true">
+        <circle class="rtrack" cx="100" cy="100" r="94"/>
+        <circle class="rarc" id="blobArc" cx="100" cy="100" r="94" stroke-dasharray="590" stroke-dashoffset="590"/>
+      </svg>
+      <div class="blob" id="blob">
+        <div class="blob-in">
+          <svg class="blob-ico" id="blobIco" viewBox="0 0 24 24"></svg>
+          <span class="num" id="blobNum">01</span>
+          <span class="numlbl" id="blobLbl">begin bij nu</span>
+        </div>
+      </div>
+      <span class="orbit o1" id="orb1"></span>
+      <span class="orbit o2" id="orb2"></span>
+      <span class="orbit o3" id="orb3"></span>
+    </div>
     <div class="panels">
       <article class="panel on" data-stage="0">
         <span class="eyebrow">stap een</span>
@@ -520,6 +583,24 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
   var morph   = document.getElementById('morph');
   var blob    = document.getElementById('blob');
   var blobNum = document.getElementById('blobNum');
+  var blobIco = document.getElementById('blobIco');
+  var blobLbl = document.getElementById('blobLbl');
+  var blobArc = document.getElementById('blobArc');
+  var blobIn  = document.querySelector('.blob-in');
+  var orbs    = [document.getElementById('orb1'), document.getElementById('orb2'), document.getElementById('orb3')];
+
+  /* per stap: handschriftlabel, icoontje en drie kernwoorden */
+  var stages = [
+    { label:'begin bij nu', arc:'#F26749',
+      ico:'<path d="M20.5 12a8.5 8.5 0 1 1-3.2-6.6"/><path d="M12 7.5v5l3 2"/>',
+      words:['nieuwsbericht','ruzie op het plein','een filmpje'] },
+    { label:'graaf in de bron', arc:'#EA9836',
+      ico:'<circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/><path d="M8 9.5h5M8 12h3.5"/>',
+      words:['een brief','een foto','een spotprent'] },
+    { label:'maak het zichtbaar', arc:'#204ECF',
+      ico:'<path d="M3 12.5l5 5L21 5"/><path d="M3 19h8"/>',
+      words:['vraag stellen','denktijd','naam noemen'] }
+  ];
   var panels  = morph.querySelectorAll('.panel');
   var cards   = document.querySelectorAll('.stack-card');
   var finale  = document.getElementById('finale');
@@ -574,11 +655,25 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
     var pair = [[C.crab, C.amber], [C.amber, C.ocean], [C.ocean, C.vista]][idx];
     blob.style.backgroundColor = mix(pair[0], pair[1], t);
     blob.style.borderRadius = shapes[idx];
-    blob.style.transform = 'rotate(' + (pm*26 - 8) + 'deg) scale(' + (0.9 + Math.sin(pm*Math.PI)*0.12) + ')';
+    var spin = pm*26 - 8;
+    blob.style.transform = 'rotate(' + spin + 'deg) scale(' + (0.9 + Math.sin(pm*Math.PI)*0.12) + ')';
+    blobIn.style.transform = 'rotate(' + (-spin) + 'deg)';   /* tekst blijft rechtop */
+    /* de meter om de blob laat zien hoever je in deze stap bent */
+    blobArc.style.strokeDashoffset = String(590*(1-t));
     if (idx !== stage) {
       stage = idx;
       blobNum.textContent = '0' + (idx+1);
+      blobIco.innerHTML = stages[idx].ico;
+      blobLbl.textContent = stages[idx].label;
+      blobArc.style.stroke = stages[idx].arc;
       for (var p = 0; p < panels.length; p++) panels[p].classList.toggle('on', p === idx);
+      /* kernwoorden komen een voor een op */
+      for (var o = 0; o < orbs.length; o++) {
+        (function(el, i){
+          el.classList.remove('on');
+          setTimeout(function(){ el.textContent = stages[idx].words[i]; el.classList.add('on'); }, 160 + i*130);
+        })(orbs[o], o);
+      }
     }
 
     /* kaarten zakken iets weg zodra de volgende eroverheen komt */
