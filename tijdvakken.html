@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Tijdvakken sorteren, versie 1.0 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tijdvakken sorteren &middot; meneer Greidanus</title>
+<meta name="description" content="Sleep gebeurtenissen naar het juiste tijdvak. Drie rondes die steeds moeilijker worden, met niveaukeuze.">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%23204ECF'/><text x='50' y='68' font-family='Poppins,Arial' font-size='46' font-weight='600' fill='%23FBF6F1' text-anchor='middle'>LG</text></svg>">
+<style>
+:root{--crab:#F26749;--amber:#EA9836;--ocean:#204ECF;--vista:#83A5F2;--sand:#FCDED6;--room:#FBF6F1;
+  --ink:#14224C;--muted:#5b6480;--goed:#2f7d52;--goed-bg:#e7f3ec;--fout:#c0442c;--fout-bg:#fdecea;
+  --max:1180px;--ease:cubic-bezier(.22,.61,.36,1)}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--room);color:var(--ink);line-height:1.6;
+  font-family:'Poppins',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;-webkit-font-smoothing:antialiased;
+  overscroll-behavior-y:contain}
+h1,h2,h3{margin:0;font-weight:600;line-height:1.12;letter-spacing:-.02em}
+p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+.wrap{width:min(100% - 28px,var(--max));margin-inline:auto}
+.hand{font-family:'Caveat',cursive;font-weight:600;color:var(--crab)}
+.eyebrow{font-size:.72rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.hide{display:none !important}
+header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-bottom:1px solid rgba(20,34,76,.08);padding:10px 0}
+.hd{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.mark{display:flex;align-items:center;gap:10px;font-weight:600;text-decoration:none}
+.mark i{width:32px;height:32px;border-radius:10px;background:var(--ocean);color:var(--room);display:grid;place-items:center;font-style:normal;font-size:.78rem}
+.hd-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.pill{background:var(--sand);font-weight:600;padding:6px 13px;border-radius:999px;font-size:.78rem}
+.linkbtn{background:none;border:none;color:var(--muted);text-decoration:underline;text-underline-offset:4px;font-size:.85rem;padding:6px}
+.linkbtn:hover{color:var(--ink)}
+
+.start{padding:46px 0 70px;text-align:center}
+.start h1{font-size:clamp(2.2rem,6vw,3.6rem);margin:8px 0 14px}
+.start .lead{max-width:56ch;margin:0 auto;color:var(--muted)}
+.kies{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:22px auto 0;max-width:900px}
+.kaartje{background:#fff;border:2px solid rgba(20,34,76,.10);border-radius:22px;padding:20px;text-align:left;transition:border-color .2s var(--ease),transform .2s var(--ease)}
+.kaartje:hover{border-color:var(--vista);transform:translateY(-3px)}
+.kaartje.on{border-color:var(--ocean);background:#f4f7ff}
+.kaartje b{display:block;font-size:1.05rem}
+.kaartje span{display:block;margin-top:5px;font-size:.86rem;color:var(--muted)}
+.btn{display:inline-block;border:none;background:var(--crab);color:#fff;font-weight:600;padding:15px 32px;border-radius:999px;
+  box-shadow:0 10px 0 rgba(20,34,76,.10);margin-top:24px;transition:transform .16s var(--ease)}
+.btn:hover{transform:translateY(-2px)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn.ghost{background:#fff;color:var(--ink);border:1.5px solid rgba(20,34,76,.15);box-shadow:none}
+
+/* ---------- spel ---------- */
+.spelkop{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;padding:16px 0 0}
+.balk{height:6px;background:rgba(20,34,76,.10);border-radius:999px;overflow:hidden;margin-top:10px}
+.balk i{display:block;height:100%;width:0;background:var(--crab);transition:width .35s var(--ease)}
+
+.speelveld{padding:16px 0 60px}
+.kaartzone{display:grid;place-items:center;min-height:190px;position:relative}
+.kaart{background:#fff;border:1px solid rgba(20,34,76,.10);border-radius:22px;padding:20px 24px;max-width:520px;width:100%;
+  box-shadow:0 16px 40px rgba(20,34,76,.10);text-align:center;touch-action:none;cursor:grab;user-select:none;
+  transition:transform .22s var(--ease),box-shadow .22s var(--ease),opacity .2s linear}
+.kaart.pak{cursor:grabbing;box-shadow:0 26px 60px rgba(20,34,76,.20);transition:none;z-index:5;position:relative}
+.kaart .jaar{font-size:.8rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--crab);margin-bottom:6px}
+.kaart .geb{font-size:clamp(1.05rem,2.6vw,1.35rem);font-weight:600;line-height:1.28}
+.kaart .sleep{margin-top:10px;font-size:.78rem;color:var(--muted)}
+body.groot .kaart .geb{font-size:1.6rem}
+@keyframes schud{0%,100%{transform:translateX(0)}20%{transform:translateX(-9px)}40%{transform:translateX(9px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+.kaart.mis{animation:schud .4s ease}
+
+.bakken{display:grid;gap:10px;margin-top:20px}
+.bakken.b4{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.bakken.b6{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.bakken.b10{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+.bak{background:#fff;border:2px dashed rgba(20,34,76,.16);border-radius:18px;padding:14px 15px;text-align:left;
+  transition:border-color .18s var(--ease),background .18s var(--ease),transform .18s var(--ease)}
+.bak:hover{border-color:var(--vista)}
+.bak.hover{border-color:var(--ocean);background:#f4f7ff;transform:scale(1.02)}
+.bak b{display:block;font-size:.95rem;line-height:1.25}
+.bak span{display:block;margin-top:3px;font-size:.78rem;color:var(--muted)}
+.bak.goed{border-style:solid;border-color:var(--goed);background:var(--goed-bg)}
+.bak.fout{border-style:solid;border-color:var(--fout);background:var(--fout-bg)}
+body.groot .bak b{font-size:1.1rem}
+
+.melding{margin-top:18px;border-radius:18px;padding:16px 18px;display:none}
+.melding.on{display:block}
+.melding.ja{background:var(--goed-bg);color:#1f5c3c}
+.melding.nee{background:var(--fout-bg);color:#8d3320}
+.melding b{display:block;margin-bottom:3px}
+.melding .btn{margin-top:14px;padding:11px 24px}
+
+.rondeklaar{background:var(--ocean);color:var(--room);border-radius:22px;padding:24px;text-align:center;margin-top:20px}
+.rondeklaar h3{font-size:1.25rem;margin-bottom:6px}
+.rondeklaar p{color:#dfe7ff;max-width:46ch;margin:0 auto}
+
+.einde{padding:44px 0 70px;text-align:center}
+.score{font-size:clamp(3rem,10vw,5rem);font-weight:600;letter-spacing:-.04em;color:var(--ocean);line-height:1}
+.overzicht{display:grid;gap:9px;max-width:660px;margin:26px auto 0;text-align:left}
+.rij{display:flex;justify-content:space-between;gap:12px;background:#fff;border:1px solid rgba(20,34,76,.08);border-radius:15px;padding:11px 15px;font-size:.9rem}
+.rij span{color:var(--muted)}
+footer{padding:26px 0 40px;font-size:.83rem;color:var(--muted);text-align:center}
+.strip{display:flex;height:7px;width:150px;border-radius:999px;overflow:hidden;margin:0 auto 12px}
+.strip i{flex:1}
+button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offset:3px;border-radius:10px}
+@media(prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap hd">
+    <a class="mark" href="over.html#materiaal"><i>LG</i> Tijdvakken</a>
+    <div class="hd-right">
+      <span class="pill hide" id="pillNiv">niveau</span>
+      <button class="linkbtn" id="grootBtn" type="button">Digibord</button>
+      <button class="linkbtn" id="opnieuwBtn" type="button">Opnieuw</button>
+    </div>
+  </div>
+</header>
+
+<section class="start wrap" id="scherm-start">
+  <p class="hand" style="font-size:1.6rem">waar hoort het thuis</p>
+  <h1>Tijdvakken sorteren</h1>
+  <p class="lead">Je krijgt een gebeurtenis. Sleep hem naar het tijdvak waar hij thuishoort, of tik gewoon op het juiste vak. Elke ronde worden er meer vakken, en dus wordt het lastiger.</p>
+  <p class="eyebrow" style="margin-top:32px">kies je niveau</p>
+  <div class="kies" id="niveaus"></div>
+  <button class="btn" id="startBtn" type="button" disabled>Start ronde 1</button>
+  <p style="margin-top:14px;font-size:.82rem;color:var(--muted)">Geen inloggen, niets wordt opgeslagen.</p>
+</section>
+
+<section class="wrap hide" id="scherm-spel">
+  <div class="spelkop">
+    <span class="eyebrow" id="rondeLabel">ronde 1</span>
+    <span class="eyebrow" id="scoreLabel">0 goed</span>
+  </div>
+  <div class="balk"><i id="balkFill"></i></div>
+  <div class="speelveld">
+    <div class="kaartzone" id="kaartzone"></div>
+    <div class="bakken" id="bakken"></div>
+    <div class="melding" id="melding"></div>
+    <div id="naRonde"></div>
+  </div>
+</section>
+
+<section class="wrap hide einde" id="scherm-einde">
+  <p class="eyebrow">klaar</p>
+  <div class="score" id="eindScore">0 / 0</div>
+  <p style="color:var(--muted);margin-top:6px" id="eindTekst"></p>
+  <div class="overzicht" id="eindOverzicht"></div>
+  <button class="btn" id="nogeensBtn" type="button">Nog een keer</button>
+</section>
+
+<footer>
+  <div class="strip" aria-hidden="true">
+    <i style="background:var(--crab)"></i><i style="background:var(--amber)"></i><i style="background:var(--ocean)"></i><i style="background:var(--vista)"></i><i style="background:var(--sand)"></i>
+  </div>
+  Tijdvakken sorteren &middot; meneer Greidanus &middot; <span id="jaar">2026</span>
+</footer>
+
+<script>
+/* ============================================================================
+   TIJDVAKKEN SORTEREN
+   ----------------------------------------------------------------------------
+   Een gebeurtenis toevoegen doe je in GEBEURTENISSEN:
+     { tv:6, jaar:'1602', tekst:'...', waarom:'korte uitleg waarom dit tijdvak' }
+   tv is het nummer van het tijdvak hieronder, van 1 tot 10.
+   ============================================================================ */
+
+var TIJDVAKKEN = [
+  { n:1,  naam:'Jagers en boeren',           periode:'tot 3000 v.Chr.' },
+  { n:2,  naam:'Grieken en Romeinen',        periode:'3000 v.Chr. tot 500' },
+  { n:3,  naam:'Monniken en ridders',        periode:'500 tot 1000' },
+  { n:4,  naam:'Steden en staten',           periode:'1000 tot 1500' },
+  { n:5,  naam:'Ontdekkers en hervormers',   periode:'1500 tot 1600' },
+  { n:6,  naam:'Regenten en vorsten',        periode:'1600 tot 1700' },
+  { n:7,  naam:'Pruiken en revoluties',      periode:'1700 tot 1800' },
+  { n:8,  naam:'Burgers en stoommachines',   periode:'1800 tot 1900' },
+  { n:9,  naam:'Wereldoorlogen',             periode:'1900 tot 1950' },
+  { n:10, naam:'Televisie en computer',      periode:'1950 tot nu' }
+];
+
+/* de drie rondes: steeds meer vakken, dus steeds preciezer sorteren */
+var RONDES = [
+  { titel:'Vier grote periodes', bakken:[
+      { naam:'Prehistorie en oudheid', periode:'tot 500',        tv:[1,2] },
+      { naam:'Middeleeuwen',           periode:'500 tot 1500',   tv:[3,4] },
+      { naam:'Vroegmoderne tijd',      periode:'1500 tot 1800',  tv:[5,6,7] },
+      { naam:'Moderne tijd',           periode:'1800 tot nu',    tv:[8,9,10] }
+    ] },
+  { titel:'Zes periodes', bakken:[
+      { naam:'Jagers, Grieken en Romeinen', periode:'tot 500',       tv:[1,2] },
+      { naam:'Monniken en ridders',         periode:'500 tot 1000',  tv:[3] },
+      { naam:'Steden en staten',            periode:'1000 tot 1500', tv:[4] },
+      { naam:'Ontdekkers, regenten',        periode:'1500 tot 1700', tv:[5,6] },
+      { naam:'Pruiken en stoommachines',    periode:'1700 tot 1900', tv:[7,8] },
+      { naam:'De twintigste eeuw',          periode:'1900 tot nu',   tv:[9,10] }
+    ] },
+  { titel:'Alle tien de tijdvakken', bakken:TIJDVAKKEN.map(function(t){
+      return { naam:t.naam, periode:t.periode, tv:[t.n] };
+    }) }
+];
+
+var NIVEAUS = [
+  { id:'bb',  naam:'vmbo-bb',           rondes:[0,1],   perRonde:5, jaar:true,
+    uitleg:'Twee rondes, het jaartal staat op de kaart.' },
+  { id:'kgt', naam:'vmbo-kgt en gl/tl', rondes:[0,1,2], perRonde:5, jaar:true,
+    uitleg:'Drie rondes tot alle tien de tijdvakken, met jaartal.' },
+  { id:'hv',  naam:'havo en vwo',       rondes:[1,2,2], perRonde:6, jaar:false,
+    uitleg:'Zonder jaartal, je redeneert vanuit de gebeurtenis zelf.' }
+];
+
+var GEBEURTENISSEN = [
+  { tv:1, jaar:'ca. 10.000 v.Chr.', tekst:'Mensen gaan zaaien en oogsten in plaats van rondtrekken', waarom:'De landbouw hoort bij de tijd van jagers en boeren, nog ver voor het schrift.' },
+  { tv:1, jaar:'ca. 5300 v.Chr.',   tekst:'De eerste boeren vestigen zich in Zuid-Limburg', waarom:'Nederlandse prehistorie: er is nog geen schrift, we weten dit uit opgravingen.' },
+  { tv:1, jaar:'ca. 3000 v.Chr.',   tekst:'In Drenthe worden hunebedden gebouwd', waarom:'Grote grafmonumenten uit de steentijd, gemaakt door boerengemeenschappen.' },
+  { tv:2, jaar:'508 v.Chr.',        tekst:'In Athene mogen burgers zelf stemmen in de volksvergadering', waarom:'De Griekse democratie hoort bij de tijd van Grieken en Romeinen.' },
+  { tv:2, jaar:'218 v.Chr.',        tekst:'Hannibal trekt met olifanten over de Alpen', waarom:'De oorlogen tussen Rome en Carthago spelen in de klassieke oudheid.' },
+  { tv:2, jaar:'ca. 50 na Chr.',    tekst:'De Romeinen bouwen forten langs de Rijn als grens van hun rijk', waarom:'De limes liep dwars door Nederland, midden in de Romeinse tijd.' },
+  { tv:3, jaar:'690',               tekst:'Willibrord komt naar de Lage Landen om te kerstenen', waarom:'Monniken verspreidden het christendom in de vroege middeleeuwen.' },
+  { tv:3, jaar:'800',               tekst:'Karel de Grote wordt in Rome tot keizer gekroond', waarom:'Het Frankische rijk is het hoogtepunt van de tijd van monniken en ridders.' },
+  { tv:3, jaar:'834',               tekst:'Vikingen plunderen de handelsplaats Dorestad', waarom:'De Vikingtochten vallen in de vroege middeleeuwen, voor het jaar 1000.' },
+  { tv:4, jaar:'1220',              tekst:'Dordrecht krijgt als eerste stad in Holland stadsrechten', waarom:'Stadsrechten horen bij de opkomst van steden na het jaar 1000.' },
+  { tv:4, jaar:'1349',              tekst:'De pest bereikt de Lage Landen', waarom:'De zwarte dood raast in de late middeleeuwen door Europa.' },
+  { tv:4, jaar:'14e eeuw',          tekst:'Steden werken samen in de Hanze om handel te beschermen', waarom:'Het Hanzeverbond hoort bij de bloei van de steden voor 1500.' },
+  { tv:5, jaar:'1517',              tekst:'Luther maakt zijn kritiek op de kerk openbaar', waarom:'De Reformatie is het hart van de tijd van ontdekkers en hervormers.' },
+  { tv:5, jaar:'1522',              tekst:'Een schip keert terug na de eerste reis om de wereld', waarom:'De grote ontdekkingsreizen vallen in de zestiende eeuw.' },
+  { tv:5, jaar:'1566',              tekst:'In de Beeldenstorm worden beelden uit kerken vernield', waarom:'Het begin van de Opstand hoort nog bij de zestiende eeuw.' },
+  { tv:6, jaar:'1602',              tekst:'De VOC wordt opgericht als eerste bedrijf met aandelen', waarom:'De VOC hoort bij de Republiek in de zeventiende eeuw.' },
+  { tv:6, jaar:'1642',              tekst:'Rembrandt schildert de Nachtwacht', waarom:'De schilderkunst van de Republiek valt midden in de tijd van regenten en vorsten.' },
+  { tv:6, jaar:'1667',              tekst:'De Ruyter vaart de Theems op en sleept het Engelse vlaggenschip mee', waarom:'De Engelse oorlogen horen bij de zeventiende eeuw.' },
+  { tv:7, jaar:'1776',              tekst:'De Amerikaanse koloniën verklaren zich onafhankelijk', waarom:'De revoluties van de achttiende eeuw horen bij pruiken en revoluties.' },
+  { tv:7, jaar:'1789',              tekst:'In Parijs breekt de revolutie uit', waarom:'De Franse Revolutie is hét voorbeeld van dit tijdvak.' },
+  { tv:7, jaar:'1795',              tekst:'De Bataafse Republiek wordt uitgeroepen', waarom:'Nederland verandert onder Franse invloed, eind achttiende eeuw.' },
+  { tv:8, jaar:'1839',              tekst:'De eerste trein rijdt van Amsterdam naar Haarlem', waarom:'De stoommachine en het spoor horen bij de negentiende eeuw.' },
+  { tv:8, jaar:'1863',              tekst:'De slavernij in Suriname en op de Cariben wordt afgeschaft', waarom:'De afschaffing valt in de tijd van burgers en stoommachines.' },
+  { tv:8, jaar:'1874',              tekst:'Het kinderwetje verbiedt fabrieksarbeid door jonge kinderen', waarom:'De eerste sociale wetten komen in de negentiende eeuw.' },
+  { tv:9, jaar:'1914',              tekst:'In Europa breekt de Eerste Wereldoorlog uit', waarom:'De wereldoorlogen vormen samen het tijdvak 1900 tot 1950.' },
+  { tv:9, jaar:'1940',              tekst:'Duitse troepen vallen Nederland binnen', waarom:'De bezetting hoort midden in de tijd van de wereldoorlogen.' },
+  { tv:9, jaar:'1945',              tekst:'Nederland wordt bevrijd', waarom:'Het einde van de Tweede Wereldoorlog valt nog binnen dit tijdvak.' },
+  { tv:10, jaar:'1953',             tekst:'De watersnoodramp treft Zeeland en Zuid-Holland', waarom:'Na 1950, in de tijd van televisie en computer.' },
+  { tv:10, jaar:'1969',             tekst:'De eerste mens zet voet op de maan', waarom:'De ruimtevaart hoort bij de tweede helft van de twintigste eeuw.' },
+  { tv:10, jaar:'1989',             tekst:'De Berlijnse Muur valt', waarom:'Het einde van de Koude Oorlog valt in het laatste tijdvak.' }
+];
+
+/* ============================================================================
+   ENGINE
+   ============================================================================ */
+(function(){
+  'use strict';
+  document.getElementById('jaar').textContent = new Date().getFullYear();
+
+  var niveau = null, rondeNr = 0, kaarten = [], kaartNr = 0, goed = 0, totaal = 0, fouten = [], bezig = false;
+  var elStart = document.getElementById('scherm-start'), elSpel = document.getElementById('scherm-spel'),
+      elEinde = document.getElementById('scherm-einde'), elZone = document.getElementById('kaartzone'),
+      elBakken = document.getElementById('bakken'), elMelding = document.getElementById('melding'),
+      elNa = document.getElementById('naRonde');
+
+  /* ---------- niveau ---------- */
+  var kiezer = document.getElementById('niveaus');
+  NIVEAUS.forEach(function(n){
+    var b = document.createElement('button');
+    b.className = 'kaartje'; b.type = 'button';
+    b.innerHTML = '<b>' + n.naam + '</b><span>' + n.uitleg + '</span>';
+    b.addEventListener('click', function(){
+      niveau = n;
+      Array.prototype.forEach.call(kiezer.children, function(c){ c.classList.remove('on'); });
+      b.classList.add('on');
+      document.getElementById('startBtn').disabled = false;
+      var p = document.getElementById('pillNiv'); p.textContent = n.naam; p.classList.remove('hide');
+    });
+    kiezer.appendChild(b);
+  });
+
+  document.getElementById('startBtn').addEventListener('click', start);
+  document.getElementById('nogeensBtn').addEventListener('click', naarStart);
+  document.getElementById('opnieuwBtn').addEventListener('click', naarStart);
+  document.getElementById('grootBtn').addEventListener('click', function(){
+    document.body.classList.toggle('groot');
+    this.textContent = document.body.classList.contains('groot') ? 'Normaal' : 'Digibord';
+  });
+
+  function naarStart(){
+    elSpel.classList.add('hide'); elEinde.classList.add('hide'); elStart.classList.remove('hide');
+    scrollTo({top:0,behavior:'auto'});
+  }
+
+  function start(){
+    rondeNr = 0; goed = 0; totaal = 0; fouten = [];
+    elStart.classList.add('hide'); elEinde.classList.add('hide'); elSpel.classList.remove('hide');
+    startRonde();
+  }
+
+  function husselen(a){
+    a = a.slice();
+    for (var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; }
+    return a;
+  }
+
+  function startRonde(){
+    var ronde = RONDES[niveau.rondes[rondeNr]];
+    kaarten = husselen(GEBEURTENISSEN).slice(0, niveau.perRonde);
+    kaartNr = 0;
+    elNa.innerHTML = '';
+    document.getElementById('rondeLabel').textContent = 'Ronde ' + (rondeNr+1) + ' van ' + niveau.rondes.length + ': ' + ronde.titel;
+    tekenBakken(ronde);
+    volgendeKaart();
+  }
+
+  function tekenBakken(ronde){
+    elBakken.className = 'bakken b' + ronde.bakken.length;
+    elBakken.innerHTML = '';
+    ronde.bakken.forEach(function(bak, i){
+      var b = document.createElement('button');
+      b.className = 'bak'; b.type = 'button'; b.dataset.i = i;
+      b.innerHTML = '<b>' + bak.naam + '</b><span>' + bak.periode + '</span>';
+      b.addEventListener('click', function(){ if (!bezig) antwoord(i); });
+      elBakken.appendChild(b);
+    });
+  }
+
+  function volgendeKaart(){
+    elMelding.className = 'melding';
+    Array.prototype.forEach.call(elBakken.children, function(c){ c.classList.remove('goed','fout','hover'); });
+
+    if (kaartNr >= kaarten.length){ rondeKlaar(); return; }
+    var g = kaarten[kaartNr];
+    var k = document.createElement('div');
+    k.className = 'kaart';
+    k.innerHTML = (niveau.jaar ? '<div class="jaar">' + g.jaar + '</div>' : '') +
+      '<div class="geb">' + g.tekst + '</div>' +
+      '<div class="sleep">Sleep me naar het juiste vak, of tik op een vak</div>';
+    elZone.innerHTML = '';
+    elZone.appendChild(k);
+    maakSleepbaar(k);
+    werkBalkBij();
+  }
+
+  /* ---------- slepen met muis, vinger of pen ---------- */
+  function maakSleepbaar(kaart){
+    var actief = false, startX = 0, startY = 0, dx = 0, dy = 0;
+
+    kaart.addEventListener('pointerdown', function(e){
+      if (bezig) return;
+      actief = true; startX = e.clientX; startY = e.clientY;
+      kaart.setPointerCapture(e.pointerId);
+      kaart.classList.add('pak');
+    });
+
+    kaart.addEventListener('pointermove', function(e){
+      if (!actief) return;
+      dx = e.clientX - startX; dy = e.clientY - startY;
+      kaart.style.transform = 'translate(' + dx + 'px,' + dy + 'px) rotate(' + (dx*0.02) + 'deg)';
+      var bak = bakOnder(e.clientX, e.clientY);
+      Array.prototype.forEach.call(elBakken.children, function(c){ c.classList.toggle('hover', c === bak); });
+    });
+
+    kaart.addEventListener('pointerup', function(e){
+      if (!actief) return;
+      actief = false;
+      kaart.classList.remove('pak');
+      var bak = bakOnder(e.clientX, e.clientY);
+      Array.prototype.forEach.call(elBakken.children, function(c){ c.classList.remove('hover'); });
+      if (bak){ antwoord(parseInt(bak.dataset.i,10)); }
+      else { kaart.style.transform = ''; }
+    });
+
+    kaart.addEventListener('pointercancel', function(){
+      actief = false; kaart.classList.remove('pak'); kaart.style.transform = '';
+    });
+  }
+
+  function bakOnder(x, y){
+    var gevonden = null;
+    Array.prototype.forEach.call(elBakken.children, function(c){
+      var r = c.getBoundingClientRect();
+      if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) gevonden = c;
+    });
+    return gevonden;
+  }
+
+  /* ---------- antwoord verwerken ---------- */
+  function antwoord(bakIndex){
+    if (bezig) return;
+    bezig = true;
+    var ronde = RONDES[niveau.rondes[rondeNr]];
+    var g = kaarten[kaartNr];
+    var bak = ronde.bakken[bakIndex];
+    var klopt = bak.tv.indexOf(g.tv) !== -1;
+    var juisteIndex = 0;
+    ronde.bakken.forEach(function(b, i){ if (b.tv.indexOf(g.tv) !== -1) juisteIndex = i; });
+
+    totaal++;
+    if (klopt) goed++;
+    else fouten.push({ tekst:g.tekst, hoort:TIJDVAKKEN[g.tv-1].naam });
+
+    elBakken.children[juisteIndex].classList.add('goed');
+    if (!klopt) elBakken.children[bakIndex].classList.add('fout');
+
+    var kaart = elZone.querySelector('.kaart');
+    if (kaart){
+      kaart.style.transform = '';
+      if (!klopt) kaart.classList.add('mis');
+      kaart.style.opacity = '.55';
+    }
+
+    elMelding.className = 'melding on ' + (klopt ? 'ja' : 'nee');
+    elMelding.innerHTML = '<b>' + (klopt ? 'Goed' : 'Net niet, het hoort bij ' + TIJDVAKKEN[g.tv-1].naam) + '</b>' +
+      g.waarom + (niveau.jaar ? '' : ' Het gebeurde in ' + g.jaar + '.') +
+      '<br><button class="btn" id="verderBtn" type="button">Volgende</button>';
+
+    document.getElementById('verderBtn').addEventListener('click', function(){
+      bezig = false; kaartNr++; volgendeKaart();
+    });
+    werkBalkBij();
+  }
+
+  function werkBalkBij(){
+    var per = niveau.perRonde * niveau.rondes.length;
+    document.getElementById('balkFill').style.width = ((totaal/per)*100) + '%';
+    document.getElementById('scoreLabel').textContent = goed + ' van ' + totaal + ' goed';
+  }
+
+  function rondeKlaar(){
+    elZone.innerHTML = '';
+    elMelding.className = 'melding';
+    if (rondeNr + 1 < niveau.rondes.length){
+      var volgende = RONDES[niveau.rondes[rondeNr+1]];
+      elNa.innerHTML = '<div class="rondeklaar"><h3>Ronde ' + (rondeNr+1) + ' afgerond</h3>' +
+        '<p>De volgende ronde heeft ' + volgende.bakken.length + ' vakken: ' + volgende.titel.toLowerCase() + '. Dus preciezer kijken.</p>' +
+        '<button class="btn" id="naarVolgende" type="button">Start ronde ' + (rondeNr+2) + '</button></div>';
+      document.getElementById('naarVolgende').addEventListener('click', function(){
+        rondeNr++; startRonde(); scrollTo({top:0,behavior:'smooth'});
+      });
+    } else {
+      toonEinde();
+    }
+  }
+
+  function toonEinde(){
+    elSpel.classList.add('hide'); elEinde.classList.remove('hide');
+    document.getElementById('eindScore').textContent = goed + ' / ' + totaal;
+    var deel = totaal ? goed/totaal : 0;
+    document.getElementById('eindTekst').textContent =
+      deel >= .85 ? 'Sterk. Je weet niet alleen wanneer iets gebeurde, maar ook waar het bij hoort.' :
+      deel >= .6  ? 'Goed op weg. Kijk vooral nog eens naar de overgangen tussen twee tijdvakken.' :
+                    'Nog even oefenen. Onthoud eerst de vier grote periodes, daarna de tien tijdvakken.';
+    var html = '';
+    if (fouten.length){
+      fouten.forEach(function(f){
+        html += '<div class="rij"><span>' + f.tekst + '</span><b>' + f.hoort + '</b></div>';
+      });
+    } else {
+      html = '<div class="rij"><span>Alles goed gesorteerd</span><b>geen missers</b></div>';
+    }
+    document.getElementById('eindOverzicht').innerHTML = html;
+    scrollTo({top:0,behavior:'smooth'});
+  }
+})();
+</script>
+</body>
+</html>
