@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- De handelsroute, versie 1.0 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>De handelsroute &middot; meneer Greidanus</title>
+<meta name="description" content="Vaar tussen havens en handel in schaarse waar. De prijzen bewegen mee met vraag en aanbod, dus wie te veel haalt, ziet zijn winst verdampen.">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%23204ECF'/><text x='50' y='68' font-family='Poppins,Arial' font-size='46' font-weight='600' fill='%23FBF6F1' text-anchor='middle'>LG</text></svg>">
+<style>
+:root{--crab:#F26749;--amber:#EA9836;--ocean:#204ECF;--vista:#83A5F2;--sand:#FCDED6;--room:#FBF6F1;
+  --ink:#14224C;--muted:#5b6480;--op:#2f7d52;--neer:#c0442c;--max:1240px;--ease:cubic-bezier(.22,.61,.36,1)}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--room);color:var(--ink);line-height:1.55;
+  font-family:'Poppins',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;font-weight:600;line-height:1.12;letter-spacing:-.02em}
+p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+.wrap{width:min(100% - 28px,var(--max));margin-inline:auto}
+.hand{font-family:'Caveat',cursive;font-weight:600;color:var(--crab)}
+.eyebrow{font-size:.72rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.hide{display:none !important}
+header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-bottom:1px solid rgba(20,34,76,.08);padding:10px 0}
+.hd{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.mark{display:flex;align-items:center;gap:10px;font-weight:600;text-decoration:none}
+.mark i{width:32px;height:32px;border-radius:10px;background:var(--ocean);color:var(--room);display:grid;place-items:center;font-style:normal;font-size:.78rem}
+.hd-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.pill{background:var(--sand);font-weight:600;padding:6px 13px;border-radius:999px;font-size:.78rem}
+.linkbtn{background:none;border:none;color:var(--muted);text-decoration:underline;text-underline-offset:4px;font-size:.85rem;padding:6px}
+.linkbtn:hover{color:var(--ink)}
+
+.start{padding:44px 0 70px;text-align:center}
+.start h1{font-size:clamp(2.2rem,6vw,3.6rem);margin:8px 0 14px}
+.start .lead{max-width:60ch;margin:0 auto;color:var(--muted)}
+.kies{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:20px auto 0;max-width:940px}
+.kaartje{background:#fff;border:2px solid rgba(20,34,76,.10);border-radius:22px;padding:20px;text-align:left;transition:border-color .2s var(--ease),transform .2s var(--ease)}
+.kaartje:hover{border-color:var(--vista);transform:translateY(-3px)}
+.kaartje.on{border-color:var(--ocean);background:#f4f7ff}
+.kaartje b{display:block;font-size:1.05rem}
+.kaartje span{display:block;margin-top:5px;font-size:.86rem;color:var(--muted)}
+.btn{display:inline-block;border:none;background:var(--crab);color:#fff;font-weight:600;padding:14px 30px;border-radius:999px;
+  box-shadow:0 10px 0 rgba(20,34,76,.10);margin-top:22px;transition:transform .16s var(--ease)}
+.btn:hover{transform:translateY(-2px)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn.klein{padding:10px 20px;font-size:.9rem;box-shadow:0 7px 0 rgba(20,34,76,.10);margin-top:0}
+.btn.ghost{background:#fff;color:var(--ink);border:1.5px solid rgba(20,34,76,.15);box-shadow:none}
+
+/* ---------- spel ---------- */
+.spel{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:22px;padding:18px 0 60px;align-items:start}
+@media(max-width:960px){.spel{grid-template-columns:1fr;gap:16px}}
+.kolom{display:grid;gap:16px}
+.kaart{background:#fff;border:1px solid rgba(20,34,76,.08);border-radius:24px;box-shadow:0 14px 34px rgba(20,34,76,.07);overflow:hidden}
+.kaart .kop{padding:16px 20px 0;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.kaart .kop h2{font-size:1.1rem}
+.kaart .body{padding:14px 20px 20px}
+
+.status{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}
+.stat{background:var(--room);border:1px solid rgba(20,34,76,.08);border-radius:15px;padding:10px 13px}
+.stat i{display:block;font-style:normal;font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.stat b{font-size:1.15rem;font-weight:600}
+.stat.waarschuw b{color:var(--neer)}
+
+svg.zeekaart{display:block;width:100%;height:auto;background:#eef3ff}
+
+.markt{width:100%;border-collapse:collapse}
+.markt th{text-align:left;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:0 6px 8px 0}
+.markt td{padding:9px 6px;border-top:1px solid rgba(20,34,76,.08);vertical-align:middle}
+.waar{display:flex;align-items:center;gap:10px}
+.waar .stip{width:12px;height:12px;border-radius:4px;flex:none}
+.waar b{font-size:.95rem}
+.waar small{display:block;color:var(--muted);font-size:.74rem}
+.prijs{font-weight:600;white-space:nowrap}
+.prijs .pijl{font-size:.72rem;margin-left:5px}
+.pijl.op{color:var(--neer)}
+.pijl.neer{color:var(--op)}
+.spark{width:70px;height:22px}
+.knoppen{display:flex;gap:5px;justify-content:flex-end;flex-wrap:wrap}
+.mini{border:1.5px solid rgba(20,34,76,.14);background:var(--room);border-radius:11px;padding:6px 10px;font-size:.8rem;font-weight:600}
+.mini:hover:not(:disabled){border-color:var(--ocean)}
+.mini:disabled{opacity:.35;cursor:not-allowed}
+.mini.verkoop{background:#fff}
+body.groot .markt td{padding:12px 6px}
+body.groot .waar b{font-size:1.08rem}
+body.groot .mini{font-size:.92rem;padding:8px 13px}
+
+.havens{display:grid;gap:8px}
+.haven{display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:left;width:100%;
+  background:var(--room);border:1.5px solid rgba(20,34,76,.10);border-radius:15px;padding:12px 15px;
+  transition:border-color .18s var(--ease),transform .18s var(--ease)}
+.haven:hover:not(:disabled){border-color:var(--vista);transform:translateX(3px)}
+.haven:disabled{opacity:.45;cursor:not-allowed}
+.haven b{font-size:.97rem}
+.haven small{display:block;color:var(--muted);font-size:.78rem}
+.haven .kosten{font-size:.85rem;font-weight:600;color:var(--muted);white-space:nowrap}
+
+.bericht{border-radius:16px;padding:14px 16px;font-size:.92rem;margin-top:12px}
+.bericht.goed{background:#e7f3ec;color:#1f5c3c}
+.bericht.slecht{background:#fdecea;color:#8d3320}
+.bericht.neutraal{background:var(--sand);color:#4a3f3a}
+.bericht b{display:block;margin-bottom:2px}
+.bericht .hist{display:block;margin-top:7px;padding-top:7px;border-top:1px dashed rgba(20,34,76,.2);color:var(--muted);font-size:.84rem}
+
+.uitleg{font-size:.82rem;color:var(--muted);background:var(--room);border-left:3px solid var(--amber);
+  padding:10px 13px;border-radius:0 12px 12px 0;margin-top:12px}
+
+/* ---------- einde ---------- */
+.einde{padding:42px 0 70px;text-align:center}
+.groot-getal{font-size:clamp(2.6rem,9vw,4.6rem);font-weight:600;letter-spacing:-.04em;color:var(--ocean);line-height:1}
+.slot{max-width:760px;margin:24px auto 0;text-align:left;display:grid;gap:12px}
+.slotkaart{background:#fff;border:1px solid rgba(20,34,76,.08);border-radius:20px;padding:18px 20px}
+.slotkaart b{display:block;margin-bottom:4px}
+.slotkaart p{font-size:.94rem;color:var(--muted)}
+.denk{background:var(--sand);border-radius:20px;padding:18px 20px}
+.denk b{display:block;margin-bottom:4px}
+.denk p{font-size:.94rem;color:#42405a}
+footer{padding:26px 0 40px;font-size:.83rem;color:var(--muted);text-align:center}
+.strip{display:flex;height:7px;width:150px;border-radius:999px;overflow:hidden;margin:0 auto 12px}
+.strip i{flex:1}
+button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offset:3px;border-radius:10px}
+@media(prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap hd">
+    <a class="mark" href="over.html#materiaal"><i>LG</i> De handelsroute</a>
+    <div class="hd-right">
+      <span class="pill hide" id="pillRoute">route</span>
+      <span class="pill hide" id="pillNiv">niveau</span>
+      <button class="linkbtn" id="grootBtn" type="button">Digibord</button>
+      <button class="linkbtn" id="opnieuwBtn" type="button">Opnieuw</button>
+    </div>
+  </div>
+</header>
+
+<section class="start wrap" id="scherm-start">
+  <p class="hand" style="font-size:1.6rem">koop laag, verkoop hoog</p>
+  <h1>De handelsroute</h1>
+  <p class="lead">Je vaart met een schip tussen havens en handelt in schaarse waar. De prijzen liggen niet vast: ze bewegen mee met vraag en aanbod. Koop je veel op, dan stijgt de prijs terwijl je koopt. Verkoop je alles tegelijk, dan zakt hij onder je handen weg.</p>
+  <p class="eyebrow" style="margin-top:30px">kies je route</p>
+  <div class="kies" id="routes"></div>
+  <p class="eyebrow" style="margin-top:28px">kies je niveau</p>
+  <p style="font-size:.85rem;color:var(--muted);margin-top:6px">De niveaus zijn afgestemd op leerjaar 1 en 2.</p>
+  <div class="kies" id="niveaus"></div>
+  <button class="btn" id="startBtn" type="button" disabled>Uitvaren</button>
+  <p style="margin-top:14px;font-size:.82rem;color:var(--muted)">Geen inloggen, niets wordt opgeslagen.</p>
+</section>
+
+<section class="wrap hide" id="scherm-spel">
+  <div class="spel">
+    <div class="kolom">
+      <div class="kaart">
+        <svg class="zeekaart" id="zeekaart" viewBox="0 0 460 300" role="img" aria-label="Zeekaart met havens"></svg>
+        <div class="body">
+          <div class="status" id="status"></div>
+          <div id="berichtVak"></div>
+        </div>
+      </div>
+      <div class="kaart">
+        <div class="kop"><h2>Waarheen vaar je?</h2></div>
+        <div class="body"><div class="havens" id="havens"></div></div>
+      </div>
+    </div>
+
+    <div class="kolom">
+      <div class="kaart">
+        <div class="kop"><h2 id="marktTitel">De markt</h2><span class="eyebrow" id="marktSub"></span></div>
+        <div class="body">
+          <table class="markt"><thead><tr>
+            <th style="width:44%">Waar</th><th>Prijs</th><th id="kolomSpark">Verloop</th><th style="text-align:right">Handelen</th>
+          </tr></thead><tbody id="marktBody"></tbody></table>
+          <p class="uitleg" id="marktUitleg"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap hide einde" id="scherm-einde">
+  <p class="eyebrow">terug in de thuishaven</p>
+  <div class="groot-getal" id="eindGeld"></div>
+  <p style="color:var(--muted);margin-top:6px" id="eindSub"></p>
+  <div class="slot" id="eindSlot"></div>
+  <button class="btn" id="nogeensBtn" type="button">Nog een reis</button>
+</section>
+
+<footer>
+  <div class="strip" aria-hidden="true">
+    <i style="background:var(--crab)"></i><i style="background:var(--amber)"></i><i style="background:var(--ocean)"></i><i style="background:var(--vista)"></i><i style="background:var(--sand)"></i>
+  </div>
+  De handelsroute &middot; meneer Greidanus &middot; <span id="jaar">2026</span>
+</footer>
+
+<script>
+/* ============================================================================
+   DE HANDELSROUTE
+   ----------------------------------------------------------------------------
+   Hoe de prijs werkt:
+     prijs = basisprijs * (normale voorraad / huidige voorraad) ^ 0.8
+   Koop je iets, dan daalt de voorraad in die haven en stijgt de prijs meteen.
+   Verkoop je, dan stijgt de voorraad en daalt de prijs. Elke beurt kruipt de
+   voorraad een stukje terug naar normaal, en concurrenten verschuiven ook waar.
+
+   Een route toevoegen doe je in ROUTES: geef de waren, de havens met hun
+   coordinaten op de kaart, en per haven de normale voorraad en basisprijs.
+   ============================================================================ */
+
+var ROUTES = {
+  voc: {
+    naam:'De VOC-route', jaar:'rond 1650',
+    tag:'Van Amsterdam naar Azie en terug, met specerijen en laken.',
+    thuis:'Amsterdam',
+    zee:'#dce8ff', land:'#FCDED6',
+    waren:[
+      { id:'peper',      naam:'Peper',      kleur:'#14224C', uitleg:'goedkoop in Azie, gewild in Europa' },
+      { id:'nootmuskaat',naam:'Nootmuskaat',kleur:'#F26749', uitleg:'groeit maar op een handvol eilanden' },
+      { id:'kaneel',     naam:'Kaneel',     kleur:'#EA9836', uitleg:'vooral van Ceylon' },
+      { id:'laken',      naam:'Laken',      kleur:'#204ECF', uitleg:'Europees textiel, gewild in Azie' }
+    ],
+    havens:[
+      { naam:'Amsterdam', x:96,  y:56,  land:'M40 20 h130 v70 h-130 z',
+        voorraad:{peper:20, nootmuskaat:12, kaneel:18, laken:150},
+        basis:   {peper:26, nootmuskaat:58, kaneel:34, laken:9} },
+      { naam:'Kaapstad', x:150, y:214, land:'M104 186 h96 v70 h-96 z',
+        voorraad:{peper:40, nootmuskaat:25, kaneel:35, laken:40},
+        basis:   {peper:17, nootmuskaat:34, kaneel:22, laken:16} },
+      { naam:'Ceylon', x:300, y:158, land:'M266 132 h70 v54 h-70 z',
+        voorraad:{peper:65, nootmuskaat:20, kaneel:130, laken:20},
+        basis:   {peper:12, nootmuskaat:40, kaneel:7,  laken:22} },
+      { naam:'Batavia', x:378, y:206, land:'M340 182 h94 v58 h-94 z',
+        voorraad:{peper:140, nootmuskaat:85, kaneel:35, laken:15},
+        basis:   {peper:6,  nootmuskaat:12, kaneel:20, laken:26} },
+      { naam:'Nagasaki', x:412, y:92,  land:'M386 66 h58 v52 h-58 z',
+        voorraad:{peper:25, nootmuskaat:22,  kaneel:30, laken:25},
+        basis:   {peper:20, nootmuskaat:36, kaneel:26, laken:20} }
+    ],
+    slot:'De VOC verdiende niet door hard te werken, maar door schaarste te beheersen. Op de Banda-eilanden ging dat monopolie op nootmuskaat gepaard met grof geweld tegen de bevolking. Dat hoort bij dit verhaal.'
+  },
+  hanze: {
+    naam:'De Hanzeroute', jaar:'rond 1400',
+    tag:'Rond de Oostzee, met haring, graan, laken en bont.',
+    thuis:'Lübeck',
+    zee:'#e4edff', land:'#FCDED6',
+    waren:[
+      { id:'haring', naam:'Haring', kleur:'#204ECF', uitleg:'gezouten vis, houdbaar en overal gevraagd' },
+      { id:'graan',  naam:'Graan',  kleur:'#EA9836', uitleg:'komt uit het oosten, gaat naar de steden' },
+      { id:'laken',  naam:'Laken',  kleur:'#F26749', uitleg:'Vlaams textiel, duur en gewild' },
+      { id:'bont',   naam:'Bont',   kleur:'#14224C', uitleg:'pelzen uit de Russische bossen' }
+    ],
+    havens:[
+      { naam:'Brugge', x:74,  y:196, land:'M40 172 h80 v62 h-80 z',
+        voorraad:{haring:35, graan:25, laken:140, bont:15},
+        basis:   {haring:16, graan:20, laken:8,  bont:34} },
+      { naam:'Lübeck', x:196, y:150, land:'M160 126 h76 v58 h-76 z',
+        voorraad:{haring:55, graan:50, laken:40, bont:35},
+        basis:   {haring:13, graan:14, laken:20, bont:26} },
+      { naam:'Bergen', x:150, y:52,  land:'M112 24 h84 v62 h-84 z',
+        voorraad:{haring:150, graan:12,  laken:18,  bont:25},
+        basis:   {haring:5,  graan:24, laken:30, bont:30} },
+      { naam:'Danzig', x:300, y:132, land:'M266 108 h74 v56 h-74 z',
+        voorraad:{haring:40, graan:145, laken:20,  bont:30},
+        basis:   {haring:14, graan:5,  laken:26, bont:24} },
+      { naam:'Novgorod', x:398, y:66, land:'M362 40 h78 v60 h-78 z',
+        voorraad:{haring:20,  graan:40, laken:12,  bont:135},
+        basis:   {haring:18, graan:15, laken:28, bont:10} }
+    ],
+    slot:'De Hanze was geen land en geen leger, maar een verbond van steden. Hun macht kwam van informatie en vertrouwen: wie wist waar iets schaars was, verdiende het meest.'
+  }
+};
+
+var NIVEAUS = [
+  { id:'bb',  naam:'vmbo-bb',           beurten:8,  ruim:24, geld:1000, kosten:0,  events:false, tips:true,
+    uitleg:'Acht reizen, rustige markt en tips bij elke haven.' },
+  { id:'kgt', naam:'vmbo-kgt en gl/tl', beurten:10, ruim:28, geld:1000, kosten:0,  events:true,  tips:true,
+    uitleg:'Tien reizen, met storm, piraten en concurrenten.' },
+  { id:'hv',  naam:'havo en vwo',       beurten:12, ruim:32, geld:1400, kosten:20, events:true,  tips:false,
+    uitleg:'Twaalf reizen, vaste kosten per reis en geen tips.' }
+];
+
+var GEBEURTENISSEN = [
+  { id:'storm', soort:'slecht', kans:.18, tekst:'Een storm bij de kust. Je verliest een deel van je lading overboord.',
+    hist:'Van elke tien schepen die uitvoeren, keerde er gemiddeld een niet terug.' },
+  { id:'piraten', soort:'slecht', kans:.12, tekst:'Kapers eisen tol. Je betaalt om door te mogen varen.',
+    hist:'Kaapvaart was vaak gewoon oorlog met winstoogmerk, met toestemming van een vorst.' },
+  { id:'concurrent', soort:'slecht', kans:.22, tekst:'Een concurrent lost een volle lading in de haven. De prijs van die waar keldert.',
+    hist:'Hier zie je de kern van de markt: hoe meer aanbod, hoe lager de prijs. Precies daarom wilde de VOC een monopolie.' },
+  { id:'misoogst', soort:'neutraal', kans:.18, tekst:'Een misoogst maakt een waar schaars. De prijs schiet omhoog.',
+    hist:'Schaarste maakt rijk of arm, afhankelijk van of je koopt of verkoopt.' },
+  { id:'wind', soort:'goed', kans:.15, tekst:'Gunstige wind. Je bespaart op proviand en bemanning.',
+    hist:'De moesson bepaalde in Azie het hele vaarschema: je vertrok wanneer de wind het toeliet.' }
+];
+
+/* ============================================================================
+   ENGINE
+   ============================================================================ */
+(function(){
+  'use strict';
+  document.getElementById('jaar').textContent = new Date().getFullYear();
+
+  var route = null, niveau = null;
+  var geld = 0, beurt = 0, hier = 0, ruim = {}, markt = [], historie = {}, log = [], bericht = null, gekocht = {};
+
+  var elStart = document.getElementById('scherm-start'), elSpel = document.getElementById('scherm-spel'),
+      elEinde = document.getElementById('scherm-einde');
+
+  /* ---------- kiezers ---------- */
+  function bouwKiezer(lijst, doel, opKies, label){
+    var vak = document.getElementById(doel);
+    lijst.forEach(function(item){
+      var b = document.createElement('button');
+      b.className = 'kaartje'; b.type = 'button';
+      b.innerHTML = '<b>' + (item.naam) + '</b><span>' + (item.tag || item.uitleg) + '</span>';
+      b.addEventListener('click', function(){
+        Array.prototype.forEach.call(vak.children, function(c){ c.classList.remove('on'); });
+        b.classList.add('on'); opKies(item);
+        document.getElementById('startBtn').disabled = !(route && niveau);
+        var p = document.getElementById(label);
+        p.textContent = item.naam; p.classList.remove('hide');
+      });
+      vak.appendChild(b);
+    });
+  }
+  bouwKiezer(Object.keys(ROUTES).map(function(k){ var r = ROUTES[k]; r.id = k; return r; }), 'routes',
+             function(r){ route = r; }, 'pillRoute');
+  bouwKiezer(NIVEAUS, 'niveaus', function(n){ niveau = n; }, 'pillNiv');
+
+  document.getElementById('startBtn').addEventListener('click', start);
+  document.getElementById('nogeensBtn').addEventListener('click', naarStart);
+  document.getElementById('opnieuwBtn').addEventListener('click', naarStart);
+  document.getElementById('grootBtn').addEventListener('click', function(){
+    document.body.classList.toggle('groot');
+    this.textContent = document.body.classList.contains('groot') ? 'Normaal' : 'Digibord';
+  });
+  function naarStart(){
+    elSpel.classList.add('hide'); elEinde.classList.add('hide'); elStart.classList.remove('hide');
+    scrollTo({top:0,behavior:'auto'});
+  }
+
+  /* ---------- opzetten ---------- */
+  function start(){
+    geld = niveau.geld; beurt = 0; hier = 0; log = []; bericht = null; gekocht = {};
+    ruim = {}; historie = {};
+    route.waren.forEach(function(w){ ruim[w.id] = 0; gekocht[w.id] = 0; historie[w.id] = []; });
+
+    /* de markt: per haven de voorraad, met de normale stand als geheugen */
+    markt = route.havens.map(function(h){
+      var v = {}, n = {};
+      route.waren.forEach(function(w){ v[w.id] = h.voorraad[w.id]; n[w.id] = h.voorraad[w.id]; });
+      return { voorraad:v, normaal:n, dicht:0 };
+    });
+    noteerPrijzen();
+
+    elStart.classList.add('hide'); elEinde.classList.add('hide'); elSpel.classList.remove('hide');
+    tekenAlles();
+    scrollTo({top:0,behavior:'auto'});
+  }
+
+  /* ---------- de prijsmotor ---------- */
+  function prijsVan(hIdx, warId){
+    var m = markt[hIdx], h = route.havens[hIdx];
+    var v = Math.max(1, m.voorraad[warId]);
+    var p = h.basis[warId] * Math.pow(m.normaal[warId] / v, 0.8);
+    return Math.max(1, Math.round(p));
+  }
+  function noteerPrijzen(){
+    route.waren.forEach(function(w){ historie[w.id].push(prijsVan(hier, w.id)); });
+  }
+
+  function koop(warId, aantal){
+    var vrij = niveau.ruim - totaalRuim();
+    var n = 0;
+    for (var i = 0; i < aantal; i++){
+      if (n >= vrij) break;
+      if (markt[hier].voorraad[warId] <= 1) break;
+      var p = prijsVan(hier, warId);
+      if (geld < p) break;
+      geld -= p; ruim[warId]++; gekocht[warId]++;
+      markt[hier].voorraad[warId]--;   /* minder aanbod, dus de prijs stijgt meteen */
+      n++;
+    }
+    if (n === 0) toonBericht('neutraal', 'Dat lukt niet', 'Geen geld, geen ruimte in het schip, of de haven heeft niets meer.');
+    else log.push({ soort:'koop', waar:warId, aantal:n, haven:route.havens[hier].naam });
+    tekenAlles();
+  }
+  function verkoop(warId, aantal){
+    var n = 0;
+    for (var i = 0; i < aantal; i++){
+      if (ruim[warId] <= 0) break;
+      var p = prijsVan(hier, warId);
+      geld += p; ruim[warId]--;
+      markt[hier].voorraad[warId]++;   /* meer aanbod, dus de prijs daalt meteen */
+      n++;
+    }
+    if (n) log.push({ soort:'verkoop', waar:warId, aantal:n, haven:route.havens[hier].naam });
+    tekenAlles();
+  }
+  function totaalRuim(){
+    var t = 0; route.waren.forEach(function(w){ t += ruim[w.id]; }); return t;
+  }
+
+  /* ---------- varen ---------- */
+  function afstand(a, b){
+    var dx = route.havens[a].x - route.havens[b].x, dy = route.havens[a].y - route.havens[b].y;
+    return Math.sqrt(dx*dx + dy*dy);
+  }
+  function reiskosten(a, b){ return Math.round(afstand(a,b) * 0.34) + niveau.kosten; }
+
+  function vaar(naar){
+    var kost = reiskosten(hier, naar);
+    if (geld < kost){
+      toonBericht('slecht', 'Te weinig geld', 'Je kunt de bemanning en de proviand voor deze reis niet betalen. Verkoop eerst iets.');
+      tekenAlles(); return;
+    }
+    geld -= kost; hier = naar; beurt++;
+    marktBeweegt();
+    if (niveau.events) gebeurtenis();
+    noteerPrijzen();
+    if (beurt >= niveau.beurten) toonEinde();
+    else tekenAlles();
+  }
+
+  /* elke reis kruipt de voorraad terug naar normaal en handelen anderen ook */
+  function marktBeweegt(){
+    markt.forEach(function(m){
+      route.waren.forEach(function(w){
+        var verschil = m.normaal[w.id] - m.voorraad[w.id];
+        m.voorraad[w.id] = Math.max(1, Math.round(m.voorraad[w.id] + verschil * 0.20));
+        var ruis = Math.round((Math.random() - .5) * m.normaal[w.id] * 0.12);
+        m.voorraad[w.id] = Math.max(1, m.voorraad[w.id] + ruis);
+      });
+      if (m.dicht > 0) m.dicht--;
+    });
+  }
+
+  function gebeurtenis(){
+    var kans = Math.random();
+    if (kans > .55) { bericht = null; return; }   /* meestal gebeurt er niets bijzonders */
+    var e = GEBEURTENISSEN[Math.floor(Math.random() * GEBEURTENISSEN.length)];
+    var w = route.waren[Math.floor(Math.random() * route.waren.length)];
+    var tekst = e.tekst;
+
+    if (e.id === 'storm'){
+      var kwijt = Math.ceil(totaalRuim() * 0.22);
+      route.waren.forEach(function(x){
+        var deel = Math.min(ruim[x.id], Math.ceil(kwijt / route.waren.length));
+        ruim[x.id] -= deel;
+      });
+      tekst += ' Je verliest ongeveer ' + kwijt + ' balen.';
+    } else if (e.id === 'piraten'){
+      var boete = Math.min(geld, 90 + Math.round(Math.random()*120));
+      geld -= boete;
+      tekst += ' Het kost je ' + boete + ' gulden.';
+    } else if (e.id === 'concurrent'){
+      markt[hier].voorraad[w.id] += Math.round(markt[hier].normaal[w.id] * 0.9);
+      tekst = 'Een concurrent lost een volle lading ' + w.naam.toLowerCase() + ' in ' +
+              route.havens[hier].naam + '. De prijs keldert.';
+    } else if (e.id === 'misoogst'){
+      markt[hier].voorraad[w.id] = Math.max(1, Math.round(markt[hier].voorraad[w.id] * 0.35));
+      tekst = 'Misoogst: er is bijna geen ' + w.naam.toLowerCase() + ' in ' +
+              route.havens[hier].naam + '. De prijs schiet omhoog.';
+    } else if (e.id === 'wind'){
+      var terug = 60 + Math.round(Math.random()*70);
+      geld += terug;
+      tekst += ' Je houdt ' + terug + ' gulden over.';
+    }
+    bericht = { soort:e.soort, titel:'Onderweg', tekst:tekst, hist:e.hist };
+  }
+
+  function toonBericht(soort, titel, tekst, hist){
+    bericht = { soort:soort, titel:titel, tekst:tekst, hist:hist };
+  }
+
+  /* ---------- tekenen ---------- */
+  function tekenAlles(){ tekenKaart(); tekenStatus(); tekenMarkt(); tekenHavens(); tekenBericht(); }
+
+  function tekenKaart(){
+    var s = '<rect width="460" height="300" fill="' + route.zee + '"/>';
+    s += '<g stroke="#204ECF" stroke-opacity=".10" stroke-width="1">';
+    for (var x = 40; x < 460; x += 40) s += '<path d="M' + x + ' 0V300"/>';
+    for (var y = 40; y < 300; y += 40) s += '<path d="M0 ' + y + 'H460"/>';
+    s += '</g>';
+    route.havens.forEach(function(h){
+      s += '<path d="' + h.land + '" fill="' + route.land + '" stroke="#14224C" stroke-opacity=".18" stroke-width="1.2"/>';
+    });
+    /* de route die je gevaren hebt */
+    var pad = '';
+    log.filter(function(l){ return l.soort === 'reis'; });
+    route.havens.forEach(function(h, i){
+      var actief = i === hier;
+      s += '<circle cx="' + h.x + '" cy="' + h.y + '" r="' + (actief ? 9 : 6) + '" fill="' +
+           (actief ? '#F26749' : '#204ECF') + '" stroke="#FBF6F1" stroke-width="2.5"/>';
+      var links = h.x > 340;
+      s += '<text x="' + (h.x + (links ? -12 : 12)) + '" y="' + (h.y + 4) + '" text-anchor="' + (links ? 'end' : 'start') +
+           '" font-family="Poppins" font-size="11" font-weight="600" fill="#14224C">' + h.naam + '</text>';
+    });
+    document.getElementById('zeekaart').innerHTML = s;
+  }
+
+  function tekenStatus(){
+    var vrij = niveau.ruim - totaalRuim();
+    var lading = route.waren.filter(function(w){ return ruim[w.id] > 0; })
+      .map(function(w){ return w.naam + ' ' + ruim[w.id]; }).join(', ') || 'leeg';
+    document.getElementById('status').innerHTML =
+      '<div class="stat"><i>Kas</i><b>' + geld + '</b></div>' +
+      '<div class="stat' + (beurt >= niveau.beurten - 2 ? ' waarschuw' : '') + '"><i>Reizen over</i><b>' + (niveau.beurten - beurt) + '</b></div>' +
+      '<div class="stat"><i>Ruim vrij</i><b>' + vrij + ' van ' + niveau.ruim + '</b></div>' +
+      '<div class="stat" style="grid-column:span 2"><i>Lading</i><b style="font-size:.92rem;font-weight:500">' + lading + '</b></div>';
+  }
+
+  function sparkline(warId){
+    var h = historie[warId].slice(-12);
+    if (h.length < 2) return '<svg class="spark"></svg>';
+    var min = Math.min.apply(null, h), max = Math.max.apply(null, h), sp = Math.max(1, max - min);
+    var d = h.map(function(p, i){
+      return (i ? 'L' : 'M') + (i / (h.length - 1) * 66 + 2).toFixed(1) + ' ' + (20 - (p - min) / sp * 16).toFixed(1);
+    }).join(' ');
+    var stijgt = h[h.length-1] >= h[0];
+    return '<svg class="spark" viewBox="0 0 70 22"><path d="' + d + '" fill="none" stroke="' +
+           (stijgt ? '#c0442c' : '#2f7d52') + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+
+  function tekenMarkt(){
+    var h = route.havens[hier];
+    document.getElementById('marktTitel').textContent = 'De markt van ' + h.naam;
+    document.getElementById('marktSub').textContent = 'reis ' + Math.min(beurt+1, niveau.beurten) + ' van ' + niveau.beurten;
+
+    var rijen = '';
+    route.waren.forEach(function(w){
+      var p = prijsVan(hier, w.id);
+      var vorige = historie[w.id][historie[w.id].length - 2];
+      var pijl = '';
+      if (vorige !== undefined && p !== vorige){
+        pijl = '<span class="pijl ' + (p > vorige ? 'op' : 'neer') + '">' + (p > vorige ? '&#9650;' : '&#9660;') + '</span>';
+      }
+      var tip = niveau.tips ? '<small>' + w.uitleg + '</small>' : '';
+      rijen += '<tr>' +
+        '<td><div class="waar"><span class="stip" style="background:' + w.kleur + '"></span>' +
+          '<span><b>' + w.naam + '</b>' + tip + '</span></div></td>' +
+        '<td class="prijs">' + p + pijl + '<br><small style="color:var(--muted);font-weight:400">in ruim: ' + ruim[w.id] + '</small></td>' +
+        '<td>' + sparkline(w.id) + '</td>' +
+        '<td><div class="knoppen">' +
+          '<button class="mini" data-koop="' + w.id + '" data-n="1">koop 1</button>' +
+          '<button class="mini" data-koop="' + w.id + '" data-n="5">5</button>' +
+          '<button class="mini verkoop" data-verkoop="' + w.id + '" data-n="1"' + (ruim[w.id] ? '' : ' disabled') + '>verkoop 1</button>' +
+          '<button class="mini verkoop" data-verkoop="' + w.id + '" data-n="99"' + (ruim[w.id] ? '' : ' disabled') + '>alles</button>' +
+        '</div></td></tr>';
+    });
+    document.getElementById('marktBody').innerHTML = rijen;
+
+    document.getElementById('marktUitleg').textContent = niveau.tips
+      ? 'Let op: terwijl jij koopt, wordt de waar hier schaarser en stijgt de prijs. Verkoop je alles in een keer, dan zakt de prijs met elke baal die je lost.'
+      : 'De prijs volgt de voorraad in deze haven. Jouw eigen handel verandert die voorraad, en dus de prijs.';
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-koop]'), function(b){
+      b.addEventListener('click', function(){ koop(b.dataset.koop, parseInt(b.dataset.n,10)); });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-verkoop]'), function(b){
+      b.addEventListener('click', function(){ verkoop(b.dataset.verkoop, parseInt(b.dataset.n,10)); });
+    });
+  }
+
+  function tekenHavens(){
+    var html = '';
+    route.havens.forEach(function(h, i){
+      if (i === hier) return;
+      var kost = reiskosten(hier, i);
+      html += '<button class="haven" data-vaar="' + i + '"' + (geld < kost ? ' disabled' : '') + '>' +
+        '<span><b>' + h.naam + '</b><small>' + (afstand(hier,i) > 180 ? 'verre reis' : 'korte oversteek') + '</small></span>' +
+        '<span class="kosten">' + kost + ' gulden</span></button>';
+    });
+    document.getElementById('havens').innerHTML = html;
+    Array.prototype.forEach.call(document.querySelectorAll('[data-vaar]'), function(b){
+      b.addEventListener('click', function(){ vaar(parseInt(b.dataset.vaar,10)); });
+    });
+  }
+
+  function tekenBericht(){
+    var vak = document.getElementById('berichtVak');
+    if (!bericht){ vak.innerHTML = ''; return; }
+    vak.innerHTML = '<div class="bericht ' + bericht.soort + '"><b>' + bericht.titel + '</b>' + bericht.tekst +
+      (bericht.hist ? '<span class="hist">' + bericht.hist + '</span>' : '') + '</div>';
+  }
+
+  /* ---------- einde ---------- */
+  function toonEinde(){
+    /* wat nog in het ruim ligt, verkoop je noodgedwongen in de laatste haven */
+    var restOpbrengst = 0;
+    route.waren.forEach(function(w){
+      while (ruim[w.id] > 0){ restOpbrengst += prijsVan(hier, w.id); markt[hier].voorraad[w.id]++; ruim[w.id]--; }
+    });
+    geld += restOpbrengst;
+
+    elSpel.classList.add('hide'); elEinde.classList.remove('hide');
+    var winst = geld - niveau.geld;
+    var factor = geld / niveau.geld;
+
+    document.getElementById('eindGeld').textContent = geld + ' gulden';
+    document.getElementById('eindSub').textContent =
+      (winst >= 0 ? 'Je begon met ' + niveau.geld + ' en maakte ' + winst + ' gulden winst.'
+                  : 'Je begon met ' + niveau.geld + ' en verloor ' + Math.abs(winst) + ' gulden.') +
+      (restOpbrengst ? ' De laatste lading bracht nog ' + restOpbrengst + ' gulden op.' : '');
+
+    var oordeel = factor >= 1.8 ? 'Een fortuin. Dit is het soort reis waar in de haven over gesproken werd.'
+                : factor >= 1.3 ? 'Een goede reis. Je hebt schaarste gevonden en gedoseerd verkocht.'
+                : factor >= 1.0 ? 'Je hield het hoofd boven water, maar de reiskosten aten je winst grotendeels op.'
+                                : 'Verlies. Reizen kost geld, en wie alles tegelijk lost, ziet de prijs onder zijn handen wegzakken.';
+
+    /* meest verhandelde waar en wat er met die prijs gebeurde */
+    var top = route.waren[0];
+    route.waren.forEach(function(w){ if (gekocht[w.id] > gekocht[top.id]) top = w; });
+    var reeks = historie[top.id];
+    var eerste = reeks[0], laatst = reeks[reeks.length-1];
+    var beweging = gekocht[top.id] === 0 ? 'Je hebt eigenlijk nauwelijks gehandeld.'
+      : 'Je kocht in totaal ' + gekocht[top.id] + ' balen ' + top.naam.toLowerCase() + '. In de haven waar je eindigde ging de prijs van ' +
+        eerste + ' naar ' + laatst + ' gulden.';
+
+    document.getElementById('eindSlot').innerHTML =
+      '<div class="slotkaart"><b>Hoe het ging</b><p>' + oordeel + '</p></div>' +
+      '<div class="slotkaart"><b>Jouw belangrijkste waar: ' + top.naam.toLowerCase() + '</b><p>' + beweging +
+        ' Dat is geen toeval: hoe meer er van iets is, hoe lager de prijs. Handel gaf winst door verschil, niet door hard werken.</p></div>' +
+      '<div class="slotkaart"><b>Waarom deze handel bestond</b><p>' + route.slot + '</p></div>' +
+      '<div class="denk"><b>Denkvraag</b><p>Stel dat drie schepen tegelijk dezelfde waar halen. Wat gebeurt er dan met de prijs, en met de winst van alle drie? En wat zou jij doen als je dat kon voorkomen?</p></div>';
+    scrollTo({top:0,behavior:'smooth'});
+  }
+})();
+</script>
+</body>
+</html>
