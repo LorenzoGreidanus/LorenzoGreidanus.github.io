@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- De vergadering, versie 1.0 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>De vergadering &middot; meneer Greidanus</title>
+<meta name="description" content="Jij bent Holland. Zeven gewesten moeten unaniem instemmen met een oorlogsbelasting. Onderhandel, geef toe en ontdek waarom de Republiek zo traag besliste.">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%23204ECF'/><text x='50' y='68' font-family='Poppins,Arial' font-size='46' font-weight='600' fill='%23FBF6F1' text-anchor='middle'>LG</text></svg>">
+<style>
+:root{--crab:#F26749;--amber:#EA9836;--ocean:#204ECF;--vista:#83A5F2;--sand:#FCDED6;--room:#FBF6F1;
+  --ink:#14224C;--muted:#5b6480;--op:#2f7d52;--neer:#c0442c;--max:1240px;--ease:cubic-bezier(.22,.61,.36,1)}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--room);color:var(--ink);line-height:1.55;
+  font-family:'Poppins',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;font-weight:600;line-height:1.12;letter-spacing:-.02em}
+p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+.wrap{width:min(100% - 28px,var(--max));margin-inline:auto}
+.hand{font-family:'Caveat',cursive;font-weight:600;color:var(--crab)}
+.eyebrow{font-size:.72rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.hide{display:none !important}
+header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-bottom:1px solid rgba(20,34,76,.08);padding:10px 0}
+.hd{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.mark{display:flex;align-items:center;gap:10px;font-weight:600;text-decoration:none}
+.mark i{width:32px;height:32px;border-radius:10px;background:var(--ocean);color:var(--room);display:grid;place-items:center;font-style:normal;font-size:.78rem}
+.hd-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.pill{background:var(--sand);font-weight:600;padding:6px 13px;border-radius:999px;font-size:.78rem}
+.linkbtn{background:none;border:none;color:var(--muted);text-decoration:underline;text-underline-offset:4px;font-size:.85rem;padding:6px}
+.linkbtn:hover{color:var(--ink)}
+
+.start{padding:44px 0 70px;text-align:center}
+.start h1{font-size:clamp(2.2rem,6vw,3.6rem);margin:8px 0 14px}
+.start .lead{max-width:60ch;margin:0 auto;color:var(--muted)}
+.kies{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:20px auto 0;max-width:900px}
+.kaartje{background:#fff;border:2px solid rgba(20,34,76,.10);border-radius:22px;padding:20px;text-align:left;transition:border-color .2s var(--ease),transform .2s var(--ease)}
+.kaartje:hover{border-color:var(--vista);transform:translateY(-3px)}
+.kaartje.on{border-color:var(--ocean);background:#f4f7ff}
+.kaartje b{display:block;font-size:1.05rem}
+.kaartje span{display:block;margin-top:5px;font-size:.86rem;color:var(--muted)}
+.btn{display:inline-block;border:none;background:var(--crab);color:#fff;font-weight:600;padding:14px 30px;border-radius:999px;
+  box-shadow:0 10px 0 rgba(20,34,76,.10);margin-top:22px;transition:transform .16s var(--ease)}
+.btn:hover{transform:translateY(-2px)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn.ghost{background:#fff;color:var(--ink);border:1.5px solid rgba(20,34,76,.15);box-shadow:none;margin-left:8px}
+
+/* ---------- spel ---------- */
+.spel{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);gap:22px;padding:18px 0 60px;align-items:start}
+@media(max-width:980px){.spel{grid-template-columns:1fr;gap:16px}}
+.kolom{display:grid;gap:16px}
+.kaart{background:#fff;border:1px solid rgba(20,34,76,.08);border-radius:24px;box-shadow:0 14px 34px rgba(20,34,76,.07);overflow:hidden}
+.kaart .kop{padding:16px 20px 0;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.kaart .kop h2{font-size:1.08rem}
+.kaart .body{padding:14px 20px 20px}
+
+svg.gewestkaart{display:block;width:100%;height:auto;background:#e8f0ff}
+svg.gewestkaart .gewest{cursor:pointer;transition:opacity .2s var(--ease)}
+svg.gewestkaart .gewest:hover{opacity:.82}
+svg.gewestkaart .actief{stroke:#14224C;stroke-width:2.5}
+
+.status{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:9px}
+.stat{background:var(--room);border:1px solid rgba(20,34,76,.08);border-radius:14px;padding:9px 12px}
+.stat i{display:block;font-style:normal;font-size:.64rem;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
+.stat b{font-size:1.1rem;font-weight:600}
+.stat.waarschuw b{color:var(--neer)}
+
+.lijst{display:grid;gap:8px}
+.gewestrij{display:grid;grid-template-columns:14px 1fr auto;gap:10px;align-items:center;width:100%;text-align:left;
+  background:var(--room);border:1.5px solid rgba(20,34,76,.10);border-radius:14px;padding:10px 13px;
+  transition:border-color .18s var(--ease),transform .18s var(--ease)}
+.gewestrij:hover{border-color:var(--vista);transform:translateX(2px)}
+.gewestrij.gekozen{border-color:var(--ocean);background:#f4f7ff}
+.gewestrij .kleur{width:14px;height:14px;border-radius:5px}
+.gewestrij b{font-size:.94rem;display:block}
+.gewestrij small{color:var(--muted);font-size:.76rem}
+.meterbalk{width:88px;height:9px;border-radius:999px;background:rgba(20,34,76,.10);overflow:hidden}
+.meterbalk i{display:block;height:100%;border-radius:999px;transition:width .4s var(--ease)}
+.stemwaarde{font-size:.74rem;font-weight:600;color:var(--muted);text-align:right;min-width:70px}
+
+.acties{display:grid;gap:9px}
+.actie{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;text-align:left;width:100%;
+  background:var(--room);border:1.5px solid rgba(20,34,76,.10);border-radius:15px;padding:12px 15px;
+  transition:border-color .18s var(--ease),transform .18s var(--ease)}
+.actie:hover:not(:disabled){border-color:var(--vista);transform:translateX(3px)}
+.actie:disabled{opacity:.42;cursor:not-allowed}
+.actie b{font-size:.95rem}
+.actie small{display:block;color:var(--muted);font-size:.8rem;margin-top:2px}
+.actie .prijs{font-size:.8rem;font-weight:600;color:var(--muted);white-space:nowrap}
+body.groot .actie b{font-size:1.1rem}
+body.groot .verslag{font-size:1.05rem}
+
+.verslag{background:var(--room);border-left:3px solid var(--amber);border-radius:0 14px 14px 0;padding:12px 15px;
+  font-size:.9rem;margin-top:12px;max-height:230px;overflow:auto}
+.verslag p{margin-bottom:8px}
+.verslag p:last-child{margin-bottom:0}
+.verslag b{color:var(--ink)}
+.verslag .op{color:var(--op);font-weight:600}
+.verslag .neer{color:var(--neer);font-weight:600}
+
+.stemming{margin-top:14px;display:grid;gap:8px}
+.stem{display:flex;justify-content:space-between;background:#fff;border:1px solid rgba(20,34,76,.1);
+  border-radius:13px;padding:10px 14px;font-size:.9rem}
+.stem.ja{background:#e7f3ec}
+.stem.nee{background:#fdecea}
+
+/* ---------- einde ---------- */
+.einde{padding:42px 0 70px;text-align:center}
+.uitslag{font-size:clamp(1.9rem,5.5vw,3.2rem);font-weight:600;letter-spacing:-.03em;line-height:1.1}
+.slot{max-width:760px;margin:24px auto 0;text-align:left;display:grid;gap:12px}
+.slotkaart{background:#fff;border:1px solid rgba(20,34,76,.08);border-radius:20px;padding:18px 20px}
+.slotkaart b{display:block;margin-bottom:4px}
+.slotkaart p{font-size:.94rem;color:var(--muted)}
+.denk{background:var(--sand);border-radius:20px;padding:18px 20px}
+.denk b{display:block;margin-bottom:4px}
+.denk p{font-size:.94rem;color:#42405a}
+footer{padding:26px 0 40px;font-size:.83rem;color:var(--muted);text-align:center}
+.strip{display:flex;height:7px;width:150px;border-radius:999px;overflow:hidden;margin:0 auto 12px}
+.strip i{flex:1}
+button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offset:3px;border-radius:10px}
+@media(prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap hd">
+    <a class="mark" href="over.html#materiaal"><i>LG</i> De vergadering</a>
+    <div class="hd-right">
+      <span class="pill hide" id="pillNiv">niveau</span>
+      <button class="linkbtn" id="grootBtn" type="button">Digibord</button>
+      <button class="linkbtn" id="opnieuwBtn" type="button">Opnieuw</button>
+    </div>
+  </div>
+</header>
+
+<section class="start wrap" id="scherm-start">
+  <p class="hand" style="font-size:1.6rem">iedereen moet ja zeggen</p>
+  <h1>De vergadering</h1>
+  <p class="lead">Het is 1672 en Frankrijk valt binnen. In Den Haag moeten de zeven gewesten samen een oorlogsbelasting goedkeuren. Jij bent Holland en betaalt in je eentje bijna zestig procent. Toch heeft Overijssel, dat nog geen vier procent betaalt, precies evenveel stem als jij: een enkel nee blokkeert alles.</p>
+  <p class="eyebrow" style="margin-top:30px">kies je niveau</p>
+  <p style="font-size:.85rem;color:var(--muted);margin-top:6px">De niveaus zijn afgestemd op leerjaar 1 en 2.</p>
+  <div class="kies" id="niveaus"></div>
+  <button class="btn" id="startBtn" type="button" disabled>Open de vergadering</button>
+  <p style="margin-top:14px;font-size:.82rem;color:var(--muted)">Geen inloggen, niets wordt opgeslagen.</p>
+</section>
+
+<section class="wrap hide" id="scherm-spel">
+  <div class="spel">
+    <div class="kolom">
+      <div class="kaart">
+        <svg class="gewestkaart" id="kaartSvg" viewBox="0 0 380 470" role="img" aria-label="Kaart van de Republiek met de zeven gewesten"></svg>
+        <div class="body">
+          <div class="status" id="status"></div>
+        </div>
+      </div>
+      <div class="kaart">
+        <div class="kop"><h2>De zeven gewesten</h2><span class="eyebrow">stem en aandeel</span></div>
+        <div class="body"><div class="lijst" id="lijst"></div></div>
+      </div>
+    </div>
+
+    <div class="kolom">
+      <div class="kaart">
+        <div class="kop"><h2 id="actieTitel">Kies een gewest</h2><span class="eyebrow" id="actieSub"></span></div>
+        <div class="body">
+          <p id="gewestTekst" style="color:#33405f;font-size:.95rem"></p>
+          <div class="acties" id="acties" style="margin-top:14px"></div>
+          <div class="verslag" id="verslag"></div>
+        </div>
+      </div>
+      <div class="kaart">
+        <div class="kop"><h2>De eindstemming</h2></div>
+        <div class="body">
+          <p style="color:var(--muted);font-size:.9rem">Elk gewest stemt ja bij voldoende steun. Een enkel nee betekent dat het voorstel er niet komt. Je mag het opnieuw proberen, maar dat kost dagen en gezag.</p>
+          <button class="btn" id="stemBtn" type="button" style="margin-top:14px">Breng in stemming</button>
+          <div class="stemming" id="stemming"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap hide einde" id="scherm-einde">
+  <p class="eyebrow" id="eindLabel">de uitslag</p>
+  <h2 class="uitslag" id="eindTitel"></h2>
+  <p style="color:var(--muted);margin-top:8px;max-width:56ch;margin-inline:auto" id="eindSub"></p>
+  <div class="slot" id="eindSlot"></div>
+  <button class="btn" id="nogeensBtn" type="button">Nog een keer</button>
+</section>
+
+<footer>
+  <div class="strip" aria-hidden="true">
+    <i style="background:var(--crab)"></i><i style="background:var(--amber)"></i><i style="background:var(--ocean)"></i><i style="background:var(--vista)"></i><i style="background:var(--sand)"></i>
+  </div>
+  De vergadering &middot; meneer Greidanus &middot; <span id="jaar">2026</span>
+</footer>
+
+<script>
+/* ============================================================================
+   DE VERGADERING
+   ----------------------------------------------------------------------------
+   De aandelen in de repartitie zijn de echte: Holland betaalde ruim 58 procent
+   van alles, Overijssel nog geen 4 procent, en toch had elk gewest een stem.
+
+   Een gewest heeft:
+     steun     0 tot 100, vanaf 60 stemt het ja
+     belang    waar het gewest echt om geeft
+     eisen     concessies die je kunt doen, met kosten en neveneffecten
+   ============================================================================ */
+
+var GEWESTEN = [
+  { id:'holland', naam:'Holland', deel:58.3, kleur:'#F26749', steun:100, speler:true,
+    pad:'M150 128 L172 140 L178 176 L186 206 L188 246 L184 286 L176 300 L150 306 L128 296 L104 282 L112 250 L126 208 L134 168 Z',
+    labelx:146, labely:230,
+    kort:'Rijk van handel, betaalt bijna zestig procent en wil dat de oorlog snel gefinancierd wordt.',
+    belang:'', eisen:[] },
+
+  { id:'zeeland', naam:'Zeeland', deel:9.2, kleur:'#204ECF', steun:44,
+    pad:'M56 336 L108 330 L124 344 L120 366 L88 380 L58 372 Z M126 350 L152 344 L156 364 L130 372 Z',
+    labelx:88, labely:356,
+    kort:'Leeft van zeehandel en kaapvaart. Wil dat het geld naar de vloot gaat, niet naar het leger.',
+    belang:'vloot',
+    eisen:[
+      { id:'z1', naam:'Meer geld naar de vloot dan naar het leger', steun:22, geld:0, krediet:12,
+        neven:{ gelderland:-10, overijssel:-8 },
+        tekst:'Zeeland juicht, maar de landgewesten zien hun grens onbeschermd.' },
+      { id:'z2', naam:'Zeeland een extra zetel in de admiraliteit', steun:16, geld:0, krediet:14,
+        neven:{ friesland:-12 },
+        tekst:'Friesland, dat een eigen admiraliteit heeft, voelt zich gepasseerd.' },
+      { id:'z3', naam:'Hollandse konvooien beschermen ook Zeeuwse schepen', steun:12, geld:35, krediet:0,
+        neven:{},
+        tekst:'Kost Holland geld, maar niemand anders heeft er last van.' }
+    ] },
+
+  { id:'utrecht', naam:'Utrecht', deel:5.8, kleur:'#EA9836', steun:38,
+    pad:'M188 248 L222 246 L228 268 L218 288 L186 288 Z',
+    labelx:206, labely:270,
+    kort:'Klein, diep in de schulden en ligt precies op de route van het Franse leger.',
+    belang:'verdediging',
+    eisen:[
+      { id:'u1', naam:'Een garnizoen soldaten in de stad Utrecht', steun:24, geld:60, krediet:0,
+        neven:{ gelderland:6 },
+        tekst:'Gelderland ziet dat de landsverdediging serieus wordt genomen.' },
+      { id:'u2', naam:'Holland neemt een deel van de Utrechtse schuld over', steun:20, geld:90, krediet:0,
+        neven:{ overijssel:-6, friesland:-6 },
+        tekst:'De andere arme gewesten vragen meteen waarom zij niets krijgen.' },
+      { id:'u3', naam:'Utrecht dit jaar minder quota laten betalen', steun:14, geld:45, krediet:6,
+        neven:{ groningen:-5 },
+        tekst:'Wie minder betaalt, laat de rekening bij de rest liggen.' }
+    ] },
+
+  { id:'gelderland', naam:'Gelderland', deel:5.6, kleur:'#83A5F2', steun:34,
+    pad:'M224 246 L262 250 L286 246 L318 250 L322 274 L300 300 L262 314 L236 312 L222 288 L230 266 Z',
+    labelx:268, labely:282,
+    kort:'Grensgewest met adellijke families. Wil vooral een sterk leger en niet nog meer Hollandse invloed.',
+    belang:'leger',
+    eisen:[
+      { id:'g1', naam:'Nieuwe vestingwerken langs de IJssel', steun:26, geld:110, krediet:0,
+        neven:{ overijssel:10, zeeland:-8 },
+        tekst:'Overijssel ligt achter diezelfde linie en is opgelucht. Zeeland ziet het geld aan land verdwijnen.' },
+      { id:'g2', naam:'Een Gelderse edelman als bevelhebber', steun:18, geld:0, krediet:16,
+        neven:{ friesland:-8, holland:0 },
+        tekst:'Friesland wilde die post zelf. Zulke benoemingen kostten altijd goodwill.' },
+      { id:'g3', naam:'Gelderland houdt zeggenschap over eigen troepen', steun:14, geld:0, krediet:20,
+        neven:{ groningen:5, overijssel:5 },
+        tekst:'De kleinere gewesten vinden het prettig als autonomie wordt gerespecteerd.' }
+    ] },
+
+  { id:'overijssel', naam:'Overijssel', deel:3.6, kleur:'#2f7d52', steun:30,
+    pad:'M264 198 L318 196 L332 224 L322 248 L286 244 L262 248 L252 218 Z',
+    labelx:290, labely:224,
+    kort:'Het armste gewest, met nog geen vier procent van de rekening. En toch een volwaardige stem.',
+    belang:'geld',
+    eisen:[
+      { id:'o1', naam:'Overijssel hoeft dit jaar geen extra quota te betalen', steun:28, geld:40, krediet:8,
+        neven:{ friesland:-10, groningen:-8 },
+        tekst:'De andere kleine gewesten willen dan precies hetzelfde.' },
+      { id:'o2', naam:'Holland betaalt de achterstallige soldij van hun troepen', steun:20, geld:75, krediet:0,
+        neven:{},
+        tekst:'Puur een kwestie van geld, en Holland heeft dat.' },
+      { id:'o3', naam:'De IJssel wordt bevaarbaar gehouden voor hun handel', steun:14, geld:55, krediet:0,
+        neven:{ gelderland:6 },
+        tekst:'Gelderland profiteert mee van een open IJssel.' }
+    ] },
+
+  { id:'friesland', naam:'Friesland', deel:11.7, kleur:'#204ECF', steun:36,
+    pad:'M196 98 L240 92 L268 90 L266 148 L216 152 L198 140 L186 116 Z',
+    labelx:228, labely:122,
+    kort:'Na Holland de grootste betaler, en daar bijzonder trots op. Wil dat dat ook wat oplevert.',
+    belang:'aanzien',
+    eisen:[
+      { id:'f1', naam:'De Friese admiraliteit blijft zelfstandig', steun:24, geld:0, krediet:10,
+        neven:{ zeeland:-10 },
+        tekst:'Zeeland vindt vijf admiraliteiten al twee te veel.' },
+      { id:'f2', naam:'Een Fries stadhouder houdt eigen bevoegdheden', steun:20, geld:0, krediet:18,
+        neven:{ holland:0, groningen:8 },
+        tekst:'Groningen deelt die stadhouder en is blij. In Holland ligt dit gevoelig.' },
+      { id:'f3', naam:'Holland betaalt mee aan het herstel van de zeedijken', steun:16, geld:85, krediet:0,
+        neven:{ zeeland:6 },
+        tekst:'Zeeland kent het probleem van dichtbij en steunt dit.' }
+    ] },
+
+  { id:'groningen', naam:'Groningen', deel:5.8, kleur:'#EA9836', steun:32,
+    pad:'M268 88 L330 82 L344 108 L336 142 L302 150 L266 148 Z',
+    labelx:302, labely:118,
+    kort:'De stad en de Ommelanden zijn het zelden eens. Elk voorstel loopt eerst vast in eigen huis.',
+    belang:'binnenlandse ruzie',
+    eisen:[
+      { id:'gr1', naam:'Holland bemiddelt tussen de stad en de Ommelanden', steun:26, geld:0, krediet:14,
+        neven:{ friesland:-6 },
+        tekst:'Friesland vindt dat Holland zich met andermans zaken bemoeit.' },
+      { id:'gr2', naam:'Geld voor de verdediging van de noordelijke grens', steun:20, geld:80, krediet:0,
+        neven:{ overijssel:5, friesland:5 },
+        tekst:'De hele noordflank profiteert hiervan.' },
+      { id:'gr3', naam:'Het stapelrecht van de stad Groningen blijft', steun:14, geld:0, krediet:12,
+        neven:{ overijssel:-7 },
+        tekst:'Overijsselse handelaren lopen precies tegen dat recht aan.' }
+    ] }
+];
+
+/* de kaart: water, niet-stemmende gebieden en de eilanden */
+var KAARTEXTRA =
+  '<rect width="380" height="470" fill="#e8f0ff"/>' +
+  /* Zuiderzee */
+  '<path d="M172 142 L198 140 L216 152 L252 218 L228 246 L188 246 L186 206 L178 176 Z" fill="#bcd2ff"/>' +
+  '<text x="206" y="196" font-family="Poppins" font-size="10" font-weight="600" fill="#204ECF" fill-opacity=".7" text-anchor="middle">Zuiderzee</text>' +
+  /* Waddeneilanden */
+  '<g fill="#FCDED6" stroke="#14224C" stroke-opacity=".2">' +
+  '<path d="M168 92 l26 -4 l2 6 l-26 4 z"/><path d="M202 84 l24 -3 l1 6 l-24 3 z"/>' +
+  '<path d="M234 78 l22 -3 l1 6 l-22 3 z"/><path d="M264 74 l20 -2 l1 6 l-20 2 z"/></g>' +
+  /* Drenthe: wel gebied, geen stem */
+  '<path d="M266 150 L336 144 L330 196 L264 198 Z" fill="#d9d2cb"/>' +
+  '<text x="298" y="176" font-family="Poppins" font-size="9.5" font-weight="600" fill="#14224C" fill-opacity=".5" text-anchor="middle">Drenthe</text>' +
+  /* Generaliteitslanden: bezet gebied zonder stem */
+  '<path d="M130 344 L156 342 L236 314 L262 316 L292 330 L272 386 L206 396 L150 386 Z" fill="#d9d2cb"/>' +
+  '<text x="212" y="356" font-family="Poppins" font-size="9.5" font-weight="600" fill="#14224C" fill-opacity=".55" text-anchor="middle">Generaliteitslanden</text>' +
+  '<text x="212" y="370" font-family="Poppins" font-size="8.5" fill="#14224C" fill-opacity=".45" text-anchor="middle">geen eigen stem</text>';
+
+var NIVEAUS = [
+  { id:'bb',  naam:'vmbo-bb', dagen:15, geld:220, krediet:55, drempel:55, hints:true, neven:false,
+    uitleg:'Vijftien dagen, je ziet wat elk gewest wil en toezeggingen hebben geen bijwerkingen.' },
+  { id:'kgt', naam:'vmbo-kgt en gl/tl', dagen:14, geld:200, krediet:50, drempel:60, hints:true, neven:true,
+    uitleg:'Veertien dagen, je ziet wat ze willen, maar een toezegging aan de een irriteert de ander.' },
+  { id:'hv',  naam:'havo en vwo', dagen:19, geld:190, krediet:48, drempel:62, hints:false, neven:true,
+    uitleg:'Negentien dagen, maar je moet zelf uitvinden wat elk gewest wil. Blind toezeggen mag, op eigen risico.' }
+];
+
+/* ============================================================================
+   ENGINE
+   ============================================================================ */
+(function(){
+  'use strict';
+  document.getElementById('jaar').textContent = new Date().getFullYear();
+
+  var niveau = null, dag = 0, geld = 0, krediet = 0, gekozen = null, klaar = false;
+  var staat = {}, gedaan = {}, gepolst = {}, verslag = [], stemrondes = 0;
+  var stemmers = GEWESTEN.filter(function(g){ return !g.speler; });
+
+  var elStart = document.getElementById('scherm-start'), elSpel = document.getElementById('scherm-spel'),
+      elEinde = document.getElementById('scherm-einde');
+
+  var kiezer = document.getElementById('niveaus');
+  NIVEAUS.forEach(function(n){
+    var b = document.createElement('button');
+    b.className = 'kaartje'; b.type = 'button';
+    b.innerHTML = '<b>' + n.naam + '</b><span>' + n.uitleg + '</span>';
+    b.addEventListener('click', function(){
+      niveau = n;
+      Array.prototype.forEach.call(kiezer.children, function(c){ c.classList.remove('on'); });
+      b.classList.add('on');
+      document.getElementById('startBtn').disabled = false;
+      var p = document.getElementById('pillNiv'); p.textContent = n.naam; p.classList.remove('hide');
+    });
+    kiezer.appendChild(b);
+  });
+
+  document.getElementById('startBtn').addEventListener('click', start);
+  document.getElementById('nogeensBtn').addEventListener('click', naarStart);
+  document.getElementById('opnieuwBtn').addEventListener('click', naarStart);
+  document.getElementById('stemBtn').addEventListener('click', stemmen);
+  document.getElementById('grootBtn').addEventListener('click', function(){
+    document.body.classList.toggle('groot');
+    this.textContent = document.body.classList.contains('groot') ? 'Normaal' : 'Digibord';
+  });
+  function naarStart(){
+    elSpel.classList.add('hide'); elEinde.classList.add('hide'); elStart.classList.remove('hide');
+    scrollTo({top:0,behavior:'auto'});
+  }
+
+  function start(){
+    dag = 0; geld = niveau.geld; krediet = niveau.krediet; gekozen = null; klaar = false;
+    staat = {}; gedaan = {}; gepolst = {}; verslag = []; stemrondes = 0;
+    GEWESTEN.forEach(function(g){ staat[g.id] = g.steun; });
+    noteer('De Staten-Generaal komen bijeen in Den Haag. Zes gewesten moeten nog overtuigd worden.');
+    elStart.classList.add('hide'); elEinde.classList.add('hide'); elSpel.classList.remove('hide');
+    tekenAlles();
+    scrollTo({top:0,behavior:'auto'});
+  }
+
+  function noteer(tekst){ verslag.unshift(tekst); if (verslag.length > 14) verslag.pop(); }
+
+  /* ---------- tekenen ---------- */
+  function tekenAlles(){ tekenKaart(); tekenStatus(); tekenLijst(); tekenActies(); tekenVerslag(); }
+
+  function tekenKaart(){
+    var s = KAARTEXTRA;
+    GEWESTEN.forEach(function(g){
+      var kleur = g.speler ? g.kleur : kleurVoorSteun(staat[g.id]);
+      s += '<path class="gewest' + (gekozen === g.id ? ' actief' : '') + '" data-g="' + g.id + '" d="' + g.pad +
+           '" fill="' + kleur + '" stroke="#FBF6F1" stroke-width="1.6"/>';
+    });
+    GEWESTEN.forEach(function(g){
+      s += '<text x="' + g.labelx + '" y="' + g.labely + '" text-anchor="middle" font-family="Poppins" font-size="10.5" ' +
+           'font-weight="600" fill="#14224C" pointer-events="none">' + g.naam + '</text>';
+      if (!g.speler){
+        s += '<text x="' + g.labelx + '" y="' + (g.labely+12) + '" text-anchor="middle" font-family="Poppins" font-size="9" ' +
+             'fill="#14224C" fill-opacity=".65" pointer-events="none">' + Math.round(staat[g.id]) + '</text>';
+      } else {
+        s += '<text x="' + g.labelx + '" y="' + (g.labely+12) + '" text-anchor="middle" font-family="Poppins" font-size="9" ' +
+             'fill="#FBF6F1" pointer-events="none">jij</text>';
+      }
+    });
+    s += '<text x="16" y="452" font-family="Poppins" font-size="9" fill="#14224C" fill-opacity=".45">Sterk vereenvoudigde kaart, 1672</text>';
+    var svg = document.getElementById('kaartSvg');
+    svg.innerHTML = s;
+    Array.prototype.forEach.call(svg.querySelectorAll('[data-g]'), function(p){
+      p.addEventListener('click', function(){ kiesGewest(p.dataset.g); });
+    });
+  }
+
+  function kleurVoorSteun(s){
+    if (s >= niveau.drempel) return '#8fc7a6';
+    if (s >= niveau.drempel - 18) return '#f6d7a6';
+    return '#f2b3a4';
+  }
+
+  function tekenStatus(){
+    var over = niveau.dagen - dag;
+    document.getElementById('status').innerHTML =
+      '<div class="stat' + (over <= 3 ? ' waarschuw' : '') + '"><i>Dagen over</i><b>' + over + '</b></div>' +
+      '<div class="stat"><i>Schatkist</i><b>' + geld + '</b></div>' +
+      '<div class="stat"><i>Gezag</i><b>' + Math.round(krediet) + '</b></div>' +
+      '<div class="stat"><i>Ja-stemmen</i><b>' + stemmers.filter(function(g){ return staat[g.id] >= niveau.drempel; }).length + ' van 6</b></div>';
+  }
+
+  function tekenLijst(){
+    var html = '';
+    GEWESTEN.forEach(function(g){
+      var s = staat[g.id];
+      var kleur = g.speler ? '#2f7d52' : (s >= niveau.drempel ? '#2f7d52' : (s >= niveau.drempel-18 ? '#EA9836' : '#c0442c'));
+      html += '<button class="gewestrij' + (gekozen === g.id ? ' gekozen' : '') + '" data-kies="' + g.id + '"' +
+        (g.speler ? ' disabled' : '') + '>' +
+        '<span class="kleur" style="background:' + g.kleur + '"></span>' +
+        '<span><b>' + g.naam + (g.speler ? ' (jij)' : '') + '</b><small>betaalt ' + g.deel + ' procent van de rekening</small></span>' +
+        '<span style="text-align:right"><span class="meterbalk"><i style="width:' + s + '%;background:' + kleur + '"></i></span>' +
+        '<span class="stemwaarde">' + (g.speler ? 'stemt ja' : (s >= niveau.drempel ? 'stemt ja' : 'stemt nee')) + '</span></span>' +
+        '</button>';
+    });
+    document.getElementById('lijst').innerHTML = html;
+    Array.prototype.forEach.call(document.querySelectorAll('[data-kies]'), function(b){
+      b.addEventListener('click', function(){ kiesGewest(b.dataset.kies); });
+    });
+  }
+
+  function kiesGewest(id){
+    var g = GEWESTEN.filter(function(x){ return x.id === id; })[0];
+    if (!g || g.speler) return;
+    gekozen = id;
+    tekenAlles();
+  }
+
+  function tekenActies(){
+    var vak = document.getElementById('acties');
+    if (!gekozen){
+      document.getElementById('actieTitel').textContent = 'Kies een gewest';
+      document.getElementById('actieSub').textContent = '';
+      document.getElementById('gewestTekst').textContent = 'Klik op de kaart of in de lijst op een gewest om te horen wat daar speelt.';
+      vak.innerHTML = '';
+      return;
+    }
+    var g = GEWESTEN.filter(function(x){ return x.id === gekozen; })[0];
+    document.getElementById('actieTitel').textContent = g.naam;
+    document.getElementById('actieSub').textContent = 'steun ' + Math.round(staat[g.id]) + ' van 100, nodig is ' + niveau.drempel;
+    var toon = niveau.hints || gepolst[g.id];
+    document.getElementById('gewestTekst').textContent = toon ? g.kort : 'Je weet nog niet goed wat hier speelt. Polsen kost een dag maar levert je informatie op.';
+
+    var html = '';
+    html += '<button class="actie" data-doe="pleit"><span><b>Houd een pleidooi over het Franse gevaar</b>' +
+      '<small>Kost een dag. Werkt, maar steeds minder naarmate je het vaker doet.</small></span>' +
+      '<span class="prijs">1 dag</span></button>';
+    if (!toon){
+      html += '<button class="actie" data-doe="pols"><span><b>Pols de afgevaardigde onder vier ogen</b>' +
+        '<small>Je hoort waar dit gewest werkelijk om geeft.</small></span><span class="prijs">1 dag</span></button>';
+    }
+    g.eisen.forEach(function(e){
+      var al = gedaan[e.id];
+      var kan = geld >= e.geld && krediet >= e.krediet;
+      html += '<button class="actie" data-eis="' + e.id + '"' + (al || !kan ? ' disabled' : '') + '>' +
+        '<span><b>' + (toon ? e.naam : 'Onbekende toezegging') + '</b><small>' +
+        (al ? 'Al toegezegd.' : (toon ? 'Kost ' + (e.geld ? e.geld + ' duizend gulden' : 'geen geld') +
+        (e.krediet ? ' en ' + e.krediet + ' gezag' : '') + '.' : 'Pols eerst om te weten wat dit inhoudt.')) +
+        '</small></span><span class="prijs">1 dag</span></button>';
+    });
+    html += '<button class="actie" data-doe="druk"><span><b>Dreig dat Holland desnoods alleen betaalt</b>' +
+      '<small>Sommigen buigen, anderen worden juist koppig. Kost gezag.</small></span><span class="prijs">1 dag</span></button>';
+    html += '<button class="actie" data-doe="schors"><span><b>Schors de vergadering en laat de gemoederen bedaren</b>' +
+      '<small>Je wint gezag terug, maar verliest kostbare tijd.</small></span><span class="prijs">1 dag</span></button>';
+    vak.innerHTML = html;
+
+    Array.prototype.forEach.call(vak.querySelectorAll('[data-doe]'), function(b){
+      b.addEventListener('click', function(){ doeActie(b.dataset.doe, g); });
+    });
+    Array.prototype.forEach.call(vak.querySelectorAll('[data-eis]'), function(b){
+      b.addEventListener('click', function(){ doeToezegging(b.dataset.eis, g); });
+    });
+  }
+
+  function tekenVerslag(){
+    document.getElementById('verslag').innerHTML = verslag.map(function(v){ return '<p>' + v + '</p>'; }).join('');
+  }
+
+  /* ---------- acties ---------- */
+  function verzetDag(){
+    dag++;
+    if (dag >= niveau.dagen){ toonEinde(false, 'tijd'); return true; }
+    /* elke dag verschuift er iets in het land */
+    if (Math.random() < .33){
+      var nieuws = [
+        { t:'Het Franse leger rukt verder op. Overal groeit de urgentie.', ef:6, allen:true },
+        { t:'Een pamflet beschuldigt Holland ervan de oorlog te willen sturen. De stemming verhardt.', ef:-5, allen:true },
+        { t:'Een konvooi is veilig binnengelopen. Dat scheelt in het humeur.', ef:3, allen:true }
+      ][Math.floor(Math.random()*3)];
+      stemmers.forEach(function(g){ staat[g.id] = grens(staat[g.id] + nieuws.ef); });
+      noteer('<b>Nieuws:</b> ' + nieuws.t);
+    }
+    return false;
+  }
+  function grens(v){ return Math.max(0, Math.min(100, v)); }
+
+  function doeActie(soort, g){
+    if (klaar) return;
+    if (soort === 'pleit'){
+      gedaan['pleit_' + g.id] = (gedaan['pleit_' + g.id] || 0) + 1;
+      var winst = Math.max(2, 10 - (gedaan['pleit_' + g.id] - 1) * 4);
+      staat[g.id] = grens(staat[g.id] + winst);
+      noteer('Je houdt een pleidooi voor <b>' + g.naam + '</b>. Steun <span class="op">plus ' + winst + '</span>.' +
+        (winst <= 3 ? ' Ze hebben dit verhaal nu wel gehoord.' : ''));
+    } else if (soort === 'pols'){
+      gepolst[g.id] = true;
+      noteer('Je spreekt de afgevaardigde van <b>' + g.naam + '</b> onder vier ogen. Nu weet je wat daar speelt.');
+    } else if (soort === 'druk'){
+      krediet = Math.max(0, krediet - 12);
+      stemmers.forEach(function(x){
+        var ef = x.deel < 6 ? 8 : -7;   /* kleine gewesten buigen, grote betalers worden koppig */
+        staat[x.id] = grens(staat[x.id] + ef);
+      });
+      noteer('Je dreigt dat Holland desnoods alleen betaalt. De kleine gewesten <span class="op">buigen</span>, ' +
+        'de grote betalers worden <span class="neer">koppiger</span>. Gezag min 12.');
+    } else if (soort === 'schors'){
+      krediet = Math.min(100, krediet + 14);
+      stemmers.forEach(function(x){ staat[x.id] = grens(staat[x.id] + 2); });
+      noteer('Je schorst de vergadering. De gemoederen bedaren, gezag <span class="op">plus 14</span>.');
+    }
+    if (verzetDag()) return;
+    tekenAlles();
+  }
+
+  function doeToezegging(eisId, g){
+    if (klaar) return;
+    var e = null;
+    g.eisen.forEach(function(x){ if (x.id === eisId) e = x; });
+    if (!e || gedaan[e.id]) return;
+    if (geld < e.geld || krediet < e.krediet) return;
+
+    gedaan[e.id] = true;
+    geld -= e.geld; krediet -= e.krediet;
+    staat[g.id] = grens(staat[g.id] + e.steun);
+    var tekst = 'Je zegt <b>' + g.naam + '</b> toe: ' + e.naam.toLowerCase() + '. Steun <span class="op">plus ' + e.steun + '</span>.';
+
+    if (niveau.neven){
+      var gevolgen = [];
+      Object.keys(e.neven).forEach(function(id){
+        var v = e.neven[id];
+        if (!v || !staat.hasOwnProperty(id)) return;
+        staat[id] = grens(staat[id] + v);
+        var naam = GEWESTEN.filter(function(x){ return x.id === id; })[0].naam;
+        gevolgen.push(naam + ' <span class="' + (v>0?'op':'neer') + '">' + (v>0?'plus ':'') + v + '</span>');
+      });
+      if (gevolgen.length) tekst += ' Gevolg: ' + gevolgen.join(', ') + '. ' + e.tekst;
+    }
+    noteer(tekst);
+    if (verzetDag()) return;
+    tekenAlles();
+  }
+
+  /* ---------- stemming ---------- */
+  function stemmen(){
+    if (klaar) return;
+    stemrondes++;
+    var uitslag = stemmers.map(function(g){
+      return { naam:g.naam, ja: staat[g.id] >= niveau.drempel, steun: Math.round(staat[g.id]) };
+    });
+    var alleJa = uitslag.every(function(u){ return u.ja; });
+
+    document.getElementById('stemming').innerHTML =
+      '<div class="stem ja"><span>Holland (jij)</span><b>voor</b></div>' +
+      uitslag.map(function(u){
+        return '<div class="stem ' + (u.ja ? 'ja' : 'nee') + '"><span>' + u.naam + '</span><b>' +
+          (u.ja ? 'voor' : 'tegen') + '</b></div>';
+      }).join('');
+
+    if (alleJa){ toonEinde(true); return; }
+
+    var tegen = uitslag.filter(function(u){ return !u.ja; }).map(function(u){ return u.naam; });
+    krediet = Math.max(0, krediet - 8);
+    stemmers.forEach(function(g){ staat[g.id] = grens(staat[g.id] - 3); });
+    noteer('<b>Stemming mislukt.</b> Tegen: ' + tegen.join(', ') + '. Een enkel nee is genoeg om alles te blokkeren. ' +
+      'Je verliest een dag en wat gezag.');
+    if (verzetDag()) return;
+    tekenAlles();
+  }
+
+  /* ---------- einde ---------- */
+  function toonEinde(gelukt, reden){
+    klaar = true;
+    elSpel.classList.add('hide'); elEinde.classList.remove('hide');
+    var uitgegeven = niveau.geld - geld;
+
+    if (gelukt){
+      document.getElementById('eindLabel').textContent = 'aangenomen';
+      document.getElementById('eindTitel').textContent = 'Unaniem: de oorlogsbelasting komt er';
+      document.getElementById('eindSub').textContent =
+        'Na ' + dag + ' vergaderdagen stemden alle zeven gewesten voor. Het kostte je ' + uitgegeven +
+        ' duizend gulden aan toezeggingen, bovenop de ' + GEWESTEN[0].deel + ' procent die Holland sowieso al betaalt.';
+    } else {
+      document.getElementById('eindLabel').textContent = 'geen besluit';
+      document.getElementById('eindTitel').textContent = 'De vergadering loopt vast';
+      document.getElementById('eindSub').textContent =
+        'De dagen zijn op en er ligt geen besluit. De troepen aan de grens wachten op soldij die niet komt. ' +
+        'Je gaf onderweg al wel ' + uitgegeven + ' duizend gulden uit aan toezeggingen.';
+    }
+
+    var nog = stemmers.filter(function(g){ return staat[g.id] < niveau.drempel; })
+                      .map(function(g){ return g.naam + ' (' + Math.round(staat[g.id]) + ')'; });
+
+    var html = '<div class="slotkaart"><b>Waarom dit zo moeizaam ging</b><p>In de Republiek besliste de Staten-Generaal ' +
+      'in principe met eenparigheid van stemmen. Elk gewest had een stem, ongeacht hoeveel het betaalde. Holland droeg ' +
+      'ruim 58 procent van alle lasten, Overijssel nog geen 4 procent, en toch kon Overijssel een besluit tegenhouden. ' +
+      'Afgevaardigden moesten bovendien terug naar hun eigen Staten om te ruggespraak te houden, en dat kostte weken.</p></div>';
+
+    html += '<div class="slotkaart"><b>En waarom het toch werkte</b><p>Omdat niemand iets kon afdwingen, moest alles worden ' +
+      'uitonderhandeld. Dat was traag, maar het maakte besluiten wel breed gedragen: wie had meebetaald aan een besluit, ' +
+      'voerde het ook uit. Holland kocht instemming met geld en gunsten, en werd daardoor in de praktijk de leider van de Republiek. ' +
+      'Precies zoals jij dat net deed.</p></div>';
+
+    if (nog.length){
+      html += '<div class="slotkaart"><b>Wie nog tegen was</b><p>' + nog.join(', ') +
+        '. Elk van hen had een eigen reden, en die reden had weinig met de oorlog te maken.</p></div>';
+    }
+
+    html += '<div class="slotkaart"><b>Jouw vergadering in cijfers</b><p>' + dag + ' dagen, ' + stemrondes +
+      ' keer gestemd, ' + uitgegeven + ' duizend gulden uitgegeven en ' + Math.round(niveau.krediet - krediet) +
+      ' punten gezag verspeeld.</p></div>';
+
+    if (niveau.id === 'hv'){
+      html += '<div class="denk"><b>Denkvraag, hier is geen goed of fout</b><p>Als Holland bijna zestig procent betaalt, ' +
+        'is het dan eerlijk dat Overijssel evenveel stem heeft? Bedenk een argument voor beide kanten, en vergelijk het ' +
+        'daarna met een land dat in de EU een veto kan uitspreken.</p></div>';
+    } else {
+      html += '<div class="denk"><b>Denk nog even door</b><p>Holland betaalde bijna zestig procent en Overijssel nog geen vier. ' +
+        'Toch telde hun stem even zwaar. Vind jij dat eerlijk? En hoe zou jij het geregeld hebben?</p></div>';
+    }
+
+    document.getElementById('eindSlot').innerHTML = html;
+    scrollTo({top:0,behavior:'smooth'});
+  }
+})();
+</script>
+</body>
+</html>
