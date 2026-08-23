@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Feodalisme, versie 1.1 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Feodalisme &middot; meneer Greidanus</title>
+<meta name="description" content="Speel als heer, ridder of boer. Verdeel arbeid, bescherming en oogst, en ontdek waarom de feodale piramide standhoudt.">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%23204ECF'/><text x='50' y='68' font-family='Poppins,Arial' font-size='46' font-weight='600' fill='%23FBF6F1' text-anchor='middle'>LG</text></svg>">
+
+<style>
+:root{
+  --crab:#F26749; --amber:#EA9836; --ocean:#204ECF; --vista:#83A5F2;
+  --sand:#FCDED6; --room:#FBF6F1; --ink:#14224C; --muted:#5b6480;
+  --op:#2f7d52; --neer:#c0442c; --max:1180px; --ease:cubic-bezier(.22,.61,.36,1);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--room);color:var(--ink);line-height:1.6;
+  font-family:'Poppins',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;font-weight:600;line-height:1.12;letter-spacing:-.02em}
+p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+.wrap{width:min(100% - 32px,var(--max));margin-inline:auto}
+.hand{font-family:'Caveat',cursive;font-weight:600;color:var(--crab)}
+.eyebrow{font-size:.72rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.hide{display:none !important}
+
+header{position:sticky;top:0;z-index:20;background:rgba(251,246,241,.94);
+  border-bottom:1px solid rgba(20,34,76,.08);padding:10px 0}
+.hd{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.mark{display:flex;align-items:center;gap:10px;font-weight:600;text-decoration:none}
+.mark i{width:32px;height:32px;border-radius:10px;background:var(--ocean);color:var(--room);
+  display:grid;place-items:center;font-style:normal;font-size:.78rem}
+.hd-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.pill{background:var(--sand);font-weight:600;padding:6px 13px;border-radius:999px;font-size:.78rem}
+.linkbtn{background:none;border:none;color:var(--muted);text-decoration:underline;text-underline-offset:4px;font-size:.85rem;padding:6px}
+.linkbtn:hover{color:var(--ink)}
+
+/* ---------- start ---------- */
+.start{padding:46px 0 70px;text-align:center}
+.start h1{font-size:clamp(2.2rem,6vw,3.6rem);margin:8px 0 14px}
+.start .lead{max-width:56ch;margin:0 auto;color:var(--muted)}
+.kies{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:22px auto 0;max-width:900px}
+.kaartje{background:#fff;border:2px solid rgba(20,34,76,.10);border-radius:22px;padding:20px;text-align:left;
+  transition:border-color .2s var(--ease),transform .2s var(--ease)}
+.kaartje:hover{border-color:var(--vista);transform:translateY(-3px)}
+.kaartje.on{border-color:var(--ocean);background:#f4f7ff}
+.kaartje b{display:block;font-size:1.05rem}
+.kaartje span{display:block;margin-top:5px;font-size:.86rem;color:var(--muted)}
+.kaartje .ico{width:48px;height:48px;border-radius:16px;display:grid;place-items:center;margin-bottom:12px}
+.kaartje .ico svg{width:24px;height:24px;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.btn{display:inline-block;border:none;background:var(--crab);color:#fff;font-weight:600;padding:15px 32px;
+  border-radius:999px;box-shadow:0 10px 0 rgba(20,34,76,.10);margin-top:26px;
+  transition:transform .16s var(--ease),box-shadow .16s var(--ease)}
+.btn:hover{transform:translateY(-2px)}
+.btn:active{transform:translateY(1px);box-shadow:0 6px 0 rgba(20,34,76,.10)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn.ghost{background:#fff;color:var(--ink);border:1.5px solid rgba(20,34,76,.15);box-shadow:none}
+
+/* piramide op het startscherm */
+.piramide{max-width:460px;margin:28px auto 0}
+.piramide svg{width:100%;height:auto}
+
+/* ---------- spel ---------- */
+.spel{padding:20px 0 60px;display:grid;grid-template-columns:300px minmax(0,1fr);gap:24px;align-items:start}
+@media(max-width:900px){.spel{grid-template-columns:1fr;gap:16px}}
+
+.paneel{background:#fff;border:1px solid rgba(20,34,76,.08);border-radius:24px;padding:20px;
+  box-shadow:0 14px 34px rgba(20,34,76,.07);position:sticky;top:70px}
+@media(max-width:900px){.paneel{position:static}}
+.rolkop{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.rolkop .ico{width:44px;height:44px;border-radius:15px;display:grid;place-items:center;flex:none}
+.rolkop .ico svg{width:22px;height:22px;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.rolkop b{font-size:1.05rem}
+.jaar{font-size:.82rem;color:var(--muted);margin-bottom:16px}
+
+.meter{margin-top:14px}
+.meter .lab{display:flex;justify-content:space-between;font-size:.85rem;margin-bottom:5px}
+.meter .lab b{font-weight:600}
+.meter .lab span{color:var(--muted)}
+.spoor{height:12px;border-radius:999px;background:rgba(20,34,76,.09);overflow:hidden}
+.spoor i{display:block;height:100%;border-radius:999px;transition:width .5s var(--ease),background .3s linear}
+.meter.laag .lab b{color:var(--neer)}
+
+.uitleg{margin-top:18px;font-size:.82rem;color:var(--muted);border-top:1px solid rgba(20,34,76,.08);padding-top:12px}
+
+.beurt{background:#fff;border:1px solid rgba(20,34,76,.08);border-radius:26px;padding:clamp(20px,3vw,30px);
+  box-shadow:0 16px 40px rgba(20,34,76,.07)}
+.beurt h2{font-size:clamp(1.3rem,3vw,1.9rem);margin:6px 0 12px}
+.verhaal{color:#33405f;font-size:1.02rem}
+body.groot .verhaal{font-size:1.2rem}
+.keuzes{display:grid;gap:10px;margin-top:20px}
+.keuze{display:flex;gap:12px;align-items:flex-start;text-align:left;width:100%;background:var(--room);
+  border:1.5px solid rgba(20,34,76,.10);border-radius:16px;padding:14px 16px;font-size:.98rem;
+  transition:border-color .18s var(--ease),transform .18s var(--ease)}
+body.groot .keuze{font-size:1.12rem;padding:17px 19px}
+.keuze:hover:not(:disabled){border-color:var(--vista);transform:translateX(3px)}
+.keuze:disabled{cursor:default;opacity:.5}
+.keuze.gekozen{opacity:1;border-color:var(--ocean);background:#f4f7ff}
+.keuze kbd{flex:none;width:23px;height:23px;border-radius:7px;background:#fff;border:1px solid rgba(20,34,76,.14);
+  font-family:inherit;font-size:.73rem;font-weight:600;display:grid;place-items:center;margin-top:1px}
+.kosten{display:block;margin-top:5px;font-size:.8rem;color:var(--muted)}
+
+.gevolg{margin-top:20px;border-radius:20px;background:var(--room);border:1px solid rgba(20,34,76,.10);padding:18px 20px;display:none}
+.gevolg.on{display:block}
+.gevolg h3{font-size:1rem;margin-bottom:6px}
+.gevolg p{color:#33405f;font-size:.97rem}
+.deltas{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.delta{font-size:.82rem;font-weight:600;padding:6px 12px;border-radius:999px}
+.delta.op{background:#e7f3ec;color:var(--op)}
+.delta.neer{background:#fdecea;color:var(--neer)}
+.delta.nul{background:rgba(20,34,76,.06);color:var(--muted)}
+.lange{margin-top:12px;padding-top:10px;border-top:1px dashed rgba(20,34,76,.18);font-size:.88rem;color:var(--muted)}
+.alarm{margin-top:12px;background:#fdecea;border-radius:14px;padding:12px 14px;font-size:.9rem;color:#8d3320}
+
+/* ---------- einde ---------- */
+.einde{padding:44px 0 70px;text-align:center}
+.einde .titel{font-size:clamp(1.8rem,5vw,3rem);margin:10px 0 8px}
+.einde .sub{color:var(--muted);max-width:56ch;margin:0 auto}
+.slot{max-width:720px;margin:26px auto 0;text-align:left;display:grid;gap:12px}
+.slotkaart{background:#fff;border:1px solid rgba(20,34,76,.08);border-radius:20px;padding:18px 20px}
+.slotkaart b{display:block;margin-bottom:4px}
+.slotkaart p{font-size:.94rem;color:var(--muted)}
+.denk{background:var(--sand);border-radius:20px;padding:18px 20px}
+.denk b{display:block;margin-bottom:4px}
+.denk p{font-size:.94rem;color:#42405a}
+
+footer{padding:26px 0 40px;font-size:.83rem;color:var(--muted);text-align:center}
+.strip{display:flex;height:7px;width:150px;border-radius:999px;overflow:hidden;margin:0 auto 12px}
+.strip i{flex:1}
+button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offset:3px;border-radius:10px}
+@media(prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap hd">
+    <a class="mark" href="over.html#materiaal"><i>LG</i> Feodalisme</a>
+    <div class="hd-right">
+      <span class="pill hide" id="pillRol">rol</span>
+      <span class="pill hide" id="pillNiv">niveau</span>
+      <button class="linkbtn" id="grootBtn" type="button">Digibord</button>
+      <button class="linkbtn" id="opnieuwBtn" type="button">Opnieuw</button>
+    </div>
+  </div>
+</header>
+
+<!-- ============================ START ============================ -->
+<section class="start wrap" id="scherm-start">
+  <p class="hand" style="font-size:1.6rem">je kiest, en je merkt het</p>
+  <h1>Feodalisme</h1>
+  <p class="lead">Je bent heer, ridder of boer. Elk jaar verdeel je arbeid, bescherming en oogst. Er zijn geen goede antwoorden, alleen keuzes met gevolgen. Aan het eind zie je waarom deze piramide eeuwenlang bleef staan.</p>
+
+  <div class="piramide" aria-hidden="true">
+    <svg viewBox="0 0 420 232">
+      <!-- De drie lagen sluiten precies op de schuine zijden aan, met een
+           gelijke tussenruimte. De rand in dezelfde kleur met ronde hoeken
+           maakt de punten zacht in plaats van scherp. -->
+      <g stroke-linejoin="round" stroke-width="7">
+        <path d="M210 18 L259.3 76 L160.7 76 Z" fill="#204ECF" stroke="#204ECF"/>
+        <path d="M155.6 82 L264.4 82 L313.6 140 L106.4 140 Z" fill="#F26749" stroke="#F26749"/>
+        <path d="M101.3 146 L318.7 146 L368 204 L52 204 Z" fill="#EA9836" stroke="#EA9836"/>
+      </g>
+
+      <!-- laag 1: de heer -->
+      <!-- Een genest svg centreert zichzelf binnen het opgegeven vak, dus het
+           icoon staat altijd precies in het midden, ongeacht de tekening. -->
+      <svg x="198" y="36" width="24" height="24" viewBox="0 0 24 24"
+           fill="none" stroke="#FBF6F1" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 17l-1-9 5.5 4L12 4l3.5 8L21 8l-1 9z"/><path d="M4.5 20h15"/>
+      </svg>
+      <text x="210" y="70" text-anchor="middle" font-family="Poppins" font-size="12.5" font-weight="600" fill="#FBF6F1">heer</text>
+
+      <!-- laag 2: de ridders -->
+      <svg x="195" y="88" width="30" height="30" viewBox="0 0 24 24"
+           fill="none" stroke="#FBF6F1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3l8 3v6c0 5-3.7 7.9-8 9-4.3-1.1-8-4-8-9V6z"/><path d="M9.5 12l2 2 3.5-4"/>
+      </svg>
+      <text x="210" y="132" text-anchor="middle" font-family="Poppins" font-size="12.5" font-weight="600" fill="#FBF6F1">ridders</text>
+
+      <!-- laag 3: de boeren -->
+      <svg x="195" y="150" width="30" height="30" viewBox="0 0 24 24"
+           fill="none" stroke="#14224C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 21v-8"/><path d="M12 13c0-3 2-5 5-5 0 3-2 5-5 5z"/><path d="M12 15.5c0-2.6-1.9-4.5-4.5-4.5 0 2.6 1.9 4.5 4.5 4.5z"/>
+      </svg>
+      <text x="210" y="196" text-anchor="middle" font-family="Poppins" font-size="12.5" font-weight="600" fill="#14224C">boeren</text>
+
+      <!-- rechts omlaag: bescherming -->
+      <g fill="none" stroke="#14224C" stroke-opacity=".45" stroke-width="2" stroke-linecap="round">
+        <path d="M388 56 C 400 100, 400 130, 388 170"/>
+      </g>
+      <path d="M388 178 l-5.5 -11 h11 z" fill="#14224C" fill-opacity=".45"/>
+      <g transform="translate(410 112) rotate(-90)">
+        <text text-anchor="middle" font-family="Poppins" font-size="10" font-weight="600" letter-spacing="1.4" fill="#14224C" fill-opacity=".55">BESCHERMING</text>
+      </g>
+
+      <!-- links omhoog: arbeid en oogst -->
+      <g fill="none" stroke="#14224C" stroke-opacity=".45" stroke-width="2" stroke-linecap="round">
+        <path d="M32 170 C 20 130, 20 100, 32 56"/>
+      </g>
+      <path d="M32 48 l-5.5 11 h11 z" fill="#14224C" fill-opacity=".45"/>
+      <g transform="translate(12 112) rotate(-90)">
+        <text text-anchor="middle" font-family="Poppins" font-size="10" font-weight="600" letter-spacing="1.4" fill="#14224C" fill-opacity=".55">ARBEID EN OOGST</text>
+      </g>
+    </svg>
+  </div>
+
+  <p class="eyebrow" style="margin-top:34px">kies je rol</p>
+  <div class="kies" id="rollen"></div>
+
+  <p class="eyebrow" style="margin-top:30px">kies je niveau</p>
+  <div class="kies" id="niveaus"></div>
+
+  <button class="btn" id="startBtn" type="button" disabled>Begin het eerste jaar</button>
+  <p style="margin-top:14px;font-size:.82rem;color:var(--muted)">Geen inloggen, niets wordt opgeslagen.</p>
+</section>
+
+<!-- ============================ SPEL ============================ -->
+<section class="wrap hide" id="scherm-spel">
+  <div class="spel">
+    <aside class="paneel" id="paneel"></aside>
+    <div class="beurt" id="beurt"></div>
+  </div>
+</section>
+
+<!-- ============================ EINDE ============================ -->
+<section class="wrap hide einde" id="scherm-einde">
+  <p class="eyebrow">na de laatste winter</p>
+  <h2 class="titel" id="eindTitel"></h2>
+  <p class="sub" id="eindSub"></p>
+  <div class="slot" id="eindSlot"></div>
+  <button class="btn" id="nogeensBtn" type="button">Speel een andere rol</button>
+</section>
+
+<footer>
+  <div class="strip" aria-hidden="true">
+    <i style="background:var(--crab)"></i><i style="background:var(--amber)"></i><i style="background:var(--ocean)"></i><i style="background:var(--vista)"></i><i style="background:var(--sand)"></i>
+  </div>
+  Feodalisme &middot; meneer Greidanus &middot; <span id="jaar">2026</span>
+</footer>
+
+<script>
+/* ============================================================================
+   FEODALISME
+   ----------------------------------------------------------------------------
+   Drie meters, van 0 tot 10:
+     voedsel      wat er te eten en te verhandelen is
+     bescherming  hoe veilig je bent tegen geweld van buiten
+     trouw        hoe stevig je positie is tegenover de laag boven en onder je
+
+   Een gebeurtenis toevoegen doe je in GEBEURTENISSEN bij de juiste rol:
+     { titel:'...', tekst:'...', keuzes:[
+         { t:'wat je doet',
+           ef:{voedsel:-1, trouw:+2},        // alleen wat verandert
+           gevolg:'wat er daarna gebeurt en waarom',
+           lang:'gevolg op lange termijn'    // alleen zichtbaar bij havo/vwo
+         } ] }
+   De derde keuze wordt bij vmbo-bb weggelaten, zodat er twee overblijven.
+   ============================================================================ */
+
+var ROLLEN = [
+  { id:'heer', naam:'De heer', kleur:'#204ECF',
+    ico:'<path d="M4 17l-1-9 5.5 4L12 4l3.5 8L21 8l-1 9z"/><path d="M4.5 20h15"/>',
+    tag:'Je bezit het land en verdeelt het onder je ridders.',
+    start:{voedsel:6, bescherming:6, trouw:5},
+    uitleg:'Je hebt land, maar je kunt het niet alleen bewerken of verdedigen. Daarvoor heb je boeren en ridders nodig.' },
+  { id:'ridder', naam:'De ridder', kleur:'#F26749',
+    ico:'<path d="M12 3l8 3v6c0 5-3.7 7.9-8 9-4.3-1.1-8-4-8-9V6z"/><path d="M9.5 12l2 2 3.5-4"/>',
+    tag:'Je krijgt land in leen en levert daarvoor krijgsdienst.',
+    start:{voedsel:5, bescherming:5, trouw:6},
+    uitleg:'Je leeft van het land dat je heer je gaf, en betaalt daarvoor met je zwaard. Val je uit, dan valt alles weg.' },
+  { id:'boer', naam:'De boer', kleur:'#EA9836',
+    ico:'<path d="M12 21v-8"/><path d="M12 13c0-3 2-5 5-5 0 3-2 5-5 5z"/><path d="M12 15.5c0-2.6-1.9-4.5-4.5-4.5 0 2.6 1.9 4.5 4.5 4.5z"/>',
+    tag:'Je bewerkt het land van een ander en betaalt met werk en oogst.',
+    start:{voedsel:4, bescherming:3, trouw:5},
+    uitleg:'Je maakt het voedsel waar iedereen van leeft, en hebt zelf het minst te zeggen. Bescherming moet je kopen met arbeid.' }
+];
+
+var NIVEAUS = [
+  { id:'bb',  naam:'vmbo-bb',           rondes:4, keuzes:2, kosten:true,  lang:false,
+    uitleg:'Twee keuzes per jaar, je ziet vooraf wat het ongeveer kost.' },
+  { id:'kgt', naam:'vmbo-kgt en gl/tl', rondes:5, keuzes:3, kosten:true,  lang:false,
+    uitleg:'Drie keuzes per jaar, met een hint over de gevolgen.' },
+  { id:'hv',  naam:'havo en vwo',       rondes:6, keuzes:3, kosten:false, lang:true,
+    uitleg:'Drie keuzes, gevolgen pas achteraf, plus het effect op lange termijn.' }
+];
+
+var GEBEURTENISSEN = {
+  heer: [
+    { titel:'De oogst valt tegen', tekst:'De zomer was nat. Je rentmeester zegt dat de boeren de volle pacht niet kunnen betalen zonder hun eigen voorraad aan te spreken.',
+      keuzes:[
+        { t:'Scheld dit jaar de helft van de pacht kwijt', ef:{voedsel:-1, trouw:2},
+          gevolg:'Je schuren blijven halfvol, maar in het dorp wordt over je gesproken als een heer die zijn mensen kent.',
+          lang:'Wie hongerige boeren houdt, houdt volgend jaar minder handen op het land. Kwijtschelden is ook rekenen.' },
+        { t:'Laat alles innen, tot de laatste korrel', ef:{voedsel:2, trouw:-3},
+          gevolg:'Je voorraad is gevuld. Twee gezinnen trekken weg naar de stad, en de rest werkt met tegenzin.',
+          lang:'Vertrekkende boeren zijn een blijvend verlies: land zonder handen brengt niets op.' },
+        { t:'Laat betalen in werkdagen in plaats van graan', ef:{voedsel:0, trouw:1, bescherming:1},
+          gevolg:'Ze herstellen je wal en je stallen. Geen graan erbij, wel een sterkere burcht en tevreden mensen.',
+          lang:'Arbeid is de munt van dit stelsel. Wie geen geld heeft, betaalt met tijd.' }
+      ] },
+    { titel:'Je ridders willen land', tekst:'Drie ridders dienen je al jaren. Ze vragen een eigen leen, want zonder land kunnen ze geen paard en harnas betalen.',
+      keuzes:[
+        { t:'Geef ze elk een stuk land in leen', ef:{bescherming:2, voedsel:-2, trouw:1},
+          gevolg:'Je hebt minder eigen land, maar drie gewapende mannen die aan jou verbonden zijn.',
+          lang:'Precies hier ontstaat de piramide: macht weggeven om macht te krijgen.' },
+        { t:'Weiger, ze krijgen soldij in graan', ef:{voedsel:-1, trouw:-2},
+          gevolg:'Ze blijven, maar mopperen. Een van hen luistert al naar een naburige heer.',
+          lang:'Zonder eigen land voelt een ridder zich huurling, en huurlingen vertrekken.' },
+        { t:'Geef land aan een, de anderen later', ef:{bescherming:1, voedsel:-1, trouw:0},
+          gevolg:'De een is tevreden, de twee anderen wachten af en houden je in de gaten.',
+          lang:'Verdeel en heers werkt, maar maakt je afhankelijk van wie je het eerst beloonde.' }
+      ] },
+    { titel:'Rovers in het bos', tekst:'Reizigers worden op de weg bij het bos overvallen. De boeren durven hun graan niet meer naar de markt te brengen.',
+      keuzes:[
+        { t:'Stuur je ridders op de rovers af', ef:{bescherming:2, voedsel:-1, trouw:2},
+          gevolg:'De weg is weer veilig. Dit is precies waarvoor de boeren je pacht betalen, en dat weten ze.',
+          lang:'Bescherming is de tegenprestatie van de heer. Levert hij die niet, dan valt de afspraak weg.' },
+        { t:'Laat de dorpen het zelf oplossen', ef:{trouw:-3, bescherming:-1},
+          gevolg:'Twee boeren raken gewond. In het dorp vraagt men zich hardop af waar de pacht eigenlijk voor is.',
+          lang:'De piramide staat op wederkerigheid. Verdwijnt die, dan verdwijnt de gehoorzaamheid ook.' },
+        { t:'Bouw een wachttoren bij de weg', ef:{voedsel:-2, bescherming:2},
+          gevolg:'De bouw kost je een flinke voorraad, maar de toren staat er ook volgend jaar nog.',
+          lang:'Stenen zijn duurder dan mannen, maar gaan langer mee. Zo veranderde het landschap van Europa.' }
+      ] },
+    { titel:'De koning roept je op', tekst:'Je leenheer, de koning, trekt ten strijde en verwacht dat jij met je ridders meekomt. Dat is de afspraak waaronder jij je land hebt.',
+      keuzes:[
+        { t:'Ga mee met al je ridders', ef:{bescherming:-3, trouw:3, voedsel:-1},
+          gevolg:'De koning is tevreden. Je burcht staat maanden vrijwel onbewaakt.',
+          lang:'Ook jij bent iemands leenman. De piramide houdt niet op bij jou.' },
+        { t:'Blijf thuis en stuur een bericht', ef:{trouw:-4},
+          gevolg:'De koning zwijgt, maar vergeet niet. Andere heren merken dat je je afspraak niet nakwam.',
+          lang:'Een leen kon worden ingetrokken. Trouw was geen gevoel maar een contract.' },
+        { t:'Stuur twee ridders en geld', ef:{bescherming:-1, trouw:1, voedsel:-2},
+          gevolg:'Een aanvaardbaar compromis. Niemand is boos, niemand is onder de indruk.',
+          lang:'Zo veranderde krijgsdienst langzaam in belasting, en ridders in betaalde soldaten.' }
+      ] },
+    { titel:'Boeren willen naar de stad', tekst:'In de stad kun je na een jaar en een dag vrij man zijn. Vier gezinnen vragen of ze mogen vertrekken.',
+      keuzes:[
+        { t:'Geef ze meer rechten zodat ze blijven', ef:{trouw:3, voedsel:-1},
+          gevolg:'Ze blijven en werken door. Je hebt iets van je macht ingeleverd voor hun handen.',
+          lang:'Zo brokkelde de horigheid af: niet door opstand, maar door onderhandeling.' },
+        { t:'Verbied het vertrek', ef:{trouw:-3, voedsel:1},
+          gevolg:'Ze blijven, maar drie van hen vertrekken later toch, in het donker.',
+          lang:'Stadslucht maakt vrij. Steden werden een uitweg uit de piramide.' },
+        { t:'Laat ze gaan, maar vraag afkoopgeld', ef:{voedsel:1, trouw:-1},
+          gevolg:'Je krijgt geld en verliest handen. Het land dat zij bewerkten ligt komend jaar deels braak.',
+          lang:'Geld werd belangrijker dan grond. Dat is het begin van het einde van dit stelsel.' }
+      ] },
+    { titel:'Een strenge winter', tekst:'De sneeuw ligt hoog en blijft liggen. In het dorp is het graan half februari op, in jouw schuren nog niet.',
+      keuzes:[
+        { t:'Open je schuren voor het dorp', ef:{voedsel:-3, trouw:4},
+          gevolg:'Je komt zelf krap uit de winter. In het dorp wordt jouw naam nog jaren genoemd.',
+          lang:'Bescherming betekende ook: voedsel in een slecht jaar. Dat maakte de band sterker dan dwang.' },
+        { t:'Houd je voorraad voor jezelf', ef:{voedsel:2, trouw:-4},
+          gevolg:'Je komt de winter goed door. In het voorjaar zijn er minder handen op het land dan er waren.',
+          lang:'Honger doodt niet alleen mensen, maar ook de afspraak waarop jouw macht rust.' },
+        { t:'Verkoop graan aan het dorp tegen hoge prijs', ef:{voedsel:0, trouw:-2},
+          gevolg:'Wie kon betalen at, wie niet kon betalen keek toe. Het dorp is verdeeld geraakt.',
+          lang:'Zodra de heer koopman wordt, verandert de verhouding van trouw in handel.' }
+      ] }
+  ],
+  ridder: [
+    { titel:'Je heer roept je op', tekst:'Je heer trekt ten strijde. Je hebt je land van hem gekregen, en krijgsdienst is de prijs.',
+      keuzes:[
+        { t:'Ga direct mee, met je eigen mannen', ef:{trouw:3, voedsel:-2, bescherming:1},
+          gevolg:'Je heer ziet dat je betrouwbaar bent. Je oogst thuis loopt schade op, want jij was er niet.',
+          lang:'Een leen was geen cadeau. Elke keer dat je opkomt, bevestig je het opnieuw.' },
+        { t:'Vraag uitstel tot na de oogst', ef:{trouw:-2, voedsel:1},
+          gevolg:'Je oogst is binnen, maar je heer moest zonder je vertrekken. Dat wordt onthouden.',
+          lang:'Wie zijn plicht uitstelt, staat achteraan bij de verdeling van buit en gunsten.' },
+        { t:'Stuur je schildknaap in jouw plaats', ef:{trouw:-1, bescherming:-1, voedsel:0},
+          gevolg:'Formeel heb je geleverd. Iedereen ziet dat jij zelf niet kwam.',
+          lang:'Eer was in deze wereld geen sier maar kapitaal: het bepaalde wat je waard was.' }
+      ] },
+    { titel:'Je harnas is versleten', tekst:'Je maliënkolder is doorgesleten en je paard is oud. Een ridder zonder uitrusting is geen ridder.',
+      keuzes:[
+        { t:'Verhoog de pacht van je boeren', ef:{voedsel:-1, bescherming:2, trouw:-2},
+          gevolg:'Je rijdt weer als een ridder. In je dorp wordt gefluisterd dat jij eet van hun werk.',
+          lang:'Alles wat een ridder draagt, is betaald met de oogst van iemand anders.' },
+        { t:'Leen geld bij een koopman uit de stad', ef:{bescherming:2, trouw:-1, voedsel:-1},
+          gevolg:'Je hebt een nieuw harnas en een schuld. De koopman zal komen vragen.',
+          lang:'Zo kwam het geld de piramide binnen, en met het geld een nieuwe macht: de stad.' },
+        { t:'Rijd nog een jaar door met wat je hebt', ef:{bescherming:-2, voedsel:1},
+          gevolg:'Je houdt je graan, maar in de eerstvolgende schermutseling merk je het verschil.',
+          lang:'Uitrusting bepaalde overleving. Bezuinigen op ijzer was bezuinigen op je leven.' }
+      ] },
+    { titel:'Je boeren klagen', tekst:'Je mannen namen bij het oefenen een veld vol jong graan in beslag. De boeren staan bij je poort.',
+      keuzes:[
+        { t:'Vergoed de schade uit je eigen voorraad', ef:{voedsel:-2, trouw:2},
+          gevolg:'De boeren gaan tevreden weg. Je mannen vinden je zacht.',
+          lang:'Een ridder die zijn boeren uitknijpt, houdt op den duur niets over om van te leven.' },
+        { t:'Stuur ze weg, het was een oefening', ef:{trouw:-3, bescherming:1},
+          gevolg:'Ze buigen en vertrekken. Bij de volgende oogst zijn de opbrengsten opeens lager.',
+          lang:'Boeren hadden geen wapens, maar wel traagheid als wapen.' },
+        { t:'Laat je mannen het veld helpen herstellen', ef:{voedsel:-1, trouw:2, bescherming:-1},
+          gevolg:'Ridders in het veld met een schoffel. Vreemd gezicht, maar het dorp praat er warm over.',
+          lang:'De grens tussen standen was scherp. Wie hem overstak, verbaasde iedereen.' }
+      ] },
+    { titel:'Twee heren vragen je dienst', tekst:'Een naburige heer biedt je een groter leen aan, als je voortaan hem dient. Je huidige heer weet van niets.',
+      keuzes:[
+        { t:'Blijf trouw aan je eigen heer', ef:{trouw:3, voedsel:0},
+          gevolg:'Je heer hoort ervan en waardeert het. Je blijft met hetzelfde land zitten.',
+          lang:'Trouw was het enige dat een ridder zeker bezat. Verkocht hij dat, dan bleef er niets over.' },
+        { t:'Neem het aanbod aan', ef:{voedsel:2, trouw:-4, bescherming:-1},
+          gevolg:'Meer land, maar je oude heer noemt je woordbreker. Andere heren twijfelen nu ook aan je.',
+          lang:'Dubbele leenmanschap kwam echt voor en leidde tot oorlogen over de vraag wie voorgaat.' },
+        { t:'Dien beide heren tegelijk', ef:{voedsel:1, trouw:-2},
+          gevolg:'Het gaat goed, tot ze ruzie krijgen. Dan moet je alsnog kiezen, met een vijand meer.',
+          lang:'Daarom ontstond de liege homage: een hoofdheer die altijd voorrang had.' }
+      ] },
+    { titel:'Een toernooi in de buurt', tekst:'De graaf houdt een toernooi. Winnaars krijgen aanzien, verliezers verliezen soms hun paard en wapens.',
+      keuzes:[
+        { t:'Doe mee en vecht', ef:{trouw:2, bescherming:1, voedsel:-1},
+          gevolg:'Je verslaat twee tegenstanders en wordt opgemerkt door de graaf.',
+          lang:'Toernooien waren geen sport maar een arbeidsmarkt: daar werd je gezien en aangenomen.' },
+        { t:'Blijf thuis en spaar je uitrusting', ef:{voedsel:1, trouw:-1},
+          gevolg:'Je bespaart kosten en risico. Wie er wel was, wordt genoemd bij de volgende verdeling.',
+          lang:'Onzichtbaar zijn kostte een ridder op termijn meer dan een gebroken lans.' },
+        { t:'Ga kijken zonder mee te doen', ef:{trouw:0, voedsel:0},
+          gevolg:'Je legt een paar handige contacten en houdt je ijzer heel.',
+          lang:'Netwerken bestond ook toen. De piramide draaide op persoonlijke banden.' }
+      ] },
+    { titel:'Een strenge winter', tekst:'Je voorraad krimpt. In je dorp sterven de eerste dieren van de kou en de boeren komen bij je aankloppen.',
+      keuzes:[
+        { t:'Deel wat je hebt met het dorp', ef:{voedsel:-2, trouw:3},
+          gevolg:'Het wordt krap voor jezelf, maar in het voorjaar staat iedereen weer op het land.',
+          lang:'Een ridder zonder werkende boeren is binnen een jaar geen ridder meer.' },
+        { t:'Houd alles voor je eigen huishouden', ef:{voedsel:2, trouw:-3},
+          gevolg:'Jij komt goed door de winter. Twee gezinnen trekken in het voorjaar weg.',
+          lang:'Afhankelijkheid werkt twee kanten op, en dat merk je pas als het misgaat.' },
+        { t:'Vraag je heer om graan uit zijn voorraad', ef:{trouw:-1, voedsel:1},
+          gevolg:'Je krijgt het, en je heer weet nu dat jij het zonder hem niet redt.',
+          lang:'Elke gunst maakt de band sterker en je positie zwakker. Zo werkt de piramide.' }
+      ] }
+  ],
+  boer: [
+    { titel:'Herendienst tijdens de oogst', tekst:'De heer laat weten dat je drie dagen op zijn land moet werken. Jouw eigen graan staat rijp en het weer slaat om.',
+      keuzes:[
+        { t:'Ga werken op het land van de heer', ef:{trouw:2, voedsel:-2},
+          gevolg:'Je doet je plicht. Een deel van je eigen oogst gaat verloren in de regen.',
+          lang:'Herendienst was geen betaling in geld maar in tijd, en tijd had een boer maar een keer.' },
+        { t:'Weiger en oogst je eigen land', ef:{voedsel:2, trouw:-4, bescherming:-1},
+          gevolg:'Je schuur is vol. De rentmeester schrijft je naam op en dat voel je later.',
+          lang:'Weigeren kon boete of verlies van je stuk land betekenen. Vrijheid had een prijs.' },
+        { t:'Stuur je oudste zoon in jouw plaats', ef:{voedsel:-1, trouw:1},
+          gevolg:'Half en half opgelost: het werk is gedaan en jij redt het meeste van je oogst.',
+          lang:'Grote gezinnen waren geen toeval. Meer handen betekende meer speelruimte.' }
+      ] },
+    { titel:'Rovers in de buurt', tekst:'Een dorp verderop is leeggeroofd. Vannacht zag de buurman vuur aan de bosrand.',
+      keuzes:[
+        { t:'Vlucht met je vee naar de burcht', ef:{bescherming:3, voedsel:-1, trouw:1},
+          gevolg:'Achter de muren ben je veilig. Je verliest twee werkdagen en wat voer.',
+          lang:'Hier zie je waarvoor de pacht dient: de burcht is de tegenprestatie van de heer.' },
+        { t:'Blijf thuis en bewaak je eigen erf', ef:{voedsel:1, bescherming:-3},
+          gevolg:'Er gebeurt niets, deze keer. Je hebt gemerkt hoe alleen je staat met een hooivork.',
+          lang:'Een boer kon zich niet bewapenen. Precies daarom was bescherming iets om voor te betalen.' },
+        { t:'Waarschuw het hele dorp en organiseer een wacht', ef:{bescherming:2, trouw:1, voedsel:-1},
+          gevolg:'Met zijn allen houden jullie de nacht door. Niemand slaapt, iedereen is heel.',
+          lang:'Dorpsgemeenschappen regelden veel zelf. De heer was niet de enige bron van veiligheid.' }
+      ] },
+    { titel:'De pacht komt eraan', tekst:'De rentmeester komt over twee weken. Je oogst was matig, en na de pacht houd je bijna niets over.',
+      keuzes:[
+        { t:'Betaal alles en eet zuinig', ef:{voedsel:-2, trouw:2},
+          gevolg:'Je staat goed aangeschreven. De winter wordt mager.',
+          lang:'Wie op papier in orde is, heeft in een slecht jaar krediet. Dat was ook iets waard.' },
+        { t:'Vraag uitstel bij de heer', ef:{trouw:-1, voedsel:1},
+          gevolg:'Je krijgt uitstel, met rente in werkdagen. Volgend jaar werk je dus meer.',
+          lang:'Schuld bond een boer nog steviger aan zijn heer dan de wet dat deed.' },
+        { t:'Verberg een deel van de oogst', ef:{voedsel:2, trouw:-3},
+          gevolg:'Je hebt genoeg te eten, en de knoop in je maag als de rentemeester rondloopt.',
+          lang:'Verzet was zelden een opstand. Meestal was het traag werken, verstoppen en vergeten.' }
+      ] },
+    { titel:'De molen van de heer', tekst:'Je moet je graan laten malen in de molen van de heer, die daarvoor een deel inhoudt. Je buurman heeft een handmolen verstopt.',
+      keuzes:[
+        { t:'Gebruik netjes de molen van de heer', ef:{voedsel:-1, trouw:2},
+          gevolg:'Je betaalt het maalloon en houdt het zuiver.',
+          lang:'Zulke verplichte rechten heetten banrechten. Ze maakten van gewoontes inkomsten.' },
+        { t:'Maal stiekem met de handmolen', ef:{voedsel:2, trouw:-3},
+          gevolg:'Je houdt meer meel over, tot iemand het doorvertelt. Dan volgt een boete.',
+          lang:'In heel Europa werden handmolens in beslag genomen. Kleine dingen, grote macht.' },
+        { t:'Vraag samen met het dorp om een lager maalloon', ef:{trouw:0, voedsel:1},
+          gevolg:'De heer wil geen gedoe en verlaagt het iets. Samen sta je sterker dan alleen.',
+          lang:'Boeren onderhandelden vaker dan je denkt, vooral als de heer hun handen nodig had.' }
+      ] },
+    { titel:'De stad lokt', tekst:'Je neef schrijft uit de stad. Wie daar een jaar en een dag woont, is vrij man. Maar je hebt hier land, familie en niets op zak.',
+      keuzes:[
+        { t:'Blijf en werk je stuk land verder uit', ef:{voedsel:1, trouw:1},
+          gevolg:'Je kent hier iedereen en weet wat je hebt. Vrij ben je niet.',
+          lang:'De meeste mensen bleven. Zekerheid woog zwaarder dan vrijheid.' },
+        { t:'Vertrek naar de stad', ef:{trouw:-3, bescherming:-2, voedsel:-1},
+          gevolg:'Je begint met niets tussen vreemden. Maar niemand kan je nog opdragen te ploegen.',
+          lang:'Steden groeiden juist door mensen zoals jij. Zo liep de piramide langzaam leeg.' },
+        { t:'Stuur je jongste kind naar de stad', ef:{voedsel:-1, trouw:0},
+          gevolg:'Een mond minder, en een verbinding met een wereld waar andere regels gelden.',
+          lang:'Families spreidden hun risico over stad en platteland. Dat was slim, geen toeval.' }
+      ] },
+    { titel:'Een strenge winter', tekst:'De voorraad slinkt en het is pas februari. Er is nog graan in de schuur van de heer.',
+      keuzes:[
+        { t:'Ga naar de heer en vraag om hulp', ef:{trouw:1, voedsel:2},
+          gevolg:'Je krijgt graan, en de verwachting dat je in het voorjaar extra dagen komt werken.',
+          lang:'Hulp was echt, maar nooit gratis. Elke gift versterkte de band en de afhankelijkheid.' },
+        { t:'Verkoop je enige koe', ef:{voedsel:2, bescherming:-1, trouw:0},
+          gevolg:'Je komt de winter door. Zonder koe is je bestaan volgend jaar wankeler.',
+          lang:'Zo raakten boeren stukje bij beetje hun eigen middelen kwijt.' },
+        { t:'Deel wat er is met de buren en hoop op het voorjaar', ef:{voedsel:-1, trouw:2, bescherming:1},
+          gevolg:'Het dorp komt gehavend maar samen de winter door. Volgende keer helpen zij jou.',
+          lang:'Naast de verticale band met de heer bestond er een horizontale: het dorp onderling.' }
+      ] }
+  ]
+};
+
+/* ============================================================================
+   ENGINE
+   ============================================================================ */
+(function(){
+  'use strict';
+  document.getElementById('jaar').textContent = new Date().getFullYear();
+
+  var METERS = [
+    { id:'voedsel',     naam:'Voedsel',     kleur:'#EA9836' },
+    { id:'bescherming', naam:'Bescherming', kleur:'#204ECF' },
+    { id:'trouw',       naam:'Trouw',       kleur:'#F26749' }
+  ];
+
+  var rol = null, niveau = null, ronde = 0, staat = null, gebeurtenissen = [], keuzeGemaakt = false, log = [];
+  var alleUitkomsten = [];
+
+  /* Alle mogelijke speelwijzen doorrekenen. Zo wordt de eindbeoordeling geijkt
+     op wat in deze rol echt haalbaar is: een boer kan nu eenmaal niet dezelfde
+     cijfers halen als een heer, en dat mag het oordeel niet vertekenen. */
+  function berekenUitkomsten(){
+    var totalen = [];
+    function loop(i, st){
+      if (i === gebeurtenissen.length){
+        totalen.push(st.voedsel + st.bescherming + st.trouw);
+        return;
+      }
+      gebeurtenissen[i].keuzes.slice(0, niveau.keuzes).forEach(function(k){
+        var n = { voedsel:st.voedsel, bescherming:st.bescherming, trouw:st.trouw };
+        METERS.forEach(function(m){
+          n[m.id] = Math.max(0, Math.min(10, n[m.id] + (k.ef[m.id] || 0)));
+        });
+        loop(i+1, n);
+      });
+    }
+    loop(0, { voedsel: rol.start.voedsel, bescherming: rol.start.bescherming, trouw: rol.start.trouw });
+    totalen.sort(function(a,b){ return a-b; });
+    return totalen;
+  }
+
+  var elStart = document.getElementById('scherm-start');
+  var elSpel = document.getElementById('scherm-spel');
+  var elEinde = document.getElementById('scherm-einde');
+  var elPaneel = document.getElementById('paneel');
+  var elBeurt = document.getElementById('beurt');
+
+  /* ---------- keuzeschermen ---------- */
+  function bouwKiezer(lijst, doelId, opKies){
+    var doel = document.getElementById(doelId);
+    lijst.forEach(function(item){
+      var b = document.createElement('button');
+      b.className = 'kaartje'; b.type = 'button';
+      var ico = item.ico
+        ? '<div class="ico" style="background:' + item.kleur + '"><svg viewBox="0 0 24 24" stroke="#FBF6F1">' + item.ico + '</svg></div>'
+        : '';
+      b.innerHTML = ico + '<b>' + item.naam + '</b><span>' + (item.tag || item.uitleg) + '</span>';
+      b.addEventListener('click', function(){
+        Array.prototype.forEach.call(doel.children, function(c){ c.classList.remove('on'); });
+        b.classList.add('on');
+        opKies(item);
+        document.getElementById('startBtn').disabled = !(rol && niveau);
+      });
+      doel.appendChild(b);
+    });
+  }
+  bouwKiezer(ROLLEN, 'rollen', function(r){ rol = r; });
+  bouwKiezer(NIVEAUS, 'niveaus', function(n){ niveau = n; });
+
+  document.getElementById('startBtn').addEventListener('click', start);
+  document.getElementById('opnieuwBtn').addEventListener('click', naarStart);
+  document.getElementById('nogeensBtn').addEventListener('click', naarStart);
+  document.getElementById('grootBtn').addEventListener('click', function(){
+    document.body.classList.toggle('groot');
+    this.textContent = document.body.classList.contains('groot') ? 'Normaal' : 'Digibord';
+  });
+
+  function naarStart(){
+    elSpel.classList.add('hide'); elEinde.classList.add('hide'); elStart.classList.remove('hide');
+    document.getElementById('pillRol').classList.add('hide');
+    document.getElementById('pillNiv').classList.add('hide');
+    scrollTo({top:0, behavior:'auto'});
+  }
+
+  function start(){
+    ronde = 0; keuzeGemaakt = false; log = [];
+    staat = { voedsel: rol.start.voedsel, bescherming: rol.start.bescherming, trouw: rol.start.trouw };
+    gebeurtenissen = GEBEURTENISSEN[rol.id].slice(0, niveau.rondes);
+    alleUitkomsten = berekenUitkomsten();
+    elStart.classList.add('hide'); elEinde.classList.add('hide'); elSpel.classList.remove('hide');
+    var pr = document.getElementById('pillRol'), pn = document.getElementById('pillNiv');
+    pr.textContent = rol.naam; pr.classList.remove('hide');
+    pn.textContent = niveau.naam; pn.classList.remove('hide');
+    tekenPaneel(); tekenBeurt();
+    scrollTo({top:0, behavior:'auto'});
+  }
+
+  /* ---------- zijpaneel met de meters ---------- */
+  function tekenPaneel(){
+    var html = '<div class="rolkop"><div class="ico" style="background:' + rol.kleur + '">' +
+      '<svg viewBox="0 0 24 24" stroke="#FBF6F1">' + rol.ico + '</svg></div><b>' + rol.naam + '</b></div>' +
+      '<p class="jaar">Jaar ' + (ronde+1) + ' van ' + niveau.rondes + '</p>';
+
+    METERS.forEach(function(m){
+      var w = staat[m.id] * 10;
+      html += '<div class="meter' + (staat[m.id] <= 2 ? ' laag' : '') + '">' +
+        '<div class="lab"><b>' + m.naam + '</b><span>' + staat[m.id] + ' van 10</span></div>' +
+        '<div class="spoor"><i style="width:' + w + '%;background:' + m.kleur + '"></i></div></div>';
+    });
+
+    html += '<p class="uitleg">' + rol.uitleg + '</p>';
+    elPaneel.innerHTML = html;
+  }
+
+  /* ---------- een jaar spelen ---------- */
+  function tekenBeurt(){
+    keuzeGemaakt = false;
+    var g = gebeurtenissen[ronde];
+    var keuzes = g.keuzes.slice(0, niveau.keuzes);
+
+    var html = '<span class="eyebrow">jaar ' + (ronde+1) + '</span><h2>' + g.titel + '</h2>' +
+               '<p class="verhaal">' + g.tekst + '</p><div class="keuzes"></div><div class="gevolg"></div>';
+    elBeurt.innerHTML = html;
+
+    var vak = elBeurt.querySelector('.keuzes');
+    keuzes.forEach(function(k, i){
+      var b = document.createElement('button');
+      b.className = 'keuze'; b.type = 'button';
+      var kosten = niveau.kosten ? '<span class="kosten">' + kostenTekst(k.ef) + '</span>' : '';
+      b.innerHTML = '<kbd>' + (i+1) + '</kbd><span>' + k.t + kosten + '</span>';
+      b.addEventListener('click', function(){ kies(k, b, vak); });
+      vak.appendChild(b);
+    });
+  }
+
+  function kostenTekst(ef){
+    var d = [];
+    METERS.forEach(function(m){
+      var v = ef[m.id] || 0;
+      if (v > 0) d.push('meer ' + m.naam.toLowerCase());
+      if (v < 0) d.push('minder ' + m.naam.toLowerCase());
+    });
+    return d.length ? 'Verwacht: ' + d.join(', ') : 'Verwacht: weinig verandering';
+  }
+
+  function kies(k, knop, vak){
+    if (keuzeGemaakt) return;
+    keuzeGemaakt = true;
+
+    Array.prototype.forEach.call(vak.children, function(c){ c.disabled = true; });
+    knop.classList.add('gekozen');
+
+    var deltas = '';
+    METERS.forEach(function(m){
+      var v = k.ef[m.id] || 0;
+      staat[m.id] = Math.max(0, Math.min(10, staat[m.id] + v));
+      var kl = v > 0 ? 'op' : (v < 0 ? 'neer' : 'nul');
+      var tk = v > 0 ? '+' + v : (v < 0 ? String(v) : '0');
+      deltas += '<span class="delta ' + kl + '">' + m.naam + ' ' + tk + '</span>';
+    });
+    log.push({ jaar: ronde+1, keuze: k.t });
+
+    var g = elBeurt.querySelector('.gevolg');
+    var html = '<h3>Wat er daarna gebeurde</h3><p>' + k.gevolg + '</p><div class="deltas">' + deltas + '</div>';
+    var waarschuwing = alarmTekst();
+    if (waarschuwing) html += '<div class="alarm">' + waarschuwing + '</div>';
+    if (niveau.lang && k.lang) html += '<div class="lange"><b>Op lange termijn:</b> ' + k.lang + '</div>';
+    html += '<button class="btn" id="verderBtn" type="button" style="margin-top:18px">' +
+            (ronde+1 < niveau.rondes ? 'Naar het volgende jaar' : 'Bekijk hoe het afliep') + '</button>';
+    g.innerHTML = html;
+    g.classList.add('on');
+    tekenPaneel();
+
+    document.getElementById('verderBtn').addEventListener('click', function(){
+      if (ronde+1 < niveau.rondes){ ronde++; tekenPaneel(); tekenBeurt(); scrollTo({top:0, behavior:'smooth'}); }
+      else toonEinde();
+    });
+  }
+
+  function alarmTekst(){
+    if (staat.voedsel <= 1) return 'Je voorraad is bijna op. Honger maakt elke andere keuze moeilijker.';
+    if (staat.bescherming <= 1) return 'Je staat vrijwel onbeschermd. Iedereen in de omgeving weet dat inmiddels.';
+    if (staat.trouw <= 1) return 'De band met de laag boven en onder je is bijna weg. Zonder trouw houdt niets je op je plek.';
+    return '';
+  }
+
+  /* ---------- eindscherm ---------- */
+  function toonEinde(){
+    elSpel.classList.add('hide'); elEinde.classList.remove('hide');
+    var totaal = staat.voedsel + staat.bescherming + staat.trouw;
+    var laagste = METERS.reduce(function(a,b){ return staat[a.id] <= staat[b.id] ? a : b; });
+
+    /* hoeveel andere speelwijzen deden het slechter dan jij? */
+    var lager = 0;
+    for (var i = 0; i < alleUitkomsten.length; i++) if (alleUitkomsten[i] < totaal) lager++;
+    var plek = alleUitkomsten.length ? lager / alleUitkomsten.length : .5;
+
+    var titel, sub;
+    if (plek >= .70){
+      titel = 'Je staat sterker dan aan het begin';
+      sub = 'Je hield alle drie de draden vast: eten, veiligheid en de band met de mensen boven en onder je. Weinig speelwijzen komen hier.';
+    } else if (plek >= .35){
+      titel = 'Je hebt het gered, met schade';
+      sub = 'Je kwam de jaren door, maar er zijn scheuren gevallen die je volgend jaar gaat voelen.';
+    } else {
+      titel = 'Je positie is afgebrokkeld';
+      sub = 'Te veel ging tegelijk mis. In dit stelsel houdt niemand het alleen vol, en dat merk je nu.';
+    }
+    if (staat.voedsel === 0) sub += ' Je schuren zijn leeg.';
+    if (staat.trouw === 0) sub += ' De band met de anderen is verbroken.';
+
+    document.getElementById('eindTitel').textContent = titel;
+    document.getElementById('eindSub').textContent = sub;
+
+    var uitleg = {
+      heer:'Jij had het land, maar geen handen en geen zwaarden. Elke keer dat je iets weggaf, kocht je daar trouw mee terug. Dat is de ruil waar de piramide op draait.',
+      ridder:'Jij zat in het midden: je kreeg land van boven en arbeid van onder, en moest allebei tevreden houden. Viel een van de twee weg, dan verloor je alles.',
+      boer:'Jij maakte het voedsel waar de hele piramide van leefde, en had het minst te zeggen. Toch was je niet machteloos: zonder jouw handen stond alles stil.'
+    };
+
+    var html = '<div class="slotkaart"><b>Jouw jaren in cijfers</b><p>Voedsel ' + staat.voedsel + ', bescherming ' +
+      staat.bescherming + ', trouw ' + staat.trouw + '. Samen ' + totaal + ' punten, beter dan ' +
+      Math.round(plek*100) + ' van de 100 mogelijke speelwijzen in deze rol.</p></div>' +
+      '<div class="slotkaart"><b>Waarom deze piramide standhield</b><p>' + uitleg[rol.id] + '</p></div>' +
+      '<div class="slotkaart"><b>Jouw zwakste punt: ' + laagste.naam.toLowerCase() + '</b><p>' + zwakTekst(laagste.id) + '</p></div>';
+
+    var lijst = log.map(function(l){ return 'Jaar ' + l.jaar + ': ' + l.keuze; }).join('<br>');
+    html += '<div class="slotkaart"><b>Wat jij koos</b><p>' + lijst + '</p></div>';
+
+    if (niveau.id === 'hv'){
+      html += '<div class="denk"><b>Denkvraag, hier is geen goed of fout</b><p>Speel het nog eens als een andere rol. ' +
+              'Welke keuze die vanuit jouw rol logisch was, pakte voor de anderen slecht uit? En wat zegt dat over macht?</p></div>';
+    } else {
+      html += '<div class="denk"><b>Nu de andere kant</b><p>Speel het nog een keer als een andere rol. Je zult merken dat dezelfde gebeurtenis er dan heel anders uitziet.</p></div>';
+    }
+    document.getElementById('eindSlot').innerHTML = html;
+    scrollTo({top:0, behavior:'smooth'});
+  }
+
+  function zwakTekst(id){
+    if (id === 'voedsel') return 'Zonder voorraad kun je niets kopen, niemand helpen en geen slecht jaar opvangen. Voedsel was de echte munt.';
+    if (id === 'bescherming') return 'Zonder bescherming ben je overgeleverd aan wie wel gewapend is. Precies daarvoor betaalden mensen met arbeid en oogst.';
+    return 'Zonder trouw valt de afspraak weg waarop je plek berust. In dit stelsel was een gebroken band gevaarlijker dan een lege schuur.';
+  }
+
+  /* ---------- toetsenbord voor het digibord ---------- */
+  addEventListener('keydown', function(e){
+    if (elSpel.classList.contains('hide') || keuzeGemaakt) return;
+    if (e.key < '1' || e.key > '3') return;
+    var knop = elBeurt.querySelectorAll('.keuze')[parseInt(e.key,10)-1];
+    if (knop) knop.click();
+  });
+})();
+</script>
+</body>
+</html>
