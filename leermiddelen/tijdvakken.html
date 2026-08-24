@@ -109,7 +109,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
 <body>
 <header>
   <div class="wrap hd">
-    <a class="mark" href="over.html#materiaal"><i>LG</i> Tijdvakken</a>
+    <a class="mark" href="./"><i>LG</i> Tijdvakken</a>
     <div class="hd-right">
       <span class="pill hide" id="pillNiv">niveau</span>
       <button class="linkbtn" id="grootBtn" type="button">Digibord</button>
@@ -122,7 +122,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
   <p class="hand" style="font-size:1.6rem">waar hoort het thuis</p>
   <h1>Tijdvakken sorteren</h1>
   <p class="lead">Je krijgt een gebeurtenis. Sleep hem naar het tijdvak waar hij thuishoort, of tik gewoon op het juiste vak. Elke ronde worden er meer vakken, en dus wordt het lastiger.</p>
-  <p class="eyebrow" style="margin-top:32px">kies je niveau</p>
+  <p class="eyebrow" id="nivKop" style="margin-top:32px">kies je niveau</p>
   <p style="font-size:.85rem;color:var(--muted);margin-top:6px">De niveaus zijn afgestemd op leerjaar 1 en 2.</p>
   <div class="kies" id="niveaus"></div>
   <button class="btn" id="startBtn" type="button" disabled>Start ronde 1</button>
@@ -456,7 +456,48 @@ var GEBEURTENISSEN = [
     document.getElementById('eindOverzicht').innerHTML = html;
     scrollTo({top:0,behavior:'smooth'});
   }
+
+  /* ------------------------------------------------------------------
+     Deelbare link vanuit de leerlingomgeving.
+     Met ?n=bb, ?n=kgt of ?n=hv staat het niveau al goed en hoeft de
+     leerling alleen nog op start te drukken. Bij feodalisme kan ook
+     ?rol=heer en bij de handelsroute ?r=voc of ?r=hanze.
+     ------------------------------------------------------------------ */
+  (function(){
+    function param(naam){
+      var m = new RegExp('[?&]' + naam + '=([^&]+)').exec(location.search);
+      return m ? decodeURIComponent(m[1]) : null;
+    }
+    function kiesUit(vakId, lijst, waarde, kopId, woord){
+      if (!waarde) return;
+      var vak = document.getElementById(vakId);
+      if (!vak) return;
+      for (var i = 0; i < lijst.length; i++){
+        if (lijst[i] && lijst[i].id === waarde && vak.children[i]){
+          vak.children[i].click();
+          vak.style.display = 'none';
+          var kop = document.getElementById(kopId);
+          if (kop) kop.textContent = woord + ': ' + lijst[i].naam + ', gekozen door je docent';
+          return;
+        }
+      }
+    }
+    kiesUit('niveaus', NIVEAUS, param('n'), 'nivKop', 'Niveau');
+    if (typeof ROLLEN !== 'undefined') kiesUit('rollen', ROLLEN, param('rol'), 'rolKop', 'Rol');
+    if (typeof ROUTES !== 'undefined'){
+      var lijst = Object.keys(ROUTES).map(function(k){ var r = ROUTES[k]; r.id = k; return r; });
+      kiesUit('routes', lijst, param('r'), 'routeKop', 'Route');
+    }
+  })();
+
 })();
+
+  /* De knop linksboven gaat terug naar het spellenmenu, met je niveau erbij. */
+  (function(){
+    var m = document.querySelector('header .mark');
+    if (m) m.setAttribute('href', './' + location.search);   /* niveau meenemen naar het menu */
+  })();
+
 </script>
 </body>
 </html>
