@@ -128,7 +128,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
 <body>
 <header>
   <div class="wrap hd">
-    <a class="mark" href="over.html#materiaal"><i>LG</i> De handelsroute</a>
+    <a class="mark" href="./"><i>LG</i> De handelsroute</a>
     <div class="hd-right">
       <span class="pill hide" id="pillRoute">route</span>
       <span class="pill hide" id="pillNiv">niveau</span>
@@ -142,9 +142,9 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
   <p class="hand" style="font-size:1.6rem">koop laag, verkoop hoog</p>
   <h1>De handelsroute</h1>
   <p class="lead">Je vaart met een schip tussen havens en handelt in schaarse waar. De prijzen liggen niet vast: ze bewegen mee met vraag en aanbod. Koop je veel op, dan stijgt de prijs terwijl je koopt. Verkoop je alles tegelijk, dan zakt hij onder je handen weg.</p>
-  <p class="eyebrow" style="margin-top:30px">kies je route</p>
+  <p class="eyebrow" id="routeKop" style="margin-top:30px">kies je route</p>
   <div class="kies" id="routes"></div>
-  <p class="eyebrow" style="margin-top:28px">kies je niveau</p>
+  <p class="eyebrow" id="nivKop" style="margin-top:28px">kies je niveau</p>
   <p style="font-size:.85rem;color:var(--muted);margin-top:6px">De niveaus zijn afgestemd op leerjaar 1 en 2.</p>
   <div class="kies" id="niveaus"></div>
   <button class="btn" id="startBtn" type="button" disabled>Uitvaren</button>
@@ -627,7 +627,48 @@ var GEBEURTENISSEN = [
       '<div class="denk"><b>Denkvraag</b><p>Stel dat drie schepen tegelijk dezelfde waar halen. Wat gebeurt er dan met de prijs, en met de winst van alle drie? En wat zou jij doen als je dat kon voorkomen?</p></div>';
     scrollTo({top:0,behavior:'smooth'});
   }
+
+  /* ------------------------------------------------------------------
+     Deelbare link vanuit de leerlingomgeving.
+     Met ?n=bb, ?n=kgt of ?n=hv staat het niveau al goed en hoeft de
+     leerling alleen nog op start te drukken. Bij feodalisme kan ook
+     ?rol=heer en bij de handelsroute ?r=voc of ?r=hanze.
+     ------------------------------------------------------------------ */
+  (function(){
+    function param(naam){
+      var m = new RegExp('[?&]' + naam + '=([^&]+)').exec(location.search);
+      return m ? decodeURIComponent(m[1]) : null;
+    }
+    function kiesUit(vakId, lijst, waarde, kopId, woord){
+      if (!waarde) return;
+      var vak = document.getElementById(vakId);
+      if (!vak) return;
+      for (var i = 0; i < lijst.length; i++){
+        if (lijst[i] && lijst[i].id === waarde && vak.children[i]){
+          vak.children[i].click();
+          vak.style.display = 'none';
+          var kop = document.getElementById(kopId);
+          if (kop) kop.textContent = woord + ': ' + lijst[i].naam + ', gekozen door je docent';
+          return;
+        }
+      }
+    }
+    kiesUit('niveaus', NIVEAUS, param('n'), 'nivKop', 'Niveau');
+    if (typeof ROLLEN !== 'undefined') kiesUit('rollen', ROLLEN, param('rol'), 'rolKop', 'Rol');
+    if (typeof ROUTES !== 'undefined'){
+      var lijst = Object.keys(ROUTES).map(function(k){ var r = ROUTES[k]; r.id = k; return r; });
+      kiesUit('routes', lijst, param('r'), 'routeKop', 'Route');
+    }
+  })();
+
 })();
+
+  /* De knop linksboven gaat terug naar het spellenmenu, met je niveau erbij. */
+  (function(){
+    var m = document.querySelector('header .mark');
+    if (m) m.setAttribute('href', './' + location.search);   /* niveau meenemen naar het menu */
+  })();
+
 </script>
 </body>
 </html>
