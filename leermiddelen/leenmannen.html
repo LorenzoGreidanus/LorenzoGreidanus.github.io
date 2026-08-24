@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Verdeel je rijk, versie 1.0 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verdeel je rijk &middot; meneer Greidanus</title>
+<meta name="description" content="Je bent koning en kunt niet overal tegelijk zijn. Geef je gebieden in leen, en ontdek waarom je rijk je door de vingers glipt.">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%23204ECF'/><text x='50' y='68' font-family='Poppins,Arial' font-size='46' font-weight='600' fill='%23FBF6F1' text-anchor='middle'>LG</text></svg>">
+<style>
+:root{--crab:#F26749;--amber:#EA9836;--ocean:#204ECF;--vista:#83A5F2;--sand:#FCDED6;--room:#FBF6F1;
+  --ink:#14224C;--muted:#5b6480;--op:#2f7d52;--neer:#c0442c;--max:1240px;--ease:cubic-bezier(.22,.61,.36,1)}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--room);color:var(--ink);line-height:1.55;
+  font-family:'Poppins',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;font-weight:600;line-height:1.12;letter-spacing:-.02em}
+p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+.wrap{width:min(100% - 28px,var(--max));margin-inline:auto}
+.hand{font-family:'Caveat',cursive;font-weight:600;color:var(--crab)}
+.eyebrow{font-size:.72rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.hide{display:none !important}
+header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-bottom:1px solid rgba(20,34,76,.08);padding:10px 0}
+.hd{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.mark{display:flex;align-items:center;gap:10px;font-weight:600;text-decoration:none}
+.mark i{width:32px;height:32px;border-radius:10px;background:var(--ocean);color:var(--room);display:grid;place-items:center;font-style:normal;font-size:.78rem}
+.hd-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.pill{background:var(--sand);font-weight:600;padding:6px 13px;border-radius:999px;font-size:.78rem}
+.linkbtn{background:none;border:none;color:var(--muted);text-decoration:underline;text-underline-offset:4px;font-size:.85rem;padding:6px}
+.linkbtn:hover{color:var(--ink)}
+
+.start{padding:44px 0 70px;text-align:center}
+.start h1{font-size:clamp(2.2rem,6vw,3.6rem);margin:8px 0 14px}
+.start .lead{max-width:58ch;margin:0 auto;color:var(--muted)}
+.kies{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:20px auto 0;max-width:900px}
+.kaartje{background:#fff;border:2px solid rgba(20,34,76,.10);border-radius:22px;padding:20px;text-align:left;transition:border-color .2s var(--ease),transform .2s var(--ease)}
+.kaartje:hover{border-color:var(--vista);transform:translateY(-3px)}
+.kaartje.on{border-color:var(--ocean);background:#f4f7ff}
+.kaartje b{display:block;font-size:1.05rem}
+.kaartje span{display:block;margin-top:5px;font-size:.86rem;color:var(--muted)}
+.btn{display:inline-block;border:none;background:var(--crab);color:#fff;font-weight:600;padding:14px 30px;border-radius:999px;
+  box-shadow:0 10px 0 rgba(20,34,76,.10);margin-top:22px;transition:transform .16s var(--ease)}
+.btn:hover{transform:translateY(-2px)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn.klein{padding:11px 22px;font-size:.9rem;box-shadow:0 7px 0 rgba(20,34,76,.10);margin-top:0}
+
+/* ---------- spel ---------- */
+.spel{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:22px;padding:18px 0 60px;align-items:start}
+@media(max-width:980px){.spel{grid-template-columns:1fr;gap:16px}}
+.kolom{display:grid;gap:16px}
+.kaart{background:#fff;border:1px solid rgba(20,34,76,.08);border-radius:24px;box-shadow:0 14px 34px rgba(20,34,76,.07);overflow:hidden}
+.kaart .kop{padding:16px 20px 0;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.kaart .kop h2{font-size:1.08rem}
+.kaart .body{padding:14px 20px 20px}
+
+svg.rijk{display:block;width:100%;height:auto;background:#dfe8ff}
+svg.rijk .gebied{cursor:pointer;transition:opacity .2s var(--ease)}
+svg.rijk .gebied:hover{opacity:.85}
+svg.rijk .actief{stroke:#14224C;stroke-width:3}
+
+.status{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:9px}
+.stat{background:var(--room);border:1px solid rgba(20,34,76,.08);border-radius:14px;padding:9px 12px}
+.stat i{display:block;font-style:normal;font-size:.64rem;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
+.stat b{font-size:1.1rem;font-weight:600}
+.stat.waarschuw b{color:var(--neer)}
+
+.lijst{display:grid;gap:8px}
+.rij{display:grid;grid-template-columns:12px 1fr auto;gap:10px;align-items:center;width:100%;text-align:left;
+  background:var(--room);border:1.5px solid rgba(20,34,76,.10);border-radius:14px;padding:10px 13px;
+  transition:border-color .18s var(--ease)}
+.rij:hover{border-color:var(--vista)}
+.rij.gekozen{border-color:var(--ocean);background:#f4f7ff}
+.rij .kleur{width:12px;height:12px;border-radius:4px;margin-left:2px}
+.rij b{font-size:.93rem;display:block}
+.rij small{color:var(--muted);font-size:.76rem}
+.rij .rechts{text-align:right;font-size:.75rem;color:var(--muted);white-space:nowrap}
+
+.keuzes{display:grid;gap:9px}
+.keuze{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;text-align:left;width:100%;
+  background:var(--room);border:1.5px solid rgba(20,34,76,.10);border-radius:15px;padding:12px 15px;
+  transition:border-color .18s var(--ease),transform .18s var(--ease)}
+.keuze:hover:not(:disabled){border-color:var(--vista);transform:translateX(3px)}
+.keuze:disabled{opacity:.45;cursor:not-allowed}
+.keuze b{font-size:.95rem}
+.keuze small{display:block;color:var(--muted);font-size:.8rem;margin-top:2px}
+.keuze .cijfers{font-size:.76rem;font-weight:600;color:var(--muted);white-space:nowrap;text-align:right}
+body.groot .keuze b{font-size:1.1rem}
+body.groot .verslag{font-size:1.04rem}
+
+.verslag{background:var(--room);border-left:3px solid var(--amber);border-radius:0 14px 14px 0;padding:12px 15px;
+  font-size:.9rem;margin-top:12px;max-height:260px;overflow:auto}
+.verslag p{margin-bottom:8px}
+.verslag p:last-child{margin-bottom:0}
+.verslag .op{color:var(--op);font-weight:600}
+.verslag .neer{color:var(--neer);font-weight:600}
+.verslag b{color:var(--ink)}
+
+.fase{display:inline-block;font-size:.72rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+  background:var(--sand);padding:5px 12px;border-radius:999px;margin-bottom:8px}
+
+/* ---------- einde ---------- */
+.einde{padding:42px 0 70px;text-align:center}
+.einde .eyebrow{display:block;margin-bottom:4px}
+.groot-getal{font-size:clamp(2.6rem,9vw,4.6rem);font-weight:600;letter-spacing:-.04em;color:var(--ocean);line-height:1;margin-top:18px}
+.slot{max-width:760px;margin:24px auto 0;text-align:left;display:grid;gap:12px}
+.slotkaart{background:#fff;border:1px solid rgba(20,34,76,.08);border-radius:20px;padding:18px 20px}
+.slotkaart b{display:block;margin-bottom:4px}
+.slotkaart p{font-size:.94rem;color:var(--muted)}
+.denk{background:var(--sand);border-radius:20px;padding:18px 20px}
+.denk b{display:block;margin-bottom:4px}
+.denk p{font-size:.94rem;color:#42405a}
+footer{padding:26px 0 40px;font-size:.83rem;color:var(--muted);text-align:center}
+.strip{display:flex;height:7px;width:150px;border-radius:999px;overflow:hidden;margin:0 auto 12px}
+.strip i{flex:1}
+button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offset:3px;border-radius:10px}
+@media(prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap hd">
+    <a class="mark" href="./"><i>LG</i> Verdeel je rijk</a>
+    <div class="hd-right">
+      <span class="pill hide" id="pillNiv">niveau</span>
+      <button class="linkbtn" id="grootBtn" type="button">Digibord</button>
+      <button class="linkbtn" id="opnieuwBtn" type="button">Opnieuw</button>
+    </div>
+  </div>
+</header>
+
+<section class="start wrap" id="scherm-start">
+  <p class="hand" style="font-size:1.6rem">je kunt niet overal zijn</p>
+  <h1>Verdeel je rijk</h1>
+  <p class="lead">Je bent koning van een rijk dat te groot is om alleen te besturen. Je geeft gebieden in leen aan mannen die je trouw zweren. Zij verdedigen jouw grenzen en jij hoeft er niet te zijn. Maar een leen gaat over op de zoon, en die zoon heeft jou nooit iets beloofd.</p>
+  <p class="eyebrow" id="nivKop" style="margin-top:30px">kies je niveau</p>
+  <p style="font-size:.85rem;color:var(--muted);margin-top:6px">De niveaus zijn afgestemd op leerjaar 1 en 2.</p>
+  <div class="kies" id="niveaus"></div>
+  <button class="btn" id="startBtn" type="button" disabled>Begin te regeren</button>
+  <p style="margin-top:14px;font-size:.82rem;color:var(--muted)">Geen inloggen, niets wordt opgeslagen.</p>
+</section>
+
+<section class="wrap hide" id="scherm-spel">
+  <div class="spel">
+    <div class="kolom">
+      <div class="kaart">
+        <svg class="rijk" id="rijkSvg" viewBox="0 0 420 320" role="img" aria-label="Kaart van je rijk met de gebieden"></svg>
+        <div class="body"><div class="status" id="status"></div>
+          <p style="margin-top:10px;font-size:.78rem;color:var(--muted)">
+            Elke kleur is een gebied. Het rondje toont wie het in handen heeft: een kroon is van jou,
+            een kruis is de kerk, een getal is de trouw van je leenman. De rode driehoekjes zijn de dreiging.</p></div>
+      </div>
+      <div class="kaart">
+        <div class="kop"><h2>Je gebieden</h2><span class="eyebrow">wie heeft wat</span></div>
+        <div class="body"><div class="lijst" id="lijst"></div></div>
+      </div>
+    </div>
+
+    <div class="kolom">
+      <div class="kaart">
+        <div class="body">
+          <span class="fase" id="faseLabel">verdelen</span>
+          <h2 id="beurtTitel" style="font-size:1.25rem"></h2>
+          <p id="beurtTekst" style="color:#33405f;font-size:.95rem;margin-top:8px"></p>
+          <div class="keuzes" id="keuzes" style="margin-top:16px"></div>
+          <div class="verslag" id="verslag"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap hide einde" id="scherm-einde">
+  <p class="eyebrow">na drie generaties</p>
+  <div class="groot-getal" id="eindGetal"></div>
+  <p style="color:var(--muted);margin-top:8px;max-width:56ch;margin-inline:auto" id="eindSub"></p>
+  <div class="slot" id="eindSlot"></div>
+  <button class="btn" id="nogeensBtn" type="button">Nog een keer</button>
+</section>
+
+<footer>
+  <div class="strip" aria-hidden="true">
+    <i style="background:var(--crab)"></i><i style="background:var(--amber)"></i><i style="background:var(--ocean)"></i><i style="background:var(--vista)"></i><i style="background:var(--sand)"></i>
+  </div>
+  Verdeel je rijk &middot; meneer Greidanus &middot; <span id="jaar">2026</span>
+</footer>
+
+<script>
+/* ============================================================================
+   VERDEEL JE RIJK
+   ----------------------------------------------------------------------------
+   Een leenman heeft drie eigenschappen:
+     kracht    hoeveel mannen hij op de been brengt, dus hoe goed hij verdedigt
+     trouw     0 tot 100, hoe zeker het is dat hij je nog gehoorzaamt
+     eerzucht  hoe graag hij voor zichzelf begint
+
+   De kern van het spel: bij een generatiewissel erft de zoon het leen, maar
+   niet de eed. Zijn trouw zakt fors. De kerk erft juist niet, daar mag je bij
+   elke wissel opnieuw iemand kiezen.
+   ============================================================================ */
+
+var GEBIEDEN = [
+  { id:'bos', kleur:'#5f9e77',    naam:'Bosgraafschap', inkomen:2, dreiging:2, x:106,  y:100,
+    pad:'M46 62 Q118.5 29.4 198 28 Q170.5 80.3 158 138 Q89.3 148.2 24 172 Q22.3 114.5 46 62 Z' },
+  { id:'grens', kleur:'#F26749',  naam:'Grensmark',     inkomen:2, dreiging:5, x:282, y:107,
+    pad:'M198 28 Q279.4 28.2 356 56 Q391.9 105.4 400 166 Q351.2 150.1 300 148 Q228.4 152.0 158 138 Q170.5 80.3 198 28 Z' },
+  { id:'kust', kleur:'#83A5F2',   naam:'Kustgouw',      inkomen:3, dreiging:3, x:102,  y:206,
+    pad:'M24 172 Q89.3 148.2 158 138 Q171.0 197.3 168 258 Q111.9 263.0 56 256 Q26.9 219.0 24 172 Z' },
+  { id:'kroon', kleur:'#EA9836',  naam:'Kroonland',     inkomen:3, dreiging:1, x:232, y:202,
+    pad:'M158 138 Q228.4 152.0 300 148 Q293.0 207.0 300 266 Q234.5 253.0 168 258 Q171.0 197.3 158 138 Z' },
+  { id:'berg', kleur:'#8a7fbf',   naam:'Bergpas',       inkomen:1, dreiging:4, x:346, y:207,
+    pad:'M300 148 Q351.2 150.1 400 166 Q404.8 209.5 384 248 Q340.7 251.1 300 266 Q293.0 207.0 300 148 Z' },
+  { id:'rivier', kleur:'#4aa3b8', naam:'Rivierdal',     inkomen:3, dreiging:2, x:193, y:279,
+    pad:'M56 256 Q111.9 263.0 168 258 Q234.5 253.0 300 266 Q303.0 286.5 296 306 Q221.2 321.0 146 308 Q95.0 292.4 56 256 Z' }
+];
+
+var KANDIDATEN = [
+  { naam:'Godfried de Sterke',   kracht:7, trouw:50, eerzucht:8,
+    tekst:'Een geducht krijgsman met een groot gevolg, en met eigen plannen.' },
+  { naam:'Reinout de Trouwe',    kracht:3, trouw:88, eerzucht:1,
+    tekst:'Diende je vader al. Trouw tot in de dood, maar hij heeft weinig mannen.' },
+  { naam:'Je broer Boudewijn',   kracht:6, trouw:62, eerzucht:7,
+    tekst:'Familie. Dat helpt, tot hij vindt dat hij net zoveel recht heeft als jij.' },
+  { naam:'Abt Wibald',           kracht:2, trouw:80, eerzucht:1, kerk:true,
+    tekst:'De kerk krijgt geen kinderen: bij zijn dood benoem jij de volgende.' },
+  { naam:'Ridder Alard',         kracht:5, trouw:68, eerzucht:4,
+    tekst:'Een degelijke keuze zonder verrassingen, in beide richtingen.' },
+  { naam:'Vrouwe Adela',         kracht:4, trouw:74, eerzucht:3,
+    tekst:'Bestuurt haar land met vaste hand en heeft veel bondgenoten.' },
+  { naam:'Herman van de Mark',   kracht:8, trouw:38, eerzucht:9,
+    tekst:'De sterkste man in de wijde omtrek. Iedereen weet dat, hijzelf ook.' },
+  { naam:'Otto de Jonge',        kracht:4, trouw:78, eerzucht:5,
+    tekst:'Jong en fel. Hij wil zich bewijzen, en dat kan twee kanten op vallen.' },
+  { naam:'Bisschop Everhard',    kracht:3, trouw:76, eerzucht:2, kerk:true,
+    tekst:'Kerkelijk bestuurder. Zijn leen keert bij zijn dood terug naar jou.' },
+  { naam:'Walter van het Woud',  kracht:6, trouw:56, eerzucht:6,
+    tekst:'Kent elk pad in zijn streek. Handig in oorlog, lastig als hij weigert.' }
+];
+
+var DADEN = [
+  { id:'hofdag', naam:'Roep een hofdag bijeen',
+    tekst:'Al je leenmannen komen naar je toe en vernieuwen hun eed in het openbaar.',
+    doel:false, ef:function(st){ st.leenmannen(function(g){ g.houder.trouw += 10; }); return 'Iedereen zweert opnieuw trouw. Overal <span class="op">plus 10 trouw</span>.'; } },
+  { id:'bevestig', naam:'Bevestig een erfgenaam in zijn leen',
+    tekst:'Je erkent de zoon officieel als leenman. Dat kost je niets behalve gezag dat je niet inzet voor iets anders.',
+    doel:true, ef:function(st, g){ g.houder.trouw += 26; return g.houder.naam + ' knielt en zweert je de eed. <span class="op">Plus 26 trouw</span> in ' + g.naam + '.'; } },
+  { id:'huwelijk', naam:'Sluit een huwelijk met zijn familie',
+    tekst:'Een neef of nicht van jou trouwt in die familie. Bloedbanden binden steviger dan eden.',
+    doel:true, ef:function(st, g){ g.houder.trouw += 16; g.houder.eerzucht = Math.max(0, g.houder.eerzucht - 3);
+      return 'Het huwelijk wordt gesloten. ' + g.naam + ': <span class="op">plus 16 trouw</span> en minder eerzucht.'; } },
+  { id:'burcht', naam:'Bouw een burcht',
+    tekst:'Een stenen burcht maakt een gebied jarenlang beter te verdedigen.',
+    doel:true, ef:function(st, g){ g.burcht = (g.burcht || 0) + 2; return 'In ' + g.naam + ' verrijst een burcht. <span class="op">Verdediging plus 2</span>, blijvend.'; } },
+  { id:'kerk', naam:'Schenk een gebied aan de kerk',
+    tekst:'Een bisschop of abt krijgt het leen. De kerk erft niet, dus het komt later bij jou terug.',
+    doel:true, ef:function(st, g){
+      g.houder = { naam:'Abt van ' + g.naam, kracht:2, trouw:82, eerzucht:1, kerk:true, generatie:st.gen };
+      return g.naam + ' gaat naar de kerk. Geen erfelijkheid, dus dit gebied glipt je niet uit handen.'; } },
+  { id:'terugroepen', naam:'Roep een leen terug',
+    tekst:'Je neemt het gebied terug in eigen hand. Andere leenmannen kijken toe en trekken hun conclusies.',
+    doel:true, ef:function(st, g){
+      var was = g.houder;
+      if (was.kracht >= 6 && was.trouw < 55){
+        g.opstandig = true; g.houder = null;
+        return was.naam + ' weigert en scheurt zich af. ' + g.naam + ' is <span class="neer">verloren</span>.';
+      }
+      g.houder = null;
+      st.leenmannen(function(x){ x.houder.trouw -= 8; });
+      return g.naam + ' is weer van jou. De anderen worden er <span class="neer">wantrouwig</span> van, overal min 8 trouw.'; } }
+];
+
+var NIVEAUS = [
+  { id:'bb',  naam:'vmbo-bb',           generaties:2, daden:2, keuzes:2, splitsing:false, verval:18,
+    uitleg:'Twee generaties, twee kandidaten per gebied.' },
+  { id:'kgt', naam:'vmbo-kgt en gl/tl', generaties:3, daden:2, keuzes:3, splitsing:false, verval:22,
+    uitleg:'Drie generaties, drie kandidaten en meer verval van trouw.' },
+  { id:'hv',  naam:'havo en vwo',       generaties:3, daden:2, keuzes:3, splitsing:true,  verval:26,
+    uitleg:'Drie generaties, en erfenissen worden soms tussen zonen verdeeld.' }
+];
+
+/* ============================================================================
+   ENGINE
+   ============================================================================ */
+(function(){
+  'use strict';
+  document.getElementById('jaar').textContent = new Date().getFullYear();
+
+  var niveau = null, gen = 0, gezag = 70, schat = 0, fase = '', verslag = [],
+      gebieden = [], pool = [], dadenOver = 0, wachtOpDoel = null, gekozenGebied = null;
+
+  var elStart = document.getElementById('scherm-start'), elSpel = document.getElementById('scherm-spel'),
+      elEinde = document.getElementById('scherm-einde');
+
+  var kiezer = document.getElementById('niveaus');
+  NIVEAUS.forEach(function(n){
+    var b = document.createElement('button');
+    b.className = 'kaartje'; b.type = 'button';
+    b.innerHTML = '<b>' + n.naam + '</b><span>' + n.uitleg + '</span>';
+    b.addEventListener('click', function(){
+      niveau = n;
+      Array.prototype.forEach.call(kiezer.children, function(c){ c.classList.remove('on'); });
+      b.classList.add('on');
+      document.getElementById('startBtn').disabled = false;
+      var p = document.getElementById('pillNiv'); p.textContent = n.naam; p.classList.remove('hide');
+    });
+    kiezer.appendChild(b);
+  });
+
+  document.getElementById('startBtn').addEventListener('click', start);
+  document.getElementById('nogeensBtn').addEventListener('click', naarStart);
+  document.getElementById('opnieuwBtn').addEventListener('click', naarStart);
+  document.getElementById('grootBtn').addEventListener('click', function(){
+    document.body.classList.toggle('groot');
+    this.textContent = document.body.classList.contains('groot') ? 'Normaal' : 'Digibord';
+  });
+  function naarStart(){
+    elSpel.classList.add('hide'); elEinde.classList.add('hide'); elStart.classList.remove('hide');
+    scrollTo({top:0,behavior:'auto'});
+  }
+
+  function husselen(a){
+    a = a.slice();
+    for (var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; }
+    return a;
+  }
+  function grens(v){ return Math.max(0, Math.min(100, v)); }
+
+  var staatObj = {
+    gen: 0,
+    leenmannen: function(fn){ gebieden.forEach(function(g){ if (g.houder) fn(g); }); }
+  };
+
+  function start(){
+    gen = 1; gezag = 70; schat = 0; verslag = []; wachtOpDoel = null; gekozenGebied = null;
+    gebieden = GEBIEDEN.map(function(g){
+      return { id:g.id, naam:g.naam, inkomen:g.inkomen, dreiging:g.dreiging, pad:g.pad, x:g.x, y:g.y,
+               houder:null, burcht:0, opstandig:false };
+    });
+    pool = husselen(KANDIDATEN);
+    elStart.classList.add('hide'); elEinde.classList.add('hide'); elSpel.classList.remove('hide');
+    noteer('<b>Generatie 1.</b> Je bent tot koning gekroond. Zes gebieden wachten op een heer.');
+    faseVerdelen();
+    scrollTo({top:0,behavior:'auto'});
+  }
+
+  function noteer(t){ verslag.unshift(t); if (verslag.length > 16) verslag.pop(); }
+
+  /* ---------- tekenen ---------- */
+  function tekenAlles(){ tekenKaart(); tekenStatus(); tekenLijst(); tekenVerslag(); }
+
+  /* Elk gebied heeft zijn eigen kleur, zodat je ze uit elkaar houdt.
+     Wie het gebied in handen heeft, lees je af aan het ronde insigne. */
+  function insigneKleur(g){
+    if (g.opstandig) return '#8d8880';
+    if (!g.houder) return '#F26749';                 /* kroondomein, van jou */
+    if (g.houder.kerk) return '#204ECF';
+    if (g.houder.trouw >= 65) return '#2f7d52';
+    if (g.houder.trouw >= 45) return '#EA9836';
+    return '#c0442c';
+  }
+  function insigneTeken(g){
+    if (g.opstandig) return '\u2717';
+    if (!g.houder) return '\u265A';                  /* kroon: jij bestuurt zelf */
+    if (g.houder.kerk) return '\u271D';
+    return String(Math.round(g.houder.trouw));
+  }
+
+  function tekenKaart(){
+    var s = '<rect width="420" height="320" fill="#dfe8ff"/>';
+    /* een zachte schaduw onder het land, zodat het als eiland leest */
+    gebieden.forEach(function(g){
+      s += '<path d="' + g.pad + '" fill="#14224C" fill-opacity=".10" transform="translate(0,4)"/>';
+    });
+    gebieden.forEach(function(g){
+      s += '<path class="gebied' + (gekozenGebied === g.id ? ' actief' : '') + '" data-g="' + g.id + '" d="' + g.pad +
+           '" fill="' + g.kleur + '" fill-opacity="' + (g.opstandig ? '.35' : '.88') +
+           '" stroke="#FBF6F1" stroke-width="2.2" stroke-linejoin="round"/>';
+    });
+    gebieden.forEach(function(g){
+      /* insigne met de stand van zaken */
+      s += '<circle cx="' + g.x + '" cy="' + (g.y - 20) + '" r="12" fill="' + insigneKleur(g) +
+           '" stroke="#FBF6F1" stroke-width="2"/>';
+      s += '<text x="' + g.x + '" y="' + (g.y - 16) + '" text-anchor="middle" font-family="Poppins" font-size="10" ' +
+           'font-weight="600" fill="#FBF6F1" pointer-events="none">' + insigneTeken(g) + '</text>';
+      s += '<text x="' + g.x + '" y="' + (g.y + 4) + '" text-anchor="middle" font-family="Poppins" font-size="11.5" ' +
+           'font-weight="600" fill="#14224C" pointer-events="none">' + g.naam + '</text>';
+      var onder = g.opstandig ? 'afgescheiden' : (g.houder ? g.houder.naam : 'jouw kroondomein');
+      if (onder.length > 22) onder = onder.slice(0, 21) + '.';
+      s += '<text x="' + g.x + '" y="' + (g.y + 17) + '" text-anchor="middle" font-family="Poppins" font-size="9" ' +
+           'fill="#14224C" fill-opacity=".75" pointer-events="none">' + onder + '</text>';
+      var teken = '';
+      for (var i = 0; i < g.dreiging; i++) teken += '\u25B2';
+      s += '<text x="' + g.x + '" y="' + (g.y + 29) + '" text-anchor="middle" font-family="Poppins" font-size="8" ' +
+           'fill="#7a1f10" fill-opacity=".8" pointer-events="none">' + teken + (g.burcht ? '  \u265C' : '') + '</text>';
+    });
+    var svg = document.getElementById('rijkSvg');
+    svg.innerHTML = s;
+    Array.prototype.forEach.call(svg.querySelectorAll('[data-g]'), function(pth){
+      pth.addEventListener('click', function(){ klikGebied(pth.dataset.g); });
+    });
+  }
+
+  function tekenStatus(){
+    var eigen = gebieden.filter(function(g){ return !g.houder && !g.opstandig; }).length;
+    var loyaal = gebieden.filter(function(g){ return g.houder && g.houder.trouw >= 50; }).length;
+    var kwijt = gebieden.filter(function(g){ return g.opstandig; }).length;
+    document.getElementById('status').innerHTML =
+      '<div class="stat"><i>Generatie</i><b>' + gen + ' van ' + niveau.generaties + '</b></div>' +
+      '<div class="stat' + (gezag < 35 ? ' waarschuw' : '') + '"><i>Gezag</i><b>' + Math.round(gezag) + '</b></div>' +
+      '<div class="stat"><i>In eigen hand</i><b>' + eigen + '</b></div>' +
+      '<div class="stat"><i>Trouwe lenen</i><b>' + loyaal + '</b></div>' +
+      '<div class="stat' + (kwijt ? ' waarschuw' : '') + '"><i>Kwijt</i><b>' + kwijt + '</b></div>';
+  }
+
+  function tekenLijst(){
+    var html = '';
+    gebieden.forEach(function(g){
+      var wie = g.opstandig ? 'heeft zich afgescheiden'
+              : (g.houder ? g.houder.naam : 'kroondomein, jij bestuurt het zelf');
+      var cijfers = g.opstandig ? '' :
+        (g.houder ? 'kracht ' + g.houder.kracht + ' &middot; trouw ' + Math.round(g.houder.trouw)
+                  : 'jouw eigen leger');
+      html += '<div class="rij' + (gekozenGebied === g.id ? ' gekozen' : '') + '">' +
+        '<span class="kleur" style="background:' + g.kleur + ';box-shadow:0 0 0 2px ' + insigneKleur(g) + '"></span>' +
+        '<span><b>' + g.naam + '</b><small>' + wie + '</small></span>' +
+        '<span class="rechts">dreiging ' + g.dreiging + (g.burcht ? ' &middot; burcht +' + g.burcht : '') +
+        '<br>' + cijfers + '</span></div>';
+    });
+    document.getElementById('lijst').innerHTML = html;
+  }
+
+  function tekenVerslag(){
+    document.getElementById('verslag').innerHTML = verslag.map(function(v){ return '<p>' + v + '</p>'; }).join('');
+  }
+
+  function zetBeurt(faseNaam, titel, tekst, knoppen){
+    fase = faseNaam;
+    document.getElementById('faseLabel').textContent = faseNaam;
+    document.getElementById('beurtTitel').textContent = titel;
+    document.getElementById('beurtTekst').innerHTML = tekst;
+    var vak = document.getElementById('keuzes');
+    vak.innerHTML = '';
+    knoppen.forEach(function(k){
+      var b = document.createElement('button');
+      b.className = 'keuze'; b.type = 'button';
+      if (k.uit) b.disabled = true;
+      b.innerHTML = '<span><b>' + k.titel + '</b><small>' + k.tekst + '</small></span>' +
+                    (k.cijfers ? '<span class="cijfers">' + k.cijfers + '</span>' : '');
+      b.addEventListener('click', k.doe);
+      vak.appendChild(b);
+    });
+    tekenAlles();
+  }
+
+  /* ---------- fase 1: gebieden verdelen ---------- */
+  function faseVerdelen(){
+    var open = gebieden.filter(function(g){ return !g.houder && !g.opstandig && !g.eigenKeuze; });
+    var vacant = gebieden.filter(function(g){ return !g.houder && !g.opstandig; });
+
+    if (!vacant.length || vacant.every(function(g){ return g.eigenKeuze; })){
+      faseDaden(); return;
+    }
+    var g = vacant.filter(function(x){ return !x.eigenKeuze; })[0];
+    if (!g){ faseDaden(); return; }
+
+    var kandidaten = pool.slice(0, niveau.keuzes);
+    var knoppen = kandidaten.map(function(k){
+      return {
+        titel: k.naam,
+        tekst: k.tekst,
+        cijfers: 'kracht ' + k.kracht + '<br>trouw ' + k.trouw,
+        doe: function(){
+          g.houder = { naam:k.naam, kracht:k.kracht, trouw:k.trouw, eerzucht:k.eerzucht, kerk:!!k.kerk, generatie:gen };
+          pool = pool.filter(function(x){ return x !== k; });
+          noteer('Je geeft <b>' + g.naam + '</b> in leen aan ' + k.naam + '.' +
+            (k.kerk ? ' De kerk erft niet, dus dit gebied komt later bij jou terug.' : ''));
+          faseVerdelen();
+        }
+      };
+    });
+    knoppen.push({
+      titel: 'Houd ' + g.naam + ' zelf',
+      tekst: 'Het blijft kroondomein. Je krijgt de inkomsten, maar je moet het ook zelf verdedigen.',
+      cijfers: 'inkomen +' + g.inkomen,
+      doe: function(){
+        g.eigenKeuze = true;
+        noteer('<b>' + g.naam + '</b> blijft kroondomein. Je verdedigt het met je eigen leger.');
+        faseVerdelen();
+      }
+    });
+
+    zetBeurt('verdelen', 'Wie krijgt ' + g.naam + '?',
+      'Dreiging hier: <b>' + g.dreiging + '</b>. Een leenman met minder kracht dan de dreiging houdt de vijand niet tegen. ' +
+      'Je eigen leger is sterk genoeg voor <b>' + koningsKracht() + '</b>, maar hoe meer je zelf houdt, hoe dunner je het uitsmeert.',
+      knoppen);
+  }
+
+  function koningsKracht(){
+    var eigen = gebieden.filter(function(g){ return !g.houder && !g.opstandig; }).length;
+    return Math.max(2, 8 - eigen);   /* hoe meer je zelf beheert, hoe minder je per gebied kunt doen */
+  }
+
+  /* ---------- fase 2: koninklijke daden ---------- */
+  function faseDaden(){
+    if (dadenOver === 0 && fase !== 'hofhouding') dadenOver = niveau.daden;
+    if (dadenOver <= 0){ faseJaar(); return; }
+
+    var knoppen = DADEN.map(function(d){
+      var bruikbaar = !d.doel || gebieden.some(function(g){ return g.houder; });
+      if (d.id === 'terugroepen' || d.id === 'kerk' || d.id === 'bevestig' || d.id === 'huwelijk' || d.id === 'burcht'){
+        bruikbaar = gebieden.some(function(g){ return d.id === 'burcht' ? !g.opstandig : !!g.houder; });
+      }
+      return {
+        titel: d.naam, tekst: d.tekst, uit: !bruikbaar,
+        doe: function(){
+          if (!d.doel){
+            noteer(d.ef(staatObj));
+            dadenOver--;
+            faseDaden();
+          } else {
+            wachtOpDoel = d;
+            kiesDoel(d);
+          }
+        }
+      };
+    });
+    knoppen.push({ titel:'Genoeg voor nu', tekst:'Laat het jaar zijn gang gaan.',
+      doe: function(){ dadenOver = 0; faseJaar(); } });
+
+    zetBeurt('hofhouding', 'Wat doe je als koning?',
+      'Je hebt nog <b>' + dadenOver + '</b> ' + (dadenOver === 1 ? 'daad' : 'daden') + ' voor deze generatie. ' +
+      'Trouw slijt vanzelf, dus onderhoud kost je steeds opnieuw iets.', knoppen);
+  }
+
+  function kiesDoel(d){
+    var mogelijk = gebieden.filter(function(g){
+      if (g.opstandig) return false;
+      if (d.id === 'burcht') return true;
+      return !!g.houder;
+    });
+    var knoppen = mogelijk.map(function(g){
+      return {
+        titel: g.naam,
+        tekst: g.houder ? g.houder.naam + ', trouw ' + Math.round(g.houder.trouw) : 'kroondomein',
+        doe: function(){
+          noteer(d.ef(staatObj, g));
+          if (g.houder) g.houder.trouw = grens(g.houder.trouw);
+          wachtOpDoel = null; gekozenGebied = null;
+          dadenOver--;
+          faseDaden();
+        }
+      };
+    });
+    knoppen.push({ titel:'Toch maar niet', tekst:'Kies iets anders.', doe: function(){ wachtOpDoel = null; faseDaden(); } });
+    zetBeurt('hofhouding', d.naam, 'Kies het gebied waar je dit doet. Je kunt ook op de kaart klikken.', knoppen);
+  }
+
+  function klikGebied(id){
+    gekozenGebied = id;
+    if (wachtOpDoel){
+      var g = gebieden.filter(function(x){ return x.id === id; })[0];
+      if (!g || g.opstandig) return;
+      if (wachtOpDoel.id !== 'burcht' && !g.houder) return;
+      noteer(wachtOpDoel.ef(staatObj, g));
+      if (g.houder) g.houder.trouw = grens(g.houder.trouw);
+      wachtOpDoel = null; gekozenGebied = null;
+      dadenOver--;
+      faseDaden();
+      return;
+    }
+    tekenAlles();
+  }
+
+  /* ---------- fase 3: het jaar en de opvolging ---------- */
+  function faseJaar(){
+    var meldingen = [];
+
+    /* aanvallen aan de grenzen */
+    gebieden.forEach(function(g){
+      if (g.opstandig) return;
+      var verdediging = (g.houder ? g.houder.kracht : koningsKracht()) + (g.burcht || 0);
+      if (g.dreiging > verdediging){
+        gezag -= 7;
+        meldingen.push('<b>' + g.naam + '</b> wordt geplunderd: dreiging ' + g.dreiging + ' tegen verdediging ' +
+          verdediging + '. <span class="neer">Gezag min 7</span>.');
+      } else if (g.dreiging >= 3){
+        if (g.houder) g.houder.trouw += 4;
+        meldingen.push('In <b>' + g.naam + '</b> wordt een inval afgeslagen. Dat schept een band.');
+      }
+    });
+
+    /* wie sterk en ontrouw is, begint voor zichzelf */
+    gebieden.forEach(function(g){
+      if (!g.houder || g.opstandig) return;
+      if (g.houder.kracht >= 6 && g.houder.trouw < 40){
+        g.opstandig = true;
+        gezag -= 12;
+        meldingen.push('<b>' + g.houder.naam + '</b> erkent je niet langer en bestuurt ' + g.naam +
+          ' voortaan als zijn eigen land. <span class="neer">Gebied verloren</span>.');
+        g.houder = null;
+      }
+    });
+
+    /* trouw slijt, eerzucht groeit */
+    gebieden.forEach(function(g){
+      if (!g.houder) return;
+      g.houder.trouw = grens(g.houder.trouw - 6 - g.houder.eerzucht * 0.6);
+    });
+
+    if (!meldingen.length) meldingen.push('Een rustig jaar. Niets bijzonders te melden uit de gewesten.');
+    meldingen.forEach(noteer);
+
+    if (gen >= niveau.generaties){ toonEinde(); return; }
+
+    zetBeurt('opvolging', 'Het jaar is voorbij',
+      'Nu komt het moment waar het in dit stelsel om draait: je leenmannen sterven, en hun zonen nemen het leen over. ' +
+      'Die zonen hebben jou nooit iets gezworen.',
+      [{ titel:'Laat de generatie wisselen', tekst:'De erfgenamen nemen de lenen over.', doe: opvolging }]);
+  }
+
+  function opvolging(){
+    gen++;
+    staatObj.gen = gen;
+    var meldingen = [];
+
+    gebieden.forEach(function(g){
+      if (!g.houder || g.opstandig) return;
+      if (g.houder.kerk){
+        g.houder = { naam:'de nieuwe abt van ' + g.naam, kracht:2, trouw:82, eerzucht:1, kerk:true, generatie:gen };
+        meldingen.push('In <b>' + g.naam + '</b> sterft de abt. De kerk erft niet, dus jij benoemt de volgende: ' +
+          '<span class="op">trouw weer hoog</span>.');
+        return;
+      }
+      var oud = g.houder;
+      var zoon = {
+        naam: 'de zoon van ' + oud.naam.split(' ')[0],
+        kracht: Math.max(1, oud.kracht + (Math.random() < .5 ? -1 : 1)),
+        trouw: grens(oud.trouw - niveau.verval),
+        eerzucht: Math.min(10, oud.eerzucht + 1),
+        generatie: gen
+      };
+      if (niveau.splitsing && Math.random() < .35){
+        zoon.kracht = Math.max(1, zoon.kracht - 2);
+        g.dreiging = Math.min(6, g.dreiging + 1);
+        meldingen.push('De erfenis in <b>' + g.naam + '</b> wordt tussen twee zonen verdeeld. De ene helft is nu zwakker, ' +
+          'en de andere broer maakt aanspraak. <span class="neer">Kracht min 2, dreiging plus 1</span>.');
+      }
+      g.houder = zoon;
+      meldingen.push('In <b>' + g.naam + '</b> volgt ' + zoon.naam + ' zijn vader op. Hij zwoer jou nooit iets: ' +
+        '<span class="neer">trouw min ' + niveau.verval + '</span>.');
+    });
+
+    noteer('<b>Generatie ' + gen + '.</b> De oude garde is heen.');
+    meldingen.forEach(noteer);
+    dadenOver = niveau.daden;
+    faseVerdelen();
+  }
+
+  /* ---------- einde ---------- */
+  function toonEinde(){
+    elSpel.classList.add('hide'); elEinde.classList.remove('hide');
+    var totaal = gebieden.length;
+    var eigen = gebieden.filter(function(g){ return !g.houder && !g.opstandig; }).length;
+    var trouw = gebieden.filter(function(g){ return g.houder && g.houder.trouw >= 50; }).length;
+    var wankel = gebieden.filter(function(g){ return g.houder && g.houder.trouw < 50; }).length;
+    var kwijt = gebieden.filter(function(g){ return g.opstandig; }).length;
+    var grip = Math.round(((eigen + trouw * 0.6 + wankel * 0.2) / totaal) * 100);
+
+    document.getElementById('eindGetal').textContent = grip + ' procent';
+    document.getElementById('eindSub').textContent =
+      'Zoveel van je rijk heb je na ' + niveau.generaties + ' generaties nog echt in handen. ' +
+      eigen + ' in eigen beheer, ' + trouw + ' bij trouwe leenmannen, ' + wankel + ' bij twijfelgevallen en ' +
+      kwijt + ' afgescheiden. Je gezag staat op ' + Math.round(gezag) + '.';
+
+    /* De grenzen zijn geijkt met een doorrekening: zelfs met de beste tactiek
+       houd je zelden meer dan zestig procent over. Dat is precies de les. */
+    var oordeel = grip >= 62 ? 'Je hebt het rijk bij elkaar gehouden. Dat lukte weinig vorsten.'
+                : grip >= 40 ? 'Je rijk staat nog overeind, maar de randen brokkelen af.'
+                             : 'Op papier ben je nog koning. In de praktijk regeren anderen jouw land.';
+
+    var html = '<div class="slotkaart"><b>Hoe het ging</b><p>' + oordeel + '</p></div>';
+    html += '<div class="slotkaart"><b>Waarom rijken uiteenvielen</b><p>Een leen was in het begin persoonlijk: ' +
+      'de leenman zwoer trouw, en bij zijn dood viel het gebied terug aan de koning. Maar leenmannen wilden hun land ' +
+      'aan hun zoon nalaten, en koningen die soldaten nodig hadden gaven toe. Zo werd het leen erfelijk, en erfde ' +
+      'iedere nieuwe generatie wel het land maar niet de band. Precies dat zag je hier gebeuren: elke wissel kostte je ' +
+      'trouw die je met moeite weer moest kopen.</p></div>';
+    html += '<div class="slotkaart"><b>De kerk als uitzondering</b><p>Kerkelijke leenmannen hadden geen wettige kinderen. ' +
+      'Hun gebied kwam terug bij de vorst, die opnieuw mocht benoemen. Daarom gaven veel koningen juist graag land aan ' +
+      'bisschoppen en abten. Wie dat in dit spel deed, hield meer grip.</p></div>';
+
+    if (niveau.id === 'hv'){
+      html += '<div class="denk"><b>Denkvraag, hier is geen goed of fout</b><p>Karel de Grote regeerde over half Europa, ' +
+        'en binnen drie generaties was zijn rijk verdeeld. Was dat de schuld van zwakke opvolgers, of zat het probleem ' +
+        'in het stelsel zelf? Gebruik wat je net hebt meegemaakt in je antwoord.</p></div>';
+    } else {
+      html += '<div class="denk"><b>Probeer het anders</b><p>Speel het nog eens en geef nu meer gebieden aan de kerk, ' +
+        'of houd juist meer zelf. Je zult merken dat allebei een prijs heeft.</p></div>';
+    }
+    document.getElementById('eindSlot').innerHTML = html;
+    scrollTo({top:0,behavior:'smooth'});
+  }
+
+  /* ------------------------------------------------------------------
+     Deelbare link vanuit de leerlingomgeving: ?n=bb, ?n=kgt of ?n=hv.
+     ------------------------------------------------------------------ */
+  (function(){
+    var m = /[?&]n=([^&]+)/.exec(location.search);
+    if (!m) return;
+    for (var i = 0; i < NIVEAUS.length; i++){
+      if (NIVEAUS[i].id === m[1] && kiezer.children[i]){
+        kiezer.children[i].click();
+        kiezer.style.display = 'none';
+        var kop = document.getElementById('nivKop');
+        if (kop) kop.textContent = 'Niveau: ' + NIVEAUS[i].naam + ', gekozen door je docent';
+        return;
+      }
+    }
+  })();
+
+  /* De knop linksboven gaat terug naar het spellenmenu, met je niveau erbij. */
+  (function(){
+    var m = document.querySelector('header .mark');
+    if (m) m.setAttribute('href', './' + location.search);
+  })();
+})();
+</script>
+</body>
+</html>
