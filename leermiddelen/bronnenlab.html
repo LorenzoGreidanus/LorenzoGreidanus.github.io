@@ -133,6 +133,24 @@ header{position:sticky;top:0;z-index:20;background:rgba(251,246,241,.92);
 /* ---------- eindscherm ---------- */
 .einde{text-align:center;padding:46px 0 70px}
 .einde .eyebrow{display:block;margin-bottom:4px}
+.naamvak{max-width:460px;margin:24px auto 0;background:#fff;border:1px solid rgba(20,34,76,.08);
+  border-radius:22px;padding:20px;text-align:left}
+.naamvak label{display:block;font-size:.86rem;color:var(--muted);margin-bottom:8px}
+.naamrij{display:flex;gap:8px}
+.naamrij input{flex:1;min-width:0;border:1.5px solid rgba(20,34,76,.14);border-radius:14px;
+  padding:12px 14px;font-size:1rem;background:var(--room);font-family:inherit}
+.naamrij input:focus{outline:none;border-color:var(--ocean)}
+.plek{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;background:#fff;
+  border:1px solid rgba(20,34,76,.08);border-radius:15px;padding:11px 14px;margin-bottom:8px;font-size:.94rem}
+.plek.jij{border-color:var(--ocean);background:#f4f7ff}
+.plek .nr{font-weight:600;color:var(--muted);text-align:center}
+.plek .pt{font-weight:600;font-variant-numeric:tabular-nums}
+.plek small{display:block;color:var(--muted);font-size:.76rem}
+.leeg{text-align:center;color:var(--muted);font-size:.9rem;background:#fff;
+  border:1px dashed rgba(20,34,76,.18);border-radius:16px;padding:20px}
+.lijst{max-width:560px;margin:26px auto 0;text-align:left}
+.lijst h3{font-size:1.05rem;margin:0 0 10px;text-align:center}
+.reeksmelding{color:var(--amber);font-weight:600}
 .score{font-size:clamp(3rem,10vw,5rem);font-weight:600;letter-spacing:-.04em;color:var(--ocean);line-height:1;margin-top:18px}
 .einde .sub{color:var(--muted);margin-top:6px}
 .overzicht{display:grid;gap:10px;max-width:640px;margin:28px auto 0;text-align:left}
@@ -184,8 +202,12 @@ body.groot .feedback{font-size:1.05rem}
   <p style="font-size:.85rem;color:var(--muted);margin-top:6px">De niveaus zijn afgestemd op leerjaar 1 en 2.</p>
   <div class="niveaus" id="niveaus"></div>
 
+  <p class="eyebrow" id="modusKop" style="margin-top:30px">hoe wil je oefenen</p>
+  <div class="niveaus" id="modussen"></div>
+
   <button class="btn" id="startBtn" type="button" disabled>Start het onderzoek</button>
-  <p style="margin-top:14px;font-size:.82rem;color:var(--muted)">Geen inloggen, niets wordt opgeslagen.</p>
+  <p style="margin-top:14px;font-size:.82rem;color:var(--muted)">Geen inloggen. Alleen in de marathon wordt je score op dit apparaat bewaard.</p>
+  <div id="startLijst" class="lijst"></div>
 </section>
 
 <!-- ============================ WERKSCHERM ============================ -->
@@ -208,6 +230,17 @@ body.groot .feedback{font-size:1.05rem}
   <div class="score" id="eindScore">0 / 12</div>
   <p class="sub" id="eindTekst"></p>
   <div class="overzicht" id="eindOverzicht"></div>
+
+  <div class="naamvak hide" id="naamvak">
+    <label for="naamveld">Zet je naam in het klassement (je voornaam is genoeg)</label>
+    <div class="naamrij">
+      <input id="naamveld" type="text" maxlength="14" placeholder="Jouw naam" autocomplete="off" spellcheck="false">
+      <button class="btn" id="bewaarBtn" type="button" style="margin-top:0;padding:12px 20px;font-size:.9rem">Bewaren</button>
+    </div>
+  </div>
+
+  <div class="lijst" id="eindLijst"></div>
+
   <button class="btn" id="nogeensBtn" type="button">Nog een keer</button>
   <button class="btn ghost" id="anderNiveauBtn" type="button" style="margin-left:8px">Ander niveau</button>
 </section>
@@ -230,10 +263,13 @@ body.groot .feedback{font-size:1.05rem}
        type: 'Brief',                 // Brief, Foto, Spotprent, Affiche, Kaart...
        titel: '...',
        jaar: '1652',
-       tekening: 'brief',             // brief | foto | spotprent | affiche
+       tekening: 'brief',             // brief foto spotprent affiche vondst kroniek
+                                      // schilderij tabel krant reclame kaart
+                                      // interview document scherm
        afbeelding: '',                // optioneel: 'bronnen/mijnfoto.jpg'
        tekst: '...',                  // wat de leerling leest of ziet
        herkomst: '...',               // waar de bron vandaan komt
+       credit: '',                    // optioneel: bronvermelding bij een echte afbeelding
        denkvraag: '...',              // alleen havo/vwo, geen goed of fout
        vragen: [ ... ]                // precies drie: wie, wanneer, weggelaten
      }
@@ -256,6 +292,11 @@ var NIVEAUS = [
   { id:'bb',  naam:'vmbo-bb',          uitleg:'Kortere teksten, drie antwoorden en altijd een hint.' },
   { id:'kgt', naam:'vmbo-kgt en gl/tl', uitleg:'Drie antwoorden, hint alleen als je erom vraagt.' },
   { id:'hv',  naam:'havo en vwo',       uitleg:'Vier antwoorden, extra verdieping en een denkvraag.' }
+];
+
+var MODUSSEN = [
+  { id:'onderzoek', naam:'Onderzoek', uitleg:'Vier bronnen achter elkaar, daarna je verslag. Ongeveer een kwartier.' },
+  { id:'marathon',  naam:'Oefenmarathon', uitleg:'Bronnen blijven komen, punten stapelen op. Je stopt zelf. Met klassement.' }
 ];
 
 var BRONNEN = [
@@ -402,6 +443,366 @@ var BRONNEN = [
         extra:{t:'De datum waarop het inging', goed:false, uitleg:'Die stond er meestal juist heel duidelijk op, want daar draaide het om.'},
         verdieping:'Zet deze bron naast een dagboekfragment uit dezelfde maand. Dan zie je pas het hele plaatje.' }
     ]
+  },
+  {
+    type:'Vondst', titel:'Romeinse dobbelsteen uit een afvalkuil', jaar:'rond 100',
+    tekening:'vondst', afbeelding:'', credit:'',
+    tekst:'Bij een opgraving in Nijmegen komt in een afvalkuil een dobbelsteen van been tevoorschijn, samen met scherven van goedkoop aardewerk en dierenbotten. De dobbelsteen is aan een kant afgesleten. Er staat geen tekst op, en niemand weet wie hem in handen had.',
+    herkomst:'Naar het soort vondst dat bij opgravingen in Romeins Nederland wordt gedaan.',
+    denkvraag:'Van rijke Romeinen zijn grafstenen met namen bewaard, van arme mensen alleen hun afval. Wat doet dat met ons beeld van die tijd?',
+    vragen:[
+      { vraag:'Wie heeft deze bron gemaakt?',
+        hint:'Een voorwerp is gemaakt om te gebruiken, niet om iets te vertellen.',
+        opties:[
+          {t:'Iemand die hem maakte om mee te spelen, niet om iets te vertellen', goed:true, uitleg:'Klopt. Dit is een overblijfsel: het is niet bedoeld als boodschap aan de toekomst, en juist daarom liegt het niet.'},
+          {t:'Een Romeinse geschiedschrijver', goed:false, uitleg:'Die schreef teksten. Een dobbelsteen is geen verhaal maar een gebruiksvoorwerp.'},
+          {t:'De archeoloog die hem opgroef', goed:false, uitleg:'Die vond hem, maar maakte hem niet. Opgraven is iets anders dan maken.'}
+        ],
+        extra:{t:'Een handelaar die hem uit Rome meebracht', goed:false, uitleg:'Kan best, maar dat weet je niet uit de vondst zelf. Bedenk niet meer dan de bron laat zien.'},
+        verdieping:'Een geschreven bron wil je iets laten geloven. Een weggegooid voorwerp wilde helemaal niets.' },
+      { vraag:'Wanneer is deze bron gemaakt?',
+        hint:'Kijk naar het jaartal en naar waar hij lag.',
+        opties:[
+          {t:'Rond het jaar 100, toen hier Romeinen woonden', goed:true, uitleg:'Klopt. De laag waarin iets ligt en de spullen eromheen vertellen de archeoloog hoe oud het is.'},
+          {t:'In de middeleeuwen', goed:false, uitleg:'Dan had hij in een jongere laag gelegen, met heel ander aardewerk eromheen.'},
+          {t:'In de negentiende eeuw, als namaak', goed:false, uitleg:'Namaak bestaat, maar dan klopt de grondlaag niet met de vondst.'}
+        ],
+        extra:{t:'Hij is niet te dateren, want er staat geen jaartal op', goed:false, uitleg:'Een bron hoeft geen jaartal te dragen. De plek in de grond werkt als een kalender.'},
+        verdieping:'Archeologen dateren met lagen: wat dieper ligt is ouder. Dat heet stratigrafie.' },
+      { vraag:'Wat wordt in deze bron weggelaten?',
+        hint:'Wat zou je willen weten over de eigenaar?',
+        opties:[
+          {t:'Wie hem gebruikte, of het een soldaat, een kind of een slaaf was', goed:true, uitleg:'Precies. Een voorwerp vertelt wat er gedaan werd, bijna nooit door wie. Daarvoor heb je grafstenen of teksten nodig.'},
+          {t:'Waar hij van gemaakt is', goed:false, uitleg:'Dat kun je aan het materiaal gewoon zien, het is been.'},
+          {t:'Dat hij versleten is', goed:false, uitleg:'Die slijtage zie je juist met het blote oog.'}
+        ],
+        extra:{t:'Hoeveel dobbelstenen er in totaal in Nijmegen lagen', goed:false, uitleg:'Interessant, maar dat is een vraag over de opgraving en niet over deze bron.'},
+        verdieping:'Van gewone mensen in de oudheid zijn vooral spullen over, geen woorden. Hun stem missen we.' }
+    ]
+  },
+  {
+    type:'Kroniek', titel:'Een monnik schrijft over de watersnood', jaar:'rond 1450',
+    tekening:'kroniek', afbeelding:'', credit:'',
+    tekst:'In een klooster schrijft een monnik een kroniek over zijn streek. Over de grote overstroming van 1421 noteert hij dat het water hele dorpen verzwolg, en hij schrijft dat God de mensen strafte voor hun zonden. Hij was er zelf niet bij: hij werd pas jaren later geboren en gebruikte verhalen van oudere broeders.',
+    herkomst:'Naar het soort kloosterkroniek dat in de late middeleeuwen werd bijgehouden.',
+    denkvraag:'De monnik legt de ramp uit als straf van God. Wat vertelt die verklaring je over zijn tijd, ook al klopt hij niet?',
+    vragen:[
+      { vraag:'Wie heeft deze bron gemaakt?',
+        hint:'Was de schrijver erbij toen het gebeurde?',
+        opties:[
+          {t:'Een monnik die het van horen zeggen had, dus geen ooggetuige', goed:true, uitleg:'Klopt. Hij schrijft over iets van voor zijn geboorte. Dat noemen we een secundaire bron.'},
+          {t:'Iemand die de overstroming zelf meemaakte', goed:false, uitleg:'Er staat letterlijk dat hij pas later geboren werd.'},
+          {t:'De graaf van Holland', goed:false, uitleg:'Die liet soms wel dingen opschrijven, maar deze tekst komt uit een klooster.'}
+        ],
+        extra:{t:'Een moderne historicus die de middeleeuwen beschrijft', goed:false, uitleg:'Nee, de tekst komt uit de tijd zelf. Wel is de schrijver een navertelller, geen getuige.'},
+        verdieping:'Van horen zeggen is niet waardeloos. Het laat zien welk verhaal er in die tijd rondging.' },
+      { vraag:'Wanneer is deze bron gemaakt?',
+        hint:'Vergelijk het jaar van de ramp met het jaar van de kroniek.',
+        opties:[
+          {t:'Ongeveer dertig jaar na de ramp', goed:true, uitleg:'Klopt. De ramp was in 1421, de kroniek rond 1450. In die tussentijd zijn verhalen gaan schuiven.'},
+          {t:'Tijdens de overstroming zelf', goed:false, uitleg:'Dan was hij een ooggetuige geweest, en dat was hij niet.'},
+          {t:'In de negentiende eeuw', goed:false, uitleg:'Kloosterkronieken als deze horen bij de middeleeuwen.'}
+        ],
+        extra:{t:'Precies in 1421, maar pas later overgeschreven', goed:false, uitleg:'Overschrijven kwam veel voor, maar hier staat dat de schrijver zelf later leefde.'},
+        verdieping:'Hoe groter het gat tussen gebeurtenis en opschrijven, hoe meer het verhaal is bijgeslepen.' },
+      { vraag:'Wat wordt in deze bron weggelaten?',
+        hint:'Hij noemt een oorzaak. Welke oorzaken noemt hij niet?',
+        opties:[
+          {t:'Dat slechte dijken en veenafgraving de ramp veel erger maakten', goed:true, uitleg:'Precies. Hij zoekt de oorzaak bij zonde, niet bij dijkonderhoud. Wat je gelooft, bepaalt wat je opschrijft.'},
+          {t:'Dat er een overstroming was', goed:false, uitleg:'Dat is juist zijn onderwerp.'},
+          {t:'Dat er dorpen verdwenen', goed:false, uitleg:'Dat noemt hij met zoveel woorden.'}
+        ],
+        extra:{t:'Het precieze aantal doden', goed:false, uitleg:'Dat wist niemand toen. Weggelaten is iets anders dan onbekend.'},
+        verdieping:'Elke tijd verklaart rampen met wat hij kent: God, straf, later pest of klimaat.' }
+    ]
+  },
+  {
+    type:'Schilderij', titel:'Portret van een koopman en zijn gezin', jaar:'1665',
+    tekening:'schilderij', afbeelding:'', credit:'',
+    tekst:'Een rijke koopman laat zichzelf schilderen met zijn vrouw en drie kinderen. Ze dragen zwarte kleding met witte kragen en staan in een kamer met een wereldbol en een kaart aan de muur. De koopman betaalde de schilder voor dit werk. Het hing in zijn eigen huis, aan de gracht.',
+    herkomst:'Naar het soort familieportret dat rijke Nederlanders in de zeventiende eeuw lieten maken.',
+    denkvraag:'De wereldbol staat er niet toevallig. Wat wilde de koopman dat bezoekers over hem dachten?',
+    vragen:[
+      { vraag:'Wie heeft deze bron gemaakt?',
+        hint:'Er is een schilder, maar er is ook iemand die betaalde.',
+        opties:[
+          {t:'Een schilder, in opdracht en betaald door de koopman zelf', goed:true, uitleg:'Klopt. Wie betaalt, bepaalt mee wat er op het doek komt. Dat maakt dit een gestuurd beeld.'},
+          {t:'Een schilder die zomaar langskwam en het gezin zag', goed:false, uitleg:'Zo werkte het niet. Een portret was duur en werd besteld.'},
+          {t:'De kinderen op het schilderij', goed:false, uitleg:'Zij zijn het onderwerp, niet de makers.'}
+        ],
+        extra:{t:'De stad, die portretten van burgers liet maken', goed:false, uitleg:'De stad bestelde wel schutters- en regentenstukken, maar dit hing in een woonhuis.'},
+        verdieping:'Vraag bij elk beeld: wie betaalde ervoor? Dat antwoord verklaart vaak de rest.' },
+      { vraag:'Wanneer is deze bron gemaakt?',
+        hint:'Kijk naar het jaartal bij de bron.',
+        opties:[
+          {t:'In 1665, in de tijd dat Nederlandse handel over de hele wereld ging', goed:true, uitleg:'Klopt. De wereldbol en de kaart passen precies bij die handel.'},
+          {t:'In de middeleeuwen', goed:false, uitleg:'Toen lieten vooral kerk en adel zich afbeelden, en zag kleding er heel anders uit.'},
+          {t:'Rond 1900, als terugblik op vroeger', goed:false, uitleg:'Dan was het geen bron uit de tijd zelf maar een schilderij over die tijd.'}
+        ],
+        extra:{t:'In 1672, het rampjaar', goed:false, uitleg:'Dichtbij, maar het jaartal bij de bron is duidelijk. Lees dat eerst.'},
+        verdieping:'Kleding, spullen en achtergrond zijn samen bijna een jaartal.' },
+      { vraag:'Wat wordt in deze bron weggelaten?',
+        hint:'Wie zie je niet, terwijl ze er wel waren?',
+        opties:[
+          {t:'Waar het geld vandaan kwam en wie het werk deed', goed:true, uitleg:'Precies. Personeel, zeelieden en tot slaaf gemaakte mensen komen niet in beeld, terwijl de rijkdom ook op hun werk rustte.'},
+          {t:'Hoeveel kinderen het gezin had', goed:false, uitleg:'Die staan er gewoon op, je kunt ze tellen.'},
+          {t:'Dat de familie rijk was', goed:false, uitleg:'Dat schreeuwt het schilderij juist uit, met kleding en spullen.'}
+        ],
+        extra:{t:'De naam van de schilder', goed:false, uitleg:'Handig om te weten, maar dat verandert niets aan het beeld dat de familie van zichzelf gaf.'},
+        verdieping:'Zoek bij een pronkportret altijd de bijbehorende boekhouding. Twee bronnen, twee verhalen.' }
+    ]
+  },
+  {
+    type:'Tabel', titel:'Sterftecijfers per wijk', jaar:'1875',
+    tekening:'tabel', afbeelding:'', credit:'',
+    tekst:'Een stadsarts zet in een tabel hoeveel kinderen er per wijk voor hun vijfde jaar overlijden. In de arme wijk bij de haven ligt dat aantal een stuk hoger dan in de deftige wijk aan de singel. De arts telde alleen kinderen die bij de burgerlijke stand waren aangegeven.',
+    herkomst:'Naar het soort gezondheidsverslag dat negentiende-eeuwse stadsartsen maakten.',
+    denkvraag:'Cijfers lijken neutraal. Wie besloot hier wat er geteld werd, en wat viel daardoor buiten de tabel?',
+    vragen:[
+      { vraag:'Wie heeft deze bron gemaakt?',
+        hint:'Er staat een beroep in de tekst.',
+        opties:[
+          {t:'Een stadsarts, die met cijfers iets wilde aantonen', goed:true, uitleg:'Klopt. Ook cijfers worden verzameld door iemand met een doel, hier waarschijnlijk betere woningen en riolering.'},
+          {t:'Niemand, want cijfers zijn objectief', goed:false, uitleg:'Iemand koos wat er geteld werd en hoe de wijken werden ingedeeld. Dat is al een keuze.'},
+          {t:'De bewoners van de havenwijk zelf', goed:false, uitleg:'Zij zijn geteld, maar ze telden niet zelf.'}
+        ],
+        extra:{t:'De landelijke regering in Den Haag', goed:false, uitleg:'Die verzamelde ook cijfers, maar deze tabel gaat per wijk en komt van de stad.'},
+        verdieping:'Achter elke grafiek zit een teller. Vraag altijd wie dat was en waarom hij telde.' },
+      { vraag:'Wanneer is deze bron gemaakt?',
+        hint:'Kijk naar het jaartal bij de bron.',
+        opties:[
+          {t:'In 1875, toen steden snel groeiden en riolering vaak ontbrak', goed:true, uitleg:'Klopt. Juist in die jaren gingen artsen meten om verandering af te dwingen.'},
+          {t:'In de zeventiende eeuw', goed:false, uitleg:'Toen bestond zo\u0027n stelselmatige registratie per wijk nog niet.'},
+          {t:'In 1975', goed:false, uitleg:'Tegen die tijd was kindersterfte in Nederland enorm gedaald.'}
+        ],
+        extra:{t:'In 1901, bij de Woningwet', goed:false, uitleg:'Die wet kwam later, mede door cijfers als deze. Het jaartal bij de bron is 1875.'},
+        verdieping:'Meten kwam vaak voor het verbeteren. Eerst het bewijs, dan de wet.' },
+      { vraag:'Wat wordt in deze bron weggelaten?',
+        hint:'Wie werden er niet geteld?',
+        opties:[
+          {t:'Kinderen die nooit zijn aangegeven, en hoe het leven in die wijk voelde', goed:true, uitleg:'Precies. Wie buiten de administratie viel, bestaat niet in de tabel. En een getal vertelt niets over honger, kou of verdriet.'},
+          {t:'Het verschil tussen de wijken', goed:false, uitleg:'Dat is juist wat de tabel laat zien.'},
+          {t:'Dat er kinderen overleden', goed:false, uitleg:'Dat is het hele onderwerp.'}
+        ],
+        extra:{t:'De namen van de artsen die de tellingen deden', goed:false, uitleg:'Aardig om te weten, maar dat verandert niets aan wie er buiten de telling viel.'},
+        verdieping:'Zet cijfers naast brieven of dagboeken. Het getal geeft de omvang, de tekst de betekenis.' }
+    ]
+  },
+  {
+    type:'Krant', titel:'Krantenbericht over de oorlog in de kolonie', jaar:'1904',
+    tekening:'krant', afbeelding:'', credit:'',
+    tekst:'Een Nederlandse krant bericht over gevechten in Nederlands-Indie. In het stuk staat dat de troepen een dorp hebben gezuiverd en dat de rust is hersteld. Gesneuvelde Nederlandse soldaten worden bij naam genoemd. Over het aantal doden aan de andere kant staat alleen dat de vijand zware verliezen leed.',
+    herkomst:'Naar het soort bericht dat rond 1900 in Nederlandse kranten over de kolonien verscheen.',
+    denkvraag:'De krant kiest woorden als zuiveren en rust herstellen. Welke woorden zou een krant in Atjeh gebruikt hebben?',
+    vragen:[
+      { vraag:'Wie heeft deze bron gemaakt?',
+        hint:'Waar werd de krant gedrukt en voor wie?',
+        opties:[
+          {t:'Een Nederlandse krant, voor Nederlandse lezers thuis', goed:true, uitleg:'Klopt. De krant schrijft voor het thuisfront, en dat hoor je terug in de woordkeus.'},
+          {t:'Een journalist die zelf in het dorp stond', goed:false, uitleg:'Meestal kwamen berichten via het leger of via telegram, niet van een verslaggever ter plekke.'},
+          {t:'De bewoners van het dorp', goed:false, uitleg:'Zij komen in dit bericht helemaal niet aan het woord.'}
+        ],
+        extra:{t:'De regering, die de tekst zelf schreef', goed:false, uitleg:'De regering leverde vaak wel de informatie, maar de krant maakte er het bericht van.'},
+        verdieping:'Kijk bij nieuws altijd wie de bron van de bron was: een ooggetuige, of een persbericht van het leger.' },
+      { vraag:'Wanneer is deze bron gemaakt?',
+        hint:'Kijk naar het jaartal bij de bron.',
+        opties:[
+          {t:'In 1904, midden in de koloniale oorlog in Atjeh', goed:true, uitleg:'Klopt. Die oorlog duurde met onderbrekingen van 1873 tot ver in de twintigste eeuw.'},
+          {t:'In 1949, bij de onafhankelijkheid van Indonesie', goed:false, uitleg:'Dat is later, en dan gaat het over een heel andere strijd.'},
+          {t:'In 1830', goed:false, uitleg:'Toen bestonden er nog nauwelijks kranten met dagelijks oorlogsnieuws uit Azie.'}
+        ],
+        extra:{t:'In 1914, bij het uitbreken van de Eerste Wereldoorlog', goed:false, uitleg:'Nederland was toen neutraal in Europa, maar dit bericht gaat over de kolonie.'},
+        verdieping:'Nederland noemde zichzelf neutraal in Europa terwijl het in Azie oorlog voerde.' },
+      { vraag:'Wat wordt in deze bron weggelaten?',
+        hint:'Welke doden krijgen een naam, en welke niet?',
+        opties:[
+          {t:'Wie de slachtoffers aan de andere kant waren, en wat er met het dorp gebeurde', goed:true, uitleg:'Precies. De ene kant krijgt namen, de andere kant een getal of zelfs dat niet. Dat verschil is de kern van deze bron.'},
+          {t:'Dat er gevochten is', goed:false, uitleg:'Dat is het onderwerp van het bericht.'},
+          {t:'Dat er Nederlandse soldaten omkwamen', goed:false, uitleg:'Die worden juist met naam genoemd.'}
+        ],
+        extra:{t:'De datum van het gevecht', goed:false, uitleg:'Die stond er meestal gewoon bij. Het gaat hier om wiens verhaal ontbreekt.'},
+        verdieping:'Let op woorden als zuiveren of pacificeren: ze maken geweld kleiner dan het was.' }
+    ]
+  },
+  {
+    type:'Reclame', titel:'Reclameplaat voor koffie uit de kolonien', jaar:'1928',
+    tekening:'reclame', afbeelding:'', credit:'',
+    tekst:'Op een kleurige plaat staat een lachende vrouw met een mand koffiebonen onder palmbomen. Boven haar staat de merknaam en de tekst dat de koffie recht van de plantage komt. De plaat hing in Nederlandse winkels om koffie te verkopen.',
+    herkomst:'Naar het soort winkelreclame dat in het interbellum in Nederland hing.',
+    denkvraag:'De plaat laat de plantage zien als een vrolijke plek. Waarom was dat goed voor de verkoop?',
+    vragen:[
+      { vraag:'Wie heeft deze bron gemaakt?',
+        hint:'Waar hangt de plaat, en waarvoor?',
+        opties:[
+          {t:'Een bedrijf dat koffie wilde verkopen', goed:true, uitleg:'Klopt. Bij reclame is het doel altijd verkopen, en dat kleurt elk detail van het beeld.'},
+          {t:'De plantagewerkers zelf', goed:false, uitleg:'Zij worden afgebeeld, maar hadden hier niets over te zeggen.'},
+          {t:'Een fotograaf die op de plantage rondliep', goed:false, uitleg:'Het is een getekende plaat, gemaakt voor de verkoop.'}
+        ],
+        extra:{t:'De Nederlandse regering, als voorlichting over de kolonien', goed:false, uitleg:'Die maakte ook beeld over de kolonien, maar hier staat een merknaam boven.'},
+        verdieping:'Reclame is de eerlijkste bron over verlangens: hij laat zien wat kopers wilden geloven.' },
+      { vraag:'Wanneer is deze bron gemaakt?',
+        hint:'Kijk naar het jaartal bij de bron.',
+        opties:[
+          {t:'In 1928, toen Indonesie nog een Nederlandse kolonie was', goed:true, uitleg:'Klopt. Nederlands-Indie was tot 1949 een kolonie, en koloniale waar was gewoon in de winkel.'},
+          {t:'In 1960', goed:false, uitleg:'Tegen die tijd was Indonesie onafhankelijk en verdween dit soort reclame.'},
+          {t:'In 1850', goed:false, uitleg:'Kleurendruk voor winkelreclame was toen nog nauwelijks in gebruik.'}
+        ],
+        extra:{t:'In 1945, vlak na de oorlog', goed:false, uitleg:'Toen was er juist schaarste, en koffie was op de bon.'},
+        verdieping:'Koloniale producten waren zo gewoon dat mensen er niet meer bij nadachten waar ze vandaan kwamen.' },
+      { vraag:'Wat wordt in deze bron weggelaten?',
+        hint:'Hoe zag het werk op zo\u0027n plantage er echt uit?',
+        opties:[
+          {t:'Het zware werk, de lage lonen en de dwang op de plantages', goed:true, uitleg:'Precies. Een vrolijk plaatje verkoopt beter dan de werkelijkheid, dus die werkelijkheid blijft eruit.'},
+          {t:'Dat het om koffie gaat', goed:false, uitleg:'Dat is juist waar de plaat mee schreeuwt.'},
+          {t:'Dat er palmbomen op staan', goed:false, uitleg:'Die zie je gewoon.'}
+        ],
+        extra:{t:'De prijs van de koffie', goed:false, uitleg:'Die stond er soms niet bij, maar dat is een detail. Het gaat om het beeld van het werk.'},
+        verdieping:'Zet de plaat naast een loonlijst of een inspectierapport van dezelfde plantage.' }
+    ]
+  },
+  {
+    type:'Kaart', titel:'Schoolkaart met de kolonien ingekleurd', jaar:'1935',
+    tekening:'kaart', afbeelding:'', credit:'',
+    tekst:'Aan de muur van een Nederlands klaslokaal hangt een wereldkaart. Nederland en de gebieden die het bestuurde zijn in dezelfde kleur gezet, met lijnen ertussen. Nederland staat midden op de kaart en is veel groter getekend dan het in het echt is. De kaart is uitgegeven door een schoolboekenmaker.',
+    herkomst:'Naar het soort schoolkaart dat in het interbellum in Nederlandse klassen hing.',
+    denkvraag:'Elke kaart kiest een midden en een schaal. Wat leerden kinderen zonder dat er iets bij gezegd werd?',
+    vragen:[
+      { vraag:'Wie heeft deze bron gemaakt?',
+        hint:'Voor welk publiek is deze kaart gemaakt?',
+        opties:[
+          {t:'Een uitgever van schoolmateriaal, voor Nederlandse leerlingen', goed:true, uitleg:'Klopt. Een schoolkaart moest iets uitleggen, en de maker koos wat er belangrijk uitzag.'},
+          {t:'Een zeekapitein die zelf de kust opmat', goed:false, uitleg:'Dat is een zeekaart met een heel ander doel: veilig varen.'},
+          {t:'De bewoners van de ingekleurde gebieden', goed:false, uitleg:'Zij zijn ingekleurd, maar tekenden niet mee.'}
+        ],
+        extra:{t:'Een neutraal aardrijkskundig instituut zonder mening', goed:false, uitleg:'Ook meten is kiezen: welke projectie, welk midden, welke kleur. Neutraal bestaat niet op een kaart.'},
+        verdieping:'Een kaart is een mening op papier die eruitziet als een feit.' },
+      { vraag:'Wanneer is deze bron gemaakt?',
+        hint:'Kijk naar het jaartal en naar wat er ingekleurd is.',
+        opties:[
+          {t:'In 1935, toen Nederland nog kolonien bestuurde', goed:true, uitleg:'Klopt. Na 1949 verdween Indonesie van zulke kaarten, en daarmee het hele plaatje.'},
+          {t:'In 1990', goed:false, uitleg:'Dan zou de kaart er totaal anders uitzien.'},
+          {t:'In 1600', goed:false, uitleg:'Toen bestonden er geen schoolkaarten voor klaslokalen zoals wij ze kennen.'}
+        ],
+        extra:{t:'In 1950, vlak na de onafhankelijkheid', goed:false, uitleg:'Kan bijna, maar de kolonien zijn hier nog in dezelfde kleur gezet als Nederland.'},
+        verdieping:'Kaarten verouderen snel. Juist daardoor dateren ze zichzelf.' },
+      { vraag:'Wat wordt in deze bron weggelaten?',
+        hint:'Wat zie je niet, terwijl het er wel was?',
+        opties:[
+          {t:'Dat er miljoenen mensen woonden met een eigen taal, geloof en bestuur', goed:true, uitleg:'Precies. Een kleurvlak maakt van een land een bezit en van bewoners niets.'},
+          {t:'Waar de gebieden liggen', goed:false, uitleg:'Dat is juist wat een kaart wel laat zien.'},
+          {t:'Dat Nederland klein is', goed:false, uitleg:'Dat wordt hier zelfs verborgen, want Nederland is te groot getekend. Maar de kern is wie er ontbreekt.'}
+        ],
+        extra:{t:'De hoogte van de bergen', goed:false, uitleg:'Dat hangt van het soort kaart af en is hier niet het punt.'},
+        verdieping:'Leg er een kaart naast die in Indonesie zelf gemaakt is. Ander midden, ander verhaal.' }
+    ]
+  },
+  {
+    type:'Interview', titel:'Iemand vertelt over de bevrijding', jaar:'1995',
+    tekening:'interview', afbeelding:'', credit:'',
+    tekst:'Een vrouw van in de zeventig vertelt voor de camera hoe zij als kind de bevrijding meemaakte. Ze herinnert zich de tanks, het gejuich en dat ze voor het eerst weer wit brood at. Sommige dingen weet ze niet zeker meer, zegt ze er zelf bij. Het interview is vijftig jaar na de oorlog opgenomen.',
+    herkomst:'Naar het soort interview dat in de jaren negentig werd opgenomen voor archieven.',
+    denkvraag:'Ze zegt zelf dat ze het niet zeker weet. Maakt die eerlijkheid haar verhaal minder of juist meer waard?',
+    vragen:[
+      { vraag:'Wie heeft deze bron gemaakt?',
+        hint:'Er zijn er twee: de verteller en degene met de camera.',
+        opties:[
+          {t:'Een ooggetuige die terugkijkt, met hulp van een interviewer', goed:true, uitleg:'Klopt. Zij maakte het mee, maar de vragen van de interviewer sturen mee wat er verteld wordt.'},
+          {t:'Een historicus die de oorlog onderzocht', goed:false, uitleg:'Die schrijft over de oorlog. Hier vertelt iemand haar eigen ervaring.'},
+          {t:'Een journalist in 1945', goed:false, uitleg:'Dan was het opgenomen op het moment zelf, en dat is het niet.'}
+        ],
+        extra:{t:'Niemand, want een herinnering heeft geen maker', goed:false, uitleg:'Er is wel degelijk gekozen: wie er gevraagd werd, welke vragen, en wat er in de montage bleef.'},
+        verdieping:'Bij oral history hoort de vraag er altijd bij. Wie vroeg wat, en wat werd niet gevraagd?' },
+      { vraag:'Wanneer is deze bron gemaakt?',
+        hint:'Vergelijk het jaar van de gebeurtenis met het jaar van de opname.',
+        opties:[
+          {t:'In 1995, dus vijftig jaar na de gebeurtenis', goed:true, uitleg:'Klopt. De gebeurtenis is uit 1945, de bron uit 1995. Dat gat van vijftig jaar hoort bij je oordeel.'},
+          {t:'In 1945, tijdens de bevrijding zelf', goed:false, uitleg:'Dan had je een kind horen praten, geen vrouw van in de zeventig.'},
+          {t:'In 2020', goed:false, uitleg:'Het jaartal bij de bron zegt 1995.'}
+        ],
+        extra:{t:'In 1955, bij de eerste herdenkingen', goed:false, uitleg:'Toen werd er juist weinig opgenomen. Het grote interviewen begon veel later.'},
+        verdieping:'Herinnering is geen opname maar een reconstructie, elke keer opnieuw gemaakt.' },
+      { vraag:'Wat wordt in deze bron weggelaten?',
+        hint:'Wat vertelt een kinderherinnering aan gejuich je niet?',
+        opties:[
+          {t:'Wat er buiten haar straat gebeurde, en wat vijftig jaar herinneren met het verhaal heeft gedaan', goed:true, uitleg:'Precies. Zij vertelt haar hoekje van de bevrijding, gekleurd door alles wat ze sindsdien hoorde en zag.'},
+          {t:'Dat zij de bevrijding meemaakte', goed:false, uitleg:'Dat is juist haar hele verhaal.'},
+          {t:'Dat ze wit brood at', goed:false, uitleg:'Dat noemt ze met zoveel woorden.'}
+        ],
+        extra:{t:'Haar leeftijd tijdens het interview', goed:false, uitleg:'Die staat er gewoon bij, ze is dan in de zeventig.'},
+        verdieping:'Persoonlijke verhalen geven kleur, archiefstukken geven omvang. Je hebt ze allebei nodig.' }
+    ]
+  },
+  {
+    type:'Overheidsstuk', titel:'Wervingsafspraak voor gastarbeiders', jaar:'1964',
+    tekening:'document', afbeelding:'', credit:'',
+    tekst:'In een officieel stuk staat hoe Nederlandse bedrijven arbeiders uit het buitenland mogen halen. Er staat in wat voor werk het is, hoe lang het contract duurt en dat de arbeiders daarna weer teruggaan. Over huisvesting staat een korte zin. Het stuk is opgesteld door ambtenaren en ondertekend namens de regering.',
+    herkomst:'Naar het soort wervingsafspraak dat Nederland in de jaren zestig maakte.',
+    denkvraag:'Het stuk gaat ervan uit dat mensen weer vertrekken. Wat gebeurt er met een bron als de werkelijkheid anders loopt?',
+    vragen:[
+      { vraag:'Wie heeft deze bron gemaakt?',
+        hint:'Wie ondertekent het stuk?',
+        opties:[
+          {t:'Ambtenaren namens de regering, dus de kant van het beleid', goed:true, uitleg:'Klopt. Dit is een bron van bovenaf: hij vertelt wat de overheid wilde regelen.'},
+          {t:'De arbeiders die naar Nederland kwamen', goed:false, uitleg:'Zij tekenden een contract, maar schreven de regels niet.'},
+          {t:'Een journalist die het beleid onderzocht', goed:false, uitleg:'Dat zou een artikel over het beleid zijn, geen officieel stuk.'}
+        ],
+        extra:{t:'De bedrijven, die het beleid zelf opschreven', goed:false, uitleg:'Bedrijven drongen wel aan, maar het stuk is namens de regering ondertekend.'},
+        verdieping:'Beleidsstukken vertellen wat er bedoeld was. Of het zo ging, moet je ergens anders zoeken.' },
+      { vraag:'Wanneer is deze bron gemaakt?',
+        hint:'Kijk naar het jaartal en denk aan de economie van die tijd.',
+        opties:[
+          {t:'In 1964, toen er in Nederland een groot tekort aan arbeiders was', goed:true, uitleg:'Klopt. De economie groeide hard en fabrieken kwamen handen tekort.'},
+          {t:'In 1945, vlak na de oorlog', goed:false, uitleg:'Toen was er juist werkloosheid en armoede, geen tekort aan arbeiders.'},
+          {t:'In 2000', goed:false, uitleg:'De wervingsverdragen horen bij de jaren zestig.'}
+        ],
+        extra:{t:'In 1973, tijdens de oliecrisis', goed:false, uitleg:'Toen stopte de werving juist grotendeels. Dat is het einde van dit verhaal, niet het begin.'},
+        verdieping:'Veel mensen bleven, en gezinnen kwamen over. Nederland veranderde blijvend.' },
+      { vraag:'Wat wordt in deze bron weggelaten?',
+        hint:'Van wie hoor je hier niets?',
+        opties:[
+          {t:'Hoe het werken en wonen er voor de arbeiders zelf uitzag', goed:true, uitleg:'Precies. Een regeling beschrijft afspraken, geen pensions, heimwee of hoe men bejegend werd. Daarvoor heb je brieven en interviews nodig.'},
+          {t:'Hoe lang het contract duurde', goed:false, uitleg:'Dat staat er juist in.'},
+          {t:'Dat er arbeiders werden geworven', goed:false, uitleg:'Dat is het hele onderwerp.'}
+        ],
+        extra:{t:'Uit welke landen de arbeiders kwamen', goed:false, uitleg:'Zulke verdragen noemden dat meestal gewoon. Het gaat om wiens ervaring ontbreekt.'},
+        verdieping:'Zet dit stuk naast een interview met iemand die kwam. Twee bronnen over dezelfde jaren.' }
+    ]
+  },
+  {
+    type:'Online bron', titel:'Filmpje van een demonstratie op sociale media', jaar:'2019',
+    tekening:'scherm', afbeelding:'', credit:'',
+    tekst:'Iemand filmt met een telefoon een demonstratie en zet het filmpje online. In beeld duwt de politie een groep mensen achteruit en klinkt geschreeuw. Het filmpje duurt achttien seconden en begint midden in de actie. Onder de post staan duizenden reacties, en het is vaak gedeeld.',
+    herkomst:'Naar het soort filmpje dat tegenwoordig van demonstraties rondgaat.',
+    denkvraag:'Het filmpje begint midden in de actie. Waarom is dat voor de kijker een probleem, en waarom wordt het toch zo vaak gedeeld?',
+    vragen:[
+      { vraag:'Wie heeft deze bron gemaakt?',
+        hint:'Wie hield de telefoon vast, en waar stond die persoon?',
+        opties:[
+          {t:'Een ooggetuige met een telefoon, die koos waar hij stond en wanneer hij begon', goed:true, uitleg:'Klopt. Ook zonder redactie is er gekozen: het beeldkader, het moment en wat erbuiten bleef.'},
+          {t:'Een journalist van een omroep', goed:false, uitleg:'Dan had je een cameraploeg en een verslaggever gezien.'},
+          {t:'De politie, voor eigen registratie', goed:false, uitleg:'Die filmt ook, maar dit is op sociale media gezet door een omstander.'}
+        ],
+        extra:{t:'Het algoritme van het platform', goed:false, uitleg:'Dat bepaalt wie het ziet, niet wie het maakte. Verspreiden is iets anders dan maken.'},
+        verdieping:'Digitale bronnen zijn massaal en snel, maar de oude vragen blijven precies hetzelfde.' },
+      { vraag:'Wanneer is deze bron gemaakt?',
+        hint:'Kijk naar het jaartal, en bedenk wat je daaraan hebt.',
+        opties:[
+          {t:'In 2019, op het moment zelf', goed:true, uitleg:'Klopt. Dit is een primaire bron van hetzelfde moment, alleen wel maar achttien seconden lang.'},
+          {t:'Jaren later, als terugblik', goed:false, uitleg:'Dan was het een documentaire of een compilatie geweest.'},
+          {t:'Dat is bij online bronnen niet te achterhalen', goed:false, uitleg:'Vaak juist wel: een datum bij de post, en soms is het beeld met andere opnames te vergelijken.'}
+        ],
+        extra:{t:'De datum klopt niet, want oude beelden worden opnieuw gedeeld', goed:false, uitleg:'Dat gebeurt echt en je moet erop letten. Maar bij deze bron staat het jaartal gewoon vast.'},
+        verdieping:'Controleer bij online beeld altijd of het echt van die dag is. Oud beeld duikt zo weer op.' },
+      { vraag:'Wat wordt in deze bron weggelaten?',
+        hint:'Achttien seconden. Wat gebeurde er in minuut een?',
+        opties:[
+          {t:'Wat er voor en na de opname gebeurde, en wat er buiten beeld viel', goed:true, uitleg:'Precies. Achttien seconden uit het midden vertellen je niet wie begon of hoe het afliep. Dat is bij dit soort beeld de kernvraag.'},
+          {t:'Dat er een demonstratie was', goed:false, uitleg:'Dat zie je gewoon.'},
+          {t:'Dat er politie aanwezig was', goed:false, uitleg:'Die staat in beeld.'}
+        ],
+        extra:{t:'Het aantal reacties onder de post', goed:false, uitleg:'Dat staat er juist bij, en het zegt iets over verspreiding, niet over de gebeurtenis.'},
+        verdieping:'Zoek er beeld van een andere hoek bij. Twee telefoons geven samen bijna een verslag.' }
+    ]
   }
 ];
 
@@ -437,6 +838,69 @@ var TEKENINGEN = {
     '<g stroke="#14224C" stroke-opacity=".3" stroke-width="3" stroke-linecap="round">'+
     '<path d="M108 78h184M108 100h184M108 122h150M108 144h170"/></g>'+
     '<path d="M212 176c16-8 40-4 52 8" stroke="#14224C" stroke-opacity=".5" stroke-width="3" fill="none" stroke-linecap="round"/></svg>'
+  ,vondst:'<svg viewBox="0 0 400 230"><rect width="400" height="230" fill="#FBF6F1"/>'+
+    '<path d="M40 168h320" stroke="#14224C" stroke-opacity=".2" stroke-width="3"/>'+
+    '<path d="M40 196h320" stroke="#14224C" stroke-opacity=".12" stroke-width="3"/>'+
+    '<rect x="150" y="96" width="66" height="66" rx="10" fill="#fff" stroke="#14224C" stroke-opacity=".35" stroke-width="2" transform="rotate(-9 183 129)"/>'+
+    '<g fill="#14224C" fill-opacity=".55"><circle cx="168" cy="114" r="5"/><circle cx="198" cy="126" r="5"/><circle cx="172" cy="146" r="5"/></g>'+
+    '<path d="M262 156c-10-6-8-20 4-22" stroke="#F26749" stroke-width="3" fill="none" stroke-linecap="round"/></svg>',
+  kroniek:'<svg viewBox="0 0 400 230"><rect width="400" height="230" fill="#FBF6F1"/>'+
+    '<rect x="58" y="26" width="284" height="178" rx="6" fill="#fff" stroke="#14224C" stroke-opacity=".18"/>'+
+    '<path d="M200 30v170" stroke="#14224C" stroke-opacity=".14" stroke-width="2"/>'+
+    '<g stroke="#14224C" stroke-opacity=".28" stroke-width="3" stroke-linecap="round">'+
+    '<path d="M78 64h104M78 86h104M78 108h88M78 130h104M218 64h104M218 86h88M218 108h104M218 130h70"/></g>'+
+    '<rect x="78" y="44" width="24" height="14" rx="3" fill="#F26749" fill-opacity=".7"/></svg>',
+  schilderij:'<svg viewBox="0 0 400 230"><rect width="400" height="230" fill="#FBF6F1"/>'+
+    '<rect x="76" y="20" width="248" height="190" rx="4" fill="#EA9836" fill-opacity=".35" stroke="#14224C" stroke-opacity=".25" stroke-width="6"/>'+
+    '<rect x="96" y="40" width="208" height="150" fill="#fff"/>'+
+    '<g fill="#14224C" fill-opacity=".55"><circle cx="150" cy="88" r="16"/><circle cx="200" cy="84" r="16"/><circle cx="248" cy="90" r="12"/>'+
+    '<path d="M126 112h48l8 66h-64zM178 108h44l8 70h-60zM230 116h36l6 62h-48z"/></g>'+
+    '<circle cx="278" cy="70" r="14" fill="#204ECF" fill-opacity=".45"/></svg>',
+  tabel:'<svg viewBox="0 0 400 230"><rect width="400" height="230" fill="#FBF6F1"/>'+
+    '<rect x="58" y="30" width="284" height="170" rx="6" fill="#fff" stroke="#14224C" stroke-opacity=".18"/>'+
+    '<rect x="58" y="30" width="284" height="30" fill="#204ECF" fill-opacity=".18"/>'+
+    '<g stroke="#14224C" stroke-opacity=".16" stroke-width="2"><path d="M58 90h284M58 124h284M58 158h284M170 30v170M256 30v170"/></g>'+
+    '<g fill="#F26749" fill-opacity=".75"><rect x="278" y="70" width="42" height="12" rx="6"/><rect x="278" y="104" width="26" height="12" rx="6"/>'+
+    '<rect x="278" y="138" width="34" height="12" rx="6"/><rect x="278" y="172" width="16" height="12" rx="6"/></g></svg>',
+  krant:'<svg viewBox="0 0 400 230"><rect width="400" height="230" fill="#FBF6F1"/>'+
+    '<rect x="52" y="22" width="296" height="186" rx="4" fill="#fff" stroke="#14224C" stroke-opacity=".18"/>'+
+    '<rect x="72" y="40" width="180" height="16" rx="4" fill="#14224C" fill-opacity=".75"/>'+
+    '<rect x="72" y="70" width="120" height="80" fill="#83A5F2" fill-opacity=".4"/>'+
+    '<g stroke="#14224C" stroke-opacity=".26" stroke-width="3" stroke-linecap="round">'+
+    '<path d="M208 76h120M208 96h120M208 116h96M208 136h120M72 168h256M72 186h190"/></g></svg>',
+  reclame:'<svg viewBox="0 0 400 230"><rect width="400" height="230" fill="#FBF6F1"/>'+
+    '<rect x="86" y="18" width="228" height="194" rx="8" fill="#EA9836" fill-opacity=".45" stroke="#14224C" stroke-opacity=".18"/>'+
+    '<circle cx="200" cy="66" r="22" fill="#F26749" fill-opacity=".8"/>'+
+    '<path d="M120 200c14-46 30-66 50-66s34 22 44 66z" fill="#204ECF" fill-opacity=".4"/>'+
+    '<path d="M244 200c8-34 20-48 34-48" stroke="#14224C" stroke-opacity=".4" stroke-width="4" fill="none" stroke-linecap="round"/>'+
+    '<rect x="126" y="164" width="148" height="14" rx="7" fill="#FBF6F1" fill-opacity=".85"/></svg>',
+  kaart:'<svg viewBox="0 0 400 230"><rect width="400" height="230" fill="#FBF6F1"/>'+
+    '<rect x="40" y="24" width="320" height="182" rx="6" fill="#83A5F2" fill-opacity=".22" stroke="#14224C" stroke-opacity=".18"/>'+
+    '<path d="M96 78c22-16 46-10 54 8s-6 34 8 44 40 2 46 18" stroke="#14224C" stroke-opacity=".2" stroke-width="2" fill="none"/>'+
+    '<path d="M112 92c18-12 38-6 40 10s-14 24-4 34 32 0 36 14-18 20-40 14-46-24-46-44 4-22 14-28z" fill="#F26749" fill-opacity=".65"/>'+
+    '<path d="M264 100c14-8 32-2 34 12s-12 20-2 28 24 0 26 12-14 16-30 12-30-18-30-32 0-28 2-32z" fill="#F26749" fill-opacity=".65"/>'+
+    '<path d="M170 122h84" stroke="#14224C" stroke-opacity=".35" stroke-width="2" stroke-dasharray="6 6"/></svg>',
+  interview:'<svg viewBox="0 0 400 230"><rect width="400" height="230" fill="#FBF6F1"/>'+
+    '<rect x="60" y="26" width="280" height="178" rx="10" fill="#fff" stroke="#14224C" stroke-opacity=".18"/>'+
+    '<circle cx="168" cy="98" r="26" fill="#14224C" fill-opacity=".5"/>'+
+    '<path d="M126 176c0-24 19-42 42-42s42 18 42 42z" fill="#14224C" fill-opacity=".5"/>'+
+    '<rect x="248" y="86" width="18" height="44" rx="9" fill="#F26749" fill-opacity=".8"/>'+
+    '<path d="M240 128a17 17 0 0 0 34 0M257 145v18M246 163h22" stroke="#14224C" stroke-opacity=".5" stroke-width="3" fill="none" stroke-linecap="round"/></svg>',
+  document:'<svg viewBox="0 0 400 230"><rect width="400" height="230" fill="#FBF6F1"/>'+
+    '<rect x="94" y="18" width="212" height="194" rx="6" fill="#fff" stroke="#14224C" stroke-opacity=".2"/>'+
+    '<rect x="118" y="42" width="96" height="12" rx="6" fill="#204ECF" fill-opacity=".6"/>'+
+    '<g stroke="#14224C" stroke-opacity=".26" stroke-width="3" stroke-linecap="round">'+
+    '<path d="M118 76h164M118 98h164M118 120h130M118 142h164"/></g>'+
+    '<circle cx="260" cy="176" r="20" fill="#F26749" fill-opacity=".28" stroke="#F26749" stroke-opacity=".7" stroke-width="2"/>'+
+    '<path d="M118 172c18-8 40-4 52 6" stroke="#14224C" stroke-opacity=".5" stroke-width="3" fill="none" stroke-linecap="round"/></svg>',
+  scherm:'<svg viewBox="0 0 400 230"><rect width="400" height="230" fill="#FBF6F1"/>'+
+    '<rect x="146" y="14" width="108" height="202" rx="16" fill="#fff" stroke="#14224C" stroke-opacity=".25" stroke-width="2"/>'+
+    '<rect x="156" y="40" width="88" height="120" fill="#83A5F2" fill-opacity=".4"/>'+
+    '<g fill="#14224C" fill-opacity=".5"><circle cx="182" cy="88" r="9"/><circle cx="212" cy="86" r="9"/>'+
+    '<path d="M170 104h24l4 34h-32zM200 102h24l4 36h-32z"/></g>'+
+    '<circle cx="200" cy="26" r="3" fill="#14224C" fill-opacity=".35"/>'+
+    '<path d="M170 178h60M170 194h38" stroke="#14224C" stroke-opacity=".28" stroke-width="4" stroke-linecap="round"/>'+
+    '<path d="M244 172l10-6 10 6-10 6z" fill="#F26749" fill-opacity=".8"/></svg>' 
 };
 
 /* ============================================================================
@@ -446,8 +910,31 @@ var TEKENINGEN = {
   'use strict';
   document.getElementById('jaar').textContent = new Date().getFullYear();
 
-  var niveau = null, bronIndex = 0, goed = 0, gedaan = 0, resultaten = [];
+  var niveau = null, modus = null, bronIndex = 0, goed = 0, gedaan = 0, resultaten = [];
   var totaalVragen = BRONNEN.length * 3;
+
+  /* In de onderzoeksstand doe je vier bronnen. In de marathon blijven ze komen. */
+  var ONDERZOEK_AANTAL = 4;
+  var SLEUTEL = 'bronnenlab-klassement-v1';
+  var zak = [], volgorde = [], punten = 0, reeks = 0, besteReeks = 0, bronnenAf = 0,
+      vorigeBron = -1, opgeslagen = false;
+
+  function isMarathon(){ return modus && modus.id === 'marathon'; }
+
+  /* ---------- opslag, met vangnet als de browser het niet toestaat ---------- */
+  function lees(){ try { return JSON.parse(localStorage.getItem(SLEUTEL) || '{}'); } catch (e){ return {}; } }
+  function schrijf(d){ try { localStorage.setItem(SLEUTEL, JSON.stringify(d)); return true; } catch (e){ return false; } }
+
+  /* De zak raakt leeg en wordt opnieuw gevuld, zodat je alle bronnen ziet
+     voordat er een terugkomt. Nooit twee keer dezelfde bron achter elkaar. */
+  function trekBron(){
+    if (!zak.length){
+      zak = husselen(BRONNEN.map(function(_, i){ return i; }));
+      if (BRONNEN.length > 1 && zak[0] === vorigeBron) zak.push(zak.shift());
+    }
+    vorigeBron = zak.shift();
+    return vorigeBron;
+  }
 
   var elStart = document.getElementById('scherm-start');
   var elLab = document.getElementById('scherm-lab');
@@ -468,15 +955,41 @@ var TEKENINGEN = {
       niveau = n;
       Array.prototype.forEach.call(elNiveaus.children, function(c){ c.classList.remove('on'); });
       b.classList.add('on');
-      elStartBtn.disabled = false;
       elPill.textContent = n.naam;
+      klaarCheck();
     });
     elNiveaus.appendChild(b);
   });
 
+  /* ---------- standkeuze ---------- */
+  var elModussen = document.getElementById('modussen');
+  MODUSSEN.forEach(function(m){
+    var b = document.createElement('button');
+    b.className = 'niv'; b.type = 'button';
+    b.innerHTML = '<b>' + m.naam + '</b><span>' + m.uitleg + '</span>';
+    b.addEventListener('click', function(){
+      modus = m;
+      Array.prototype.forEach.call(elModussen.children, function(c){ c.classList.remove('on'); });
+      b.classList.add('on');
+      elStartBtn.textContent = isMarathon() ? 'Start de marathon' : 'Start het onderzoek';
+      klaarCheck();
+    });
+    elModussen.appendChild(b);
+  });
+
+  function klaarCheck(){
+    elStartBtn.disabled = !(niveau && modus);
+    toonKlassement('startLijst', null);
+  }
+
   elStartBtn.addEventListener('click', function(){
-    bronIndex = 0; goed = 0; gedaan = 0; resultaten = [];
+    goed = 0; gedaan = 0; resultaten = [];
+    punten = 0; reeks = 0; besteReeks = 0; bronnenAf = 0;
+    zak = []; vorigeBron = -1; opgeslagen = false;
+    volgorde = isMarathon() ? [] : husselen(BRONNEN.map(function(_, i){ return i; })).slice(0, ONDERZOEK_AANTAL);
+    bronIndex = isMarathon() ? trekBron() : volgorde[0];
     elStart.classList.add('hide'); elEinde.classList.add('hide'); elLab.classList.remove('hide');
+    document.getElementById('naamvak').classList.add('hide');
     toonBron();
     scrollTo({top:0, behavior:'auto'});
   });
@@ -491,6 +1004,7 @@ var TEKENINGEN = {
 
   function naarStart(){
     elLab.classList.add('hide'); elEinde.classList.add('hide'); elStart.classList.remove('hide');
+    toonKlassement('startLijst', null);
     scrollTo({top:0, behavior:'auto'});
   }
 
@@ -503,18 +1017,24 @@ var TEKENINGEN = {
 
     elBron.innerHTML =
       '<div class="bron-top"><span class="badge">' + b.type + '</span>' +
-      '<span class="eyebrow">bron ' + (bronIndex+1) + ' van ' + BRONNEN.length + '</span></div>' +
+      '<span class="eyebrow">' + (isMarathon()
+        ? 'bron ' + (bronnenAf + 1)
+        : 'bron ' + (bronnenAf + 1) + ' van ' + volgorde.length) + '</span></div>' +
       '<div class="bron-beeld">' + beeld + '</div>' +
       '<div class="bron-body">' +
         '<h2>' + b.titel + '</h2>' +
         '<p class="bron-jaar">' + b.jaar + '</p>' +
         '<p class="bron-tekst' + (niveau.id === 'bb' ? ' groot' : '') + '">' + b.tekst + '</p>' +
-        '<p class="herkomst">' + b.herkomst + '</p>' +
+        '<p class="herkomst">' + b.herkomst + (b.credit ? ' ' + b.credit : '') + '</p>' +
       '</div>';
 
     elVragen.innerHTML = '';
     elNa.innerHTML = '';
-    b.vragen.forEach(function(v, i){ elVragen.appendChild(maakVraag(v, i, b)); });
+    /* In de marathon wisselt de volgorde van de drie vragen, zodat je niet op
+       een vast ritme gaat antwoorden. In de onderzoeksstand blijft wie, wanneer,
+       weggelaten op volgorde staan, want dat is de denkstap die je leert. */
+    var rij = isMarathon() ? husselen(b.vragen.slice()) : b.vragen;
+    rij.forEach(function(v, i){ elVragen.appendChild(maakVraag(v, i, b)); });
     werkTellerBij();
   }
 
@@ -550,7 +1070,15 @@ var TEKENINGEN = {
         if (kaart.dataset.klaar) return;
         kaart.dataset.klaar = '1';
         gedaan++;
-        if (o.goed) goed++;
+        if (o.goed){
+          goed++; reeks++;
+          besteReeks = Math.max(besteReeks, reeks);
+          /* Geen klok, dus geen snelheidsbonus: hier telt nadenken, niet tempo.
+             Drie goed op rij levert dubbele punten op. */
+          punten += reeks >= 3 ? 20 : 10;
+        } else {
+          reeks = 0;
+        }
         resultaten.push({ bron:bron.titel, vraag:i+1, goed:!!o.goed });
 
         Array.prototype.forEach.call(vak.children, function(c){ c.disabled = true; });
@@ -562,7 +1090,13 @@ var TEKENINGEN = {
           });
         }
         feedback.className = 'feedback on ' + (o.goed ? 'ja' : 'nee');
-        feedback.innerHTML = '<b>' + (o.goed ? 'Goed' : 'Niet helemaal') + '</b>' + o.uitleg +
+        var melding = '';
+        if (isMarathon() && o.goed){
+          melding = reeks >= 3
+            ? ' <span class="reeksmelding">' + reeks + ' goed op rij, dubbele punten.</span>'
+            : ' <span class="reeksmelding">Nog ' + (3 - reeks) + ' tot dubbele punten.</span>';
+        }
+        feedback.innerHTML = '<b>' + (o.goed ? 'Goed' : 'Niet helemaal') + '</b>' + o.uitleg + melding +
           (niveau.id === 'hv' && v.verdieping ? '<div class="verdieping">' + v.verdieping + '</div>' : '');
 
         werkTellerBij();
@@ -580,55 +1114,138 @@ var TEKENINGEN = {
     if (open > 0) return;
 
     var b = BRONNEN[bronIndex];
+    bronnenAf++;
+
     var html = '';
     if (niveau.id === 'hv' && b.denkvraag){
       html += '<div class="denkvraag"><b>Denkvraag, hier is geen goed of fout</b><p>' + b.denkvraag + '</p></div>';
     }
-    html += '<div class="klaar" style="margin-top:14px"><h3>Bron ' + (bronIndex+1) + ' afgerond</h3>' +
-            '<p>' + (bronIndex+1 < BRONNEN.length ? 'Klaar voor de volgende bron?' : 'Dit was de laatste bron.') + '</p>' +
+
+    var laatste = !isMarathon() && bronnenAf >= volgorde.length;
+    html += '<div class="klaar" style="margin-top:14px"><h3>Bron ' + bronnenAf + ' afgerond</h3>' +
+            '<p>' + (isMarathon()
+              ? 'Je staat op ' + punten + ' punten. Doorgaan zolang je wilt.'
+              : (laatste ? 'Dit was de laatste bron.' : 'Klaar voor de volgende bron?')) + '</p>' +
             '<button class="btn" id="verderBtn" type="button">' +
-            (bronIndex+1 < BRONNEN.length ? 'Volgende bron' : 'Bekijk je resultaat') + '</button></div>';
+            (laatste ? 'Bekijk je resultaat' : 'Volgende bron') + '</button>' +
+            (isMarathon() ? '<button class="btn ghost" id="stopBtn" type="button" style="margin-left:8px">Stoppen en score opslaan</button>' : '') +
+            '</div>';
     elNa.innerHTML = html;
 
     document.getElementById('verderBtn').addEventListener('click', function(){
-      if (bronIndex + 1 < BRONNEN.length){
-        bronIndex++;
-        toonBron();
-        scrollTo({top:0, behavior:'smooth'});
-      } else {
-        toonEinde();
-      }
+      if (laatste){ toonEinde(); return; }
+      bronIndex = isMarathon() ? trekBron() : volgorde[bronnenAf];
+      toonBron();
+      scrollTo({top:0, behavior:'smooth'});
     });
+    var stop = document.getElementById('stopBtn');
+    if (stop) stop.addEventListener('click', toonEinde);
   }
 
   /* ---------- voortgang ---------- */
   function werkTellerBij(){
-    document.getElementById('balkFill').style.width = ((gedaan/totaalVragen)*100) + '%';
-    document.getElementById('telLinks').textContent = 'Bron ' + (bronIndex+1) + ' van ' + BRONNEN.length;
-    document.getElementById('telRechts').textContent = goed + ' van ' + gedaan + ' goed';
+    var open = elVragen.querySelectorAll('.vraag[data-klaar]').length;
+    if (isMarathon()){
+      /* Geen vast einde, dus de balk toont je vordering binnen deze bron. */
+      document.getElementById('balkFill').style.width = ((open / 3) * 100) + '%';
+      document.getElementById('telLinks').textContent = 'Bron ' + (bronnenAf + 1) + ' \u00b7 ' + punten + ' punten';
+      document.getElementById('telRechts').textContent = goed + ' van ' + gedaan + ' goed' +
+        (reeks >= 2 ? ' \u00b7 ' + reeks + ' op rij' : '');
+    } else {
+      var totaal = volgorde.length * 3;
+      document.getElementById('balkFill').style.width = ((gedaan / totaal) * 100) + '%';
+      document.getElementById('telLinks').textContent = 'Bron ' + (bronnenAf + 1) + ' van ' + volgorde.length;
+      document.getElementById('telRechts').textContent = goed + ' van ' + gedaan + ' goed';
+    }
   }
 
   /* ---------- eindscherm ---------- */
   function toonEinde(){
     elLab.classList.add('hide'); elEinde.classList.remove('hide');
-    document.getElementById('eindScore').textContent = goed + ' / ' + totaalVragen;
-    var deel = goed / totaalVragen;
-    document.getElementById('eindTekst').textContent =
-      deel >= .85 ? 'Sterk. Je kijkt naar een bron zoals een historicus dat doet.' :
-      deel >= .6  ? 'Goed op weg. Let vooral op de vraag wat er wordt weggelaten.' :
-                    'Nog even oefenen. Begin bij de vraag wie de bron gemaakt heeft, daar volgt de rest uit.';
+    var totaal = isMarathon() ? gedaan : volgorde.length * 3;
+    var deel = totaal ? goed / totaal : 0;
 
-    var per = {};
+    document.getElementById('eindScore').textContent = isMarathon()
+      ? punten + ' punten'
+      : goed + ' / ' + totaal;
+
+    document.getElementById('eindTekst').textContent = isMarathon()
+      ? 'Je onderzocht ' + bronnenAf + ' bronnen en had ' + goed + ' van de ' + gedaan +
+        ' vragen goed. Je langste reeks was ' + besteReeks + '.'
+      : (deel >= .85 ? 'Sterk. Je kijkt naar een bron zoals een historicus dat doet.' :
+         deel >= .6  ? 'Goed op weg. Let vooral op de vraag wat er wordt weggelaten.' :
+                       'Nog even oefenen. Begin bij de vraag wie de bron gemaakt heeft, daar volgt de rest uit.');
+
+    var per = {}, aantal = {};
     resultaten.forEach(function(r){
-      if (!per[r.bron]) per[r.bron] = 0;
+      if (!per[r.bron]){ per[r.bron] = 0; aantal[r.bron] = 0; }
+      aantal[r.bron]++;
       if (r.goed) per[r.bron]++;
     });
     var rijen = '';
     Object.keys(per).forEach(function(k){
-      rijen += '<div class="rij"><span>' + k + '</span><b>' + per[k] + ' van 3</b></div>';
+      rijen += '<div class="rij"><span>' + k + '</span><b>' + per[k] + ' van ' + aantal[k] + '</b></div>';
     });
     document.getElementById('eindOverzicht').innerHTML = rijen;
+
+    var vak = document.getElementById('naamvak');
+    vak.classList.toggle('hide', !isMarathon() || opgeslagen || gedaan === 0);
+    if (isMarathon() && !opgeslagen && gedaan > 0){
+      var veld = document.getElementById('naamveld');
+      veld.value = '';
+    }
+    toonKlassement('eindLijst', null);
     scrollTo({top:0, behavior:'smooth'});
+  }
+
+  /* ---------- klassement, alleen voor de marathon ---------- */
+  document.getElementById('bewaarBtn').addEventListener('click', bewaarScore);
+  document.getElementById('naamveld').addEventListener('keydown', function(e){
+    if (e.key === 'Enter') bewaarScore();
+  });
+
+  function bewaarScore(){
+    if (opgeslagen || !isMarathon()) return;
+    var veld = document.getElementById('naamveld');
+    var naam = veld.value.trim().slice(0, 14);
+    if (!naam){ veld.focus(); return; }
+    var data = lees();
+    var sleutel = niveau.id;
+    var lijst = data[sleutel] || [];
+    var nieuwe = { naam:naam, punten:punten, goed:goed, bronnen:bronnenAf, reeks:besteReeks,
+                   datum:new Date().toLocaleDateString('nl-NL') };
+    lijst.push(nieuwe);
+    lijst.sort(function(a, b){ return b.punten - a.punten; });
+    data[sleutel] = lijst.slice(0, 10);
+    var gelukt = schrijf(data);
+    opgeslagen = true;
+    document.getElementById('naamvak').classList.add('hide');
+    toonKlassement('eindLijst', gelukt ? nieuwe : null);
+    if (!gelukt){
+      document.getElementById('eindLijst').insertAdjacentHTML('beforeend',
+        '<p class="leeg">Deze browser staat opslaan niet toe, dus je score kon niet bewaard worden.</p>');
+    }
+  }
+
+  function toonKlassement(doelId, markeer){
+    var doel = document.getElementById(doelId);
+    if (!doel) return;
+    if (!niveau || !isMarathon()){ doel.innerHTML = ''; return; }
+    var lijst = lees()[niveau.id] || [];
+    var titel = 'Klassement marathon, ' + niveau.naam;
+    if (!lijst.length){
+      doel.innerHTML = '<h3>' + titel + '</h3><div class="leeg">Nog geen scores. Wie het eerst speelt, staat bovenaan.</div>';
+      return;
+    }
+    var html = '<h3>' + titel + '</h3>';
+    lijst.forEach(function(r, i){
+      var ik = markeer && r.naam === markeer.naam && r.punten === markeer.punten;
+      html += '<div class="plek' + (ik ? ' jij' : '') + '"><span class="nr">' + (i + 1) + '</span>' +
+        '<span><b>' + r.naam + '</b><small>' + r.bronnen + ' bronnen \u00b7 ' + r.goed +
+        ' goed \u00b7 reeks ' + r.reeks + ' \u00b7 ' + r.datum + '</small></span>' +
+        '<span class="pt">' + r.punten + '</span></div>';
+    });
+    doel.innerHTML = html;
   }
 
   /* ---------- toetsenbord, handig voor het digibord ---------- */
@@ -676,6 +1293,7 @@ var TEKENINGEN = {
       }
     }
     kiesUit('niveaus', NIVEAUS, param('n'), 'nivKop', 'Niveau');
+    kiesUit('modussen', MODUSSEN, param('m'), 'modusKop', 'Stand');
     if (typeof ROLLEN !== 'undefined') kiesUit('rollen', ROLLEN, param('rol'), 'rolKop', 'Rol');
     if (typeof ROUTES !== 'undefined'){
       var lijst = Object.keys(ROUTES).map(function(k){ var r = ROUTES[k]; r.id = k; return r; });
