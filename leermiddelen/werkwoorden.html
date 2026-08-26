@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Werkwoordrace, versie 1.0 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Werkwoordrace &middot; meneer Greidanus</title>
+<meta name="description" content="Oefenen met werkwoordspelling: d of t, het kofschip en het voltooid deelwoord. Met niveaukeuze en een tijdrace.">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%23F26749'/><text x='50' y='68' font-family='Poppins,Arial' font-size='46' font-weight='600' fill='%23FBF6F1' text-anchor='middle'>LG</text></svg>">
+<style>
+:root{--crab:#F26749;--amber:#EA9836;--ocean:#204ECF;--vista:#83A5F2;--sand:#FCDED6;--room:#FBF6F1;
+  --ink:#14224C;--muted:#5b6480;--goed:#2f7d52;--goed-bg:#e7f3ec;--fout:#c0442c;--fout-bg:#fdecea;
+  --max:1180px;--ease:cubic-bezier(.22,.61,.36,1)}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--room);color:var(--ink);line-height:1.6;
+  font-family:'Poppins',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;font-weight:600;line-height:1.12;letter-spacing:-.02em}
+p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
+.wrap{width:min(100% - 28px,var(--max));margin-inline:auto}
+.hand{font-family:'Caveat',cursive;font-weight:600;color:var(--crab)}
+.eyebrow{font-size:.72rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.hide{display:none !important}
+header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-bottom:1px solid rgba(20,34,76,.08);padding:10px 0}
+.hd{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.mark{display:flex;align-items:center;gap:10px;font-weight:600;text-decoration:none;color:inherit}
+.mark i{width:32px;height:32px;border-radius:10px;background:var(--crab);color:var(--room);display:grid;place-items:center;font-style:normal;font-size:.78rem}
+.hd-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.pill{background:var(--sand);font-weight:600;padding:6px 13px;border-radius:999px;font-size:.78rem}
+.linkbtn{background:none;border:none;color:var(--muted);text-decoration:underline;text-underline-offset:4px;font-size:.85rem;padding:6px}
+.linkbtn:hover{color:var(--ink)}
+
+.start{padding:46px 0 70px;text-align:center}
+.start h1{font-size:clamp(2.2rem,6vw,3.6rem);margin:8px 0 14px}
+.start .lead{max-width:56ch;margin:0 auto;color:var(--muted)}
+.kies{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:22px auto 0;max-width:920px}
+.kaartje{background:#fff;border:2px solid rgba(20,34,76,.10);border-radius:22px;padding:20px;text-align:left;transition:border-color .2s var(--ease),transform .2s var(--ease)}
+.kaartje:hover{border-color:var(--vista);transform:translateY(-3px)}
+.kaartje.on{border-color:var(--ocean);background:#f4f7ff}
+.kaartje b{display:block;font-size:1.05rem}
+.kaartje span{display:block;margin-top:5px;font-size:.86rem;color:var(--muted)}
+.btn{display:inline-block;border:none;background:var(--crab);color:#fff;font-weight:600;padding:15px 32px;border-radius:999px;
+  box-shadow:0 10px 0 rgba(20,34,76,.10);margin-top:24px;transition:transform .16s var(--ease)}
+.btn:hover{transform:translateY(-2px)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn.ghost{background:#fff;color:var(--ink);border:1.5px solid rgba(20,34,76,.15);box-shadow:none}
+
+.spelkop{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;padding:16px 0 0}
+.balk{height:6px;background:rgba(20,34,76,.10);border-radius:999px;overflow:hidden;margin-top:10px}
+.balk i{display:block;height:100%;width:0;background:var(--crab);transition:width .35s var(--ease)}
+.tijdbalk{height:16px;border-radius:999px;background:rgba(20,34,76,.10);overflow:hidden;margin-top:10px}
+.tijdbalk i{display:block;height:100%;width:100%;border-radius:999px;background:var(--goed);transition:background .3s linear}
+.tijdbalk.krap i{background:var(--crab)}
+@media(prefers-reduced-motion:no-preference){.tijdbalk.krap{animation:klop 1s ease-in-out infinite}}
+@keyframes klop{0%,100%{opacity:1}50%{opacity:.55}}
+.klok{font-variant-numeric:tabular-nums}
+
+.speelveld{padding:26px 0 70px;max-width:760px;margin-inline:auto}
+.zin{background:#fff;border:1px solid rgba(20,34,76,.10);border-radius:24px;padding:clamp(24px,5vw,40px);
+  text-align:center;box-shadow:0 16px 40px rgba(20,34,76,.08);
+  font-size:clamp(1.25rem,3.4vw,1.75rem);font-weight:500;line-height:1.45}
+.gat{display:inline-block;min-width:5.5ch;border-bottom:3px solid var(--crab);margin:0 3px;
+  font-weight:600;color:var(--crab)}
+.gat.ja{border-color:var(--goed);color:var(--goed)}
+.gat.nee{border-color:var(--fout);color:var(--fout)}
+body.groot .zin{font-size:2.1rem}
+
+.keuzes{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
+.keuze{background:#fff;border:2px solid rgba(20,34,76,.12);border-radius:20px;padding:20px 14px;
+  font-size:clamp(1.1rem,3vw,1.5rem);font-weight:600;min-height:76px;
+  transition:border-color .15s var(--ease),transform .15s var(--ease),background .15s var(--ease)}
+.keuze:hover:not(:disabled){border-color:var(--ocean);transform:translateY(-3px)}
+.keuze:disabled{cursor:default}
+.keuze.ja{border-color:var(--goed);background:var(--goed-bg);color:var(--goed)}
+.keuze.nee{border-color:var(--fout);background:var(--fout-bg);color:var(--fout)}
+.keuze.dof{opacity:.4}
+body.groot .keuze{font-size:1.8rem;min-height:94px}
+@media (max-width:420px){.keuzes{grid-template-columns:1fr}}
+
+.regel{margin-top:14px;text-align:center;min-height:34px}
+.regel span{display:inline-block;background:var(--sand);border-radius:999px;padding:6px 15px;
+  font-size:.82rem;font-weight:600}
+.uitleg{margin-top:12px;border-radius:18px;padding:15px 18px;font-size:.95rem;min-height:64px;
+  display:flex;align-items:center;justify-content:center;text-align:center;background:transparent;color:var(--muted)}
+.uitleg.ja{background:var(--goed-bg);color:#1f5c3c}
+.uitleg.nee{background:var(--fout-bg);color:#8d3320}
+.onderrij{margin-top:14px;display:flex;gap:9px;justify-content:center;flex-wrap:wrap}
+.onderrij button{background:none;border:1.5px solid rgba(20,34,76,.15);border-radius:999px;padding:9px 16px;
+  font-size:.84rem;font-weight:600;min-height:42px}
+.onderrij button:hover{border-color:var(--ocean);color:var(--ocean)}
+
+.spiek{max-width:760px;margin:18px auto 0;background:#fff;border:1px solid rgba(20,34,76,.10);
+  border-radius:22px;padding:22px;text-align:left}
+.spiek h3{font-size:1rem;margin-bottom:8px}
+.spiek p{font-size:.9rem;color:var(--muted);margin-bottom:14px}
+.spiek p:last-child{margin-bottom:0}
+.spiek b{color:var(--ink)}
+
+.einde{padding:50px 0 70px;text-align:center}
+.score{font-size:clamp(3rem,10vw,5rem);font-weight:700;letter-spacing:-.03em;line-height:1}
+.overzicht{display:grid;gap:9px;max-width:680px;margin:26px auto 0;text-align:left}
+.rij{display:flex;justify-content:space-between;gap:12px;background:#fff;border:1px solid rgba(20,34,76,.08);
+  border-radius:15px;padding:11px 15px;font-size:.9rem}
+.rij span{color:var(--muted)}
+.naamvak{max-width:460px;margin:24px auto 0;background:#fff;border:1px solid rgba(20,34,76,.08);
+  border-radius:22px;padding:20px;text-align:left}
+.naamvak label{display:block;font-size:.86rem;color:var(--muted);margin-bottom:8px}
+.naamrij{display:flex;gap:8px}
+.naamrij input{flex:1;min-width:0;border:1.5px solid rgba(20,34,76,.14);border-radius:14px;
+  padding:12px 14px;font-size:1rem;background:var(--room);font-family:inherit;color:inherit}
+.naamrij input:focus{outline:none;border-color:var(--ocean)}
+.lijst{max-width:560px;margin:26px auto 0;text-align:left}
+.lijst h3{font-size:1.05rem;margin:0 0 10px;text-align:center}
+.plek{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;background:#fff;
+  border:1px solid rgba(20,34,76,.08);border-radius:15px;padding:11px 14px;margin-bottom:8px;font-size:.94rem}
+.plek.jij{border-color:var(--ocean);background:#f4f7ff}
+.plek .nr{font-weight:600;color:var(--muted);text-align:center}
+.plek .pt{font-weight:600;font-variant-numeric:tabular-nums}
+.plek small{display:block;color:var(--muted);font-size:.76rem}
+.leegvak{text-align:center;color:var(--muted);font-size:.9rem;background:#fff;
+  border:1px dashed rgba(20,34,76,.18);border-radius:16px;padding:20px}
+
+footer{padding:26px 0 40px;font-size:.83rem;color:var(--muted);text-align:center}
+.strip{display:flex;height:7px;width:150px;border-radius:999px;overflow:hidden;margin:0 auto 12px}
+.strip i{flex:1}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(--amber);outline-offset:3px;border-radius:10px}
+@media(prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap hd">
+    <a class="mark" href="./"><i>LG</i> Werkwoordrace</a>
+    <div class="hd-right">
+      <span class="pill hide" id="pillNiv">niveau</span>
+      <button class="linkbtn" id="grootBtn" type="button">Digibord</button>
+      <button class="linkbtn" id="opnieuwBtn" type="button">Opnieuw</button>
+    </div>
+  </div>
+</header>
+
+<section class="start wrap" id="scherm-start">
+  <p class="hand" style="font-size:1.6rem">d of t</p>
+  <h1>Werkwoordrace</h1>
+  <p class="lead">Een zin met een gat, twee schrijfwijzen, eentje is goed. Bij elk antwoord krijg je de regel erbij, zodat je niet gokt maar leert waarom het zo is.</p>
+
+  <p class="eyebrow" id="nivKop" style="margin-top:32px">welk niveau</p>
+  <div class="kies" id="niveaus"></div>
+
+  <p class="eyebrow" id="deelKop" style="margin-top:30px">wat wil je oefenen</p>
+  <div class="kies" id="onderdelen"></div>
+
+  <p class="eyebrow" id="modusKop" style="margin-top:30px">hoe wil je oefenen</p>
+  <div class="kies" id="modussen"></div>
+
+  <button class="btn" id="startBtn" type="button" disabled>Start</button>
+  <p style="margin-top:14px;font-size:.82rem;color:var(--muted)">Geen inloggen. Alleen in de tijdrace wordt je score op dit apparaat bewaard.</p>
+  <div id="startLijst" class="lijst"></div>
+</section>
+
+<section class="wrap hide" id="scherm-spel">
+  <div class="spelkop">
+    <span class="eyebrow" id="rondeLabel">oefenen</span>
+    <span class="eyebrow" id="scoreLabel">0 goed</span>
+  </div>
+  <div class="balk hide" id="balk"><i id="balkFill"></i></div>
+  <div class="tijdbalk hide" id="tijdbalk"><i id="tijdFill"></i></div>
+
+  <div class="speelveld">
+    <p class="zin" id="zin"></p>
+    <div class="keuzes" id="keuzes"></div>
+    <div class="regel" id="regel"></div>
+    <div class="uitleg" id="uitleg" role="status" aria-live="polite"></div>
+    <div class="onderrij" id="onderrij">
+      <button type="button" id="spiekBtn">Regels erbij</button>
+      <button type="button" id="stopBtn" class="hide">Stoppen</button>
+    </div>
+    <div class="spiek hide" id="spiek">
+      <h3>De regels op een rij</h3>
+      <p><b>Tegenwoordige tijd.</b> Bij ik gebruik je de stam. Bij jij, hij, zij of het komt er een t achter de stam. Bij wij, jullie en zij meervoud schrijf je het hele werkwoord. Staat jij of je achter het werkwoord, dan valt die t weg.</p>
+      <p><b>Verleden tijd.</b> Kijk naar de laatste letters van het hele werkwoord, dus niet van de stam. Zitten ze in 't kofschip (t, k, f, s, ch, p), dan schrijf je te of ten. Anders de of den.</p>
+      <p><b>Voltooid deelwoord.</b> Ge plus de stam, en daarachter een t of een d volgens datzelfde kofschip. Eindigt de stam al op een d, dan komt er niets meer bij. Een voltooid deelwoord krijgt nooit dt.</p>
+      <p><b>De twijfelgevallen.</b> Staat er is, was, heeft, hebben of wordt voor het werkwoord, dan is het een voltooid deelwoord. Vervang het woord door lopen: past gelopen, dan is het een deelwoord. Past loopt, dan is het een persoonsvorm.</p>
+    </div>
+  </div>
+</section>
+
+<section class="wrap hide einde" id="scherm-einde">
+  <p class="eyebrow">klaar</p>
+  <div class="score" id="eindScore">0 / 0</div>
+  <p style="color:var(--muted);margin-top:6px" id="eindTekst"></p>
+  <div class="overzicht" id="eindOverzicht"></div>
+
+  <div class="naamvak hide" id="naamvak">
+    <label for="naamveld">Zet je naam in het klassement (je voornaam is genoeg)</label>
+    <div class="naamrij">
+      <input id="naamveld" type="text" maxlength="14" placeholder="Jouw naam" autocomplete="off" spellcheck="false">
+      <button class="btn" id="bewaarBtn" type="button" style="margin-top:0;padding:12px 20px;font-size:.9rem">Bewaren</button>
+    </div>
+  </div>
+
+  <div class="lijst" id="eindLijst"></div>
+  <button class="btn" id="nogeensBtn" type="button">Nog een keer</button>
+</section>
+
+<footer>
+  <div class="strip" aria-hidden="true">
+    <i style="background:var(--crab)"></i><i style="background:var(--amber)"></i><i style="background:var(--ocean)"></i><i style="background:var(--vista)"></i><i style="background:var(--sand)"></i>
+  </div>
+  Werkwoordrace &middot; meneer Greidanus &middot; <span id="jaar">2026</span>
+</footer>
+
+<script>
+/* ============================================================================
+   WERKWOORDRACE
+   ----------------------------------------------------------------------------
+   Elke opgave is een zin met een gat, aangegeven met %. Er zijn twee
+   schrijfwijzen en precies een daarvan is goed.
+
+     v   = vanaf welk niveau (1 vmbo-bb, 2 vanaf kgt, 3 alleen havo/vwo)
+     s   = onderdeel: tt, vt, vd of val
+     zin = de zin, met % op de plek van het gat
+     o   = de twee schrijfwijzen
+     g   = welke van de twee goed is (0 of 1)
+     r   = de regel in het kort, komt als labeltje in beeld
+     w   = de uitleg die je krijgt na je antwoord
+
+   Een zin toevoegen kan gewoon onderaan een blok. Let op: de foute vorm moet
+   een fout zijn die leerlingen echt maken, anders leert de opgave niets.
+   ============================================================================ */
+
+var ONDERDELEN = [
+  { id:'tt',    naam:'Tegenwoordige tijd', uitleg:'Ik loop, jij loopt, wij lopen. Met de val van word en wordt.' },
+  { id:'vt',    naam:'Verleden tijd',      uitleg:'Werkte of werkde? Hier oefen je met het kofschip.' },
+  { id:'vd',    naam:'Voltooid deelwoord', uitleg:'Ik heb gewerkt, ik heb geopend. Met ge ervoor en t of d erachter.' },
+  { id:'val',   naam:'De d of t val',      uitleg:'Gebeurt of gebeurd? Dezelfde klank, twee betekenissen.' },
+  { id:'alles', naam:'Alles door elkaar',  uitleg:'Alle onderdelen gemengd. Zo werkt het ook op een toets.' }
+];
+
+var OPGAVEN = [
+/* ---------- tegenwoordige tijd ---------- */
+{ v:1, s:'tt', zin:'Ik % elke dag naar school.', o:['fiets','fietst'], g:0,
+  r:'ik = de stam', w:'Bij ik gebruik je de stam, dus zonder t. De stam van fietsen is fiets.' },
+{ v:1, s:'tt', zin:'Hij % de deur voor mij open.', o:['doet','doed'], g:0,
+  r:'hij = stam + t', w:'Bij hij, zij of het komt er een t achter de stam. In de tegenwoordige tijd is dat altijd een t, nooit een d.' },
+{ v:1, s:'tt', zin:'Wij % morgen naar Zwolle.', o:['gaan','gaat'], g:0,
+  r:'wij = hele werkwoord', w:'Bij wij, jullie en zij meervoud schrijf je het hele werkwoord: gaan.' },
+{ v:1, s:'tt', zin:'De hond % de hele nacht.', o:['blaft','blafd'], g:0,
+  r:'hij = stam + t', w:'De hond is een hij, dus stam plus t. In de tegenwoordige tijd hoor je nooit een d achter de stam.' },
+{ v:1, s:'tt', zin:'Ik % morgen vijftien.', o:['word','wordt'], g:0,
+  r:'ik = de stam', w:'De stam van worden is word. Bij ik komt er niets achter, dus word zonder t.' },
+{ v:1, s:'tt', zin:'Hij % steeds bozer.', o:['word','wordt'], g:1,
+  r:'hij = stam + t', w:'Stam word plus t is wordt. Dat de stam al op een d eindigt maakt niet uit, de t komt er gewoon achter.' },
+{ v:2, s:'tt', zin:'% jij ook uitgenodigd?', o:['Word','Wordt'], g:0,
+  r:'jij achter het werkwoord: geen t', w:'Staat jij achter het werkwoord, dan valt de t weg. Vergelijk: jij wordt uitgenodigd, maar word jij uitgenodigd?' },
+{ v:2, s:'tt', zin:'Wat % jij daarvan?', o:['vind','vindt'], g:0,
+  r:'jij achter het werkwoord: geen t', w:'Jij staat achter het werkwoord, dus geen t. Wel: jij vindt daar iets van.' },
+{ v:2, s:'tt', zin:'Jij % dat altijd goed.', o:['doet','doe'], g:0,
+  r:'jij ervoor = stam + t', w:'Staat jij voor het werkwoord, dan komt de t er gewoon bij.' },
+{ v:2, s:'tt', zin:'Mijn zus % op haar fiets naar school.', o:['rijdt','rijd'], g:0,
+  r:'hij of zij = stam + t', w:'Mijn zus is een zij. De stam van rijden is rijd, daar komt een t achter.' },
+{ v:2, s:'tt', zin:'Hij % nooit op mijn berichten.', o:['antwoordt','antwoord'], g:0,
+  r:'hij = stam + t', w:'De stam van antwoorden is antwoord. Bij hij komt daar een t achter, ook al ziet dat er raar uit.' },
+{ v:2, s:'tt', zin:'Ik % je vanavond.', o:['antwoord','antwoordt'], g:0,
+  r:'ik = de stam', w:'Bij ik gebruik je alleen de stam: antwoord.' },
+{ v:2, s:'tt', zin:'De leerlingen % het lokaal binnen.', o:['lopen','loopt'], g:0,
+  r:'meervoud = hele werkwoord', w:'De leerlingen zijn er meer dan een, dus het hele werkwoord: lopen.' },
+{ v:3, s:'tt', zin:'% je even mee naar buiten?', o:['Loop','Loopt'], g:0,
+  r:'je achter het werkwoord: geen t', w:'Ook bij je in plaats van jij valt de t weg als het achter het werkwoord staat.' },
+{ v:3, s:'tt', zin:'Het % me dat je er bent.', o:['verbaast','verbaasd'], g:0,
+  r:'het = stam + t', w:'Hier is verbazen een gewoon werkwoord in de tegenwoordige tijd: stam verbaas plus t.' },
+
+/* ---------- verleden tijd ---------- */
+{ v:2, s:'vt', zin:'Wij % de hele middag aan ons verslag.', o:['werkten','werkden'], g:0,
+  r:"het kofschip: k, dus ten", w:"Werken eindigt op ken. De k zit in 't kofschip, dus verleden tijd met ten." },
+{ v:2, s:'vt', zin:'Hij % zijn huiswerk al voor het eten.', o:['maakte','maakde'], g:0,
+  r:"het kofschip: k, dus te", w:"Maken eindigt op ken. De k zit in 't kofschip, dus te." },
+{ v:2, s:'vt', zin:'Ik % de hele avond naar muziek.', o:['luisterde','luisterte'], g:0,
+  r:"geen kofschip: r, dus de", w:"Luisteren eindigt op ren. De r zit niet in 't kofschip, dus de." },
+{ v:2, s:'vt', zin:'Zij % de deur voorzichtig.', o:['opende','opente'], g:0,
+  r:"geen kofschip: n, dus de", w:"Openen eindigt op nen. De n zit niet in 't kofschip, dus de." },
+{ v:2, s:'vt', zin:'De hond % de hele nacht.', o:['blafte','blafde'], g:0,
+  r:"het kofschip: f, dus te", w:"Blaffen eindigt op fen. De f zit in 't kofschip, dus te." },
+{ v:2, s:'vt', zin:'Wij % vroeger in Emmeloord.', o:['woonden','woonten'], g:0,
+  r:"geen kofschip: n, dus den", w:"Wonen eindigt op nen, dus den. Je hoort het ook: woonden." },
+{ v:2, s:'vt', zin:'Ik % de bal over de schutting.', o:['gooide','gooite'], g:0,
+  r:"geen kofschip, dus de", w:"Gooien eindigt op ien. Die letters zitten niet in 't kofschip, dus de." },
+{ v:3, s:'vt', zin:'De juf % de les precies op tijd.', o:['startte','starte'], g:0,
+  r:'stam op t, dus tte', w:'De stam is start en die eindigt al op een t. Daar komt te achter, dus twee keer t: startte.' },
+{ v:3, s:'vt', zin:'Hij % een hoger cijfer.', o:['verwachtte','verwachte'], g:0,
+  r:'stam op t, dus tte', w:'De stam is verwacht. Daar komt te achter, dus verwachtte met twee keer t.' },
+{ v:3, s:'vt', zin:'Wij % vorig jaar naar een ander huis.', o:['verhuisden','verhuisten'], g:0,
+  r:"kijk naar het hele werkwoord", w:"Verhuizen eindigt op zen, en de z zit niet in 't kofschip. Kijk dus naar het hele werkwoord, niet naar de stam verhuis." },
+{ v:3, s:'vt', zin:'Ik % de vraag van de docent.', o:['beantwoordde','beantwoorde'], g:0,
+  r:'stam op d, dus dde', w:'De stam is beantwoord en eindigt al op een d. Daar komt de achter: beantwoordde.' },
+{ v:3, s:'vt', zin:'Hij % zich de hele les.', o:['verveelde','verveelte'], g:0,
+  r:"geen kofschip: l, dus de", w:"Vervelen eindigt op len. De l zit niet in 't kofschip, dus de." },
+{ v:3, s:'vt', zin:'De klas % het antwoord meteen.', o:['raadde','raadte'], g:0,
+  r:'stam op d, dus de', w:'Raden eindigt op den, dus de. De stam raad eindigt al op een d: raadde.' },
+
+{ v:1, s:'vt', zin:'Ik % gisteren naar school.', o:['fietste','fietsde'], g:0,
+  r:"het kofschip: s, dus te", w:"Fietsen eindigt op sen. De s zit in 't kofschip, dus te." },
+{ v:1, s:'vt', zin:'Wij % gisteren de hele middag buiten.', o:['speelden','speelten'], g:0,
+  r:"geen kofschip: l, dus den", w:"Spelen eindigt op len. De l zit niet in 't kofschip, dus den." },
+{ v:1, s:'vt', zin:'Zij % hard om de grap.', o:['lachte','lachde'], g:0,
+  r:"het kofschip: ch, dus te", w:"Lachen eindigt op chen. De ch zit in 't kofschip, dus te." },
+{ v:1, s:'vt', zin:'Ik % mijn kamer op zaterdag.', o:['poetste','poetsde'], g:0,
+  r:"het kofschip: s, dus te", w:"Poetsen eindigt op sen, en de s zit in 't kofschip. Dus te." },
+{ v:2, s:'vt', zin:'Hij % de bal over de schutting.', o:['gooide','gooiden'], g:0,
+  r:'hij is enkelvoud', w:'De vorm met de is goed, want hij is een persoon. Gooiden gebruik je bij wij of zij meervoud.' },
+
+/* ---------- voltooid deelwoord ---------- */
+{ v:1, s:'vd', zin:'Ik heb de hele dag hard %.', o:['gewerkt','gewerkd'], g:0,
+  r:"het kofschip: k, dus t", w:"Werken eindigt op ken en de k zit in 't kofschip, dus ge plus stam plus t." },
+{ v:1, s:'vd', zin:'Wij hebben het samen %.', o:['gemaakt','gemaakd'], g:0,
+  r:"het kofschip: k, dus t", w:"Maken hoort bij 't kofschip, dus gemaakt met een t." },
+{ v:2, s:'vd', zin:'Hij heeft de deur al %.', o:['geopend','geopent'], g:0,
+  r:"geen kofschip: n, dus d", w:"Openen eindigt op nen. De n zit niet in 't kofschip, dus een d: geopend." },
+{ v:2, s:'vd', zin:'Zij is naar huis %.', o:['gefietst','gefietsd'], g:0,
+  r:"het kofschip: s, dus t", w:"Fietsen eindigt op sen. De s zit in 't kofschip, dus een t." },
+{ v:2, s:'vd', zin:'Hij heeft nog steeds niet %.', o:['geantwoord','geantwoordt'], g:0,
+  r:'stam eindigt al op d', w:'De stam is antwoord en eindigt al op een d. Er komt niets meer bij: geantwoord. Een voltooid deelwoord krijgt nooit dt.' },
+{ v:2, s:'vd', zin:'Ik heb de hele week %.', o:['geleerd','geleert'], g:0,
+  r:"geen kofschip: r, dus d", w:"Leren eindigt op ren. De r zit niet in 't kofschip, dus een d." },
+{ v:3, s:'vd', zin:'Ik heb je bericht gisteren %.', o:['ontvangen','ontvangd'], g:0,
+  r:'sterk werkwoord, geen ge', w:'Ontvangen is een sterk werkwoord met een onbeklemtoond voorvoegsel. Er komt geen ge voor en geen t of d achter.' },
+{ v:3, s:'vd', zin:'Ze heeft haar pas %.', o:['verloren','verliesd'], g:0,
+  r:'sterk werkwoord', w:'Verliezen verandert van klank in het voltooid deelwoord: verloren. Bij sterke werkwoorden helpt het kofschip je niet.' },
+{ v:3, s:'vd', zin:'Het pakketje wordt vandaag %.', o:['bezorgd','bezorgt'], g:0,
+  r:"geen kofschip: g, dus d", w:"Bezorgen eindigt op gen. De g zit niet in 't kofschip, dus een d. Let op: wordt bezorgd is een voltooid deelwoord, geen persoonsvorm." },
+{ v:3, s:'vd', zin:'Hij heeft zich de hele les %.', o:['verveeld','verveelt'], g:0,
+  r:"geen kofschip: l, dus d", w:"Vervelen eindigt op len, dus een d. Na heeft staat altijd een voltooid deelwoord." },
+
+{ v:1, s:'vd', zin:'Ik heb de hele middag buiten %.', o:['gespeeld','gespeelt'], g:0,
+  r:"geen kofschip: l, dus d", w:"Spelen eindigt op len. De l zit niet in 't kofschip, dus een d." },
+{ v:1, s:'vd', zin:'Zij heeft haar kamer %.', o:['gepoetst','gepoetsd'], g:0,
+  r:"het kofschip: s, dus t", w:"Poetsen hoort bij 't kofschip, dus gepoetst met een t." },
+
+/* ---------- de d of t val ---------- */
+{ v:1, s:'val', zin:'Hij % de bal naar mij.', o:['gooit','gooid'], g:0,
+  r:'persoonsvorm, dus t', w:'Dit is de persoonsvorm bij hij: stam plus t. Vervang het door lopen: hij loopt.' },
+{ v:1, s:'val', zin:'De bal is naar mij %.', o:['gegooid','gegooit'], g:0,
+  r:'na is: deelwoord', w:'Na is komt een voltooid deelwoord. Vervang het door lopen: het is gelopen. Dus gegooid.' },
+{ v:1, s:'val', zin:'Wat % er allemaal?', o:['gebeurt','gebeurd'], g:0,
+  r:'persoonsvorm, dus t', w:'Hier is gebeuren de persoonsvorm in de tegenwoordige tijd. Vervang het door lopen: wat loopt er. Je hoort een t.' },
+{ v:1, s:'val', zin:'Er is iets ergs %.', o:['gebeurd','gebeurt'], g:0,
+  r:'na is of heeft: deelwoord', w:'Na is, was, heeft of hebben komt een voltooid deelwoord. Vervang het door lopen: er is iets gelopen. Dus gebeurd met een d.' },
+{ v:2, s:'val', zin:'Hij % zich tijdens de uitleg.', o:['verveelt','verveeld'], g:0,
+  r:'persoonsvorm, dus t', w:'Dit is de persoonsvorm bij hij: stam plus t. Vervang het door lopen: hij loopt.' },
+{ v:2, s:'val', zin:'Hij heeft zich vreselijk %.', o:['verveeld','verveelt'], g:0,
+  r:'na heeft: deelwoord', w:'Na heeft komt een voltooid deelwoord. Vervang het door lopen: hij heeft gelopen. Dus verveeld.' },
+{ v:2, s:'val', zin:'De postbode % het pakket om vier uur.', o:['bezorgt','bezorgd'], g:0,
+  r:'persoonsvorm, dus t', w:'De postbode is een hij, dus stam plus t. Vervang het door lopen: de postbode loopt.' },
+{ v:2, s:'val', zin:'Het pakket is al %.', o:['bezorgd','bezorgt'], g:0,
+  r:'na is: deelwoord', w:'Na is komt een voltooid deelwoord. Vervang het door lopen: het is gelopen. Dus bezorgd.' },
+{ v:3, s:'val', zin:'De brief is vanmorgen %.', o:['verstuurd','verstuurt'], g:0,
+  r:'na is: deelwoord', w:'Na is komt een voltooid deelwoord: verstuurd met een d.' },
+{ v:3, s:'val', zin:'Hij % de brief vanmorgen.', o:['verstuurt','verstuurd'], g:0,
+  r:'persoonsvorm, dus t', w:'Hier is versturen de persoonsvorm bij hij: stam plus t.' },
+{ v:3, s:'val', zin:'Dat had ik niet %.', o:['verwacht','verwachtte'], g:0,
+  r:'na had: deelwoord', w:'Na had komt een voltooid deelwoord: verwacht. Verwachtte is verleden tijd, en die past hier niet.' },
+{ v:3, s:'val', zin:'Ik % dat het zou lukken.', o:['verwachtte','verwacht'], g:0,
+  r:'verleden tijd, dus tte', w:'Hier vertel je over vroeger, dus verleden tijd. Stam verwacht plus te wordt verwachtte.' },
+{ v:3, s:'val', zin:'De les wordt door hem %.', o:['gegeven','geeft'], g:0,
+  r:'na wordt: deelwoord', w:'Na wordt komt een voltooid deelwoord. Wordt is hier de persoonsvorm, gegeven hoort erbij.' },
+{ v:3, s:'val', zin:'Het % mij dat niemand iets zei.', o:['verbaasde','verbaasd'], g:0,
+  r:'verleden tijd, dus de', w:"Verbazen eindigt op zen en de z zit niet in 't kofschip, dus de. Zonder is of heeft ervoor is het geen deelwoord." }
+];
+
+var NIVEAUS = [
+  { id:'bb',  naam:'vmbo-bb',        tot:1, uitleg:'De basisregels, met korte zinnen.' },
+  { id:'kgt', naam:'vmbo-kgt',       tot:2, uitleg:'Ook het kofschip en de eerste twijfelgevallen.' },
+  { id:'hv',  naam:'havo en vwo',    tot:3, uitleg:'Ook sterke werkwoorden en stammen die al op t of d eindigen.' }
+];
+
+var MODUSSEN = [
+  { id:'oefen', naam:'Oefenen',  uitleg:'Alle zinnen een keer, zonder klok. De regels mag je erbij pakken.' },
+  { id:'race',  naam:'Tijdrace', uitleg:'De klok loopt. Goed levert seconden op, fout kost ze. Met klassement.' }
+];
+
+var RACE = { start:60, erbij:4, eraf:6 };
+
+/* ============================================================================
+   ENGINE
+   ============================================================================ */
+(function(){
+  'use strict';
+  document.getElementById('jaar').textContent = new Date().getFullYear();
+
+  var SLEUTEL = 'werkwoorden-klassement-v1';
+  var niveau = null, onderdeel = null, modus = null;
+  var rij = [], nr = 0, goed = 0, totaal = 0, fouten = [], punten = 0, reeks = 0, besteReeks = 0;
+  var tijd = 0, loopt = false, laatsteTik = 0, bezig = false, opgeslagen = false;
+  var huidig = null, volgorde = [], wachter = null;
+
+  var elStart = document.getElementById('scherm-start'),
+      elSpel  = document.getElementById('scherm-spel'),
+      elEinde = document.getElementById('scherm-einde'),
+      elZin   = document.getElementById('zin'),
+      elKeuzes= document.getElementById('keuzes'),
+      elRegel = document.getElementById('regel'),
+      elUit   = document.getElementById('uitleg'),
+      elStartBtn = document.getElementById('startBtn');
+
+  function isRace(){ return modus && modus.id === 'race'; }
+  function lees(){ try { return JSON.parse(localStorage.getItem(SLEUTEL) || '{}'); } catch (e){ return {}; } }
+  function schrijf(d){ try { localStorage.setItem(SLEUTEL, JSON.stringify(d)); return true; } catch (e){ return false; } }
+
+  function husselen(a){
+    a = a.slice();
+    for (var i = a.length - 1; i > 0; i--){ var j = Math.floor(Math.random()*(i+1)); var t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+
+  /* ---------- keuzeknoppen ---------- */
+  function knoppen(vakId, lijst, kies){
+    var vak = document.getElementById(vakId);
+    lijst.forEach(function(item){
+      var b = document.createElement('button');
+      b.className = 'kaartje'; b.type = 'button';
+      b.innerHTML = '<b>' + item.naam + '</b><span>' + item.uitleg + '</span>';
+      b.addEventListener('click', function(){
+        Array.prototype.forEach.call(vak.children, function(c){ c.classList.remove('on'); });
+        b.classList.add('on');
+        kies(item);
+      });
+      vak.appendChild(b);
+    });
+  }
+
+  knoppen('niveaus', NIVEAUS, function(n){
+    niveau = n;
+    var p = document.getElementById('pillNiv'); p.textContent = n.naam; p.classList.remove('hide');
+    klaarCheck();
+  });
+  knoppen('onderdelen', ONDERDELEN, function(o){ onderdeel = o; klaarCheck(); });
+  knoppen('modussen', MODUSSEN, function(m){
+    modus = m;
+    elStartBtn.textContent = isRace() ? 'Start de tijdrace' : 'Start met oefenen';
+    klaarCheck();
+  });
+
+  function selectie(){
+    if (!niveau || !onderdeel) return [];
+    return OPGAVEN.filter(function(op){
+      return op.v <= niveau.tot && (onderdeel.id === 'alles' || op.s === onderdeel.id);
+    });
+  }
+
+  function klaarCheck(){
+    var aantal = selectie().length;
+    elStartBtn.disabled = !(niveau && onderdeel && modus && aantal > 0);
+    if (niveau && onderdeel && modus && aantal){
+      elStartBtn.textContent = (isRace() ? 'Start de tijdrace' : 'Start met oefenen') + ' (' + aantal + ' zinnen)';
+    }
+    toonKlassement('startLijst', null);
+  }
+
+  /* ---------- spelverloop ---------- */
+  elStartBtn.addEventListener('click', start);
+  document.getElementById('nogeensBtn').addEventListener('click', naarStart);
+  document.getElementById('opnieuwBtn').addEventListener('click', naarStart);
+  document.getElementById('grootBtn').addEventListener('click', function(){
+    document.body.classList.toggle('groot');
+    this.textContent = document.body.classList.contains('groot') ? 'Normaal' : 'Digibord';
+  });
+  document.getElementById('spiekBtn').addEventListener('click', function(){
+    var s = document.getElementById('spiek');
+    s.classList.toggle('hide');
+    this.textContent = s.classList.contains('hide') ? 'Regels erbij' : 'Regels weg';
+  });
+  document.getElementById('stopBtn').addEventListener('click', function(){
+    loopt = false;
+    if (wachter){ clearTimeout(wachter); wachter = null; }
+    toonEinde();
+  });
+
+  function start(){
+    goed = 0; totaal = 0; fouten = []; punten = 0; reeks = 0; besteReeks = 0;
+    nr = 0; bezig = false; opgeslagen = false; volgorde = [];
+    rij = husselen(selectie());
+    tijd = RACE.start;
+    elStart.classList.add('hide'); elEinde.classList.add('hide'); elSpel.classList.remove('hide');
+    document.getElementById('naamvak').classList.add('hide');
+    document.getElementById('balk').classList.toggle('hide', isRace());
+    document.getElementById('tijdbalk').classList.toggle('hide', !isRace());
+    document.getElementById('spiekBtn').classList.toggle('hide', isRace());
+    document.getElementById('stopBtn').classList.toggle('hide', !isRace());
+    document.getElementById('spiek').classList.add('hide');
+    document.getElementById('spiekBtn').textContent = 'Regels erbij';
+    document.getElementById('rondeLabel').textContent = onderdeel.naam.toLowerCase() + ', ' + niveau.naam;
+    volgende();
+    if (isRace()){ loopt = true; laatsteTik = performance.now(); requestAnimationFrame(tik); }
+    scrollTo({top:0, behavior:'auto'});
+  }
+
+  function tik(nu){
+    if (!loopt) return;
+    /* De klok staat stil zolang de uitleg in beeld staat: lezen mag geen tijd kosten. */
+    if (!bezig){
+      tijd -= (nu - laatsteTik) / 1000;
+      if (tijd <= 0){ tijd = 0; tekenTeller(); loopt = false; toonEinde(); return; }
+    }
+    laatsteTik = nu;
+    tekenTeller();
+    requestAnimationFrame(tik);
+  }
+
+  /* De zak raakt leeg en wordt opnieuw gevuld, zodat je alle zinnen ziet voordat
+     er een terugkomt. In de oefenstand is de zak precies een ronde lang. */
+  function trek(){
+    if (!volgorde.length) volgorde = husselen(selectie());
+    return volgorde.shift();
+  }
+
+  function volgende(){
+    if (wachter){ clearTimeout(wachter); wachter = null; }
+    elUit.className = 'uitleg';
+    elUit.textContent = '';
+    elRegel.innerHTML = '';
+
+    if (isRace()){
+      huidig = trek();
+    } else {
+      if (nr >= rij.length){ toonEinde(); return; }
+      huidig = rij[nr];
+    }
+
+    /* De goede vorm staat in de opgaven meestal vooraan. Hier wisselen we de
+       volgorde, anders leren leerlingen op plek te gokken in plaats van te denken. */
+    var links = Math.random() < .5;
+    var vormen = links ? [huidig.o[0], huidig.o[1]] : [huidig.o[1], huidig.o[0]];
+    var goedeVorm = huidig.o[huidig.g];
+
+    elZin.innerHTML = huidig.zin.replace('%', '<span class="gat" id="gat">\u00b7 \u00b7 \u00b7</span>');
+    elKeuzes.innerHTML = '';
+    vormen.forEach(function(vorm){
+      var b = document.createElement('button');
+      b.className = 'keuze'; b.type = 'button'; b.textContent = vorm;
+      b.addEventListener('click', function(){ antwoord(vorm === goedeVorm, vorm, goedeVorm); });
+      elKeuzes.appendChild(b);
+    });
+    tekenTeller();
+  }
+
+  function tekenTeller(){
+    if (isRace()){
+      var deel = Math.max(0, Math.min(1, tijd / RACE.start));
+      document.getElementById('tijdFill').style.width = (deel * 100) + '%';
+      document.getElementById('tijdbalk').classList.toggle('krap', tijd <= 10);
+      document.getElementById('scoreLabel').innerHTML =
+        '<span class="klok">' + Math.ceil(tijd) + ' sec</span> \u00b7 ' + punten + ' punten' +
+        (reeks >= 2 ? ' \u00b7 ' + reeks + ' op rij' : '');
+    } else {
+      document.getElementById('balkFill').style.width = ((nr / rij.length) * 100) + '%';
+      document.getElementById('scoreLabel').textContent =
+        'Zin ' + Math.min(nr + 1, rij.length) + ' van ' + rij.length + ' \u00b7 ' + goed + ' goed';
+    }
+  }
+
+  /* ---------- antwoord ---------- */
+  function antwoord(klopt, gekozen, goedeVorm){
+    if (bezig) return;
+    bezig = true;
+    totaal++;
+
+    if (klopt){
+      goed++; reeks++;
+      besteReeks = Math.max(besteReeks, reeks);
+      if (isRace()){
+        punten += reeks >= 3 ? 20 : 10;
+        tijd = Math.min(RACE.start * 1.6, tijd + RACE.erbij);
+      }
+    } else {
+      reeks = 0;
+      fouten.push({ zin:huidig.zin.replace('%', goedeVorm), gekozen:gekozen, regel:huidig.r });
+      if (isRace()) tijd -= RACE.eraf;
+    }
+
+    /* Het gat wordt altijd ingevuld met de goede vorm. Zo lees je de zin een keer
+       goed, ook als je het fout had. Dat is precies wat blijft hangen. */
+    var gat = document.getElementById('gat');
+    if (gat){ gat.textContent = goedeVorm; gat.className = 'gat ' + (klopt ? 'ja' : 'nee'); }
+
+    Array.prototype.forEach.call(elKeuzes.children, function(b){
+      b.disabled = true;
+      if (b.textContent === goedeVorm) b.classList.add('ja');
+      else if (b.textContent === gekozen) b.classList.add('nee');
+      else b.classList.add('dof');
+    });
+
+    elRegel.innerHTML = '<span>' + huidig.r + '</span>';
+    elUit.className = 'uitleg ' + (klopt ? 'ja' : 'nee');
+    elUit.textContent = (klopt ? '' : 'Het is ' + goedeVorm + '. ') + huidig.w +
+      (isRace() ? (klopt ? ' Plus ' + RACE.erbij + ' sec.' : ' Min ' + RACE.eraf + ' sec.') : '');
+    tekenTeller();
+
+    /* Vanzelf door. Bij goed kort, bij fout langer, want daar staat de regel. */
+    wachter = setTimeout(verder, klopt ? 1100 : 3200);
+  }
+
+  function verder(){
+    if (!bezig) return;
+    if (wachter){ clearTimeout(wachter); wachter = null; }
+    bezig = false;
+    if (isRace() && tijd <= 0){ loopt = false; toonEinde(); return; }
+    if (!isRace()) nr++;
+    volgende();
+  }
+
+  /* Enter of spatie springt meteen door, wachten hoeft niet. */
+  document.addEventListener('keydown', function(e){
+    if (elSpel.classList.contains('hide')) return;
+    if (bezig && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); verder(); return; }
+    /* Met 1 en 2 kun je ook zonder muis antwoorden, handig op het digibord. */
+    if (!bezig && (e.key === '1' || e.key === '2')){
+      var b = elKeuzes.children[e.key === '1' ? 0 : 1];
+      if (b) b.click();
+    }
+  });
+
+  /* ---------- einde ---------- */
+  function naarStart(){
+    loopt = false; bezig = false;
+    if (wachter){ clearTimeout(wachter); wachter = null; }
+    elSpel.classList.add('hide'); elEinde.classList.add('hide'); elStart.classList.remove('hide');
+    toonKlassement('startLijst', null);
+    scrollTo({top:0, behavior:'auto'});
+  }
+
+  function toonEinde(){
+    loopt = false; bezig = false;
+    if (wachter){ clearTimeout(wachter); wachter = null; }
+    elSpel.classList.add('hide'); elEinde.classList.remove('hide');
+    var deel = totaal ? goed / totaal : 0;
+
+    document.getElementById('eindScore').textContent = isRace() ? punten + ' punten' : goed + ' / ' + totaal;
+    document.getElementById('eindTekst').textContent = isRace()
+      ? 'Je had ' + goed + ' van de ' + totaal + ' zinnen goed (' + Math.round(deel*100) +
+        ' procent). Je langste reeks was ' + besteReeks + '.'
+      : (deel >= .9 ? 'Sterk. De regels zitten er goed in.' :
+         deel >= .65 ? 'Goed op weg. Kijk de zinnen hieronder nog een keer na.' :
+                       'Nog even oefenen. Pak er de regels bij en doe hetzelfde onderdeel nog een ronde.');
+
+    var html = '';
+    if (fouten.length){
+      var toon = fouten.slice(-12);
+      toon.forEach(function(f){
+        html += '<div class="rij"><span>' + f.zin + '</span><b>' + f.regel + '</b></div>';
+      });
+      if (fouten.length > toon.length) html += '<div class="rij"><span>en nog ' + (fouten.length - toon.length) + ' eerder</span><b></b></div>';
+    } else {
+      html = '<div class="rij"><span>Alles goed</span><b>geen missers</b></div>';
+    }
+    document.getElementById('eindOverzicht').innerHTML = html;
+
+    document.getElementById('naamvak').classList.toggle('hide', !isRace() || opgeslagen || totaal === 0);
+    if (isRace() && !opgeslagen) document.getElementById('naamveld').value = '';
+    toonKlassement('eindLijst', null);
+    scrollTo({top:0, behavior:'smooth'});
+  }
+
+  /* ---------- klassement, alleen voor de tijdrace ---------- */
+  document.getElementById('bewaarBtn').addEventListener('click', bewaarScore);
+  document.getElementById('naamveld').addEventListener('keydown', function(e){
+    if (e.key === 'Enter'){ e.preventDefault(); bewaarScore(); }
+  });
+
+  /* Elk onderdeel en elk niveau een eigen lijst: alleen de tegenwoordige tijd
+     bij vmbo-bb is nu eenmaal iets anders dan alles door elkaar bij havo. */
+  function klassementSleutel(){ return niveau.id + '-' + onderdeel.id; }
+
+  function bewaarScore(){
+    if (opgeslagen || !isRace()) return;
+    var veld = document.getElementById('naamveld');
+    var naam = veld.value.trim().slice(0, 14);
+    if (!naam){ veld.focus(); return; }
+    var data = lees(), s = klassementSleutel();
+    var lijst = data[s] || [];
+    var nieuwe = { naam:naam, punten:punten, goed:goed, totaal:totaal, reeks:besteReeks,
+                   datum:new Date().toLocaleDateString('nl-NL') };
+    lijst.push(nieuwe);
+    lijst.sort(function(a, b){ return b.punten - a.punten; });
+    data[s] = lijst.slice(0, 10);
+    var gelukt = schrijf(data);
+    opgeslagen = true;
+    document.getElementById('naamvak').classList.add('hide');
+    toonKlassement('eindLijst', gelukt ? nieuwe : null);
+    if (!gelukt) document.getElementById('eindLijst').insertAdjacentHTML('beforeend',
+      '<p class="leegvak">Deze browser staat opslaan niet toe, dus je score kon niet bewaard worden.</p>');
+  }
+
+  function toonKlassement(doelId, markeer){
+    var doel = document.getElementById(doelId);
+    if (!doel) return;
+    if (!niveau || !onderdeel || !isRace()){ doel.innerHTML = ''; return; }
+    var lijst = lees()[klassementSleutel()] || [];
+    var titel = 'Klassement tijdrace, ' + onderdeel.naam.toLowerCase() + ', ' + niveau.naam;
+    if (!lijst.length){
+      doel.innerHTML = '<h3>' + titel + '</h3><div class="leegvak">Nog geen scores. Wie het eerst speelt, staat bovenaan.</div>';
+      return;
+    }
+    var h = '<h3>' + titel + '</h3>';
+    lijst.forEach(function(r, i){
+      var ik = markeer && r.naam === markeer.naam && r.punten === markeer.punten;
+      h += '<div class="plek' + (ik ? ' jij' : '') + '"><span class="nr">' + (i+1) + '</span>' +
+        '<span><b>' + r.naam + '</b><small>' + r.goed + ' van ' + r.totaal +
+        ' goed \u00b7 reeks ' + r.reeks + ' \u00b7 ' + r.datum + '</small></span>' +
+        '<span class="pt">' + r.punten + '</span></div>';
+    });
+    doel.innerHTML = h;
+  }
+
+  /* ------------------------------------------------------------------
+     Deelbare link vanuit de leerlingomgeving:
+       ?n=bb, kgt of hv        welk niveau
+       ?d=tt, vt, vd, val, alles   welk onderdeel
+       ?m=oefen of race        welke stand
+     ------------------------------------------------------------------ */
+  (function(){
+    function param(naam){
+      var m = new RegExp('[?&]' + naam + '=([^&]+)').exec(location.search);
+      return m ? decodeURIComponent(m[1]) : null;
+    }
+    function kiesUit(vakId, lijst, waarde, kopId, woord){
+      if (!waarde) return;
+      var i = lijst.map(function(x){ return x.id; }).indexOf(waarde);
+      var vak = document.getElementById(vakId);
+      if (i === -1 || !vak.children[i]) return;
+      vak.children[i].click();
+      vak.style.display = 'none';
+      var kop = document.getElementById(kopId);
+      if (kop) kop.textContent = woord + ': ' + lijst[i].naam + ', gekozen door je docent';
+    }
+    kiesUit('niveaus', NIVEAUS, param('n'), 'nivKop', 'Niveau');
+    kiesUit('onderdelen', ONDERDELEN, param('d'), 'deelKop', 'Onderdeel');
+    kiesUit('modussen', MODUSSEN, param('m'), 'modusKop', 'Stand');
+  })();
+
+})();
+
+/* De knop linksboven gaat terug naar het spellenmenu, met je keuzes erbij. */
+(function(){
+  var m = document.querySelector('header .mark');
+  if (m) m.setAttribute('href', './' + location.search);
+})();
+</script>
+</body>
+</html>
