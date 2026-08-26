@@ -61,7 +61,16 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .kaart{background:#fff;border:1px solid rgba(20,34,76,.10);border-radius:22px;padding:20px 24px;max-width:520px;width:100%;
   box-shadow:0 16px 40px rgba(20,34,76,.10);text-align:center;touch-action:none;cursor:grab;user-select:none;
   transition:transform .22s var(--ease),box-shadow .22s var(--ease),opacity .2s linear}
-.kaart.pak{cursor:grabbing;box-shadow:0 26px 60px rgba(20,34,76,.20);transition:none;z-index:5;position:relative}
+.kaart.pak{cursor:grabbing;box-shadow:0 26px 60px rgba(20,34,76,.20);transition:none;z-index:5;position:relative;
+  opacity:.82}
+/* Waar de kaart terechtkomt, staat op de kaart zelf. Tijdens het slepen ligt
+   je hand vaak op het vak eronder, dus dat vak alleen kleuren is niet genoeg. */
+.mikker{position:absolute;left:50%;top:-15px;translate:-50% 0;background:var(--ocean);color:#fff;
+  font-size:.8rem;font-weight:600;padding:6px 14px;border-radius:999px;white-space:nowrap;
+  box-shadow:0 6px 16px rgba(20,34,76,.22);pointer-events:none;display:none;max-width:90vw;overflow:hidden;
+  text-overflow:ellipsis}
+.kaart.pak .mikker.aan{display:block}
+.mikker.leeg{background:var(--muted)}
 .kaart .jaar{font-size:.8rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--crab);margin-bottom:6px}
 .kaart .geb{font-size:clamp(1.05rem,2.6vw,1.35rem);font-weight:600;line-height:1.28}
 .kaart .sleep{margin-top:10px;font-size:.78rem;color:var(--muted)}
@@ -76,11 +85,17 @@ body.groot .kaart .geb{font-size:1.6rem}
 .bak{background:#fff;border:2px dashed rgba(20,34,76,.16);border-radius:18px;padding:14px 15px;text-align:left;
   transition:border-color .18s var(--ease),background .18s var(--ease),transform .18s var(--ease)}
 .bak:hover{border-color:var(--vista)}
-.bak.hover{border-color:var(--ocean);background:#f4f7ff;transform:scale(1.02)}
+/* Tijdens het slepen dooft alles behalve het vak waar je boven zit. */
+.bakken.sleept .bak{opacity:.4}
+.bakken.sleept .bak.hover{opacity:1}
+.bak.hover{border-style:solid;border-color:var(--ocean);border-width:3px;background:#e8eeff;
+  transform:scale(1.05);box-shadow:0 0 0 4px rgba(32,78,207,.18),0 12px 26px rgba(20,34,76,.16)}
+.bak.hover b{color:var(--ocean)}
 .bak b{display:block;font-size:.95rem;line-height:1.25}
 .bak span{display:block;margin-top:3px;font-size:.78rem;color:var(--muted)}
-.bak.goed{border-style:solid;border-color:var(--goed);background:var(--goed-bg)}
-.bak.fout{border-style:solid;border-color:var(--fout);background:var(--fout-bg)}
+.bak.goed{border-style:solid;border-color:var(--goed);background:var(--goed-bg);opacity:1;
+  box-shadow:0 0 0 4px rgba(47,125,82,.16)}
+.bak.fout{border-style:solid;border-color:var(--fout);background:var(--fout-bg);opacity:1}
 body.groot .bak b{font-size:1.1rem}
 
 .melding{margin-top:18px;border-radius:18px;padding:16px 18px;display:none}
@@ -537,6 +552,10 @@ var KENMERKEN = [
       b.className = 'bak'; b.type = 'button'; b.dataset.i = i;
       b.innerHTML = '<b>' + bak.naam + '</b><span>' + bak.periode + '</span>';
       b.addEventListener('click', function(){ if (!bezig) antwoord(i); });
+      /* Even oplichten bij aanwijzen met muis of toetsenbord, zodat ook zonder
+         slepen duidelijk is welk vak je kiest. */
+      b.addEventListener('focus', function(){ if (!bezig) b.classList.add('hover'); });
+      b.addEventListener('blur', function(){ b.classList.remove('hover'); });
       elBakken.appendChild(b);
     });
   }
@@ -563,7 +582,8 @@ var KENMERKEN = [
         (kenmerk ? 'Kenmerk van een tijdvak' : 'Gebeurtenis') + '</span>' : '') +
       (toonJaar ? '<div class="jaar">' + huidige.jaar + '</div>' : '') +
       '<div class="geb">' + huidige.tekst + '</div>' +
-      '<div class="sleep">Sleep me naar het juiste vak, of tik op een vak</div>';
+      '<div class="sleep">Sleep me naar het juiste vak, of tik op een vak</div>' +
+      '<div class="mikker" id="mikker"></div>';
     elZone.innerHTML = '';
     elZone.appendChild(k);
     maakSleepbaar(k);
@@ -573,20 +593,41 @@ var KENMERKEN = [
   /* ---------- slepen met muis, vinger of pen ---------- */
   function maakSleepbaar(kaart){
     var actief = false, startX = 0, startY = 0, dx = 0, dy = 0;
+    var mikker = kaart.querySelector('.mikker');
+
+    function wijsAan(bak){
+      Array.prototype.forEach.call(elBakken.children, function(c){ c.classList.toggle('hover', c === bak); });
+      if (!mikker) return;
+      mikker.classList.add('aan');
+      if (bak){
+        mikker.textContent = 'Naar ' + bak.querySelector('b').textContent;
+        mikker.classList.remove('leeg');
+      } else {
+        mikker.textContent = 'Nog geen vak';
+        mikker.classList.add('leeg');
+      }
+    }
+
+    function opruimen(){
+      Array.prototype.forEach.call(elBakken.children, function(c){ c.classList.remove('hover'); });
+      elBakken.classList.remove('sleept');
+      if (mikker){ mikker.classList.remove('aan'); mikker.textContent = ''; }
+    }
 
     kaart.addEventListener('pointerdown', function(e){
       if (bezig) return;
       actief = true; startX = e.clientX; startY = e.clientY;
       kaart.setPointerCapture(e.pointerId);
       kaart.classList.add('pak');
+      elBakken.classList.add('sleept');
+      wijsAan(bakOnder(e.clientX, e.clientY));
     });
 
     kaart.addEventListener('pointermove', function(e){
       if (!actief) return;
       dx = e.clientX - startX; dy = e.clientY - startY;
       kaart.style.transform = 'translate(' + dx + 'px,' + dy + 'px) rotate(' + (dx*0.02) + 'deg)';
-      var bak = bakOnder(e.clientX, e.clientY);
-      Array.prototype.forEach.call(elBakken.children, function(c){ c.classList.toggle('hover', c === bak); });
+      wijsAan(bakOnder(e.clientX, e.clientY));
     });
 
     kaart.addEventListener('pointerup', function(e){
@@ -594,23 +635,34 @@ var KENMERKEN = [
       actief = false;
       kaart.classList.remove('pak');
       var bak = bakOnder(e.clientX, e.clientY);
-      Array.prototype.forEach.call(elBakken.children, function(c){ c.classList.remove('hover'); });
+      opruimen();
       if (bak){ antwoord(parseInt(bak.dataset.i,10)); }
       else { kaart.style.transform = ''; }
     });
 
     kaart.addEventListener('pointercancel', function(){
       actief = false; kaart.classList.remove('pak'); kaart.style.transform = '';
+      opruimen();
     });
   }
 
+  /* Precies binnen een vak loslaten telt altijd. Laat je net ernaast los, dan
+     kiest hij het dichtstbijzijnde vak binnen een halve vakbreedte. Zonder die
+     marge is loslaten in de kier tussen twee vakken een misser die niets met
+     geschiedenis te maken heeft. */
   function bakOnder(x, y){
-    var gevonden = null;
+    var raak = null, beste = null, besteAfstand = Infinity;
     Array.prototype.forEach.call(elBakken.children, function(c){
       var r = c.getBoundingClientRect();
-      if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) gevonden = c;
+      if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom){ raak = c; return; }
+      var ux = Math.max(r.left - x, 0, x - r.right);
+      var uy = Math.max(r.top - y, 0, y - r.bottom);
+      var d = Math.sqrt(ux*ux + uy*uy);
+      if (d < besteAfstand){ besteAfstand = d; beste = c; }
     });
-    return gevonden;
+    if (raak) return raak;
+    var grens = elBakken.children[0] ? elBakken.children[0].getBoundingClientRect().width * 0.5 : 60;
+    return besteAfstand <= Math.max(50, grens) ? beste : null;
   }
 
   /* ---------- antwoord verwerken ---------- */
@@ -651,9 +703,13 @@ var KENMERKEN = [
     var kaart = elZone.querySelector('.kaart');
     if (kaart){
       kaart.style.transform = '';
+      kaart.classList.remove('pak');
+      var mk = kaart.querySelector('.mikker');
+      if (mk) mk.classList.remove('aan');
       if (!klopt) kaart.classList.add('mis');
       kaart.style.opacity = '.55';
     }
+    elBakken.classList.remove('sleept');
 
     elMelding.className = 'melding on ' + (klopt ? 'ja' : 'nee');
     elMelding.innerHTML = '<b>' + (klopt ? 'Goed' : 'Net niet, het hoort bij ' + TIJDVAKKEN[g.tv-1].naam) + '</b>' +
