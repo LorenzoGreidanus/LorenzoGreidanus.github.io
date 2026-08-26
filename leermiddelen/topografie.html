@@ -63,15 +63,27 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 @keyframes klop{0%,100%{opacity:1}50%{opacity:.55}}
 .klok{font-variant-numeric:tabular-nums}
 
-.veld{padding:14px 0 60px}
-.kaartvak{background:var(--zee);border:1px solid rgba(20,34,76,.10);border-radius:22px;overflow:hidden;
-  position:relative}
-.kaartvak svg{display:block;width:100%;height:auto}
+/* Tijdens het spelen vult het scherm zich precies: kaart bovenin, invulvak
+   eronder, allebei altijd in beeld. Daarom scrollt de pagina dan niet. */
+body.speelt{height:100dvh;overflow:hidden;display:flex;flex-direction:column}
+body.speelt header{flex:none}
+body.speelt footer{display:none}
+body.speelt #scherm-spel{flex:1;min-height:0;display:flex;flex-direction:column}
+body.speelt .spelkop,body.speelt .balk,body.speelt .tijdbalk{flex:none}
+
+.veld{flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;padding:10px 0 14px}
+.kaartvak{flex:1;min-height:0;background:var(--zee);border:1px solid rgba(20,34,76,.10);
+  border-radius:22px;overflow:hidden;position:relative}
+.kaartvak svg{display:block;width:100%;height:100%}
 /* Landen uit de vragenlijst krijgen bewust dezelfde kleur als de rest.
    Een ander kleurtje zou verraden welke landen er kunnen komen. */
 .achter,.doel{fill:var(--land);stroke:var(--grens);stroke-width:.5;stroke-linejoin:round}
+/* Wat je gehad hebt blijft staan: groen goed, rood mis. Zo zie je aan de kaart
+   hoe ver je bent, en welke hoek je nog moet leren. */
+.doel.af.goed{fill:#a9d3ba}
+.doel.af.mis{fill:#f0bcb1}
 .op{fill:var(--amber);stroke:var(--ink);stroke-width:1.2}
-.op.mis{fill:var(--crab)}
+.op.mis{fill:var(--fout)}
 .op.raak{fill:var(--goed)}
 .stip{fill:none;stroke:var(--ink);stroke-width:2.2;opacity:0}
 .stip.aan{opacity:1}
@@ -83,23 +95,32 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
   @keyframes puls{0%,100%{opacity:1}50%{opacity:.62}}
 }
 
-.invul{max-width:560px;margin:18px auto 0;text-align:center}
-.invulrij{display:flex;gap:9px;margin-top:10px}
+.invul{flex:none;max-width:620px;width:100%;margin:0 auto;text-align:center}
+.invulrij{display:flex;gap:9px;margin-top:7px}
 .invulrij input{flex:1;min-width:0;border:2px solid rgba(20,34,76,.14);border-radius:16px;
   padding:15px 16px;font-size:1.15rem;background:#fff;font-family:inherit;color:inherit}
 .invulrij input:focus{outline:none;border-color:var(--ocean)}
 .invulrij button{min-height:56px;padding:0 24px;border:none;border-radius:16px;background:var(--ocean);color:#fff;font-weight:600}
-.uitslag{margin-top:14px;border-radius:18px;padding:14px 16px;font-size:.95rem;display:none;text-align:left}
-.uitslag.aan{display:block}
+/* Vaste hoogte, zodat de kaart niet op en neer springt bij elk antwoord. */
+.uitslag{margin-top:9px;border-radius:14px;padding:9px 14px;font-size:.92rem;text-align:left;
+  min-height:44px;display:flex;align-items:center;gap:9px;background:transparent;color:var(--muted);
+  justify-content:center}
+.uitslag b{display:inline;font-size:.98rem}
 .uitslag.ja{background:var(--goed-bg);color:var(--goed)}
 .uitslag.nee{background:var(--fout-bg);color:var(--fout)}
 .uitslag.bijna{background:#fff6e6;color:#8a5a12}
 .uitslag b{display:block;font-size:1.05rem}
-.hulp{margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
-.hulp button{background:none;border:1.5px solid rgba(20,34,76,.15);border-radius:999px;padding:9px 16px;
-  font-size:.84rem;font-weight:600;min-height:42px}
+.hulp{margin-top:7px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;align-items:center}
+.hulp button{background:none;border:1.5px solid rgba(20,34,76,.15);border-radius:999px;padding:8px 15px;
+  font-size:.82rem;font-weight:600;min-height:42px}
 .hulp button:hover{border-color:var(--ocean);color:var(--ocean)}
-.letters{margin-top:10px;font-size:1.3rem;letter-spacing:.35em;font-weight:600;color:var(--muted)}
+.letters{margin:0;font-size:1.15rem;letter-spacing:.3em;font-weight:600;color:var(--muted)}
+@media (max-height:620px){
+  .invulrij input{padding:11px 14px;font-size:1rem}
+  .invulrij button{min-height:46px}
+  .uitslag{min-height:36px;margin-top:6px}
+  .veld{gap:7px;padding:7px 0 10px}
+}
 
 /* ---------- einde ---------- */
 .einde{padding:50px 0 70px;text-align:center}
@@ -153,7 +174,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 <section class="start wrap" id="scherm-start">
   <p class="hand" style="font-size:1.6rem">hoe heet dit land</p>
   <h1>Topografie</h1>
-  <p class="lead">Er licht een land op de kaart op. Jij typt hoe het heet. Spelfouten mogen: als je er bijna bent, telt het gewoon. Begin met Europa en ga daarna de wereld over.</p>
+  <p class="lead">Er licht een land op de kaart op. Jij typt hoe het heet en drukt op enter, dan komt het volgende land vanzelf. Spelfouten mogen: als je er bijna bent, telt het gewoon. Wat je goed hebt, blijft groen op de kaart staan.</p>
 
   <p class="eyebrow" id="kaartKop" style="margin-top:32px">welke kaart</p>
   <div class="kies" id="kaarten"></div>
@@ -191,8 +212,9 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
       <div class="hulp" id="hulp">
         <button type="button" id="hintBtn">Geef een letter</button>
         <button type="button" id="overslaanBtn">Ik weet het niet</button>
+        <button type="button" id="stopBtn" class="hide">Stoppen</button>
+        <span class="letters hide" id="letters"></span>
       </div>
-      <p class="letters hide" id="letters"></p>
     </div>
   </div>
 </section>
@@ -264,7 +286,7 @@ var RACE = { start:60, erbij:5, eraf:6 };
   var kaartId = null, niveau = null, modus = null;
   var rij = [], nr = 0, goed = 0, totaal = 0, fouten = [], punten = 0, reeks = 0, besteReeks = 0;
   var tijd = 0, loopt = false, laatsteTik = 0, bezig = false, opgeslagen = false;
-  var hintLetters = 0, pogingen = 0, huidig = null;
+  var hintLetters = 0, pogingen = 0, huidig = null, wachter = null;
 
   var elStart = document.getElementById('scherm-start'),
       elSpel  = document.getElementById('scherm-spel'),
@@ -377,6 +399,7 @@ var RACE = { start:60, erbij:5, eraf:6 };
 
   /* ---------- de kaart tekenen ---------- */
   function tekenKaart(){
+    gehad = {};
     var m = KAARTEN[kaartId];
     var svg = '<svg viewBox="0 0 ' + m.breed + ' ' + m.hoog + '" role="img" ' +
       'aria-labelledby="kaartTitel"><title id="kaartTitel">Kaart van ' + m.naam + '</title>';
@@ -392,12 +415,22 @@ var RACE = { start:60, erbij:5, eraf:6 };
     elVak.innerHTML = svg;
   }
 
+  /* Wat je al gehad hebt houdt zijn kleur: 1 is goed, 2 is mis. Zo groeit de
+     kaart mee met wat je kent, en dat is meteen je overzicht. */
+  var gehad = {};
+
+  function rustKlasse(i){
+    return gehad[i] === 1 ? 'doel af goed' : (gehad[i] === 2 ? 'doel af mis' : 'doel');
+  }
+
   function licht(land, klasse){
     var m = KAARTEN[kaartId];
     var i = m.landen.indexOf(land);
     var p = document.getElementById('l' + i);
     if (p){
-      p.setAttribute('class', 'doel op ' + (klasse || '') + (klasse ? '' : ' puls'));
+      /* Alleen op en de uitslagkleur, geen af-klasse erbij: anders wint de
+         blijvende kleur het van het oplichten. */
+      p.setAttribute('class', 'doel op' + (klasse ? ' ' + klasse : ' puls'));
       p.parentNode.appendChild(p);          /* naar voren halen, anders valt het weg achter een buur */
     }
     /* Een land als Luxemburg is op deze schaal een paar pixels groot. Dan wijst
@@ -409,10 +442,18 @@ var RACE = { start:60, erbij:5, eraf:6 };
   }
 
   function dooffKaart(){
+    var m = KAARTEN[kaartId];
     Array.prototype.forEach.call(elVak.querySelectorAll('.op'), function(p){
-      p.setAttribute('class', 'doel');
+      var i = parseInt(p.id.slice(1), 10);
+      p.setAttribute('class', rustKlasse(i));
     });
     document.getElementById('stip').setAttribute('class', 'stip');
+  }
+
+  function onthoud(land, klopt){
+    var i = KAARTEN[kaartId].landen.indexOf(land);
+    /* Later alsnog goed? Dan wint groen van rood. */
+    if (klopt || !gehad[i]) gehad[i] = klopt ? 1 : 2;
   }
 
   /* ---------- spelverloop ---------- */
@@ -433,7 +474,10 @@ var RACE = { start:60, erbij:5, eraf:6 };
     document.getElementById('naamvak').classList.add('hide');
     document.getElementById('balk').classList.toggle('hide', isRace());
     document.getElementById('tijdbalk').classList.toggle('hide', !isRace());
-    document.getElementById('hulp').classList.toggle('hide', isRace());
+    document.getElementById('hintBtn').classList.toggle('hide', isRace());
+    document.getElementById('overslaanBtn').classList.toggle('hide', isRace());
+    document.getElementById('stopBtn').classList.toggle('hide', !isRace());
+    document.body.classList.add('speelt');
     document.getElementById('rondeLabel').textContent =
       KAARTEN[kaartId].naam + ', ' + niveau.naam.toLowerCase();
     tekenKaart();
@@ -455,9 +499,13 @@ var RACE = { start:60, erbij:5, eraf:6 };
   }
 
   function volgende(){
+    if (wachter){ clearTimeout(wachter); wachter = null; }
     elUit.className = 'uitslag';
+    elUit.innerHTML = '';
     elIn.value = '';
-    elIn.disabled = false;
+    /* readOnly in plaats van disabled: zo blijft het toetsenbord op een telefoon
+       gewoon staan tussen twee landen door. */
+    elIn.readOnly = false;
     document.getElementById('letters').classList.add('hide');
     hintLetters = 0; pogingen = 0;
     dooffKaart();
@@ -473,6 +521,10 @@ var RACE = { start:60, erbij:5, eraf:6 };
     tekenTeller();
     elIn.focus({ preventScroll:true });
   }
+
+  /* Hoe lang de uitslag blijft staan. Goed mag kort, want je weet het al.
+     Bij een misser krijg je langer, want daar staat de juiste naam. */
+  function wachttijd(klopt){ return klopt ? 750 : 2100; }
 
   function tekenTeller(){
     if (isRace()){
@@ -491,21 +543,24 @@ var RACE = { start:60, erbij:5, eraf:6 };
 
   document.getElementById('checkBtn').addEventListener('click', nakijken);
   elIn.addEventListener('keydown', function(e){
-    if (e.key === 'Enter'){ e.preventDefault(); if (bezig) verder(); else nakijken(); }
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    /* Tijdens de uitslag springt enter meteen door, wachten hoeft niet. */
+    if (bezig) verder(); else nakijken();
   });
 
   function nakijken(){
     if (bezig || !huidig) return;
     var oordeel = beoordeel(elIn.value, huidig);
-    if (oordeel.soort === 'leeg'){ elIn.focus(); return; }
+    if (oordeel.soort === 'leeg'){ elIn.focus({ preventScroll:true }); return; }
 
     if (oordeel.soort === 'fout'){
       pogingen++;
       /* In de oefenstand mag je het bij de eerste misser nog een keer proberen.
-         In de race niet: daar is de klok de tweede kans. */
+         Je hoeft nergens op te klikken, gewoon opnieuw typen. */
       if (!isRace() && pogingen === 1){
-        elUit.className = 'uitslag aan nee';
-        elUit.innerHTML = '<b>Nog niet</b>Probeer het nog een keer, of vraag een letter.';
+        elUit.className = 'uitslag nee';
+        elUit.innerHTML = '<b>Nog niet.</b> Probeer het nog een keer.';
         elIn.select();
         return;
       }
@@ -518,7 +573,7 @@ var RACE = { start:60, erbij:5, eraf:6 };
   function afronden(klopt, oordeel){
     bezig = true;
     totaal++;
-    elIn.disabled = true;
+    elIn.readOnly = true;
     if (klopt){
       goed++; reeks++;
       besteReeks = Math.max(besteReeks, reeks);
@@ -532,35 +587,33 @@ var RACE = { start:60, erbij:5, eraf:6 };
       if (isRace()) tijd -= RACE.eraf;
     }
 
+    onthoud(huidig, klopt);
     licht(huidig, klopt ? 'raak' : 'mis');
 
     var kop, tekst, soort;
     if (klopt && oordeel.soort === 'bijna'){
-      kop = 'Goed gerekend'; soort = 'bijna';
-      tekst = 'Je bedoelde het juiste land. De officiele schrijfwijze is ' + huidig.n + '.';
+      kop = 'Goed gerekend.'; soort = 'bijna';
+      tekst = 'Het schrijf je als ' + huidig.n + '.';
     } else if (klopt){
-      kop = 'Goed'; soort = 'ja';
-      tekst = huidig.n + (oordeel.naam !== huidig.n ? ' (je schreef ' + oordeel.naam + ', dat mag ook)' : '') + '.';
+      kop = 'Goed.'; soort = 'ja';
+      tekst = huidig.n + '.';
     } else {
-      kop = 'Dit is ' + huidig.n; soort = 'nee';
-      tekst = 'Kijk nog even goed waar het ligt, dan onthoud je het beter.';
+      kop = 'Dit is ' + huidig.n + '.'; soort = 'nee';
+      tekst = elIn.value.trim() ? 'Jij schreef ' + elIn.value.trim() + '.' : '';
     }
-    if (isRace()) tekst += klopt ? ' Plus ' + RACE.erbij + ' seconden.' : ' Min ' + RACE.eraf + ' seconden.';
+    if (isRace()) tekst += klopt ? ' Plus ' + RACE.erbij + ' sec.' : ' Min ' + RACE.eraf + ' sec.';
 
-    elUit.className = 'uitslag aan ' + soort;
-    elUit.innerHTML = '<b>' + kop + '</b>' + tekst +
-      '<br><button class="btn" id="verderBtn" type="button" style="margin-top:10px;padding:11px 22px;font-size:.9rem">Volgende</button>' +
-      (isRace() ? '<button class="btn ghost" id="stopBtn" type="button" style="margin-top:10px;margin-left:8px;padding:11px 22px;font-size:.9rem">Stoppen</button>' : '');
-
-    document.getElementById('verderBtn').addEventListener('click', verder);
-    var stop = document.getElementById('stopBtn');
-    if (stop) stop.addEventListener('click', function(){ loopt = false; toonEinde(); });
-    document.getElementById('verderBtn').focus({ preventScroll:true });
+    elUit.className = 'uitslag ' + soort;
+    elUit.innerHTML = '<b>' + kop + '</b> ' + tekst;
     tekenTeller();
+
+    /* Vanzelf door naar het volgende land. Geen knop: dat onderbreekt het ritme. */
+    wachter = setTimeout(verder, wachttijd(klopt));
   }
 
   function verder(){
     if (!bezig) return;
+    if (wachter){ clearTimeout(wachter); wachter = null; }
     bezig = false;
     if (isRace() && tijd <= 0){ loopt = false; toonEinde(); return; }
     if (!isRace()) nr++;
@@ -577,6 +630,7 @@ var RACE = { start:60, erbij:5, eraf:6 };
     var p = document.getElementById('letters');
     p.textContent = zicht;
     p.classList.remove('hide');
+    elIn.focus({ preventScroll:true });
   });
 
   document.getElementById('overslaanBtn').addEventListener('click', function(){
@@ -585,9 +639,17 @@ var RACE = { start:60, erbij:5, eraf:6 };
     afronden(false, { soort:'fout' });
   });
 
+  document.getElementById('stopBtn').addEventListener('click', function(){
+    loopt = false;
+    if (wachter){ clearTimeout(wachter); wachter = null; }
+    toonEinde();
+  });
+
   /* ---------- einde ---------- */
   function naarStart(){
     loopt = false; bezig = false;
+    if (wachter){ clearTimeout(wachter); wachter = null; }
+    document.body.classList.remove('speelt');
     elSpel.classList.add('hide'); elEinde.classList.add('hide'); elStart.classList.remove('hide');
     toonKlassement('startLijst', null);
     scrollTo({top:0, behavior:'auto'});
@@ -595,6 +657,8 @@ var RACE = { start:60, erbij:5, eraf:6 };
 
   function toonEinde(){
     loopt = false; bezig = false;
+    if (wachter){ clearTimeout(wachter); wachter = null; }
+    document.body.classList.remove('speelt');
     elSpel.classList.add('hide'); elEinde.classList.remove('hide');
     var deel = totaal ? goed / totaal : 0;
 
