@@ -79,8 +79,17 @@ header{padding:14px 0;border-bottom:1px solid rgba(20,34,76,.08);background:#fff
 .spel .tegel svg{width:28px;height:28px;fill:none;stroke:#FBF6F1;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .spel h3{font-size:1.28rem}
 .spel .wat{margin-top:8px;color:var(--muted);font-size:.95rem;flex:1}
-.spel .leer{display:inline-block;margin-top:14px;font-size:.78rem;font-weight:600;padding:6px 13px;
+.spel .labels{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}
+.spel .leer{display:inline-block;font-size:.78rem;font-weight:600;padding:6px 13px;
   border-radius:999px;background:var(--sand)}
+.spel .tv{display:inline-block;font-size:.78rem;font-weight:600;padding:6px 13px;
+  border-radius:999px;background:#e5ecff;color:var(--ocean)}
+/* Kopje boven elke groep spellen, zodat de volgorde ook echt te zien is. */
+.groepkop{grid-column:1 / -1;display:flex;align-items:baseline;gap:12px;
+  padding:14px 0 0;border-top:1px solid rgba(20,34,76,.10);margin-top:8px}
+.groepkop:first-child{border-top:none;padding-top:0;margin-top:0}
+.groepkop b{font-size:.9rem;font-weight:600}
+.groepkop span{font-size:.78rem;color:var(--muted)}
 .spel .tijd{font-size:.78rem;color:var(--muted);margin-top:10px}
 .speelknop{display:block;text-align:center;text-decoration:none;margin-top:18px;background:var(--crab);color:#fff;
   font-weight:600;padding:14px 20px;border-radius:999px;box-shadow:0 8px 0 rgba(20,34,76,.10);
@@ -195,43 +204,60 @@ var VAKKEN = [
     ico:'<circle cx="12" cy="12" r="9"/><path d="M3.5 12h17"/><path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18z"/>' }
 ];
 
+/* De tien tijdvakken. Bij een geschiedenisspel zet je in tv het nummer, of een
+   rijtje nummers als het over meer tijdvakken gaat. Laat tv weg of zet 0 als
+   het een vaardigheid is die bij elk tijdvak past. De lijst wordt hierop
+   gesorteerd, dus een nieuw spel komt vanzelf op de goede plek te staan. */
+var TIJDVAKKEN = [
+  { nr:1,  naam:'Jagers en boeren',        periode:'tot 3000 v.Chr.' },
+  { nr:2,  naam:'Grieken en Romeinen',     periode:'3000 v.Chr. tot 500' },
+  { nr:3,  naam:'Monniken en ridders',     periode:'500 tot 1000' },
+  { nr:4,  naam:'Steden en staten',        periode:'1000 tot 1500' },
+  { nr:5,  naam:'Ontdekkers en hervormers',periode:'1500 tot 1600' },
+  { nr:6,  naam:'Regenten en vorsten',     periode:'1600 tot 1700' },
+  { nr:7,  naam:'Pruiken en revoluties',   periode:'1700 tot 1800' },
+  { nr:8,  naam:'Burgers en stoommachines',periode:'1800 tot 1900' },
+  { nr:9,  naam:'Wereldoorlogen',          periode:'1900 tot 1950' },
+  { nr:10, naam:'Televisie en computer',   periode:'vanaf 1950' }
+];
+
 var SPELLEN = [
   { vak:'rekenen', bestand:'rekenen.html', naam:'Rekenrace', kleur:'#EA9836',
     ico:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h2M12 11h2M16 11h.01M8 15h2M12 15h2M16 15h.01M8 19h8"/>',
     wat:'De klok loopt af. Elk goed antwoord levert seconden op, elk fout antwoord kost seconden. Vijf goed op rij en je punten tellen dubbel. Met een klassement.',
     leer:'Hoofdrekenen', tijd:'een paar minuten per race' },
 
-  { vak:'geschiedenis', bestand:'bronnenlab.html', naam:'Bronnenlab', kleur:'#204ECF',
+  { vak:'geschiedenis', bestand:'bronnenlab.html', naam:'Bronnenlab', kleur:'#204ECF', tv:0,
     ico:'<circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/><path d="M8 9.5h5M8 12h3.5"/>',
     wat:'Veertien bronnen, van een Romeinse dobbelsteen tot een filmpje op sociale media. Bij elke bron stel je drie vragen: wie maakte dit, wanneer, en wat zie je juist niet? Kies een kort onderzoek of een marathon met punten.',
     leer:'Bronnen onderzoeken', tijd:'15 minuten, of zo lang je wilt' },
 
-  { vak:'geschiedenis', bestand:'tijdvakken.html', naam:'Tijdvakken sorteren', kleur:'#83A5F2',
+  { vak:'geschiedenis', bestand:'tijdvakken.html', naam:'Tijdvakken sorteren', kleur:'#83A5F2', tv:0,
     ico:'<path d="M3 6h18M3 12h18M3 18h18"/><circle cx="8" cy="6" r="2" fill="#FBF6F1" stroke="none"/><circle cx="15" cy="12" r="2" fill="#FBF6F1" stroke="none"/><circle cx="11" cy="18" r="2" fill="#FBF6F1" stroke="none"/>',
     wat:'Sleep gebeurtenissen en kenmerken naar het juiste tijdvak. Kies rustige sorteerrondes met uitleg, of de tijdrace waarin goed antwoorden seconden oplevert en fout antwoorden ze kosten.',
     leer:'Tijd en volgorde', tijd:'ongeveer 10 minuten' },
 
-  { vak:'geschiedenis', bestand:'feodalisme.html', naam:'Feodalisme', kleur:'#EA9836',
+  { vak:'geschiedenis', bestand:'feodalisme.html', naam:'Feodalisme', kleur:'#EA9836', tv:3,
     ico:'<path d="M4 17l-1-9 5.5 4L12 4l3.5 8L21 8l-1 9z"/><path d="M4.5 20h15"/>',
     wat:'Je bent heer, ridder of boer in de middeleeuwen. Elk jaar maak je keuzes over arbeid, bescherming en oogst. Je merkt vanzelf waarom niemand het alleen redt.',
     leer:'Middeleeuwen', tijd:'ongeveer 15 minuten' },
 
-  { vak:'geschiedenis', bestand:'handel.html', naam:'De handelsroute', kleur:'#204ECF',
+  { vak:'geschiedenis', bestand:'handel.html', naam:'De handelsroute', kleur:'#204ECF', tv:[4,6],
     ico:'<path d="M3.5 16.5h17L18 21H6z"/><path d="M12 16.5V3"/><path d="M13.5 5l5.5 8h-5.5z"/>',
     wat:'Vaar met de VOC of de Hanze tussen havens. Koop waar het goedkoop is en verkoop waar het duur is, maar pas op: door jouw eigen handel verandert de prijs.',
     leer:'Handel en economie', tijd:'ongeveer 20 minuten' },
 
-  { vak:'geschiedenis', bestand:'vergadering.html', naam:'De vergadering', kleur:'#F26749',
+  { vak:'geschiedenis', bestand:'vergadering.html', naam:'De vergadering', kleur:'#F26749', tv:6,
     ico:'<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17M3.5 12h17"/>',
     wat:'Het is 1672 en Frankrijk valt binnen. Jij bent Holland en betaalt het meeste, maar alle zeven gewesten moeten ja zeggen. Praat, geef toe en overtuig.',
     leer:'De Republiek', tijd:'ongeveer 20 minuten' },
 
-  { vak:'geschiedenis', bestand:'leenmannen.html', naam:'Verdeel je rijk', kleur:'#EA9836',
+  { vak:'geschiedenis', bestand:'leenmannen.html', naam:'Verdeel je rijk', kleur:'#EA9836', tv:3,
     ico:'<path d="M4 17l-1-9 5.5 4L12 4l3.5 8L21 8l-1 9z"/><path d="M4.5 20h15"/><path d="M9 13.5h6"/>',
     wat:'Je bent koning en kunt niet overal tegelijk zijn. Geef je gebieden weg aan leenmannen die je grens bewaken, en merk wat er gebeurt zodra hun zonen het overnemen.',
     leer:'Middeleeuwen', tijd:'ongeveer 15 minuten' },
 
-  { vak:'geschiedenis', bestand:'', naam:'Bouw je stad', kleur:'#83A5F2',
+  { vak:'geschiedenis', bestand:'', naam:'Bouw je stad', kleur:'#83A5F2', tv:4,
     ico:'<path d="M3 21V10l5-3 5 3v11"/><path d="M13 21V13l4-2 4 2v8"/><path d="M7 21v-4h2v4"/>',
     wat:'Bouw vanaf het jaar 1150 je eigen middeleeuwse stad, met een muur, een markt en een kerk. Wat je bouwt, bepaalt wie er komt wonen.',
     leer:'Steden', tijd:'binnenkort te spelen' },
@@ -246,7 +272,7 @@ var SPELLEN = [
     wat:'Een zin met een gat en twee schrijfwijzen: wordt of word, gebeurt of gebeurd. Bij elk antwoord krijg je de regel erbij, dus je leert waarom het zo is. Kies de tegenwoordige tijd, de verleden tijd, het voltooid deelwoord of alles door elkaar.',
     leer:'Werkwoordspelling', tijd:'10 minuten, of tegen de klok' },
 
-  { vak:'geschiedenis', bestand:'berlijn.html', naam:'De Conferentie van Berlijn', kleur:'#204ECF',
+  { vak:'geschiedenis', bestand:'berlijn.html', naam:'De Conferentie van Berlijn', kleur:'#204ECF', tv:8,
     ico:'<circle cx="12" cy="12" r="9"/><path d="M12 3c2.5 3 2.5 15 0 18M4 9h16M4.5 15h15"/>',
     wat:'Verdeel Afrika zoals de Europese grootmachten dat in 1884 deden. Ieder speelt een onderhandelaar met eigen doelen en beperkte invloed, dus je moet praten en ruilen. Aan het eind zie je hoe het echt liep, en wie er niet aan tafel zat.',
     leer:'Modern imperialisme', tijd:'ongeveer 30 minuten, met de klas of alleen' }
@@ -293,12 +319,39 @@ var SPELLEN = [
     });
   }
 
+  function eersteTv(sp){
+    if (!sp.tv) return 0;
+    return Array.isArray(sp.tv) ? sp.tv[0] : sp.tv;
+  }
+  function tvVan(nr){
+    return TIJDVAKKEN.filter(function(t){ return t.nr === nr; })[0] || null;
+  }
+  /* Op de kaart zelf: kort, want de kop erboven zegt het al voluit. */
+  function tvLabel(sp){
+    if (!sp.tv) return sp.vak === 'geschiedenis' ? 'Alle tijdvakken' : '';
+    var lijst = Array.isArray(sp.tv) ? sp.tv : [sp.tv];
+    /* Elke naam apart met een kleine letter, en gescheiden door een komma.
+       Namen als steden en staten bevatten zelf al een en, dus daar nog een en
+       tussen zetten leest niet. */
+    var namen = lijst.map(function(nr){
+      var t = tvVan(nr);
+      return t ? t.naam.charAt(0).toLowerCase() + t.naam.slice(1) : nr;
+    });
+    return 'Tijdvak ' + lijst.join(' en ') + ': ' + namen.join(', ');
+  }
+
   function toonSpellen(v){
     vak = v;
     vakvak.style.display = 'none';
     spelvak.style.display = 'block';
     document.getElementById('vakTitel').textContent = v.naam;
     var mijn = SPELLEN.filter(function(s){ return s.vak === v.id; });
+    /* Heeft dit vak tijdvakken, dan gaat de lijst op chronologische volgorde.
+       Spellen zonder tijdvak zijn vaardigheden en staan bovenaan. */
+    var metTijd = mijn.some(function(s){ return s.tv; });
+    if (metTijd) mijn = mijn.slice().sort(function(a, b){
+      return eersteTv(a) - eersteTv(b) || a.naam.localeCompare(b.naam, 'nl');
+    });
     vaklijst.innerHTML = '';
 
     if (!mijn.length){
@@ -306,7 +359,21 @@ var SPELLEN = [
         '<p>Voor dit vak staan de eerste spellen nog in de maak. Kijk gerust bij een ander vak.</p></div>';
     }
 
+    var vorigeGroep = null;
     mijn.forEach(function(sp){
+      if (metTijd){
+        var groep = eersteTv(sp);
+        if (groep !== vorigeGroep){
+          var kop = document.createElement('div');
+          kop.className = 'groepkop';
+          var t = tvVan(groep);
+          kop.innerHTML = t
+            ? '<b>Tijdvak ' + t.nr + ': ' + t.naam + '</b><span>' + t.periode + '</span>'
+            : '<b>Bij elk tijdvak</b><span>vaardigheden die je het hele jaar gebruikt</span>';
+          vaklijst.appendChild(kop);
+          vorigeGroep = groep;
+        }
+      }
       var kaart = document.createElement('article');
       kaart.className = 'spel' + (sp.bestand ? '' : ' binnenkort');
       var link = sp.bestand + (gekozen ? '?n=' + gekozen.id : '');
@@ -314,7 +381,8 @@ var SPELLEN = [
         '<div class="tegel" style="background:' + sp.kleur + '"><svg viewBox="0 0 24 24">' + sp.ico + '</svg></div>' +
         '<h3>' + sp.naam + '</h3>' +
         '<p class="wat">' + sp.wat + '</p>' +
-        '<span class="leer">' + sp.leer + '</span>' +
+        '<div class="labels"><span class="leer">' + sp.leer + '</span>' +
+        (tvLabel(sp) ? '<span class="tv">' + tvLabel(sp) + '</span>' : '') + '</div>' +
         '<p class="tijd">' + sp.tijd + '</p>' +
         (sp.bestand
           ? '<a class="speelknop" href="' + link + '">Start' + (gekozen ? ' op ' + gekozen.kort : '') + '</a>'
