@@ -46,15 +46,21 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .kaartje b{display:block;font-size:1.02rem}
 .kaartje span{display:block;margin-top:4px;font-size:.85rem;color:var(--muted)}
 /* ---------- tafelkiezer ---------- */
+.stap{margin-top:30px}
+.stapuitleg{font-size:.85rem;color:var(--muted);margin-top:6px}
 .tafelvak{max-width:680px;margin:16px auto 0;background:#fff;border:2px solid rgba(20,34,76,.10);
   border-radius:22px;padding:18px}
-.tafelrij{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;margin-top:12px}
-.chip{min-width:52px;min-height:48px;padding:0 14px;border-radius:14px;background:var(--room);
+/* Vijftien knopjes in een vast raster van vijf breed. Laten vloeien geeft een
+   rafelige onderste rij, en dan is het zoeken naar de tafel van 12. */
+.tafelrij{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;
+  max-width:340px;margin:14px auto 0}
+@media (min-width:560px){.tafelrij{grid-template-columns:repeat(8,minmax(0,1fr));max-width:520px}}
+.chip{min-height:48px;padding:0 6px;border-radius:14px;background:var(--room);
   border:2px solid rgba(20,34,76,.12);font-weight:600;font-size:1.05rem;font-variant-numeric:tabular-nums;
   transition:border-color .15s var(--ease),background .15s var(--ease),transform .12s var(--ease)}
 .chip:hover{border-color:var(--vista);transform:translateY(-2px)}
 .chip[aria-pressed="true"]{background:var(--ocean);border-color:var(--ocean);color:#fff}
-.snel{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:13px}
+.snel{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-top:14px}
 .snel button{background:none;border:1.5px solid rgba(20,34,76,.15);border-radius:999px;
   padding:8px 15px;font-size:.82rem;font-weight:600;min-height:40px}
 .snel button:hover{border-color:var(--ocean);color:var(--ocean)}
@@ -147,7 +153,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
   <div class="wrap hd">
     <a class="mark" href="./"><i>LG</i> Rekenrace</a>
     <div class="hd-right">
-      <span class="pill hide" id="pillNiv">niveau</span>
+      <span class="pill hide" id="pillNiv">tempo</span>
       <button class="linkbtn" id="grootBtn" type="button">Digibord</button>
       <button class="linkbtn" id="opnieuwBtn" type="button">Opnieuw</button>
     </div>
@@ -159,24 +165,32 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
   <h1>Rekenrace</h1>
   <p class="lead">De klok loopt af. Elk goed antwoord levert je seconden op, elk fout antwoord kost je seconden. Hoe langer je goed blijft rekenen, hoe verder je komt. Bij vijf goede antwoorden op rij ga je in een reeks en tellen je punten dubbel.</p>
 
-  <p class="eyebrow" id="nivKop" style="margin-top:28px">kies je niveau</p>
-  <p style="font-size:.85rem;color:var(--muted);margin-top:6px">De niveaus zijn afgestemd op leerjaar 1 en 2.</p>
-  <div class="kies" id="niveaus"></div>
-
-  <p class="eyebrow" style="margin-top:26px">waar wil je mee oefenen</p>
+  <p class="eyebrow" id="soortKop" style="margin-top:32px">waar wil je mee oefenen</p>
   <div class="kies" id="soorten"></div>
 
-  <div class="tafelvak hide" id="tafelvak">
-    <p class="eyebrow" id="tafelKop">welke tafels wil je oefenen</p>
-    <p style="font-size:.85rem;color:var(--muted);margin-top:6px">Tik de tafels aan die je wilt. Je mag er zoveel kiezen als je wilt, bijvoorbeeld alleen 3 en 6.</p>
+  <div class="stap hide" id="tafelvak">
+    <p class="eyebrow" id="tafelKop">welke tafels</p>
+    <p class="stapuitleg">Tik aan wat je wilt oefenen. Zoveel of zo weinig als je wilt, bijvoorbeeld alleen 3 en 6. Hier bepaal jij hoe moeilijk het wordt.</p>
     <div class="tafelrij" id="tafelrij" role="group" aria-labelledby="tafelKop"></div>
     <div class="snel">
-      <button type="button" id="tafelAlles">Alle tafels</button>
+      <button type="button" id="tafelTien">1 tot en met 10</button>
       <button type="button" id="tafelMakkelijk">1 tot en met 5</button>
       <button type="button" id="tafelMoeilijk">6 tot en met 10</button>
+      <button type="button" id="tafelExtra">11 tot en met 15</button>
+      <button type="button" id="tafelAlles">Alle 15</button>
       <button type="button" id="tafelGeen">Wis keuze</button>
     </div>
     <p class="tafelstand" id="tafelstand" aria-live="polite"></p>
+  </div>
+
+  <div class="stap hide" id="bereikRij">
+    <p class="eyebrow" id="bereikKop">hoe groot mogen de getallen worden</p>
+    <div class="kies" id="bereiken"></div>
+  </div>
+
+  <div class="stap hide" id="tempoRij">
+    <p class="eyebrow" id="tempoKop">hoe snel loopt de klok</p>
+    <div class="kies" id="tempos"></div>
   </div>
 
   <button class="btn" id="startBtn" type="button" disabled>Start de race</button>
@@ -242,18 +256,32 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
    ziet een leerling alleen zijn eigen lijst.
    ============================================================================ */
 
-var NIVEAUS = [
-  { id:'bb',  naam:'vmbo-bb',           start:50, erbij:5, eraf:5, uitleg:'Getallen tot 20 en de tafels tot 5. Rustiger klok.' },
-  { id:'kgt', naam:'vmbo-kgt en gl/tl', start:45, erbij:4, eraf:6, uitleg:'Getallen tot 100, alle tafels en delen.' },
-  { id:'hv',  naam:'havo en vwo',       start:40, erbij:3, eraf:7, uitleg:'Ook procenten, breuken en negatieve getallen.' }
+/* Vroeger stond alles in een niveau: hoe groot de getallen zijn, hoe snel de
+   klok loopt, en welke tafels je kreeg. Sinds je de tafels zelf aanvinkt klopte
+   dat niet meer, want daar bepaal jij de moeilijkheid. Daarom nu twee losse
+   keuzes: waar de sommen over gaan, en hoe snel de klok loopt.
+
+   BEREIK bepaalt hoe groot de getallen worden. De id's bb, kgt en hv worden
+   binnen de sommenfabriek gebruikt, dus die blijven zo heten. */
+var BEREIK = [
+  { id:'bb',  naam:'Tot 20',   uitleg:'Kleine getallen, veel hoofdrekenen zonder omwegen.' },
+  { id:'kgt', naam:'Tot 100',  uitleg:'Optellen en aftrekken met tientallen erbij.' },
+  { id:'hv',  naam:'Tot 200 en negatief', uitleg:'Grotere getallen, en uitkomsten onder nul.' }
 ];
 
+/* TEMPO bepaalt alleen de klok. Los van de sommen, zodat je makkelijke sommen
+   snel kunt doen en moeilijke rustig. */
+var TEMPO = [
+  { id:'rustig', naam:'Rustig',  start:60, erbij:5, eraf:4, uitleg:'Een minuut op de klok. Fout kost weinig.' },
+  { id:'gewoon', naam:'Gewoon',  start:45, erbij:4, eraf:6, uitleg:'Drie kwartier minuut. De gewone race.' },
+  { id:'snel',   naam:'Snel',    start:35, erbij:3, eraf:8, uitleg:'Kort en meedogenloos. Fout hakt erin.' }
+];
 var SOORTEN = [
   { id:'alles',  naam:'Alles door elkaar', uitleg:'De beste training: je weet nooit wat er komt.' },
   { id:'plus',   naam:'Optellen en aftrekken', uitleg:'Alleen plus- en minsommen.' },
   { id:'tafels', naam:'Tafels', uitleg:'Keersommen.' },
   { id:'delen',  naam:'Delen', uitleg:'Deelsommen die precies uitkomen.' },
-  { id:'procent',naam:'Procenten en breuken', uitleg:'Alleen bij havo en vwo.', alleen:'hv' }
+  { id:'procent',naam:'Procenten en breuken', uitleg:'Tien procent van 60, of een kwart van 80.' }
 ];
 
 /* ============================================================================
@@ -272,15 +300,15 @@ var FABRIEK = {
     return { vraag: a + ' \u2212 ' + b, antwoord: a - b, soort:'aftrekken' };
   },
   tafels: function(niv, tafels){
-    var lijst = (tafels && tafels.length) ? tafels : standaardTafels(niv);
-    var t = kies(lijst), b = heel(1, niv === 'hv' ? 12 : 10);
+    var lijst = (tafels && tafels.length) ? tafels : standaardTafels();
+    var t = kies(lijst), b = heel(1, 10);
     /* de tafel staat afwisselend voor en achter, zodat 3 x 7 en 7 x 3 allebei langskomen */
     var links = Math.random() < .5 ? t : b, rechts = links === t ? b : t;
     return { vraag: links + ' \u00D7 ' + rechts, antwoord: t * b, soort:'tafel van ' + t };
   },
   delen: function(niv, tafels){
-    var lijst = (tafels && tafels.length) ? tafels : standaardTafels(niv);
-    var t = kies(lijst), uit = heel(1, niv === 'hv' ? 12 : 10);
+    var lijst = (tafels && tafels.length) ? tafels : standaardTafels();
+    var t = kies(lijst), uit = heel(1, 10);
     return { vraag: (t * uit) + ' : ' + t, antwoord: uit, soort:'tafel van ' + t };
   },
   procent: function(){
@@ -299,8 +327,10 @@ var FABRIEK = {
 };
 
 /* Zonder eigen keuze: vmbo-bb oefent de tafels tot 5, de rest alles tot 10. */
-function standaardTafels(niv){
-  return niv === 'bb' ? [1,2,3,4,5] : [1,2,3,4,5,6,7,8,9,10];
+/* Zonder eigen keuze: vmbo-bb oefent de tafels tot 5, de rest tot 10. De
+   tafels 11 tot en met 15 zitten er wel in, maar kies je zelf aan. */
+function standaardTafels(){
+  return [1,2,3,4,5,6,7,8,9,10];
 }
 
 function maakSom(niv, soort, tafels){
@@ -338,7 +368,7 @@ function maakOpties(goed){
   document.getElementById('jaar').textContent = new Date().getFullYear();
 
   var SLEUTEL = 'rekenrace-klassement-v1';
-  var niveau = null, soort = null, tijd = 0, punten = 0, goed = 0, fout = 0, reeks = 0, besteReeks = 0,
+  var bereik = null, tempo = null, soort = null, tijd = 0, punten = 0, goed = 0, fout = 0, reeks = 0, besteReeks = 0,
       huidige = null, bezig = false, laatsteTik = 0, opgeslagen = false;
   var gekozenTafels = [], tafelsGeraakt = false;
 
@@ -364,28 +394,61 @@ function maakOpties(goed){
     catch (e){ return false; }
   }
 
-  /* ---------- kiezers ---------- */
-  var nivVak = document.getElementById('niveaus'), soortVak = document.getElementById('soorten');
-  NIVEAUS.forEach(function(n){
+  /* ---------- kiezers ----------
+     Volgorde: eerst waar je mee oefent, dan wat daarbij hoort. Bij tafels en
+     delen bepaal jij de moeilijkheid met de tafelknopjes, dus dan is er geen
+     vraag over het getallenbereik. Het tempo komt altijd, want dat staat los
+     van de sommen. */
+  var soortVak = document.getElementById('soorten'),
+      bereikVak = document.getElementById('bereiken'),
+      tempoVak = document.getElementById('tempos');
+
+  function bereikTelt(){ return soort && (soort.id === 'plus' || soort.id === 'alles'); }
+
+  function knop(vak, item, kies){
     var b = document.createElement('button');
     b.className = 'kaartje'; b.type = 'button';
-    b.innerHTML = '<b>' + n.naam + '</b><span>' + n.uitleg + '</span>';
+    b.innerHTML = '<b>' + item.naam + '</b><span>' + item.uitleg + '</span>';
     b.addEventListener('click', function(){
-      niveau = n;
-      Array.prototype.forEach.call(nivVak.children, function(c){ c.classList.remove('on'); });
+      Array.prototype.forEach.call(vak.children, function(c){ c.classList.remove('on'); });
       b.classList.add('on');
-      var p = document.getElementById('pillNiv'); p.textContent = n.naam; p.classList.remove('hide');
-      /* Nog niets zelf aangetikt? Dan volgt de keuze het niveau. */
-      if (!tafelsGeraakt) gekozenTafels = standaardTafels(n.id);
-      tekenSoorten();
-      tekenTafels();
+      kies(item);
     });
-    nivVak.appendChild(b);
+    vak.appendChild(b);
+    return b;
+  }
+
+  SOORTEN.forEach(function(x){
+    knop(soortVak, x, function(s2){
+      soort = s2;
+      if (!tafelsGeraakt) gekozenTafels = standaardTafels();
+      /* Procenten en breuken werken alleen met de grotere getallen. */
+      if (soort.id === 'procent') bereik = BEREIK[BEREIK.length - 1];
+      document.getElementById('bereikRij').classList.toggle('hide', !bereikTelt());
+      if (!bereikTelt() && soort.id !== 'procent') bereik = BEREIK[1];
+      document.getElementById('tempoRij').classList.remove('hide');
+      tekenTafels();
+      klaarCheck();
+    });
+  });
+
+  BEREIK.forEach(function(x){
+    knop(bereikVak, x, function(b2){ bereik = b2; klaarCheck(); });
+  });
+
+  TEMPO.forEach(function(x){
+    knop(tempoVak, x, function(t2){
+      tempo = t2;
+      var p = document.getElementById('pillNiv');
+      p.textContent = t2.naam; p.classList.remove('hide');
+      klaarCheck();
+    });
   });
 
   /* ---------- tafelkiezer ---------- */
+  var MAXTAFEL = 15;
   var tafelrij = document.getElementById('tafelrij');
-  for (var t = 1; t <= 10; t++){
+  for (var t = 1; t <= MAXTAFEL; t++){
     (function(nummer){
       var b = document.createElement('button');
       b.className = 'chip'; b.type = 'button';
@@ -404,21 +467,36 @@ function maakOpties(goed){
   }
 
   function zetTafels(lijst){ gekozenTafels = lijst.slice(); tafelsGeraakt = true; tekenTafels(); }
-  document.getElementById('tafelAlles').addEventListener('click', function(){ zetTafels([1,2,3,4,5,6,7,8,9,10]); });
-  document.getElementById('tafelMakkelijk').addEventListener('click', function(){ zetTafels([1,2,3,4,5]); });
-  document.getElementById('tafelMoeilijk').addEventListener('click', function(){ zetTafels([6,7,8,9,10]); });
+  function reeksTafels(van, tot){
+    var uit = [];
+    for (var i = van; i <= tot; i++) uit.push(i);
+    return uit;
+  }
+  document.getElementById('tafelTien').addEventListener('click', function(){ zetTafels(reeksTafels(1, 10)); });
+  document.getElementById('tafelAlles').addEventListener('click', function(){ zetTafels(reeksTafels(1, MAXTAFEL)); });
+  document.getElementById('tafelMakkelijk').addEventListener('click', function(){ zetTafels(reeksTafels(1, 5)); });
+  document.getElementById('tafelMoeilijk').addEventListener('click', function(){ zetTafels(reeksTafels(6, 10)); });
+  document.getElementById('tafelExtra').addEventListener('click', function(){ zetTafels(reeksTafels(11, MAXTAFEL)); });
   document.getElementById('tafelGeen').addEventListener('click', function(){ zetTafels([]); });
 
   function tafelsInTekst(lijst){
     if (!lijst.length) return '';
-    if (lijst.length === 10) return 'alle tafels';
+    if (lijst.length === MAXTAFEL) return 'alle tafels';
     if (lijst.length === 1) return 'de tafel van ' + lijst[0];
+    /* Een aaneengesloten rij korter opschrijven. De tafels van 11, 12, 13, 14
+       en 15 leest als een boodschappenlijstje. */
+    var aaneen = lijst.every(function(t, i){ return i === 0 || t === lijst[i-1] + 1; });
+    if (aaneen && lijst.length >= 3){
+      return 'de tafels van ' + lijst[0] + ' tot en met ' + lijst[lijst.length - 1];
+    }
     return 'de tafels van ' + lijst.slice(0, -1).join(', ') + ' en ' + lijst[lijst.length - 1];
   }
 
   function tekenTafels(){
     var vak = document.getElementById('tafelvak');
-    vak.classList.toggle('hide', !tafelsTellen());
+    /* Alleen bij tafels en delen doet de keuze iets, en pas als er een
+       onderdeel gekozen is. Anders staat er een vak zonder betekenis. */
+    vak.classList.toggle('hide', !soort || !tafelsTellen());
     Array.prototype.forEach.call(tafelrij.children, function(knop, i){
       knop.setAttribute('aria-pressed', gekozenTafels.indexOf(i + 1) !== -1 ? 'true' : 'false');
     });
@@ -434,26 +512,8 @@ function maakOpties(goed){
     toonKlassement('startLijst', null);
   }
 
-  function tekenSoorten(){
-    soortVak.innerHTML = '';
-    SOORTEN.forEach(function(s){
-      if (s.alleen && (!niveau || niveau.id !== s.alleen)) return;
-      var b = document.createElement('button');
-      b.className = 'kaartje' + (soort && soort.id === s.id ? ' on' : ''); b.type = 'button';
-      b.innerHTML = '<b>' + s.naam + '</b><span>' + s.uitleg + '</span>';
-      b.addEventListener('click', function(){
-        soort = s;
-        Array.prototype.forEach.call(soortVak.children, function(c){ c.classList.remove('on'); });
-        b.classList.add('on');
-        if (!tafelsGeraakt && niveau) gekozenTafels = standaardTafels(niveau.id);
-        tekenTafels();
-      });
-      soortVak.appendChild(b);
-    });
-  }
-  tekenSoorten();
   function klaarCheck(){
-    var kan = !!(niveau && soort) && (!tafelsTellen() || gekozenTafels.length > 0);
+    var kan = !!(soort && tempo && bereik) && (!tafelsTellen() || gekozenTafels.length > 0);
     document.getElementById('startBtn').disabled = !kan;
   }
 
@@ -480,7 +540,7 @@ function maakOpties(goed){
 
   /* ---------- de race ---------- */
   function start(){
-    tijd = niveau.start; punten = 0; goed = 0; fout = 0; reeks = 0; besteReeks = 0;
+    tijd = tempo.start; punten = 0; goed = 0; fout = 0; reeks = 0; besteReeks = 0;
     bezig = true; opgeslagen = false;
     elStart.classList.add('hide'); elEinde.classList.add('hide'); elSpel.classList.remove('hide');
     document.getElementById('naamvak').classList.remove('hide');
@@ -501,7 +561,7 @@ function maakOpties(goed){
   }
 
   function tekenKlok(){
-    var deel = Math.max(0, Math.min(1, tijd / niveau.start));
+    var deel = Math.max(0, Math.min(1, tijd / tempo.start));
     document.getElementById('tijdFill').style.width = (deel * 100) + '%';
     document.getElementById('tijdbalk').classList.toggle('krap', tijd <= 10);
     document.getElementById('klok').textContent = Math.ceil(tijd);
@@ -510,7 +570,7 @@ function maakOpties(goed){
   }
 
   function volgendeSom(){
-    huidige = maakSom(niveau.id, soort.id, actieveTafels());
+    huidige = maakSom(bereik.id, soort.id, actieveTafels());
     document.getElementById('vraag').textContent = huidige.vraag + ' =';
     document.getElementById('soortLabel').textContent = huidige.soort;
     var opties = maakOpties(huidige.antwoord);
@@ -540,17 +600,17 @@ function maakOpties(goed){
       var basis = 10 + Math.round(Math.min(6, tijd / 8));
       var winst = reeks >= 5 ? basis * 2 : basis;
       punten += winst;
-      tijd = Math.min(niveau.start * 1.6, tijd + niveau.erbij);
+      tijd = Math.min(tempo.start * 1.6, tijd + tempo.erbij);
       knop.classList.add('goed');
-      vlieg('+' + niveau.erbij + ' seconden', true);
+      vlieg('+' + tempo.erbij + ' seconden', true);
     } else {
       fout++; reeks = 0;
-      tijd -= niveau.eraf;
+      tijd -= tempo.eraf;
       knop.classList.add('fout');
       Array.prototype.forEach.call(document.getElementById('opties').children, function(c){
         if (Number(c.dataset.waarde) === huidige.antwoord) c.classList.add('goed');
       });
-      vlieg('\u2212' + niveau.eraf + ' seconden', false);
+      vlieg('\u2212' + tempo.eraf + ' seconden', false);
     }
     tekenKlok();
     if (tijd <= 0){ stop(); return; }
@@ -586,7 +646,7 @@ function maakOpties(goed){
       '<div class="sam"><i>Goed</i><b>' + goed + '</b></div>' +
       '<div class="sam"><i>Fout</i><b>' + fout + '</b></div>' +
       '<div class="sam"><i>Langste reeks</i><b>' + besteReeks + '</b></div>' +
-      '<div class="sam"><i>Niveau</i><b style="font-size:.95rem">' + niveau.naam + '</b></div>' +
+      '<div class="sam"><i>Tempo</i><b style="font-size:.95rem">' + tempo.naam + '</b></div>' +
       (tafelsTellen()
         ? '<div class="sam"><i>Tafels</i><b style="font-size:.95rem">' + gekozenTafels.join(', ') + '</b></div>'
         : '');
@@ -602,8 +662,11 @@ function maakOpties(goed){
   /* De tafel van 1 is nu eenmaal makkelijker dan de tafel van 7. Een score hoort
      dus alleen in de lijst van precies dezelfde keuze. */
   function klassementSleutel(){
-    var basis = niveau.id + '-' + soort.id;
-    return tafelsTellen() ? basis + '-' + gekozenTafels.join('.') : basis;
+    /* De sleutel moet alles bevatten wat de moeilijkheid bepaalt, anders staan
+       de tafel van 1 en de tafel van 13 in dezelfde ranglijst. */
+    var basis = soort.id + '-' + tempo.id;
+    if (tafelsTellen()) return basis + '-' + gekozenTafels.join('.');
+    return basis + '-' + bereik.id;
   }
 
   function bewaarScore(){
@@ -628,12 +691,12 @@ function maakOpties(goed){
   function toonKlassement(doelId, markeer){
     var doel = document.getElementById(doelId);
     if (!doel) return;
-    if (!niveau || !soort){ doel.innerHTML = ''; return; }
+    if (!soort || !tempo || !bereik){ doel.innerHTML = ''; return; }
     var data = lees();
     if (tafelsTellen() && !gekozenTafels.length){ doel.innerHTML = ''; return; }
     var lijst = data[klassementSleutel()] || [];
-    var titel = 'Klassement ' + niveau.naam + ', ' + soort.naam.toLowerCase() +
-                (tafelsTellen() ? ', ' + tafelsInTekst(gekozenTafels) : '');
+    var titel = 'Klassement ' + soort.naam.toLowerCase() + ', tempo ' + tempo.naam.toLowerCase() +
+                (tafelsTellen() ? ', ' + tafelsInTekst(gekozenTafels) : ', getallen ' + bereik.naam.toLowerCase());
     if (!lijst.length){
       doel.innerHTML = '<h3>' + titel + '</h3><div class="leeg">Nog geen scores. Wie het eerst speelt, staat bovenaan.</div>';
       return;
@@ -657,26 +720,26 @@ function maakOpties(goed){
       var m = new RegExp('[?&]' + naam + '=([^&]+)').exec(location.search);
       return m ? decodeURIComponent(m[1]) : null;
     }
-    var n = param('n');
-    if (n) for (var i = 0; i < NIVEAUS.length; i++){
-      if (NIVEAUS[i].id === n){
-        nivVak.children[i].click();
-        nivVak.style.display = 'none';
-        var kop = document.getElementById('nivKop');
-        if (kop) kop.textContent = 'Niveau: ' + NIVEAUS[i].naam + ', gekozen door je docent';
-      }
+    function vast(vakId, lijst, waarde, kopId, woord){
+      if (!waarde) return null;
+      var i = lijst.map(function(x){ return x.id; }).indexOf(waarde);
+      var vak = document.getElementById(vakId);
+      if (i === -1 || !vak.children[i]) return null;
+      vak.children[i].click();
+      vak.style.display = 'none';
+      var kop = document.getElementById(kopId);
+      if (kop) kop.textContent = woord + ': ' + lijst[i].naam + ', gekozen door je docent';
+      return lijst[i];
     }
-    var s = param('s');
-    if (s) Array.prototype.forEach.call(soortVak.children, function(knop, k){
-      var zichtbaar = SOORTEN.filter(function(x){ return !x.alleen || (niveau && x.alleen === niveau.id); });
-      if (zichtbaar[k] && zichtbaar[k].id === s) knop.click();
-    });
+    /* ?s=tafels  ?b=kgt  ?tp=snel  ?t=3,6 */
+    vast('soorten', SOORTEN, param('s'), 'soortKop', 'Onderdeel');
+    vast('bereiken', BEREIK, param('b'), 'bereikKop', 'Getallen');
+    vast('tempos', TEMPO, param('tp'), 'tempoKop', 'Tempo');
 
-    /* ?t=3,6 zet de tafels alvast klaar, bijvoorbeeld voor een opdracht in de les. */
     var t = param('t');
     if (t){
       var uit = t.split(',').map(function(x){ return parseInt(x, 10); })
-                 .filter(function(x){ return x >= 1 && x <= 10; });
+                 .filter(function(x){ return x >= 1 && x <= 15; });
       if (uit.length){
         uit.sort(function(a, b){ return a - b; });
         zetTafels(uit.filter(function(x, i){ return uit.indexOf(x) === i; }));
@@ -686,7 +749,7 @@ function maakOpties(goed){
     }
   })();
 
-  /* De knop linksboven gaat terug naar het spellenmenu, met je niveau erbij. */
+  /* De knop linksboven gaat terug naar het spellenmenu, met je keuzes erbij. */
   (function(){
     var m = document.querySelector('header .mark');
     if (m) m.setAttribute('href', './' + location.search);
