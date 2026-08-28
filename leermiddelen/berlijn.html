@@ -44,6 +44,21 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .btn.ghost{background:#fff;color:var(--ink);border:1.5px solid rgba(20,34,76,.15);box-shadow:none}
 .btn.klein{padding:11px 20px;font-size:.9rem;margin-top:0}
 
+.kies{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:18px auto 0}
+.kaartje{background:#fff;border:2px solid rgba(20,34,76,.10);border-radius:20px;padding:16px;text-align:left;
+  transition:border-color .2s var(--ease),transform .2s var(--ease)}
+.kaartje:hover{border-color:var(--vista);transform:translateY(-3px)}
+.kaartje.on{border-color:var(--ocean);background:#f4f7ff}
+.kaartje b{display:block;font-size:1rem}
+.kaartje span{display:block;margin-top:4px;font-size:.83rem;color:var(--muted)}
+.nieuws{background:#fff;border:2px solid var(--amber);border-radius:20px;padding:16px 18px;margin-top:14px}
+.nieuws .kop{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline;justify-content:space-between}
+.nieuws b{font-size:1.02rem}
+.nieuws .jaartal{background:var(--sand);border-radius:999px;padding:4px 11px;font-size:.75rem;font-weight:600}
+.nieuws p{margin-top:8px;font-size:.92rem}
+.nieuws.watals{border-color:var(--vista)}
+.nieuws.watals .jaartal{background:#e5ecff;color:var(--ocean)}
+.nieuws .merk2{font-size:.7rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .spelers{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:24px auto 0;max-width:1000px}
 .speler{background:#fff;border:2px solid rgba(20,34,76,.10);border-radius:22px;padding:18px;text-align:left}
 .speler .vlag{display:inline-block;width:14px;height:14px;border-radius:4px;margin-right:8px;vertical-align:-2px}
@@ -154,6 +169,9 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
 
   <p class="eyebrow" style="margin-top:34px">wie speelt wat</p>
   <div class="spelers" id="spelers"></div>
+
+  <p class="eyebrow" style="margin-top:30px">gebeurtenissen onderweg</p>
+  <div class="kies" id="soortenGeb" style="max-width:900px"></div>
 
   <button class="btn" id="startBtn" type="button">Open de conferentie</button>
   <p style="margin-top:14px;font-size:.82rem;color:var(--muted)">Op het digibord: zet alle vier op leerling en laat groepjes om de beurt naar voren komen. Alleen thuis: zet er drie op computer.</p>
@@ -400,6 +418,167 @@ var MACHTEN = [
     ] }
 ];
 
+/* ============================================================================
+   GEBEURTENISSEN
+   ----------------------------------------------------------------------------
+   Aan het begin van elke ronde vanaf de tweede gebeurt er iets. Twee soorten:
+
+     echt   = dit is werkelijk gebeurd, met het jaartal erbij
+     watals = dit had gekund maar gebeurde niet, duidelijk als zodanig gemerkt
+
+   kan()  bepaalt of de gebeurtenis nu zin heeft. Zo krijg je geen bericht over
+          een opstand in een gebied dat nog van niemand is.
+   doe()  voert hem uit via sp, dat toegang geeft tot het spel.
+
+   Een gebeurtenis toevoegen kan gewoon onderaan de lijst.
+   ============================================================================ */
+var GEBEURTENISSEN = [
+{ id:'khartoem', soort:'echt', jaar:1885, naam:'De Mahdi neemt Khartoem',
+  kan:function(sp){ return true; },
+  doe:function(sp){
+    var had = sp.eigenaar('soedan');
+    sp.bevrijd('soedan');
+    sp.weerstand('soedan', 1);
+    return 'Het leger van de Mahdi verovert Khartoem en doodt generaal Gordon. ' +
+      (had ? naamVan(had) + ' verliest Soedan, ' : '') +
+      'en niemand waagt zich er voorlopig nog aan. De weerstand daar loopt op.';
+  } },
+
+{ id:'vrijstaat', soort:'echt', jaar:1885, naam:'De Congo-Vrijstaat wordt erkend',
+  kan:function(sp){ return sp.eigenaar('congo') === 'be'; },
+  doe:function(sp){ sp.geef('be', 3);
+    return 'De conferentie erkent Leopold II persoonlijk als heerser over Congo. Niet Belgi\u00eb, ' +
+      'maar de koning zelf. Er stroomt geld en erkenning binnen: Leopold krijgt 3 invloed.'; } },
+
+{ id:'kinine', soort:'echt', jaar:1890, naam:'Kinine maakt het binnenland begaanbaar',
+  kan:function(sp){ return true; },
+  doe:function(sp){ sp.allen(2);
+    return 'Kinine tegen malaria wordt op grote schaal beschikbaar. Waar Europeanen eerder binnen ' +
+      'een jaar stierven, kunnen ze nu blijven. Iedereen krijgt 2 invloed. Zonder dit medicijn was ' +
+      'de verdeling van Afrika niet mogelijk geweest.'; } },
+
+{ id:'helgoland', soort:'echt', jaar:1890, naam:'Het Helgoland-Zanzibarverdrag',
+  kan:function(sp){ return sp.eigenaar('oost') === 'du'; },
+  doe:function(sp){ sp.verplaats('oost', 'vk'); sp.geef('du', 4);
+    return 'Duitsland ruilt zijn aanspraken rond Zanzibar tegen het eilandje Helgoland in de Noordzee. ' +
+      'Bismarck vond Europa belangrijker dan Afrika. Zanzibar gaat naar het Verenigd Koninkrijk, ' +
+      'Duitsland krijgt 4 invloed.'; } },
+
+{ id:'adwa', soort:'echt', jaar:1896, naam:'Ethiopi\u00eb verslaat Itali\u00eb bij Adwa',
+  kan:function(sp){ return true; },
+  doe:function(sp){
+    var had = sp.eigenaar('ethiopie');
+    sp.bevrijd('ethiopie'); sp.weerstand('ethiopie', 1);
+    return 'Het leger van keizer Menelik II verslaat een Italiaans invasieleger bij Adwa. ' +
+      (had ? naamVan(had) + ' raakt zijn claim kwijt. ' : '') +
+      'Ethiopi\u00eb blijft als enige Afrikaanse staat onafhankelijk, en dat blijft zo.'; } },
+
+{ id:'jameson', soort:'echt', jaar:1896, naam:'De Jameson-inval mislukt',
+  kan:function(sp){ return sp.eigenaar('kaap') === 'vk'; },
+  doe:function(sp){ sp.pak('vk', 3);
+    return 'Een Britse strooptocht naar Transvaal loopt uit op een blamage. De Boeren nemen de hele ' +
+      'groep gevangen en Londen moet toegeven dat het ervan wist. Het Verenigd Koninkrijk verliest 3 invloed.'; } },
+
+{ id:'fashoda', soort:'echt', jaar:1898, naam:'De crisis bij Fashoda',
+  kan:function(sp){ return sp.eigenaar('bovennijl') === 'fr' && sp.eigenaar('soedan') === 'vk'; },
+  doe:function(sp){ sp.verplaats('bovennijl', 'vk'); sp.geef('fr', 4);
+    return 'Een Franse en een Britse eenheid staan bij Fashoda aan de Nijl tegenover elkaar. ' +
+      'Wekenlang lijkt het oorlog te worden. Uiteindelijk trekt Frankrijk zich terug in ruil voor ' +
+      'toezeggingen elders: de Boven-Nijl wordt Brits, Frankrijk krijgt 4 invloed.'; } },
+
+{ id:'boerenoorlog', soort:'echt', jaar:1899, naam:'De Boerenoorlog',
+  kan:function(sp){ return sp.eigenaar('kaap') === 'vk'; },
+  doe:function(sp){ sp.pak('vk', 4);
+    return 'Het Verenigd Koninkrijk vecht bijna drie jaar tegen de Boerenrepublieken en zet er ' +
+      'meer dan vierhonderdduizend soldaten voor in. Het wint, maar het kost een vermogen en ' +
+      'de reputatie: 4 invloed weg.'; } },
+
+{ id:'bismarck', soort:'echt', jaar:1890, naam:'Bismarck wordt ontslagen',
+  kan:function(sp){ return true; },
+  doe:function(sp){ sp.geef('du', 3);
+    return 'De nieuwe keizer stuurt Bismarck weg. Diens rem op koloniale avonturen valt daarmee weg: ' +
+      'Duitsland gaat voortaan voor Weltpolitik en krijgt 3 invloed erbij.'; } },
+
+{ id:'sokoto', soort:'echt', jaar:1903, naam:'Het Sokoto-kalifaat valt',
+  kan:function(sp){ return sp.weerstandVan('niger') > 0; },
+  doe:function(sp){ sp.weerstand('niger', -1);
+    return 'Na jaren strijd valt het Sokoto-kalifaat, een van de grootste staten van Afrika. ' +
+      'De weerstand in de Nigerdelta neemt af.'; } },
+
+{ id:'herero', soort:'echt', jaar:1904, naam:'De opstand van de Herero en de Nama',
+  kan:function(sp){ return sp.eigenaar('zuidwest') !== null; },
+  doe:function(sp){ var e = sp.eigenaar('zuidwest'); sp.pak(e, 2); sp.weerstand('zuidwest', 1);
+    return 'De Herero en de Nama komen in opstand tegen de bezetter. Het antwoord is een ' +
+      'vernietigingsoorlog waarin tienduizenden omkomen. ' + naamVan(e) + ' verliest 2 invloed.'; } },
+
+{ id:'rubber', soort:'echt', jaar:1904, naam:'Het rubberschandaal in Congo',
+  kan:function(sp){ return sp.eigenaar('congo') === 'be'; },
+  doe:function(sp){ sp.pak('be', 4);
+    return 'Een rapport over de dwangarbeid in de rubberwinning haalt de wereldpers. Wat er in ' +
+      'Congo gebeurt is zo erg dat zelfs andere koloniale mogendheden er afstand van nemen. ' +
+      'In 1908 moet Leopold zijn kolonie aan de Belgische staat afstaan. Hij verliest 4 invloed.'; } },
+
+{ id:'majimaji', soort:'echt', jaar:1905, naam:'De Maji Maji-opstand',
+  kan:function(sp){ return sp.eigenaar('oost') !== null; },
+  doe:function(sp){ var e = sp.eigenaar('oost'); sp.pak(e, 3);
+    return 'In Oost-Afrika komen tientallen volken tegelijk in opstand. De onderdrukking kost ' +
+      'naar schatting meer dan honderdduizend mensen het leven. ' + naamVan(e) + ' verliest 3 invloed.'; } },
+
+{ id:'marokkocrisis', soort:'echt', jaar:1911, naam:'De Marokkocrisis',
+  kan:function(sp){ return sp.eigenaar('marokko') === 'fr'; },
+  doe:function(sp){ sp.pak('fr', 3); sp.geef('du', 3);
+    return 'Duitsland stuurt een kanonneerboot naar Agadir om duidelijk te maken dat het ook wat ' +
+      'wil. Frankrijk mag Marokko houden, maar staat er gebied in Midden-Afrika voor af. ' +
+      'Frankrijk verliest 3 invloed, Duitsland krijgt er 3.'; } },
+
+{ id:'tripolioorlog', soort:'echt', jaar:1911, naam:'Itali\u00eb valt Tripoli binnen',
+  kan:function(sp){ return sp.eigenaar('tripoli') === 'ot'; },
+  doe:function(sp){ sp.weerstand('tripoli', -1);
+    return 'Itali\u00eb verklaart het Ottomaanse Rijk de oorlog en neemt Tripoli in. Het Ottomaanse ' +
+      'gezag brokkelt af, en het gebied ligt nu open.'; } },
+
+/* ---------- wat had gekund, maar niet gebeurde ---------- */
+{ id:'rozekaart', soort:'watals', jaar:1890, naam:'Portugal krijgt zijn roze kaart',
+  kan:function(sp){ return true; },
+  doe:function(sp){ sp.aanPortugal('nyassa'); sp.aanPortugal('zambezi');
+    return 'Portugal had een kaart met een roze strook dwars door Afrika, van Angola tot Mozambique. ' +
+      'In het echt stuurde Londen in 1890 een ultimatum en gaf Lissabon toe. In deze partij niet: ' +
+      'de Zambezi en het Nyassameer worden Portugees en zijn niet meer te pakken.'; } },
+
+{ id:'mahdiblijft', soort:'watals', jaar:1898, naam:'De Mahdi-staat houdt stand',
+  kan:function(sp){ return true; },
+  doe:function(sp){ sp.onafhankelijk('soedan'); sp.onafhankelijk('bovennijl');
+    return 'In het echt versloeg Kitchener het Mahdi-leger in 1898 bij Omdurman, met machinegeweren ' +
+      'tegen speren. Stel dat het anders was gelopen: Soedan en de Boven-Nijl blijven onafhankelijk ' +
+      'en zijn voor niemand meer te nemen.'; } },
+
+{ id:'bondgenoot', soort:'watals', jaar:1894, naam:'Frankrijk en Duitsland sluiten een verdrag',
+  kan:function(sp){ return true; },
+  doe:function(sp){ sp.geef('fr', 4); sp.geef('du', 4);
+    return 'In het echt keken Parijs en Berlijn elkaar sinds 1871 met de rug aan. Stel dat ze in ' +
+      'Afrika samen waren opgetrokken tegen de Britten: allebei 4 invloed erbij.'; } },
+
+{ id:'coalitie', soort:'watals', jaar:1893, naam:'Een Afrikaanse coalitie',
+  kan:function(sp){ return true; },
+  doe:function(sp){ sp.weerstand('goudkust', 1); sp.weerstand('niger', 1); sp.weerstand('dahomey', 1);
+    return 'De Ashanti, het Sokoto-kalifaat en Dahomey vochten elk apart, en werden een voor een ' +
+      'verslagen. Stel dat ze hadden samengewerkt en wapens hadden gedeeld: in West-Afrika wordt ' +
+      'alles een stuk moeilijker.'; } },
+
+{ id:'faillissement', soort:'watals', jaar:1890, naam:'Leopold gaat failliet',
+  kan:function(sp){ return sp.eigenaar('congo') === 'be'; },
+  doe:function(sp){ sp.bevrijd('congo'); sp.pak('be', 3);
+    return 'Leopold financierde Congo met geleend geld en stond er in 1890 slecht voor. In het echt ' +
+      'redde de Belgische staat hem met een lening. Hier niet: hij verliest Congo en 3 invloed.'; } },
+
+{ id:'zanzibarvrij', soort:'watals', jaar:1896, naam:'Zanzibar blijft onafhankelijk',
+  kan:function(sp){ return true; },
+  doe:function(sp){ sp.onafhankelijk('oost');
+    return 'De oorlog tussen het Verenigd Koninkrijk en Zanzibar in 1896 duurde achtendertig minuten ' +
+      'en is de kortste oorlog uit de geschiedenis. Stel dat de sultan het had gehouden: Zanzibar ' +
+      'en de kust blijven onafhankelijk.'; } }
+];
+
 var ANDEREN = { ot:'het Ottomaanse Rijk', po:'Portugal' };
 
 /* ============================================================================
@@ -444,6 +623,7 @@ var OORLOGSRISICO = 7;
 
   function magPakken(g, doorWie){
     var i = INFO[g];
+    if (i.onafh) return 'Dit gebied is onafhankelijk gebleven. Hier valt niets te halen.';
     if (i.vast) return 'Dit gebied hoort bij ' + naamVan(bezit[g]) + ' en blijft daar.';
     if (fase === 'conferentie'){
       if (i.alleenLater) return 'Ottomaans gebied. Dat staat in Berlijn niet op de agenda.';
@@ -485,6 +665,75 @@ var OORLOGSRISICO = 7;
     }
   };
 
+  /* ---------- gebeurtenissen ---------- */
+  var SOORTEN_GEB = [
+    { id:'geen',  naam:'Geen',              uitleg:'Alleen onderhandelen. Het kortst, en het meest voorspelbaar.' },
+    { id:'echt',  naam:'Alleen wat echt gebeurde', uitleg:'Veertien gebeurtenissen uit 1885 tot 1914, met jaartal.' },
+    { id:'alles', naam:'Ook wat had gekund', uitleg:'Daarbij zes wat-als-gebeurtenissen die duidelijk gemerkt zijn.' }
+  ];
+  var gebSoort = SOORTEN_GEB[1];
+  var gehad = [], nieuwsNu = null;
+
+  var gebVak = document.getElementById('soortenGeb');
+  SOORTEN_GEB.forEach(function(x, i){
+    var b = document.createElement('button');
+    b.className = 'kaartje' + (i === 1 ? ' on' : ''); b.type = 'button';
+    b.innerHTML = '<b>' + x.naam + '</b><span>' + x.uitleg + '</span>';
+    b.addEventListener('click', function(){
+      gebSoort = x;
+      Array.prototype.forEach.call(gebVak.children, function(c){ c.classList.remove('on'); });
+      b.classList.add('on');
+    });
+    gebVak.appendChild(b);
+  });
+
+  /* Het gereedschap dat een gebeurtenis mag gebruiken. Zo staat er in de lijst
+     hierboven geen enkele verwijzing naar de binnenkant van het spel. */
+  var sp = {
+    eigenaar: function(g){ return bezit[g] || null; },
+    weerstandVan: function(g){ return INFO[g].weerstand; },
+    geef: function(id, n){ if (invloed[id] !== undefined) invloed[id] += n; },
+    pak: function(id, n){ if (invloed[id] !== undefined) invloed[id] = Math.max(0, invloed[id] - n); },
+    allen: function(n){ MACHTEN.forEach(function(m){ invloed[m.id] += n; }); },
+    verplaats: function(g, naar){ bezit[g] = naar; },
+    bevrijd: function(g){ bezit[g] = null; },
+    weerstand: function(g, d){ INFO[g].weerstand = Math.max(0, Math.min(4, INFO[g].weerstand + d)); },
+    /* onafhankelijk en aanPortugal halen een gebied uit het spel */
+    onafhankelijk: function(g){ bezit[g] = null; INFO[g].vast = true; INFO[g].onafh = true; },
+    aanPortugal: function(g){ bezit[g] = 'po'; INFO[g].vast = true; }
+  };
+
+  function nieuwsRonde(){
+    nieuwsNu = null;
+    if (gebSoort.id === 'geen' || ronde < 2) return;
+    var kans = GEBEURTENISSEN.filter(function(g){
+      if (gehad.indexOf(g.id) !== -1) return false;
+      if (g.soort === 'watals' && gebSoort.id !== 'alles') return false;
+      return g.kan(sp);
+    });
+    if (!kans.length) return;
+    var g = kans[Math.floor(Math.random() * kans.length)];
+    gehad.push(g.id);
+    var tekst = g.doe(sp);
+    nieuwsNu = { naam:g.naam, jaar:g.jaar, soort:g.soort, tekst:tekst };
+    noteer('<b>' + g.naam + ' (' + g.jaar + ')</b> ' + tekst);
+  }
+
+  function tekenNieuws(){
+    var oud2 = document.getElementById('nieuwsvak');
+    if (oud2) oud2.remove();
+    if (!nieuwsNu) return;
+    var d = document.createElement('div');
+    d.id = 'nieuwsvak';
+    d.className = 'nieuws' + (nieuwsNu.soort === 'watals' ? ' watals' : '');
+    d.innerHTML = '<div class="kop"><b>' + nieuwsNu.naam + '</b>' +
+      '<span class="jaartal">' + nieuwsNu.jaar + '</span></div>' +
+      '<p class="merk2">' + (nieuwsNu.soort === 'watals' ? 'dit is niet echt gebeurd' : 'dit is echt gebeurd') + '</p>' +
+      '<p>' + nieuwsNu.tekst + '</p>';
+    var paneel = document.querySelector('.paneel');
+    paneel.insertBefore(d, paneel.firstChild);
+  }
+
   /* ---------- opzet ---------- */
   var elSpelers = document.getElementById('spelers');
   MACHTEN.forEach(function(m){
@@ -513,7 +762,21 @@ var OORLOGSRISICO = 7;
     scrollTo({top:0,behavior:'auto'});
   }
 
+  /* De gebeurtenissen veranderen weerstand en vaste gebieden, dus die zetten we
+     bij een nieuwe partij terug naar de oorspronkelijke waarden. */
+  var BEGINSTAAT = {};
+  Object.keys(INFO).forEach(function(k){
+    BEGINSTAAT[k] = { weerstand:INFO[k].weerstand, vast:!!INFO[k].vast };
+  });
+
   function start(){
+    Object.keys(BEGINSTAAT).forEach(function(k){
+      INFO[k].weerstand = BEGINSTAAT[k].weerstand;
+      INFO[k].vast = BEGINSTAAT[k].vast;
+      delete INFO[k].onafh;
+    });
+    gehad = []; nieuwsNu = null; fase = 'conferentie';
+    var vak = document.getElementById('nieuwsvak'); if (vak) vak.remove();
     bezit = {}; invloed = {}; regels = []; beurt = 0; ronde = 1; gekozen = null; klaar = false;
     KAART.gebieden.forEach(function(g){ bezit[g.id] = INFO[g.id].bezit || null; });
     MACHTEN.forEach(function(m){ invloed[m.id] = m.invloed; });
@@ -606,6 +869,7 @@ var OORLOGSRISICO = 7;
     document.getElementById('doelen').innerHTML = d;
 
     verfKaart('kaartvak', false);
+    tekenNieuws();
     toonKeuze(null);
 
     if (!mens[m.id]) setTimeout(computerZet, 900);
@@ -613,14 +877,16 @@ var OORLOGSRISICO = 7;
 
   function volgende(){
     beurt++;
-    if (beurt % MACHTEN.length === 0) ronde++;
+    var nieuweRonde = (beurt % MACHTEN.length === 0);
+    if (nieuweRonde) ronde++;
     var laatste = fase === 'conferentie' ? RONDES : RONDES + VEROVER_RONDES;
     if (ronde > laatste){
       if (fase === 'conferentie'){ startVerovering(); return; }
       klaar = true; toonEinde(); return;
     }
-    if (fase === 'conferentie' && ronde > RONDES) startVerovering();
-    else nieuweBeurt();
+    if (fase === 'conferentie' && ronde > RONDES){ startVerovering(); return; }
+    if (nieuweRonde) nieuwsRonde();
+    nieuweBeurt();
   }
 
   /* De conferentie is voorbij, de kaart moet worden waargemaakt. */
@@ -630,6 +896,7 @@ var OORLOGSRISICO = 7;
     noteer('<b>De conferentie is gesloten.</b> Op papier staat nu wie waar mag zijn. ' +
       'In Berlijn is afgesproken dat een claim pas telt als je er ook echt zit, dus nu moet ' +
       'iedereen het waarmaken. Elke mogendheid krijgt ' + VEROVER_INVLOED + ' erbij voor troepen en geld.');
+    nieuwsRonde();
     nieuweBeurt();
   }
 
@@ -868,6 +1135,10 @@ var OORLOGSRISICO = 7;
       '<p>Jullie verdeling komt bij <b>' + raak + ' van de ' + mee + ' gebieden</b> overeen met de kaart van 1914. ' +
       'Hieronder staat het per gebied.</p>' +
       '<div class="overzicht" style="margin:0 0 18px">' + lijstEcht + '</div>' +
+      (gehad.length ? '<h3>Wat er onderweg gebeurde</h3><p>' + gehad.map(function(id){
+          var g = GEBEURTENISSEN.filter(function(x){ return x.id === id; })[0];
+          return g ? g.naam + ' (' + g.jaar + (g.soort === 'watals' ? ', niet echt gebeurd' : '') + ')' : id;
+        }).join('. ') + '.</p>' : '') +
       '<h3>Wat de tweede ronde liet zien</h3>' +
       '<p>In Berlijn werd afgesproken dat een claim pas telt als je er ook echt zit. Dat heet ' +
       '<b>effectieve bezetting</b>, en het is de reden dat de lijnen op papier binnen twintig jaar ' +
