@@ -96,11 +96,13 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .geb.kan{stroke:var(--ocean);stroke-width:1.2;stroke-dasharray:4 5;stroke-opacity:.45}
 .kaartvak.later .geb.kan{stroke-width:1.8;stroke-dasharray:6 4;stroke-opacity:.9}
 .geb.kan:hover{fill:#fff3c4;stroke-opacity:1}
+/* Aanwijzen moet je echt zien. De vulling animeren naar inherit werkt niet, dus
+   we knipperen met een eigen laag eroverheen in plaats van met de vulling zelf. */
+.wijzer2{fill:none;stroke:var(--amber);stroke-width:5;stroke-linejoin:round;pointer-events:none}
 @media(prefers-reduced-motion:no-preference){
-  .geb.wijs{animation:wijzen .6s ease-in-out 3}
-  @keyframes wijzen{0%,100%{fill:inherit}50%{fill:#ffd97a}}
+  .wijzer2{animation:wijzen .55s ease-in-out 3}
+  @keyframes wijzen{0%,100%{opacity:1}50%{opacity:.15}}
 }
-.geb.wijs{stroke:var(--amber);stroke-width:3}
 .doel{width:100%;text-align:left;background:none;border:none;font:inherit;cursor:default}
 .doel.klikbaar{cursor:pointer}
 .doel.klikbaar:hover span{color:var(--ocean)}
@@ -110,6 +112,14 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .merk{font-size:15px;font-weight:600;fill:var(--ink);text-anchor:middle;pointer-events:none;
   paint-order:stroke;stroke:#fff;stroke-width:3.5px;stroke-linejoin:round}
 
+.popup{position:fixed;inset:0;z-index:60;background:rgba(20,34,76,.55);display:grid;place-items:center;padding:20px}
+.popupkaart{background:#fff;border-radius:26px;padding:clamp(22px,4vw,34px);max-width:620px;width:100%;
+  max-height:88vh;overflow:auto;box-shadow:0 30px 70px rgba(20,34,76,.35)}
+.popupkaart h2{font-size:clamp(1.5rem,4vw,2.1rem);margin:6px 0 10px}
+.popupkaart > p{color:var(--muted);font-size:.95rem}
+.popuplijst{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:10px}
+.popuplijst li{background:var(--room);border-radius:14px;padding:12px 15px;font-size:.9rem;color:var(--muted)}
+.popuplijst b{color:var(--ink)}
 .fasebalk{margin-top:14px;background:var(--sand);border-radius:999px;padding:8px 18px;text-align:center;
   font-size:.8rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
 .fasebalk.oorlog{background:#f6d9d2;color:#8d3320}
@@ -141,6 +151,11 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .keuzeblok p.let{font-size:.85rem;color:var(--muted);margin-top:11px}
 .keuzeblok p.staat{font-size:.85rem;margin-top:9px;background:var(--sand);border-radius:12px;padding:9px 12px}
 .kracht{background:var(--room);border-radius:16px;padding:14px;margin-top:12px}
+.strijd{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;text-align:center}
+.strijd span{display:block;font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--muted);line-height:1.3}
+.strijd b{display:block;font-size:2rem;font-variant-numeric:tabular-nums;line-height:1.1}
+.strijd .tegen{font-size:.75rem;color:var(--muted)}
 .krachtrij{display:flex;justify-content:space-between;align-items:baseline}
 .krachtrij span{font-size:.8rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .krachtrij b{font-size:1.6rem;font-variant-numeric:tabular-nums}
@@ -213,7 +228,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
   <div class="hoe">
     <div><b>1</b><span>Klik op een gebied op de kaart. Je ziet dan wat het waard is en wat het kost.</span></div>
     <div><b>2</b><span>Overleg hardop met de anderen. Ruilen mag, en een gebied weggeven kost je je beurt niet.</span></div>
-    <div><b>3</b><span>Claim wat je wilt hebben. Je invloed is beperkt, dus je kunt niet alles.</span></div>
+    <div><b>3</b><span>Claim wat je wilt hebben. De conferentie loopt door tot heel Afrika verdeeld is, dus er komt geen bel die hem afkapt.</span></div>
     <div><b>4</b><span>Zodra alles verdeeld is, moet je je claims waarmaken met troepen. Je zet invloed in, allebei gooien een dobbelsteen, de hoogste wint. Wat je niet bezet, ben je aan het eind kwijt.</span></div>
   </div>
 
@@ -240,7 +255,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
         <div class="meters">
           <div class="meter"><b id="mInvloed">0</b><span>invloed</span></div>
           <div class="meter"><b id="mGebied">0</b><span>gebieden</span></div>
-          <div class="meter"><b id="mRonde">1</b><span>ronde</span></div>
+          <div class="meter"><b id="mRonde">21</b><span>nog te verdelen</span></div>
         </div>
         <p class="inzet" id="beurtInzet"></p>
       </div>
@@ -275,6 +290,23 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
   <div class="slot" id="slot"></div>
   <div style="text-align:center"><button class="btn" id="nogeensBtn" type="button">Nog een keer</button></div>
 </section>
+
+<div class="popup hide" id="popup">
+  <div class="popupkaart" role="dialog" aria-labelledby="popupKop" aria-modal="true">
+    <p class="eyebrow">de conferentie is gesloten</p>
+    <h2 id="popupKop">Afrika is verdeeld</h2>
+    <p>Op papier staat nu wie waar mag zijn. Vanaf dit moment gelden er andere regels.</p>
+    <ul class="popuplijst">
+      <li><b>Je kunt elkaar aanvallen.</b> Alleen gebieden die grenzen aan iets van jou. Je valt aan vanuit je sterkste buurgebied.</li>
+      <li><b>Elk gebied heeft een kracht.</b> Twee punten om te beginnen, plus de weerstand van de mensen die er wonen, plus een punt voor elk buurgebied van dezelfde eigenaar. Een aaneengesloten rijk verdedigt zichzelf.</li>
+      <li><b>Het verschil bepaalt je kans.</b> Gelijke kracht is vijftig procent. Elk punt verschil scheelt tien procent. Kracht 7 tegen kracht 5 is dus zeventig procent.</li>
+      <li><b>Troepen sturen helpt, maar tot een grens.</b> Elke invloed die je meestuurt telt als een punt kracht erbij, hoogstens drie. Die invloed ben je hoe dan ook kwijt.</li>
+      <li><b>De verdediger heeft thuisvoordeel.</b> Twee punten kracht erbij, want hij kent het terrein en hoeft er niet eerst heen.</li>
+      <li><b>Verliezen doet pijn.</b> Het gebied waar je vandaan aanviel raakt verzwakt.</li>
+    </ul>
+    <button class="btn" id="popupDicht" type="button">Begrepen, laat maar komen</button>
+  </div>
+</div>
 
 <footer>
   <div class="strip" aria-hidden="true">
@@ -375,9 +407,9 @@ var INFO = {
   meren:     { eco:2, strat:3, kost:3, weerstand:2, bezit:null, staat:'het koninkrijk Buganda en het rijk van Bunyoro',
     grond:['ivoor'], echt:'het Verenigd Koninkrijk',
     let:'Hier ontspringt de Nijl. Wie dit heeft, heeft Egypte bij de keel.' },
-  ethiopie:  { eco:1, strat:2, kost:4, weerstand:3, taai:8, bezit:null, staat:'het Ethiopische keizerrijk van Menelik II',
+  ethiopie:  { eco:1, strat:2, kost:4, weerstand:3, taai:8, bezit:'vrij', natie:true, kort:'ETH', staat:'het Ethiopische keizerrijk van Menelik II',
     grond:['koffie'], echt:'niemand: Ethiopië bleef onafhankelijk',
-    let:'Een keizerrijk met een eigen leger. Op papier makkelijk te claimen.' },
+    let:'Geen leeg gebied maar een bestaand keizerrijk met een eigen leger en een eigen kerk. In Berlijn werd erover gepraat alsof het te verdelen viel. Dat viel het niet.' },
   rodezee:   { eco:0, strat:3, kost:2, weerstand:1, bezit:null, staat:'de Afar-sultanaten',
     grond:['zout'], echt:'Italië en Frankrijk',
     let:'Kaal en heet, maar het ligt aan de vaarroute door het Suezkanaal naar Indië.' },
@@ -453,8 +485,8 @@ var MACHTEN = [
         check:function(s){ return s.van('kameroen') === 'du'; } },
       { t:'Krijg voet aan de grond in Oost-Afrika', p:4, wijst:['oost','meren'],
         check:function(s){ return s.van('oost') === 'du'; } },
-      { t:'Houd het evenwicht: niemand mag meer dan vijf gebieden werkelijk bezetten', p:5,
-        check:function(s){ return s.meeste() <= 5; } }
+      { t:'Houd het evenwicht: niemand mag meer dan acht gebieden hebben', p:5,
+        check:function(s){ return s.meeste() <= 8; } }
     ] },
   { id:'be', naam:'Leopold II', wie:'koning van België, voor zichzelf', kleur:'#EA9836', invloed:15,
     inzet:'Leopold onderhandelt niet namens België maar voor zijn eigen vereniging. Hij wil het Congobekken, en internationale erkenning.',
@@ -519,9 +551,9 @@ var GEBEURTENISSEN = [
   kan:function(sp){ return true; },
   doe:function(sp){
     var had = sp.eigenaar('ethiopie');
-    sp.bevrijd('ethiopie'); sp.weerstand('ethiopie', 1);
+    sp.bevrijdNatie('ethiopie'); sp.weerstand('ethiopie', 1);
     return 'Het leger van keizer Menelik II verslaat een Italiaans invasieleger bij Adwa. ' +
-      (had ? naamVan(had) + ' raakt zijn claim kwijt. ' : '') +
+      (had && had !== 'vrij' ? naamVan(had) + ' wordt eruit gegooid. ' : '') +
       'Ethiopi\u00eb blijft als enige Afrikaanse staat onafhankelijk, en dat blijft zo.'; } },
 
 { id:'jameson', soort:'echt', jaar:1896, naam:'De Jameson-inval mislukt',
@@ -633,24 +665,27 @@ var GEBEURTENISSEN = [
 var ANDEREN = { ot:'het Ottomaanse Rijk', po:'Portugal', vrij:'een onafhankelijke staat' };
 
 /* ---------------------------------------------------------------------------
-   De krachtmeter. Aanvallen is geen kwestie van betalen maar van gokken: je
-   zet invloed in, allebei gooien een dobbelsteen, en de hoogste optelsom wint.
-   Zo voelt een leerling dat een verovering mis kon gaan, en dat gebeurde ook.
+   KRACHT EN KANS
+   Zodra Afrika verdeeld is heeft elk gebied een kracht. Aanvallen kan alleen op
+   een buurgebied, en de kans hangt af van het verschil in kracht: gelijk is
+   vijftig procent, en elk punt verschil scheelt tien procent.
    --------------------------------------------------------------------------- */
-function verdediging(info, soortVerdediger){
-  var b = info.weerstand * 2;        /* de mensen die er wonen */
-  if (soortVerdediger === 'papier') b += 2;   /* een ander heeft er alleen een claim */
-  if (soortVerdediger === 'echt') b += 5;     /* daar staan werkelijk troepen */
-  if (info.taai) b += info.taai;     /* Ethiopië heeft een echt leger */
-  return b;
+var KANS_PER_PUNT = 10;
+/* Hoeveel troepen je hoogstens mee kunt sturen. Zonder plafond koopt de rijkste
+   speler elke aanval en is de kracht van het gebied niet meer belangrijk. */
+var MAX_TROEPEN = 3;
+/* Verdedigen is makkelijker dan aanvallen: je kent het terrein en je hoeft er
+   niet eerst heen. Zonder dit voordeel slaagt bijna elke aanval en wisselt de
+   kaart elke beurt van kleur. */
+var THUISVOORDEEL = 2;
+var KANS_MIN = 5, KANS_MAX = 95;   /* er blijft altijd een kleine kans, beide kanten op */
+
+function winkansUitVerschil(aanval, verdedig){
+  var k = 50 + KANS_PER_PUNT * (aanval - verdedig);
+  return Math.max(KANS_MIN, Math.min(KANS_MAX, k));
 }
-/* Kans dat aanval + dobbelsteen hoger uitkomt dan verdediging + dobbelsteen. */
-function winkans(aanval, verdedig){
-  var raak = 0;
-  for (var a = 1; a <= 6; a++) for (var v = 1; v <= 6; v++) if (aanval + a > verdedig + v) raak++;
-  return raak / 36;
-}
-function dobbel(){ return 1 + Math.floor(Math.random() * 6); }
+/* Een worp van 1 tot en met 100. Is hij niet hoger dan je kans, dan win je. */
+function worp100(){ return 1 + Math.floor(Math.random() * 100); }
 
 /* ============================================================================
    ENGINE
@@ -659,11 +694,11 @@ function dobbel(){ return 1 + Math.floor(Math.random() * 6); }
   'use strict';
   document.getElementById('jaar').textContent = new Date().getFullYear();
 
-  /* De conferentie duurt zolang er nog iets te verdelen valt. Pas als alle vrije
-   gebieden op papier vergeven zijn, begint de strijd om ze ook echt te bezetten.
-   MAXRONDES is alleen een noodrem als iedereen blijft passen. */
-var MAXRONDES = 9;
-var VEROVER_RONDES = 4;      /* de jaren erna, toen de kaart waargemaakt moest worden */
+  /* De conferentie kent geen rondes. Hij duurt tot heel Afrika op papier verdeeld
+   is, hoeveel beurten dat ook kost. NOODREM grijpt alleen in als alle vier de
+   spelers eindeloos blijven passen, want dan zou het spel nooit aflopen. */
+var NOODREM = 30;
+var VEROVER_RONDES = 3;      /* de jaren erna, toen de kaart waargemaakt moest worden */
 var VEROVER_INVLOED = 8;     /* troepen en geld voor die tweede fase */
 /* Elkaar aanvallen was duur en riskant, en gebeurde in Afrika bijna nooit.
    Bij Fashoda stonden Britten en Fransen tegenover elkaar en het werd alsnog
@@ -677,9 +712,7 @@ var SPAREN = 2;
   var mens = {};           /* mogendheid -> speelt een leerling mee */
   var beurt = 0, ronde = 1, gekozen = null, klaar = false, regels = [], fase = 'conferentie';
   var eindRonde = 0, inzet = 1, laatsteWorp = null;
-  /* Wat op papier van je is, is nog niet van je. echtBezet houdt bij welke
-     claims ook werkelijk bezet zijn. Alleen die tellen aan het eind mee. */
-  var echtBezet = {}, verlorenClaims = [];
+
 
   var elKaart = document.getElementById('kaartvak'),
       elSpel  = document.getElementById('scherm-spel'),
@@ -700,23 +733,57 @@ var SPAREN = 2;
     return 1;
   }
 
-  /* Wie verdedigt dit gebied: niemand, een claim op papier, of echte troepen? */
-  function soortVerdediger(g, doorWie){
-    var e = bezit[g];
-    if (!e || e === doorWie) return echtBezet[g] ? 'echt' : 'leeg';
-    return echtBezet[g] ? 'echt' : 'papier';
+  /* ---------- kracht ----------
+     Twee basispunten, plus de weerstand van de mensen die er wonen, plus een
+     punt voor elk buurgebied van dezelfde eigenaar. Een aaneengesloten rijk
+     verdedigt zichzelf, losse vlekken zijn kwetsbaar. */
+  function kracht(g, alsVerdediger){
+    var k = 2 + INFO[g].weerstand - (INFO[g].uitgeput || 0);
+    if (alsVerdediger) k += THUISVOORDEEL;
+    if (INFO[g].taai) k += 3;                 /* Ethiopië heeft een echt leger */
+    var eig = bezit[g];
+    if (eig) (BUREN[g] || []).forEach(function(b){ if (bezit[b] === eig) k++; });
+    return Math.max(1, k);
+  }
+
+  /* Vanuit welk eigen gebied kun je dit aanvallen? Het sterkste buurgebied. */
+  function vanuitWelk(doel, machtId){
+    var beste = null;
+    (BUREN[doel] || []).forEach(function(b){
+      if (bezit[b] !== machtId) return;
+      if (!beste || kracht(b) > kracht(beste)) beste = b;
+    });
+    return beste;
+  }
+  function toonPopup(){
+    var pu = document.getElementById('popup');
+    pu.classList.remove('hide');
+    document.getElementById('popupDicht').focus({ preventScroll:true });
+  }
+  document.getElementById('popupDicht').addEventListener('click', function(){
+    document.getElementById('popup').classList.add('hide');
+  });
+
+  function naamVanGebied(id){
+    var g = KAART.gebieden.filter(function(x){ return x.id === id; })[0];
+    return g ? g.naam : id;
   }
 
   function magPakken(g, doorWie){
     var i = INFO[g];
-    if (i.onafh) return 'Dit is een onafhankelijke staat geworden: ' + i.staat + '. Hier valt niets meer te halen.';
-    if (i.vast) return 'Dit gebied hoort bij ' + naamVan(bezit[g]) + ' en blijft daar.';
     if (fase === 'conferentie'){
+      if (i.vast) return 'Dit gebied hoort bij ' + naamVan(bezit[g]) + ' en blijft daar.';
+      if (i.natie) return 'Dit is een bestaande staat met een eigen regering en leger. ' +
+        'Je kunt er in Berlijn wel over praten, maar hem niet op papier verdelen.';
       if (i.alleenLater) return 'Ottomaans gebied. Dat staat in Berlijn niet op de agenda.';
       if (bezit[g]) return 'Bezet door ' + naamVan(bezit[g]) + '. Praat het uit aan tafel.';
       return null;
     }
-    if (bezit[g] === doorWie && echtBezet[g]) return 'Dit heb je al werkelijk bezet.';
+    /* Na de verdeling: alleen buurgebieden, en niet je eigen land. */
+    if (bezit[g] === doorWie) return 'Dit is al van jou.';
+    if (i.vast) return 'Dit gebied hoort bij ' + naamVan(bezit[g]) + ' en blijft daar.';
+    if (!vanuitWelk(g, doorWie)) return 'Je kunt alleen aanvallen vanuit een gebied dat aan dit gebied grenst. ' +
+      'Je hebt hier geen buurgebied.';
     return null;
   }
   function naamVan(id){ return macht(id) ? macht(id).naam : (ANDEREN[id] || 'niemand'); }
@@ -783,6 +850,8 @@ var SPAREN = 2;
     allen: function(n){ MACHTEN.forEach(function(m){ invloed[m.id] += n; }); },
     verplaats: function(g, naar){ bezit[g] = naar; },
     bevrijd: function(g){ bezit[g] = null; },
+    /* Een bestaande staat die zijn land terugneemt blijft een staat op de kaart. */
+    bevrijdNatie: function(g){ bezit[g] = 'vrij'; },
     weerstand: function(g, d){ INFO[g].weerstand = Math.max(0, Math.min(4, INFO[g].weerstand + d)); },
     /* onafhankelijk en aanPortugal halen een gebied uit het spel */
     /* Een gebied dat zich vrijvecht wordt een echt land op de kaart, met een
@@ -863,8 +932,9 @@ var SPAREN = 2;
       INFO[k].weerstand = BEGINSTAAT[k].weerstand;
       INFO[k].vast = BEGINSTAAT[k].vast;
       delete INFO[k].onafh;
+      delete INFO[k].uitgeput;
     });
-    gehad = []; nieuwsNu = null; fase = 'conferentie'; echtBezet = {}; inzet = 1;
+    gehad = []; nieuwsNu = null; fase = 'conferentie'; inzet = 1;
     var vak = document.getElementById('nieuwsvak'); if (vak) vak.remove();
     bezit = {}; invloed = {}; regels = []; beurt = 0; ronde = 1; gekozen = null; klaar = false;
     KAART.gebieden.forEach(function(g){ bezit[g.id] = INFO[g.id].bezit || null; });
@@ -918,7 +988,7 @@ var SPAREN = 2;
       p.setAttribute('class', klas);
       p.style.fill = eig ? kleurVan(eig) : '';
       p.style.fillOpacity = eig ? '.78' : '';
-      if (t) t.textContent = eig ? kortNaam(eig) : '';
+      if (t) t.textContent = eig ? (INFO[g.id].kort || kortNaam(eig)) : '';
     });
 
     /* De buurgebieden worden na dit gebied getekend en overschilderen dan de
@@ -934,12 +1004,24 @@ var SPAREN = 2;
 
   /* Laat een paar gebieden even oplichten, zodat je ziet waar een doel over gaat. */
   function wijsAan(lijst){
+    var svg = document.querySelector('#kaartvak svg');
+    if (!svg) return;
+    /* Oude aanwijzers weg, anders stapelen ze op bij snel achter elkaar tikken. */
+    Array.prototype.slice.call(svg.querySelectorAll('.wijzer2')).forEach(function(x){ x.remove(); });
+
+    var gemaakt = [];
     lijst.forEach(function(gid){
-      var p = document.getElementById('kaartvak-' + gid);
-      if (!p) return;
-      p.classList.add('wijs');
-      setTimeout(function(){ p.classList.remove('wijs'); }, 1800);
+      var g = KAART.gebieden.filter(function(x){ return x.id === gid; })[0];
+      if (!g || !g.d) return;
+      /* Een kopie bovenop de kaart, want de rand van het gebied zelf wordt
+         overtekend door de buren die erna komen. */
+      var kopie = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      kopie.setAttribute('class', 'wijzer2');
+      kopie.setAttribute('d', g.d);
+      svg.appendChild(kopie);
+      gemaakt.push(kopie);
     });
+    setTimeout(function(){ gemaakt.forEach(function(x){ x.remove(); }); }, 1900);
   }
 
   function kortNaam(id){
@@ -958,10 +1040,22 @@ var SPAREN = 2;
     document.getElementById('beurtInzet').textContent = m.inzet;
     document.getElementById('mInvloed').textContent = invloed[m.id];
     document.getElementById('mGebied').textContent = stand.aantal(m.id);
-    document.getElementById('mRonde').textContent = fase === 'conferentie'
-      ? String(ronde) : ronde + ' van ' + eindRonde;
+    /* Tijdens de conferentie is een rondenummer nietszeggend: hij loopt tot alles
+       verdeeld is. Het aantal gebieden dat nog op tafel ligt zegt veel meer. */
+    var meter = document.getElementById('mRonde');
+    var label = meter.parentNode.querySelector('span');
+    if (fase === 'conferentie'){
+      meter.textContent = KAART.gebieden.filter(function(g){
+        var i = INFO[g.id];
+        return !i.vast && !i.natie && !i.alleenLater && !bezit[g.id];
+      }).length;
+      label.textContent = 'nog te verdelen';
+    } else {
+      meter.textContent = (eindRonde - ronde + 1);
+      label.textContent = (eindRonde - ronde + 1) === 1 ? 'laatste ronde' : 'rondes over';
+    }
     document.getElementById('faseLabel').textContent = fase === 'conferentie'
-      ? 'de conferentie: lijnen op de kaart'
+      ? 'de conferentie loopt tot heel Afrika op papier verdeeld is'
       : 'na de conferentie: effectieve bezetting';
     document.getElementById('faseLabel').className = 'fasebalk' + (fase === 'verovering' ? ' oorlog' : '');
     document.getElementById('kaartvak').classList.toggle('later', fase === 'verovering');
@@ -997,7 +1091,7 @@ var SPAREN = 2;
   function nogTeVerdelen(){
     return KAART.gebieden.some(function(g){
       var i = INFO[g.id];
-      return !i.vast && !i.alleenLater && !bezit[g.id];
+      return !i.vast && !i.natie && !i.alleenLater && !bezit[g.id];
     });
   }
 
@@ -1009,7 +1103,7 @@ var SPAREN = 2;
     if (fase === 'conferentie'){
       /* De conferentie is klaar zodra alle vrije gebieden vergeven zijn. Blijft
          iedereen passen, dan grijpt de noodrem in. */
-      if (!nogTeVerdelen() || ronde > MAXRONDES){ startVerovering(); return; }
+      if (!nogTeVerdelen() || ronde > NOODREM){ startVerovering(); return; }
       if (nieuweRonde) nieuwsRonde();
       nieuweBeurt();
       return;
@@ -1026,21 +1120,10 @@ var SPAREN = 2;
     eindRonde = ronde + VEROVER_RONDES - 1;
     MACHTEN.forEach(function(m){ invloed[m.id] += VEROVER_INVLOED; });
 
-    /* Waar nauwelijks weerstand was, volstond een vlag en een handjevol
-       ambtenaren. Die gebieden tellen meteen als bezet, anders zou je vier
-       rondes bezig zijn met plekken waar niemand tegen was. Wat een land al
-       voor de conferentie had, was er natuurlijk ook al. */
-    var meteen = 0;
-    KAART.gebieden.forEach(function(g){
-      var e = bezit[g.id];
-      if (!e || !macht(e)) return;
-      if (INFO[g.id].weerstand <= 1 || INFO[g.id].bezit === e){ echtBezet[g.id] = true; meteen++; }
-    });
-    noteer('<b>De conferentie is gesloten.</b> Op papier staat nu wie waar mag zijn. ' +
-      'In Berlijn is afgesproken dat een claim pas telt als je er ook echt zit, dus nu moet ' +
-      'iedereen het waarmaken. Elke mogendheid krijgt ' + VEROVER_INVLOED + ' erbij voor troepen en geld. ' +
-      meteen + ' gebieden tellen meteen als bezet, omdat daar geen noemenswaardig verzet was. ' +
-      'De rest moet je halen, en wat je aan het eind niet bezet hebt ben je kwijt.');
+    noteer('<b>Afrika is verdeeld.</b> Vanaf nu kun je elkaar aanvallen, maar alleen ' +
+      'gebieden die grenzen aan iets van jou. Elk gebied heeft een kracht, en het verschil ' +
+      'bepaalt je kans. Elke mogendheid krijgt ' + VEROVER_INVLOED + ' invloed voor troepen.');
+    toonPopup();
     nieuwsRonde();
     nieuweBeurt();
   }
@@ -1057,55 +1140,51 @@ var SPAREN = 2;
      verdediger gooit er ook een. De hoogste optelsom wint. De kans staat er
      vooraf bij, zodat het een keuze is en geen verrassing. */
   function bouwKrachtmeter(vak, m, id, g, i, eig){
-    var soort = soortVerdediger(id, m.id);
-    var verd = verdediging(i, soort);
-    var eigen = (eig === m.id);
-    inzet = Math.max(1, Math.min(inzet, invloed[m.id]));
+    var vanuit = vanuitWelk(id, m.id);
+    if (!vanuit) return;
+    var eigenKracht = kracht(vanuit), doelKracht = kracht(id, true);
+    inzet = Math.max(0, Math.min(inzet, Math.min(invloed[m.id], MAX_TROEPEN)));
 
     var doos = document.createElement('div');
     doos.className = 'kracht';
     doos.innerHTML =
-      '<div class="krachtrij"><span>' + (eigen ? 'Nog te bezetten' : 'Verdediging') + '</span><b>' + verd + '</b></div>' +
-      '<p class="krachtuitleg">' +
-        (eigen
-          ? 'Dit is jouw claim, maar alleen op papier. Weerstand ' + i.weerstand +
-            ' maal twee van ' + i.staat + '.'
-          : 'Weerstand ' + i.weerstand + ' maal twee' +
-            (soort === 'echt' ? ', plus 5 voor de troepen van ' + naamVan(eig) + '.'
-             : soort === 'papier' ? ', plus 2 voor de claim van ' + naamVan(eig) + '.' : '.')) +
-        (i.taai ? ' Plus ' + i.taai + ', want hier staat een echt leger.' : '') + '</p>' +
+      '<div class="strijd">' +
+        '<div><span>Jij, vanuit ' + naamVanGebied(vanuit) + '</span><b id="kA">' + eigenKracht + '</b></div>' +
+        '<div class="tegen">tegen</div>' +
+        '<div><span>' + (eig && macht(eig) ? naamVan(eig) : i.staat) + '</span><b>' + doelKracht + '</b></div>' +
+      '</div>' +
       '<div class="tel"><button type="button" id="inzetMin">\u2212</button>' +
       '<b id="inzetGetal">' + inzet + '</b>' +
-      '<button type="button" id="inzetPlus">+</button><span>invloed inzetten</span></div>' +
+      '<button type="button" id="inzetPlus">+</button><span>troepen erbij, hoogstens ' + MAX_TROEPEN + '</span></div>' +
       '<div class="meter"><i id="meterVul"></i></div>' +
       '<p class="kans" id="kansTekst"></p>';
     vak.appendChild(doos);
-
-    function bij(){
-      document.getElementById('inzetGetal').textContent = inzet;
-      var kans = winkans(inzet, verd);
-      document.getElementById('meterVul').style.width = Math.round(kans * 100) + '%';
-      document.getElementById('meterVul').className = kans >= .6 ? 'goed' : (kans >= .35 ? 'twijfel' : 'slecht');
-      document.getElementById('kansTekst').textContent =
-        'Kans dat je wint: ongeveer ' + Math.round(kans * 100) + ' procent. ' +
-        'Je inzet ben je hoe dan ook kwijt.';
-      knopje.textContent = (eigen ? 'Bezet met ' : 'Val aan met ') + inzet + ' invloed';
-    }
-    doos.querySelector('#inzetMin').addEventListener('click', function(){
-      inzet = Math.max(1, inzet - 1); bij();
-    });
-    doos.querySelector('#inzetPlus').addEventListener('click', function(){
-      inzet = Math.min(invloed[m.id], inzet + 1); bij();
-    });
 
     var knopje = document.createElement('button');
     knopje.className = 'btn klein'; knopje.type = 'button';
     knopje.addEventListener('click', function(){ valAan(m.id, id, inzet); });
     vak.appendChild(knopje);
+
+    function bij(){
+      var aanval = eigenKracht + inzet;
+      var kans = winkansUitVerschil(aanval, doelKracht);
+      document.getElementById('inzetGetal').textContent = inzet;
+      document.getElementById('kA').textContent = aanval;
+      document.getElementById('meterVul').style.width = kans + '%';
+      document.getElementById('meterVul').className = kans >= 60 ? 'goed' : (kans >= 40 ? 'twijfel' : 'slecht');
+      document.getElementById('kansTekst').textContent =
+        'Kracht ' + aanval + ' tegen ' + doelKracht + ' (daar zit ' + THUISVOORDEEL +
+        ' thuisvoordeel in), verschil ' + (aanval - doelKracht) +
+        '. Kans om te winnen: ' + kans + ' procent.' +
+        (inzet ? ' Die ' + inzet + ' troepen ben je hoe dan ook kwijt.' : '');
+      knopje.textContent = 'Val aan' + (inzet ? ' met ' + inzet + ' troepen erbij' : '');
+    }
+    doos.querySelector('#inzetMin').addEventListener('click', function(){ inzet = Math.max(0, inzet - 1); bij(); });
+    doos.querySelector('#inzetPlus').addEventListener('click', function(){ inzet = Math.min(Math.min(invloed[m.id], MAX_TROEPEN), inzet + 1); bij(); });
     bij();
   }
 
-  /* Overslaan kan altijd, ook nadat je al een gebied hebt aangeklikt. Anders moet
+  /* Overslaan kan altijd, ook nadat je al een gebied hebt aangeklikt.  /* Overslaan kan altijd, ook nadat je al een gebied hebt aangeklikt. Anders moet
      je eerst je selectie ongedaan maken, en daar is geen knop voor. */
   function maakOverslaan(vak, m){
     var b = document.createElement('button');
@@ -1230,36 +1309,39 @@ var SPAREN = 2;
   /* ---------- een aanval uitvoeren ---------- */
   function valAan(machtId, gebiedId, inzetNu){
     var i = INFO[gebiedId];
-    var g = KAART.gebieden.filter(function(x){ return x.id === gebiedId; })[0];
+    var vanuit = vanuitWelk(gebiedId, machtId);
+    if (!vanuit) return;
     var eigenaar = bezit[gebiedId];
-    var eigen = (eigenaar === machtId);
-    var soort = soortVerdediger(gebiedId, machtId);
-    var verd = verdediging(i, soort);
 
-    invloed[machtId] -= inzetNu;              /* de inzet ben je hoe dan ook kwijt */
-    var wa = dobbel(), wv = dobbel();
-    var aanval = inzetNu + wa, verdedig = verd + wv;
-    var gelukt = aanval > verdedig;
+    var aanval = kracht(vanuit) + inzetNu;
+    var verdedig = kracht(gebiedId, true);
+    var kans = winkansUitVerschil(aanval, verdedig);
+    var w = worp100();
+    var gelukt = w <= kans;
 
-    var t = '<b>' + naamVan(machtId) + '</b> ' + (eigen ? 'stuurt troepen naar ' : 'valt ') +
-      g.naam + (eigen ? ' ' : ' aan ') + 'met ' + inzetNu + ' invloed. ' +
-      inzetNu + ' plus ' + wa + ' is ' + aanval + ', tegen ' + verd + ' plus ' + wv + ' is ' + verdedig + '. ';
+    invloed[machtId] -= inzetNu;
+    laatsteWorp = { worp:w, kans:kans, aanval:aanval, verdedig:verdedig, gelukt:gelukt,
+                    vanuit:naamVanGebied(vanuit), doel:naamVanGebied(gebiedId) };
+
+    var t = '<b>' + naamVan(machtId) + '</b> valt ' + naamVanGebied(gebiedId) + ' aan vanuit ' +
+      naamVanGebied(vanuit) + '. Kracht ' + kracht(vanuit) +
+      (inzetNu ? ' plus ' + inzetNu + ' troepen is ' + aanval : '') +
+      ', tegen ' + verdedig + '. Dat is ' + kans + ' procent kans. Worp: ' + w + '. ';
 
     if (gelukt){
-      if (!eigen && eigenaar && macht(eigenaar)){
+      if (eigenaar && macht(eigenaar)){
         invloed[eigenaar] += 2;
-        t += naamVan(eigenaar) + ' wordt verdreven en krijgt 2 invloed als schadeloosstelling.';
-      } else if (eigen){
-        t += 'De bezetting is een feit: deze claim telt nu echt.';
+        t += naamVan(eigenaar) + ' verliest het gebied en krijgt 2 invloed als schadeloosstelling.';
+      } else if (eigenaar === 'vrij'){
+        t += i.staat + ' is verslagen en verliest de onafhankelijkheid.';
       } else {
-        t += (i.weerstand >= 2 ? 'Het verzet van ' + i.staat + ' is gebroken.' : 'Het gebied is bezet.');
+        t += 'Het gebied is bezet.';
       }
       bezit[gebiedId] = machtId;
-      echtBezet[gebiedId] = true;
     } else {
-      /* Een mislukte poging waarschuwt de verdediger: volgende keer is het zwaarder. */
-      i.weerstand = Math.min(4, i.weerstand + 1);
-      t += 'Het mislukt. De inzet is weg en ' + i.staat + ' is nu beter voorbereid.';
+      /* Een mislukte aanval put het gebied uit waar je vandaan kwam. */
+      INFO[vanuit].uitgeput = (INFO[vanuit].uitgeput || 0) + 1;
+      t += 'De aanval mislukt. De troepen zijn weg en ' + naamVanGebied(vanuit) + ' is verzwakt.';
       if (i.taai) t += ' Dit is wat Itali\u00eb in 1896 bij Adwa overkwam.';
     }
     noteer(t);
@@ -1366,16 +1448,6 @@ var SPAREN = 2;
   /* ---------- einde ---------- */
   function toonEinde(){
     klaar = true;
-    /* Effectieve bezetting: wat je nooit hebt bezet, ben je kwijt. Waar een
-       sterke staat zat wordt het gebied onafhankelijk, de rest blijft leeg. */
-    verlorenClaims = [];
-    KAART.gebieden.forEach(function(g){
-      var e = bezit[g.id];
-      if (!e || !macht(e) || echtBezet[g.id]) return;
-      verlorenClaims.push({ macht:e, naam:g.naam });
-      if (INFO[g.id].weerstand >= 3){ bezit[g.id] = 'vrij'; INFO[g.id].onafh = true; }
-      else bezit[g.id] = null;
-    });
     elSpel.classList.add('hide'); elEinde.classList.remove('hide');
     tekenKaart('eindKaart', true);
 
@@ -1427,17 +1499,6 @@ var SPAREN = 2;
           var g = GEBEURTENISSEN.filter(function(x){ return x.id === id; })[0];
           return g ? g.naam + ' (' + g.jaar + (g.soort === 'watals' ? ', niet echt gebeurd' : '') + ')' : id;
         }).join('. ') + '.</p>' : '') +
-      (verlorenClaims.length ? (function(){
-        var per = {};
-        verlorenClaims.forEach(function(k){ (per[k.macht] = per[k.macht] || []).push(k.naam); });
-        var t2 = '<h3>Claims die nooit zijn waargemaakt</h3><p>';
-        Object.keys(per).forEach(function(mid){
-          t2 += '<b>' + naamVan(mid) + '</b> tekende ' + per[mid].join(', ') +
-                ' wel op de kaart, maar stuurde er nooit iemand heen. ';
-        });
-        return t2 + 'Die claims tellen niet mee. Dat is wat effectieve bezetting betekende: ' +
-          'een lijn op papier was niets waard.</p>';
-      })() : '') +
       '<h3>Wat de tweede ronde liet zien</h3>' +
       '<p>In Berlijn werd afgesproken dat een claim pas telt als je er ook echt zit. Dat heet ' +
       '<b>effectieve bezetting</b>, en het is de reden dat de lijnen op papier binnen twintig jaar ' +
