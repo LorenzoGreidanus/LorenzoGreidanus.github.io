@@ -39,7 +39,10 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .start .lead{max-width:62ch;margin:0 auto;color:var(--muted)}
 .hoe{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:12px;margin:24px auto 0;max-width:1050px;text-align:left}
 .hoe div{background:#fff;border:1px solid rgba(20,34,76,.10);border-radius:18px;padding:14px 16px;display:flex;gap:11px;align-items:flex-start}
-.hoe b{flex:none;width:26px;height:26px;border-radius:9px;background:var(--vista);color:#fff;display:grid;place-items:center;font-size:.85rem}
+/* Alleen het nummer vooraan is een rondje. Zonder deze afbakening werd elk
+   vetgedrukt woord in de uitleg ook een blauwe cirkel van 26 pixels. */
+.hoe div>b{flex:none;width:26px;height:26px;border-radius:9px;background:var(--vista);color:#fff;display:grid;place-items:center;font-size:.85rem}
+.hoe span b{font-weight:600;color:var(--ink)}
 .hoe span{font-size:.85rem;color:var(--muted)}
 .btn{display:inline-block;border:none;background:var(--crab);color:#fff;font-weight:600;padding:14px 30px;border-radius:999px;
   box-shadow:0 9px 0 rgba(20,34,76,.10);margin-top:20px;transition:transform .16s var(--ease)}
@@ -50,6 +53,16 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .naamveld input{border:2px solid rgba(20,34,76,.14);border-radius:16px;padding:13px 18px;font-size:1.1rem;
   font-family:'Caveat',cursive;font-weight:600;background:#fff;color:inherit;text-align:center;min-width:260px}
 .naamveld input:focus{outline:none;border-color:var(--ocean)}
+#bewaarlijst:empty{display:none}
+#bewaarlijst{margin-top:26px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
+#bewaarlijst .eyebrow{width:100%;margin-bottom:2px}
+.bewaard{display:inline-flex;align-items:stretch;background:#fff;border:1.5px solid rgba(20,34,76,.14);
+  border-radius:999px;overflow:hidden}
+.bewaard button{border:none;background:none;padding:9px 8px 9px 16px;font-size:.88rem;font-weight:600}
+.bewaard button:hover{color:var(--ocean)}
+.bewaard small{margin-left:7px;font-weight:400;color:var(--muted);font-size:.76rem}
+.bewaard .wegknop{padding:9px 14px 9px 8px;color:var(--muted);font-size:1rem}
+.bewaard .wegknop:hover{color:var(--fout)}
 
 /* ---------- de werkbank ---------- */
 .bank{display:grid;grid-template-columns:216px minmax(0,1fr) 268px;gap:12px;padding:10px 0 50px;align-items:start}
@@ -164,7 +177,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
     <div><b>1</b><span>Begin met de muur: los stuk voor stuk, of in een keer met de knop Muur rondom. Kies daarna links een onderdeel en klik op het vel.</span></div>
     <div><b>2</b><span>Sleep iets wat er al staat om het te verplaatsen. Tik erop en je kunt het draaien, spiegelen, groter maken of weghalen.</span></div>
     <div><b>3</b><span>De stadsraad rechts vinkt af wat er klopt, en legt uit wat er nog niet klopt.</span></div>
-    <div><b>4</b><span>Klaar? Sla je stad op als afbeelding en lever hem in.</span></div>
+    <div><b>4</b><span>Met <b>Bewaren</b> kun je volgende les verder. Met <b>Afbeelding</b> lever je je plattegrond in.</span></div>
   </div>
 
   <div class="naamveld">
@@ -173,6 +186,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
   </div>
 
   <button class="btn" id="startBtn" type="button">Pak een leeg vel</button>
+  <div id="bewaarlijst"></div>
 </section>
 
 <section class="wrap hide" id="scherm-bank">
@@ -195,7 +209,8 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
         <button type="button" id="potloodBtn">Potlood: schetsig</button>
         <button type="button" id="terug">Laatste weg</button>
         <button type="button" id="leeg">Alles wissen</button>
-        <button type="button" id="bewaar">Sla op als afbeelding</button>
+        <button type="button" id="bewaarStadBtn">Bewaren</button>
+        <button type="button" id="bewaar">Afbeelding</button>
       </div>
     </div>
 
@@ -243,7 +258,7 @@ var ONDERDELEN = [
   { nr:9,  id:'smid',      naam:'Smid',                soort:'gebouw',
     uit:'Vuur en herrie. Daarom stond hij liever niet midden tussen de huizen.' },
   { nr:10, id:'straat',    naam:'Straat',              soort:'lijn',
-    uit:'Verbind de poorten met de markt. Klik meerdere keren voor een langere straat.' },
+    uit:'Verbind de poorten met de markt. Klik meerdere keren voor een langere straat. Niet verplicht, maar het maakt je plattegrond veel leesbaarder.' },
   { nr:11, id:'haven',     naam:'Haven',               soort:'gebouw',
     uit:'Alleen aan het water. Over land vervoeren was tien keer zo duur.' },
   { nr:12, id:'bakker',    naam:'Bakker',              soort:'gebouw',
@@ -296,10 +311,6 @@ var REGELS = [
     check:function(st){ return st.dichtbij('spinners','wevers', 178); },
     ja:'Een echte lakenbuurt. De draad hoefde niet ver.',
     nee:'Zet je spinners en wevers dichter bij elkaar. Ambachten van hetzelfde gilde klonterden samen in een buurt.' },
-  { id:'straten', wat:'Er lopen straten van de poorten naar de markt',
-    check:function(st){ return st.tel('straat') >= 4 && st.tel('poort') >= 1; },
-    ja:'Wegen die op de markt uitkomen. Daar is de stad voor gebouwd.',
-    nee:'Teken straten van je poorten naar de markt. Zonder wegen komt er niets binnen.' },
   { id:'compleet', wat:'De vier onmisbare onderdelen staan er',
     check:function(st){ return st.tel('kerk') > 0 && st.tel('markt') > 0 && st.tel('raadhuis') > 0 && st.heeftMuur(); },
     ja:'Kerk, markt, raadhuis en muur. Hiermee is het een stad en geen dorp.',
@@ -887,6 +898,70 @@ function tekenOnderdeel(o, item, geselecteerd){
 
   function melding(t){ document.getElementById('hint').innerHTML = t; }
 
+  /* ---------- steden bewaren ----------
+     In deze browser, onder de naam van de stad. Zo kan een leerling volgende
+     les verder, en kunnen er meerdere steden naast elkaar staan op een
+     computer die door een klas gedeeld wordt. */
+  var SLEUTEL = 'lg-stadsontwerp';
+  function leesAlles(){
+    try { return JSON.parse(localStorage.getItem(SLEUTEL) || '{}'); } catch (e){ return {}; }
+  }
+  function schrijfAlles(d){
+    try { localStorage.setItem(SLEUTEL, JSON.stringify(d)); return true; } catch (e){ return false; }
+  }
+  function bewaarStad(){
+    var naam = (stadnaam || '').trim();
+    if (!naam){ melding('Geef je stad eerst een naam.'); return; }
+    if (!stukken.length){ melding('Er staat nog niets op het vel om te bewaren.'); return; }
+    var alles = leesAlles();
+    alles[naam] = { op:Date.now(), potlood:potloodNu, stukken:stukken, teller:teller };
+    if (schrijfAlles(alles)){
+      melding('<b>' + naam + '</b> is bewaard op deze computer. Met <b>Openen</b> haal je hem terug.');
+    } else {
+      melding('Bewaren lukt niet in deze browser. Sla je stad op als afbeelding.');
+    }
+    tekenBewaarlijst();
+  }
+  function openStad(naam){
+    var d = leesAlles()[naam];
+    if (!d) return;
+    stadnaam = naam;
+    stukken = (d.stukken || []).map(function(x){ return {
+      i:x.i, id:x.id, x:x.x, y:x.y, v:x.v || 0, r:x.r || 0, m:!!x.m, s:x.s || 1 }; });
+    teller = d.teller || (stukken.reduce(function(a, x){ return Math.max(a, x.i); }, 0) + 1);
+    if (d.potlood != null){ potloodNu = d.potlood; WOBBEL = POTLOOD[potloodNu].w;
+      document.getElementById('potloodBtn').textContent = 'Potlood: ' + POTLOOD[potloodNu].naam.toLowerCase(); }
+    gekozenStuk = null; gekozen = null;
+    kijk.x = 0; kijk.y = 0; kijk.b = VEL.breed;
+    document.getElementById('scherm-start').classList.add('hide');
+    document.getElementById('scherm-bank').classList.remove('hide');
+    tekenVel(); tekenLegenda(); tekenRaad(); tekenGereedschap(); tekenBewaarlijst();
+    melding('<b>' + naam + '</b> staat weer op het vel, met ' + stukken.length + ' onderdelen.');
+  }
+  function tekenBewaarlijst(){
+    var vak = document.getElementById('bewaarlijst');
+    if (!vak) return;
+    var alles = leesAlles();
+    var namen = Object.keys(alles).sort(function(a, b){ return (alles[b].op || 0) - (alles[a].op || 0); });
+    if (!namen.length){ vak.innerHTML = ''; return; }
+    vak.innerHTML = '<p class="eyebrow">bewaarde steden</p>' + namen.map(function(n){
+      return '<span class="bewaard"><button type="button" data-open="' + n + '">' + n +
+        '<small>' + (alles[n].stukken || []).length + '</small></button>' +
+        '<button type="button" class="wegknop" data-weg="' + n + '" aria-label="' + n + ' weggooien">&times;</button></span>';
+    }).join('');
+    Array.prototype.forEach.call(vak.querySelectorAll('[data-open]'), function(b){
+      b.addEventListener('click', function(){ openStad(b.getAttribute('data-open')); });
+    });
+    Array.prototype.forEach.call(vak.querySelectorAll('[data-weg]'), function(b){
+      b.addEventListener('click', function(){
+        var n = b.getAttribute('data-weg');
+        var alles2 = leesAlles(); delete alles2[n]; schrijfAlles(alles2);
+        tekenBewaarlijst();
+        melding('<b>' + n + '</b> is weggegooid.');
+      });
+    });
+  }
+
   /* Met de pijltjestoetsen schuif je een gekozen stuk pixel voor pixel. Slepen
      is niet nauwkeurig genoeg om een poort precies in de muur te zetten. */
   document.addEventListener('keydown', function(e){
@@ -1191,6 +1266,8 @@ function tekenOnderdeel(o, item, geselecteerd){
 
   /* Opslaan als afbeelding: de svg naar een canvas en dan downloaden. Zo werkt
      het ook zonder internet, want er gaat niets naar buiten. */
+  document.getElementById('bewaarStadBtn').addEventListener('click', bewaarStad);
+
   document.getElementById('bewaar').addEventListener('click', function(){
     var svg = document.getElementById('stadsvg');
     /* Het hele vel opslaan, ook het deel dat buiten beeld valt. */
@@ -1226,8 +1303,11 @@ function tekenOnderdeel(o, item, geselecteerd){
   });
   document.getElementById('opnieuwBtn').addEventListener('click', function(){
     elBank.classList.add('hide'); elStart.classList.remove('hide');
+    tekenBewaarlijst();
     scrollTo({top:0, behavior:'auto'});
   });
+
+  tekenBewaarlijst();
 
   document.getElementById('startBtn').addEventListener('click', function(){
     stadnaam = (document.getElementById('stadnaam').value || 'Mijn stad').trim();
