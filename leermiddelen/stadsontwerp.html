@@ -89,12 +89,16 @@ body.groot .hint{font-size:1rem}
 body.groot .gereed button{font-size:.95rem;padding:11px 17px}
 body.groot .raadscore b{font-size:2.6rem}
 .velvak.plaatsen{cursor:crosshair}
+.velvak{touch-action:none;user-select:none;-webkit-user-select:none}
+.stuk{cursor:grab}
+.stuk:active{cursor:grabbing}
 .stadsnaam{font-family:'Caveat',cursive;font-size:34px;fill:var(--inkt)}
 .stuk{cursor:pointer}
 .stuk:hover{opacity:.75}
 .stukgereed{display:flex;gap:7px;flex-wrap:wrap;align-items:center;padding:10px 13px;background:#f4f7ff;
   border-top:2px solid var(--ocean)}
 .stukgereed b{font-size:.86rem;margin-right:4px}
+.stukgereed .tip{font-size:.76rem;color:var(--muted);margin-right:6px}
 .stukgereed button{border:1.5px solid rgba(32,78,207,.3);background:#fff;border-radius:11px;padding:7px 12px;
   font-size:.81rem;font-weight:600}
 .stukgereed button:hover{border-color:var(--ocean);color:var(--ocean)}
@@ -142,7 +146,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 
   <div class="hoe">
     <div><b>1</b><span>Begin met de muur: los stuk voor stuk, of in een keer met de knop Muur rondom. Kies daarna links een onderdeel en klik op het vel.</span></div>
-    <div><b>2</b><span>Tik op iets wat er al staat om het te draaien, te spiegelen, groter te maken of weg te halen.</span></div>
+    <div><b>2</b><span>Sleep iets wat er al staat om het te verplaatsen. Tik erop en je kunt het draaien, spiegelen, groter maken of weghalen.</span></div>
     <div><b>3</b><span>De stadsraad rechts vinkt af wat er klopt, en legt uit wat er nog niet klopt.</span></div>
     <div><b>4</b><span>Klaar? Sla je stad op als afbeelding en lever hem in.</span></div>
   </div>
@@ -232,7 +236,9 @@ var ONDERDELEN = [
   { nr:15, id:'muur',      naam:'Stadsmuur',           soort:'gebouw',
     uit:'Zet stukken muur naast elkaar tot een ring. Draai ze bij zodat ze aansluiten, of gebruik de knop Muur rondom.' },
   { nr:16, id:'poort',     naam:'Stadspoort',          soort:'gebouw',
-    uit:'Waar de wegen de muur kruisen. Hier werd tol geheven.' }
+    uit:'Waar de wegen de muur kruisen. Hier werd tol geheven.' },
+  { nr:17, id:'woonhuis',  naam:'Woonhuis',            soort:'gebouw', extra:true,
+    uit:'Een gewoon huis. Hier woonden de mensen die in al die werkplaatsen werkten. Zet er gerust een hele straat vol.' }
 ];
 
 /* De stadsraad kijkt mee. Elke regel is iets wat een middeleeuwse stad echt
@@ -307,6 +313,7 @@ var VARIANTNAMEN = {
   molen:['standerdmolen','torenmolen','molen op berg'],
   slager:['met luifel','met haken','met hakblok'],
   muur:['recht stuk','hoektoren','met steunberen'],
+  woonhuis:['met schoorsteen','trapgevel','vakwerk'],
   poort:['een toren','twee torens','met ophaalbrug']
 };
 
@@ -429,6 +436,27 @@ const BUILD = {
     else if (v === 1) { shell(p, {x:36, w:64, h:48, d:22, rise:22, roof:'gable'}); p.wins(44, GY-38, 3, 5, 14, 16); p.l(106, GY, 106, GY-36, 1.9); p.l(140, GY, 140, GY-36, 1.9); p.l(106, GY-36, 140, GY-36, 1.9); p.r(108, GY-33, 30, 24, '#FCDED6', 1.4); p.hatchLines(108, GY-33, 30, 24, 6); }
     else { shell(p, {x:26, w:54, h:50, d:20, rise:24, roof:'gable'}); shell(p, {x:80, w:48, h:44, d:20, rise:20, roof:'gable'}); p.wins(34, GY-40, 3, 4, 12, 15); p.wins(86, GY-34, 2, 6, 14, 14); }
   },
+  woonhuis(p, v){
+    /* Een gewoon huis om de straten mee te vullen. Drie soorten, zodat een rij
+       huizen geen rij dezelfde huizen wordt. */
+    if (v === 0) {
+      shell(p, {x:48, w:64, h:44, d:22, rise:24, roof:'gable'});
+      p.wins(58, GY-34, 2, 12, 14, 14);
+      p.deur(72, GY-24, 16, 24);
+      p.schoorsteen(96, GY-70, 8, 12);
+    } else if (v === 1) {
+      shell(p, {x:52, w:56, h:52, d:20, rise:18, roof:'step'});
+      p.wins(60, GY-44, 2, 10, 14, 14);
+      p.win(60, GY-26, 14, 14);
+      p.deur(84, GY-22, 14, 22);
+    } else {
+      shell(p, {x:44, w:72, h:38, d:24, rise:22, roof:'gable', balken:true});
+      p.wins(54, GY-28, 3, 6, 12, 14);
+      p.deur(96, GY-22, 14, 22);
+      p.rook(104, GY-64);
+      p.schoorsteen(98, GY-60, 7, 10);
+    }
+  },
   spinners(p, v){
     if (v === 0) { shell(p, {x:54, w:52, h:38, d:20, rise:22, roof:'gable'}); p.win(60, GY-28, 14, 14); p.deur(84, GY-22, 14, 22); p.c(122, GY-12, 11); p.l(122, GY-23, 122, GY-1, 1); p.l(111, GY-12, 133, GY-12, 1); p.l(122, GY-12, 132, GY+2, 1.5); }
     else if (v === 1) { shell(p, {x:50, w:58, h:40, d:22, rise:20, roof:'schild'}); p.wins(58, GY-30, 2, 8, 14, 14); p.f([[112,GY-4],[126,GY-4],[124,GY-16],[114,GY-16]], '#e6dfcd', 1.5); p.f([[128,GY-2],[140,GY-2],[139,GY-12],[129,GY-12]], '#e6dfcd', 1.5); }
@@ -495,10 +523,10 @@ function defs(uid, ink, wobbel){
 /* de rivier van het bouwstenenblad hoort bij een ander vel en vervalt hier */
 
 
-var VEL = { breed:1280, hoog:820 };
+var VEL = { breed:1700, hoog:1060 };
 /* De rivier loopt van linksboven naar rechtsonder langs de stad. */
-var RIVIER = 'M -26,145 C 205,181 320,289 384,398 C 448,506 422,675 333,845';
-var RIVIER2 = 'M -26,229 C 218,259 403,350 467,452 C 531,555 512,706 435,845';
+var RIVIER = 'M -35,188 C 272,234 425,374 510,515 C 595,655 561,873 442,1090';
+var RIVIER2 = 'M -35,296 C 290,335 535,453 620,585 C 705,718 680,913 578,1090';
 
 function huisje(x, y, s, kleur){
   return '<g transform="translate(' + x + ',' + y + ') scale(' + s + ')">' +
@@ -547,16 +575,29 @@ var VORM = {
 };
 
 
+/* Waar en hoe een stuk staat. Apart gehouden, want tijdens het slepen werken
+   we alleen deze regel bij in plaats van het hele vel opnieuw te tekenen. */
+var HALFHOOG = 46;   /* halve hoogte van een doorsnee gebouw, in tekeneenheden */
+
+function transformVoor(item){
+  var sc = TEKENSCHAAL * (item.s || 1);
+  /* Het gebouw staat met zijn voet op het punt waar je klikt, maar draait om
+     zijn eigen midden. Zou hij om zijn voet draaien, dan zwiept hij bij een
+     kleine draai meteen een halve gevel opzij. */
+  return 'translate(' + item.x + ',' + (item.y - HALFHOOG * sc) + ') ' +
+         'rotate(' + (item.r || 0) + ') ' +
+         'scale(' + (item.m ? -sc : sc) + ',' + sc + ') ' +
+         'translate(' + (-CX) + ',' + (-(GY - HALFHOOG)) + ')';
+}
+
 /* Een onderdeel op het vel zetten. Het tekenvak staat met zijn grond op de
    plek waar je klikt, en kan gedraaid, gespiegeld en geschaald zijn. */
 function tekenOnderdeel(o, item, geselecteerd){
   if (o.soort === 'lijn') return '';
   var pen = new Pen('v', INKT);
   if (BUILD[o.id]) BUILD[o.id](pen, item.v || 0); else BUILD.herberg(pen, 0);
-  var sc = TEKENSCHAAL * (item.s || 1);
-  var t = 'translate(' + item.x + ',' + item.y + ') rotate(' + (item.r || 0) + ') ' +
-          'scale(' + (item.m ? -sc : sc) + ',' + sc + ') translate(' + (-CX) + ',' + (-GY) + ')';
-  return '<g class="stuk' + (geselecteerd ? ' gekozenstuk' : '') + '" data-i="' + item.i + '" transform="' + t + '">' +
+  return '<g class="stuk' + (geselecteerd ? ' gekozenstuk' : '') + '" data-i="' + item.i +
+    '" transform="' + transformVoor(item) + '">' +
     (geselecteerd ? '<rect x="6" y="' + (GY - 128) + '" width="' + (BOX - 12) + '" height="136" rx="8" ' +
        'fill="none" stroke="#204ECF" stroke-width="3" stroke-dasharray="7 5"/>' : '') +
     '<g filter="url(#pv)">' + pen.s + '</g></g>';
@@ -587,17 +628,17 @@ function tekenOnderdeel(o, item, geselecteerd){
   function tekenVel(){
     var s = '<svg id="stadsvg" viewBox="0 0 ' + VEL.breed + ' ' + VEL.hoog + '" ' +
       'xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Je ontwerp voor een middeleeuwse stad">' +
-      '<style>.stadsnaam{font-family:Caveat,cursive;font-size:44px;fill:#3b3730}</style>' +
+      '<style>.stadsnaam{font-family:Caveat,cursive;font-size:56px;fill:#3b3730}</style>' +
       defs('v', INKT, WOBBEL) +
       '<rect width="' + VEL.breed + '" height="' + VEL.hoog + '" fill="#f6f1e6"/>';
 
     /* De rivier is een dikke lijn met een randje, niet een vlak tussen twee
        krommen: dat laatste leverde twee banen op die elkaar kruisten. */
-    s += '<path d="' + RIVIER + '" fill="none" stroke="#a8c6e2" stroke-width="96" stroke-linecap="round"/>';
-    s += '<path d="' + RIVIER + '" fill="none" stroke="#cfe0f5" stroke-width="86" stroke-linecap="round"/>';
+    s += '<path d="' + RIVIER + '" fill="none" stroke="#a8c6e2" stroke-width="128" stroke-linecap="round"/>';
+    s += '<path d="' + RIVIER + '" fill="none" stroke="#cfe0f5" stroke-width="116" stroke-linecap="round"/>';
     s += '<path d="' + RIVIER + '" fill="none" stroke="#b9d2ea" stroke-width="2" stroke-dasharray="14 10" opacity=".8"/>';
-    s += '<text x="192" y="567" font-family="Caveat,cursive" font-size="32" fill="#6f93b8" ' +
-         'transform="rotate(64 192 567)">de rivier</text>';
+    s += '<text x="255" y="753" font-family="Caveat,cursive" font-size="42" fill="#6f93b8" ' +
+         'transform="rotate(64 255 753)">de rivier</text>';
 
     /* Straatstukken die dicht bij elkaar liggen worden met een band verbonden,
        zodat losse stippen vanzelf een weg worden. */
@@ -624,23 +665,73 @@ function tekenOnderdeel(o, item, geselecteerd){
       .slice().sort(function(a, b){ return a.y - b.y; })
       .forEach(function(x){ s += tekenOnderdeel(onderdeel(x.id), x, x.i === gekozenStuk); });
 
-    s += '<text class="stadsnaam" x="' + (VEL.breed - 32) + '" y="' + (VEL.hoog - 28) + '" text-anchor="end">' +
+    s += '<text class="stadsnaam" x="' + (VEL.breed - 40) + '" y="' + (VEL.hoog - 34) + '" text-anchor="end">' +
          stadnaam + '</text>';
     s += '</svg>';
     elVel.innerHTML = s;
 
+    /* Slepen met muis of vinger. Tijdens het slepen werken we alleen de
+       transformatie van dat ene stuk bij; pas als je loslaat wordt het vel
+       opnieuw getekend. Anders hapert het bij dertig gebouwen met een filter. */
     Array.prototype.forEach.call(elVel.querySelectorAll('.stuk'), function(g){
-      g.addEventListener('click', function(e){
+      g.addEventListener('pointerdown', function(e){
         e.stopPropagation();
         var i = parseInt(g.getAttribute('data-i'), 10);
-        gekozenStuk = (gekozenStuk === i) ? null : i;
-        tekenVel(); tekenGereedschap();
+        var st = stukken.filter(function(x){ return x.i === i; })[0];
+        if (!st) return;
+        var p = velPunt(e);
+        sleep = { i:i, stuk:st, el:g, px:p.x, py:p.y, ox:st.x, oy:st.y, bewogen:false };
+        if (g.setPointerCapture) { try { g.setPointerCapture(e.pointerId); } catch(x){} }
       });
     });
-    document.getElementById('stadsvg').addEventListener('click', klikOpVel);
+
+    var svg = document.getElementById('stadsvg');
+    svg.addEventListener('click', klikOpVel);
+    svg.addEventListener('pointermove', tijdensSleep);
+    svg.addEventListener('pointerup', eindSleep);
+    svg.addEventListener('pointercancel', eindSleep);
+    svg.addEventListener('pointerleave', eindSleep);
+  }
+
+  /* Waar op het vel wijst deze aanraking? */
+  function velPunt(e){
+    var svg = document.getElementById('stadsvg');
+    var r = svg.getBoundingClientRect();
+    return { x: Math.round((e.clientX - r.left) / r.width * VEL.breed),
+             y: Math.round((e.clientY - r.top) / r.height * VEL.hoog) };
+  }
+
+  var sleep = null, netGesleept = false;
+
+  function tijdensSleep(e){
+    if (!sleep) return;
+    var p = velPunt(e);
+    var dx = p.x - sleep.px, dy = p.y - sleep.py;
+    if (!sleep.bewogen && Math.hypot(dx, dy) < 5) return;   /* een tik is nog geen sleep */
+    sleep.bewogen = true;
+    sleep.stuk.x = Math.max(50, Math.min(VEL.breed - 50, sleep.ox + dx));
+    sleep.stuk.y = Math.max(70, Math.min(VEL.hoog - 50, sleep.oy + dy));
+    sleep.el.setAttribute('transform', transformVoor(sleep.stuk));
+  }
+
+  function eindSleep(){
+    if (!sleep) return;
+    var bewogen = sleep.bewogen, i = sleep.i;
+    sleep = null;
+    if (bewogen){
+      netGesleept = true;
+      setTimeout(function(){ netGesleept = false; }, 60);
+      gekozenStuk = i;
+      tekenVel(); tekenRaad(); tekenGereedschap();
+      melding('Verplaatst. Sleep verder, of gebruik de knoppen om te draaien en te spiegelen.');
+    } else {
+      gekozenStuk = (gekozenStuk === i) ? null : i;
+      tekenVel(); tekenGereedschap();
+    }
   }
 
   function klikOpVel(e){
+    if (netGesleept) return;
     if (!gekozen){ if (gekozenStuk !== null){ gekozenStuk = null; tekenVel(); tekenGereedschap(); } return; }
     var svg = document.getElementById('stadsvg');
     var r = svg.getBoundingClientRect();
@@ -662,6 +753,32 @@ function tekenOnderdeel(o, item, geselecteerd){
 
   function melding(t){ document.getElementById('hint').innerHTML = t; }
 
+  /* Met de pijltjestoetsen schuif je een gekozen stuk pixel voor pixel. Slepen
+     is niet nauwkeurig genoeg om een poort precies in de muur te zetten. */
+  document.addEventListener('keydown', function(e){
+    if (gekozenStuk === null) return;
+    var st = stukken.filter(function(x){ return x.i === gekozenStuk; })[0];
+    if (!st) return;
+    var stap = e.shiftKey ? 12 : 2;
+    var dx = 0, dy = 0;
+    if (e.key === 'ArrowLeft')  dx = -stap;
+    else if (e.key === 'ArrowRight') dx = stap;
+    else if (e.key === 'ArrowUp')    dy = -stap;
+    else if (e.key === 'ArrowDown')  dy = stap;
+    else if (e.key === 'Escape'){ gekozenStuk = null; tekenVel(); tekenGereedschap(); return; }
+    else if (e.key === 'Delete' || e.key === 'Backspace'){
+      stukken = stukken.filter(function(x){ return x.i !== st.i; });
+      gekozenStuk = null;
+      e.preventDefault();
+      tekenVel(); tekenLegenda(); tekenRaad(); tekenGereedschap();
+      return;
+    } else return;
+    e.preventDefault();
+    st.x = Math.max(50, Math.min(VEL.breed - 50, st.x + dx));
+    st.y = Math.max(70, Math.min(VEL.hoog - 50, st.y + dy));
+    tekenVel(); tekenRaad();
+  });
+
   /* Zodra je op iets tikt dat er al staat, verschijnt er gereedschap om het te
      draaien, te spiegelen, groter of kleiner te maken of weg te halen. */
   function tekenGereedschap(){
@@ -672,6 +789,7 @@ function tekenOnderdeel(o, item, geselecteerd){
     var o = onderdeel(st.id);
     vak.classList.remove('hide');
     vak.innerHTML = '<b>' + o.naam + '</b>' +
+      '<span class="tip">sleep om te verplaatsen, pijltjes voor precies</span>' +
       '<button type="button" data-d="links">Draai links</button>' +
       '<button type="button" data-d="rechts">Draai rechts</button>' +
       '<button type="button" data-d="recht">Recht zetten</button>' +
@@ -701,7 +819,8 @@ function tekenOnderdeel(o, item, geselecteerd){
     var vak = document.getElementById('legenda');
     vak.innerHTML = ONDERDELEN.map(function(o){
       var n = tel(o.id);
-      return '<button class="stukknop' + (gekozen === o.id ? ' on' : '') + (n ? ' klaar' : '') +
+      return (o.extra ? '<p class="eyebrow" style="margin:10px 0 4px">extra, niet op je werkblad</p>' : '') +
+        '<button class="stukknop' + (gekozen === o.id ? ' on' : '') + (n ? ' klaar' : '') +
         '" type="button" data-o="' + o.id + '">' +
         '<span class="nr">' + o.nr + '</span><span>' + o.naam + '</span>' +
         '<span class="tel">' + (n ? (o.eenmalig ? '\u2713' : n + 'x') : '') + '</span></button>';
@@ -762,7 +881,7 @@ function tekenOnderdeel(o, item, geselecteerd){
     aanWater: function(id){
       /* De rivier loopt links en onderaan. Grof gemeten met de twee oevers. */
       return stukken.filter(function(s){ return s.id === id; }).some(function(s){
-        return afstandTotRivier(s.x, s.y) < 76;
+        return afstandTotRivier(s.x, s.y) < 95;
       });
     },
     buitenMuur: function(id){
@@ -844,10 +963,10 @@ function tekenOnderdeel(o, item, geselecteerd){
       var x, y;
       if (t < 0.5){
         var u = t / 0.5;
-        x = -26 + (384 + 26) * u; y = 187 + (398 - 187) * u * (0.6 + 0.4 * u);
+        x = -35 + (510 + 35) * u; y = 242 + (515 - 242) * u * (0.6 + 0.4 * u);
       } else {
         var v = (t - 0.5) / 0.5;
-        x = 384 - 51 * v; y = 398 + (845 - 398) * v;
+        x = 510 - 68 * v; y = 515 + (1090 - 515) * v;
       }
       p.push([x, y]);
     }
@@ -877,11 +996,11 @@ function tekenOnderdeel(o, item, geselecteerd){
      bijschuiven, draaien of stuk voor stuk weghalen. */
   document.getElementById('muurRondom').addEventListener('click', function(){
     stukken = stukken.filter(function(x){ return x.id !== 'muur'; });
-    var cx = VEL.breed * 0.62, cy = VEL.hoog * 0.5;
+    var cx = VEL.breed * 0.60, cy = VEL.hoog * 0.5;
     /* Hoeveel stukken er nodig zijn hangt af van de omtrek. De muurtekening
        zelf is ongeveer honderd van de honderdzestig eenheden breed, dus we
        rekenen met die honderd en houden een beetje overlap. */
-    var rx = 360, ry = 250;
+    var rx = 470, ry = 320;
     var omtrek = Math.PI * (3*(rx+ry) - Math.sqrt((3*rx+ry) * (rx+3*ry)));
     var n = Math.round(omtrek / (100 * TEKENSCHAAL * 0.92));
     for (var k = 0; k < n; k++){
