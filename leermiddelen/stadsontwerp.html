@@ -90,9 +90,15 @@ body.groot .gereed button{font-size:.95rem;padding:11px 17px}
 body.groot .raadscore b{font-size:2.6rem}
 .velvak.plaatsen{cursor:crosshair}
 .stadsnaam{font-family:'Caveat',cursive;font-size:34px;fill:var(--inkt)}
-.nrlabel{font:700 12px Poppins,Arial;fill:#c0442c;paint-order:stroke;stroke:var(--papier);stroke-width:3}
 .stuk{cursor:pointer}
 .stuk:hover{opacity:.75}
+.stukgereed{display:flex;gap:7px;flex-wrap:wrap;align-items:center;padding:10px 13px;background:#f4f7ff;
+  border-top:2px solid var(--ocean)}
+.stukgereed b{font-size:.86rem;margin-right:4px}
+.stukgereed button{border:1.5px solid rgba(32,78,207,.3);background:#fff;border-radius:11px;padding:7px 12px;
+  font-size:.81rem;font-weight:600}
+.stukgereed button:hover{border-color:var(--ocean);color:var(--ocean)}
+.gekozenstuk{opacity:1}
 .gereed{display:flex;gap:7px;flex-wrap:wrap;padding:11px 13px;border-top:1px solid rgba(20,34,76,.08);background:#fff}
 .gereed button{border:1.5px solid rgba(20,34,76,.14);background:var(--room);border-radius:11px;padding:8px 13px;font-size:.82rem;font-weight:600}
 .gereed button:hover{border-color:var(--ocean);color:var(--ocean)}
@@ -135,8 +141,8 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
   <p class="lead">Geen rondes en geen beurten: je tekent zelf. Zet de muur neer, hang er poorten in, leg een markt aan en verdeel de ambachten over de straten. De stadsraad kijkt mee en zegt wat er klopt en wat niet. De onderdelen zijn genummerd zoals in de legenda op papier, dus je kunt een getekende en een ontworpen stad naast elkaar leggen.</p>
 
   <div class="hoe">
-    <div><b>1</b><span>Kies links een onderdeel en klik op het vel om het neer te zetten.</span></div>
-    <div><b>2</b><span>Klik op iets wat er al staat om het weer weg te halen.</span></div>
+    <div><b>1</b><span>Begin met de muur: los stuk voor stuk, of in een keer met de knop Muur rondom. Kies daarna links een onderdeel en klik op het vel.</span></div>
+    <div><b>2</b><span>Tik op iets wat er al staat om het te draaien, te spiegelen, groter te maken of weg te halen.</span></div>
     <div><b>3</b><span>De stadsraad rechts vinkt af wat er klopt, en legt uit wat er nog niet klopt.</span></div>
     <div><b>4</b><span>Klaar? Sla je stad op als afbeelding en lever hem in.</span></div>
   </div>
@@ -159,10 +165,11 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 
     <div>
       <div class="velvak" id="velvak"><div id="vel"></div></div>
+      <div class="stukgereed hide" id="stukgereed"></div>
       <p class="hint" id="hint"></p>
       <div class="gereed">
-        <button type="button" id="muurGroter">Muur groter</button>
-        <button type="button" id="muurKleiner">Muur kleiner</button>
+        <button type="button" id="muurRondom">Muur rondom</button>
+        <button type="button" id="potloodBtn">Potlood: schetsig</button>
         <button type="button" id="terug">Laatste weg</button>
         <button type="button" id="leeg">Alles wissen</button>
         <button type="button" id="bewaar">Sla op als afbeelding</button>
@@ -222,8 +229,8 @@ var ONDERDELEN = [
     uit:'Wind heeft ruimte nodig, dus meestal buiten de muur of erbovenop.' },
   { nr:14, id:'slager',    naam:'Slager',              soort:'gebouw',
     uit:'Bloed en afval gingen de gracht in. Niet naast je drinkwater zetten.' },
-  { nr:15, id:'muur',      naam:'Stadsmuur',           soort:'muur', eenmalig:true,
-    uit:'De ring om je stad. Klik om hem neer te zetten, daarna kun je hem groter of kleiner maken.' },
+  { nr:15, id:'muur',      naam:'Stadsmuur',           soort:'gebouw',
+    uit:'Zet stukken muur naast elkaar tot een ring. Draai ze bij zodat ze aansluiten, of gebruik de knop Muur rondom.' },
   { nr:16, id:'poort',     naam:'Stadspoort',          soort:'gebouw',
     uit:'Waar de wegen de muur kruisen. Hier werd tol geheven.' }
 ];
@@ -271,7 +278,7 @@ var REGELS = [
   { id:'compleet', wat:'De vier onmisbare onderdelen staan er',
     check:function(st){ return st.tel('kerk') > 0 && st.tel('markt') > 0 && st.tel('raadhuis') > 0 && st.heeftMuur(); },
     ja:'Kerk, markt, raadhuis en muur. Hiermee is het een stad en geen dorp.',
-    nee:'Er ontbreekt iets onmisbaars: een kerk, een marktplein, een raadhuis of een muur.' }
+    nee:'Er ontbreekt iets onmisbaars: een kerk, een marktplein, een raadhuis, of een muur van minstens drie stukken.' }
 ];
 
 /* ============================================================================
@@ -305,7 +312,17 @@ var VARIANTNAMEN = {
 
 var GY = 132, CX = 80, BOX = 160;
 var TEKENSCHAAL = 0.72;      /* zo staan ze in verhouding op het grote vel */
-var INKT = '#4d483f', WOBBEL = 1.1;
+var INKT = '#4d483f';
+/* Hoe hard de lijnen trillen. Nul is met een liniaal getrokken, vijf is een
+   losse schets. Het bouwstenenblad staat standaard op 3,6; hier iets hoger,
+   want op een groot vel valt een strakke lijn eerder op als computerwerk. */
+var POTLOOD = [
+  { naam:'Strak',    w:0,   uit:'rechte lijnen, als een bouwtekening' },
+  { naam:'Potlood',  w:2.6, uit:'een lichte trilling in de lijn' },
+  { naam:'Schetsig', w:4.5, uit:'alsof het met de hand is geschetst' }
+];
+var potloodNu = 2;
+var WOBBEL = POTLOOD[potloodNu].w;
 
 function d2(n){ return Math.round(n * 10) / 10; }
 function P(pts){ return 'M' + pts.map(p => d2(p[0]) + ',' + d2(p[1])).join('L') + 'Z'; }
@@ -530,18 +547,19 @@ var VORM = {
 };
 
 
-/* Een onderdeel op het vel zetten: het tekenvak staat met zijn grond op de
-   plek waar je klikt. */
-function tekenOnderdeel(o, item){
-  if (o.soort === 'lijn' || o.soort === 'muur') return '';
+/* Een onderdeel op het vel zetten. Het tekenvak staat met zijn grond op de
+   plek waar je klikt, en kan gedraaid, gespiegeld en geschaald zijn. */
+function tekenOnderdeel(o, item, geselecteerd){
+  if (o.soort === 'lijn') return '';
   var pen = new Pen('v', INKT);
-  var v = item.v || 0;
-  if (BUILD[o.id]) BUILD[o.id](pen, v); else BUILD.herberg(pen, 0);
-  var sc = TEKENSCHAAL;
-  return '<g class="stuk" data-i="' + item.i + '" transform="translate(' +
-    (item.x - CX * sc) + ',' + (item.y - GY * sc) + ')">' +
-    '<g transform="scale(' + sc + ')" filter="url(#pv)">' + pen.s + '</g>' +
-    '<text class="nrlabel" x="' + (CX * sc + 20) + '" y="' + (GY * sc - 62 * sc) + '">' + o.nr + '</text></g>';
+  if (BUILD[o.id]) BUILD[o.id](pen, item.v || 0); else BUILD.herberg(pen, 0);
+  var sc = TEKENSCHAAL * (item.s || 1);
+  var t = 'translate(' + item.x + ',' + item.y + ') rotate(' + (item.r || 0) + ') ' +
+          'scale(' + (item.m ? -sc : sc) + ',' + sc + ') translate(' + (-CX) + ',' + (-GY) + ')';
+  return '<g class="stuk' + (geselecteerd ? ' gekozenstuk' : '') + '" data-i="' + item.i + '" transform="' + t + '">' +
+    (geselecteerd ? '<rect x="6" y="' + (GY - 128) + '" width="' + (BOX - 12) + '" height="136" rx="8" ' +
+       'fill="none" stroke="#204ECF" stroke-width="3" stroke-dasharray="7 5"/>' : '') +
+    '<g filter="url(#pv)">' + pen.s + '</g></g>';
 }
 
 /* ============================================================================
@@ -554,7 +572,7 @@ function tekenOnderdeel(o, item){
   var stukken = [];            /* alles wat je hebt neergezet */
   var gekozen = null;          /* welk onderdeel je nu plaatst */
   var variant = 0;             /* welke van de drie tekeningen */
-  var muur = null;             /* { cx, cy, rx, ry } */
+  var gekozenStuk = null;      /* welk geplaatst onderdeel je nu bewerkt */
   var teller = 0, stadnaam = 'Gildenborg';
 
   var elStart = document.getElementById('scherm-start'),
@@ -569,8 +587,7 @@ function tekenOnderdeel(o, item){
   function tekenVel(){
     var s = '<svg id="stadsvg" viewBox="0 0 ' + VEL.breed + ' ' + VEL.hoog + '" ' +
       'xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Je ontwerp voor een middeleeuwse stad">' +
-      '<style>.nrlabel{font:700 12px Poppins,Arial;fill:#c0442c}' +
-      '.stadsnaam{font-family:Caveat,cursive;font-size:44px;fill:#3b3730}</style>' +
+      '<style>.stadsnaam{font-family:Caveat,cursive;font-size:44px;fill:#3b3730}</style>' +
       defs('v', INKT, WOBBEL) +
       '<rect width="' + VEL.breed + '" height="' + VEL.hoog + '" fill="#f6f1e6"/>';
 
@@ -582,18 +599,6 @@ function tekenOnderdeel(o, item){
     s += '<text x="192" y="567" font-family="Caveat,cursive" font-size="32" fill="#6f93b8" ' +
          'transform="rotate(64 192 567)">de rivier</text>';
 
-    /* de muur */
-    if (muur){
-      s += '<ellipse cx="' + muur.cx + '" cy="' + muur.cy + '" rx="' + (muur.rx + 17) + '" ry="' + (muur.ry + 17) +
-           '" fill="none" stroke="#9dc0e5" stroke-width="18" opacity=".55"/>';
-      s += '<ellipse class="muurlijn" cx="' + muur.cx + '" cy="' + muur.cy + '" rx="' + muur.rx + '" ry="' + muur.ry +
-           '" fill="none" stroke="#7d7566" stroke-width="11"/>';
-      s += '<ellipse cx="' + muur.cx + '" cy="' + muur.cy + '" rx="' + muur.rx + '" ry="' + muur.ry +
-           '" fill="none" stroke="#3b3730" stroke-width="1.6" stroke-dasharray="11 8"/>';
-      s += '<text class="nrlabel" x="' + (muur.cx - muur.rx + 6) + '" y="' + (muur.cy - muur.ry - 8) + '">15</text>';
-    }
-
-    /* straten eerst, die liggen onder de gebouwen */
     /* Straatstukken die dicht bij elkaar liggen worden met een band verbonden,
        zodat losse stippen vanzelf een weg worden. */
     var straten = stukken.filter(function(x){ return x.id === 'straat'; });
@@ -617,7 +622,7 @@ function tekenOnderdeel(o, item){
        hoort dus over de rest heen. */
     stukken.filter(function(x){ return x.id !== 'straat'; })
       .slice().sort(function(a, b){ return a.y - b.y; })
-      .forEach(function(x){ s += tekenOnderdeel(onderdeel(x.id), x); });
+      .forEach(function(x){ s += tekenOnderdeel(onderdeel(x.id), x, x.i === gekozenStuk); });
 
     s += '<text class="stadsnaam" x="' + (VEL.breed - 32) + '" y="' + (VEL.hoog - 28) + '" text-anchor="end">' +
          stadnaam + '</text>';
@@ -628,15 +633,15 @@ function tekenOnderdeel(o, item){
       g.addEventListener('click', function(e){
         e.stopPropagation();
         var i = parseInt(g.getAttribute('data-i'), 10);
-        stukken = stukken.filter(function(x){ return x.i !== i; });
-        tekenVel(); tekenLegenda(); tekenRaad();
+        gekozenStuk = (gekozenStuk === i) ? null : i;
+        tekenVel(); tekenGereedschap();
       });
     });
     document.getElementById('stadsvg').addEventListener('click', klikOpVel);
   }
 
   function klikOpVel(e){
-    if (!gekozen) return;
+    if (!gekozen){ if (gekozenStuk !== null){ gekozenStuk = null; tekenVel(); tekenGereedschap(); } return; }
     var svg = document.getElementById('stadsvg');
     var r = svg.getBoundingClientRect();
     var x = Math.round((e.clientX - r.left) / r.width * VEL.breed);
@@ -646,26 +651,56 @@ function tekenOnderdeel(o, item){
     x = Math.max(50, Math.min(VEL.breed - 50, x));
     y = Math.max(70, Math.min(VEL.hoog - 50, y));
 
-    if (o.soort === 'muur'){
-      /* De muur komt om het punt waar je klikt, met een gemiddeld formaat. */
-      muur = { cx:x, cy:y, rx:372, ry:259 };
-    } else {
-      if (o.eenmalig && tel(o.id)){
-        melding('Van ' + o.naam.toLowerCase() + ' is er maar een. Klik op de bestaande om hem weg te halen.');
-        return;
-      }
-      stukken.push({ i:teller++, id:o.id, x:x, y:y, v:variant });
+    if (o.eenmalig && tel(o.id)){
+      melding('Van ' + o.naam.toLowerCase() + ' is er maar een. Tik op de bestaande om hem te verplaatsen of weg te halen.');
+      return;
     }
+    stukken.push({ i:teller++, id:o.id, x:x, y:y, v:variant, r:0, m:false, s:1 });
+    gekozenStuk = null;
     tekenVel(); tekenLegenda(); tekenRaad();
   }
 
   function melding(t){ document.getElementById('hint').innerHTML = t; }
 
+  /* Zodra je op iets tikt dat er al staat, verschijnt er gereedschap om het te
+     draaien, te spiegelen, groter of kleiner te maken of weg te halen. */
+  function tekenGereedschap(){
+    var vak = document.getElementById('stukgereed');
+    if (gekozenStuk === null){ vak.innerHTML = ''; vak.classList.add('hide'); return; }
+    var st = stukken.filter(function(x){ return x.i === gekozenStuk; })[0];
+    if (!st){ gekozenStuk = null; vak.innerHTML = ''; vak.classList.add('hide'); return; }
+    var o = onderdeel(st.id);
+    vak.classList.remove('hide');
+    vak.innerHTML = '<b>' + o.naam + '</b>' +
+      '<button type="button" data-d="links">Draai links</button>' +
+      '<button type="button" data-d="rechts">Draai rechts</button>' +
+      '<button type="button" data-d="recht">Recht zetten</button>' +
+      '<button type="button" data-d="spiegel">Spiegelen</button>' +
+      '<button type="button" data-d="groter">Groter</button>' +
+      '<button type="button" data-d="kleiner">Kleiner</button>' +
+      '<button type="button" data-d="weg">Weghalen</button>' +
+      '<button type="button" data-d="klaar">Klaar</button>';
+    Array.prototype.forEach.call(vak.querySelectorAll('button'), function(b){
+      b.addEventListener('click', function(){
+        var wat = b.getAttribute('data-d');
+        if (wat === 'links')   st.r = ((st.r || 0) - 15) % 360;
+        if (wat === 'rechts')  st.r = ((st.r || 0) + 15) % 360;
+        if (wat === 'recht')   st.r = 0;
+        if (wat === 'spiegel') st.m = !st.m;
+        if (wat === 'groter')  st.s = Math.min(2.2, (st.s || 1) + 0.15);
+        if (wat === 'kleiner') st.s = Math.max(0.45, (st.s || 1) - 0.15);
+        if (wat === 'weg'){ stukken = stukken.filter(function(x){ return x.i !== st.i; }); gekozenStuk = null; }
+        if (wat === 'klaar') gekozenStuk = null;
+        tekenVel(); tekenLegenda(); tekenRaad(); tekenGereedschap();
+      });
+    });
+  }
+
   /* ---------- legenda ---------- */
   function tekenLegenda(){
     var vak = document.getElementById('legenda');
     vak.innerHTML = ONDERDELEN.map(function(o){
-      var n = o.soort === 'muur' ? (muur ? 1 : 0) : tel(o.id);
+      var n = tel(o.id);
       return '<button class="stukknop' + (gekozen === o.id ? ' on' : '') + (n ? ' klaar' : '') +
         '" type="button" data-o="' + o.id + '">' +
         '<span class="nr">' + o.nr + '</span><span>' + o.naam + '</span>' +
@@ -690,14 +725,15 @@ function tekenOnderdeel(o, item){
   function tekenVarianten(){
     var vak = document.getElementById('varianten');
     var o = gekozen ? onderdeel(gekozen) : null;
-    if (!o || !BUILD[o.id] || o.soort === 'lijn' || o.soort === 'muur'){ vak.innerHTML = ''; return; }
+    if (!o || !BUILD[o.id] || o.soort === 'lijn'){ vak.innerHTML = ''; return; }
     var namen = VARIANTNAMEN[o.id] || ['eerste','tweede','derde'];
     vak.innerHTML = '<p class="eyebrow" style="margin-top:12px">welke ' + o.naam.toLowerCase() + '</p>' +
       '<div class="varrij">' + [0,1,2].map(function(v){
-        var pen = new Pen('v', INKT);
+        var pen = new Pen('k' + v, INKT);
         BUILD[o.id](pen, v);
         return '<button class="varknop' + (variant === v ? ' on' : '') + '" type="button" data-v="' + v + '">' +
-          '<svg viewBox="0 0 ' + BOX + ' ' + (GY + 14) + '">' + pen.s + '</svg>' +
+          '<svg viewBox="0 0 ' + BOX + ' ' + (GY + 14) + '">' + defs('k' + v, INKT, WOBBEL) +
+          '<g filter="url(#pk' + v + ')">' + pen.s + '</g></svg>' +
           '<span>' + namen[v] + '</span></button>';
       }).join('') + '</div>';
     Array.prototype.forEach.call(vak.querySelectorAll('.varknop'), function(b){
@@ -713,7 +749,7 @@ function tekenOnderdeel(o, item){
      punten voor het neerzetten van dingen, maar voor waar je ze neerzet. */
   var stand = {
     tel: tel,
-    heeftMuur: function(){ return !!muur; },
+    heeftMuur: function(){ return tel('muur') >= 3; },
     afstand: function(a, b){
       var pa = eersteVan(a), pb = eersteVan(b);
       if (!pa || !pb) return null;
@@ -730,32 +766,76 @@ function tekenOnderdeel(o, item){
       });
     },
     buitenMuur: function(id){
-      if (!muur) return false;
+      if (!omhullende()) return false;
       return stukken.filter(function(s){ return s.id === id; }).some(function(s){
-        return binnenMuur(s.x, s.y) > 0.85;
+        return !binnenRing(s.x, s.y);
       });
     },
     aanDeRand: function(id){
-      if (!muur) return tel(id) > 0;
+      if (!omhullende()) return tel(id) > 0;
       return stukken.filter(function(s){ return s.id === id; }).some(function(s){
-        return binnenMuur(s.x, s.y) > 0.55;
+        return !binnenRing(s.x, s.y) || afstandTotMuur(s.x, s.y) < 150;
       });
     },
     poortenOpMuur: function(){
-      if (!muur || !tel('poort')) return false;
+      if (!omhullende() || !tel('poort')) return false;
       return stukken.filter(function(s){ return s.id === 'poort'; }).every(function(s){
-        var v = binnenMuur(s.x, s.y);
-        return v > 0.82 && v < 1.18;
+        return afstandTotMuur(s.x, s.y) < 70;
       });
     }
   };
 
-  /* Waar zit dit punt ten opzichte van de muur? Onder 1 is binnen, boven 1 buiten. */
-  function binnenMuur(x, y){
-    if (!muur) return 99;
-    var dx = (x - muur.cx) / muur.rx, dy = (y - muur.cy) / muur.ry;
-    return Math.sqrt(dx*dx + dy*dy);
+  /* ---------- waar loopt de muur ----------
+     De muur bestaat nu uit losse stukken. Het gebied van de stad is de
+     omhullende van die stukken: de kleinste veelhoek waar ze allemaal in
+     passen. Zo hoeft een leerling geen sluitende ring te leggen om toch een
+     zinnig antwoord van de stadsraad te krijgen. */
+  function muurPunten(){
+    return stukken.filter(function(x){ return x.id === 'muur'; })
+                  .map(function(x){ return [x.x, x.y]; });
   }
+  function omhullende(){
+    var p = muurPunten();
+    if (p.length < 3) return null;
+    p = p.slice().sort(function(a, b){ return a[0] - b[0] || a[1] - b[1]; });
+    var kruis = function(o, a, b){ return (a[0]-o[0])*(b[1]-o[1]) - (a[1]-o[1])*(b[0]-o[0]); };
+    var onder = [], boven = [];
+    p.forEach(function(q){
+      while (onder.length >= 2 && kruis(onder[onder.length-2], onder[onder.length-1], q) <= 0) onder.pop();
+      onder.push(q);
+    });
+    for (var k = p.length - 1; k >= 0; k--){
+      var q = p[k];
+      while (boven.length >= 2 && kruis(boven[boven.length-2], boven[boven.length-1], q) <= 0) boven.pop();
+      boven.push(q);
+    }
+    onder.pop(); boven.pop();
+    var h = onder.concat(boven);
+    return h.length >= 3 ? h : null;
+  }
+  function binnenRing(x, y){
+    var h = omhullende();
+    if (!h) return false;
+    var raak = false;
+    for (var i = 0, j = h.length - 1; i < h.length; j = i++){
+      var a = h[i], b = h[j];
+      if ((a[1] > y) !== (b[1] > y) && x < (b[0]-a[0]) * (y-a[1]) / (b[1]-a[1]) + a[0]) raak = !raak;
+    }
+    return raak;
+  }
+  function afstandTotMuur(x, y){
+    var h = omhullende();
+    if (!h) return 1e9;
+    var m = 1e9;
+    for (var i = 0, j = h.length - 1; i < h.length; j = i++){
+      var a = h[i], b = h[j];
+      var dx = b[0]-a[0], dy = b[1]-a[1];
+      var t = (dx || dy) ? Math.max(0, Math.min(1, ((x-a[0])*dx + (y-a[1])*dy) / (dx*dx + dy*dy))) : 0;
+      m = Math.min(m, Math.hypot(x - (a[0]+t*dx), y - (a[1]+t*dy)));
+    }
+    return m;
+  }
+
   /* Afstand tot de rivier, benaderd met een reeks punten op de middellijn. */
   var RIVIERPUNTEN = (function(){
     var p = [];
@@ -792,24 +872,49 @@ function tekenOnderdeel(o, item){
   }
 
   /* ---------- gereedschap ---------- */
-  document.getElementById('muurGroter').addEventListener('click', function(){
-    if (!muur){ melding('Zet eerst een stadsmuur neer. Kies onderdeel 15 en klik op het vel.'); return; }
-    muur.rx = Math.min(590, muur.rx + 32); muur.ry = Math.min(374, muur.ry + 22);
-    tekenVel(); tekenRaad();
+  /* Een ring muurstukken in een keer neerzetten. Met de hand twaalf stukken
+     plaatsen en draaien is monnikenwerk; dit geeft een ring die je daarna kunt
+     bijschuiven, draaien of stuk voor stuk weghalen. */
+  document.getElementById('muurRondom').addEventListener('click', function(){
+    stukken = stukken.filter(function(x){ return x.id !== 'muur'; });
+    var cx = VEL.breed * 0.62, cy = VEL.hoog * 0.5;
+    /* Hoeveel stukken er nodig zijn hangt af van de omtrek. De muurtekening
+       zelf is ongeveer honderd van de honderdzestig eenheden breed, dus we
+       rekenen met die honderd en houden een beetje overlap. */
+    var rx = 360, ry = 250;
+    var omtrek = Math.PI * (3*(rx+ry) - Math.sqrt((3*rx+ry) * (rx+3*ry)));
+    var n = Math.round(omtrek / (100 * TEKENSCHAAL * 0.92));
+    for (var k = 0; k < n; k++){
+      var h = (k / n) * Math.PI * 2;
+      var x = cx + Math.cos(h) * rx, y = cy + Math.sin(h) * ry;
+      /* de raaklijn van de ellips bepaalt hoe het stuk moet staan */
+      var graden = Math.atan2(Math.cos(h) * ry, -Math.sin(h) * rx) * 180 / Math.PI;
+      stukken.push({ i:teller++, id:'muur', x:Math.round(x), y:Math.round(y),
+                     v:(k % 5 === 0 ? 1 : 0), r:Math.round(graden), m:false, s:1 });
+    }
+    gekozenStuk = null;
+    melding('Er staat een ring van ' + n + ' muurstukken. Schuif ze bij, draai ze, of haal er een uit voor een poort.');
+    tekenVel(); tekenLegenda(); tekenRaad(); tekenGereedschap();
   });
-  document.getElementById('muurKleiner').addEventListener('click', function(){
-    if (!muur){ melding('Er staat nog geen muur.'); return; }
-    muur.rx = Math.max(154, muur.rx - 32); muur.ry = Math.max(109, muur.ry - 22);
-    tekenVel(); tekenRaad();
+
+  /* De potloodstand doorschakelen. Alles wordt opnieuw getekend, ook de
+     voorbeeldjes in de legenda, zodat je meteen ziet wat je kiest. */
+  document.getElementById('potloodBtn').addEventListener('click', function(){
+    potloodNu = (potloodNu + 1) % POTLOOD.length;
+    WOBBEL = POTLOOD[potloodNu].w;
+    this.textContent = 'Potlood: ' + POTLOOD[potloodNu].naam.toLowerCase();
+    melding('<b>' + POTLOOD[potloodNu].naam + ':</b> ' + POTLOOD[potloodNu].uit + '.');
+    tekenVel(); tekenVarianten();
   });
+
   document.getElementById('terug').addEventListener('click', function(){
     if (!stukken.length){ melding('Er staat nog niets om weg te halen.'); return; }
     stukken.pop();
     tekenVel(); tekenLegenda(); tekenRaad();
   });
   document.getElementById('leeg').addEventListener('click', function(){
-    stukken = []; muur = null; gekozen = null;
-    tekenVel(); tekenLegenda(); tekenRaad();
+    stukken = []; gekozen = null; gekozenStuk = null;
+    tekenVel(); tekenLegenda(); tekenRaad(); tekenGereedschap();
     melding('Leeg vel. Begin bij de muur, dat werkt het makkelijkst.');
   });
 
@@ -851,10 +956,10 @@ function tekenOnderdeel(o, item){
 
   document.getElementById('startBtn').addEventListener('click', function(){
     stadnaam = (document.getElementById('stadnaam').value || 'Mijn stad').trim();
-    stukken = []; muur = null; gekozen = null; teller = 0;
+    stukken = []; gekozen = null; gekozenStuk = null; teller = 0;
     elStart.classList.add('hide'); elBank.classList.remove('hide');
     tekenVel(); tekenLegenda(); tekenRaad();
-    melding('Begin met de <b>stadsmuur</b>, onderdeel 15. Klik hem op het vel en maak hem daarna groter of kleiner.');
+    melding('Begin met de <b>stadsmuur</b>, onderdeel 15. Zet losse stukken neer, of druk op <b>Muur rondom</b> voor een hele ring in een keer.');
     scrollTo({top:0, behavior:'auto'});
   });
 })();
