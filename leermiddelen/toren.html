@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Torenverdediging, versie 1.0 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Torenverdediging &middot; meneer Greidanus</title>
+<meta name="description" content="Verdedig de klas tegen fouten. Goede antwoorden leveren munten op, met munten koop je torens.">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%23F26749'/><text x='50' y='68' font-family='Poppins,Arial' font-size='46' font-weight='600' fill='%23FBF6F1' text-anchor='middle'>LG</text></svg>">
+<style>
+:root{--crab:#F26749;--amber:#EA9836;--ocean:#204ECF;--vista:#83A5F2;--sand:#FCDED6;--room:#FBF6F1;
+  --ink:#14224C;--muted:#5b6480;--goed:#2f7d52;--goed-bg:#e7f3ec;--fout:#c0442c;--fout-bg:#fdecea;
+  --gras:#eae4d6;--pad:#d9cdb4;--max:1500px;--ease:cubic-bezier(.22,.61,.36,1)}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--room);color:var(--ink);line-height:1.55;
+  font-family:'Poppins',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;font-weight:600;line-height:1.14;letter-spacing:-.02em}
+p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
+.wrap{width:min(100% - 24px,var(--max));margin-inline:auto}
+.hand{font-family:'Caveat',cursive;font-weight:600;color:var(--crab)}
+.eyebrow{font-size:.72rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.hide{display:none !important}
+header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-bottom:1px solid rgba(20,34,76,.08);padding:10px 0}
+.hd{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.mark{display:flex;align-items:center;gap:10px;font-weight:600;text-decoration:none;color:inherit}
+.mark i{width:32px;height:32px;border-radius:10px;background:var(--crab);color:var(--room);display:grid;place-items:center;font-style:normal;font-size:.78rem}
+.hd-right{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.linkbtn{background:none;border:none;color:var(--muted);text-decoration:underline;text-underline-offset:4px;font-size:.85rem;padding:6px}
+.linkbtn:hover{color:var(--ink)}
+
+/* ---------- startscherm ---------- */
+.start{padding:34px 0 60px}
+.start h1{font-size:clamp(2.2rem,5.5vw,3.4rem);margin:6px 0 12px}
+.start .lead{max-width:56ch;color:var(--muted);margin-bottom:30px}
+.kop2{margin:26px 0 12px}
+.niv{display:flex;gap:10px;flex-wrap:wrap}
+.niv button{background:#fff;border:2px solid rgba(20,34,76,.12);border-radius:999px;padding:11px 20px;font-weight:600;font-size:.92rem}
+.niv button:hover{border-color:var(--vista)}
+.niv button.on{border-color:var(--ocean);background:#f4f7ff;color:var(--ocean)}
+.nivuit{font-size:.9rem;color:var(--muted);margin-top:10px}
+.vakken{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.vak{background:#fff;border:2px solid transparent;border-radius:22px;padding:18px;text-align:left;
+  box-shadow:0 10px 26px rgba(20,34,76,.06);transition:transform .18s var(--ease),border-color .15s ease}
+.vak:hover{transform:translateY(-3px)}
+.vak.on{border-color:var(--ocean)}
+.vak i{width:42px;height:42px;border-radius:14px 14px 14px 5px;display:grid;place-items:center;
+  font-style:normal;font-weight:600;color:#fff;margin-bottom:12px}
+.vak b{display:block;font-size:1.05rem;margin-bottom:4px}
+.vak span{font-size:.86rem;color:var(--muted);line-height:1.45}
+.deelvak{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+.deelvak button{background:var(--room);border:1.5px solid rgba(20,34,76,.12);border-radius:999px;
+  padding:7px 13px;font-size:.8rem;font-weight:600}
+.deelvak button:hover{border-color:var(--vista)}
+.deelvak button.on{border-color:var(--ocean);background:#eaf0ff;color:var(--ocean)}
+.btn{display:inline-block;border:none;background:var(--crab);color:#fff;font-weight:600;padding:14px 32px;
+  border-radius:999px;box-shadow:0 9px 0 rgba(20,34,76,.10);margin-top:24px;transition:transform .16s var(--ease)}
+.btn:hover{transform:translateY(-2px)}
+.btn:disabled{opacity:.45;box-shadow:none;transform:none;cursor:default}
+
+/* ---------- spel ---------- */
+.baan{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:14px;padding:12px 0 40px;align-items:start}
+@media (max-width:1080px){.baan{grid-template-columns:1fr}}
+.bordvak{background:var(--gras);border:1px solid rgba(20,34,76,.12);border-radius:20px;overflow:hidden}
+.bordvak svg{display:block;width:100%;height:auto}
+.balk{display:flex;gap:8px;flex-wrap:wrap;padding:11px 13px;background:#fff;border-top:1px solid rgba(20,34,76,.08)}
+.meterv{flex:1;min-width:86px;background:var(--room);border-radius:13px;padding:8px 10px;text-align:center}
+.meterv b{display:block;font-size:1.25rem;line-height:1.1;font-variant-numeric:tabular-nums}
+.meterv span{font-size:.66rem;color:var(--muted);letter-spacing:.09em;text-transform:uppercase}
+.winkel{display:flex;gap:8px;flex-wrap:wrap;padding:0 13px 12px;background:#fff}
+.koop{flex:1;min-width:118px;background:var(--room);border:2px solid transparent;border-radius:14px;padding:9px 11px;text-align:left}
+.koop:hover{border-color:var(--vista)}
+.koop.on{border-color:var(--ocean);background:#f4f7ff}
+.koop:disabled{opacity:.42;cursor:default}
+.koop b{display:block;font-size:.88rem}
+.koop span{font-size:.72rem;color:var(--muted)}
+.koop em{font-style:normal;font-weight:700;font-size:.78rem;color:var(--crab)}
+
+.vraagvak{background:var(--ocean);color:#fff;border-radius:20px;padding:18px;position:sticky;top:66px}
+.vraagvak .eyebrow{color:rgba(255,255,255,.72)}
+.vraagvak h2{font-size:1.3rem;margin:8px 0 16px;line-height:1.3}
+.opties{display:grid;gap:8px}
+.optie{background:transparent;border:2px solid rgba(251,246,241,.45);color:#fff;border-radius:14px;
+  padding:12px 15px;text-align:left;font-size:.95rem;font-weight:500;transition:background .12s ease,border-color .12s ease}
+.optie:hover:not(:disabled){background:rgba(255,255,255,.12)}
+.optie.juist{background:var(--room);border-color:var(--room);color:var(--ink);font-weight:600}
+.optie.mis{background:var(--crab);border-color:var(--crab);color:#fff}
+.optie:disabled{cursor:default}
+.uitleg{margin-top:14px;background:rgba(255,255,255,.14);border-radius:14px;padding:12px 14px;font-size:.88rem;line-height:1.5}
+.uitleg.goed{background:rgba(255,255,255,.22)}
+.reeks{margin-top:14px;font-size:.82rem;color:rgba(255,255,255,.75)}
+
+/* ---------- einde ---------- */
+.einde{padding:40px 0 60px;text-align:center}
+.einde h1{font-size:clamp(2rem,5vw,3rem);margin:8px 0 14px}
+.cijfers{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;max-width:760px;margin:26px auto 0}
+.cijfers div{background:#fff;border:1px solid rgba(20,34,76,.10);border-radius:18px;padding:16px}
+.cijfers b{display:block;font-size:1.9rem;font-variant-numeric:tabular-nums}
+.cijfers span{font-size:.75rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+
+body.groot .vraagvak h2{font-size:1.7rem}
+body.groot .optie{font-size:1.12rem;padding:14px 17px}
+body.groot .meterv b{font-size:1.6rem}
+body.groot .uitleg{font-size:1rem}
+
+footer{padding:24px 0 40px;font-size:.83rem;color:var(--muted);text-align:center}
+.strip{display:flex;height:7px;width:150px;border-radius:999px;overflow:hidden;margin:0 auto 12px}
+.strip i{flex:1}
+button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offset:3px;border-radius:10px}
+@media(prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+
+/* ---------------------------------------------------------------------------
+   Het logo beweegt als je erover gaat: het vakje kantelt en krijgt een losse
+   vorm, de letters tuimelen een rondje om, en er springt een stip naast.
+   Alles in CSS, dus het kost niets en werkt ook zonder javascript.
+   --------------------------------------------------------------------------- */
+.lgmark{position:relative;display:inline-flex;flex:none}
+.mark .lgmark i,.mark .lgmark .badge{
+  display:flex;align-items:center;justify-content:center;gap:1px;font-style:normal;
+  transition:transform 420ms cubic-bezier(.34,1.56,.64,1),
+             border-radius 420ms cubic-bezier(.34,1.56,.64,1),
+             box-shadow 300ms ease}
+.lgdot{position:absolute;right:-3px;top:-3px;width:10px;height:10px;border-radius:50%;
+  background:var(--crab);transform:scale(0);
+  transition:transform 380ms cubic-bezier(.34,1.56,.64,1) 120ms}
+.mark:hover .lgmark i,.mark:focus-visible .lgmark i,
+.mark:hover .lgmark .badge,.mark:focus-visible .lgmark .badge{
+  border-radius:58% 42% 47% 53% / 44% 52% 48% 56%;
+  transform:scale(1.08) rotate(-6deg);
+  box-shadow:0 10px 18px rgba(32,78,207,.24)}
+.mark:hover .lgdot,.mark:focus-visible .lgdot{transform:scale(1)}
+/* Alleen de twee letters tuimelen, niet het vakje eromheen. Op over.html is dat
+   vakje zelf een span, en dan zou het zijn eigen kanteling overschrijven. */
+.mark:hover .lgmark i span,.mark:focus-visible .lgmark i span,
+.mark:hover .lgmark .badge span,.mark:focus-visible .lgmark .badge span{
+  animation:lgtuimel 620ms cubic-bezier(.45,0,.25,1) 1 both}
+.mark:hover .lgmark i span:nth-child(2),.mark:focus-visible .lgmark i span:nth-child(2),
+.mark:hover .lgmark .badge span:nth-child(2),.mark:focus-visible .lgmark .badge span:nth-child(2){
+  animation-delay:90ms}
+@keyframes lgtuimel{
+  0%{transform:rotate(0deg) scale(1)}
+  55%{transform:rotate(230deg) scale(.86)}
+  100%{transform:rotate(360deg) scale(1)}}
+@media(prefers-reduced-motion:reduce){
+  .lgmark i,.lgmark .badge,.lgdot,.lgmark span,.lgstreep,.lghoi{transition:none !important;animation:none !important}}
+
+/* De naam naast het logo krijgt een streep die uitloopt bij aanwijzen. */
+.mark .lgnaam{display:inline-flex;flex-direction:column;gap:2px}
+.mark .lgstreep{display:block;height:3px;width:0;border-radius:999px;background:var(--crab);
+  transition:width 420ms cubic-bezier(.22,1,.36,1) 60ms}
+.mark:hover .lgstreep,.mark:focus-visible .lgstreep{width:100%}
+
+/* Een handgeschreven wegwijzer die opduikt als je het logo aanwijst. Zo zien
+   leerlingen dat het logo de weg terug is en niet alleen een plaatje. */
+.mark{position:relative}
+/* Zweeft naast het logo in plaats van ruimte op te eisen: anders houdt een
+   lange zin de hele kopbalk uit elkaar terwijl hij onzichtbaar is. */
+.lghoi{position:absolute;left:calc(100% + 8px);top:50%;
+  font-family:'Caveat',cursive;font-size:1.15rem;color:var(--crab);
+  opacity:0;transform:translateY(-42%) rotate(3deg);transform-origin:left center;
+  transition:opacity 300ms ease 160ms,transform 420ms cubic-bezier(.34,1.56,.64,1) 160ms;
+  pointer-events:none;white-space:nowrap}
+/* Niet verder omhoog dan de kopbalk zelf: die staat tegen de bovenrand van het
+   scherm, dus alles wat hoger komt wordt afgesneden. */
+.mark:hover .lghoi,.mark:focus-visible .lghoi{opacity:1;transform:translateY(-58%) rotate(-6deg)}
+@media(max-width:900px){.lghoi{display:none}}
+@media(prefers-reduced-motion:reduce){.lghoi{transition:none !important}}
+
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap hd">
+    <a class="mark" href="./"><span class="lgmark"><i><span>L</span><span>G</span></i><b class="lgdot"></b></span><span class="lgnaam"><span>Torenverdediging</span><span class="lgstreep"></span></span><span class="lghoi">alle spellen</span></a>
+    <div class="hd-right">
+      <button class="linkbtn" id="grootBtn" type="button">Digibord</button>
+      <button class="linkbtn" id="opnieuwBtn" type="button">Opnieuw</button>
+    </div>
+  </div>
+</header>
+
+<section class="start wrap" id="scherm-start">
+  <p class="hand" style="font-size:1.5rem">hoi, klaar om te verdedigen?</p>
+  <h1>Torenverdediging</h1>
+  <p class="lead">Er lopen fouten over het pad naar de klas. Elk goed antwoord levert munten op, met munten koop je torens. Fout? Dan lees je waarom, en je gaat door. Het spel stopt pas als de klas vol fouten zit.</p>
+
+  <p class="eyebrow">kies je niveau</p>
+  <div class="niv" id="niveaus"></div>
+  <p class="nivuit" id="nivUit"></p>
+
+  <p class="eyebrow kop2">kies je vak</p>
+  <div class="vakken" id="vakken"></div>
+
+  <div id="deelvakken"></div>
+
+  <button class="btn" id="startBtn" type="button" disabled>Kies eerst een vak</button>
+</section>
+
+<section class="wrap hide" id="scherm-spel">
+  <div class="baan">
+    <div>
+      <div class="bordvak" id="bordvak"></div>
+      <div class="balk">
+        <div class="meterv"><b id="mMunt">0</b><span>munten</span></div>
+        <div class="meterv"><b id="mLeven">12</b><span>klas</span></div>
+        <div class="meterv"><b id="mRonde">1</b><span>ronde</span></div>
+        <div class="meterv"><b id="mReeks">0</b><span>op rij</span></div>
+      </div>
+      <div class="winkel" id="winkel"></div>
+    </div>
+    <div class="vraagvak">
+      <p class="eyebrow" id="vraagKop">vraag</p>
+      <h2 id="vraagTekst">...</h2>
+      <div class="opties" id="opties"></div>
+      <div id="uitlegVak"></div>
+      <p class="reeks" id="reeksUit"></p>
+    </div>
+  </div>
+</section>
+
+<section class="einde wrap hide" id="scherm-einde">
+  <p class="hand" style="font-size:1.5rem">de klas zit vol fouten</p>
+  <h1>Het is voorbij</h1>
+  <p class="lead" id="eindeUit" style="margin-inline:auto"></p>
+  <div class="cijfers" id="cijfers"></div>
+  <button class="btn" id="nogBtn" type="button">Nog een keer</button>
+</section>
+
+<footer>
+  <div class="strip" aria-hidden="true">
+    <i style="background:var(--crab)"></i><i style="background:var(--amber)"></i><i style="background:var(--ocean)"></i><i style="background:var(--vista)"></i><i style="background:var(--sand)"></i>
+  </div>
+  Torenverdediging &middot; meneer Greidanus &middot; <span id="jaar">2026</span>
+</footer>
+
+<script>
+
+const PAD = [[-40,90],[190,90],[190,250],[430,250],[430,110],[650,110],[650,390],[900,390]];
+const PLEKKEN = [{x:80,y:220},{x:290,y:60},{x:300,y:180},{x:120,y:370},{x:340,y:370},{x:520,y:60},{x:530,y:190},{x:540,y:400},{x:760,y:230},{x:770,y:60}];
+const SOORTEN = {
+  kanon:     {naam:'Kanon',      letter:'K', kleur:'var(--crab)',        prijs:40, bereik:110, schade:6,  tempo:0.55, onder:'Snel en dichtbij'},
+  katapult:  {naam:'Katapult',   letter:'T', kleur:'var(--deep-ocean)',  prijs:70, bereik:200, schade:20, tempo:1.5,  onder:'Ver, maar traag'},
+  vertrager: {naam:'Vertrager',  letter:'V', kleur:'var(--butterscotch)',prijs:55, bereik:130, schade:2,  tempo:0.5,  onder:'Maakt fouten langzaam'}
+};
+const VAKKEN = [
+  {id:'reken', naam:'Rekenen',    mark:'R', kleur:'var(--crab)',       onder:'Hoofdrekenen, breuken, procenten, verhoudingen, tijd en geld, meten'},
+  {id:'ned',   naam:'Nederlands', mark:'N', kleur:'var(--deep-ocean)', onder:'Spelling, werkwoorden, synoniemen, betekenis, leestekens, meervoud'},
+  {id:'eng',   naam:'Engels',     mark:'E', kleur:'var(--butterscotch)',onder:'Woordjes twee kanten op en irregular verbs'},
+  {id:'ges',   naam:'Geschiedenis', mark:'G', kleur:'var(--vista-blue)', onder:'Begrippen bij de tien tijdvakken, van hunebed tot globalisering'}
+];
+
+const NIVEAUS = [
+  {id: 'bb',  rang: 1, naam: 'vmbo-bb',        uitleg: 'Kleine getallen, korte vragen en rustige rondes. Fouten lopen langzaam.'},
+  {id: 'kgt', rang: 2, naam: 'vmbo-kgt en tl', uitleg: 'Iets grotere getallen, ook procenten en meervouden. Normaal tempo.'},
+  {id: 'havo',rang: 3, naam: 'havo',           uitleg: 'Grotere getallen, verhoudingen en meten. De fouten lopen sneller.'},
+  {id: 'vwo', rang: 4, naam: 'vwo',            uitleg: 'De moeilijkste vragen en het hoogste tempo. Weinig ruimte voor fouten.'}
+];
+const NED_N = [1,1,2,2,3,1,1,1,3,3,2,4,3,2,4,2,1,3,1,3,1,4,1,2];
+const ENG_N = [1,1,1,2,1,1,3,2,2,4,3,1,1,2,2,1,1,2,3,3,1,4,2,3];
+const NED = [
+  {v:'Hij ___ morgen tien jaar.', o:['word','wordt','words','wort'], g:1, u:'Stam word + t, want hij is een hij-vorm. Alleen bij ik hoort word zonder t.', t:'werkwoordspelling'},
+  {v:'Ik ___ het antwoord al.', o:['weet','weett','wet','weed'], g:0, u:'Bij ik komt er nooit een t achter de stam.', t:'werkwoordspelling'},
+  {v:'Gisteren ___ ik naar de markt.', o:['fietste','fietsde','fietzte','fietstte'], g:0, u:'De stam fiets eindigt op een s, dat hoort bij t kofschip, dus te.', t:'werkwoordspelling'},
+  {v:'Wij hebben lang ___.', o:['gewandelt','gewandeld','gewandelde','wandelde'], g:1, u:'De stam wandel eindigt niet op een letter uit t kofschip, dus d.', t:'werkwoordspelling'},
+  {v:'De deur is ___.', o:['gebeurt','gebeurd','gebeurdt','gebeurde'], g:1, u:'Voltooid deelwoord van gebeuren: de stam eindigt op r, dus d.', t:'spelling'},
+  {v:'Wat is een synoniem van snel?', o:['langzaam','rap','stil','zwaar'], g:1, u:'Rap betekent hetzelfde als snel. Langzaam is juist het tegenovergestelde.', t:'synoniemen'},
+  {v:'Wat is een synoniem van bang?', o:['angstig','dapper','boos','blij'], g:0, u:'Angstig en bang betekenen hetzelfde.', t:'synoniemen'},
+  {v:'Wat is een synoniem van beginnen?', o:['stoppen','starten','wachten','denken'], g:1, u:'Starten en beginnen betekenen hetzelfde.', t:'synoniemen'},
+  {v:'Wat betekent globaal?', o:['in het groot, niet precies','heel nauwkeurig','erg snel','onder de grond'], g:0, u:'Globaal betekent in grote lijnen, dus niet tot in detail.', t:'betekenis'},
+  {v:'Wat betekent een neutrale mening?', o:['fel voor','fel tegen','geen kant kiezen','onbekend'], g:2, u:'Neutraal betekent dat je geen partij kiest.', t:'betekenis'},
+  {v:'Wat betekent het woord tijdvak?', o:['een klok','een periode in de geschiedenis','een lokaal','een agenda'], g:1, u:'Een tijdvak is een afgebakende periode in de tijd.', t:'betekenis'},
+  {v:'Welke zin heeft de leestekens goed?', o:['Kom je mee, vroeg hij.','Kom je mee? vroeg hij','"Kom je mee?" vroeg hij.','Kom je mee "vroeg hij".'], g:2, u:'Een vraag binnen aanhalingstekens houdt zijn vraagteken, daarna volgt de rest van de zin.', t:'leestekens'},
+  {v:'Waar hoort de komma?', o:['Omdat het regende, bleven we binnen.','Omdat het regende bleven, we binnen.','Omdat, het regende bleven we binnen.','Er hoort geen komma in.'], g:0, u:'Na een bijzin vooraan de zin zet je een komma.', t:'leestekens'},
+  {v:'Wat is het meervoud van kanon?', o:['kanons','kanonnen','kanonen','kanonne'], g:1, u:'De klinker blijft kort, dus verdubbelt de n: kanonnen.', t:'meervoud'},
+  {v:'Wat is het meervoud van museum?', o:['museums','musea','museumen','museae'], g:1, u:'Museum komt uit het Latijn en krijgt musea, net als gymnasium en gymnasia.', t:'meervoud'},
+  {v:'Wat is het meervoud van pagina?', o:['paginas','pagina&#39;s','paginaas','paginae'], g:1, u:'Bij een woord dat eindigt op een losse a zet je een apostrof voor de s.', t:'meervoud'},
+  {v:'Hij ___ zijn jas op.', o:['hangt','hangd','hant','hangdt'], g:0, u:'Stam hang plus t. Je hoort de t niet altijd, maar hij staat er wel.', t:'werkwoordspelling'},
+  {v:'Zij heeft de deur ___.', o:['geverft','geverfd','geverfde','verfde'], g:0, u:'Verf eindigt op f, en f zit in t kofschip, dus geverft.', t:'spelling'},
+  {v:'Wat is een synoniem van moeilijk?', o:['lastig','saai','laag','lang'], g:0, u:'Lastig en moeilijk betekenen hetzelfde.', t:'synoniemen'},
+  {v:'Welke schrijfwijze is goed?', o:['s morgens','&#39;s morgens','Smorgens','&#39;smorgens'], g:1, u:'Voor de s komt een apostrof en daarna een los woord: &#39;s morgens.', t:'spelling'},
+  {v:'Wat is het meervoud van kind?', o:['kinden','kinders','kinderen','kindens'], g:2, u:'Kind krijgt er in het meervoud een hele lettergroep bij: kinderen.', t:'meervoud'},
+  {v:'Wat betekent een chronologisch verhaal?', o:['op tijd verteld','in de juiste tijdsorde','met veel details','zonder einde'], g:1, u:'Chronologisch betekent in de volgorde van de tijd.', t:'betekenis'},
+  {v:'Hij ___ het boek al gelezen.', o:['heb','heeft','hebt','heefd'], g:1, u:'Bij hij hoort heeft.', t:'werkwoordspelling'},
+  {v:'Welke zin is goed?', o:['Ik heb me vergist, sorry.','Ik heb me vergist sorry.','Ik heb me, vergist sorry.','Ik heb me vergist. sorry'], g:0, u:'Voor sorry hoort een komma, en de zin eindigt met een punt.', t:'leestekens'}
+];
+const ENG = [
+  {v:'huis', o:['house','horse','mouse','hose'], g:0, u:'House is huis. Horse is paard.', t:'woordjes NL naar EN'},
+  {v:'school', o:['scool','school','skool','shool'], g:1, u:'School schrijf je in het Engels net als in het Nederlands.', t:'woordjes NL naar EN'},
+  {v:'vraag', o:['answer','question','quest','request'], g:1, u:'Question is vraag, answer is antwoord.', t:'woordjes NL naar EN'},
+  {v:'geschiedenis', o:['story','history','histoire','past'], g:1, u:'History is het vak en het verleden, story is een verhaal.', t:'woordjes NL naar EN'},
+  {v:'oorlog', o:['war','word','world','work'], g:0, u:'War is oorlog.', t:'woordjes NL naar EN'},
+  {v:'gemakkelijk', o:['hard','easy','busy','lazy'], g:1, u:'Easy is gemakkelijk.', t:'woordjes NL naar EN'},
+  {v:'to borrow', o:['lenen van iemand','uitlenen','kopen','verliezen'], g:0, u:'Borrow is lenen van iemand, lend is uitlenen.', t:'woordjes EN naar NL'},
+  {v:'expensive', o:['goedkoop','duur','handig','gratis'], g:1, u:'Expensive is duur.', t:'woordjes EN naar NL'},
+  {v:'to remember', o:['vergeten','onthouden','herhalen','begrijpen'], g:1, u:'Remember is onthouden of je herinneren, forget is vergeten.', t:'woordjes EN naar NL'},
+  {v:'although', o:['hoewel','omdat','daarom','totdat'], g:0, u:'Although is hoewel.', t:'woordjes EN naar NL'},
+  {v:'a century', o:['een jaar','een eeuw','een tiental','een dag'], g:1, u:'A century is een eeuw, honderd jaar.', t:'woordjes EN naar NL'},
+  {v:'to travel', o:['reizen','werken','wonen','betalen'], g:0, u:'Travel is reizen.', t:'woordjes EN naar NL'},
+  {v:'go, ___, gone', o:['goed','went','goned','gone'], g:1, u:'Go went gone. De verleden tijd is went.', t:'irregular verbs'},
+  {v:'buy, ___, bought', o:['buyed','bought','boughted','buying'], g:1, u:'Buy bought bought, twee keer dezelfde vorm.', t:'irregular verbs'},
+  {v:'write, wrote, ___', o:['writed','written','wroten','write'], g:1, u:'Write wrote written.', t:'irregular verbs'},
+  {v:'take, ___, taken', o:['took','taked','taken','takes'], g:0, u:'Take took taken.', t:'irregular verbs'},
+  {v:'see, ___, seen', o:['seed','saw','sawn','seen'], g:1, u:'See saw seen.', t:'irregular verbs'},
+  {v:'think, ___, thought', o:['thinked','thought','thinks','thunk'], g:1, u:'Think thought thought.', t:'irregular verbs'},
+  {v:'bring, ___, brought', o:['bringed','brang','brought','brung'], g:2, u:'Bring brought brought.', t:'irregular verbs'},
+  {v:'fight, ___, fought', o:['fighted','fought','faught','fight'], g:1, u:'Fight fought fought.', t:'irregular verbs'},
+  {v:'antwoord', o:['answer','answar','ansver','anser'], g:0, u:'Answer, met een w die je niet hoort.', t:'woordjes NL naar EN'},
+  {v:'to be allowed to', o:['moeten','mogen','kunnen','willen'], g:1, u:'Be allowed to is mogen, have to is moeten.', t:'woordjes EN naar NL'},
+  {v:'leave, ___, left', o:['leaved','left','leaft','leaving'], g:1, u:'Leave left left.', t:'irregular verbs'},
+  {v:'belangrijk', o:['important','importent','impotant','importand'], g:0, u:'Important, met -ant aan het eind.', t:'woordjes NL naar EN'}
+];
+
+function rnd(n) { return Math.floor(Math.random() * n); }
+function kies(a) { return a[rnd(a.length)]; }
+function euro(n) { return '\u20ac ' + n.toFixed(2).replace('.', ','); }
+function shuffleVraag(vraag, goedTekst) {
+  const o = vraag.o.slice();
+  const paren = o.map((t, i) => ({t, g: i === vraag.g}));
+  for (let i = paren.length - 1; i > 0; i--) { const j = rnd(i + 1); const h = paren[i]; paren[i] = paren[j]; paren[j] = h; }
+  return {v: vraag.v, o: paren.map(p => p.t), g: paren.findIndex(p => p.g), u: vraag.u, t: vraag.t};
+}
+function uniek(goed, maakFout) {
+  const set = [goed];
+  let poging = 0;
+  while (set.length < 4 && poging < 60) { const f = maakFout(); if (!set.includes(f)) set.push(f); poging++; }
+  while (set.length < 4) set.push(String(Number(goed) + set.length));
+  return set;
+}
+function bouw(v, goed, fouten, u, t) {
+  const o = uniek(goed, fouten);
+  return shuffleVraag({v, o, g: 0, u, t});
+}
+
+const TIJDVAKKEN = [
+  {id:'tv1', naam:'1 jagers en boeren'}, {id:'tv2', naam:'2 Grieken en Romeinen'},
+  {id:'tv3', naam:'3 monniken en ridders'}, {id:'tv4', naam:'4 steden en staten'},
+  {id:'tv5', naam:'5 ontdekkers en hervormers'}, {id:'tv6', naam:'6 regenten en vorsten'},
+  {id:'tv7', naam:'7 pruiken en revoluties'}, {id:'tv8', naam:'8 burgers en stoommachines'},
+  {id:'tv9', naam:'9 wereldoorlogen'}, {id:'tv10', naam:'10 televisie en computer'}
+];
+const GES = [
+  {v:'Wat is een hunebed?', o:['een grafmonument van grote stenen','een woonhuis van hout','een offerplaats in een rivier','een verdedigingswal'], g:0, u:'Boeren in de prehistorie bouwden hunebedden van grote keien om hun doden in te begraven.', t:'tv1'},
+  {v:'Wat betekent nomaden?', o:['mensen die rondtrekken','mensen die op één plek blijven','mensen die vee verkopen','mensen die kunnen schrijven'], g:0, u:'Nomaden trekken rond achter hun eten aan, jagers en verzamelaars leefden zo.', t:'tv1'},
+  {v:'Wat veranderde er bij de landbouwrevolutie?', o:['mensen gingen zelf voedsel maken','mensen leerden vuur maken','mensen begonnen te jagen','mensen bouwden steden met muren'], g:0, u:'Mensen gingen akkers bewerken en vee houden, dus ze bleven op één plek wonen.', t:'tv1'},
+  {v:'Wat is prehistorie?', o:['de tijd zonder schrift','de tijd van de Romeinen','de tijd voor de aarde bestond','de tijd van de eerste steden'], g:0, u:'Prehistorie is de tijd waarvan geen geschreven bronnen zijn, want het schrift bestond nog niet.', t:'tv1'},
+  {v:'Wat is democratie in Athene?', o:['het volk beslist mee','één koning beslist','de priesters beslissen','de rijkste familie beslist'], g:0, u:'In Athene mochten vrije mannen meebeslissen in de volksvergadering, vrouwen en slaven niet.', t:'tv2'},
+  {v:'Wat was de limes?', o:['de noordgrens van het Romeinse rijk','een Romeinse weg naar Rome','een Romeinse rechtbank','de haven van Rome'], g:0, u:'De limes was de bewaakte rijksgrens, in Nederland liep hij langs de Rijn.', t:'tv2'},
+  {v:'Wat is een gladiator?', o:['een vechter in de arena','een Romeinse legerleider','een bouwer van aquaducten','een raadslid in Rome'], g:0, u:'Gladiatoren vochten voor publiek in een amfitheater, vaak waren het slaven.', t:'tv2'},
+  {v:'Wat betekent romanisering?', o:['gebieden nemen de Romeinse cultuur over','Rome wordt opnieuw gebouwd','soldaten gaan met pensioen','wegen worden bestraat'], g:0, u:'Volken in het rijk namen de taal, goden en gewoonten van de Romeinen over.', t:'tv2'},
+  {v:'Wat is het hofstelsel?', o:['boeren werken op het land van een heer','boeren verkopen alles op de markt','ridders bezitten samen één dorp','de kerk verdeelt het land elk jaar'], g:0, u:'Onvrije boeren werkten op het domein van een heer en mochten daar wonen en een stukje land gebruiken.', t:'tv3'},
+  {v:'Wat doet een missionaris?', o:['het christendom verspreiden','belasting innen','boeken kopiëren voor de koning','soldaten opleiden'], g:0, u:'Missionarissen als Willibrord reisden rond om mensen te bekeren tot het christendom.', t:'tv3'},
+  {v:'Wat is een leenheer?', o:['iemand die land uitleent in ruil voor trouw','iemand die geld leent aan boeren','de baas van een klooster','een rondtrekkende handelaar'], g:0, u:'In het leenstelsel gaf een leenheer land aan een leenman, die daarvoor trouw en hulp in de oorlog beloofde.', t:'tv3'},
+  {v:'Wat gebeurde er in een klooster?', o:['bidden, werken en boeken kopiëren','handel drijven met verre landen','ridders trainen voor de strijd','recht spreken over misdadigers'], g:0, u:'Monniken en nonnen leefden er volgens vaste regels, en hielden kennis in leven door boeken te kopiëren.', t:'tv3'},
+  {v:'Wat zijn stadsrechten?', o:['rechten die een stad van een heer krijgt','regels voor het bouwen van huizen','het recht om oorlog te beginnen','de rechten van boeren op het platteland'], g:0, u:'Met stadsrechten mocht een stad markt houden, muren bouwen en eigen recht spreken.', t:'tv4'},
+  {v:'Wat is een gilde?', o:['een vereniging van mensen met hetzelfde beroep','een groep ridders van één heer','een school voor kooplieden','de raad van de bisschop'], g:0, u:'Een gilde bepaalde de prijs en de kwaliteit van het werk, en hielp leden die ziek werden.', t:'tv4'},
+  {v:'Wat was de zwarte dood?', o:['een pestepidemie in de veertiende eeuw','een grote hongersnood in de steden','de naam van een ridderorde','een straf voor ketters'], g:0, u:'De pest doodde rond 1350 ongeveer een derde van de bevolking van Europa.', t:'tv4'},
+  {v:'Wat is een kruistocht?', o:['een christelijke veldtocht naar het Heilige Land','een pelgrimstocht naar Rome','een handelsreis naar Azië','een tocht van monniken langs kloosters'], g:0, u:'Christelijke legers trokken naar Jeruzalem om de stad in handen te krijgen.', t:'tv4'},
+  {v:'Wat is de reformatie?', o:['de splitsing van de kerk in katholiek en protestant','de bouw van nieuwe kerken','de terugkeer van de paus naar Rome','een nieuwe manier van bijbelschrijven'], g:0, u:'Luther en Calvijn hadden kritiek op de katholieke kerk, daaruit kwamen protestantse kerken.', t:'tv5'},
+  {v:'Wat was de Beeldenstorm?', o:['het kapotslaan van beelden in katholieke kerken','een storm die kerken verwoestte','het verbod op schilderen','de opstand van boeren tegen de graaf'], g:0, u:'In 1566 haalden protestanten beelden en schilderijen uit katholieke kerken weg.', t:'tv5'},
+  {v:'Wat is een kolonie?', o:['een gebied dat door een ander land bestuurd wordt','een stad met eigen stadsrechten','een schip met ontdekkingsreizigers','een handelspost van een gilde'], g:0, u:'Een kolonie wordt bestuurd en uitgebuit door een ander land, vaak ver weg.', t:'tv5'},
+  {v:'Waarom gingen Europeanen op ontdekkingsreis?', o:['om handel, rijkdom en nieuwe routes','om land te geven aan boeren','om kloosters te stichten in Azië','om de pest te ontvluchten'], g:0, u:'Ze zochten specerijen, goud en een eigen zeeroute naar Azië.', t:'tv5'},
+  {v:'Wat was de VOC?', o:['een handelscompagnie met eigen macht in Azië','de vloot van de stadhouder','een gilde van Amsterdamse schippers','de belastingdienst van de Republiek'], g:0, u:'De VOC mocht namens de Republiek oorlog voeren, verdragen sluiten en forten bouwen.', t:'tv6'},
+  {v:'Wat is een regent?', o:['een rijke bestuurder in een stad','de zoon van een koning','een legeraanvoerder van de prins','een dominee met bestuursmacht'], g:0, u:'Regenten waren rijke families die de steden en de gewesten bestuurden.', t:'tv6'},
+  {v:'Wat betekent absolutisme?', o:['de vorst heeft alle macht','het volk kiest de vorst','de kerk regeert het land','de steden regeren samen'], g:0, u:'Een absolute vorst als Lodewijk XIV hoefde zijn macht met niemand te delen.', t:'tv6'},
+  {v:'Waarom heet de zeventiende eeuw de Gouden Eeuw?', o:['de Republiek was rijk door handel','er werd goud gevonden in de Alpen','de munten waren van goud','er was nooit oorlog'], g:0, u:'Handel, scheepvaart, wetenschap en kunst bloeiden, maar de rijkdom kwam ook uit slavenhandel en koloniën.', t:'tv6'},
+  {v:'Wat is de Verlichting?', o:['vertrouwen op het verstand in plaats van traditie','de uitvinding van de gaslamp','een religieuze opwekking','een nieuwe schilderstijl'], g:0, u:'Verlichte denkers wilden alles met rede en onderzoek verklaren, ook macht en godsdienst.', t:'tv7'},
+  {v:'Wat eiste de Franse Revolutie van 1789?', o:['vrijheid, gelijkheid en broederschap','een sterkere koning','meer macht voor de kerk','terugkeer van de adel'], g:0, u:'De burgers wilden gelijke rechten en een eind aan de voorrechten van adel en kerk.', t:'tv7'},
+  {v:'Wat is een plantage?', o:['een groot landbouwbedrijf, vaak met slavenarbeid','een tuin bij een landhuis','een handelspost aan de kust','een fabriek voor katoen'], g:0, u:'Op plantages in Suriname en de Caraïben werkten slaafgemaakte mensen onder dwang.', t:'tv7'},
+  {v:'Wie waren de patriotten?', o:['Nederlanders die meer inspraak wilden','soldaten van de stadhouder','Franse legerleiders','kooplieden van de VOC'], g:0, u:'De patriotten kwamen rond 1780 in opstand tegen de macht van de stadhouder en de regenten.', t:'tv7'},
+  {v:'Wat is de industriële revolutie?', o:['machines nemen het werk in fabrieken over','boeren gaan meer land bewerken','stoomschepen vervangen de trein','steden krijgen stadsrechten'], g:0, u:'Door de stoommachine kwam productie in fabrieken terecht en groeiden de steden snel.', t:'tv8'},
+  {v:'Wat was het Kinderwetje van Van Houten (1874)?', o:['een verbod op fabrieksarbeid door jonge kinderen','leerplicht voor alle kinderen','gratis eten op school','een verbod op nachtwerk voor vrouwen'], g:0, u:'Kinderen onder de twaalf mochten niet meer in fabrieken werken, thuis en op het land nog wel.', t:'tv8'},
+  {v:'Wat is imperialisme?', o:['landen veroveren gebieden overzee','handel zonder invoerrechten','de macht van fabriekseigenaren','de opkomst van vakbonden'], g:0, u:'Rond 1900 verdeelden Europese landen bijna heel Afrika en Azië onder elkaar.', t:'tv8'},
+  {v:'Wat wilde het socialisme?', o:['betere rechten en lonen voor arbeiders','meer macht voor de koning','vrije handel voor fabrieken','terugkeer naar het platteland'], g:0, u:'Socialisten streden met partijen en vakbonden voor kortere werkdagen en kiesrecht.', t:'tv8'},
+  {v:'Wat betekent mobilisatie?', o:['het leger paraat zetten','een land binnenvallen','wapens verkopen','soldaten naar huis sturen'], g:0, u:'Bij mobilisatie worden soldaten opgeroepen en klaargezet, ook als er nog geen oorlog is.', t:'tv9'},
+  {v:'Wat was de Holocaust?', o:['de moord op zes miljoen Joden door de nazi\u2019s','de bombardementen op Rotterdam','de hongerwinter van 1944','de vlucht van de regering naar Londen'], g:0, u:'De nazi\u2019s vermoordden systematisch Joden, en ook Sinti, Roma en anderen.', t:'tv9'},
+  {v:'Wat deed het verzet in de bezetting?', o:['illegaal werk tegen de bezetter','het leger van Duitsland versterken','de regering in Londen bestrijden','de grenzen bewaken'], g:0, u:'Verzetsmensen verspreidden illegale kranten, hielpen onderduikers en pleegden sabotage.', t:'tv9'},
+  {v:'Wat waren de crisisjaren?', o:['de jaren dertig met veel werkloosheid','de jaren na de oorlog met wederopbouw','de jaren van de watersnood','de jaren van de Koude Oorlog'], g:0, u:'Na de beurskrach van 1929 verloren veel mensen hun werk en werd er bezuinigd.', t:'tv9'},
+  {v:'Wat was de Koude Oorlog?', o:['de spanning tussen de VS en de Sovjet-Unie','een oorlog in Noord-Europa','de strijd om de Noordpool','een oorlog zonder wapens in Afrika'], g:0, u:'Twee machtsblokken stonden tegenover elkaar met dreiging, wapens en spionage, zonder rechtstreekse oorlog.', t:'tv10'},
+  {v:'Wat is dekolonisatie?', o:['koloniën worden zelfstandige landen','landen sluiten nieuwe koloniën','koloniën gaan samen handelen','een kolonie wordt groter'], g:0, u:'Na 1945 werden veel koloniën onafhankelijk, zoals Indonesië en Suriname.', t:'tv10'},
+  {v:'Wat is een welvaartsstaat?', o:['de staat zorgt bij ziekte, ouderdom en werkloosheid','een land zonder belasting','een land met alleen rijke burgers','een staat die alles zelf produceert'], g:0, u:'Met AOW, uitkeringen en zorg vangt de overheid mensen op die het zelf niet redden.', t:'tv10'},
+  {v:'Wat betekent globalisering?', o:['de wereld raakt steeds meer verbonden','landen sluiten hun grenzen','iedereen spreekt dezelfde taal','handel wordt verboden'], g:0, u:'Handel, reizen en internet maken afstanden klein, gebeurtenissen ver weg raken ons hier.', t:'tv10'}
+];
+const GES_N = [1,1,2,2,1,2,1,3,2,1,3,1,2,2,1,2,2,2,1,2,2,2,3,2,3,1,2,3,1,2,3,3,2,1,1,2,1,2,2,2];
+
+const ONDERDELEN = {
+  reken: [{id:'hoofd',naam:'hoofdrekenen'},{id:'breuk',naam:'breuken'},{id:'procent',naam:'procenten'},{id:'verhouding',naam:'verhoudingen'},{id:'tijdgeld',naam:'tijd en geld'},{id:'meten',naam:'meten en meetkunde'}],
+  ned: [{id:'werkwoordspelling',naam:'werkwoordspelling'},{id:'spelling',naam:'spelling'},{id:'synoniemen',naam:'synoniemen'},{id:'betekenis',naam:'betekenis van woorden'},{id:'leestekens',naam:'leestekens'},{id:'meervoud',naam:'enkel en meervoud'}],
+  eng: [{id:'woordjes NL naar EN',naam:'woordjes NL naar EN'},{id:'woordjes EN naar NL',naam:'woordjes EN naar NL'},{id:'irregular verbs',naam:'irregular verbs'}],
+  ges: TIJDVAKKEN.map(t => ({id: t.id, naam: t.naam}))
+};
+const BRONNEN = {ned: NED, eng: ENG, ges: GES};
+const NIVOS = {ned: NED_N, eng: ENG_N, ges: GES_N};
+
+function rekenVraag(rang, toegestaan) {
+  const r = rang || 2;
+  const potten = {
+    1: ['hoofd','hoofd','hoofd','breuk','tijdgeld'],
+    2: ['hoofd','hoofd','breuk','procent','tijdgeld','meten'],
+    3: ['hoofd','breuk','procent','verhouding','tijdgeld','meten'],
+    4: ['hoofd','breuk','procent','verhouding','verhouding','tijdgeld','meten']
+  };
+  const mag = toegestaan && toegestaan.length ? potten[r].filter(s => toegestaan.includes(s)) : potten[r];
+  const soort = kies(mag.length ? mag : (toegestaan && toegestaan.length ? toegestaan : potten[r]));
+  if (soort === 'hoofd') {
+    const type = r === 1 ? kies(['x','+','-']) : kies(['x','+','-',':']);
+    if (type === 'x') {
+      const a = r === 1 ? 2 + rnd(8) : r === 2 ? 3 + rnd(10) : r === 3 ? 6 + rnd(13) : 11 + rnd(19);
+      const b = r === 1 ? 2 + rnd(8) : r === 2 ? 4 + rnd(9) : r === 3 ? 5 + rnd(11) : 7 + rnd(14);
+      return bouw(a + ' \u00d7 ' + b, String(a * b), () => String(a * b + (rnd(2) ? 1 : -1) * (a + rnd(b))), 'Reken in stappen: ' + a + ' \u00d7 10 = ' + (a * 10) + ', en daar haal je ' + a + ' \u00d7 ' + (10 - b) + ' van af of tel je bij op.', 'hoofdrekenen');
+    }
+    if (type === '+') {
+      const a = r === 1 ? 12 + rnd(70) : r === 2 ? 120 + rnd(700) : r === 3 ? 640 + rnd(2400) : 2400 + rnd(7000);
+      const b = r === 1 ? 8 + rnd(40) : r === 2 ? 60 + rnd(400) : r === 3 ? 180 + rnd(900) : 900 + rnd(4000);
+      return bouw(a + ' + ' + b, String(a + b), () => String(a + b + (rnd(2) ? 10 : -10) * (1 + rnd(5))), 'Tel eerst de grootste getallen op, dan de tientallen, dan de eenheden.', 'hoofdrekenen');
+    }
+    if (type === '-') {
+      const a = r === 1 ? 40 + rnd(60) : r === 2 ? 400 + rnd(600) : r === 3 ? 1200 + rnd(2000) : 4000 + rnd(6000);
+      const b = r === 1 ? 8 + rnd(30) : r === 2 ? 80 + rnd(300) : r === 3 ? 240 + rnd(800) : 800 + rnd(3000);
+      return bouw(a + ' \u2212 ' + b, String(a - b), () => String(a - b + (rnd(2) ? 10 : -10) * (1 + rnd(6))), 'Reken handig: haal eerst een rond getal eraf en corrigeer daarna.', 'hoofdrekenen');
+    }
+    const b = r <= 2 ? 3 + rnd(9) : 6 + rnd(12), q = r <= 2 ? 3 + rnd(12) : 7 + rnd(20), a = b * q;
+    return bouw(a + ' : ' + b, String(q), () => String(q + (rnd(2) ? 1 : -1) * (1 + rnd(4))), 'Hoe vaak past ' + b + ' in ' + a + '? ' + b + ' \u00d7 ' + q + ' = ' + a + '.', 'hoofdrekenen');
+  }
+  if (soort === 'breuk') {
+    const noemers = r === 1 ? [[1,2],[1,4],[1,3]] : r === 2 ? [[1,2],[1,4],[3,4],[1,3],[1,5]] : [[3,4],[2,3],[3,5],[2,5],[5,6],[3,8]];
+    const f = kies(noemers), basis = f[1] * (r <= 2 ? 2 + rnd(8) : 6 + rnd(16));
+    const goed = basis * f[0] / f[1];
+    return bouw(f[0] + '/' + f[1] + ' van ' + basis, String(goed), () => String(goed + (rnd(2) ? 1 : -1) * (1 + rnd(6))), 'Deel eerst door ' + f[1] + ' (' + basis + ' : ' + f[1] + ' = ' + (basis / f[1]) + ') en neem daar ' + f[0] + ' keer van.', 'breuken');
+  }
+  if (soort === 'procent') {
+    const p = r <= 2 ? kies([10,20,25,50]) : kies([5,15,35,40,60,75,80]);
+    const basis = r <= 2 ? kies([20,40,60,80,120,200]) : kies([160,240,320,420,650,840]);
+    const goed = basis * p / 100;
+    return bouw(p + '% van ' + basis, String(goed), () => String(goed + (rnd(2) ? 1 : -1) * kies([2,4,5,10])), '1% van ' + basis + ' is ' + (basis / 100) + ', dus ' + p + '% is ' + p + ' \u00d7 ' + (basis / 100) + ' = ' + goed + '.', 'procenten');
+  }
+  if (soort === 'verhouding') {
+    const stuk = kies([2,3,4,5]), prijs = stuk * kies([0.75,1.25,1.5,2.25]), meer = stuk + kies([1,2,3]);
+    const goed = prijs / stuk * meer;
+    return bouw(stuk + ' pakken kosten ' + euro(prijs) + '. Wat kosten ' + meer + ' pakken?', euro(goed), () => euro(goed + (rnd(2) ? 1 : -1) * kies([0.25,0.5,0.75,1])), 'Eerst \u00e9\u00e9n pak: ' + euro(prijs) + ' : ' + stuk + ' = ' + euro(prijs / stuk) + '. Dan \u00d7 ' + meer + '.', 'verhoudingen');
+  }
+  if (soort === 'tijdgeld') {
+    if (rnd(2)) {
+      const u = 8 + rnd(11), m = kies([10,15,25,35,40,45,50]), plus = kies([25,35,40,50,55,70,80]);
+      const tot = u * 60 + m + plus, gu = Math.floor(tot / 60) % 24, gm = tot % 60;
+      const pad = n => (n < 10 ? '0' : '') + n;
+      const goed = pad(gu) + ':' + pad(gm);
+      return bouw('Het is ' + pad(u) + ':' + pad(m) + '. Hoe laat is het over ' + plus + ' minuten?', goed, () => { const d = (rnd(2) ? 1 : -1) * kies([5,10,15,60]); const t2 = tot + d; return pad(Math.floor(t2 / 60) % 24) + ':' + pad(((t2 % 60) + 60) % 60); }, 'Tel eerst tot het volgende hele uur, en daarna de rest van de minuten.', 'tijd');
+    }
+    const betaald = kies([10,20,50]), prijs = betaald - kies([1,2,3,4,5,6,7]) - kies([0.05,0.15,0.35,0.45,0.75,0.95]);
+    const goed = betaald - prijs;
+    return bouw('Je koopt iets van ' + euro(prijs) + ' en betaalt met ' + euro(betaald) + '. Hoeveel krijg je terug?', euro(goed), () => euro(goed + (rnd(2) ? 1 : -1) * kies([0.10,0.50,1,2])), 'Tel aan van ' + euro(prijs) + ' naar ' + euro(betaald) + ', eerst naar de hele euro.', 'geld');
+  }
+  const type = kies(['omtrek','opp','meter']);
+  if (type === 'omtrek') { const a = 3 + rnd(18), b = 4 + rnd(20); return bouw('Omtrek van een rechthoek van ' + a + ' bij ' + b + ' cm', (2 * (a + b)) + ' cm', () => (2 * (a + b) + (rnd(2) ? 1 : -1) * kies([2,4,a,b])) + ' cm', 'Omtrek is 2 \u00d7 (' + a + ' + ' + b + ').', 'meten'); }
+  if (type === 'opp') { const a = 3 + rnd(12), b = 4 + rnd(12); return bouw('Oppervlakte van een rechthoek van ' + a + ' bij ' + b + ' cm', (a * b) + ' cm\u00b2', () => (a * b + (rnd(2) ? 1 : -1) * kies([a,b,2,10])) + ' cm\u00b2', 'Oppervlakte is lengte \u00d7 breedte: ' + a + ' \u00d7 ' + b + '.', 'meten'); }
+  const m = kies([1.5,2.5,0.75,3.2,4.05,0.4]);
+  return bouw(String(m).replace('.', ',') + ' meter in centimeter', (m * 100) + ' cm', () => (m * 100 * kies([10,0.1]) + kies([0,5])) + ' cm', 'Een meter is 100 cm, dus je vermenigvuldigt met 100.', 'meten');
+}
+/* ============================================================================
+   ENGINE
+   ----------------------------------------------------------------------------
+   De data en de vraaggenerator hierboven komen uit het oorspronkelijke ontwerp.
+   Het tekenen en de bediening zijn hier opnieuw gebouwd, zonder afhankelijkheid
+   van een extern ontwerpsysteem, zodat de pagina los werkt.
+   ============================================================================ */
+(function(){
+  'use strict';
+  document.getElementById('jaar').textContent = new Date().getFullYear();
+
+  var BREED = 900, HOOG = 460;
+  var niveau = 'kgt', vak = null, keuze = {};
+  var vijanden = [], torens = [], schoten = [], pot = null;
+  var wachtrij = 5, spawnKlok = 0, rondePauze = 2;
+  var bank = { munten:60, leven:12, ronde:1 };
+  var reeks = 0, besteReeks = 0, goedAantal = 0, foutAantal = 0;
+  var vraag = null, gekliktIndex = -1, gekozenSoort = null, geselecteerd = null;
+  var klok = null;
+
+  function rang(){ var n = NIVEAUS.filter(function(x){ return x.id === niveau; })[0]; return n ? n.rang : 2; }
+
+  /* ---------- het pad ---------- */
+  var PADLENGTE = (function(){
+    var l = 0;
+    for (var i = 1; i < PAD.length; i++) l += Math.hypot(PAD[i][0]-PAD[i-1][0], PAD[i][1]-PAD[i-1][1]);
+    return l;
+  })();
+  function positie(afstand){
+    var rest = afstand;
+    for (var i = 1; i < PAD.length; i++){
+      var dx = PAD[i][0]-PAD[i-1][0], dy = PAD[i][1]-PAD[i-1][1], len = Math.hypot(dx, dy);
+      if (rest <= len) return { x:PAD[i-1][0] + dx*(rest/len), y:PAD[i-1][1] + dy*(rest/len) };
+      rest -= len;
+    }
+    return { x:PAD[PAD.length-1][0], y:PAD[PAD.length-1][1] };
+  }
+
+  /* ---------- startscherm ---------- */
+  function tekenNiveaus(){
+    var vak2 = document.getElementById('niveaus');
+    vak2.innerHTML = NIVEAUS.map(function(n){
+      return '<button type="button" data-n="' + n.id + '"' + (niveau === n.id ? ' class="on"' : '') + '>' + n.naam + '</button>';
+    }).join('');
+    Array.prototype.forEach.call(vak2.querySelectorAll('button'), function(b){
+      b.addEventListener('click', function(){ niveau = b.getAttribute('data-n'); tekenNiveaus(); });
+    });
+    var n = NIVEAUS.filter(function(x){ return x.id === niveau; })[0];
+    document.getElementById('nivUit').textContent = n ? n.uitleg : '';
+  }
+
+  function tekenVakken(){
+    var vak2 = document.getElementById('vakken');
+    vak2.innerHTML = VAKKEN.map(function(v){
+      return '<button class="vak' + (vak === v.id ? ' on' : '') + '" type="button" data-v="' + v.id + '">' +
+        '<i style="background:' + kleurVan(v.kleur) + '">' + v.mark + '</i>' +
+        '<b>' + v.naam + '</b><span>' + v.onder + '</span></button>';
+    }).join('');
+    Array.prototype.forEach.call(vak2.querySelectorAll('.vak'), function(b){
+      b.addEventListener('click', function(){
+        vak = b.getAttribute('data-v');
+        if (!keuze[vak]) keuze[vak] = [];
+        tekenVakken(); tekenDeelvakken(); tekenStartknop();
+      });
+    });
+  }
+
+  /* De oorspronkelijke kleuren verwijzen naar een ontwerpsysteem dat hier niet
+     staat; deze tabel vertaalt ze naar de kleuren van de site. */
+  function kleurVan(c){
+    var t = { 'var(--crab)':'#F26749', 'var(--deep-ocean)':'#204ECF', 'var(--butterscotch)':'#EA9836',
+              'var(--vista-blue)':'#83A5F2' };
+    return t[c] || c;
+  }
+
+  function tekenDeelvakken(){
+    var doel = document.getElementById('deelvakken');
+    if (!vak){ doel.innerHTML = ''; return; }
+    var lijst = ONDERDELEN[vak] || [];
+    doel.innerHTML = '<p class="eyebrow kop2">wat wil je oefenen</p>' +
+      '<div class="deelvak"><button type="button" data-d="alles"' +
+        (keuze[vak].length ? '' : ' class="on"') + '>alles door elkaar</button>' +
+      lijst.map(function(o){
+        return '<button type="button" data-d="' + o.id + '"' +
+          (keuze[vak].indexOf(o.id) >= 0 ? ' class="on"' : '') + '>' + o.naam + '</button>';
+      }).join('') + '</div>';
+    Array.prototype.forEach.call(doel.querySelectorAll('button'), function(b){
+      b.addEventListener('click', function(){
+        var d = b.getAttribute('data-d');
+        if (d === 'alles') keuze[vak] = [];
+        else {
+          var k = keuze[vak].indexOf(d);
+          if (k >= 0) keuze[vak].splice(k, 1); else keuze[vak].push(d);
+        }
+        tekenDeelvakken();
+      });
+    });
+  }
+
+  function tekenStartknop(){
+    var b = document.getElementById('startBtn');
+    b.disabled = !vak;
+    b.textContent = vak
+      ? 'Begin met ' + VAKKEN.filter(function(v){ return v.id === vak; })[0].naam.toLowerCase()
+      : 'Kies eerst een vak';
+  }
+
+  /* ---------- vragen ---------- */
+  function nieuweVraag(){
+    var r = rang(), gekozen2 = keuze[vak] || [];
+    if (vak === 'reken') return rekenVraag(r, gekozen2);
+    var bron = BRONNEN[vak], nivo = NIVOS[vak];
+    if (!pot || !pot.length){
+      var magTag = function(i){ return !gekozen2.length || gekozen2.indexOf(bron[i].t) >= 0; };
+      var ids = bron.map(function(q, i){ return i; }).filter(function(i){ return magTag(i) && nivo[i] <= r && nivo[i] >= r-1; });
+      if (ids.length < 4) ids = bron.map(function(q, i){ return i; }).filter(function(i){ return magTag(i) && nivo[i] <= r; });
+      if (ids.length < 4) ids = bron.map(function(q, i){ return i; }).filter(magTag);
+      pot = ids.sort(function(){ return Math.random() - 0.5; });
+    }
+    var i2 = pot.pop(), q = bron[i2];
+    if (vak === 'ges'){
+      var tv = TIJDVAKKEN.filter(function(t){ return t.id === q.t; })[0] || { naam:'' };
+      return shuffleVraag({ v:q.v, o:q.o, g:q.g, u:q.u, t:'tijdvak ' + tv.naam.replace(/^\d+ /, '') });
+    }
+    if (vak === 'eng' && q.t !== 'irregular verbs'){
+      return shuffleVraag({ v:(q.t === 'woordjes NL naar EN' ? 'Hoe zeg je: ' : 'Wat betekent: ') + q.v + '?',
+                            o:q.o, g:q.g, u:q.u, t:q.t });
+    }
+    return shuffleVraag(q);
+  }
+
+  function tekenVraag(){
+    if (!vraag) return;
+    document.getElementById('vraagKop').textContent = vraag.t || 'vraag';
+    document.getElementById('vraagTekst').textContent = vraag.v;
+    var vak2 = document.getElementById('opties');
+    vak2.innerHTML = vraag.o.map(function(tekst, i){
+      var kl = '';
+      if (gekliktIndex >= 0){
+        if (i === vraag.g) kl = ' juist';
+        else if (i === gekliktIndex) kl = ' mis';
+      }
+      return '<button class="optie' + kl + '" type="button" data-i="' + i + '"' +
+        (gekliktIndex >= 0 ? ' disabled' : '') + '>' + tekst + '</button>';
+    }).join('');
+    Array.prototype.forEach.call(vak2.querySelectorAll('.optie'), function(b){
+      b.addEventListener('click', function(){ antwoord(parseInt(b.getAttribute('data-i'), 10)); });
+    });
+    document.getElementById('reeksUit').textContent = reeks > 1
+      ? reeks + ' goed op rij, dat levert extra munten op.' : '';
+  }
+
+  function antwoord(i){
+    if (!vraag || gekliktIndex >= 0) return;
+    var goed = i === vraag.g;
+    var winst = goed ? 15 + Math.min(15, reeks * 3) : 0;
+    gekliktIndex = i;
+    reeks = goed ? reeks + 1 : 0;
+    besteReeks = Math.max(besteReeks, reeks);
+    bank.munten += winst;
+    if (goed) goedAantal++; else foutAantal++;
+    document.getElementById('uitlegVak').innerHTML = '<div class="uitleg' + (goed ? ' goed' : '') + '">' +
+      (goed ? 'Goed. ' + winst + ' munten erbij.' : 'Niet goed. ' + vraag.u) + '</div>';
+    tekenVraag(); tekenMeters(); tekenWinkel();
+    /* Bij een fout krijg je langer de tijd om de uitleg te lezen. */
+    setTimeout(function(){
+      if (document.getElementById('scherm-spel').classList.contains('hide')) return;
+      vraag = nieuweVraag(); gekliktIndex = -1;
+      document.getElementById('uitlegVak').innerHTML = '';
+      tekenVraag();
+    }, goed ? 700 : 3400);
+  }
+
+  /* ---------- torens kopen ---------- */
+  function tekenWinkel(){
+    var vak2 = document.getElementById('winkel');
+    vak2.innerHTML = Object.keys(SOORTEN).map(function(id){
+      var s = SOORTEN[id];
+      return '<button class="koop' + (gekozenSoort === id ? ' on' : '') + '" type="button" data-s="' + id + '"' +
+        (bank.munten < s.prijs ? ' disabled' : '') + '>' +
+        '<b>' + s.naam + ' <em>' + s.prijs + '</em></b><span>' + s.onder + '</span></button>';
+    }).join('');
+    Array.prototype.forEach.call(vak2.querySelectorAll('.koop'), function(b){
+      b.addEventListener('click', function(){
+        var id = b.getAttribute('data-s');
+        gekozenSoort = gekozenSoort === id ? null : id;
+        tekenWinkel(); tekenBord();
+      });
+    });
+  }
+
+  function plaats(index){
+    var bestaand = torens.filter(function(t){ return t.plek === index; })[0];
+    if (bestaand){ versterk(bestaand); return; }
+    if (!gekozenSoort){ geselecteerd = null; tekenBord(); return; }
+    var s = SOORTEN[gekozenSoort];
+    if (bank.munten < s.prijs) return;
+    bank.munten -= s.prijs;
+    torens.push({ plek:index, soort:gekozenSoort, niveau:1, klok:0 });
+    gekozenSoort = null; geselecteerd = index;
+    tekenMeters(); tekenWinkel(); tekenBord();
+  }
+
+  function versterk(toren){
+    if (geselecteerd !== toren.plek){ geselecteerd = toren.plek; tekenBord(); return; }
+    var kosten = Math.round(SOORTEN[toren.soort].prijs * 0.8 * toren.niveau);
+    if (bank.munten < kosten || toren.niveau >= 3) return;
+    bank.munten -= kosten;
+    toren.niveau++;
+    tekenMeters(); tekenWinkel(); tekenBord();
+  }
+
+  /* ---------- het bord ---------- */
+  function padTekening(){
+    var d = 'M' + PAD[0][0] + ',' + PAD[0][1];
+    for (var i = 1; i < PAD.length; i++) d += 'L' + PAD[i][0] + ',' + PAD[i][1];
+    return d;
+  }
+
+  function tekenBord(){
+    var s = '<svg viewBox="0 0 ' + BREED + ' ' + HOOG + '" xmlns="http://www.w3.org/2000/svg" ' +
+      'role="img" aria-label="Het pad naar de klas met jouw torens">';
+    s += '<rect width="' + BREED + '" height="' + HOOG + '" fill="#eae4d6"/>';
+    /* het pad */
+    s += '<path d="' + padTekening() + '" fill="none" stroke="#c9bb9c" stroke-width="46" ' +
+         'stroke-linecap="round" stroke-linejoin="round"/>';
+    s += '<path d="' + padTekening() + '" fill="none" stroke="#d9cdb4" stroke-width="38" ' +
+         'stroke-linecap="round" stroke-linejoin="round"/>';
+    /* de klas aan het eind */
+    var eind = PAD[PAD.length-1];
+    s += '<g transform="translate(' + (eind[0]-46) + ',' + (eind[1]-40) + ')">' +
+      '<rect x="0" y="8" width="74" height="62" rx="8" fill="#fff" stroke="#3b3730" stroke-width="2"/>' +
+      '<path d="M-6,10 L37,-14 L80,10 z" fill="#F26749" stroke="#3b3730" stroke-width="2" stroke-linejoin="round"/>' +
+      '<rect x="26" y="38" width="22" height="32" fill="#204ECF" opacity=".7"/>' +
+      '<text x="37" y="90" font-size="13" font-weight="600" fill="#5b6480" text-anchor="middle">de klas</text></g>';
+
+    /* bereik van de gekozen toren */
+    PLEKKEN.forEach(function(p, i){
+      var t = torens.filter(function(x){ return x.plek === i; })[0];
+      if (t && geselecteerd === i){
+        var ber = SOORTEN[t.soort].bereik + (t.niveau - 1) * 18;
+        s += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + ber + '" fill="' +
+             kleurVan(SOORTEN[t.soort].kleur) + '" opacity=".10"/>';
+      }
+    });
+
+    /* plekken en torens */
+    PLEKKEN.forEach(function(p, i){
+      var t = torens.filter(function(x){ return x.plek === i; })[0];
+      if (!t){
+        s += '<g class="plek" data-p="' + i + '" style="cursor:pointer">' +
+          '<circle cx="' + p.x + '" cy="' + p.y + '" r="17" fill="#fff" opacity="' +
+          (gekozenSoort ? '.85' : '.4') + '" stroke="#b5ac9c" stroke-width="2" stroke-dasharray="5 4"/>' +
+          (gekozenSoort ? '<text x="' + p.x + '" y="' + (p.y+5) + '" font-size="16" font-weight="700" ' +
+            'fill="#5b6480" text-anchor="middle">+</text>' : '') + '</g>';
+        return;
+      }
+      var so = SOORTEN[t.soort], kl = kleurVan(so.kleur);
+      s += '<g class="plek" data-p="' + i + '" style="cursor:pointer">' +
+        '<circle cx="' + p.x + '" cy="' + p.y + '" r="20" fill="' + kl + '" stroke="#fff" stroke-width="3"/>' +
+        '<text x="' + p.x + '" y="' + (p.y+6) + '" font-size="16" font-weight="700" fill="#fff" ' +
+        'text-anchor="middle">' + so.letter + '</text>';
+      for (var n = 0; n < t.niveau; n++){
+        s += '<circle cx="' + (p.x - 8 + n*8) + '" cy="' + (p.y + 27) + '" r="3" fill="' + kl + '"/>';
+      }
+      s += '</g>';
+    });
+
+    /* schoten */
+    schoten.forEach(function(sc){
+      s += '<line x1="' + sc.x + '" y1="' + sc.y + '" x2="' + (sc.x + Math.cos(sc.hoek*Math.PI/180)*sc.len) +
+        '" y2="' + (sc.y + Math.sin(sc.hoek*Math.PI/180)*sc.len) + '" stroke="' + kleurVan(sc.kleur) +
+        '" stroke-width="3" stroke-linecap="round" opacity="' + Math.max(0, sc.leven/0.18*0.8) + '"/>';
+    });
+
+    /* de fouten die naar de klas lopen */
+    vijanden.forEach(function(e){
+      var p = positie(e.d);
+      var deel = Math.max(0, e.hp / e.maxHp);
+      s += '<g>' +
+        '<circle cx="' + p.x + '" cy="' + p.y + '" r="13" fill="' + (e.traag > 0 ? '#EA9836' : '#c0442c') +
+        '" stroke="#fff" stroke-width="2"/>' +
+        '<text x="' + p.x + '" y="' + (p.y+5) + '" font-size="14" font-weight="700" fill="#fff" ' +
+        'text-anchor="middle">' + e.mark + '</text>' +
+        '<rect x="' + (p.x-14) + '" y="' + (p.y-24) + '" width="28" height="5" rx="2.5" fill="rgba(20,34,76,.2)"/>' +
+        '<rect x="' + (p.x-14) + '" y="' + (p.y-24) + '" width="' + (28*deel) + '" height="5" rx="2.5" fill="#2f7d52"/>' +
+        '</g>';
+    });
+    s += '</svg>';
+    var vak2 = document.getElementById('bordvak');
+    vak2.innerHTML = s;
+    Array.prototype.forEach.call(vak2.querySelectorAll('.plek'), function(g){
+      g.addEventListener('click', function(){ plaats(parseInt(g.getAttribute('data-p'), 10)); });
+    });
+  }
+
+  function tekenMeters(){
+    document.getElementById('mMunt').textContent = bank.munten;
+    document.getElementById('mLeven').textContent = bank.leven;
+    document.getElementById('mRonde').textContent = bank.ronde;
+    document.getElementById('mReeks').textContent = reeks;
+  }
+
+  /* ---------- de klok ---------- */
+  function tik(){
+    var dt = 0.06, ronde = bank.ronde;
+    if (wachtrij === 0 && vijanden.length === 0){
+      rondePauze -= dt;
+      if (rondePauze <= 0){ bank.ronde++; wachtrij = 4 + bank.ronde; spawnKlok = 0; }
+    }
+    if (wachtrij > 0){
+      spawnKlok -= dt;
+      if (spawnKlok <= 0){
+        spawnKlok = Math.max(0.55, 1.4 - ronde * 0.05);
+        wachtrij--;
+        var r = rang();
+        var hp = Math.round((10 + ronde * 6) * (0.75 + r * 0.15));
+        vijanden.push({ d:0, hp:hp, maxHp:hp, snelheid:30 + r*5 + ronde*2.3, traag:0,
+                        mark:kies(['?', '!', '\u00d7']) });
+        if (wachtrij === 0) rondePauze = 3;
+      }
+    }
+    var verlies = 0;
+    vijanden.forEach(function(e){
+      e.d += e.snelheid * (e.traag > 0 ? 0.45 : 1) * dt;
+      if (e.traag > 0) e.traag -= dt;
+      if (e.d >= PADLENGTE){ e.dood = true; verlies++; }
+    });
+    torens.forEach(function(t){
+      var s = SOORTEN[t.soort];
+      var bereik = s.bereik + (t.niveau-1) * 18, schade = s.schade * (1 + (t.niveau-1) * 0.6);
+      t.klok -= dt;
+      if (t.klok > 0) return;
+      var p = PLEKKEN[t.plek], doel = null, verst = -1, doelPos = null;
+      vijanden.forEach(function(e){
+        if (e.dood) return;
+        var pos = positie(e.d);
+        if (Math.hypot(pos.x - p.x, pos.y - p.y) <= bereik && e.d > verst){ doel = e; verst = e.d; doelPos = pos; }
+      });
+      if (!doel) return;
+      t.klok = s.tempo;
+      doel.hp -= schade;
+      if (t.soort === 'vertrager') doel.traag = 1.4;
+      if (doel.hp <= 0) doel.dood = true;
+      var dx = doelPos.x - p.x, dy = doelPos.y - p.y;
+      schoten.push({ x:p.x, y:p.y, len:Math.hypot(dx, dy),
+                     hoek:Math.atan2(dy, dx) * 180 / Math.PI, kleur:s.kleur, leven:0.18 });
+    });
+    vijanden = vijanden.filter(function(e){ return !e.dood; });
+    schoten.forEach(function(s){ s.leven -= dt; });
+    schoten = schoten.filter(function(s){ return s.leven > 0; });
+    if (verlies){
+      bank.leven -= verlies;
+      if (bank.leven <= 0){ bank.leven = 0; tekenMeters(); einde(); return; }
+    }
+    tekenBord(); tekenMeters();
+  }
+
+  /* ---------- beginnen en eindigen ---------- */
+  function begin(){
+    vijanden = []; torens = []; schoten = []; pot = null;
+    wachtrij = 5; spawnKlok = 0; rondePauze = 2;
+    bank = { munten:60, leven:12, ronde:1 };
+    reeks = 0; besteReeks = 0; goedAantal = 0; foutAantal = 0;
+    gekliktIndex = -1; gekozenSoort = null; geselecteerd = null;
+    vraag = nieuweVraag();
+    document.getElementById('uitlegVak').innerHTML = '';
+    document.getElementById('scherm-start').classList.add('hide');
+    document.getElementById('scherm-einde').classList.add('hide');
+    document.getElementById('scherm-spel').classList.remove('hide');
+    tekenVraag(); tekenMeters(); tekenWinkel(); tekenBord();
+    if (klok) clearInterval(klok);
+    klok = setInterval(tik, 60);
+    scrollTo({ top:0, behavior:'auto' });
+  }
+
+  function einde(){
+    if (klok){ clearInterval(klok); klok = null; }
+    document.getElementById('scherm-spel').classList.add('hide');
+    document.getElementById('scherm-einde').classList.remove('hide');
+    var totaal = goedAantal + foutAantal;
+    var deel = totaal ? Math.round(goedAantal / totaal * 100) : 0;
+    var v = VAKKEN.filter(function(x){ return x.id === vak; })[0];
+    document.getElementById('eindeUit').textContent =
+      'Je hield het ' + bank.ronde + ' rondes vol bij ' + (v ? v.naam.toLowerCase() : 'dit vak') +
+      '. Je beantwoordde ' + totaal + ' vragen, waarvan ' + goedAantal + ' goed.' +
+      (foutAantal ? ' De fouten die doorliepen waren de vragen die je miste, dus die zijn het oefenen waard.' : '');
+    document.getElementById('cijfers').innerHTML =
+      '<div><b>' + bank.ronde + '</b><span>rondes</span></div>' +
+      '<div><b>' + goedAantal + '</b><span>goed</span></div>' +
+      '<div><b>' + foutAantal + '</b><span>fout</span></div>' +
+      '<div><b>' + deel + '%</b><span>goed</span></div>' +
+      '<div><b>' + besteReeks + '</b><span>beste reeks</span></div>';
+    bewaarRecord(bank.ronde);
+    scrollTo({ top:0, behavior:'auto' });
+  }
+
+  /* Het klassement blijft op deze computer staan, net als bij de andere spellen. */
+  function bewaarRecord(rondes){
+    try {
+      var sleutel = 'lg-toren-' + vak + '-' + niveau;
+      var oud = parseInt(localStorage.getItem(sleutel) || '0', 10);
+      if (rondes > oud){
+        localStorage.setItem(sleutel, String(rondes));
+        document.getElementById('eindeUit').textContent += ' Dat is je beste poging tot nu toe.';
+      } else if (oud){
+        document.getElementById('eindeUit').textContent += ' Je beste poging blijft ' + oud + ' rondes.';
+      }
+    } catch (e){}
+  }
+
+  /* ---------- knoppen ---------- */
+  document.getElementById('startBtn').addEventListener('click', function(){ if (vak) begin(); });
+  document.getElementById('nogBtn').addEventListener('click', begin);
+  document.getElementById('opnieuwBtn').addEventListener('click', function(){
+    if (klok){ clearInterval(klok); klok = null; }
+    document.getElementById('scherm-spel').classList.add('hide');
+    document.getElementById('scherm-einde').classList.add('hide');
+    document.getElementById('scherm-start').classList.remove('hide');
+    scrollTo({ top:0, behavior:'auto' });
+  });
+  document.getElementById('grootBtn').addEventListener('click', function(){
+    document.body.classList.toggle('groot');
+    this.textContent = document.body.classList.contains('groot') ? 'Normaal' : 'Digibord';
+  });
+
+  tekenNiveaus(); tekenVakken(); tekenDeelvakken(); tekenStartknop();
+})();
+</script>
+</body>
+</html>
