@@ -321,6 +321,11 @@ var SPELLEN = [
     wat:'Kies op de kaart welke polis je bestuurt: Athene, Sparta, Korinthe, Thebe, Argos, Milete of Syracuse. Elk begint anders. Veertig zetels in de vergadering. Jij brengt voorstellen in, ronselt stemmen met een redevoering of met geschenken, en ziet dan zetel voor zetel of je het haalt. Wie er mag stemmen hangt af van de bestuursvorm, en die verandert zodra een groep te lang buitengesloten blijft.',
     leer:'Grieken en Romeinen', tijd:'een kwartier of een half uur' },
 
+  { vak:['rekenen','nederlands','engels','geschiedenis'], bestand:'toren.html', naam:'Torenverdediging', kleur:'#F26749', tv:0,
+    ico:'<path d="M12 2 L4 7v13h16V7z"/><path d="M9 20v-6h6v6"/><path d="M4 7h16"/>',
+    wat:'Er lopen fouten over het pad naar de klas. Elk goed antwoord levert munten op, met munten koop je torens: een kanon dat snel en dichtbij schiet, een katapult die ver komt maar traag is, en een vertrager. Kies rekenen, Nederlands, Engels of geschiedenis, en per vak welk onderdeel je wilt oefenen. Het spel stopt pas als de klas vol fouten zit.',
+    leer:'Oefenen', tijd:'zolang je het volhoudt' },
+
   { vak:'geschiedenis', bestand:'bronnenlab.html', naam:'Bronnenlab', kleur:'#204ECF', tv:0,
     ico:'<circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/><path d="M8 9.5h5M8 12h3.5"/>',
     wat:'Vierentwintig bronnen: tien echte die je in een museum of archief kunt opzoeken, een uit elk tijdvak, en veertien oefenbronnen van elk een ander soort. Je bekijkt wie hem maakte, wanneer, en wat er wordt weggelaten.',
@@ -414,10 +419,16 @@ var SPELLEN = [
   });
 
   /* ---------- vakken ---------- */
+  /* Een spel hoort meestal bij een vak, maar Torenverdediging dekt er vier.
+     Daarom mag vak ook een lijstje zijn. */
+  function hoortBij(sp, id){
+    return Array.isArray(sp.vak) ? sp.vak.indexOf(id) >= 0 : sp.vak === id;
+  }
+
   function tekenVakken(){
     vakvak.innerHTML = '';
     VAKKEN.forEach(function(v){
-      var aantal = SPELLEN.filter(function(s){ return s.vak === v.id && s.bestand; }).length;
+      var aantal = SPELLEN.filter(function(s){ return hoortBij(s, v.id) && s.bestand; }).length;
       var b = document.createElement('button');
       b.className = 'vak' + (aantal ? '' : ' leeg'); b.type = 'button';
       b.innerHTML = '<div class="tegel" style="background:' + v.kleur + '"><svg viewBox="0 0 24 24">' + v.ico + '</svg></div>' +
@@ -437,7 +448,7 @@ var SPELLEN = [
   }
   /* Op de kaart zelf: kort, want de kop erboven zegt het al voluit. */
   function tvLabel(sp){
-    if (!sp.tv) return sp.vak === 'geschiedenis' ? 'Alle tijdvakken' : '';
+    if (!sp.tv) return hoortBij(sp, 'geschiedenis') && !Array.isArray(sp.vak) ? 'Alle tijdvakken' : '';
     var lijst = Array.isArray(sp.tv) ? sp.tv : [sp.tv];
     /* Elke naam apart met een kleine letter, en gescheiden door een komma.
        Namen als steden en staten bevatten zelf al een en, dus daar nog een en
@@ -454,7 +465,7 @@ var SPELLEN = [
     vakvak.style.display = 'none';
     spelvak.style.display = 'block';
     document.getElementById('vakTitel').textContent = v.naam;
-    var mijn = SPELLEN.filter(function(s){ return s.vak === v.id; });
+    var mijn = SPELLEN.filter(function(s){ return hoortBij(s, v.id); });
     /* Heeft dit vak tijdvakken, dan gaat de lijst op chronologische volgorde.
        Spellen zonder tijdvak zijn vaardigheden en staan bovenaan. */
     var metTijd = mijn.some(function(s){ return s.tv; });
