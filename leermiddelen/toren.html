@@ -211,7 +211,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
 <section class="start wrap" id="scherm-start">
   <p class="hand" style="font-size:1.5rem">hoi, klaar om te verdedigen?</p>
   <h1>Torenverdediging</h1>
-  <p class="lead">Er lopen fouten over het pad naar de klas. Elk goed antwoord levert munten op, met munten koop je torens. Fout? Dan lees je waarom, en je gaat door. Het spel stopt pas als de klas vol fouten zit.</p>
+  <p class="lead">Er lopen fouten over het pad naar de klas. Elk goed antwoord levert munten op. Naast het pad bouw je torens, op het pad leg je pek, voetangels of een versperring. Vanaf ronde vier komen er snellere fouten bij, vanaf ronde zeven fouten met een schild, en elke tiende ronde een baas. Fout geantwoord? Dan lees je waarom, en je gaat door.</p>
 
   <p class="eyebrow">kies je niveau</p>
   <div class="niv" id="niveaus"></div>
@@ -233,7 +233,8 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
         <div class="meterv"><b id="mLeven">12</b><span>klas</span></div>
         <div class="meterv"><b id="mRonde">1</b><span>ronde</span></div>
         <div class="meterv"><b id="mReeks">0</b><span>op rij</span></div>
-        <div class="meterv"><b id="mToren">0/8</b><span>torens</span></div>
+        <div class="meterv"><b id="mToren">0/12</b><span>torens</span></div>
+        <div class="meterv"><b id="mWeg">0/5</b><span>op de weg</span></div>
       </div>
       <div class="bordvak" id="bordvak"></div>
       <p class="bordtip" id="bordtip">Tik op een lege plek langs het pad om daar een toren te zetten.</p>
@@ -1370,11 +1371,42 @@ function rekenVraag(rang, toegestaan) {
      Vrije plaatsing: geen vaste plekken meer. Je mag overal bouwen behalve op
      het pad zelf, te dicht op een andere toren, of half buiten het bord. */
   var PADVRIJ = 34, TORENVRIJ = 42, RAND = 26;
+
+  /* ---------- dingen op de weg ----------
+     Torens staan naast het pad, deze liggen erop. Ze werken op alles wat
+     eroverheen loopt, dus ze zijn sterk tegen een zwerm en tegen snelle fouten
+     die je torens te vlug passeren. */
+  var WEGDING = {
+    pek:     { naam:'Pekvlek',      prijs:45,  straal:34, kleur:'#3b3730',
+               onder:'vertraagt alles wat erdoor loopt' },
+    angels:  { naam:'Voetangels',   prijs:60,  straal:26, kleur:'#7d7566',
+               onder:'doet schade, slijt na 30 treffers', schade:5, voorraad:30 },
+    hek:     { naam:'Wegversperring', prijs:80, straal:20, kleur:'#8a6a45',
+               onder:'houdt fouten even tegen, gaat 6 keer mee', voorraad:6 }
+  };
+  var MAXWEG = 5;
+  var wegdingen = [];
+  var WEGVRIJ = 70;
+
+  function magOpWeg(x, y, behalve){
+    if (afstandTotPad(x, y) > 22) return false;
+    for (var i = 0; i < wegdingen.length; i++){
+      if (wegdingen[i] === behalve) continue;
+      if (Math.hypot(wegdingen[i].x - x, wegdingen[i].y - y) < WEGVRIJ) return false;
+    }
+    return true;
+  }
+  function wegdingBij(x, y){
+    for (var i = 0; i < wegdingen.length; i++){
+      if (Math.hypot(wegdingen[i].x - x, wegdingen[i].y - y) <= 24) return wegdingen[i];
+    }
+    return null;
+  }
   /* Met vrije plaatsing passen er meer dan honderd torens op het bord, en dan
      is het spel na een paar rondes niet meer te verliezen. Vandaar een maximum
      en een prijs die stijgt met elke toren die je al hebt. Doorgerekend: zo kom
      je op ongeveer veertien rondes, net als met de tien vaste plekken van eerst. */
-  var MAXTORENS = 8, DUURDER = 0.25;
+  var MAXTORENS = 12, DUURDER = 0.18;
 
   function prijsVan(soort){
     return Math.round(SOORTEN[soort].prijs * (1 + DUURDER * torens.length));
@@ -1423,6 +1455,27 @@ function rekenVraag(rang, toegestaan) {
      langzamer loopt en drie levens kost als hij binnenkomt. */
   var BAASRONDE = 10, BAASTAAI = 8, BAASSCHADE = 3, BAASBELONING = 100;
   function isBaasRonde(n){ return n % BAASRONDE === 0; }
+
+  /* ---------- soorten fouten ----------
+     Vanaf bepaalde rondes komen er andere fouten bij, zodat je je torens moet
+     bijstellen in plaats van er alleen meer neer te zetten. */
+  var FOUTEN = [
+    { id:'gewoon', naam:'gewone fout', vanaf:1, kans:5, mark:'?', kleur:'#c0442c',
+      taai:1, vlug:1, schild:0 },
+    { id:'snel', naam:'snelle fout', vanaf:4, kans:3, mark:'\u00bb', kleur:'#EA9836',
+      taai:0.62, vlug:1.7, schild:0 },
+    { id:'schild', naam:'fout met schild', vanaf:7, kans:3, mark:'\u25cf', kleur:'#5b6480',
+      taai:1.15, vlug:0.85, schild:0.55 },
+    { id:'zwerm', naam:'zwerm', vanaf:9, kans:2, mark:'\u00d7', kleur:'#7d1f12',
+      taai:0.34, vlug:1.25, schild:0, aantal:3 }
+  ];
+  function kiesFout(ronde){
+    var mag = FOUTEN.filter(function(f){ return f.vanaf <= ronde; });
+    var totaal = mag.reduce(function(a, f){ return a + f.kans; }, 0);
+    var trek = Math.random() * totaal;
+    for (var i = 0; i < mag.length; i++){ trek -= mag[i].kans; if (trek <= 0) return mag[i]; }
+    return mag[0];
+  }
   var baasAlarm = 0, pols = 0;
   var menu = null;      /* het keuzemenu, op de plek waar je tikte */
   var sleep = null;     /* de toren die je aan het verplaatsen bent */
@@ -1434,8 +1487,21 @@ function rekenVraag(rang, toegestaan) {
     return tekst.length <= max ? tekst : tekst.slice(0, Math.max(1, max - 1)) + '\u2026';
   }
 
-  function menuVoor(x, y, toren){
+  function menuVoor(x, y, toren, opWeg, ding){
     var rijen = [];
+    if (ding){
+      var w = WEGDING[ding.soort];
+      rijen.push({ id:'dingweg', label:w.naam + ' weghalen', onder:'je krijgt de helft terug',
+                   prijs:null, kan:true, kleur:'#c0442c' });
+      var br0 = 248, hr0 = 44;
+      var h0 = hr0 + 14;
+      var mx0 = x + 30, my0 = y - h0 / 2;
+      if (mx0 + br0 > BREED - 8) mx0 = x - 30 - br0;
+      if (mx0 < 8) mx0 = 8;
+      my0 = Math.max(8, Math.min(HOOG - h0 - 8, my0));
+      rijen[0].x = mx0 + 7; rijen[0].y = my0 + 7; rijen[0].b = br0 - 14; rijen[0].h = hr0;
+      return { x:mx0, y:my0, b:br0, h:h0, rijen:rijen, punt:{ x:x, y:y }, toren:null, ding:ding };
+    }
     if (toren){
       var so = SOORTEN[toren.soort];
       var kosten = Math.round(so.prijs * 0.8 * toren.niveau);
@@ -1445,6 +1511,17 @@ function rekenVraag(rang, toegestaan) {
         rijen.push({ id:'vol', label:so.naam, onder:'staat al op niveau 3', prijs:null, kan:false, kleur:so.kleur });
       }
       rijen.push({ id:'weg', label:'Weghalen', onder:'je krijgt de helft terug', prijs:null, kan:true, kleur:'#c0442c' });
+    } else if (opWeg){
+      if (wegdingen.length >= MAXWEG){
+        rijen.push({ id:'vol3', label:'Je hebt al ' + MAXWEG + ' dingen op de weg',
+                     onder:'haal er eerst een weg', prijs:null, kan:false, kleur:'#5b6480' });
+      } else {
+        Object.keys(WEGDING).forEach(function(id){
+          var w = WEGDING[id];
+          rijen.push({ id:'weg-' + id, label:w.naam, onder:w.onder, prijs:w.prijs,
+                       kan:bank.munten >= w.prijs, kleur:w.kleur });
+        });
+      }
     } else {
       if (torens.length >= MAXTORENS){
         rijen.push({ id:'vol2', label:'Je hebt al ' + MAXTORENS + ' torens', prijs:null, kan:false,
@@ -1464,11 +1541,25 @@ function rekenVraag(rang, toegestaan) {
     if (mx < 8) mx = 8;
     my = Math.max(8, Math.min(HOOG - h - 8, my));
     rijen.forEach(function(r, k){ r.x = mx + 7; r.y = my + 7 + k * (hr + gat); r.b = br - 14; r.h = hr; });
-    return { x:mx, y:my, b:br, h:h, rijen:rijen, punt:{ x:x, y:y }, toren:toren || null };
+    return { x:mx, y:my, b:br, h:h, rijen:rijen, punt:{ x:x, y:y }, toren:toren || null, opWeg:!!opWeg };
   }
 
   function menuKiest(r){
     var t = menu.toren;
+    if (r.id === 'dingweg' && menu.ding){
+      bank.munten += Math.round(WEGDING[menu.ding.soort].prijs * 0.5);
+      laatMuntZien(Math.round(WEGDING[menu.ding.soort].prijs * 0.5));
+      wegdingen = wegdingen.filter(function(d){ return d !== menu.ding; });
+      menu = null; tekenMeters(); tekenBord(); return;
+    }
+    if (r.id.indexOf('weg-') === 0 && r.kan){
+      var soort = r.id.slice(4), w = WEGDING[soort];
+      if (!magOpWeg(menu.punt.x, menu.punt.y, null) || wegdingen.length >= MAXWEG) return;
+      bank.munten -= w.prijs; laatMuntZien(-w.prijs);
+      wegdingen.push({ x:menu.punt.x, y:menu.punt.y, soort:soort,
+                       voorraad:w.voorraad || 0, klok:0 });
+      menu = null; tekenMeters(); tekenBord(); return;
+    }
     if (r.id === 'weg' && t){
       var terug = Math.round(SOORTEN[t.soort].prijs * 0.5 * t.niveau);
       bank.munten += terug; laatMuntZien(terug);
@@ -1552,6 +1643,16 @@ function rekenVraag(rang, toegestaan) {
   /* Een fout raken: schade, een flits, een schadecijfer en bij nul deeltjes. */
   function raakVijand(e, schade, vertragen){
     if (!e || e.dood) return;
+    /* Een schild slikt een deel van de klap, tot het onder de helft van de
+       levens op is. Daarna telt alles weer normaal. */
+    if (e.schildOp && e.schild > 0){
+      schade = schade * (1 - e.schild);
+      if (e.hp - schade < e.maxHp * 0.5){
+        e.schildOp = false;
+        cijfers.push({ x:positie(e.d).x, y:positie(e.d).y - 32, tekst:'schild stuk',
+                       leven:0.8, kleur:'#EA9836' });
+      }
+    }
     e.hp -= schade;
     e.flits = 0.22;
     if (vertragen) e.traag = 1.4;
@@ -1592,6 +1693,39 @@ function rekenVraag(rang, toegestaan) {
     /* de klas aan het eind, met de schade die hij tot nu toe opliep */
     var eind = PAD[PAD.length-1];
     s += tekenKlas(eind[0] + 4, eind[1] - 30, bank.leven, 12);
+
+    /* wat er op de weg ligt */
+    wegdingen.forEach(function(d){
+      var w = WEGDING[d.soort];
+      if (d.soort === 'pek'){
+        s += '<ellipse cx="' + d.x + '" cy="' + d.y + '" rx="' + w.straal + '" ry="' + (w.straal * 0.62) +
+          '" fill="#3b3730" opacity=".72"/>';
+        s += '<ellipse cx="' + (d.x - 7) + '" cy="' + (d.y - 5) + '" rx="8" ry="5" fill="#5b6480" opacity=".5"/>';
+      } else if (d.soort === 'angels'){
+        s += '<circle cx="' + d.x + '" cy="' + d.y + '" r="' + w.straal + '" fill="#b5ac9c" opacity=".35"/>';
+        for (var a = 0; a < 7; a++){
+          var hk = a / 7 * Math.PI * 2, rr = w.straal * 0.62;
+          var ax = d.x + Math.cos(hk) * rr, ay = d.y + Math.sin(hk) * rr;
+          s += '<path d="M' + (ax-4) + ',' + (ay+3) + ' L' + ax + ',' + (ay-5) + ' L' + (ax+4) + ',' + (ay+3) +
+            ' M' + (ax-4) + ',' + (ay-2) + ' L' + (ax+4) + ',' + (ay-2) +
+            '" fill="none" stroke="#4a3826" stroke-width="1.8" stroke-linecap="round"/>';
+        }
+      } else {
+        s += '<rect x="' + (d.x - 24) + '" y="' + (d.y - 13) + '" width="48" height="26" rx="4" ' +
+          'fill="#8a6a45" stroke="#4a3826" stroke-width="2.4"/>';
+        s += '<path d="M' + (d.x-24) + ',' + (d.y-4) + ' h48 M' + (d.x-24) + ',' + (d.y+5) + ' h48" ' +
+          'stroke="#4a3826" stroke-width="2"/>';
+        s += '<path d="M' + (d.x-16) + ',' + (d.y-13) + ' l32,26 M' + (d.x+16) + ',' + (d.y-13) + ' l-32,26" ' +
+          'stroke="#4a3826" stroke-width="1.6" opacity=".55"/>';
+      }
+      /* hoeveel er nog in zit */
+      if (w.voorraad){
+        var deel = d.voorraad / w.voorraad;
+        s += '<rect x="' + (d.x - 16) + '" y="' + (d.y + w.straal * 0.62 + 5) + '" width="32" height="4" rx="2" fill="rgba(20,34,76,.2)"/>';
+        s += '<rect x="' + (d.x - 16) + '" y="' + (d.y + w.straal * 0.62 + 5) + '" width="' + (32 * deel).toFixed(1) +
+          '" height="4" rx="2" fill="#EA9836"/>';
+      }
+    });
 
     /* Het bereik: van de toren die je sleept, of van de toren waarvan het menu
        open staat. Zo zie je tijdens het verplaatsen precies wat hij dekt. */
@@ -1685,13 +1819,27 @@ function rekenVraag(rang, toegestaan) {
           '" fill="none" stroke="#7d1f12" stroke-width="3" opacity=".5"/>';
       }
       var raak = (e.flits || 0) > 0;
+      if (e.soort === 'snel'){
+        /* een streepje achter zich aan, zodat je ziet dat hij hard gaat */
+        var vorig = positie(Math.max(0, e.d - 22));
+        s += '<line x1="' + vorig.x + '" y1="' + vorig.y + '" x2="' + p.x + '" y2="' + p.y +
+          '" stroke="#EA9836" stroke-width="5" stroke-linecap="round" opacity=".38"/>';
+      }
+      if (e.schildOp){
+        s += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (r2 + 5) +
+          '" fill="none" stroke="#9dc0e5" stroke-width="3.4" opacity=".9"/>';
+        s += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (r2 + 5) +
+          '" fill="none" stroke="#fff" stroke-width="1.2" opacity=".7"/>';
+      }
       if (raak){
         s += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (r2 + 6) + '" fill="#fff" opacity="' +
           (e.flits / 0.22 * 0.55).toFixed(2) + '"/>';
       }
       s += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (r2 + (raak ? 2 : 0)) + '" fill="' +
-        (raak ? '#ffd9cf' : (e.traag > 0 ? '#EA9836' : (e.baas ? '#7d1f12' : '#c0442c'))) +
+        (raak ? '#ffd9cf' : (e.traag > 0 ? '#9dc0e5' : (e.kleur || (e.baas ? '#7d1f12' : '#c0442c')))) +
         '" stroke="#fff" stroke-width="' + (e.baas ? 3 : 2) + '"/>' +
+        (e.traag > 0 ? '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (r2 + 2) +
+          '" fill="none" stroke="#204ECF" stroke-width="2" opacity=".6"/>' : '') +
         '<text x="' + p.x + '" y="' + (p.y + (e.baas ? 9 : 5)) + '" font-size="' + (e.baas ? 26 : 14) +
         '" font-weight="700" fill="#fff" text-anchor="middle">' + e.mark + '</text>' +
         '<rect x="' + (p.x - br/2) + '" y="' + (p.y - r2 - 11) + '" width="' + br + '" height="' +
@@ -1809,6 +1957,8 @@ function rekenVraag(rang, toegestaan) {
         return;
       }
       /* Op een toren beginnen betekent slepen; ergens anders opent het menu. */
+      var d = wegdingBij(x, y);
+      if (d){ menu = menuVoor(x, y, null, false, d); tekenBord(); return; }
       var t = torenBij(x, y);
       if (t){
         sleep = { toren:t, vanX:t.x, vanY:t.y, pakX:x - t.x, pakY:y - t.y,
@@ -1817,11 +1967,21 @@ function rekenVraag(rang, toegestaan) {
         tekenBord();
         return;
       }
-      if (!magHier(x, y, null)){
-        melding2('Daar kan geen toren staan: te dicht op het pad, op een andere toren of op de rand.');
+      /* Op het pad leg je iets neer, ernaast bouw je een toren. */
+      if (afstandTotPad(x, y) <= 22){
+        if (!magOpWeg(x, y, null)){
+          melding2('Daar kan niets liggen: te dicht op iets anders dat al op de weg ligt.');
+          return;
+        }
+        menu = menuVoor(x, y, null, true, null);
+        tekenBord();
         return;
       }
-      menu = menuVoor(x, y, null);
+      if (!magHier(x, y, null)){
+        melding2('Daar kan geen toren staan: te dicht op het pad, op een andere toren, op de school of op de rand.');
+        return;
+      }
+      menu = menuVoor(x, y, null, false, null);
       tekenBord();
     });
 
@@ -1845,7 +2005,7 @@ function rekenVraag(rang, toegestaan) {
       sleep = null;
       if (!bewogen){
         /* alleen aangetikt: het menu van deze toren */
-        menu = menuVoor(t.x, t.y, t);
+        menu = menuVoor(t.x, t.y, t, false, null);
       } else if (!geldig){
         t.x = vanX; t.y = vanY;
         melding2('Daar kan hij niet staan, dus hij is teruggezet.');
@@ -1913,8 +2073,8 @@ function rekenVraag(rang, toegestaan) {
   function tekenMeters(){
     var tip = document.getElementById('bordtip');
     if (tip && !tip.style.color) tip.textContent = torens.length
-      ? 'Sleep een toren om hem te verplaatsen, dan zie je meteen zijn bereik. Tik erop om te versterken of weg te halen.'
-      : 'Tik ergens naast het pad om daar een toren neer te zetten.';
+      ? 'Naast het pad bouw je torens, op het pad leg je pek, voetangels of een versperring. Sleep een toren om hem te verplaatsen.'
+      : 'Tik naast het pad voor een toren, of op het pad om er iets neer te leggen.';
     document.getElementById('mMunt').textContent = bank.munten;
     var lev = document.getElementById('mLeven');
     lev.textContent = bank.leven;
@@ -1922,6 +2082,7 @@ function rekenVraag(rang, toegestaan) {
     document.getElementById('mRonde').textContent = bank.ronde;
     document.getElementById('mReeks').textContent = reeks;
     document.getElementById('mToren').textContent = torens.length + '/' + MAXTORENS;
+    document.getElementById('mWeg').textContent = wegdingen.length + '/' + MAXWEG;
   }
 
   /* ---------- de klok ---------- */
@@ -1946,23 +2107,54 @@ function rekenVraag(rang, toegestaan) {
         var r = rang();
         var hp = Math.round((10 + ronde * 6) * (0.75 + r * 0.15));
         /* de laatste van een baasronde is de baas zelf */
+        var basisSnel = 30 + r*5 + ronde*2.3;
         if (wachtrij === 0 && isBaasRonde(ronde)){
           var bhp = Math.round(hp * BAASTAAI);
-          vijanden.push({ d:0, hp:bhp, maxHp:bhp, snelheid:(30 + r*5 + ronde*2.3) * 0.5,
-                          traag:0, mark:'!', baas:true });
+          vijanden.push({ d:0, hp:bhp, maxHp:bhp, snelheid:basisSnel * 0.5,
+                          traag:0, mark:'!', baas:true, soort:'baas', schild:0 });
         } else {
-          vijanden.push({ d:0, hp:hp, maxHp:hp, snelheid:30 + r*5 + ronde*2.3, traag:0,
-                          mark:kies(['?', '!', '\u00d7']) });
+          var f = kiesFout(ronde), hoeveel = f.aantal || 1;
+          for (var z = 0; z < hoeveel; z++){
+            var thp = Math.max(1, Math.round(hp * f.taai));
+            vijanden.push({ d:-z * 22, hp:thp, maxHp:thp, snelheid:basisSnel * f.vlug,
+                            traag:0, mark:f.mark, soort:f.id, kleur:f.kleur,
+                            schild:f.schild, schildOp:f.schild > 0 });
+          }
         }
         if (wachtrij === 0) rondePauze = isBaasRonde(bank.ronde + 1) ? 8 : 3;
       }
     }
     var verlies = 0;
     vijanden.forEach(function(e){
+      if (e.stop > 0){ e.stop -= dt; if (e.traag > 0) e.traag -= dt; return; }
       e.d += e.snelheid * (e.traag > 0 ? 0.45 : 1) * dt;
       if (e.traag > 0) e.traag -= dt;
       if (e.d >= PADLENGTE){ e.dood = true; verlies += e.baas ? BAASSCHADE : 1; }
     });
+    /* wat er op de weg ligt, werkt op alles wat eroverheen komt */
+    wegdingen.forEach(function(d){
+      var w = WEGDING[d.soort];
+      d.klok -= dt;
+      vijanden.forEach(function(e){
+        if (e.dood) return;
+        var q = positie(e.d);
+        if (Math.hypot(q.x - d.x, q.y - d.y) > w.straal) return;
+        if (d.soort === 'pek'){ e.traag = Math.max(e.traag, 0.3); }
+        if (d.soort === 'angels' && d.klok <= 0 && d.voorraad > 0){
+          raakVijand(e, w.schade, false);
+          d.voorraad--;
+        }
+        if (d.soort === 'hek' && d.voorraad > 0 && !e.gehouden){
+          e.gehouden = true; e.stop = 1.1; d.voorraad--;
+          pluis.push({ x:q.x, y:q.y, vx:0, vy:-40, leven:0.4, kleur:'#8a6a45' });
+        }
+      });
+      if (d.soort === 'angels' && d.klok <= 0) d.klok = 0.35;
+    });
+    wegdingen = wegdingen.filter(function(d){
+      return !WEGDING[d.soort].voorraad || d.voorraad > 0;
+    });
+
     torens.forEach(function(t){
       var s = SOORTEN[t.soort];
       var bereik = s.bereik + (t.niveau-1) * 18, schade = s.schade * (1 + (t.niveau-1) * 0.6);
@@ -2059,7 +2251,7 @@ function rekenVraag(rang, toegestaan) {
   /* ---------- beginnen en eindigen ---------- */
   function begin(){
     vijanden = []; torens = []; schoten = []; pot = null;
-    cijfers = []; pluis = []; golven = []; kogels = [];
+    cijfers = []; pluis = []; golven = []; kogels = []; wegdingen = [];
     wachtrij = 5; spawnKlok = 0; rondePauze = 2;
     bank = { munten:60, leven:12, ronde:1 };
     reeks = 0; besteReeks = 0; goedAantal = 0; foutAantal = 0;
