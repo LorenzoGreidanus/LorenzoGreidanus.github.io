@@ -70,7 +70,37 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .bordvak svg{display:block;width:100%;height:auto}
 .balk{display:flex;gap:8px;flex-wrap:wrap;padding:0 0 10px}
 .bordtip{font-size:.84rem;color:var(--muted);padding:9px 4px 0}
-.meterv{flex:1;min-width:86px;background:#fff;border:1px solid rgba(20,34,76,.10);border-radius:13px;padding:8px 10px;text-align:center}
+/* Als er een fout doorloopt moet je dat zien, ook als je net naar de vraag keek. */
+.meterv.raak{background:var(--fout-bg);border-color:var(--fout);animation:schud .5s ease}
+.meterv.raak b{color:var(--fout)}
+.meterv.laag b{color:var(--fout)}
+@keyframes schud{
+  0%,100%{transform:translateX(0)}
+  15%{transform:translateX(-6px)}
+  35%{transform:translateX(5px)}
+  55%{transform:translateX(-4px)}
+  75%{transform:translateX(3px)}}
+.bordvak.raak{animation:randrood .6s ease}
+@keyframes randrood{
+  0%,100%{box-shadow:0 0 0 0 rgba(192,68,44,0)}
+  30%{box-shadow:0 0 0 5px rgba(192,68,44,.55)}}
+.meterv{flex:1;min-width:86px;background:#fff;border:1px solid rgba(20,34,76,.10);border-radius:13px;
+  padding:8px 10px;text-align:center;position:relative}
+/* Munten erbij: de meter licht groen op en het bedrag vliegt eruit omhoog. */
+.meterv.winst{background:var(--goed-bg);border-color:var(--goed);animation:muntklop .45s ease}
+.meterv.winst b{color:var(--goed)}
+.meterv.kosten{background:var(--sand);border-color:var(--crab)}
+.muntvlieg{position:absolute;left:50%;top:-2px;font-size:1rem;font-weight:700;
+  pointer-events:none;white-space:nowrap;animation:muntop .95s ease forwards}
+.muntvlieg.op{color:var(--goed)}
+.muntvlieg.af{color:var(--crab)}
+@keyframes muntklop{
+  0%,100%{transform:scale(1)}
+  40%{transform:scale(1.09)}}
+@keyframes muntop{
+  0%{opacity:0;transform:translate(-50%,8px) scale(.8)}
+  22%{opacity:1;transform:translate(-50%,-2px) scale(1.12)}
+  100%{opacity:0;transform:translate(-50%,-34px) scale(1)}}
 .meterv b{display:block;font-size:1.25rem;line-height:1.1;font-variant-numeric:tabular-nums}
 .meterv span{font-size:.66rem;color:var(--muted);letter-spacing:.09em;text-transform:uppercase}
 
@@ -203,6 +233,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
         <div class="meterv"><b id="mLeven">12</b><span>klas</span></div>
         <div class="meterv"><b id="mRonde">1</b><span>ronde</span></div>
         <div class="meterv"><b id="mReeks">0</b><span>op rij</span></div>
+        <div class="meterv"><b id="mToren">0/8</b><span>torens</span></div>
       </div>
       <div class="bordvak" id="bordvak"></div>
       <p class="bordtip" id="bordtip">Tik op een lege plek langs het pad om daar een toren te zetten.</p>
@@ -235,7 +266,6 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
 <script>
 
 const PAD = [[-40,90],[190,90],[190,250],[430,250],[430,110],[650,110],[650,390],[900,390]];
-const PLEKKEN = [{x:80,y:220},{x:290,y:60},{x:300,y:180},{x:120,y:370},{x:340,y:370},{x:520,y:60},{x:530,y:190},{x:540,y:400},{x:760,y:230},{x:770,y:60}];
 const SOORTEN = {
   kanon:     {naam:'Kanon',      letter:'K', kleur:'var(--crab)',        prijs:40, bereik:110, schade:6,  tempo:0.55, onder:'Snel en dichtbij'},
   katapult:  {naam:'Katapult',   letter:'T', kleur:'var(--deep-ocean)',  prijs:70, bereik:200, schade:20, tempo:1.5,  onder:'Ver, maar traag'},
@@ -615,6 +645,7 @@ function rekenVraag(rang, toegestaan) {
     reeks = goed ? reeks + 1 : 0;
     besteReeks = Math.max(besteReeks, reeks);
     bank.munten += winst;
+    if (winst) laatMuntZien(winst);
     if (goed) goedAantal++; else foutAantal++;
     document.getElementById('uitlegVak').innerHTML = '<div class="uitleg' + (goed ? ' goed' : '') + '">' +
       (goed ? 'Goed. ' + winst + ' munten erbij.' : 'Niet goed. ' + vraag.u) + '</div>';
@@ -628,58 +659,105 @@ function rekenVraag(rang, toegestaan) {
     }, goed ? 700 : 3400);
   }
 
+  /* ---------- waar mag een toren staan ----------
+     Vrije plaatsing: geen vaste plekken meer. Je mag overal bouwen behalve op
+     het pad zelf, te dicht op een andere toren, of half buiten het bord. */
+  var PADVRIJ = 34, TORENVRIJ = 42, RAND = 26;
+  /* Met vrije plaatsing passen er meer dan honderd torens op het bord, en dan
+     is het spel na een paar rondes niet meer te verliezen. Vandaar een maximum
+     en een prijs die stijgt met elke toren die je al hebt. Doorgerekend: zo kom
+     je op ongeveer veertien rondes, net als met de tien vaste plekken van eerst. */
+  var MAXTORENS = 8, DUURDER = 0.25;
+
+  function prijsVan(soort){
+    return Math.round(SOORTEN[soort].prijs * (1 + DUURDER * torens.length));
+  }
+
+  function afstandTotPad(x, y){
+    var m = 1e9;
+    for (var i = 1; i < PAD.length; i++){
+      var ax = PAD[i-1][0], ay = PAD[i-1][1];
+      var dx = PAD[i][0] - ax, dy = PAD[i][1] - ay;
+      var t = (dx || dy) ? Math.max(0, Math.min(1, ((x-ax)*dx + (y-ay)*dy) / (dx*dx + dy*dy))) : 0;
+      m = Math.min(m, Math.hypot(x - (ax + t*dx), y - (ay + t*dy)));
+    }
+    return m;
+  }
+
+  function magHier(x, y, behalve){
+    if (x < RAND || x > BREED - RAND || y < RAND || y > HOOG - RAND) return false;
+    if (afstandTotPad(x, y) < PADVRIJ) return false;
+    for (var i = 0; i < torens.length; i++){
+      if (torens[i] === behalve) continue;
+      if (Math.hypot(torens[i].x - x, torens[i].y - y) < TORENVRIJ) return false;
+    }
+    return true;
+  }
+
+  function torenBij(x, y){
+    for (var i = 0; i < torens.length; i++){
+      if (Math.hypot(torens[i].x - x, torens[i].y - y) <= 24) return torens[i];
+    }
+    return null;
+  }
+
+  function bereikVan(t){ return SOORTEN[t.soort].bereik + (t.niveau - 1) * 18; }
+
   /* ---------- torens kopen, op het bord zelf ----------
      Eerst stond er een winkel onder het bord: je koos daar een toren en klikte
      daarna op een plek. Dat betekende scrollen, en je zag niet waar je mee bezig
      was. Nu tik je op een plek en klapt het keuzemenu daar open. */
-  var menu = null;   /* { plek, knoppen:[...] } */
+  var klap = 0, klapAantal = 0;   /* hoe lang de rode flits nog te zien is */
+  var muntTeller = 0;             /* om vliegende bedragen niet op elkaar te laten vallen */
+  var menu = null;      /* het keuzemenu, op de plek waar je tikte */
+  var sleep = null;     /* de toren die je aan het verplaatsen bent */
 
-  function menuVoor(index){
-    var p = PLEKKEN[index];
-    var bestaand = torens.filter(function(t){ return t.plek === index; })[0];
+  function menuVoor(x, y, toren){
     var rijen = [];
-    if (bestaand){
-      var so = SOORTEN[bestaand.soort];
-      var kosten = Math.round(so.prijs * 0.8 * bestaand.niveau);
-      if (bestaand.niveau < 3){
-        rijen.push({ id:'sterker', label:so.naam + ' versterken', onder:'naar niveau ' + (bestaand.niveau+1) +
+    if (toren){
+      var so = SOORTEN[toren.soort];
+      var kosten = Math.round(so.prijs * 0.8 * toren.niveau);
+      if (toren.niveau < 3){
+        rijen.push({ id:'sterker', label:so.naam + ' versterken', onder:'naar niveau ' + (toren.niveau+1) +
                      ', meer schade en bereik', prijs:kosten, kan:bank.munten >= kosten, kleur:so.kleur });
       } else {
         rijen.push({ id:'vol', label:so.naam + ' is op niveau 3', onder:'hoger kan niet', prijs:null, kan:false, kleur:so.kleur });
       }
-      rijen.push({ id:'weg', label:'Weghalen', onder:'je krijgt de helft terug',
-                   prijs:null, kan:true, kleur:'#c0442c' });
+      rijen.push({ id:'weg', label:'Weghalen', onder:'je krijgt de helft terug', prijs:null, kan:true, kleur:'#c0442c' });
     } else {
-      Object.keys(SOORTEN).forEach(function(id){
-        var so = SOORTEN[id];
-        rijen.push({ id:id, label:so.naam, onder:so.onder, prijs:so.prijs,
-                     kan:bank.munten >= so.prijs, kleur:so.kleur });
-      });
+      if (torens.length >= MAXTORENS){
+        rijen.push({ id:'vol2', label:'Je hebt al ' + MAXTORENS + ' torens', prijs:null, kan:false,
+                     onder:'haal er eerst een weg of versterk wat je hebt', kleur:'#5b6480' });
+      } else {
+        Object.keys(SOORTEN).forEach(function(id){
+          var so = SOORTEN[id], prijs = prijsVan(id);
+          rijen.push({ id:id, label:so.naam, onder:so.onder, prijs:prijs,
+                       kan:bank.munten >= prijs, kleur:so.kleur });
+        });
+      }
     }
-    /* het menu naast de plek, en binnen het bord houden */
     var br = 214, hr = 40, gat = 7;
     var h = rijen.length * (hr + gat) - gat + 14;
-    var x = p.x + 30, y = p.y - h / 2;
-    if (x + br > BREED - 8) x = p.x - 30 - br;
-    if (x < 8) x = 8;
-    y = Math.max(8, Math.min(HOOG - h - 8, y));
-    rijen.forEach(function(r, k){
-      r.x = x + 7; r.y = y + 7 + k * (hr + gat); r.b = br - 14; r.h = hr;
-    });
-    return { plek:index, x:x, y:y, b:br, h:h, rijen:rijen };
+    var mx = x + 30, my = y - h / 2;
+    if (mx + br > BREED - 8) mx = x - 30 - br;
+    if (mx < 8) mx = 8;
+    my = Math.max(8, Math.min(HOOG - h - 8, my));
+    rijen.forEach(function(r, k){ r.x = mx + 7; r.y = my + 7 + k * (hr + gat); r.b = br - 14; r.h = hr; });
+    return { x:mx, y:my, b:br, h:h, rijen:rijen, punt:{ x:x, y:y }, toren:toren || null };
   }
 
   function menuKiest(r){
-    var index = menu.plek;
-    var bestaand = torens.filter(function(t){ return t.plek === index; })[0];
-    if (r.id === 'weg' && bestaand){
-      bank.munten += Math.round(SOORTEN[bestaand.soort].prijs * 0.5 * bestaand.niveau);
-      torens = torens.filter(function(t){ return t.plek !== index; });
-    } else if (r.id === 'sterker' && bestaand && r.kan){
-      bank.munten -= r.prijs; bestaand.niveau++;
+    var t = menu.toren;
+    if (r.id === 'weg' && t){
+      var terug = Math.round(SOORTEN[t.soort].prijs * 0.5 * t.niveau);
+      bank.munten += terug; laatMuntZien(terug);
+      torens = torens.filter(function(x){ return x !== t; });
+    } else if (r.id === 'sterker' && t && r.kan){
+      bank.munten -= r.prijs; laatMuntZien(-r.prijs); t.niveau++;
     } else if (SOORTEN[r.id] && r.kan){
-      bank.munten -= r.prijs;
-      torens.push({ plek:index, soort:r.id, niveau:1, klok:0 });
+      if (!magHier(menu.punt.x, menu.punt.y, null) || torens.length >= MAXTORENS) return;
+      bank.munten -= r.prijs; laatMuntZien(-r.prijs);
+      torens.push({ x:menu.punt.x, y:menu.punt.y, soort:r.id, niveau:1, klok:0 });
     } else return;
     menu = null;
     tekenMeters(); tekenBord();
@@ -709,37 +787,39 @@ function rekenVraag(rang, toegestaan) {
       '<rect x="26" y="38" width="22" height="32" fill="#204ECF" opacity=".7"/>' +
       '<text x="37" y="90" font-size="13" font-weight="600" fill="#5b6480" text-anchor="middle">de klas</text></g>';
 
-    /* bereik van de gekozen toren */
-    PLEKKEN.forEach(function(p, i){
-      var t = torens.filter(function(x){ return x.plek === i; })[0];
-      if (t && menu && menu.plek === i){
-        var ber = SOORTEN[t.soort].bereik + (t.niveau - 1) * 18;
-        s += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + ber + '" fill="' +
-             kleurVan(SOORTEN[t.soort].kleur) + '" opacity=".10"/>';
-      }
+    /* Het bereik: van de toren die je sleept, of van de toren waarvan het menu
+       open staat. Zo zie je tijdens het verplaatsen precies wat hij dekt. */
+    torens.forEach(function(t){
+      var toon = (sleep && sleep.toren === t) || (menu && menu.toren === t);
+      if (!toon) return;
+      var ok = !sleep || sleep.geldig;
+      s += '<circle cx="' + t.x + '" cy="' + t.y + '" r="' + bereikVan(t) + '" fill="' +
+        (ok ? kleurVan(SOORTEN[t.soort].kleur) : '#c0442c') + '" opacity="' + (sleep ? '.16' : '.11') + '"/>';
+      s += '<circle cx="' + t.x + '" cy="' + t.y + '" r="' + bereikVan(t) + '" fill="none" stroke="' +
+        (ok ? kleurVan(SOORTEN[t.soort].kleur) : '#c0442c') +
+        '" stroke-width="2" stroke-dasharray="8 6" opacity=".7"/>';
     });
+    /* het bereik van de toren die je op het punt staat te kopen */
+    if (menu && !menu.toren){
+      var eerste = SOORTEN[Object.keys(SOORTEN)[0]];
+      s += '<circle cx="' + menu.punt.x + '" cy="' + menu.punt.y + '" r="' + eerste.bereik +
+        '" fill="none" stroke="#5b6480" stroke-width="2" stroke-dasharray="6 6" opacity=".45"/>';
+      s += '<circle cx="' + menu.punt.x + '" cy="' + menu.punt.y + '" r="8" fill="#fff" ' +
+        'stroke="#204ECF" stroke-width="3"/>';
+    }
 
-    /* plekken en torens */
-    PLEKKEN.forEach(function(p, i){
-      var t = torens.filter(function(x){ return x.plek === i; })[0];
-      if (!t){
-        var open2 = menu && menu.plek === i;
-        s += '<g>' +
-          '<circle cx="' + p.x + '" cy="' + p.y + '" r="17" fill="#fff" opacity="' +
-          (open2 ? '.95' : '.55') + '" stroke="' + (open2 ? '#204ECF' : '#b5ac9c') +
-          '" stroke-width="' + (open2 ? 3 : 2) + '" stroke-dasharray="5 4"/>' +
-          '<text x="' + p.x + '" y="' + (p.y+6) + '" font-size="18" font-weight="700" ' +
-          'fill="' + (open2 ? '#204ECF' : '#8a8578') + '" text-anchor="middle">+</text></g>';
-        return;
-      }
+    /* de torens */
+    torens.forEach(function(t){
       var so = SOORTEN[t.soort], kl = kleurVan(so.kleur);
-      s += '<g>' +
-        '<circle cx="' + p.x + '" cy="' + p.y + '" r="20" fill="' + kl + '" stroke="' +
-        (menu && menu.plek === i ? '#204ECF' : '#fff') + '" stroke-width="3"/>' +
-        '<text x="' + p.x + '" y="' + (p.y+6) + '" font-size="16" font-weight="700" fill="#fff" ' +
+      var bezig = sleep && sleep.toren === t;
+      s += '<g opacity="' + (bezig ? '.85' : '1') + '">' +
+        '<circle cx="' + t.x + '" cy="' + t.y + '" r="20" fill="' + kl + '" stroke="' +
+        (bezig ? (sleep.geldig ? '#204ECF' : '#c0442c') : (menu && menu.toren === t ? '#204ECF' : '#fff')) +
+        '" stroke-width="3"/>' +
+        '<text x="' + t.x + '" y="' + (t.y+6) + '" font-size="16" font-weight="700" fill="#fff" ' +
         'text-anchor="middle">' + so.letter + '</text>';
       for (var n = 0; n < t.niveau; n++){
-        s += '<circle cx="' + (p.x - 8 + n*8) + '" cy="' + (p.y + 27) + '" r="3" fill="' + kl + '"/>';
+        s += '<circle cx="' + (t.x - 8 + n*8) + '" cy="' + (t.y + 27) + '" r="3" fill="' + kl + '"/>';
       }
       s += '</g>';
     });
@@ -783,6 +863,16 @@ function rekenVraag(rang, toegestaan) {
           '</g>';
       });
     }
+    /* rode waas over het bord en een teller die uit de klas omhoog springt */
+    if (klap > 0){
+      var deel = klap / 0.9;
+      s += '<rect width="' + BREED + '" height="' + HOOG + '" fill="#c0442c" opacity="' +
+        (deel * 0.20).toFixed(3) + '"/>';
+      var e2 = PAD[PAD.length-1];
+      s += '<text x="' + e2[0] + '" y="' + (e2[1] - 56 - (1 - deel) * 34) + '" font-size="34" ' +
+        'font-weight="700" fill="#c0442c" text-anchor="middle" opacity="' + deel.toFixed(2) +
+        '" paint-order="stroke" stroke="#fff" stroke-width="5">-' + klapAantal + '</text>';
+    }
     s += '</svg>';
     var vak2 = document.getElementById('bordvak');
     vak2.innerHTML = s;
@@ -810,24 +900,120 @@ function rekenVraag(rang, toegestaan) {
         menu = null; tekenBord();
         return;
       }
-      var dichtst = -1, best = 30;
-      PLEKKEN.forEach(function(p, i){
-        var d = Math.hypot(p.x - x, p.y - y);
-        if (d < best){ best = d; dichtst = i; }
-      });
-      if (dichtst >= 0){ menu = menuVoor(dichtst); tekenBord(); }
+      /* Op een toren beginnen betekent slepen; ergens anders opent het menu. */
+      var t = torenBij(x, y);
+      if (t){
+        sleep = { toren:t, vanX:t.x, vanY:t.y, pakX:x - t.x, pakY:y - t.y,
+                  bewogen:false, geldig:true };
+        if (vak2.setPointerCapture) { try { vak2.setPointerCapture(e.pointerId); } catch (x2){} }
+        tekenBord();
+        return;
+      }
+      if (!magHier(x, y, null)){
+        melding2('Daar kan geen toren staan: te dicht op het pad, op een andere toren of op de rand.');
+        return;
+      }
+      menu = menuVoor(x, y, null);
+      tekenBord();
     });
+
+    vak2.addEventListener('pointermove', function(e){
+      if (!sleep) return;
+      var svg = vak2.querySelector('svg'); if (!svg) return;
+      var r = svg.getBoundingClientRect();
+      var x = (e.clientX - r.left) / r.width * BREED - sleep.pakX;
+      var y = (e.clientY - r.top) / r.height * HOOG - sleep.pakY;
+      if (!sleep.bewogen && Math.hypot(x - sleep.vanX, y - sleep.vanY) < 6) return;
+      sleep.bewogen = true;
+      sleep.toren.x = x; sleep.toren.y = y;
+      sleep.geldig = magHier(x, y, sleep.toren);
+      tekenBord();
+    });
+
+    function laatLos(){
+      if (!sleep) return;
+      var t = sleep.toren, bewogen = sleep.bewogen, geldig = sleep.geldig;
+      var vanX = sleep.vanX, vanY = sleep.vanY;
+      sleep = null;
+      if (!bewogen){
+        /* alleen aangetikt: het menu van deze toren */
+        menu = menuVoor(t.x, t.y, t);
+      } else if (!geldig){
+        t.x = vanX; t.y = vanY;
+        melding2('Daar kan hij niet staan, dus hij is teruggezet.');
+      }
+      tekenBord();
+    }
+    vak2.addEventListener('pointerup', laatLos);
+    vak2.addEventListener('pointercancel', laatLos);
+    vak2.addEventListener('pointerleave', laatLos);
   })();
+
+  /* een kort berichtje onder het bord */
+  var meldKlok = null;
+  function melding2(t){
+    var tip = document.getElementById('bordtip');
+    if (!tip) return;
+    tip.textContent = t;
+    tip.style.color = 'var(--fout)';
+    if (meldKlok) clearTimeout(meldKlok);
+    meldKlok = setTimeout(function(){ tip.style.color = ''; tekenMeters(); }, 2600);
+  }
+
+  /* De meter schudt, het bord krijgt een rode rand en er springt een teller uit
+     de klas omhoog. Drie signalen, want tijdens het antwoorden kijk je niet naar
+     het bord. */
+  function laatKlapZien(aantal){
+    var m = document.getElementById('mLeven').parentNode;
+    var b = document.getElementById('bordvak');
+    m.classList.remove('raak'); b.classList.remove('raak');
+    void m.offsetWidth; void b.offsetWidth;
+    m.classList.add('raak'); b.classList.add('raak');
+    setTimeout(function(){ m.classList.remove('raak'); b.classList.remove('raak'); }, 620);
+    var tip = document.getElementById('bordtip');
+    if (tip){
+      tip.textContent = aantal === 1
+        ? 'Er is een fout de klas binnengekomen. Nog ' + bank.leven + ' te gaan.'
+        : aantal + ' fouten tegelijk de klas in. Nog ' + bank.leven + ' te gaan.';
+      tip.style.color = 'var(--fout)';
+      if (meldKlok) clearTimeout(meldKlok);
+      meldKlok = setTimeout(function(){ tip.style.color = ''; tekenMeters(); }, 2600);
+    }
+  }
+
+  /* Elke keer dat er munten bij komen of af gaan, zie je dat aan de meter. */
+  function laatMuntZien(bedrag){
+    var b = document.getElementById('mMunt');
+    if (!b || !bedrag) return;
+    var m = b.parentNode;
+    var erbij = bedrag > 0;
+    m.classList.remove('winst', 'kosten');
+    void m.offsetWidth;
+    m.classList.add(erbij ? 'winst' : 'kosten');
+    setTimeout(function(){ m.classList.remove('winst', 'kosten'); }, erbij ? 620 : 420);
+    /* Bij snel doorklikken staan er kort twee tegelijk. Zonder verspringing
+       zouden die precies over elkaar heen vallen. */
+    var vlieg = document.createElement('span');
+    vlieg.className = 'muntvlieg ' + (erbij ? 'op' : 'af');
+    vlieg.textContent = (erbij ? '+' : '') + bedrag;
+    vlieg.style.left = 'calc(50% + ' + ((muntTeller % 3) - 1) * 20 + 'px)';
+    muntTeller++;
+    m.appendChild(vlieg);
+    setTimeout(function(){ vlieg.remove(); }, 980);
+  }
 
   function tekenMeters(){
     var tip = document.getElementById('bordtip');
-    if (tip) tip.textContent = torens.length
-      ? 'Tik op een toren om hem te versterken of weg te halen. Een lege plek geeft je een nieuwe toren.'
-      : 'Tik op een lege plek langs het pad om daar een toren te zetten.';
+    if (tip && !tip.style.color) tip.textContent = torens.length
+      ? 'Sleep een toren om hem te verplaatsen, dan zie je meteen zijn bereik. Tik erop om te versterken of weg te halen.'
+      : 'Tik ergens naast het pad om daar een toren neer te zetten.';
     document.getElementById('mMunt').textContent = bank.munten;
-    document.getElementById('mLeven').textContent = bank.leven;
+    var lev = document.getElementById('mLeven');
+    lev.textContent = bank.leven;
+    lev.parentNode.classList.toggle('laag', bank.leven <= 3);
     document.getElementById('mRonde').textContent = bank.ronde;
     document.getElementById('mReeks').textContent = reeks;
+    document.getElementById('mToren').textContent = torens.length + '/' + MAXTORENS;
   }
 
   /* ---------- de klok ---------- */
@@ -858,9 +1044,10 @@ function rekenVraag(rang, toegestaan) {
     torens.forEach(function(t){
       var s = SOORTEN[t.soort];
       var bereik = s.bereik + (t.niveau-1) * 18, schade = s.schade * (1 + (t.niveau-1) * 0.6);
+      if (sleep && sleep.toren === t) return;
       t.klok -= dt;
       if (t.klok > 0) return;
-      var p = PLEKKEN[t.plek], doel = null, verst = -1, doelPos = null;
+      var p = t, doel = null, verst = -1, doelPos = null;
       vijanden.forEach(function(e){
         if (e.dood) return;
         var pos = positie(e.d);
@@ -878,8 +1065,11 @@ function rekenVraag(rang, toegestaan) {
     vijanden = vijanden.filter(function(e){ return !e.dood; });
     schoten.forEach(function(s){ s.leven -= dt; });
     schoten = schoten.filter(function(s){ return s.leven > 0; });
+    if (klap > 0) klap -= dt;
     if (verlies){
       bank.leven -= verlies;
+      klap = 0.9; klapAantal = verlies;
+      laatKlapZien(verlies);
       if (bank.leven <= 0){ bank.leven = 0; tekenMeters(); einde(); return; }
     }
     tekenBord(); tekenMeters();
