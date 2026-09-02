@@ -62,6 +62,11 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .meter small{display:block;font-size:.72rem;color:var(--muted);margin-top:3px}
 .meter.zorg b{color:var(--fout)}
 
+.landvak{background:#fff;border:1px solid rgba(20,34,76,.10);border-radius:20px;overflow:hidden;
+  margin-bottom:10px;box-shadow:0 10px 26px rgba(20,34,76,.08)}
+.landvak svg{display:block;width:100%;height:auto;touch-action:manipulation}
+.landsvg .plek:hover rect{opacity:.08 !important;stroke:var(--ocean) !important}
+.landtip{font-size:.84rem;color:var(--muted);margin-bottom:18px}
 .klussen{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:18px}
 .klus{background:#fff;border:2px solid rgba(20,34,76,.10);border-radius:20px;padding:16px;text-align:center}
 .klus.uit{opacity:.5}
@@ -207,7 +212,9 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
   <div class="meters" id="meters"></div>
 
   <div id="keuzedeel">
-    <p class="eyebrow" style="margin-top:22px">verdeel je zes ploegen</p>
+    <p class="eyebrow" style="margin-top:22px">stuur je ploegen het land in</p>
+    <div class="landvak" id="landvak"></div>
+    <p class="landtip" id="landtip">Tik op een plek om er een ploeg heen te sturen, tik op een poppetje om hem terug te roepen. Op elk bordje staat wat die plek oplevert. Na het jaar zie je per plek hoeveel het werd.</p>
     <div class="klussen" id="klussen"></div>
     <div class="plan">
       <span class="schat" id="schat"></span>
@@ -265,6 +272,337 @@ var PLEKNAAM = ['rondtrekkend', 'een vast kamp', 'een gehucht', 'een dorp'];
    dertig mensen bent. Anders wordt het rekenwerk in plaats van spel.
    ============================================================================ */
 var PLOEGEN = 6, JAREN = 12;
+/* ============================================================================
+   HET LANDSCHAP
+   ----------------------------------------------------------------------------
+   Vier plekken waar je ploegen naartoe kunt sturen: het bos, de open helling,
+   de akker en het kamp. De tekening verandert mee met wat je doet: hutten
+   verschijnen als je bouwt, de akker kleurt bij als het graan opkomt, en het
+   wild wordt schaars als je te lang op dezelfde plek jaagt.
+   ============================================================================ */
+var LAND = { breed:900, hoog:330 };
+
+/* de vier plekken, met het gebied waar je op kunt tikken */
+var PLEKKEN = [
+  { id:'jacht', naam:'het bos',    x1:14,  x2:330 },
+  { id:'verz',  naam:'de helling', x1:338, x2:540 },
+  { id:'akker', naam:'de akker',   x1:548, x2:732 },
+  { id:'bouw',  naam:'het kamp',   x1:740, x2:892 }
+];
+/* De begane grond loopt van 182 tot aan de oever. De rivier slingert, dus de
+   oever ligt niet overal even hoog: bij het kamp op 272 en in het midden op
+   299. Alles wat op de grond hoort te staan rekent met deze lijn, anders staat
+   het kampvuur in het water. */
+var GROND = { boven:182 };
+var RIVIER = [
+  [[0,300],[160,278],[330,294]],
+  [[330,294],[500,310],[670,282]],
+  [[670,282],[790,262],[900,284]]
+];
+function oeverY(x){
+  var beste = 300, afstand = 1e9;
+  RIVIER.forEach(function(sg){
+    for (var t = 0; t <= 1.0001; t += 0.04){
+      var u = 1 - t;
+      var px = u*u*sg[0][0] + 2*u*t*sg[1][0] + t*t*sg[2][0];
+      var py = u*u*sg[0][1] + 2*u*t*sg[1][1] + t*t*sg[2][1];
+      var d = Math.abs(px - x);
+      if (d < afstand){ afstand = d; beste = py; }
+    }
+  });
+  return beste;
+}
+function grondY(x){ return oeverY(x) - 6; }
+/* De laagste oever binnen een stuk, zodat een klikvlak nergens over het water
+   hangt. Op drie punten meten is niet genoeg: daartussen zakt de oever soms. */
+function oeverLaagst(x1, x2){
+  var m = 1e9;
+  for (var x = x1; x <= x2; x += 4) m = Math.min(m, oeverY(x));
+  return Math.min(m, oeverY(x2));
+}
+
+/* Kleuren per seizoen, zodat je ziet dat het jaar verstrijkt. */
+var SEIZOEN = {
+  lente: { lucht:'#dceafb', gras:'#cfe0b4', bos:'#6f9e5a', akker:'#c8b98a', water:'#9dc0e5' },
+  zomer: { lucht:'#d6e9fb', gras:'#c2d99e', bos:'#5c8f49', akker:'#dcc46a', water:'#93b8e0' },
+  herfst:{ lucht:'#f1e3d2', gras:'#d8c79a', bos:'#b07a3a', akker:'#c9a961', water:'#9fb3c9' },
+  winter:{ lucht:'#e8eef5', gras:'#e6e6e2', bos:'#8fa08a', akker:'#e0dfd6', water:'#c6d6e4' }
+};
+
+function poppetje(x, y, kleur, schaal){
+  var s = schaal || 1;
+  return '<g transform="translate(' + x + ',' + y + ') scale(' + s + ')">' +
+    '<ellipse cx="0" cy="2" rx="6" ry="2.4" fill="rgba(20,34,76,.22)"/>' +
+    '<path d="M0,-18 l-5,10 h10 z" fill="' + kleur + '"/>' +
+    '<circle cx="0" cy="-21" r="3.4" fill="#e3b98f" stroke="#6f5545" stroke-width="1"/>' +
+    '<path d="M-4,-8 l-2,8 M4,-8 l2,8" stroke="' + kleur + '" stroke-width="2.2" stroke-linecap="round"/>' +
+    '</g>';
+}
+
+function boom(x, y, kleur, groot){
+  var g = groot || 1;
+  return '<g transform="translate(' + x + ',' + y + ') scale(' + g + ')">' +
+    '<ellipse cx="0" cy="1" rx="13" ry="4" fill="rgba(20,34,76,.14)"/>' +
+    '<path d="M-2.5,0 v-15 q2.5,-3 5,0 v15 z" fill="#7a5c48"/>' +
+    '<path d="M-3,-9 l-5,-5 M3,-13 l6,-5" stroke="#7a5c48" stroke-width="1.6" stroke-linecap="round"/>' +
+    /* drie lagen kroon, de bovenste het lichtst: dat geeft diepte */
+    '<path d="M0,-16 c-15,0 -19,-8 -16,-14 c3,-6 10,-6 16,-6 c6,0 13,0 16,6 c3,6 -1,14 -16,14 z" fill="' + kleur + '"/>' +
+    '<path d="M0,-26 c-12,0 -15,-7 -12,-12 c3,-5 8,-5 12,-5 c4,0 9,0 12,5 c3,5 0,12 -12,12 z" fill="' + kleur + '" opacity=".82"/>' +
+    '<path d="M0,-36 c-8,0 -10,-5 -8,-9 c2,-4 5,-4 8,-4 c3,0 6,0 8,4 c2,4 0,9 -8,9 z" fill="#fff" opacity=".16"/>' +
+    '</g>';
+}
+
+function hert(x, y, flauw){
+  return '<g transform="translate(' + x + ',' + y + ')" opacity="' + (flauw ? '.35' : '1') + '">' +
+    '<ellipse cx="0" cy="0" rx="9" ry="5" fill="#9b6b43"/>' +
+    '<path d="M7,-2 l4,-6 l2,1 l-3,6 z" fill="#9b6b43"/>' +
+    '<path d="M10,-8 l2,-5 M12,-8 l3,-4" stroke="#6f4b2e" stroke-width="1.4" stroke-linecap="round"/>' +
+    '<path d="M-5,4 v5 M0,4 v5 M5,4 v5" stroke="#7a5636" stroke-width="1.6" stroke-linecap="round"/>' +
+    '</g>';
+}
+
+function hut(x, y, groot){
+  var g = groot || 1;
+  return '<g transform="translate(' + x + ',' + y + ') scale(' + g + ')">' +
+    '<ellipse cx="0" cy="2" rx="22" ry="5" fill="rgba(20,34,76,.16)"/>' +
+    '<path d="M-20,0 l20,-26 l20,26 z" fill="#b08a5c" stroke="#6f5545" stroke-width="1.8" stroke-linejoin="round"/>' +
+    '<path d="M-13,0 v-9 a13,13 0 0 1 26,0 v9 z" fill="#c9a276" stroke="#6f5545" stroke-width="1.6"/>' +
+    '<path d="M-5,0 v-9 a5,9 0 0 1 10,0 v9 z" fill="#6f5545"/>' +
+    '</g>';
+}
+
+/* De hele scene. Wat je ziet hangt af van de toestand van het spel:
+   vaste 0 tot 3 bepaalt of er tenten of hutten staan, akkerp hoe ver het graan
+   is, en schaars hoeveel wild er nog rondloopt. */
+function tekenLand(st, verd, seizoen, actief, labels, oogst){
+  var K = SEIZOEN[seizoen || 'zomer'];
+  var s = '<svg viewBox="0 0 ' + LAND.breed + ' ' + LAND.hoog + '" xmlns="http://www.w3.org/2000/svg" ' +
+    'class="landsvg" role="img" aria-label="Het landschap waar je groep leeft">';
+
+  /* een vaste reeks, zodat wolken en grasplukjes niet dansen bij elke tekenbeurt */
+  var zaad = 21;
+  function toeval(){ zaad = (zaad * 1103515245 + 12345) % 2147483648; return zaad / 2147483648; }
+
+  /* lucht met een verloop, en een zon of een bleke winterzon */
+  s += '<defs><linearGradient id="lucht' + (seizoen || 'zomer') + '" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0%" stop-color="' + K.lucht + '"/>' +
+    '<stop offset="100%" stop-color="#ffffff" stop-opacity=".7"/></linearGradient></defs>';
+  s += '<rect width="' + LAND.breed + '" height="' + LAND.hoog + '" fill="url(#lucht' + (seizoen || 'zomer') + ')"/>';
+  s += '<circle cx="700" cy="52" r="' + (seizoen === 'winter' ? 20 : 26) + '" fill="#ffd98a" opacity="' +
+    (seizoen === 'winter' ? '.45' : '.75') + '"/>';
+  /* wolken */
+  [[250,44,1],[430,30,.7],[560,60,.55]].forEach(function(w){
+    s += '<g transform="translate(' + w[0] + ',' + w[1] + ') scale(' + w[2] + ')" opacity=".75">' +
+      '<ellipse cx="0" cy="0" rx="34" ry="13" fill="#fff"/>' +
+      '<ellipse cx="-18" cy="4" rx="20" ry="9" fill="#fff"/>' +
+      '<ellipse cx="20" cy="4" rx="22" ry="10" fill="#fff"/></g>';
+  });
+  /* vogels */
+  s += '<path d="M120,58 q6,-6 12,0 q6,-6 12,0 M164,44 q5,-5 10,0 q5,-5 10,0" fill="none" ' +
+    'stroke="#5b6480" stroke-width="1.8" stroke-linecap="round" opacity=".5"/>';
+
+  /* de heuvels, met een lichte rand bovenop */
+  s += '<path d="M0,150 q120,-46 240,-10 q140,42 300,-16 q160,-44 360,12 v194 H0 z" fill="' + K.bos + '" opacity=".26"/>';
+  s += '<path d="M0,176 q160,-30 320,4 q180,38 340,-14 q120,-36 240,6 v158 H0 z" fill="' + K.gras + '"/>';
+  s += '<path d="M0,176 q160,-30 320,4 q180,38 340,-14 q120,-36 240,6" fill="none" stroke="#fff" ' +
+    'stroke-width="2.5" opacity=".35"/>';
+  /* grasplukjes op de heuvel */
+  for (var gp = 0; gp < 70; gp++){
+    var gx = toeval() * LAND.breed, gy = 196 + toeval() * 92;
+    s += '<path d="M' + gx.toFixed(0) + ',' + gy.toFixed(0) + ' l-2,-5 M' + gx.toFixed(0) + ',' +
+      gy.toFixed(0) + ' l1,-7 M' + gx.toFixed(0) + ',' + gy.toFixed(0) + ' l3,-5" stroke="' + K.bos +
+      '" stroke-width="1.3" stroke-linecap="round" fill="none" opacity=".3"/>';
+  }
+
+  /* de rivier, met golfjes en riet langs de kant */
+  s += '<path d="M0,300 q160,-22 330,-6 q170,16 340,-12 q120,-20 230,2 v46 H0 z" fill="' + K.water + '"/>';
+  s += '<path d="M0,300 q160,-22 330,-6 q170,16 340,-12 q120,-20 230,2" fill="none" stroke="#fff" stroke-width="2.5" opacity=".55"/>';
+  for (var gv = 0; gv < 10; gv++){
+    var wx = 30 + gv * 88, wy = 312 + (gv % 3) * 6;
+    s += '<path d="M' + wx + ',' + wy + ' q7,-4 14,0 q7,4 14,0" fill="none" stroke="#fff" ' +
+      'stroke-width="1.6" stroke-linecap="round" opacity=".4"/>';
+  }
+  for (var rt = 0; rt < 14; rt++){
+    var rx2 = 20 + rt * 64, ry2 = oeverY(rx2) + 2 + (rt % 2) * 3;
+    s += '<path d="M' + rx2 + ',' + ry2 + ' v-11 M' + (rx2 + 4) + ',' + ry2 + ' v-8 M' + (rx2 - 4) + ',' +
+      ry2 + ' v-7" stroke="' + K.bos + '" stroke-width="1.6" stroke-linecap="round" opacity=".55"/>';
+  }
+
+  /* het bos */
+  for (var i = 0; i < 9; i++){
+    var bx = 30 + (i % 5) * 52 + (i > 4 ? 26 : 0);
+    var by = 196 + (i > 4 ? 26 : 0);
+    s += boom(bx, by, K.bos, 0.85 + (i % 3) * 0.12);
+  }
+  /* het wild: hoe schaarser, hoe minder en flauwer */
+  var wild = Math.max(0, 3 - Math.round((st.schaars || 0) * 3));
+  for (var w = 0; w < 3; w++) s += hert(64 + w * 74, 232 + (w % 2) * 16, w >= wild);
+
+  /* de open helling met struiken */
+  for (var b = 0; b < 7; b++){
+    var sx = 356 + (b % 4) * 44, sy = 210 + Math.floor(b / 4) * 34;
+    s += '<g transform="translate(' + sx + ',' + sy + ')">' +
+      '<ellipse cx="0" cy="9" rx="13" ry="3.5" fill="rgba(20,34,76,.12)"/>' +
+      '<ellipse cx="0" cy="0" rx="15" ry="11" fill="' + K.bos + '" opacity=".8"/>' +
+      '<ellipse cx="-4" cy="-4" rx="8" ry="6" fill="#fff" opacity=".16"/>' +
+      '<circle cx="-5" cy="-3" r="2.4" fill="#a8324a"/><circle cx="4" cy="2" r="2.4" fill="#a8324a"/>' +
+      '<circle cx="6" cy="-5" r="2.4" fill="#a8324a"/>' +
+      '<circle cx="-5" cy="-3.8" r=".8" fill="#fff" opacity=".6"/>' +
+      '</g>';
+  }
+
+  /* de akker: alleen als je ergens blijft, en hij groeit mee */
+  if (st.vaste >= 1){
+    s += '<rect x="556" y="196" width="168" height="96" rx="6" fill="' + K.akker + '" stroke="#a58f5e" stroke-width="2"/>';
+    var rijp = Math.min(1, (st.akkerp || 0) / 3);
+    for (var r = 0; r < 6; r++){
+      for (var c = 0; c < 11; c++){
+        var hx = 566 + c * 15, hy = 210 + r * 15;
+        var hoog = 4 + rijp * 8;
+        s += '<path d="M' + hx + ',' + hy + ' v-' + hoog.toFixed(0) + '" stroke="' +
+          (rijp > 0.6 ? '#d8b355' : '#8fa855') + '" stroke-width="2" stroke-linecap="round"/>';
+      }
+    }
+  } else {
+    s += '<rect x="556" y="196" width="168" height="96" rx="6" fill="none" stroke="#a58f5e" ' +
+      'stroke-width="2" stroke-dasharray="7 6" opacity=".6"/>' +
+      '<text x="640" y="250" font-size="13" fill="#7a6a4e" text-anchor="middle">nog geen akker</text>';
+  }
+
+  /* het kamp: tenten worden hutten worden een dorp */
+  if (st.vaste === 0){
+    s += '<g transform="translate(790,250)"><ellipse cx="0" cy="2" rx="24" ry="5" fill="rgba(20,34,76,.16)"/>' +
+      '<path d="M-20,0 l20,-30 l20,30 z" fill="#c2a882" stroke="#6f5545" stroke-width="1.8" stroke-linejoin="round"/>' +
+      '<path d="M0,-30 v30" stroke="#6f5545" stroke-width="1.4"/></g>';
+    s += '<g transform="translate(838,262) scale(.7)"><path d="M-20,0 l20,-30 l20,30 z" fill="#c2a882" ' +
+      'stroke="#6f5545" stroke-width="2.4" stroke-linejoin="round"/></g>';
+  } else {
+    for (var h = 0; h < st.vaste; h++){
+      s += hut(776 + h * 46, 254 + (h % 2) * 14, 0.9);
+    }
+    if (st.vaste >= 3){
+      s += '<path d="M752,286 h150" stroke="#8a6a45" stroke-width="4" stroke-linecap="round"/>';
+      for (var pz = 0; pz < 8; pz++){
+        s += '<path d="M' + (756 + pz * 20) + ',288 v-14" stroke="#8a6a45" stroke-width="3.4" stroke-linecap="round"/>';
+      }
+    }
+  }
+  /* het vuur, altijd */
+  s += '<g transform="translate(742,' + (grondY(742) - 4).toFixed(0) + ')">' +
+    '<ellipse cx="0" cy="2" rx="10" ry="3" fill="rgba(20,34,76,.14)"/>' +
+    '<path d="M-7,0 l14,0 M-5,-2 l10,2" stroke="#7a5c48" stroke-width="3" stroke-linecap="round"/>' +
+    '<path d="M0,-4 c-4,-6 2,-8 0,-13 c6,5 8,10 4,14 z" fill="#EA9836"/>' +
+    '<path d="M-1,-8 c-3,-5 3,-6 1,-10" fill="none" stroke="#F26749" stroke-width="1.6" stroke-linecap="round"/>' +
+    '<path d="M2,-18 q-6,-8 0,-14 q6,-6 1,-13" fill="none" stroke="#b9b3a6" stroke-width="2.2" ' +
+    'stroke-linecap="round" opacity=".55"/></g>';
+
+  /* wat er in de lucht hangt, per seizoen */
+  if (seizoen === 'winter' || seizoen === 'lente' || seizoen === 'herfst'){
+    var vlok = seizoen === 'winter' ? '#ffffff' : (seizoen === 'lente' ? '#f6c9d4' : '#c98a3a');
+    for (var vl = 0; vl < 28; vl++){
+      var vx = toeval() * LAND.breed, vy = 20 + toeval() * 260;
+      s += '<circle cx="' + vx.toFixed(0) + '" cy="' + vy.toFixed(0) + '" r="' +
+        (1.4 + toeval() * 1.8).toFixed(1) + '" fill="' + vlok + '" opacity="' +
+        (0.45 + toeval() * 0.4).toFixed(2) + '"/>';
+    }
+  }
+
+  /* ---------- de groep zelf ----------
+     Bij het kamp staan de mensen die je hebt. Hun aantal is het aantal mensen
+     in de groep, en hun kleur zegt hoe het met ze gaat. Zo zie je een krimpende
+     of zieke groep aankomen zonder de meters te lezen. */
+  var mensen = Math.max(0, Math.round(st.mensen || 0));
+  var gez = Math.max(0, Math.min(100, st.gezondheid == null ? 100 : st.gezondheid));
+  var huid = gez >= 75 ? '#e3b98f' : gez >= 55 ? '#d9ab7c' : '#c99a72';
+  var jas  = gez >= 75 ? '#7a5c48' : gez >= 55 ? '#8a7256' : '#9a8a72';
+  var perRij = 7;
+  for (var m = 0; m < Math.min(mensen, 14); m++){
+    var mx = 762 + (m % perRij) * 19, my = 206 + Math.floor(m / perRij) * 17;
+    s += '<g transform="translate(' + mx + ',' + my + ') scale(.62)" opacity="' +
+      (gez < 55 ? '.8' : '1') + '">' +
+      '<ellipse cx="0" cy="2" rx="6" ry="2.4" fill="rgba(20,34,76,.18)"/>' +
+      '<path d="M0,-18 l-5,10 h10 z" fill="' + jas + '"/>' +
+      '<circle cx="0" cy="-21" r="3.4" fill="' + huid + '" stroke="#6f5545" stroke-width="1"/>' +
+      '</g>';
+  }
+  if (mensen > 14){
+    s += '<text x="' + (762 + perRij * 19 - 6) + '" y="228" font-size="11" font-weight="600" ' +
+      'fill="#5b6480">+' + (mensen - 14) + '</text>';
+  }
+  /* een bordje met het aantal en een balkje voor de gezondheid */
+  /* linksboven in de lege lucht, want bij het kamp botst hij met het bordje */
+  s += '<g transform="translate(16,16)">' +
+    '<rect y="2" width="176" height="46" rx="13" fill="rgba(20,34,76,.10)"/>' +
+    '<rect width="176" height="46" rx="13" fill="#fff" stroke="rgba(20,34,76,.12)" stroke-width="1.2"/>' +
+    '<text x="13" y="20" font-size="13.5" font-weight="600" fill="#14224C">' + mensen + ' mensen</text>' +
+    '<text x="' + (176 - 13) + '" y="20" font-size="11" fill="#5b6480" text-anchor="end">' +
+      (gez >= 75 ? 'gezond' : gez >= 55 ? 'moe' : 'ziek') + '</text>' +
+    '<rect x="13" y="29" width="150" height="8" rx="4" fill="rgba(20,34,76,.14)"/>' +
+    '<rect x="13" y="29" width="' + (150 * gez / 100).toFixed(1) + '" height="8" rx="4" fill="' +
+      (gez >= 70 ? '#2f7d52' : gez >= 50 ? '#EA9836' : '#c0442c') + '"/>' +
+    '</g>';
+
+  /* de ploegen, op een rij vooraan in hun eigen plek */
+  PLEKKEN.forEach(function(p){
+    var n = verd[p.id] || 0;
+    var mid = (p.x1 + p.x2) / 2;
+    for (var i2 = 0; i2 < n; i2++){
+      var px = mid + (i2 - (n - 1) / 2) * 26;
+      s += '<g class="ploeg" data-p="' + p.id + '" data-i="' + i2 + '" style="cursor:pointer">' +
+        poppetje(px, grondY(px), '#204ECF', 1.05) + '</g>';
+    }
+  });
+
+  /* De klikvlakken, met boven elke plek een leesbaar bordje. De naam stond
+     eerst los over de bomen heen en verdween daarin; nu staat hij op een wit
+     vlakje met het aantal ploegen en wat het oplevert. */
+  PLEKKEN.forEach(function(p){
+    var aan = actief === p.id;
+    var mid = (p.x1 + p.x2) / 2;
+    var n = verd[p.id] || 0;
+    var uit = (labels && labels[p.id]) || '';
+    s += '<g class="plek" data-p="' + p.id + '" style="cursor:pointer">' +
+      '<rect x="' + p.x1 + '" y="' + GROND.boven + '" width="' + (p.x2 - p.x1) +
+      '" height="' + (oeverLaagst(p.x1, p.x2) - GROND.boven) +
+      '" rx="14" fill="#204ECF" opacity="' +
+      (aan ? '.10' : '.001') + '" stroke="' + (aan ? '#204ECF' : 'rgba(20,34,76,.18)') +
+      '" stroke-width="' + (aan ? 2.5 : 1.4) + '" stroke-dasharray="8 6"/>';
+    /* Het bordje. Vaste hoogte en ruime marges, en de tekst kapt netjes af in
+       plaats van tegen de rand aan te lopen. */
+    var br2 = p.x2 - p.x1 - 14;
+    var ruimte = br2 - 22 - (n ? 26 : 0);
+    var kort = function(t, per){
+      var max = Math.floor(ruimte / per);
+      return t.length <= max ? t : t.slice(0, Math.max(1, max - 1)) + '\u2026';
+    };
+    s += '<g transform="translate(' + (mid - br2 / 2) + ',' + (GROND.boven - 30) + ')">' +
+      '<rect y="2" width="' + br2 + '" height="40" rx="12" fill="rgba(20,34,76,.10)"/>' +
+      '<rect width="' + br2 + '" height="40" rx="12" fill="#fff" stroke="rgba(20,34,76,.12)" stroke-width="1.2"/>' +
+      '<text x="11" y="17" font-size="12.5" font-weight="600" fill="#14224C">' +
+        kort(p.naam, 7.2) + '</text>' +
+      (uit ? '<text x="11" y="32" font-size="10" fill="#5b6480">' + kort(uit, 5.1) + '</text>' : '') +
+      (n ? '<g transform="translate(' + (br2 - 20) + ',20)">' +
+           '<circle r="10" fill="#204ECF"/><text y="4" font-size="11.5" font-weight="700" fill="#fff" ' +
+           'text-anchor="middle">' + n + '</text></g>' : '') +
+      '</g></g>';
+  });
+  /* wat elke plek het afgelopen jaar opleverde, als een bordje dat blijft staan
+     terwijl je het verslag leest */
+  if (oogst){
+    PLEKKEN.forEach(function(p){
+      if (!(p.id in oogst)) return;
+      var mid2 = (p.x1 + p.x2) / 2;
+      var tekst = oogst[p.id];
+      var br2 = 24 + tekst.length * 7.2;
+      s += '<g transform="translate(' + (mid2 - br2 / 2) + ',' + (grondY(mid2) - 60).toFixed(0) + ')">' +
+        '<rect width="' + br2 + '" height="26" rx="13" fill="#2f7d52" opacity=".94"/>' +
+        '<text x="' + (br2 / 2) + '" y="18" font-size="13" font-weight="700" fill="#fff" ' +
+        'text-anchor="middle">' + tekst + '</text></g>';
+    });
+  }
+  return s + '</svg>';
+}
+
 var START = { mensen:12, gezondheid:100, voorraad:0, vaste:0, kennis:0, bouwp:0, akkerp:0, vastJaren:0 };
 
 function perPloeg(s){ return s.mensen / PLOEGEN; }
@@ -421,7 +759,63 @@ function jaarDoen(s, v, geluk){
 
   function totaalPloegen(){ return verd.jacht + verd.verz + verd.akker + verd.bouw; }
 
+  /* Welk seizoen hoort bij dit jaar? Puur voor de kleur van het landschap, maar
+     het maakt zichtbaar dat de tijd verstrijkt. */
+  var SEIZOENEN = ['lente','zomer','herfst','winter'];
+  function seizoenNu(){ return SEIZOENEN[(s.jaar - 1) % 4]; }
+
+  /* Mag je hier een ploeg heen sturen? Zaaien kan alleen als je ergens blijft,
+     en aan een afgebouwd dorp valt niets meer te bouwen. */
+  function magHier2(id){
+    if (id === 'akker' && s.vaste < 1) return false;
+    if (id === 'bouw' && s.vaste >= 3) return false;
+    return true;
+  }
+
+  var laatsteOogst = null;   /* wat elke plek vorig jaar opleverde */
+
+  function tekenLandschap(){
+    var vak = document.getElementById('landvak');
+    /* op elk bordje kort wat die plek oplevert, zodat je niet hoeft te rekenen */
+    var labels = {
+      jacht: Math.round(jachtP(s)) + ' eten per ploeg' + (wildRem(s) > 0.2 ? ', wild wordt schaars' : ''),
+      verz:  Math.round(verzP(s)) + ' eten per ploeg',
+      akker: s.vaste >= 1 ? Math.round(akkerP(s)) + ' eten per ploeg' : 'kan pas als je blijft',
+      bouw:  s.vaste >= 3 ? 'het dorp is af' : 'nog ' + (3 - s.bouwp) + ' ploegjaren'
+    };
+    vak.innerHTML = tekenLand({ vaste:s.vaste, akkerp:s.akkerp, schaars:wildRem(s),
+                                mensen:s.mensen, gezondheid:s.gezondheid },
+                              verd, seizoenNu(), null, labels, laatsteOogst);
+    if (bezig) return;
+    Array.prototype.forEach.call(vak.querySelectorAll('.plek'), function(g){
+      g.addEventListener('click', function(){
+        var id = g.getAttribute('data-p');
+        if (!magHier2(id)){
+          document.getElementById('landtip').textContent = id === 'akker'
+            ? 'Zaaien heeft geen zin zolang je rondtrekt: bij de oogst ben je hier niet meer.'
+            : 'Het dorp is af. Er valt hier niets meer te bouwen.';
+          return;
+        }
+        if (totaalPloegen() >= PLOEGEN){
+          document.getElementById('landtip').textContent =
+            'Al je zes ploegen zijn ingedeeld. Tik eerst een poppetje aan om er een terug te roepen.';
+          return;
+        }
+        verd[id]++;
+        tekenAlles();
+      });
+    });
+    Array.prototype.forEach.call(vak.querySelectorAll('.ploeg'), function(g){
+      g.addEventListener('click', function(e){
+        e.stopPropagation();
+        var id = g.getAttribute('data-p');
+        if (verd[id] > 0){ verd[id]--; tekenAlles(); }
+      });
+    });
+  }
+
   function tekenAlles(){
+    tekenLandschap();
     document.getElementById('jaarLabel').textContent = 'jaar ' + s.jaar + ' van ' + JAREN;
     document.getElementById('plekLabel').textContent = PLEKNAAM[s.vaste] +
       (s.kennis ? ', boerenkennis ' + s.kennis + ' van 3' : '');
@@ -494,6 +888,14 @@ function jaarDoen(s, v, geluk){
     bezig = true;
     var voor = { mensen:s.mensen, gezondheid:s.gezondheid, vaste:s.vaste, kennis:s.kennis };
     var u = jaarDoen(s, verd, { jacht:Math.random(), verz:Math.random(), akker:Math.random() });
+    /* Wat elke plek opbracht komt als een groen bordje op het landschap te
+       staan. Zo zie je waar je eten vandaan kwam, niet alleen het totaal. */
+    laatsteOogst = {};
+    if (verd.jacht) laatsteOogst.jacht = '+' + Math.round(u.jacht) + ' eten';
+    if (verd.verz)  laatsteOogst.verz  = '+' + Math.round(u.verz) + ' eten';
+    if (verd.akker) laatsteOogst.akker = u.akker > 0 ? '+' + Math.round(u.akker) + ' eten' : 'niets';
+    if (verd.bouw)  laatsteOogst.bouw  = s.vaste > voor.vaste ? 'het kamp groeit' : 'gebouwd';
+    tekenLandschap();
     toonVerslag(verslagTekst(u, voor), false);
   });
 
@@ -554,6 +956,7 @@ function jaarDoen(s, v, geluk){
     document.getElementById('keuzedeel').classList.add('hide');
     document.getElementById('verderBtn').addEventListener('click', function(){
       elVerslag.classList.add('hide');
+      laatsteOogst = null;
       document.getElementById('keuzedeel').classList.remove('hide');
       bezig = false;
       if (!tussendoor && s.jaar > JAREN){ toonEinde(); return; }
