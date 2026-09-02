@@ -267,9 +267,14 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
 
 const PAD = [[-40,90],[190,90],[190,250],[430,250],[430,110],[650,110],[650,390],[900,390]];
 const SOORTEN = {
-  kanon:     {naam:'Kanon',      letter:'K', kleur:'var(--crab)',        prijs:40, bereik:110, schade:6,  tempo:0.55, onder:'Snel en dichtbij'},
-  katapult:  {naam:'Katapult',   letter:'T', kleur:'var(--deep-ocean)',  prijs:70, bereik:200, schade:20, tempo:1.5,  onder:'Ver, maar traag'},
-  vertrager: {naam:'Vertrager',  letter:'V', kleur:'var(--butterscotch)',prijs:55, bereik:130, schade:2,  tempo:0.5,  onder:'Maakt fouten langzaam'}
+  kanon:     {naam:'Kanon',        letter:'K', kleur:'var(--crab)',        prijs:40,  bereik:110, schade:6,  tempo:0.55, onder:'Snel en dichtbij'},
+  katapult:  {naam:'Katapult',     letter:'T', kleur:'var(--deep-ocean)',  prijs:70,  bereik:200, schade:20, tempo:1.5,  onder:'Ver, maar traag'},
+  vertrager: {naam:'Vertrager',    letter:'V', kleur:'var(--butterscotch)',prijs:55,  bereik:130, schade:2,  tempo:0.5,  onder:'Houdt fouten op'},
+  /* Twee nieuwe. De pekelpot raakt alles wat vlakbij staat, dus die is sterk
+     tegen een lange rij; de scherpschutter reikt het verst en slaat hard toe,
+     maar laadt lang en is duur. */
+  pekelpot:  {naam:'Pekelpot',     letter:'P', kleur:'#2f7d52',            prijs:85,  bereik:120, schade:9,  tempo:1.1,  onder:'Raakt alles binnen bereik', vlak:true},
+  schutter:  {naam:'Scherpschutter',letter:'S',kleur:'#7d1f12',            prijs:120, bereik:300, schade:46, tempo:2.6,  onder:'Bereikt het hele pad, laadt lang'}
 };
 const VAKKEN = [
   {id:'reken', naam:'Rekenen',    mark:'R', kleur:'var(--crab)',       onder:'Hoofdrekenen, breuken, procenten, verhoudingen, tijd en geld, meten'},
@@ -412,24 +417,718 @@ const GES = [
 const GES_N = [1,1,2,2,1,2,1,3,2,1,3,1,2,2,1,2,2,2,1,2,2,2,3,2,3,1,2,3,1,2,3,3,2,1,1,2,1,2,2,2];
 
 const ONDERDELEN = {
-  reken: [{id:'hoofd',naam:'hoofdrekenen'},{id:'breuk',naam:'breuken'},{id:'procent',naam:'procenten'},{id:'verhouding',naam:'verhoudingen'},{id:'tijdgeld',naam:'tijd en geld'},{id:'meten',naam:'meten en meetkunde'}],
+  reken: [{id:'tafels',naam:'tafels'},{id:'hoofd',naam:'hoofdrekenen'},{id:'breuk',naam:'breuken'},{id:'procent',naam:'procenten'},{id:'verhouding',naam:'verhoudingen'},{id:'tijdgeld',naam:'tijd en geld'},{id:'meten',naam:'meten en meetkunde'}],
   ned: [{id:'werkwoordspelling',naam:'werkwoordspelling'},{id:'spelling',naam:'spelling'},{id:'synoniemen',naam:'synoniemen'},{id:'betekenis',naam:'betekenis van woorden'},{id:'leestekens',naam:'leestekens'},{id:'meervoud',naam:'enkel en meervoud'}],
   eng: [{id:'woordjes NL naar EN',naam:'woordjes NL naar EN'},{id:'woordjes EN naar NL',naam:'woordjes EN naar NL'},{id:'irregular verbs',naam:'irregular verbs'}],
   ges: TIJDVAKKEN.map(t => ({id: t.id, naam: t.naam}))
 };
-const BRONNEN = {ned: NED, eng: ENG, ges: GES};
-const NIVOS = {ned: NED_N, eng: ENG_N, ges: GES_N};
+
+/* ---------------------------------------------------------------------------
+   Extra vragen, zodat je niet na tien minuten dezelfde weer krijgt.
+   De Engelse werkwoorden komen uit Irregular verbs en de Nederlandse
+   werkwoordspelling uit de Werkwoordrace, allebei van deze site zelf. De
+   tijdvakvragen komen uit Tijdvakken sorteren. De rest is er los bij
+   geschreven.
+   --------------------------------------------------------------------------- */
+const NED2 = [
+{v:'Ik ___ elke dag naar school.',o:['fiets','fietst','fietsd','fietse'],g:0,u:'Bij ik gebruik je de stam, dus zonder t. De stam van fietsen is fiets.',t:'werkwoordspelling'},
+{v:'Hij ___ de deur voor mij open.',o:['doet','doed','doete','doetd'],g:0,u:'Bij hij, zij of het komt er een t achter de stam. In de tegenwoordige tijd is dat altijd een t, nooit een d.',t:'werkwoordspelling'},
+{v:'Wij ___ morgen naar Zwolle.',o:['gaan','gaat','gaant','gaandt'],g:0,u:'Bij wij, jullie en zij meervoud schrijf je het hele werkwoord: gaan.',t:'werkwoordspelling'},
+{v:'De hond ___ de hele nacht.',o:['blaft','blafd','blafdt','blafte'],g:0,u:'De hond is een hij, dus stam plus t. In de tegenwoordige tijd hoor je nooit een d achter de stam.',t:'werkwoordspelling'},
+{v:'Ik ___ morgen vijftien.',o:['word','wordt','wordd','worde'],g:0,u:'De stam van worden is word. Bij ik komt er niets achter, dus word zonder t.',t:'werkwoordspelling'},
+{v:'Hij ___ steeds bozer.',o:['word','wordt','wordte','worddt'],g:1,u:'Stam word plus t is wordt. Dat de stam al op een d eindigt maakt niet uit, de t komt er gewoon achter.',t:'werkwoordspelling'},
+{v:'___ jij ook uitgenodigd?',o:['Word','Wordt','Worden','Worde'],g:0,u:'Staat jij achter het werkwoord, dan valt de t weg. Vergelijk: jij wordt uitgenodigd, maar word jij uitgenodigd?',t:'werkwoordspelling'},
+{v:'Wat ___ jij daarvan?',o:['vind','vindt','vinde','vinden'],g:0,u:'Jij staat achter het werkwoord, dus geen t. Wel: jij vindt daar iets van.',t:'werkwoordspelling'},
+{v:'Jij ___ dat altijd goed.',o:['doet','doe','doete','doetd'],g:0,u:'Staat jij voor het werkwoord, dan komt de t er gewoon bij.',t:'werkwoordspelling'},
+{v:'Mijn zus ___ op haar fiets naar school.',o:['rijdt','rijd','rijdte','rijdten'],g:0,u:'Mijn zus is een zij. De stam van rijden is rijd, daar komt een t achter.',t:'werkwoordspelling'},
+{v:'Hij ___ nooit op mijn berichten.',o:['antwoordt','antwoord','antwoordten','antwoorddt'],g:0,u:'De stam van antwoorden is antwoord. Bij hij komt daar een t achter, ook al ziet dat er raar uit.',t:'werkwoordspelling'},
+{v:'Ik ___ je vanavond.',o:['antwoord','antwoordt','antwoort','antwoorte'],g:0,u:'Bij ik gebruik je alleen de stam: antwoord.',t:'werkwoordspelling'},
+{v:'De leerlingen ___ het lokaal binnen.',o:['lopen','loopt','lopene','lopend'],g:0,u:'De leerlingen zijn er meer dan een, dus het hele werkwoord: lopen.',t:'werkwoordspelling'},
+{v:'___ je even mee naar buiten?',o:['Loop','Loopt','Loope','Loopdt'],g:0,u:'Ook bij je in plaats van jij valt de t weg als het achter het werkwoord staat.',t:'werkwoordspelling'},
+{v:'Het ___ me dat je er bent.',o:['verbaast','verbaasd','verbaasdt','verbaasten'],g:0,u:'Hier is verbazen een gewoon werkwoord in de tegenwoordige tijd: stam verbaas plus t.',t:'werkwoordspelling'},
+{v:'Wij ___ de hele middag aan ons verslag. (verleden tijd)',o:['werkten','werkden','werkte','werktenen'],g:0,u:'Werken eindigt op ken. De k zit in \'t kofschip, dus verleden tijd met ten.',t:'werkwoordspelling'},
+{v:'Hij ___ zijn huiswerk al voor het eten. (verleden tijd)',o:['maakte','maakde','maakted','maaktee'],g:0,u:'Maken eindigt op ken. De k zit in \'t kofschip, dus te.',t:'werkwoordspelling'},
+{v:'Ik ___ de hele avond naar muziek. (verleden tijd)',o:['luisterde','luisterte','luisterd','luisterdeen'],g:0,u:'Luisteren eindigt op ren. De r zit niet in \'t kofschip, dus de.',t:'werkwoordspelling'},
+{v:'Zij ___ de deur voorzichtig. (verleden tijd)',o:['opende','opente','opendeen','opended'],g:0,u:'Openen eindigt op nen. De n zit niet in \'t kofschip, dus de.',t:'werkwoordspelling'},
+{v:'De hond ___ de hele nacht. (verleden tijd)',o:['blafte','blafde','blaftee','blafteen'],g:0,u:'Blaffen eindigt op fen. De f zit in \'t kofschip, dus te.',t:'werkwoordspelling'},
+{v:'Wij ___ vroeger in Emmeloord. (verleden tijd)',o:['woonden','woonten','woonte','woont'],g:0,u:'Wonen eindigt op nen, dus den. Je hoort het ook: woonden.',t:'werkwoordspelling'},
+{v:'Ik ___ de bal over de schutting. (verleden tijd)',o:['gooide','gooite','gooit','gooidee'],g:0,u:'Gooien eindigt op ien. Die letters zitten niet in \'t kofschip, dus de.',t:'werkwoordspelling'},
+{v:'De juf ___ de les precies op tijd. (verleden tijd)',o:['startte','starte','startt','startted'],g:0,u:'De stam is start en die eindigt al op een t. Daar komt te achter, dus twee keer t: startte.',t:'werkwoordspelling'},
+{v:'Hij ___ een hoger cijfer. (verleden tijd)',o:['verwachtte','verwachte','verwachtteen','verwachttee'],g:0,u:'De stam is verwacht. Daar komt te achter, dus verwachtte met twee keer t.',t:'werkwoordspelling'},
+{v:'Wij ___ vorig jaar naar een ander huis. (verleden tijd)',o:['verhuisden','verhuisten','verhuisd','verhuiste'],g:0,u:'Verhuizen eindigt op zen, en de z zit niet in \'t kofschip. Kijk dus naar het hele werkwoord, niet naar de stam verhuis.',t:'werkwoordspelling'},
+{v:'Ik ___ de vraag van de docent. (verleden tijd)',o:['beantwoordde','beantwoorde','beantwoorddee','beantwoorddeen'],g:0,u:'De stam is beantwoord en eindigt al op een d. Daar komt de achter: beantwoordde.',t:'werkwoordspelling'},
+{v:'Hij ___ zich de hele les. (verleden tijd)',o:['verveelde','verveelte','verveelt','verveeldee'],g:0,u:'Vervelen eindigt op len. De l zit niet in \'t kofschip, dus de.',t:'werkwoordspelling'},
+{v:'De klas ___ het antwoord meteen. (verleden tijd)',o:['raadde','raadte','raadt','raaddeen'],g:0,u:'Raden eindigt op den, dus de. De stam raad eindigt al op een d: raadde.',t:'werkwoordspelling'},
+{v:'Ik ___ gisteren naar school. (verleden tijd)',o:['fietste','fietsde','fietstee','fietsteen'],g:0,u:'Fietsen eindigt op sen. De s zit in \'t kofschip, dus te.',t:'werkwoordspelling'},
+{v:'Wij ___ gisteren de hele middag buiten. (verleden tijd)',o:['speelden','speelten','speeldenen','speelt'],g:0,u:'Spelen eindigt op len. De l zit niet in \'t kofschip, dus den.',t:'werkwoordspelling'},
+{v:'Zij ___ hard om de grap. (verleden tijd)',o:['lachte','lachde','lachd','lacht'],g:0,u:'Lachen eindigt op chen. De ch zit in \'t kofschip, dus te.',t:'werkwoordspelling'},
+{v:'Ik ___ mijn kamer op zaterdag. (verleden tijd)',o:['poetste','poetsde','poetsted','poetst'],g:0,u:'Poetsen eindigt op sen, en de s zit in \'t kofschip. Dus te.',t:'werkwoordspelling'},
+{v:'Hij ___ de bal over de schutting. (verleden tijd)',o:['gooide','gooiden','gooidee','gooideen'],g:0,u:'De vorm met de is goed, want hij is een persoon. Gooiden gebruik je bij wij of zij meervoud.',t:'werkwoordspelling'},
+{v:'Ik heb de hele dag hard ___. (voltooid deelwoord)',o:['gewerkt','gewerkd','gewerktd','gewerkte'],g:0,u:'Werken eindigt op ken en de k zit in \'t kofschip, dus ge plus stam plus t.',t:'werkwoordspelling'},
+{v:'Wij hebben het samen ___. (voltooid deelwoord)',o:['gemaakt','gemaakd','gemaakten','gemaakte'],g:0,u:'Maken hoort bij \'t kofschip, dus gemaakt met een t.',t:'werkwoordspelling'},
+{v:'Hij heeft de deur al ___. (voltooid deelwoord)',o:['geopend','geopent','geopende','geopenden'],g:0,u:'Openen eindigt op nen. De n zit niet in \'t kofschip, dus een d: geopend.',t:'werkwoordspelling'},
+{v:'Zij is naar huis ___. (voltooid deelwoord)',o:['gefietst','gefietsd','gefietsten','gefietstd'],g:0,u:'Fietsen eindigt op sen. De s zit in \'t kofschip, dus een t.',t:'werkwoordspelling'},
+{v:'Hij heeft nog steeds niet ___. (voltooid deelwoord)',o:['geantwoord','geantwoordt','geantwoordd','geantwoort'],g:0,u:'De stam is antwoord en eindigt al op een d. Er komt niets meer bij: geantwoord. Een voltooid deelwoord krijgt nooit dt.',t:'werkwoordspelling'},
+{v:'Ik heb de hele week ___. (voltooid deelwoord)',o:['geleerd','geleert','geleerde','geleerden'],g:0,u:'Leren eindigt op ren. De r zit niet in \'t kofschip, dus een d.',t:'werkwoordspelling'},
+{v:'Ik heb je bericht gisteren ___. (voltooid deelwoord)',o:['ontvangen','ontvangd','ontvangend','ontvangent'],g:0,u:'Ontvangen is een sterk werkwoord met een onbeklemtoond voorvoegsel. Er komt geen ge voor en geen t of d achter.',t:'werkwoordspelling'},
+{v:'Ze heeft haar pas ___. (voltooid deelwoord)',o:['verloren','verliesd','verlorene','verlorenen'],g:0,u:'Verliezen verandert van klank in het voltooid deelwoord: verloren. Bij sterke werkwoorden helpt het kofschip je niet.',t:'werkwoordspelling'},
+{v:'Het pakketje wordt vandaag ___. (voltooid deelwoord)',o:['bezorgd','bezorgt','bezorgde','bezorgden'],g:0,u:'Bezorgen eindigt op gen. De g zit niet in \'t kofschip, dus een d. Let op: wordt bezorgd is een voltooid deelwoord, geen persoonsvorm.',t:'werkwoordspelling'},
+{v:'Hij heeft zich de hele les ___. (voltooid deelwoord)',o:['verveeld','verveelt','verveelde','verveelden'],g:0,u:'Vervelen eindigt op len, dus een d. Na heeft staat altijd een voltooid deelwoord.',t:'werkwoordspelling'},
+{v:'Ik heb de hele middag buiten ___. (voltooid deelwoord)',o:['gespeeld','gespeelt','gespeelden','gespeeldt'],g:0,u:'Spelen eindigt op len. De l zit niet in \'t kofschip, dus een d.',t:'werkwoordspelling'},
+{v:'Zij heeft haar kamer ___. (voltooid deelwoord)',o:['gepoetst','gepoetsd','gepoetsdt','gepoetsten'],g:0,u:'Poetsen hoort bij \'t kofschip, dus gepoetst met een t.',t:'werkwoordspelling'},
+{v:'Hij ___ de bal naar mij.',o:['gooit','gooid','gooitd','gooite'],g:0,u:'Dit is de persoonsvorm bij hij: stam plus t. Vervang het door lopen: hij loopt.',t:'werkwoordspelling'},
+{v:'De bal is naar mij ___.',o:['gegooid','gegooit','gegooide','gegooidd'],g:0,u:'Na is komt een voltooid deelwoord. Vervang het door lopen: het is gelopen. Dus gegooid.',t:'werkwoordspelling'},
+{v:'Wat ___ er allemaal?',o:['gebeurt','gebeurd','gebeurte','gebeurtd'],g:0,u:'Hier is gebeuren de persoonsvorm in de tegenwoordige tijd. Vervang het door lopen: wat loopt er. Je hoort een t.',t:'werkwoordspelling'},
+{v:'Er is iets ergs ___.',o:['gebeurd','gebeurt','gebeurte','gebeurdd'],g:0,u:'Na is, was, heeft of hebben komt een voltooid deelwoord. Vervang het door lopen: er is iets gelopen. Dus gebeurd met een d.',t:'werkwoordspelling'},
+{v:'Hij ___ zich tijdens de uitleg.',o:['verveelt','verveeld','verveelte','verveelten'],g:0,u:'Dit is de persoonsvorm bij hij: stam plus t. Vervang het door lopen: hij loopt.',t:'werkwoordspelling'},
+{v:'Hij heeft zich vreselijk ___.',o:['verveeld','verveelt','verveelde','verveelden'],g:0,u:'Na heeft komt een voltooid deelwoord. Vervang het door lopen: hij heeft gelopen. Dus verveeld.',t:'werkwoordspelling'},
+{v:'De postbode ___ het pakket om vier uur.',o:['bezorgt','bezorgd','bezorgdt','bezorgten'],g:0,u:'De postbode is een hij, dus stam plus t. Vervang het door lopen: de postbode loopt.',t:'werkwoordspelling'},
+{v:'Het pakket is al ___.',o:['bezorgd','bezorgt','bezorgde','bezorgden'],g:0,u:'Na is komt een voltooid deelwoord. Vervang het door lopen: het is gelopen. Dus bezorgd.',t:'werkwoordspelling'},
+{v:'De brief is vanmorgen ___.',o:['verstuurd','verstuurt','verstuurde','verstuurden'],g:0,u:'Na is komt een voltooid deelwoord: verstuurd met een d.',t:'werkwoordspelling'},
+{v:'Hij ___ de brief vanmorgen.',o:['verstuurt','verstuurd','verstuurte','verstuurdt'],g:0,u:'Hier is versturen de persoonsvorm bij hij: stam plus t.',t:'werkwoordspelling'},
+{v:'Dat had ik niet ___.',o:['verwacht','verwachtte','verwachd','verwachte'],g:0,u:'Na had komt een voltooid deelwoord: verwacht. Verwachtte is verleden tijd, en die past hier niet.',t:'werkwoordspelling'},
+{v:'Ik ___ dat het zou lukken.',o:['verwachtte','verwacht','verwachttee','verwachtteen'],g:0,u:'Hier vertel je over vroeger, dus verleden tijd. Stam verwacht plus te wordt verwachtte.',t:'werkwoordspelling'},
+{v:'De les wordt door hem ___.',o:['gegeven','geeft','gegevene','gegevent'],g:0,u:'Na wordt komt een voltooid deelwoord. Wordt is hier de persoonsvorm, gegeven hoort erbij.',t:'werkwoordspelling'},
+{v:'Het ___ mij dat niemand iets zei.',o:['verbaasde','verbaasd','verbaasdee','verbaaste'],g:0,u:'Verbazen eindigt op zen en de z zit niet in \'t kofschip, dus de. Zonder is of heeft ervoor is het geen deelwoord.',t:'werkwoordspelling'},
+{v:'Wat is een synoniem van eerlijk?',o:['oprecht','zuinig','luid','vroeg'],g:0,u:'Oprecht betekent hetzelfde als eerlijk.',t:'synoniemen'},
+{v:'Wat is een synoniem van blij?',o:['vrolijk','moe','streng','zwaar'],g:0,u:'Vrolijk en blij betekenen hetzelfde.',t:'synoniemen'},
+{v:'Wat is een synoniem van praten?',o:['spreken','lopen','kijken','wachten'],g:0,u:'Spreken en praten betekenen hetzelfde.',t:'synoniemen'},
+{v:'Wat is een synoniem van groot?',o:['enorm','smal','kort','dun'],g:0,u:'Enorm betekent heel groot.',t:'synoniemen'},
+{v:'Wat is een synoniem van boos?',o:['kwaad','bang','blij','stil'],g:0,u:'Kwaad en boos betekenen hetzelfde.',t:'synoniemen'},
+{v:'Wat is een synoniem van kopen?',o:['aanschaffen','verkopen','lenen','geven'],g:0,u:'Aanschaffen is een deftig woord voor kopen. Verkopen is juist het tegenovergestelde.',t:'synoniemen'},
+{v:'Wat is een synoniem van proberen?',o:['pogen','slagen','stoppen','weten'],g:0,u:'Pogen betekent proberen. Slagen betekent dat het gelukt is.',t:'synoniemen'},
+{v:'Wat is een synoniem van verbieden?',o:['tegenhouden','toestaan','vragen','vergeten'],g:0,u:'Toestaan is het tegenovergestelde van verbieden.',t:'synoniemen'},
+{v:'Wat is een synoniem van rijk?',o:['welvarend','arm','gierig','duur'],g:0,u:'Welvarend betekent rijk. Gierig gaat over hoe je met geld omgaat, niet hoeveel je hebt.',t:'synoniemen'},
+{v:'Wat is een synoniem van belangrijk?',o:['essentieel','handig','nieuw','duidelijk'],g:0,u:'Essentieel betekent onmisbaar, dus heel belangrijk.',t:'synoniemen'},
+{v:'Wat betekent een bron kritisch bekijken?',o:['nagaan of je hem kunt geloven','hem hardop voorlezen','hem overschrijven','hem afkeuren'],g:0,u:'Kritisch kijken is niet hetzelfde als afkeuren: je onderzoekt of je de bron kunt vertrouwen.',t:'betekenis'},
+{v:'Wat betekent het woord oorzaak?',o:['waardoor iets gebeurt','wat er daarna gebeurt','hoe lang iets duurt','wie het opschreef'],g:0,u:'De oorzaak komt eerst, het gevolg komt daarna.',t:'betekenis'},
+{v:'Wat betekent het woord gevolg?',o:['wat er daarna gebeurt','waardoor iets begon','een andere mening','een korte samenvatting'],g:0,u:'Eerst de oorzaak, dan het gevolg.',t:'betekenis'},
+{v:'Wat betekent het woord bevolking?',o:['alle mensen die ergens wonen','alle gebouwen in een stad','het bestuur van een land','de mensen die stemmen'],g:0,u:'De bevolking is iedereen die er woont, ook wie niet mag stemmen.',t:'betekenis'},
+{v:'Wat betekent het woord verplicht?',o:['het moet','het mag','het kan','het is verboden'],g:0,u:'Verplicht is sterker dan mogen: het moet.',t:'betekenis'},
+{v:'Wat betekent het woord toevallig?',o:['zonder dat het gepland was','met opzet','al heel lang','precies op tijd'],g:0,u:'Toevallig betekent dat niemand het zo bedoeld heeft.',t:'betekenis'},
+{v:'Wat betekent het woord vooroordeel?',o:['een mening zonder de feiten te kennen','een goed onderbouwde mening','een oordeel van een rechter','een eerste indruk die klopt'],g:0,u:'Een vooroordeel is een oordeel vooraf, zonder dat je het onderzocht hebt.',t:'betekenis'},
+{v:'Wat betekent het woord standpunt?',o:['wat iemand ergens van vindt','waar iemand staat','een bewijs','een feit'],g:0,u:'Een standpunt is een mening, geen feit.',t:'betekenis'},
+{v:'Wat betekent het woord gelijkwaardig?',o:['evenveel waard','precies hetzelfde','goedkoper','ouder'],g:0,u:'Gelijkwaardig betekent evenveel waard, niet dat het hetzelfde is.',t:'betekenis'},
+{v:'Wat betekent het woord invoeren?',o:['van buiten het land halen','naar buiten het land brengen','zelf maken','weggooien'],g:0,u:'Invoeren is importeren, uitvoeren is exporteren.',t:'betekenis'},
+{v:'Wat is het meervoud van glas?',o:['glazen','glassen','glasen','glases'],g:0,u:'De s wordt een z en de a wordt lang: glazen.',t:'meervoud'},
+{v:'Wat is het meervoud van huis?',o:['huizen','huisen','huissen','huizes'],g:0,u:'De s wordt een z: huizen.',t:'meervoud'},
+{v:'Wat is het meervoud van bus?',o:['bussen','busen','buzen','busses'],g:0,u:'Korte klank, dus de s verdubbelt: bussen.',t:'meervoud'},
+{v:'Wat is het meervoud van raam?',o:['ramen','ramen die','raamen','rammen'],g:0,u:'De lange aa wordt een a in een open lettergreep: ramen. Rammen zijn mannetjesschapen.',t:'meervoud'},
+{v:'Wat is het meervoud van eend?',o:['eenden','eendes','eendden','eenders'],g:0,u:'Gewoon en erachter: eenden.',t:'meervoud'},
+{v:'Wat is het meervoud van foto?',o:['foto\'s','fotos','fotoos','fotoen'],g:0,u:'Bij een klinker aan het eind komt er een apostrof: foto\'s.',t:'meervoud'},
+{v:'Wat is het meervoud van hobby?',o:['hobby\'s','hobbys','hobbies','hobbyen'],g:0,u:'In het Nederlands met een apostrof: hobby\'s. Hobbies is Engels.',t:'meervoud'},
+{v:'Wat is het meervoud van collega?',o:['collega\'s','collegas','collegaas','collegae'],g:0,u:'Klinker aan het eind, dus apostrof: collega\'s.',t:'meervoud'},
+{v:'Wat is het meervoud van stad?',o:['steden','stads','stadden','staden'],g:0,u:'Een uitzondering die je uit je hoofd moet kennen: stad wordt steden.',t:'meervoud'},
+{v:'Wat is het meervoud van schip?',o:['schepen','schippen','schipen','schips'],g:0,u:'Ook een uitzondering: schip wordt schepen.',t:'meervoud'},
+{v:'Welke zin heeft de komma goed?',o:['Ik ga naar huis, want het regent.','Ik ga naar huis want, het regent.','Ik ga, naar huis want het regent.','Ik ga naar huis want het, regent.'],g:0,u:'Voor een verbindingswoord als want komt een komma.',t:'leestekens'},
+{v:'Welke zin is goed?',o:['Wat een mooie dag!','Wat een mooie dag?','Wat een mooie dag.,','Wat een mooie dag!?'],g:0,u:'Een uitroep krijgt een uitroepteken.',t:'leestekens'},
+{v:'Waar hoort het vraagteken?',o:['Kom je vanavond nog langs?','Kom je vanavond nog langs.','Kom je? vanavond nog langs','Kom je vanavond, nog langs'],g:0,u:'Een vraag eindigt op een vraagteken.',t:'leestekens'},
+{v:'Welke zin heeft de aanhalingstekens goed?',o:['Zij zei: "Ik kom eraan."','Zij zei "Ik kom eraan".','Zij zei: Ik kom eraan.','Zij zei: "Ik kom eraan'],g:0,u:'Dubbele punt, dan de aanhalingstekens om precies wat er gezegd is.',t:'leestekens'},
+{v:'Welke zin gebruikt de dubbele punt goed?',o:['Je hebt drie dingen nodig: papier, pen en tijd.','Je hebt drie dingen nodig, papier: pen en tijd.','Je hebt: drie dingen nodig papier, pen en tijd.','Je hebt drie dingen: nodig papier pen en tijd.'],g:0,u:'Een dubbele punt kondigt een opsomming aan.',t:'leestekens'},
+{v:'Wat is de verleden tijd van gebeuren?',o:['gebeurde','gebeurdde','gebeurdte','gebeurtte'],g:0,u:'Verleden tijd van gebeuren: de stam eindigt op r, dus de.',t:'spelling'},
+{v:'Hoe schrijf je dit goed?',o:['ik verwacht','ik verwagt','ik ferwacht','ik verwachtt'],g:0,u:'Verwachten schrijf je met cht, net als wachten.',t:'spelling'},
+{v:'Welke zin is goed geschreven?',o:['het gebeurt vaak','het gebeurd vaak','het gebeurdt vaak','het gebeurte vaak'],g:0,u:'Tegenwoordige tijd, derde persoon: stam plus t.',t:'spelling'},
+{v:'Hoe schrijf je de periode van ridders en kastelen?',o:['middeleeuwen','middeleeuwe','midden eeuwen','middeleuwen'],g:0,u:'Een woord, met eeuw erin: middeleeuwen.',t:'spelling'},
+{v:'Welk woord is goed gespeld?',o:['tegenwoordig','tegenwoordigd','tegewoordig','tegenwoordich'],g:0,u:'Tegenwoordig eindigt op ig, net als handig en rustig.',t:'spelling'}
+];
+const NED2_N = [1,1,1,1,1,1,2,2,2,2,2,2,2,3,3,2,2,2,2,2,2,2,3,3,3,3,3,3,1,1,1,1,2,1,1,2,2,2,2,3,3,3,3,1,1,1,1,1,1,2,2,2,2,3,3,3,3,3,3,1,1,1,1,1,2,2,2,2,3,2,1,1,1,1,2,3,2,3,2,1,1,1,2,1,2,2,2,2,2,2,1,1,3,2,1,1,2,2,2];
+const ENG2 = [
+{v:'be, ___, been',o:['was','spelt','bent','meant'],g:0,u:'be - was - been.',t:'irregular verbs'},
+{v:'be, was, ___',o:['been','flown','shut','hurt'],g:0,u:'be - was - been.',t:'irregular verbs'},
+{v:'Wat betekent to be?',o:['zijn','plakken, vastzitten','branden','bedoelen, betekenen'],g:0,u:'to be betekent zijn. De vormen zijn be - was - been.',t:'woordjes EN naar NL'},
+{v:'have, ___, had',o:['had','hid','forgave','learnt'],g:0,u:'have - had - had.',t:'irregular verbs'},
+{v:'have, had, ___',o:['had','bled','leapt','forbidden'],g:0,u:'have - had - had.',t:'irregular verbs'},
+{v:'Wat betekent to have?',o:['hebben','weten, kennen','zwemmen','komen'],g:0,u:'to have betekent hebben. De vormen zijn have - had - had.',t:'woordjes EN naar NL'},
+{v:'do, ___, done',o:['did','swore','spilt','quit'],g:0,u:'do - did - done.',t:'irregular verbs'},
+{v:'do, did, ___',o:['done','wound','shut','led'],g:0,u:'do - did - done.',t:'irregular verbs'},
+{v:'Wat betekent to do?',o:['doen','zijn','knielen','drinken'],g:0,u:'to do betekent doen. De vormen zijn do - did - done.',t:'woordjes EN naar NL'},
+{v:'go, ___, gone',o:['went','was','showed','split'],g:0,u:'go - went - gone.',t:'irregular verbs'},
+{v:'go, went, ___',o:['gone','become','spat','borne'],g:0,u:'go - went - gone.',t:'irregular verbs'},
+{v:'Wat betekent to go?',o:['gaan','lesgeven','springen','zwaaien, schommelen'],g:0,u:'to go betekent gaan. De vormen zijn go - went - gone.',t:'woordjes EN naar NL'},
+{v:'come, ___, come',o:['came','forgot','meant','flew'],g:0,u:'come - came - come.',t:'irregular verbs'},
+{v:'come, came, ___',o:['come','built','cast','known'],g:0,u:'come - came - come.',t:'irregular verbs'},
+{v:'Wat betekent to come?',o:['komen','knielen','steken (van een insect)','bloeden'],g:0,u:'to come betekent komen. De vormen zijn come - came - come.',t:'woordjes EN naar NL'},
+{v:'get, ___, got',o:['got','read','made','broke'],g:0,u:'get - got - got.',t:'irregular verbs'},
+{v:'get, got, ___',o:['got','learnt','met','caught'],g:0,u:'get - got - got.',t:'irregular verbs'},
+{v:'Wat betekent to get?',o:['krijgen','dromen','vasthouden','vinden'],g:0,u:'to get betekent krijgen. De vormen zijn get - got - got.',t:'woordjes EN naar NL'},
+{v:'make, ___, made',o:['made','cast','swam','forgot'],g:0,u:'make - made - made.',t:'irregular verbs'},
+{v:'make, made, ___',o:['made','meant','swung','sprung'],g:0,u:'make - made - made.',t:'irregular verbs'},
+{v:'Wat betekent to make?',o:['maken','leren','splitsen','zijn'],g:0,u:'to make betekent maken. De vormen zijn make - made - made.',t:'woordjes EN naar NL'},
+{v:'take, ___, taken',o:['took','gave','flew','bought'],g:0,u:'take - took - taken.',t:'irregular verbs'},
+{v:'take, took, ___',o:['taken','driven','dreamt','lost'],g:0,u:'take - took - taken.',t:'irregular verbs'},
+{v:'Wat betekent to take?',o:['nemen','slaan, staken','rennen','vinden'],g:0,u:'to take betekent nemen. De vormen zijn take - took - taken.',t:'woordjes EN naar NL'},
+{v:'see, ___, seen',o:['saw','spelt','did','dealt'],g:0,u:'see - saw - seen.',t:'irregular verbs'},
+{v:'see, saw, ___',o:['seen','shot','held','hurt'],g:0,u:'see - saw - seen.',t:'irregular verbs'},
+{v:'Wat betekent to see?',o:['zien','horen','verbergen','leiden'],g:0,u:'to see betekent zien. De vormen zijn see - saw - seen.',t:'woordjes EN naar NL'},
+{v:'know, ___, known',o:['knew','fled','smelt','rang'],g:0,u:'know - knew - known.',t:'irregular verbs'},
+{v:'know, knew, ___',o:['known','slept','crept','been'],g:0,u:'know - knew - known.',t:'irregular verbs'},
+{v:'Wat betekent to know?',o:['weten, kennen','worden','houden, bewaren','lezen'],g:0,u:'to know betekent weten, kennen. De vormen zijn know - knew - known.',t:'woordjes EN naar NL'},
+{v:'think, ___, thought',o:['thought','shot','fell','bore'],g:0,u:'think - thought - thought.',t:'irregular verbs'},
+{v:'think, thought, ___',o:['thought','fought','dealt','awoken'],g:0,u:'think - thought - thought.',t:'irregular verbs'},
+{v:'Wat betekent to think?',o:['denken','spellen','doen','voelen'],g:0,u:'to think betekent denken. De vormen zijn think - thought - thought.',t:'woordjes EN naar NL'},
+{v:'say, ___, said',o:['said','drew','slid','lit'],g:0,u:'say - said - said.',t:'irregular verbs'},
+{v:'say, said, ___',o:['said','smelt','begun','got'],g:0,u:'say - said - said.',t:'irregular verbs'},
+{v:'Wat betekent to say?',o:['zeggen','springen, ontspringen','glijden','rijden op'],g:0,u:'to say betekent zeggen. De vormen zijn say - said - said.',t:'woordjes EN naar NL'},
+{v:'tell, ___, told',o:['told','held','lent','grew'],g:0,u:'tell - told - told.',t:'irregular verbs'},
+{v:'tell, told, ___',o:['told','sped','chosen','eaten'],g:0,u:'tell - told - told.',t:'irregular verbs'},
+{v:'Wat betekent to tell?',o:['vertellen','bouwen','opwinden, kronkelen','rijden'],g:0,u:'to tell betekent vertellen. De vormen zijn tell - told - told.',t:'woordjes EN naar NL'},
+{v:'give, ___, given',o:['gave','rose','hurt','spoke'],g:0,u:'give - gave - given.',t:'irregular verbs'},
+{v:'give, gave, ___',o:['given','beaten','sung','flown'],g:0,u:'give - gave - given.',t:'irregular verbs'},
+{v:'Wat betekent to give?',o:['geven','schieten','ontwaken','zijn'],g:0,u:'to give betekent geven. De vormen zijn give - gave - given.',t:'woordjes EN naar NL'},
+{v:'find, ___, found',o:['found','dealt','gave','slid'],g:0,u:'find - found - found.',t:'irregular verbs'},
+{v:'find, found, ___',o:['found','been','split','taken'],g:0,u:'find - found - found.',t:'irregular verbs'},
+{v:'Wat betekent to find?',o:['vinden','uitlenen','verslaan','wakker worden'],g:0,u:'to find betekent vinden. De vormen zijn find - found - found.',t:'woordjes EN naar NL'},
+{v:'leave, ___, left',o:['left','meant','struck','crept'],g:0,u:'leave - left - left.',t:'irregular verbs'},
+{v:'leave, left, ___',o:['left','felt','paid','got'],g:0,u:'leave - left - left.',t:'irregular verbs'},
+{v:'Wat betekent to leave?',o:['vertrekken, achterlaten','nemen','kruipen, sluipen','leggen'],g:0,u:'to leave betekent vertrekken, achterlaten. De vormen zijn leave - left - left.',t:'woordjes EN naar NL'},
+{v:'feel, ___, felt',o:['felt','bound','made','kept'],g:0,u:'feel - felt - felt.',t:'irregular verbs'},
+{v:'feel, felt, ___',o:['felt','shown','read','drunk'],g:0,u:'feel - felt - felt.',t:'irregular verbs'},
+{v:'Wat betekent to feel?',o:['voelen','bederven, verwennen','zijn','vertrekken, achterlaten'],g:0,u:'to feel betekent voelen. De vormen zijn feel - felt - felt.',t:'woordjes EN naar NL'},
+{v:'put, ___, put',o:['put','forbade','was','forgot'],g:0,u:'put - put - put.',t:'irregular verbs'},
+{v:'put, put, ___',o:['put','dreamt','let','forgotten'],g:0,u:'put - put - put.',t:'irregular verbs'},
+{v:'Wat betekent to put?',o:['zetten, leggen','kruipen, sluipen','pijn doen','worden'],g:0,u:'to put betekent zetten, leggen. De vormen zijn put - put - put.',t:'woordjes EN naar NL'},
+{v:'bring, ___, brought',o:['brought','took','bent','understood'],g:0,u:'bring - brought - brought.',t:'irregular verbs'},
+{v:'bring, brought, ___',o:['brought','beaten','bitten','heard'],g:0,u:'bring - brought - brought.',t:'irregular verbs'},
+{v:'Wat betekent to bring?',o:['brengen','dragen, verdragen','naaien','kruipen, sluipen'],g:0,u:'to bring betekent brengen. De vormen zijn bring - brought - brought.',t:'woordjes EN naar NL'},
+{v:'begin, ___, begun',o:['began','became','spread','withdrew'],g:0,u:'begin - began - begun.',t:'irregular verbs'},
+{v:'begin, began, ___',o:['begun','wept','wound','sought'],g:0,u:'begin - began - begun.',t:'irregular verbs'},
+{v:'Wat betekent to begin?',o:['beginnen','leggen','maken','zeggen'],g:0,u:'to begin betekent beginnen. De vormen zijn begin - began - begun.',t:'woordjes EN naar NL'},
+{v:'keep, ___, kept',o:['kept','slept','led','rode'],g:0,u:'keep - kept - kept.',t:'irregular verbs'},
+{v:'keep, kept, ___',o:['kept','laid','sent','left'],g:0,u:'keep - kept - kept.',t:'irregular verbs'},
+{v:'Wat betekent to keep?',o:['houden, bewaren','verbieden','schieten','gaan'],g:0,u:'to keep betekent houden, bewaren. De vormen zijn keep - kept - kept.',t:'woordjes EN naar NL'},
+{v:'write, ___, written',o:['wrote','found','showed','forgot'],g:0,u:'write - wrote - written.',t:'irregular verbs'},
+{v:'write, wrote, ___',o:['written','grown','swung','stuck'],g:0,u:'write - wrote - written.',t:'irregular verbs'},
+{v:'Wat betekent to write?',o:['schrijven','horen','ruiken','staan'],g:0,u:'to write betekent schrijven. De vormen zijn write - wrote - written.',t:'woordjes EN naar NL'},
+{v:'read, ___, read',o:['read','lent','forgot','learnt'],g:0,u:'read - read - read.',t:'irregular verbs'},
+{v:'read, read, ___',o:['read','sped','dreamt','dug'],g:0,u:'read - read - read.',t:'irregular verbs'},
+{v:'Wat betekent to read?',o:['lezen','terugtrekken, opnemen','schijnen','spellen'],g:0,u:'to read betekent lezen. De vormen zijn read - read - read.',t:'woordjes EN naar NL'},
+{v:'run, ___, run',o:['ran','quit','understood','spat'],g:0,u:'run - ran - run.',t:'irregular verbs'},
+{v:'run, ran, ___',o:['run','split','stung','learnt'],g:0,u:'run - ran - run.',t:'irregular verbs'},
+{v:'Wat betekent to run?',o:['rennen','wakker worden','nemen','winnen'],g:0,u:'to run betekent rennen. De vormen zijn run - ran - run.',t:'woordjes EN naar NL'},
+{v:'eat, ___, eaten',o:['ate','shone','held','sent'],g:0,u:'eat - ate - eaten.',t:'irregular verbs'},
+{v:'eat, ate, ___',o:['eaten','sunk','taken','bent'],g:0,u:'eat - ate - eaten.',t:'irregular verbs'},
+{v:'Wat betekent to eat?',o:['eten','slaan, raken','rijden','vallen'],g:0,u:'to eat betekent eten. De vormen zijn eat - ate - eaten.',t:'woordjes EN naar NL'},
+{v:'drink, ___, drunk',o:['drank','burst','crept','drove'],g:0,u:'drink - drank - drunk.',t:'irregular verbs'},
+{v:'drink, drank, ___',o:['drunk','fled','sold','driven'],g:0,u:'drink - drank - drunk.',t:'irregular verbs'},
+{v:'Wat betekent to drink?',o:['drinken','kosten','vertrekken, achterlaten','branden'],g:0,u:'to drink betekent drinken. De vormen zijn drink - drank - drunk.',t:'woordjes EN naar NL'},
+{v:'sit, ___, sat',o:['sat','crept','found','sought'],g:0,u:'sit - sat - sat.',t:'irregular verbs'},
+{v:'sit, sat, ___',o:['sat','knelt','done','driven'],g:0,u:'sit - sat - sat.',t:'irregular verbs'},
+{v:'Wat betekent to sit?',o:['zitten','verbergen','vasthouden','bellen, rinkelen'],g:0,u:'to sit betekent zitten. De vormen zijn sit - sat - sat.',t:'woordjes EN naar NL'},
+{v:'stand, ___, stood',o:['stood','forbade','sank','forgave'],g:0,u:'stand - stood - stood.',t:'irregular verbs'},
+{v:'stand, stood, ___',o:['stood','slept','burnt','lent'],g:0,u:'stand - stood - stood.',t:'irregular verbs'},
+{v:'Wat betekent to stand?',o:['staan','slaan, staken','slaan, raken','ontstaan, zich voordoen'],g:0,u:'to stand betekent staan. De vormen zijn stand - stood - stood.',t:'woordjes EN naar NL'},
+{v:'become, ___, become',o:['became','split','dealt','swung'],g:0,u:'become - became - become.',t:'irregular verbs'},
+{v:'become, became, ___',o:['become','gone','known','been'],g:0,u:'become - became - become.',t:'irregular verbs'},
+{v:'Wat betekent to become?',o:['worden','vergeten','opwinden, kronkelen','rijden'],g:0,u:'to become betekent worden. De vormen zijn become - became - become.',t:'woordjes EN naar NL'},
+{v:'break, ___, broken',o:['broke','caught','chose','hit'],g:0,u:'break - broke - broken.',t:'irregular verbs'},
+{v:'break, broke, ___',o:['broken','dreamt','dug','done'],g:0,u:'break - broke - broken.',t:'irregular verbs'},
+{v:'Wat betekent to break?',o:['breken','maken','zwemmen','vertellen'],g:0,u:'to break betekent breken. De vormen zijn break - broke - broken.',t:'woordjes EN naar NL'},
+{v:'buy, ___, bought',o:['bought','had','spelt','meant'],g:0,u:'buy - bought - bought.',t:'irregular verbs'},
+{v:'buy, bought, ___',o:['bought','smelt','found','stuck'],g:0,u:'buy - bought - bought.',t:'irregular verbs'},
+{v:'Wat betekent to buy?',o:['kopen','weten, kennen','houden, bewaren','bloeden'],g:0,u:'to buy betekent kopen. De vormen zijn buy - bought - bought.',t:'woordjes EN naar NL'},
+{v:'catch, ___, caught',o:['caught','rode','stood','had'],g:0,u:'catch - caught - caught.',t:'irregular verbs'},
+{v:'catch, caught, ___',o:['caught','slid','thought','sunk'],g:0,u:'catch - caught - caught.',t:'irregular verbs'},
+{v:'Wat betekent to catch?',o:['vangen','geven','schudden','bedoelen, betekenen'],g:0,u:'to catch betekent vangen. De vormen zijn catch - caught - caught.',t:'woordjes EN naar NL'},
+{v:'choose, ___, chosen',o:['chose','drove','spat','wound'],g:0,u:'choose - chose - chosen.',t:'irregular verbs'},
+{v:'choose, chose, ___',o:['chosen','been','driven','read'],g:0,u:'choose - chose - chosen.',t:'irregular verbs'},
+{v:'Wat betekent to choose?',o:['kiezen','morsen','dragen, verdragen','zweren, vloeken'],g:0,u:'to choose betekent kiezen. De vormen zijn choose - chose - chosen.',t:'woordjes EN naar NL'},
+{v:'cut, ___, cut',o:['cut','split','bet','spat'],g:0,u:'cut - cut - cut.',t:'irregular verbs'},
+{v:'cut, cut, ___',o:['cut','dreamt','broken','slept'],g:0,u:'cut - cut - cut.',t:'irregular verbs'},
+{v:'Wat betekent to cut?',o:['snijden','barsten','weten, kennen','vergeven'],g:0,u:'to cut betekent snijden. De vormen zijn cut - cut - cut.',t:'woordjes EN naar NL'},
+{v:'drive, ___, driven',o:['drove','bled','sewed','quit'],g:0,u:'drive - drove - driven.',t:'irregular verbs'},
+{v:'drive, drove, ___',o:['driven','ridden','paid','woken'],g:0,u:'drive - drove - driven.',t:'irregular verbs'},
+{v:'Wat betekent to drive?',o:['rijden','brengen','zetten, leggen','vasthouden'],g:0,u:'to drive betekent rijden. De vormen zijn drive - drove - driven.',t:'woordjes EN naar NL'},
+{v:'fall, ___, fallen',o:['fell','shot','slept','cut'],g:0,u:'fall - fell - fallen.',t:'irregular verbs'},
+{v:'fall, fell, ___',o:['fallen','wound','lent','taken'],g:0,u:'fall - fell - fallen.',t:'irregular verbs'},
+{v:'Wat betekent to fall?',o:['vallen','maken','vergeven','dromen'],g:0,u:'to fall betekent vallen. De vormen zijn fall - fell - fallen.',t:'woordjes EN naar NL'},
+{v:'fly, ___, flown',o:['flew','broke','caught','struck'],g:0,u:'fly - flew - flown.',t:'irregular verbs'},
+{v:'fly, flew, ___',o:['flown','meant','sat','been'],g:0,u:'fly - flew - flown.',t:'irregular verbs'},
+{v:'Wat betekent to fly?',o:['vliegen','dromen','bellen, rinkelen','krijgen'],g:0,u:'to fly betekent vliegen. De vormen zijn fly - flew - flown.',t:'woordjes EN naar NL'},
+{v:'forget, ___, forgotten',o:['forgot','ran','cut','drove'],g:0,u:'forget - forgot - forgotten.',t:'irregular verbs'},
+{v:'forget, forgot, ___',o:['forgotten','struck','stolen','spilt'],g:0,u:'forget - forgot - forgotten.',t:'irregular verbs'},
+{v:'Wat betekent to forget?',o:['vergeten','steken (van een insect)','vertrekken, achterlaten','knielen'],g:0,u:'to forget betekent vergeten. De vormen zijn forget - forgot - forgotten.',t:'woordjes EN naar NL'},
+{v:'grow, ___, grown',o:['grew','stole','spelt','woke'],g:0,u:'grow - grew - grown.',t:'irregular verbs'},
+{v:'grow, grew, ___',o:['grown','meant','arisen','given'],g:0,u:'grow - grew - grown.',t:'irregular verbs'},
+{v:'Wat betekent to grow?',o:['groeien','schudden','gaan','zingen'],g:0,u:'to grow betekent groeien. De vormen zijn grow - grew - grown.',t:'woordjes EN naar NL'},
+{v:'hear, ___, heard',o:['heard','meant','split','crept'],g:0,u:'hear - heard - heard.',t:'irregular verbs'},
+{v:'hear, heard, ___',o:['heard','dreamt','held','swung'],g:0,u:'hear - heard - heard.',t:'irregular verbs'},
+{v:'Wat betekent to hear?',o:['horen','ruiken','zweren, vloeken','zijn'],g:0,u:'to hear betekent horen. De vormen zijn hear - heard - heard.',t:'woordjes EN naar NL'},
+{v:'hit, ___, hit',o:['hit','wound','awoke','swung'],g:0,u:'hit - hit - hit.',t:'irregular verbs'},
+{v:'hit, hit, ___',o:['hit','swung','meant','stung'],g:0,u:'hit - hit - hit.',t:'irregular verbs'},
+{v:'Wat betekent to hit?',o:['slaan, raken','branden','voeden','dromen'],g:0,u:'to hit betekent slaan, raken. De vormen zijn hit - hit - hit.',t:'woordjes EN naar NL'},
+{v:'hold, ___, held',o:['held','read','knelt','taught'],g:0,u:'hold - held - held.',t:'irregular verbs'},
+{v:'hold, held, ___',o:['held','slid','dealt','shut'],g:0,u:'hold - held - held.',t:'irregular verbs'},
+{v:'Wat betekent to hold?',o:['vasthouden','vallen','verkopen','dromen'],g:0,u:'to hold betekent vasthouden. De vormen zijn hold - held - held.',t:'woordjes EN naar NL'},
+{v:'lose, ___, lost',o:['lost','cast','rode','fell'],g:0,u:'lose - lost - lost.',t:'irregular verbs'},
+{v:'lose, lost, ___',o:['lost','leapt','cast','forbidden'],g:0,u:'lose - lost - lost.',t:'irregular verbs'},
+{v:'Wat betekent to lose?',o:['verliezen','ontstaan, zich voordoen','opwinden, kronkelen','zwaaien, schommelen'],g:0,u:'to lose betekent verliezen. De vormen zijn lose - lost - lost.',t:'woordjes EN naar NL'},
+{v:'meet, ___, met',o:['met','was','sang','had'],g:0,u:'meet - met - met.',t:'irregular verbs'},
+{v:'meet, met, ___',o:['met','leapt','hit','put'],g:0,u:'meet - met - met.',t:'irregular verbs'},
+{v:'Wat betekent to meet?',o:['ontmoeten','spreken','laten','kosten'],g:0,u:'to meet betekent ontmoeten. De vormen zijn meet - met - met.',t:'woordjes EN naar NL'},
+{v:'pay, ___, paid',o:['paid','learnt','said','shone'],g:0,u:'pay - paid - paid.',t:'irregular verbs'},
+{v:'pay, paid, ___',o:['paid','shut','heard','beaten'],g:0,u:'pay - paid - paid.',t:'irregular verbs'},
+{v:'Wat betekent to pay?',o:['betalen','krijgen','beginnen','vangen'],g:0,u:'to pay betekent betalen. De vormen zijn pay - paid - paid.',t:'woordjes EN naar NL'},
+{v:'ring, ___, rung',o:['rang','shot','lit','wore'],g:0,u:'ring - rang - rung.',t:'irregular verbs'},
+{v:'ring, rang, ___',o:['rung','stuck','shut','stolen'],g:0,u:'ring - rang - rung.',t:'irregular verbs'},
+{v:'Wat betekent to ring?',o:['bellen, rinkelen','ontwaken','uitgeven, doorbrengen','rijden op'],g:0,u:'to ring betekent bellen, rinkelen. De vormen zijn ring - rang - rung.',t:'woordjes EN naar NL'},
+{v:'send, ___, sent',o:['sent','hung','sang','said'],g:0,u:'send - sent - sent.',t:'irregular verbs'},
+{v:'send, sent, ___',o:['sent','swung','fallen','slept'],g:0,u:'send - sent - sent.',t:'irregular verbs'},
+{v:'Wat betekent to send?',o:['sturen','steken (van een insect)','staan','geven'],g:0,u:'to send betekent sturen. De vormen zijn send - sent - sent.',t:'woordjes EN naar NL'},
+{v:'sing, ___, sung',o:['sang','drank','slept','swore'],g:0,u:'sing - sang - sung.',t:'irregular verbs'},
+{v:'sing, sang, ___',o:['sung','kept','hidden','given'],g:0,u:'sing - sang - sung.',t:'irregular verbs'},
+{v:'Wat betekent to sing?',o:['zingen','betalen','breken','komen'],g:0,u:'to sing betekent zingen. De vormen zijn sing - sang - sung.',t:'woordjes EN naar NL'},
+{v:'sleep, ___, slept',o:['slept','hit','chose','stole'],g:0,u:'sleep - slept - slept.',t:'irregular verbs'},
+{v:'sleep, slept, ___',o:['slept','cost','stung','flown'],g:0,u:'sleep - slept - slept.',t:'irregular verbs'},
+{v:'Wat betekent to sleep?',o:['slapen','horen','vinden','bloeden'],g:0,u:'to sleep betekent slapen. De vormen zijn sleep - slept - slept.',t:'woordjes EN naar NL'},
+{v:'speak, ___, spoken',o:['spoke','fled','rang','found'],g:0,u:'speak - spoke - spoken.',t:'irregular verbs'},
+{v:'speak, spoke, ___',o:['spoken','told','sent','wound'],g:0,u:'speak - spoke - spoken.',t:'irregular verbs'},
+{v:'Wat betekent to speak?',o:['spreken','vliegen','verslaan','denken'],g:0,u:'to speak betekent spreken. De vormen zijn speak - spoke - spoken.',t:'woordjes EN naar NL'},
+{v:'spend, ___, spent',o:['spent','bet','bit','got'],g:0,u:'spend - spent - spent.',t:'irregular verbs'},
+{v:'spend, spent, ___',o:['spent','swung','burnt','seen'],g:0,u:'spend - spent - spent.',t:'irregular verbs'},
+{v:'Wat betekent to spend?',o:['uitgeven, doorbrengen','kopen','zweren, vloeken','breken'],g:0,u:'to spend betekent uitgeven, doorbrengen. De vormen zijn spend - spent - spent.',t:'woordjes EN naar NL'},
+{v:'swim, ___, swum',o:['swam','ran','sold','stung'],g:0,u:'swim - swam - swum.',t:'irregular verbs'},
+{v:'swim, swam, ___',o:['swum','meant','broken','dealt'],g:0,u:'swim - swam - swum.',t:'irregular verbs'},
+{v:'Wat betekent to swim?',o:['zwemmen','vluchten','vallen','zijn'],g:0,u:'to swim betekent zwemmen. De vormen zijn swim - swam - swum.',t:'woordjes EN naar NL'},
+{v:'teach, ___, taught',o:['taught','kept','did','left'],g:0,u:'teach - taught - taught.',t:'irregular verbs'},
+{v:'teach, taught, ___',o:['taught','lain','dreamt','taken'],g:0,u:'teach - taught - taught.',t:'irregular verbs'},
+{v:'Wat betekent to teach?',o:['lesgeven','aansteken','sturen','uitgeven, doorbrengen'],g:0,u:'to teach betekent lesgeven. De vormen zijn teach - taught - taught.',t:'woordjes EN naar NL'},
+{v:'understand, ___, understood',o:['understood','leapt','led','crept'],g:0,u:'understand - understood - understood.',t:'irregular verbs'},
+{v:'understand, understood, ___',o:['understood','awoken','cost','lent'],g:0,u:'understand - understood - understood.',t:'irregular verbs'},
+{v:'Wat betekent to understand?',o:['begrijpen','vergeten','sluiten','bedoelen, betekenen'],g:0,u:'to understand betekent begrijpen. De vormen zijn understand - understood - understood.',t:'woordjes EN naar NL'},
+{v:'wear, ___, worn',o:['wore','struck','swore','froze'],g:0,u:'wear - wore - worn.',t:'irregular verbs'},
+{v:'wear, wore, ___',o:['worn','driven','quit','been'],g:0,u:'wear - wore - worn.',t:'irregular verbs'},
+{v:'Wat betekent to wear?',o:['dragen (kleding)','worden','ontwaken','schrijven'],g:0,u:'to wear betekent dragen (kleding). De vormen zijn wear - wore - worn.',t:'woordjes EN naar NL'},
+{v:'win, ___, won',o:['won','burst','said','fed'],g:0,u:'win - won - won.',t:'irregular verbs'},
+{v:'win, won, ___',o:['won','taught','taken','shot'],g:0,u:'win - won - won.',t:'irregular verbs'},
+{v:'Wat betekent to win?',o:['winnen','zijn','sturen','eten'],g:0,u:'to win betekent winnen. De vormen zijn win - won - won.',t:'woordjes EN naar NL'},
+{v:'bite, ___, bitten',o:['bit','fell','meant','burnt'],g:0,u:'bite - bit - bitten.',t:'irregular verbs'},
+{v:'bite, bit, ___',o:['bitten','gone','bent','shown'],g:0,u:'bite - bit - bitten.',t:'irregular verbs'},
+{v:'Wat betekent to bite?',o:['bijten','snijden','verbergen','rijden'],g:0,u:'to bite betekent bijten. De vormen zijn bite - bit - bitten.',t:'woordjes EN naar NL'},
+{v:'blow, ___, blown',o:['blew','burst','cut','stole'],g:0,u:'blow - blew - blown.',t:'irregular verbs'},
+{v:'blow, blew, ___',o:['blown','been','awoken','written'],g:0,u:'blow - blew - blown.',t:'irregular verbs'},
+{v:'Wat betekent to blow?',o:['blazen, waaien','buigen','snellen, te hard rijden','verkopen'],g:0,u:'to blow betekent blazen, waaien. De vormen zijn blow - blew - blown.',t:'woordjes EN naar NL'},
+{v:'build, ___, built',o:['built','drank','brought','thought'],g:0,u:'build - built - built.',t:'irregular verbs'},
+{v:'build, built, ___',o:['built','arisen','lit','sought'],g:0,u:'build - built - built.',t:'irregular verbs'},
+{v:'Wat betekent to build?',o:['bouwen','brengen','laten zien','fokken'],g:0,u:'to build betekent bouwen. De vormen zijn build - built - built.',t:'woordjes EN naar NL'},
+{v:'cost, ___, cost',o:['cost','struck','shot','showed'],g:0,u:'cost - cost - cost.',t:'irregular verbs'},
+{v:'cost, cost, ___',o:['cost','blown','quit','written'],g:0,u:'cost - cost - cost.',t:'irregular verbs'},
+{v:'Wat betekent to cost?',o:['kosten','buigen','sluiten','dromen'],g:0,u:'to cost betekent kosten. De vormen zijn cost - cost - cost.',t:'woordjes EN naar NL'},
+{v:'draw, ___, drawn',o:['drew','swung','hung','rode'],g:0,u:'draw - drew - drawn.',t:'irregular verbs'},
+{v:'draw, drew, ___',o:['drawn','swung','flown','struck'],g:0,u:'draw - drew - drawn.',t:'irregular verbs'},
+{v:'Wat betekent to draw?',o:['tekenen','branden','liggen','kiezen'],g:0,u:'to draw betekent tekenen. De vormen zijn draw - drew - drawn.',t:'woordjes EN naar NL'},
+{v:'fight, ___, fought',o:['fought','sent','bought','bet'],g:0,u:'fight - fought - fought.',t:'irregular verbs'},
+{v:'fight, fought, ___',o:['fought','struck','understood','found'],g:0,u:'fight - fought - fought.',t:'irregular verbs'},
+{v:'Wat betekent to fight?',o:['vechten','vertellen','denken','zien'],g:0,u:'to fight betekent vechten. De vormen zijn fight - fought - fought.',t:'woordjes EN naar NL'},
+{v:'hide, ___, hidden',o:['hid','wound','hit','understood'],g:0,u:'hide - hid - hidden.',t:'irregular verbs'},
+{v:'hide, hid, ___',o:['hidden','heard','broken','won'],g:0,u:'hide - hid - hidden.',t:'irregular verbs'},
+{v:'Wat betekent to hide?',o:['verbergen','glijden','staan','winnen'],g:0,u:'to hide betekent verbergen. De vormen zijn hide - hid - hidden.',t:'woordjes EN naar NL'},
+{v:'hurt, ___, hurt',o:['hurt','sprang','found','built'],g:0,u:'hurt - hurt - hurt.',t:'irregular verbs'},
+{v:'hurt, hurt, ___',o:['hurt','found','drawn','gone'],g:0,u:'hurt - hurt - hurt.',t:'irregular verbs'},
+{v:'Wat betekent to hurt?',o:['pijn doen','schieten','voeden','groeien'],g:0,u:'to hurt betekent pijn doen. De vormen zijn hurt - hurt - hurt.',t:'woordjes EN naar NL'},
+{v:'lead, ___, led',o:['led','dreamt','caught','became'],g:0,u:'lead - led - led.',t:'irregular verbs'},
+{v:'lead, led, ___',o:['led','come','spelt','cut'],g:0,u:'lead - led - led.',t:'irregular verbs'},
+{v:'Wat betekent to lead?',o:['leiden','vallen','sturen','lezen'],g:0,u:'to lead betekent leiden. De vormen zijn lead - led - led.',t:'woordjes EN naar NL'},
+{v:'lend, ___, lent',o:['lent','spoke','hid','came'],g:0,u:'lend - lent - lent.',t:'irregular verbs'},
+{v:'lend, lent, ___',o:['lent','bitten','leant','caught'],g:0,u:'lend - lent - lent.',t:'irregular verbs'},
+{v:'Wat betekent to lend?',o:['uitlenen','bouwen','fokken','plakken, vastzitten'],g:0,u:'to lend betekent uitlenen. De vormen zijn lend - lent - lent.',t:'woordjes EN naar NL'},
+{v:'let, ___, let',o:['let','laid','forgot','hurt'],g:0,u:'let - let - let.',t:'irregular verbs'},
+{v:'let, let, ___',o:['let','quit','stood','eaten'],g:0,u:'let - let - let.',t:'irregular verbs'},
+{v:'Wat betekent to let?',o:['laten','maken','slaan, raken','kopen'],g:0,u:'to let betekent laten. De vormen zijn let - let - let.',t:'woordjes EN naar NL'},
+{v:'mean, ___, meant',o:['meant','wore','threw','knelt'],g:0,u:'mean - meant - meant.',t:'irregular verbs'},
+{v:'mean, meant, ___',o:['meant','dealt','gone','spat'],g:0,u:'mean - meant - meant.',t:'irregular verbs'},
+{v:'Wat betekent to mean?',o:['bedoelen, betekenen','bouwen','zijn','zeggen'],g:0,u:'to mean betekent bedoelen, betekenen. De vormen zijn mean - meant - meant.',t:'woordjes EN naar NL'},
+{v:'ride, ___, ridden',o:['rode','was','smelt','bit'],g:0,u:'ride - rode - ridden.',t:'irregular verbs'},
+{v:'ride, rode, ___',o:['ridden','meant','frozen','struck'],g:0,u:'ride - rode - ridden.',t:'irregular verbs'},
+{v:'Wat betekent to ride?',o:['rijden op','zien','horen','zetten, leggen'],g:0,u:'to ride betekent rijden op. De vormen zijn ride - rode - ridden.',t:'woordjes EN naar NL'},
+{v:'rise, ___, risen',o:['rose','hung','fled','burnt'],g:0,u:'rise - rose - risen.',t:'irregular verbs'},
+{v:'rise, rose, ___',o:['risen','sunk','sewn','dealt'],g:0,u:'rise - rose - risen.',t:'irregular verbs'},
+{v:'Wat betekent to rise?',o:['stijgen, opkomen','breken','spugen','vergeten'],g:0,u:'to rise betekent stijgen, opkomen. De vormen zijn rise - rose - risen.',t:'woordjes EN naar NL'},
+{v:'sell, ___, sold',o:['sold','cast','beat','sank'],g:0,u:'sell - sold - sold.',t:'irregular verbs'},
+{v:'sell, sold, ___',o:['sold','smelt','shown','gone'],g:0,u:'sell - sold - sold.',t:'irregular verbs'},
+{v:'Wat betekent to sell?',o:['verkopen','fokken','splitsen','staan'],g:0,u:'to sell betekent verkopen. De vormen zijn sell - sold - sold.',t:'woordjes EN naar NL'},
+{v:'shine, ___, shone',o:['shone','cost','showed','came'],g:0,u:'shine - shone - shone.',t:'irregular verbs'},
+{v:'shine, shone, ___',o:['shone','drunk','held','flown'],g:0,u:'shine - shone - shone.',t:'irregular verbs'},
+{v:'Wat betekent to shine?',o:['schijnen','rijden op','uitgeven, doorbrengen','sturen'],g:0,u:'to shine betekent schijnen. De vormen zijn shine - shone - shone.',t:'woordjes EN naar NL'},
+{v:'shoot, ___, shot',o:['shot','said','meant','shone'],g:0,u:'shoot - shot - shot.',t:'irregular verbs'},
+{v:'shoot, shot, ___',o:['shot','forgotten','thought','paid'],g:0,u:'shoot - shot - shot.',t:'irregular verbs'},
+{v:'Wat betekent to shoot?',o:['schieten','kosten','ontstaan, zich voordoen','slaan, raken'],g:0,u:'to shoot betekent schieten. De vormen zijn shoot - shot - shot.',t:'woordjes EN naar NL'},
+{v:'show, ___, shown',o:['showed','let','lost','said'],g:0,u:'show - showed - shown.',t:'irregular verbs'},
+{v:'show, showed, ___',o:['shown','bent','drunk','caught'],g:0,u:'show - showed - shown.',t:'irregular verbs'},
+{v:'Wat betekent to show?',o:['laten zien','spugen','stelen','dromen'],g:0,u:'to show betekent laten zien. De vormen zijn show - showed - shown.',t:'woordjes EN naar NL'},
+{v:'shut, ___, shut',o:['shut','rose','flew','knew'],g:0,u:'shut - shut - shut.',t:'irregular verbs'},
+{v:'shut, shut, ___',o:['shut','shone','been','stood'],g:0,u:'shut - shut - shut.',t:'irregular verbs'},
+{v:'Wat betekent to shut?',o:['sluiten','vallen','morsen','schudden'],g:0,u:'to shut betekent sluiten. De vormen zijn shut - shut - shut.',t:'woordjes EN naar NL'},
+{v:'sink, ___, sunk',o:['sank','wrote','won','was'],g:0,u:'sink - sank - sunk.',t:'irregular verbs'},
+{v:'sink, sank, ___',o:['sunk','thrown','knelt','lit'],g:0,u:'sink - sank - sunk.',t:'irregular verbs'},
+{v:'Wat betekent to sink?',o:['zinken','vallen','zijn','vangen'],g:0,u:'to sink betekent zinken. De vormen zijn sink - sank - sunk.',t:'woordjes EN naar NL'},
+{v:'steal, ___, stolen',o:['stole','split','shone','swung'],g:0,u:'steal - stole - stolen.',t:'irregular verbs'},
+{v:'steal, stole, ___',o:['stolen','awoken','lit','spoken'],g:0,u:'steal - stole - stolen.',t:'irregular verbs'},
+{v:'Wat betekent to steal?',o:['stelen','zeggen','kopen','dragen (kleding)'],g:0,u:'to steal betekent stelen. De vormen zijn steal - stole - stolen.',t:'woordjes EN naar NL'},
+{v:'tear, ___, torn',o:['tore','froze','had','let'],g:0,u:'tear - tore - torn.',t:'irregular verbs'},
+{v:'tear, tore, ___',o:['torn','given','thought','found'],g:0,u:'tear - tore - torn.',t:'irregular verbs'},
+{v:'Wat betekent to tear?',o:['scheuren','verbergen','staan','breken'],g:0,u:'to tear betekent scheuren. De vormen zijn tear - tore - torn.',t:'woordjes EN naar NL'},
+{v:'throw, ___, thrown',o:['threw','sent','became','got'],g:0,u:'throw - threw - thrown.',t:'irregular verbs'},
+{v:'throw, threw, ___',o:['thrown','hit','flown','learnt'],g:0,u:'throw - threw - thrown.',t:'irregular verbs'},
+{v:'Wat betekent to throw?',o:['gooien','horen','voelen','weten, kennen'],g:0,u:'to throw betekent gooien. De vormen zijn throw - threw - thrown.',t:'woordjes EN naar NL'},
+{v:'wake, ___, woken',o:['woke','fought','had','bred'],g:0,u:'wake - woke - woken.',t:'irregular verbs'},
+{v:'wake, woke, ___',o:['woken','beaten','sunk','frozen'],g:0,u:'wake - woke - woken.',t:'irregular verbs'},
+{v:'Wat betekent to wake?',o:['wakker worden','zingen','stijgen, opkomen','bevriezen'],g:0,u:'to wake betekent wakker worden. De vormen zijn wake - woke - woken.',t:'woordjes EN naar NL'},
+{v:'beat, ___, beaten',o:['beat','rang','grew','burnt'],g:0,u:'beat - beat - beaten.',t:'irregular verbs'},
+{v:'beat, beat, ___',o:['beaten','hidden','sped','sunk'],g:0,u:'beat - beat - beaten.',t:'irregular verbs'},
+{v:'Wat betekent to beat?',o:['verslaan','vliegen','kruipen, sluipen','bijten'],g:0,u:'to beat betekent verslaan. De vormen zijn beat - beat - beaten.',t:'woordjes EN naar NL'},
+{v:'bend, ___, bent',o:['bent','spent','smelt','spelt'],g:0,u:'bend - bent - bent.',t:'irregular verbs'},
+{v:'bend, bent, ___',o:['bent','crept','stolen','lit'],g:0,u:'bend - bent - bent.',t:'irregular verbs'},
+{v:'Wat betekent to bend?',o:['buigen','gooien','barsten','opwinden, kronkelen'],g:0,u:'to bend betekent buigen. De vormen zijn bend - bent - bent.',t:'woordjes EN naar NL'},
+{v:'deal, ___, dealt',o:['dealt','dreamt','spelt','hit'],g:0,u:'deal - dealt - dealt.',t:'irregular verbs'},
+{v:'deal, dealt, ___',o:['dealt','fallen','taken','bought'],g:0,u:'deal - dealt - dealt.',t:'irregular verbs'},
+{v:'Wat betekent to deal?',o:['omgaan met, verdelen','terugtrekken, opnemen','worden','leren'],g:0,u:'to deal betekent omgaan met, verdelen. De vormen zijn deal - dealt - dealt.',t:'woordjes EN naar NL'},
+{v:'dig, ___, dug',o:['dug','left','cut','dealt'],g:0,u:'dig - dug - dug.',t:'irregular verbs'},
+{v:'dig, dug, ___',o:['dug','bled','sung','shone'],g:0,u:'dig - dug - dug.',t:'irregular verbs'},
+{v:'Wat betekent to dig?',o:['graven','kruipen, sluipen','zitten','zijn'],g:0,u:'to dig betekent graven. De vormen zijn dig - dug - dug.',t:'woordjes EN naar NL'},
+{v:'feed, ___, fed',o:['fed','rang','paid','won'],g:0,u:'feed - fed - fed.',t:'irregular verbs'},
+{v:'feed, fed, ___',o:['fed','risen','blown','told'],g:0,u:'feed - fed - fed.',t:'irregular verbs'},
+{v:'Wat betekent to feed?',o:['voeden','pijn doen','vechten','bijten'],g:0,u:'to feed betekent voeden. De vormen zijn feed - fed - fed.',t:'woordjes EN naar NL'},
+{v:'forgive, ___, forgiven',o:['forgave','told','sprang','grew'],g:0,u:'forgive - forgave - forgiven.',t:'irregular verbs'},
+{v:'forgive, forgave, ___',o:['forgiven','quit','forgotten','slid'],g:0,u:'forgive - forgave - forgiven.',t:'irregular verbs'},
+{v:'Wat betekent to forgive?',o:['vergeven','slaan, staken','laten zien','stoppen, ermee kappen'],g:0,u:'to forgive betekent vergeven. De vormen zijn forgive - forgave - forgiven.',t:'woordjes EN naar NL'},
+{v:'freeze, ___, frozen',o:['froze','lit','rode','woke'],g:0,u:'freeze - froze - frozen.',t:'irregular verbs'},
+{v:'freeze, froze, ___',o:['frozen','swung','lost','told'],g:0,u:'freeze - froze - frozen.',t:'irregular verbs'},
+{v:'Wat betekent to freeze?',o:['bevriezen','worden','zijn','vliegen'],g:0,u:'to freeze betekent bevriezen. De vormen zijn freeze - froze - frozen.',t:'woordjes EN naar NL'},
+{v:'hang, ___, hung',o:['hung','found','dreamt','cut'],g:0,u:'hang - hung - hung.',t:'irregular verbs'},
+{v:'hang, hung, ___',o:['hung','sold','wept','risen'],g:0,u:'hang - hung - hung.',t:'irregular verbs'},
+{v:'Wat betekent to hang?',o:['hangen','leiden','pijn doen','zinken'],g:0,u:'to hang betekent hangen. De vormen zijn hang - hung - hung.',t:'woordjes EN naar NL'},
+{v:'lay, ___, laid',o:['laid','leant','cut','said'],g:0,u:'lay - laid - laid.',t:'irregular verbs'},
+{v:'lay, laid, ___',o:['laid','bound','let','worn'],g:0,u:'lay - laid - laid.',t:'irregular verbs'},
+{v:'Wat betekent to lay?',o:['leggen','sturen','terugtrekken, opnemen','krimpen'],g:0,u:'to lay betekent leggen. De vormen zijn lay - laid - laid.',t:'woordjes EN naar NL'},
+{v:'lie, ___, lain',o:['lay','fell','was','burnt'],g:0,u:'lie - lay - lain.',t:'irregular verbs'},
+{v:'lie, lay, ___',o:['lain','awoken','forgotten','come'],g:0,u:'lie - lay - lain.',t:'irregular verbs'},
+{v:'Wat betekent to lie?',o:['liggen','stijgen, opkomen','zijn','slaan, raken'],g:0,u:'to lie betekent liggen. De vormen zijn lie - lay - lain.',t:'woordjes EN naar NL'},
+{v:'light, ___, lit',o:['lit','shot','ran','held'],g:0,u:'light - lit - lit.',t:'irregular verbs'},
+{v:'light, lit, ___',o:['lit','meant','hit','cut'],g:0,u:'light - lit - lit.',t:'irregular verbs'},
+{v:'Wat betekent to light?',o:['aansteken','kopen','huilen','splitsen'],g:0,u:'to light betekent aansteken. De vormen zijn light - lit - lit.',t:'woordjes EN naar NL'},
+{v:'quit, ___, quit',o:['quit','told','sent','chose'],g:0,u:'quit - quit - quit.',t:'irregular verbs'},
+{v:'quit, quit, ___',o:['quit','knelt','stolen','awoken'],g:0,u:'quit - quit - quit.',t:'irregular verbs'},
+{v:'Wat betekent to quit?',o:['stoppen, ermee kappen','ontwaken','bouwen','gaan'],g:0,u:'to quit betekent stoppen, ermee kappen. De vormen zijn quit - quit - quit.',t:'woordjes EN naar NL'},
+{v:'seek, ___, sought',o:['sought','told','spread','wound'],g:0,u:'seek - sought - sought.',t:'irregular verbs'},
+{v:'seek, sought, ___',o:['sought','heard','been','left'],g:0,u:'seek - sought - sought.',t:'irregular verbs'},
+{v:'Wat betekent to seek?',o:['zoeken','naaien','vertrekken, achterlaten','werpen'],g:0,u:'to seek betekent zoeken. De vormen zijn seek - sought - sought.',t:'woordjes EN naar NL'},
+{v:'shake, ___, shaken',o:['shook','cast','felt','gave'],g:0,u:'shake - shook - shaken.',t:'irregular verbs'},
+{v:'shake, shook, ___',o:['shaken','become','shown','sworn'],g:0,u:'shake - shook - shaken.',t:'irregular verbs'},
+{v:'Wat betekent to shake?',o:['schudden','slaan, raken','wakker worden','maken'],g:0,u:'to shake betekent schudden. De vormen zijn shake - shook - shaken.',t:'woordjes EN naar NL'},
+{v:'slide, ___, slid',o:['slid','swung','saw','cut'],g:0,u:'slide - slid - slid.',t:'irregular verbs'},
+{v:'slide, slid, ___',o:['slid','caught','had','got'],g:0,u:'slide - slid - slid.',t:'irregular verbs'},
+{v:'Wat betekent to slide?',o:['glijden','spellen','spugen','winnen'],g:0,u:'to slide betekent glijden. De vormen zijn slide - slid - slid.',t:'woordjes EN naar NL'},
+{v:'spread, ___, spread',o:['spread','heard','went','left'],g:0,u:'spread - spread - spread.',t:'irregular verbs'},
+{v:'spread, spread, ___',o:['spread','lit','let','told'],g:0,u:'spread - spread - spread.',t:'irregular verbs'},
+{v:'Wat betekent to spread?',o:['verspreiden','lesgeven','snijden','uitlenen'],g:0,u:'to spread betekent verspreiden. De vormen zijn spread - spread - spread.',t:'woordjes EN naar NL'},
+{v:'stick, ___, stuck',o:['stuck','crept','shut','struck'],g:0,u:'stick - stuck - stuck.',t:'irregular verbs'},
+{v:'stick, stuck, ___',o:['stuck','left','gone','had'],g:0,u:'stick - stuck - stuck.',t:'irregular verbs'},
+{v:'Wat betekent to stick?',o:['plakken, vastzitten','slapen','vliegen','steken (van een insect)'],g:0,u:'to stick betekent plakken, vastzitten. De vormen zijn stick - stuck - stuck.',t:'woordjes EN naar NL'},
+{v:'strike, ___, struck',o:['struck','beat','led','read'],g:0,u:'strike - struck - struck.',t:'irregular verbs'},
+{v:'strike, struck, ___',o:['struck','rung','shut','beaten'],g:0,u:'strike - struck - struck.',t:'irregular verbs'},
+{v:'Wat betekent to strike?',o:['slaan, staken','krijgen','vertellen','huilen'],g:0,u:'to strike betekent slaan, staken. De vormen zijn strike - struck - struck.',t:'woordjes EN naar NL'},
+{v:'swear, ___, sworn',o:['swore','stuck','drew','sat'],g:0,u:'swear - swore - sworn.',t:'irregular verbs'},
+{v:'swear, swore, ___',o:['sworn','lain','bitten','been'],g:0,u:'swear - swore - sworn.',t:'irregular verbs'},
+{v:'Wat betekent to swear?',o:['zweren, vloeken','laten','scheuren','barsten'],g:0,u:'to swear betekent zweren, vloeken. De vormen zijn swear - swore - sworn.',t:'woordjes EN naar NL'},
+{v:'sweep, ___, swept',o:['swept','had','won','took'],g:0,u:'sweep - swept - swept.',t:'irregular verbs'},
+{v:'sweep, swept, ___',o:['swept','let','spent','broken'],g:0,u:'sweep - swept - swept.',t:'irregular verbs'},
+{v:'Wat betekent to sweep?',o:['vegen','vluchten','voelen','pijn doen'],g:0,u:'to sweep betekent vegen. De vormen zijn sweep - swept - swept.',t:'woordjes EN naar NL'},
+{v:'swing, ___, swung',o:['swung','forgave','became','ran'],g:0,u:'swing - swung - swung.',t:'irregular verbs'},
+{v:'swing, swung, ___',o:['swung','spoken','cost','come'],g:0,u:'swing - swung - swung.',t:'irregular verbs'},
+{v:'Wat betekent to swing?',o:['zwaaien, schommelen','zijn','dragen (kleding)','breken'],g:0,u:'to swing betekent zwaaien, schommelen. De vormen zijn swing - swung - swung.',t:'woordjes EN naar NL'},
+{v:'burn, ___, burnt',o:['burnt','spent','grew','smelt'],g:0,u:'burn - burnt - burnt.',t:'irregular verbs'},
+{v:'burn, burnt, ___',o:['burnt','burst','slid','bent'],g:0,u:'burn - burnt - burnt.',t:'irregular verbs'},
+{v:'Wat betekent to burn?',o:['branden','drinken','vinden','gaan'],g:0,u:'to burn betekent branden. De vormen zijn burn - burnt - burnt.',t:'woordjes EN naar NL'},
+{v:'learn, ___, learnt',o:['learnt','drove','bled','burnt'],g:0,u:'learn - learnt - learnt.',t:'irregular verbs'},
+{v:'learn, learnt, ___',o:['learnt','kept','gone','knelt'],g:0,u:'learn - learnt - learnt.',t:'irregular verbs'},
+{v:'Wat betekent to learn?',o:['leren','zeggen','uitlenen','gaan'],g:0,u:'to learn betekent leren. De vormen zijn learn - learnt - learnt.',t:'woordjes EN naar NL'},
+{v:'dream, ___, dreamt',o:['dreamt','shrank','won','fed'],g:0,u:'dream - dreamt - dreamt.',t:'irregular verbs'},
+{v:'dream, dreamt, ___',o:['dreamt','shown','bitten','forgotten'],g:0,u:'dream - dreamt - dreamt.',t:'irregular verbs'},
+{v:'Wat betekent to dream?',o:['dromen','schudden','buigen','stelen'],g:0,u:'to dream betekent dromen. De vormen zijn dream - dreamt - dreamt.',t:'woordjes EN naar NL'},
+{v:'smell, ___, smelt',o:['smelt','made','forgot','swept'],g:0,u:'smell - smelt - smelt.',t:'irregular verbs'},
+{v:'smell, smelt, ___',o:['smelt','bred','burnt','stung'],g:0,u:'smell - smelt - smelt.',t:'irregular verbs'},
+{v:'Wat betekent to smell?',o:['ruiken','steken (van een insect)','geven','rijden op'],g:0,u:'to smell betekent ruiken. De vormen zijn smell - smelt - smelt.',t:'woordjes EN naar NL'},
+{v:'spell, ___, spelt',o:['spelt','swept','threw','taught'],g:0,u:'spell - spelt - spelt.',t:'irregular verbs'},
+{v:'spell, spelt, ___',o:['spelt','frozen','flown','got'],g:0,u:'spell - spelt - spelt.',t:'irregular verbs'},
+{v:'Wat betekent to spell?',o:['spellen','zitten','bloeden','branden'],g:0,u:'to spell betekent spellen. De vormen zijn spell - spelt - spelt.',t:'woordjes EN naar NL'},
+{v:'arise, ___, arisen',o:['arose','stuck','flew','bet'],g:0,u:'arise - arose - arisen.',t:'irregular verbs'},
+{v:'arise, arose, ___',o:['arisen','split','come','known'],g:0,u:'arise - arose - arisen.',t:'irregular verbs'},
+{v:'Wat betekent to arise?',o:['ontstaan, zich voordoen','laten','vliegen','groeien'],g:0,u:'to arise betekent ontstaan, zich voordoen. De vormen zijn arise - arose - arisen.',t:'woordjes EN naar NL'},
+{v:'awake, ___, awoken',o:['awoke','sought','stuck','read'],g:0,u:'awake - awoke - awoken.',t:'irregular verbs'},
+{v:'awake, awoke, ___',o:['awoken','caught','lain','stung'],g:0,u:'awake - awoke - awoken.',t:'irregular verbs'},
+{v:'Wat betekent to awake?',o:['ontwaken','laten','breken','zijn'],g:0,u:'to awake betekent ontwaken. De vormen zijn awake - awoke - awoken.',t:'woordjes EN naar NL'},
+{v:'bear, ___, borne',o:['bore','shone','bound','hung'],g:0,u:'bear - bore - borne.',t:'irregular verbs'},
+{v:'bear, bore, ___',o:['borne','burnt','awoken','worn'],g:0,u:'bear - bore - borne.',t:'irregular verbs'},
+{v:'Wat betekent to bear?',o:['dragen, verdragen','nemen','vertrekken, achterlaten','pijn doen'],g:0,u:'to bear betekent dragen, verdragen. De vormen zijn bear - bore - borne.',t:'woordjes EN naar NL'},
+{v:'bet, ___, bet',o:['bet','met','drank','blew'],g:0,u:'bet - bet - bet.',t:'irregular verbs'},
+{v:'bet, bet, ___',o:['bet','lit','bred','met'],g:0,u:'bet - bet - bet.',t:'irregular verbs'},
+{v:'Wat betekent to bet?',o:['wedden','verslaan','verbergen','brengen'],g:0,u:'to bet betekent wedden. De vormen zijn bet - bet - bet.',t:'woordjes EN naar NL'},
+{v:'bind, ___, bound',o:['bound','sat','showed','rose'],g:0,u:'bind - bound - bound.',t:'irregular verbs'},
+{v:'bind, bound, ___',o:['bound','said','become','sat'],g:0,u:'bind - bound - bound.',t:'irregular verbs'},
+{v:'Wat betekent to bind?',o:['binden','schieten','leggen','komen'],g:0,u:'to bind betekent binden. De vormen zijn bind - bound - bound.',t:'woordjes EN naar NL'},
+{v:'bleed, ___, bled',o:['bled','cost','showed','was'],g:0,u:'bleed - bled - bled.',t:'irregular verbs'},
+{v:'bleed, bled, ___',o:['bled','been','shot','had'],g:0,u:'bleed - bled - bled.',t:'irregular verbs'},
+{v:'Wat betekent to bleed?',o:['bloeden','breken','zwaaien, schommelen','bevriezen'],g:0,u:'to bleed betekent bloeden. De vormen zijn bleed - bled - bled.',t:'woordjes EN naar NL'},
+{v:'breed, ___, bred',o:['bred','came','showed','slid'],g:0,u:'breed - bred - bred.',t:'irregular verbs'},
+{v:'breed, bred, ___',o:['bred','spelt','known','been'],g:0,u:'breed - bred - bred.',t:'irregular verbs'},
+{v:'Wat betekent to breed?',o:['fokken','lezen','binden','zitten'],g:0,u:'to breed betekent fokken. De vormen zijn breed - bred - bred.',t:'woordjes EN naar NL'},
+{v:'burst, ___, burst',o:['burst','let','shone','fed'],g:0,u:'burst - burst - burst.',t:'irregular verbs'},
+{v:'burst, burst, ___',o:['burst','spent','meant','gone'],g:0,u:'burst - burst - burst.',t:'irregular verbs'},
+{v:'Wat betekent to burst?',o:['barsten','zien','krimpen','eten'],g:0,u:'to burst betekent barsten. De vormen zijn burst - burst - burst.',t:'woordjes EN naar NL'},
+{v:'cast, ___, cast',o:['cast','rode','arose','wept'],g:0,u:'cast - cast - cast.',t:'irregular verbs'},
+{v:'cast, cast, ___',o:['cast','meant','gone','lost'],g:0,u:'cast - cast - cast.',t:'irregular verbs'},
+{v:'Wat betekent to cast?',o:['werpen','dromen','morsen','ontstaan, zich voordoen'],g:0,u:'to cast betekent werpen. De vormen zijn cast - cast - cast.',t:'woordjes EN naar NL'},
+{v:'creep, ___, crept',o:['crept','flew','sent','slept'],g:0,u:'creep - crept - crept.',t:'irregular verbs'},
+{v:'creep, crept, ___',o:['crept','awoken','bent','sought'],g:0,u:'creep - crept - crept.',t:'irregular verbs'},
+{v:'Wat betekent to creep?',o:['kruipen, sluipen','vasthouden','vallen','slapen'],g:0,u:'to creep betekent kruipen, sluipen. De vormen zijn creep - crept - crept.',t:'woordjes EN naar NL'},
+{v:'flee, ___, fled',o:['fled','sought','quit','got'],g:0,u:'flee - fled - fled.',t:'irregular verbs'},
+{v:'flee, fled, ___',o:['fled','read','sprung','made'],g:0,u:'flee - fled - fled.',t:'irregular verbs'},
+{v:'Wat betekent to flee?',o:['vluchten','zien','rijden','vechten'],g:0,u:'to flee betekent vluchten. De vormen zijn flee - fled - fled.',t:'woordjes EN naar NL'},
+{v:'forbid, ___, forbidden',o:['forbade','forgave','led','paid'],g:0,u:'forbid - forbade - forbidden.',t:'irregular verbs'},
+{v:'forbid, forbade, ___',o:['forbidden','fought','bought','built'],g:0,u:'forbid - forbade - forbidden.',t:'irregular verbs'},
+{v:'Wat betekent to forbid?',o:['verbieden','doen','zetten, leggen','vertellen'],g:0,u:'to forbid betekent verbieden. De vormen zijn forbid - forbade - forbidden.',t:'woordjes EN naar NL'},
+{v:'kneel, ___, knelt',o:['knelt','showed','sang','held'],g:0,u:'kneel - knelt - knelt.',t:'irregular verbs'},
+{v:'kneel, knelt, ___',o:['knelt','fought','fed','sewn'],g:0,u:'kneel - knelt - knelt.',t:'irregular verbs'},
+{v:'Wat betekent to kneel?',o:['knielen','ontwaken','vasthouden','laten'],g:0,u:'to kneel betekent knielen. De vormen zijn kneel - knelt - knelt.',t:'woordjes EN naar NL'},
+{v:'lean, ___, leant',o:['leant','tore','sewed','rode'],g:0,u:'lean - leant - leant.',t:'irregular verbs'},
+{v:'lean, leant, ___',o:['leant','taken','spread','lost'],g:0,u:'lean - leant - leant.',t:'irregular verbs'},
+{v:'Wat betekent to lean?',o:['leunen','weten, kennen','vangen','gaan'],g:0,u:'to lean betekent leunen. De vormen zijn lean - leant - leant.',t:'woordjes EN naar NL'},
+{v:'leap, ___, leapt',o:['leapt','knelt','told','met'],g:0,u:'leap - leapt - leapt.',t:'irregular verbs'},
+{v:'leap, leapt, ___',o:['leapt','swept','spat','forbidden'],g:0,u:'leap - leapt - leapt.',t:'irregular verbs'},
+{v:'Wat betekent to leap?',o:['springen','vliegen','bloeden','brengen'],g:0,u:'to leap betekent springen. De vormen zijn leap - leapt - leapt.',t:'woordjes EN naar NL'},
+{v:'sew, ___, sewn',o:['sewed','bit','cut','blew'],g:0,u:'sew - sewed - sewn.',t:'irregular verbs'},
+{v:'sew, sewed, ___',o:['sewn','been','lain','blown'],g:0,u:'sew - sewed - sewn.',t:'irregular verbs'},
+{v:'Wat betekent to sew?',o:['naaien','stoppen, ermee kappen','verkopen','bloeden'],g:0,u:'to sew betekent naaien. De vormen zijn sew - sewed - sewn.',t:'woordjes EN naar NL'},
+{v:'shrink, ___, shrunk',o:['shrank','spat','hid','was'],g:0,u:'shrink - shrank - shrunk.',t:'irregular verbs'},
+{v:'shrink, shrank, ___',o:['shrunk','wound','read','shown'],g:0,u:'shrink - shrank - shrunk.',t:'irregular verbs'},
+{v:'Wat betekent to shrink?',o:['krimpen','branden','uitlenen','komen'],g:0,u:'to shrink betekent krimpen. De vormen zijn shrink - shrank - shrunk.',t:'woordjes EN naar NL'},
+{v:'speed, ___, sped',o:['sped','bore','understood','fed'],g:0,u:'speed - sped - sped.',t:'irregular verbs'},
+{v:'speed, sped, ___',o:['sped','laid','bet','been'],g:0,u:'speed - sped - sped.',t:'irregular verbs'},
+{v:'Wat betekent to speed?',o:['snellen, te hard rijden','barsten','nemen','uitgeven, doorbrengen'],g:0,u:'to speed betekent snellen, te hard rijden. De vormen zijn speed - sped - sped.',t:'woordjes EN naar NL'},
+{v:'spill, ___, spilt',o:['spilt','wept','hit','forbade'],g:0,u:'spill - spilt - spilt.',t:'irregular verbs'},
+{v:'spill, spilt, ___',o:['spilt','found','quit','grown'],g:0,u:'spill - spilt - spilt.',t:'irregular verbs'},
+{v:'Wat betekent to spill?',o:['morsen','bouwen','voeden','vergeten'],g:0,u:'to spill betekent morsen. De vormen zijn spill - spilt - spilt.',t:'woordjes EN naar NL'},
+{v:'spit, ___, spat',o:['spat','put','shook','made'],g:0,u:'spit - spat - spat.',t:'irregular verbs'},
+{v:'spit, spat, ___',o:['spat','swum','forbidden','sped'],g:0,u:'spit - spat - spat.',t:'irregular verbs'},
+{v:'Wat betekent to spit?',o:['spugen','verspreiden','staan','zijn'],g:0,u:'to spit betekent spugen. De vormen zijn spit - spat - spat.',t:'woordjes EN naar NL'},
+{v:'split, ___, split',o:['split','drank','quit','caught'],g:0,u:'split - split - split.',t:'irregular verbs'},
+{v:'split, split, ___',o:['split','been','said','run'],g:0,u:'split - split - split.',t:'irregular verbs'},
+{v:'Wat betekent to split?',o:['splitsen','laten','gaan','geven'],g:0,u:'to split betekent splitsen. De vormen zijn split - split - split.',t:'woordjes EN naar NL'},
+{v:'spoil, ___, spoilt',o:['spoilt','swept','dreamt','spat'],g:0,u:'spoil - spoilt - spoilt.',t:'irregular verbs'},
+{v:'spoil, spoilt, ___',o:['spoilt','bitten','drunk','done'],g:0,u:'spoil - spoilt - spoilt.',t:'irregular verbs'},
+{v:'Wat betekent to spoil?',o:['bederven, verwennen','steken (van een insect)','maken','zitten'],g:0,u:'to spoil betekent bederven, verwennen. De vormen zijn spoil - spoilt - spoilt.',t:'woordjes EN naar NL'},
+{v:'spring, ___, sprung',o:['sprang','bit','hit','lit'],g:0,u:'spring - sprang - sprung.',t:'irregular verbs'},
+{v:'spring, sprang, ___',o:['sprung','dug','burnt','shown'],g:0,u:'spring - sprang - sprung.',t:'irregular verbs'},
+{v:'Wat betekent to spring?',o:['springen, ontspringen','verbergen','gaan','schrijven'],g:0,u:'to spring betekent springen, ontspringen. De vormen zijn spring - sprang - sprung.',t:'woordjes EN naar NL'},
+{v:'sting, ___, stung',o:['stung','crept','bought','caught'],g:0,u:'sting - stung - stung.',t:'irregular verbs'},
+{v:'sting, stung, ___',o:['stung','forbidden','awoken','come'],g:0,u:'sting - stung - stung.',t:'irregular verbs'},
+{v:'Wat betekent to sting?',o:['steken (van een insect)','zeggen','zijn','lezen'],g:0,u:'to sting betekent steken (van een insect). De vormen zijn sting - stung - stung.',t:'woordjes EN naar NL'},
+{v:'weep, ___, wept',o:['wept','read','did','ran'],g:0,u:'weep - wept - wept.',t:'irregular verbs'},
+{v:'weep, wept, ___',o:['wept','begun','sprung','broken'],g:0,u:'weep - wept - wept.',t:'irregular verbs'},
+{v:'Wat betekent to weep?',o:['huilen','springen','worden','staan'],g:0,u:'to weep betekent huilen. De vormen zijn weep - wept - wept.',t:'woordjes EN naar NL'},
+{v:'wind, ___, wound',o:['wound','lit','leapt','read'],g:0,u:'wind - wound - wound.',t:'irregular verbs'},
+{v:'wind, wound, ___',o:['wound','given','shaken','meant'],g:0,u:'wind - wound - wound.',t:'irregular verbs'},
+{v:'Wat betekent to wind?',o:['opwinden, kronkelen','bloeden','snijden','dragen (kleding)'],g:0,u:'to wind betekent opwinden, kronkelen. De vormen zijn wind - wound - wound.',t:'woordjes EN naar NL'},
+{v:'withdraw, ___, withdrawn',o:['withdrew','rode','tore','broke'],g:0,u:'withdraw - withdrew - withdrawn.',t:'irregular verbs'},
+{v:'withdraw, withdrew, ___',o:['withdrawn','let','felt','sung'],g:0,u:'withdraw - withdrew - withdrawn.',t:'irregular verbs'},
+{v:'Wat betekent to withdraw?',o:['terugtrekken, opnemen','drinken','zitten','kosten'],g:0,u:'to withdraw betekent terugtrekken, opnemen. De vormen zijn withdraw - withdrew - withdrawn.',t:'woordjes EN naar NL'},
+{v:'boek',o:['book','look','back','box'],g:0,u:'Een boek is a book.',t:'woordjes NL naar EN'},
+{v:'water',o:['water','winter','waiter','weather'],g:0,u:'Water blijft water, maar let op de uitspraak.',t:'woordjes NL naar EN'},
+{v:'vriend',o:['friend','family','father','forest'],g:0,u:'Een vriend is a friend.',t:'woordjes NL naar EN'},
+{v:'stad',o:['city','citizen','country','castle'],g:0,u:'Een stad is a city. A country is een land.',t:'woordjes NL naar EN'},
+{v:'land',o:['country','county','continent','city'],g:0,u:'Een land is a country.',t:'woordjes NL naar EN'},
+{v:'koning',o:['king','queen','knight','kingdom'],g:0,u:'Een koning is a king, een koningin a queen.',t:'woordjes NL naar EN'},
+{v:'kerk',o:['church','castle','chair','cheese'],g:0,u:'Een kerk is a church.',t:'woordjes NL naar EN'},
+{v:'leger',o:['army','arm','angry','armour'],g:0,u:'Een leger is an army.',t:'woordjes NL naar EN'},
+{v:'handel',o:['trade','travel','track','trust'],g:0,u:'Handel is trade. Travel is reizen.',t:'woordjes NL naar EN'},
+{v:'macht',o:['power','poor','pour','powder'],g:0,u:'Macht is power.',t:'woordjes NL naar EN'},
+{v:'eeuw',o:['century','centre','cent','ceremony'],g:0,u:'Een eeuw is a century, honderd jaar.',t:'woordjes NL naar EN'},
+{v:'wet',o:['law','low','lawn','loud'],g:0,u:'Een wet is a law. Low betekent laag.',t:'woordjes NL naar EN'},
+{v:'belasting',o:['tax','taxi','task','text'],g:0,u:'Belasting is tax.',t:'woordjes NL naar EN'},
+{v:'opstand',o:['revolt','result','request','report'],g:0,u:'Een opstand is a revolt of a rebellion.',t:'woordjes NL naar EN'},
+{v:'vrede',o:['peace','piece','place','police'],g:0,u:'Vrede is peace. A piece is een stuk.',t:'woordjes NL naar EN'},
+{v:'grens',o:['border','boarder','burden','builder'],g:0,u:'Een grens is a border.',t:'woordjes NL naar EN'},
+{v:'slavernij',o:['slavery','silver','salary','solar'],g:0,u:'Slavernij is slavery.',t:'woordjes NL naar EN'},
+{v:'verkiezing',o:['election','selection','collection','direction'],g:0,u:'Een verkiezing is an election.',t:'woordjes NL naar EN'},
+{v:'geschiedenis',o:['history','story','historic','mystery'],g:0,u:'Geschiedenis is history. A story is een verhaal.',t:'woordjes NL naar EN'},
+{v:'boer',o:['farmer','farm','former','father'],g:0,u:'Een boer is a farmer, a farm is de boerderij.',t:'woordjes NL naar EN'},
+{v:'a village',o:['een dorp','een stad','een gebouw','een straat'],g:0,u:'A village is een dorp, kleiner dan a town.',t:'woordjes EN naar NL'},
+{v:'a merchant',o:['een koopman','een soldaat','een boer','een priester'],g:0,u:'A merchant is een koopman.',t:'woordjes EN naar NL'},
+{v:'wealth',o:['rijkdom','gezondheid','gewicht','weer'],g:0,u:'Wealth is rijkdom, van wealthy: rijk.',t:'woordjes EN naar NL'},
+{v:'to rule',o:['heersen','regelen','rollen','rusten'],g:0,u:'To rule is heersen of besturen.',t:'woordjes EN naar NL'},
+{v:'a weapon',o:['een wapen','een schild','een wagen','een muur'],g:0,u:'A weapon is een wapen.',t:'woordjes EN naar NL'},
+{v:'a treaty',o:['een verdrag','een traktatie','een reis','een dreiging'],g:0,u:'A treaty is een verdrag tussen landen.',t:'woordjes EN naar NL'},
+{v:'to increase',o:['toenemen','afnemen','beginnen','stoppen'],g:0,u:'To increase is toenemen, to decrease is afnemen.',t:'woordjes EN naar NL'},
+{v:'to decrease',o:['afnemen','toenemen','beslissen','beschrijven'],g:0,u:'To decrease is afnemen.',t:'woordjes EN naar NL'},
+{v:'a crop',o:['een gewas','een groep','een klap','een korf'],g:0,u:'A crop is een gewas dat je verbouwt.',t:'woordjes EN naar NL'},
+{v:'to settle',o:['zich vestigen','vertrekken','vechten','verkopen'],g:0,u:'To settle is zich ergens vestigen. A settlement is een nederzetting.',t:'woordjes EN naar NL'},
+{v:'however',o:['echter','hoeveel','altijd','overal'],g:0,u:'However betekent echter of toch.',t:'woordjes EN naar NL'},
+{v:'therefore',o:['daarom','daarna','daarvoor','daarheen'],g:0,u:'Therefore betekent daarom.',t:'woordjes EN naar NL'},
+{v:'because of',o:['vanwege','omdat','hoewel','behalve'],g:0,u:'Because of komt voor een zelfstandig naamwoord, because voor een hele zin.',t:'woordjes EN naar NL'},
+{v:'enough',o:['genoeg','eng','onder','eenmaal'],g:0,u:'Enough betekent genoeg. Let op de uitspraak: inuf.',t:'woordjes EN naar NL'},
+{v:'a century',o:['een eeuw','een cent','een centrum','een seconde'],g:0,u:'A century is honderd jaar.',t:'woordjes EN naar NL'},
+{v:'to belong to',o:['horen bij','langs gaan','bellen naar','lang duren'],g:0,u:'To belong to is horen bij.',t:'woordjes EN naar NL'},
+{v:'ancient',o:['heel oud','recent','buitenlands','moeilijk'],g:0,u:'Ancient betekent heel oud, uit de oudheid.',t:'woordjes EN naar NL'},
+{v:'wealthy',o:['rijk','gezond','wijs','breed'],g:0,u:'Wealthy is rijk.',t:'woordjes EN naar NL'},
+{v:'a servant',o:['een bediende','een dienblad','een server','een dienst'],g:0,u:'A servant is een bediende of knecht.',t:'woordjes EN naar NL'},
+{v:'to defeat',o:['verslaan','verdedigen','vertrekken','vertellen'],g:0,u:'To defeat is verslaan. To defend is verdedigen.',t:'woordjes EN naar NL'}
+];
+const ENG2_N = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,1,1,1,1,1,1,1,2,2,2,2,2,3,3,2,2,3,3,1,1,1,3,3,2,2,4,3,3,3,4,3,3,3,2,2,3,4,3,3,3];
+const GES2 = [
+{v:'In welk tijdvak hoort dit? Mensen gaan zaaien en oogsten in plaats van rondtrekken',o:['jagers en boeren','Grieken en Romeinen','monniken en ridders','pruiken en revoluties'],g:0,u:'De landbouw hoort bij de tijd van jagers en boeren, nog ver voor het schrift. (ca. 10.000 v.Chr.)',t:'tv1'},
+{v:'In welk tijdvak hoort dit? De eerste boeren vestigen zich in Zuid-Limburg',o:['jagers en boeren','steden en staten','wereldoorlogen','pruiken en revoluties'],g:0,u:'Nederlandse prehistorie: er is nog geen schrift, we weten dit uit opgravingen. (ca. 5300 v.Chr.)',t:'tv1'},
+{v:'In welk tijdvak hoort dit? In Drenthe worden hunebedden gebouwd',o:['jagers en boeren','steden en staten','burgers en stoommachines','monniken en ridders'],g:0,u:'Grote grafmonumenten uit de steentijd, gemaakt door boerengemeenschappen. (ca. 3000 v.Chr.)',t:'tv1'},
+{v:'In welk tijdvak hoort dit? In Athene mogen burgers zelf stemmen in de volksvergadering',o:['Grieken en Romeinen','televisie en computer','burgers en stoommachines','pruiken en revoluties'],g:0,u:'De Griekse democratie hoort bij de tijd van Grieken en Romeinen. (508 v.Chr.)',t:'tv2'},
+{v:'In welk tijdvak hoort dit? Hannibal trekt met olifanten over de Alpen',o:['Grieken en Romeinen','burgers en stoommachines','ontdekkers en hervormers','televisie en computer'],g:0,u:'De oorlogen tussen Rome en Carthago spelen in de klassieke oudheid. (218 v.Chr.)',t:'tv2'},
+{v:'In welk tijdvak hoort dit? De Romeinen bouwen forten langs de Rijn als grens van hun rijk',o:['Grieken en Romeinen','burgers en stoommachines','steden en staten','wereldoorlogen'],g:0,u:'De limes liep dwars door Nederland, midden in de Romeinse tijd. (ca. 50 na Chr.)',t:'tv2'},
+{v:'In welk tijdvak hoort dit? Willibrord komt naar de Lage Landen om te kerstenen',o:['monniken en ridders','steden en staten','Grieken en Romeinen','jagers en boeren'],g:0,u:'Monniken verspreidden het christendom in de vroege middeleeuwen. (690)',t:'tv3'},
+{v:'In welk tijdvak hoort dit? Karel de Grote wordt in Rome tot keizer gekroond',o:['monniken en ridders','televisie en computer','Grieken en Romeinen','jagers en boeren'],g:0,u:'Het Frankische rijk is het hoogtepunt van de tijd van monniken en ridders. (800)',t:'tv3'},
+{v:'In welk tijdvak hoort dit? Vikingen plunderen de handelsplaats Dorestad',o:['monniken en ridders','steden en staten','ontdekkers en hervormers','burgers en stoommachines'],g:0,u:'De Vikingtochten vallen in de vroege middeleeuwen, voor het jaar 1000. (834)',t:'tv3'},
+{v:'In welk tijdvak hoort dit? Dordrecht krijgt als eerste stad in Holland stadsrechten',o:['steden en staten','jagers en boeren','Grieken en Romeinen','monniken en ridders'],g:0,u:'Stadsrechten horen bij de opkomst van steden na het jaar 1000. (1220)',t:'tv4'},
+{v:'In welk tijdvak hoort dit? De pest bereikt de Lage Landen',o:['steden en staten','televisie en computer','wereldoorlogen','jagers en boeren'],g:0,u:'De zwarte dood raast in de late middeleeuwen door Europa. (1349)',t:'tv4'},
+{v:'In welk tijdvak hoort dit? Steden werken samen in de Hanze om handel te beschermen',o:['steden en staten','ontdekkers en hervormers','regenten en vorsten','wereldoorlogen'],g:0,u:'Het Hanzeverbond hoort bij de bloei van de steden voor 1500. (14e eeuw)',t:'tv4'},
+{v:'In welk tijdvak hoort dit? Luther maakt zijn kritiek op de kerk openbaar',o:['ontdekkers en hervormers','steden en staten','regenten en vorsten','wereldoorlogen'],g:0,u:'De Reformatie is het hart van de tijd van ontdekkers en hervormers. (1517)',t:'tv5'},
+{v:'In welk tijdvak hoort dit? Een schip keert terug na de eerste reis om de wereld',o:['ontdekkers en hervormers','burgers en stoommachines','jagers en boeren','Grieken en Romeinen'],g:0,u:'De grote ontdekkingsreizen vallen in de zestiende eeuw. (1522)',t:'tv5'},
+{v:'In welk tijdvak hoort dit? In de Beeldenstorm worden beelden uit kerken vernield',o:['ontdekkers en hervormers','monniken en ridders','regenten en vorsten','Grieken en Romeinen'],g:0,u:'Het begin van de Opstand hoort nog bij de zestiende eeuw. (1566)',t:'tv5'},
+{v:'In welk tijdvak hoort dit? De VOC wordt opgericht als eerste bedrijf met aandelen',o:['regenten en vorsten','jagers en boeren','ontdekkers en hervormers','Grieken en Romeinen'],g:0,u:'De VOC hoort bij de Republiek in de zeventiende eeuw. (1602)',t:'tv6'},
+{v:'In welk tijdvak hoort dit? Rembrandt schildert de Nachtwacht',o:['regenten en vorsten','wereldoorlogen','steden en staten','televisie en computer'],g:0,u:'De schilderkunst van de Republiek valt midden in de tijd van regenten en vorsten. (1642)',t:'tv6'},
+{v:'In welk tijdvak hoort dit? De Ruyter vaart de Theems op en sleept het Engelse vlaggenschip mee',o:['regenten en vorsten','Grieken en Romeinen','ontdekkers en hervormers','pruiken en revoluties'],g:0,u:'De Engelse oorlogen horen bij de zeventiende eeuw. (1667)',t:'tv6'},
+{v:'In welk tijdvak hoort dit? De Amerikaanse koloniën verklaren zich onafhankelijk',o:['pruiken en revoluties','jagers en boeren','monniken en ridders','regenten en vorsten'],g:0,u:'De revoluties van de achttiende eeuw horen bij pruiken en revoluties. (1776)',t:'tv7'},
+{v:'In welk tijdvak hoort dit? In Parijs breekt de revolutie uit',o:['pruiken en revoluties','steden en staten','Grieken en Romeinen','burgers en stoommachines'],g:0,u:'De Franse Revolutie is hét voorbeeld van dit tijdvak. (1789)',t:'tv7'},
+{v:'In welk tijdvak hoort dit? De Bataafse Republiek wordt uitgeroepen',o:['pruiken en revoluties','steden en staten','jagers en boeren','wereldoorlogen'],g:0,u:'Nederland verandert onder Franse invloed, eind achttiende eeuw. (1795)',t:'tv7'},
+{v:'In welk tijdvak hoort dit? De eerste trein rijdt van Amsterdam naar Haarlem',o:['burgers en stoommachines','pruiken en revoluties','ontdekkers en hervormers','jagers en boeren'],g:0,u:'De stoommachine en het spoor horen bij de negentiende eeuw. (1839)',t:'tv8'},
+{v:'In welk tijdvak hoort dit? De slavernij in Suriname en op de Cariben wordt afgeschaft',o:['burgers en stoommachines','Grieken en Romeinen','monniken en ridders','televisie en computer'],g:0,u:'De afschaffing valt in de tijd van burgers en stoommachines. (1863)',t:'tv8'},
+{v:'In welk tijdvak hoort dit? Het kinderwetje verbiedt fabrieksarbeid door jonge kinderen',o:['burgers en stoommachines','monniken en ridders','pruiken en revoluties','steden en staten'],g:0,u:'De eerste sociale wetten komen in de negentiende eeuw. (1874)',t:'tv8'},
+{v:'In welk tijdvak hoort dit? In Europa breekt de Eerste Wereldoorlog uit',o:['wereldoorlogen','regenten en vorsten','televisie en computer','pruiken en revoluties'],g:0,u:'De wereldoorlogen vormen samen het tijdvak 1900 tot 1950. (1914)',t:'tv9'},
+{v:'In welk tijdvak hoort dit? Duitse troepen vallen Nederland binnen',o:['wereldoorlogen','Grieken en Romeinen','jagers en boeren','pruiken en revoluties'],g:0,u:'De bezetting hoort midden in de tijd van de wereldoorlogen. (1940)',t:'tv9'},
+{v:'In welk tijdvak hoort dit? Nederland wordt bevrijd',o:['wereldoorlogen','monniken en ridders','ontdekkers en hervormers','pruiken en revoluties'],g:0,u:'Het einde van de Tweede Wereldoorlog valt nog binnen dit tijdvak. (1945)',t:'tv9'},
+{v:'In welk tijdvak hoort dit? De watersnoodramp treft Zeeland en Zuid-Holland',o:['televisie en computer','steden en staten','monniken en ridders','wereldoorlogen'],g:0,u:'Na 1950, in de tijd van televisie en computer. (1953)',t:'tv10'},
+{v:'In welk tijdvak hoort dit? De eerste mens zet voet op de maan',o:['televisie en computer','Grieken en Romeinen','jagers en boeren','burgers en stoommachines'],g:0,u:'De ruimtevaart hoort bij de tweede helft van de twintigste eeuw. (1969)',t:'tv10'},
+{v:'In welk tijdvak hoort dit? De Berlijnse Muur valt',o:['televisie en computer','jagers en boeren','Grieken en Romeinen','ontdekkers en hervormers'],g:0,u:'Het einde van de Koude Oorlog valt in het laatste tijdvak. (1989)',t:'tv10'},
+{v:'In welk tijdvak hoort dit? Kleine groepen trekken achter kuddes aan en verzamelen wat ze onderweg vinden',o:['jagers en boeren','monniken en ridders','Grieken en Romeinen','ontdekkers en hervormers'],g:0,u:'Jagen en verzamelen is de oudste levenswijze, voor de landbouw. (ca. 12.000 v.Chr.)',t:'tv1'},
+{v:'In welk tijdvak hoort dit? Griekse denkers zoeken verklaringen in de natuur in plaats van bij goden',o:['Grieken en Romeinen','ontdekkers en hervormers','wereldoorlogen','monniken en ridders'],g:0,u:'Het begin van wetenschappelijk denken hoort bij de Grieken. (ca. 400 v.Chr.)',t:'tv2'},
+{v:'In welk tijdvak hoort dit? Het christendom wordt in het Romeinse rijk toegestaan',o:['Grieken en Romeinen','pruiken en revoluties','burgers en stoommachines','ontdekkers en hervormers'],g:0,u:'Nog binnen de Romeinse tijd, ruim voor het jaar 500. (313)',t:'tv2'},
+{v:'In welk tijdvak hoort dit? Mohammed vertrekt naar Medina en de islam begint zich te verspreiden',o:['monniken en ridders','ontdekkers en hervormers','wereldoorlogen','Grieken en Romeinen'],g:0,u:'De opkomst van de islam valt in de vroege middeleeuwen. (622)',t:'tv3'},
+{v:'In welk tijdvak hoort dit? De eerste kruistocht vertrekt naar het oosten',o:['steden en staten','pruiken en revoluties','jagers en boeren','Grieken en Romeinen'],g:0,u:'De kruistochten horen bij de late middeleeuwen, na het jaar 1000. (1096)',t:'tv4'},
+{v:'In welk tijdvak hoort dit? De Sint-Elisabethsvloed verzwelgt dorpen in de Grote Waard',o:['steden en staten','monniken en ridders','jagers en boeren','Grieken en Romeinen'],g:0,u:'Vijftiende eeuw, dus nog net binnen de middeleeuwen. (1421)',t:'tv4'},
+{v:'In welk tijdvak hoort dit? De Opstand tegen de Spaanse koning begint',o:['ontdekkers en hervormers','steden en staten','monniken en ridders','regenten en vorsten'],g:0,u:'Het begin van de Tachtigjarige Oorlog valt in de zestiende eeuw. (1568)',t:'tv5'},
+{v:'In welk tijdvak hoort dit? De eerste Nederlandse schepen bereiken Indie',o:['ontdekkers en hervormers','steden en staten','jagers en boeren','monniken en ridders'],g:0,u:'Nog voor de VOC, dus in de tijd van de ontdekkers. (1596)',t:'tv5'},
+{v:'In welk tijdvak hoort dit? De Amsterdamse Wisselbank opent haar deuren',o:['regenten en vorsten','jagers en boeren','Grieken en Romeinen','pruiken en revoluties'],g:0,u:'Het handelskapitalisme van de Republiek hoort bij de zeventiende eeuw. (1609)',t:'tv6'},
+{v:'In welk tijdvak hoort dit? Het rampjaar: de Republiek wordt van vier kanten aangevallen',o:['regenten en vorsten','jagers en boeren','televisie en computer','Grieken en Romeinen'],g:0,u:'Midden in de tijd van regenten en vorsten. (1672)',t:'tv6'},
+{v:'In welk tijdvak hoort dit? Denkers stellen dat je met je verstand alles kunt onderzoeken',o:['pruiken en revoluties','burgers en stoommachines','wereldoorlogen','televisie en computer'],g:0,u:'De Verlichting is het hart van de achttiende eeuw. (1740)',t:'tv7'},
+{v:'In welk tijdvak hoort dit? Op Haiti komen tot slaaf gemaakte mensen in opstand',o:['pruiken en revoluties','steden en staten','jagers en boeren','regenten en vorsten'],g:0,u:'De opstand hoort bij de revoluties van de late achttiende eeuw. (1791)',t:'tv7'},
+{v:'In welk tijdvak hoort dit? Thorbecke schrijft een nieuwe grondwet met meer macht voor het parlement',o:['burgers en stoommachines','pruiken en revoluties','jagers en boeren','ontdekkers en hervormers'],g:0,u:'De liberale hervormingen vallen in de negentiende eeuw. (1848)',t:'tv8'},
+{v:'In welk tijdvak hoort dit? Europese landen verdelen Afrika onder elkaar op een conferentie',o:['burgers en stoommachines','steden en staten','regenten en vorsten','jagers en boeren'],g:0,u:'Het modern imperialisme hoort bij het eind van de negentiende eeuw. (1884)',t:'tv8'},
+{v:'In welk tijdvak hoort dit? De beurs stort in en de wereld raakt in een diepe crisis',o:['wereldoorlogen','Grieken en Romeinen','monniken en ridders','steden en staten'],g:0,u:'De crisisjaren vallen tussen de twee wereldoorlogen. (1929)',t:'tv9'},
+{v:'In welk tijdvak hoort dit? De vernietiging van de Joden in Europa komt op gang',o:['wereldoorlogen','Grieken en Romeinen','burgers en stoommachines','ontdekkers en hervormers'],g:0,u:'De Holocaust hoort bij het tijdvak van de wereldoorlogen. (1942)',t:'tv9'},
+{v:'In welk tijdvak hoort dit? Indonesie wordt onafhankelijk van Nederland',o:['televisie en computer','wereldoorlogen','jagers en boeren','burgers en stoommachines'],g:0,u:'Let op: dit valt net in het tijdvak dat in 1950 begint volgens de leerstof, maar hoort inhoudelijk bij de dekolonisatie na de oorlog. (1949)',t:'tv10'},
+{v:'In welk tijdvak hoort dit? Zes landen richten samen de voorloper van de Europese Unie op',o:['televisie en computer','jagers en boeren','pruiken en revoluties','wereldoorlogen'],g:0,u:'De Europese eenwording hoort bij de tijd na 1950. (1957)',t:'tv10'},
+{v:'In welk tijdvak hoort dit? Steeds meer huishoudens krijgen een computer in huis',o:['televisie en computer','regenten en vorsten','monniken en ridders','jagers en boeren'],g:0,u:'De computer thuis hoort bij het laatste tijdvak. (1989)',t:'tv10'},
+{v:'In welk tijdvak hoort dit? Mensen leven van jagen en verzamelen en trekken rond',o:['jagers en boeren','ontdekkers en hervormers','monniken en ridders','televisie en computer'],g:0,u:'De levenswijze van jagers-verzamelaars is het eerste kenmerk van dit tijdvak.',t:'tv1'},
+{v:'In welk tijdvak hoort dit? Mensen gaan akkers bewerken en vee houden, en blijven op een plek wonen',o:['jagers en boeren','steden en staten','ontdekkers en hervormers','monniken en ridders'],g:0,u:'Het ontstaan van landbouwsamenlevingen hoort bij jagers en boeren.',t:'tv1'},
+{v:'In welk tijdvak hoort dit? Denkers zoeken verklaringen met hun verstand in plaats van in verhalen over goden',o:['Grieken en Romeinen','pruiken en revoluties','ontdekkers en hervormers','wereldoorlogen'],g:0,u:'Het ontstaan van wetenschappelijk denken is een kenmerk van de Griekse wereld.',t:'tv2'},
+{v:'In welk tijdvak hoort dit? Een rijk breidt zich uit rond de hele Middellandse Zee en legt overal wegen aan',o:['Grieken en Romeinen','ontdekkers en hervormers','steden en staten','burgers en stoommachines'],g:0,u:'De groei van het Romeinse imperium is kenmerkend voor dit tijdvak.',t:'tv2'},
+{v:'In welk tijdvak hoort dit? Een nieuwe godsdienst verspreidt zich vanuit het oosten door het rijk',o:['Grieken en Romeinen','jagers en boeren','wereldoorlogen','pruiken en revoluties'],g:0,u:'Het ontstaan en de verspreiding van het christendom hoort bij de oudheid.',t:'tv2'},
+{v:'In welk tijdvak hoort dit? Bijna iedereen werkt op het land, en steden stellen weinig voor',o:['monniken en ridders','televisie en computer','Grieken en Romeinen','pruiken en revoluties'],g:0,u:'Een vrijwel volledig agrarische samenleving is kenmerkend voor de vroege middeleeuwen.',t:'tv3'},
+{v:'In welk tijdvak hoort dit? Een heer geeft land in leen en krijgt daarvoor trouw en krijgsdienst terug',o:['monniken en ridders','ontdekkers en hervormers','jagers en boeren','Grieken en Romeinen'],g:0,u:'De feodale verhoudingen horen bij monniken en ridders.',t:'tv3'},
+{v:'In welk tijdvak hoort dit? Kloosters houden het lezen en schrijven in leven',o:['monniken en ridders','regenten en vorsten','jagers en boeren','wereldoorlogen'],g:0,u:'De rol van monniken is een kenmerk van dit tijdvak.',t:'tv3'},
+{v:'In welk tijdvak hoort dit? Steden groeien, ambachtslieden verenigen zich en er wordt weer met geld betaald',o:['steden en staten','regenten en vorsten','pruiken en revoluties','televisie en computer'],g:0,u:'De opkomst van handel, ambacht en geldeconomie hoort bij steden en staten.',t:'tv4'},
+{v:'In welk tijdvak hoort dit? Vorsten proberen hun gebied vanuit een vast bestuur te besturen',o:['steden en staten','Grieken en Romeinen','pruiken en revoluties','monniken en ridders'],g:0,u:'Het begin van staatsvorming en centralisatie is kenmerkend na 1000.',t:'tv4'},
+{v:'In welk tijdvak hoort dit? Kerk en wereldlijke heersers vechten om de vraag wie de baas is',o:['steden en staten','wereldoorlogen','jagers en boeren','Grieken en Romeinen'],g:0,u:'Het conflict tussen kerk en staat hoort bij de late middeleeuwen.',t:'tv4'},
+{v:'In welk tijdvak hoort dit? Europeanen varen naar andere werelddelen en stichten daar handelsposten',o:['ontdekkers en hervormers','jagers en boeren','Grieken en Romeinen','burgers en stoommachines'],g:0,u:'Het begin van de Europese overzeese expansie is kenmerkend voor dit tijdvak.',t:'tv5'},
+{v:'In welk tijdvak hoort dit? De kerk splitst in stukken door kritiek van hervormers',o:['ontdekkers en hervormers','monniken en ridders','Grieken en Romeinen','burgers en stoommachines'],g:0,u:'De Reformatie en de kerksplitsing horen bij ontdekkers en hervormers.',t:'tv5'},
+{v:'In welk tijdvak hoort dit? Kunstenaars en geleerden kijken terug naar de oudheid en zetten de mens centraal',o:['ontdekkers en hervormers','jagers en boeren','pruiken en revoluties','Grieken en Romeinen'],g:0,u:'De renaissance verandert het wereldbeeld in de zestiende eeuw.',t:'tv5'},
+{v:'In welk tijdvak hoort dit? Handel wordt wereldwijd georganiseerd door bedrijven met aandeelhouders',o:['regenten en vorsten','steden en staten','monniken en ridders','pruiken en revoluties'],g:0,u:'Het wereldwijd handelskapitalisme is kenmerkend voor de zeventiende eeuw.',t:'tv6'},
+{v:'In welk tijdvak hoort dit? Een land wordt bestuurd door kooplieden en stadsbesturen in plaats van door een koning',o:['regenten en vorsten','steden en staten','burgers en stoommachines','monniken en ridders'],g:0,u:'De bijzondere plaats van de Republiek hoort bij regenten en vorsten.',t:'tv6'},
+{v:'In welk tijdvak hoort dit? Een vorst regeert alleen en zegt dat zijn macht van God komt',o:['regenten en vorsten','monniken en ridders','televisie en computer','burgers en stoommachines'],g:0,u:'Het absolutisme is kenmerkend voor de zeventiende eeuw.',t:'tv6'},
+{v:'In welk tijdvak hoort dit? Denkers vinden dat je met je verstand de samenleving kunt verbeteren',o:['pruiken en revoluties','regenten en vorsten','Grieken en Romeinen','wereldoorlogen'],g:0,u:'Het rationeel optimisme van de Verlichting hoort bij pruiken en revoluties.',t:'tv7'},
+{v:'In welk tijdvak hoort dit? Burgers komen in opstand en eisen rechten die voor iedereen gelden',o:['pruiken en revoluties','jagers en boeren','steden en staten','ontdekkers en hervormers'],g:0,u:'De democratische revoluties zijn kenmerkend voor de achttiende eeuw.',t:'tv7'},
+{v:'In welk tijdvak hoort dit? Er wordt gehandeld in tot slaaf gemaakte mensen terwijl anderen juist over mensenrechten praten',o:['pruiken en revoluties','wereldoorlogen','jagers en boeren','Grieken en Romeinen'],g:0,u:'Die tegenstelling is een kenmerk van dit tijdvak.',t:'tv7'},
+{v:'In welk tijdvak hoort dit? Fabrieken met machines nemen het werk over van werkplaatsen thuis',o:['burgers en stoommachines','wereldoorlogen','pruiken en revoluties','monniken en ridders'],g:0,u:'De industriele revolutie is het kernkenmerk van burgers en stoommachines.',t:'tv8'},
+{v:'In welk tijdvak hoort dit? Groepen zonder rechten, zoals arbeiders en vrouwen, gaan zich organiseren',o:['burgers en stoommachines','Grieken en Romeinen','regenten en vorsten','pruiken en revoluties'],g:0,u:'De opkomst van emancipatiebewegingen hoort bij de negentiende eeuw.',t:'tv8'},
+{v:'In welk tijdvak hoort dit? Europese landen willen zoveel mogelijk gebied in Afrika en Azie bezitten',o:['burgers en stoommachines','ontdekkers en hervormers','steden en staten','regenten en vorsten'],g:0,u:'Het modern imperialisme is kenmerkend voor het eind van de negentiende eeuw.',t:'tv8'},
+{v:'In welk tijdvak hoort dit? Staten waarin een partij alles bepaalt en tegenspraak verboden is',o:['wereldoorlogen','pruiken en revoluties','steden en staten','Grieken en Romeinen'],g:0,u:'De totalitaire ideologieen horen bij het tijdvak van de wereldoorlogen.',t:'tv9'},
+{v:'In welk tijdvak hoort dit? Oorlog raakt niet alleen soldaten maar hele bevolkingen en steden',o:['wereldoorlogen','burgers en stoommachines','regenten en vorsten','televisie en computer'],g:0,u:'Verwoesting op ongekende schaal is kenmerkend voor dit tijdvak.',t:'tv9'},
+{v:'In welk tijdvak hoort dit? Een staat vervolgt en vermoordt mensen om wie ze zijn',o:['wereldoorlogen','steden en staten','jagers en boeren','regenten en vorsten'],g:0,u:'Racisme en de Holocaust horen bij het tijdvak 1900 tot 1950.',t:'tv9'},
+{v:'In welk tijdvak hoort dit? Kolonien worden een voor een zelfstandige landen',o:['televisie en computer','steden en staten','regenten en vorsten','jagers en boeren'],g:0,u:'De dekolonisatie is kenmerkend voor de tijd na 1950.',t:'tv10'},
+{v:'In welk tijdvak hoort dit? Twee machtsblokken staan tegenover elkaar zonder dat ze rechtstreeks oorlog voeren',o:['televisie en computer','Grieken en Romeinen','jagers en boeren','monniken en ridders'],g:0,u:'De Koude Oorlog hoort bij televisie en computer.',t:'tv10'},
+{v:'In welk tijdvak hoort dit? De overheid gaat zorgen voor uitkeringen, pensioen en zorg voor iedereen',o:['televisie en computer','ontdekkers en hervormers','monniken en ridders','steden en staten'],g:0,u:'De opbouw van de verzorgingsstaat is kenmerkend voor dit tijdvak.',t:'tv10'},
+{v:'In welk tijdvak hoort dit? Mensen met verschillende afkomst, talen en geloven wonen in dezelfde stad',o:['televisie en computer','ontdekkers en hervormers','jagers en boeren','regenten en vorsten'],g:0,u:'De pluriforme samenleving hoort bij de tijd na 1950.',t:'tv10'},
+{v:'Waarom gingen jagers-verzamelaars rondtrekken?',o:['ze volgden het voedsel','ze hadden geen huizen','ze zochten metaal','ze vluchtten voor legers'],g:0,u:'Ze trokken achter dieren en rijpe planten aan, want ze verbouwden nog niets.',t:'tv1'},
+{v:'Wat veranderde er door de landbouw?',o:['mensen bleven op een plek wonen','mensen gingen meer rondtrekken','mensen aten minder','mensen leerden schrijven'],g:0,u:'Wie zaait moet blijven om te oogsten. Zo ontstonden dorpen.',t:'tv1'},
+{v:'Wat is prehistorie?',o:['de tijd voor het schrift','de tijd voor de mens','de tijd van de Romeinen','de tijd van de dinosaurussen'],g:0,u:'Prehistorie betekent letterlijk voor de geschiedenis, dus voor er geschreven bronnen zijn.',t:'tv1'},
+{v:'Waarom ontstonden de eerste steden bij rivieren?',o:['vruchtbare grond en water','er woonden al koningen','het was er koeler','er lag goud in de rivier'],g:0,u:'Rivierklei is vruchtbaar en water heb je nodig voor mens, dier en akker.',t:'tv1'},
+{v:'Wat is een polis?',o:['een Griekse stadstaat','een Grieks leger','een Griekse tempel','een Griekse munt'],g:0,u:'Een polis is een stad met het omliggende land, met een eigen bestuur.',t:'tv2'},
+{v:'Wie mochten in Athene stemmen?',o:['alleen mannelijke burgers','iedereen die er woonde','alleen de rijken','alleen soldaten'],g:0,u:'Vrouwen, slaven en vreemdelingen mochten niet stemmen. Zo bleef het een minderheid.',t:'tv2'},
+{v:'Wat betekent democratie letterlijk?',o:['het volk regeert','de rijken regeren','een man regeert','de ouderen regeren'],g:0,u:'Demos is volk, kratos is macht.',t:'tv2'},
+{v:'Wat was het Romeinse Rijk aan zijn noordgrens in Nederland?',o:['de limes langs de Rijn','een muur van steen door het midden','een zeegrens bij Texel','er was geen grens'],g:0,u:'De limes liep langs de Rijn, met forten en wachttorens.',t:'tv2'},
+{v:'Wat is een romanisering?',o:['overnemen van de Romeinse leefwijze','het bouwen van Romeinse wegen','de val van Rome','de taal van de Grieken'],g:0,u:'Volken namen taal, kleding, bouwstijl en goden van de Romeinen over.',t:'tv2'},
+{v:'Waarom bouwden de Romeinen wegen?',o:['om legers en handel snel te verplaatsen','om toeristen te trekken','om water af te voeren','om de grens te markeren'],g:0,u:'Een leger dat snel ter plaatse is, houdt een groot rijk bij elkaar.',t:'tv2'},
+{v:'Wat deed een monnik in een klooster vooral?',o:['bidden en werken','handeldrijven','vechten','regeren'],g:0,u:'Ora et labora: bid en werk. Ze schreven ook boeken over.',t:'tv3'},
+{v:'Wat kreeg een leenman van zijn leenheer?',o:['een stuk land','een zwaard','een huis in de stad','een deel van de belasting'],g:0,u:'Grond in ruil voor trouw en krijgsdienst. Dat is het leenstelsel.',t:'tv3'},
+{v:'Wat is horigheid?',o:['boeren horen bij het land van de heer','boeren mogen alles zelf beslissen','boeren zijn slaven die verkocht worden','boeren betalen alleen belasting'],g:0,u:'Horigen waren geen slaven, maar ze mochten niet zomaar weg en moesten voor de heer werken.',t:'tv3'},
+{v:'Waarom noemen we het christendom in deze tijd machtig?',o:['de kerk bezat veel land en bepaalde het dagelijks leven','iedereen kon lezen wat er in de Bijbel stond','de paus was ook koning van Frankrijk','er waren geen andere godsdiensten'],g:0,u:'De kerk had grond, tienden, en bepaalde de feestdagen en de moraal.',t:'tv3'},
+{v:'Wat is stadsrecht?',o:['het recht om een eigen bestuur en markt te hebben','het recht om in een stad te wonen','het recht van de koning op de stad','het recht om belasting te weigeren'],g:0,u:'Met stadsrecht mocht een plaats zichzelf besturen, een markt houden en een muur bouwen.',t:'tv4'},
+{v:'Waarom trokken mensen in de middeleeuwen naar de stad?',o:['ze zochten werk en vrijheid','de steden waren gezonder','er woonde geen adel','het was er goedkoper'],g:0,u:'Stadslucht maakt vrij: wie een jaar en een dag in de stad woonde, was geen horige meer.',t:'tv4'},
+{v:'Wat deed een gilde?',o:['regels stellen voor een ambacht','soldaten leveren','belasting innen','de kerk besturen'],g:0,u:'Een gilde bepaalde wie er mocht werken, wat het mocht kosten en hoe goed het moest zijn.',t:'tv4'},
+{v:'Wat was de Hanze?',o:['een verbond van handelssteden','een leger van ridders','een kloosterorde','een verdrag met de paus'],g:0,u:'Steden rond de Oostzee en de Noordzee werkten samen om de handel te beschermen.',t:'tv4'},
+{v:'Wat gebeurde er bij de pest van 1348?',o:['een groot deel van de bevolking stierf','de steden groeiden snel','de oorlog werd beslist','de handel nam toe'],g:0,u:'Naar schatting stierf een derde van de bevolking van Europa.',t:'tv4'},
+{v:'Wat deed de boekdrukkunst met kennis?',o:['boeken werden goedkoper en verspreidden sneller','alleen kloosters konden nog boeken maken','er kwamen minder boeken','de kerk kreeg meer grip op teksten'],g:0,u:'Met losse letters kon je snel veel drukken. Ideeen verspreidden zich buiten de kerk om.',t:'tv5'},
+{v:'Wat wilde Maarten Luther?',o:['de kerk hervormen','een nieuwe koning','oorlog met Spanje','de paus vermoorden'],g:0,u:'Hij bekritiseerde onder meer de aflaten en wilde terug naar de Bijbel.',t:'tv5'},
+{v:'Wat is een aflaat?',o:['betalen om straf voor zonden kwijt te schelden','een belasting op handel','een brief van de koning','een verbod van de paus'],g:0,u:'Juist die handel in aflaten maakte Luther kwaad.',t:'tv5'},
+{v:'Waarom zochten Europeanen een zeeweg naar Azie?',o:['om specerijen zonder tussenhandel te halen','om nieuw land te bewonen','om de Grieken te vinden','om de aarde te meten'],g:0,u:'Over land ging alles via veel tussenhandelaren, en dat maakte het duur.',t:'tv5'},
+{v:'Wat was de VOC?',o:['een handelscompagnie met eigen leger en rechtspraak','een leger van de Republiek','een verbond van steden','een bank in Amsterdam'],g:0,u:'De VOC mocht namens de Staten-Generaal oorlog voeren en verdragen sluiten.',t:'tv6'},
+{v:'Wat is een regent?',o:['een rijke bestuurder van een stad','een koning zonder land','een legeraanvoerder','een dominee'],g:0,u:'In de Republiek bestuurden rijke koopmansfamilies de steden.',t:'tv6'},
+{v:'Waarom kwam de Opstand tegen Spanje?',o:['om belastingen en de vervolging van protestanten','om land in Amerika','om de handel met Engeland','om de troonopvolging'],g:0,u:'De tiende penning en de kettervervolging waren twee van de belangrijkste redenen.',t:'tv6'},
+{v:'Wat is de Republiek der Zeven Verenigde Nederlanden?',o:['een land zonder koning, bestuurd door gewesten','een koninkrijk met zeven koningen','een stad met zeven raden','een verbond met Spanje'],g:0,u:'De zeven gewesten bestuurden zichzelf en overlegden in de Staten-Generaal.',t:'tv6'},
+{v:'Wat wilden denkers van de Verlichting?',o:['redeneren op grond van verstand in plaats van gezag','terug naar de middeleeuwen','meer macht voor de kerk','minder onderwijs'],g:0,u:'Niet omdat de kerk of de koning het zegt, maar omdat je het zelf kunt beredeneren.',t:'tv7'},
+{v:'Wat gebeurde er in 1789 in Frankrijk?',o:['het begin van de Franse Revolutie','de kroning van Napoleon','de slag bij Waterloo','de aanleg van de eerste spoorlijn'],g:0,u:'De bestorming van de Bastille geldt als het begin.',t:'tv7'},
+{v:'Wat betekent vrijheid, gelijkheid en broederschap?',o:['de leus van de Franse Revolutie','de wet van Napoleon','een gebed uit de kerk','een verdrag tussen landen'],g:0,u:'Liberte, egalite, fraternite.',t:'tv7'},
+{v:'Wat veranderde de stoommachine aan werk?',o:['fabrieken konden overal staan en draaiden door','er waren minder arbeiders nodig','het werk werd lichter','de landbouw verdween'],g:0,u:'Eerst dreef water de machines aan, dus fabrieken stonden aan een rivier. Met stoom kon het overal.',t:'tv8'},
+{v:'Wat was kinderarbeid in de negentiende eeuw?',o:['gewoon, tot het bij wet werd beperkt','altijd verboden','alleen op het platteland','alleen in Engeland'],g:0,u:'Het Kinderwetje van Van Houten uit 1874 verbood fabrieksarbeid voor kinderen onder de twaalf.',t:'tv8'},
+{v:'Wat is imperialisme?',o:['een land dat gebieden overzee overheerst','handel tussen gelijke landen','het bouwen van steden','de macht van een keizer over zijn adel'],g:0,u:'Europese landen veroverden en bestuurden grote delen van Afrika en Azie.',t:'tv8'},
+{v:'Wat gebeurde er op de Conferentie van Berlijn?',o:['Europese landen maakten afspraken over Afrika','Afrikaanse landen werden onafhankelijk','de Eerste Wereldoorlog begon','de slavernij werd afgeschaft'],g:0,u:'In 1884 en 1885 verdeelden Europese mogendheden Afrika, zonder Afrikanen aan tafel.',t:'tv8'},
+{v:'Waarom heet 1914 tot 1918 een wereldoorlog?',o:['er vochten landen van meerdere werelddelen mee','hij duurde het langst','iedereen kon het volgen op radio','er vielen de meeste doden'],g:0,u:'Door de koloniën en bondgenoten raakten landen over de hele wereld betrokken.',t:'tv9'},
+{v:'Wat is een loopgraaf?',o:['een gegraven gang aan het front','een tunnel onder een stad','een greppel voor water','een schuilkelder in de stad'],g:0,u:'Aan het westfront lagen legers jarenlang tegenover elkaar in loopgraven.',t:'tv9'},
+{v:'Wat was de Holocaust?',o:['de systematische moord op zes miljoen Joden','een bombardement op Rotterdam','de hongerwinter','een veldslag in Rusland'],g:0,u:'De nazi\'s vermoordden zes miljoen Joden, en daarnaast Roma, Sinti en anderen.',t:'tv9'},
+{v:'Wat gebeurde er in mei 1940 in Nederland?',o:['Duitsland viel Nederland binnen','Nederland werd bevrijd','de oorlog eindigde','Nederland verklaarde de oorlog'],g:0,u:'Op 10 mei 1940 begon de aanval, op 15 mei gaf Nederland zich over.',t:'tv9'},
+{v:'Wat was de Koude Oorlog?',o:['de spanning tussen de VS en de Sovjet-Unie','een oorlog op de Noordpool','een oorlog zonder wapens in Europa','de oorlog in Korea'],g:0,u:'Twee blokken stonden tegenover elkaar zonder rechtstreeks te vechten.',t:'tv10'},
+{v:'Wat betekende de val van de Muur in 1989?',o:['het einde van de deling van Duitsland kwam in zicht','het begin van de Koude Oorlog','de oprichting van de EU','de bouw van Berlijn'],g:0,u:'Op 9 november 1989 ging de Muur open, in 1990 werd Duitsland herenigd.',t:'tv10'},
+{v:'Waarom kwamen er in de jaren zestig gastarbeiders naar Nederland?',o:['er was een tekort aan arbeidskrachten','er was oorlog in Nederland','ze kwamen studeren','de regering wilde meer inwoners'],g:0,u:'Nederland sloot wervingsverdragen, onder meer met Turkije in 1964 en Marokko in 1969.',t:'tv10'},
+{v:'Wat is dekolonisatie?',o:['kolonien worden onafhankelijk','landen stichten nieuwe kolonien','handel met kolonien stopt','kolonien worden groter'],g:0,u:'Na 1945 werden veel kolonien zelfstandig, zoals Indonesie in 1949.',t:'tv10'}
+];
+const GES2_N = [1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,2,1,2,1,2,3,2,1,2,3,3,2,2,2,3,2,2,2,3,2,2,2,3,3,3,2,2,2,2,3,3,2,1,3,1,2,2,2,3];
+
+const BRONNEN = {ned: NED.concat(NED2), eng: ENG.concat(ENG2), ges: GES.concat(GES2)};
+const NIVOS = {ned: NED_N.concat(NED2_N), eng: ENG_N.concat(ENG2_N), ges: GES_N.concat(GES2_N)};
 
 function rekenVraag(rang, toegestaan) {
   const r = rang || 2;
   const potten = {
-    1: ['hoofd','hoofd','hoofd','breuk','tijdgeld'],
-    2: ['hoofd','hoofd','breuk','procent','tijdgeld','meten'],
-    3: ['hoofd','breuk','procent','verhouding','tijdgeld','meten'],
-    4: ['hoofd','breuk','procent','verhouding','verhouding','tijdgeld','meten']
+    1: ['tafels','tafels','hoofd','hoofd','breuk','tijdgeld'],
+    2: ['tafels','tafels','hoofd','hoofd','breuk','procent','tijdgeld','meten'],
+    3: ['tafels','hoofd','breuk','procent','verhouding','tijdgeld','meten'],
+    4: ['tafels','hoofd','breuk','procent','verhouding','verhouding','tijdgeld','meten']
   };
   const mag = toegestaan && toegestaan.length ? potten[r].filter(s => toegestaan.includes(s)) : potten[r];
   const soort = kies(mag.length ? mag : (toegestaan && toegestaan.length ? toegestaan : potten[r]));
+  if (soort === 'tafels') {
+    /* Welke tafels je krijgt hangt af van het niveau. De foute antwoorden zijn
+       geen willekeurige getallen maar de fouten die leerlingen echt maken: een
+       stapje te ver of te weinig in dezelfde tafel, of de buurtafel. */
+    const tafelsVan = { 1:[1,2,3,4,5,10], 2:[2,3,4,5,6,7,8,9,10], 3:[3,4,6,7,8,9,11,12], 4:[6,7,8,9,11,12,13,15] };
+    const a = kies(tafelsVan[r] || tafelsVan[2]);
+    const b = 2 + rnd(r === 1 ? 9 : 11);
+    const goed = a * b;
+    const fouten = [goed + a, goed - a, goed + b, (a + 1) * b, (a - 1) * b, goed + 10]
+      .filter(function(n){ return n > 0 && n !== goed; });
+    const hulp = b > 5
+      ? 'Reken via ' + a + ' \u00d7 10 = ' + (a * 10) + ' en haal er ' + a + ' \u00d7 ' + (10 - b) + ' = ' + (a * (10 - b)) + ' van af.'
+      : 'Tel de tafel van ' + a + ' op: ' + [1,2,3,4,5].slice(0, b).map(function(k){ return a * k; }).join(', ') + '.';
+    return bouw(a + ' \u00d7 ' + b, String(goed),
+      function(){ return String(kies(fouten)); },
+      a + ' \u00d7 ' + b + ' = ' + goed + '. ' + hulp, 'tafel van ' + a);
+  }
   if (soort === 'hoofd') {
     const type = r === 1 ? kies(['x','+','-']) : kies(['x','+','-',':']);
     if (type === 'x') {
@@ -499,6 +1198,7 @@ function rekenVraag(rang, toegestaan) {
   var BREED = 900, HOOG = 460;
   var niveau = 'kgt', vak = null, keuze = {};
   var vijanden = [], torens = [], schoten = [], pot = null;
+  var cijfers = [], pluis = [], golven = [];   /* schadecijfers, deeltjes en de golf van de pekelpot */
   var wachtrij = 5, spawnKlok = 0, rondePauze = 2;
   var bank = { munten:60, leven:12, ronde:1 };
   var reeks = 0, besteReeks = 0, goedAantal = 0, foutAantal = 0;
@@ -599,9 +1299,14 @@ function rekenVraag(rang, toegestaan) {
     var bron = BRONNEN[vak], nivo = NIVOS[vak];
     if (!pot || !pot.length){
       var magTag = function(i){ return !gekozen2.length || gekozen2.indexOf(bron[i].t) >= 0; };
-      var ids = bron.map(function(q, i){ return i; }).filter(function(i){ return magTag(i) && nivo[i] <= r && nivo[i] >= r-1; });
-      if (ids.length < 4) ids = bron.map(function(q, i){ return i; }).filter(function(i){ return magTag(i) && nivo[i] <= r; });
-      if (ids.length < 4) ids = bron.map(function(q, i){ return i; }).filter(magTag);
+      /* Eerst vragen die precies bij het niveau passen. Blijft die stapel klein,
+         dan verruimen we hem, want anders krijg je na tien vragen alweer
+         dezelfde. Op het hoogste niveau kijken we sowieso twee stappen terug,
+         omdat er weinig vragen zijn die alleen voor vwo bedoeld zijn. */
+      var ondergrens = r >= 4 ? r - 2 : r - 1;
+      var ids = bron.map(function(q, i){ return i; }).filter(function(i){ return magTag(i) && nivo[i] <= r && nivo[i] >= ondergrens; });
+      if (ids.length < 14) ids = bron.map(function(q, i){ return i; }).filter(function(i){ return magTag(i) && nivo[i] <= r; });
+      if (ids.length < 14) ids = bron.map(function(q, i){ return i; }).filter(magTag);
       pot = ids.sort(function(){ return Math.random() - 0.5; });
     }
     var i2 = pot.pop(), q = bron[i2];
@@ -709,6 +1414,11 @@ function rekenVraag(rang, toegestaan) {
      was. Nu tik je op een plek en klapt het keuzemenu daar open. */
   var klap = 0, klapAantal = 0;   /* hoe lang de rode flits nog te zien is */
   var muntTeller = 0;             /* om vliegende bedragen niet op elkaar te laten vallen */
+  /* Elke tiende ronde komt er een baas: een dikke fout die veel meer incasseert,
+     langzamer loopt en drie levens kost als hij binnenkomt. */
+  var BAASRONDE = 10, BAASTAAI = 8, BAASSCHADE = 3, BAASBELONING = 100;
+  function isBaasRonde(n){ return n % BAASRONDE === 0; }
+  var baasAlarm = 0, pols = 0;
   var menu = null;      /* het keuzemenu, op de plek waar je tikte */
   var sleep = null;     /* de toren die je aan het verplaatsen bent */
 
@@ -808,41 +1518,95 @@ function rekenVraag(rang, toegestaan) {
         'stroke="#204ECF" stroke-width="3"/>';
     }
 
-    /* de torens */
+    /* De torens: een stenen voet met een schaduw, en daarbovenop iets dat bij
+       het soort past en meedraait naar het doel. Bij het schieten deinst hij
+       even terug. */
     torens.forEach(function(t){
       var so = SOORTEN[t.soort], kl = kleurVan(so.kleur);
       var bezig = sleep && sleep.toren === t;
-      s += '<g opacity="' + (bezig ? '.85' : '1') + '">' +
-        '<circle cx="' + t.x + '" cy="' + t.y + '" r="20" fill="' + kl + '" stroke="' +
-        (bezig ? (sleep.geldig ? '#204ECF' : '#c0442c') : (menu && menu.toren === t ? '#204ECF' : '#fff')) +
-        '" stroke-width="3"/>' +
-        '<text x="' + t.x + '" y="' + (t.y+6) + '" font-size="16" font-weight="700" fill="#fff" ' +
-        'text-anchor="middle">' + so.letter + '</text>';
+      var hoek = t.mikt || 0;
+      var terug = Math.max(0, t.terugslag || 0) * 4;
+      var rand = bezig ? (sleep.geldig ? '#204ECF' : '#c0442c') : (menu && menu.toren === t ? '#204ECF' : '#fff');
+
+      s += '<g opacity="' + (bezig ? '.88' : '1') + '">';
+      s += '<ellipse cx="' + t.x + '" cy="' + (t.y + 15) + '" rx="20" ry="7" fill="rgba(20,34,76,.16)"/>';
+      /* de voet */
+      s += '<circle cx="' + t.x + '" cy="' + t.y + '" r="19" fill="#cfc6b4" stroke="' + rand + '" stroke-width="3"/>';
+      s += '<circle cx="' + t.x + '" cy="' + t.y + '" r="13" fill="' + kl + '"/>';
+
+      s += '<g transform="translate(' + t.x + ',' + t.y + ') rotate(' + hoek.toFixed(1) + ')">';
+      if (t.soort === 'kanon'){
+        s += '<rect x="' + (4 - terug) + '" y="-5" width="20" height="10" rx="3" fill="#4a3826"/>' +
+             '<circle cx="0" cy="0" r="7" fill="#6b5340"/>';
+      } else if (t.soort === 'katapult'){
+        s += '<path d="M' + (-6 - terug) + ',6 L' + (14 - terug) + ',-11" stroke="#4a3826" stroke-width="5" stroke-linecap="round"/>' +
+             '<circle cx="' + (14 - terug) + '" cy="-11" r="5.5" fill="#4a3826"/>';
+      } else if (t.soort === 'vertrager'){
+        s += '<circle cx="0" cy="0" r="8" fill="none" stroke="#4a3826" stroke-width="3"/>' +
+             '<path d="M0,-8 L0,0 L6,3" stroke="#4a3826" stroke-width="2.6" fill="none" stroke-linecap="round"/>';
+      } else if (t.soort === 'pekelpot'){
+        s += '<ellipse cx="0" cy="1" rx="9" ry="8" fill="#4a3826"/>' +
+             '<ellipse cx="0" cy="-4" rx="9" ry="3.4" fill="#7db08e"/>' +
+             '<path d="M-9,-4 q9,-7 18,0" fill="none" stroke="#4a3826" stroke-width="2"/>';
+      } else {
+        s += '<rect x="' + (2 - terug) + '" y="-3" width="26" height="6" rx="2.5" fill="#4a3826"/>' +
+             '<circle cx="' + (2 - terug) + '" cy="0" r="6" fill="#6b5340"/>' +
+             '<circle cx="' + (26 - terug) + '" cy="0" r="2.6" fill="#EA9836"/>';
+      }
+      s += '</g>';
+      /* de sterretjes voor het niveau */
       for (var n = 0; n < t.niveau; n++){
-        s += '<circle cx="' + (t.x - 8 + n*8) + '" cy="' + (t.y + 27) + '" r="3" fill="' + kl + '"/>';
+        s += '<circle cx="' + (t.x - 8 + n*8) + '" cy="' + (t.y + 26) + '" r="3.2" fill="' + kl +
+             '" stroke="#fff" stroke-width="1.2"/>';
       }
       s += '</g>';
     });
 
-    /* schoten */
-    schoten.forEach(function(sc){
-      s += '<line x1="' + sc.x + '" y1="' + sc.y + '" x2="' + (sc.x + Math.cos(sc.hoek*Math.PI/180)*sc.len) +
-        '" y2="' + (sc.y + Math.sin(sc.hoek*Math.PI/180)*sc.len) + '" stroke="' + kleurVan(sc.kleur) +
-        '" stroke-width="3" stroke-linecap="round" opacity="' + Math.max(0, sc.leven/0.18*0.8) + '"/>';
+    /* de golf van de pekelpot */
+    golven.forEach(function(g){
+      var deel = g.leven / 0.34;
+      s += '<circle cx="' + g.x + '" cy="' + g.y + '" r="' + (g.r * (1 - deel * 0.75)).toFixed(1) +
+        '" fill="none" stroke="' + kleurVan(g.kleur) + '" stroke-width="' + (7 * deel).toFixed(1) +
+        '" opacity="' + (deel * 0.8).toFixed(2) + '"/>';
     });
 
-    /* de fouten die naar de klas lopen */
+    /* schoten */
+    schoten.forEach(function(sc){
+      var deel = Math.max(0, sc.leven / 0.18);
+      s += '<line x1="' + sc.x + '" y1="' + sc.y + '" x2="' + (sc.x + Math.cos(sc.hoek*Math.PI/180)*sc.len) +
+        '" y2="' + (sc.y + Math.sin(sc.hoek*Math.PI/180)*sc.len) + '" stroke="' + kleurVan(sc.kleur) +
+        '" stroke-width="' + (sc.dik || 3) + '" stroke-linecap="round" opacity="' + (deel*0.85).toFixed(2) + '"/>';
+    });
+
     vijanden.forEach(function(e){
       var p = positie(e.d);
       var deel = Math.max(0, e.hp / e.maxHp);
-      s += '<g>' +
-        '<circle cx="' + p.x + '" cy="' + p.y + '" r="13" fill="' + (e.traag > 0 ? '#EA9836' : '#c0442c') +
-        '" stroke="#fff" stroke-width="2"/>' +
-        '<text x="' + p.x + '" y="' + (p.y+5) + '" font-size="14" font-weight="700" fill="#fff" ' +
-        'text-anchor="middle">' + e.mark + '</text>' +
-        '<rect x="' + (p.x-14) + '" y="' + (p.y-24) + '" width="28" height="5" rx="2.5" fill="rgba(20,34,76,.2)"/>' +
-        '<rect x="' + (p.x-14) + '" y="' + (p.y-24) + '" width="' + (28*deel) + '" height="5" rx="2.5" fill="#2f7d52"/>' +
-        '</g>';
+      var r2 = e.baas ? 26 : 13, br = e.baas ? 62 : 28;
+      s += '<g>';
+      if (e.baas){
+        /* een ring die meepulseert, zodat je hem tussen de rest uit pikt */
+        s += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (r2 + 8 + Math.sin(pols*4) * 3).toFixed(1) +
+          '" fill="none" stroke="#7d1f12" stroke-width="3" opacity=".5"/>';
+      }
+      var raak = (e.flits || 0) > 0;
+      if (raak){
+        s += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (r2 + 6) + '" fill="#fff" opacity="' +
+          (e.flits / 0.22 * 0.55).toFixed(2) + '"/>';
+      }
+      s += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (r2 + (raak ? 2 : 0)) + '" fill="' +
+        (raak ? '#ffd9cf' : (e.traag > 0 ? '#EA9836' : (e.baas ? '#7d1f12' : '#c0442c'))) +
+        '" stroke="#fff" stroke-width="' + (e.baas ? 3 : 2) + '"/>' +
+        '<text x="' + p.x + '" y="' + (p.y + (e.baas ? 9 : 5)) + '" font-size="' + (e.baas ? 26 : 14) +
+        '" font-weight="700" fill="#fff" text-anchor="middle">' + e.mark + '</text>' +
+        '<rect x="' + (p.x - br/2) + '" y="' + (p.y - r2 - 11) + '" width="' + br + '" height="' +
+          (e.baas ? 7 : 5) + '" rx="3" fill="rgba(20,34,76,.2)"/>' +
+        '<rect x="' + (p.x - br/2) + '" y="' + (p.y - r2 - 11) + '" width="' + (br*deel).toFixed(1) +
+          '" height="' + (e.baas ? 7 : 5) + '" rx="3" fill="' + (e.baas ? '#EA9836' : '#2f7d52') + '"/>';
+      if (e.baas){
+        s += '<text x="' + p.x + '" y="' + (p.y - r2 - 17) + '" font-size="12" font-weight="700" ' +
+          'fill="#7d1f12" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="4">BAAS</text>';
+      }
+      s += '</g>';
     });
     /* het keuzemenu, bovenop alles */
     if (menu){
@@ -863,6 +1627,37 @@ function rekenVraag(rang, toegestaan) {
           '</g>';
       });
     }
+    /* deeltjes van een gevelde fout */
+    pluis.forEach(function(v){
+      s += '<circle cx="' + v.x.toFixed(1) + '" cy="' + v.y.toFixed(1) + '" r="' +
+        (3.4 * (v.leven / 0.5)).toFixed(1) + '" fill="' + v.kleur + '" opacity="' +
+        (v.leven / 0.5).toFixed(2) + '"/>';
+    });
+
+    /* de schadecijfers */
+    cijfers.forEach(function(c){
+      s += '<text x="' + c.x.toFixed(1) + '" y="' + c.y.toFixed(1) + '" font-size="14" font-weight="700" ' +
+        'fill="' + c.kleur + '" text-anchor="middle" opacity="' + Math.min(1, c.leven / 0.7 * 1.6).toFixed(2) +
+        '" paint-order="stroke" stroke="rgba(20,34,76,.55)" stroke-width="3">' + c.tekst + '</text>';
+    });
+
+    /* de aankondiging van de baas, tijdens de pauze voor die ronde */
+    if (baasAlarm > 0){
+      var puls = 0.55 + Math.sin(pols * 6) * 0.25;
+      s += '<rect x="0" y="0" width="' + BREED + '" height="' + HOOG + '" fill="#7d1f12" opacity="' +
+        (0.10 * puls).toFixed(3) + '"/>';
+      var bh = 74, by = HOOG / 2 - bh / 2;
+      s += '<rect x="60" y="' + by + '" width="' + (BREED - 120) + '" height="' + bh +
+        '" rx="18" fill="#7d1f12" opacity=".94"/>';
+      s += '<rect x="60" y="' + by + '" width="' + (BREED - 120) + '" height="' + bh +
+        '" rx="18" fill="none" stroke="#EA9836" stroke-width="' + (2 + puls * 3).toFixed(1) + '"/>';
+      s += '<text x="' + (BREED/2) + '" y="' + (by + 31) + '" font-size="23" font-weight="700" ' +
+        'fill="#fff" text-anchor="middle">Ronde ' + (bank.ronde + 1) + ': er komt een baas aan</text>';
+      s += '<text x="' + (BREED/2) + '" y="' + (by + 55) + '" font-size="14" fill="#f6d9d2" ' +
+        'text-anchor="middle">Hij incasseert veel meer en kost ' + BAASSCHADE +
+        ' levens als hij binnenkomt. Zet je torens klaar.</text>';
+    }
+
     /* rode waas over het bord en een teller die uit de klas omhoog springt */
     if (klap > 0){
       var deel = klap / 0.9;
@@ -1019,9 +1814,16 @@ function rekenVraag(rang, toegestaan) {
   /* ---------- de klok ---------- */
   function tik(){
     var dt = 0.06, ronde = bank.ronde;
+    pols += dt;
+    /* Tijdens de pauze voor een baasronde staat de waarschuwing in beeld. */
+    baasAlarm = (wachtrij === 0 && vijanden.length === 0 && isBaasRonde(bank.ronde + 1))
+      ? rondePauze : 0;
     if (wachtrij === 0 && vijanden.length === 0){
       rondePauze -= dt;
-      if (rondePauze <= 0){ bank.ronde++; wachtrij = 4 + bank.ronde; spawnKlok = 0; }
+      if (rondePauze <= 0){
+        bank.ronde++; wachtrij = 4 + bank.ronde; spawnKlok = 0;
+        if (isBaasRonde(bank.ronde)) melding2('Ronde ' + bank.ronde + '. De baas loopt achteraan mee.');
+      }
     }
     if (wachtrij > 0){
       spawnKlok -= dt;
@@ -1030,16 +1832,23 @@ function rekenVraag(rang, toegestaan) {
         wachtrij--;
         var r = rang();
         var hp = Math.round((10 + ronde * 6) * (0.75 + r * 0.15));
-        vijanden.push({ d:0, hp:hp, maxHp:hp, snelheid:30 + r*5 + ronde*2.3, traag:0,
-                        mark:kies(['?', '!', '\u00d7']) });
-        if (wachtrij === 0) rondePauze = 3;
+        /* de laatste van een baasronde is de baas zelf */
+        if (wachtrij === 0 && isBaasRonde(ronde)){
+          var bhp = Math.round(hp * BAASTAAI);
+          vijanden.push({ d:0, hp:bhp, maxHp:bhp, snelheid:(30 + r*5 + ronde*2.3) * 0.5,
+                          traag:0, mark:'!', baas:true });
+        } else {
+          vijanden.push({ d:0, hp:hp, maxHp:hp, snelheid:30 + r*5 + ronde*2.3, traag:0,
+                          mark:kies(['?', '!', '\u00d7']) });
+        }
+        if (wachtrij === 0) rondePauze = isBaasRonde(bank.ronde + 1) ? 8 : 3;
       }
     }
     var verlies = 0;
     vijanden.forEach(function(e){
       e.d += e.snelheid * (e.traag > 0 ? 0.45 : 1) * dt;
       if (e.traag > 0) e.traag -= dt;
-      if (e.d >= PADLENGTE){ e.dood = true; verlies++; }
+      if (e.d >= PADLENGTE){ e.dood = true; verlies += e.baas ? BAASSCHADE : 1; }
     });
     torens.forEach(function(t){
       var s = SOORTEN[t.soort];
@@ -1055,16 +1864,60 @@ function rekenVraag(rang, toegestaan) {
       });
       if (!doel) return;
       t.klok = s.tempo;
-      doel.hp -= schade;
-      if (t.soort === 'vertrager') doel.traag = 1.4;
-      if (doel.hp <= 0) doel.dood = true;
-      var dx = doelPos.x - p.x, dy = doelPos.y - p.y;
-      schoten.push({ x:p.x, y:p.y, len:Math.hypot(dx, dy),
-                     hoek:Math.atan2(dy, dx) * 180 / Math.PI, kleur:s.kleur, leven:0.18 });
+      t.mikt = Math.atan2(doelPos.y - p.y, doelPos.x - p.x) * 180 / Math.PI;
+      t.terugslag = 1;
+
+      /* De pekelpot raakt alles binnen bereik tegelijk, de rest maar een doel. */
+      var geraakt = s.vlak
+        ? vijanden.filter(function(e){
+            if (e.dood) return false;
+            var q = positie(e.d);
+            return Math.hypot(q.x - p.x, q.y - p.y) <= bereik;
+          })
+        : [doel];
+
+      geraakt.forEach(function(e){
+        e.hp -= schade;
+        e.flits = 0.22;
+        if (t.soort === 'vertrager') e.traag = 1.4;
+        var q = positie(e.d);
+        cijfers.push({ x:q.x, y:q.y - 18, tekst:'-' + Math.round(schade), leven:0.7,
+                       kleur:e.baas ? '#EA9836' : '#fff' });
+        if (e.hp <= 0){
+          e.dood = true;
+          for (var k = 0; k < (e.baas ? 14 : 6); k++){
+            var h = Math.random() * Math.PI * 2, v = 40 + Math.random() * 70;
+            pluis.push({ x:q.x, y:q.y, vx:Math.cos(h)*v, vy:Math.sin(h)*v,
+                         leven:0.5, kleur:e.baas ? '#7d1f12' : '#c0442c' });
+          }
+          if (e.baas){
+            bank.munten += BAASBELONING;
+            laatMuntZien(BAASBELONING);
+            melding2('De baas is gevallen. ' + BAASBELONING + ' munten erbij.');
+          }
+        }
+      });
+
+      if (s.vlak){
+        golven.push({ x:p.x, y:p.y, r:bereik, leven:0.34, kleur:s.kleur });
+      } else {
+        var dx = doelPos.x - p.x, dy = doelPos.y - p.y;
+        schoten.push({ x:p.x, y:p.y, len:Math.hypot(dx, dy),
+                       hoek:Math.atan2(dy, dx) * 180 / Math.PI, kleur:s.kleur,
+                       leven:0.18, dik:t.soort === 'schutter' ? 4 : 3 });
+      }
     });
+    vijanden.forEach(function(e){ if (e.flits > 0) e.flits -= dt; });
     vijanden = vijanden.filter(function(e){ return !e.dood; });
     schoten.forEach(function(s){ s.leven -= dt; });
     schoten = schoten.filter(function(s){ return s.leven > 0; });
+    cijfers.forEach(function(c){ c.leven -= dt; c.y -= 26 * dt; });
+    cijfers = cijfers.filter(function(c){ return c.leven > 0; });
+    pluis.forEach(function(v){ v.leven -= dt; v.x += v.vx * dt; v.y += v.vy * dt; v.vy += 90 * dt; });
+    pluis = pluis.filter(function(v){ return v.leven > 0; });
+    golven.forEach(function(g){ g.leven -= dt; });
+    golven = golven.filter(function(g){ return g.leven > 0; });
+    torens.forEach(function(t){ if (t.terugslag > 0) t.terugslag -= dt * 5; });
     if (klap > 0) klap -= dt;
     if (verlies){
       bank.leven -= verlies;
@@ -1078,10 +1931,11 @@ function rekenVraag(rang, toegestaan) {
   /* ---------- beginnen en eindigen ---------- */
   function begin(){
     vijanden = []; torens = []; schoten = []; pot = null;
+    cijfers = []; pluis = []; golven = [];
     wachtrij = 5; spawnKlok = 0; rondePauze = 2;
     bank = { munten:60, leven:12, ronde:1 };
     reeks = 0; besteReeks = 0; goedAantal = 0; foutAantal = 0;
-    gekliktIndex = -1; menu = null;
+    gekliktIndex = -1; menu = null; klap = 0; baasAlarm = 0; pols = 0;
     vraag = nieuweVraag();
     document.getElementById('uitlegVak').innerHTML = '';
     document.getElementById('scherm-start').classList.add('hide');
