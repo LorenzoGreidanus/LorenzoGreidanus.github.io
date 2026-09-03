@@ -252,6 +252,29 @@ body.groot .optie{font-size:1.12rem;padding:14px 17px}
 body.groot .meterv b{font-size:1.6rem}
 body.groot .uitleg{font-size:1rem}
 
+/* ---------- testpaneel ----------
+   Staat er alleen als je #test achter de URL zet, dus een klas komt hem nooit
+   tegen. Hij hangt linksonder over het bord heen en kan dicht. */
+#testvak{position:fixed;left:10px;bottom:10px;z-index:60;background:#14224C;color:#fff;
+  border-radius:14px;padding:10px 12px;font-size:.78rem;box-shadow:0 10px 30px rgba(20,34,76,.35);
+  max-width:270px;line-height:1.35}
+/* Uitgeklapt hangt hij over de startknop heen, dus hij begint dicht: dan is
+   het een chipje van een paar tellen breed en zit hij niets in de weg. */
+#testvak.dicht{padding:6px 10px}
+#testvak.dicht > *:not(.testkop){display:none}
+#testvak .testkop{display:flex;justify-content:space-between;align-items:center;gap:10px;
+  font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:.66rem;
+  color:rgba(255,255,255,.7);cursor:pointer;user-select:none}
+#testvak .testrij{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;align-items:center}
+#testvak button{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);
+  color:#fff;border-radius:8px;padding:5px 9px;font-size:.76rem;font-weight:600}
+#testvak button:hover{background:rgba(255,255,255,.26)}
+#testvak button.aan{background:var(--amber);border-color:var(--amber);color:var(--ink)}
+#testvak input,#testvak select{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);
+  color:#fff;border-radius:8px;padding:4px 7px;font:inherit;font-size:.76rem}
+#testvak input{width:52px}
+#testvak select option{color:#14224C}
+#testvak .testuit{color:rgba(255,255,255,.55);font-size:.7rem;margin-top:8px}
 footer{padding:24px 0 40px;font-size:.83rem;color:var(--muted);text-align:center}
 .strip{display:flex;height:7px;width:150px;border-radius:999px;overflow:hidden;margin:0 auto 12px}
 .strip i{flex:1}
@@ -418,6 +441,35 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
   <div class="cijfers" id="cijfers"></div>
   <button class="btn" id="nogBtn" type="button">Nog een keer</button>
 </section>
+
+<div id="testvak" class="hide dicht">
+  <div class="testkop"><span>Testpaneel</span><span id="testKlap">tonen</span></div>
+  <div class="testrij">
+    <span>Tempo</span>
+    <button type="button" data-tempo="1" class="aan">1&times;</button>
+    <button type="button" data-tempo="3">3&times;</button>
+    <button type="button" data-tempo="8">8&times;</button>
+  </div>
+  <div class="testrij">
+    <span>Ronde</span><input id="testRonde" type="number" min="1" max="99" value="20">
+    <button type="button" id="testSpring">spring</button>
+  </div>
+  <div class="testrij">
+    <button type="button" id="testMunt">+1000 munten</button>
+    <button type="button" id="testPen">+1 penning</button>
+  </div>
+  <div class="testrij">
+    <button type="button" id="testOnsterf">onsterfelijk</button>
+    <button type="button" id="testAuto">alles goed</button>
+  </div>
+  <div class="testrij">
+    <button type="button" id="testVrij">torens vrijspelen</button>
+  </div>
+  <div class="testrij">
+    <span>Kaart</span><select id="testKaart"></select>
+  </div>
+  <p class="testuit">Zet <b>#test</b> achter de URL om dit paneel te krijgen. T verbergt hem.</p>
+</div>
 
 <footer>
   <div class="strip" aria-hidden="true">
@@ -2082,6 +2134,14 @@ function rekenVraag(rang, toegestaan) {
   /* Staat het spel stil? Dan loopt de klok niet, maar blijft alles wel staan
      zoals het stond: torens, munten, ronde en de fouten op het pad. */
   var pauze = false;
+  /* ---------- testmodus ----------
+     Bedoeld om zelf een partij te kunnen doorlopen zonder er een half uur voor
+     te gaan zitten. Alles hieronder staat uit tenzij je #test achter de URL
+     zet, en de knoppen doen niets als het paneel er niet is. */
+  var tempo = 1;            /* hoe vaak de klok per tik doorloopt */
+  var tekenUit = false;     /* bij snel doorspoelen tekenen we alleen de laatste stap */
+  var onsterfelijk = false;
+  var autoGoed = false, autoKlok = null;
 
   function rang(){ var n = NIVEAUS.filter(function(x){ return x.id === niveau; })[0]; return n ? n.rang : 2; }
 
@@ -2281,7 +2341,12 @@ function rekenVraag(rang, toegestaan) {
       vraag = nieuweVraag(); gekliktIndex = -1;
       document.getElementById('uitlegVak').innerHTML = '';
       tekenVraag();
-    }, goed ? 700 : 3400);
+      /* Bij het doorspoelen van het testpaneel moet ook het tempo van de vragen
+         mee. Anders loopt het bord acht keer zo snel terwijl er evenveel vragen
+         per seconde binnenkomen, verdien je per ronde een fractie van normaal,
+         en meet je de balans van een spel dat niet bestaat. Buiten de testmodus
+         staat tempo op 1 en verandert er niets. */
+    }, (goed ? 700 : 3400) / tempo);
   }
 
   /* ---------- waar mag een toren staan ----------
@@ -2597,6 +2662,20 @@ function rekenVraag(rang, toegestaan) {
   function kort(tekst, breedte, perTeken){
     var max = Math.floor(breedte / perTeken);
     return tekst.length <= max ? tekst : tekst.slice(0, Math.max(1, max - 1)) + '\u2026';
+  }
+
+  /* Zelfde probleem als kort(), maar zonder informatie weg te gooien: hier
+     knippen we op spaties tot elke regel binnen de breedte past. */
+  function wikkel(tekst, breedte, perTeken){
+    var max = Math.max(8, Math.floor(breedte / perTeken));
+    var woorden = tekst.split(' '), regels = [], nu = '';
+    for (var i = 0; i < woorden.length; i++){
+      var kandidaat = nu ? nu + ' ' + woorden[i] : woorden[i];
+      if (kandidaat.length > max && nu){ regels.push(nu); nu = woorden[i]; }
+      else nu = kandidaat;
+    }
+    if (nu) regels.push(nu);
+    return regels;
   }
 
   function menuVoor(x, y, toren, opWeg, ding){
@@ -3215,6 +3294,10 @@ function rekenVraag(rang, toegestaan) {
   }
 
   function tekenBord(){
+    /* Bij tempo 3 of 8 loopt de klok meer keren per beeld door. Alleen de
+       laatste stap hoeft getekend te worden; de rest zou je toch niet zien en
+       kost wel tijd. */
+    if (tekenUit) return;
     var s = '<svg viewBox="0 0 ' + BREED + ' ' + HOOG + '" xmlns="http://www.w3.org/2000/svg" ' +
       'role="img" aria-label="Het pad naar de klas met jouw torens">';
     s += achtergrond();
@@ -3846,17 +3929,24 @@ function rekenVraag(rang, toegestaan) {
           MINISCHADE + ' levens als hij erdoor komt.'
         : komt.uit + ' Hij kost ' + (komt.id === 'mega' ? MEGASCHADE : BAASSCHADE) +
           ' levens als hij binnenkomt.';
+      /* SVG breekt geen tekst af, dus deze regel liep gewoon door tot buiten het
+         vak. Bij de spaarpot is hij honderdveertig tekens en het vak is 780
+         breed: dat past niet op een regel van veertien punt. We knippen zelf op
+         woorden en laten de banner meegroeien met het aantal regels. */
+      var alRegels = wikkel(alOnder, BREED - 190, 6.6);
       s += '<rect x="0" y="0" width="' + BREED + '" height="' + HOOG + '" fill="' + alKleur +
         '" opacity="' + (0.10 * puls).toFixed(3) + '"/>';
-      var bh = 74, by = HOOG / 2 - bh / 2;
+      var bh = 50 + alRegels.length * 20, by = HOOG / 2 - bh / 2;
       s += '<rect x="60" y="' + by + '" width="' + (BREED - 120) + '" height="' + bh +
         '" rx="18" fill="' + alKleur + '" opacity=".94"/>';
       s += '<rect x="60" y="' + by + '" width="' + (BREED - 120) + '" height="' + bh +
         '" rx="18" fill="none" stroke="' + alRand + '" stroke-width="' + (2 + puls * 3).toFixed(1) + '"/>';
-      s += '<text x="' + (BREED/2) + '" y="' + (by + 31) + '" font-size="23" font-weight="700" ' +
+      s += '<text x="' + (BREED/2) + '" y="' + (by + 32) + '" font-size="23" font-weight="700" ' +
         'fill="#fff" text-anchor="middle">Ronde ' + (bank.ronde + 1) + ': ' + komt.naam + ' komt eraan</text>';
-      s += '<text x="' + (BREED/2) + '" y="' + (by + 55) + '" font-size="14" fill="' +
-        (alarmMini ? '#f6ecd2' : '#f6d9d2') + '" text-anchor="middle">' + alOnder + '</text>';
+      alRegels.forEach(function(regel, ri){
+        s += '<text x="' + (BREED/2) + '" y="' + (by + 56 + ri * 20) + '" font-size="14" fill="' +
+          (alarmMini ? '#f6ecd2' : '#f6d9d2') + '" text-anchor="middle">' + regel + '</text>';
+      });
     }
 
     /* rode waas over het bord en een teller die uit de klas omhoog springt */
@@ -3897,13 +3987,30 @@ function rekenVraag(rang, toegestaan) {
      in de tekening is dan alweer verdwenen voordat de klik afgerond is. */
   (function(){
     var vak2 = document.getElementById('bordvak');
+    /* Van scherm naar bord. Dit stond twee keer als (clientX - left) / width,
+       en dat klopte zolang de SVG precies zo groot was als zijn tekening. Sinds
+       het bord de hoogte van het venster vult is dat niet meer zo: bij
+       preserveAspectRatio staat de tekening gecentreerd in een hoger vak met
+       grasranden erboven en eronder. De y liep daardoor mis, waardoor je in het
+       koopmenu op Kanon klikte en een Katapult kocht.
+
+       Nu rekenen we dezelfde schaal uit die de browser gebruikt (de kleinste
+       van de twee), en trekken we de rand eraf die daardoor overblijft. */
+    function bordPunt(svg, e){
+      var r = svg.getBoundingClientRect();
+      var schaal = Math.min(r.width / BREED, r.height / HOOG);
+      if (!(schaal > 0)) return null;
+      return { x:(e.clientX - r.left - (r.width - BREED * schaal) / 2) / schaal,
+               y:(e.clientY - r.top - (r.height - HOOG * schaal) / 2) / schaal };
+    }
+
     vak2.addEventListener('pointerdown', function(e){
       if (pauze) return;                      /* tijdens de pauze verandert er niets */
       var svg = vak2.querySelector('svg');
       if (!svg) return;
-      var r = svg.getBoundingClientRect();
-      var x = (e.clientX - r.left) / r.width * BREED;
-      var y = (e.clientY - r.top) / r.height * HOOG;
+      var pt = bordPunt(svg, e);
+      if (!pt) return;
+      var x = pt.x, y = pt.y;
 
       if (menu){
         var geraakt = null;
@@ -3959,9 +4066,9 @@ function rekenVraag(rang, toegestaan) {
     vak2.addEventListener('pointermove', function(e){
       if (pauze || !sleep) return;
       var svg = vak2.querySelector('svg'); if (!svg) return;
-      var r = svg.getBoundingClientRect();
-      var x = (e.clientX - r.left) / r.width * BREED - sleep.pakX;
-      var y = (e.clientY - r.top) / r.height * HOOG - sleep.pakY;
+      var pt = bordPunt(svg, e);
+      if (!pt) return;
+      var x = pt.x - sleep.pakX, y = pt.y - sleep.pakY;
       if (!sleep.bewogen && Math.hypot(x - sleep.vanX, y - sleep.vanY) < 6) return;
       sleep.bewogen = true;
       sleep.toren.x = x; sleep.toren.y = y;
@@ -4459,7 +4566,7 @@ function rekenVraag(rang, toegestaan) {
     torens.forEach(function(t){ if (t.terugslag > 0) t.terugslag -= dt * 5; });
     if (klap > 0) klap -= dt;
     if (verlies){
-      bank.leven -= verlies;
+      if (!onsterfelijk) bank.leven -= verlies;
       klap = 0.9; klapAantal = verlies;
       laatKlapZien(verlies);
       if (bank.leven <= 0){ bank.leven = 0; tekenMeters(); einde(); return; }
@@ -4472,6 +4579,21 @@ function rekenVraag(rang, toegestaan) {
      uit, verder blijft alles precies staan zoals het stond. Antwoorden en
      bouwen kan tijdens de pauze niet, anders speelt iemand stiekem door
      terwijl de fouten stilstaan. */
+  /* De klok draait altijd op zestig milliseconden, maar loopt bij een hoger
+     tempo meerdere stappen per beurt door. Dat is eerlijker dan het interval
+     verkorten: de natuurkunde van het spel blijft dan precies hetzelfde. */
+  function startKlok(){
+    if (klok) clearInterval(klok);
+    klok = setInterval(function(){
+      for (var i = 0; i < tempo; i++){
+        tekenUit = (i < tempo - 1);
+        tik();
+        if (!klok) break;          /* het spel kan tijdens deze lus eindigen */
+      }
+      tekenUit = false;
+    }, 60);
+  }
+
   function inSpel(){
     return !document.getElementById('scherm-spel').classList.contains('hide');
   }
@@ -4489,7 +4611,7 @@ function rekenVraag(rang, toegestaan) {
       if (klok){ clearInterval(klok); klok = null; }
       sleep = null; menu = null; verplaats = null;   /* geen half werk laten hangen */
     } else if (!klok && inSpel()){
-      klok = setInterval(tik, 60);
+      startKlok();
     }
     tekenVraag(); tekenMeters(); tekenBord();
   }
@@ -4517,8 +4639,7 @@ function rekenVraag(rang, toegestaan) {
     document.getElementById('scherm-spel').classList.remove('hide');
     tekenVraag(); tekenMeters(); tekenBord();
     melding2('Kaart: ' + kaart.naam + '. Elk potje loot een andere weg, dus kijk eerst waar de bochten liggen.');
-    if (klok) clearInterval(klok);
-    klok = setInterval(tik, 60);
+    startKlok();
     scrollTo({ top:0, behavior:'auto' });
   }
 
@@ -4626,6 +4747,115 @@ function rekenVraag(rang, toegestaan) {
     document.body.classList.toggle('groot');
     this.textContent = document.body.classList.contains('groot') ? 'Normaal' : 'Digibord';
   });
+
+  /* ---------- het testpaneel bedienen ----------
+     Het paneel bestaat alleen als de URL #test of ?test bevat. Verder in de
+     code staat niets dat hiervan afhangt, dus zonder die URL is het spel
+     precies zoals het was. */
+  (function(){
+    var aan = /(^|[#?&])test\b/.test(location.hash + location.search);
+    var tvak = document.getElementById('testvak');
+    if (!tvak || !aan) return;
+    tvak.classList.remove('hide');
+
+    function knop(id, doe){
+      var k = document.getElementById(id);
+      if (k) k.addEventListener('click', doe);
+      return k;
+    }
+    function stand(k, waar){ if (k) k.classList.toggle('aan', waar); }
+
+    /* in- en uitklappen */
+    document.querySelector('#testvak .testkop').addEventListener('click', function(){
+      tvak.classList.toggle('dicht');
+      document.getElementById('testKlap').textContent =
+        tvak.classList.contains('dicht') ? 'tonen' : 'verbergen';
+    });
+
+    /* tempo */
+    Array.prototype.forEach.call(tvak.querySelectorAll('[data-tempo]'), function(k){
+      k.addEventListener('click', function(){
+        tempo = parseInt(k.getAttribute('data-tempo'), 10);
+        Array.prototype.forEach.call(tvak.querySelectorAll('[data-tempo]'), function(x){
+          x.classList.toggle('aan', x === k);
+        });
+        if (klok) startKlok();
+        zetAuto();                 /* automatisch antwoorden gaat mee met het tempo */
+      });
+    });
+
+    /* naar een ronde springen: de ronde ervoor zetten en de wachtrij legen,
+       dan rolt de klok vanzelf door naar de ronde die je vroeg */
+    knop('testSpring', function(){
+      var n = Math.max(1, Math.min(99, parseInt(document.getElementById('testRonde').value, 10) || 1));
+      if (!inSpel()) return;
+      bank.ronde = n - 1;
+      vijanden = []; wachtrij = 0; rondePauze = 0.05;
+      baasBijWachtrij = -1; miniBijWachtrij = -1;
+      tekenMeters(); tekenBord();
+    });
+
+    knop('testMunt', function(){ bank.munten += 1000; laatMuntZien(1000); tekenMeters(); });
+    knop('testPen', function(){ penningen++; tekenMeters(); tekenBord(); });
+
+    var kOns = knop('testOnsterf', function(){
+      onsterfelijk = !onsterfelijk;
+      stand(kOns, onsterfelijk);
+    });
+
+    /* Automatisch goed antwoorden. Het tempo telt mee, anders verdien je bij
+       acht keer zo snel spelen acht keer zo weinig per ronde en meet je de
+       balans van een spel dat niet bestaat. */
+    function zetAuto(){
+      if (autoKlok){ clearInterval(autoKlok); autoKlok = null; }
+      if (!autoGoed) return;
+      autoKlok = setInterval(function(){
+        if (!inSpel() || pauze || !vraag || gekliktIndex >= 0) return;
+        antwoord(vraag.g);
+      }, Math.max(120, Math.round(1600 / tempo)));
+    }
+    var kAuto = knop('testAuto', function(){
+      autoGoed = !autoGoed;
+      stand(kAuto, autoGoed);
+      zetAuto();
+    });
+
+    knop('testVrij', function(){
+      tonklaVrij = true; aapVrij = true;
+      try {
+        localStorage.setItem('lg-toren-tonkla', 'ja');
+        localStorage.setItem('lg-toren-aap', 'ja');
+      } catch (e){}
+      melding2('Tonkla Toren en Apentoren vrijgespeeld.');
+    });
+
+    /* een kaart kiezen in plaats van loten */
+    var kies = document.getElementById('testKaart');
+    kies.innerHTML = '<option value="-1">loten</option>' + KAARTEN.map(function(k, i){
+      return '<option value="' + i + '">' + k.naam + '</option>';
+    }).join('');
+    kies.addEventListener('change', function(){
+      var i = parseInt(kies.value, 10);
+      if (i < 0 || !inSpel()) return;
+      vorigeKaart = i; kaart = KAARTEN[i];
+      PAD = kaart.pad; PADLENGTE = padlengte(); ACHTERGROND = null;
+      vijanden = []; wegdingen = []; torens = [];
+      tekenBord(); tekenMeters();
+      melding2('Kaart gezet op ' + kaart.naam + '. Bord leeggemaakt, want torens stonden op de oude weg.');
+    });
+
+    /* T verbergt het paneel, behalve als je in een invoerveld staat */
+    document.addEventListener('keydown', function(e){
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      var el = document.activeElement;
+      if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
+      if (e.key === 't' || e.key === 'T'){
+        tvak.classList.toggle('dicht');
+        document.getElementById('testKlap').textContent =
+          tvak.classList.contains('dicht') ? 'tonen' : 'verbergen';
+      }
+    });
+  })();
 
   tekenNiveaus(); tekenVakken(); tekenDeelvakken(); tekenStartknop();
 })();
