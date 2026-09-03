@@ -351,10 +351,13 @@ const SOORTEN = {
      maar laadt lang en is duur. */
   pekelpot:  {naam:'Pekelpot',     letter:'P', kleur:'#2f7d52',            prijs:85,  bereik:120, schade:9,  tempo:1.1,  onder:'Raakt alles in de buurt', vlak:true},
   schutter:  {naam:'Scherpschutter',letter:'S',kleur:'#7d1f12',            prijs:120, bereik:300, schade:46, tempo:2.6,  onder:'Groot bereik, laadt lang'},
-  /* De Tonkla Toren moet je verdienen: honderd goede antwoorden achter elkaar,
-     en pas te bouwen vanaf ronde twintig. Naast het gewone schieten laat hij om
-     de zoveel tijd een schokgolf los, maar alleen als er iets binnen bereik is. */
-  tonkla:    {naam:'Tonkla Toren', letter:'T',kleur:'#6b3fa0',             prijs:260, bereik:170, schade:16, tempo:0.7,
+  /* De Tonkla Toren moet je verdienen: een lange reeks goede antwoorden achter
+     elkaar, en pas te bouwen vanaf ronde twintig. Naast het gewone schieten laat
+     hij om de zoveel tijd een schokgolf los, maar alleen als er iets binnen
+     bereik is. De prijs stond op 260 en dat was een tweede slot op dezelfde
+     deur: wie de reeks haalt heeft de toren al verdiend en moet hem ook kunnen
+     neerzetten. */
+  tonkla:    {naam:'Tonkla Toren', letter:'T',kleur:'#6b3fa0',             prijs:170, bereik:170, schade:16, tempo:0.7,
               onder:'Schokgolf om de 20 seconden', golf:70, golftijd:20, speciaal:true}
 };
 const VAKKEN = [
@@ -1978,14 +1981,18 @@ function rekenVraag(rang, toegestaan) {
   function antwoord(i){
     if (!vraag || gekliktIndex >= 0 || pauze) return;
     var goed = i === vraag.g;
-    var winst = goed ? 15 + Math.min(15, reeks * 3) : 0;
+    /* De fouten worden elke ronde taaier, maar een goed antwoord leverde altijd
+       hetzelfde op. Dan loopt je bord onvermijdelijk achter. Vanaf nu telt de
+       ronde mee, zodat late rondes de dure niveaus kunnen betalen. Het geld komt
+       nog steeds uit de vragen: doorleren blijft de manier om sterker te worden. */
+    var winst = goed ? Math.round((15 + Math.min(15, reeks * 3)) * (1 + (bank.ronde - 1) * 0.06)) : 0;
     gekliktIndex = i;
     reeks = goed ? reeks + 1 : 0;
     besteReeks = Math.max(besteReeks, reeks);
     if (!tonklaVrij && reeks >= TONKLAREEKS){
       tonklaVrij = true;
       try { localStorage.setItem('lg-toren-tonkla', 'ja'); } catch (e){}
-      melding2('Honderd goed op rij. De Tonkla Toren is ontgrendeld, te bouwen vanaf ronde ' + TONKLARONDE + '.');
+      melding2(TONKLAREEKS + ' goed op rij. De Tonkla Toren is ontgrendeld, te bouwen vanaf ronde ' + TONKLARONDE + '.');
     }
     bank.munten += winst;
     if (winst) laatMuntZien(winst);
@@ -2042,6 +2049,10 @@ function rekenVraag(rang, toegestaan) {
      en een prijs die stijgt met elke toren die je al hebt. Doorgerekend: zo kom
      je op ongeveer veertien rondes, net als met de tien vaste plekken van eerst. */
   var MAXTORENS = 12, DUURDER = 0.18;
+  /* Torens gingen tot niveau drie, en daarna was er niets meer te verbeteren
+     terwijl de fouten wel doorgroeiden. Twee extra niveaus geven je late munten
+     een bestemming en je bord een antwoord op de zwaarste rondes. */
+  var MAXNIVEAU = 5;
 
   function prijsVan(soort){
     return Math.round(SOORTEN[soort].prijs * (1 + DUURDER * torens.length));
@@ -2117,8 +2128,18 @@ function rekenVraag(rang, toegestaan) {
   ];
   function baasVan(ronde){ return BAZEN[(Math.floor(ronde / BAASRONDE) - 1) % BAZEN.length]; }
 
-  /* Na ronde twintig wordt alles taaier, anders gaat het eindeloos door. */
-  function zwaarte(ronde){ return ronde <= 20 ? 1 : 1 + (ronde - 20) * 0.11; }
+  /* Na ronde twintig wordt alles taaier, anders gaat het eindeloos door. Elf
+     procent per ronde bleek te steil: de fouten groeien dan sneller dan een vol
+     bord torens ooit kan bijhouden, en rond ronde zevenentwintig loopt het
+     hoe dan ook stuk. Vier procent laat de rondes nog altijd zwaarder worden,
+     maar geeft goed spelen de tijd om mee te groeien. */
+  function zwaarte(ronde){ return ronde <= 20 ? 1 : 1 + (ronde - 20) * 0.04; }
+
+  /* Aan een knop draaien is makkelijker dan overal getallen aanpassen. Deze
+     schaal gaat over alles wat een fout kan incasseren: gewone fouten, zwermen
+     en bazen rekenen er allemaal mee. Onder de 1 wordt het spel makkelijker,
+     boven de 1 zwaarder. */
+  var VIJANDKRACHT = 0.95;   /* fouten zijn vijf procent minder taai */
   function isBaasRonde(n){ return n % BAASRONDE === 0; }
 
   /* ---------- soorten fouten ----------
@@ -2171,10 +2192,10 @@ function rekenVraag(rang, toegestaan) {
     if (toren){
       var so = SOORTEN[toren.soort];
       var kosten = Math.round(so.prijs * 0.8 * toren.niveau);
-      if (toren.niveau < 3){
+      if (toren.niveau < MAXNIVEAU){
         rijen.push({ id:'sterker', label:'Versterken', onder:'niveau ' + (toren.niveau+1) + ': meer schade, meer bereik', prijs:kosten, kan:bank.munten >= kosten, kleur:so.kleur });
       } else {
-        rijen.push({ id:'vol', label:so.naam, onder:'staat al op niveau 3', prijs:null, kan:false, kleur:so.kleur });
+        rijen.push({ id:'vol', label:so.naam, onder:'staat al op niveau ' + MAXNIVEAU, prijs:null, kan:false, kleur:so.kleur });
       }
       var kr = KRACHTEN[toren.soort];
       if (toren.kracht){
@@ -2366,10 +2387,13 @@ function rekenVraag(rang, toegestaan) {
                      leven:0.5, kleur:e.baas ? '#7d1f12' : '#c0442c' });
       }
       if (e.baas){
-        bank.munten += BAASBELONING;
-        laatMuntZien(BAASBELONING);
+        /* Een baas in ronde veertig is veel meer werk dan een in ronde tien, dus
+           hij betaalt ook meer uit. */
+        var beloning = BAASBELONING + bank.ronde * 5;
+        bank.munten += beloning;
+        laatMuntZien(beloning);
         penningen++;
-        melding2('De baas is gevallen. ' + BAASBELONING + ' munten erbij, en een penning: ' +
+        melding2('De baas is gevallen. ' + beloning + ' munten erbij, en een penning: ' +
           'tik een toren aan om hem een bijzondere kracht te geven.');
         if (e.splijt){
           for (var z = 0; z < e.splijt; z++){
@@ -2512,7 +2536,9 @@ function rekenVraag(rang, toegestaan) {
       var rand = bezig ? ((sleep && !sleep.geldig) ? '#c0442c' : '#204ECF')
                        : (menu && menu.toren === t ? '#204ECF' : (t.kracht ? '#EA9836' : '#fff'));
 
-      var voet = 18 + (t.niveau - 1) * 2;      /* hoe sterker de toren, hoe steviger zijn voet */
+      /* hoe sterker de toren, hoe steviger zijn voet, maar na niveau drie
+         groeit hij trager: anders staan twee torens tegen elkaar aan */
+      var voet = 18 + Math.min(t.niveau - 1, 2) * 2 + Math.max(0, t.niveau - 3);
       s += '<g opacity="' + (bezig ? '.88' : '1') + '">';
       s += '<ellipse cx="' + t.x + '" cy="' + (t.y + voet - 3) + '" rx="' + (voet + 3) +
         '" ry="' + (voet * 0.36).toFixed(1) + '" fill="rgba(20,34,76,.18)"/>';
@@ -2610,7 +2636,7 @@ function rekenVraag(rang, toegestaan) {
       s += '</g>';
       /* bij de Tonkla Toren een boogje dat volloopt tot de schokgolf klaarstaat */
       if (so.golf){
-        var wachtt = (so.golftijd - (t.niveau - 1) * 4) * (t.kracht ? 0.5 : 1);
+        var wachtt = Math.max(6, so.golftijd - (t.niveau - 1) * 4) * (t.kracht ? 0.5 : 1);
         var vol = 1 - Math.max(0, Math.min(1, (t.golfKlok === undefined ? wachtt : t.golfKlok) / wachtt));
         s += '<circle cx="' + t.x + '" cy="' + t.y + '" r="24" fill="none" stroke="rgba(20,34,76,.14)" stroke-width="3"/>';
         s += '<circle cx="' + t.x + '" cy="' + t.y + '" r="24" fill="none" stroke="#EA9836" stroke-width="3" ' +
@@ -2631,8 +2657,9 @@ function rekenVraag(rang, toegestaan) {
       }
 
       /* de sterretjes voor het niveau */
+      var ster0 = t.x - (t.niveau - 1) * 4.5 - 3.4;   /* het rijtje blijft gecentreerd */
       for (var n = 0; n < t.niveau; n++){
-        s += '<path d="M' + (t.x - 9 + n*9) + ',' + (t.y + voet + 8) + ' l3.4,-6 l3.4,6 z" fill="' + kl +
+        s += '<path d="M' + (ster0 + n*9) + ',' + (t.y + voet + 8) + ' l3.4,-6 l3.4,6 z" fill="' + kl +
              '" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/>';
       }
       s += '</g>';
@@ -2996,7 +3023,7 @@ function rekenVraag(rang, toegestaan) {
         spawnKlok = Math.max(0.55, 1.4 - ronde * 0.05);
         wachtrij--;
         var r = rang();
-        var hp = Math.round((10 + ronde * 6) * (0.75 + r * 0.15) * zwaarte(ronde));
+        var hp = Math.max(1, Math.round((10 + ronde * 6) * (0.75 + r * 0.15) * zwaarte(ronde) * VIJANDKRACHT));
         /* de laatste van een baasronde is de baas zelf */
         var basisSnel = (30 + r*5 + ronde*2.3) * (ronde <= 20 ? 1 : 1.12);
         if (wachtrij === 0 && isBaasRonde(ronde)){
@@ -3053,7 +3080,7 @@ function rekenVraag(rang, toegestaan) {
     torens.forEach(function(t){
       var so = SOORTEN[t.soort];
       if (!so.golf) return;
-      var wacht = (so.golftijd - (t.niveau - 1) * 4) * (t.kracht ? 0.5 : 1);   /* versterken en Onweer laden hem sneller */
+      var wacht = Math.max(6, so.golftijd - (t.niveau - 1) * 4) * (t.kracht ? 0.5 : 1);   /* versterken en Onweer laden hem sneller */
       if (t.golfKlok === undefined) t.golfKlok = wacht;
       t.golfKlok -= dt;
       if (t.golfKlok > 0) return;
