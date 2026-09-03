@@ -77,14 +77,40 @@ body.groot .uitleg b{font-size:1.1rem}
 .btn:disabled{opacity:.45;box-shadow:none;transform:none;cursor:default}
 
 /* ---------- spel ---------- */
-.baan{display:grid;grid-template-columns:minmax(0,1fr) 430px;gap:14px;padding:12px 0 40px;align-items:start}
-@media (max-width:1080px){.baan{grid-template-columns:1fr}}
+/* Het spelscherm liet op een scherm van 1280 bij 900 ruim driehonderd pixels
+   onderaan leeg staan, terwijl het bord maar 812 breed was. Voor een klas die
+   vanaf de achterste rij meekijkt is elke pixel van dat bord er een. De baan is
+   nu zo hoog als het venster min de kopbalk, en het bord rekt mee.
+
+   Het bord is een SVG met een viewBox, dus hij schaalt vanzelf en houdt zijn
+   verhoudingen; wat overblijft aan de korte kant wordt opgevuld met de
+   graskleur van het vak eromheen. */
+.baan{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:14px;
+  padding:10px 0 14px;align-items:stretch;height:calc(100vh - 62px);min-height:520px}
+.bordkolom{display:flex;flex-direction:column;min-height:0}
+@media (max-width:1080px){
+  .baan{grid-template-columns:1fr;height:auto;padding-bottom:40px}
+  .bordkolom{min-height:0}
+}
+/* Het vak vult de hoogte die overblijft en de tekening staat er in het midden
+   in. Wat aan de boven- en onderkant overblijft krijgt de graskleur van het vak
+   zelf, dus het leest als meer veld en niet als een gat. Ik heb ook geprobeerd
+   het bord op zijn eigen verhouding te zetten en de ruimte te verdelen, maar
+   dan staan er twee lege stroken om het bord heen en dat ziet eruit als een
+   fout in plaats van als een keuze. */
 .bordvak{background:var(--gras);border:1px solid rgba(20,34,76,.12);border-radius:20px;overflow:hidden;
-  box-shadow:0 10px 26px rgba(20,34,76,.10)}
-.bordvak svg{display:block;width:100%;height:auto}
-.balk{display:flex;gap:8px;flex-wrap:wrap;padding:0 0 10px}
-.bordtip{font-size:.84rem;color:var(--muted);padding:9px 4px 0}
+  box-shadow:0 10px 26px rgba(20,34,76,.10);flex:1;min-height:240px}
+.bordvak svg{display:block;width:100%;height:100%}
+@media (max-width:1080px){.bordvak{flex:0 0 auto}.bordvak svg{height:auto}}
+.balk{display:flex;gap:8px;flex-wrap:wrap;padding:0 0 10px;align-items:stretch}
+/* De regel onder het bord was klein grijs. Nu is het een strook die je ook van
+   een afstand ziet, want daar staat wat je moet doen. */
+.bordtip{font-size:.9rem;color:var(--ink);background:#fff;border:1px solid rgba(20,34,76,.10);
+  border-radius:12px;padding:9px 14px;margin-top:9px;box-shadow:0 3px 10px rgba(20,34,76,.05)}
 .bordknoppen{padding:9px 0 0}
+/* Onder het spel hoort geen colofon: dat duwt het bord omhoog en levert niets
+   op tijdens een les. */
+#scherm-spel:not(.hide) ~ footer{display:none}
 /* De pauzeknop staat in de kopbalk, want die blijft altijd in beeld. Hij is
    met opzet geen grijs linkje: wie de les stilzet moet hem meteen zien. */
 .pauzeknop{border:none;background:var(--amber);color:var(--ink);font-weight:600;
@@ -115,8 +141,17 @@ body.gepauzeerd #nuBtn{opacity:.45;pointer-events:none}
 @keyframes randrood{
   0%,100%{box-shadow:0 0 0 0 rgba(192,68,44,0)}
   30%{box-shadow:0 0 0 5px rgba(192,68,44,.55)}}
-.meterv{flex:1;min-width:86px;background:#fff;border:1px solid rgba(20,34,76,.10);border-radius:13px;box-shadow:0 3px 10px rgba(20,34,76,.06);
-  padding:8px 10px;text-align:center;position:relative}
+/* Acht tellers in acht identieke witte doosjes: alles even belangrijk, en dus
+   niets. Munten en de klas zijn waar het om gaat, dus die zijn nu groter en
+   krijgen een gekleurde bovenrand. De rest is bijzaak en mag klein. */
+.meterv{flex:1;min-width:74px;background:#fff;border:1px solid rgba(20,34,76,.10);border-radius:13px;box-shadow:0 3px 10px rgba(20,34,76,.06);
+  padding:7px 9px;text-align:center;position:relative}
+.meterv.hoofd{flex:1.5;min-width:112px;padding:9px 12px;border-top:4px solid var(--amber)}
+.meterv.hoofd b{font-size:1.85rem}
+.meterv.hoofd span{font-size:.72rem;color:var(--ink);font-weight:600}
+#levenVak.hoofd{border-top-color:var(--goed)}
+#levenVak.laag{border-top-color:var(--fout);background:var(--fout-bg)}
+#levenVak.laag b{color:var(--fout)}
 /* Munten erbij: de meter licht groen op en het bedrag vliegt eruit omhoog. */
 .meterv.winst{background:var(--goed-bg);border-color:var(--goed);animation:muntklop .45s ease}
 #penningVak{background:#f3edfa;border-color:#6b3fa0}
@@ -188,11 +223,17 @@ body.groot #vraagBeeld .vormvak{height:min(300px,32vh)}
 .beeldvorm{filter:drop-shadow(0 3px 6px rgba(0,0,0,.25))}
 body.groot .beeld{max-height:220px}
 .opties{display:grid;gap:8px}
-.optie{background:rgba(255,255,255,.06);border:2px solid rgba(251,246,241,.45);color:#fff;border-radius:14px;
-  padding:12px 15px;text-align:left;font-size:.95rem;font-weight:500;transition:background .12s ease,border-color .12s ease}
-.optie:hover:not(:disabled){background:rgba(255,255,255,.12)}
-.optie.juist{background:var(--room);border-color:var(--room);color:var(--ink);font-weight:600}
+/* Wit-op-blauw met een doorzichtige vulling las van achter uit de klas als
+   grijs op blauw. Nu zijn het lichte knoppen met donkere tekst: hetzelfde
+   contrast als de rest van de pagina, en goed en fout blijven daardoor ook
+   duidelijk verschillen omdat die juist wel kleur krijgen. */
+.optie{background:#fff;border:2px solid #fff;color:var(--ink);border-radius:14px;
+  padding:13px 16px;text-align:left;font-size:1rem;font-weight:600;
+  transition:transform .12s var(--ease),box-shadow .12s ease}
+.optie:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 5px 14px rgba(20,34,76,.22)}
+.optie.juist{background:var(--goed);border-color:var(--goed);color:#fff}
 .optie.mis{background:var(--crab);border-color:var(--crab);color:#fff}
+.optie:disabled:not(.juist):not(.mis){opacity:.55}
 .optie:disabled{cursor:default}
 .uitleg{margin-top:14px;background:rgba(255,255,255,.14);border-radius:14px;padding:12px 14px;font-size:.88rem;line-height:1.5}
 .uitleg.goed{background:rgba(255,255,255,.22)}
@@ -311,10 +352,9 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
     <div>
       <i style="background:var(--ocean)">3</i>
       <b>Elke tiende ronde een baas</b>
-      <span>Vier soorten, om de beurt, en soms de apenbaas die met bananenschillen je torens
-        stillegt. Elke gevelde baas lapt de school weer een beetje op. Halverwege, in ronde
-        vijf, vijftien en zo door, loopt er een spaarpot mee: breek hem en het geld is van jou.
-        En in ronde vijftig staat de Grote Fout.</span>
+      <span>Vier soorten om de beurt, soms de apenbaas die je torens stillegt, en in ronde
+        vijftig de Grote Fout. Elke gevelde baas lapt de school weer op. Halverwege loopt er
+        een spaarpot mee: breek hem en het geld is van jou.</span>
     </div>
     <div>
       <i style="background:#6b3fa0">4</i>
@@ -325,9 +365,8 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
     </div>
   </div>
 
-  <p class="tip">Haast? Roep de volgende ronde erbij en je krijgt de overgeslagen tijd in munten.
-    Doe je dat twee keer op rij, dan verdubbelt de uitbetaling, maar komen er ook meer fouten.
-    Even stoppen voor een instructie? Druk op Pauze, of op de P.</p>
+  <p class="tip">Haast? Roep de volgende ronde erbij voor munten. Twee keer op rij verdubbelt
+    de uitbetaling, maar levert ook meer fouten op. Pauze zet alles stil, ook met de P.</p>
 
   <p class="eyebrow">kies je niveau</p>
   <div class="niv" id="niveaus"></div>
@@ -343,10 +382,10 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
 
 <section class="wrap hide" id="scherm-spel">
   <div class="baan">
-    <div>
+    <div class="bordkolom">
       <div class="balk">
-        <div class="meterv"><b id="mMunt">0</b><span>munten</span></div>
-        <div class="meterv"><b id="mLeven">12</b><span>klas</span></div>
+        <div class="meterv hoofd"><b id="mMunt">0</b><span>munten</span></div>
+        <div class="meterv hoofd" id="levenVak"><b id="mLeven">12</b><span>klas</span></div>
         <div class="meterv"><b id="mRonde">1</b><span>ronde</span></div>
         <div class="meterv"><b id="mReeks">0</b><span>op rij</span></div>
         <div class="meterv"><b id="mBonus">&times;1,00</b><span>schade</span></div>
@@ -4013,7 +4052,7 @@ function rekenVraag(rang, toegestaan) {
     document.getElementById('mMunt').textContent = bank.munten;
     var lev = document.getElementById('mLeven');
     lev.textContent = bank.leven;
-    lev.parentNode.classList.toggle('laag', bank.leven <= 3);
+    document.getElementById('levenVak').classList.toggle('laag', bank.leven <= 3);
     document.getElementById('mRonde').textContent = bank.ronde;
     document.getElementById('mReeks').textContent = reeks;
     /* Zonder deze meter zien de kinderen alleen dat de getallen boven de
