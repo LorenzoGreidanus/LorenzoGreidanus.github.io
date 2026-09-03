@@ -2215,7 +2215,7 @@ function rekenVraag(rang, toegestaan) {
      is het spel na een paar rondes niet meer te verliezen. Vandaar een maximum
      en een prijs die stijgt met elke toren die je al hebt. Doorgerekend: zo kom
      je op ongeveer veertien rondes, net als met de tien vaste plekken van eerst. */
-  var MAXTORENS = 12, DUURDER = 0.18;
+  var MAXTORENS = 14, DUURDER = 0.18;
   /* Torens gingen tot niveau drie, en daarna was er niets meer te verbeteren
      terwijl de fouten wel doorgroeiden. Vijf bleek te ver doorgeschoten: een vol
      bord werd dan zo sterk dat de late rondes hun spanning verloren, en het
@@ -2237,6 +2237,20 @@ function rekenVraag(rang, toegestaan) {
       m = Math.min(m, Math.hypot(x - (ax + t*dx), y - (ay + t*dy)));
     }
     return m;
+  }
+
+  /* Onder welke hoek loopt de weg hier? Zo kan alles wat op de weg ligt
+     meedraaien met het pad in plaats van altijd recht te liggen. */
+  function padHoek(x, y){
+    var m = 1e9, hk = 0;
+    for (var i = 1; i < PAD.length; i++){
+      var ax = PAD[i-1][0], ay = PAD[i-1][1];
+      var dx = PAD[i][0] - ax, dy = PAD[i][1] - ay;
+      var t = (dx || dy) ? Math.max(0, Math.min(1, ((x-ax)*dx + (y-ay)*dy) / (dx*dx + dy*dy))) : 0;
+      var af = Math.hypot(x - (ax + t*dx), y - (ay + t*dy));
+      if (af < m){ m = af; hk = Math.atan2(dy, dx) * 180 / Math.PI; }
+    }
+    return hk;
   }
 
   function magHier(x, y, behalve){
@@ -2503,7 +2517,8 @@ function rekenVraag(rang, toegestaan) {
       if (!magOpWeg(menu.punt.x, menu.punt.y, null) || wegdingen.length >= MAXWEG) return;
       bank.munten -= w.prijs; laatMuntZien(-w.prijs);
       wegdingen.push({ x:menu.punt.x, y:menu.punt.y, soort:soort,
-                       voorraad:w.voorraad || 0, klok:0 });
+                       voorraad:w.voorraad || 0, klok:0,
+                       hoek:padHoek(menu.punt.x, menu.punt.y) });
       menu = null; tekenMeters(); tekenBord(); return;
     }
     if (r.id === 'kracht' && t && penningen > 0 && !t.kracht){
@@ -2718,36 +2733,107 @@ function rekenVraag(rang, toegestaan) {
     var eind = PAD[PAD.length-1];
     s += tekenKlas(eind[0] + 4, eind[1] - 30, bank.leven, 12);
 
-    /* wat er op de weg ligt */
-    wegdingen.forEach(function(d){
+    /* Wat er op de weg ligt. Alles wordt getekend in zijn eigen assenstelsel,
+       met de x-as langs de weg, en daarna gedraaid naar de richting van het pad.
+       Zo volgt een pekvlek de bocht en staat een versperring er dwars op in
+       plaats van altijd kaarsrecht. */
+    wegdingen.forEach(function(d, di){
       var w = WEGDING[d.soort];
+      var hk = (d.hoek === undefined ? padHoek(d.x, d.y) : d.hoek);
+      var deel = w.voorraad ? d.voorraad / w.voorraad : 1;
+
       if (d.soort === 'pek'){
-        s += '<ellipse cx="' + d.x + '" cy="' + d.y + '" rx="' + w.straal + '" ry="' + (w.straal * 0.62) +
-          '" fill="#3b3730" opacity=".72"/>';
-        s += '<ellipse cx="' + (d.x - 7) + '" cy="' + (d.y - 5) + '" rx="8" ry="5" fill="#5b6480" opacity=".5"/>';
+        /* Een plas met een grillige rand in plaats van een nette ovaal, met
+           glans erop en belletjes die eruit opkomen. */
+        var vorm = 'M-34,0 C-35,-9 -24,-16 -13,-14 C-6,-19 8,-19 15,-13 C26,-15 34,-8 33,0 ' +
+                   'C34,8 25,15 15,14 C7,18 -7,18 -15,13 C-26,15 -34,9 -34,0 Z';
+        s += '<g transform="translate(' + d.x + ',' + d.y + ') rotate(' + hk.toFixed(1) + ')">';
+        /* de grond eromheen is doorweekt en donkerder */
+        s += '<ellipse cx="0" cy="1" rx="38" ry="19" fill="#8a8172" opacity=".3"/>';
+        s += '<path d="' + vorm + '" fill="#332f28"/>';
+        /* een lichte natte rand, zodat het niet een zwart gat wordt */
+        s += '<path d="' + vorm + '" fill="none" stroke="#6b6152" stroke-width="2.2"/>';
+        /* de glans van bovenaf */
+        s += '<path d="M-21,-6 C-15,-11 -2,-12 7,-8 C0,-3 -11,-2 -21,-6 Z" fill="#dfeaf6" opacity=".3"/>';
+        s += '<ellipse cx="15" cy="5" rx="8" ry="3.2" fill="#dfeaf6" opacity=".17"/>';
+        /* belletjes die uit de pek opkomen */
+        s += '<circle cx="-9" cy="4" r="3.6" fill="#463f35"/>' +
+             '<circle cx="-10.2" cy="2.8" r="1.3" fill="#a89e8a" opacity=".85"/>';
+        s += '<circle cx="6" cy="-4" r="2.6" fill="#463f35"/>' +
+             '<circle cx="5.2" cy="-4.9" r="1" fill="#a89e8a" opacity=".85"/>';
+        s += '<circle cx="23" cy="6" r="1.9" fill="#463f35"/>';
+        s += '</g>';
+
       } else if (d.soort === 'angels'){
-        s += '<circle cx="' + d.x + '" cy="' + d.y + '" r="' + w.straal + '" fill="#b5ac9c" opacity=".35"/>';
-        for (var a = 0; a < 7; a++){
-          var hk = a / 7 * Math.PI * 2, rr = w.straal * 0.62;
-          var ax = d.x + Math.cos(hk) * rr, ay = d.y + Math.sin(hk) * rr;
-          s += '<path d="M' + (ax-4) + ',' + (ay+3) + ' L' + ax + ',' + (ay-5) + ' L' + (ax+4) + ',' + (ay+3) +
-            ' M' + (ax-4) + ',' + (ay-2) + ' L' + (ax+4) + ',' + (ay-2) +
-            '" fill="none" stroke="#4a3826" stroke-width="1.8" stroke-linecap="round"/>';
+        /* Een omgewoelde strook grond met daarin losse voetangels. De plekken
+           liggen vast, anders dansen ze bij elke tekenbeurt. */
+        /* De eerste plekken liggen in het midden: als er nog maar een paar over
+           zijn, liggen ze verspreid en niet allemaal in een hoekje. */
+        var plek = [[-3,-8],[9,3],[-14,7],[16,-7],[-23,-3],[22,8],[-19,-11]];
+        s += '<g transform="translate(' + d.x + ',' + d.y + ') rotate(' + hk.toFixed(1) + ')">';
+        /* omgewoelde grond, donkerder dan de weg zodat het ijzer eruit springt */
+        s += '<ellipse cx="0" cy="0" rx="29" ry="16" fill="#a89e8a" opacity=".55"/>';
+        s += '<ellipse cx="0" cy="0" rx="29" ry="16" fill="none" stroke="#8a8172" ' +
+             'stroke-width="1.4" stroke-dasharray="6 4" opacity=".7"/>';
+        var hoeveel = Math.max(2, Math.round(plek.length * deel));
+        for (var a = 0; a < hoeveel; a++){
+          var px = plek[a][0], py = plek[a][1], sc = 1.05 + (a % 3) * 0.11;
+          s += '<g transform="translate(' + px + ',' + py + ') scale(' + sc.toFixed(2) + ')">' +
+               '<ellipse cx="1.5" cy="4.5" rx="7" ry="2.4" fill="rgba(20,34,76,.3)"/>' +
+               /* eerst een donkere onderlaag, daarop een lichte kern: dat leest als ijzer */
+               '<path d="M0,2 L-6.5,5.5 M0,2 L6.5,5.5 M0,2 L-4.5,-3.5 M0,2 L4.5,-3.5 M0,2 L0,-8.5" ' +
+                 'stroke="#2f2a22" stroke-width="3.6" stroke-linecap="round" fill="none"/>' +
+               '<path d="M0,2 L-6.5,5.5 M0,2 L6.5,5.5 M0,2 L-4.5,-3.5 M0,2 L4.5,-3.5 M0,2 L0,-8.5" ' +
+                 'stroke="#9a9184" stroke-width="1.5" stroke-linecap="round" fill="none"/>' +
+               '<path d="M0,-10 l-1.8,3.6 h3.6z" fill="#2f2a22"/>' +
+               '<circle cx="0" cy="2" r="2.6" fill="#4a4238"/>' +
+               '<circle cx="-0.8" cy="1.2" r="1" fill="#c9c1b0"/></g>';
         }
+        s += '</g>';
+
       } else {
-        s += '<rect x="' + (d.x - 24) + '" y="' + (d.y - 13) + '" width="48" height="26" rx="4" ' +
-          'fill="#8a6a45" stroke="#4a3826" stroke-width="2.4"/>';
-        s += '<path d="M' + (d.x-24) + ',' + (d.y-4) + ' h48 M' + (d.x-24) + ',' + (d.y+5) + ' h48" ' +
-          'stroke="#4a3826" stroke-width="2"/>';
-        s += '<path d="M' + (d.x-16) + ',' + (d.y-13) + ' l32,26 M' + (d.x+16) + ',' + (d.y-13) + ' l-32,26" ' +
-          'stroke="#4a3826" stroke-width="1.6" opacity=".55"/>';
+        /* De versperring staat dwars op de weg: de hoek van het pad plus een
+           kwartslag. Twee schragen, een plank met waarschuwingsstrepen, en de
+           plank wordt korter naarmate hij het vaker heeft moeten opvangen. */
+        var br = 24 + 22 * deel;                 /* van bijna op tot een volle plank */
+        s += '<g transform="translate(' + d.x + ',' + d.y + ') rotate(' + (hk + 90).toFixed(1) + ')">';
+        s += '<rect x="' + (-br) + '" y="-6" width="' + (br * 2) + '" height="20" rx="4" ' +
+             'fill="rgba(20,34,76,.22)"/>';
+        /* de twee poten */
+        s += '<rect x="' + (-br + 3) + '" y="-14" width="7" height="28" rx="3" fill="#7a5a3a" ' +
+             'stroke="#4a3826" stroke-width="1.8"/>';
+        s += '<rect x="' + (br - 10) + '" y="-14" width="7" height="28" rx="3" fill="#7a5a3a" ' +
+             'stroke="#4a3826" stroke-width="1.8"/>';
+        /* de plank */
+        s += '<clipPath id="wg' + di + '"><rect x="' + (-br) + '" y="-9" width="' + (br * 2) +
+             '" height="18" rx="3"/></clipPath>';
+        s += '<rect x="' + (-br) + '" y="-9" width="' + (br * 2) + '" height="18" rx="3" fill="#c9a06a"/>';
+        s += '<g clip-path="url(#wg' + di + ')">';
+        for (var st = -3; st < 8; st++){
+          var sx = -br + st * 12;
+          s += '<path d="M' + sx + ',-9 l9,0 l-9,18 l-9,0z" fill="#c0442c" opacity=".85"/>';
+        }
+        s += '</g>';
+        s += '<rect x="' + (-br) + '" y="-9" width="' + (br * 2) + '" height="18" rx="3" ' +
+             'fill="none" stroke="#4a3826" stroke-width="2.4"/>';
+        s += '<path d="M' + (-br + 2) + ',-6 h' + (br * 2 - 4) + '" stroke="#fff" ' +
+             'stroke-width="1.6" opacity=".3"/>';
+        s += '</g>';
       }
-      /* hoeveel er nog in zit */
+
+      /* Hoeveel er nog in zit. Het balkje draait niet mee, want een schuine
+         voortgangsbalk lees je niet, maar het schuift wel op tot onder het ding:
+         hoe schuiner de weg loopt, hoe verder het naar beneden moet. */
       if (w.voorraad){
-        var deel = d.voorraad / w.voorraad;
-        s += '<rect x="' + (d.x - 16) + '" y="' + (d.y + w.straal * 0.62 + 5) + '" width="32" height="4" rx="2" fill="rgba(20,34,76,.2)"/>';
-        s += '<rect x="' + (d.x - 16) + '" y="' + (d.y + w.straal * 0.62 + 5) + '" width="' + (32 * deel).toFixed(1) +
-          '" height="4" rx="2" fill="#EA9836"/>';
+        var rad = hk * Math.PI / 180;
+        var onder = d.soort === 'hek'
+          ? Math.abs((24 + 22 * deel) * Math.cos(rad)) + Math.abs(15 * Math.sin(rad)) + 9
+          : Math.hypot(29 * Math.sin(rad), 16 * Math.cos(rad)) + 9;
+        s += '<rect x="' + (d.x - 16) + '" y="' + (d.y + onder).toFixed(1) +
+             '" width="32" height="4.5" rx="2.2" fill="#fff" opacity=".8"/>';
+        s += '<rect x="' + (d.x - 15) + '" y="' + (d.y + onder + 0.7).toFixed(1) + '" width="' +
+             (30 * deel).toFixed(1) + '" height="3.1" rx="1.5" fill="' +
+             (deel > 0.35 ? '#EA9836' : '#c0442c') + '"/>';
       }
     });
 
