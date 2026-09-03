@@ -2268,7 +2268,10 @@ function rekenVraag(rang, toegestaan) {
   var klap = 0, klapAantal = 0;   /* hoe lang de rode flits nog te zien is */
   var muntTeller = 0;             /* om vliegende bedragen niet op elkaar te laten vallen */
   /* Elke tiende ronde komt er een baas, en niet steeds dezelfde. */
-  var BAASRONDE = 10, BAASSCHADE = 3, BAASBELONING = 100;
+  /* Een baas was een dikke fout en verder niet veel. Hij hoort het hoogtepunt
+     van de ronde te zijn: hij incasseert flink meer, hij kost vier levens als
+     hij binnenkomt in plaats van drie, en hij betaalt navenant uit. */
+  var BAASRONDE = 10, BAASSCHADE = 4, BAASBELONING = 120;
 
   /* Voor elke baas die je velt krijg je een penning. Daarmee geef je een toren
      zijn eigen bijzondere kracht, en die past bij wat die toren toch al goed
@@ -2288,27 +2291,32 @@ function rekenVraag(rang, toegestaan) {
      kapotbeuken, de snelle moet je op tijd tegenhouden, de schildbaas vraagt om
      harde klappen, en de splijter valt uiteen als je hem velt. */
   var BAZEN = [
-    { id:'zwaar',  naam:'de zware baas',  taai:8,   vlug:0.5,  schild:0,   mark:'!',
+    { id:'zwaar',  naam:'de zware baas',  taai:11,  vlug:0.5,  schild:0,    mark:'!',
       uit:'Hij incasseert enorm veel, maar loopt langzaam.' },
-    { id:'snel',   naam:'de snelle baas', taai:5,   vlug:1.05, schild:0,   mark:'\u00bb',
+    { id:'snel',   naam:'de snelle baas', taai:7,   vlug:1.2,  schild:0,    mark:'\u00bb',
       uit:'Minder taai, maar hij staat zo bij de klas.' },
-    { id:'schild', naam:'de schildbaas',  taai:6,   vlug:0.6,  schild:0.6, mark:'\u25cf',
-      uit:'Zijn schild slikt het meeste, dus je hebt harde klappen nodig.' },
-    { id:'splijt', naam:'de splijter',    taai:6.5, vlug:0.65, schild:0,   mark:'\u2726',
-      uit:'Als hij valt spat hij uiteen in vier snelle fouten.', splijt:4 }
+    { id:'schild', naam:'de schildbaas',  taai:7.5, vlug:0.6,  schild:0.65, mark:'\u25cf',
+      uit:'Zijn schild slikt bijna alles, dus je hebt harde klappen nodig.' },
+    { id:'splijt', naam:'de splijter',    taai:8,   vlug:0.65, schild:0,    mark:'\u2726',
+      uit:'Als hij valt spat hij uiteen in vijf snelle fouten.', splijt:5 }
   ];
   /* De apenbaas hoort niet in de vaste beurtwisseling: hij komt in plaats van
      de baas die aan de beurt was, en hoe verder je komt hoe vaker. Hij vecht
      ook anders. In plaats van hard te slaan gooit hij bananenschillen naar je
      torens, en een toren die er een over zich heen krijgt staat even stil. */
-  var APENBAAS = { id:'aap', naam:'de apenbaas', taai:6.5, vlug:0.7, schild:0.2, mark:'A', kleur:'#8a6a45',
-    uit:'Hij gooit bananenschillen en legt daarmee je torens tijdelijk stil.' };
-  var SCHILTIJD = 7, SCHILDUUR = 4, SCHILBEREIK = 300;
+  var APENBAAS = { id:'aap', naam:'de apenbaas', taai:10, vlug:0.78, schild:0.3, mark:'A', kleur:'#8a6a45',
+    uit:'Hij is de taaiste van allemaal en legt je torens met bananenschillen stil.' };
+  /* Hij gooit vaker, de schil ligt langer, hij mikt verder, en vanaf ronde
+     dertig gooit hij er twee tegelijk. Zonder dat was hij vooral een baas met
+     een grapje; nu moet je er echt omheen bouwen. */
+  var SCHILTIJD = 4.5, SCHILDUUR = 6, SCHILBEREIK = 380, DUBBELSCHIL = 30;
 
   /* De kans is per baasronde afgesproken: vijf procent in ronde tien, vijftien
-     in twintig, vijfendertig in dertig en vijfenzeventig in veertig. Daartussen
-     loopt hij recht op, daarbuiten blijft hij staan. */
-  var APENKANS = [[10, 0.05], [20, 0.15], [30, 0.35], [40, 0.75]];
+     in twintig, vijfendertig in dertig en vijfenzeventig in veertig. Daarna zakt
+     hij weer, want anders is elke baas vanaf dat punt de apenbaas en zie je de
+     andere vier nooit meer. Tussen de punten loopt de lijn recht, daarbuiten
+     blijft hij staan. */
+  var APENKANS = [[10, 0.05], [20, 0.15], [30, 0.35], [40, 0.75], [50, 0.35], [60, 0.25]];
   function apenkans(ronde){
     if (ronde <= APENKANS[0][0]) return APENKANS[0][1];
     for (var i = 1; i < APENKANS.length; i++){
@@ -2384,6 +2392,11 @@ function rekenVraag(rang, toegestaan) {
     for (var i = 0; i < mag.length; i++){ trek -= mag[i].kans; if (trek <= 0) return mag[i]; }
     return mag[0];
   }
+  /* Op welk moment in de ronde de baas meeloopt. De teller telt af, dus dit is
+     hoeveel fouten er na hem nog komen. Eerder was dat altijd nul en wist je
+     precies wanneer hij kwam; nu valt hij ergens in de tweede helft binnen en
+     moet je je bord de hele ronde op orde houden. */
+  var baasBijWachtrij = -1;
   var baasAlarm = 0, pols = 0;
   var camoGezien = false;   /* de uitleg over verstopte fouten komt maar een keer */
   var menu = null;      /* het keuzemenu, op de plek waar je tikte */
@@ -2961,7 +2974,7 @@ function rekenVraag(rang, toegestaan) {
     vijanden.forEach(function(e){
       var p = positie(e.d);
       var deel = Math.max(0, e.hp / e.maxHp);
-      var r2 = e.baas ? 26 : 13, br = e.baas ? 62 : 28;
+      var r2 = e.baas ? (e.baassoort === 'aap' ? 31 : 26) : 13, br = e.baas ? 62 : 28;
       /* Een verstopte fout is halfdoorzichtig en heeft een gestippelde rand:
          je ziet hem wel, je torens niet. */
       s += '<g' + (e.camo ? ' opacity=".72"' : '') + '>';
@@ -3330,8 +3343,11 @@ function rekenVraag(rang, toegestaan) {
           wachtrij = Math.max(3, Math.round(wachtrij * RUSTAANTAL));
           melding2('Ronde ' + bank.ronde + '. Rustronde: minder en zwakkere fouten. Bouw bij.');
         } else if (isBaasRonde(bank.ronde)){
-          melding2('Ronde ' + bank.ronde + '. De baas loopt achteraan mee.');
+          melding2('Ronde ' + bank.ronde + '. De baas loopt ergens in de tweede helft mee.');
         }
+        /* de plek van de baas in de rij, ergens voorbij de helft */
+        baasBijWachtrij = isBaasRonde(bank.ronde)
+          ? Math.floor(Math.random() * Math.max(1, Math.floor(wachtrij / 2))) : -1;
       }
     }
     if (wachtrij > 0){
@@ -3344,7 +3360,8 @@ function rekenVraag(rang, toegestaan) {
                           VIJANDKRACHT * (isRustronde(ronde) ? RUSTTAAI : 1)));
         /* de laatste van een baasronde is de baas zelf */
         var basisSnel = (30 + r*5 + ronde*2.3) * (ronde <= 20 ? 1 : 1.12);
-        if (wachtrij === 0 && isBaasRonde(ronde)){
+        if (wachtrij === baasBijWachtrij && isBaasRonde(ronde)){
+          baasBijWachtrij = -1;                 /* er komt er maar een per ronde */
           var bz = baasVan(ronde);
           var bhp = Math.round(hp * bz.taai);
           vijanden.push({ d:0, hp:bhp, maxHp:bhp, snelheid:basisSnel * bz.vlug,
@@ -3392,8 +3409,21 @@ function rekenVraag(rang, toegestaan) {
       });
       if (!mik){ e.schilKlok = 1; return; }
       e.schilKlok = SCHILTIJD;
-      schillen.push({ x0:q.x, y0:q.y, x1:mik.x, y1:mik.y, t:0, duur:0.55,
-                      toren:mik, draai:Math.random() * 360 });
+      /* vanaf de late rondes krijgt ook de op een na dichtstbijzijnde er een */
+      var doelen = [mik];
+      if (bank.ronde >= DUBBELSCHIL){
+        var tweede = null, k2 = SCHILBEREIK;
+        torens.forEach(function(t){
+          if (t === mik || (t.uit || 0) > 0) return;
+          var a2 = Math.hypot(t.x - q.x, t.y - q.y);
+          if (a2 < k2){ k2 = a2; tweede = t; }
+        });
+        if (tweede) doelen.push(tweede);
+      }
+      doelen.forEach(function(t){
+        schillen.push({ x0:q.x, y0:q.y, x1:t.x, y1:t.y, t:0, duur:0.55,
+                        toren:t, draai:Math.random() * 360 });
+      });
     });
     /* een toren met een schil erover komt vanzelf weer bij */
     torens.forEach(function(t){ if ((t.uit || 0) > 0) t.uit -= dt; });
@@ -3664,6 +3694,7 @@ function rekenVraag(rang, toegestaan) {
     reeks = 0; besteReeks = 0; goedAantal = 0; foutAantal = 0;
     gekliktIndex = -1; menu = null; klap = 0; baasAlarm = 0; pols = 0; verplaats = null; sleep = null; penningen = 0;
     camoGezien = false;
+    baasBijWachtrij = -1;
     pauze = false; document.body.classList.remove('gepauzeerd');
     var pk = document.getElementById('pauzeBtn');
     pk.classList.remove('hide', 'aan'); pk.textContent = 'Pauze'; pk.setAttribute('aria-pressed', 'false');
