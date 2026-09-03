@@ -278,7 +278,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
 <section class="start wrap" id="scherm-start">
   <p class="hand" style="font-size:1.5rem">hoi, klaar om te verdedigen?</p>
   <h1>Torenverdediging</h1>
-  <p class="lead">Er lopen fouten over het pad naar de klas. Elk goed antwoord levert munten op. Naast het pad bouw je torens, op het pad leg je pek, voetangels of een versperring. Vanaf ronde vier komen er snellere fouten bij, vanaf ronde zeven fouten met een schild, vanaf negen zwermen, en elke tiende ronde een andere baas. Na ronde twintig wordt alles taaier. Wil je niet wachten tussen de rondes, dan roep je de volgende erbij en krijg je de overgeslagen tijd in munten. Voor elke baas die je velt krijg je een penning, en daarmee geef je een toren zijn eigen bijzondere kracht. Fout geantwoord? Dan lees je waarom, en je gaat door.</p>
+  <p class="lead">Er lopen fouten over het pad naar de klas. Elk goed antwoord levert munten op. Naast het pad bouw je torens, op het pad leg je pek, voetangels of een versperring. Vanaf ronde vier komen er snellere fouten bij, vanaf ronde zeven fouten met een schild, vanaf negen zwermen, vanaf twaalf verstopte fouten waar alleen de Scherpschutter doorheen kijkt, en elke tiende ronde een andere baas. De ronde na een baas is steeds wat rustiger, zodat je kunt bijbouwen. Na ronde twintig wordt alles taaier. Wil je niet wachten tussen de rondes, dan roep je de volgende erbij en krijg je de overgeslagen tijd in munten. Voor elke baas die je velt krijg je een penning, en daarmee geef je een toren zijn eigen bijzondere kracht. Fout geantwoord? Dan lees je waarom, en je gaat door.</p>
 
   <p class="eyebrow">kies je niveau</p>
   <div class="niv" id="niveaus"></div>
@@ -350,7 +350,7 @@ const SOORTEN = {
      tegen een lange rij; de scherpschutter reikt het verst en slaat hard toe,
      maar laadt lang en is duur. */
   pekelpot:  {naam:'Pekelpot',     letter:'P', kleur:'#2f7d52',            prijs:85,  bereik:120, schade:9,  tempo:1.1,  onder:'Raakt alles in de buurt', vlak:true},
-  schutter:  {naam:'Scherpschutter',letter:'S',kleur:'#7d1f12',            prijs:120, bereik:300, schade:46, tempo:2.6,  onder:'Groot bereik, laadt lang'},
+  schutter:  {naam:'Scherpschutter',letter:'S',kleur:'#7d1f12',            prijs:120, bereik:300, schade:46, tempo:2.6,  onder:'Ver, en ziet verstopte fouten'},
   /* De Tonkla Toren moet je verdienen: een lange reeks goede antwoorden achter
      elkaar, en pas te bouwen vanaf ronde twintig. Naast het gewone schieten laat
      hij om de zoveel tijd een schokgolf los, maar alleen als er iets binnen
@@ -2139,7 +2139,14 @@ function rekenVraag(rang, toegestaan) {
      schaal gaat over alles wat een fout kan incasseren: gewone fouten, zwermen
      en bazen rekenen er allemaal mee. Onder de 1 wordt het spel makkelijker,
      boven de 1 zwaarder. */
-  var VIJANDKRACHT = 0.95;   /* fouten zijn vijf procent minder taai */
+  var VIJANDKRACHT = 0.90;   /* fouten zijn overal tien procent minder taai */
+
+  /* Na een baas komt er een rustronde: minder fouten en die zijn ook nog eens
+     zwakker. Dat geeft lucht om je penning te vergeven, bij te bouwen en de
+     munten van de baas uit te geven voordat het weer opbouwt. De eerste ronde
+     telt niet mee, want daar ging geen baas aan vooraf. */
+  function isRustronde(n){ return n > BAASRONDE && n % BAASRONDE === 1; }
+  var RUSTTAAI = 0.7, RUSTAANTAL = 0.65;
   function isBaasRonde(n){ return n % BAASRONDE === 0; }
 
   /* ---------- soorten fouten ----------
@@ -2153,8 +2160,16 @@ function rekenVraag(rang, toegestaan) {
     { id:'schild', naam:'fout met schild', vanaf:7, kans:3, mark:'\u25cf', kleur:'#5b6480',
       taai:1.15, vlug:0.85, schild:0.55 },
     { id:'zwerm', naam:'zwerm', vanaf:9, kans:2, mark:'\u00d7', kleur:'#7d1f12',
-      taai:0.34, vlug:1.25, schild:0, aantal:3 }
+      taai:0.34, vlug:1.25, schild:0, aantal:3 },
+    /* De verstopte fout loopt gewoon over het pad, maar de meeste torens kijken
+       er dwars doorheen. Alleen de Scherpschutter heeft het bereik en het vizier
+       om hem te vinden. Wat op de weg ligt werkt wel: pek en voetangels hoeven
+       niets te zien om te werken, dus je hebt altijd nog een tweede antwoord. */
+    { id:'camo', naam:'verstopte fout', vanaf:12, kans:2, mark:'?', kleur:'#5f7d55',
+      taai:0.9, vlug:1, schild:0, camo:true }
   ];
+  /* Wie mag er op deze fout schieten? */
+  function ziet(toren, e){ return !e || !e.camo || toren.soort === 'schutter'; }
   function kiesFout(ronde){
     var mag = FOUTEN.filter(function(f){ return f.vanaf <= ronde; });
     var totaal = mag.reduce(function(a, f){ return a + f.kans; }, 0);
@@ -2163,6 +2178,7 @@ function rekenVraag(rang, toegestaan) {
     return mag[0];
   }
   var baasAlarm = 0, pols = 0;
+  var camoGezien = false;   /* de uitleg over verstopte fouten komt maar een keer */
   var menu = null;      /* het keuzemenu, op de plek waar je tikte */
   var sleep = null;     /* de toren die je aan het verplaatsen bent */
   var verplaats = null; /* de toren die op een nieuwe tik wacht, voor aanraakschermen */
@@ -2566,9 +2582,12 @@ function rekenVraag(rang, toegestaan) {
       var pen = !!t.kracht;
       if (t.soort === 'kanon'){
         if (pen){
-          s += '<rect x="' + (3 - terug) + '" y="-10" width="22" height="8" rx="3" fill="#4a3826"/>' +
-               '<rect x="' + (3 - terug) + '" y="2" width="22" height="8" rx="3" fill="#4a3826"/>' +
-               '<rect x="' + (22 - terug) + '" y="-10" width="3.4" height="20" rx="1.7" fill="#EA9836"/>' +
+          /* de bovenste loop hoort bij t.loop 0, de onderste bij 1 */
+          var tb = t.loop ? 0 : terug, to = t.loop ? terug : 0;
+          s += '<rect x="' + (3 - tb) + '" y="-10" width="22" height="8" rx="3" fill="#4a3826"/>' +
+               '<rect x="' + (22 - tb) + '" y="-10" width="3.4" height="8" rx="1.7" fill="#EA9836"/>' +
+               '<rect x="' + (3 - to) + '" y="2" width="22" height="8" rx="3" fill="#4a3826"/>' +
+               '<rect x="' + (22 - to) + '" y="2" width="3.4" height="8" rx="1.7" fill="#EA9836"/>' +
                '<circle cx="0" cy="0" r="8.5" fill="#6b5340" stroke="#EA9836" stroke-width="1.6"/>';
         } else {
           s += '<rect x="' + (4 - terug) + '" y="-5" width="20" height="10" rx="3" fill="#4a3826"/>' +
@@ -2685,9 +2704,15 @@ function rekenVraag(rang, toegestaan) {
       var p = positie(e.d);
       var deel = Math.max(0, e.hp / e.maxHp);
       var r2 = e.baas ? 26 : 13, br = e.baas ? 62 : 28;
-      s += '<g>';
+      /* Een verstopte fout is halfdoorzichtig en heeft een gestippelde rand:
+         je ziet hem wel, je torens niet. */
+      s += '<g' + (e.camo ? ' opacity=".72"' : '') + '>';
       s += '<ellipse cx="' + p.x + '" cy="' + (p.y + r2 - 1) + '" rx="' + (r2 * 0.9).toFixed(1) +
         '" ry="' + (r2 * 0.34).toFixed(1) + '" fill="rgba(20,34,76,.20)"/>';
+      if (e.camo){
+        s += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (r2 + 6) +
+          '" fill="none" stroke="#5f7d55" stroke-width="2" stroke-dasharray="4 5" opacity=".8"/>';
+      }
       if (e.baas){
         /* een ring die meepulseert, zodat je hem tussen de rest uit pikt */
         s += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (r2 + 8 + Math.sin(pols*4) * 3).toFixed(1) +
@@ -2712,7 +2737,8 @@ function rekenVraag(rang, toegestaan) {
       }
       s += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (r2 + (raak ? 2 : 0)) + '" fill="' +
         (raak ? '#ffd9cf' : (e.traag > 0 ? '#9dc0e5' : (e.kleur || (e.baas ? '#7d1f12' : '#c0442c')))) +
-        '" stroke="#fff" stroke-width="' + (e.baas ? 3 : 2) + '"/>' +
+        '" stroke="#fff" stroke-width="' + (e.baas ? 3 : 2) + '"' +
+        (e.camo ? ' stroke-dasharray="4 3"' : '') + '/>' +
         (e.traag > 0 ? '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (r2 + 2) +
           '" fill="none" stroke="#204ECF" stroke-width="2" opacity=".6"/>' : '') +
         '<text x="' + p.x + '" y="' + (p.y + (e.baas ? 9 : 5)) + '" font-size="' + (e.baas ? 26 : 14) +
@@ -3014,7 +3040,13 @@ function rekenVraag(rang, toegestaan) {
       rondePauze -= dt;
       if (rondePauze <= 0){
         bank.ronde++; wachtrij = 4 + bank.ronde; spawnKlok = 0;
-        if (isBaasRonde(bank.ronde)) melding2('Ronde ' + bank.ronde + '. De baas loopt achteraan mee.');
+        if (isRustronde(bank.ronde)){
+          wachtrij = Math.max(3, Math.round(wachtrij * RUSTAANTAL));
+          melding2('Ronde ' + bank.ronde + '. Na de baas is het even rustiger: ' +
+            'minder fouten en ze zijn zwakker. Mooi moment om bij te bouwen.');
+        } else if (isBaasRonde(bank.ronde)){
+          melding2('Ronde ' + bank.ronde + '. De baas loopt achteraan mee.');
+        }
       }
     }
     if (wachtrij > 0){
@@ -3023,7 +3055,8 @@ function rekenVraag(rang, toegestaan) {
         spawnKlok = Math.max(0.55, 1.4 - ronde * 0.05);
         wachtrij--;
         var r = rang();
-        var hp = Math.max(1, Math.round((10 + ronde * 6) * (0.75 + r * 0.15) * zwaarte(ronde) * VIJANDKRACHT));
+        var hp = Math.max(1, Math.round((10 + ronde * 6) * (0.75 + r * 0.15) * zwaarte(ronde) *
+                          VIJANDKRACHT * (isRustronde(ronde) ? RUSTTAAI : 1)));
         /* de laatste van een baasronde is de baas zelf */
         var basisSnel = (30 + r*5 + ronde*2.3) * (ronde <= 20 ? 1 : 1.12);
         if (wachtrij === 0 && isBaasRonde(ronde)){
@@ -3035,14 +3068,20 @@ function rekenVraag(rang, toegestaan) {
                           basisHp:hp, basisSnel:basisSnel });
         } else {
           var f = kiesFout(ronde), hoeveel = f.aantal || 1;
+          if (f.camo && !camoGezien){
+            camoGezien = true;
+            melding2('Er loopt een verstopte fout mee. Je torens kijken er dwars doorheen: ' +
+              'alleen de Scherpschutter ziet hem, en pek of voetangels op de weg werken ook.');
+          }
           for (var z = 0; z < hoeveel; z++){
             var thp = Math.max(1, Math.round(hp * f.taai));
             vijanden.push({ d:-z * 22, hp:thp, maxHp:thp, snelheid:basisSnel * f.vlug,
                             traag:0, mark:f.mark, soort:f.id, kleur:f.kleur,
-                            schild:f.schild, schildOp:f.schild > 0 });
+                            schild:f.schild, schildOp:f.schild > 0, camo:!!f.camo });
           }
         }
-        if (wachtrij === 0) rondePauze = isBaasRonde(bank.ronde + 1) ? 8 : 3;
+        if (wachtrij === 0) rondePauze = isBaasRonde(bank.ronde + 1) ? 8
+                                       : isBaasRonde(bank.ronde) ? 6 : 3;
       }
     }
     var verlies = 0;
@@ -3086,7 +3125,7 @@ function rekenVraag(rang, toegestaan) {
       if (t.golfKlok > 0) return;
       var bereik2 = so.bereik + (t.niveau - 1) * 18;
       var raakbaar = vijanden.filter(function(e){
-        if (e.dood) return false;
+        if (e.dood || !ziet(t, e)) return false;
         var q = positie(e.d);
         return Math.hypot(q.x - t.x, q.y - t.y) <= bereik2;
       });
@@ -3108,7 +3147,7 @@ function rekenVraag(rang, toegestaan) {
       if (t.klok > 0) return;
       var p = t, doel = null, verst = -1, doelPos = null;
       vijanden.forEach(function(e){
-        if (e.dood) return;
+        if (e.dood || !ziet(t, e)) return;
         var pos = positie(e.d);
         if (Math.hypot(pos.x - p.x, pos.y - p.y) <= bereik && e.d > verst){ doel = e; verst = e.d; doelPos = pos; }
       });
@@ -3123,7 +3162,7 @@ function rekenVraag(rang, toegestaan) {
       /* De pekelpot raakt alles binnen bereik tegelijk, de rest maar een doel. */
       var geraakt = s.vlak
         ? vijanden.filter(function(e){
-            if (e.dood) return false;
+            if (e.dood || !ziet(t, e)) return false;
             var q = positie(e.d);
             return Math.hypot(q.x - p.x, q.y - p.y) <= bereik;
           })
@@ -3138,6 +3177,15 @@ function rekenVraag(rang, toegestaan) {
                       brand:!!t.kracht });
       } else {
         geraakt.forEach(function(e){
+          /* Eenmaal in het vizier van de Scherpschutter is de verstopte fout
+             ontdekt, en dan mag de rest van het bord er ook op schieten. Zo
+             loont het om er een schutter bij te zetten in plaats van er een
+             heel bord van te bouwen. */
+          if (t.soort === 'schutter' && e.camo){
+            e.camo = false;
+            var qc = positie(e.d);
+            cijfers.push({ x:qc.x, y:qc.y - 32, tekst:'ontdekt', leven:0.9, kleur:'#2f7d52' });
+          }
           raakVijand(e, schade * (t.kracht && t.soort === 'pekelpot' ? 1.8 : 1), t.soort === 'vertrager');
           /* Vrieskou vertraagt sterker en langer dan gewoon. */
           if (t.kracht && t.soort === 'vertrager'){ e.traag = 2.6; e.ijs = true; }
@@ -3145,8 +3193,20 @@ function rekenVraag(rang, toegestaan) {
         if (s.vlak){
           golven.push({ x:p.x, y:p.y, r:bereik, leven:0.34, kleur:s.kleur });
         } else {
-          var dx = doelPos.x - p.x, dy = doelPos.y - p.y;
-          schoten.push({ x:p.x, y:p.y, len:Math.hypot(dx, dy),
+          /* De dubbelloop schoot nog uit het midden, tussen de twee lopen door.
+             Nu wisselt hij om en om, en deinst alleen de loop terug die net
+             afging. De verschuiving staat haaks op de richting waarin hij mikt,
+             precies zover als de lopen in de tekening uit elkaar staan. */
+          var vanX = p.x, vanY = p.y;
+          if (t.kracht && t.soort === 'kanon'){
+            t.loop = t.loop ? 0 : 1;
+            var h = Math.atan2(doelPos.y - p.y, doelPos.x - p.x);
+            var kant = t.loop ? 6 : -6;
+            vanX = p.x - Math.sin(h) * kant;
+            vanY = p.y + Math.cos(h) * kant;
+          }
+          var dx = doelPos.x - vanX, dy = doelPos.y - vanY;
+          schoten.push({ x:vanX, y:vanY, len:Math.hypot(dx, dy),
                          hoek:Math.atan2(dy, dx) * 180 / Math.PI, kleur:s.kleur,
                          leven:0.18, dik:t.soort === 'schutter' ? 4 : 3 });
         }
@@ -3174,7 +3234,7 @@ function rekenVraag(rang, toegestaan) {
         if (!slachtoffer){
           var kortst = 30;
           vijanden.forEach(function(e){
-            if (e.dood) return;
+            if (e.dood || e.camo) return;
             var q = positie(e.d);
             var d = Math.hypot(q.x - k.x1, q.y - k.y1);
             if (d < kortst){ kortst = d; slachtoffer = e; }
@@ -3184,7 +3244,7 @@ function rekenVraag(rang, toegestaan) {
           /* Brandbom: alles binnen zestig pixels van de inslag krijgt de klap. */
           var geraakt2 = 0;
           vijanden.forEach(function(e){
-            if (e.dood) return;
+            if (e.dood || e.camo) return;
             var q2 = positie(e.d);
             if (Math.hypot(q2.x - k.x1, q2.y - k.y1) <= 60){ raakVijand(e, k.schade, false); geraakt2++; }
           });
@@ -3248,6 +3308,7 @@ function rekenVraag(rang, toegestaan) {
     bank = { munten:60, leven:12, ronde:1 };
     reeks = 0; besteReeks = 0; goedAantal = 0; foutAantal = 0;
     gekliktIndex = -1; menu = null; klap = 0; baasAlarm = 0; pols = 0; verplaats = null; sleep = null; penningen = 0;
+    camoGezien = false;
     pauze = false; document.body.classList.remove('gepauzeerd');
     var pk = document.getElementById('pauzeBtn');
     pk.classList.remove('hide', 'aan'); pk.textContent = 'Pauze'; pk.setAttribute('aria-pressed', 'false');
