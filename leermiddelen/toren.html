@@ -312,17 +312,21 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
       <i style="background:var(--ocean)">3</i>
       <b>Elke tiende ronde een baas</b>
       <span>Vier soorten, om de beurt, en soms de apenbaas die met bananenschillen je torens
-        stillegt. De ronde erna is steeds wat rustiger, dus dan kun je bijbouwen.</span>
+        stillegt. Elke gevelde baas lapt de school weer een beetje op. Halverwege, in ronde
+        vijf, vijftien en zo door, loopt er een spaarpot mee: breek hem en het geld is van jou.
+        En in ronde vijftig staat de Grote Fout.</span>
     </div>
     <div>
       <i style="background:#6b3fa0">4</i>
       <b>Verdienen</b>
       <span>Elke gevelde baas levert een penning op: daarmee geef je een toren zijn eigen kracht.
-        De Tonkla Toren verdien je met een lange reeks goed, de Apentoren met de apenbaas.</span>
+        Goed op rij maakt je torens ook harder slaan, tot de helft erbij. De Tonkla Toren
+        verdien je met een lange reeks goed, de Apentoren met de apenbaas.</span>
     </div>
   </div>
 
   <p class="tip">Haast? Roep de volgende ronde erbij en je krijgt de overgeslagen tijd in munten.
+    Doe je dat twee keer op rij, dan verdubbelt de uitbetaling, maar komen er ook meer fouten.
     Even stoppen voor een instructie? Druk op Pauze, of op de P.</p>
 
   <p class="eyebrow">kies je niveau</p>
@@ -345,6 +349,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
         <div class="meterv"><b id="mLeven">12</b><span>klas</span></div>
         <div class="meterv"><b id="mRonde">1</b><span>ronde</span></div>
         <div class="meterv"><b id="mReeks">0</b><span>op rij</span></div>
+        <div class="meterv"><b id="mBonus">&times;1,00</b><span>schade</span></div>
         <div class="meterv"><b id="mToren">0/12</b><span>torens</span></div>
         <div class="meterv"><b id="mWeg">0/5</b><span>op de weg</span></div>
         <div class="meterv hide" id="penningVak"><b id="mPenning">0</b><span>penningen</span></div>
@@ -384,25 +389,52 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
 
 <script>
 
+/* Vier kaarten. Elk potje wordt er een geloot, zodat een klas die het spel al
+   kent niet elke keer dezelfde plekken kan dichtzetten.
+
+   Drie regels waar elke kaart zich aan houdt:
+   - het pad begint buiten het bord (x = -40) en eindigt rechts bij x = 812,
+     want daar wordt de school getekend en die moet heel op het bord passen;
+   - de bovenste vijftig pixels blijven vrij, want daar hangt de levensbalk
+     van de baas overheen;
+   - evenwijdige stukken liggen minstens zeventig pixels uit elkaar, anders
+     lopen twee wegen (tweeënvijftig pixels breed) tegen elkaar aan.
+   De lengtes liggen tussen 1430 en 1650: hoe langer het pad, hoe meer tijd je
+   torens hebben, dus veel verder uit elkaar mogen ze niet lopen. */
+const KAARTEN = [
+  { naam:'Het schoolplein', pad:[[-40,90],[190,90],[190,250],[430,250],[430,110],[650,110],[650,390],[812,390]] },
+  { naam:'De zaagtand',     pad:[[-40,140],[130,140],[130,330],[300,330],[300,140],[470,140],[470,330],[640,330],[640,170],[812,170]] },
+  { naam:'De grote lus',    pad:[[-40,150],[280,150],[280,290],[130,290],[130,390],[540,390],[540,240],[812,240]] },
+  { naam:'De slingerweg',   pad:[[-40,230],[120,230],[120,100],[330,100],[330,300],[520,300],[520,130],[720,130],[720,300],[812,300]] }
+];
 /* Het pad eindigt bij de deur van de school. Het liep eerst door tot de rand,
    en dan valt het gebouw half buiten het bord. */
-const PAD = [[-40,90],[190,90],[190,250],[430,250],[430,110],[650,110],[650,390],[812,390]];
+let PAD = KAARTEN[0].pad;
 const SOORTEN = {
   kanon:     {naam:'Kanon',        letter:'K', kleur:'var(--crab)',        prijs:40,  bereik:110, schade:6,  tempo:0.55, onder:'Snel en dichtbij'},
   katapult:  {naam:'Katapult',     letter:'T', kleur:'var(--deep-ocean)',  prijs:70,  bereik:200, schade:20, tempo:1.5,  onder:'Ver, maar traag'},
-  vertrager: {naam:'Vertrager',    letter:'V', kleur:'var(--butterscotch)',prijs:55,  bereik:130, schade:2,  tempo:0.5,  onder:'Houdt fouten op'},
+  /* De Vertrager hield maar een fout tegelijk op. Vanaf ronde twintig lopen er
+     zestien tegelijk op het pad, dus die ene deed er niet meer toe: hij was met
+     0,073 schade per munt veruit de slechtste koop van het bord. Nu raakt en
+     vertraagt hij alles binnen bereik tegelijk, net als de Pekelpot. Zijn bereik
+     gaat iets omlaag zodat hij een zone is en geen deken, en zijn schade blijft
+     laag: hij hoort te vertragen, niet te vellen. */
+  vertrager: {naam:'Vertrager',    letter:'V', kleur:'var(--butterscotch)',prijs:55,  bereik:120, schade:3,  tempo:0.5,  onder:'Houdt een hele groep op', vlak:true},
   /* Twee nieuwe. De pekelpot raakt alles wat vlakbij staat, dus die is sterk
      tegen een lange rij; de scherpschutter reikt het verst en slaat hard toe,
      maar laadt lang en is duur. */
-  pekelpot:  {naam:'Pekelpot',     letter:'P', kleur:'#2f7d52',            prijs:85,  bereik:120, schade:9,  tempo:1.1,  onder:'Raakt alles in de buurt', vlak:true},
+  pekelpot:  {naam:'Pekelpot',     letter:'P', kleur:'#2f7d52',            prijs:80,  bereik:120, schade:11, tempo:1.1,  onder:'Raakt alles in de buurt', vlak:true},
   schutter:  {naam:'Scherpschutter',letter:'S',kleur:'#7d1f12',            prijs:120, bereik:300, schade:46, tempo:2.6,  onder:'Ver, en ziet verstopte fouten'},
   /* De Tonkla Toren moet je verdienen: een lange reeks goede antwoorden achter
      elkaar, en pas te bouwen vanaf ronde twintig. Naast het gewone schieten laat
      hij om de zoveel tijd een schokgolf los, maar alleen als er iets binnen
      bereik is. De prijs stond op 260 en dat was een tweede slot op dezelfde
      deur: wie de reeks haalt heeft de toren al verdiend en moet hem ook kunnen
-     neerzetten. */
-  tonkla:    {naam:'Tonkla Toren', letter:'T',kleur:'#6b3fa0',             prijs:170, bereik:170, schade:16, tempo:0.7,
+     neerzetten.
+     Zijn schokgolf was sterk, maar zijn gewone schot deed met 16 minder dan een
+     Katapult van 70 munten. Voor een toren die vijftig goede antwoorden op rij
+     kost hoort ook het schieten zelf het beste van het bord te zijn: 24. */
+  tonkla:    {naam:'Tonkla Toren', letter:'T',kleur:'#6b3fa0',             prijs:170, bereik:170, schade:24, tempo:0.7,
               onder:'Schokgolf om de 20 seconden', golf:70, golftijd:20, speciaal:true, slot:'tonkla'},
   /* De Apentoren verdien je door de apenbaas te verslaan. Zijn minigun schiet
      bananen: los stelt een banaan weinig voor, maar er komen er zoveel achter
@@ -1986,6 +2018,16 @@ function rekenVraag(rang, toegestaan) {
   var wachtrij = 5, spawnKlok = 0, rondePauze = 2;
   var bank = { munten:60, leven:12, ronde:1 };
   var reeks = 0, besteReeks = 0, goedAantal = 0, foutAantal = 0;
+  /* Doorleren maakt je torens sterker, niet alleen rijker. Twee procent extra
+     schade per goed antwoord op rij, tot vijftig procent bij vijfentwintig.
+
+     Hij loopt op een eigen teller. Bij een fout gaat 'reeks' naar nul, want de
+     muntbonus en het record horen dat te voelen. Maar een derde van je schade
+     kwijtraken midden in ronde veertig maakt een klas alleen maar bang om te
+     antwoorden, dus dit vuurtje halveert in plaats van uit te gaan: je bent er
+     in vijf goede antwoorden weer bovenop. */
+  var vuur = 0;
+  function reeksbonus(){ return 1 + Math.min(0.5, vuur * 0.02); }
   var TONKLAREEKS = 50, TONKLARONDE = 20;
   /* Eenmaal verdiend blijft hij verdiend, ook een volgende les. */
   var tonklaVrij = (function(){
@@ -2005,11 +2047,28 @@ function rekenVraag(rang, toegestaan) {
   function rang(){ var n = NIVEAUS.filter(function(x){ return x.id === niveau; })[0]; return n ? n.rang : 2; }
 
   /* ---------- het pad ---------- */
-  var PADLENGTE = (function(){
+  /* De lengte hoorde bij een pad dat nooit veranderde. Nu wordt er elk potje
+     een kaart geloot, dus rekenen we hem opnieuw uit zodra dat gebeurt. */
+  function padlengte(){
     var l = 0;
     for (var i = 1; i < PAD.length; i++) l += Math.hypot(PAD[i][0]-PAD[i-1][0], PAD[i][1]-PAD[i-1][1]);
     return l;
-  })();
+  }
+  var PADLENGTE = padlengte();
+  var kaart = KAARTEN[0];
+  var vorigeKaart = -1;
+  /* Loten, maar nooit twee keer achter elkaar dezelfde: dan voelt willekeurig
+     als kapot. De achtergrond met het gras en de keitjes wordt bewaard, dus die
+     moet weg zodra de weg ergens anders loopt. */
+  function kiesKaart(){
+    var i = Math.floor(Math.random() * KAARTEN.length);
+    if (KAARTEN.length > 1 && i === vorigeKaart) i = (i + 1 + Math.floor(Math.random() * (KAARTEN.length - 1))) % KAARTEN.length;
+    vorigeKaart = i;
+    kaart = KAARTEN[i];
+    PAD = kaart.pad;
+    PADLENGTE = padlengte();
+    ACHTERGROND = null;
+  }
   function positie(afstand){
     var rest = afstand;
     for (var i = 1; i < PAD.length; i++){
@@ -2150,10 +2209,20 @@ function rekenVraag(rang, toegestaan) {
     /* De fouten worden elke ronde taaier, maar een goed antwoord leverde altijd
        hetzelfde op. Dan loopt je bord onvermijdelijk achter. Vanaf nu telt de
        ronde mee, zodat late rondes de dure niveaus kunnen betalen. Het geld komt
-       nog steeds uit de vragen: doorleren blijft de manier om sterker te worden. */
-    var winst = goed ? Math.round((15 + Math.min(15, reeks * 3)) * (1 + (bank.ronde - 1) * 0.06)) : 0;
+       nog steeds uit de vragen: doorleren blijft de manier om sterker te worden.
+
+       De groei stond op zes procent per ronde en dat was te veel. Je verdiende
+       tot ronde vijftig ruim achttienduizend munten terwijl een vol bord met
+       alles op niveau drie er achtduizend kost, dus je hield meer dan het dubbele
+       over. Uitgeven was daardoor geen keuze meer: je kocht alles toch. Op drie
+       procent haalt wie snel en foutloos antwoordt zijn bord rond ronde
+       eenendertig vol, wie rustig antwoordt rond zevenendertig, en wie er
+       geregeld naast zit haalt het niet. De reeksbonus op schade heeft de rol
+       overgenomen die deze groei eerst speelde. */
+    var winst = goed ? Math.round((15 + Math.min(15, reeks * 3)) * (1 + (bank.ronde - 1) * 0.03)) : 0;
     gekliktIndex = i;
     reeks = goed ? reeks + 1 : 0;
+    vuur = goed ? vuur + 1 : Math.floor(vuur / 2);
     besteReeks = Math.max(besteReeks, reeks);
     if (!tonklaVrij && reeks >= TONKLAREEKS){
       tonklaVrij = true;
@@ -2318,7 +2387,7 @@ function rekenVraag(rang, toegestaan) {
      de baas die aan de beurt was, en hoe verder je komt hoe vaker. Hij vecht
      ook anders. In plaats van hard te slaan gooit hij bananenschillen naar je
      torens, en een toren die er een over zich heen krijgt staat even stil. */
-  var APENBAAS = { id:'aap', naam:'de apenbaas', taai:10, vlug:0.78, schild:0.3, mark:'A', kleur:'#8a6a45',
+  var APENBAAS = { id:'aap', naam:'de apenbaas', taai:10, vlug:0.78, schild:0.3, mark:'A', kleur:'#8a6a45', gooit:true,
     uit:'Hij is de taaiste van allemaal en legt je torens met bananenschillen stil.' };
   /* Hij gooit vaker, de schil ligt langer, hij mikt verder, en vanaf ronde
      dertig gooit hij er twee tegelijk. Zonder dat was hij vooral een baas met
@@ -2345,11 +2414,35 @@ function rekenVraag(rang, toegestaan) {
   /* Eenmaal geloot blijft het bij die baas, anders klopt de aankondiging die je
      tijdens de pauze ervoor te zien krijgt niet met wat er komt. */
   var baasKeuzes = {};
+  /* ---------- de eindbaas ----------
+     Ronde vijftig is waar een goed gespeeld bord tegen zijn plafond aan loopt,
+     dus daar hoort iets te staan dat alles vraagt wat je hebt geleerd. De
+     Grote Fout is geen vijfde soort in de beurtwisseling maar een examen: hij
+     heeft het schild van de schildbaas, het gooien van de apenbaas en het
+     uiteenvallen van de splijter, en hij is twee keer zo taai als de zwaarste
+     van de vier. Daar staat tegenover dat hij half zo hard loopt, dus je hebt
+     zesentwintig seconden om hem te vellen in plaats van zeventien.
+
+     Rekenwerk: bij 644 levens voor een gewone fout in ronde vijftig komt hij op
+     14.168, en met zijn schild reken je op ongeveer 18.000 voordat hij valt.
+     Een goed bord doet rond de 950 schade per seconde, dus je hebt hem er in
+     negentien seconden af, mits je bord die hele tijd op hem staat. Dat lukt
+     alleen als de rest van de ronde onder controle is. Precies de bedoeling.
+
+     Hij komt elke vijftigste ronde terug, want het spel houdt niet op. */
+  function isMegaRonde(n){ return n % 50 === 0; }
+  var MEGASCHADE = 6;
+  var MEGABAAS = { id:'mega', naam:'de Grote Fout', taai:22, vlug:0.38, schild:0.35,
+    mark:'\u2739', kleur:'#4a1230', splijt:6, gooit:true,
+    uit:'Hij heeft het schild, het gooien en het uiteenvallen van alle bazen tegelijk.' };
+
   function baasVan(ronde){
     if (!baasKeuzes[ronde]){
-      baasKeuzes[ronde] = (Math.random() < apenkans(ronde))
-        ? APENBAAS
-        : BAZEN[(Math.floor(ronde / BAASRONDE) - 1) % BAZEN.length];
+      baasKeuzes[ronde] = isMegaRonde(ronde)
+        ? MEGABAAS
+        : (Math.random() < apenkans(ronde))
+          ? APENBAAS
+          : BAZEN[(Math.floor(ronde / BAASRONDE) - 1) % BAZEN.length];
     }
     return baasKeuzes[ronde];
   }
@@ -2375,6 +2468,25 @@ function rekenVraag(rang, toegestaan) {
   var RUSTTAAI = 0.7, RUSTAANTAL = 0.65;
   function isBaasRonde(n){ return n % BAASRONDE === 0; }
 
+  /* ---------- de spaarpot ----------
+     Halverwege tussen twee bazen in, dus in ronde vijf, vijftien, vijfentwintig
+     en zo door. Hij is geen echte baas: geen penning, geen levens terug, en met
+     vier en een half keer de levens van een gewone fout ook lang niet zo taai
+     als de elf van de zware baas. Wat hij wel doet is betalen. Sinds het
+     inkomen per ronde op drie procent staat is een uitbetaling die je moet
+     verdienen meer waard dan een die vanzelf komt: laat je hem lopen, dan krijg
+     je niets en kost hij ook nog twee levens.
+
+     Hij leent de brede levensbalk van de baas, want dat is precies waar hij
+     voor bedoeld is: een doel waar je even alles op richt. */
+  function isMiniRonde(n){ return n % BAASRONDE === (BAASRONDE / 2); }
+  var MINISCHADE = 2;
+  var MINIBAAS = { id:'spaarpot', naam:'de spaarpot', taai:4.5, vlug:0.9, schild:0,
+    mark:'\u20ac', kleur:'#c9971f',
+    uit:'Hij draagt de munten van de klas. Vel hem en je krijgt ze allemaal.' };
+  function minibeloning(ronde){ return 60 + ronde * 8; }
+  var miniBijWachtrij = -1;
+
   /* ---------- soorten fouten ----------
      Vanaf bepaalde rondes komen er andere fouten bij, zodat je je torens moet
      bijstellen in plaats van er alleen meer neer te zetten. */
@@ -2392,10 +2504,25 @@ function rekenVraag(rang, toegestaan) {
        om hem te vinden. Wat op de weg ligt werkt wel: pek en voetangels hoeven
        niets te zien om te werken, dus je hebt altijd nog een tweede antwoord. */
     /* Hij kwam te vaak, was te taai en liep te hard voor iets waar maar een
-       toren op mag schieten. Nu is hij zeldzamer, zwakker en langzamer: hij is
-       een puzzel die je moet oplossen, geen ronde die je zomaar kost. */
-    { id:'camo', naam:'verstopte fout', vanaf:14, kans:1, mark:'?', kleur:'#5f7d55',
-      taai:0.55, vlug:0.8, schild:0, camo:true }
+       toren op mag schieten. Nu is hij zwakker en langzamer: hij is een puzzel
+       die je moet oplossen, geen ronde die je zomaar kost.
+
+       Hij was daarna alleen zo zeldzaam geworden dat je hem in de praktijk niet
+       meer zag. Vanaf ronde veertien met kans een op veertien betekende dat de
+       meeste potjes voorbij waren voordat hij een keer meeliep. Nu komt hij
+       vanaf ronde elf en is zijn kans twee op vijftien, dus ongeveer twee per
+       ronde: vaak genoeg om iets te zijn waar je op bouwt, niet zo vaak dat een
+       bord zonder Scherpschutter meteen omvalt. */
+    { id:'camo', naam:'verstopte fout', vanaf:11, kans:2, mark:'\u00bf', kleur:'#5f7d55',
+      taai:0.55, vlug:0.8, schild:0, camo:true },
+    /* De dikke fout. Vanaf ronde tweeentwintig werden de rondes wel langer maar
+       niet spannender: dertig fouten van dezelfde soort achter elkaar, allemaal
+       even taai. Deze is drie keer zo taai als een gewone, loopt trager en is
+       groter getekend, dus je pikt hem eruit en moet je vuur even bundelen.
+       Kans een op zestien: hij tilt de levens per ronde met vijftien procent op
+       en kost een goed bord ongeveer drie rondes aan plafond. */
+    { id:'dik', naam:'dikke fout', vanaf:22, kans:1, mark:'\u25c6', kleur:'#6b3fa0',
+      taai:3, vlug:0.7, schild:0, dik:true }
   ];
   /* Wie mag er op deze fout schieten? */
   function ziet(toren, e){ return !e || !e.camo || toren.soort === 'schutter'; }
@@ -2412,6 +2539,15 @@ function rekenVraag(rang, toegestaan) {
      moet je je bord de hele ronde op orde houden. */
   var baasBijWachtrij = -1;
   var baasAlarm = 0, pols = 0;
+  /* De balk boven aan het bord. baasSpook is de bleke balk die achter de echte
+     aan zakt: zonder dat zie je bij een harde klap alleen dat er iets korter
+     werd, niet hoeveel eraf ging. baasBalkIn laat hem in- en uitschuiven, zodat
+     hij niet ineens over het bord staat. */
+  var baasSpook = 1, baasBalkIn = 0, baasLaatst = null, baasBalk = null;
+  var alarmMini = false;
+  /* Hoeveel rondes je achter elkaar hebt overgeslagen, en of je deze pauze hebt
+     overgeslagen. */
+  var haast = 0, sprongOver = false;
   var camoGezien = false;   /* de uitleg over verstopte fouten komt maar een keer */
   var menu = null;      /* het keuzemenu, op de plek waar je tikte */
   var sleep = null;     /* de toren die je aan het verplaatsen bent */
@@ -2554,69 +2690,104 @@ function rekenVraag(rang, toegestaan) {
 /* De school aan het eind van het pad. Hoe minder levens, hoe havelozer hij
    erbij staat: ramen gaan stuk, er komen scheuren in de muur en de vlag zakt.
    Zo zie je in een oogopslag hoe je ervoor staat, ook van achter uit de klas. */
+  /* ---------- de klas ----------
+     Het gebouw was een plat vlak met een driehoek erop: geen dakrand, geen
+     voet, geen schaduw onder de overstek, en de schade zag je pas laat. Nu
+     valt het licht van linksboven zoals bij alles op het bord, staat hij op een
+     stenen plint in plaats van te zweven, en loopt het verval in acht stappen
+     in plaats van drie, zodat de klas je van een afstand vertelt hoe het gaat.
+
+     De maten blijven binnen wat magHier uitsluit voor bouwen, dus het gebouw
+     groeit niet buiten zijn plek. */
   function tekenKlas(cx, cy, leven, maxLeven){
   var deel = Math.max(0, Math.min(1, leven / maxLeven));
   var stuk = 1 - deel;                       /* 0 is gaaf, 1 is bijna weg */
   var kapot = function(n){ return stuk > n; };
   var s = '<g transform="translate(' + cx + ',' + cy + ')">';
 
-  /* schaduw */
-  s += '<ellipse cx="0" cy="42" rx="58" ry="9" fill="rgba(20,34,76,.18)"/>';
+  s += '<ellipse cx="0" cy="44" rx="60" ry="9" fill="rgba(20,34,76,.16)"/>';
 
-  /* het gebouw */
-  s += '<rect x="-46" y="-18" width="92" height="60" rx="4" fill="#efe7d8" stroke="#4a3826" stroke-width="2.5"/>';
-  /* baksteenlijnen */
-  s += '<path d="M-46,-4 h92 M-46,10 h92 M-46,24 h92" stroke="#d9cdb4" stroke-width="1.6"/>';
+  /* de plint: zonder deze rand staat het gebouw met zijn muur in het gras */
+  s += '<rect x="-50" y="34" width="100" height="11" rx="3" fill="#cfc6b4" stroke="#4a3826" stroke-width="2.2"/>';
+  s += '<rect x="-50" y="34" width="100" height="4" rx="2" fill="#fff" opacity=".18"/>';
 
-  /* het dak */
-  s += '<path d="M-54,-18 L0,-46 L54,-18 z" fill="#c0442c" stroke="#4a3826" stroke-width="2.5" stroke-linejoin="round"/>';
-  s += '<path d="M-54,-18 h108" stroke="#4a3826" stroke-width="2.5"/>';
+  /* de muur */
+  s += '<rect x="-46" y="-18" width="92" height="55" rx="3" fill="#f2ebdc" stroke="#4a3826" stroke-width="2.4"/>';
+  /* de zonkant links is lichter, de schaduwkant rechts donkerder */
+  s += '<rect x="16" y="-18" width="30" height="55" fill="rgba(20,34,76,.06)"/>';
+  /* de overstek van het dak werpt een schaduw op de muur eronder */
+  s += '<rect x="-46" y="-18" width="92" height="8" fill="rgba(20,34,76,.11)"/>';
+  s += '<path d="M-46,-3 h92 M-46,11 h92 M-46,25 h92" stroke="#ddd2ba" stroke-width="1.5"/>';
+
+  /* het dak, met pannenrijen en een lichte nok */
+  s += '<path d="M-54,-18 L0,-46 L54,-18 z" fill="#c0442c" stroke="#4a3826" stroke-width="2.4" stroke-linejoin="round"/>';
+  s += '<path d="M-38,-26 L38,-26 M-27,-32 L27,-32 M-16,-38 L16,-38" stroke="#a3341f" stroke-width="1.8" stroke-linecap="round"/>';
+  s += '<path d="M-52,-19 L0,-45" stroke="#d05c46" stroke-width="2.2" stroke-linecap="round" opacity=".45"/>';
+  /* de dakrand steekt over en heeft dus zijn eigen balk */
+  s += '<rect x="-57" y="-21" width="114" height="6" rx="3" fill="#a3341f" stroke="#4a3826" stroke-width="2"/>';
 
   /* het klokkentorentje */
-  s += '<rect x="-9" y="-64" width="18" height="20" rx="3" fill="#efe7d8" stroke="#4a3826" stroke-width="2.2"/>';
-  s += '<path d="M-12,-64 L0,-76 L12,-64 z" fill="#c0442c" stroke="#4a3826" stroke-width="2" stroke-linejoin="round"/>';
-  s += '<circle cx="0" cy="-54" r="5.5" fill="#fff" stroke="#4a3826" stroke-width="1.6"/>';
-  s += '<path d="M0,-57 L0,-54 L2.5,-52.5" stroke="#4a3826" stroke-width="1.4" fill="none" stroke-linecap="round"/>';
+  s += '<rect x="-9" y="-64" width="18" height="21" rx="3" fill="#f2ebdc" stroke="#4a3826" stroke-width="2.2"/>';
+  s += '<rect x="1" y="-64" width="8" height="21" fill="rgba(20,34,76,.07)"/>';
+  s += '<path d="M-13,-64 L0,-77 L13,-64 z" fill="#c0442c" stroke="#4a3826" stroke-width="2" stroke-linejoin="round"/>';
+  s += '<circle cx="0" cy="-54" r="5.8" fill="#fff" stroke="#4a3826" stroke-width="1.6"/>';
+  s += '<path d="M0,-57.5 L0,-54 L2.6,-52.4" stroke="#4a3826" stroke-width="1.4" fill="none" stroke-linecap="round"/>';
 
   /* de vlag, die zakt als het slecht gaat */
   var hoek = -8 + stuk * 74;   /* positief is met de klok mee, dus omlaag */
-  s += '<line x1="0" y1="-76" x2="0" y2="-92" stroke="#4a3826" stroke-width="2"/>';
-  s += '<g transform="translate(0,-90) rotate(' + hoek.toFixed(0) + ')">' +
+  s += '<line x1="0" y1="-77" x2="0" y2="-93" stroke="#4a3826" stroke-width="2"/>';
+  s += '<g transform="translate(0,-91) rotate(' + hoek.toFixed(0) + ')">' +
        '<path d="M0,0 L20,4 L0,8 z" fill="#EA9836" stroke="#4a3826" stroke-width="1.4" stroke-linejoin="round"/></g>';
 
-  /* de deur */
-  s += '<path d="M-11,42 L-11,14 a11,11 0 0 1 22,0 L11,42 z" fill="#8a6a45" stroke="#4a3826" stroke-width="2.2"/>';
-  s += '<circle cx="6" cy="30" r="1.8" fill="#EA9836"/>';
-  s += '<rect x="-16" y="38" width="32" height="5" rx="2" fill="#cfc6b4" stroke="#4a3826" stroke-width="1.6"/>';
-
-  /* vier ramen, die stuk gaan naarmate het slechter gaat */
-  var ramen = [[-34, 2], [-34, 24], [22, 2], [22, 24]];
-  var grens = [0.2, 0.45, 0.65, 0.85];
+  /* vier ramen. Warm licht betekent dat er nog les is; hoe meer er stuk gaat,
+     hoe meer er donker wordt. Dat is de duidelijkste meter die het gebouw heeft. */
+  var ramen = [[-35, 0], [-35, 20], [21, 0], [21, 20]];
+  var grens = [0.18, 0.42, 0.62, 0.84];
   ramen.forEach(function(r, i){
     var heel = !kapot(grens[i]);
-    s += '<rect x="' + r[0] + '" y="' + r[1] + '" width="16" height="14" rx="2" fill="' +
-      (heel ? '#9dc0e5' : '#3b3730') + '" stroke="#4a3826" stroke-width="1.8"/>';
+    s += '<rect x="' + r[0] + '" y="' + r[1] + '" width="16" height="15" rx="2" fill="' +
+      (heel ? '#f6d98a' : '#3b3730') + '" stroke="#4a3826" stroke-width="1.8"/>';
     if (heel){
-      s += '<path d="M' + (r[0]+8) + ',' + r[1] + ' v14 M' + r[0] + ',' + (r[1]+7) + ' h16" ' +
-        'stroke="#4a3826" stroke-width="1.2" opacity=".7"/>';
+      s += '<path d="M' + (r[0]+8) + ',' + r[1] + ' v15 M' + r[0] + ',' + (r[1]+7.5) + ' h16" ' +
+        'stroke="#4a3826" stroke-width="1.2" opacity=".65"/>';
+      /* een streepje glas linksboven, dezelfde lichtinval als de rest van het bord */
+      s += '<path d="M' + (r[0]+2) + ',' + (r[1]+6) + ' L' + (r[0]+6) + ',' + (r[1]+1.5) + '" ' +
+        'stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity=".3"/>';
     } else {
-      s += '<path d="M' + (r[0]+2) + ',' + (r[1]+2) + ' l12,10 M' + (r[0]+14) + ',' + (r[1]+2) +
-        ' l-12,10" stroke="#efe7d8" stroke-width="1.4" opacity=".8"/>';
+      s += '<path d="M' + (r[0]+2) + ',' + (r[1]+2) + ' l12,11 M' + (r[0]+14) + ',' + (r[1]+2) +
+        ' l-12,11" stroke="#8a8172" stroke-width="1.4"/>';
+      /* roetvegen boven een kapot raam */
+      s += '<path d="M' + (r[0]+3) + ',' + (r[1]-1) + ' q5,-7 11,-1" fill="none" ' +
+        'stroke="rgba(20,34,76,.28)" stroke-width="4" stroke-linecap="round"/>';
     }
   });
 
-  /* scheuren in de muur */
-  if (kapot(0.5)) s += '<path d="M-24,42 l6,-14 l-5,-8 l7,-10" fill="none" stroke="#4a3826" stroke-width="2.4" opacity=".85"/>';
-  if (kapot(0.75)) s += '<path d="M30,-18 l-5,12 l6,9 l-4,10" fill="none" stroke="#4a3826" stroke-width="2.4" opacity=".85"/>';
-  /* een gat in het dak */
-  if (kapot(0.9)) s += '<path d="M10,-24 l10,-8 l9,9 z" fill="#3b3730" stroke="#4a3826" stroke-width="1.6" stroke-linejoin="round"/>';
+  /* de deur, met een drempel en licht dat naar buiten valt zolang het goed gaat */
+  if (!kapot(0.62)){
+    s += '<path d="M-13,37 L-13,14 a13,13 0 0 1 26,0 L13,37 z" fill="#f6d98a" opacity=".3"/>';
+  }
+  s += '<path d="M-11,37 L-11,14 a11,11 0 0 1 22,0 L11,37 z" fill="#8a6a45" stroke="#4a3826" stroke-width="2.2"/>';
+  s += '<path d="M-11,20 a11,11 0 0 1 11,-9" fill="none" stroke="#fff" stroke-width="1.6" opacity=".12"/>';
+  s += '<path d="M0,11 L0,37" stroke="#5f4830" stroke-width="1.4" opacity=".8"/>';
+  s += '<circle cx="5" cy="26" r="1.9" fill="#EA9836"/>';
+  /* het naambordje boven de deur */
+  s += '<rect x="-15" y="-8" width="30" height="8" rx="2" fill="#204ECF" stroke="#4a3826" stroke-width="1.4" opacity=".9"/>';
+  s += '<path d="M-11,-4 h22" stroke="#fff" stroke-width="1.6" opacity=".65"/>';
 
-  s += '<text x="0" y="60" font-size="13" font-weight="600" fill="#5b6480" text-anchor="middle">de klas</text>';
+  /* scheuren in de muur, en uiteindelijk een gat in het dak */
+  if (kapot(0.3)) s += '<path d="M-24,37 l5,-12 l-4,-7 l6,-9" fill="none" stroke="#4a3826" stroke-width="2.2" opacity=".8"/>';
+  if (kapot(0.55)) s += '<path d="M32,-10 l-5,11 l6,8 l-4,9" fill="none" stroke="#4a3826" stroke-width="2.2" opacity=".8"/>';
+  if (kapot(0.72)) s += '<path d="M-40,-15 l-4,9 l5,7" fill="none" stroke="#4a3826" stroke-width="2" opacity=".7"/>';
+  if (kapot(0.88)){
+    s += '<path d="M9,-25 l11,-9 l10,10 z" fill="#3b3730" stroke="#4a3826" stroke-width="1.6" stroke-linejoin="round"/>';
+    s += '<path d="M-22,-30 l8,-5 l3,7 z" fill="#3b3730" stroke="#4a3826" stroke-width="1.4" stroke-linejoin="round"/>';
+  }
+
+  s += '<text x="0" y="62" font-size="13" font-weight="600" fill="#5b6480" text-anchor="middle">de klas</text>';
   s += '</g>';
   return s;
 }
 
-  /* Een fout raken: schade, een flits, een schadecijfer en bij nul deeltjes. */
   function raakVijand(e, schade, vertragen){
     if (!e || e.dood) return;
     /* Een schild slikt een deel van de klap, tot het onder de helft van de
@@ -2642,21 +2813,53 @@ function rekenVraag(rang, toegestaan) {
         pluis.push({ x:q.x, y:q.y, vx:Math.cos(h)*v, vy:Math.sin(h)*v,
                      leven:0.5, kleur:e.baas ? '#7d1f12' : '#c0442c' });
       }
-      if (e.baas){
+      if (e.baas && e.mini){
+        /* De spaarpot betaalt en verder niets: geen penning, geen levens terug.
+           Zijn hele bestaansreden is dat hij weg kan lopen met het geld. */
+        var buit = minibeloning(bank.ronde);
+        bank.munten += buit;
+        laatMuntZien(buit);
+        for (var m2 = 0; m2 < 12; m2++){
+          var hm = Math.random() * Math.PI * 2, vm = 50 + Math.random() * 80;
+          pluis.push({ x:q.x, y:q.y, vx:Math.cos(hm)*vm, vy:Math.sin(hm)*vm,
+                       leven:0.6, kleur:'#EFC64A' });
+        }
+        cijfers.push({ x:q.x, y:q.y - 40, tekst:'+' + buit, leven:1.1, kleur:'#c9971f' });
+        melding2('De spaarpot is gebroken. ' + buit + ' munten voor de klas.');
+      } else if (e.baas){
         /* Een baas in ronde veertig is veel meer werk dan een in ronde tien, dus
            hij betaalt ook meer uit. */
         var beloning = BAASBELONING + bank.ronde * 5;
+        if (e.mega) beloning += 800;
         bank.munten += beloning;
         laatMuntZien(beloning);
-        penningen++;
+        penningen += e.mega ? 3 : 1;
+        /* Levens kwamen nooit terug. Over vijftig rondes lopen er 1433 fouten
+           over het pad en je begint met twaalf levens, dus je moest 99,2 procent
+           vellen zonder marge: een slechte ronde in de twintig kostte je de
+           partij dertig rondes later. Een geveld baas lapt de school weer op,
+           twee levens, nooit boven de twaalf uit. Repareren dus, geen groei.
+           De Grote Fout lapt hem helemaal op, want wie hem velt heeft dat
+           verdiend en gaat de tweede vijftig rondes in. */
+        var heel = Math.min(e.mega ? 12 : 2, 12 - bank.leven);
+        if (heel > 0) bank.leven += heel;
+        var levenUit = heel > 0
+          ? (heel === 1 ? ', een leven terug' : ', ' + heel + ' levens terug')
+          : '';
         var eersteAap = e.baassoort === 'aap' && !aapVrij;
         if (eersteAap){
           aapVrij = true;
           try { localStorage.setItem('lg-toren-aap', 'ja'); } catch (x3){}
         }
-        melding2(eersteAap
-          ? 'Apenbaas geveld. ' + beloning + ' munten, een penning, en de Apentoren is vrij.'
-          : 'Baas geveld. ' + beloning + ' munten en een penning. Tik een toren aan.');
+        melding2(e.mega
+          ? 'De Grote Fout is geveld. Ronde ' + bank.ronde + ' gehaald: ' + beloning +
+            ' munten, drie penningen' + (heel > 0 ? ', de school is weer heel' : '') +
+            '. Hij spat nog uiteen in ' + e.splijt + ' snelle fouten, dus maak af.'
+          : eersteAap
+            ? 'Apenbaas geveld. ' + beloning + ' munten, een penning' + levenUit +
+              ', en de Apentoren is vrij.'
+            : 'Baas geveld. ' + beloning + ' munten, een penning' + levenUit +
+              '. Tik een toren aan.');
         if (e.splijt){
           for (var z = 0; z < e.splijt; z++){
             var shp = Math.max(1, Math.round(e.basisHp * 0.5));
@@ -2664,7 +2867,10 @@ function rekenVraag(rang, toegestaan) {
                             snelheid:e.basisSnel * 1.5, traag:0, mark:'\u00bb',
                             soort:'snel', kleur:'#EA9836', schild:0 });
           }
-          melding2('De splijter valt uiteen in ' + e.splijt + ' snelle fouten.');
+          /* Bij de Grote Fout zou deze regel de zin overschrijven waarin staat
+             dat je ronde vijftig hebt gehaald, en dat is de zin die je wilt
+             lezen. Die vermeldt het uiteenvallen zelf al. */
+          if (!e.mega) melding2('De splijter valt uiteen in ' + e.splijt + ' snelle fouten.');
         }
       }
     }
@@ -2721,7 +2927,251 @@ function rekenVraag(rang, toegestaan) {
       g += '<circle cx="' + kx.toFixed(0) + '" cy="' + ky.toFixed(0) + '" r="' +
         (1.5 + toeval() * 2).toFixed(1) + '" fill="#b5a689" opacity=".8"/>';
     }
+    /* De naam van de geloote kaart, klein en rustig linksonder. Hij hoort bij de
+       tekening en verandert alleen als de kaart verandert, dus hij mag mee in
+       het bewaarde plaatje. */
+    g += '<text x="14" y="' + (HOOG - 13) + '" font-size="12" font-weight="600" ' +
+      'fill="#4a5470" opacity=".85">' + kaart.naam + '</text>';
     ACHTERGROND = g;
+    return g;
+  }
+
+  /* ---------- hoe een fout eruitziet ----------
+     Alles was een cirkel met een letter erin. Op een digibord van achter uit de
+     klas is dat elf keer dezelfde stip in een andere kleur, en kleur alleen is
+     geen informatie voor wie er niet goed op ziet. Nu heeft elke soort zijn
+     eigen omtrek, en die lees je ook als je het teken niet kunt onderscheiden.
+
+     Twee groepen, want ze draaien niet allebei mee. Het lijf draait naar de
+     richting van de weg, zodat een snelle fout met zijn punt vooruit loopt en
+     een schild aan de voorkant zit. Wat 'boven' betekent draait juist niet mee:
+     horens, een kroon, oren en de gleuf van de spaarpot horen omhoog te wijzen,
+     hoe de weg ook loopt. Het teken in het midden staat om dezelfde reden recht.
+
+     Alle maten zijn een veelvoud van r, dus een baas van 36 en een gewone fout
+     van 13 krijgen dezelfde vorm op hun eigen formaat. */
+  /* Een tint van dezelfde kleur, donkerder bij een positieve factor en lichter
+     bij een negatieve. Daarmee krijgt elke fout een omlijning in zijn eigen
+     kleur in plaats van overal hetzelfde wit. Wit rondom maakt er stickers van
+     en vreet bij een kleine fout van dertien pixels het halve lijf op. */
+  function tint(hex, f){
+    if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return 'rgba(20,34,76,.55)';
+    var n = parseInt(hex.slice(1), 16);
+    var r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    if (f < 0){
+      var t = -f;
+      r = Math.round(r + (255 - r) * t); g = Math.round(g + (255 - g) * t); b = Math.round(b + (255 - b) * t);
+    } else {
+      r = Math.round(r * (1 - f)); g = Math.round(g * (1 - f)); b = Math.round(b * (1 - f));
+    }
+    return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+  }
+
+  function vijandLijf(e, r, vul, sw){
+    var dash = e.camo ? ' stroke-dasharray="' + (r * 0.32).toFixed(1) + ' ' + (r * 0.24).toFixed(1) + '"' : '';
+    var lijn = tint(vul, 0.42);
+    var rand = ' fill="' + vul + '" stroke="' + lijn + '" stroke-width="' +
+      Math.max(1.4, r * 0.11).toFixed(1) + '"' + dash;
+    function n(v){ return (r * v).toFixed(1); }
+    var soort = e.baas ? (e.baassoort || 'baas') : e.soort;
+
+    /* de snelle fout en de snelle baas: een druppel met de punt vooruit */
+    if (soort === 'snel'){
+      return '<path d="M' + n(1.5) + ',0 C' + n(0.75) + ',' + n(0.98) + ' ' + n(-0.7) + ',' + n(1.02) +
+        ' ' + n(-1.02) + ',0 C' + n(-0.7) + ',' + n(-1.02) + ' ' + n(0.75) + ',' + n(-0.98) +
+        ' ' + n(1.5) + ',0 Z"' + rand + '/>';
+    }
+    /* de zwerm: drie klonten die samen oplopen, geen nette bol */
+    if (soort === 'zwerm'){
+      return '<circle cx="' + n(0.42) + '" cy="' + n(-0.34) + '" r="' + n(0.7) + '"' + rand + '/>' +
+             '<circle cx="' + n(-0.44) + '" cy="' + n(-0.06) + '" r="' + n(0.62) + '"' + rand + '/>' +
+             '<circle cx="' + n(0.1) + '" cy="' + n(0.44) + '" r="' + n(0.66) + '"' + rand + '/>';
+    }
+    /* de dikke fout: een blok met afgeronde hoeken, zwaarder dan een cirkel */
+    if (soort === 'dik'){
+      return '<rect x="' + n(-0.93) + '" y="' + n(-0.93) + '" width="' + n(1.86) +
+        '" height="' + n(1.86) + '" rx="' + n(0.42) + '"' + rand + '/>' +
+        '<circle cx="' + n(-0.58) + '" cy="' + n(-0.58) + '" r="' + n(0.11) + '" fill="' + tint(vul, 0.3) + '"/>' +
+        '<circle cx="' + n(0.58) + '" cy="' + n(0.58) + '" r="' + n(0.11) + '" fill="' + tint(vul, 0.3) + '"/>';
+    }
+    /* alles met een schild: bol met een plaat over de voorkant. De plaat liep
+       eerst van rand tot rand en dan blijft er een donut over waar de kleur van
+       de fout niet meer in te zien is. Nu dekt hij de voorste honderdtwintig
+       graden af, licht van kleur zodat je hem los ziet van het lijf. */
+    if (soort === 'schild'){
+      return '<circle cx="0" cy="0" r="' + n(1) + '"' + rand + '/>' +
+        '<path d="M' + n(0.5) + ',' + n(-0.87) + ' A ' + n(1) + ' ' + n(1) +
+        ' 0 0 1 ' + n(0.5) + ',' + n(0.87) + '" fill="none" stroke="#9dc0e5" ' +
+        'stroke-width="' + n(0.26) + '" stroke-linecap="round"/>' +
+        '<path d="M' + n(0.5) + ',' + n(-0.87) + ' A ' + n(1) + ' ' + n(1) +
+        ' 0 0 1 ' + n(0.5) + ',' + n(0.87) + '" fill="none" stroke="rgba(255,255,255,.55)" ' +
+        'stroke-width="' + n(0.07) + '" stroke-linecap="round"/>';
+    }
+    /* de verstopte fout: een bol met blaadjes langs de rand */
+    if (soort === 'camo'){
+      var g = '<circle cx="0" cy="0" r="' + n(1) + '"' + rand + '/>';
+      for (var i = 0; i < 6; i++){
+        var hk = i * 60;
+        g += '<ellipse cx="' + n(1.0) + '" cy="0" rx="' + n(0.34) + '" ry="' + n(0.19) +
+          '" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' +
+          Math.max(1, r * 0.075).toFixed(1) + '" transform="rotate(' + hk + ')"/>';
+      }
+      return g;
+    }
+    /* de splijter: een bol met een barst er dwars doorheen */
+    if (soort === 'splijt'){
+      return '<circle cx="0" cy="0" r="' + n(1) + '"' + rand + '/>' +
+        '<path d="M' + n(-0.95) + ',' + n(-0.2) + ' L' + n(-0.3) + ',' + n(0.12) +
+        ' L' + n(0.05) + ',' + n(-0.3) + ' L' + n(0.5) + ',' + n(0.1) +
+        ' L' + n(0.95) + ',' + n(-0.16) + '" fill="none" stroke="' + tint(vul, -0.55) + '" ' +
+        'stroke-width="' + n(0.15) + '" stroke-linejoin="round" stroke-linecap="round"/>';
+    }
+    /* de spaarpot: een buik met een snuit vooruit */
+    if (soort === 'spaarpot'){
+      return '<ellipse cx="0" cy="0" rx="' + n(1.12) + '" ry="' + n(0.95) + '"' + rand + '/>' +
+        '<ellipse cx="' + n(1.02) + '" cy="0" rx="' + n(0.3) + '" ry="' + n(0.24) +
+        '" fill="' + tint(vul, 0.3) + '"/>';
+    }
+    /* de Grote Fout: een bol met een gekartelde rand, alsof hij uit stukken bestaat */
+    if (soort === 'mega'){
+      var d = '';
+      for (var k = 0; k < 14; k++){
+        var a = k / 14 * Math.PI * 2, straal = k % 2 ? 1.0 : 1.16;
+        d += (k ? 'L' : 'M') + (Math.cos(a) * r * straal).toFixed(1) + ',' +
+             (Math.sin(a) * r * straal).toFixed(1) + ' ';
+      }
+      return '<path d="' + d + 'Z"' + rand + ' stroke-linejoin="round"/>' +
+        '<circle cx="0" cy="0" r="' + n(0.74) + '" fill="' + tint(vul, -0.16) + '"/>';
+    }
+    /* de gewone fout en de zware baas: een ei, net geen cirkel, met een donkere
+       onderkant zodat hij bol lijkt in plaats van plat */
+    return '<ellipse cx="0" cy="0" rx="' + n(1) + '" ry="' + n(0.94) + '"' + rand + '/>' +
+      '<path d="M' + n(-0.8) + ',' + n(0.42) + ' A ' + n(1) + ' ' + n(0.94) +
+      ' 0 0 0 ' + n(0.8) + ',' + n(0.42) + '" fill="none" stroke="' + tint(vul, 0.2) + '" ' +
+      'stroke-width="' + n(0.2) + '" stroke-linecap="round" opacity=".8"/>';
+  }
+
+  /* Een lichtplekje linksboven. Dit draait bewust niet mee met de weg: licht
+     komt uit een vaste hoek, anders rolt de glans over het lijf heen als een
+     fout een bocht neemt en ziet het er nat uit in plaats van bol. */
+  function vijandGlans(e, r){
+    var soort = e.baas ? (e.baassoort || 'baas') : e.soort;
+    /* De glans stond op .26 en dat was over het hele bord bij elkaar te veel:
+       twintig vijanden en veertien torens die allemaal glimmen leest als nat
+       plastic. Op .12 zie je nog steeds dat het bol is, zonder dat het blinkt. */
+    var op = soort === 'camo' ? 0.07 : 0.12;
+    return '<ellipse cx="' + (r * -0.3).toFixed(1) + '" cy="' + (r * -0.4).toFixed(1) +
+      '" rx="' + (r * 0.36).toFixed(1) + '" ry="' + (r * 0.25).toFixed(1) +
+      '" fill="#fff" opacity="' + op + '" transform="rotate(-28 ' +
+      (r * -0.3).toFixed(1) + ' ' + (r * -0.4).toFixed(1) + ')"/>';
+  }
+
+  /* Wat omhoog hoort te wijzen, ongeacht welke kant de weg op gaat. Dit wordt
+     achter het lijf getekend, zodat het er alleen bovenuit steekt. */
+  function vijandKroon(e, r){
+    function n(v){ return (r * v).toFixed(1); }
+    if (e.baassoort === 'aap'){
+      return '<circle cx="' + n(-0.86) + '" cy="' + n(-0.78) + '" r="' + n(0.33) +
+        '" fill="#a8845c" stroke="#5f4830" stroke-width="1.6"/>' +
+        '<circle cx="' + n(0.86) + '" cy="' + n(-0.78) + '" r="' + n(0.33) +
+        '" fill="#a8845c" stroke="#5f4830" stroke-width="1.6"/>';
+    }
+    if (e.mega){
+      /* vijf punten, als een kroon */
+      var g = '';
+      for (var i = 0; i < 5; i++){
+        var hk = -90 + (i - 2) * 26;
+        g += '<path d="M' + n(-0.24) + ',' + n(-0.92) + ' L0,' + n(-1.58) + ' L' + n(0.24) + ',' +
+          n(-0.92) + ' Z" fill="#EFC64A" stroke="#a8842a" stroke-width="1.4" ' +
+          'stroke-linejoin="round" transform="rotate(' + (hk + 90) + ')"/>';
+      }
+      return g;
+    }
+    if (e.baassoort === 'zwaar'){
+      /* twee horens */
+      return '<path d="M' + n(-0.88) + ',' + n(-0.5) + ' L' + n(-1.34) + ',' + n(-1.36) +
+        ' L' + n(-0.3) + ',' + n(-0.94) + ' Z" fill="#5c150c" stroke="#3a0d07" stroke-width="1.4" stroke-linejoin="round"/>' +
+        '<path d="M' + n(0.88) + ',' + n(-0.5) + ' L' + n(1.34) + ',' + n(-1.36) +
+        ' L' + n(0.3) + ',' + n(-0.94) + ' Z" fill="#5c150c" stroke="#3a0d07" stroke-width="1.4" stroke-linejoin="round"/>';
+    }
+    if (e.baassoort === 'spaarpot'){
+      /* de gleuf waar de munten in gaan */
+      return '<rect x="' + n(-0.4) + '" y="' + n(-1.14) + '" width="' + n(0.8) +
+        '" height="' + n(0.27) + '" rx="' + n(0.135) + '" fill="#6b4f0e" stroke="#8a6a1f" stroke-width="1.3"/>';
+    }
+    return '';
+  }
+
+  /* ---------- de poort ----------
+     De fouten kwamen uit het niets: ze schoven de linkerrand binnen alsof ze
+     door de muur liepen. Nu staat er aan het begin van de weg een oude poort
+     met een donkere doorgang, en daar komen ze uit. Dat scheelt niet alleen in
+     hoe het eruitziet: je weet nu waar je moet kijken als een ronde begint, en
+     dat is op een digibord de helft van het werk.
+
+     Hij staat op zesenveertig pixels langs het pad, net binnen het bord, en
+     draait mee met de richting van de weg. Alle vier de kaarten beginnen links
+     op x = -40, dus in de praktijk staat hij altijd links, maar met de draaiing
+     erbij blijft hij kloppen als er ooit een kaart bijkomt die ergens anders
+     begint. */
+  var poortFlits = 0;
+  /* Waar de poort staat, gemeten langs het pad. Fouten verschijnen op dit punt
+     en niet meer op nul, want anders komen ze niet uit de poort maar lopen ze
+     er van buiten het bord naartoe.
+
+     Zevenenveertig, want dan valt de achterste balk precies op x is nul. Op
+     zeventig stond hij twintig pixels naar binnen en lag er een stuk weg voor
+     hem waar nooit iets op gebeurde: een doodlopend stukje asfalt dat nergens
+     vandaan kwam. Nu sluit hij aan op de rand van het bord.
+
+     De fouten verschijnen nog zestien pixels verderop (zie SPAWNAF), dus het
+     kost bij elkaar vierenzestig pixels aan looplengte: ruim vier procent van
+     het pad en dus evenveel schiettijd. Minder dan een ronde aan plafond, en
+     het leek me het waard: je weet nu waar een ronde begint. */
+  var POORTAF = 48;
+  /* Waar de fouten precies verschijnen, apart van waar de poort staat. Op de
+     poort zelf kwam een baas van tweeëntwintig pixels breed half buiten het
+     bord tevoorschijn, want zijn middelpunt lag op acht. Zestien pixels verder
+     staat hij helemaal op het bord en nog steeds binnen de donkere doorgang,
+     die van twee tot zesenveertig loopt. */
+  var SPAWNAF = POORTAF + 16;
+  function tekenPoort(){
+    /* Het anker ligt op vijftig pixels langs het pad. Alle vorm zit vóór dat
+       punt, want de eerste poging had zijn halve bouwwerk op negatieve x staan
+       en dan valt hij van het bord af: de kaarten beginnen op x = -40 en het
+       bord begint pas op nul. Zo staat hij er nu helemaal op, en komen de
+       fouten van achter de achterste balk vandaan gelopen. */
+    var q = positie(POORTAF), hk = padHoek(q.x, q.y);
+    var vlam = Math.min(1, poortFlits / 0.45);
+    var g = '<g transform="translate(' + q.x.toFixed(1) + ',' + q.y.toFixed(1) +
+      ') rotate(' + hk.toFixed(1) + ')">';
+    /* de schaduw die de poort op de weg werpt */
+    g += '<rect x="-6" y="-26" width="34" height="52" rx="10" fill="#2b2620" opacity=".82"/>';
+    /* de gloed die opvlamt zodra er iets uit komt */
+    g += '<ellipse cx="' + (2 + vlam * 4).toFixed(1) + '" cy="0" rx="' + (9 + vlam * 9).toFixed(1) +
+      '" ry="' + (18 + vlam * 5).toFixed(1) + '" fill="#EA9836" opacity="' +
+      (0.12 + vlam * 0.42).toFixed(2) + '"/>';
+    /* de achterste balk: hier komen ze vandaan */
+    g += '<rect x="-8" y="-38" width="13" height="76" rx="5" fill="url(#steen)" ' +
+      'stroke="#6f6656" stroke-width="2.2"/>';
+    g += '<path d="M-4,-34 v68" stroke="#fff" stroke-width="2" opacity=".18" stroke-linecap="round"/>';
+    /* de twee stijlen langs de weg */
+    [-1, 1].forEach(function(k){
+      var y0 = k < 0 ? -38 : 22;
+      g += '<rect x="-8" y="' + y0 + '" width="40" height="16" rx="5" fill="url(#steen)" ' +
+        'stroke="#6f6656" stroke-width="2.2"/>';
+      g += '<path d="M-4,' + (y0 + 4) + ' h32" stroke="#fff" stroke-width="2" ' +
+        'opacity="' + (k < 0 ? '.2' : '.1') + '" stroke-linecap="round"/>';
+      g += '<path d="M6,' + y0 + ' v16 M19,' + y0 + ' v16" stroke="#a89e8a" ' +
+        'stroke-width="1.4" opacity=".6"/>';
+    });
+    /* mos, want hij staat er al even */
+    g += '<path d="M28,-36 q6,6 1,13 M28,25 q6,7 1,13" fill="none" stroke="#5f7d55" ' +
+      'stroke-width="3.4" stroke-linecap="round" opacity=".5"/>';
+    /* een bordje op de achterste balk, met de kant van de weg mee */
+    g += '<rect x="-6" y="-9" width="9" height="18" rx="2" fill="#c0442c" ' +
+      'stroke="#4a3826" stroke-width="1.4" opacity=".9"/>';
+    g += '</g>';
     return g;
   }
 
@@ -2732,6 +3182,8 @@ function rekenVraag(rang, toegestaan) {
     /* de klas aan het eind, met de schade die hij tot nu toe opliep */
     var eind = PAD[PAD.length-1];
     s += tekenKlas(eind[0] + 4, eind[1] - 30, bank.leven, 12);
+    /* de poort waar de fouten uit komen, aan het begin van de weg */
+    s += tekenPoort();
 
     /* Wat er op de weg ligt. Alles wordt getekend in zijn eigen assenstelsel,
        met de x-as langs de weg, en daarna gedraaid naar de richting van het pad.
@@ -2866,8 +3318,15 @@ function rekenVraag(rang, toegestaan) {
       var bezig = (sleep && sleep.toren === t) || verplaats === t;
       var hoek = t.mikt || 0;
       var terug = Math.max(0, t.terugslag || 0) * 4;
+      /* De rand was standaard wit en drie pixels dik. Dat maakt van elke toren
+         een knop, en zeven knoppen in zeven kleuren lijken op een afstand
+         precies hetzelfde. Nu is de rustrand een steenkleur en valt hij weg;
+         alleen een toren die iets is (geselecteerd, verplaatst, of met een
+         penning) krijgt een opvallende rand, en dan ook een dikkere. */
+      var opvallend = bezig || (menu && menu.toren === t) || t.kracht;
       var rand = bezig ? ((sleep && !sleep.geldig) ? '#c0442c' : '#204ECF')
-                       : (menu && menu.toren === t ? '#204ECF' : (t.kracht ? '#EA9836' : '#fff'));
+                       : (menu && menu.toren === t ? '#204ECF' : (t.kracht ? '#EA9836' : '#7e7466'));
+      var randB = opvallend ? 3.2 : 2;
 
       /* hoe sterker de toren, hoe steviger zijn voet, maar na niveau drie
          groeit hij trager: anders staan twee torens tegen elkaar aan */
@@ -2878,18 +3337,21 @@ function rekenVraag(rang, toegestaan) {
         '" ry="' + (voet * 0.36).toFixed(1) + '" fill="rgba(20,34,76,.18)"/>';
       /* de voet: stenen ring met een lichtval van linksboven */
       s += '<circle cx="' + t.x + '" cy="' + t.y + '" r="' + voet + '" fill="url(#steen)" stroke="' +
-        rand + '" stroke-width="3"/>';
-      /* blokjes in de rand, zodat het metselwerk lijkt */
-      for (var b2 = 0; b2 < 8; b2++){
-        var hk2 = b2 / 8 * Math.PI * 2;
-        s += '<line x1="' + (t.x + Math.cos(hk2) * (voet - 5)).toFixed(1) + '" y1="' +
-          (t.y + Math.sin(hk2) * (voet - 5)).toFixed(1) + '" x2="' +
-          (t.x + Math.cos(hk2) * voet).toFixed(1) + '" y2="' +
-          (t.y + Math.sin(hk2) * voet).toFixed(1) + '" stroke="#a89e8a" stroke-width="1.4" opacity=".7"/>';
-      }
-      s += '<circle cx="' + t.x + '" cy="' + t.y + '" r="' + (voet - 6) + '" fill="' + kl + '"/>';
-      s += '<circle cx="' + (t.x - 3) + '" cy="' + (t.y - 4) + '" r="' + (voet - 10) +
-        '" fill="#fff" opacity=".16"/>';
+        rand + '" stroke-width="' + randB + '"/>';
+      /* De acht metselstreepjes zijn eruit. Op vijftien pixels lees je die niet
+         als steen maar als ruis. Een donkere onderrand doet meer: die geeft de
+         voet hoogte in plaats van hem plat op het gras te leggen. */
+      s += '<path d="M' + (t.x - voet * 0.8).toFixed(1) + ',' + (t.y + voet * 0.4).toFixed(1) +
+        ' A ' + voet + ' ' + voet + ' 0 0 0 ' + (t.x + voet * 0.8).toFixed(1) + ',' +
+        (t.y + voet * 0.4).toFixed(1) + '" fill="none" stroke="rgba(20,34,76,.13)" stroke-width="' +
+        (voet * 0.24).toFixed(1) + '" stroke-linecap="round"/>';
+      /* het platform in de kleur van de toren, met een donkerder kraag eromheen */
+      s += '<circle cx="' + t.x + '" cy="' + t.y + '" r="' + (voet - 3.5) + '" fill="' + tint(kl, -0.14) +
+        '" stroke="' + tint(kl, 0.3) + '" stroke-width="1.6"/>';
+      s += '<ellipse cx="' + (t.x - voet * 0.28).toFixed(1) + '" cy="' + (t.y - voet * 0.34).toFixed(1) +
+        '" rx="' + (voet * 0.4).toFixed(1) + '" ry="' + (voet * 0.26).toFixed(1) +
+        '" fill="#fff" opacity=".11" transform="rotate(-28 ' + (t.x - voet * 0.28).toFixed(1) +
+        ' ' + (t.y - voet * 0.34).toFixed(1) + ')"/>';
       /* De oren van de Apentoren draaien niet mee, anders staat zijn kop scheef
          zodra hij een fout volgt. */
       if (t.soort === 'aap'){
@@ -2909,84 +3371,113 @@ function rekenVraag(rang, toegestaan) {
          de pekelpot een borrelende pot, de scherpschutter een vizier en de
          Tonkla Toren een bliksem. */
       var pen = !!t.kracht;
+      /* Alle bovenstukken waren hetzelfde donkerbruin, dus zeven torens hadden
+         zeven identieke loopjes op een schijf in een andere kleur. Nu is het
+         bovenstuk getint uit de kleur van de toren zelf: een Kanon heeft een
+         rode loop, een Scherpschutter een donkerrode, de Vertrager een oranje.
+         Dat maakt van elke toren een geheel in plaats van een badge met een
+         accessoire erop. */
+      var mDonker = tint(kl, 0.68), mMid = tint(kl, 0.44), mZwart = tint(kl, 0.8);
       if (t.soort === 'kanon'){
         if (pen){
           /* de bovenste loop hoort bij t.loop 0, de onderste bij 1 */
           var tb = t.loop ? 0 : terug, to = t.loop ? terug : 0;
-          s += '<rect x="' + (3 - tb) + '" y="-10" width="22" height="8" rx="3" fill="#4a3826"/>' +
+          s += '<rect x="' + (3 - tb) + '" y="-10" width="22" height="8" rx="3" fill="' + mDonker + '"/>' +
                '<rect x="' + (22 - tb) + '" y="-10" width="3.4" height="8" rx="1.7" fill="#EA9836"/>' +
-               '<rect x="' + (3 - to) + '" y="2" width="22" height="8" rx="3" fill="#4a3826"/>' +
+               '<rect x="' + (3 - to) + '" y="2" width="22" height="8" rx="3" fill="' + mDonker + '"/>' +
                '<rect x="' + (22 - to) + '" y="2" width="3.4" height="8" rx="1.7" fill="#EA9836"/>' +
-               '<circle cx="0" cy="0" r="8.5" fill="#6b5340" stroke="#EA9836" stroke-width="1.6"/>';
+               '<circle cx="0" cy="0" r="8.5" fill="' + mMid + '" stroke="#EA9836" stroke-width="1.6"/>';
         } else {
-          s += '<rect x="' + (4 - terug) + '" y="-5" width="20" height="10" rx="3" fill="#4a3826"/>' +
-               '<circle cx="0" cy="0" r="7" fill="#6b5340"/>';
+          s += '<rect x="' + (4 - terug) + '" y="-5" width="20" height="10" rx="3" fill="' + mDonker + '"/>' +
+               '<circle cx="0" cy="0" r="7" fill="' + mMid + '"/>';
         }
       } else if (t.soort === 'katapult'){
         if (pen){
-          s += '<path d="M' + (-7 - terug) + ',7 L' + (15 - terug) + ',-12" stroke="#4a3826" stroke-width="6" stroke-linecap="round"/>' +
+          s += '<path d="M' + (-7 - terug) + ',7 L' + (15 - terug) + ',-12" stroke="' + mDonker + '" stroke-width="6" stroke-linecap="round"/>' +
                '<path d="M' + (15 - terug) + ',-22 q5,5 0,9 q-5,-4 0,-9z" fill="#F26749"/>' +
                '<circle cx="' + (15 - terug) + '" cy="-12" r="7" fill="#EA9836"/>' +
                '<circle cx="' + (15 - terug) + '" cy="-12" r="3.6" fill="#FFE168"/>';
         } else {
-          s += '<path d="M' + (-6 - terug) + ',6 L' + (14 - terug) + ',-11" stroke="#4a3826" stroke-width="5" stroke-linecap="round"/>' +
-               '<circle cx="' + (14 - terug) + '" cy="-11" r="5.5" fill="#4a3826"/>';
+          s += '<path d="M' + (-6 - terug) + ',6 L' + (14 - terug) + ',-11" stroke="' + mDonker + '" stroke-width="5" stroke-linecap="round"/>' +
+               '<circle cx="' + (14 - terug) + '" cy="-11" r="5.5" fill="' + mDonker + '"/>';
         }
       } else if (t.soort === 'vertrager'){
+        /* Drie schoepen die over de rand van de voet steken. De Vertrager,
+           de Pekelpot en de Tonkla pasten alle drie helemaal binnen hun eigen
+           schijf, en dan blijft er van een afstand niets over dan een schijf. */
+        for (var vb = 0; vb < 3; vb++){
+          s += '<path d="M0,0 Q' + (pen ? 13 : 11) + ',-6 ' + (pen ? 19 : 17) + ',2 Q' +
+            (pen ? 11 : 9) + ',4 0,0 Z" fill="' + mMid + '" stroke="' + mDonker +
+            '" stroke-width="1.2" stroke-linejoin="round" transform="rotate(' + (vb * 120) + ')"/>';
+        }
         if (pen){
           s += '<circle cx="0" cy="0" r="10" fill="#dceaf7" stroke="#5b8fc9" stroke-width="2.4"/>' +
                '<g stroke="#fff" stroke-width="2.6" stroke-linecap="round">' +
                '<path d="M0,-9 L0,9"/><path d="M-7.8,-4.5 L7.8,4.5"/><path d="M-7.8,4.5 L7.8,-4.5"/></g>' +
                '<circle cx="0" cy="0" r="2.8" fill="#5b8fc9"/>';
         } else {
-          s += '<circle cx="0" cy="0" r="8" fill="none" stroke="#4a3826" stroke-width="3"/>' +
-               '<path d="M0,-8 L0,0 L6,3" stroke="#4a3826" stroke-width="2.6" fill="none" stroke-linecap="round"/>';
+          s += '<circle cx="0" cy="0" r="8" fill="none" stroke="' + mDonker + '" stroke-width="3"/>' +
+               '<path d="M0,-8 L0,0 L6,3" stroke="' + mDonker + '" stroke-width="2.6" fill="none" stroke-linecap="round"/>';
         }
       } else if (t.soort === 'pekelpot'){
+        /* twee oren aan de pot, zodat hij over zijn voet heen steekt */
+        s += '<path d="M-8,-2 A 11 11 0 0 0 -21,-1" fill="none" stroke="' + mDonker +
+          '" stroke-width="3.2" stroke-linecap="round"/>' +
+          '<path d="M8,-2 A 11 11 0 0 1 21,-1" fill="none" stroke="' + mDonker +
+          '" stroke-width="3.2" stroke-linecap="round"/>' +
+          /* damp die uit de pot kringelt, langzaam op en neer */
+          '<path d="M-3,-11 q-4,-5 0,-9 q4,-4 1,-8" fill="none" stroke="#fff" ' +
+          'stroke-width="2" stroke-linecap="round" opacity="' +
+          (0.22 + Math.sin(pols * 2) * 0.12).toFixed(2) + '"/>';
         if (pen){
           s += '<ellipse cx="0" cy="1" rx="10" ry="9" fill="#3b2f1f"/>' +
                '<ellipse cx="0" cy="-4" rx="10" ry="3.8" fill="#9bdd4f"/>' +
-               '<path d="M-10,-4 q10,-8 20,0" fill="none" stroke="#4a3826" stroke-width="2"/>' +
+               '<path d="M-10,-4 q10,-8 20,0" fill="none" stroke="' + mDonker + '" stroke-width="2"/>' +
                '<circle cx="-3.5" cy="-8" r="2.4" fill="#c9f08a" opacity=".95"/>' +
                '<circle cx="3.5" cy="-10.5" r="1.7" fill="#c9f08a" opacity=".85"/>' +
                '<circle cx="0" cy="-13.5" r="1.1" fill="#c9f08a" opacity=".7"/>';
         } else {
-          s += '<ellipse cx="0" cy="1" rx="9" ry="8" fill="#4a3826"/>' +
+          s += '<ellipse cx="0" cy="1" rx="9" ry="8" fill="' + mDonker + '"/>' +
                '<ellipse cx="0" cy="-4" rx="9" ry="3.4" fill="#7db08e"/>' +
-               '<path d="M-9,-4 q9,-7 18,0" fill="none" stroke="#4a3826" stroke-width="2"/>';
+               '<path d="M-9,-4 q9,-7 18,0" fill="none" stroke="' + mDonker + '" stroke-width="2"/>';
         }
       } else if (t.soort === 'schutter'){
         if (pen){
-          s += '<rect x="' + (2 - terug) + '" y="-3" width="32" height="6" rx="2.5" fill="#4a3826"/>' +
-               '<rect x="' + (6 - terug) + '" y="-10" width="15" height="5" rx="2" fill="#2f2418"/>' +
-               '<circle cx="' + (2 - terug) + '" cy="0" r="6.5" fill="#6b5340"/>' +
+          s += '<rect x="' + (2 - terug) + '" y="-3" width="32" height="6" rx="2.5" fill="' + mDonker + '"/>' +
+               '<rect x="' + (6 - terug) + '" y="-10" width="15" height="5" rx="2" fill="' + mZwart + '"/>' +
+               '<circle cx="' + (2 - terug) + '" cy="0" r="6.5" fill="' + mMid + '"/>' +
                '<circle cx="' + (32 - terug) + '" cy="0" r="6" fill="none" stroke="#EA9836" stroke-width="1.6"/>' +
                '<path d="M' + (25 - terug) + ',0 L' + (39 - terug) + ',0 M' + (32 - terug) + ',-7 L' + (32 - terug) + ',7" ' +
                  'stroke="#EA9836" stroke-width="1.4"/>';
         } else {
-          s += '<rect x="' + (2 - terug) + '" y="-3" width="26" height="6" rx="2.5" fill="#4a3826"/>' +
-               '<circle cx="' + (2 - terug) + '" cy="0" r="6" fill="#6b5340"/>' +
+          s += '<rect x="' + (2 - terug) + '" y="-3" width="26" height="6" rx="2.5" fill="' + mDonker + '"/>' +
+               '<circle cx="' + (2 - terug) + '" cy="0" r="6" fill="' + mMid + '"/>' +
                '<circle cx="' + (26 - terug) + '" cy="0" r="2.6" fill="#EA9836"/>';
         }
       } else if (t.soort === 'aap'){
         /* de minigun: een blok met drie korte lopen, en met de penning een
            dikkere bak eronder waar de bommen uit komen */
-        s += '<rect x="' + (1 - terug) + '" y="-7" width="13" height="14" rx="4" fill="#4a3826"/>';
-        s += '<rect x="' + (12 - terug) + '" y="-5.5" width="13" height="3" rx="1.5" fill="#6b5340"/>';
-        s += '<rect x="' + (12 - terug) + '" y="-1.5" width="16" height="3" rx="1.5" fill="#4a3826"/>';
-        s += '<rect x="' + (12 - terug) + '" y="2.5" width="13" height="3" rx="1.5" fill="#6b5340"/>';
+        s += '<rect x="' + (1 - terug) + '" y="-7" width="13" height="14" rx="4" fill="' + mDonker + '"/>';
+        s += '<rect x="' + (12 - terug) + '" y="-5.5" width="13" height="3" rx="1.5" fill="' + mMid + '"/>';
+        s += '<rect x="' + (12 - terug) + '" y="-1.5" width="16" height="3" rx="1.5" fill="' + mDonker + '"/>';
+        s += '<rect x="' + (12 - terug) + '" y="2.5" width="13" height="3" rx="1.5" fill="' + mMid + '"/>';
         if (pen) s += '<rect x="' + (4 - terug) + '" y="6" width="14" height="6" rx="3" fill="#3b3730"/>';
-        s += '<circle cx="0" cy="0" r="6" fill="#a8845c" stroke="#4a3826" stroke-width="1.4"/>';
+        s += '<circle cx="0" cy="0" r="6" fill="#a8845c" stroke="' + mDonker + '" stroke-width="1.4"/>';
       } else {
-        /* de Tonkla Toren: een korte dikke loop met een ring eromheen */
+        /* de Tonkla Toren: een korte dikke loop met een ring eromheen, en twee
+           pennen die erboven uitsteken waar de schokgolf tussendoor slaat */
+        s += '<path d="M-6,-11 L-9,-19 M6,-11 L9,-19" stroke="' + mDonker +
+          '" stroke-width="3" stroke-linecap="round" fill="none"/>' +
+          '<path d="M-9,-19 q9,-5 18,0" fill="none" stroke="#EFC64A" stroke-width="1.8" ' +
+          'stroke-linecap="round" opacity="' + (0.5 + Math.sin(pols * 5) * 0.4).toFixed(2) + '"/>';
         if (pen){
           s += '<circle cx="0" cy="0" r="11" fill="none" stroke="#EA9836" stroke-width="2.8"/>' +
-               '<rect x="' + (5 - terug) + '" y="-7" width="18" height="14" rx="4" fill="#4a3826"/>' +
+               '<rect x="' + (5 - terug) + '" y="-7" width="18" height="14" rx="4" fill="' + mDonker + '"/>' +
                '<circle cx="0" cy="0" r="7" fill="#6b3fa0"/>' +
                '<path d="M2.5,-8 L-4,0.5 L0,0.5 L-2.5,8 L4.5,-1 L0.5,-1 Z" fill="#FFE168"/>';
         } else {
           s += '<circle cx="0" cy="0" r="10" fill="none" stroke="#EA9836" stroke-width="2.4"/>' +
-               '<rect x="' + (5 - terug) + '" y="-6" width="17" height="12" rx="4" fill="#4a3826"/>' +
+               '<rect x="' + (5 - terug) + '" y="-6" width="17" height="12" rx="4" fill="' + mDonker + '"/>' +
                '<circle cx="0" cy="0" r="5" fill="#EA9836"/>';
         }
       }
@@ -3024,10 +3515,17 @@ function rekenVraag(rang, toegestaan) {
           'transform="rotate(-90 ' + t.x + ' ' + t.y + ')"/>';
       }
 
-      var ster0 = t.x - (t.niveau - 1) * 4.5 - 3.4;   /* het rijtje blijft gecentreerd */
-      for (var n = 0; n < t.niveau; n++){
-        s += '<path d="M' + (ster0 + n*9) + ',' + (t.y + voet + 8) + ' l3.4,-6 l3.4,6 z" fill="' + kl +
-             '" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/>';
+      /* Het niveau stond als driehoekjes onder de voet. Die vielen buiten de
+         omtrek, botsten op de sterretjes van de toren ernaast, en drie kleine
+         puntjes tel je niet van achter uit de klas. Nu zijn het drie stippen op
+         de onderrand van de voet zelf: gevuld wat je hebt, leeg wat nog kan. */
+      for (var n = 0; n < MAXNIVEAU; n++){
+        var ph = 90 + (n - (MAXNIVEAU - 1) / 2) * 21;
+        var px2 = t.x + Math.cos(ph * Math.PI / 180) * (voet - 3.5);
+        var py2 = t.y + Math.sin(ph * Math.PI / 180) * (voet - 3.5);
+        s += '<circle cx="' + px2.toFixed(1) + '" cy="' + py2.toFixed(1) + '" r="2.6" fill="' +
+          (n < t.niveau ? '#fff' : 'rgba(20,34,76,.22)') + '" stroke="' +
+          (n < t.niveau ? tint(kl, 0.4) : 'none') + '" stroke-width="1"/>';
       }
       s += '</g>';
     });
@@ -3060,25 +3558,53 @@ function rekenVraag(rang, toegestaan) {
     vijanden.forEach(function(e){
       var p = positie(e.d);
       var deel = Math.max(0, e.hp / e.maxHp);
-      var r2 = e.baas ? (e.baassoort === 'aap' ? 31 : 26) : 13, br = e.baas ? 62 : 28;
+      /* Een lichte dein op de pas die hij loopt, zodat het bord leeft zonder dat
+         er iets extra's gerekend hoeft te worden: de afstand die hij al aflegde
+         is de klok. Een baas deint minder, die hoort zwaar te zijn. Alleen het
+         lijf gaat mee omhoog; de schaduw blijft op de grond en dat is precies
+         wat de beweging verkoopt. */
+      var bob = Math.sin(e.d * 0.13) * (e.baas ? 1.1 : 1.9);
+      var hoek = padHoek(p.x, p.y);
+      var r2 = e.baas ? (e.mega ? 36 : e.baassoort === 'aap' ? 31 : e.mini ? 22 : 26) : (e.dik ? 19 : 13),
+          br = e.baas ? (e.mega ? 78 : e.mini ? 50 : 62) : (e.dik ? 42 : 28);
       /* Een verstopte fout is halfdoorzichtig en heeft een gestippelde rand:
          je ziet hem wel, je torens niet. */
-      s += '<g' + (e.camo ? ' opacity=".72"' : '') + '>';
-      s += '<ellipse cx="' + p.x + '" cy="' + (p.y + r2 - 1) + '" rx="' + (r2 * 0.9).toFixed(1) +
-        '" ry="' + (r2 * 0.34).toFixed(1) + '" fill="rgba(20,34,76,.20)"/>';
+      s += '<g' + (e.camo ? ' opacity=".82"' : '') + '>';
+      var grond = 1 - Math.max(0, -bob) * 0.05;
+      s += '<ellipse cx="' + p.x + '" cy="' + (p.y + r2 - 1) + '" rx="' + (r2 * 0.9 * grond).toFixed(1) +
+        '" ry="' + (r2 * 0.34 * grond).toFixed(1) + '" fill="rgba(20,34,76,.18)"/>';
       if (e.camo){
-        s += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (r2 + 6) +
-          '" fill="none" stroke="#5f7d55" stroke-width="2" stroke-dasharray="4 5" opacity=".8"/>';
+        /* Halfdoorzichtig met een stippelrand leek te veel op een gewone fout
+           die net geraakt was. Nu kruipt de stippelrand rond, staat er een
+           tweede ring omheen, en zwelt hij zacht op en af: beweging pik je op
+           uit je ooghoek, een kleurverschil niet. */
+        var kruip = (pols * 14) % 9;
+        s += '<circle cx="' + p.x + '" cy="' + (p.y + bob).toFixed(1) + '" r="' + (r2 + 11 + Math.sin(pols * 3) * 2).toFixed(1) +
+          '" fill="none" stroke="#5f7d55" stroke-width="1.4" stroke-dasharray="2 7" opacity=".55"/>';
+        s += '<circle cx="' + p.x + '" cy="' + (p.y + bob).toFixed(1) + '" r="' + (r2 + 6) +
+          '" fill="none" stroke="#5f7d55" stroke-width="2.4" stroke-dasharray="4 5" ' +
+          'stroke-dashoffset="' + kruip.toFixed(1) + '" opacity=".9"/>';
       }
-      if (e.baassoort === 'aap'){
-        /* aan zijn oren herken je hem van een afstand */
-        s += '<circle cx="' + (p.x - r2 + 2) + '" cy="' + (p.y - r2 + 4) + '" r="9" fill="#a8845c" stroke="#4a3826" stroke-width="2"/>';
-        s += '<circle cx="' + (p.x + r2 - 2) + '" cy="' + (p.y - r2 + 4) + '" r="9" fill="#a8845c" stroke="#4a3826" stroke-width="2"/>';
+      /* Horens, oren, kroon en gleuf: achter het lijf, en ze wijzen omhoog wat
+         de weg ook doet. Ze deinen wel mee, anders zwemt de kop los van het
+         lichaam. */
+      var kroon = vijandKroon(e, r2);
+      if (kroon){
+        s += '<g transform="translate(' + p.x.toFixed(1) + ',' + (p.y + bob).toFixed(1) + ')">' +
+          kroon + '</g>';
       }
       if (e.baas){
         /* een ring die meepulseert, zodat je hem tussen de rest uit pikt */
-        s += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (r2 + 8 + Math.sin(pols*4) * 3).toFixed(1) +
-          '" fill="none" stroke="#7d1f12" stroke-width="3" opacity=".5"/>';
+        s += '<circle cx="' + p.x + '" cy="' + (p.y + bob).toFixed(1) + '" r="' + (r2 + 8 + Math.sin(pols*4) * 3).toFixed(1) +
+          '" fill="none" stroke="' + (e.mega ? '#4a1230' : '#7d1f12') +
+          '" stroke-width="3" opacity=".5"/>';
+        /* De Grote Fout krijgt er een tweede ring omheen die de andere kant op
+           ademt. Op een digibord moet van achter uit de klas meteen duidelijk
+           zijn dat dit niet de baas van ronde veertig is. */
+        if (e.mega){
+          s += '<circle cx="' + p.x + '" cy="' + (p.y + bob).toFixed(1) + '" r="' + (r2 + 17 - Math.sin(pols*4) * 4).toFixed(1) +
+            '" fill="none" stroke="#EFC64A" stroke-width="2.2" stroke-dasharray="7 6" opacity=".7"/>';
+        }
       }
       var raak = (e.flits || 0) > 0;
       if (e.soort === 'snel'){
@@ -3088,36 +3614,117 @@ function rekenVraag(rang, toegestaan) {
           '" stroke="#EA9836" stroke-width="5" stroke-linecap="round" opacity=".38"/>';
       }
       if (e.schildOp){
-        s += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (r2 + 5) +
+        s += '<circle cx="' + p.x + '" cy="' + (p.y + bob).toFixed(1) + '" r="' + (r2 + 5) +
           '" fill="none" stroke="#9dc0e5" stroke-width="3.4" opacity=".9"/>';
-        s += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (r2 + 5) +
+        s += '<circle cx="' + p.x + '" cy="' + (p.y + bob).toFixed(1) + '" r="' + (r2 + 5) +
           '" fill="none" stroke="#fff" stroke-width="1.2" opacity=".7"/>';
       }
       if (raak){
-        s += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (r2 + 6) + '" fill="#fff" opacity="' +
+        s += '<circle cx="' + p.x + '" cy="' + (p.y + bob).toFixed(1) + '" r="' + (r2 + 6) + '" fill="#fff" opacity="' +
           (e.flits / 0.22 * 0.55).toFixed(2) + '"/>';
       }
-      s += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (r2 + (raak ? 2 : 0)) + '" fill="' +
-        (raak ? '#ffd9cf' : (e.traag > 0 ? '#9dc0e5' : (e.kleur || (e.baas ? '#7d1f12' : '#c0442c')))) +
-        '" stroke="#fff" stroke-width="' + (e.baas ? 3 : 2) + '"' +
-        (e.camo ? ' stroke-dasharray="4 3"' : '') + '/>' +
-        (e.traag > 0 ? '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (r2 + 2) +
+      var vul = raak ? '#ffd9cf'
+              : (e.traag > 0 ? '#9dc0e5' : (e.kleur || (e.baas ? '#7d1f12' : '#c0442c')));
+      s += '<g transform="translate(' + p.x.toFixed(1) + ',' + (p.y + bob).toFixed(1) +
+        ') rotate(' + hoek.toFixed(1) + ')">' +
+        vijandLijf(e, r2 + (raak ? 2 : 0), vul, e.baas ? 3 : 2) + '</g>';
+      s += '<g transform="translate(' + p.x.toFixed(1) + ',' + (p.y + bob).toFixed(1) + ')">' +
+        vijandGlans(e, r2) + '</g>';
+      s += (e.traag > 0 ? '<circle cx="' + p.x + '" cy="' + (p.y + bob).toFixed(1) + '" r="' + (r2 + 2) +
           '" fill="none" stroke="#204ECF" stroke-width="2" opacity=".6"/>' : '') +
-        '<text x="' + p.x + '" y="' + (p.y + (e.baas ? 9 : 5)) + '" font-size="' + (e.baas ? 26 : 14) +
-        '" font-weight="700" fill="#fff" text-anchor="middle">' + e.mark + '</text>' +
-        '<rect x="' + (p.x - br/2 - 1) + '" y="' + (p.y - r2 - 12) + '" width="' + (br + 2) + '" height="' +
-          (e.baas ? 9 : 7) + '" rx="4" fill="#fff" opacity=".85"/>' +
-        '<rect x="' + (p.x - br/2) + '" y="' + (p.y - r2 - 11) + '" width="' + br + '" height="' +
-          (e.baas ? 7 : 5) + '" rx="3" fill="rgba(20,34,76,.18)"/>' +
-        '<rect x="' + (p.x - br/2) + '" y="' + (p.y - r2 - 11) + '" width="' + (br*deel).toFixed(1) +
-          '" height="' + (e.baas ? 7 : 5) + '" rx="3" fill="' +
-          (deel > 0.5 ? '#2f7d52' : deel > 0.25 ? '#EA9836' : '#c0442c') + '"/>';
-      if (e.baas){
-        s += '<text x="' + p.x + '" y="' + (p.y - r2 - 17) + '" font-size="12" font-weight="700" ' +
-          'fill="#7d1f12" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="4">BAAS</text>';
+        '<text x="' + p.x + '" y="' + (p.y + bob + (e.baas ? 7 : e.dik ? 6 : 4)).toFixed(1) + '" font-size="' +
+        /* De bolletjes van het schild zijn als letterteken al bijna een vlak, dus
+           die vragen om een kleinere maat dan een vraagteken of een ruit. */
+        ((e.mark === '\u25cf' ? 0.72 : 1) * (e.baas ? (e.mega ? 26 : 21) : e.dik ? 16 : 12)).toFixed(0) +
+        '" font-weight="700" fill="#fff" text-anchor="middle" opacity=".92">' + e.mark + '</text>';
+      /* Een balkje boven elk hoofd terwijl er niets aan de hand is, is twintig
+         keer ruis op een vol bord. Hij verschijnt zodra er iets af is. Een baas
+         houdt hem altijd: die wil je kunnen volgen vanaf de eerste tik. */
+      if (deel < 0.999 || e.baas){
+        var bh2 = e.baas ? 6 : 4, by2 = p.y - r2 - 11;
+        s += '<rect x="' + (p.x - br/2 - 1) + '" y="' + (by2 - 1) + '" width="' + (br + 2) +
+            '" height="' + (bh2 + 2) + '" rx="' + ((bh2 + 2) / 2) + '" fill="#fff" opacity=".7"/>' +
+          '<rect x="' + (p.x - br/2) + '" y="' + by2 + '" width="' + br + '" height="' + bh2 +
+            '" rx="' + (bh2 / 2) + '" fill="rgba(20,34,76,.16)"/>' +
+          '<rect x="' + (p.x - br/2) + '" y="' + by2 + '" width="' + (br * deel).toFixed(1) +
+            '" height="' + bh2 + '" rx="' + (bh2 / 2) + '" fill="' +
+            (deel > 0.5 ? '#3d9464' : deel > 0.25 ? '#EA9836' : '#c0442c') + '"/>';
       }
+      /* Het woord BAAS stond hier eerst boven zijn hoofd. Nu staat zijn naam
+         voluit in de balk boven aan het bord, en botste het label daar op de
+         kaart waar het pad hoog loopt. Het streepje blijft: daaraan zie je in
+         een oogopslag welke van de fouten op het pad de baas is. */
       s += '</g>';
     });
+
+    /* ---------- de levensbalk van de baas ----------
+       Het streepje boven zijn hoofd is achtentwintig pixels breed en loopt met
+       hem mee door de bochten: daar lees je een gevecht van duizend levens niet
+       op af. Deze balk staat stil boven aan het bord, is ruim zeven keer zo
+       breed, en zegt erbij wie er loopt.
+
+       Drie dingen die de balk doet en het streepje niet:
+       - de naam, zodat je weet of je de splijter of de apenbaas voor je hebt;
+       - een bleke balk die achter de echte aan zakt, zodat je ziet hoeveel er
+         van een treffer af ging en niet alleen dat er iets af ging;
+       - het getal erbij, want kleur alleen is geen informatie voor wie
+         kleurenblind is of achter in de klas zit.
+       Hij ligt onder het keuzemenu: waar je op tikt hoort altijd bovenop. */
+    if (baasBalkIn > 0.01 && baasBalk){
+      var BX = 64, BW = BREED - 128, BY = 6, BH = 46;
+      var bIn = baasBalkIn * baasBalkIn * (3 - 2 * baasBalkIn);   /* zacht in- en uitschuiven */
+      var bDeel = Math.max(0, Math.min(1, baasBalk.deel));
+      var bSpk = Math.max(bDeel, Math.min(1, baasSpook));
+      var bKleur = bDeel > 0.5 ? '#4caf7d' : bDeel > 0.25 ? '#f0a93f' : '#e2604a';
+      var bNaam = baasBalk.naam.charAt(0).toUpperCase() + baasBalk.naam.slice(1);
+      var bPct = bDeel <= 0 ? 0 : Math.max(1, Math.round(bDeel * 100));
+      var bNood = bDeel > 0 && bDeel <= 0.25 ? 0.5 + Math.sin(pols * 7) * 0.5 : 0;
+      var tX = BX + 16, tB = BW - 32, tY = BY + 33, tH = 8;
+
+      s += '<g opacity="' + bIn.toFixed(2) + '" transform="translate(0,' +
+        ((1 - bIn) * -14).toFixed(1) + ')">';
+      s += '<rect x="' + BX + '" y="' + BY + '" width="' + BW + '" height="' + BH +
+        '" rx="14" fill="#14224C" opacity=".92"/>';
+      s += '<rect x="' + BX + '" y="' + BY + '" width="' + BW + '" height="' + BH +
+        '" rx="14" fill="none" stroke="' + (baasBalk.flits ? '#fff' : baasBalk.kleur) +
+        '" stroke-width="' + (baasBalk.flits ? 3.4 : 2 + bNood * 2).toFixed(1) + '"/>';
+      /* het teken van de baas, hetzelfde als in zijn eigen cirkel */
+      s += '<circle cx="' + (BX + 27) + '" cy="' + (BY + 19) + '" r="11" fill="' +
+        baasBalk.kleur + '" stroke="#fff" stroke-width="1.8"/>';
+      s += '<text x="' + (BX + 27) + '" y="' + (BY + 24) + '" font-size="13" font-weight="700" ' +
+        'fill="#fff" text-anchor="middle">' + baasBalk.mark + '</text>';
+      s += '<text x="' + (BX + 47) + '" y="' + (BY + 24) + '" font-size="15" font-weight="700" ' +
+        'fill="#fff">' + bNaam + '</text>';
+      s += '<text x="' + (BX + BW - 16) + '" y="' + (BY + 24) + '" font-size="15" font-weight="700" ' +
+        'fill="#fff" text-anchor="end">' + bPct + '%</text>';
+      /* Staat zijn schild op, dan zie je dat hier ook: anders lijkt het alsof
+         je schoten niets doen zonder dat het bord uitlegt waarom. */
+      if (baasBalk.schild){
+        s += '<g transform="translate(' + (BX + BW - 68) + ',' + (BY + 18) + ')">' +
+          '<path d="M0,-9 L8,-6 V0 C8,5 4,8 0,10 C-4,8 -8,5 -8,0 V-6 Z" ' +
+          'fill="rgba(157,192,229,.32)" stroke="#9dc0e5" stroke-width="1.6" stroke-linejoin="round"/></g>';
+      }
+      /* de baan, de bleke balk die naschokt, en daarbovenop wat hij nu nog heeft */
+      s += '<rect x="' + tX + '" y="' + tY + '" width="' + tB + '" height="' + tH +
+        '" rx="4" fill="rgba(255,255,255,.15)"/>';
+      if (bSpk > bDeel){
+        s += '<rect x="' + tX + '" y="' + tY + '" width="' + (tB * bSpk).toFixed(1) +
+          '" height="' + tH + '" rx="4" fill="#f6d9d2" opacity=".5"/>';
+      }
+      if (bDeel > 0){
+        s += '<rect x="' + tX + '" y="' + tY + '" width="' + (tB * bDeel).toFixed(1) +
+          '" height="' + tH + '" rx="4" fill="' + bKleur + '"/>';
+      }
+      /* streepjes op een kwart, de helft en driekwart, zodat je de stand ook
+         zonder kleur kunt aflezen */
+      [0.25, 0.5, 0.75].forEach(function(q){
+        s += '<line x1="' + (tX + tB * q).toFixed(1) + '" y1="' + tY + '" x2="' +
+          (tX + tB * q).toFixed(1) + '" y2="' + (tY + tH) +
+          '" stroke="#14224C" stroke-width="1.5" opacity=".45"/>';
+      });
+      s += '</g>';
+    }
+
     /* het keuzemenu, bovenop alles */
     if (menu){
       s += '<rect x="' + menu.x + '" y="' + menu.y + '" width="' + menu.b + '" height="' + menu.h +
@@ -3192,18 +3799,25 @@ function rekenVraag(rang, toegestaan) {
     /* de aankondiging van de baas, tijdens de pauze voor die ronde */
     if (baasAlarm > 0){
       var puls = 0.55 + Math.sin(pols * 6) * 0.25;
-      s += '<rect x="0" y="0" width="' + BREED + '" height="' + HOOG + '" fill="#7d1f12" opacity="' +
-        (0.10 * puls).toFixed(3) + '"/>';
+      var alKleur = alarmMini ? '#8a6a1f' : isMegaRonde(bank.ronde + 1) ? '#4a1230' : '#7d1f12';
+      var alRand = alarmMini ? '#EFC64A' : '#EA9836';
+      var komt = alarmMini ? MINIBAAS : baasVan(bank.ronde + 1);
+      var alOnder = alarmMini
+        ? komt.uit + ' Hij levert ' + minibeloning(bank.ronde + 1) + ' munten op, en kost ' +
+          MINISCHADE + ' levens als hij erdoor komt.'
+        : komt.uit + ' Hij kost ' + (komt.id === 'mega' ? MEGASCHADE : BAASSCHADE) +
+          ' levens als hij binnenkomt.';
+      s += '<rect x="0" y="0" width="' + BREED + '" height="' + HOOG + '" fill="' + alKleur +
+        '" opacity="' + (0.10 * puls).toFixed(3) + '"/>';
       var bh = 74, by = HOOG / 2 - bh / 2;
       s += '<rect x="60" y="' + by + '" width="' + (BREED - 120) + '" height="' + bh +
-        '" rx="18" fill="#7d1f12" opacity=".94"/>';
+        '" rx="18" fill="' + alKleur + '" opacity=".94"/>';
       s += '<rect x="60" y="' + by + '" width="' + (BREED - 120) + '" height="' + bh +
-        '" rx="18" fill="none" stroke="#EA9836" stroke-width="' + (2 + puls * 3).toFixed(1) + '"/>';
-      var komt = baasVan(bank.ronde + 1);
+        '" rx="18" fill="none" stroke="' + alRand + '" stroke-width="' + (2 + puls * 3).toFixed(1) + '"/>';
       s += '<text x="' + (BREED/2) + '" y="' + (by + 31) + '" font-size="23" font-weight="700" ' +
         'fill="#fff" text-anchor="middle">Ronde ' + (bank.ronde + 1) + ': ' + komt.naam + ' komt eraan</text>';
-      s += '<text x="' + (BREED/2) + '" y="' + (by + 55) + '" font-size="14" fill="#f6d9d2" ' +
-        'text-anchor="middle">' + komt.uit + ' Hij kost ' + BAASSCHADE + ' levens als hij binnenkomt.</text>';
+      s += '<text x="' + (BREED/2) + '" y="' + (by + 55) + '" font-size="14" fill="' +
+        (alarmMini ? '#f6ecd2' : '#f6d9d2') + '" text-anchor="middle">' + alOnder + '</text>';
     }
 
     /* rode waas over het bord en een teller die uit de klas omhoog springt */
@@ -3402,6 +4016,9 @@ function rekenVraag(rang, toegestaan) {
     lev.parentNode.classList.toggle('laag', bank.leven <= 3);
     document.getElementById('mRonde').textContent = bank.ronde;
     document.getElementById('mReeks').textContent = reeks;
+    /* Zonder deze meter zien de kinderen alleen dat de getallen boven de
+       fouten groter worden, zonder te snappen waarom. */
+    document.getElementById('mBonus').textContent = '\u00d7' + kommaGetal(reeksbonus(), 2);
     document.getElementById('mToren').textContent = torens.length + '/' + MAXTORENS;
     document.getElementById('mWeg').textContent = wegdingen.length + '/' + MAXWEG;
     var pv = document.getElementById('penningVak');
@@ -3410,37 +4027,89 @@ function rekenVraag(rang, toegestaan) {
     var nu = document.getElementById('nuBtn');
     var wacht = wachtrij === 0 && vijanden.length === 0 && rondePauze > 0.2;
     nu.classList.toggle('hide', !wacht);
-    if (wacht) nu.textContent = 'Ronde ' + (bank.ronde + 1) + ' nu starten, +' +
-      Math.max(5, Math.round(rondePauze * 8)) + ' munten';
+    if (wacht){
+      var kn = Math.max(5, Math.round(rondePauze * 8)) * haastKeer();
+      nu.textContent = 'Ronde ' + (bank.ronde + 1) + ' nu starten, +' + kn + ' munten' +
+        (haast > 0 ? ' (\u00d7' + haastKeer() + ')' : '') +
+        ', ' + Math.round(haastExtra() * 100) + '% meer fouten';
+    }
   }
 
   /* ---------- de klok ---------- */
   function tik(){
     var dt = 0.06, ronde = bank.ronde;
     pols += dt;
-    /* Tijdens de pauze voor een baasronde staat de waarschuwing in beeld. */
-    baasAlarm = (wachtrij === 0 && vijanden.length === 0 && isBaasRonde(bank.ronde + 1))
+    if (poortFlits > 0) poortFlits = Math.max(0, poortFlits - dt);
+    /* De levensbalk van de baas bijwerken. De bleke balk zakt met een vaste
+       snelheid van veertig procent per seconde: hard genoeg om bij te blijven,
+       traag genoeg om te zien wat een treffer deed. */
+    var levendeBaas = null;
+    for (var bb = 0; bb < vijanden.length; bb++){
+      if (vijanden[bb].baas && !vijanden[bb].dood){ levendeBaas = vijanden[bb]; break; }
+    }
+    if (levendeBaas){
+      if (levendeBaas !== baasLaatst){ baasLaatst = levendeBaas; baasSpook = 1; }
+      var nu2 = Math.max(0, levendeBaas.hp / levendeBaas.maxHp);
+      baasSpook = nu2 > baasSpook ? nu2 : Math.max(nu2, baasSpook - 0.4 * dt);
+      baasBalkIn = Math.min(1, baasBalkIn + dt * 4);
+      baasBalk = { naam:levendeBaas.baasnaam || 'de baas', mark:levendeBaas.mark,
+                   kleur:levendeBaas.kleur || '#7d1f12', deel:nu2, hp:Math.max(0, levendeBaas.hp),
+                   maxHp:levendeBaas.maxHp, schild:!!levendeBaas.schildOp,
+                   flits:(levendeBaas.flits || 0) > 0 };
+    } else {
+      /* Valt hij, dan loopt de balk leeg terwijl hij uit beeld schuift. Meteen
+         weghalen leest als een storing: je ziet niet dat je hem hebt geveld. */
+      baasLaatst = null;
+      baasSpook = Math.max(0, baasSpook - 1.6 * dt);
+      if (baasBalk){ baasBalk.deel = 0; baasBalk.hp = 0; baasBalk.flits = false; }
+      baasBalkIn = Math.max(0, baasBalkIn - dt * 1.6);
+    }
+    /* Tijdens de pauze voor een baasronde staat de waarschuwing in beeld. De
+       spaarpot krijgt dezelfde banner in goud: hij is geen dreiging maar een
+       kans, en die moet je net zo goed zien aankomen. */
+    var komtBaas = isBaasRonde(bank.ronde + 1), komtMini = isMiniRonde(bank.ronde + 1);
+    alarmMini = !komtBaas && komtMini;
+    baasAlarm = (wachtrij === 0 && vijanden.length === 0 && (komtBaas || komtMini))
       ? rondePauze : 0;
     if (wachtrij === 0 && vijanden.length === 0){
       rondePauze -= dt;
       if (rondePauze <= 0){
         bank.ronde++; wachtrij = 4 + bank.ronde; spawnKlok = 0;
+        /* Wie de pauze oversloeg krijgt de rekening in deze ronde gepresenteerd. */
+        haast = sprongOver ? haast + 1 : 0;
+        sprongOver = false;
+        var toeslag = haast > 0 ? Math.round(wachtrij * 0.10 * Math.min(HAASTMAX + 1, haast)) : 0;
+        wachtrij += toeslag;
         if (isRustronde(bank.ronde)){
           wachtrij = Math.max(3, Math.round(wachtrij * RUSTAANTAL));
           melding2('Ronde ' + bank.ronde + '. Rustronde: minder en zwakkere fouten. Bouw bij.');
         } else if (isBaasRonde(bank.ronde)){
           melding2('Ronde ' + bank.ronde + '. De baas loopt ergens in de tweede helft mee.');
+        } else if (isMiniRonde(bank.ronde)){
+          melding2('Ronde ' + bank.ronde + '. Er loopt een spaarpot mee. Vel hem en je krijgt ' +
+            minibeloning(bank.ronde) + ' munten; laat je hem door, dan kost hij twee levens.');
         }
         /* de plek van de baas in de rij, ergens voorbij de helft */
         baasBijWachtrij = isBaasRonde(bank.ronde)
+          ? Math.floor(Math.random() * Math.max(1, Math.floor(wachtrij / 2))) : -1;
+        miniBijWachtrij = isMiniRonde(bank.ronde)
           ? Math.floor(Math.random() * Math.max(1, Math.floor(wachtrij / 2))) : -1;
       }
     }
     if (wachtrij > 0){
       spawnKlok -= dt;
       if (spawnKlok <= 0){
-        spawnKlok = Math.max(0.55, 1.4 - ronde * 0.05);
+        /* Fouten kwamen met een vaste tussenpoos, en dat is een druppelkraan:
+           in ronde vijftig dertig seconden lang precies elke 0,55 seconde een.
+           Nu komen ze in golfjes van vier kort achter elkaar met daarna een
+           pauze. De tussenpoos is over vijf spawns heen gemiddeld precies
+           dezelfde als eerst (4 x 0,6 + 2,6 gedeeld door 5 is 1), dus de ronde
+           duurt even lang en vraagt evenveel schade. Alleen voel je nu druk en
+           lucht in plaats van een streep. */
+        var basis = Math.max(0.55, 1.4 - ronde * 0.05);
+        spawnKlok = (wachtrij % 5 === 0) ? basis * 2.6 : basis * 0.6;
         wachtrij--;
+        poortFlits = 0.45;                    /* de poort licht op bij elke fout */
         var r = rang();
         var hp = Math.max(1, Math.round((10 + ronde * 6) * (0.75 + r * 0.15) * zwaarte(ronde) *
                           VIJANDKRACHT * (isRustronde(ronde) ? RUSTTAAI : 1)));
@@ -3450,11 +4119,21 @@ function rekenVraag(rang, toegestaan) {
           baasBijWachtrij = -1;                 /* er komt er maar een per ronde */
           var bz = baasVan(ronde);
           var bhp = Math.round(hp * bz.taai);
-          vijanden.push({ d:0, hp:bhp, maxHp:bhp, snelheid:basisSnel * bz.vlug,
-                          traag:0, mark:bz.mark, baas:true, soort:'baas', baassoort:bz.id, kleur:bz.kleur,
+          vijanden.push({ d:SPAWNAF, hp:bhp, maxHp:bhp, snelheid:basisSnel * bz.vlug,
+                          traag:0, mark:bz.mark, baas:true, soort:'baas', baassoort:bz.id,
+                          baasnaam:bz.naam, kleur:bz.kleur,
                           schild:bz.schild, schildOp:bz.schild > 0, splijt:bz.splijt || 0,
                           basisHp:hp, basisSnel:basisSnel,
-                          schilKlok:bz.id === 'aap' ? 3 : 0 });
+                          mega:bz.id === 'mega', gooit:!!bz.gooit,
+                          schilKlok:bz.gooit ? 3 : 0 });
+        } else if (wachtrij === miniBijWachtrij && isMiniRonde(ronde)){
+          miniBijWachtrij = -1;                 /* ook van hem komt er maar een */
+          var mhp = Math.round(hp * MINIBAAS.taai);
+          vijanden.push({ d:SPAWNAF, hp:mhp, maxHp:mhp, snelheid:basisSnel * MINIBAAS.vlug,
+                          traag:0, mark:MINIBAAS.mark, baas:true, mini:true, soort:'baas',
+                          baassoort:MINIBAAS.id, baasnaam:MINIBAAS.naam, kleur:MINIBAAS.kleur,
+                          schild:0, schildOp:false, splijt:0,
+                          basisHp:hp, basisSnel:basisSnel, schilKlok:0 });
         } else {
           var f = kiesFout(ronde), hoeveel = f.aantal || 1;
           if (f.camo && !camoGezien){
@@ -3464,13 +4143,17 @@ function rekenVraag(rang, toegestaan) {
           }
           for (var z = 0; z < hoeveel; z++){
             var thp = Math.max(1, Math.round(hp * f.taai));
-            vijanden.push({ d:-z * 22, hp:thp, maxHp:thp, snelheid:basisSnel * f.vlug,
+            /* De zwerm stond eerst achter elkaar op negatieve afstand, en dat
+               zette twee van de drie buiten de poort op het gras. Nu komen ze
+               er vlak na elkaar uit in plaats van ervoor te staan. */
+            vijanden.push({ d:SPAWNAF + z * 15, hp:thp, maxHp:thp, snelheid:basisSnel * f.vlug,
                             traag:0, mark:f.mark, soort:f.id, kleur:f.kleur,
-                            schild:f.schild, schildOp:f.schild > 0, camo:!!f.camo });
+                            schild:f.schild, schildOp:f.schild > 0, camo:!!f.camo, dik:!!f.dik });
           }
         }
         if (wachtrij === 0) rondePauze = isBaasRonde(bank.ronde + 1) ? 8
-                                       : isBaasRonde(bank.ronde) ? 6 : 3;
+                                       : isBaasRonde(bank.ronde) ? 6
+                                       : isMiniRonde(bank.ronde + 1) ? 5 : 3;
       }
     }
     var verlies = 0;
@@ -3478,13 +4161,14 @@ function rekenVraag(rang, toegestaan) {
       if (e.stop > 0){ e.stop -= dt; if (e.traag > 0) e.traag -= dt; return; }
       e.d += e.snelheid * (e.traag > 0 ? (e.ijs ? 0.22 : 0.45) : 1) * dt;
       if (e.traag > 0){ e.traag -= dt; if (e.traag <= 0) e.ijs = false; }
-      if (e.d >= PADLENGTE){ e.dood = true; verlies += e.baas ? BAASSCHADE : 1; }
+      if (e.d >= PADLENGTE){ e.dood = true;
+        verlies += e.baas ? (e.mini ? MINISCHADE : e.mega ? MEGASCHADE : BAASSCHADE) : 1; }
     });
     /* De apenbaas zoekt om de zoveel tijd de dichtstbijzijnde toren die nog
        werkt en gooit daar een schil naartoe. Staat er niets in de buurt, dan
        probeert hij het zo weer. */
     vijanden.forEach(function(e){
-      if (e.dood || e.baassoort !== 'aap') return;
+      if (e.dood || !e.gooit) return;
       e.schilKlok -= dt;
       if (e.schilKlok > 0) return;
       var q = positie(e.d), mik = null, kortst = SCHILBEREIK;
@@ -3580,7 +4264,7 @@ function rekenVraag(rang, toegestaan) {
       if (!doelB) return;
       t.bomKlok = BOMTIJD;
       kogels.push({ x0:t.x, y0:t.y, x1:posB.x, y1:posB.y, t:0, duur:0.5,
-                    schade:BOMSCHADE * (1 + (t.niveau - 1) * 0.6), doel:doelB,
+                    schade:BOMSCHADE * (1 + (t.niveau - 1) * 0.6) * reeksbonus(), doel:doelB,
                     draai:Math.random() * 360, brand:true, bom:true });
     });
 
@@ -3600,7 +4284,7 @@ function rekenVraag(rang, toegestaan) {
       /* alleen afgaan als er iets te raken valt */
       if (!raakbaar.length) return;
       t.golfKlok = wacht;
-      var kracht = so.golf * (1 + (t.niveau - 1) * 0.6);
+      var kracht = so.golf * (1 + (t.niveau - 1) * 0.6) * reeksbonus();
       raakbaar.forEach(function(e){ raakVijand(e, kracht, false); });
       golven.push({ x:t.x, y:t.y, r:bereik2, leven:0.55, kleur:so.kleur, dik:true });
       melding2('De Tonkla Toren laat een schokgolf los en raakt ' + raakbaar.length +
@@ -3609,7 +4293,8 @@ function rekenVraag(rang, toegestaan) {
 
     torens.forEach(function(t){
       var s = SOORTEN[t.soort];
-      var bereik = s.bereik + (t.niveau-1) * 18, schade = s.schade * (1 + (t.niveau-1) * 0.6);
+      var bereik = s.bereik + (t.niveau-1) * 18,
+          schade = s.schade * (1 + (t.niveau-1) * 0.6) * reeksbonus();
       if (sleep && sleep.toren === t) return;
       if ((t.uit || 0) > 0) return;      /* ligt eruit door een bananenschil */
       t.klok -= dt;
@@ -3772,15 +4457,17 @@ function rekenVraag(rang, toegestaan) {
 
   /* ---------- beginnen en eindigen ---------- */
   function begin(){
+    kiesKaart();
+    baasSpook = 1; baasBalkIn = 0; baasBalk = null; baasLaatst = null;
     vijanden = []; torens = []; schoten = []; pot = null;
     cijfers = []; pluis = []; golven = []; kogels = []; wegdingen = []; schillen = [];
     baasKeuzes = {};
     wachtrij = 5; spawnKlok = 0; rondePauze = 2;
     bank = { munten:60, leven:12, ronde:1 };
-    reeks = 0; besteReeks = 0; goedAantal = 0; foutAantal = 0;
+    reeks = 0; vuur = 0; besteReeks = 0; goedAantal = 0; foutAantal = 0;
     gekliktIndex = -1; menu = null; klap = 0; baasAlarm = 0; pols = 0; verplaats = null; sleep = null; penningen = 0;
-    camoGezien = false;
-    baasBijWachtrij = -1;
+    camoGezien = false; poortFlits = 0;
+    baasBijWachtrij = -1; miniBijWachtrij = -1; haast = 0; sprongOver = false;
     pauze = false; document.body.classList.remove('gepauzeerd');
     var pk = document.getElementById('pauzeBtn');
     pk.classList.remove('hide', 'aan'); pk.textContent = 'Pauze'; pk.setAttribute('aria-pressed', 'false');
@@ -3790,6 +4477,7 @@ function rekenVraag(rang, toegestaan) {
     document.getElementById('scherm-einde').classList.add('hide');
     document.getElementById('scherm-spel').classList.remove('hide');
     tekenVraag(); tekenMeters(); tekenBord();
+    melding2('Kaart: ' + kaart.naam + '. Elk potje loot een andere weg, dus kijk eerst waar de bochten liggen.');
     if (klok) clearInterval(klok);
     klok = setInterval(tik, 60);
     scrollTo({ top:0, behavior:'auto' });
@@ -3836,14 +4524,30 @@ function rekenVraag(rang, toegestaan) {
   document.getElementById('startBtn').addEventListener('click', function(){ if (vak) begin(); });
   /* De wachttijd tussen rondes overslaan. Wie dat aandurft krijgt de resterende
      seconden uitbetaald in munten, dus haasten loont. */
+  /* Doorstarten stapelt. Een keer overslaan was altijd goed en dus geen keuze:
+     de bonus dekte precies de vragen die je door de kortere pauze misliep. Nu
+     verdubbelt hij bij elke pauze die je achter elkaar overslaat, tot acht keer
+     toe, maar komt de volgende ronde met tien procent meer fouten per keer, tot
+     veertig procent. Sla je een pauze wel uit, dan begint de rij opnieuw.
+
+     Het rekensommetje dat de speler moet maken: 240 munten kopen ongeveer
+     dertig schade per seconde, en dertig procent meer fouten in ronde dertig
+     vraagt er vijfentachtig extra. Vroeg is haasten dus bijna gratis geld en
+     laat is het roekeloos. Precies waar het spel om moet draaien. */
+  var HAASTMAX = 3;                            /* verder dan acht keer gaat hij niet */
+  function haastKeer(){ return Math.pow(2, Math.min(HAASTMAX, haast)); }
+  function haastExtra(){ return 0.10 * Math.min(HAASTMAX + 1, haast + 1); }
   document.getElementById('nuBtn').addEventListener('click', function(){
     if (pauze) return;
     if (!(wachtrij === 0 && vijanden.length === 0 && rondePauze > 0)) return;
-    var bonus = Math.max(5, Math.round(rondePauze * 8));
+    var bonus = Math.max(5, Math.round(rondePauze * 8)) * haastKeer();
+    var extra = Math.round(haastExtra() * 100);
     bank.munten += bonus;
     laatMuntZien(bonus);
+    sprongOver = true;
     rondePauze = 0.01;
-    melding2('Je roept de volgende ronde erbij en krijgt ' + bonus + ' munten voor de tijd die je overslaat.');
+    melding2('Je roept de volgende ronde erbij: ' + bonus + ' munten, maar er komen ' +
+      extra + ' procent meer fouten. Sla je de volgende pauze ook over, dan verdubbelt het allebei.');
     tekenMeters();
   });
 
