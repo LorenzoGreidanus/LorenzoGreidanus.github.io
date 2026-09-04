@@ -544,7 +544,7 @@ let PAD = KAARTEN[0].pad;
 /* De Tonkla Bommenwerper. De straal staat hier los, want daar draai je aan als
    hij te sterk of te slap blijkt: alles binnen dat aantal pixels van de inslag
    krijgt de volle klap. */
-const BOMSTRAAL = 78, BOMVAL = 0.85;
+const BOMSTRAAL = 78, BOMVAL = 0.45, VLUCHT = 0.6;   /* val van de bom en de vlucht heen, in seconden */
 /* De Vriendenhut. Per hut lopen er standaard twee vrienden rond, ze houden een
    fout tegen zolang ze leven en slaan er ondertussen op in. Wat hen raakt is de
    fout waar ze tegenaan staan; een baas slaat drie keer zo hard. */
@@ -2207,6 +2207,7 @@ function rekenVraag(rang, toegestaan) {
   var niveau = 'kgt', vak = null, keuze = {};
   var vijanden = [], torens = [], schoten = [], pot = null;
   var vrienden = [];                                       /* de mannetjes uit de Vriendenhut */
+  var vliegers = [];                                       /* de vliegtuigen van de Bommenwerper */
   var cijfers = [], pluis = [], golven = [], kogels = [];   /* effecten en de stenen van de katapult */
   var schillen = [];                                       /* de schillen die de apenbaas gooit */
   var wachtrij = 5, spawnKlok = 0, rondePauze = 2;
@@ -3065,6 +3066,7 @@ function rekenVraag(rang, toegestaan) {
      De maten blijven binnen wat magHier uitsluit voor bouwen, dus het gebouw
      groeit niet buiten zijn plek. */
   function tekenKlas(cx, cy, leven, maxLeven){
+  if (thema.id === 'eiland') return tekenStrandklas(cx, cy, leven, maxLeven);
   var deel = Math.max(0, Math.min(1, leven / maxLeven));
   var stuk = 1 - deel;                       /* 0 is gaaf, 1 is bijna weg */
   var kapot = function(n){ return stuk > n; };
@@ -3152,6 +3154,117 @@ function rekenVraag(rang, toegestaan) {
   s += '</g>';
   return s;
 }
+
+  /* ---------- de klas op het eiland ----------
+     Hetzelfde gebouw in ander materiaal: een open leslokaal op een houten
+     terras, met bamboe hoekpalen en een dak van palmblad. De maten en de acht
+     stappen van het verval zijn precies dezelfde als bij de school op het
+     plein, zodat de klas op allebei de borden op dezelfde manier vertelt hoe
+     het ervoor staat: eerst gaan de luiken dicht, dan valt het riet uit het
+     dak, en de vlag zakt de hele tijd door mee. */
+  function tekenStrandklas(cx, cy, leven, maxLeven){
+    var deel = Math.max(0, Math.min(1, leven / maxLeven));
+    var stuk = 1 - deel;
+    var kapot = function(n){ return stuk > n; };
+    var s = '<g transform="translate(' + cx + ',' + cy + ')">';
+
+    s += '<ellipse cx="0" cy="44" rx="60" ry="9" fill="rgba(20,34,76,.16)"/>';
+
+    /* het terras: planken op palen, in plaats van een stenen plint */
+    s += '<rect x="-52" y="34" width="104" height="11" rx="3" fill="#c9a06a" stroke="#5f4830" stroke-width="2.2"/>';
+    s += '<path d="M-38,34 v11 M-19,34 v11 M0,34 v11 M19,34 v11 M38,34 v11" stroke="#8d6234" stroke-width="1.4" opacity=".55"/>';
+    s += '<rect x="-52" y="34" width="104" height="4" rx="2" fill="#fff" opacity=".2"/>';
+
+    /* de wand van bamboelatten */
+    s += '<rect x="-46" y="-18" width="92" height="55" rx="3" fill="#f0dcb2" stroke="#5f4830" stroke-width="2.4"/>';
+    s += '<rect x="16" y="-18" width="30" height="55" fill="rgba(20,34,76,.06)"/>';
+    s += '<rect x="-46" y="-18" width="92" height="9" fill="rgba(20,34,76,.12)"/>';
+    for (var b = -39; b <= 39; b += 7.5){
+      s += '<path d="M' + b.toFixed(1) + ',-8 v45" stroke="#d9bd8b" stroke-width="2" opacity=".75"/>';
+    }
+    /* twee bamboe hoekpalen die de nok dragen */
+    [-46, 41].forEach(function(x){
+      s += '<rect x="' + x + '" y="-20" width="5" height="57" rx="2.5" fill="#cdb45f" stroke="#7d6a28" stroke-width="1.8"/>';
+      s += '<path d="M' + (x + 0.5) + ',-4 h4 M' + (x + 0.5) + ',13 h4 M' + (x + 0.5) + ',30 h4" stroke="#8f7c33" stroke-width="2"/>';
+    });
+
+    /* het dak van palmblad: een grondvlak met daaroverheen drie rijen riet met
+       een gerafelde onderrand, want vlak riet leest als karton */
+    s += '<path d="M-58,-16 L0,-50 L58,-16 z" fill="#8a6f3c" stroke="#5f4830" stroke-width="2.4" stroke-linejoin="round"/>';
+    [[-15, 57, '#a5854a'], [-24, 44, '#9a7c43'], [-33, 30, '#8f733d']].forEach(function(rij){
+      var y = rij[0], w = rij[1];
+      var d = 'M' + (-w) + ',' + (y - 10) + ' L' + w + ',' + (y - 10) + ' L' + w + ',' + y;
+      for (var x = w; x > -w + 1; x -= 11) d += ' q-2.8,5 -5.5,0 q-2.7,-5 -5.5,0';
+      d += ' L' + (-w) + ',' + (y - 10) + ' Z';
+      s += '<path d="' + d + '" fill="' + rij[2] + '" stroke="#6b552c" stroke-width="1.4" stroke-linejoin="round"/>';
+    });
+    /* de nokbalk en de overstekende dakrand, allebei bamboe */
+    s += '<rect x="-62" y="-20" width="124" height="6" rx="3" fill="#cdb45f" stroke="#7d6a28" stroke-width="2"/>';
+    s += '<path d="M-40,-19 v4 M-14,-19 v4 M14,-19 v4 M40,-19 v4" stroke="#8f7c33" stroke-width="2"/>';
+
+    /* de schoolbel hangt aan de dakrand: dit blijft een school */
+    s += '<path d="M53,-14 v7" stroke="#5f4830" stroke-width="1.6"/>';
+    s += '<path d="M48,-1 a5,6 0 0 1 10,0 z" fill="#EA9836" stroke="#5f4830" stroke-width="1.6" stroke-linejoin="round"/>';
+    s += '<circle cx="53" cy="1.4" r="1.7" fill="#5f4830"/>';
+    s += '<path d="M49.5,-4 a4,4 0 0 1 4,-3" fill="none" stroke="#fff" stroke-width="1.4" opacity=".35"/>';
+
+    /* de vlag op de nok, die zakt als het slecht gaat */
+    var hoek = -8 + stuk * 74;
+    s += '<line x1="0" y1="-50" x2="0" y2="-70" stroke="#7d6a28" stroke-width="2.4"/>';
+    s += '<g transform="translate(0,-68) rotate(' + hoek.toFixed(0) + ')">' +
+         '<path d="M0,0 L20,4 L0,8 z" fill="#EA9836" stroke="#5f4830" stroke-width="1.4" stroke-linejoin="round"/></g>';
+
+    /* vier vensters met luiken. Heel is een open luik met warm licht erachter,
+       stuk is een dichtgetimmerd gat. */
+    var ramen = [[-35, 0], [-35, 20], [21, 0], [21, 20]];
+    var grens = [0.18, 0.42, 0.62, 0.84];
+    ramen.forEach(function(r, i){
+      var heel = !kapot(grens[i]);
+      s += '<rect x="' + r[0] + '" y="' + r[1] + '" width="16" height="15" rx="2" fill="' +
+        (heel ? '#f6d98a' : '#3b3730') + '" stroke="#5f4830" stroke-width="1.8"/>';
+      if (heel){
+        /* het luik staat open en wordt omhoog gehouden door een stokje */
+        s += '<path d="M' + r[0] + ',' + r[1] + ' l16,0 l-3,-6 l-10,0 z" fill="#c9a06a" ' +
+          'stroke="#5f4830" stroke-width="1.4" stroke-linejoin="round"/>';
+        s += '<path d="M' + (r[0] + 13) + ',' + (r[1] - 1) + ' l2,-4" stroke="#5f4830" stroke-width="1.4"/>';
+        s += '<path d="M' + (r[0] + 8) + ',' + r[1] + ' v15" stroke="#5f4830" stroke-width="1.2" opacity=".55"/>';
+        s += '<path d="M' + (r[0] + 2) + ',' + (r[1] + 6) + ' L' + (r[0] + 6) + ',' + (r[1] + 1.5) + '" ' +
+          'stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity=".3"/>';
+      } else {
+        s += '<path d="M' + (r[0] - 1) + ',' + (r[1] + 4) + ' l18,3 M' + (r[0] - 1) + ',' + (r[1] + 10) +
+          ' l18,-3" stroke="#a9793f" stroke-width="2.6" stroke-linecap="round"/>';
+        s += '<path d="M' + (r[0] + 3) + ',' + (r[1] - 1) + ' q5,-7 11,-1" fill="none" ' +
+          'stroke="rgba(20,34,76,.28)" stroke-width="4" stroke-linecap="round"/>';
+      }
+    });
+
+    /* de deuropening met een gordijn van kralen, en licht dat naar buiten valt */
+    if (!kapot(0.62)){
+      s += '<path d="M-13,37 L-13,14 a13,13 0 0 1 26,0 L13,37 z" fill="#f6d98a" opacity=".3"/>';
+    }
+    s += '<path d="M-11,37 L-11,14 a11,11 0 0 1 22,0 L11,37 z" fill="#3b3025" stroke="#5f4830" stroke-width="2.2"/>';
+    for (var k = -8; k <= 8; k += 4){
+      s += '<path d="M' + k + ',' + (7 + Math.abs(k) * 0.35).toFixed(1) + ' v' + (24 - Math.abs(k) * 0.6).toFixed(1) +
+        '" stroke="#c9a06a" stroke-width="1.6" opacity=".8"/>';
+      s += '<circle cx="' + k + '" cy="' + (31 - Math.abs(k) * 0.25).toFixed(1) + '" r="1.6" fill="#EA9836"/>';
+    }
+    /* het naambordje boven de deur, op een plank */
+    s += '<rect x="-15" y="-8" width="30" height="8" rx="2" fill="#2f7d52" stroke="#5f4830" stroke-width="1.4" opacity=".95"/>';
+    s += '<path d="M-11,-4 h22" stroke="#fff" stroke-width="1.6" opacity=".65"/>';
+
+    /* het verval: eerst losse latten, dan gaten in het riet */
+    if (kapot(0.3)) s += '<path d="M-24,37 l3,-13 l-5,-6 l6,-8" fill="none" stroke="#5f4830" stroke-width="2.2" opacity=".8"/>';
+    if (kapot(0.55)) s += '<path d="M32,-8 l-5,11 l6,8 l-4,9" fill="none" stroke="#5f4830" stroke-width="2.2" opacity=".8"/>';
+    if (kapot(0.72)) s += '<path d="M-42,-14 l-3,9 l5,7" fill="none" stroke="#5f4830" stroke-width="2" opacity=".7"/>';
+    if (kapot(0.88)){
+      s += '<path d="M9,-26 l11,-9 l10,10 z" fill="#3b3730" stroke="#5f4830" stroke-width="1.6" stroke-linejoin="round"/>';
+      s += '<path d="M-22,-31 l8,-5 l3,7 z" fill="#3b3730" stroke="#5f4830" stroke-width="1.4" stroke-linejoin="round"/>';
+    }
+
+    s += '<text x="0" y="62" font-size="13" font-weight="600" fill="#0f3f4c" text-anchor="middle">de klas</text>';
+    s += '</g>';
+    return s;
+  }
 
   function raakVijand(e, schade, vertragen){
     if (!e || e.dood) return;
@@ -3596,6 +3709,7 @@ function rekenVraag(rang, toegestaan) {
      die van twee tot zesenveertig loopt. */
   var SPAWNAF = POORTAF + 16;
   function tekenPoort(){
+    if (thema.id === 'eiland') return tekenBamboepoort();
     /* Het anker ligt op vijftig pixels langs het pad. Alle vorm zit vóór dat
        punt, want de eerste poging had zijn halve bouwwerk op negatieve x staan
        en dan valt hij van het bord af: de kaarten beginnen op x = -40 en het
@@ -3631,6 +3745,98 @@ function rekenVraag(rang, toegestaan) {
     /* een bordje op de achterste balk, met de kant van de weg mee */
     g += '<rect x="-6" y="-9" width="9" height="18" rx="2" fill="#c0442c" ' +
       'stroke="#4a3826" stroke-width="1.4" opacity=".9"/>';
+    g += '</g>';
+    return g;
+  }
+
+  /* ---------- de bamboepoort ----------
+     Dezelfde maten als de stenen poort, want de fouten komen op precies dezelfde
+     plek naar buiten en een baas van tweeentwintig pixels breed moet er nog
+     steeds in passen. Alleen het materiaal verschilt: drie staande stengels
+     achterin, twee liggende balken langs de weg, touw op de kruisingen en een
+     bos palmblad bovenop. */
+  function bamboe(x, y, breed, hoog, liggend){
+    var g = '<rect x="' + x + '" y="' + y + '" width="' + breed + '" height="' + hoog +
+      '" rx="4" fill="#cdb45f" stroke="#7d6a28" stroke-width="2"/>';
+    /* de knopen: dwars op de lengte van de stengel */
+    if (liggend){
+      for (var kx = x + 11; kx < x + breed - 4; kx += 13){
+        g += '<path d="M' + kx + ',' + (y + 1) + ' v' + (hoog - 2) + '" stroke="#8f7c33" stroke-width="2.4"/>';
+      }
+      g += '<rect x="' + x + '" y="' + (y + 1.5) + '" width="' + breed + '" height="3" rx="1.5" fill="#fff" opacity=".22"/>';
+    } else {
+      for (var ky = y + 11; ky < y + hoog - 4; ky += 13){
+        g += '<path d="M' + (x + 1) + ',' + ky + ' h' + (breed - 2) + '" stroke="#8f7c33" stroke-width="2.4"/>';
+      }
+      g += '<rect x="' + (x + 1.5) + '" y="' + y + '" width="3" height="' + hoog + '" rx="1.5" fill="#fff" opacity=".22"/>';
+    }
+    return g;
+  }
+
+  /* Een klein propellervliegtuig van bovenaf, met de neus naar +x. Met bom
+     hangt er een zwart bolletje onder de romp; de propeller draait op de pols. */
+  function vliegtuig(x, y, hoek, kl, metBom, schaal){
+    var g = '<g transform="translate(' + x.toFixed(1) + ',' + y.toFixed(1) + ') rotate(' + hoek.toFixed(1) +
+      ') scale(' + schaal + ')">';
+    g += '<rect x="-4" y="-15" width="7" height="30" rx="2.5" fill="' + tint(kl, -0.1) + '" stroke="' +
+      tint(kl, 0.45) + '" stroke-width="1.2"/>';                                        /* vleugels */
+    g += '<rect x="-13" y="-6" width="4" height="12" rx="1.5" fill="' + tint(kl, -0.1) + '" stroke="' +
+      tint(kl, 0.45) + '" stroke-width="1.2"/>';                                        /* staartvlak */
+    g += '<ellipse cx="0" cy="0" rx="13" ry="3.8" fill="' + kl + '" stroke="' + tint(kl, 0.45) + '" stroke-width="1.4"/>';
+    g += '<path d="M-13,0 l-3,-3 v6 z" fill="' + tint(kl, 0.3) + '"/>';                /* kielvlak */
+    g += '<ellipse cx="2" cy="0" rx="3.6" ry="2.2" fill="#dceaf7" stroke="' + tint(kl, 0.5) + '" stroke-width="1"/>';
+    g += '<path d="M-2,-13 h3 M-2,13 h3" stroke="#EA9836" stroke-width="1.8" stroke-linecap="round"/>';
+    if (metBom) g += '<circle cx="-1" cy="0" r="2.6" fill="#3b3730" stroke="#14224C" stroke-width="1"/>';
+    var draai = (pols * 900) % 180;
+    g += '<line x1="13.5" y1="-6" x2="13.5" y2="6" stroke="#4a3826" stroke-width="1.6" ' +
+      'stroke-linecap="round" transform="rotate(' + draai.toFixed(0) + ' 13.5 0)" opacity=".85"/>';
+    g += '<circle cx="13.5" cy="0" r="1.4" fill="#EA9836"/>';
+    g += '</g>';
+    return g;
+  }
+
+  function tekenBamboepoort(){
+    var q = positie(POORTAF), hk = padHoek(q.x, q.y);
+    var vlam = Math.min(1, poortFlits / 0.45);
+    var g = '<g transform="translate(' + q.x.toFixed(1) + ',' + q.y.toFixed(1) +
+      ') rotate(' + hk.toFixed(1) + ')">';
+    /* de donkere doorgang, precies zoals bij de stenen poort */
+    g += '<rect x="-6" y="-26" width="34" height="52" rx="10" fill="#2b2620" opacity=".82"/>';
+    g += '<ellipse cx="' + (2 + vlam * 4).toFixed(1) + '" cy="0" rx="' + (9 + vlam * 9).toFixed(1) +
+      '" ry="' + (18 + vlam * 5).toFixed(1) + '" fill="#EA9836" opacity="' +
+      (0.12 + vlam * 0.42).toFixed(2) + '"/>';
+    /* drie staande stengels achterin: daar komen ze tussenuit */
+    g += bamboe(-9, -38, 5, 76, false);
+    g += bamboe(-2.5, -38, 5, 76, false);
+    g += bamboe(4, -38, 5, 76, false);
+    /* de twee liggende balken langs de weg */
+    [-1, 1].forEach(function(k){
+      var y0 = k < 0 ? -38 : 22;
+      g += bamboe(-9, y0, 41, 16, true);
+      /* touw waar de balk over de stengels heen ligt */
+      g += '<path d="M-11,' + (y0 + 3) + ' q4,5 0,10 M-6,' + (y0 + 2) + ' q5,6 0,12" fill="none" ' +
+        'stroke="#e0cba0" stroke-width="2.2" stroke-linecap="round"/>';
+      g += '<path d="M6,' + (y0 - 1) + ' q4,9 0,18" fill="none" stroke="#c9b083" stroke-width="2" ' +
+        'stroke-linecap="round" opacity=".85"/>';
+    });
+    /* palmblad boven op de balken, aan weerskanten van de doorgang. Elk blad
+       staat onder zijn eigen hoek en heeft een nerf, anders worden het drie
+       dezelfde groene bulten op een rij. */
+    [-1, 1].forEach(function(k){
+      var y0 = k < 0 ? -39 : 39;
+      [[-6, -34], [7, -6], [20, 22]].forEach(function(bl){
+        var draai = k < 0 ? bl[1] : -bl[1];
+        g += '<g transform="translate(' + bl[0] + ',' + y0 + ') rotate(' + (k < 0 ? 180 + draai : draai) + ')">' +
+          '<path d="M0,0 q9,-7 20,-2 q-9,7 -20,2z" fill="#3f8f5c" stroke="#2c6b44" ' +
+          'stroke-width="1.2" stroke-linejoin="round"/>' +
+          '<path d="M1,-0.5 q9,-4 18,-1.5" fill="none" stroke="#2c6b44" stroke-width="1" opacity=".7"/>' +
+          '</g>';
+      });
+    });
+    /* een plankje met een rode stip, net als de stenen poort er een had */
+    g += '<rect x="-6" y="-9" width="9" height="18" rx="2" fill="#a9793f" ' +
+      'stroke="#5f4830" stroke-width="1.4" opacity=".95"/>';
+    g += '<circle cx="-1.5" cy="0" r="2.6" fill="#c0442c"/>';
     g += '</g>';
     return g;
   }
@@ -3919,31 +4125,52 @@ function rekenVraag(rang, toegestaan) {
                '<circle cx="' + (26 - terug) + '" cy="0" r="2.6" fill="#EA9836"/>';
         }
       } else if (t.soort === 'bommenwerper'){
-        /* Een korte dikke mortier die schuin omhoog staat, met een rekje bommen
-           ernaast. Hij mikt wel mee, want dan zie je waar de volgende heen gaat. */
-        s += '<rect x="' + (0 - terug) + '" y="-8" width="15" height="16" rx="5" fill="' + mDonker + '"/>';
-        s += '<path d="M' + (10 - terug) + ',-9 L' + (26 - terug) + ',-17 L' + (30 - terug) +
-          ',-10 L' + (14 - terug) + ',-2 z" fill="' + mMid + '" stroke="' + mDonker +
-          '" stroke-width="1.6" stroke-linejoin="round"/>';
-        s += '<circle cx="' + (28 - terug) + '" cy="-13.5" r="3" fill="#14224C" opacity=".7"/>';
-        if (pen){
-          /* de trosbom: drie bommetjes op het rek in plaats van twee */
-          s += '<circle cx="-9" cy="7" r="4" fill="#3b3730"/><circle cx="-1" cy="9" r="4" fill="#3b3730"/>' +
-               '<circle cx="7" cy="9.5" r="4" fill="#3b3730"/>';
-          s += '<circle cx="0" cy="0" r="10.5" fill="none" stroke="#EA9836" stroke-width="2.6"/>';
-        } else {
-          s += '<circle cx="-7" cy="8" r="4" fill="#3b3730"/><circle cx="1" cy="9.5" r="4" fill="#3b3730"/>';
-        }
+        /* Een vliegveldje: een baan met witte strepen die naar het doel draait,
+           een hangaar aan het begin en het vliegtuig geparkeerd op de baan
+           zolang het niet in de lucht is. */
+        /* De baan steekt naar voren uit, net als een loop: de hangaar blijft
+           binnen de voet, het eind van de baan wijst naar het doel. */
+        s += '<rect x="-12" y="-7" width="40" height="14" rx="3" fill="#55606b" stroke="' + mZwart +
+          '" stroke-width="1.4"/>';
+        s += '<path d="M-4,0 h6 M8,0 h6" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".8"/>';
+        s += '<path d="M22,-5 l4,5 l-4,5" fill="none" stroke="#EA9836" stroke-width="1.8" stroke-linejoin="round"/>';
+        /* de hangaar, met een ronde kap */
+        s += '<path d="M-17,-11 h7 a4,4 0 0 1 4,4 v14 a4,4 0 0 1 -4,4 h-7 z" fill="' + mMid +
+          '" stroke="' + mDonker + '" stroke-width="1.6"/>';
+        s += '<path d="M-15,-8 h5 M-15,8 h5" stroke="' + mDonker + '" stroke-width="1.2" opacity=".6"/>';
+        /* het bommenrek naast de baan */
+        s += '<circle cx="-2" cy="12" r="3.2" fill="#3b3730"/><circle cx="6" cy="12" r="3.2" fill="#3b3730"/>';
+        if (pen) s += '<circle cx="14" cy="12" r="3.2" fill="#3b3730"/>';
+        if (!t.vliegt) s += vliegtuig(7, 0, 0, kl, true, 0.72);
+        if (pen) s += '<circle cx="0" cy="0" r="27" fill="none" stroke="#EA9836" stroke-width="2" opacity=".5"/>';
       } else if (t.soort === 'vrienden'){
-        /* Een hut met een palmdak. Hij mikt nergens op, dus hij draait ook niet
-           mee: t.mikt blijft nul en dan staat het dak altijd recht. */
-        s += '<rect x="-9" y="-4" width="18" height="14" rx="2" fill="' + mDonker + '"/>';
-        s += '<rect x="-3.5" y="1" width="7" height="9" rx="1.5" fill="#1f3a2b"/>';
-        s += '<path d="M-17,-4 L0,-19 L17,-4 z" fill="#6f9d55" stroke="#2c6b44" ' +
-          'stroke-width="1.6" stroke-linejoin="round"/>';
-        s += '<path d="M-11,-4 L0,-16 M0,-16 L11,-4 M-5,-4 L0,-10" fill="none" stroke="#2c6b44" ' +
-          'stroke-width="1.2" opacity=".55"/>';
-        if (pen) s += '<circle cx="0" cy="-22" r="4" fill="#EA9836" stroke="#fff" stroke-width="1.4"/>';
+        /* Een hut met een dak van palmblad in twee rijen, zoals de klas op het
+           eiland, en een fakkel ernaast die op de pols flakkert. Hij mikt nergens
+           op, dus hij draait niet mee en het dak staat altijd recht. */
+        s += '<rect x="-13" y="-3" width="26" height="15" rx="2" fill="#e6c98f" stroke="#7d6a28" stroke-width="1.4"/>';
+        s += '<path d="M-9,-1 v12 M-4,-1 v12 M4,-1 v12 M9,-1 v12" stroke="#c9a06a" stroke-width="1.4" opacity=".8"/>';
+        s += '<path d="M-4.5,12 v-8 a4.5,4.5 0 0 1 9,0 v8 z" fill="#2b241c"/>';
+        s += '<path d="M-3,5 v7 M0,4 v8 M3,5 v7" stroke="#c9a06a" stroke-width="1" opacity=".7"/>';
+        s += '<circle cx="0" cy="11" r="1" fill="#EA9836"/>';
+        s += '<path d="M-21,-3 L0,-22 L21,-3 z" fill="#8a6f3c" stroke="#5f4830" stroke-width="1.6" stroke-linejoin="round"/>';
+        [[-3, 20, '#a5854a'], [-10, 12, '#9a7c43']].forEach(function(rij){
+          var y = rij[0], w = rij[1];
+          var d = 'M' + (-w) + ',' + (y - 6) + ' L' + w + ',' + (y - 6) + ' L' + w + ',' + y;
+          for (var x = w; x > -w + 1; x -= 7) d += ' q-1.8,3.5 -3.5,0 q-1.7,-3.5 -3.5,0';
+          d += ' L' + (-w) + ',' + (y - 6) + ' Z';
+          s += '<path d="' + d + '" fill="' + rij[2] + '" stroke="#6b552c" stroke-width="1.1" stroke-linejoin="round"/>';
+        });
+        /* de fakkel bij de deur */
+        s += '<path d="M17,12 v-12" stroke="#7d6a28" stroke-width="2.2" stroke-linecap="round"/>';
+        var vlam = 1 + Math.sin(pols * 9) * 0.25;
+        s += '<path d="M17,0 q-4,' + (-5 * vlam).toFixed(1) + ' 0,' + (-9 * vlam).toFixed(1) + ' q4,' +
+          (4 * vlam).toFixed(1) + ' 0,' + (9 * vlam).toFixed(1) + 'z" fill="#EA9836" stroke="#c0442c" stroke-width="1"/>';
+        s += '<circle cx="17" cy="-3" r="1.4" fill="#FFE168"/>';
+        if (pen){
+          /* met de penning hangt er een vlag aan de nok: de club heeft een naam */
+          s += '<path d="M0,-22 v-9" stroke="#5f4830" stroke-width="1.6"/>';
+          s += '<path d="M0,-31 l10,2.5 l-10,2.5 z" fill="#2f7d52" stroke="#1f5c40" stroke-width="1.2" stroke-linejoin="round"/>';
+        }
       } else if (t.soort === 'aap'){
         /* de minigun: een blok met drie korte lopen, en met de penning een
            dikkere bak eronder waar de bommen uit komen */
@@ -4072,14 +4299,20 @@ function rekenVraag(rang, toegestaan) {
       s += '<path d="M' + (-13 + duw) + ',-9 q-7,9 0,18 q7,-9 0,-18z" fill="#7fc48f" ' +
         'stroke="#2c6b44" stroke-width="1.6" stroke-linejoin="round"/>';
       s += '</g>';
-      s += '<circle cx="' + q.x.toFixed(1) + '" cy="' + (q.y + wip).toFixed(1) +
-        '" r="9.5" fill="#3f8f5c" stroke="#1f5c40" stroke-width="2"/>';
-      s += '<circle cx="' + (q.x - 3).toFixed(1) + '" cy="' + (q.y + wip - 2).toFixed(1) +
-        '" r="1.6" fill="#fff"/>';
-      s += '<circle cx="' + (q.x + 3).toFixed(1) + '" cy="' + (q.y + wip - 2).toFixed(1) +
-        '" r="1.6" fill="#fff"/>';
-      s += '<path d="M' + (q.x - 3.5).toFixed(1) + ',' + (q.y + wip + 3).toFixed(1) +
-        ' q3.5,3 7,0" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>';
+      var vx = q.x.toFixed(1), vy = (q.y + wip).toFixed(1);
+      /* het lijf, met een groen hemdje en een strooien hoed */
+      s += '<circle cx="' + vx + '" cy="' + vy + '" r="9.5" fill="#3f8f5c" stroke="#1f5c40" stroke-width="2"/>';
+      s += '<ellipse cx="' + vx + '" cy="' + (q.y + wip + 1).toFixed(1) + '" rx="5.5" ry="4.5" fill="#f2c9a0"/>';
+      s += '<circle cx="' + (q.x - 2.2).toFixed(1) + '" cy="' + (q.y + wip).toFixed(1) + '" r="1.1" fill="#14224C"/>';
+      s += '<circle cx="' + (q.x + 2.2).toFixed(1) + '" cy="' + (q.y + wip).toFixed(1) + '" r="1.1" fill="#14224C"/>';
+      s += '<path d="M' + (q.x - 2.5).toFixed(1) + ',' + (q.y + wip + 3).toFixed(1) +
+        ' q2.5,2.4 5,0" fill="none" stroke="#14224C" stroke-width="1.2" stroke-linecap="round"/>';
+      /* de hoed: een brede rand en een bol met een bandje */
+      s += '<ellipse cx="' + vx + '" cy="' + (q.y + wip - 4).toFixed(1) + '" rx="11" ry="3.6" fill="#e6c98f" stroke="#a8842a" stroke-width="1.2"/>';
+      s += '<path d="M' + (q.x - 6).toFixed(1) + ',' + (q.y + wip - 4.5).toFixed(1) +
+        ' a6,5 0 0 1 12,0 z" fill="#f0dcb2" stroke="#a8842a" stroke-width="1.2"/>';
+      s += '<path d="M' + (q.x - 5.5).toFixed(1) + ',' + (q.y + wip - 5.5).toFixed(1) +
+        ' h11" stroke="#c0442c" stroke-width="1.6"/>';
       if (v.hp < v.maxHp){
         var deel = Math.max(0, v.hp / v.maxHp);
         s += '<rect x="' + (q.x - 11) + '" y="' + (q.y + wip - 18) + '" width="22" height="4" rx="2" ' +
@@ -4320,6 +4553,23 @@ function rekenVraag(rang, toegestaan) {
           : '<path d="M-6,-2 L-2,-7 L5,-5 L7,1 L2,6 L-5,4 z" fill="#8a8578" stroke="#4a3826" stroke-width="1.6" stroke-linejoin="round"/>' +
             '<path d="M-2,-3 L2,-1 L0,2" fill="none" stroke="#4a3826" stroke-width="1" opacity=".6"/>') +
         '</g>';
+    });
+
+    /* de vliegtuigen van de Bommenwerper: eerst met bom naar het doel, dan
+       leeg weer terug. Ze vliegen hoog, dus de schaduw loopt een stuk voor ze
+       uit op de grond. */
+    vliegers.forEach(function(v){
+      var f = Math.min(1, v.t);
+      /* zacht opstijgen en landen: aan het begin en het eind van elke vlucht
+         iets lager, in het midden op kruishoogte */
+      var hoog = 26 - 14 * Math.pow(Math.abs(f - 0.5) * 2, 2) * (v.terug ? 1 : 0.4);
+      var x = v.x0 + (v.x1 - v.x0) * f, y = v.y0 + (v.y1 - v.y0) * f;
+      var hk = Math.atan2(v.y1 - v.y0, v.x1 - v.x0) * 180 / Math.PI;
+      var kl = kleurVan(SOORTEN.bommenwerper.kleur);
+      s += '<ellipse cx="' + (x + 6).toFixed(1) + '" cy="' + (y + 12).toFixed(1) +
+        '" rx="12" ry="5" fill="rgba(20,34,76,.2)" transform="rotate(' + hk.toFixed(1) + ' ' +
+        (x + 6).toFixed(1) + ' ' + (y + 12).toFixed(1) + ')"/>';
+      s += vliegtuig(x, y - hoog, hk, kl, !v.terug, 1);
     });
 
     /* de schillen die de apenbaas naar je torens gooit, in een boog */
@@ -4867,15 +5117,34 @@ function rekenVraag(rang, toegestaan) {
         var q = positie(e.d);
         if (Math.hypot(q.x - t.x, q.y - t.y) <= bw && e.d > verstW){ doelW = e; verstW = e.d; posW = q; }
       });
-      if (!doelW) return;
+      if (!doelW || t.vliegt) return;
       t.klok = so.tempo;
       t.mikt = Math.atan2(posW.y - t.y, posW.x - t.x) * 180 / Math.PI;
-      t.terugslag = 1;
-      kogels.push({ x0:t.x, y0:t.y - 30, x1:posW.x, y1:posW.y, t:0, duur:BOMVAL,
-                    schade:so.schade * (1 + (t.niveau - 1) * 0.6) * reeksbonus() * (t.kracht ? 1.5 : 1),
-                    straal:so.straal * (t.kracht ? 1.45 : 1),
-                    doel:doelW, draai:Math.random() * 360, bom:true, valt:true });
+      t.vliegt = true;
+      /* Het vliegtuig stijgt op, vliegt naar de plek waar de fout nu loopt,
+         laat daar zijn bom vallen en keert om. De schade komt pas bij de inslag,
+         dus wie hard loopt kan er nog onder vandaan. */
+      vliegers.push({ toren:t, x0:t.x, y0:t.y, x1:posW.x, y1:posW.y, t:0, duur:VLUCHT,
+                      terug:false,
+                      schade:so.schade * (1 + (t.niveau - 1) * 0.6) * reeksbonus() * (t.kracht ? 1.5 : 1),
+                      straal:so.straal * (t.kracht ? 1.45 : 1), doel:doelW });
     });
+    vliegers.forEach(function(v){
+      v.t += dt / v.duur;
+      if (v.t < 1) return;
+      if (!v.terug){
+        /* boven het doel: bom los, en dezelfde weg terug */
+        kogels.push({ x0:v.x1, y0:v.y1, x1:v.x1, y1:v.y1, t:0, duur:BOMVAL, schade:v.schade,
+                      straal:v.straal, doel:v.doel, draai:0, bom:true, valt:true });
+        v.terug = true; v.t = 0;
+        var wx = v.x0; v.x0 = v.x1; v.x1 = wx;
+        var wy = v.y0; v.y0 = v.y1; v.y1 = wy;
+      } else {
+        v.klaar = true;
+        if (v.toren) v.toren.vliegt = false;
+      }
+    });
+    vliegers = vliegers.filter(function(v){ return !v.klaar; });
 
     /* ---------- de vrienden uit de Vriendenhut ----------
        Ze lopen het pad af naar de poort toe, tot ze een fout tegenkomen of tot
@@ -5155,7 +5424,7 @@ function rekenVraag(rang, toegestaan) {
   function begin(){
     kiesKaart();
     baasSpook = 1; baasBalkIn = 0; baasBalk = null; baasLaatst = null;
-    vijanden = []; torens = []; schoten = []; pot = null; vrienden = [];
+    vijanden = []; torens = []; schoten = []; pot = null; vrienden = []; vliegers = [];
     cijfers = []; pluis = []; golven = []; kogels = []; wegdingen = []; schillen = [];
     baasKeuzes = {};
     wachtrij = 5; spawnKlok = 0; rondePauze = 2;
@@ -5460,7 +5729,7 @@ function rekenVraag(rang, toegestaan) {
     themaKies.addEventListener('change', function(){
       thema = THEMAS.filter(function(t){ return t.id === themaKies.value; })[0] || THEMAS[0];
       ACHTERGROND = null;
-      torens = []; vrienden = []; wegdingen = [];
+      torens = []; vrienden = []; vliegers = []; wegdingen = [];
       tekenThemas();
       if (inSpel()){ tekenBord(); tekenMeters(); }
       melding2('Omgeving gezet op ' + thema.naam + '. Bord leeggemaakt, want de torens verschillen.');
