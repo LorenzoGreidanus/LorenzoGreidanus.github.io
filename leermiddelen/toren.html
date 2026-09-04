@@ -412,7 +412,8 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
       <b>Verdienen</b>
       <span>Elke gevelde baas levert een penning op: daarmee geef je een toren zijn eigen kracht.
         Goed op rij maakt je torens ook harder slaan, tot de helft erbij. De Tonkla Toren
-        verdien je met een lange reeks goed, de Apentoren met de apenbaas.</span>
+        verdien je met een lange reeks goed, de Apentoren met de apenbaas, en het tropisch
+        eiland door ronde vijftig te overleven.</span>
     </div>
   </div>
 
@@ -428,6 +429,10 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
   <p class="nivuit hide" id="vastUit"></p>
 
   <div id="deelvakken"></div>
+
+  <p class="eyebrow kop2" id="themaKop">kies je omgeving</p>
+  <div class="niv" id="themas"></div>
+  <p class="nivuit" id="themaUit"></p>
 
   <button class="btn" id="startBtn" type="button" disabled>Kies eerst een vak</button>
 </section>
@@ -494,7 +499,10 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
     <button type="button" id="testAuto">alles goed</button>
   </div>
   <div class="testrij">
-    <button type="button" id="testVrij">torens vrijspelen</button>
+    <button type="button" id="testVrij">alles vrijspelen</button>
+  </div>
+  <div class="testrij">
+    <span>Omgeving</span><select id="testThema"></select>
   </div>
   <div class="testrij">
     <span>Kaart</span><select id="testKaart"></select>
@@ -522,15 +530,36 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
      lopen twee wegen (tweeënvijftig pixels breed) tegen elkaar aan.
    De lengtes liggen tussen 1430 en 1650: hoe langer het pad, hoe meer tijd je
    torens hebben, dus veel verder uit elkaar mogen ze niet lopen. */
+/* Elke kaart heeft ook een naam voor op het eiland. Dezelfde weg, maar 'Het
+   schoolplein' in het zand tussen de palmen leest als een fout. */
 const KAARTEN = [
-  { naam:'Het schoolplein', pad:[[-40,90],[190,90],[190,250],[430,250],[430,110],[650,110],[650,390],[812,390]] },
-  { naam:'De zaagtand',     pad:[[-40,140],[130,140],[130,330],[300,330],[300,140],[470,140],[470,330],[640,330],[640,170],[812,170]] },
-  { naam:'De grote lus',    pad:[[-40,150],[280,150],[280,290],[130,290],[130,390],[540,390],[540,240],[812,240]] },
-  { naam:'De slingerweg',   pad:[[-40,230],[120,230],[120,100],[330,100],[330,300],[520,300],[520,130],[720,130],[720,300],[812,300]] }
+  { naam:'Het schoolplein', eiland:'De lagune',     pad:[[-40,90],[190,90],[190,250],[430,250],[430,110],[650,110],[650,390],[812,390]] },
+  { naam:'De zaagtand',     eiland:'De rifrand',    pad:[[-40,140],[130,140],[130,330],[300,330],[300,140],[470,140],[470,330],[640,330],[640,170],[812,170]] },
+  { naam:'De grote lus',    eiland:'De baai',       pad:[[-40,150],[280,150],[280,290],[130,290],[130,390],[540,390],[540,240],[812,240]] },
+  { naam:'De slingerweg',   eiland:'De kokosroute', pad:[[-40,230],[120,230],[120,100],[330,100],[330,300],[520,300],[520,130],[720,130],[720,300],[812,300]] }
 ];
 /* Het pad eindigt bij de deur van de school. Het liep eerst door tot de rand,
    en dan valt het gebouw half buiten het bord. */
 let PAD = KAARTEN[0].pad;
+/* De Tonkla Bommenwerper. De straal staat hier los, want daar draai je aan als
+   hij te sterk of te slap blijkt: alles binnen dat aantal pixels van de inslag
+   krijgt de volle klap. */
+const BOMSTRAAL = 78, BOMVAL = 0.85;
+/* De Vriendenhut. Per hut lopen er standaard twee vrienden rond, ze houden een
+   fout tegen zolang ze leven en slaan er ondertussen op in. Wat hen raakt is de
+   fout waar ze tegenaan staan; een baas slaat drie keer zo hard. */
+const VRIEND = {
+  aantal:2,          /* hoeveel er tegelijk rondlopen, met de penning een meer */
+  hp:46,             /* hoeveel een vriend kan hebben op niveau een */
+  hpNiveau:0.6,      /* hoeveel taaier per niveau erbij */
+  schade:8,          /* per klap */
+  tempo:0.55,        /* seconden tussen twee klappen */
+  snelheid:60,       /* hoe hard ze het pad af lopen om een fout op te vangen */
+  leiband:150,       /* zover lopen ze voor hun hut uit, niet verder */
+  wachten:7,         /* seconden voordat er een nieuwe uit de hut komt */
+  klap:3.4,          /* wat een fout per seconde bij een vriend weghaalt */
+  baasklap:3         /* een baas slaat zoveel keer zo hard */
+};
 const SOORTEN = {
   kanon:     {naam:'Kanon',        letter:'K', kleur:'var(--crab)',        prijs:40,  bereik:110, schade:6,  tempo:0.55, onder:'Snel en dichtbij'},
   katapult:  {naam:'Katapult',     letter:'T', kleur:'var(--deep-ocean)',  prijs:70,  bereik:200, schade:20, tempo:1.5,  onder:'Ver, maar traag'},
@@ -574,8 +603,38 @@ const SOORTEN = {
      elkaar dat een zwerm er niet doorheen komt. Zijn bereik is kort, dus je zet
      hem dicht op het pad. */
   aap:       {naam:'Apentoren',    letter:'A',kleur:'#8a6a45',             prijs:160, bereik:130, schade:3.4, tempo:0.15,
-              onder:'Minigun vol bananen', schotkleur:'#EFC64A', speciaal:true, slot:'aap', aap:true}
+              onder:'Minigun vol bananen', schotkleur:'#EFC64A', speciaal:true, slot:'aap', aap:true},
+  /* De twee torens van het eiland. De Bommenwerper schiet niet, hij laat om de
+     twee seconden een bom vallen op de fout die het verst is; alles binnen de
+     straal krijgt de klap mee. Zijn schade per munt is laag voor een enkel doel
+     en hoog zodra er drie of meer in een rij lopen: dat is precies waar hij voor
+     is. De Vriendenhut schiet helemaal niet, maar stuurt vrienden het pad op die
+     de fouten tegenhouden en ondertussen op ze inslaan. */
+  bommenwerper: {naam:'Tonkla Bommenwerper', letter:'B', kleur:'#3f6b8f', prijs:150, bereik:230,
+              schade:34, tempo:2.0, onder:'Laat bommen vallen, raakt een hele groep',
+              bommen:true, straal:BOMSTRAAL},
+  vrienden:  {naam:'Vriendenhut',  letter:'V', kleur:'#2f7d52',            prijs:110, bereik:150,
+              schade:0,  tempo:0,  onder:'Stuurt vrienden het pad op', vrienden:true}
 };
+
+/* ---------------------------------------------------------------------------
+   Twee omgevingen. Het schoolplein is er altijd; het tropisch eiland speel je
+   vrij door ronde vijftig te overleven, dus door de Grote Fout te vellen.
+
+   Een omgeving is meer dan een kleurtje: hij bepaalt ook welke torens er te
+   koop zijn. Op het eiland staan de vier gewone torens plus de twee die alleen
+   daar bestaan, en juist niet de Pekelpot, de Tonkla Toren en de Apentoren.
+   Zo speel je op het eiland een ander spel en niet hetzelfde spel in het zand.
+   --------------------------------------------------------------------------- */
+const THEMAS = [
+  { id:'plein', naam:'Het schoolplein',
+    onder:'Gras, een zandweg en de school aan het eind. Met de Pekelpot, de Tonkla Toren en de Apentoren.',
+    torens:['kanon','katapult','vertrager','pekelpot','schutter','tonkla','aap'] },
+  { id:'eiland', naam:'Tropisch eiland', slot:true,
+    onder:'Zee, palmen en een vlonder over het zand. Met de Tonkla Bommenwerper en de Vriendenhut.',
+    torens:['kanon','katapult','vertrager','schutter','bommenwerper','vrienden'] }
+];
+const EILANDRONDE = 50;   /* zoveel rondes overleven en het eiland staat open */
 /* Hoe lang de Apentoren met de penning over een bom doet, en hoe hard die
    aankomt binnen zestig pixels van de inslag. */
 const BOMTIJD = 8, BOMSCHADE = 55;
@@ -2147,6 +2206,7 @@ function rekenVraag(rang, toegestaan) {
   var BREED = 900, HOOG = 460;
   var niveau = 'kgt', vak = null, keuze = {};
   var vijanden = [], torens = [], schoten = [], pot = null;
+  var vrienden = [];                                       /* de mannetjes uit de Vriendenhut */
   var cijfers = [], pluis = [], golven = [], kogels = [];   /* effecten en de stenen van de katapult */
   var schillen = [];                                       /* de schillen die de apenbaas gooit */
   var wachtrij = 5, spawnKlok = 0, rondePauze = 2;
@@ -2172,6 +2232,14 @@ function rekenVraag(rang, toegestaan) {
   var aapVrij = (function(){
     try { return localStorage.getItem('lg-toren-aap') === 'ja'; } catch (e){ return false; }
   })();
+  /* Het tropisch eiland verdien je door ronde vijftig te overleven. Dat is de
+     ronde van de Grote Fout, dus je hebt hem geveld voordat je er komt. */
+  var eilandVrij = (function(){
+    try { return localStorage.getItem('lg-toren-eiland') === 'ja'; } catch (e){ return false; }
+  })();
+  var thema = THEMAS[0];
+  /* Hoe de kaart nu heet, in de omgeving waarin je speelt. */
+  function kaartNaam(k){ return (thema.id === 'eiland' && k.eiland) ? k.eiland : k.naam; }
   var vraag = null, gekliktIndex = -1;
   var klok = null;
   /* Staat het spel stil? Dan loopt de klok niet, maar blijft alles wel staan
@@ -2195,6 +2263,14 @@ function rekenVraag(rang, toegestaan) {
     miniBijWachtrij = isMiniRonde(bank.ronde)
       ? Math.floor(Math.random() * Math.max(1, Math.floor(wachtrij / 2))) : miniBijWachtrij;
     if (!nieuweRonde) return;
+    /* Wie aan ronde eenenvijftig begint heeft ronde vijftig overleefd, en
+       daarmee de Grote Fout. Dat opent het tropisch eiland, ook een volgende les. */
+    if (bank.ronde > EILANDRONDE && !eilandVrij){
+      eilandVrij = true;
+      try { localStorage.setItem('lg-toren-eiland', 'ja'); } catch (e){}
+      melding2('Je hebt ronde ' + EILANDRONDE + ' overleefd. Het tropisch eiland staat open: ' +
+        'kies het bij de volgende partij en speel met de Bommenwerper en de Vriendenhut.');
+    }
     if (isRustronde(bank.ronde)){
       melding2('Ronde ' + bank.ronde + '. Rustronde: minder en zwakkere fouten. Bouw bij.');
     } else if (isBaasRonde(bank.ronde)){
@@ -2323,6 +2399,30 @@ function rekenVraag(rang, toegestaan) {
         tekenDeelvakken();
       });
     });
+  }
+
+  /* De omgevingen op het startscherm. Het eiland staat er ook als je het nog
+     niet hebt: een slot dat je ziet hangen is een reden om door te spelen, en
+     een klas die niet weet dat er iets te halen valt gaat er ook niet voor. */
+  function tekenThemas(){
+    var doel = document.getElementById('themas');
+    doel.innerHTML = THEMAS.map(function(t){
+      var op = !t.slot || eilandVrij;
+      return '<button type="button" data-t="' + t.id + '"' +
+        (thema.id === t.id ? ' class="on"' : '') + (op ? '' : ' disabled') + '>' +
+        (op ? '' : '\u{1F512} ') + t.naam + '</button>';
+    }).join('');
+    Array.prototype.forEach.call(doel.querySelectorAll('button'), function(b){
+      b.addEventListener('click', function(){
+        var id = b.getAttribute('data-t');
+        thema = THEMAS.filter(function(t){ return t.id === id; })[0];
+        ACHTERGROND = null;
+        tekenThemas();
+      });
+    });
+    var uit = document.getElementById('themaUit');
+    uit.textContent = thema.onder + (eilandVrij ? '' :
+      ' Het tropisch eiland gaat open zodra je ronde ' + EILANDRONDE + ' overleeft.');
   }
 
   function tekenStartknop(){
@@ -2539,6 +2639,22 @@ function rekenVraag(rang, toegestaan) {
     return m;
   }
 
+  /* Hoe ver langs het pad ligt het punt dat het dichtst bij x,y ligt? De
+     vrienden lopen over het pad en werken dus met een afstand, niet met een
+     plek op het bord. */
+  function padPlek(x, y){
+    var m = 1e9, plek = 0, gelopen = 0;
+    for (var i = 1; i < PAD.length; i++){
+      var ax = PAD[i-1][0], ay = PAD[i-1][1];
+      var dx = PAD[i][0] - ax, dy = PAD[i][1] - ay, len = Math.hypot(dx, dy);
+      var t = (dx || dy) ? Math.max(0, Math.min(1, ((x-ax)*dx + (y-ay)*dy) / (dx*dx + dy*dy))) : 0;
+      var af = Math.hypot(x - (ax + t*dx), y - (ay + t*dy));
+      if (af < m){ m = af; plek = gelopen + t * len; }
+      gelopen += len;
+    }
+    return plek;
+  }
+
   /* Onder welke hoek loopt de weg hier? Zo kan alles wat op de weg ligt
      meedraaien met het pad in plaats van altijd recht te liggen. */
   function padHoek(x, y){
@@ -2598,7 +2714,9 @@ function rekenVraag(rang, toegestaan) {
     pekelpot:  { naam:'Bijtend zuur', uit:'de golf doet bijna dubbele schade',   mark:'\u25CE' },
     schutter:  { naam:'Kopschot',     uit:'drie keer zoveel schade tegen bazen', mark:'\u2295' },
     tonkla:    { naam:'Onweer',       uit:'de schokgolf laadt twee keer zo snel',mark:'\u21AF' },
-    aap:       { naam:'Bommenwerper', uit:'gooit er om de acht seconden een bom bij', mark:'\u2299' }
+    aap:       { naam:'Bommenwerper', uit:'gooit er om de acht seconden een bom bij', mark:'\u2299' },
+    bommenwerper: { naam:'Trosbom',   uit:'een veel grotere inslag en meer schade', mark:'\u2234' },
+    vrienden:  { naam:'Vriendenclub', uit:'er loopt een vriend extra mee en ze staan sneller weer op', mark:'\u263A' }
   };
 
   /* Vier soorten bazen, om de beurt. Ze vragen elk iets anders: de zware moet je
@@ -2856,6 +2974,8 @@ function rekenVraag(rang, toegestaan) {
                      onder:'haal er eerst een weg', kleur:'#5b6480' });
       } else {
         Object.keys(SOORTEN).forEach(function(id){
+          /* Elke omgeving heeft zijn eigen rij torens. */
+          if (thema.torens.indexOf(id) < 0) return;
           var so = SOORTEN[id], prijs = prijsVan(id);
           if (so.speciaal){
             /* elk van de twee bijzondere torens heeft zijn eigen slot */
@@ -3134,6 +3254,7 @@ function rekenVraag(rang, toegestaan) {
   var ACHTERGROND = null;
   function achtergrond(){
     if (ACHTERGROND) return ACHTERGROND;
+    if (thema.id === 'eiland') return eilandAchtergrond();
     var g = '<defs>' +
       '<radialGradient id="steen" cx="35%" cy="30%">' +
         '<stop offset="0%" stop-color="#e8e1d2"/><stop offset="100%" stop-color="#bdb3a0"/></radialGradient>' +
@@ -3177,6 +3298,100 @@ function rekenVraag(rang, toegestaan) {
        het bewaarde plaatje. */
     g += '<text x="14" y="' + (HOOG - 13) + '" font-size="12" font-weight="600" ' +
       'fill="#4a5470" opacity=".85">' + kaart.naam + '</text>';
+    ACHTERGROND = g;
+    return g;
+  }
+
+  /* ---------- het strand ----------
+     Zee boven en onder, zand ertussen, en een houten vlonder als pad. De zee
+     ligt niet links en rechts, want daar loopt het pad het bord op en staat de
+     school: die horen op het droge.
+
+     Alles staat stil. Een achtergrond die beweegt kost bij tempo acht net zoveel
+     rekenwerk als het hele spel, en op een digibord leidt hij af van de fouten
+     die je juist moet zien aankomen. */
+  var ZEE = 42;
+  function eilandAchtergrond(){
+    var g = '<defs>' +
+      '<radialGradient id="steen" cx="35%" cy="30%">' +
+        '<stop offset="0%" stop-color="#f3e6cb"/><stop offset="100%" stop-color="#c8ab7e"/></radialGradient>' +
+      '<linearGradient id="zand" x1="0" y1="0" x2="0" y2="1">' +
+        '<stop offset="0%" stop-color="#f7e9cd"/><stop offset="100%" stop-color="#ecd7ac"/></linearGradient>' +
+      '<linearGradient id="zee" x1="0" y1="0" x2="0" y2="1">' +
+        '<stop offset="0%" stop-color="#3f9fbd"/><stop offset="100%" stop-color="#57bdd0"/></linearGradient>' +
+      '<filter id="zacht" x="-30%" y="-30%" width="160%" height="160%">' +
+        '<feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#14224C" flood-opacity=".22"/></filter>' +
+      '</defs>';
+    var zaad = 11;
+    function toeval(){ zaad = (zaad * 1103515245 + 12345) % 2147483648; return zaad / 2147483648; }
+
+    g += '<rect width="' + BREED + '" height="' + HOOG + '" fill="url(#zand)"/>';
+    /* de zee, met een natte zoom en een schuimrand */
+    [0, 1].forEach(function(onder){
+      var y = onder ? HOOG - ZEE : 0;
+      g += '<rect x="0" y="' + y + '" width="' + BREED + '" height="' + ZEE + '" fill="url(#zee)"/>';
+      var rand = onder ? y : ZEE;
+      g += '<rect x="0" y="' + (onder ? rand - 9 : rand) + '" width="' + BREED +
+        '" height="9" fill="#e3c99a" opacity=".75"/>';
+      g += '<path d="M0,' + rand + ' H' + BREED + '" stroke="#fff" stroke-width="3" opacity=".65"/>';
+      /* golfstreepjes */
+      for (var w = 0; w < 26; w++){
+        var wx = toeval() * BREED, wy = y + 6 + toeval() * (ZEE - 14);
+        g += '<path d="M' + wx.toFixed(0) + ',' + wy.toFixed(0) + ' q7,-4 14,0 q7,4 14,0" fill="none" ' +
+          'stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity=".4"/>';
+      }
+    });
+
+    /* de vlonder: natte planken op het zand, met dwarslatten die de bocht volgen */
+    g += '<path d="' + padTekening() + '" fill="none" stroke="#e0c496" stroke-width="54" ' +
+         'stroke-linecap="round" stroke-linejoin="round"/>';
+    g += '<path d="' + padTekening() + '" fill="none" stroke="#a9793f" stroke-width="46" ' +
+         'stroke-linecap="round" stroke-linejoin="round"/>';
+    g += '<path d="' + padTekening() + '" fill="none" stroke="#c9995c" stroke-width="40" ' +
+         'stroke-linecap="round" stroke-linejoin="round"/>';
+    for (var d = 8; d < PADLENGTE; d += 23){
+      var q = positie(d), hk = padHoek(q.x, q.y);
+      g += '<rect x="-2" y="-20" width="4" height="40" rx="1.5" fill="#8d6234" opacity=".55" ' +
+        'transform="translate(' + q.x.toFixed(1) + ',' + q.y.toFixed(1) + ') rotate(' + hk.toFixed(1) + ')"/>';
+    }
+    /* palmen, alleen op het droge en ruim naast de vlonder */
+    var gezet = 0;
+    for (var i = 0; i < 220 && gezet < 11; i++){
+      var px = 30 + toeval() * (BREED - 60), py = ZEE + 24 + toeval() * (HOOG - 2 * ZEE - 48);
+      if (afstandTotPad(px, py) < 58) continue;
+      if (px > BREED - 150 && py > HOOG - 220) continue;      /* daar staat de school */
+      gezet++;
+      var hoog = 34 + toeval() * 16, kant = toeval() < 0.5 ? -1 : 1;
+      g += '<ellipse cx="' + px.toFixed(0) + '" cy="' + py.toFixed(0) + '" rx="14" ry="5" fill="rgba(20,34,76,.13)"/>';
+      g += '<path d="M' + px.toFixed(0) + ',' + py.toFixed(0) + ' q' + (kant * 7) + ',-' +
+        (hoog / 2).toFixed(0) + ' ' + (kant * 4) + ',-' + hoog.toFixed(0) + '" fill="none" ' +
+        'stroke="#9b7141" stroke-width="5" stroke-linecap="round"/>';
+      var tx = px + kant * 4, ty = py - hoog;
+      [[-26, -10], [-16, -20], [16, -20], [26, -10], [0, -22]].forEach(function(b){
+        g += '<path d="M' + tx.toFixed(0) + ',' + ty.toFixed(0) + ' q' + (b[0] / 2) + ',' + (b[1] - 4) +
+          ' ' + b[0] + ',' + b[1] + ' q-' + (b[0] / 2) + ',' + (4 - b[1] / 2) + ' -' + b[0] + ',' + (-b[1]) + 'z" ' +
+          'fill="#3f8f5c" stroke="#2c6b44" stroke-width="1.2" stroke-linejoin="round"/>';
+      });
+      g += '<circle cx="' + (tx + kant * 5).toFixed(0) + '" cy="' + (ty + 4).toFixed(0) +
+        '" r="3.4" fill="#7d5a33"/>';
+    }
+    /* schelpen en zeesterren langs de vlonder */
+    for (var k = 0; k < 70; k++){
+      var sx = toeval() * BREED, sy = ZEE + 6 + toeval() * (HOOG - 2 * ZEE - 12);
+      var af = afstandTotPad(sx, sy);
+      if (af < 26 || af > 46) continue;
+      if (toeval() < 0.35){
+        g += '<path d="M0,-5 L1.5,-1.5 L5,-1.5 L2.2,1 L3.2,5 L0,2.6 L-3.2,5 L-2.2,1 L-5,-1.5 L-1.5,-1.5z" ' +
+          'fill="#e08a6a" opacity=".75" transform="translate(' + sx.toFixed(0) + ',' + sy.toFixed(0) +
+          ') rotate(' + (toeval() * 360).toFixed(0) + ')"/>';
+      } else {
+        g += '<path d="M-4,2 q4,-8 8,0 q-4,2 -8,0z" fill="#f0ddc0" stroke="#c9ab7e" stroke-width="1" ' +
+          'transform="translate(' + sx.toFixed(0) + ',' + sy.toFixed(0) + ') rotate(' +
+          (toeval() * 360).toFixed(0) + ')"/>';
+      }
+    }
+    g += '<text x="14" y="' + (HOOG - 13) + '" font-size="12" font-weight="600" ' +
+      'fill="#0f3f4c" opacity=".9">' + kaartNaam(kaart) + ' \u00b7 tropisch eiland</text>';
     ACHTERGROND = g;
     return g;
   }
@@ -3703,6 +3918,32 @@ function rekenVraag(rang, toegestaan) {
                '<circle cx="' + (2 - terug) + '" cy="0" r="6" fill="' + mMid + '"/>' +
                '<circle cx="' + (26 - terug) + '" cy="0" r="2.6" fill="#EA9836"/>';
         }
+      } else if (t.soort === 'bommenwerper'){
+        /* Een korte dikke mortier die schuin omhoog staat, met een rekje bommen
+           ernaast. Hij mikt wel mee, want dan zie je waar de volgende heen gaat. */
+        s += '<rect x="' + (0 - terug) + '" y="-8" width="15" height="16" rx="5" fill="' + mDonker + '"/>';
+        s += '<path d="M' + (10 - terug) + ',-9 L' + (26 - terug) + ',-17 L' + (30 - terug) +
+          ',-10 L' + (14 - terug) + ',-2 z" fill="' + mMid + '" stroke="' + mDonker +
+          '" stroke-width="1.6" stroke-linejoin="round"/>';
+        s += '<circle cx="' + (28 - terug) + '" cy="-13.5" r="3" fill="#14224C" opacity=".7"/>';
+        if (pen){
+          /* de trosbom: drie bommetjes op het rek in plaats van twee */
+          s += '<circle cx="-9" cy="7" r="4" fill="#3b3730"/><circle cx="-1" cy="9" r="4" fill="#3b3730"/>' +
+               '<circle cx="7" cy="9.5" r="4" fill="#3b3730"/>';
+          s += '<circle cx="0" cy="0" r="10.5" fill="none" stroke="#EA9836" stroke-width="2.6"/>';
+        } else {
+          s += '<circle cx="-7" cy="8" r="4" fill="#3b3730"/><circle cx="1" cy="9.5" r="4" fill="#3b3730"/>';
+        }
+      } else if (t.soort === 'vrienden'){
+        /* Een hut met een palmdak. Hij mikt nergens op, dus hij draait ook niet
+           mee: t.mikt blijft nul en dan staat het dak altijd recht. */
+        s += '<rect x="-9" y="-4" width="18" height="14" rx="2" fill="' + mDonker + '"/>';
+        s += '<rect x="-3.5" y="1" width="7" height="9" rx="1.5" fill="#1f3a2b"/>';
+        s += '<path d="M-17,-4 L0,-19 L17,-4 z" fill="#6f9d55" stroke="#2c6b44" ' +
+          'stroke-width="1.6" stroke-linejoin="round"/>';
+        s += '<path d="M-11,-4 L0,-16 M0,-16 L11,-4 M-5,-4 L0,-10" fill="none" stroke="#2c6b44" ' +
+          'stroke-width="1.2" opacity=".55"/>';
+        if (pen) s += '<circle cx="0" cy="-22" r="4" fill="#EA9836" stroke="#fff" stroke-width="1.4"/>';
       } else if (t.soort === 'aap'){
         /* de minigun: een blok met drie korte lopen, en met de penning een
            dikkere bak eronder waar de bommen uit komen */
@@ -3731,6 +3972,18 @@ function rekenVraag(rang, toegestaan) {
         }
       }
       s += '</g>';
+      /* bij de Vriendenhut een rijtje stipjes: hoeveel vrienden er buiten lopen
+         en hoeveel er nog moeten komen */
+      if (so.vrienden){
+        var wil2 = VRIEND.aantal + (t.kracht ? 1 : 0);
+        var er = vrienden.filter(function(v){ return v.hut === t; }).length;
+        for (var vi = 0; vi < wil2; vi++){
+          s += '<circle cx="' + (t.x - (wil2 - 1) * 5 + vi * 10) + '" cy="' + (t.y + voet + 9) +
+            '" r="3.4" fill="' + (vi < er ? '#3f8f5c' : 'rgba(20,34,76,.18)') +
+            '" stroke="#fff" stroke-width="1.2"/>';
+        }
+      }
+
       /* bij de Tonkla Toren een boogje dat volloopt tot de schokgolf klaarstaat */
       if (so.golf){
         var wachtt = Math.max(6, so.golftijd - (t.niveau - 1) * 4) * (t.kracht ? 0.5 : 1);
@@ -3801,6 +4054,38 @@ function rekenVraag(rang, toegestaan) {
         s += '<g transform="translate(' + bx.toFixed(1) + ',' + by.toFixed(1) + ') rotate(' + sc.hoek.toFixed(0) + ')" ' +
           'opacity="' + Math.min(1, deel * 1.6).toFixed(2) + '">' +
           '<path d="M-5,-3 q5,7 10,3 q-4,4 -10,-3z" fill="#EFC64A" stroke="#a8842a" stroke-width="1.2" stroke-linejoin="round"/></g>';
+      }
+    });
+
+    /* De vrienden. Ze staan op de vlonder tussen de fouten in, dus ze moeten
+       er van een afstand anders uitzien: rond, groen en met een blad als schild.
+       Een balkje erboven zodra ze klappen hebben gehad. */
+    vrienden.forEach(function(v){
+      var q = positie(v.d), hk = padHoek(q.x, q.y);
+      var wip = Math.sin(pols * 4 + v.stap) * 1.6;
+      var duw = (v.slag || 0) > 0 ? -3 : 0;          /* even naar voren bij een klap */
+      s += '<ellipse cx="' + q.x.toFixed(1) + '" cy="' + (q.y + 11).toFixed(1) +
+        '" rx="9" ry="3.4" fill="rgba(20,34,76,.2)"/>';
+      s += '<g transform="translate(' + q.x.toFixed(1) + ',' + (q.y + wip).toFixed(1) +
+        ') rotate(' + hk.toFixed(1) + ')">';
+      /* het schild wijst naar de poort, dus naar de kant waar de fouten vandaan komen */
+      s += '<path d="M' + (-13 + duw) + ',-9 q-7,9 0,18 q7,-9 0,-18z" fill="#7fc48f" ' +
+        'stroke="#2c6b44" stroke-width="1.6" stroke-linejoin="round"/>';
+      s += '</g>';
+      s += '<circle cx="' + q.x.toFixed(1) + '" cy="' + (q.y + wip).toFixed(1) +
+        '" r="9.5" fill="#3f8f5c" stroke="#1f5c40" stroke-width="2"/>';
+      s += '<circle cx="' + (q.x - 3).toFixed(1) + '" cy="' + (q.y + wip - 2).toFixed(1) +
+        '" r="1.6" fill="#fff"/>';
+      s += '<circle cx="' + (q.x + 3).toFixed(1) + '" cy="' + (q.y + wip - 2).toFixed(1) +
+        '" r="1.6" fill="#fff"/>';
+      s += '<path d="M' + (q.x - 3.5).toFixed(1) + ',' + (q.y + wip + 3).toFixed(1) +
+        ' q3.5,3 7,0" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>';
+      if (v.hp < v.maxHp){
+        var deel = Math.max(0, v.hp / v.maxHp);
+        s += '<rect x="' + (q.x - 11) + '" y="' + (q.y + wip - 18) + '" width="22" height="4" rx="2" ' +
+          'fill="rgba(20,34,76,.25)"/>';
+        s += '<rect x="' + (q.x - 11) + '" y="' + (q.y + wip - 18) + '" width="' + (22 * deel).toFixed(1) +
+          '" height="4" rx="2" fill="#3f8f5c"/>';
       }
     });
 
@@ -4001,6 +4286,27 @@ function rekenVraag(rang, toegestaan) {
       var v = Math.min(1, k.t);
       var x = k.x0 + (k.x1 - k.x0) * v;
       var vlak = k.y0 + (k.y1 - k.y0) * v;
+      /* Een bom van de Bommenwerper komt van boven en niet in een boog: hij
+         begint hoog boven de inslag en valt recht naar beneden, met een schaduw
+         die kleiner wordt naarmate hij dichterbij komt. Daarom eerst de plek
+         waar hij inslaat, en daarboven de bom zelf. */
+      if (k.valt){
+        x = k.x1;
+        vlak = k.y1;
+        var hoogte = (1 - v) * 170;
+        s += '<circle cx="' + k.x1.toFixed(1) + '" cy="' + k.y1.toFixed(1) + '" r="' +
+          (k.straal || 60) + '" fill="none" stroke="#EA9836" stroke-width="2" ' +
+          'stroke-dasharray="7 6" opacity="' + (0.15 + v * 0.4).toFixed(2) + '"/>';
+        s += '<ellipse cx="' + k.x1.toFixed(1) + '" cy="' + k.y1.toFixed(1) + '" rx="' +
+          (14 - v * 7).toFixed(1) + '" ry="' + (6 - v * 3).toFixed(1) + '" fill="rgba(20,34,76,.24)"/>';
+        s += '<g transform="translate(' + k.x1.toFixed(1) + ',' + (k.y1 - hoogte).toFixed(1) + ')">' +
+          '<ellipse rx="6" ry="8.5" fill="#3b3730" stroke="#14224C" stroke-width="1.4"/>' +
+          '<path d="M0,-11 l-4,-6 h8 z" fill="#c0442c"/>' +
+          '<path d="M-4,8 l-3,6 M4,8 l3,6 M0,9 v6" stroke="#8a8578" stroke-width="1.8" ' +
+          'stroke-linecap="round" fill="none"/>' +
+          '<circle cx="-2" cy="-3" r="1.8" fill="#fff" opacity=".35"/></g>';
+        return;
+      }
       var boog = 4 * v * (1 - v) * (46 + Math.hypot(k.x1-k.x0, k.y1-k.y0) * 0.14);
       s += '<ellipse cx="' + x.toFixed(1) + '" cy="' + vlak.toFixed(1) + '" rx="' +
         (7 - v * 2).toFixed(1) + '" ry="3" fill="rgba(20,34,76,.18)"/>';
@@ -4547,6 +4853,97 @@ function rekenVraag(rang, toegestaan) {
                     draai:Math.random() * 360, brand:true, bom:true });
     });
 
+    /* De Tonkla Bommenwerper. Hij mikt op de fout die het verst is en laat daar
+       een bom op vallen; wat er tegen de tijd van de inslag omheen staat, krijgt
+       het ook. Hij schiet niet, dus hij loopt langs de gewone schietronde heen. */
+    torens.forEach(function(t){
+      var so = SOORTEN[t.soort];
+      if (!so.bommen || (t.uit || 0) > 0) return;
+      t.klok -= dt;
+      if (t.klok > 0) return;
+      var bw = bereikVan(t), doelW = null, verstW = -1, posW = null;
+      vijanden.forEach(function(e){
+        if (e.dood || !ziet(t, e)) return;
+        var q = positie(e.d);
+        if (Math.hypot(q.x - t.x, q.y - t.y) <= bw && e.d > verstW){ doelW = e; verstW = e.d; posW = q; }
+      });
+      if (!doelW) return;
+      t.klok = so.tempo;
+      t.mikt = Math.atan2(posW.y - t.y, posW.x - t.x) * 180 / Math.PI;
+      t.terugslag = 1;
+      kogels.push({ x0:t.x, y0:t.y - 30, x1:posW.x, y1:posW.y, t:0, duur:BOMVAL,
+                    schade:so.schade * (1 + (t.niveau - 1) * 0.6) * reeksbonus() * (t.kracht ? 1.5 : 1),
+                    straal:so.straal * (t.kracht ? 1.45 : 1),
+                    doel:doelW, draai:Math.random() * 360, bom:true, valt:true });
+    });
+
+    /* ---------- de vrienden uit de Vriendenhut ----------
+       Ze lopen het pad af naar de poort toe, tot ze een fout tegenkomen of tot
+       ze aan hun leiband hangen. Wat ze tegenhouden staat stil zolang zij leven,
+       en ondertussen slaan ze erop in. Valt er een, dan komt er na een paar
+       seconden een nieuwe uit de hut. */
+    torens.forEach(function(t){
+      var so = SOORTEN[t.soort];
+      if (!so.vrienden) return;
+      if (t.thuis === undefined) t.thuis = padPlek(t.x, t.y);
+      var wil = VRIEND.aantal + (t.kracht ? 1 : 0);
+      var mijn = vrienden.filter(function(v){ return v.hut === t; }).length;
+      if ((t.uit || 0) > 0) return;                 /* hut ligt eruit, dus niemand naar buiten */
+      if (mijn >= wil){ t.vriendKlok = VRIEND.wachten * (t.kracht ? 0.5 : 1); return; }
+      if (t.vriendKlok === undefined) t.vriendKlok = 0;
+      t.vriendKlok -= dt;
+      if (t.vriendKlok > 0) return;
+      t.vriendKlok = VRIEND.wachten * (t.kracht ? 0.5 : 1);
+      var maxHp = Math.round(VRIEND.hp * (1 + (t.niveau - 1) * VRIEND.hpNiveau));
+      /* Elke vriend van dezelfde hut houdt een stukje meer afstand, anders staan
+         ze precies op elkaar en zie je er maar een. Dat is ook eerlijker: de
+         voorste vangt de klappen op en de tweede staat erachter klaar. */
+      var plek = 0;
+      while (vrienden.some(function(v){ return v.hut === t && v.eigen === plek; })) plek += 20;
+      vrienden.push({ hut:t, d:Math.max(SPAWNAF + 20, t.thuis), hp:maxHp, maxHp:maxHp,
+                      klok:0, eigen:plek, stap:Math.random() * 6 });
+    });
+    vrienden.forEach(function(v){
+      if (torens.indexOf(v.hut) < 0){ v.hp = 0; return; }   /* hut weggehaald */
+      var grens = Math.max(SPAWNAF + 20, v.hut.thuis - VRIEND.leiband + (v.eigen || 0));
+      var q = positie(v.d);
+      /* waar staat hij tegenaan? de eerste fout die vlak voor hem loopt */
+      var tegen = null;
+      vijanden.forEach(function(e){
+        if (e.dood || tegen) return;
+        if (e.d >= v.d - 18 && e.d <= v.d + 22) tegen = e;
+      });
+      if (tegen){
+        /* vasthouden: elke tik opnieuw, dus zodra de vriend valt loopt hij door */
+        tegen.stop = Math.max(tegen.stop || 0, 0.12);
+        if (tegen.camo){
+          tegen.camo = false;
+          cijfers.push({ x:q.x, y:q.y - 32, tekst:'ontdekt', leven:0.9, kleur:'#2f7d52' });
+        }
+        v.klok -= dt;
+        if (v.klok <= 0){
+          v.klok = VRIEND.tempo;
+          raakVijand(tegen, VRIEND.schade * (1 + (v.hut.niveau - 1) * 0.6) * reeksbonus(), false);
+          v.slag = 0.22;
+        }
+        v.hp -= VRIEND.klap * (tegen.baas ? VRIEND.baasklap : 1) * (1 + bank.ronde * 0.03) * dt;
+      } else if (v.d > grens){
+        v.d = Math.max(grens, v.d - VRIEND.snelheid * dt);
+      } else if (v.d < grens){
+        v.d += VRIEND.snelheid * dt;
+      }
+      if (v.slag > 0) v.slag -= dt;
+    });
+    vrienden.forEach(function(v){
+      if (v.hp > 0) return;
+      var q = positie(v.d);
+      for (var i = 0; i < 6; i++){
+        var h = Math.random() * Math.PI * 2, sn = 25 + Math.random() * 45;
+        pluis.push({ x:q.x, y:q.y, vx:Math.cos(h)*sn, vy:Math.sin(h)*sn, leven:0.4, kleur:'#3f8f5c' });
+      }
+    });
+    vrienden = vrienden.filter(function(v){ return v.hp > 0; });
+
     torens.forEach(function(t){
       var so = SOORTEN[t.soort];
       if (!so.golf || (t.uit || 0) > 0) return;
@@ -4572,6 +4969,8 @@ function rekenVraag(rang, toegestaan) {
 
     torens.forEach(function(t){
       var s = SOORTEN[t.soort];
+      /* Deze twee doen hun werk hierboven al en hebben geen loop. */
+      if (s.bommen || s.vrienden) return;
       var bereik = s.bereik + (t.niveau-1) * 18,
           schade = s.schade * (1 + (t.niveau-1) * 0.6) * reeksbonus();
       if (sleep && sleep.toren === t) return;
@@ -4674,15 +5073,18 @@ function rekenVraag(rang, toegestaan) {
             if (d < kortst){ kortst = d; slachtoffer = e; }
           });
         }
-        if (k.brand){
-          /* Brandbom: alles binnen zestig pixels van de inslag krijgt de klap. */
+        if (k.brand || k.straal){
+          /* Alles binnen de straal van de inslag krijgt de klap. De brandbom van
+             de Apentoren doet zestig, de Bommenwerper brengt zijn eigen straal
+             mee. */
+          var straal = k.straal || 60;
           var geraakt2 = 0;
           vijanden.forEach(function(e){
             if (e.dood || e.camo) return;
             var q2 = positie(e.d);
-            if (Math.hypot(q2.x - k.x1, q2.y - k.y1) <= 60){ raakVijand(e, k.schade, false); geraakt2++; }
+            if (Math.hypot(q2.x - k.x1, q2.y - k.y1) <= straal){ raakVijand(e, k.schade, false); geraakt2++; }
           });
-          golven.push({ x:k.x1, y:k.y1, r:60, leven:0.3, kleur:'#EA9836' });
+          golven.push({ x:k.x1, y:k.y1, r:straal, leven:0.3, kleur:'#EA9836' });
           if (!geraakt2) raakVijand(slachtoffer, k.schade, false);
         } else {
           raakVijand(slachtoffer, k.schade, false);
@@ -4753,7 +5155,7 @@ function rekenVraag(rang, toegestaan) {
   function begin(){
     kiesKaart();
     baasSpook = 1; baasBalkIn = 0; baasBalk = null; baasLaatst = null;
-    vijanden = []; torens = []; schoten = []; pot = null;
+    vijanden = []; torens = []; schoten = []; pot = null; vrienden = [];
     cijfers = []; pluis = []; golven = []; kogels = []; wegdingen = []; schillen = [];
     baasKeuzes = {};
     wachtrij = 5; spawnKlok = 0; rondePauze = 2;
@@ -4771,7 +5173,8 @@ function rekenVraag(rang, toegestaan) {
     document.getElementById('scherm-einde').classList.add('hide');
     document.getElementById('scherm-spel').classList.remove('hide');
     tekenVraag(); tekenMeters(); tekenBord();
-    melding2('Kaart: ' + kaart.naam + '. Elk potje loot een andere weg, dus kijk eerst waar de bochten liggen.');
+    melding2('Kaart: ' + kaartNaam(kaart) + (thema.id === 'plein' ? '' : ' op het tropisch eiland') +
+      '. Elk potje loot een andere weg, dus kijk eerst waar de bochten liggen.');
     startKlok();
     scrollTo({ top:0, behavior:'auto' });
   }
@@ -4795,6 +5198,12 @@ function rekenVraag(rang, toegestaan) {
       '<div><b>' + foutAantal + '</b><span>fout</span></div>' +
       '<div><b>' + deel + '%</b><span>goed</span></div>' +
       '<div><b>' + besteReeks + '</b><span>beste reeks</span></div>';
+    /* Sneuvel je in ronde eenenvijftig, dan heb ronde vijftig alsnog gehaald. */
+    if (bank.ronde >= EILANDRONDE && !eilandVrij){
+      eilandVrij = true;
+      try { localStorage.setItem('lg-toren-eiland', 'ja'); } catch (e){}
+      tekenThemas();
+    }
     bewaarRecord(bank.ronde);
     scrollTo({ top:0, behavior:'auto' });
   }
@@ -4948,6 +5357,7 @@ function rekenVraag(rang, toegestaan) {
       tvak.classList.remove('hide');
       tvak.classList.remove('dicht');
       document.getElementById('testKlap').textContent = 'verbergen';
+      vulThemaKies();                 /* de omgeving kan al gekozen zijn */
     }
 
     document.addEventListener('keydown', function(e){
@@ -5026,12 +5436,34 @@ function rekenVraag(rang, toegestaan) {
     });
 
     knop('testVrij', function(){
-      tonklaVrij = true; aapVrij = true;
+      tonklaVrij = true; aapVrij = true; eilandVrij = true;
       try {
         localStorage.setItem('lg-toren-tonkla', 'ja');
         localStorage.setItem('lg-toren-aap', 'ja');
+        localStorage.setItem('lg-toren-eiland', 'ja');
       } catch (e){}
-      melding2('Tonkla Toren en Apentoren vrijgespeeld.');
+      tekenThemas();
+      vulThemaKies();
+      melding2('Tonkla Toren, Apentoren en het tropisch eiland vrijgespeeld.');
+    });
+
+    /* Van omgeving wisselen zonder eerst ronde vijftig te halen. Het bord wordt
+       leeggemaakt, want de torens van de ene omgeving bestaan in de andere niet. */
+    var themaKies = document.getElementById('testThema');
+    function vulThemaKies(){
+      themaKies.innerHTML = THEMAS.map(function(t){
+        return '<option value="' + t.id + '"' + (thema.id === t.id ? ' selected' : '') + '>' +
+          t.naam + '</option>';
+      }).join('');
+    }
+    vulThemaKies();
+    themaKies.addEventListener('change', function(){
+      thema = THEMAS.filter(function(t){ return t.id === themaKies.value; })[0] || THEMAS[0];
+      ACHTERGROND = null;
+      torens = []; vrienden = []; wegdingen = [];
+      tekenThemas();
+      if (inSpel()){ tekenBord(); tekenMeters(); }
+      melding2('Omgeving gezet op ' + thema.naam + '. Bord leeggemaakt, want de torens verschillen.');
     });
 
     /* een kaart kiezen in plaats van loten */
@@ -5046,7 +5478,7 @@ function rekenVraag(rang, toegestaan) {
       PAD = kaart.pad; PADLENGTE = padlengte(); ACHTERGROND = null;
       vijanden = []; wegdingen = []; torens = [];
       tekenBord(); tekenMeters();
-      melding2('Kaart gezet op ' + kaart.naam + '. Bord leeggemaakt, want torens stonden op de oude weg.');
+      melding2('Kaart gezet op ' + kaartNaam(kaart) + '. Bord leeggemaakt, want torens stonden op de oude weg.');
     });
 
     /* Sluiten haalt het paneel helemaal weg in plaats van het dicht te klappen:
@@ -5066,8 +5498,7 @@ function rekenVraag(rang, toegestaan) {
        ?deel=vlaggen                zet ook het onderdeel vast, meer mag ook:
                                     ?deel=vlaggen,landvormen
      Staat het vak in de link, dan gaan de keuzeknoppen weg en staat er alleen
-     nog wat je gaat oefenen. Zo kan dezelfde pagina in de lijst staan als
-     Vlaggen of als Landenvormen, zonder dat de leerling eerst door een menu moet.
+     nog wat je gaat oefenen.
      --------------------------------------------------------------------------- */
   var uitLink = (function(){
     function param(naam){
@@ -5092,7 +5523,7 @@ function rekenVraag(rang, toegestaan) {
     return true;
   })();
 
-  tekenNiveaus(); tekenVakken(); tekenDeelvakken(); tekenStartknop();
+  tekenNiveaus(); tekenVakken(); tekenDeelvakken(); tekenThemas(); tekenStartknop();
 
   if (uitLink){
     (function(){
