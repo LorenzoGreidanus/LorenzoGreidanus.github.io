@@ -100,7 +100,12 @@ body.groot .uitleg b{font-size:1.1rem}
    fout in plaats van als een keuze. */
 .bordvak{background:var(--gras);border:1px solid rgba(20,34,76,.12);border-radius:20px;overflow:hidden;
   box-shadow:0 10px 26px rgba(20,34,76,.10);flex:1;min-height:240px}
-.bordvak svg{display:block;width:100%;height:100%}
+.bordvak svg{display:block;width:100%;height:100%;overflow:visible}
+/* Het bord is 900 bij 460 en het vak eromheen niet, dus er blijven stroken
+   over. In plaats van die stroken in de kleur van het vak te laten staan, laat
+   het bord zijn achtergrond doorlopen: de svg mag buiten zijn tekengebied
+   tekenen en het vak knipt hem af op zijn eigen rand. Het gras en de zee lopen
+   dus gewoon door tot de rand, wat de maat van het scherm ook is. */
 @media (max-width:1080px){.bordvak{flex:0 0 auto}.bordvak svg{height:auto}}
 .balk{display:flex;gap:8px;flex-wrap:wrap;padding:0 0 10px;align-items:stretch}
 /* De regel onder het bord was klein grijs. Nu is het een strook die je ook van
@@ -398,13 +403,14 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
       <i style="background:var(--amber)">2</i>
       <b>Elke ronde zwaarder</b>
       <span>Eerst gewone fouten, dan snelle, fouten met een schild, zwermen en verstopte fouten
-        die je eerst moet ontmaskeren. Na ronde twintig wordt alles taaier.</span>
+        die je eerst moet ontmaskeren. Sommige rondes hebben een karakter: dan komt een soort
+        veel vaker en zegt de melding vooraf welke. Na ronde twintig wordt alles taaier.</span>
     </div>
     <div>
       <i style="background:var(--ocean)">3</i>
       <b>Elke tiende ronde een baas</b>
       <span>Vier soorten om de beurt, soms de apenbaas die je torens stillegt, en in ronde
-        vijftig de Grote Fout. Elke gevelde baas lapt de school weer op. Halverwege loopt er
+        vijftig de Grote Fout, of op het eiland de Kraken. Elke gevelde baas lapt de school weer op. Halverwege loopt er
         een spaarpot mee: breek hem en het geld is van jou.</span>
     </div>
     <div>
@@ -444,7 +450,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
         <div class="meterv hoofd"><b id="mMunt">0</b><span>munten</span></div>
         <div class="meterv hoofd" id="levenVak"><b id="mLeven">12</b><span>klas</span></div>
         <button type="button" id="lapBtn" class="leeg">De klas oplappen</button>
-        <div class="meterv"><b id="mRonde">1</b><span>ronde</span></div>
+        <div class="meterv"><b id="mRonde">1</b><span id="mRondeUit">ronde</span></div>
         <div class="meterv"><b id="mReeks">0</b><span>op rij</span></div>
         <div class="meterv"><b id="mBonus">&times;1,00</b><span>schade</span></div>
         <div class="meterv"><b id="mToren">0/12</b><span>torens</span></div>
@@ -2282,6 +2288,10 @@ function rekenVraag(rang, toegestaan) {
     } else if (isMiniRonde(bank.ronde)){
       melding2('Ronde ' + bank.ronde + '. Er loopt een spaarpot mee. Vel hem en je krijgt ' +
         minibeloning(bank.ronde) + ' munten; laat je hem door, dan kost hij twee levens.');
+    } else if (golfVan(bank.ronde).naam){
+      var gk = golfVan(bank.ronde);
+      melding2('Ronde ' + bank.ronde + '. ' + gk.naam.charAt(0).toUpperCase() + gk.naam.slice(1) +
+        ': ' + gk.uit);
     }
   }
 
@@ -2785,14 +2795,23 @@ function rekenVraag(rang, toegestaan) {
      Hij komt elke vijftigste ronde terug, want het spel houdt niet op. */
   function isMegaRonde(n){ return n % 50 === 0; }
   var MEGASCHADE = 6;
-  var MEGABAAS = { id:'mega', naam:'de Grote Fout', taai:22, vlug:0.38, schild:0.35,
+  var MEGABAAS = { id:'mega', naam:'de Grote Fout', taai:22, vlug:0.38, schild:0.35, mega:true,
     mark:'\u2739', kleur:'#4a1230', splijt:6, gooit:true,
     uit:'Hij heeft het schild, het gooien en het uiteenvallen van alle bazen tegelijk.' };
+  /* De eindbaas van het eiland. Even taai en even traag als de Grote Fout, maar
+     hij gooit niet met schillen: om de zoveel tijd spuit hij een inktwolk over
+     het pad, en dan is elke fout die meeloopt een paar seconden verstopt. Dat is
+     precies wat het eiland lastig maakt: de Bommenwerper ziet ze niet meer, en
+     alleen de Scherpschutter, de vrienden en wat op de weg ligt helpen nog. */
+  var KRAKEN = { id:'kraken', naam:'de Kraken', taai:22, vlug:0.38, schild:0.35, mega:true,
+    mark:'\u224b', kleur:'#2a3f6e', splijt:6, inkt:true,
+    uit:'Hij spuit inkt over het pad: dan is alles om hem heen even verstopt. Hij spat uiteen als hij valt.' };
+  var INKTTIJD = 7, INKTDUUR = 4, INKTBEREIK = 260;
 
   function baasVan(ronde){
     if (!baasKeuzes[ronde]){
       baasKeuzes[ronde] = isMegaRonde(ronde)
-        ? MEGABAAS
+        ? (thema.id === 'eiland' ? KRAKEN : MEGABAAS)
         : (Math.random() < apenkans(ronde))
           ? APENBAAS
           : BAZEN[(Math.floor(ronde / BAASRONDE) - 1) % BAZEN.length];
@@ -2877,13 +2896,58 @@ function rekenVraag(rang, toegestaan) {
     { id:'dik', naam:'dikke fout', vanaf:22, kans:1, mark:'\u25c6', kleur:'#6b3fa0',
       taai:3, vlug:0.7, schild:0, dik:true }
   ];
+  /* ---------- het karakter van een ronde ----------
+     Een ronde trok altijd uit dezelfde pot, dus vanaf ronde vijftien zag elke
+     ronde er hetzelfde uit: een beetje van alles. Nu heeft een deel van de
+     rondes een karakter: dan komt een soort veel vaker dan anders en zegt de
+     melding vooraf welke. Dat geeft de klas iets om op te bouwen. Een
+     verstopte golf vraagt om de Scherpschutter of iets op de weg, een
+     schildgolf om harde klappen, een snelle golf om vertragen.
+
+     De weging vermenigvuldigt de gewone kans van die soort. Bij weeg 4 komt
+     een soort met kans 3 op 12, tegen 5 voor de gewone fout: dan is ruim de
+     helft van de ronde van die soort, maar niet alles, anders is er niets meer
+     om tussendoor op te oefenen. Rustrondes en baasrondes houden hun eigen
+     karakter en doen hier niet aan mee. */
+  var GOLFSOORTEN = [
+    { id:'gewoon', kans:7 },
+    { id:'snel',   kans:2, vanaf:6,  naam:'snelle golf',
+      uit:'Bijna alles loopt hard. Vertragen loont nu dubbel.',                    weeg:{ snel:4 } },
+    { id:'schild', kans:2, vanaf:9,  naam:'schildgolf',
+      uit:'Veel fouten met een schild. Je hebt harde klappen nodig, geen speldenprikken.', weeg:{ schild:4 } },
+    { id:'zwerm',  kans:2, vanaf:11, naam:'zwermgolf',
+      uit:'Zwermen: veel kleine tegelijk. Iets dat alles in de buurt raakt is goud.', weeg:{ zwerm:4 } },
+    { id:'camo',   kans:2, vanaf:14, naam:'verstopte golf',
+      uit:'Veel verstopte fouten. Scherpschutter, iets op de weg, of vrienden die ertegenaan lopen.', weeg:{ camo:4 } },
+    { id:'dik',    kans:2, vanaf:24, naam:'zware golf',
+      uit:'Dikke fouten, drie keer zo taai. Bundel je vuur op een plek.',             weeg:{ dik:3 } }
+  ];
+  var GOLFVANAF = 6;      /* voor die ronde hebben rondes nog geen karakter */
+  var golfKeuzes = {};
+  /* Welk karakter heeft deze ronde? Eenmaal geloot blijft het staan, want de
+     melding vooraf moet kloppen met wat er komt. */
+  function golfVan(ronde){
+    if (golfKeuzes[ronde] !== undefined) return golfKeuzes[ronde];
+    var g = GOLFSOORTEN[0];
+    if (ronde >= GOLFVANAF && !isRustronde(ronde) && !isBaasRonde(ronde)){
+      var mag = GOLFSOORTEN.filter(function(x){ return !x.vanaf || x.vanaf <= ronde; });
+      var totaal = mag.reduce(function(a, x){ return a + x.kans; }, 0);
+      var trek = Math.random() * totaal;
+      for (var i = 0; i < mag.length; i++){ trek -= mag[i].kans; if (trek <= 0){ g = mag[i]; break; } }
+    }
+    golfKeuzes[ronde] = g;
+    return g;
+  }
+
   /* Wie mag er op deze fout schieten? */
   function ziet(toren, e){ return !e || !e.camo || toren.soort === 'schutter'; }
   function kiesFout(ronde){
     var mag = FOUTEN.filter(function(f){ return f.vanaf <= ronde; });
-    var totaal = mag.reduce(function(a, f){ return a + f.kans; }, 0);
+    var golf = golfVan(ronde);
+    var gewicht = function(f){ return f.kans * ((golf.weeg && golf.weeg[f.id]) || 1); };
+    var totaal = mag.reduce(function(a, f){ return a + gewicht(f); }, 0);
     var trek = Math.random() * totaal;
-    for (var i = 0; i < mag.length; i++){ trek -= mag[i].kans; if (trek <= 0) return mag[i]; }
+    for (var i = 0; i < mag.length; i++){ trek -= gewicht(mag[i]); if (trek <= 0) return mag[i]; }
     return mag[0];
   }
   /* Op welk moment in de ronde de baas meeloopt. De teller telt af, dus dit is
@@ -3333,7 +3397,7 @@ function rekenVraag(rang, toegestaan) {
           try { localStorage.setItem('lg-toren-aap', 'ja'); } catch (x3){}
         }
         melding2(e.mega
-          ? 'De Grote Fout is geveld. Ronde ' + bank.ronde + ' gehaald: ' + beloning +
+          ? (e.baasnaam || 'de baas').replace(/^de /, 'De ') + ' is geveld. Ronde ' + bank.ronde + ' gehaald: ' + beloning +
             ' munten, drie penningen' + (heel > 0 ? ', de school is weer heel' : '') +
             '. Hij spat nog uiteen in ' + e.splijt + ' snelle fouten, dus maak af.'
           : eersteAap
@@ -3368,6 +3432,9 @@ function rekenVraag(rang, toegestaan) {
      we. Anders staan we zestien keer per seconde dezelfde grasplukjes te
      verzinnen. */
   var ACHTERGROND = null;
+  /* Zover tekent de achtergrond buiten het bord door. Ruim genoeg voor een
+     staand digibord en voor een smal venster met het bord op de volle hoogte. */
+  var BUITEN = 700;
   function achtergrond(){
     if (ACHTERGROND) return ACHTERGROND;
     if (thema.id === 'eiland') return eilandAchtergrond();
@@ -3379,12 +3446,14 @@ function rekenVraag(rang, toegestaan) {
       '<filter id="zacht" x="-30%" y="-30%" width="160%" height="160%">' +
         '<feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#14224C" flood-opacity=".22"/></filter>' +
       '</defs>';
-    g += '<rect width="' + BREED + '" height="' + HOOG + '" fill="url(#gras)"/>';
-    /* grasplukjes, met een vaste reeks zodat ze niet dansen */
+    g += '<rect x="' + (-BUITEN) + '" y="' + (-BUITEN) + '" width="' + (BREED + 2 * BUITEN) +
+      '" height="' + (HOOG + 2 * BUITEN) + '" fill="url(#gras)"/>';
+    /* grasplukjes, met een vaste reeks zodat ze niet dansen; ook in de stroken
+       boven en onder het bord, anders zie je daar waar het bord ophoudt */
     var zaad = 7;
     function toeval(){ zaad = (zaad * 1103515245 + 12345) % 2147483648; return zaad / 2147483648; }
-    for (var i = 0; i < 150; i++){
-      var gx = toeval() * BREED, gy = toeval() * HOOG;
+    for (var i = 0; i < 260; i++){
+      var gx = -240 + toeval() * (BREED + 480), gy = -300 + toeval() * (HOOG + 600);
       if (afstandTotPad(gx, gy) < 30) continue;
       var h = 4 + toeval() * 5;
       g += '<path d="M' + gx.toFixed(0) + ',' + gy.toFixed(0) + ' l-2,-' + h.toFixed(0) +
@@ -3441,18 +3510,21 @@ function rekenVraag(rang, toegestaan) {
     var zaad = 11;
     function toeval(){ zaad = (zaad * 1103515245 + 12345) % 2147483648; return zaad / 2147483648; }
 
-    g += '<rect width="' + BREED + '" height="' + HOOG + '" fill="url(#zand)"/>';
-    /* de zee, met een natte zoom en een schuimrand */
+    g += '<rect x="' + (-BUITEN) + '" y="0" width="' + (BREED + 2 * BUITEN) + '" height="' + HOOG + '" fill="url(#zand)"/>';
+    /* de zee, met een natte zoom en een schuimrand. Boven en onder het bord loopt
+       hij door tot buiten beeld, zodat er nooit een rand te zien is. */
     [0, 1].forEach(function(onder){
       var y = onder ? HOOG - ZEE : 0;
-      g += '<rect x="0" y="' + y + '" width="' + BREED + '" height="' + ZEE + '" fill="url(#zee)"/>';
+      g += '<rect x="' + (-BUITEN) + '" y="' + (onder ? y : -BUITEN) + '" width="' + (BREED + 2 * BUITEN) +
+        '" height="' + (ZEE + BUITEN) + '" fill="url(#zee)"/>';
       var rand = onder ? y : ZEE;
-      g += '<rect x="0" y="' + (onder ? rand - 9 : rand) + '" width="' + BREED +
+      g += '<rect x="' + (-BUITEN) + '" y="' + (onder ? rand - 9 : rand) + '" width="' + (BREED + 2 * BUITEN) +
         '" height="9" fill="#e3c99a" opacity=".75"/>';
-      g += '<path d="M0,' + rand + ' H' + BREED + '" stroke="#fff" stroke-width="3" opacity=".65"/>';
-      /* golfstreepjes */
-      for (var w = 0; w < 26; w++){
-        var wx = toeval() * BREED, wy = y + 6 + toeval() * (ZEE - 14);
+      g += '<path d="M' + (-BUITEN) + ',' + rand + ' H' + (BREED + BUITEN) + '" stroke="#fff" stroke-width="3" opacity=".65"/>';
+      /* golfstreepjes, ook in het water buiten het bord */
+      for (var w = 0; w < 110; w++){
+        var wx = -300 + toeval() * (BREED + 600);
+        var wy = onder ? y + 6 + toeval() * 300 : y + ZEE - 8 - toeval() * 300;
         g += '<path d="M' + wx.toFixed(0) + ',' + wy.toFixed(0) + ' q7,-4 14,0 q7,4 14,0" fill="none" ' +
           'stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity=".4"/>';
       }
@@ -3608,6 +3680,32 @@ function rekenVraag(rang, toegestaan) {
         '<ellipse cx="' + n(1.02) + '" cy="0" rx="' + n(0.3) + '" ry="' + n(0.24) +
         '" fill="' + tint(vul, 0.3) + '"/>';
     }
+    /* de Kraken: een kop als een druppel met acht tentakels eromheen die op de
+       pols krullen. Alles in dezelfde tint als het lijf, zodat hij een geheel is. */
+    if (soort === 'kraken'){
+      var g = '';
+      for (var tk = 0; tk < 8; tk++){
+        var ta = (tk / 8) * Math.PI * 2 + Math.PI / 8;
+        var golfje = Math.sin(pols * 3 + tk) * 0.18;
+        var bx = Math.cos(ta) * r * 0.85, by = Math.sin(ta) * r * 0.85;
+        var mx = Math.cos(ta + golfje) * r * 1.45, my = Math.sin(ta + golfje) * r * 1.45;
+        var ex = Math.cos(ta - golfje * 1.6) * r * 1.85, ey = Math.sin(ta - golfje * 1.6) * r * 1.85;
+        g += '<path d="M' + bx.toFixed(1) + ',' + by.toFixed(1) + ' Q' + mx.toFixed(1) + ',' + my.toFixed(1) +
+          ' ' + ex.toFixed(1) + ',' + ey.toFixed(1) + '" fill="none" stroke="' + lijn + '" stroke-width="' +
+          n(0.3) + '" stroke-linecap="round"/>';
+        g += '<path d="M' + bx.toFixed(1) + ',' + by.toFixed(1) + ' Q' + mx.toFixed(1) + ',' + my.toFixed(1) +
+          ' ' + ex.toFixed(1) + ',' + ey.toFixed(1) + '" fill="none" stroke="' + vul + '" stroke-width="' +
+          n(0.18) + '" stroke-linecap="round"/>';
+        g += '<circle cx="' + ex.toFixed(1) + '" cy="' + ey.toFixed(1) + '" r="' + n(0.1) + '" fill="' + tint(vul, -0.35) + '"/>';
+      }
+      g += '<ellipse cx="0" cy="0" rx="' + n(1.02) + '" ry="' + n(0.9) + '"' + rand + '/>';
+      /* twee grote ogen: een baas moet je aan kunnen kijken */
+      g += '<circle cx="' + n(-0.36) + '" cy="' + n(-0.18) + '" r="' + n(0.22) + '" fill="#fff"/>' +
+           '<circle cx="' + n(0.36) + '" cy="' + n(-0.18) + '" r="' + n(0.22) + '" fill="#fff"/>' +
+           '<circle cx="' + n(-0.33) + '" cy="' + n(-0.16) + '" r="' + n(0.1) + '" fill="#14224C"/>' +
+           '<circle cx="' + n(0.39) + '" cy="' + n(-0.16) + '" r="' + n(0.1) + '" fill="#14224C"/>';
+      return g;
+    }
     /* de Grote Fout: een bol met een gekartelde rand, alsof hij uit stukken bestaat */
     if (soort === 'mega'){
       var d = '';
@@ -3652,7 +3750,7 @@ function rekenVraag(rang, toegestaan) {
         '<circle cx="' + n(0.86) + '" cy="' + n(-0.78) + '" r="' + n(0.33) +
         '" fill="#a8845c" stroke="#5f4830" stroke-width="1.6"/>';
     }
-    if (e.mega){
+    if (e.mega && e.baassoort !== 'kraken'){
       /* vijf punten, als een kroon */
       var g = '';
       for (var i = 0; i < 5; i++){
@@ -4374,7 +4472,7 @@ function rekenVraag(rang, toegestaan) {
       if (e.baas){
         /* een ring die meepulseert, zodat je hem tussen de rest uit pikt */
         s += '<circle cx="' + p.x + '" cy="' + (p.y + bob).toFixed(1) + '" r="' + (r2 + 8 + Math.sin(pols*4) * 3).toFixed(1) +
-          '" fill="none" stroke="' + (e.mega ? '#4a1230' : '#7d1f12') +
+          '" fill="none" stroke="' + (e.mega ? (e.kleur || '#4a1230') : '#7d1f12') +
           '" stroke-width="3" opacity=".5"/>';
         /* De Grote Fout krijgt er een tweede ring omheen die de andere kant op
            ademt. Op een digibord moet van achter uit de klas meteen duidelijk
@@ -4413,7 +4511,7 @@ function rekenVraag(rang, toegestaan) {
         '<text x="' + p.x + '" y="' + (p.y + bob + (e.baas ? 7 : e.dik ? 6 : 4)).toFixed(1) + '" font-size="' +
         /* De bolletjes van het schild zijn als letterteken al bijna een vlak, dus
            die vragen om een kleinere maat dan een vraagteken of een ruit. */
-        ((e.mark === '\u25cf' ? 0.72 : 1) * (e.baas ? (e.mega ? 26 : 21) : e.dik ? 16 : 12)).toFixed(0) +
+        ((e.mark === '\u25cf' ? 0.72 : 1) * (e.baas ? (e.mega ? (e.baassoort === 'kraken' ? 18 : 26) : 21) : e.dik ? 16 : 12)).toFixed(0) +
         '" font-weight="700" fill="#fff" text-anchor="middle" opacity=".92">' + e.mark + '</text>';
       /* Een balkje boven elk hoofd terwijl er niets aan de hand is, is twintig
          keer ruis op een vol bord. Hij verschijnt zodra er iets af is. Een baas
@@ -4628,7 +4726,7 @@ function rekenVraag(rang, toegestaan) {
       var alOnder = alarmMini
         ? komt.uit + ' Hij levert ' + minibeloning(bank.ronde + 1) + ' munten op, en kost ' +
           MINISCHADE + ' levens als hij erdoor komt.'
-        : komt.uit + ' Hij kost ' + (komt.id === 'mega' ? MEGASCHADE : BAASSCHADE) +
+        : komt.uit + ' Hij kost ' + (komt.mega ? MEGASCHADE : BAASSCHADE) +
           ' levens als hij binnenkomt.';
       /* SVG breekt geen tekst af, dus deze regel liep gewoon door tot buiten het
          vak. Bij de spaarpot is hij honderdveertig tekens en het vak is 780
@@ -4862,6 +4960,12 @@ function rekenVraag(rang, toegestaan) {
     lev.textContent = bank.leven;
     document.getElementById('levenVak').classList.toggle('laag', bank.leven <= 3);
     document.getElementById('mRonde').textContent = bank.ronde;
+    /* het karakter van de ronde staat onder het getal, zolang hij loopt */
+    var gUit = document.getElementById('mRondeUit');
+    if (gUit){
+      var gNu = inSpel() ? golfVan(bank.ronde) : GOLFSOORTEN[0];
+      gUit.textContent = gNu.naam || 'ronde';
+    }
     document.getElementById('mReeks').textContent = reeks;
     /* Zonder deze meter zien de kinderen alleen dat de getallen boven de
        fouten groter worden, zonder te snappen waarom. */
@@ -4977,7 +5081,8 @@ function rekenVraag(rang, toegestaan) {
                           baasnaam:bz.naam, kleur:bz.kleur,
                           schild:bz.schild, schildOp:bz.schild > 0, splijt:bz.splijt || 0,
                           basisHp:hp, basisSnel:basisSnel,
-                          mega:bz.id === 'mega', gooit:!!bz.gooit,
+                          mega:!!bz.mega, gooit:!!bz.gooit,
+                          inkt:!!bz.inkt, inktKlok:bz.inkt ? 4 : 0,
                           schilKlok:bz.gooit ? 3 : 0 });
         } else if (wachtrij === miniBijWachtrij && isMiniRonde(ronde)){
           miniBijWachtrij = -1;                 /* ook van hem komt er maar een */
@@ -5048,6 +5153,35 @@ function rekenVraag(rang, toegestaan) {
                         toren:t, draai:Math.random() * 360 });
       });
     });
+    /* De Kraken spuit om de zoveel tijd inkt: elke fout binnen bereik die nog
+       niet verstopt was, is dat nu even wel. De inkt trekt vanzelf weg; wie er
+       eerder tegenaan loopt of hem in het vizier krijgt, haalt hem er eerder uit. */
+    vijanden.forEach(function(e){
+      if (e.dood || !e.inkt) return;
+      e.inktKlok -= dt;
+      if (e.inktKlok > 0) return;
+      e.inktKlok = INKTTIJD;
+      var q = positie(e.d), geraaktI = 0;
+      vijanden.forEach(function(a){
+        if (a.dood || a.baas || a.camo) return;
+        var qa = positie(a.d);
+        if (Math.hypot(qa.x - q.x, qa.y - q.y) > INKTBEREIK) return;
+        a.camo = true; a.inktOp = INKTDUUR; geraaktI++;
+      });
+      golven.push({ x:q.x, y:q.y, r:INKTBEREIK, leven:0.7, kleur:'#2a1f4a', dik:true });
+      for (var ip = 0; ip < 18; ip++){
+        var hi = Math.random() * Math.PI * 2, vi = 60 + Math.random() * 120;
+        pluis.push({ x:q.x, y:q.y, vx:Math.cos(hi)*vi, vy:Math.sin(hi)*vi, leven:0.5, kleur:'#2a1f4a' });
+      }
+      if (geraaktI) melding2('De Kraken spuit inkt: ' + geraaktI + (geraaktI === 1 ? ' fout is' : ' fouten zijn') +
+        ' even verstopt. Alleen de Scherpschutter, de vrienden en wat op de weg ligt zien ze nog.');
+    });
+    vijanden.forEach(function(e){
+      if (!(e.inktOp > 0)) return;
+      e.inktOp -= dt;
+      if (e.inktOp <= 0) e.camo = false;
+    });
+
     /* een toren met een schil erover komt vanzelf weer bij */
     torens.forEach(function(t){ if ((t.uit || 0) > 0) t.uit -= dt; });
     schillen.forEach(function(sl){
@@ -5447,7 +5581,7 @@ function rekenVraag(rang, toegestaan) {
     baasSpook = 1; baasBalkIn = 0; baasBalk = null; baasLaatst = null;
     vijanden = []; torens = []; schoten = []; pot = null; vrienden = []; vliegers = [];
     cijfers = []; pluis = []; golven = []; kogels = []; wegdingen = []; schillen = [];
-    baasKeuzes = {};
+    baasKeuzes = {}; golfKeuzes = {};
     wachtrij = 5; spawnKlok = 0; rondePauze = 2;
     bank = { munten:60, leven:12, ronde:1 };
     reeks = 0; vuur = 0; besteReeks = 0; goedAantal = 0; foutAantal = 0;
