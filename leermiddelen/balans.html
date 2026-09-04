@@ -60,21 +60,14 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .som{text-align:center;font-size:clamp(1.4rem,4vw,2rem);font-weight:600;font-variant-numeric:tabular-nums}
 body.groot .som{font-size:2.6rem}
 
-/* ---------- de weegschaal ---------- */
-.weeg{margin-top:14px;position:relative}
-.balk{display:flex;justify-content:center;align-items:flex-end;gap:0;transition:transform .5s var(--ease);transform-origin:50% 100%}
-.weeg.kiep-l .balk{transform:rotate(-4deg)}
-.weeg.kiep-r .balk{transform:rotate(4deg)}
-.schaal{flex:1;min-width:0;max-width:420px;display:flex;flex-direction:column;align-items:center;gap:0}
-.pan{width:100%;min-height:132px;background:#fff;border:2px solid rgba(20,34,76,.12);border-top:none;
-  border-radius:0 0 22px 22px;padding:12px;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;
-  justify-content:center}
-.pandak{width:100%;height:10px;background:var(--hout);border-radius:6px 6px 0 0}
-.touw{width:2px;height:26px;background:rgba(20,34,76,.25)}
-.spil{position:absolute;left:50%;translate:-50% 0;bottom:-8px;width:0;height:0;
-  border-left:22px solid transparent;border-right:22px solid transparent;border-bottom:34px solid var(--hout)}
-.beam{height:12px;background:var(--hout);border-radius:8px;flex:none;width:44px;align-self:flex-start;margin-top:0}
-.kantnaam{font-size:.72rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+/* ---------- de weegschaal ----------
+   Was twee platte vakken naast elkaar met een driehoekje eronder, en hij sloeg
+   alleen door als je een zet deed die niet mocht. Bij goed spelen bewoog hij
+   dus nooit, terwijl doorslaan juist is wat een weegschaal te vertellen heeft.
+   Nu is het een SVG die zijn stand berekent uit wat er werkelijk in de schalen
+   ligt, met een balk die scharniert en twee schalen die aan kettingen hangen. */
+.weeg{margin-top:10px}
+.weeg svg{display:block;width:100%;height:auto}
 
 .zak{background:var(--ocean);color:#fff;border-radius:12px;min-width:44px;height:44px;display:grid;place-items:center;
   font-weight:700;font-size:1.15rem;box-shadow:0 3px 0 rgba(20,34,76,.25)}
@@ -233,22 +226,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 
   <div class="speelveld">
     <p class="som" id="som"></p>
-    <div class="weeg" id="weeg">
-      <div class="balk">
-        <div class="schaal">
-          <p class="kantnaam">links</p>
-          <div class="pandak"></div>
-          <div class="pan" id="panL"></div>
-        </div>
-        <div class="beam"></div>
-        <div class="schaal">
-          <p class="kantnaam">rechts</p>
-          <div class="pandak"></div>
-          <div class="pan" id="panR"></div>
-        </div>
-      </div>
-      <div class="spil"></div>
-    </div>
+    <div class="weeg" id="weeg"></div>
 
     <div class="gereedschap">
       <div class="tel">
@@ -432,20 +410,132 @@ var AANTAL = 8;
   function somTekst(){ return kantTekst(L) + ' = ' + kantTekst(R); }
 
   /* ---------- tekenen ---------- */
-  function tekenPan(id, p){
-    var pan = document.getElementById(id);
-    var h = '';
-    for (var i = 0; i < p.x; i++) h += '<div class="zak">x</div>';
-    var aantal = Math.abs(p.n);
-    for (var j = 0; j < aantal; j++) h += '<div class="blok' + (p.n < 0 ? ' rood' : '') + '"></div>';
-    if (!p.x && !p.n) h = '<span class="leegpan">leeg</span>';
-    pan.innerHTML = h;
+  /* ---------- de weegschaal tekenen ----------
+     Een tint van dezelfde kleur, donkerder bij een positieve factor en lichter
+     bij een negatieve. Zo krijgt elk zakje en elk blokje een omlijning in zijn
+     eigen kleur in plaats van overal hetzelfde wit of zwart. */
+  function tint(hex, f){
+    if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return 'rgba(20,34,76,.55)';
+    var v = parseInt(hex.slice(1), 16);
+    var r = (v >> 16) & 255, g = (v >> 8) & 255, b = v & 255;
+    if (f < 0){ var t = -f;
+      r = Math.round(r + (255 - r) * t); g = Math.round(g + (255 - g) * t); b = Math.round(b + (255 - b) * t);
+    } else { r = Math.round(r * (1 - f)); g = Math.round(g * (1 - f)); b = Math.round(b * (1 - f)); }
+    return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+  }
+
+  /* Wat een kant werkelijk weegt. De opgave kent de waarde van x wel, ook al
+     weet de leerling hem nog niet, dus de schaal kan eerlijk doorslaan. */
+  function gewicht(p){ return p.x * (opgave ? opgave.x : 3) + p.n; }
+
+  /* Een zakje: een buideltje met een touwtje eromheen en een x erop. */
+  function tekenZak(cx, cy, s2){
+    var k = '#204ECF', d = tint(k, 0.4);
+    return '<g transform="translate(' + cx.toFixed(1) + ',' + cy.toFixed(1) + ') scale(' + s2 + ')">' +
+      '<path d="M-13,-2 C-13,-11 -7,-15 0,-15 C7,-15 13,-11 13,-2 C13,10 8,16 0,16 C-8,16 -13,10 -13,-2 Z" ' +
+        'fill="' + k + '" stroke="' + d + '" stroke-width="2"/>' +
+      '<path d="M-9,-9 h18" stroke="' + d + '" stroke-width="3.4" stroke-linecap="round"/>' +
+      '<path d="M-5,-15 l2,-5 M5,-15 l-2,-5" stroke="' + d + '" stroke-width="2.4" stroke-linecap="round"/>' +
+      '<ellipse cx="-4" cy="2" rx="4" ry="3" fill="#fff" opacity=".13"/>' +
+      '<text y="9" font-size="13" font-weight="700" fill="#fff" text-anchor="middle">x</text></g>';
+  }
+
+  /* Een blokje: oranje is plus een, rood is min een. */
+  function tekenBlok(cx, cy, s2, negatief){
+    var k = negatief ? '#c0442c' : '#EA9836', d = tint(k, 0.38);
+    return '<g transform="translate(' + cx.toFixed(1) + ',' + cy.toFixed(1) + ') scale(' + s2 + ')">' +
+      '<rect x="-11" y="-11" width="22" height="22" rx="6" fill="' + k + '" stroke="' + d + '" stroke-width="2"/>' +
+      '<path d="M-7,7 h14" stroke="' + d + '" stroke-width="2.4" stroke-linecap="round" opacity=".7"/>' +
+      '<ellipse cx="-3" cy="-4" rx="4" ry="3" fill="#fff" opacity=".16"/>' +
+      '<text y="5" font-size="13" font-weight="700" fill="#fff" text-anchor="middle">' +
+        (negatief ? '\u2212' : '+') + '</text></g>';
+  }
+
+  /* Een schaal met alles wat erin ligt. De inhoud wordt kleiner naarmate er
+     meer in ligt, zodat een volle schaal niet overloopt. */
+  function tekenSchaal(mx, my, p, naam){
+    var g = '';
+    var breed = 250, hoog = 96;
+    /* de kettingen naar de rand van de schaal */
+    g += '<path d="M' + mx + ',' + (my - 96) + ' L' + (mx - breed / 2 + 16) + ',' + my +
+      ' M' + mx + ',' + (my - 96) + ' L' + (mx + breed / 2 - 16) + ',' + my +
+      '" stroke="#8a8172" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="5 4"/>';
+    g += '<circle cx="' + mx + '" cy="' + (my - 98) + '" r="5" fill="#8a8172"/>';
+    /* de schaal zelf: een schaaltje dat naar onderen smaller wordt */
+    g += '<path d="M' + (mx - breed / 2) + ',' + my + ' L' + (mx + breed / 2) + ',' + my +
+      ' L' + (mx + breed / 2 - 26) + ',' + (my + hoog) + ' Q' + mx + ',' + (my + hoog + 12) + ' ' +
+      (mx - breed / 2 + 26) + ',' + (my + hoog) + ' Z" fill="#fff" stroke="#b9ae97" stroke-width="2.6" ' +
+      'stroke-linejoin="round"/>';
+    g += '<path d="M' + (mx - breed / 2 + 4) + ',' + (my + 4) + ' L' + (mx + breed / 2 - 4) + ',' + (my + 4) +
+      '" stroke="rgba(20,34,76,.10)" stroke-width="5" stroke-linecap="round"/>';
+    g += '<text x="' + mx + '" y="' + (my - 108) + '" font-size="13" font-weight="700" ' +
+      'letter-spacing="1.6" fill="#5b6480" text-anchor="middle">' + naam.toUpperCase() + '</text>';
+
+    var stuks = [];
+    for (var i = 0; i < p.x; i++) stuks.push('zak');
+    var m = Math.abs(p.n);
+    for (var j = 0; j < m; j++) stuks.push(p.n < 0 ? 'min' : 'plus');
+    if (!stuks.length){
+      g += '<text x="' + mx + '" y="' + (my + 56) + '" font-size="15" fill="#9a9184" ' +
+        'text-anchor="middle">leeg</text>';
+      return g;
+    }
+    /* zoveel per rij dat alles binnen de schaal blijft */
+    var perRij = Math.min(7, Math.max(4, Math.ceil(Math.sqrt(stuks.length * 1.8))));
+    var rijen = Math.ceil(stuks.length / perRij);
+    var s2 = Math.min(1.05, Math.min((breed - 60) / (perRij * 34), (hoog - 12) / (rijen * 32)));
+    var stap = 34 * s2, rijH = 32 * s2;
+    for (var k = 0; k < stuks.length; k++){
+      var rij = Math.floor(k / perRij), inRij = Math.min(perRij, stuks.length - rij * perRij);
+      var cx = mx - (inRij - 1) * stap / 2 + (k % perRij) * stap;
+      var cy = my + hoog - 16 - (rijen - 1 - rij) * rijH - rijH * 0.35;
+      g += stuks[k] === 'zak' ? tekenZak(cx, cy, s2) : tekenBlok(cx, cy, s2, stuks[k] === 'min');
+    }
+    return g;
+  }
+
+  function tekenWeeg(){
+    var BR = 900, HO = 380, spilX = BR / 2, spilY = 120, arm = 250;
+    /* De stand volgt uit het echte verschil, afgetopt zodat hij ook bij een
+       groot verschil binnen het beeld blijft. */
+    var verschil = gewicht(L) - gewicht(R);
+    var hoek = Math.max(-10, Math.min(10, verschil * 1.6));
+    var rad = hoek * Math.PI / 180;
+    var lx = spilX - Math.cos(rad) * arm, ly = spilY - Math.sin(rad) * arm;
+    var rx = spilX + Math.cos(rad) * arm, ry = spilY + Math.sin(rad) * arm;
+
+    var s2 = '<svg viewBox="0 0 ' + BR + ' ' + HO + '" xmlns="http://www.w3.org/2000/svg" role="img" ' +
+      'aria-label="Weegschaal met links ' + kantTekst(L) + ' en rechts ' + kantTekst(R) + '">';
+    /* de staander en de voet */
+    s2 += '<ellipse cx="' + spilX + '" cy="356" rx="120" ry="12" fill="rgba(20,34,76,.10)"/>';
+    s2 += '<rect x="' + (spilX - 90) + '" y="338" width="180" height="18" rx="9" fill="#b08d5f" ' +
+      'stroke="#7a5a3a" stroke-width="2.4"/>';
+    s2 += '<path d="M' + (spilX - 26) + ',338 L' + (spilX - 9) + ',' + (spilY + 6) + ' L' +
+      (spilX + 9) + ',' + (spilY + 6) + ' L' + (spilX + 26) + ',338 Z" fill="#c69c68" ' +
+      'stroke="#7a5a3a" stroke-width="2.4" stroke-linejoin="round"/>';
+    s2 += '<path d="M' + (spilX - 20) + ',330 L' + (spilX - 7) + ',' + (spilY + 20) +
+      '" stroke="#fff" stroke-width="3" opacity=".2" stroke-linecap="round"/>';
+    /* de balk, die scharniert om de spil */
+    s2 += '<g transform="rotate(' + hoek.toFixed(2) + ' ' + spilX + ' ' + spilY + ')" ' +
+      'style="transition:transform .45s cubic-bezier(.22,.61,.36,1)">';
+    s2 += '<rect x="' + (spilX - arm - 14) + '" y="' + (spilY - 8) + '" width="' + (arm * 2 + 28) +
+      '" height="16" rx="8" fill="#c69c68" stroke="#7a5a3a" stroke-width="2.4"/>';
+    s2 += '<rect x="' + (spilX - arm - 8) + '" y="' + (spilY - 5) + '" width="' + (arm * 2 + 16) +
+      '" height="4" rx="2" fill="#fff" opacity=".22"/>';
+    s2 += '</g>';
+    /* de spil bovenop de staander */
+    s2 += '<circle cx="' + spilX + '" cy="' + spilY + '" r="13" fill="#7a5a3a"/>';
+    s2 += '<circle cx="' + spilX + '" cy="' + spilY + '" r="6" fill="#e8d9c0"/>';
+    /* de twee schalen hangen recht naar beneden vanaf de uiteinden */
+    s2 += tekenSchaal(lx, ly + 98, L, 'links');
+    s2 += tekenSchaal(rx, ry + 98, R, 'rechts');
+    s2 += '</svg>';
+    document.getElementById('weeg').innerHTML = s2;
   }
 
   function teken(){
     document.getElementById('som').textContent = somTekst();
-    tekenPan('panL', L);
-    tekenPan('panR', R);
+    tekenWeeg();
     document.getElementById('teller').textContent = 'vergelijking ' + (nr + 1) + ' van ' + AANTAL;
     document.getElementById('balkFill').style.width = ((nr / AANTAL) * 100) + '%';
     document.getElementById('scoreLabel').textContent = stappen + ' stappen, minstens ' + opgave.minimum + ' nodig';

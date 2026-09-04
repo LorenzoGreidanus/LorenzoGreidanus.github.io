@@ -77,10 +77,33 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .wissel button.on{background:var(--ocean);border-color:var(--ocean);color:#fff}
 
 /* ---------- speelscherm ---------- */
-.bord{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:22px;padding:18px 0 60px;align-items:start}
-@media (max-width:900px){.bord{grid-template-columns:1fr}}
-.kaartvak{background:var(--zee);border:1px solid rgba(20,34,76,.10);border-radius:22px;overflow:hidden}
-.kaartvak svg{display:block;width:100%;height:auto}
+/* De kaart is 640 bij 760, dus hoger dan breed, en liep bij een breedte van
+   ruim achthonderd pixels een heel eind onder de vouw door. Je moest scrollen
+   om zuidelijk Afrika te zien terwijl het paneel met je doelen bovenaan bleef
+   staan, en dat is precies de verkeerde kant op voor een spel dat om overzicht
+   draait. De kaart past nu in de hoogte van het venster en het paneel ernaast
+   scrollt zelf als het lang wordt. */
+/* Een vaste hoogte van 100vh min de kopbalk klopte niet, want boven het bord
+   staat ook nog de fasebalk. In plaats van dat getal te raden maken we het hele
+   spelscherm een kolom die het venster vult; wat de fasebalk nodig heeft gaat er
+   vanzelf af en het bord krijgt de rest. */
+#scherm-spel:not(.hide){display:flex;flex-direction:column;height:calc(100vh - 62px);min-height:600px}
+/* Het colofon onder het spel duwde de kaart honderdtwintig pixels omlaag en
+   leverde tijdens een les niets op. */
+#scherm-spel:not(.hide) ~ footer{display:none}
+.bord{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:22px;
+  padding:14px 0 16px;align-items:stretch;flex:1;min-height:0}
+.paneel{min-height:0;overflow:auto;overscroll-behavior:contain;padding-right:4px;
+  scrollbar-width:thin;scrollbar-color:rgba(20,34,76,.25) transparent}
+@media (max-width:900px){
+  #scherm-spel:not(.hide){display:block;height:auto}
+  .bord{grid-template-columns:1fr;padding-bottom:50px}
+  .paneel{overflow:visible}
+}
+.kaartvak{background:var(--zee);border:1px solid rgba(20,34,76,.10);border-radius:22px;overflow:hidden;
+  min-height:280px}
+.kaartvak svg{display:block;width:100%;height:100%}
+@media (max-width:900px){.kaartvak svg{height:auto}}
 .achter{fill:#e6e2db;stroke:var(--grens);stroke-width:.6;stroke-linejoin:round}
 .geb{fill:var(--land);stroke:#8d8577;stroke-width:1;stroke-linejoin:round;cursor:pointer;
   transition:fill .2s var(--ease)}
@@ -1012,11 +1035,37 @@ var SPAREN = 2;
   function tekenKaart(doelId, eind){
     var svg = '<svg viewBox="0 0 ' + KAART.breed + ' ' + KAART.hoog + '" role="img" ' +
       'aria-label="Kaart van Afrika met twintig gebieden">';
+    /* De zee was een egale kleur en het land lag er plat op. Een verloop in het
+       water, een lichte gloed langs de kust en een schaduw onder het continent
+       maken er een kaart van in plaats van een vlakkenplaat. Het staat in de
+       SVG en niet in de CSS, zodat het meeschaalt met de kaart. */
+    svg += '<defs>' +
+      '<radialGradient id="zeeverloop" cx="42%" cy="34%" r="78%">' +
+        '<stop offset="0%" stop-color="#eaf1fd"/><stop offset="100%" stop-color="#cfdcf6"/></radialGradient>' +
+      '<filter id="kustglans" x="-6%" y="-6%" width="112%" height="112%">' +
+        '<feDropShadow dx="0" dy="0" stdDeviation="7" flood-color="#8fa8d8" flood-opacity=".55"/></filter>' +
+      '<filter id="landschaduw" x="-6%" y="-6%" width="112%" height="112%">' +
+        '<feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#14224C" flood-opacity=".22"/></filter>' +
+      '</defs>';
+    svg += '<rect width="' + KAART.breed + '" height="' + KAART.hoog + '" fill="url(#zeeverloop)"/>';
+    /* een paar rustige golfstreepjes, met een vaste reeks zodat ze niet dansen */
+    var zaad = 11;
+    function toeval(){ zaad = (zaad * 1103515245 + 12345) % 2147483648; return zaad / 2147483648; }
+    for (var w = 0; w < 90; w++){
+      var wx = toeval() * KAART.breed, wy = toeval() * KAART.hoog, wl = 7 + toeval() * 9;
+      svg += '<path d="M' + wx.toFixed(0) + ',' + wy.toFixed(0) + ' q' + (wl / 2).toFixed(0) + ',-3 ' +
+        wl.toFixed(0) + ',0" fill="none" stroke="#b6c8ea" stroke-width="1.4" stroke-linecap="round" ' +
+        'opacity=".5"/>';
+    }
+    /* de kustgloed ligt onder het continent en volgt exact dezelfde omtrek */
+    svg += '<path d="' + KAART.achter + '" fill="#e6e2db" filter="url(#kustglans)" opacity=".9"/>';
+    svg += '<g filter="url(#landschaduw)">';
     svg += '<path class="achter" d="' + KAART.achter + '"/>';
     KAART.gebieden.forEach(function(g){
       svg += '<path class="geb" id="' + doelId + '-' + g.id + '" data-g="' + g.id + '" d="' + g.d + '">' +
              '<title>' + g.naam + '</title></path>';
     });
+    svg += '</g>';
     KAART.gebieden.forEach(function(g){
       svg += '<text class="merk" x="' + g.x + '" y="' + (g.y + 5) + '" id="' + doelId + '-t-' + g.id + '"></text>';
     });
