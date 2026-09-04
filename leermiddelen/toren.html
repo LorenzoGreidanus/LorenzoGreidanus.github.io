@@ -107,7 +107,11 @@ body.groot .uitleg b{font-size:1.1rem}
    een afstand ziet, want daar staat wat je moet doen. */
 .bordtip{font-size:.9rem;color:var(--ink);background:#fff;border:1px solid rgba(20,34,76,.10);
   border-radius:12px;padding:9px 14px;margin-top:9px;box-shadow:0 3px 10px rgba(20,34,76,.05)}
-.bordknoppen{padding:9px 0 0}
+/* 'leeg' houdt de plek vrij maar laat niets zien: zo verspringt de indeling
+   niet als een knop komt of gaat. hide haalt het element uit de opmaak en dat
+   liet het bord bij elke rondewissel van hoogte veranderen. */
+.leeg{visibility:hidden !important}
+.bordknoppen{padding:9px 0 0;min-height:52px}
 /* Onder het spel hoort geen colofon: dat duwt het bord omhoog en levert niets
    op tijdens een les. */
 #scherm-spel:not(.hide) ~ footer{display:none}
@@ -152,6 +156,15 @@ body.gepauzeerd #nuBtn{opacity:.45;pointer-events:none}
 #levenVak.hoofd{border-top-color:var(--goed)}
 #levenVak.laag{border-top-color:var(--fout);background:var(--fout-bg)}
 #levenVak.laag b{color:var(--fout)}
+/* De knop om de klas op te lappen staat tussen de tellers, naast de munten en
+   de levens waar hij over gaat. Hij stond eerst onder het bord, maar daar ligt
+   het testpaneel overheen en dan kun je hem tijdens het testen niet indrukken. */
+#lapBtn{flex:1.4;min-width:150px;background:var(--goed);color:#fff;border:none;border-radius:13px;
+  padding:7px 12px;font-size:.82rem;font-weight:700;line-height:1.25;
+  box-shadow:0 3px 10px rgba(20,34,76,.10)}
+#lapBtn:hover:not(:disabled){filter:brightness(1.08)}
+#lapBtn:disabled{background:#fff;color:var(--muted);border:1px solid rgba(20,34,76,.10);
+  box-shadow:none;opacity:1}
 /* Munten erbij: de meter licht groen op en het bedrag vliegt eruit omhoog. */
 .meterv.winst{background:var(--goed-bg);border-color:var(--goed);animation:muntklop .45s ease}
 #penningVak{background:#f3edfa;border-color:#6b3fa0}
@@ -264,7 +277,11 @@ body.groot .uitleg{font-size:1rem}
 /* ---------- testpaneel ----------
    Verborgen tot je de toetsreeks intikt; zie het blok onderaan in het script.
    Hij hangt linksonder over het bord heen. */
-#testvak{position:fixed;left:10px;bottom:10px;z-index:60;background:#14224C;color:#fff;
+/* Stond linksonder en lag daar precies over de knoppen onder het bord: eerst
+   over 'de klas oplappen', daarna over 'volgende ronde'. Rechtsonder hangt hij
+   over het onderste stuk van het vragenpaneel, en daar staat vrijwel altijd
+   niets, want de antwoorden zitten bovenin. */
+#testvak{position:fixed;right:10px;bottom:10px;z-index:60;background:#14224C;color:#fff;
   border-radius:14px;padding:10px 12px;font-size:.78rem;box-shadow:0 10px 30px rgba(20,34,76,.35);
   max-width:270px;line-height:1.35}
 /* Hij begint niet meer dichtgeklapt maar helemaal weg: een chipje in beeld
@@ -420,6 +437,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
       <div class="balk">
         <div class="meterv hoofd"><b id="mMunt">0</b><span>munten</span></div>
         <div class="meterv hoofd" id="levenVak"><b id="mLeven">12</b><span>klas</span></div>
+        <button type="button" id="lapBtn" class="leeg">De klas oplappen</button>
         <div class="meterv"><b id="mRonde">1</b><span>ronde</span></div>
         <div class="meterv"><b id="mReeks">0</b><span>op rij</span></div>
         <div class="meterv"><b id="mBonus">&times;1,00</b><span>schade</span></div>
@@ -430,7 +448,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
       <div class="bordvak" id="bordvak"></div>
       <p class="bordtip" id="bordtip">Tik naast het pad voor een toren, of op het pad om er iets neer te leggen.</p>
       <div class="bordknoppen">
-        <button type="button" id="nuBtn" class="hide">Volgende ronde nu starten</button>
+        <button type="button" id="nuBtn" class="leeg">Volgende ronde nu starten</button>
       </div>
     </div>
     <div class="vraagvak">
@@ -2158,6 +2176,49 @@ function rekenVraag(rang, toegestaan) {
   /* Staat het spel stil? Dan loopt de klok niet, maar blijft alles wel staan
      zoals het stond: torens, munten, ronde en de fouten op het pad. */
   var pauze = false;
+  /* Een ronde aan de wachtrij toevoegen. Dit gebeurde alleen als de vorige
+     ronde helemaal op was, en stond middenin de klok. Nu staat het los, zodat
+     je een ronde er ook bij kunt roepen terwijl de vorige nog loopt: de nieuwe
+     fouten komen dan boven op wat er al staat. */
+  function rondeErbij(nieuweRonde){
+    bank.ronde++;
+    var erbij = 4 + bank.ronde;
+    var toeslag = haast > 0 ? Math.round(erbij * 0.10 * Math.min(HAASTMAX + 1, haast)) : 0;
+    erbij += toeslag;
+    if (isRustronde(bank.ronde)) erbij = Math.max(3, Math.round(erbij * RUSTAANTAL));
+    wachtrij += erbij;
+    /* De plek van de baas telt af vanaf de nieuwe lengte van de rij, dus hij
+       komt in de tweede helft van alles wat er nu nog aankomt. */
+    baasBijWachtrij = isBaasRonde(bank.ronde)
+      ? Math.floor(Math.random() * Math.max(1, Math.floor(wachtrij / 2))) : baasBijWachtrij;
+    miniBijWachtrij = isMiniRonde(bank.ronde)
+      ? Math.floor(Math.random() * Math.max(1, Math.floor(wachtrij / 2))) : miniBijWachtrij;
+    if (!nieuweRonde) return;
+    if (isRustronde(bank.ronde)){
+      melding2('Ronde ' + bank.ronde + '. Rustronde: minder en zwakkere fouten. Bouw bij.');
+    } else if (isBaasRonde(bank.ronde)){
+      melding2('Ronde ' + bank.ronde + '. De baas loopt ergens in de tweede helft mee.');
+    } else if (isMiniRonde(bank.ronde)){
+      melding2('Ronde ' + bank.ronde + '. Er loopt een spaarpot mee. Vel hem en je krijgt ' +
+        minibeloning(bank.ronde) + ' munten; laat je hem door, dan kost hij twee levens.');
+    }
+  }
+
+  /* ---------- de klas oplappen ----------
+     Munten hadden na het bord geen bestemming meer: je kocht veertien torens,
+     zette ze op niveau drie, en daarna stapelde het geld op zonder dat er nog
+     iets te kiezen viel. Nu kun je er een leven mee terugkopen.
+
+     De prijs verdubbelt per keer: 100, 200, 400, 800 en zo door. Daarmee is de
+     eerste reparatie een kleinigheid en is de vijfde een halve toren waard, dus
+     hoe slechter je het doet hoe duurder het wordt om het recht te trekken.
+
+     Nooit boven de twaalf uit, net als bij een gevelde baas: je lapt de school
+     op, je maakt hem niet groter. Daardoor is het ook geen voorraadje dat je
+     vooraf inslaat maar iets wat je koopt op het moment dat het misgaat. */
+  var gelapt = 0;
+  function lapPrijs(){ return 100 * Math.pow(2, gelapt); }
+  function magLappen(){ return inSpel() && !pauze && bank.leven < 12 && bank.munten >= lapPrijs(); }
   /* ---------- testmodus ----------
      Bedoeld om zelf een partij te kunnen doorlopen zonder er een half uur voor
      te gaan zitten. Alles hieronder staat uit tenzij je #test achter de URL
@@ -2377,7 +2438,13 @@ function rekenVraag(rang, toegestaan) {
        eenendertig vol, wie rustig antwoordt rond zevenendertig, en wie er
        geregeld naast zit haalt het niet. De reeksbonus op schade heeft de rol
        overgenomen die deze groei eerst speelde. */
-    var winst = goed ? Math.round((15 + Math.min(15, reeks * 3)) * (1 + (bank.ronde - 1) * 0.03)) : 0;
+    /* Het basisbedrag stond op 15 met een reeksbonus tot 15 erbij, dus dertig
+       munten voor een goed antwoord in ronde 1. Met de levenswinkel erbij is
+       dat te ruim: dan koop je een vol bord en alle levens die je maar wilt.
+       Nu 10 met een bonus tot 12, dus tweeentwintig als maximum. Dat is ruim een
+       kwart minder, en het maakt de reeks relatief zwaarder: zonder reeks houd
+       je nog maar tien over, met een volle reeks meer dan het dubbele. */
+    var winst = goed ? Math.round((10 + Math.min(12, reeks * 3)) * (1 + (bank.ronde - 1) * 0.03)) : 0;
     gekliktIndex = i;
     reeks = goed ? reeks + 1 : 0;
     vuur = goed ? vuur + 1 : Math.floor(vuur / 2);
@@ -4223,6 +4290,19 @@ function rekenVraag(rang, toegestaan) {
     document.getElementById('mReeks').textContent = reeks;
     /* Zonder deze meter zien de kinderen alleen dat de getallen boven de
        fouten groter worden, zonder te snappen waarom. */
+    var lap = document.getElementById('lapBtn');
+    if (lap){
+      /* De knop verdwijnt als de klas heel is: een knop die je niet kunt
+         gebruiken is alleen maar ruis op het bord. */
+      /* Hem verbergen liet een gat in de tellerbalk achter, en hem weghalen
+         liet de balk verspringen. Hij blijft dus staan en zegt zelf waarom je
+         niet kunt kopen. */
+      lap.classList.toggle('leeg', !inSpel());
+      lap.disabled = !magLappen();
+      lap.textContent = bank.leven >= 12
+        ? 'De klas is heel'
+        : 'De klas oplappen, ' + lapPrijs() + ' munten voor 1 leven';
+    }
     document.getElementById('mBonus').textContent = '\u00d7' + kommaGetal(reeksbonus(), 2);
     document.getElementById('mToren').textContent = torens.length + '/' + MAXTORENS;
     document.getElementById('mWeg').textContent = wegdingen.length + '/' + MAXWEG;
@@ -4231,12 +4311,19 @@ function rekenVraag(rang, toegestaan) {
     document.getElementById('mPenning').textContent = penningen;
     var nu = document.getElementById('nuBtn');
     var wacht = wachtrij === 0 && vijanden.length === 0 && rondePauze > 0.2;
-    nu.classList.toggle('hide', !wacht);
+    /* Deze knop verscheen en verdween met display:none. Daardoor werd de kolom
+       onder het bord telkens hoger en lager, en omdat het bord de rest van de
+       hoogte vult sprong het hele speelveld mee bij elke rondewissel. Nu blijft
+       de ruimte staan en wordt alleen de knop zelf onzichtbaar. */
+    nu.classList.toggle('leeg', !(wacht || magErbijRoepen()));
     if (wacht){
       var kn = Math.max(5, Math.round(rondePauze * 8)) * haastKeer();
       nu.textContent = 'Ronde ' + (bank.ronde + 1) + ' nu starten, +' + kn + ' munten' +
         (haast > 0 ? ' (\u00d7' + haastKeer() + ')' : '') +
         ', ' + Math.round(haastExtra() * 100) + '% meer fouten';
+    } else if (magErbijRoepen()){
+      nu.textContent = 'Ronde ' + (bank.ronde + 1) + ' er nu bij roepen, +' +
+        Math.max(5, Math.round(24 * haastKeer())) + ' munten';
     }
   }
 
@@ -4279,26 +4366,12 @@ function rekenVraag(rang, toegestaan) {
     if (wachtrij === 0 && vijanden.length === 0){
       rondePauze -= dt;
       if (rondePauze <= 0){
-        bank.ronde++; wachtrij = 4 + bank.ronde; spawnKlok = 0;
         /* Wie de pauze oversloeg krijgt de rekening in deze ronde gepresenteerd. */
         haast = sprongOver ? haast + 1 : 0;
         sprongOver = false;
-        var toeslag = haast > 0 ? Math.round(wachtrij * 0.10 * Math.min(HAASTMAX + 1, haast)) : 0;
-        wachtrij += toeslag;
-        if (isRustronde(bank.ronde)){
-          wachtrij = Math.max(3, Math.round(wachtrij * RUSTAANTAL));
-          melding2('Ronde ' + bank.ronde + '. Rustronde: minder en zwakkere fouten. Bouw bij.');
-        } else if (isBaasRonde(bank.ronde)){
-          melding2('Ronde ' + bank.ronde + '. De baas loopt ergens in de tweede helft mee.');
-        } else if (isMiniRonde(bank.ronde)){
-          melding2('Ronde ' + bank.ronde + '. Er loopt een spaarpot mee. Vel hem en je krijgt ' +
-            minibeloning(bank.ronde) + ' munten; laat je hem door, dan kost hij twee levens.');
-        }
-        /* de plek van de baas in de rij, ergens voorbij de helft */
-        baasBijWachtrij = isBaasRonde(bank.ronde)
-          ? Math.floor(Math.random() * Math.max(1, Math.floor(wachtrij / 2))) : -1;
-        miniBijWachtrij = isMiniRonde(bank.ronde)
-          ? Math.floor(Math.random() * Math.max(1, Math.floor(wachtrij / 2))) : -1;
+        wachtrij = 0; spawnKlok = 0;
+        baasBijWachtrij = -1; miniBijWachtrij = -1;
+        rondeErbij(true);
       }
     }
     if (wachtrij > 0){
@@ -4686,7 +4759,7 @@ function rekenVraag(rang, toegestaan) {
     bank = { munten:60, leven:12, ronde:1 };
     reeks = 0; vuur = 0; besteReeks = 0; goedAantal = 0; foutAantal = 0;
     gekliktIndex = -1; menu = null; klap = 0; baasAlarm = 0; pols = 0; verplaats = null; sleep = null; penningen = 0;
-    camoGezien = false; poortFlits = 0;
+    camoGezien = false; poortFlits = 0; gelapt = 0;
     baasBijWachtrij = -1; miniBijWachtrij = -1; haast = 0; sprongOver = false;
     pauze = false; document.body.classList.remove('gepauzeerd');
     var pk = document.getElementById('pauzeBtn');
@@ -4756,18 +4829,56 @@ function rekenVraag(rang, toegestaan) {
   var HAASTMAX = 3;                            /* verder dan acht keer gaat hij niet */
   function haastKeer(){ return Math.pow(2, Math.min(HAASTMAX, haast)); }
   function haastExtra(){ return 0.10 * Math.min(HAASTMAX + 1, haast + 1); }
+  /* Tussen twee rondes: de pauze overslaan. Dat kon al. */
+  function inPauzeTussenRondes(){
+    return inSpel() && !pauze && wachtrij === 0 && vijanden.length === 0 && rondePauze > 0;
+  }
+  /* Midden in een ronde: de volgende er alvast bij roepen, zodat de fouten van
+     twee of drie rondes tegelijk op het pad staan. Dat mag pas als de baas of
+     de spaarpot van deze ronde er al uit is; anders zou zijn plek in de rij
+     verschuiven en kwam hij er niet meer. */
+  function magErbijRoepen(){
+    return inSpel() && !pauze && wachtrij > 0 &&
+           baasBijWachtrij < 0 && miniBijWachtrij < 0;
+  }
+
   document.getElementById('nuBtn').addEventListener('click', function(){
-    if (pauze) return;
-    if (!(wachtrij === 0 && vijanden.length === 0 && rondePauze > 0)) return;
-    var bonus = Math.max(5, Math.round(rondePauze * 8)) * haastKeer();
-    var extra = Math.round(haastExtra() * 100);
-    bank.munten += bonus;
-    laatMuntZien(bonus);
-    sprongOver = true;
-    rondePauze = 0.01;
-    melding2('Je roept de volgende ronde erbij: ' + bonus + ' munten, maar er komen ' +
-      extra + ' procent meer fouten. Sla je de volgende pauze ook over, dan verdubbelt het allebei.');
-    tekenMeters();
+    if (inPauzeTussenRondes()){
+      var bonus = Math.max(5, Math.round(rondePauze * 8)) * haastKeer();
+      bank.munten += bonus;
+      laatMuntZien(bonus);
+      sprongOver = true;
+      rondePauze = 0.01;
+      melding2('Je roept de volgende ronde erbij: ' + bonus + ' munten, maar er komen ' +
+        Math.round(haastExtra() * 100) + ' procent meer fouten. Sla je de volgende pauze ook ' +
+        'over, dan verdubbelt het allebei.');
+      tekenMeters();
+      return;
+    }
+    if (!magErbijRoepen()) return;
+    /* Erbij roepen terwijl er nog een ronde loopt telt als overslaan, dus de
+       stapel van het haasten loopt gewoon door: meer munten, meer fouten. */
+    haast = Math.min(HAASTMAX + 1, haast + 1);
+    var bonus2 = Math.max(5, Math.round(24 * haastKeer()));
+    bank.munten += bonus2;
+    laatMuntZien(bonus2);
+    var voor = wachtrij;
+    rondeErbij(true);
+    melding2('Ronde ' + bank.ronde + ' komt er nu bij: ' + (wachtrij - voor) +
+      ' fouten extra boven op de ' + voor + ' die er nog aankomen, en ' + bonus2 + ' munten.');
+    tekenMeters(); tekenBord();
+  });
+
+  document.getElementById('lapBtn').addEventListener('click', function(){
+    if (!magLappen()) return;
+    var prijs = lapPrijs();
+    bank.munten -= prijs;
+    bank.leven++;
+    gelapt++;
+    laatMuntZien(-prijs);
+    melding2('De klas is opgelapt. Een leven erbij; de volgende reparatie kost ' +
+      lapPrijs() + ' munten.');
+    tekenMeters(); tekenBord();
   });
 
   document.getElementById('nogBtn').addEventListener('click', begin);
