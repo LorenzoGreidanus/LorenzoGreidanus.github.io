@@ -423,8 +423,9 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
   <div class="niv" id="niveaus"></div>
   <p class="nivuit" id="nivUit"></p>
 
-  <p class="eyebrow kop2">kies je vak</p>
+  <p class="eyebrow kop2" id="vakKop">kies je vak</p>
   <div class="vakken" id="vakken"></div>
+  <p class="nivuit hide" id="vastUit"></p>
 
   <div id="deelvakken"></div>
 
@@ -5058,7 +5059,57 @@ function rekenVraag(rang, toegestaan) {
     });
   })();
 
+  /* ---------------------------------------------------------------------------
+     Deelbare link vanaf de spellenpagina.
+       ?n=bb, kgt, havo of vwo      zet het niveau alvast goed
+       ?vak=aard                    zet het vak vast
+       ?deel=vlaggen                zet ook het onderdeel vast, meer mag ook:
+                                    ?deel=vlaggen,landvormen
+     Staat het vak in de link, dan gaan de keuzeknoppen weg en staat er alleen
+     nog wat je gaat oefenen. Zo kan dezelfde pagina in de lijst staan als
+     Vlaggen of als Landenvormen, zonder dat de leerling eerst door een menu moet.
+     --------------------------------------------------------------------------- */
+  var uitLink = (function(){
+    function param(naam){
+      var m = new RegExp('[?&]' + naam + '=([^&#]+)').exec(location.search);
+      return m ? decodeURIComponent(m[1]) : null;
+    }
+    /* De spellenpagina kent drie niveaus, dit spel vier. */
+    var ANDERS = { hv:'havo' };
+    var n = param('n');
+    if (n){
+      n = ANDERS[n] || n;
+      if (NIVEAUS.some(function(x){ return x.id === n; })) niveau = n;
+    }
+    var v = param('vak');
+    if (!v || !VAKKEN.some(function(x){ return x.id === v; })) return false;
+    vak = v;
+    keuze[vak] = [];
+    var d = param('deel');
+    if (d) d.split(',').forEach(function(id){
+      if ((ONDERDELEN[vak] || []).some(function(o){ return o.id === id; })) keuze[vak].push(id);
+    });
+    return true;
+  })();
+
   tekenNiveaus(); tekenVakken(); tekenDeelvakken(); tekenStartknop();
+
+  if (uitLink){
+    (function(){
+      var v = VAKKEN.filter(function(x){ return x.id === vak; })[0];
+      var namen = keuze[vak].map(function(id){
+        return ONDERDELEN[vak].filter(function(o){ return o.id === id; })[0].naam;
+      });
+      var wat = namen.length ? namen.join(' en ') : v.naam.toLowerCase();
+      document.getElementById('vakKop').textContent = 'je oefent';
+      document.getElementById('vakken').classList.add('hide');
+      document.getElementById('deelvakken').classList.add('hide');
+      var uit = document.getElementById('vastUit');
+      uit.textContent = v.naam + ', ' + wat + '. De rest van het spel is hetzelfde.';
+      uit.classList.remove('hide');
+      document.getElementById('startBtn').textContent = 'Begin met ' + wat;
+    })();
+  }
 })();
 </script>
 </body>
