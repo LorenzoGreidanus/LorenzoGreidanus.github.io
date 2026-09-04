@@ -262,15 +262,17 @@ body.groot .meterv b{font-size:1.6rem}
 body.groot .uitleg{font-size:1rem}
 
 /* ---------- testpaneel ----------
-   Staat er alleen als je #test achter de URL zet, dus een klas komt hem nooit
-   tegen. Hij hangt linksonder over het bord heen en kan dicht. */
+   Verborgen tot je de toetsreeks intikt; zie het blok onderaan in het script.
+   Hij hangt linksonder over het bord heen. */
 #testvak{position:fixed;left:10px;bottom:10px;z-index:60;background:#14224C;color:#fff;
   border-radius:14px;padding:10px 12px;font-size:.78rem;box-shadow:0 10px 30px rgba(20,34,76,.35);
   max-width:270px;line-height:1.35}
-/* Uitgeklapt hangt hij over de startknop heen, dus hij begint dicht: dan is
-   het een chipje van een paar tellen breed en zit hij niets in de weg. */
+/* Hij begint niet meer dichtgeklapt maar helemaal weg: een chipje in beeld
+   verraadt al dat er iets te vinden is. */
 #testvak.dicht{padding:6px 10px}
 #testvak.dicht > *:not(.testkop){display:none}
+#testvak #testSluit{margin-left:8px;font-size:1rem;line-height:1;padding:0 3px;color:rgba(255,255,255,.75)}
+#testvak #testSluit:hover{color:#fff}
 #testvak .testkop{display:flex;justify-content:space-between;align-items:center;gap:10px;
   font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:.66rem;
   color:rgba(255,255,255,.7);cursor:pointer;user-select:none}
@@ -451,8 +453,9 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
   <button class="btn" id="nogBtn" type="button">Nog een keer</button>
 </section>
 
-<div id="testvak" class="hide dicht">
-  <div class="testkop"><span>Testpaneel</span><span id="testKlap">tonen</span></div>
+<div id="testvak" class="hide">
+  <div class="testkop"><span>Testpaneel</span>
+    <span><span id="testKlap">verbergen</span> <span id="testSluit" title="sluiten">&times;</span></span></div>
   <div class="testrij">
     <span>Tempo</span>
     <button type="button" data-tempo="1" class="aan">1&times;</button>
@@ -477,7 +480,6 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
   <div class="testrij">
     <span>Kaart</span><select id="testKaart"></select>
   </div>
-  <p class="testuit">Zet <b>#test</b> achter de URL om dit paneel te krijgen. T verbergt hem.</p>
 </div>
 
 <footer>
@@ -4810,10 +4812,44 @@ function rekenVraag(rang, toegestaan) {
      code staat niets dat hiervan afhangt, dus zonder die URL is het spel
      precies zoals het was. */
   (function(){
-    var aan = /(^|[#?&])test\b/.test(location.hash + location.search);
     var tvak = document.getElementById('testvak');
-    if (!tvak || !aan) return;
-    tvak.classList.remove('hide');
+    if (!tvak) return;
+
+    /* Het paneel zat achter #test in de URL. Dat staat in de adresbalk, blijft
+       in de geschiedenis staan, gaat mee als je de link deelt, en een leerling
+       die het een keer ziet weet het de rest van het jaar. Nu moet je een reeks
+       letters typen die geen woord is en die je niet per ongeluk aanslaat.
+
+       Belangrijk om te weten: dit is verstoppen, geen beveiliging. Het bestand
+       staat openbaar op GitHub Pages, dus wie de broncode opent vindt de reeks.
+       Het houdt tegen dat iemand er per ongeluk in valt of een URL doorstuurt,
+       meer niet. Wil je het echt dicht, dan moet de testcode uit het bestand
+       dat je publiceert.
+
+       De reeks staat hieronder per letter, zodat hij niet als woord in de
+       broncode te vinden is met zoeken op de voor de hand liggende termen. */
+    var SLEUTEL = ['q','w','q','z'].join('');
+    var getikt = '', tikKlok = null;
+
+    function toonPaneel(){
+      if (!tvak.classList.contains('hide')) return;
+      tvak.classList.remove('hide');
+      tvak.classList.remove('dicht');
+      document.getElementById('testKlap').textContent = 'verbergen';
+    }
+
+    document.addEventListener('keydown', function(e){
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      var el = document.activeElement;
+      if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
+      if (!/^[a-z]$/i.test(e.key)) return;
+      getikt = (getikt + e.key.toLowerCase()).slice(-SLEUTEL.length);
+      /* Na anderhalve seconde stilte begint de reeks opnieuw, zodat losse
+         letters die je in de loop van een les aanslaat niet blijven staan. */
+      if (tikKlok) clearTimeout(tikKlok);
+      tikKlok = setTimeout(function(){ getikt = ''; }, 1500);
+      if (getikt === SLEUTEL){ getikt = ''; toonPaneel(); }
+    });
 
     function knop(id, doe){
       var k = document.getElementById(id);
@@ -4901,16 +4937,13 @@ function rekenVraag(rang, toegestaan) {
       melding2('Kaart gezet op ' + kaart.naam + '. Bord leeggemaakt, want torens stonden op de oude weg.');
     });
 
-    /* T verbergt het paneel, behalve als je in een invoerveld staat */
-    document.addEventListener('keydown', function(e){
-      if (e.altKey || e.ctrlKey || e.metaKey) return;
-      var el = document.activeElement;
-      if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
-      if (e.key === 't' || e.key === 'T'){
-        tvak.classList.toggle('dicht');
-        document.getElementById('testKlap').textContent =
-          tvak.classList.contains('dicht') ? 'tonen' : 'verbergen';
-      }
+    /* Sluiten haalt het paneel helemaal weg in plaats van het dicht te klappen:
+       staat er een dichtgeklapt chipje in beeld, dan weet de klas alsnog dat er
+       iets te vinden is. Met de reeks komt hij terug. */
+    var kSluit = document.getElementById('testSluit');
+    if (kSluit) kSluit.addEventListener('click', function(e){
+      e.stopPropagation();
+      tvak.classList.add('hide');
     });
   })();
 
