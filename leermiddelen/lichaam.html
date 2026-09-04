@@ -62,8 +62,23 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .lijfvak{background:#fff;border:1px solid rgba(20,34,76,.10);border-radius:22px;overflow:hidden;
   display:grid;place-items:center;padding:8px}
 .lijfvak svg{display:block;width:auto;height:auto;max-height:78vh;max-width:100%;touch-action:manipulation}
-.orgaan{cursor:pointer}
-.orgaan:hover{opacity:.8}
+/* De uitlopers: een lijn van het orgaan naar een letter naast het lichaam.
+   Op de letter klik je. De lijn en het kadertje horen bij elkaar, dus de
+   hover werkt op de hele groep. */
+.uitloper{cursor:pointer}
+.uitloper .kader{fill:#fff;stroke:var(--ink);stroke-width:3;transition:fill .12s}
+.uitloper:hover .kader{fill:#f4f7ff;stroke:var(--ocean)}
+.uitloper .lijn{stroke:var(--ink);stroke-width:3;fill:none;opacity:.55}
+.uitloper:hover .lijn{opacity:1;stroke:var(--ocean)}
+.uitloper .letter{fill:var(--ink);font-weight:700;font-size:46px;pointer-events:none;
+  font-family:'Poppins',system-ui,sans-serif}
+.uitloper.juist .kader{fill:var(--goed);stroke:var(--goed)}
+.uitloper.juist .letter{fill:#fff}
+.uitloper.juist .lijn{stroke:var(--goed);opacity:1}
+.uitloper.mis .kader{fill:var(--fout);stroke:var(--fout)}
+.uitloper.mis .letter{fill:#fff}
+.uitloper.mis .lijn{stroke:var(--fout);opacity:1}
+.uitloper.stil{cursor:default}
 .zijkant{position:sticky;top:66px;display:grid;gap:12px}
 .vraagvak{background:var(--ocean);color:#fff;border-radius:20px;padding:18px}
 .vraagvak .eyebrow{color:rgba(255,255,255,.72)}
@@ -249,7 +264,7 @@ var NIVEAUS = [
   { id:'hv',  naam:'havo en vwo', rang:3, uit:'Alles, ook de galblaas, de alvleesklier en de schildklier.' }
 ];
 var MODUSSEN = [
-  { id:'wijs',    naam:'Aanwijzen',   uit:'Je leest een naam en klikt het orgaan aan op de tekening.' },
+  { id:'wijs',    naam:'Aanwijzen',   uit:'Je leest een naam en klikt de letter aan die met een lijntje naar dat orgaan wijst.' },
   { id:'noem',    naam:'Benoemen',    uit:'Er licht een orgaan op en jij kiest de juiste naam.' },
   { id:'gemengd', naam:'Door elkaar', uit:'Om de beurt aanwijzen en benoemen.' }
 ];
@@ -331,10 +346,64 @@ var MODUSSEN = [
     }).join('');
   }
 
+  /* ---------- de uitlopers ----------
+     Klikken op het orgaan zelf was onduidelijk: de galblaas is een postzegel en
+     de dikke darm ligt om de dunne darm heen, dus een klik ernaast telde als
+     fout terwijl je het wel wist. Nu loopt er van elk orgaan een lijn naar een
+     letter naast het lichaam, zoals op een toetsblad, en klik je de letter aan.
+
+     De letters worden per partij opnieuw geloot, anders is C na twee keer
+     spelen gewoon het hart. Links en rechts krijgen elk de helft, gesorteerd
+     op waar het orgaan zit, en de kadertjes worden zo verdeeld dat ze elkaar
+     niet raken maar wel zo dicht mogelijk bij hun orgaan blijven. */
+  var ZIJ = 300, BOVEN = 20, ONDER = 900;        /* ruimte naast het lichaam, en welk stuk we laten zien */
+  var KADER_B = 132, KADER_H = 80, TUSSEN = 100;  /* maat van een kadertje en de minste afstand ertussen */
+  var letters = {};
+
+  function lootLetters(){
+    var abc = husl('ABCDEFGHIJKLMNOP'.split(''));
+    letters = {};
+    ORGANEN.forEach(function(o, i){ letters[o.id] = abc[i % abc.length]; });
+  }
+
+  /* het zwaartepunt van het eerste vlak: daar begint de lijn */
+  function anker(o){
+    var p = o.vlak[0], sx = 0, sy = 0;
+    p.forEach(function(q){ sx += q[0]; sy += q[1]; });
+    return { x:sx / p.length, y:sy / p.length };
+  }
+
+  function uitlopers(toon){
+    var met = toon.map(function(o){ var a = anker(o); return { o:o, ax:a.x, ay:a.y }; });
+    met.sort(function(a, b){ return a.ax - b.ax; });
+    var helft = Math.floor(met.length / 2);
+    var links = met.slice(0, helft), rechts = met.slice(helft);
+    function spreid(lijst, kant){
+      lijst.sort(function(a, b){ return a.ay - b.ay; });
+      var y = [], laag = BOVEN + KADER_H / 2 + 12, hoog = ONDER - KADER_H / 2 - 12;
+      lijst.forEach(function(u, i){
+        y[i] = Math.max(i ? y[i-1] + TUSSEN : laag, u.ay);
+      });
+      /* te laag uitgekomen: alles omhoog schuiven en van onderaf weer uit elkaar houden */
+      if (y.length && y[y.length-1] > hoog){
+        y[y.length-1] = hoog;
+        for (var i = y.length - 2; i >= 0; i--) y[i] = Math.min(y[i], y[i+1] - TUSSEN);
+      }
+      lijst.forEach(function(u, i){
+        u.by = y[i];
+        u.kant = kant;
+        u.bx = kant === 'links' ? -ZIJ + 24 : BEELD.breed + ZIJ - 24 - KADER_B;
+      });
+      return lijst;
+    }
+    return spreid(links, 'links').concat(spreid(rechts, 'rechts'));
+  }
+
   function tekenLijf(){
     var toon = mee();
-    var s = '<svg id="lijfsvg" viewBox="0 0 ' + BEELD.breed + ' ' + BEELD.hoog + '" ' +
-      'xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Een lichaam met de organen erin">';
+    var s = '<svg id="lijfsvg" viewBox="' + (-ZIJ) + ' ' + BOVEN + ' ' + (BEELD.breed + 2 * ZIJ) + ' ' +
+      (ONDER - BOVEN) + '" xmlns="http://www.w3.org/2000/svg" role="img" ' +
+      'aria-label="Een lichaam met de organen erin, met letters ernaast">';
     s += '<image href="' + BEELD.bron + '" x="0" y="0" width="' + BEELD.breed +
          '" height="' + BEELD.hoog + '"/>';
 
@@ -352,11 +421,27 @@ var MODUSSEN = [
            'stroke="#2f7d52" stroke-width="7" stroke-linejoin="round"/>';
     }
 
-    /* de klikvlakken: onzichtbaar, maar wel aan te wijzen */
+    /* de uitlopers met hun letter, alleen bij aanwijzen */
     if (beurt === 'wijs'){
-      toon.forEach(function(o){
-        s += '<path class="orgaan" data-o="' + o.id + '" d="' + padVan(o) +
-             '" fill="transparent" stroke="none"/>';
+      uitlopers(toon).forEach(function(u){
+        var klas = 'uitloper';
+        if (nu && nu.af && u.o.id === nu.id) klas += ' juist stil';
+        else if (nu && nu.mis === u.o.id) klas += ' mis';
+        else if (nu && nu.af) klas += ' stil';
+        /* de lijn: van het orgaan schuin naar de hoogte van het kader, dan recht
+           het kader in; een stip op het orgaan zodat je ziet waar hij begint */
+        var randX = u.kant === 'links' ? u.bx + KADER_B : u.bx;
+        var knikX = u.kant === 'links' ? -30 : BEELD.breed + 30;
+        s += '<g class="' + klas + '" data-o="' + u.o.id + '">';
+        s += '<path class="lijn" d="M' + u.ax.toFixed(0) + ',' + u.ay.toFixed(0) + ' L' + knikX + ',' +
+          u.by.toFixed(0) + ' L' + randX + ',' + u.by.toFixed(0) + '" stroke-linejoin="round" stroke-linecap="round"/>';
+        s += '<circle cx="' + u.ax.toFixed(0) + '" cy="' + u.ay.toFixed(0) + '" r="9" fill="#fff" ' +
+          'stroke="#14224C" stroke-width="3"/>';
+        s += '<rect class="kader" x="' + u.bx + '" y="' + (u.by - KADER_H / 2).toFixed(0) + '" width="' + KADER_B +
+          '" height="' + KADER_H + '" rx="18"/>';
+        s += '<text class="letter" x="' + (u.bx + KADER_B / 2) + '" y="' + (u.by + 16).toFixed(0) +
+          '" text-anchor="middle">' + letters[u.o.id] + '</text>';
+        s += '</g>';
       });
     }
     s += '</svg>';
@@ -364,8 +449,8 @@ var MODUSSEN = [
     vak.innerHTML = s;
 
     if (beurt === 'wijs'){
-      Array.prototype.forEach.call(vak.querySelectorAll('.orgaan'), function(p){
-        p.addEventListener('click', function(){ klikOpOrgaan(p.getAttribute('data-o')); });
+      Array.prototype.forEach.call(vak.querySelectorAll('.uitloper'), function(g){
+        g.addEventListener('click', function(){ klikOpOrgaan(g.getAttribute('data-o')); });
       });
     }
   }
@@ -373,7 +458,7 @@ var MODUSSEN = [
   /* ---------- de vraag ---------- */
   function volgende(){
     if (!rij.length){ einde(); return; }
-    nu = { id: rij[0], af:false };
+    nu = { id: rij[0], af:false, mis:null };
     beurt = modus === 'gemengd' ? ((goed + fout) % 2 ? 'noem' : 'wijs') : modus;
     alGefaald = false;
     var o = ORGANEN.filter(function(x){ return x.id === nu.id; })[0];
@@ -383,7 +468,7 @@ var MODUSSEN = [
     if (beurt === 'wijs'){
       document.getElementById('vraagKop').textContent = 'wijs aan';
       document.getElementById('vraagTekst').textContent = 'Waar zit ' + o.naam + '?';
-      document.getElementById('vraagSub').textContent = 'Klik het aan op het lichaam.';
+      document.getElementById('vraagSub').textContent = 'Klik de letter aan die ernaar wijst.';
       document.getElementById('opties').innerHTML = '';
     } else {
       document.getElementById('vraagKop').textContent = 'benoemen';
@@ -435,9 +520,11 @@ var MODUSSEN = [
     } else {
       if (!alGefaald){ fout++; gemist.push(o.naam); alGefaald = true; }
       var mis = ORGANEN.filter(function(x){ return x.id === id; })[0];
-      document.getElementById('terugvak').innerHTML = '<div class="terug">Dat is ' + mis.naam +
+      nu.mis = id;
+      document.getElementById('terugvak').innerHTML = '<div class="terug">' + letters[id] + ' is ' + mis.naam +
         '. Probeer het nog eens.</div>';
       document.getElementById('mFout').textContent = fout;
+      tekenLijf();
     }
   }
 
@@ -459,6 +546,7 @@ var MODUSSEN = [
   /* ---------- beginnen en eindigen ---------- */
   function begin(){
     var lijst = mee();
+    lootLetters();
     rij = husl(lijst.map(function(o){ return o.id; }));
     goed = 0; fout = 0; gemist = [];
     document.getElementById('mGoed').textContent = 0;
