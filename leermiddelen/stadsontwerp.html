@@ -65,23 +65,37 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .bewaard .wegknop:hover{color:var(--fout)}
 
 /* ---------- de werkbank ---------- */
-.bank{display:grid;grid-template-columns:216px minmax(0,1fr) 268px;gap:12px;padding:10px 0 50px;align-items:start}
+.bank{display:grid;grid-template-columns:262px minmax(0,1fr) 262px;gap:12px;padding:10px 0 50px;align-items:start}
 @media (max-width:1240px){.bank{grid-template-columns:1fr}}
 .paneel{background:#fff;border:1px solid rgba(20,34,76,.10);border-radius:20px;padding:14px}
 .paneel h3{font-size:.95rem;margin-bottom:9px}
-.legenda{display:grid;gap:3px;max-height:78vh;overflow:auto;overscroll-behavior:contain}
+.legenda{display:grid;gap:3px;max-height:calc(78vh - 90px);overflow:auto;overscroll-behavior:contain}
 .groepkop{font-size:.66rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
   color:var(--muted);margin:12px 0 3px;padding-left:2px}
 .groepkop:first-child{margin-top:0}
 @media (max-width:1240px){.legenda{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));max-height:none}}
-.stukknop{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:7px;align-items:center;
-  background:var(--room);border:1.5px solid transparent;border-radius:10px;padding:6px 8px;
-  text-align:left;font-size:.83rem;min-width:0}
-.stukknop:hover{border-color:var(--vista)}
-.stukknop.on{border-color:var(--ocean);background:#f4f7ff}
+/* De stappen boven het menu: dat vertelt wat je moet doen voordat je het vraagt. */
+.stappen{display:grid;gap:4px;margin-bottom:10px;font-size:.78rem;color:var(--muted);line-height:1.35}
+.stappen span{display:flex;gap:7px;align-items:flex-start}
+.stappen i{flex:none;width:18px;height:18px;border-radius:50%;background:var(--room);border:1px solid rgba(20,34,76,.15);
+  font-style:normal;font-size:.66rem;font-weight:700;display:grid;place-items:center;color:var(--ink)}
+.stappen span.nu{color:var(--ink);font-weight:600}
+.stappen span.nu i{background:var(--ocean);color:#fff;border-color:var(--ocean)}
+.stukknop{display:grid;grid-template-columns:20px 42px minmax(0,1fr) auto;gap:7px;align-items:center;
+  background:var(--room);border:1.5px solid transparent;border-radius:12px;padding:5px 8px 5px 6px;
+  text-align:left;font-size:.83rem;min-width:0;transition:border-color .15s,transform .15s var(--ease)}
+.stukknop:hover{border-color:var(--vista);transform:translateX(2px)}
+.stukknop.on{border-color:var(--ocean);background:#f4f7ff;box-shadow:0 0 0 3px rgba(32,78,207,.12)}
 .stukknop .nr{width:20px;height:20px;border-radius:6px;background:#fff;border:1px solid rgba(20,34,76,.12);
   display:grid;place-items:center;font-size:.68rem;font-weight:700;color:var(--muted)}
 .stukknop.on .nr{color:var(--ocean);border-color:var(--ocean)}
+/* het plaatje: de eerste tekening van het onderdeel, klein, op een reepje papier */
+.stukknop .mini{width:44px;height:34px;border-radius:7px;background:#f6f1e6;border:1px solid rgba(20,34,76,.08);overflow:hidden;display:grid;place-items:center}
+.stukknop .mini svg{width:44px;height:34px;display:block}
+.stukknop.klaar .nr{background:var(--goed);color:#fff;border-color:var(--goed)}
+.stukknop .tel small{display:block;font-size:.6rem;color:var(--muted);font-weight:500;text-align:right;line-height:1}
+.stukknop.eenmalig.klaar{opacity:.72}
+.stukknop.eenmalig.klaar .wat::after{content:' \2713';color:var(--goed)}
 /* Een lange naam als Geldwisselkantoor breekt af op twee regels. Afkappen met
    puntjes zou de naam onleesbaar maken, en uit het menu lopen mag niet. */
 .stukknop .wat{min-width:0;overflow-wrap:anywhere;line-height:1.2}
@@ -251,6 +265,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
   <div class="bank">
     <div class="paneel">
       <h3>Onderdelen</h3>
+      <div id="stappen"></div>
       <div class="legenda" id="legenda"></div>
     </div>
 
@@ -429,6 +444,16 @@ var POTLOOD = [
 var potloodNu = 2;
 var WOBBEL = POTLOOD[potloodNu].w;
 
+/* Een lichte kleurwas over het potlood, zoals een leerling met kleurpotlood
+   over een schets gaat: daken in verweerd rood, torens en kerk in leisteen,
+   muur en poort in steen. Alles gedempt, want het blijft een schets op papier
+   en geen bouwplaat. */
+var WAS = {
+  dak:'#dcb59a', dakDonker:'#cfa287', leisteen:'#b9c4d6', leisteenDonker:'#a3afc6',
+  steen:'#dcd6c6', steenDonker:'#cfc7b4', hout:'#c9ae86', muur:'#f0e9dc',
+  water:'#cfe0f5', gras:'#d8dfbd', pad:'#e0d4b8', doek:'#EA9836', doek2:'#F26749', doek3:'#83A5F2'
+};
+
 function d2(n){ return Math.round(n * 10) / 10; }
 function P(pts){ return 'M' + pts.map(p => d2(p[0]) + ',' + d2(p[1])).join('L') + 'Z'; }
 
@@ -441,7 +466,7 @@ class Pen {
   r(x, y, w, h, fill, sw){ return this.f([[x,y],[x+w,y],[x+w,y+h],[x,y+h]], fill, sw); }
   c(cx, cy, rad, fill, sw){ return this.add('<circle cx="' + d2(cx) + '" cy="' + d2(cy) + '" r="' + d2(rad) + '" fill="' + (fill || 'none') + '" stroke="' + this.k + '" stroke-width="' + (sw || 1.6) + '"/>'); }
   arc(x, y, w, h){ const r = w / 2; return this.add('<path d="M' + d2(x) + ',' + d2(y+h) + 'L' + d2(x) + ',' + d2(y+r) + 'A' + d2(r) + ',' + d2(r) + ' 0 0 1 ' + d2(x+w) + ',' + d2(y+r) + 'L' + d2(x+w) + ',' + d2(y+h) + 'Z" fill="#cdc5b0" stroke="' + this.k + '" stroke-width="1.5" stroke-linejoin="round"/>'); }
-  win(x, y, w, h){ this.r(x, y, w, h, '#cdc5b0', 1.4); this.l(x + w/2, y, x + w/2, y + h, .9, .8); this.l(x, y + h/2, x + w, y + h/2, .9, .8); return this; }
+  win(x, y, w, h){ this.r(x, y, w, h, '#f1dfa8', 1.4); this.l(x + w/2, y, x + w/2, y + h, .9, .8); this.l(x, y + h/2, x + w, y + h/2, .9, .8); return this; }
   wins(x, y, n, gap, w, h){ for (let i = 0; i < n; i++) this.win(x + i * (w + gap), y, w, h); return this; }
   deur(x, y, w, h){ this.f([[x,y+h],[x,y+w*.55],[x+w/2,y],[x+w,y+w*.55],[x+w,y+h]], '#b0a68f', 1.6); return this; }
   hatchLines(x, y, w, h, step){ for (let i = 0; i < w + h; i += (step || 6)) { const x1 = x + i, y1 = y, x2 = x + i - h, y2 = y + h; this.l(Math.min(x1, x + w), y1 + Math.max(0, i - w), Math.max(x2, x), y2, .8, .45); } return this; }
@@ -461,19 +486,27 @@ function shell(p, o){
   } else if (roof === 'lessenaar') {
     p.sh([[x+w,top],[x+w,top-rise],[x+w+dx,top-rise+dy],[x+w+dx,top+dy]]);
   }
-  p.f([[x,GY],[x+w,GY],[x+w,top],[x,top]], '#efe9dc');
-  if (roof === 'gable') p.f([[x,top],[x+w/2,top-rise],[x+w,top]], '#e7e0cf');
+  var dak = o.dak || WAS.dak;
+  p.f([[x,GY],[x+w,GY],[x+w,top],[x,top]], o.muurkleur || WAS.muur);
+  if (roof === 'gable') p.f([[x,top],[x+w/2,top-rise],[x+w,top]], dak);
   else if (roof === 'step') {
     const st = 4, sw = w / (st * 2 + 1), sh2 = rise / st, pts = [[x, top]];
     for (let i = 0; i < st; i++) { pts.push([x + i*sw, top - i*sh2]); pts.push([x + i*sw, top - (i+1)*sh2]); pts.push([x + (i+1)*sw, top - (i+1)*sh2]); }
     pts.push([x + w/2, top - rise - 3]);
     for (let i = st - 1; i >= 0; i--) { pts.push([x + w - (i+1)*sw, top - (i+1)*sh2]); pts.push([x + w - i*sw, top - (i+1)*sh2]); pts.push([x + w - i*sw, top - i*sh2]); }
     pts.push([x + w, top]);
-    p.f(pts, '#e7e0cf');
+    p.f(pts, o.trapdak || WAS.muur);
   } else if (roof === 'schild') {
-    p.f([[x,top],[x+rise*.5,top-rise],[x+w-rise*.5,top-rise],[x+w,top]], '#e7e0cf');
+    p.f([[x,top],[x+rise*.5,top-rise],[x+w-rise*.5,top-rise],[x+w,top]], dak);
   } else if (roof === 'lessenaar') {
-    p.f([[x,top],[x,top-rise*.45],[x+w,top-rise],[x+w,top]], '#e7e0cf');
+    p.f([[x,top],[x,top-rise*.45],[x+w,top-rise],[x+w,top]], dak);
+  }
+  /* een paar pannenlijnen op het dak, licht, zodat het dak een dak wordt */
+  if (roof === 'gable' || roof === 'schild'){
+    for (var k2 = 1; k2 <= 2; k2++){
+      var ty = top - rise * k2 / 3, inw = roof === 'gable' ? (w / 2) * k2 / 3 : (rise * .5) * k2 / 3;
+      p.l(x + inw, ty, x + w - inw, ty, .9, .35);
+    }
   }
   p.l(x - 2, top, x + w + 2, top, 1.6);
   if (o.balken) { const n = 3; for (let i = 1; i < n; i++) p.l(x, GY - h*i/n, x + w, GY - h*i/n, 1.1, .55); p.l(x + w*.35, top, x + w*.35, GY, 1.1, .45); p.l(x + w*.7, top, x + w*.7, GY, 1.1, .45); }
@@ -483,10 +516,13 @@ function shell(p, o){
 function toren(p, o){
   const x = o.x, w = o.w, h = o.h, d = o.d == null ? 16 : o.d, top = GY - h, dx = d*.5, dy = -d*.42;
   p.sh([[x+w,GY],[x+w+dx,GY+dy],[x+w+dx,top+dy],[x+w,top]]);
-  if (o.spits === 'punt') { p.sh([[x+w,top],[x+w/2+dx*.5,top-o.sp],[x+w+dx,top+dy]]); p.f([[x-3,top],[x+w/2,top-o.sp],[x+w+3,top]], '#ddd5c1'); }
-  else if (o.spits === 'zadel') { p.sh([[x+w,top],[x+w/2,top-o.sp],[x+w/2+dx,top-o.sp+dy],[x+w+dx,top+dy]]); p.f([[x,top],[x+w/2,top-o.sp],[x+w,top]], '#ddd5c1'); }
-  else { for (let i = 0; i < 3; i++) p.r(x + i*(w/3) + 1, top - 6, w/3 - 3, 6, '#e6dfcd', 1.4); }
-  p.f([[x,GY],[x+w,GY],[x+w,top],[x,top]], '#efe9dc');
+  var spitskleur = o.dak || WAS.leisteen;
+  if (o.spits === 'punt') { p.sh([[x+w,top],[x+w/2+dx*.5,top-o.sp],[x+w+dx,top+dy]]); p.f([[x-3,top],[x+w/2,top-o.sp],[x+w+3,top]], spitskleur); p.l(x + w/2, top - o.sp, x + w/2, top - o.sp - 7, 1.6); }
+  else if (o.spits === 'zadel') { p.sh([[x+w,top],[x+w/2,top-o.sp],[x+w/2+dx,top-o.sp+dy],[x+w+dx,top+dy]]); p.f([[x,top],[x+w/2,top-o.sp],[x+w,top]], spitskleur); }
+  else { for (let i = 0; i < 3; i++) p.r(x + i*(w/3) + 1, top - 6, w/3 - 3, 6, WAS.steen, 1.4); }
+  p.f([[x,GY],[x+w,GY],[x+w,top],[x,top]], o.muurkleur || WAS.muur);
+  /* een smal raampje halverwege de toren */
+  p.arc(x + w/2 - 3, top + (GY - top) * .35, 6, 12);
   p.l(x - 2, top, x + w + 2, top, 1.6);
   return { x, w, top, cx: x + w/2 };
 }
@@ -498,9 +534,9 @@ function vlak(p, cx, cy, rx, ry, fill){
 
 const BUILD = {
   kerk(p, v){
-    if (v === 0) { const n = shell(p, {x:52, w:76, h:44, d:26, rise:22, roof:'gable'}); p.wins(60, GY-34, 3, 8, 10, 18); toren(p, {x:26, w:26, h:96, d:16, spits:'punt', sp:36}); p.c(39, GY-84, 5); p.arc(33, GY-22, 12, 22); }
-    else if (v === 1) { const n = shell(p, {x:44, w:72, h:42, d:24, rise:20, roof:'gable'}); p.c(80, GY-52, 8); p.wins(56, GY-32, 2, 14, 12, 18); toren(p, {x:20, w:22, h:82, d:14, spits:'punt', sp:28}); toren(p, {x:118, w:22, h:82, d:14, spits:'punt', sp:28}); p.arc(70, GY-24, 20, 24); }
-    else { const n = shell(p, {x:40, w:84, h:48, d:28, rise:24, roof:'gable'}); p.l(52, GY, 52, GY-48, 2.2, .7); p.l(72, GY, 72, GY-48, 2.2, .7); p.l(92, GY, 92, GY-48, 2.2, .7); p.arc(56, GY-36, 14, 36); p.arc(78, GY-36, 14, 36); toren(p, {x:112, w:30, h:74, d:18, spits:'zadel', sp:24}); p.c(127, GY-58, 6); }
+    if (v === 0) { const n = shell(p, {x:52, w:76, h:44, d:26, rise:22, roof:'gable', dak:WAS.leisteen}); p.wins(60, GY-34, 3, 8, 10, 18); toren(p, {x:26, w:26, h:96, d:16, spits:'punt', sp:36}); p.c(39, GY-84, 5); p.arc(33, GY-22, 12, 22); }
+    else if (v === 1) { const n = shell(p, {x:44, w:72, h:42, d:24, rise:20, roof:'gable', dak:WAS.leisteen}); p.c(80, GY-52, 8, '#f1dfa8'); p.wins(56, GY-32, 2, 14, 12, 18); toren(p, {x:20, w:22, h:82, d:14, spits:'punt', sp:28}); toren(p, {x:118, w:22, h:82, d:14, spits:'punt', sp:28}); p.arc(70, GY-24, 20, 24); }
+    else { const n = shell(p, {x:40, w:84, h:48, d:28, rise:24, roof:'gable', dak:WAS.leisteen}); p.l(52, GY, 52, GY-48, 2.2, .7); p.l(72, GY, 72, GY-48, 2.2, .7); p.l(92, GY, 92, GY-48, 2.2, .7); p.arc(56, GY-36, 14, 36); p.arc(78, GY-36, 14, 36); toren(p, {x:112, w:30, h:74, d:18, spits:'zadel', sp:24}); p.c(127, GY-58, 6); }
   },
   markt(p, v){
     vlak(p, 80, GY-4, 56, 20, '#eee7d5');
@@ -510,9 +546,9 @@ const BUILD = {
     else { p.f([[30,GY-30],[80,GY-44],[130,GY-30],[80,GY-16]], '#FCDED6', 1.8); p.l(30, GY-30, 30, GY-6, 1.6); p.l(130, GY-30, 130, GY-6, 1.6); p.l(80, GY-16, 80, GY+2, 1.4); p.l(55, GY-37, 105, GY-37, 1, .5); }
   },
   raadhuis(p, v){
-    if (v === 0) { shell(p, {x:38, w:86, h:52, d:26, rise:26, roof:'step'}); p.wins(48, GY-42, 4, 6, 13, 16); p.wins(48, GY-22, 4, 6, 13, 14); p.deur(74, GY-24, 14, 24); }
-    else if (v === 1) { const n = shell(p, {x:34, w:92, h:46, d:26, rise:18, roof:'schild'}); p.wins(44, GY-36, 5, 5, 12, 14); p.deur(72, GY-22, 16, 22); toren(p, {x:70, w:20, h:86, d:12, spits:'punt', sp:22}); p.c(80, GY-72, 6); }
-    else { shell(p, {x:32, w:96, h:50, d:28, rise:20, roof:'schild'}); for (let i = 0; i < 4; i++) p.arc(40 + i*22, GY-26, 16, 26); p.wins(42, GY-44, 5, 5, 13, 13); p.l(32, GY-30, 128, GY-30, 1.6); }
+    if (v === 0) { shell(p, {x:38, w:86, h:52, d:26, rise:26, roof:'step', trapdak:WAS.leisteen}); p.wins(48, GY-42, 4, 6, 13, 16); p.wins(48, GY-22, 4, 6, 13, 14); p.deur(74, GY-24, 14, 24); }
+    else if (v === 1) { const n = shell(p, {x:34, w:92, h:46, d:26, rise:18, roof:'schild', dak:WAS.leisteen}); p.wins(44, GY-36, 5, 5, 12, 14); p.deur(72, GY-22, 16, 22); toren(p, {x:70, w:20, h:86, d:12, spits:'punt', sp:22}); p.c(80, GY-72, 6); }
+    else { shell(p, {x:32, w:96, h:50, d:28, rise:20, roof:'schild', dak:WAS.leisteen}); for (let i = 0; i < 4; i++) p.arc(40 + i*22, GY-26, 16, 26); p.wins(42, GY-44, 5, 5, 13, 13); p.l(32, GY-30, 128, GY-30, 1.6); }
   },
   wissel(p, v){
     if (v === 0) { shell(p, {x:52, w:58, h:52, d:22, rise:24, roof:'gable'}); p.wins(60, GY-42, 2, 10, 15, 15); p.wins(60, GY-22, 2, 10, 15, 13); p.l(110, GY-56, 128, GY-56, 1.8); p.c(124, GY-46, 9, '#EA9836'); p.l(124, GY-56, 124, GY-55, 1.4); }
@@ -567,9 +603,9 @@ const BUILD = {
   },
   straat(p, v){
     const cob = (x, y, n, w2) => { for (let i = 0; i < n; i++) { const px2 = x + (i % 6) * (w2/6) + ((i/6|0) % 2) * 3, py = y + ((i/6|0)) * 5; p.c(px2, py, 1.6, 'none', .9); } };
-    if (v === 0) { p.f([[30,GY-14],[130,GY-14],[130,GY+8],[30,GY+8]], '#e0d4b8', 1.7); cob(36, GY-9, 30, 92); }
-    else if (v === 1) { p.f([[30,GY-14],[92,GY-14],[92,GY-56],[112,GY-56],[112,GY+8],[30,GY+8]], '#e0d4b8', 1.7); cob(36, GY-8, 24, 76); for (let i = 0; i < 8; i++) p.c(96 + (i%2)*8, GY-48 + (i/2|0)*9, 1.6, 'none', .9); }
-    else { p.f([[30,GY-14],[68,GY-14],[68,GY-56],[92,GY-56],[92,GY-14],[130,GY-14],[130,GY+8],[92,GY+8],[92,GY+34],[68,GY+34],[68,GY+8],[30,GY+8]], '#e0d4b8', 1.7); cob(36, GY-8, 30, 92); }
+    if (v === 0) { p.f([[30,GY-14],[130,GY-14],[130,GY+8],[30,GY+8]], WAS.pad, 1.7); cob(36, GY-9, 30, 92); }
+    else if (v === 1) { p.f([[30,GY-14],[92,GY-14],[92,GY-56],[112,GY-56],[112,GY+8],[30,GY+8]], WAS.pad, 1.7); cob(36, GY-8, 24, 76); for (let i = 0; i < 8; i++) p.c(96 + (i%2)*8, GY-48 + (i/2|0)*9, 1.6, 'none', .9); }
+    else { p.f([[30,GY-14],[68,GY-14],[68,GY-56],[92,GY-56],[92,GY-14],[130,GY-14],[130,GY+8],[92,GY+8],[92,GY+34],[68,GY+34],[68,GY+8],[30,GY+8]], WAS.pad, 1.7); cob(36, GY-8, 30, 92); }
   },
   haven(p, v){
     p.f([[20,GY+22],[140,GY+22],[140,GY+38],[20,GY+38]], '#cfe0f5', 1.5);
@@ -596,15 +632,15 @@ const BUILD = {
     else { shell(p, {x:50, w:60, h:42, d:22, rise:20, roof:'schild'}); p.deur(58, GY-24, 16, 24); p.win(84, GY-30, 16, 14); p.f([[112,GY-8],[136,GY-8],[136,GY-18],[112,GY-18]], '#b0a68f', 1.7); p.l(118, GY-18, 130, GY-30, 1.8); }
   },
   muur(p, v){
-    const kant = (x, y, w) => { const n = Math.floor(w / 12); for (let i = 0; i < n; i++) p.r(x + i*12 + 2, y - 7, 7, 7, '#e3dcc8', 1.5); };
-    if (v === 0) { p.sh([[24,GY-42],[136,GY-42],[130,GY-50],[30,GY-50]]); p.f([[24,GY],[136,GY],[136,GY-42],[24,GY-42]], '#e3dcc8', 1.9); kant(26, GY-42, 110); for (let r = 0; r < 3; r++) for (let i = 0; i < 6; i++) p.l(28 + i*18 + (r%2)*9, GY-8-r*12, 44 + i*18 + (r%2)*9, GY-8-r*12, .9, .45); }
-    else if (v === 1) { p.f([[24,GY],[70,GY],[70,GY-38],[24,GY-38]], '#e3dcc8', 1.9); kant(26, GY-38, 44); p.f([[70,GY],[110,GY],[110,GY-58],[70,GY-58]], '#efe9dc', 1.9); p.sh([[110,GY],[124,GY-6],[124,GY-64],[110,GY-58]]); kant(72, GY-58, 38); p.win(82, GY-46, 12, 14); for (let r = 0; r < 2; r++) for (let i = 0; i < 3; i++) p.l(28 + i*16, GY-10-r*13, 42 + i*16, GY-10-r*13, .9, .45); }
-    else { p.sh([[24,GY-40],[136,GY-40],[130,GY-48],[30,GY-48]]); p.f([[24,GY],[136,GY],[136,GY-40],[24,GY-40]], '#e3dcc8', 1.9); kant(26, GY-40, 110); p.f([[44,GY],[58,GY],[54,GY-26],[48,GY-26]], '#d9d0ba', 1.7); p.f([[102,GY],[116,GY],[112,GY-26],[106,GY-26]], '#d9d0ba', 1.7); }
+    const kant = (x, y, w) => { const n = Math.floor(w / 12); for (let i = 0; i < n; i++) p.r(x + i*12 + 2, y - 7, 7, 7, WAS.steen, 1.5); };
+    if (v === 0) { p.sh([[24,GY-42],[136,GY-42],[130,GY-50],[30,GY-50]]); p.f([[24,GY],[136,GY],[136,GY-42],[24,GY-42]], WAS.steen, 1.9); kant(26, GY-42, 110); for (let r = 0; r < 3; r++) for (let i = 0; i < 6; i++) p.l(28 + i*18 + (r%2)*9, GY-8-r*12, 44 + i*18 + (r%2)*9, GY-8-r*12, .9, .45); }
+    else if (v === 1) { p.f([[24,GY],[70,GY],[70,GY-38],[24,GY-38]], WAS.steen, 1.9); kant(26, GY-38, 44); p.f([[70,GY],[110,GY],[110,GY-58],[70,GY-58]], WAS.muur, 1.9); p.sh([[110,GY],[124,GY-6],[124,GY-64],[110,GY-58]]); kant(72, GY-58, 38); p.win(82, GY-46, 12, 14); for (let r = 0; r < 2; r++) for (let i = 0; i < 3; i++) p.l(28 + i*16, GY-10-r*13, 42 + i*16, GY-10-r*13, .9, .45); }
+    else { p.sh([[24,GY-40],[136,GY-40],[130,GY-48],[30,GY-48]]); p.f([[24,GY],[136,GY],[136,GY-40],[24,GY-40]], WAS.steen, 1.9); kant(26, GY-40, 110); p.f([[44,GY],[58,GY],[54,GY-26],[48,GY-26]], WAS.steenDonker, 1.7); p.f([[102,GY],[116,GY],[112,GY-26],[106,GY-26]], WAS.steenDonker, 1.7); }
   },
   poort(p, v){
-    if (v === 0) { p.sh([[110,GY],[124,GY-6],[124,GY-70],[110,GY-64]]); p.f([[52,GY],[110,GY],[110,GY-64],[52,GY-64]], '#efe9dc', 1.9); for (let i = 0; i < 5; i++) p.r(54 + i*12, GY-71, 7, 7, '#e3dcc8', 1.5); p.arc(70, GY-32, 24, 32); p.l(72, GY-24, 92, GY-24, 1, .6); p.win(74, GY-52, 16, 12); p.f([[24,GY],[52,GY],[52,GY-34],[24,GY-34]], '#e3dcc8', 1.8); p.f([[124,GY],[142,GY],[142,GY-34],[124,GY-34]], '#e3dcc8', 1.8); }
-    else if (v === 1) { p.f([[34,GY],[62,GY],[62,GY-70],[34,GY-70]], '#efe9dc', 1.9); p.f([[98,GY],[126,GY],[126,GY-70],[98,GY-70]], '#efe9dc', 1.9); p.sh([[126,GY],[138,GY-5],[138,GY-75],[126,GY-70]]); p.f([[62,GY-46],[98,GY-46],[98,GY-58],[62,GY-58]], '#e3dcc8', 1.8); p.arc(66, GY-46, 28, 46); for (let i = 0; i < 3; i++) { p.r(36 + i*9, GY-77, 6, 7, '#e3dcc8', 1.4); p.r(100 + i*9, GY-77, 6, 7, '#e3dcc8', 1.4); } p.win(42, GY-40, 12, 13); p.win(106, GY-40, 12, 13); }
-    else { p.sh([[104,GY],[118,GY-6],[118,GY-66],[104,GY-60]]); p.f([[46,GY],[104,GY],[104,GY-60],[46,GY-60]], '#efe9dc', 1.9); for (let i = 0; i < 5; i++) p.r(48 + i*12, GY-67, 7, 7, '#e3dcc8', 1.5); p.arc(64, GY-30, 22, 30); p.l(64, GY-32, 24, GY-58, 2); p.l(86, GY-32, 46, GY-58, 2); p.f([[20,GY-2],[46,GY-2],[46,GY-10],[20,GY-10]], '#b0a68f', 1.7); p.win(68, GY-50, 14, 12); }
+    if (v === 0) { p.sh([[110,GY],[124,GY-6],[124,GY-70],[110,GY-64]]); p.f([[52,GY],[110,GY],[110,GY-64],[52,GY-64]], WAS.muur, 1.9); for (let i = 0; i < 5; i++) p.r(54 + i*12, GY-71, 7, 7, WAS.steen, 1.5); p.arc(70, GY-32, 24, 32); p.l(72, GY-24, 92, GY-24, 1, .6); p.win(74, GY-52, 16, 12); p.f([[24,GY],[52,GY],[52,GY-34],[24,GY-34]], WAS.steen, 1.8); p.f([[124,GY],[142,GY],[142,GY-34],[124,GY-34]], WAS.steen, 1.8); }
+    else if (v === 1) { p.f([[34,GY],[62,GY],[62,GY-70],[34,GY-70]], WAS.muur, 1.9); p.f([[98,GY],[126,GY],[126,GY-70],[98,GY-70]], WAS.muur, 1.9); p.sh([[126,GY],[138,GY-5],[138,GY-75],[126,GY-70]]); p.f([[62,GY-46],[98,GY-46],[98,GY-58],[62,GY-58]], WAS.steen, 1.8); p.arc(66, GY-46, 28, 46); for (let i = 0; i < 3; i++) { p.r(36 + i*9, GY-77, 6, 7, WAS.steen, 1.4); p.r(100 + i*9, GY-77, 6, 7, WAS.steen, 1.4); } p.win(42, GY-40, 12, 13); p.win(106, GY-40, 12, 13); }
+    else { p.sh([[104,GY],[118,GY-6],[118,GY-66],[104,GY-60]]); p.f([[46,GY],[104,GY],[104,GY-60],[46,GY-60]], WAS.muur, 1.9); for (let i = 0; i < 5; i++) p.r(48 + i*12, GY-67, 7, 7, WAS.steen, 1.5); p.arc(64, GY-30, 22, 30); p.l(64, GY-32, 24, GY-58, 2); p.l(86, GY-32, 46, GY-58, 2); p.f([[20,GY-2],[46,GY-2],[46,GY-10],[20,GY-10]], '#b0a68f', 1.7); p.win(68, GY-50, 14, 12); }
   }
 };
 
@@ -743,6 +779,10 @@ function tekenOnderdeel(o, item, geselecteerd){
     (geselecteerd ? '<rect x="' + g.x1 + '" y="' + g.y1 + '" width="' + (g.x2 - g.x1) +
        '" height="' + (g.y2 - g.y1) + '" rx="7" fill="none" stroke="#204ECF" stroke-width="3" ' +
        'stroke-dasharray="7 5" vector-effect="non-scaling-stroke"/>' : '') +
+    /* een zachte schaduw op de grond, zodat het gebouw op het papier staat en
+       niet erin zweeft */
+    '<ellipse cx="' + ((g.x1 + g.x2) / 2 + 6) + '" cy="' + (GY + 3) + '" rx="' + ((g.x2 - g.x1) / 2 + 4) +
+      '" ry="9" fill="#4d483f" opacity=".10"/>' +
     '<g filter="url(#pv)">' + pen.s + '</g></g>';
 }
 
@@ -778,14 +818,40 @@ function tekenOnderdeel(o, item, geselecteerd){
       '<style>.stadsnaam{font-family:Caveat,cursive;font-size:56px;fill:#3b3730}</style>' +
       defs('v', INKT, WOBBEL) +
       '<rect width="' + VEL.breed + '" height="' + VEL.hoog + '" fill="#f6f1e6"/>';
+    /* een paar vlekken weide en wat plukjes gras, met een vaste reeks zodat ze
+       niet verspringen bij elke tekenronde */
+    (function(){
+      var zaad = 3;
+      function toeval(){ zaad = (zaad * 1103515245 + 12345) % 2147483648; return zaad / 2147483648; }
+      [[1250, 260, 260, 120], [1380, 820, 220, 100], [180, 900, 200, 90], [1000, 980, 300, 80], [700, 120, 240, 80]].forEach(function(v){
+        s += '<ellipse cx="' + v[0] + '" cy="' + v[1] + '" rx="' + v[2] + '" ry="' + v[3] + '" fill="' + WAS.gras + '" opacity=".45"/>';
+      });
+      for (var i = 0; i < 90; i++){
+        var gx = toeval() * VEL.breed, gy = toeval() * VEL.hoog;
+        s += '<path d="M' + gx.toFixed(0) + ',' + gy.toFixed(0) + ' l3,-9 M' + (gx + 4).toFixed(0) + ',' + gy.toFixed(0) +
+          ' l1,-11 M' + (gx + 8).toFixed(0) + ',' + gy.toFixed(0) + ' l-3,-8" stroke="#8fa07a" stroke-width="1.4" stroke-linecap="round" opacity=".45"/>';
+      }
+    })();
 
     /* De rivier is een dikke lijn met een randje, niet een vlak tussen twee
        krommen: dat laatste leverde twee banen op die elkaar kruisten. */
+    /* oevers met riet en een paar stroomlijntjes */
+    s += '<path d="' + RIVIER + '" fill="none" stroke="#8fa07a" stroke-width="134" stroke-linecap="round" opacity=".18"/>';
     s += '<path d="' + RIVIER + '" fill="none" stroke="#a8c6e2" stroke-width="128" stroke-linecap="round"/>';
     s += '<path d="' + RIVIER + '" fill="none" stroke="#cfe0f5" stroke-width="116" stroke-linecap="round"/>';
-    s += '<path d="' + RIVIER + '" fill="none" stroke="#b9d2ea" stroke-width="2" stroke-dasharray="14 10" opacity=".8"/>';
+    s += '<path d="' + RIVIER + '" fill="none" stroke="#9fbad8" stroke-width="1.4" stroke-dasharray="26 18" opacity=".7" transform="translate(-22,0)"/>';
+    s += '<path d="' + RIVIER + '" fill="none" stroke="#9fbad8" stroke-width="1.4" stroke-dasharray="18 26" opacity=".6" transform="translate(24,0)"/>';
     s += '<text x="255" y="753" font-family="Caveat,cursive" font-size="42" fill="#6f93b8" ' +
          'transform="rotate(64 255 753)">de rivier</text>';
+    /* een kompasroos en een schaalstok, in potlood, zoals op een echte plattegrond */
+    s += '<g transform="translate(' + (VEL.breed - 90) + ',90)" stroke="#4d483f" fill="none" opacity=".7">' +
+      '<circle r="34" stroke-width="1.6"/><circle r="4" fill="#4d483f" stroke="none"/>' +
+      '<path d="M0,-30 L7,0 L0,30 L-7,0 Z" fill="#f6f1e6" stroke-width="1.6"/><path d="M0,-30 L7,0 L-7,0 Z" fill="#c0442c" stroke-width="1.4"/>' +
+      '<path d="M-30,0 L0,6 L30,0 L0,-6 Z" fill="#f6f1e6" stroke-width="1.4"/>' +
+      '<text y="-40" text-anchor="middle" font-family="Caveat,cursive" font-size="24" fill="#4d483f" stroke="none">N</text></g>';
+    s += '<g transform="translate(60,' + (VEL.hoog - 60) + ')" stroke="#4d483f" fill="none" stroke-width="1.6" opacity=".7">' +
+      '<path d="M0,0 h200 M0,-6 v12 M100,-6 v12 M200,-6 v12"/>' +
+      '<text x="100" y="24" text-anchor="middle" font-family="Caveat,cursive" font-size="22" fill="#4d483f" stroke="none">honderd passen</text></g>';
 
     /* Straatstukken die dicht bij elkaar liggen worden met een band verbonden,
        zodat losse stippen vanzelf een weg worden. */
@@ -853,11 +919,19 @@ function tekenOnderdeel(o, item, geselecteerd){
   }
 
   /* Waar op het vel wijst deze aanraking? */
+  /* Waar op het vel wijst deze aanraking? De svg mag door de maximale hoogte
+     breder zijn dan zijn tekening; dan staat het vel gecentreerd met lege
+     stroken links en rechts. Die stroken moeten eraf, anders komt alles wat je
+     neerzet een stuk naast je klik terecht. En het gaat om het stuk dat je nu
+     ziet (kijk), niet om het hele vel: ingezoomd is dat niet hetzelfde. */
   function velPunt(e){
     var svg = document.getElementById('stadsvg');
     var r = svg.getBoundingClientRect();
-    return { x: Math.round(kijk.x + (e.clientX - r.left) / r.width * kijk.b),
-             y: Math.round(kijk.y + (e.clientY - r.top) / r.height * kijkHoog()) };
+    var schaal = Math.min(r.width / kijk.b, r.height / kijkHoog());
+    var links = r.left + (r.width - kijk.b * schaal) / 2;
+    var boven = r.top + (r.height - kijkHoog() * schaal) / 2;
+    return { x: Math.round(kijk.x + (e.clientX - links) / schaal),
+             y: Math.round(kijk.y + (e.clientY - boven) / schaal) };
   }
 
   var sleep = null, netGesleept = false, schuif = null;
@@ -936,10 +1010,7 @@ function tekenOnderdeel(o, item, geselecteerd){
   function klikOpVel(e){
     if (netGesleept) return;
     if (!gekozen){ if (gekozenStuk !== null){ gekozenStuk = null; tekenVel(); tekenGereedschap(); } return; }
-    var svg = document.getElementById('stadsvg');
-    var r = svg.getBoundingClientRect();
-    var x = Math.round((e.clientX - r.left) / r.width * VEL.breed);
-    var y = Math.round((e.clientY - r.top) / r.height * VEL.hoog);
+    var p = velPunt(e), x = p.x, y = p.y;
     var o = onderdeel(gekozen);
     /* Binnen het vel houden, anders staat je molen half buiten beeld. */
     x = Math.max(50, Math.min(VEL.breed - 50, x));
@@ -1082,27 +1153,61 @@ function tekenOnderdeel(o, item, geselecteerd){
   }
 
   /* ---------- legenda ---------- */
+  /* Een klein plaatje per onderdeel voor in het menu: de eerste tekening,
+     zonder trilfilter (dat is te zwaar voor zeventien knopjes) en een keer
+     gemaakt, daarna uit het geheugen. */
+  var MINI = {};
+  function mini(id){
+    if (MINI[id]) return MINI[id];
+    var o = onderdeel(id), uit = '';
+    if (o.soort === 'lijn'){
+      uit = '<svg viewBox="0 0 160 110"><path d="M10,60 C50,30 110,90 150,50" fill="none" stroke="' + WAS.pad + '" stroke-width="26" stroke-linecap="round"/>' +
+        '<path d="M10,60 C50,30 110,90 150,50" fill="none" stroke="#c9bb9c" stroke-width="1.2" stroke-dasharray="4 4"/></svg>';
+    } else if (BUILD[o.id]){
+      var pen = new Pen('m' + id, INKT);
+      BUILD[o.id](pen, 0);
+      uit = '<svg viewBox="0 6 160 ' + (GY + 30) + '">' + defs('m' + id, INKT, 0) + pen.s + '</svg>';
+    }
+    MINI[id] = uit;
+    return uit;
+  }
+
   function tekenLegenda(){
     var vak = document.getElementById('legenda');
+    var stap = gekozen ? 2 : 1;
+    var kop = '<div class="stappen">' +
+      '<span class="' + (stap === 1 ? 'nu' : '') + '"><i>1</i>Kies hieronder wat je wilt bouwen</span>' +
+      '<span class="' + (stap === 2 ? 'nu' : '') + '"><i>2</i>' + (gekozen ? 'Klik op het vel waar ' + onderdeel(gekozen).naam.toLowerCase() + ' komt' : 'Klik op het vel waar het komt') + '</span>' +
+      '<span><i>3</i>Tik een gebouw aan om het te draaien, te verplaatsen of weg te halen</span></div>';
+    document.getElementById('stappen').innerHTML = kop;
     vak.innerHTML = GROEPEN.map(function(gr){
       return '<p class="groepkop">' + gr.naam + '</p>' + gr.ids.map(function(id){
         var o = onderdeel(id);
         if (!o) return '';
         var n = tel(o.id);
-        return '<button class="stukknop' + (gekozen === o.id ? ' on' : '') + (n ? ' klaar' : '') +
-          '" type="button" data-o="' + o.id + '" title="' + o.naam + '">' +
+        return '<button class="stukknop' + (gekozen === o.id ? ' on' : '') + (n ? ' klaar' : '') + (o.eenmalig ? ' eenmalig' : '') +
+          '" type="button" data-o="' + o.id + '" title="' + o.naam + (o.eenmalig ? ' (een per stad)' : '') + '">' +
           '<span class="nr">' + o.nr + '</span>' +
+          '<span class="mini">' + mini(o.id) + '</span>' +
           '<span class="wat">' + o.naam + '</span>' +
-          '<span class="tel">' + (n || '') + '</span></button>';
+          '<span class="tel">' + (n ? (o.eenmalig ? '' : n + '<small>gezet</small>') : (o.eenmalig ? '<small>een</small>' : '')) + '</span></button>';
       }).join('');
     }).join('');
     Array.prototype.forEach.call(vak.querySelectorAll('.stukknop'), function(b){
       b.addEventListener('click', function(){
         var welk = b.getAttribute('data-o');
+        if (welk === gekozen){
+          /* nog eens tikken: klaar met dit onderdeel */
+          gekozen = null;
+          document.getElementById('velvak').classList.remove('plaatsen');
+          melding('Kies links een onderdeel, of tik een gebouw op het vel aan.');
+          tekenLegenda();
+          return;
+        }
         if (welk !== gekozen) variant = 0;
         gekozen = welk;
         var o = onderdeel(gekozen);
-        melding('<b>' + o.naam + '.</b> ' + o.uit);
+        melding('<b>' + o.naam + '.</b> ' + o.uit + ' <em>Klik op het vel om hem neer te zetten.</em>');
         document.getElementById('velvak').classList.add('plaatsen');
         tekenLegenda();
       });
