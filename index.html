@@ -1,12 +1,19 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-<!-- versie 2026-08-24-a -->
+<!-- versie 2026-09-06-a -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Geschiedenis die leeft &middot; Lorenzo Greidanus</title>
 <meta name="description" content="Een scrollverhaal over mijn onderwijs: geschiedenis die begint bij een vraag uit het nu.">
-<meta name="theme-color" content="#FBF6F1">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#FBF6F1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1A3D" media="(prefers-color-scheme: dark)">
+<script>
+/* Opgeslagen themakeuze meteen toepassen, nog voor de pagina getekend wordt.
+   Zonder keuze volgt de site de instelling van het apparaat. */
+(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();
+</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,6 +24,8 @@
 <style>
 /* ============================================================
    MERKKLEUREN, uit het merkboek
+   De vlakken (crab, amber, ocean, vista, sand) blijven in beide
+   thema's gelijk. Alleen achtergrond, tekst en lijnen wisselen.
    ============================================================ */
 :root{
   --crab:#F26749;
@@ -24,28 +33,127 @@
   --ocean:#204ECF;
   --vista:#83A5F2;
   --sand:#FCDED6;
-  --room:#FBF6F1;
-  --ink:#14224C;
+
+  --navy:#14224C;            /* vast: tekst op gekleurde vlakken */
+  --cream:#FBF6F1;           /* vast: tekst op oceaanblauw */
+
+  --room:#FBF6F1;  --room-rgb:251 246 241;   /* achtergrond */
+  --ink:#14224C;   --ink-rgb:20 34 76;       /* tekst, lijnen, schaduw */
   --muted:#5b6480;
-  --max:1120px;
-  --ease:cubic-bezier(.22,.61,.36,1);
+  --paper:#FFFFFF;
+  --dim:rgba(20,34,76,.16);                  /* woorden die nog moeten invullen */
+  --hand:#D9522F;                            /* handschrift: iets dieper dan crab voor leesbaarheid */
+  --accent-tekst:#204ECF;                    /* gekleurde cijfers en labels */
+
+  /* vormtaal: zachte ronde hoeken, een haarlijn en een zachte, getinte schaduw */
+  --r:22px;
+  --r-s:16px;
+  --sch-rgb:20 34 76;                        /* tint van de schaduwen */
+  --lijn:1px solid rgb(var(--ink-rgb) / .10);
+  --schaduw:0 24px 60px rgb(var(--sch-rgb) / .10);
+  --schaduw-s:0 9px 0 rgb(var(--sch-rgb) / .10);
+
+  --max:1160px;
+  --ease:cubic-bezier(.22,.61,.36,1);       /* aankomen en wisselen: snel op gang, lange uitloop */
+  --zacht:cubic-bezier(.45,0,.55,1);         /* ademen en drijven: symmetrisch, als een sinus */
+}
+/* Donkere waarden staan twee keer: een keer voor het apparaat dat donker vraagt
+   (tenzij je zelf licht koos) en een keer voor een eigen keuze voor donker.
+   Verander je er een, verander dan allebei. */
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --room:#0F1A3D;  --room-rgb:15 26 61;
+    --ink:#F3EFE9;   --ink-rgb:243 239 233;
+    --muted:#B3BBD0;
+    --paper:#182652;
+    --dim:rgba(243,239,233,.18);
+    --hand:#F26749;
+    --accent-tekst:#EA9836;
+    --sch-rgb:0 0 0;
+  }
+}
+:root[data-theme="dark"]{
+  --room:#0F1A3D;  --room-rgb:15 26 61;
+  --ink:#F3EFE9;   --ink-rgb:243 239 233;
+  --muted:#B3BBD0;
+  --paper:#182652;
+  --dim:rgba(243,239,233,.18);
+  --hand:#F26749;
+  --accent-tekst:#EA9836;
+  --sch-rgb:0 0 0;
 }
 
 *{box-sizing:border-box}
-html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;background:var(--room);overflow-x:clip}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;background:var(--room);overflow-x:clip;
+  scroll-padding:72px 0 110px}   /* vaste kopbalk en tijdbalk mogen een aangesprongen of gefocust element niet bedekken */
 body{
   margin:0;background:transparent;color:var(--ink);
   font-family:'Poppins',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;
   line-height:1.6;-webkit-font-smoothing:antialiased;
 }
-h1,h2,h3{font-weight:600;margin:0;line-height:1.05;letter-spacing:-.025em}
+h1,h2,h3{font-weight:600;margin:0;line-height:1.05;letter-spacing:-.03em;text-wrap:balance}
 p{margin:0}
-a{color:inherit}
+a{color:inherit;text-underline-offset:.16em}
+img{max-width:100%;display:block}
+::selection{background:var(--sand);color:var(--navy)}
 .wrap{width:min(100% - 40px, var(--max));margin-inline:auto}
-.hand{font-family:'Caveat',cursive;font-weight:600;line-height:1;color:var(--crab)}
-.eyebrow{
-  font-size:.72rem;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);
+.hand{font-family:'Caveat',cursive;font-weight:600;line-height:1;color:var(--hand)}
+
+.skip{position:absolute;left:-9999px;top:0;background:var(--ink);color:var(--room);padding:10px 16px;
+  border-radius:0 0 var(--r-s) 0;z-index:99;text-decoration:none;font-weight:600}
+.skip:focus{left:0}
+
+
+/* ============================================================
+   THEMASCHAKELAAR
+   Zonder keuze volgt de site het apparaat. Een klik zet data-theme
+   op <html> en onthoudt dat. Het icoontje toont waar je naartoe
+   schakelt: de maan in de lichte stand, de zon in de donkere.
+   ============================================================ */
+:root[data-theme="dark"]{color-scheme:dark}
+:root[data-theme="light"]{color-scheme:light}
+.themaknop{width:38px;height:38px;border-radius:999px;border:1.5px solid rgb(var(--ink-rgb) / .18);
+  background:var(--paper);color:var(--ink);display:grid;place-items:center;cursor:pointer;padding:0;flex:none;
+  transition:border-color .16s var(--ease),transform .16s var(--ease),background .16s var(--ease)}
+.themaknop:hover{border-color:var(--ocean);transform:translateY(-1px)}
+.themaknop svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.themaknop .zon{display:none}
+:root[data-theme="dark"] .themaknop .maan{display:none}
+:root[data-theme="dark"] .themaknop .zon{display:block}
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .themaknop .maan{display:none}
+  :root:not([data-theme="light"]) .themaknop .zon{display:block}
 }
+
+/* Op deze pagina staat de schakelaar vast rechtsboven, zodat hij er ook is
+   voordat de navigatie tevoorschijn komt. De navigatie houdt er ruimte voor vrij. */
+.themavast{position:fixed;top:12px;right:20px;z-index:55}
+.nav-knoppen{padding-right:50px}
+@media(max-width:430px){
+  .themavast{right:14px}
+  .themaknop{width:32px;height:32px}
+  .themaknop svg{width:16px;height:16px}
+  .nav-knoppen{padding-right:40px}
+  /* Naam, twee knoppen en de schakelaar passen niet naast elkaar op een smalle
+     telefoon: dan blijft alleen het LG-logo over. */
+  #topnav .mark .lgnaam{display:none}
+}
+
+/* knoppen */
+.knop{
+  display:inline-flex;align-items:center;gap:8px;text-decoration:none;font-weight:600;font-size:.95rem;
+  padding:14px 26px;border-radius:999px;border:1.5px solid rgb(var(--ink-rgb) / .18);color:var(--ink);background:transparent;
+  white-space:nowrap;
+  transition:transform .16s var(--ease),box-shadow .16s var(--ease),background .16s var(--ease),border-color .16s var(--ease);
+}
+.knop:hover{transform:translateY(-2px);background:var(--paper);border-color:var(--ocean)}
+.knop:active{transform:translateY(1px)}
+.knop.crab{background:var(--crab);color:var(--navy);border-color:transparent;box-shadow:var(--schaduw-s)}
+.knop.crab:hover{background:var(--crab);border-color:transparent;box-shadow:0 12px 0 rgb(var(--sch-rgb) / .12)}
+.knop.crab:active{box-shadow:0 6px 0 rgb(var(--sch-rgb) / .10)}
+.knop.ocean{background:var(--ocean);color:var(--cream);border-color:transparent}
+.knop.ocean:hover{background:#1a41ae;border-color:transparent}
+.knop.klein{font-size:.88rem;padding:9px 18px}
 
 /* voortgangsbalk in de merkkleuren */
 .progress{position:fixed;inset:0 0 auto 0;height:4px;z-index:60;background:transparent;pointer-events:none}
@@ -56,228 +164,271 @@ a{color:inherit}
    ACHTERGROND EN TIJDBALK
    ============================================================ */
 .bg{position:fixed;inset:0;z-index:-1;pointer-events:none}
-.bg .sky{position:absolute;inset:0;background:var(--room);transition:background-color .35s linear}
+.bg .sky{position:absolute;inset:0;background:var(--room);transition:background-color .35s var(--ease)}
 
-.timebar{position:fixed;left:0;right:0;bottom:0;z-index:45;
-  padding:12px 0 calc(18px + env(safe-area-inset-bottom, 0px));
-  background:linear-gradient(to top, rgba(251,246,241,.97) 40%, rgba(251,246,241,.72) 78%, rgba(251,246,241,0));
-  backdrop-filter:blur(6px);opacity:0;transform:translateY(14px);pointer-events:none;
-  will-change:transform,opacity;
-  transition:opacity .45s var(--ease),transform .45s var(--ease)}
-.timebar.show{opacity:1;transform:none;pointer-events:auto}
-.tb-in{width:min(100% - 40px, var(--max));margin-inline:auto;position:relative;padding-top:38px}
-.tb-label{position:absolute;top:0;left:0;white-space:nowrap;transform:translateX(-50%);
-  transition:left .25s var(--ease)}
-.tb-ico{width:17px;height:17px;vertical-align:-3px;margin-right:8px;fill:none;stroke:var(--ocean);
-  stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;opacity:.7}
-.tb-label b{font-size:.95rem;font-weight:600;letter-spacing:-.01em;color:var(--ocean)}
-.tb-label span{margin-left:9px;font-size:.8rem;color:var(--muted)}
-@media(max-width:620px){.tb-label span{display:none}}
-.tb-rail{position:relative;height:20px}
-.tb-line{position:absolute;top:8px;left:0;right:0;height:3px;border-radius:999px;background:rgba(20,34,76,.13)}
-.tb-fill{position:absolute;top:8px;left:0;height:3px;border-radius:999px;background:var(--crab);width:0}
-.tb-tick{position:absolute;top:4px;width:11px;height:11px;margin-left:-5.5px;padding:0;border-radius:50%;
-  background:var(--room);border:2px solid rgba(20,34,76,.20);transition:all .25s var(--ease)}
-.tb-tick:hover{border-color:var(--ocean);transform:scale(1.2)}
-.tb-tick::after{content:"";position:absolute;left:50%;top:50%;translate:-50% -50%;
-  width:34px;height:38px}   /* onzichtbaar aanraakvlak, makkelijker te tikken */
-.tb-tick.on{background:var(--crab);border-color:var(--crab)}
-.tb-tick i{position:absolute;bottom:20px;left:50%;translate:-50% 0;white-space:nowrap;font-style:normal;
-  font-size:.7rem;font-weight:600;color:var(--ink);background:rgba(251,246,241,.94);padding:4px 9px;
-  border-radius:999px;opacity:0;transition:opacity .2s var(--ease);pointer-events:none;
-  box-shadow:0 4px 12px rgba(20,34,76,.10)}
-.tb-tick:hover i{opacity:1}
-@media(max-width:620px){
-  .tb-tick{width:9px;height:9px;margin-left:-4.5px;top:5px}
-  .tb-label b{font-size:.9rem}
-}
-.tb-dot{position:absolute;top:1px;width:17px;height:17px;margin-left:-8.5px;border-radius:50%;
-  background:var(--crab);box-shadow:0 0 0 5px rgba(242,103,73,.15)}
+/* ============================================================
+   REIS DOOR DE TIJD: een gewone sectie waar je voorbij kunt scrollen.
+   De stops bedien je zelf: knoppen, de tijdlijn, rijken en stippen.
+   ============================================================ */
+.reis{position:relative;padding:110px 0 80px}
+.reis-kop{text-align:center;margin-bottom:34px}
+.reis-kop h2{font-size:clamp(2.1rem,5.2vw,3.6rem)}
+.reis-kop p{margin:14px auto 0;max-width:44ch;color:var(--muted)}
+.reis-in{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:clamp(24px,4vw,56px)}
+.bol-kaart{position:relative;width:min(520px,62svh,100%);aspect-ratio:1;justify-self:center;border-radius:50%;
+  box-shadow:0 30px 70px rgb(var(--sch-rgb) / .18);touch-action:pan-y;cursor:grab;user-select:none}
+.bol-kaart.sleept{cursor:grabbing}
+.bol-kaart canvas{display:block;width:100%;height:100%;border-radius:50%}
+.bol-hint{position:absolute;left:50%;bottom:-30px;translate:-50% 0;font-size:.74rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--muted);white-space:nowrap;pointer-events:none}
+/* de momenten als tikbare punten op de bol; de knop is 24px, de stip kleiner */
+.bol-punt{position:absolute;width:24px;height:24px;margin:-12px 0 0 -12px;border-radius:50%;
+  background:transparent;border:0;padding:0;cursor:pointer;display:grid;place-items:center}
+.bol-punt i{display:block;width:9px;height:9px;border-radius:50%;background:var(--crab);opacity:.55;
+  box-shadow:0 0 0 2px var(--paper);transition:transform .25s var(--ease),opacity .25s var(--ease)}
+.bol-punt.komt i{opacity:.28}
+.bol-punt.on i{opacity:1;transform:scale(1.5);box-shadow:0 0 0 3px var(--paper),0 0 0 8px rgba(242,103,73,.22)}
+.bol-punt.achter{display:none}
+.bol-punt:hover i{opacity:1}
+@media(prefers-reduced-motion:no-preference){ .bol-punt.on i{animation:puls 1.8s var(--zacht) infinite} }
+@keyframes puls{0%,100%{box-shadow:0 0 0 3px var(--paper),0 0 0 8px rgba(242,103,73,.22)}50%{box-shadow:0 0 0 3px var(--paper),0 0 0 13px rgba(242,103,73,.08)}}
+
+/* het verhaal naast de bol */
+.reis-tekst{display:grid;align-content:center;gap:12px;min-height:300px}
+.reis-jaar{display:inline-flex;align-items:center;gap:9px;justify-self:start;font-family:'Caveat',cursive;
+  font-weight:600;font-size:clamp(1.5rem,3.4vw,2.1rem);line-height:1;color:var(--hand)}
+.tb-ico{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;opacity:.85}
+.reis-tekst h2{font-size:clamp(1.7rem,4vw,2.9rem)}
+.reis-tekst p{color:var(--muted);max-width:40ch;font-size:1.02rem}
+.reis-rijk{display:inline-flex;align-items:center;gap:8px;justify-self:start;font-size:.82rem;font-weight:600;
+  padding:6px 12px 6px 8px;border-radius:999px;background:var(--paper);border:var(--lijn)}
+.reis-rijk i{width:12px;height:12px;border-radius:50%;background:var(--rijkkleur,var(--crab))}
+.reis-rijk[hidden]{display:none}
+/* vorige, afspelen, volgende */
+.reis-knoppen{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.reis-knoppen .knop{padding:10px 16px;font-size:.88rem;gap:6px}
+.reis-knoppen .knop svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.reis-knoppen .knop .pauze{display:none}
+.reis-knoppen .knop.speelt .pauze{display:block}
+.reis-knoppen .knop.speelt .speel{display:none}
+/* legenda: alle rijken, klikbaar */
+.rijken{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.rijken button{font:inherit;font-size:.74rem;font-weight:600;color:var(--ink);background:transparent;
+  border:1.5px solid rgb(var(--ink-rgb) / .16);border-radius:999px;padding:5px 10px 5px 7px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:6px;transition:border-color .16s var(--ease),background .16s var(--ease)}
+.rijken button i{width:9px;height:9px;border-radius:50%;background:var(--rijkkleur)}
+.rijken button:hover{border-color:var(--ocean)}
+.rijken button.on{background:var(--paper);border-color:var(--rijkkleur)}
+
+/* de tijdlijn onder bol en tekst: een schuif met jaartallen */
+.reis-tijdlijn{margin-top:44px;padding:0 6px}
+.reis-tijdlijn input{display:block;width:100%;margin:0;accent-color:var(--crab);cursor:pointer;height:28px}
+.reis-jaren{position:relative;height:20px;margin-top:4px;font-size:.74rem;color:var(--muted)}
+.reis-jaren span{position:absolute;top:0;translate:-50% 0;white-space:nowrap}
+.reis-jaren span:first-child{translate:0 0}
+.reis-jaren span:last-child{translate:-100% 0}
+.reis-noot{font-size:.78rem;color:var(--muted);margin-top:22px;max-width:60ch;opacity:.85}
+.reis-noot a{color:inherit;text-underline-offset:.16em}
 @media(max-width:820px){
-  .timebar{backdrop-filter:none;background:linear-gradient(to top, rgba(251,246,241,1) 55%, rgba(251,246,241,.85) 82%, rgba(251,246,241,0))}
+  .reis{padding:80px 0 60px}
+  .reis-in{grid-template-columns:1fr;gap:26px;text-align:center}
+  .bol-kaart{width:min(66vw,42svh)}
+  .bol-hint{display:none}
+  .reis-tekst{min-height:0;justify-items:center}
+  .reis-tekst p{font-size:.95rem;max-width:36ch}
+  .reis-knoppen,.rijken{justify-content:center}
+  .reis-tijdlijn{margin-top:30px}
+  .reis-jaren span.klein{display:none}
 }
-@media(prefers-reduced-motion:reduce){.timebar{opacity:1;transform:none}}
 
 /* ============================================================
    NAVIGATIE, verschijnt na de hero
    ============================================================ */
 header{
   position:fixed;top:0;left:0;right:0;z-index:50;padding:12px 0;
-  background:rgba(251,246,241,.75);backdrop-filter:blur(14px) saturate(1.4);
-  border-bottom:1px solid rgba(20,34,76,.08);
+  background:rgb(var(--room-rgb) / .78);backdrop-filter:blur(14px) saturate(1.4);
+  border-bottom:var(--lijn);
   transform:translateY(-100%);transition:transform .45s var(--ease);
 }
 header.show{transform:none}
-.nav-in{display:flex;align-items:center;justify-content:space-between}
+.nav-in{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .mark{display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:600;font-size:.95rem}
-.mark i{width:32px;height:32px;border-radius:10px;background:var(--ocean);color:var(--room);
+.mark i{width:32px;height:32px;border-radius:10px;background:var(--ocean);color:var(--cream);
   display:flex;align-items:center;justify-content:center;font-style:normal;font-size:.78rem}
-.nav-cta{text-decoration:none;background:var(--ocean);color:var(--room);font-weight:600;font-size:.88rem;
-  padding:9px 18px;border-radius:999px;transition:background .2s var(--ease)}
-.nav-cta:hover{background:#1a41ae}
-.nav-knoppen{display:flex;align-items:center;gap:8px}
-.nav-tweede{text-decoration:none;font-weight:600;font-size:.88rem;padding:9px 16px;border-radius:999px;
-  color:var(--ink);border:1.5px solid rgba(20,34,76,.16);transition:border-color .2s var(--ease),background .2s var(--ease)}
-.nav-tweede:hover{border-color:var(--ocean);background:#fff}
+.nav-knoppen{display:flex;align-items:center;gap:10px}
 @media(max-width:560px){
-  /* Over mij niet meer verbergen op een telefoon: dan bleef alleen de blauwe
-     knop over en tikte je op de leeromgeving terwijl je Over mij bedoelde. */
-  .nav-tweede{font-size:.8rem;padding:8px 12px}
-  .nav-cta{font-size:.8rem;padding:8px 12px}
   .nav-knoppen{gap:6px}
+  .knop.klein{font-size:.78rem;padding:8px 12px}
   .mark span,.mark{font-size:.86rem}
 }
 @media(max-width:400px){
   .mark{gap:6px}
   .mark i{width:28px;height:28px;font-size:.7rem}
-  .nav-tweede,.nav-cta{font-size:.74rem;padding:7px 10px}
+  .knop.klein{font-size:.72rem;padding:7px 10px}
 }
 
 /* ============================================================
-   1. HERO
+   1. HERO: gecentreerd, met zachte bollen die meedrijven
    ============================================================ */
 .hero{min-height:100svh;display:grid;place-items:center;text-align:center;position:relative;padding:90px 0 40px}
-.hero-name{font-size:clamp(2.9rem,12vw,8.5rem);line-height:.92}
+.hero .hand{font-size:clamp(1.4rem,4vw,2.1rem);opacity:0;animation:rise .8s var(--ease) .1s forwards}
+.hero-name{font-size:clamp(2.9rem,12vw,8.5rem);line-height:.92;letter-spacing:-.03em}
+/* letters komen een voor een van onderen op, elk net voor de vorige tot rust komt */
 .hero-name span{display:inline-block;opacity:0;transform:translateY(.5em) rotate(2deg);
   animation:rise .9s var(--ease) forwards}
 @keyframes rise{to{opacity:1;transform:none}}
-.hero .hand{font-size:clamp(1.4rem,4vw,2.1rem);opacity:0;animation:rise .8s var(--ease) .1s forwards}
 .hero-sub{max-width:34ch;margin:22px auto 0;color:var(--muted);font-size:clamp(1rem,2.2vw,1.15rem);
   opacity:0;animation:rise .9s var(--ease) .75s forwards}
-.hero-orbs{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:-1}
-.orb{position:absolute;border-radius:50%;filter:blur(2px);opacity:.55}
-.orb.o1{width:22vw;height:22vw;min-width:150px;min-height:150px;background:var(--vista);top:12%;left:6%}
-.orb.o2{width:14vw;height:14vw;min-width:100px;min-height:100px;background:var(--sand);bottom:16%;right:9%}
-.orb.o3{width:9vw;height:9vw;min-width:70px;min-height:70px;background:var(--amber);top:22%;right:18%;opacity:.4}
 .hero-knoppen{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:26px;
   opacity:0;animation:rise .9s var(--ease) 1s forwards}
-.hero-knop{text-decoration:none;font-weight:600;font-size:.95rem;padding:14px 26px;border-radius:999px;
-  background:var(--crab);color:#fff;box-shadow:0 9px 0 rgba(20,34,76,.10);
-  transition:transform .16s var(--ease),box-shadow .16s var(--ease)}
-.hero-knop:hover{transform:translateY(-2px);box-shadow:0 12px 0 rgba(20,34,76,.12)}
-.hero-knop:active{transform:translateY(1px);box-shadow:0 6px 0 rgba(20,34,76,.10)}
-.hero-knop.tweede{background:transparent;color:var(--ink);box-shadow:none;
-  border:1.5px solid rgba(20,34,76,.18)}
-.hero-knop.tweede:hover{background:#fff;border-color:var(--ocean);box-shadow:none}
-@media(max-width:560px){.hero-knop{font-size:.9rem;padding:13px 22px}}
+
+/* De bollen: de buitenste laag schuift mee met het scrollen (javascript), de
+   binnenste laag drijft heel langzaam op en neer (css). Twee lagen, zodat het
+   scrollen en het drijven elkaar niet overschrijven. */
+.hero-orbs{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:-1}
+.orb{position:absolute;will-change:transform}
+.orb i{display:block;width:100%;height:100%;border-radius:50%;filter:blur(2px);opacity:.55}
+.orb.o1{width:22vw;height:22vw;min-width:150px;min-height:150px;top:12%;left:6%}
+.orb.o1 i{background:var(--vista)}
+.orb.o2{width:14vw;height:14vw;min-width:100px;min-height:100px;bottom:16%;right:9%}
+.orb.o2 i{background:var(--sand)}
+.orb.o3{width:9vw;height:9vw;min-width:70px;min-height:70px;top:22%;right:18%}
+.orb.o3 i{background:var(--amber);opacity:.4}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .orb i{opacity:.32}:root:not([data-theme="light"]) .orb.o3 i{opacity:.26}}
+:root[data-theme="dark"] .orb i{opacity:.32}
+:root[data-theme="dark"] .orb.o3 i{opacity:.26}
+@media(prefers-reduced-motion:no-preference){
+  .orb.o1 i{animation:drijf 9s var(--zacht) infinite}
+  .orb.o2 i{animation:drijf 7.5s var(--zacht) infinite -2.5s}
+  .orb.o3 i{animation:drijf 8.2s var(--zacht) infinite -5s}
+}
+@keyframes drijf{0%,100%{transform:translate(0,0)}50%{transform:translate(4px,-10px)}}
 
 .scroll-hint{position:absolute;bottom:26px;left:50%;translate:-50% 0;display:grid;justify-items:center;gap:8px;
   font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);opacity:0;
   animation:rise .8s var(--ease) 1.2s forwards}
 .scroll-hint b{display:block;width:1px;height:34px;background:linear-gradient(var(--muted),transparent)}
+@media(max-width:560px){.knop{font-size:.9rem;padding:13px 22px}}
 
 /* ============================================================
    2. TEKST DIE INVULT
    ============================================================ */
-.filler{height:230vh;position:relative}
-.filler .pin{position:-webkit-sticky;position:sticky;top:0;height:100svh;display:grid;place-items:center;padding:70px 0 96px}
-.fill-text{font-size:clamp(1.6rem,5.2vw,3.6rem);font-weight:600;line-height:1.22;letter-spacing:-.02em;
-  max-width:22ch;text-align:left}
-.fill-text w{color:rgba(20,34,76,.14);transition:color .25s linear}
+.filler{height:220vh;position:relative}
+.filler .pin{position:-webkit-sticky;position:sticky;top:0;height:100svh;display:grid;align-items:center;padding:80px 0 110px}
+.fill-text{font-size:clamp(1.7rem,5.2vw,3.9rem);font-weight:600;line-height:1.15;letter-spacing:-.03em;
+  max-width:24ch}
+.fill-text w{color:var(--dim);transition:color .25s var(--ease)}
 .fill-text w.on{color:var(--ink)}
 .fill-text w.hl.on{color:var(--crab)}
 
 /* ============================================================
    3. VASTGEPRIKTE BLOB MET DRIE PANELEN
    ============================================================ */
-.morph{height:360vh;position:relative}
+.morph{height:340vh;position:relative}
 .morph .pin{position:-webkit-sticky;position:sticky;top:0;height:100svh;display:grid;
-  grid-template-columns:1fr 1fr;align-items:center;gap:40px;
+  grid-template-columns:.9fr 1.1fr;align-items:center;gap:56px;
   width:min(100% - 40px,var(--max));margin-inline:auto}
 @media(max-width:820px){
   .morph .pin{grid-template-columns:1fr;gap:18px;place-content:center;text-align:center;
     padding:76px 0 104px}
-  .blobwrap{width:min(300px,74vw)}
-  .blob{width:min(232px,58vw)}
-  .blob-ico{width:28px;height:28px;margin-bottom:4px}
-  .blob .numlbl{font-size:1.15rem}
-  .panels{min-height:250px}
+  .blobwrap{width:min(280px,70vw)}
+  .blob{width:min(216px,54vw)}
+  .blob-ico{width:44px;height:44px}
+  .blob .numlbl{font-size:1.2rem}
+  .panels{min-height:240px}
 }
-/* liggend scherm of lage vensters: alles een maatje kleiner */
 @media(max-height:760px) and (max-width:820px){
-  .blobwrap{width:min(230px,52vw)}
-  .blob{width:min(180px,42vw)}
-  .blob .num{font-size:2.2rem}
-  .blob .numlbl{font-size:1rem}
-  .panels{min-height:210px}
+  .blobwrap{width:min(220px,50vw)}
+  .blob{width:min(170px,40vw)}
+  .blob-ico{width:36px;height:36px}
+  .blob .numlbl{font-size:1.05rem}
+  .panels{min-height:200px}
 }
 .blobwrap{position:relative;width:min(440px,86vw);aspect-ratio:1;justify-self:center;display:grid;place-items:center}
 .blob{
   width:min(340px,64vw);aspect-ratio:1;
   border-radius:58% 42% 46% 54% / 48% 52% 48% 52%;
-  display:grid;place-items:center;color:var(--room);
-  box-shadow:0 26px 60px rgba(20,34,76,.18);
+  display:grid;place-items:center;color:var(--navy);
+  box-shadow:0 26px 60px rgb(var(--sch-rgb) / .18);
   will-change:transform,background-color,border-radius;
 }
-.blob-in{display:grid;justify-items:center;gap:2px;text-align:center;padding:10px;
-  width:82%;max-width:82%}
-.blob-ico{width:34px;height:34px;fill:none;stroke:currentColor;stroke-width:1.7;
-  stroke-linecap:round;stroke-linejoin:round;opacity:.9;margin-bottom:6px}
-.blob .num{font-size:clamp(2.8rem,7.5vw,4.6rem);font-weight:600;letter-spacing:-.04em;line-height:1}
-.blob .numlbl{font-family:'Caveat',cursive;font-size:clamp(1rem,3.4vw,1.35rem);opacity:.92;
-  line-height:1.15;text-wrap:balance}
+.blob-in{display:grid;justify-items:center;gap:8px;text-align:center;padding:10px;width:82%;max-width:82%}
+.blob-ico{width:clamp(56px,8vw,88px);height:clamp(56px,8vw,88px);fill:none;stroke:currentColor;stroke-width:1.5;
+  stroke-linecap:round;stroke-linejoin:round}
+.blob .numlbl{font-family:'Caveat',cursive;font-size:clamp(1.3rem,3.6vw,1.9rem);line-height:1.1;text-wrap:balance}
 
 /* meter om de blob: hoever je in deze stap bent */
 .blobring{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);pointer-events:none}
 .blobring circle{fill:none;stroke-linecap:round}
-.blobring .rtrack{stroke:rgba(20,34,76,.10);stroke-width:2}
+.blobring .rtrack{stroke:rgb(var(--ink-rgb) / .12);stroke-width:2}
 .blobring .rarc{stroke:var(--crab);stroke-width:3;transition:stroke .4s var(--ease)}
 
 .panels{position:relative;min-height:290px}
-.panel{position:absolute;inset:0;display:grid;align-content:center;gap:14px;
+.panel{position:absolute;inset:0;display:grid;align-content:center;gap:16px;
   opacity:0;transform:translateY(22px);transition:opacity .4s var(--ease),transform .4s var(--ease);pointer-events:none}
 .panel.on{opacity:1;transform:none;pointer-events:auto}
-.panel h2{font-size:clamp(1.7rem,4.4vw,3rem)}
-.panel p{color:var(--muted);max-width:38ch;font-size:1.02rem}
+.panel h2{font-size:clamp(1.9rem,4.6vw,3.4rem)}
+.panel p{color:var(--muted);max-width:40ch;font-size:1.05rem}
 @media(max-width:820px){.panel p{margin-inline:auto}}
 
 /* ============================================================
-   4. STAPELENDE KAARTEN
+   4. STAPELENDE KAARTEN, elk in een eigen merkkleur
    ============================================================ */
-.stack-head{padding:110px 0 20px;text-align:center}
-.stack-head h2{font-size:clamp(1.9rem,5vw,3.2rem);margin-top:10px}
+.stack-head{padding:120px 0 28px}
+.stack-head h2{font-size:clamp(2.1rem,5.2vw,3.6rem);max-width:14ch}
 .stack{padding-bottom:22vh}
 .stack-card{
-  position:-webkit-sticky;position:sticky;top:16vh;background:#fff;border-radius:30px;padding:clamp(28px,4.5vw,52px);
-  border:1px solid rgba(20,34,76,.08);box-shadow:0 24px 60px rgba(20,34,76,.10);
-  margin-bottom:14vh;will-change:transform;
+  position:-webkit-sticky;position:sticky;top:16vh;border-radius:var(--r);padding:clamp(28px,4.5vw,52px);
+  background:var(--paper);border:var(--lijn);box-shadow:var(--schaduw);margin-bottom:14vh;will-change:transform;
+  display:grid;gap:14px;align-content:start;
 }
 .stack-card:nth-child(1){top:14vh}
 .stack-card:nth-child(2){top:16vh}
 .stack-card:nth-child(3){top:18vh}
 .stack-card:nth-child(4){top:20vh}
-.sc-top{display:flex;align-items:center;gap:16px;margin-bottom:18px}
-.sc-tile{width:52px;height:52px;border-radius:18px 18px 18px 6px;display:grid;place-items:center;flex:none}
-.sc-tile svg{width:26px;height:26px;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-.sc-top h3{font-size:clamp(1.2rem,3vw,1.7rem)}
-.stack-card p{color:var(--muted);max-width:52ch}
-.sc-tag{display:inline-block;margin-top:18px;font-size:.8rem;font-weight:600;padding:7px 14px;border-radius:999px}
+.sc-top{display:flex;align-items:center;gap:16px}
+/* het icoontje zit in een gekleurd tegeltje naast de kop */
+.sc-tile{width:52px;height:52px;border-radius:18px 18px 18px 6px;display:grid;place-items:center;flex:none;color:var(--navy)}
+.stack-card.ocean .sc-tile{background:var(--ocean);color:var(--cream)}
+.stack-card.crab .sc-tile{background:var(--crab)}
+.stack-card.amber .sc-tile{background:var(--amber)}
+.stack-card.vista .sc-tile{background:var(--vista)}
+.sc-tile svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.stack-card h3{font-size:clamp(1.4rem,3.2vw,2.1rem)}
+.stack-card p{max-width:56ch;font-size:1.02rem;color:var(--muted)}
+.sc-tag{justify-self:start;font-size:.8rem;font-weight:600;padding:7px 14px;border-radius:999px;background:var(--sand);color:var(--navy)}
+@media(max-width:560px){
+  .sc-tile{width:44px;height:44px;border-radius:14px 14px 14px 5px}
+  .sc-tile svg{width:22px;height:22px}
+}
 
 /* ============================================================
-   5. CIJFERS
+   5. CIJFERS, het grootste getal krijgt de ruimte
    ============================================================ */
-.stats{padding:110px 0 120px;text-align:center}
-.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:34px;margin-top:44px}
-.stat b{display:block;font-size:clamp(2.6rem,7vw,4.4rem);font-weight:600;letter-spacing:-.04em;line-height:1}
-.stat span{display:block;margin-top:8px;color:var(--muted);font-size:.94rem}
+.stats{padding:110px 0 130px}
+.stats h2{font-size:clamp(2.1rem,5.2vw,3.6rem)}
+.stats-grid{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:32px;margin-top:36px;padding-top:32px;border-top:var(--lijn)}
+.stat b{display:block;font-size:clamp(2.6rem,6vw,4.4rem);font-weight:600;letter-spacing:-.03em;line-height:1}
+.stat:first-child b{font-size:clamp(4rem,10vw,6rem);color:var(--accent-tekst)}
+.stat span{display:block;margin-top:10px;color:var(--muted);font-size:.94rem;max-width:22ch}
+@media(max-width:820px){
+  .stats-grid{grid-template-columns:1fr 1fr;gap:28px 20px}
+  .stat:first-child{grid-column:1 / -1}
+}
 
 /* ============================================================
-   6. AFSLUITING, achtergrond kleurt mee
+   6. AFSLUITING, achtergrond kleurt mee van room naar oceaan
    ============================================================ */
 .finale{min-height:100svh;display:grid;place-items:center;text-align:center;padding:110px 0;
   background:var(--room);transition:none}
-.finale h2{font-size:clamp(2rem,6.5vw,4.4rem);max-width:16ch;margin-inline:auto}
-.finale p{margin:20px auto 0;max-width:40ch}
-.btn{display:inline-block;margin-top:32px;text-decoration:none;font-weight:600;
-  padding:15px 30px;border-radius:999px;background:var(--crab);color:#fff;
-  box-shadow:0 12px 0 rgba(20,34,76,.12);transition:transform .18s var(--ease),box-shadow .18s var(--ease)}
-.btn:hover{transform:translateY(-3px);box-shadow:0 15px 0 rgba(20,34,76,.14)}
-.btn:active{transform:translateY(1px);box-shadow:0 7px 0 rgba(20,34,76,.12)}
+.finale h2{font-size:clamp(2.1rem,6.5vw,4.6rem);max-width:16ch;margin-inline:auto}
+.finale p{margin:20px auto 0;max-width:40ch;color:var(--muted)}
+.finale .knop{margin-top:34px;font-size:1rem;padding:15px 30px}
 
 /* ============================================================
    7. DOORGANG NAAR DE SITE
    ============================================================ */
-.gate{min-height:78svh;display:grid;place-items:center;text-align:center;background:var(--ocean);color:var(--room);padding:70px 0 110px}
+.gate{min-height:78svh;display:grid;place-items:center;text-align:center;background:var(--ocean);color:var(--cream);padding:70px 20px 110px}
 .gate-in{display:grid;justify-items:center;gap:20px}
 .ring{position:relative;width:104px;height:104px}
 .ring svg{width:104px;height:104px;transform:rotate(-90deg)}
@@ -285,19 +436,20 @@ header.show{transform:none}
 .ring .track{stroke:rgba(251,246,241,.22)}
 .ring .fill{stroke:var(--sand);stroke-dasharray:295;stroke-dashoffset:295;transition:stroke-dashoffset .12s linear}
 .ring .arrow{position:absolute;inset:0;display:grid;place-items:center}
-.ring .arrow svg{width:26px;height:26px;transform:none;fill:none;stroke:var(--room);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-@media(prefers-reduced-motion:no-preference){ .ring .arrow{animation:nudge 1.8s ease-in-out infinite} }
+.ring .arrow svg{width:26px;height:26px;transform:none;fill:none;stroke:var(--cream);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+@media(prefers-reduced-motion:no-preference){ .ring .arrow{animation:nudge 1.8s var(--zacht) infinite} }
 @keyframes nudge{0%,100%{transform:translateY(-3px)}50%{transform:translateY(3px)}}
 .gate h3{font-size:clamp(1.3rem,3.6vw,2rem)}
 .gate p{color:#dfe7ff;max-width:34ch;font-size:.98rem}
 .gate a.plain{color:var(--sand);font-weight:600;font-size:.92rem;text-underline-offset:5px}
+.gate a.plain:hover{color:var(--cream)}
 
 /* doekje dat over het scherm trekt tijdens de overgang */
 .veil{position:fixed;inset:0;z-index:80;background:var(--ocean);opacity:0;pointer-events:none;
   transition:opacity .5s var(--ease)}
 .veil.on{opacity:1}
 
-footer{padding:40px 0 54px;font-size:.86rem;color:var(--muted)}
+footer{padding:40px 0 100px;font-size:.86rem;color:var(--muted)} /* extra ruimte onderin: de tijdbalk blijft daar staan */
 .foot-in{display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;align-items:center}
 .strip{display:flex;height:8px;width:170px;border-radius:999px;overflow:hidden}
 .strip i{flex:1}
@@ -306,7 +458,7 @@ footer{padding:40px 0 54px;font-size:.86rem;color:var(--muted)}
 .up{opacity:0;transform:translateY(26px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
 .up.in{opacity:1;transform:none}
 
-a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:8px}
+a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:8px}
 
 /* ============================================================
    RUSTIGE VARIANT: alles zichtbaar, niets beweegt
@@ -314,14 +466,13 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
 @media(prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
   *{animation:none !important;transition:none !important}
-  .hero-name span,.hero .hand,.hero-sub,.scroll-hint,.hero-knoppen{opacity:1;transform:none}
+  .hero-name span,.hero .hand,.hero-sub,.hero-knoppen,.scroll-hint{opacity:1;transform:none}
   /* Wat je iets vertelt blijft aan: woorden die invullen, cijfers die oplopen
      en blokken die verschijnen. Alleen het schuiven en kantelen gaat eruit. */
   .fill-text w{transition:none}
-  .up{transform:none;transition:opacity .5s linear !important}
+  .up{transform:none;transition:opacity .5s var(--ease) !important}
   .up.in{opacity:1}
 }
-
 
 /* ---------------------------------------------------------------------------
    Het logo beweegt als je erover gaat: het vakje kantelt en krijgt een losse
@@ -331,20 +482,18 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
 .lgmark{position:relative;display:inline-flex;flex:none}
 .mark .lgmark i,.mark .lgmark .badge{
   display:flex;align-items:center;justify-content:center;gap:1px;font-style:normal;
-  transition:transform 420ms cubic-bezier(.34,1.56,.64,1),
-             border-radius 420ms cubic-bezier(.34,1.56,.64,1),
-             box-shadow 300ms ease}
+  transition:transform 420ms cubic-bezier(.16,1,.3,1),
+             border-radius 420ms cubic-bezier(.16,1,.3,1),
+             box-shadow 300ms var(--ease)}
 .lgdot{position:absolute;right:-3px;top:-3px;width:10px;height:10px;border-radius:50%;
   background:var(--crab);transform:scale(0);
-  transition:transform 380ms cubic-bezier(.34,1.56,.64,1) 120ms}
+  transition:transform 380ms cubic-bezier(.16,1,.3,1) 120ms}
 .mark:hover .lgmark i,.mark:focus-visible .lgmark i,
 .mark:hover .lgmark .badge,.mark:focus-visible .lgmark .badge{
   border-radius:58% 42% 47% 53% / 44% 52% 48% 56%;
   transform:scale(1.08) rotate(-6deg);
   box-shadow:0 10px 18px rgba(32,78,207,.24)}
 .mark:hover .lgdot,.mark:focus-visible .lgdot{transform:scale(1)}
-/* Alleen de twee letters tuimelen, niet het vakje eromheen. Op over.html is dat
-   vakje zelf een span, en dan zou het zijn eigen kanteling overschrijven. */
 .mark:hover .lgmark i span,.mark:focus-visible .lgmark i span,
 .mark:hover .lgmark .badge span,.mark:focus-visible .lgmark .badge span{
   animation:lgtuimel 620ms cubic-bezier(.45,0,.25,1) 1 both}
@@ -369,41 +518,41 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
 
 <div class="bg" aria-hidden="true"><div class="sky" id="sky"></div></div>
 
-<div class="timebar" id="timebar">
-  <div class="tb-in">
-    <div class="tb-label" id="tbLabel"><svg class="tb-ico" id="tbIco" viewBox="0 0 24 24"></svg><b></b><span></span></div>
-    <div class="tb-rail" id="tbRail">
-      <div class="tb-line"></div>
-      <div class="tb-fill" id="tbFill"></div>
-      <div class="tb-dot" id="tbDot"></div>
-    </div>
-  </div>
-</div>
-
 <div class="progress" aria-hidden="true"><i id="bar"></i></div>
+
+<a class="skip" href="#main">Naar de inhoud</a>
+
+<div class="themavast">
+<button class="themaknop" id="themaknop" type="button" aria-label="Schakel naar donker" title="Donker of licht">
+  <svg class="maan" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+  <svg class="zon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>
+</button>
+</div>
 
 <header id="topnav">
   <div class="wrap nav-in">
     <a class="mark" href="#top"><span class="lgmark"><i><span>L</span><span>G</span></i><b class="lgdot"></b></span><span class="lgnaam"><span>Lorenzo Greidanus</span><span class="lgstreep"></span></span></a>
     <span class="nav-knoppen">
-      <a class="nav-tweede" href="over.html">Over mij</a>
-      <a class="nav-cta" href="leermiddelen/">Naar de leeromgeving</a>
+      <a class="knop klein" href="over.html">Over mij</a>
+      <a class="knop klein ocean" href="leermiddelen/">Naar de leeromgeving</a>
     </span>
   </div>
 </header>
 
+<main id="main">
+
 <!-- ============================ 1. HERO ============================ -->
 <section class="hero" id="top">
   <div class="hero-orbs" aria-hidden="true">
-    <span class="orb o1"></span><span class="orb o2"></span><span class="orb o3"></span>
+    <span class="orb o1"><i></i></span><span class="orb o2"><i></i></span><span class="orb o3"><i></i></span>
   </div>
   <div class="wrap">
     <p class="hand">geschiedenis, maar dan</p>
     <h1 class="hero-name" id="heroName">Die leeft</h1>
     <p class="hero-sub">Scroll mee door de manier waarop ik lesgeef, van de eerste vraag tot de laatste minuut.</p>
     <div class="hero-knoppen">
-      <a class="hero-knop" href="leermiddelen/">Naar de leeromgeving</a>
-      <a class="hero-knop tweede" href="over.html">Over mij</a>
+      <a class="knop crab" href="leermiddelen/">Naar de leeromgeving</a>
+      <a class="knop" href="over.html">Over mij</a>
     </div>
   </div>
   <div class="scroll-hint"><span>Scroll</span><b></b></div>
@@ -412,9 +561,11 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
 <!-- ============================ 2. TEKST DIE INVULT ============================ -->
 <section class="filler" id="fill">
   <div class="pin">
-    <p class="fill-text" id="fillText"
-       data-text="Het verleden is geen rij jaartallen. Het is het antwoord op een vraag die vandaag nog steeds gesteld wordt."
-       data-highlight="vandaag"></p>
+    <div class="wrap">
+      <p class="fill-text" id="fillText"
+         data-text="Het verleden is geen rij jaartallen. Het is het antwoord op een vraag die vandaag nog steeds gesteld wordt."
+         data-highlight="vandaag"></p>
+    </div>
   </div>
 </section>
 
@@ -428,25 +579,21 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
       </svg>
       <div class="blob" id="blob">
         <div class="blob-in">
-          <svg class="blob-ico" id="blobIco" viewBox="0 0 24 24"></svg>
-          <span class="num" id="blobNum">01</span>
+          <svg class="blob-ico" id="blobIco" viewBox="0 0 24 24" aria-hidden="true"></svg>
           <span class="numlbl" id="blobLbl">begin bij nu</span>
         </div>
       </div>
-</div>
+    </div>
     <div class="panels">
       <article class="panel on" data-stage="0">
-        <span class="eyebrow">stap een</span>
         <h2>Begin bij nu</h2>
         <p>Elke les opent met iets uit hun eigen wereld: een nieuwsbericht, een ruzie op het plein, een filmpje. Pas als de vraag van hen is, gaan we terug in de tijd.</p>
       </article>
       <article class="panel" data-stage="1">
-        <span class="eyebrow">stap twee</span>
         <h2>Werk met bronnen</h2>
         <p>Leerlingen lezen niet over geschiedenis, ze onderzoeken hem. Een brief, een foto, een spotprent. Wie schreef dit, voor wie, en wat wordt er weggelaten?</p>
       </article>
       <article class="panel" data-stage="2">
-        <span class="eyebrow">stap drie</span>
         <h2>Maak het zichtbaar</h2>
         <p>Ik check onderweg wat er blijft hangen, met beurten in plaats van duimen omhoog. Zo weet ik precies wie de volgende stap aankan en wie nog even mee moet.</p>
       </article>
@@ -454,62 +601,75 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
   </div>
 </section>
 
+<!-- ============================ 3b. REIS DOOR DE TIJD ============================ -->
+<section class="reis" id="reis">
+  <div class="wrap">
+    <div class="reis-kop up">
+      <h2>Reis door de tijd</h2>
+      <p>Van de eerste mensen tot nu: elke stop draait de bol naar de plek van het verhaal, en de grote rijken kleuren op de kaart.</p>
+    </div>
+    <div class="reis-in">
+      <div class="bol-kaart" id="bolKaart">
+        <canvas id="bolCanvas" aria-hidden="true"></canvas>
+        <div id="bolPunten"></div>
+        <span class="bol-hint" aria-hidden="true">Sleep om te draaien</span>
+      </div>
+      <div class="reis-tekst" aria-live="polite">
+        <span class="reis-jaar"><svg class="tb-ico" id="tbIco" viewBox="0 0 24 24" aria-hidden="true"></svg><span id="reisJaarTekst"></span></span>
+        <h2 id="reisTitel"></h2>
+        <p id="reisTekst"></p>
+        <span class="reis-rijk" id="reisRijk" hidden><i></i><span></span></span>
+        <div class="reis-knoppen">
+          <button class="knop" id="reisVorige" type="button" aria-label="Vorige stop"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Vorige</button>
+          <button class="knop crab" id="reisSpeel" type="button" aria-pressed="false"><svg class="speel" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l12 8-12 8z"/></svg><svg class="pauze" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5v14M17 5v14"/></svg><span id="reisSpeelTekst">Afspelen</span></button>
+          <button class="knop" id="reisVolgende" type="button" aria-label="Volgende stop">Volgende<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+        </div>
+        <div class="rijken" id="rijken" aria-label="Rijken op de kaart"></div>
+      </div>
+    </div>
+    <div class="reis-tijdlijn">
+      <input type="range" id="reisSchuif" min="0" max="25" step="1" value="0" aria-label="Moment in de tijd">
+      <div class="reis-jaren" id="reisJaren" aria-hidden="true"></div>
+    </div>
+    <p class="reis-noot">De rijken staan op hun hoogtepunt, op wereldschaal. Grenzen uit <a href="https://github.com/aourednik/historical-basemaps" target="_blank" rel="noopener">historical-basemaps</a> (GPL-3), kustlijnen van Natural Earth.</p>
+  </div>
+</section>
+
 <!-- ============================ 4. STAPELENDE KAARTEN ============================ -->
 <div class="wrap stack-head up">
-  <span class="eyebrow">waar het op rust</span>
   <h2>Vier vaste bodems</h2>
 </div>
 
 <div class="wrap stack" id="stack">
-  <article class="stack-card">
-    <div class="sc-top">
-      <div class="sc-tile" style="background:var(--ocean)">
-        <svg viewBox="0 0 24 24" stroke="#FBF6F1"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H11v16H5.5A2.5 2.5 0 0 1 3 17.5z"/><path d="M21 6.5A2.5 2.5 0 0 0 18.5 4H13v16h5.5a2.5 2.5 0 0 0 2.5-2.5z"/></svg>
-      </div>
-      <h3>Geschiedenis die leeft</h3>
-    </div>
+  <article class="stack-card ocean">
+    <div class="sc-top"><span class="sc-tile" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H11v16H5.5A2.5 2.5 0 0 1 3 17.5z"/><path d="M21 6.5A2.5 2.5 0 0 0 18.5 4H13v16h5.5a2.5 2.5 0 0 0 2.5-2.5z"/></svg></span><h3>Geschiedenis die leeft</h3></div>
     <p>Van een vraag uit het nu terug naar de bron. Het verleden krijgt een reden om er te zijn, en leerlingen krijgen een reden om mee te denken.</p>
-    <span class="sc-tag" style="background:var(--sand)">Vakinhoud</span>
+    <span class="sc-tag">Vakinhoud</span>
   </article>
 
-  <article class="stack-card">
-    <div class="sc-top">
-      <div class="sc-tile" style="background:var(--crab)">
-        <svg viewBox="0 0 24 24" stroke="#fff"><path d="M20 6 9 17l-5-5"/></svg>
-      </div>
-      <h3>Formatief evalueren</h3>
-    </div>
+  <article class="stack-card crab">
+    <div class="sc-top"><span class="sc-tile" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span><h3>Formatief evalueren</h3></div>
     <p>Feed up, feed back en feed forward. Leerlingen weten waar ze staan, wat de volgende stap is en hoe ze die zetten. Een cijfer komt pas daarna.</p>
-    <span class="sc-tag" style="background:var(--sand)">Didactiek</span>
+    <span class="sc-tag">Didactiek</span>
   </article>
 
-  <article class="stack-card">
-    <div class="sc-top">
-      <div class="sc-tile" style="background:var(--amber)">
-        <svg viewBox="0 0 24 24" stroke="#14224C"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-      </div>
-      <h3>Digitaal en mediawijs</h3>
-    </div>
+  <article class="stack-card amber">
+    <div class="sc-top"><span class="sc-tile" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span><h3>Digitaal en mediawijs</h3></div>
     <p>Van AI-tools tot bronnenonderzoek online. Techniek is een middel dat tijd bespaart of iets zichtbaar maakt, en nooit het doel van de les.</p>
-    <span class="sc-tag" style="background:var(--sand)">Gereedschap</span>
+    <span class="sc-tag">Gereedschap</span>
   </article>
 
-  <article class="stack-card">
-    <div class="sc-top">
-      <div class="sc-tile" style="background:var(--vista)">
-        <svg viewBox="0 0 24 24" stroke="#14224C"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 5.5a3 3 0 0 1 0 5.4M18.2 20a6.4 6.4 0 0 0-2.3-4.9"/></svg>
-      </div>
-      <h3>Structuur en relatie</h3>
-    </div>
+  <article class="stack-card vista">
+    <div class="sc-top"><span class="sc-tile" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 5.5a3 3 0 0 1 0 5.4M18.2 20a6.4 6.4 0 0 0-2.3-4.9"/></svg></span><h3>Structuur en relatie</h3></div>
     <p>Vaste routines, duidelijke verwachtingen en persoonlijke aandacht. Rust in de klas is geen doel op zich, het is de ruimte waarin leren begint.</p>
-    <span class="sc-tag" style="background:var(--sand)">Klimaat</span>
+    <span class="sc-tag">Klimaat</span>
   </article>
 </div>
 
 <!-- ============================ 5. CIJFERS ============================ -->
 <section class="stats">
   <div class="wrap up">
-    <span class="eyebrow">een gemiddelde les</span>
+    <h2>Een gemiddelde les</h2>
     <div class="stats-grid">
       <div class="stat"><b data-count="50" data-suffix=" min">0</b><span>lestijd, van start tot afsluiting</span></div>
       <div class="stat"><b data-count="15" data-suffix=" min">0</b><span>maximaal dat ik zelf aan het woord ben</span></div>
@@ -522,10 +682,10 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
 <!-- ============================ 6. AFSLUITING ============================ -->
 <section class="finale" id="finale">
   <div class="wrap">
-    <p class="hand" style="font-size:clamp(1.3rem,3.6vw,2rem)">en dan</p>
+    <p class="hand" style="font-size:clamp(1.4rem,3.6vw,2.1rem)">en dan</p>
     <h2 id="finaleTitle">Gaan ze de klas uit met een vraag</h2>
     <p id="finaleText">Niet met een lijstje jaartallen, maar met iets waar ze thuis nog over doorpraten.</p>
-    <a class="btn" href="over.html#contact">Neem contact op</a>
+    <a class="knop crab" href="over.html#contact">Neem contact op</a>
   </div>
 </section>
 
@@ -545,6 +705,8 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
     <a class="plain" href="leermiddelen/" style="opacity:.85">Ik ben leerling, naar de leeromgeving</a>
   </div>
 </section>
+
+</main>
 
 <div class="veil" id="veil" aria-hidden="true"></div>
 
@@ -571,7 +733,7 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
   name.textContent = '';
   letters.forEach(function(ch,i){
     var s = document.createElement('span');
-    s.textContent = ch === ' ' ? '\u00A0' : ch;
+    s.textContent = ch === ' ' ? ' ' : ch;
     s.style.animationDelay = (0.18 + i*0.045) + 's';
     name.appendChild(s);
   });
@@ -590,11 +752,19 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
   var wordEls = ft.querySelectorAll('w');
 
   /* ---------- kleuren mengen ---------- */
-  function hex(h){ return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]; }
-  var C = { crab:hex('#F26749'), amber:hex('#EA9836'), ocean:hex('#204ECF'), vista:hex('#83A5F2'), room:hex('#FBF6F1') };
+  function hex(h){ h = h.trim(); return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]; }
+  function cssKleur(naam){ return hex(getComputedStyle(document.documentElement).getPropertyValue(naam)); }
+  var C = { crab:hex('#F26749'), amber:hex('#EA9836'), ocean:hex('#204ECF'), vista:hex('#83A5F2'),
+            navy:hex('#14224C'), cream:hex('#FBF6F1') };
+  /* achtergrond en tekst wisselen met het thema, dus die lezen we uit de css */
+  function leesThema(){ C.room = cssKleur('--room'); C.ink = cssKleur('--ink'); C.muted = cssKleur('--muted'); C.hand = cssKleur('--hand'); }
+  leesThema();
   function mix(a,b,t){
     return 'rgb(' + Math.round(a[0]+(b[0]-a[0])*t) + ',' + Math.round(a[1]+(b[1]-a[1])*t) + ',' + Math.round(a[2]+(b[2]-a[2])*t) + ')';
   }
+  function mixArr(a,b,t){ return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t]; }
+  /* is een kleur licht genoeg voor donkere tekst erop */
+  function licht(c){ return (0.2126*c[0] + 0.7152*c[1] + 0.0722*c[2]) > 120; }
 
   /* ---------- opkomen bij binnenscrollen ---------- */
   var ups = document.querySelectorAll('.up');
@@ -678,16 +848,12 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
     going = false; charge = 0; paintRing(); veil.classList.remove('on');
   });
 
-
-
-
   /* ---------- scrollmotor, één lus voor alles ---------- */
   var bar     = document.getElementById('bar');
   var nav     = document.getElementById('topnav');
   var fill    = document.getElementById('fill');
   var morph   = document.getElementById('morph');
   var blob    = document.getElementById('blob');
-  var blobNum = document.getElementById('blobNum');
   var blobIco = document.getElementById('blobIco');
   var blobLbl = document.getElementById('blobLbl');
   var blobArc = document.getElementById('blobArc');
@@ -705,8 +871,11 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
   var panels  = morph.querySelectorAll('.panel');
   var cards   = document.querySelectorAll('.stack-card');
   var finale  = document.getElementById('finale');
-  var orbs    = document.querySelectorAll('.orb');
+  var finaleTitle = document.getElementById('finaleTitle');
+  var finaleText  = document.getElementById('finaleText');
+  var finaleHand  = finale.querySelector('.hand');
   var hero    = document.querySelector('.hero');
+  var orbs    = document.querySelectorAll('.orb');
   var stage   = -1;
 
   function sectionProgress(el){
@@ -732,12 +901,12 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
     /* navigatie na de hero */
     nav.classList.toggle('show', y > innerHeight * 0.85);
 
-    /* hero: bollen bewegen mee, inhoud zakt zacht weg */
-    if (y < innerHeight * 1.2) {
+    /* hero: bollen schuiven mee, inhoud zakt zacht weg (pas na ruim een schermhoogte,
+       zodat de knoppen even blijven staan) */
+    if (!reduced && y < innerHeight * 1.2) {
       orbs[0].style.transform = 'translate3d(0,' + (y*0.22) + 'px,0)';
       orbs[1].style.transform = 'translate3d(0,' + (y*-0.14) + 'px,0)';
       orbs[2].style.transform = 'translate3d(0,' + (y*0.34) + 'px,0)';
-      /* de hero vervaagt pas na ruim een schermhoogte, zodat de knoppen even blijven staan */
       hero.style.opacity = String(clamp(1 - Math.max(0, y - innerHeight*0.45)/(innerHeight*0.75), 0, 1));
     }
 
@@ -754,16 +923,20 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
     var idx = Math.floor(seg);
     var t   = seg - idx;
     var pair = [[C.crab, C.amber], [C.amber, C.ocean], [C.ocean, C.vista]][idx];
+    var bg = mixArr(pair[0], pair[1], t);
     blob.style.backgroundColor = mix(pair[0], pair[1], t);
+    /* donkere tekst op lichte vlakken, lichte tekst op het diepe blauw */
+    blob.style.color = licht(bg) ? '#14224C' : '#FBF6F1';
     blob.style.borderRadius = shapes[idx];
-    var spin = pm*26 - 8;
-    blob.style.transform = 'rotate(' + spin + 'deg) scale(' + (0.9 + Math.sin(pm*Math.PI)*0.12) + ')';
-    blobIn.style.transform = 'rotate(' + (-spin) + 'deg)';   /* tekst blijft rechtop */
+    if (!reduced) {   /* rustige stand: wel van kleur en paneel wisselen, niet draaien */
+      var spin = pm*26 - 8;
+      blob.style.transform = 'rotate(' + spin + 'deg) scale(' + (0.9 + Math.sin(pm*Math.PI)*0.12) + ')';
+      blobIn.style.transform = 'rotate(' + (-spin) + 'deg)';   /* tekst blijft rechtop */
+    }
     /* de meter om de blob laat zien hoever je in deze stap bent */
     blobArc.style.strokeDashoffset = String(590*(1-t));
     if (idx !== stage) {
       stage = idx;
-      blobNum.textContent = '0' + (idx+1);
       blobIco.innerHTML = stages[idx].ico;
       blobLbl.textContent = stages[idx].label;
       blobArc.style.stroke = stages[idx].arc;
@@ -771,22 +944,21 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
     }
 
     /* kaarten zakken iets weg zodra de volgende eroverheen komt */
-    for (var c = 0; c < cards.length; c++) {
+    for (var c = 0; !reduced && c < cards.length; c++) {
       var r = cards[c].getBoundingClientRect();
       var stuck = clamp((innerHeight*0.16 - r.top) / (innerHeight*0.5), 0, 1);
       cards[c].style.transform = 'scale(' + (1 - stuck*0.055) + ') translateY(' + (stuck*-10) + 'px)';
-      cards[c].style.filter = 'brightness(' + (1 - stuck*0.05) + ')';
+      cards[c].style.filter = 'brightness(' + (1 - stuck*0.06) + ')';
     }
 
-    /* slot kleurt van room naar diep oceaanblauw */
+    /* slot kleurt van de achtergrond naar diep oceaanblauw */
     var fr = finale.getBoundingClientRect();
     var pfin = clamp(1 - (fr.top / innerHeight), 0, 1);
     finale.style.backgroundColor = mix(C.room, C.ocean, pfin);
     var textT = clamp((pfin - 0.45) / 0.35, 0, 1);
-    var inkToRoom = mix([20,34,76], C.room, textT);
-    document.getElementById('finaleTitle').style.color = inkToRoom;
-    document.getElementById('finaleText').style.color = mix([91,100,128], [223,231,255], textT);
-    finale.querySelector('.hand').style.color = mix(C.crab, [252,222,214], textT);
+    finaleTitle.style.color = mix(C.ink, C.cream, textT);
+    finaleText.style.color  = mix(C.muted, [223,231,255], textT);
+    finaleHand.style.color  = mix(C.hand, [252,222,214], textT);
   }
 
   /* Ook hier een doorlopende lus in plaats van alleen scroll-events: op Android
@@ -801,6 +973,11 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
     }
     requestAnimationFrame(loop);
   })();
+  /* wisselt het thema terwijl de pagina open staat, dan de kleuren opnieuw lezen */
+  try {
+    matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(){ leesThema(); lastScroll = -1; });
+  } catch (e) {}
+  addEventListener('themawissel', function(){ leesThema(); lastScroll = -1; });
   paintRing();
   frame();
 })();
@@ -808,138 +985,430 @@ a:focus-visible{outline:3px solid var(--amber);outline-offset:4px;border-radius:
 
 <script>
 /* ============================================================
-   TIJDBALK
-   Onderin loopt een balk mee met hoever je door de pagina bent. Scrollen
-   is reizen door de tijd: de balk vult zich, het jaartal loopt mee en je
-   kunt op een moment tikken om er meteen heen te springen.
+   REIS DOOR DE TIJD
+   Een wereldbol met 26 stops. Je stapt er zelf doorheen: met de knoppen,
+   de tijdlijn, de rijken in de legenda of de stippen op de bol. Afspelen
+   loopt de reis vanzelf door. Slepen draait de bol. De kustlijnen komen uit
+   wereld.json (Natural Earth), de grenzen uit rijken.json (historical-basemaps).
    ============================================================ */
 (function(){
   'use strict';
   var clamp = function(v,a,b){ return v<a?a:(v>b?b:v); };
   var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var RAD = Math.PI/180;
 
-  /* per moment: jaartal, gebeurtenis, tint, sterkte van de tint, icoontje */
-  var moments = [
-    ['300.000 v.Chr.','De eerste Homo sapiens in Afrika',[252,222,214],.22,
-      '<ellipse cx="10.5" cy="14.5" rx="4" ry="6"/><circle cx="15" cy="7.5" r="1.3"/><circle cx="17.6" cy="10" r="1.1"/><circle cx="7.4" cy="6.6" r="1.2"/>'],
-    ['10.000 v.Chr.','Landbouw en de eerste dorpen',[234,152,54],.12,
-      '<path d="M12 21v-8"/><path d="M12 13c0-3 2-5 5-5 0 3-2 5-5 5z"/><path d="M12 15.5c0-2.6-1.9-4.5-4.5-4.5 0 2.6 1.9 4.5 4.5 4.5z"/>'],
-    ['3300 v.Chr.','Het schrift, hier begint de geschiedenis',[234,152,54],.20,
-      '<rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4.5"/>'],
-    ['508 v.Chr.','Democratie in Athene',[131,165,242],.14,
-      '<path d="M5 4.5h14M4 20h16"/><path d="M8.5 4.5V20M15.5 4.5V20"/>'],
-    ['476','Einde van het West-Romeinse Rijk',[242,103,73],.18,
-      '<path d="M5 20v-8a7 7 0 0 1 14 0v8"/><path d="M9.5 20v-6M14.5 20v-6"/>'],
-    ['800','Karel de Grote tot keizer gekroond',[234,152,54],.16,
-      '<path d="M4 17l-1-9 5.5 4L12 4l3.5 8L21 8l-1 9z"/><path d="M4.5 20h15"/>'],
-    ['1348','De pest bereikt West-Europa',[32,78,207],.14,
-      '<path d="M6.5 3h11M6.5 21h11"/><path d="M8.5 3v3l3.5 6 3.5-6V3M8.5 21v-3l3.5-6 3.5 6v3"/>'],
-    ['1450','De boekdrukkunst van Gutenberg',[234,152,54],.14,
-      '<path d="M3 5h6.5A2.5 2.5 0 0 1 12 7.5V20a2.5 2.5 0 0 0-2.5-2H3z"/><path d="M21 5h-6.5A2.5 2.5 0 0 0 12 7.5V20a2.5 2.5 0 0 1 2.5-2H21z"/>'],
-    ['1492','Columbus bereikt Amerika',[131,165,242],.20,
-      '<path d="M3.5 16.5h17L18 21H6z"/><path d="M12 16.5V3"/><path d="M13.5 5l5.5 8h-5.5z"/>'],
-    ['1568','Begin van de Tachtigjarige Oorlog',[242,103,73],.16,
-      '<path d="M12 3l8 3v6c0 5-3.7 7.9-8 9-4.3-1.1-8-4-8-9V6z"/>'],
-    ['1602','Oprichting van de VOC',[131,165,242],.22,
-      '<path d="M12 7.5V21"/><path d="M8.5 11.5H5.5c0 5 3 8 6.5 9 3.5-1 6.5-4 6.5-9h-3"/><circle cx="12" cy="5" r="2"/>'],
-    ['1789','De Franse Revolutie',[242,103,73],.16,
-      '<path d="M12 2.5c2 2.2 3 4.2 3 6a3 3 0 0 1-6 0c0-1.8 1-3.8 3-6z"/><path d="M10 12h4l-.8 9h-2.4z"/>'],
-    ['1914','Begin van de Eerste Wereldoorlog',[32,78,207],.16,
-      '<path d="M4.5 15a7.5 7.5 0 0 1 15 0"/><rect x="3" y="15" width="18" height="2.6" rx="1.3"/>'],
-    ['1940 tot 1945','Bezetting en bevrijding',[32,78,207],.22,
-      '<path d="M2.5 12.5c2.2-2.4 4.4-2.4 6.6 0 2.2-2.4 4.4-2.4 6.6 0"/><path d="M9 17.5c2.2-2.4 4.4-2.4 6.6 0 1.5-1.6 3-2.1 4.5-1.5"/>'],
-    ['1969','De eerste mens op de maan',[131,165,242],.16,
-      '<path d="M12 2.5c3 3.2 4.2 6.8 4.2 10L12 16l-4.2-3.5c0-3.2 1.2-6.8 4.2-10z"/><circle cx="12" cy="9" r="1.7"/><path d="M7.8 13l-2.8 4 3-1M16.2 13l2.8 4-3-1"/>'],
-    ['1989','Val van de Berlijnse Muur',[131,165,242],.14,
-      '<path d="M3 8h18M3 13h18M3 18h18"/><path d="M9 3.5V8M16 3.5V8M6 8v5M13 8v5M20 8v5M9 13v5M16 13v5"/>'],
-    ['Nu','Terug in de klas',[131,165,242],.10,
-      '<path d="M9.5 18.5h5M10.5 21h3"/><path d="M12 3a6 6 0 0 1 3.8 10.6c-.6.6-1 1.4-1 2.2h-5.6c0-.8-.4-1.6-1-2.2A6 6 0 0 1 12 3z"/>']
+  var rijken = {
+    egypte:   { kort:'Egypte', naam:'Het Egyptische Rijk', kleur:'#E0A93A', mid:[33,26], vlakken:[[[32,31.5],[34.5,31.5],[36,33],[38,36.5],[39,35],[36.5,33],[35,31],[34,29.5],[33,27],[33,24],[32,21],[31,19],[30.5,20],[30,25],[28.5,27],[29,30.5],[30.5,31.5]]] },
+    perzie:   { kort:'Perzië', naam:'Het Perzische Rijk', kleur:'#7E57C2', mid:[48,34], vlakken:[[[26,42],[30,41],[35,40],[42,41],[48,39],[52,42],[60,44],[66,42],[72,40],[74,36],[70,32],[68,26],[66,24],[60,25],[56,26],[52,27],[50,29],[48,30],[44,32],[40,34],[36,36],[34,32],[33,28],[32,25],[30,24],[26,31],[32,31.5],[35,34],[30,37],[27,38],[26,40]]] },
+    alexander:{ kort:'Alexander', naam:'Het rijk van Alexander de Grote', kleur:'#26A69A', mid:[44,34], vlakken:[[[21,40],[23,42],[26,42],[30,41],[36,40],[42,41],[48,39],[55,41],[62,40],[68,40],[72,36],[73,32],[70,29],[68,26],[64,24],[58,26],[52,28],[48,30],[44,32],[38,35],[34,32],[32,28],[30,24],[26,31],[32,31.5],[35,34],[30,37],[26,39],[22,37]]] },
+    rome:     { kort:'Rome', naam:'Het Romeinse Rijk', kleur:'#D32F2F', mid:[16,40], vlakken:[[[-6,56],[0,56],[2,51],[8,51],[10,50],[12,48],[16,48],[20,46],[26,46],[30,46],[34,45],[42,44],[44,41],[44,37],[42,36],[40,34],[38,33],[36,31],[34,29],[32,27],[33,23],[31,22],[29,25],[27,30],[24,30],[20,30.5],[16,30],[10,31],[6,33],[2,34],[-2,33],[-6,33],[-10,33],[-10,36],[-9,40],[-9,43],[-8,44],[-4,48],[-6,50]]] },
+    kalifaat: { kort:'Kalifaat', naam:'Het Kalifaat van de Omajjaden', kleur:'#2E7D32', mid:[38,30], vlakken:[[[-10,44],[2,43],[4,40],[-1,36],[10,37],[12,33],[20,32],[25,32],[32,31.5],[35,37],[38,38],[42,40],[46,40],[52,42],[60,44],[66,42],[72,40],[74,36],[70,30],[68,25],[66,24],[60,25],[56,27],[52,25],[50,20],[46,15],[44,13],[43,15],[40,17],[38,20],[36,24],[36,28],[34,30],[32,28],[30,24],[26,31],[22,32],[10,30],[0,30],[-8,30],[-12,32],[-10,36]]] },
+    karel:    { kort:'Karel de Grote', naam:'Het rijk van Karel de Grote', kleur:'#204ECF', mid:[6,47], vlakken:[[[-5,43],[3,43],[4,41],[10,42],[14,41],[16,44],[18,48],[15,52],[10,55],[8,54],[4,52],[2,50],[-2,48],[-5,47]]] },
+    mongolen: { kort:'Mongolen', naam:'Het Mongoolse Rijk', kleur:'#E07A1F', mid:[88,44], vlakken:[[[127,41],[130,45],[128,52],[115,54],[100,55],[90,55],[80,54],[70,54],[60,54],[50,53],[40,52],[32,51],[24,48],[28,44],[40,45],[48,43],[50,40],[44,38],[44,34],[48,30],[56,26],[62,26],[68,24],[74,30],[80,30],[88,28],[96,24],[100,22],[106,22],[110,20],[112,24],[118,26],[122,30],[122,36],[126,38]]] },
+    spanje:   { kort:'Spanje', naam:'Het Spaanse Rijk', kleur:'#9C2B4B', mid:[-42,14], vlakken:[[[-10,36],[-9,44],[3,43],[3,40],[-1,36]],[[-118,34],[-100,30],[-96,26],[-90,22],[-88,16],[-84,10],[-78,8],[-74,12],[-64,10],[-60,4],[-50,0],[-40,-5],[-38,-14],[-40,-22],[-48,-28],[-52,-33],[-58,-38],[-62,-40],[-70,-45],[-73,-40],[-72,-30],[-76,-16],[-80,-6],[-80,2],[-90,12],[-100,18],[-106,22],[-114,28]],[[117,6],[126,6],[126,19],[118,19]]] },
+    ottomanen:{ kort:'Ottomanen', naam:'Het Ottomaanse Rijk', kleur:'#6D8B1F', mid:[30,37], vlakken:[[[17,46],[22,48],[28,48],[30,46],[34,46],[38,45],[42,43],[44,40],[46,38],[48,32],[48,29],[44,28],[42,22],[40,18],[44,14],[46,13],[42,14],[39,17],[36,22],[34,30],[36,32],[33,28],[25,31],[20,31],[12,32],[10,35],[2,36],[0,35],[-1,37],[9,38],[12,37],[18,40],[14,42],[14,45]]] },
+    britten:  { kort:'Britten', naam:'Het Britse Rijk', kleur:'#E8739A', mid:[40,20], vlakken:[[[-11,50],[2,50],[2,59],[-8,59]],[[-141,60],[-141,70],[-60,75],[-52,47],[-66,44],[-80,42],[-95,49],[-125,49]],[[61,25],[66,24],[72,20],[74,8],[80,6],[82,10],[92,22],[98,10],[100,18],[96,28],[88,28],[78,36],[72,36],[66,30]],[[113,-35],[114,-22],[130,-11],[142,-10],[150,-22],[153,-30],[148,-40],[140,-38],[130,-32],[118,-35]],[[166,-47],[179,-47],[179,-34],[172,-34]],[[25,22],[25,32],[34,31],[37,22],[38,15],[34,4],[30,4],[24,10],[22,20]],[[30,4],[42,4],[40,-10],[30,-12],[30,-1]],[[17,-29],[20,-35],[28,-34],[33,-27],[33,-15],[24,-13],[20,-18]],[[2,6],[4,13],[14,13],[9,4]],[[-3,5],[-3,11],[1,11],[1,5]],[[100,7],[104,7],[104,1],[100,1]]] }
+  };
+
+  var stops = [
+    { jaar:'300.000 v.Chr.', titel:'De eerste mensen', tekst:'In Afrika leven de eerste Homo sapiens. Alles wat hierna komt, begint hier.', tint:[252,222,214], punt:[38.5,8.0],
+      ico:'<ellipse cx="10.5" cy="14.5" rx="4" ry="6"/><circle cx="15" cy="7.5" r="1.3"/><circle cx="17.6" cy="10" r="1.1"/><circle cx="7.4" cy="6.6" r="1.2"/>' },
+    { jaar:'10.000 v.Chr.', titel:'Landbouw en de eerste dorpen', tekst:'Tussen Eufraat en Tigris blijven mensen op een plek wonen en verbouwen ze zelf hun eten.', tint:[234,152,54], punt:[39,36.5],
+      ico:'<path d="M12 21v-8"/><path d="M12 13c0-3 2-5 5-5 0 3-2 5-5 5z"/><path d="M12 15.5c0-2.6-1.9-4.5-4.5-4.5 0 2.6 1.9 4.5 4.5 4.5z"/>' },
+    { jaar:'3300 v.Chr.', titel:'Het schrift', tekst:'In Mesopotamië krassen mensen tekens in klei. Hier begint de geschiedenis: vanaf nu kunnen we lezen wat ze dachten.', tint:[234,152,54], punt:[45.6,31.3],
+      ico:'<rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4.5"/>' },
+    { jaar:'1450 v.Chr.', titel:'Het Egyptische Rijk', tekst:'Langs de Nijl regeren de farao\'s over een rijk dat tot ver in Nubië en de Levant reikt.', rijk:'egypte',
+      ico:'<path d="M12 4l8 16H4z"/><path d="M8.5 20l3.5-7 3.5 7"/>' },
+    { jaar:'508 v.Chr.', titel:'Democratie in Athene', tekst:'De burgers van Athene gaan zelf beslissen over hun stad. Een idee dat de wereld niet meer loslaat.', tint:[131,165,242], punt:[23.7,38],
+      ico:'<path d="M5 4.5h14M4 20h16"/><path d="M8.5 4.5V20M15.5 4.5V20"/>' },
+    { jaar:'500 v.Chr.', titel:'Het Perzische Rijk', tekst:'Van Egypte tot de Indus: het grootste rijk dat de wereld tot dan toe gezien heeft, met wegen, post en satrapen.', rijk:'perzie',
+      ico:'<circle cx="12" cy="12" r="8"/><path d="M12 4v16M4 12h16"/>' },
+    { jaar:'323 v.Chr.', titel:'Het rijk van Alexander', tekst:'In twaalf jaar verovert Alexander de Grote Perzië. Na zijn dood valt het rijk uiteen, maar de Griekse cultuur blijft.', rijk:'alexander',
+      ico:'<path d="M12 3l3 6 6 1-4.5 4.5 1 6.5-5.5-3-5.5 3 1-6.5L3 10l6-1z"/>' },
+    { jaar:'117', titel:'Het Romeinse Rijk', tekst:'Onder keizer Trajanus is Rome op zijn grootst: van Schotland tot de Perzische Golf, met de Middellandse Zee als binnenzee.', rijk:'rome',
+      ico:'<path d="M5 20v-8a7 7 0 0 1 14 0v8"/><path d="M9.5 20v-6M14.5 20v-6"/>' },
+    { jaar:'476', titel:'Einde van het West-Romeinse Rijk', tekst:'De laatste keizer in Rome wordt afgezet. In het westen begint de middeleeuwen.', tint:[242,103,73], punt:[12.5,41.9],
+      ico:'<path d="M5 20v-8a7 7 0 0 1 14 0v8"/><path d="M9.5 20v-6M14.5 20v-6"/>' },
+    { jaar:'750', titel:'Het Kalifaat', tekst:'Ruim een eeuw na Mohammed strekt de islamitische wereld zich uit van Spanje tot de Indus, onder de kaliefen en hun emirs.', rijk:'kalifaat',
+      ico:'<path d="M15 3a8 8 0 1 0 6 13 6.5 6.5 0 1 1-6-13z"/>' },
+    { jaar:'800', titel:'Het rijk van Karel de Grote', tekst:'Karel wordt in Rome tot keizer gekroond. Zijn rijk omvat het grootste deel van West-Europa.', rijk:'karel',
+      ico:'<path d="M4 17l-1-9 5.5 4L12 4l3.5 8L21 8l-1 9z"/><path d="M4.5 20h15"/>' },
+    { jaar:'1279', titel:'Het Mongoolse Rijk', tekst:'Van Korea tot Hongarije: het grootste aaneengesloten rijk ooit, bij elkaar gereden te paard.', rijk:'mongolen',
+      ico:'<path d="M4 18l4-8 4 5 3-3 5 6z"/><path d="M3 21h18"/>' },
+    { jaar:'1348', titel:'De pest bereikt Europa', tekst:'Met handelsschepen komt de pest via Sicilië Europa binnen. Een op de drie mensen sterft.', tint:[32,78,207], punt:[15.6,38.2],
+      ico:'<path d="M6.5 3h11M6.5 21h11"/><path d="M8.5 3v3l3.5 6 3.5-6V3M8.5 21v-3l3.5-6 3.5 6v3"/>' },
+    { jaar:'1450', titel:'De boekdrukkunst', tekst:'In Mainz drukt Gutenberg met losse letters. Kennis wordt goedkoop en reist snel.', tint:[234,152,54], punt:[8.3,50],
+      ico:'<path d="M3 5h6.5A2.5 2.5 0 0 1 12 7.5V20a2.5 2.5 0 0 0-2.5-2H3z"/><path d="M21 5h-6.5A2.5 2.5 0 0 0 12 7.5V20a2.5 2.5 0 0 1 2.5-2H21z"/>' },
+    { jaar:'1492', titel:'Columbus bereikt Amerika', tekst:'Op zoek naar Azië landt Columbus op de Bahama\'s. Twee werelden komen in botsing.', tint:[131,165,242], punt:[-74.5,24],
+      ico:'<path d="M3.5 16.5h17L18 21H6z"/><path d="M12 16.5V3"/><path d="M13.5 5l5.5 8h-5.5z"/>' },
+    { jaar:'1568', titel:'Begin van de Tachtigjarige Oorlog', tekst:'Bij Heiligerlee wint het leger van Oranje een eerste slag. De opstand tegen Spanje is begonnen.', tint:[242,103,73], punt:[7,53.2],
+      ico:'<path d="M12 3l8 3v6c0 5-3.7 7.9-8 9-4.3-1.1-8-4-8-9V6z"/>' },
+    { jaar:'1600', titel:'Het Spaanse Rijk', tekst:'Het eerste rijk waar de zon nooit ondergaat: Spanje en Portugal, Amerika en de Filipijnen.', rijk:'spanje',
+      ico:'<circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c3 3 3 13 0 16M12 4c-3 3-3 13 0 16"/>' },
+    { jaar:'1602', titel:'Oprichting van de VOC', tekst:'In Amsterdam bundelen handelaren hun geld in een compagnie. Het begin van de wereldhandel op grote schaal.', tint:[131,165,242], punt:[4.9,52.4],
+      ico:'<path d="M12 7.5V21"/><path d="M8.5 11.5H5.5c0 5 3 8 6.5 9 3.5-1 6.5-4 6.5-9h-3"/><circle cx="12" cy="5" r="2"/>' },
+    { jaar:'1683', titel:'Het Ottomaanse Rijk', tekst:'De Ottomanen staan voor de poorten van Wenen. Hun rijk omvat de Balkan, het Midden-Oosten en Noord-Afrika.', rijk:'ottomanen',
+      ico:'<path d="M15 3a8 8 0 1 0 6 13 6.5 6.5 0 1 1-6-13z"/><path d="M17 8l1.2 2.4 2.6.4-1.9 1.8.5 2.6L17 14l-2.4 1.2.5-2.6-1.9-1.8 2.6-.4z"/>' },
+    { jaar:'1789', titel:'De Franse Revolutie', tekst:'Parijs komt in opstand. Vrijheid, gelijkheid en broederschap worden de nieuwe woorden van Europa.', tint:[242,103,73], punt:[2.35,48.9],
+      ico:'<path d="M12 2.5c2 2.2 3 4.2 3 6a3 3 0 0 1-6 0c0-1.8 1-3.8 3-6z"/><path d="M10 12h4l-.8 9h-2.4z"/>' },
+    { jaar:'1914', titel:'Begin van de Eerste Wereldoorlog', tekst:'Een moord in Sarajevo sleept heel Europa een oorlog in die vier jaar duurt.', tint:[32,78,207], punt:[18.4,43.9],
+      ico:'<path d="M4.5 15a7.5 7.5 0 0 1 15 0"/><rect x="3" y="15" width="18" height="2.6" rx="1.3"/>' },
+    { jaar:'1920', titel:'Het Britse Rijk', tekst:'Na de oorlog is het Britse Rijk op zijn grootst: een kwart van de wereld, van Canada tot Australië.', rijk:'britten',
+      ico:'<circle cx="12" cy="12" r="8"/><path d="M12 4v16M4 12h16M6.5 6.5l11 11M17.5 6.5l-11 11"/>' },
+    { jaar:'1940 tot 1945', titel:'Bezetting en bevrijding', tekst:'Vijf jaar bezetting in Nederland. Rotterdam gebombardeerd, de Hongerwinter, en dan de bevrijding.', tint:[32,78,207], punt:[4.5,51.9],
+      ico:'<path d="M2.5 12.5c2.2-2.4 4.4-2.4 6.6 0 2.2-2.4 4.4-2.4 6.6 0"/><path d="M9 17.5c2.2-2.4 4.4-2.4 6.6 0 1.5-1.6 3-2.1 4.5-1.5"/>' },
+    { jaar:'1969', titel:'De eerste mens op de maan', tekst:'Vanaf Cape Canaveral vertrekt Apollo 11. Voor het eerst kijkt een mens terug naar de aarde.', tint:[131,165,242], punt:[-80.6,28.5],
+      ico:'<path d="M12 2.5c3 3.2 4.2 6.8 4.2 10L12 16l-4.2-3.5c0-3.2 1.2-6.8 4.2-10z"/><circle cx="12" cy="9" r="1.7"/><path d="M7.8 13l-2.8 4 3-1M16.2 13l2.8 4-3-1"/>' },
+    { jaar:'1989', titel:'Val van de Berlijnse Muur', tekst:'De muur die Berlijn 28 jaar in tweeën deelde, gaat open. De Koude Oorlog is voorbij.', tint:[131,165,242], punt:[13.4,52.5],
+      ico:'<path d="M3 8h18M3 13h18M3 18h18"/><path d="M9 3.5V8M16 3.5V8M6 8v5M13 8v5M20 8v5M9 13v5M16 13v5"/>' },
+    { jaar:'Nu', titel:'Terug in de klas', tekst:'In Emmeloord begint elke les met een vraag uit het nu. En dan gaan we terug in de tijd.', tint:[131,165,242], punt:[5.75,52.7],
+      ico:'<path d="M9.5 18.5h5M10.5 21h3"/><path d="M12 3a6 6 0 0 1 3.8 10.6c-.6.6-1 1.4-1 2.2h-5.6c0-.8-.4-1.6-1-2.2A6 6 0 0 1 12 3z"/>' }
   ];
+  var N = stops.length;
+  var SPEELTEMPO = 4200;   /* milliseconden per stop bij afspelen */
 
   var sky = document.getElementById('sky'),
-      barEl = document.getElementById('timebar'),
-      rail = document.getElementById('tbRail'),
-      fillEl = document.getElementById('tbFill'),
-      dot = document.getElementById('tbDot'),
-      label = document.getElementById('tbLabel'),
+      sectie = document.getElementById('reis'),
+      kaart = document.getElementById('bolKaart'),
+      canvas = document.getElementById('bolCanvas'),
+      ctx = canvas.getContext('2d'),
+      puntenEl = document.getElementById('bolPunten'),
       labIco = document.getElementById('tbIco'),
-      labYear = label.querySelector('b'),
-      labText = label.querySelector('span'),
-      ticks = [], idxNow = -1;
+      jaarEl = document.getElementById('reisJaarTekst'),
+      titelEl = document.getElementById('reisTitel'),
+      tekstEl = document.getElementById('reisTekst'),
+      rijkEl = document.getElementById('reisRijk'),
+      rijkenEl = document.getElementById('rijken'),
+      schuif = document.getElementById('reisSchuif'),
+      jarenEl = document.getElementById('reisJaren'),
+      vorigeKnop = document.getElementById('reisVorige'),
+      volgendeKnop = document.getElementById('reisVolgende'),
+      speelKnop = document.getElementById('reisSpeel'),
+      speelTekst = document.getElementById('reisSpeelTekst'),
+      punten = [], rijkKnoppen = {}, idxNow = -1;
 
-  var ROOM = [251,246,241];
+  /* ---------- kleuren uit de css, zodat de bol meegaat met het thema ---------- */
+  function hex(h){ h = h.trim(); return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]; }
   function mix(a,b,t){ return 'rgb('+Math.round(a[0]+(b[0]-a[0])*t)+','+Math.round(a[1]+(b[1]-a[1])*t)+','+Math.round(a[2]+(b[2]-a[2])*t)+')'; }
-
-  /* waar op de pagina hoort een punt op de balk bij */
-  function range(){
-    var start = innerHeight*0.55;
-    var end = document.documentElement.scrollHeight - innerHeight*1.75;
-    return [start, Math.max(end, start + 1)];
+  var K = {};
+  function leesKleuren(){
+    var cs = getComputedStyle(document.documentElement);
+    var inkt = cs.getPropertyValue('--ink-rgb').trim().split(/\s+/).join(',');
+    K.room  = hex(cs.getPropertyValue('--room'));
+    K.zee   = cs.getPropertyValue('--paper').trim();
+    K.land  = cs.getPropertyValue('--sand').trim();
+    K.lijn  = 'rgba(' + inkt + ',.12)';
+    K.rand  = 'rgba(' + inkt + ',.22)';
+    K.schaduw = 'rgba(' + inkt + ',.16)';
+    K.donker = document.documentElement.getAttribute('data-theme') === 'dark' ||
+      (!document.documentElement.getAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches);
+    if (K.donker) K.land = '#3A4A7A';
   }
-  function progress(){
-    var r = range();
-    return clamp(((scrollY || pageYOffset) - r[0])/(r[1]-r[0]), 0, 1);
-  }
+  leesKleuren();
 
-  /* de momenten op de balk zetten */
-  moments.forEach(function(m,i){
-    var pct = (i/(moments.length-1))*100;
-    var b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'tb-tick';
-    b.style.left = pct + '%';
-    b.innerHTML = '<i>' + m[0] + '</i>';
-    b.setAttribute('aria-label','Naar ' + m[0] + ', ' + m[1]);
-    b.addEventListener('click', function(){
-      var r = range();
-      scrollTo({top: r[0] + (r[1]-r[0])*(i/(moments.length-1)), behavior: reduced ? 'auto' : 'smooth'});
+  /* ---------- kustlijnen en grenzen laden ---------- */
+  var land = [];
+  function uitpakken(topo){
+    var t = topo.transform, sc = t ? t.scale : [1,1], tr = t ? t.translate : [0,0];
+    var arcs = topo.arcs.map(function(arc){
+      var x = 0, y = 0;
+      return arc.map(function(p){ x += p[0]; y += p[1]; return [x*sc[0]+tr[0], y*sc[1]+tr[1]]; });
     });
-    rail.appendChild(b); ticks.push(b);
+    function ring(idxs){
+      var pts = [];
+      idxs.forEach(function(i){
+        var a = i < 0 ? arcs[~i].slice().reverse() : arcs[i];
+        if (pts.length) a = a.slice(1);
+        pts = pts.concat(a);
+      });
+      return pts;
+    }
+    var uit = [];
+    function geom(g){
+      if (g.type === 'Polygon') uit.push(g.arcs.map(ring));
+      else if (g.type === 'MultiPolygon') g.arcs.forEach(function(p){ uit.push(p.map(ring)); });
+      else if (g.type === 'GeometryCollection') g.geometries.forEach(geom);
+    }
+    geom(topo.objects.land);
+    return uit;
+  }
+  if (window.fetch) {
+    fetch('wereld.json').then(function(r){ return r.json(); }).then(function(topo){
+      land = uitpakken(topo); vuil = true;
+    }).catch(function(){ /* geen kaart: dan alleen gradenlijnen */ });
+    /* de echte grenzen van de rijken; zonder dit bestand blijven de grove omtrekken staan */
+    fetch('rijken.json').then(function(r){ return r.json(); }).then(function(d){
+      Object.keys(d.rijken || {}).forEach(function(k){
+        if (rijken[k] && d.rijken[k].vlakken && d.rijken[k].vlakken.length) rijken[k].vlakken = d.rijken[k].vlakken;
+      });
+      vuil = true;
+    }).catch(function(){});
+  }
+
+  /* ---------- projectie: een bol gezien van opzij, gedraaid naar het doel ---------- */
+  var S = 400, R = 198, cx = 200, cy = 200, dpr = 1;
+  var masker = document.createElement('canvas'), mctx = masker.getContext('2d');
+  var laag = document.createElement('canvas'), lctx = laag.getContext('2d');
+  var lam = 20, phi = 20, lamDoel = 20, phiDoel = 20;
+  function maat(){
+    var r = canvas.getBoundingClientRect();
+    S = Math.max(40, Math.round(r.width));
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    [canvas, masker, laag].forEach(function(c){ c.width = Math.round(S*dpr); c.height = Math.round(S*dpr); });
+    [ctx, mctx, lctx].forEach(function(c){ c.setTransform(dpr,0,0,dpr,0,0); });
+    R = S/2 - 1.5; cx = S/2; cy = S/2;
+    vuil = true;
+  }
+  var cosP = 1, sinP = 0;
+  function proj(lon,lat){
+    var l = (lon - lam)*RAD, p = lat*RAD, cp = Math.cos(p);
+    var x = cp*Math.sin(l), y = Math.sin(p), z = cp*Math.cos(l);
+    var y2 = y*cosP - z*sinP, z2 = y*sinP + z*cosP;
+    return [x, y2, z2];
+  }
+  function naarScherm(v){
+    var x = v[0], y = v[1];
+    if (v[2] < 0) { var m = Math.hypot(x,y) || 1; x /= m; y /= m; }
+    return [cx + x*R, cy - y*R];
+  }
+  function ringPad(c, ring){
+    var zichtbaar = false;
+    for (var i = 0; i < ring.length; i++) { if (proj(ring[i][0], ring[i][1])[2] > -0.05) { zichtbaar = true; break; } }
+    if (!zichtbaar) return;
+    for (var j = 0; j < ring.length; j++) {
+      var q = naarScherm(proj(ring[j][0], ring[j][1]));
+      if (j === 0) c.moveTo(q[0], q[1]); else c.lineTo(q[0], q[1]);
+    }
+    c.closePath();
+  }
+  function landPad(c){
+    c.beginPath();
+    land.forEach(function(poly){ poly.forEach(function(ring){ ringPad(c, ring); }); });
+  }
+
+  function teken(){
+    cosP = Math.cos(phi*RAD); sinP = Math.sin(phi*RAD);
+    ctx.clearRect(0,0,S,S);
+    ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fillStyle = K.zee; ctx.fill();
+    if (land.length) { landPad(ctx); ctx.fillStyle = K.land; ctx.fill('evenodd'); }
+    /* het rijk van deze stop: op een aparte laag, en dan alleen het deel op land overhouden */
+    var stop = stops[idxNow] || stops[0];
+    if (stop.rijk && land.length) {
+      var rk = rijken[stop.rijk];
+      lctx.clearRect(0,0,S,S);
+      lctx.beginPath();
+      rk.vlakken.forEach(function(ring){ ringPad(lctx, ring); });
+      lctx.fillStyle = rk.kleur; lctx.globalAlpha = K.donker ? .8 : .72; lctx.fill(); lctx.globalAlpha = 1;
+      mctx.clearRect(0,0,S,S); landPad(mctx); mctx.fillStyle = '#000'; mctx.fill('evenodd');
+      lctx.globalCompositeOperation = 'destination-in';
+      lctx.drawImage(masker, 0, 0, S, S);
+      lctx.globalCompositeOperation = 'source-over';
+      ctx.drawImage(laag, 0, 0, S, S);
+    }
+    ctx.strokeStyle = K.lijn; ctx.lineWidth = 1;
+    ctx.beginPath();
+    var g, k, v, aan, q;
+    for (g = -60; g <= 60; g += 30) {
+      aan = false;
+      for (k = 0; k <= 360; k += 4) { v = proj(k, g); if (v[2] > 0.01) { q = naarScherm(v); if (aan) ctx.lineTo(q[0],q[1]); else ctx.moveTo(q[0],q[1]); aan = true; } else aan = false; }
+    }
+    for (g = 0; g < 360; g += 30) {
+      aan = false;
+      for (k = -90; k <= 90; k += 4) { v = proj(g, k); if (v[2] > 0.01) { q = naarScherm(v); if (aan) ctx.lineTo(q[0],q[1]); else ctx.moveTo(q[0],q[1]); aan = true; } else aan = false; }
+    }
+    ctx.stroke();
+    var gr = ctx.createRadialGradient(cx - R*0.35, cy - R*0.35, R*0.1, cx, cy, R);
+    gr.addColorStop(0, 'rgba(255,255,255,' + (K.donker ? 0.04 : 0.26) + ')');
+    gr.addColorStop(0.7, 'rgba(255,255,255,0)');
+    gr.addColorStop(1, K.schaduw);
+    ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fillStyle = gr; ctx.fill();
+    ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.strokeStyle = K.rand; ctx.lineWidth = 1; ctx.stroke();
+    for (var i = 0; i < N; i++) {
+      var p = punten[i];
+      if (!p) continue;
+      var w = proj(stops[i].punt[0], stops[i].punt[1]);
+      if (w[2] < 0.06) { p.classList.add('achter'); continue; }
+      p.classList.remove('achter');
+      p.style.left = (cx + w[0]*R) + 'px';
+      p.style.top  = (cy - w[1]*R) + 'px';
+    }
+  }
+
+  /* ---------- de stops ---------- */
+  function inBeeld(){
+    var r = sectie.getBoundingClientRect();
+    return r.bottom > 0 && r.top < innerHeight;
+  }
+  function toonStop(idx, stil){
+    idx = clamp(idx, 0, N-1);
+    if (idx === idxNow) return;
+    idxNow = idx;
+    var st = stops[idx];
+    labIco.innerHTML = st.ico;
+    jaarEl.textContent = st.jaar;
+    titelEl.textContent = st.titel;
+    tekstEl.textContent = st.tekst;
+    if (st.rijk) {
+      var rk = rijken[st.rijk];
+      rijkEl.hidden = false;
+      rijkEl.style.setProperty('--rijkkleur', rk.kleur);
+      rijkEl.lastElementChild.textContent = rk.naam;
+      lamDoel = rk.mid[0]; phiDoel = rk.mid[1];
+    } else {
+      rijkEl.hidden = true;
+      lamDoel = st.punt[0]; phiDoel = st.punt[1];
+    }
+    for (var i = 0; i < N; i++) {
+      if (punten[i]) { punten[i].classList.toggle('on', i === idx); punten[i].classList.toggle('komt', i > idx); }
+    }
+    Object.keys(rijkKnoppen).forEach(function(k){ rijkKnoppen[k].classList.toggle('on', st.rijk === k); });
+    schuif.value = idx;
+    schuif.setAttribute('aria-valuetext', st.jaar + ', ' + st.titel);
+    vorigeKnop.disabled = idx === 0;
+    volgendeKnop.disabled = idx === N-1;
+    if (reduced) { lam = lamDoel; phi = phiDoel; }
+    /* de achtergrond kleurt heel licht mee met de stop */
+    var tint = st.rijk ? hex(rijken[st.rijk].kleur) : st.tint;
+    sky.style.backgroundColor = mix(K.room, tint, st.rijk ? .10 : .16);
+    vuil = true;
+    if (!stil) stopAfspelen();
+  }
+
+  /* afspelen: elke paar seconden een stop verder, tot het eind */
+  var speler = null;
+  function stopAfspelen(){
+    if (!speler) return;
+    clearInterval(speler); speler = null;
+    speelKnop.classList.remove('speelt');
+    speelKnop.setAttribute('aria-pressed', 'false');
+    speelTekst.textContent = 'Afspelen';
+  }
+  function startAfspelen(){
+    if (idxNow >= N-1) toonStop(0, true);
+    speler = setInterval(function(){
+      if (idxNow >= N-1 || !inBeeld()) { stopAfspelen(); return; }
+      toonStop(idxNow + 1, true);
+    }, SPEELTEMPO);
+    speelKnop.classList.add('speelt');
+    speelKnop.setAttribute('aria-pressed', 'true');
+    speelTekst.textContent = 'Pauze';
+  }
+  speelKnop.addEventListener('click', function(){ if (speler) stopAfspelen(); else startAfspelen(); });
+  vorigeKnop.addEventListener('click', function(){ toonStop(idxNow - 1); });
+  volgendeKnop.addEventListener('click', function(){ toonStop(idxNow + 1); });
+  schuif.addEventListener('input', function(){ toonStop(parseInt(schuif.value, 10)); });
+  /* pijltjes werken ook als de bol of de tekst de aandacht heeft */
+  sectie.addEventListener('keydown', function(e){
+    if (e.target === schuif) return;
+    if (e.key === 'ArrowRight') { toonStop(idxNow + 1); e.preventDefault(); }
+    if (e.key === 'ArrowLeft')  { toonStop(idxNow - 1); e.preventDefault(); }
   });
 
-  function paint(){
-    var p = progress();
-    var pos = p*100;
-    fillEl.style.width = pos + '%';
-    dot.style.left = pos + '%';
+  /* de jaartallen onder de schuif */
+  var jaren = [[0,''],[3,''],[7,'klein'],[11,''],[16,'klein'],[21,''],[N-1,'']];
+  jaren.forEach(function(j){
+    var sp = document.createElement('span');
+    if (j[1]) sp.className = j[1];
+    sp.style.left = (j[0]/(N-1)*100) + '%';
+    sp.textContent = stops[j[0]].jaar;
+    jarenEl.appendChild(sp);
+  });
 
-    var seg = 1/(moments.length-1);
-    var idx = clamp(Math.round(p/seg), 0, moments.length-1);
-    if (idx !== idxNow){
-      idxNow = idx;
-      labIco.innerHTML = moments[idx][4];
-      labYear.textContent = moments[idx][0];
-      labText.textContent = moments[idx][1];
-      for (var i=0;i<ticks.length;i++) ticks[i].classList.toggle('on', i <= idx);
+  /* de tikbare punten op de bol, en de knoppen van de rijken */
+  stops.forEach(function(st,i){
+    if (st.punt) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'bol-punt komt';
+      b.innerHTML = '<i></i>';
+      b.setAttribute('aria-label', st.jaar + ', ' + st.titel);
+      b.addEventListener('click', function(){ toonStop(i); });
+      puntenEl.appendChild(b); punten[i] = b;
     }
+    if (st.rijk) {
+      var rk = rijken[st.rijk];
+      var k = document.createElement('button');
+      k.type = 'button';
+      k.style.setProperty('--rijkkleur', rk.kleur);
+      k.innerHTML = '<i></i>' + rk.kort;
+      k.setAttribute('aria-label', 'Naar ' + st.jaar + ', ' + rk.naam);
+      k.addEventListener('click', function(){ toonStop(i); });
+      rijkenEl.appendChild(k); rijkKnoppen[st.rijk] = k;
+    }
+  });
 
-    /* pas positioneren als de tekst er staat, anders meet je de vorige breedte */
-    var railW = rail.offsetWidth, labW = label.offsetWidth;
-    label.style.left = clamp(railW*p, labW/2 + 2, railW - labW/2 - 2) + 'px';
+  /* ---------- slepen om te draaien ---------- */
+  var sleep = null;
+  kaart.addEventListener('pointerdown', function(e){
+    if (e.target.closest('.bol-punt')) return;
+    sleep = { x:e.clientX, y:e.clientY, lam:lam, phi:phi };
+    kaart.setPointerCapture(e.pointerId);
+    kaart.classList.add('sleept');
+  });
+  kaart.addEventListener('pointermove', function(e){
+    if (!sleep) return;
+    var f = 180 / S;
+    var dx = e.clientX - sleep.x, dy = e.clientY - sleep.y;
+    lam = sleep.lam - dx*f;
+    phi = clamp(sleep.phi + dy*f, -80, 80);
+    lamDoel = lam; phiDoel = phi;
+    vuil = true;
+  });
+  function loslaten(){ if (sleep) { sleep = null; kaart.classList.remove('sleept'); } }
+  kaart.addEventListener('pointerup', loslaten);
+  kaart.addEventListener('pointercancel', loslaten);
 
-    /* de achtergrond kleurt heel licht mee met het tijdvak */
-    var lo = clamp(Math.floor(p/seg), 0, moments.length-1),
-        hi = Math.min(lo+1, moments.length-1),
-        t = clamp((p - lo*seg)/seg, 0, 1);
-    var ca = moments[lo][2], cb = moments[hi][2];
-    var wgt = moments[lo][3] + (moments[hi][3]-moments[lo][3])*t;
-    sky.style.backgroundColor = mix(ROOM, [ca[0]+(cb[0]-ca[0])*t, ca[1]+(cb[1]-ca[1])*t, ca[2]+(cb[2]-ca[2])*t], wgt);
-
-    /* alleen zichtbaar tijdens de reis zelf */
-    var y = scrollY || pageYOffset, r = range();
-    barEl.classList.toggle('show', reduced || (y > r[0] - innerHeight*0.35 && y < r[1] + innerHeight*0.9));
-  }
-
-  /* Android Chrome levert scroll-events met vertraging tijdens een flick en terwijl
-     de adresbalk in- en uitschuift. Een doorlopende lus houdt de balk daarom
-     gelijk met de pagina. Hij staat vanzelf stil op een verborgen tabblad. */
-  var lastP = -1;
+  /* Een doorlopende lus: de bol draait zacht naar het doel. Buiten beeld staat hij stil. */
+  var vuil = true;
   (function loop(){
-    var p = progress();
-    if (p !== lastP){ lastP = p; paint(); }
+    if (inBeeld()) {
+      var dl = ((lamDoel - lam + 540) % 360) - 180;
+      var dp = phiDoel - phi;
+      if (!sleep && (Math.abs(dl) > 0.02 || Math.abs(dp) > 0.02)) {
+        lam += dl * 0.07; phi += dp * 0.07; vuil = true;
+      } else if (!sleep && (lam !== lamDoel || phi !== phiDoel)) { lam = lamDoel; phi = phiDoel; vuil = true; }
+      if (vuil && S > 0) { vuil = false; teken(); }
+    }
     requestAnimationFrame(loop);
   })();
-  addEventListener('resize', function(){ lastP = -1; });
+  maat();
+  toonStop(0, true);
+  addEventListener('resize', function(){ maat(); });
+  function themaBij(){ leesKleuren(); vuil = true; if (idxNow >= 0) { var st = stops[idxNow]; var tint = st.rijk ? hex(rijken[st.rijk].kleur) : st.tint; sky.style.backgroundColor = mix(K.room, tint, st.rijk ? .10 : .16); } }
+  try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', themaBij); } catch (e) {}
+  addEventListener('themawissel', themaBij);
+})();
+</script>
+
+<script>
+/* ---------- themaschakelaar ---------- */
+(function(){
+  'use strict';
+  var knop = document.getElementById('themaknop');
+  if (!knop) return;
+  var wortel = document.documentElement;
+  var donkerMQ = matchMedia('(prefers-color-scheme: dark)');
+  function huidig(){
+    var t = wortel.getAttribute('data-theme');
+    return t || (donkerMQ.matches ? 'dark' : 'light');
+  }
+  function bijwerken(){
+    var donker = huidig() === 'dark';
+    knop.setAttribute('aria-label', donker ? 'Schakel naar licht' : 'Schakel naar donker');
+    /* de browserbalk kleurt mee met de gekozen stand */
+    var kleur = getComputedStyle(wortel).getPropertyValue('--room').trim();
+    document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){ m.setAttribute('content', kleur); });
+  }
+  knop.addEventListener('click', function(){
+    var nieuw = huidig() === 'dark' ? 'light' : 'dark';
+    wortel.setAttribute('data-theme', nieuw);
+    try { localStorage.setItem('thema', nieuw); } catch (e) {}
+    bijwerken();
+    /* de scrollscripts lezen hun kleuren opnieuw */
+    dispatchEvent(new Event('themawissel'));
+  });
+  try { donkerMQ.addEventListener('change', bijwerken); } catch (e) {}
+  bijwerken();
 })();
 </script>
 </body>

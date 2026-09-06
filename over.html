@@ -5,7 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lorenzo Greidanus &middot; Docent geschiedenis</title>
 <meta name="description" content="Persoonlijke site van Lorenzo Greidanus, docent geschiedenis met een digitale inslag. Werkvormen, materiaal en contact.">
-<meta name="theme-color" content="#204ECF">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#FBF6F1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1A3D" media="(prefers-color-scheme: dark)">
+<script>
+/* Opgeslagen themakeuze meteen toepassen, nog voor de pagina getekend wordt.
+   Zonder keuze volgt de site de instelling van het apparaat. */
+(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();
+</script>
 
 <!-- Open graph, handig als je de link deelt -->
 <meta property="og:type" content="website">
@@ -15,12 +22,15 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preload" as="image" href="foto.jpg">
 
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%23204ECF'/><text x='50' y='68' font-family='Poppins,Arial' font-size='46' font-weight='600' fill='%23FBF6F1' text-anchor='middle'>LG</text></svg>">
 
 <style>
 /* ============================================================
    MERKKLEUREN, uit het merkboek
+   De vlakken (crab, amber, ocean, vista, sand) blijven in beide
+   thema's gelijk. Alleen achtergrond, tekst en lijnen wisselen.
    ============================================================ */
 :root{
   --crab:#F26749;
@@ -28,22 +38,58 @@
   --ocean:#204ECF;
   --vista:#83A5F2;
   --sand:#FCDED6;
-  --room:#FBF6F1;
 
-  --ink:#14224C;
+  --navy:#14224C;            /* vast: tekst op gekleurde vlakken */
+  --cream:#FBF6F1;           /* vast: tekst op oceaanblauw */
+
+  --room:#FBF6F1;  --room-rgb:251 246 241;
+  --ink:#14224C;   --ink-rgb:20 34 76;
   --muted:#5b6480;
-  --line:#e7ddd6;
+  --tekst:#3a4364;           /* lopende tekst, iets zachter dan inkt */
+  --paper:#FFFFFF;
+  --hand:#D9522F;
+  --accent-tekst:#204ECF;                    /* gekleurde links en labels */
 
+  /* vormtaal: zachte ronde hoeken, een haarlijn en een zachte, getinte schaduw */
+  --r:22px;
   --r-s:14px;
-  --r-m:20px;
-  --r-l:28px;
-  --shadow:0 10px 0 rgba(20,34,76,.08);
-  --shadow-soft:0 14px 34px rgba(20,34,76,.10);
-  --max:1080px;
+  --sch-rgb:20 34 76;
+  --lijn:1px solid rgb(var(--ink-rgb) / .12);
+  --schaduw:0 14px 34px rgb(var(--sch-rgb) / .10);
+  --schaduw-s:0 10px 0 rgb(var(--sch-rgb) / .08);
+
+  --max:1120px;
+  --ease:cubic-bezier(.22,.61,.36,1);       /* aankomen en wisselen: snel op gang, lange uitloop */
+  --zacht:cubic-bezier(.45,0,.55,1);         /* ademen en drijven: symmetrisch, als een sinus */
+}
+/* Donkere waarden staan twee keer: een keer voor het apparaat dat donker vraagt
+   (tenzij je zelf licht koos) en een keer voor een eigen keuze voor donker.
+   Verander je er een, verander dan allebei. */
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --room:#0F1A3D;  --room-rgb:15 26 61;
+    --ink:#F3EFE9;   --ink-rgb:243 239 233;
+    --muted:#B3BBD0;
+    --tekst:#F3EFE9;
+    --paper:#182652;
+    --hand:#F26749;
+    --accent-tekst:#EA9836;
+    --sch-rgb:0 0 0;
+  }
+}
+:root[data-theme="dark"]{
+  --room:#0F1A3D;  --room-rgb:15 26 61;
+  --ink:#F3EFE9;   --ink-rgb:243 239 233;
+  --muted:#B3BBD0;
+  --tekst:#F3EFE9;
+  --paper:#182652;
+  --hand:#F26749;
+  --accent-tekst:#EA9836;
+  --sch-rgb:0 0 0;
 }
 
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;scroll-padding-top:84px}   /* plakkende kopbalk mag een aangesprongen kop niet bedekken */
 body{
   margin:0;
   background:var(--room);
@@ -54,186 +100,238 @@ body{
   -webkit-font-smoothing:antialiased;
 }
 img{max-width:100%;display:block}
-a{color:inherit}
+a{color:inherit;text-underline-offset:.16em}
+::selection{background:var(--sand);color:var(--navy)}
 
 .wrap{width:min(100% - 40px, var(--max));margin-inline:auto}
 
-h1,h2,h3{font-weight:600;line-height:1.15;margin:0}
-h2{font-size:clamp(1.7rem,4vw,2.6rem);letter-spacing:-.01em}
-h3{font-size:1.15rem}
+h1,h2,h3{font-weight:600;line-height:1.1;margin:0;letter-spacing:-.03em;text-wrap:balance}
+h2{font-size:clamp(1.9rem,4.4vw,3rem)}
+h3{font-size:1.2rem;letter-spacing:-.01em}
 p{margin:0 0 1rem}
 
-.hand{font-family:'Caveat',cursive;font-weight:600;font-size:1.6rem;line-height:1;color:var(--crab)}
-.label{
-  display:inline-block;font-size:.72rem;font-weight:600;letter-spacing:.16em;
-  text-transform:uppercase;color:var(--muted);margin-bottom:.5rem;
+.hand{font-family:'Caveat',cursive;font-weight:600;font-size:1.7rem;line-height:1;color:var(--hand)}
+
+
+/* ============================================================
+   THEMASCHAKELAAR
+   Zonder keuze volgt de site het apparaat. Een klik zet data-theme
+   op <html> en onthoudt dat. Het icoontje toont waar je naartoe
+   schakelt: de maan in de lichte stand, de zon in de donkere.
+   ============================================================ */
+:root[data-theme="dark"]{color-scheme:dark}
+:root[data-theme="light"]{color-scheme:light}
+.themaknop{width:38px;height:38px;border-radius:999px;border:1.5px solid rgb(var(--ink-rgb) / .18);
+  background:var(--paper);color:var(--ink);display:grid;place-items:center;cursor:pointer;padding:0;flex:none;
+  transition:border-color .16s var(--ease),transform .16s var(--ease),background .16s var(--ease)}
+.themaknop:hover{border-color:var(--ocean);transform:translateY(-1px)}
+.themaknop svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.themaknop .zon{display:none}
+:root[data-theme="dark"] .themaknop .maan{display:none}
+:root[data-theme="dark"] .themaknop .zon{display:block}
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .themaknop .maan{display:none}
+  :root:not([data-theme="light"]) .themaknop .zon{display:block}
 }
+
+/* knoppen */
+.knop{
+  display:inline-flex;align-items:center;gap:8px;text-decoration:none;font-weight:600;font-size:.95rem;
+  padding:13px 24px;border-radius:999px;border:1.5px solid rgb(var(--ink-rgb) / .18);color:var(--ink);background:transparent;
+  white-space:nowrap;
+  transition:transform .16s var(--ease),box-shadow .16s var(--ease),background .16s var(--ease),border-color .16s var(--ease);
+}
+.knop:hover{transform:translateY(-2px);background:var(--paper);border-color:var(--ocean)}
+.knop:active{transform:translateY(1px)}
+.knop.crab{background:var(--crab);color:var(--navy);border-color:transparent;box-shadow:var(--schaduw-s)}
+.knop.crab:hover{background:var(--crab);border-color:transparent;box-shadow:0 12px 0 rgb(var(--sch-rgb) / .12)}
+.knop.crab:active{box-shadow:0 6px 0 rgb(var(--sch-rgb) / .10)}
+.knop.ocean{background:var(--ocean);color:var(--cream);border-color:transparent;box-shadow:var(--schaduw-s)}
+.knop.ocean:hover{background:#1a41ae;border-color:transparent}
+/* doorzichtige knop op het blauwe vlak */
+.knop.ghost{color:var(--cream);border-color:rgba(251,246,241,.45)}
+.knop.ghost:hover{background:rgba(251,246,241,.12);border-color:var(--cream)}
 
 /* ============================================================
    NAVIGATIE
    ============================================================ */
 .skip{
-  position:absolute;left:-9999px;top:0;background:var(--ink);color:#fff;
+  position:absolute;left:-9999px;top:0;background:var(--ink);color:var(--room);
   padding:10px 16px;border-radius:0 0 var(--r-s) 0;z-index:99;
 }
 .skip:focus{left:0}
 
 header.nav{position:sticky;top:0;z-index:40;padding:14px 0;
-  background:rgba(251,246,241,.86);backdrop-filter:blur(8px);border-bottom:1px solid transparent}
-header.nav.scrolled{border-bottom-color:var(--line)}
+  background:rgb(var(--room-rgb) / .88);backdrop-filter:blur(10px);
+  border-bottom:1px solid transparent;transition:border-color .2s var(--ease)}
+header.nav.scrolled{border-bottom-color:rgb(var(--ink-rgb) / .12)}
 .nav-in{display:flex;align-items:center;justify-content:space-between;gap:16px}
 .mark{display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:600}
 .mark span.badge{
-  width:36px;height:36px;border-radius:11px;background:var(--ocean);color:var(--room);
+  width:36px;height:36px;border-radius:11px;background:var(--ocean);color:var(--cream);
   display:flex;align-items:center;justify-content:center;font-size:.85rem;letter-spacing:.02em;
 }
-.nav-links{display:flex;gap:6px;align-items:center}
+.nav-links{display:flex;gap:8px;align-items:center}
 .nav-links a{
   text-decoration:none;font-size:.92rem;font-weight:500;color:var(--ink);
-  padding:8px 14px;border-radius:999px;transition:background .18s ease,color .18s ease;
+  padding:8px 14px;border-radius:999px;border:2px solid transparent;
+  transition:background .18s var(--ease),color .18s var(--ease),border-color .18s var(--ease);
 }
-.nav-links a:hover{background:var(--sand)}
-.nav-links a.cta{background:var(--ocean);color:var(--room)}
-.nav-links a.cta:hover{background:#1a41ae}
+.nav-links a:hover{background:var(--sand);color:var(--navy)}
+.nav-links a.cta{background:var(--ocean);color:var(--cream);margin-left:6px}
+.nav-links a.cta:hover{background:#1a41ae;color:var(--cream)}
+.nav-links .themaknop{margin-left:6px}
 @media(max-width:720px){.nav-links a:not(.cta){display:none}}
 
 /* ============================================================
-   HERO
+   HERO: tekst links, portret met stickers rechts
    ============================================================ */
-.hero{position:relative;overflow:hidden;padding:72px 0 96px;background:var(--ocean);color:var(--room)}
+.hero{position:relative;overflow:hidden;padding:72px 0 110px;background:var(--ocean);color:var(--cream)}
 .hero::after{
   content:"";position:absolute;left:0;right:0;bottom:-1px;height:70px;background:var(--room);
   border-radius:60% 40% 0 0 / 100% 100% 0 0;
 }
-.hero-in{position:relative;z-index:2;display:grid;grid-template-columns:1.15fr .85fr;gap:48px;align-items:center}
-@media(max-width:860px){.hero-in{grid-template-columns:1fr;gap:36px}.hero{padding-bottom:80px}}
-
 .hero .hand{color:var(--sand)}
-.hero h1{font-size:clamp(2.4rem,6.2vw,4rem);margin:.35rem 0 1rem;letter-spacing:-.02em}
+.hero-in{position:relative;display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(28px,5vw,64px);align-items:center}
+.hero h1{font-size:clamp(2.4rem,6.2vw,4.2rem);margin:.35rem 0 1rem;letter-spacing:-.03em;color:var(--cream)}
 .hero p.lead{font-size:1.08rem;color:#dfe7ff;max-width:46ch}
-.hero-buttons{display:flex;flex-wrap:wrap;gap:12px;margin-top:26px}
+.hero-buttons{display:flex;flex-wrap:wrap;gap:14px;margin-top:26px}
 
-.btn{
-  display:inline-block;text-decoration:none;font-weight:600;font-size:.95rem;
-  padding:13px 24px;border-radius:999px;box-shadow:var(--shadow);
-  transition:transform .16s ease,box-shadow .16s ease;
-}
-.btn:hover{transform:translateY(-2px);box-shadow:0 12px 0 rgba(20,34,76,.12)}
-.btn:active{transform:translateY(1px);box-shadow:0 6px 0 rgba(20,34,76,.10)}
-.btn-crab{background:var(--crab);color:#fff}
-.btn-ghost{background:transparent;color:var(--room);box-shadow:none;border:1.5px solid rgba(251,246,241,.45)}
-.btn-ghost:hover{background:rgba(251,246,241,.12);box-shadow:none}
-.btn-ocean{background:var(--ocean);color:var(--room)}
+/* het portret: een losse vorm met inktlijn, een amberkleurige schaduwvorm erachter */
+.portret{position:relative;justify-self:end;width:min(400px,36vw);aspect-ratio:1}
+.portret .vorm,.portret .foto{border-radius:58% 42% 46% 54% / 48% 52% 48% 52%}
+.portret .vorm{position:absolute;inset:0;background:var(--amber);opacity:.9;
+  transform:translate(22px,22px) rotate(-7deg)}
+.portret .foto{position:relative;width:100%;height:100%;overflow:hidden;background:var(--vista);box-shadow:0 18px 40px rgba(6,20,60,.28);
+  display:flex;align-items:center;justify-content:center}
+.portret img{width:100%;height:100%;object-fit:cover}
+.portret .initials{font-size:4.4rem;font-weight:600;color:var(--cream);letter-spacing:.02em}
 
-/* blob met foto */
-.portrait{position:relative;justify-self:center;width:min(320px,80vw);aspect-ratio:1;}
-.portrait .blob{
-  width:100%;height:100%;overflow:hidden;background:var(--vista);
-  border-radius:58% 42% 46% 54% / 48% 52% 48% 52%;
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:0 18px 40px rgba(6,20,60,.28);
-}
-.portrait .blob img{width:100%;height:100%;object-fit:cover}
-.portrait .initials{font-size:4.4rem;font-weight:600;color:var(--room);letter-spacing:.02em}
-
-/* stickerchips, zwevende bubbels */
+/* stickers om het portret heen, net buiten de rand */
 .bub{
-  position:absolute;font-size:.82rem;font-weight:600;padding:8px 15px;border-radius:999px;
+  position:absolute;font-size:.84rem;font-weight:600;padding:8px 15px;border-radius:999px;
   box-shadow:0 8px 18px rgba(6,20,60,.20);white-space:nowrap;
 }
-.bub.a{background:var(--crab);color:#fff;top:2%;right:-6%;transform:rotate(-6deg)}
-.bub.b{background:var(--amber);color:var(--ink);bottom:16%;left:-12%;transform:rotate(5deg)}
-.bub.c{background:var(--sand);color:var(--ink);bottom:-2%;right:4%;transform:rotate(-3deg)}
+.bub.a{background:var(--crab);color:var(--navy);top:-2%;right:-10%;transform:rotate(-6deg)}
+.bub.b{background:var(--sand);color:var(--navy);bottom:18%;left:-16%;transform:rotate(5deg)}
+.bub.c{background:var(--vista);color:var(--navy);bottom:-6%;right:2%;transform:rotate(-3deg)}
 @media(prefers-reduced-motion:no-preference){
-  .bub.a{animation:float 7s ease-in-out infinite}
-  .bub.b{animation:float 8.5s ease-in-out infinite .6s}
-  .bub.c{animation:float 7.8s ease-in-out infinite 1.2s}
+  .bub.a{animation:float 7s var(--zacht) infinite}
+  .bub.b{animation:float 8.5s var(--zacht) infinite .6s}
+  .bub.c{animation:float 7.8s var(--zacht) infinite 1.2s}
 }
 @keyframes float{0%,100%{translate:0 0}50%{translate:0 -9px}}
+@media(max-width:860px){
+  .hero{padding:32px 0 64px;min-height:0}
+  .hero-in{grid-template-columns:1fr;gap:40px}
+  .portret{justify-self:start;width:min(240px,58vw);margin-left:10vw}
+  .portret .vorm{transform:translate(12px,12px) rotate(-7deg)}
+  .hero{padding:40px 0 96px}
+  .bub{font-size:.78rem;padding:7px 12px}
+  .bub.b{left:-24%}
+}
 
 /* ============================================================
    SECTIES
    ============================================================ */
-section{padding:72px 0}
+section{padding:80px 0}
 .sec-head{max-width:60ch;margin-bottom:38px}
-.sec-head p{color:var(--muted)}
+.sec-head p{color:var(--muted);margin-top:.8rem}
 
-/* Over mij */
-.about{display:grid;grid-template-columns:1.25fr .75fr;gap:46px;align-items:start}
-@media(max-width:860px){.about{grid-template-columns:1fr}}
-.about p{color:#3a4364}
-.chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+/* Over mij: tekst links, een scheef feitenkaartje rechts */
+.about{display:grid;grid-template-columns:1.2fr .8fr;gap:56px;align-items:start}
+@media(max-width:860px){.about{grid-template-columns:1fr;gap:40px}}
+.about p{color:var(--tekst)}
+.chips{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px}
 .chip{
   font-size:.85rem;font-weight:600;padding:8px 15px;border-radius:999px;
-  box-shadow:0 6px 14px rgba(20,34,76,.08);
+  box-shadow:0 6px 14px rgb(var(--sch-rgb) / .08);color:var(--navy);
 }
-.chip:nth-child(4n+1){background:var(--sand);color:var(--ink);transform:rotate(-2deg)}
-.chip:nth-child(4n+2){background:var(--vista);color:var(--ink);transform:rotate(1.5deg)}
-.chip:nth-child(4n+3){background:var(--amber);color:var(--ink);transform:rotate(-1deg)}
-.chip:nth-child(4n+4){background:var(--crab);color:#fff;transform:rotate(2deg)}
+.chip:nth-child(4n+1){background:var(--sand);transform:rotate(-2deg)}
+.chip:nth-child(4n+2){background:var(--vista);transform:rotate(1.5deg)}
+.chip:nth-child(4n+3){background:var(--amber);transform:rotate(-1deg)}
+.chip:nth-child(4n+4){background:var(--crab);transform:rotate(2deg)}
 
-.facts{background:#fff;border:1px solid var(--line);border-radius:var(--r-l);padding:26px;box-shadow:var(--shadow-soft)}
-.facts h3{margin-bottom:14px}
-.facts ul{list-style:none;margin:0;padding:0}
-.facts li{display:flex;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:.94rem}
-.facts li:first-child{border-top:0}
-.facts li b{font-weight:600;min-width:96px;color:var(--muted);font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;padding-top:3px}
+.facts{background:var(--paper);border:var(--lijn);border-radius:var(--r);padding:28px;
+  box-shadow:var(--schaduw);position:sticky;top:96px}
+.facts h3{margin-bottom:16px;font-size:1.3rem}
+.facts ul{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.facts li{display:grid;grid-template-columns:96px 1fr;gap:12px;font-size:.94rem;line-height:1.5}
+.facts li b{font-weight:600;font-size:.76rem;letter-spacing:.06em;text-transform:uppercase;padding-top:3px;color:var(--muted)}
 
-/* Aanpak, kaarten */
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}
+/* Aanpak: vier vlakken in een bento, twee breed en twee smal */
+.bento{display:grid;grid-template-columns:repeat(3,1fr);grid-template-areas:"a a b" "c d d";gap:22px}
 .card{
-  background:#fff;border:1px solid var(--line);border-radius:var(--r-l);padding:26px;
-  transition:transform .18s ease,box-shadow .18s ease;
+  background:var(--paper);border:var(--lijn);border-radius:var(--r);padding:clamp(24px,3vw,34px);
+  display:grid;gap:12px;align-content:start;
+  transition:transform .18s var(--ease),box-shadow .18s var(--ease);
 }
-.card:hover{transform:translateY(-4px);box-shadow:var(--shadow-soft)}
-.card .tile{
-  width:48px;height:48px;border-radius:16px 16px 16px 6px;
-  display:flex;align-items:center;justify-content:center;margin-bottom:16px;
+.card:hover{transform:translateY(-4px);box-shadow:var(--schaduw)}
+.card:nth-child(1){grid-area:a}
+.card:nth-child(2){grid-area:b}
+.card:nth-child(3){grid-area:c}
+.card:nth-child(4){grid-area:d}
+.card-top{display:flex;align-items:center;gap:14px}
+/* het icoontje zit in een gekleurd tegeltje naast de kop */
+.card-tile{width:48px;height:48px;border-radius:16px 16px 16px 6px;display:grid;place-items:center;flex:none;color:var(--navy)}
+.card:nth-child(1) .card-tile{background:var(--ocean);color:var(--cream)}
+.card:nth-child(2) .card-tile{background:var(--crab)}
+.card:nth-child(3) .card-tile{background:var(--amber)}
+.card:nth-child(4) .card-tile{background:var(--vista)}
+.card-tile svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.card h3{font-size:clamp(1.25rem,2.4vw,1.6rem)}
+.card p{margin:0;font-size:.97rem;max-width:44ch;color:var(--muted)}
+@media(max-width:860px){
+  .bento{grid-template-columns:1fr;grid-template-areas:"a" "b" "c" "d"}
 }
-.card .tile svg{width:24px;height:24px;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-.card p{margin:10px 0 0;color:var(--muted);font-size:.94rem}
 
-/* Materiaal */
-.materiaal{background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-.deelvak{background:var(--room);border:1px solid var(--line);border-radius:var(--r-l);
-  padding:clamp(26px,4vw,42px)}
+/* Materiaal: een groot vak met de spellen per vak gegroepeerd */
+.deelvak{background:var(--paper);border:var(--lijn);border-radius:var(--r);
+  padding:clamp(26px,4vw,44px)}
 .deelkop{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:18px}
-.deelkop h3{font-size:clamp(1.3rem,3vw,1.7rem);margin:0}
-.deelkop p{margin:6px 0 0;color:var(--muted);font-size:.94rem;max-width:46ch}
-.spellijst{list-style:none;margin:28px 0 0;padding:0;
-  display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
-  column-gap:40px;align-items:start}
-.spellijst li{padding:14px 2px;border-top:1px solid var(--line)}
-.spellijst .naam{margin:0;display:flex;align-items:center;gap:9px;min-height:24px}
-.spellijst b{font-weight:600;font-size:1rem;line-height:1.3}
-.spellijst span{display:block;margin-top:2px;color:var(--muted);font-size:.88rem;
-  line-height:1.45;text-wrap:pretty}
-.spellijst em{flex:none;font-style:normal;font-size:.66rem;font-weight:600;letter-spacing:.08em;
-  text-transform:uppercase;color:var(--muted);background:#fff;
-  border:1px solid var(--line);border-radius:999px;padding:3px 9px;line-height:1.4}
-.empty{
-  border:2px dashed var(--vista);border-radius:var(--r-l);padding:44px 26px;text-align:center;background:var(--room);
+.deelkop h3{font-size:clamp(1.4rem,3vw,1.9rem);margin:0}
+.deelkop p{margin:6px 0 0;color:var(--muted);font-size:.95rem;max-width:46ch}
+
+/* drie uitgelichte spellen, als klikbare kaarten */
+.hoogtepunten{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:30px}
+.hoog{display:grid;gap:10px;align-content:start;padding:22px;border-radius:var(--r);background:var(--room);
+  border:var(--lijn);text-decoration:none;color:inherit;
+  transition:transform .18s var(--ease),box-shadow .18s var(--ease)}
+.hoog:hover{transform:translateY(-4px);box-shadow:var(--schaduw)}
+.hoog .card-tile{width:48px;height:48px;border-radius:16px 16px 16px 6px;display:grid;place-items:center;color:var(--cream)}
+.hoog .card-tile svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.hoog b{font-size:1.08rem;line-height:1.25}
+.hoog span{color:var(--muted);font-size:.92rem;line-height:1.5}
+.hoog .ga{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:.86rem;color:var(--accent-tekst,var(--ocean));margin-top:4px}
+.hoog .ga svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .18s var(--ease)}
+.hoog:hover .ga svg{transform:translateX(3px)}
+/* en de rest: de vakken als pillen naar de leeromgeving */
+.vakkenrij{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:24px;font-size:.9rem;color:var(--muted)}
+.vakkenrij a{display:inline-flex;align-items:center;min-height:36px;padding:6px 13px;border-radius:999px;
+  border:1.5px solid rgb(var(--ink-rgb) / .16);color:var(--ink);text-decoration:none;font-weight:600;font-size:.84rem;
+  transition:border-color .16s var(--ease),background .16s var(--ease)}
+.vakkenrij a:hover{border-color:var(--ocean);background:var(--paper)}
+@media(max-width:860px){
+  .hoogtepunten{grid-template-columns:1fr;gap:14px}
 }
-.empty .hand{display:block;margin-bottom:8px}
-.empty p{color:var(--muted);max-width:44ch;margin-inline:auto}
 
 /* Contact */
 .contact-box{
-  background:var(--ocean);color:var(--room);border-radius:var(--r-l);padding:clamp(30px,5vw,54px);
-  display:grid;grid-template-columns:1.1fr .9fr;gap:34px;align-items:center;position:relative;overflow:hidden;
+  background:var(--ocean);color:var(--cream);border-radius:var(--r);position:relative;overflow:hidden;
+  padding:clamp(30px,5vw,54px);
+  display:grid;grid-template-columns:1.1fr .9fr;gap:34px;align-items:center;
 }
 @media(max-width:760px){.contact-box{grid-template-columns:1fr}}
-.contact-box::before{
-  content:"";position:absolute;width:280px;height:280px;background:rgba(131,165,242,.28);
-  border-radius:50%;right:-90px;top:-110px;
-}
-.contact-box h2{color:var(--room);position:relative}
-.contact-box p{color:#dfe7ff;position:relative}
-.contact-links{display:flex;flex-direction:column;gap:12px;position:relative}
+.contact-box::before{content:"";position:absolute;width:280px;height:280px;background:rgba(131,165,242,.28);border-radius:50%;right:-90px;top:-110px}
+.contact-box > *{position:relative}
+.contact-box .hand{color:var(--sand)}
+.contact-box h2{color:var(--cream)}
+.contact-box p{color:#dfe7ff}
+.contact-links{display:flex;flex-direction:column;gap:12px}
 .contact-links a{
-  display:flex;align-items:center;gap:12px;text-decoration:none;background:rgba(251,246,241,.10);
-  border:1px solid rgba(251,246,241,.22);border-radius:var(--r-m);padding:14px 18px;font-weight:500;
-  transition:background .18s ease,transform .18s ease;
+  display:flex;align-items:center;gap:12px;text-decoration:none;
+  background:rgba(251,246,241,.10);border:1px solid rgba(251,246,241,.22);border-radius:var(--r-s);padding:14px 18px;font-weight:500;color:var(--cream);
+  transition:background .18s var(--ease),color .18s var(--ease),transform .18s var(--ease);
 }
 .contact-links a:hover{background:rgba(251,246,241,.20);transform:translateX(3px)}
 .contact-links svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
@@ -246,7 +344,7 @@ footer{padding:34px 0 46px;font-size:.88rem;color:var(--muted)}
 
 /* Toegankelijkheid en beweging */
 a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offset:3px;border-radius:6px}
-.reveal{opacity:0;transform:translateY(18px);transition:opacity .55s ease,transform .55s ease}
+.reveal{opacity:0;transform:translateY(18px);transition:opacity .55s var(--ease),transform .55s var(--ease)}
 .reveal.in{opacity:1;transform:none}
 @media(prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
@@ -262,19 +360,19 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
 .lgmark{position:relative;display:inline-flex;flex:none}
 .mark .lgmark i,.mark .lgmark .badge{
   display:flex;align-items:center;justify-content:center;gap:1px;font-style:normal;
-  transition:transform 420ms cubic-bezier(.34,1.56,.64,1),
-             border-radius 420ms cubic-bezier(.34,1.56,.64,1),
-             box-shadow 300ms ease}
+  transition:transform 420ms cubic-bezier(.16,1,.3,1),
+             border-radius 420ms cubic-bezier(.16,1,.3,1),
+             box-shadow 300ms var(--ease)}
 .lgdot{position:absolute;right:-3px;top:-3px;width:10px;height:10px;border-radius:50%;
   background:var(--crab);transform:scale(0);
-  transition:transform 380ms cubic-bezier(.34,1.56,.64,1) 120ms}
+  transition:transform 380ms cubic-bezier(.16,1,.3,1) 120ms}
 .mark:hover .lgmark i,.mark:focus-visible .lgmark i,
 .mark:hover .lgmark .badge,.mark:focus-visible .lgmark .badge{
   border-radius:58% 42% 47% 53% / 44% 52% 48% 56%;
   transform:scale(1.08) rotate(-6deg);
   box-shadow:0 10px 18px rgba(32,78,207,.24)}
 .mark:hover .lgdot,.mark:focus-visible .lgdot{transform:scale(1)}
-/* Alleen de twee letters tuimelen, niet het vakje eromheen. Op over.html is dat
+/* Alleen de twee letters tuimelen, niet het vakje eromheen. Op deze pagina is dat
    vakje zelf een span, en dan zou het zijn eigen kanteling overschrijven. */
 .mark:hover .lgmark i span,.mark:focus-visible .lgmark i span,
 .mark:hover .lgmark .badge span,.mark:focus-visible .lgmark .badge span{
@@ -298,23 +396,19 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
 /* Alleen hier, op de pagina waar je gezicht staat: een handgeschreven groet
    die opduikt als je het logo aanwijst. */
 .mark{position:relative}
-/* Zweeft naast het logo in plaats van ruimte op te eisen. */
 .lghoi{position:absolute;left:calc(100% + 8px);top:50%;
-  font-family:'Caveat',cursive;font-size:1.15rem;color:var(--crab);
+  font-family:'Caveat',cursive;font-size:1.15rem;color:var(--hand);
   opacity:0;transform:translateY(-42%) rotate(3deg);transform-origin:left center;
-  transition:opacity 300ms ease 160ms,transform 420ms cubic-bezier(.34,1.56,.64,1) 160ms;
+  transition:opacity 300ms var(--ease) 160ms,transform 420ms cubic-bezier(.16,1,.3,1) 160ms;
   pointer-events:none;white-space:nowrap}
-/* Niet verder omhoog dan de kopbalk zelf: die staat tegen de bovenrand van het
-   scherm, dus alles wat hoger komt wordt afgesneden. */
 .mark:hover .lghoi,.mark:focus-visible .lghoi{opacity:1;transform:translateY(-58%) rotate(-6deg)}
 @media(prefers-reduced-motion:reduce){.lghoi{transition:none !important}}
-
 </style>
 </head>
 <body>
 
 <script>
-/* Komt de bezoeker van landing.html, dan lost het blauwe doek hier zacht op. */
+/* Komt de bezoeker van de startpagina, dan lost het blauwe doek hier zacht op. */
 (function(){
   if (location.search.indexOf('from=landing') === -1) return;
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -336,6 +430,9 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
 
 <a class="skip" href="#main">Naar de inhoud</a>
 
+<!-- onzichtbaar meetpunt: zodra dit uit beeld is, krijgt de kopbalk een lijn -->
+<div id="bovenkant" aria-hidden="true"></div>
+
 <header class="nav" id="nav">
   <div class="wrap nav-in">
     <a class="mark" href="#top"><span class="lgmark"><span class="badge"><span>L</span><span>G</span></span><b class="lgdot"></b></span><span class="lgnaam"><span>Lorenzo Greidanus</span><span class="lgstreep"></span></span><span class="lghoi">hoi!</span></a>
@@ -346,6 +443,10 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
       <a href="#aanpak">Mijn aanpak</a>
       <a href="#materiaal">Materiaal</a>
       <a class="cta" href="#contact">Contact</a>
+      <button class="themaknop" id="themaknop" type="button" aria-label="Schakel naar donker" title="Donker of licht">
+  <svg class="maan" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+  <svg class="zon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>
+</button>
     </nav>
   </div>
 </header>
@@ -360,16 +461,17 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
       <h1>Lorenzo Greidanus</h1>
       <p class="lead">Docent geschiedenis met een digitale inslag. Ik maak van het verleden iets waar leerlingen vandaag iets aan hebben, in een klas waar je fouten mag maken.</p>
       <div class="hero-buttons">
-        <a class="btn btn-crab" href="#aanpak">Bekijk mijn werk</a>
-        <a class="btn btn-ghost" href="#contact">Neem contact op</a>
+        <a class="knop crab" href="#aanpak">Bekijk mijn werk</a>
+        <a class="knop ghost" href="#contact">Neem contact op</a>
       </div>
     </div>
 
-    <div class="portrait">
-      <div class="blob">
+    <div class="portret">
+      <span class="vorm" aria-hidden="true"></span>
+      <div class="foto">
         <!-- Zet een foto naast index.html met de naam foto.jpg, dan verschijnt die hier vanzelf.
              Geen foto? Dan blijven de initialen staan. -->
-        <img src="foto.jpg" alt="Portret van Lorenzo Greidanus" onerror="this.remove();document.getElementById('initialen').hidden=false">
+        <img src="foto.jpg" width="1024" height="1024" alt="Portret van Lorenzo Greidanus" fetchpriority="high" onerror="this.remove();document.getElementById('initialen').hidden=false">
         <span class="initials" id="initialen" hidden>LG</span>
       </div>
       <span class="bub a">Het nu</span>
@@ -383,7 +485,6 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
 <section id="over">
   <div class="wrap about reveal">
     <div>
-      <span class="label">over mij</span>
       <h2>Serieus vak, leuk leren</h2>
       <p style="margin-top:18px">Voordat ik voor het onderwijs koos, rondde ik de mbo-opleiding Game Developer af. Die makende, spelende manier van denken neem ik mee de klas in.</p>
       <p>Goed onderwijs begint voor mij bij de relatie met leerlingen. Pas in een veilig en voorspelbaar klimaat durven ze fouten te maken, vragen te stellen en zichzelf te zijn. Daar komt leren op gang.</p>
@@ -414,41 +515,28 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
 <section id="aanpak" style="padding-top:0">
   <div class="wrap">
     <div class="sec-head reveal">
-      <span class="label">mijn aanpak</span>
       <h2>Waar mijn lessen op rusten</h2>
       <p>Vier uitgangspunten die in elke les terugkomen, van een instructie van tien minuten tot een hele projectweek.</p>
     </div>
 
-    <div class="cards reveal">
+    <div class="bento reveal">
       <article class="card">
-        <div class="tile" style="background:var(--ocean)">
-          <svg viewBox="0 0 24 24" stroke="#FBF6F1"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H11v16H5.5A2.5 2.5 0 0 1 3 17.5z"/><path d="M21 6.5A2.5 2.5 0 0 0 18.5 4H13v16h5.5a2.5 2.5 0 0 0 2.5-2.5z"/></svg>
-        </div>
-        <h3>Geschiedenis die leeft</h3>
+        <div class="card-top"><span class="card-tile" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H11v16H5.5A2.5 2.5 0 0 1 3 17.5z"/><path d="M21 6.5A2.5 2.5 0 0 0 18.5 4H13v16h5.5a2.5 2.5 0 0 0 2.5-2.5z"/></svg></span><h3>Geschiedenis die leeft</h3></div>
         <p>Ik begin bij een vraag uit het nu en werk terug naar de bron. Zo krijgt het verleden een reden om er te zijn.</p>
       </article>
 
       <article class="card">
-        <div class="tile" style="background:var(--crab)">
-          <svg viewBox="0 0 24 24" stroke="#fff"><path d="M20 6 9 17l-5-5"/></svg>
-        </div>
-        <h3>Formatief evalueren</h3>
+        <div class="card-top"><span class="card-tile" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span><h3>Formatief evalueren</h3></div>
         <p>Feed up, feed back en feed forward. Leerlingen weten waar ze staan, wat de volgende stap is en hoe ze die zetten.</p>
       </article>
 
       <article class="card">
-        <div class="tile" style="background:var(--amber)">
-          <svg viewBox="0 0 24 24" stroke="#14224C"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-        </div>
-        <h3>Digitaal en mediawijs</h3>
+        <div class="card-top"><span class="card-tile" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span><h3>Digitaal en mediawijs</h3></div>
         <p>Van AI-tools tot bronnenonderzoek online. Techniek is een middel, nooit het doel van de les.</p>
       </article>
 
       <article class="card">
-        <div class="tile" style="background:var(--vista)">
-          <svg viewBox="0 0 24 24" stroke="#14224C"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 5.5a3 3 0 0 1 0 5.4M18.2 20a6.4 6.4 0 0 0-2.3-4.9"/></svg>
-        </div>
-        <h3>Mentor en structuur</h3>
+        <div class="card-top"><span class="card-tile" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 5.5a3 3 0 0 1 0 5.4M18.2 20a6.4 6.4 0 0 0-2.3-4.9"/></svg></span><h3>Mentor en structuur</h3></div>
         <p>Vaste routines, duidelijke verwachtingen en persoonlijke aandacht. Rust in de klas geeft ruimte om te leren.</p>
       </article>
     </div>
@@ -456,10 +544,9 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
 </section>
 
 <!-- ============================ MATERIAAL ============================ -->
-<section class="materiaal" id="materiaal">
+<section id="materiaal" style="padding-top:0">
   <div class="wrap">
     <div class="sec-head reveal">
-      <span class="label">werkvormen en materiaal</span>
       <h2>Wat ik deel</h2>
       <p>Lesmateriaal en werkvormen die ik zelf maak en gebruik, vrij te gebruiken in je eigen klas. Alles staat bij elkaar in de leeromgeving voor leerlingen: geen inloggen, geen account, gewoon een link die je op het bord kunt zetten.</p>
     </div>
@@ -470,43 +557,41 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
           <h3>De leeromgeving</h3>
           <p>Negentien spellen op een rij, met niveaukeuze voor leerjaar 1 en 2 en een digibordstand.</p>
         </div>
-        <a class="btn btn-ocean" href="leermiddelen/">Bekijk de leeromgeving</a>
+        <a class="knop ocean" href="leermiddelen/">Bekijk de leeromgeving</a>
       </div>
 
-      <ul class="spellijst">
-        <li><p class="naam"><b>Rekenrace</b></p><span>Hoofdrekenen tegen de klok, met klassement</span></li>
-        <li><p class="naam"><b>Torenverdediging</b></p><span>Fouten tegenhouden met torens, voor rekenen, Nederlands, Engels en geschiedenis</span></li>
-        <li><p class="naam"><b>Het lichaam</b></p><span>Organen aanwijzen op een lichaam, per stelsel</span></li>
-        <li><p class="naam"><b>Bronnenlab</b></p><span>Veertien bronnen, drie vaste onderzoeksvragen</span></li>
-        <li><p class="naam"><b>Tijdvakken sorteren</b></p><span>Periodiseren: sorteren op tijdvak, rustig of tegen de klok</span></li>
-        <li><p class="naam"><b>Ontwerp je stad</b></p><span>Zelf een middeleeuwse stad tekenen, met een stadsraad die meekijkt</span></li>
-        <li><p class="naam"><b>De vergadering</b></p><span>Onderhandelen met de zeven gewesten, 1672</span></li>
-        <li><p class="naam"><b>De handelsroute</b></p><span>Varen en handelen met vraag en aanbod</span></li>
-        <li><p class="naam"><b>Verdeel je rijk</b></p><span>Leen uitgeven als koning, en het weer verliezen</span></li>
-        <li><p class="naam"><b>Feodalisme</b></p><span>Heer, ridder of boer in de piramide</span></li>
-        <li><p class="naam"><b>Topografie</b></p><span>Land, provincie, stad of rivier licht op, jij typt de naam</span></li>
-        <li><p class="naam"><b>De balans</b></p><span>Vergelijkingen oplossen met een weegschaal</span></li>
-        <li><p class="naam"><b>Irregular verbs</b></p><span>Engelse onregelmatige werkwoorden: go, went, gone</span></li>
-        <li><p class="naam"><b>Werkwoordrace</b></p><span>Werkwoordspelling: d of t, met de regel erbij</span></li>
-        <li><p class="naam"><b>De vergadering van de klas</b></p><span>Rollenspel: de klas is een Griekse polis en stemt over wetten</span></li>
-        <li><p class="naam"><b>Wie beslist</b></p><span>Stemmen ronselen in een Griekse polis, met veertig zetels die zelf beslissen</span></li>
-        <li><p class="naam"><b>Blijven of doorlopen</b></p><span>Jagers of boeren worden, en wat dat kost</span></li>
-        <li><p class="naam"><b>De Conferentie van Berlijn</b></p><span>Afrika verdelen in 1884, met vier onderhandelaars</span></li>
-        <li><p class="naam"><b>Langs de meetlat</b></p><span>Goed of fout tijdens de bezetting, met groepen of alleen</span></li>
-        <li><p class="naam"><b>Bouw je stad</b> <em>Binnenkort</em></p><span>Middeleeuwse stad vanaf 1150</span></li>
-      </ul>
+      <div class="hoogtepunten">
+        <a class="hoog" href="leermiddelen/bronnenlab.html">
+          <span class="card-tile" style="background:var(--ocean)" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/><path d="M8 9.5h5M8 12h3.5"/></svg></span>
+          <b>Bronnenlab</b>
+          <span>Tien echte bronnen en veertien oefenbronnen. Wie maakte dit, wanneer, en wat wordt er weggelaten?</span>
+          <span class="ga">Speel het spel <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+        </a>
+        <a class="hoog" href="leermiddelen/toren.html">
+          <span class="card-tile" style="background:var(--crab);color:var(--navy)" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 21V8h14v13z"/><path d="M5 8V4h2.5v2h3V4h3v2h3V4H19v4"/><path d="M9.5 21v-5a2.5 2.5 0 0 1 5 0v5"/></svg></span>
+          <b>Torenverdediging</b>
+          <span>Fouten lopen over het pad naar de klas. Goed antwoorden levert munten op voor torens en valstrikken. Voor vijf vakken.</span>
+          <span class="ga">Speel het spel <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+        </a>
+        <a class="hoog" href="leermiddelen/berlijn.html">
+          <span class="card-tile" style="background:var(--amber);color:var(--navy)" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3c2.5 3 2.5 15 0 18M4 9h16M4.5 15h15"/></svg></span>
+          <b>De Conferentie van Berlijn</b>
+          <span>Verdeel Afrika zoals de grootmachten in 1884, met vier onderhandelaars. Aan het eind zie je hoe het echt liep.</span>
+          <span class="ga">Speel het spel <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+        </a>
+      </div>
+
+      <div class="vakkenrij">
+        <span>En verder:</span>
+        <a href="leermiddelen/">Geschiedenis</a>
+        <a href="leermiddelen/">Rekenen en wiskunde</a>
+        <a href="leermiddelen/">Nederlands en Engels</a>
+        <a href="leermiddelen/">Aardrijkskunde en biologie</a>
+      </div>
     </div>
 
-    <!-- ============================================================
-         SPEL TOEVOEGEN: zet er hierboven een regel bij in de lijst.
-
-    <li><p class="naam"><b>Naam van het spel</b></p><span>Korte omschrijving</span></li>
-
-         Nog niet af? Zet het label binnen de naam-regel:
-         <p class="naam"><b>Naam</b> <em>Binnenkort</em></p>
-         De spellen zelf staan in leermiddelen/, daar hoef je hier niets
-         voor te veranderen.
-         ============================================================ -->
+    <!-- De volledige lijst met spellen staat in leermiddelen/index.html (SPELLEN).
+         Hier staan alleen drie uitgelichte spellen; wissel ze gerust. -->
   </div>
 </section>
 
@@ -515,18 +600,18 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
   <div class="wrap">
     <div class="contact-box reveal">
       <div>
-        <span class="hand" style="color:var(--sand)">even kennismaken?</span>
+        <span class="hand">even kennismaken?</span>
         <h2 style="margin:.3rem 0 .8rem">Ik hoor graag van je</h2>
         <p style="margin:0">Vragen over een werkvorm, samenwerken aan lesmateriaal of een vacature. Stuur gerust een bericht.</p>
       </div>
       <div class="contact-links">
         <!-- Pas hier je eigen gegevens en links aan. -->
         <a href="mailto:contact@meneergreidanus.nl">
-          <svg viewBox="0 0 24 24"><rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><path d="m3 7 9 6 9-6"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><path d="m3 7 9 6 9-6"/></svg>
           contact@meneergreidanus.nl
         </a>
         <a href="https://www.linkedin.com/in/lorenzo-greidanus-678a61205" target="_blank" rel="noopener">
-          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7.5 10.5V17M7.5 7.5v.01M11.5 17v-3.6a2.4 2.4 0 0 1 4.8 0V17"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7.5 10.5V17M7.5 7.5v.01M11.5 17v-3.6a2.4 2.4 0 0 1 4.8 0V17"/></svg>
           LinkedIn
         </a>
       </div>
@@ -548,11 +633,15 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
 <script>
 document.getElementById('jaar').textContent = new Date().getFullYear();
 
-// Randlijn onder de navigatie zodra je scrollt
+// Randlijn onder de navigatie zodra het meetpunt bovenaan uit beeld is.
+// Geen scroll-event nodig: de browser meldt het zelf.
 const nav = document.getElementById('nav');
-const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 8);
-onScroll();
-addEventListener('scroll', onScroll, {passive:true});
+const boven = document.getElementById('bovenkant');
+if ('IntersectionObserver' in window) {
+  new IntersectionObserver((entries) => {
+    nav.classList.toggle('scrolled', !entries[0].isIntersecting);
+  }, {rootMargin:'8px 0px 0px 0px'}).observe(boven);
+}
 
 // Secties rustig in beeld laten komen
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -565,6 +654,38 @@ if (reduced || !('IntersectionObserver' in window)) {
   }, {threshold:.12, rootMargin:'0px 0px -40px 0px'});
   items.forEach(el => io.observe(el));
 }
+</script>
+
+<script>
+/* ---------- themaschakelaar ---------- */
+(function(){
+  'use strict';
+  var knop = document.getElementById('themaknop');
+  if (!knop) return;
+  var wortel = document.documentElement;
+  var donkerMQ = matchMedia('(prefers-color-scheme: dark)');
+  function huidig(){
+    var t = wortel.getAttribute('data-theme');
+    return t || (donkerMQ.matches ? 'dark' : 'light');
+  }
+  function bijwerken(){
+    var donker = huidig() === 'dark';
+    knop.setAttribute('aria-label', donker ? 'Schakel naar licht' : 'Schakel naar donker');
+    /* de browserbalk kleurt mee met de gekozen stand */
+    var kleur = getComputedStyle(wortel).getPropertyValue('--room').trim();
+    document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){ m.setAttribute('content', kleur); });
+  }
+  knop.addEventListener('click', function(){
+    var nieuw = huidig() === 'dark' ? 'light' : 'dark';
+    wortel.setAttribute('data-theme', nieuw);
+    try { localStorage.setItem('thema', nieuw); } catch (e) {}
+    bijwerken();
+    /* de scrollscripts lezen hun kleuren opnieuw */
+    dispatchEvent(new Event('themawissel'));
+  });
+  try { donkerMQ.addEventListener('change', bijwerken); } catch (e) {}
+  bijwerken();
+})();
 </script>
 
 </body>
