@@ -6,11 +6,14 @@ Een site, twee kanten: de voorkant voor collega's en een aparte leeromgeving voo
 
 | Pad | Waarvoor |
 |---|---|
-| `index.html` | Startpagina: het scrollverhaal met de tijdbalk |
+| `index.html` | Startpagina: het scrollverhaal met de wereldbol |
 | `over.html` | Over mij, mijn aanpak, materiaal en contact |
 | `404.html` | Foutpagina |
 | `CNAME` | Koppelt de site aan meneergreidanus.nl |
+| `wereld.json` | Kustlijnen voor de wereldbol op de startpagina (Natural Earth, publiek domein) |
+| `rijken.json` | Grenzen van tien rijken op hun hoogtepunt, geknipt en vereenvoudigd uit [historical-basemaps](https://github.com/aourednik/historical-basemaps) (GPL-3; dit bestand valt onder dezelfde licentie) |
 | `leermiddelen/index.html` | Leeromgeving: voorpagina voor leerlingen met niveaukeuze |
+| `leermiddelen/basis.css` | Gedeelde afwerking van alle spellen (kleuren uit het merkboek, knoppen, beweging, focus); wordt na de eigen stijl van elk spel geladen |
 | `leermiddelen/bronnenlab.html` | Bronnenonderzoek met drie vaste vragen |
 | `leermiddelen/tijdvakken.html` | Gebeurtenissen sorteren naar tijdvak |
 | `leermiddelen/feodalisme.html` | Heer, ridder of boer: keuzes met gevolgen |
