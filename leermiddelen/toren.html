@@ -691,10 +691,10 @@ const SOORTEN = {
   /* De twee torens van de eilanden staan op het water, niet op het land. De
      Kanonneerboot is het kanon van de zee: snel en dichtbij. De Onderzeeer
      schiet raketten die bij de inslag alles in de buurt meenemen. */
-  schip:     {naam:'Kanonneerboot', letter:'B', kleur:'#4a6b8a',           prijs:95,  bereik:150, schade:11, tempo:0.4,
+  schip:     {naam:'Kanonneerboot', letter:'B', kleur:'#4a6b8a',           prijs:95,  bereik:150, schade:12, tempo:0.4,
               onder:'Kanonnen, alleen op het water', water:true, speciaal:true, slot:'archipel'},
-  onderzeeer:{naam:'Onderzee\u00ebr',   letter:'O', kleur:'#2d5f6e',           prijs:140, bereik:240, schade:38, tempo:1.7,
-              onder:'Raketten met een klap eromheen, op het water', water:true, raket:true, straal:52, speciaal:true, slot:'archipel'},
+  onderzeeer:{naam:'Onderzee\u00ebr',   letter:'O', kleur:'#2d5f6e',           prijs:140, bereik:250, schade:46, tempo:1.6,
+              onder:'Raketten met een klap eromheen, ziet verstopte fouten', water:true, raket:true, sonar:true, straal:52, speciaal:true, slot:'archipel'},
   /* De twee torens van de vulkaan. De Magmamortier slingert lava die op de
      weg blijft liggen en iedereen verbrandt die erdoorheen loopt. De
      Zwavelblazer zet alles vlakbij in brand: weinig per klap, maar het vuur
@@ -779,7 +779,10 @@ const THEMAS = [
   { id:'eiland', naam:'Tropisch eiland', slot:'eiland', strand:true, plek:' op het tropisch eiland',
     onder:'Zee, palmen en een vlonder over het zand. Met de Tonkla Bommenwerper en de Vriendenhut.',
     torens:['kanon','katapult','vertrager','schutter','bommenwerper','vrienden'] },
-  { id:'archipel', naam:'De eilanden', slot:'archipel', strand:true, water:true, plek:' tussen de eilanden',
+  /* kracht: de fouten zijn hier een kwart minder taai. De eilandjes liggen ver
+     van de weg en er passen minder torens op, en gemeten viel een gemiddelde
+     klas hier rond ronde veertig waar hij op het plein ronde zestig haalde. */
+  { id:'archipel', naam:'De eilanden', slot:'archipel', strand:true, water:true, plek:' tussen de eilanden', kracht:0.75,
     onder:'Open zee met kleine eilandjes. Landtorens passen alleen op een eiland; de Kanonneerboot en de Onderzee\u00ebr liggen op het water. Vanaf ronde zestig komt de Zeeslang.',
     torens:['kanon','katapult','schutter','onderzeeer','schip','bommenwerper'] },
   { id:'vulkaan', naam:'De vulkaan', slot:'vulkaan', plek:' op de vulkaan',
@@ -3029,8 +3032,8 @@ function rekenVraag(rang, toegestaan) {
   var MAXTORENS = 14, DUURDER = 0.18;
   /* Op de eilanden liggen de landtorens verder van de weg en dekken ze minder;
      gemeten met de speelbot liep daar de baas van ronde dertig nog door waar hij
-     op het plein al viel. Twee boten extra maken dat goed. */
-  function maxTorens(){ return MAXTORENS + (thema.water ? 2 : 0); }
+     op het plein al viel. Drie boten extra maken dat goed. */
+  function maxTorens(){ return MAXTORENS + (thema.water ? 3 : 0); }
   /* Torens gingen tot niveau drie, en daarna was er niets meer te verbeteren
      terwijl de fouten wel doorgroeiden. Vijf bleek te ver doorgeschoten: een vol
      bord werd dan zo sterk dat de late rondes hun spanning verloren, en het
@@ -3289,7 +3292,7 @@ function rekenVraag(rang, toegestaan) {
      Scherpschutter hem nog. Wie alleen landtorens heeft ziet hem onder zijn
      bord door glijden. Vel hem en de vulkaan gaat open. */
   var ZEESLANGRONDE = 60, DUIKTIJD = 7, DUIKDUUR = 3.5;
-  var ZEESLANG = { id:'zeeslang', naam:'de Zeeslang', taai:9, vlug:0.62, schild:0.2, duikt:true,
+  var ZEESLANG = { id:'zeeslang', naam:'de Zeeslang', taai:8, vlug:0.62, schild:0.2, duikt:true,
     mark:'\u223f', kleur:'#1f7a6d',
     uit:'Hij duikt geregeld onder: dan zwemt hij harder en raken alleen de boot, de onderzee\u00ebr en de Scherpschutter hem.' };
   /* ---------- de Magmakoning ----------
@@ -3308,7 +3311,10 @@ function rekenVraag(rang, toegestaan) {
         ? (thema.id === 'vulkaan' ? MAGMAKONING : thema.strand ? KRAKEN : MEGABAAS)
         : (thema.id === 'archipel' && ronde >= ZEESLANGRONDE && (ronde / BAASRONDE) % 2 === 0)
           ? ZEESLANG
-          : (Math.random() < apenkans(ronde))
+          /* Op open zee geen apenbaas: zijn schillen leggen op de eilandjes te
+             veel van het toch al schaarse bord stil (gemeten: elke klas viel daar
+             rond ronde veertig), en apen horen niet op zee. */
+          : (thema.id !== 'archipel' && Math.random() < apenkans(ronde))
             ? APENBAAS
             : BAZEN[(Math.floor(ronde / BAASRONDE) - 1) % BAZEN.length];
     }
@@ -3445,7 +3451,8 @@ function rekenVraag(rang, toegestaan) {
     if (!e) return true;
     /* onder water zien alleen de watertorens en de Scherpschutter hem */
     if (e.onder > 0) return !!SOORTEN[toren.soort].water || toren.soort === 'schutter';
-    return !e.camo || toren.soort === 'schutter';
+    /* de Onderzeeer heeft sonar: die ziet ook wat verstopt is, en dus door de inkt van de Kraken heen */
+    return !e.camo || toren.soort === 'schutter' || !!SOORTEN[toren.soort].sonar;
   }
   function kiesFout(ronde){
     var mag = FOUTEN.filter(function(f){ return f.vanaf <= ronde; });
@@ -6059,7 +6066,7 @@ function rekenVraag(rang, toegestaan) {
         poortFlits = 0.45;                    /* de poort licht op bij elke fout */
         var r = rang();
         var hp = Math.max(1, Math.round((10 + ronde * 6) * (0.75 + r * 0.15) * zwaarte(ronde) *
-                          VIJANDKRACHT * (isRustronde(ronde) ? RUSTTAAI : 1)));
+                          VIJANDKRACHT * (thema.kracht || 1) * (isRustronde(ronde) ? RUSTTAAI : 1)));
         /* de laatste van een baasronde is de baas zelf */
         var basisSnel = (30 + r*5 + ronde*2.3) * (ronde <= 20 ? 1 : 1.12);
         if (wachtrij === baasBijWachtrij && isBaasRonde(ronde)){
