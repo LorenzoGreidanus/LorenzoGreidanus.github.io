@@ -631,7 +631,7 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
       <input type="range" id="reisSchuif" min="0" max="25" step="1" value="0" aria-label="Moment in de tijd">
       <div class="reis-jaren" id="reisJaren" aria-hidden="true"></div>
     </div>
-    <p class="reis-noot">De rijken staan op hun hoogtepunt, op wereldschaal. Grenzen uit <a href="https://github.com/aourednik/historical-basemaps" target="_blank" rel="noopener">historical-basemaps</a> (GPL-3), kustlijnen van Natural Earth.</p>
+    <p class="reis-noot">De uitgelichte rijken staan op hun hoogtepunt; op de achtergrond zie je alle rijken en volken van dat moment opkomen en verdwijnen, op wereldschaal en met grove grenzen. Grenzen uit <a href="https://github.com/aourednik/historical-basemaps" target="_blank" rel="noopener">historical-basemaps</a> (GPL-3), kustlijnen van Natural Earth.</p>
   </div>
 </section>
 
@@ -989,7 +989,8 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
    Een wereldbol met 26 stops. Je stapt er zelf doorheen: met de knoppen,
    de tijdlijn, de rijken in de legenda of de stippen op de bol. Afspelen
    loopt de reis vanzelf door. Slepen draait de bol. De kustlijnen komen uit
-   wereld.json (Natural Earth), de grenzen uit rijken.json (historical-basemaps).
+   wereld.json (Natural Earth), de grenzen uit rijken.json en de achtergrond van
+   alle rijken per moment uit tijdlagen.json (allebei historical-basemaps).
    ============================================================ */
 (function(){
   'use strict';
@@ -1066,6 +1067,56 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
   ];
   var N = stops.length;
   var SPEELTEMPO = 4200;   /* milliseconden per stop bij afspelen */
+
+  /* ---------- de achtergrond: alle rijken en volken van dat moment ----------
+     Bij elke stop hoort een jaarkaart uit historical-basemaps (tijdlagen.json,
+     sterk vereenvoudigd). Alles wat daarop een naam heeft krijgt een zachte,
+     vaste kleur, zodat je hetzelfde rijk van stop tot stop ziet groeien en
+     krimpen. Het uitgelichte rijk ligt er in zijn eigen kleur bovenop. Bij een
+     stap vloeit de oude kaart uit en de nieuwe in. */
+  var jaarVanStop = [-123000, -10000, -3000, -1500, -500, -500, -323, 100, 500, 800, 800, 1279, 1300, 1400, 1492, 1530,
+                     1600, 1600, 1700, 1783, 1914, 1920, 1938, 1960, 1960, 2010];
+  var lagen = null, lagenGevraagd = false;
+  var laagVan = null, laagNaar = null, laagT = 1, laagKlok = 0;
+  var LAAGDUUR = 900;      /* milliseconden voor het in- en uitvloeien */
+  var kleurCache = {};
+  function laagKleur(naam){
+    if (kleurCache[naam]) return kleurCache[naam];
+    var h = 0;
+    for (var i = 0; i < naam.length; i++) h = (h * 31 + naam.charCodeAt(i)) % 360;
+    /* goudgeel tot rood zit al bij de uitgelichte rijken en de site zelf; de
+       achtergrond blijft in zachtere tinten, zodat het uitgelichte rijk eruit springt */
+    kleurCache[naam] = h;
+    return h;
+  }
+  function laadLagen(){
+    if (lagenGevraagd || !window.fetch) return;
+    lagenGevraagd = true;
+    fetch('tijdlagen.json').then(function(r){ return r.json(); }).then(function(d){
+      lagen = d.jaren || {};
+      /* de laag van de huidige stop meteen laten zien, zonder overgang */
+      laagNaar = String(jaarVanStop[Math.max(0, idxNow)]); laagVan = null; laagT = 1;
+      vuil = true;
+    }).catch(function(){ /* geen achtergrond: dan alleen het uitgelichte rijk */ });
+  }
+  /* Een jaarkaart op de laag tekenen: elk rijk in zijn eigen tint, met een dunne rand. */
+  function tekenLaag(c, jaar, alpha){
+    var lijst = lagen && lagen[jaar];
+    if (!lijst || alpha <= 0.01) return;
+    var sat = K.donker ? 42 : 48, licht = K.donker ? 52 : 64;
+    c.globalAlpha = alpha;
+    for (var i = 0; i < lijst.length; i++){
+      var g = lijst[i], h = laagKleur(g.n);
+      c.beginPath();
+      for (var j = 0; j < g.v.length; j++) ringPad(c, g.v[j]);
+      c.fillStyle = 'hsl(' + h + ',' + sat + '%,' + licht + '%)';
+      c.fill('evenodd');
+      c.strokeStyle = K.donker ? 'rgba(15,26,61,.45)' : 'rgba(255,255,255,.55)';
+      c.lineWidth = 0.8;
+      c.stroke();
+    }
+    c.globalAlpha = 1;
+  }
 
   var sky = document.getElementById('sky'),
       sectie = document.getElementById('reis'),
@@ -1191,6 +1242,18 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
     ctx.clearRect(0,0,S,S);
     ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fillStyle = K.zee; ctx.fill();
     if (land.length) { landPad(ctx); ctx.fillStyle = K.land; ctx.fill('evenodd'); }
+    /* de achtergrond: alle rijken van dat moment, de oude kaart uit en de nieuwe in */
+    if (lagen && land.length && (laagNaar || laagVan)) {
+      var basis = K.donker ? .62 : .5;
+      lctx.clearRect(0,0,S,S);
+      if (laagVan && laagT < 1) tekenLaag(lctx, laagVan, basis * (1 - laagT));
+      if (laagNaar) tekenLaag(lctx, laagNaar, basis * laagT);
+      mctx.clearRect(0,0,S,S); landPad(mctx); mctx.fillStyle = '#000'; mctx.fill('evenodd');
+      lctx.globalCompositeOperation = 'destination-in';
+      lctx.drawImage(masker, 0, 0, S, S);
+      lctx.globalCompositeOperation = 'source-over';
+      ctx.drawImage(laag, 0, 0, S, S);
+    }
     /* het rijk van deze stop: op een aparte laag, en dan alleen het deel op land overhouden */
     var stop = stops[idxNow] || stops[0];
     if (stop.rijk && land.length) {
@@ -1267,6 +1330,12 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
     vorigeKnop.disabled = idx === 0;
     volgendeKnop.disabled = idx === N-1;
     if (reduced) { lam = lamDoel; phi = phiDoel; }
+    /* de jaarkaart van deze stop, met een overgang vanaf de vorige */
+    var jr = String(jaarVanStop[idx]);
+    if (jr !== laagNaar) {
+      laagVan = laagNaar; laagNaar = jr;
+      laagT = (reduced || !laagVan) ? 1 : 0; laagKlok = performance.now();
+    }
     /* de achtergrond kleurt heel licht mee met de stop */
     var tint = st.rijk ? hex(rijken[st.rijk].kleur) : st.tint;
     sky.style.backgroundColor = mix(K.room, tint, st.rijk ? .10 : .16);
@@ -1362,6 +1431,8 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
   var vuil = true;
   (function loop(){
     if (inBeeld()) {
+      laadLagen();
+      if (laagT < 1) { laagT = Math.min(1, (performance.now() - laagKlok) / LAAGDUUR); vuil = true; }
       var dl = ((lamDoel - lam + 540) % 360) - 180;
       var dp = phiDoel - phi;
       if (!sleep && (Math.abs(dl) > 0.02 || Math.abs(dp) > 0.02)) {
@@ -1374,6 +1445,7 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
   maat();
   toonStop(0, true);
   addEventListener('resize', function(){ maat(); });
+  setTimeout(laadLagen, 5000);   /* ook zonder scrollen komt de achtergrond op tijd binnen */
   function themaBij(){ leesKleuren(); vuil = true; if (idxNow >= 0) { var st = stops[idxNow]; var tint = st.rijk ? hex(rijken[st.rijk].kleur) : st.tint; sky.style.backgroundColor = mix(K.room, tint, st.rijk ? .10 : .16); } }
   try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', themaBij); } catch (e) {}
   addEventListener('themawissel', themaBij);
