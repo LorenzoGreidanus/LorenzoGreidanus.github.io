@@ -12,7 +12,7 @@ Een site, twee kanten: de voorkant voor collega's en een aparte leeromgeving voo
 | `CNAME` | Koppelt de site aan meneergreidanus.nl |
 | `wereld.json` | Kustlijnen voor de wereldbol op de startpagina (Natural Earth, publiek domein) |
 | `rijken.json` | Grenzen van tien rijken op hun hoogtepunt, geknipt en vereenvoudigd uit [historical-basemaps](https://github.com/aourednik/historical-basemaps) (GPL-3; dit bestand valt onder dezelfde licentie) |
-| `tijdlagen.json` | Alle rijken en volken per stop van de wereldbol (22 jaarkaarten), sterk vereenvoudigd uit [historical-basemaps](https://github.com/aourednik/historical-basemaps) (GPL-3; dit bestand valt onder dezelfde licentie); wordt pas geladen als de bol in beeld komt |
+| `tijdlagen.json` | Per moment van de wereldbol de drie grootste rijken (26 jaarkaarten, 1942 met de hand getekend), vereenvoudigd uit [historical-basemaps](https://github.com/aourednik/historical-basemaps) (GPL-3; dit bestand valt onder dezelfde licentie); wordt pas geladen als de bol in beeld komt |
 | `leermiddelen/index.html` | Leeromgeving: voorpagina voor leerlingen met niveaukeuze |
 | `leermiddelen/basis.css` | Gedeelde afwerking van alle spellen (kleuren uit het merkboek, knoppen, beweging, focus, spelgevoel) en de donkere stand; wordt na de eigen stijl van elk spel geladen |
 | `leermiddelen/adaptief.js` | Meegroeiend niveau: wie de vragen te goed weet, krijgt ze een stap zwaarder (tl naar havo, havo naar vwo); alleen in Torenverdediging en Zwaardvechter |
