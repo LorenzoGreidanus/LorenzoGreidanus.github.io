@@ -405,6 +405,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
 @media(prefers-reduced-motion:reduce){.lghoi{transition:none !important}}
 
 </style>
+<script src="adaptief.js"></script>
 <link rel="stylesheet" href="basis.css">
 </head>
 <body>
@@ -2520,6 +2521,13 @@ function rekenVraag(rang, toegestaan) {
   var autoGoed = false, autoKlok = null;
 
   function rang(){ var n = NIVEAUS.filter(function(x){ return x.id === niveau; })[0]; return n ? n.rang : 2; }
+  /* De vragen groeien mee: wie het te goed weet krijgt een niveau hoger, van
+     tl naar havo, van havo naar vwo. De fouten op het bord rekenen met het
+     gekozen niveau; alleen de vragen worden zwaarder. Zie adaptief.js. */
+  var slim = Adaptief({ ladder:NIVEAUS.map(function(n){ return n.id; }), start:niveau,
+    naam:function(id){ var n = NIVEAUS.filter(function(x){ return x.id === id; })[0]; return n ? n.naam : id; }, wissel:function(){ pot = null; } });
+  function vraagRang(){ var n = NIVEAUS.filter(function(x){ return x.id === slim.niveau(); })[0]; return n ? n.rang : rang(); }
+  function vraagNiveauNaam(){ var n = NIVEAUS.filter(function(x){ return x.id === slim.niveau(); })[0]; return n ? n.naam : ''; }
 
   /* ---------- het pad ---------- */
   /* De lengte hoorde bij een pad dat nooit veranderde. Nu wordt er elk potje
@@ -2731,7 +2739,7 @@ function rekenVraag(rang, toegestaan) {
      antwoorden zijn landnamen. Vier landen uit dezelfde hoek van de wereld,
      want anders raad je het te makkelijk. */
   function nieuweVraag(){
-    var r = rang(), gekozen2 = keuze[vak] || [];
+    var r = vraagRang(), gekozen2 = keuze[vak] || [];
     if (vak === 'reken') return rekenVraag(r, gekozen2);
     var bron = BRONNEN[vak], nivo = NIVOS[vak];
     if (!pot || !pot.length){
@@ -2760,7 +2768,7 @@ function rekenVraag(rang, toegestaan) {
 
   function tekenVraag(){
     if (!vraag) return;
-    document.getElementById('vraagKop').textContent = vraag.t || 'vraag';
+    document.getElementById('vraagKop').textContent = (vraag.t || 'vraag') + (slim.verhoogd() ? ' \u00b7 ' + vraagNiveauNaam() : '');
     document.getElementById('vraagBeeld').innerHTML = beeldVoor(vraag);
     document.getElementById('vraagTekst').textContent = vraag.v;
     document.getElementById('beeldVak').innerHTML = vraag.beeld || '';
@@ -2784,6 +2792,7 @@ function rekenVraag(rang, toegestaan) {
   function antwoord(i){
     if (!vraag || gekliktIndex >= 0 || pauze) return;
     var goed = i === vraag.g;
+    slim.toets(goed);
     /* De fouten worden elke ronde taaier, maar een goed antwoord leverde altijd
        hetzelfde op. Dan loopt je bord onvermijdelijk achter. Vanaf nu telt de
        ronde mee, zodat late rondes de dure niveaus kunnen betalen. Het geld komt
@@ -6360,6 +6369,7 @@ function rekenVraag(rang, toegestaan) {
     pk.classList.remove('hide', 'aan'); pk.textContent = 'Pauze'; pk.setAttribute('aria-pressed', 'false');
     var sk = document.getElementById('snelBtn');
     sk.classList.remove('hide'); zetSnel(false);
+    slim.reset(niveau);
     vraag = nieuweVraag();
     document.getElementById('uitlegVak').innerHTML = '';
     document.getElementById('scherm-start').classList.add('hide');

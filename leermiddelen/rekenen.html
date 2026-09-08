@@ -209,6 +209,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 @media(prefers-reduced-motion:reduce){.lghoi{transition:none !important}}
 
 </style>
+<script src="adaptief.js"></script>
 <link rel="stylesheet" href="basis.css">
 </head>
 <body>
@@ -438,6 +439,10 @@ function maakOpties(goed){
   var bereik = null, tempo = null, soort = null, tijd = 0, punten = 0, goed = 0, fout = 0, reeks = 0, besteReeks = 0,
       huidige = null, bezig = false, laatsteTik = 0, opgeslagen = false;
   var gekozenTafels = [], tafelsGeraakt = false;
+  /* Het bereik groeit mee: wie tot 100 bijna alles goed heeft, krijgt sommen
+     tot 200 en onder nul. Zie adaptief.js. */
+  var slim = Adaptief({ ladder:BEREIK.map(function(b){ return b.id; }), start:'kgt',
+    naam:function(id){ var b = BEREIK.filter(function(x){ return x.id === id; })[0]; return b ? b.naam.toLowerCase() : id; } });
 
   /* Alleen bij tafels en delen doet de keuze iets. Bij de andere onderdelen komen
      er geen keersommen voorbij, dus dan blijft het vak verborgen. */
@@ -608,6 +613,7 @@ function maakOpties(goed){
   /* ---------- de race ---------- */
   function start(){
     tijd = tempo.start; punten = 0; goed = 0; fout = 0; reeks = 0; besteReeks = 0;
+    slim.reset(bereik.id);
     bezig = true; opgeslagen = false;
     elStart.classList.add('hide'); elEinde.classList.add('hide'); elSpel.classList.remove('hide');
     document.getElementById('naamvak').classList.remove('hide');
@@ -637,7 +643,7 @@ function maakOpties(goed){
   }
 
   function volgendeSom(){
-    huidige = maakSom(bereik.id, soort.id, actieveTafels());
+    huidige = maakSom(slim.niveau(), soort.id, actieveTafels());
     document.getElementById('vraag').textContent = huidige.vraag + ' =';
     document.getElementById('soortLabel').textContent = huidige.soort;
     var opties = maakOpties(huidige.antwoord);
@@ -659,6 +665,7 @@ function maakOpties(goed){
   function antwoord(gekozen, knop){
     if (!bezig) return;
     var klopt = gekozen === huidige.antwoord;
+    slim.toets(klopt);
     Array.prototype.forEach.call(document.getElementById('opties').children, function(c){ c.disabled = true; });
 
     if (klopt){
