@@ -1,9 +1,13 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-<!-- Torenverdediging, versie 1.0 -->
+<!-- Torenverdediging, versie 1.1 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+/* Opgeslagen themakeuze meteen toepassen, nog voor de pagina getekend wordt. */
+(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();
+</script>
 <title>Torenverdediging &middot; meneer Greidanus</title>
 <meta name="description" content="Verdedig de klas tegen fouten. Goede antwoorden leveren munten op, met munten koop je torens.">
 <meta name="theme-color" content="#FBF6F1">
@@ -101,12 +105,26 @@ body.groot .uitleg b{font-size:1.1rem}
    Het bord is een SVG met een viewBox, dus hij schaalt vanzelf en houdt zijn
    verhoudingen; wat overblijft aan de korte kant wordt opgevuld met de
    graskleur van het vak eromheen. */
-.baan{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:14px;
-  padding:10px 0 14px;align-items:stretch;height:calc(100vh - 62px);min-height:520px}
+/* De tellers stonden als een rij doosjes boven het bord en de vraag stond in
+   een kolom van vierhonderd pixels ernaast. Op een laptop of een digibord van
+   1280 breed bleef er dan een bord van zevenhonderd bij driehonderdzeventig
+   over, en zodra de penningteller erbij kwam brak de tellerrij over twee
+   regels en zakte het bord nog verder in. Nu staat alles wat geen bord is in
+   de zijkolom: de tellers als klein rooster, de knoppen eronder en dan de
+   vraag. Het bord krijgt de hele hoogte en de rest van de breedte. */
+.baan{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:12px;
+  padding:8px 0 10px;align-items:stretch;height:calc(100vh - 62px);min-height:520px}
 .bordkolom{display:flex;flex-direction:column;min-height:0}
+.zijkolom{display:flex;flex-direction:column;gap:8px;min-height:0}
 @media (max-width:1080px){
   .baan{grid-template-columns:1fr;height:auto;padding-bottom:40px}
   .bordkolom{min-height:0}
+  /* onder elkaar: eerst de tellers, dan het bord, dan de vraag */
+  .zijkolom{display:contents}
+  .zijkolom .balk{order:-2}
+  .zijkolom .bordknoppen{order:-1}
+  .bordkolom{order:0}
+  .zijkolom .vraagvak{order:1}
 }
 /* Het vak vult de hoogte die overblijft en de tekening staat er in het midden
    in. Wat aan de boven- en onderkant overblijft krijgt de graskleur van het vak
@@ -123,16 +141,19 @@ body.groot .uitleg b{font-size:1.1rem}
    tekenen en het vak knipt hem af op zijn eigen rand. Het gras en de zee lopen
    dus gewoon door tot de rand, wat de maat van het scherm ook is. */
 @media (max-width:1080px){.bordvak{flex:0 0 auto}.bordvak svg{height:auto}}
-.balk{display:flex;gap:8px;flex-wrap:wrap;padding:0 0 10px;align-items:stretch}
+.balk{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;padding:0;align-items:stretch}
 /* De regel onder het bord was klein grijs. Nu is het een strook die je ook van
    een afstand ziet, want daar staat wat je moet doen. */
-.bordtip{font-size:.9rem;color:var(--ink);background:#fff;border:1px solid rgba(20,34,76,.10);
-  border-radius:12px;padding:9px 14px;margin-top:9px;box-shadow:0 3px 10px rgba(20,34,76,.05)}
+.bordtip{font-size:.86rem;color:var(--ink);background:#fff;border:1px solid rgba(20,34,76,.10);
+  border-radius:12px;padding:7px 12px;margin-top:7px;box-shadow:0 3px 10px rgba(20,34,76,.05);line-height:1.4}
 /* 'leeg' houdt de plek vrij maar laat niets zien: zo verspringt de indeling
    niet als een knop komt of gaat. hide haalt het element uit de opmaak en dat
    liet het bord bij elke rondewissel van hoogte veranderen. */
 .leeg{visibility:hidden !important}
-.bordknoppen{padding:9px 0 0;min-height:52px}
+/* de twee knoppen naast elkaar in de zijkolom; als ze allebei leeg zijn
+   blijft de ruimte staan, zodat de vraag niet op en neer springt */
+.bordknoppen{display:flex;gap:6px;padding:0;min-height:40px}
+.bordknoppen button{flex:1;min-height:40px;font-size:.78rem;line-height:1.2;padding:6px 10px}
 /* Onder het spel hoort geen colofon: dat duwt het bord omhoog en levert niets
    op tijdens een les. */
 #scherm-spel:not(.hide) ~ footer{display:none}
@@ -147,8 +168,8 @@ body.groot .uitleg b{font-size:1.1rem}
    zien. De knoppen eromheen blijven wel werken. */
 body.gepauzeerd .bordvak{cursor:default}
 body.gepauzeerd #nuBtn{opacity:.45;pointer-events:none}
-#nuBtn{border:none;background:var(--goed);color:#fff;font-weight:600;border-radius:999px;
-  padding:10px 20px;font-size:.86rem;box-shadow:0 5px 0 rgba(20,34,76,.12)}
+#nuBtn{border:none;background:var(--goed);color:#fff;font-weight:600;border-radius:12px;
+  box-shadow:0 3px 10px rgba(20,34,76,.10)}
 #nuBtn:hover{transform:translateY(-1px)}
 /* Op een aanraakscherm mag de pagina niet meescrollen als je een toren sleept. */
 .bordvak{touch-action:none}
@@ -169,23 +190,26 @@ body.gepauzeerd #nuBtn{opacity:.45;pointer-events:none}
 /* Acht tellers in acht identieke witte doosjes: alles even belangrijk, en dus
    niets. Munten en de klas zijn waar het om gaat, dus die zijn nu groter en
    krijgen een gekleurde bovenrand. De rest is bijzaak en mag klein. */
-.meterv{flex:1;min-width:74px;background:#fff;border:1px solid rgba(20,34,76,.10);border-radius:13px;box-shadow:0 3px 10px rgba(20,34,76,.06);
-  padding:7px 9px;text-align:center;position:relative}
-.meterv.hoofd{flex:1.5;min-width:112px;padding:9px 12px;border-top:4px solid var(--amber)}
-.meterv.hoofd b{font-size:1.85rem}
-.meterv.hoofd span{font-size:.72rem;color:var(--ink);font-weight:600}
+.meterv{min-width:0;background:#fff;border:1px solid rgba(20,34,76,.10);border-radius:11px;box-shadow:0 3px 10px rgba(20,34,76,.06);
+  padding:5px 4px;text-align:center;position:relative}
+.meterv.hoofd{grid-column:span 3;padding:7px 8px;border-top:4px solid var(--amber)}
+.meterv.hoofd b{font-size:1.55rem}
+.meterv.hoofd span{font-size:.68rem;color:var(--ink);font-weight:600}
 #levenVak.hoofd{border-top-color:var(--goed)}
 #levenVak.laag{border-top-color:var(--fout);background:var(--fout-bg)}
 #levenVak.laag b{color:var(--fout)}
 /* De knop om de klas op te lappen staat tussen de tellers, naast de munten en
    de levens waar hij over gaat. Hij stond eerst onder het bord, maar daar ligt
    het testpaneel overheen en dan kun je hem tijdens het testen niet indrukken. */
-#lapBtn{flex:1.4;min-width:150px;background:var(--goed);color:#fff;border:none;border-radius:13px;
-  padding:7px 12px;font-size:.82rem;font-weight:700;line-height:1.25;
+#lapBtn{background:var(--amber);color:var(--ink);border:none;border-radius:12px;font-weight:700;
   box-shadow:0 3px 10px rgba(20,34,76,.10)}
 #lapBtn:hover:not(:disabled){filter:brightness(1.08)}
 #lapBtn:disabled{background:#fff;color:var(--muted);border:1px solid rgba(20,34,76,.10);
   box-shadow:none;opacity:1}
+/* de penningteller staat er altijd, maar zolang je er geen hebt is hij stil */
+#penningVak.stil{opacity:.45}
+/* de sneltoets in de kopbalk */
+.linkbtn.aan{background:var(--goed);border-color:var(--goed);color:#fff}
 /* Munten erbij: de meter licht groen op en het bedrag vliegt eruit omhoog. */
 .meterv.winst{background:var(--goed-bg);border-color:var(--goed);animation:muntklop .45s ease}
 #penningVak{background:#f3edfa;border-color:#6b3fa0}
@@ -203,13 +227,17 @@ body.gepauzeerd #nuBtn{opacity:.45;pointer-events:none}
   0%{opacity:0;transform:translate(-50%,8px) scale(.8)}
   22%{opacity:1;transform:translate(-50%,-2px) scale(1.12)}
   100%{opacity:0;transform:translate(-50%,-34px) scale(1)}}
-.meterv b{display:block;font-size:1.25rem;line-height:1.1;font-variant-numeric:tabular-nums}
-.meterv span{font-size:.66rem;color:var(--muted);letter-spacing:.09em;text-transform:uppercase}
+.meterv b{display:block;font-size:1.05rem;line-height:1.1;font-variant-numeric:tabular-nums}
+.meterv span{display:block;font-size:.6rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 
-.vraagvak{background:var(--ocean);color:#fff;border-radius:20px;padding:18px;position:sticky;top:66px}
+.vraagvak{background:var(--ocean);color:#fff;border-radius:18px;padding:14px 16px;flex:1;min-height:0;overflow:auto;
+  overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.45) transparent}
+.vraagvak::-webkit-scrollbar{width:8px}
+.vraagvak::-webkit-scrollbar-thumb{background:rgba(255,255,255,.4);border-radius:99px}
 .vraagvak .eyebrow{color:rgba(255,255,255,.72)}
-.vraagvak h2{font-size:1.3rem;margin:8px 0 16px;line-height:1.3}
+.vraagvak h2{font-size:1.18rem;margin:6px 0 12px;line-height:1.3}
 /* Bij aardrijkskunde staat er een vlag of een landvorm boven de vraag. */
 #vraagBeeld:empty{display:none}
 #vraagBeeld{background:#fff;border-radius:14px;padding:10px;margin:10px auto 6px;display:grid;place-items:center;
@@ -233,7 +261,7 @@ body.gepauzeerd #nuBtn{opacity:.45;pointer-events:none}
 #vraagBeeld .vormvak{height:min(230px,26vh);aspect-ratio:1/1}
 /* Op het digibord telt zichtbaarheid vanaf de achterste rij, dus daar mag het
    plaatje wat groter, maar nog steeds met een dak erop. */
-body.groot .baan{grid-template-columns:minmax(0,1fr) 520px}
+body.groot .baan{grid-template-columns:minmax(0,1fr) 430px}
 body.groot #vraagBeeld{padding:12px}
 body.groot #vraagBeeld .vlagvak{height:min(190px,21vh)}
 body.groot #vraagBeeld .vormvak{height:min(300px,32vh)}
@@ -243,21 +271,9 @@ body.groot #vraagBeeld .vormvak{height:min(300px,32vh)}
   #vraagBeeld .vlagvak{height:min(120px,14vh)}
   #vraagBeeld .vormvak{height:min(190px,23vh)}
 }
-/* Mocht een vraag toch lang worden, dan scrollt het paneel zelf en niet de
-   hele pagina. Zo blijven de antwoorden bereikbaar zonder dat het bord en de
-   tellers wegschuiven. */
-@media (min-width:1081px){
-  .vraagvak{max-height:calc(100vh - 78px);overflow:auto;overscroll-behavior:contain;
-    scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.45) transparent}
-  .vraagvak::-webkit-scrollbar{width:8px}
-  .vraagvak::-webkit-scrollbar-thumb{background:rgba(255,255,255,.4);border-radius:99px}
-}
-/* De tellers blijven onder de kop hangen, zodat je munten en klas ook ziet als
-   je naar beneden bent gescrold. Op een smal scherm niet: daar breken de
-   tellers over meer regels en zou de balk het halve scherm opeten. */
-@media (min-width:761px){
-  .balk{position:sticky;top:52px;z-index:20;background:var(--room);
-    padding:8px 0 10px;margin-top:-8px}
+/* Onder elkaar (smal scherm) mag de vraag gewoon zo hoog zijn als hij is. */
+@media (max-width:1080px){
+  .vraagvak{overflow:visible;flex:none}
 }
 /* het plaatje bij een aardrijkskundevraag */
 #beeldVak:empty{display:none}
@@ -270,15 +286,15 @@ body.groot .beeld{max-height:220px}
    grijs op blauw. Nu zijn het lichte knoppen met donkere tekst: hetzelfde
    contrast als de rest van de pagina, en goed en fout blijven daardoor ook
    duidelijk verschillen omdat die juist wel kleur krijgen. */
-.optie{background:#fff;border:2px solid #fff;color:var(--ink);border-radius:14px;
-  padding:13px 16px;text-align:left;font-size:1rem;font-weight:600;
+.optie{background:#fff;border:2px solid #fff;color:var(--ink);border-radius:12px;
+  padding:10px 13px;text-align:left;font-size:.95rem;font-weight:600;
   transition:transform .12s var(--ease),box-shadow .12s ease}
 .optie:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 5px 14px rgba(20,34,76,.22)}
 .optie.juist{background:var(--goed);border-color:var(--goed);color:#fff}
 .optie.mis{background:var(--crab);border-color:var(--crab);color:#fff}
 .optie:disabled:not(.juist):not(.mis){opacity:.55}
 .optie:disabled{cursor:default}
-.uitleg{margin-top:14px;background:rgba(255,255,255,.14);border-radius:14px;padding:12px 14px;font-size:.88rem;line-height:1.5}
+.uitleg{margin-top:10px;background:rgba(255,255,255,.14);border-radius:12px;padding:10px 12px;font-size:.86rem;line-height:1.5}
 .uitleg.goed{background:rgba(255,255,255,.22)}
 .reeks{margin-top:14px;font-size:.82rem;color:rgba(255,255,255,.75)}
 
@@ -290,9 +306,10 @@ body.groot .beeld{max-height:220px}
 .cijfers b{display:block;font-size:1.9rem;font-variant-numeric:tabular-nums}
 .cijfers span{font-size:.75rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
 
-body.groot .vraagvak h2{font-size:1.7rem}
-body.groot .optie{font-size:1.12rem;padding:14px 17px}
-body.groot .meterv b{font-size:1.6rem}
+body.groot .vraagvak h2{font-size:1.5rem}
+body.groot .optie{font-size:1.08rem;padding:12px 15px}
+body.groot .meterv b{font-size:1.3rem}
+body.groot .meterv.hoofd b{font-size:1.8rem}
 body.groot .uitleg{font-size:1rem}
 
 /* ---------- testpaneel ----------
@@ -388,6 +405,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
 @media(prefers-reduced-motion:reduce){.lghoi{transition:none !important}}
 
 </style>
+<script src="adaptief.js"></script>
 <link rel="stylesheet" href="basis.css">
 </head>
 <body>
@@ -395,7 +413,12 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
   <div class="wrap hd">
     <a class="mark" href="./"><span class="lgmark"><i><span>L</span><span>G</span></i><b class="lgdot"></b></span><span class="lgnaam"><span>Torenverdediging</span><span class="lgstreep"></span></span><span class="lghoi">alle spellen</span></a>
     <div class="hd-right">
+      <button class="themaknop" id="themaknop" type="button" aria-label="Schakel naar donker" title="Donker of licht">
+        <svg class="maan" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+        <svg class="zon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>
+      </button>
       <button class="pauzeknop hide" id="pauzeBtn" type="button" aria-pressed="false">Pauze</button>
+      <button class="linkbtn hide" id="snelBtn" type="button" aria-pressed="false" title="Het bord twee keer zo snel">2&times; snel</button>
       <button class="linkbtn" id="grootBtn" type="button">Digibord</button>
       <button class="linkbtn" id="opnieuwBtn" type="button">Opnieuw</button>
     </div>
@@ -427,7 +450,8 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
       <i style="background:var(--ocean)">3</i>
       <b>Elke tiende ronde een baas</b>
       <span>Vier soorten om de beurt, soms de apenbaas die je torens stillegt, en in ronde
-        vijftig de Grote Fout, of op het eiland de Kraken. Elke gevelde baas lapt de school weer op. Halverwege loopt er
+        vijftig de Grote Fout, de Kraken of de Magmakoning. Op de eilanden komt vanaf ronde zestig de
+        Zeeslang. Elke gevelde baas lapt de school weer op. Halverwege loopt er
         een spaarpot mee: breek hem en het geld is van jou.</span>
     </div>
     <div>
@@ -435,13 +459,15 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
       <b>Verdienen</b>
       <span>Elke gevelde baas levert een penning op: daarmee geef je een toren zijn eigen kracht.
         Goed op rij maakt je torens ook harder slaan, tot de helft erbij. De Tonkla Toren
-        verdien je met een lange reeks goed, de Apentoren met de apenbaas, en het tropisch
-        eiland door ronde vijftig te overleven.</span>
+        verdien je met een lange reeks goed, de Apentoren met de apenbaas, het tropisch
+        eiland door ronde vijftig te overleven, de eilanden door de Kraken te vellen en de
+        vulkaan door daar de Zeeslang te vellen.</span>
     </div>
   </div>
 
   <p class="tip">Haast? Roep de volgende ronde erbij voor munten. Twee keer op rij verdubbelt
-    de uitbetaling, maar levert ook meer fouten op. Pauze zet alles stil, ook met de P.</p>
+    de uitbetaling, maar levert ook meer fouten op; een ronde telt pas als alles wat erin liep
+    geveld is. Pauze zet alles stil, ook met de P. Bord op orde? Zet 2&times; aan.</p>
 
   <p class="eyebrow">kies je niveau</p>
   <div class="niv" id="niveaus"></div>
@@ -467,23 +493,24 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
 <section class="wrap hide" id="scherm-spel">
   <div class="baan">
     <div class="bordkolom">
+      <div class="bordvak" id="bordvak"></div>
+      <p class="bordtip" id="bordtip">Tik naast het pad voor een toren, of op het pad om er iets neer te leggen.</p>
+    </div>
+    <div class="zijkolom">
       <div class="balk">
         <div class="meterv hoofd"><b id="mMunt">0</b><span>munten</span></div>
         <div class="meterv hoofd" id="levenVak"><b id="mLeven">12</b><span>klas</span></div>
-        <button type="button" id="lapBtn" class="leeg">De klas oplappen</button>
         <div class="meterv"><b id="mRonde">1</b><span id="mRondeUit">ronde</span></div>
         <div class="meterv"><b id="mReeks">0</b><span>op rij</span></div>
         <div class="meterv"><b id="mBonus">&times;1,00</b><span>schade</span></div>
+        <div class="meterv stil" id="penningVak"><b id="mPenning">0</b><span>penningen</span></div>
         <div class="meterv"><b id="mToren">0/12</b><span>torens</span></div>
         <div class="meterv"><b id="mWeg">0/5</b><span>op de weg</span></div>
-        <div class="meterv hide" id="penningVak"><b id="mPenning">0</b><span>penningen</span></div>
       </div>
-      <div class="bordvak" id="bordvak"></div>
-      <p class="bordtip" id="bordtip">Tik naast het pad voor een toren, of op het pad om er iets neer te leggen.</p>
       <div class="bordknoppen">
+        <button type="button" id="lapBtn" class="leeg">De klas oplappen</button>
         <button type="button" id="nuBtn" class="leeg">Volgende ronde nu starten</button>
       </div>
-    </div>
     <div class="vraagvak">
       <p class="eyebrow" id="vraagKop">vraag</p>
       <div id="beeldVak"></div>
@@ -492,6 +519,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
       <div class="opties" id="opties"></div>
       <div id="uitlegVak"></div>
       <p class="reeks" id="reeksUit"></p>
+    </div>
     </div>
   </div>
 </section>
@@ -560,10 +588,10 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
 /* Elke kaart heeft ook een naam voor op het eiland. Dezelfde weg, maar 'Het
    schoolplein' in het zand tussen de palmen leest als een fout. */
 const KAARTEN = [
-  { naam:'Het schoolplein', eiland:'De lagune',     pad:[[-40,90],[190,90],[190,250],[430,250],[430,110],[650,110],[650,390],[812,390]] },
-  { naam:'De zaagtand',     eiland:'De rifrand',    pad:[[-40,140],[130,140],[130,330],[300,330],[300,140],[470,140],[470,330],[640,330],[640,170],[812,170]] },
-  { naam:'De grote lus',    eiland:'De baai',       pad:[[-40,150],[280,150],[280,290],[130,290],[130,390],[540,390],[540,240],[812,240]] },
-  { naam:'De slingerweg',   eiland:'De kokosroute', pad:[[-40,230],[120,230],[120,100],[330,100],[330,300],[520,300],[520,130],[720,130],[720,300],[812,300]] }
+  { naam:'Het schoolplein', eiland:'De lagune',     archipel:'De kralensnoer',  vulkaan:'De asvlakte',   pad:[[-40,90],[190,90],[190,250],[430,250],[430,110],[650,110],[650,390],[812,390]] },
+  { naam:'De zaagtand',     eiland:'De rifrand',    archipel:'De scherenkust',  vulkaan:'De lavatrap',   pad:[[-40,140],[130,140],[130,330],[300,330],[300,140],[470,140],[470,330],[640,330],[640,170],[812,170]] },
+  { naam:'De grote lus',    eiland:'De baai',       archipel:'De atol',         vulkaan:'De kraterrand', pad:[[-40,150],[280,150],[280,290],[130,290],[130,390],[540,390],[540,240],[812,240]] },
+  { naam:'De slingerweg',   eiland:'De kokosroute', archipel:'De eilandhop',    vulkaan:'De zwavelweg',  pad:[[-40,230],[120,230],[120,100],[330,100],[330,300],[520,300],[520,130],[720,130],[720,300],[812,300]] }
 ];
 /* Het pad eindigt bij de deur van de school. Het liep eerst door tot de rand,
    en dan valt het gebouw half buiten het bord. */
@@ -571,17 +599,27 @@ let PAD = KAARTEN[0].pad;
 /* De Tonkla Bommenwerper. De straal staat hier los, want daar draai je aan als
    hij te sterk of te slap blijkt: alles binnen dat aantal pixels van de inslag
    krijgt de volle klap. */
-const BOMSTRAAL = 78, BOMVAL = 0.45, VLUCHT = 0.6;   /* val van de bom en de vlucht heen, in seconden */
+const BOMSTRAAL = 78, BOMVAL = 0.45;   /* de val van de bom, in seconden */
+/* Het toestel vliegt over het hele bord, dus de toren heeft geen bereik. Het
+   neemt vijf bommen mee, laat er om de anderhalve seconde een vallen op de fout
+   die het verst is, en moet daarna terug naar zijn veld om te herladen. Dat
+   duurt even, en in die tijd doet hij niets: precies de adempauze die de
+   Bommenwerper eerder niet had. Versterken maakt het herladen korter. */
+const BOMMEN = 5, BOMPAUZE = 1.4, HERLAAD = 9, VLIEGSNEL = 190;
 /* Het vliegtuig blijft boven zijn veld rondjes draaien als het niets te doen
    heeft: zo ver van de toren, en zoveel radialen per seconde. */
 const KRING = 36, KRINGVAART = 1.7, VLIEGHOOGTE = 26;
 /* De Vriendenhut. Per hut lopen er standaard twee vrienden rond, ze houden een
    fout tegen zolang ze leven en slaan er ondertussen op in. Wat hen raakt is de
    fout waar ze tegenaan staan; een baas slaat drie keer zo hard. */
+/* Een vriend hield eerst een fout tegen en had er levens genoeg voor om een
+   halve ronde te blijven staan. Nu houdt hij alles tegen wat tegen hem aan
+   loopt, tot hij valt: een echte prop op de weg. Daar staat tegenover dat hij
+   minder kan hebben en dat alles wat hij tegenhoudt ook op hem inslaat. */
 const VRIEND = {
   aantal:2,          /* hoeveel er tegelijk rondlopen, met de penning een meer */
-  hp:46,             /* hoeveel een vriend kan hebben op niveau een */
-  hpNiveau:0.6,      /* hoeveel taaier per niveau erbij */
+  hp:30,             /* hoeveel een vriend kan hebben op niveau een */
+  hpNiveau:0.4,      /* hoeveel taaier per niveau erbij */
   schade:8,          /* per klap */
   tempo:0.55,        /* seconden tussen twee klappen */
   snelheid:60,       /* hoe hard ze het pad af lopen om een fout op te vangen */
@@ -640,11 +678,26 @@ const SOORTEN = {
      en hoog zodra er drie of meer in een rij lopen: dat is precies waar hij voor
      is. De Vriendenhut schiet helemaal niet, maar stuurt vrienden het pad op die
      de fouten tegenhouden en ondertussen op ze inslaan. */
-  bommenwerper: {naam:'Tonkla Bommenwerper', letter:'B', kleur:'#3f6b8f', prijs:150, bereik:230,
-              schade:38, tempo:2.8, onder:'Laat bommen vallen, raakt een hele groep',
+  bommenwerper: {naam:'Tonkla Bommenwerper', letter:'B', kleur:'#3f6b8f', prijs:150, bereik:0,
+              schade:38, tempo:0, onder:'Vliegt over het hele bord, vijf bommen per vlucht',
               bommen:true, straal:BOMSTRAAL, speciaal:true, slot:'eiland'},
   vrienden:  {naam:'Vriendenhut',  letter:'V', kleur:'#2f7d52',            prijs:110, bereik:150,
-              schade:0,  tempo:0,  onder:'Stuurt vrienden het pad op', vrienden:true, speciaal:true, slot:'eiland'}
+              schade:0,  tempo:0,  onder:'Vrienden houden alles tegen tot ze vallen', vrienden:true, speciaal:true, slot:'eiland'},
+  /* De twee torens van de eilanden staan op het water, niet op het land. De
+     Kanonneerboot is het kanon van de zee: snel en dichtbij. De Onderzeeer
+     schiet raketten die bij de inslag alles in de buurt meenemen. */
+  schip:     {naam:'Kanonneerboot', letter:'B', kleur:'#4a6b8a',           prijs:95,  bereik:150, schade:8,  tempo:0.42,
+              onder:'Kanonnen, alleen op het water', water:true, speciaal:true, slot:'archipel'},
+  onderzeeer:{naam:'Onderzee\u00ebr',   letter:'O', kleur:'#2d5f6e',           prijs:140, bereik:240, schade:34, tempo:1.7,
+              onder:'Raketten met een klap eromheen, op het water', water:true, raket:true, straal:44, speciaal:true, slot:'archipel'},
+  /* De twee torens van de vulkaan. De Magmamortier slingert lava die op de
+     weg blijft liggen en iedereen verbrandt die erdoorheen loopt. De
+     Zwavelblazer zet alles vlakbij in brand: weinig per klap, maar het vuur
+     brandt door als de fout al weer verder loopt. */
+  mortier:   {naam:'Magmamortier', letter:'M', kleur:'#b3361f',            prijs:140, bereik:210, schade:26, tempo:1.9,
+              onder:'Lava die op de weg blijft branden', lava:true, straal:50, speciaal:true, slot:'vulkaan'},
+  zwavel:    {naam:'Zwavelblazer', letter:'Z', kleur:'#c98a1c',            prijs:95,  bereik:105, schade:2.5, tempo:0.5,
+              onder:'Zet alles in de buurt in brand', vlak:true, brand:true, speciaal:true, slot:'vulkaan'}
 };
 
 /* ---------------------------------------------------------------------------
@@ -674,6 +727,16 @@ const ICONEN = {
   bommenwerper:'<path d="M3 12 h18 l-4 -2.5 h-6 l-3 -3.5 h-2 l1 3.5 h-2 l-2 -1.5 h-1.5 l1.5 4 -1.5 4 h1.5 l2 -1.5 h2 l-1 3.5 h2 l3 -3.5 h6 Z" fill="K" stroke="K" stroke-width="1.2" stroke-linejoin="round"/>',
   vrienden: '<path d="M12 3 l7 2.5 v5.5 c0 4.5 -3 8 -7 10 c-4 -2 -7 -5.5 -7 -10 V5.5 Z" fill="none" stroke="K" stroke-width="2" stroke-linejoin="round"/>' +
             '<path d="M8.5 12 l2.5 2.5 l4.5 -5" fill="none" stroke="K" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
+  schip:    '<path d="M3 14 h18 l-3 5 h-12 z" fill="K" stroke="K" stroke-width="1.2" stroke-linejoin="round"/>' +
+            '<rect x="9" y="9" width="6" height="5" rx="1" fill="K"/><path d="M15 11 h6" stroke="K" stroke-width="2.2" stroke-linecap="round"/>' +
+            '<path d="M2 21 q3 -2 5 0 q3 2 5 0 q3 -2 5 0 q3 2 5 0" fill="none" stroke="K" stroke-width="1.4" stroke-linecap="round"/>',
+  onderzeeer:'<ellipse cx="12" cy="14" rx="9" ry="4" fill="K"/><rect x="10" y="7" width="5" height="5" rx="1" fill="K"/>' +
+            '<path d="M12 7 v-3 h3" fill="none" stroke="K" stroke-width="1.6" stroke-linecap="round"/>' +
+            '<path d="M2 14 h3" stroke="K" stroke-width="2" stroke-linecap="round"/>',
+  mortier:  '<path d="M7 20 h10 l-1 -8 a4 4 0 0 0 -8 0 z" fill="K" stroke="K" stroke-width="1.2" stroke-linejoin="round"/>' +
+            '<path d="M12 10 q-3 -4 0 -7 q3 3 0 7 M9 9 q-1 -3 1 -4 M15 9 q1 -3 -1 -4" fill="none" stroke="K" stroke-width="1.6" stroke-linecap="round"/>',
+  zwavel:   '<circle cx="12" cy="13" r="4" fill="K"/>' +
+            '<path d="M12 9 v-5 M15.5 11 l4.3 -2.5 M15.5 15 l4.3 2.5 M12 17 v5 M8.5 15 l-4.3 2.5 M8.5 11 l-4.3 -2.5" stroke="K" stroke-width="2" stroke-linecap="round"/>',
   /* de dingen op de weg */
   pek:      '<path d="M4 15 q3 -6 8 -4 q5 2 8 -1 q1 6 -4 8 q-6 2 -12 -3 Z" fill="K" opacity=".85"/><circle cx="8" cy="9" r="1.6" fill="K"/>',
   angels:   '<path d="M12 3 v18 M4.5 7.5 l15 9 M4.5 16.5 l15 -9" stroke="K" stroke-width="2.6" stroke-linecap="round"/><circle cx="12" cy="12" r="2.6" fill="K"/>',
@@ -700,13 +763,23 @@ function icoon(id, kleur){
    hebt vrijgespeeld. De lijst 'torens' van een omgeving is alleen nog de
    volgorde waarin ze standaard aan staan: op het eiland eerst de eilandtorens.
    --------------------------------------------------------------------------- */
+/* Vier omgevingen, achter elkaar vrij te spelen: het eiland door ronde vijftig
+   te overleven, de eilanden door de Kraken te vellen, de vulkaan door daar de
+   Zeeslang te vellen. 'strand' zegt welke poort en welke school er staan,
+   'water' dat je op het water bouwt en alleen op de eilandjes op het land. */
 const THEMAS = [
-  { id:'plein', naam:'Het schoolplein',
+  { id:'plein', naam:'Het schoolplein', plek:'',
     onder:'Gras, een zandweg en de school aan het eind. Met de Pekelpot, de Tonkla Toren en de Apentoren.',
     torens:['kanon','katapult','vertrager','pekelpot','schutter','tonkla','aap'] },
-  { id:'eiland', naam:'Tropisch eiland', slot:true,
+  { id:'eiland', naam:'Tropisch eiland', slot:'eiland', strand:true, plek:' op het tropisch eiland',
     onder:'Zee, palmen en een vlonder over het zand. Met de Tonkla Bommenwerper en de Vriendenhut.',
-    torens:['kanon','katapult','vertrager','schutter','bommenwerper','vrienden'] }
+    torens:['kanon','katapult','vertrager','schutter','bommenwerper','vrienden'] },
+  { id:'archipel', naam:'De eilanden', slot:'archipel', strand:true, water:true, plek:' tussen de eilanden',
+    onder:'Open zee met kleine eilandjes. Landtorens passen alleen op een eiland; de Kanonneerboot en de Onderzee\u00ebr liggen op het water. Vanaf ronde zestig komt de Zeeslang.',
+    torens:['kanon','katapult','schutter','onderzeeer','schip','bommenwerper'] },
+  { id:'vulkaan', naam:'De vulkaan', slot:'vulkaan', plek:' op de vulkaan',
+    onder:'As, lavabeken en een stenen weg. Met de Magmamortier en de Zwavelblazer, en in ronde vijftig de Magmakoning.',
+    torens:['kanon','katapult','vertrager','schutter','mortier','zwavel'] }
 ];
 const EILANDRONDE = 50;   /* zoveel rondes overleven en het eiland staat open */
 /* Hoeveel torens je meeneemt. Minder dan alles, want dan is het een keuze: wie
@@ -2287,8 +2360,17 @@ function rekenVraag(rang, toegestaan) {
   var vliegers = [];                                       /* de vliegtuigen van de Bommenwerper */
   var cijfers = [], pluis = [], golven = [], kogels = [];   /* effecten en de stenen van de katapult */
   var schillen = [];                                       /* de schillen die de apenbaas gooit */
+  var lavas = [];                                          /* de plassen van de Magmamortier */
   var wachtrij = 5, spawnKlok = 0, rondePauze = 2;
   var bank = { munten:60, leven:12, ronde:1 };
+  /* bank.ronde is de ronde waarvan de fouten nu komen. Roep je de volgende er
+     alvast bij, dan loopt dat getal op terwijl de vorige nog op het pad staat.
+     Gehaald is een ronde pas als alles wat er hoort te lopen ook echt geveld
+     is, en dat is het getal dat telt voor het eindscherm en het klassement. */
+  var rondeGehaald = 0;
+  /* De sneltoets naast Pauze: alles twee keer zo snel. Het spel rekent dan
+     twee stappen per tik; de natuurkunde blijft precies dezelfde. */
+  var snel = false;
   var reeks = 0, besteReeks = 0, goedAantal = 0, foutAantal = 0;
   /* Doorleren maakt je torens sterker, niet alleen rijker. Twee procent extra
      schade per goed antwoord op rij, tot vijftig procent bij vijfentwintig.
@@ -2315,6 +2397,21 @@ function rekenVraag(rang, toegestaan) {
   var eilandVrij = (function(){
     try { return localStorage.getItem('lg-toren-eiland') === 'ja'; } catch (e){ return false; }
   })();
+  /* De eilanden verdien je door de Kraken te vellen, de vulkaan door op de
+     eilanden de Zeeslang te vellen. */
+  var archipelVrij = (function(){
+    try { return localStorage.getItem('lg-toren-archipel') === 'ja'; } catch (e){ return false; }
+  })();
+  var vulkaanVrij = (function(){
+    try { return localStorage.getItem('lg-toren-vulkaan') === 'ja'; } catch (e){ return false; }
+  })();
+  function slotVrij(slot){
+    return slot === 'aap' ? aapVrij : slot === 'eiland' ? eilandVrij
+         : slot === 'archipel' ? archipelVrij : slot === 'vulkaan' ? vulkaanVrij : tonklaVrij;
+  }
+  function themaVrij(t){ return !t.slot || slotVrij(t.slot); }
+  /* Een watertoren hoort alleen in een omgeving met water. */
+  function past(id){ var so = SOORTEN[id]; return !so.water || !!thema.water; }
   var thema = THEMAS[0];
   /* ---------- de torenkeuze ----------
      Per omgeving onthoudt het spel welke torens je meeneemt. Een toren die op
@@ -2326,13 +2423,15 @@ function rekenVraag(rang, toegestaan) {
   function isVrij(id){
     var so = SOORTEN[id];
     if (!so.speciaal) return true;
-    return so.slot === 'aap' ? aapVrij : so.slot === 'eiland' ? eilandVrij : tonklaVrij;
+    return slotVrij(so.slot);
   }
   function slotTekst(id){
     var so = SOORTEN[id];
     if (!so.speciaal) return '';
     return so.slot === 'aap' ? 'vel de apenbaas om hem vrij te spelen'
          : so.slot === 'eiland' ? 'overleef ronde ' + EILANDRONDE + ' en hij is vrij, samen met het eiland'
+         : so.slot === 'archipel' ? 'vel de Kraken op het eiland en hij is vrij, samen met de eilanden'
+         : so.slot === 'vulkaan' ? 'vel de Zeeslang op de eilanden en hij is vrij, samen met de vulkaan'
          : TONKLAREEKS + ' goed op rij in een partij speelt hem vrij';
   }
   /* alle torens, met die van de omgeving voorop */
@@ -2345,11 +2444,11 @@ function rekenVraag(rang, toegestaan) {
     var lijst = null;
     try { lijst = JSON.parse(localStorage.getItem('lg-toren-keuze-' + thema.id) || 'null'); } catch (e){}
     if (!Array.isArray(lijst)) lijst = torenVolgorde();
-    /* alleen wat bestaat en vrij is, en nooit meer dan mag */
-    lijst = lijst.filter(function(id){ return SOORTEN[id] && isVrij(id); });
+    /* alleen wat bestaat, vrij is en in deze omgeving past, en nooit meer dan mag */
+    lijst = lijst.filter(function(id){ return SOORTEN[id] && isVrij(id) && past(id); });
     if (lijst.length > MAXKEUZE) lijst = lijst.slice(0, MAXKEUZE);
     if (lijst.length < MINKEUZE){
-      torenVolgorde().forEach(function(id){ if (lijst.length < MAXKEUZE && isVrij(id) && lijst.indexOf(id) < 0) lijst.push(id); });
+      torenVolgorde().forEach(function(id){ if (lijst.length < MAXKEUZE && isVrij(id) && past(id) && lijst.indexOf(id) < 0) lijst.push(id); });
     }
     keuzeTorens[thema.id] = lijst;
     return lijst;
@@ -2359,7 +2458,7 @@ function rekenVraag(rang, toegestaan) {
     try { localStorage.setItem('lg-toren-keuze-' + thema.id, JSON.stringify(gekozen())); } catch (e){}
   }
   /* Hoe de kaart nu heet, in de omgeving waarin je speelt. */
-  function kaartNaam(k){ return (thema.id === 'eiland' && k.eiland) ? k.eiland : k.naam; }
+  function kaartNaam(k){ return (thema.id !== 'plein' && k[thema.id]) ? k[thema.id] : k.naam; }
   var vraag = null, gekliktIndex = -1;
   var klok = null;
   /* Staat het spel stil? Dan loopt de klok niet, maar blijft alles wel staan
@@ -2383,14 +2482,6 @@ function rekenVraag(rang, toegestaan) {
     miniBijWachtrij = isMiniRonde(bank.ronde)
       ? Math.floor(Math.random() * Math.max(1, Math.floor(wachtrij / 2))) : miniBijWachtrij;
     if (!nieuweRonde) return;
-    /* Wie aan ronde eenenvijftig begint heeft ronde vijftig overleefd, en
-       daarmee de Grote Fout. Dat opent het tropisch eiland, ook een volgende les. */
-    if (bank.ronde > EILANDRONDE && !eilandVrij){
-      eilandVrij = true;
-      try { localStorage.setItem('lg-toren-eiland', 'ja'); } catch (e){}
-      melding2('Je hebt ronde ' + EILANDRONDE + ' overleefd. Het tropisch eiland staat open: ' +
-        'kies het bij de volgende partij en speel met de Bommenwerper en de Vriendenhut.');
-    }
     if (isRustronde(bank.ronde)){
       melding2('Ronde ' + bank.ronde + '. Rustronde: minder en zwakkere fouten. Bouw bij.');
     } else if (isBaasRonde(bank.ronde)){
@@ -2430,6 +2521,13 @@ function rekenVraag(rang, toegestaan) {
   var autoGoed = false, autoKlok = null;
 
   function rang(){ var n = NIVEAUS.filter(function(x){ return x.id === niveau; })[0]; return n ? n.rang : 2; }
+  /* De vragen groeien mee: wie het te goed weet krijgt een niveau hoger, van
+     tl naar havo, van havo naar vwo. De fouten op het bord rekenen met het
+     gekozen niveau; alleen de vragen worden zwaarder. Zie adaptief.js. */
+  var slim = Adaptief({ ladder:NIVEAUS.map(function(n){ return n.id; }), start:niveau,
+    naam:function(id){ var n = NIVEAUS.filter(function(x){ return x.id === id; })[0]; return n ? n.naam : id; }, wissel:function(){ pot = null; } });
+  function vraagRang(){ var n = NIVEAUS.filter(function(x){ return x.id === slim.niveau(); })[0]; return n ? n.rang : rang(); }
+  function vraagNiveauNaam(){ var n = NIVEAUS.filter(function(x){ return x.id === slim.niveau(); })[0]; return n ? n.naam : ''; }
 
   /* ---------- het pad ---------- */
   /* De lengte hoorde bij een pad dat nooit veranderde. Nu wordt er elk potje
@@ -2531,7 +2629,7 @@ function rekenVraag(rang, toegestaan) {
   function tekenThemas(){
     var doel = document.getElementById('themas');
     doel.innerHTML = THEMAS.map(function(t){
-      var op = !t.slot || eilandVrij;
+      var op = themaVrij(t);
       return '<button type="button" data-t="' + t.id + '"' +
         (thema.id === t.id ? ' class="on"' : '') + (op ? '' : ' disabled') + '>' +
         (op ? '' : '\u{1F512} ') + t.naam + '</button>';
@@ -2546,15 +2644,17 @@ function rekenVraag(rang, toegestaan) {
       });
     });
     var uit = document.getElementById('themaUit');
-    uit.textContent = thema.onder + (eilandVrij ? '' :
-      ' Het tropisch eiland gaat open zodra je ronde ' + EILANDRONDE + ' overleeft.');
+    var dicht = !eilandVrij ? ' Het tropisch eiland gaat open zodra je ronde ' + EILANDRONDE + ' overleeft.'
+              : !archipelVrij ? ' De eilanden gaan open zodra je op het eiland de Kraken velt.'
+              : !vulkaanVrij ? ' De vulkaan gaat open zodra je op de eilanden de Zeeslang velt.' : '';
+    uit.textContent = thema.onder + dicht;
   }
 
   function tekenTorenkeuze(){
     var doel = document.getElementById('torenkeuze');
     if (!doel) return;
     var lijst = gekozen();
-    doel.innerHTML = torenVolgorde().map(function(id){
+    doel.innerHTML = torenVolgorde().filter(past).map(function(id){
       var so = SOORTEN[id], vrij = isVrij(id), aan = lijst.indexOf(id) >= 0;
       var vol = !aan && lijst.length >= MAXKEUZE;
       return '<button type="button" class="torenkaart' + (aan ? ' on' : '') + '" data-id="' + id + '"' +
@@ -2585,7 +2685,7 @@ function rekenVraag(rang, toegestaan) {
   function zegKeuze(tekst){
     var uit = document.getElementById('torenUit');
     if (!uit) return;
-    var l = gekozen(), opSlot = Object.keys(SOORTEN).filter(function(id){ return !isVrij(id); }).length;
+    var l = gekozen(), opSlot = Object.keys(SOORTEN).filter(function(id){ return past(id) && !isVrij(id); }).length;
     uit.textContent = tekst || (l.length + ' van de ' + MAXKEUZE + ' gekozen' +
       (opSlot ? ', ' + opSlot + ' nog op slot' : '') +
       '. Wat je hier aanzet staat in het koopmenu; pek, voetangels en de versperring heb je altijd.');
@@ -2639,7 +2739,7 @@ function rekenVraag(rang, toegestaan) {
      antwoorden zijn landnamen. Vier landen uit dezelfde hoek van de wereld,
      want anders raad je het te makkelijk. */
   function nieuweVraag(){
-    var r = rang(), gekozen2 = keuze[vak] || [];
+    var r = vraagRang(), gekozen2 = keuze[vak] || [];
     if (vak === 'reken') return rekenVraag(r, gekozen2);
     var bron = BRONNEN[vak], nivo = NIVOS[vak];
     if (!pot || !pot.length){
@@ -2668,7 +2768,7 @@ function rekenVraag(rang, toegestaan) {
 
   function tekenVraag(){
     if (!vraag) return;
-    document.getElementById('vraagKop').textContent = vraag.t || 'vraag';
+    document.getElementById('vraagKop').textContent = (vraag.t || 'vraag') + (slim.verhoogd() ? ' \u00b7 ' + vraagNiveauNaam() : '');
     document.getElementById('vraagBeeld').innerHTML = beeldVoor(vraag);
     document.getElementById('vraagTekst').textContent = vraag.v;
     document.getElementById('beeldVak').innerHTML = vraag.beeld || '';
@@ -2692,6 +2792,7 @@ function rekenVraag(rang, toegestaan) {
   function antwoord(i){
     if (!vraag || gekliktIndex >= 0 || pauze) return;
     var goed = i === vraag.g;
+    slim.toets(goed);
     /* De fouten worden elke ronde taaier, maar een goed antwoord leverde altijd
        hetzelfde op. Dan loopt je bord onvermijdelijk achter. Vanaf nu telt de
        ronde mee, zodat late rondes de dure niveaus kunnen betalen. Het geld komt
@@ -2754,13 +2855,21 @@ function rekenVraag(rang, toegestaan) {
   var WEGDING = {
     pek:     { naam:'Pekvlek',      prijs:45,  straal:34, kleur:'#3b3730',
                onder:'vertraagt alles wat erdoor loopt' },
+    /* De voetangels deden vijf schade per treffer, in elke ronde. In ronde
+       twintig heeft een gewone fout er honderddertig, dus dat was niets. Nu
+       groeit de klap mee met de ronde en is het minstens een tiende van wat een
+       gewone fout kan hebben; een baas krijgt alleen het rondedeel. */
     angels:  { naam:'Voetangels',   prijs:60,  straal:26, kleur:'#7d7566',
-               onder:'doet schade, slijt na 30 treffers', schade:5, voorraad:30 },
+               onder:'doet flinke schade, groeit mee, slijt na 40 treffers', schade:5, voorraad:40 },
     hek:     { naam:'Wegversperring', prijs:80, straal:20, kleur:'#8a6a45',
                onder:'houdt fouten even tegen, gaat 6 keer mee', voorraad:6 }
   };
   var MAXWEG = 5;
-  var wegdingen = [];
+  var wegdingen = [], wegTeller = 0;
+  function angelSchade(e){
+    var basis = 4 + 1.6 * bank.ronde;
+    return e.baas ? basis : Math.max(basis, e.maxHp * 0.12);
+  }
   var WEGVRIJ = 70;
 
   function magOpWeg(x, y, behalve){
@@ -2835,12 +2944,65 @@ function rekenVraag(rang, toegestaan) {
     return hk;
   }
 
-  function magHier(x, y, behalve){
+  /* ---------- de eilandjes ----------
+     Op de eilanden is het bord zee, met eilandjes langs de weg. Het eerste
+     ligt bij de poort, het laatste onder de school, en daartussen om de
+     honderdveertig pixels een, om en om links en rechts van de weg. Een
+     landtoren moet er goed op passen; een watertoren mag er juist niet op. */
+  var EILANDEN = null;
+  function eilanden(){
+    if (EILANDEN && EILANDEN.kaart === kaart) return EILANDEN.lijst;
+    var lijst = [];
+    var q0 = positie(POORTAF);
+    lijst.push({ x:q0.x + 12, y:q0.y, rx:72, ry:62 });
+    var e = PAD[PAD.length-1];
+    lijst.push({ x:e[0] + 4, y:e[1] - 22, rx:108, ry:90 });
+    var kant = 1;
+    for (var d = 200; d < PADLENGTE - 230; d += 140){
+      var q = positie(d), hk = padHoek(q.x, q.y) * Math.PI / 180;
+      var gezet = false;
+      /* eerst de kant die aan de beurt is, anders de andere; en waar een ander
+         stuk weg dichtbij loopt wordt het eilandje kleiner in plaats van weg */
+      for (var poging = 0; poging < 2 && !gezet; poging++){
+        var k = poging ? -kant : kant;
+        var cx = q.x - Math.sin(hk) * k * 88, cy = q.y + Math.cos(hk) * k * 88;
+        cx = Math.max(44, Math.min(BREED - 44, cx));
+        cy = Math.max(44, Math.min(HOOG - 44, cy));
+        var af = afstandTotPad(cx, cy);
+        if (af < 62) continue;
+        if (Math.hypot(cx - (e[0] + 4), cy - (e[1] - 22)) < 150) continue;
+        var rx = Math.min(58, af - 24), ry = Math.min(46, rx * 0.82);
+        if (lijst.some(function(ei){ return Math.hypot(ei.x - cx, ei.y - cy) < ei.rx + rx - 6; })) continue;
+        lijst.push({ x:cx, y:cy, rx:rx, ry:ry });
+        gezet = true;
+      }
+      kant = -kant;
+    }
+    EILANDEN = { kaart:kaart, lijst:lijst };
+    return lijst;
+  }
+  /* Ligt dit punt op het land? Zonder water is alles land. De marge zorgt dat
+     een toren met zijn hele voet op het eiland staat en niet half in zee. */
+  function opEiland(x, y, marge){
+    if (!thema.water) return true;
+    var m = marge === undefined ? 0.72 : marge;
+    return eilanden().some(function(ei){
+      var dx = (x - ei.x) / ei.rx, dy = (y - ei.y) / ei.ry;
+      return dx * dx + dy * dy <= m;
+    });
+  }
+
+  function magHier(x, y, behalve, soort){
     if (x < RAND || x > BREED - RAND || y < RAND || y > HOOG - RAND) return false;
     if (afstandTotPad(x, y) < PADVRIJ) return false;
     /* niet boven op de school bouwen */
     var e = PAD[PAD.length-1];
     if (Math.abs(x - (e[0] + 4)) < 62 && y > e[1] - 108 && y < e[1] + 22) return false;
+    /* op de eilanden: land op het land, water op het water */
+    if (thema.water && soort){
+      var land = opEiland(x, y);
+      if (SOORTEN[soort].water ? land : !land) return false;
+    }
     for (var i = 0; i < torens.length; i++){
       if (torens[i] === behalve) continue;
       if (Math.hypot(torens[i].x - x, torens[i].y - y) < TORENVRIJ) return false;
@@ -2856,6 +3018,8 @@ function rekenVraag(rang, toegestaan) {
   }
 
   function bereikVan(t){ return SOORTEN[t.soort].bereik + (t.niveau - 1) * 18; }
+  /* hoe lang de Bommenwerper over het herladen doet: korter per niveau, en met de Trosbom nog korter */
+  function herlaadtijd(t){ return Math.max(4, HERLAAD - (t.niveau - 1) * 1.5) * (t.kracht ? 0.7 : 1); }
 
   /* ---------- torens kopen, op het bord zelf ----------
      Eerst stond er een winkel onder het bord: je koos daar een toren en klikte
@@ -2882,7 +3046,11 @@ function rekenVraag(rang, toegestaan) {
     tonkla:    { naam:'Onweer',       uit:'de schokgolf laadt twee keer zo snel',mark:'\u21AF' },
     aap:       { naam:'Bommenwerper', uit:'gooit er om de acht seconden een bom bij', mark:'\u2299' },
     bommenwerper: { naam:'Trosbom',   uit:'een veel grotere inslag en meer schade', mark:'\u2234' },
-    vrienden:  { naam:'Vriendenclub', uit:'er loopt een vriend extra mee en ze staan sneller weer op', mark:'\u263A' }
+    vrienden:  { naam:'Vriendenclub', uit:'er loopt een vriend extra mee en ze staan sneller weer op', mark:'\u263A' },
+    schip:     { naam:'Breedzij',     uit:'schiet op drie fouten tegelijk',        mark:'\u2630' },
+    onderzeeer:{ naam:'Torpedo',      uit:'dubbele schade tegen bazen',            mark:'\u27A4' },
+    mortier:   { naam:'Vuurzee',      uit:'de lava ligt twee keer zo lang en is breder', mark:'\u2668' },
+    zwavel:    { naam:'Hittegolf',    uit:'het vuur brandt twee keer zo fel',      mark:'\u2600' }
   };
 
   /* Vier soorten bazen, om de beurt. Ze vragen elk iets anders: de zware moet je
@@ -2902,7 +3070,9 @@ function rekenVraag(rang, toegestaan) {
      de baas die aan de beurt was, en hoe verder je komt hoe vaker. Hij vecht
      ook anders. In plaats van hard te slaan gooit hij bananenschillen naar je
      torens, en een toren die er een over zich heen krijgt staat even stil. */
-  var APENBAAS = { id:'aap', naam:'de apenbaas', taai:10, vlug:0.78, schild:0.3, mark:'A', kleur:'#8a6a45', gooit:true,
+  /* Zijn loopsnelheid stond op 0,78 en dan stond hij bij de klas voordat je
+     hem geraakt had; nu 0,62. */
+  var APENBAAS = { id:'aap', naam:'de apenbaas', taai:10, vlug:0.62, schild:0.3, mark:'A', kleur:'#8a6a45', gooit:true,
     uit:'Hij is de taaiste van allemaal en legt je torens met bananenschillen stil.' };
   /* Hij gooit vaker, de schil ligt langer, hij mikt verder, en vanaf ronde
      dertig gooit hij er twee tegelijk. Zonder dat was hij vooral een baas met
@@ -2955,18 +3125,40 @@ function rekenVraag(rang, toegestaan) {
      het pad, en dan is elke fout die meeloopt een paar seconden verstopt. Dat is
      precies wat het eiland lastig maakt: de Bommenwerper ziet ze niet meer, en
      alleen de Scherpschutter, de vrienden en wat op de weg ligt helpen nog. */
-  var KRAKEN = { id:'kraken', naam:'de Kraken', taai:22, vlug:0.38, schild:0.35, mega:true,
+  /* Vijf procent minder taai dan de Grote Fout: 20,9 in plaats van 22. */
+  var KRAKEN = { id:'kraken', naam:'de Kraken', taai:20.9, vlug:0.38, schild:0.35, mega:true,
     mark:'\u224b', kleur:'#2a3f6e', splijt:6, inkt:true,
     uit:'Hij spuit inkt over het pad: dan is alles om hem heen even verstopt. Hij spat uiteen als hij valt.' };
   var INKTTIJD = 7, INKTDUUR = 4, INKTBEREIK = 260;
+  /* ---------- de Zeeslang ----------
+     De baas van de eilanden, vanaf ronde zestig en daarna om de andere
+     baasronde. Hij duikt om de zoveel tijd onder: dan zwemt hij anderhalf keer
+     zo hard en raken alleen de Kanonneerboot, de Onderzeeer en de
+     Scherpschutter hem nog. Wie alleen landtorens heeft ziet hem onder zijn
+     bord door glijden. Vel hem en de vulkaan gaat open. */
+  var ZEESLANGRONDE = 60, DUIKTIJD = 7, DUIKDUUR = 3.5;
+  var ZEESLANG = { id:'zeeslang', naam:'de Zeeslang', taai:16, vlug:0.62, schild:0.2, duikt:true,
+    mark:'\u223f', kleur:'#1f7a6d',
+    uit:'Hij duikt geregeld onder: dan zwemt hij harder en raken alleen de boot, de onderzee\u00ebr en de Scherpschutter hem.' };
+  /* ---------- de Magmakoning ----------
+     De eindbaas van de vulkaan. Even taai als de Grote Fout, maar hij barst om
+     de zoveel tijd uit: er springen vonken van hem af die als snelle fouten
+     doorlopen, en elke toren in de buurt wordt zo heet dat hij een paar
+     seconden trager schiet. Bouw dus niet alles op een kluitje. */
+  var UITBARSTTIJD = 9, HITTEDUUR = 4, HITTEBEREIK = 180, VONKEN = 3;
+  var MAGMAKONING = { id:'magma', naam:'de Magmakoning', taai:24, vlug:0.36, schild:0.3, mega:true,
+    mark:'\u2668', kleur:'#7a2a12', splijt:6, uitbarst:true,
+    uit:'Om de zoveel tijd barst hij uit: vonken op de weg, en torens in de buurt schieten even trager. Hij spat uiteen als hij valt.' };
 
   function baasVan(ronde){
     if (!baasKeuzes[ronde]){
       baasKeuzes[ronde] = isMegaRonde(ronde)
-        ? (thema.id === 'eiland' ? KRAKEN : MEGABAAS)
-        : (Math.random() < apenkans(ronde))
-          ? APENBAAS
-          : BAZEN[(Math.floor(ronde / BAASRONDE) - 1) % BAZEN.length];
+        ? (thema.id === 'vulkaan' ? MAGMAKONING : thema.strand ? KRAKEN : MEGABAAS)
+        : (thema.id === 'archipel' && ronde >= ZEESLANGRONDE && (ronde / BAASRONDE) % 2 === 0)
+          ? ZEESLANG
+          : (Math.random() < apenkans(ronde))
+            ? APENBAAS
+            : BAZEN[(Math.floor(ronde / BAASRONDE) - 1) % BAZEN.length];
     }
     return baasKeuzes[ronde];
   }
@@ -3092,7 +3284,12 @@ function rekenVraag(rang, toegestaan) {
   }
 
   /* Wie mag er op deze fout schieten? */
-  function ziet(toren, e){ return !e || !e.camo || toren.soort === 'schutter'; }
+  function ziet(toren, e){
+    if (!e) return true;
+    /* onder water zien alleen de watertorens en de Scherpschutter hem */
+    if (e.onder > 0) return !!SOORTEN[toren.soort].water || toren.soort === 'schutter';
+    return !e.camo || toren.soort === 'schutter';
+  }
   function kiesFout(ronde){
     var mag = FOUTEN.filter(function(f){ return f.vanaf <= ronde; });
     var golf = golfVan(ronde);
@@ -3195,13 +3392,16 @@ function rekenVraag(rang, toegestaan) {
         rijen.push({ id:'vol2', label:'Je hebt al ' + MAXTORENS + ' torens', prijs:null, kan:false,
                      onder:'haal er eerst een weg', kleur:'#5b6480' });
       } else {
+        var opLand = opEiland(x, y);
         Object.keys(SOORTEN).forEach(function(id){
           /* Alleen wat je hebt meegenomen, plus een bijzondere toren die je
              tijdens deze partij hebt vrijgespeeld: die mag je meteen proberen. */
           var so = SOORTEN[id], prijs = prijsVan(id);
           var mee = gekozen().indexOf(id) >= 0;
-          var netVrij = so.speciaal && !vrijBijStart[so.slot] && isVrij(id);
+          var netVrij = so.speciaal && !vrijBijStart[so.slot] && isVrij(id) && past(id);
           if (!mee && !netVrij) return;
+          /* op de eilanden: op het water alleen de boten, op het land de rest */
+          if (thema.water && (so.water ? opLand : !opLand)) return;
           if (so.speciaal){
             /* elke bijzondere toren heeft zijn eigen slot */
             if (!isVrij(id)) return;                    /* nog niet verdiend, dus niet in de lijst */
@@ -3222,7 +3422,7 @@ function rekenVraag(rang, toegestaan) {
        niveau, of dat je op de weg staat, of hoeveel munten je hebt om te bouwen. */
     var titel = toren
       ? SOORTEN[toren.soort].naam + ' \u00b7 niveau ' + toren.niveau
-      : opWeg ? 'Op de weg' : 'Bouwen';
+      : opWeg ? 'Op de weg' : (thema.water ? (opEiland(x, y) ? 'Bouwen op het eiland' : 'Bouwen op het water') : 'Bouwen');
     var onder2 = toren
       ? (toren.kracht ? KRACHTEN[toren.soort].naam : 'tik om te versterken of te verplaatsen')
       : bank.munten + ' munten in kas';
@@ -3249,7 +3449,7 @@ function rekenVraag(rang, toegestaan) {
       var soort = r.id.slice(4), w = WEGDING[soort];
       if (!magOpWeg(menu.punt.x, menu.punt.y, null) || wegdingen.length >= MAXWEG) return;
       bank.munten -= w.prijs; laatMuntZien(-w.prijs);
-      wegdingen.push({ x:menu.punt.x, y:menu.punt.y, soort:soort,
+      wegdingen.push({ x:menu.punt.x, y:menu.punt.y, soort:soort, id:++wegTeller,
                        voorraad:w.voorraad || 0, klok:0,
                        hoek:padHoek(menu.punt.x, menu.punt.y) });
       menu = null; tekenMeters(); tekenBord(); return;
@@ -3276,7 +3476,7 @@ function rekenVraag(rang, toegestaan) {
     } else if (r.id === 'sterker' && t && r.kan){
       bank.munten -= r.prijs; laatMuntZien(-r.prijs); t.niveau++;
     } else if (SOORTEN[r.id] && r.kan){
-      if (!magHier(menu.punt.x, menu.punt.y, null) || torens.length >= MAXTORENS) return;
+      if (!magHier(menu.punt.x, menu.punt.y, null, r.id) || torens.length >= MAXTORENS) return;
       bank.munten -= r.prijs; laatMuntZien(-r.prijs);
       torens.push({ x:menu.punt.x, y:menu.punt.y, soort:r.id, niveau:1, klok:0 });
     } else return;
@@ -3297,7 +3497,7 @@ function rekenVraag(rang, toegestaan) {
      De maten blijven binnen wat magHier uitsluit voor bouwen, dus het gebouw
      groeit niet buiten zijn plek. */
   function tekenKlas(cx, cy, leven, maxLeven){
-  if (thema.id === 'eiland') return tekenStrandklas(cx, cy, leven, maxLeven);
+  if (thema.strand) return tekenStrandklas(cx, cy, leven, maxLeven);
   var deel = Math.max(0, Math.min(1, leven / maxLeven));
   var stuk = 1 - deel;                       /* 0 is gaaf, 1 is bijna weg */
   var kapot = function(n){ return stuk > n; };
@@ -3497,7 +3697,7 @@ function rekenVraag(rang, toegestaan) {
     return s;
   }
 
-  function raakVijand(e, schade, vertragen){
+  function raakVijand(e, schade, vertragen, stil){
     if (!e || e.dood) return;
     /* Een schild slikt een deel van de klap, tot het onder de helft van de
        levens op is. Daarna telt alles weer normaal. */
@@ -3510,10 +3710,10 @@ function rekenVraag(rang, toegestaan) {
       }
     }
     e.hp -= schade;
-    e.flits = 0.22;
+    if (!stil) e.flits = 0.22;
     if (vertragen) e.traag = 1.4;
     var q = positie(e.d);
-    cijfers.push({ x:q.x, y:q.y - 18, tekst:'-' + Math.round(schade), leven:0.7,
+    if (!stil) cijfers.push({ x:q.x, y:q.y - 18, tekst:'-' + Math.round(schade), leven:0.7,
                    kleur:e.baas ? '#EA9836' : '#fff' });
     if (e.hp <= 0){
       e.dood = true;
@@ -3560,15 +3760,27 @@ function rekenVraag(rang, toegestaan) {
           aapVrij = true;
           try { localStorage.setItem('lg-toren-aap', 'ja'); } catch (x3){}
         }
+        /* de Kraken opent de eilanden, de Zeeslang de vulkaan */
+        var opent = '';
+        if (e.baassoort === 'kraken' && !archipelVrij){
+          archipelVrij = true;
+          try { localStorage.setItem('lg-toren-archipel', 'ja'); } catch (x4){}
+          opent = ' De eilanden staan open: kies ze bij de volgende partij.';
+        }
+        if (e.baassoort === 'zeeslang' && !vulkaanVrij){
+          vulkaanVrij = true;
+          try { localStorage.setItem('lg-toren-vulkaan', 'ja'); } catch (x5){}
+          opent = ' De vulkaan staat open: kies hem bij de volgende partij.';
+        }
         melding2(e.mega
           ? (e.baasnaam || 'de baas').replace(/^de /, 'De ') + ' is geveld. Ronde ' + bank.ronde + ' gehaald: ' + beloning +
             ' munten, drie penningen' + (heel > 0 ? ', de school is weer heel' : '') +
-            '. Hij spat nog uiteen in ' + e.splijt + ' snelle fouten, dus maak af.'
+            '. Hij spat nog uiteen in ' + e.splijt + ' snelle fouten, dus maak af.' + opent
           : eersteAap
             ? 'Apenbaas geveld. ' + beloning + ' munten, een penning' + levenUit +
               ', en de Apentoren is vrij.'
-            : 'Baas geveld. ' + beloning + ' munten, een penning' + levenUit +
-              '. Tik een toren aan.');
+            : (e.baasnaam || 'de baas').replace(/^de /, 'De ') + ' geveld. ' + beloning + ' munten, een penning' + levenUit +
+              '.' + (opent || ' Tik een toren aan.'));
         if (e.splijt){
           for (var z = 0; z < e.splijt; z++){
             var shp = Math.max(1, Math.round(e.basisHp * 0.5));
@@ -3602,6 +3814,8 @@ function rekenVraag(rang, toegestaan) {
   function achtergrond(){
     if (ACHTERGROND) return ACHTERGROND;
     if (thema.id === 'eiland') return eilandAchtergrond();
+    if (thema.id === 'archipel') return archipelAchtergrond();
+    if (thema.id === 'vulkaan') return vulkaanAchtergrond();
     var g = '<defs>' +
       '<radialGradient id="steen" cx="35%" cy="30%">' +
         '<stop offset="0%" stop-color="#e8e1d2"/><stop offset="100%" stop-color="#bdb3a0"/></radialGradient>' +
@@ -3721,7 +3935,7 @@ function rekenVraag(rang, toegestaan) {
       var tx = px + kant * 4, ty = py - hoog;
       [[-26, -10], [-16, -20], [16, -20], [26, -10], [0, -22]].forEach(function(b){
         g += '<path d="M' + tx.toFixed(0) + ',' + ty.toFixed(0) + ' q' + (b[0] / 2) + ',' + (b[1] - 4) +
-          ' ' + b[0] + ',' + b[1] + ' q-' + (b[0] / 2) + ',' + (4 - b[1] / 2) + ' -' + b[0] + ',' + (-b[1]) + 'z" ' +
+          ' ' + b[0] + ',' + b[1] + ' q' + (-b[0] / 2) + ',' + (4 - b[1] / 2) + ' ' + (-b[0]) + ',' + (-b[1]) + 'z" ' +
           'fill="#3f8f5c" stroke="#2c6b44" stroke-width="1.2" stroke-linejoin="round"/>';
       });
       g += '<circle cx="' + (tx + kant * 5).toFixed(0) + '" cy="' + (ty + 4).toFixed(0) +
@@ -3744,6 +3958,137 @@ function rekenVraag(rang, toegestaan) {
     }
     g += '<text x="14" y="' + (HOOG - 13) + '" font-size="12" font-weight="600" ' +
       'fill="#0f3f4c" opacity=".9">' + kaartNaam(kaart) + ' \u00b7 tropisch eiland</text>';
+    ACHTERGROND = g;
+    return g;
+  }
+
+  /* ---------- de eilanden ----------
+     Zee over het hele bord, met eilandjes van zand langs de weg. De weg zelf
+     is een vlonder op palen: over het water een brug, over een eiland een pad.
+     De poort en de school staan op hun eigen eiland. */
+  function archipelAchtergrond(){
+    var g = '<defs>' +
+      '<radialGradient id="steen" cx="35%" cy="30%">' +
+        '<stop offset="0%" stop-color="#f3e6cb"/><stop offset="100%" stop-color="#c8ab7e"/></radialGradient>' +
+      '<linearGradient id="zee" x1="0" y1="0" x2="0" y2="1">' +
+        '<stop offset="0%" stop-color="#3f9fbd"/><stop offset="100%" stop-color="#4fb3c9"/></linearGradient>' +
+      '<filter id="zacht" x="-30%" y="-30%" width="160%" height="160%">' +
+        '<feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#14224C" flood-opacity=".22"/></filter>' +
+      '</defs>';
+    var zaad = 23;
+    function toeval(){ zaad = (zaad * 1103515245 + 12345) % 2147483648; return zaad / 2147483648; }
+    g += '<rect x="' + (-BUITEN) + '" y="' + (-BUITEN) + '" width="' + (BREED + 2 * BUITEN) +
+      '" height="' + (HOOG + 2 * BUITEN) + '" fill="url(#zee)"/>';
+    for (var w = 0; w < 170; w++){
+      var wx = -300 + toeval() * (BREED + 600), wy = -300 + toeval() * (HOOG + 600);
+      g += '<path d="M' + wx.toFixed(0) + ',' + wy.toFixed(0) + ' q7,-4 14,0 q7,4 14,0" fill="none" ' +
+        'stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity=".35"/>';
+    }
+    /* de palen van de brug, onder de vlonder, over het water */
+    for (var d0 = 8; d0 < PADLENGTE; d0 += 46){
+      var q0 = positie(d0);
+      if (opEiland(q0.x, q0.y, 1)) continue;
+      var hk0 = padHoek(q0.x, q0.y);
+      g += '<g transform="translate(' + q0.x.toFixed(1) + ',' + q0.y.toFixed(1) + ') rotate(' + hk0.toFixed(1) + ')">' +
+        '<rect x="-3" y="-30" width="6" height="8" rx="2" fill="#7a5a3a"/><rect x="-3" y="22" width="6" height="8" rx="2" fill="#7a5a3a"/>' +
+        '<ellipse cx="0" cy="-26" rx="9" ry="3" fill="#fff" opacity=".25"/><ellipse cx="0" cy="26" rx="9" ry="3" fill="#fff" opacity=".25"/></g>';
+    }
+    /* de eilandjes: een natte zoom, zand, en wat groen of een rots erop */
+    eilanden().forEach(function(ei, i){
+      g += '<ellipse cx="' + ei.x + '" cy="' + ei.y + '" rx="' + (ei.rx + 9) + '" ry="' + (ei.ry + 8) + '" fill="#9fd9df" opacity=".8"/>';
+      g += '<ellipse cx="' + ei.x + '" cy="' + ei.y + '" rx="' + (ei.rx + 3) + '" ry="' + (ei.ry + 3) + '" fill="#e3c99a"/>';
+      g += '<ellipse cx="' + ei.x + '" cy="' + ei.y + '" rx="' + ei.rx + '" ry="' + ei.ry + '" fill="#f4e4c3"/>';
+      g += '<ellipse cx="' + (ei.x - ei.rx * 0.2) + '" cy="' + (ei.y - ei.ry * 0.25) + '" rx="' + (ei.rx * 0.5) + '" ry="' + (ei.ry * 0.4) + '" fill="#fff" opacity=".18"/>';
+      if (i < 2) return;                       /* poort en school staan er zelf op */
+      /* om en om een palm en een rots, aan de rand zodat het midden vrij blijft */
+      var hoekje = toeval() * Math.PI * 2;
+      var px = ei.x + Math.cos(hoekje) * ei.rx * 0.82, py = ei.y + Math.sin(hoekje) * ei.ry * 0.82;
+      if (afstandTotPad(px, py) < 34) return;
+      if (i % 2){
+        g += '<ellipse cx="' + px.toFixed(0) + '" cy="' + py.toFixed(0) + '" rx="12" ry="4" fill="rgba(20,34,76,.13)"/>';
+        g += '<path d="M' + px.toFixed(0) + ',' + py.toFixed(0) + ' q5,-14 3,-28" fill="none" stroke="#9b7141" stroke-width="4" stroke-linecap="round"/>';
+        [[-18, -8], [-10, -16], [12, -16], [18, -8]].forEach(function(b){
+          g += '<path d="M' + (px + 3).toFixed(0) + ',' + (py - 28).toFixed(0) + ' q' + (b[0] / 2) + ',' + (b[1] - 3) +
+            ' ' + b[0] + ',' + b[1] + ' q' + (-b[0] / 2) + ',' + (3 - b[1] / 2) + ' ' + (-b[0]) + ',' + (-b[1]) + 'z" fill="#3f8f5c" stroke="#2c6b44" stroke-width="1.1"/>';
+        });
+      } else {
+        g += '<path d="M' + (px - 11).toFixed(0) + ',' + (py + 5).toFixed(0) + ' l5,-11 l8,-3 l8,7 l1,7 z" fill="#8f8a82" stroke="#5d5852" stroke-width="1.4" stroke-linejoin="round"/>';
+        g += '<path d="M' + (px - 6).toFixed(0) + ',' + (py - 6).toFixed(0) + ' l7,-3 l5,4" fill="none" stroke="#fff" stroke-width="1.4" opacity=".35"/>';
+      }
+    });
+    /* de vlonder, dezelfde als op het strand */
+    g += '<path d="' + padTekening() + '" fill="none" stroke="#e0c496" stroke-width="54" ' +
+         'stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>';
+    g += '<path d="' + padTekening() + '" fill="none" stroke="#a9793f" stroke-width="46" ' +
+         'stroke-linecap="round" stroke-linejoin="round"/>';
+    g += '<path d="' + padTekening() + '" fill="none" stroke="#c9995c" stroke-width="40" ' +
+         'stroke-linecap="round" stroke-linejoin="round"/>';
+    for (var d = 8; d < PADLENGTE; d += 23){
+      var q = positie(d), hk = padHoek(q.x, q.y);
+      g += '<rect x="-2" y="-20" width="4" height="40" rx="1.5" fill="#8d6234" opacity=".55" ' +
+        'transform="translate(' + q.x.toFixed(1) + ',' + q.y.toFixed(1) + ') rotate(' + hk.toFixed(1) + ')"/>';
+    }
+    g += '<text x="14" y="' + (HOOG - 13) + '" font-size="12" font-weight="600" ' +
+      'fill="#fff" opacity=".9">' + kaartNaam(kaart) + ' \u00b7 de eilanden</text>';
+    ACHTERGROND = g;
+    return g;
+  }
+
+  /* ---------- de vulkaan ----------
+     Donkere as met lavabeken die oplichten, een weg van gestapelde steen en
+     hier en daar een brok gestold gesteente. De lava ligt nooit op de weg en
+     nooit onder de school: het is decor, geen gevaar. */
+  function vulkaanAchtergrond(){
+    var g = '<defs>' +
+      '<radialGradient id="steen" cx="35%" cy="30%">' +
+        '<stop offset="0%" stop-color="#8f8880"/><stop offset="100%" stop-color="#4f4944"/></radialGradient>' +
+      '<linearGradient id="as" x1="0" y1="0" x2="0" y2="1">' +
+        '<stop offset="0%" stop-color="#4a4441"/><stop offset="100%" stop-color="#332e2c"/></linearGradient>' +
+      '<filter id="zacht" x="-30%" y="-30%" width="160%" height="160%">' +
+        '<feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity=".35"/></filter>' +
+      '<filter id="gloed" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="4"/></filter>' +
+      '</defs>';
+    var zaad = 31;
+    function toeval(){ zaad = (zaad * 1103515245 + 12345) % 2147483648; return zaad / 2147483648; }
+    g += '<rect x="' + (-BUITEN) + '" y="' + (-BUITEN) + '" width="' + (BREED + 2 * BUITEN) +
+      '" height="' + (HOOG + 2 * BUITEN) + '" fill="url(#as)"/>';
+    /* asvlekken en kleine stenen */
+    for (var i = 0; i < 160; i++){
+      var ax = -240 + toeval() * (BREED + 480), ay = -300 + toeval() * (HOOG + 600);
+      g += '<ellipse cx="' + ax.toFixed(0) + '" cy="' + ay.toFixed(0) + '" rx="' + (3 + toeval() * 9).toFixed(0) +
+        '" ry="' + (2 + toeval() * 4).toFixed(0) + '" fill="#000" opacity="' + (0.08 + toeval() * 0.12).toFixed(2) + '"/>';
+    }
+    /* lavabeken: korte kronkels, met een gloed eronder */
+    var e = PAD[PAD.length-1];
+    for (var b = 0; b < 26; b++){
+      var lx = 20 + toeval() * (BREED - 40), ly = 20 + toeval() * (HOOG - 40);
+      if (afstandTotPad(lx, ly) < 52) continue;
+      if (Math.hypot(lx - e[0], ly - e[1] + 30) < 130) continue;
+      var d = 'M' + lx.toFixed(0) + ',' + ly.toFixed(0), px = lx, py = ly, ok = true;
+      for (var st = 0; st < 4; st++){
+        px += (toeval() - 0.5) * 60; py += (toeval() - 0.5) * 60;
+        if (afstandTotPad(px, py) < 46 || Math.hypot(px - e[0], py - e[1] + 30) < 120){ ok = false; break; }
+        d += ' L' + px.toFixed(0) + ',' + py.toFixed(0);
+      }
+      if (!ok) continue;
+      g += '<path d="' + d + '" fill="none" stroke="#ff6a1a" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" opacity=".35" filter="url(#gloed)"/>';
+      g += '<path d="' + d + '" fill="none" stroke="#c2461c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>';
+      g += '<path d="' + d + '" fill="none" stroke="#ffb347" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>';
+    }
+    /* de weg: gestapelde grijze steen met een lichte streep in het midden */
+    g += '<path d="' + padTekening() + '" fill="none" stroke="#2a2624" stroke-width="54" stroke-linecap="round" stroke-linejoin="round"/>';
+    g += '<path d="' + padTekening() + '" fill="none" stroke="#6f6862" stroke-width="44" stroke-linecap="round" stroke-linejoin="round"/>';
+    g += '<path d="' + padTekening() + '" fill="none" stroke="#847c75" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>';
+    g += '<path d="' + padTekening() + '" fill="none" stroke="#a89f96" stroke-width="2" stroke-dasharray="10 14" stroke-linecap="round"/>';
+    /* brokken gestold gesteente naast de weg */
+    for (var k = 0; k < 40; k++){
+      var kx = toeval() * BREED, ky = toeval() * HOOG;
+      var d2 = afstandTotPad(kx, ky);
+      if (d2 < 30 || d2 > 44) continue;
+      g += '<path d="M' + (kx - 6).toFixed(0) + ',' + (ky + 3).toFixed(0) + ' l3,-6 l6,-1 l4,4 l-1,4 z" fill="#5a534d" stroke="#2a2624" stroke-width="1.2" stroke-linejoin="round"/>';
+    }
+    g += '<text x="14" y="' + (HOOG - 13) + '" font-size="12" font-weight="600" ' +
+      'fill="#f2c48c" opacity=".9">' + kaartNaam(kaart) + ' \u00b7 de vulkaan</text>';
     ACHTERGROND = g;
     return g;
   }
@@ -3870,6 +4215,34 @@ function rekenVraag(rang, toegestaan) {
            '<circle cx="' + n(0.39) + '" cy="' + n(-0.16) + '" r="' + n(0.1) + '" fill="#14224C"/>';
       return g;
     }
+    /* de Zeeslang: een kop met een lange staart die achter hem aan golft */
+    if (soort === 'zeeslang'){
+      var gz = '';
+      for (var sg = 4; sg >= 1; sg--){
+        var sy = Math.sin(pols * 4 + sg * 1.1) * r * 0.35;
+        gz += '<circle cx="' + n(-0.9 * sg - 0.3) + '" cy="' + sy.toFixed(1) + '" r="' + n(0.62 - sg * 0.08) + '"' + rand + '/>';
+        gz += '<path d="M' + n(-0.9 * sg - 0.3) + ',' + (sy - r * (0.62 - sg * 0.08)).toFixed(1) + ' l' + n(-0.2) + ',' + n(-0.45) + ' l' + n(0.35) + ',' + n(0.3) + 'z" fill="' + tint(vul, 0.3) + '"/>';
+      }
+      gz += '<ellipse cx="0" cy="0" rx="' + n(1.15) + '" ry="' + n(0.85) + '"' + rand + '/>';
+      gz += '<path d="M' + n(0.2) + ',' + n(-0.85) + ' l' + n(0.25) + ',' + n(-0.55) + ' l' + n(0.3) + ',' + n(0.5) + 'z" fill="' + tint(vul, 0.3) + '"/>';
+      gz += '<circle cx="' + n(0.45) + '" cy="' + n(-0.28) + '" r="' + n(0.2) + '" fill="#fff"/>' +
+            '<circle cx="' + n(0.5) + '" cy="' + n(-0.28) + '" r="' + n(0.09) + '" fill="#14224C"/>';
+      return gz;
+    }
+    /* de Magmakoning: een brok gesteente met gloeiende barsten */
+    if (soort === 'magma'){
+      var dm = '';
+      for (var km = 0; km < 12; km++){
+        var am = km / 12 * Math.PI * 2, sm = km % 2 ? 1.0 : 1.2;
+        dm += (km ? 'L' : 'M') + (Math.cos(am) * r * sm).toFixed(1) + ',' + (Math.sin(am) * r * sm).toFixed(1) + ' ';
+      }
+      var gl = (0.6 + Math.sin(pols * 5) * 0.35).toFixed(2);
+      return '<path d="' + dm + 'Z"' + rand + ' stroke-linejoin="round"/>' +
+        '<path d="M' + n(-0.7) + ',' + n(-0.1) + ' L' + n(-0.2) + ',' + n(0.2) + ' L' + n(0.1) + ',' + n(-0.4) +
+        ' L' + n(0.6) + ',' + n(0.1) + ' M' + n(-0.3) + ',' + n(0.6) + ' L' + n(0.2) + ',' + n(0.45) +
+        '" fill="none" stroke="#ffb347" stroke-width="' + n(0.14) + '" stroke-linecap="round" opacity="' + gl + '"/>' +
+        '<circle cx="0" cy="0" r="' + n(0.3) + '" fill="#ff6a1a" opacity="' + gl + '"/>';
+    }
     /* de Grote Fout: een bol met een gekartelde rand, alsof hij uit stukken bestaat */
     if (soort === 'mega'){
       var d = '';
@@ -3974,7 +4347,7 @@ function rekenVraag(rang, toegestaan) {
      die van twee tot zesenveertig loopt. */
   var SPAWNAF = POORTAF + 16;
   function tekenPoort(){
-    if (thema.id === 'eiland') return tekenBamboepoort();
+    if (thema.strand) return tekenBamboepoort();
     /* Het anker ligt op vijftig pixels langs het pad. Alle vorm zit vóór dat
        punt, want de eerste poging had zijn halve bouwwerk op negatieve x staan
        en dan valt hij van het bord af: de kaarten beginnen op x = -40 en het
@@ -4233,11 +4606,24 @@ function rekenVraag(rang, toegestaan) {
       }
     });
 
+    /* de lava van de Magmamortier: een plas die langzaam dooft */
+    lavas.forEach(function(l){
+      var deel = Math.max(0, Math.min(1, l.leven / l.vol));
+      var gl = (0.6 + Math.sin(pols * 6 + l.x) * 0.15) * (0.35 + deel * 0.65);
+      s += '<ellipse cx="' + l.x.toFixed(1) + '" cy="' + l.y.toFixed(1) + '" rx="' + (l.r * 1.1).toFixed(1) + '" ry="' + (l.r * 0.65).toFixed(1) +
+        '" fill="#ff6a1a" opacity="' + (gl * 0.45).toFixed(2) + '"/>';
+      s += '<ellipse cx="' + l.x.toFixed(1) + '" cy="' + l.y.toFixed(1) + '" rx="' + (l.r * 0.85).toFixed(1) + '" ry="' + (l.r * 0.48).toFixed(1) +
+        '" fill="#e0501e" opacity="' + gl.toFixed(2) + '"/>';
+      s += '<ellipse cx="' + (l.x - l.r * 0.2).toFixed(1) + '" cy="' + (l.y - l.r * 0.1).toFixed(1) + '" rx="' + (l.r * 0.42).toFixed(1) + '" ry="' + (l.r * 0.2).toFixed(1) +
+        '" fill="#ffd166" opacity="' + (gl * 0.8).toFixed(2) + '"/>';
+    });
+
     /* Het bereik: van de toren die je sleept, of van de toren waarvan het menu
-       open staat. Zo zie je tijdens het verplaatsen precies wat hij dekt. */
+       open staat. Zo zie je tijdens het verplaatsen precies wat hij dekt. De
+       Bommenwerper heeft geen bereik: zijn toestel gaat overal heen. */
     torens.forEach(function(t){
       var toon = (sleep && sleep.toren === t) || (menu && menu.toren === t) || verplaats === t;
-      if (!toon) return;
+      if (!toon || SOORTEN[t.soort].bommen) return;
       var ok = !sleep || sleep.geldig;
       s += '<circle cx="' + t.x + '" cy="' + t.y + '" r="' + bereikVan(t) + '" fill="' +
         (ok ? kleurVan(SOORTEN[t.soort].kleur) : '#c0442c') + '" opacity="' + (sleep ? '.16' : '.11') + '"/>';
@@ -4276,12 +4662,25 @@ function rekenVraag(rang, toegestaan) {
          groeit hij trager: anders staan twee torens tegen elkaar aan */
       var voet = 18 + Math.min(t.niveau - 1, 2) * 2 + Math.max(0, t.niveau - 3);
       var uit = (t.uit || 0) > 0;          /* ligt eruit door een bananenschil */
+      var heet = (t.heet || 0) > 0;        /* staat te bakken van de Magmakoning */
       s += '<g opacity="' + (bezig ? '.88' : (uit ? '.45' : '1')) + '">';
+      if (so.water){
+        /* een boot ligt op het water: geen stenen voet maar een kring van golfjes */
+        s += '<ellipse cx="' + t.x + '" cy="' + (t.y + 4) + '" rx="' + (voet + 6) + '" ry="' + (voet * 0.55).toFixed(1) + '" fill="#fff" opacity=".18"/>';
+        s += '<ellipse cx="' + t.x + '" cy="' + (t.y + 2) + '" rx="' + (voet + 2 + Math.sin(pols * 2 + t.x) * 1.5).toFixed(1) + '" ry="' + (voet * 0.5).toFixed(1) +
+          '" fill="none" stroke="#fff" stroke-width="1.6" opacity=".45"/>';
+        s += '<circle cx="' + t.x + '" cy="' + t.y + '" r="' + (voet - 2) + '" fill="rgba(20,60,90,.28)" stroke="' + rand + '" stroke-width="' + randB + '"/>';
+      } else {
       s += '<ellipse cx="' + t.x + '" cy="' + (t.y + voet - 3) + '" rx="' + (voet + 3) +
         '" ry="' + (voet * 0.36).toFixed(1) + '" fill="rgba(20,34,76,.18)"/>';
       /* de voet: stenen ring met een lichtval van linksboven */
       s += '<circle cx="' + t.x + '" cy="' + t.y + '" r="' + voet + '" fill="url(#steen)" stroke="' +
         rand + '" stroke-width="' + randB + '"/>';
+      }
+      if (heet){
+        s += '<circle cx="' + t.x + '" cy="' + t.y + '" r="' + (voet + 4) + '" fill="none" stroke="#ff6a1a" stroke-width="3" opacity="' +
+          (0.35 + Math.sin(pols * 8) * 0.25).toFixed(2) + '"/>';
+      }
       /* De acht metselstreepjes zijn eruit. Op vijftien pixels lees je die niet
          als steen maar als ruis. Een donkere onderrand doet meer: die geeft de
          voet hoogte in plaats van hem plat op het gras te leggen. */
@@ -4412,11 +4811,49 @@ function rekenVraag(rang, toegestaan) {
         s += '<path d="M-17,-11 h7 a4,4 0 0 1 4,4 v14 a4,4 0 0 1 -4,4 h-7 z" fill="' + mMid +
           '" stroke="' + mDonker + '" stroke-width="1.6"/>';
         s += '<path d="M-15,-8 h5 M-15,8 h5" stroke="' + mDonker + '" stroke-width="1.2" opacity=".6"/>';
-        /* het bommenrek naast de baan */
-        s += '<circle cx="-2" cy="12" r="3.2" fill="#3b3730"/><circle cx="6" cy="12" r="3.2" fill="#3b3730"/>';
-        if (pen) s += '<circle cx="14" cy="12" r="3.2" fill="#3b3730"/>';
-        /* het toestel staat hier nooit: het hangt boven het veld in de lucht */
+        /* het bommenrek naast de baan: wat er nog aan boord is */
+        var vlg = t.vlieger || { bommen:BOMMEN, fase:'vliegt' };
+        var rek = BOMMEN + (pen ? 2 : 0);
+        for (var rb = 0; rb < rek; rb++){
+          s += '<circle cx="' + (-6 + rb * 7) + '" cy="12" r="2.8" fill="' + (rb < vlg.bommen ? '#3b3730' : 'rgba(20,34,76,.18)') + '"/>';
+        }
         if (pen) s += '<circle cx="0" cy="0" r="27" fill="none" stroke="#EA9836" stroke-width="2" opacity=".5"/>';
+        /* tijdens het herladen staat het toestel op de baan */
+        if (vlg.fase === 'laadt') s += vliegtuig(4, 0, 0, kleurVan(so.kleur), false, 0.85);
+      } else if (t.soort === 'schip'){
+        /* een romp met de punt naar het doel, een dek, en een toren met een loop */
+        s += '<path d="M-16,-7 h22 l10,7 l-10,7 h-22 z" fill="' + mMid + '" stroke="' + mDonker + '" stroke-width="1.6" stroke-linejoin="round"/>';
+        s += '<path d="M-13,-4 h18 l6,4 l-6,4 h-18 z" fill="' + tint(kl, -0.2) + '" opacity=".8"/>';
+        s += '<rect x="' + (2 - terug) + '" y="-2" width="16" height="4" rx="2" fill="' + mZwart + '"/>';
+        s += '<circle cx="-2" cy="0" r="5.5" fill="' + mDonker + '"/>';
+        if (pen){
+          s += '<rect x="' + (2 - terug) + '" y="-7" width="13" height="3" rx="1.5" fill="' + mZwart + '"/>' +
+               '<rect x="' + (2 - terug) + '" y="4" width="13" height="3" rx="1.5" fill="' + mZwart + '"/>';
+        }
+      } else if (t.soort === 'onderzeeer'){
+        /* een sigaar met een toren en een periscoop, en de raketbuis vooraan */
+        s += '<ellipse cx="0" cy="0" rx="18" ry="6.5" fill="' + mMid + '" stroke="' + mDonker + '" stroke-width="1.6"/>';
+        s += '<path d="M-10,-6 h10 v12 h-10 z" fill="' + tint(kl, -0.15) + '" opacity=".5"/>';
+        s += '<rect x="-7" y="-10" width="10" height="7" rx="2" fill="' + mDonker + '"/>';
+        s += '<path d="M-3,-10 v-5 h4" fill="none" stroke="' + mZwart + '" stroke-width="1.6" stroke-linecap="round"/>';
+        s += '<rect x="' + (8 - terug) + '" y="-2" width="14" height="4" rx="2" fill="' + mZwart + '"/>';
+        s += '<path d="M' + (22 - terug) + ',-2 l4,2 l-4,2 z" fill="#F26749"/>';
+        if (pen) s += '<circle cx="-14" cy="0" r="3.2" fill="#EA9836"/>';
+      } else if (t.soort === 'mortier'){
+        /* een dikke korte buis van bovenaf gezien, met gloeiende lava erin */
+        var lg = (0.6 + Math.sin(pols * 4 + t.x) * 0.3).toFixed(2);
+        s += '<circle cx="0" cy="0" r="' + (pen ? 12 : 10.5) + '" fill="' + mDonker + '" stroke="' + mZwart + '" stroke-width="2"/>';
+        s += '<circle cx="0" cy="0" r="' + (pen ? 7.5 : 6.5) + '" fill="#ff6a1a" opacity="' + lg + '"/>';
+        s += '<circle cx="-1.5" cy="-1.5" r="3" fill="#ffd166" opacity="' + lg + '"/>';
+        s += '<path d="M-14,8 l4,-4 M14,8 l-4,-4 M0,-14 v5" stroke="' + mZwart + '" stroke-width="2.4" stroke-linecap="round"/>';
+      } else if (t.soort === 'zwavel'){
+        /* een blaasbalg: een bol met zes tuiten eromheen en een gele wolk boven */
+        for (var zb = 0; zb < 6; zb++){
+          s += '<path d="M0,0 L' + (pen ? 15 : 13) + ',-3 L' + (pen ? 15 : 13) + ',3 Z" fill="' + mMid + '" stroke="' + mDonker +
+            '" stroke-width="1.2" stroke-linejoin="round" transform="rotate(' + (zb * 60 + pols * 40) + ')"/>';
+        }
+        s += '<circle cx="0" cy="0" r="7" fill="' + mDonker + '" stroke="' + mZwart + '" stroke-width="1.4"/>';
+        s += '<circle cx="0" cy="0" r="3" fill="#ffd166" opacity="' + (0.5 + Math.sin(pols * 6) * 0.4).toFixed(2) + '"/>';
       } else if (t.soort === 'vrienden'){
         /* Dezelfde taal als de andere torens: een paar vlakken in de tinten van
            de toren zelf, geen strootjes en fakkels. Een breed dak dat over de
@@ -4480,6 +4917,14 @@ function rekenVraag(rang, toegestaan) {
         }
       }
 
+      /* bij de Bommenwerper een boogje dat volloopt tot het toestel weer opstijgt */
+      if (so.bommen && t.vlieger && t.vlieger.fase === 'laadt'){
+        var lv = 1 - Math.max(0, Math.min(1, t.vlieger.laad / (t.vlieger.laadVol || 1)));
+        s += '<circle cx="' + t.x + '" cy="' + t.y + '" r="24" fill="none" stroke="rgba(20,34,76,.14)" stroke-width="3"/>';
+        s += '<circle cx="' + t.x + '" cy="' + t.y + '" r="24" fill="none" stroke="#3f6b8f" stroke-width="3" ' +
+          'stroke-linecap="round" stroke-dasharray="' + (150.8 * lv).toFixed(1) + ' 999" ' +
+          'transform="rotate(-90 ' + t.x + ' ' + t.y + ')"/>';
+      }
       /* bij de Tonkla Toren een boogje dat volloopt tot de schokgolf klaarstaat */
       if (so.golf){
         var wachtt = Math.max(6, so.golftijd - (t.niveau - 1) * 4) * (t.kracht ? 0.5 : 1);
@@ -4544,6 +4989,12 @@ function rekenVraag(rang, toegestaan) {
       s += '<line x1="' + sc.x + '" y1="' + sc.y + '" x2="' + ex +
         '" y2="' + ey + '" stroke="' + kleurVan(sc.kleur) +
         '" stroke-width="' + (sc.dik || 3) + '" stroke-linecap="round" opacity="' + (deel*0.85).toFixed(2) + '"/>';
+      /* bij de Kanonneerboot een kogel met een rookwolkje bij de loop */
+      if (sc.boot){
+        var kx2 = sc.x + (ex - sc.x) * (1 - deel), ky2 = sc.y + (ey - sc.y) * (1 - deel);
+        s += '<circle cx="' + kx2.toFixed(1) + '" cy="' + ky2.toFixed(1) + '" r="3.2" fill="#2b2f36"/>';
+        s += '<circle cx="' + sc.x + '" cy="' + sc.y + '" r="' + (5 + (1 - deel) * 6).toFixed(1) + '" fill="#fff" opacity="' + (deel * 0.5).toFixed(2) + '"/>';
+      }
       /* bij de Apentoren zie je de banaan zelf aankomen */
       if (sc.banaan){
         var bx = sc.x + (ex - sc.x) * (1 - deel), by = sc.y + (ey - sc.y) * (1 - deel);
@@ -4605,11 +5056,18 @@ function rekenVraag(rang, toegestaan) {
          wat de beweging verkoopt. */
       var bob = Math.sin(e.d * 0.13) * (e.baas ? 1.1 : 1.9);
       var hoek = padHoek(p.x, p.y);
-      var r2 = e.baas ? (e.mega ? 36 : e.baassoort === 'aap' ? 31 : e.mini ? 22 : 26) : (e.dik ? 19 : 13),
+      var r2 = e.baas ? (e.mega ? 36 : e.baassoort === 'aap' ? 31 : e.baassoort === 'zeeslang' ? 28 : e.mini ? 22 : 26) : (e.dik ? 19 : 13),
           br = e.baas ? (e.mega ? 78 : e.mini ? 50 : 62) : (e.dik ? 42 : 28);
       /* Een verstopte fout is halfdoorzichtig en heeft een gestippelde rand:
          je ziet hem wel, je torens niet. */
-      s += '<g' + (e.camo ? ' opacity=".82"' : '') + '>';
+      s += '<g' + (e.camo ? ' opacity=".82"' : (e.onder > 0 ? ' opacity=".42"' : '')) + '>';
+      /* onder water: rimpels om hem heen */
+      if (e.onder > 0){
+        s += '<ellipse cx="' + p.x + '" cy="' + p.y + '" rx="' + (r2 + 14 + Math.sin(pols * 3) * 3).toFixed(1) + '" ry="' + (r2 * 0.6).toFixed(1) +
+          '" fill="none" stroke="#fff" stroke-width="2" opacity=".55"/>';
+        s += '<ellipse cx="' + p.x + '" cy="' + p.y + '" rx="' + (r2 + 24 - Math.sin(pols * 3) * 3).toFixed(1) + '" ry="' + (r2 * 0.85).toFixed(1) +
+          '" fill="none" stroke="#fff" stroke-width="1.4" opacity=".35"/>';
+      }
       var grond = 1 - Math.max(0, -bob) * 0.05;
       s += '<ellipse cx="' + p.x + '" cy="' + (p.y + r2 - 1) + '" rx="' + (r2 * 0.9 * grond).toFixed(1) +
         '" ry="' + (r2 * 0.34 * grond).toFixed(1) + '" fill="rgba(20,34,76,.18)"/>';
@@ -4670,12 +5128,19 @@ function rekenVraag(rang, toegestaan) {
         vijandLijf(e, r2 + (raak ? 2 : 0), vul, e.baas ? 3 : 2) + '</g>';
       s += '<g transform="translate(' + p.x.toFixed(1) + ',' + (p.y + bob).toFixed(1) + ')">' +
         vijandGlans(e, r2) + '</g>';
+      /* wie in brand staat heeft een vlammetje boven zich */
+      if (e.brand > 0){
+        var vl = 1 + Math.sin(pols * 9 + e.d) * 0.25;
+        s += '<g transform="translate(' + p.x.toFixed(1) + ',' + (p.y + bob - r2 - 2).toFixed(1) + ') scale(' + vl.toFixed(2) + ')">' +
+          '<path d="M0,0 q7,-8 2,-16 q-1,6 -4,7 q0,-6 -4,-9 q-3,9 2,13 q2,3 4,5z" fill="#ff7a1a"/>' +
+          '<path d="M0,-1 q3,-5 1,-9 q-2,4 -3,5z" fill="#ffd166"/></g>';
+      }
       s += (e.traag > 0 ? '<circle cx="' + p.x + '" cy="' + (p.y + bob).toFixed(1) + '" r="' + (r2 + 2) +
           '" fill="none" stroke="#204ECF" stroke-width="2" opacity=".6"/>' : '') +
         '<text x="' + p.x + '" y="' + (p.y + bob + (e.baas ? 7 : e.dik ? 6 : 4)).toFixed(1) + '" font-size="' +
         /* De bolletjes van het schild zijn als letterteken al bijna een vlak, dus
            die vragen om een kleinere maat dan een vraagteken of een ruit. */
-        ((e.mark === '\u25cf' ? 0.72 : 1) * (e.baas ? (e.mega ? (e.baassoort === 'kraken' ? 18 : 26) : 21) : e.dik ? 16 : 12)).toFixed(0) +
+        ((e.mark === '\u25cf' ? 0.72 : 1) * (e.baas ? (e.mega ? (e.baassoort === 'kraken' ? 18 : e.baassoort === 'magma' ? 22 : 26) : 21) : e.dik ? 16 : 12)).toFixed(0) +
         '" font-weight="700" fill="#fff" text-anchor="middle" opacity=".92">' + e.mark + '</text>';
       /* Een balkje boven elk hoofd terwijl er niets aan de hand is, is twintig
          keer ruis op een vol bord. Hij verschijnt zodra er iets af is. Een baas
@@ -4836,12 +5301,26 @@ function rekenVraag(rang, toegestaan) {
           '<circle cx="-2" cy="-3" r="1.8" fill="#fff" opacity=".35"/></g>';
         return;
       }
+      /* een raket vliegt recht, met een vlam erachter */
+      if (k.raket){
+        var rh = Math.atan2(k.y1 - k.y0, k.x1 - k.x0) * 180 / Math.PI;
+        s += '<g transform="translate(' + x.toFixed(1) + ',' + vlak.toFixed(1) + ') rotate(' + rh.toFixed(1) + ')">' +
+          '<path d="M-8,0 l-7,-4 l5,4 l-5,4 z" fill="#EA9836" opacity=".9"/>' +
+          '<rect x="-8" y="-2.6" width="15" height="5.2" rx="2.4" fill="#dfe6ee" stroke="#2d5f6e" stroke-width="1.2"/>' +
+          '<path d="M7,-2.6 l5,2.6 l-5,2.6 z" fill="#F26749"/>' +
+          '<path d="M-8,-2.6 l-3,-3 h4 M-8,2.6 l-3,3 h4" fill="none" stroke="#2d5f6e" stroke-width="1.2"/></g>';
+        return;
+      }
       var boog = 4 * v * (1 - v) * (46 + Math.hypot(k.x1-k.x0, k.y1-k.y0) * 0.14);
       s += '<ellipse cx="' + x.toFixed(1) + '" cy="' + vlak.toFixed(1) + '" rx="' +
         (7 - v * 2).toFixed(1) + '" ry="3" fill="rgba(20,34,76,.18)"/>';
       s += '<g transform="translate(' + x.toFixed(1) + ',' + (vlak - boog).toFixed(1) +
         ') rotate(' + k.draai.toFixed(0) + ')">' +
-        (k.bom
+        (k.lava
+          ? '<circle r="7" fill="#e0501e" stroke="#7a2a12" stroke-width="1.4"/>' +
+            '<circle cx="-2" cy="-2" r="3" fill="#ffd166" opacity=".9"/>' +
+            '<path d="M-9,2 q-4,-2 -6,-6 M8,-4 q4,0 6,-4" fill="none" stroke="#ff7a1a" stroke-width="2" stroke-linecap="round" opacity=".8"/>'
+          : k.bom
           ? '<circle r="6.5" fill="#3b3730" stroke="#14224C" stroke-width="1.4"/>' +
             '<path d="M2,-6 q5,-3 6,-7" fill="none" stroke="#a8845c" stroke-width="1.8"/>' +
             '<circle cx="8" cy="-13" r="2.4" fill="#EA9836"/>' +
@@ -4864,15 +5343,13 @@ function rekenVraag(rang, toegestaan) {
       s += vliegtuig(x, y - VLIEGHOOGTE, hk, klV, metBom, 1);
     }
     torens.forEach(function(t){
-      if (!SOORTEN[t.soort].bommen || t.vliegt) return;
-      var k = kringplek(t);
-      toestel(k.x, k.y, k.hoek, true);
-    });
-    vliegers.forEach(function(v){
-      var f = Math.min(1, v.t);
-      var x = v.x0 + (v.x1 - v.x0) * f, y = v.y0 + (v.y1 - v.y0) * f;
-      var hk = Math.atan2(v.y1 - v.y0, v.x1 - v.x0) * 180 / Math.PI;
-      toestel(x, y, hk, !v.terug);
+      if (!SOORTEN[t.soort].bommen || !t.vlieger || t.vlieger.fase === 'laadt') return;
+      var v = t.vlieger;
+      toestel(v.x, v.y, v.hoek, v.bommen > 0);
+      /* hoeveel bommen er nog hangen, als stipjes naast het toestel */
+      for (var bb2 = 0; bb2 < v.bommen; bb2++){
+        s += '<circle cx="' + (v.x - 8 + bb2 * 5).toFixed(1) + '" cy="' + (v.y - VLIEGHOOGTE - 20).toFixed(1) + '" r="2" fill="#3b3730" stroke="#fff" stroke-width=".8"/>';
+      }
     });
 
     /* de schillen die de apenbaas naar je torens gooit, in een boog */
@@ -5011,7 +5488,7 @@ function rekenVraag(rang, toegestaan) {
       /* Op een toren beginnen betekent slepen; ergens anders opent het menu. */
       /* Staat er een toren te wachten op een nieuwe plek, dan gaat deze tik daarover. */
       if (verplaats){
-        if (magHier(x, y, verplaats)){
+        if (magHier(x, y, verplaats, verplaats.soort)){
           verplaats.x = x; verplaats.y = y;
           verplaats = null;
           melding2('Verplaatst.');
@@ -5045,6 +5522,12 @@ function rekenVraag(rang, toegestaan) {
         melding2('Daar kan geen toren staan: te dicht op het pad, een toren, de school of de rand.');
         return;
       }
+      if (thema.water && torens.length < MAXTORENS && !gekozen().some(function(id){
+            return SOORTEN[id].water ? !opEiland(x, y) : opEiland(x, y); })){
+        melding2(opEiland(x, y) ? 'Op een eiland passen alleen landtorens, en die heb je niet meegenomen.'
+                                : 'Op het water passen alleen de Kanonneerboot en de Onderzee\u00ebr.');
+        return;
+      }
       menu = menuVoor(x, y, null, false, null);
       tekenBord();
     });
@@ -5058,7 +5541,7 @@ function rekenVraag(rang, toegestaan) {
       if (!sleep.bewogen && Math.hypot(x - sleep.vanX, y - sleep.vanY) < 6) return;
       sleep.bewogen = true;
       sleep.toren.x = x; sleep.toren.y = y;
-      sleep.geldig = magHier(x, y, sleep.toren);
+      sleep.geldig = magHier(x, y, sleep.toren, sleep.toren.soort);
       tekenBord();
     });
 
@@ -5173,7 +5656,7 @@ function rekenVraag(rang, toegestaan) {
     document.getElementById('mToren').textContent = torens.length + '/' + MAXTORENS;
     document.getElementById('mWeg').textContent = wegdingen.length + '/' + MAXWEG;
     var pv = document.getElementById('penningVak');
-    pv.classList.toggle('hide', penningen === 0);
+    pv.classList.toggle('stil', penningen === 0);
     document.getElementById('mPenning').textContent = penningen;
     var nu = document.getElementById('nuBtn');
     var wacht = wachtrij === 0 && vijanden.length === 0 && rondePauze > 0.2;
@@ -5231,6 +5714,17 @@ function rekenVraag(rang, toegestaan) {
       ? rondePauze : 0;
     if (wachtrij === 0 && vijanden.length === 0){
       rondePauze -= dt;
+      /* Alles van deze ronde is geveld: nu pas is hij gehaald. Ronde vijftig
+         halen opent het tropisch eiland, ook een volgende les. */
+      if (rondeGehaald < bank.ronde){
+        rondeGehaald = bank.ronde;
+        if (rondeGehaald >= EILANDRONDE && !eilandVrij){
+          eilandVrij = true;
+          try { localStorage.setItem('lg-toren-eiland', 'ja'); } catch (e){}
+          melding2('Je hebt ronde ' + EILANDRONDE + ' overleefd. Het tropisch eiland staat open: ' +
+            'kies het bij de volgende partij en speel met de Bommenwerper en de Vriendenhut.');
+        }
+      }
       if (rondePauze <= 0){
         /* Wie de pauze oversloeg krijgt de rekening in deze ronde gepresenteerd. */
         haast = sprongOver ? haast + 1 : 0;
@@ -5270,6 +5764,8 @@ function rekenVraag(rang, toegestaan) {
                           basisHp:hp, basisSnel:basisSnel,
                           mega:!!bz.mega, gooit:!!bz.gooit,
                           inkt:!!bz.inkt, inktKlok:bz.inkt ? 4 : 0,
+                          duikt:!!bz.duikt, duikKlok:bz.duikt ? 5 : 0, onder:0,
+                          uitbarst:!!bz.uitbarst, uitbarstKlok:bz.uitbarst ? 6 : 0,
                           schilKlok:bz.gooit ? 3 : 0 });
         } else if (wachtrij === miniBijWachtrij && isMiniRonde(ronde)){
           miniBijWachtrij = -1;                 /* ook van hem komt er maar een */
@@ -5303,11 +5799,66 @@ function rekenVraag(rang, toegestaan) {
     }
     var verlies = 0;
     vijanden.forEach(function(e){
+      /* wie in brand staat of in de lava loopt, verliest levens zonder dat er
+         elke tik een cijfer opspringt */
+      if (e.brand > 0){ e.brand -= dt; raakVijand(e, (e.brandKracht || 0) * dt, false, true); }
+      if (e.dood) return;
       if (e.stop > 0){ e.stop -= dt; if (e.traag > 0) e.traag -= dt; return; }
-      e.d += e.snelheid * (e.traag > 0 ? (e.ijs ? 0.22 : 0.45) : 1) * dt;
+      e.d += e.snelheid * (e.traag > 0 ? (e.ijs ? 0.22 : 0.45) : 1) * (e.onder > 0 ? 1.5 : 1) * dt;
       if (e.traag > 0){ e.traag -= dt; if (e.traag <= 0) e.ijs = false; }
       if (e.d >= PADLENGTE){ e.dood = true;
         verlies += e.baas ? (e.mini ? MINISCHADE : e.mega ? MEGASCHADE : BAASSCHADE) : 1; }
+    });
+    /* de lava van de Magmamortier: wie erin staat, brandt */
+    lavas.forEach(function(l){
+      l.leven -= dt;
+      vijanden.forEach(function(e){
+        if (e.dood) return;
+        var q = positie(e.d);
+        if (Math.hypot(q.x - l.x, q.y - l.y) > l.r) return;
+        raakVijand(e, l.schade * dt, false, true);
+        if (!(e.brand > 0)){ e.brand = 1.2; e.brandKracht = Math.max(e.brandKracht || 0, l.schade * 0.4); }
+      });
+    });
+    lavas = lavas.filter(function(l){ return l.leven > 0; });
+    /* De Zeeslang duikt onder en komt weer boven. Onder water is hij sneller
+       en alleen voor de watertorens en de Scherpschutter te raken. */
+    vijanden.forEach(function(e){
+      if (e.dood || !e.duikt) return;
+      e.duikKlok -= dt;
+      if (e.onder > 0) e.onder = Math.max(0.001, e.onder);
+      if (e.duikKlok > 0) return;
+      if (e.onder > 0){
+        e.onder = 0; e.duikKlok = DUIKTIJD;
+      } else {
+        e.onder = DUIKDUUR; e.duikKlok = DUIKDUUR;
+        var qz = positie(e.d);
+        golven.push({ x:qz.x, y:qz.y, r:70, leven:0.5, kleur:'#3f9fbd' });
+        melding2('De Zeeslang duikt onder. Alleen de Kanonneerboot, de Onderzee\u00ebr en de Scherpschutter raken hem nu.');
+      }
+    });
+    /* De Magmakoning barst uit: vonken op de weg en hitte over de torens vlakbij. */
+    vijanden.forEach(function(e){
+      if (e.dood || !e.uitbarst) return;
+      e.uitbarstKlok -= dt;
+      if (e.uitbarstKlok > 0) return;
+      e.uitbarstKlok = UITBARSTTIJD;
+      var qm = positie(e.d), heet = 0;
+      for (var vk = 0; vk < VONKEN; vk++){
+        var vhp = Math.max(1, Math.round(e.basisHp * 0.4));
+        vijanden.push({ d:Math.max(0, e.d - 14 - vk * 14), hp:vhp, maxHp:vhp, snelheid:e.basisSnel * 1.6,
+                        traag:0, mark:'\u2726', soort:'snel', kleur:'#ff7a1a', schild:0 });
+      }
+      torens.forEach(function(t){
+        if (Math.hypot(t.x - qm.x, t.y - qm.y) <= HITTEBEREIK){ t.heet = HITTEDUUR; heet++; }
+      });
+      golven.push({ x:qm.x, y:qm.y, r:HITTEBEREIK, leven:0.6, kleur:'#ff6a1a', dik:true });
+      for (var ip2 = 0; ip2 < 16; ip2++){
+        var hi2 = Math.random() * Math.PI * 2, vi2 = 50 + Math.random() * 110;
+        pluis.push({ x:qm.x, y:qm.y, vx:Math.cos(hi2)*vi2, vy:Math.sin(hi2)*vi2 - 60, leven:0.55, kleur:'#ff8c3a' });
+      }
+      melding2('De Magmakoning barst uit: ' + VONKEN + ' vonken op de weg' +
+        (heet ? ', en ' + heet + (heet === 1 ? ' toren schiet' : ' torens schieten') + ' even trager van de hitte.' : '.'));
     });
     /* De apenbaas zoekt om de zoveel tijd de dichtstbijzijnde toren die nog
        werkt en gooit daar een schil naartoe. Staat er niets in de buurt, dan
@@ -5369,8 +5920,8 @@ function rekenVraag(rang, toegestaan) {
       if (e.inktOp <= 0) e.camo = false;
     });
 
-    /* een toren met een schil erover komt vanzelf weer bij */
-    torens.forEach(function(t){ if ((t.uit || 0) > 0) t.uit -= dt; });
+    /* een toren met een schil erover komt vanzelf weer bij, en een hete koelt af */
+    torens.forEach(function(t){ if ((t.uit || 0) > 0) t.uit -= dt; if ((t.heet || 0) > 0) t.heet -= dt; });
     schillen.forEach(function(sl){
       sl.t += dt / sl.duur;
       sl.draai += 260 * dt;
@@ -5407,11 +5958,16 @@ function rekenVraag(rang, toegestaan) {
         }
         if (d.soort === 'pek'){ e.traag = Math.max(e.traag, 0.3); }
         if (d.soort === 'angels' && d.klok <= 0 && d.voorraad > 0){
-          raakVijand(e, w.schade, false);
+          raakVijand(e, angelSchade(e), false);
           d.voorraad--;
         }
-        if (d.soort === 'hek' && d.voorraad > 0 && !e.gehouden){
-          e.gehouden = true; e.stop = 1.1; d.voorraad--;
+        /* Een fout die een versperring gehad heeft, mag een volgende niet
+           zomaar voorbij: het merkteken staat per versperring, niet per fout.
+           Met een merkteken per fout liep alles wat al een keer was
+           tegengehouden dwars door elke volgende versperring heen. */
+        if (d.soort === 'hek' && d.voorraad > 0 && !(e.gehouden && e.gehouden[d.id])){
+          e.gehouden = e.gehouden || {};
+          e.gehouden[d.id] = true; e.stop = 1.1; d.voorraad--;
           pluis.push({ x:q.x, y:q.y, vx:0, vy:-40, leven:0.4, kleur:'#8a6a45' });
         }
       });
@@ -5442,51 +5998,53 @@ function rekenVraag(rang, toegestaan) {
                     draai:Math.random() * 360, brand:true, bom:true });
     });
 
-    /* De Tonkla Bommenwerper. Hij mikt op de fout die het verst is en laat daar
-       een bom op vallen; wat er tegen de tijd van de inslag omheen staat, krijgt
-       het ook. Hij schiet niet, dus hij loopt langs de gewone schietronde heen. */
+    /* De Tonkla Bommenwerper. Het toestel is altijd in de lucht, behalve als
+       het herlaadt. Het zoekt de fout die het verst is, waar ook op het bord,
+       vliegt erheen en laat een bom vallen zodra het erboven hangt. Dan de
+       volgende, tot de vijf bommen op zijn; daarna vliegt het terug naar zijn
+       veld, staat een tijdje stil om te herladen, en stijgt weer op. Is er
+       niets te doen, dan draait het rondjes boven het veld, met de bommen
+       onder de romp. */
     torens.forEach(function(t){
       var so = SOORTEN[t.soort];
-      if (!so.bommen || (t.uit || 0) > 0) return;
-      t.klok -= dt;
-      if (t.klok > 0) return;
-      var bw = bereikVan(t), doelW = null, verstW = -1, posW = null;
-      vijanden.forEach(function(e){
+      if (!so.bommen) return;
+      if (!t.vlieger) t.vlieger = { x:t.x, y:t.y - 1, hoek:0, bommen:BOMMEN, fase:'vliegt', klok:0, laad:0 };
+      var v = t.vlieger;
+      var ligtEruit = (t.uit || 0) > 0;
+      if (v.klok > 0) v.klok -= dt;
+      if (v.fase === 'laadt'){
+        v.x = t.x; v.y = t.y;
+        if (!ligtEruit) v.laad -= dt;
+        if (v.laad <= 0){ v.bommen = BOMMEN + (t.kracht ? 2 : 0); v.fase = 'vliegt'; }
+        return;
+      }
+      var doel = null, verst = -1, pos = null;
+      if (v.bommen > 0 && !ligtEruit) vijanden.forEach(function(e){
         if (e.dood || !ziet(t, e)) return;
-        var q = positie(e.d);
-        if (Math.hypot(q.x - t.x, q.y - t.y) <= bw && e.d > verstW){ doelW = e; verstW = e.d; posW = q; }
+        if (e.d > verst){ doel = e; verst = e.d; pos = positie(e.d); }
       });
-      if (!doelW || t.vliegt) return;
-      t.klok = so.tempo;
-      t.mikt = Math.atan2(posW.y - t.y, posW.x - t.x) * 180 / Math.PI;
-      t.vliegt = true;
-      /* Het vliegtuig stijgt op, vliegt naar de plek waar de fout nu loopt,
-         laat daar zijn bom vallen en keert om. De schade komt pas bij de inslag,
-         dus wie hard loopt kan er nog onder vandaan. */
-      var van = kringplek(t);
-      vliegers.push({ toren:t, x0:van.x, y0:van.y, x1:posW.x, y1:posW.y, t:0, duur:VLUCHT,
-                      terug:false,
+      var mik;
+      if (v.fase === 'terug' || v.bommen <= 0){ v.fase = 'terug'; mik = { x:t.x, y:t.y }; }
+      else if (doel) mik = pos;
+      else { var kr = kringplek(t); mik = { x:kr.x, y:kr.y }; }
+      var dx = mik.x - v.x, dy = mik.y - v.y, af = Math.hypot(dx, dy);
+      if (af > 0.5){
+        v.hoek = Math.atan2(dy, dx) * 180 / Math.PI;
+        var f = Math.min(1, VLIEGSNEL * dt / af);
+        v.x += dx * f; v.y += dy * f;
+      }
+      if (v.fase === 'terug'){
+        if (af <= 6){ v.fase = 'laadt'; v.laad = herlaadtijd(t); v.laadVol = v.laad; }
+        return;
+      }
+      if (doel && af <= 16 && v.klok <= 0){
+        v.bommen--; v.klok = BOMPAUZE;
+        kogels.push({ x0:pos.x, y0:pos.y, x1:pos.x, y1:pos.y, t:0, duur:BOMVAL,
                       schade:so.schade * (1 + (t.niveau - 1) * 0.6) * reeksbonus() * (t.kracht ? 1.5 : 1),
-                      straal:so.straal * (t.kracht ? 1.45 : 1), doel:doelW });
-    });
-    vliegers.forEach(function(v){
-      v.t += dt / v.duur;
-      if (v.t < 1) return;
-      if (!v.terug){
-        /* boven het doel: bom los, en dezelfde weg terug */
-        kogels.push({ x0:v.x1, y0:v.y1, x1:v.x1, y1:v.y1, t:0, duur:BOMVAL, schade:v.schade,
-                      straal:v.straal, doel:v.doel, draai:0, bom:true, valt:true });
-        /* terug naar de kring, naar de plek waar die over een vlucht zal zijn */
-        v.terug = true; v.t = 0;
-        v.x0 = v.x1; v.y0 = v.y1;
-        var thuis = kringplek(v.toren, VLUCHT);
-        v.x1 = thuis.x; v.y1 = thuis.y;
-      } else {
-        v.klaar = true;
-        if (v.toren) v.toren.vliegt = false;
+                      straal:so.straal * (t.kracht ? 1.45 : 1), doel:doel, draai:0, bom:true, valt:true });
+        if (v.bommen <= 0) v.fase = 'terug';
       }
     });
-    vliegers = vliegers.filter(function(v){ return !v.klaar; });
 
     /* ---------- de vrienden uit de Vriendenhut ----------
        Ze lopen het pad af naar de poort toe, tot ze een fout tegenkomen of tot
@@ -5518,26 +6076,29 @@ function rekenVraag(rang, toegestaan) {
       if (torens.indexOf(v.hut) < 0){ v.hp = 0; return; }   /* hut weggehaald */
       var grens = Math.max(SPAWNAF + 20, v.hut.thuis - VRIEND.leiband + (v.eigen || 0));
       var q = positie(v.d);
-      /* waar staat hij tegenaan? de eerste fout die vlak voor hem loopt */
-      var tegen = null;
+      /* Alles wat tegen hem aan loopt staat stil zolang hij leeft, en alles
+         wat stilstaat slaat op hem in. Hij slaat zelf terug op de voorste. */
+      var tegen = null, klappen = 0;
       vijanden.forEach(function(e){
-        if (e.dood || tegen) return;
-        if (e.d >= v.d - 18 && e.d <= v.d + 22) tegen = e;
-      });
-      if (tegen){
-        /* vasthouden: elke tik opnieuw, dus zodra de vriend valt loopt hij door */
-        tegen.stop = Math.max(tegen.stop || 0, 0.12);
-        if (tegen.camo){
-          tegen.camo = false;
+        if (e.dood) return;
+        if (e.d < v.d - 18 || e.d > v.d + 22) return;
+        /* vasthouden: elke tik opnieuw, dus zodra de vriend valt loopt alles door */
+        e.stop = Math.max(e.stop || 0, 0.12);
+        if (!tegen) tegen = e;
+        klappen += VRIEND.klap * (e.baas ? VRIEND.baasklap : 1);
+        if (e.camo){
+          e.camo = false;
           cijfers.push({ x:q.x, y:q.y - 32, tekst:'ontdekt', leven:0.9, kleur:'#2f7d52' });
         }
+      });
+      if (tegen){
         v.klok -= dt;
         if (v.klok <= 0){
           v.klok = VRIEND.tempo;
           raakVijand(tegen, VRIEND.schade * (1 + (v.hut.niveau - 1) * 0.6) * reeksbonus(), false);
           v.slag = 0.22;
         }
-        v.hp -= VRIEND.klap * (tegen.baas ? VRIEND.baasklap : 1) * (1 + bank.ronde * 0.03) * dt;
+        v.hp -= klappen * (1 + bank.ronde * 0.03) * dt;
       } else if (v.d > grens){
         v.d = Math.max(grens, v.d - VRIEND.snelheid * dt);
       } else if (v.d < grens){
@@ -5595,23 +6156,42 @@ function rekenVraag(rang, toegestaan) {
         if (Math.hypot(pos.x - p.x, pos.y - p.y) <= bereik && e.d > verst){ doel = e; verst = e.d; doelPos = pos; }
       });
       if (!doel) return;
-      /* Dubbelloop halveert de laadtijd van het kanon. */
-      t.klok = s.tempo * (t.kracht && t.soort === 'kanon' ? 0.5 : 1);
-      /* Kopschot van de scherpschutter telt driedubbel tegen een baas. */
+      /* Dubbelloop halveert de laadtijd van het kanon; hitte van de Magmakoning maakt alles trager. */
+      t.klok = s.tempo * (t.kracht && t.soort === 'kanon' ? 0.5 : 1) * ((t.heet || 0) > 0 ? 1.6 : 1);
+      /* Kopschot van de scherpschutter telt driedubbel tegen een baas, de Torpedo dubbel. */
       if (t.kracht && t.soort === 'schutter' && doel.baas) schade *= 3;
+      if (t.kracht && t.soort === 'onderzeeer' && doel.baas) schade *= 2;
       t.mikt = Math.atan2(doelPos.y - p.y, doelPos.x - p.x) * 180 / Math.PI;
       t.terugslag = 1;
 
-      /* De pekelpot raakt alles binnen bereik tegelijk, de rest maar een doel. */
+      /* De pekelpot raakt alles binnen bereik tegelijk, de rest maar een doel.
+         De Kanonneerboot met Breedzij neemt de drie voorste. */
       var geraakt = s.vlak
         ? vijanden.filter(function(e){
             if (e.dood || !ziet(t, e)) return false;
             var q = positie(e.d);
             return Math.hypot(q.x - p.x, q.y - p.y) <= bereik;
           })
-        : [doel];
+        : (t.kracht && t.soort === 'schip')
+          ? vijanden.filter(function(e){
+              if (e.dood || !ziet(t, e)) return false;
+              var q = positie(e.d);
+              return Math.hypot(q.x - p.x, q.y - p.y) <= bereik;
+            }).sort(function(a, b){ return b.d - a.d; }).slice(0, 3)
+          : [doel];
 
-      if (t.soort === 'katapult'){
+      if (t.soort === 'mortier'){
+        /* De Magmamortier slingert een klomp lava in een boog; bij de inslag
+           krijgt alles in de buurt de klap en blijft er een plas liggen. */
+        kogels.push({ x0:p.x, y0:p.y, x1:doelPos.x, y1:doelPos.y, t:0, duur:0.55,
+                      schade:schade, doel:doel, draai:Math.random() * 360, lava:true,
+                      straal:s.straal * (t.kracht ? 1.3 : 1),
+                      lavaDuur:t.kracht ? 8 : 4, lavaSchade:schade * 0.35 });
+      } else if (t.soort === 'onderzeeer'){
+        /* een raket: recht op het doel af, en bij de inslag een klap eromheen */
+        kogels.push({ x0:p.x, y0:p.y, x1:doelPos.x, y1:doelPos.y, t:0, duur:0.4,
+                      schade:schade, doel:doel, draai:0, raket:true, straal:s.straal });
+      } else if (t.soort === 'katapult'){
         /* De katapult slingert een steen die een boog maakt. De schade valt pas
            bij de inslag, want anders zie je een fout omvallen voordat de steen
            er is. */
@@ -5632,6 +6212,11 @@ function rekenVraag(rang, toegestaan) {
           raakVijand(e, schade * (t.kracht && t.soort === 'pekelpot' ? 1.8 : 1), t.soort === 'vertrager');
           /* Vrieskou vertraagt sterker en langer dan gewoon. */
           if (t.kracht && t.soort === 'vertrager'){ e.traag = 2.6; e.ijs = true; }
+          /* De Zwavelblazer zet in brand: het vuur brandt drie seconden door. */
+          if (s.brand){
+            e.brand = 3;
+            e.brandKracht = Math.max(e.brandKracht || 0, 4 * (1 + (t.niveau - 1) * 0.6) * reeksbonus() * (t.kracht ? 2 : 1));
+          }
         });
         if (s.vlak){
           golven.push({ x:p.x, y:p.y, r:bereik, leven:0.34, kleur:s.kleur });
@@ -5652,7 +6237,7 @@ function rekenVraag(rang, toegestaan) {
           schoten.push({ x:vanX, y:vanY, len:Math.hypot(dx, dy),
                          hoek:Math.atan2(dy, dx) * 180 / Math.PI, kleur:s.schotkleur || s.kleur,
                          leven:0.18, dik:t.soort === 'schutter' ? 4 : 3,
-                         banaan:t.soort === 'aap' });
+                         banaan:t.soort === 'aap', boot:t.soort === 'schip' });
         }
       }
     });
@@ -5674,11 +6259,11 @@ function rekenVraag(rang, toegestaan) {
         k.raak = true;
         /* Is het oorspronkelijke doel al gevallen, dan raakt de steen wie er nu
            op die plek loopt. Hij komt daar tenslotte toch neer. */
-        var slachtoffer = (k.doel && !k.doel.dood) ? k.doel : null;
+        var slachtoffer = (k.doel && !k.doel.dood && !(k.doel.onder > 0)) ? k.doel : null;
         if (!slachtoffer){
           var kortst = 30;
           vijanden.forEach(function(e){
-            if (e.dood || e.camo) return;
+            if (e.dood || e.camo || e.onder > 0) return;
             var q = positie(e.d);
             var d = Math.hypot(q.x - k.x1, q.y - k.y1);
             if (d < kortst){ kortst = d; slachtoffer = e; }
@@ -5691,12 +6276,13 @@ function rekenVraag(rang, toegestaan) {
           var straal = k.straal || 60;
           var geraakt2 = 0;
           vijanden.forEach(function(e){
-            if (e.dood || e.camo) return;
+            if (e.dood || e.camo || e.onder > 0) return;
             var q2 = positie(e.d);
             if (Math.hypot(q2.x - k.x1, q2.y - k.y1) <= straal){ raakVijand(e, k.schade, false); geraakt2++; }
           });
-          golven.push({ x:k.x1, y:k.y1, r:straal, leven:0.3, kleur:'#EA9836' });
+          golven.push({ x:k.x1, y:k.y1, r:straal, leven:0.3, kleur:k.lava ? '#ff6a1a' : '#EA9836' });
           if (!geraakt2) raakVijand(slachtoffer, k.schade, false);
+          if (k.lava) lavas.push({ x:k.x1, y:k.y1, r:straal * 0.8, leven:k.lavaDuur, vol:k.lavaDuur, schade:k.lavaSchade });
         } else {
           raakVijand(slachtoffer, k.schade, false);
         }
@@ -5731,8 +6317,9 @@ function rekenVraag(rang, toegestaan) {
   function startKlok(){
     if (klok) clearInterval(klok);
     klok = setInterval(function(){
-      for (var i = 0; i < tempo; i++){
-        tekenUit = (i < tempo - 1);
+      var stappen = tempo * (snel ? 2 : 1);
+      for (var i = 0; i < stappen; i++){
+        tekenUit = (i < stappen - 1);
         tik();
         if (!klok) break;          /* het spel kan tijdens deze lus eindigen */
       }
@@ -5766,13 +6353,13 @@ function rekenVraag(rang, toegestaan) {
   function begin(){
     kiesKaart();
     baasSpook = 1; baasBalkIn = 0; baasBalk = null; baasLaatst = null;
-    vijanden = []; torens = []; schoten = []; pot = null; vrienden = []; vliegers = [];
-    vrijBijStart = { tonkla:tonklaVrij, aap:aapVrij, eiland:eilandVrij };
+    vijanden = []; torens = []; schoten = []; pot = null; vrienden = []; vliegers = []; lavas = [];
+    vrijBijStart = { tonkla:tonklaVrij, aap:aapVrij, eiland:eilandVrij, archipel:archipelVrij, vulkaan:vulkaanVrij };
     laadKeuze();
     cijfers = []; pluis = []; golven = []; kogels = []; wegdingen = []; schillen = [];
     baasKeuzes = {}; golfKeuzes = {};
     wachtrij = 5; spawnKlok = 0; rondePauze = 2;
-    bank = { munten:60, leven:12, ronde:1 };
+    bank = { munten:60, leven:12, ronde:1 }; rondeGehaald = 0;
     reeks = 0; vuur = 0; besteReeks = 0; goedAantal = 0; foutAantal = 0;
     gekliktIndex = -1; menu = null; klap = 0; baasAlarm = 0; pols = 0; verplaats = null; sleep = null; penningen = 0;
     camoGezien = false; poortFlits = 0; gelapt = 0;
@@ -5780,14 +6367,17 @@ function rekenVraag(rang, toegestaan) {
     pauze = false; document.body.classList.remove('gepauzeerd');
     var pk = document.getElementById('pauzeBtn');
     pk.classList.remove('hide', 'aan'); pk.textContent = 'Pauze'; pk.setAttribute('aria-pressed', 'false');
+    var sk = document.getElementById('snelBtn');
+    sk.classList.remove('hide'); zetSnel(false);
+    slim.reset(niveau);
     vraag = nieuweVraag();
     document.getElementById('uitlegVak').innerHTML = '';
     document.getElementById('scherm-start').classList.add('hide');
     document.getElementById('scherm-einde').classList.add('hide');
     document.getElementById('scherm-spel').classList.remove('hide');
     tekenVraag(); tekenMeters(); tekenBord();
-    melding2('Kaart: ' + kaartNaam(kaart) + (thema.id === 'plein' ? '' : ' op het tropisch eiland') +
-      '. Elk potje loot een andere weg, dus kijk eerst waar de bochten liggen.');
+    melding2('Kaart: ' + kaartNaam(kaart) + (thema.plek || '') +
+      (thema.water ? '. Landtorens op de eilandjes, de boten op het water.' : '. Elk potje loot een andere weg, dus kijk eerst waar de bochten liggen.'));
     startKlok();
     scrollTo({ top:0, behavior:'auto' });
   }
@@ -5796,29 +6386,33 @@ function rekenVraag(rang, toegestaan) {
     if (klok){ clearInterval(klok); klok = null; }
     pauze = false; document.body.classList.remove('gepauzeerd');
     document.getElementById('pauzeBtn').classList.add('hide');
+    document.getElementById('snelBtn').classList.add('hide'); zetSnel(false);
     document.getElementById('scherm-spel').classList.add('hide');
     document.getElementById('scherm-einde').classList.remove('hide');
+    tekenThemas();
     tekenTorenkeuze();       /* een toren die net vrijkwam staat nu ook op het startscherm */
     var totaal = goedAantal + foutAantal;
     var deel = totaal ? Math.round(goedAantal / totaal * 100) : 0;
     var v = VAKKEN.filter(function(x){ return x.id === vak; })[0];
+    /* Alleen rondes waarvan alles geveld is tellen. Wie ronde twaalf erbij
+       riep en toen omviel, heeft er elf gehaald. */
     document.getElementById('eindeUit').textContent =
-      'Je hield het ' + bank.ronde + ' rondes vol bij ' + (v ? v.naam.toLowerCase() : 'dit vak') +
+      'Je hield het ' + rondeGehaald + ' rondes vol bij ' + (v ? v.naam.toLowerCase() : 'dit vak') +
       ', met ' + goedAantal + ' van de ' + totaal + ' vragen goed.' +
+      (bank.ronde > rondeGehaald + 1 ? ' Ronde ' + bank.ronde + ' was al begonnen, maar niet af.' : '') +
       (foutAantal ? ' Elke fout die doorliep was een vraag die je miste: precies die zijn het oefenen waard.' : '');
     document.getElementById('cijfers').innerHTML =
-      '<div><b>' + bank.ronde + '</b><span>rondes</span></div>' +
+      '<div><b>' + rondeGehaald + '</b><span>rondes gehaald</span></div>' +
       '<div><b>' + goedAantal + '</b><span>goed</span></div>' +
       '<div><b>' + foutAantal + '</b><span>fout</span></div>' +
       '<div><b>' + deel + '%</b><span>goed</span></div>' +
       '<div><b>' + besteReeks + '</b><span>beste reeks</span></div>';
-    /* Sneuvel je in ronde eenenvijftig, dan heb ronde vijftig alsnog gehaald. */
-    if (bank.ronde >= EILANDRONDE && !eilandVrij){
+    if (rondeGehaald >= EILANDRONDE && !eilandVrij){
       eilandVrij = true;
       try { localStorage.setItem('lg-toren-eiland', 'ja'); } catch (e){}
       tekenThemas();
     }
-    bewaarRecord(bank.ronde);
+    bewaarRecord(rondeGehaald);
     scrollTo({ top:0, behavior:'auto' });
   }
 
@@ -5910,6 +6504,7 @@ function rekenVraag(rang, toegestaan) {
     if (klok){ clearInterval(klok); klok = null; }
     pauze = false; document.body.classList.remove('gepauzeerd');
     document.getElementById('pauzeBtn').classList.add('hide');
+    document.getElementById('snelBtn').classList.add('hide'); zetSnel(false);
     document.getElementById('scherm-spel').classList.add('hide');
     document.getElementById('scherm-einde').classList.add('hide');
     document.getElementById('scherm-start').classList.remove('hide');
@@ -5917,6 +6512,19 @@ function rekenVraag(rang, toegestaan) {
   });
   document.getElementById('pauzeBtn').addEventListener('click', function(){
     zetPauze(!pauze);
+  });
+  /* Twee keer zo snel: voor wie zijn bord op orde heeft en de rondes wil zien
+     komen. De vragen komen niet sneller; alleen het bord. */
+  function zetSnel(aan){
+    snel = !!aan;
+    var k = document.getElementById('snelBtn');
+    k.classList.toggle('aan', snel);
+    k.setAttribute('aria-pressed', snel ? 'true' : 'false');
+    k.textContent = snel ? '2\u00d7 aan' : '2\u00d7 snel';
+  }
+  document.getElementById('snelBtn').addEventListener('click', function(){
+    if (!inSpel()) return;
+    zetSnel(!snel);
   });
   /* P of Escape doet hetzelfde, handig als je voor de klas staat. Niet als je
      net in een tekstvak typt, en niet als de knop zelf de focus heeft, want
@@ -6050,16 +6658,18 @@ function rekenVraag(rang, toegestaan) {
     });
 
     knop('testVrij', function(){
-      tonklaVrij = true; aapVrij = true; eilandVrij = true;
+      tonklaVrij = true; aapVrij = true; eilandVrij = true; archipelVrij = true; vulkaanVrij = true;
       try {
         localStorage.setItem('lg-toren-tonkla', 'ja');
         localStorage.setItem('lg-toren-aap', 'ja');
         localStorage.setItem('lg-toren-eiland', 'ja');
+        localStorage.setItem('lg-toren-archipel', 'ja');
+        localStorage.setItem('lg-toren-vulkaan', 'ja');
       } catch (e){}
       tekenThemas();
       tekenTorenkeuze();
       vulThemaKies();
-      melding2('Tonkla Toren, Apentoren en het tropisch eiland vrijgespeeld.');
+      melding2('Tonkla Toren, Apentoren, eiland, eilanden en vulkaan vrijgespeeld.');
     });
 
     /* Van omgeving wisselen zonder eerst ronde vijftig te halen. Het bord wordt
@@ -6074,8 +6684,9 @@ function rekenVraag(rang, toegestaan) {
     vulThemaKies();
     themaKies.addEventListener('change', function(){
       thema = THEMAS.filter(function(t){ return t.id === themaKies.value; })[0] || THEMAS[0];
-      ACHTERGROND = null;
-      torens = []; vrienden = []; vliegers = []; wegdingen = [];
+      ACHTERGROND = null; EILANDEN = null;
+      torens = []; vrienden = []; vliegers = []; wegdingen = []; lavas = [];
+      laadKeuze();
       tekenThemas();
       tekenTorenkeuze();
       if (inSpel()){ tekenBord(); tekenMeters(); }
@@ -6159,5 +6770,6 @@ function rekenVraag(rang, toegestaan) {
   }
 })();
 </script>
+<script src="thema.js"></script>
 </body>
 </html>

@@ -1,9 +1,13 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-<!-- Zwaardvechter, versie 1.0 -->
+<!-- Zwaardvechter, versie 1.1 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+/* Opgeslagen themakeuze meteen toepassen, nog voor de pagina getekend wordt. */
+(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();
+</script>
 <title>Zwaardvechter &middot; meneer Greidanus</title>
 <meta name="description" content="Bestuur een zwaardvechter in een arena vol fouten. Overleef de ronde, beantwoord vragen voor munten en koop betere uitrusting.">
 <meta name="theme-color" content="#FBF6F1">
@@ -67,9 +71,15 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 /* ---------- het spel ---------- */
 .spel{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;padding:10px 0 16px;align-items:stretch;
   height:calc(100vh - 62px);min-height:560px}
-@media(max-width:1000px){.spel{grid-template-columns:1fr;height:auto}.arenavak{height:60vw}}
+@media(max-width:1000px){.spel{grid-template-columns:1fr;height:auto}.arenavak{height:56vw}}
 .arenakolom{display:flex;flex-direction:column;min-height:0;gap:8px;height:100%}
-.hud{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch}
+.hudrij{display:flex;gap:8px;align-items:stretch}
+.hud{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch;flex:1}
+/* de ontwijkknop: voor wie op een aanraakscherm speelt, en als teller voor de rest */
+.dashknop{border:none;background:var(--ocean);color:#fff;font-weight:600;border-radius:14px;padding:7px 14px;
+  min-width:118px;font-size:.82rem;line-height:1.2;box-shadow:0 3px 10px rgba(20,34,76,.12);white-space:nowrap}
+.dashknop:disabled{background:#fff;color:var(--muted);border:1px solid rgba(20,34,76,.09);box-shadow:none;cursor:default}
+.dashknop small{display:block;font-size:.66rem;font-weight:500;opacity:.85}
 .meter{background:#fff;border:1px solid rgba(20,34,76,.09);border-radius:14px;padding:7px 13px;min-width:88px}
 .meter i{display:block;font-style:normal;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
 .meter b{font-size:1.15rem;font-variant-numeric:tabular-nums}
@@ -188,6 +198,7 @@ body.groot .meter b{font-size:1.45rem}
 @media(max-width:900px){.lghoi{display:none}}
 @media(prefers-reduced-motion:reduce){.lghoi{transition:none !important}}
 </style>
+<script src="adaptief.js"></script>
 <link rel="stylesheet" href="basis.css">
 </head>
 <body>
@@ -196,6 +207,10 @@ body.groot .meter b{font-size:1.45rem}
   <div class="wrap hd">
     <a class="mark" href="./"><span class="lgmark"><i><span>L</span><span>G</span></i><b class="lgdot"></b></span><span class="lgnaam"><span>Zwaardvechter</span><span class="lgstreep"></span></span><span class="lghoi">alle spellen</span></a>
     <div class="hd-right">
+      <button class="themaknop" id="themaknop" type="button" aria-label="Schakel naar donker" title="Donker of licht">
+        <svg class="maan" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+        <svg class="zon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>
+      </button>
       <button class="linkbtn hide" id="pauzeBtn" type="button">Pauze</button>
       <button class="linkbtn" id="bordBtn" type="button">Digibord</button>
       <button class="linkbtn" id="opnieuwBtn" type="button">Opnieuw</button>
@@ -209,9 +224,9 @@ body.groot .meter b{font-size:1.45rem}
   <p class="lead">Jij staat met een zwaard in een arena en de fouten komen van alle kanten op je af. Loop, ontwijk en sla. Na elke ronde beantwoord je met de klas een paar vragen: elk goed antwoord is geld, en met geld koop je een scherper zwaard, een harnas, snellere laarzen of een werpmes. Hoeveel rondes houd je vol?</p>
 
   <div class="uitleg">
-    <div><i style="background:var(--crab)">1</i><b>Bewegen en slaan</b><span>Pijltjes of WASD om te lopen, of houd je vinger op de arena en loop erheen. Je zwaard slaat vanzelf naar de dichtstbijzijnde fout die binnen bereik komt.</span></div>
+    <div><i style="background:var(--crab)">1</i><b>Bewegen, ontwijken en slaan</b><span>Pijltjes of WASD om te lopen, of houd je vinger op de arena en loop erheen. Spatie of de knop Ontwijk maakt een sprong waarbij niets je raakt. Je zwaard slaat vanzelf naar de dichtstbijzijnde fout die binnen bereik komt.</span></div>
     <div><i style="background:var(--amber)">2</i><b>Elke ronde meer</b><span>Meer fouten, snellere, dikkere en fouten met een schild. Elke vijfde ronde een baas. Raakt een fout je, dan kost dat leven; op nul is het klaar.</span></div>
-    <div><i style="background:var(--ocean)">3</i><b>Vragen zijn munten</b><span>Na elke ronde drie vragen voor de klas. Goed is munten, op rij goed is meer munten. Fouten die je velt laten ook wat vallen.</span></div>
+    <div><i style="background:var(--ocean)">3</i><b>Vragen zijn munten</b><span>Na elke ronde vijf vragen voor de klas, en hoe verder je komt hoe meer. Goed is munten, op rij goed is meer munten. Weet je het te goed, dan gaan de vragen een niveau omhoog. Fouten die je velt laten ook wat vallen.</span></div>
     <div><i style="background:#6b3fa0">4</i><b>Uitrusting</b><span>Tussen de rondes koop je in de winkel: zwaard, bereik, tempo, harnas, laarzen, werpmes en een drankje. Alles heeft vijf niveaus.</span></div>
   </div>
 
@@ -229,8 +244,8 @@ body.groot .meter b{font-size:1.45rem}
 
 <section class="wrap spel hide" id="scherm-spel">
   <div class="arenakolom">
-    <div class="hud" id="hud"></div>
-    <div class="arenavak" id="arenavak"><svg id="arena" viewBox="0 0 900 520" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    <div class="hudrij"><div class="hud" id="hud"></div><button class="dashknop" type="button" id="dashBtn">Ontwijk<small>spatie of shift</small></button></div>
+    <div class="arenavak" id="arenavak"><svg id="arena" viewBox="0 0 1100 620" xmlns="http://www.w3.org/2000/svg"></svg></div>
     <p class="arenatip" id="arenatip">Pijltjes of WASD om te lopen. Je zwaard slaat vanzelf.</p>
   </div>
   <aside class="zij" id="zij"></aside>
@@ -253,7 +268,7 @@ body.groot .meter b{font-size:1.45rem}
    Een arena, een zwaardvechter en fouten die op je af komen. Drie fasen die
    elkaar afwisselen:
      ronde   je loopt en slaat tot alle fouten van die ronde weg zijn
-     vragen  drie vragen voor de klas, goed is munten
+     vragen  vijf of meer vragen voor de klas, goed is munten
      winkel  je koopt uitrusting van die munten, dan de volgende ronde
 
    De vragen zijn dezelfde als in Torenverdediging: rekenen, Nederlands,
@@ -1826,10 +1841,19 @@ function rekenVraag(rang, toegestaan) {
 /* ============================================================================
    BALANS. Hier draai je aan.
    ============================================================================ */
-const ARENA = { b:900, h:520, rand:26 };
+/* De arena was 900 bij 520 en dan zat je vanaf ronde tien klem in een hoek:
+   er kwamen meer fouten dan er ruimte was om omheen te lopen. Nu 1100 bij 620,
+   en daarnaast kun je ontwijken (zie DASH). */
+const ARENA = { b:1100, h:620, rand:26 };
 const SPELER = { r:22, hp:100, snelheid:200, zwaard:{ schade:16, bereik:82, tempo:0.55 }, boog:110 };
-const VRAGEN_PER_RONDE = 3;
-const MUNT_GOED = 12, MUNT_REEKS = 3, MUNT_REEKSMAX = 12, MUNT_GROEI = 0.04;   /* per goed antwoord, met reeksbonus, en groei per ronde */
+/* Ontwijken: een korte sprong in je looprichting, even onkwetsbaar, en dan
+   een paar seconden wachten. Spatie, Shift of de knop naast de tellers. */
+const DASH = { duur:0.18, snel:950, pauze:2.2, onkwetsbaar:0.4 };
+/* Drie vragen per ronde was te weinig om echt te oefenen. Nu vijf, en elke
+   vier rondes een erbij tot acht. De munten per vraag gaan iets omlaag, anders
+   koop je met vijf vragen de winkel in twee rondes leeg. */
+function vragenInRonde(n){ return Math.min(8, 5 + Math.floor((n - 1) / 4)); }
+const MUNT_GOED = 9, MUNT_REEKS = 3, MUNT_REEKSMAX = 10, MUNT_GROEI = 0.04;   /* per goed antwoord, met reeksbonus, en groei per ronde */
 const MUNT_VAL = 0.35;          /* kans dat een gevelde fout een munt laat vallen */
 const RAAKPAUZE = 0.8;          /* seconden onkwetsbaar na een klap */
 const BAASRONDE = 5;
@@ -1891,6 +1915,12 @@ const ICONEN = {
   /* ---------- keuzes ---------- */
   var niveau = 'kgt', vak = null, keuze = {};
   function rang(){ var n = NIVEAUS.filter(function(x){ return x.id === niveau; })[0]; return n ? n.rang : 2; }
+  /* De vragen groeien mee met wie ze te goed weet: een niveau hoger zodra
+     bijna alles goed is, een stap terug als het misgaat. Zie adaptief.js. */
+  var slim = Adaptief({ ladder:NIVEAUS.map(function(n){ return n.id; }), start:niveau,
+    naam:function(id){ var n = NIVEAUS.filter(function(x){ return x.id === id; })[0]; return n ? n.naam : id; }, wissel:function(){ pot = null; } });
+  function vraagRang(){ var n = NIVEAUS.filter(function(x){ return x.id === slim.niveau(); })[0]; return n ? n.rang : rang(); }
+  function vraagNiveauNaam(){ var n = NIVEAUS.filter(function(x){ return x.id === slim.niveau(); })[0]; return n ? n.naam : ''; }
 
   function tekenNiveaus(){
     var el = document.getElementById('niveaus');
@@ -1941,9 +1971,9 @@ const ICONEN = {
   }
 
   /* ---------- vragen ---------- */
-  var pot = null, vraag = null, geklikt = -1, reeks = 0, besteReeks = 0, goedAantal = 0, foutAantal = 0, vragenOver = 0;
+  var pot = null, vraag = null, geklikt = -1, reeks = 0, besteReeks = 0, goedAantal = 0, foutAantal = 0, vragenOver = 0, vragenTotaal = 0;
   function nieuweVraag(){
-    var r = rang(), gekozen2 = keuze[vak] || [];
+    var r = vraagRang(), gekozen2 = keuze[vak] || [];
     if (vak === 'reken') return rekenVraag(r, gekozen2);
     var bron = BRONNEN[vak], nivo = NIVOS[vak];
     if (!pot || !pot.length){
@@ -1979,7 +2009,7 @@ const ICONEN = {
   /* ---------- toestand ---------- */
   var fase = 'ronde';           /* ronde, vragen, winkel */
   var ronde = 0, munten = 0, hp = 0, maxHp = 0, geveld = 0, level = {}, tijdInRonde = 0;
-  var sp = { x:450, y:260, mikt:0, klok:0, zwaai:0, raak:0, mesKlok:0, flits:0 };
+  var sp = { x:550, y:310, mikt:0, klok:0, zwaai:0, raak:0, mesKlok:0, flits:0, dash:0, dashKlok:0, dx:1, dy:0 };
   var fouten = [], messen = [], munt = [], pluis = [], cijfers = [], teSpawnen = 0, spawnKlok = 0;
   var toetsen = {}, wijs = null, loopt = false, pauze = false, laatste = 0;
 
@@ -1996,6 +2026,7 @@ const ICONEN = {
   /* ---------- beginnen ---------- */
   function begin(){
     ronde = 0; munten = 0; level = {}; geveld = 0; reeks = 0; besteReeks = 0; goedAantal = 0; foutAantal = 0;
+    slim.reset(niveau); pot = null;
     maxHp = maxLeven(); hp = maxHp;
     document.getElementById('scherm-start').classList.add('hide');
     document.getElementById('scherm-einde').classList.add('hide');
@@ -2055,6 +2086,7 @@ const ICONEN = {
   /* ---------- besturing ---------- */
   addEventListener('keydown', function(e){
     if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].indexOf(e.key) >= 0 && fase === 'ronde') e.preventDefault();
+    if ((e.key === ' ' || e.key === 'Shift') && fase === 'ronde' && !e.repeat) ontwijk();
     toetsen[e.key.toLowerCase()] = true;
     if ((e.key === 'p' || e.key === 'Escape') && !document.getElementById('scherm-spel').classList.contains('hide')) zetPauze();
     if (fase === 'vragen' && e.key >= '1' && e.key <= '4') antwoord(parseInt(e.key, 10) - 1);
@@ -2071,6 +2103,30 @@ const ICONEN = {
   vak2.addEventListener('pointermove', function(e){ if (wijs) wijs = arenaPunt(e); });
   vak2.addEventListener('pointerup', function(){ wijs = null; });
   vak2.addEventListener('pointercancel', function(){ wijs = null; });
+
+  /* Ontwijken. Sta je stil, dan spring je weg van de dichtstbijzijnde fout. */
+  function ontwijk(){
+    if (fase !== 'ronde' || pauze || sp.dashKlok > 0 || sp.dash > 0) return;
+    if (!sp.loopt){
+      var d = null, da = 1e9;
+      fouten.forEach(function(f){ var a = Math.hypot(f.x - sp.x, f.y - sp.y); if (a < da){ da = a; d = f; } });
+      if (d){ var wx = sp.x - d.x, wy = sp.y - d.y, wl = Math.hypot(wx, wy) || 1; sp.dx = wx / wl; sp.dy = wy / wl; }
+    }
+    sp.dash = DASH.duur; sp.dashKlok = DASH.pauze;
+    sp.raak = Math.max(sp.raak, DASH.onkwetsbaar);
+    for (var i = 0; i < 6; i++){
+      var hk = Math.random() * Math.PI * 2, sn = 30 + Math.random() * 60;
+      pluis.push({ x:sp.x, y:sp.y, vx:Math.cos(hk) * sn, vy:Math.sin(hk) * sn, leven:0.35, kleur:'#83A5F2' });
+    }
+  }
+  document.getElementById('dashBtn').addEventListener('pointerdown', function(e){ e.preventDefault(); ontwijk(); });
+  function tekenDash(){
+    var k = document.getElementById('dashBtn');
+    if (!k) return;
+    var klaar = sp.dashKlok <= 0;
+    k.disabled = !klaar || fase !== 'ronde';
+    k.innerHTML = klaar ? 'Ontwijk<small>spatie of shift</small>' : 'Ontwijk<small>nog ' + sp.dashKlok.toFixed(1).replace('.', ',') + ' s</small>';
+  }
 
   function zetPauze(){
     if (fase !== 'ronde') return;
@@ -2111,7 +2167,15 @@ const ICONEN = {
     if (l){
       sp.x += dx / l * loopSnel() * dt; sp.y += dy / l * loopSnel() * dt;
       sp.loopt = true;
+      sp.dx = dx / l; sp.dy = dy / l;          /* de laatste looprichting, voor het ontwijken */
     } else sp.loopt = false;
+    /* de sprong: kort en hard, met een spoor erachter */
+    if (sp.dashKlok > 0) sp.dashKlok -= dt;
+    if (sp.dash > 0){
+      sp.dash -= dt;
+      sp.x += sp.dx * DASH.snel * dt; sp.y += sp.dy * DASH.snel * dt;
+      pluis.push({ x:sp.x - sp.dx * 10, y:sp.y - sp.dy * 10, vx:-sp.dx * 30, vy:-sp.dy * 30, leven:0.3, kleur:'#83A5F2' });
+    }
     sp.x = Math.max(ARENA.rand, Math.min(ARENA.b - ARENA.rand, sp.x));
     sp.y = Math.max(ARENA.rand, Math.min(ARENA.h - ARENA.rand, sp.y));
 
@@ -2235,15 +2299,17 @@ const ICONEN = {
     munt.forEach(function(m){ munten += m.waarde; });
     munt = [];
     fase = 'vragen';
-    vragenOver = VRAGEN_PER_RONDE;
+    vragenOver = vragenInRonde(ronde); vragenTotaal = vragenOver;
     vraag = nieuweVraag(); geklikt = -1;
-    document.getElementById('arenatip').textContent = 'Ronde ' + ronde + ' overleefd. Nu ' + VRAGEN_PER_RONDE + ' vragen voor de klas; elk goed antwoord is geld voor de winkel.';
+    tekenDash();
+    document.getElementById('arenatip').textContent = 'Ronde ' + ronde + ' overleefd. Nu ' + vragenTotaal + ' vragen voor de klas; elk goed antwoord is geld voor de winkel.';
     tekenZij();
   }
   function antwoord(i){
     if (fase !== 'vragen' || !vraag || geklikt >= 0 || i >= vraag.o.length) return;
     var goed = i === vraag.g;
     geklikt = i;
+    slim.toets(goed);
     if (goed){
       reeks++; goedAantal++; besteReeks = Math.max(besteReeks, reeks);
       var winst = Math.round((MUNT_GOED + Math.min(MUNT_REEKSMAX, reeks * MUNT_REEKS)) * (1 + (ronde - 1) * MUNT_GROEI));
@@ -2290,7 +2356,8 @@ const ICONEN = {
       }).join(' \u00b7 ') + '</div>';
       h += '<p class="sub" style="margin-top:auto;font-size:.8rem">Elke vijfde ronde komt er een baas. Fouten die je velt laten soms een munt vallen; loop erover om hem op te rapen.</p>';
     } else if (fase === 'vragen'){
-      h += '<p class="eyebrow">vraag ' + (VRAGEN_PER_RONDE - vragenOver + (geklikt >= 0 ? 0 : 1)) + ' van ' + VRAGEN_PER_RONDE + ' \u00b7 ' + (vraag.t || '') + '</p>';
+      h += '<p class="eyebrow">vraag ' + (vragenTotaal - vragenOver + (geklikt >= 0 ? 0 : 1)) + ' van ' + vragenTotaal + ' \u00b7 ' + (vraag.t || '') +
+        (slim.verhoogd() ? ' \u00b7 ' + vraagNiveauNaam() : '') + '</p>';
       h += '<h2>' + vraag.v + '</h2>';
       var beeld = beeldVoor(vraag); if (beeld) h += '<div class="beeld">' + beeld + '</div>';
       h += '<div class="opties">' + vraag.o.map(function(t, i){
@@ -2331,6 +2398,7 @@ const ICONEN = {
       '<div class="meter"><i>Ronde</i><b>' + ronde + '</b></div>' +
       '<div class="meter"><i>Nog te gaan</i><b>' + (fouten.length + Math.max(0, teSpawnen)) + '</b></div>' +
       '<div class="meter"><i>Geveld</i><b>' + geveld + '</b></div>';
+    tekenDash();
   }
 
   /* ---------- de arena ---------- */
@@ -2422,6 +2490,8 @@ const ICONEN = {
     if (stat('harnas') >= 3) s += '<path d="M0,' + (-R) + ' l0,-9 l5,3" fill="none" stroke="#F26749" stroke-width="3.5" stroke-linecap="round"/>';
     s += '</g>';
     if (sp.raak > 0) s += '<circle cx="' + sp.x.toFixed(1) + '" cy="' + sp.y.toFixed(1) + '" r="' + (R + 8) + '" fill="none" stroke="#fff" stroke-width="2" opacity=".5" stroke-dasharray="6 5"/>';
+    if (sp.dash > 0) s += '<path d="M' + sp.x.toFixed(1) + ',' + sp.y.toFixed(1) + ' L' + (sp.x - sp.dx * 70).toFixed(1) + ',' + (sp.y - sp.dy * 70).toFixed(1) +
+      '" stroke="#83A5F2" stroke-width="' + (R * 1.4).toFixed(0) + '" stroke-linecap="round" opacity="' + (sp.dash / DASH.duur * 0.5).toFixed(2) + '"/>';
     /* deeltjes en getallen */
     pluis.forEach(function(p){ s += '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' + (3 * p.leven / 0.45 + 1).toFixed(1) + '" fill="' + p.kleur + '" opacity="' + (p.leven / 0.45).toFixed(2) + '"/>'; });
     cijfers.forEach(function(c){ s += '<text x="' + c.x.toFixed(1) + '" y="' + c.y.toFixed(1) + '" text-anchor="middle" font-size="15" font-weight="700" fill="' + c.kleur + '" opacity="' + Math.min(1, c.leven).toFixed(2) + '" font-family="Poppins" stroke="#fff" stroke-width="3" paint-order="stroke">' + c.tekst + '</text>'; });
@@ -2494,5 +2564,6 @@ const ICONEN = {
   }
 })();
 </script>
+<script src="thema.js"></script>
 </body>
 </html>
