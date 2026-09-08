@@ -1,4 +1,4 @@
-/* Meegroeiend niveau, gedeeld door de spellen die vragen stellen.
+/* Meegroeiend niveau, voor Torenverdediging en Zwaardvechter.
 
    Een leerling die op vmbo-tl speelt en bijna alles goed heeft, wordt niet
    uitgedaagd. Dit stukje kijkt naar de laatste antwoorden en zet het niveau

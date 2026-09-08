@@ -223,7 +223,6 @@ body.groot .uitslagregel{font-size:1.05rem}
 @media(max-width:900px){.lghoi{display:none}}
 @media(prefers-reduced-motion:reduce){.lghoi{transition:none !important}}
 </style>
-<script src="adaptief.js"></script>
 <link rel="stylesheet" href="basis.css">
 </head>
 <body>
@@ -485,7 +484,7 @@ var LANDEN = [
     });
   }
 
-  knoppen('niveaus',    NIVEAUS,    'nivUit',    function(x){ niveau = x; slim.reset(x.id); });
+  knoppen('niveaus',    NIVEAUS,    'nivUit',    function(x){ niveau = x; });
   knoppen('richtingen', RICHTINGEN, 'richtUit',  function(x){ richting = x; });
   knoppen('modussen',   MODUSSEN,   'modusUit',  function(x){ modus = x; });
 
@@ -497,14 +496,8 @@ var LANDEN = [
   }
 
   /* ---------- de stapel vragen ---------- */
-  /* Het niveau groeit mee: wie bijna alles goed heeft, krijgt de lastiger
-     landen erbij. De stapel die nog komt wordt dan opnieuw gelegd. Zie adaptief.js. */
-  var slim = Adaptief({ ladder:NIVEAUS.map(function(n){ return n.id; }), start:'kgt',
-    naam:function(id){ var n = NIVEAUS.filter(function(x){ return x.id === id; })[0]; return n ? n.naam : id; },
-    wissel:function(){ rij = rij.slice(0, nr).concat(stapel()); } });
-  function slimRang(){ var n = NIVEAUS.filter(function(x){ return x.id === slim.niveau(); })[0]; return n ? n.rang : niveau.rang; }
   function stapel(){
-    var mag = LANDEN.filter(function(x){ return x.n <= slimRang(); });
+    var mag = LANDEN.filter(function(x){ return x.n <= niveau.rang; });
     /* Blijft er te weinig over, dan verruimen we het, want tien keer dezelfde
        vlag is geen spel. */
     if (mag.length < 16) mag = LANDEN.slice();
@@ -512,7 +505,6 @@ var LANDEN = [
   }
 
   function begin(){
-    slim.reset(niveau.id);
     rij = stapel(); nr = 0;
     goed = 0; punten = 0; reeks = 0; besteReeks = 0; fouten = []; opgeslagen = false;
     tijd = RACE.start; loopt = isRace(); laatsteTik = Date.now();
@@ -597,7 +589,6 @@ var LANDEN = [
   function antwoord(knop, klopt){
     if (bezig) return;
     bezig = true;
-    slim.toets(klopt);
     var juist = naamVan(huidig);
 
     Array.prototype.forEach.call(elOpties.children, function(b){

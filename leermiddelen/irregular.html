@@ -190,7 +190,6 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 @media(prefers-reduced-motion:reduce){.lghoi{transition:none !important}}
 
 </style>
-<script src="adaptief.js"></script>
 <link rel="stylesheet" href="basis.css">
 </head>
 <body>
@@ -544,7 +543,7 @@ var KOP = { w:'hele werkwoord', vt:'verleden tijd', vd:'voltooid deelwoord' };
       b.innerHTML = '<b>' + s.naam + '</b><span>' +
         (n === VERBS.length ? 'alle ' + n + ' werkwoorden' : n + ' van de ' + VERBS.length + ' werkwoorden') + '</span>';
       b.addEventListener('click', function(){
-        set = s; slim.reset(s.id);
+        set = s;
         Array.prototype.forEach.call(setVak.children, function(c){ c.classList.remove('on'); });
         b.classList.add('on');
         document.getElementById('modusRij').classList.remove('hide');
@@ -561,20 +560,7 @@ var KOP = { w:'hele werkwoord', vt:'verleden tijd', vd:'voltooid deelwoord' };
     klaarCheck();
   });
 
-  /* De set groeit mee: wie de bekendste bijna allemaal weet, krijgt er de
-     volgende laag bij. De rij die nog komt wordt dan uit de nieuwe set
-     aangevuld. Zie adaptief.js. */
-  var slim = Adaptief({ ladder:SETS.map(function(x){ return x.id; }), start:'kern',
-    naam:function(id){ var x = SETS.filter(function(y){ return y.id === id; })[0]; return x ? x.naam.toLowerCase() : id; },
-    wissel:function(){
-      var gedaan = rij.slice(0, nr + 1);
-      rij = gedaan.concat(husselen(selectie().filter(function(v){ return gedaan.indexOf(v) < 0; })));
-      zak = [];
-    } });
-  function selectie(){
-    var s = SETS.filter(function(x){ return x.id === slim.niveau(); })[0] || set;
-    return s ? VERBS.filter(function(v){ return v.v <= s.tot; }) : [];
-  }
+  function selectie(){ return set ? VERBS.filter(function(v){ return v.v <= set.tot; }) : []; }
   function klaarCheck(){
     elStartBtn.disabled = !(vorm && set && modus);
     if (vorm && set && modus){
@@ -609,7 +595,6 @@ var KOP = { w:'hele werkwoord', vt:'verleden tijd', vd:'voltooid deelwoord' };
   function start(){
     goed = 0; totaal = 0; fouten = []; punten = 0; reeks = 0; besteReeks = 0;
     nr = 0; bezig = false; opgeslagen = false; zak = [];
-    slim.reset(set.id);
     rij = husselen(selectie());
     tijd = RACE.start;
     elStart.classList.add('hide'); elEinde.classList.add('hide'); elSpel.classList.remove('hide');
@@ -735,7 +720,6 @@ var KOP = { w:'hele werkwoord', vt:'verleden tijd', vd:'voltooid deelwoord' };
     bezig = true;
     totaal++;
     elIn.readOnly = true;
-    slim.toets(klopt2);
     if (klopt2){
       goed++; reeks++;
       besteReeks = Math.max(besteReeks, reeks);

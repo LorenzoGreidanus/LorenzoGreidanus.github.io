@@ -181,7 +181,6 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
 @media(max-width:900px){.lghoi{display:none}}
 @media(prefers-reduced-motion:reduce){.lghoi{transition:none !important}}
 </style>
-<script src="adaptief.js"></script>
 <link rel="stylesheet" href="basis.css">
 </head>
 <body>
@@ -344,23 +343,13 @@ var MODUSSEN = [
   document.getElementById('jaar').textContent = new Date().getFullYear();
 
   var modus = 'wijs', niveau = 'kgt', gekozen = [];
-  var rij = [], nu = null, goed = 0, fout = 0, gemist = [], alGefaald = false, gehad = [];
+  var rij = [], nu = null, goed = 0, fout = 0, gemist = [], alGefaald = false;
   var beurt = 'wijs';
 
   function rang(){ var n = NIVEAUS.filter(function(x){ return x.id === niveau; })[0]; return n ? n.rang : 2; }
-  /* Het niveau groeit mee: wie de grote organen allemaal weet, krijgt de
-     kleinere erbij in dezelfde beurt. Zie adaptief.js. */
-  var slim = Adaptief({ ladder:NIVEAUS.map(function(n){ return n.id; }), start:niveau,
-    naam:function(id){ var n = NIVEAUS.filter(function(x){ return x.id === id; })[0]; return n ? n.naam : id; },
-    wissel:function(){
-      var erbij = mee().map(function(o){ return o.id; }).filter(function(id){ return rij.indexOf(id) < 0 && gehad.indexOf(id) < 0; });
-      rij = rij.concat(husl(erbij));
-      document.getElementById('mRest').textContent = rij.length;
-    } });
-  function vraagRang(){ var n = NIVEAUS.filter(function(x){ return x.id === slim.niveau(); })[0]; return n ? n.rang : rang(); }
   function mee(){
     return ORGANEN.filter(function(o){
-      return o.n <= vraagRang() && (!gekozen.length || gekozen.indexOf(o.stelsel) >= 0);
+      return o.n <= rang() && (!gekozen.length || gekozen.indexOf(o.stelsel) >= 0);
     });
   }
   function husl(a){
@@ -384,7 +373,7 @@ var MODUSSEN = [
     document.getElementById('modusUit').textContent = MODUSSEN.filter(function(m){ return m.id === modus; })[0].uit;
   }
   function tekenNiveaus(){
-    knoppen('niveaus', NIVEAUS, niveau, function(v){ niveau = v; slim.reset(v); tekenNiveaus(); tekenSets(); tekenStart(); });
+    knoppen('niveaus', NIVEAUS, niveau, function(v){ niveau = v; tekenNiveaus(); tekenSets(); tekenStart(); });
     document.getElementById('nivUit').textContent = NIVEAUS.filter(function(n){ return n.id === niveau; })[0].uit;
   }
   function tekenSets(){
@@ -555,7 +544,7 @@ var MODUSSEN = [
          het gekozen stelsel. Anders heeft de bloedsomloop maar een orgaan en
          valt er niets te kiezen. Organen uit hetzelfde stelsel gaan wel voor,
          want die zijn lastiger uit elkaar te houden. */
-      var alle = ORGANEN.filter(function(x){ return x.n <= vraagRang() && x.id !== o.id; });
+      var alle = ORGANEN.filter(function(x){ return x.n <= rang() && x.id !== o.id; });
       var eigen = husl(alle.filter(function(x){ return x.stelsel === o.stelsel; }));
       var rest = husl(alle.filter(function(x){ return x.stelsel !== o.stelsel; }));
       var anderen = eigen.concat(rest).slice(0, 3);
@@ -576,7 +565,7 @@ var MODUSSEN = [
   }
 
   function verder(){
-    gehad.push(rij.shift());
+    rij.shift();
     document.getElementById('mGoed').textContent = goed;
     document.getElementById('mFout').textContent = fout;
     setTimeout(function(){
@@ -589,13 +578,13 @@ var MODUSSEN = [
     if (!nu || nu.af) return;
     var o = ORGANEN.filter(function(x){ return x.id === nu.id; })[0];
     if (id === nu.id){
-      if (!alGefaald){ goed++; slim.toets(true); }
+      if (!alGefaald) goed++; 
       nu.af = true;
       toonUitleg(o, true);
       tekenLijf();
       verder();
     } else {
-      if (!alGefaald){ fout++; gemist.push(o.naam); alGefaald = true; slim.toets(false); }
+      if (!alGefaald){ fout++; gemist.push(o.naam); alGefaald = true; }
       var mis = ORGANEN.filter(function(x){ return x.id === id; })[0];
       nu.mis = id;
       document.getElementById('terugvak').innerHTML = '<div class="terug">' + letters[id] + ' is ' + mis.naam +
@@ -611,7 +600,6 @@ var MODUSSEN = [
     var o = ORGANEN.filter(function(x){ return x.id === nu.id; })[0];
     var juist = id === nu.id;
     if (juist) goed++; else { fout++; gemist.push(o.naam); }
-    slim.toets(juist);
     Array.prototype.forEach.call(document.getElementById('opties').querySelectorAll('.optie'), function(b){
       b.disabled = true;
       if (b.getAttribute('data-o') === nu.id) b.classList.add('juist');
@@ -625,9 +613,8 @@ var MODUSSEN = [
   function begin(){
     var lijst = mee();
     lootLetters();
-    slim.reset(niveau);
     rij = husl(lijst.map(function(o){ return o.id; }));
-    goed = 0; fout = 0; gemist = []; gehad = [];
+    goed = 0; fout = 0; gemist = [];
     document.getElementById('mGoed').textContent = 0;
     document.getElementById('mFout').textContent = 0;
     document.getElementById('scherm-start').classList.add('hide');

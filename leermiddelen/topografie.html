@@ -253,7 +253,6 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 @media(prefers-reduced-motion:reduce){.lghoi{transition:none !important}}
 
 </style>
-<script src="adaptief.js"></script>
 <link rel="stylesheet" href="basis.css">
 </head>
 <body>
@@ -562,7 +561,6 @@ var RACE = { start:60, erbij:5, eraf:6 };
     } else {
       nivRij.classList.add('hide');
       niveau = NIVEAUS[NIVEAUS.length - 1];        /* alles, want er is maar een set */
-      slim.reset(niveau.id);
       document.getElementById('pillNiv').classList.add('hide');
     }
     document.getElementById('modusRij').classList.toggle('hide', niveauZinvol(k) && !niveau);
@@ -582,7 +580,7 @@ var RACE = { start:60, erbij:5, eraf:6 };
                        : n1 + ' van de ' + totaal + ' ' + woordVan(kaartId)) +
         ', ' + n.kort + '</span>';
       b.addEventListener('click', function(){
-        niveau = n; slim.reset(n.id);
+        niveau = n;
         Array.prototype.forEach.call(elNiveaus.children, function(c){ c.classList.remove('on'); });
         b.classList.add('on');
         var p = document.getElementById('pillNiv'); p.textContent = n.naam; p.classList.remove('hide');
@@ -599,18 +597,9 @@ var RACE = { start:60, erbij:5, eraf:6 };
     klaarCheck();
   });
 
-  /* De set groeit mee: wie de basis bijna allemaal weet, krijgt de minder
-     bekende erbij. Zie adaptief.js. */
-  var slim = Adaptief({ ladder:NIVEAUS.map(function(n){ return n.id; }), start:'kern',
-    naam:function(id){ var n = NIVEAUS.filter(function(x){ return x.id === id; })[0]; return n ? n.naam.toLowerCase() : id; },
-    wissel:function(){
-      var gedaan = rij.slice(0, nr + 1);
-      rij = gedaan.concat(husselen(selectie().filter(function(l){ return gedaan.indexOf(l) < 0; })));
-    } });
-  function slimTot(){ var n = NIVEAUS.filter(function(x){ return x.id === slim.niveau(); })[0]; return n ? n.tot : (niveau ? niveau.tot : 1); }
   function selectie(){
     if (!kaartId || !niveau) return [];
-    return KAARTEN[kaartId].landen.filter(function(l){ return l.v <= slimTot(); });
+    return KAARTEN[kaartId].landen.filter(function(l){ return l.v <= niveau.tot; });
   }
 
   function meervoud(){
@@ -741,7 +730,6 @@ var RACE = { start:60, erbij:5, eraf:6 };
   function start(){
     goed = 0; totaal = 0; fouten = []; punten = 0; reeks = 0; besteReeks = 0;
     nr = 0; bezig = false; opgeslagen = false;
-    slim.reset(niveau.id);
     rij = husselen(selectie());
     tijd = RACE.start;
     elStart.classList.add('hide'); elEinde.classList.add('hide'); elSpel.classList.remove('hide');
@@ -862,7 +850,6 @@ var RACE = { start:60, erbij:5, eraf:6 };
     bezig = true;
     totaal++;
     elIn.readOnly = true;
-    slim.toets(klopt);
     if (klopt){
       goed++; reeks++;
       besteReeks = Math.max(besteReeks, reeks);
