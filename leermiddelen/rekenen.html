@@ -348,6 +348,7 @@ var SOORTEN = [
   { id:'plus',   naam:'Optellen en aftrekken', uitleg:'Alleen plus- en minsommen.' },
   { id:'tafels', naam:'Tafels', uitleg:'Keersommen.' },
   { id:'delen',  naam:'Delen', uitleg:'Deelsommen die precies uitkomen.' },
+  { id:'komma',  naam:'Kommagetallen', uitleg:'Optellen en aftrekken met een komma, en keer of delen door 10, 100 en 1000.' },
   { id:'procent',naam:'Procenten en breuken', uitleg:'Tien procent van 60, of een kwart van 80.' }
 ];
 
@@ -356,6 +357,10 @@ var SOORTEN = [
    Elke functie geeft { vraag, antwoord, soort } terug.
    ============================================================================ */
 function heel(min, max){ return Math.floor(Math.random() * (max - min + 1)) + min; }
+/* Een getal zoals wij het schrijven: met een komma. */
+function toon(x){ return String(x).replace('.', ','); }
+/* Twee kommagetallen zijn gelijk als ze op de zwevende komma na gelijk zijn. */
+function dicht(a, b){ return Math.abs(a - b) < 1e-9; }
 function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
 
 var FABRIEK = {
@@ -377,6 +382,31 @@ var FABRIEK = {
     var lijst = (tafels && tafels.length) ? tafels : standaardTafels();
     var t = kies(lijst), uit = heel(1, 10);
     return { vraag: (t * uit) + ' : ' + t, antwoord: uit, soort:'tafel van ' + t };
+  },
+  /* Kommagetallen. Tot 20 alleen optellen en aftrekken met een cijfer achter de
+     komma; tot 100 ook twee cijfers en keer 10 of 100; daarboven ook delen
+     door 10 of 100 en keer 1000. Het antwoord wordt netjes afgerond, zodat
+     0,1 + 0,2 niet 0,30000000000000004 wordt. */
+  komma: function(niv){
+    var dec = niv === 'bb' ? 1 : (niv === 'kgt' ? (Math.random() < .5 ? 1 : 2) : 2);
+    var f = Math.pow(10, dec), rond = function(x){ return Math.round(x * f) / f; };
+    var welke = heel(1, niv === 'bb' ? 2 : (niv === 'kgt' ? 3 : 4));
+    if (welke <= 2){
+      var max = niv === 'bb' ? 10 : (niv === 'kgt' ? 50 : 100);
+      var a = rond(1 + Math.random() * (max - 1)), b = rond(1 + Math.random() * (max - 1));
+      if (welke === 1) return { vraag: toon(a) + ' + ' + toon(b), antwoord: rond(a + b), soort:'kommagetallen', decimalen:dec };
+      if (a < b){ var t = a; a = b; b = t; }
+      return { vraag: toon(a) + ' \u2212 ' + toon(b), antwoord: rond(a - b), soort:'kommagetallen', decimalen:dec };
+    }
+    if (welke === 3){
+      var g = rond(0.1 + Math.random() * 20), k = kies(niv === 'hv' ? [10, 100, 1000] : [10, 100]);
+      return { vraag: toon(g) + ' \u00D7 ' + k, antwoord: rond(g * k), soort:'keer ' + k, decimalen:dec };
+    }
+    /* delen door 10 of 100: de komma schuift, dus het antwoord krijgt meer cijfers */
+    var h = heel(1, 99) + kies([0, 0.5, 0.2]), k2 = kies([10, 100]);
+    var ant = Math.round(h / k2 * 10000) / 10000;
+    var achter = (String(ant).split('.')[1] || '').length;
+    return { vraag: toon(h) + ' : ' + k2, antwoord: ant, soort:'delen door ' + k2, decimalen:Math.max(dec, achter) };
   },
   procent: function(){
     var soort = heel(1, 3);
@@ -402,7 +432,7 @@ function standaardTafels(){
 
 function maakSom(niv, soort, tafels){
   var lijst = soort === 'alles'
-    ? (niv === 'hv' ? ['plus','tafels','delen','procent'] : ['plus','tafels','delen'])
+    ? (niv === 'hv' ? ['plus','tafels','delen','komma','procent'] : ['plus','tafels','delen','komma'])
     : [soort];
   var welke = kies(lijst);
   if (welke === 'procent' && niv !== 'hv') welke = 'tafels';
@@ -410,9 +440,26 @@ function maakSom(niv, soort, tafels){
 }
 
 /* vier antwoorden: het juiste plus drie geloofwaardige missers */
-function maakOpties(goed){
+function maakOpties(goed, decimalen){
   var set = [goed];
   var pogingen = 0;
+  if (decimalen){
+    /* bij kommagetallen zijn de missers de fouten die je echt maakt: een
+       cijfer achter de komma ernaast, de komma een plek verkeerd, of een heel
+       getal ernaast */
+    var f = Math.pow(10, decimalen), rond = function(x){ return Math.round(x * f) / f; };
+    var kand = [goed + 1/f, goed - 1/f, goed + 2/f, goed - 2/f, goed + 10/f, goed - 10/f, goed + 1, goed - 1, goed * 10, goed / 10, goed + 0.5, goed - 0.5];
+    for (var q = kand.length - 1; q > 0; q--){ var w = Math.floor(Math.random() * (q + 1)); var h = kand[q]; kand[q] = kand[w]; kand[w] = h; }
+    kand.forEach(function(v){
+      v = Math.round(v * 10000) / 10000;
+      if (set.length >= 4 || v < 0) return;
+      if (set.some(function(x){ return dicht(x, v); })) return;
+      set.push(v);
+    });
+    while (set.length < 4) set.push(rond(goed + set.length * 3 / f));
+    for (var i2 = set.length - 1; i2 > 0; i2--){ var j2 = Math.floor(Math.random() * (i2 + 1)); var t2 = set[i2]; set[i2] = set[j2]; set[j2] = t2; }
+    return set;
+  }
   while (set.length < 4 && pogingen < 60){
     pogingen++;
     var afwijking = kies([1, -1, 2, -2, 10, -10, 5, -5]);
@@ -470,7 +517,7 @@ function maakOpties(goed){
       bereikVak = document.getElementById('bereiken'),
       tempoVak = document.getElementById('tempos');
 
-  function bereikTelt(){ return soort && (soort.id === 'plus' || soort.id === 'alles'); }
+  function bereikTelt(){ return soort && (soort.id === 'plus' || soort.id === 'alles' || soort.id === 'komma'); }
 
   function knop(vak, item, kies){
     var b = document.createElement('button');
@@ -640,13 +687,13 @@ function maakOpties(goed){
     huidige = maakSom(bereik.id, soort.id, actieveTafels());
     document.getElementById('vraag').textContent = huidige.vraag + ' =';
     document.getElementById('soortLabel').textContent = huidige.soort;
-    var opties = maakOpties(huidige.antwoord);
+    var opties = maakOpties(huidige.antwoord, huidige.decimalen);
     var vak = document.getElementById('opties');
     vak.innerHTML = '';
     opties.forEach(function(o, i){
       var b = document.createElement('button');
       b.className = 'optie'; b.type = 'button';
-      b.innerHTML = '<kbd>' + (i + 1) + '</kbd>' + o;
+      b.innerHTML = '<kbd>' + (i + 1) + '</kbd>' + toon(o);
       b.dataset.waarde = o;
       b.addEventListener('click', function(){ antwoord(o, b); });
       vak.appendChild(b);
@@ -658,7 +705,7 @@ function maakOpties(goed){
 
   function antwoord(gekozen, knop){
     if (!bezig) return;
-    var klopt = gekozen === huidige.antwoord;
+    var klopt = dicht(gekozen, huidige.antwoord);
     Array.prototype.forEach.call(document.getElementById('opties').children, function(c){ c.disabled = true; });
 
     if (klopt){
@@ -675,7 +722,7 @@ function maakOpties(goed){
       tijd -= tempo.eraf;
       knop.classList.add('fout');
       Array.prototype.forEach.call(document.getElementById('opties').children, function(c){
-        if (Number(c.dataset.waarde) === huidige.antwoord) c.classList.add('goed');
+        if (dicht(Number(c.dataset.waarde), huidige.antwoord)) c.classList.add('goed');
       });
       vlieg('\u2212' + tempo.eraf + ' seconden', false);
     }
