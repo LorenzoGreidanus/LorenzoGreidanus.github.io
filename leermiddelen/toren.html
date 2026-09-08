@@ -557,6 +557,11 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
     <button type="button" id="testVrij">alles vrijspelen</button>
   </div>
   <div class="testrij">
+    <span>Bot</span><button type="button" id="testBot">speelt zelf</button>
+    <input id="testGoed" type="number" min="0" max="100" value="80" title="deel goed"> %
+    <input id="testAntw" type="number" min="1" max="30" value="5" title="seconden per antwoord"> s
+  </div>
+  <div class="testrij">
     <span>Omgeving</span><select id="testThema"></select>
   </div>
   <div class="testrij">
@@ -686,10 +691,10 @@ const SOORTEN = {
   /* De twee torens van de eilanden staan op het water, niet op het land. De
      Kanonneerboot is het kanon van de zee: snel en dichtbij. De Onderzeeer
      schiet raketten die bij de inslag alles in de buurt meenemen. */
-  schip:     {naam:'Kanonneerboot', letter:'B', kleur:'#4a6b8a',           prijs:95,  bereik:150, schade:8,  tempo:0.42,
+  schip:     {naam:'Kanonneerboot', letter:'B', kleur:'#4a6b8a',           prijs:95,  bereik:150, schade:12, tempo:0.4,
               onder:'Kanonnen, alleen op het water', water:true, speciaal:true, slot:'archipel'},
-  onderzeeer:{naam:'Onderzee\u00ebr',   letter:'O', kleur:'#2d5f6e',           prijs:140, bereik:240, schade:34, tempo:1.7,
-              onder:'Raketten met een klap eromheen, op het water', water:true, raket:true, straal:44, speciaal:true, slot:'archipel'},
+  onderzeeer:{naam:'Onderzee\u00ebr',   letter:'O', kleur:'#2d5f6e',           prijs:140, bereik:250, schade:46, tempo:1.6,
+              onder:'Raketten met een klap eromheen, ziet verstopte fouten', water:true, raket:true, sonar:true, straal:52, speciaal:true, slot:'archipel'},
   /* De twee torens van de vulkaan. De Magmamortier slingert lava die op de
      weg blijft liggen en iedereen verbrandt die erdoorheen loopt. De
      Zwavelblazer zet alles vlakbij in brand: weinig per klap, maar het vuur
@@ -774,7 +779,10 @@ const THEMAS = [
   { id:'eiland', naam:'Tropisch eiland', slot:'eiland', strand:true, plek:' op het tropisch eiland',
     onder:'Zee, palmen en een vlonder over het zand. Met de Tonkla Bommenwerper en de Vriendenhut.',
     torens:['kanon','katapult','vertrager','schutter','bommenwerper','vrienden'] },
-  { id:'archipel', naam:'De eilanden', slot:'archipel', strand:true, water:true, plek:' tussen de eilanden',
+  /* kracht: de fouten zijn hier een kwart minder taai. De eilandjes liggen ver
+     van de weg en er passen minder torens op, en gemeten viel een gemiddelde
+     klas hier rond ronde veertig waar hij op het plein ronde zestig haalde. */
+  { id:'archipel', naam:'De eilanden', slot:'archipel', strand:true, water:true, plek:' tussen de eilanden', kracht:0.75,
     onder:'Open zee met kleine eilandjes. Landtorens passen alleen op een eiland; de Kanonneerboot en de Onderzee\u00ebr liggen op het water. Vanaf ronde zestig komt de Zeeslang.',
     torens:['kanon','katapult','schutter','onderzeeer','schip','bommenwerper'] },
   { id:'vulkaan', naam:'De vulkaan', slot:'vulkaan', plek:' op de vulkaan',
@@ -2482,6 +2490,7 @@ function rekenVraag(rang, toegestaan) {
     miniBijWachtrij = isMiniRonde(bank.ronde)
       ? Math.floor(Math.random() * Math.max(1, Math.floor(wachtrij / 2))) : miniBijWachtrij;
     if (!nieuweRonde) return;
+    botLog('ronde');
     if (isRustronde(bank.ronde)){
       melding2('Ronde ' + bank.ronde + '. Rustronde: minder en zwakkere fouten. Bouw bij.');
     } else if (isBaasRonde(bank.ronde)){
@@ -2519,6 +2528,136 @@ function rekenVraag(rang, toegestaan) {
   var tekenUit = false;     /* bij snel doorspoelen tekenen we alleen de laatste stap */
   var onsterfelijk = false;
   var autoGoed = false, autoKlok = null;
+
+  /* ---------- de speelbot (testpaneel) ----------
+     Speelt een partij zoals een redelijke leerling: antwoordt om de zoveel
+     seconden speeltijd met een instelbaar deel goed, bouwt torens op zinnige
+     plekken, versterkt ze, geeft penningen weg en lapt de klas op als het
+     spannend wordt. Bedoeld om de balans te meten zonder er een uur voor te
+     gaan zitten. Hij kan alleen aan via het testpaneel. Wat hij meemaakt komt
+     in window.torenLog te staan: per ronde, per baas, per verlies. */
+  var bot = { aan:false, goed:0.8, tempoAntwoord:5, klok:0, bouwKlok:0, log:[], wegGezet:0 };
+  window.torenLog = bot.log;
+  function botLog(soort, extra){
+    if (!bot.aan) return;
+    var r = { t:soort, ronde:bank.ronde, gehaald:rondeGehaald, leven:bank.leven, munten:bank.munten, torens:torens.length };
+    if (extra) for (var k in extra) r[k] = extra[k];
+    bot.log.push(r);
+  }
+  function botAntwoord(){
+    if (!vraag || gekliktIndex >= 0 || pauze) return;
+    var i = vraag.g;
+    if (Math.random() >= bot.goed && vraag.o.length > 1){
+      do { i = Math.floor(Math.random() * vraag.o.length); } while (i === vraag.g);
+    }
+    antwoord(i);
+  }
+  /* Welke toren nu? Een vaste opbouw: eerst goedkoop en breed, dan bereik en
+     harde klappen, dan wat de omgeving bijzonders heeft, en daarna herhalen. */
+  function botWens(){
+    var mag = gekozen().filter(function(id){
+      return isVrij(id) && past(id) && !(SOORTEN[id].slot === 'tonkla' && bank.ronde < TONKLARONDE);
+    });
+    if (!mag.length) return null;
+    var tel = {}; torens.forEach(function(t){ tel[t.soort] = (tel[t.soort] || 0) + 1; });
+    var plan = ['kanon','kanon','katapult','pekelpot','schutter','schip','vertrager','katapult','onderzeeer','mortier','zwavel',
+                'schutter','pekelpot','bommenwerper','vrienden','tonkla','aap','katapult','schutter','kanon','onderzeeer','mortier'];
+    var kandidaten = plan.filter(function(id){ return mag.indexOf(id) >= 0; });
+    if (!kandidaten.length) kandidaten = mag;
+    var telPlan = {};
+    for (var i = 0; i < kandidaten.length; i++){
+      var id = kandidaten[i]; telPlan[id] = (telPlan[id] || 0) + 1;
+      if ((tel[id] || 0) < telPlan[id]) return id;
+    }
+    return kandidaten[torens.length % kandidaten.length];
+  }
+  /* De beste plek voor deze toren: naast het pad, en waar hij het meeste pad
+     binnen bereik heeft. Op de eilanden vallen plekken op het verkeerde soort
+     grond vanzelf af via magHier. */
+  function botPlek(soort){
+    var so = SOORTEN[soort], bereik = so.bommen ? 1 : Math.max(60, so.bereik);
+    var punten = [];
+    for (var d = 0; d < PADLENGTE; d += 25) punten.push(positie(d));
+    var beste = null, besteScore = -1;
+    for (var d2 = 90; d2 < PADLENGTE - 140; d2 += 30){
+      var q = positie(d2), hk = padHoek(q.x, q.y) * Math.PI / 180;
+      [PADVRIJ + 8, PADVRIJ + 44, PADVRIJ + 80].forEach(function(af){
+        [1, -1].forEach(function(kant){
+          var x = q.x - Math.sin(hk) * kant * af, y = q.y + Math.cos(hk) * kant * af;
+          if (!magHier(x, y, null, soort)) return;
+          var score = 0;
+          punten.forEach(function(p){ if (Math.hypot(p.x - x, p.y - y) <= bereik) score++; });
+          if (so.bommen) score = 1 + Math.random();
+          /* liever vlak bij het pad, en liever niet te dicht op de school */
+          score += (af === PADVRIJ + 8 ? 0.5 : 0);
+          if (score > besteScore){ besteScore = score; beste = { x:x, y:y }; }
+        });
+      });
+    }
+    return beste;
+  }
+  function botBouw(){
+    if (!inSpel() || pauze) return;
+    if (bank.leven <= 5 && magLappen()){ bank.munten -= lapPrijs(); bank.leven++; gelapt++; botLog('lap'); }
+    if (penningen > 0){
+      var volg = ['katapult','schutter','pekelpot','kanon','onderzeeer','mortier','tonkla','bommenwerper','vertrager','schip','zwavel','aap','vrienden'];
+      var kandidaat = null;
+      volg.forEach(function(soort){ if (!kandidaat) kandidaat = torens.filter(function(t){ return t.soort === soort && !t.kracht; })[0] || null; });
+      if (kandidaat){ penningen--; kandidaat.kracht = true; botLog('penning', { soort:kandidaat.soort }); }
+    }
+    if (bank.ronde >= 4 && wegdingen.length < 3 && bot.wegGezet < 3){
+      var wegSoort = ['pek', 'angels', 'hek'][bot.wegGezet], w = WEGDING[wegSoort];
+      if (bank.munten >= w.prijs + 60){
+        for (var dd = PADLENGTE * 0.6; dd < PADLENGTE - 120; dd += 30){
+          var qq = positie(dd);
+          if (magOpWeg(qq.x, qq.y, null)){
+            bank.munten -= w.prijs;
+            wegdingen.push({ x:qq.x, y:qq.y, soort:wegSoort, id:++wegTeller, voorraad:w.voorraad || 0, klok:0, hoek:padHoek(qq.x, qq.y) });
+            bot.wegGezet++; break;
+          }
+        }
+      }
+    }
+    var wens = botWens();
+    if (wens && torens.length < maxTorens()){
+      var prijs = prijsVan(wens);
+      if (bank.munten < prijs) return;           /* sparen voor wat we willen */
+      var plek = botPlek(wens);
+      if (plek){
+        bank.munten -= prijs;
+        torens.push({ x:plek.x, y:plek.y, soort:wens, niveau:1, klok:0 });
+        botLog('bouw', { soort:wens });
+        return;
+      }
+    }
+    var beste = null, bestePrijs = 1e9;
+    torens.forEach(function(t){
+      if (t.niveau >= MAXNIVEAU || SOORTEN[t.soort].vrienden) return;
+      var kosten = Math.round(SOORTEN[t.soort].prijs * 0.8 * t.niveau);
+      if (kosten < bestePrijs){ bestePrijs = kosten; beste = t; }
+    });
+    if (beste && bank.munten >= bestePrijs){
+      bank.munten -= bestePrijs; beste.niveau++;
+      botLog('sterker', { soort:beste.soort, niveau:beste.niveau });
+    }
+  }
+  function botTik(dt){
+    if (!bot.aan || !inSpel()) return;
+    bot.klok -= dt;
+    if (bot.klok <= 0){
+      bot.klok = bot.tempoAntwoord;
+      /* de echte pauze na een antwoord loopt op de klok van de browser; hier
+         gaat de bot zelf door naar de volgende vraag */
+      if (vraag && gekliktIndex >= 0){
+        vraag = nieuweVraag(); gekliktIndex = -1;
+        document.getElementById('uitlegVak').innerHTML = '';
+        tekenVraag();
+      }
+      botAntwoord();
+    }
+    bot.bouwKlok -= dt;
+    if (bot.bouwKlok <= 0){ bot.bouwKlok = 1.5; botBouw(); }
+  }
 
   function rang(){ var n = NIVEAUS.filter(function(x){ return x.id === niveau; })[0]; return n ? n.rang : 2; }
   /* De vragen groeien mee: wie het te goed weet krijgt een niveau hoger, van
@@ -2812,7 +2951,7 @@ function rekenVraag(rang, toegestaan) {
        Nu 10 met een bonus tot 12, dus tweeentwintig als maximum. Dat is ruim een
        kwart minder, en het maakt de reeks relatief zwaarder: zonder reeks houd
        je nog maar tien over, met een volle reeks meer dan het dubbele. */
-    var winst = goed ? Math.round((10 + Math.min(12, reeks * 3)) * (1 + (bank.ronde - 1) * 0.03)) : 0;
+    var winst = goed ? Math.round((12 + Math.min(12, reeks * 3)) * (1 + (bank.ronde - 1) * 0.03)) : 0;
     gekliktIndex = i;
     reeks = goed ? reeks + 1 : 0;
     vuur = goed ? vuur + 1 : Math.floor(vuur / 2);
@@ -2891,13 +3030,23 @@ function rekenVraag(rang, toegestaan) {
      en een prijs die stijgt met elke toren die je al hebt. Doorgerekend: zo kom
      je op ongeveer veertien rondes, net als met de tien vaste plekken van eerst. */
   var MAXTORENS = 14, DUURDER = 0.18;
+  /* Op de eilanden liggen de landtorens verder van de weg en dekken ze minder;
+     gemeten met de speelbot liep daar de baas van ronde dertig nog door waar hij
+     op het plein al viel. Drie boten extra maken dat goed. */
+  function maxTorens(){ return MAXTORENS + (thema.water ? 3 : 0); }
   /* Torens gingen tot niveau drie, en daarna was er niets meer te verbeteren
      terwijl de fouten wel doorgroeiden. Vijf bleek te ver doorgeschoten: een vol
      bord werd dan zo sterk dat de late rondes hun spanning verloren, en het
      versterken ging eindeloos door. Vier geeft je late munten een bestemming
      zonder dat het bord alles wegveegt. Drie was weer te weinig ruimte, vijf te
      veel; hier staat drie omdat dat de keuze is die in de les gemaakt is. */
-  var MAXNIVEAU = 3;
+  /* Gemeten met de speelbot (september 2026): met drie niveaus stond een vol
+     bord vanaf ronde dertig stil terwijl er duizenden munten bleven liggen, en
+     haalde zelfs een klas met negentig procent goed de Grote Fout niet. Vier
+     geeft die munten een bestemming en maakt de eindbaas haalbaar. Met vier lag
+     er vanaf ronde veertig alsnog een paar duizend munten stil; vijf, met een
+     prijs die per stap oploopt, houdt het bord tot ronde vijftig in beweging. */
+  var MAXNIVEAU = 5;
 
   function prijsVan(soort){
     return Math.round(SOORTEN[soort].prijs * (1 + DUURDER * torens.length));
@@ -3057,7 +3206,7 @@ function rekenVraag(rang, toegestaan) {
      kapotbeuken, de snelle moet je op tijd tegenhouden, de schildbaas vraagt om
      harde klappen, en de splijter valt uiteen als je hem velt. */
   var BAZEN = [
-    { id:'zwaar',  naam:'de zware baas',  taai:11,  vlug:0.5,  schild:0,    mark:'!',
+    { id:'zwaar',  naam:'de zware baas',  taai:9.5, vlug:0.5,  schild:0,    mark:'!',
       uit:'Hij incasseert enorm veel, maar loopt langzaam.' },
     { id:'snel',   naam:'de snelle baas', taai:7,   vlug:1.2,  schild:0,    mark:'\u00bb',
       uit:'Minder taai, maar hij staat zo bij de klas.' },
@@ -3072,12 +3221,15 @@ function rekenVraag(rang, toegestaan) {
      torens, en een toren die er een over zich heen krijgt staat even stil. */
   /* Zijn loopsnelheid stond op 0,78 en dan stond hij bij de klas voordat je
      hem geraakt had; nu 0,62. */
-  var APENBAAS = { id:'aap', naam:'de apenbaas', taai:10, vlug:0.62, schild:0.3, mark:'A', kleur:'#8a6a45', gooit:true,
+  var APENBAAS = { id:'aap', naam:'de apenbaas', taai:7.5, vlug:0.62, schild:0.25, mark:'A', kleur:'#8a6a45', gooit:true,
     uit:'Hij is de taaiste van allemaal en legt je torens met bananenschillen stil.' };
   /* Hij gooit vaker, de schil ligt langer, hij mikt verder, en vanaf ronde
      dertig gooit hij er twee tegelijk. Zonder dat was hij vooral een baas met
      een grapje; nu moet je er echt omheen bouwen. */
-  var SCHILTIJD = 4.5, SCHILDUUR = 6, SCHILBEREIK = 380, DUBBELSCHIL = 30;
+  /* Gemeten: met een schil om de 4,5 seconde die zes seconden bleef liggen lag
+     vanaf ronde dertig het halve bord stil en liep hij er bij elke klas door.
+     Nu om de zes seconden, vier seconden lang, en pas vanaf ronde veertig twee. */
+  var SCHILTIJD = 6, SCHILDUUR = 4, SCHILBEREIK = 380, DUBBELSCHIL = 40;
 
   /* De kans is per baasronde afgesproken: vijf procent in ronde tien, vijftien
      in twintig, vijfendertig in dertig en vijfenzeventig in veertig. Daarna zakt
@@ -3108,16 +3260,19 @@ function rekenVraag(rang, toegestaan) {
      van de vier. Daar staat tegenover dat hij half zo hard loopt, dus je hebt
      zesentwintig seconden om hem te vellen in plaats van zeventien.
 
-     Rekenwerk: bij 644 levens voor een gewone fout in ronde vijftig komt hij op
-     14.168, en met zijn schild reken je op ongeveer 18.000 voordat hij valt.
-     Een goed bord doet rond de 950 schade per seconde, dus je hebt hem er in
-     negentien seconden af, mits je bord die hele tijd op hem staat. Dat lukt
-     alleen als de rest van de ronde onder controle is. Precies de bedoeling.
+     Rekenwerk (na het balansonderzoek van september 2026): een gewone fout heeft
+     in ronde vijftig ongeveer 277 levens, de Grote Fout veertien keer zoveel met
+     de mildere groei van een baas, dus rond de 6.800, en met zijn schild ongeveer
+     8.500 voordat hij valt. Hij loopt op een derde van de snelheid, dus een vol
+     bord op niveau vier heeft hem in de dertig seconden die hij over het pad
+     doet net aan. Dat lukt alleen als de rest van de ronde onder controle is.
+     Precies de bedoeling: gemeten met de speelbot op tachtig procent goed valt
+     hij, op vijfenzestig procent komt de klas niet zover.
 
      Hij komt elke vijftigste ronde terug, want het spel houdt niet op. */
   function isMegaRonde(n){ return n % 50 === 0; }
   var MEGASCHADE = 6;
-  var MEGABAAS = { id:'mega', naam:'de Grote Fout', taai:22, vlug:0.38, schild:0.35, mega:true,
+  var MEGABAAS = { id:'mega', naam:'de Grote Fout', taai:14, vlug:0.33, schild:0.35, mega:true,
     mark:'\u2739', kleur:'#4a1230', splijt:6, gooit:true,
     uit:'Hij heeft het schild, het gooien en het uiteenvallen van alle bazen tegelijk.' };
   /* De eindbaas van het eiland. Even taai en even traag als de Grote Fout, maar
@@ -3125,8 +3280,8 @@ function rekenVraag(rang, toegestaan) {
      het pad, en dan is elke fout die meeloopt een paar seconden verstopt. Dat is
      precies wat het eiland lastig maakt: de Bommenwerper ziet ze niet meer, en
      alleen de Scherpschutter, de vrienden en wat op de weg ligt helpen nog. */
-  /* Vijf procent minder taai dan de Grote Fout: 20,9 in plaats van 22. */
-  var KRAKEN = { id:'kraken', naam:'de Kraken', taai:20.9, vlug:0.38, schild:0.35, mega:true,
+  /* Vijf procent minder taai dan de Grote Fout: 13,3 in plaats van 14. */
+  var KRAKEN = { id:'kraken', naam:'de Kraken', taai:13.3, vlug:0.33, schild:0.35, mega:true,
     mark:'\u224b', kleur:'#2a3f6e', splijt:6, inkt:true,
     uit:'Hij spuit inkt over het pad: dan is alles om hem heen even verstopt. Hij spat uiteen als hij valt.' };
   var INKTTIJD = 7, INKTDUUR = 4, INKTBEREIK = 260;
@@ -3137,7 +3292,7 @@ function rekenVraag(rang, toegestaan) {
      Scherpschutter hem nog. Wie alleen landtorens heeft ziet hem onder zijn
      bord door glijden. Vel hem en de vulkaan gaat open. */
   var ZEESLANGRONDE = 60, DUIKTIJD = 7, DUIKDUUR = 3.5;
-  var ZEESLANG = { id:'zeeslang', naam:'de Zeeslang', taai:16, vlug:0.62, schild:0.2, duikt:true,
+  var ZEESLANG = { id:'zeeslang', naam:'de Zeeslang', taai:8, vlug:0.62, schild:0.2, duikt:true,
     mark:'\u223f', kleur:'#1f7a6d',
     uit:'Hij duikt geregeld onder: dan zwemt hij harder en raken alleen de boot, de onderzee\u00ebr en de Scherpschutter hem.' };
   /* ---------- de Magmakoning ----------
@@ -3146,7 +3301,7 @@ function rekenVraag(rang, toegestaan) {
      doorlopen, en elke toren in de buurt wordt zo heet dat hij een paar
      seconden trager schiet. Bouw dus niet alles op een kluitje. */
   var UITBARSTTIJD = 9, HITTEDUUR = 4, HITTEBEREIK = 180, VONKEN = 3;
-  var MAGMAKONING = { id:'magma', naam:'de Magmakoning', taai:24, vlug:0.36, schild:0.3, mega:true,
+  var MAGMAKONING = { id:'magma', naam:'de Magmakoning', taai:16, vlug:0.33, schild:0.3, mega:true,
     mark:'\u2668', kleur:'#7a2a12', splijt:6, uitbarst:true,
     uit:'Om de zoveel tijd barst hij uit: vonken op de weg, en torens in de buurt schieten even trager. Hij spat uiteen als hij valt.' };
 
@@ -3156,7 +3311,10 @@ function rekenVraag(rang, toegestaan) {
         ? (thema.id === 'vulkaan' ? MAGMAKONING : thema.strand ? KRAKEN : MEGABAAS)
         : (thema.id === 'archipel' && ronde >= ZEESLANGRONDE && (ronde / BAASRONDE) % 2 === 0)
           ? ZEESLANG
-          : (Math.random() < apenkans(ronde))
+          /* Op open zee geen apenbaas: zijn schillen leggen op de eilandjes te
+             veel van het toch al schaarse bord stil (gemeten: elke klas viel daar
+             rond ronde veertig), en apen horen niet op zee. */
+          : (thema.id !== 'archipel' && Math.random() < apenkans(ronde))
             ? APENBAAS
             : BAZEN[(Math.floor(ronde / BAASRONDE) - 1) % BAZEN.length];
     }
@@ -3168,13 +3326,18 @@ function rekenVraag(rang, toegestaan) {
      bord torens ooit kan bijhouden, en rond ronde zevenentwintig loopt het
      hoe dan ook stuk. Vier procent laat de rondes nog altijd zwaarder worden,
      maar geeft goed spelen de tijd om mee te groeien. */
-  function zwaarte(ronde){ return ronde <= 20 ? 1 : 1 + (ronde - 20) * 0.04; }
+  function zwaarte(ronde){ return ronde <= 20 ? 1 : 1 + (ronde - 20) * 0.03; }
+  /* Een baas groeit trager mee dan de gewone fouten. Met de gewone groei was een
+     vol bord van veertien torens op niveau drie vanaf ronde dertig te licht
+     voor elke baas, en dan valt er niets meer te winnen. Nu blijft hij lastig,
+     maar te vellen voor wie zijn bord op orde heeft. */
+  function baasZwaarte(ronde){ return ronde <= 20 ? 1 : 1 + (ronde - 20) * 0.025; }
 
   /* Aan een knop draaien is makkelijker dan overal getallen aanpassen. Deze
      schaal gaat over alles wat een fout kan incasseren: gewone fouten, zwermen
      en bazen rekenen er allemaal mee. Onder de 1 wordt het spel makkelijker,
      boven de 1 zwaarder. */
-  var VIJANDKRACHT = 0.90;   /* fouten zijn overal tien procent minder taai */
+  var VIJANDKRACHT = 0.85;   /* fouten zijn overal vijftien procent minder taai */
 
   /* Na een baas komt er een rustronde: minder fouten en die zijn ook nog eens
      zwakker. Dat geeft lucht om je penning te vergeven, bij te bouwen en de
@@ -3288,7 +3451,8 @@ function rekenVraag(rang, toegestaan) {
     if (!e) return true;
     /* onder water zien alleen de watertorens en de Scherpschutter hem */
     if (e.onder > 0) return !!SOORTEN[toren.soort].water || toren.soort === 'schutter';
-    return !e.camo || toren.soort === 'schutter';
+    /* de Onderzeeer heeft sonar: die ziet ook wat verstopt is, en dus door de inkt van de Kraken heen */
+    return !e.camo || toren.soort === 'schutter' || !!SOORTEN[toren.soort].sonar;
   }
   function kiesFout(ronde){
     var mag = FOUTEN.filter(function(f){ return f.vanaf <= ronde; });
@@ -3388,8 +3552,8 @@ function rekenVraag(rang, toegestaan) {
         });
       }
     } else {
-      if (torens.length >= MAXTORENS){
-        rijen.push({ id:'vol2', label:'Je hebt al ' + MAXTORENS + ' torens', prijs:null, kan:false,
+      if (torens.length >= maxTorens()){
+        rijen.push({ id:'vol2', label:'Je hebt al ' + maxTorens() + ' torens', prijs:null, kan:false,
                      onder:'haal er eerst een weg', kleur:'#5b6480' });
       } else {
         var opLand = opEiland(x, y);
@@ -3476,7 +3640,7 @@ function rekenVraag(rang, toegestaan) {
     } else if (r.id === 'sterker' && t && r.kan){
       bank.munten -= r.prijs; laatMuntZien(-r.prijs); t.niveau++;
     } else if (SOORTEN[r.id] && r.kan){
-      if (!magHier(menu.punt.x, menu.punt.y, null, r.id) || torens.length >= MAXTORENS) return;
+      if (!magHier(menu.punt.x, menu.punt.y, null, r.id) || torens.length >= maxTorens()) return;
       bank.munten -= r.prijs; laatMuntZien(-r.prijs);
       torens.push({ x:menu.punt.x, y:menu.punt.y, soort:r.id, niveau:1, klok:0 });
     } else return;
@@ -3497,6 +3661,8 @@ function rekenVraag(rang, toegestaan) {
      De maten blijven binnen wat magHier uitsluit voor bouwen, dus het gebouw
      groeit niet buiten zijn plek. */
   function tekenKlas(cx, cy, leven, maxLeven){
+  if (thema.id === 'archipel') return tekenPaalschool(cx, cy, leven, maxLeven);
+  if (thema.id === 'vulkaan') return tekenBunkerklas(cx, cy, leven, maxLeven);
   if (thema.strand) return tekenStrandklas(cx, cy, leven, maxLeven);
   var deel = Math.max(0, Math.min(1, leven / maxLeven));
   var stuk = 1 - deel;                       /* 0 is gaaf, 1 is bijna weg */
@@ -3697,6 +3863,154 @@ function rekenVraag(rang, toegestaan) {
     return s;
   }
 
+  /* ---------- de school op de eilanden ----------
+     Een witgekalkt huis op palen boven het water, met een vuurtorentje op de
+     hoek. Dezelfde maten en dezelfde acht stappen van verval als de andere
+     scholen: luiken dicht, scheuren in de muur, en de lamp van de vuurtoren
+     gaat uit als het echt slecht gaat. */
+  function tekenPaalschool(cx, cy, leven, maxLeven){
+    var deel = Math.max(0, Math.min(1, leven / maxLeven));
+    var stuk = 1 - deel;
+    var kapot = function(n){ return stuk > n; };
+    var s = '<g transform="translate(' + cx + ',' + cy + ')">';
+    s += '<ellipse cx="0" cy="46" rx="62" ry="9" fill="rgba(20,34,76,.16)"/>';
+    /* de palen, en het water dat er omheen kabbelt */
+    [-40, -14, 14, 40].forEach(function(x, i){
+      var scheef = (kapot(0.72) && i === 0) ? ' transform="rotate(-9 ' + x + ' 30)"' : '';
+      s += '<rect x="' + (x - 3) + '" y="30" width="6" height="16" rx="2" fill="#8d6234" stroke="#5f4830" stroke-width="1.6"' + scheef + '/>';
+    });
+    s += '<path d="M-56,45 q6,-3 12,0 q6,3 12,0 M-4,45 q6,-3 12,0 q6,3 12,0 M32,45 q6,-3 12,0 q6,3 12,0" fill="none" stroke="#fff" stroke-width="1.6" opacity=".6"/>';
+    /* de vlonder met reling */
+    s += '<rect x="-54" y="26" width="108" height="8" rx="2" fill="#c9a06a" stroke="#5f4830" stroke-width="2"/>';
+    s += '<path d="M-40,26 v8 M-20,26 v8 M0,26 v8 M20,26 v8 M40,26 v8" stroke="#8d6234" stroke-width="1.3" opacity=".6"/>';
+    s += '<path d="M-52,26 v-7 h8 v7 M44,26 v-7 h8 v7 M-52,22 h8 M44,22 h8" stroke="#5f4830" stroke-width="1.6" fill="none"/>';
+    /* de muur: wit met een blauwe band en een schaduwkant */
+    s += '<rect x="-44" y="-16" width="88" height="44" rx="3" fill="#f7f3ea" stroke="#2f5a7a" stroke-width="2.4"/>';
+    s += '<rect x="16" y="-16" width="28" height="44" fill="rgba(20,34,76,.06)"/>';
+    s += '<rect x="-44" y="-16" width="88" height="6" fill="#3f6b8f"/>';
+    s += '<path d="M-44,0 h88 M-44,14 h88" stroke="#e4ddcf" stroke-width="1.4"/>';
+    /* het dak: golfplaat in zeeblauw */
+    s += '<path d="M-52,-16 L0,-38 L52,-16 z" fill="#4a7ba0" stroke="#2f5a7a" stroke-width="2.4" stroke-linejoin="round"/>';
+    s += '<path d="M-36,-22 L36,-22 M-24,-27 L24,-27 M-12,-32 L12,-32" stroke="#6f9dc0" stroke-width="1.6" stroke-linecap="round"/>';
+    s += '<rect x="-56" y="-19" width="112" height="6" rx="3" fill="#2f5a7a" stroke="#1f3f56" stroke-width="1.6"/>';
+    /* de vuurtoren op de hoek */
+    s += '<rect x="30" y="-62" width="16" height="46" rx="3" fill="#f7f3ea" stroke="#2f5a7a" stroke-width="2"/>';
+    s += '<rect x="30" y="-54" width="16" height="7" fill="#c0442c"/><rect x="30" y="-38" width="16" height="7" fill="#c0442c"/>';
+    s += '<rect x="26" y="-73" width="24" height="12" rx="3" fill="#2f5a7a"/>';
+    var lamp = !kapot(0.55);
+    s += '<circle cx="38" cy="-67" r="4.2" fill="' + (lamp ? '#FFE168' : '#3b3730') + '" stroke="#1f3f56" stroke-width="1"/>';
+    if (lamp){
+      var gl = (0.35 + Math.sin(pols * 2.5) * 0.2).toFixed(2);
+      s += '<path d="M43,-71 l18,-9 M43,-63 l18,9" stroke="#FFE168" stroke-width="3.5" stroke-linecap="round" opacity="' + gl + '"/>';
+    }
+    s += '<path d="M24,-73 L38,-83 L52,-73 z" fill="#c0442c" stroke="#1f3f56" stroke-width="1.6" stroke-linejoin="round"/>';
+    /* de vlag op de vuurtoren, die zakt als het slecht gaat */
+    var hoek = -8 + stuk * 74;
+    s += '<line x1="38" y1="-83" x2="38" y2="-99" stroke="#1f3f56" stroke-width="2"/>';
+    s += '<g transform="translate(38,-97) rotate(' + hoek.toFixed(0) + ')"><path d="M0,0 L20,4 L0,8 z" fill="#EA9836" stroke="#1f3f56" stroke-width="1.4" stroke-linejoin="round"/></g>';
+    /* vier ramen met blauwe luiken */
+    var ramen = [[-36, -6], [-36, 12], [-8, -6], [-8, 12]];
+    var grens = [0.18, 0.42, 0.62, 0.84];
+    ramen.forEach(function(r, i){
+      var heel = !kapot(grens[i]);
+      s += '<rect x="' + r[0] + '" y="' + r[1] + '" width="16" height="15" rx="2" fill="' + (heel ? '#f6d98a' : '#3b3730') + '" stroke="#2f5a7a" stroke-width="1.8"/>';
+      if (heel){
+        s += '<rect x="' + (r[0] - 5) + '" y="' + r[1] + '" width="4" height="15" rx="1" fill="#3f6b8f"/><rect x="' + (r[0] + 17) + '" y="' + r[1] + '" width="4" height="15" rx="1" fill="#3f6b8f"/>';
+        s += '<path d="M' + (r[0] + 8) + ',' + r[1] + ' v15 M' + r[0] + ',' + (r[1] + 7.5) + ' h16" stroke="#2f5a7a" stroke-width="1.2" opacity=".65"/>';
+      } else {
+        /* een luik hangt scheef, het andere ligt eraf */
+        s += '<rect x="' + (r[0] - 6) + '" y="' + (r[1] + 2) + '" width="4" height="15" rx="1" fill="#3f6b8f" transform="rotate(-14 ' + (r[0] - 4) + ' ' + (r[1] + 2) + ')"/>';
+        s += '<path d="M' + (r[0] + 2) + ',' + (r[1] + 2) + ' l12,11 M' + (r[0] + 14) + ',' + (r[1] + 2) + ' l-12,11" stroke="#8a8172" stroke-width="1.4"/>';
+      }
+    });
+    /* de deur, met licht dat naar buiten valt zolang het goed gaat */
+    if (!kapot(0.62)) s += '<path d="M12,28 L12,8 a10,10 0 0 1 20,0 L32,28 z" fill="#f6d98a" opacity=".3"/>';
+    s += '<path d="M14,28 L14,8 a8,8 0 0 1 16,0 L30,28 z" fill="#3f6b8f" stroke="#2f5a7a" stroke-width="2"/>';
+    s += '<circle cx="26" cy="19" r="1.8" fill="#EA9836"/>';
+    s += '<rect x="-30" y="-9" width="30" height="8" rx="2" fill="#204ECF" stroke="#2f5a7a" stroke-width="1.2" opacity=".9"/>';
+    s += '<path d="M-26,-5 h22" stroke="#fff" stroke-width="1.6" opacity=".65"/>';
+    /* het verval: scheuren en gaten */
+    if (kapot(0.3)) s += '<path d="M-24,28 l5,-11 l-4,-7 l6,-8" fill="none" stroke="#2f5a7a" stroke-width="2" opacity=".8"/>';
+    if (kapot(0.55)) s += '<path d="M8,-10 l-4,9 l6,7 l-4,8" fill="none" stroke="#2f5a7a" stroke-width="2" opacity=".8"/>';
+    if (kapot(0.88)){
+      s += '<path d="M-14,-24 l10,-7 l8,8 z" fill="#3b3730" stroke="#2f5a7a" stroke-width="1.4" stroke-linejoin="round"/>';
+      s += '<path d="M-44,26 l-8,10 M-38,34 l-6,8" stroke="#8d6234" stroke-width="2.4" stroke-linecap="round"/>';
+    }
+    s += '<text x="0" y="62" font-size="13" font-weight="600" fill="#fff" text-anchor="middle">de klas</text>';
+    s += '</g>';
+    return s;
+  }
+
+  /* ---------- de school op de vulkaan ----------
+     Een bunker van basaltblokken met een stalen kap en een schoorsteen. Warm
+     licht achter de ramen zolang er les is; gaat het slecht, dan sijpelt er
+     lava door de scheuren en dooft het licht. */
+  function tekenBunkerklas(cx, cy, leven, maxLeven){
+    var deel = Math.max(0, Math.min(1, leven / maxLeven));
+    var stuk = 1 - deel;
+    var kapot = function(n){ return stuk > n; };
+    var s = '<g transform="translate(' + cx + ',' + cy + ')">';
+    s += '<ellipse cx="0" cy="44" rx="62" ry="9" fill="rgba(0,0,0,.3)"/>';
+    /* de plint van gestolde lava */
+    s += '<rect x="-52" y="34" width="104" height="11" rx="3" fill="#3a3633" stroke="#1f1c1a" stroke-width="2.2"/>';
+    s += '<rect x="-52" y="34" width="104" height="3" rx="1.5" fill="#fff" opacity=".12"/>';
+    /* de muur van basaltblokken */
+    s += '<rect x="-46" y="-14" width="92" height="51" rx="4" fill="#5a534d" stroke="#1f1c1a" stroke-width="2.4"/>';
+    s += '<rect x="16" y="-14" width="30" height="51" fill="rgba(0,0,0,.14)"/>';
+    s += '<path d="M-46,3 h92 M-46,20 h92 M-30,-14 v17 M-6,3 v17 M18,-14 v17 M34,3 v17 M2,20 v17 M-24,20 v17 M26,20 v17" stroke="#3a3633" stroke-width="1.6"/>';
+    /* de stalen kap met ribben, en de dakrand */
+    s += '<path d="M-54,-14 Q0,-54 54,-14 z" fill="#6f6862" stroke="#1f1c1a" stroke-width="2.4"/>';
+    s += '<path d="M-40,-21 Q0,-47 40,-21 M-26,-28 Q0,-44 26,-28" fill="none" stroke="#8a827a" stroke-width="1.6"/>';
+    s += '<rect x="-57" y="-17" width="114" height="6" rx="3" fill="#3a3633" stroke="#1f1c1a" stroke-width="2"/>';
+    /* de schoorsteen, met rook zolang de kachel brandt */
+    s += '<rect x="18" y="-58" width="13" height="28" rx="2" fill="#5a534d" stroke="#1f1c1a" stroke-width="2"/>';
+    s += '<rect x="16" y="-61" width="17" height="5" rx="1.5" fill="#3a3633" stroke="#1f1c1a" stroke-width="1.6"/>';
+    if (!kapot(0.55)){
+      for (var rk = 0; rk < 3; rk++){
+        var fase = (pols * 0.6 + rk * 0.33) % 1;
+        s += '<circle cx="' + (24.5 + Math.sin(fase * 6) * 3).toFixed(1) + '" cy="' + (-64 - fase * 22).toFixed(1) + '" r="' + (3 + fase * 3).toFixed(1) +
+          '" fill="#bdb5ad" opacity="' + (0.5 * (1 - fase)).toFixed(2) + '"/>';
+      }
+    }
+    /* de vlag, op een paal naast de kap */
+    var hoek = -8 + stuk * 74;
+    s += '<line x1="-30" y1="-17" x2="-30" y2="-64" stroke="#1f1c1a" stroke-width="2.4"/>';
+    s += '<g transform="translate(-30,-62) rotate(' + hoek.toFixed(0) + ')"><path d="M0,0 L20,4 L0,8 z" fill="#EA9836" stroke="#1f1c1a" stroke-width="1.4" stroke-linejoin="round"/></g>';
+    /* vier ramen met warm licht */
+    var ramen = [[-36, -4], [-36, 14], [22, -4], [22, 14]];
+    var grens = [0.18, 0.42, 0.62, 0.84];
+    ramen.forEach(function(r, i){
+      var heel = !kapot(grens[i]);
+      s += '<rect x="' + r[0] + '" y="' + r[1] + '" width="16" height="15" rx="3" fill="' + (heel ? '#ffb347' : '#1f1c1a') + '" stroke="#1f1c1a" stroke-width="2"/>';
+      if (heel){
+        s += '<path d="M' + (r[0] + 8) + ',' + r[1] + ' v15 M' + r[0] + ',' + (r[1] + 7.5) + ' h16" stroke="#1f1c1a" stroke-width="1.6" opacity=".7"/>';
+        s += '<path d="M' + (r[0] + 2) + ',' + (r[1] + 6) + ' L' + (r[0] + 6) + ',' + (r[1] + 1.5) + '" stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity=".35"/>';
+      } else {
+        s += '<path d="M' + (r[0] + 2) + ',' + (r[1] + 2) + ' l12,11 M' + (r[0] + 14) + ',' + (r[1] + 2) + ' l-12,11" stroke="#6f6862" stroke-width="1.4"/>';
+        s += '<path d="M' + (r[0] + 3) + ',' + (r[1] - 1) + ' q5,-7 11,-1" fill="none" stroke="rgba(0,0,0,.4)" stroke-width="4" stroke-linecap="round"/>';
+      }
+    });
+    /* de stalen deur met een patrijspoort */
+    if (!kapot(0.62)) s += '<path d="M-13,37 L-13,14 a13,13 0 0 1 26,0 L13,37 z" fill="#ffb347" opacity=".25"/>';
+    s += '<path d="M-11,37 L-11,14 a11,11 0 0 1 22,0 L11,37 z" fill="#3a3633" stroke="#1f1c1a" stroke-width="2.2"/>';
+    s += '<path d="M-8,18 h16 M-8,26 h16" stroke="#6f6862" stroke-width="1.6"/>';
+    s += '<circle cx="0" cy="12" r="3.4" fill="' + (kapot(0.62) ? '#1f1c1a' : '#ffb347') + '" stroke="#8a827a" stroke-width="1.4"/>';
+    s += '<rect x="-15" y="-8" width="30" height="8" rx="2" fill="#b3361f" stroke="#1f1c1a" stroke-width="1.4"/>';
+    s += '<path d="M-11,-4 h22" stroke="#fff" stroke-width="1.6" opacity=".65"/>';
+    /* het verval: door de scheuren sijpelt lava */
+    var gloed = (0.6 + Math.sin(pols * 4) * 0.3).toFixed(2);
+    if (kapot(0.3)) s += '<path d="M-24,37 l5,-12 l-4,-7 l6,-9" fill="none" stroke="#ff7a1a" stroke-width="2.2" opacity="' + gloed + '"/>';
+    if (kapot(0.55)) s += '<path d="M32,-10 l-5,11 l6,8 l-4,9" fill="none" stroke="#ff7a1a" stroke-width="2.2" opacity="' + gloed + '"/>';
+    if (kapot(0.72)) s += '<path d="M-40,-11 l-4,9 l5,7" fill="none" stroke="#ff7a1a" stroke-width="2" opacity="' + gloed + '"/>';
+    if (kapot(0.88)){
+      s += '<path d="M6,-30 l12,-8 l10,10 z" fill="#1f1c1a" stroke="#ff7a1a" stroke-width="1.4" stroke-linejoin="round" opacity=".9"/>';
+      s += '<path d="M-22,-34 l8,-4 l3,7 z" fill="#1f1c1a" stroke="#ff7a1a" stroke-width="1.2" stroke-linejoin="round" opacity=".9"/>';
+    }
+    s += '<text x="0" y="62" font-size="13" font-weight="600" fill="#f2c48c" text-anchor="middle">de klas</text>';
+    s += '</g>';
+    return s;
+  }
+
   function raakVijand(e, schade, vertragen, stil){
     if (!e || e.dood) return;
     /* Een schild slikt een deel van de klap, tot het onder de helft van de
@@ -3740,6 +4054,7 @@ function rekenVraag(rang, toegestaan) {
            hij betaalt ook meer uit. */
         var beloning = BAASBELONING + bank.ronde * 5;
         if (e.mega) beloning += 800;
+        botLog('geveld', { naam:e.baasnaam });
         bank.munten += beloning;
         laatMuntZien(beloning);
         penningen += e.mega ? 3 : 1;
@@ -5522,7 +5837,7 @@ function rekenVraag(rang, toegestaan) {
         melding2('Daar kan geen toren staan: te dicht op het pad, een toren, de school of de rand.');
         return;
       }
-      if (thema.water && torens.length < MAXTORENS && !gekozen().some(function(id){
+      if (thema.water && torens.length < maxTorens() && !gekozen().some(function(id){
             return SOORTEN[id].water ? !opEiland(x, y) : opEiland(x, y); })){
         melding2(opEiland(x, y) ? 'Op een eiland passen alleen landtorens, en die heb je niet meegenomen.'
                                 : 'Op het water passen alleen de Kanonneerboot en de Onderzee\u00ebr.');
@@ -5653,7 +5968,7 @@ function rekenVraag(rang, toegestaan) {
         : 'De klas oplappen, ' + lapPrijs() + ' munten voor 1 leven';
     }
     document.getElementById('mBonus').textContent = '\u00d7' + kommaGetal(reeksbonus(), 2);
-    document.getElementById('mToren').textContent = torens.length + '/' + MAXTORENS;
+    document.getElementById('mToren').textContent = torens.length + '/' + maxTorens();
     document.getElementById('mWeg').textContent = wegdingen.length + '/' + MAXWEG;
     var pv = document.getElementById('penningVak');
     pv.classList.toggle('stil', penningen === 0);
@@ -5680,6 +5995,7 @@ function rekenVraag(rang, toegestaan) {
   function tik(){
     var dt = 0.06, ronde = bank.ronde;
     pols += dt;
+    botTik(dt);
     if (poortFlits > 0) poortFlits = Math.max(0, poortFlits - dt);
     /* De levensbalk van de baas bijwerken. De bleke balk zakt met een vaste
        snelheid van veertig procent per seconde: hard genoeg om bij te blijven,
@@ -5750,13 +6066,13 @@ function rekenVraag(rang, toegestaan) {
         poortFlits = 0.45;                    /* de poort licht op bij elke fout */
         var r = rang();
         var hp = Math.max(1, Math.round((10 + ronde * 6) * (0.75 + r * 0.15) * zwaarte(ronde) *
-                          VIJANDKRACHT * (isRustronde(ronde) ? RUSTTAAI : 1)));
+                          VIJANDKRACHT * (thema.kracht || 1) * (isRustronde(ronde) ? RUSTTAAI : 1)));
         /* de laatste van een baasronde is de baas zelf */
         var basisSnel = (30 + r*5 + ronde*2.3) * (ronde <= 20 ? 1 : 1.12);
         if (wachtrij === baasBijWachtrij && isBaasRonde(ronde)){
           baasBijWachtrij = -1;                 /* er komt er maar een per ronde */
           var bz = baasVan(ronde);
-          var bhp = Math.round(hp * bz.taai);
+          var bhp = Math.round(hp / zwaarte(ronde) * baasZwaarte(ronde) * bz.taai);
           vijanden.push({ d:SPAWNAF, hp:bhp, maxHp:bhp, snelheid:basisSnel * bz.vlug,
                           traag:0, mark:bz.mark, baas:true, soort:'baas', baassoort:bz.id,
                           baasnaam:bz.naam, kleur:bz.kleur,
@@ -5767,6 +6083,7 @@ function rekenVraag(rang, toegestaan) {
                           duikt:!!bz.duikt, duikKlok:bz.duikt ? 5 : 0, onder:0,
                           uitbarst:!!bz.uitbarst, uitbarstKlok:bz.uitbarst ? 6 : 0,
                           schilKlok:bz.gooit ? 3 : 0 });
+          botLog('baas', { naam:bz.naam, hp:bhp });
         } else if (wachtrij === miniBijWachtrij && isMiniRonde(ronde)){
           miniBijWachtrij = -1;                 /* ook van hem komt er maar een */
           var mhp = Math.round(hp * MINIBAAS.taai);
@@ -5804,9 +6121,10 @@ function rekenVraag(rang, toegestaan) {
       if (e.brand > 0){ e.brand -= dt; raakVijand(e, (e.brandKracht || 0) * dt, false, true); }
       if (e.dood) return;
       if (e.stop > 0){ e.stop -= dt; if (e.traag > 0) e.traag -= dt; return; }
-      e.d += e.snelheid * (e.traag > 0 ? (e.ijs ? 0.22 : 0.45) : 1) * (e.onder > 0 ? 1.5 : 1) * dt;
+      e.d += e.snelheid * (e.traag > 0 ? (e.ijs ? 0.22 : 0.45) : 1) * (e.onder > 0 ? 1.3 : 1) * dt;
       if (e.traag > 0){ e.traag -= dt; if (e.traag <= 0) e.ijs = false; }
       if (e.d >= PADLENGTE){ e.dood = true;
+        if (e.baas) botLog('door', { naam:e.baasnaam, mini:!!e.mini });
         verlies += e.baas ? (e.mini ? MINISCHADE : e.mega ? MEGASCHADE : BAASSCHADE) : 1; }
     });
     /* de lava van de Magmamortier: wie erin staat, brandt */
@@ -6298,6 +6616,7 @@ function rekenVraag(rang, toegestaan) {
     torens.forEach(function(t){ if (t.terugslag > 0) t.terugslag -= dt * 5; });
     if (klap > 0) klap -= dt;
     if (verlies){
+      botLog('verlies', { n:verlies });
       if (!onsterfelijk) bank.leven -= verlies;
       klap = 0.9; klapAantal = verlies;
       laatKlapZien(verlies);
@@ -6383,6 +6702,7 @@ function rekenVraag(rang, toegestaan) {
   }
 
   function einde(){
+    botLog('einde');
     if (klok){ clearInterval(klok); klok = null; }
     pauze = false; document.body.classList.remove('gepauzeerd');
     document.getElementById('pauzeBtn').classList.add('hide');
@@ -6634,6 +6954,18 @@ function rekenVraag(rang, toegestaan) {
 
     knop('testMunt', function(){ bank.munten += 1000; laatMuntZien(1000); tekenMeters(); });
     knop('testPen', function(){ penningen++; tekenMeters(); tekenBord(); });
+
+    /* de speelbot: aan of uit, met hoeveel procent goed en hoeveel seconden per antwoord */
+    function leesBot(){
+      bot.goed = Math.max(0, Math.min(100, parseFloat(document.getElementById('testGoed').value) || 0)) / 100;
+      bot.tempoAntwoord = Math.max(1, parseFloat(document.getElementById('testAntw').value) || 5);
+    }
+    var kBot = knop('testBot', function(){
+      bot.aan = !bot.aan; leesBot(); stand(kBot, bot.aan);
+      if (bot.aan){ bot.log.length = 0; bot.wegGezet = 0; bot.klok = 0; bot.bouwKlok = 0; }
+    });
+    document.getElementById('testGoed').addEventListener('change', leesBot);
+    document.getElementById('testAntw').addEventListener('change', leesBot);
 
     var kOns = knop('testOnsterf', function(){
       onsterfelijk = !onsterfelijk;
