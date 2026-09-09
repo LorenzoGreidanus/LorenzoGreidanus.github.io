@@ -715,7 +715,7 @@ const SOORTEN = {
      is. De Vriendenhut schiet helemaal niet, maar stuurt vrienden het pad op die
      de fouten tegenhouden en ondertussen op ze inslaan. */
   bommenwerper: {naam:'Tonkla Bommenwerper', letter:'B', kleur:'#3f6b8f', prijs:150, bereik:0,
-              schade:38, tempo:0, onder:'Vliegt over het hele bord, vijf bommen per vlucht',
+              schade:38, tempo:0, onder:'Patrouilleert over de weg, vijf bommen per vlucht',
               bommen:true, straal:BOMSTRAAL, speciaal:true, slot:'eiland'},
   vrienden:  {naam:'Vriendenhut',  letter:'V', kleur:'#2f7d52',            prijs:110, bereik:150,
               schade:0,  tempo:0,  onder:'Vrienden houden alles tegen tot ze vallen', vrienden:true, speciaal:true, slot:'eiland'},
@@ -6648,8 +6648,9 @@ function rekenVraag(rang, toegestaan) {
        vliegt erheen en laat een bom vallen zodra het erboven hangt. Dan de
        volgende, tot de vijf bommen op zijn; daarna vliegt het terug naar zijn
        veld, staat een tijdje stil om te herladen, en stijgt weer op. Is er
-       niets te doen, dan draait het rondjes boven het veld, met de bommen
-       onder de romp. */
+       niets te doen, dan patrouilleert het over de weg, van de poort naar de
+       school en weer terug, met de bommen onder de romp. Het gaat pas naar
+       huis als de bommen op zijn. */
     torens.forEach(function(t){
       var so = SOORTEN[t.soort];
       if (!so.bommen) return;
@@ -6671,7 +6672,18 @@ function rekenVraag(rang, toegestaan) {
       var mik;
       if (v.fase === 'terug' || v.bommen <= 0){ v.fase = 'terug'; mik = { x:t.x, y:t.y }; }
       else if (doel) mik = pos;
-      else { var kr = kringplek(t); mik = { x:kr.x, y:kr.y }; }
+      else {
+        /* patrouille: langs de weg heen en weer, in stukken van tweehonderd pixels */
+        if (v.wacht === undefined){ v.wacht = 1; v.richting = 1; }
+        var stap = 200, aantal = Math.max(2, Math.floor(PADLENGTE / stap));
+        var doelPlek = positie(Math.min(PADLENGTE - 40, 60 + v.wacht * stap));
+        if (Math.hypot(doelPlek.x - v.x, doelPlek.y - v.y) < 12){
+          v.wacht += v.richting;
+          if (v.wacht >= aantal){ v.wacht = aantal; v.richting = -1; }
+          if (v.wacht <= 0){ v.wacht = 0; v.richting = 1; }
+        }
+        mik = doelPlek;
+      }
       var dx = mik.x - v.x, dy = mik.y - v.y, af = Math.hypot(dx, dy);
       if (af > 0.5){
         v.hoek = Math.atan2(dy, dx) * 180 / Math.PI;
