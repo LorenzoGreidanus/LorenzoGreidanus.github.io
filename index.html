@@ -976,7 +976,7 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
         <g fill="#8f8c83" opacity=".5"><circle cx="1250" cy="120" r="34"/><circle cx="1400" cy="230" r="46"/><circle cx="1300" cy="290" r="22"/><circle cx="1440" cy="110" r="18"/><circle cx="1200" cy="230" r="14"/></g>
         <g fill="#7d7a71" opacity=".35"><circle cx="1250" cy="120" r="22"/><circle cx="1400" cy="230" r="30"/></g>
         <g class="maanlander" id="maanlander">
-          <g transform="translate(1290 438) rotate(180)">
+          <g transform="translate(1290 425) rotate(180) scale(.6)">
             <g stroke="#c9ccd6" stroke-width="7" stroke-linecap="round" fill="none">
               <path d="M-46 -24 L-84 26 M-46 -4 L-84 26 M46 -24 L84 26 M46 -4 L84 26"/>
             </g>
@@ -988,7 +988,7 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
           </g>
         </g>
         <g class="maanvlag" id="maanvlag">
-          <g transform="translate(1215 379) rotate(180)"><rect x="-2" y="-64" width="4" height="64" fill="#e8e6df"/><rect x="2" y="-64" width="40" height="26" fill="#c0392b"/><rect x="2" y="-64" width="40" height="4" fill="#fff"/><rect x="2" y="-56" width="40" height="4" fill="#fff"/><rect x="2" y="-48" width="40" height="4" fill="#fff"/><rect x="2" y="-64" width="16" height="14" fill="#204ECF"/></g>
+          <g transform="translate(1225 383) rotate(180) scale(.7)"><rect x="-2" y="-64" width="4" height="64" fill="#e8e6df"/><rect x="2" y="-64" width="40" height="26" fill="#c0392b"/><rect x="2" y="-64" width="40" height="4" fill="#fff"/><rect x="2" y="-56" width="40" height="4" fill="#fff"/><rect x="2" y="-48" width="40" height="4" fill="#fff"/><rect x="2" y="-64" width="16" height="14" fill="#204ECF"/></g>
         </g>
       </g>
       <g class="laag3" id="raket" style="transform:translate(430px,760px)">
@@ -1731,39 +1731,18 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
     stand: function(t, p){
       t.tekst.classList.toggle('aan', p > 0.1);
       /* de motor brandt tijdens de lancering; de baan zelf staat in de lus */
-      t.brandt = !reduced && p > 0.12 && p < 0.42;
+      t.brandt = !reduced && p > 0.12 && p < 0.62;
       t.vlammen.forEach(function(v){ v.classList.toggle('aan', t.brandt); });
       t.lander.classList.toggle('neer', reduced || p > 0.72);
       t.vlag.classList.toggle('aan', reduced || p > 0.9);
     },
     adem: function(t, c, tijd, dt){
       /* de raket: van het platform in een boog omhoog, dan een baan om de maan, achterlangs en weer voor */
-      /* de baan: een ellips om de maan, met de klok mee; de raket komt van links onderlangs binnen,
-         gaat rechts omhoog, achter de maan langs en links weer naar beneden */
-      var p = reduced ? 1 : Math.max(0, t.p), cx = 1330, cy = 180, rx = 370, ry = 340, th0 = Math.PI * 0.62;
-      var x, y, hoek, schaal = 1, achter = false, dx, dy;
-      if (p <= 0.12){ x = 430; y = 760; hoek = 0; }
-      else if (p < 0.42){
-        /* lancering: eerst recht omhoog, dan in een boog die de baan raakt op het instappunt */
-        var u = (p - 0.12) / 0.30; u = u * u * (3 - 2 * u);
-        var Ex = cx + rx * Math.cos(th0), Ey = cy + ry * Math.sin(th0);
-        var Cx = 430, Cy = 160;
-        x = (1 - u) * (1 - u) * 430 + 2 * (1 - u) * u * Cx + u * u * Ex;
-        y = (1 - u) * (1 - u) * 760 + 2 * (1 - u) * u * Cy + u * u * Ey;
-        dx = 2 * (1 - u) * (Cx - 430) + 2 * u * (Ex - Cx); dy = 2 * (1 - u) * (Cy - 760) + 2 * u * (Ey - Cy);
-        if (u < 0.02){ dx = 0; dy = -1; }
-        hoek = Math.atan2(dy, dx) * 180 / Math.PI + 90;
-      } else {
-        if (p >= 0.75 && !reduced) t.baanTijd += dt * 0.3;
-        var th = th0 - clamp((p - 0.42) / 0.33, 0, 1) * Math.PI * 2.5 - t.baanTijd;
-        x = cx + rx * Math.cos(th); y = cy + ry * Math.sin(th);
-        dx = rx * Math.sin(th); dy = -ry * Math.cos(th);
-        hoek = Math.atan2(dy, dx) * 180 / Math.PI + 90;
-        achter = Math.sin(th) < 0;
-        schaal = achter ? 0.62 : 0.9;
-      }
-      t.raket.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px) rotate(' + hoek.toFixed(1) + 'deg) scale(' + schaal + ')';
-      if (achter !== t.achter){ t.achter = achter; t.svg.insertBefore(t.raket, achter ? t.laag2 : t.pad); }
+      /* de raket: recht omhoog vanaf het platform, steeds sneller, tot hij boven uit beeld is */
+      var p = reduced ? 1 : Math.max(0, t.p);
+      var u = clamp((p - 0.12) / 0.5, 0, 1); u = u * u;
+      var y = 760 - 1400 * u;
+      t.raket.style.transform = 'translate(430px,' + y.toFixed(1) + 'px)';
       c.clearRect(0, 0, t.w, t.h);
       c.fillStyle = '#fff';
       for (var i = 0; i < t.sterren.length; i++){
