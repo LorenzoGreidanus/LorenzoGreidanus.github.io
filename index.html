@@ -273,7 +273,6 @@ img{max-width:100%;display:block}
 .druk.aan{opacity:1}
 /* zee: het schip deint, de wolken drijven */
 @media(prefers-reduced-motion:no-preference){
-  .schip-deint{animation:deinen 5.2s var(--zacht) infinite;transform-box:fill-box;transform-origin:50% 90%}
   .wolk{animation:drijven linear infinite}
   .wolk.w1{animation-duration:70s}
   .wolk.w2{animation-duration:95s;animation-delay:-30s}
@@ -285,9 +284,8 @@ img{max-width:100%;display:block}
 @keyframes drijven{from{transform:translateX(-500px)}to{transform:translateX(1900px)}}
 @keyframes gloeien{0%,100%{transform:scale(1);opacity:.55}50%{transform:scale(1.12);opacity:.8}}
 @keyframes flakkeren{0%{opacity:.75}20%{opacity:.95}40%{opacity:.7}60%{opacity:1}80%{opacity:.8}100%{opacity:.9}}
-.schip{transition:transform 1.2s var(--ease)}
-.eiland{opacity:0;transform:translateX(120px);transition:opacity 1.2s var(--ease),transform 1.6s var(--ease)}
-.eiland.aan{opacity:1;transform:none}
+#schip{transition:none;will-change:transform;transform-box:view-box;transform-origin:0 582px}
+.eiland{will-change:transform,opacity}
 /* apollo: de raket stijgt op, de maanlander daalt */
 .raket{transition:transform .12s linear}
 .vlam{opacity:0}
@@ -834,7 +832,7 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
           <g transform="translate(1585 600) scale(.75)"><path d="M0 0 Q6 -40 -2 -78" stroke="#5b3a22" stroke-width="5"/><path d="M-2 -78 q-34 -18 -54 4 M-2 -78 q34 -18 54 4 M-2 -78 q-22 -32 -8 -52 M-2 -78 q22 -32 8 -52 M-2 -78 q-38 6 -44 28 M-2 -78 q38 6 44 28" stroke="#2f6647" stroke-width="5"/></g>
         </g>
       </g>
-      <g class="laag2" id="schip" style="transform:translateX(var(--schip,-200px))">
+      <g class="laag2" id="schip" style="transform:translateX(-320px)">
         <g class="schip-deint">
           <g transform="translate(0 582)">
             <!-- want en stagen: van de masttoppen naar de reling en naar boeg en spiegel -->
@@ -1373,11 +1371,15 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
       t.hero.classList.toggle('weg', h > 0.85);
       t.tekst.classList.toggle('aan', p > 0.22);
       drempels(t.handen, p, 0.18, 0.75, 'aan');
+      /* voorbij de helft zakt het vuur in tot gloeiende as; terugscrollen wakkert het weer aan */
+      t.kracht = reduced ? 1 : 1 - clamp((p - 0.5) / 0.45, 0, 1) * 0.94;
     },
     adem: function(t, c, tijd, dt){
       var basis = t.naarScherm(800, 830), s = t.schaal;
-      /* nieuwe vonken en vlammen */
-      for (var k = 0; k < 5; k++){
+      var kracht = t.kracht === undefined ? 1 : t.kracht;
+      /* nieuwe vonken en vlammen, minder naarmate het vuur dooft */
+      var aantal = kracht > .3 ? Math.round(5 * kracht) : (Math.random() < kracht * 3 ? 1 : 0);
+      for (var k = 0; k < aantal; k++){
         t.vonken.push({ x: basis[0] + (Math.random() - .5) * 120 * s, y: basis[1] + (Math.random() - .5) * 10 * s,
           vx: (Math.random() - .5) * 40 * s, vy: -(60 + Math.random() * 140) * s, leven: 0, duur: .6 + Math.random() * (k < 2 ? 1.6 : .7),
           r: (k < 2 ? 2 + Math.random() * 3 : 10 + Math.random() * 26) * s, vlam: k >= 2 });
@@ -1385,8 +1387,8 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
       c.clearRect(0, 0, t.w, t.h);
       /* de gloed van het vuur op de vloer */
       var flik = 0.85 + Math.sin(tijd * 9) * 0.06 + Math.sin(tijd * 23) * 0.05;
-      var g = c.createRadialGradient(basis[0], basis[1], 0, basis[0], basis[1], 420 * s * flik);
-      g.addColorStop(0, 'rgba(255,190,90,.55)'); g.addColorStop(.35, 'rgba(242,103,73,.22)'); g.addColorStop(1, 'rgba(242,103,73,0)');
+      var g = c.createRadialGradient(basis[0], basis[1], 0, basis[0], basis[1], Math.max(30, 420 * s * flik * (0.25 + 0.75 * kracht)));
+      g.addColorStop(0, 'rgba(255,190,90,' + (.55 * (0.2 + 0.8 * kracht)).toFixed(3) + ')'); g.addColorStop(.35, 'rgba(242,103,73,' + (.22 * kracht).toFixed(3) + ')'); g.addColorStop(1, 'rgba(242,103,73,0)');
       c.fillStyle = g; c.fillRect(0, 0, t.w, t.h);
       c.globalCompositeOperation = 'lighter';
       for (var i = t.vonken.length - 1; i >= 0; i--){
@@ -1403,7 +1405,7 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
         c.fill();
       }
       c.globalCompositeOperation = 'source-over';
-      t.gloed.style.opacity = String(0.75 + Math.sin(tijd * 7) * 0.08 + Math.sin(tijd * 19) * 0.07);
+      t.gloed.style.opacity = String((0.75 + Math.sin(tijd * 7) * 0.08 + Math.sin(tijd * 19) * 0.07) * (0.08 + 0.92 * kracht));
     }
   });
 
@@ -1530,15 +1532,40 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
 
   /* ---------- 5. zee ---------- */
   maakTafereel('zee', {
-    bouw: function(t){ t.schip = document.getElementById('schip'); t.eiland = document.getElementById('eiland'); },
+    bouw: function(t){
+      t.schip = document.getElementById('schip'); t.eiland = document.getElementById('eiland');
+      t.x = -320; t.doelX = -320; t.schuim = []; t.lagen = [ [600, 26, 0.55, '#3f6de0', .9], [660, 22, 0.8, '#204ECF', .95], [740, 18, 1.1, '#1a41ae', 1] ];
+      t.eiland.style.opacity = '0';
+    },
     stand: function(t, p){
       t.tekst.classList.toggle('aan', p > 0.1);
-      t.schip.style.setProperty('--schip', Math.round(-200 + 1300 * (reduced ? .6 : p)) + 'px');
-      t.eiland.classList.toggle('aan', reduced || p > 0.55);
+      /* de vaart: rustig op gang, rustig uit; de kust komt met de laatste helft geleidelijk uit de nevel */
+      var e = reduced ? .6 : p * p * (3 - 2 * p);
+      t.doelX = -320 + 1480 * e;
+      var k = reduced ? 1 : clamp((p - 0.3) / 0.5, 0, 1);
+      t.eiland.style.opacity = String(k);
+      t.eiland.style.transform = 'translateX(' + Math.round(260 * (1 - k)) + 'px)';
     },
-    adem: function(t, c, tijd){
+    /* de hoogte van een golflaag op een schermpositie, dezelfde som als bij het tekenen */
+    golf: function(t, L, xs, tijd){
+      var A = L[1] * t.schaal;
+      return Math.sin(xs / (170 * t.schaal) + tijd * L[2]) * A + Math.sin(xs / (61 * t.schaal) - tijd * L[2] * 1.7) * A * 0.45;
+    },
+    adem: function(t, c, tijd, dt){
       c.clearRect(0, 0, t.w, t.h);
-      var lagen = [ [600, 26, 0.55, '#3f6de0', .9], [660, 22, 0.8, '#204ECF', .95], [740, 18, 1.1, '#1a41ae', 1] ];
+      var lagen = t.lagen, s = t.schaal;
+      /* het schip glijdt naar zijn doel en volgt de achterste golf: hoogte en helling */
+      t.x += (t.doelX - t.x) * Math.min(1, dt * 2.2);
+      var xs = t.naarScherm(t.x, 0)[0];
+      var h0 = t.opzet.golf(t, lagen[0], xs, tijd), hv = t.opzet.golf(t, lagen[0], xs + 90 * s, tijd), ha = t.opzet.golf(t, lagen[0], xs - 90 * s, tijd);
+      var helling = Math.atan2(hv - ha, 180 * s) * 180 / Math.PI;
+      t.schip.style.transform = 'translate(' + t.x.toFixed(1) + 'px,' + (h0 / s).toFixed(1) + 'px) rotate(' + (helling * 0.8 + Math.sin(tijd * 0.9) * 1.2).toFixed(2) + 'deg)';
+      /* schuim achter de spiegel en bij de boeg */
+      if (!reduced && Math.abs(t.doelX - t.x) > 2){
+        var spiegel = t.naarScherm(t.x - 236, 582), boeg = t.naarScherm(t.x + 250, 582);
+        t.schuim.push({ x:spiegel[0] + (Math.random() - .5) * 20 * s, y:spiegel[1] + h0 + (Math.random() - .5) * 8 * s, r:(4 + Math.random() * 9) * s, leven:0, duur:1.4 + Math.random(), vx:-14 * s });
+        if (Math.random() < .5) t.schuim.push({ x:boeg[0] + (Math.random() - .5) * 12 * s, y:boeg[1] + h0 + 4 * s, r:(3 + Math.random() * 6) * s, leven:0, duur:.6 + Math.random() * .5, vx:10 * s });
+      }
       for (var k = 0; k < lagen.length; k++){
         var L = lagen[k], basis = t.naarScherm(0, L[0])[1], A = L[1] * t.schaal;
         c.beginPath(); c.moveTo(0, t.h);
@@ -1556,6 +1583,17 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
           if (x2 === 0) c.moveTo(x2, y2); else c.lineTo(x2, y2);
         }
         c.stroke();
+      }
+      /* het schuim, bovenop het water */
+      c.fillStyle = '#FBF6F1';
+      for (var q = t.schuim.length - 1; q >= 0; q--){
+        var f = t.schuim[q];
+        f.leven += dt;
+        if (f.leven > f.duur){ t.schuim.splice(q, 1); continue; }
+        var g = f.leven / f.duur;
+        f.x += f.vx * dt;
+        c.globalAlpha = (1 - g) * .55;
+        c.beginPath(); c.arc(f.x, f.y, f.r * (1 + g * .8), 0, 6.283); c.fill();
       }
       c.globalAlpha = 1;
     }
