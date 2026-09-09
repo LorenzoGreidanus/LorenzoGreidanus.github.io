@@ -6,7 +6,7 @@ Een site, twee kanten: de voorkant voor collega's en een aparte leeromgeving voo
 
 | Pad | Waarvoor |
 |---|---|
-| `index.html` | Startpagina: het scrollverhaal met de wereldbol |
+| `index.html` | Startpagina: de tijdreis met de wereldbol als opening (scrollen laat de tijd lopen), vier keuzescènes "Jij bent erbij", "Vandaag in de geschiedenis" en een vraag in digibordstijl |
 | `over.html` | Over mij, mijn aanpak, materiaal en contact |
 | `404.html` | Foutpagina |
 | `CNAME` | Koppelt de site aan meneergreidanus.nl |
