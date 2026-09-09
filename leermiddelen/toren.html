@@ -7166,28 +7166,31 @@ function rekenVraag(rang, toegestaan) {
   }
 
   /* ---------- het klassement ----------
-     Per omgeving en niveau, op deze computer, de tien beste partijen. Wie het
-     verst kwam staat bovenaan; bij gelijke rondes wint wie meer vragen goed had. */
-  var KLASSEMENT = 'lg-toren-klassement-v1';
+     Een lijst voor alle omgevingen en niveaus samen, op deze computer: de
+     tien beste partijen. Wie het verst kwam staat bovenaan; bij gelijke rondes
+     wint wie meer vragen goed had. Per rij staat erbij waar en op welk niveau
+     er gespeeld is. */
+  var KLASSEMENT = 'lg-toren-klassement-v2';
   var opgeslagen = false, laatsteNaam = '';
   try { laatsteNaam = localStorage.getItem('lg-toren-naam') || ''; } catch (e){}
   function leesKlassement(){ try { return JSON.parse(localStorage.getItem(KLASSEMENT) || '{}'); } catch (e){ return {}; } }
   function schrijfKlassement(d){ try { localStorage.setItem(KLASSEMENT, JSON.stringify(d)); return true; } catch (e){ return false; } }
-  function klassementSleutel(){ return thema.id + '-' + niveau; }
+  function leesLijst(){ var d = leesKlassement(); return Array.isArray(d.alles) ? d.alles : []; }
   function bewaarScore(){
     if (opgeslagen) return;
     var veld = document.getElementById('naamveld');
     var naam = veld.value.trim().slice(0, 16);
     if (!naam){ veld.focus(); return; }
-    var data = leesKlassement(), sleutel = klassementSleutel();
-    var lijst = data[sleutel] || [];
+    var data = leesKlassement();
+    var lijst = leesLijst();
     var v = VAKKEN.filter(function(x){ return x.id === vak; })[0];
+    var nv = NIVEAUS.filter(function(x){ return x.id === niveau; })[0];
     var nieuw = { naam:naam, rondes:rondeGehaald, goed:goedAantal, totaal:goedAantal + foutAantal, vak:v ? v.naam : '',
-                  datum:new Date().toLocaleDateString('nl-NL'), t:Date.now() };
+                  waar:thema.naam, niveau:nv ? nv.naam : '', datum:new Date().toLocaleDateString('nl-NL'), t:Date.now() };
     lijst.push(nieuw);
     lijst.sort(function(a, b){ return b.rondes - a.rondes || b.goed - a.goed; });
     lijst = lijst.slice(0, 10);
-    data[sleutel] = lijst;
+    data.alles = lijst;
     var gelukt = schrijfKlassement(data);
     opgeslagen = true;
     try { localStorage.setItem('lg-toren-naam', naam); } catch (e){}
@@ -7199,16 +7202,15 @@ function rekenVraag(rang, toegestaan) {
       med.classList.remove('hide'); med.classList.add('nieuw');
     }
     document.getElementById('opslaghint').textContent = gelukt
-      ? (plek >= 0 ? 'Je staat op plek ' + (plek + 1) + ' van ' + thema.naam.toLowerCase() + '.' : 'Bewaard, maar niet in de top tien van ' + thema.naam.toLowerCase() + '.')
+      ? (plek >= 0 ? 'Je staat op plek ' + (plek + 1) + ' in het klassement.' : 'Bewaard, maar niet in de top tien.')
       : 'Opslaan lukte niet in deze browser, je score staat dus niet in de lijst.';
     toonKlassement('eindLijst', gelukt ? nieuw : null);
   }
   function toonKlassement(doelId, markeer){
     var doel = document.getElementById(doelId);
     if (!doel) return;
-    var lijst = leesKlassement()[klassementSleutel()] || [];
-    var nv = NIVEAUS.filter(function(x){ return x.id === niveau; })[0];
-    var titel = 'Klassement ' + thema.naam.toLowerCase() + ', ' + (nv ? nv.naam : '');
+    var lijst = leesLijst();
+    var titel = 'Klassement van deze computer';
     if (!lijst.length){
       doel.innerHTML = '<h3>' + titel + '</h3><div class="leeg">Nog geen partijen op deze computer. Wie het eerst speelt, staat bovenaan.</div>';
       return;
@@ -7217,7 +7219,7 @@ function rekenVraag(rang, toegestaan) {
     lijst.forEach(function(r, i){
       var ik = markeer && r.t === markeer.t;
       html += '<div class="plek' + (ik ? ' jij' : '') + '"><span class="nr">' + (i + 1) + '</span>' +
-        '<span><b>' + r.naam.replace(/[<>&]/g, '') + '</b><small>' + r.vak + ' \u00b7 ' + r.goed + ' van ' + r.totaal + ' goed \u00b7 ' + r.datum + '</small></span>' +
+        '<span><b>' + r.naam.replace(/[<>&]/g, '') + '</b><small>' + (r.waar ? r.waar + ' \u00b7 ' : '') + (r.niveau ? r.niveau + ' \u00b7 ' : '') + r.vak + ' \u00b7 ' + r.goed + ' van ' + r.totaal + ' goed \u00b7 ' + r.datum + '</small></span>' +
         '<span class="pt">' + r.rondes + ' rondes</span></div>';
     });
     doel.innerHTML = html;
