@@ -9,6 +9,10 @@ Een site, twee kanten: de voorkant voor collega's en een aparte leeromgeving voo
 | `index.html` | Startpagina: acht levende taferelen (grot, kleitablet, Pnyx, drukkerij, VOC-schip, Februaristaking, Apollo 11, de klas) met canvas-animatie, daarna "Vandaag in de geschiedenis" en de wereldbol |
 | `over.html` | Over mij, mijn aanpak, materiaal en contact |
 | `404.html` | Foutpagina |
+| `privacy.html` | Privacy: geen accounts, geen volgcookies, geen analytics; wat er in de browser bewaard wordt |
+| `voorwaarden.html` | Gebruiksvoorwaarden: vrij gebruiken in de les met bronvermelding, niet verkopen |
+| `robots.txt`, `sitemap.xml` | Voor zoekmachines; de sitemap noemt alle pagina's |
+| `fonts.css`, `fonts/` | Poppins en Caveat, zelf gehost (Open Font License), zodat er geen verzoek naar Google gaat |
 | `CNAME` | Koppelt de site aan meneergreidanus.nl |
 | `wereld.json` | Kustlijnen voor de wereldbol op de startpagina (Natural Earth, publiek domein) |
 | `rijken.json` | Grenzen van tien rijken op hun hoogtepunt, geknipt en vereenvoudigd uit [historical-basemaps](https://github.com/aourednik/historical-basemaps) (GPL-3; dit bestand valt onder dezelfde licentie) |
