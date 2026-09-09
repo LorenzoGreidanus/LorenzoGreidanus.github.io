@@ -6,7 +6,7 @@ Een site, twee kanten: de voorkant voor collega's en een aparte leeromgeving voo
 
 | Pad | Waarvoor |
 |---|---|
-| `index.html` | Startpagina: zeven levende taferelen (grot, kleitablet, Pnyx, drukkerij, VOC-schip, Februaristaking, de klas) met canvas-animatie en keuzes, daarna "Vandaag in de geschiedenis", een vraag in digibordstijl en de wereldbol |
+| `index.html` | Startpagina: acht levende taferelen (grot, kleitablet, Pnyx, drukkerij, VOC-schip, Februaristaking, Apollo 11, de klas) met canvas-animatie, daarna "Vandaag in de geschiedenis" en de wereldbol |
 | `over.html` | Over mij, mijn aanpak, materiaal en contact |
 | `404.html` | Foutpagina |
 | `CNAME` | Koppelt de site aan meneergreidanus.nl |
