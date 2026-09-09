@@ -175,7 +175,7 @@ img{max-width:100%;display:block}
    vuur, stof, golven, regen. Dat gebeurt op een canvas per tafereel,
    alleen zolang het in beeld is.
    ============================================================ */
-.tafereel{position:relative;height:200vh}
+.tafereel{position:relative;height:340vh}   /* lang genoeg dat een tikje op het wiel niet meteen een sprong in het verhaal is */
 .tafereel-pin{position:-webkit-sticky;position:sticky;top:0;height:100svh;overflow:hidden;background:var(--taf-bg,#14224C);isolation:isolate;box-shadow:0 -40px 80px rgba(0,0,0,.45)}
 .tafereel-pin::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 45%,transparent 55%,rgba(0,0,0,.28) 100%)}
 .tafereel-pin > .tafereel-tekst,.tafereel-pin > .hero-blok{z-index:3}
@@ -315,7 +315,7 @@ img{max-width:100%;display:block}
 .wolkje.k1{background:var(--sand)} .wolkje.k2{background:var(--amber)} .wolkje.k3{background:#fff} .wolkje.k4{background:var(--vista);color:var(--navy)}
 
 @media(max-width:820px){
-  .tafereel{height:180vh}
+  .tafereel{height:290vh}
   .tafereel-tekst{left:12px;right:12px;bottom:12px;width:auto;padding:18px 18px 20px;gap:9px;max-height:70svh;border-radius:18px}
   .info-knop{left:14px;bottom:16px}
   .info-knop.rechts{left:auto;right:14px}
@@ -1837,8 +1837,7 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
       /* een tafereel dat gemeten is toen het nog geen maat had (verborgen tabblad), meet opnieuw */
       var pr = t.pin.getBoundingClientRect();
       if (Math.round(pr.width) !== t.w || Math.round(pr.height) !== t.h) t.maat();
-      var p = voortgang(t.sectie);
-      if (p !== t.p){ t.p = p; if (t.opzet.stand) t.opzet.stand(t, p); }
+      t.pDoel = voortgang(t.sectie);   /* de stand loopt er in de lus met een korte uitloop naartoe */
     }
     for (var id2 in taferelen){
       var t2 = taferelen[id2];
@@ -1858,6 +1857,18 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
     var dt = Math.min(0.05, (nu - vorige) / 1000); vorige = nu;
     var y = scrollY || pageYOffset;
     if (y !== lastScroll || innerHeight !== lastH){ lastScroll = y; lastH = innerHeight; frame(); }
+    /* de stand van elk tafereel volgt het scrollen met een korte uitloop, zodat een snelle beweging
+       niet in een sprong maar in een vloeiende beweging terechtkomt */
+    for (var tid in taferelen){
+      var tf = taferelen[tid];
+      if (tf.pDoel === undefined || tf.p === tf.pDoel) continue;
+      var np = (tf.p < 0 || reduced) ? tf.pDoel : tf.p + (tf.pDoel - tf.p) * Math.min(1, dt * 6);
+      if (Math.abs(tf.pDoel - np) < 0.0006) np = tf.pDoel;
+      tf.p = np;
+      if (tf.opzet.stand) tf.opzet.stand(tf, np);
+      /* het knopje volgt de stand van het tekstvak meteen, niet pas bij de volgende scrollstap */
+      tf.knop.classList.toggle('aan', tf.tekst.classList.contains('aan') && !tf.tekst.classList.contains('open'));
+    }
     if (!reduced){
       for (var id in taferelen){
         var t = taferelen[id];
