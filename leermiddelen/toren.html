@@ -516,7 +516,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
       <b>Elke ronde zwaarder</b>
       <span>Eerst gewone fouten, dan snelle, fouten met een schild, zwermen en verstopte fouten
         die je eerst moet ontmaskeren. Sommige rondes hebben een karakter: dan komt een soort
-        veel vaker en zegt de melding vooraf welke. Na ronde twintig wordt alles taaier.</span>
+        veel vaker en zegt de melding vooraf welke. Elke ronde wordt alles een beetje taaier.</span>
     </div>
     <div>
       <i style="background:var(--ocean)">3</i>
@@ -751,6 +751,12 @@ const SOORTEN = {
      maar laadt lang en is duur. */
   pekelpot:  {naam:'Pekelpot',     letter:'P', kleur:'#2f7d52',            prijs:80,  bereik:120, schade:11, tempo:1.1,  onder:'Raakt alles in de buurt', vlak:true},
   schutter:  {naam:'Scherpschutter',letter:'S',kleur:'#7d1f12',            prijs:120, bereik:300, schade:46, tempo:2.6,  onder:'Ver, en ziet verstopte fouten'},
+  /* De Dartwerper. Hij gooit dartpijlen: recht, snel en verder dan het Kanon,
+     en elke pijl gaat door de eerste fout heen en raakt er vlak daarachter nog
+     een. Met de penning wordt hij een laser: een straal die elke fout op de
+     lijn raakt tot aan de rand van zijn bereik, en die door een schild heen
+     brandt. */
+  dart:      {naam:'Dartwerper',   letter:'D', kleur:'#1f7a8c',            prijs:90,  bereik:170, schade:12, tempo:0.7,  onder:'Pijlen die door twee fouten gaan', dart:true},
   /* De Tonkla Toren moet je verdienen: een lange reeks goede antwoorden achter
      elkaar, en pas te bouwen vanaf ronde twintig. Naast het gewone schieten laat
      hij om de zoveel tijd een schokgolf los, maar alleen als er iets binnen
@@ -815,6 +821,9 @@ const ICONEN = {
             '<path d="M9 4.5 q1 3 2 0 M13 4 q1 3.5 2 0" stroke="K" stroke-width="1.6" stroke-linecap="round" fill="none"/>',
   schutter: '<circle cx="12" cy="12" r="7" fill="none" stroke="K" stroke-width="2"/>' +
             '<path d="M12 2 v4 M12 18 v4 M2 12 h4 M18 12 h4" stroke="K" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.8" fill="K"/>',
+  dart:     '<path d="M6 18 L16 8" stroke="K" stroke-width="2.4" stroke-linecap="round"/>' +
+            '<path d="M16 8 l4.5 -4.5" stroke="K" stroke-width="3.2" stroke-linecap="round"/>' +
+            '<path d="M6 18 l-3 -6 l4.5 1.5 z M6 18 l6 3 l-1.5 -4.5 z" fill="K"/>',
   tonkla:   '<circle cx="12" cy="12" r="2.4" fill="K"/>' +
             '<path d="M6.5 6.5 a7.8 7.8 0 0 0 0 11 M17.5 6.5 a7.8 7.8 0 0 1 0 11" fill="none" stroke="K" stroke-width="2" stroke-linecap="round"/>' +
             '<path d="M3.5 3.5 a12 12 0 0 0 0 17 M20.5 3.5 a12 12 0 0 1 0 17" fill="none" stroke="K" stroke-width="1.6" stroke-linecap="round" opacity=".7"/>',
@@ -865,20 +874,20 @@ function icoon(id, kleur){
    'water' dat je op het water bouwt en alleen op de eilandjes op het land. */
 const THEMAS = [
   { id:'plein', naam:'Het schoolplein', plek:'',
-    onder:'Gras, een zandweg en de school aan het eind. Met de Pekelpot, de Tonkla Toren en de Apentoren.',
-    torens:['kanon','katapult','vertrager','pekelpot','schutter','tonkla','aap'] },
+    onder:'Gras, een zandweg en de school aan het eind. Met de Pekelpot, de Dartwerper, de Tonkla Toren en de Apentoren.',
+    torens:['kanon','katapult','vertrager','pekelpot','schutter','dart','tonkla','aap'] },
   { id:'eiland', naam:'Tropisch eiland', slot:'eiland', strand:true, plek:' op het tropisch eiland',
     onder:'Zee, palmen en een vlonder over het zand. Met de Tonkla Bommenwerper en de Vriendenhut.',
-    torens:['kanon','katapult','vertrager','schutter','bommenwerper','vrienden'] },
+    torens:['kanon','katapult','vertrager','schutter','bommenwerper','vrienden','dart'] },
   /* kracht: de fouten zijn hier een kwart minder taai. De eilandjes liggen ver
      van de weg en er passen minder torens op, en gemeten viel een gemiddelde
      klas hier rond ronde veertig waar hij op het plein ronde zestig haalde. */
   { id:'archipel', naam:'De eilanden', slot:'archipel', strand:true, water:true, plek:' tussen de eilanden', kracht:0.75,
     onder:'Open zee met kleine eilandjes. Landtorens passen alleen op een eiland; de Kanonneerboot en de Onderzee\u00ebr liggen op het water. Vanaf ronde zestig komt de Zeeslang.',
-    torens:['kanon','katapult','schutter','onderzeeer','schip','bommenwerper'] },
+    torens:['kanon','katapult','schutter','onderzeeer','schip','bommenwerper','dart'] },
   { id:'vulkaan', naam:'De vulkaan', slot:'vulkaan', plek:' op de vulkaan',
     onder:'As, lavabeken en een stenen weg. Met de Magmamortier en de Zwavelblazer, en in ronde vijftig de Magmakoning.',
-    torens:['kanon','katapult','vertrager','schutter','mortier','zwavel'] }
+    torens:['kanon','katapult','vertrager','schutter','mortier','zwavel','dart'] }
 ];
 const EILANDRONDE = 50;   /* zoveel rondes overleven en het eiland staat open */
 /* Hoeveel torens je meeneemt. Minder dan alles, want dan is het een keuze: wie
@@ -2753,7 +2762,8 @@ function rekenVraag(rang, toegestaan) {
      fouten komen dan boven op wat er al staat. */
   function rondeErbij(nieuweRonde){
     bank.ronde++;
-    var erbij = 4 + bank.ronde + Math.max(0, bank.ronde - 50);
+    /* na ronde vijftig kwam er per ronde een extra fout bij; nu een per twee rondes */
+    var erbij = 4 + bank.ronde + Math.floor(Math.max(0, bank.ronde - 50) / 2);
     var toeslag = haast > 0 ? Math.round(erbij * 0.10 * Math.min(HAASTMAX + 1, haast)) : 0;
     erbij += toeslag;
     if (isRustronde(bank.ronde)) erbij = Math.max(3, Math.round(erbij * RUSTAANTAL));
@@ -2795,11 +2805,18 @@ function rekenVraag(rang, toegestaan) {
   /* Levens kopen is eruit (het maakte late rondes te makkelijk). Munten gaan nu
      naar plekken voor torens: je begint met vijf en koopt er een voor een bij,
      elke volgende plek een kwart duurder dan de vorige: 60, 75, 95, 115, 145
-     en zo door, tot 1365 voor de twintigste. */
+     en zo door. Er zat een maximum op van vierentwintig; dat is eraf. Zolang
+     je kunt betalen mag er een plek bij. Na de twaalfde plek erbij (875
+     munten) groeit de prijs niet meer met een kwart per keer maar met twaalf
+     procent van dat bedrag, anders is de dertigste plek onbetaalbaar: de
+     vierentwintigste plek kost zo 1605, de veertigste 3280. */
   var gelapt = 0;
-  var STARTSLOTS = 5, MAXSLOTS = 24, slots = STARTSLOTS;
-  function slotPrijs(){ return Math.round(60 * Math.pow(1.25, slots - STARTSLOTS) / 5) * 5; }
-  function magSlot(){ return inSpel() && !pauze && slots < MAXSLOTS && bank.munten >= slotPrijs(); }
+  var STARTSLOTS = 5, slots = STARTSLOTS;
+  function slotPrijs(){
+    var n = slots - STARTSLOTS;
+    return Math.round(60 * Math.pow(1.25, Math.min(n, 12)) * (1 + 0.12 * Math.max(0, n - 12)) / 5) * 5;
+  }
+  function magSlot(){ return inSpel() && !pauze && bank.munten >= slotPrijs(); }
   function koopSlot(){
     if (!magSlot()) return false;
     var prijs = slotPrijs();
@@ -2847,7 +2864,7 @@ function rekenVraag(rang, toegestaan) {
     });
     if (!mag.length) return null;
     var tel = {}; torens.forEach(function(t){ tel[t.soort] = (tel[t.soort] || 0) + 1; });
-    var plan = ['kanon','kanon','katapult','pekelpot','schutter','schip','vertrager','katapult','onderzeeer','mortier','zwavel',
+    var plan = ['kanon','kanon','katapult','pekelpot','dart','schutter','schip','vertrager','katapult','onderzeeer','mortier','zwavel',
                 'schutter','pekelpot','bommenwerper','vrienden','tonkla','aap','katapult','schutter','kanon','onderzeeer','mortier'];
     var kandidaten = plan.filter(function(id){ return mag.indexOf(id) >= 0; });
     if (!kandidaten.length) kandidaten = mag;
@@ -2888,12 +2905,12 @@ function rekenVraag(rang, toegestaan) {
     /* Staat het bord vol, dan spaart de bot voor een plek erbij, tot hij er
        zestien heeft; daarna gaat het geld naar versterken. Zo speelt een klas
        het ook: eerst meer torens, dan betere. */
-    if (torens.length >= slots && slots < MAXSLOTS && bank.munten >= slotPrijs()){
+    if (torens.length >= slots && bank.munten >= slotPrijs()){
       var laagste = torens.reduce(function(m, t){ return Math.min(m, t.niveau); }, 9);
       if (slots < 12 || laagste >= 3){ koopSlot(); botLog('slot', { slots:slots }); }
     }
     if (penningen > 0){
-      var volg = ['katapult','schutter','pekelpot','kanon','onderzeeer','mortier','tonkla','bommenwerper','vertrager','schip','zwavel','aap','vrienden'];
+      var volg = ['katapult','schutter','pekelpot','dart','kanon','onderzeeer','mortier','tonkla','bommenwerper','vertrager','schip','zwavel','aap','vrienden'];
       var kandidaat = null;
       volg.forEach(function(soort){ if (!kandidaat) kandidaat = torens.filter(function(t){ return t.soort === soort && !t.kracht; })[0] || null; });
       if (kandidaat){ penningen--; kandidaat.kracht = true; botLog('penning', { soort:kandidaat.soort }); }
@@ -3246,7 +3263,10 @@ function rekenVraag(rang, toegestaan) {
        Nu 10 met een bonus tot 12, dus tweeentwintig als maximum. Dat is ruim een
        kwart minder, en het maakt de reeks relatief zwaarder: zonder reeks houd
        je nog maar tien over, met een volle reeks meer dan het dubbele. */
-    var winst = goed ? Math.round((12 + Math.min(12, reeks * 3)) * (1 + (bank.ronde - 1) * 0.03)) : 0;
+    /* September 2026: van drie naar drieenhalf procent per ronde, want het
+       aantal plekken is niet meer begrensd en de late rondes moeten die plekken
+       en niveaus ook kunnen betalen. */
+    var winst = goed ? Math.round((12 + Math.min(12, reeks * 3)) * (1 + (bank.ronde - 1) * 0.035)) : 0;
     gekliktIndex = i;
     reeks = goed ? reeks + 1 : 0;
     vuur = goed ? vuur + 1 : Math.floor(vuur / 2);
@@ -3487,6 +3507,7 @@ function rekenVraag(rang, toegestaan) {
     vertrager: { naam:'Vrieskou',     uit:'vertraagt veel sterker en langer',    mark:'\u2744' },
     pekelpot:  { naam:'Bijtend zuur', uit:'de golf doet bijna dubbele schade',   mark:'\u25CE' },
     schutter:  { naam:'Kopschot',     uit:'drie keer zoveel schade tegen bazen', mark:'\u2295' },
+    dart:      { naam:'Laserstraal',  uit:'een straal die elke fout op de lijn raakt, dwars door schilden', mark:'\u2261' },
     tonkla:    { naam:'Onweer',       uit:'de schokgolf laadt twee keer zo snel',mark:'\u21AF' },
     aap:       { naam:'Bommenwerper', uit:'gooit er om de acht seconden een bom bij', mark:'\u2299' },
     bommenwerper: { naam:'Trosbom',   uit:'een veel grotere inslag en meer schade', mark:'\u2234' },
@@ -3673,12 +3694,30 @@ function rekenVraag(rang, toegestaan) {
      maar geeft goed spelen de tijd om mee te groeien. */
   /* Een klas haalde ronde 115. Vanaf vijftig gaat de groei dus een tand
      harder: dan komen er ook meer fouten per ronde en lopen ze sneller. */
-  function zwaarte(ronde){ return ronde <= 20 ? 1 : 1 + (ronde - 20) * 0.035 + Math.max(0, ronde - 50) * 0.025; }
+  /* September 2026: de eerste twintig rondes waren te makkelijk (alles even
+     taai als in ronde een) en na veertig liep het te steil op. Nu groeit het
+     vanaf ronde een met twee procent per ronde, tussen twintig en veertig met
+     anderhalf, en daarna met een. Tot ronde veertig is dat zwaarder dan eerst
+     (ronde tien een vijfde, ronde twintig ruim een derde), in ronde veertig
+     precies gelijk, en daarna lichter: in ronde zestig driekwart van wat het
+     was, in ronde tachtig ruim de helft. Gemeten met de speelbot op tachtig
+     procent goed: de eerste versie van deze curve (omslag bij 46) viel nog
+     altijd in ronde 46, net als de oude. Het aantal plekken is niet meer
+     begrensd, dus wie doorspeelt kan zijn bord ook echt laten meegroeien. */
+  function zwaarte(ronde){
+    return ronde <= 20 ? 1 + (ronde - 1) * 0.02
+         : ronde <= 40 ? 1.38 + (ronde - 20) * 0.016
+         : 1.70 + (ronde - 40) * 0.01;
+  }
   /* Een baas groeit trager mee dan de gewone fouten. Met de gewone groei was een
      vol bord van veertien torens op niveau drie vanaf ronde dertig te licht
      voor elke baas, en dan valt er niets meer te winnen. Nu blijft hij lastig,
      maar te vellen voor wie zijn bord op orde heeft. */
-  function baasZwaarte(ronde){ return ronde <= 20 ? 1 : 1 + (ronde - 20) * 0.03 + Math.max(0, ronde - 50) * 0.02; }
+  function baasZwaarte(ronde){
+    return ronde <= 20 ? 1 + (ronde - 1) * 0.015
+         : ronde <= 40 ? 1.285 + (ronde - 20) * 0.015
+         : 1.585 + (ronde - 40) * 0.008;
+  }
 
   /* Aan een knop draaien is makkelijker dan overal getallen aanpassen. Deze
      schaal gaat over alles wat een fout kan incasseren: gewone fouten, zwermen
@@ -3903,7 +3942,7 @@ function rekenVraag(rang, toegestaan) {
     } else {
       if (torens.length >= maxTorens()){
         rijen.push({ id:'vol2', label:'Al je ' + maxTorens() + ' plekken staan vol', prijs:null, kan:false,
-                     onder:slots < MAXSLOTS ? 'koop een plek erbij, ' + slotPrijs() + ' munten' : 'haal er eerst een weg', kleur:'#5b6480' });
+                     onder:'koop een plek erbij, ' + slotPrijs() + ' munten', kleur:'#5b6480' });
       } else {
         var opLand = opEiland(x, y);
         Object.keys(SOORTEN).forEach(function(id){
@@ -5586,6 +5625,25 @@ function rekenVraag(rang, toegestaan) {
           s += '<path d="M' + (14 - terug) + ',3 l-5,9 M' + (14 - terug) + ',-3 l-5,-9" stroke="' + mZwart + '" stroke-width="2.2" stroke-linecap="round"/>' +
                '<rect x="' + (8 - terug) + '" y="' + (pen ? -14 : -9) + '" width="12" height="4" rx="2" fill="#EFC64A" stroke="#8a6a1f" stroke-width=".8"/>';
         }
+      } else if (t.soort === 'dart'){
+        if (pen){
+          /* de laser: een dikke korte buis met een lens die gloeit */
+          s += '<rect x="' + (-2 - terug) + '" y="-5" width="24" height="10" rx="4" fill="' + mDonker + '"/>' +
+               '<rect x="' + (14 - terug) + '" y="-7" width="6" height="14" rx="2" fill="' + mZwart + '"/>' +
+               '<circle cx="' + (23 - terug) + '" cy="0" r="4" fill="#ff2d55" stroke="#fff" stroke-width="1.2" opacity="' +
+                 (0.75 + Math.sin(pols * 9) * 0.25).toFixed(2) + '"/>' +
+               '<circle cx="0" cy="0" r="7.5" fill="' + mMid + '" stroke="#EA9836" stroke-width="1.6"/>';
+        } else {
+          /* een rail met een dartpijl erop, klaar om te gooien, op een schijfje
+             met de kleuren van een dartbord */
+          s += '<rect x="' + (2 - terug) + '" y="-2.2" width="22" height="4.4" rx="2" fill="' + mDonker + '"/>' +
+               '<path d="M' + (10 - terug) + ',0 L' + (26 - terug) + ',0" stroke="#dfe6ee" stroke-width="2" stroke-linecap="round"/>' +
+               '<path d="M' + (26 - terug) + ',0 l4,0" stroke="#3b3730" stroke-width="2.4" stroke-linecap="round"/>' +
+               '<path d="M' + (10 - terug) + ',0 l-3,-4 l3,0 z M' + (10 - terug) + ',0 l-3,4 l3,0 z" fill="#c0442c"/>' +
+               '<circle cx="0" cy="0" r="6.5" fill="' + mMid + '"/>' +
+               '<circle cx="0" cy="0" r="3.5" fill="#c0442c"/><circle cx="0" cy="0" r="1.4" fill="#2f7d52"/>';
+        }
+        if (top) s += '<rect x="' + (4 - terug) + '" y="-10" width="14" height="4" rx="2" fill="#EFC64A" stroke="#8a6a1f" stroke-width=".8"/>';
       } else if (t.soort === 'bommenwerper'){
         /* Een vliegveldje: een baan met witte strepen die naar het doel draait,
            een hangaar aan het begin en het vliegtuig geparkeerd op de baan
@@ -5843,6 +5901,13 @@ function rekenVraag(rang, toegestaan) {
       s += '<line x1="' + sc.x + '" y1="' + sc.y + '" x2="' + ex +
         '" y2="' + ey + '" stroke="' + kleurVan(sc.kleur) +
         '" stroke-width="' + (sc.dik || 3) + '" stroke-linecap="round" opacity="' + (deel*0.85).toFixed(2) + '"/>';
+      /* de laser: een brede gloed eromheen en een witte kern erin */
+      if (sc.laser){
+        s += '<line x1="' + sc.x + '" y1="' + sc.y + '" x2="' + ex + '" y2="' + ey +
+          '" stroke="#ff2d55" stroke-width="10" stroke-linecap="round" opacity="' + (deel * 0.28).toFixed(2) + '"/>' +
+          '<line x1="' + sc.x + '" y1="' + sc.y + '" x2="' + ex + '" y2="' + ey +
+          '" stroke="#fff" stroke-width="1.4" stroke-linecap="round" opacity="' + (deel * 0.9).toFixed(2) + '"/>';
+      }
       /* bij de Kanonneerboot een kogel met een rookwolkje bij de loop */
       if (sc.boot){
         var kx2 = sc.x + (ex - sc.x) * (1 - deel), ky2 = sc.y + (ey - sc.y) * (1 - deel);
@@ -6159,6 +6224,16 @@ function rekenVraag(rang, toegestaan) {
           '<path d="M-4,8 l-3,6 M4,8 l3,6 M0,9 v6" stroke="#8a8578" stroke-width="1.8" ' +
           'stroke-linecap="round" fill="none"/>' +
           '<circle cx="-2" cy="-3" r="1.8" fill="#fff" opacity=".35"/></g>';
+        return;
+      }
+      /* een dartpijl: schacht, punt en rode veren, recht op het doel af */
+      if (k.dart){
+        var dh = Math.atan2(k.y1 - k.y0, k.x1 - k.x0) * 180 / Math.PI;
+        s += '<g transform="translate(' + x.toFixed(1) + ',' + vlak.toFixed(1) + ') rotate(' + dh.toFixed(1) + ')">' +
+          '<path d="M-9,0 L6,0" stroke="#dfe6ee" stroke-width="2.2" stroke-linecap="round"/>' +
+          '<path d="M6,0 l5,0" stroke="#3b3730" stroke-width="2.6" stroke-linecap="round"/>' +
+          '<path d="M-9,0 l-4,-4 l4,0 z M-9,0 l-4,4 l4,0 z" fill="#c0442c"/>' +
+          '<rect x="-4" y="-1.8" width="6" height="3.6" rx="1.5" fill="#1f7a8c"/></g>';
         return;
       }
       /* een raket vliegt recht, met een vlam erachter */
@@ -6505,9 +6580,7 @@ function rekenVraag(rang, toegestaan) {
          wat een plek kost en of je hem kunt betalen. */
       sk.classList.toggle('leeg', !inSpel());
       sk.disabled = !magSlot();
-      sk.textContent = slots >= MAXSLOTS
-        ? 'Alle ' + MAXSLOTS + ' plekken gekocht'
-        : 'Torenplek erbij, ' + slotPrijs() + ' munten (' + torens.length + ' van ' + slots + ' bezet)';
+      sk.textContent = 'Torenplek erbij, ' + slotPrijs() + ' munten (' + torens.length + ' van ' + slots + ' bezet)';
     }
     document.getElementById('mBonus').textContent = '\u00d7' + kommaGetal(reeksbonus(), 2);
     document.getElementById('mToren').textContent = torens.length + '/' + maxTorens();
@@ -6615,7 +6688,7 @@ function rekenVraag(rang, toegestaan) {
         var hp = Math.max(1, Math.round((10 + ronde * 6) * (0.75 + r * 0.15) * zwaarte(ronde) *
                           VIJANDKRACHT * (thema.kracht || 1) * (isRustronde(ronde) ? RUSTTAAI : 1)));
         /* de laatste van een baasronde is de baas zelf */
-        var basisSnel = (30 + r*5 + ronde*2.3) * (ronde <= 20 ? 1 : ronde <= 60 ? 1.12 : 1.25);
+        var basisSnel = (30 + r*5 + ronde*2.3) * (ronde <= 20 ? 1 : ronde <= 60 ? 1.1 : 1.18);
         if (wachtrij === baasBijWachtrij && isBaasRonde(ronde)){
           baasBijWachtrij = -1;                 /* er komt er maar een per ronde */
           var bz = baasVan(ronde);
@@ -7103,6 +7176,31 @@ function rekenVraag(rang, toegestaan) {
         /* een raket: recht op het doel af, en bij de inslag een klap eromheen */
         kogels.push({ x0:p.x, y0:p.y, x1:doelPos.x, y1:doelPos.y, t:0, duur:0.4,
                       schade:schade, doel:doel, draai:0, raket:true, straal:s.straal });
+      } else if (t.soort === 'dart' && t.kracht){
+        /* De laser: een rechte streep van de toren door het doel heen tot aan
+           de rand van het bereik. Alles wat binnen twaalf pixels van die lijn
+           loopt krijgt de klap, en een schild helpt niet: de straal brandt er
+           dwars doorheen (de klap wordt zo opgehoogd dat er netto de volle
+           schade overblijft, en het schild gaat gewoon stuk als het onder de
+           helft komt). */
+        var lh = Math.atan2(doelPos.y - p.y, doelPos.x - p.x);
+        var lx = Math.cos(lh), ly = Math.sin(lh);
+        vijanden.forEach(function(e){
+          if (e.dood || !ziet(t, e)) return;
+          var q = positie(e.d), rx = q.x - p.x, ry = q.y - p.y;
+          var langs = rx * lx + ry * ly;
+          if (langs < 0 || langs > bereik) return;
+          if (Math.abs(ry * lx - rx * ly) > 12) return;
+          var sch = (e.schildOp && e.schild > 0) ? schade / (1 - e.schild) : schade;
+          raakVijand(e, sch, false);
+        });
+        schoten.push({ x:p.x, y:p.y, len:bereik, hoek:lh * 180 / Math.PI, kleur:'#ff2d55',
+                       leven:0.18, dik:3, laser:true });
+      } else if (t.soort === 'dart'){
+        /* een dartpijl: recht op het doel af, en bij de inslag gaat hij door
+           naar de fout die er het dichtst achter loopt */
+        kogels.push({ x0:p.x, y0:p.y, x1:doelPos.x, y1:doelPos.y, t:0, duur:0.22,
+                      schade:schade, doel:doel, draai:0, dart:true });
       } else if (t.soort === 'katapult'){
         /* De katapult slingert een steen die een boog maakt. De schade valt pas
            bij de inslag, want anders zie je een fout omvallen voordat de steen
@@ -7195,6 +7293,18 @@ function rekenVraag(rang, toegestaan) {
           golven.push({ x:k.x1, y:k.y1, r:straal, leven:0.3, kleur:k.lava ? '#ff6a1a' : '#EA9836' });
           if (!geraakt2) raakVijand(slachtoffer, k.schade, false);
           if (k.lava) lavas.push({ x:k.x1, y:k.y1, r:straal * 0.8, leven:k.lavaDuur, vol:k.lavaDuur, schade:k.lavaSchade });
+        } else if (k.dart){
+          raakVijand(slachtoffer, k.schade, false);
+          /* de pijl gaat door: de dichtstbijzijnde andere fout binnen zestig
+             pixels van de inslag krijgt dezelfde klap */
+          var tweede = null, kort2 = 60;
+          vijanden.forEach(function(e){
+            if (e === slachtoffer || e.dood || e.camo || e.onder > 0) return;
+            var q3 = positie(e.d), d3 = Math.hypot(q3.x - k.x1, q3.y - k.y1);
+            if (d3 < kort2){ kort2 = d3; tweede = e; }
+          });
+          if (tweede) raakVijand(tweede, k.schade, false);
+          return;
         } else {
           raakVijand(slachtoffer, k.schade, false);
         }
@@ -7484,8 +7594,7 @@ function rekenVraag(rang, toegestaan) {
 
   document.getElementById('slotBtn').addEventListener('click', function(){
     if (!koopSlot()) return;
-    melding2('Een plek erbij: je kunt nu ' + slots + ' torens neerzetten.' +
-      (slots < MAXSLOTS ? ' De volgende plek kost ' + slotPrijs() + ' munten.' : ''));
+    melding2('Een plek erbij: je kunt nu ' + slots + ' torens neerzetten. De volgende plek kost ' + slotPrijs() + ' munten.');
     tekenMeters(); tekenBord();
   });
 
