@@ -396,7 +396,7 @@ export class Kamer extends DurableObject {
     const i = this.stand.i, q = this.stand.vragen[i];
     const verdeling = q.o.map(() => 0);
     Object.keys(this.stand.spelers).forEach(sid => { const a = this.stand.spelers[sid].antw[i]; if (a) verdeling[a.k]++; });
-    return { t: "uitslag", i, n: this.stand.vragen.length, g: q.g, u: q.u, o: q.o, v: q.v, verdeling,
+    return { t: "uitslag", i, n: this.stand.vragen.length, g: q.g, u: q.u, o: q.o, v: q.v, vlag: q.vlag, svg: q.svg, verdeling,
              stand: this.ranglijst().slice(0, 10), laatste: i >= this.stand.vragen.length - 1 };
   }
   uitslagVoorSpeler(sid){

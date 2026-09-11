@@ -70,9 +70,13 @@ window.STRIJD = (function(){
     '.sitelijst .naamrij input{flex:1;min-width:0;border:1.5px solid rgba(20,34,76,.14);border-radius:12px;padding:10px 12px;font:inherit;background:#FBF6F1;color:inherit}' +
     '.sitelijst .naamrij button{border:none;border-radius:12px;padding:10px 14px;font:600 .9rem Poppins,system-ui,sans-serif;background:#F26749;color:#fff;cursor:pointer}' +
     '.sitelijst .hint{font-size:.85rem;color:#5b6480;margin:0 0 8px}' +
-    ':root[data-theme="dark"] .duelvak,:root[data-theme="dark"] .sitelijst .rij,:root[data-theme="dark"] .duelvak input,:root[data-theme="dark"] .sitelijst .naamrij input,:root[data-theme="dark"] .duelvak button.los{background:#182652;color:#F3EFE9;border-color:rgba(243,239,233,.14)}' +
-    ':root[data-theme="dark"] .sitelijst .rij.jij{background:#3a3220;border-color:#EFC64A}' +
-    ':root[data-theme="dark"] .duelvak p,:root[data-theme="dark"] .sitelijst .rij small,:root[data-theme="dark"] .sitelijst .leeg,:root[data-theme="dark"] .sitelijst .hint,:root[data-theme="dark"] .sitelijst .rij .nr{color:#B3BBD0}';
+    /* donker: bij een eigen keuze en bij een apparaat dat donker vraagt */
+    donkerRegels(':root[data-theme="dark"] ', '.duelvak,.sitelijst .rij,.duelvak input,.sitelijst .naamrij input,.duelvak button.los{background:#182652;color:#F3EFE9;border-color:rgba(243,239,233,.14)}.sitelijst .rij.jij{background:#3a3220;border-color:#EFC64A}.duelvak p,.sitelijst .rij small,.sitelijst .leeg,.sitelijst .hint,.sitelijst .rij .nr{color:#B3BBD0}.duelvak h3,.sitelijst h3{color:#F3EFE9}#strijdSluier>div{background:#182652;color:#F3EFE9}#strijdSluier p{color:#B3BBD0}#strijdSluier button{background:#182652;color:#F3EFE9;border-color:rgba(243,239,233,.2)}') +
+    '@media(prefers-color-scheme:dark){' + donkerRegels(':root:not([data-theme="light"]) ', '.duelvak,.sitelijst .rij,.duelvak input,.sitelijst .naamrij input,.duelvak button.los{background:#182652;color:#F3EFE9;border-color:rgba(243,239,233,.14)}.sitelijst .rij.jij{background:#3a3220;border-color:#EFC64A}.duelvak p,.sitelijst .rij small,.sitelijst .leeg,.sitelijst .hint,.sitelijst .rij .nr{color:#B3BBD0}.duelvak h3,.sitelijst h3{color:#F3EFE9}#strijdSluier>div{background:#182652;color:#F3EFE9}#strijdSluier p{color:#B3BBD0}#strijdSluier button{background:#182652;color:#F3EFE9;border-color:rgba(243,239,233,.2)}') + '}';
+  /* elke selector in een regelblok krijgt de voorloper */
+  function donkerRegels(voor, regels){
+    return regels.replace(/(^|\})([^{}]+)\{/g, function(alles, s0, sel){ return s0 + sel.split(',').map(function(x){ return voor + x.trim(); }).join(',') + '{'; });
+  }
   var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
 
   /* ======================================================================
