@@ -33,7 +33,15 @@ export default {
 
     if (p === "/q" || p.startsWith("/q/")){
       const code = p.slice(3).toUpperCase().replace(/[^A-Z]/g, "");
-      return Response.redirect(url.origin + "/leermiddelen/klasquiz.html" + (code ? "?k=" + code : ""), 302);
+      /* met een code kijken we welk spel erbij hoort: de Klasquiz of de Klasstrijd */
+      let pagina = "klasquiz.html";
+      if (code.length === 4){
+        try {
+          const r = await env.KAMERS.get(env.KAMERS.idFromName(code)).fetch("https://kamer/stand");
+          if (r.ok){ const j = await r.json(); if (j.spel === "strijd") pagina = "strijd.html"; }
+        } catch (e){}
+      }
+      return Response.redirect(url.origin + "/leermiddelen/" + pagina + (code ? "?k=" + code : ""), 302);
     }
 
     if (p === "/api/kamer" && req.method === "POST"){
@@ -46,6 +54,8 @@ export default {
         const r = await stub.fetch("https://kamer/nieuw", { method: "POST",
           body: JSON.stringify(Object.assign({}, opzet, { code })) });
         if (r.status === 200) return json(await r.json());
+        /* alleen een bezette code opnieuw proberen; een foute opzet is een fout van de aanvrager */
+        if (r.status !== 409) return json(await r.json(), r.status);
       }
       return json({ fout: "geen vrije code gevonden, probeer nog eens" }, 503);
     }

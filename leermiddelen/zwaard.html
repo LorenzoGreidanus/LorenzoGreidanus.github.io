@@ -259,6 +259,7 @@ body.groot .meter b{font-size:1.45rem}
 
 <footer>Zwaardvechter &middot; meneer Greidanus &middot; <span id="jaar"></span></footer>
 
+<script src="strijd.js"></script>
 <script>
 /* ============================================================================
    ZWAARDVECHTER
@@ -2195,6 +2196,7 @@ const ICONEN = {
 
   /* ---------- toestand ---------- */
   var fase = 'ronde';           /* ronde, vragen, winkel */
+  var strijdExtra = 0;          /* fouten die klasgenoten je sturen terwijl je tussen twee rondes zit */
   var ronde = 0, munten = 0, hp = 0, maxHp = 0, geveld = 0, level = {}, tijdInRonde = 0;
   var sp = { x:550, y:310, mikt:0, klok:0, zwaai:0, raak:0, mesKlok:0, flits:0, dash:0, dashKlok:0, dx:1, dy:0 };
   var fouten = [], messen = [], munt = [], pluis = [], cijfers = [], teSpawnen = 0, spawnKlok = 0;
@@ -2316,7 +2318,7 @@ const ICONEN = {
     fase = 'ronde';
     fouten = []; messen = []; munt = []; pluis = []; cijfers = [];
     sp.x = ARENA.b / 2; sp.y = ARENA.h / 2; sp.raak = 0; sp.klok = 0; sp.mesKlok = 0;
-    teSpawnen = aantalInRonde(ronde);
+    teSpawnen = aantalInRonde(ronde) + strijdExtra; strijdExtra = 0;
     spawnKlok = 0.6;
     tijdInRonde = 0;
     if (ronde % BAASRONDE === 0) spawnBaas();
@@ -2589,6 +2591,7 @@ const ICONEN = {
     slim.toets(goed);
     if (goed){
       reeks++; goedAantal++; besteReeks = Math.max(besteReeks, reeks);
+      if (window.STRIJD) STRIJD.reeks(reeks);
       var winst = Math.round((MUNT_GOED + Math.min(MUNT_REEKSMAX, reeks * MUNT_REEKS)) * (1 + (ronde - 1) * MUNT_GROEI));
       munten += winst;
       vraag.winst = winst;
@@ -2787,6 +2790,7 @@ const ICONEN = {
   /* ---------- einde ---------- */
   function einde(){
     botLog('einde');
+    if (window.STRIJD) STRIJD.af({ ronde:ronde, punten:geveld });
     fase = 'einde'; loopt = false; pauze = false;
     document.getElementById('scherm-spel').classList.add('hide');
     document.getElementById('scherm-einde').classList.remove('hide');
@@ -2839,6 +2843,25 @@ const ICONEN = {
     var uit = document.getElementById('vastUit');
     uit.textContent = VAKKEN.filter(function(x){ return x.id === vak; })[0].naam + (keuze[vak].length ? ', ' + keuze[vak].join(' en ') : '') + '.';
     uit.classList.remove('hide');
+  }
+
+  /* ---------- de Klasstrijd ----------
+     Met ?kamer=CODE in het adres hangt dit potje aan een kamer: de docent
+     start, de stand gaat naar het bord, en een aanval van een klasgenoot
+     laat extra fouten de arena in komen. Zie strijd.js. */
+  if (window.STRIJD){
+    STRIJD.klaar('zwaard', {
+      start: function(){ if (!document.getElementById('scherm-start').classList.contains('hide') && vak) begin(); },
+      stand: function(){ return { ronde:ronde, gehaald:Math.max(0, ronde - 1), leven:Math.round(hp), punten:geveld }; },
+      aanval: function(n, van){
+        if (fase === 'einde' || !loopt) return;
+        if (fase === 'ronde'){ for (var i = 0; i < n; i++) spawn(kiesFout()); }
+        else strijdExtra += n;
+        tekenHud();
+        document.getElementById('arenatip').textContent = (van || 'Een klasgenoot') + ' stuurt je ' + n + (n === 1 ? ' extra fout!' : ' extra fouten!');
+      }
+    });
+    document.getElementById('startBtn').classList.add('hide');
   }
 })();
 </script>

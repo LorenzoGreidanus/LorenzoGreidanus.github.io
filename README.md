@@ -28,6 +28,8 @@ Een site, twee kanten: de voorkant voor collega's en een aparte leeromgeving voo
 | `leermiddelen/thema.js` | De schakelaar licht/donker van de leeromgeving; deelt de keuze (`localStorage` sleutel `thema`) met de hoofdpagina's |
 | `leermiddelen/klasquiz.html` | Klasquiz: de docent opent een kamer op het digibord, leerlingen doen mee op hun telefoon via `meneergreidanus.nl/q` |
 | `leermiddelen/bank.js` | De vragenbanken en de rekengenerator, gemaakt uit `toren.html` door `server/maak-bank.js`; niet met de hand bewerken |
+| `leermiddelen/strijd.html` | Klasstrijd: Torenverdediging of Zwaardvechter met de hele klas, de docent start en ziet de stand, goede reeksen sturen fouten naar de anderen |
+| `leermiddelen/strijd.js` | De spelerskant van de Klasstrijd; een spel met `?kamer=CODE` in het adres laadt dit en roept `STRIJD.klaar`, `STRIJD.reeks` en `STRIJD.af` aan |
 | `leermiddelen/bronnenlab.html` | Bronnenonderzoek met drie vaste vragen |
 | `leermiddelen/tijdvakken.html` | Gebeurtenissen sorteren naar tijdvak |
 | `leermiddelen/feodalisme.html` | Heer, ridder of boer: keuzes met gevolgen |

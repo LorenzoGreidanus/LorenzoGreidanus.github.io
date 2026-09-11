@@ -664,6 +664,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
   Torenverdediging &middot; meneer Greidanus &middot; <span id="jaar">2026</span>
 </footer>
 
+<script src="strijd.js"></script>
 <script>
 
 /* Vier kaarten. Elk potje wordt er een geloot, zodat een klas die het spel al
@@ -3269,6 +3270,7 @@ function rekenVraag(rang, toegestaan) {
     var winst = goed ? Math.round((12 + Math.min(12, reeks * 3)) * (1 + (bank.ronde - 1) * 0.035)) : 0;
     gekliktIndex = i;
     reeks = goed ? reeks + 1 : 0;
+    if (window.STRIJD) STRIJD.reeks(reeks);
     vuur = goed ? vuur + 1 : Math.floor(vuur / 2);
     besteReeks = Math.max(besteReeks, reeks);
     if (!tonklaVrij && reeks >= TONKLAREEKS){
@@ -7409,6 +7411,7 @@ function rekenVraag(rang, toegestaan) {
 
   function einde(){
     botLog('einde');
+    if (window.STRIJD) STRIJD.af({ ronde:rondeGehaald, punten:goedAantal });
     if (klok){ clearInterval(klok); klok = null; }
     pauze = false; document.body.classList.remove('gepauzeerd');
     document.getElementById('pauzeBtn').classList.add('hide');
@@ -7879,6 +7882,23 @@ function rekenVraag(rang, toegestaan) {
       uit.classList.remove('hide');
       document.getElementById('startBtn').textContent = 'Begin met ' + wat;
     })();
+  }
+
+  /* ---------- de Klasstrijd ----------
+     Met ?kamer=CODE in het adres hangt dit potje aan een kamer: de docent
+     start, de stand gaat naar het bord, en een aanval van een klasgenoot
+     zet extra fouten in de wachtrij. Zie strijd.js. */
+  if (window.STRIJD){
+    STRIJD.klaar('toren', {
+      start: function(){ if (!inSpel() && vak) begin(); },
+      stand: function(){ return { ronde:bank.ronde, gehaald:rondeGehaald, leven:bank.leven, punten:goedAantal }; },
+      aanval: function(n, van){
+        if (!inSpel()) return;
+        wachtrij += n;
+        melding2((van || 'Een klasgenoot') + ' stuurt je ' + n + (n === 1 ? ' extra fout.' : ' extra fouten.'));
+      }
+    });
+    document.getElementById('startBtn').classList.add('hide');
   }
 })();
 </script>
