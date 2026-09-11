@@ -20,8 +20,10 @@
    daarna weer bij de constructor. De WebSockets overleven dat slapen wel (de
    hibernation API); wie erbij hoort staat in de bijlage van elke socket. */
 import { DurableObject } from "cloudflare:workers";
+import { nette } from "./naamfilter.js";
 
 const MAX_SPELERS = 60, MAX_VRAGEN = 60;
+const AFTELLEN = 3000;                       /* een duel begint drie seconden nadat de tweede speler er is */
 const OPRUIMEN_NA = 3 * 60 * 60 * 1000;     /* een kamer leeft hoogstens drie uur */
 const NA_EINDE = 30 * 60 * 1000;             /* na de eindstand nog een half uur te bekijken */
 const SPELLEN_STRIJD = { toren: "Torenverdediging", zwaard: "Zwaardvechter" };
@@ -79,7 +81,8 @@ export class Kamer extends DurableObject {
     if (opzet.spel === "strijd"){
       const game = String(opzet.game || "");
       if (!SPELLEN_STRIJD[game]) return json({ fout: "onbekend spel" }, 400);
-      this.stand = Object.assign(basis, { spel: "strijd", game, gestart: 0 });
+      /* een duel: twee spelers, geen docent, begint vanzelf als de tweede er is */
+      this.stand = Object.assign(basis, { spel: "strijd", game, gestart: 0, duel: !!opzet.duel });
     } else {
       const vragen = Array.isArray(opzet.vragen) ? opzet.vragen.slice(0, MAX_VRAGEN).map(q => ({
         v: schoon(q.v, 300),
@@ -105,14 +108,15 @@ export class Kamer extends DurableObject {
     if (!this.stand) return json({ fout: "geen kamer met deze code" }, 404);
     const rol = url.searchParams.get("rol") === "host" ? "host" : "speler";
     let sid = schoon(url.searchParams.get("sid"), 40);
-    let naam = schoon(url.searchParams.get("naam"), 16) || "Leerling";
+    let naam = nette(url.searchParams.get("naam"), "Leerling");   /* door het naamfilter */
     if (rol === "host"){
       if (url.searchParams.get("sleutel") !== this.stand.sleutel) return json({ fout: "dit is niet jouw kamer" }, 403);
       sid = "host";
     } else {
       if (!/^[A-Za-z0-9_-]{8,40}$/.test(sid)) return json({ fout: "geen geldig kenmerk" }, 400);
       if (this.stand.fase === "einde") return json({ fout: "dit potje is al afgelopen" }, 410);
-      if (!this.stand.spelers[sid] && Object.keys(this.stand.spelers).length >= MAX_SPELERS) return json({ fout: "de kamer zit vol" }, 409);
+      const vol = this.stand.duel ? 2 : MAX_SPELERS;
+      if (!this.stand.spelers[sid] && Object.keys(this.stand.spelers).length >= vol) return json({ fout: this.stand.duel ? "dit duel heeft al twee spelers" : "de kamer zit vol" }, 409);
     }
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
@@ -131,6 +135,12 @@ export class Kamer extends DurableObject {
       if (this.stand.fase === "bezig" && rol === "speler") this.stuur(server, { t: "start" });
       if (this.stand.fase === "einde") this.stuur(server, this.strijdEinde(rol === "speler" ? sid : null));
       else this.stuur(server, this.standBericht(rol === "speler" ? sid : null));
+      /* een duel telt af zodra de tweede speler binnen is */
+      if (this.stand.duel && this.stand.fase === "lobby" && Object.keys(this.stand.spelers).length >= 2){
+        this.ctx.waitUntil(this.duelAftellen());
+      }
+      this.zegSpelers();
+      if (rol === "speler") this.planStand();
     } else {
       if (rol === "speler") this.stuur(server, { t: "jouw", jouw: this.jouw(sid) });
       /* midden in een vraag binnenkomen: die vraag meteen meesturen */
@@ -189,6 +199,7 @@ export class Kamer extends DurableObject {
     if (!this.stand) return;
     const a = this.stand.alarm || {};
     if (a.wat === "sluit" && !this.strijd && this.stand.fase === "vraag" && a.i === this.stand.i) return this.sluitVraag();
+    if (a.wat === "duelstart" && this.strijd && this.stand.fase === "aftellen") return this.strijdStart();
     if (a.wat === "opruimen"){
       this.ctx.getWebSockets().forEach(ws => { try { ws.close(1000, "de kamer is gesloten"); } catch (e){} });
       this.stand = null;
@@ -199,21 +210,32 @@ export class Kamer extends DurableObject {
   /* ======================================================================
      De Klasstrijd
      ====================================================================== */
+  async strijdStart(){
+    const st = this.stand;
+    st.fase = "bezig"; st.gestart = Date.now();
+    await this.zetAlarm({ wat: "opruimen" }, OPRUIMEN_NA);
+    await this.bewaar();
+    this.iedereen({ t: "start" });
+    this.planStand();
+  }
+  async duelAftellen(){
+    this.stand.fase = "aftellen";
+    await this.zetAlarm({ wat: "duelstart" }, AFTELLEN);
+    await this.bewaar();
+    this.iedereen({ t: "aftellen", s: Math.round(AFTELLEN / 1000) });
+  }
   async strijdBericht(ws, wie, m){
     const st = this.stand;
     if (wie.rol === "host"){
-      if (m.t === "start" && st.fase === "lobby"){
-        st.fase = "bezig"; st.gestart = Date.now();
-        await this.zetAlarm({ wat: "opruimen" }, OPRUIMEN_NA);
-        await this.bewaar();
-        this.iedereen({ t: "start" });
-        this.planStand();
-      }
+      if (m.t === "start" && st.fase === "lobby") return this.strijdStart();
       if (m.t === "stop" && st.fase !== "einde") return this.strijdKlaar();
       return;
     }
     const sp = st.spelers[wie.sid];
-    if (!sp || st.fase !== "bezig") return;
+    if (!sp) return;
+    /* in een duel mag een speler die alleen wacht de kamer sluiten */
+    if (m.t === "stop" && st.duel && st.fase !== "einde") return this.strijdKlaar();
+    if (st.fase !== "bezig") return;
     if (m.t === "stand"){
       /* de ronde loopt alleen op; een speler die opnieuw begint gaat niet terug */
       sp.ronde = Math.max(sp.ronde, getal(m.ronde, 999));
@@ -251,6 +273,8 @@ export class Kamer extends DurableObject {
       await this.bewaar();
       this.planStand();
       const alle = Object.keys(st.spelers);
+      /* in een duel is het klaar zodra er een valt; met de klas als iedereen af is */
+      if (st.duel && alle.length >= 2) return this.strijdKlaar();
       if (alle.length && alle.every(id => st.spelers[id].af)) return this.strijdKlaar();
     }
   }
@@ -266,7 +290,8 @@ export class Kamer extends DurableObject {
       const sp = st.spelers[sid];
       return { sid, naam: sp.naam, ronde: sp.ronde, gehaald: sp.gehaald, leven: sp.leven, punten: sp.punten,
                af: !!sp.af, aanvallen: sp.aanvallen || 0, aan: this.aanwezig(sid) };
-    }).sort((a, b) => b.gehaald - a.gehaald || b.punten - a.punten || (a.af === b.af ? 0 : a.af ? 1 : -1) || a.naam.localeCompare(b.naam))
+    }).sort((a, b) => (this.stand.duel && a.af !== b.af) ? (a.af ? 1 : -1)   /* in een duel wint wie overeind blijft */
+        : (b.gehaald - a.gehaald || b.punten - a.punten || (a.af === b.af ? 0 : a.af ? 1 : -1) || a.naam.localeCompare(b.naam)))
       .map((r, i) => Object.assign(r, { rang: i + 1 }));
   }
   standBericht(sid){
@@ -275,7 +300,9 @@ export class Kamer extends DurableObject {
     const kop = lijst[0] ? { naam: lijst[0].naam, ronde: lijst[0].ronde } : null;
     if (!sid) return { t: "stand", spelers: lijst, bezig, fase: this.stand.fase };
     const mij = lijst.filter(r => r.sid === sid)[0];
-    return { t: "stand", jouw: mij ? { rang: mij.rang, van: lijst.length } : null, bezig, koploper: kop };
+    const tegen = this.stand.duel ? (lijst.filter(r => r.sid !== sid)[0] || null) : null;
+    return { t: "stand", jouw: mij ? { rang: mij.rang, van: lijst.length } : null, bezig, koploper: kop, fase: this.stand.fase,
+             tegen: tegen ? { naam: tegen.naam, ronde: tegen.ronde, leven: tegen.leven, punten: tegen.punten, af: tegen.af, aan: tegen.aan } : null };
   }
   stuurStand(){
     if (!this.strijd) return;
@@ -390,7 +417,7 @@ export class Kamer extends DurableObject {
     const st = this.stand, basis = { code: st.code, spel: st.spel, vak: st.vak, niveau: st.niveau, fase: st.fase };
     if (this.strijd){
       const lijst = this.strijdLijst();
-      return Object.assign(basis, { game: st.game, gestart: st.gestart, bezig: lijst.filter(r => !r.af).length, spelers: lijst });
+      return Object.assign(basis, { game: st.game, duel: !!st.duel, gestart: st.gestart, bezig: lijst.filter(r => !r.af).length, spelers: lijst });
     }
     return Object.assign(basis, { onderdeel: st.onderdeel, i: st.i, n: st.vragen.length, tijd: st.tijd,
       spelers: this.ranglijst().map(r => ({ sid: r.sid, naam: r.naam, score: r.score, aan: r.aan })) });

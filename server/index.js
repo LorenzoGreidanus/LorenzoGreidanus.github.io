@@ -11,6 +11,8 @@
    /q                    de korte link voor leerlingen: stuurt door naar de quiz
    /q/ABCD               idem, met de code al ingevuld */
 export { Kamer } from "./kamer.js";
+export { Klassement } from "./klassement.js";
+const KLASSEMENTEN = { toren: true, zwaard: true };
 
 /* Geen I, O, 0 en 1: die lees je van een digibord niet uit elkaar. */
 const LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -42,6 +44,18 @@ export default {
         } catch (e){}
       }
       return Response.redirect(url.origin + "/leermiddelen/" + pagina + (code ? "?k=" + code : ""), 302);
+    }
+
+    /* het klassement van de hele site, per spel */
+    const km = p.match(/^\/api\/klassement\/([a-z]+)\/?$/);
+    if (km){
+      if (!KLASSEMENTEN[km[1]]) return json({ fout: "onbekend spel" }, 404);
+      const stub = env.KLASSEMENT.get(env.KLASSEMENT.idFromName(km[1]));
+      if (req.method === "POST"){
+        let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldige inzending" }, 400); }
+        return stub.fetch("https://klassement/zet", { method: "POST", body: JSON.stringify(inz) });
+      }
+      return stub.fetch("https://klassement/lijst");
     }
 
     if (p === "/api/kamer" && req.method === "POST"){

@@ -561,7 +561,9 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
   <p class="nivuit" id="torenUit"></p>
 
   <button class="btn" id="startBtn" type="button" disabled>Kies eerst een vak</button>
+  <div id="duelvak"></div>
   <div class="lijst" id="startLijst"></div>
+  <div id="siteStartLijst"></div>
 </section>
 
 <section class="wrap hide" id="scherm-spel">
@@ -617,6 +619,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
   </div>
   <p class="opslaghint" id="opslaghint"></p>
   <div class="lijst" id="eindLijst"></div>
+  <div id="siteLijst"></div>
   <button class="btn" id="nogBtn" type="button">Nog een keer</button>
 </section>
 
@@ -664,6 +667,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
   Torenverdediging &middot; meneer Greidanus &middot; <span id="jaar">2026</span>
 </footer>
 
+<script src="naamfilter.js"></script>
 <script src="strijd.js"></script>
 <script>
 
@@ -7457,6 +7461,7 @@ function rekenVraag(rang, toegestaan) {
     document.getElementById('naamveld').value = laatsteNaam;
     document.getElementById('opslaghint').textContent = '';
     toonKlassement('eindLijst', null);
+    if (window.STRIJD) STRIJD.klassement.toon('siteLijst', 'toren');
     scrollTo({ top:0, behavior:'auto' });
   }
 
@@ -7476,6 +7481,7 @@ function rekenVraag(rang, toegestaan) {
     var veld = document.getElementById('naamveld');
     var naam = veld.value.trim().slice(0, 16);
     if (!naam){ veld.focus(); return; }
+    if (window.STRIJD && !STRIJD.naamOk(naam)){ document.getElementById('opslaghint').textContent = 'Die bijnaam kan niet. Kies een andere.'; veld.focus(); return; }
     var data = leesKlassement();
     var lijst = leesLijst();
     var v = VAKKEN.filter(function(x){ return x.id === vak; })[0];
@@ -7495,6 +7501,11 @@ function rekenVraag(rang, toegestaan) {
     if (gelukt && plek >= 0 && plek < 3){
       med.innerHTML = (plek + 1) + '<small>' + (plek === 0 ? 'eerste' : plek === 1 ? 'tweede' : 'derde') + '</small>';
       med.classList.remove('hide'); med.classList.add('nieuw');
+    }
+    if (window.STRIJD){
+      STRIJD.klassement.zet('toren', { naam:naam, ronde:rondeGehaald, punten:goedAantal, waar:thema.naam, niveau:nv ? nv.naam : '', vak:v ? v.naam : '' }).then(function(j){
+        STRIJD.klassement.toon('siteLijst', 'toren', j.id, '<p class="hint">' + (j.fout ? j.fout : j.plek ? 'Je staat op plek ' + j.plek + ' van de hele site.' : 'Ingestuurd, maar niet in de top honderd van de site.') + '</p>');
+      });
     }
     document.getElementById('opslaghint').textContent = gelukt
       ? (plek >= 0 ? 'Je staat op plek ' + (plek + 1) + ' in het klassement.' : 'Bewaard, maar niet in de top tien.')
@@ -7888,7 +7899,7 @@ function rekenVraag(rang, toegestaan) {
      Met ?kamer=CODE in het adres hangt dit potje aan een kamer: de docent
      start, de stand gaat naar het bord, en een aanval van een klasgenoot
      zet extra fouten in de wachtrij. Zie strijd.js. */
-  if (window.STRIJD){
+  if (window.STRIJD && STRIJD.actief){
     STRIJD.klaar('toren', {
       start: function(){ if (!inSpel() && vak) begin(); },
       stand: function(){ return { ronde:bank.ronde, gehaald:rondeGehaald, leven:bank.leven, punten:goedAantal }; },
@@ -7899,6 +7910,11 @@ function rekenVraag(rang, toegestaan) {
       }
     });
     document.getElementById('startBtn').classList.add('hide');
+  }
+  /* het duel tegen een vriend, en de top van de hele site op het startscherm */
+  if (window.STRIJD){
+    STRIJD.duelBlok('duelvak', 'toren', function(){ return { vak:vak, niveau:niveau }; });
+    STRIJD.klassement.toon('siteStartLijst', 'toren');
   }
 })();
 </script>

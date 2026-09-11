@@ -18,6 +18,8 @@ Een site, twee kanten: de voorkant voor collega's en een aparte leeromgeving voo
 | `server/index.js` | De server: kamers aanmaken (`POST /api/kamer`), de stand opvragen, WebSockets doorzetten naar de kamer, de korte link `/q/CODE` |
 | `server/kamer.js` | Een spelkamer: spelers, WebSockets, de spelstand en de regels van de Klasquiz; de kamer is de baas over de score |
 | `server/maak-bank.js` | Maakt `leermiddelen/bank.js` uit `toren.html`; opnieuw draaien na elke wijziging aan de vragen |
+| `server/klassement.js` | Het klassement van de hele site (Durable Object per spel): top honderd, naamfilter, een inzending per apparaat per twintig seconden |
+| `server/naamfilter.js` | Het naamfilter tegen racistische en haatdragende bijnamen, ook met cijfers, tekens en herhaalde letters; `server/maak-filter.js` maakt er `leermiddelen/naamfilter.js` van voor de browser |
 | `.assetsignore` | Wat er niet als website wordt uitgedeeld (servermap, configuratie) |
 | `wereld.json` | Kustlijnen voor de wereldbol op de startpagina (Natural Earth, publiek domein) |
 | `rijken.json` | Grenzen van tien rijken op hun hoogtepunt, geknipt en vereenvoudigd uit [historical-basemaps](https://github.com/aourednik/historical-basemaps) (GPL-3; dit bestand valt onder dezelfde licentie) |
@@ -29,7 +31,7 @@ Een site, twee kanten: de voorkant voor collega's en een aparte leeromgeving voo
 | `leermiddelen/klasquiz.html` | Klasquiz: de docent opent een kamer op het digibord, leerlingen doen mee op hun telefoon via `meneergreidanus.nl/q` |
 | `leermiddelen/bank.js` | De vragenbanken en de rekengenerator, gemaakt uit `toren.html` door `server/maak-bank.js`; niet met de hand bewerken |
 | `leermiddelen/strijd.html` | Klasstrijd: Torenverdediging of Zwaardvechter met de hele klas, de docent start en ziet de stand, goede reeksen sturen fouten naar de anderen |
-| `leermiddelen/strijd.js` | De spelerskant van de Klasstrijd; een spel met `?kamer=CODE` in het adres laadt dit en roept `STRIJD.klaar`, `STRIJD.reeks` en `STRIJD.af` aan |
+| `leermiddelen/strijd.js` | Samen spelen vanuit Torenverdediging en Zwaardvechter: het duel tegen een vriend (kamer voor twee, begint vanzelf), de klasstrijd (`?kamer=CODE`, haakjes `STRIJD.klaar`, `STRIJD.reeks`, `STRIJD.af`) en het klassement van de site op start- en eindscherm |
 | `leermiddelen/bronnenlab.html` | Bronnenonderzoek met drie vaste vragen |
 | `leermiddelen/tijdvakken.html` | Gebeurtenissen sorteren naar tijdvak |
 | `leermiddelen/feodalisme.html` | Heer, ridder of boer: keuzes met gevolgen |

@@ -238,6 +238,8 @@ body.groot .meter b{font-size:1.45rem}
   <div id="deelvakken"></div>
 
   <button class="btn" id="startBtn" type="button" disabled>Kies eerst een vak</button>
+  <div id="duelvak"></div>
+  <div id="siteStartLijst"></div>
 </section>
 
 <section class="wrap spel hide" id="scherm-spel">
@@ -254,11 +256,13 @@ body.groot .meter b{font-size:1.45rem}
   <h1 id="eindKop"></h1>
   <p class="lead" id="eindUit"></p>
   <div class="cijfers" id="cijfers"></div>
+  <div id="siteLijst"></div>
   <button class="btn" id="nogBtn" type="button">Nog een keer</button>
 </section>
 
 <footer>Zwaardvechter &middot; meneer Greidanus &middot; <span id="jaar"></span></footer>
 
+<script src="naamfilter.js"></script>
 <script src="strijd.js"></script>
 <script>
 /* ============================================================================
@@ -2804,6 +2808,12 @@ const ICONEN = {
       '<div><b>' + ronde + '</b><span>rondes</span></div><div><b>' + geveld + '</b><span>fouten geveld</span></div>' +
       '<div><b>' + goedAantal + '</b><span>vragen goed</span></div><div><b>' + besteReeks + '</b><span>langste reeks</span></div>' +
       '<div><b>' + UITRUSTING.filter(function(u){ return !u.los; }).reduce(function(a, u){ return a + stat(u.id); }, 0) + '</b><span>niveaus gekocht</span></div>';
+    if (window.STRIJD){
+      STRIJD.klassement.vorm('siteLijst', 'zwaard', function(){
+        var nv = NIVEAUS.filter(function(x){ return x.id === niveau; })[0], vk = VAKKEN.filter(function(x){ return x.id === vak; })[0];
+        return { ronde:ronde, punten:geveld, waar:'', niveau:nv ? nv.naam : '', vak:vk ? vk.naam : '' };
+      });
+    }
     scrollTo({ top:0, behavior:'smooth' });
   }
 
@@ -2849,7 +2859,7 @@ const ICONEN = {
      Met ?kamer=CODE in het adres hangt dit potje aan een kamer: de docent
      start, de stand gaat naar het bord, en een aanval van een klasgenoot
      laat extra fouten de arena in komen. Zie strijd.js. */
-  if (window.STRIJD){
+  if (window.STRIJD && STRIJD.actief){
     STRIJD.klaar('zwaard', {
       start: function(){ if (!document.getElementById('scherm-start').classList.contains('hide') && vak) begin(); },
       stand: function(){ return { ronde:ronde, gehaald:Math.max(0, ronde - 1), leven:Math.round(hp), punten:geveld }; },
@@ -2862,6 +2872,11 @@ const ICONEN = {
       }
     });
     document.getElementById('startBtn').classList.add('hide');
+  }
+  /* het duel tegen een vriend, en de top van de hele site op het startscherm */
+  if (window.STRIJD){
+    STRIJD.duelBlok('duelvak', 'zwaard', function(){ return { vak:vak, niveau:niveau }; });
+    STRIJD.klassement.toon('siteStartLijst', 'zwaard');
   }
 })();
 </script>
