@@ -1,0 +1,26 @@
+// De server van meneergreidanus.nl op Cloudflare Workers.
+// De site zelf is de map met HTML-bestanden (assets); alles onder /api/, /ws/
+// en /q gaat naar de Worker, de rest wordt als gewoon bestand uitgedeeld.
+// Elke spelkamer is een Durable Object (Kamer) met eigen geheugen en de
+// WebSockets van alle spelers in die kamer.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "meneergreidanus",
+  "main": "server/index.js",
+  "compatibility_date": "2026-08-01",
+  "assets": {
+    "directory": "./",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page",
+    // geen omleiding van toren.html naar /toren: de adressen blijven zoals ze
+    // altijd waren; mappen (/, /leermiddelen/) worden in index.js naar index.html gestuurd
+    "html_handling": "none",
+    // mappen gaan ook eerst langs de Worker, die er index.html van maakt
+    "run_worker_first": ["/api/*", "/ws/*", "/q", "/q/*", "/", "/leermiddelen", "/leermiddelen/"]
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "KAMERS", "class_name": "Kamer" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Kamer"] }],
+  "observability": { "enabled": true }
+}

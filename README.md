@@ -13,7 +13,12 @@ Een site, twee kanten: de voorkant voor collega's en een aparte leeromgeving voo
 | `voorwaarden.html` | Gebruiksvoorwaarden: vrij gebruiken in de les met bronvermelding, niet verkopen |
 | `robots.txt`, `sitemap.xml` | Voor zoekmachines; de sitemap noemt alle pagina's |
 | `fonts.css`, `fonts/` | Poppins en Caveat, zelf gehost (Open Font License), zodat er geen verzoek naar Google gaat |
-| `CNAME` | Koppelt de site aan meneergreidanus.nl |
+| `CNAME` | Overblijfsel van GitHub Pages; de site draait nu op Cloudflare (zie onderaan) |
+| `wrangler.jsonc` | De Cloudflare-configuratie: de map is de site, `/api/`, `/ws/` en `/q` gaan naar de server, elke spelkamer is een Durable Object |
+| `server/index.js` | De server: kamers aanmaken (`POST /api/kamer`), de stand opvragen, WebSockets doorzetten naar de kamer, de korte link `/q/CODE` |
+| `server/kamer.js` | Een spelkamer: spelers, WebSockets, de spelstand en de regels van de Klasquiz; de kamer is de baas over de score |
+| `server/maak-bank.js` | Maakt `leermiddelen/bank.js` uit `toren.html`; opnieuw draaien na elke wijziging aan de vragen |
+| `.assetsignore` | Wat er niet als website wordt uitgedeeld (servermap, configuratie) |
 | `wereld.json` | Kustlijnen voor de wereldbol op de startpagina (Natural Earth, publiek domein) |
 | `rijken.json` | Grenzen van tien rijken op hun hoogtepunt, geknipt en vereenvoudigd uit [historical-basemaps](https://github.com/aourednik/historical-basemaps) (GPL-3; dit bestand valt onder dezelfde licentie) |
 | `tijdlagen.json` | Per moment van de wereldbol de drie grootste rijken (26 jaarkaarten, 1942 met de hand getekend), vereenvoudigd uit [historical-basemaps](https://github.com/aourednik/historical-basemaps) (GPL-3; dit bestand valt onder dezelfde licentie); wordt pas geladen als de bol in beeld komt |
@@ -21,6 +26,8 @@ Een site, twee kanten: de voorkant voor collega's en een aparte leeromgeving voo
 | `leermiddelen/basis.css` | Gedeelde afwerking van alle spellen (kleuren uit het merkboek, knoppen, beweging, focus, spelgevoel) en de donkere stand; wordt na de eigen stijl van elk spel geladen |
 | `leermiddelen/adaptief.js` | Meegroeiend niveau: wie de vragen te goed weet, krijgt ze een stap zwaarder (tl naar havo, havo naar vwo); alleen in Torenverdediging en Zwaardvechter |
 | `leermiddelen/thema.js` | De schakelaar licht/donker van de leeromgeving; deelt de keuze (`localStorage` sleutel `thema`) met de hoofdpagina's |
+| `leermiddelen/klasquiz.html` | Klasquiz: de docent opent een kamer op het digibord, leerlingen doen mee op hun telefoon via `meneergreidanus.nl/q` |
+| `leermiddelen/bank.js` | De vragenbanken en de rekengenerator, gemaakt uit `toren.html` door `server/maak-bank.js`; niet met de hand bewerken |
 | `leermiddelen/bronnenlab.html` | Bronnenonderzoek met drie vaste vragen |
 | `leermiddelen/tijdvakken.html` | Gebeurtenissen sorteren naar tijdvak |
 | `leermiddelen/feodalisme.html` | Heer, ridder of boer: keuzes met gevolgen |
@@ -37,6 +44,17 @@ De leeromgeving is dus gewoon een map in dezelfde repository. Bezoekers komen ui
 - `feodalisme.html?n=hv&rol=boer` en `handel.html?n=kgt&r=hanze` zetten ook de rol of route vast
 
 In het spel verdwijnt de keuzeknop dan, met de melding dat je docent die keuze al gemaakt heeft.
+
+## Hosting en server
+
+De site draait op Cloudflare Workers. Elke push naar `Live-branch` wordt door Cloudflare gebouwd en live gezet (`npx wrangler deploy`). De HTML-bestanden zijn gewoon de site; alleen `/api/`, `/ws/` en `/q` gaan naar de server in `server/`. Lokaal testen, inclusief de spelkamers:
+
+```
+npm install
+npm run dev
+```
+
+Dat geeft http://localhost:8787. De status van de lokale server staat bewust buiten de map (`../.wrangler-state`): in de map zelf zet hij de bestandswaker in een lus, en een lang pad maakt de opslag van de kamers op Windows kapot.
 
 ## Nieuw spel toevoegen
 
