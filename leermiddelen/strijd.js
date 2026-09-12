@@ -88,7 +88,8 @@ window.STRIJD = (function(){
   naam = naam.trim().slice(0, 16);
   if (!naamOk(naam)) naam = 'Leerling';
   var hud, toast, sluier, toastKlok = null, mijnSid = sid();
-  var ws = null, dicht = false, pogingen = 0, hooks = null, gestart = false, klaarMet = false, laatsteStand = '', duel = false, tegen = null;
+  var ws = null, dicht = false, pogingen = 0, hooks = null, gestart = false, klaarMet = false, laatsteStand = '', duel = false, tegen = null, gastheer = null, maatNaam = '';
+  function samen(){ return duel && hooks && hooks.samen; }
 
   function zeg(tekst, goed){
     if (!toast) return;
@@ -133,17 +134,19 @@ window.STRIJD = (function(){
 
   function wachtTekst(aantal){
     if (duel){
-      if (aantal < 2) return '<b>Wacht op je tegenstander</b><p>Laat je tegenstander naar <strong>' + location.host.replace(/^www\./, '') + '/q</strong> gaan en deze code invullen:</p>' +
-        '<span class="code">' + code + '</span><p>Het duel begint vanzelf zodra hij er is.</p><button type="button">Toch niet</button>';
-      return '<b>Je tegenstander is er</b><p>Het duel begint zo…</p>';
+      var wie = samen() ? 'je maat' : 'je tegenstander';
+      if (aantal < 2) return '<b>Wacht op ' + wie + '</b><p>Laat ' + wie + ' naar <strong>' + location.host.replace(/^www\./, '') + '/q</strong> gaan en deze code invullen:</p>' +
+        '<span class="code">' + code + '</span><p>' + (samen() ? 'Jullie spelen samen in een arena; het begint vanzelf zodra hij er is.' : 'Het duel begint vanzelf zodra hij er is.') + '</p><button type="button">Toch niet</button>';
+      return '<b>' + (samen() ? 'Je maat is er' : 'Je tegenstander is er') + '</b><p>Het begint zo…</p>';
     }
     return '<b>Wacht tot de docent start</b><p>Je doet mee als <strong>' + schoon(naam) + '</strong>' + (aantal ? ', met ' + (aantal - 1) + ' ' + (aantal === 2 ? 'ander' : 'anderen') : '') + '. Zodra het bord op start drukt, begint het bij iedereen tegelijk.</p>';
   }
   function bericht(m){
     if (m.t === 'welkom'){
       if (m.spel !== 'strijd'){ hudTekst('Samen spelen', 'deze code hoort bij een ander spel', true); sluierTekst('<b>Deze code hoort bij een ander spel.</b><button type="button">Terug</button>'); return; }
-      duel = !!m.duel;
+      duel = !!m.duel; gastheer = m.gastheer || null;
       var aantal = m.spelers ? m.spelers.length : 0;
+      (m.spelers || []).forEach(function(r){ if (r.sid !== mijnSid) maatNaam = r.naam; });
       hudTekst((duel ? 'Duel ' : 'Klasstrijd ') + code, aantal + ' in de kamer', true);
       if (m.fase === 'bezig') start();
       else if (m.fase === 'einde') sluierWeg();
@@ -153,7 +156,8 @@ window.STRIJD = (function(){
     }
     if (m.t === 'aftellen'){ aftellen(m.s || 3); return; }
     if (m.t === 'start'){ start(); return; }
-    if (m.t === 'stand'){ toonStand(m); return; }
+    if (m.t === 'net'){ if (hooks && hooks.net) hooks.net(m.d); return; }
+    if (m.t === 'stand'){ if (m.tegen && m.tegen.naam){ maatNaam = m.tegen.naam; if (hooks && hooks.maatNaam) hooks.maatNaam(maatNaam); } toonStand(m); return; }
     if (m.t === 'aanval'){
       if (!gestart || klaarMet || !hooks) return;
       var n = Math.max(1, Math.min(5, m.n | 0));
@@ -164,7 +168,11 @@ window.STRIJD = (function(){
     if (m.t === 'einde'){
       klaarMet = true; dicht = true;
       var j = m.jouw, lijst = m.stand || [];
-      if (duel){
+      if (samen()){
+        var mij = lijst.filter(function(r){ return r.sid === mijnSid; })[0];
+        hudTekst('Samen tot ronde ' + (mij ? mij.ronde : '?') + ' gekomen', maatNaam ? 'met ' + maatNaam : '', false);
+        zeg('Jullie zijn allebei gevallen. Samen tot ronde ' + (mij ? mij.ronde : '?') + '.', true);
+      } else if (duel){
         var winnaar = lijst[0], ander = lijst.filter(function(r){ return r.sid !== mijnSid; })[0];
         var gewonnen = !!(winnaar && winnaar.sid === mijnSid);
         hudTekst(gewonnen ? 'Je hebt het duel gewonnen!' : (winnaar ? winnaar.naam + ' heeft gewonnen' : 'Het duel is voorbij'),
@@ -185,7 +193,7 @@ window.STRIJD = (function(){
     var over = s;
     var tik = function(){
       if (gestart){ clearInterval(telKlok); return; }
-      sluierTekst('<b>Het duel begint over</b><div class="tel">' + Math.max(1, over) + '</div><p>Vijf goed op rij stuurt een fout naar je tegenstander.</p>');
+      sluierTekst('<b>Het begint over</b><div class="tel">' + Math.max(1, over) + '</div><p>' + (samen() ? 'Samen in een arena: dek elkaar, en wie neergaat staat de volgende ronde weer op.' : 'Vijf goed op rij stuurt een fout naar je tegenstander.') + '</p>');
       over--;
       if (over < 0) clearInterval(telKlok);
     };
@@ -197,8 +205,8 @@ window.STRIJD = (function(){
     clearInterval(telKlok);
     sluierWeg();
     hudTekst((duel ? 'Duel ' : 'Klasstrijd ') + code, 'gestart, veel succes', false);
-    if (hooks) hooks.start();
-    zeg('Start! Vijf goed op rij stuurt fouten naar ' + (duel ? 'je tegenstander' : 'de anderen') + '.', true);
+    if (hooks) hooks.start({ duel:duel, rol:duel ? (gastheer === mijnSid ? 'host' : 'gast') : null, maat:maatNaam });
+    zeg(samen() ? 'Start! Samen tegen de fouten, met ' + (maatNaam || 'je maat') + '.' : 'Start! Vijf goed op rij stuurt fouten naar ' + (duel ? 'je tegenstander' : 'de anderen') + '.', true);
   }
   function toonStand(m){
     if (klaarMet) return;
@@ -210,7 +218,7 @@ window.STRIJD = (function(){
     }
     if (duel){
       tegen = m.tegen || null;
-      hudTekst(tegen ? 'Tegen ' + schoon(tegen.naam) : 'Duel ' + code,
+      hudTekst(tegen ? (samen() ? 'Samen met ' : 'Tegen ') + schoon(tegen.naam) : 'Duel ' + code,
         tegen ? (tegen.af ? tegen.naam + ' is gevallen in ronde ' + tegen.ronde : 'ronde ' + tegen.ronde + ' · ' + tegen.leven + ' levens' + (tegen.aan ? '' : ' · even weg')) : 'wacht op je tegenstander', false);
       return;
     }
@@ -235,10 +243,13 @@ window.STRIJD = (function(){
   function duelBlok(doelId, spel, keuze){
     var doel = document.getElementById(doelId);
     if (!doel || actief) return;
-    doel.innerHTML = '<div class="duelvak"><h3>Tegen een vriend</h3>' +
-      '<p>Jullie spelen allebei op je eigen scherm, tegelijk. Vijf goed op rij stuurt een extra fout naar de ander. Wie het langst overleeft wint.</p>' +
+    var samenSpel = spel === 'zwaard';
+    doel.innerHTML = '<div class="duelvak"><h3>' + (samenSpel ? 'Samen met een vriend' : 'Tegen een vriend') + '</h3>' +
+      '<p>' + (samenSpel
+        ? 'Jullie staan samen in één arena, allebei op je eigen scherm, tegen dezelfde fouten. Wie neergaat staat de volgende ronde weer op; pas als jullie allebei liggen is het voorbij.'
+        : 'Jullie spelen allebei op je eigen scherm, tegelijk. Vijf goed op rij stuurt een extra fout naar de ander. Wie het langst overleeft wint.') + '</p>' +
       '<div class="rij"><input type="text" id="duelNaam" maxlength="16" placeholder="Je bijnaam" autocomplete="nickname" value="' + schoon(bewaardeNaam()) + '">' +
-      '<button type="button" id="duelMaak">Maak een duel</button></div>' +
+      '<button type="button" id="duelMaak">' + (samenSpel ? 'Maak een kamer' : 'Maak een duel') + '</button></div>' +
       '<div class="rij" style="margin-top:8px"><input type="text" class="code" id="duelCode" maxlength="4" placeholder="CODE" autocapitalize="characters" autocomplete="off">' +
       '<button type="button" class="los" id="duelDoe">Doe mee met een code</button></div>' +
       '<div class="fout" id="duelFout"></div></div>';
@@ -339,8 +350,9 @@ window.STRIJD = (function(){
     code: code,
     naam: naam,
     klaar: function(spel, h){ if (!actief) return; hooks = h; open(); },
+    stuurNet: function(d){ if (actief && gestart && !klaarMet) stuur({ t:'net', d:d }); },
     reeks: function(reeks){
-      if (!actief || !gestart || klaarMet || !reeks || reeks % 5) return;
+      if (!actief || !gestart || klaarMet || samen() || !reeks || reeks % 5) return;
       var nu = Date.now();
       if (nu - laatsteAanval < 4000) return;
       laatsteAanval = nu;

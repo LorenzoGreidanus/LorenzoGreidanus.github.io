@@ -128,6 +128,8 @@ export class Kamer extends DurableObject {
       else this.stand.spelers[sid] = this.strijd
         ? { naam, ronde: 0, gehaald: 0, leven: 0, punten: 0, af: false, aanvallen: 0, sinds: Date.now() }
         : { naam, score: 0, antw: {}, sinds: Date.now() };
+      /* in een duel is de eerste speler de gastheer: die rekent de gedeelde arena uit */
+      if (this.strijd && this.stand.duel && !this.stand.gastheer) this.stand.gastheer = sid;
       this.ctx.waitUntil(this.bewaar());
     }
     this.stuur(server, Object.assign({ t: "welkom", rol, naam }, this.overzicht()));
@@ -235,6 +237,18 @@ export class Kamer extends DurableObject {
     if (!sp) return;
     /* in een duel mag een speler die alleen wacht de kamer sluiten */
     if (m.t === "stop" && st.duel && st.fase !== "einde") return this.strijdKlaar();
+    /* berichten tussen de spelers onderling (de gedeelde arena): de kamer geeft ze
+       alleen door, bewaart niets en kijkt er niet in */
+    if (m.t === "net"){
+      if (st.fase === "einde" || m.d === undefined) return;
+      const s = JSON.stringify({ t: "net", van: wie.sid, d: m.d });
+      if (s.length > 60000) return;
+      this.ctx.getWebSockets("speler").forEach(ws2 => {
+        const w = ws2.deserializeAttachment() || {};
+        if (w.sid !== wie.sid){ try { ws2.send(s); } catch (e){} }
+      });
+      return;
+    }
     if (st.fase !== "bezig") return;
     if (m.t === "stand"){
       /* de ronde loopt alleen op; een speler die opnieuw begint gaat niet terug */
@@ -417,7 +431,7 @@ export class Kamer extends DurableObject {
     const st = this.stand, basis = { code: st.code, spel: st.spel, vak: st.vak, niveau: st.niveau, fase: st.fase };
     if (this.strijd){
       const lijst = this.strijdLijst();
-      return Object.assign(basis, { game: st.game, duel: !!st.duel, gestart: st.gestart, bezig: lijst.filter(r => !r.af).length, spelers: lijst });
+      return Object.assign(basis, { game: st.game, duel: !!st.duel, gastheer: st.gastheer || null, gestart: st.gestart, bezig: lijst.filter(r => !r.af).length, spelers: lijst });
     }
     return Object.assign(basis, { onderdeel: st.onderdeel, i: st.i, n: st.vragen.length, tijd: st.tijd,
       spelers: this.ranglijst().map(r => ({ sid: r.sid, naam: r.naam, score: r.score, aan: r.aan })) });

@@ -2206,6 +2206,25 @@ const ICONEN = {
   var fouten = [], messen = [], munt = [], pluis = [], cijfers = [], teSpawnen = 0, spawnKlok = 0;
   var toetsen = {}, wijs = null, loopt = false, pauze = false, laatste = 0;
 
+  /* ---------- samen in een arena ----------
+     Twee spelers in hetzelfde veld. De gastheer (co.rol 'host') rekent de
+     arena uit voor allebei: zijn eigen poppetje uit zijn eigen toetsen, dat van
+     zijn maat uit de toetsen die over de kamer binnenkomen. Twaalf keer per
+     seconde stuurt hij de hele stand terug; de gast tekent die en verder niets.
+     Vragen en winkel doet ieder op zijn eigen scherm; de volgende ronde begint
+     pas als allebei op de knop hebben gedrukt. Wie neergaat ligt tot de
+     volgende ronde; pas als allebei liggen is het voorbij. */
+  var co = { aan:false, rol:null, neer:false, klaar:false, maatKlaar:false, dashVraag:false,
+             laatsteInvoer:'', zendKlok:0, laatsteFase:'', gastMunt:0, gastGeveld:0 };
+  var maat = null;
+  function nieuweMaat(naam){
+    return { naam:naam, hp:SPELER.hp, maxHp:SPELER.hp, neer:false, munten:0, geveld:0, dashVraag:false,
+             sp:{ x:ARENA.b / 2 + 50, y:ARENA.h / 2, mikt:0, klok:0, zwaai:0, raak:0, mesKlok:0, flits:0, dash:0, dashKlok:0, dx:1, dy:0, loopt:false },
+             stats:{ schade:SPELER.zwaard.schade, bereik:SPELER.zwaard.bereik, tempo:SPELER.zwaard.tempo, snel:SPELER.snelheid, pantser:1, mesTempo:0, mesSchade:0, harnas:0, maxHp:SPELER.hp },
+             in:{ dx:0, dy:0 } };
+  }
+  function zendNet(d){ if (window.STRIJD && STRIJD.stuurNet) STRIJD.stuurNet(d); }
+
   /* ---------- de speelbot ----------
      Voor het balansonderzoek: speelt zelf, zoals een redelijke leerling. Hij
      loopt weg van de kluit fouten, ontwijkt als er een te dichtbij komt, koopt
@@ -2280,7 +2299,8 @@ const ICONEN = {
       if (beste && munten >= beste.prijs[stat(beste.id)]){ var voor = munten; koop(beste.id); gekocht = munten < voor; }
     }
     botLog('winkel', { uitrusting:UITRUSTING.filter(function(u){ return !u.los; }).map(function(u){ return u.id[0] + stat(u.id); }).join(' ') });
-    volgendeRonde();
+    if (co.aan && co.klaar) return;   /* samen: al gedrukt, wachten op de ander */
+    startVolgende();
   }
   function botTik(dt){
     if (!bot.aan || document.getElementById('scherm-spel').classList.contains('hide')) return;
@@ -2312,17 +2332,26 @@ const ICONEN = {
     document.getElementById('scherm-einde').classList.add('hide');
     document.getElementById('scherm-spel').classList.remove('hide');
     document.getElementById('pauzeBtn').classList.remove('hide');
-    volgendeRonde();
+    if (co.aan && co.rol === 'gast'){ ronde = 1; fase = 'ronde'; co.laatsteFase = ''; tekenZij(); tekenHud(); }
+    else volgendeRonde();
     scrollTo({ top:0, behavior:'auto' });
-    if (!loopt){ loopt = true; laatste = performance.now(); requestAnimationFrame(tik); }
+    if (!loopt){ loopt = true; laatste = performance.now(); laatsteTik = laatste; if (!rafId) rafId = requestAnimationFrame(tik); }
   }
 
   function volgendeRonde(){
     ronde++;
     fase = 'ronde';
     fouten = []; messen = []; munt = []; pluis = []; cijfers = [];
-    sp.x = ARENA.b / 2; sp.y = ARENA.h / 2; sp.raak = 0; sp.klok = 0; sp.mesKlok = 0;
-    teSpawnen = aantalInRonde(ronde) + strijdExtra; strijdExtra = 0;
+    sp.x = ARENA.b / 2 - (co.aan ? 50 : 0); sp.y = ARENA.h / 2; sp.raak = 0; sp.klok = 0; sp.mesKlok = 0; sp.dash = 0; sp.dashKlok = 0;
+    if (co.aan){
+      if (co.neer){ co.neer = false; hp = Math.max(1, Math.round(maxHp / 2)); }
+      if (maat){
+        maat.sp.x = ARENA.b / 2 + 50; maat.sp.y = ARENA.h / 2; maat.sp.raak = 0; maat.sp.klok = 0; maat.sp.mesKlok = 0; maat.sp.dash = 0; maat.sp.dashKlok = 0;
+        if (maat.neer){ maat.neer = false; maat.hp = Math.max(1, Math.round(maat.maxHp / 2)); }
+      }
+      co.klaar = false; co.maatKlaar = false;
+    }
+    teSpawnen = Math.round(aantalInRonde(ronde) * (co.aan ? 1.5 : 1)) + strijdExtra; strijdExtra = 0;
     spawnKlok = 0.6;
     tijdInRonde = 0;
     if (ronde % BAASRONDE === 0) spawnBaas();
@@ -2386,17 +2415,22 @@ const ICONEN = {
 
   /* Ontwijken. Sta je stil, dan spring je weg van de dichtstbijzijnde fout. */
   function ontwijk(){
-    if (fase !== 'ronde' || pauze || sp.dashKlok > 0 || sp.dash > 0) return;
-    if (!sp.loopt){
+    if (fase !== 'ronde' || pauze) return;
+    if (co.aan && co.rol === 'gast'){ co.dashVraag = true; return; }   /* de gastheer springt voor je */
+    ontwijkMet(sp);
+  }
+  function ontwijkMet(s){
+    if (s.dashKlok > 0 || s.dash > 0) return;
+    if (!s.loopt){
       var d = null, da = 1e9;
-      fouten.forEach(function(f){ var a = Math.hypot(f.x - sp.x, f.y - sp.y); if (a < da){ da = a; d = f; } });
-      if (d){ var wx = sp.x - d.x, wy = sp.y - d.y, wl = Math.hypot(wx, wy) || 1; sp.dx = wx / wl; sp.dy = wy / wl; }
+      fouten.forEach(function(f){ var a = Math.hypot(f.x - s.x, f.y - s.y); if (a < da){ da = a; d = f; } });
+      if (d){ var wx = s.x - d.x, wy = s.y - d.y, wl = Math.hypot(wx, wy) || 1; s.dx = wx / wl; s.dy = wy / wl; }
     }
-    sp.dash = DASH.duur; sp.dashKlok = DASH.pauze;
-    sp.raak = Math.max(sp.raak, DASH.onkwetsbaar);
+    s.dash = DASH.duur; s.dashKlok = DASH.pauze;
+    s.raak = Math.max(s.raak, DASH.onkwetsbaar);
     for (var i = 0; i < 6; i++){
       var hk = Math.random() * Math.PI * 2, sn = 30 + Math.random() * 60;
-      pluis.push({ x:sp.x, y:sp.y, vx:Math.cos(hk) * sn, vy:Math.sin(hk) * sn, leven:0.35, kleur:'#83A5F2' });
+      pluis.push({ x:s.x, y:s.y, vx:Math.cos(hk) * sn, vy:Math.sin(hk) * sn, leven:0.35, kleur:'#83A5F2' });
     }
   }
   document.getElementById('dashBtn').addEventListener('pointerdown', function(e){ e.preventDefault(); ontwijk(); });
@@ -2409,7 +2443,7 @@ const ICONEN = {
   }
 
   function zetPauze(){
-    if (fase !== 'ronde') return;
+    if (fase !== 'ronde' || (co.aan && co.rol === 'gast')) return;
     pauze = !pauze;
     document.getElementById('pauzeBtn').textContent = pauze ? 'Verder' : 'Pauze';
     document.getElementById('arenatip').textContent = pauze ? 'Pauze. Druk op P of Escape om verder te gaan.' : 'Verder.';
@@ -2417,25 +2451,44 @@ const ICONEN = {
   document.getElementById('pauzeBtn').addEventListener('click', zetPauze);
 
   /* ---------- de klok ---------- */
+  /* De klok loopt op requestAnimationFrame, maar die staat stil zodra het
+     tabblad niet zichtbaar is. Voor de gastheer van een gedeelde arena zou dat
+     de arena van zijn maat bevriezen, dus een waakhond neemt het over zolang
+     er niet getekend wordt. */
+  var rafId = 0, laatsteTik = 0;
+  setInterval(function(){
+    if (!loopt || performance.now() - laatsteTik < 120) return;
+    if (rafId){ cancelAnimationFrame(rafId); rafId = 0; }
+    tik(performance.now());
+  }, 40);
   function tik(nu){
+    rafId = 0;
     if (!loopt) return;
+    laatsteTik = nu;
     var dt = Math.min(0.05, (nu - laatste) / 1000); laatste = nu;
     botTik(dt);
-    if (fase === 'ronde' && !pauze) stap(dt);
+    if (co.aan && co.rol === 'gast') gastTik(dt);
+    else if (fase === 'ronde' && !pauze) stap(dt);
     else if (fase !== 'ronde') { /* de deeltjes lopen nog even uit */
       pluis.forEach(function(p){ p.leven -= dt; p.x += p.vx * dt; p.y += p.vy * dt; });
       pluis = pluis.filter(function(p){ return p.leven > 0; });
       cijfers.forEach(function(c){ c.leven -= dt; c.y -= 30 * dt; });
       cijfers = cijfers.filter(function(c){ return c.leven > 0; });
     }
+    if (co.aan && co.rol === 'host') hostZend(dt);
     tekenArena();
-    requestAnimationFrame(tik);
+    if (!rafId) rafId = requestAnimationFrame(tik);
   }
 
-  function stap(dt){
-    tijdInRonde += dt;
-    if (bot.aan) botStuur();
-    /* lopen */
+  /* ---------- de spelers als records ----------
+     Alles wat een speler doet (lopen, springen, slaan, werpen, munten rapen,
+     klappen krijgen) loopt via zo'n record, zodat dezelfde code voor de eigen
+     speler en voor de maat van de gastheer werkt. */
+  function mijnStats(){
+    return { schade:zwaardSchade(), bereik:zwaardBereik(), tempo:zwaardTempo(), snel:loopSnel(), pantser:pantser(),
+             mesTempo:mesTempo(), mesSchade:mesSchade(), harnas:stat('harnas'), maxHp:maxHp };
+  }
+  function eigenInvoer(){
     var dx = 0, dy = 0;
     if (toetsen['arrowleft'] || toetsen['a']) dx -= 1;
     if (toetsen['arrowright'] || toetsen['d']) dx += 1;
@@ -2446,35 +2499,106 @@ const ICONEN = {
       if (wl > 8){ dx = wx / wl; dy = wy / wl; }
     }
     var l = Math.hypot(dx, dy);
-    if (l){
-      sp.x += dx / l * loopSnel() * dt; sp.y += dy / l * loopSnel() * dt;
-      sp.loopt = true;
-      sp.dx = dx / l; sp.dy = dy / l;          /* de laatste looprichting, voor het ontwijken */
-    } else sp.loopt = false;
+    return l ? { dx:dx / l, dy:dy / l } : { dx:0, dy:0 };
+  }
+  function ikRecord(inv){
+    return { sp:sp, stats:mijnStats(), inv:inv, naam:'jij', eigen:true,
+             hp:function(){ return hp; }, zetHp:function(v){ hp = v; }, maxHp:function(){ return maxHp; },
+             neer:function(){ return co.neer; }, zetNeer:function(){ co.neer = true; },
+             munt:function(w){ munten += w; }, geveld:function(){ geveld++; } };
+  }
+  function maatRecord(){
+    return { sp:maat.sp, stats:maat.stats, inv:maat.in, naam:maat.naam, eigen:false,
+             hp:function(){ return maat.hp; }, zetHp:function(v){ maat.hp = v; }, maxHp:function(){ return maat.maxHp; },
+             neer:function(){ return maat.neer; }, zetNeer:function(){ maat.neer = true; },
+             munt:function(w){ maat.munten += w; }, geveld:function(){ maat.geveld++; } };
+  }
+  function spelersNu(){
+    var lijst = [ikRecord(eigenInvoer())];
+    if (co.aan && co.rol === 'host' && maat) lijst.push(maatRecord());
+    return lijst;
+  }
+  function beweeg(P, dt){
+    var s = P.sp;
+    if (P.neer()){ s.loopt = false; return; }
+    var dx = P.inv.dx, dy = P.inv.dy;
+    if (dx || dy){
+      s.x += dx * P.stats.snel * dt; s.y += dy * P.stats.snel * dt;
+      s.loopt = true; s.dx = dx; s.dy = dy;            /* de laatste looprichting, voor het ontwijken */
+    } else s.loopt = false;
+    if (!P.eigen && maat && maat.dashVraag){ maat.dashVraag = false; ontwijkMet(s); }
     /* de sprong: kort en hard, met een spoor erachter */
-    if (sp.dashKlok > 0) sp.dashKlok -= dt;
-    if (sp.dash > 0){
-      sp.dash -= dt;
-      sp.x += sp.dx * DASH.snel * dt; sp.y += sp.dy * DASH.snel * dt;
-      pluis.push({ x:sp.x - sp.dx * 10, y:sp.y - sp.dy * 10, vx:-sp.dx * 30, vy:-sp.dy * 30, leven:0.3, kleur:'#83A5F2' });
+    if (s.dashKlok > 0) s.dashKlok -= dt;
+    if (s.dash > 0){
+      s.dash -= dt;
+      s.x += s.dx * DASH.snel * dt; s.y += s.dy * DASH.snel * dt;
+      pluis.push({ x:s.x - s.dx * 10, y:s.y - s.dy * 10, vx:-s.dx * 30, vy:-s.dy * 30, leven:0.3, kleur:'#83A5F2' });
     }
-    sp.x = Math.max(ARENA.rand, Math.min(ARENA.b - ARENA.rand, sp.x));
-    sp.y = Math.max(ARENA.rand, Math.min(ARENA.h - ARENA.rand, sp.y));
+    s.x = Math.max(ARENA.rand, Math.min(ARENA.b - ARENA.rand, s.x));
+    s.y = Math.max(ARENA.rand, Math.min(ARENA.h - ARENA.rand, s.y));
+    if (s.raak > 0) s.raak -= dt;
+    if (s.flits > 0) s.flits -= dt;
+  }
+  function wapens(P, dt){
+    var s = P.sp;
+    if (P.neer()) return;
+    /* het zwaard: slaat vanzelf naar de dichtstbijzijnde fout binnen bereik */
+    s.klok -= dt;
+    if (s.zwaai > 0) s.zwaai -= dt;
+    var dichtst = null, da = 1e9;
+    fouten.forEach(function(f){ var d = Math.hypot(f.x - s.x, f.y - s.y); if (d < da){ da = d; dichtst = f; } });
+    if (dichtst){
+      var wil = Math.atan2(dichtst.y - s.y, dichtst.x - s.x);
+      var verschil = Math.atan2(Math.sin(wil - s.mikt), Math.cos(wil - s.mikt));
+      s.mikt += verschil * Math.min(1, dt * 12);
+    }
+    if (dichtst && da <= P.stats.bereik + dichtst.r && s.klok <= 0){
+      s.klok = P.stats.tempo; s.zwaai = 0.18;
+      var halveBoog = SPELER.boog / 2 * Math.PI / 180, ber = P.stats.bereik, sch = P.stats.schade;
+      fouten.forEach(function(f){
+        var d = Math.hypot(f.x - s.x, f.y - s.y);
+        if (d > ber + f.r) return;
+        var hoek = Math.atan2(f.y - s.y, f.x - s.x);
+        var af = Math.atan2(Math.sin(hoek - s.mikt), Math.cos(hoek - s.mikt));
+        if (Math.abs(af) <= halveBoog) raak(f, sch, s, P);
+      });
+    }
+    /* het werpmes: naar de verste fout, vanzelf */
+    if (P.stats.mesTempo > 0){
+      s.mesKlok -= dt;
+      if (s.mesKlok <= 0 && fouten.length){
+        s.mesKlok = P.stats.mesTempo;
+        var verst = null, dv = -1;
+        fouten.forEach(function(f){ var d = Math.hypot(f.x - s.x, f.y - s.y); if (d > dv){ dv = d; verst = f; } });
+        var hk = Math.atan2(verst.y - s.y, verst.x - s.x);
+        messen.push({ x:s.x, y:s.y, vx:Math.cos(hk) * 520, vy:Math.sin(hk) * 520, leven:1.2, hoek:hk, schade:P.stats.mesSchade, draai:0, van:P });
+      }
+    }
+  }
 
-    /* spawnen */
+  function stap(dt){
+    tijdInRonde += dt;
+    if (bot.aan) botStuur();
+    var spelers = spelersNu();
+    spelers.forEach(function(P){ beweeg(P, dt); });
+
+    /* spawnen; met twee in de arena komen ze sneller */
     if (teSpawnen > 0){
       spawnKlok -= dt;
       if (spawnKlok <= 0){
         var soort = kiesFout();
         spawn(soort); teSpawnen -= 1;
-        spawnKlok = Math.max(0.25, 1.1 - ronde * 0.04);
+        spawnKlok = Math.max(0.25, 1.1 - ronde * 0.04) / (spelers.length > 1 ? 1.4 : 1);
       }
     }
 
-    /* fouten lopen naar je toe, en duwen elkaar een beetje weg */
+    /* fouten lopen naar de dichtstbijzijnde speler die nog staat, en duwen elkaar een beetje weg */
+    var levend = spelers.filter(function(P){ return !P.neer(); });
     fouten.forEach(function(f){
-      var ax = sp.x - f.x, ay = sp.y - f.y, al = Math.hypot(ax, ay) || 1;
-      var vx = ax / al * f.snel, vy = ay / al * f.snel;
+      var doel = null, dl = 1e9;
+      levend.forEach(function(P){ var d = Math.hypot(P.sp.x - f.x, P.sp.y - f.y); if (d < dl){ dl = d; doel = P; } });
+      var vx = 0, vy = 0;
+      if (doel){ var ax = doel.sp.x - f.x, ay = doel.sp.y - f.y, al = Math.hypot(ax, ay) || 1; vx = ax / al * f.snel; vy = ay / al * f.snel; }
       fouten.forEach(function(g){
         if (g === f) return;
         var gx = f.x - g.x, gy = f.y - g.y, gl = Math.hypot(gx, gy);
@@ -2484,64 +2608,38 @@ const ICONEN = {
       f.x += vx * dt; f.y += vy * dt;
       if (f.flits > 0) f.flits -= dt;
       f.slaKlok -= dt;
-      /* raakt hij je? */
-      if (al < f.r + SPELER.r + 2 && sp.raak <= 0 && f.slaKlok <= 0){
-        var klap = Math.round(f.soort.schade * pantser() * (1 + ronde * 0.03));
-        hp -= klap; sp.raak = RAAKPAUZE; sp.flits = 0.25; f.slaKlok = 0.6;
-        cijfers.push({ x:sp.x, y:sp.y - 26, tekst:'-' + klap, leven:0.9, kleur:'#c0442c' });
-        if (hp <= 0){ hp = 0; einde(); return; }
-      }
-    });
-    if (sp.raak > 0) sp.raak -= dt;
-    if (sp.flits > 0) sp.flits -= dt;
-
-    /* het zwaard: slaat vanzelf naar de dichtstbijzijnde fout binnen bereik */
-    sp.klok -= dt;
-    if (sp.zwaai > 0) sp.zwaai -= dt;
-    var dichtst = null, da = 1e9;
-    fouten.forEach(function(f){ var d = Math.hypot(f.x - sp.x, f.y - sp.y); if (d < da){ da = d; dichtst = f; } });
-    if (dichtst){
-      var wil = Math.atan2(dichtst.y - sp.y, dichtst.x - sp.x);
-      /* soepel draaien naar het doel */
-      var verschil = Math.atan2(Math.sin(wil - sp.mikt), Math.cos(wil - sp.mikt));
-      sp.mikt += verschil * Math.min(1, dt * 12);
-    }
-    if (dichtst && da <= zwaardBereik() + dichtst.r && sp.klok <= 0){
-      sp.klok = zwaardTempo(); sp.zwaai = 0.18;
-      var halveBoog = SPELER.boog / 2 * Math.PI / 180, ber = zwaardBereik(), sch = zwaardSchade();
-      fouten.forEach(function(f){
-        var d = Math.hypot(f.x - sp.x, f.y - sp.y);
-        if (d > ber + f.r) return;
-        var hoek = Math.atan2(f.y - sp.y, f.x - sp.x);
-        var af = Math.atan2(Math.sin(hoek - sp.mikt), Math.cos(hoek - sp.mikt));
-        if (Math.abs(af) <= halveBoog) raak(f, sch, true);
+      /* raakt hij iemand? */
+      levend.forEach(function(P){
+        var s2 = P.sp;
+        if (Math.hypot(s2.x - f.x, s2.y - f.y) < f.r + SPELER.r + 2 && s2.raak <= 0 && f.slaKlok <= 0){
+          var klap = Math.round(f.soort.schade * P.stats.pantser * (1 + ronde * 0.03));
+          P.zetHp(P.hp() - klap); s2.raak = RAAKPAUZE; s2.flits = 0.25; f.slaKlok = 0.6;
+          cijfers.push({ x:s2.x, y:s2.y - 26, tekst:'-' + klap, leven:0.9, kleur:'#c0442c' });
+          if (P.hp() <= 0){ P.zetHp(0); valNeer(P); }
+        }
       });
-    }
+    });
+    if (fase !== 'ronde') return;      /* het spel is net afgelopen */
 
-    /* het werpmes: naar de verste fout, vanzelf */
-    if (stat('mes')){
-      sp.mesKlok -= dt;
-      if (sp.mesKlok <= 0 && fouten.length){
-        sp.mesKlok = mesTempo();
-        var verst = null, dv = -1;
-        fouten.forEach(function(f){ var d = Math.hypot(f.x - sp.x, f.y - sp.y); if (d > dv){ dv = d; verst = f; } });
-        var hk = Math.atan2(verst.y - sp.y, verst.x - sp.x);
-        messen.push({ x:sp.x, y:sp.y, vx:Math.cos(hk) * 520, vy:Math.sin(hk) * 520, leven:1.2, hoek:hk, schade:mesSchade(), draai:0 });
-      }
-    }
+    spelers.forEach(function(P){ wapens(P, dt); });
     messen.forEach(function(m){
       m.x += m.vx * dt; m.y += m.vy * dt; m.leven -= dt; m.draai += dt * 20;
       fouten.forEach(function(f){
         if (m.leven <= 0) return;
-        if (Math.hypot(f.x - m.x, f.y - m.y) < f.r + 6){ raak(f, m.schade, false); m.leven = 0; }
+        if (Math.hypot(f.x - m.x, f.y - m.y) < f.r + 6){ raak(f, m.schade, null, m.van); m.leven = 0; }
       });
     });
     messen = messen.filter(function(m){ return m.leven > 0 && m.x > -30 && m.x < ARENA.b + 30 && m.y > -30 && m.y < ARENA.h + 30; });
 
-    /* munten oprapen */
+    /* munten oprapen: wie erover loopt krijgt hem */
     munt.forEach(function(m){
       m.leven -= dt;
-      if (Math.hypot(m.x - sp.x, m.y - sp.y) < SPELER.r + 14){ munten += m.waarde; m.leven = 0; cijfers.push({ x:m.x, y:m.y - 10, tekst:'+' + m.waarde, leven:0.8, kleur:'#c9971f' }); }
+      levend.forEach(function(P){
+        if (m.leven > 0 && Math.hypot(m.x - P.sp.x, m.y - P.sp.y) < SPELER.r + 14){
+          P.munt(m.waarde); m.leven = 0;
+          cijfers.push({ x:m.x, y:m.y - 10, tekst:'+' + m.waarde, leven:0.8, kleur:'#c9971f' });
+        }
+      });
     });
     munt = munt.filter(function(m){ return m.leven > 0; });
 
@@ -2551,20 +2649,27 @@ const ICONEN = {
     cijfers = cijfers.filter(function(c){ return c.leven > 0; });
 
     /* opruimen en de ronde afsluiten */
-    var voor = fouten.length;
     fouten = fouten.filter(function(f){ return f.hp > 0; });
     if (teSpawnen <= 0 && !fouten.length && fase === 'ronde'){ naarVragen(); }
     tekenHud();
   }
+  /* Een speler gaat neer. Alleen is dat het einde. Samen blijft hij liggen
+     tot de volgende ronde, en pas als allebei liggen is het voorbij. */
+  function valNeer(P){
+    if (!co.aan){ einde(); return; }
+    P.zetNeer();
+    cijfers.push({ x:P.sp.x, y:P.sp.y - 40, tekst:(P.eigen ? 'jij' : P.naam) + ' ligt neer', leven:1.6, kleur:'#14224C' });
+    if (spelersNu().every(function(Q){ return Q.neer(); })) einde();
+  }
 
-  function raak(f, schade, zwaard){
+  function raak(f, schade, vanaf, P){
     var echt = Math.round(schade * (f.schild ? 1 - f.schild : 1));
     f.hp -= echt; f.flits = 0.15;
     cijfers.push({ x:f.x, y:f.y - f.r - 8, tekst:'-' + echt, leven:0.7, kleur:'#14224C' });
     /* een duwtje van het zwaard, zodat je ruimte krijgt */
-    if (zwaard){ var h = Math.atan2(f.y - sp.y, f.x - sp.x); f.x += Math.cos(h) * 18; f.y += Math.sin(h) * 18; }
+    if (vanaf){ var h = Math.atan2(f.y - vanaf.y, f.x - vanaf.x); f.x += Math.cos(h) * 18; f.y += Math.sin(h) * 18; }
     if (f.hp <= 0){
-      geveld++;
+      if (P) P.geveld(); else geveld++;
       for (var i = 0; i < 7; i++){
         var hk = Math.random() * Math.PI * 2, sn = 40 + Math.random() * 90;
         pluis.push({ x:f.x, y:f.y, vx:Math.cos(hk) * sn, vy:Math.sin(hk) * sn, leven:0.45, kleur:f.soort.kleur });
@@ -2575,11 +2680,124 @@ const ICONEN = {
     }
   }
 
+  /* ---------- de gastheer stuurt, de gast tekent ---------- */
+  function r1(v){ return Math.round(v * 10) / 10; }
+  function r2(v){ return Math.round(v * 100) / 100; }
+  function inpak(s2, hpNu, maxNu, harnasLv, neer, ber){
+    return [r1(s2.x), r1(s2.y), r2(s2.mikt), r2(s2.zwaai), r2(s2.raak), r2(s2.dash), r2(s2.dx), r2(s2.dy), s2.loopt ? 1 : 0, r2(s2.flits),
+            Math.round(hpNu), Math.round(maxNu), harnasLv, neer ? 1 : 0, Math.round(ber), r2(s2.dashKlok)];
+  }
+  function uitpak(s2, a){
+    s2.x = a[0]; s2.y = a[1]; s2.mikt = a[2]; s2.zwaai = a[3]; s2.raak = a[4]; s2.dash = a[5]; s2.dx = a[6]; s2.dy = a[7];
+    s2.loopt = !!a[8]; s2.flits = a[9]; s2.dashKlok = a[15];
+  }
+  function standPakket(){
+    return { k:'st', f:fase, r:ronde, ts:teSpawnen,
+      sp:[inpak(sp, hp, maxHp, stat('harnas'), co.neer, zwaardBereik()),
+          maat ? inpak(maat.sp, maat.hp, maat.maxHp, maat.stats.harnas, maat.neer, maat.stats.bereik) : null],
+      fo:fouten.map(function(f){ return [r1(f.x), r1(f.y), Math.round(f.hp), f.maxHp, f.baas ? 'baas' : f.soort.id, f.r, f.flits > 0 ? 0.1 : 0, r2(f.stap), f.schild || 0]; }),
+      me:messen.map(function(m){ return [r1(m.x), r1(m.y), r2(m.hoek)]; }),
+      mu:munt.map(function(m){ return [r1(m.x), r1(m.y), m.waarde]; }),
+      ci:cijfers.map(function(c){ return [r1(c.x), r1(c.y), c.tekst, c.kleur, r2(c.leven)]; }),
+      gm:maat ? maat.munten : 0, gg:maat ? maat.geveld : 0 };
+  }
+  function hostZend(dt){
+    co.zendKlok -= dt;
+    if (fase !== co.laatsteFase || (fase === 'ronde' && !pauze && co.zendKlok <= 0)){
+      co.laatsteFase = fase; co.zendKlok = 0.08;
+      zendNet(standPakket());
+    }
+  }
+  function zetMaatStats(st){
+    if (!maat || !st) return;
+    ['schade', 'bereik', 'tempo', 'snel', 'pantser', 'mesTempo', 'mesSchade', 'harnas', 'maxHp'].forEach(function(k){
+      if (typeof st[k] === 'number' && isFinite(st[k])) maat.stats[k] = st[k];
+    });
+    maat.maxHp = maat.stats.maxHp || maat.maxHp;
+    if (maat.hp > maat.maxHp) maat.hp = maat.maxHp;
+  }
+  function hostOntvang(d){
+    if (!maat || !d) return;
+    if (d.k === 'in'){ maat.in.dx = Math.max(-1, Math.min(1, +d.dx || 0)); maat.in.dy = Math.max(-1, Math.min(1, +d.dy || 0)); if (d.dash) maat.dashVraag = true; }
+    else if (d.k === 'stats'){ zetMaatStats(d.s); }
+    else if (d.k === 'klaar'){
+      zetMaatStats(d.s);
+      if (d.hp !== undefined) maat.hp = Math.max(1, Math.min(maat.maxHp, Math.round(+d.hp) || 1));
+      co.maatKlaar = true;
+      if (co.klaar && fase === 'winkel') volgendeRonde(); else tekenZij();
+    }
+  }
+  function gastTik(dt){
+    if (fase === 'ronde' && !pauze){
+      var inv = eigenInvoer();
+      co.zendKlok -= dt;
+      var sleutel = inv.dx.toFixed(2) + ',' + inv.dy.toFixed(2) + (co.dashVraag ? 'd' : '');
+      if (sleutel !== co.laatsteInvoer || co.zendKlok <= 0){
+        co.laatsteInvoer = sleutel; co.zendKlok = 0.5;
+        zendNet({ k:'in', dx:inv.dx, dy:inv.dy, dash:co.dashVraag ? 1 : 0 });
+        co.dashVraag = false;
+      }
+    } else {
+      pluis.forEach(function(p2){ p2.leven -= dt; p2.x += p2.vx * dt; p2.y += p2.vy * dt; });
+      pluis = pluis.filter(function(p2){ return p2.leven > 0; });
+      cijfers.forEach(function(c){ c.leven -= dt; c.y -= 30 * dt; });
+      cijfers = cijfers.filter(function(c){ return c.leven > 0; });
+    }
+  }
+  function gastOntvang(d){
+    if (!d) return;
+    if (d.k === 'st') pasStandToe(d);
+    else if (d.k === 'klaar'){ co.maatKlaar = true; tekenZij(); }
+  }
+  function pasSpelers(d){
+    /* sp[0] is de gastheer, sp[1] de gast, dus ik */
+    var mij = d.sp[1], hij = d.sp[0];
+    if (mij){ uitpak(sp, mij); hp = mij[10]; co.neer = !!mij[13]; }
+    if (hij && maat){ uitpak(maat.sp, hij); maat.hp = hij[10]; maat.maxHp = hij[11]; maat.stats.harnas = hij[12]; maat.neer = !!hij[13]; maat.stats.bereik = hij[14]; }
+  }
+  function pasStandToe(d){
+    if (d.f !== fase){
+      if (d.f === 'vragen' && fase === 'ronde'){ ronde = d.r; pasSpelers(d); naarVragen(); }
+      else if (d.f === 'ronde'){
+        ronde = d.r; fase = 'ronde'; co.klaar = false; co.maatKlaar = false;
+        fouten = []; messen = []; munt = []; pluis = []; cijfers = []; tijdInRonde = 0;
+        tekenZij(); tekenHud();
+        document.getElementById('arenatip').textContent = 'Ronde ' + ronde + '. Samen! Pijltjes of WASD om te lopen, je zwaard slaat vanzelf.';
+      } else if (d.f === 'einde'){ pasSpelers(d); einde(); return; }
+      else return;
+    }
+    if (fase !== 'ronde') return;
+    ronde = d.r; teSpawnen = d.ts;
+    pasSpelers(d);
+    fouten = d.fo.map(function(a){
+      var soort = a[4] === 'baas' ? BAAS : (FOUTEN.filter(function(x){ return x.id === a[4]; })[0] || FOUTEN[0]);
+      return { x:a[0], y:a[1], hp:a[2], maxHp:a[3], soort:soort, r:a[5], flits:a[6], stap:a[7], schild:a[8], baas:a[4] === 'baas', snel:0, slaKlok:0 };
+    });
+    messen = d.me.map(function(a){ return { x:a[0], y:a[1], hoek:a[2] }; });
+    munt = d.mu.map(function(a){ return { x:a[0], y:a[1], waarde:a[2], leven:1 }; });
+    cijfers = d.ci.map(function(a){ return { x:a[0], y:a[1], tekst:a[2], kleur:a[3], leven:a[4] }; });
+    if (typeof d.gm === 'number'){ munten += d.gm - co.gastMunt; co.gastMunt = d.gm; }
+    if (typeof d.gg === 'number'){ geveld += d.gg - co.gastGeveld; co.gastGeveld = d.gg; }
+    tekenHud();
+  }
+  /* de knop 'Ronde starten': samen pas als allebei zover zijn */
+  function startVolgende(){
+    if (!co.aan){ volgendeRonde(); return; }
+    co.klaar = true;
+    if (co.rol === 'gast'){ zendNet({ k:'klaar', s:mijnStats(), hp:hp }); tekenZij(); return; }
+    zendNet({ k:'klaar' });
+    if (co.maatKlaar) volgendeRonde(); else tekenZij();
+  }
+
   /* ---------- de vragenfase ---------- */
   function naarVragen(){
-    /* wat nog op de grond ligt is van jou: de ronde is gewonnen */
-    munt.forEach(function(m){ munten += m.waarde; });
+    /* wat nog op de grond ligt is van jou: de ronde is gewonnen; samen delen jullie het */
+    if (!(co.aan && co.rol === 'gast')){
+      var rest = 0; munt.forEach(function(m){ rest += m.waarde; });
+      if (co.aan && maat){ munten += Math.ceil(rest / 2); maat.munten += Math.floor(rest / 2); } else munten += rest;
+    }
     munt = [];
+    co.klaar = false; co.maatKlaar = false;
     botLog('ronde-af');
     fase = 'vragen';
     vragenOver = vragenInRonde(ronde); vragenTotaal = vragenOver;
@@ -2665,19 +2883,22 @@ const ICONEN = {
           '<span><b>' + u.naam + pips + '</b><small>' + u.onder + ' \u00b7 ' + u.uit + '</small></span>' +
           '<span class="prijs">' + (vol ? 'vol' : prijs + (u.los && hp >= maxHp ? ' (leven is vol)' : '')) + '</span></button>';
       }).join('') + '</div>';
-      h += '<button class="btn" id="rondeBtn" type="button">Ronde ' + (ronde + 1) + ' starten' + ((ronde + 1) % BAASRONDE === 0 ? ', met baas' : '') + '</button>';
+      if (co.aan && co.klaar) h += '<button class="btn" id="rondeBtn" type="button" disabled>Wachten op ' + (maat ? maat.naam : 'je maat') + '\u2026</button>';
+      else h += '<button class="btn" id="rondeBtn" type="button">Ronde ' + (ronde + 1) + ' starten' + ((ronde + 1) % BAASRONDE === 0 ? ', met baas' : '') +
+        (co.aan && co.maatKlaar ? ' (' + (maat ? maat.naam : 'je maat') + ' is klaar)' : '') + '</button>';
     }
     z.innerHTML = h;
     Array.prototype.forEach.call(z.querySelectorAll('.optie'), function(b){ b.addEventListener('click', function(){ antwoord(parseInt(b.getAttribute('data-i'), 10)); }); });
     var vb = document.getElementById('verderBtn'); if (vb) vb.addEventListener('click', verder);
     Array.prototype.forEach.call(z.querySelectorAll('[data-koop]'), function(b){ b.addEventListener('click', function(){ koop(b.getAttribute('data-koop')); }); });
-    var rb = document.getElementById('rondeBtn'); if (rb) rb.addEventListener('click', volgendeRonde);
+    var rb = document.getElementById('rondeBtn'); if (rb) rb.addEventListener('click', startVolgende);
   }
 
   function tekenHud(){
     var deel = Math.max(0, hp / maxHp);
     document.getElementById('hud').innerHTML =
       '<div class="meter leven"><i>Leven ' + Math.max(0, Math.round(hp)) + ' / ' + maxHp + '</i><div class="levenbalk"><i class="' + (deel < 0.3 ? 'laag' : '') + '" style="width:' + (deel * 100).toFixed(1) + '%"></i></div></div>' +
+      (co.aan && maat ? '<div class="meter leven"><i>' + maat.naam + ' ' + Math.max(0, Math.round(maat.hp)) + ' / ' + maat.maxHp + (maat.neer ? ' (ligt neer)' : '') + '</i><div class="levenbalk"><i class="' + (maat.hp / maat.maxHp < 0.3 ? 'laag' : '') + '" style="width:' + (Math.max(0, maat.hp / maat.maxHp) * 100).toFixed(1) + '%"></i></div></div>' : '') +
       '<div class="meter"><i>Munten</i><b>' + munten + '</b></div>' +
       '<div class="meter"><i>Ronde</i><b>' + ronde + '</b></div>' +
       '<div class="meter"><i>Nog te gaan</i><b>' + (fouten.length + Math.max(0, teSpawnen)) + '</b></div>' +
@@ -2720,6 +2941,40 @@ const ICONEN = {
     return g;
   }
 
+  function tekenSpeler(sp2, ber, harnasLv, neer, naam, pols){
+    var s = '', mikt = sp2.mikt * 180 / Math.PI, R = SPELER.r;
+    s += '<ellipse cx="' + sp2.x.toFixed(1) + '" cy="' + (sp2.y + R * 0.9).toFixed(1) + '" rx="' + (R * 0.85) + '" ry="' + (R * 0.3) + '" fill="rgba(20,34,76,.2)"/>';
+    if (sp2.zwaai > 0 && !neer){
+      /* de zwaai: een boog die even oplicht */
+      var a0 = sp2.mikt - SPELER.boog / 2 * Math.PI / 180, a1 = sp2.mikt + SPELER.boog / 2 * Math.PI / 180;
+      s += '<path d="M' + sp2.x.toFixed(1) + ',' + sp2.y.toFixed(1) + ' L' + (sp2.x + Math.cos(a0) * ber).toFixed(1) + ',' + (sp2.y + Math.sin(a0) * ber).toFixed(1) +
+        ' A' + ber + ',' + ber + ' 0 0 1 ' + (sp2.x + Math.cos(a1) * ber).toFixed(1) + ',' + (sp2.y + Math.sin(a1) * ber).toFixed(1) + ' Z" fill="#fff" opacity="' + (sp2.zwaai / 0.18 * 0.55).toFixed(2) + '"/>';
+    }
+    var wip2 = sp2.loopt ? Math.sin(pols * 14) * 2 : 0;
+    s += '<g transform="translate(' + sp2.x.toFixed(1) + ',' + (sp2.y + wip2).toFixed(1) + ')' + (neer ? ' rotate(80)' : '') + '"' + (neer ? ' opacity=".55"' : '') + '>';
+    /* het zwaard, aan de kant waar je heen mikt; bij een zwaai staat het in de boog */
+    var zw = sp2.zwaai > 0 ? mikt + (sp2.zwaai / 0.18 - 0.5) * SPELER.boog : mikt - 30;
+    var g0 = R * 0.75;
+    s += '<g transform="rotate(' + zw.toFixed(1) + ')">' +
+      '<path d="M' + g0 + ',0 L' + (g0 + ber * 0.6).toFixed(0) + ',0" stroke="#dfe6ee" stroke-width="6" stroke-linecap="round"/>' +
+      '<path d="M' + g0 + ',0 L' + (g0 + ber * 0.6).toFixed(0) + ',0" stroke="#5b6480" stroke-width="1.6" stroke-linecap="round" opacity=".6"/>' +
+      '<path d="M' + (g0 - 2) + ',-8 v16" stroke="#c9971f" stroke-width="4" stroke-linecap="round"/><path d="M' + (g0 - 10) + ',0 h8" stroke="#5f4830" stroke-width="5" stroke-linecap="round"/></g>';
+    /* het lijf: een ronde ridder met een helm en een vizier, in de kleur van het harnas; de maat in een warmere tint */
+    var kleuren = naam ? ['#F26749', '#e8623f', '#d95c3b', '#c9603d', '#b8654a', '#a86a57', '#987064', '#887670'] : ['#204ECF', '#3559c9', '#4a63b8', '#5b6480', '#6b7391', '#7c85a3', '#8d94ae', '#9ea4bb'];
+    var harnasKl = kleuren[Math.min(7, harnasLv || 0)];
+    s += '<circle r="' + R + '" fill="' + harnasKl + '" stroke="#14224C" stroke-width="2.4"' + (sp2.flits > 0 ? ' opacity=".5"' : '') + '/>';
+    s += '<path d="M' + (-R) + ',-3 a' + R + ',' + R + ' 0 0 1 ' + (2 * R) + ',0 z" fill="' + tint(harnasKl, 0.25) + '" opacity=".9"/>';
+    s += '<rect x="' + (-R * 0.6) + '" y="-6" width="' + (R * 1.2) + '" height="8" rx="4" fill="#14224C"/>';
+    s += '<circle cx="' + (-R * 0.27) + '" cy="-2" r="2" fill="#fff"/><circle cx="' + (R * 0.27) + '" cy="-2" r="2" fill="#fff"/>';
+    if ((harnasLv || 0) >= 3) s += '<path d="M0,' + (-R) + ' l0,-9 l5,3" fill="none" stroke="' + (naam ? '#204ECF' : '#F26749') + '" stroke-width="3.5" stroke-linecap="round"/>';
+    s += '</g>';
+    if (naam) s += '<text x="' + sp2.x.toFixed(1) + '" y="' + (sp2.y - R - 12).toFixed(1) + '" text-anchor="middle" font-size="13" font-weight="700" fill="#14224C" font-family="Poppins" stroke="#fff" stroke-width="3" paint-order="stroke">' + naam.replace(/[<>&]/g, '') + '</text>';
+    if (sp2.raak > 0 && !neer) s += '<circle cx="' + sp2.x.toFixed(1) + '" cy="' + sp2.y.toFixed(1) + '" r="' + (R + 8) + '" fill="none" stroke="#fff" stroke-width="2" opacity=".5" stroke-dasharray="6 5"/>';
+    if (sp2.dash > 0) s += '<path d="M' + sp2.x.toFixed(1) + ',' + sp2.y.toFixed(1) + ' L' + (sp2.x - sp2.dx * 70).toFixed(1) + ',' + (sp2.y - sp2.dy * 70).toFixed(1) +
+      '" stroke="#83A5F2" stroke-width="' + (R * 1.4).toFixed(0) + '" stroke-linecap="round" opacity="' + (sp2.dash / DASH.duur * 0.5).toFixed(2) + '"/>';
+    return s;
+  }
+
   function tekenArena(){
     var s = vloer();
     var pols = performance.now() / 1000;
@@ -2746,36 +3001,10 @@ const ICONEN = {
       s += '<g transform="translate(' + m.x.toFixed(1) + ',' + m.y.toFixed(1) + ') rotate(' + (m.hoek * 180 / Math.PI).toFixed(1) + ')">' +
         '<path d="M-8,0 L6,0 L10,-2.5 L6,-5 L-2,-5 Z" fill="#dfe6ee" stroke="#5b6480" stroke-width="1.2"/><rect x="-10" y="-2" width="5" height="4" fill="#5f4830"/></g>';
     });
-    /* de speler */
-    var mikt = sp.mikt * 180 / Math.PI, ber = zwaardBereik();
-    var R = SPELER.r;
-    s += '<ellipse cx="' + sp.x.toFixed(1) + '" cy="' + (sp.y + R * 0.9).toFixed(1) + '" rx="' + (R * 0.85) + '" ry="' + (R * 0.3) + '" fill="rgba(20,34,76,.2)"/>';
-    if (sp.zwaai > 0){
-      /* de zwaai: een boog die even oplicht */
-      var a0 = sp.mikt - SPELER.boog / 2 * Math.PI / 180, a1 = sp.mikt + SPELER.boog / 2 * Math.PI / 180;
-      s += '<path d="M' + sp.x.toFixed(1) + ',' + sp.y.toFixed(1) + ' L' + (sp.x + Math.cos(a0) * ber).toFixed(1) + ',' + (sp.y + Math.sin(a0) * ber).toFixed(1) +
-        ' A' + ber + ',' + ber + ' 0 0 1 ' + (sp.x + Math.cos(a1) * ber).toFixed(1) + ',' + (sp.y + Math.sin(a1) * ber).toFixed(1) + ' Z" fill="#fff" opacity="' + (sp.zwaai / 0.18 * 0.55).toFixed(2) + '"/>';
-    }
-    var wip2 = sp.loopt ? Math.sin(pols * 14) * 2 : 0;
-    s += '<g transform="translate(' + sp.x.toFixed(1) + ',' + (sp.y + wip2).toFixed(1) + ')">';
-    /* het zwaard, aan de kant waar je heen mikt; bij een zwaai staat het in de boog */
-    var zw = sp.zwaai > 0 ? mikt + (sp.zwaai / 0.18 - 0.5) * SPELER.boog : mikt - 30;
-    var g0 = R * 0.75;
-    s += '<g transform="rotate(' + zw.toFixed(1) + ')">' +
-      '<path d="M' + g0 + ',0 L' + (g0 + ber * 0.6).toFixed(0) + ',0" stroke="#dfe6ee" stroke-width="6" stroke-linecap="round"/>' +
-      '<path d="M' + g0 + ',0 L' + (g0 + ber * 0.6).toFixed(0) + ',0" stroke="#5b6480" stroke-width="1.6" stroke-linecap="round" opacity=".6"/>' +
-      '<path d="M' + (g0 - 2) + ',-8 v16" stroke="#c9971f" stroke-width="4" stroke-linecap="round"/><path d="M' + (g0 - 10) + ',0 h8" stroke="#5f4830" stroke-width="5" stroke-linecap="round"/></g>';
-    /* het lijf: een ronde ridder met een helm en een vizier, in de kleur van het harnas */
-    var harnasKl = ['#204ECF', '#3559c9', '#4a63b8', '#5b6480', '#6b7391', '#7c85a3', '#8d94ae', '#9ea4bb'][stat('harnas')];
-    s += '<circle r="' + R + '" fill="' + harnasKl + '" stroke="#14224C" stroke-width="2.4"' + (sp.flits > 0 ? ' opacity=".5"' : '') + '/>';
-    s += '<path d="M' + (-R) + ',-3 a' + R + ',' + R + ' 0 0 1 ' + (2 * R) + ',0 z" fill="' + tint(harnasKl, 0.25) + '" opacity=".9"/>';
-    s += '<rect x="' + (-R * 0.6) + '" y="-6" width="' + (R * 1.2) + '" height="8" rx="4" fill="#14224C"/>';
-    s += '<circle cx="' + (-R * 0.27) + '" cy="-2" r="2" fill="#fff"/><circle cx="' + (R * 0.27) + '" cy="-2" r="2" fill="#fff"/>';
-    if (stat('harnas') >= 3) s += '<path d="M0,' + (-R) + ' l0,-9 l5,3" fill="none" stroke="#F26749" stroke-width="3.5" stroke-linecap="round"/>';
-    s += '</g>';
-    if (sp.raak > 0) s += '<circle cx="' + sp.x.toFixed(1) + '" cy="' + sp.y.toFixed(1) + '" r="' + (R + 8) + '" fill="none" stroke="#fff" stroke-width="2" opacity=".5" stroke-dasharray="6 5"/>';
-    if (sp.dash > 0) s += '<path d="M' + sp.x.toFixed(1) + ',' + sp.y.toFixed(1) + ' L' + (sp.x - sp.dx * 70).toFixed(1) + ',' + (sp.y - sp.dy * 70).toFixed(1) +
-      '" stroke="#83A5F2" stroke-width="' + (R * 1.4).toFixed(0) + '" stroke-linecap="round" opacity="' + (sp.dash / DASH.duur * 0.5).toFixed(2) + '"/>';
+    /* de spelers: jij, en samen ook je maat */
+    var lijstSp = [{ s:sp, ber:zwaardBereik(), harnas:stat('harnas'), neer:co.neer, naam:null }];
+    if (co.aan && maat) lijstSp.push({ s:maat.sp, ber:maat.stats.bereik, harnas:maat.stats.harnas, neer:maat.neer, naam:maat.naam });
+    lijstSp.forEach(function(Q){ s += tekenSpeler(Q.s, Q.ber, Q.harnas, Q.neer, Q.naam, pols); });
     /* deeltjes en getallen */
     pluis.forEach(function(p){ s += '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' + (3 * p.leven / 0.45 + 1).toFixed(1) + '" fill="' + p.kleur + '" opacity="' + (p.leven / 0.45).toFixed(2) + '"/>'; });
     cijfers.forEach(function(c){ s += '<text x="' + c.x.toFixed(1) + '" y="' + c.y.toFixed(1) + '" text-anchor="middle" font-size="15" font-weight="700" fill="' + c.kleur + '" opacity="' + Math.min(1, c.leven).toFixed(2) + '" font-family="Poppins" stroke="#fff" stroke-width="3" paint-order="stroke">' + c.tekst + '</text>'; });
@@ -2793,13 +3022,16 @@ const ICONEN = {
 
   /* ---------- einde ---------- */
   function einde(){
+    if (fase === 'einde') return;
     botLog('einde');
+    fase = 'einde';
+    if (co.aan && co.rol === 'host') zendNet(standPakket());
     if (window.STRIJD) STRIJD.af({ ronde:ronde, punten:geveld });
-    fase = 'einde'; loopt = false; pauze = false;
+    loopt = false; pauze = false;
     document.getElementById('scherm-spel').classList.add('hide');
     document.getElementById('scherm-einde').classList.remove('hide');
     document.getElementById('pauzeBtn').classList.add('hide');
-    document.getElementById('eindKop').textContent = 'Gevallen in ronde ' + ronde;
+    document.getElementById('eindKop').textContent = (co.aan ? 'Samen gevallen in ronde ' : 'Gevallen in ronde ') + ronde;
     var record = 0;
     try { record = parseInt(localStorage.getItem('lg-zwaard-record') || '0', 10); if (ronde > record){ localStorage.setItem('lg-zwaard-record', String(ronde)); } } catch (e){}
     document.getElementById('eindUit').textContent = 'Je velde ' + geveld + ' fouten en beantwoordde ' + goedAantal + ' van de ' + (goedAantal + foutAantal) + ' vragen goed.' +
@@ -2861,10 +3093,20 @@ const ICONEN = {
      laat extra fouten de arena in komen. Zie strijd.js. */
   if (window.STRIJD && STRIJD.actief){
     STRIJD.klaar('zwaard', {
-      start: function(){ if (!document.getElementById('scherm-start').classList.contains('hide') && vak) begin(); },
+      samen: true,   /* in een duel spelen twee in dezelfde arena */
+      start: function(info){
+        if (info && info.duel){
+          co.aan = true; co.rol = info.rol === 'host' ? 'host' : 'gast';
+          maat = nieuweMaat(info.maat || 'je maat');
+        }
+        if (!document.getElementById('scherm-start').classList.contains('hide') && vak) begin();
+        if (co.aan && co.rol === 'gast') zendNet({ k:'stats', s:mijnStats() });
+      },
+      maatNaam: function(naam){ if (maat && naam) maat.naam = naam; },
+      net: function(d){ if (!co.aan) return; if (co.rol === 'host') hostOntvang(d); else gastOntvang(d); },
       stand: function(){ return { ronde:ronde, gehaald:Math.max(0, ronde - 1), leven:Math.round(hp), punten:geveld }; },
       aanval: function(n, van){
-        if (fase === 'einde' || !loopt) return;
+        if (co.aan || fase === 'einde' || !loopt) return;
         if (fase === 'ronde'){ for (var i = 0; i < n; i++) spawn(kiesFout()); }
         else strijdExtra += n;
         tekenHud();

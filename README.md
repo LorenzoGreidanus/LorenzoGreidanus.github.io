@@ -31,7 +31,7 @@ Een site, twee kanten: de voorkant voor collega's en een aparte leeromgeving voo
 | `leermiddelen/klasquiz.html` | Klasquiz: de docent opent een kamer op het digibord, leerlingen doen mee op hun telefoon via `meneergreidanus.nl/q` |
 | `leermiddelen/bank.js` | De vragenbanken en de rekengenerator, gemaakt uit `toren.html` door `server/maak-bank.js`; niet met de hand bewerken |
 | `leermiddelen/strijd.html` | Klasstrijd: Torenverdediging of Zwaardvechter met de hele klas, de docent start en ziet de stand, goede reeksen sturen fouten naar de anderen |
-| `leermiddelen/strijd.js` | Samen spelen vanuit Torenverdediging en Zwaardvechter: het duel tegen een vriend (kamer voor twee, begint vanzelf), de klasstrijd (`?kamer=CODE`, haakjes `STRIJD.klaar`, `STRIJD.reeks`, `STRIJD.af`) en het klassement van de site op start- en eindscherm |
+| `leermiddelen/strijd.js` | Samen spelen vanuit Torenverdediging en Zwaardvechter: het duel tegen een vriend (kamer voor twee, begint vanzelf), de klasstrijd (`?kamer=CODE`, haakjes `STRIJD.klaar`, `STRIJD.reeks`, `STRIJD.af`) en het klassement van de site op start- en eindscherm. Zwaardvechter speelt een duel als gedeelde arena: de eerste speler is gastheer en rekent alles uit, de ander stuurt zijn toetsen via de kamer (`STRIJD.stuurNet`, haakje `net`) en tekent de stand die twaalf keer per seconde binnenkomt |
 | `leermiddelen/bronnenlab.html` | Bronnenonderzoek met drie vaste vragen |
 | `leermiddelen/tijdvakken.html` | Gebeurtenissen sorteren naar tijdvak |
 | `leermiddelen/feodalisme.html` | Heer, ridder of boer: keuzes met gevolgen |
