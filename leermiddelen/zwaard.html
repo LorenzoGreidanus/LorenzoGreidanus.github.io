@@ -2215,7 +2215,35 @@ const ICONEN = {
      pas als allebei op de knop hebben gedrukt. Wie neergaat ligt tot de
      volgende ronde; pas als allebei liggen is het voorbij. */
   var co = { aan:false, rol:null, neer:false, klaar:false, maatKlaar:false, dashVraag:false,
-             laatsteInvoer:'', zendKlok:0, laatsteFase:'', gastMunt:0, gastGeveld:0 };
+             laatsteInvoer:'', zendKlok:0, laatsteFase:'', gastMunt:0, gastGeveld:0,
+             /* in de pas (lockstep): allebei rekenen dezelfde stappen uit */
+             lock:false, tikken:0, inbox:[], log:{}, inTicks:{}, bevestigd:0, hashes:{}, reserve:6, opzet:null, wachtOp:false, seed:0,
+             mijnIn:{ dx:0, dy:0 }, rest:0, laatsteZend:'' };
+  /* Samen spelen gaat in de pas: de spelmotor rekent in vaste stappen van een
+     zestigste seconde, loot uit een eigen toevalsbron met een zaad van de
+     gastheer, en alles wat een speler doet (lopen, ontwijken, klaar in de
+     winkel, pauze) is een opdracht die bij allebei in dezelfde stap wordt
+     uitgevoerd. De maat tekent dan zestig keer per seconde zijn eigen
+     berekening in plaats van twaalf keer per seconde een ontvangen stand.
+     Loopt het toch uit de pas (verschil in rekenwerk tussen browsers), dan
+     valt het terug op het doorsturen van de stand. */
+  var STAP = 1 / 60;
+  var toevalZaad = 1;
+  function zaai(z){ toevalZaad = (z >>> 0) || 1; }
+  function toeval(){
+    toevalZaad = (toevalZaad + 0x6D2B79F5) | 0;
+    var t = toevalZaad;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+  function opdracht(c){ if (co.rol === 'host'){ c.wie = 'h'; co.inbox.push(c); } else zendNet({ k:'in', c:c }); }
+  function vanMij(c){ return (c.wie === 'h') === (co.rol === 'host'); }
+  function vingerafdruk(){
+    var som = 0; fouten.forEach(function(f){ som += f.x + f.y + f.hp; });
+    var a = co.rol === 'host' ? sp : (maat ? maat.sp : sp), b = co.rol === 'host' ? (maat ? maat.sp : sp) : sp;
+    return [ronde, fase === 'ronde' ? 1 : 0, teSpawnen, fouten.length, Math.round(som / 50), Math.round(a.x / 4), Math.round(a.y / 4), Math.round(b.x / 4), Math.round(b.y / 4), munt.length].join('|');
+  }
   var maat = null;
   function nieuweMaat(naam){
     return { naam:naam, hp:SPELER.hp, maxHp:SPELER.hp, neer:false, munten:0, geveld:0, dashVraag:false,
@@ -2326,14 +2354,19 @@ const ICONEN = {
   /* ---------- beginnen ---------- */
   function begin(){
     ronde = 0; munten = 0; level = {}; geveld = 0; reeks = 0; besteReeks = 0; goedAantal = 0; foutAantal = 0;
+    co.tikken = 0; co.inbox = []; co.log = {}; co.inTicks = {}; co.bevestigd = 0; co.hashes = {}; co.reserve = 6; co.rest = 0;
+    co.mijnIn = { dx:0, dy:0 }; co.laatsteZend = ''; co.klaar = false; co.maatKlaar = false; co.eind = false;
+    if (co.aan && co.lock && co.rol === 'gast' && co.opzet) zaai(co.opzet.seed);
+    else { co.seed = Math.floor(Math.random() * 4294967296); zaai(co.seed); }
     slim.reset(niveau); pot = null;
     maxHp = maxLeven(); hp = maxHp;
     document.getElementById('scherm-start').classList.add('hide');
     document.getElementById('scherm-einde').classList.add('hide');
     document.getElementById('scherm-spel').classList.remove('hide');
     document.getElementById('pauzeBtn').classList.remove('hide');
-    if (co.aan && co.rol === 'gast'){ ronde = 1; fase = 'ronde'; co.laatsteFase = ''; tekenZij(); tekenHud(); }
+    if (co.aan && !co.lock && co.rol === 'gast'){ ronde = 1; fase = 'ronde'; co.laatsteFase = ''; tekenZij(); tekenHud(); }
     else volgendeRonde();
+    if (co.aan && co.lock && co.rol === 'host') zendNet({ k:'op', seed:co.seed });
     scrollTo({ top:0, behavior:'auto' });
     if (!loopt){ loopt = true; laatste = performance.now(); laatsteTik = laatste; if (!rafId) rafId = requestAnimationFrame(tik); }
   }
@@ -2342,14 +2375,17 @@ const ICONEN = {
     ronde++;
     fase = 'ronde';
     fouten = []; messen = []; munt = []; pluis = []; cijfers = [];
-    sp.x = ARENA.b / 2 - (co.aan ? 50 : 0); sp.y = ARENA.h / 2; sp.raak = 0; sp.klok = 0; sp.mesKlok = 0; sp.dash = 0; sp.dashKlok = 0;
+    /* de gastheer links van het midden, de gast rechts, bij allebei zo */
+    sp.x = ARENA.b / 2 + (co.aan ? (co.lock && co.rol === 'gast' ? 50 : -50) : 0); sp.y = ARENA.h / 2; sp.raak = 0; sp.klok = 0; sp.mesKlok = 0; sp.dash = 0; sp.dashKlok = 0;
     if (co.aan){
       if (co.neer){ co.neer = false; hp = Math.max(1, Math.round(maxHp / 2)); }
       if (maat){
-        maat.sp.x = ARENA.b / 2 + 50; maat.sp.y = ARENA.h / 2; maat.sp.raak = 0; maat.sp.klok = 0; maat.sp.mesKlok = 0; maat.sp.dash = 0; maat.sp.dashKlok = 0;
+        maat.sp.x = ARENA.b / 2 + (co.lock && co.rol === 'gast' ? -50 : 50); maat.sp.y = ARENA.h / 2; maat.sp.raak = 0; maat.sp.klok = 0; maat.sp.mesKlok = 0; maat.sp.dash = 0; maat.sp.dashKlok = 0;
         if (maat.neer){ maat.neer = false; maat.hp = Math.max(1, Math.round(maat.maxHp / 2)); }
       }
       co.klaar = false; co.maatKlaar = false;
+      /* iedereen begint de ronde stilstaand; wie een toets ingedrukt houdt stuurt hem vanzelf opnieuw */
+      co.mijnIn = { dx:0, dy:0 }; if (maat) maat.in = { dx:0, dy:0 }; co.laatsteZend = '';
     }
     teSpawnen = Math.round(aantalInRonde(ronde) * (co.aan ? 1.5 : 1)) + strijdExtra; strijdExtra = 0;
     spawnKlok = 0.6;
@@ -2364,17 +2400,17 @@ const ICONEN = {
   /* ---------- de fouten ---------- */
   function kiesFout(){
     var mag = FOUTEN.filter(function(f){ return f.vanaf <= ronde; });
-    var totaal = mag.reduce(function(a, f){ return a + f.kans; }, 0), trek = Math.random() * totaal;
+    var totaal = mag.reduce(function(a, f){ return a + f.kans; }, 0), trek = toeval() * totaal;
     for (var i = 0; i < mag.length; i++){ trek -= mag[i].kans; if (trek <= 0) return mag[i]; }
     return mag[0];
   }
   /* ze komen van de rand, ver van de speler */
   function randPlek(){
-    var kant = Math.floor(Math.random() * 4), x, y;
-    if (kant === 0){ x = -20; y = Math.random() * ARENA.h; }
-    else if (kant === 1){ x = ARENA.b + 20; y = Math.random() * ARENA.h; }
-    else if (kant === 2){ x = Math.random() * ARENA.b; y = -20; }
-    else { x = Math.random() * ARENA.b; y = ARENA.h + 20; }
+    var kant = Math.floor(toeval() * 4), x, y;
+    if (kant === 0){ x = -20; y = toeval() * ARENA.h; }
+    else if (kant === 1){ x = ARENA.b + 20; y = toeval() * ARENA.h; }
+    else if (kant === 2){ x = toeval() * ARENA.b; y = -20; }
+    else { x = toeval() * ARENA.b; y = ARENA.h + 20; }
     if (Math.hypot(x - sp.x, y - sp.y) < 160) return randPlek();
     return { x:x, y:y };
   }
@@ -2382,8 +2418,8 @@ const ICONEN = {
     var n = soort.aantal || 1, p = randPlek();
     for (var i = 0; i < n; i++){
       var h = Math.round(foutHp(ronde) * soort.hp);
-      fouten.push({ soort:soort, x:p.x + (Math.random() - .5) * 30, y:p.y + (Math.random() - .5) * 30,
-                    hp:h, maxHp:h, r:soort.r, snel:soort.snel * (70 + ronde * 1.6), flits:0, stap:Math.random() * 6,
+      fouten.push({ soort:soort, x:p.x + (toeval() - .5) * 30, y:p.y + (toeval() - .5) * 30,
+                    hp:h, maxHp:h, r:soort.r, snel:soort.snel * (70 + ronde * 1.6), flits:0, stap:toeval() * 6,
                     schild:soort.schild || 0, slaKlok:0 });
     }
   }
@@ -2416,6 +2452,7 @@ const ICONEN = {
   /* Ontwijken. Sta je stil, dan spring je weg van de dichtstbijzijnde fout. */
   function ontwijk(){
     if (fase !== 'ronde' || pauze) return;
+    if (co.aan && co.lock){ opdracht({ k:'dash' }); return; }
     if (co.aan && co.rol === 'gast'){ co.dashVraag = true; return; }   /* de gastheer springt voor je */
     ontwijkMet(sp);
   }
@@ -2429,7 +2466,7 @@ const ICONEN = {
     s.dash = DASH.duur; s.dashKlok = DASH.pauze;
     s.raak = Math.max(s.raak, DASH.onkwetsbaar);
     for (var i = 0; i < 6; i++){
-      var hk = Math.random() * Math.PI * 2, sn = 30 + Math.random() * 60;
+      var hk = toeval() * Math.PI * 2, sn = 30 + toeval() * 60;
       pluis.push({ x:s.x, y:s.y, vx:Math.cos(hk) * sn, vy:Math.sin(hk) * sn, leven:0.35, kleur:'#83A5F2' });
     }
   }
@@ -2444,6 +2481,7 @@ const ICONEN = {
 
   function zetPauze(){
     if (fase !== 'ronde' || (co.aan && co.rol === 'gast')) return;
+    if (co.aan && co.lock){ opdracht({ k:'pauze', aan:!pauze }); return; }
     pauze = !pauze;
     document.getElementById('pauzeBtn').textContent = pauze ? 'Verder' : 'Pauze';
     document.getElementById('arenatip').textContent = pauze ? 'Pauze. Druk op P of Escape om verder te gaan.' : 'Verder.';
@@ -2456,28 +2494,132 @@ const ICONEN = {
      de arena van zijn maat bevriezen, dus een waakhond neemt het over zolang
      er niet getekend wordt. */
   var rafId = 0, laatsteTik = 0;
-  setInterval(function(){
-    if (!loopt || performance.now() - laatsteTik < 120) return;
+  /* De waakhond tikt vanuit een werker: die wordt, anders dan een timer in de
+     pagina, niet afgeremd zodra het tabblad niet zichtbaar is. Zo rekent de
+     gastheer op volle snelheid door, ook als hij even van tabblad wisselt. */
+  function waakhond(){
+    if (!loopt || performance.now() - laatsteTik < 30) return;
     if (rafId){ cancelAnimationFrame(rafId); rafId = 0; }
     tik(performance.now());
-  }, 40);
+  }
+  try {
+    var klokWerker = new Worker(URL.createObjectURL(new Blob(['setInterval(function(){ postMessage(0); }, 16);'], { type:'text/javascript' })));
+    klokWerker.onmessage = waakhond;
+  } catch (e){ setInterval(waakhond, 40); }
   function tik(nu){
     rafId = 0;
     if (!loopt) return;
     laatsteTik = nu;
-    var dt = Math.min(0.05, (nu - laatste) / 1000); laatste = nu;
+    var dt = Math.min(0.1, (nu - laatste) / 1000); laatste = nu;
+    /* De motor rekent in vaste stappen van een zestigste seconde, hoe snel
+       het scherm ook ververst: op een traag toestel meer stappen per beeld,
+       op een snel scherm soms geen. Hoogstens vier per beeld, anders loopt
+       het spel in slow motion in plaats van vast. */
+    co.rest = Math.min(4 * STAP, co.rest + dt); co.laatsteDt = dt;
+    if (co.aan && co.rol === 'gast'){ if (co.lock) gastStap(); else { co.rest = 0; gastTik(dt); } }
+    else {
+      var gedaan = 0;
+      while (co.rest >= STAP && gedaan < 4){ co.rest -= STAP; doeStap(); gedaan++; }
+      if (co.aan && co.rol === 'host' && !co.lock) hostZend(dt);
+    }
+    tekenArena();
+    if (!rafId) rafId = requestAnimationFrame(tik);
+  }
+  /* een stap van de motor: in de pas eerst de opdrachten van deze stap */
+  function doeStap(){
+    var dt = STAP;
+    if (co.aan && co.lock){
+      co.tikken++;
+      var opdr = co.rol === 'host' ? co.inbox.splice(0) : (co.inTicks[co.tikken] || []);
+      opdr.forEach(function(c){ voerUit(c); });
+      if (co.rol === 'host') co.log[co.tikken] = opdr; else delete co.inTicks[co.tikken];
+    }
     botTik(dt);
-    if (co.aan && co.rol === 'gast') gastTik(dt);
-    else if (fase === 'ronde' && !pauze) stap(dt);
+    if (fase === 'ronde' && !pauze) stap(dt);
     else if (fase !== 'ronde') { /* de deeltjes lopen nog even uit */
       pluis.forEach(function(p){ p.leven -= dt; p.x += p.vx * dt; p.y += p.vy * dt; });
       pluis = pluis.filter(function(p){ return p.leven > 0; });
       cijfers.forEach(function(c){ c.leven -= dt; c.y -= 30 * dt; });
       cijfers = cijfers.filter(function(c){ return c.leven > 0; });
     }
-    if (co.aan && co.rol === 'host') hostZend(dt);
-    tekenArena();
-    if (!rafId) rafId = requestAnimationFrame(tik);
+    if (co.aan && co.lock){
+      if (co.rol === 'host'){ eigenInvoerNaarPas(); lockNaStap(); }
+      else {
+        var h = co.hashes[co.tikken];
+        if (h !== undefined){ delete co.hashes[co.tikken]; if (h !== vingerafdruk()) valTerug(); }
+      }
+    }
+  }
+  /* De eigen toetsen gaan als opdracht de pas in, alleen als er iets verandert;
+     met een vinger op het scherm verandert de richting steeds een beetje, dus
+     dan hoogstens tien keer per seconde. */
+  function eigenInvoerNaarPas(){
+    var inv = eigenInvoer();
+    var sleutel = inv.dx.toFixed(2) + ',' + inv.dy.toFixed(2);
+    if (sleutel === co.laatsteZend) return;
+    var nu = performance.now();
+    if (wijs && co.laatsteZendTijd && nu - co.laatsteZendTijd < 100) return;
+    co.laatsteZend = sleutel; co.laatsteZendTijd = nu;
+    opdracht({ k:'in', dx:inv.dx, dy:inv.dy });
+  }
+  /* Wat een opdracht doet, bij allebei hetzelfde. 'wie' zegt van welke speler
+     hij komt: h voor de gastheer, g voor de gast. */
+  function voerUit(c){
+    if (!c) return;
+    var mij = vanMij(c);
+    if (c.k === 'in'){
+      var inv = { dx:Math.max(-1, Math.min(1, +c.dx || 0)), dy:Math.max(-1, Math.min(1, +c.dy || 0)) };
+      if (mij) co.mijnIn = inv; else if (maat) maat.in = inv;
+    } else if (c.k === 'dash'){
+      if (fase === 'ronde' && !pauze){ if (mij) ontwijkMet(sp); else if (maat) ontwijkMet(maat.sp); }
+    } else if (c.k === 'klaar'){
+      if (mij) co.klaar = true;
+      else { zetMaatStats(c.s); if (c.hp !== undefined && maat) maat.hp = Math.max(1, Math.min(maat.maxHp, Math.round(+c.hp) || 1)); co.maatKlaar = true; }
+      if (co.klaar && co.maatKlaar) volgendeRonde(); else tekenZij();
+    } else if (c.k === 'pauze'){
+      pauze = !!c.aan;
+      document.getElementById('pauzeBtn').textContent = pauze ? 'Verder' : 'Pauze';
+      document.getElementById('arenatip').textContent = pauze ? (co.rol === 'host' ? 'Pauze. Druk op P of Escape om verder te gaan.' : 'Je maat heeft gepauzeerd.') : 'Verder.';
+    }
+  }
+  /* de gastheer bevestigt om de twee stappen welke opdrachten erin zaten, met om de zestig stappen een vingerafdruk */
+  function lockNaStap(nu){
+    var k = co.tikken;
+    if (!nu && k % 2) return;
+    var m = { k:'tk', n:k, in:[co.log[k - 1] || [], co.log[k] || []], eind:fase === 'einde' ? 1 : undefined };
+    delete co.log[k - 1]; delete co.log[k];
+    if (k % 60 === 0) m.h = vingerafdruk();
+    zendNet(m);
+  }
+  /* De maat: per beeld zoveel stappen als de tijd vraagt, maar nooit verder
+     dan wat de gastheer bevestigd heeft min een voorraad. Komt hij zonder
+     voorraad te zitten, dan houdt hij voortaan meer aan. */
+  function gastStap(){
+    if (!co.opzet) return;
+    /* De maat wil een voorraad van 'reserve' bevestigde stappen achter de hand
+       houden. Zit hij eronder, dan loopt hij een fractie langzamer; zit hij er
+       ruim boven, een fractie sneller. Zo blijft hij op de gewenste afstand
+       zonder ooit een beeld over te slaan. Alleen als er echt niets meer
+       bevestigd is (een hik in de verbinding) staat hij stil, en dan houdt hij
+       voortaan wat meer voorraad aan. */
+    var buffer = co.bevestigd - co.tikken, doel = co.eind ? 0 : co.reserve;
+    /* de tijd loopt hier acht procent langzamer of sneller tot de voorraad klopt */
+    if (!co.eind && co.laatsteDt){ co.rest += co.laatsteDt * (buffer < doel ? -0.08 : buffer > doel + 6 ? 0.08 : 0); if (co.rest < 0) co.rest = 0; }
+    var gedaan = 0, nu = performance.now();
+    while (co.rest >= STAP && gedaan < 4 && co.tikken < co.bevestigd){ co.rest -= STAP; doeStap(); gedaan++; }
+    if (gedaan) co.laatsteStap = nu;
+    else if (co.rest >= STAP && co.bevestigd > 0 && !co.eind && co.laatsteStap && nu - co.laatsteStap > 150 && nu - (co.reserveTijd || 0) > 3000){
+      co.reserve = Math.min(20, co.reserve + 2); co.reserveTijd = nu;
+    }
+    if (gedaan === 0 && co.tikken >= co.bevestigd) co.rest = Math.min(co.rest, 2 * STAP);
+    eigenInvoerNaarPas();
+  }
+  function valTerug(){
+    if (!co.lock) return;
+    co.lock = false;
+    if (co.rol === 'host'){ co.inbox.splice(0).forEach(voerUit); co.laatsteFase = ''; co.zendKlok = 0; }
+    else { zendNet({ k:'val' }); co.zendKlok = 0; co.laatsteInvoer = ''; }
+    document.getElementById('arenatip').textContent = 'Even uit de pas geraakt; de gastheer stuurt de arena nu door.';
   }
 
   /* ---------- de spelers als records ----------
@@ -2514,6 +2656,10 @@ const ICONEN = {
              munt:function(w){ maat.munten += w; }, geveld:function(){ maat.geveld++; } };
   }
   function spelersNu(){
+    if (co.aan && co.lock && maat){
+      /* eerst de gastheer, dan de gast, bij allebei dezelfde volgorde */
+      return co.rol === 'host' ? [ikRecord(co.mijnIn), maatRecord()] : [maatRecord(), ikRecord(co.mijnIn)];
+    }
     var lijst = [ikRecord(eigenInvoer())];
     if (co.aan && co.rol === 'host' && maat) lijst.push(maatRecord());
     return lijst;
@@ -2526,7 +2672,7 @@ const ICONEN = {
       s.x += dx * P.stats.snel * dt; s.y += dy * P.stats.snel * dt;
       s.loopt = true; s.dx = dx; s.dy = dy;            /* de laatste looprichting, voor het ontwijken */
     } else s.loopt = false;
-    if (!P.eigen && maat && maat.dashVraag){ maat.dashVraag = false; ontwijkMet(s); }
+    if (!P.eigen && maat && maat.dashVraag && !co.lock){ maat.dashVraag = false; ontwijkMet(s); }
     /* de sprong: kort en hard, met een spoor erachter */
     if (s.dashKlok > 0) s.dashKlok -= dt;
     if (s.dash > 0){
@@ -2671,10 +2817,10 @@ const ICONEN = {
     if (f.hp <= 0){
       if (P) P.geveld(); else geveld++;
       for (var i = 0; i < 7; i++){
-        var hk = Math.random() * Math.PI * 2, sn = 40 + Math.random() * 90;
+        var hk = toeval() * Math.PI * 2, sn = 40 + toeval() * 90;
         pluis.push({ x:f.x, y:f.y, vx:Math.cos(hk) * sn, vy:Math.sin(hk) * sn, leven:0.45, kleur:f.soort.kleur });
       }
-      if (f.baas || Math.random() < MUNT_VAL){
+      if (f.baas || toeval() < MUNT_VAL){
         munt.push({ x:f.x, y:f.y, waarde:f.baas ? 25 + ronde * 3 : 2 + Math.floor(ronde / 3), leven:12 });
       }
     }
@@ -2718,6 +2864,12 @@ const ICONEN = {
   }
   function hostOntvang(d){
     if (!maat || !d) return;
+    if (co.lock){
+      if (d.k === 'in' && d.c && typeof d.c.k === 'string' && d.c.k !== 'in' && d.c.k !== 'pauze'){ d.c.wie = 'g'; co.inbox.push(d.c); }
+      else if (d.k === 'in' && d.c && d.c.k === 'in'){ d.c.wie = 'g'; co.inbox.push(d.c); }
+      else if (d.k === 'val') valTerug();
+      return;
+    }
     if (d.k === 'in'){ maat.in.dx = Math.max(-1, Math.min(1, +d.dx || 0)); maat.in.dy = Math.max(-1, Math.min(1, +d.dy || 0)); if (d.dash) maat.dashVraag = true; }
     else if (d.k === 'stats'){ zetMaatStats(d.s); }
     else if (d.k === 'klaar'){
@@ -2746,7 +2898,21 @@ const ICONEN = {
   }
   function gastOntvang(d){
     if (!d) return;
-    if (d.k === 'st') pasStandToe(d);
+    if (d.k === 'op'){
+      co.opzet = d;
+      if (co.wachtOp){ co.wachtOp = false; if (!document.getElementById('scherm-start').classList.contains('hide') && vak) begin(); }
+      return;
+    }
+    if (d.k === 'tk'){
+      var nr = d.n | 0, lijst = d.in || [];
+      if (nr <= co.bevestigd) return;
+      lijst.forEach(function(l, i){ var idx = nr - (lijst.length - 1) + i; if (idx > co.bevestigd) co.inTicks[idx] = l || []; });
+      co.bevestigd = nr;
+      if (d.h) co.hashes[nr] = d.h;
+      if (d.eind) co.eind = true;
+      return;
+    }
+    if (d.k === 'st'){ if (co.lock) valTerug(); pasStandToe(d); }
     else if (d.k === 'klaar'){ co.maatKlaar = true; tekenZij(); }
   }
   function pasSpelers(d){
@@ -2783,6 +2949,7 @@ const ICONEN = {
   /* de knop 'Ronde starten': samen pas als allebei zover zijn */
   function startVolgende(){
     if (!co.aan){ volgendeRonde(); return; }
+    if (co.lock){ if (!co.klaar){ opdracht({ k:'klaar', s:mijnStats(), hp:hp }); document.getElementById('arenatip').textContent = 'Wachten op je maat…'; } return; }
     co.klaar = true;
     if (co.rol === 'gast'){ zendNet({ k:'klaar', s:mijnStats(), hp:hp }); tekenZij(); return; }
     zendNet({ k:'klaar' });
@@ -2792,7 +2959,11 @@ const ICONEN = {
   /* ---------- de vragenfase ---------- */
   function naarVragen(){
     /* wat nog op de grond ligt is van jou: de ronde is gewonnen; samen delen jullie het */
-    if (!(co.aan && co.rol === 'gast')){
+    if (co.aan && co.lock && maat){
+      var rest0 = 0; munt.forEach(function(m){ rest0 += m.waarde; });
+      var hostDeel = Math.ceil(rest0 / 2), gastDeel = Math.floor(rest0 / 2);
+      munten += co.rol === 'host' ? hostDeel : gastDeel; maat.munten += co.rol === 'host' ? gastDeel : hostDeel;
+    } else if (!(co.aan && co.rol === 'gast')){
       var rest = 0; munt.forEach(function(m){ rest += m.waarde; });
       if (co.aan && maat){ munten += Math.ceil(rest / 2); maat.munten += Math.floor(rest / 2); } else munten += rest;
     }
@@ -3025,7 +3196,8 @@ const ICONEN = {
     if (fase === 'einde') return;
     botLog('einde');
     fase = 'einde';
-    if (co.aan && co.rol === 'host') zendNet(standPakket());
+    if (co.aan && co.rol === 'host' && !co.lock) zendNet(standPakket());
+    if (co.aan && co.lock && co.rol === 'host') lockNaStap(true);
     if (window.STRIJD) STRIJD.af({ ronde:ronde, punten:geveld });
     loopt = false; pauze = false;
     document.getElementById('scherm-spel').classList.add('hide');
@@ -3096,11 +3268,11 @@ const ICONEN = {
       samen: true,   /* in een duel spelen twee in dezelfde arena */
       start: function(info){
         if (info && info.duel){
-          co.aan = true; co.rol = info.rol === 'host' ? 'host' : 'gast';
+          co.aan = true; co.lock = true; co.rol = info.rol === 'host' ? 'host' : 'gast';
           maat = nieuweMaat(info.maat || 'je maat');
         }
+        if (co.aan && co.rol === 'gast' && !co.opzet){ co.wachtOp = true; return; }
         if (!document.getElementById('scherm-start').classList.contains('hide') && vak) begin();
-        if (co.aan && co.rol === 'gast') zendNet({ k:'stats', s:mijnStats() });
       },
       maatNaam: function(naam){ if (maat && naam) maat.naam = naam; },
       net: function(d){ if (!co.aan) return; if (co.rol === 'host') hostOntvang(d); else gastOntvang(d); },

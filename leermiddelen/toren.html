@@ -7825,9 +7825,8 @@ function rekenVraag(rang, toegestaan) {
       if (h !== undefined){ delete co.hashes[co.tikken]; if (h !== vingerafdruk()) valTerug(); }
       return;
     }
-    if (!nu && co.tikken % 2) return;
-    var k = co.tikken, m = { k:'tk', n:k, in:[co.log[k - 1] || [], co.log[k] || []], va:tempo * (snel ? 2 : 1) };
-    delete co.log[k - 1]; delete co.log[k];
+    var k = co.tikken, m = { k:'tk', n:k, in:[co.log[k] || []], va:tempo * (snel ? 2 : 1) };
+    delete co.log[k];
     if (k % 20 === 0) m.h = vingerafdruk();
     var vl = Object.keys(SOORTEN).filter(isVrij).join(',');
     if (vl !== co.vlLaatst){ co.vlLaatst = vl; m.vl = vl.split(','); }
@@ -7844,9 +7843,8 @@ function rekenVraag(rang, toegestaan) {
     var basis = Math.max(1, Math.min(3, Math.round(co.vaart) || 1));
     var mag = co.bevestigd - co.reserve - co.tikken;
     var doen = mag >= basis + 4 ? basis + 1 : mag >= basis ? basis : mag >= 1 ? 1 : 0, gedaan = 0;
-    if (!doen && co.bevestigd > 0 && !pauze){
-      if (++co.stil >= 3 && co.reserve < 8){ co.reserve++; co.stil = 0; }
-    } else co.stil = 0;
+    /* elke hapering betekent voortaan een tik meer voorraad, tot een halve seconde */
+    if (!doen && co.bevestigd > 0 && !pauze && co.reserve < 12) co.reserve++;
     while (gedaan < doen){
       tekenUit = (gedaan < doen - 1);
       tik(); gedaan++;
@@ -8002,9 +8000,18 @@ function rekenVraag(rang, toegestaan) {
   /* De klok draait altijd op zestig milliseconden, maar loopt bij een hoger
      tempo meerdere stappen per beurt door. Dat is eerlijker dan het interval
      verkorten: de natuurkunde van het spel blijft dan precies hetzelfde. */
+  /* De klok tikt vanuit een werker: die wordt, anders dan een timer in de
+     pagina, niet afgeremd zodra het tabblad niet zichtbaar is. Voor wie alleen
+     speelt maakt dat niets uit; voor de gastheer van een gedeeld bord wel,
+     want zijn maat wacht op elke tik. Lukt de werker niet, dan een gewone timer. */
+  var klokWerker = null, klokNr = 0, klokStap = null;
+  try {
+    klokWerker = new Worker(URL.createObjectURL(new Blob(['setInterval(function(){ postMessage(0); }, 60);'], { type:'text/javascript' })));
+    klokWerker.onmessage = function(){ if (klok && klokStap) klokStap(); };
+  } catch (e){ klokWerker = null; }
   function startKlok(){
     if (klok) clearInterval(klok);
-    klok = setInterval(function(){
+    klokStap = function(){
       co.slagen++;
       var stappen = tempo * (snel ? 2 : 1);
       for (var i = 0; i < stappen; i++){
@@ -8013,7 +8020,9 @@ function rekenVraag(rang, toegestaan) {
         if (!klok) break;          /* het spel kan tijdens deze lus eindigen */
       }
       tekenUit = false;
-    }, 60);
+    };
+    /* met de werker is 'klok' alleen een kenmerk (groot getal, zodat clearInterval nooit een echte timer raakt) */
+    klok = klokWerker ? 1000000000 + (++klokNr) : setInterval(klokStap, 60);
   }
 
   function inSpel(){
@@ -8051,7 +8060,7 @@ function rekenVraag(rang, toegestaan) {
       co.seed = Math.floor(Math.random() * 4294967296);
       zaai(co.seed);
     }
-    co.tikken = 0; co.inbox = []; co.log = {}; co.inTicks = {}; co.bevestigd = 0; co.hashes = {}; co.reserve = 2; co.stil = 0; co.vlLaatst = '';
+    co.tikken = 0; co.inbox = []; co.log = {}; co.inTicks = {}; co.bevestigd = 0; co.hashes = {}; co.reserve = 4; co.stil = 0; co.vlLaatst = '';
     baasSpook = 1; baasBalkIn = 0; baasBalk = null; baasLaatst = null;
     vijanden = []; torens = []; schoten = []; pot = null; vrienden = []; vliegers = []; lavas = [];
     vrijBijStart = { tonkla:tonklaVrij, aap:aapVrij, eiland:eilandVrij, archipel:archipelVrij, vulkaan:vulkaanVrij };
