@@ -2667,7 +2667,10 @@ function rekenVraag(rang, toegestaan) {
      uit; zijn maat stuurt bouwacties en de munten van zijn eigen goede
      antwoorden over de kamer, en tekent acht keer per seconde de stand die
      terugkomt. Munten, levens en torens zijn van allebei. */
-  var co = { aan:false, rol:null, maat:'', zendKlok:0, gastKlok:null, gastLaatst:0, gehad:false, vrij:null };
+  var co = { aan:false, rol:null, maat:'', zendKlok:0, gastKlok:null, gastLaatst:0, gehad:false, vrij:null, laatstZend:0, laatstePakket:0, vaart:1, pauze:false,
+             buf:[], verschil:null, getoond:null, tikken:0 };
+  var UITSTEL = 220;   /* ms: hoe ver de maat achter de gastheer aan kijkt, zodat een laat pakket niet opvalt */
+  var vijandTeller = 0;
   var torenTeller = 0;
   function zendNet(d){ if (window.STRIJD && STRIJD.stuurNet) STRIJD.stuurNet(d); }
   /* bank.ronde is de ronde waarvan de fouten nu komen. Roep je de volgende er
@@ -6404,7 +6407,7 @@ function rekenVraag(rang, toegestaan) {
       s += '<text x="' + cx + '" y="' + (py + 104) +
         '" font-size="14" fill="#5b6480" text-anchor="middle">Alles blijft staan: je torens, je munten en je ronde.</text>';
       s += '<text x="' + cx + '" y="' + (py + 125) +
-        '" font-size="13" fill="#5b6480" text-anchor="middle">Klik boven op Verder spelen, of druk op P of Escape.</text>';
+        '" font-size="13" fill="#5b6480" text-anchor="middle">' + (co.aan && co.rol === 'gast' ? 'Je maat heeft gepauzeerd; het gaat verder zodra hij verder speelt.' : 'Klik boven op Verder spelen, of druk op P of Escape.') + '</text>';
     }
     s += '</svg>';
     var vak2 = document.getElementById('bordvak');
@@ -7378,7 +7381,7 @@ function rekenVraag(rang, toegestaan) {
      paar kilobyte in plaats van tientallen, en dat scheelt op een telefoon op
      het schoolnetwerk het verschil tussen vloeiend en hakkelen. */
   var VELDEN = {
-    v:['d','hp','maxHp','snelheid','traag','ijs','onder','soort','kleur','mark','schild','schildOp','camo','dik','brand','flits','fase','fasen','baas','baassoort','mega','mini','vorm','dood'],
+    v:['id','d','hp','maxHp','snelheid','traag','ijs','onder','soort','kleur','mark','schild','schildOp','camo','dik','brand','flits','fase','fasen','baas','baassoort','mega','mini','vorm','dood'],
     t:['id','x','y','soort','niveau','kracht','loop','mikt','uit','heet','terugslag','golfKlok'],
     vl:['fase','laad','laadVol'],
     s:['x','y','hoek','len','leven','kleur','dik','laser','banaan','boot'],
@@ -7407,7 +7410,8 @@ function rekenVraag(rang, toegestaan) {
     });
   }
   function standPakket(f){
-    return { k:'st', f:f || 'spel', th:thema.id, ki:KAARTEN.indexOf(kaart),
+    vijanden.forEach(function(e){ if (!e.id) e.id = ++vijandTeller; });
+    return { k:'st', f:f || 'spel', ts:co.tikken * 60, th:thema.id, ki:KAARTEN.indexOf(kaart), pz:pauze, va:tempo * (snel ? 2 : 1),
       gz:gekozen(), vb:vrijBijStart, vl:Object.keys(SOORTEN).filter(isVrij),
       g:{ munten:bank.munten, leven:bank.leven, ronde:bank.ronde, wachtrij:wachtrij, rondePauze:rondePauze, slots:slots, penningen:penningen, haast:haast,
           baasBalkIn:baasBalkIn, baasSpook:baasSpook, baasAlarm:baasAlarm, alarmMini:alarmMini, klap:klap, klapAantal:klapAantal, rondeGehaald:rondeGehaald,
@@ -7422,9 +7426,9 @@ function rekenVraag(rang, toegestaan) {
       pl:inpak(pluis.slice(-60), VELDEN.pl) };
   }
   function hostZend(dt){
-    co.zendKlok -= dt;
-    if (co.zendKlok > 0) return;
-    co.zendKlok = 0.125;
+    var nu = Date.now();
+    if (nu - co.laatstZend < 110) return;
+    co.laatstZend = nu;
     zendNet(standPakket());
   }
   /* wat de maat vraagt, met dezelfde regels als op het bord zelf */
@@ -7474,7 +7478,7 @@ function rekenVraag(rang, toegestaan) {
     if (klok){ clearInterval(klok); klok = null; }
     ['snelBtn', 'pauzeBtn'].forEach(function(id){ var k = document.getElementById(id); if (k) k.classList.add('hide'); });
     if (co.gastKlok) clearInterval(co.gastKlok);
-    co.gehad = false; co.vrij = null; co.gastLaatst = Date.now();
+    co.gehad = false; co.vrij = null; co.gastLaatst = Date.now(); co.buf = []; co.verschil = null; co.getoond = null;
     co.gastKlok = setInterval(function(){
       var nu = Date.now(), dt = Math.min(0.2, (nu - co.gastLaatst) / 1000);
       co.gastLaatst = nu;
@@ -7487,9 +7491,49 @@ function rekenVraag(rang, toegestaan) {
   /* Tussen twee standen van de gastheer in loopt het bord hier zelf even door,
      met dezelfde snelheden als bij hem; de volgende stand zet alles weer recht.
      Zo beweegt alles vloeiend in plaats van acht keer per seconde te springen. */
+  /* Een stand komt niet meteen op het bord. De maat bewaart ze en kijkt een
+     vijfde seconde achter de gastheer aan: dan heeft hij bijna altijd ook al de
+     stand daarna binnen, en kan hij elke fout precies tussen die twee in
+     zetten. Een pakket dat wat later binnenkomt valt zo niet op, en de fouten
+     lopen even gelijkmatig als bij de gastheer, ook als die op 2x speelt. */
+  function gastOntvang(d){
+    if (!d || d.k !== 'st') return;
+    if (d.f === 'einde'){ co.buf = []; pasStandToe(d); return; }
+    var aan = Date.now(), ts = +d.ts || aan;
+    /* De gastheer stuurt zijn tiknummer mee (zestig ms per tik), niet zijn
+       kloktijd: zijn fouten zetten per tik een vaste stap, dus zo staat elke
+       stand op een vaste plek in de tijd. Het verschil met onze klok: een
+       sneller pakket telt meteen (dat had de minste vertraging), omhoog gaat
+       het langzaam mee (de tik loopt iets langzamer dan de klok), en na een
+       pauze of een hik springt het bij. */
+    var lat = aan - ts;
+    if (co.verschil === null || lat < co.verschil || lat - co.verschil > 150) co.verschil = lat;
+    else co.verschil += (lat - co.verschil) * 0.05;
+    d.ts = ts;
+    co.buf.push(d);
+    if (co.buf.length > 12) co.buf.shift();
+    if (!co.gehad) pasStandToe(d);     /* de eerste stand meteen, dan staat er tenminste iets */
+  }
   function gastLoopt(dt){
+    if (co.verschil === null) return;
+    var nu = Date.now(), tr = nu - co.verschil - UITSTEL;
+    var A = null, B = null;
+    co.buf.forEach(function(q){ if (q.ts <= tr) A = q; else if (!B) B = q; });
+    if (A && A !== co.getoond){ pasStandToe(A); co.getoond = A; }
+    /* wat ouder is dan A hoeft niet meer bewaard */
+    co.buf = co.buf.filter(function(q){ return q.ts >= (A ? A.ts : 0); });
+    if (!A || co.pauze) return;
+    if (B){
+      var deel = Math.max(0, Math.min(1, (tr - A.ts) / Math.max(1, B.ts - A.ts)));
+      var bij = {}; (B.v || []).forEach(function(r){ bij[r[0]] = r[1]; });
+      vijanden.forEach(function(e){
+        if (bij[e.id] !== undefined) e.d = e.dA + (bij[e.id] - e.dA) * deel;
+      });
+    } else if (tr - A.ts > 400) return;   /* al even niets binnen: dan blijft alles staan */
+    dt *= co.vaart;
     vijanden.forEach(function(e){
       if (e.dood || e.hp <= 0) return;
+      if (B && bij[e.id] !== undefined) return;
       e.d += e.snelheid * (e.traag > 0 ? (e.ijs ? 0.22 : 0.45) : 1) * (e.onder > 0 ? 1.3 : 1) * dt;
     });
     cijfers.forEach(function(c){ c.leven -= dt; c.y -= 26 * dt; });
@@ -7514,7 +7558,16 @@ function rekenVraag(rang, toegestaan) {
     if (d.vb) vrijBijStart = d.vb;
     if (d.vl) co.vrij = d.vl;
     baasBalk = d.bb || null;
-    vijanden = uitpak(d.v, VELDEN.v); schoten = uitpak(d.s, VELDEN.s); kogels = uitpak(d.ko, VELDEN.ko); golven = uitpak(d.go, VELDEN.go);
+    co.laatstePakket = Date.now();
+    co.vaart = d.va > 0 ? d.va : 1;
+    if (!!d.pz !== co.pauze){
+      co.pauze = pauze = !!d.pz;
+      document.body.classList.toggle('gepauzeerd', pauze);
+      if (!pauze) sleep = null;
+    }
+    vijanden = uitpak(d.v, VELDEN.v);
+    vijanden.forEach(function(e){ e.dA = e.d; });
+    schoten = uitpak(d.s, VELDEN.s); kogels = uitpak(d.ko, VELDEN.ko); golven = uitpak(d.go, VELDEN.go);
     cijfers = uitpak(d.ci, VELDEN.ci); wegdingen = uitpak(d.w, VELDEN.w); lavas = uitpak(d.la, VELDEN.la); pluis = uitpak(d.pl, VELDEN.pl);
     /* torens: bestaande objecten hergebruiken, zodat het menu en het slepen blijven kloppen */
     var oud = {}; torens.forEach(function(t){ oud[t.id] = t; });
@@ -7547,6 +7600,7 @@ function rekenVraag(rang, toegestaan) {
   function startKlok(){
     if (klok) clearInterval(klok);
     klok = setInterval(function(){
+      co.tikken++;
       var stappen = tempo * (snel ? 2 : 1);
       for (var i = 0; i < stappen; i++){
         tekenUit = (i < stappen - 1);
@@ -7561,6 +7615,7 @@ function rekenVraag(rang, toegestaan) {
     return !document.getElementById('scherm-spel').classList.contains('hide');
   }
   function zetPauze(aan){
+    if (co.aan && co.rol === 'gast') return;
     aan = !!aan;
     if (!inSpel()) aan = false;
     if (aan === pauze) return;
@@ -7577,6 +7632,7 @@ function rekenVraag(rang, toegestaan) {
       startKlok();
     }
     tekenVraag(); tekenMeters(); tekenBord();
+    if (co.aan && co.rol === 'host') zendNet(standPakket());
   }
 
   /* ---------- beginnen en eindigen ---------- */
@@ -8114,7 +8170,7 @@ function rekenVraag(rang, toegestaan) {
         if (!inSpel() && vak) begin();
       },
       maatNaam: function(naam){ if (naam) co.maat = naam; },
-      net: function(d){ if (!co.aan) return; if (co.rol === 'host') hostOntvang(d); else pasStandToe(d); },
+      net: function(d){ if (!co.aan) return; if (co.rol === 'host') hostOntvang(d); else gastOntvang(d); },
       stand: function(){ return { ronde:bank.ronde, gehaald:rondeGehaald, leven:bank.leven, punten:goedAantal }; },
       aanval: function(n, van){
         if (co.aan || !inSpel()) return;
