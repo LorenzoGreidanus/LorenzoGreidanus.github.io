@@ -28,3 +28,11 @@
   if (donkerMQ.addEventListener) donkerMQ.addEventListener('change', bijwerken);
   bijwerken();
 })();
+
+/* De leeromgeving als app: de service worker (sw.js) bewaart de spellen die
+   je geopend hebt, zodat ze ook zonder verbinding starten, en maakt de site
+   installeerbaar op het beginscherm. Alleen op de echte site en bij lokaal
+   testen; de spelkamers gaan er nooit doorheen. */
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname))){
+  addEventListener('load', function(){ navigator.serviceWorker.register('/sw.js').catch(function(){}); });
+}
