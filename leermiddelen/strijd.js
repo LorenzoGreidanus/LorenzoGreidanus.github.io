@@ -250,9 +250,9 @@ window.STRIJD = (function(){
       '<p>' + (bord
         ? 'Jullie bouwen samen op hetzelfde bord, allebei op je eigen scherm, en verdedigen dezelfde school. Munten, levens en torens zijn van jullie samen; elk goed antwoord van allebei vult de kas.'
         : 'Jullie staan samen in één arena, allebei op je eigen scherm, tegen dezelfde fouten. Wie neergaat staat de volgende ronde weer op; pas als jullie allebei liggen is het voorbij.') + '</p>' +
-      '<div class="rij"><input type="text" id="duelNaam" maxlength="16" placeholder="Je bijnaam" autocomplete="nickname" value="' + schoon(bewaardeNaam()) + '">' +
+      '<div class="rij"><input type="text" id="duelNaam" aria-label="Je bijnaam" maxlength="16" placeholder="Je bijnaam" autocomplete="nickname" value="' + schoon(bewaardeNaam()) + '">' +
       '<button type="button" id="duelMaak">' + (samenSpel ? 'Maak een kamer' : 'Maak een duel') + '</button></div>' +
-      '<div class="rij" style="margin-top:8px"><input type="text" class="code" id="duelCode" maxlength="4" placeholder="CODE" autocapitalize="characters" autocomplete="off">' +
+      '<div class="rij" style="margin-top:8px"><input type="text" class="code" id="duelCode" aria-label="Code van je vriend" maxlength="4" placeholder="CODE" autocapitalize="characters" autocomplete="off">' +
       '<button type="button" class="los" id="duelDoe">Doe mee met een code</button></div>' +
       '<div class="fout" id="duelFout"></div></div>';
     var fout = document.getElementById('duelFout');
