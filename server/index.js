@@ -13,6 +13,7 @@
 export { Kamer } from "./kamer.js";
 export { Klassement } from "./klassement.js";
 export { Poort } from "./poort.js";
+export { Sets } from "./sets.js";
 const KLASSEMENTEN = { toren: true, zwaard: true };
 
 /* Een browser stuurt bij elk POST en bij elke WebSocket mee vanaf welke site
@@ -89,6 +90,18 @@ export default {
         return stub.fetch("https://klassement/zet", { method: "POST", body: JSON.stringify(inz) });
       }
       return stub.fetch("https://klassement/lijst");
+    }
+
+    /* eigen vragensets van de Klasquiz: bewaren onder een code, en ophalen */
+    if (p === "/api/set" && req.method === "POST"){
+      if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
+      if (!await magDoor(env, req, "set", 10, 600)) return json({ fout: "even wachten met nieuwe sets" }, 429);
+      let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldige set" }, 400); }
+      return env.SETS.get(env.SETS.idFromName("sets")).fetch("https://sets/zet", { method: "POST", body: JSON.stringify(inz || {}) });
+    }
+    const sm = p.match(/^\/api\/set\/([A-Za-z0-9]{6})\/?$/);
+    if (sm && req.method === "GET"){
+      return env.SETS.get(env.SETS.idFromName("sets")).fetch("https://sets/haal?code=" + sm[1].toUpperCase());
     }
 
     if (p === "/api/kamer" && req.method === "POST"){

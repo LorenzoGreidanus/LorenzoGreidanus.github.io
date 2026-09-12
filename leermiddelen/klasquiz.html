@@ -208,9 +208,40 @@ button.optie:disabled{cursor:default;transform:none}
     <div class="kaart">
       <p class="eyebrow">docent</p>
       <h2>Open een kamer</h2>
+      <div class="stap"><b>Vragen</b><div class="chips" id="bronKeuze"><button type="button" class="on" data-bron="bank">Uit de vragenbank</button><button type="button" data-bron="eigen">Eigen vragen</button></div></div>
+      <div id="bankVak">
       <div class="stap"><b>Vak</b><div class="chips" id="vakken"></div></div>
       <div class="stap"><b>Onderdeel</b><div class="chips" id="onderdelen"></div></div>
       <div class="stap"><b>Niveau</b><div class="chips" id="niveaus"></div></div>
+      </div>
+      <div id="eigenVak" class="hide">
+        <div class="stap">
+          <b>Je eigen vragen</b>
+          <p class="tip" style="margin:4px 0 8px">Per vraag: eerst de vraag, dan de antwoorden onder elkaar met een sterretje voor het goede antwoord, en eventueel een regel die begint met <i>uitleg:</i>. Een lege regel tussen twee vragen. Twee tot vier antwoorden per vraag.</p>
+          <textarea id="eigenTekst" class="veld" rows="10" spellcheck="false" placeholder="In welk jaar begon de Tachtigjarige Oorlog?
+* 1568
+1648
+1588
+1600
+uitleg: De Opstand begon in 1568 en eindigde met de Vrede van Munster in 1648.
+
+Wie schilderde de Nachtwacht?
+* Rembrandt
+Vermeer
+Frans Hals"></textarea>
+          <p class="tip" id="eigenUit" style="margin-top:6px"></p>
+        </div>
+        <div class="stap">
+          <b>Bewaren en delen</b>
+          <div class="rij" style="flex-wrap:wrap;gap:8px;align-items:center">
+            <input id="setNaam" class="veld" style="width:auto;min-width:160px" maxlength="60" placeholder="Naam van de set (bijv. 2H tijdvak 5)">
+            <button class="knop" id="setBewaar" type="button">Bewaar als set</button>
+            <input id="setCode" class="veld code-veld" style="width:auto;max-width:150px" maxlength="6" autocapitalize="characters" spellcheck="false" placeholder="CODE">
+            <button class="knop" id="setLaad" type="button">Laden</button>
+          </div>
+          <p class="tip" id="setUit" style="margin-top:6px">Een set krijgt een code van zes tekens; daarmee haal je hem op elk apparaat weer op, een half jaar lang. Wat je hier typt blijft ook op dit apparaat bewaard.</p>
+        </div>
+      </div>
       <div class="stap">
         <b>Aantal vragen en tijd per vraag</b>
         <div class="rij">
@@ -468,20 +499,96 @@ button.optie:disabled{cursor:default;transform:none}
     return uit;
   }
 
+  /* ---------- eigen vragen ----------
+     Het formaat is bewust simpel: een vraag, daaronder de antwoorden, een
+     sterretje voor het goede, een lege regel ertussen. Wat de docent typt
+     blijft op dit apparaat staan; met een set-code kan hij het overal ophalen. */
+  var bron = 'bank';
+  function leesEigen(tekst){
+    var uit = [], fouten = [];
+    String(tekst || '').replace(/\r/g, '').split(/\n\s*\n+/).forEach(function(blok, i){
+      var regels = blok.split('\n').map(function(r){ return r.trim(); }).filter(Boolean);
+      if (!regels.length) return;
+      var v = regels[0], o = [], g = -1, u = '';
+      regels.slice(1).forEach(function(r){
+        var m = /^uitleg\s*:\s*(.*)$/i.exec(r);
+        if (m){ u = m[1]; return; }
+        var goed = /^\*\s*/.test(r);
+        r = r.replace(/^\*\s*/, '').replace(/^[-\u2022]\s*/, '');
+        if (!r) return;
+        if (goed && g < 0) g = o.length;
+        o.push(r.slice(0, 120));
+      });
+      if (!v || o.length < 2) { fouten.push('Vraag ' + (i + 1) + ': minstens twee antwoorden nodig.'); return; }
+      if (g < 0) { fouten.push('Vraag ' + (i + 1) + ': zet een sterretje voor het goede antwoord.'); return; }
+      if (o.length > 4) { fouten.push('Vraag ' + (i + 1) + ': hoogstens vier antwoorden.'); return; }
+      uit.push({ v:v.slice(0, 300), o:o, g:g, u:u.slice(0, 600), t:'eigen vraag' });
+    });
+    return { vragen:uit, fouten:fouten };
+  }
+  function toonEigen(){
+    var r = leesEigen($('eigenTekst').value);
+    $('eigenUit').textContent = (r.vragen.length ? r.vragen.length + (r.vragen.length === 1 ? ' vraag herkend.' : ' vragen herkend.') : 'Nog geen vragen herkend.') + (r.fouten.length ? ' ' + r.fouten.join(' ') : '');
+    try { localStorage.setItem('lg-quiz-eigen', $('eigenTekst').value); } catch (e){}
+    return r;
+  }
+  try { $('eigenTekst').value = localStorage.getItem('lg-quiz-eigen') || ''; } catch (e){}
+  $('eigenTekst').addEventListener('input', toonEigen);
+  Array.prototype.forEach.call($('bronKeuze').querySelectorAll('button'), function(b){
+    b.addEventListener('click', function(){
+      bron = b.getAttribute('data-bron');
+      Array.prototype.forEach.call($('bronKeuze').querySelectorAll('button'), function(x){ x.classList.toggle('on', x === b); });
+      $('bankVak').classList.toggle('hide', bron === 'eigen');
+      $('eigenVak').classList.toggle('hide', bron !== 'eigen');
+      if (bron === 'eigen') toonEigen();
+    });
+  });
+  $('setBewaar').addEventListener('click', function(){
+    var r = toonEigen();
+    if (!r.vragen.length){ $('setUit').textContent = 'Eerst een paar vragen typen.'; return; }
+    $('setBewaar').disabled = true;
+    fetch('/api/set', { method:'POST', headers:{ 'content-type':'application/json' }, body: JSON.stringify({ naam:$('setNaam').value, tekst:$('eigenTekst').value }) })
+      .then(function(x){ return x.json().then(function(j){ return { ok:x.ok, j:j }; }); })
+      .then(function(x){
+        $('setBewaar').disabled = false;
+        if (!x.ok){ $('setUit').textContent = x.j.fout || 'Bewaren lukte niet.'; return; }
+        $('setCode').value = x.j.code;
+        $('setUit').innerHTML = 'Bewaard. De code is <b>' + schoonHtml(x.j.code) + '</b>: daarmee haal je deze set op elk apparaat op, een half jaar lang.';
+      })
+      .catch(function(){ $('setBewaar').disabled = false; $('setUit').textContent = 'Geen verbinding met de server.'; });
+  });
+  $('setLaad').addEventListener('click', function(){
+    var c = $('setCode').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (c.length !== 6){ $('setUit').textContent = 'Een set-code heeft zes tekens.'; return; }
+    fetch('/api/set/' + c).then(function(x){ return x.json().then(function(j){ return { ok:x.ok, j:j }; }); })
+      .then(function(x){
+        if (!x.ok){ $('setUit').textContent = x.j.fout || 'Geen set gevonden.'; return; }
+        $('eigenTekst').value = x.j.tekst; if (x.j.naam) $('setNaam').value = x.j.naam;
+        toonEigen();
+        $('setUit').textContent = 'Set ' + c + (x.j.naam ? ' (' + x.j.naam + ')' : '') + ' geladen.';
+      })
+      .catch(function(){ $('setUit').textContent = 'Geen verbinding met de server.'; });
+  });
+
   $('openBtn').addEventListener('click', function(){
     var aantal = parseInt($('aantal').value, 10), tijd = parseInt($('tijd').value, 10);
-    var vragen = maakVragen(aantal);
+    var vragen;
+    if (bron === 'eigen'){
+      var eigen = toonEigen();
+      if (eigen.fouten.length){ $('openFout').textContent = eigen.fouten[0]; return; }
+      vragen = eigen.vragen.slice(0, 60).map(shuffleVraag);
+    } else vragen = maakVragen(aantal);
     $('openFout').textContent = '';
-    if (vragen.length < 3){ $('openFout').textContent = 'Te weinig vragen voor deze keuze.'; return; }
+    if (vragen.length < (bron === 'eigen' ? 2 : 3)){ $('openFout').textContent = bron === 'eigen' ? 'Typ minstens twee vragen.' : 'Te weinig vragen voor deze keuze.'; return; }
     $('openBtn').disabled = true;
     fetch('/api/kamer', { method:'POST', headers:{ 'content-type':'application/json' },
-      body: JSON.stringify({ vak:vak, niveau:niveau, onderdeel:onderdeel, tijd:tijd,
+      body: JSON.stringify({ vak:bron === 'eigen' ? 'eigen' : vak, niveau:bron === 'eigen' ? '' : niveau, onderdeel:bron === 'eigen' ? ($('setNaam').value.trim() || 'eigen vragen') : onderdeel, tijd:tijd,
         vragen: vragen.map(function(q){ return { v:q.v, o:q.o, g:q.g, u:q.u, t:q.t, vlag:q.vlag, svg:q.svg }; }) }) })
     .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
     .then(function(x){
       $('openBtn').disabled = false;
       if (!x.ok){ $('openFout').textContent = x.j.fout || 'Het lukte niet om een kamer te openen.'; return; }
-      var host = { code:x.j.code, sleutel:x.j.sleutel, vak:vak, niveau:niveau, onderdeel:onderdeel, aantal:aantal, tijd:tijd };
+      var host = { code:x.j.code, sleutel:x.j.sleutel, vak:bron === 'eigen' ? 'eigen' : vak, niveau:bron === 'eigen' ? '' : niveau, onderdeel:bron === 'eigen' ? ($('setNaam').value.trim() || 'eigen vragen') : onderdeel, aantal:vragen.length, tijd:tijd };
       try { localStorage.setItem('lg-quiz-host', JSON.stringify(host)); } catch (e){}
       wordHost(host);
     })
@@ -542,7 +649,9 @@ button.optie:disabled{cursor:default;transform:none}
     toon('s-host'); hostScherm('h-lobby');
     $('hCode').textContent = h.code;
     $('hLink').textContent = location.host.replace(/^www\./, '') + '/q';
-    $('hOpzet').textContent = naamVan(VAKKEN, h.vak) + ' · ' + (h.onderdeel ? naamVan(ONDERDELEN[h.vak] || [], h.onderdeel) : 'alles door elkaar') +
+    $('hOpzet').textContent = h.vak === 'eigen'
+      ? 'Eigen vragen' + (h.onderdeel ? ' · ' + h.onderdeel : '') + ' · ' + h.aantal + ' vragen · ' + h.tijd + ' s'
+      : naamVan(VAKKEN, h.vak) + ' · ' + (h.onderdeel ? naamVan(ONDERDELEN[h.vak] || [], h.onderdeel) : 'alles door elkaar') +
       ' · ' + naamVan(NIVEAUS, h.niveau) + ' · ' + h.aantal + ' vragen · ' + h.tijd + ' s';
     verbind({ code:h.code, query:'rol=host&sleutel=' + encodeURIComponent(h.sleutel) }, hostBericht);
   }
