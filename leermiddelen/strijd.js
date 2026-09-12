@@ -244,11 +244,11 @@ window.STRIJD = (function(){
   function duelBlok(doelId, spel, keuze){
     var doel = document.getElementById(doelId);
     if (!doel || actief) return;
-    var samenSpel = spel === 'zwaard';
-    doel.innerHTML = '<div class="duelvak"><h3>' + (samenSpel ? 'Samen met een vriend' : 'Tegen een vriend') + '</h3>' +
-      '<p>' + (samenSpel
-        ? 'Jullie staan samen in één arena, allebei op je eigen scherm, tegen dezelfde fouten. Wie neergaat staat de volgende ronde weer op; pas als jullie allebei liggen is het voorbij.'
-        : 'Jullie spelen allebei op je eigen scherm, tegelijk. Vijf goed op rij stuurt een extra fout naar de ander. Wie het langst overleeft wint.') + '</p>' +
+    var samenSpel = true, bord = spel === 'toren';
+    doel.innerHTML = '<div class="duelvak"><h3>Samen met een vriend</h3>' +
+      '<p>' + (bord
+        ? 'Jullie bouwen samen op hetzelfde bord, allebei op je eigen scherm, en verdedigen dezelfde school. Munten, levens en torens zijn van jullie samen; elk goed antwoord van allebei vult de kas.'
+        : 'Jullie staan samen in één arena, allebei op je eigen scherm, tegen dezelfde fouten. Wie neergaat staat de volgende ronde weer op; pas als jullie allebei liggen is het voorbij.') + '</p>' +
       '<div class="rij"><input type="text" id="duelNaam" maxlength="16" placeholder="Je bijnaam" autocomplete="nickname" value="' + schoon(bewaardeNaam()) + '">' +
       '<button type="button" id="duelMaak">' + (samenSpel ? 'Maak een kamer' : 'Maak een duel') + '</button></div>' +
       '<div class="rij" style="margin-top:8px"><input type="text" class="code" id="duelCode" maxlength="4" placeholder="CODE" autocapitalize="characters" autocomplete="off">' +

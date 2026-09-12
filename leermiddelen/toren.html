@@ -2661,6 +2661,15 @@ function rekenVraag(rang, toegestaan) {
   var lavas = [];                                          /* de plassen van de Magmamortier */
   var wachtrij = 5, spawnKlok = 0, rondePauze = 2;
   var bank = { munten:60, leven:12, ronde:1 };
+
+  /* ---------- samen op een bord ----------
+     Twee spelers op hetzelfde bord. De gastheer (co.rol 'host') rekent alles
+     uit; zijn maat stuurt bouwacties en de munten van zijn eigen goede
+     antwoorden over de kamer, en tekent acht keer per seconde de stand die
+     terugkomt. Munten, levens en torens zijn van allebei. */
+  var co = { aan:false, rol:null, maat:'', zendKlok:0, gastKlok:null };
+  var torenTeller = 0;
+  function zendNet(d){ if (window.STRIJD && STRIJD.stuurNet) STRIJD.stuurNet(d); }
   /* bank.ronde is de ronde waarvan de fouten nu komen. Roep je de volgende er
      alvast bij, dan loopt dat getal op terwijl de vorige nog op het pad staat.
      Gehaald is een ronde pas als alles wat er hoort te lopen ook echt geveld
@@ -2824,6 +2833,7 @@ function rekenVraag(rang, toegestaan) {
   }
   function magSlot(){ return inSpel() && !pauze && bank.munten >= slotPrijs(); }
   function koopSlot(){
+    if (co.aan && co.rol === 'gast'){ if (magSlot()) zendNet({ k:'slot' }); return false; }
     if (!magSlot()) return false;
     var prijs = slotPrijs();
     bank.munten -= prijs; slots++;
@@ -2941,7 +2951,7 @@ function rekenVraag(rang, toegestaan) {
       var plek = botPlek(wens);
       if (plek){
         bank.munten -= prijs;
-        torens.push({ x:plek.x, y:plek.y, soort:wens, niveau:1, klok:0 });
+        torens.push({ x:plek.x, y:plek.y, soort:wens, niveau:1, klok:0, id:++torenTeller });
         botLog('bouw', { soort:wens });
         return;
       }
@@ -3284,7 +3294,8 @@ function rekenVraag(rang, toegestaan) {
       melding2(TONKLAREEKS + ' goed op rij. De Tonkla Toren is vrij, te bouwen vanaf ronde ' +
         TONKLARONDE + '.');
     }
-    bank.munten += winst;
+    if (co.aan && co.rol === 'gast'){ if (winst) zendNet({ k:'munt', w:winst }); }
+    else bank.munten += winst;
     if (winst) laatMuntZien(winst);
     if (goed) goedAantal++; else foutAantal++;
     document.getElementById('uitlegVak').innerHTML = '<div class="uitleg' + (goed ? ' goed' : '') + '">' +
@@ -3998,6 +4009,18 @@ function rekenVraag(rang, toegestaan) {
 
   function menuKiest(r){
     var t = menu.toren;
+    if (co.aan && co.rol === 'gast'){
+      var cmd = null;
+      if (r.id === 'dingweg' && menu.ding) cmd = { k:'dingweg', id:menu.ding.id };
+      else if (r.id.indexOf('weg-') === 0 && r.kan) cmd = { k:'wegding', soort:r.id.slice(4), x:menu.punt.x, y:menu.punt.y };
+      else if (r.id === 'kracht' && t && penningen > 0 && !t.kracht) cmd = { k:'kracht', id:t.id };
+      else if (r.id === 'zet' && t){ verplaats = t; menu = null; melding2('Tik de nieuwe plek aan, naast het pad en niet te dicht op een toren.'); tekenBord(); return; }
+      else if (r.id === 'weg' && t) cmd = { k:'weg', id:t.id };
+      else if (r.id === 'sterker' && t && r.kan) cmd = { k:'sterker', id:t.id };
+      else if (SOORTEN[r.id] && r.kan) cmd = { k:'bouw', soort:r.id, x:menu.punt.x, y:menu.punt.y };
+      if (cmd) zendNet(cmd);
+      menu = null; tekenBord(); return;
+    }
     if (r.id === 'dingweg' && menu.ding){
       bank.munten += Math.round(WEGDING[menu.ding.soort].prijs * 0.5);
       laatMuntZien(Math.round(WEGDING[menu.ding.soort].prijs * 0.5));
@@ -4037,7 +4060,7 @@ function rekenVraag(rang, toegestaan) {
     } else if (SOORTEN[r.id] && r.kan){
       if (!magHier(menu.punt.x, menu.punt.y, null, r.id) || torens.length >= maxTorens()) return;
       bank.munten -= r.prijs; laatMuntZien(-r.prijs);
-      torens.push({ x:menu.punt.x, y:menu.punt.y, soort:r.id, niveau:1, klok:0 });
+      torens.push({ x:menu.punt.x, y:menu.punt.y, soort:r.id, niveau:1, klok:0, id:++torenTeller });
     } else return;
     menu = null;
     tekenMeters(); tekenBord();
@@ -6432,6 +6455,7 @@ function rekenVraag(rang, toegestaan) {
       if (verplaats){
         if (magHier(x, y, verplaats, verplaats.soort)){
           verplaats.x = x; verplaats.y = y;
+          if (co.aan && co.rol === 'gast') zendNet({ k:'zet', id:verplaats.id, x:x, y:y });
           verplaats = null;
           melding2('Verplaatst.');
         } else {
@@ -6498,7 +6522,7 @@ function rekenVraag(rang, toegestaan) {
       } else if (!geldig){
         t.x = vanX; t.y = vanY;
         melding2('Daar kan hij niet staan, dus hij is teruggezet.');
-      }
+      } else if (co.aan && co.rol === 'gast') zendNet({ k:'zet', id:t.id, x:t.x, y:t.y });
       tekenBord();
     }
     vak2.addEventListener('pointerup', laatLos);
@@ -7333,8 +7357,123 @@ function rekenVraag(rang, toegestaan) {
       laatKlapZien(verlies);
       if (bank.leven <= 0){ bank.leven = 0; tekenMeters(); einde(); return; }
     }
+    if (co.aan && co.rol === 'host') hostZend(dt);
     tekenBord(); tekenMeters();
   }
+
+  /* ---------- de gastheer stuurt, de maat tekent ---------- */
+  function plat(o, extra){
+    var r = {};
+    for (var k in o){
+      var v = o[k], tp = typeof v;
+      if (tp === 'number') r[k] = Math.round(v * 100) / 100;
+      else if (tp === 'string' || tp === 'boolean') r[k] = v;
+    }
+    if (extra) extra(o, r);
+    return r;
+  }
+  function plat1(o){ return plat(o); }
+  function standPakket(f){
+    return { k:'st', f:f || 'spel', th:thema.id, ki:KAARTEN.indexOf(kaart),
+      g:{ munten:bank.munten, leven:bank.leven, ronde:bank.ronde, wachtrij:wachtrij, rondePauze:rondePauze, slots:slots, penningen:penningen, haast:haast,
+          baasBalkIn:baasBalkIn, baasSpook:baasSpook, baasAlarm:baasAlarm, alarmMini:alarmMini, klap:klap, klapAantal:klapAantal, rondeGehaald:rondeGehaald,
+          poortFlits:poortFlits, gk:golfKeuzes },
+      bb:baasBalk,
+      v:vijanden.map(plat1),
+      t:torens.map(function(t){ return plat(t, function(o, r){ if (o.vlieger) r.vlieger = plat(o.vlieger); }); }),
+      s:schoten.map(plat1), ko:kogels.map(plat1), go:golven.map(plat1), ci:cijfers.map(plat1), w:wegdingen.map(plat1),
+      vr:vrienden.map(function(v){ return plat(v, function(o, r){ r.hutId = o.hut ? o.hut.id : null; }); }),
+      la:lavas.map(plat1),
+      sc:schillen.map(function(x){ return plat(x, function(o, r){ r.torenId = o.toren ? o.toren.id : null; }); }),
+      pl:pluis.slice(-120).map(plat1) };
+  }
+  function hostZend(dt){
+    co.zendKlok -= dt;
+    if (co.zendKlok > 0) return;
+    co.zendKlok = 0.125;
+    zendNet(standPakket());
+  }
+  /* wat de maat vraagt, met dezelfde regels als op het bord zelf */
+  function hostOntvang(d){
+    if (!d || !inSpel() || pauze) return;
+    var t = d.id !== undefined ? torens.filter(function(x){ return x.id === d.id; })[0] : null;
+    var x = +d.x, y = +d.y, okXY = isFinite(x) && isFinite(y);
+    if (d.k === 'munt'){ var w = Math.max(0, Math.min(500, d.w | 0)); bank.munten += w; if (w) laatMuntZien(w); }
+    else if (d.k === 'bouw' && okXY){
+      var so = SOORTEN[d.soort];
+      if (!so || !past(d.soort) || (gekozen().indexOf(d.soort) < 0 && !(so.speciaal && isVrij(d.soort)))) return;
+      if (so.slot === 'tonkla' && bank.ronde < TONKLARONDE) return;
+      var prijs = prijsVan(d.soort);
+      if (bank.munten < prijs || torens.length >= maxTorens() || !magHier(x, y, null, d.soort)) return;
+      bank.munten -= prijs; laatMuntZien(-prijs);
+      torens.push({ x:x, y:y, soort:d.soort, niveau:1, klok:0, id:++torenTeller });
+    }
+    else if (d.k === 'sterker' && t){
+      if (t.niveau >= MAXNIVEAU) return;
+      var kosten = Math.round(SOORTEN[t.soort].prijs * 0.8 * t.niveau);
+      if (bank.munten < kosten) return;
+      bank.munten -= kosten; laatMuntZien(-kosten); t.niveau++;
+    }
+    else if (d.k === 'weg' && t){
+      var terug = Math.round(SOORTEN[t.soort].prijs * 0.5 * t.niveau);
+      bank.munten += terug; laatMuntZien(terug);
+      torens = torens.filter(function(q){ return q !== t; });
+    }
+    else if (d.k === 'zet' && t && okXY){ if (magHier(x, y, t, t.soort)){ t.x = x; t.y = y; } }
+    else if (d.k === 'kracht' && t){ if (penningen > 0 && !t.kracht){ penningen--; t.kracht = true; } }
+    else if (d.k === 'wegding' && okXY){
+      var w2 = WEGDING[d.soort];
+      if (!w2 || wegdingen.length >= MAXWEG || bank.munten < w2.prijs || !magOpWeg(x, y, null)) return;
+      bank.munten -= w2.prijs; laatMuntZien(-w2.prijs);
+      wegdingen.push({ x:x, y:y, soort:d.soort, id:++wegTeller, voorraad:w2.voorraad || 0, klok:0, hoek:padHoek(x, y) });
+    }
+    else if (d.k === 'dingweg'){
+      var ding = wegdingen.filter(function(q){ return q.id === d.id; })[0];
+      if (ding){ var t2 = Math.round(WEGDING[ding.soort].prijs * 0.5); bank.munten += t2; laatMuntZien(t2); wegdingen = wegdingen.filter(function(q){ return q !== ding; }); }
+    }
+    else if (d.k === 'slot'){ koopSlot(); }
+    else if (d.k === 'ronde'){ document.getElementById('nuBtn').click(); }
+    else return;
+    tekenMeters(); tekenBord();
+  }
+  function gastStart(){
+    if (klok){ clearInterval(klok); klok = null; }
+    ['snelBtn', 'pauzeBtn'].forEach(function(id){ var k = document.getElementById(id); if (k) k.classList.add('hide'); });
+    if (co.gastKlok) clearInterval(co.gastKlok);
+    co.gastKlok = setInterval(function(){
+      pols += 0.06;
+      if (klap > 0) klap = Math.max(0, klap - 0.06);
+      tekenBord(); tekenMeters();
+    }, 60);
+  }
+  function pasStandToe(d){
+    if (!d || d.k !== 'st') return;
+    if (d.th && thema.id !== d.th){ thema = THEMAS.filter(function(x){ return x.id === d.th; })[0] || thema; ACHTERGROND = null; }
+    if (typeof d.ki === 'number' && KAARTEN[d.ki] && kaart !== KAARTEN[d.ki]){ kaart = KAARTEN[d.ki]; PAD = kaart.pad; PADLENGTE = padlengte(); ACHTERGROND = null; }
+    var g = d.g;
+    bank.munten = g.munten; bank.leven = g.leven; bank.ronde = g.ronde;
+    wachtrij = g.wachtrij; rondePauze = g.rondePauze; slots = g.slots; penningen = g.penningen; haast = g.haast;
+    baasBalkIn = g.baasBalkIn; baasSpook = g.baasSpook; baasAlarm = g.baasAlarm; alarmMini = !!g.alarmMini;
+    klap = g.klap; klapAantal = g.klapAantal; rondeGehaald = g.rondeGehaald; poortFlits = g.poortFlits;
+    if (g.gk) golfKeuzes = g.gk;
+    baasBalk = d.bb || null;
+    vijanden = d.v; schoten = d.s; kogels = d.ko; golven = d.go; cijfers = d.ci; wegdingen = d.w; lavas = d.la; pluis = d.pl;
+    /* torens: bestaande objecten hergebruiken, zodat het menu en het slepen blijven kloppen */
+    var oud = {}; torens.forEach(function(t){ oud[t.id] = t; });
+    torens = d.t.map(function(nt){
+      var t = oud[nt.id];
+      if (!t) return nt;
+      for (var k in nt){ if (sleep && sleep.toren === t && (k === 'x' || k === 'y')) continue; t[k] = nt[k]; }
+      return t;
+    });
+    var perId = {}; torens.forEach(function(t){ perId[t.id] = t; });
+    vrienden = d.vr.map(function(v){ v.hut = perId[v.hutId] || null; return v; });
+    schillen = d.sc.map(function(x){ x.toren = perId[x.torenId] || null; return x; });
+    if (menu && menu.toren && !perId[menu.toren.id]) menu = null;
+    if (verplaats && !perId[verplaats.id]) verplaats = null;
+    if (d.f === 'einde' && inSpel()){ tekenMeters(); einde(); }
+  }
+
 
   /* ---------- pauze ----------
      Even stoppen voor een instructie hoeft geen ronde te kosten. De klok gaat
@@ -7410,12 +7549,14 @@ function rekenVraag(rang, toegestaan) {
     tekenVraag(); tekenMeters(); tekenBord();
     melding2('Kaart: ' + kaartNaam(kaart) + (thema.plek || '') +
       (thema.water ? '. Landtorens op de eilandjes, de boten op het water.' : '. Elk potje loot een andere weg, dus kijk eerst waar de bochten liggen.'));
-    startKlok();
+    if (co.aan && co.rol === 'gast') gastStart(); else startKlok();
     scrollTo({ top:0, behavior:'auto' });
   }
 
   function einde(){
     botLog('einde');
+    if (co.aan && co.rol === 'host') zendNet(standPakket('einde'));
+    if (co.gastKlok){ clearInterval(co.gastKlok); co.gastKlok = null; }
     if (window.STRIJD) STRIJD.af({ ronde:rondeGehaald, punten:goedAantal });
     if (klok){ clearInterval(klok); klok = null; }
     pauze = false; document.body.classList.remove('gepauzeerd');
@@ -7581,6 +7722,7 @@ function rekenVraag(rang, toegestaan) {
   }
 
   document.getElementById('nuBtn').addEventListener('click', function(){
+    if (co.aan && co.rol === 'gast'){ zendNet({ k:'ronde' }); return; }
     if (inPauzeTussenRondes()){
       var bonus = Math.max(5, Math.round(rondePauze * 8)) * haastKeer();
       bank.munten += bonus;
@@ -7902,10 +8044,16 @@ function rekenVraag(rang, toegestaan) {
      zet extra fouten in de wachtrij. Zie strijd.js. */
   if (window.STRIJD && STRIJD.actief){
     STRIJD.klaar('toren', {
-      start: function(){ if (!inSpel() && vak) begin(); },
+      samen: true,   /* in een duel bouwen twee spelers op hetzelfde bord */
+      start: function(info){
+        if (info && info.duel){ co.aan = true; co.rol = info.rol === 'host' ? 'host' : 'gast'; co.maat = info.maat || 'je maat'; }
+        if (!inSpel() && vak) begin();
+      },
+      maatNaam: function(naam){ if (naam) co.maat = naam; },
+      net: function(d){ if (!co.aan) return; if (co.rol === 'host') hostOntvang(d); else pasStandToe(d); },
       stand: function(){ return { ronde:bank.ronde, gehaald:rondeGehaald, leven:bank.leven, punten:goedAantal }; },
       aanval: function(n, van){
-        if (!inSpel()) return;
+        if (co.aan || !inSpel()) return;
         wachtrij += n;
         melding2((van || 'Een klasgenoot') + ' stuurt je ' + n + (n === 1 ? ' extra fout.' : ' extra fouten.'));
       }
