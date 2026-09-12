@@ -104,7 +104,8 @@ window.STRIJD = (function(){
     hud = document.createElement('div'); hud.id = 'strijdHud'; hud.className = 'wacht'; hud.innerHTML = 'Verbinden…';
     toast = document.createElement('div'); toast.id = 'strijdToast';
     sluier = document.createElement('div'); sluier.id = 'strijdSluier';
-    document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(hud); document.body.appendChild(toast); document.body.appendChild(sluier); });
+    /* de start kan al binnen zijn voordat de pagina klaar is; dan is de sluier al weg */
+    document.addEventListener('DOMContentLoaded', function(){ [hud, toast, sluier].forEach(function(el){ if (el && !el.parentNode) document.body.appendChild(el); }); });
     sluierTekst('<b>Verbinden met kamer ' + code + '…</b>');
   }
 
