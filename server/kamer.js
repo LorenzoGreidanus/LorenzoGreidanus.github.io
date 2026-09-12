@@ -29,6 +29,7 @@ const NA_EINDE = 30 * 60 * 1000;             /* na de eindstand nog een half uur
 const SPELLEN_STRIJD = { toren: "Torenverdediging", zwaard: "Zwaardvechter" };
 const KLAS_LEEFT = 7 * 24 * 60 * 60 * 1000;   /* een klascode is een week geldig */
 const KLAS_MAX = 3000;                        /* hoogstens zoveel gemelde potjes per klas */
+const KLAS_SPELLEN = { race: "Vragenrace" };    /* spellen zonder kamer die wel bij een klas melden */
 
 function json(obj, status){
   return new Response(JSON.stringify(obj), { status: status || 200,
@@ -482,7 +483,7 @@ export class Kamer extends DurableObject {
     const sid = schoon(inz && inz.sid, 40);
     if (!/^[A-Za-z0-9_-]{8,40}$/.test(sid)) return json({ fout: "geen geldig kenmerk" }, 400);
     const spel = String(inz.spel || "");
-    if (!SPELLEN_STRIJD[spel]) return json({ fout: "onbekend spel" }, 400);
+    if (!SPELLEN_STRIJD[spel] && !KLAS_SPELLEN[spel]) return json({ fout: "onbekend spel" }, 400);
     const r = { sid: sid.slice(0, 12), naam: nette(inz.naam, "Leerling"), spel, ronde: getal(inz.ronde, 250), punten: getal(inz.punten, 5000),
                 niveau: schoon(inz.niveau, 10), vak: schoon(inz.vak, 10), t: Date.now() };
     /* per leerling per spel hoogstens dertig potjes, en een plafond voor de hele klas */
