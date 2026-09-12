@@ -12,7 +12,32 @@
    /q/ABCD               idem, met de code al ingevuld */
 export { Kamer } from "./kamer.js";
 export { Klassement } from "./klassement.js";
+export { Poort } from "./poort.js";
 const KLASSEMENTEN = { toren: true, zwaard: true };
+
+/* Een browser stuurt bij elk POST en bij elke WebSocket mee vanaf welke site
+   het komt. Alleen de site zelf (en lokaal testen) mag kamers maken, scores
+   insturen en verbinden; een andere site kan dat dan niet namens een
+   bezoeker doen. Een verzoek zonder Origin (geen browser) laten we door, dat
+   houdt de poortwachter hieronder in de gaten. */
+function eigenSite(req, url){
+  const o = req.headers.get("Origin");
+  if (!o) return true;
+  try {
+    const h = new URL(o).host;
+    return h === url.host || /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(h) || h.replace(/^www\./, "") === url.host.replace(/^www\./, "");
+  } catch (e){ return false; }
+}
+/* De poortwachter telt per adres hoe vaak er iets gemaakt of ingestuurd wordt. */
+async function magDoor(env, req, wat, per, seconden){
+  try {
+    const ip = req.headers.get("CF-Connecting-IP") || "?";
+    const r = await env.POORT.get(env.POORT.idFromName("poort")).fetch("https://poort/tel", { method: "POST",
+      body: JSON.stringify({ wat, ip, per, seconden }) });
+    const j = await r.json();
+    return !!j.ok;
+  } catch (e){ return true; }
+}
 
 /* Geen I, O, 0 en 1: die lees je van een digibord niet uit elkaar. */
 const LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -24,7 +49,7 @@ function nieuweCode(){
 }
 function json(obj, status){
   return new Response(JSON.stringify(obj), { status: status || 200,
-    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
+    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" } });
 }
 const CODE = /^[A-Z]{4}$/;
 
@@ -51,7 +76,15 @@ export default {
     if (km){
       if (!KLASSEMENTEN[km[1]]) return json({ fout: "onbekend spel" }, 404);
       const stub = env.KLASSEMENT.get(env.KLASSEMENT.idFromName(km[1]));
+      /* de beheerder haalt een rij weg: DELETE met de geheime sleutel (wrangler secret put BEHEER) */
+      if (req.method === "DELETE"){
+        if (!env.BEHEER || req.headers.get("x-beheer") !== env.BEHEER) return json({ fout: "geen toegang" }, 403);
+        let opdr; try { opdr = await req.json(); } catch (e){ return json({ fout: "geen geldige opdracht" }, 400); }
+        return stub.fetch("https://klassement/weg", { method: "POST", body: JSON.stringify(opdr) });
+      }
       if (req.method === "POST"){
+        if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
+        if (!await magDoor(env, req, "klassement", 12, 120)) return json({ fout: "even wachten" }, 429);
         let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldige inzending" }, 400); }
         return stub.fetch("https://klassement/zet", { method: "POST", body: JSON.stringify(inz) });
       }
@@ -59,8 +92,11 @@ export default {
     }
 
     if (p === "/api/kamer" && req.method === "POST"){
+      if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
+      if (!await magDoor(env, req, "kamer", 15, 600)) return json({ fout: "even wachten met nieuwe kamers" }, 429);
       let opzet;
       try { opzet = await req.json(); } catch (e){ return json({ fout: "geen geldige opzet" }, 400); }
+      if (!opzet || typeof opzet !== "object") return json({ fout: "geen geldige opzet" }, 400);
       /* een vrije code zoeken: bijna altijd de eerste */
       for (let poging = 0; poging < 8; poging++){
         const code = nieuweCode();
@@ -81,6 +117,7 @@ export default {
       const stub = env.KAMERS.get(env.KAMERS.idFromName(code));
       if (m[1] === "ws"){
         if (req.headers.get("Upgrade") !== "websocket") return json({ fout: "hier hoort een WebSocket" }, 426);
+        if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
         return stub.fetch(req);
       }
       return stub.fetch("https://kamer/stand");

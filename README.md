@@ -20,6 +20,8 @@ Een site, twee kanten: de voorkant voor collega's en een aparte leeromgeving voo
 | `server/maak-bank.js` | Maakt `leermiddelen/bank.js` uit `toren.html`; opnieuw draaien na elke wijziging aan de vragen |
 | `server/klassement.js` | Het klassement van de hele site (Durable Object per spel): top honderd, naamfilter, een inzending per apparaat per twintig seconden |
 | `server/naamfilter.js` | Het naamfilter tegen racistische en haatdragende bijnamen, ook met cijfers, tekens en herhaalde letters; `server/maak-filter.js` maakt er `leermiddelen/naamfilter.js` van voor de browser |
+| `server/poort.js` | De poortwachter (Durable Object): telt per adres hoe vaak er kamers gemaakt en scores ingestuurd worden en remt een stroom af |
+| `_headers` | Koppen die Cloudflare bij elk bestand meegeeft: niet in een frame van een andere site, geen raden naar bestandstype, en lange bewaartijd voor lettertypen en kaartgegevens |
 | `.assetsignore` | Wat er niet als website wordt uitgedeeld (servermap, configuratie) |
 | `wereld.json` | Kustlijnen voor de wereldbol op de startpagina (Natural Earth, publiek domein) |
 | `rijken.json` | Grenzen van tien rijken op hun hoogtepunt, geknipt en vereenvoudigd uit [historical-basemaps](https://github.com/aourednik/historical-basemaps) (GPL-3; dit bestand valt onder dezelfde licentie) |
@@ -59,6 +61,14 @@ npm run dev
 ```
 
 Dat geeft http://localhost:8787. De status van de lokale server staat bewust buiten de map (`../.wrangler-state`): in de map zelf zet hij de bestandswaker in een lus, en een lang pad maakt de opslag van de kamers op Windows kapot.
+
+### Wat de server tegenhoudt
+
+- Kamers maken, scores insturen en verbinden kan alleen vanaf de site zelf (de browser stuurt de herkomst mee); een andere site kan dat niet namens een bezoeker doen.
+- De poortwachter laat per adres hoogstens vijftien kamers per tien minuten en twaalf scores per twee minuten door.
+- In een kamer kent een speler alleen zijn eigen kenmerk; naar buiten toe heet iedereen bij een kort openbaar nummer, dus niemand kan zich voor een ander uitgeven. Wie meer dan driehonderd berichten per tien seconden stuurt wordt genegeerd, boven de twaalfhonderd afgesloten.
+- Het plaatje bij een quizvraag mag alleen eenvoudige vormen bevatten (geen scripts, verwijzingen of gebeurtenissen); de kamer en de pagina kijken er allebei naar.
+- Het klassement kapt verzonnen scores af (hoogstens ronde 250 en 5000 punten) en een rij is weg te halen met de beheersleutel: zet die eenmalig met `npx wrangler secret put BEHEER` en stuur dan `DELETE /api/klassement/toren` met de kop `x-beheer` en `{"naam":"..."}` of `{"id":"..."}` als inhoud.
 
 ## Nieuw spel toevoegen
 

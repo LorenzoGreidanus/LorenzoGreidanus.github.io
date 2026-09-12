@@ -132,7 +132,11 @@ body.groot .uitleg b{font-size:1.1rem}
    fout in plaats van als een keuze. */
 .bordvak{background:var(--gras);border:1px solid rgba(20,34,76,.12);border-radius:20px;overflow:hidden;
   box-shadow:0 10px 26px rgba(20,34,76,.10);flex:1;min-height:240px}
+.bordvak{position:relative}
 .bordvak svg{display:block;width:100%;height:100%;overflow:visible}
+/* de achtergrondlaag ligt precies onder de beweeglaag en vangt geen tikken */
+.bordvak svg.achter{position:absolute;left:0;top:0;pointer-events:none}
+.bordvak svg.voor{position:relative;z-index:1}
 /* Het bord is 900 bij 460 en het vak eromheen niet, dus er blijven stroken
    over. In plaats van die stroken in de kleur van het vak te laten staan, laat
    het bord zijn achtergrond doorlopen: de svg mag buiten zijn tekengebied
@@ -5351,9 +5355,12 @@ function rekenVraag(rang, toegestaan) {
        laatste stap hoeft getekend te worden; de rest zou je toch niet zien en
        kost wel tijd. */
     if (tekenUit) return;
-    var s = '<svg viewBox="0 0 ' + BREED + ' ' + HOOG + '" xmlns="http://www.w3.org/2000/svg" ' +
-      'role="img" aria-label="Het pad naar de klas met jouw torens">';
-    s += achtergrond();
+    /* Het bord is twee lagen: de achtergrond (gras, weg, keitjes) staat in een
+       eigen svg die alleen opnieuw gezet wordt als de kaart wisselt, en alles
+       wat beweegt komt in een tweede svg eroverheen. Zo hoeft de browser per
+       beeld niet ook nog de driehonderd grasplukjes opnieuw te lezen. */
+    var s = '';
+    var ag = achtergrond();
     /* de klas aan het eind, met de schade die hij tot nu toe opliep */
     var eind = PAD[PAD.length-1];
     s += tekenKlas(eind[0] + 4, eind[1] - 30, bank.leven, 12);
@@ -6448,9 +6455,15 @@ function rekenVraag(rang, toegestaan) {
       s += '<text x="' + cx + '" y="' + (py + 125) +
         '" font-size="13" fill="#5b6480" text-anchor="middle">' + (co.aan && co.rol === 'gast' ? 'Je maat heeft gepauzeerd; het gaat verder zodra hij verder speelt.' : 'Klik boven op Verder spelen, of druk op P of Escape.') + '</text>';
     }
-    s += '</svg>';
     var vak2 = document.getElementById('bordvak');
-    vak2.innerHTML = s;
+    var achter = vak2.firstElementChild, voor = vak2.lastElementChild;
+    if (!achter || !voor || achter === voor || !voor.classList.contains('voor')){
+      vak2.innerHTML = '<svg class="achter" viewBox="0 0 ' + BREED + ' ' + HOOG + '" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"></svg>' +
+        '<svg class="voor" viewBox="0 0 ' + BREED + ' ' + HOOG + '" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Het pad naar de klas met jouw torens"></svg>';
+      achter = vak2.firstElementChild; voor = vak2.lastElementChild; achter.__ag = null;
+    }
+    if (achter.__ag !== ag){ achter.innerHTML = ag; achter.__ag = ag; }
+    voor.innerHTML = s;
   }
 
   /* De klik hangt aan het omhulsel en rekent zelf uit waar je tikte. Het bord

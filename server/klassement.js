@@ -11,6 +11,8 @@ import { DurableObject } from "cloudflare:workers";
 import { nette } from "./naamfilter.js";
 
 const MAX_LIJST = 100, TOP = 50, WACHT = 20 * 1000;
+/* Verder dan dit komt niemand eerlijk; wat erboven zit is verzonnen en wordt afgekapt. */
+const MAX_RONDE = 250, MAX_PUNTEN = 5000;
 function json(obj, status){
   return new Response(JSON.stringify(obj), { status: status || 200,
     headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
@@ -32,6 +34,7 @@ export class Klassement extends DurableObject {
       const url = new URL(req.url);
       if (url.pathname === "/lijst") return json({ lijst: this.top() });
       if (url.pathname === "/zet" && req.method === "POST") return await this.zet(await req.json());
+      if (url.pathname === "/weg" && req.method === "POST") return await this.weg(await req.json());
       return json({ fout: "onbekend" }, 404);
     } catch (e){
       console.error("klassement", e && e.stack || e);
@@ -45,7 +48,7 @@ export class Klassement extends DurableObject {
     const nu = Date.now();
     if (this.laatst[sid] && nu - this.laatst[sid] < WACHT) return json({ fout: "even wachten voor je nog een score instuurt" }, 429);
     const rij = {
-      naam: nette(inz.naam, "Anoniem"), ronde: getal(inz.ronde, 999), punten: getal(inz.punten, 99999),
+      naam: nette(inz.naam, "Anoniem"), ronde: getal(inz.ronde, MAX_RONDE), punten: getal(inz.punten, MAX_PUNTEN),
       waar: tekst(inz.waar, 30), niveau: tekst(inz.niveau, 20), vak: tekst(inz.vak, 20),
       t: nu, id: sid.slice(0, 8) + "-" + nu.toString(36)
     };
@@ -60,5 +63,13 @@ export class Klassement extends DurableObject {
     await this.ctx.storage.put("laatst", this.laatst);
     const plek = this.lijst.findIndex(r => r.id === rij.id);
     return json({ plek: plek >= 0 ? plek + 1 : 0, id: rij.id, naam: rij.naam, lijst: this.top() });
+  }
+  /* de beheerder haalt een rij weg (index.js heeft de sleutel al gecontroleerd) */
+  async weg(opdr){
+    const id = tekst(opdr && opdr.id, 40), naam = tekst(opdr && opdr.naam, 16);
+    const voor = this.lijst.length;
+    this.lijst = this.lijst.filter(r => !(id && r.id === id) && !(naam && r.naam === naam));
+    await this.ctx.storage.put("lijst", this.lijst);
+    return json({ weg: voor - this.lijst.length, lijst: this.top() });
   }
 }

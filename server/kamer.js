@@ -36,16 +36,31 @@ function schoon(tekst, max){
   return String(tekst || "").replace(/[\u0000-\u001f\u007f]/g, "").replace(/\s+/g, " ").trim().slice(0, max);
 }
 function getal(x, max){ const n = Number(x); return Number.isFinite(n) ? Math.max(0, Math.min(max, Math.round(n))) : 0; }
-function sleutelMaken(){
-  const r = crypto.getRandomValues(new Uint8Array(12));
+function sleutelMaken(n){
+  const r = crypto.getRandomValues(new Uint8Array(n || 12));
   return Array.from(r, b => b.toString(16).padStart(2, "0")).join("");
 }
+/* Het plaatje bij een vraag is een stukje SVG dat op ieders scherm in de
+   pagina komt. Alleen eenvoudige vormen mogen erin: geen scripts, geen
+   verwijzingen naar buiten, geen gebeurtenissen. */
+export function veiligSvg(s){
+  if (typeof s !== "string" || s.length > 20000) return false;
+  if (!/^<svg[\s>][\s\S]*<\/svg>\s*$/i.test(s.trim())) return false;
+  if (/<\s*(script|foreignobject|iframe|object|embed|image|use|animate|animatemotion|animatetransform|set|link|meta|style|a)\b/i.test(s)) return false;
+  if (/\son[a-z]+\s*=|javascript:|href|xlink|<!|<\?|url\(/i.test(s)) return false;
+  return true;
+}
+/* Hoeveel berichten een speler per tien seconden mag sturen. Samen spelen
+   komt op zo'n honderd; wie er ruim overheen gaat wordt genegeerd, wie er
+   ver overheen gaat wordt afgesloten. */
+const VENSTER = 10000, NEGEREN_BIJ = 300, BYTES_PER_VENSTER = 2500000, AFSLUITEN_BIJ = 1200;
 
 export class Kamer extends DurableObject {
   constructor(ctx, env){
     super(ctx, env);
     this.stand = null;
     this.standTimer = null;
+    this.tempo = {};        /* per speler: hoeveel berichten deze seconde */
     this.ctx.blockConcurrencyWhile(async () => {
       this.stand = (await this.ctx.storage.get("stand")) || null;
     });
@@ -91,7 +106,7 @@ export class Kamer extends DurableObject {
         u: schoon(q.u, 600),
         t: schoon(q.t, 60),
         vlag: /^[a-z-]{2,8}$/.test(q.vlag || "") ? q.vlag : undefined,
-        svg: typeof q.svg === "string" && q.svg.length < 20000 && /^<svg[\s\S]*<\/svg>$/.test(q.svg.trim()) ? q.svg : undefined
+        svg: veiligSvg(q.svg) ? q.svg : undefined
       })).filter(q => q.v && q.o.length >= 2 && q.g >= 0 && q.g < q.o.length) : [];
       if (!vragen.length) return json({ fout: "geen vragen" }, 400);
       this.stand = Object.assign(basis, { spel: "quiz", onderdeel: schoon(opzet.onderdeel, 80), vragen,
@@ -126,13 +141,17 @@ export class Kamer extends DurableObject {
       const bestaand = this.stand.spelers[sid];
       if (bestaand) bestaand.naam = naam;
       else this.stand.spelers[sid] = this.strijd
-        ? { naam, ronde: 0, gehaald: 0, leven: 0, punten: 0, af: false, aanvallen: 0, sinds: Date.now() }
-        : { naam, score: 0, antw: {}, sinds: Date.now() };
+        ? { naam, pid: sleutelMaken(4), ronde: 0, gehaald: 0, leven: 0, punten: 0, af: false, aanvallen: 0, sinds: Date.now() }
+        : { naam, pid: sleutelMaken(4), score: 0, antw: {}, sinds: Date.now() };
+      /* Naar buiten toe heet een speler bij zijn korte, openbare nummer (pid);
+         het kenmerk waarmee hij verbindt (sid) blijft geheim, anders kon een
+         ander zich voor hem uitgeven. */
+      if (!this.stand.spelers[sid].pid) this.stand.spelers[sid].pid = sleutelMaken(4);
       /* in een duel is de eerste speler de gastheer: die rekent de gedeelde arena uit */
       if (this.strijd && this.stand.duel && !this.stand.gastheer) this.stand.gastheer = sid;
       this.ctx.waitUntil(this.bewaar());
     }
-    this.stuur(server, Object.assign({ t: "welkom", rol, naam }, this.overzicht()));
+    this.stuur(server, Object.assign({ t: "welkom", rol, naam, jij: rol === "speler" ? this.pid(sid) : null }, this.overzicht()));
     if (this.strijd){
       if (this.stand.fase === "bezig" && rol === "speler") this.stuur(server, { t: "start" });
       if (this.stand.fase === "einde") this.stuur(server, this.strijdEinde(rol === "speler" ? sid : null));
@@ -157,11 +176,15 @@ export class Kamer extends DurableObject {
 
   async webSocketMessage(ws, tekst){
     if (!this.stand) return;
-    let m; try { m = JSON.parse(tekst); } catch (e){ return; }
+    if (typeof tekst !== "string" || tekst.length > 70000) return;
     const wie = ws.deserializeAttachment() || {};
-    if (wie.rol === "host" && m.t === "weg" && typeof m.sid === "string" && this.stand.spelers[m.sid]){
-      delete this.stand.spelers[m.sid];
-      this.ctx.getWebSockets(m.sid).forEach(s => { try { s.close(1000, "verwijderd door de docent"); } catch (e){} });
+    if (!this.opTempo(ws, wie, tekst.length)) return;
+    let m; try { m = JSON.parse(tekst); } catch (e){ return; }
+    if (!m || typeof m !== "object") return;
+    const wegSid = wie.rol === "host" && m.t === "weg" ? this.sidVanPid(m.sid) : null;
+    if (wegSid){
+      delete this.stand.spelers[wegSid];
+      this.ctx.getWebSockets(wegSid).forEach(s => { try { s.close(1000, "verwijderd door de docent"); } catch (e){} });
       await this.bewaar(); this.zegSpelers();
       if (this.strijd) this.planStand();
       return;
@@ -190,6 +213,19 @@ export class Kamer extends DurableObject {
     }
   }
   async webSocketClose(ws){ this.zegSpelers(); if (this.strijd) this.planStand(); }
+  opTempo(ws, wie, lengte){
+    const nu = Date.now(), k = wie.sid || "?";
+    let tp = this.tempo[k];
+    if (!tp || nu - tp.sinds > VENSTER) tp = this.tempo[k] = { sinds: nu, tel: 0, bytes: 0 };
+    tp.tel++; tp.bytes += lengte;
+    if (tp.tel > AFSLUITEN_BIJ){ try { ws.close(1008, "te veel berichten"); } catch (e){} return false; }
+    return tp.tel <= NEGEREN_BIJ && tp.bytes <= BYTES_PER_VENSTER;
+  }
+  pid(sid){ const sp = this.stand && this.stand.spelers[sid]; return sp ? sp.pid : null; }
+  sidVanPid(pid){
+    if (typeof pid !== "string" || !this.stand) return null;
+    return Object.keys(this.stand.spelers).filter(s => this.stand.spelers[s].pid === pid)[0] || null;
+  }
   async webSocketError(ws){ this.zegSpelers(); }
 
   /* ---------- de klok ---------- */
@@ -251,6 +287,9 @@ export class Kamer extends DurableObject {
     }
     if (st.fase !== "bezig") return;
     if (m.t === "stand"){
+      const nu0 = Date.now();
+      if (sp.standLaatst && nu0 - sp.standLaatst < 400) return;   /* vaker dan dit hoeft niet */
+      sp.standLaatst = nu0;
       /* de ronde loopt alleen op; een speler die opnieuw begint gaat niet terug */
       sp.ronde = Math.max(sp.ronde, getal(m.ronde, 999));
       sp.gehaald = Math.max(sp.gehaald, getal(m.gehaald, 999));
@@ -302,7 +341,7 @@ export class Kamer extends DurableObject {
     const st = this.stand;
     return Object.keys(st.spelers).map(sid => {
       const sp = st.spelers[sid];
-      return { sid, naam: sp.naam, ronde: sp.ronde, gehaald: sp.gehaald, leven: sp.leven, punten: sp.punten,
+      return { sid: sp.pid, naam: sp.naam, ronde: sp.ronde, gehaald: sp.gehaald, leven: sp.leven, punten: sp.punten,
                af: !!sp.af, aanvallen: sp.aanvallen || 0, aan: this.aanwezig(sid) };
     }).sort((a, b) => (this.stand.duel && a.af !== b.af) ? (a.af ? 1 : -1)   /* in een duel wint wie overeind blijft */
         : (b.gehaald - a.gehaald || b.punten - a.punten || (a.af === b.af ? 0 : a.af ? 1 : -1) || a.naam.localeCompare(b.naam)))
@@ -313,8 +352,9 @@ export class Kamer extends DurableObject {
     const bezig = lijst.filter(r => !r.af).length;
     const kop = lijst[0] ? { naam: lijst[0].naam, ronde: lijst[0].ronde } : null;
     if (!sid) return { t: "stand", spelers: lijst, bezig, fase: this.stand.fase };
-    const mij = lijst.filter(r => r.sid === sid)[0];
-    const tegen = this.stand.duel ? (lijst.filter(r => r.sid !== sid)[0] || null) : null;
+    const pid = this.pid(sid);
+    const mij = lijst.filter(r => r.sid === pid)[0];
+    const tegen = this.stand.duel ? (lijst.filter(r => r.sid !== pid)[0] || null) : null;
     return { t: "stand", jouw: mij ? { rang: mij.rang, van: lijst.length } : null, bezig, koploper: kop, fase: this.stand.fase,
              tegen: tegen ? { naam: tegen.naam, ronde: tegen.ronde, leven: tegen.leven, punten: tegen.punten, af: tegen.af, aan: tegen.aan } : null };
   }
@@ -328,7 +368,8 @@ export class Kamer extends DurableObject {
   }
   strijdEinde(sid){
     const lijst = this.strijdLijst();
-    const mij = sid ? lijst.filter(r => r.sid === sid)[0] : null;
+    const pid = sid ? this.pid(sid) : null;
+    const mij = pid ? lijst.filter(r => r.sid === pid)[0] : null;
     return { t: "einde", stand: lijst, jouw: mij ? { rang: mij.rang, van: lijst.length, naam: mij.naam } : null };
   }
   async strijdKlaar(){
@@ -393,7 +434,7 @@ export class Kamer extends DurableObject {
   ranglijst(){
     return Object.keys(this.stand.spelers).map(sid => {
       const sp = this.stand.spelers[sid], a = sp.antw[this.stand.i] || {};
-      return { sid, naam: sp.naam, score: sp.score, delta: a.delta || 0, goed: !!a.goed, aan: this.aanwezig(sid) };
+      return { sid: sp.pid, naam: sp.naam, score: sp.score, delta: a.delta || 0, goed: !!a.goed, aan: this.aanwezig(sid) };
     }).sort((a, b) => b.score - a.score || a.naam.localeCompare(b.naam))
       .map((r, i) => Object.assign(r, { rang: i + 1 }));
   }
@@ -403,7 +444,7 @@ export class Kamer extends DurableObject {
     return { n: aan.filter(sid => this.stand.spelers[sid].antw[i]).length, van: aan.length };
   }
   jouw(sid){
-    const lijst = this.ranglijst(), r = lijst.filter(x => x.sid === sid)[0];
+    const pid = this.pid(sid), lijst = this.ranglijst(), r = lijst.filter(x => x.sid === pid)[0];
     return r ? { naam: r.naam, score: r.score, rang: r.rang, van: lijst.length } : null;
   }
   uitslagVoorHost(){
@@ -431,7 +472,7 @@ export class Kamer extends DurableObject {
     const st = this.stand, basis = { code: st.code, spel: st.spel, vak: st.vak, niveau: st.niveau, fase: st.fase };
     if (this.strijd){
       const lijst = this.strijdLijst();
-      return Object.assign(basis, { game: st.game, duel: !!st.duel, gastheer: st.gastheer || null, gestart: st.gestart, bezig: lijst.filter(r => !r.af).length, spelers: lijst });
+      return Object.assign(basis, { game: st.game, duel: !!st.duel, gastheer: st.gastheer ? this.pid(st.gastheer) : null, gestart: st.gestart, bezig: lijst.filter(r => !r.af).length, spelers: lijst });
     }
     return Object.assign(basis, { onderdeel: st.onderdeel, i: st.i, n: st.vragen.length, tijd: st.tijd,
       spelers: this.ranglijst().map(r => ({ sid: r.sid, naam: r.naam, score: r.score, aan: r.aan })) });

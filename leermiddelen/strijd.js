@@ -87,7 +87,7 @@ window.STRIJD = (function(){
   var naam = param('naam') || bewaardeNaam();
   naam = naam.trim().slice(0, 16);
   if (!naamOk(naam)) naam = 'Leerling';
-  var hud, toast, sluier, toastKlok = null, mijnSid = sid();
+  var hud, toast, sluier, toastKlok = null, mijnSid = sid(), mijnPid = null;   /* mijnPid: het openbare nummer dat de kamer me geeft */
   var ws = null, dicht = false, pogingen = 0, hooks = null, gestart = false, klaarMet = false, laatsteStand = '', duel = false, tegen = null, gastheer = null, maatNaam = '';
   function samen(){ return duel && hooks && hooks.samen; }
 
@@ -146,8 +146,9 @@ window.STRIJD = (function(){
     if (m.t === 'welkom'){
       if (m.spel !== 'strijd'){ hudTekst('Samen spelen', 'deze code hoort bij een ander spel', true); sluierTekst('<b>Deze code hoort bij een ander spel.</b><button type="button">Terug</button>'); return; }
       duel = !!m.duel; gastheer = m.gastheer || null;
+      if (m.jij) mijnPid = m.jij;
       var aantal = m.spelers ? m.spelers.length : 0;
-      (m.spelers || []).forEach(function(r){ if (r.sid !== mijnSid) maatNaam = r.naam; });
+      (m.spelers || []).forEach(function(r){ if (r.sid !== mijnPid) maatNaam = r.naam; });
       hudTekst((duel ? 'Duel ' : 'Klasstrijd ') + code, aantal + ' in de kamer', true);
       if (m.fase === 'bezig') start();
       else if (m.fase === 'einde') sluierWeg();
@@ -170,12 +171,12 @@ window.STRIJD = (function(){
       klaarMet = true; dicht = true;
       var j = m.jouw, lijst = m.stand || [];
       if (samen()){
-        var mij = lijst.filter(function(r){ return r.sid === mijnSid; })[0];
+        var mij = lijst.filter(function(r){ return r.sid === mijnPid; })[0];
         hudTekst('Samen tot ronde ' + (mij ? mij.ronde : '?') + ' gekomen', maatNaam ? 'met ' + maatNaam : '', false);
         zeg('Jullie zijn allebei gevallen. Samen tot ronde ' + (mij ? mij.ronde : '?') + '.', true);
       } else if (duel){
-        var winnaar = lijst[0], ander = lijst.filter(function(r){ return r.sid !== mijnSid; })[0];
-        var gewonnen = !!(winnaar && winnaar.sid === mijnSid);
+        var winnaar = lijst[0], ander = lijst.filter(function(r){ return r.sid !== mijnPid; })[0];
+        var gewonnen = !!(winnaar && winnaar.sid === mijnPid);
         hudTekst(gewonnen ? 'Je hebt het duel gewonnen!' : (winnaar ? winnaar.naam + ' heeft gewonnen' : 'Het duel is voorbij'),
           ander ? ander.naam + ' kwam tot ronde ' + ander.ronde : '', false);
         zeg(gewonnen ? 'Gewonnen! Je tegenstander is gevallen.' : 'Verloren. ' + (winnaar ? winnaar.naam + ' hield het langer vol.' : ''), gewonnen);
@@ -206,7 +207,7 @@ window.STRIJD = (function(){
     clearInterval(telKlok);
     sluierWeg();
     hudTekst((duel ? 'Duel ' : 'Klasstrijd ') + code, 'gestart, veel succes', false);
-    if (hooks) hooks.start({ duel:duel, rol:duel ? (gastheer === mijnSid ? 'host' : 'gast') : null, maat:maatNaam });
+    if (hooks) hooks.start({ duel:duel, rol:duel ? (gastheer === mijnPid ? 'host' : 'gast') : null, maat:maatNaam });
     zeg(samen() ? 'Start! Samen tegen de fouten, met ' + (maatNaam || 'je maat') + '.' : 'Start! Vijf goed op rij stuurt fouten naar ' + (duel ? 'je tegenstander' : 'de anderen') + '.', true);
   }
   function toonStand(m){

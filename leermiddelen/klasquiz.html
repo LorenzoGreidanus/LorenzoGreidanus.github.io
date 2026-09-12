@@ -337,9 +337,19 @@ button.optie:disabled{cursor:default;transform:none}
   function toon(scherm){
     ['s-start', 's-host', 's-speler'].forEach(function(id){ $(id).classList.toggle('hide', id !== scherm); });
   }
+  /* Het plaatje komt via de kamer van de docent. De kamer laat alleen eenvoudige
+     vormen door, en hier kijken we nog een keer: geen scripts, geen verwijzingen
+     naar buiten, geen gebeurtenissen. */
+  function veiligSvg(s){
+    if (typeof s !== 'string' || s.length > 20000) return false;
+    if (!/^<svg[\s>][\s\S]*<\/svg>\s*$/i.test(s.trim())) return false;
+    if (/<\s*(script|foreignobject|iframe|object|embed|image|use|animate|animatemotion|animatetransform|set|link|meta|style|a)\b/i.test(s)) return false;
+    if (/\son[a-z]+\s*=|javascript:|href|xlink|<!|<\?|url\(/i.test(s)) return false;
+    return true;
+  }
   function beeldVoor(q){
-    if (q.vlag) return '<img class="vlagvak" src="vlaggen/' + schoonHtml(q.vlag) + '.svg" alt="Een vlag">';
-    return q.svg || '';
+    if (q.vlag && /^[a-z-]{2,8}$/.test(q.vlag)) return '<img class="vlagvak" src="vlaggen/' + q.vlag + '.svg" alt="Een vlag">';
+    return veiligSvg(q.svg) ? q.svg : '';
   }
   /* ---------- verbinding ---------- */
   var ws = null, wsDoel = null, wsPogingen = 0, pingKlok = null, dicht = false;
