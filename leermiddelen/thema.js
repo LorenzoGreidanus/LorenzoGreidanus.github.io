@@ -36,3 +36,11 @@
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname))){
   addEventListener('load', function(){ navigator.serviceWorker.register('/sw.js').catch(function(){}); });
 }
+
+/* Een tik per paginabezoek voor de gebruikstelling: alleen het pad van de
+   pagina, geen cookie, geen adres bewaard. Zo is te zien welke spellen leven. */
+try {
+  if (navigator.sendBeacon && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname))){
+    navigator.sendBeacon('/api/tel', new Blob([JSON.stringify({ p: location.pathname })], { type: 'text/plain' }));
+  }
+} catch (e){}

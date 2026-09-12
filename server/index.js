@@ -14,6 +14,7 @@ export { Kamer } from "./kamer.js";
 export { Klassement } from "./klassement.js";
 export { Poort } from "./poort.js";
 export { Sets } from "./sets.js";
+export { Beheer } from "./beheer.js";
 const KLASSEMENTEN = { toren: true, zwaard: true };
 
 /* Een browser stuurt bij elk POST en bij elke WebSocket mee vanaf welke site
@@ -102,6 +103,31 @@ export default {
     const sm = p.match(/^\/api\/set\/([A-Za-z0-9]{6})\/?$/);
     if (sm && req.method === "GET"){
       return env.SETS.get(env.SETS.idFromName("sets")).fetch("https://sets/haal?code=" + sm[1].toUpperCase());
+    }
+
+    /* meldingen bij vragen en de gebruikstelling: naar het beheerobject */
+    const beheer = () => env.BEHEER_DO.get(env.BEHEER_DO.idFromName("beheer"));
+    if (p === "/api/melding" && req.method === "POST"){
+      if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
+      if (!await magDoor(env, req, "melding", 6, 600)) return json({ fout: "even wachten met een volgende melding" }, 429);
+      let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldige melding" }, 400); }
+      return beheer().fetch("https://beheer/melding", { method: "POST", body: JSON.stringify(inz || {}) });
+    }
+    if (p === "/api/tel" && req.method === "POST"){
+      if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
+      if (!await magDoor(env, req, "tel", 60, 60)) return json({ ok: false }, 429);
+      let inz; try { inz = JSON.parse(await req.text()); } catch (e){ return json({ fout: "geen pad" }, 400); }
+      return beheer().fetch("https://beheer/tel", { method: "POST", body: JSON.stringify(inz || {}) });
+    }
+    /* alleen de beheerder: lezen en opruimen, met de geheime sleutel (wrangler secret put BEHEER) */
+    const bm = p.match(/^\/api\/beheer\/(meldingen|tellers|melding-weg)\/?$/);
+    if (bm){
+      if (!env.BEHEER || req.headers.get("x-beheer") !== env.BEHEER) return json({ fout: "geen toegang" }, 403);
+      if (bm[1] === "melding-weg"){
+        let opdr; try { opdr = await req.json(); } catch (e){ return json({ fout: "geen geldige opdracht" }, 400); }
+        return beheer().fetch("https://beheer/weg", { method: "POST", body: JSON.stringify(opdr || {}) });
+      }
+      return beheer().fetch("https://beheer/" + bm[1]);
     }
 
     if (p === "/api/kamer" && req.method === "POST"){

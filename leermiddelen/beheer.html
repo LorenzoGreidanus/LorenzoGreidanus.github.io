@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>
+(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();
+</script>
+<title>Beheer · meneer Greidanus</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<style>
+:root{--crab:#F26749;--amber:#EA9836;--ocean:#204ECF;--vista:#83A5F2;--room:#FBF6F1;--ink:#14224C;--muted:#5b6480;--kaart:#fff;--kaart2:#f4efe8;--rand:rgba(20,34,76,.10);--rand2:rgba(20,34,76,.16);--fout:#c0442c;--goed:#2f7d52;--schaduw:0 10px 26px rgba(20,34,76,.08)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--room:#0F1A3D;--ink:#F3EFE9;--muted:#B3BBD0;--kaart:#182652;--kaart2:#1f2f5e;--rand:rgba(243,239,233,.12);--rand2:rgba(243,239,233,.2);--schaduw:0 14px 34px rgba(0,0,0,.35)}}
+:root[data-theme="dark"]{--room:#0F1A3D;--ink:#F3EFE9;--muted:#B3BBD0;--kaart:#182652;--kaart2:#1f2f5e;--rand:rgba(243,239,233,.12);--rand2:rgba(243,239,233,.2);--schaduw:0 14px 34px rgba(0,0,0,.35);color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;min-height:100svh;background:var(--room);color:var(--ink);line-height:1.5;font-family:'Poppins',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;font-weight:600;line-height:1.14;letter-spacing:-.02em}
+p{margin:0}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+.hide{display:none !important}
+.eyebrow{font-size:.72rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.wrap{width:min(100% - 24px,1000px);margin-inline:auto}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0}
+.merk{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;font-weight:600}
+.merk i{width:34px;height:34px;border-radius:10px;background:var(--ocean);color:#fff;display:grid;place-items:center;font-style:normal;font-size:.9rem}
+header a{color:var(--muted);font-size:.9rem}
+.kaart{background:var(--kaart);border:1px solid var(--rand);border-radius:20px;padding:20px;box-shadow:var(--schaduw);margin-top:18px}
+.knop{border:none;border-radius:12px;padding:10px 14px;font-weight:600;background:var(--ocean);color:#fff}
+.knop.stil{background:var(--kaart);color:var(--ink);border:1.5px solid var(--rand2)}
+.knop.klein{padding:6px 10px;font-size:.85rem;border-radius:10px}
+.knop.rood{background:var(--fout)}
+.veld{border:2px solid var(--rand2);border-radius:12px;padding:10px 12px;background:var(--kaart);color:var(--ink);font-size:1rem}
+.rij{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.tip{color:var(--muted);font-size:.9rem;margin-top:6px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+.tabs button{border:1.5px solid var(--rand2);background:var(--kaart);border-radius:999px;padding:8px 14px;font-weight:600}
+.tabs button.on{background:var(--ocean);color:#fff;border-color:var(--ocean)}
+.melding{border-top:1px solid var(--rand);padding:12px 0}
+.melding:first-child{border-top:none}
+.melding b{display:block}
+.melding .meta{color:var(--muted);font-size:.85rem}
+.melding .opm{margin-top:4px;background:var(--kaart2);border-radius:10px;padding:8px 10px}
+table{border-collapse:collapse;width:100%;font-size:.93rem}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--rand)}
+th{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+td.getal{text-align:right;font-variant-numeric:tabular-nums}
+.leeg{color:var(--muted);padding:14px 0}
+</style>
+</head>
+<body>
+<header class="wrap">
+  <a class="merk" href="index.html"><i>LG</i><span>Beheer</span></a>
+  <span><a href="klas.html">Klasoverzicht</a> · <a href="klasquiz.html">Klasquiz</a></span>
+</header>
+<main class="wrap">
+  <p class="eyebrow">alleen voor de beheerder</p>
+  <h1>Beheer</h1>
+  <p class="tip" style="max-width:64ch">Meldingen bij vragen, de gebruikstelling per pagina en het opruimen van het klassement. Alles hier vraagt de beheersleutel (gezet met <code>npx wrangler secret put BEHEER</code>); die blijft in deze browser staan.</p>
+  <div class="kaart">
+    <div class="rij">
+      <input id="sleutel" class="veld" type="password" style="flex:1;min-width:220px" placeholder="Beheersleutel" autocomplete="off">
+      <button class="knop" id="laad" type="button">Laden</button>
+      <button class="knop stil" id="vergeet" type="button">Vergeet sleutel</button>
+    </div>
+    <p class="tip" id="status"></p>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button type="button" data-tab="meldingen" class="on">Meldingen</button>
+    <button type="button" data-tab="gebruik">Gebruik</button>
+    <button type="button" data-tab="klassement">Klassement</button>
+  </div>
+
+  <section class="kaart" id="tab-meldingen">
+    <h2>Meldingen bij vragen</h2>
+    <p class="tip">Wat spelers intypten onder "Klopt deze vraag niet?", nieuwste bovenaan. Weghalen als je de vraag hebt nagekeken.</p>
+    <div id="meldingen" style="margin-top:10px"><p class="leeg">Nog niet geladen.</p></div>
+  </section>
+
+  <section class="kaart hide" id="tab-gebruik">
+    <h2>Gebruik per pagina</h2>
+    <p class="tip">Eén tik per paginabezoek, zonder cookie of adres. De laatste dertig dagen, met vandaag apart.</p>
+    <div style="overflow-x:auto;margin-top:10px"><table><thead><tr><th>Pagina</th><th>Vandaag</th><th>7 dagen</th><th>30 dagen</th></tr></thead><tbody id="gebruik"><tr><td colspan="4" class="leeg">Nog niet geladen.</td></tr></tbody></table></div>
+  </section>
+
+  <section class="kaart hide" id="tab-klassement">
+    <h2>Klassement opruimen</h2>
+    <p class="tip">Haal een rij weg op naam (alle rijen met die naam) of op id.</p>
+    <div class="rij" style="margin-top:10px">
+      <select id="kSpel" class="veld"><option value="toren">Torenverdediging</option><option value="zwaard">Zwaardvechter</option></select>
+      <input id="kNaam" class="veld" placeholder="naam" maxlength="16">
+      <input id="kId" class="veld" placeholder="of id" maxlength="40">
+      <button class="knop rood" id="kWeg" type="button">Weghalen</button>
+    </div>
+    <p class="tip" id="kStatus"></p>
+    <div id="kLijst" style="margin-top:12px"></div>
+  </section>
+</main>
+<script>
+(function(){
+  'use strict';
+  function $(id){ return document.getElementById(id); }
+  function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+  try { $('sleutel').value = localStorage.getItem('lg-beheer') || ''; } catch (e){}
+  function sleutel(){ return $('sleutel').value.trim(); }
+  function kop(){ return { 'content-type':'application/json', 'x-beheer':sleutel() }; }
+  function haal(pad, opties){
+    return fetch(pad, Object.assign({ headers:kop() }, opties || {})).then(function(r){ return r.json().then(function(j){ return { ok:r.ok, status:r.status, j:j }; }); });
+  }
+  Array.prototype.forEach.call($('tabs').querySelectorAll('button'), function(b){
+    b.addEventListener('click', function(){
+      Array.prototype.forEach.call($('tabs').querySelectorAll('button'), function(x){ x.classList.toggle('on', x === b); });
+      ['meldingen', 'gebruik', 'klassement'].forEach(function(t){ $('tab-' + t).classList.toggle('hide', t !== b.getAttribute('data-tab')); });
+    });
+  });
+  function tekenMeldingen(lijst){
+    $('meldingen').innerHTML = lijst.length ? lijst.map(function(m){
+      return '<div class="melding"><b>' + schoon(m.vraag || '(geen vraag meegestuurd)') + '</b><span class="meta">' + new Date(m.t).toLocaleString('nl-NL') + ' · ' + schoon(m.spel || m.pad || '') + (m.vak ? ' · ' + schoon(m.vak) : '') + (m.niveau ? ' · ' + schoon(m.niveau) : '') + '</span>' +
+        (m.opmerking ? '<div class="opm">' + schoon(m.opmerking) + '</div>' : '') + '<div style="margin-top:6px"><button type="button" class="knop stil klein" data-weg="' + schoon(m.id) + '">Weghalen</button></div></div>';
+    }).join('') : '<p class="leeg">Geen meldingen.</p>';
+    Array.prototype.forEach.call($('meldingen').querySelectorAll('[data-weg]'), function(b){
+      b.addEventListener('click', function(){
+        haal('/api/beheer/melding-weg', { method:'POST', body:JSON.stringify({ id:b.getAttribute('data-weg') }) }).then(function(){ laad(); });
+      });
+    });
+  }
+  function tekenGebruik(tellers){
+    var dagen = Object.keys(tellers).sort();
+    var vandaag = new Date().toISOString().slice(0, 10);
+    var som = {};
+    dagen.forEach(function(d){
+      var oud = Math.round((new Date(vandaag) - new Date(d)) / 86400000);
+      Object.keys(tellers[d]).forEach(function(p){
+        var r = som[p] = som[p] || { v:0, w:0, m:0 };
+        var n = tellers[d][p];
+        if (d === vandaag) r.v += n;
+        if (oud < 7) r.w += n;
+        if (oud < 30) r.m += n;
+      });
+    });
+    var rijen = Object.keys(som).sort(function(a, b){ return som[b].m - som[a].m; });
+    $('gebruik').innerHTML = rijen.length ? rijen.map(function(p){ var r = som[p]; return '<tr><td>' + schoon(p) + '</td><td class="getal">' + r.v + '</td><td class="getal">' + r.w + '</td><td class="getal">' + r.m + '</td></tr>'; }).join('') : '<tr><td colspan="4" class="leeg">Nog niets geteld.</td></tr>';
+  }
+  function laad(){
+    if (!sleutel()){ $('status').textContent = 'Vul de beheersleutel in.'; return; }
+    try { localStorage.setItem('lg-beheer', sleutel()); } catch (e){}
+    $('status').textContent = 'Laden…';
+    Promise.all([haal('/api/beheer/meldingen'), haal('/api/beheer/tellers')]).then(function(x){
+      if (!x[0].ok){ $('status').textContent = x[0].status === 403 ? 'De sleutel klopt niet, of hij is nog niet gezet op de server.' : (x[0].j.fout || 'Laden lukte niet.'); return; }
+      $('status').textContent = 'Geladen om ' + new Date().toLocaleTimeString('nl-NL');
+      tekenMeldingen(x[0].j.meldingen || []);
+      tekenGebruik(x[1].ok ? (x[1].j.tellers || {}) : {});
+    }).catch(function(){ $('status').textContent = 'Geen verbinding met de server.'; });
+    tekenKlassement();
+  }
+  function tekenKlassement(){
+    fetch('/api/klassement/' + $('kSpel').value).then(function(r){ return r.json(); }).then(function(j){
+      var l = j.lijst || [];
+      $('kLijst').innerHTML = l.length ? '<table><thead><tr><th>Plek</th><th>Naam</th><th>Ronde</th><th>Punten</th><th>Id</th></tr></thead><tbody>' + l.map(function(r){ return '<tr><td class="getal">' + r.plek + '</td><td>' + schoon(r.naam) + '</td><td class="getal">' + r.ronde + '</td><td class="getal">' + r.punten + '</td><td><code>' + schoon(r.id) + '</code></td></tr>'; }).join('') + '</tbody></table>' : '<p class="leeg">Het klassement is leeg.</p>';
+    }).catch(function(){});
+  }
+  $('kSpel').addEventListener('change', tekenKlassement);
+  $('kWeg').addEventListener('click', function(){
+    var body = { naam:$('kNaam').value.trim(), id:$('kId').value.trim() };
+    if (!body.naam && !body.id){ $('kStatus').textContent = 'Vul een naam of id in.'; return; }
+    haal('/api/klassement/' + $('kSpel').value, { method:'DELETE', body:JSON.stringify(body) }).then(function(x){
+      $('kStatus').textContent = x.ok ? x.j.weg + ' rij(en) weggehaald.' : (x.j.fout || 'Weghalen lukte niet.');
+      tekenKlassement();
+    });
+  });
+  $('laad').addEventListener('click', laad);
+  $('vergeet').addEventListener('click', function(){ try { localStorage.removeItem('lg-beheer'); } catch (e){} $('sleutel').value = ''; $('status').textContent = 'Sleutel vergeten.'; });
+  if (sleutel()) laad();
+})();
+</script>
+</body>
+</html>
