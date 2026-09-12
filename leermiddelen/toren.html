@@ -2667,7 +2667,7 @@ function rekenVraag(rang, toegestaan) {
      uit; zijn maat stuurt bouwacties en de munten van zijn eigen goede
      antwoorden over de kamer, en tekent acht keer per seconde de stand die
      terugkomt. Munten, levens en torens zijn van allebei. */
-  var co = { aan:false, rol:null, maat:'', zendKlok:0, gastKlok:null };
+  var co = { aan:false, rol:null, maat:'', zendKlok:0, gastKlok:null, gastLaatst:0, gehad:false, vrij:null };
   var torenTeller = 0;
   function zendNet(d){ if (window.STRIJD && STRIJD.stuurNet) STRIJD.stuurNet(d); }
   /* bank.ronde is de ronde waarvan de fouten nu komen. Roep je de volgende er
@@ -2730,6 +2730,7 @@ function rekenVraag(rang, toegestaan) {
   function isVrij(id){
     var so = SOORTEN[id];
     if (!so.speciaal) return true;
+    if (co.aan && co.rol === 'gast' && co.vrij) return co.vrij.indexOf(id) >= 0;
     return slotVrij(so.slot);
   }
   function slotTekst(id){
@@ -7372,20 +7373,53 @@ function rekenVraag(rang, toegestaan) {
     if (extra) extra(o, r);
     return r;
   }
-  function plat1(o){ return plat(o); }
+  /* Wat de maat nodig heeft om het bord te tekenen en even door te laten lopen:
+     per soort een vaste rij velden, zonder de namen erbij. Zo is een stand een
+     paar kilobyte in plaats van tientallen, en dat scheelt op een telefoon op
+     het schoolnetwerk het verschil tussen vloeiend en hakkelen. */
+  var VELDEN = {
+    v:['d','hp','maxHp','snelheid','traag','ijs','onder','soort','kleur','mark','schild','schildOp','camo','dik','brand','flits','fase','fasen','baas','baassoort','mega','mini','vorm','dood'],
+    t:['id','x','y','soort','niveau','kracht','loop','mikt','uit','heet','terugslag','golfKlok'],
+    vl:['fase','laad','laadVol'],
+    s:['x','y','hoek','len','leven','kleur','dik','laser','banaan','boot'],
+    ko:['x0','y0','x1','y1','t','duur','draai','bom','dart','lava','raket','straal','valt'],
+    go:['x','y','r','leven','kleur','dik'],
+    ci:['x','y','tekst','leven','kleur'],
+    w:['id','x','y','soort','voorraad','hoek'],
+    vr:['x','y','d','hp','maxHp','hoek','kleur','leven','slag','stap','bommen','hutId'],
+    la:['x','y','r','leven','vol'],
+    sc:['x0','y0','x1','y1','t','draai','torenId'],
+    pl:['x','y','vx','vy','leven','kleur']
+  };
+  function kort(v){ var tp = typeof v; return tp === 'number' ? Math.round(v * 10) / 10 : (tp === 'string' || tp === 'boolean') ? v : null; }
+  function inpak(lijst, velden, extra){
+    return lijst.map(function(o){
+      var r = velden.map(function(k){ return kort(o[k]); });
+      if (extra) extra(o, r);
+      return r;
+    });
+  }
+  function uitpak(rijen, velden){
+    return (rijen || []).map(function(r){
+      var o = {};
+      velden.forEach(function(k, i){ if (r[i] !== null && r[i] !== undefined) o[k] = r[i]; });
+      return o;
+    });
+  }
   function standPakket(f){
     return { k:'st', f:f || 'spel', th:thema.id, ki:KAARTEN.indexOf(kaart),
+      gz:gekozen(), vb:vrijBijStart, vl:Object.keys(SOORTEN).filter(isVrij),
       g:{ munten:bank.munten, leven:bank.leven, ronde:bank.ronde, wachtrij:wachtrij, rondePauze:rondePauze, slots:slots, penningen:penningen, haast:haast,
           baasBalkIn:baasBalkIn, baasSpook:baasSpook, baasAlarm:baasAlarm, alarmMini:alarmMini, klap:klap, klapAantal:klapAantal, rondeGehaald:rondeGehaald,
           poortFlits:poortFlits, gk:golfKeuzes },
-      bb:baasBalk,
-      v:vijanden.map(plat1),
-      t:torens.map(function(t){ return plat(t, function(o, r){ if (o.vlieger) r.vlieger = plat(o.vlieger); }); }),
-      s:schoten.map(plat1), ko:kogels.map(plat1), go:golven.map(plat1), ci:cijfers.map(plat1), w:wegdingen.map(plat1),
-      vr:vrienden.map(function(v){ return plat(v, function(o, r){ r.hutId = o.hut ? o.hut.id : null; }); }),
-      la:lavas.map(plat1),
-      sc:schillen.map(function(x){ return plat(x, function(o, r){ r.torenId = o.toren ? o.toren.id : null; }); }),
-      pl:pluis.slice(-120).map(plat1) };
+      bb:baasBalk ? plat(baasBalk) : null,
+      v:inpak(vijanden, VELDEN.v),
+      t:inpak(torens, VELDEN.t, function(o, r){ r.push(o.vlieger ? VELDEN.vl.map(function(k){ return kort(o.vlieger[k]); }) : null); }),
+      s:inpak(schoten, VELDEN.s), ko:inpak(kogels, VELDEN.ko), go:inpak(golven, VELDEN.go), ci:inpak(cijfers, VELDEN.ci), w:inpak(wegdingen, VELDEN.w),
+      vr:inpak(vrienden, VELDEN.vr, function(o, r){ r[r.length - 1] = o.hut ? o.hut.id : null; }),
+      la:inpak(lavas, VELDEN.la),
+      sc:inpak(schillen, VELDEN.sc, function(o, r){ r[r.length - 1] = o.toren ? o.toren.id : null; }),
+      pl:inpak(pluis.slice(-60), VELDEN.pl) };
   }
   function hostZend(dt){
     co.zendKlok -= dt;
@@ -7440,11 +7474,31 @@ function rekenVraag(rang, toegestaan) {
     if (klok){ clearInterval(klok); klok = null; }
     ['snelBtn', 'pauzeBtn'].forEach(function(id){ var k = document.getElementById(id); if (k) k.classList.add('hide'); });
     if (co.gastKlok) clearInterval(co.gastKlok);
+    co.gehad = false; co.vrij = null; co.gastLaatst = Date.now();
     co.gastKlok = setInterval(function(){
-      pols += 0.06;
-      if (klap > 0) klap = Math.max(0, klap - 0.06);
+      var nu = Date.now(), dt = Math.min(0.2, (nu - co.gastLaatst) / 1000);
+      co.gastLaatst = nu;
+      pols += dt;
+      if (klap > 0) klap = Math.max(0, klap - dt);
+      if (co.gehad) gastLoopt(dt);
       tekenBord(); tekenMeters();
     }, 60);
+  }
+  /* Tussen twee standen van de gastheer in loopt het bord hier zelf even door,
+     met dezelfde snelheden als bij hem; de volgende stand zet alles weer recht.
+     Zo beweegt alles vloeiend in plaats van acht keer per seconde te springen. */
+  function gastLoopt(dt){
+    vijanden.forEach(function(e){
+      if (e.dood || e.hp <= 0) return;
+      e.d += e.snelheid * (e.traag > 0 ? (e.ijs ? 0.22 : 0.45) : 1) * (e.onder > 0 ? 1.3 : 1) * dt;
+    });
+    cijfers.forEach(function(c){ c.leven -= dt; c.y -= 26 * dt; });
+    pluis.forEach(function(v){ v.leven -= dt; v.x += v.vx * dt; v.y += v.vy * dt; v.vy += 90 * dt; });
+    schoten.forEach(function(s){ s.leven -= dt; });
+    kogels.forEach(function(k){ if (k.t < 1){ k.t = Math.min(1, k.t + dt / (k.duur || 0.5)); k.draai = (k.draai || 0) + 340 * dt; } });
+    cijfers = cijfers.filter(function(c){ return c.leven > 0; });
+    pluis = pluis.filter(function(v){ return v.leven > 0; });
+    schoten = schoten.filter(function(s){ return s.leven > 0; });
   }
   function pasStandToe(d){
     if (!d || d.k !== 'st') return;
@@ -7456,19 +7510,26 @@ function rekenVraag(rang, toegestaan) {
     baasBalkIn = g.baasBalkIn; baasSpook = g.baasSpook; baasAlarm = g.baasAlarm; alarmMini = !!g.alarmMini;
     klap = g.klap; klapAantal = g.klapAantal; rondeGehaald = g.rondeGehaald; poortFlits = g.poortFlits;
     if (g.gk) golfKeuzes = g.gk;
+    if (d.gz) keuzeTorens[thema.id] = d.gz;
+    if (d.vb) vrijBijStart = d.vb;
+    if (d.vl) co.vrij = d.vl;
     baasBalk = d.bb || null;
-    vijanden = d.v; schoten = d.s; kogels = d.ko; golven = d.go; cijfers = d.ci; wegdingen = d.w; lavas = d.la; pluis = d.pl;
+    vijanden = uitpak(d.v, VELDEN.v); schoten = uitpak(d.s, VELDEN.s); kogels = uitpak(d.ko, VELDEN.ko); golven = uitpak(d.go, VELDEN.go);
+    cijfers = uitpak(d.ci, VELDEN.ci); wegdingen = uitpak(d.w, VELDEN.w); lavas = uitpak(d.la, VELDEN.la); pluis = uitpak(d.pl, VELDEN.pl);
     /* torens: bestaande objecten hergebruiken, zodat het menu en het slepen blijven kloppen */
     var oud = {}; torens.forEach(function(t){ oud[t.id] = t; });
-    torens = d.t.map(function(nt){
+    torens = uitpak(d.t, VELDEN.t).map(function(nt, i){
+      var rv = d.t[i][VELDEN.t.length];
+      nt.vlieger = rv ? uitpak([rv], VELDEN.vl)[0] : undefined;
       var t = oud[nt.id];
       if (!t) return nt;
-      for (var k in nt){ if (sleep && sleep.toren === t && (k === 'x' || k === 'y')) continue; t[k] = nt[k]; }
+      VELDEN.t.concat(['vlieger']).forEach(function(k){ if (sleep && sleep.toren === t && (k === 'x' || k === 'y')) return; t[k] = nt[k]; });
       return t;
     });
     var perId = {}; torens.forEach(function(t){ perId[t.id] = t; });
-    vrienden = d.vr.map(function(v){ v.hut = perId[v.hutId] || null; return v; });
-    schillen = d.sc.map(function(x){ x.toren = perId[x.torenId] || null; return x; });
+    vrienden = uitpak(d.vr, VELDEN.vr).map(function(v){ v.hut = perId[v.hutId] || null; return v; });
+    schillen = uitpak(d.sc, VELDEN.sc).map(function(x){ x.toren = perId[x.torenId] || null; return x; });
+    if (!co.gehad){ co.gehad = true; kaartMelding(); }
     if (menu && menu.toren && !perId[menu.toren.id]) menu = null;
     if (verplaats && !perId[verplaats.id]) verplaats = null;
     if (d.f === 'einde' && inSpel()){ tekenMeters(); einde(); }
@@ -7547,10 +7608,13 @@ function rekenVraag(rang, toegestaan) {
     document.getElementById('scherm-einde').classList.add('hide');
     document.getElementById('scherm-spel').classList.remove('hide');
     tekenVraag(); tekenMeters(); tekenBord();
+    if (co.aan && co.rol === 'gast') gastStart(); else { kaartMelding(); startKlok(); }
+    scrollTo({ top:0, behavior:'auto' });
+  }
+
+  function kaartMelding(){
     melding2('Kaart: ' + kaartNaam(kaart) + (thema.plek || '') +
       (thema.water ? '. Landtorens op de eilandjes, de boten op het water.' : '. Elk potje loot een andere weg, dus kijk eerst waar de bochten liggen.'));
-    if (co.aan && co.rol === 'gast') gastStart(); else startKlok();
-    scrollTo({ top:0, behavior:'auto' });
   }
 
   function einde(){
