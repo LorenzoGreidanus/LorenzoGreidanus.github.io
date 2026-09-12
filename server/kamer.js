@@ -27,6 +27,8 @@ const AFTELLEN = 3000;                       /* een duel begint drie seconden na
 const OPRUIMEN_NA = 3 * 60 * 60 * 1000;     /* een kamer leeft hoogstens drie uur */
 const NA_EINDE = 30 * 60 * 1000;             /* na de eindstand nog een half uur te bekijken */
 const SPELLEN_STRIJD = { toren: "Torenverdediging", zwaard: "Zwaardvechter" };
+const KLAS_LEEFT = 7 * 24 * 60 * 60 * 1000;   /* een klascode is een week geldig */
+const KLAS_MAX = 3000;                        /* hoogstens zoveel gemelde potjes per klas */
 
 function json(obj, status){
   return new Response(JSON.stringify(obj), { status: status || 200,
@@ -77,6 +79,8 @@ export class Kamer extends DurableObject {
       const url = new URL(req.url);
       if (url.pathname === "/nieuw") return await this.nieuw(await req.json());
       if (url.pathname === "/stand") return this.stand ? json(this.overzicht()) : json({ fout: "geen kamer met deze code" }, 404);
+      if (url.pathname === "/meld" && req.method === "POST") return await this.meld(await req.json());
+      if (url.pathname === "/resultaten") return this.resultaten(url.searchParams.get("sleutel"));
       if (req.headers.get("Upgrade") === "websocket") return this.verbind(url);
       return json({ fout: "onbekend" }, 404);
     } catch (e){
@@ -87,13 +91,16 @@ export class Kamer extends DurableObject {
 
   async nieuw(opzet){
     /* een code die nog in gebruik is geven we niet nog een keer uit */
-    if (this.stand && this.stand.fase !== "einde" && Date.now() - this.stand.laatst < OPRUIMEN_NA) return json({ fout: "bezet" }, 409);
+    if (this.stand && (this.stand.spel === "klas" ? Date.now() - this.stand.gemaakt < KLAS_LEEFT : (this.stand.fase !== "einde" && Date.now() - this.stand.laatst < OPRUIMEN_NA))) return json({ fout: "bezet" }, 409);
     const basis = {
       code: String(opzet.code || "").toUpperCase(), sleutel: sleutelMaken(),
       vak: schoon(opzet.vak, 20), niveau: schoon(opzet.niveau, 20),
       fase: "lobby", spelers: {}, gemaakt: Date.now(), laatst: Date.now(), alarm: null
     };
-    if (opzet.spel === "strijd"){
+    if (opzet.spel === "klas"){
+      /* een klascode: geen spel, maar een bak waarin leerlingen hun uitslagen melden en die de docent leest */
+      this.stand = Object.assign(basis, { spel: "klas", naam: schoon(opzet.naam, 40) || "Klas", resultaten: [] });
+    } else if (opzet.spel === "strijd"){
       const game = String(opzet.game || "");
       if (!SPELLEN_STRIJD[game]) return json({ fout: "onbekend spel" }, 400);
       /* een duel: twee spelers, geen docent, begint vanzelf als de tweede er is */
@@ -114,13 +121,14 @@ export class Kamer extends DurableObject {
     }
     /* wat er nog aan oude sockets hangt, mag weg */
     this.ctx.getWebSockets().forEach(ws => { try { ws.close(1000, "nieuwe kamer"); } catch (e){} });
-    await this.zetAlarm({ wat: "opruimen" }, OPRUIMEN_NA);
+    await this.zetAlarm({ wat: "opruimen" }, this.stand.spel === "klas" ? KLAS_LEEFT : OPRUIMEN_NA);
     await this.bewaar();
     return json({ code: this.stand.code, sleutel: this.stand.sleutel, n: this.stand.vragen ? this.stand.vragen.length : 0 });
   }
 
   verbind(url){
     if (!this.stand) return json({ fout: "geen kamer met deze code" }, 404);
+    if (this.stand.spel === "klas") return json({ fout: "een klascode is geen spelkamer" }, 400);
     const rol = url.searchParams.get("rol") === "host" ? "host" : "speler";
     let sid = schoon(url.searchParams.get("sid"), 40);
     let naam = nette(url.searchParams.get("naam"), "Leerling");   /* door het naamfilter */
@@ -467,9 +475,35 @@ export class Kamer extends DurableObject {
   /* ======================================================================
      Gedeeld
      ====================================================================== */
+  /* ---------- het klasoverzicht ---------- */
+  async meld(inz){
+    if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
+    if (Date.now() - this.stand.gemaakt > KLAS_LEEFT) return json({ fout: "deze klascode is verlopen" }, 410);
+    const sid = schoon(inz && inz.sid, 40);
+    if (!/^[A-Za-z0-9_-]{8,40}$/.test(sid)) return json({ fout: "geen geldig kenmerk" }, 400);
+    const spel = String(inz.spel || "");
+    if (!SPELLEN_STRIJD[spel]) return json({ fout: "onbekend spel" }, 400);
+    const r = { sid: sid.slice(0, 12), naam: nette(inz.naam, "Leerling"), spel, ronde: getal(inz.ronde, 250), punten: getal(inz.punten, 5000),
+                niveau: schoon(inz.niveau, 10), vak: schoon(inz.vak, 10), t: Date.now() };
+    /* per leerling per spel hoogstens dertig potjes, en een plafond voor de hele klas */
+    const mijn = this.stand.resultaten.filter(x => x.sid === r.sid && x.spel === spel);
+    if (mijn.length >= 30) this.stand.resultaten.splice(this.stand.resultaten.indexOf(mijn[0]), 1);
+    this.stand.resultaten.push(r);
+    if (this.stand.resultaten.length > KLAS_MAX) this.stand.resultaten.splice(0, this.stand.resultaten.length - KLAS_MAX);
+    await this.bewaar();
+    return json({ ok: true, n: this.stand.resultaten.length });
+  }
+  resultaten(sleutel){
+    if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
+    if (!sleutel || sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
+    return json({ code: this.stand.code, naam: this.stand.naam, gemaakt: this.stand.gemaakt,
+                  resultaten: this.stand.resultaten.map(x => ({ naam: x.naam, spel: x.spel, ronde: x.ronde, punten: x.punten, niveau: x.niveau, vak: x.vak, t: x.t })) });
+  }
+
   aanwezig(sid){ return this.ctx.getWebSockets(sid).length > 0; }
   overzicht(){
     const st = this.stand, basis = { code: st.code, spel: st.spel, vak: st.vak, niveau: st.niveau, fase: st.fase };
+    if (st.spel === "klas") return Object.assign(basis, { naam: st.naam, n: st.resultaten.length, gemaakt: st.gemaakt });
     if (this.strijd){
       const lijst = this.strijdLijst();
       return Object.assign(basis, { game: st.game, duel: !!st.duel, gastheer: st.gastheer ? this.pid(st.gastheer) : null, gestart: st.gestart, bezig: lijst.filter(r => !r.af).length, spelers: lijst });

@@ -255,6 +255,12 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
   :root[data-theme="dark"] .rij.on .tel{background:rgba(20,34,76,.15);color:#14224C}
   :root[data-theme="dark"] .rij.on .nr{background:#14224C;border-color:#14224C;color:#fff}
 }
+.klasvak .rij{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.klasvak input{border:1.5px solid var(--rand2,rgba(20,34,76,.16));border-radius:12px;padding:8px 10px;background:var(--kaart,#fff);color:var(--ink);font:inherit;width:96px}
+.klasvak input.naam{width:150px}
+.klasvak button{border:none;border-radius:12px;padding:8px 12px;background:var(--ocean,#204ECF);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+.klasvak button.los{background:transparent;color:var(--muted);text-decoration:underline;padding:6px 4px;font-weight:500}
+.klasvak p.status{font-size:.86rem;color:var(--muted);margin-top:6px}
 </style>
 <link rel="stylesheet" href="basis.css">
 </head>
@@ -268,6 +274,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
         <svg class="maan" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
         <svg class="zon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>
       </button>
+      <a class="docent" href="klas.html">Klasoverzicht</a>
       <a class="docent" href="../over.html">Voor docenten</a></span>
   </div>
 </header>
@@ -283,6 +290,10 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
       <p class="eyebrow">jouw niveau</p>
       <div class="niveaubalk" id="niveaubalk" role="group" aria-label="Kies je niveau"></div>
       <p class="niveauhint" id="niveauhint">Kies je niveau, dan staat het in elke startknop.</p>
+      <div class="klasvak" id="klasvak">
+        <p class="eyebrow" style="margin-top:12px">klascode van je docent</p>
+        <div id="klasUit"></div>
+      </div>
     </div>
   </section>
 
@@ -850,6 +861,35 @@ var SPELLEN = [
 
   tekenSnel(); tekenVerder(); alles();
   if (n) NIVEAUS.forEach(function(x){ if (x.id === n) zetNiveau(x); });
+})();
+</script>
+<script src="klas.js"></script>
+<script>
+/* de klascode van de docent: een keer koppelen, daarna melden de spellen hun uitslag */
+(function(){
+  var doel = document.getElementById('klasUit'); if (!doel || !window.KLAS) return;
+  function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+  function teken(){
+    var k = KLAS.lees();
+    if (k){
+      doel.innerHTML = '<p class="status">Gekoppeld aan klas <b>' + schoon(k.code) + '</b> als <b>' + schoon(k.naam) + '</b>. Je uitslagen van Torenverdediging en Zwaardvechter gaan naar je docent. <button type="button" class="los" id="klasLos">Loskoppelen</button></p>';
+      document.getElementById('klasLos').addEventListener('click', function(){ KLAS.wis(); teken(); });
+      return;
+    }
+    doel.innerHTML = '<div class="rij"><input id="klasCode" maxlength="4" placeholder="CODE" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Klascode"><input id="klasNaam" class="naam" maxlength="16" placeholder="Je bijnaam" autocomplete="nickname" aria-label="Je bijnaam"><button type="button" id="klasKoppel">Koppelen</button></div>' +
+      '<p class="status" id="klasStatus">Alleen als je docent je een code gaf. Zonder code speel je gewoon en wordt er niets opgeslagen.</p>';
+    document.getElementById('klasKoppel').addEventListener('click', function(){
+      var code = document.getElementById('klasCode').value.toUpperCase().replace(/[^A-Z]/g, ''), naam = document.getElementById('klasNaam').value.trim(), st = document.getElementById('klasStatus');
+      if (code.length !== 4){ st.textContent = 'Een klascode heeft vier letters.'; return; }
+      if (naam.length < 2){ st.textContent = 'Vul een bijnaam in.'; return; }
+      st.textContent = 'Even kijken\u2026';
+      fetch('/api/kamer/' + code).then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); }).then(function(x){
+        if (!x.ok || x.j.spel !== 'klas'){ st.textContent = 'Geen klas met deze code.'; return; }
+        KLAS.zet(code, naam); teken();
+      }).catch(function(){ st.textContent = 'Geen verbinding.'; });
+    });
+  }
+  teken();
 })();
 </script>
 <script src="thema.js"></script>
