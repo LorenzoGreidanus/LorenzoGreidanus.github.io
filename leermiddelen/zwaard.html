@@ -232,8 +232,8 @@ body.groot .meter b{font-size:1.45rem}
   <p class="lead">Jij staat met een zwaard in een arena en de fouten komen van alle kanten op je af. Loop, ontwijk en sla. Na elke ronde beantwoord je met de klas een paar vragen: elk goed antwoord is geld, en met geld koop je een scherper zwaard, een harnas, snellere laarzen of een werpmes. Hoeveel rondes houd je vol?</p>
 
   <div class="uitleg">
-    <div><i style="background:var(--crab)">1</i><b>Bewegen, ontwijken en slaan</b><span>Pijltjes of WASD om te lopen, of houd je vinger op de arena en loop erheen. Spatie of de knop Ontwijk maakt een sprong waarbij niets je raakt. Je zwaard slaat vanzelf naar de dichtstbijzijnde fout die binnen bereik komt.</span></div>
-    <div><i style="background:var(--amber)">2</i><b>Elke ronde meer</b><span>Meer fouten, snellere, dikkere en fouten met een schild. Raakt een fout je, dan kost dat leven; op nul is het klaar.</span></div>
+    <div><i style="background:var(--crab);color:#14224C">1</i><b>Bewegen, ontwijken en slaan</b><span>Pijltjes of WASD om te lopen, of houd je vinger op de arena en loop erheen. Spatie of de knop Ontwijk maakt een sprong waarbij niets je raakt. Je zwaard slaat vanzelf naar de dichtstbijzijnde fout die binnen bereik komt.</span></div>
+    <div><i style="background:var(--amber);color:#14224C">2</i><b>Elke ronde meer</b><span>Meer fouten, snellere, dikkere en fouten met een schild. Raakt een fout je, dan kost dat leven; op nul is het klaar.</span></div>
     <div><i style="background:#4a1230">B</i><b>Elke vijfde ronde een baas</b><span>Er zijn er zes, en ze komen om de beurt: De Grote Fout, De Inktvlek, De Rode Pen, De Prop, De Klok en De Zwerm. Elk heeft zijn eigen aanvallen, en die zie je op de grond aankomen: cirkels die ontploffen, een draaiende laser, een golf, inkt die blijft liggen, strepen dwars over de vloer, propjes in het rond, tikkende uren en een ring die zich sluit. Loop eruit, of spring er met Ontwijk doorheen. Onder de helft van zijn leven wordt hij kwaad en slaat hij sneller toe.</span></div>
     <div><i style="background:var(--ocean)">3</i><b>Vragen zijn munten</b><span>Na elke ronde vijf vragen voor de klas, en hoe verder je komt hoe meer. Goed is munten, op rij goed is meer munten. Weet je het te goed, dan gaan de vragen een niveau omhoog. Fouten die je velt laten ook wat vallen.</span></div>
     <div><i style="background:#6b3fa0">4</i><b>Uitrusting</b><span>Tussen de rondes koop je in de winkel: zwaard, bereik, tempo, harnas, laarzen, werpmes en een drankje. Alles heeft zeven niveaus.</span></div>
@@ -467,9 +467,19 @@ const ICONEN = {
   }
   function tekenVakken(){
     var el = document.getElementById('vakken');
+    /* Wit haalt de norm niet op crab, amber en lichtblauw; donkerblauw wel. */
+    function inktOp(c){
+      var t = { 'var(--crab)':'#F26749', 'var(--deep-ocean)':'#204ECF', 'var(--butterscotch)':'#EA9836',
+                'var(--vista-blue)':'#83A5F2', 'var(--ocean)':'#204ECF', 'var(--amber)':'#EA9836', 'var(--vista)':'#83A5F2' };
+      var v = String(t[String(c).trim()] || c).trim();
+      if (v.charAt(0) !== '#' || v.length !== 7) return '#fff';
+      var d = [1, 3, 5].map(function(i){ var x = parseInt(v.substr(i, 2), 16) / 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
+      var L = 0.2126 * d[0] + 0.7152 * d[1] + 0.0722 * d[2];
+      return (1.05 / (L + 0.05)) >= ((L + 0.05) / 0.0673) ? '#fff' : '#14224C';
+    }
     el.innerHTML = VAKKEN.map(function(v){
       return '<button type="button" class="vak' + (vak === v.id ? ' on' : '') + '" data-v="' + v.id + '">' +
-        '<i style="background:' + v.kleur + '">' + v.mark + '</i><b>' + v.naam + '</b><span>' + v.onder + '</span></button>';
+        '<i style="background:' + v.kleur + ';color:' + inktOp(v.kleur) + '">' + v.mark + '</i><b>' + v.naam + '</b><span>' + v.onder + '</span></button>';
     }).join('');
     Array.prototype.forEach.call(el.querySelectorAll('.vak'), function(b){
       b.addEventListener('click', function(){

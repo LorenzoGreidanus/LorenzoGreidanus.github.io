@@ -44,7 +44,7 @@ button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
 header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-bottom:1px solid rgba(20,34,76,.08);padding:10px 0}
 .hd{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .mark{display:flex;align-items:center;gap:10px;font-weight:600;text-decoration:none;color:inherit}
-.mark i{width:32px;height:32px;border-radius:10px;background:var(--ocean);color:var(--room);display:grid;place-items:center;font-style:normal;font-size:.78rem}
+.mark i{width:32px;height:32px;border-radius:10px;background:var(--ocean);color:#fff;display:grid;place-items:center;font-style:normal;font-size:.78rem}
 .linkbtn{background:none;border:none;color:var(--muted);text-decoration:underline;text-underline-offset:4px;font-size:.85rem;padding:6px}
 .linkbtn:hover{color:var(--ink)}
 
@@ -55,6 +55,12 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .spelers{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin:20px auto 0;max-width:1100px}
 .speler{background:#fff;border:2px solid rgba(20,34,76,.10);border-radius:20px;padding:16px;text-align:left}
 .speler h3{font-size:1.05rem}
+/* de naam van een polis: donkere variant in de lichte stand, lichte in de donkere.
+   De kleur staat hier en niet in het style-attribuut, anders wint de inline
+   kleur van de themaregel en blijft hij staan na het omschakelen. */
+.poliskop{color:var(--pk)}
+:root[data-theme="dark"] .poliskop{color:var(--pkl)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .poliskop{color:var(--pkl)}}
 .speler .wat{font-size:.83rem;color:var(--muted);margin-top:5px}
 .speler .wie{display:flex;gap:7px;margin-top:11px}
 .speler .wie button{flex:1;border:2px solid rgba(20,34,76,.12);background:var(--room);border-radius:12px;padding:8px;font-size:.82rem;font-weight:600}
@@ -78,8 +84,8 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .plek circle{fill:#fff;stroke:#5b6480;stroke-width:2;transition:r .15s var(--ease)}
 .plek:hover circle{r:9}
 .plek.kan circle{stroke:var(--ocean);stroke-width:3;stroke-dasharray:3 2}
-.plek.aan circle{r:10;stroke:var(--ink);stroke-width:3.5}
-.plek text{font-size:11px;font-weight:600;fill:var(--ink);paint-order:stroke;stroke:#fff;stroke-width:3;text-anchor:middle;pointer-events:none}
+.plek.aan circle{r:10;stroke:#14224C;stroke-width:3.5}
+.plek text{font-size:11px;font-weight:600;fill:#14224C;paint-order:stroke;stroke:#fff;stroke-width:3;text-anchor:middle;pointer-events:none}
 .thuis rect{stroke:#fff;stroke-width:2.5}
 .thuis text{font-size:12px;font-weight:700;fill:var(--ink);paint-order:stroke;stroke:#fff;stroke-width:3.5;text-anchor:middle;pointer-events:none}
 
@@ -313,7 +319,9 @@ var OMSLAG = [
 ];
 
 /* De kleur van een polis als tekstkleur: in het donker de lichte variant, anders verdwijnt blauw op de donkere kaart. */
-function tekstKleur(p){ var t = document.documentElement.getAttribute('data-theme'); var donker = t === 'dark' || (t !== 'light' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches); return donker && p.licht ? p.licht : p.kleur; }
+/* Geeft de twee varianten mee als eigenschappen; welke er getoond wordt kiest
+   de stijl, zodat de kleur meeverandert als je halverwege omschakelt. */
+function polisKleur(p){ return '--pk:' + p.kleur + ';--pkl:' + (p.licht || p.kleur); }
 var POLEIS = [
   { id:'athene', naam:'Athene', kort:'ATH', kleur:'#204ECF', licht:'#83A5F2', vorm:'aristocratie',
     invloed:14, adel:52, rijk:52, volk:48, sfeer:['egeisch','zwart'],
@@ -328,7 +336,7 @@ var POLEIS = [
       { t:'Word een democratie: laat je roeiers meebeslissen', p:5,
         check:function(s){ return s.vormVan('athene') === 'democratie'; } }
     ] },
-  { id:'sparta', naam:'Sparta', kort:'SPA', kleur:'#c0442c', vorm:'aristocratie',
+  { id:'sparta', naam:'Sparta', kort:'SPA', kleur:'#c0442c', licht:'#f0a090', vorm:'aristocratie',
     invloed:12, adel:74, rijk:32, volk:30, sfeer:['west'], duur:2, maxKolonies:2, landmacht:4, leger:3,
     wat:'Een klein leger van burgers heerst over een veel grotere onderworpen bevolking. Sparta sticht hoogstens twee kolonies, krijgt elke ronde 4 invloed extra uit het onderworpen land, en valt aan met 3 kracht extra: het beste landleger van Griekenland.',
     nooit:['tirannie','democratie','oligarchie'],
@@ -340,7 +348,7 @@ var POLEIS = [
       { t:'Neem wat je niet gesticht hebt: verover een kolonie van een ander', p:5,
         check:function(s){ return s.veroverd('sparta') >= 1; } }
     ] },
-  { id:'korinthe', naam:'Korinthe', kort:'KOR', kleur:'#EA9836', vorm:'aristocratie',
+  { id:'korinthe', naam:'Korinthe', kort:'KOR', kleur:'#EA9836', licht:'#f3c88a', vorm:'aristocratie',
     invloed:15, adel:58, rijk:60, volk:38, sfeer:['west','egeisch'],
     wat:'De landengte tussen twee zeeen. Alles wat verhandeld wordt gaat hier langs.',
     doelen:[
@@ -549,7 +557,7 @@ function worp100(){ return 1 + Math.floor(Math.random() * 100); }
   POLEIS.forEach(function(p){
     var d = document.createElement('div');
     d.className = 'speler';
-    d.innerHTML = '<h3 style="color:' + tekstKleur(p) + '">' + p.naam + '</h3>' +
+    d.innerHTML = '<h3 class="poliskop" style="' + polisKleur(p) + '">' + p.naam + '</h3>' +
       '<p class="wat">' + p.wat + '</p>' +
       '<p class="wat" style="margin-top:6px"><b>Streek:</b> ' +
         p.sfeer.map(function(x){ return STREEKNAAM[x]; }).join(' en ') +
@@ -990,7 +998,7 @@ function worp100(){ return 1 + Math.floor(Math.random() * 100); }
 
     document.getElementById('uitslag').innerHTML = rij.map(function(r, i){
       return '<div class="plaats" style="border-color:' + r.p.kleur + '">' +
-        '<div class="kop3"><b style="color:' + tekstKleur(r.p) + '">' + (i+1) + '. ' + r.p.naam + '</b>' +
+        '<div class="kop3"><b class="poliskop" style="' + polisKleur(r.p) + '">' + (i+1) + '. ' + r.p.naam + '</b>' +
         '<span class="pt">' + r.punten + '</span></div>' +
         '<p style="font-size:.85rem;color:var(--muted)">' + r.kolonies + ' kolonies, opbrengst ' + opbrengst(r.p.id) +
         ', eindigt als ' + VORMEN[staat[r.p.id].vorm].naam.toLowerCase() + '.</p>' +

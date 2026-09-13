@@ -43,7 +43,7 @@ button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
 header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-bottom:1px solid rgba(20,34,76,.08);padding:10px 0}
 .hd{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .mark{display:flex;align-items:center;gap:10px;font-weight:600;text-decoration:none;color:inherit}
-.mark i{width:32px;height:32px;border-radius:10px;background:var(--crab);color:var(--room);display:grid;place-items:center;font-style:normal;font-size:.78rem}
+.mark i{width:32px;height:32px;border-radius:10px;background:var(--crab);color:#14224C;display:grid;place-items:center;font-style:normal;font-size:.78rem}
 .hd-right{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .linkbtn{background:none;border:none;color:var(--muted);text-decoration:underline;text-underline-offset:4px;font-size:.85rem;padding:6px}
 .linkbtn:hover{color:var(--ink)}
@@ -1383,7 +1383,7 @@ const BOMTIJD = 8, BOMSCHADE = 44;
     var vak2 = document.getElementById('vakken');
     vak2.innerHTML = VAKKEN.map(function(v){
       return '<button class="vak' + (vak === v.id ? ' on' : '') + '" type="button" data-v="' + v.id + '">' +
-        '<i style="background:' + kleurVan(v.kleur) + '">' + v.mark + '</i>' +
+        '<i style="background:' + kleurVan(v.kleur) + ';color:' + inktOp(v.kleur) + '">' + v.mark + '</i>' +
         '<b>' + v.naam + '</b><span>' + v.onder + '</span></button>';
     }).join('');
     Array.prototype.forEach.call(vak2.querySelectorAll('.vak'), function(b){
@@ -1401,6 +1401,17 @@ const BOMTIJD = 8, BOMSCHADE = 44;
     var t = { 'var(--crab)':'#F26749', 'var(--deep-ocean)':'#204ECF', 'var(--butterscotch)':'#EA9836',
               'var(--vista-blue)':'#83A5F2' };
     return t[c] || c;
+  }
+  /* Welke letterkleur leest op dat vlak: wit haalt de norm niet op crab, amber
+     en lichtblauw, donkerblauw wel. */
+  function inktOp(c){
+    var v = kleurVan(c).replace('#', '');
+    if (v.length !== 6) return '#fff';
+    var d = [0, 2, 4].map(function(i){ var x = parseInt(v.substr(i, 2), 16) / 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
+    var L = 0.2126 * d[0] + 0.7152 * d[1] + 0.0722 * d[2];
+    var witR = 1.05 / (L + 0.05), donkerL = 0.0173;
+    var donkerR = (L + 0.05) / (donkerL + 0.05);
+    return witR >= donkerR ? '#fff' : '#14224C';
   }
 
   function tekenDeelvakken(){
