@@ -33,7 +33,7 @@ const KAART_MAX = 12000, BORD_MAX = 40000, ACTIE_MAX = 4000;
 const KLAS_LEEFT = 7 * 24 * 60 * 60 * 1000;   /* een klascode is een week geldig */
 const KLAS_MAX = 3000;                        /* hoogstens zoveel gemelde potjes per klas */
 /* spellen zonder kamer die wel bij een klas melden */
-const KLAS_SPELLEN = { race: "Vragenrace", klasquiz: "Klasquiz", rekenen: "Rekenrace", balans: "De balans", werkwoorden: "Werkwoordrace", irregular: "Irregular verbs", vlaggen: "Vlaggen", landenvormen: "Landenvormen", topografie: "Topografie", lichaam: "Het lichaam", tijdvakken: "Tijdvakken sorteren", bronnenlab: "Bronnenlab", machtsschema: "Het machtsschema", jagers: "Blijven of doorlopen", feodalisme: "Feodalisme", leenmannen: "Verdeel je rijk", stad: "Bouw je stad", handel: "De handelsroute", vergadering: "De vergadering" };
+const KLAS_SPELLEN = { race: "Vragenrace", klasquiz: "Klasquiz", rekenen: "Rekenrace", balans: "De balans", werkwoorden: "Werkwoordrace", irregular: "Irregular verbs", vlaggen: "Vlaggen", landenvormen: "Landenvormen", topografie: "Topografie", lichaam: "Het lichaam", tijdvakken: "Tijdvakken sorteren", bronnenlab: "Bronnenlab", machtsschema: "Het machtsschema", jagers: "Blijven of doorlopen", feodalisme: "Feodalisme", leenmannen: "Verdeel je rijk", stad: "Bouw je stad", handel: "De handelsroute", vergadering: "De vergadering", zinsbouw: "Zinsbouw", tekstdetective: "De tekstdetective", uitverkoop: "De uitverkoop", breukenbakker: "De breukenbakker" };
 
 function json(obj, status){
   return new Response(JSON.stringify(obj), { status: status || 200,
