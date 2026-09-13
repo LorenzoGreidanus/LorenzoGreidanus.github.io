@@ -233,7 +233,8 @@ body.groot .meter b{font-size:1.45rem}
 
   <div class="uitleg">
     <div><i style="background:var(--crab)">1</i><b>Bewegen, ontwijken en slaan</b><span>Pijltjes of WASD om te lopen, of houd je vinger op de arena en loop erheen. Spatie of de knop Ontwijk maakt een sprong waarbij niets je raakt. Je zwaard slaat vanzelf naar de dichtstbijzijnde fout die binnen bereik komt.</span></div>
-    <div><i style="background:var(--amber)">2</i><b>Elke ronde meer</b><span>Meer fouten, snellere, dikkere en fouten met een schild. Elke vijfde ronde een baas. Raakt een fout je, dan kost dat leven; op nul is het klaar.</span></div>
+    <div><i style="background:var(--amber)">2</i><b>Elke ronde meer</b><span>Meer fouten, snellere, dikkere en fouten met een schild. Raakt een fout je, dan kost dat leven; op nul is het klaar.</span></div>
+    <div><i style="background:#4a1230">B</i><b>Elke vijfde ronde een baas</b><span>Hij verschijnt in het midden en hij houdt zijn plek, maar hij valt aan met patronen die je op de grond ziet aankomen: cirkels die na een tel ontploffen, een laser die om hem heen draait en een golf die naar buiten rolt. Loop eruit, of spring er met Ontwijk doorheen. Onder de helft van zijn leven wordt hij kwaad en slaat hij sneller toe.</span></div>
     <div><i style="background:var(--ocean)">3</i><b>Vragen zijn munten</b><span>Na elke ronde vijf vragen voor de klas, en hoe verder je komt hoe meer. Goed is munten, op rij goed is meer munten. Weet je het te goed, dan gaan de vragen een niveau omhoog. Fouten die je velt laten ook wat vallen.</span></div>
     <div><i style="background:#6b3fa0">4</i><b>Uitrusting</b><span>Tussen de rondes koop je in de winkel: zwaard, bereik, tempo, harnas, laarzen, werpmes en een drankje. Alles heeft zeven niveaus.</span></div>
   </div>
@@ -358,7 +359,26 @@ const FOUTEN = [
   { id:'zwerm',  naam:'zwerm',       vanaf:3, kans:2, mark:'\u00d7', kleur:'#7d1f12', hp:0.35, snel:1.3,  r:12, schade:6, aantal:3 },
   { id:'dik',    naam:'dikke fout',  vanaf:6, kans:1, mark:'\u25c6', kleur:'#6b3fa0', hp:2.6,  snel:0.65, r:28, schade:18 }
 ];
-const BAAS = { id:'baas', naam:'de baas', mark:'!', kleur:'#4a1230', hp:12, snel:0.7, r:40, schade:26 };
+const BAAS = { id:'baas', naam:'de baas', mark:'!', kleur:'#4a1230', hp:11, snel:0, r:46, schade:26, schild:0.15 };
+/* De aanvallen van de baas. Hij staat in het midden en valt aan met patronen
+   die je van tevoren ziet aankomen: cirkels op de grond die ontploffen, een
+   laser die om hem heen draait, en een golf die vanuit hem naar buiten rolt.
+   Wie oplet, stapt opzij of ontwijkt (dan ben je even onkwetsbaar). */
+const AANVAL = {
+  pauze:function(n){ return Math.max(1.2, 2.6 - n * 0.035); },   /* seconden tussen twee aanvallen */
+  /* Hoe verder je komt, hoe meer er tegelijk gebeurt. De waarschuwing wordt
+     ook korter, maar nooit korter dan een halve seconde: je moet het kunnen
+     zien aankomen, anders is ontwijken een gok en geen keuze. */
+  cirkel:{ r:78, wacht:1.15, knal:0.3, schade:18,
+    extra:function(n){ return 1 + Math.floor(n / 10); } },        /* losse cirkels naast die onder de spelers */
+  laser:{ wacht:0.9, duur:1.7, boog:Math.PI * 0.55, breed:26, schade:16,
+    stralen:function(n){ return n >= 15 ? 2 : 1; } },             /* vanaf ronde 15 een tweede straal, recht tegenover */
+  golf:{ wacht:0.75, duur:1.5, tot:620, band:24, schade:20,
+    ringen:function(n){ return n >= 20 ? 2 : 1; } },              /* vanaf ronde 20 een tweede ring erachteraan */
+  korter:function(n){ return Math.max(0.5, 1 - n * 0.012); },     /* de waarschuwing krimpt langzaam */
+  /* Onder de helft van zijn leven wordt hij kwaad: sneller achter elkaar. */
+  boosPauze:0.6
+};
 /* Hoeveel fouten in een ronde, en hoe taai ze zijn. Gemeten met de speelbot
    (september 2026): met dertien procent groei per ronde zonder einde stond de
    uitrusting rond ronde twintig vol terwijl de fouten door bleven groeien, en
@@ -487,7 +507,7 @@ const ICONEN = {
   var strijdExtra = 0;          /* fouten die klasgenoten je sturen terwijl je tussen twee rondes zit */
   var ronde = 0, munten = 0, hp = 0, maxHp = 0, geveld = 0, level = {}, tijdInRonde = 0;
   var sp = { x:550, y:310, mikt:0, klok:0, zwaai:0, raak:0, mesKlok:0, flits:0, dash:0, dashKlok:0, dx:1, dy:0 };
-  var fouten = [], messen = [], munt = [], pluis = [], cijfers = [], teSpawnen = 0, spawnKlok = 0;
+  var fouten = [], messen = [], munt = [], pluis = [], cijfers = [], teSpawnen = 0, spawnKlok = 0, aanvallen = [];
   var toetsen = {}, wijs = null, loopt = false, pauze = false, laatste = 0;
 
   /* ---------- samen in een arena ----------
@@ -526,7 +546,7 @@ const ICONEN = {
   function vingerafdruk(){
     var som = 0; fouten.forEach(function(f){ som += f.x + f.y + f.hp; });
     var a = co.rol === 'host' ? sp : (maat ? maat.sp : sp), b = co.rol === 'host' ? (maat ? maat.sp : sp) : sp;
-    return [ronde, fase === 'ronde' ? 1 : 0, teSpawnen, fouten.length, Math.round(som / 50), Math.round(a.x / 4), Math.round(a.y / 4), Math.round(b.x / 4), Math.round(b.y / 4), munt.length].join('|');
+    return [ronde, fase === 'ronde' ? 1 : 0, teSpawnen, fouten.length, Math.round(som / 50), Math.round(a.x / 4), Math.round(a.y / 4), Math.round(b.x / 4), Math.round(b.y / 4), munt.length, aanvallen.length].join('|');
   }
   var maat = null;
   function nieuweMaat(naam){
@@ -658,7 +678,7 @@ const ICONEN = {
   function volgendeRonde(){
     ronde++;
     fase = 'ronde';
-    fouten = []; messen = []; munt = []; pluis = []; cijfers = [];
+    fouten = []; messen = []; munt = []; pluis = []; cijfers = []; aanvallen = [];
     /* de gastheer links van het midden, de gast rechts, bij allebei zo */
     sp.x = ARENA.b / 2 + (co.aan ? (co.lock && co.rol === 'gast' ? 50 : -50) : 0); sp.y = ARENA.h / 2; sp.raak = 0; sp.klok = 0; sp.mesKlok = 0; sp.dash = 0; sp.dashKlok = 0;
     if (co.aan){
@@ -671,14 +691,15 @@ const ICONEN = {
       /* iedereen begint de ronde stilstaand; wie een toets ingedrukt houdt stuurt hem vanzelf opnieuw */
       co.mijnIn = { dx:0, dy:0 }; if (maat) maat.in = { dx:0, dy:0 }; co.laatsteZend = '';
     }
-    teSpawnen = Math.round(aantalInRonde(ronde) * (co.aan ? 1.5 : 1)) + strijdExtra; strijdExtra = 0;
+    /* in een baasronde komen er minder gewone fouten bij: de baas is het werk */
+    teSpawnen = Math.round(aantalInRonde(ronde) * (ronde % BAASRONDE === 0 ? 0.6 : 1) * (co.aan ? 1.5 : 1)) + strijdExtra; strijdExtra = 0;
     spawnKlok = 0.6;
     tijdInRonde = 0;
     if (ronde % BAASRONDE === 0) spawnBaas();
     tekenZij();
     tekenHud();
     document.getElementById('arenatip').textContent = 'Ronde ' + ronde + ': ' + teSpawnen + ' fouten' +
-      (ronde % BAASRONDE === 0 ? ' en een baas' : '') + '. Pijltjes of WASD om te lopen, je zwaard slaat vanzelf.';
+      (ronde % BAASRONDE === 0 ? ' en een baas in het midden: kijk naar de grond, ontwijk de cirkels, de laser en de golf' : '') + '. Pijltjes of WASD om te lopen, je zwaard slaat vanzelf.';
   }
 
   /* ---------- de fouten ---------- */
@@ -707,9 +728,94 @@ const ICONEN = {
                     schild:soort.schild || 0, slaKlok:0 });
     }
   }
+  /* voor het testen: __zwaardSpring(5) springt naar een baasronde */
+  window.__zwaardSpring = function(n){ ronde = n - 1; volgendeRonde(); };
   function spawnBaas(){
-    var p = randPlek(), h = Math.round(foutHp(ronde) * BAAS.hp);
-    fouten.push({ soort:BAAS, x:p.x, y:p.y, hp:h, maxHp:h, r:BAAS.r, snel:BAAS.snel * (70 + ronde * 1.6), flits:0, stap:0, schild:0, slaKlok:0, baas:true });
+    var h = Math.round(foutHp(ronde) * BAAS.hp);
+    fouten.push({ soort:BAAS, x:ARENA.b / 2, y:ARENA.h / 2, hp:h, maxHp:h, r:BAAS.r, snel:0, flits:0, stap:0, schild:BAAS.schild, slaKlok:0, baas:true, aanvalKlok:2.2, laatste:-1, eerste:true });
+    /* de spelers beginnen in het midden: even opzij, anders sta je in de baas */
+    spelersNu().forEach(function(P, i){ P.sp.x = ARENA.b / 2 + (i === 0 ? -150 : 150); });
+  }
+  /* een nieuwe aanval kiezen: niet twee keer dezelfde na elkaar */
+  function baasValtAan(b, levend){
+    /* de eerste aanval is altijd de cirkels: het makkelijkst te lezen, zodat je weet wat je te wachten staat */
+    var keuze = b.eerste ? 0 : Math.floor(toeval() * 3); b.eerste = false;
+    if (keuze === b.laatste) keuze = (keuze + 1) % 3;
+    b.laatste = keuze;
+    var k = AANVAL.korter(ronde);
+    if (keuze === 0){
+      /* cirkels: onder elke speler die nog staat, plus een paar op toevallige plekken */
+      levend.forEach(function(P){ aanvallen.push({ soort:'cirkel', x:P.sp.x, y:P.sp.y, t:0, k:k }); });
+      var extra = AANVAL.cirkel.extra(ronde);
+      for (var i = 0; i < extra; i++){
+        aanvallen.push({ soort:'cirkel', k:k, t:0,
+          x:ARENA.rand + 60 + toeval() * (ARENA.b - 2 * ARENA.rand - 120),
+          y:ARENA.rand + 60 + toeval() * (ARENA.h - 2 * ARENA.rand - 120) });
+      }
+    } else if (keuze === 1){
+      /* laser: begint richting een speler en draait dan een halve slag, links- of rechtsom */
+      var doel = levend[Math.floor(toeval() * levend.length)] || spelersNu()[0];
+      var hoek = Math.atan2(doel.sp.y - b.y, doel.sp.x - b.x) - AANVAL.laser.boog * 0.35;
+      var richting = toeval() < 0.5 ? 1 : -1, n = AANVAL.laser.stralen(ronde);
+      for (var j = 0; j < n; j++){
+        aanvallen.push({ soort:'laser', x:b.x, y:b.y, hoek:hoek + j * Math.PI * 2 / n, richting:richting, t:0, k:k });
+      }
+    } else {
+      var ringen = AANVAL.golf.ringen(ronde);
+      for (var g = 0; g < ringen; g++) aanvallen.push({ soort:'golf', x:b.x, y:b.y, t:-g * 0.55, k:k });
+    }
+  }
+  /* hoe lang de waarschuwing van deze aanval duurt */
+  function wachtVan(a, basis){ return basis * (a.k || 1); }
+  /* een speler wordt getroffen door een aanval van de baas */
+  function tref(P, schade, kleur){
+    var s2 = P.sp;
+    if (s2.raak > 0 || P.neer()) return;
+    var klap = Math.round(schade * P.stats.pantser * (1 + ronde * 0.03));
+    P.zetHp(P.hp() - klap); s2.raak = RAAKPAUZE; s2.flits = 0.25;
+    cijfers.push({ x:s2.x, y:s2.y - 26, tekst:'-' + klap, leven:0.9, kleur:kleur || '#c0442c' });
+    if (P.hp() <= 0){ P.zetHp(0); valNeer(P); }
+  }
+  /* de aanvallen lopen door de tijd; elk heeft een waarschuwing en dan het echte moment */
+  function stapAanvallen(dt, levend){
+    aanvallen.forEach(function(a){
+      a.t += dt;
+      if (a.soort === 'cirkel'){
+        var c = AANVAL.cirkel, cW = wachtVan(a, c.wacht);
+        if (a.t >= cW && !a.geknald){
+          a.geknald = true;
+          levend.forEach(function(P){ if (Math.hypot(P.sp.x - a.x, P.sp.y - a.y) < c.r + SPELER.r * 0.5) tref(P, c.schade, '#c0442c'); });
+          for (var i = 0; i < 10; i++){ var hk = toeval() * Math.PI * 2, sn = 60 + toeval() * 120; pluis.push({ x:a.x, y:a.y, vx:Math.cos(hk) * sn, vy:Math.sin(hk) * sn, leven:0.4, kleur:'#EA9836' }); }
+        }
+        if (a.t >= cW + c.knal) a.klaar = true;
+      } else if (a.soort === 'laser'){
+        var l = AANVAL.laser, lW = wachtVan(a, l.wacht);
+        if (a.t >= lW){
+          var deel = Math.min(1, (a.t - lW) / l.duur);
+          a.nu = a.hoek + a.richting * l.boog * deel;
+          var cx = Math.cos(a.nu), cy = Math.sin(a.nu);
+          levend.forEach(function(P){
+            var px = P.sp.x - a.x, py = P.sp.y - a.y, langs = px * cx + py * cy;
+            if (langs < BAAS.r) return;                       /* achter de baas is het veilig */
+            var dwars = Math.abs(-px * cy + py * cx);
+            if (dwars < l.breed / 2 + SPELER.r * 0.7) tref(P, l.schade, '#F26749');
+          });
+          if (deel >= 1) a.klaar = true;
+        } else a.nu = a.hoek;
+      } else if (a.soort === 'golf'){
+        var g = AANVAL.golf, gW = wachtVan(a, g.wacht);
+        if (a.t >= gW){
+          var deel2 = Math.min(1, (a.t - gW) / g.duur);
+          a.straal = BAAS.r + deel2 * (g.tot - BAAS.r);
+          levend.forEach(function(P){
+            var d = Math.hypot(P.sp.x - a.x, P.sp.y - a.y);
+            if (Math.abs(d - a.straal) < g.band / 2 + SPELER.r * 0.7) tref(P, g.schade, '#6b3fa0');
+          });
+          if (deel2 >= 1) a.klaar = true;
+        }
+      }
+    });
+    aanvallen = aanvallen.filter(function(a){ return !a.klaar; });
   }
 
   /* ---------- besturing ---------- */
@@ -1024,18 +1130,38 @@ const ICONEN = {
 
     /* fouten lopen naar de dichtstbijzijnde speler die nog staat, en duwen elkaar een beetje weg */
     var levend = spelers.filter(function(P){ return !P.neer(); });
+    /* de baas staat in het midden en valt met tussenpozen aan */
+    fouten.forEach(function(b){
+      if (!b.baas) return;
+      b.x = ARENA.b / 2; b.y = ARENA.h / 2;
+      b.aanvalKlok -= dt;
+      if (b.aanvalKlok <= 0 && !aanvallen.length && levend.length){
+        var boos = b.hp <= b.maxHp / 2;
+        if (boos && !b.boosGeweest){
+          b.boosGeweest = true;
+          cijfers.push({ x:b.x, y:b.y - b.r - 16, tekst:'de baas wordt kwaad', leven:2, kleur:'#4a1230' });
+        }
+        baasValtAan(b, levend);
+        var loopt = b.laatste === 1 ? AANVAL.laser.wacht + AANVAL.laser.duur
+                  : b.laatste === 2 ? AANVAL.golf.wacht + AANVAL.golf.duur + (AANVAL.golf.ringen(ronde) - 1) * 0.55
+                  : AANVAL.cirkel.wacht + AANVAL.cirkel.knal;
+        b.aanvalKlok = AANVAL.pauze(ronde) * (boos ? AANVAL.boosPauze : 1) + loopt;
+      }
+    });
+    stapAanvallen(dt, levend);
+    if (fase !== 'ronde') return;
     fouten.forEach(function(f){
       var doel = null, dl = 1e9;
       levend.forEach(function(P){ var d = Math.hypot(P.sp.x - f.x, P.sp.y - f.y); if (d < dl){ dl = d; doel = P; } });
       var vx = 0, vy = 0;
-      if (doel){ var ax = doel.sp.x - f.x, ay = doel.sp.y - f.y, al = Math.hypot(ax, ay) || 1; vx = ax / al * f.snel; vy = ay / al * f.snel; }
+      if (doel && !f.baas){ var ax = doel.sp.x - f.x, ay = doel.sp.y - f.y, al = Math.hypot(ax, ay) || 1; vx = ax / al * f.snel; vy = ay / al * f.snel; }
       fouten.forEach(function(g){
         if (g === f) return;
         var gx = f.x - g.x, gy = f.y - g.y, gl = Math.hypot(gx, gy);
         var min = f.r + g.r;
         if (gl > 0 && gl < min){ vx += gx / gl * (min - gl) * 6; vy += gy / gl * (min - gl) * 6; }
       });
-      f.x += vx * dt; f.y += vy * dt;
+      if (!f.baas){ f.x += vx * dt; f.y += vy * dt; }
       if (f.flits > 0) f.flits -= dt;
       f.slaKlok -= dt;
       /* raakt hij iemand? */
@@ -1097,9 +1223,18 @@ const ICONEN = {
     f.hp -= echt; f.flits = 0.15;
     cijfers.push({ x:f.x, y:f.y - f.r - 8, tekst:'-' + echt, leven:0.7, kleur:'#14224C' });
     /* een duwtje van het zwaard, zodat je ruimte krijgt */
-    if (vanaf){ var h = Math.atan2(f.y - vanaf.y, f.x - vanaf.x); f.x += Math.cos(h) * 18; f.y += Math.sin(h) * 18; }
+    if (vanaf && !f.baas){ var h = Math.atan2(f.y - vanaf.y, f.x - vanaf.x); f.x += Math.cos(h) * 18; f.y += Math.sin(h) * 18; }
     if (f.hp <= 0){
       if (P) P.geveld(); else geveld++;
+      if (f.baas){
+        /* zijn aanvallen doven uit zodra hij valt, ook die al op de grond liggen */
+        aanvallen = [];
+        cijfers.push({ x:f.x, y:f.y - f.r - 20, tekst:'de baas is geveld', leven:2.2, kleur:'#4a1230' });
+        for (var b2 = 0; b2 < 22; b2++){
+          var bh = toeval() * Math.PI * 2, bs = 60 + toeval() * 160;
+          pluis.push({ x:f.x, y:f.y, vx:Math.cos(bh) * bs, vy:Math.sin(bh) * bs, leven:0.7, kleur:b2 % 2 ? '#4a1230' : '#FFE168' });
+        }
+      }
       for (var i = 0; i < 7; i++){
         var hk = toeval() * Math.PI * 2, sn = 40 + toeval() * 90;
         pluis.push({ x:f.x, y:f.y, vx:Math.cos(hk) * sn, vy:Math.sin(hk) * sn, leven:0.45, kleur:f.soort.kleur });
@@ -1129,6 +1264,7 @@ const ICONEN = {
       me:messen.map(function(m){ return [r1(m.x), r1(m.y), r2(m.hoek)]; }),
       mu:munt.map(function(m){ return [r1(m.x), r1(m.y), m.waarde]; }),
       ci:cijfers.map(function(c){ return [r1(c.x), r1(c.y), c.tekst, c.kleur, r2(c.leven)]; }),
+      aa:aanvallen.map(function(a){ return [a.soort, r1(a.x), r1(a.y), r2(a.t), r2(a.hoek || 0), a.richting || 1, r2(a.nu || 0), r1(a.straal || 0), a.geknald ? 1 : 0]; }),
       gm:maat ? maat.munten : 0, gg:maat ? maat.geveld : 0 };
   }
   function hostZend(dt){
@@ -1226,6 +1362,7 @@ const ICONEN = {
     messen = d.me.map(function(a){ return { x:a[0], y:a[1], hoek:a[2] }; });
     munt = d.mu.map(function(a){ return { x:a[0], y:a[1], waarde:a[2], leven:1 }; });
     cijfers = d.ci.map(function(a){ return { x:a[0], y:a[1], tekst:a[2], kleur:a[3], leven:a[4] }; });
+    aanvallen = (d.aa || []).map(function(a){ return { soort:a[0], x:a[1], y:a[2], t:a[3], hoek:a[4], richting:a[5], nu:a[6], straal:a[7], geknald:!!a[8] }; });
     if (typeof d.gm === 'number'){ munten += d.gm - co.gastMunt; co.gastMunt = d.gm; }
     if (typeof d.gg === 'number'){ geveld += d.gg - co.gastGeveld; co.gastGeveld = d.gg; }
     tekenHud();
@@ -1391,7 +1528,11 @@ const ICONEN = {
     else if (f.soort.id === 'dik') g = '<rect x="' + n(-1) + '" y="' + n(-1) + '" width="' + n(2) + '" height="' + n(2) + '" rx="' + n(0.35) + '" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.14) + '"/>';
     else if (f.baas){
       var d = ''; for (var k = 0; k < 14; k++){ var a = k / 14 * Math.PI * 2, st = k % 2 ? 1 : 1.16; d += (k ? 'L' : 'M') + (Math.cos(a) * r * st).toFixed(1) + ',' + (Math.sin(a) * r * st).toFixed(1) + ' '; }
-      g = '<path d="' + d + 'Z" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.12) + '" stroke-linejoin="round"/>';
+      g = '<circle r="' + n(1.4) + '" fill="none" stroke="' + vul + '" stroke-width="' + n(0.08) + '" stroke-dasharray="' + n(0.3) + ' ' + n(0.2) + '" opacity=".5"/>' +
+          '<path d="' + d + 'Z" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.12) + '" stroke-linejoin="round"/>' +
+          '<circle cx="' + n(-0.3) + '" cy="' + n(-0.2) + '" r="' + n(0.17) + '" fill="#fff"/><circle cx="' + n(0.3) + '" cy="' + n(-0.2) + '" r="' + n(0.17) + '" fill="#fff"/>' +
+          '<circle cx="' + n(-0.28) + '" cy="' + n(-0.18) + '" r="' + n(0.08) + '" fill="#14224C"/><circle cx="' + n(0.32) + '" cy="' + n(-0.18) + '" r="' + n(0.08) + '" fill="#14224C"/>';
+      return g;
     } else g = '<ellipse rx="' + n(1) + '" ry="' + n(0.94) + '" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.14) + '"/>';
     g += '<text y="' + n(0.38) + '" text-anchor="middle" font-size="' + n(1.05) + '" font-weight="700" fill="#fff" font-family="Poppins">' + f.soort.mark + '</text>';
     return g;
@@ -1440,6 +1581,40 @@ const ICONEN = {
       s += '<circle cx="' + m.x.toFixed(1) + '" cy="' + (m.y + wip).toFixed(1) + '" r="9" fill="#FFE168" stroke="#c9971f" stroke-width="2"/>' +
            '<circle cx="' + (m.x - 2).toFixed(1) + '" cy="' + (m.y + wip - 2).toFixed(1) + '" r="2" fill="#fff" opacity=".6"/>';
     });
+    /* de aanvallen van de baas: eerst de waarschuwing op de grond, dan de klap */
+    aanvallen.forEach(function(a){
+      if (a.soort === 'cirkel'){
+        var c = AANVAL.cirkel, cW = c.wacht * (a.k || 1), deel = Math.min(1, Math.max(0, a.t) / cW);
+        if (!a.geknald){
+          s += '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + c.r + '" fill="rgba(242,103,73,.16)" stroke="#F26749" stroke-width="3" stroke-dasharray="8 6"/>' +
+               '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + (c.r * deel).toFixed(1) + '" fill="rgba(242,103,73,.35)"/>';
+        } else {
+          var na = Math.min(1, (a.t - cW) / c.knal);
+          s += '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + (c.r * (1 + na * 0.25)).toFixed(1) + '" fill="#EA9836" opacity="' + (0.85 * (1 - na)).toFixed(2) + '"/>';
+        }
+      } else if (a.soort === 'laser'){
+        var l = AANVAL.laser, lW = l.wacht * (a.k || 1), hk = a.nu !== undefined ? a.nu : a.hoek, lengte = 1400, wacht = a.t < lW;
+        var ex = a.x + Math.cos(hk) * lengte, ey = a.y + Math.sin(hk) * lengte;
+        if (wacht){
+          s += '<path d="M' + a.x.toFixed(1) + ',' + a.y.toFixed(1) + ' L' + ex.toFixed(1) + ',' + ey.toFixed(1) + '" stroke="#F26749" stroke-width="3" stroke-dasharray="10 8" opacity="' + (0.35 + 0.5 * Math.min(1, Math.max(0, a.t) / lW)).toFixed(2) + '"/>';
+          /* de boog die hij gaat maken */
+          var tot = a.hoek + a.richting * l.boog, grootBoog = l.boog > Math.PI ? 1 : 0;
+          s += '<path d="M' + (a.x + Math.cos(a.hoek) * 120).toFixed(1) + ',' + (a.y + Math.sin(a.hoek) * 120).toFixed(1) + ' A120,120 0 ' + grootBoog + ' ' + (a.richting > 0 ? 1 : 0) + ' ' + (a.x + Math.cos(tot) * 120).toFixed(1) + ',' + (a.y + Math.sin(tot) * 120).toFixed(1) + '" fill="none" stroke="#F26749" stroke-width="2" stroke-dasharray="4 6" opacity=".6"/>';
+        } else {
+          s += '<path d="M' + a.x.toFixed(1) + ',' + a.y.toFixed(1) + ' L' + ex.toFixed(1) + ',' + ey.toFixed(1) + '" stroke="#F26749" stroke-width="' + (l.breed + 14) + '" stroke-linecap="round" opacity=".35"/>' +
+               '<path d="M' + a.x.toFixed(1) + ',' + a.y.toFixed(1) + ' L' + ex.toFixed(1) + ',' + ey.toFixed(1) + '" stroke="#FFE168" stroke-width="' + l.breed + '" stroke-linecap="round" opacity=".95"/>' +
+               '<path d="M' + a.x.toFixed(1) + ',' + a.y.toFixed(1) + ' L' + ex.toFixed(1) + ',' + ey.toFixed(1) + '" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity=".9"/>';
+        }
+      } else if (a.soort === 'golf'){
+        var g = AANVAL.golf, gW = g.wacht * (a.k || 1);
+        if (a.t < gW){
+          s += '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + (BAAS.r + 10 + Math.sin(pols * 18) * 5).toFixed(1) + '" fill="none" stroke="#6b3fa0" stroke-width="4" stroke-dasharray="6 6" opacity=".8"/>';
+        } else if (a.straal){
+          s += '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + a.straal.toFixed(1) + '" fill="none" stroke="#6b3fa0" stroke-width="' + (g.band + 10) + '" opacity=".3"/>' +
+               '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + a.straal.toFixed(1) + '" fill="none" stroke="#b58ae0" stroke-width="' + g.band + '" opacity=".9"/>';
+        }
+      }
+    });
     /* de fouten */
     fouten.forEach(function(f){
       var bob = Math.sin(pols * 6 + f.stap) * 1.5;
@@ -1461,6 +1636,16 @@ const ICONEN = {
     var lijstSp = [{ s:sp, ber:zwaardBereik(), harnas:stat('harnas'), neer:co.neer, naam:null }];
     if (co.aan && maat) lijstSp.push({ s:maat.sp, ber:maat.stats.bereik, harnas:maat.stats.harnas, neer:maat.neer, naam:maat.naam });
     lijstSp.forEach(function(Q){ s += tekenSpeler(Q.s, Q.ber, Q.harnas, Q.neer, Q.naam, pols); });
+    /* de balk van de baas, bovenin: hoeveel er nog van hem over is */
+    var baasNu = null;
+    fouten.forEach(function(f){ if (f.baas) baasNu = f; });
+    if (baasNu){
+      var bw = 620, bx = (ARENA.b - bw) / 2, by = 16, deel3 = Math.max(0, baasNu.hp / baasNu.maxHp);
+      s += '<rect x="' + (bx - 8) + '" y="' + (by - 8) + '" width="' + (bw + 16) + '" height="46" rx="14" fill="#FBF6F1" opacity=".85"/>';
+      s += '<rect x="' + bx + '" y="' + (by + 12) + '" width="' + bw + '" height="16" rx="8" fill="rgba(20,34,76,.18)"/>';
+      s += '<rect x="' + bx + '" y="' + (by + 12) + '" width="' + (bw * deel3).toFixed(1) + '" height="16" rx="8" fill="' + (deel3 <= 0.5 ? '#c0442c' : '#4a1230') + '"/>';
+      s += '<text x="' + (ARENA.b / 2) + '" y="' + (by + 8) + '" text-anchor="middle" font-size="13" font-weight="700" fill="#4a1230" font-family="Poppins" letter-spacing="1.5">DE BAAS' + (deel3 <= 0.5 ? ' \u00b7 KWAAD' : '') + '</text>';
+    }
     /* deeltjes en getallen */
     pluis.forEach(function(p){ s += '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' + (3 * p.leven / 0.45 + 1).toFixed(1) + '" fill="' + p.kleur + '" opacity="' + (p.leven / 0.45).toFixed(2) + '"/>'; });
     cijfers.forEach(function(c){ s += '<text x="' + c.x.toFixed(1) + '" y="' + c.y.toFixed(1) + '" text-anchor="middle" font-size="15" font-weight="700" fill="' + c.kleur + '" opacity="' + Math.min(1, c.leven).toFixed(2) + '" font-family="Poppins" stroke="#fff" stroke-width="3" paint-order="stroke">' + c.tekst + '</text>'; });
@@ -1583,6 +1768,6 @@ const ICONEN = {
 </script>
 <script src="thema.js"></script>
 <script src="spel.js"></script>
-<script>SPEL.uitleg({ doel:"Vel de fouten in de arena. Goede antwoorden maken je zwaard sterker.", tijd:"zolang je het volhoudt", bediening:"Pijltjes of WASD om te lopen, spatie of Shift om te ontwijken. Op een telefoon sleep je." });</script>
+<script>SPEL.uitleg({ doel:"Vel de fouten in de arena. Goede antwoorden maken je zwaard sterker.", tijd:"zolang je het volhoudt", bediening:"Pijltjes of WASD om te lopen, spatie of Shift om te ontwijken; bij een baas stap je uit de cirkels en de laser. Op een telefoon sleep je." });</script>
 </body>
 </html>
