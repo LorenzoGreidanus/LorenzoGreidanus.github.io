@@ -317,7 +317,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
         <svg class="maan" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
         <svg class="zon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>
       </button>
-      <span class="linkbtn" id="pillVorm" style="text-decoration:none"></span>
+      <span class="linkbtn hide" id="pillVorm" style="text-decoration:none"></span>
       <button class="linkbtn" id="grootBtn" type="button">Digibord</button>
       <button class="linkbtn" id="opnieuwBtn" type="button">Opnieuw</button>
     </div>
@@ -331,8 +331,8 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
 
   <div class="hoe">
     <div><b>1</b><span>Kies op de kaart welke polis jullie zijn en hoeveel leerlingen er in de klas zitten.</span></div>
-    <div><b>2</b><span>Het bord laat zien hoeveel leerlingen welke rol krijgen. Deel ze uit, of laat het bord de rollen over de telefoons van de klas verdelen.</span></div>
-    <div><b>3</b><span>Bij elk wetsvoorstel toont het bord groot wie er nu mag stemmen. Tel de handen en tik het in, of laat iedereen op zijn telefoon stemmen: het bord telt.</span></div>
+    <div><b>2</b><span>Het bord laat zien hoeveel leerlingen welke rol krijgen. Deel ze uit, of laat het bord de rollen over de apparaten van de klas verdelen.</span></div>
+    <div><b>3</b><span>Bij elk wetsvoorstel toont het bord groot wie er nu mag stemmen. Tel de handen en tik het in, of laat iedereen op zijn eigen scherm stemmen: het bord telt.</span></div>
     <div><b>4</b><span>Onderweg gebeurt er iets in de stad: een koning sterft, iemand grijpt de macht. Dan verandert de bestuursvorm, en dus wie er mag stemmen.</span></div>
   </div>
 
@@ -354,7 +354,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
   </div>
 
   <p class="eyebrow" style="margin-top:24px">hoe stemmen jullie</p>
-  <div class="stemwijze" id="stemwijze"><button type="button" data-w="handen" class="on">Handen tellen</button><button type="button" data-w="telefoons">Op telefoons</button></div>
+  <div class="stemwijze" id="stemwijze"><button type="button" data-w="handen" class="on">Handen tellen</button><button type="button" data-w="telefoons">Op telefoon of laptop</button></div>
   <p style="font-size:.87rem;color:var(--muted);max-width:60ch;margin:8px auto 0" id="stemwijzeUit">De docent telt de handen en tikt de aantallen in.</p>
   <button class="btn" id="startBtn" type="button" disabled>Verdeel de rollen</button>
 </section>
@@ -364,7 +364,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
   <h2 style="font-size:clamp(1.6rem,4.5vw,2.4rem);margin-top:6px" id="rolKop"></h2>
   <p style="color:var(--muted);margin-top:8px" id="rolUit"></p>
   <div class="rollen" id="rollen"></div>
-  <p class="eyebrow" style="margin-top:22px;text-align:center">zo ziet jullie klas eruit bij de eerste wet</p>
+  <p class="eyebrow" id="vloerKop" style="margin-top:22px;text-align:center">zo ziet jullie klas eruit bij de eerste wet</p>
   <div id="rolvloer"></div>
   <div class="waarschuw" id="waarschuw"></div>
   <div style="text-align:center"><button class="btn" id="naarSpel" type="button">De vergadering begint</button></div>
@@ -803,7 +803,7 @@ var KWESTIES = [
       wijze = b.getAttribute('data-w');
       Array.prototype.forEach.call(document.querySelectorAll('#stemwijze button'), function(x){ x.classList.toggle('on', x === b); });
       document.getElementById('stemwijzeUit').textContent = wijze === 'telefoons'
-        ? 'Leerlingen doen mee via meneergreidanus.nl/q met een code. Het bord verdeelt de rollen over de telefoons en telt de stemmen zelf.'
+        ? 'Leerlingen doen mee op hun telefoon of laptop via meneergreidanus.nl/q met een code. Het bord verdeelt de rollen en telt de stemmen zelf.'
         : 'De docent telt de handen en tikt de aantallen in.';
       document.getElementById('klasRij').classList.toggle('hide', wijze === 'telefoons' || !polisId);
       document.getElementById('startBtn').textContent = wijze === 'telefoons' ? 'Open de kamer' : 'Verdeel de rollen';
@@ -822,7 +822,7 @@ var KWESTIES = [
   function naarStart(){
     elRollen.classList.add('hide'); elSpel.classList.add('hide'); elEinde.classList.add('hide');
     elStart.classList.remove('hide');
-    document.getElementById('pillVorm').textContent = '';
+    document.getElementById('pillVorm').textContent = ''; document.getElementById('pillVorm').classList.add('hide');
     if (kamer){ kamer.sluit(); }
     kamer = null; kamerInfo = null; gestart = false; rolVan = {}; spelers = []; heerser = null; stemmen = {};
     scrollTo({top:0, behavior:'auto'});
@@ -850,6 +850,9 @@ var KWESTIES = [
     if (wijze === 'telefoons'){ naarLobby(); return; }
     berekenVerdeling();
     var p = POLEIS[polisId];
+    document.getElementById('rollen').style.display = '';
+    document.getElementById('vloerKop').classList.remove('hide');
+    document.getElementById('waarschuw').classList.remove('hide');
     elStart.classList.add('hide'); elRollen.classList.remove('hide');
     document.getElementById('rolKop').textContent = 'Jullie zijn ' + p.naam;
     document.getElementById('rollen').innerHTML = ROLLEN.map(function(r){
@@ -883,9 +886,12 @@ var KWESTIES = [
      stemmen twee knoppen, de rest ziet waarom niet. Het bord telt. */
   function naarLobby(){
     elStart.classList.add('hide'); elRollen.classList.remove('hide');
-    document.getElementById('rolKop').textContent = 'Doe mee op je telefoon';
-    document.getElementById('rolUit').textContent = 'Ga naar de code hieronder. Zodra iedereen erbij is, verdeelt het bord de rollen over de telefoons en begint de vergadering. Wie later binnenkomt, wordt geen burger.';
+    document.getElementById('rolKop').textContent = 'Doe mee op je telefoon of laptop';
+    document.getElementById('rolUit').textContent = 'Ga naar de code hieronder. Zodra iedereen erbij is, verdeelt het bord de rollen over de apparaten en begint de vergadering. Wie later binnenkomt, wordt geen burger.';
+    /* het vloerplaatje en de waarschuwing horen bij het handen tellen */
     document.getElementById('rolvloer').innerHTML = ''; document.getElementById('waarschuw').innerHTML = '';
+    document.getElementById('vloerKop').classList.add('hide');
+    document.getElementById('waarschuw').classList.add('hide');
     document.getElementById('naarSpel').disabled = true;
     if (kamer){ tekenLobby(); return; }
     document.getElementById('rollen').innerHTML = '<p style="text-align:center;color:var(--muted)">Kamer maken\u2026</p>';
@@ -897,7 +903,7 @@ var KWESTIES = [
   }
   function tekenLobby(){
     if (!kamerInfo || gestart) return;
-    ROLSPEL.lobby(document.getElementById('rollen'), kamerInfo.code, spelers, spelers.length < 4 ? 'Minstens vier telefoons.' : 'Iedereen erbij? Druk op De vergadering begint.');
+    ROLSPEL.lobby(document.getElementById('rollen'), kamerInfo.code, spelers, spelers.length < 4 ? 'Minstens vier apparaten.' : 'Iedereen erbij? Druk op De vergadering begint.');
     document.getElementById('naarSpel').disabled = spelers.length < 4;
   }
   function rolKaart(id){ var r = rol(id); return { soort:'rol', rol:id, titel:r.naam, onder:POLEIS[polisId].naam, tekst:r.kaartje, kleur:r.kleur }; }
@@ -935,7 +941,7 @@ var KWESTIES = [
       '<div class="stemvak"><p class="eyebrow">wie mag hier nu over stemmen</p>' + klasvloer(s.vorm) +
       (v.alleen
         ? '<p class="stemhulp">Er wordt niet gestemd. <b>' + ROLSPEL.schoon(naamVan(heerser)) + '</b> is ' + (s.vorm === 'tirannie' ? 'de tiran' : 'de koning') + ' en beslist alleen, op zijn telefoon. Vraag de rest hardop wat zij ervan vinden, en doe er vervolgens niets mee.</p>'
-        : '<p class="stemhulp">Wie mag stemmen, stemt op zijn telefoon. Er zijn <b>' + aantalStemmers() + '</b> stemgerechtigden, dus je hebt er <b>' + (Math.floor(aantalStemmers() / 2) + 1) + '</b> nodig. De stemming sluit vanzelf als iedereen gestemd heeft.</p>') +
+        : '<p class="stemhulp">Wie mag stemmen, stemt op zijn eigen scherm. Er zijn <b>' + aantalStemmers() + '</b> stemgerechtigden, dus je hebt er <b>' + (Math.floor(aantalStemmers() / 2) + 1) + '</b> nodig. De stemming sluit vanzelf als iedereen gestemd heeft.</p>') +
       '<div class="rollen-stem"><div><b id="tVoor">0</b><span>voor</span></div><div><b id="tTegen">0</b><span>tegen</span></div><div><b id="tNog">' + (v.alleen ? 1 : aantalStemmers()) + '</b><span>nog niet gestemd</span></div></div>' +
       '<div class="stembalk"><i class="v" id="balkVoor"></i><i class="t" id="balkTegen"></i><b class="drempel"></b></div><p class="balkuitleg" id="balkUit"></p>' +
       '<div style="margin-top:16px"><button class="btn klein" id="tel" type="button">' + (v.alleen ? 'Beslis zonder de heerser' : 'Sluit de stemming nu') + '</button></div>' +
@@ -1010,7 +1016,8 @@ var KWESTIES = [
     var v = VORMEN[s.vorm];
     document.getElementById('vormbanner').innerHTML =
       '<b>' + vormico(s.vorm) + v.naam + '</b><p>' + v.uit + '</p>';
-    document.getElementById('pillVorm').innerHTML = vormico(s.vorm) + v.naam;
+    var pv = document.getElementById('pillVorm');
+    pv.innerHTML = vormico(s.vorm) + v.naam; pv.classList.remove('hide');
     document.getElementById('teller').textContent = 'wet ' + Math.min(nr + 1, rij.length) + ' van ' + rij.length;
     document.getElementById('balkFill').style.width = ((nr / rij.length) * 100) + '%';
     document.getElementById('stemming').textContent = v.alleen

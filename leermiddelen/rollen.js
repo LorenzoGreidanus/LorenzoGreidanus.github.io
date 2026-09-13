@@ -120,8 +120,12 @@ window.ROLSPEL = (function(){
   }
   function lobby(el, code, spelers, tekst){
     if (!el) return;
-    el.innerHTML = '<div class="rollen-lobby"><div class="rollen-code"><small>ga naar <b>' + schoon(location.host.replace(/^www\./, '')) + '/q</b> en vul in</small><b>' + schoon(code) + '</b></div>' +
-      '<div><p class="rollen-tel">' + (spelers.length ? spelers.length + (spelers.length === 1 ? ' telefoon' : ' telefoons') + ' aangemeld' : 'Nog niemand. Zodra iemand meedoet staat zijn bijnaam hier.') + '</p>' +
+    /* de houder mag geen raster van het spel zelf zijn, anders past de kaart niet */
+    el.style.display = 'block';
+    el.innerHTML = '<div class="rollen-lobby"><div class="rollen-code">' +
+        '<small>ga op je telefoon of laptop naar</small><i>' + schoon(location.host.replace(/^www\./, '')) + '/q</i>' +
+        '<small>en vul deze code in</small><b>' + schoon(code) + '</b></div>' +
+      '<div><p class="rollen-tel">' + (spelers.length ? spelers.length + (spelers.length === 1 ? ' apparaat' : ' apparaten') + ' aangemeld' : 'Nog niemand. Zodra iemand meedoet staat zijn bijnaam hier.') + '</p>' +
       '<div class="rollen-chips">' + spelers.map(function(s){
         return '<span class="rollen-chip' + (s.aan ? '' : ' uit') + '">' + (window.AVATAR ? AVATAR.svg(s.naam, 22, s.av) : '') + schoon(s.naam) + (s.rol ? '<small>' + schoon(s.rol) + '</small>' : '') + '</span>';
       }).join('') + '</div>' + (tekst ? '<p class="rollen-tel">' + schoon(tekst) + '</p>' : '') + '</div></div>';
@@ -129,12 +133,15 @@ window.ROLSPEL = (function(){
   /* de stijl van de lobby en de chips, één keer */
   try {
     var st = document.createElement('style');
-    st.textContent = '.rollen-lobby{display:grid;grid-template-columns:auto minmax(0,1fr);gap:18px;align-items:start;margin:14px 0}' +
-      '.rollen-code{background:#14224C;color:#FBF6F1;border-radius:22px;padding:14px 24px;text-align:center}.rollen-code small{display:block;opacity:.8;font-size:.86rem}.rollen-code b{display:block;font-size:clamp(2.4rem,6vw,4rem);letter-spacing:.22em;line-height:1.1;font-weight:700;margin-left:.22em}' +
+    st.textContent = '.rollen-lobby{display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr);gap:18px;align-items:start;margin:14px 0}' +
+      '.rollen-code{background:#14224C;color:#FBF6F1;border-radius:22px;padding:14px 20px;text-align:center;max-width:100%;min-width:0;overflow-wrap:anywhere}' +
+      '.rollen-code small{display:block;opacity:.75;font-size:.82rem;line-height:1.3}' +
+      '.rollen-code i{display:block;font-style:normal;font-weight:600;font-size:clamp(1rem,3.4vw,1.4rem);margin:2px 0 8px;overflow-wrap:anywhere}' +
+      '.rollen-code b{display:block;font-size:clamp(2.2rem,11vw,3.6rem);letter-spacing:.18em;line-height:1.15;font-weight:700;margin:4px 0 0 .18em}' +
       '.rollen-tel{color:var(--muted);font-size:.9rem;margin:0 0 8px}.rollen-chips{display:flex;flex-wrap:wrap;gap:6px}' +
       '.rollen-chip{display:inline-flex;align-items:center;gap:6px;background:var(--kaart,#fff);border:1px solid rgba(20,34,76,.12);border-radius:999px;padding:5px 11px 5px 6px;font-weight:600;font-size:.88rem}.rollen-chip.uit{opacity:.45}.rollen-chip small{font-weight:500;color:var(--muted);font-size:.76rem}' +
       '.rollen-stem{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:12px 0}.rollen-stem div{background:var(--kaart,#fff);border:1px solid rgba(20,34,76,.12);border-radius:16px;padding:12px 14px}.rollen-stem b{display:block;font-size:1.8rem;line-height:1.1}.rollen-stem span{font-size:.8rem;color:var(--muted)}' +
-      '@media(max-width:560px){.rollen-lobby{grid-template-columns:1fr}}' +
+      '@media(max-width:620px){.rollen-lobby{grid-template-columns:minmax(0,1fr);gap:12px}.rollen-code{padding:12px 14px}}' +
       ':root[data-theme="dark"] .rollen-chip,:root[data-theme="dark"] .rollen-stem div{background:#182652;border-color:rgba(243,239,233,.14)}' +
       '@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .rollen-chip,:root:not([data-theme="light"]) .rollen-stem div{background:#182652;border-color:rgba(243,239,233,.14)}}';
     document.head.appendChild(st);
