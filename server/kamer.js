@@ -82,6 +82,7 @@ export class Kamer extends DurableObject {
       if (url.pathname === "/nieuw") return await this.nieuw(await req.json());
       if (url.pathname === "/stand") return this.stand ? json(this.overzicht()) : json({ fout: "geen kamer met deze code" }, 404);
       if (url.pathname === "/meld" && req.method === "POST") return await this.meld(await req.json());
+      if (url.pathname === "/melden" && req.method === "POST") return await this.melden(await req.json());
       if (url.pathname === "/resultaten") return this.resultaten(url.searchParams.get("sleutel"));
       if (req.headers.get("Upgrade") === "websocket") return this.verbind(url);
       return json({ fout: "onbekend" }, 404);
@@ -444,7 +445,7 @@ export class Kamer extends DurableObject {
   ranglijst(){
     return Object.keys(this.stand.spelers).map(sid => {
       const sp = this.stand.spelers[sid], a = sp.antw[this.stand.i] || {};
-      return { sid: sp.pid, naam: sp.naam, score: sp.score, delta: a.delta || 0, goed: !!a.goed, aan: this.aanwezig(sid) };
+      return { sid: sp.pid, naam: sp.naam, score: sp.score, delta: a.delta || 0, goed: !!a.goed, aantalGoed: Object.keys(sp.antw).filter(k => sp.antw[k] && sp.antw[k].goed).length, aan: this.aanwezig(sid) };
     }).sort((a, b) => b.score - a.score || a.naam.localeCompare(b.naam))
       .map((r, i) => Object.assign(r, { rang: i + 1 }));
   }
@@ -485,15 +486,40 @@ export class Kamer extends DurableObject {
     if (!/^[A-Za-z0-9_-]{8,40}$/.test(sid)) return json({ fout: "geen geldig kenmerk" }, 400);
     const spel = String(inz.spel || "");
     if (!SPELLEN_STRIJD[spel] && !KLAS_SPELLEN[spel]) return json({ fout: "onbekend spel" }, 400);
-    const r = { sid: sid.slice(0, 12), naam: nette(inz.naam, "Leerling"), spel, ronde: getal(inz.ronde, 250), punten: getal(inz.punten, 5000),
-                niveau: schoon(inz.niveau, 10), vak: schoon(inz.vak, 10), t: Date.now() };
-    /* per leerling per spel hoogstens dertig potjes, en een plafond voor de hele klas */
-    const mijn = this.stand.resultaten.filter(x => x.sid === r.sid && x.spel === spel);
+    this.voegToe({ sid: sid.slice(0, 12), naam: nette(inz.naam, "Leerling"), spel, ronde: getal(inz.ronde, 250), punten: getal(inz.punten, 5000),
+                   niveau: schoon(inz.niveau, 10), vak: schoon(inz.vak, 10), t: Date.now() });
+    await this.bewaar();
+    return json({ ok: true, n: this.stand.resultaten.length });
+  }
+  /* per leerling per spel hoogstens dertig potjes, en een plafond voor de hele klas */
+  voegToe(r){
+    const mijn = this.stand.resultaten.filter(x => x.sid === r.sid && x.spel === r.spel);
     if (mijn.length >= 30) this.stand.resultaten.splice(this.stand.resultaten.indexOf(mijn[0]), 1);
     this.stand.resultaten.push(r);
     if (this.stand.resultaten.length > KLAS_MAX) this.stand.resultaten.splice(0, this.stand.resultaten.length - KLAS_MAX);
+  }
+  /* De docent meldt een hele uitslag ineens, bijvoorbeeld van een Klasquiz:
+     alleen met de sleutel van de klas. Het kenmerk per leerling komt uit de
+     bijnaam, zodat dezelfde bijnaam bij dezelfde leerling terechtkomt. */
+  async melden(inz){
+    if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
+    if (Date.now() - this.stand.gemaakt > KLAS_LEEFT) return json({ fout: "deze klascode is verlopen" }, 410);
+    if (!inz || inz.sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
+    const spel = String(inz.spel || "");
+    if (!SPELLEN_STRIJD[spel] && !KLAS_SPELLEN[spel]) return json({ fout: "onbekend spel" }, 400);
+    const lijst = Array.isArray(inz.lijst) ? inz.lijst.slice(0, 80) : [];
+    if (!lijst.length) return json({ fout: "geen uitslag" }, 400);
+    const t = Date.now();
+    let n = 0;
+    for (const r of lijst){
+      const naam = nette(r && r.naam, "");
+      if (!naam) continue;
+      const sid = ("kq-" + naam.toLowerCase().replace(/[^a-z0-9]/g, "") + "xxxxxxxx").slice(0, 12);
+      this.voegToe({ sid, naam, spel, ronde: getal(r.ronde, 250), punten: getal(r.punten, 5000), niveau: schoon(inz.niveau, 10), vak: schoon(inz.vak, 10), t });
+      n++;
+    }
     await this.bewaar();
-    return json({ ok: true, n: this.stand.resultaten.length });
+    return json({ ok: true, n });
   }
   resultaten(sleutel){
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);

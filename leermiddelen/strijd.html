@@ -99,6 +99,20 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;pa
 .speler-chip button{border:none;background:none;color:var(--muted);padding:0 2px;font-size:1rem;line-height:1}
 @keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
 .hostknoppen{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;justify-content:flex-end}
+/* op het digibord: geen kopbalk, grote letters, de knoppen in de hoek */
+body.bord header{display:none}
+body.bord .wrap{width:min(100% - 32px,1600px)}
+body.bord #h-bezig h1,body.bord #h-einde h1{font-size:clamp(2rem,4.5vw,3.4rem)}
+body.bord .statusrij b{font-size:2.6rem}
+body.bord .statusrij span{font-size:1.25rem}
+body.bord table.stand{border-spacing:0 8px}
+body.bord table.stand th{font-size:.95rem}
+body.bord table.stand td{font-size:1.55rem;padding:12px 18px}
+body.bord .codevak b{font-size:clamp(3rem,8vw,6.5rem)}
+body.bord .codevak small{font-size:1.15rem}
+body.bord .podium div b{font-size:1.7rem}
+body.bord .podium div small{font-size:1.05rem}
+body.bord .hostknoppen{position:fixed;right:16px;bottom:16px;margin:0;z-index:5}
 .statusrij{display:flex;flex-wrap:wrap;gap:16px;align-items:baseline;margin-top:14px}
 .statusrij b{font-size:1.6rem}
 .statusrij span{color:var(--muted);font-size:.9rem}
@@ -215,6 +229,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     </div>
     <table class="stand" id="hTabel"><thead><tr><th>#</th><th>naam</th><th>ronde</th><th>levens</th><th>punten</th><th>aanvallen</th><th></th></tr></thead><tbody></tbody></table>
     <div class="hostknoppen">
+      <button class="knop stil" id="hBord" type="button">Op het bord</button>
       <button class="knop stil" id="hStop" type="button">Stop en toon de eindstand</button>
     </div>
   </div>
@@ -443,6 +458,18 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     try { localStorage.removeItem('lg-strijd-host'); } catch (e){}
   }
   $('hStart').addEventListener('click', function(){ stuur({ t:'start' }); hostScherm('h-bezig'); });
+  /* groot op het digibord: kopbalk weg, grote letters en beeldvullend als de browser dat toelaat */
+  $('hBord').addEventListener('click', function(){
+    var aan = document.body.classList.toggle('bord');
+    $('hBord').textContent = aan ? 'Gewoon scherm' : 'Op het bord';
+    try {
+      if (aan && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(function(){});
+      else if (!aan && document.fullscreenElement) document.exitFullscreen();
+    } catch (e){}
+  });
+  document.addEventListener('fullscreenchange', function(){
+    if (!document.fullscreenElement && document.body.classList.contains('bord')){ document.body.classList.remove('bord'); $('hBord').textContent = 'Op het bord'; }
+  });
   $('hStop').addEventListener('click', function(){ if (confirm('De strijd nu stoppen? De stand van dit moment wordt de eindstand.')) stuur({ t:'stop' }); });
   $('hStop0').addEventListener('click', function(){ if (confirm('De kamer sluiten?')) stuur({ t:'stop' }); });
   $('hTerug').addEventListener('click', function(){ sluitVerbinding(); location.href = location.pathname; });

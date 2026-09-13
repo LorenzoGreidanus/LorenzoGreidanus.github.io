@@ -150,15 +150,16 @@ export default {
     }
 
     /* het klasoverzicht: leerlingen melden hun uitslag, de docent haalt ze op met de sleutel */
-    const kl = p.match(/^\/api\/klas\/([A-Za-z]{4})(\/meld)?\/?$/);
+    const kl = p.match(/^\/api\/klas\/([A-Za-z]{4})(\/meld|\/melden)?\/?$/);
     if (kl){
       const stub = env.KAMERS.get(env.KAMERS.idFromName(kl[1].toUpperCase()));
       if (kl[2]){
         if (req.method !== "POST") return json({ fout: "onbekend" }, 404);
         if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
-        if (!await magDoor(env, req, "meld", 40, 60)) return json({ fout: "even wachten" }, 429);
+        const lijst = kl[2] === "/melden";
+        if (!await magDoor(env, req, lijst ? "melden" : "meld", lijst ? 10 : 40, 60)) return json({ fout: "even wachten" }, 429);
         let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldige melding" }, 400); }
-        return stub.fetch("https://kamer/meld", { method: "POST", body: JSON.stringify(inz || {}) });
+        return stub.fetch("https://kamer/" + (lijst ? "melden" : "meld"), { method: "POST", body: JSON.stringify(inz || {}) });
       }
       return stub.fetch("https://kamer/resultaten?sleutel=" + encodeURIComponent(url.searchParams.get("sleutel") || ""));
     }

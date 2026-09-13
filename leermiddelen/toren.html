@@ -65,6 +65,19 @@ body.groot .uitleg b{font-size:1.1rem}
 .niv button{background:#fff;border:2px solid rgba(20,34,76,.12);border-radius:999px;padding:11px 20px;font-weight:600;font-size:.92rem}
 .niv button:hover{border-color:var(--vista)}
 .niv button.on{border-color:var(--ocean);background:#f4f7ff;color:var(--ocean)}
+/* de campagne: tien kaarten als tegels */
+.campagne{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:12px}
+.campagne button{background:#fff;border:2px solid rgba(20,34,76,.12);border-radius:18px;padding:12px 12px 10px;text-align:left;display:grid;gap:3px;font:inherit;color:inherit;cursor:pointer}
+.campagne button:hover:not(:disabled){border-color:var(--vista)}
+.campagne button.on{border-color:var(--ocean);background:#f4f7ff}
+.campagne button:disabled{opacity:.55;cursor:not-allowed;border-style:dashed}
+.campagne .nr{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.campagne b{font-size:.95rem;line-height:1.2}
+.campagne small{color:var(--muted);font-size:.76rem}
+.campagne .sterren{color:#EA9836;letter-spacing:2px;font-size:.95rem}
+:root[data-theme="dark"] .campagne button{background:#182652;border-color:rgba(243,239,233,.12)}
+:root[data-theme="dark"] .campagne button.on{background:#1f3270;border-color:var(--vista)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .campagne button{background:#182652;border-color:rgba(243,239,233,.12)}:root:not([data-theme="light"]) .campagne button.on{background:#1f3270;border-color:var(--vista)}}
 .nivuit{font-size:.9rem;color:var(--muted);margin-top:10px}
 .vakken{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
 .vak{background:#fff;border:2px solid transparent;border-radius:22px;padding:18px;text-align:left;
@@ -566,6 +579,11 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
   <p class="eyebrow kop2" id="themaKop">kies je omgeving</p>
   <div class="niv" id="themas"></div>
   <p class="nivuit" id="themaUit"></p>
+
+  <p class="eyebrow kop2">los potje of campagne</p>
+  <div class="niv" id="campKies"><button type="button" data-c="los" class="on">Los potje</button><button type="button" data-c="camp">Campagne: tien kaarten</button></div>
+  <p class="nivuit" id="campUit">Tien kaarten op rij, van het schoolplein tot de vulkaan. Elke kaart heeft drie doelen in rondes; haal het eerste doel en de volgende kaart gaat open. Je sterren blijven op dit apparaat staan.</p>
+  <div class="campagne hide" id="campagneVak"></div>
 
   <p class="eyebrow kop2" id="torenKop">stel je torens samen</p>
   <div class="torens" id="torenkeuze"></div>
@@ -6075,11 +6093,87 @@ const BOMTIJD = 8, BOMSCHADE = 44;
   }
 
   /* ---------- beginnen en eindigen ---------- */
+  /* ---------- de campagne ----------
+     Tien kaarten op rij, elk met een vaste weg en omgeving en drie doelen in
+     rondes. Wie het eerste doel haalt, opent de volgende kaart. De sterren
+     staan in localStorage; in de campagne kies je de omgeving niet zelf, en
+     samen spelen gaat buiten de campagne om. */
+  var CAMPAGNE = [
+    { kaart:0, thema:'plein',    doel:[6, 10, 15] },
+    { kaart:1, thema:'plein',    doel:[8, 12, 18] },
+    { kaart:2, thema:'plein',    doel:[10, 15, 20] },
+    { kaart:3, thema:'eiland',   doel:[10, 15, 22] },
+    { kaart:1, thema:'eiland',   doel:[12, 18, 25] },
+    { kaart:2, thema:'archipel', doel:[12, 18, 25] },
+    { kaart:0, thema:'archipel', doel:[15, 20, 30] },
+    { kaart:3, thema:'vulkaan',  doel:[15, 22, 32] },
+    { kaart:1, thema:'vulkaan',  doel:[20, 28, 38] },
+    { kaart:0, thema:'plein',    doel:[25, 35, 50] }
+  ];
+  var campagne = null, campStand = {};
+  try { campStand = JSON.parse(localStorage.getItem('lg-toren-campagne') || '{}') || {}; } catch (e){}
+  function campSterren(i){ return campStand[i] | 0; }
+  function campOpen(i){ return i === 0 || campSterren(i - 1) > 0; }
+  function campThema(c){ return THEMAS.filter(function(x){ return x.id === c.thema; })[0] || THEMAS[0]; }
+  function tekenCampagne(){
+    var vak0 = document.getElementById('campagneVak'), aan = campagne !== null;
+    Array.prototype.forEach.call(document.getElementById('campKies').querySelectorAll('button'), function(b){
+      b.classList.toggle('on', (b.getAttribute('data-c') === 'camp') === aan);
+    });
+    vak0.classList.toggle('hide', !aan);
+    ['themaKop', 'themas', 'themaUit'].forEach(function(id){ document.getElementById(id).classList.toggle('hide', aan); });
+    if (!aan) return;
+    vak0.innerHTML = CAMPAGNE.map(function(c, i){
+      var t = campThema(c), k = KAARTEN[c.kaart], open = campOpen(i), st = campSterren(i);
+      var naam = (c.thema !== 'plein' && k[c.thema]) ? k[c.thema] : k.naam, sterren = '';
+      for (var j = 0; j < 3; j++) sterren += j < st ? '\u2605' : '\u2606';
+      return '<button type="button" data-i="' + i + '"' + (open ? '' : ' disabled') + (campagne === i ? ' class="on"' : '') +
+        '><span class="nr">kaart ' + (i + 1) + (open ? '' : ' \u00b7 dicht') + '</span><b>' + naam + '</b><small>' + t.naam + '</small>' +
+        '<span class="sterren" aria-label="' + st + ' van 3 sterren">' + sterren + '</span><small>doel: ronde ' + c.doel.join(', ') + '</small></button>';
+    }).join('');
+    Array.prototype.forEach.call(vak0.querySelectorAll('button'), function(b){
+      b.addEventListener('click', function(){ kiesCampagne(parseInt(b.getAttribute('data-i'), 10)); });
+    });
+  }
+  function kiesCampagne(i){
+    if (!CAMPAGNE[i] || !campOpen(i)) return;
+    campagne = i;
+    thema = campThema(CAMPAGNE[i]);
+    ACHTERGROND = null;
+    tekenCampagne(); tekenThemas(); tekenTorenkeuze(); toonKlassement('startLijst', null);
+  }
+  Array.prototype.forEach.call(document.getElementById('campKies').querySelectorAll('button'), function(b){
+    b.addEventListener('click', function(){
+      if (b.getAttribute('data-c') === 'camp'){
+        /* de eerste kaart die nog niet vol is */
+        var i = 0; while (i < CAMPAGNE.length - 1 && campSterren(i) >= 3) i++;
+        while (i > 0 && !campOpen(i)) i--;
+        kiesCampagne(i);
+      } else { campagne = null; tekenCampagne(); tekenThemas(); tekenTorenkeuze(); }
+    });
+  });
+  /* aan het eind: sterren tellen en bewaren; geeft het aantal, of null buiten de campagne */
+  function campAfronden(){
+    if (campagne === null || co.aan) return null;
+    var c = CAMPAGNE[campagne], st = c.doel.filter(function(d){ return rondeGehaald >= d; }).length;
+    if (st > campSterren(campagne)){
+      campStand[campagne] = st;
+      try { localStorage.setItem('lg-toren-campagne', JSON.stringify(campStand)); } catch (e){}
+    }
+    return st;
+  }
+
   function begin(){
     if (co.aan && co.lock && co.rol === 'gast' && co.opzet){
       thema = THEMAS.filter(function(x){ return x.id === co.opzet.th; })[0] || thema;
       kaart = KAARTEN[co.opzet.ki] || KAARTEN[0]; PAD = kaart.pad; PADLENGTE = padlengte(); ACHTERGROND = null; EILANDEN = null;
       zaai(co.opzet.seed);
+    } else if (campagne !== null && !co.aan){
+      var cp = CAMPAGNE[campagne];
+      vorigeKaart = cp.kaart; kaart = KAARTEN[cp.kaart]; PAD = kaart.pad; PADLENGTE = padlengte(); ACHTERGROND = null;
+      thema = campThema(cp);
+      co.seed = Math.floor(Math.random() * 4294967296);
+      zaai(co.seed);
     } else {
       kiesKaart();
       co.seed = Math.floor(Math.random() * 4294967296);
@@ -6181,7 +6275,21 @@ const BOMTIJD = 8, BOMSCHADE = 44;
     document.getElementById('naamveld').value = laatsteNaam;
     document.getElementById('opslaghint').textContent = '';
     toonKlassement('eindLijst', null);
-    SPEL.einde({ spel:'toren', compact:true, waarde:rondeGehaald, label:'rondes', sterren: rondeGehaald >= 50 ? 3 : rondeGehaald >= 20 ? 2 : rondeGehaald >= 10 ? 1 : 0, klas:false, plek:'cijfers', sleutel:niveau, deelTekst:'ronde ' + rondeGehaald, kleur:kleuren, kop:'jouw partij' });
+    var campSt = campAfronden();
+    var kaartE = SPEL.einde({ spel:'toren', compact:true, waarde:rondeGehaald, label:'rondes',
+      sterren: campSt !== null ? campSt : (rondeGehaald >= 50 ? 3 : rondeGehaald >= 20 ? 2 : rondeGehaald >= 10 ? 1 : 0),
+      klas:false, plek:'cijfers', sleutel: campSt !== null ? 'campagne-' + (campagne + 1) : niveau, kleur:kleuren,
+      deelTekst:'ronde ' + rondeGehaald + (campSt !== null ? ' op kaart ' + (campagne + 1) + ' van de campagne' : ''),
+      kop: campSt !== null ? 'campagne, kaart ' + (campagne + 1) + ' van ' + CAMPAGNE.length + ', doel ronde ' + CAMPAGNE[campagne].doel.join(', ') : 'jouw partij' });
+    if (campSt !== null && kaartE){
+      var laatsteKaart = campagne + 1 >= CAMPAGNE.length, verder = !laatsteKaart && campOpen(campagne + 1);
+      var kn = document.createElement('button'); kn.type = 'button';
+      kn.textContent = verder ? 'Volgende kaart' : laatsteKaart ? (campSt ? 'Campagne uitgespeeld' : 'Haal ronde ' + CAMPAGNE[campagne].doel[0]) : 'Haal eerst ronde ' + CAMPAGNE[campagne].doel[0];
+      kn.disabled = !verder; if (!verder) kn.className = 'stil';
+      kn.addEventListener('click', function(){ kiesCampagne(campagne + 1); begin(); });
+      var knoppen = kaartE.querySelector('.knoppen'); knoppen.insertBefore(kn, knoppen.firstChild);
+      tekenCampagne();
+    }
     if (window.STRIJD) STRIJD.klassement.toon('siteLijst', 'toren');
     scrollTo({ top:0, behavior:'auto' });
   }

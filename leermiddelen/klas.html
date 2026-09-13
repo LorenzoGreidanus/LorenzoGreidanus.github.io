@@ -94,6 +94,13 @@ td.getal{font-variant-numeric:tabular-nums;text-align:right}
 .samen{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-top:12px}
 .samen div{background:var(--kaart2);border-radius:14px;padding:12px 14px}
 .samen b{display:block;font-size:1.05rem}
+.samen .regel{display:grid;grid-template-columns:minmax(0,1fr) 104px;gap:1px 10px;margin-top:9px;font-size:.86rem;align-items:center}
+.samen .regel .wat{font-weight:600}
+.samen .regel em{grid-column:2;grid-row:1/4;font-style:normal}
+.samen .regel em svg{width:104px;height:30px;display:block}
+.samen .regel .cijfer{color:var(--ink)}
+.samen .regel small{color:var(--muted);font-size:.76rem}
+.samen .leeg{grid-column:1/-1}
 .samen span{display:block;color:var(--muted);font-size:.86rem}
 .stappen{display:grid;gap:10px;margin-top:10px}
 .stappen div{display:flex;gap:12px;align-items:flex-start}
@@ -145,7 +152,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       <div class="stappen">
         <div><i>1</i><span>Ze gaan naar <b id="linkTekst">meneergreidanus.nl/leermiddelen</b>.</span></div>
         <div><i>2</i><span>Onder <b>klascode van je docent</b> vullen ze de code en een bijnaam in en tikken op koppelen. Dat hoeft maar een keer per apparaat.</span></div>
-        <div><i>3</i><span>Vanaf dan meldt elk potje Torenverdediging en Zwaardvechter zijn einduitslag hier, met ronde, punten, niveau en vak.</span></div>
+        <div><i>3</i><span>Vanaf dan meldt elk spel zijn einduitslag hier: ronde of aantal goed, punten, niveau en vak. De uitslag van een Klasquiz zet je er zelf in, met een knop op het eindscherm van de quiz.</span></div>
       </div>
       <p class="tip" style="margin-top:12px">De bijnaam gaat door hetzelfde filter als in de Klasquiz. Spreek met de klas af welke bijnaam ze gebruiken, dan herken je iedereen.</p>
     </div>
@@ -171,7 +178,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     </div>
     <div class="stap">
       <b>Alle potjes</b>
-      <div class="tabelvak"><table><thead><tr><th>Leerling</th><th>Spel</th><th>Ronde</th><th>Punten</th><th>Niveau</th><th>Vak</th><th>Wanneer</th></tr></thead><tbody id="rijen"></tbody></table></div>
+      <div class="tabelvak"><table><thead><tr><th>Leerling</th><th>Spel</th><th>Ronde of goed</th><th>Punten</th><th>Niveau</th><th>Vak</th><th>Wanneer</th></tr></thead><tbody id="rijen"></tbody></table></div>
     </div>
   </section>
 </main>
@@ -182,6 +189,24 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
   'use strict';
   function $(id){ return document.getElementById(id); }
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+  /* welk getal per spel de maat is, en hoe het heet */
+  var MAAT = { toren:{ v:'ronde', l:'rondes' }, zwaard:{ v:'ronde', l:'rondes' }, race:{ v:'punten', l:'punten' }, klasquiz:{ v:'punten', l:'punten' },
+    rekenen:{ v:'punten', l:'punten' }, balans:{ v:'ronde', l:'opgelost' }, handel:{ v:'punten', l:'gulden' }, jagers:{ v:'punten', l:'mensen' },
+    feodalisme:{ v:'punten', l:'punten' }, leenmannen:{ v:'punten', l:'procent' }, stad:{ v:'punten', l:'punten' }, vergadering:{ v:'ronde', l:'dagen' } };
+  function maat(sp){ return MAAT[sp] || { v:'ronde', l:'goed' }; }
+  /* een lijntje door de laatste potjes, van oud naar nieuw */
+  function lijntje(w){
+    if (w.length < 2) return '';
+    w = w.slice(-12);
+    var max = Math.max.apply(null, w), min = Math.min.apply(null, w), span = Math.max(1, max - min);
+    var pts = w.map(function(v, i){ return (4 + i * (96 / (w.length - 1))).toFixed(1) + ',' + (26 - (v - min) / span * 20).toFixed(1); });
+    var laatste = pts[pts.length - 1].split(',');
+    return '<svg viewBox="0 0 104 30" aria-hidden="true"><polyline points="' + pts.join(' ') + '" fill="none" stroke="var(--ocean)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="' + laatste[0] + '" cy="' + laatste[1] + '" r="3" fill="var(--crab)"/></svg>';
+  }
+  function wanneer(t){
+    var d = new Date(t), nu = new Date(), dag = Math.round((nu.setHours(0, 0, 0, 0) - new Date(d).setHours(0, 0, 0, 0)) / 86400000);
+    return dag === 0 ? 'vandaag' : dag === 1 ? 'gisteren' : d.toLocaleDateString('nl-NL', { day:'numeric', month:'short' });
+  }
   var SPELLEN = { toren:'Torenverdediging', zwaard:'Zwaardvechter', race:'Vragenrace', klasquiz:'Klasquiz', rekenen:'Rekenrace', balans:'De balans', werkwoorden:'Werkwoordrace', irregular:'Irregular verbs', vlaggen:'Vlaggen', landenvormen:'Landenvormen', topografie:'Topografie', lichaam:'Het lichaam', tijdvakken:'Tijdvakken sorteren', bronnenlab:'Bronnenlab', machtsschema:'Het machtsschema', jagers:'Blijven of doorlopen', feodalisme:'Feodalisme', leenmannen:'Verdeel je rijk', stad:'Bouw je stad', handel:'De handelsroute', vergadering:'De vergadering' };
   var NIVEAUS = { bb:'vmbo-bb', kgt:'vmbo-kgt/tl', havo:'havo', vwo:'vwo' };
   var VAKKEN = { reken:'Rekenen', ned:'Nederlands', eng:'Engels', ges:'Geschiedenis', aard:'Aardrijkskunde' };
@@ -236,18 +261,18 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     Array.prototype.forEach.call($('spelChips').querySelectorAll('button'), function(b){ b.addEventListener('click', function(){ spelFilter = b.getAttribute('data-id'); teken(); }); });
     if (spelFilter) lijst = lijst.filter(function(r){ return r.spel === spelFilter; });
     lijst.sort(function(a, b){ return b.t - a.t; });
-    /* per leerling het beste potje per spel */
-    var beste = {};
-    lijst.forEach(function(r){
-      var k = r.naam + '|' + r.spel;
-      if (!beste[k] || r.ronde > beste[k].ronde || (r.ronde === beste[k].ronde && r.punten > beste[k].punten)) beste[k] = r;
-    });
+    /* per leerling per spel: het beste, hoeveel potjes, wanneer voor het laatst, en een lijntje door de tijd */
     var per = {};
-    Object.keys(beste).forEach(function(k){ var r = beste[k]; (per[r.naam] = per[r.naam] || []).push(r); });
+    lijst.forEach(function(r){ var p = per[r.naam] = per[r.naam] || {}; (p[r.spel] = p[r.spel] || []).push(r); });
     var namen = Object.keys(per).sort(function(a, b){ return a.localeCompare(b, 'nl'); });
     $('samen').innerHTML = namen.length ? namen.map(function(n){
-      return '<div><b>' + schoon(n) + '</b>' + per[n].map(function(r){
-        return '<span>' + schoon(SPELLEN[r.spel] || r.spel) + ': ronde ' + r.ronde + ', ' + r.punten + ' punten</span>';
+      return '<div><b>' + schoon(n) + '</b>' + Object.keys(per[n]).map(function(sp){
+        var potjes = per[n][sp].slice().sort(function(a, b){ return a.t - b.t; }), m = maat(sp);
+        var w = potjes.map(function(r){ return r[m.v] | 0; }), beste = Math.max.apply(null, w), laatste = potjes[potjes.length - 1];
+        var trend = w.length >= 2 ? (w[w.length - 1] > w[0] ? ', stijgend' : w[w.length - 1] < w[0] ? ', dalend' : ', gelijk') : '';
+        return '<span class="regel"><span class="wat">' + schoon(SPELLEN[sp] || sp) + '</span><em>' + lijntje(w) + '</em>' +
+          '<span class="cijfer">beste ' + beste + ' ' + schoon(m.l) + '</span>' +
+          '<small>' + potjes.length + (potjes.length === 1 ? ' potje' : ' potjes') + ', laatst ' + wanneer(laatste.t) + trend + '</small></span>';
       }).join('') + '</div>';
     }).join('') : '<p class="leeg">Nog niets gemeld. Zodra een leerling een potje afmaakt, staat het hier.</p>';
     $('rijen').innerHTML = lijst.length ? lijst.map(function(r){
@@ -279,7 +304,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
   });
   $('csvBtn').addEventListener('click', function(){
     if (!data) return;
-    var regels = [['leerling', 'spel', 'ronde', 'punten', 'niveau', 'vak', 'wanneer']].concat(data.resultaten.map(function(r){
+    var regels = [['leerling', 'spel', 'ronde of goed', 'punten', 'niveau', 'vak', 'wanneer']].concat(data.resultaten.map(function(r){
       return [r.naam, SPELLEN[r.spel] || r.spel, r.ronde, r.punten, NIVEAUS[r.niveau] || r.niveau || '', VAKKEN[r.vak] || r.vak || '', new Date(r.t).toLocaleString('nl-NL')];
     }));
     var csv = '﻿' + regels.map(function(rij){ return rij.map(function(v){ return '"' + String(v).replace(/"/g, '""') + '"'; }).join(';'); }).join('\r\n');

@@ -104,6 +104,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
 .speler-chip button{border:none;background:none;color:var(--muted);padding:0 2px;font-size:1rem;line-height:1}
 @keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
 .hostknoppen{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;justify-content:flex-end}
+.meldklas{margin-top:18px;background:var(--kaart);border:1px solid var(--rand);border-radius:16px;padding:14px 16px}
 
 .vraagvak{margin-top:12px}
 .vraagkop{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
@@ -322,6 +323,14 @@ Frans Hals"></textarea>
     <h1>Dat was de quiz</h1>
     <div class="podium" id="hPodium"></div>
     <div class="stand" id="hEindStand"></div>
+    <div class="meldklas hide" id="hMeldKlas">
+      <b>Zet deze uitslag in het klasoverzicht</b>
+      <div class="rij" style="margin-top:8px">
+        <select id="hMeldKeuze" class="veld" aria-label="Kies de klas" style="width:auto;min-width:200px"></select>
+        <button class="knop" id="hMeldBtn" type="button">Meld bij deze klas</button>
+      </div>
+      <p class="tip" id="hMeldUit" style="margin-top:6px">Elke leerling komt erin met de bijnaam uit de quiz en zijn punten.</p>
+    </div>
     <div class="hostknoppen">
       <button class="knop stil" id="hTerug" type="button">Terug naar het begin</button>
       <button class="knop crab" id="hNogeens" type="button">Nog een quiz met dezelfde klas</button>
@@ -761,6 +770,31 @@ Frans Hals"></textarea>
       return '<div><b>' + s.rang + '.</b><span>' + schoonHtml(s.naam) + '</span><span></span><b>' + s.score + '</b></div>';
     }).join('');
     try { localStorage.removeItem('lg-quiz-host'); } catch (e){}
+    meldKlasAanbod(m.stand);
+  }
+  /* De docent heeft in het klasoverzicht klassen gemaakt; die staan in deze
+     browser. Is er minstens een, dan kan de uitslag met een tik het
+     klasoverzicht in. */
+  function meldKlasAanbod(stand){
+    var vak0 = $('hMeldKlas'), klassen = [];
+    try { klassen = JSON.parse(localStorage.getItem('lg-klas-docent') || '[]'); } catch (e){}
+    klassen = (klassen || []).filter(function(k){ return k && k.code && k.sleutel; });
+    if (!klassen.length || !stand || !stand.length){ vak0.classList.add('hide'); return; }
+    vak0.classList.remove('hide');
+    $('hMeldKeuze').innerHTML = klassen.map(function(k){ return '<option value="' + schoonHtml(k.code) + '">' + schoonHtml(k.naam || k.code) + ' (' + schoonHtml(k.code) + ')</option>'; }).join('');
+    $('hMeldUit').textContent = stand.length + (stand.length === 1 ? ' leerling' : ' leerlingen') + ', met bijnaam en punten.';
+    var knop = $('hMeldBtn'); knop.disabled = false;
+    knop.onclick = function(){
+      var k = klassen.filter(function(x){ return x.code === $('hMeldKeuze').value; })[0];
+      if (!k) return;
+      knop.disabled = true; $('hMeldUit').textContent = 'Bezig met melden...';
+      var lijst = stand.map(function(sp){ return { naam:sp.naam, punten:sp.score | 0, ronde:sp.aantalGoed | 0 }; });
+      fetch('/api/klas/' + k.code + '/melden', { method:'POST', headers:{ 'content-type':'application/json' },
+        body:JSON.stringify({ sleutel:k.sleutel, spel:'klasquiz', niveau:host && host.niveau || '', vak:host && host.vak || '', lijst:lijst }) })
+        .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+        .then(function(x){ $('hMeldUit').textContent = x.ok ? 'Gemeld: ' + x.j.n + ' leerlingen staan nu in het klasoverzicht van ' + (k.naam || k.code) + '.' : 'Melden lukte niet' + (x.j && x.j.fout ? ': ' + x.j.fout : '.'); if (!x.ok) knop.disabled = false; })
+        .catch(function(){ $('hMeldUit').textContent = 'Melden lukte niet: geen verbinding.'; knop.disabled = false; });
+    };
   }
   $('hTerug').addEventListener('click', function(){ sluitVerbinding(); location.href = location.pathname; });
   $('hNogeens').addEventListener('click', function(){
