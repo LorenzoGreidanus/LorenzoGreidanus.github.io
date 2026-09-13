@@ -3,9 +3,15 @@
    een gezichtje. Dezelfde bijnaam geeft altijd dezelfde blob, op elk
    apparaat, want alles komt uit een hash van de naam. Geen plaatjes nodig.
 
+   Wie een eigen avatar heeft gekozen (profiel.js), geeft een spec mee:
+   'v3k2o1m0e4' = vorm, kleur, ogen, mond, extra. Dan telt de naam niet meer.
+
    Gebruik:
-     AVATAR.svg('Noor', 32)     een <svg> als tekst, 32 pixels
-     AVATAR.vul(root)           vult elementen met data-avatar="naam" */
+     AVATAR.svg('Noor', 32)         een <svg> als tekst, 32 pixels
+     AVATAR.svg('Noor', 32, spec)   met eigen keuzes
+     AVATAR.ontleed(spec) / AVATAR.maak({v,k,o,m,e})
+     AVATAR.KEUZES                  hoeveel er van elk zijn
+     AVATAR.vul(root)               vult elementen met data-avatar="naam" */
 window.AVATAR = (function(){
   'use strict';
   var KLEUREN = ['#F26749', '#EA9836', '#204ECF', '#83A5F2', '#2f7d52', '#6b3fa0', '#14224C', '#d95c3b', '#1f7a6d'];
@@ -42,9 +48,16 @@ window.AVATAR = (function(){
     }
     return d + ' Z';
   }
-  function svg(naam, maat){
+  var KEUZES = { vormen:8, kleuren:KLEUREN.length, ogen:5, monden:4, extras:6 };
+  function ontleed(spec){ var m = /^v(\d)k(\d)o(\d)m(\d)e(\d)$/.exec(String(spec || '')); return m ? { v:+m[1], k:+m[2], o:+m[3], m:+m[4], e:+m[5] } : null; }
+  function maak(o){ return 'v' + (o.v % KEUZES.vormen) + 'k' + (o.k % KEUZES.kleuren) + 'o' + (o.o % KEUZES.ogen) + 'm' + (o.m % KEUZES.monden) + 'e' + (o.e % KEUZES.extras); }
+  function svg(naam, maat, spec){
     maat = maat || 32;
-    var r = toeval(hash(naam)), kleur = KLEUREN[Math.floor(r() * KLEUREN.length)];
+    var sp = ontleed(spec);
+    /* met een spec hangt niets meer van de naam af: dezelfde keuzes geven overal dezelfde blob */
+    var r = toeval(sp ? 7919 * (sp.v + 1) + 17 : hash(naam));
+    var kleur = KLEUREN[Math.floor(r() * KLEUREN.length)];
+    if (sp) kleur = KLEUREN[sp.k % KLEUREN.length];
     var donker = !!DONKER[kleur], oog = donker ? '#fff' : '#14224C', pupil = '#14224C', mond = donker ? '#14224C' : '#14224C';
     var draai = (r() * 16 - 8).toFixed(1);
     var s = '<svg class="avatar" viewBox="-50 -50 100 100" width="' + maat + '" height="' + maat + '" aria-hidden="true" focusable="false">';
@@ -53,6 +66,7 @@ window.AVATAR = (function(){
     s += '<path d="M-40,-6 a40,40 0 0 1 80,0 z" fill="#fff" opacity=".14"/></g>';
     /* de ogen: vijf soorten */
     var soort = Math.floor(r() * 5), kijk = (r() - 0.5) * 5, afstand = 15;
+    if (sp) soort = sp.o % 5;
     if (soort === 1){                 /* blij: boogjes */
       s += '<path d="M-22,-4 q7,-9 14,0 M8,-4 q7,-9 14,0" fill="none" stroke="' + oog + '" stroke-width="4.5" stroke-linecap="round"/>';
     } else if (soort === 2){          /* knipoog */
@@ -72,12 +86,14 @@ window.AVATAR = (function(){
     }
     /* de mond: lach, klein rondje, of een streepje */
     var m = Math.floor(r() * 4);
+    if (sp) m = sp.m % 4;
     if (m === 0) s += '<path d="M-10,12 q10,10 20,0" fill="none" stroke="' + mond + '" stroke-width="4" stroke-linecap="round"/>';
     else if (m === 1) s += '<circle cx="0" cy="14" r="4.5" fill="' + mond + '"/>';
     else if (m === 2) s += '<path d="M-7,13 h14" fill="none" stroke="' + mond + '" stroke-width="4" stroke-linecap="round"/>';
     else s += '<path d="M-12,10 q12,14 24,0 q-12,4 -24,0 z" fill="' + mond + '"/><path d="M-5,14 q5,6 10,0 z" fill="#F26749" opacity=".9"/>';
     /* iets extra's: blosjes, sproetjes, een krul, een petje of een sticker */
     var e = Math.floor(r() * 6);
+    if (sp) e = sp.e % 6;
     if (e === 0) s += '<circle cx="-26" cy="8" r="5" fill="#F26749" opacity=".45"/><circle cx="26" cy="8" r="5" fill="#F26749" opacity=".45"/>';
     else if (e === 1) s += '<g fill="' + oog + '" opacity=".7"><circle cx="-27" cy="6" r="1.6"/><circle cx="-22" cy="10" r="1.6"/><circle cx="-30" cy="12" r="1.6"/><circle cx="27" cy="6" r="1.6"/><circle cx="22" cy="10" r="1.6"/><circle cx="30" cy="12" r="1.6"/></g>';
     else if (e === 2) s += '<path d="M2,-44 q4,-12 14,-6 q-8,-2 -10,6" fill="none" stroke="' + kleur + '" stroke-width="5" stroke-linecap="round"/>';
@@ -87,7 +103,7 @@ window.AVATAR = (function(){
   }
   function vul(root){
     Array.prototype.forEach.call((root || document).querySelectorAll('[data-avatar]'), function(el){
-      el.innerHTML = svg(el.getAttribute('data-avatar'), +el.getAttribute('data-maat') || 32);
+      el.innerHTML = svg(el.getAttribute('data-avatar'), +el.getAttribute('data-maat') || 32, el.getAttribute('data-spec') || '');
     });
   }
   /* de paar regels stijl die elke pagina nodig heeft */
@@ -96,5 +112,5 @@ window.AVATAR = (function(){
     st.textContent = '.avatar{display:inline-block;vertical-align:middle;flex:none;margin-right:6px}.avrij{display:flex;align-items:center;gap:8px;min-width:0}.avrij .avatar{margin-right:0}.avrij>span{min-width:0}';
     document.head.appendChild(st);
   } catch (e){}
-  return { svg:svg, vul:vul };
+  return { svg:svg, vul:vul, ontleed:ontleed, maak:maak, KEUZES:KEUZES };
 })();

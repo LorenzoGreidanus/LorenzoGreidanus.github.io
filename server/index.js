@@ -15,6 +15,7 @@ export { Klassement } from "./klassement.js";
 export { Poort } from "./poort.js";
 export { Sets } from "./sets.js";
 export { Beheer } from "./beheer.js";
+export { Profiel } from "./profiel.js";
 const KLASSEMENTEN = { toren: true, zwaard: true };
 
 /* Een browser stuurt bij elk POST en bij elke WebSocket mee vanaf welke site
@@ -43,10 +44,11 @@ async function magDoor(env, req, wat, per, seconden){
 
 /* Geen I, O, 0 en 1: die lees je van een digibord niet uit elkaar. */
 const LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-function nieuweCode(){
+function nieuweCode(n){
+  n = n || 4;
   let c = "";
-  const r = crypto.getRandomValues(new Uint8Array(4));
-  for (let i = 0; i < 4; i++) c += LETTERS[r[i] % LETTERS.length];
+  const r = crypto.getRandomValues(new Uint8Array(n));
+  for (let i = 0; i < n; i++) c += LETTERS[r[i] % LETTERS.length];
   return c;
 }
 function json(obj, status){
@@ -107,6 +109,34 @@ export default {
 
     /* meldingen bij vragen en de gebruikstelling: naar het beheerobject */
     const beheer = () => env.BEHEER_DO.get(env.BEHEER_DO.idFromName("beheer"));
+    /* de speelcode: een profiel zonder account, acht letters */
+    if (p === "/api/profiel" && req.method === "POST"){
+      if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
+      if (!await magDoor(env, req, "profiel-maak", 10, 600)) return json({ fout: "even wachten met een nieuwe speelcode" }, 429);
+      let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldig profiel" }, 400); }
+      for (let poging = 0; poging < 4; poging++){
+        const code = nieuweCode(8);
+        const r = await env.PROFIEL.get(env.PROFIEL.idFromName(code)).fetch("https://profiel/maak", { method: "POST", body: JSON.stringify({ code, profiel: inz && inz.profiel }) });
+        if (r.status !== 409) return r;
+      }
+      return json({ fout: "probeer het nog eens" }, 503);
+    }
+    const pm = p.match(/^\/api\/profiel\/([A-Za-z]{8})\/?$/);
+    if (pm){
+      const code = pm[1].toUpperCase();
+      const stub = env.PROFIEL.get(env.PROFIEL.idFromName(code));
+      if (req.method === "GET"){
+        if (!await magDoor(env, req, "profiel-lees", 30, 60)) return json({ fout: "even wachten" }, 429);
+        return stub.fetch("https://profiel/lees");
+      }
+      if (req.method === "PUT"){
+        if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
+        if (!await magDoor(env, req, "profiel-sync", 240, 60)) return json({ fout: "even wachten" }, 429);
+        let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldig profiel" }, 400); }
+        return stub.fetch("https://profiel/sync", { method: "POST", body: JSON.stringify(inz || {}) });
+      }
+      return json({ fout: "onbekend" }, 404);
+    }
     if (p === "/api/melding" && req.method === "POST"){
       if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
       if (!await magDoor(env, req, "melding", 6, 600)) return json({ fout: "even wachten met een volgende melding" }, 429);

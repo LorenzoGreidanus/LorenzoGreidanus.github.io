@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="manifest" href="/manifest.json">
 <script src="avatar.js"></script>
+<script src="profiel.js"></script>
 <link rel="apple-touch-icon" href="/icoon-192.png">
 <title>Klasstrijd · meneer Greidanus</title>
 <meta name="description" content="Torenverdediging of Zwaardvechter met de hele klas tegelijk: iedereen op zijn eigen scherm, de stand op het digibord, en goede reeksen sturen fouten naar de anderen.">
@@ -427,7 +428,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
   }
   function tekenSpelers(lijst){
     $('hSpelers').innerHTML = lijst.map(function(s){
-      return '<span class="speler-chip' + (s.aan ? '' : ' uit') + '"><i></i>' + (window.AVATAR ? AVATAR.svg(s.naam, 22) : '') + schoonHtml(s.naam) +
+      return '<span class="speler-chip' + (s.aan ? '' : ' uit') + '"><i></i>' + (window.AVATAR ? AVATAR.svg(s.naam, 22, s.av) : '') + schoonHtml(s.naam) +
         '<button type="button" title="Verwijderen" data-sid="' + schoonHtml(s.sid) + '">×</button></span>';
     }).join('');
     Array.prototype.forEach.call($('hSpelers').querySelectorAll('button'), function(b){
@@ -438,7 +439,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
   }
   function rijen(lijst, metStatus){
     return lijst.map(function(s){
-      return '<tr class="' + (s.rang === 1 ? 'top' : '') + (s.af ? ' af' : '') + '"><td>' + s.rang + '</td><td class="naam">' + (window.AVATAR ? AVATAR.svg(s.naam, 30) : '') + schoonHtml(s.naam) + '</td>' +
+      return '<tr class="' + (s.rang === 1 ? 'top' : '') + (s.af ? ' af' : '') + '"><td>' + s.rang + '</td><td class="naam">' + (window.AVATAR ? AVATAR.svg(s.naam, 30, s.av) : '') + schoonHtml(s.naam) + '</td>' +
         '<td>' + s.ronde + '</td>' + (metStatus ? '<td class="lev">' + (s.af ? '–' : s.leven) + '</td>' : '') + '<td>' + s.punten + '</td><td>' + (s.aanvallen || 0) + '</td>' +
         (metStatus ? '<td>' + (s.af ? '<span class="badge af">af in ronde ' + s.ronde + '</span>' : s.aan ? '<span class="badge">speelt</span>' : '<span class="badge weg">even weg</span>') + '</td>' : '') + '</tr>';
     }).join('');
@@ -455,7 +456,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     var top = m.stand.slice(0, 3), volgorde = [top[1], top[0], top[2]], klassen = ['p2', 'p1', 'p3'];
     $('hPodium').innerHTML = volgorde.map(function(s, i){
       if (!s) return '<div class="' + klassen[i] + '" style="visibility:hidden"></div>';
-      return '<div class="' + klassen[i] + '"><span class="nr">' + s.rang + '</span>' + (window.AVATAR ? AVATAR.svg(s.naam, 56) : '') + '<b>' + schoonHtml(s.naam) + '</b><small>ronde ' + s.ronde + ' · ' + s.punten + ' punten</small></div>';
+      return '<div class="' + klassen[i] + '"><span class="nr">' + s.rang + '</span>' + (window.AVATAR ? AVATAR.svg(s.naam, 56, s.av) : '') + '<b>' + schoonHtml(s.naam) + '</b><small>ronde ' + s.ronde + ' · ' + s.punten + ' punten</small></div>';
     }).join('');
     $('hEindTabel').querySelector('tbody').innerHTML = rijen(m.stand, false);
     try { localStorage.removeItem('lg-strijd-host'); } catch (e){}
@@ -492,7 +493,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     $('pUit').textContent = 'Je doet mee als ' + naam + ' aan ' + naamVan(SPELLEN, j.game) + ', ' + naamVan(VAKKEN, j.vak) + ' op ' + naamVan(NIVEAUS, j.niveau) + '.';
     /* al begonnen: meteen het spel in */
     if (j.fase === 'bezig'){ location.href = spelLink(code, naam, j); return; }
-    verbind({ code:code, query:'rol=speler&sid=' + encodeURIComponent(sid()) + '&naam=' + encodeURIComponent(naam) }, function(m){
+    verbind({ code:code, query:'rol=speler&sid=' + encodeURIComponent(sid()) + '&naam=' + encodeURIComponent(naam) + '&av=' + encodeURIComponent(window.PROFIEL ? PROFIEL.avatar() : '') }, function(m){
       if (m.t === 'start' || (m.t === 'welkom' && m.fase === 'bezig')){ sluitVerbinding(); location.href = spelLink(code, naam, j); }
       if (m.t === 'einde'){ $('pWachtTekst').textContent = 'Dit potje is al afgelopen.'; dicht = true; }
     });

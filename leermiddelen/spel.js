@@ -115,6 +115,7 @@ window.SPEL = (function(){
         record = !!(beste && typeof beste.w === 'number'); eerste = !record;
         zet(sleutel, { w:waarde, t:Date.now() });
         beste = { w:waarde };
+        if (window.PROFIEL) PROFIEL.sync();
       }
     }
     var sterren = sterrenVan(o, waarde);
@@ -128,7 +129,7 @@ window.SPEL = (function(){
                  : 'Beste ooit op dit apparaat: <b>' + schoon(beste.w) + (o.label ? ' ' + schoon(o.label) : '') + '</b>';
     }
     /* de blob van de leerling, als er een klascode met bijnaam staat */
-    var wie = window.KLAS && KLAS.lees(), wieHtml = wie && window.AVATAR ? '<p class="wie">' + AVATAR.svg(wie.naam, 30) + schoon(wie.naam) + '</p>' : '';
+    var wie = window.KLAS && KLAS.lees(), wieHtml = wie && window.AVATAR ? '<p class="wie">' + AVATAR.svg(wie.naam, 30, window.PROFIEL ? PROFIEL.avatar() : '') + schoon(wie.naam) + '</p>' : '';
     var sterrenHtml = sterren === null ? '' : '<div class="sterren" aria-label="' + sterren + ' van 3 sterren">' +
       [0, 1, 2].map(function(i){ return IC.ster.replace('<svg ', '<svg class="ster' + (i < sterren ? ' vol' : '') + '" '); }).join('') + '</div>';
     kaart.innerHTML =

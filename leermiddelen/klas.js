@@ -16,6 +16,7 @@ window.KLAS = (function(){
   function zet(code, naam){
     var k = { code:String(code || '').toUpperCase().replace(/[^A-Z]/g, ''), naam:String(naam || '').trim().slice(0, 16), sinds:Date.now() };
     try { localStorage.setItem(SLEUTEL, JSON.stringify(k)); } catch (e){}
+    if (window.PROFIEL) PROFIEL.sync();
     return k;
   }
   function wis(){ try { localStorage.removeItem(SLEUTEL); } catch (e){} }
@@ -41,7 +42,7 @@ window.KLAS = (function(){
   function meld(gegevens, naId){
     var k = lees();
     if (!k) return Promise.resolve(null);
-    var body = Object.assign({ sid:sid(), naam:k.naam }, gegevens || {});
+    var body = Object.assign({ sid:sid(), naam:k.naam, av: window.PROFIEL ? PROFIEL.avatar() : '' }, gegevens || {});
     return fetch('/api/klas/' + k.code + '/meld', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify(body) })
       .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
       .then(function(x){

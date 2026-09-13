@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="manifest" href="/manifest.json">
 <script src="avatar.js"></script>
+<script src="profiel.js"></script>
 <link rel="apple-touch-icon" href="/icoon-192.png">
 <script>
 /* Opgeslagen themakeuze meteen toepassen, nog voor de pagina getekend wordt. */
@@ -692,7 +693,7 @@ Frans Hals"></textarea>
   function zegGeteld(n, van){ $('hGeteldTekst').textContent = n + ' van ' + van + ' geantwoord'; }
   function tekenSpelers(lijst){
     $('hSpelers').innerHTML = lijst.map(function(s){
-      return '<span class="speler-chip' + (s.aan ? '' : ' uit') + '"><i></i>' + (window.AVATAR ? AVATAR.svg(s.naam, 22) : '') + schoonHtml(s.naam) +
+      return '<span class="speler-chip' + (s.aan ? '' : ' uit') + '"><i></i>' + (window.AVATAR ? AVATAR.svg(s.naam, 22, s.av) : '') + schoonHtml(s.naam) +
         '<button type="button" title="Verwijderen" data-sid="' + schoonHtml(s.sid) + '">×</button></span>';
     }).join('');
     Array.prototype.forEach.call($('hSpelers').querySelectorAll('button'), function(b){
@@ -751,7 +752,7 @@ Frans Hals"></textarea>
     $('hUitleg').textContent = m.u || '';
     $('hUitleg').classList.toggle('hide', !m.u);
     $('hStand').innerHTML = m.stand.map(function(s){
-      return '<div' + (s.rang === 1 ? ' class="top"' : '') + '><b>' + s.rang + '.</b><span>' + (window.AVATAR ? AVATAR.svg(s.naam, 26) : '') + schoonHtml(s.naam) + '</span>' +
+      return '<div' + (s.rang === 1 ? ' class="top"' : '') + '><b>' + s.rang + '.</b><span>' + (window.AVATAR ? AVATAR.svg(s.naam, 26, s.av) : '') + schoonHtml(s.naam) + '</span>' +
         '<span class="delta' + (s.delta ? '' : ' nul') + '">' + (s.delta ? '+' + s.delta : '–') + '</span><b>' + s.score + '</b></div>';
     }).join('');
     $('hStand').classList.toggle('hide', !m.stand.length);
@@ -766,10 +767,10 @@ Frans Hals"></textarea>
     var volgorde = [top[1], top[0], top[2]], klassen = ['p2', 'p1', 'p3'];
     $('hPodium').innerHTML = volgorde.map(function(s, i){
       if (!s) return '<div class="' + klassen[i] + '" style="visibility:hidden"></div>';
-      return '<div class="' + klassen[i] + '"><span class="nr">' + s.rang + '</span>' + (window.AVATAR ? AVATAR.svg(s.naam, 56) : '') + '<b>' + schoonHtml(s.naam) + '</b><small>' + s.score + ' punten</small></div>';
+      return '<div class="' + klassen[i] + '"><span class="nr">' + s.rang + '</span>' + (window.AVATAR ? AVATAR.svg(s.naam, 56, s.av) : '') + '<b>' + schoonHtml(s.naam) + '</b><small>' + s.score + ' punten</small></div>';
     }).join('');
     $('hEindStand').innerHTML = m.stand.slice(3).map(function(s){
-      return '<div><b>' + s.rang + '.</b><span>' + (window.AVATAR ? AVATAR.svg(s.naam, 26) : '') + schoonHtml(s.naam) + '</span><span></span><b>' + s.score + '</b></div>';
+      return '<div><b>' + s.rang + '.</b><span>' + (window.AVATAR ? AVATAR.svg(s.naam, 26, s.av) : '') + schoonHtml(s.naam) + '</span><span></span><b>' + s.score + '</b></div>';
     }).join('');
     try { localStorage.removeItem('lg-quiz-host'); } catch (e){}
     meldKlasAanbod(m.stand);
@@ -790,7 +791,7 @@ Frans Hals"></textarea>
       var k = klassen.filter(function(x){ return x.code === $('hMeldKeuze').value; })[0];
       if (!k) return;
       knop.disabled = true; $('hMeldUit').textContent = 'Bezig met melden...';
-      var lijst = stand.map(function(sp){ return { naam:sp.naam, punten:sp.score | 0, ronde:sp.aantalGoed | 0 }; });
+      var lijst = stand.map(function(sp){ return { naam:sp.naam, av:sp.av || '', punten:sp.score | 0, ronde:sp.aantalGoed | 0 }; });
       fetch('/api/klas/' + k.code + '/melden', { method:'POST', headers:{ 'content-type':'application/json' },
         body:JSON.stringify({ sleutel:k.sleutel, spel:'klasquiz', niveau:host && host.niveau || '', vak:host && host.vak || '', lijst:lijst }) })
         .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
@@ -822,9 +823,9 @@ Frans Hals"></textarea>
   function wordSpeler(code, naam){
     speler = { code:code, naam:naam };
     toon('s-speler'); spelerScherm('p-wacht');
-    $('pNaam').innerHTML = (window.AVATAR ? AVATAR.svg(naam, 28) : '') + schoonHtml(naam);
+    $('pNaam').innerHTML = (window.AVATAR ? AVATAR.svg(naam, 28, window.PROFIEL ? PROFIEL.avatar() : '') : '') + schoonHtml(naam);
     $('pWachtTekst').textContent = 'Wacht tot de docent start';
-    verbind({ code:code, query:'rol=speler&sid=' + encodeURIComponent(sid()) + '&naam=' + encodeURIComponent(naam) }, spelerBericht);
+    verbind({ code:code, query:'rol=speler&sid=' + encodeURIComponent(sid()) + '&naam=' + encodeURIComponent(naam) + '&av=' + encodeURIComponent(window.PROFIEL ? PROFIEL.avatar() : '') }, spelerBericht);
   }
   function spelerBericht(m){
     if (m.t === 'welkom'){

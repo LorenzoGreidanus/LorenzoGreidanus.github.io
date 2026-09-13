@@ -112,7 +112,7 @@ window.STRIJD = (function(){
   function open(){
     if (dicht || !actief) return;
     var proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
-    var s = new WebSocket(proto + location.host + '/ws/' + code + '?rol=speler&sid=' + encodeURIComponent(mijnSid) + '&naam=' + encodeURIComponent(naam));
+    var s = new WebSocket(proto + location.host + '/ws/' + code + '?rol=speler&sid=' + encodeURIComponent(mijnSid) + '&naam=' + encodeURIComponent(naam) + '&av=' + encodeURIComponent(window.PROFIEL ? PROFIEL.avatar() : ''));
     ws = s;
     s.onopen = function(){ pogingen = 0; };
     s.onmessage = function(e){
@@ -311,7 +311,7 @@ window.STRIJD = (function(){
         if (!lijst.length) html += '<div class="leeg">Nog niemand. Wie het eerst speelt, staat bovenaan.</div>';
         lijst.forEach(function(r){
           html += '<div class="rij' + (id && r.id === id ? ' jij' : '') + '"><span class="nr">' + r.plek + '</span>' +
-            '<span class="avrij">' + (window.AVATAR ? AVATAR.svg(r.naam, 34) : '') + '<span><b>' + schoon(r.naam) + '</b><small>' + [r.waar, r.niveau, r.vak].filter(Boolean).map(schoon).join(' · ') + (r.t ? ' · ' + new Date(r.t).toLocaleDateString('nl-NL') : '') + '</small></span></span>' +
+            '<span class="avrij">' + (window.AVATAR ? AVATAR.svg(r.naam, 34, r.av) : '') + '<span><b>' + schoon(r.naam) + '</b><small>' + [r.waar, r.niveau, r.vak].filter(Boolean).map(schoon).join(' · ') + (r.t ? ' · ' + new Date(r.t).toLocaleDateString('nl-NL') : '') + '</small></span></span>' +
             '<span class="pt">' + r.ronde + ' rondes</span></div>';
         });
         doel.innerHTML = html;

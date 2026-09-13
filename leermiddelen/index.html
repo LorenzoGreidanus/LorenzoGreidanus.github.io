@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="manifest" href="/manifest.json">
 <script src="avatar.js"></script>
+<script src="profiel.js"></script>
 <link rel="apple-touch-icon" href="/icoon-192.png">
 <script>
 /* Opgeslagen themakeuze meteen toepassen, nog voor de pagina getekend wordt. */
@@ -296,6 +297,25 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
 .klasvak button{border:none;border-radius:12px;padding:8px 12px;background:var(--ocean,#204ECF);color:#fff;font:inherit;font-weight:600;cursor:pointer}
 .klasvak button.los{background:transparent;color:var(--muted);text-decoration:underline;padding:6px 4px;font-weight:500}
 .klasvak p.status{font-size:.86rem;color:var(--muted);margin-top:6px}
+/* het profiel: de eigen avatar en de speelcode */
+.profielvak{margin-top:14px;padding-top:12px;border-top:1px solid var(--rand)}
+.profielkop{display:flex;align-items:center;gap:10px}
+.profielkop .avatar{margin:0}
+.profielkop b{display:block;font-size:.92rem}
+.profielkop small{color:var(--muted);font-size:.8rem}
+.profielkop .knoppen{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.profielvak button.klein{border:1.5px solid var(--rand2,rgba(20,34,76,.16));background:var(--kaart,#fff);color:var(--ink);border-radius:999px;padding:6px 11px;font-size:.8rem;font-weight:600;cursor:pointer}
+.profielvak button.klein.aan{background:var(--ocean);color:#fff;border-color:var(--ocean)}
+.kiezer{margin-top:10px;display:grid;gap:8px}
+.kiezer .rijtje{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.kiezer .rijtje span{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;width:52px}
+.kiezer button{border:2px solid transparent;background:transparent;border-radius:12px;padding:2px;cursor:pointer;line-height:0}
+.kiezer button.aan{border-color:var(--ocean);background:var(--kaart-aan,#eef2ff)}
+.kiezer .kleur{width:22px;height:22px;border-radius:50%;display:block}
+.codevak2{margin-top:10px}
+.codevak2 .code{font-size:1.5rem;font-weight:700;letter-spacing:.22em;font-variant-numeric:tabular-nums;background:var(--ink);color:var(--room);border-radius:12px;padding:8px 14px;display:inline-block;margin-right:8px}
+.codevak2 input{border:1.5px solid var(--rand2,rgba(20,34,76,.16));border-radius:12px;padding:8px 10px;background:var(--kaart,#fff);color:var(--ink);font:inherit;width:140px;letter-spacing:.14em;text-transform:uppercase}
+.codevak2 p{font-size:.84rem;color:var(--muted);margin-top:6px}
 </style>
 <link rel="stylesheet" href="basis.css">
 </head>
@@ -330,6 +350,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
       <div class="klasvak" id="klasvak">
         <p class="eyebrow" style="margin-top:12px">klascode van je docent</p>
         <div id="klasUit"></div>
+        <div class="profielvak" id="profielvak"></div>
       </div>
     </div>
   </section>
@@ -957,6 +978,82 @@ var SPELLEN = [
     });
   }
   teken();
+  if (window.PROFIEL) PROFIEL.op(teken);
+})();
+</script>
+<script>
+/* Het profiel: je eigen avatar kiezen en een speelcode om je voortgang mee
+   te nemen naar een ander apparaat. Geen account: acht letters, meer niet. */
+(function(){
+  var vak0 = document.getElementById('profielvak'); if (!vak0 || !window.PROFIEL || !window.AVATAR) return;
+  function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+  var open = false, codeOpen = false, koppelOpen = false, melding = '';
+  function naam(){ var k = window.KLAS && KLAS.lees(); return k ? k.naam : 'jij'; }
+  function spec(){ return PROFIEL.avatar(); }
+  function huidig(){ return AVATAR.ontleed(spec()) || { v:0, k:2, o:0, m:0, e:5 }; }
+  function teken(){
+    var sp = spec(), code = PROFIEL.code(), h = huidig();
+    var html = '<div class="profielkop">' + AVATAR.svg(naam(), 44, sp) + '<div><b>' + (sp ? 'Jouw gezichtje' : 'Je gezichtje') + '</b><small>' +
+      (code ? 'speelcode ' + schoon(code) : sp ? 'alleen op dit apparaat' : 'komt uit je bijnaam, of kies er zelf een') + '</small></div>' +
+      '<div class="knoppen"><button type="button" class="klein' + (open ? ' aan' : '') + '" id="pfKies">' + (open ? 'Klaar' : 'Aanpassen') + '</button>' +
+      '<button type="button" class="klein' + (codeOpen ? ' aan' : '') + '" id="pfCode">' + (code ? 'Mijn code' : 'Meenemen') + '</button></div></div>';
+    if (open){
+      var K = AVATAR.KEUZES, rijen = [['vorm', 'v', K.vormen], ['kleur', 'k', K.kleuren], ['ogen', 'o', K.ogen], ['mond', 'm', K.monden], ['extra', 'e', K.extras]];
+      html += '<div class="kiezer">' + rijen.map(function(r){
+        var uit = '<div class="rijtje"><span>' + r[0] + '</span>';
+        for (var i = 0; i < r[2]; i++){
+          var o2 = { v:h.v, k:h.k, o:h.o, m:h.m, e:h.e }; o2[r[1]] = i;
+          uit += '<button type="button" data-w="' + r[1] + '" data-i="' + i + '"' + (h[r[1]] === i ? ' class="aan"' : '') + ' aria-label="' + r[0] + ' ' + (i + 1) + '">' + AVATAR.svg('', 30, AVATAR.maak(o2)) + '</button>';
+        }
+        return uit + '</div>';
+      }).join('') + '</div>';
+    }
+    if (codeOpen){
+      html += '<div class="codevak2">';
+      if (code){
+        html += '<span class="code" id="pfCodeTekst">' + schoon(code) + '</span><button type="button" class="klein" id="pfKopieer">Kopieer</button> ' +
+          '<button type="button" class="klein" id="pfVergeet">Haal van dit apparaat</button>' +
+          '<p>Vul deze code in op een ander apparaat (onder Meenemen, dan Ik heb al een code) en je gezichtje, beste scores, sterren en klascode staan daar ook. Schrijf hem in je agenda: er is geen wachtwoord en geen manier om hem terug te vragen.</p>';
+      } else if (koppelOpen){
+        html += '<div class="rij"><input id="pfInvoer" maxlength="8" placeholder="ACHT LETTERS" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Speelcode"><button type="button" id="pfKoppel">Koppelen</button></div>' +
+          '<p>Wat op dit apparaat staat gaat erbij; het beste van allebei blijft. <button type="button" class="klein" id="pfTerug">Terug</button></p>';
+      } else {
+        html += '<div class="rij"><button type="button" id="pfMaak">Maak een speelcode</button><button type="button" class="klein" id="pfHebAl">Ik heb al een code</button></div>' +
+          '<p>Een speelcode is acht letters, zonder naam of wachtwoord. Daarmee neem je je gezichtje, beste scores, sterren en klascode mee naar een ander apparaat. Alleen wie de code kent kan erbij.</p>';
+      }
+      if (melding) html += '<p class="status"><b>' + schoon(melding) + '</b></p>';
+      html += '</div>';
+    }
+    vak0.innerHTML = html;
+    document.getElementById('pfKies').addEventListener('click', function(){ open = !open; if (open) codeOpen = false; teken(); });
+    document.getElementById('pfCode').addEventListener('click', function(){ codeOpen = !codeOpen; if (codeOpen) open = false; melding = ''; teken(); });
+    Array.prototype.forEach.call(vak0.querySelectorAll('.kiezer button'), function(b){
+      b.addEventListener('click', function(){
+        var h2 = huidig(); h2[b.getAttribute('data-w')] = parseInt(b.getAttribute('data-i'), 10);
+        PROFIEL.zetAvatar(AVATAR.maak(h2)); teken();
+      });
+    });
+    function knop(id, fn){ var el = document.getElementById(id); if (el) el.addEventListener('click', function(){ fn(el); }); }
+    knop('pfMaak', function(el){
+      el.disabled = true; melding = 'Even wachten\u2026'; teken();
+      PROFIEL.maak().then(function(){ melding = 'Gelukt. Schrijf de code op.'; teken(); }).catch(function(e){ melding = e.message; teken(); });
+    });
+    knop('pfHebAl', function(){ koppelOpen = true; melding = ''; teken(); });
+    knop('pfTerug', function(){ koppelOpen = false; melding = ''; teken(); });
+    knop('pfKoppel', function(){
+      var c = document.getElementById('pfInvoer').value; melding = 'Even kijken\u2026'; teken();
+      PROFIEL.koppel(c).then(function(){ koppelOpen = false; melding = 'Gekoppeld: je voortgang staat nu ook hier.'; teken(); location.reload(); }).catch(function(e){ melding = e.message; koppelOpen = true; teken(); document.getElementById('pfInvoer').value = c; });
+    });
+    knop('pfKopieer', function(){
+      var c = PROFIEL.code();
+      if (navigator.clipboard) navigator.clipboard.writeText(c).then(function(){ melding = 'Gekopieerd.'; teken(); }, function(){ melding = c; teken(); });
+    });
+    knop('pfVergeet', function(){
+      if (confirm('De speelcode van dit apparaat halen? Je voortgang blijft op de server staan onder de code; wat hier staat blijft ook staan.')){ PROFIEL.wis(); codeOpen = false; melding = ''; teken(); }
+    });
+  }
+  teken();
+  PROFIEL.op(function(){ if (!open) teken(); });
 })();
 </script>
 <script src="thema.js"></script>

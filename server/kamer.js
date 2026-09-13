@@ -40,6 +40,8 @@ function schoon(tekst, max){
   return String(tekst || "").replace(/[\u0000-\u001f\u007f]/g, "").replace(/\s+/g, " ").trim().slice(0, max);
 }
 function getal(x, max){ const n = Number(x); return Number.isFinite(n) ? Math.max(0, Math.min(max, Math.round(n))) : 0; }
+/* een gekozen avatar: v3k2o1m0e4, anders leeg (dan komt hij uit de bijnaam) */
+function schoonAv(a){ a = String(a || "").replace(/[^a-z0-9]/g, "").slice(0, 12); return /^v\dk\do\dm\de\d$/.test(a) ? a : ""; }
 function sleutelMaken(n){
   const r = crypto.getRandomValues(new Uint8Array(n || 12));
   return Array.from(r, b => b.toString(16).padStart(2, "0")).join("");
@@ -135,6 +137,7 @@ export class Kamer extends DurableObject {
     const rol = url.searchParams.get("rol") === "host" ? "host" : "speler";
     let sid = schoon(url.searchParams.get("sid"), 40);
     let naam = nette(url.searchParams.get("naam"), "Leerling");   /* door het naamfilter */
+    const av = schoonAv(url.searchParams.get("av"));
     if (rol === "host"){
       if (url.searchParams.get("sleutel") !== this.stand.sleutel) return json({ fout: "dit is niet jouw kamer" }, 403);
       sid = "host";
@@ -150,10 +153,10 @@ export class Kamer extends DurableObject {
     server.serializeAttachment({ rol, sid });
     if (rol === "speler"){
       const bestaand = this.stand.spelers[sid];
-      if (bestaand) bestaand.naam = naam;
+      if (bestaand){ bestaand.naam = naam; bestaand.av = av; }
       else this.stand.spelers[sid] = this.strijd
-        ? { naam, pid: sleutelMaken(4), ronde: 0, gehaald: 0, leven: 0, punten: 0, af: false, aanvallen: 0, sinds: Date.now() }
-        : { naam, pid: sleutelMaken(4), score: 0, antw: {}, sinds: Date.now() };
+        ? { naam, av, pid: sleutelMaken(4), ronde: 0, gehaald: 0, leven: 0, punten: 0, af: false, aanvallen: 0, sinds: Date.now() }
+        : { naam, av, pid: sleutelMaken(4), score: 0, antw: {}, sinds: Date.now() };
       /* Naar buiten toe heet een speler bij zijn korte, openbare nummer (pid);
          het kenmerk waarmee hij verbindt (sid) blijft geheim, anders kon een
          ander zich voor hem uitgeven. */
@@ -352,7 +355,7 @@ export class Kamer extends DurableObject {
     const st = this.stand;
     return Object.keys(st.spelers).map(sid => {
       const sp = st.spelers[sid];
-      return { sid: sp.pid, naam: sp.naam, ronde: sp.ronde, gehaald: sp.gehaald, leven: sp.leven, punten: sp.punten,
+      return { sid: sp.pid, naam: sp.naam, av: sp.av || "", ronde: sp.ronde, gehaald: sp.gehaald, leven: sp.leven, punten: sp.punten,
                af: !!sp.af, aanvallen: sp.aanvallen || 0, aan: this.aanwezig(sid) };
     }).sort((a, b) => (this.stand.duel && a.af !== b.af) ? (a.af ? 1 : -1)   /* in een duel wint wie overeind blijft */
         : (b.gehaald - a.gehaald || b.punten - a.punten || (a.af === b.af ? 0 : a.af ? 1 : -1) || a.naam.localeCompare(b.naam)))
@@ -445,7 +448,7 @@ export class Kamer extends DurableObject {
   ranglijst(){
     return Object.keys(this.stand.spelers).map(sid => {
       const sp = this.stand.spelers[sid], a = sp.antw[this.stand.i] || {};
-      return { sid: sp.pid, naam: sp.naam, score: sp.score, delta: a.delta || 0, goed: !!a.goed, aantalGoed: Object.keys(sp.antw).filter(k => sp.antw[k] && sp.antw[k].goed).length, aan: this.aanwezig(sid) };
+      return { sid: sp.pid, naam: sp.naam, av: sp.av || "", score: sp.score, delta: a.delta || 0, goed: !!a.goed, aantalGoed: Object.keys(sp.antw).filter(k => sp.antw[k] && sp.antw[k].goed).length, aan: this.aanwezig(sid) };
     }).sort((a, b) => b.score - a.score || a.naam.localeCompare(b.naam))
       .map((r, i) => Object.assign(r, { rang: i + 1 }));
   }
@@ -486,7 +489,7 @@ export class Kamer extends DurableObject {
     if (!/^[A-Za-z0-9_-]{8,40}$/.test(sid)) return json({ fout: "geen geldig kenmerk" }, 400);
     const spel = String(inz.spel || "");
     if (!SPELLEN_STRIJD[spel] && !KLAS_SPELLEN[spel]) return json({ fout: "onbekend spel" }, 400);
-    this.voegToe({ sid: sid.slice(0, 12), naam: nette(inz.naam, "Leerling"), spel, ronde: getal(inz.ronde, 250), punten: getal(inz.punten, 5000),
+    this.voegToe({ sid: sid.slice(0, 12), naam: nette(inz.naam, "Leerling"), av: schoonAv(inz.av), spel, ronde: getal(inz.ronde, 250), punten: getal(inz.punten, 5000),
                    niveau: schoon(inz.niveau, 10), vak: schoon(inz.vak, 10), t: Date.now() });
     await this.bewaar();
     return json({ ok: true, n: this.stand.resultaten.length });
@@ -515,7 +518,7 @@ export class Kamer extends DurableObject {
       const naam = nette(r && r.naam, "");
       if (!naam) continue;
       const sid = ("kq-" + naam.toLowerCase().replace(/[^a-z0-9]/g, "") + "xxxxxxxx").slice(0, 12);
-      this.voegToe({ sid, naam, spel, ronde: getal(r.ronde, 250), punten: getal(r.punten, 5000), niveau: schoon(inz.niveau, 10), vak: schoon(inz.vak, 10), t });
+      this.voegToe({ sid, naam, av: schoonAv(r.av), spel, ronde: getal(r.ronde, 250), punten: getal(r.punten, 5000), niveau: schoon(inz.niveau, 10), vak: schoon(inz.vak, 10), t });
       n++;
     }
     await this.bewaar();
@@ -525,7 +528,7 @@ export class Kamer extends DurableObject {
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
     if (!sleutel || sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
     return json({ code: this.stand.code, naam: this.stand.naam, gemaakt: this.stand.gemaakt,
-                  resultaten: this.stand.resultaten.map(x => ({ naam: x.naam, spel: x.spel, ronde: x.ronde, punten: x.punten, niveau: x.niveau, vak: x.vak, t: x.t })) });
+                  resultaten: this.stand.resultaten.map(x => ({ naam: x.naam, av: x.av || "", spel: x.spel, ronde: x.ronde, punten: x.punten, niveau: x.niveau, vak: x.vak, t: x.t })) });
   }
 
   aanwezig(sid){ return this.ctx.getWebSockets(sid).length > 0; }
@@ -537,7 +540,7 @@ export class Kamer extends DurableObject {
       return Object.assign(basis, { game: st.game, duel: !!st.duel, gastheer: st.gastheer ? this.pid(st.gastheer) : null, gestart: st.gestart, bezig: lijst.filter(r => !r.af).length, spelers: lijst });
     }
     return Object.assign(basis, { onderdeel: st.onderdeel, i: st.i, n: st.vragen.length, tijd: st.tijd,
-      spelers: this.ranglijst().map(r => ({ sid: r.sid, naam: r.naam, score: r.score, aan: r.aan })) });
+      spelers: this.ranglijst().map(r => ({ sid: r.sid, naam: r.naam, av: r.av, score: r.score, aan: r.aan })) });
   }
   zegSpelers(){
     if (!this.stand) return;
