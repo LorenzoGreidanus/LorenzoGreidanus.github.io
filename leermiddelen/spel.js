@@ -127,12 +127,14 @@ window.SPEL = (function(){
                  : eerste ? 'Je eerste keer op dit apparaat'
                  : 'Beste ooit op dit apparaat: <b>' + schoon(beste.w) + (o.label ? ' ' + schoon(o.label) : '') + '</b>';
     }
+    /* de blob van de leerling, als er een klascode met bijnaam staat */
+    var wie = window.KLAS && KLAS.lees(), wieHtml = wie && window.AVATAR ? '<p class="wie">' + AVATAR.svg(wie.naam, 30) + schoon(wie.naam) + '</p>' : '';
     var sterrenHtml = sterren === null ? '' : '<div class="sterren" aria-label="' + sterren + ' van 3 sterren">' +
       [0, 1, 2].map(function(i){ return IC.ster.replace('<svg ', '<svg class="ster' + (i < sterren ? ' vol' : '') + '" '); }).join('') + '</div>';
     kaart.innerHTML =
       '<p class="eyebrow">' + schoon(o.kop || 'klaar') + '</p>' +
       (!o.compact && o.score !== undefined && o.score !== null ? '<div class="getal">' + schoon(o.score) + (o.label ? '<small>' + schoon(o.label) + '</small>' : '') + '</div>' : '') +
-      '<div class="rechts">' + sterrenHtml + (besteTekst ? '<p class="beste">' + besteTekst + '</p>' : '') + '</div>' +
+      '<div class="rechts">' + sterrenHtml + (besteTekst ? '<p class="beste">' + besteTekst + '</p>' : '') + wieHtml + '</div>' +
       '<div class="knoppen">' +
         knopje('opnieuw', IC.opnieuw, schoon(o.opnieuwTekst || 'Nog een keer')) +
         knopje('stil deel', IC.deel, 'Delen') +
