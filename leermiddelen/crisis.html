@@ -114,6 +114,20 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 .spanmidden{flex:1 1 200px;min-width:0}
 .wijzer{width:clamp(150px,30vw,196px);flex:none}
 .wijzer svg{display:block;width:100%;height:auto}
+#defNaald{transform-box:view-box;transform-origin:100px 92px}
+#defVak0,#defVak1,#defVak2,#defVak3,#defVak4{transition:opacity .4s var(--ease)}
+/* ---------- beweging ----------
+   De naald loopt naar zijn nieuwe stand in plaats van te verspringen, en de
+   uitkomst van de dag schuift onder de twee zetten vandaan. */
+@media(prefers-reduced-motion:no-preference){
+  @keyframes gevolgOp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  @keyframes zetOp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  #defNaald{transition:transform .7s cubic-bezier(.34,1.12,.4,1)}
+  .gevolg{animation:gevolgOp .34s cubic-bezier(.22,.61,.36,1) both}
+  .tweezet>div{animation:zetOp .3s cubic-bezier(.22,.61,.36,1) both}
+  .tweezet>div:nth-child(2){animation-delay:.1s}
+  .combo{animation:gevolgOp .3s cubic-bezier(.22,.61,.36,1) .22s both}
+}
 .spanbalk{height:14px;border-radius:999px;background:var(--kaart2);overflow:hidden}
 .spanbalk i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#2f7d52,#EA9836 55%,#c0442c);transition:width .5s var(--ease)}
 .spanmidden .tip{margin-top:8px}
@@ -347,25 +361,36 @@ var DAGEN = [
     var x2 = 100 + r * Math.cos(a2), y2 = 92 + r * Math.sin(a2);
     return 'M' + x1.toFixed(1) + ' ' + y1.toFixed(1) + ' A' + r + ' ' + r + ' 0 0 1 ' + x2.toFixed(1) + ' ' + y2.toFixed(1);
   }
-  function wijzerplaat(){
-    var d = defcon(), vakken = '', grenzen = [0, 30, 50, 70, 88, 100];
+  /* De wijzerplaat wordt een keer getekend; daarna draait alleen de naald en
+     licht het vak op dat nu geldt. Zo kan de naald er naartoe lopen in plaats
+     van te verspringen. */
+  function bouwWijzer(){
+    if ($('wijzer').firstChild) return;
+    var vakken = '', grenzen = [0, 30, 50, 70, 88, 100];
     for (var i = 0; i < 5; i++){
-      vakken += '<path d="' + boog(grenzen[i] + 1, grenzen[i + 1] - 1, 72) + '" fill="none" stroke="' + DEFKLEUR[i] +
-        '" stroke-width="16" stroke-linecap="round" opacity="' + (5 - d === i ? '1' : '.3') + '"/>';
+      vakken += '<path id="defVak' + i + '" d="' + boog(grenzen[i] + 1, grenzen[i + 1] - 1, 72) + '" fill="none" stroke="' + DEFKLEUR[i] +
+        '" stroke-width="16" stroke-linecap="round" opacity=".3"/>';
     }
-    var hoek = -90 + spanning * 1.8;
-    return '<svg viewBox="0 0 200 126" aria-label="DEFCON ' + d + '">' + vakken +
-      '<g transform="rotate(' + hoek.toFixed(1) + ' 100 92)">' +
-        '<path d="M100 92 L94 88 L100 24 L106 88 Z" fill="var(--ink)"/></g>' +
+    $('wijzer').innerHTML = '<svg viewBox="0 0 200 126" role="img" aria-label="spanningsmeter">' + vakken +
+      '<g id="defNaald"><path d="M100 92 L94 88 L100 24 L106 88 Z" fill="var(--ink)"/></g>' +
       '<circle cx="100" cy="92" r="9" fill="var(--ink)"/><circle cx="100" cy="92" r="4" fill="var(--kaart)"/>' +
-      '<text x="100" y="121" text-anchor="middle" font-size="18" font-weight="700" fill="' + DEFKLEUR[5 - d] + '">DEFCON ' + d + '</text>' +
+      '<text id="defTekst" x="100" y="121" text-anchor="middle" font-size="18" font-weight="700">DEFCON 5</text>' +
       '</svg>';
+  }
+  function zetWijzer(){
+    bouwWijzer();
+    var d = defcon();
+    for (var i = 0; i < 5; i++) $('defVak' + i).setAttribute('opacity', 5 - d === i ? '1' : '.3');
+    $('defNaald').style.transform = 'rotate(' + (-90 + spanning * 1.8).toFixed(1) + 'deg)';
+    $('defTekst').textContent = 'DEFCON ' + d;
+    $('defTekst').setAttribute('fill', DEFKLEUR[5 - d]);
+    $('wijzer').setAttribute('aria-label', 'DEFCON ' + d);
   }
   function tekenBord(){
     $('dagKop').innerHTML = 'Dag ' + (dag + 1) + ' van ' + DAGEN.length + ' &middot; <span>' + schoon(DAGEN[dag].d) + '</span>';
     $('dagTekst').textContent = DAGEN[dag].tekst;
     $('spanIn').style.width = spanning + '%';
-    $('wijzer').innerHTML = wijzerplaat();
+    zetWijzer();
     $('spanUit').textContent = spanning >= 88 ? 'de bommenwerpers staan met draaiende motoren klaar'
       : spanning >= 70 ? 'de strijdkrachten staan op scherp, overal ter wereld'
       : spanning >= 50 ? 'de legers zijn opgeroepen, niemand slaapt nog'
