@@ -7,6 +7,7 @@
 <link rel="manifest" href="/manifest.json">
 <script src="avatar.js"></script>
 <script src="profiel.js"></script>
+<script src="rollen.js"></script>
 <link rel="apple-touch-icon" href="/icoon-192.png">
 <script>
 /* Opgeslagen themakeuze meteen toepassen, nog voor de pagina getekend wordt. */
@@ -271,6 +272,9 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
   <p class="eyebrow" id="nivKop" style="margin-top:30px">kies je niveau</p>
   <p style="font-size:.85rem;color:var(--muted);margin-top:6px">De niveaus zijn afgestemd op leerjaar 1 en 2.</p>
   <div class="kies" id="niveaus"></div>
+  <p class="eyebrow" style="margin-top:24px">wie zijn de gewesten</p>
+  <div class="kies" id="wijzen"></div>
+  <div id="lobbyvak" class="hide"></div>
   <button class="btn" id="startBtn" type="button" disabled>Open de vergadering</button>
   <p style="margin-top:14px;font-size:.82rem;color:var(--muted)">Geen inloggen, niets wordt opgeslagen.</p>
 </section>
@@ -511,6 +515,125 @@ var NIVEAUS = [
   var niveau = null, dag = 0, geld = 0, krediet = 0, gekozen = null, klaar = false;
   var staat = {}, gedaan = {}, gepolst = {}, verslag = [], stemrondes = 0;
   var stemmers = GEWESTEN.filter(function(g){ return !g.speler; });
+  /* op telefoons: elk gewest is een groepje leerlingen; bij een stemming stemmen zij zelf */
+  var wijze = 'bord', kamer = null, kamerInfo = null, spelers = [], gestart = false, gewestVan = {}, stemVraag = null, stemKeuze = {};
+  var WIJZEN = [
+    { id:'bord', naam:'Alleen op het bord', uitleg:'Jij speelt Holland en de gewesten reageren zoals het spel ze inschat.' },
+    { id:'tel', naam:'Gewesten op telefoons', uitleg:'Leerlingen doen mee via een code en worden in groepjes de zes gewesten. Bij een stemming beslissen zij zelf, met hun belangen op hun telefoon.' }
+  ];
+  var wijzeVak = document.getElementById('wijzen');
+  WIJZEN.forEach(function(w){
+    var b = document.createElement('button');
+    b.className = 'kaartje' + (w.id === 'bord' ? ' on' : ''); b.type = 'button';
+    b.innerHTML = '<b>' + w.naam + '</b><span>' + w.uitleg + '</span>';
+    b.addEventListener('click', function(){
+      wijze = w.id;
+      Array.prototype.forEach.call(wijzeVak.children, function(c){ c.classList.remove('on'); });
+      b.classList.add('on');
+      document.getElementById('lobbyvak').classList.toggle('hide', wijze !== 'tel');
+      if (wijze === 'tel') naarLobby(); else document.getElementById('startBtn').disabled = !niveau;
+    });
+    wijzeVak.appendChild(b);
+  });
+  function naarLobby(){
+    var vak = document.getElementById('lobbyvak');
+    document.getElementById('startBtn').disabled = true;
+    if (kamer){ tekenLobby(); return; }
+    vak.innerHTML = '<p style="color:var(--muted)">Kamer maken\u2026</p>';
+    ROLSPEL.maak('staten').then(function(k){
+      kamerInfo = k;
+      kamer = ROLSPEL.host({ game:'staten', code:k.code, sleutel:k.sleutel, onSpelers:function(l){ spelers = l; tekenLobby(); laatkomers(); }, onActie:actie });
+      tekenLobby();
+    }).catch(function(e){ vak.innerHTML = '<p style="color:var(--crab)">' + ROLSPEL.schoon(e.message) + '</p>'; });
+  }
+  function tekenLobby(){
+    if (!kamerInfo || gestart) return;
+    ROLSPEL.lobby(document.getElementById('lobbyvak'), kamerInfo.code, spelers, spelers.length < 2 ? 'Minstens twee telefoons; met zes of meer heeft elk gewest een eigen afgevaardigde.' : 'Iedereen erbij? Kies een niveau en open de vergadering.');
+    document.getElementById('startBtn').disabled = spelers.length < 2 || !niveau;
+  }
+  function gewest(id){ return GEWESTEN.filter(function(x){ return x.id === id; })[0]; }
+  function rolKaart(gid){
+    var g = gewest(gid);
+    return { soort:'rol', rol:gid, titel:g.naam, onder:'betaalt ' + g.deel + ' procent van de lasten, 1 stem', kleur:g.kleur,
+      tekst:g.kort + (g.eisen && g.eisen.length ? ' Wat jullie willen: ' + g.eisen.map(function(e){ return e.naam.toLowerCase(); }).join(', ') + '.' : '') };
+  }
+  function deelUit(){
+    var per = Math.max(1, Math.floor(spelers.length / stemmers.length));
+    var wens = stemmers.map(function(g){ return { id:g.id, aantal:per }; });
+    gewestVan = ROLSPEL.verdeel(spelers, wens, {});
+    /* wat overblijft, verdelen we een voor een over de gewesten */
+    var i = 0; Object.keys(gewestVan).forEach(function(pid){ if (!gewest(gewestVan[pid]) || (gewestVan[pid] === stemmers[stemmers.length - 1].id && Object.keys(gewestVan).filter(function(p){ return gewestVan[p] === gewestVan[pid]; }).length > per + 1)){ gewestVan[pid] = stemmers[i++ % stemmers.length].id; } });
+    kamer.kaarten(spelers.map(function(sp){ return { pid:sp.sid, d:rolKaart(gewestVan[sp.sid]) }; }));
+    gestart = true; kamer.start();
+  }
+  function laatkomers(){
+    if (!gestart) return;
+    var nieuw = spelers.filter(function(sp){ return !gewestVan[sp.sid]; });
+    nieuw.forEach(function(sp){
+      /* naar het gewest met de minste leerlingen */
+      var tel = {}; stemmers.forEach(function(g){ tel[g.id] = 0; }); Object.keys(gewestVan).forEach(function(p){ tel[gewestVan[p]] = (tel[gewestVan[p]] || 0) + 1; });
+      var g = stemmers.slice().sort(function(a, b){ return tel[a.id] - tel[b.id]; })[0];
+      gewestVan[sp.sid] = g.id; kamer.naar(sp.sid, rolKaart(g.id));
+    });
+    if (nieuw.length) stuurStand();
+  }
+  function ledenVan(gid){ return spelers.filter(function(sp){ return gewestVan[sp.sid] === gid; }); }
+  function kaal(t){ return String(t || '').replace(/<[^>]*>/g, ''); }
+  /* na elke zet: elk gewest ziet zijn eigen steun en het laatste nieuws */
+  function stuurStand(){
+    if (!kamer || !gestart || stemVraag) return;
+    kamer.kaarten(spelers.map(function(sp){
+      var g = gewest(gewestVan[sp.sid]); if (!g) return null;
+      var st = Math.round(staat[g.id]), ja = st >= niveau.drempel;
+      return { pid:sp.sid, d:{ soort:'wacht', kop:'dag ' + (dag + 1) + ' van ' + niveau.dagen, titel:g.naam + ': steun ' + st + ' van 100',
+        tekst:(ja ? 'Boven de streep (' + niveau.drempel + '): zoals het nu staat stemmen jullie voor.' : 'Onder de streep (' + niveau.drempel + '): zoals het nu staat stemmen jullie tegen. Wat wil Holland jullie toezeggen?') + (verslag[0] ? ' Laatste nieuws: ' + kaal(verslag[0]) : '') } };
+    }).filter(Boolean));
+  }
+  function stemmenOpTelefoons(){
+    stemVraag = 'stem' + stemrondes; stemKeuze = {};
+    var lijst = [];
+    spelers.forEach(function(sp){
+      var g = gewest(gewestVan[sp.sid]); if (!g) return;
+      var st = Math.round(staat[g.id]);
+      lijst.push({ pid:sp.sid, d:{ soort:'vraag', id:stemVraag, kop:'de eindstemming', titel:'Stemt ' + g.naam + ' voor de oorlogsbelasting?',
+        tekst:'Jullie steun staat op ' + st + ' van 100; de streep ligt bij ' + niveau.drempel + '. Overleg met je gewest. Een enkel nee blokkeert het hele besluit.',
+        opties:[{ id:'voor', tekst:'Voor', kleur:'#1f7a4a' }, { id:'tegen', tekst:'Tegen', kleur:'#c0442c' }],
+        meer: g.kort } });
+    });
+    kamer.kaarten(lijst);
+    tekenStemmingLive();
+  }
+  function tekenStemmingLive(){
+    var h = '<div class="stem ja"><span>Holland (jij)</span><b>voor</b></div>';
+    stemmers.forEach(function(g){
+      var leden = ledenVan(g.id), voor = 0, tegen = 0;
+      leden.forEach(function(sp){ if (stemKeuze[sp.sid] === 'voor') voor++; else if (stemKeuze[sp.sid] === 'tegen') tegen++; });
+      var st = leden.length ? (voor + tegen < leden.length ? 'wacht' : voor >= tegen ? 'ja' : 'nee') : (staat[g.id] >= niveau.drempel ? 'ja' : 'nee');
+      h += '<div class="stem ' + (st === 'wacht' ? '' : st) + '"><span>' + g.naam + (leden.length ? ' <small style="color:var(--muted)">(' + (voor + tegen) + ' van ' + leden.length + ' gestemd)</small>' : ' <small style="color:var(--muted)">(niemand, het bord beslist)</small>') + '</span><b>' + (st === 'wacht' ? 'wacht\u2026' : st === 'ja' ? 'voor' : 'tegen') + '</b></div>';
+    });
+    h += '<div style="margin-top:10px"><button class="btn klein" id="stemSluit" type="button">Sluit de stemming</button></div>';
+    document.getElementById('stemming').innerHTML = h;
+    document.getElementById('stemSluit').addEventListener('click', stemmenAfTelefoons);
+  }
+  function actie(pid, d){
+    if (!stemVraag || !d || d.vraag !== stemVraag || (d.keuze !== 'voor' && d.keuze !== 'tegen')) return;
+    stemKeuze[pid] = d.keuze;
+    tekenStemmingLive();
+    var alle = spelers.every(function(sp){ return !gewest(gewestVan[sp.sid]) || stemKeuze[sp.sid]; });
+    if (alle) setTimeout(function(){ if (stemVraag) stemmenAfTelefoons(); }, 1200);
+  }
+  function stemmenAfTelefoons(){
+    if (!stemVraag) return;
+    var uitslag = stemmers.map(function(g){
+      var leden = ledenVan(g.id), voor = 0, tegen = 0;
+      leden.forEach(function(sp){ if (stemKeuze[sp.sid] === 'voor') voor++; else if (stemKeuze[sp.sid] === 'tegen') tegen++; });
+      var ja = leden.length && (voor + tegen) ? voor >= tegen : staat[g.id] >= niveau.drempel;
+      return { naam:g.naam, ja:ja, steun:Math.round(staat[g.id]) };
+    });
+    stemVraag = null;
+    kamer.alle({ soort:'wacht', titel:'de stemming is gesloten', tekst:'Kijk naar het bord.' });
+    stemmenAf(uitslag);
+  }
 
   var elStart = document.getElementById('scherm-start'), elSpel = document.getElementById('scherm-spel'),
       elEinde = document.getElementById('scherm-einde');
@@ -524,7 +647,7 @@ var NIVEAUS = [
       niveau = n;
       Array.prototype.forEach.call(kiezer.children, function(c){ c.classList.remove('on'); });
       b.classList.add('on');
-      document.getElementById('startBtn').disabled = false;
+      document.getElementById('startBtn').disabled = wijze === 'tel' ? spelers.length < 2 : false;
       var p = document.getElementById('pillNiv'); p.textContent = n.naam; p.classList.remove('hide');
     });
     kiezer.appendChild(b);
@@ -539,6 +662,7 @@ var NIVEAUS = [
     this.textContent = document.body.classList.contains('groot') ? 'Normaal' : 'Digibord';
   });
   function naarStart(){
+    if (kamer){ kamer.sluit(); kamer = null; kamerInfo = null; gestart = false; gewestVan = {}; spelers = []; stemVraag = null; if (wijze === 'tel') naarLobby(); }
     elSpel.classList.add('hide'); elEinde.classList.add('hide'); elStart.classList.remove('hide');
     scrollTo({top:0,behavior:'auto'});
   }
@@ -548,6 +672,7 @@ var NIVEAUS = [
     staat = {}; gedaan = {}; gepolst = {}; verslag = []; stemrondes = 0;
     GEWESTEN.forEach(function(g){ staat[g.id] = g.steun; });
     noteer('De Staten-Generaal komen bijeen in Den Haag. Zes gewesten moeten nog overtuigd worden.');
+    if (wijze === 'tel'){ if (!kamer || spelers.length < 2) return; deelUit(); }
     elStart.classList.add('hide'); elEinde.classList.add('hide'); elSpel.classList.remove('hide');
     tekenAlles();
     scrollTo({top:0,behavior:'auto'});
@@ -557,7 +682,7 @@ var NIVEAUS = [
 
   /* ---------- tekenen ---------- */
   var netVeranderd = {};      /* welke gewesten net verschoven zijn, voor de flits op de kaart */
-  function tekenAlles(){ tekenKaart(); tekenStatus(); tekenLijst(); tekenActies(); tekenVerslag(); tekenStemUit(); netVeranderd = {}; }
+  function tekenAlles(){ tekenKaart(); tekenStatus(); tekenLijst(); tekenActies(); tekenVerslag(); tekenStemUit(); netVeranderd = {}; stuurStand(); }
   function jaTal(){ return stemmers.filter(function(g){ return staat[g.id] >= niveau.drempel; }).length; }
 
   function tekenKaart(){
@@ -851,10 +976,14 @@ var NIVEAUS = [
   /* ---------- stemming ---------- */
   function stemmen(){
     if (klaar) return;
+    if (stemVraag) return;
     stemrondes++;
-    var uitslag = stemmers.map(function(g){
+    if (kamer && gestart){ stemmenOpTelefoons(); return; }
+    stemmenAf(stemmers.map(function(g){
       return { naam:g.naam, ja: staat[g.id] >= niveau.drempel, steun: Math.round(staat[g.id]) };
-    });
+    }));
+  }
+  function stemmenAf(uitslag){
     var alleJa = uitslag.every(function(u){ return u.ja; });
 
     document.getElementById('stemming').innerHTML =
@@ -878,6 +1007,7 @@ var NIVEAUS = [
   /* ---------- einde ---------- */
   function toonEinde(gelukt, reden){
     klaar = true;
+    if (kamer){ kamer.alle({ soort:'uitslag', kop: gelukt ? 'aangenomen' : 'geen besluit', titel: gelukt ? 'De oorlogsbelasting komt er' : 'De vergadering loopt vast', tekst: gelukt ? 'Alle zeven gewesten stemden voor, na ' + dag + ' dagen.' : 'De dagen zijn op zonder besluit.' }); kamer.stop(); }
     elSpel.classList.add('hide'); elEinde.classList.remove('hide');
     var uitgegeven = niveau.geld - geld;
 

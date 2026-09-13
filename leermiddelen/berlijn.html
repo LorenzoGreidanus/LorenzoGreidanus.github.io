@@ -7,6 +7,7 @@
 <link rel="manifest" href="/manifest.json">
 <script src="avatar.js"></script>
 <script src="profiel.js"></script>
+<script src="rollen.js"></script>
 <link rel="apple-touch-icon" href="/icoon-192.png">
 <script>
 /* Opgeslagen themakeuze meteen toepassen, nog voor de pagina getekend wordt. */
@@ -332,6 +333,9 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
   <p class="eyebrow" style="margin-top:30px">gebeurtenissen onderweg</p>
   <div class="kies" id="soortenGeb" style="max-width:900px"></div>
 
+  <p class="eyebrow" style="margin-top:30px">aan het bord of op telefoons</p>
+  <div class="kies" id="wijzen" style="max-width:900px"></div>
+  <div id="lobbyvak" class="hide"></div>
   <button class="btn" id="startBtn" type="button">Open de conferentie</button>
   <p style="margin-top:14px;font-size:.82rem;color:var(--muted)">Op het digibord: zet alle vier op leerling en laat groepjes om de beurt naar voren komen. Alleen thuis: zet er drie op computer.</p>
 </section>
@@ -804,6 +808,116 @@ var SPAREN = 2;
   var bezit = {};          /* gebied -> id van de mogendheid, of null */
   var invloed = {};        /* mogendheid -> invloed over */
   var mens = {};           /* mogendheid -> speelt een leerling mee */
+  /* op telefoons: elke mogendheid is een delegatie van leerlingen; zij kiezen op hun telefoon, de meeste stemmen gelden */
+  var wijze = 'bord', kamer = null, kamerInfo = null, spelers = [], gestart = false, machtVan = {}, deleg = null, inzetDeleg = null;
+  var WIJZEN = [
+    { id:'bord', naam:'Aan het bord', uitleg:'Groepjes komen om de beurt naar het digibord, of je speelt alleen tegen de computer.' },
+    { id:'tel', naam:'Delegaties op telefoons', uitleg:'Leerlingen doen mee via een code en worden in delegaties verdeeld over de vier mogendheden. Elke delegatie kiest op de telefoons; het bord toont de kaart.' }
+  ];
+  var wijzeVak = document.getElementById('wijzen');
+  WIJZEN.forEach(function(w){
+    var b = document.createElement('button');
+    b.className = 'kaartje' + (w.id === 'bord' ? ' on' : ''); b.type = 'button';
+    b.innerHTML = '<b>' + w.naam + '</b><span>' + w.uitleg + '</span>';
+    b.addEventListener('click', function(){
+      wijze = w.id;
+      Array.prototype.forEach.call(wijzeVak.children, function(c){ c.classList.remove('on'); });
+      b.classList.add('on');
+      document.getElementById('lobbyvak').classList.toggle('hide', wijze !== 'tel');
+      document.getElementById('spelers').classList.toggle('hide', wijze === 'tel');
+      if (wijze === 'tel') naarLobby(); else document.getElementById('startBtn').disabled = false;
+    });
+    wijzeVak.appendChild(b);
+  });
+  function naarLobby(){
+    var vak = document.getElementById('lobbyvak');
+    document.getElementById('startBtn').disabled = true;
+    if (kamer){ tekenLobby(); return; }
+    vak.innerHTML = '<p style="color:var(--muted)">Kamer maken\u2026</p>';
+    ROLSPEL.maak('berlijn').then(function(k){
+      kamerInfo = k;
+      kamer = ROLSPEL.host({ game:'berlijn', code:k.code, sleutel:k.sleutel, onSpelers:function(l){ spelers = l; tekenLobby(); laatkomers(); }, onActie:actie });
+      tekenLobby();
+    }).catch(function(e){ vak.innerHTML = '<p style="color:var(--crab)">' + ROLSPEL.schoon(e.message) + '</p>'; });
+  }
+  function tekenLobby(){
+    if (!kamerInfo || gestart) return;
+    ROLSPEL.lobby(document.getElementById('lobbyvak'), kamerInfo.code, spelers, spelers.length < 2 ? 'Minstens twee telefoons; met vier of meer heeft elke mogendheid een delegatie.' : 'Iedereen erbij? Open de conferentie.');
+    document.getElementById('startBtn').disabled = spelers.length < 2;
+  }
+  function kaal(t){ return String(t || '').replace(/<[^>]*>/g, ''); }
+  function ledenVan(mid){ return spelers.filter(function(sp){ return machtVan[sp.sid] === mid; }).map(function(sp){ return sp.sid; }); }
+  function rolKaart(mid){
+    var m = macht(mid);
+    return { soort:'rol', rol:mid, titel:m.naam, onder:m.wie, kleur:m.kleur,
+      tekst:m.inzet + ' Jullie doelen: ' + m.doelen.map(function(d){ return d.t.toLowerCase() + ' (' + d.p + ' pt)'; }).join('; ') + '.' };
+  }
+  function deelUit(){
+    var vrij = spelers.map(function(sp){ return sp.sid; });
+    for (var i = vrij.length - 1; i > 0; i--){ var j = Math.floor(Math.random() * (i + 1)); var t = vrij[i]; vrij[i] = vrij[j]; vrij[j] = t; }
+    machtVan = {};
+    vrij.forEach(function(pid, i){ machtVan[pid] = MACHTEN[i % MACHTEN.length].id; });
+    MACHTEN.forEach(function(m){ mens[m.id] = ledenVan(m.id).length > 0; });
+    kamer.kaarten(spelers.map(function(sp){ return { pid:sp.sid, d:rolKaart(machtVan[sp.sid]) }; }));
+    gestart = true; kamer.start();
+  }
+  function laatkomers(){
+    if (!gestart) return;
+    spelers.filter(function(sp){ return !machtVan[sp.sid]; }).forEach(function(sp){
+      var kleinste = MACHTEN.slice().sort(function(a, b){ return ledenVan(a.id).length - ledenVan(b.id).length; })[0];
+      machtVan[sp.sid] = kleinste.id; mens[kleinste.id] = true;
+      kamer.naar(sp.sid, rolKaart(kleinste.id));
+    });
+  }
+  /* de delegatie die aan zet is krijgt de gebieden die ze kan pakken; de rest wacht */
+  function vraagDelegatie(m){
+    var leden = ledenVan(m.id);
+    if (!leden.length){ setTimeout(computerZet, 900); return; }
+    var items = [];
+    KAART.gebieden.forEach(function(g){
+      if (magPakken(g.id, m.id) || bezit[g.id] === m.id) return;
+      var prijs = kostenVan(g.id, m.id);
+      if (fase === 'conferentie'){
+        if (prijs > invloed[m.id]) return;
+        items.push({ id:g.id, tekst:g.naam, onder:'kost ' + prijs + ' invloed' + (INFO[g.id].eco ? ' \u00b7 opbrengst ' + INFO[g.id].eco : '') });
+      } else {
+        var vanuit = vanuitWelk(g.id, m.id); if (!vanuit) return;
+        var kans = winkansUitVerschil(kracht(vanuit), kracht(g.id, true));
+        items.push({ id:g.id, tekst:g.naam, onder:(bezit[g.id] && macht(bezit[g.id]) ? 'van ' + naamVan(bezit[g.id]) : bezit[g.id] === 'vrij' ? INFO[g.id].staat : 'onbezet') + ' \u00b7 zonder extra troepen ' + kans + ' procent kans' });
+      }
+    });
+    items.push({ id:'overslaan', tekst:'Sla over en spaar ' + SPAREN + ' invloed', onder:'onderhandelen in plaats van pakken' });
+    var anderen = spelers.filter(function(sp){ return machtVan[sp.sid] !== m.id; });
+    if (anderen.length) kamer.kaarten(anderen.map(function(sp){ return { pid:sp.sid, d:{ soort:'wacht', kop:'aan zet', titel:m.naam + ' is aan zet', tekst:(regels[0] ? kaal(regels[0]) + ' ' : '') + 'Overleg alvast met de anderen: wat wil jouw mogendheid straks?' } }; }));
+    deleg = ROLSPEL.delegatie(kamer, leden, { soort:'lijst', id:'zet' + beurt, kop:fase === 'conferentie' ? 'jullie zijn aan zet' : 'jullie zijn aan zet: bezetten of aanvallen', titel:m.naam + ', ' + invloed[m.id] + ' invloed',
+      tekst:fase === 'conferentie' ? 'Kies wat jullie claimen. De meeste stemmen in de delegatie gelden.' : 'Kies wat jullie bezetten of aanvallen. De meeste stemmen in de delegatie gelden.', items:items },
+      function(keuze){
+        deleg = null;
+        if (!keuze || keuze === 'overslaan' || !items.some(function(x){ return x.id === keuze; })){
+          invloed[m.id] += SPAREN;
+          noteer('<b>' + m.naam + '</b> claimt niets en onderhandelt in plaats daarvan. ' + SPAREN + ' invloed erbij, nu ' + invloed[m.id] + '.');
+          gekozen = null; volgende(); return;
+        }
+        gekozen = keuze; verfKaart('kaartvak', false); toonKeuze(keuze);
+        if (fase === 'conferentie'){ claim(m.id, keuze); return; }
+        vraagInzet(m, keuze);
+      }, { onStem:function(n, van){ var e = document.getElementById('kWaar'); if (e) e.textContent = 'De delegatie van ' + m.naam + ' kiest op de telefoons: ' + n + ' van ' + van + ' hebben gekozen.'; } });
+  }
+  /* bij een aanval: hoeveel troepen erbij, met de kans per keuze */
+  function vraagInzet(m, gebiedId){
+    var leden = ledenVan(m.id), vanuit = vanuitWelk(gebiedId, m.id);
+    var max = Math.min(invloed[m.id], MAX_TROEPEN), opties = [];
+    for (var i = 0; i <= max; i++){
+      var kans = winkansUitVerschil(kracht(vanuit) + i, kracht(gebiedId, true));
+      opties.push({ id:String(i), tekst:(i ? i + (i === 1 ? ' troep' : ' troepen') + ' erbij' : 'Geen troepen erbij') + ', ' + kans + ' procent kans', kleur: kans >= 60 ? '#1f7a4a' : kans >= 40 ? '#EA9836' : '#c0442c' });
+    }
+    inzetDeleg = ROLSPEL.delegatie(kamer, leden, { soort:'vraag', id:'inzet' + beurt, kop:'de aanval op ' + naamVanGebied(gebiedId), titel:'Hoeveel troepen zetten jullie in?', tekst:'Troepen die je inzet ben je hoe dan ook kwijt. Vanuit ' + naamVanGebied(vanuit) + ', kracht ' + kracht(vanuit) + ' tegen ' + kracht(gebiedId, true) + '.', opties:opties },
+      function(keuze){ inzetDeleg = null; valAan(m.id, gebiedId, Math.max(0, Math.min(max, parseInt(keuze, 10) || 0))); });
+  }
+  function actie(pid, d){
+    if (deleg && deleg.actie(pid, d)) return;
+    if (inzetDeleg) inzetDeleg.actie(pid, d);
+  }
   var beurt = 0, ronde = 1, gekozen = null, klaar = false, regels = [], fase = 'conferentie';
   var eindRonde = 0, inzet = 1, laatsteWorp = null;
 
@@ -1010,6 +1124,7 @@ var SPAREN = 2;
   });
 
   function naarStart(){
+    if (kamer){ kamer.sluit(); kamer = null; kamerInfo = null; gestart = false; machtVan = {}; spelers = []; deleg = null; inzetDeleg = null; if (wijze === 'tel') naarLobby(); }
     elSpel.classList.add('hide'); elEinde.classList.add('hide'); elStart.classList.remove('hide');
     scrollTo({top:0,behavior:'auto'});
   }
@@ -1033,6 +1148,7 @@ var SPAREN = 2;
     bezit = {}; invloed = {}; regels = []; beurt = 0; ronde = 1; gekozen = null; klaar = false;
     KAART.gebieden.forEach(function(g){ bezit[g.id] = INFO[g.id].bezit || null; });
     MACHTEN.forEach(function(m){ invloed[m.id] = m.invloed; });
+    if (wijze === 'tel'){ if (!kamer || spelers.length < 2) return; deelUit(); }
     elStart.classList.add('hide'); elEinde.classList.add('hide'); elSpel.classList.remove('hide');
     tekenKaart('kaartvak', false);
     noteer('De conferentie is geopend. Vier mogendheden verdelen wat er te verdelen valt. ' +
@@ -1205,6 +1321,7 @@ var SPAREN = 2;
     toonKeuze(null);
 
     if (!mens[m.id]) setTimeout(computerZet, 900);
+    else if (kamer && gestart) vraagDelegatie(m);
   }
 
   /* Is er op papier nog iets te verdelen? Zolang dat zo is duurt de conferentie. */
@@ -1328,7 +1445,7 @@ var SPAREN = 2;
         let_   = document.getElementById('kLet');
 
     if (!id){
-      document.getElementById('kNaam').textContent = mens[m.id] ? 'Klik op een gebied' : 'De computer is aan zet';
+      document.getElementById('kNaam').textContent = kamer && gestart && mens[m.id] ? 'De delegatie kiest op de telefoons' : mens[m.id] ? 'Klik op een gebied' : 'De computer is aan zet';
       var telKan = 0;
       KAART.gebieden.forEach(function(x){
         if (!magPakken(x.id, m.id) && kostenVan(x.id, m.id) <= invloed[m.id]) telKan++;
@@ -1568,6 +1685,7 @@ var SPAREN = 2;
   /* ---------- einde ---------- */
   function toonEinde(){
     klaar = true;
+    if (kamer){ kamer.alle({ soort:'uitslag', kop:'einde', titel:'De conferentie is gesloten', tekst:'Kijk op het bord wie zijn doelen haalde, en wie er de hele tijd niet aan tafel zat.' }); kamer.stop(); }
     elSpel.classList.add('hide'); elEinde.classList.remove('hide');
     tekenKaart('eindKaart', true);
 

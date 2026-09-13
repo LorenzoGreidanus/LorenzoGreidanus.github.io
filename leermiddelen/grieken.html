@@ -7,6 +7,7 @@
 <link rel="manifest" href="/manifest.json">
 <script src="avatar.js"></script>
 <script src="profiel.js"></script>
+<script src="rollen.js"></script>
 <link rel="apple-touch-icon" href="/icoon-192.png">
 <script>
 /* Opgeslagen themakeuze meteen toepassen, nog voor de pagina getekend wordt. */
@@ -227,6 +228,9 @@ body.groot .plek text{font-size:13px}
   <p class="eyebrow" style="margin-top:30px">wie speelt wat</p>
   <div class="spelers" id="spelers"></div>
 
+  <p class="eyebrow" style="margin-top:30px">aan het bord of op telefoons</p>
+  <div id="wijzen" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;max-width:760px;margin:12px auto 0"></div>
+  <div id="lobbyvak" class="hide"></div>
   <button class="btn" id="startBtn" type="button">Stuur de eerste schepen uit</button>
   <p style="margin-top:14px;font-size:.82rem;color:var(--muted)">Geen inloggen, niets wordt opgeslagen. Werkt het best op een digibord.</p>
 </section>
@@ -433,6 +437,95 @@ function worp100(){ return 1 + Math.floor(Math.random() * 100); }
   document.getElementById('jaar').textContent = new Date().getFullYear();
 
   var mens = {}, bezit = {}, staat = {}, beurt = 0, ronde = 1, fase = 'kolonisatie';
+  /* op telefoons: elke polis is een delegatie van leerlingen; zij kiezen op hun telefoon, de meeste stemmen gelden */
+  var wijze = 'bord', kamer = null, kamerInfo = null, spelers = [], gestart = false, polisVan = {}, deleg = null;
+  var WIJZEN = [
+    { id:'bord', naam:'Aan het bord', uitleg:'Groepjes komen om de beurt naar het digibord, of je speelt tegen de computer.' },
+    { id:'tel', naam:'Delegaties op telefoons', uitleg:'Leerlingen doen mee via een code en worden verdeeld over de vier poleis. Elke polis kiest op de telefoons; het bord toont de kaart.' }
+  ];
+  var wijzeVak = document.getElementById('wijzen');
+  WIJZEN.forEach(function(w){
+    var b = document.createElement('button');
+    b.className = 'kaartje' + (w.id === 'bord' ? ' on' : ''); b.type = 'button';
+    b.innerHTML = '<b>' + w.naam + '</b><span>' + w.uitleg + '</span>';
+    b.addEventListener('click', function(){
+      wijze = w.id;
+      Array.prototype.forEach.call(wijzeVak.children, function(c){ c.classList.remove('on'); });
+      b.classList.add('on');
+      document.getElementById('lobbyvak').classList.toggle('hide', wijze !== 'tel');
+      document.getElementById('spelers').classList.toggle('hide', wijze === 'tel');
+      if (wijze === 'tel') naarLobby(); else document.getElementById('startBtn').disabled = false;
+    });
+    wijzeVak.appendChild(b);
+  });
+  function naarLobby(){
+    var vak = document.getElementById('lobbyvak');
+    document.getElementById('startBtn').disabled = true;
+    if (kamer){ tekenLobby(); return; }
+    vak.innerHTML = '<p style="color:var(--muted)">Kamer maken\u2026</p>';
+    ROLSPEL.maak('grieken').then(function(k){
+      kamerInfo = k;
+      kamer = ROLSPEL.host({ game:'grieken', code:k.code, sleutel:k.sleutel, onSpelers:function(l){ spelers = l; tekenLobby(); laatkomers(); }, onActie:function(pid, d){ if (deleg) deleg.actie(pid, d); } });
+      tekenLobby();
+    }).catch(function(e){ vak.innerHTML = '<p style="color:var(--crab)">' + ROLSPEL.schoon(e.message) + '</p>'; });
+  }
+  function tekenLobby(){
+    if (!kamerInfo || gestart) return;
+    ROLSPEL.lobby(document.getElementById('lobbyvak'), kamerInfo.code, spelers, spelers.length < 2 ? 'Minstens twee telefoons; met vier of meer heeft elke polis een delegatie.' : 'Iedereen erbij? Stuur de schepen uit.');
+    document.getElementById('startBtn').disabled = spelers.length < 2;
+  }
+  function kaal(t){ return String(t || '').replace(/<[^>]*>/g, ''); }
+  function ledenVan(pid2){ return spelers.filter(function(sp){ return polisVan[sp.sid] === pid2; }).map(function(sp){ return sp.sid; }); }
+  function rolKaart(id){
+    var p = polis(id);
+    return { soort:'rol', rol:id, titel:p.naam, onder:'begint als ' + VORMEN[p.vorm].naam.toLowerCase(), kleur:p.kleur,
+      tekst:p.wat + ' Jullie doelen: ' + p.doelen.map(function(d){ return d.t.toLowerCase() + ' (' + d.p + ' pt)'; }).join('; ') + '.' };
+  }
+  function deelUit(){
+    var vrij = spelers.map(function(sp){ return sp.sid; });
+    for (var i = vrij.length - 1; i > 0; i--){ var j = Math.floor(Math.random() * (i + 1)); var t = vrij[i]; vrij[i] = vrij[j]; vrij[j] = t; }
+    polisVan = {};
+    vrij.forEach(function(sid, i){ polisVan[sid] = POLEIS[i % POLEIS.length].id; });
+    POLEIS.forEach(function(p){ mens[p.id] = ledenVan(p.id).length > 0; });
+    kamer.kaarten(spelers.map(function(sp){ return { pid:sp.sid, d:rolKaart(polisVan[sp.sid]) }; }));
+    gestart = true; kamer.start();
+  }
+  function laatkomers(){
+    if (!gestart) return;
+    spelers.filter(function(sp){ return !polisVan[sp.sid]; }).forEach(function(sp){
+      var kleinste = POLEIS.slice().sort(function(a, b){ return ledenVan(a.id).length - ledenVan(b.id).length; })[0];
+      polisVan[sp.sid] = kleinste.id; mens[kleinste.id] = true;
+      kamer.naar(sp.sid, rolKaart(kleinste.id));
+    });
+  }
+  function vraagDelegatie(m){
+    var leden = ledenVan(m.id);
+    if (!leden.length){ setTimeout(computerZet, 850); return; }
+    var items = [];
+    KAART.plekken.forEach(function(p){
+      if (magNiet(p.id, m.id)) return;
+      if (fase === 'kolonisatie') items.push({ id:p.id, tekst:p.naam, onder:STREEKNAAM[STREEK[p.id]] + ' \u00b7 kost ' + kostVoor(p.id, metStand(m)) + ' invloed \u00b7 opbrengst ' + INFO[p.id].eco });
+      else {
+        var aan = kracht(p.id, m.id, true), verd = kracht(p.id, bezit[p.id], false);
+        items.push({ id:p.id, tekst:p.naam, onder:'van ' + polis(bezit[p.id]).naam + ' \u00b7 kracht ' + aan + ' tegen ' + verd + ', ' + winkans(aan, verd) + ' procent kans' });
+      }
+    });
+    items.push({ id:'overslaan', tekst:'Sla over en spaar 2 invloed', onder:'geen schepen uitsturen' });
+    var anderen = spelers.filter(function(sp){ return polisVan[sp.sid] !== m.id; });
+    if (anderen.length) kamer.kaarten(anderen.map(function(sp){ return { pid:sp.sid, d:{ soort:'wacht', kop:'aan zet', titel:m.naam + ' is aan zet', tekst:(regels[0] ? kaal(regels[0]) + ' ' : '') + 'Overleg alvast: welke plek willen jullie straks?' } }; }));
+    deleg = ROLSPEL.delegatie(kamer, leden, { soort:'lijst', id:'zet' + beurt, kop:'jullie zijn aan zet', titel:m.naam + ', ' + staat[m.id].invloed + ' invloed',
+      tekst:fase === 'kolonisatie' ? 'Kies waar jullie een kolonie stichten. De meeste stemmen in de delegatie gelden.' : 'Kies welke kolonie jullie aanvallen. De meeste stemmen in de delegatie gelden.', items:items },
+      function(keuze){
+        deleg = null;
+        if (!keuze || keuze === 'overslaan' || !items.some(function(x){ return x.id === keuze; })){
+          staat[m.id].invloed += 2;
+          noteer('<b>' + m.naam + '</b> stuurt geen schepen uit en houdt 2 invloed over.');
+          gekozen = null; volgende(); return;
+        }
+        gekozen = keuze; verf(); toonPlek();
+        if (fase === 'kolonisatie') sticht(m.id, keuze); else valAan(m.id, keuze);
+      }, { onStem:function(n, van){ var e = document.getElementById('plekvak'); if (e && !gekozen) e.innerHTML = '<p class="eyebrow">op de telefoons</p><p style="font-size:.87rem;color:var(--muted);margin-top:8px">De delegatie van ' + m.naam + ' kiest: ' + n + ' van ' + van + ' hebben gekozen.</p>'; } });
+  }
   var gekozen = null, regels = [], klaar = false, veroverd = {}, verloren = {}, eindRonde = 0;
 
   POLEIS.forEach(function(p){ mens[p.id] = true; });
@@ -485,6 +578,7 @@ function worp100(){ return 1 + Math.floor(Math.random() * 100); }
   });
 
   function naarStart(){
+    if (kamer){ kamer.sluit(); kamer = null; kamerInfo = null; gestart = false; polisVan = {}; spelers = []; deleg = null; if (wijze === 'tel') naarLobby(); }
     elSpel.classList.add('hide'); elEinde.classList.add('hide'); elStart.classList.remove('hide');
     scrollTo({top:0, behavior:'auto'});
   }
@@ -496,6 +590,7 @@ function worp100(){ return 1 + Math.floor(Math.random() * 100); }
       staat[p.id] = { vorm:p.vorm, invloed:p.invloed, adel:p.adel, rijk:p.rijk, volk:p.volk };
       veroverd[p.id] = 0; verloren[p.id] = 0;
     });
+    if (wijze === 'tel'){ if (!kamer || spelers.length < 2) return; deelUit(); }
     elStart.classList.add('hide'); elEinde.classList.add('hide'); elSpel.classList.remove('hide');
     tekenKaart();
     noteer('De schepen liggen klaar. Er zijn ' + KAART.plekken.length + ' plekken waar je kunt landen, ' +
@@ -676,7 +771,7 @@ function worp100(){ return 1 + Math.floor(Math.random() * 100); }
     if (!gekozen){
       vak.innerHTML = '<p class="eyebrow">kies een plek</p>' +
         '<p style="font-size:.87rem;color:var(--muted);margin-top:8px">' +
-        (mens[m.id] ? 'Tik een stip op de kaart aan. De stippen met een blauwe rand kun je nu pakken.' : 'Even wachten.') + '</p>';
+        (kamer && gestart && mens[m.id] ? 'De delegatie van ' + m.naam + ' kiest op de telefoons.' : mens[m.id] ? 'Tik een stip op de kaart aan. De stippen met een blauwe rand kun je nu pakken.' : 'Even wachten.') + '</p>';
       return;
     }
     var p = plek(gekozen), i = INFO[gekozen], eig = bezit[gekozen];
@@ -819,6 +914,7 @@ function worp100(){ return 1 + Math.floor(Math.random() * 100); }
        worden. Dat regelen we door hem een extra beurt te geven na de zijne. */
     tekenBeurt(); verf(); toonPlek();
     if (!mens[m.id]) setTimeout(computerZet, 850);
+    else if (kamer && gestart) vraagDelegatie(m);
   }
 
   function noteer(t){
@@ -884,6 +980,7 @@ function worp100(){ return 1 + Math.floor(Math.random() * 100); }
 
   /* ---------- einde ---------- */
   function toonEinde(){
+    if (kamer){ kamer.alle({ soort:'uitslag', kop:'einde', titel:'De kust is verdeeld', tekst:'Kijk op het bord welke polis zijn doelen haalde, en lees wie er aan die kust al woonden.' }); kamer.stop(); }
     elSpel.classList.add('hide'); elEinde.classList.remove('hide');
     var rij = POLEIS.map(function(p){
       var behaald = p.doelen.filter(function(d){ return d.check(stand); });

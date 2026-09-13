@@ -17,6 +17,7 @@
      kamer.start(); kamer.stop(); kamer.weg(pid); kamer.spelers()
      ROLSPEL.verdeel(spelers, [{ id:'koning', aantal:1 }, { id:'burger' }])   pid -> rol-id
      ROLSPEL.lobby(el, code, spelers)   de code groot met de aangemelde telefoons
+     ROLSPEL.delegatie(kamer, [pids], kaart, function(keuze){})   een groepje laten kiezen
 
    Kaarten (wat een telefoon kan tonen):
      { soort:'rol', rol:'burger', titel, onder, tekst, kleur }        blijft bovenaan staan
@@ -88,6 +89,35 @@ window.ROLSPEL = (function(){
     vrij.forEach(function(sid){ uit[sid] = rest.id; });
     return uit;
   }
+  /* Een delegatie laten kiezen: dezelfde kaart naar een groepje telefoons,
+     de meeste stemmen gelden (bij gelijk: wie het eerst koos), en als niet
+     iedereen reageert valt het besluit twaalf seconden na de eerste stem.
+     Geeft { actie(pid, d), sluit() } terug; geef acties van de kamer door. */
+  function delegatie(kamer, leden, kaart, klaar, o){
+    o = o || {};
+    var keuzes = {}, volg = [], timer = null, af = false, id = kaart.id;
+    kamer.kaarten(leden.map(function(pid){ return { pid:pid, d:JSON.parse(JSON.stringify(kaart)) }; }));
+    function besluit(){
+      if (af) return; af = true; clearTimeout(timer);
+      var tel = {};
+      Object.keys(keuzes).forEach(function(p){ var k = keuzes[p]; tel[k] = (tel[k] || 0) + 1; });
+      var best = volg.slice().sort(function(a, b){ return tel[b] - tel[a]; })[0];
+      klaar(best === undefined ? null : best, tel);
+    }
+    return {
+      actie: function(pid, d){
+        if (af || !d || d.vraag !== id || leden.indexOf(pid) < 0) return false;
+        var k = d.keuze !== undefined ? String(d.keuze) : String(d.waarde);
+        keuzes[pid] = k; if (volg.indexOf(k) < 0) volg.push(k);
+        if (o.onStem) o.onStem(Object.keys(keuzes).length, leden.length, keuzes);
+        if (Object.keys(keuzes).length >= leden.length) besluit();
+        else if (!timer) timer = setTimeout(besluit, o.wacht || 12000);
+        return true;
+      },
+      sluit: besluit,
+      af: function(){ return af; }
+    };
+  }
   function lobby(el, code, spelers, tekst){
     if (!el) return;
     el.innerHTML = '<div class="rollen-lobby"><div class="rollen-code"><small>ga naar <b>' + schoon(location.host.replace(/^www\./, '')) + '/q</b> en vul in</small><b>' + schoon(code) + '</b></div>' +
@@ -109,5 +139,5 @@ window.ROLSPEL = (function(){
       '@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .rollen-chip,:root:not([data-theme="light"]) .rollen-stem div{background:#182652;border-color:rgba(243,239,233,.14)}}';
     document.head.appendChild(st);
   } catch (e){}
-  return { maak:maak, host:host, verdeel:verdeel, lobby:lobby, schoon:schoon };
+  return { maak:maak, host:host, verdeel:verdeel, delegatie:delegatie, lobby:lobby, schoon:schoon };
 })();

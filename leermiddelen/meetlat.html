@@ -7,6 +7,7 @@
 <link rel="manifest" href="/manifest.json">
 <script src="avatar.js"></script>
 <script src="profiel.js"></script>
+<script src="rollen.js"></script>
 <link rel="apple-touch-icon" href="/icoon-192.png">
 <script>
 /* Opgeslagen themakeuze meteen toepassen, nog voor de pagina getekend wordt. */
@@ -311,6 +312,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
     <div class="groepkies" id="groepkies"></div>
   </div>
 
+  <div id="lobbyvak" class="hide"></div>
   <button class="btn" id="startBtn" type="button" disabled>Begin</button>
   <p style="margin-top:14px;font-size:.82rem;color:var(--muted)">Geen inloggen. Wat je op de meetlat zet blijft op dit apparaat, zodat een volgende klas kan zien hoe eerdere spelers oordeelden.</p>
 </section>
@@ -467,7 +469,8 @@ var KAARTEN = [
 
 var STANDEN = [
   { id:'alleen', naam:'Alleen', uitleg:'Jij oordeelt over alle zestien. Daarna zie je hoe eerdere spelers op dit apparaat oordeelden.' },
-  { id:'klas',   naam:'Met groepen', uitleg:'Voor het digibord. Elke groep zet zijn eigen merkteken op de lat, en je ziet meteen hoe ver jullie uit elkaar liggen.' }
+  { id:'klas',   naam:'Met groepen', uitleg:'Voor het digibord. Elke groep zet zijn eigen merkteken op de lat, en je ziet meteen hoe ver jullie uit elkaar liggen.' },
+  { id:'tel',    naam:'Op telefoons', uitleg:'Voor het digibord. Iedereen doet mee via een code en zet zijn eigen merkteken op zijn telefoon; het bord laat alle merktekens zien.' }
 ];
 var GROEPKLEUR = ['#F26749','#204ECF','#EA9836','#2f7d52','#83A5F2','#8b6bb8'];
 var SLEUTEL = 'meetlat-oordelen-v1';
@@ -501,8 +504,48 @@ var SLEUTEL = 'meetlat-oordelen-v1';
     return a;
   }
   function isKlas(){ return stand && stand.id === 'klas'; }
-  function aantalSpelers(){ return isKlas() ? groepen : 1; }
-  function spelerNaam(i){ return isKlas() ? 'Groep ' + (i + 1) : 'Jij'; }
+  function isTel(){ return stand && stand.id === 'tel'; }
+  /* op telefoons: de spelers in vaste volgorde (wie later komt, achteraan) */
+  var kamer = null, kamerInfo = null, spelers = [], volgorde = [], naamVan = {}, gestart = false;
+  function ids(){ if (isTel()) return volgorde.slice(); var a = []; for (var i = 0; i < aantalSpelers(); i++) a.push(i); return a; }
+  function aantalSpelers(){ return isTel() ? volgorde.length : isKlas() ? groepen : 1; }
+  function spelerNaam(i){ return isTel() ? (naamVan[i] || '') : isKlas() ? 'Groep ' + (i + 1) : 'Jij'; }
+  function kleurVan(i){ return isTel() ? GROEPKLEUR[volgorde.indexOf(i) % GROEPKLEUR.length] : isKlas() ? GROEPKLEUR[i] : '#204ECF'; }
+  function naarLobby(){
+    var vak = document.getElementById('lobbyvak');
+    vak.classList.remove('hide');
+    document.getElementById('startBtn').disabled = true;
+    if (kamer){ tekenLobby(); return; }
+    vak.innerHTML = '<p style="color:var(--muted)">Kamer maken\u2026</p>';
+    ROLSPEL.maak('meetlat').then(function(k){
+      kamerInfo = k;
+      kamer = ROLSPEL.host({ game:'meetlat', code:k.code, sleutel:k.sleutel, onSpelers:function(l){ spelers = l; tekenLobby(); laatkomers(); }, onActie:actie });
+      tekenLobby();
+    }).catch(function(e){ vak.innerHTML = '<p style="color:var(--crab)">' + ROLSPEL.schoon(e.message) + '</p>'; });
+  }
+  function tekenLobby(){
+    if (!kamerInfo || gestart) return;
+    ROLSPEL.lobby(document.getElementById('lobbyvak'), kamerInfo.code, spelers, spelers.length < 2 ? 'Minstens twee telefoons.' : 'Iedereen erbij? Druk op Begin.');
+    document.getElementById('startBtn').disabled = spelers.length < 2;
+  }
+  function laatkomers(){
+    spelers.forEach(function(sp){ naamVan[sp.sid] = sp.naam; if (gestart && volgorde.indexOf(sp.sid) < 0){ volgorde.push(sp.sid); kamer.naar(sp.sid, rolKaart()); if (fase === 'oordeel') kamer.naar(sp.sid, latKaart(undefined)); } });
+  }
+  function rolKaart(){ return { soort:'rol', rol:'beoordelaar', titel:'Jij oordeelt', onder:'Nederland, 1940 tot 1945', tekst:'Zestien mensen maken een keuze tijdens de bezetting. Jij zet elk van hen op de meetlat, van fout tot goed. Er is geen goed antwoord.', kleur:'#5b6480' }; }
+  function latKaart(waarde){
+    var k = rij[nr];
+    return { soort:'lat', id:'k' + nr + (fase === 'herzien' ? 'b' : 'a'), kop: fase === 'herzien' ? 'wil je nog iets veranderen' : 'kaart ' + (nr + 1) + ' van ' + rij.length,
+      titel:k.wat, tekst:k.naam + ', ' + k.jaar + '. ' + k.tekst + (fase === 'herzien' ? ' Je hebt op het bord gelezen hoe het verderging: schuif als je oordeel verschoven is, of laat het staan.' : ''),
+      links:'fout', rechts:'goed', waarde: waarde === undefined ? 50 : waarde };
+  }
+  function actie(pid, d){
+    if (!d || typeof d.waarde !== 'number') return;
+    var w = Math.max(0, Math.min(100, Math.round(d.waarde)));
+    if (fase === 'oordeel' && d.vraag === 'k' + nr + 'a'){ oordeel[pid] = w; eerste[pid] = w; }
+    else if (fase === 'herzien' && d.vraag === 'k' + nr + 'b'){ oordeel[pid] = w; }
+    else return;
+    tekenScherm();
+  }
 
   /* ---------- opzet ---------- */
   var standVak = document.getElementById('standen');
@@ -515,7 +558,9 @@ var SLEUTEL = 'meetlat-oordelen-v1';
       Array.prototype.forEach.call(standVak.children, function(c){ c.classList.remove('on'); });
       b.classList.add('on');
       document.getElementById('groepvak').classList.toggle('hide', !isKlas());
+      document.getElementById('lobbyvak').classList.toggle('hide', !isTel());
       document.getElementById('startBtn').disabled = false;
+      if (isTel()) naarLobby();
     });
     standVak.appendChild(b);
   });
@@ -542,11 +587,18 @@ var SLEUTEL = 'meetlat-oordelen-v1';
   });
 
   function naarStart(){
+    if (kamer){ kamer.sluit(); kamer = null; kamerInfo = null; gestart = false; volgorde = []; spelers = []; document.getElementById('lobbyvak').innerHTML = ''; if (isTel()) naarLobby(); }
     elSpel.classList.add('hide'); elEinde.classList.add('hide'); elStart.classList.remove('hide');
     scrollTo({top:0,behavior:'auto'});
   }
 
   function start(){
+    if (isTel()){
+      if (!kamer || spelers.length < 2) return;
+      volgorde = spelers.map(function(sp){ return sp.sid; });
+      kamer.kaarten(spelers.map(function(sp){ return { pid:sp.sid, d:rolKaart() }; }));
+      gestart = true; kamer.start();
+    }
     rij = husselen(KAARTEN); nr = 0; uitkomst = [];
     elStart.classList.add('hide'); elEinde.classList.add('hide'); elSpel.classList.remove('hide');
     bouwStrepen();
@@ -581,7 +633,7 @@ var SLEUTEL = 'meetlat-oordelen-v1';
     var sch = document.getElementById('schuif');
     sch.style.top = (100 - cursor) + '%';
     sch.textContent = cursor;
-    sch.style.background = isKlas() ? GROEPKLEUR[aanBeurt] : '#204ECF';
+    sch.style.background = isTel() ? '#5b6480' : isKlas() ? GROEPKLEUR[aanBeurt] : '#204ECF';
     sch.style.display = fase === 'context' ? 'none' : 'flex';
     tekenMerken();
     tekenKnoptekst();
@@ -658,16 +710,16 @@ var SLEUTEL = 'meetlat-oordelen-v1';
       }
     }
     /* de spelers die al geplaatst hebben */
-    for (var i = 0; i < aantalSpelers(); i++){
-      if (oordeel[i] === undefined) continue;
+    ids().forEach(function(i){
+      if (oordeel[i] === undefined) return;
       /* De groep die nu bijstelt wordt al door de cursor getekend. Twee
          merktekens voor dezelfde groep is verwarrend en kost een baan. */
-      if (fase === 'herzien' && i === aanBeurt) continue;
-      if (isKlas() || fase !== 'oordeel'){
-        lijst.push({ v:oordeel[i], kleur:isKlas() ? GROEPKLEUR[i] : '#204ECF',
-                     tekst:isKlas() ? 'groep ' + (i + 1) : 'jij', klasse:'' });
+      if (fase === 'herzien' && !isTel() && i === aanBeurt) return;
+      if (isKlas() || isTel() || fase !== 'oordeel'){
+        lijst.push({ v:oordeel[i], kleur:kleurVan(i),
+                     tekst:isTel() ? (fase === 'oordeel' ? '' : spelerNaam(i)) : isKlas() ? 'groep ' + (i + 1) : 'jij', klasse:'' });
       }
-    }
+    });
     /* wie nu aan zet is staat als schuif op de lat zelf; een tweede merkteken
        in de baan ernaast was dubbelop */
 
@@ -707,9 +759,9 @@ var SLEUTEL = 'meetlat-oordelen-v1';
     var v = cursor, woord;
     /* het keyboard: ook dat telt als aanraken */
     if (v !== 50 && !aangeraakt){ aangeraakt = true; elLat.classList.remove('onaangeraakt'); }
-    if (fase === 'context'){
+    if (fase === 'context' || isTel()){
       e.innerHTML = '<b>' + Math.round(gemHuidig()) + '</b>' +
-        (isKlas() ? 'gemiddelde van de groepen' : 'jouw oordeel');
+        (isTel() ? 'gemiddelde van de klas' : isKlas() ? 'gemiddelde van de groepen' : 'jouw oordeel');
       return;
     }
     if (v >= 85) woord = 'zonder twijfel goed';
@@ -724,7 +776,7 @@ var SLEUTEL = 'meetlat-oordelen-v1';
 
   function gemHuidig(){
     var a = [];
-    for (var i = 0; i < aantalSpelers(); i++) if (oordeel[i] !== undefined) a.push(oordeel[i]);
+    ids().forEach(function(i){ if (oordeel[i] !== undefined) a.push(oordeel[i]); });
     return a.length ? a.reduce(function(x, y){ return x + y; }, 0) / a.length : cursor;
   }
 
@@ -742,12 +794,13 @@ var SLEUTEL = 'meetlat-oordelen-v1';
       '<div><h2>' + k.wat + '</h2><p class="naam">' + k.naam + ', ' + k.jaar + '</p></div></div>' +
       '<span class="jaar">' + k.jaar + '</span></div>' +
       '<p class="tekst">' + k.tekst + '</p>';
+    if (kamer) kamer.kaarten(volgorde.map(function(pid){ return { pid:pid, d:latKaart(undefined) }; }));
     tekenScherm();
   }
 
   function tekenStappen(){
     var st = fase === 'oordeel' ? 2 : fase === 'context' ? 3 : 4;
-    var namen = ['Lees het verhaal', isKlas() ? 'Elke groep zet zijn oordeel' : 'Zet je oordeel op de lat', 'Lees hoe het verderging', 'Stel je oordeel bij, of laat het staan'];
+    var namen = ['Lees het verhaal', isTel() ? 'Iedereen zet zijn oordeel op zijn telefoon' : isKlas() ? 'Elke groep zet zijn oordeel' : 'Zet je oordeel op de lat', 'Lees hoe het verderging', 'Stel je oordeel bij, of laat het staan'];
     document.getElementById('stappen').innerHTML = namen.map(function(n, i){
       var nr2 = i + 1;
       return '<span class="' + (nr2 < st ? 'af' : nr2 === st ? 'nu' : '') + '"><i>' + (nr2 < st ? '\u2713' : nr2) + '</i>' + n + '</span>';
@@ -759,13 +812,19 @@ var SLEUTEL = 'meetlat-oordelen-v1';
     tekenStappen();
     /* wie is aan de beurt, groot en in de kleur van de groep */
     var bc = document.getElementById('beurtchip');
-    if (isKlas() && fase !== 'context'){
+    if (isTel() && fase !== 'context'){
+      var geteld = ids().filter(function(i){ return oordeel[i] !== undefined; }).length;
+      bc.innerHTML = '<div class="beurtchip" style="background:#5b6480"><i></i>' + geteld + ' van ' + aantalSpelers() + (fase === 'oordeel' ? ' hebben een merkteken gezet' : ' bijgesteld of bevestigd') + '</div>';
+    } else if (isKlas() && fase !== 'context'){
       bc.innerHTML = '<div class="beurtchip" style="background:' + GROEPKLEUR[aanBeurt] + '"><i></i>Groep ' + (aanBeurt + 1) +
         (fase === 'oordeel' ? ' is aan de beurt' : ' mag bijstellen') + '</div>';
     } else bc.innerHTML = '';
     var lk = document.getElementById('latkop');
     if (fase === 'context'){
       lk.innerHTML = 'De lat staat even vast<small>lees eerst hoe het verderging</small>';
+      elLat.classList.add('uit'); elLat.classList.remove('onaangeraakt');
+    } else if (isTel()){
+      lk.innerHTML = (fase === 'herzien' ? 'Iedereen mag op zijn telefoon bijstellen' : 'Iedereen zet zijn merkteken op zijn telefoon') + '<small>de schuif op het bord is het gemiddelde van de klas</small>';
       elLat.classList.add('uit'); elLat.classList.remove('onaangeraakt');
     } else if (fase === 'herzien'){
       lk.innerHTML = 'Klik of sleep om je oordeel te verplaatsen<small>of laat hem staan en klik Klaar</small>';
@@ -781,7 +840,11 @@ var SLEUTEL = 'meetlat-oordelen-v1';
 
     /* groepsrijtje onder de lat */
     var g = '';
-    if (isKlas()){
+    if (isTel()){
+      ids().forEach(function(i){
+        g += '<span class="groepnaam"><i style="background:' + kleurVan(i) + '"></i>' + ROLSPEL.schoon(spelerNaam(i)) + (oordeel[i] !== undefined ? (fase === 'oordeel' ? ' \u00b7 \u2713' : ' \u00b7 ' + oordeel[i]) : '') + '</span>';
+      });
+    } else if (isKlas()){
       for (var i = 0; i < groepen; i++){
         g += '<span class="groepnaam' + (fase === 'oordeel' && i === aanBeurt ? ' beurt' : '') + '">' +
              '<i style="background:' + GROEPKLEUR[i] + '"></i>Groep ' + (i + 1) +
@@ -792,7 +855,8 @@ var SLEUTEL = 'meetlat-oordelen-v1';
 
     var u = document.getElementById('latuitleg');
     if (fase === 'oordeel'){
-      u.textContent = isKlas()
+      u.textContent = isTel() ? 'De merktekens komen binnen zonder naam. Sluit de ronde als iedereen gezet heeft, dan komen de namen erbij.'
+        : isKlas()
         ? 'Overleg in je groep en zet je merkteken. De andere groepen zien pas iets als iedereen geweest is.'
         : 'Bovenaan is goed, onderaan is fout. Ergens in het midden mag ook.';
     } else if (fase === 'context'){
@@ -804,6 +868,28 @@ var SLEUTEL = 'meetlat-oordelen-v1';
 
     var a = document.getElementById('acties');
     a.innerHTML = '';
+    if (isTel()){
+      if (fase === 'oordeel'){
+        knop(a, 'Sluit de ronde', function(){
+          if (!ids().some(function(i){ return oordeel[i] !== undefined; })) return;
+          fase = 'context'; kamer.alle({ soort:'wacht', titel:'kijk naar het bord', tekst:'Lees hoe het verderging. Daarna mag je bijstellen.' });
+          toonContext(); tekenScherm(); tekenMerken();
+        }, true);
+      } else if (fase === 'context'){
+        knop(a, 'Iedereen mag bijstellen', function(){
+          fase = 'herzien';
+          kamer.kaarten(volgorde.map(function(pid){ return { pid:pid, d:latKaart(oordeel[pid]) }; }));
+          tekenScherm(); tekenMerken();
+        }, true);
+        knop(a, 'Laat staan, volgende kaart', volgendeKaart, true);
+      } else {
+        knop(a, 'Klaar, volgende kaart', volgendeKaart, true);
+      }
+      cursor = Math.round(gemHuidig());
+      tekenMerken();
+      zetCursor(cursor);
+      return;
+    }
     if (fase === 'oordeel'){
       knop(a, isKlas() && aanBeurt < groepen - 1 ? 'Vastleggen, volgende groep' : 'Vastleggen', function(){
         oordeel[aanBeurt] = cursor;
@@ -849,10 +935,10 @@ var SLEUTEL = 'meetlat-oordelen-v1';
   function volgendeKaart(){
     var k = rij[nr];
     var eind = [], begin = [];
-    for (var i = 0; i < aantalSpelers(); i++){
+    ids().forEach(function(i){
       if (oordeel[i] !== undefined) eind.push(oordeel[i]);
       if (eerste[i] !== undefined) begin.push(eerste[i]);
-    }
+    });
     uitkomst.push({ kaart:k, eind:eind, begin:begin });
 
     /* alleen echte oordelen bewaren, zodat een volgende klas iets te zien heeft */
@@ -868,6 +954,7 @@ var SLEUTEL = 'meetlat-oordelen-v1';
 
   /* ---------- einde ---------- */
   function toonEinde(){
+    if (kamer){ kamer.alle({ soort:'uitslag', kop:'klaar', titel:'Zestien kaarten', tekst:'Kijk op het bord hoe ver jullie uit elkaar lagen en waar het oordeel verschoof.' }); kamer.stop(); }
     elSpel.classList.add('hide'); elEinde.classList.remove('hide');
 
     function gem(a){ return a.length ? a.reduce(function(x,y){ return x+y; },0) / a.length : 50; }
