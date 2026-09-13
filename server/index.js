@@ -64,12 +64,12 @@ export default {
 
     if (p === "/q" || p.startsWith("/q/")){
       const code = p.slice(3).toUpperCase().replace(/[^A-Z]/g, "");
-      /* met een code kijken we welk spel erbij hoort: de Klasquiz of de Klasstrijd */
+      /* met een code kijken we welk spel erbij hoort: de Klasquiz, de Klasstrijd of een rollenspel */
       let pagina = "klasquiz.html";
       if (code.length === 4){
         try {
           const r = await env.KAMERS.get(env.KAMERS.idFromName(code)).fetch("https://kamer/stand");
-          if (r.ok){ const j = await r.json(); if (j.spel === "strijd") pagina = "strijd.html"; }
+          if (r.ok){ const j = await r.json(); if (j.spel === "strijd") pagina = "strijd.html"; else if (j.spel === "rollen") pagina = "rol.html"; }
         } catch (e){}
       }
       return Response.redirect(url.origin + "/leermiddelen/" + pagina + (code ? "?k=" + code : ""), 302);

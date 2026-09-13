@@ -27,6 +27,9 @@ const AFTELLEN = 3000;                       /* een duel begint drie seconden na
 const OPRUIMEN_NA = 3 * 60 * 60 * 1000;     /* een kamer leeft hoogstens drie uur */
 const NA_EINDE = 30 * 60 * 1000;             /* na de eindstand nog een half uur te bekijken */
 const SPELLEN_STRIJD = { toren: "Torenverdediging", zwaard: "Zwaardvechter" };
+/* spellen met rollen op telefoons: het bord draait het spel, de kamer deelt kaarten uit en geeft acties door */
+const SPELLEN_ROLLEN = { polis: "De vergadering van de klas", meetlat: "Langs de meetlat", staten: "De vergadering", berlijn: "De Conferentie van Berlijn", grieken: "De Griekse wereld" };
+const KAART_MAX = 12000, BORD_MAX = 40000, ACTIE_MAX = 4000;
 const KLAS_LEEFT = 7 * 24 * 60 * 60 * 1000;   /* een klascode is een week geldig */
 const KLAS_MAX = 3000;                        /* hoogstens zoveel gemelde potjes per klas */
 /* spellen zonder kamer die wel bij een klas melden */
@@ -76,6 +79,7 @@ export class Kamer extends DurableObject {
   }
   async bewaar(){ this.stand.laatst = Date.now(); await this.ctx.storage.put("stand", this.stand); }
   get strijd(){ return !!this.stand && this.stand.spel === "strijd"; }
+  get rollen(){ return !!this.stand && this.stand.spel === "rollen"; }
 
   /* ---------- binnenkomend ---------- */
   async fetch(req){
@@ -105,6 +109,10 @@ export class Kamer extends DurableObject {
     if (opzet.spel === "klas"){
       /* een klascode: geen spel, maar een bak waarin leerlingen hun uitslagen melden en die de docent leest */
       this.stand = Object.assign(basis, { spel: "klas", naam: schoon(opzet.naam, 40) || "Klas", resultaten: [] });
+    } else if (opzet.spel === "rollen"){
+      const game = String(opzet.game || "");
+      if (!SPELLEN_ROLLEN[game]) return json({ fout: "onbekend spel" }, 400);
+      this.stand = Object.assign(basis, { spel: "rollen", game, gestart: 0, bord: null, n: 0 });
     } else if (opzet.spel === "strijd"){
       const game = String(opzet.game || "");
       if (!SPELLEN_STRIJD[game]) return json({ fout: "onbekend spel" }, 400);
@@ -156,6 +164,7 @@ export class Kamer extends DurableObject {
       if (bestaand){ bestaand.naam = naam; bestaand.av = av; }
       else this.stand.spelers[sid] = this.strijd
         ? { naam, av, pid: sleutelMaken(4), ronde: 0, gehaald: 0, leven: 0, punten: 0, af: false, aanvallen: 0, sinds: Date.now() }
+        : this.rollen ? { naam, av, pid: sleutelMaken(4), kaart: null, sinds: Date.now() }
         : { naam, av, pid: sleutelMaken(4), score: 0, antw: {}, sinds: Date.now() };
       /* Naar buiten toe heet een speler bij zijn korte, openbare nummer (pid);
          het kenmerk waarmee hij verbindt (sid) blijft geheim, anders kon een
@@ -166,6 +175,17 @@ export class Kamer extends DurableObject {
       this.ctx.waitUntil(this.bewaar());
     }
     this.stuur(server, Object.assign({ t: "welkom", rol, naam, jij: rol === "speler" ? this.pid(sid) : null }, this.overzicht()));
+    if (this.rollen){
+      /* een telefoon die (terug)komt krijgt zijn kaart en het bord van dit moment */
+      if (rol === "speler"){
+        const sp = this.stand.spelers[sid];
+        if (this.stand.bord) this.stuur(server, { t: "bord", d: this.stand.bord });
+        if (sp && sp.kaart) this.stuur(server, { t: "kaart", d: sp.kaart });
+        if (this.stand.fase === "einde") this.stuur(server, { t: "einde" });
+      }
+      this.zegSpelers();
+      return new Response(null, { status: 101, webSocket: client });
+    }
     if (this.strijd){
       if (this.stand.fase === "bezig" && rol === "speler") this.stuur(server, { t: "start" });
       if (this.stand.fase === "einde") this.stuur(server, this.strijdEinde(rol === "speler" ? sid : null));
@@ -204,6 +224,7 @@ export class Kamer extends DurableObject {
       return;
     }
     if (this.strijd) return this.strijdBericht(ws, wie, m);
+    if (this.rollen) return this.rollenBericht(ws, wie, m);
     if (wie.rol === "host"){
       if (m.t === "start" && this.stand.fase === "lobby") return this.volgende();
       if (m.t === "volgende" && this.stand.fase === "uitslag") return this.volgende();
@@ -227,6 +248,63 @@ export class Kamer extends DurableObject {
     }
   }
   async webSocketClose(ws){ this.zegSpelers(); if (this.strijd) this.planStand(); }
+
+  /* ======================================================================
+     De rollenkamer: het bord stuurt kaarten (naar een speler of naar
+     iedereen), de telefoons sturen acties terug. De kamer bewaart alleen de
+     laatste kaart per speler en het laatste bord, zodat een telefoon die de
+     verbinding kwijtraakt verder kan waar hij was.
+     ====================================================================== */
+  async rollenBericht(ws, wie, m){
+    const st = this.stand;
+    if (wie.rol === "host"){
+      if (m.t === "start" && st.fase === "lobby"){
+        st.fase = "bezig"; st.gestart = Date.now();
+        await this.zetAlarm({ wat: "opruimen" }, OPRUIMEN_NA);
+        await this.bewaar();
+        this.iedereen({ t: "start" });
+        return;
+      }
+      if (m.t === "stop" && st.fase !== "einde"){
+        st.fase = "einde";
+        await this.zetAlarm({ wat: "opruimen" }, NA_EINDE);
+        await this.bewaar();
+        this.iedereen({ t: "einde" });
+        return;
+      }
+      if (m.t === "naar" || m.t === "kaarten"){
+        const lijst = m.t === "naar" ? [{ pid: m.pid, d: m.d }] : (Array.isArray(m.lijst) ? m.lijst.slice(0, 200) : []);
+        for (const k of lijst){
+          const sid = this.sidVanPid(k.pid), sp = sid && st.spelers[sid];
+          if (!sp || k.d === undefined) continue;
+          const s = JSON.stringify({ t: "kaart", d: k.d });
+          if (s.length > KAART_MAX) continue;
+          sp.kaart = k.d;
+          this.ctx.getWebSockets(sid).forEach(w => { try { w.send(s); } catch (e){} });
+        }
+        await this.bewaar();
+        return;
+      }
+      if (m.t === "alle"){
+        if (m.d === undefined) return;
+        const s = JSON.stringify({ t: "bord", d: m.d });
+        if (s.length > BORD_MAX) return;
+        st.bord = m.d;
+        await this.bewaar();
+        this.ctx.getWebSockets("speler").forEach(w => { try { w.send(s); } catch (e){} });
+        return;
+      }
+      return;
+    }
+    const sp = st.spelers[wie.sid];
+    if (!sp || st.fase === "einde") return;
+    if (m.t === "actie"){
+      if (m.d === undefined) return;
+      const s = JSON.stringify({ t: "actie", van: sp.pid, naam: sp.naam, d: m.d });
+      if (s.length > ACTIE_MAX) return;
+      this.ctx.getWebSockets("host").forEach(w => { try { w.send(s); } catch (e){} });
+    }
+  }
   opTempo(ws, wie, lengte){
     const nu = Date.now(), k = wie.sid || "?";
     let tp = this.tempo[k];
@@ -538,6 +616,12 @@ export class Kamer extends DurableObject {
     if (this.strijd){
       const lijst = this.strijdLijst();
       return Object.assign(basis, { game: st.game, duel: !!st.duel, gastheer: st.gastheer ? this.pid(st.gastheer) : null, gestart: st.gestart, bezig: lijst.filter(r => !r.af).length, spelers: lijst });
+    }
+    if (this.rollen){
+      return Object.assign(basis, { game: st.game, gestart: st.gestart, spelers: Object.keys(st.spelers).map(sid => {
+        const sp = st.spelers[sid];
+        return { sid: sp.pid, naam: sp.naam, av: sp.av || "", aan: this.aanwezig(sid), rol: sp.kaart && sp.kaart.rol ? sp.kaart.rol : null };
+      }).sort((a, b) => a.naam.localeCompare(b.naam)) });
     }
     return Object.assign(basis, { onderdeel: st.onderdeel, i: st.i, n: st.vragen.length, tijd: st.tijd,
       spelers: this.ranglijst().map(r => ({ sid: r.sid, naam: r.naam, av: r.av, score: r.score, aan: r.aan })) });
