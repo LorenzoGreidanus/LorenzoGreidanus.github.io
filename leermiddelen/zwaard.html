@@ -234,7 +234,7 @@ body.groot .meter b{font-size:1.45rem}
   <div class="uitleg">
     <div><i style="background:var(--crab)">1</i><b>Bewegen, ontwijken en slaan</b><span>Pijltjes of WASD om te lopen, of houd je vinger op de arena en loop erheen. Spatie of de knop Ontwijk maakt een sprong waarbij niets je raakt. Je zwaard slaat vanzelf naar de dichtstbijzijnde fout die binnen bereik komt.</span></div>
     <div><i style="background:var(--amber)">2</i><b>Elke ronde meer</b><span>Meer fouten, snellere, dikkere en fouten met een schild. Raakt een fout je, dan kost dat leven; op nul is het klaar.</span></div>
-    <div><i style="background:#4a1230">B</i><b>Elke vijfde ronde een baas</b><span>Hij verschijnt in het midden en hij houdt zijn plek, maar hij valt aan met patronen die je op de grond ziet aankomen: cirkels die na een tel ontploffen, een laser die om hem heen draait en een golf die naar buiten rolt. Loop eruit, of spring er met Ontwijk doorheen. Onder de helft van zijn leven wordt hij kwaad en slaat hij sneller toe.</span></div>
+    <div><i style="background:#4a1230">B</i><b>Elke vijfde ronde een baas</b><span>Er zijn er zes, en ze komen om de beurt: De Grote Fout, De Inktvlek, De Rode Pen, De Prop, De Klok en De Zwerm. Elk heeft zijn eigen aanvallen, en die zie je op de grond aankomen: cirkels die ontploffen, een draaiende laser, een golf, inkt die blijft liggen, strepen dwars over de vloer, propjes in het rond, tikkende uren en een ring die zich sluit. Loop eruit, of spring er met Ontwijk doorheen. Onder de helft van zijn leven wordt hij kwaad en slaat hij sneller toe.</span></div>
     <div><i style="background:var(--ocean)">3</i><b>Vragen zijn munten</b><span>Na elke ronde vijf vragen voor de klas, en hoe verder je komt hoe meer. Goed is munten, op rij goed is meer munten. Weet je het te goed, dan gaan de vragen een niveau omhoog. Fouten die je velt laten ook wat vallen.</span></div>
     <div><i style="background:#6b3fa0">4</i><b>Uitrusting</b><span>Tussen de rondes koop je in de winkel: zwaard, bereik, tempo, harnas, laarzen, werpmes en een drankje. Alles heeft zeven niveaus.</span></div>
   </div>
@@ -359,25 +359,62 @@ const FOUTEN = [
   { id:'zwerm',  naam:'zwerm',       vanaf:3, kans:2, mark:'\u00d7', kleur:'#7d1f12', hp:0.35, snel:1.3,  r:12, schade:6, aantal:3 },
   { id:'dik',    naam:'dikke fout',  vanaf:6, kans:1, mark:'\u25c6', kleur:'#6b3fa0', hp:2.6,  snel:0.65, r:28, schade:18 }
 ];
-const BAAS = { id:'baas', naam:'de baas', mark:'!', kleur:'#4a1230', hp:11, snel:0, r:46, schade:26, schild:0.15 };
-/* De aanvallen van de baas. Hij staat in het midden en valt aan met patronen
-   die je van tevoren ziet aankomen: cirkels op de grond die ontploffen, een
-   laser die om hem heen draait, en een golf die vanuit hem naar buiten rolt.
-   Wie oplet, stapt opzij of ontwijkt (dan ben je even onkwetsbaar). */
+/* De zes bazen. Om de vijf rondes komt de volgende aan de beurt, en na de
+   zesde begint de rij opnieuw op een hogere ronde en dus taaier. Ze staan
+   allemaal stil in het midden: het gevecht gaat om wegblijven uit wat er
+   oplicht, niet om wegrennen. 'hp' is het aantal keer een gewone fout,
+   'aanvallen' zijn de patronen waaruit hij kiest (zie AANVAL). */
+const BAZEN = [
+  { id:'fout',    naam:'De Grote Fout', kleur:'#4a1230', vorm:'ster',  hp:11, r:46, schade:26, schild:0.15,
+    aanvallen:['cirkel', 'laser', 'golf'],
+    wat:'Cirkels op de grond, een laser die om hem heen draait en een golf die naar buiten rolt.' },
+  { id:'inkt',    naam:'De Inktvlek',   kleur:'#1b3a8f', vorm:'vlek',  hp:10, r:50, schade:24, schild:0.1,
+    aanvallen:['plas', 'kegel', 'cirkel'],
+    wat:'Spat inkt over de vloer die blijft liggen, en spuit een waaier voor zich uit. Steeds minder plek om te staan.' },
+  { id:'pen',     naam:'De Rode Pen',   kleur:'#c0442c', vorm:'pen',   hp:11, r:42, schade:26, schild:0.15,
+    aanvallen:['baan', 'kruis', 'laser'],
+    wat:'Streept de arena door met rechte halen en zet er kruisen doorheen. Ga tussen de strepen staan.' },
+  { id:'prop',    naam:'De Prop',       kleur:'#8a7350', vorm:'prop',  hp:12, r:52, schade:28, schild:0.2,
+    aanvallen:['kogel', 'golf', 'baan'],
+    wat:'Schiet propjes in alle richtingen en rolt over de vloer. Taai, maar traag met aanvallen.' },
+  { id:'klok',    naam:'De Klok',       kleur:'#6b3fa0', vorm:'klok',  hp:10, r:46, schade:24, schild:0.15,
+    aanvallen:['wijzers', 'tik', 'krimp'],
+    wat:'Twee wijzers draaien rond, de uren tikken een voor een af en de ring loopt naar binnen.' },
+  { id:'zwerm',   naam:'De Zwerm',      kleur:'#7d1f12', vorm:'zwerm', hp:9,  r:48, schade:22, schild:0.1,
+    aanvallen:['kogel', 'krimp', 'cirkel'],
+    wat:'Barst uit elkaar in propjes en sluit je in met een ring. Het minste leven, het meeste in de lucht.' }
+];
+const BAAS = BAZEN[0];   /* de vorm die de oude standen in het netwerk nog verwachten */
+
+/* De aanvallen zelf. Elke aanval heeft eerst een waarschuwing die je op de
+   grond ziet, en dan het moment dat het raakt. Wie oplet stapt opzij of
+   ontwijkt (dan ben je even onkwetsbaar). Alle maten zijn in arenapunten. */
 const AANVAL = {
   pauze:function(n){ return Math.max(1.2, 2.6 - n * 0.035); },   /* seconden tussen twee aanvallen */
-  /* Hoe verder je komt, hoe meer er tegelijk gebeurt. De waarschuwing wordt
-     ook korter, maar nooit korter dan een halve seconde: je moet het kunnen
-     zien aankomen, anders is ontwijken een gok en geen keuze. */
+  korter:function(n){ return Math.max(0.5, 1 - n * 0.012); },    /* de waarschuwing krimpt langzaam, nooit onder een halve seconde */
+  boosPauze:0.6,                                                 /* onder de helft van zijn leven: sneller achter elkaar */
+  /* Hoe verder je komt, hoe meer er tegelijk gebeurt. */
   cirkel:{ r:78, wacht:1.15, knal:0.3, schade:18,
     extra:function(n){ return 1 + Math.floor(n / 10); } },        /* losse cirkels naast die onder de spelers */
   laser:{ wacht:0.9, duur:1.7, boog:Math.PI * 0.55, breed:26, schade:16,
     stralen:function(n){ return n >= 15 ? 2 : 1; } },             /* vanaf ronde 15 een tweede straal, recht tegenover */
   golf:{ wacht:0.75, duur:1.5, tot:620, band:24, schade:20,
     ringen:function(n){ return n >= 20 ? 2 : 1; } },              /* vanaf ronde 20 een tweede ring erachteraan */
-  korter:function(n){ return Math.max(0.5, 1 - n * 0.012); },     /* de waarschuwing krimpt langzaam */
-  /* Onder de helft van zijn leven wordt hij kwaad: sneller achter elkaar. */
-  boosPauze:0.6
+  /* De Inktvlek: plassen blijven liggen, de waaier gaat een kant op. */
+  plas:{ wacht:0.9, duur:6.5, r:66, schade:9,
+    aantal:function(n){ return 3 + Math.floor(n / 12); } },
+  kegel:{ wacht:1, knal:0.45, wijd:Math.PI * 0.17, ver:640, schade:20 },
+  /* De Rode Pen: rechte halen over de vloer. */
+  baan:{ wacht:1.05, knal:0.35, breed:74, schade:19,
+    aantal:function(n){ return n >= 15 ? 3 : 2; } },
+  kruis:{ wacht:1.05, knal:0.35, breed:66, schade:19 },
+  /* De Prop en De Zwerm: propjes die je ziet vliegen. */
+  kogel:{ wacht:0.55, snel:250, r:13, schade:15, leven:4,
+    aantal:function(n){ return 8 + Math.min(8, Math.floor(n / 6)) * 2; } },
+  /* De Klok: wijzers, tikken en een ring die naar binnen loopt. */
+  wijzers:{ wacht:1, duur:3.4, breed:24, schade:16 },
+  tik:{ wacht:0.8, knal:0.3, r:62, schade:16, ring:210, na:0.16, aantal:12 },
+  krimp:{ wacht:1.1, duur:2.2, van:660, band:30, gat:Math.PI * 0.3, schade:20 }
 };
 /* Hoeveel fouten in een ronde, en hoe taai ze zijn. Gemeten met de speelbot
    (september 2026): met dertien procent groei per ronde zonder einde stond de
@@ -699,7 +736,7 @@ const ICONEN = {
     tekenZij();
     tekenHud();
     document.getElementById('arenatip').textContent = 'Ronde ' + ronde + ': ' + teSpawnen + ' fouten' +
-      (ronde % BAASRONDE === 0 ? ' en een baas in het midden: kijk naar de grond, ontwijk de cirkels, de laser en de golf' : '') + '. Pijltjes of WASD om te lopen, je zwaard slaat vanzelf.';
+      (ronde % BAASRONDE === 0 ? ' en ' + baasVan(ronde).naam + ' in het midden. ' + baasVan(ronde).wat + ' Kijk naar de grond en stap eruit' : '') + '. Pijltjes of WASD om te lopen, je zwaard slaat vanzelf.';
   }
 
   /* ---------- de fouten ---------- */
@@ -730,43 +767,118 @@ const ICONEN = {
   }
   /* voor het testen: __zwaardSpring(5) springt naar een baasronde */
   window.__zwaardSpring = function(n){ ronde = n - 1; volgendeRonde(); };
+  /* welke baas hoort bij deze ronde: om de beurt, daarna weer van voren af aan */
+  function baasVan(n){ return BAZEN[(Math.max(1, Math.round(n / BAASRONDE)) - 1) % BAZEN.length]; }
   function spawnBaas(){
-    var h = Math.round(foutHp(ronde) * BAAS.hp);
-    fouten.push({ soort:BAAS, x:ARENA.b / 2, y:ARENA.h / 2, hp:h, maxHp:h, r:BAAS.r, snel:0, flits:0, stap:0, schild:BAAS.schild, slaKlok:0, baas:true, aanvalKlok:2.2, laatste:-1, eerste:true });
+    var def = baasVan(ronde), h = Math.round(foutHp(ronde) * def.hp);
+    fouten.push({ soort:def, def:def, x:ARENA.b / 2, y:ARENA.h / 2, hp:h, maxHp:h, r:def.r, snel:0, flits:0, stap:0,
+                  schild:def.schild, slaKlok:0, baas:true, aanvalKlok:2.2, laatste:-1, eerste:true });
     /* de spelers beginnen in het midden: even opzij, anders sta je in de baas */
     spelersNu().forEach(function(P, i){ P.sp.x = ARENA.b / 2 + (i === 0 ? -150 : 150); });
   }
-  /* een nieuwe aanval kiezen: niet twee keer dezelfde na elkaar */
+  /* Een nieuwe aanval kiezen uit de set van deze baas, nooit twee keer
+     dezelfde achter elkaar. De eerste aanval van een gevecht is altijd de
+     eerste uit zijn rij: die is het makkelijkst te lezen. */
   function baasValtAan(b, levend){
-    /* de eerste aanval is altijd de cirkels: het makkelijkst te lezen, zodat je weet wat je te wachten staat */
-    var keuze = b.eerste ? 0 : Math.floor(toeval() * 3); b.eerste = false;
-    if (keuze === b.laatste) keuze = (keuze + 1) % 3;
-    b.laatste = keuze;
-    var k = AANVAL.korter(ronde);
-    if (keuze === 0){
-      /* cirkels: onder elke speler die nog staat, plus een paar op toevallige plekken */
+    var rij = b.def.aanvallen;
+    var i = b.eerste ? 0 : Math.floor(toeval() * rij.length);
+    b.eerste = false;
+    if (i === b.laatste) i = (i + 1) % rij.length;
+    b.laatste = i;
+    zetAanval(rij[i], b, levend, AANVAL.korter(ronde));
+  }
+  /* een toevallig punt in de arena, niet te dicht op de rand */
+  function vrijPunt(marge){
+    marge = marge || 60;
+    return { x:ARENA.rand + marge + toeval() * (ARENA.b - 2 * ARENA.rand - 2 * marge),
+             y:ARENA.rand + marge + toeval() * (ARENA.h - 2 * ARENA.rand - 2 * marge) };
+  }
+  function eenSpeler(levend){ return levend[Math.floor(toeval() * levend.length)] || spelersNu()[0]; }
+  function zetAanval(soort, b, levend, k){
+    var i, n, p, hoek, doel;
+    if (soort === 'cirkel'){
+      /* onder elke speler die nog staat, plus een paar op toevallige plekken */
       levend.forEach(function(P){ aanvallen.push({ soort:'cirkel', x:P.sp.x, y:P.sp.y, t:0, k:k }); });
-      var extra = AANVAL.cirkel.extra(ronde);
-      for (var i = 0; i < extra; i++){
-        aanvallen.push({ soort:'cirkel', k:k, t:0,
-          x:ARENA.rand + 60 + toeval() * (ARENA.b - 2 * ARENA.rand - 120),
-          y:ARENA.rand + 60 + toeval() * (ARENA.h - 2 * ARENA.rand - 120) });
+      n = AANVAL.cirkel.extra(ronde);
+      for (i = 0; i < n; i++){ p = vrijPunt(); aanvallen.push({ soort:'cirkel', x:p.x, y:p.y, t:0, k:k }); }
+    } else if (soort === 'laser' || soort === 'wijzers'){
+      /* laser: begint richting een speler en draait dan een stuk; de wijzers van de klok gaan helemaal rond */
+      var w = soort === 'wijzers' ? AANVAL.wijzers : AANVAL.laser;
+      doel = eenSpeler(levend);
+      hoek = Math.atan2(doel.sp.y - b.y, doel.sp.x - b.x) - (soort === 'wijzers' ? 0 : AANVAL.laser.boog * 0.35);
+      var richting = toeval() < 0.5 ? 1 : -1;
+      n = soort === 'wijzers' ? 2 : AANVAL.laser.stralen(ronde);
+      for (i = 0; i < n; i++){
+        aanvallen.push({ soort:'laser', x:b.x, y:b.y, r0:b.r, t:0, k:k, richting:richting,
+          hoek:hoek + i * Math.PI * 2 / n,
+          boog: soort === 'wijzers' ? Math.PI * 2 : AANVAL.laser.boog,
+          duur:w.duur, breed:w.breed, schade:w.schade });
       }
-    } else if (keuze === 1){
-      /* laser: begint richting een speler en draait dan een halve slag, links- of rechtsom */
-      var doel = levend[Math.floor(toeval() * levend.length)] || spelersNu()[0];
-      var hoek = Math.atan2(doel.sp.y - b.y, doel.sp.x - b.x) - AANVAL.laser.boog * 0.35;
-      var richting = toeval() < 0.5 ? 1 : -1, n = AANVAL.laser.stralen(ronde);
-      for (var j = 0; j < n; j++){
-        aanvallen.push({ soort:'laser', x:b.x, y:b.y, hoek:hoek + j * Math.PI * 2 / n, richting:richting, t:0, k:k });
+    } else if (soort === 'golf'){
+      n = AANVAL.golf.ringen(ronde);
+      for (i = 0; i < n; i++) aanvallen.push({ soort:'golf', x:b.x, y:b.y, r0:b.r, t:-i * 0.55, k:k });
+    } else if (soort === 'plas'){
+      /* inkt: een paar plassen die blijven liggen, een onder een speler */
+      doel = eenSpeler(levend);
+      aanvallen.push({ soort:'plas', x:doel.sp.x, y:doel.sp.y, t:0, k:k });
+      n = AANVAL.plas.aantal(ronde) - 1;
+      for (i = 0; i < n; i++){ p = vrijPunt(70); aanvallen.push({ soort:'plas', x:p.x, y:p.y, t:-i * 0.12, k:k }); }
+    } else if (soort === 'kegel'){
+      doel = eenSpeler(levend);
+      hoek = Math.atan2(doel.sp.y - b.y, doel.sp.x - b.x);
+      aanvallen.push({ soort:'kegel', x:b.x, y:b.y, hoek:hoek, t:0, k:k });
+      if (ronde >= 18) aanvallen.push({ soort:'kegel', x:b.x, y:b.y, hoek:hoek + Math.PI, t:-0.4, k:k });
+    } else if (soort === 'baan'){
+      /* rechte halen naast elkaar, met ruimte ertussen om te staan */
+      hoek = toeval() * Math.PI;
+      n = AANVAL.baan.aantal(ronde);
+      var mid = vrijPunt(0), stap2 = 200;
+      for (i = 0; i < n; i++){
+        var af = (i - (n - 1) / 2) * stap2;
+        aanvallen.push({ soort:'baan', hoek:hoek, t:-i * 0.1, k:k, kl:b.def.kleur,
+          x:mid.x + Math.cos(hoek + Math.PI / 2) * af, y:mid.y + Math.sin(hoek + Math.PI / 2) * af });
       }
-    } else {
-      var ringen = AANVAL.golf.ringen(ronde);
-      for (var g = 0; g < ringen; g++) aanvallen.push({ soort:'golf', x:b.x, y:b.y, t:-g * 0.55, k:k });
+    } else if (soort === 'kruis'){
+      p = eenSpeler(levend).sp; hoek = toeval() * Math.PI;
+      aanvallen.push({ soort:'baan', x:p.x, y:p.y, hoek:hoek, t:0, k:k, breed:AANVAL.kruis.breed, kl:b.def.kleur });
+      aanvallen.push({ soort:'baan', x:p.x, y:p.y, hoek:hoek + Math.PI / 2, t:0, k:k, breed:AANVAL.kruis.breed, kl:b.def.kleur });
+    } else if (soort === 'kogel'){
+      /* een krans propjes, iets gedraaid zodat het nooit hetzelfde is */
+      n = AANVAL.kogel.aantal(ronde);
+      var draai = toeval() * Math.PI * 2;
+      for (i = 0; i < n; i++){
+        var h2 = draai + i * Math.PI * 2 / n;
+        aanvallen.push({ soort:'kogel', x:b.x, y:b.y, hoek:h2, t:0, k:k, kl:b.def.kleur });
+      }
+    } else if (soort === 'tik'){
+      /* de uren van de klok, een voor een rond */
+      var start = Math.floor(toeval() * AANVAL.tik.aantal), om = toeval() < 0.5 ? 1 : -1;
+      for (i = 0; i < AANVAL.tik.aantal; i++){
+        var h3 = (start + om * i) * Math.PI * 2 / AANVAL.tik.aantal;
+        aanvallen.push({ soort:'tik', t:-i * AANVAL.tik.na, k:k,
+          x:b.x + Math.cos(h3) * AANVAL.tik.ring, y:b.y + Math.sin(h3) * AANVAL.tik.ring });
+      }
+    } else if (soort === 'krimp'){
+      aanvallen.push({ soort:'krimp', x:b.x, y:b.y, r0:b.r, t:0, k:k, gat:toeval() * Math.PI * 2 });
     }
   }
   /* hoe lang de waarschuwing van deze aanval duurt */
   function wachtVan(a, basis){ return basis * (a.k || 1); }
+  /* hoe lang een aanval in totaal loopt, zodat de volgende er niet doorheen valt */
+  function duurVan(soort){
+    var A = AANVAL;
+    if (soort === 'laser') return A.laser.wacht + A.laser.duur;
+    if (soort === 'wijzers') return A.wijzers.wacht + A.wijzers.duur;
+    if (soort === 'golf') return A.golf.wacht + A.golf.duur + (A.golf.ringen(ronde) - 1) * 0.55;
+    if (soort === 'plas') return A.plas.wacht + 1.6;                 /* de plassen blijven liggen, maar hij wacht niet tot ze weg zijn */
+    if (soort === 'kegel') return A.kegel.wacht + A.kegel.knal + 0.4;
+    if (soort === 'baan') return A.baan.wacht + A.baan.knal + 0.3;
+    if (soort === 'kruis') return A.kruis.wacht + A.kruis.knal + 0.3;
+    if (soort === 'kogel') return 1.6;
+    if (soort === 'tik') return A.tik.wacht + A.tik.na * A.tik.aantal;
+    if (soort === 'krimp') return A.krimp.wacht + A.krimp.duur;
+    return A.cirkel.wacht + A.cirkel.knal;
+  }
   /* een speler wordt getroffen door een aanval van de baas */
   function tref(P, schade, kleur){
     var s2 = P.sp;
@@ -790,28 +902,92 @@ const ICONEN = {
         if (a.t >= cW + c.knal) a.klaar = true;
       } else if (a.soort === 'laser'){
         var l = AANVAL.laser, lW = wachtVan(a, l.wacht);
+        var lDuur = a.duur || l.duur, lBoog = a.boog || l.boog, lBreed = a.breed || l.breed, lSch = a.schade || l.schade;
         if (a.t >= lW){
-          var deel = Math.min(1, (a.t - lW) / l.duur);
-          a.nu = a.hoek + a.richting * l.boog * deel;
+          var deel = Math.min(1, (a.t - lW) / lDuur);
+          a.nu = a.hoek + a.richting * lBoog * deel;
           var cx = Math.cos(a.nu), cy = Math.sin(a.nu);
           levend.forEach(function(P){
             var px = P.sp.x - a.x, py = P.sp.y - a.y, langs = px * cx + py * cy;
-            if (langs < BAAS.r) return;                       /* achter de baas is het veilig */
+            if (langs < (a.r0 || 46)) return;                 /* achter de baas is het veilig */
             var dwars = Math.abs(-px * cy + py * cx);
-            if (dwars < l.breed / 2 + SPELER.r * 0.7) tref(P, l.schade, '#F26749');
+            if (dwars < lBreed / 2 + SPELER.r * 0.7) tref(P, lSch, '#F26749');
           });
           if (deel >= 1) a.klaar = true;
         } else a.nu = a.hoek;
       } else if (a.soort === 'golf'){
-        var g = AANVAL.golf, gW = wachtVan(a, g.wacht);
+        var g = AANVAL.golf, gW = wachtVan(a, g.wacht), r0 = a.r0 || 46;
         if (a.t >= gW){
           var deel2 = Math.min(1, (a.t - gW) / g.duur);
-          a.straal = BAAS.r + deel2 * (g.tot - BAAS.r);
+          a.straal = r0 + deel2 * (g.tot - r0);
           levend.forEach(function(P){
             var d = Math.hypot(P.sp.x - a.x, P.sp.y - a.y);
             if (Math.abs(d - a.straal) < g.band / 2 + SPELER.r * 0.7) tref(P, g.schade, '#6b3fa0');
           });
           if (deel2 >= 1) a.klaar = true;
+        }
+      } else if (a.soort === 'plas'){
+        /* de inkt spat neer en blijft liggen; wie erin staat wordt geraakt */
+        var pl = AANVAL.plas, pW = wachtVan(a, pl.wacht);
+        if (a.t >= pW){
+          if (!a.neer){
+            a.neer = true;
+            for (var q = 0; q < 8; q++){ var qh = toeval() * Math.PI * 2, qs = 40 + toeval() * 70; pluis.push({ x:a.x, y:a.y, vx:Math.cos(qh) * qs, vy:Math.sin(qh) * qs, leven:0.4, kleur:'#1b3a8f' }); }
+          }
+          levend.forEach(function(P){ if (Math.hypot(P.sp.x - a.x, P.sp.y - a.y) < pl.r) tref(P, pl.schade, '#1b3a8f'); });
+          if (a.t >= pW + pl.duur) a.klaar = true;
+        }
+      } else if (a.soort === 'kegel'){
+        var ke = AANVAL.kegel, keW = wachtVan(a, ke.wacht);
+        if (a.t >= keW && !a.geknald){
+          a.geknald = true;
+          levend.forEach(function(P){
+            var dx2 = P.sp.x - a.x, dy2 = P.sp.y - a.y, af2 = Math.hypot(dx2, dy2);
+            if (af2 > ke.ver) return;
+            var v = Math.atan2(Math.sin(Math.atan2(dy2, dx2) - a.hoek), Math.cos(Math.atan2(dy2, dx2) - a.hoek));
+            if (Math.abs(v) <= ke.wijd) tref(P, ke.schade, '#1b3a8f');
+          });
+        }
+        if (a.t >= keW + ke.knal) a.klaar = true;
+      } else if (a.soort === 'baan'){
+        var ba = AANVAL.baan, baW = wachtVan(a, ba.wacht), breed = a.breed || ba.breed;
+        if (a.t >= baW && !a.geknald){
+          a.geknald = true;
+          var bx = Math.cos(a.hoek), by = Math.sin(a.hoek);
+          levend.forEach(function(P){
+            var px2 = P.sp.x - a.x, py2 = P.sp.y - a.y;
+            if (Math.abs(-px2 * by + py2 * bx) < breed / 2 + SPELER.r * 0.6) tref(P, ba.schade, a.kl || '#c0442c');
+          });
+        }
+        if (a.t >= baW + ba.knal) a.klaar = true;
+      } else if (a.soort === 'tik'){
+        var ti = AANVAL.tik, tiW = wachtVan(a, ti.wacht);
+        if (a.t >= tiW && !a.geknald){
+          a.geknald = true;
+          levend.forEach(function(P){ if (Math.hypot(P.sp.x - a.x, P.sp.y - a.y) < ti.r + SPELER.r * 0.5) tref(P, ti.schade, '#6b3fa0'); });
+        }
+        if (a.t >= tiW + ti.knal) a.klaar = true;
+      } else if (a.soort === 'kogel'){
+        /* een propje dat je ziet vliegen: geen waarschuwing op de grond nodig */
+        var ko = AANVAL.kogel;
+        if (a.t >= 0){
+          a.x += Math.cos(a.hoek) * ko.snel * dt; a.y += Math.sin(a.hoek) * ko.snel * dt;
+          levend.forEach(function(P){ if (Math.hypot(P.sp.x - a.x, P.sp.y - a.y) < ko.r + SPELER.r * 0.8) { tref(P, ko.schade, a.kl || '#8a7350'); a.klaar = true; } });
+          if (a.t > ko.leven || a.x < -40 || a.x > ARENA.b + 40 || a.y < -40 || a.y > ARENA.h + 40) a.klaar = true;
+        }
+      } else if (a.soort === 'krimp'){
+        /* een ring die naar binnen loopt, met een opening om door te gaan */
+        var kr = AANVAL.krimp, krW = wachtVan(a, kr.wacht), rEind = (a.r0 || 46) + 18;
+        if (a.t >= krW){
+          var deel3 = Math.min(1, (a.t - krW) / kr.duur);
+          a.straal = kr.van - deel3 * (kr.van - rEind);
+          levend.forEach(function(P){
+            var dx3 = P.sp.x - a.x, dy3 = P.sp.y - a.y, d3 = Math.hypot(dx3, dy3);
+            if (Math.abs(d3 - a.straal) >= kr.band / 2 + SPELER.r * 0.7) return;
+            var vh = Math.atan2(Math.sin(Math.atan2(dy3, dx3) - a.gat), Math.cos(Math.atan2(dy3, dx3) - a.gat));
+            if (Math.abs(vh) > kr.gat / 2) tref(P, kr.schade, '#6b3fa0');
+          });
+          if (deel3 >= 1) a.klaar = true;
         }
       }
     });
@@ -1135,17 +1311,14 @@ const ICONEN = {
       if (!b.baas) return;
       b.x = ARENA.b / 2; b.y = ARENA.h / 2;
       b.aanvalKlok -= dt;
-      if (b.aanvalKlok <= 0 && !aanvallen.length && levend.length){
+      if (b.aanvalKlok <= 0 && !aanvallen.some(function(a){ return a.soort !== 'plas'; }) && levend.length){
         var boos = b.hp <= b.maxHp / 2;
         if (boos && !b.boosGeweest){
           b.boosGeweest = true;
-          cijfers.push({ x:b.x, y:b.y - b.r - 16, tekst:'de baas wordt kwaad', leven:2, kleur:'#4a1230' });
+          cijfers.push({ x:b.x, y:b.y - b.r - 16, tekst:b.def.naam + ' wordt kwaad', leven:2, kleur:b.def.kleur });
         }
         baasValtAan(b, levend);
-        var loopt = b.laatste === 1 ? AANVAL.laser.wacht + AANVAL.laser.duur
-                  : b.laatste === 2 ? AANVAL.golf.wacht + AANVAL.golf.duur + (AANVAL.golf.ringen(ronde) - 1) * 0.55
-                  : AANVAL.cirkel.wacht + AANVAL.cirkel.knal;
-        b.aanvalKlok = AANVAL.pauze(ronde) * (boos ? AANVAL.boosPauze : 1) + loopt;
+        b.aanvalKlok = AANVAL.pauze(ronde) * (boos ? AANVAL.boosPauze : 1) + duurVan(b.def.aanvallen[b.laatste]);
       }
     });
     stapAanvallen(dt, levend);
@@ -1229,10 +1402,10 @@ const ICONEN = {
       if (f.baas){
         /* zijn aanvallen doven uit zodra hij valt, ook die al op de grond liggen */
         aanvallen = [];
-        cijfers.push({ x:f.x, y:f.y - f.r - 20, tekst:'de baas is geveld', leven:2.2, kleur:'#4a1230' });
+        cijfers.push({ x:f.x, y:f.y - f.r - 20, tekst:(f.def ? f.def.naam : 'De baas') + ' is geveld', leven:2.2, kleur:(f.def ? f.def.kleur : '#4a1230') });
         for (var b2 = 0; b2 < 22; b2++){
           var bh = toeval() * Math.PI * 2, bs = 60 + toeval() * 160;
-          pluis.push({ x:f.x, y:f.y, vx:Math.cos(bh) * bs, vy:Math.sin(bh) * bs, leven:0.7, kleur:b2 % 2 ? '#4a1230' : '#FFE168' });
+          pluis.push({ x:f.x, y:f.y, vx:Math.cos(bh) * bs, vy:Math.sin(bh) * bs, leven:0.7, kleur:b2 % 2 ? (f.def ? f.def.kleur : '#4a1230') : '#FFE168' });
         }
       }
       for (var i = 0; i < 7; i++){
@@ -1260,11 +1433,11 @@ const ICONEN = {
     return { k:'st', f:fase, r:ronde, ts:teSpawnen,
       sp:[inpak(sp, hp, maxHp, stat('harnas'), co.neer, zwaardBereik()),
           maat ? inpak(maat.sp, maat.hp, maat.maxHp, maat.stats.harnas, maat.neer, maat.stats.bereik) : null],
-      fo:fouten.map(function(f){ return [r1(f.x), r1(f.y), Math.round(f.hp), f.maxHp, f.baas ? 'baas' : f.soort.id, f.r, f.flits > 0 ? 0.1 : 0, r2(f.stap), f.schild || 0]; }),
+      fo:fouten.map(function(f){ return [r1(f.x), r1(f.y), Math.round(f.hp), f.maxHp, f.baas ? 'b:' + f.def.id : f.soort.id, f.r, f.flits > 0 ? 0.1 : 0, r2(f.stap), f.schild || 0]; }),
       me:messen.map(function(m){ return [r1(m.x), r1(m.y), r2(m.hoek)]; }),
       mu:munt.map(function(m){ return [r1(m.x), r1(m.y), m.waarde]; }),
       ci:cijfers.map(function(c){ return [r1(c.x), r1(c.y), c.tekst, c.kleur, r2(c.leven)]; }),
-      aa:aanvallen.map(function(a){ return [a.soort, r1(a.x), r1(a.y), r2(a.t), r2(a.hoek || 0), a.richting || 1, r2(a.nu || 0), r1(a.straal || 0), a.geknald ? 1 : 0]; }),
+      aa:aanvallen.map(function(a){ return [a.soort, r1(a.x), r1(a.y), r2(a.t), r2(a.hoek || 0), a.richting || 1, r2(a.nu || 0), r1(a.straal || 0), a.geknald ? 1 : 0, r2(a.k || 1), r2(a.gat || 0), a.breed || 0, r2(a.boog || 0), r2(a.duur || 0), a.r0 || 0, a.kl || '']; }),
       gm:maat ? maat.munten : 0, gg:maat ? maat.geveld : 0 };
   }
   function hostZend(dt){
@@ -1356,13 +1529,15 @@ const ICONEN = {
     ronde = d.r; teSpawnen = d.ts;
     pasSpelers(d);
     fouten = d.fo.map(function(a){
-      var soort = a[4] === 'baas' ? BAAS : (FOUTEN.filter(function(x){ return x.id === a[4]; })[0] || FOUTEN[0]);
-      return { x:a[0], y:a[1], hp:a[2], maxHp:a[3], soort:soort, r:a[5], flits:a[6], stap:a[7], schild:a[8], baas:a[4] === 'baas', snel:0, slaKlok:0 };
+      var isBaas = a[4] === 'baas' || a[4].indexOf('b:') === 0;
+      var def = isBaas ? (BAZEN.filter(function(x){ return x.id === a[4].slice(2); })[0] || BAZEN[0]) : null;
+      var soort = def || (FOUTEN.filter(function(x){ return x.id === a[4]; })[0] || FOUTEN[0]);
+      return { x:a[0], y:a[1], hp:a[2], maxHp:a[3], soort:soort, def:def, r:a[5], flits:a[6], stap:a[7], schild:a[8], baas:isBaas, snel:0, slaKlok:0 };
     });
     messen = d.me.map(function(a){ return { x:a[0], y:a[1], hoek:a[2] }; });
     munt = d.mu.map(function(a){ return { x:a[0], y:a[1], waarde:a[2], leven:1 }; });
     cijfers = d.ci.map(function(a){ return { x:a[0], y:a[1], tekst:a[2], kleur:a[3], leven:a[4] }; });
-    aanvallen = (d.aa || []).map(function(a){ return { soort:a[0], x:a[1], y:a[2], t:a[3], hoek:a[4], richting:a[5], nu:a[6], straal:a[7], geknald:!!a[8] }; });
+    aanvallen = (d.aa || []).map(function(a){ return { soort:a[0], x:a[1], y:a[2], t:a[3], hoek:a[4], richting:a[5], nu:a[6], straal:a[7], geknald:!!a[8], k:a[9] || 1, gat:a[10] || 0, breed:a[11] || 0, boog:a[12] || 0, duur:a[13] || 0, r0:a[14] || 0, kl:a[15] || '', neer:a[3] > 0 }; });
     if (typeof d.gm === 'number'){ munten += d.gm - co.gastMunt; co.gastMunt = d.gm; }
     if (typeof d.gg === 'number'){ geveld += d.gg - co.gastGeveld; co.gastGeveld = d.gg; }
     tekenHud();
@@ -1526,18 +1701,55 @@ const ICONEN = {
     if (f.soort.id === 'snel') g = '<path d="M' + n(1.1) + ',0 L' + n(-0.6) + ',' + n(-0.9) + ' L' + n(-0.25) + ',0 L' + n(-0.6) + ',' + n(0.9) + ' Z" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.14) + '" stroke-linejoin="round"/>';
     else if (f.soort.id === 'schild') g = '<path d="M0,' + n(-1.05) + ' L' + n(0.95) + ',' + n(-0.55) + ' L' + n(0.95) + ',' + n(0.55) + ' L0,' + n(1.05) + ' L' + n(-0.95) + ',' + n(0.55) + ' L' + n(-0.95) + ',' + n(-0.55) + ' Z" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.14) + '" stroke-linejoin="round"/>';
     else if (f.soort.id === 'dik') g = '<rect x="' + n(-1) + '" y="' + n(-1) + '" width="' + n(2) + '" height="' + n(2) + '" rx="' + n(0.35) + '" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.14) + '"/>';
-    else if (f.baas){
-      var d = ''; for (var k = 0; k < 14; k++){ var a = k / 14 * Math.PI * 2, st = k % 2 ? 1 : 1.16; d += (k ? 'L' : 'M') + (Math.cos(a) * r * st).toFixed(1) + ',' + (Math.sin(a) * r * st).toFixed(1) + ' '; }
-      g = '<circle r="' + n(1.4) + '" fill="none" stroke="' + vul + '" stroke-width="' + n(0.08) + '" stroke-dasharray="' + n(0.3) + ' ' + n(0.2) + '" opacity=".5"/>' +
-          '<path d="' + d + 'Z" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.12) + '" stroke-linejoin="round"/>' +
-          '<circle cx="' + n(-0.3) + '" cy="' + n(-0.2) + '" r="' + n(0.17) + '" fill="#fff"/><circle cx="' + n(0.3) + '" cy="' + n(-0.2) + '" r="' + n(0.17) + '" fill="#fff"/>' +
-          '<circle cx="' + n(-0.28) + '" cy="' + n(-0.18) + '" r="' + n(0.08) + '" fill="#14224C"/><circle cx="' + n(0.32) + '" cy="' + n(-0.18) + '" r="' + n(0.08) + '" fill="#14224C"/>';
-      return g;
-    } else g = '<ellipse rx="' + n(1) + '" ry="' + n(0.94) + '" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.14) + '"/>';
+    else if (f.baas) return baasVorm(f, r, vul, lijn, n); else g = '<ellipse rx="' + n(1) + '" ry="' + n(0.94) + '" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.14) + '"/>';
     g += '<text y="' + n(0.38) + '" text-anchor="middle" font-size="' + n(1.05) + '" font-weight="700" fill="#fff" font-family="Poppins">' + f.soort.mark + '</text>';
     return g;
   }
 
+  /* Elke baas heeft zijn eigen gedaante. Alles in maten van zijn straal, zodat
+     hij op elk scherm klopt; n(v) is v keer de straal. */
+  function baasVorm(f, r, vul, lijn, n){
+    var vorm = (f.def && f.def.vorm) || 'ster', k, a, g = '';
+    /* de ring eromheen: het teken dat dit de baas is */
+    g += '<circle r="' + n(1.4) + '" fill="none" stroke="' + vul + '" stroke-width="' + n(0.08) + '" stroke-dasharray="' + n(0.3) + ' ' + n(0.2) + '" opacity=".5"/>';
+    if (vorm === 'ster'){
+      var d = ''; for (k = 0; k < 14; k++){ a = k / 14 * Math.PI * 2; var st = k % 2 ? 1 : 1.16; d += (k ? 'L' : 'M') + (Math.cos(a) * r * st).toFixed(1) + ',' + (Math.sin(a) * r * st).toFixed(1) + ' '; }
+      g += '<path d="' + d + 'Z" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.12) + '" stroke-linejoin="round"/>';
+    } else if (vorm === 'vlek'){
+      /* een inktvlek: een rond lijf met spatten eromheen */
+      var v = ''; for (k = 0; k < 11; k++){ a = k / 11 * Math.PI * 2; var sv = 1 + (k % 3 === 0 ? 0.14 : k % 3 === 1 ? -0.07 : 0.03); v += (k ? 'L' : 'M') + (Math.cos(a) * r * sv).toFixed(1) + ',' + (Math.sin(a) * r * sv).toFixed(1) + ' '; }
+      g += '<path d="' + v + 'Z" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.1) + '" stroke-linejoin="round"/>';
+      g += '<circle cx="' + n(1.15) + '" cy="' + n(-0.55) + '" r="' + n(0.18) + '" fill="' + vul + '"/>' +
+           '<circle cx="' + n(-1.05) + '" cy="' + n(0.75) + '" r="' + n(0.13) + '" fill="' + vul + '"/>' +
+           '<circle cx="' + n(0.3) + '" cy="' + n(1.15) + '" r="' + n(0.1) + '" fill="' + vul + '"/>';
+    } else if (vorm === 'pen'){
+      /* een pen met de punt naar beneden */
+      g += '<path d="M0,' + n(1.25) + ' L' + n(-0.42) + ',' + n(0.25) + ' L' + n(-0.42) + ',' + n(-1.15) + ' L' + n(0.42) + ',' + n(-1.15) + ' L' + n(0.42) + ',' + n(0.25) + ' Z" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.1) + '" stroke-linejoin="round"/>';
+      g += '<path d="M' + n(-0.42) + ',' + n(-0.55) + ' h' + n(0.84) + '" stroke="' + lijn + '" stroke-width="' + n(0.1) + '"/>';
+      g += '<path d="M0,' + n(1.25) + ' L0,' + n(0.5) + '" stroke="#fff" stroke-width="' + n(0.09) + '" stroke-linecap="round"/>';
+    } else if (vorm === 'prop'){
+      /* een verfrommeld propje papier */
+      var p = ''; for (k = 0; k < 12; k++){ a = k / 12 * Math.PI * 2; var sp2 = k % 2 ? 0.84 : 1.08; p += (k ? 'L' : 'M') + (Math.cos(a) * r * sp2).toFixed(1) + ',' + (Math.sin(a) * r * sp2).toFixed(1) + ' '; }
+      g += '<path d="' + p + 'Z" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.11) + '" stroke-linejoin="round"/>';
+      g += '<path d="M' + n(-0.5) + ',' + n(-0.4) + ' L' + n(-0.05) + ',' + n(0.1) + ' L' + n(-0.45) + ',' + n(0.5) + ' M' + n(0.15) + ',' + n(-0.6) + ' L' + n(0.55) + ',' + n(-0.1) + ' L' + n(0.2) + ',' + n(0.55) + '" fill="none" stroke="' + lijn + '" stroke-width="' + n(0.07) + '" opacity=".8"/>';
+    } else if (vorm === 'klok'){
+      var uur = (performance.now() / 1000) % 60;
+      g += '<circle r="' + n(1.02) + '" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.12) + '"/>';
+      g += '<circle r="' + n(0.84) + '" fill="none" stroke="#fff" stroke-width="' + n(0.05) + '" opacity=".5"/>';
+      for (k = 0; k < 12; k++){ a = k / 12 * Math.PI * 2; g += '<circle cx="' + (Math.cos(a) * r * 0.84).toFixed(1) + '" cy="' + (Math.sin(a) * r * 0.84).toFixed(1) + '" r="' + n(0.06) + '" fill="#fff" opacity=".8"/>'; }
+      g += '<path d="M0,0 L' + (Math.cos(uur / 60 * Math.PI * 2 - Math.PI / 2) * r * 0.62).toFixed(1) + ',' + (Math.sin(uur / 60 * Math.PI * 2 - Math.PI / 2) * r * 0.62).toFixed(1) + '" stroke="#fff" stroke-width="' + n(0.09) + '" stroke-linecap="round"/>';
+      g += '<path d="M0,0 L' + (Math.cos(uur / 12 * Math.PI * 2 - Math.PI / 2) * r * 0.4).toFixed(1) + ',' + (Math.sin(uur / 12 * Math.PI * 2 - Math.PI / 2) * r * 0.4).toFixed(1) + '" stroke="#fff" stroke-width="' + n(0.12) + '" stroke-linecap="round"/>';
+      return g;
+    } else if (vorm === 'zwerm'){
+      /* een kluit propjes die samen een lijf vormen */
+      g += '<circle r="' + n(0.9) + '" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.1) + '"/>';
+      for (k = 0; k < 7; k++){ a = k / 7 * Math.PI * 2; g += '<circle cx="' + (Math.cos(a) * r * 0.82).toFixed(1) + '" cy="' + (Math.sin(a) * r * 0.82).toFixed(1) + '" r="' + n(0.3) + '" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.07) + '"/>'; }
+    }
+    /* twee ogen, bij elke baas op dezelfde plek, zodat je ziet dat het leeft */
+    g += '<circle cx="' + n(-0.3) + '" cy="' + n(-0.2) + '" r="' + n(0.17) + '" fill="#fff"/><circle cx="' + n(0.3) + '" cy="' + n(-0.2) + '" r="' + n(0.17) + '" fill="#fff"/>' +
+         '<circle cx="' + n(-0.28) + '" cy="' + n(-0.18) + '" r="' + n(0.08) + '" fill="#14224C"/><circle cx="' + n(0.32) + '" cy="' + n(-0.18) + '" r="' + n(0.08) + '" fill="#14224C"/>';
+    return g;
+  }
   function eigenNaam(){ var k = window.KLAS && KLAS.lees(); return k && k.naam ? k.naam : 'jij'; }
   function tekenSpeler(sp2, ber, harnasLv, neer, naam, pols){
     var s = '', mikt = sp2.mikt * 180 / Math.PI, R = SPELER.r;
@@ -1593,17 +1805,81 @@ const ICONEN = {
           s += '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + (c.r * (1 + na * 0.25)).toFixed(1) + '" fill="#EA9836" opacity="' + (0.85 * (1 - na)).toFixed(2) + '"/>';
         }
       } else if (a.soort === 'laser'){
-        var l = AANVAL.laser, lW = l.wacht * (a.k || 1), hk = a.nu !== undefined ? a.nu : a.hoek, lengte = 1400, wacht = a.t < lW;
+        var l = AANVAL.laser, lW = l.wacht * (a.k || 1), lBreed = a.breed || l.breed, lBoog = a.boog || l.boog;
+        var hk = a.nu !== undefined ? a.nu : a.hoek, lengte = 1400, wacht = a.t < lW;
         var ex = a.x + Math.cos(hk) * lengte, ey = a.y + Math.sin(hk) * lengte;
         if (wacht){
           s += '<path d="M' + a.x.toFixed(1) + ',' + a.y.toFixed(1) + ' L' + ex.toFixed(1) + ',' + ey.toFixed(1) + '" stroke="#F26749" stroke-width="3" stroke-dasharray="10 8" opacity="' + (0.35 + 0.5 * Math.min(1, Math.max(0, a.t) / lW)).toFixed(2) + '"/>';
           /* de boog die hij gaat maken */
-          var tot = a.hoek + a.richting * l.boog, grootBoog = l.boog > Math.PI ? 1 : 0;
+          var tot = a.hoek + a.richting * lBoog, grootBoog = lBoog > Math.PI ? 1 : 0;
           s += '<path d="M' + (a.x + Math.cos(a.hoek) * 120).toFixed(1) + ',' + (a.y + Math.sin(a.hoek) * 120).toFixed(1) + ' A120,120 0 ' + grootBoog + ' ' + (a.richting > 0 ? 1 : 0) + ' ' + (a.x + Math.cos(tot) * 120).toFixed(1) + ',' + (a.y + Math.sin(tot) * 120).toFixed(1) + '" fill="none" stroke="#F26749" stroke-width="2" stroke-dasharray="4 6" opacity=".6"/>';
         } else {
-          s += '<path d="M' + a.x.toFixed(1) + ',' + a.y.toFixed(1) + ' L' + ex.toFixed(1) + ',' + ey.toFixed(1) + '" stroke="#F26749" stroke-width="' + (l.breed + 14) + '" stroke-linecap="round" opacity=".35"/>' +
-               '<path d="M' + a.x.toFixed(1) + ',' + a.y.toFixed(1) + ' L' + ex.toFixed(1) + ',' + ey.toFixed(1) + '" stroke="#FFE168" stroke-width="' + l.breed + '" stroke-linecap="round" opacity=".95"/>' +
+          s += '<path d="M' + a.x.toFixed(1) + ',' + a.y.toFixed(1) + ' L' + ex.toFixed(1) + ',' + ey.toFixed(1) + '" stroke="#F26749" stroke-width="' + (lBreed + 14) + '" stroke-linecap="round" opacity=".35"/>' +
+               '<path d="M' + a.x.toFixed(1) + ',' + a.y.toFixed(1) + ' L' + ex.toFixed(1) + ',' + ey.toFixed(1) + '" stroke="#FFE168" stroke-width="' + lBreed + '" stroke-linecap="round" opacity=".95"/>' +
                '<path d="M' + a.x.toFixed(1) + ',' + a.y.toFixed(1) + ' L' + ex.toFixed(1) + ',' + ey.toFixed(1) + '" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity=".9"/>';
+        }
+      } else if (a.soort === 'plas'){
+        var pl = AANVAL.plas, plW = pl.wacht * (a.k || 1);
+        if (a.t < plW){
+          var pd = Math.min(1, Math.max(0, a.t) / plW);
+          s += '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + pl.r + '" fill="rgba(27,58,143,.12)" stroke="#1b3a8f" stroke-width="3" stroke-dasharray="7 6"/>' +
+               '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + (pl.r * pd).toFixed(1) + '" fill="rgba(27,58,143,.25)"/>';
+        } else {
+          /* de plas zelf, met een randje dat vervaagt als hij bijna op is */
+          var op = Math.min(1, (plW + pl.duur - a.t) / 1.2);
+          s += '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + pl.r + '" fill="#1b3a8f" opacity="' + (0.55 * op).toFixed(2) + '"/>' +
+               '<circle cx="' + (a.x - pl.r * 0.4).toFixed(1) + '" cy="' + (a.y + pl.r * 0.35).toFixed(1) + '" r="' + (pl.r * 0.3).toFixed(1) + '" fill="#1b3a8f" opacity="' + (0.45 * op).toFixed(2) + '"/>' +
+               '<circle cx="' + (a.x + pl.r * 0.45).toFixed(1) + '" cy="' + (a.y - pl.r * 0.3).toFixed(1) + '" r="' + (pl.r * 0.22).toFixed(1) + '" fill="#1b3a8f" opacity="' + (0.45 * op).toFixed(2) + '"/>';
+        }
+      } else if (a.soort === 'kegel'){
+        var ke = AANVAL.kegel, keW = ke.wacht * (a.k || 1), wacht2 = a.t < keW;
+        var h1 = a.hoek - ke.wijd, h2 = a.hoek + ke.wijd;
+        var pad = 'M' + a.x.toFixed(1) + ',' + a.y.toFixed(1) +
+          ' L' + (a.x + Math.cos(h1) * ke.ver).toFixed(1) + ',' + (a.y + Math.sin(h1) * ke.ver).toFixed(1) +
+          ' A' + ke.ver + ',' + ke.ver + ' 0 0 1 ' + (a.x + Math.cos(h2) * ke.ver).toFixed(1) + ',' + (a.y + Math.sin(h2) * ke.ver).toFixed(1) + ' Z';
+        if (wacht2) s += '<path d="' + pad + '" fill="rgba(27,58,143,.16)" stroke="#1b3a8f" stroke-width="3" stroke-dasharray="9 7"/>';
+        else {
+          var kn = Math.min(1, (a.t - keW) / ke.knal);
+          s += '<path d="' + pad + '" fill="#1b3a8f" opacity="' + (0.75 * (1 - kn)).toFixed(2) + '"/>';
+        }
+      } else if (a.soort === 'baan'){
+        var ba = AANVAL.baan, baW = ba.wacht * (a.k || 1), breed = a.breed || ba.breed, lang = 1500, bkl = a.kl || '#c0442c';
+        var hx = Math.cos(a.hoek) * lang, hy = Math.sin(a.hoek) * lang;
+        var x1 = a.x - hx, y1 = a.y - hy, x2 = a.x + hx, y2 = a.y + hy;
+        if (a.t < baW){
+          s += '<path d="M' + x1.toFixed(1) + ',' + y1.toFixed(1) + ' L' + x2.toFixed(1) + ',' + y2.toFixed(1) + '" stroke="' + bkl + '" stroke-width="' + breed + '" opacity=".18"/>' +
+               '<path d="M' + x1.toFixed(1) + ',' + y1.toFixed(1) + ' L' + x2.toFixed(1) + ',' + y2.toFixed(1) + '" stroke="' + bkl + '" stroke-width="3" stroke-dasharray="12 9"/>';
+        } else {
+          var bn = Math.min(1, (a.t - baW) / ba.knal);
+          s += '<path d="M' + x1.toFixed(1) + ',' + y1.toFixed(1) + ' L' + x2.toFixed(1) + ',' + y2.toFixed(1) + '" stroke="' + bkl + '" stroke-width="' + breed + '" opacity="' + (0.85 * (1 - bn)).toFixed(2) + '"/>';
+        }
+      } else if (a.soort === 'tik'){
+        var ti = AANVAL.tik, tiW = ti.wacht * (a.k || 1);
+        if (a.t < tiW){
+          var td = Math.min(1, Math.max(0, a.t) / tiW);
+          s += '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + ti.r + '" fill="rgba(107,63,160,.14)" stroke="#6b3fa0" stroke-width="3" stroke-dasharray="7 6"/>' +
+               '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + (ti.r * td).toFixed(1) + '" fill="rgba(107,63,160,.3)"/>';
+        } else {
+          var tn = Math.min(1, (a.t - tiW) / ti.knal);
+          s += '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + (ti.r * (1 + tn * 0.2)).toFixed(1) + '" fill="#b58ae0" opacity="' + (0.85 * (1 - tn)).toFixed(2) + '"/>';
+        }
+      } else if (a.soort === 'kogel'){
+        var ko = AANVAL.kogel;
+        s += '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + (ko.r + 3) + '" fill="rgba(20,34,76,.14)"/>' +
+             '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + ko.r + '" fill="' + (a.kl || '#8a7350') + '" stroke="#14224C" stroke-width="2" stroke-opacity=".5"/>' +
+             '<circle cx="' + (a.x - 3).toFixed(1) + '" cy="' + (a.y - 3).toFixed(1) + '" r="3" fill="#fff" opacity=".5"/>';
+      } else if (a.soort === 'krimp'){
+        var kr = AANVAL.krimp, krW = kr.wacht * (a.k || 1);
+        var straal = a.straal || kr.van, gat1 = a.gat - kr.gat / 2, gat2 = a.gat + kr.gat / 2;
+        /* de ring met een opening: twee bogen, van het ene eind van het gat naar het andere */
+        var bx1 = a.x + Math.cos(gat2) * straal, by1 = a.y + Math.sin(gat2) * straal;
+        var bx2 = a.x + Math.cos(gat1) * straal, by2 = a.y + Math.sin(gat1) * straal;
+        var ringPad = 'M' + bx1.toFixed(1) + ',' + by1.toFixed(1) + ' A' + straal.toFixed(1) + ',' + straal.toFixed(1) + ' 0 1 1 ' + bx2.toFixed(1) + ',' + by2.toFixed(1);
+        if (a.t < krW){
+          s += '<path d="' + ringPad + '" fill="none" stroke="#6b3fa0" stroke-width="4" stroke-dasharray="10 8" opacity=".8"/>';
+        } else {
+          s += '<path d="' + ringPad + '" fill="none" stroke="#6b3fa0" stroke-width="' + (kr.band + 10) + '" opacity=".3"/>' +
+               '<path d="' + ringPad + '" fill="none" stroke="#b58ae0" stroke-width="' + kr.band + '" opacity=".9"/>';
         }
       } else if (a.soort === 'golf'){
         var g = AANVAL.golf, gW = g.wacht * (a.k || 1);
@@ -1643,8 +1919,9 @@ const ICONEN = {
       var bw = 620, bx = (ARENA.b - bw) / 2, by = 16, deel3 = Math.max(0, baasNu.hp / baasNu.maxHp);
       s += '<rect x="' + (bx - 8) + '" y="' + (by - 8) + '" width="' + (bw + 16) + '" height="46" rx="14" fill="#FBF6F1" opacity=".85"/>';
       s += '<rect x="' + bx + '" y="' + (by + 12) + '" width="' + bw + '" height="16" rx="8" fill="rgba(20,34,76,.18)"/>';
-      s += '<rect x="' + bx + '" y="' + (by + 12) + '" width="' + (bw * deel3).toFixed(1) + '" height="16" rx="8" fill="' + (deel3 <= 0.5 ? '#c0442c' : '#4a1230') + '"/>';
-      s += '<text x="' + (ARENA.b / 2) + '" y="' + (by + 8) + '" text-anchor="middle" font-size="13" font-weight="700" fill="#4a1230" font-family="Poppins" letter-spacing="1.5">DE BAAS' + (deel3 <= 0.5 ? ' \u00b7 KWAAD' : '') + '</text>';
+      s += '<rect x="' + bx + '" y="' + (by + 12) + '" width="' + (bw * deel3).toFixed(1) + '" height="16" rx="8" fill="' + (deel3 <= 0.5 ? '#c0442c' : ((baasNu.def && baasNu.def.kleur) || '#4a1230')) + '"/>';
+      var bnaam = ((baasNu.def && baasNu.def.naam) || 'De baas').toUpperCase();
+      s += '<text x="' + (ARENA.b / 2) + '" y="' + (by + 8) + '" text-anchor="middle" font-size="13" font-weight="700" fill="' + ((baasNu.def && baasNu.def.kleur) || '#4a1230') + '" font-family="Poppins" letter-spacing="1.5">' + bnaam + (deel3 <= 0.5 ? ' \u00b7 KWAAD' : '') + '</text>';
     }
     /* deeltjes en getallen */
     pluis.forEach(function(p){ s += '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' + (3 * p.leven / 0.45 + 1).toFixed(1) + '" fill="' + p.kleur + '" opacity="' + (p.leven / 0.45).toFixed(2) + '"/>'; });
