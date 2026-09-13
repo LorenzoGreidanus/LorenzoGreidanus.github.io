@@ -88,7 +88,7 @@ window.STRIJD = (function(){
   naam = naam.trim().slice(0, 16);
   if (!naamOk(naam)) naam = 'Leerling';
   var hud, toast, sluier, toastKlok = null, mijnSid = sid(), mijnPid = null;   /* mijnPid: het openbare nummer dat de kamer me geeft */
-  var ws = null, dicht = false, pogingen = 0, hooks = null, gestart = false, klaarMet = false, laatsteStand = '', duel = false, tegen = null, gastheer = null, maatNaam = '';
+  var ws = null, dicht = false, pogingen = 0, hooks = null, gestart = false, klaarMet = false, laatsteStand = '', duel = false, tegen = null, gastheer = null, maatNaam = '', maatAv = '';
   function samen(){ return duel && hooks && hooks.samen; }
 
   function zeg(tekst, goed){
@@ -148,7 +148,7 @@ window.STRIJD = (function(){
       duel = !!m.duel; gastheer = m.gastheer || null;
       if (m.jij) mijnPid = m.jij;
       var aantal = m.spelers ? m.spelers.length : 0;
-      (m.spelers || []).forEach(function(r){ if (r.sid !== mijnPid) maatNaam = r.naam; });
+      (m.spelers || []).forEach(function(r){ if (r.sid !== mijnPid){ maatNaam = r.naam; maatAv = r.av || ''; } });
       hudTekst((duel ? 'Duel ' : 'Klasstrijd ') + code, aantal + ' in de kamer', true);
       if (m.fase === 'bezig') start();
       else if (m.fase === 'einde') sluierWeg();
@@ -159,7 +159,7 @@ window.STRIJD = (function(){
     if (m.t === 'aftellen'){ aftellen(m.s || 3); return; }
     if (m.t === 'start'){ start(); return; }
     if (m.t === 'net'){ if (hooks && hooks.net) hooks.net(m.d); return; }
-    if (m.t === 'stand'){ if (m.tegen && m.tegen.naam){ maatNaam = m.tegen.naam; if (hooks && hooks.maatNaam) hooks.maatNaam(maatNaam); } toonStand(m); return; }
+    if (m.t === 'stand'){ if (m.tegen && m.tegen.naam){ maatNaam = m.tegen.naam; maatAv = m.tegen.av || maatAv; if (hooks && hooks.maatNaam) hooks.maatNaam(maatNaam, maatAv); } toonStand(m); return; }
     if (m.t === 'aanval'){
       if (!gestart || klaarMet || !hooks) return;
       var n = Math.max(1, Math.min(5, m.n | 0));
@@ -207,7 +207,7 @@ window.STRIJD = (function(){
     clearInterval(telKlok);
     sluierWeg();
     hudTekst((duel ? 'Duel ' : 'Klasstrijd ') + code, 'gestart, veel succes', false);
-    if (hooks) hooks.start({ duel:duel, rol:duel ? (gastheer === mijnPid ? 'host' : 'gast') : null, maat:maatNaam });
+    if (hooks) hooks.start({ duel:duel, rol:duel ? (gastheer === mijnPid ? 'host' : 'gast') : null, maat:maatNaam, maatAv:maatAv });
     zeg(samen() ? 'Start! Samen tegen de fouten, met ' + (maatNaam || 'je maat') + '.' : 'Start! Vijf goed op rij stuurt fouten naar ' + (duel ? 'je tegenstander' : 'de anderen') + '.', true);
   }
   function toonStand(m){

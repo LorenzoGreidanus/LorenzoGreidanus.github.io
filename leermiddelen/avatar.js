@@ -9,6 +9,7 @@
    Gebruik:
      AVATAR.svg('Noor', 32)         een <svg> als tekst, 32 pixels
      AVATAR.svg('Noor', 32, spec)   met eigen keuzes
+     AVATAR.inhoud('Noor', spec)    alleen de binnenkant, voor in een eigen svg (viewBox -50..50)
      AVATAR.ontleed(spec) / AVATAR.maak({v,k,o,m,e})
      AVATAR.KEUZES                  hoeveel er van elk zijn
      AVATAR.vul(root)               vult elementen met data-avatar="naam" */
@@ -51,6 +52,16 @@ window.AVATAR = (function(){
   var KEUZES = { vormen:8, kleuren:KLEUREN.length, ogen:5, monden:4, extras:6 };
   function ontleed(spec){ var m = /^v(\d)k(\d)o(\d)m(\d)e(\d)$/.exec(String(spec || '')); return m ? { v:+m[1], k:+m[2], o:+m[3], m:+m[4], e:+m[5] } : null; }
   function maak(o){ return 'v' + (o.v % KEUZES.vormen) + 'k' + (o.k % KEUZES.kleuren) + 'o' + (o.o % KEUZES.ogen) + 'm' + (o.m % KEUZES.monden) + 'e' + (o.e % KEUZES.extras); }
+  var cache = {};
+  /* de binnenkant (viewBox -50..50), voor wie hem in een eigen svg tekent, zoals de arena van Zwaardvechter */
+  function inhoud(naam, spec){
+    var sleutel = (spec || '') + '|' + String(naam || '').toLowerCase().trim();
+    if (cache[sleutel]) return cache[sleutel];
+    var s = svg(naam, 100, spec).replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
+    if (Object.keys(cache).length > 200) cache = {};
+    cache[sleutel] = s;
+    return s;
+  }
   function svg(naam, maat, spec){
     maat = maat || 32;
     var sp = ontleed(spec);
@@ -112,5 +123,5 @@ window.AVATAR = (function(){
     st.textContent = '.avatar{display:inline-block;vertical-align:middle;flex:none;margin-right:6px}.avrij{display:flex;align-items:center;gap:8px;min-width:0}.avrij .avatar{margin-right:0}.avrij>span{min-width:0}';
     document.head.appendChild(st);
   } catch (e){}
-  return { svg:svg, vul:vul, ontleed:ontleed, maak:maak, KEUZES:KEUZES };
+  return { svg:svg, inhoud:inhoud, vul:vul, ontleed:ontleed, maak:maak, KEUZES:KEUZES };
 })();

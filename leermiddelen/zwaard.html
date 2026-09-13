@@ -1397,6 +1397,7 @@ const ICONEN = {
     return g;
   }
 
+  function eigenNaam(){ var k = window.KLAS && KLAS.lees(); return k && k.naam ? k.naam : 'jij'; }
   function tekenSpeler(sp2, ber, harnasLv, neer, naam, pols){
     var s = '', mikt = sp2.mikt * 180 / Math.PI, R = SPELER.r;
     s += '<ellipse cx="' + sp2.x.toFixed(1) + '" cy="' + (sp2.y + R * 0.9).toFixed(1) + '" rx="' + (R * 0.85) + '" ry="' + (R * 0.3) + '" fill="rgba(20,34,76,.2)"/>';
@@ -1415,14 +1416,13 @@ const ICONEN = {
       '<path d="M' + g0 + ',0 L' + (g0 + ber * 0.6).toFixed(0) + ',0" stroke="#dfe6ee" stroke-width="6" stroke-linecap="round"/>' +
       '<path d="M' + g0 + ',0 L' + (g0 + ber * 0.6).toFixed(0) + ',0" stroke="#5b6480" stroke-width="1.6" stroke-linecap="round" opacity=".6"/>' +
       '<path d="M' + (g0 - 2) + ',-8 v16" stroke="#c9971f" stroke-width="4" stroke-linecap="round"/><path d="M' + (g0 - 10) + ',0 h8" stroke="#5f4830" stroke-width="5" stroke-linecap="round"/></g>';
-    /* het lijf: een ronde ridder met een helm en een vizier, in de kleur van het harnas; de maat in een warmere tint */
-    var kleuren = naam ? ['#F26749', '#e8623f', '#d95c3b', '#c9603d', '#b8654a', '#a86a57', '#987064', '#887670'] : ['#204ECF', '#3559c9', '#4a63b8', '#5b6480', '#6b7391', '#7c85a3', '#8d94ae', '#9ea4bb'];
-    var harnasKl = kleuren[Math.min(7, harnasLv || 0)];
-    s += '<circle r="' + R + '" fill="' + harnasKl + '" stroke="#14224C" stroke-width="2.4"' + (sp2.flits > 0 ? ' opacity=".5"' : '') + '/>';
-    s += '<path d="M' + (-R) + ',-3 a' + R + ',' + R + ' 0 0 1 ' + (2 * R) + ',0 z" fill="' + tint(harnasKl, 0.25) + '" opacity=".9"/>';
-    s += '<rect x="' + (-R * 0.6) + '" y="-6" width="' + (R * 1.2) + '" height="8" rx="4" fill="#14224C"/>';
-    s += '<circle cx="' + (-R * 0.27) + '" cy="-2" r="2" fill="#fff"/><circle cx="' + (R * 0.27) + '" cy="-2" r="2" fill="#fff"/>';
-    if ((harnasLv || 0) >= 3) s += '<path d="M0,' + (-R) + ' l0,-9 l5,3" fill="none" stroke="' + (naam ? '#204ECF' : '#F26749') + '" stroke-width="3.5" stroke-linecap="round"/>';
+    /* het lijf: je eigen gezichtje (de blob uit de leeromgeving), met een ring in de kleur van het harnas; de maat zijn eigen blob */
+    var ringen = ['', '#dfe6ee', '#b9c4d1', '#8f9db0', '#6b7a90', '#4f5d73', '#3b4759', '#c9971f'];
+    var ring = ringen[Math.min(7, harnasLv || 0)];
+    var wie = naam ? { naam:naam, av:(maat && maat.av) || '' } : { naam:eigenNaam(), av:(window.PROFIEL ? PROFIEL.avatar() : '') };
+    s += '<g transform="scale(' + (R / 46).toFixed(3) + ')"' + (sp2.flits > 0 ? ' opacity=".5"' : '') + '>' + (window.AVATAR ? AVATAR.inhoud(wie.naam, wie.av) : '<circle r="46" fill="#204ECF"/>') + '</g>';
+    if (ring) s += '<circle r="' + (R + 2) + '" fill="none" stroke="' + ring + '" stroke-width="3" opacity=".9"/>';
+    if ((harnasLv || 0) >= 3) s += '<path d="M0,' + (-R - 2) + ' l0,-9 l5,3" fill="none" stroke="' + (naam ? '#204ECF' : '#F26749') + '" stroke-width="3.5" stroke-linecap="round"/>';
     s += '</g>';
     if (naam) s += '<text x="' + sp2.x.toFixed(1) + '" y="' + (sp2.y - R - 12).toFixed(1) + '" text-anchor="middle" font-size="13" font-weight="700" fill="#14224C" font-family="Poppins" stroke="#fff" stroke-width="3" paint-order="stroke">' + naam.replace(/[<>&]/g, '') + '</text>';
     if (sp2.raak > 0 && !neer) s += '<circle cx="' + sp2.x.toFixed(1) + '" cy="' + sp2.y.toFixed(1) + '" r="' + (R + 8) + '" fill="none" stroke="#fff" stroke-width="2" opacity=".5" stroke-dasharray="6 5"/>';
@@ -1561,7 +1561,7 @@ const ICONEN = {
         if (co.aan && co.rol === 'gast' && !co.opzet){ co.wachtOp = true; return; }
         if (!document.getElementById('scherm-start').classList.contains('hide') && vak) begin();
       },
-      maatNaam: function(naam){ if (maat && naam) maat.naam = naam; },
+      maatNaam: function(naam, av){ if (maat && naam) maat.naam = naam; if (maat && av !== undefined) maat.av = av || ''; },
       net: function(d){ if (!co.aan) return; if (co.rol === 'host') hostOntvang(d); else gastOntvang(d); },
       stand: function(){ return { ronde:ronde, gehaald:Math.max(0, ronde - 1), leven:Math.round(hp), punten:geveld }; },
       aanval: function(n, van){
