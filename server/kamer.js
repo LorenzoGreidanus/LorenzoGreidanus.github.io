@@ -28,7 +28,7 @@ const OPRUIMEN_NA = 3 * 60 * 60 * 1000;     /* een kamer leeft hoogstens drie uu
 const NA_EINDE = 30 * 60 * 1000;             /* na de eindstand nog een half uur te bekijken */
 const SPELLEN_STRIJD = { toren: "Torenverdediging", zwaard: "Zwaardvechter" };
 /* spellen met rollen op telefoons: het bord draait het spel, de kamer deelt kaarten uit en geeft acties door */
-const SPELLEN_ROLLEN = { polis: "De vergadering van de klas", meetlat: "Langs de meetlat", staten: "De vergadering", berlijn: "De Conferentie van Berlijn", grieken: "De Griekse wereld" };
+const SPELLEN_ROLLEN = { polis: "De vergadering van de klas", meetlat: "Langs de meetlat", staten: "De vergadering", berlijn: "De Conferentie van Berlijn", grieken: "De Griekse wereld", standen: "Stem per stand", crisis: "De crisis" };
 const KAART_MAX = 12000, BORD_MAX = 40000, ACTIE_MAX = 4000;
 const KLAS_LEEFT = 7 * 24 * 60 * 60 * 1000;   /* een klascode is een week geldig */
 const KLAS_MAX = 3000;                        /* hoogstens zoveel gemelde potjes per klas */
