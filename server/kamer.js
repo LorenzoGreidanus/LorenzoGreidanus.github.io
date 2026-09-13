@@ -29,7 +29,8 @@ const NA_EINDE = 30 * 60 * 1000;             /* na de eindstand nog een half uur
 const SPELLEN_STRIJD = { toren: "Torenverdediging", zwaard: "Zwaardvechter" };
 const KLAS_LEEFT = 7 * 24 * 60 * 60 * 1000;   /* een klascode is een week geldig */
 const KLAS_MAX = 3000;                        /* hoogstens zoveel gemelde potjes per klas */
-const KLAS_SPELLEN = { race: "Vragenrace" };    /* spellen zonder kamer die wel bij een klas melden */
+/* spellen zonder kamer die wel bij een klas melden */
+const KLAS_SPELLEN = { race: "Vragenrace", klasquiz: "Klasquiz", rekenen: "Rekenrace", balans: "De balans", werkwoorden: "Werkwoordrace", irregular: "Irregular verbs", vlaggen: "Vlaggen", landenvormen: "Landenvormen", topografie: "Topografie", lichaam: "Het lichaam", tijdvakken: "Tijdvakken sorteren", bronnenlab: "Bronnenlab", machtsschema: "Het machtsschema", jagers: "Blijven of doorlopen", feodalisme: "Feodalisme", leenmannen: "Verdeel je rijk", stad: "Bouw je stad", handel: "De handelsroute", vergadering: "De vergadering" };
 
 function json(obj, status){
   return new Response(JSON.stringify(obj), { status: status || 200,
