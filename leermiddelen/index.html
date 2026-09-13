@@ -65,6 +65,10 @@ header{padding:12px 0;border-bottom:1px solid var(--rand);background:#fff;positi
 .niveauknop:hover{background:var(--kaart-aan)}
 .niveauknop.on{background:var(--ocean);color:#fff}
 .niveauhint{font-size:.8rem;color:var(--muted);margin-top:6px;min-height:20px}
+/* Geen keuzepaneel meer vooraf: alleen een regel als er al een niveau bekend is. */
+.niveauregel{font-size:.88rem;color:var(--muted);margin-bottom:8px}
+.niveauregel b{color:var(--ink)}
+.niveauregel button{background:none;border:none;padding:0 0 0 2px;font:inherit;color:var(--link,#204ECF);font-weight:600;text-decoration:underline;text-underline-offset:3px;cursor:pointer;min-height:32px}
 /* op een smalle telefoon: de titel in de kopbalk weg (hij staat er vlak onder nog een keer) en de niveauknoppen mogen afbreken */
 /* de kopknoppen blijven hier op een rij naast het merk; basis.css zet ze in de spellen onder de titel */
 @media(max-width:640px){header .hd .hd-right{flex:0 0 auto;width:auto;justify-content:flex-end}}
@@ -101,7 +105,8 @@ header{padding:12px 0;border-bottom:1px solid var(--rand);background:#fff;positi
 .zoek{flex:1;min-width:240px;position:relative}
 .zoek svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:18px;height:18px;fill:none;stroke:var(--muted);stroke-width:2;stroke-linecap:round}
 .zoek input{width:100%;border:1.5px solid rgba(20,34,76,.14);border-radius:14px;padding:11px 40px 11px 42px;background:var(--kaart);font-size:.95rem}
-.zoek input:focus{outline:none;border-color:var(--ocean);box-shadow:0 0 0 4px rgba(32,78,207,.12)}
+.zoek input:focus-visible{outline:3px solid var(--amber);outline-offset:3px}
+.zoek input:focus{border-color:var(--ocean);box-shadow:0 0 0 4px rgba(32,78,207,.12)}
 .zoek kbd{position:absolute;right:12px;top:50%;transform:translateY(-50%);font:600 .7rem/1 'Poppins',sans-serif;color:var(--muted);
   border:1px solid rgba(20,34,76,.18);border-radius:6px;padding:4px 6px;background:var(--room)}
 .zoek .wis{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:none;background:none;color:var(--muted);font-size:1.2rem;padding:4px 8px;line-height:1}
@@ -373,13 +378,13 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
     <div>
       <p class="hand" style="font-size:1.5rem">welkom</p>
       <h1>Oefenen en spelen</h1>
-      <p class="uit">Kies een vak, kies een spel en ga aan de slag. Zonder inloggen, en er wordt niets van je opgeslagen.</p>
+      <p class="uit">Kies een vak, kies een spel en ga aan de slag. Zonder inloggen. Vul je geen klascode in, dan blijft alles op dit apparaat.</p>
       <a class="collegalink" href="#collegas">Docent? Zo gebruik je dit in de les<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
     </div>
     <div class="niveauvak">
-      <p class="eyebrow">jouw niveau</p>
-      <div class="niveaubalk" id="niveaubalk" role="group" aria-label="Kies je niveau"></div>
-      <p class="niveauhint" id="niveauhint">Kies je niveau, dan staat het in elke startknop.</p>
+      <p class="niveauregel hide" id="niveauregel"></p>
+      <div class="niveaubalk hide" id="niveaubalk" role="group" aria-label="Kies je niveau"></div>
+      <p class="niveauhint hide" id="niveauhint"></p>
       <details class="klasvak" id="klasvak" open>
         <summary>Klascode of je gezichtje</summary>
         <p class="eyebrow" style="margin-top:12px">klascode van je docent</p>
@@ -422,7 +427,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
         </div>
         <div class="tellers">
           <div><b id="telSpellen">25</b><span>spellen</span></div>
-          <div><b>1.684</b><span>vragen in de bank</span></div>
+          <div><b id="telVragen">1.684</b><span>vragen in de bank</span></div>
           <div><b id="telVakken">6</b><span>vakken</span></div>
           <div><b>0</b><span>accounts nodig</span></div>
         </div>
@@ -757,11 +762,29 @@ var SPELLEN = [
     b.addEventListener('click', function(){ zetNiveau(n); });
     balk.appendChild(b);
   });
-  function zetNiveau(n){
+  function zetNiveau(n, stil){
     stand.niveau = n;
     Array.prototype.forEach.call(balk.children, function(c, i){ c.classList.toggle('on', NIVEAUS[i] === n); });
     $('niveauhint').textContent = n.hint;
+    if (!stil){ balk.classList.add('hide'); $('niveauhint').classList.add('hide'); }
+    tekenNiveauregel();
     onthoud(); tekenSpellen(); tekenSnel(); tekenVerder();
+  }
+  /* De regel vertelt wat er onthouden is en laat je het wisselen. Weet de
+     leeromgeving nog niets, dan staat er niets: de keuze valt in het spel. */
+  function tekenNiveauregel(){
+    var r = $('niveauregel');
+    if (!stand.niveau){ r.classList.add('hide'); return; }
+    r.classList.remove('hide');
+    r.innerHTML = 'Je speelt op <b>' + schoon(stand.niveau.kort) + '</b>. ';
+    var b = document.createElement('button');
+    b.type = 'button'; b.textContent = 'Wisselen';
+    b.addEventListener('click', function(){
+      var uit = balk.classList.toggle('hide');
+      $('niveauhint').classList.toggle('hide', uit);
+      if (!uit) balk.querySelector('button').focus();
+    });
+    r.appendChild(b);
   }
 
   /* ---------- de link naar een spel ---------- */
@@ -780,14 +803,14 @@ var SPELLEN = [
     if (tv) tv.textContent = VAKKEN.filter(function(v){ return SPELLEN.some(function(sp){ return sp.bestand && hoortBij(sp, v.id); }); }).length;
   })();
   function spelMet(bestand){ return SPELLEN.filter(function(s){ return s.bestand === bestand; })[0] || null; }
-  function tegel(sp){ return '<span class="tegel" style="background:' + sp.kleur + '"><svg viewBox="0 0 24 24">' + sp.ico + '</svg></span>'; }
+  function tegel(sp){ return '<span class="tegel" style="background:' + sp.kleur + '" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true">' + sp.ico + '</svg></span>'; }
 
   /* ---------- snel starten ---------- */
   function tekenSnel(){
     var quiz = spelMet('klasquiz.html'), toren = spelMet('toren.html'), s = '';
     if (quiz) s += '<a class="snelknop" href="' + linkNaar(quiz) + '" data-start="' + quiz.bestand + '" title="Samen op het digibord, met een code">' + tegel(quiz) + 'Klasquiz</a>';
     if (toren) s += '<a class="snelknop" href="' + linkNaar(toren) + '" data-start="' + toren.bestand + '" title="Oefenen voor een toets, elk vak">' + tegel(toren) + 'Torenverdediging</a>';
-    s += '<button class="snelknop" type="button" id="verras" title="Een willekeurig spel uit je keuze"><span class="tegel" style="background:var(--amber)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.4" fill="#FBF6F1" stroke="none"/><circle cx="16" cy="8" r="1.4" fill="#FBF6F1" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="#FBF6F1" stroke="none"/><circle cx="8" cy="16" r="1.4" fill="#FBF6F1" stroke="none"/><circle cx="16" cy="16" r="1.4" fill="#FBF6F1" stroke="none"/></svg></span>Verras me</button>';
+    s += '<button class="snelknop" type="button" id="verras" title="Een willekeurig spel uit je keuze"><span class="tegel" style="background:var(--amber)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.4" fill="#FBF6F1" stroke="none"/><circle cx="16" cy="8" r="1.4" fill="#FBF6F1" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="#FBF6F1" stroke="none"/><circle cx="8" cy="16" r="1.4" fill="#FBF6F1" stroke="none"/><circle cx="16" cy="16" r="1.4" fill="#FBF6F1" stroke="none"/></svg></span>Verras me</button>';
     $('snel').innerHTML = s;
     $('verras').addEventListener('click', function(){
       var lijst = gefilterd();
@@ -924,7 +947,7 @@ var SPELLEN = [
   }
   function sectie(ico, kleur, titel, onder, tel, lijst){
     return '<section class="sectie"><div class="sectiekop">' +
-      (ico ? '<i style="background:' + kleur + '"><svg viewBox="0 0 24 24">' + ico + '</svg></i>' : '') +
+      (ico ? '<i style="background:' + kleur + '"><svg viewBox="0 0 24 24" aria-hidden="true">' + ico + '</svg></i>' : '') +
       '<h2>' + schoon(titel) + (onder ? '<small>' + schoon(onder) + '</small>' : '') + '</h2>' +
       (tel !== undefined ? '<span>' + tel + (tel === 1 ? ' spel' : ' spellen') + '</span>' : '') + '</div>' +
       '<div class="spellen">' + lijst.map(kaart).join('') + '</div></section>';
@@ -989,7 +1012,7 @@ var SPELLEN = [
     vak.classList.toggle('hide', !lijst.length);
     if (!lijst.length) return;
     vak.innerHTML = '<span class="eyebrow">ga verder met</span>' + lijst.map(function(sp){
-      return '<a href="' + linkNaar(sp) + '" data-start="' + sp.bestand + '"><i style="background:' + sp.kleur + '"><svg viewBox="0 0 24 24">' + sp.ico + '</svg></i>' + schoon(sp.naam) + '</a>';
+      return '<a href="' + linkNaar(sp) + '" data-start="' + sp.bestand + '"><i style="background:' + sp.kleur + '"><svg viewBox="0 0 24 24" aria-hidden="true">' + sp.ico + '</svg></i>' + schoon(sp.naam) + '</a>';
     }).join('');
   }
   document.addEventListener('click', function(e){
@@ -1024,7 +1047,8 @@ var SPELLEN = [
   if (z){ stand.zoek = z; zoekveld.value = z; $('zoekWis').classList.remove('hide'); $('zoekKbd').classList.add('hide'); }
 
   tekenSnel(); tekenVerder(); alles();
-  if (n) NIVEAUS.forEach(function(x){ if (x.id === n) zetNiveau(x); });
+  if (n) NIVEAUS.forEach(function(x){ if (x.id === n) zetNiveau(x, true); });
+  tekenNiveauregel();
 })();
 </script>
 <script src="klas.js"></script>
