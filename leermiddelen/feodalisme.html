@@ -110,6 +110,35 @@ body.groot .keuze{font-size:1.12rem;padding:17px 19px}
 .keuze kbd{flex:none;width:23px;height:23px;border-radius:7px;background:#fff;border:1px solid rgba(20,34,76,.14);
   font-family:inherit;font-size:.73rem;font-weight:600;display:grid;place-items:center;margin-top:1px}
 .kosten{display:block;margin-top:5px;font-size:.8rem;color:var(--muted)}
+/* ---------- verdelen ----------
+   De drie treden van de piramide zijn de drie partijen. Je ziet per trede wat
+   hij nodig heeft en wat je gaf, en of dat genoeg is. */
+.potrij{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;margin:18px 0 10px}
+.pot{font-size:1.05rem;font-weight:600}
+.pot b{font-size:1.6rem;line-height:1;margin-right:4px}
+.potuit{color:var(--muted);font-size:.88rem}
+.druk{color:var(--muted);font-size:.94rem;margin-top:8px;border-left:3px solid var(--amber);padding-left:12px}
+.treden{display:grid;gap:10px}
+.trede{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 14px;align-items:center;
+  background:var(--room);border:1.5px solid rgba(20,34,76,.12);border-left:5px solid var(--tk);border-radius:16px;padding:12px 14px}
+.trede.genoeg{border-color:rgba(31,107,65,.45);border-left-color:var(--tk)}
+.trede.tekort{border-color:rgba(168,55,31,.4);border-left-color:var(--tk)}
+.tnaam b{display:block;font-size:1.05rem}
+.tnaam small{color:var(--muted);font-size:.84rem}
+.tbalk{grid-column:1/-1;position:relative;height:26px;border-radius:999px;background:rgba(20,34,76,.08);overflow:hidden}
+.tbalk i{display:block;height:100%;background:var(--tk);border-radius:999px;transition:width .22s var(--ease)}
+.tcijfer{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:700;color:var(--ink)}
+.tknoppen{display:flex;align-items:center;gap:8px}
+.tknoppen button{width:44px;height:44px;border-radius:999px;border:1.5px solid rgba(20,34,76,.16);background:#fff;
+  font-size:1.3rem;font-weight:700;line-height:1;cursor:pointer;color:var(--ink)}
+.tknoppen button:hover:not(:disabled){border-color:var(--tk);color:var(--tk)}
+.tknoppen button:disabled{opacity:.35;cursor:default}
+.tknoppen kbd{font-family:inherit;font-size:.76rem;color:var(--muted);background:rgba(20,34,76,.06);border-radius:6px;padding:2px 6px}
+.hint{margin-top:12px;color:var(--muted);font-size:.9rem;background:rgba(234,152,54,.12);border-radius:12px;padding:10px 12px}
+.knoprij{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.btn.ghost{background:transparent;border:1.5px solid rgba(20,34,76,.16);color:var(--ink);box-shadow:none}
+.watgaf{color:var(--muted);font-size:.9rem;margin-bottom:6px}
+@media(max-width:560px){.trede{grid-template-columns:1fr}.tknoppen{justify-content:flex-end}}
 
 .gevolg{margin-top:20px;border-radius:20px;background:var(--room);border:1px solid rgba(20,34,76,.10);padding:18px 20px;display:none}
 .gevolg.on{display:block}
@@ -310,7 +339,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
 
 <!-- ============================ EINDE ============================ -->
 <section class="wrap hide einde" id="scherm-einde">
-  <p class="eyebrow">na de laatste winter</p>
+  <p class="eyebrow" id="eindBoven">na de laatste winter</p>
   <h2 class="titel" id="eindTitel"></h2>
   <p class="sub" id="eindSub"></p>
   <div class="slot" id="eindSlot"></div>
@@ -333,14 +362,21 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
      bescherming  hoe veilig je bent tegen geweld van buiten
      trouw        hoe stevig je positie is tegenover de laag boven en onder je
 
-   Een gebeurtenis toevoegen doe je in GEBEURTENISSEN bij de juiste rol:
+   Je speelt door te verdelen. Elk jaar is er een pot, en drie partijen die er
+   samen meer van vragen dan erin zit; wie tekortkomt, trekt dat van zijn band
+   af. Komt een band op nul, dan is het spel voorbij: in dit stelsel draagt
+   elke laag de twee andere.
+
+   Wie er per rol iets van je nodig heeft staat in ONTVANGERS, wat een jaar
+   zwaar maakt in DRUK, en de verhalen in GEBEURTENISSEN:
      { titel:'...', tekst:'...', keuzes:[
          { t:'wat je doet',
-           ef:{voedsel:-1, trouw:+2},        // alleen wat verandert
+           ef:{voedsel:-1, trouw:+2},        // waar dit verhaal bij past
            gevolg:'wat er daarna gebeurt en waarom',
            lang:'gevolg op lange termijn'    // alleen zichtbaar bij havo/vwo
          } ] }
-   De derde keuze wordt bij vmbo-bb weggelaten, zodat er twee overblijven.
+   De ef-cijfers bepalen niets meer; het spel kiest achteraf het verhaal dat
+   het dichtst bij jouw verdeling ligt, zodat de tekst bij je eigen jaar hoort.
    ============================================================================ */
 
 var ROLLEN = [
@@ -362,13 +398,64 @@ var ROLLEN = [
 ];
 
 var NIVEAUS = [
-  { id:'bb',  naam:'vmbo-bb',           rondes:4, keuzes:2, kosten:true,  lang:false,
-    uitleg:'Twee keuzes per jaar, je ziet vooraf wat het ongeveer kost.' },
-  { id:'kgt', naam:'vmbo-kgt en gl/tl', rondes:5, keuzes:3, kosten:true,  lang:false,
-    uitleg:'Drie keuzes per jaar, met een hint over de gevolgen.' },
-  { id:'hv',  naam:'havo en vwo',       rondes:6, keuzes:3, kosten:false, lang:true,
-    uitleg:'Drie keuzes, gevolgen pas achteraf, plus het effect op lange termijn.' }
+  { id:'bb',  naam:'vmbo-bb',           rondes:4, pot:10, hint:true,  lang:false,
+    uitleg:'Vier jaar, en je ziet meteen wat je verdeling gaat doen.' },
+  { id:'kgt', naam:'vmbo-kgt en gl/tl', rondes:5, pot:9,  hint:false, lang:false,
+    uitleg:'Vijf jaar, en je hebt net te weinig voor iedereen.' },
+  { id:'hv',  naam:'havo en vwo',       rondes:6, pot:8,  hint:false, lang:true,
+    uitleg:'Zes jaar, minder in de pot, plus het effect op lange termijn.' }
 ];
+
+/* Wie er elk jaar iets van je nodig heeft. Per rol drie partijen, en elke
+   partij hangt aan een van de drie banden van de piramide: doe je er een
+   tekort, dan zakt die band. Dat is het hele feodale stelsel in drie rijen. */
+var ONTVANGERS = {
+  heer: [
+    { id:'hof',     naam:'Je eigen hof', kort:'schuur, tafel en huishouden',   meter:'voedsel',     kleur:'#204ECF' },
+    { id:'ridders', naam:'Je ridders',   kort:'paard, harnas en soldij',       meter:'bescherming', kleur:'#F26749' },
+    { id:'boeren',  naam:'Je boeren',    kort:'zaaigoed, rust en een dak',     meter:'trouw',       kleur:'#EA9836' }
+  ],
+  ridder: [
+    { id:'heer',   naam:'Je heer',       kort:'de dienst die je hem beloofde', meter:'trouw',       kleur:'#204ECF' },
+    { id:'wapens', naam:'Je uitrusting', kort:'paard, harnas en knecht',       meter:'bescherming', kleur:'#F26749' },
+    { id:'boeren', naam:'Je boeren',     kort:'de mensen die jouw land doen',  meter:'voedsel',     kleur:'#EA9836' }
+  ],
+  boer: [
+    { id:'pacht', naam:'De pacht',   kort:'wat de heer komt halen',            meter:'bescherming', kleur:'#204ECF' },
+    { id:'kerk',  naam:'De tienden', kort:'het tiende deel voor de kerk',      meter:'trouw',       kleur:'#F26749' },
+    { id:'gezin', naam:'Je gezin',   kort:'wat er thuis op tafel komt',        meter:'voedsel',     kleur:'#EA9836' }
+  ]
+};
+
+/* Wat een jaar zwaar maakt. Per gebeurtenis: wie er dat jaar meer nodig heeft
+   dan anders, en of er minder in de pot zit. De volgorde loopt gelijk met
+   GEBEURTENISSEN hierboven. */
+var DRUK = {
+  heer: [
+    { zwaar:'boeren',  pot:-2, waarom:'De oogst is klein: er is minder te verdelen.' },
+    { zwaar:'ridders', pot:0,  waarom:'Je ridders willen land, en land kost je inkomsten.' },
+    { zwaar:'ridders', pot:0,  waarom:'Rovers op de weg: je ridders moeten erop uit.' },
+    { zwaar:'ridders', pot:-1, waarom:'De koning roept: wie meegaat, moet uitgerust zijn.' },
+    { zwaar:'boeren',  pot:0,  waarom:'De stad lonkt: wie blijft, wil er iets voor terug.' },
+    { zwaar:'boeren',  pot:-2, waarom:'Strenge winter: iedereen teert in, de boeren het eerst.' }
+  ],
+  ridder: [
+    { zwaar:'heer',   pot:0,  waarom:'Je heer roept je op, en een veldtocht kost.' },
+    { zwaar:'wapens', pot:0,  waarom:'Je harnas is versleten en een smid werkt niet gratis.' },
+    { zwaar:'boeren', pot:0,  waarom:'Je boeren klagen: zonder hen ligt je land stil.' },
+    { zwaar:'heer',   pot:-1, waarom:'Twee heren vragen dienst, en beide verwachten alles.' },
+    { zwaar:'wapens', pot:0,  waarom:'Een toernooi: eer kost paarden en harnas.' },
+    { zwaar:'boeren', pot:-2, waarom:'Strenge winter: op jouw land wordt honger geleden.' }
+  ],
+  boer: [
+    { zwaar:'pacht', pot:-1, waarom:'Herendienst midden in de oogst: je tijd is niet van jou.' },
+    { zwaar:'pacht', pot:0,  waarom:'Rovers in de buurt: bescherming moet je verdienen.' },
+    { zwaar:'pacht', pot:0,  waarom:'De pacht komt eraan, en die wacht niet op jou.' },
+    { zwaar:'pacht', pot:0,  waarom:'Alleen de molen van de heer mag malen, tegen zijn prijs.' },
+    { zwaar:'gezin', pot:0,  waarom:'De stad lokt: blijven kost je gezin iets.' },
+    { zwaar:'gezin', pot:-2, waarom:'Strenge winter: de voorraad thuis raakt op.' }
+  ]
+};
 
 var GEBEURTENISSEN = {
   heer: [
@@ -609,29 +696,83 @@ var GEBEURTENISSEN = {
   ];
 
   var rol = null, niveau = null, ronde = 0, staat = null, gebeurtenissen = [], keuzeGemaakt = false, log = [];
-  var alleUitkomsten = [];
+  var gebroken = null;   /* de band die het begaf, als het zover kwam */
+  var uitkomstGewicht = null;
 
-  /* Alle mogelijke speelwijzen doorrekenen. Zo wordt de eindbeoordeling geijkt
-     op wat in deze rol echt haalbaar is: een boer kan nu eenmaal niet dezelfde
-     cijfers halen als een heer, en dat mag het oordeel niet vertekenen. */
-  function berekenUitkomsten(){
-    var totalen = [];
-    function loop(i, st){
-      if (i === gebeurtenissen.length){
-        totalen.push(st.voedsel + st.bescherming + st.trouw);
-        return;
-      }
-      gebeurtenissen[i].keuzes.slice(0, niveau.keuzes).forEach(function(k){
-        var n = { voedsel:st.voedsel, bescherming:st.bescherming, trouw:st.trouw };
-        METERS.forEach(function(m){
-          n[m.id] = Math.max(0, Math.min(10, n[m.id] + (k.ef[m.id] || 0)));
-        });
-        loop(i+1, n);
-      });
+  /* Wat er dit jaar van je gevraagd wordt, en wat je te verdelen hebt. Op een
+     plek, zodat het spel zelf en de ijking hieronder niet uit elkaar kunnen
+     lopen. */
+  function jaarEis(j){
+    var dr = (DRUK[rol.id] || [])[j] || { zwaar:null, pot:0, waarom:'' };
+    var eis = ONTVANGERS[rol.id].map(function(x){ return 3 + (dr.zwaar === x.id ? 2 : 0); });
+    return { eis:eis, pot: Math.max(4, niveau.pot + (dr.pot || 0)), druk:dr };
+  }
+
+  /* Wat een verdeling met de drie meters doet. Wie genoeg kreeg geeft een
+     beetje terug, wie tekortkwam neemt het van zijn band af: een punt bij een
+     klein tekort, twee bij een groter. Verder loopt het niet op, want anders
+     is een misoogst meteen het einde en valt er daarna niets meer te kiezen. */
+  function jaarEffect(eis, gegeven){
+    var o = ONTVANGERS[rol.id], d = { voedsel:0, bescherming:0, trouw:0 };
+    for (var i = 0; i < o.length; i++){
+      var tekort = eis[i] - gegeven[i];
+      d[o[i].meter] += tekort > 0 ? -Math.min(tekort, 2) : 1;
     }
-    loop(0, { voedsel: rol.start.voedsel, bescherming: rol.start.bescherming, trouw: rol.start.trouw });
-    totalen.sort(function(a,b){ return a-b; });
-    return totalen;
+    return d;
+  }
+
+  /* Alle speelwijzen wegen. Zo wordt de eindbeoordeling geijkt op wat in deze
+     rol echt haalbaar is: een boer kan nu eenmaal niet dezelfde cijfers halen
+     als een heer, en dat mag het oordeel niet vertekenen.
+
+     Elke verdeling van de pot over drie partijen is een speelwijze, dus zes
+     jaar lang tientallen miljarden. Die lopen we niet een voor een na: het
+     spel telt per jaar hoeveel speelwijzen in welke stand uitkomen. Meer dan
+     duizend standen bestaan er niet, dus dat is zo gebeurd, en het antwoord
+     is exact in plaats van geschat. */
+  function berekenUitkomsten(){
+    var nu = {}, start = rol.start;
+    nu[start.voedsel + ',' + start.bescherming + ',' + start.trouw] = 1;
+    for (var j = 0; j < niveau.rondes; j++){
+      var e = jaarEis(j), stappen = [];
+      for (var a = 0; a <= e.pot; a++) for (var b = 0; a + b <= e.pot; b++){
+        stappen.push(jaarEffect(e.eis, [a, b, e.pot - a - b]));
+      }
+      var volgend = {};
+      for (var k in nu){ if (!Object.prototype.hasOwnProperty.call(nu, k)) continue;
+        var st = k.split(','), n = nu[k];
+        var v0 = +st[0], b0 = +st[1], t0 = +st[2];
+        for (var i = 0; i < stappen.length; i++){
+          var d = stappen[i];
+          var v = Math.min(10, v0 + d.voedsel),
+              b = Math.min(10, b0 + d.bescherming),
+              t = Math.min(10, t0 + d.trouw);
+          /* een band op nul is het einde: die lijn telt niet mee voor wat er
+             te halen viel, want hij haalt het eind niet */
+          if (v <= 0 || b <= 0 || t <= 0) continue;
+          volgend[v + ',' + b + ',' + t] = (volgend[v + ',' + b + ',' + t] || 0) + n;
+        }
+      }
+      nu = volgend;
+    }
+    var gewicht = [], totaal = 0, hoogst = 0, x;
+    for (x = 0; x <= 30; x++) gewicht[x] = 0;
+    for (var k2 in nu){ if (!Object.prototype.hasOwnProperty.call(nu, k2)) continue;
+      var d2 = k2.split(',');
+      var som = (+d2[0]) + (+d2[1]) + (+d2[2]);
+      gewicht[som] += nu[k2]; totaal += nu[k2];
+      if (som > hoogst) hoogst = som;
+    }
+    return { gewicht:gewicht, totaal:totaal, hoogst:hoogst };
+  }
+
+  /* Het hoogste dat er in deze rol op dit niveau in zat. Daar wordt tegen
+     gemeten, en niet tegen het gemiddelde van alle speelwijzen: tussen alle
+     denkbare verdelingen zitten zo veel volstrekt willekeurige dat je daar
+     met elke redelijke verdeling bovenuit komt. Dat zegt niets.
+     Wat er maximaal in zat, zegt wel iets. */
+  function hoogstHaalbaar(){
+    return uitkomstGewicht && uitkomstGewicht.hoogst ? uitkomstGewicht.hoogst : 30;
   }
 
   var elStart = document.getElementById('scherm-start');
@@ -678,10 +819,10 @@ var GEBEURTENISSEN = {
   }
 
   function start(){
-    ronde = 0; keuzeGemaakt = false; log = [];
+    ronde = 0; keuzeGemaakt = false; log = []; gebroken = null;
     staat = { voedsel: rol.start.voedsel, bescherming: rol.start.bescherming, trouw: rol.start.trouw };
     gebeurtenissen = GEBEURTENISSEN[rol.id].slice(0, niveau.rondes);
-    alleUitkomsten = berekenUitkomsten();
+    uitkomstGewicht = berekenUitkomsten();
     elStart.classList.add('hide'); elEinde.classList.add('hide'); elSpel.classList.remove('hide');
     var pr = document.getElementById('pillRol'), pn = document.getElementById('pillNiv');
     pr.textContent = rol.naam; pr.classList.remove('hide');
@@ -826,81 +967,181 @@ var GEBEURTENISSEN = {
     var kapot = BANDEN.filter(function(b3){ return staat[b3.meter] <= 2; });
     g += kapot.length
       ? '<p class="bandwaarschuwing">De band van ' + kapot.map(function(b4){ return b4.tekst; }).join(' en ') +
-        ' begeeft het. Zonder die afspraak valt de piramide uit elkaar.</p>'
+        ' begeeft het. Komt die op nul, dan valt de piramide uit elkaar en is het spel voorbij.</p>'
       : '<p class="bandtekst">Elke trede hangt van de andere twee af. Zolang de drie banden houden, houdt de piramide.</p>';
     return g + '</div>';
   }
 
-  /* ---------- een jaar spelen ---------- */
+  /* ---------- een jaar spelen ----------
+     Je hebt een pot met graan en handen, en drie partijen die er allemaal iets
+     van moeten hebben. Samen vragen ze meer dan er is: dat is het punt. Je
+     verdeelt met de knoppen op de drie treden, en wie tekortkomt, laat dat
+     merken aan de band die hem met jou verbindt. */
+  var verdeling = null, pot = 0, behoefte = null;
+
+  function ontvangers(){ return ONTVANGERS[rol.id]; }
+
   function tekenBeurt(){
     keuzeGemaakt = false;
-    var g = gebeurtenissen[ronde];
-    var keuzes = g.keuzes.slice(0, niveau.keuzes);
+    var g = gebeurtenissen[ronde], e = jaarEis(ronde), dr = e.druk, o = ontvangers();
+    /* Iedereen vraagt drie, behalve wie het dit jaar zwaar heeft: die vraagt
+       er twee meer bij. In de pot zit minder dan de som, altijd. */
+    behoefte = {}; verdeling = {};
+    o.forEach(function(x, i){ behoefte[x.id] = e.eis[i]; verdeling[x.id] = 0; });
+    pot = e.pot;
 
-    var html = '<span class="eyebrow">jaar ' + (ronde+1) + '</span><h2>' + g.titel + '</h2>' +
-               '<p class="verhaal">' + g.tekst + '</p><div class="keuzes"></div><div class="gevolg"></div>';
-    elBeurt.innerHTML = html;
-
-    var vak = elBeurt.querySelector('.keuzes');
-    keuzes.forEach(function(k, i){
-      var b = document.createElement('button');
-      b.className = 'keuze'; b.type = 'button';
-      var kosten = niveau.kosten ? '<span class="kosten">' + kostenTekst(k.ef) + '</span>' : '';
-      b.innerHTML = '<kbd>' + (i+1) + '</kbd><span>' + k.t + kosten + '</span>';
-      b.addEventListener('click', function(){ kies(k, b, vak); });
-      vak.appendChild(b);
-    });
+    elBeurt.innerHTML = '<span class="eyebrow">jaar ' + (ronde+1) + '</span><h2>' + g.titel + '</h2>' +
+      '<p class="verhaal">' + g.tekst + '</p>' +
+      (dr.waarom ? '<p class="druk">' + dr.waarom + '</p>' : '') +
+      '<div class="verdeelvak" id="verdeelvak"></div><div class="gevolg"></div>';
+    tekenVerdeling();
   }
 
-  function kostenTekst(ef){
-    var d = [];
-    METERS.forEach(function(m){
-      var v = ef[m.id] || 0;
-      if (v > 0) d.push('meer ' + m.naam.toLowerCase());
-      if (v < 0) d.push('minder ' + m.naam.toLowerCase());
-    });
-    return d.length ? 'Verwacht: ' + d.join(', ') : 'Verwacht: weinig verandering';
+  function over(){
+    var uit = 0;
+    ontvangers().forEach(function(x){ uit += verdeling[x.id]; });
+    return pot - uit;
   }
 
-  function kies(k, knop, vak){
+  function tekenVerdeling(){
+    var vak = document.getElementById('verdeelvak'), o = ontvangers(), rest = over();
+    var som = 0; o.forEach(function(x){ som += behoefte[x.id]; });
+    var h = '<div class="potrij"><span class="pot"><b>' + rest + '</b> van de ' + pot + ' te verdelen</span>' +
+      '<span class="potuit">samen vragen ze ' + som + '. Je komt ' + (som - pot) + ' tekort, dus iemand krijgt te weinig.</span></div>';
+    h += '<div class="treden">';
+    o.forEach(function(x, i){
+      var geef = verdeling[x.id], nodig = behoefte[x.id];
+      var vol = Math.min(100, Math.round(geef / nodig * 100));
+      var staat2 = geef >= nodig ? 'genoeg' : (geef >= nodig - 1 ? 'bijna' : 'tekort');
+      h += '<div class="trede ' + staat2 + '" style="--tk:' + x.kleur + '">' +
+        '<div class="tnaam"><b>' + x.naam + '</b><small>' + x.kort + '</small></div>' +
+        '<div class="tbalk"><i style="width:' + vol + '%"></i>' +
+          '<span class="tcijfer">' + geef + ' van de ' + nodig + '</span></div>' +
+        '<div class="tknoppen">' +
+          '<button type="button" class="tmin" data-id="' + x.id + '" aria-label="Minder naar ' + x.naam + '"' + (geef <= 0 ? ' disabled' : '') + '>&minus;</button>' +
+          '<kbd>' + (i + 1) + '</kbd>' +
+          '<button type="button" class="tplus" data-id="' + x.id + '" aria-label="Meer naar ' + x.naam + '"' + (rest <= 0 ? ' disabled' : '') + '>+</button>' +
+        '</div></div>';
+    });
+    h += '</div>';
+    if (niveau.hint) h += '<p class="hint">' + hintTekst() + '</p>';
+    h += '<div class="knoprij"><button class="btn" id="deelBtn" type="button"' + (rest > 0 ? ' disabled' : '') + '>' +
+      (rest > 0 ? 'Verdeel eerst alles' : 'Zo doe ik het') + '</button>' +
+      '<button class="btn ghost" id="wisBtn" type="button">Opnieuw verdelen</button></div>';
+    vak.innerHTML = h;
+
+    Array.prototype.forEach.call(vak.querySelectorAll('.tplus'), function(b){
+      b.addEventListener('click', function(){ if (over() > 0){ verdeling[b.getAttribute('data-id')]++; tekenVerdeling(); } });
+    });
+    Array.prototype.forEach.call(vak.querySelectorAll('.tmin'), function(b){
+      b.addEventListener('click', function(){ var id = b.getAttribute('data-id'); if (verdeling[id] > 0){ verdeling[id]--; tekenVerdeling(); } });
+    });
+    document.getElementById('wisBtn').addEventListener('click', function(){
+      ontvangers().forEach(function(x){ verdeling[x.id] = 0; }); tekenVerdeling();
+    });
+    var deel = document.getElementById('deelBtn');
+    if (!deel.disabled) deel.addEventListener('click', rekenAf);
+  }
+
+  /* Op een digibord wil je niet mikken: 1, 2 en 3 geven een eenheid aan die
+     trede, met shift erbij haal je er een af. Enter verdeelt. */
+  document.addEventListener('keydown', function(e){
+    if (keuzeGemaakt || !verdeling || elSpel.classList.contains('hide')) return;
+    if (/^[123]$/.test(e.key)){
+      var x = ontvangers()[parseInt(e.key, 10) - 1];
+      if (!x) return;
+      if (e.shiftKey){ if (verdeling[x.id] > 0){ verdeling[x.id]--; tekenVerdeling(); } }
+      else if (over() > 0){ verdeling[x.id]++; tekenVerdeling(); }
+      e.preventDefault();
+    } else if (e.key === 'Enter' && over() === 0){
+      rekenAf(); e.preventDefault();
+    }
+  });
+
+  /* Alleen op vmbo-bb: in gewone woorden wat deze verdeling gaat doen. */
+  function hintTekst(){
+    var tekorten = ontvangers().filter(function(x){ return verdeling[x.id] < behoefte[x.id]; });
+    if (!tekorten.length) return 'Iedereen krijgt genoeg. Dat lukt zelden.';
+    return 'Zo komt ' + tekorten.map(function(x){ return x.naam.toLowerCase(); }).join(' en ') +
+      ' tekort, en dat kost je ' + tekorten.map(function(x){ return meterNaam(x.meter); }).join(' en ') + '.';
+  }
+  function meterNaam(id){
+    var m = METERS.filter(function(x){ return x.id === id; })[0];
+    return m ? m.naam.toLowerCase() : id;
+  }
+
+  /* De uitkomst. Elke partij die genoeg kreeg geeft een beetje terug, elke
+     partij die tekortkwam neemt precies dat tekort van zijn band af. Daarna
+     zoekt het spel bij wat er gebeurde het verhaal dat er het dichtst bij ligt:
+     zo horen de geschreven gevolgen bij wat jij deed. */
+  function verdeelUit(){
+    var e = jaarEis(ronde);
+    return jaarEffect(e.eis, ontvangers().map(function(x){ return verdeling[x.id]; }));
+  }
+  function passendVerhaal(g, d){
+    var best = null, bestScore = -1e9;
+    g.keuzes.forEach(function(k){
+      var sc = 0;
+      METERS.forEach(function(m){ sc += (k.ef[m.id] || 0) * (d[m.id] || 0); });
+      if (sc > bestScore){ bestScore = sc; best = k; }
+    });
+    return best || g.keuzes[0];
+  }
+
+  function rekenAf(){
     if (keuzeGemaakt) return;
     keuzeGemaakt = true;
-
-    Array.prototype.forEach.call(vak.children, function(c){ c.disabled = true; });
-    knop.classList.add('gekozen');
-
+    var g = gebeurtenissen[ronde], d = verdeelUit(), k = passendVerhaal(g, d);
     var deltas = '';
     METERS.forEach(function(m){
-      var v = k.ef[m.id] || 0;
+      var v = d[m.id] || 0;
       staat[m.id] = Math.max(0, Math.min(10, staat[m.id] + v));
       var kl = v > 0 ? 'op' : (v < 0 ? 'neer' : 'nul');
-      var tk = v > 0 ? '+' + v : (v < 0 ? String(v) : '0');
-      deltas += '<span class="delta ' + kl + '">' + m.naam + ' ' + tk + '</span>';
+      deltas += '<span class="delta ' + kl + '">' + m.naam + ' ' + (v > 0 ? '+' + v : v) + '</span>';
     });
-    log.push({ jaar: ronde+1, keuze: k.t });
+    var kreeg = ontvangers().map(function(x){ return x.naam.toLowerCase() + ' ' + verdeling[x.id] + ' van de ' + behoefte[x.id]; }).join(', ');
+    log.push({ jaar: ronde+1, keuze: kreeg });
 
-    var g = elBeurt.querySelector('.gevolg');
-    var html = '<h3>Wat er daarna gebeurde</h3><p>' + k.gevolg + '</p><div class="deltas">' + deltas + '</div>';
+    /* Een meter op nul betekent dat een van de drie banden is geknapt. In dit
+       stelsel draagt elke laag de andere twee; valt er een weg, dan houdt de
+       rest het niet. Daar loopt het spel dan ook af. */
+    var stuk = METERS.filter(function(m){ return staat[m.id] <= 0; })[0];
+    if (stuk) gebroken = stuk;
+
+    Array.prototype.forEach.call(document.querySelectorAll('#verdeelvak button'), function(b){ b.disabled = true; });
+    var vg = elBeurt.querySelector('.gevolg');
+    var html = '<h3>Wat er daarna gebeurde</h3><p class="watgaf">Je gaf ' + kreeg + '.</p><p>' + k.gevolg + '</p>' +
+      '<div class="deltas">' + deltas + '</div>';
     var waarschuwing = alarmTekst();
     if (waarschuwing) html += '<div class="alarm">' + waarschuwing + '</div>';
     if (niveau.lang && k.lang) html += '<div class="lange"><b>Op lange termijn:</b> ' + k.lang + '</div>';
     html += '<button class="btn" id="verderBtn" type="button" style="margin-top:18px">' +
-            (ronde+1 < niveau.rondes ? 'Naar het volgende jaar' : 'Bekijk hoe het afliep') + '</button>';
-    g.innerHTML = html;
-    g.classList.add('on');
+            (gebroken ? 'Bekijk hoe het afliep' :
+             ronde+1 < niveau.rondes ? 'Naar het volgende jaar' : 'Bekijk hoe het afliep') + '</button>';
+    vg.innerHTML = html;
+    vg.classList.add('on');
     tekenPaneel();
 
     document.getElementById('verderBtn').addEventListener('click', function(){
-      if (ronde+1 < niveau.rondes){ ronde++; tekenPaneel(); tekenBeurt(); scrollTo({top:0, behavior:'smooth'}); }
+      if (!gebroken && ronde+1 < niveau.rondes){ ronde++; tekenPaneel(); tekenBeurt(); scrollTo({top:0, behavior:'smooth'}); }
       else toonEinde();
     });
   }
 
   function alarmTekst(){
-    if (staat.voedsel <= 1) return 'Je voorraad is bijna op. Honger maakt elke andere keuze moeilijker.';
-    if (staat.bescherming <= 1) return 'Je staat vrijwel onbeschermd. Iedereen in de omgeving weet dat inmiddels.';
+    if (gebroken) return '';
+    if (staat.voedsel <= 1) return 'Je voorraad is bijna op. Nog een misoogst en er valt niets meer te verdelen.';
+    if (staat.bescherming <= 1) return 'Je staat vrijwel onbeschermd. Zakt dit naar nul, dan is het afgelopen.';
     if (staat.trouw <= 1) return 'De band met de laag boven en onder je is bijna weg. Zonder trouw houdt niets je op je plek.';
     return '';
+  }
+
+  /* Welke partij het was die je liet vallen, in de woorden van deze rol: de
+     meter heet 'voedsel', maar wat er brak was de band met je boeren. */
+  function gebrokenWie(){
+    if (!gebroken) return '';
+    var x = ONTVANGERS[rol.id].filter(function(o){ return o.meter === gebroken.id; })[0];
+    return x ? x.naam.toLowerCase() : gebroken.naam.toLowerCase();
   }
 
   /* ---------- eindscherm ---------- */
@@ -909,28 +1150,34 @@ var GEBEURTENISSEN = {
     var totaal = staat.voedsel + staat.bescherming + staat.trouw;
     var laagste = METERS.reduce(function(a,b){ return staat[a.id] <= staat[b.id] ? a : b; });
 
-    /* hoeveel andere speelwijzen deden het slechter dan jij? */
-    var lager = 0;
-    for (var i = 0; i < alleUitkomsten.length; i++) if (alleUitkomsten[i] < totaal) lager++;
-    var plek = alleUitkomsten.length ? lager / alleUitkomsten.length : .5;
+    /* hoe dicht kwam je bij het hoogste dat erin zat? Verliezen hoort erbij:
+       er is elk jaar te weinig, dus ook de beste verdeling levert terrein in.
+       Daarom staat er nooit dat je sterker staat dan aan het begin. */
+    var top = hoogstHaalbaar();
+    var plek = top ? totaal / top : .5;
 
     var titel, sub;
-    if (plek >= .70){
-      titel = 'Je staat sterker dan aan het begin';
-      sub = 'Je hield alle drie de draden vast: eten, veiligheid en de band met de mensen boven en onder je. Weinig speelwijzen komen hier.';
-    } else if (plek >= .35){
+    if (gebroken){
+      titel = 'De band met ' + gebrokenWie() + ' brak';
+      sub = 'Je liet ' + gebrokenWie() + ' te vaak tekortkomen, en in jaar ' + (ronde+1) +
+        ' viel die band helemaal weg. Daarmee viel je positie weg: in dit stelsel draagt elke laag de twee andere.';
+    } else if (plek >= .80){
+      titel = 'Je hebt de piramide overeind gehouden';
+      sub = 'Je hield alle drie de banden vast: eten, veiligheid en de trouw van de mensen boven en onder je. Veel beter dan dit kon niemand het doen.';
+    } else if (plek >= .50){
       titel = 'Je hebt het gered, met schade';
       sub = 'Je kwam de jaren door, maar er zijn scheuren gevallen die je volgend jaar gaat voelen.';
     } else {
       titel = 'Je positie is afgebrokkeld';
       sub = 'Te veel ging tegelijk mis. In dit stelsel houdt niemand het alleen vol, en dat merk je nu.';
     }
-    if (staat.voedsel === 0) sub += ' Je schuren zijn leeg.';
-    if (staat.trouw === 0) sub += ' De band met de anderen is verbroken.';
+    if (!gebroken && staat.voedsel === 0) sub += ' Je schuren zijn leeg.';
+    if (!gebroken && staat.trouw === 0) sub += ' De band met de anderen is verbroken.';
 
+    document.getElementById('eindBoven').textContent = gebroken ? 'jaar ' + (ronde+1) + ', en verder kwam je niet' : 'na de laatste winter';
     document.getElementById('eindTitel').textContent = titel;
     document.getElementById('eindSub').textContent = sub;
-    SPEL.einde({ spel:'feodalisme', score:totaal, label:'punten', sterren: plek >= .7 ? 3 : plek >= .35 ? 2 : 1, ronde:0, punten:totaal, vak:'ges' });
+    SPEL.einde({ spel:'feodalisme', score:totaal, label:'punten', sterren: gebroken ? 1 : plek >= .8 ? 3 : plek >= .5 ? 2 : 1, ronde:0, punten:totaal, vak:'ges' });
 
     var uitleg = {
       heer:'Jij had het land, maar geen handen en geen zwaarden. Elke keer dat je iets weggaf, kocht je daar trouw mee terug. Dat is de ruil waar de piramide op draait.',
@@ -939,9 +1186,9 @@ var GEBEURTENISSEN = {
     };
 
     var html = '<div class="slotkaart"><b>Jouw jaren in cijfers</b><p>Voedsel ' + staat.voedsel + ', bescherming ' +
-      staat.bescherming + ', trouw ' + staat.trouw + '. Samen ' + totaal + ' punten, beter dan ' +
-      Math.round(plek*100) + ' van de 100 mogelijke speelwijzen in deze rol.</p></div>' +
-      '<div class="slotkaart"><b>Waarom deze piramide standhield</b><p>' + uitleg[rol.id] + '</p></div>' +
+      staat.bescherming + ', trouw ' + staat.trouw + '. Samen ' + totaal + ' punten. Meer dan ' + top +
+      ' zat er in deze rol niet in: er is elk jaar te weinig, dus verliezen hoort erbij.</p></div>' +
+      '<div class="slotkaart"><b>Waarom deze piramide op ruil draaide</b><p>' + uitleg[rol.id] + '</p></div>' +
       '<div class="slotkaart"><b>Jouw zwakste punt: ' + laagste.naam.toLowerCase() + '</b><p>' + zwakTekst(laagste.id) + '</p></div>';
 
     var lijst = log.map(function(l){ return 'Jaar ' + l.jaar + ': ' + l.keuze; }).join('<br>');
