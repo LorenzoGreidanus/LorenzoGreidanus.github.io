@@ -8,7 +8,7 @@
    /api/kamer            POST  maakt een kamer, geeft {code, sleutel}
    /api/kamer/ABCD       GET   de stand van de kamer (bestaat hij, welke fase)
    /ws/ABCD?...          WebSocket naar de kamer
-   /q                    de korte link voor leerlingen: stuurt door naar de quiz
+   /q                    de korte link voor leerlingen: stuurt door naar de instappagina
    /q/ABCD               idem, met de code al ingevuld */
 export { Kamer } from "./kamer.js";
 export { Klassement } from "./klassement.js";
@@ -65,11 +65,17 @@ export default {
     if (p === "/q" || p.startsWith("/q/")){
       const code = p.slice(3).toUpperCase().replace(/[^A-Z]/g, "");
       /* met een code kijken we welk spel erbij hoort: de Klasquiz, de Klasstrijd of een rollenspel */
-      let pagina = "klasquiz.html";
+      /* Zonder code weet nog niemand welk spel het wordt, dus dan gaat de
+         leerling naar de instappagina: die vraagt alleen de code en stuurt hem
+         daarna naar het goede spel. Met een code weten we het hier al. */
+      let pagina = "mee.html";
       if (code.length === 4){
         try {
           const r = await env.KAMERS.get(env.KAMERS.idFromName(code)).fetch("https://kamer/stand");
-          if (r.ok){ const j = await r.json(); if (j.spel === "strijd") pagina = "strijd.html"; else if (j.spel === "rollen") pagina = "rol.html"; }
+          if (r.ok){
+            const j = await r.json();
+            pagina = j.spel === "strijd" ? "strijd.html" : j.spel === "rollen" ? "rol.html" : "klasquiz.html";
+          }
         } catch (e){}
       }
       return Response.redirect(url.origin + "/leermiddelen/" + pagina + (code ? "?k=" + code : ""), 302);
