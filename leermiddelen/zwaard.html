@@ -76,10 +76,12 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .btn:not(:disabled):hover{transform:translateY(-1px)}
 
 /* ---------- het spel ---------- */
-.spel{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;padding:10px 0 16px;align-items:stretch;
-  height:calc(100vh - 62px);min-height:560px}
-@media(max-width:1000px){.spel{grid-template-columns:1fr;height:auto}.arenavak{height:56vw}}
-.arenakolom{display:flex;flex-direction:column;min-height:0;gap:8px;height:100%}
+/* De arena krijgt de hele breedte. De vragen en de winkel komen er als paneel
+   overheen: tijdens het vechten zie je alleen het veld, en zodra de vragen
+   komen is er niets anders meer te zien. */
+.spel{display:block;padding:10px 0 16px;height:calc(100vh - 62px);min-height:560px}
+@media(max-width:1000px){.spel{height:auto}.arenavak{height:auto;min-height:0}}
+.arenakolom{position:relative;display:flex;flex-direction:column;min-height:0;gap:8px;height:100%}
 .hudrij{display:flex;gap:8px;align-items:stretch}
 .hud{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch;flex:1}
 /* de ontwijkknop: voor wie op een aanraakscherm speelt, en als teller voor de rest */
@@ -94,17 +96,32 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .levenbalk{height:10px;border-radius:99px;background:rgba(20,34,76,.1);overflow:hidden;margin-top:4px}
 .levenbalk i{display:block;height:100%;background:var(--goed);transition:width .2s var(--ease);border-radius:99px}
 .levenbalk i.laag{background:var(--fout)}
-.arenavak{flex:1;min-height:260px;background:#e9dfc9;border-radius:20px;border:1px solid rgba(20,34,76,.12);overflow:hidden;
+/* Het vak heeft dezelfde verhouding als het speelveld zelf. Anders blijft er
+   links en rechts een rand over waar niets gebeurt, en is het veld kleiner
+   dan het scherm toelaat. */
+.arenavak{flex:1 1 auto;min-height:0;aspect-ratio:1100 / 620;width:auto;max-width:100%;margin-inline:auto;
+  background:#e9dfc9;border-radius:20px;border:1px solid rgba(20,34,76,.12);overflow:hidden;
   position:relative;touch-action:none;user-select:none;-webkit-user-select:none;box-shadow:0 10px 26px rgba(20,34,76,.08)}
 .arenavak svg{display:block;width:100%;height:100%;overflow:visible}
 .arenatip{font-size:.86rem;color:var(--muted);background:#fff;border:1px solid rgba(20,34,76,.09);border-radius:12px;padding:8px 13px}
 
-.zij{background:var(--ocean);color:#fff;border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:12px;min-height:0;overflow:auto;max-height:100%}
+/* het paneel ligt over de arena, die er gedimd achter blijft staan */
+.zij{position:absolute;inset:0;z-index:5;display:grid;place-items:center;padding:12px;
+  background:rgba(15,26,61,.58);border-radius:20px;animation:paneel-in .22s var(--ease) both}
+@media(prefers-reduced-motion:reduce){.zij{animation:none}}
+@keyframes paneel-in{from{opacity:0}to{opacity:1}}
+.paneelkaart{background:var(--ocean);color:#fff;border-radius:22px;padding:20px 22px;
+  width:min(100%,640px);max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:12px;
+  box-shadow:0 26px 60px rgba(20,34,76,.4)}
+@media(max-width:1000px){
+  .zij{position:fixed;inset:0;border-radius:0;padding:10px;z-index:60}
+  .paneelkaart{width:100%;max-height:100%}
+}
 .zij .eyebrow{color:rgba(255,255,255,.72)}
-.zij h2{font-size:1.25rem;line-height:1.3}
-.zij p.sub{font-size:.88rem;color:rgba(255,255,255,.8)}
-.opties{display:grid;gap:8px}
-.optie{background:transparent;border:2px solid rgba(251,246,241,.45);color:#fff;border-radius:14px;padding:11px 15px;text-align:left;font-size:.95rem;font-weight:500}
+.zij h2{font-size:clamp(1.3rem,2.4vw,1.8rem);line-height:1.25}
+.zij p.sub{font-size:.9rem;color:rgba(255,255,255,.8)}
+.opties{display:grid;gap:9px}
+.optie{background:transparent;border:2px solid rgba(251,246,241,.45);color:#fff;border-radius:14px;padding:13px 17px;text-align:left;font-size:1.02rem;font-weight:500}
 .optie:hover:not(:disabled){background:rgba(255,255,255,.12)}
 .optie.juist{background:var(--room);border-color:var(--room);color:var(--ink);font-weight:600}
 .optie.mis{background:var(--crab);border-color:var(--crab)}
@@ -119,7 +136,11 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .vlaggat span{font-size:.7rem;font-weight:500;opacity:.8}
 
 /* de winkel */
-.winkel{display:grid;gap:8px}
+/* Het paneel is breder dan de oude kolom, dus de winkel past in twee
+   kolommen zodra daar ruimte voor is. Zo staat alles in beeld zonder te
+   scrollen. */
+.winkel{display:grid;gap:9px}
+@media(min-width:620px){.winkel{grid-template-columns:1fr 1fr}.waar.los{grid-column:1 / -1}}
 .waar{display:grid;grid-template-columns:40px 1fr auto;gap:10px;align-items:center;background:rgba(255,255,255,.1);border-radius:14px;padding:9px 11px;
   border:1.5px solid transparent;text-align:left;color:#fff;width:100%}
 .waar:hover:not(:disabled){border-color:rgba(255,255,255,.55)}
@@ -258,8 +279,8 @@ body.groot .meter b{font-size:1.45rem}
     <div class="hudrij"><div class="hud" id="hud"></div><button class="dashknop" type="button" id="dashBtn">Ontwijk<small>spatie of shift</small></button></div>
     <div class="arenavak" id="arenavak"><svg id="arena" viewBox="0 0 1100 620" xmlns="http://www.w3.org/2000/svg"></svg></div>
     <p class="arenatip" id="arenatip">Pijltjes of WASD om te lopen. Je zwaard slaat vanzelf.</p>
+    <aside class="zij hide" id="zij"></aside>
   </div>
-  <aside class="zij" id="zij"></aside>
 </section>
 
 <section class="wrap eind hide" id="scherm-einde">
@@ -555,6 +576,11 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
 
   /* ---------- toestand ---------- */
   var fase = 'ronde';           /* ronde, vragen, winkel */
+  /* Na de laatste fout speel je nog even door. De munten die er dan nog
+     liggen kreeg je altijd al, maar het oprapen zelf werd je afgepakt, en
+     dat voelt alsof het spel je iets afneemt. Ligt er niets meer, dan hoef
+     je ook niet te wachten. */
+  var RAAPTIJD = 5, rondeUit = 0, raapTeller = -1;
   var strijdExtra = 0;          /* fouten die klasgenoten je sturen terwijl je tussen twee rondes zit */
   var ronde = 0, munten = 0, hp = 0, maxHp = 0, geveld = 0, level = {}, tijdInRonde = 0;
   var sp = { x:550, y:310, mikt:0, klok:0, zwaai:0, raak:0, mesKlok:0, flits:0, dash:0, dashKlok:0, dx:1, dy:0 };
@@ -1412,7 +1438,17 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
 
     /* opruimen en de ronde afsluiten */
     fouten = fouten.filter(function(f){ return f.hp > 0; });
-    if (teSpawnen <= 0 && !fouten.length && fase === 'ronde'){ naarVragen(); }
+    if (teSpawnen <= 0 && !fouten.length && fase === 'ronde'){
+      if (munt.length && rondeUit < RAAPTIJD){
+        rondeUit += dt;
+        var nog = Math.max(0, Math.ceil(RAAPTIJD - rondeUit));
+        if (nog !== raapTeller){
+          raapTeller = nog;
+          document.getElementById('arenatip').textContent =
+            'De ronde is gehaald. Nog ' + nog + ' seconde' + (nog === 1 ? '' : 'n') + ' om de munten op te rapen.';
+        }
+      } else naarVragen();
+    }
     tekenHud();
   }
   /* Een speler gaat neer. Alleen is dat het einde. Samen blijft hij liggen
@@ -1596,7 +1632,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       var rest = 0; munt.forEach(function(m){ rest += m.waarde; });
       if (co.aan && maat){ munten += Math.ceil(rest / 2); maat.munten += Math.floor(rest / 2); } else munten += rest;
     }
-    munt = [];
+    munt = []; rondeUit = 0; raapTeller = -1;
     co.klaar = false; co.maatKlaar = false;
     botLog('ronde-af');
     fase = 'vragen';
@@ -1650,15 +1686,10 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   if (window.MELDING) MELDING.volg('zij', function(el){ var o = el.querySelector('.opties'); return o ? o.parentNode : null; }, function(){ return { spel:'zwaard', vraag:vraag ? vraag.v : '', vak:vak, niveau:niveau }; });
   function tekenZij(){
     var z = document.getElementById('zij'), h = '';
-    if (fase === 'ronde'){
-      h += '<p class="eyebrow">ronde ' + ronde + '</p><h2>Houd stand</h2>' +
-        '<p class="sub">Loop weg van de groep en sla ze een voor een. Het zwaard slaat vanzelf naar wat dichtbij komt' +
-        (stat('mes') ? ', het werpmes naar wat ver weg is' : '') + '.</p>';
-      h += '<div class="terug"><b>Je uitrusting</b><br>' + UITRUSTING.filter(function(u){ return !u.los; }).map(function(u){
-        return u.naam + ' ' + stat(u.id);
-      }).join(' \u00b7 ') + '</div>';
-      h += '<p class="sub" style="margin-top:auto;font-size:.8rem">Elke vijfde ronde komt er een baas. Fouten die je velt laten soms een munt vallen; loop erover om hem op te rapen.</p>';
-    } else if (fase === 'vragen'){
+    /* Tijdens het vechten hoort er niets over de arena te liggen. */
+    if (fase === 'ronde'){ z.classList.add('hide'); z.innerHTML = ''; return; }
+    z.classList.remove('hide');
+    if (fase === 'vragen'){
       h += '<p class="eyebrow">vraag ' + (vragenTotaal - vragenOver + (geklikt >= 0 ? 0 : 1)) + ' van ' + vragenTotaal + ' \u00b7 ' + (vraag.t || '') +
         (slim.verhoogd() ? ' \u00b7 ' + vraagNiveauNaam() : '') + '</p>';
       h += '<h2>' + vraag.v + '</h2>';
@@ -1679,7 +1710,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
         var prijs = u.los ? u.prijs[0] : (vol ? null : u.prijs[lv]);
         var kan = prijs !== null && munten >= prijs && (!u.los || hp < maxHp);
         var pips = u.los ? '' : '<span class="pips">' + u.prijs.map(function(_, i){ return '<i class="' + (i < lv ? 'aan' : '') + '"></i>'; }).join('') + '</span>';
-        return '<button class="waar' + (vol ? ' vol' : '') + '" type="button" data-koop="' + u.id + '"' + (kan ? '' : ' disabled') + '>' +
+        return '<button class="waar' + (vol ? ' vol' : '') + (u.los ? ' los' : '') + '" type="button" data-koop="' + u.id + '"' + (kan ? '' : ' disabled') + '>' +
           '<i style="background:' + u.kleur + '"><svg viewBox="0 0 24 24" width="24" height="24">' + ICONEN[u.ico] + '</svg></i>' +
           '<span><b>' + u.naam + pips + '</b><small>' + u.onder + ' \u00b7 ' + u.uit + '</small></span>' +
           '<span class="prijs">' + (vol ? 'vol' : prijs + (u.los && hp >= maxHp ? ' (leven is vol)' : '')) + '</span></button>';
@@ -1688,7 +1719,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       else h += '<button class="btn" id="rondeBtn" type="button">Ronde ' + (ronde + 1) + ' starten' + ((ronde + 1) % BAASRONDE === 0 ? ', met baas' : '') +
         (co.aan && co.maatKlaar ? ' (' + (maat ? maat.naam : 'je maat') + ' is klaar)' : '') + '</button>';
     }
-    z.innerHTML = h;
+    z.innerHTML = '<div class="paneelkaart">' + h + '</div>';
     Array.prototype.forEach.call(z.querySelectorAll('.optie'), function(b){ b.addEventListener('click', function(){ antwoord(parseInt(b.getAttribute('data-i'), 10)); }); });
     var vb = document.getElementById('verderBtn'); if (vb) vb.addEventListener('click', verder);
     Array.prototype.forEach.call(z.querySelectorAll('[data-koop]'), function(b){ b.addEventListener('click', function(){ koop(b.getAttribute('data-koop')); }); });
