@@ -5685,7 +5685,18 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       }
     });
     vijanden.forEach(function(e){ if (e.flits > 0) e.flits -= dt; });
-    vijanden = vijanden.filter(function(e){ return !e.dood; });
+    vijanden = vijanden.filter(function(e){
+      if (e.dood) return false;
+      /* vangnet: een fout met een kapot getal valt nooit en komt nooit aan,
+         en dan loopt de ronde niet af. Weg ermee. */
+      if (!isFinite(e.hp) || !isFinite(e.d) || !isFinite(e.snelheid)){
+        if (window.console && console.warn){
+          console.warn('vastloper weggehaald', { soort:e.soort, hp:e.hp, d:e.d, snelheid:e.snelheid, ronde:bank.ronde });
+        }
+        return false;
+      }
+      return true;
+    });
     schoten.forEach(function(s){ s.leven -= dt; });
     schoten = schoten.filter(function(s){ return s.leven > 0; });
     cijfers.forEach(function(c){ c.leven -= dt; c.y -= 26 * dt; });
