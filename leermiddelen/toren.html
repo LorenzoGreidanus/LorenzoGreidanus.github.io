@@ -981,7 +981,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
      terugkomt. Munten, levens en torens zijn van allebei. */
   var co = { aan:false, rol:null, maat:'', zendKlok:0, gastKlok:null, gastLaatst:0, gehad:false, vrij:null, laatstZend:0, laatstePakket:0, vaart:1, pauze:false,
              buf:[], verschil:null, getoond:null, tikken:0, slagen:0,
-             lock:false, inbox:[], log:{}, inTicks:{}, bevestigd:0, hashes:{}, reserve:2, stil:0, opzet:null, wachtOp:false, seed:0, vlLaatst:'' };
+             lock:false, inbox:[], log:{}, inTicks:{}, bevestigd:0, hashes:{}, reserve:2, stil:0, opzet:null, wachtOp:false, seed:0, vlLaatst:'',
+             maatKeuze:null, startWacht:0, samenErbij:0 };
   /* Samen spelen gaat in de pas (lockstep): allebei rekenen precies hetzelfde
      spel uit, tik voor tik, met hetzelfde toeval. Wat een speler doet (bouwen,
      versterken, een goed antwoord) is een opdracht die bij allebei in dezelfde
@@ -1102,6 +1103,20 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     return lijst;
   }
   function gekozen(){ return keuzeTorens[thema.id] || laadKeuze(); }
+  /* In een duel bouwen jullie uit een menu, dus hoort dat menu van allebei te
+     zijn: eerst de torens van de gastheer, daarna die van zijn maat. Wat hier
+     niet past of bij de gastheer nog op slot staat valt af, want anders zou de
+     ene een toren kunnen zetten die de ander niet kent. */
+  var SAMENKEUZE = MAXKEUZE * 2;
+  function samenKeuze(eigen, maat){
+    var uit = eigen.slice();
+    (maat || []).forEach(function(id){
+      if (uit.length >= SAMENKEUZE || uit.indexOf(id) >= 0) return;
+      if (!SOORTEN[id] || !past(id) || !isVrij(id)) return;
+      uit.push(id);
+    });
+    return uit;
+  }
   function bewaarKeuze(){
     try { localStorage.setItem('lg-toren-keuze-' + thema.id, JSON.stringify(gekozen())); } catch (e){}
   }
@@ -2355,13 +2370,22 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       ? (toren.kracht ? KRACHTEN[toren.soort].naam : 'tik om te versterken of te verplaatsen')
       : bank.munten + ' munten in kas';
     var br = 276, hr = 50, gat = 6, kop = 40;
-    var h = kop + rijen.length * (hr + gat) - gat + 16;
+    /* Meer dan zeven rijen passen niet onder elkaar op het bord: dan zou je de
+       onderste niet meer kunnen aantikken. Vanaf acht gaat het menu daarom in
+       twee kolommen naast elkaar. */
+    var kol = rijen.length > 7 ? 2 : 1, perKol = Math.ceil(rijen.length / kol);
+    var menuB = kol === 2 ? br * 2 : br;
+    var h = kop + perKol * (hr + gat) - gat + 16;
     var mx = x + 30, my = y - h / 2;
-    if (mx + br > BREED - 8) mx = x - 30 - br;
+    if (mx + menuB > BREED - 8) mx = x - 30 - menuB;
     if (mx < 8) mx = 8;
     my = Math.max(8, Math.min(HOOG - h - 8, my));
-    rijen.forEach(function(r, k){ r.x = mx + 8; r.y = my + kop + k * (hr + gat); r.b = br - 16; r.h = hr; });
-    return { x:mx, y:my, b:br, h:h, rijen:rijen, punt:{ x:x, y:y }, toren:toren || null, opWeg:!!opWeg,
+    rijen.forEach(function(r, k){
+      r.x = mx + 8 + Math.floor(k / perKol) * br;
+      r.y = my + kop + (k % perKol) * (hr + gat);
+      r.b = br - 16; r.h = hr;
+    });
+    return { x:mx, y:my, b:menuB, h:h, rijen:rijen, punt:{ x:x, y:y }, toren:toren || null, opWeg:!!opWeg,
              titel:titel, onder:onder2, kleur:toren ? SOORTEN[toren.soort].kleur : (opWeg ? '#5b6480' : '#204ECF') };
   }
 
@@ -5814,7 +5838,14 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   }
   /* wat de maat vraagt, met dezelfde regels als op het bord zelf */
   function hostOntvang(d){
-    if (!d || !inSpel() || pauze) return;
+    if (!d) return;
+    /* de torenkeuze van je maat komt binnen voordat het potje begint */
+    if (d.k === 'kz'){
+      co.maatKeuze = Array.isArray(d.gz) ? d.gz : null;
+      if (co.startWacht){ clearTimeout(co.startWacht); co.startWacht = 0; if (!inSpel() && vak) begin(); }
+      return;
+    }
+    if (!inSpel() || pauze) return;
     if (co.lock){
       if (d.k === 'in' && d.c && typeof d.c.k === 'string' && d.c.k !== 'in') co.inbox.push(d.c);
       else if (d.k === 'val') valTerug();
@@ -6200,10 +6231,17 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     vijanden = []; torens = []; schoten = []; pot = null; vrienden = []; vliegers = []; lavas = [];
     vrijBijStart = { tonkla:tonklaVrij, aap:aapVrij, eiland:eilandVrij, archipel:archipelVrij, vulkaan:vulkaanVrij };
     laadKeuze();
+    co.samenErbij = 0;
     if (co.aan && co.lock && co.rol === 'gast' && co.opzet){
-      keuzeTorens[thema.id] = co.opzet.gz || gekozen();
+      var eigenLijst = gekozen().slice();
+      keuzeTorens[thema.id] = co.opzet.gz || eigenLijst;
       vrijBijStart = co.opzet.vb || vrijBijStart;
       co.vrij = co.opzet.vl || null;
+      co.samenErbij = keuzeTorens[thema.id].filter(function(id){ return eigenLijst.indexOf(id) < 0; }).length;
+    } else if (co.aan && co.lock && co.rol === 'host' && co.maatKeuze){
+      var voor = gekozen().length;
+      keuzeTorens[thema.id] = samenKeuze(gekozen(), co.maatKeuze);
+      co.samenErbij = keuzeTorens[thema.id].length - voor;
     }
     cijfers = []; pluis = []; golven = []; kogels = []; wegdingen = []; schillen = [];
     baasKeuzes = {}; golfKeuzes = {};
@@ -6238,6 +6276,14 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   function kaartMelding(){
     melding2('Kaart: ' + kaartNaam(kaart) + (thema.plek || '') +
       (thema.water ? '. Landtorens op de eilandjes, de boten op het water.' : '. Elk potje loot een andere weg, dus kijk eerst waar de bochten liggen.'));
+    if (co.aan && co.lock){
+      setTimeout(function(){
+        melding2(co.samenErbij
+          ? 'Jullie bouwen samen uit een menu: ' + co.samenErbij +
+            (co.samenErbij === 1 ? ' toren komt' : ' torens komen') + ' van ' + co.maat + '.'
+          : 'Jullie bouwen samen uit een menu, en jullie kozen dezelfde torens.');
+      }, 3000);
+    }
   }
 
   function einde(){
@@ -6774,8 +6820,23 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       samen: true,   /* in een duel bouwen twee spelers op hetzelfde bord */
       start: function(info){
         if (info && info.duel){ co.aan = true; co.lock = true; co.rol = info.rol === 'host' ? 'host' : 'gast'; co.maat = info.maat || 'je maat'; }
-        if (co.aan && co.rol === 'gast' && !co.opzet){ co.wachtOp = true; return; }
-        if (!inSpel() && vak) begin();
+        if (co.aan && co.rol === 'gast' && !co.opzet){
+          /* je eigen torens meesturen: jullie bouwen straks uit een menu */
+          zendNet({ k:'kz', gz:gekozen() });
+          co.wachtOp = true; return;
+        }
+        if (!inSpel() && vak){
+          /* de gastheer wacht heel even op de keuze van zijn maat; komt die
+             niet, dan begint hij met zijn eigen torens */
+          if (co.aan && co.lock && co.rol === 'host' && !co.maatKeuze && !co.startWacht){
+            co.startWacht = setTimeout(function(){
+              co.startWacht = 0;
+              if (!inSpel() && vak) begin();
+            }, 900);
+            return;
+          }
+          begin();
+        }
       },
       maatNaam: function(naam){ if (naam) co.maat = naam; },
       net: function(d){ if (!co.aan) return; if (co.rol === 'host') hostOntvang(d); else gastOntvang(d); },

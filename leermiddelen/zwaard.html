@@ -571,7 +571,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   var co = { aan:false, rol:null, neer:false, klaar:false, maatKlaar:false, dashVraag:false,
              laatsteInvoer:'', zendKlok:0, laatsteFase:'', gastMunt:0, gastGeveld:0,
              /* in de pas (lockstep): allebei rekenen dezelfde stappen uit */
-             lock:false, tikken:0, inbox:[], log:{}, inTicks:{}, bevestigd:0, hashes:{}, reserve:6, opzet:null, wachtOp:false, seed:0,
+             lock:false, tikken:0, inbox:[], log:{}, inTicks:{}, bevestigd:0, hashes:{}, reserve:4, opzet:null, wachtOp:false, seed:0,
+             vlotSinds:0, laatsteDx:0, laatsteDy:0,
              mijnIn:{ dx:0, dy:0 }, rest:0, laatsteZend:'' };
   /* Samen spelen gaat in de pas: de spelmotor rekent in vaste stappen van een
      zestigste seconde, loot uit een eigen toevalsbron met een zaad van de
@@ -582,6 +583,11 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
      Loopt het toch uit de pas (verschil in rekenwerk tussen browsers), dan
      valt het terug op het doorsturen van de stand. */
   var STAP = 1 / 60;
+  /* Zoveel bevestigde stappen houdt de maat achter de hand. Elke stap is een
+     zestigste seconde tussen zijn knop en wat hij ziet, dus hoe lager hoe
+     beter; te laag en hij staat stil bij de eerste hik. Bij een hapering gaat
+     hij omhoog, en bij rustig lopen weer terug naar deze waarde. */
+  var RESERVEMIN = 4, RESERVEMAX = 16;
   var toevalZaad = 1;
   function zaai(z){ toevalZaad = (z >>> 0) || 1; }
   function toeval(){
@@ -708,7 +714,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   /* ---------- beginnen ---------- */
   function begin(){
     ronde = 0; munten = 0; level = {}; geveld = 0; reeks = 0; besteReeks = 0; goedAantal = 0; foutAantal = 0;
-    co.tikken = 0; co.inbox = []; co.log = {}; co.inTicks = {}; co.bevestigd = 0; co.hashes = {}; co.reserve = 6; co.rest = 0;
+    co.tikken = 0; co.inbox = []; co.log = {}; co.inTicks = {}; co.bevestigd = 0; co.hashes = {}; co.reserve = RESERVEMIN; co.vlotSinds = 0; co.rest = 0;
     co.mijnIn = { dx:0, dy:0 }; co.laatsteZend = ''; co.klaar = false; co.maatKlaar = false; co.eind = false;
     if (co.aan && co.lock && co.rol === 'gast' && co.opzet) zaai(co.opzet.seed);
     else { co.seed = Math.floor(Math.random() * 4294967296); zaai(co.seed); }
@@ -1137,8 +1143,14 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     var sleutel = inv.dx.toFixed(2) + ',' + inv.dy.toFixed(2);
     if (sleutel === co.laatsteZend) return;
     var nu = performance.now();
-    if (wijs && co.laatsteZendTijd && nu - co.laatsteZendTijd < 100) return;
+    /* Bij sturen met de muis of een vinger verandert de richting elk beeld een
+       beetje; die stroom wordt ingehouden. Maar een echte koerswijziging (of
+       stoppen) moet meteen door, anders stuurt de maat met een tiende seconde
+       vertraging. */
+    if (wijs && co.laatsteZendTijd && nu - co.laatsteZendTijd < 50 &&
+        Math.abs(inv.dx - co.laatsteDx) + Math.abs(inv.dy - co.laatsteDy) < 0.35) return;
     co.laatsteZend = sleutel; co.laatsteZendTijd = nu;
+    co.laatsteDx = inv.dx; co.laatsteDy = inv.dy;
     opdracht({ k:'in', dx:inv.dx, dy:inv.dy });
   }
   /* Wat een opdracht doet, bij allebei hetzelfde. 'wie' zegt van welke speler
@@ -1186,9 +1198,16 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (!co.eind && co.laatsteDt){ co.rest += co.laatsteDt * (buffer < doel ? -0.08 : buffer > doel + 6 ? 0.08 : 0); if (co.rest < 0) co.rest = 0; }
     var gedaan = 0, nu = performance.now();
     while (co.rest >= STAP && gedaan < 4 && co.tikken < co.bevestigd){ co.rest -= STAP; doeStap(); gedaan++; }
-    if (gedaan) co.laatsteStap = nu;
+    if (gedaan){
+      co.laatsteStap = nu;
+      /* Gaat het een tijd lang vlot, dan mag er voorraad af. Zonder dit blijft
+         de maat de rest van het potje achterlopen om een hapering die allang
+         voorbij is. */
+      if (!co.vlotSinds) co.vlotSinds = nu;
+      else if (co.reserve > RESERVEMIN && nu - co.vlotSinds > 4000){ co.reserve--; co.vlotSinds = nu; }
+    }
     else if (co.rest >= STAP && co.bevestigd > 0 && !co.eind && co.laatsteStap && nu - co.laatsteStap > 150 && nu - (co.reserveTijd || 0) > 3000){
-      co.reserve = Math.min(20, co.reserve + 2); co.reserveTijd = nu;
+      co.reserve = Math.min(RESERVEMAX, co.reserve + 2); co.reserveTijd = nu; co.vlotSinds = 0;
     }
     if (gedaan === 0 && co.tikken >= co.bevestigd) co.rest = Math.min(co.rest, 2 * STAP);
     eigenInvoerNaarPas();

@@ -30,6 +30,32 @@ const LANG = [
 ];
 /* korte of gevoelige termen: alleen als de hele naam eruit bestaat */
 const HEEL = [ "spic", "paki", "coon", "coons", "kkk", "jood", "joden", "jew", "jews", "kike", "nsb", "wog", "gyp", "sieg", "heil", "kut", "hoer", "slet" ];
+/* De klankvorm vangt de truc waar de gewone vorm langs loopt: er een letter
+   bij zetten die je toch niet hoort. "Niegggaaa" is geen "nigga" zolang je
+   letter voor letter vergelijkt, maar wel zodra je klinkers die achter elkaar
+   staan als een klank leest. Daarom gaat elke rij klinkers terug naar de
+   eerste ervan, en wordt y een i. Alleen de termen hieronder worden zo
+   vergeleken: bij korte woorden levert deze vorm te veel onschuldige treffers
+   op ("gook" wordt dan "gok", en dan is een gokker ook fout). */
+const HARD = [
+  "nigger", "nigga", "niggr", "neger", "negerin", "nikkerin",
+  "sandnigger", "zandneger", "bosneger", "kutneger", "kankerneger", "roetmop", "zwartjoekel",
+  "spleetoog", "spleetogen", "poepchinees", "junglebunny", "porchmonkey", "towelhead",
+  "raghead", "tarbaby", "kaffer", "kaffir"
+];
+/* korte klankvormen die alleen als de hele naam tellen: "Nieger" is een truc,
+   "Nigeria" is een land en blijft dus gewoon toegestaan. */
+const HARDHEEL = [ "niger", "nigr", "niga", "nigga", "negr" ];
+
+/* Woorden die door een van de regels hierboven vallen maar niets te maken
+   hebben met wat dit filter tegenhoudt. Ze tellen alleen als de hele naam
+   eruit bestaat, dus "kutknikker" komt er nog steeds niet door. */
+const TOEGESTAAN = [
+  "knikker", "knikkers", "knikkeren", "knikkerkoning", "knikkerkampioen",
+  "gokker", "gokkers", "gokken", "gokkast", "goochelaar",
+  "nigeria", "nigeriaan", "nigeriaans", "nigeriaanse"
+];
+
 /* codes met cijfers, gecontroleerd op de versie waarin cijfers cijfers blijven */
 const CODES = [ "1488", "14 88", "88 14" ];
 
@@ -42,14 +68,28 @@ function ruw(naam){
 export function normaliseer(naam){
   return ruw(naam).replace(/(.)\1{2,}/g, "$1$1");
 }
+/* derde vorm: op klank. Rijen van dezelfde letter worden twee, y wordt i, en
+   elke rij klinkers wordt de eerste klinker ervan. "Niegggaaa" en "nigga"
+   komen zo allebei op "nigga" uit. */
+function klank(naam){
+  let s = ruw(naam).replace(/y/g, "i");
+  s = s.replace(/(.)\1{2,}/g, "$1$1");
+  return s.replace(/[aeiou]{2,}/g, m => m[0]);
+}
+
 /* tweede vorm: cijfers blijven staan, voor codes als 1488 */
 function metCijfers(naam){
   return String(naam || "").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
 }
 
 export function verboden(naam){
-  const r = ruw(naam), n = normaliseer(naam), c = metCijfers(naam);
+  const r = ruw(naam), n = normaliseer(naam), c = metCijfers(naam), k = klank(naam);
   if (!n && !c) return false;
+  /* een gewoon woord dat toevallig op een regel hieronder past, mag */
+  if (TOEGESTAAN.includes(n) || TOEGESTAAN.includes(k)) return false;
+  /* op klank: hier zit de truc met een extra letter erin */
+  for (const t of HARD){ if (k.includes(klank(t))) return true; }
+  for (const t of HARDHEEL){ if (k === t) return true; }
   /* Herhaalde letters weghalen vangt "nigerr" en "negerrr", maar alleen als
      de naam zelf herhalingen heeft: "Nigeria" heeft ze niet en blijft gewoon
      een land. */
