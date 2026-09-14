@@ -213,7 +213,7 @@ button.optie:disabled{cursor:default;transform:none}
         <input id="joinNaam" class="veld" maxlength="16" autocomplete="nickname" placeholder="Je bijnaam" aria-label="Je bijnaam">
         <button class="knop groot" id="joinBtn" type="button">Meedoen</button>
         <p class="fout-melding" id="joinFout"></p>
-        <p class="tip">Geen echte naam nodig. Je bijnaam staat alleen deze quiz op het bord.</p>
+        <p class="tip">Geen echte naam nodig, en je bijnaam staat alleen op het bord van je klas. Hoort de code bij een ander spel van je docent, dan ga je daar vanzelf heen.</p>
       </div>
       <div id="terugHost" class="hide" style="margin-top:14px"></div>
     </div>
@@ -632,6 +632,13 @@ Frans Hals"></textarea>
     }).catch(function(){});
   })();
 
+  /* Een code hoort bij een kamer, en die kamer weet zelf welk spel hij is.
+     Stuur de leerling dus naar de pagina van dat spel: /q komt hier binnen
+     zonder dat iemand weet of het een quiz, de Klasstrijd of een rollenspel
+     wordt. */
+  function paginaVoorSpel(spel){
+    return spel === 'rollen' ? 'rol.html' : spel === 'strijd' ? 'strijd.html' : 'klasquiz.html';
+  }
   /* meedoen */
   (function(){
     var k = new URLSearchParams(location.search).get('k');
@@ -651,7 +658,7 @@ Frans Hals"></textarea>
     .then(function(x){
       $('joinBtn').disabled = false;
       if (!x.ok){ $('joinFout').textContent = x.j.fout || 'Geen kamer met deze code.'; return; }
-      if (x.j.spel && x.j.spel !== 'quiz'){ location.href = 'strijd.html?k=' + code; return; }
+      if (x.j.spel && x.j.spel !== 'quiz'){ location.href = paginaVoorSpel(x.j.spel) + '?k=' + code; return; }
       if (x.j.fase === 'einde'){ $('joinFout').textContent = 'Deze quiz is al afgelopen.'; return; }
       wordSpeler(code, naam);
     })

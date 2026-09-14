@@ -119,7 +119,11 @@ footer{text-align:center;font-size:.8rem;color:var(--muted);padding:20px 0}
     try { localStorage.setItem('lg-quiz-naam', naam); } catch (e){}
     $('joinFout').textContent = 'Even kijken…';
     fetch('/api/kamer/' + code).then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); }).then(function(x){
-      if (!x.ok || x.j.spel !== 'rollen'){ $('joinFout').textContent = 'Geen rollenspel met deze code.'; return; }
+      if (x.ok && x.j.spel && x.j.spel !== 'rollen'){
+        /* deze code hoort bij een ander spel van de docent */
+        location.href = (x.j.spel === 'strijd' ? 'strijd.html' : 'klasquiz.html') + '?k=' + code; return;
+      }
+      if (!x.ok || x.j.spel !== 'rollen'){ $('joinFout').textContent = 'Geen spel met deze code. Kijk of je hem goed hebt overgenomen.'; return; }
       $('s-join').classList.add('hide'); $('s-spel').classList.remove('hide');
       $('kopNaam').innerHTML = (window.AVATAR ? AVATAR.svg(naam, 28, window.PROFIEL ? PROFIEL.avatar() : '') : '') + schoon(naam);
       toon({ soort:'wacht', titel:'Je doet mee', tekst:'Wacht tot het bord begint. Je rol komt hier vanzelf.' });

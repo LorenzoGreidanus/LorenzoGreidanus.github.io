@@ -77,8 +77,14 @@ svg.rijk .drift,svg.rijk .grond{transition:fill-opacity .8s var(--ease),fill .8s
 svg.rijk .rand{fill:none;stroke:#FBF6F1;stroke-width:2.2;stroke-linejoin:round;
   transition:stroke .25s var(--ease),stroke-width .25s var(--ease)}
 svg.rijk .geb:hover .rand{stroke:#fff;stroke-width:3}
-svg.rijk .geb.aan .rand{stroke:#14224C;stroke-width:3.6}
-svg.rijk .geb.vrij .rand{stroke-dasharray:8 6}
+/* Het gekozen gebied licht zelf op. De browser tekent zijn eigen kader om het
+   omhullende vierkant, en dat is op een kaart met schuine grenzen een lelijke
+   doos; die gaat uit, maar wie met de tab-toets loopt ziet hetzelfde oplichten. */
+svg.rijk .geb:focus{outline:none}
+svg.rijk .gloed{fill:none;stroke:transparent;stroke-width:9;stroke-linejoin:round;
+  transition:stroke .25s var(--ease)}
+svg.rijk .geb.aan .gloed,svg.rijk .geb:focus-visible .gloed{stroke:rgba(20,34,76,.42)}
+svg.rijk .geb.aan .rand,svg.rijk .geb:focus-visible .rand{stroke:#fff;stroke-width:3.6}
 svg.rijk text{pointer-events:none}
 svg.rijk .naam{font-family:'Poppins',sans-serif;font-size:10.5px;font-weight:600;fill:#fff;
   stroke:#14224C;stroke-width:2.8;paint-order:stroke;stroke-linejoin:round}
@@ -92,11 +98,15 @@ svg.rijk .pijl.door path{stroke:#7a1f10;stroke-width:3.4}
 /* wat er dit jaar gebeurde, even op de kaart zelf */
 @media(prefers-reduced-motion:no-preference){
   svg.rijk .geb.geplunderd .grond{animation:leen-slag 1.5s var(--ease) 2}
-  svg.rijk .geb.vrij .rand{animation:leen-adem 2.6s var(--zacht,ease-in-out) infinite}
+  /* Een gebied dat nog te vergeven is ademt zacht, elk met zijn eigen
+     vertraging. Een stippelrand kon dat niet: buren delen een grens, dus die
+     lag er dubbel overheen. */
+  svg.rijk .geb.vrij .grond{animation:leen-adem 3.4s var(--zacht,ease-in-out) infinite;
+    animation-delay:calc(var(--i,0) * .22s)}
   svg.rijk .pijl.door{animation:leen-stoot 1.3s var(--ease) 2}
 }
 @keyframes leen-slag{0%,100%{fill:#2B55CE}45%{fill:#C0442C}}
-@keyframes leen-adem{0%,100%{stroke-opacity:.55}50%{stroke-opacity:1}}
+@keyframes leen-adem{0%,100%{fill-opacity:.95}50%{fill-opacity:.82}}
 @keyframes leen-stoot{0%,100%{transform:translate(0,0)}50%{transform:translate(0,5px)}}
 
 .legenda{display:flex;flex-wrap:wrap;gap:8px 15px;margin-top:12px;font-size:.75rem;color:var(--muted)}
@@ -112,7 +122,7 @@ svg.rijk .pijl.door path{stroke:#7a1f10;stroke-width:3.4}
 
 /* ---------- het paneel naast de kaart ---------- */
 .fase{display:inline-block;font-size:.72rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
-  background:var(--sand);color:var(--navy);padding:5px 12px;border-radius:999px;margin-bottom:8px}
+  background:var(--sand);color:var(--ink);padding:5px 12px;border-radius:999px;margin-bottom:8px}
 .gezagbalk{height:9px;border-radius:999px;background:rgba(20,34,76,.10);overflow:hidden;margin:6px 0 2px}
 .gezagbalk i{display:block;height:100%;border-radius:999px;background:var(--ocean);
   transform-origin:left center;transition:transform .6s var(--ease)}
@@ -137,7 +147,9 @@ svg.rijk .pijl.door path{stroke:#7a1f10;stroke-width:3.4}
 .keuze b{font-size:.95rem;display:block}
 .keuze small{display:block;color:var(--muted);font-size:.8rem;margin-top:2px}
 .keuze .cijfers{font-size:.76rem;font-weight:600;color:var(--muted);white-space:nowrap;text-align:right}
-.keuze .prijs{font-size:.76rem;font-weight:600;white-space:nowrap;color:var(--ocean)}
+/* --link is in de donkere stand lichtblauw; --ocean blijft koningsblauw, en
+   dat is op een donker vlak niet te lezen */
+.keuze .prijs{font-size:.76rem;font-weight:600;white-space:nowrap;color:var(--link)}
 .keuze button.duur .prijs{color:var(--neer)}
 .keuze .mand{width:18px;height:18px;border-radius:6px;flex:none;margin-top:2px}
 body.groot .keuze b{font-size:1.1rem}
@@ -164,7 +176,7 @@ body.groot .verslag{font-size:1.04rem}
 .slotkaart p{font-size:.94rem;color:var(--muted)}
 .denk{background:var(--sand);border-radius:20px;padding:18px 20px}
 .denk b{display:block;margin-bottom:4px}
-.denk p{font-size:.94rem;color:#42405a}
+.denk p{font-size:.94rem;color:var(--ink)}
 footer{padding:26px 0 40px;font-size:.83rem;color:var(--muted);text-align:center}
 .strip{display:flex;height:7px;width:150px;border-radius:999px;overflow:hidden;margin:0 auto 12px}
 .strip i{flex:1}
@@ -542,8 +554,9 @@ var NIVEAUS = [
     gebieden.forEach(function(g){
       s += '<path d="' + g.pad + '" fill="#14224C" fill-opacity=".10" transform="translate(0,4)"/>';
     });
-    gebieden.forEach(function(g){
-      s += '<g class="geb" data-g="' + g.id + '" tabindex="0" role="button">' +
+    gebieden.forEach(function(g, i){
+      s += '<g class="geb" data-g="' + g.id + '" tabindex="0" role="button" style="--i:' + i + '">' +
+             '<path class="gloed" d="' + g.pad + '"/>' +
              '<path class="grond" d="' + g.pad + '" fill="#2B55CE" fill-opacity=".95"/>' +
              '<path class="drift" d="' + g.pad + '" fill="#2B55CE" fill-opacity="0"/>' +
              '<path class="rand" d="' + g.pad + '"/>' +
@@ -601,6 +614,8 @@ var NIVEAUS = [
       el.querySelector('.merk circle').setAttribute('fill', merkKleur(g));
       el.querySelector('.merkje').textContent = merkTeken(g);
       el.classList.toggle('aan', gekozen === g.id);
+      /* het gekozen gebied vooraan, anders valt zijn gloed onder de buren */
+      if (gekozen === g.id && el.parentNode.lastChild !== el) el.parentNode.appendChild(el);
       el.classList.toggle('vrij', !g.houder && !g.opstandig && !jaarklaar &&
         !gebieden.some(function(x){ return x.houder; }));
       el.classList.toggle('geplunderd', !!g.geplunderd);
