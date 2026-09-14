@@ -118,6 +118,25 @@ window.ROLSPEL = (function(){
       af: function(){ return af; }
     };
   }
+  /* De startknop zegt zelf waar hij op wacht. Een spel dat pas kan beginnen
+     met genoeg telefoons liet dat aan een regeltje naast de lobby over, en
+     ondertussen deed de knop niets zonder uitleg. Geef door hoeveel apparaten
+     er meedoen, hoeveel er nodig zijn en hoe de knop heet als het wel kan.
+     Komt er nog iets anders bij (een niveau dat nog niet gekozen is), dan kan
+     dat er met ook en ookTekst bij. Geeft terug hoeveel er tekort zijn en de
+     zin die erbij hoort, zodat de lobby dezelfde woorden kan gebruiken. */
+  function startknop(el, o){
+    o = o || {};
+    var aantal = o.aantal || 0, nodig = o.nodig || 0;
+    var tekort = Math.max(0, nodig - aantal);
+    var tekst = tekort ? 'Nog ' + tekort + (tekort === 1 ? ' apparaat' : ' apparaten') + ' nodig' : '';
+    if (el){
+      el.disabled = tekort > 0 || !!o.ook;
+      el.textContent = tekort ? tekst : (o.ook ? (o.ookTekst || o.klaar) : o.klaar);
+      el.title = tekort ? 'Er doen ' + aantal + ' van de ' + nodig + ' apparaten mee.' : '';
+    }
+    return { tekort:tekort, tekst:tekst };
+  }
   function lobby(el, code, spelers, tekst){
     if (!el) return;
     /* de houder mag geen raster van het spel zelf zijn, anders past de kaart niet */
@@ -146,5 +165,5 @@ window.ROLSPEL = (function(){
       '@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .rollen-chip,:root:not([data-theme="light"]) .rollen-stem div{background:#182652;border-color:rgba(243,239,233,.14)}}';
     document.head.appendChild(st);
   } catch (e){}
-  return { maak:maak, host:host, verdeel:verdeel, delegatie:delegatie, lobby:lobby, schoon:schoon };
+  return { maak:maak, host:host, verdeel:verdeel, delegatie:delegatie, lobby:lobby, startknop:startknop, schoon:schoon };
 })();
