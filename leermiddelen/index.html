@@ -133,6 +133,17 @@ header{padding:12px 0;border-bottom:1px solid var(--rand);background:#fff;positi
 .sectiekop span{font-size:.82rem;color:var(--muted);margin-left:auto;white-space:nowrap}
 .sectiekop small{display:block;font-size:.8rem;color:var(--muted);font-weight:400}
 .spellen{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;align-items:stretch}
+/* De kaart die Verras me koos: die moet je zien voordat de pagina wisselt,
+   ook als beweging uitstaat. */
+.spel.gekozen{outline:3px solid var(--amber);outline-offset:3px}
+@media(prefers-reduced-motion:no-preference){
+  /* wie blijft, schuift naar zijn nieuwe plek; wie nieuw is, komt omhoog */
+  .spel.schuift{transition:transform .42s cubic-bezier(.16,1,.3,1)}
+  @keyframes spelKomt{from{opacity:0;transform:translateY(10px) scale(.99)}to{opacity:1;transform:none}}
+  .spel.komt{animation:spelKomt .34s cubic-bezier(.16,1,.3,1) both;animation-delay:calc(var(--i,0) * 35ms)}
+  @keyframes spelGekozen{0%{transform:none}40%{transform:scale(1.03)}100%{transform:none}}
+  .spel.gekozen{animation:spelGekozen .44s cubic-bezier(.16,1,.3,1)}
+}
 .spel{background:var(--kaart);border:1px solid var(--rand);border-radius:18px;padding:14px;display:flex;flex-direction:column;
   box-shadow:0 8px 20px rgba(20,34,76,.04);transition:transform .18s var(--ease),box-shadow .18s var(--ease)}
 .spel:hover{transform:translateY(-2px);box-shadow:0 14px 30px rgba(20,34,76,.09)}
@@ -817,7 +828,14 @@ var SPELLEN = [
       if (!lijst.length) lijst = SPELLEN.filter(function(x){ return x.bestand; });
       var sp = lijst[Math.floor(Math.random() * lijst.length)];
       bewaarRecent(sp);
-      location.href = linkNaar(sp);
+      var gaan = function(){ location.href = linkNaar(sp); };
+      /* Laat zien welk spel het werd voordat je er naartoe gaat. Staat de
+         kaart niet in het rooster, dan valt er niets te wijzen en ga je meteen. */
+      var k = $('secties').querySelector('.spel[data-bestand="' + sp.bestand + '"]');
+      if (!k){ gaan(); return; }
+      k.scrollIntoView({ block:'center', behavior: magBewegen ? 'smooth' : 'auto' });
+      k.classList.add('gekozen');
+      setTimeout(gaan, magBewegen ? 560 : 260);
     });
   }
 
@@ -953,7 +971,59 @@ var SPELLEN = [
       '<div class="spellen">' + lijst.map(kaart).join('') + '</div></section>';
   }
   function opTijd(lijst){ return lijst.slice().sort(function(a, b){ return eersteTv(a) - eersteTv(b) || a.naam.localeCompare(b.naam, 'nl'); }); }
+  /* Staat de beweging aan? Een keer vragen, niet per kaart. */
+  var magBewegen = !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+  /* Tekent het rooster opnieuw en laat zien wat er veranderde: kaarten die
+     er al stonden schuiven van hun oude plek naar hun nieuwe, kaarten die
+     nieuw zijn komen omhoog. Zo kun je een spel volgen door een filter heen
+     in plaats van het rooster opnieuw te moeten lezen. */
   function tekenSpellen(){
+    var doel = $('secties');
+    if (!magBewegen || !doel.querySelector('.spel')){ tekenSpellenNu(); return; }
+    var voor = {};
+    Array.prototype.forEach.call(doel.querySelectorAll('.spel[data-bestand]'), function(k){
+      voor[k.getAttribute('data-bestand')] = k.getBoundingClientRect();
+    });
+    tekenSpellenNu();
+    var schuivers = [], nieuw = 0;
+    Array.prototype.forEach.call(doel.querySelectorAll('.spel[data-bestand]'), function(k){
+      var oud = voor[k.getAttribute('data-bestand')];
+      if (!oud){
+        /* nieuw in beeld: een golf die kort genoeg is om als een beweging te lezen */
+        k.style.setProperty('--i', Math.min(nieuw++, 8));
+        k.classList.add('komt');
+        return;
+      }
+      var na = k.getBoundingClientRect();
+      var dx = oud.left - na.left, dy = oud.top - na.top;
+      if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+      k.style.transform = 'translate(' + dx.toFixed(1) + 'px,' + dy.toFixed(1) + 'px)';
+      schuivers.push(k);
+    });
+    if (!schuivers.length) return;
+    requestAnimationFrame(function(){
+      schuivers.forEach(function(k){
+        k.classList.add('schuift');
+        k.style.transform = '';
+      });
+      /* De klasse gaat eraf zodra de kaart is aangekomen. Filtert iemand
+         halverwege opnieuw, dan meet de volgende ronde de kaart waar hij op dat
+         moment staat en loopt hij door in plaats van te verspringen. */
+      schuivers.forEach(function(k){
+        var af = function(e){
+          if (e && e.target !== k) return;
+          k.classList.remove('schuift');
+          k.removeEventListener('transitionend', af);
+          clearTimeout(k._schuiftimer);
+        };
+        k.addEventListener('transitionend', af);
+        clearTimeout(k._schuiftimer);
+        k._schuiftimer = setTimeout(af, 520);
+      });
+    });
+  }
+  function tekenSpellenNu(){
     var lijst = gefilterd(), s = '';
     if (!lijst.length){
       $('secties').innerHTML = '<div class="leegmelding"><span class="hand">niets gevonden</span>' +
