@@ -111,6 +111,15 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 /* twee lagen over elkaar: de vloer eronder, alles wat beweegt erboven */
 .arenavak svg{position:absolute;inset:0;display:block;width:100%;height:100%;overflow:visible}
 .arenatip{font-size:.86rem;color:var(--muted);background:#fff;border:1px solid rgba(20,34,76,.09);border-radius:12px;padding:8px 13px}
+/* in de uitlegstand staat hier wat de baas doet, dus dan mag het opvallen */
+.arenatip.uitleg{border-color:var(--amber);background:#fff8ec;color:var(--ink);font-weight:500}
+.uitlegvak{display:flex;gap:10px;align-items:flex-start;width:min(560px,100%);margin:18px auto 0;padding:12px 14px;
+  background:#fff;border:1px solid rgba(20,34,76,.09);border-radius:14px;cursor:pointer;text-align:left;
+  box-shadow:0 6px 16px rgba(20,34,76,.05)}
+.uitlegvak input{width:20px;height:20px;flex:none;margin-top:2px;accent-color:var(--ocean)}
+.uitlegvak b{display:block;font-size:.95rem}
+.uitlegvak small{display:block;color:var(--muted);font-size:.84rem;line-height:1.45;margin-top:2px}
+.uitlegvak.hide{display:none}
 
 /* het paneel ligt over de arena, die er gedimd achter blijft staan */
 .zij{position:absolute;inset:0;z-index:5;display:grid;place-items:center;padding:12px;
@@ -276,6 +285,10 @@ body.groot .meter b{font-size:1.45rem}
   <p class="nivuit hide" id="vastUit"></p>
   <div id="deelvakken"></div>
 
+  <label class="uitlegvak" id="uitlegvak">
+    <input type="checkbox" id="uitlegAan">
+    <span><b>Uitlegstand</b><small>alles op bijna halve snelheid, met onder de arena wat de baas doet en hoe je eruit blijft. Telt niet mee voor het klassement.</small></span>
+  </label>
   <button class="btn" id="startBtn" type="button" disabled>Kies eerst een vak</button>
   <div id="duelvak"></div>
   <div id="siteStartLijst"></div>
@@ -424,6 +437,22 @@ const BAZEN = [
 ];
 const BAAS = BAZEN[0];   /* de vorm die de oude standen in het netwerk nog verwachten */
 
+/* Wat er bij elke aanval gebeurt, in gewone taal. Alleen te lezen in de
+   uitlegstand; daar staat het onder de arena zodra de baas eraan begint. */
+const AANVALUITLEG = {
+  cirkel:  'Cirkels op de grond, ook een onder jou. Ze ploffen na een tel. Loop de cirkel uit, of spring er met Ontwijk doorheen.',
+  laser:   'Een straal die om de baas heen draait. Loop met de draai mee in plaats van ertegenin, of ga vlak achter de baas staan: daar komt hij niet.',
+  golf:    'Een ring die naar buiten rolt. Hij raakt alleen de rand zelf, dus loop naar de baas toe, of ontwijk er overheen op het moment dat hij bij je is.',
+  plas:    'Inkt die neerkomt en blijft liggen. Ga er niet in staan; er blijft steeds minder vloer over, dus loop op tijd naar een leeg stuk.',
+  kegel:   'Een waaier recht voor hem uit, richting een speler. Stap opzij, de punt uit.',
+  baan:    'Rechte halen over de vloer, met ruimte ertussen. Ga tussen twee strepen staan, niet erop.',
+  kruis:   'Twee strepen die elkaar kruisen onder je voeten. Loop uit het kruis weg, opzij of naar voren.',
+  kogel:   'Propjes in alle richtingen. Ze vliegen recht, dus loop tussen twee propjes door naar buiten.',
+  tik:     'De uren van de klok ploffen een voor een rond. Kijk welke cirkel oplicht en loop naar de plek die net geweest is.',
+  wijzers: 'Twee wijzers draaien helemaal rond. Loop met de wijzer mee; hij haalt je niet in als je doorloopt.',
+  krimp:   'Een ring die naar binnen loopt, met een gat erin. Zoek het gat en ga daar staan voor hij bij je is.'
+};
+
 /* De aanvallen zelf. Elke aanval heeft eerst een waarschuwing die je op de
    grond ziet, en dan het moment dat het raakt. Wie oplet stapt opzij of
    ontwijkt (dan ben je even onkwetsbaar). Alle maten zijn in arenapunten. */
@@ -486,6 +515,31 @@ const ICONEN = {
 (function(){
   'use strict';
   document.getElementById('jaar').textContent = new Date().getFullYear();
+
+  /* De uitlegstand: alles op bijna halve snelheid, met uitleg bij elke aanval.
+     Een leerstand, dus hij telt niet mee voor het klassement of je record. */
+  var uitlegstand = false;
+  const TRAAGHEID = 0.45;
+  (function(){
+    var vk = document.getElementById('uitlegAan');
+    if (!vk) return;
+    try { uitlegstand = localStorage.getItem('lg-zwaard-uitleg') === 'ja'; } catch (e){}
+    vk.checked = uitlegstand;
+    vk.addEventListener('change', function(){
+      uitlegstand = vk.checked;
+      try { localStorage.setItem('lg-zwaard-uitleg', uitlegstand ? 'ja' : 'nee'); } catch (e){}
+    });
+  })();
+  /* wat de baas nu doet, onder de arena */
+  function legUit(soort){
+    if (!uitlegstand) return;
+    var t = AANVALUITLEG[soort];
+    if (!t) return;
+    var vak = document.getElementById('arenatip');
+    if (!vak) return;
+    vak.textContent = t;
+    vak.classList.add('uitleg');
+  }
 
   /* ---------- keuzes ---------- */
 /* Onthoudt het gekozen niveau voor de leeromgeving, zodat je het maar een
@@ -766,6 +820,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
 
   /* ---------- beginnen ---------- */
   function begin(){
+    /* samen in een arena loopt iedereen op dezelfde snelheid */
+    if (co.aan) uitlegstand = false;
     ronde = 0; munten = 0; level = {}; geveld = 0; reeks = 0; besteReeks = 0; goedAantal = 0; foutAantal = 0;
     co.tikken = 0; co.inbox = []; co.log = {}; co.inTicks = {}; co.bevestigd = 0; co.hashes = {}; co.reserve = RESERVEMIN; co.vlotSinds = 0; co.rest = 0;
     co.mijnIn = { dx:0, dy:0 }; co.laatsteZend = ''; co.klaar = false; co.maatKlaar = false; co.eind = false;
@@ -878,6 +934,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   function eenSpeler(levend){ return levend[Math.floor(toeval() * levend.length)] || spelersNu()[0]; }
   function zetAanval(soort, b, levend, k){
     var i, n, p, hoek, doel;
+    legUit(soort);
     if (soort === 'cirkel'){
       /* onder elke speler die nog staat, plus een paar op toevallige plekken */
       levend.forEach(function(P){ aanvallen.push({ soort:'cirkel', x:P.sp.x, y:P.sp.y, t:0, k:k }); });
@@ -1198,6 +1255,9 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (!loopt) return;
     laatsteTik = nu;
     var dt = Math.min(0.1, (nu - laatste) / 1000); laatste = nu;
+    /* de uitlegstand vertraagt de hele motor; samen in een arena kan dat niet,
+       want dan zou de een langzamer lopen dan de ander */
+    if (uitlegstand && !co.aan) dt *= TRAAGHEID;
     /* De motor rekent in vaste stappen van een zestigste seconde, hoe snel
        het scherm ook ververst: op een traag toestel meer stappen per beeld,
        op een snel scherm soms geen. Hoogstens vier per beeld, anders loopt
@@ -2201,15 +2261,19 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     document.getElementById('pauzeBtn').classList.add('hide');
     document.getElementById('eindKop').textContent = (co.aan ? 'Samen gevallen in ronde ' : 'Gevallen in ronde ') + ronde;
     var record = 0;
-    try { record = parseInt(localStorage.getItem('lg-zwaard-record') || '0', 10); if (ronde > record){ localStorage.setItem('lg-zwaard-record', String(ronde)); } } catch (e){}
+    if (!uitlegstand){
+      try { record = parseInt(localStorage.getItem('lg-zwaard-record') || '0', 10); if (ronde > record){ localStorage.setItem('lg-zwaard-record', String(ronde)); } } catch (e){}
+    }
     document.getElementById('eindUit').textContent = 'Je velde ' + geveld + ' fouten en beantwoordde ' + goedAantal + ' van de ' + (goedAantal + foutAantal) + ' vragen goed.' +
-      (ronde > record ? ' Dat is een nieuw record op deze computer.' : record ? ' Het record op deze computer is ronde ' + record + '.' : '');
+      (uitlegstand ? ' Dit was de uitlegstand, dus deze ronde telt niet mee voor je record of het klassement.'
+                   : (ronde > record ? ' Dat is een nieuw record op deze computer.' : record ? ' Het record op deze computer is ronde ' + record + '.' : ''));
     document.getElementById('cijfers').innerHTML =
       '<div><b>' + ronde + '</b><span>rondes</span></div><div><b>' + geveld + '</b><span>fouten geveld</span></div>' +
       '<div><b>' + goedAantal + '</b><span>vragen goed</span></div><div><b>' + besteReeks + '</b><span>langste reeks</span></div>' +
       '<div><b>' + UITRUSTING.filter(function(u){ return !u.los; }).reduce(function(a, u){ return a + stat(u.id); }, 0) + '</b><span>niveaus gekocht</span></div>';
-    SPEL.einde({ spel:'zwaard', compact:true, waarde:ronde, label:'rondes', sterren: ronde >= 12 ? 3 : ronde >= 6 ? 2 : ronde >= 3 ? 1 : 0, klas:false, plek:'siteLijst', sleutel:niveau, deelTekst:'ronde ' + ronde, kop:'jouw gevecht' });
-    if (window.STRIJD){
+    SPEL.einde({ spel:'zwaard', compact:true, waarde:ronde, label:'rondes', sterren: ronde >= 12 ? 3 : ronde >= 6 ? 2 : ronde >= 3 ? 1 : 0, klas:false, plek:'siteLijst',
+      sleutel: niveau + (uitlegstand ? '-uitleg' : ''), deelTekst:'ronde ' + ronde, kop: uitlegstand ? 'jouw oefengevecht' : 'jouw gevecht' });
+    if (window.STRIJD && !uitlegstand){
       STRIJD.klassement.vorm('siteLijst', 'zwaard', function(){
         var nv = NIVEAUS.filter(function(x){ return x.id === niveau; })[0], vk = VAKKEN.filter(function(x){ return x.id === vak; })[0];
         return { ronde:ronde, punten:geveld, waar:'', niveau:nv ? nv.naam : '', vak:vk ? vk.naam : '' };
