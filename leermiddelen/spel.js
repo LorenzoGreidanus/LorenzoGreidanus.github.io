@@ -168,5 +168,51 @@ window.SPEL = (function(){
     return kaart;
   }
 
-  return { uitleg:uitleg, einde:einde, bestand:bestand };
+  /* ---------- de klassementen op dit apparaat schoonhouden ----------
+     Een bijnaam die het naamfilter niet haalt, hoort niet op het scherm van
+     een klas. Namen worden bij het opslaan gecontroleerd, maar een lijst kan
+     ouder zijn dan dat filter, en op een digibord kijkt niemand in de opslag
+     van de browser. Daarom kijkt de site er bij elke start zelf even door.
+     Het loopt over elke sleutel met "klassement" erin, want elk spel bewaart
+     zijn lijst onder een eigen naam en in een eigen vorm. Wat geen voorwerp
+     met een naam is, blijft ongemoeid. */
+  function naamMag(n){
+    if (typeof n !== 'string' || !n.trim()) return true;
+    return !(window.NAAMFILTER && NAAMFILTER.verboden(n));
+  }
+  function schoonIn(waarde, weg){
+    if (Array.isArray(waarde)){
+      var uit = [];
+      for (var i = 0; i < waarde.length; i++){
+        var r = waarde[i];
+        if (r && typeof r === 'object' && !Array.isArray(r) && 'naam' in r && !naamMag(r.naam)){ weg.n++; continue; }
+        uit.push(schoonIn(r, weg));
+      }
+      return uit;
+    }
+    if (waarde && typeof waarde === 'object'){
+      for (var k in waarde) if (Object.prototype.hasOwnProperty.call(waarde, k)) waarde[k] = schoonIn(waarde[k], weg);
+    }
+    return waarde;
+  }
+  function schoonKlassementen(){
+    if (!window.NAAMFILTER) return 0;
+    var totaal = 0;
+    try {
+      for (var i = localStorage.length - 1; i >= 0; i--){
+        var sleutel = localStorage.key(i);
+        if (!sleutel || sleutel.indexOf('klassement') < 0) continue;
+        var ruw = localStorage.getItem(sleutel);
+        if (!ruw || ruw.charAt(0) !== '{' && ruw.charAt(0) !== '[') continue;
+        var d; try { d = JSON.parse(ruw); } catch (e){ continue; }
+        var weg = { n:0 };
+        var schoon = schoonIn(d, weg);
+        if (weg.n){ localStorage.setItem(sleutel, JSON.stringify(schoon)); totaal += weg.n; }
+      }
+    } catch (e){}
+    return totaal;
+  }
+  schoonKlassementen();
+
+  return { uitleg:uitleg, einde:einde, bestand:bestand, naamMag:naamMag, schoonKlassementen:schoonKlassementen };
 })();

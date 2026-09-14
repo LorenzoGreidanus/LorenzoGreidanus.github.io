@@ -355,6 +355,10 @@ body.groot .beeld{max-height:220px}
 .naamrij input:focus{outline:none;border-color:var(--ocean)}
 .naamrij .btn{margin-top:0;padding:11px 22px;font-size:.9rem;box-shadow:0 7px 0 rgba(20,34,76,.10)}
 .lijst h3{font-size:1.05rem;margin-bottom:10px;text-align:center}
+.wisklassement{display:block;margin:10px auto 0;background:none;border:none;padding:8px 12px;min-height:44px;
+  font:inherit;font-size:.84rem;font-weight:600;color:var(--muted);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.wisklassement:hover{color:var(--crab)}
+.wisklassement[data-zeker="ja"]{color:var(--crab)}
 .plek{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;background:#fff;
   border:1px solid rgba(20,34,76,.08);border-radius:15px;padding:11px 14px;margin-bottom:8px;font-size:.94rem}
 .plek.jij{border-color:var(--ocean);background:#f4f7ff}
@@ -6374,7 +6378,27 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
         '<span class="avrij">' + (window.AVATAR ? AVATAR.svg(r.naam.replace(/[<>&]/g, ''), 34) : '') + '<span><b>' + r.naam.replace(/[<>&]/g, '') + '</b><small>' + (r.waar ? r.waar + ' \u00b7 ' : '') + (r.niveau ? r.niveau + ' \u00b7 ' : '') + r.vak + ' \u00b7 ' + r.goed + ' van ' + r.totaal + ' goed \u00b7 ' + r.datum + '</small></span></span>' +
         '<span class="pt">' + r.rondes + ' rondes</span></div>';
     });
+    /* Een klassement op een schoolcomputer is van de klas, niet van de site:
+       de docent moet het kunnen legen zonder in de opslag van de browser te
+       duiken. Twee tikken, want weg is weg. */
+    if (doelId === 'startLijst') html += '<button type="button" class="wisklassement">Wis dit klassement</button>';
     doel.innerHTML = html;
+    var wis = doel.querySelector('.wisklassement');
+    if (wis) wis.addEventListener('click', function(){
+      if (wis.getAttribute('data-zeker') !== 'ja'){
+        wis.setAttribute('data-zeker', 'ja');
+        wis.textContent = 'Zeker weten? Tik nog een keer';
+        setTimeout(function(){
+          if (!wis.parentNode) return;
+          wis.removeAttribute('data-zeker');
+          wis.textContent = 'Wis dit klassement';
+        }, 5000);
+        return;
+      }
+      try { localStorage.removeItem(KLASSEMENT); } catch (e){}
+      opgeslagen = false;
+      toonKlassement(doelId, null);
+    });
   }
   document.getElementById('bewaarBtn').addEventListener('click', bewaarScore);
   document.getElementById('naamveld').addEventListener('keydown', function(e){
