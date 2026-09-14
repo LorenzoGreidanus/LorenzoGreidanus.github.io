@@ -113,9 +113,18 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .arenatip{font-size:.86rem;color:var(--muted);background:#fff;border:1px solid rgba(20,34,76,.09);border-radius:12px;padding:8px 13px}
 /* in de uitlegstand staat hier wat de baas doet, dus dan mag het opvallen */
 .arenatip.uitleg{border-color:var(--amber);background:#fff8ec;color:var(--ink);font-weight:500}
+/* in het donker blijft de rand amber, maar het vlak volgt het thema */
+:root[data-theme="dark"] .arenatip{background:var(--kaart);border-color:rgba(243,239,233,.14);color:var(--ink)}
+:root[data-theme="dark"] .arenatip.uitleg{background:var(--kaart);border-color:var(--amber);color:var(--ink)}
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .arenatip{background:var(--kaart);border-color:rgba(243,239,233,.14);color:var(--ink)}
+  :root:not([data-theme="light"]) .arenatip.uitleg{background:var(--kaart);border-color:var(--amber);color:var(--ink)}
+}
 .uitlegvak{display:flex;gap:10px;align-items:flex-start;width:min(560px,100%);margin:18px auto 0;padding:12px 14px;
-  background:#fff;border:1px solid rgba(20,34,76,.09);border-radius:14px;cursor:pointer;text-align:left;
+  background:var(--kaart,#fff);color:var(--ink);border:1px solid rgba(20,34,76,.09);border-radius:14px;cursor:pointer;text-align:left;
   box-shadow:0 6px 16px rgba(20,34,76,.05)}
+:root[data-theme="dark"] .uitlegvak{border-color:rgba(243,239,233,.18);box-shadow:none}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .uitlegvak{border-color:rgba(243,239,233,.18);box-shadow:none}}
 .uitlegvak input{width:20px;height:20px;flex:none;margin-top:2px;accent-color:var(--ocean)}
 .uitlegvak b{display:block;font-size:.95rem}
 .uitlegvak small{display:block;color:var(--muted);font-size:.84rem;line-height:1.45;margin-top:2px}
@@ -287,7 +296,7 @@ body.groot .meter b{font-size:1.45rem}
 
   <label class="uitlegvak" id="uitlegvak">
     <input type="checkbox" id="uitlegAan">
-    <span><b>Uitlegstand</b><small>alles op bijna halve snelheid, met onder de arena wat de baas doet en hoe je eruit blijft. Telt niet mee voor het klassement.</small></span>
+    <span><b>Uitlegstand</b><small>op de momenten die ertoe doen gaat het langzamer: een baas die binnenkomt, een aanval die op de grond oplicht, een fout die je nog niet kent. Eronder staat wat er gebeurt en hoe je eruit blijft. Telt niet mee voor het klassement.</small></span>
   </label>
   <button class="btn" id="startBtn" type="button" disabled>Kies eerst een vak</button>
   <div id="duelvak"></div>
@@ -437,6 +446,16 @@ const BAZEN = [
 ];
 const BAAS = BAZEN[0];   /* de vorm die de oude standen in het netwerk nog verwachten */
 
+/* Wat voor fout dit is, de eerste keer dat je hem tegenkomt. Alleen te lezen in
+   de uitlegstand. */
+const SOORTUITLEG = {
+  snel:     'Een snelle fout. Hij loopt harder dan de rest, dus hij is als eerste bij je; draai op tijd naar hem toe.',
+  schild:   'Een fout met een schild. Die slikt de helft van elke klap, dus blijf erop slaan of laat je werpmes het werk doen.',
+  zwerm:    'Een zwerm: drie kleine fouten tegelijk. Elk gaat zo neer, maar samen duwen ze je klem tegen de rand.',
+  dik:      'Een dikke fout. Veel leven en traag: loop eromheen en sla hem in de rug, of laat hem tot het laatst.',
+  schutter: 'Een schutter. Hij komt niet op je af maar houdt afstand en schiet. De streep op de grond laat zien waar hij op mikt, dus stap opzij.'
+};
+
 /* Wat er bij elke aanval gebeurt, in gewone taal. Alleen te lezen in de
    uitlegstand; daar staat het onder de arena zodra de baas eraan begint. */
 const AANVALUITLEG = {
@@ -520,6 +539,19 @@ const ICONEN = {
      Een leerstand, dus hij telt niet mee voor het klassement of je record. */
   var uitlegstand = false;
   const TRAAGHEID = 0.45;
+  /* Hoeveel echte seconden het nog langzaam gaat. Alles de hele tijd vertragen
+     is geen leren maar wachten, dus de rem gaat alleen aan als er iets te zien
+     is: een baas die binnenkomt, een aanval waarvan de waarschuwing op de grond
+     ligt, en de eerste keer dat je een soort fout tegenkomt. */
+  var traagKlok = 0, alGezien = {};
+  function traagMoment(seconden, tekst){
+    if (!uitlegstand || co.aan) return;
+    traagKlok = Math.max(traagKlok, seconden);
+    if (tekst){
+      var vak = document.getElementById('arenatip');
+      if (vak){ vak.textContent = tekst; vak.classList.add('uitleg'); }
+    }
+  }
   (function(){
     var vk = document.getElementById('uitlegAan');
     if (!vk) return;
@@ -530,15 +562,15 @@ const ICONEN = {
       try { localStorage.setItem('lg-zwaard-uitleg', uitlegstand ? 'ja' : 'nee'); } catch (e){}
     });
   })();
-  /* wat de baas nu doet, onder de arena */
-  function legUit(soort){
-    if (!uitlegstand) return;
+  /* Wat de baas nu doet, onder de arena, en zolang de waarschuwing op de grond
+     ligt gaat het langzaam. Die waarschuwing duurt in speeltijd 'wacht' maal de
+     factor k; in echte seconden is dat zoveel gedeeld door de traagheid. */
+  function legUit(soort, k){
+    if (!uitlegstand || co.aan) return;
     var t = AANVALUITLEG[soort];
     if (!t) return;
-    var vak = document.getElementById('arenatip');
-    if (!vak) return;
-    vak.textContent = t;
-    vak.classList.add('uitleg');
+    var w = (AANVAL[soort] && AANVAL[soort].wacht) || 1;
+    traagMoment(w * (k || 1) / TRAAGHEID + 0.5, t);
   }
 
   /* ---------- keuzes ---------- */
@@ -822,6 +854,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   function begin(){
     /* samen in een arena loopt iedereen op dezelfde snelheid */
     if (co.aan) uitlegstand = false;
+    traagKlok = 0; alGezien = {};
     ronde = 0; munten = 0; level = {}; geveld = 0; reeks = 0; besteReeks = 0; goedAantal = 0; foutAantal = 0;
     co.tikken = 0; co.inbox = []; co.log = {}; co.inTicks = {}; co.bevestigd = 0; co.hashes = {}; co.reserve = RESERVEMIN; co.vlotSinds = 0; co.rest = 0;
     co.mijnIn = { dx:0, dy:0 }; co.laatsteZend = ''; co.klaar = false; co.maatKlaar = false; co.eind = false;
@@ -865,6 +898,11 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     tekenHud();
     document.getElementById('arenatip').textContent = 'Ronde ' + ronde + ': ' + teSpawnen + ' fouten' +
       (ronde % BAASRONDE === 0 ? ' en ' + baasVan(ronde).naam + ' in het midden. ' + baasVan(ronde).wat + ' Kijk naar de grond en stap eruit' : '') + '. Pijltjes of WASD om te lopen, je wapen slaat vanzelf, Q wisselt tussen zwaard en boog.';
+    /* in de uitlegstand krijgt een baas eerst even alle aandacht */
+    if (ronde % BAASRONDE === 0){
+      var bz = baasVan(ronde);
+      traagMoment(3, bz.naam + ' komt binnen. ' + bz.wat + ' Kijk naar de grond: wat daar oplicht gaat zo raken.');
+    }
   }
 
   /* ---------- de fouten ---------- */
@@ -886,6 +924,11 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   }
   function spawn(soort){
     var n = soort.aantal || 1, p = randPlek();
+    /* de eerste keer dat je een soort tegenkomt mag je hem even bekijken */
+    if (uitlegstand && !co.aan && !alGezien[soort.id] && SOORTUITLEG[soort.id]){
+      alGezien[soort.id] = 1;
+      traagMoment(2.5, SOORTUITLEG[soort.id]);
+    }
     for (var i = 0; i < n; i++){
       var h = Math.round(foutHp(ronde) * soort.hp);
       fouten.push({ soort:soort, x:p.x + (toeval() - .5) * 30, y:p.y + (toeval() - .5) * 30,
@@ -934,7 +977,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   function eenSpeler(levend){ return levend[Math.floor(toeval() * levend.length)] || spelersNu()[0]; }
   function zetAanval(soort, b, levend, k){
     var i, n, p, hoek, doel;
-    legUit(soort);
+    legUit(soort, k);
     if (soort === 'cirkel'){
       /* onder elke speler die nog staat, plus een paar op toevallige plekken */
       levend.forEach(function(P){ aanvallen.push({ soort:'cirkel', x:P.sp.x, y:P.sp.y, t:0, k:k }); });
@@ -1213,8 +1256,14 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   }
   document.getElementById('dashBtn').addEventListener('pointerdown', function(e){ e.preventDefault(); ontwijk(); });
   document.getElementById('wapenBtn').addEventListener('pointerdown', function(e){ e.preventDefault(); wisselWapen(); });
-  var dashVak = null, dashWas = '';
+  var dashVak = null, dashWas = '', tipVak = null;
   function tekenDash(){
+    /* het amber randje onder de arena staat er precies zolang de rem aan is */
+    var tip = tipVak || (tipVak = document.getElementById('arenatip'));
+    if (tip){
+      var wil = uitlegstand && traagKlok > 0;
+      if (tip.classList.contains('uitleg') !== wil) tip.classList.toggle('uitleg', wil);
+    }
     var k = dashVak || (dashVak = document.getElementById('dashBtn'));
     if (!k) return;
     var klaar = sp.dashKlok <= 0;
@@ -1255,9 +1304,9 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (!loopt) return;
     laatsteTik = nu;
     var dt = Math.min(0.1, (nu - laatste) / 1000); laatste = nu;
-    /* de uitlegstand vertraagt de hele motor; samen in een arena kan dat niet,
-       want dan zou de een langzamer lopen dan de ander */
-    if (uitlegstand && !co.aan) dt *= TRAAGHEID;
+    /* de uitlegstand vertraagt alleen op de momenten die ertoe doen; samen in
+       een arena kan dat niet, want dan zou de een langzamer lopen dan de ander */
+    if (uitlegstand && !co.aan && traagKlok > 0){ traagKlok -= dt; dt *= TRAAGHEID; }
     /* De motor rekent in vaste stappen van een zestigste seconde, hoe snel
        het scherm ook ververst: op een traag toestel meer stappen per beeld,
        op een snel scherm soms geen. Hoogstens vier per beeld, anders loopt
