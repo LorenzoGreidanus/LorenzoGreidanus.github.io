@@ -84,6 +84,16 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .arenakolom{position:relative;display:flex;flex-direction:column;min-height:0;gap:8px;height:100%}
 .hudrij{display:flex;gap:8px;align-items:stretch}
 .hud{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch;flex:1}
+/* De levensbalk van de baas hoort boven de arena en niet erin: in het veld kon
+   hij precies staan waar jij moest zijn. */
+.baasbalk{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid rgba(20,34,76,.09);
+  border-radius:12px;padding:7px 13px}
+.baasbalk b{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;color:var(--ink)}
+.baasbalk i{flex:1;min-width:0;display:block;height:14px;border-radius:7px;background:rgba(20,34,76,.15);overflow:hidden}
+.baasbalk i span{display:block;height:100%;border-radius:7px;transition:width .12s linear}
+:root[data-theme="dark"] .baasbalk{background:var(--kaart);border-color:rgba(243,239,233,.14)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .baasbalk{background:var(--kaart);border-color:rgba(243,239,233,.14)}}
+
 /* de ontwijkknop: voor wie op een aanraakscherm speelt, en als teller voor de rest */
 .dashknop{border:none;background:var(--ocean);color:#fff;font-weight:600;border-radius:14px;padding:7px 14px;
   min-width:118px;font-size:.82rem;line-height:1.2;box-shadow:0 3px 10px rgba(20,34,76,.12);white-space:nowrap}
@@ -300,7 +310,7 @@ body.groot .meter b{font-size:1.45rem}
 
   <label class="uitlegvak" id="uitlegvak">
     <input type="checkbox" id="uitlegAan">
-    <span><b>Uitlegstand</b><small>op de momenten die ertoe doen gaat het langzamer: een baas die binnenkomt, een aanval die op de grond oplicht, een fout die je nog niet kent. Eronder staat wat er gebeurt en hoe je eruit blijft. Telt niet mee voor het klassement.</small></span>
+    <span><b>Uitlegstand</b><small>op de momenten die ertoe doen gaat het langzamer: een baas die binnenkomt, en de eerste keer dat je een aanval of een soort fout ziet. Eronder staat wat er gebeurt en hoe je eruit blijft. Telt niet mee voor het klassement.</small></span>
   </label>
   <button class="btn" id="startBtn" type="button" disabled>Kies eerst een vak</button>
   <div id="duelvak"></div>
@@ -310,6 +320,7 @@ body.groot .meter b{font-size:1.45rem}
 <section class="wrap spel hide" id="scherm-spel">
   <div class="arenakolom">
     <div class="hudrij"><div class="hud" id="hud"></div><button class="dashknop" type="button" id="wapenBtn">Zwaard<small>dichtbij, hard</small></button><button class="dashknop" type="button" id="dashBtn">Ontwijk<small>spatie of shift</small></button></div>
+    <div class="baasbalk hide" id="baasbalk"></div>
     <div class="arenavak" id="arenavak"><svg id="arenagrond" viewBox="0 0 1100 620" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"></svg><svg id="arena" viewBox="0 0 1100 620" xmlns="http://www.w3.org/2000/svg"><defs id="arenavast"></defs><g id="arenalaag"></g></svg></div>
     <p class="arenatip" id="arenatip">Pijltjes of WASD om te lopen. Je wapen slaat vanzelf; Q wisselt tussen zwaard en boog.</p>
     <aside class="zij hide" id="zij"></aside>
@@ -577,6 +588,9 @@ const ICONEN = {
     if (!uitlegstand || co.aan) return;
     var t = AANVALUITLEG[soort];
     if (!t) return;
+    /* de eerste keer dat je deze aanval ziet is genoeg; daarna ken je hem */
+    if (alGezien['aanval:' + soort]) return;
+    alGezien['aanval:' + soort] = 1;
     var w = (AANVAL[soort] && AANVAL[soort].wacht) || 1;
     traagMoment(w * (k || 1) / TRAAGHEID + 0.5, t, b ? { x:b.x, y:b.y, r:b.r + 26 } : null);
   }
@@ -2266,17 +2280,10 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     var lijstSp = [{ s:sp, ber:zwaardBereik(), harnas:stat('harnas'), neer:co.neer, naam:null }];
     if (co.aan && maat) lijstSp.push({ s:maat.sp, ber:maat.stats.bereik, harnas:maat.stats.harnas, neer:maat.neer, naam:maat.naam });
     lijstSp.forEach(function(Q){ s += tekenSpeler(Q.s, Q.ber, Q.harnas, Q.neer, Q.naam, pols); });
-    /* de balk van de baas, bovenin: hoeveel er nog van hem over is */
+    /* de balk van de baas staat boven de arena, buiten het speelveld */
     var baasNu = null;
     fouten.forEach(function(f){ if (f.baas) baasNu = f; });
-    if (baasNu){
-      var bw = 620, bx = (ARENA.b - bw) / 2, by = 16, deel3 = Math.max(0, baasNu.hp / baasNu.maxHp);
-      s += '<rect x="' + (bx - 8) + '" y="' + (by - 8) + '" width="' + (bw + 16) + '" height="46" rx="14" fill="#FBF6F1" opacity=".85"/>';
-      s += '<rect x="' + bx + '" y="' + (by + 12) + '" width="' + bw + '" height="16" rx="8" fill="rgba(20,34,76,.18)"/>';
-      s += '<rect x="' + bx + '" y="' + (by + 12) + '" width="' + (bw * deel3).toFixed(1) + '" height="16" rx="8" fill="' + (deel3 <= 0.5 ? '#c0442c' : ((baasNu.def && baasNu.def.kleur) || '#4a1230')) + '"/>';
-      var bnaam = ((baasNu.def && baasNu.def.naam) || 'De baas').toUpperCase();
-      s += '<text x="' + (ARENA.b / 2) + '" y="' + (by + 8) + '" text-anchor="middle" font-size="13" font-weight="700" fill="' + ((baasNu.def && baasNu.def.kleur) || '#4a1230') + '" font-family="Poppins" letter-spacing="1.5">' + bnaam + (deel3 <= 0.5 ? ' \u00b7 KWAAD' : '') + '</text>';
-    }
+    tekenBaasbalk(baasNu);
     /* deeltjes en getallen */
     pluis.forEach(function(p){ s += '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' + (3 * p.leven / 0.45 + 1).toFixed(1) + '" fill="' + p.kleur + '" opacity="' + (p.leven / 0.45).toFixed(2) + '"/>'; });
     cijfers.forEach(function(c){ s += '<text x="' + c.x.toFixed(1) + '" y="' + c.y.toFixed(1) + '" text-anchor="middle" font-size="15" font-weight="700" fill="' + c.kleur + '" opacity="' + Math.min(1, c.leven).toFixed(2) + '" font-family="Poppins" stroke="#fff" stroke-width="3" paint-order="stroke">' + c.tekst + '</text>'; });
@@ -2342,7 +2349,28 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     });
     return s;
   }
-  var arenaVak = null;
+  var arenaVak = null, baasVak = null, baasWas = '';
+  /* De levensbalk van de baas, boven de arena. Alleen de breedte verandert per
+     beeld; de naam en de kleur pas als hij kwaad wordt. */
+  function tekenBaasbalk(b){
+    var el = baasVak || (baasVak = document.getElementById('baasbalk'));
+    if (!el) return;
+    if (!b){
+      if (!el.classList.contains('hide')){ el.classList.add('hide'); el.innerHTML = ''; baasWas = ''; }
+      return;
+    }
+    el.classList.remove('hide');
+    var deel = Math.max(0, b.hp / b.maxHp);
+    var kwaad = deel <= 0.5;
+    var naam = ((b.def && b.def.naam) || 'De baas') + (kwaad ? ' \u00b7 kwaad' : '');
+    var kleur = kwaad ? '#c0442c' : ((b.def && b.def.kleur) || '#4a1230');
+    if (naam + kleur !== baasWas){
+      el.innerHTML = '<b>' + naam.replace(/[<>&]/g, String()) + '</b><i><span style="background:' + kleur + '"></span></i>';
+      baasWas = naam + kleur;
+    }
+    var balk = el.firstElementChild && el.firstElementChild.nextElementSibling;
+    if (balk && balk.firstElementChild) balk.firstElementChild.style.width = (deel * 100).toFixed(1) + '%';
+  }
 
   /* Een gezichtje hoort bij de vormen die blijven staan: het wordt een keer in
      het vaste vakje gezet en daarna alleen nog aangewezen. */
