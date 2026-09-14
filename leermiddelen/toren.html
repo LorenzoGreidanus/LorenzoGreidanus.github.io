@@ -966,6 +966,10 @@ const BOMTIJD = 8, BOMSCHADE = 44;
 function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id); } catch (e){} }
   var niveau = 'kgt', vak = null, keuze = {};
   var vijanden = [], torens = [], schoten = [], pot = null;
+  /* Waar een fout stond aan het begin van deze stap, en hoe ver we tussen deze
+     stap en de volgende zijn. Alleen voor het tekenen; de motor rekent gewoon
+     met e.d. */
+  var tekenDeel = 1, tikTijd = 0;
   var vrienden = [];                                       /* de mannetjes uit de Vriendenhut */
   var vliegers = [];                                       /* de vliegtuigen van de Bommenwerper */
   var cijfers = [], pluis = [], golven = [], kogels = [];   /* effecten en de stenen van de katapult */
@@ -1377,12 +1381,29 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     PADLENGTE = padlengte();
     ACHTERGROND = null;
   }
-  function positie(afstand){
-    var rest = afstand;
+  /* De weg bestaat uit rechte stukken en verandert alleen als de kaart wisselt.
+     De lengte en de richting van elk stuk worden daarom een keer uitgerekend en
+     bewaard, zodat er per fout per beeld geen wortels en arctangensen meer aan
+     te pas komen. */
+  var PADSTUK = null, PADVOOR = null;
+  function padStukken(){
+    if (PADVOOR === PAD && PADSTUK) return PADSTUK;
+    PADSTUK = [];
     for (var i = 1; i < PAD.length; i++){
-      var dx = PAD[i][0]-PAD[i-1][0], dy = PAD[i][1]-PAD[i-1][1], len = Math.hypot(dx, dy);
-      if (rest <= len) return { x:PAD[i-1][0] + dx*(rest/len), y:PAD[i-1][1] + dy*(rest/len) };
-      rest -= len;
+      var ax = PAD[i-1][0], ay = PAD[i-1][1];
+      var dx = PAD[i][0] - ax, dy = PAD[i][1] - ay;
+      PADSTUK.push({ ax:ax, ay:ay, dx:dx, dy:dy, q:dx*dx + dy*dy,
+                     len:Math.sqrt(dx*dx + dy*dy), hoek:Math.atan2(dy, dx) * 180 / Math.PI });
+    }
+    PADVOOR = PAD;
+    return PADSTUK;
+  }
+  function positie(afstand){
+    var st = padStukken(), rest = afstand;
+    for (var i = 0; i < st.length; i++){
+      var S = st[i];
+      if (rest <= S.len) return { x:S.ax + S.dx * (rest / S.len), y:S.ay + S.dy * (rest / S.len) };
+      rest -= S.len;
     }
     return { x:PAD[PAD.length-1][0], y:PAD[PAD.length-1][1] };
   }
@@ -1787,14 +1808,17 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
 
   /* Onder welke hoek loopt de weg hier? Zo kan alles wat op de weg ligt
      meedraaien met het pad in plaats van altijd recht te liggen. */
+  /* Welk stuk van de weg ligt het dichtst bij dit punt? Vergelijken op het
+     kwadraat van de afstand geeft dezelfde winnaar als vergelijken op de
+     afstand zelf, en scheelt een wortel per stuk. */
   function padHoek(x, y){
-    var m = 1e9, hk = 0;
-    for (var i = 1; i < PAD.length; i++){
-      var ax = PAD[i-1][0], ay = PAD[i-1][1];
-      var dx = PAD[i][0] - ax, dy = PAD[i][1] - ay;
-      var t = (dx || dy) ? Math.max(0, Math.min(1, ((x-ax)*dx + (y-ay)*dy) / (dx*dx + dy*dy))) : 0;
-      var af = Math.hypot(x - (ax + t*dx), y - (ay + t*dy));
-      if (af < m){ m = af; hk = Math.atan2(dy, dx) * 180 / Math.PI; }
+    var st = padStukken(), m = 1e18, hk = 0;
+    for (var i = 0; i < st.length; i++){
+      var S = st[i];
+      var t = S.q ? Math.max(0, Math.min(1, ((x-S.ax)*S.dx + (y-S.ay)*S.dy) / S.q)) : 0;
+      var ex = x - (S.ax + t*S.dx), ey = y - (S.ay + t*S.dy);
+      var af = ex*ex + ey*ey;
+      if (af < m){ m = af; hk = S.hoek; }
     }
     return hk;
   }
@@ -4390,14 +4414,16 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     });
 
     vijanden.forEach(function(e){
-      var p = positie(e.d);
+      /* tussen twee stappen van de motor schuift hij evenredig op */
+      var dNu = e.dVorig === undefined ? e.d : e.dVorig + (e.d - e.dVorig) * tekenDeel;
+      var p = positie(dNu);
       var deel = Math.max(0, e.hp / e.maxHp);
       /* Een lichte dein op de pas die hij loopt, zodat het bord leeft zonder dat
          er iets extra's gerekend hoeft te worden: de afstand die hij al aflegde
          is de klok. Een baas deint minder, die hoort zwaar te zijn. Alleen het
          lijf gaat mee omhoog; de schaduw blijft op de grond en dat is precies
          wat de beweging verkoopt. */
-      var bob = Math.sin(e.d * 0.13) * (e.baas ? 1.1 : 1.9);
+      var bob = Math.sin(dNu * 0.13) * (e.baas ? 1.1 : 1.9);
       var hoek = padHoek(p.x, p.y);
       var r2 = e.baas ? (e.fasen ? 42 : e.mega ? 36 : e.baassoort === 'aap' ? 31 : e.baassoort === 'zeeslang' ? 28 : e.mini ? 22 : 26) : (e.dik ? 19 : 13),
           br = e.baas ? (e.mega ? 78 : e.mini ? 50 : 62) : (e.dik ? 42 : 28);
@@ -4456,7 +4482,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       var raak = (e.flits || 0) > 0;
       if (e.soort === 'snel'){
         /* een streepje achter zich aan, zodat je ziet dat hij hard gaat */
-        var vorig = positie(Math.max(0, e.d - 22));
+        var vorig = positie(Math.max(0, dNu - 22));
         s += '<line x1="' + vorig.x + '" y1="' + vorig.y + '" x2="' + p.x + '" y2="' + p.y +
           '" stroke="#EA9836" stroke-width="5" stroke-linecap="round" opacity=".38"/>';
       }
@@ -4479,7 +4505,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
         vijandGlans(e, r2) + '</g>';
       /* wie in brand staat heeft een vlammetje boven zich */
       if (e.brand > 0){
-        var vl = 1 + Math.sin(pols * 9 + e.d) * 0.25;
+        var vl = 1 + Math.sin(pols * 9 + dNu) * 0.25;
         s += '<g transform="translate(' + p.x.toFixed(1) + ',' + (p.y + bob - r2 - 2).toFixed(1) + ') scale(' + vl.toFixed(2) + ')">' +
           '<path d="M0,0 q7,-8 2,-16 q-1,6 -4,7 q0,-6 -4,-9 q-3,9 2,13 q2,3 4,5z" fill="#ff7a1a"/>' +
           '<path d="M0,-1 q3,-5 1,-9 q-2,4 -3,5z" fill="#ffd166"/></g>';
@@ -6113,6 +6139,9 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (klok) clearInterval(klok);
     klokStap = function(){
       co.slagen++;
+      /* onthouden waar iedereen stond, zodat het scherm ertussenin kan schuiven */
+      for (var v = 0; v < vijanden.length; v++) vijanden[v].dVorig = vijanden[v].d;
+      tikTijd = performance.now();
       var stappen = tempo * (snel ? 2 : 1);
       for (var i = 0; i < stappen; i++){
         tekenUit = (i < stappen - 1);
@@ -6128,6 +6157,27 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   function inSpel(){
     return !document.getElementById('scherm-spel').classList.contains('hide');
   }
+  /* Het scherm ververst zestig keer per seconde, de motor rekent er zestien.
+     Deze lus tekent het bord op het tempo van het scherm en schuift de fouten
+     evenredig op naar waar ze heen gaan. Er verandert niets aan het spel zelf:
+     wie samen speelt rekent nog precies dezelfde stappen. */
+  var beeldDuur = 16, vorigBeeld = 0, laatsteTeken = 0;
+  (function beeldLus(nu){
+    requestAnimationFrame(beeldLus);
+    if (!klok || pauze || !inSpel()){ vorigBeeld = 0; return; }
+    nu = nu || performance.now();
+    if (vorigBeeld) beeldDuur = beeldDuur * 0.9 + (nu - vorigBeeld) * 0.1;
+    vorigBeeld = nu;
+    /* Haalt het toestel de zestig beelden niet meer, dan heeft tussendoor
+       tekenen geen zin: dan kost het alleen maar lucht die het spel nodig
+       heeft. In dat geval tekent hij op het tempo van de motor, zoals het
+       hiervoor ook ging. */
+    if (beeldDuur > 28 && nu - laatsteTeken < 55) return;
+    var f = (nu - tikTijd) / 60;
+    tekenDeel = f < 0 ? 0 : f > 1 ? 1 : f;
+    tekenBord();
+    laatsteTeken = nu;
+  })();
   function zetPauze(aan){
     if (co.aan && co.rol === 'gast') return;
     aan = !!aan;

@@ -108,7 +108,8 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .arenavak{flex:1 1 auto;min-height:0;aspect-ratio:1100 / 620;width:auto;max-width:100%;margin-inline:auto;
   background:#e9dfc9;border-radius:20px;border:1px solid rgba(20,34,76,.12);overflow:hidden;
   position:relative;touch-action:none;user-select:none;-webkit-user-select:none;box-shadow:0 10px 26px rgba(20,34,76,.08)}
-.arenavak svg{display:block;width:100%;height:100%;overflow:visible}
+/* twee lagen over elkaar: de vloer eronder, alles wat beweegt erboven */
+.arenavak svg{position:absolute;inset:0;display:block;width:100%;height:100%;overflow:visible}
 .arenatip{font-size:.86rem;color:var(--muted);background:#fff;border:1px solid rgba(20,34,76,.09);border-radius:12px;padding:8px 13px}
 
 /* het paneel ligt over de arena, die er gedimd achter blijft staan */
@@ -283,7 +284,7 @@ body.groot .meter b{font-size:1.45rem}
 <section class="wrap spel hide" id="scherm-spel">
   <div class="arenakolom">
     <div class="hudrij"><div class="hud" id="hud"></div><button class="dashknop" type="button" id="wapenBtn">Zwaard<small>dichtbij, hard</small></button><button class="dashknop" type="button" id="dashBtn">Ontwijk<small>spatie of shift</small></button></div>
-    <div class="arenavak" id="arenavak"><svg id="arena" viewBox="0 0 1100 620" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    <div class="arenavak" id="arenavak"><svg id="arenagrond" viewBox="0 0 1100 620" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"></svg><svg id="arena" viewBox="0 0 1100 620" xmlns="http://www.w3.org/2000/svg"><defs id="arenavast"></defs><g id="arenalaag"></g></svg></div>
     <p class="arenatip" id="arenatip">Pijltjes of WASD om te lopen. Je wapen slaat vanzelf; Q wisselt tussen zwaard en boog.</p>
     <aside class="zij hide" id="zij"></aside>
   </div>
@@ -1130,12 +1131,14 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     s.zwaai = 0;
     tekenWapen();
   }
+  var wapenVak = null, wapenWas = '';
   function tekenWapen(){
-    var k = document.getElementById('wapenBtn');
+    var k = wapenVak || (wapenVak = document.getElementById('wapenBtn'));
     if (!k) return;
     var boog = sp.wapen === 'boog';
     k.disabled = fase !== 'ronde';
-    k.innerHTML = (boog ? 'Boog' : 'Zwaard') + '<small>' + (boog ? 'van ver, minder hard' : 'dichtbij, hard') + '</small>';
+    var t = (boog ? 'Boog' : 'Zwaard') + '<small>' + (boog ? 'van ver, minder hard' : 'dichtbij, hard') + '</small>';
+    if (t !== wapenWas){ k.innerHTML = t; wapenWas = t; }
   }
   function ontwijkMet(s){
     if (s.dashKlok > 0 || s.dash > 0) return;
@@ -1153,12 +1156,14 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   }
   document.getElementById('dashBtn').addEventListener('pointerdown', function(e){ e.preventDefault(); ontwijk(); });
   document.getElementById('wapenBtn').addEventListener('pointerdown', function(e){ e.preventDefault(); wisselWapen(); });
+  var dashVak = null, dashWas = '';
   function tekenDash(){
-    var k = document.getElementById('dashBtn');
+    var k = dashVak || (dashVak = document.getElementById('dashBtn'));
     if (!k) return;
     var klaar = sp.dashKlok <= 0;
     k.disabled = !klaar || fase !== 'ronde';
-    k.innerHTML = klaar ? 'Ontwijk<small>spatie of shift</small>' : 'Ontwijk<small>nog ' + sp.dashKlok.toFixed(1).replace('.', ',') + ' s</small>';
+    var t = klaar ? 'Ontwijk<small>spatie of shift</small>' : 'Ontwijk<small>nog ' + sp.dashKlok.toFixed(1).replace('.', ',') + ' s</small>';
+    if (t !== dashWas){ k.innerHTML = t; dashWas = t; }
   }
 
   function zetPauze(){
@@ -1843,15 +1848,24 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     var rb = document.getElementById('rondeBtn'); if (rb) rb.addEventListener('click', startVolgende);
   }
 
+  /* Deze balk werd elke stap van de motor opnieuw opgebouwd, zestig keer per
+     seconde, terwijl de getallen erop hoogstens een paar keer per seconde
+     veranderen. Nu wordt hij eerst opgebouwd en alleen neergezet als hij
+     anders is dan wat er staat. */
+  var hudVak = null, hudWas = '';
   function tekenHud(){
     var deel = Math.max(0, hp / maxHp);
-    document.getElementById('hud').innerHTML =
+    var h =
       '<div class="meter leven"><i>Leven ' + Math.max(0, Math.round(hp)) + ' / ' + maxHp + '</i><div class="levenbalk"><i class="' + (deel < 0.3 ? 'laag' : '') + '" style="width:' + (deel * 100).toFixed(1) + '%"></i></div></div>' +
       (co.aan && maat ? '<div class="meter leven"><i>' + maat.naam + ' ' + Math.max(0, Math.round(maat.hp)) + ' / ' + maat.maxHp + (maat.neer ? ' (ligt neer)' : '') + '</i><div class="levenbalk"><i class="' + (maat.hp / maat.maxHp < 0.3 ? 'laag' : '') + '" style="width:' + (Math.max(0, maat.hp / maat.maxHp) * 100).toFixed(1) + '%"></i></div></div>' : '') +
       '<div class="meter"><i>Munten</i><b>' + munten + '</b></div>' +
       '<div class="meter"><i>Ronde</i><b>' + ronde + '</b></div>' +
       '<div class="meter"><i>Nog te gaan</i><b>' + (fouten.length + Math.max(0, teSpawnen)) + '</b></div>' +
       '<div class="meter"><i>Geveld</i><b>' + geveld + '</b></div>';
+    if (h !== hudWas){
+      if (!hudVak) hudVak = document.getElementById('hud');
+      hudVak.innerHTML = h; hudWas = h;
+    }
     tekenDash();
     tekenWapen();
   }
@@ -1862,7 +1876,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     var f = function(c){ return Math.max(0, Math.min(255, Math.round(d > 0 ? c * (1 - d) : c + (255 - c) * -d))); };
     return 'rgb(' + f(r) + ',' + f(g) + ',' + f(b) + ')';
   }
-  var VLOER = null;
+  var VLOER = null, grondGezet = false;
   function vloer(){
     if (VLOER) return VLOER;
     var s = '<defs><radialGradient id="vl" cx="50%" cy="45%"><stop offset="0" stop-color="#f3ead6"/><stop offset="1" stop-color="#e1d3b7"/></radialGradient></defs>';
@@ -1971,7 +1985,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     var ringen = ['', '#dfe6ee', '#b9c4d1', '#8f9db0', '#6b7a90', '#4f5d73', '#3b4759', '#c9971f'];
     var ring = ringen[Math.min(7, harnasLv || 0)];
     var wie = naam ? { naam:naam, av:(maat && maat.av) || '' } : { naam:eigenNaam(), av:(window.PROFIEL ? PROFIEL.avatar() : '') };
-    s += '<g transform="scale(' + (R / 46).toFixed(3) + ')"' + (sp2.flits > 0 ? ' opacity=".5"' : '') + '>' + (window.AVATAR ? AVATAR.inhoud(wie.naam, wie.av) : '<circle r="46" fill="#204ECF"/>') + '</g>';
+    s += '<g transform="scale(' + (R / 46).toFixed(3) + ')"' + (sp2.flits > 0 ? ' opacity=".5"' : '') + '><use href="#' + gezichtId(wie.naam, wie.av) + '"/></g>';
     if (ring) s += '<circle r="' + (R + 2) + '" fill="none" stroke="' + ring + '" stroke-width="3" opacity=".9"/>';
     if ((harnasLv || 0) >= 3) s += '<path d="M0,' + (-R - 2) + ' l0,-9 l5,3" fill="none" stroke="' + (naam ? '#204ECF' : '#F26749') + '" stroke-width="3.5" stroke-linecap="round"/>';
     s += '</g>';
@@ -1983,7 +1997,10 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   }
 
   function tekenArena(){
-    var s = vloer();
+    /* De vloer verandert nooit, dus die wordt een keer neergezet in de laag
+       eronder in plaats van elk beeld opnieuw ingelezen. */
+    if (!grondGezet){ document.getElementById('arenagrond').innerHTML = vloer(); grondGezet = true; }
+    var s = '';
     var pols = performance.now() / 1000;
     /* munten op de grond */
     munt.forEach(function(m){
@@ -2151,7 +2168,22 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       s += '<text x="' + (ARENA.b / 2) + '" y="' + (ARENA.h / 2 - 6) + '" text-anchor="middle" font-size="26" font-weight="700" fill="#14224C" font-family="Poppins">' + kop + '</text>';
       s += '<text x="' + (ARENA.b / 2) + '" y="' + (ARENA.h / 2 + 24) + '" text-anchor="middle" font-size="13" fill="#5b6480" font-family="Poppins">' + onder + '</text>';
     }
-    document.getElementById('arena').innerHTML = s;
+    (arenaVak || (arenaVak = document.getElementById('arenalaag'))).innerHTML = s;
+  }
+  var arenaVak = null;
+
+  /* Een gezichtje hoort bij de vormen die blijven staan: het wordt een keer in
+     het vaste vakje gezet en daarna alleen nog aangewezen. */
+  var gezichten = {}, gezichtNr = 0;
+  function gezichtId(naam, av){
+    var sleutel = naam + '|' + av;
+    if (gezichten[sleutel]) return gezichten[sleutel];
+    var id = 'gez' + (++gezichtNr);
+    gezichten[sleutel] = id;
+    var vast = document.getElementById('arenavast');
+    if (vast) vast.insertAdjacentHTML('beforeend',
+      '<g id="' + id + '">' + (window.AVATAR ? AVATAR.inhoud(naam, av) : '<circle r="46" fill="#204ECF"/>') + '</g>');
+    return id;
   }
 
   /* ---------- einde ---------- */
