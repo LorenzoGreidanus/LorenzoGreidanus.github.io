@@ -152,7 +152,7 @@ window.ROLSPEL = (function(){
   /* de stijl van de lobby en de chips, één keer */
   try {
     var st = document.createElement('style');
-    st.textContent = '.rollen-lobby{display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr);gap:18px;align-items:start;margin:14px 0}' +
+    st.textContent = '.rollen-lobby{display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr);gap:18px;align-items:start;margin:14px auto;width:min(760px,100%)}' +
       '.rollen-code{background:#14224C;color:#FBF6F1;border-radius:22px;padding:14px 20px;text-align:center;max-width:100%;min-width:0;overflow-wrap:anywhere}' +
       '.rollen-code small{display:block;opacity:.75;font-size:.82rem;line-height:1.3}' +
       '.rollen-code i{display:block;font-style:normal;font-weight:600;font-size:clamp(1rem,3.4vw,1.4rem);margin:2px 0 8px;overflow-wrap:anywhere}' +
