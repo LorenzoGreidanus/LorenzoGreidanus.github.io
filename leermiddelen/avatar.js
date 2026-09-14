@@ -108,7 +108,7 @@ window.AVATAR = (function(){
     if (e === 0) s += '<circle cx="-26" cy="8" r="5" fill="#F26749" opacity=".45"/><circle cx="26" cy="8" r="5" fill="#F26749" opacity=".45"/>';
     else if (e === 1) s += '<g fill="' + oog + '" opacity=".7"><circle cx="-27" cy="6" r="1.6"/><circle cx="-22" cy="10" r="1.6"/><circle cx="-30" cy="12" r="1.6"/><circle cx="27" cy="6" r="1.6"/><circle cx="22" cy="10" r="1.6"/><circle cx="30" cy="12" r="1.6"/></g>';
     else if (e === 2) s += '<path d="M2,-44 q4,-12 14,-6 q-8,-2 -10,6" fill="none" stroke="' + kleur + '" stroke-width="5" stroke-linecap="round"/>';
-    else if (e === 3) s += '<path d="M-24,-34 q24,-24 48,0 z" fill="#14224C"/><path d="M-28,-33 h60" stroke="#14224C" stroke-width="6" stroke-linecap="round"/>';
+    else if (e === 3) s += '<path d="M-26,-30 q26,-36 52,0 z" fill="#14224C"/><path d="M-31,-29 h62" stroke="#14224C" stroke-width="7" stroke-linecap="round"/>';
     else if (e === 4) s += '<path d="M30,-30 l3,7 7,1 -5,5 1,7 -6,-4 -6,4 1,-7 -5,-5 7,-1z" fill="#FFD166"/>';
     return s + '</svg>';
   }
