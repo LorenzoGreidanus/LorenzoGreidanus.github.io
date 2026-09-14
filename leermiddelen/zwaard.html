@@ -80,7 +80,7 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
    overheen: tijdens het vechten zie je alleen het veld, en zodra de vragen
    komen is er niets anders meer te zien. */
 .spel{display:block;padding:10px 0 16px;height:calc(100vh - 62px);min-height:560px}
-@media(max-width:1000px){.spel{height:auto}.arenavak{height:auto;min-height:0}}
+@media(max-width:1000px){.spel{height:auto}.arenavak{height:auto;min-height:0;flex:none;width:100%}}
 .arenakolom{position:relative;display:flex;flex-direction:column;min-height:0;gap:8px;height:100%}
 .hudrij{display:flex;gap:8px;align-items:stretch}
 .hud{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch;flex:1}
@@ -110,6 +110,10 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
   position:relative;touch-action:none;user-select:none;-webkit-user-select:none;box-shadow:0 10px 26px rgba(20,34,76,.08)}
 /* twee lagen over elkaar: de vloer eronder, alles wat beweegt erboven */
 .arenavak svg{position:absolute;inset:0;display:block;width:100%;height:100%;overflow:visible}
+/* Op een smal scherm vult de arena de breedte en haalt hij zijn hoogte uit de
+   verhouding van het speelveld. Deze regel moet na de regel hierboven staan,
+   anders wint die met zijn width:auto. */
+@media(max-width:1000px){.arenavak{flex:none;width:100%;height:auto;min-height:0}}
 .arenatip{font-size:.86rem;color:var(--muted);background:#fff;border:1px solid rgba(20,34,76,.09);border-radius:12px;padding:8px 13px}
 /* in de uitlegstand staat hier wat de baas doet, dus dan mag het opvallen */
 .arenatip.uitleg{border-color:var(--amber);background:#fff8ec;color:var(--ink);font-weight:500}
@@ -543,10 +547,14 @@ const ICONEN = {
      is geen leren maar wachten, dus de rem gaat alleen aan als er iets te zien
      is: een baas die binnenkomt, een aanval waarvan de waarschuwing op de grond
      ligt, en de eerste keer dat je een soort fout tegenkomt. */
-  var traagKlok = 0, alGezien = {};
-  function traagMoment(seconden, tekst){
+  var traagKlok = 0, alGezien = {}, wolk = null;
+  /* 'doel' is waar het om gaat: {x, y, r}. Daar valt het licht op, en de wolk
+     komt ernaast te staan. Zonder doel is er alleen de regel onder de arena. */
+  function traagMoment(seconden, tekst, doel){
     if (!uitlegstand || co.aan) return;
     traagKlok = Math.max(traagKlok, seconden);
+    wolk = tekst ? { t:tekst, x:doel ? doel.x : ARENA.b / 2, y:doel ? doel.y : ARENA.h / 2,
+                     r:doel ? doel.r : 0, heeftDoel:!!doel } : null;
     if (tekst){
       var vak = document.getElementById('arenatip');
       if (vak){ vak.textContent = tekst; vak.classList.add('uitleg'); }
@@ -565,12 +573,12 @@ const ICONEN = {
   /* Wat de baas nu doet, onder de arena, en zolang de waarschuwing op de grond
      ligt gaat het langzaam. Die waarschuwing duurt in speeltijd 'wacht' maal de
      factor k; in echte seconden is dat zoveel gedeeld door de traagheid. */
-  function legUit(soort, k){
+  function legUit(soort, k, b){
     if (!uitlegstand || co.aan) return;
     var t = AANVALUITLEG[soort];
     if (!t) return;
     var w = (AANVAL[soort] && AANVAL[soort].wacht) || 1;
-    traagMoment(w * (k || 1) / TRAAGHEID + 0.5, t);
+    traagMoment(w * (k || 1) / TRAAGHEID + 0.5, t, b ? { x:b.x, y:b.y, r:b.r + 26 } : null);
   }
 
   /* ---------- keuzes ---------- */
@@ -854,7 +862,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   function begin(){
     /* samen in een arena loopt iedereen op dezelfde snelheid */
     if (co.aan) uitlegstand = false;
-    traagKlok = 0; alGezien = {};
+    traagKlok = 0; alGezien = {}; wolk = null;
     ronde = 0; munten = 0; level = {}; geveld = 0; reeks = 0; besteReeks = 0; goedAantal = 0; foutAantal = 0;
     co.tikken = 0; co.inbox = []; co.log = {}; co.inTicks = {}; co.bevestigd = 0; co.hashes = {}; co.reserve = RESERVEMIN; co.vlotSinds = 0; co.rest = 0;
     co.mijnIn = { dx:0, dy:0 }; co.laatsteZend = ''; co.klaar = false; co.maatKlaar = false; co.eind = false;
@@ -901,7 +909,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     /* in de uitlegstand krijgt een baas eerst even alle aandacht */
     if (ronde % BAASRONDE === 0){
       var bz = baasVan(ronde);
-      traagMoment(3, bz.naam + ' komt binnen. ' + bz.wat + ' Kijk naar de grond: wat daar oplicht gaat zo raken.');
+      traagMoment(3, bz.naam + ' komt binnen. ' + bz.wat + ' Kijk naar de grond: wat daar oplicht gaat zo raken.',
+        { x:ARENA.b / 2, y:ARENA.h / 2, r:bz.r + 30 });
     }
   }
 
@@ -925,10 +934,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   function spawn(soort){
     var n = soort.aantal || 1, p = randPlek();
     /* de eerste keer dat je een soort tegenkomt mag je hem even bekijken */
-    if (uitlegstand && !co.aan && !alGezien[soort.id] && SOORTUITLEG[soort.id]){
-      alGezien[soort.id] = 1;
-      traagMoment(2.5, SOORTUITLEG[soort.id]);
-    }
+    var nieuweSoort = uitlegstand && !co.aan && !alGezien[soort.id] && SOORTUITLEG[soort.id];
+    if (nieuweSoort) alGezien[soort.id] = 1;
     for (var i = 0; i < n; i++){
       var h = Math.round(foutHp(ronde) * soort.hp);
       fouten.push({ soort:soort, x:p.x + (toeval() - .5) * 30, y:p.y + (toeval() - .5) * 30,
@@ -936,6 +943,11 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
                     schild:soort.schild || 0, slaKlok:0,
                     /* een schutter mikt, schuift een kant op en laadt eerst */
                     mikt:0, zij:toeval() < 0.5 ? 1 : -1, laadKlok:soort.laden ? 1.2 + toeval() : 0 });
+    }
+    /* de eerste van zijn soort mag je even bekijken */
+    if (nieuweSoort){
+      var eerste = fouten[fouten.length - 1];
+      traagMoment(2.5, SOORTUITLEG[soort.id], { x:eerste.x, y:eerste.y, r:eerste.r + 24 });
     }
   }
   /* voor het testen: __zwaardSpring(5) springt naar een baasronde */
@@ -977,7 +989,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   function eenSpeler(levend){ return levend[Math.floor(toeval() * levend.length)] || spelersNu()[0]; }
   function zetAanval(soort, b, levend, k){
     var i, n, p, hoek, doel;
-    legUit(soort, k);
+    legUit(soort, k, b);
     if (soort === 'cirkel'){
       /* onder elke speler die nog staat, plus een paar op toevallige plekken */
       levend.forEach(function(P){ aanvallen.push({ soort:'cirkel', x:P.sp.x, y:P.sp.y, t:0, k:k }); });
@@ -1306,7 +1318,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     var dt = Math.min(0.1, (nu - laatste) / 1000); laatste = nu;
     /* de uitlegstand vertraagt alleen op de momenten die ertoe doen; samen in
        een arena kan dat niet, want dan zou de een langzamer lopen dan de ander */
-    if (uitlegstand && !co.aan && traagKlok > 0){ traagKlok -= dt; dt *= TRAAGHEID; }
+    if (uitlegstand && !co.aan && traagKlok > 0){ traagKlok -= dt; dt *= TRAAGHEID; if (traagKlok <= 0) wolk = null; }
     /* De motor rekent in vaste stappen van een zestigste seconde, hoe snel
        het scherm ook ververst: op een traag toestel meer stappen per beeld,
        op een snel scherm soms geen. Hoogstens vier per beeld, anders loopt
@@ -2277,7 +2289,58 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       s += '<text x="' + (ARENA.b / 2) + '" y="' + (ARENA.h / 2 - 6) + '" text-anchor="middle" font-size="26" font-weight="700" fill="#14224C" font-family="Poppins">' + kop + '</text>';
       s += '<text x="' + (ARENA.b / 2) + '" y="' + (ARENA.h / 2 + 24) + '" text-anchor="middle" font-size="13" fill="#5b6480" font-family="Poppins">' + onder + '</text>';
     }
+    s += tekenWolk();
     (arenaVak || (arenaVak = document.getElementById('arenalaag'))).innerHTML = s;
+  }
+
+  /* De uitleg in de arena zelf: de rest gaat in de schaduw, om het ding dat het
+     betreft komt een ring, en ernaast staat een wolk met de tekst. Op een smal
+     scherm slaan we hem over: daar is de tekening te klein om te lezen, en staat
+     dezelfde uitleg onder de arena. */
+  function regelsVan(t, breedte){
+    var woorden = t.split(' '), regels = [], nu = '';
+    for (var i = 0; i < woorden.length; i++){
+      var proef = nu ? nu + ' ' + woorden[i] : woorden[i];
+      if (proef.length > breedte && nu){ regels.push(nu); nu = woorden[i]; }
+      else nu = proef;
+    }
+    if (nu) regels.push(nu);
+    return regels;
+  }
+  function tekenWolk(){
+    if (!wolk || !uitlegstand) return '';
+    var vak = document.getElementById('arenavak');
+    if (vak && vak.clientWidth && vak.clientWidth < 560) return '';
+    var pols = performance.now() / 1000;
+    var s = '', kl = '#EA9836';
+    var straal = wolk.r + Math.sin(pols * 4) * 3;
+    /* de schaduw over alles, met een gat waar het om gaat */
+    s += '<defs><mask id="uitleggat">' +
+      '<rect x="-400" y="-400" width="' + (ARENA.b + 800) + '" height="' + (ARENA.h + 800) + '" fill="#fff"/>' +
+      (wolk.heeftDoel ? '<circle cx="' + wolk.x.toFixed(1) + '" cy="' + wolk.y.toFixed(1) + '" r="' + straal.toFixed(1) + '" fill="#000"/>' : '') +
+      '</mask></defs>';
+    s += '<rect x="-400" y="-400" width="' + (ARENA.b + 800) + '" height="' + (ARENA.h + 800) + '" fill="#14224C" opacity=".42" mask="url(#uitleggat)"/>';
+    if (wolk.heeftDoel){
+      s += '<circle cx="' + wolk.x.toFixed(1) + '" cy="' + wolk.y.toFixed(1) + '" r="' + straal.toFixed(1) +
+        '" fill="none" stroke="' + kl + '" stroke-width="4" stroke-dasharray="12 9" opacity=".95"/>';
+    }
+    /* de wolk zelf, aan de kant waar de meeste ruimte is */
+    var regels = regelsVan(wolk.t, 46), breed = 430, hoog = 26 + regels.length * 25;
+    var onder = wolk.y < ARENA.h / 2;
+    var bx = Math.max(20, Math.min(ARENA.b - breed - 20, wolk.x - breed / 2));
+    var by = onder ? wolk.y + straal + 30 : wolk.y - straal - 30 - hoog;
+    by = Math.max(14, Math.min(ARENA.h - hoog - 14, by));
+    /* het puntje naar het ding toe */
+    var px = Math.max(bx + 26, Math.min(bx + breed - 26, wolk.x));
+    var py = onder ? by : by + hoog;
+    var pw = 13, pv = onder ? -16 : 16;
+    s += '<rect x="' + bx + '" y="' + by + '" width="' + breed + '" height="' + hoog + '" rx="16" fill="#FBF6F1" stroke="' + kl + '" stroke-width="3"/>';
+    s += '<path d="M' + (px - pw) + ',' + py + ' L' + px + ',' + (py + pv) + ' L' + (px + pw) + ',' + py + ' z" fill="#FBF6F1" stroke="' + kl + '" stroke-width="3" stroke-linejoin="round"/>';
+    s += '<rect x="' + (px - pw + 2) + '" y="' + (py - 2) + '" width="' + (pw * 2 - 4) + '" height="4" fill="#FBF6F1"/>';
+    regels.forEach(function(r, i){
+      s += '<text x="' + (bx + breed / 2) + '" y="' + (by + 30 + i * 25) + '" text-anchor="middle" font-size="17" font-weight="600" fill="#14224C" font-family="Poppins">' + r.replace(/[<>&]/g, '') + '</text>';
+    });
+    return s;
   }
   var arenaVak = null;
 
