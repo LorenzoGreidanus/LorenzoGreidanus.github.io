@@ -578,6 +578,27 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
 :root[data-theme="dark"] #t-mainz .tafereel-tekst .jaar{color:#83A5F2}
 :root[data-theme="dark"] .reis-spring summary{color:#83A5F2}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) #t-mainz{--tint:#83A5F2;--tint-ink:#14224C}:root:not([data-theme="light"]) #t-mainz .tafereel-tekst .jaar{color:#83A5F2}:root:not([data-theme="light"]) .reis-spring summary{color:#83A5F2}}
+/* ---------------------------------------------------------------------------
+   De knop voor licht en donker draait een rondje, het plaatje krimpt halverwege
+   weg zodat de maan ongemerkt een zon wordt, en er gaat een ring naar buiten in
+   de kleur van waar je heen gaat. De pagina verkleurt mee in plaats van te
+   knipperen. Wie beweging heeft uitgezet krijgt de oude, directe wissel.
+   --------------------------------------------------------------------------- */
+.themaknop{position:relative}
+.themaknop.draait{animation:themadraai .62s cubic-bezier(.34,1.56,.64,1)}
+.themaknop.draait svg{animation:themaplaatje .62s cubic-bezier(.34,1.56,.64,1)}
+.themaknop.draait::after{content:"";position:absolute;inset:-3px;border-radius:999px;
+  border:3px solid #EA9836;animation:themaring .62s cubic-bezier(.2,.7,.3,1) forwards;pointer-events:none}
+:root[data-theme="dark"] .themaknop.draait::after{border-color:#83A5F2}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .themaknop.draait::after{border-color:#83A5F2}}
+@keyframes themadraai{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@keyframes themaplaatje{0%{transform:scale(1);opacity:1}42%{transform:scale(.2);opacity:.15}100%{transform:scale(1);opacity:1}}
+@keyframes themaring{from{transform:scale(.85);opacity:1}to{transform:scale(2.4);opacity:0}}
+:root.themawisselt body{transition:background-color .34s ease,color .34s ease}
+@media(prefers-reduced-motion:reduce){
+  .themaknop.draait,.themaknop.draait svg,.themaknop.draait::after{animation:none}
+  :root.themawisselt body{transition:none}
+}
 </style>
 </head>
 <body>
@@ -2436,8 +2457,17 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offs
     var kleur = getComputedStyle(wortel).getPropertyValue('--room').trim();
     document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){ m.setAttribute('content', kleur); });
   }
+  var beweegtLiever = matchMedia('(prefers-reduced-motion: reduce)');
   knop.addEventListener('click', function(){
     var nieuw = huidig() === 'dark' ? 'light' : 'dark';
+    if (!beweegtLiever.matches){
+      /* opnieuw laten beginnen als je snel achter elkaar drukt */
+      knop.classList.remove('draait');
+      void knop.offsetWidth;
+      knop.classList.add('draait');
+      wortel.classList.add('themawisselt');
+      setTimeout(function(){ knop.classList.remove('draait'); wortel.classList.remove('themawisselt'); }, 640);
+    }
     wortel.setAttribute('data-theme', nieuw);
     try { localStorage.setItem('thema', nieuw); } catch (e) {}
     bijwerken();

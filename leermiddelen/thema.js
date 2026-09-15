@@ -18,8 +18,17 @@
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', donker ? '#0F1A3D' : '#FBF6F1');
   }
+  var beweegtLiever = window.matchMedia ? matchMedia('(prefers-reduced-motion: reduce)') : { matches:false };
   knop.addEventListener('click', function(){
     var nieuw = huidig() === 'dark' ? 'light' : 'dark';
+    if (!beweegtLiever.matches){
+      /* opnieuw laten beginnen als je snel achter elkaar drukt */
+      knop.classList.remove('draait');
+      void knop.offsetWidth;
+      knop.classList.add('draait');
+      wortel.classList.add('themawisselt');
+      setTimeout(function(){ knop.classList.remove('draait'); wortel.classList.remove('themawisselt'); }, 640);
+    }
     wortel.setAttribute('data-theme', nieuw);
     try { localStorage.setItem('thema', nieuw); } catch (e) {}
     bijwerken();
