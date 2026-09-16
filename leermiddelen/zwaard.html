@@ -320,10 +320,10 @@ body.groot .meter b{font-size:1.45rem}
 
 <section class="wrap spel hide" id="scherm-spel">
   <div class="arenakolom">
-    <div class="hudrij"><div class="hud" id="hud"></div><button class="dashknop" type="button" id="wapenBtn">Zwaard<small>dichtbij, hard</small></button><button class="dashknop" type="button" id="dashBtn">Ontwijk<small>spatie of shift</small></button></div>
+    <div class="hudrij"><div class="hud" id="hud"></div><button class="dashknop" type="button" id="wapenBtn">Zwaard<small>dichtbij, hard · Q, E of rechtsklik</small></button><button class="dashknop" type="button" id="dashBtn">Ontwijk<small>spatie of shift</small></button></div>
     <div class="baasbalk hide" id="baasbalk"></div>
     <div class="arenavak" id="arenavak"><svg id="arenagrond" viewBox="0 0 1100 620" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"></svg><svg id="arena" viewBox="0 0 1100 620" xmlns="http://www.w3.org/2000/svg"><defs id="arenavast"></defs><g id="arenalaag"></g></svg></div>
-    <p class="arenatip" id="arenatip">Pijltjes of WASD om te lopen. Je wapen slaat vanzelf; Q wisselt tussen zwaard en boog.</p>
+    <p class="arenatip" id="arenatip">Pijltjes of WASD om te lopen. Je wapen slaat vanzelf; Q, E, Tab of de rechtermuisknop wisselt tussen zwaard en boog.</p>
     <aside class="zij hide" id="zij"></aside>
   </div>
 </section>
@@ -889,7 +889,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   function rondeTekst(n, aantal, bz){
     fase = 'ronde'; co.klaar = false; co.maatKlaar = false;
     document.getElementById('arenatip').textContent = 'Ronde ' + n + ': ' + aantal + ' fouten' +
-      (bz ? ' en ' + bz.naam + ' in het midden. ' + bz.wat + ' Kijk naar de grond en stap eruit' : '') + '. Pijltjes of WASD om te lopen, je wapen slaat vanzelf, Q wisselt tussen zwaard en boog.';
+      (bz ? ' en ' + bz.naam + ' in het midden. ' + bz.wat + ' Kijk naar de grond en stap eruit' : '') + '. Pijltjes of WASD om te lopen, je wapen slaat vanzelf, Q (of E, Tab, rechtsklik) wisselt tussen zwaard en boog.';
     /* in de uitlegstand krijgt een baas eerst even alle aandacht */
     if (bz) stilMoment(bz.naam + ' komt binnen. ' + bz.wat + ' Kijk naar de grond: wat daar oplicht gaat zo raken.', { x:ARENA.b / 2, y:ARENA.h / 2, r:bz.r + 30 });
     tekenZij(); tekenHud();
@@ -920,7 +920,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (uitlegPauze && fase === 'ronde' && !e.repeat && uitlegVerder()){ e.preventDefault(); return; }
     if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].indexOf(e.key) >= 0 && fase === 'ronde') e.preventDefault();
     if ((e.key === ' ' || e.key === 'Shift') && fase === 'ronde' && !e.repeat) ontwijk();
-    if (e.key.toLowerCase() === 'q' && fase === 'ronde' && !e.repeat) wisselWapen();
+    /* wisselen van wapen: Q, E of Tab, en de rechtermuisknop op de arena */
+    if ((e.key.toLowerCase() === 'q' || e.key.toLowerCase() === 'e' || e.key === 'Tab') && fase === 'ronde' && !e.repeat){ e.preventDefault(); wisselWapen(); }
     toetsen[e.key.toLowerCase()] = true;
     if ((e.key === 'p' || e.key === 'Escape') && !document.getElementById('scherm-spel').classList.contains('hide')) zetPauze();
     if (fase === 'vragen' && e.key >= '1' && e.key <= '4') antwoord(parseInt(e.key, 10) - 1);
@@ -933,7 +934,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     return { x:(e.clientX - r.left - (r.width - ARENA.b * schaal) / 2) / schaal,
              y:(e.clientY - r.top - (r.height - ARENA.h * schaal) / 2) / schaal };
   }
-  vak2.addEventListener('pointerdown', function(e){ if (uitlegVerder()) return; wijs = arenaPunt(e); vak2.setPointerCapture(e.pointerId); });
+  vak2.addEventListener('pointerdown', function(e){ if (e.button === 2) return; if (uitlegVerder()) return; wijs = arenaPunt(e); vak2.setPointerCapture(e.pointerId); });
+  vak2.addEventListener('contextmenu', function(e){ e.preventDefault(); if (fase === 'ronde' && !pauze) wisselWapen(); });
   vak2.addEventListener('pointermove', function(e){ if (wijs) wijs = arenaPunt(e); });
   vak2.addEventListener('pointerup', function(){ wijs = null; });
   vak2.addEventListener('pointercancel', function(){ wijs = null; });
@@ -971,7 +973,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (!k) return;
     var boog = sp.wapen === 'boog';
     k.disabled = fase !== 'ronde';
-    var t = (boog ? 'Boog' : 'Zwaard') + '<small>' + (boog ? 'van ver, minder hard' : 'dichtbij, hard') + '</small>';
+    var t = (boog ? 'Boog' : 'Zwaard') + '<small>' + (boog ? 'van ver, minder hard' : 'dichtbij, hard') + ' · Q, E of rechtsklik</small>';
     if (t !== wapenWas){ k.innerHTML = t; wapenWas = t; }
   }
   document.getElementById('dashBtn').addEventListener('pointerdown', function(e){ e.preventDefault(); ontwijk(); });
@@ -1875,6 +1877,6 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
 </script>
 <script src="thema.js"></script>
 <script src="spel.js"></script>
-<script>SPEL.uitleg({ doel:"Vel de fouten in de arena. Goede antwoorden maken je zwaard sterker.", tijd:"zolang je het volhoudt", bediening:"Pijltjes of WASD om te lopen, spatie of Shift om te ontwijken, Q om tussen zwaard en boog te wisselen; bij een baas en bij een schutter stap je uit wat er op de grond oplicht. Op een telefoon sleep je." });</script>
+<script>SPEL.uitleg({ doel:"Vel de fouten in de arena. Goede antwoorden maken je zwaard sterker.", tijd:"zolang je het volhoudt", bediening:"Pijltjes of WASD om te lopen, spatie of Shift om te ontwijken, Q, E, Tab of de rechtermuisknop om tussen zwaard en boog te wisselen (of tik op de knop Zwaard/Boog); bij een baas en bij een schutter stap je uit wat er op de grond oplicht. Op een telefoon sleep je." });</script>
 </body>
 </html>
