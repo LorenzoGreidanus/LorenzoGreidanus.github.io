@@ -72,6 +72,7 @@ export class Kamer extends DurableObject {
     super(ctx, env);
     this.stand = null;
     this.standTimer = null;
+    this.proef = null;
     this.tempo = {};        /* per speler: hoeveel berichten deze seconde */
     this.ctx.blockConcurrencyWhile(async () => {
       this.stand = (await this.ctx.storage.get("stand")) || null;
@@ -368,6 +369,11 @@ export class Kamer extends DurableObject {
     if (!sp) return;
     /* in een duel mag een speler die alleen wacht de kamer sluiten */
     if (m.t === "stop" && st.duel && st.fase !== "einde") return this.strijdKlaar();
+    /* PROEF (tijdelijk): de kamer tikt zelf, om te zien of dat kan */
+    if (m.t === "net" && m.d && m.d.k === "proef" && st.duel){
+      this.proefStart(Math.min(600, Math.max(5, Number(m.d.duur) || 60)), Math.min(400000, Math.max(0, Number(m.d.werk) || 20000)));
+      return;
+    }
     /* berichten tussen de spelers onderling (de gedeelde arena): de kamer geeft ze
        alleen door, bewaart niets en kijkt er niet in */
     if (m.t === "net"){
@@ -425,6 +431,22 @@ export class Kamer extends DurableObject {
       if (st.duel && alle.length >= 2) return this.strijdKlaar();
       if (alle.length && alle.every(id => st.spelers[id].af)) return this.strijdKlaar();
     }
+  }
+  /* PROEF (tijdelijk): zestig tikken per seconde met wat rekenwerk, twintig
+     berichten per seconde naar de spelers, zolang de proef duurt */
+  proefStart(duur, werk){
+    if (this.proef) return;
+    const t0 = Date.now(); let n = 0, laatst = t0, maxGat = 0, som = 0;
+    this.proef = setInterval(() => {
+      const nu = Date.now(); maxGat = Math.max(maxGat, nu - laatst); laatst = nu;
+      let x = 0; for (let i = 0; i < werk; i++) x += Math.sin(i * 0.001); som += x;
+      n++;
+      if (n % 3 === 0){
+        const s = JSON.stringify({ t: "net", d: { k: "proeftik", n, t: nu, sec: Math.round((nu - t0) / 100) / 10, maxGat, som: Math.round(som) } });
+        this.ctx.getWebSockets("speler").forEach(ws => { try { ws.send(s); } catch (e){} });
+      }
+      if (nu - t0 > duur * 1000){ clearInterval(this.proef); this.proef = null; }
+    }, 1000 / 60);
   }
   /* de stand gaat op zijn vroegst om de ruim een seconde naar iedereen, hoe
      vaak de spelers ook melden */
