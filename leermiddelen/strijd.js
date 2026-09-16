@@ -88,7 +88,7 @@ window.STRIJD = (function(){
   naam = naam.trim().slice(0, 16);
   if (!naamOk(naam)) naam = 'Leerling';
   var hud, toast, sluier, toastKlok = null, mijnSid = sid(), mijnPid = null;   /* mijnPid: het openbare nummer dat de kamer me geeft */
-  var ws = null, dicht = false, pogingen = 0, hooks = null, gestart = false, klaarMet = false, laatsteStand = '', duel = false, tegen = null, gastheer = null, maatNaam = '', maatAv = '';
+  var ws = null, dicht = false, pogingen = 0, hooks = null, gestart = false, klaarMet = false, laatsteStand = '', duel = false, tegen = null, gastheer = null, maatNaam = '', maatAv = '', maten = [], maxSamen = 2;
   function samen(){ return duel && hooks && hooks.samen; }
 
   function zeg(tekst, goed){
@@ -97,7 +97,18 @@ window.STRIJD = (function(){
     clearTimeout(toastKlok); toastKlok = setTimeout(function(){ toast.className = ''; }, 2600);
   }
   function hudTekst(kop, onder, wacht){ if (!hud) return; hud.innerHTML = kop + (onder ? '<small>' + onder + '</small>' : ''); hud.className = wacht ? 'wacht' : ''; }
-  function sluierTekst(html){ if (sluier){ sluier.innerHTML = '<div>' + html + '</div>'; var k = sluier.querySelector('button'); if (k) k.addEventListener('click', function(){ stuur({ t:'stop' }); location.href = location.pathname; }); } }
+  function sluierTekst(html){
+    if (!sluier) return;
+    sluier.innerHTML = '<div>' + html + '</div>';
+    /* de knop 'Toch niet' sluit de kamer; een knop met data-start geeft het startsein */
+    Array.prototype.forEach.call(sluier.querySelectorAll('button'), function(k){
+      k.addEventListener('click', function(){
+        if (k.getAttribute('data-start')){ k.disabled = true; stuur({ t:'start' }); return; }
+        stuur({ t:'stop' }); location.href = location.pathname;
+      });
+    });
+  }
+  function namen(lijst){ var n = lijst.map(function(r){ return schoon(r.naam); }); return n.length <= 1 ? n.join('') : n.slice(0, -1).join(', ') + ' en ' + n[n.length - 1]; }
   function sluierWeg(){ if (sluier && sluier.parentNode) sluier.parentNode.removeChild(sluier); sluier = null; }
 
   if (actief){
@@ -134,6 +145,14 @@ window.STRIJD = (function(){
   setInterval(function(){ if (ws && ws.readyState === 1) ws.send('ping'); }, 25000);
 
   function wachtTekst(aantal){
+    if (duel && maxSamen > 2){
+      /* samen met twee, drie of vier: de maker start zodra er minstens twee zijn; vol begint het vanzelf */
+      var ikMaak = gastheer === mijnPid, erbij = maten.length ? '<p>Al in de kamer: <strong>' + namen(maten) + '</strong>.</p>' : '';
+      var uitleg = '<p>Laat je vrienden naar <strong>' + location.host.replace(/^www\./, '') + '/q</strong> gaan en deze code invullen:</p><span class="code">' + code + '</span>' + erbij;
+      if (aantal < 2) return '<b>Wacht op je vrienden</b>' + uitleg + '<p>Tot vier in een arena. Zodra er twee zijn kan het beginnen; met vier begint het vanzelf.</p><button type="button">Toch niet</button>';
+      if (ikMaak) return '<b>' + aantal + ' in de kamer</b>' + uitleg + '<p>Nog iemand erbij, of nu beginnen? Met vier begint het vanzelf.</p><button type="button" data-start="1">Start met z\'n ' + (aantal === 2 ? 'tweeën' : aantal === 3 ? 'drieën' : 'vieren') + '</button> <button type="button">Toch niet</button>';
+      return '<b>' + aantal + ' in de kamer</b>' + uitleg + '<p>Wacht tot de maker van de kamer start, of tot de kamer vol is.</p><button type="button">Toch niet</button>';
+    }
     if (duel){
       var wie = samen() ? 'je maat' : 'je tegenstander';
       if (aantal < 2) return '<b>Wacht op ' + wie + '</b><p>Laat ' + wie + ' naar <strong>' + location.host.replace(/^www\./, '') + '/q</strong> gaan en deze code invullen:</p>' +
@@ -145,21 +164,27 @@ window.STRIJD = (function(){
   function bericht(m){
     if (m.t === 'welkom'){
       if (m.spel !== 'strijd'){ hudTekst('Samen spelen', 'deze code hoort bij een ander spel', true); sluierTekst('<b>Deze code hoort bij een ander spel.</b><button type="button">Terug</button>'); return; }
-      duel = !!m.duel; gastheer = m.gastheer || null;
+      duel = !!m.duel; gastheer = m.gastheer || null; if (m.max) maxSamen = m.max;
       if (m.jij) mijnPid = m.jij;
       var aantal = m.spelers ? m.spelers.length : 0;
+      maten = (m.spelers || []).filter(function(r){ return r.sid !== mijnPid; }).map(function(r){ return { sid:r.sid, naam:r.naam, av:r.av || '' }; });
       (m.spelers || []).forEach(function(r){ if (r.sid !== mijnPid){ maatNaam = r.naam; maatAv = r.av || ''; } });
       hudTekst((duel ? 'Duel ' : 'Klasstrijd ') + code, aantal + ' in de kamer', true);
-      if (m.fase === 'bezig') start();
+      if (m.fase === 'bezig') start(m);
       else if (m.fase === 'einde') sluierWeg();
       else if (m.fase === 'aftellen') aftellen(3);
       else sluierTekst(wachtTekst(aantal));
       return;
     }
     if (m.t === 'aftellen'){ aftellen(m.s || 3); return; }
-    if (m.t === 'start'){ start(); return; }
+    if (m.t === 'start'){ start(m); return; }
     if (m.t === 'net'){ if (hooks && hooks.net) hooks.net(m.d); return; }
-    if (m.t === 'stand'){ if (m.tegen && m.tegen.naam){ maatNaam = m.tegen.naam; maatAv = m.tegen.av || maatAv; if (hooks && hooks.maatNaam) hooks.maatNaam(maatNaam, maatAv); } toonStand(m); return; }
+    if (m.t === 'stand'){
+      if (m.max) maxSamen = m.max;
+      if (m.maten) maten = m.maten;
+      if (m.tegen && m.tegen.naam){ maatNaam = m.tegen.naam; maatAv = m.tegen.av || maatAv; if (hooks && hooks.maatNaam) hooks.maatNaam(maatNaam, maatAv); }
+      toonStand(m); return;
+    }
     if (m.t === 'aanval'){
       if (!gestart || klaarMet || !hooks) return;
       var n = Math.max(1, Math.min(5, m.n | 0));
@@ -171,9 +196,9 @@ window.STRIJD = (function(){
       klaarMet = true; dicht = true;
       var j = m.jouw, lijst = m.stand || [];
       if (samen()){
-        var mij = lijst.filter(function(r){ return r.sid === mijnPid; })[0];
-        hudTekst('Samen tot ronde ' + (mij ? mij.ronde : '?') + ' gekomen', maatNaam ? 'met ' + maatNaam : '', false);
-        zeg('Jullie zijn allebei gevallen. Samen tot ronde ' + (mij ? mij.ronde : '?') + '.', true);
+        var mij = lijst.filter(function(r){ return r.sid === mijnPid; })[0], anderen = lijst.filter(function(r){ return r.sid !== mijnPid; });
+        hudTekst('Samen tot ronde ' + (mij ? mij.ronde : '?') + ' gekomen', anderen.length ? 'met ' + namen(anderen) : '', false);
+        zeg((anderen.length > 1 ? 'Jullie zijn allemaal gevallen.' : 'Jullie zijn allebei gevallen.') + ' Samen tot ronde ' + (mij ? mij.ronde : '?') + '.', true);
       } else if (duel){
         var winnaar = lijst[0], ander = lijst.filter(function(r){ return r.sid !== mijnPid; })[0];
         var gewonnen = !!(winnaar && winnaar.sid === mijnPid);
@@ -201,14 +226,18 @@ window.STRIJD = (function(){
     };
     tik(); telKlok = setInterval(tik, 1000);
   }
-  function start(){
+  function start(m){
     if (gestart) return;
     gestart = true;
     clearInterval(telKlok);
     sluierWeg();
     hudTekst((duel ? 'Duel ' : 'Klasstrijd ') + code, 'gestart, veel succes', false);
-    if (hooks) hooks.start({ duel:duel, rol:duel ? (gastheer === mijnPid ? 'host' : 'gast') : null, maat:maatNaam, maatAv:maatAv });
-    zeg(samen() ? 'Start! Samen tegen de fouten, met ' + (maatNaam || 'je maat') + '.' : 'Start! Vijf goed op rij stuurt fouten naar ' + (duel ? 'je tegenstander' : 'de anderen') + '.', true);
+    /* de kamer zegt wie speler 0, 1, 2, 3 is (de volgorde van de motor) */
+    var mij = m && typeof m.mij === 'number' && m.mij >= 0 ? m.mij : (gastheer === mijnPid ? 0 : 1);
+    var lijst = m && m.spelers ? m.spelers : null;
+    if (lijst) maten = lijst.filter(function(r){ return r.sid !== mijnPid; }).map(function(r){ return { sid:r.sid, naam:r.naam, av:r.av || '' }; });
+    if (hooks) hooks.start({ duel:duel, rol:duel ? (gastheer === mijnPid ? 'host' : 'gast') : null, mij:mij, spelers:lijst, maat:maatNaam, maatAv:maatAv });
+    zeg(samen() ? 'Start! Samen tegen de fouten, met ' + (maten.length ? namen(maten) : (maatNaam || 'je maat')) + '.' : 'Start! Vijf goed op rij stuurt fouten naar ' + (duel ? 'je tegenstander' : 'de anderen') + '.', true);
   }
   function toonStand(m){
     if (klaarMet) return;
@@ -216,6 +245,10 @@ window.STRIJD = (function(){
     if (!gestart){
       if (m.fase === 'lobby') sluierTekst(wachtTekst(aantal));
       hudTekst((duel ? 'Duel ' : 'Klasstrijd ') + code, aantal + ' in de kamer, wacht op de start', true);
+      return;
+    }
+    if (duel && samen() && maten.length > 1){
+      hudTekst('Samen met ' + namen(maten), maten.map(function(r){ return schoon(r.naam) + (r.af ? ' gevallen' : ' ronde ' + r.ronde) + (r.aan === false ? ' (even weg)' : ''); }).join(' · '), false);
       return;
     }
     if (duel){
@@ -246,10 +279,10 @@ window.STRIJD = (function(){
     var doel = document.getElementById(doelId);
     if (!doel || actief) return;
     var samenSpel = true, bord = spel === 'toren';
-    doel.innerHTML = '<div class="duelvak"><h3>Samen met een vriend</h3>' +
+    doel.innerHTML = '<div class="duelvak"><h3>' + (bord ? 'Samen met een vriend' : 'Samen met vrienden') + '</h3>' +
       '<p>' + (bord
         ? 'Jullie bouwen samen op hetzelfde bord, allebei op je eigen scherm, en verdedigen dezelfde school. Munten, levens en torens zijn van jullie samen; elk goed antwoord van allebei vult de kas.'
-        : 'Jullie staan samen in één arena, allebei op je eigen scherm, tegen dezelfde fouten. Wie neergaat staat de volgende ronde weer op; pas als jullie allebei liggen is het voorbij.') + '</p>' +
+        : 'Met twee, drie of vier in één arena, ieder op zijn eigen scherm, tegen dezelfde fouten. Meer spelers, meer fouten en een taaiere baas. Wie neergaat staat de volgende ronde weer op; pas als iedereen ligt is het voorbij.') + '</p>' +
       '<div class="rij"><input type="text" id="duelNaam" aria-label="Je bijnaam" maxlength="16" placeholder="Je bijnaam" autocomplete="nickname" value="' + schoon(bewaardeNaam()) + '">' +
       '<button type="button" id="duelMaak">' + (samenSpel ? 'Maak een kamer' : 'Maak een duel') + '</button></div>' +
       '<div class="rij" style="margin-top:8px"><input type="text" class="code" id="duelCode" aria-label="Code van je vriend" maxlength="4" placeholder="CODE" autocapitalize="characters" autocomplete="off">' +

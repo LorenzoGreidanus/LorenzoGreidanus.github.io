@@ -91,11 +91,17 @@ window.PROFIEL = (function(){
     });
   }
   function wis(){ var p = lees(); delete p.code; zet(p); zeg(); }
+  /* de klaskoppeling is losgemaakt: ook uit het profiel op de server halen */
+  function klasWeg(){
+    var c = code(); if (!c) return Promise.resolve(null);
+    clearTimeout(timer);
+    return vraag('/api/profiel/' + c, 'PUT', { profiel:verzamel(), klasWeg:true }).then(function(j){ pasToe(j.profiel); return j; }).catch(function(){ return null; });
+  }
 
   /* inloggen met Microsoft: de server weet of het aan staat en wie er ingelogd is.
      Terug van Microsoft staat er ?account=in (of een fout) in het adres; dat
      lezen we hier, voordat de pagina zijn eigen adres herschrijft. */
-  var accountStand = null, accountVlag = '';
+  var accountStand = null, accountVlag = '', accountBezig = null;
   try {
     var q0 = new URLSearchParams(location.search); accountVlag = q0.get('account') || '';
     if (accountVlag){ q0.delete('account'); history.replaceState(null, '', location.pathname + (q0.toString() ? '?' + q0.toString() : '') + location.hash); }
@@ -103,9 +109,11 @@ window.PROFIEL = (function(){
   function account(vers){
     if (accountStand && !vers) return Promise.resolve(accountStand);
     if (typeof fetch !== 'function') return Promise.resolve({ mogelijk:false, ingelogd:false });
-    return fetch('/api/account', { cache:'no-store' }).then(function(r){ return r.json(); })
-      .then(function(j){ accountStand = j && typeof j === 'object' ? j : { mogelijk:false, ingelogd:false }; return accountStand; })
-      .catch(function(){ accountStand = { mogelijk:false, ingelogd:false }; return accountStand; });
+    if (accountBezig && !vers) return accountBezig;
+    accountBezig = fetch('/api/account', { cache:'no-store' }).then(function(r){ return r.json(); })
+      .then(function(j){ accountStand = j && typeof j === 'object' ? j : { mogelijk:false, ingelogd:false }; accountBezig = null; return accountStand; })
+      .catch(function(){ accountStand = { mogelijk:false, ingelogd:false }; accountBezig = null; return accountStand; });
+    return accountBezig;
   }
   function inlogAdres(){ return '/api/account/inloggen?terug=' + encodeURIComponent(location.pathname); }
   /* na het inloggen: het account heeft een speelcode, of nog niet */
@@ -132,5 +140,5 @@ window.PROFIEL = (function(){
   /* bij het laden even samenvoegen, als er een code is */
   if (code() && typeof fetch === 'function'){ setTimeout(function(){ sync(); }, 1500); }
   return { lees:lees, code:code, avatar:avatar, zetAvatar:zetAvatar, maak:maak, koppel:koppel, sync:sync, wis:wis, verzamel:verzamel, op:op,
-    account:account, accountVlag:function(){ return accountVlag; }, accountAfstemmen:accountAfstemmen, inlogAdres:inlogAdres, uitloggen:uitloggen, accountWeg:accountWeg };
+    klasWeg:klasWeg, account:account, accountVlag:function(){ return accountVlag; }, accountAfstemmen:accountAfstemmen, inlogAdres:inlogAdres, uitloggen:uitloggen, accountWeg:accountWeg };
 })();

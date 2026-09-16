@@ -174,6 +174,8 @@ function maak(opties){
                      dashVraag:false, wapenVraag:false, inNr:0 });
   });
   var samen = W.spelers.length > 1;
+  /* met meer spelers meer fouten en een taaiere baas: twee anderhalf keer, drie twee keer, vier tweeënhalf keer */
+  function meer(){ return 1 + 0.5 * (W.spelers.length - 1); }
 
   /* ---------- wat de spelers doen ---------- */
   W.zetInvoer = function(i, dx, dy, nr){
@@ -226,14 +228,14 @@ function maak(opties){
     W.fouten = []; W.messen = []; W.munt = []; W.pluis = []; W.cijfers = []; W.aanvallen = [];
     W.spelers.forEach(function(P, i){
       var s = P.sp;
-      /* de eerste links van het midden, de tweede rechts */
-      s.x = ARENA.b / 2 + (samen ? (i === 0 ? -50 : 50) : 0); s.y = ARENA.h / 2;
+      /* naast elkaar rond het midden */
+      s.x = ARENA.b / 2 + (samen ? (i - (W.spelers.length - 1) / 2) * 70 : 0); s.y = ARENA.h / 2;
       s.raak = 0; s.klok = 0; s.mesKlok = 0; s.dash = 0; s.dashKlok = 0;
       if (P.neer){ P.neer = false; P.hp = Math.max(1, Math.round(P.maxHp / 2)); }
       P.klaar = false; P.inv = { dx:0, dy:0 };
     });
     /* in een baasronde komen er minder gewone fouten bij: de baas is het werk */
-    W.teSpawnen = Math.round(aantalInRonde(W.ronde) * (W.ronde % BAASRONDE === 0 ? 0.6 : 1) * (samen ? 1.5 : 1)) + W.extra; W.extra = 0;
+    W.teSpawnen = Math.round(aantalInRonde(W.ronde) * (W.ronde % BAASRONDE === 0 ? 0.6 : 1) * meer()) + W.extra; W.extra = 0;
     W.spawnKlok = 0.6;
     W.tijdInRonde = 0; W.rondeUit = 0; W.raapTeller = -1;
     if (W.ronde % BAASRONDE === 0) spawnBaas();
@@ -242,7 +244,7 @@ function maak(opties){
   /* de ronde is gehaald: wat nog op de grond ligt is van jullie, samen gedeeld */
   function naarVragen(){
     var rest = 0; W.munt.forEach(function(m){ rest += m.waarde; });
-    if (samen){ W.spelers[0].munten += Math.ceil(rest / 2); W.spelers[1].munten += Math.floor(rest / 2); }
+    if (samen){ var elk = Math.floor(rest / W.spelers.length), over = rest - elk * W.spelers.length; W.spelers.forEach(function(P, i){ P.munten += elk + (i < over ? 1 : 0); }); }
     else W.spelers[0].munten += rest;
     W.munt = []; W.rondeUit = 0; W.raapTeller = -1;
     W.spelers.forEach(function(P){ P.klaar = false; });
@@ -289,7 +291,7 @@ function maak(opties){
     zeg('spawn', soort, eerste);
   }
   function spawnBaas(){
-    var def = baasVan(W.ronde), h = Math.round(foutHp(W.ronde) * def.hp);
+    var def = baasVan(W.ronde), h = Math.round(foutHp(W.ronde) * def.hp * (samen ? 0.7 + 0.3 * W.spelers.length : 1));
     var b = { id:++W.nr, soort:def, def:def, x:ARENA.b / 2, y:ARENA.h / 2, hp:h, maxHp:h, r:def.r, snel:0, flits:0, stap:0,
               schild:def.schild, slaKlok:0, baas:true, aanvalKlok:2.2, laatste:-1, eerste:true };
     W.fouten.push(b);
@@ -634,7 +636,7 @@ function maak(opties){
     }
   }
   /* Een speler gaat neer. Alleen is dat het einde. Samen blijft hij liggen
-     tot de volgende ronde, en pas als allebei liggen is het voorbij. */
+     tot de volgende ronde, en pas als iedereen ligt is het voorbij. */
   function valNeer(P){
     if (!samen){ einde(); return; }
     P.neer = true;
@@ -691,7 +693,7 @@ function maak(opties){
       W.spawnKlok -= dt;
       if (W.spawnKlok <= 0){
         spawn(kiesFout()); W.teSpawnen -= 1;
-        W.spawnKlok = Math.max(0.25, 1.1 - ronde * 0.04) / (spelers.length > 1 ? 1.4 : 1);
+        W.spawnKlok = Math.max(0.25, 1.1 - ronde * 0.04) / (spelers.length > 1 ? 1.1 + 0.3 * spelers.length : 1);
       }
     }
 

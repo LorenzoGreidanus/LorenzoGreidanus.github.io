@@ -179,7 +179,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
 <main class="wrap">
   <p class="eyebrow">voor de docent</p>
   <h1>Klasoverzicht</h1>
-  <p style="margin-top:8px;max-width:64ch">Maak een klascode, laat leerlingen die eenmalig invullen in de leeromgeving, en zie na de les wie welk spel tot hoever heeft gehaald. Zonder accounts: een leerling koppelt zich met een bijnaam, en alleen jij ziet de uitslagen, op dit apparaat. Een klascode blijft een week geldig.</p>
+  <p style="margin-top:8px;max-width:64ch">Maak een klascode, laat leerlingen die eenmalig invullen in de leeromgeving, en zie na de les wie welk spel tot hoever heeft gehaald. Zonder accounts: een leerling koppelt zich met een bijnaam, en alleen jij ziet de uitslagen, op dit apparaat. Een klascode blijft geldig tot jij hem opheft.</p>
 
   <div class="twee">
     <div class="kaart">
@@ -220,7 +220,8 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       <div class="rij">
         <button class="knop stil klein" id="ververs" type="button">Vernieuwen</button>
         <button class="knop stil klein" id="csvBtn" type="button">Download als CSV</button>
-        <button class="knop stil klein" id="vergeet" type="button">Vergeet deze klas</button>
+        <button class="knop stil klein" id="vergeet" type="button">Vergeet op dit apparaat</button>
+        <button class="knop stil klein" id="opheffen" type="button">Klascode opheffen</button>
       </div>
     </div>
     <p class="tip" id="ovUit" style="margin-top:8px"></p>
@@ -235,7 +236,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     </div>
   </section>
 </main>
-<footer class="wrap">Uitslagen blijven een week op de server en zijn alleen op te halen met de sleutel van de klas. Zie ook de <a href="../privacy.html" style="color:inherit">privacyverklaring</a>.</footer>
+<footer class="wrap">Uitslagen blijven op de server zolang de klascode bestaat: tot je hem opheft, of tot hij ruim een jaar niet gebruikt is. Ze zijn alleen op te halen met de sleutel van de klas. Zie ook de <a href="../privacy.html" style="color:inherit">privacyverklaring</a>.</footer>
 
 <script>
 (function(){
@@ -300,8 +301,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       .then(function(x){
         if (!x.ok){ $('ovUit').textContent = x.j.fout || 'Ophalen lukte niet.'; data = null; teken(); return; }
         data = x.j;
-        var dagen = Math.max(0, Math.round((7 * 24 * 3600 * 1000 - (Date.now() - data.gemaakt)) / (24 * 3600 * 1000)));
-        $('ovUit').textContent = data.resultaten.length + (data.resultaten.length === 1 ? ' potje gemeld' : ' potjes gemeld') + ' · nog ' + dagen + (dagen === 1 ? ' dag' : ' dagen') + ' geldig · ververst vanzelf';
+        $('ovUit').textContent = data.resultaten.length + (data.resultaten.length === 1 ? ' potje gemeld' : ' potjes gemeld') + ' · geldig tot je de code opheft · ververst vanzelf';
         teken();
       })
       .catch(function(){ $('ovUit').textContent = 'Geen verbinding met de server.'; });
@@ -353,9 +353,22 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
   });
   $('ververs').addEventListener('click', haal);
   $('vergeet').addEventListener('click', function(){
-    if (!huidig || !confirm('Deze klas van dit apparaat vergeten? De uitslagen zijn daarna niet meer op te halen.')) return;
+    if (!huidig || !confirm('Deze klas van dit apparaat vergeten? De klascode blijft bestaan, maar zonder de sleutel zijn de uitslagen niet meer op te halen.')) return;
     klassen = klassen.filter(function(k){ return k.code !== huidig.code; }); bewaar();
     kies(null);
+  });
+  /* opheffen: de code en alle uitslagen weg van de server; leerlingen raken de koppeling kwijt */
+  $('opheffen').addEventListener('click', function(){
+    if (!huidig || !confirm('Klascode ' + huidig.code + ' opheffen? De code werkt dan niet meer, alle uitslagen worden gewist en de leerlingen zijn losgekoppeld. Dit is niet terug te draaien.')) return;
+    var k = huidig;
+    fetch('/api/klas/' + k.code + '/opheffen', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ sleutel:k.sleutel }) })
+      .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+      .then(function(x){
+        if (!x.ok && x.j.fout !== 'dit is geen klascode'){ alert(x.j.fout || 'Opheffen lukte niet.'); return; }
+        klassen = klassen.filter(function(q){ return q.code !== k.code; }); bewaar();
+        kies(null);
+      })
+      .catch(function(){ alert('Geen verbinding met de server.'); });
   });
   $('csvBtn').addEventListener('click', function(){
     if (!data) return;

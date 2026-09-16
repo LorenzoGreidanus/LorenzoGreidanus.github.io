@@ -35,9 +35,9 @@ function netjes(inz){
   return p;
 }
 /* Samenvoegen: het nieuwste record wint, sterren en vrijgespeelde dingen tellen op, de rest komt van het apparaat dat meldt. */
-function voegSamen(oud, nieuw){
+function voegSamen(oud, nieuw, klasWeg){
   const p = { avatar: nieuw.avatar || oud.avatar || "", beste: Object.assign({}, oud.beste), campagne: Object.assign({}, oud.campagne),
-              vrij: Object.assign({}, oud.vrij), klas: nieuw.klas || oud.klas || null, niveau: nieuw.niveau || oud.niveau || "" };
+              vrij: Object.assign({}, oud.vrij), klas: nieuw.klas || (klasWeg ? null : oud.klas) || null, niveau: nieuw.niveau || oud.niveau || "" };
   Object.keys(nieuw.beste).forEach(k => { const a = p.beste[k], b = nieuw.beste[k]; if (!a || b.t >= a.t) p.beste[k] = b; });
   Object.keys(nieuw.campagne).forEach(k => { p.campagne[k] = Math.max(p.campagne[k] | 0, nieuw.campagne[k]); });
   Object.keys(nieuw.vrij).forEach(k => { p.vrij[k] = true; });
@@ -77,7 +77,7 @@ export class Profiel extends DurableObject {
       return json({ ok: true, code: this.stand.code, profiel: this.stand.profiel, gemaakt: this.stand.gemaakt });
     }
     if (url.pathname === "/sync"){
-      const nieuw = voegSamen(this.stand.profiel, netjes(inz.profiel));
+      const nieuw = voegSamen(this.stand.profiel, netjes(inz.profiel), !!inz.klasWeg);
       if (JSON.stringify(nieuw).length > MAX_TEKST) return json({ fout: "profiel te groot" }, 413);
       this.stand.profiel = nieuw;
       await this.bewaar();

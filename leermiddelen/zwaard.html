@@ -664,7 +664,11 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   var co = { aan:false, mij:0, neer:false, klaar:false, maatKlaar:false, dashVraag:false, wapenVraag:false,
              zendKlok:0, laatsteInvoer:'', laatsteZendTijd:0, inNr:0, verzonden:{}, lag:80, laatsteFase:'', pakketten:0, laatstePakket:0,
              maatNaam:'', maatAv:'' };
-  var maat = null;   /* de ander: { naam, av, sp, stats:{ bereik, harnas }, hp, maxHp, neer } */
+  var maat = null;   /* de ander: { naam, av, sp, stats:{ bereik, harnas }, hp, maxHp, neer } (de eerste maat, voor teksten) */
+  var maten = {};    /* alle anderen, op hun nummer in de motor: { naam, av, sp, stats, hp, maxHp, neer, klaar } */
+  function alleMaten(){ return Object.keys(maten).map(function(k){ return maten[k]; }); }
+  function matenNaam(lijst){ var n = lijst.map(function(m){ return m.naam; }); return n.length <= 1 ? (n[0] || 'je maat') : n.slice(0, -1).join(', ') + ' en ' + n[n.length - 1]; }
+  function wieNietKlaar(){ return alleMaten().filter(function(m){ return !m.klaar; }); }
   function zendNet(d){ if (window.STRIJD && STRIJD.stuurNet) STRIJD.stuurNet(d); }
 
   /* De maat ziet zichzelf zonder wachten. Zijn toetsen gaan naar de kamer en
@@ -868,7 +872,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (co.aan){
       /* samen: de motor draait in de kamer; wij sturen toetsen en tekenen wat terugkomt */
       W = null; fase = 'ronde'; ronde = 1;
-      sp = ZWAARDMOTOR.nieuweSp(ARENA.b / 2 + (co.mij ? 50 : -50), ARENA.h / 2);
+      sp = ZWAARDMOTOR.nieuweSp(ARENA.b / 2 + (co.mij - ((co.spelers ? co.spelers.length : 2) - 1) / 2) * 70, ARENA.h / 2);
       zendNet({ k:'stats', s:mijnStats(), hp:hp });
       document.getElementById('arenatip').textContent = 'Samen! Het begint zodra de kamer de eerste stand stuurt.';
       tekenZij(); tekenHud();
@@ -904,6 +908,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       soorten:fouten.map(function(f){ return f.baas ? 'baas:' + f.def.id : f.soort.id; }),
       baasHp:(fouten.filter(function(f){ return f.baas; })[0] || {}).maxHp || 0,
       aanvallen:aanvallen.map(function(a){ return a.soort; }),
+      maten:alleMaten().map(function(m){ return { naam:m.naam, x:Math.round(m.sp.x), y:Math.round(m.sp.y), hp:m.hp, klaar:m.klaar }; }), mij:co.mij, aan:co.aan,
       aanvalTijd:aanvallen.reduce(function(o, a){ o[a.soort] = Math.max(o[a.soort] || -9, a.t); return o; }, {}),
       uitlegPauze:uitlegPauze,
       schutters:fouten.filter(function(f){ return f.soort.id === 'schutter'; }).map(function(f){ return { x:Math.round(f.x), y:Math.round(f.y), laad:+(f.laadKlok || 0).toFixed(2), stil:+(f.stilKlok || 0).toFixed(2) }; }),
@@ -1117,7 +1122,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     fouten.forEach(function(f){ schuifEen(f, nu); });
     messen.forEach(function(m){ schuifEen(m, nu); });
     aanvallen.forEach(function(a){ if (a.soort === 'kogel' || a.soort === 'schot' || a.soort === 'bom') schuifEen(a, nu); });
-    if (maat) schuifEen(maat.sp, nu);
+    alleMaten().forEach(function(m){ schuifEen(m.sp, nu); });
   }
   function netOntvang(d){
     if (!d) return;
@@ -1125,7 +1130,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   }
   function pasStandToe(d, nu){
     co.pakketten++; co.laatstePakket = nu;
-    var mijA = d.sp[co.mij], hijA = d.sp[1 - co.mij];
+    var mijA = d.sp[co.mij];
     /* de fase: een nieuwe ronde, de vragen, of het einde */
     if (d.f !== co.laatsteFase){
       co.laatsteFase = d.f;
@@ -1166,12 +1171,19 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       }
       voorspelBevestig(nu);
     }
-    if (hijA){
-      if (!maat) maat = { naam:co.maatNaam || 'je maat', av:co.maatAv || '', sp:ZWAARDMOTOR.nieuweSp(hijA[0], hijA[1]), stats:{ bereik:hijA[14], harnas:hijA[12] }, hp:hijA[10], maxHp:hijA[11], neer:false };
-      zetDoel(maat.sp, hijA[0], hijA[1], nu); uitpak(maat.sp, hijA);
-      maat.hp = hijA[10]; maat.maxHp = hijA[11]; maat.stats.harnas = hijA[12]; maat.neer = !!hijA[13]; maat.stats.bereik = hijA[14];
-      co.maatKlaar = !!hijA[20];
+    /* de anderen, op hun nummer */
+    for (var mi = 0; mi < d.sp.length; mi++){
+      if (mi === co.mij) continue;
+      var hijA = d.sp[mi], wieM = (co.spelers && co.spelers[mi]) || {};
+      var m2 = maten[mi];
+      if (!m2){
+        m2 = maten[mi] = { naam:wieM.naam || (mi === 1 - co.mij && co.maatNaam) || 'maat ' + (mi + 1), av:wieM.av || (mi === 1 - co.mij ? co.maatAv : '') || '', sp:ZWAARDMOTOR.nieuweSp(hijA[0], hijA[1]), stats:{ bereik:hijA[14], harnas:hijA[12] }, hp:hijA[10], maxHp:hijA[11], neer:false, klaar:false };
+        if (!maat) maat = m2;
+      }
+      zetDoel(m2.sp, hijA[0], hijA[1], nu); uitpak(m2.sp, hijA);
+      m2.hp = hijA[10]; m2.maxHp = hijA[11]; m2.stats.harnas = hijA[12]; m2.neer = !!hijA[13]; m2.stats.bereik = hijA[14]; m2.klaar = !!hijA[20];
     }
+    co.maatKlaar = alleMaten().length > 0 && wieNietKlaar().length === 0;
     if (fase !== 'ronde') return;
     /* de fouten, op nummer: wie er al stond schuift, wie nieuw is verschijnt */
     var was = {}; fouten.forEach(function(f){ was[f.id] = f; });
@@ -1207,7 +1219,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       if (!co.klaar){
         co.klaar = true;
         zendNet({ k:'klaar', s:mijnStats(), hp:hp });
-        document.getElementById('arenatip').textContent = 'Wachten op ' + (maat ? maat.naam : 'je maat') + '\u2026';
+        document.getElementById('arenatip').textContent = 'Wachten op ' + matenNaam(wieNietKlaar()) + '\u2026';
         tekenZij();
       }
       return;
@@ -1299,9 +1311,9 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
           '<span><b>' + u.naam + pips + '</b><small>' + u.onder + ' \u00b7 ' + u.uit + '</small></span>' +
           '<span class="prijs">' + (vol ? 'vol' : prijs + (u.los && hp >= maxHp ? ' (leven is vol)' : '')) + '</span></button>';
       }).join('') + '</div>';
-      if (co.aan && co.klaar) h += '<button class="btn" id="rondeBtn" type="button" disabled>Wachten op ' + (maat ? maat.naam : 'je maat') + '\u2026</button>';
+      if (co.aan && co.klaar) h += '<button class="btn" id="rondeBtn" type="button" disabled>Wachten op ' + matenNaam(wieNietKlaar()) + '\u2026</button>';
       else h += '<button class="btn" id="rondeBtn" type="button">Ronde ' + (ronde + 1) + ' starten' + ((ronde + 1) % BAASRONDE === 0 ? ', met baas' : '') +
-        (co.aan && co.maatKlaar ? ' (' + (maat ? maat.naam : 'je maat') + ' is klaar)' : '') + '</button>';
+        (co.aan && co.maatKlaar ? ' (' + (alleMaten().length > 1 ? 'de anderen zijn' : matenNaam(alleMaten()) + ' is') + ' klaar)' : '') + '</button>';
     }
     z.innerHTML = '<div class="paneelkaart">' + h + '</div>';
     Array.prototype.forEach.call(z.querySelectorAll('.optie'), function(b){ b.addEventListener('click', function(){ antwoord(parseInt(b.getAttribute('data-i'), 10)); }); });
@@ -1319,7 +1331,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     var deel = Math.max(0, hp / maxHp);
     var h =
       '<div class="meter leven"><i>Leven ' + Math.max(0, Math.round(hp)) + ' / ' + maxHp + '</i><div class="levenbalk"><i class="' + (deel < 0.3 ? 'laag' : '') + '" style="width:' + (deel * 100).toFixed(1) + '%"></i></div></div>' +
-      (co.aan && maat ? '<div class="meter leven"><i>' + maat.naam + ' ' + Math.max(0, Math.round(maat.hp)) + ' / ' + maat.maxHp + (maat.neer ? ' (ligt neer)' : '') + '</i><div class="levenbalk"><i class="' + (maat.hp / maat.maxHp < 0.3 ? 'laag' : '') + '" style="width:' + (Math.max(0, maat.hp / maat.maxHp) * 100).toFixed(1) + '%"></i></div></div>' : '') +
+      (co.aan ? alleMaten().map(function(m){ return '<div class="meter leven"><i>' + m.naam + ' ' + Math.max(0, Math.round(m.hp)) + ' / ' + m.maxHp + (m.neer ? ' (ligt neer)' : '') + '</i><div class="levenbalk"><i class="' + (m.hp / m.maxHp < 0.3 ? 'laag' : '') + '" style="width:' + (Math.max(0, m.hp / m.maxHp) * 100).toFixed(1) + '%"></i></div></div>'; }).join('') : '') +
       '<div class="meter"><i>Munten</i><b>' + munten + '</b></div>' +
       '<div class="meter"><i>Ronde</i><b>' + ronde + '</b></div>' +
       '<div class="meter"><i>Nog te gaan</i><b>' + (fouten.length + Math.max(0, teSpawnen)) + '</b></div>' +
@@ -1415,7 +1427,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     return g;
   }
   function eigenNaam(){ var k = window.KLAS && KLAS.lees(); return k && k.naam ? k.naam : 'jij'; }
-  function tekenSpeler(sp2, ber, harnasLv, neer, naam, pols){
+  function tekenSpeler(sp2, ber, harnasLv, neer, naam, pols, av){
     var s = '', mikt = sp2.mikt * 180 / Math.PI, R = SPELER.r;
     s += '<ellipse cx="' + sp2.x.toFixed(1) + '" cy="' + (sp2.y + R * 0.9).toFixed(1) + '" rx="' + (R * 0.85) + '" ry="' + (R * 0.3) + '" fill="rgba(20,34,76,.2)"/>';
     if (sp2.zwaai > 0 && !neer && sp2.wapen !== 'boog'){
@@ -1446,7 +1458,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     /* het lijf: je eigen gezichtje (de blob uit de leeromgeving), met een ring in de kleur van het harnas; de maat zijn eigen blob */
     var ringen = ['', '#dfe6ee', '#b9c4d1', '#8f9db0', '#6b7a90', '#4f5d73', '#3b4759', '#c9971f'];
     var ring = ringen[Math.min(7, harnasLv || 0)];
-    var wie = naam ? { naam:naam, av:(maat && maat.av) || '' } : { naam:eigenNaam(), av:(window.PROFIEL ? PROFIEL.avatar() : '') };
+    var wie = naam ? { naam:naam, av:av || '' } : { naam:eigenNaam(), av:(window.PROFIEL ? PROFIEL.avatar() : '') };
     s += '<g transform="scale(' + (R / 46).toFixed(3) + ')"' + (sp2.flits > 0 ? ' opacity=".5"' : '') + '><use href="#' + gezichtId(wie.naam, wie.av) + '"/></g>';
     if (ring) s += '<circle r="' + (R + 2) + '" fill="none" stroke="' + ring + '" stroke-width="3" opacity=".9"/>';
     if ((harnasLv || 0) >= 3) s += '<path d="M0,' + (-R - 2) + ' l0,-9 l5,3" fill="none" stroke="' + (naam ? '#204ECF' : '#F26749') + '" stroke-width="3.5" stroke-linecap="round"/>';
@@ -1645,8 +1657,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     /* de spelers: jij, en samen ook je maat */
     var mijnSp = voorspel.aan ? Object.assign({}, sp, { x:voorspel.x, y:voorspel.y }) : sp;
     var lijstSp = [{ s:mijnSp, ber:zwaardBereik(), harnas:stat('harnas'), neer:co.neer, naam:null }];
-    if (co.aan && maat) lijstSp.push({ s:maat.sp, ber:maat.stats.bereik, harnas:maat.stats.harnas, neer:maat.neer, naam:maat.naam });
-    lijstSp.forEach(function(Q){ s += tekenSpeler(Q.s, Q.ber, Q.harnas, Q.neer, Q.naam, pols); });
+    if (co.aan) alleMaten().forEach(function(m){ lijstSp.push({ s:m.sp, ber:m.stats.bereik, harnas:m.stats.harnas, neer:m.neer, naam:m.naam, av:m.av }); });
+    lijstSp.forEach(function(Q){ s += tekenSpeler(Q.s, Q.ber, Q.harnas, Q.neer, Q.naam, pols, Q.av); });
     /* de balk van de baas staat boven de arena, buiten het speelveld */
     var baasNu = null;
     fouten.forEach(function(f){ if (f.baas) baasNu = f; });
@@ -1836,12 +1848,12 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     STRIJD.klaar('zwaard', {
       samen: true,   /* in een duel spelen twee in dezelfde arena, met de motor in de kamer */
       start: function(info){
-        if (info && info.duel){ co.aan = true; co.mij = info.rol === 'host' ? 0 : 1; co.maatNaam = info.maat || 'je maat'; }
+        if (info && info.duel){ co.aan = true; co.mij = typeof info.mij === 'number' && info.mij >= 0 ? info.mij : (info.rol === 'host' ? 0 : 1); co.spelers = info.spelers || null; co.maatNaam = info.maat || 'je maat'; }
         if (!document.getElementById('scherm-start').classList.contains('hide') && vak) begin();
       },
       maatNaam: function(naam, av){
         if (naam) co.maatNaam = naam; if (av !== undefined) co.maatAv = av || '';
-        if (maat){ if (naam) maat.naam = naam; if (av !== undefined) maat.av = av || ''; }
+        if (maat && alleMaten().length === 1){ if (naam) maat.naam = naam; if (av !== undefined) maat.av = av || ''; }
       },
       net: function(d){ if (co.aan) netOntvang(d); },
       stand: function(){ return { ronde:ronde, gehaald:Math.max(0, ronde - 1), leven:Math.round(hp), punten:geveld }; },

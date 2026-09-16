@@ -286,6 +286,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
 .klasvak button{border:none;border-radius:12px;padding:8px 12px;background:var(--ocean,#204ECF);color:#fff;font:inherit;font-weight:600;cursor:pointer}
 .klasvak button.los{background:transparent;color:var(--muted);text-decoration:underline;padding:6px 4px;font-weight:500}
 .klasvak p.status{font-size:.86rem;color:var(--muted);margin-top:6px}
+.klasvak p.status .vast{display:block;margin-top:4px;color:var(--ink);font-weight:600}
 /* Op een telefoon stond er anderhalf scherm instelwerk voor het eerste spel.
    De drie docentenlinks worden er een; klascode en gezichtje zitten in de
    lade onder je eigen gezichtje in de kopbalk. */
@@ -1061,16 +1062,24 @@ var SPELLEN = [
 </script>
 <script src="klas.js"></script>
 <script>
-/* de klascode van de docent: een keer koppelen, daarna melden de spellen hun uitslag */
+/* de klascode van de docent: een keer koppelen, daarna melden de spellen hun
+   uitslag. Wie met Microsoft is ingelogd kan de koppeling niet zelf losmaken:
+   die blijft tot de docent de klascode opheft. */
 (function(){
   var doel = document.getElementById('klasUit'); if (!doel || !window.KLAS) return;
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+  var ingelogd = false, gekeken = false;
   function teken(){
     var k = KLAS.lees();
     if (window.VERNIEUWGEZICHT) VERNIEUWGEZICHT();
     if (k){
-      doel.innerHTML = '<p class="status">' + (window.AVATAR ? AVATAR.svg(k.naam, 30) : '') + 'Gekoppeld aan klas <b>' + schoon(k.code) + '</b> als <b>' + schoon(k.naam) + '</b>. Je uitslagen gaan naar je docent, met dit gezichtje erbij. <button type="button" class="los" id="klasLos">Loskoppelen</button></p>';
-      document.getElementById('klasLos').addEventListener('click', function(){ KLAS.wis(); teken(); });
+      var vast = ingelogd;
+      doel.innerHTML = '<p class="status">' + (window.AVATAR ? AVATAR.svg(k.naam, 30) : '') + 'Gekoppeld aan klas <b>' + schoon(k.code) + '</b> als <b>' + schoon(k.naam) + '</b>. Je uitslagen gaan naar je docent, met dit gezichtje erbij. ' +
+        (vast ? '<span class="vast">Je bent ingelogd met Microsoft, dus dit blijft staan tot je docent de klascode opheft.</span>' : '<button type="button" class="los" id="klasLos">Loskoppelen</button>') + '</p>';
+      var los = document.getElementById('klasLos');
+      if (los) los.addEventListener('click', function(){ KLAS.wis(); teken(); });
+      /* bestaat de code nog? een keer per bezoek kijken */
+      if (!gekeken){ gekeken = true; KLAS.controleer().then(function(nog){ if (!nog) teken(); }); }
       return;
     }
     doel.innerHTML = '<div class="invulrij"><input id="klasCode" maxlength="4" placeholder="CODE" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Klascode"><input id="klasNaam" class="naam" maxlength="16" placeholder="Je bijnaam" autocomplete="nickname" aria-label="Je bijnaam"><button type="button" id="klasKoppel">Koppelen</button></div>' +
@@ -1087,7 +1096,10 @@ var SPELLEN = [
     });
   }
   teken();
-  if (window.PROFIEL) PROFIEL.op(teken);
+  if (window.PROFIEL){
+    PROFIEL.op(teken);
+    PROFIEL.account().then(function(a){ ingelogd = !!(a && a.ingelogd); if (ingelogd) teken(); });
+  }
 })();
 </script>
 <script>

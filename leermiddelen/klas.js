@@ -1,8 +1,10 @@
 /* De klascode: een leerling koppelt de leeromgeving eenmalig aan de klas van
    zijn docent (code van vier letters plus een bijnaam), en daarna melden de
    spellen hun einduitslag bij die klas. De docent ziet ze in het
-   klasoverzicht (klas.html). Geen accounts: de koppeling staat alleen in
-   deze browser en is met een tik weer los te maken. */
+   klasoverzicht (klas.html). De koppeling staat in deze browser (en reist
+   mee met de speelcode); wie met Microsoft is ingelogd kan hem niet zelf
+   losmaken, alleen de docent kan de klascode opheffen. Is de code
+   opgeheven, dan valt de koppeling vanzelf weg. */
 window.KLAS = (function(){
   'use strict';
   var SLEUTEL = 'lg-klas';
@@ -19,7 +21,23 @@ window.KLAS = (function(){
     if (window.PROFIEL) PROFIEL.sync();
     return k;
   }
-  function wis(){ try { localStorage.removeItem(SLEUTEL); } catch (e){} }
+  function wis(){ try { localStorage.removeItem(SLEUTEL); } catch (e){} if (window.PROFIEL && PROFIEL.klasWeg) PROFIEL.klasWeg(); }
+  /* bestaat de klascode nog? Zo niet, dan valt de koppeling weg. Geeft een belofte met true/false. */
+  var gecontroleerd = null;
+  function controleer(){
+    var k = lees();
+    if (!k || typeof fetch !== 'function') return Promise.resolve(!!k);
+    if (gecontroleerd && gecontroleerd.code === k.code) return gecontroleerd.p;
+    var p = fetch('/api/kamer/' + k.code, { cache:'no-store' }).then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+      .then(function(x){
+        if (x.ok && x.j && x.j.spel === 'klas') return true;
+        if (!x.ok && x.j && /geen kamer|geen klascode|opgeheven|verlopen/.test(x.j.fout || '')){ wis(); return false; }
+        if (x.ok && x.j && x.j.spel && x.j.spel !== 'klas'){ wis(); return false; }
+        return true;
+      }).catch(function(){ return true; });
+    gecontroleerd = { code:k.code, p:p };
+    return p;
+  }
   /* hetzelfde kenmerk als de spelkamers gebruiken, zodat een leerling op een apparaat een geheel is */
   function sid(){
     var s = null;
@@ -46,10 +64,12 @@ window.KLAS = (function(){
     return fetch('/api/klas/' + k.code + '/meld', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify(body) })
       .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
       .then(function(x){
+        /* de docent heeft de code opgeheven: de koppeling valt weg */
+        if (!x.ok && /geen kamer|geen klascode|opgeheven|verlopen/.test(x.j && x.j.fout || '')){ wis(); toon(naId, 'De klascode ' + k.code + ' is opgeheven door je docent; je bent losgekoppeld.'); return x; }
         toon(naId, x.ok ? 'Gemeld bij klas ' + k.code + ' als ' + k.naam + '.' : 'Melden bij de klas lukte niet' + (x.j && x.j.fout ? ': ' + x.j.fout : '.'));
         return x;
       })
       .catch(function(){ toon(naId, 'Melden bij de klas lukte niet: geen verbinding.'); return null; });
   }
-  return { lees:lees, zet:zet, wis:wis, meld:meld, sid:sid };
+  return { lees:lees, zet:zet, wis:wis, meld:meld, sid:sid, controleer:controleer };
 })();
