@@ -781,6 +781,34 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     return [ronde, fase === 'ronde' ? 1 : 0, teSpawnen, fouten.length, Math.round(som / 50), Math.round(a.x / 4), Math.round(a.y / 4), Math.round(b.x / 4), Math.round(b.y / 4), munt.length, aanvallen.length].join('|');
   }
   var maat = null;
+  /* De maat ziet zichzelf zonder wachten: zijn poppetje staat op de bevestigde
+     plek plus wat zijn toetsen van de laatste 'lag' stappen nog gaan doen.
+     hist: zijn toetsen per bevestigde stap; dashes: sprongen die onderweg
+     zijn; verzonden: welk toetsnummer bij welke stap de deur uit ging. */
+  var voorspel = { aan:false, x:0, y:0, hist:[], lag:6, dashes:[], inNr:0, verzonden:{} };
+  function mijnPlek(){ return voorspel.aan ? voorspel : sp; }
+  function voorspelBij(){
+    if (!(co.aan && co.lock && co.rol === 'gast')){ voorspel.aan = false; return; }
+    var L = Math.round(voorspel.lag), h = voorspel.hist, snel = loopSnel();
+    var x = sp.x, y = sp.y;
+    if (!co.neer){
+      for (var i = Math.max(0, h.length - L); i < h.length; i++){ x += h[i].dx * snel * STAP; y += h[i].dy * snel * STAP; }
+      /* een sprong die onderweg is: wat hij nu al gedaan zou hebben, min wat
+         de bevestigde stand er al van in zich heeft */
+      voorspel.dashes = voorspel.dashes.filter(function(d){
+        var zelf = Math.min(DASH.duur, (co.tikken - d.tik) * STAP);
+        var alIn = d.bevestigd === undefined ? 0 : Math.min(DASH.duur, Math.max(0, co.tikken - d.bevestigd) * STAP);
+        x += d.dx * DASH.snel * (zelf - alIn); y += d.dy * DASH.snel * (zelf - alIn);
+        return !(alIn >= DASH.duur || co.tikken - d.tik > 120);
+      });
+    }
+    x = Math.max(ARENA.rand, Math.min(ARENA.b - ARENA.rand, x));
+    y = Math.max(ARENA.rand, Math.min(ARENA.h - ARENA.rand, y));
+    /* een kleine afwijking (een duw, een rand) glijdt weg; een grote (een nieuwe ronde) springt */
+    if (!voorspel.aan || Math.hypot(x - voorspel.x, y - voorspel.y) > 90){ voorspel.x = x; voorspel.y = y; }
+    else { voorspel.x += (x - voorspel.x) * 0.5; voorspel.y += (y - voorspel.y) * 0.5; }
+    voorspel.aan = true;
+  }
   function nieuweMaat(naam){
     return { naam:naam, hp:SPELER.hp, maxHp:SPELER.hp, neer:false, munten:0, geveld:0, dashVraag:false,
              sp:{ x:ARENA.b / 2 + 50, y:ARENA.h / 2, mikt:0, klok:0, zwaai:0, raak:0, mesKlok:0, flits:0, dash:0, dashKlok:0, dx:1, dy:0, loopt:false, wapen:'zwaard' },
@@ -901,6 +929,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     ronde = 0; munten = 0; level = {}; geveld = 0; reeks = 0; besteReeks = 0; goedAantal = 0; foutAantal = 0;
     co.tikken = 0; co.inbox = []; co.log = {}; co.inTicks = {}; co.bevestigd = 0; co.hashes = {}; co.reserve = RESERVEMIN; co.vlotSinds = 0; co.rest = 0; co.tkLaatst = 0;
     co.mijnIn = { dx:0, dy:0 }; co.laatsteZend = ''; co.klaar = false; co.maatKlaar = false; co.eind = false;
+    voorspel.aan = false; voorspel.hist = []; voorspel.dashes = []; voorspel.verzonden = {}; voorspel.lag = 6;
     if (co.aan && co.lock && co.rol === 'gast' && co.opzet) zaai(co.opzet.seed);
     else { co.seed = Math.floor(Math.random() * 4294967296); zaai(co.seed); }
     slim.reset(niveau); pot = null;
@@ -920,6 +949,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     ronde++;
     fase = 'ronde';
     fouten = []; messen = []; munt = []; pluis = []; cijfers = []; aanvallen = [];
+    voorspel.hist = []; voorspel.dashes = [];
     /* de gastheer links van het midden, de gast rechts, bij allebei zo */
     sp.x = ARENA.b / 2 + (co.aan ? (co.lock && co.rol === 'gast' ? 50 : -50) : 0); sp.y = ARENA.h / 2; sp.raak = 0; sp.klok = 0; sp.mesKlok = 0; sp.dash = 0; sp.dashKlok = 0;
     if (co.aan){
@@ -986,7 +1016,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     }
   }
   /* voor het testen: hoe ver lopen de gastheer en de maat uit elkaar */
-  window.__zwaardPas = function(){ return { rol:co.rol, aan:co.aan, lock:co.lock, tikken:co.tikken, bevestigd:co.bevestigd, reserve:co.reserve, ronde:ronde, fase:fase }; };
+  window.__zwaardPas = function(){ return { rol:co.rol, aan:co.aan, lock:co.lock, tikken:co.tikken, bevestigd:co.bevestigd, reserve:co.reserve, ronde:ronde, fase:fase,
+    lag:+voorspel.lag.toFixed(1), x:Math.round(sp.x), y:Math.round(sp.y), vx:Math.round(voorspel.aan ? voorspel.x : sp.x), vy:Math.round(voorspel.aan ? voorspel.y : sp.y) }; };
   /* voor het testen: __zwaardSpring(5) springt naar een baasronde */
   window.__zwaardSpring = function(n){ ronde = n - 1; volgendeRonde(); };
   /* en een kijkgaatje: wat staat er nu in de arena */
@@ -1265,7 +1296,19 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   function ontwijk(){
     if (uitlegVerder()) return;
     if (fase !== 'ronde' || pauze) return;
-    if (co.aan && co.lock){ opdracht({ k:'dash' }); return; }
+    if (co.aan && co.lock){
+      if (co.rol === 'gast' && sp.dashKlok <= 0 && sp.dash <= 0){
+        var inv = eigenInvoer(), ddx = inv.dx, ddy = inv.dy, p = mijnPlek();
+        if (!ddx && !ddy){
+          var d0 = null, da0 = 1e9;
+          fouten.forEach(function(f){ var a = Math.hypot(f.x - p.x, f.y - p.y); if (a < da0){ da0 = a; d0 = f; } });
+          if (d0){ var wx = p.x - d0.x, wy = p.y - d0.y, wl = Math.hypot(wx, wy) || 1; ddx = wx / wl; ddy = wy / wl; }
+          else { ddx = sp.dx; ddy = sp.dy; }
+        }
+        voorspel.dashes.push({ tik:co.tikken, dx:ddx, dy:ddy });
+      }
+      opdracht({ k:'dash' }); return;
+    }
     if (co.aan && co.rol === 'gast'){ co.dashVraag = true; return; }   /* de gastheer springt voor je */
     ontwijkMet(sp);
   }
@@ -1415,7 +1458,9 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
         Math.abs(inv.dx - co.laatsteDx) + Math.abs(inv.dy - co.laatsteDy) < 0.35) return;
     co.laatsteZend = sleutel; co.laatsteZendTijd = nu;
     co.laatsteDx = inv.dx; co.laatsteDy = inv.dy;
-    opdracht({ k:'in', dx:inv.dx, dy:inv.dy });
+    var c = { k:'in', dx:inv.dx, dy:inv.dy };
+    if (co.rol === 'gast'){ c.nr = ++voorspel.inNr; voorspel.verzonden[c.nr] = co.tikken; }
+    opdracht(c);
   }
   /* Wat een opdracht doet, bij allebei hetzelfde. 'wie' zegt van welke speler
      hij komt: h voor de gastheer, g voor de gast. */
@@ -1425,8 +1470,14 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (c.k === 'in'){
       var inv = { dx:Math.max(-1, Math.min(1, +c.dx || 0)), dy:Math.max(-1, Math.min(1, +c.dy || 0)) };
       if (mij) co.mijnIn = inv; else if (maat) maat.in = inv;
+      /* de maat meet hoeveel stappen zijn toets onderweg was */
+      if (mij && co.rol === 'gast' && c.nr && voorspel.verzonden[c.nr] !== undefined){
+        var lag = co.tikken - voorspel.verzonden[c.nr]; delete voorspel.verzonden[c.nr];
+        voorspel.lag += (Math.max(1, Math.min(30, lag)) - voorspel.lag) * 0.25;
+      }
     } else if (c.k === 'dash'){
       if (fase === 'ronde' && !pauze){ if (mij) ontwijkMet(sp); else if (maat) ontwijkMet(maat.sp); }
+      if (mij && co.rol === 'gast'){ for (var di = 0; di < voorspel.dashes.length; di++){ if (voorspel.dashes[di].bevestigd === undefined){ voorspel.dashes[di].bevestigd = co.tikken; break; } } }
     } else if (c.k === 'wapen'){
       if (fase === 'ronde' && !pauze){ if (mij) wisselWapenVan(sp); else if (maat) wisselWapenVan(maat.sp); }
     } else if (c.k === 'klaar'){
@@ -1439,11 +1490,11 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       document.getElementById('arenatip').textContent = pauze ? (co.rol === 'host' ? 'Pauze. Druk op P of Escape om verder te gaan.' : 'Je maat heeft gepauzeerd.') : 'Verder.';
     }
   }
-  /* De gastheer bevestigt om de drie stappen welke opdrachten erin zaten, met
-     om de zestig stappen een vingerafdruk. Drie per bericht is twintig
-     berichten per seconde: ruim onder wat de kamer doorlaat, en een stap
-     later dan om de twee. Bij het einde gaat wat er nog ligt meteen mee. */
-  var PASBUNDEL = 3;
+  /* De gastheer bevestigt om de twee stappen welke opdrachten erin zaten, met
+     om de zestig stappen een vingerafdruk. Dat is dertig berichten per
+     seconde, ruim onder wat de kamer doorlaat sinds die grens omhoog ging.
+     Bij het einde gaat wat er nog ligt meteen mee. */
+  var PASBUNDEL = 2;
   function lockNaStap(nu){
     var k = co.tikken;
     if (!nu && k % PASBUNDEL) return;
@@ -1470,7 +1521,11 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     /* de tijd loopt hier acht procent langzamer of sneller tot de voorraad klopt */
     if (!co.eind && co.laatsteDt){ co.rest += co.laatsteDt * (buffer < doel ? -0.08 : buffer > doel + 6 ? 0.08 : 0); if (co.rest < 0) co.rest = 0; }
     var gedaan = 0, nu = performance.now();
-    while (co.rest >= STAP && gedaan < 4 && co.tikken < co.bevestigd){ co.rest -= STAP; doeStap(); gedaan++; }
+    while (co.rest >= STAP && gedaan < 4 && co.tikken < co.bevestigd){
+      co.rest -= STAP; doeStap(); gedaan++;
+      voorspel.hist.push(eigenInvoer()); if (voorspel.hist.length > 40) voorspel.hist.shift();
+    }
+    voorspelBij();
     if (gedaan){
       co.laatsteStap = nu;
       /* Gaat het een tijd lang vlot, dan mag er voorraad af. Zonder dit blijft
@@ -1509,7 +1564,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (toetsen['arrowup'] || toetsen['w']) dy -= 1;
     if (toetsen['arrowdown'] || toetsen['s']) dy += 1;
     if (!dx && !dy && wijs){
-      var wx = wijs.x - sp.x, wy = wijs.y - sp.y, wl = Math.hypot(wx, wy);
+      var pl = mijnPlek(), wx = wijs.x - pl.x, wy = wijs.y - pl.y, wl = Math.hypot(wx, wy);
       if (wl > 8){ dx = wx / wl; dy = wy / wl; }
     }
     var l = Math.hypot(dx, dy);
@@ -2317,7 +2372,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
         '</g>';
     });
     /* de spelers: jij, en samen ook je maat */
-    var lijstSp = [{ s:sp, ber:zwaardBereik(), harnas:stat('harnas'), neer:co.neer, naam:null }];
+    var mijnSp = voorspel.aan ? Object.assign({}, sp, { x:voorspel.x, y:voorspel.y }) : sp;
+    var lijstSp = [{ s:mijnSp, ber:zwaardBereik(), harnas:stat('harnas'), neer:co.neer, naam:null }];
     if (co.aan && maat) lijstSp.push({ s:maat.sp, ber:maat.stats.bereik, harnas:maat.stats.harnas, neer:maat.neer, naam:maat.naam });
     lijstSp.forEach(function(Q){ s += tekenSpeler(Q.s, Q.ber, Q.harnas, Q.neer, Q.naam, pols); });
     /* de balk van de baas staat boven de arena, buiten het speelveld */
