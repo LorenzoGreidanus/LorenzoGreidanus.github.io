@@ -21,6 +21,10 @@
    hibernation API); wie erbij hoort staat in de bijlage van elke socket. */
 import { DurableObject } from "cloudflare:workers";
 import { nette } from "./naamfilter.js";
+/* de motor van Zwaardvechter: hetzelfde bestand dat de browser laadt */
+import ZWAARDMOTOR from "../leermiddelen/zwaard-motor.js";
+const MOTORSTAP = 1 / 60, MOTOR_STAND_OM = 3, MOTOR_STIL_OM = 12;   /* per hoeveel tikken de stand gaat: in de ronde, en daarbuiten */
+const MOTOR_ZONDER_SPELERS = 60 * 1000;                            /* zonder een enkele speler stopt de motor na een minuut */
 
 const MAX_SPELERS = 60, MAX_VRAGEN = 60;
 const AFTELLEN = 3000;                       /* een duel begint drie seconden nadat de tweede speler er is */
@@ -72,7 +76,8 @@ export class Kamer extends DurableObject {
     super(ctx, env);
     this.stand = null;
     this.standTimer = null;
-    this.proef = null;
+    /* de motor van een duel Zwaardvechter, zolang het potje loopt */
+    this.motor = null; this.motorKlok = null; this.motorTik = 0; this.motorSids = []; this.motorLeeg = 0;
     this.tempo = {};        /* per speler: hoeveel berichten deze seconde */
     this.ctx.blockConcurrencyWhile(async () => {
       this.stand = (await this.ctx.storage.get("stand")) || null;
@@ -191,7 +196,7 @@ export class Kamer extends DurableObject {
       return new Response(null, { status: 101, webSocket: client });
     }
     if (this.strijd){
-      if (this.stand.fase === "bezig" && rol === "speler") this.stuur(server, { t: "start" });
+      if (this.stand.fase === "bezig" && rol === "speler"){ this.stuur(server, { t: "start" }); if (this.motor) this.stuur(server, { t: "net", d: this.motor.pakket() }); }
       if (this.stand.fase === "einde") this.stuur(server, this.strijdEinde(rol === "speler" ? sid : null));
       else this.stuur(server, this.standBericht(rol === "speler" ? sid : null));
       /* een duel telt af zodra de tweede speler binnen is */
@@ -335,6 +340,7 @@ export class Kamer extends DurableObject {
     if (a.wat === "sluit" && !this.strijd && this.stand.fase === "vraag" && a.i === this.stand.i) return this.sluitVraag();
     if (a.wat === "duelstart" && this.strijd && this.stand.fase === "aftellen") return this.strijdStart();
     if (a.wat === "opruimen"){
+      this.motorStop();
       this.ctx.getWebSockets().forEach(ws => { try { ws.close(1000, "de kamer is gesloten"); } catch (e){} });
       this.stand = null;
       await this.ctx.storage.deleteAll();
@@ -351,6 +357,59 @@ export class Kamer extends DurableObject {
     await this.bewaar();
     this.iedereen({ t: "start" });
     this.planStand();
+    if (st.duel && st.game === "zwaard") this.motorStart();
+  }
+  /* ---------- de motor van Zwaardvechter in de kamer ----------
+     De gastheer van het duel is speler 0, de ander speler 1: dezelfde
+     volgorde als in de browsers. De kamer tikt zestig keer per seconde en
+     stuurt de stand om de drie tikken; buiten de ronde (vragen, winkel) om
+     de twaalf, want dan beweegt er niets. Zonder spelers stopt hij na een
+     minuut, en bij het einde van het potje meteen. */
+  motorStart(){
+    if (this.motor || !this.stand) return;
+    const st = this.stand, sids = Object.keys(st.spelers);
+    const eerst = st.gastheer && st.spelers[st.gastheer] ? st.gastheer : sids[0];
+    this.motorSids = [eerst].concat(sids.filter(x => x !== eerst)).slice(0, 2);
+    if (this.motorSids.length < 2) return;
+    const W = ZWAARDMOTOR.maak({ spelers: this.motorSids.map(sid => ({ naam: st.spelers[sid].naam })) });
+    this.motor = W; this.motorTik = 0; this.motorLeeg = 0;
+    W.volgendeRonde();
+    this.motorZend();
+    this.motorKlok = setInterval(() => {
+      try {
+        if (!this.motor || !this.stand || this.stand.fase !== "bezig"){ this.motorStop(); return; }
+        W.stap(MOTORSTAP);
+        this.motorTik++;
+        if (W.fase === "einde"){ this.motorZend(); this.motorStop(); return; }
+        if (this.motorTik % (W.fase === "ronde" ? MOTOR_STAND_OM : MOTOR_STIL_OM) === 0) this.motorZend();
+        /* niemand meer aan de lijn: even wachten, dan ophouden */
+        if (this.motorTik % 60 === 0){
+          if (this.ctx.getWebSockets("speler").length === 0){ this.motorLeeg += 1000; if (this.motorLeeg >= MOTOR_ZONDER_SPELERS) this.motorStop(); }
+          else this.motorLeeg = 0;
+        }
+      } catch (e){ console.error("motor", e && e.stack || e); this.motorStop(); }
+    }, 1000 * MOTORSTAP);
+  }
+  motorZend(){
+    if (!this.motor) return;
+    const s = JSON.stringify({ t: "net", d: this.motor.pakket() });
+    this.ctx.getWebSockets("speler").forEach(ws => { try { ws.send(s); } catch (e){} });
+  }
+  motorStop(){
+    if (this.motorKlok){ clearInterval(this.motorKlok); this.motorKlok = null; }
+    this.motor = null;
+  }
+  /* wat een speler de motor stuurt: toetsen, uitrusting, klaar, pauze */
+  motorBericht(wie, d){
+    const W = this.motor, i = this.motorSids.indexOf(wie.sid);
+    if (!W || i < 0 || !d) return;
+    if (d.k === "in"){
+      W.zetInvoer(i, d.dx, d.dy, Math.max(0, d.nr | 0));
+      if (d.dash) W.spelers[i].dashVraag = true;
+      if (d.wapen) W.spelers[i].wapenVraag = true;
+    } else if (d.k === "stats"){ W.zetStats(i, d.s, d.hp); }
+    else if (d.k === "klaar"){ W.zetStats(i, d.s, d.hp); if (W.klaar(i)) this.motorZend(); else this.motorZend(); }
+    else if (d.k === "pauze"){ W.pauze = !!d.aan; this.motorZend(); }
   }
   async duelAftellen(){
     this.stand.fase = "aftellen";
@@ -369,15 +428,11 @@ export class Kamer extends DurableObject {
     if (!sp) return;
     /* in een duel mag een speler die alleen wacht de kamer sluiten */
     if (m.t === "stop" && st.duel && st.fase !== "einde") return this.strijdKlaar();
-    /* PROEF (tijdelijk): de kamer tikt zelf, om te zien of dat kan */
-    if (m.t === "net" && m.d && m.d.k === "proef" && st.duel){
-      this.proefStart(Math.min(600, Math.max(5, Number(m.d.duur) || 60)), Math.min(400000, Math.max(0, Number(m.d.werk) || 20000)));
-      return;
-    }
     /* berichten tussen de spelers onderling (de gedeelde arena): de kamer geeft ze
        alleen door, bewaart niets en kijkt er niet in */
     if (m.t === "net"){
       if (st.fase === "einde" || m.d === undefined) return;
+      if (this.motor){ this.motorBericht(wie, m.d); return; }
       const s = JSON.stringify({ t: "net", van: wie.sid, d: m.d });
       if (s.length > 60000) return;
       this.ctx.getWebSockets("speler").forEach(ws2 => {
@@ -432,22 +487,6 @@ export class Kamer extends DurableObject {
       if (alle.length && alle.every(id => st.spelers[id].af)) return this.strijdKlaar();
     }
   }
-  /* PROEF (tijdelijk): zestig tikken per seconde met wat rekenwerk, twintig
-     berichten per seconde naar de spelers, zolang de proef duurt */
-  proefStart(duur, werk){
-    if (this.proef) return;
-    const t0 = Date.now(); let n = 0, laatst = t0, maxGat = 0, som = 0;
-    this.proef = setInterval(() => {
-      const nu = Date.now(); maxGat = Math.max(maxGat, nu - laatst); laatst = nu;
-      let x = 0; for (let i = 0; i < werk; i++) x += Math.sin(i * 0.001); som += x;
-      n++;
-      if (n % 3 === 0){
-        const s = JSON.stringify({ t: "net", d: { k: "proeftik", n, t: nu, sec: Math.round((nu - t0) / 100) / 10, maxGat, som: Math.round(som) } });
-        this.ctx.getWebSockets("speler").forEach(ws => { try { ws.send(s); } catch (e){} });
-      }
-      if (nu - t0 > duur * 1000){ clearInterval(this.proef); this.proef = null; }
-    }, 1000 / 60);
-  }
   /* de stand gaat op zijn vroegst om de ruim een seconde naar iedereen, hoe
      vaak de spelers ook melden */
   planStand(){
@@ -490,6 +529,7 @@ export class Kamer extends DurableObject {
     return { t: "einde", stand: lijst, jouw: mij ? { rang: mij.rang, van: lijst.length, naam: mij.naam } : null };
   }
   async strijdKlaar(){
+    this.motorStop();
     this.stand.fase = "einde";
     await this.zetAlarm({ wat: "opruimen" }, NA_EINDE);
     await this.bewaar();

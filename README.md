@@ -16,6 +16,7 @@ Een site, twee kanten: de voorkant voor collega's en een aparte leeromgeving voo
 | `fonts.css`, `fonts/` | Poppins en Caveat, zelf gehost (Open Font License), zodat er geen verzoek naar Google gaat |
 | `CNAME` | Overblijfsel van GitHub Pages; de site draait nu op Cloudflare (zie onderaan) |
 | `wrangler.jsonc` | De Cloudflare-configuratie: de map is de site, `/api/`, `/ws/` en `/q` gaan naar de server, elke spelkamer is een Durable Object |
+| `leermiddelen/zwaard-motor.js` | De motor van Zwaardvechter (arena, fouten, bazen, aanvallen, toeval), zonder tekenen. De pagina laadt hem voor wie alleen speelt; `server/kamer.js` laadt hetzelfde bestand en draait hem in de kamer voor een duel |
 | `server/index.js` | De server: kamers aanmaken (`POST /api/kamer`), de stand opvragen, WebSockets doorzetten naar de kamer, de korte link `/q/CODE` |
 | `server/kamer.js` | Een spelkamer: spelers, WebSockets, de spelstand en de regels van de Klasquiz; de kamer is de baas over de score |
 | `server/maak-bank.js` | Controleert `leermiddelen/bank.js` na een wijziging aan de vragen (aantallen per niveau, complete vragen, de rekengenerator): `node server/maak-bank.js` |
