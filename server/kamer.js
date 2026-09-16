@@ -388,19 +388,26 @@ export class Kamer extends DurableObject {
     const W = TORENMOTOR.maak({ thema: typeof a.th === "string" ? a.th : "plein", torens: menu, vrij, rang: RANGEN[st.niveau] || Number(a.rang) || 2 });
     this.motor = W; this.motorSpel = "toren"; this.motorSids = lijst; this.motorTik = 0; this.motorLeeg = 0;
     this.motorZend();
+    /* zoveel tikken als er echte tijd verstreken is, en nooit meer dan drie in een keer */
+    let laatst = Date.now(), rest = 0;
     this.motorKlok = setInterval(() => {
       try {
         if (!this.motor || !this.stand || this.stand.fase !== "bezig"){ this.motorStop(); return; }
-        W.stap();
-        this.motorTik++;
-        if (W.fase === "einde"){ this.motorZend(); this.motorStop(); return; }
-        if (this.motorTik % TOREN_STAND_OM === 0) this.motorZend();
-        if (this.motorTik % 16 === 0){
-          if (this.ctx.getWebSockets("speler").length === 0){ this.motorLeeg += 1000; if (this.motorLeeg >= MOTOR_ZONDER_SPELERS) this.motorStop(); }
-          else this.motorLeeg = 0;
+        const nu = Date.now(); rest = Math.min(rest + (nu - laatst), 3 * TORENSTAP); laatst = nu;
+        let gedaan = 0;
+        while (rest >= TORENSTAP && gedaan < 3 && this.motor){
+          rest -= TORENSTAP; gedaan++;
+          W.stap();
+          this.motorTik++;
+          if (W.fase === "einde"){ this.motorZend(); this.motorStop(); return; }
+          if (this.motorTik % TOREN_STAND_OM === 0) this.motorZend();
+          if (this.motorTik % 16 === 0){
+            if (this.ctx.getWebSockets("speler").length === 0){ this.motorLeeg += 1000; if (this.motorLeeg >= MOTOR_ZONDER_SPELERS) this.motorStop(); }
+            else this.motorLeeg = 0;
+          }
         }
       } catch (e){ console.error("torenmotor", e && e.stack || e); this.motorStop(); }
-    }, TORENSTAP);
+    }, TORENSTAP / 2);
     return true;
   }
   /* ---------- de motor van Zwaardvechter in de kamer ----------
@@ -419,20 +426,28 @@ export class Kamer extends DurableObject {
     this.motor = W; this.motorSpel = "zwaard"; this.motorTik = 0; this.motorLeeg = 0;
     W.volgendeRonde();
     this.motorZend();
+    /* zoveel stappen als er echte tijd verstreken is, en nooit meer dan vier in een keer */
+    const STAPMS = 1000 * MOTORSTAP;
+    let laatst = Date.now(), rest = 0;
     this.motorKlok = setInterval(() => {
       try {
         if (!this.motor || !this.stand || this.stand.fase !== "bezig"){ this.motorStop(); return; }
-        W.stap(MOTORSTAP);
-        this.motorTik++;
-        if (W.fase === "einde"){ this.motorZend(); this.motorStop(); return; }
-        if (this.motorTik % (W.fase === "ronde" ? MOTOR_STAND_OM : MOTOR_STIL_OM) === 0) this.motorZend();
-        /* niemand meer aan de lijn: even wachten, dan ophouden */
-        if (this.motorTik % 60 === 0){
-          if (this.ctx.getWebSockets("speler").length === 0){ this.motorLeeg += 1000; if (this.motorLeeg >= MOTOR_ZONDER_SPELERS) this.motorStop(); }
-          else this.motorLeeg = 0;
+        const nu = Date.now(); rest = Math.min(rest + (nu - laatst), 4 * STAPMS); laatst = nu;
+        let gedaan = 0;
+        while (rest >= STAPMS && gedaan < 4 && this.motor){
+          rest -= STAPMS; gedaan++;
+          W.stap(MOTORSTAP);
+          this.motorTik++;
+          if (W.fase === "einde"){ this.motorZend(); this.motorStop(); return; }
+          if (this.motorTik % (W.fase === "ronde" ? MOTOR_STAND_OM : MOTOR_STIL_OM) === 0) this.motorZend();
+          /* niemand meer aan de lijn: even wachten, dan ophouden */
+          if (this.motorTik % 60 === 0){
+            if (this.ctx.getWebSockets("speler").length === 0){ this.motorLeeg += 1000; if (this.motorLeeg >= MOTOR_ZONDER_SPELERS) this.motorStop(); }
+            else this.motorLeeg = 0;
+          }
         }
       } catch (e){ console.error("motor", e && e.stack || e); this.motorStop(); }
-    }, 1000 * MOTORSTAP);
+    }, STAPMS / 2);
   }
   motorZend(){
     if (!this.motor) return;

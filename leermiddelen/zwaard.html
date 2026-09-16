@@ -670,29 +670,48 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
      sprong die onderweg is. Hoe lang die reis duurt meet hij zelf: elke toets
      krijgt een nummer mee, en de stand zegt welk nummer de kamer het laatst
      verwerkte. Alleen tekenen; klappen en munten gaan op de bevestigde plek. */
-  var voorspel = { aan:false, x:0, y:0, hist:[], dashes:[] };
+  /* x, y: waar ik mezelf teken. ex, ey: het verschil met wat de kamer zegt,
+     dat elk beeld een stuk kleiner wordt. hist: wat ik per beeld gelopen heb,
+     om bij een stand uit te rekenen wat de kamer nog niet had. */
+  var voorspel = { aan:false, x:0, y:0, ex:0, ey:0, hist:[], dashRest:0, ddx:0, ddy:0 };
   function mijnPlek(){ return voorspel.aan ? voorspel : sp; }
-  function voorspelBij(nu){
+  /* elk beeld: mijn eigen toetsen meteen, en de correctie zachtjes */
+  function voorspelStap(inv, dt, nu){
     if (!co.aan){ voorspel.aan = false; return; }
-    var snel = loopSnel(), x = sp.x, y = sp.y;
+    if (!voorspel.aan){ voorspel.x = sp.x; voorspel.y = sp.y; voorspel.ex = 0; voorspel.ey = 0; voorspel.hist = []; voorspel.dashRest = 0; voorspel.aan = true; }
+    var mx = 0, my = 0;
     if (!co.neer && fase === 'ronde' && !pauze){
-      var h = voorspel.hist, van = nu - co.lag;
-      for (var i = 0; i < h.length; i++){ if (h[i].t < van) continue; x += h[i].dx * snel * h[i].dt; y += h[i].dy * snel * h[i].dt; }
-      /* een sprong die onderweg is: wat hij nu al gedaan zou hebben, min wat
-         de bevestigde stand er al van in zich heeft */
-      voorspel.dashes = voorspel.dashes.filter(function(d){
-        var zelf = Math.min(DASH.duur, (nu - d.t) / 1000);
-        var alIn = d.bevestigd === undefined ? 0 : Math.min(DASH.duur, Math.max(0, (nu - d.bevestigd) / 1000));
-        x += d.dx * DASH.snel * (zelf - alIn); y += d.dy * DASH.snel * (zelf - alIn);
-        return !(alIn >= DASH.duur || nu - d.t > 2500);
-      });
+      var snel = loopSnel();
+      mx = inv.dx * snel * dt; my = inv.dy * snel * dt;
+      if (voorspel.dashRest > 0){
+        var d = Math.min(dt, voorspel.dashRest); voorspel.dashRest -= d;
+        mx += voorspel.ddx * DASH.snel * d; my += voorspel.ddy * DASH.snel * d;
+      }
     }
-    x = Math.max(ARENA.rand, Math.min(ARENA.b - ARENA.rand, x));
-    y = Math.max(ARENA.rand, Math.min(ARENA.h - ARENA.rand, y));
-    /* een kleine afwijking (een duw, een rand) glijdt weg; een grote (een nieuwe ronde) springt */
-    if (!voorspel.aan || Math.hypot(x - voorspel.x, y - voorspel.y) > 90){ voorspel.x = x; voorspel.y = y; }
-    else { voorspel.x += (x - voorspel.x) * 0.5; voorspel.y += (y - voorspel.y) * 0.5; }
-    voorspel.aan = true;
+    voorspel.hist.push({ t:nu, mx:mx, my:my });
+    while (voorspel.hist.length && voorspel.hist[0].t < nu - 2000) voorspel.hist.shift();
+    voorspel.x += mx; voorspel.y += my;
+    /* het verschil met de kamer glijdt weg in ongeveer een tiende seconde */
+    var k = Math.min(1, dt * 10);
+    var corr = Math.hypot(voorspel.ex * k, voorspel.ey * k);
+    voorspel.corrSom = (voorspel.corrSom || 0) + corr; voorspel.corrN = (voorspel.corrN || 0) + 1; voorspel.corrMax = Math.max(voorspel.corrMax || 0, corr);
+    voorspel.x += voorspel.ex * k; voorspel.y += voorspel.ey * k;
+    voorspel.ex *= (1 - k); voorspel.ey *= (1 - k);
+    voorspel.x = Math.max(ARENA.rand, Math.min(ARENA.b - ARENA.rand, voorspel.x));
+    voorspel.y = Math.max(ARENA.rand, Math.min(ARENA.h - ARENA.rand, voorspel.y));
+  }
+  /* een stand van de kamer: waar ik daar sta, plus wat ik daarna nog gelopen
+     heb (dat was nog onderweg); het verschil met wat ik teken glijdt weg, of
+     springt als het groot is */
+  function voorspelBevestig(nu){
+    if (!voorspel.aan) return;
+    /* de stand is van een halve reis geleden: wat ik daarna liep had de kamer nog niet */
+    var tx = sp.x, ty = sp.y, van = nu - co.lag / 2;
+    voorspel.hist.forEach(function(h){ if (h.t > van){ tx += h.mx; ty += h.my; } });
+    tx = Math.max(ARENA.rand, Math.min(ARENA.b - ARENA.rand, tx)); ty = Math.max(ARENA.rand, Math.min(ARENA.h - ARENA.rand, ty));
+    var ex = tx - voorspel.x, ey = ty - voorspel.y;
+    if (Math.hypot(ex, ey) > 120 || fase !== 'ronde' || co.neer){ voorspel.x = tx; voorspel.y = ty; voorspel.ex = 0; voorspel.ey = 0; }
+    else { voorspel.ex = ex; voorspel.ey = ey; }
   }
 
   /* de spiegels bijwerken uit de motor, na elke stap */
@@ -833,7 +852,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     ronde = 0; munten = 0; level = {}; geveld = 0; reeks = 0; besteReeks = 0; goedAantal = 0; foutAantal = 0; muntWas = 0; geveldWas = 0;
     co.klaar = false; co.maatKlaar = false; co.neer = false; co.inNr = 0; co.verzonden = {}; co.lag = 80; co.laatsteFase = ''; co.pakketten = 0;
     co.dashVraag = false; co.wapenVraag = false; co.laatsteInvoer = '';
-    voorspel.aan = false; voorspel.hist = []; voorspel.dashes = [];
+    voorspel.aan = false; voorspel.hist = []; voorspel.dashRest = 0;
     fouten = []; messen = []; munt = []; pluis = []; cijfers = []; aanvallen = []; teSpawnen = 0; tijdInRonde = 0;
     slim.reset(niveau); pot = null;
     maxHp = maxLeven(); hp = maxHp; pauze = false;
@@ -869,7 +888,9 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   }
   /* voor het testen: hoe ver loopt wat ik zie voor op wat de kamer bevestigde */
   window.__zwaardPas = function(){ return { aan:co.aan, mij:co.mij, lag:Math.round(co.lag), pakketten:co.pakketten, ronde:ronde, fase:fase, tikken:co.pakketten, bevestigd:co.pakketten, lock:true,
-    x:Math.round(sp.x), y:Math.round(sp.y), vx:Math.round(voorspel.aan ? voorspel.x : sp.x), vy:Math.round(voorspel.aan ? voorspel.y : sp.y) }; };
+    x:Math.round(sp.x), y:Math.round(sp.y), vx:Math.round(voorspel.aan ? voorspel.x : sp.x), vy:Math.round(voorspel.aan ? voorspel.y : sp.y),
+    corrGem:+((voorspel.corrSom || 0) / Math.max(1, voorspel.corrN || 0)).toFixed(2), corrMax:+(voorspel.corrMax || 0).toFixed(2), corrN:voorspel.corrN || 0, t:+tijdInRonde.toFixed(3) }; };
+  window.__zwaardCorrReset = function(){ voorspel.corrSom = 0; voorspel.corrN = 0; voorspel.corrMax = 0; };
   /* voor het testen: __zwaardSpring(5) springt naar een baasronde */
   window.__zwaardSpring = function(n){ if (!W) return; W.ronde = n - 1; W.volgendeRonde(); spiegel(); };
   /* en een kijkgaatje: wat staat er nu in de arena */
@@ -920,7 +941,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
           if (d0){ var wx = p.x - d0.x, wy = p.y - d0.y, wl = Math.hypot(wx, wy) || 1; ddx = wx / wl; ddy = wy / wl; }
           else { ddx = sp.dx; ddy = sp.dy; }
         }
-        voorspel.dashes.push({ t:performance.now(), dx:ddx, dy:ddy });
+        voorspel.dashRest = DASH.duur; voorspel.ddx = ddx; voorspel.ddy = ddy;
         co.dashVraag = true;
       }
       return;
@@ -995,7 +1016,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (uitlegstand && !co.aan && traagKlok > 0){ traagKlok -= dt; dt *= TRAAGHEID; if (traagKlok <= 0) wolk = null; }
     if (co.aan){
       /* samen: toetsen sturen, de ontvangen stand tussen twee pakketten door schuiven, en mezelf vooruit tekenen */
-      gastTik(dt, nu); schuif(nu); voorspelBij(nu);
+      gastTik(dt, nu); schuif(nu);
     } else {
       /* De motor rekent in vaste stappen van een zestigste seconde, hoe snel
          het scherm ook ververst. Hoogstens vier per beeld, anders loopt het
@@ -1053,8 +1074,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (fase === 'ronde' && !pauze){
       if (bot.aan) botStuur();
       var inv = eigenInvoer();
-      voorspel.hist.push({ t:nu, dx:inv.dx, dy:inv.dy, dt:dt });
-      while (voorspel.hist.length && voorspel.hist[0].t < nu - 1500) voorspel.hist.shift();
+      voorspelStap(inv, dt, nu);
       co.zendKlok -= dt;
       var sleutel = inv.dx.toFixed(2) + ',' + inv.dy.toFixed(2);
       var anders = sleutel !== co.laatsteInvoer, meteen = co.dashVraag || co.wapenVraag || co.zendKlok <= 0;
@@ -1066,6 +1086,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
         co.dashVraag = false; co.wapenVraag = false;
       }
     } else {
+      voorspelStap({ dx:0, dy:0 }, dt, nu);
       /* de deeltjes lopen nog even uit */
       pluis.forEach(function(p2){ p2.leven -= dt; p2.x += p2.vx * dt; p2.y += p2.vy * dt; });
       pluis = pluis.filter(function(p2){ return p2.leven > 0; });
@@ -1104,7 +1125,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       co.laatsteFase = d.f;
       if (d.f === 'ronde'){
         fouten = []; messen = []; munt = []; pluis = []; cijfers = []; aanvallen = [];
-        co.neer = false; voorspel.hist = []; voorspel.dashes = [];
+        co.neer = false; voorspel.aan = false;
         ronde = d.r;
         rondeTekst(d.r, d.ts + (d.fo || []).length, d.r % BAASRONDE === 0 ? baasVan(d.r) : null);
       } else if (d.f === 'vragen'){
@@ -1137,8 +1158,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
         co.lag += (Math.max(20, Math.min(1500, reis)) - co.lag) * 0.25;
         Object.keys(co.verzonden).forEach(function(k){ if (+k < nr) delete co.verzonden[k]; });
       }
-      /* een sprong die de kamer nu bevestigt */
-      if (sp.dash > 0){ for (var di = 0; di < voorspel.dashes.length; di++){ if (voorspel.dashes[di].bevestigd === undefined){ voorspel.dashes[di].bevestigd = nu; break; } } }
+      voorspelBevestig(nu);
     }
     if (hijA){
       if (!maat) maat = { naam:co.maatNaam || 'je maat', av:co.maatAv || '', sp:ZWAARDMOTOR.nieuweSp(hijA[0], hijA[1]), stats:{ bereik:hijA[14], harnas:hijA[12] }, hp:hijA[10], maxHp:hijA[11], neer:false };
