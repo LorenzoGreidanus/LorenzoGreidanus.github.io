@@ -791,7 +791,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (!(co.aan && co.lock && co.rol === 'gast')){ voorspel.aan = false; return; }
     var L = Math.round(voorspel.lag), h = voorspel.hist, snel = loopSnel();
     var x = sp.x, y = sp.y;
-    if (!co.neer){
+    if (!co.neer && fase === 'ronde' && !pauze){
       for (var i = Math.max(0, h.length - L); i < h.length; i++){ x += h[i].dx * snel * STAP; y += h[i].dy * snel * STAP; }
       /* een sprong die onderweg is: wat hij nu al gedaan zou hebben, min wat
          de bevestigde stand er al van in zich heeft */
@@ -1518,8 +1518,13 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
        bevestigd is (een hik in de verbinding) staat hij stil, en dan houdt hij
        voortaan wat meer voorraad aan. */
     var buffer = co.bevestigd - co.tikken, doel = co.eind ? 0 : co.reserve;
-    /* de tijd loopt hier acht procent langzamer of sneller tot de voorraad klopt */
-    if (!co.eind && co.laatsteDt){ co.rest += co.laatsteDt * (buffer < doel ? -0.08 : buffer > doel + 6 ? 0.08 : 0); if (co.rest < 0) co.rest = 0; }
+    /* De tijd loopt hier acht procent langzamer tot de voorraad klopt. Ligt
+       er na een hik een stoot bevestigde stappen te wachten, dan haalt hij die
+       in naar rato van de achterstand, tot vier keer zo snel. */
+    if (!co.eind && co.laatsteDt){
+      var extra = buffer < doel ? -0.08 : buffer > doel + 6 ? Math.min(3, (buffer - doel - 6) / 8 + 0.08) : 0;
+      co.rest += co.laatsteDt * extra; if (co.rest < 0) co.rest = 0;
+    }
     var gedaan = 0, nu = performance.now();
     while (co.rest >= STAP && gedaan < 4 && co.tikken < co.bevestigd){
       co.rest -= STAP; doeStap(); gedaan++;
