@@ -295,7 +295,7 @@ body.groot .meter b{font-size:1.45rem}
   <div class="uitleg">
     <div><i style="background:var(--crab);color:#14224C">1</i><b>Bewegen, ontwijken en slaan</b><span>Pijltjes of WASD om te lopen, of houd je vinger op de arena en loop erheen. Spatie of de knop Ontwijk maakt een sprong waarbij niets je raakt. Je wapen slaat vanzelf naar de dichtstbijzijnde fout die binnen bereik komt. Met Q of de knop ernaast wissel je tussen het zwaard, dat hard toeslaat van dichtbij, en pijl en boog, die van ver raakt maar ongeveer de helft doet.</span></div>
     <div><i style="background:var(--amber);color:#14224C">2</i><b>Elke ronde meer</b><span>Meer fouten, snellere, dikkere en fouten met een schild. Raakt een fout je, dan kost dat leven; op nul is het klaar.</span></div>
-    <div><i style="background:#4a1230">B</i><b>Elke vijfde ronde een baas</b><span>Er zijn er zes, en ze komen om de beurt: De Grote Fout, De Inktvlek, De Rode Pen, De Prop, De Klok en De Zwerm. Elk heeft zijn eigen aanvallen, en die zie je op de grond aankomen: cirkels die ontploffen, een draaiende laser, een golf, inkt die blijft liggen, strepen dwars over de vloer, propjes in het rond, tikkende uren en een ring die zich sluit. Loop eruit, of spring er met Ontwijk doorheen. Onder de helft van zijn leven wordt hij kwaad en slaat hij sneller toe.</span></div>
+    <div><i style="background:#4a1230">B</i><b>Elke vijfde ronde een baas</b><span>Er zijn er zes, en ze komen om de beurt: De Grote Fout, De Inktvlek, De Rode Pen, De Prop, De Klok en De Zwerm. Elk heeft zijn eigen aanvallen, en die zie je op de grond aankomen: cirkels die ontploffen, een draaiende laser, een golf, inkt die blijft liggen, strepen dwars over de vloer, propjes in het rond, tikkende uren en een ring die zich sluit. Loop eruit, of spring er met Ontwijk doorheen. Elke baas heeft er vier: verder ook een regen van plofjes, een muur die over de vloer veegt, een spiraal van propjes en bommen die in scherven uiteenspatten. Onder de helft van zijn leven wordt hij kwaad: kortere waarschuwingen, aanvallen die over elkaar heen vallen en soms twee tegelijk.</span></div>
     <div><i style="background:var(--ocean)">3</i><b>Vragen zijn munten</b><span>Na elke ronde vijf vragen voor de klas, en hoe verder je komt hoe meer. Goed is munten, op rij goed is meer munten. Weet je het te goed, dan gaan de vragen een niveau omhoog. Fouten die je velt laten ook wat vallen.</span></div>
     <div><i style="background:#6b3fa0">4</i><b>Uitrusting</b><span>Tussen de rondes koop je in de winkel: zwaard, bereik, tempo, harnas, laarzen, werpmes en een drankje. Alles heeft zeven niveaus.</span></div>
   </div>
@@ -440,7 +440,11 @@ const AANVALUITLEG = {
   kogel:   'Propjes in alle richtingen. Ze vliegen recht, dus loop tussen twee propjes door naar buiten.',
   tik:     'De uren van de klok ploffen een voor een rond. Kijk welke cirkel oplicht en loop naar de plek die net geweest is.',
   wijzers: 'Twee wijzers draaien helemaal rond. Loop met de wijzer mee; hij haalt je niet in als je doorloopt.',
-  krimp:   'Een ring die naar binnen loopt, met een gat erin. Zoek het gat en ga daar staan voor hij bij je is.'
+  krimp:   'Een ring die naar binnen loopt, met een gat erin. Zoek het gat en ga daar staan voor hij bij je is.',
+  regen:   'Kleine cirkels die een voor een neerkomen, overal, de laatste onder jou. Blijf lopen, nooit stilstaan.',
+  muur:    'Een streep die van de ene kant naar de andere over de vloer veegt, met een gat erin. Ga in het gat staan en laat hem langs.',
+  spiraal: 'Propjes die een voor een uit de baas komen en zo een draaiende spiraal maken. Loop met de draai mee, tussen twee propjes door.',
+  bom:     'Een bom die langzaam naar je toe rolt en dan in scherven uiteenspat. Loop van hem weg, en stap opzij als hij knalt.'
 };
 
 
@@ -894,11 +898,13 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   /* voor het testen: __zwaardSpring(5) springt naar een baasronde */
   window.__zwaardSpring = function(n){ if (!W) return; W.ronde = n - 1; W.volgendeRonde(); spiegel(); };
   /* en een kijkgaatje: wat staat er nu in de arena */
+  window.__zwaardVol = function(){ if (W) W.spelers.forEach(function(P){ P.hp = P.maxHp; }); };
   window.__zwaardKijk = function(){
     return { ronde:ronde, fase:fase, hp:Math.round(hp), wapen:sp.wapen,
       soorten:fouten.map(function(f){ return f.baas ? 'baas:' + f.def.id : f.soort.id; }),
       baasHp:(fouten.filter(function(f){ return f.baas; })[0] || {}).maxHp || 0,
       aanvallen:aanvallen.map(function(a){ return a.soort; }),
+      aanvalTijd:aanvallen.reduce(function(o, a){ o[a.soort] = Math.max(o[a.soort] || -9, a.t); return o; }, {}),
       uitlegPauze:uitlegPauze,
       schutters:fouten.filter(function(f){ return f.soort.id === 'schutter'; }).map(function(f){ return { x:Math.round(f.x), y:Math.round(f.y), laad:+(f.laadKlok || 0).toFixed(2), stil:+(f.stilKlok || 0).toFixed(2) }; }),
       messen:messen.map(function(m){ return m.pijl ? 'pijl' : 'mes'; }) };
@@ -1110,7 +1116,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   function schuif(nu){
     fouten.forEach(function(f){ schuifEen(f, nu); });
     messen.forEach(function(m){ schuifEen(m, nu); });
-    aanvallen.forEach(function(a){ if (a.soort === 'kogel' || a.soort === 'schot') schuifEen(a, nu); });
+    aanvallen.forEach(function(a){ if (a.soort === 'kogel' || a.soort === 'schot' || a.soort === 'bom') schuifEen(a, nu); });
     if (maat) schuifEen(maat.sp, nu);
   }
   function netOntvang(d){
@@ -1188,7 +1194,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     var wasA = {}; aanvallen.forEach(function(a){ wasA[a.id] = a; });
     aanvallen = (d.aa || []).map(function(a){
       var o = wasA[a[16]] || { id:a[16], soort:a[0], x:a[1], y:a[2] };
-      if (o.soort === 'kogel' || o.soort === 'schot') zetDoel(o, a[1], a[2], nu); else { o.x = a[1]; o.y = a[2]; }
+      if (o.soort === 'kogel' || o.soort === 'schot' || o.soort === 'bom') zetDoel(o, a[1], a[2], nu); else { o.x = a[1]; o.y = a[2]; }
       o.t = a[3]; o.hoek = a[4]; o.richting = a[5]; o.nu = a[6]; o.straal = a[7]; o.geknald = !!a[8]; o.k = a[9] || 1; o.gat = a[10] || 0;
       o.breed = a[11] || 0; o.boog = a[12] || 0; o.duur = a[13] || 0; o.r0 = a[14] || 0; o.kl = a[15] || ''; o.neer = a[3] > 0;
       return o;
@@ -1467,13 +1473,16 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     /* de aanvallen van de baas: eerst de waarschuwing op de grond, dan de klap */
     aanvallen.forEach(function(a){
       if (a.soort === 'cirkel'){
-        var c = AANVAL.cirkel, cW = c.wacht * (a.k || 1), deel = Math.min(1, Math.max(0, a.t) / cW);
-        if (!a.geknald){
-          s += '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + c.r + '" fill="rgba(242,103,73,.16)" stroke="#F26749" stroke-width="3" stroke-dasharray="8 6"/>' +
-               '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + (c.r * deel).toFixed(1) + '" fill="rgba(242,103,73,.35)"/>';
+        var c = AANVAL.cirkel, cW = c.wacht * (a.k || 1), deel = Math.min(1, Math.max(0, a.t) / cW), cr = a.straal || c.r;
+        if (a.t < 0){
+          /* nog niet aan de beurt (de regen): alleen een vaag stipje */
+          s += '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="6" fill="#F26749" opacity=".3"/>';
+        } else if (!a.geknald){
+          s += '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + cr + '" fill="rgba(242,103,73,.16)" stroke="#F26749" stroke-width="3" stroke-dasharray="8 6"/>' +
+               '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + (cr * deel).toFixed(1) + '" fill="rgba(242,103,73,.35)"/>';
         } else {
           var na = Math.min(1, (a.t - cW) / c.knal);
-          s += '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + (c.r * (1 + na * 0.25)).toFixed(1) + '" fill="#EA9836" opacity="' + (0.85 * (1 - na)).toFixed(2) + '"/>';
+          s += '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + (cr * (1 + na * 0.25)).toFixed(1) + '" fill="#EA9836" opacity="' + (0.85 * (1 - na)).toFixed(2) + '"/>';
         }
       } else if (a.soort === 'laser'){
         var l = AANVAL.laser, lW = l.wacht * (a.k || 1), lBreed = a.breed || l.breed, lBoog = a.boog || l.boog;
@@ -1551,6 +1560,42 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
           s += '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + (sc.r + 4) + '" fill="rgba(20,34,76,.14)"/>' +
                '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + sc.r + '" fill="' + skl + '" stroke="#14224C" stroke-width="2" stroke-opacity=".45"/>' +
                '<circle cx="' + (a.x - 3).toFixed(1) + '" cy="' + (a.y - 3).toFixed(1) + '" r="3" fill="#fff" opacity=".5"/>';
+        }
+      } else if (a.soort === 'muur'){
+        var mu = AANVAL.muur, ms = ZWAARDMOTOR.muurStand(a), mkl = a.kl || '#c0442c', mWacht = a.t < ms.wacht;
+        var g1 = ms.gatMidden - ms.gatBreed / 2, g2 = ms.gatMidden + ms.gatBreed / 2, dwarsLang = ms.langsX ? ARENA.h : ARENA.b;
+        /* in de waarschuwing staat hij net binnen de rand waar hij vandaan komt */
+        var mPos = mWacht ? (ms.vooruit ? 12 : (ms.langsX ? ARENA.b : ARENA.h) - 12) : ms.pos, mDik = mWacht ? 8 : mu.breed;
+        var stuk = function(van, tot){
+          return ms.langsX ? '<rect x="' + (mPos - mDik / 2).toFixed(1) + '" y="' + van.toFixed(1) + '" width="' + mDik + '" height="' + Math.max(0, tot - van).toFixed(1) + '"'
+                           : '<rect x="' + van.toFixed(1) + '" y="' + (mPos - mDik / 2).toFixed(1) + '" width="' + Math.max(0, tot - van).toFixed(1) + '" height="' + mDik + '"';
+        };
+        if (a.t < 0){
+          /* de tweede muur, die nog moet komen */
+        } else if (mWacht){
+          var md = Math.min(1, Math.max(0, a.t) / ms.wacht), mOp = (0.3 + 0.55 * md).toFixed(2);
+          s += stuk(0, g1) + ' fill="' + mkl + '" opacity="' + mOp + '" rx="4"/>' + stuk(g2, dwarsLang) + ' fill="' + mkl + '" opacity="' + mOp + '" rx="4"/>';
+          /* pijltjes die de kant op wijzen */
+          var pijl = ms.vooruit ? 1 : -1, pm = mPos + pijl * (14 + md * 10);
+          for (var pa = 40; pa < dwarsLang; pa += 120){
+            if (pa > g1 - 20 && pa < g2 + 20) continue;
+            var px1 = ms.langsX ? mPos : pa, py1 = ms.langsX ? pa : mPos, px2 = ms.langsX ? pm : pa, py2 = ms.langsX ? pa : pm;
+            s += '<path d="M' + px1.toFixed(1) + ',' + py1.toFixed(1) + ' L' + px2.toFixed(1) + ',' + py2.toFixed(1) + '" stroke="' + mkl + '" stroke-width="3" stroke-linecap="round" opacity="' + mOp + '"/>';
+          }
+        } else {
+          s += stuk(0, g1) + ' fill="' + mkl + '" opacity=".3"/>' + stuk(g2, dwarsLang) + ' fill="' + mkl + '" opacity=".3"/>';
+          mDik = mu.breed - 12;
+          s += stuk(0, g1) + ' fill="' + mkl + '" opacity=".9" rx="3"/>' + stuk(g2, dwarsLang) + ' fill="' + mkl + '" opacity=".9" rx="3"/>';
+        }
+      } else if (a.soort === 'bom'){
+        var bo = AANVAL.bom, bkl2 = a.kl || '#8a7350', bd = Math.min(1, Math.max(0, a.t) / bo.duur);
+        if (a.t >= 0){
+          s += '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + (bo.r + 8 + bd * 14).toFixed(1) + '" fill="none" stroke="' + bkl2 + '" stroke-width="3" stroke-dasharray="6 5" opacity="' + (0.3 + 0.55 * bd).toFixed(2) + '"/>' +
+               '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + (bo.r + 4) + '" fill="rgba(20,34,76,.14)"/>' +
+               '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + bo.r + '" fill="' + bkl2 + '" stroke="#14224C" stroke-width="2.5" stroke-opacity=".55"/>' +
+               '<circle cx="' + (a.x - 6).toFixed(1) + '" cy="' + (a.y - 6).toFixed(1) + '" r="5" fill="#fff" opacity=".45"/>' +
+               '<path d="M' + a.x.toFixed(1) + ',' + (a.y - bo.r + 2).toFixed(1) + ' q4,-10 12,-12" fill="none" stroke="#14224C" stroke-width="3" stroke-linecap="round"/>' +
+               '<circle cx="' + (a.x + 12).toFixed(1) + '" cy="' + (a.y - bo.r - 10).toFixed(1) + '" r="' + (3 + Math.sin(pols * 30) * 1.5).toFixed(1) + '" fill="#FFE168"/>';
         }
       } else if (a.soort === 'krimp'){
         var kr = AANVAL.krimp, krW = kr.wacht * (a.k || 1);

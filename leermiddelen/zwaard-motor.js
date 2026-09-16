@@ -63,31 +63,38 @@ const FOUTEN = [
 /* De zes bazen. Om de vijf rondes komt de volgende aan de beurt, en na de
    zesde begint de rij opnieuw op een hogere ronde en dus taaier. */
 const BAZEN = [
-  { id:'fout',    naam:'De Grote Fout', kleur:'#4a1230', vorm:'ster',  hp:14, r:46, schade:26, schild:0.15,
-    aanvallen:['cirkel', 'laser', 'golf'],
-    wat:'Cirkels op de grond, een laser die om hem heen draait en een golf die naar buiten rolt.' },
-  { id:'inkt',    naam:'De Inktvlek',   kleur:'#1b3a8f', vorm:'vlek',  hp:14, r:50, schade:24, schild:0.1,
-    aanvallen:['plas', 'kegel', 'cirkel'],
-    wat:'Spat inkt over de vloer die blijft liggen, en spuit een waaier voor zich uit. Steeds minder plek om te staan.' },
-  { id:'pen',     naam:'De Rode Pen',   kleur:'#c0442c', vorm:'pen',   hp:16, r:42, schade:26, schild:0.15,
-    aanvallen:['baan', 'kruis', 'laser'],
-    wat:'Streept de arena door met rechte halen en zet er kruisen doorheen. Ga tussen de strepen staan.' },
-  { id:'prop',    naam:'De Prop',       kleur:'#8a7350', vorm:'prop',  hp:18, r:52, schade:28, schild:0.2,
-    aanvallen:['kogel', 'golf', 'baan'],
-    wat:'Schiet propjes in alle richtingen en rolt over de vloer. Taai, maar traag met aanvallen.' },
-  { id:'klok',    naam:'De Klok',       kleur:'#6b3fa0', vorm:'klok',  hp:15, r:46, schade:24, schild:0.15,
-    aanvallen:['wijzers', 'tik', 'krimp'],
-    wat:'Twee wijzers draaien rond, de uren tikken een voor een af en de ring loopt naar binnen.' },
-  { id:'zwerm',   naam:'De Zwerm',      kleur:'#7d1f12', vorm:'zwerm', hp:14, r:48, schade:22, schild:0.1,
-    aanvallen:['kogel', 'krimp', 'cirkel'],
-    wat:'Barst uit elkaar in propjes en sluit je in met een ring. Het minste leven, het meeste in de lucht.' }
+  { id:'fout',    naam:'De Grote Fout', kleur:'#4a1230', vorm:'ster',  hp:16, r:46, schade:26, schild:0.35,
+    aanvallen:['cirkel', 'laser', 'golf', 'spiraal'],
+    wat:'Cirkels op de grond, een laser die om hem heen draait, een golf die naar buiten rolt en een spiraal van propjes.' },
+  { id:'inkt',    naam:'De Inktvlek',   kleur:'#1b3a8f', vorm:'vlek',  hp:16, r:50, schade:24, schild:0.3,
+    aanvallen:['plas', 'kegel', 'cirkel', 'regen'],
+    wat:'Spat inkt over de vloer die blijft liggen, spuit een waaier voor zich uit en laat het plofjes regenen. Steeds minder plek om te staan.' },
+  { id:'pen',     naam:'De Rode Pen',   kleur:'#c0442c', vorm:'pen',   hp:18, r:42, schade:26, schild:0.35,
+    aanvallen:['baan', 'kruis', 'laser', 'muur'],
+    wat:'Streept de arena door met rechte halen, zet er kruisen doorheen en veegt een streep over de vloer met een gat erin.' },
+  { id:'prop',    naam:'De Prop',       kleur:'#8a7350', vorm:'prop',  hp:21, r:52, schade:28, schild:0.4,
+    aanvallen:['kogel', 'golf', 'baan', 'bom'],
+    wat:'Schiet propjes in alle richtingen, rolt over de vloer en gooit bommen die in scherven uiteenspatten. Taai.' },
+  { id:'klok',    naam:'De Klok',       kleur:'#6b3fa0', vorm:'klok',  hp:17, r:46, schade:24, schild:0.35,
+    aanvallen:['wijzers', 'tik', 'krimp', 'spiraal'],
+    wat:'Twee wijzers draaien rond, de uren tikken een voor een af, de ring loopt naar binnen en de seconden spiralen naar buiten.' },
+  { id:'zwerm',   naam:'De Zwerm',      kleur:'#7d1f12', vorm:'zwerm', hp:16, r:48, schade:22, schild:0.3,
+    aanvallen:['kogel', 'krimp', 'cirkel', 'bom'],
+    wat:'Barst uit elkaar in propjes, sluit je in met een ring en gooit bommen. Het minste leven, het meeste in de lucht.' }
 ];
 /* De aanvallen. Elke aanval heeft eerst een waarschuwing die je op de grond
    ziet, en dan het moment dat het raakt. Alle maten zijn in arenapunten. */
 const AANVAL = {
   pauze:function(n){ return Math.max(0.55, 1.6 - n * 0.03); },   /* seconden tussen twee aanvallen: kort, en steeds korter */
   korter:function(n){ return Math.max(0.5, 1 - n * 0.012); },    /* de waarschuwing krimpt langzaam, nooit onder een halve seconde */
-  boosPauze:0.5,                                                 /* onder de helft van zijn leven: nog sneller achter elkaar */
+  boosPauze:0.3,                                                 /* onder de helft van zijn leven: nog sneller achter elkaar */
+  boosKorter:0.85,                                               /* kwaad: de waarschuwing nog korter */
+  boosOverlap:0.55,                                              /* kwaad: de volgende aanval begint al voor de vorige klaar is */
+  boosDubbel:0.35,                                               /* kwaad: kans dat er meteen een tweede aanval bij komt */
+  regen:{ r:50, na:0.2, aantal:function(n){ return 7 + Math.floor(n / 8); } },
+  muur:{ wacht:1, duur:2.2, breed:44, gat:150, schade:19 },
+  spiraal:{ na:0.09, draai:0.5, aantal:function(n){ return 16 + Math.min(12, Math.floor(n / 3)); } },
+  bom:{ snel:170, r:20, duur:1.4, scherven:10, schade:18, aantal:function(n){ return n >= 12 ? 2 : 1; } },
   cirkel:{ r:78, wacht:1.15, knal:0.3, schade:18,
     extra:function(n){ return 1 + Math.floor(n / 10); } },
   laser:{ wacht:0.9, duur:1.7, boog:Math.PI * 0.55, breed:26, schade:16,
@@ -107,6 +114,17 @@ const AANVAL = {
   krimp:{ wacht:1.1, duur:2.2, van:660, band:30, gat:Math.PI * 0.3, schade:20 },
   schot:{ wacht:0.8, snel:430, r:11, schade:14, breed:26, leven:3 }
 };
+/* De muur: een band die van de ene kant van de arena naar de andere veegt,
+   met een gat erin. hoek 0 = van links naar rechts, halve pi = van boven naar
+   beneden, pi = van rechts, anderhalve pi = van onder. gat is 0..1 dwars. */
+function muurStand(a){
+  var mu = AANVAL.muur, W0 = mu.wacht * (a.k || 1), p = Math.min(1, Math.max(0, (a.t - W0) / mu.duur));
+  var kant = Math.round(a.hoek / (Math.PI / 2)) % 4, langsX = kant % 2 === 0;
+  var lengte = langsX ? ARENA.b : ARENA.h, dwars = langsX ? ARENA.h : ARENA.b;
+  var van = -mu.breed / 2, tot = lengte + mu.breed / 2;
+  return { langsX:langsX, vooruit:kant < 2, pos:kant < 2 ? van + p * (tot - van) : tot - p * (tot - van),
+           gatMidden:ARENA.rand + (a.gat || 0.5) * (dwars - 2 * ARENA.rand), gatBreed:mu.gat, deel:p, wacht:W0 };
+}
 /* Hoeveel fouten in een ronde, en hoe taai ze zijn. */
 function aantalInRonde(n){ return 6 + Math.round(Math.min(n, 25) * 1.9 + Math.max(0, n - 25) * 0.9); }
 function foutHp(n){ var k = Math.min(n, 20); return Math.round(30 * Math.pow(1.13, k - 1) * (1 + Math.max(0, n - 20) * 0.06 + Math.max(0, n - 35) * 0.05)); }
@@ -281,13 +299,18 @@ function maak(opties){
   }
 
   /* ---------- de bazen en hun aanvallen ---------- */
-  function baasValtAan(b, levend){
-    var rij = b.def.aanvallen;
+  function baasValtAan(b, levend, boos){
+    var rij = b.def.aanvallen, k = AANVAL.korter(W.ronde) * (boos ? AANVAL.boosKorter : 1);
     var i = b.eerste ? 0 : Math.floor(toeval() * rij.length);
     b.eerste = false;
     if (i === b.laatste) i = (i + 1) % rij.length;
     b.laatste = i;
-    zetAanval(rij[i], b, levend, AANVAL.korter(W.ronde));
+    zetAanval(rij[i], b, levend, k);
+    /* kwaad: soms twee aanvallen tegelijk */
+    if (boos && toeval() < AANVAL.boosDubbel){
+      var j = (i + 1 + Math.floor(toeval() * (rij.length - 1))) % rij.length;
+      zetAanval(rij[j], b, levend, k);
+    }
   }
   function vrijPunt(marge){
     marge = marge || 60;
@@ -354,6 +377,27 @@ function maak(opties){
         A.push({ id:++W.nr, soort:'tik', t:-i * AANVAL.tik.na, k:k,
           x:b.x + Math.cos(h3) * AANVAL.tik.ring, y:b.y + Math.sin(h3) * AANVAL.tik.ring });
       }
+    } else if (soort === 'regen'){
+      var rg = AANVAL.regen; n = rg.aantal(ronde);
+      for (i = 0; i < n; i++){
+        p = i === n - 1 ? eenSpeler(levend).sp : vrijPunt(40);
+        A.push({ id:++W.nr, soort:'cirkel', x:p.x, y:p.y, t:-i * rg.na, k:k, straal:rg.r });
+      }
+    } else if (soort === 'muur'){
+      var kant = Math.floor(toeval() * 4);
+      A.push({ id:++W.nr, soort:'muur', x:b.x, y:b.y, hoek:kant * Math.PI / 2, gat:0.15 + toeval() * 0.7, t:0, k:k, kl:b.def.kleur });
+      if (ronde >= 15) A.push({ id:++W.nr, soort:'muur', x:b.x, y:b.y, hoek:((kant + 2) % 4) * Math.PI / 2, gat:0.15 + toeval() * 0.7, t:-0.6, k:k, kl:b.def.kleur });
+    } else if (soort === 'spiraal'){
+      var spi = AANVAL.spiraal, start2 = toeval() * Math.PI * 2, om2 = toeval() < 0.5 ? 1 : -1;
+      n = spi.aantal(ronde);
+      for (i = 0; i < n; i++) A.push({ id:++W.nr, soort:'kogel', x:b.x, y:b.y, hoek:start2 + om2 * i * spi.draai, t:-i * spi.na, k:k, kl:b.def.kleur });
+    } else if (soort === 'bom'){
+      var bo = AANVAL.bom; n = bo.aantal(ronde);
+      for (i = 0; i < n; i++){
+        doel = eenSpeler(levend);
+        hoek = Math.atan2(doel.sp.y - b.y, doel.sp.x - b.x) + (i ? (toeval() - 0.5) * 1.2 : 0);
+        A.push({ id:++W.nr, soort:'bom', x:b.x, y:b.y, hoek:hoek, t:-i * 0.5, k:k, kl:b.def.kleur });
+      }
     } else if (soort === 'krimp'){
       A.push({ id:++W.nr, soort:'krimp', x:b.x, y:b.y, r0:b.r, t:0, k:k, gat:toeval() * Math.PI * 2 });
     }
@@ -372,6 +416,10 @@ function maak(opties){
     if (soort === 'kogel') return 1.6;
     if (soort === 'tik') return A.tik.wacht + A.tik.na * A.tik.aantal;
     if (soort === 'krimp') return A.krimp.wacht + A.krimp.duur;
+    if (soort === 'regen') return A.cirkel.wacht + A.regen.na * A.regen.aantal(W.ronde) + 0.3;
+    if (soort === 'muur') return A.muur.wacht + A.muur.duur + (W.ronde >= 15 ? 0.6 : 0);
+    if (soort === 'spiraal') return A.spiraal.na * A.spiraal.aantal(W.ronde) + 1;
+    if (soort === 'bom') return 0.5 * (A.bom.aantal(W.ronde) - 1) + A.bom.duur + 1.2;
     return A.cirkel.wacht + A.cirkel.knal;
   }
   /* een speler wordt getroffen door een aanval */
@@ -390,7 +438,7 @@ function maak(opties){
         var c = AANVAL.cirkel, cW = wachtVan(a, c.wacht);
         if (a.t >= cW && !a.geknald){
           a.geknald = true;
-          levend.forEach(function(P){ if (Math.hypot(P.sp.x - a.x, P.sp.y - a.y) < c.r + SPELER.r * 0.5) tref(P, c.schade, '#c0442c'); });
+          levend.forEach(function(P){ if (Math.hypot(P.sp.x - a.x, P.sp.y - a.y) < (a.straal || c.r) + SPELER.r * 0.5) tref(P, c.schade, '#c0442c'); });
           for (var i = 0; i < 10; i++){ var hk = toeval() * Math.PI * 2, sn = 60 + toeval() * 120; W.pluis.push({ x:a.x, y:a.y, vx:Math.cos(hk) * sn, vy:Math.sin(hk) * sn, leven:0.4, kleur:'#EA9836' }); }
         }
         if (a.t >= cW + c.knal) a.klaar = true;
@@ -475,6 +523,29 @@ function maak(opties){
             if (Math.hypot(P2.sp.x - a.x, P2.sp.y - a.y) < sc.r + SPELER.r * 0.8){ tref(P2, sc.schade, a.kl || '#2f7d52'); a.klaar = true; }
           });
           if (a.t > scW + sc.leven || a.x < -40 || a.x > ARENA.b + 40 || a.y < -40 || a.y > ARENA.h + 40) a.klaar = true;
+        }
+      } else if (a.soort === 'muur'){
+        var mu = AANVAL.muur, ms = muurStand(a);
+        if (a.t >= ms.wacht){
+          levend.forEach(function(P){
+            var langs = ms.langsX ? P.sp.x : P.sp.y, dwars2 = ms.langsX ? P.sp.y : P.sp.x;
+            if (Math.abs(langs - ms.pos) < mu.breed / 2 + SPELER.r * 0.6 && Math.abs(dwars2 - ms.gatMidden) > ms.gatBreed / 2 - SPELER.r * 0.3) tref(P, mu.schade, a.kl || '#c0442c');
+          });
+          if (ms.deel >= 1) a.klaar = true;
+        }
+      } else if (a.soort === 'bom'){
+        var bo = AANVAL.bom;
+        if (a.t >= 0){
+          a.x += Math.cos(a.hoek) * bo.snel * dt; a.y += Math.sin(a.hoek) * bo.snel * dt;
+          var knalt = a.t >= bo.duur;
+          levend.forEach(function(P){ if (Math.hypot(P.sp.x - a.x, P.sp.y - a.y) < bo.r + SPELER.r * 0.8){ tref(P, bo.schade, a.kl || '#8a7350'); knalt = true; } });
+          if (knalt){
+            /* uiteen in scherven: propjes naar alle kanten */
+            a.klaar = true;
+            var h0 = toeval() * Math.PI * 2;
+            for (var si = 0; si < bo.scherven; si++) W.aanvallen.push({ id:++W.nr, soort:'kogel', x:a.x, y:a.y, hoek:h0 + si * Math.PI * 2 / bo.scherven, t:0, k:a.k, kl:a.kl });
+            for (var pi2 = 0; pi2 < 12; pi2++){ var hk2 = toeval() * Math.PI * 2, sn2 = 80 + toeval() * 140; W.pluis.push({ x:a.x, y:a.y, vx:Math.cos(hk2) * sn2, vy:Math.sin(hk2) * sn2, leven:0.45, kleur:a.kl || '#8a7350' }); }
+          }
         }
       } else if (a.soort === 'krimp'){
         var kr = AANVAL.krimp, krW = wachtVan(a, kr.wacht), rEind = (a.r0 || 46) + 18;
@@ -630,14 +701,16 @@ function maak(opties){
       if (!b.baas) return;
       b.x = ARENA.b / 2; b.y = ARENA.h / 2;
       b.aanvalKlok -= dt;
-      if (b.aanvalKlok <= 0 && !W.aanvallen.some(function(a){ return a.soort !== 'plas' && a.soort !== 'schot'; }) && levend.length){
-        var boos = b.hp <= b.maxHp / 2;
+      var boos = b.hp <= b.maxHp / 2;
+      /* kwaad wacht hij niet tot de vorige aanval klaar is */
+      var vrij = boos || !W.aanvallen.some(function(a){ return a.soort !== 'plas' && a.soort !== 'schot'; });
+      if (b.aanvalKlok <= 0 && vrij && levend.length){
         if (boos && !b.boosGeweest){
           b.boosGeweest = true;
           W.cijfers.push({ x:b.x, y:b.y - b.r - 16, tekst:b.def.naam + ' wordt kwaad', leven:2, kleur:b.def.kleur });
         }
-        baasValtAan(b, levend);
-        b.aanvalKlok = AANVAL.pauze(ronde) * (boos ? AANVAL.boosPauze : 1) + duurVan(b.def.aanvallen[b.laatste]);
+        baasValtAan(b, levend, boos);
+        b.aanvalKlok = AANVAL.pauze(ronde) * (boos ? AANVAL.boosPauze : 1) + duurVan(b.def.aanvallen[b.laatste]) * (boos ? AANVAL.boosOverlap : 1);
       }
     });
     stapAanvallen(dt, levend);
@@ -754,7 +827,7 @@ function maak(opties){
   return W;
 }
 
-g.ZWAARDMOTOR = { maak:maak, ARENA:ARENA, SPELER:SPELER, DASH:DASH, FOUTEN:FOUTEN, BAZEN:BAZEN, AANVAL:AANVAL, BAASRONDE:BAASRONDE,
+g.ZWAARDMOTOR = { maak:maak, ARENA:ARENA, SPELER:SPELER, DASH:DASH, FOUTEN:FOUTEN, BAZEN:BAZEN, AANVAL:AANVAL, BAASRONDE:BAASRONDE, muurStand:muurStand,
                   MUNT_VAL:MUNT_VAL, RAAKPAUZE:RAAKPAUZE, RAAPTIJD:RAAPTIJD, aantalInRonde:aantalInRonde, foutHp:foutHp, baasVan:baasVan, basisStats:basisStats, nieuweSp:nieuweSp };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 if (typeof module !== 'undefined' && module.exports) module.exports = globalThis.ZWAARDMOTOR;
