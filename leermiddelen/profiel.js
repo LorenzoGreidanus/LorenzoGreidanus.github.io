@@ -12,7 +12,14 @@
      PROFIEL.maak()             een code maken (belofte met { code })
      PROFIEL.koppel(code)       een bestaande code op dit apparaat zetten
      PROFIEL.sync()             wat hier staat naar de server, samengevoegd terug
-     PROFIEL.wis()              de code van dit apparaat halen (profiel blijft op de server) */
+     PROFIEL.wis()              de code van dit apparaat halen (profiel blijft op de server)
+   Optioneel, als de site inloggen met Microsoft aan heeft staan:
+     PROFIEL.account()          belofte met { mogelijk, ingelogd, naam, code }
+     PROFIEL.accountAfstemmen() na het inloggen: de speelcode van het account hier zetten,
+                                of de code van hier aan het account hangen (belofte met { nieuw })
+     PROFIEL.inlogAdres()       waar de knop Inloggen met Microsoft heen gaat
+     PROFIEL.uitloggen()        het koekje weg; de speelcode blijft hier staan
+     PROFIEL.accountWeg()       het account bij de server weg (de speelcode blijft) */
 window.PROFIEL = (function(){
   'use strict';
   var SLEUTEL = 'lg-profiel', timer = null, luisteraars = [];
@@ -84,7 +91,46 @@ window.PROFIEL = (function(){
     });
   }
   function wis(){ var p = lees(); delete p.code; zet(p); zeg(); }
+
+  /* inloggen met Microsoft: de server weet of het aan staat en wie er ingelogd is.
+     Terug van Microsoft staat er ?account=in (of een fout) in het adres; dat
+     lezen we hier, voordat de pagina zijn eigen adres herschrijft. */
+  var accountStand = null, accountVlag = '';
+  try {
+    var q0 = new URLSearchParams(location.search); accountVlag = q0.get('account') || '';
+    if (accountVlag){ q0.delete('account'); history.replaceState(null, '', location.pathname + (q0.toString() ? '?' + q0.toString() : '') + location.hash); }
+  } catch (e){}
+  function account(vers){
+    if (accountStand && !vers) return Promise.resolve(accountStand);
+    if (typeof fetch !== 'function') return Promise.resolve({ mogelijk:false, ingelogd:false });
+    return fetch('/api/account', { cache:'no-store' }).then(function(r){ return r.json(); })
+      .then(function(j){ accountStand = j && typeof j === 'object' ? j : { mogelijk:false, ingelogd:false }; return accountStand; })
+      .catch(function(){ accountStand = { mogelijk:false, ingelogd:false }; return accountStand; });
+  }
+  function inlogAdres(){ return '/api/account/inloggen?terug=' + encodeURIComponent(location.pathname); }
+  /* na het inloggen: het account heeft een speelcode, of nog niet */
+  function accountAfstemmen(){
+    return account(true).then(function(a){
+      if (!a.ingelogd) return { nieuw:false };
+      var hier = code();
+      if (a.code && a.code !== hier){
+        /* het account kent een code: die nemen we hier over (wat hier stond gaat erbij) */
+        return koppel(a.code).then(function(){ return { nieuw:true }; });
+      }
+      if (!a.code){
+        var klaar = hier ? Promise.resolve() : maak();
+        return klaar.then(function(){ return vraag('/api/account/koppel', 'POST', { code:code() }); })
+          .then(function(){ accountStand = null; return { nieuw:!hier }; });
+      }
+      return { nieuw:false };
+    });
+  }
+  function uitloggen(){ return vraag('/api/account/uitloggen', 'POST', {}).then(function(){ accountStand = null; zeg(); }); }
+  function accountWeg(){
+    return fetch('/api/account', { method:'DELETE' }).then(function(r){ return r.json(); }).then(function(j){ if (j && j.fout) throw new Error(j.fout); accountStand = null; zeg(); });
+  }
   /* bij het laden even samenvoegen, als er een code is */
   if (code() && typeof fetch === 'function'){ setTimeout(function(){ sync(); }, 1500); }
-  return { lees:lees, code:code, avatar:avatar, zetAvatar:zetAvatar, maak:maak, koppel:koppel, sync:sync, wis:wis, verzamel:verzamel, op:op };
+  return { lees:lees, code:code, avatar:avatar, zetAvatar:zetAvatar, maak:maak, koppel:koppel, sync:sync, wis:wis, verzamel:verzamel, op:op,
+    account:account, accountVlag:function(){ return accountVlag; }, accountAfstemmen:accountAfstemmen, inlogAdres:inlogAdres, uitloggen:uitloggen, accountWeg:accountWeg };
 })();

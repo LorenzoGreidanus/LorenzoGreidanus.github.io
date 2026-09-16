@@ -16,6 +16,8 @@ export { Poort } from "./poort.js";
 export { Sets } from "./sets.js";
 export { Beheer } from "./beheer.js";
 export { Profiel } from "./profiel.js";
+export { Account } from "./account.js";
+import { behandel as accountBehandel } from "./account.js";
 const KLASSEMENTEN = { toren: true, zwaard: true };
 
 /* Een browser stuurt bij elk POST en bij elke WebSocket mee vanaf welke site
@@ -113,6 +115,10 @@ export default {
       return env.SETS.get(env.SETS.idFromName("sets")).fetch("https://sets/haal?code=" + sm[1].toUpperCase());
     }
 
+    /* inloggen met Microsoft, optioneel, gekoppeld aan een speelcode (account.js) */
+    if (p === "/api/account" || p.startsWith("/api/account/")){
+      return accountBehandel(req, env, url, { eigenSite: () => eigenSite(req, url), magDoor: (wat, per, s) => magDoor(env, req, wat, per, s) });
+    }
     /* meldingen bij vragen en de gebruikstelling: naar het beheerobject */
     const beheer = () => env.BEHEER_DO.get(env.BEHEER_DO.idFromName("beheer"));
     /* de speelcode: een profiel zonder account, acht letters */
