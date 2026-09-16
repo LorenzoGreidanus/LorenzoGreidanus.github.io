@@ -310,7 +310,7 @@ body.groot .meter b{font-size:1.45rem}
 
   <label class="uitlegvak" id="uitlegvak">
     <input type="checkbox" id="uitlegAan">
-    <span><b>Uitlegstand</b><small>op de momenten die ertoe doen gaat het langzamer: een baas die binnenkomt, en de eerste keer dat je een aanval of een soort fout ziet. Eronder staat wat er gebeurt en hoe je eruit blijft. Telt niet mee voor het klassement.</small></span>
+    <span><b>Uitlegstand</b><small>bij een baas die binnenkomt en de eerste keer dat je een soort fout ziet staat het spel stil tot je verder wilt, en de eerste keer dat je een aanval ziet gaat het langzaam. Eronder staat wat er gebeurt en hoe je eruit blijft. Telt niet mee voor het klassement.</small></span>
   </label>
   <button class="btn" id="startBtn" type="button" disabled>Kies eerst een vak</button>
   <div id="duelvak"></div>
@@ -394,7 +394,7 @@ const DASH = { duur:0.18, snel:950, pauze:2.2, onkwetsbaar:0.4 };
    vier rondes een erbij tot acht. De munten per vraag gaan iets omlaag, anders
    koop je met vijf vragen de winkel in twee rondes leeg. */
 function vragenInRonde(n){ return Math.min(8, 5 + Math.floor((n - 1) / 4)); }
-const MUNT_GOED = 9, MUNT_REEKS = 3, MUNT_REEKSMAX = 10, MUNT_GROEI = 0.04;   /* per goed antwoord, met reeksbonus, en groei per ronde */
+const MUNT_GOED = 13, MUNT_REEKS = 4, MUNT_REEKSMAX = 14, MUNT_GROEI = 0.04;   /* per goed antwoord, met reeksbonus, en groei per ronde */
 const MUNT_VAL = 0.35;          /* kans dat een gevelde fout een munt laat vallen */
 const RAAKPAUZE = 0.8;          /* seconden onkwetsbaar na een klap */
 const BAASRONDE = 5;
@@ -432,7 +432,7 @@ const FOUTEN = [
      opzij. 'afstand' is de afstand die hij zoekt, 'laden' de seconden tussen
      twee schoten. */
   { id:'schutter', naam:'schutter', vanaf:6, kans:2, mark:'\u2192', kleur:'#2f7d52', hp:0.8, snel:0.8, r:17, schade:8,
-    afstand:250, laden:2.5 }
+    afstand:250, laden:2.5, mik:0.45 }
 ];
 /* De zes bazen. Om de vijf rondes komt de volgende aan de beurt, en na de
    zesde begint de rij opnieuw op een hogere ronde en dus taaier. Ze staan
@@ -491,9 +491,9 @@ const AANVALUITLEG = {
    grond ziet, en dan het moment dat het raakt. Wie oplet stapt opzij of
    ontwijkt (dan ben je even onkwetsbaar). Alle maten zijn in arenapunten. */
 const AANVAL = {
-  pauze:function(n){ return Math.max(1.1, 2.4 - n * 0.035); },   /* seconden tussen twee aanvallen */
+  pauze:function(n){ return Math.max(0.55, 1.6 - n * 0.03); },   /* seconden tussen twee aanvallen: kort, en steeds korter */
   korter:function(n){ return Math.max(0.5, 1 - n * 0.012); },    /* de waarschuwing krimpt langzaam, nooit onder een halve seconde */
-  boosPauze:0.55,                                                /* onder de helft van zijn leven: sneller achter elkaar */
+  boosPauze:0.5,                                                 /* onder de helft van zijn leven: nog sneller achter elkaar */
   /* Hoe verder je komt, hoe meer er tegelijk gebeurt. */
   cirkel:{ r:78, wacht:1.15, knal:0.3, schade:18,
     extra:function(n){ return 1 + Math.floor(n / 10); } },        /* losse cirkels naast die onder de spelers */
@@ -559,6 +559,27 @@ const ICONEN = {
      is: een baas die binnenkomt, een aanval waarvan de waarschuwing op de grond
      ligt, en de eerste keer dat je een soort fout tegenkomt. */
   var traagKlok = 0, alGezien = {}, wolk = null;
+  /* Bij iets nieuws staat het spel helemaal stil tot je verder wilt, zodat
+     je de wolk rustig kunt lezen: een soort fout die je nog niet zag, een
+     baas die binnenkomt. Een aanval gaat alleen langzaam, want die moet je
+     juist zien bewegen. */
+  var uitlegPauze = false;
+  function stilMoment(tekst, doel){
+    if (!uitlegstand || co.aan) return;
+    uitlegPauze = true; traagKlok = 0;
+    wolk = { t:tekst, x:doel ? doel.x : ARENA.b / 2, y:doel ? doel.y : ARENA.h / 2,
+             r:doel ? doel.r : 0, heeftDoel:!!doel, stil:true };
+    var vak = document.getElementById('arenatip');
+    if (vak){ vak.textContent = tekst + ' Druk op een toets of tik op de arena om verder te gaan.'; vak.classList.add('uitleg'); }
+  }
+  /* verder na zo'n stilstand; zegt of er iets te hervatten viel */
+  function uitlegVerder(){
+    if (!uitlegPauze) return false;
+    uitlegPauze = false; wolk = null;
+    var vak = document.getElementById('arenatip');
+    if (vak){ vak.classList.remove('uitleg'); vak.textContent = 'Verder.'; }
+    return true;
+  }
   /* 'doel' is waar het om gaat: {x, y, r}. Daar valt het licht op, en de wolk
      komt ernaast te staan. Zonder doel is er alleen de regel onder de arena. */
   function traagMoment(seconden, tekst, doel){
@@ -726,7 +747,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   var co = { aan:false, rol:null, neer:false, klaar:false, maatKlaar:false, dashVraag:false,
              laatsteInvoer:'', zendKlok:0, laatsteFase:'', gastMunt:0, gastGeveld:0,
              /* in de pas (lockstep): allebei rekenen dezelfde stappen uit */
-             lock:false, tikken:0, inbox:[], log:{}, inTicks:{}, bevestigd:0, hashes:{}, reserve:4, opzet:null, wachtOp:false, seed:0,
+             lock:false, tikken:0, inbox:[], log:{}, inTicks:{}, bevestigd:0, hashes:{}, reserve:4, opzet:null, wachtOp:false, seed:0, tkLaatst:0,
              vlotSinds:0, laatsteDx:0, laatsteDy:0,
              mijnIn:{ dx:0, dy:0 }, rest:0, laatsteZend:'' };
   /* Samen spelen gaat in de pas: de spelmotor rekent in vaste stappen van een
@@ -876,9 +897,9 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   function begin(){
     /* samen in een arena loopt iedereen op dezelfde snelheid */
     if (co.aan) uitlegstand = false;
-    traagKlok = 0; alGezien = {}; wolk = null;
+    traagKlok = 0; alGezien = {}; wolk = null; uitlegPauze = false;
     ronde = 0; munten = 0; level = {}; geveld = 0; reeks = 0; besteReeks = 0; goedAantal = 0; foutAantal = 0;
-    co.tikken = 0; co.inbox = []; co.log = {}; co.inTicks = {}; co.bevestigd = 0; co.hashes = {}; co.reserve = RESERVEMIN; co.vlotSinds = 0; co.rest = 0;
+    co.tikken = 0; co.inbox = []; co.log = {}; co.inTicks = {}; co.bevestigd = 0; co.hashes = {}; co.reserve = RESERVEMIN; co.vlotSinds = 0; co.rest = 0; co.tkLaatst = 0;
     co.mijnIn = { dx:0, dy:0 }; co.laatsteZend = ''; co.klaar = false; co.maatKlaar = false; co.eind = false;
     if (co.aan && co.lock && co.rol === 'gast' && co.opzet) zaai(co.opzet.seed);
     else { co.seed = Math.floor(Math.random() * 4294967296); zaai(co.seed); }
@@ -923,7 +944,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     /* in de uitlegstand krijgt een baas eerst even alle aandacht */
     if (ronde % BAASRONDE === 0){
       var bz = baasVan(ronde);
-      traagMoment(3, bz.naam + ' komt binnen. ' + bz.wat + ' Kijk naar de grond: wat daar oplicht gaat zo raken.',
+      stilMoment(bz.naam + ' komt binnen. ' + bz.wat + ' Kijk naar de grond: wat daar oplicht gaat zo raken.',
         { x:ARENA.b / 2, y:ARENA.h / 2, r:bz.r + 30 });
     }
   }
@@ -956,14 +977,16 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
                     hp:h, maxHp:h, r:soort.r, snel:soort.snel * (70 + ronde * 1.6), flits:0, stap:toeval() * 6,
                     schild:soort.schild || 0, slaKlok:0,
                     /* een schutter mikt, schuift een kant op en laadt eerst */
-                    mikt:0, zij:toeval() < 0.5 ? 1 : -1, laadKlok:soort.laden ? 1.2 + toeval() : 0 });
+                    mikt:0, zij:toeval() < 0.5 ? 1 : -1, laadKlok:soort.laden ? 1.2 + toeval() : 0, stilKlok:0 });
     }
     /* de eerste van zijn soort mag je even bekijken */
     if (nieuweSoort){
       var eerste = fouten[fouten.length - 1];
-      traagMoment(2.5, SOORTUITLEG[soort.id], { x:eerste.x, y:eerste.y, r:eerste.r + 24 });
+      stilMoment(SOORTUITLEG[soort.id], { x:eerste.x, y:eerste.y, r:eerste.r + 24 });
     }
   }
+  /* voor het testen: hoe ver lopen de gastheer en de maat uit elkaar */
+  window.__zwaardPas = function(){ return { rol:co.rol, aan:co.aan, lock:co.lock, tikken:co.tikken, bevestigd:co.bevestigd, reserve:co.reserve, ronde:ronde, fase:fase }; };
   /* voor het testen: __zwaardSpring(5) springt naar een baasronde */
   window.__zwaardSpring = function(n){ ronde = n - 1; volgendeRonde(); };
   /* en een kijkgaatje: wat staat er nu in de arena */
@@ -972,6 +995,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       soorten:fouten.map(function(f){ return f.baas ? 'baas:' + f.def.id : f.soort.id; }),
       baasHp:(fouten.filter(function(f){ return f.baas; })[0] || {}).maxHp || 0,
       aanvallen:aanvallen.map(function(a){ return a.soort; }),
+      uitlegPauze:uitlegPauze,
+      schutters:fouten.filter(function(f){ return f.soort.id === 'schutter'; }).map(function(f){ return { x:Math.round(f.x), y:Math.round(f.y), laad:+f.laadKlok.toFixed(2), stil:+(f.stilKlok || 0).toFixed(2) }; }),
       messen:messen.map(function(m){ return m.pijl ? 'pijl' : 'mes'; }) };
   };
   /* welke baas hoort bij deze ronde: om de beurt, daarna weer van voren af aan */
@@ -1215,6 +1240,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
 
   /* ---------- besturing ---------- */
   addEventListener('keydown', function(e){
+    if (uitlegPauze && fase === 'ronde' && !e.repeat && uitlegVerder()){ e.preventDefault(); return; }
     if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].indexOf(e.key) >= 0 && fase === 'ronde') e.preventDefault();
     if ((e.key === ' ' || e.key === 'Shift') && fase === 'ronde' && !e.repeat) ontwijk();
     if (e.key.toLowerCase() === 'q' && fase === 'ronde' && !e.repeat) wisselWapen();
@@ -1230,13 +1256,14 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     return { x:(e.clientX - r.left - (r.width - ARENA.b * schaal) / 2) / schaal,
              y:(e.clientY - r.top - (r.height - ARENA.h * schaal) / 2) / schaal };
   }
-  vak2.addEventListener('pointerdown', function(e){ wijs = arenaPunt(e); vak2.setPointerCapture(e.pointerId); });
+  vak2.addEventListener('pointerdown', function(e){ if (uitlegVerder()) return; wijs = arenaPunt(e); vak2.setPointerCapture(e.pointerId); });
   vak2.addEventListener('pointermove', function(e){ if (wijs) wijs = arenaPunt(e); });
   vak2.addEventListener('pointerup', function(){ wijs = null; });
   vak2.addEventListener('pointercancel', function(){ wijs = null; });
 
   /* Ontwijken. Sta je stil, dan spring je weg van de dichtstbijzijnde fout. */
   function ontwijk(){
+    if (uitlegVerder()) return;
     if (fase !== 'ronde' || pauze) return;
     if (co.aan && co.lock){ opdracht({ k:'dash' }); return; }
     if (co.aan && co.rol === 'gast'){ co.dashVraag = true; return; }   /* de gastheer springt voor je */
@@ -1287,7 +1314,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     /* het amber randje onder de arena staat er precies zolang de rem aan is */
     var tip = tipVak || (tipVak = document.getElementById('arenatip'));
     if (tip){
-      var wil = uitlegstand && traagKlok > 0;
+      var wil = uitlegstand && (traagKlok > 0 || uitlegPauze);
       if (tip.classList.contains('uitleg') !== wil) tip.classList.toggle('uitleg', wil);
     }
     var k = dashVak || (dashVak = document.getElementById('dashBtn'));
@@ -1357,7 +1384,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       if (co.rol === 'host') co.log[co.tikken] = opdr; else delete co.inTicks[co.tikken];
     }
     botTik(dt);
-    if (fase === 'ronde' && !pauze) stap(dt);
+    if (fase === 'ronde' && !pauze && !uitlegPauze) stap(dt);
     else if (fase !== 'ronde') { /* de deeltjes lopen nog even uit */
       pluis.forEach(function(p){ p.leven -= dt; p.x += p.vx * dt; p.y += p.vy * dt; });
       pluis = pluis.filter(function(p){ return p.leven > 0; });
@@ -1412,12 +1439,19 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       document.getElementById('arenatip').textContent = pauze ? (co.rol === 'host' ? 'Pauze. Druk op P of Escape om verder te gaan.' : 'Je maat heeft gepauzeerd.') : 'Verder.';
     }
   }
-  /* de gastheer bevestigt om de twee stappen welke opdrachten erin zaten, met om de zestig stappen een vingerafdruk */
+  /* De gastheer bevestigt om de drie stappen welke opdrachten erin zaten, met
+     om de zestig stappen een vingerafdruk. Drie per bericht is twintig
+     berichten per seconde: ruim onder wat de kamer doorlaat, en een stap
+     later dan om de twee. Bij het einde gaat wat er nog ligt meteen mee. */
+  var PASBUNDEL = 3;
   function lockNaStap(nu){
     var k = co.tikken;
-    if (!nu && k % 2) return;
-    var m = { k:'tk', n:k, in:[co.log[k - 1] || [], co.log[k] || []], eind:fase === 'einde' ? 1 : undefined };
-    delete co.log[k - 1]; delete co.log[k];
+    if (!nu && k % PASBUNDEL) return;
+    var lijst = [];
+    for (var i = co.tkLaatst + 1; i <= k; i++){ lijst.push(co.log[i] || []); delete co.log[i]; }
+    if (!lijst.length && !nu) return;
+    co.tkLaatst = k;
+    var m = { k:'tk', n:k, in:lijst, eind:fase === 'einde' ? 1 : undefined };
     if (k % 60 === 0) m.h = vingerafdruk();
     zendNet(m);
   }
@@ -1618,9 +1652,14 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
            dichtbij en hij loopt achteruit, en op afstand schuift hij opzij zodat
            hij geen stilstaand doelwit is. Al het andere loopt recht op je af. */
         var wil = 1;
+        /* Een schutter die mikt, en een schutter wiens streep nog op de grond
+           ligt, staat stil. Dan is de streep ook echt waar het schot vandaan
+           komt, en heb je een vaste plek om uit te stappen. */
+        if (f.stilKlok > 0) f.stilKlok -= dt;
+        var stil = !!f.soort.laden && (f.laadKlok <= f.soort.mik || f.stilKlok > 0);
         if (f.soort.afstand){
-          wil = al > f.soort.afstand + 40 ? 1 : al < f.soort.afstand - 40 ? -0.9 : 0;
-          if (!wil){ vx = -ay / al * f.snel * 0.55 * f.zij; vy = ax / al * f.snel * 0.55 * f.zij; }
+          wil = stil ? 0 : al > f.soort.afstand + 40 ? 1 : al < f.soort.afstand - 40 ? -0.9 : 0;
+          if (!wil && !stil){ vx = -ay / al * f.snel * 0.55 * f.zij; vy = ax / al * f.snel * 0.55 * f.zij; }
         }
         vx += ax / al * f.snel * wil; vy += ay / al * f.snel * wil;
         /* mikken gaat vloeiend, zodat je hem ziet draaien voor hij schiet */
@@ -1630,6 +1669,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
           f.laadKlok -= dt;
           if (f.laadKlok <= 0){
             f.laadKlok = f.soort.laden;
+            f.stilKlok = AANVAL.schot.wacht;
             aanvallen.push({ soort:'schot', x:f.x, y:f.y, hoek:f.mikt, t:0, k:1, kl:f.soort.kleur });
           }
         }
@@ -2332,7 +2372,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
         '" fill="none" stroke="' + kl + '" stroke-width="4" stroke-dasharray="12 9" opacity=".95"/>';
     }
     /* de wolk zelf, aan de kant waar de meeste ruimte is */
-    var regels = regelsVan(wolk.t, 46), breed = 430, hoog = 26 + regels.length * 25;
+    var regels = regelsVan(wolk.t, 46), breed = 430, hoog = 26 + regels.length * 25 + (wolk.stil ? 24 : 0);
     var onder = wolk.y < ARENA.h / 2;
     var bx = Math.max(20, Math.min(ARENA.b - breed - 20, wolk.x - breed / 2));
     var by = onder ? wolk.y + straal + 30 : wolk.y - straal - 30 - hoog;
@@ -2347,6 +2387,9 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     regels.forEach(function(r, i){
       s += '<text x="' + (bx + breed / 2) + '" y="' + (by + 30 + i * 25) + '" text-anchor="middle" font-size="17" font-weight="600" fill="#14224C" font-family="Poppins">' + r.replace(/[<>&]/g, '') + '</text>';
     });
+    if (wolk.stil){
+      s += '<text x="' + (bx + breed / 2) + '" y="' + (by + 30 + regels.length * 25) + '" text-anchor="middle" font-size="13" font-weight="600" fill="#5b6480" font-family="Poppins" letter-spacing="1">DRUK OP EEN TOETS OF TIK OM VERDER TE GAAN</text>';
+    }
     return s;
   }
   var arenaVak = null, baasVak = null, baasWas = '';

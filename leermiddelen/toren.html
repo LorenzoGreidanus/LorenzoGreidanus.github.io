@@ -985,7 +985,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
      terugkomt. Munten, levens en torens zijn van allebei. */
   var co = { aan:false, rol:null, maat:'', zendKlok:0, gastKlok:null, gastLaatst:0, gehad:false, vrij:null, laatstZend:0, laatstePakket:0, vaart:1, pauze:false,
              buf:[], verschil:null, getoond:null, tikken:0, slagen:0,
-             lock:false, inbox:[], log:{}, inTicks:{}, bevestigd:0, hashes:{}, reserve:2, stil:0, opzet:null, wachtOp:false, seed:0, vlLaatst:'',
+             lock:false, inbox:[], log:{}, inTicks:{}, bevestigd:0, hashes:{}, reserve:2, stil:0, opzet:null, wachtOp:false, seed:0, vlLaatst:'', tkLaatst:0, gastFn:null,
              maatKeuze:null, startWacht:0, samenErbij:0 };
   /* Samen spelen gaat in de pas (lockstep): allebei rekenen precies hetzelfde
      spel uit, tik voor tik, met hetzelfde toeval. Wat een speler doet (bouwen,
@@ -1015,6 +1015,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   var vijandTeller = 0;
   var torenTeller = 0;
   function zendNet(d){ if (window.STRIJD && STRIJD.stuurNet) STRIJD.stuurNet(d); }
+  /* voor het testen: hoe ver lopen de gastheer en de maat uit elkaar */
+  window.__torenPas = function(){ return { rol:co.rol, aan:co.aan, lock:co.lock, tikken:co.tikken, bevestigd:co.bevestigd, reserve:co.reserve, ronde:bank.ronde, leven:bank.leven, munten:bank.munten }; };
   /* bank.ronde is de ronde waarvan de fouten nu komen. Roep je de volgende er
      alvast bij, dan loopt dat getal op terwijl de vorige nog op het pad staat.
      Gehaald is een ronde pas als alles wat er hoort te lopen ook echt geveld
@@ -5944,15 +5946,24 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     melding2('Even uit de pas geraakt; de gastheer stuurt het bord nu door.');
   }
   /* Na elke tik: de gastheer stuurt om de twee tikken welke opdrachten erin
-     zaten (en af en toe een vingerafdruk), de maat vergelijkt zijn vingerafdruk. */
+     zaten (en af en toe een vingerafdruk), de maat vergelijkt zijn
+     vingerafdruk. Twee tikken per bericht is acht berichten per seconde, op
+     2x zestien: ruim onder wat de kamer doorlaat. Bij het einde gaat wat er
+     nog ligt meteen mee. */
+  var PASBUNDEL = 2;
   function lockNaTik(nu){
     if (co.rol !== 'host'){
       var h = co.hashes[co.tikken];
       if (h !== undefined){ delete co.hashes[co.tikken]; if (h !== vingerafdruk()) valTerug(); }
       return;
     }
-    var k = co.tikken, m = { k:'tk', n:k, in:[co.log[k] || []], va:tempo * (snel ? 2 : 1) };
-    delete co.log[k];
+    var k = co.tikken;
+    if (!nu && k % PASBUNDEL) return;
+    var lijst = [];
+    for (var i = co.tkLaatst + 1; i <= k; i++){ lijst.push(co.log[i] || []); delete co.log[i]; }
+    if (!lijst.length && !nu) return;
+    co.tkLaatst = k;
+    var m = { k:'tk', n:k, in:lijst, va:tempo * (snel ? 2 : 1) };
     if (k % 20 === 0) m.h = vingerafdruk();
     var vl = Object.keys(SOORTEN).filter(isVrij).join(',');
     if (vl !== co.vlLaatst){ co.vlLaatst = vl; m.vl = vl.split(','); }
@@ -5969,8 +5980,24 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     var basis = Math.max(1, Math.min(3, Math.round(co.vaart) || 1));
     var mag = co.bevestigd - co.reserve - co.tikken;
     var doen = mag >= basis + 4 ? basis + 1 : mag >= basis ? basis : mag >= 1 ? 1 : 0, gedaan = 0;
-    /* elke hapering betekent voortaan een tik meer voorraad, tot een halve seconde */
-    if (!doen && co.bevestigd > 0 && !pauze && co.reserve < 12) co.reserve++;
+    /* Een echte stilstand (twee tikken op rij zonder voorraad) betekent
+       voortaan een tik meer voorraad, tot een halve seconde. Loopt het daarna
+       vijf seconden zonder hik, dan gaat er weer een tik af: anders bleef de
+       maat de rest van het potje achterlopen om een hik die allang voorbij is. */
+    var nu = performance.now();
+    if (!doen && co.bevestigd > 0 && !pauze){
+      co.droog = (co.droog || 0) + 1;
+      if (co.droog >= 2 && co.reserve < 8){ co.reserve++; co.droog = 0; co.vlotSinds = nu; }
+    } else if (doen){
+      co.droog = 0;
+      if (!co.vlotSinds) co.vlotSinds = nu;
+      else if (co.reserve > 3 && nu - co.vlotSinds > 5000){ co.reserve--; co.vlotSinds = nu; }
+    }
+    /* onthouden waar iedereen stond, zodat het scherm ertussenin kan schuiven */
+    if (doen){
+      for (var v = 0; v < vijanden.length; v++) vijanden[v].dVorig = vijanden[v].d;
+      tikTijd = performance.now();
+    }
     while (gedaan < doen){
       tekenUit = (gedaan < doen - 1);
       tik(); gedaan++;
@@ -5982,8 +6009,9 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (klok){ clearInterval(klok); klok = null; }
     ['snelBtn', 'pauzeBtn'].forEach(function(id){ var k = document.getElementById(id); if (k) k.classList.add('hide'); });
     if (co.gastKlok) clearInterval(co.gastKlok);
+    co.gastFn = null;
     co.gehad = false; if (!co.lock) co.vrij = null; co.gastLaatst = Date.now(); co.buf = []; co.verschil = null; co.getoond = null;
-    co.gastKlok = setInterval(function(){
+    var gastTik = function(){
       if (co.lock){ gastStap(); return; }
       var nu = Date.now(), dt = Math.min(0.2, (nu - co.gastLaatst) / 1000);
       co.gastLaatst = nu;
@@ -5991,7 +6019,12 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       if (klap > 0) klap = Math.max(0, klap - dt);
       if (co.gehad) gastLoopt(dt);
       tekenBord(); tekenMeters();
-    }, 60);
+    };
+    /* Op dezelfde werker als de gastheer. Een timer in de pagina wordt
+       afgeremd zodra het tabblad niet zichtbaar is, en dan liep de maat na
+       een blik op een ander tabblad hopeloos achter. */
+    if (klokWerker){ co.gastFn = gastTik; co.gastKlok = 1000000000 + (++klokNr); }
+    else co.gastKlok = setInterval(gastTik, 60);
   }
   /* Tussen twee standen van de gastheer in loopt het bord hier zelf even door,
      met dezelfde snelheden als bij hem; de volgende stand zet alles weer recht.
@@ -6133,7 +6166,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   var klokWerker = null, klokNr = 0, klokStap = null;
   try {
     klokWerker = new Worker(URL.createObjectURL(new Blob(['setInterval(function(){ postMessage(0); }, 60);'], { type:'text/javascript' })));
-    klokWerker.onmessage = function(){ if (klok && klokStap) klokStap(); };
+    klokWerker.onmessage = function(){ if (klok && klokStap) klokStap(); else if (co.gastKlok && co.gastFn) co.gastFn(); };
   } catch (e){ klokWerker = null; }
   function startKlok(){
     if (klok) clearInterval(klok);
@@ -6164,7 +6197,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   var beeldDuur = 16, vorigBeeld = 0, laatsteTeken = 0;
   (function beeldLus(nu){
     requestAnimationFrame(beeldLus);
-    if (!klok || pauze || !inSpel()){ vorigBeeld = 0; return; }
+    var maatInPas = co.aan && co.rol === 'gast' && co.lock && co.gastKlok;
+    if (!(klok || maatInPas) || pauze || !inSpel()){ vorigBeeld = 0; return; }
     nu = nu || performance.now();
     if (vorigBeeld) beeldDuur = beeldDuur * 0.9 + (nu - vorigBeeld) * 0.1;
     vorigBeeld = nu;
@@ -6287,7 +6321,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       co.seed = Math.floor(Math.random() * 4294967296);
       zaai(co.seed);
     }
-    co.tikken = 0; co.inbox = []; co.log = {}; co.inTicks = {}; co.bevestigd = 0; co.hashes = {}; co.reserve = 4; co.stil = 0; co.vlLaatst = '';
+    co.tikken = 0; co.inbox = []; co.log = {}; co.inTicks = {}; co.bevestigd = 0; co.hashes = {}; co.reserve = 3; co.stil = 0; co.vlLaatst = ''; co.tkLaatst = 0;
     baasSpook = 1; baasBalkIn = 0; baasBalk = null; baasLaatst = null;
     vijanden = []; torens = []; schoten = []; pot = null; vrienden = []; vliegers = []; lavas = [];
     vrijBijStart = { tonkla:tonklaVrij, aap:aapVrij, eiland:eilandVrij, archipel:archipelVrij, vulkaan:vulkaanVrij };
@@ -6350,7 +6384,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   function einde(){
     botLog('einde');
     if (co.aan && co.rol === 'host' && !co.lock) zendNet(standPakket('einde'));
-    if (co.gastKlok){ clearInterval(co.gastKlok); co.gastKlok = null; }
+    if (co.gastKlok){ clearInterval(co.gastKlok); co.gastKlok = null; co.gastFn = null; }
     if (window.STRIJD) STRIJD.af({ ronde:rondeGehaald, punten:goedAantal });
     if (window.KLAS) KLAS.meld({ spel:'toren', ronde:rondeGehaald, punten:goedAantal, niveau:niveau, vak:vak }, 'eindeUit');
     if (klok){ clearInterval(klok); klok = null; }

@@ -60,9 +60,12 @@ export function veiligSvg(s){
   return true;
 }
 /* Hoeveel berichten een speler per tien seconden mag sturen. Samen spelen
-   komt op zo'n honderd; wie er ruim overheen gaat wordt genegeerd, wie er
-   ver overheen gaat wordt afgesloten. */
-const VENSTER = 10000, NEGEREN_BIJ = 300, BYTES_PER_VENSTER = 2500000, AFSLUITEN_BIJ = 1200;
+   in de pas komt op zo'n tweehonderd tot vierhonderd (de gastheer bevestigt
+   twintig keer per seconde, plus de bewegingen van allebei); de grens ligt
+   daar ruim boven. Wie er toch overheen gaat wordt genegeerd, wie er ver
+   overheen gaat wordt afgesloten. De bytes per venster houden een echte
+   overstroming tegen. */
+const VENSTER = 10000, NEGEREN_BIJ = 1200, BYTES_PER_VENSTER = 2500000, AFSLUITEN_BIJ = 3000;
 
 export class Kamer extends DurableObject {
   constructor(ctx, env){
