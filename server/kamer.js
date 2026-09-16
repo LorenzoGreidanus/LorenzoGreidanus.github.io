@@ -23,6 +23,10 @@ import { DurableObject } from "cloudflare:workers";
 import { nette } from "./naamfilter.js";
 /* de motor van Zwaardvechter: hetzelfde bestand dat de browser laadt */
 import ZWAARDMOTOR from "../leermiddelen/zwaard-motor.js";
+import TORENMOTOR from "../leermiddelen/toren-motor.js";
+const TORENSTAP = 60, TOREN_STAND_OM = 2;   /* Torenverdediging: een tik van zestig milliseconden, de stand om de andere tik */
+const TOREN_WACHT_KEUZE = 1500;             /* zolang wacht de kamer op de keuze van de tweede speler */
+const RANGEN = { bb: 1, kgt: 2, havo: 3, vwo: 4 };
 const MOTORSTAP = 1 / 60, MOTOR_STAND_OM = 3, MOTOR_STIL_OM = 12;   /* per hoeveel tikken de stand gaat: in de ronde, en daarbuiten */
 const MOTOR_ZONDER_SPELERS = 60 * 1000;                            /* zonder een enkele speler stopt de motor na een minuut */
 
@@ -77,7 +81,7 @@ export class Kamer extends DurableObject {
     this.stand = null;
     this.standTimer = null;
     /* de motor van een duel Zwaardvechter, zolang het potje loopt */
-    this.motor = null; this.motorKlok = null; this.motorTik = 0; this.motorSids = []; this.motorLeeg = 0;
+    this.motor = null; this.motorKlok = null; this.motorTik = 0; this.motorSids = []; this.motorLeeg = 0; this.motorSpel = ""; this.motorKeuze = {}; this.motorWacht = null;
     this.tempo = {};        /* per speler: hoeveel berichten deze seconde */
     this.ctx.blockConcurrencyWhile(async () => {
       this.stand = (await this.ctx.storage.get("stand")) || null;
@@ -358,6 +362,46 @@ export class Kamer extends DurableObject {
     this.iedereen({ t: "start" });
     this.planStand();
     if (st.duel && st.game === "zwaard") this.motorStart();
+    if (st.duel && st.game === "toren"){
+      /* het bord komt zodra de keuze van allebei binnen is, en anders na een korte wachttijd */
+      if (!this.torenStart()) this.motorWacht = setTimeout(() => { this.motorWacht = null; this.torenStart(true); }, TOREN_WACHT_KEUZE);
+    }
+  }
+  /* ---------- de motor van Torenverdediging in de kamer ----------
+     De gastheer bepaalt de omgeving en het niveau, het menu is van allebei
+     (eerst de torens van de gastheer, dan die van zijn maat), en wat een van
+     beiden vrij heeft is op dit bord vrij. */
+  torenStart(nu){
+    if (this.motor || !this.stand || this.stand.fase !== "bezig") return true;
+    const st = this.stand, sids = Object.keys(st.spelers);
+    const eerst = st.gastheer && st.spelers[st.gastheer] ? st.gastheer : sids[0];
+    const lijst = [eerst].concat(sids.filter(x => x !== eerst)).slice(0, 2);
+    if (lijst.length < 2) return false;
+    const a = this.motorKeuze[lijst[0]], b = this.motorKeuze[lijst[1]];
+    if (!a || (!b && !nu)) return false;
+    const menu = [];
+    (Array.isArray(a.gz) ? a.gz : []).concat(Array.isArray(b && b.gz) ? b.gz : []).forEach(id => {
+      if (typeof id === "string" && TORENMOTOR.SOORTEN[id] && menu.indexOf(id) < 0 && menu.length < TORENMOTOR.SAMENKEUZE) menu.push(id);
+    });
+    const vrij = {};
+    ["tonkla", "aap", "eiland", "archipel", "vulkaan"].forEach(k => { vrij[k] = !!((a.vb && a.vb[k]) || (b && b.vb && b.vb[k])); });
+    const W = TORENMOTOR.maak({ thema: typeof a.th === "string" ? a.th : "plein", torens: menu, vrij, rang: RANGEN[st.niveau] || Number(a.rang) || 2 });
+    this.motor = W; this.motorSpel = "toren"; this.motorSids = lijst; this.motorTik = 0; this.motorLeeg = 0;
+    this.motorZend();
+    this.motorKlok = setInterval(() => {
+      try {
+        if (!this.motor || !this.stand || this.stand.fase !== "bezig"){ this.motorStop(); return; }
+        W.stap();
+        this.motorTik++;
+        if (W.fase === "einde"){ this.motorZend(); this.motorStop(); return; }
+        if (this.motorTik % TOREN_STAND_OM === 0) this.motorZend();
+        if (this.motorTik % 16 === 0){
+          if (this.ctx.getWebSockets("speler").length === 0){ this.motorLeeg += 1000; if (this.motorLeeg >= MOTOR_ZONDER_SPELERS) this.motorStop(); }
+          else this.motorLeeg = 0;
+        }
+      } catch (e){ console.error("torenmotor", e && e.stack || e); this.motorStop(); }
+    }, TORENSTAP);
+    return true;
   }
   /* ---------- de motor van Zwaardvechter in de kamer ----------
      De gastheer van het duel is speler 0, de ander speler 1: dezelfde
@@ -372,7 +416,7 @@ export class Kamer extends DurableObject {
     this.motorSids = [eerst].concat(sids.filter(x => x !== eerst)).slice(0, 2);
     if (this.motorSids.length < 2) return;
     const W = ZWAARDMOTOR.maak({ spelers: this.motorSids.map(sid => ({ naam: st.spelers[sid].naam })) });
-    this.motor = W; this.motorTik = 0; this.motorLeeg = 0;
+    this.motor = W; this.motorSpel = "zwaard"; this.motorTik = 0; this.motorLeeg = 0;
     W.volgendeRonde();
     this.motorZend();
     this.motorKlok = setInterval(() => {
@@ -397,12 +441,20 @@ export class Kamer extends DurableObject {
   }
   motorStop(){
     if (this.motorKlok){ clearInterval(this.motorKlok); this.motorKlok = null; }
-    this.motor = null;
+    if (this.motorWacht){ clearTimeout(this.motorWacht); this.motorWacht = null; }
+    this.motor = null; this.motorSpel = "";
   }
   /* wat een speler de motor stuurt: toetsen, uitrusting, klaar, pauze */
   motorBericht(wie, d){
     const W = this.motor, i = this.motorSids.indexOf(wie.sid);
     if (!W || i < 0 || !d) return;
+    if (this.motorSpel === "toren"){
+      /* alles wat een speler op het bord doet; de kamer past dezelfde regels toe als het bord zelf */
+      if (["bouw", "sterker", "weg", "zet", "kracht", "wegding", "dingweg", "slot", "ronde", "munt", "vrij", "pz", "snel"].indexOf(d.k) < 0) return;
+      W.voerUit(d);
+      if (d.k === "pz" || d.k === "snel" || d.k === "bouw" || d.k === "zet") this.motorZend();
+      return;
+    }
     if (d.k === "in"){
       W.zetInvoer(i, d.dx, d.dy, Math.max(0, d.nr | 0));
       if (d.dash) W.spelers[i].dashVraag = true;
@@ -432,6 +484,11 @@ export class Kamer extends DurableObject {
        alleen door, bewaart niets en kijkt er niet in */
     if (m.t === "net"){
       if (st.fase === "einde" || m.d === undefined) return;
+      if (m.d && m.d.k === "kz" && st.game === "toren"){
+        this.motorKeuze[wie.sid] = m.d;
+        if (st.fase === "bezig" && !this.motor && this.torenStart()){ if (this.motorWacht){ clearTimeout(this.motorWacht); this.motorWacht = null; } }
+        return;
+      }
       if (this.motor){ this.motorBericht(wie, m.d); return; }
       const s = JSON.stringify({ t: "net", van: wie.sid, d: m.d });
       if (s.length > 60000) return;

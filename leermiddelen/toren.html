@@ -708,6 +708,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
 <script src="klas.js"></script>
 <script src="melding.js"></script>
 <script src="bank.js"></script>
+<script src="toren-motor.js"></script>
 <script>
 
 /* Vier kaarten. Elk potje wordt er een geloot, zodat een klas die het spel al
@@ -995,21 +996,43 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
      tikken later. Loopt het toch uit de pas (dat kan bij een verschil in
      rekenwerk tussen browsers), dan valt het terug op het doorsturen van de
      stand. */
-  var toevalZaad = 1;
-  function zaai(z){ toevalZaad = (z >>> 0) || 1; }
-  function toeval(){
-    toevalZaad = (toevalZaad + 0x6D2B79F5) | 0;
-    var t = toevalZaad;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  /* De motor (toren-motor.js) rekent; W is hem, als hij hier draait. Samen
+     draait hij in de kamer en is W null. Het toeval komt uit de motor, zodat
+     wat de pagina loot (de baas van de volgende ronde voor de banner) hetzelfde
+     toeval verbruikt als vroeger. */
+  var W = null;
+  function toeval(){ return W ? W.toeval() : Math.random(); }
+  /* de spiegels: na elke tik neemt de pagina over wat er te tekenen is */
+  function spiegel(){
+    if (!W) return;
+    vijanden = W.vijanden; torens = W.torens; schoten = W.schoten; vrienden = W.vrienden; cijfers = W.cijfers; pluis = W.pluis;
+    golven = W.golven; kogels = W.kogels; schillen = W.schillen; lavas = W.lavas; wegdingen = W.wegdingen;
+    bank = W.bank; wachtrij = W.wachtrij; spawnKlok = W.spawnKlok; rondePauze = W.rondePauze; rondeGehaald = W.rondeGehaald;
+    vuur = W.vuur; penningen = W.penningen; slots = W.slots; gelapt = W.gelapt; haast = W.haast; sprongOver = W.sprongOver;
+    camoGezien = W.camoGezien; laatsteDoor = W.laatsteDoor; baasBijWachtrij = W.baasBijWachtrij; miniBijWachtrij = W.miniBijWachtrij;
+    baasAlarm = W.baasAlarm; pols = W.pols; alarmMini = W.alarmMini; baasSpook = W.baasSpook; baasBalkIn = W.baasBalkIn; baasBalk = W.baasBalk;
+    klap = W.klap; klapAantal = W.klapAantal; poortFlits = W.poortFlits; golfKeuzes = W.golfKeuzes; baasKeuzes = W.baasKeuzes;
   }
-  function opdracht(c){ if (co.rol === 'host') co.inbox.push(c); else { spookBij(c); zendNet({ k:'in', c:c }); } }
+  /* wat de motor te vertellen heeft, als hij hier draait */
+  var HAAK = {
+    melding: function(t){ melding2(t); },
+    munt: function(n){ laatMuntZien(n); },
+    klap: function(n){ laatKlapZien(n); },
+    vrij: function(slot){ vrijMaak(slot); },
+    log: function(soort, extra){ botLog(soort, extra); },
+    fout: function(x){ if (window.console && console.warn) console.warn('vastloper weggehaald', x); }
+  };
+  /* een omgeving of toren die vrijkomt blijft vrij, ook een volgende les */
+  function vrijMaak(slot){
+    if (slot === 'tonkla') tonklaVrij = true; else if (slot === 'aap') aapVrij = true; else if (slot === 'eiland') eilandVrij = true;
+    else if (slot === 'archipel') archipelVrij = true; else if (slot === 'vulkaan') vulkaanVrij = true; else return;
+    try { localStorage.setItem('lg-toren-' + slot, 'ja'); } catch (e){}
+  }
   /* De spoken: wat de maat gedaan heeft en nog niet bevestigd is. Hij ziet
      het alvast op het bord en op de muntenmeter, tot de bevestiging komt. */
   var spoken = [];
   function spookBij(c){
-    if (!c || !co.lock || co.rol !== 'gast') return;
+    if (!c || !co.aan) return;
     var kost = 0, t = c.id !== undefined ? torens.filter(function(x){ return x.id === c.id; })[0] : null;
     if (c.k === 'bouw' && SOORTEN[c.soort]) kost = prijsVan(c.soort);
     else if (c.k === 'sterker' && t) kost = Math.round(SOORTEN[t.soort].prijs * 0.8 * t.niveau);
@@ -1017,7 +1040,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     else if (c.k === 'wegding' && WEGDING[c.soort]) kost = WEGDING[c.soort].prijs;
     else if (c.k === 'dingweg'){ var dg = wegdingen.filter(function(q){ return q.id === c.id; })[0]; if (dg) kost = -Math.round(WEGDING[dg.soort].prijs * 0.5); }
     else if (c.k !== 'zet' && c.k !== 'kracht') return;
-    spoken.push({ c:c, tik:co.tikken, kost:kost });
+    spoken.push({ c:c, tik:co.tikken, pk:co.pakketten || 0, kost:kost });
   }
   /* een bevestigde opdracht van mezelf: het spook mag weg, goed- of afgekeurd */
   function spookWeg(d){
@@ -1039,8 +1062,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   /* het bord met de spoken erop: geeft terug hoe je het weer echt maakt */
   function spookAan(){
     /* een spook dat te lang wacht is een afgekeurde opdracht die niet terugkwam */
-    spoken = spoken.filter(function(sp){ return co.tikken - sp.tik < 150; });
-    if (!spoken.length || !(co.aan && co.lock && co.rol === 'gast')) return function(){};
+    if (!spoken.length || !co.aan) return function(){};
     var oudTorens = torens, oudWeg = wegdingen, nr = 0;
     var kopie = {};
     function van(id){ var t = torens.filter(function(x){ return x.id === id; })[0]; if (!t) return null; if (!kopie[id]){ kopie[id] = Object.assign({}, t); torens = torens.map(function(x){ return x === t ? kopie[id] : x; }); } return kopie[id]; }
@@ -1057,20 +1079,22 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     });
     return function(){ torens = oudTorens; wegdingen = oudWeg; };
   }
-  function stuurOpdracht(c){ if (co.lock) opdracht(c); else zendNet(c); }
-  /* een korte samenvatting van de stand, om te zien of allebei nog hetzelfde rekenen */
-  function vingerafdruk(){
-    var som = 0; vijanden.forEach(function(e){ som += e.d + e.hp; });
-    return [bank.munten, bank.leven, bank.ronde, wachtrij, torens.length, vijanden.length, Math.round(som / 20), penningen, slots, wegdingen.length].join('|');
+  /* Wat een speler doet gaat als opdracht naar de motor: hier, of in de kamer.
+     Samen gaat het de lijn over en staat het alvast als spook op het bord. */
+  function stuurOpdracht(c){
+    if (co.aan){ spookBij(c); zendNet(c); return true; }
+    if (!W) return false;
+    var ok = W.voerUit(c); spiegel();
+    return ok;
   }
   var UITSTEL = 220;   /* ms: hoe ver de maat achter de gastheer aan kijkt, zodat een laat pakket niet opvalt */
   var vijandTeller = 0;
   var torenTeller = 0;
   function zendNet(d){ if (window.STRIJD && STRIJD.stuurNet) STRIJD.stuurNet(d); }
   /* voor het testen: bouwen zonder het menu, langs dezelfde weg als een tik */
-  window.__torenBouw = function(soort, x, y){ if (co.aan && (co.lock || co.rol === 'gast')) stuurOpdracht({ k:'bouw', soort:soort, x:x, y:y }); else voerUit({ k:'bouw', soort:soort, x:x, y:y }); };
+  window.__torenBouw = function(soort, x, y){ return stuurOpdracht({ k:'bouw', soort:soort, x:x, y:y }); };
   /* voor het testen: hoe ver lopen de gastheer en de maat uit elkaar */
-  window.__torenPas = function(){ return { rol:co.rol, aan:co.aan, lock:co.lock, tikken:co.tikken, bevestigd:co.bevestigd, reserve:co.reserve, ronde:bank.ronde, leven:bank.leven, munten:bank.munten, spoken:spoken.length, torens:torens.length, zicht:zichtMunten() }; };
+  window.__torenPas = function(){ return { rol:co.rol, aan:co.aan, lock:false, tikken:co.pakketten || 0, bevestigd:co.pakketten || 0, pakketten:co.pakketten || 0, reserve:0, ronde:bank.ronde, leven:bank.leven, munten:bank.munten, spoken:spoken.length, torens:torens.length, zicht:zichtMunten() }; };
   /* bank.ronde is de ronde waarvan de fouten nu komen. Roep je de volgende er
      alvast bij, dan loopt dat getal op terwijl de vorige nog op het pad staat.
      Gehaald is een ronde pas als alles wat er hoort te lopen ook echt geveld
@@ -1191,35 +1215,6 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
      ronde helemaal op was, en stond middenin de klok. Nu staat het los, zodat
      je een ronde er ook bij kunt roepen terwijl de vorige nog loopt: de nieuwe
      fouten komen dan boven op wat er al staat. */
-  function rondeErbij(nieuweRonde){
-    bank.ronde++;
-    /* na ronde vijftig kwam er per ronde een extra fout bij; nu een per twee rondes */
-    var erbij = 4 + bank.ronde + Math.floor(Math.max(0, bank.ronde - 50) / 2);
-    var toeslag = haast > 0 ? Math.round(erbij * 0.10 * Math.min(HAASTMAX + 1, haast)) : 0;
-    erbij += toeslag;
-    if (isRustronde(bank.ronde)) erbij = Math.max(3, Math.round(erbij * RUSTAANTAL));
-    wachtrij += erbij;
-    /* De plek van de baas telt af vanaf de nieuwe lengte van de rij, dus hij
-       komt in de tweede helft van alles wat er nu nog aankomt. */
-    baasBijWachtrij = isBaasRonde(bank.ronde)
-      ? Math.floor(toeval() * Math.max(1, Math.floor(wachtrij / 2))) : baasBijWachtrij;
-    miniBijWachtrij = isMiniRonde(bank.ronde)
-      ? Math.floor(toeval() * Math.max(1, Math.floor(wachtrij / 2))) : miniBijWachtrij;
-    if (!nieuweRonde) return;
-    botLog('ronde');
-    if (isRustronde(bank.ronde)){
-      melding2('Ronde ' + bank.ronde + '. Rustronde: minder en zwakkere fouten. Bouw bij.');
-    } else if (isBaasRonde(bank.ronde)){
-      melding2('Ronde ' + bank.ronde + '. De baas loopt ergens in de tweede helft mee.');
-    } else if (isMiniRonde(bank.ronde)){
-      melding2('Ronde ' + bank.ronde + '. Er loopt een spaarpot mee. Vel hem en je krijgt ' +
-        minibeloning(bank.ronde) + ' munten; laat je hem door, dan kost hij twee levens.');
-    } else if (golfVan(bank.ronde).naam){
-      var gk = golfVan(bank.ronde);
-      melding2('Ronde ' + bank.ronde + '. ' + gk.naam.charAt(0).toUpperCase() + gk.naam.slice(1) +
-        ': ' + gk.uit);
-    }
-  }
 
   /* ---------- de klas oplappen ----------
      Munten hadden na het bord geen bestemming meer: je kocht veertien torens,
@@ -1249,16 +1244,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   }
   function magSlot(){ return inSpel() && !pauze && bank.munten >= slotPrijs(); }
   function koopSlot(){
-    if (co.aan && co.lock){ if (magSlot()) opdracht({ k:'slot' }); return false; }
-    if (co.aan && co.rol === 'gast'){ if (magSlot()) zendNet({ k:'slot' }); return false; }
-    return koopSlotNu();
-  }
-  function koopSlotNu(){
     if (!magSlot()) return false;
-    var prijs = slotPrijs();
-    bank.munten -= prijs; slots++;
-    laatMuntZien(-prijs);
-    return true;
+    return stuurOpdracht({ k:'slot' });
   }
   /* ---------- testmodus ----------
      Bedoeld om zelf een partij te kunnen doorlopen zonder er een half uur voor
@@ -1349,7 +1336,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       var volg = ['katapult','schutter','pekelpot','dart','kanon','onderzeeer','mortier','tonkla','bommenwerper','vertrager','schip','zwavel','aap','vrienden'];
       var kandidaat = null;
       volg.forEach(function(soort){ if (!kandidaat) kandidaat = torens.filter(function(t){ return t.soort === soort && !t.kracht; })[0] || null; });
-      if (kandidaat){ penningen--; kandidaat.kracht = true; botLog('penning', { soort:kandidaat.soort }); }
+      if (kandidaat){ stuurOpdracht({ k:'kracht', id:kandidaat.id }); botLog('penning', { soort:kandidaat.soort }); }
     }
     if (bank.ronde >= 4 && wegdingen.length < 3 && bot.wegGezet < 3){
       var wegSoort = ['pek', 'angels', 'hek'][bot.wegGezet], w = WEGDING[wegSoort];
@@ -1357,8 +1344,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
         for (var dd = PADLENGTE * 0.6; dd < PADLENGTE - 120; dd += 30){
           var qq = positie(dd);
           if (magOpWeg(qq.x, qq.y, null)){
-            bank.munten -= w.prijs;
-            wegdingen.push({ x:qq.x, y:qq.y, soort:wegSoort, id:++wegTeller, voorraad:w.voorraad || 0, klok:0, hoek:padHoek(qq.x, qq.y) });
+            stuurOpdracht({ k:'wegding', soort:wegSoort, x:qq.x, y:qq.y });
             bot.wegGezet++; break;
           }
         }
@@ -1370,8 +1356,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       if (bank.munten < prijs) return;           /* sparen voor wat we willen */
       var plek = botPlek(wens);
       if (plek){
-        bank.munten -= prijs;
-        torens.push({ x:plek.x, y:plek.y, soort:wens, niveau:1, klok:0, id:++torenTeller });
+        stuurOpdracht({ k:'bouw', soort:wens, x:plek.x, y:plek.y });
         botLog('bouw', { soort:wens });
         return;
       }
@@ -1383,8 +1368,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       if (kosten < bestePrijs){ bestePrijs = kosten; beste = t; }
     });
     if (beste && bank.munten >= bestePrijs){
-      bank.munten -= bestePrijs; beste.niveau++;
-      botLog('sterker', { soort:beste.soort, niveau:beste.niveau });
+      stuurOpdracht({ k:'sterker', id:beste.id });
+      botLog('sterker', { soort:beste.soort, niveau:beste.niveau + 1 });
     }
   }
   function botTik(dt){
@@ -1735,18 +1720,16 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     gekliktIndex = i;
     reeks = goed ? reeks + 1 : 0;
     if (window.STRIJD) STRIJD.reeks(reeks);
-    if (!(co.aan && co.lock)) vuur = goed ? vuur + 1 : Math.floor(vuur / 2);   /* in de pas telt het vuur van allebei samen, via de opdracht */
     besteReeks = Math.max(besteReeks, reeks);
     if (!tonklaVrij && reeks >= TONKLAREEKS){
       tonklaVrij = true;
       try { localStorage.setItem('lg-toren-tonkla', 'ja'); } catch (e){}
+      stuurOpdracht({ k:'vrij', slot:'tonkla' });
       melding2(TONKLAREEKS + ' goed op rij. De Tonkla Toren is vrij, te bouwen vanaf ronde ' +
         TONKLARONDE + '.');
     }
-    if (co.aan && co.lock) opdracht({ k:'munt', w:winst, goed:goed });
-    else if (co.aan && co.rol === 'gast'){ if (winst) zendNet({ k:'munt', w:winst }); }
-    else bank.munten += winst;
-    if (winst) laatMuntZien(winst);
+    stuurOpdracht({ k:'munt', w:winst, goed:goed });
+    if (co.aan && winst) laatMuntZien(winst);
     if (goed) goedAantal++; else foutAantal++;
     document.getElementById('uitlegVak').innerHTML = '<div class="uitleg' + (goed ? ' goed' : '') + '">' +
       (goed ? 'Goed. ' + winst + ' munten erbij.' : 'Niet goed. ' + vraag.u) + '</div>';
@@ -2139,24 +2122,6 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     return baasKeuzes[ronde];
   }
   /* De fasewissel van een baas van tachtig. */
-  function faseWissel(e){
-    var q = positie(e.d);
-    e.schildOp = e.schild > 0;
-    e.schildTot = e.hp - e.maxHp / 6;          /* het schild houdt de helft van deze fase */
-    e.snelheid *= 1.35;
-    if (e.gooit) e.schilKlok = 0.3;
-    if (e.inkt) e.inktKlok = 0.3;
-    if (e.uitbarst) e.uitbarstKlok = 0.3;
-    if (e.duikt){ e.duikKlok = 0.3; }
-    for (var z = 0; z < 4; z++){
-      var shp = Math.max(1, Math.round(e.basisHp * 0.6));
-      vijanden.push({ d:Math.max(0, e.d - 18 - z * 16), hp:shp, maxHp:shp, snelheid:e.basisSnel * 1.3,
-                      traag:0, mark:'\u00bb', soort:'snel', kleur:'#EA9836', schild:0 });
-    }
-    golven.push({ x:q.x, y:q.y, r:150, leven:0.7, kleur:e.kleur || '#4a1230', dik:true });
-    cijfers.push({ x:q.x, y:q.y - 46, tekst:'fase ' + e.fase, leven:1.2, kleur:'#EA9836' });
-    melding2((e.baasnaam || 'De baas').replace(/^de /, 'De ') + ' gaat fase ' + e.fase + ' in: schild terug, hulp erbij, en hij loopt sneller.');
-  }
 
   /* Na ronde twintig wordt alles taaier, anders gaat het eindeloos door. Elf
      procent per ronde bleek te steil: de fouten groeien dan sneller dan een vol
@@ -2313,15 +2278,6 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     /* de Onderzeeer heeft sonar: die ziet ook wat verstopt is, en dus door de inkt van de Kraken heen */
     return !e.camo || toren.soort === 'schutter' || !!SOORTEN[toren.soort].sonar;
   }
-  function kiesFout(ronde){
-    var mag = FOUTEN.filter(function(f){ return f.vanaf <= ronde; });
-    var golf = golfVan(ronde);
-    var gewicht = function(f){ return f.kans * ((golf.weeg && golf.weeg[f.id]) || 1); };
-    var totaal = mag.reduce(function(a, f){ return a + gewicht(f); }, 0);
-    var trek = toeval() * totaal;
-    for (var i = 0; i < mag.length; i++){ trek -= gewicht(mag[i]); if (trek <= 0) return mag[i]; }
-    return mag[0];
-  }
   /* Op welk moment in de ronde de baas meeloopt. De teller telt af, dus dit is
      hoeveel fouten er na hem nog komen. Eerder was dat altijd nul en wist je
      precies wanneer hij kwam; nu valt hij ergens in de tweede helft binnen en
@@ -2470,62 +2426,20 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   }
 
   function menuKiest(r){
-    var t = menu.toren;
-    if (co.aan && (co.lock || co.rol === 'gast')){
-      var cmd = null;
-      if (r.id === 'dingweg' && menu.ding) cmd = { k:'dingweg', id:menu.ding.id };
-      else if (r.id.indexOf('weg-') === 0 && r.kan) cmd = { k:'wegding', soort:r.id.slice(4), x:menu.punt.x, y:menu.punt.y };
-      else if (r.id === 'kracht' && t && penningen > 0 && !t.kracht) cmd = { k:'kracht', id:t.id };
-      else if (r.id === 'zet' && t){ verplaats = t; menu = null; melding2('Tik de nieuwe plek aan, naast het pad en niet te dicht op een toren.'); tekenBord(); return; }
-      else if (r.id === 'weg' && t) cmd = { k:'weg', id:t.id };
-      else if (r.id === 'sterker' && t && r.kan) cmd = { k:'sterker', id:t.id };
-      else if (SOORTEN[r.id] && r.kan) cmd = { k:'bouw', soort:r.id, x:menu.punt.x, y:menu.punt.y };
-      if (cmd) stuurOpdracht(cmd);
-      menu = null; tekenBord(); return;
-    }
-    if (r.id === 'dingweg' && menu.ding){
-      bank.munten += Math.round(WEGDING[menu.ding.soort].prijs * 0.5);
-      laatMuntZien(Math.round(WEGDING[menu.ding.soort].prijs * 0.5));
-      wegdingen = wegdingen.filter(function(d){ return d !== menu.ding; });
-      menu = null; tekenMeters(); tekenBord(); return;
-    }
-    if (r.id.indexOf('weg-') === 0 && r.kan){
-      var soort = r.id.slice(4), w = WEGDING[soort];
-      if (!magOpWeg(menu.punt.x, menu.punt.y, null) || wegdingen.length >= MAXWEG) return;
-      bank.munten -= w.prijs; laatMuntZien(-w.prijs);
-      wegdingen.push({ x:menu.punt.x, y:menu.punt.y, soort:soort, id:++wegTeller,
-                       voorraad:w.voorraad || 0, klok:0,
-                       hoek:padHoek(menu.punt.x, menu.punt.y) });
-      menu = null; tekenMeters(); tekenBord(); return;
-    }
-    if (r.id === 'kracht' && t && penningen > 0 && !t.kracht){
-      penningen--;
-      t.kracht = true;
-      menu = null;
+    var t = menu.toren, cmd = null;
+    if (r.id === 'dingweg' && menu.ding) cmd = { k:'dingweg', id:menu.ding.id };
+    else if (r.id.indexOf('weg-') === 0 && r.kan) cmd = { k:'wegding', soort:r.id.slice(4), x:menu.punt.x, y:menu.punt.y };
+    else if (r.id === 'kracht' && t && penningen > 0 && !t.kracht){
+      cmd = { k:'kracht', id:t.id };
       melding2(SOORTEN[t.soort].naam + ' heeft nu ' + KRACHTEN[t.soort].naam + ': ' + KRACHTEN[t.soort].uit + '.');
-      tekenMeters(); tekenBord();
-      return;
     }
-    if (r.id === 'zet' && t){
-      verplaats = t;
-      menu = null;
-      melding2('Tik de nieuwe plek aan, naast het pad en niet te dicht op een toren.');
-      tekenBord();
-      return;
-    }
-    if (r.id === 'weg' && t){
-      var terug = Math.round(SOORTEN[t.soort].prijs * 0.5 * t.niveau);
-      bank.munten += terug; laatMuntZien(terug);
-      torens = torens.filter(function(x){ return x !== t; });
-    } else if (r.id === 'sterker' && t && r.kan){
-      bank.munten -= r.prijs; laatMuntZien(-r.prijs); t.niveau++;
-    } else if (SOORTEN[r.id] && r.kan){
-      if (!magHier(menu.punt.x, menu.punt.y, null, r.id) || torens.length >= maxTorens()) return;
-      bank.munten -= r.prijs; laatMuntZien(-r.prijs);
-      torens.push({ x:menu.punt.x, y:menu.punt.y, soort:r.id, niveau:1, klok:0, id:++torenTeller });
-    } else return;
-    menu = null;
-    tekenMeters(); tekenBord();
+    else if (r.id === 'zet' && t){ verplaats = t; menu = null; melding2('Tik de nieuwe plek aan, naast het pad en niet te dicht op een toren.'); tekenBord(); return; }
+    else if (r.id === 'weg' && t) cmd = { k:'weg', id:t.id };
+    else if (r.id === 'sterker' && t && r.kan) cmd = { k:'sterker', id:t.id };
+    else if (SOORTEN[r.id] && r.kan) cmd = { k:'bouw', soort:r.id, x:menu.punt.x, y:menu.punt.y };
+    else return;
+    stuurOpdracht(cmd);
+    menu = null; tekenMeters(); tekenBord();
   }
 
 /* De school aan het eind van het pad. Hoe minder levens, hoe havelozer hij
@@ -2891,112 +2805,6 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     return s;
   }
 
-  function raakVijand(e, schade, vertragen, stil){
-    if (!e || e.dood) return;
-    /* Een schild slikt een deel van de klap, tot het onder de helft van de
-       levens op is. Daarna telt alles weer normaal. */
-    if (e.schildOp && e.schild > 0){
-      schade = schade * (1 - e.schild);
-      if (e.hp - schade < (e.schildTot !== undefined ? e.schildTot : e.maxHp * 0.5)){
-        e.schildOp = false;
-        cijfers.push({ x:positie(e.d).x, y:positie(e.d).y - 32, tekst:'schild stuk',
-                       leven:0.8, kleur:'#EA9836' });
-      }
-    }
-    e.hp -= schade;
-    if (!stil) e.flits = 0.22;
-    if (vertragen) e.traag = 1.4;
-    /* een baas met fases: bij elk derde dat eraf is, een nieuwe fase */
-    if (e.fasen && e.hp > 0){
-      var fase = e.hp > e.maxHp * 2 / 3 ? 1 : e.hp > e.maxHp / 3 ? 2 : 3;
-      if (fase > (e.fase || 1)){ e.fase = fase; faseWissel(e); }
-    }
-    var q = positie(e.d);
-    if (!stil) cijfers.push({ x:q.x, y:q.y - 18, tekst:'-' + Math.round(schade), leven:0.7,
-                   kleur:e.baas ? '#EA9836' : '#fff' });
-    if (e.hp <= 0){
-      e.dood = true;
-      for (var k = 0; k < (e.baas ? 14 : 6); k++){
-        var h = toeval() * Math.PI * 2, v = 40 + toeval() * 70;
-        pluis.push({ x:q.x, y:q.y, vx:Math.cos(h)*v, vy:Math.sin(h)*v,
-                     leven:0.5, kleur:e.baas ? '#7d1f12' : '#c0442c' });
-      }
-      if (e.baas && e.mini){
-        /* De spaarpot betaalt en verder niets: geen penning, geen levens terug.
-           Zijn hele bestaansreden is dat hij weg kan lopen met het geld. */
-        var buit = minibeloning(bank.ronde);
-        bank.munten += buit;
-        laatMuntZien(buit);
-        for (var m2 = 0; m2 < 12; m2++){
-          var hm = toeval() * Math.PI * 2, vm = 50 + toeval() * 80;
-          pluis.push({ x:q.x, y:q.y, vx:Math.cos(hm)*vm, vy:Math.sin(hm)*vm,
-                       leven:0.6, kleur:'#EFC64A' });
-        }
-        cijfers.push({ x:q.x, y:q.y - 40, tekst:'+' + buit, leven:1.1, kleur:'#c9971f' });
-        melding2('De spaarpot is gebroken. ' + buit + ' munten voor de klas.');
-      } else if (e.baas){
-        /* Een baas in ronde veertig is veel meer werk dan een in ronde tien, dus
-           hij betaalt ook meer uit. */
-        var beloning = BAASBELONING + bank.ronde * 5;
-        if (e.mega) beloning += 800;
-        if (e.fasen) beloning += 1200;
-        botLog('geveld', { naam:e.baasnaam });
-        bank.munten += beloning;
-        laatMuntZien(beloning);
-        penningen += (e.mega || e.fasen) ? 3 : 1;
-        /* Levens kwamen nooit terug. Over vijftig rondes lopen er 1433 fouten
-           over het pad en je begint met twaalf levens, dus je moest 99,2 procent
-           vellen zonder marge: een slechte ronde in de twintig kostte je de
-           partij dertig rondes later. Een geveld baas lapt de school weer op,
-           twee levens, nooit boven de twaalf uit. Repareren dus, geen groei.
-           De Grote Fout lapt hem helemaal op, want wie hem velt heeft dat
-           verdiend en gaat de tweede vijftig rondes in. */
-        var heel = Math.min(e.mega ? 12 : 2, 12 - bank.leven);
-        if (heel > 0) bank.leven += heel;
-        var levenUit = heel > 0
-          ? (heel === 1 ? ', een leven terug' : ', ' + heel + ' levens terug')
-          : '';
-        var eersteAap = e.baassoort === 'aap' && !aapVrij;
-        if (eersteAap){
-          aapVrij = true;
-          try { localStorage.setItem('lg-toren-aap', 'ja'); } catch (x3){}
-        }
-        /* de Kraken opent de eilanden, de Zeeslang de vulkaan */
-        var opent = '';
-        if (e.baassoort === 'kraken' && !archipelVrij){
-          archipelVrij = true;
-          try { localStorage.setItem('lg-toren-archipel', 'ja'); } catch (x4){}
-          opent = ' De eilanden staan open: kies ze bij de volgende partij.';
-        }
-        if (e.baassoort === 'zeeslang' && !vulkaanVrij){
-          vulkaanVrij = true;
-          try { localStorage.setItem('lg-toren-vulkaan', 'ja'); } catch (x5){}
-          opent = ' De vulkaan staat open: kies hem bij de volgende partij.';
-        }
-        melding2(e.mega
-          ? (e.baasnaam || 'de baas').replace(/^de /, 'De ') + ' is geveld. Ronde ' + bank.ronde + ' gehaald: ' + beloning +
-            ' munten, drie penningen' + (heel > 0 ? ', de school is weer heel' : '') +
-            '. Hij spat nog uiteen in ' + e.splijt + ' snelle fouten, dus maak af.' + opent
-          : eersteAap
-            ? 'Apenbaas geveld. ' + beloning + ' munten, een penning' + levenUit +
-              ', en de Apentoren is vrij.'
-            : (e.baasnaam || 'de baas').replace(/^de /, 'De ') + ' geveld. ' + beloning + ' munten, een penning' + levenUit +
-              '.' + (opent || ' Tik een toren aan.'));
-        if (e.splijt){
-          for (var z = 0; z < e.splijt; z++){
-            var shp = Math.max(1, Math.round(e.basisHp * 0.5));
-            vijanden.push({ d:Math.max(0, e.d - z * 16), hp:shp, maxHp:shp,
-                            snelheid:e.basisSnel * 1.5, traag:0, mark:'\u00bb',
-                            soort:'snel', kleur:'#EA9836', schild:0 });
-          }
-          /* Bij de Grote Fout zou deze regel de zin overschrijven waarin staat
-             dat je ronde vijftig hebt gehaald, en dat is de zin die je wilt
-             lezen. Die vermeldt het uiteenvallen zelf al. */
-          if (!e.mega) melding2('De splijter valt uiteen in ' + e.splijt + ' snelle fouten.');
-        }
-      }
-    }
-  }
 
   /* ---------- het bord ---------- */
   function padTekening(){
@@ -3771,7 +3579,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
        nog niet bevestigd is, staat er als spook alvast op */
     var echt = spookAan();
     try {
-      if (co.aan && co.lock && sleep && sleep.bewogen && sleep.toren){
+      if (sleep && sleep.bewogen && sleep.toren){
         var st = sleep.toren, ex = st.x, ey = st.y;
         st.x = sleep.x; st.y = sleep.y;
         try { tekenBord0(); } finally { st.x = ex; st.y = ey; }
@@ -4944,11 +4752,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       /* Staat er een toren te wachten op een nieuwe plek, dan gaat deze tik daarover. */
       if (verplaats){
         if (magHier(x, y, verplaats, verplaats.soort)){
-          if (co.aan && co.lock) opdracht({ k:'zet', id:verplaats.id, x:x, y:y });
-          else {
-            verplaats.x = x; verplaats.y = y;
-            if (co.aan && co.rol === 'gast') zendNet({ k:'zet', id:verplaats.id, x:x, y:y });
-          }
+          stuurOpdracht({ k:'zet', id:verplaats.id, x:x, y:y });
           verplaats = null;
           melding2('Verplaatst.');
         } else {
@@ -5000,9 +4804,6 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       if (!sleep.bewogen && Math.hypot(x - sleep.vanX, y - sleep.vanY) < 6) return;
       sleep.bewogen = true;
       sleep.x = x; sleep.y = y;
-      /* in de pas verschuift de toren pas echt als de opdracht bij allebei is;
-         tot die tijd tekenen we hem op de vinger (zie tekenBord) */
-      if (!(co.aan && co.lock)){ sleep.toren.x = x; sleep.toren.y = y; }
       sleep.geldig = magHier(x, y, sleep.toren, sleep.toren.soort);
       tekenBord();
     });
@@ -5016,10 +4817,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
         /* alleen aangetikt: het menu van deze toren */
         menu = menuVoor(t.x, t.y, t, false, null);
       } else if (!geldig){
-        if (!(co.aan && co.lock)){ t.x = vanX; t.y = vanY; }
         melding2('Daar kan hij niet staan, dus hij is teruggezet.');
-      } else if (co.aan && co.lock) opdracht({ k:'zet', id:t.id, x:naarX, y:naarY });
-      else if (co.aan && co.rol === 'gast') zendNet({ k:'zet', id:t.id, x:t.x, y:t.y });
+      } else stuurOpdracht({ k:'zet', id:t.id, x:naarX, y:naarY });
       tekenBord();
     }
     vak2.addEventListener('pointerup', laatLos);
@@ -5088,7 +4887,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
           ? penningen + ' penning' + (penningen > 1 ? 'en' : '') + ' te vergeven. Tik een toren aan.'
           : 'Sleep een toren om hem te verplaatsen. Tik hem aan om hem te versterken.')
       : 'Tik naast het pad voor een toren, of op het pad om er iets neer te leggen.';
-    document.getElementById('mMunt').textContent = co.aan && co.lock && co.rol === 'gast' ? zichtMunten() : bank.munten;
+    document.getElementById('mMunt').textContent = co.aan ? zichtMunten() : bank.munten;
     var lev = document.getElementById('mLeven');
     lev.textContent = bank.leven;
     document.getElementById('levenVak').classList.toggle('laag', bank.leven <= 3);
@@ -5136,946 +4935,32 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
 
   /* ---------- de klok ---------- */
   function tik(){
-    var dt = 0.06, ronde = bank.ronde;
-    if (co.aan && co.lock){
-      co.tikken++;
-      var opdr = co.rol === 'host' ? co.inbox.splice(0) : (co.inTicks[co.tikken] || []);
-      opdr.forEach(function(c){ voerUit(c); });
-      if (co.rol === 'host') co.log[co.tikken] = opdr; else delete co.inTicks[co.tikken];
-    }
-    pols += dt;
-    botTik(dt);
-    if (poortFlits > 0) poortFlits = Math.max(0, poortFlits - dt);
-    /* De levensbalk van de baas bijwerken. De bleke balk zakt met een vaste
-       snelheid van veertig procent per seconde: hard genoeg om bij te blijven,
-       traag genoeg om te zien wat een treffer deed. */
-    var levendeBaas = null;
-    for (var bb = 0; bb < vijanden.length; bb++){
-      if (vijanden[bb].baas && !vijanden[bb].dood){ levendeBaas = vijanden[bb]; break; }
-    }
-    if (levendeBaas){
-      if (levendeBaas !== baasLaatst){ baasLaatst = levendeBaas; baasSpook = 1; }
-      var nu2 = Math.max(0, levendeBaas.hp / levendeBaas.maxHp);
-      baasSpook = nu2 > baasSpook ? nu2 : Math.max(nu2, baasSpook - 0.4 * dt);
-      baasBalkIn = Math.min(1, baasBalkIn + dt * 4);
-      baasBalk = { naam:levendeBaas.baasnaam || 'de baas', mark:levendeBaas.mark,
-                   kleur:levendeBaas.kleur || '#7d1f12', deel:nu2, hp:Math.max(0, levendeBaas.hp),
-                   maxHp:levendeBaas.maxHp, schild:!!levendeBaas.schildOp,
-                   flits:(levendeBaas.flits || 0) > 0 };
-    } else {
-      /* Valt hij, dan loopt de balk leeg terwijl hij uit beeld schuift. Meteen
-         weghalen leest als een storing: je ziet niet dat je hem hebt geveld. */
-      baasLaatst = null;
-      baasSpook = Math.max(0, baasSpook - 1.6 * dt);
-      if (baasBalk){ baasBalk.deel = 0; baasBalk.hp = 0; baasBalk.flits = false; }
-      baasBalkIn = Math.max(0, baasBalkIn - dt * 1.6);
-    }
-    /* Tijdens de pauze voor een baasronde staat de waarschuwing in beeld. De
-       spaarpot krijgt dezelfde banner in goud: hij is geen dreiging maar een
-       kans, en die moet je net zo goed zien aankomen. */
-    var komtBaas = isBaasRonde(bank.ronde + 1), komtMini = isMiniRonde(bank.ronde + 1);
-    alarmMini = !komtBaas && komtMini;
-    baasAlarm = (wachtrij === 0 && vijanden.length === 0 && (komtBaas || komtMini))
-      ? rondePauze : 0;
-    if (wachtrij === 0 && vijanden.length === 0){
-      rondePauze -= dt;
-      /* Alles van deze ronde is geveld: nu pas is hij gehaald. Ronde vijftig
-         halen opent het tropisch eiland, ook een volgende les. */
-      if (rondeGehaald < bank.ronde){
-        rondeGehaald = bank.ronde;
-        if (rondeGehaald >= EILANDRONDE && !eilandVrij){
-          eilandVrij = true;
-          try { localStorage.setItem('lg-toren-eiland', 'ja'); } catch (e){}
-          melding2('Je hebt ronde ' + EILANDRONDE + ' overleefd. Het tropisch eiland staat open: ' +
-            'kies het bij de volgende partij en speel met de Bommenwerper en de Vriendenhut.');
-        }
-      }
-      if (rondePauze <= 0){
-        /* Wie de pauze oversloeg krijgt de rekening in deze ronde gepresenteerd. */
-        haast = sprongOver ? haast + 1 : 0;
-        sprongOver = false;
-        wachtrij = 0; spawnKlok = 0;
-        baasBijWachtrij = -1; miniBijWachtrij = -1;
-        rondeErbij(true);
-      }
-    }
-    if (wachtrij > 0){
-      spawnKlok -= dt;
-      if (spawnKlok <= 0){
-        /* Fouten kwamen met een vaste tussenpoos, en dat is een druppelkraan:
-           in ronde vijftig dertig seconden lang precies elke 0,55 seconde een.
-           Nu komen ze in golfjes van vier kort achter elkaar met daarna een
-           pauze. De tussenpoos is over vijf spawns heen gemiddeld precies
-           dezelfde als eerst (4 x 0,6 + 2,6 gedeeld door 5 is 1), dus de ronde
-           duurt even lang en vraagt evenveel schade. Alleen voel je nu druk en
-           lucht in plaats van een streep. */
-        /* September 2026: een ronde druppelde te lang binnen. De golfjes van vier
-           komen nu vrijwel tegelijk (0,35 keer de basis tussen twee fouten) en de
-           adempauze ertussen is korter; de basis zelf zakt tot 0,4 seconde. Over
-           vijf spawns is dat 0,6 keer de basis in plaats van 1,0, dus een ronde
-           is in ruim de helft van de tijd binnen en het bord staat voller. */
-        var basis = Math.max(0.4, 1.1 - ronde * 0.04);
-        spawnKlok = (wachtrij % 5 === 0) ? basis * 1.6 : basis * 0.35;
-        wachtrij--;
-        poortFlits = 0.45;                    /* de poort licht op bij elke fout */
-        var r = rang();
-        var hp = Math.max(1, Math.round((10 + ronde * 6) * (0.75 + r * 0.15) * zwaarte(ronde) *
-                          VIJANDKRACHT * (thema.kracht || 1) * (isRustronde(ronde) ? RUSTTAAI : 1)));
-        /* de laatste van een baasronde is de baas zelf */
-        var basisSnel = (30 + r*5 + ronde*2.3) * (ronde <= 20 ? 1 : ronde <= 60 ? 1.1 : 1.18);
-        if (wachtrij === baasBijWachtrij && isBaasRonde(ronde)){
-          baasBijWachtrij = -1;                 /* er komt er maar een per ronde */
-          var bz = baasVan(ronde);
-          var bhp = Math.round(hp / zwaarte(ronde) * baasZwaarte(ronde) * bz.taai);
-          vijanden.push({ d:SPAWNAF, hp:bhp, maxHp:bhp, snelheid:basisSnel * bz.vlug,
-                          traag:0, mark:bz.mark, baas:true, soort:'baas', baassoort:bz.id,
-                          baasnaam:bz.naam, kleur:bz.kleur,
-                          schild:bz.schild, schildOp:bz.schild > 0, splijt:bz.splijt || 0,
-                          basisHp:hp, basisSnel:basisSnel,
-                          mega:!!bz.mega, gooit:!!bz.gooit,
-                          inkt:!!bz.inkt, inktKlok:bz.inkt ? 4 : 0,
-                          duikt:!!bz.duikt, duikKlok:bz.duikt ? 5 : 0, onder:0,
-                          uitbarst:!!bz.uitbarst, uitbarstKlok:bz.uitbarst ? 6 : 0,
-                          kopieert:!!bz.kopieert, kopieKlok:bz.kopieert ? 5 : 0,
-                          rooft:!!bz.rooft, roofKlok:bz.rooft ? 4 : 0,
-                          fasen:!!bz.fasen, fase:1, vorm:bz.vorm || null,
-                          schilKlok:bz.gooit ? 3 : 0 });
-          botLog('baas', { naam:bz.naam, hp:bhp });
-        } else if (wachtrij === miniBijWachtrij && isMiniRonde(ronde)){
-          miniBijWachtrij = -1;                 /* ook van hem komt er maar een */
-          var mhp = Math.round(hp * MINIBAAS.taai);
-          vijanden.push({ d:SPAWNAF, hp:mhp, maxHp:mhp, snelheid:basisSnel * MINIBAAS.vlug,
-                          traag:0, mark:MINIBAAS.mark, baas:true, mini:true, soort:'baas',
-                          baassoort:MINIBAAS.id, baasnaam:MINIBAAS.naam, kleur:MINIBAAS.kleur,
-                          schild:0, schildOp:false, splijt:0,
-                          basisHp:hp, basisSnel:basisSnel, schilKlok:0 });
-        } else {
-          var f = kiesFout(ronde), hoeveel = f.aantal || 1;
-          if (f.camo && !camoGezien){
-            camoGezien = true;
-            melding2('Er loopt een verstopte fout mee. Ontmasker hem met de Scherpschutter ' +
-              'of met iets op de weg, daarna mag de rest er ook op schieten.');
-          }
-          for (var z = 0; z < hoeveel; z++){
-            var thp = Math.max(1, Math.round(hp * f.taai));
-            /* De zwerm stond eerst achter elkaar op negatieve afstand, en dat
-               zette twee van de drie buiten de poort op het gras. Nu komen ze
-               er vlak na elkaar uit in plaats van ervoor te staan. */
-            vijanden.push({ d:SPAWNAF + z * 15, hp:thp, maxHp:thp, snelheid:basisSnel * f.vlug,
-                            traag:0, mark:f.mark, soort:f.id, kleur:f.kleur,
-                            schild:f.schild, schildOp:f.schild > 0, camo:!!f.camo, dik:!!f.dik });
-          }
-        }
-        if (wachtrij === 0) rondePauze = isBaasRonde(bank.ronde + 1) ? 8
-                                       : isBaasRonde(bank.ronde) ? 6
-                                       : isMiniRonde(bank.ronde + 1) ? 5 : 3;
-      }
-    }
-    var verlies = 0;
-    vijanden.forEach(function(e){
-      /* wie in brand staat of in de lava loopt, verliest levens zonder dat er
-         elke tik een cijfer opspringt */
-      if (e.brand > 0){ e.brand -= dt; raakVijand(e, (e.brandKracht || 0) * dt, false, true); }
-      if (e.dood) return;
-      if (e.stop > 0){ e.stop -= dt; if (e.traag > 0) e.traag -= dt; return; }
-      e.d += e.snelheid * (e.traag > 0 ? (e.ijs ? 0.22 : 0.45) : 1) * (e.onder > 0 ? 1.3 : 1) * dt;
-      if (e.traag > 0){ e.traag -= dt; if (e.traag <= 0) e.ijs = false; }
-      if (e.d >= PADLENGTE){ e.dood = true;
-        if (e.baas) botLog('door', { naam:e.baasnaam, mini:!!e.mini });
-        laatsteDoor = e.baas ? (e.baasnaam || 'de baas') : ('een ' + (foutNaam(e.soort) || 'fout'));
-        verlies += e.baas ? (e.mini ? MINISCHADE : e.fasen ? FASENSCHADE : e.mega ? MEGASCHADE : BAASSCHADE) : 1; }
-    });
-    /* de lava van de Magmamortier: wie erin staat, brandt */
-    lavas.forEach(function(l){
-      l.leven -= dt;
-      vijanden.forEach(function(e){
-        if (e.dood) return;
-        var q = positie(e.d);
-        if (Math.hypot(q.x - l.x, q.y - l.y) > l.r) return;
-        raakVijand(e, l.schade * dt, false, true);
-        if (!(e.brand > 0)){ e.brand = 1.2; e.brandKracht = Math.max(e.brandKracht || 0, l.schade * 0.4); }
-      });
-    });
-    lavas = lavas.filter(function(l){ return l.leven > 0; });
-    /* De Kopieermachine spuugt kopieen uit van fouten die al lopen. */
-    vijanden.forEach(function(e){
-      if (e.dood || !e.kopieert) return;
-      e.kopieKlok -= dt;
-      if (e.kopieKlok > 0) return;
-      e.kopieKlok = KOPIEERTIJD;
-      var bron = vijanden.filter(function(a){ return !a.dood && !a.baas; });
-      if (!bron.length) return;
-      for (var kp = 0; kp < 2; kp++){
-        var o = bron[Math.floor(toeval() * bron.length)];
-        vijanden.push({ d:Math.max(0, e.d - 20 - kp * 16), hp:o.maxHp, maxHp:o.maxHp, snelheid:o.snelheid, traag:0,
-                        mark:o.mark, soort:o.soort, kleur:o.kleur, schild:o.schild, schildOp:o.schild > 0, camo:!!o.camo, dik:!!o.dik });
-      }
-      var qk = positie(e.d);
-      golven.push({ x:qk.x, y:qk.y, r:60, leven:0.4, kleur:'#3f5f8f' });
-      melding2('De Kopieermachine spuugt twee kopie\u00ebn uit.');
-    });
-    /* De Zeeroverkapitein rooft munten zolang hij loopt. */
-    vijanden.forEach(function(e){
-      if (e.dood || !e.rooft) return;
-      e.roofKlok -= dt;
-      if (e.roofKlok > 0) return;
-      e.roofKlok = ROOFTIJD;
-      var buit = Math.min(bank.munten, Math.max(15, Math.round(bank.munten * 0.06)));
-      if (buit <= 0) return;
-      bank.munten -= buit;
-      laatMuntZien(-buit);
-      var qr = positie(e.d);
-      cijfers.push({ x:qr.x, y:qr.y - 40, tekst:'-' + buit + ' munten', leven:1.1, kleur:'#c9971f' });
-      melding2('De Zeeroverkapitein rooft ' + buit + ' munten. Vel hem voordat hij je kas leegt.');
-    });
-    /* De Zeeslang duikt onder en komt weer boven. Onder water is hij sneller
-       en alleen voor de watertorens en de Scherpschutter te raken. */
-    vijanden.forEach(function(e){
-      if (e.dood || !e.duikt) return;
-      e.duikKlok -= dt;
-      if (e.onder > 0) e.onder = Math.max(0.001, e.onder);
-      if (e.duikKlok > 0) return;
-      if (e.onder > 0){
-        e.onder = 0; e.duikKlok = DUIKTIJD;
-      } else {
-        e.onder = DUIKDUUR; e.duikKlok = DUIKDUUR;
-        var qz = positie(e.d);
-        golven.push({ x:qz.x, y:qz.y, r:70, leven:0.5, kleur:'#3f9fbd' });
-        melding2((e.baasnaam || 'De baas').replace(/^de /, 'De ') + ' duikt onder. Alleen de Kanonneerboot, de Onderzee\u00ebr en de Scherpschutter raken hem nu.');
-      }
-    });
-    /* De Magmakoning barst uit: vonken op de weg en hitte over de torens vlakbij. */
-    vijanden.forEach(function(e){
-      if (e.dood || !e.uitbarst) return;
-      e.uitbarstKlok -= dt;
-      if (e.uitbarstKlok > 0) return;
-      e.uitbarstKlok = UITBARSTTIJD;
-      var qm = positie(e.d), heet = 0;
-      for (var vk = 0; vk < VONKEN; vk++){
-        var vhp = Math.max(1, Math.round(e.basisHp * 0.4));
-        vijanden.push({ d:Math.max(0, e.d - 14 - vk * 14), hp:vhp, maxHp:vhp, snelheid:e.basisSnel * 1.6,
-                        traag:0, mark:'\u2726', soort:'snel', kleur:'#ff7a1a', schild:0 });
-      }
-      torens.forEach(function(t){
-        if (Math.hypot(t.x - qm.x, t.y - qm.y) <= HITTEBEREIK){ t.heet = HITTEDUUR; heet++; }
-      });
-      golven.push({ x:qm.x, y:qm.y, r:HITTEBEREIK, leven:0.6, kleur:'#ff6a1a', dik:true });
-      for (var ip2 = 0; ip2 < 16; ip2++){
-        var hi2 = toeval() * Math.PI * 2, vi2 = 50 + toeval() * 110;
-        pluis.push({ x:qm.x, y:qm.y, vx:Math.cos(hi2)*vi2, vy:Math.sin(hi2)*vi2 - 60, leven:0.55, kleur:'#ff8c3a' });
-      }
-      melding2((e.baasnaam || 'De baas').replace(/^de /, 'De ') + ' barst uit: ' + VONKEN + ' vonken op de weg' +
-        (heet ? ', en ' + heet + (heet === 1 ? ' toren schiet' : ' torens schieten') + ' even trager van de hitte.' : '.'));
-    });
-    /* De apenbaas zoekt om de zoveel tijd de dichtstbijzijnde toren die nog
-       werkt en gooit daar een schil naartoe. Staat er niets in de buurt, dan
-       probeert hij het zo weer. */
-    vijanden.forEach(function(e){
-      if (e.dood || !e.gooit) return;
-      e.schilKlok -= dt;
-      if (e.schilKlok > 0) return;
-      var q = positie(e.d), mik = null, kortst = SCHILBEREIK;
-      torens.forEach(function(t){
-        if ((t.uit || 0) > 0) return;
-        var afst = Math.hypot(t.x - q.x, t.y - q.y);
-        if (afst < kortst){ kortst = afst; mik = t; }
-      });
-      if (!mik){ e.schilKlok = 1; return; }
-      e.schilKlok = SCHILTIJD;
-      /* vanaf de late rondes krijgt ook de op een na dichtstbijzijnde er een */
-      var doelen = [mik];
-      if (bank.ronde >= DUBBELSCHIL){
-        var tweede = null, k2 = SCHILBEREIK;
-        torens.forEach(function(t){
-          if (t === mik || (t.uit || 0) > 0) return;
-          var a2 = Math.hypot(t.x - q.x, t.y - q.y);
-          if (a2 < k2){ k2 = a2; tweede = t; }
-        });
-        if (tweede) doelen.push(tweede);
-      }
-      doelen.forEach(function(t){
-        schillen.push({ x0:q.x, y0:q.y, x1:t.x, y1:t.y, t:0, duur:0.55,
-                        toren:t, draai:toeval() * 360 });
-      });
-    });
-    /* De Kraken spuit om de zoveel tijd inkt: elke fout binnen bereik die nog
-       niet verstopt was, is dat nu even wel. De inkt trekt vanzelf weg; wie er
-       eerder tegenaan loopt of hem in het vizier krijgt, haalt hem er eerder uit. */
-    vijanden.forEach(function(e){
-      if (e.dood || !e.inkt) return;
-      e.inktKlok -= dt;
-      if (e.inktKlok > 0) return;
-      e.inktKlok = INKTTIJD;
-      var q = positie(e.d), geraaktI = 0;
-      vijanden.forEach(function(a){
-        if (a.dood || a.baas || a.camo) return;
-        var qa = positie(a.d);
-        if (Math.hypot(qa.x - q.x, qa.y - q.y) > INKTBEREIK) return;
-        a.camo = true; a.inktOp = INKTDUUR; geraaktI++;
-      });
-      golven.push({ x:q.x, y:q.y, r:INKTBEREIK, leven:0.7, kleur:'#2a1f4a', dik:true });
-      for (var ip = 0; ip < 18; ip++){
-        var hi = toeval() * Math.PI * 2, vi = 60 + toeval() * 120;
-        pluis.push({ x:q.x, y:q.y, vx:Math.cos(hi)*vi, vy:Math.sin(hi)*vi, leven:0.5, kleur:'#2a1f4a' });
-      }
-      if (geraaktI) melding2((e.baasnaam || 'De baas').replace(/^de /, 'De ') + (e.baassoort === 'kraken' || e.baassoort === 'neptunus' ? ' spuit inkt: ' : ' blaast as: ') + geraaktI + (geraaktI === 1 ? ' fout is' : ' fouten zijn') +
-        ' even verstopt. Alleen de Scherpschutter, de vrienden en wat op de weg ligt zien ze nog.');
-    });
-    vijanden.forEach(function(e){
-      if (!(e.inktOp > 0)) return;
-      e.inktOp -= dt;
-      if (e.inktOp <= 0) e.camo = false;
-    });
-
-    /* een toren met een schil erover komt vanzelf weer bij, en een hete koelt af */
-    torens.forEach(function(t){ if ((t.uit || 0) > 0) t.uit -= dt; if ((t.heet || 0) > 0) t.heet -= dt; });
-    schillen.forEach(function(sl){
-      sl.t += dt / sl.duur;
-      sl.draai += 260 * dt;
-      if (sl.t >= 1 && !sl.raak){
-        sl.raak = true;
-        if (torens.indexOf(sl.toren) >= 0){
-          sl.toren.uit = SCHILDUUR;
-          melding2(SOORTEN[sl.toren.soort].naam + ' glijdt uit over een bananenschil: ' +
-            SCHILDUUR + ' seconden uit de running.');
-          for (var sp = 0; sp < 5; sp++){
-            var sh = toeval() * Math.PI * 2, sv = 25 + toeval() * 40;
-            pluis.push({ x:sl.x1, y:sl.y1, vx:Math.cos(sh)*sv, vy:Math.sin(sh)*sv,
-                         leven:0.4, kleur:'#EFC64A' });
-          }
-        }
-      }
-    });
-    schillen = schillen.filter(function(sl){ return sl.t < 1.2; });
-
-    /* wat er op de weg ligt, werkt op alles wat eroverheen komt */
-    wegdingen.forEach(function(d){
-      var w = WEGDING[d.soort];
-      d.klok -= dt;
-      vijanden.forEach(function(e){
-        if (e.dood) return;
-        var q = positie(e.d);
-        if (Math.hypot(q.x - d.x, q.y - d.y) > w.straal) return;
-        /* Wie door de pek loopt of over de voetangels stapt laat sporen na, dus
-           daarna ziet het hele bord hem. Zo is een scherpschutter handig maar
-           niet het enige antwoord op een verstopte fout. */
-        if (e.camo){
-          e.camo = false;
-          cijfers.push({ x:q.x, y:q.y - 32, tekst:'ontdekt', leven:0.9, kleur:'#2f7d52' });
-        }
-        if (d.soort === 'pek'){ e.traag = Math.max(e.traag, 0.3); }
-        if (d.soort === 'angels' && d.klok <= 0 && d.voorraad > 0){
-          raakVijand(e, angelSchade(e), false);
-          d.voorraad--;
-        }
-        /* Een fout die een versperring gehad heeft, mag een volgende niet
-           zomaar voorbij: het merkteken staat per versperring, niet per fout.
-           Met een merkteken per fout liep alles wat al een keer was
-           tegengehouden dwars door elke volgende versperring heen. */
-        if (d.soort === 'hek' && d.voorraad > 0 && !(e.gehouden && e.gehouden[d.id])){
-          e.gehouden = e.gehouden || {};
-          e.gehouden[d.id] = true; e.stop = 1.1; d.voorraad--;
-          pluis.push({ x:q.x, y:q.y, vx:0, vy:-40, leven:0.4, kleur:'#8a6a45' });
-        }
-      });
-      if (d.soort === 'angels' && d.klok <= 0) d.klok = 0.35;
-    });
-    wegdingen = wegdingen.filter(function(d){
-      return !WEGDING[d.soort].voorraad || d.voorraad > 0;
-    });
-
-    /* de schokgolf van de Tonkla Toren */
-    /* De Apentoren met de Bommenwerper gooit naast zijn bananen om de zoveel
-       tijd een bom, en die raakt alles rond de inslag. */
-    torens.forEach(function(t){
-      if ((t.uit || 0) > 0 || !t.kracht || t.soort !== 'aap') return;
-      if (t.bomKlok === undefined) t.bomKlok = BOMTIJD;
-      t.bomKlok -= dt;
-      if (t.bomKlok > 0) return;
-      var bereikB = bereikVan(t), doelB = null, verstB = -1, posB = null;
-      vijanden.forEach(function(e){
-        if (e.dood || !ziet(t, e)) return;
-        var q = positie(e.d);
-        if (Math.hypot(q.x - t.x, q.y - t.y) <= bereikB && e.d > verstB){ doelB = e; verstB = e.d; posB = q; }
-      });
-      if (!doelB) return;
-      t.bomKlok = BOMTIJD;
-      kogels.push({ x0:t.x, y0:t.y, x1:posB.x, y1:posB.y, t:0, duur:0.5,
-                    schade:BOMSCHADE * (1 + (t.niveau - 1) * 0.6) * reeksbonus(), doel:doelB,
-                    draai:toeval() * 360, brand:true, bom:true });
-    });
-
-    /* De Tonkla Bommenwerper. Het toestel is altijd in de lucht, behalve als
-       het herlaadt. Het zoekt de fout die het verst is, waar ook op het bord,
-       vliegt erheen en laat een bom vallen zodra het erboven hangt. Dan de
-       volgende, tot de vijf bommen op zijn; daarna vliegt het terug naar zijn
-       veld, staat een tijdje stil om te herladen, en stijgt weer op. Is er
-       niets te doen, dan patrouilleert het over de weg, van de poort naar de
-       school en weer terug, met de bommen onder de romp. Het gaat pas naar
-       huis als de bommen op zijn. */
-    torens.forEach(function(t){
-      var so = SOORTEN[t.soort];
-      if (!so.bommen) return;
-      if (!t.vlieger) t.vlieger = { x:t.x, y:t.y - 1, hoek:0, bommen:BOMMEN, fase:'vliegt', klok:0, laad:0 };
-      var v = t.vlieger;
-      var ligtEruit = (t.uit || 0) > 0;
-      if (v.klok > 0) v.klok -= dt;
-      if (v.fase === 'laadt'){
-        v.x = t.x; v.y = t.y;
-        if (!ligtEruit) v.laad -= dt;
-        if (v.laad <= 0){ v.bommen = BOMMEN + (t.kracht ? 2 : 0); v.fase = 'vliegt'; }
-        return;
-      }
-      var doel = null, verst = -1, pos = null;
-      if (v.bommen > 0 && !ligtEruit) vijanden.forEach(function(e){
-        if (e.dood || !ziet(t, e)) return;
-        if (e.d > verst){ doel = e; verst = e.d; pos = positie(e.d); }
-      });
-      var mik;
-      if (v.fase === 'terug' || v.bommen <= 0){ v.fase = 'terug'; mik = { x:t.x, y:t.y }; }
-      else if (doel) mik = pos;
-      else {
-        /* patrouille: langs de weg heen en weer, in stukken van tweehonderd pixels */
-        if (v.wacht === undefined){ v.wacht = 1; v.richting = 1; }
-        var stap = 200, aantal = Math.max(2, Math.floor(PADLENGTE / stap));
-        var doelPlek = positie(Math.min(PADLENGTE - 40, 60 + v.wacht * stap));
-        if (Math.hypot(doelPlek.x - v.x, doelPlek.y - v.y) < 12){
-          v.wacht += v.richting;
-          if (v.wacht >= aantal){ v.wacht = aantal; v.richting = -1; }
-          if (v.wacht <= 0){ v.wacht = 0; v.richting = 1; }
-        }
-        mik = doelPlek;
-      }
-      var dx = mik.x - v.x, dy = mik.y - v.y, af = Math.hypot(dx, dy);
-      if (af > 0.5){
-        v.hoek = Math.atan2(dy, dx) * 180 / Math.PI;
-        var f = Math.min(1, VLIEGSNEL * dt / af);
-        v.x += dx * f; v.y += dy * f;
-      }
-      if (v.fase === 'terug'){
-        if (af <= 6){ v.fase = 'laadt'; v.laad = herlaadtijd(t); v.laadVol = v.laad; }
-        return;
-      }
-      if (doel && af <= 16 && v.klok <= 0){
-        v.bommen--; v.klok = BOMPAUZE;
-        kogels.push({ x0:pos.x, y0:pos.y, x1:pos.x, y1:pos.y, t:0, duur:BOMVAL,
-                      schade:so.schade * (1 + (t.niveau - 1) * 0.6) * reeksbonus() * (t.kracht ? 1.5 : 1),
-                      straal:so.straal * (t.kracht ? 1.45 : 1), doel:doel, draai:0, bom:true, valt:true });
-        if (v.bommen <= 0) v.fase = 'terug';
-      }
-    });
-
-    /* ---------- de vrienden uit de Vriendenhut ----------
-       Ze lopen het pad af naar de poort toe, tot ze een fout tegenkomen of tot
-       ze aan hun leiband hangen. Wat ze tegenhouden staat stil zolang zij leven,
-       en ondertussen slaan ze erop in. Valt er een, dan komt er na een paar
-       seconden een nieuwe uit de hut. */
-    torens.forEach(function(t){
-      var so = SOORTEN[t.soort];
-      if (!so.vrienden) return;
-      if (t.thuis === undefined) t.thuis = padPlek(t.x, t.y);
-      var wil = VRIEND.aantal + (t.kracht ? 1 : 0);
-      var mijn = vrienden.filter(function(v){ return v.hut === t; }).length;
-      if ((t.uit || 0) > 0) return;                 /* hut ligt eruit, dus niemand naar buiten */
-      if (mijn >= wil){ t.vriendKlok = VRIEND.wachten * (t.kracht ? 0.7 : 1); return; }
-      if (t.vriendKlok === undefined) t.vriendKlok = 0;
-      t.vriendKlok -= dt;
-      if (t.vriendKlok > 0) return;
-      t.vriendKlok = VRIEND.wachten * (t.kracht ? 0.7 : 1);
-      var maxHp = Math.round(VRIEND.hp * (1 + (t.niveau - 1) * VRIEND.hpNiveau));
-      /* Elke vriend van dezelfde hut houdt een stukje meer afstand, anders staan
-         ze precies op elkaar en zie je er maar een. Dat is ook eerlijker: de
-         voorste vangt de klappen op en de tweede staat erachter klaar. */
-      var plek = 0;
-      while (vrienden.some(function(v){ return v.hut === t && v.eigen === plek; })) plek += 28;
-      vrienden.push({ hut:t, d:Math.max(SPAWNAF + 20, t.thuis), hp:maxHp, maxHp:maxHp,
-                      klok:0, eigen:plek, stap:toeval() * 6 });
-    });
-    vrienden.forEach(function(v){
-      if (torens.indexOf(v.hut) < 0){ v.hp = 0; return; }   /* hut weggehaald */
-      var grens = Math.max(SPAWNAF + 20, v.hut.thuis - VRIEND.leiband + (v.eigen || 0));
-      var q = positie(v.d);
-      /* Alles wat tegen hem aan loopt staat stil zolang hij leeft, en alles
-         wat stilstaat slaat op hem in. Hij slaat zelf terug op de voorste. */
-      var tegen = null, klappen = 0;
-      vijanden.forEach(function(e){
-        if (e.dood) return;
-        if (e.d < v.d - 18 || e.d > v.d + 22) return;
-        /* vasthouden: elke tik opnieuw, dus zodra de vriend valt loopt alles door */
-        e.stop = Math.max(e.stop || 0, 0.12);
-        if (!tegen) tegen = e;
-        klappen += VRIEND.klap * (e.baas ? VRIEND.baasklap : 1);
-        if (e.camo){
-          e.camo = false;
-          cijfers.push({ x:q.x, y:q.y - 32, tekst:'ontdekt', leven:0.9, kleur:'#2f7d52' });
-        }
-      });
-      if (tegen){
-        v.klok -= dt;
-        if (v.klok <= 0){
-          v.klok = VRIEND.tempo;
-          raakVijand(tegen, VRIEND.schade * (1 + (v.hut.niveau - 1) * 0.6) * reeksbonus(), false);
-          v.slag = 0.22;
-        }
-        v.hp -= klappen * (1 + bank.ronde * 0.03) * dt;
-      } else if (v.d > grens){
-        v.d = Math.max(grens, v.d - VRIEND.snelheid * dt);
-      } else if (v.d < grens){
-        v.d += VRIEND.snelheid * dt;
-      }
-      if (v.slag > 0) v.slag -= dt;
-    });
-    vrienden.forEach(function(v){
-      if (v.hp > 0) return;
-      var q = positie(v.d);
-      for (var i = 0; i < 6; i++){
-        var h = toeval() * Math.PI * 2, sn = 25 + toeval() * 45;
-        pluis.push({ x:q.x, y:q.y, vx:Math.cos(h)*sn, vy:Math.sin(h)*sn, leven:0.4, kleur:'#3f8f5c' });
-      }
-    });
-    vrienden = vrienden.filter(function(v){ return v.hp > 0; });
-
-    torens.forEach(function(t){
-      var so = SOORTEN[t.soort];
-      if (!so.golf || (t.uit || 0) > 0) return;
-      var wacht = Math.max(6, so.golftijd - (t.niveau - 1) * 4) * (t.kracht ? 0.5 : 1);   /* versterken en Onweer laden hem sneller */
-      if (t.golfKlok === undefined) t.golfKlok = wacht;
-      t.golfKlok -= dt;
-      if (t.golfKlok > 0) return;
-      var bereik2 = so.bereik + (t.niveau - 1) * 18;
-      var raakbaar = vijanden.filter(function(e){
-        if (e.dood || !ziet(t, e)) return false;
-        var q = positie(e.d);
-        return Math.hypot(q.x - t.x, q.y - t.y) <= bereik2;
-      });
-      /* alleen afgaan als er iets te raken valt */
-      if (!raakbaar.length) return;
-      t.golfKlok = wacht;
-      var kracht = so.golf * (1 + (t.niveau - 1) * 0.6) * reeksbonus();
-      raakbaar.forEach(function(e){ raakVijand(e, kracht, false); });
-      golven.push({ x:t.x, y:t.y, r:bereik2, leven:0.55, kleur:so.kleur, dik:true });
-      melding2('De Tonkla Toren laat een schokgolf los en raakt ' + raakbaar.length +
-        (raakbaar.length === 1 ? ' fout.' : ' fouten.'));
-    });
-
-    torens.forEach(function(t){
-      var s = SOORTEN[t.soort];
-      /* Deze twee doen hun werk hierboven al en hebben geen loop. */
-      if (s.bommen || s.vrienden) return;
-      var bereik = s.bereik + (t.niveau-1) * 18,
-          schade = s.schade * (1 + (t.niveau-1) * 0.6) * reeksbonus();
-      if (sleep && sleep.toren === t) return;
-      if ((t.uit || 0) > 0) return;      /* ligt eruit door een bananenschil */
-      t.klok -= dt;
-      if (t.klok > 0) return;
-      var p = t, doel = null, verst = -1, doelPos = null;
-      vijanden.forEach(function(e){
-        if (e.dood || !ziet(t, e)) return;
-        var pos = positie(e.d);
-        if (Math.hypot(pos.x - p.x, pos.y - p.y) <= bereik && e.d > verst){ doel = e; verst = e.d; doelPos = pos; }
-      });
-      if (!doel) return;
-      /* Dubbelloop halveert de laadtijd van het kanon; hitte van de Magmakoning maakt alles trager. */
-      t.klok = s.tempo * (t.kracht && t.soort === 'kanon' ? 0.5 : 1) * ((t.heet || 0) > 0 ? 1.6 : 1);
-      /* Kopschot van de scherpschutter telt driedubbel tegen een baas, de Torpedo dubbel. */
-      if (t.kracht && t.soort === 'schutter' && doel.baas) schade *= 3;
-      if (t.kracht && t.soort === 'onderzeeer' && doel.baas) schade *= 1.6;
-      t.mikt = Math.atan2(doelPos.y - p.y, doelPos.x - p.x) * 180 / Math.PI;
-      t.terugslag = 1;
-
-      /* De pekelpot raakt alles binnen bereik tegelijk, de rest maar een doel.
-         De Kanonneerboot met Breedzij neemt de drie voorste. */
-      var geraakt = s.vlak
-        ? vijanden.filter(function(e){
-            if (e.dood || !ziet(t, e)) return false;
-            var q = positie(e.d);
-            return Math.hypot(q.x - p.x, q.y - p.y) <= bereik;
-          })
-        : (t.kracht && t.soort === 'schip')
-          ? vijanden.filter(function(e){
-              if (e.dood || !ziet(t, e)) return false;
-              var q = positie(e.d);
-              return Math.hypot(q.x - p.x, q.y - p.y) <= bereik;
-            }).sort(function(a, b){ return b.d - a.d; }).slice(0, 3)
-          : [doel];
-
-      if (t.soort === 'mortier'){
-        /* De Magmamortier slingert een klomp lava in een boog; bij de inslag
-           krijgt alles in de buurt de klap en blijft er een plas liggen. */
-        kogels.push({ x0:p.x, y0:p.y, x1:doelPos.x, y1:doelPos.y, t:0, duur:0.55,
-                      schade:schade, doel:doel, draai:toeval() * 360, lava:true,
-                      straal:s.straal * (t.kracht ? 1.3 : 1),
-                      lavaDuur:t.kracht ? 6 : 3, lavaSchade:schade * 0.25 });
-      } else if (t.soort === 'onderzeeer'){
-        /* een raket: recht op het doel af, en bij de inslag een klap eromheen */
-        kogels.push({ x0:p.x, y0:p.y, x1:doelPos.x, y1:doelPos.y, t:0, duur:0.4,
-                      schade:schade, doel:doel, draai:0, raket:true, straal:s.straal });
-      } else if (t.soort === 'dart'){
-        /* Een dartpijl: recht op het doel af, en bij de inslag gaat hij door
-           naar de fout die er het dichtst achter loopt. Met de penning telt de
-           toren zijn worpen: elke derde is een roos. Het tellen gebeurt aan
-           beide kanten van een duo hetzelfde, want beide schermen rekenen
-           dezelfde ronde uit. */
-        var roos = false;
-        if (t.kracht){ t.worp = (t.worp || 0) + 1; roos = t.worp % 3 === 0; }
-        kogels.push({ x0:p.x, y0:p.y, x1:doelPos.x, y1:doelPos.y, t:0, duur:0.22,
-                      schade:roos ? schade * 3 : schade, doel:doel, draai:0, dart:true, roos:roos });
-      } else if (t.soort === 'katapult'){
-        /* De katapult slingert een steen die een boog maakt. De schade valt pas
-           bij de inslag, want anders zie je een fout omvallen voordat de steen
-           er is. */
-        kogels.push({ x0:p.x, y0:p.y, x1:doelPos.x, y1:doelPos.y, t:0, duur:0.42,
-                      schade:schade, doel:doel, draai:toeval() * 360,
-                      brand:!!t.kracht });
-      } else {
-        geraakt.forEach(function(e){
-          /* Eenmaal in het vizier van de Scherpschutter is de verstopte fout
-             ontdekt, en dan mag de rest van het bord er ook op schieten. Zo
-             loont het om er een schutter bij te zetten in plaats van er een
-             heel bord van te bouwen. */
-          if (t.soort === 'schutter' && e.camo){
-            e.camo = false;
-            var qc = positie(e.d);
-            cijfers.push({ x:qc.x, y:qc.y - 32, tekst:'ontdekt', leven:0.9, kleur:'#2f7d52' });
-          }
-          raakVijand(e, schade * (t.kracht && t.soort === 'pekelpot' ? 1.8 : 1), t.soort === 'vertrager');
-          /* Vrieskou vertraagt sterker en langer dan gewoon. */
-          if (t.kracht && t.soort === 'vertrager'){ e.traag = 2.6; e.ijs = true; }
-          /* De Zwavelblazer zet in brand: het vuur brandt drie seconden door. */
-          if (s.brand){
-            e.brand = 3;
-            e.brandKracht = Math.max(e.brandKracht || 0, 2.4 * (1 + (t.niveau - 1) * 0.6) * reeksbonus() * (t.kracht ? 2 : 1));
-          }
-        });
-        if (s.vlak){
-          golven.push({ x:p.x, y:p.y, r:bereik, leven:0.34, kleur:s.kleur });
-        } else {
-          /* De dubbelloop schoot nog uit het midden, tussen de twee lopen door.
-             Nu wisselt hij om en om, en deinst alleen de loop terug die net
-             afging. De verschuiving staat haaks op de richting waarin hij mikt,
-             precies zover als de lopen in de tekening uit elkaar staan. */
-          var vanX = p.x, vanY = p.y;
-          if (t.kracht && t.soort === 'kanon'){
-            t.loop = t.loop ? 0 : 1;
-            var h = Math.atan2(doelPos.y - p.y, doelPos.x - p.x);
-            var kant = t.loop ? 6 : -6;
-            vanX = p.x - Math.sin(h) * kant;
-            vanY = p.y + Math.cos(h) * kant;
-          }
-          var dx = doelPos.x - vanX, dy = doelPos.y - vanY;
-          schoten.push({ x:vanX, y:vanY, len:Math.hypot(dx, dy),
-                         hoek:Math.atan2(dy, dx) * 180 / Math.PI, kleur:s.schotkleur || s.kleur,
-                         leven:0.18, dik:t.soort === 'schutter' ? 4 : 3,
-                         banaan:t.soort === 'aap', boot:t.soort === 'schip' });
-        }
-      }
-    });
-    vijanden.forEach(function(e){ if (e.flits > 0) e.flits -= dt; });
-    vijanden = vijanden.filter(function(e){
-      if (e.dood) return false;
-      /* vangnet: een fout met een kapot getal valt nooit en komt nooit aan,
-         en dan loopt de ronde niet af. Weg ermee. */
-      if (!isFinite(e.hp) || !isFinite(e.d) || !isFinite(e.snelheid)){
-        if (window.console && console.warn){
-          console.warn('vastloper weggehaald', { soort:e.soort, hp:e.hp, d:e.d, snelheid:e.snelheid, ronde:bank.ronde });
-        }
-        return false;
-      }
-      return true;
-    });
-    schoten.forEach(function(s){ s.leven -= dt; });
-    schoten = schoten.filter(function(s){ return s.leven > 0; });
-    cijfers.forEach(function(c){ c.leven -= dt; c.y -= 26 * dt; });
-    cijfers = cijfers.filter(function(c){ return c.leven > 0; });
-    pluis.forEach(function(v){ v.leven -= dt; v.x += v.vx * dt; v.y += v.vy * dt; v.vy += 90 * dt; });
-    pluis = pluis.filter(function(v){ return v.leven > 0; });
-    golven.forEach(function(g){ g.leven -= dt; });
-    golven = golven.filter(function(g){ return g.leven > 0; });
-    /* de stenen van de katapult: bij aankomst slaan ze in */
-    kogels.forEach(function(k){
-      k.t += dt / k.duur;
-      k.draai += 340 * dt;
-      if (k.t >= 1 && !k.raak){
-        k.raak = true;
-        /* Is het oorspronkelijke doel al gevallen, dan raakt de steen wie er nu
-           op die plek loopt. Hij komt daar tenslotte toch neer. */
-        var slachtoffer = (k.doel && !k.doel.dood && !(k.doel.onder > 0)) ? k.doel : null;
-        if (!slachtoffer){
-          var kortst = 30;
-          vijanden.forEach(function(e){
-            if (e.dood || e.camo || e.onder > 0) return;
-            var q = positie(e.d);
-            var d = Math.hypot(q.x - k.x1, q.y - k.y1);
-            if (d < kortst){ kortst = d; slachtoffer = e; }
-          });
-        }
-        if (k.brand || k.straal){
-          /* Alles binnen de straal van de inslag krijgt de klap. De brandbom van
-             de Apentoren doet zestig, de Bommenwerper brengt zijn eigen straal
-             mee. */
-          var straal = k.straal || 60;
-          var geraakt2 = 0;
-          vijanden.forEach(function(e){
-            if (e.dood || e.camo || e.onder > 0) return;
-            var q2 = positie(e.d);
-            if (Math.hypot(q2.x - k.x1, q2.y - k.y1) <= straal){ raakVijand(e, k.schade, false); geraakt2++; }
-          });
-          golven.push({ x:k.x1, y:k.y1, r:straal, leven:0.3, kleur:k.lava ? '#ff6a1a' : '#EA9836' });
-          if (!geraakt2) raakVijand(slachtoffer, k.schade, false);
-          if (k.lava) lavas.push({ x:k.x1, y:k.y1, r:straal * 0.8, leven:k.lavaDuur, vol:k.lavaDuur, schade:k.lavaSchade });
-        } else if (k.dart){
-          raakVijand(slachtoffer, k.schade, false);
-          /* De pijl gaat door naar de fouten die er het dichtst achter lopen:
-             normaal een, bij een roos twee, en dan ook nog van verder weg. */
-          var ver = k.roos ? 110 : 60, hoeveel = k.roos ? 2 : 1, dichtbij = [];
-          vijanden.forEach(function(e){
-            if (e === slachtoffer || e.dood || e.camo || e.onder > 0) return;
-            var q3 = positie(e.d), d3 = Math.hypot(q3.x - k.x1, q3.y - k.y1);
-            if (d3 < ver) dichtbij.push({ e:e, d:d3 });
-          });
-          dichtbij.sort(function(a, b){ return a.d - b.d; });
-          dichtbij.slice(0, hoeveel).forEach(function(x){ raakVijand(x.e, k.schade, false); });
-          /* een gouden ring bij een roos, zodat je ziet dat de derde raak was */
-          if (k.roos){
-            golven.push({ x:k.x1, y:k.y1, r:30, leven:0.28, kleur:'#EFC64A' });
-            cijfers.push({ x:k.x1, y:k.y1 - 12, tekst:'roos', leven:0.6, kleur:'#EFC64A' });
-          }
-          return;
-        } else {
-          raakVijand(slachtoffer, k.schade, false);
-        }
-        for (var i = 0; i < 5; i++){
-          var h = toeval() * Math.PI * 2, v = 25 + toeval() * 45;
-          pluis.push({ x:k.x1, y:k.y1, vx:Math.cos(h)*v, vy:Math.sin(h)*v,
-                       leven:0.32, kleur:'#9b8c72' });
-        }
-        golven.push({ x:k.x1, y:k.y1, r:26, leven:0.2, kleur:'#9b8c72' });
-      }
-    });
-    kogels = kogels.filter(function(k){ return k.t < 1; });
-    torens.forEach(function(t){ if (t.terugslag > 0) t.terugslag -= dt * 5; });
-    if (klap > 0) klap -= dt;
-    if (verlies){
-      botLog('verlies', { n:verlies });
-      if (!onsterfelijk) bank.leven -= verlies;
-      klap = 0.9; klapAantal = verlies;
-      laatKlapZien(verlies);
-      if (bank.leven <= 0){ bank.leven = 0; tekenMeters(); if (co.aan && co.lock) lockNaTik(true); einde(); return; }
-    }
-    if (co.aan && co.lock) lockNaTik(false);
-    else if (co.aan && co.rol === 'host') hostZend(dt);
+    if (!W) return;
+    botTik(0.06);
+    W.stilToren = sleep ? sleep.toren : null;
+    W.tempo = tempo; W.snel = snel;
+    W.stap();
+    spiegel();
+    if (W.fase === 'einde'){ tekenMeters(); einde(); return; }
     tekenBord(); tekenMeters();
   }
 
   /* ---------- de gastheer stuurt, de maat tekent ---------- */
-  function plat(o, extra){
-    var r = {};
-    for (var k in o){
-      var v = o[k], tp = typeof v;
-      if (tp === 'number') r[k] = Math.round(v * 100) / 100;
-      else if (tp === 'string' || tp === 'boolean') r[k] = v;
-    }
-    if (extra) extra(o, r);
-    return r;
-  }
-  /* Wat de maat nodig heeft om het bord te tekenen en even door te laten lopen:
-     per soort een vaste rij velden, zonder de namen erbij. Zo is een stand een
-     paar kilobyte in plaats van tientallen, en dat scheelt op een telefoon op
-     het schoolnetwerk het verschil tussen vloeiend en hakkelen. */
-  var VELDEN = {
-    v:['id','d','hp','maxHp','snelheid','traag','ijs','onder','soort','kleur','mark','schild','schildOp','camo','dik','brand','flits','fase','fasen','baas','baassoort','mega','mini','vorm','dood'],
-    t:['id','x','y','soort','niveau','kracht','loop','mikt','uit','heet','terugslag','golfKlok'],
-    vl:['fase','laad','laadVol'],
-    s:['x','y','hoek','len','leven','kleur','dik','banaan','boot'],
-    ko:['x0','y0','x1','y1','t','duur','draai','bom','dart','roos','lava','raket','straal','valt'],
-    go:['x','y','r','leven','kleur','dik'],
-    ci:['x','y','tekst','leven','kleur'],
-    w:['id','x','y','soort','voorraad','hoek'],
-    vr:['x','y','d','hp','maxHp','hoek','kleur','leven','slag','stap','bommen','hutId'],
-    la:['x','y','r','leven','vol'],
-    sc:['x0','y0','x1','y1','t','draai','torenId'],
-    pl:['x','y','vx','vy','leven','kleur']
-  };
-  function kort(v){ var tp = typeof v; return tp === 'number' ? Math.round(v * 10) / 10 : (tp === 'string' || tp === 'boolean') ? v : null; }
-  function inpak(lijst, velden, extra){
-    return lijst.map(function(o){
-      var r = velden.map(function(k){ return kort(o[k]); });
-      if (extra) extra(o, r);
-      return r;
-    });
-  }
-  function uitpak(rijen, velden){
-    return (rijen || []).map(function(r){
-      var o = {};
-      velden.forEach(function(k, i){ if (r[i] !== null && r[i] !== undefined) o[k] = r[i]; });
-      return o;
-    });
-  }
-  function standPakket(f){
-    vijanden.forEach(function(e){ if (!e.id) e.id = ++vijandTeller; });
-    return { k:'st', f:f || 'spel', ts:co.slagen * 60, th:thema.id, ki:KAARTEN.indexOf(kaart), pz:pauze, va:tempo * (snel ? 2 : 1),
-      gz:gekozen(), vb:vrijBijStart, vl:Object.keys(SOORTEN).filter(isVrij),
-      g:{ munten:bank.munten, leven:bank.leven, ronde:bank.ronde, wachtrij:wachtrij, rondePauze:rondePauze, slots:slots, penningen:penningen, haast:haast,
-          baasBalkIn:baasBalkIn, baasSpook:baasSpook, baasAlarm:baasAlarm, alarmMini:alarmMini, klap:klap, klapAantal:klapAantal, rondeGehaald:rondeGehaald,
-          poortFlits:poortFlits, gk:golfKeuzes },
-      bb:baasBalk ? plat(baasBalk) : null,
-      v:inpak(vijanden, VELDEN.v),
-      t:inpak(torens, VELDEN.t, function(o, r){ r.push(o.vlieger ? VELDEN.vl.map(function(k){ return kort(o.vlieger[k]); }) : null); }),
-      s:inpak(schoten, VELDEN.s), ko:inpak(kogels, VELDEN.ko), go:inpak(golven, VELDEN.go), ci:inpak(cijfers, VELDEN.ci), w:inpak(wegdingen, VELDEN.w),
-      vr:inpak(vrienden, VELDEN.vr, function(o, r){ r[r.length - 1] = o.hut ? o.hut.id : null; }),
-      la:inpak(lavas, VELDEN.la),
-      sc:inpak(schillen, VELDEN.sc, function(o, r){ r[r.length - 1] = o.toren ? o.toren.id : null; }),
-      pl:inpak(pluis.slice(-60), VELDEN.pl) };
-  }
-  function hostZend(dt){
-    var nu = Date.now();
-    if (nu - co.laatstZend < 110) return;
-    co.laatstZend = nu;
-    zendNet(standPakket());
-  }
-  /* wat de maat vraagt, met dezelfde regels als op het bord zelf */
-  function hostOntvang(d){
-    if (!d) return;
-    /* de torenkeuze van je maat komt binnen voordat het potje begint */
-    if (d.k === 'kz'){
-      co.maatKeuze = Array.isArray(d.gz) ? d.gz : null;
-      if (co.startWacht){ clearTimeout(co.startWacht); co.startWacht = 0; if (!inSpel() && vak) begin(); }
-      return;
-    }
-    if (!inSpel() || pauze) return;
-    if (co.lock){
-      if (d.k === 'in' && d.c && typeof d.c.k === 'string' && d.c.k !== 'in') co.inbox.push(d.c);
-      else if (d.k === 'val') valTerug();
-      return;
-    }
-    if (!voerUit(d)) return;
-    tekenMeters(); tekenBord();
-  }
-  /* Een opdracht uitvoeren, met dezelfde regels als op het bord zelf. In de pas
-     doen de gastheer en de maat dit allebei, in dezelfde tik. */
-  function voerUit(d){
-    if (!d) return false;
-    if (co.lock && co.rol === 'gast') spookWeg(d);
-    var t = d.id !== undefined ? torens.filter(function(x){ return x.id === d.id; })[0] : null;
-    var x = +d.x, y = +d.y, okXY = isFinite(x) && isFinite(y);
-    if (d.k === 'munt'){ var w = Math.max(0, Math.min(500, d.w | 0)); bank.munten += w; if (w) laatMuntZien(w); if (co.lock && typeof d.goed === 'boolean') vuur = d.goed ? vuur + 1 : Math.floor(vuur / 2); }
-    else if (d.k === 'bouw' && okXY){
-      var so = SOORTEN[d.soort];
-      if (!so || !past(d.soort) || (gekozen().indexOf(d.soort) < 0 && !so.speciaal)) return false;
-      if (so.slot === 'tonkla' && bank.ronde < TONKLARONDE) return false;
-      var prijs = prijsVan(d.soort);
-      if (bank.munten < prijs || torens.length >= maxTorens() || !magHier(x, y, null, d.soort)) return false;
-      bank.munten -= prijs; laatMuntZien(-prijs);
-      torens.push({ x:x, y:y, soort:d.soort, niveau:1, klok:0, id:++torenTeller });
-    }
-    else if (d.k === 'sterker' && t){
-      if (t.niveau >= MAXNIVEAU) return false;
-      var kosten = Math.round(SOORTEN[t.soort].prijs * 0.8 * t.niveau);
-      if (bank.munten < kosten) return false;
-      bank.munten -= kosten; laatMuntZien(-kosten); t.niveau++;
-    }
-    else if (d.k === 'weg' && t){
-      var terug = Math.round(SOORTEN[t.soort].prijs * 0.5 * t.niveau);
-      bank.munten += terug; laatMuntZien(terug);
-      torens = torens.filter(function(q){ return q !== t; });
-    }
-    else if (d.k === 'zet' && t && okXY){ if (magHier(x, y, t, t.soort)){ t.x = x; t.y = y; } }
-    else if (d.k === 'kracht' && t){ if (penningen > 0 && !t.kracht){ penningen--; t.kracht = true; } }
-    else if (d.k === 'wegding' && okXY){
-      var w2 = WEGDING[d.soort];
-      if (!w2 || wegdingen.length >= MAXWEG || bank.munten < w2.prijs || !magOpWeg(x, y, null)) return false;
-      bank.munten -= w2.prijs; laatMuntZien(-w2.prijs);
-      wegdingen.push({ x:x, y:y, soort:d.soort, id:++wegTeller, voorraad:w2.voorraad || 0, klok:0, hoek:padHoek(x, y) });
-    }
-    else if (d.k === 'dingweg'){
-      var ding = wegdingen.filter(function(q){ return q.id === d.id; })[0];
-      if (ding){ var t2 = Math.round(WEGDING[ding.soort].prijs * 0.5); bank.munten += t2; laatMuntZien(t2); wegdingen = wegdingen.filter(function(q){ return q !== ding; }); }
-    }
-    else if (d.k === 'slot'){ koopSlotNu(); }
-    else if (d.k === 'ronde'){ rondeNu(); }
-    else return false;
-    return true;
-  }
-  /* Terugvallen op het doorsturen van de stand, als de pas niet meer klopt. */
-  function valTerug(){
-    if (!co.lock) return;
-    co.lock = false;
-    if (co.rol === 'host'){ co.inbox.splice(0).forEach(voerUit); co.laatstZend = 0; }
-    else { co.buf = []; co.verschil = null; co.getoond = null; co.gehad = false; zendNet({ k:'val' }); }
-    melding2('Even uit de pas geraakt; de gastheer stuurt het bord nu door.');
-  }
-  /* Na elke tik: de gastheer stuurt om de twee tikken welke opdrachten erin
-     zaten (en af en toe een vingerafdruk), de maat vergelijkt zijn
-     vingerafdruk. Elke tik een bericht is zestien per seconde, op 2x
-     drieëndertig: onder wat de kamer doorlaat sinds die grens omhoog ging,
-     en elke tik minder wachten voor de maat. */
-  var PASBUNDEL = 1;
-  function lockNaTik(nu){
-    if (co.rol !== 'host'){
-      var h = co.hashes[co.tikken];
-      if (h !== undefined){ delete co.hashes[co.tikken]; if (h !== vingerafdruk()) valTerug(); }
-      return;
-    }
-    var k = co.tikken;
-    if (!nu && k % PASBUNDEL) return;
-    var lijst = [];
-    for (var i = co.tkLaatst + 1; i <= k; i++){ lijst.push(co.log[i] || []); delete co.log[i]; }
-    if (!lijst.length && !nu) return;
-    co.tkLaatst = k;
-    var m = { k:'tk', n:k, in:lijst, va:tempo * (snel ? 2 : 1) };
-    if (k % 20 === 0) m.h = vingerafdruk();
-    var vl = Object.keys(SOORTEN).filter(isVrij).join(',');
-    if (vl !== co.vlLaatst){ co.vlLaatst = vl; m.vl = vl.split(','); }
-    zendNet(m);
-  }
-  /* De maat in de pas: hij loopt een paar tikken achter de gastheer aan en
-     doet per beeld hoogstens drie tikken, zodat hij na een hik weer bijkomt. */
-  function gastStap(){
-    if (!co.opzet || !inSpel()) return;
-    /* Per beeld evenveel tikken als de gastheer (een, of twee op 2x snel).
-       Alleen wie te ver achterloopt (na een hik) doet er een extra, en wie
-       geen bevestigde tik meer heeft wacht even en houdt voortaan iets meer
-       voorraad aan. */
-    var basis = Math.max(1, Math.min(3, Math.round(co.vaart) || 1));
-    var mag = co.bevestigd - co.reserve - co.tikken;
-    var doen = mag >= basis + 12 ? basis + 3 : mag >= basis + 4 ? basis + 1 : mag >= basis ? basis : mag >= 1 ? 1 : 0, gedaan = 0;
-    /* Een echte stilstand (twee tikken op rij zonder voorraad) betekent
-       voortaan een tik meer voorraad, tot een halve seconde. Loopt het daarna
-       vijf seconden zonder hik, dan gaat er weer een tik af: anders bleef de
-       maat de rest van het potje achterlopen om een hik die allang voorbij is. */
-    var nu = performance.now();
-    if (!doen && co.bevestigd > 0 && !pauze){
-      co.droog = (co.droog || 0) + 1;
-      if (co.droog >= 2 && co.reserve < 8){ co.reserve++; co.droog = 0; co.vlotSinds = nu; }
-    } else if (doen){
-      co.droog = 0;
-      if (!co.vlotSinds) co.vlotSinds = nu;
-      else if (co.reserve > 2 && nu - co.vlotSinds > 5000){ co.reserve--; co.vlotSinds = nu; }
-    }
-    /* onthouden waar iedereen stond, zodat het scherm ertussenin kan schuiven */
-    if (doen){
-      for (var v = 0; v < vijanden.length; v++) vijanden[v].dVorig = vijanden[v].d;
-      tikTijd = performance.now();
-    }
-    while (gedaan < doen){
-      tekenUit = (gedaan < doen - 1);
-      tik(); gedaan++;
-      if (!inSpel()) break;
-    }
-    tekenUit = false;
-  }
+  var VELDEN = TORENMOTOR.VELDEN, uitpak = TORENMOTOR.uitpak;
   function gastStart(){
     if (klok){ clearInterval(klok); klok = null; }
-    ['snelBtn', 'pauzeBtn'].forEach(function(id){ var k = document.getElementById(id); if (k) k.classList.add('hide'); });
     if (co.gastKlok) clearInterval(co.gastKlok);
     co.gastFn = null;
     co.gehad = false; if (!co.lock) co.vrij = null; co.gastLaatst = Date.now(); co.buf = []; co.verschil = null; co.getoond = null;
     var gastTik = function(){
-      if (co.lock){ gastStap(); return; }
       var nu = Date.now(), dt = Math.min(0.2, (nu - co.gastLaatst) / 1000);
       co.gastLaatst = nu;
       pols += dt;
       if (klap > 0) klap = Math.max(0, klap - dt);
+      botTik(dt);
+      /* onthouden waar iedereen stond, zodat het scherm ertussenin kan schuiven */
+      for (var v = 0; v < vijanden.length; v++) vijanden[v].dVorig = vijanden[v].d;
+      tikTijd = performance.now();
       if (co.gehad) gastLoopt(dt);
       tekenBord(); tekenMeters();
     };
@@ -6118,7 +5003,6 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       return;
     }
     if (d.k !== 'st') return;
-    if (co.lock) valTerug();
     if (d.f === 'einde'){ co.buf = []; pasStandToe(d); return; }
     var aan = Date.now(), ts = +d.ts || aan;
     /* De gastheer stuurt zijn tiknummer mee (zestig ms per tik), niet zijn
@@ -6175,16 +5059,29 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     baasBalkIn = g.baasBalkIn; baasSpook = g.baasSpook; baasAlarm = g.baasAlarm; alarmMini = !!g.alarmMini;
     klap = g.klap; klapAantal = g.klapAantal; rondeGehaald = g.rondeGehaald; poortFlits = g.poortFlits;
     if (g.gk) golfKeuzes = g.gk;
+    if (g.bk) baasKeuzes = g.bk;
+    if (typeof g.vuur === 'number') vuur = g.vuur;
+    if (typeof g.laatsteDoor === 'string') laatsteDoor = g.laatsteDoor;
+    if (typeof g.baasBij === 'number'){ baasBijWachtrij = g.baasBij; miniBijWachtrij = g.miniBij; }
+    co.pakketten = (co.pakketten || 0) + 1;
+    /* een spook is klaar zodra de kamer de opdracht verwerkt kan hebben */
+    spoken = spoken.filter(function(sp){ return co.pakketten - sp.pk < 3; });
     if (d.gz) keuzeTorens[thema.id] = d.gz;
     if (d.vb) vrijBijStart = d.vb;
     if (d.vl) co.vrij = d.vl;
+    /* wat op het gedeelde bord vrijkomt, blijft ook hier vrij */
+    (d.vl || []).forEach(function(id){ var so = SOORTEN[id]; if (so && so.speciaal && !slotVrij(so.slot)) vrijMaak(so.slot); });
     baasBalk = d.bb || null;
     co.laatstePakket = Date.now();
     co.vaart = d.va > 0 ? d.va : 1;
+    if (co.aan && snel !== (co.vaart >= 2)) zetSnel(co.vaart >= 2);
     if (!!d.pz !== co.pauze){
       co.pauze = pauze = !!d.pz;
       document.body.classList.toggle('gepauzeerd', pauze);
-      if (!pauze) sleep = null;
+      var pk2 = document.getElementById('pauzeBtn');
+      pk2.textContent = pauze ? 'Verder spelen' : 'Pauze'; pk2.classList.toggle('aan', pauze); pk2.setAttribute('aria-pressed', pauze ? 'true' : 'false');
+      if (!pauze) sleep = null; else { sleep = null; menu = null; verplaats = null; }
+      tekenVraag();
     }
     vijanden = uitpak(d.v, VELDEN.v);
     vijanden.forEach(function(e){ e.dA = e.d; });
@@ -6234,13 +5131,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       /* onthouden waar iedereen stond, zodat het scherm ertussenin kan schuiven */
       for (var v = 0; v < vijanden.length; v++) vijanden[v].dVorig = vijanden[v].d;
       tikTijd = performance.now();
-      var stappen = tempo * (snel ? 2 : 1);
-      for (var i = 0; i < stappen; i++){
-        tekenUit = (i < stappen - 1);
-        tik();
-        if (!klok) break;          /* het spel kan tijdens deze lus eindigen */
-      }
-      tekenUit = false;
+      tik();
     };
     /* met de werker is 'klok' alleen een kenmerk (groot getal, zodat clearInterval nooit een echte timer raakt) */
     klok = klokWerker ? 1000000000 + (++klokNr) : setInterval(klokStap, 60);
@@ -6256,7 +5147,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   var beeldDuur = 16, vorigBeeld = 0, laatsteTeken = 0;
   (function beeldLus(nu){
     requestAnimationFrame(beeldLus);
-    var maatInPas = co.aan && co.rol === 'gast' && co.lock && co.gastKlok;
+    var maatInPas = co.aan && co.gastKlok;
     if (!(klok || maatInPas) || pauze || !inSpel()){ vorigBeeld = 0; return; }
     nu = nu || performance.now();
     if (vorigBeeld) beeldDuur = beeldDuur * 0.9 + (nu - vorigBeeld) * 0.1;
@@ -6272,7 +5163,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     laatsteTeken = nu;
   })();
   function zetPauze(aan){
-    if (co.aan && co.rol === 'gast') return;
+    if (co.aan){ if (inSpel()) zendNet({ k:'pz', aan:!!aan }); return; }
     aan = !!aan;
     if (!inSpel()) aan = false;
     if (aan === pauze) return;
@@ -6289,7 +5180,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       startKlok();
     }
     tekenVraag(); tekenMeters(); tekenBord();
-    if (co.aan && co.rol === 'host') zendNet(co.lock ? { k:'pz', aan:pauze } : standPakket());
+    if (W) W.pauze = pauze;
   }
 
   /* ---------- beginnen en eindigen ---------- */
@@ -6365,38 +5256,17 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   }
 
   function begin(){
-    if (co.aan && co.lock && co.rol === 'gast' && co.opzet){
-      thema = THEMAS.filter(function(x){ return x.id === co.opzet.th; })[0] || thema;
-      kaart = KAARTEN[co.opzet.ki] || KAARTEN[0]; PAD = kaart.pad; PADLENGTE = padlengte(); ACHTERGROND = null; EILANDEN = null;
-      zaai(co.opzet.seed);
-    } else if (campagne !== null && !co.aan){
+    if (campagne !== null && !co.aan){
       var cp = CAMPAGNE[campagne];
       vorigeKaart = cp.kaart; kaart = KAARTEN[cp.kaart]; PAD = kaart.pad; PADLENGTE = padlengte(); ACHTERGROND = null;
       thema = campThema(cp);
-      co.seed = Math.floor(Math.random() * 4294967296);
-      zaai(co.seed);
-    } else {
-      kiesKaart();
-      co.seed = Math.floor(Math.random() * 4294967296);
-      zaai(co.seed);
-    }
-    co.tikken = 0; co.inbox = []; co.log = {}; co.inTicks = {}; co.bevestigd = 0; co.hashes = {}; co.reserve = 2; co.stil = 0; co.vlLaatst = ''; co.tkLaatst = 0; spoken = [];
+    } else if (!co.aan) kiesKaart();
+    co.tikken = 0; co.pakketten = 0; spoken = [];
     baasSpook = 1; baasBalkIn = 0; baasBalk = null; baasLaatst = null;
     vijanden = []; torens = []; schoten = []; pot = null; vrienden = []; vliegers = []; lavas = [];
     vrijBijStart = { tonkla:tonklaVrij, aap:aapVrij, eiland:eilandVrij, archipel:archipelVrij, vulkaan:vulkaanVrij };
     laadKeuze();
     co.samenErbij = 0;
-    if (co.aan && co.lock && co.rol === 'gast' && co.opzet){
-      var eigenLijst = gekozen().slice();
-      keuzeTorens[thema.id] = co.opzet.gz || eigenLijst;
-      vrijBijStart = co.opzet.vb || vrijBijStart;
-      co.vrij = co.opzet.vl || null;
-      co.samenErbij = keuzeTorens[thema.id].filter(function(id){ return eigenLijst.indexOf(id) < 0; }).length;
-    } else if (co.aan && co.lock && co.rol === 'host' && co.maatKeuze){
-      var voor = gekozen().length;
-      keuzeTorens[thema.id] = samenKeuze(gekozen(), co.maatKeuze);
-      co.samenErbij = keuzeTorens[thema.id].length - voor;
-    }
     cijfers = []; pluis = []; golven = []; kogels = []; wegdingen = []; schillen = [];
     baasKeuzes = {}; golfKeuzes = {};
     wachtrij = 5; spawnKlok = 0; rondePauze = 2;
@@ -6418,31 +5288,30 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     document.getElementById('scherm-start').classList.add('hide');
     document.getElementById('scherm-einde').classList.add('hide');
     document.getElementById('scherm-spel').classList.remove('hide');
-    tekenVraag(); tekenMeters(); tekenBord();
-    if (co.aan && co.rol === 'gast') gastStart(); else { kaartMelding(); startKlok(); }
-    if (co.aan && co.lock && co.rol === 'gast') kaartMelding();
-    if (co.aan && co.lock && co.rol === 'host'){
-      zendNet({ k:'op', seed:co.seed, ki:KAARTEN.indexOf(kaart), th:thema.id, gz:gekozen(), vb:vrijBijStart, vl:Object.keys(SOORTEN).filter(isVrij) });
+    if (co.aan){
+      /* samen: de motor draait in de kamer; wij sturen wat we doen en tekenen wat terugkomt */
+      W = null;
+      gastStart();
+    } else {
+      W = TORENMOTOR.maak({ thema:thema.id, kaart:KAARTEN.indexOf(kaart), torens:gekozen(), vrij:vrijBijStart, rang:rang(), haak:HAAK });
+      W.onsterfelijk = onsterfelijk; W.tempo = tempo;
+      spiegel();
+      kaartMelding(); startKlok();
     }
+    tekenVraag(); tekenMeters(); tekenBord();
     scrollTo({ top:0, behavior:'auto' });
   }
 
   function kaartMelding(){
     melding2('Kaart: ' + kaartNaam(kaart) + (thema.plek || '') +
       (thema.water ? '. Landtorens op de eilandjes, de boten op het water.' : '. Elk potje loot een andere weg, dus kijk eerst waar de bochten liggen.'));
-    if (co.aan && co.lock){
-      setTimeout(function(){
-        melding2(co.samenErbij
-          ? 'Jullie bouwen samen uit een menu: ' + co.samenErbij +
-            (co.samenErbij === 1 ? ' toren komt' : ' torens komen') + ' van ' + co.maat + '.'
-          : 'Jullie bouwen samen uit een menu, en jullie kozen dezelfde torens.');
-      }, 3000);
+    if (co.aan){
+      setTimeout(function(){ melding2('Jullie bouwen samen uit een menu: jouw torens en die van ' + co.maat + '. De kamer rekent het bord uit voor allebei.'); }, 3000);
     }
   }
 
   function einde(){
     botLog('einde');
-    if (co.aan && co.rol === 'host' && !co.lock) zendNet(standPakket('einde'));
     if (co.gastKlok){ clearInterval(co.gastKlok); co.gastKlok = null; co.gastFn = null; }
     if (window.STRIJD) STRIJD.af({ ronde:rondeGehaald, punten:goedAantal });
     if (window.KLAS) KLAS.meld({ spel:'toren', ronde:rondeGehaald, punten:goedAantal, niveau:niveau, vak:vak }, 'eindeUit');
@@ -6644,35 +5513,10 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
            baasBijWachtrij < 0 && miniBijWachtrij < 0;
   }
 
-  document.getElementById('nuBtn').addEventListener('click', function(){
-    if (co.aan && co.lock){ opdracht({ k:'ronde' }); return; }
-    if (co.aan && co.rol === 'gast'){ zendNet({ k:'ronde' }); return; }
-    rondeNu();
-  });
+  document.getElementById('nuBtn').addEventListener('click', function(){ rondeNu(); });
   function rondeNu(){
-    if (inPauzeTussenRondes()){
-      var bonus = Math.max(5, Math.round(rondePauze * 8)) * haastKeer();
-      bank.munten += bonus;
-      laatMuntZien(bonus);
-      sprongOver = true;
-      rondePauze = 0.01;
-      melding2('Je roept de volgende ronde erbij: ' + bonus + ' munten, maar er komen ' +
-        Math.round(haastExtra() * 100) + ' procent meer fouten. Sla je de volgende pauze ook ' +
-        'over, dan verdubbelt het allebei.');
-      tekenMeters();
-      return;
-    }
-    if (!magErbijRoepen()) return;
-    /* Erbij roepen terwijl er nog een ronde loopt telt als overslaan, dus de
-       stapel van het haasten loopt gewoon door: meer munten, meer fouten. */
-    haast = Math.min(HAASTMAX + 1, haast + 1);
-    var bonus2 = Math.max(5, Math.round(24 * haastKeer()));
-    bank.munten += bonus2;
-    laatMuntZien(bonus2);
-    var voor = wachtrij;
-    rondeErbij(true);
-    melding2('Ronde ' + bank.ronde + ' komt er nu bij: ' + (wachtrij - voor) +
-      ' fouten extra boven op de ' + voor + ' die er nog aankomen, en ' + bonus2 + ' munten.');
+    if (!inPauzeTussenRondes() && !magErbijRoepen()) return;
+    stuurOpdracht({ k:'ronde' });
     tekenMeters(); tekenBord();
   }
 
@@ -6708,6 +5552,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   }
   document.getElementById('snelBtn').addEventListener('click', function(){
     if (!inSpel()) return;
+    if (co.aan){ zendNet({ k:'snel', aan:!snel }); return; }
     zetSnel(!snel);
   });
   /* P of Escape doet hetzelfde, handig als je voor de klas staat. Niet als je
@@ -6800,7 +5645,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
         Array.prototype.forEach.call(tvak.querySelectorAll('[data-tempo]'), function(x){
           x.classList.toggle('aan', x === k);
         });
-        if (klok) startKlok();
+        if (W) W.tempo = tempo;
         zetAuto();                 /* automatisch antwoorden gaat mee met het tempo */
       });
     });
@@ -6810,14 +5655,12 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     knop('testSpring', function(){
       var n = Math.max(1, Math.min(99, parseInt(document.getElementById('testRonde').value, 10) || 1));
       if (!inSpel()) return;
-      bank.ronde = n - 1;
-      vijanden = []; wachtrij = 0; rondePauze = 0.05;
-      baasBijWachtrij = -1; miniBijWachtrij = -1;
+      stuurOpdracht({ k:'test', ronde:n });
       tekenMeters(); tekenBord();
     });
 
-    knop('testMunt', function(){ bank.munten += 1000; laatMuntZien(1000); tekenMeters(); });
-    knop('testPen', function(){ penningen++; tekenMeters(); tekenBord(); });
+    knop('testMunt', function(){ stuurOpdracht({ k:'test', munten:1000 }); laatMuntZien(1000); tekenMeters(); });
+    knop('testPen', function(){ stuurOpdracht({ k:'test', penning:1 }); tekenMeters(); tekenBord(); });
 
     /* de speelbot: aan of uit, met hoeveel procent goed en hoeveel seconden per antwoord */
     function leesBot(){
@@ -6833,6 +5676,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
 
     var kOns = knop('testOnsterf', function(){
       onsterfelijk = !onsterfelijk;
+      if (W) W.onsterfelijk = onsterfelijk;
       stand(kOns, onsterfelijk);
     });
 
@@ -6862,6 +5706,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
         localStorage.setItem('lg-toren-archipel', 'ja');
         localStorage.setItem('lg-toren-vulkaan', 'ja');
       } catch (e){}
+      stuurOpdracht({ k:'test', alles:true });
       tekenThemas();
       tekenTorenkeuze();
       vulThemaKies();
@@ -6973,31 +5818,21 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     STRIJD.klaar('toren', {
       samen: true,   /* in een duel bouwen twee spelers op hetzelfde bord */
       start: function(info){
-        if (info && info.duel){ co.aan = true; co.lock = true; co.rol = info.rol === 'host' ? 'host' : 'gast'; co.maat = info.maat || 'je maat'; }
-        if (co.aan && co.rol === 'gast' && !co.opzet){
-          /* je eigen torens meesturen: jullie bouwen straks uit een menu */
-          zendNet({ k:'kz', gz:gekozen() });
-          co.wachtOp = true; return;
+        /* in een duel is niemand de gastheer: de kamer rekent, allebei tekenen ze */
+        if (info && info.duel){ co.aan = true; co.lock = false; co.rol = 'gast'; co.maat = info.maat || 'je maat'; }
+        if (co.aan){
+          /* mijn omgeving, mijn torens en wat ik al vrij heb: de kamer maakt er een bord van */
+          zendNet({ k:'kz', gz:gekozen(), th:thema.id, rang:rang(),
+                    vb:{ tonkla:tonklaVrij, aap:aapVrij, eiland:eilandVrij, archipel:archipelVrij, vulkaan:vulkaanVrij } });
         }
-        if (!inSpel() && vak){
-          /* de gastheer wacht heel even op de keuze van zijn maat; komt die
-             niet, dan begint hij met zijn eigen torens */
-          if (co.aan && co.lock && co.rol === 'host' && !co.maatKeuze && !co.startWacht){
-            co.startWacht = setTimeout(function(){
-              co.startWacht = 0;
-              if (!inSpel() && vak) begin();
-            }, 900);
-            return;
-          }
-          begin();
-        }
+        if (!inSpel() && vak) begin();
       },
       maatNaam: function(naam){ if (naam) co.maat = naam; },
-      net: function(d){ if (!co.aan) return; if (co.rol === 'host') hostOntvang(d); else gastOntvang(d); },
+      net: function(d){ if (co.aan) gastOntvang(d); },
       stand: function(){ return { ronde:bank.ronde, gehaald:rondeGehaald, leven:bank.leven, punten:goedAantal }; },
       aanval: function(n, van){
-        if (co.aan || !inSpel()) return;
-        wachtrij += n;
+        if (co.aan || !inSpel() || !W) return;
+        W.voerUit({ k:'extra', n:n }); spiegel();
         melding2((van || 'Een klasgenoot') + ' stuurt je ' + n + (n === 1 ? ' extra fout.' : ' extra fouten.'));
       }
     });
