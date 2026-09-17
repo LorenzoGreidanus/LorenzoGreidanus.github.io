@@ -6,7 +6,7 @@ Een site, twee kanten: de voorkant voor collega's en een aparte leeromgeving voo
 
 | Pad | Waarvoor |
 |---|---|
-| `index.html` | Startpagina: acht levende taferelen (grot, kleitablet, Pnyx, drukkerij, VOC-schip, Februaristaking, Apollo 11, de klas) met canvas-animatie, daarna "Vandaag in de geschiedenis" en de wereldbol |
+| `index.html` | Startpagina in dezelfde stijl als de leeromgeving: kop met de kijkdoos (de acht levende taferelen, een tegelijk, het verhaal loopt vanzelf en wisselt na een paar seconden; tik op het jaartal voor tekst en bron), drie deuren (leerling, docent, over mij), "Vandaag in de geschiedenis", de wereldbol, "Zo werk ik" en de afsluiting |
 | `over.html` | Over mij, mijn aanpak, materiaal en contact |
 | `404.html` | Foutpagina |
 | `nieuw.html` | Wat is nieuw: de veranderingen op de site voor collega's, nieuwste bovenaan |
