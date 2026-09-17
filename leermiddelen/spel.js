@@ -163,7 +163,7 @@ window.SPEL = (function(){
     });
     /* bij de klas melden, als deze leerling een klascode heeft */
     if (o.klas !== false && o.spel && window.KLAS && KLAS.lees()){
-      KLAS.meld({ spel:o.spel, ronde:o.ronde | 0, punten:o.punten | 0, niveau:o.niveau || '', vak:o.vak || '' }, 'eindMeta');
+      KLAS.meld({ spel:o.spel, ronde:o.ronde | 0, punten:o.punten | 0, niveau:o.niveau || '', vak:o.vak || '', od:o.od || undefined }, 'eindMeta');
     }
     return kaart;
   }

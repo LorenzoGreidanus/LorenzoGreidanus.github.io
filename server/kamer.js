@@ -44,6 +44,21 @@ const KLAS_MAX = 3000;                        /* hoogstens zoveel gemelde potjes
 /* spellen zonder kamer die wel bij een klas melden */
 const KLAS_SPELLEN = { race: "Vragenrace", klasquiz: "Klasquiz", rekenen: "Rekenrace", balans: "De balans", werkwoorden: "Werkwoordrace", irregular: "Irregular verbs", vlaggen: "Vlaggen", landenvormen: "Landenvormen", topografie: "Topografie", lichaam: "Het lichaam", tijdvakken: "Tijdvakken sorteren", bronnenlab: "Bronnenlab", jagers: "Blijven of doorlopen", feodalisme: "Feodalisme", leenmannen: "Verdeel je rijk", stad: "Bouw je stad", handel: "De handelsroute", vergadering: "De vergadering", zinsbouw: "Zinsbouw", tekstdetective: "De tekstdetective", uitverkoop: "De uitverkoop", breukenbakker: "De breukenbakker" };
 
+/* per onderdeel [goed, gesteld]: hoogstens dertig onderdelen, korte namen, kleine getallen */
+function schoonOd(od){
+  if (!od || typeof od !== "object") return undefined;
+  const uit = {}; let n = 0;
+  for (const k of Object.keys(od)){
+    if (n >= 30) break;
+    const naam = schoon(k, 40), w = od[k];
+    if (!naam || !Array.isArray(w)) continue;
+    const goed = getal(w[0], 500), tot = getal(w[1], 500);
+    if (tot <= 0 || goed > tot) continue;
+    uit[naam] = [goed, tot]; n++;
+  }
+  return n ? uit : undefined;
+}
+
 function json(obj, status){
   return new Response(JSON.stringify(obj), { status: status || 200,
     headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
@@ -722,7 +737,9 @@ export class Kamer extends DurableObject {
   ranglijst(){
     return Object.keys(this.stand.spelers).map(sid => {
       const sp = this.stand.spelers[sid], a = sp.antw[this.stand.i] || {};
-      return { sid: sp.pid, naam: sp.naam, av: sp.av || "", score: sp.score, delta: a.delta || 0, goed: !!a.goed, aantalGoed: Object.keys(sp.antw).filter(k => sp.antw[k] && sp.antw[k].goed).length, aan: this.aanwezig(sid) };
+      const od = {};
+      Object.keys(sp.antw).forEach(k => { const q = this.stand.vragen[k], a2 = sp.antw[k]; if (!q || !a2 || a2.goed === undefined) return; const o = q.t || "overig"; od[o] = od[o] || [0, 0]; od[o][1]++; if (a2.goed) od[o][0]++; });
+      return { sid: sp.pid, naam: sp.naam, av: sp.av || "", score: sp.score, delta: a.delta || 0, goed: !!a.goed, aantalGoed: Object.keys(sp.antw).filter(k => sp.antw[k] && sp.antw[k].goed).length, od, aan: this.aanwezig(sid) };
     }).sort((a, b) => b.score - a.score || a.naam.localeCompare(b.naam))
       .map((r, i) => Object.assign(r, { rang: i + 1 }));
   }
@@ -764,7 +781,7 @@ export class Kamer extends DurableObject {
     const spel = String(inz.spel || "");
     if (!SPELLEN_STRIJD[spel] && !KLAS_SPELLEN[spel]) return json({ fout: "onbekend spel" }, 400);
     this.voegToe({ sid: sid.slice(0, 12), naam: nette(inz.naam, "Leerling"), av: schoonAv(inz.av), spel, ronde: getal(inz.ronde, 250), punten: getal(inz.punten, 5000),
-                   niveau: schoon(inz.niveau, 10), vak: schoon(inz.vak, 10), t: Date.now() });
+                   niveau: schoon(inz.niveau, 10), vak: schoon(inz.vak, 10), od: schoonOd(inz.od), t: Date.now() });
     await this.zetAlarm({ wat: "opruimen" }, KLAS_SLAAPT);
     await this.bewaar();
     return json({ ok: true, n: this.stand.resultaten.length });
@@ -793,7 +810,7 @@ export class Kamer extends DurableObject {
       const naam = nette(r && r.naam, "");
       if (!naam) continue;
       const sid = ("kq-" + naam.toLowerCase().replace(/[^a-z0-9]/g, "") + "xxxxxxxx").slice(0, 12);
-      this.voegToe({ sid, naam, av: schoonAv(r.av), spel, ronde: getal(r.ronde, 250), punten: getal(r.punten, 5000), niveau: schoon(inz.niveau, 10), vak: schoon(inz.vak, 10), t });
+      this.voegToe({ sid, naam, av: schoonAv(r.av), spel, ronde: getal(r.ronde, 250), punten: getal(r.punten, 5000), niveau: schoon(inz.niveau, 10), vak: schoon(inz.vak, 10), od: schoonOd(r.od), t });
       n++;
     }
     await this.zetAlarm({ wat: "opruimen" }, KLAS_SLAAPT);
@@ -814,7 +831,7 @@ export class Kamer extends DurableObject {
     /* kijken telt ook als gebruik, hoogstens een keer per uur bijgeschreven */
     if (Date.now() - this.stand.laatst > 3600000){ await this.zetAlarm({ wat: "opruimen" }, KLAS_SLAAPT); await this.bewaar(); }
     return json({ code: this.stand.code, naam: this.stand.naam, gemaakt: this.stand.gemaakt,
-                  resultaten: this.stand.resultaten.map(x => ({ naam: x.naam, av: x.av || "", spel: x.spel, ronde: x.ronde, punten: x.punten, niveau: x.niveau, vak: x.vak, t: x.t })) });
+                  resultaten: this.stand.resultaten.map(x => ({ naam: x.naam, av: x.av || "", spel: x.spel, ronde: x.ronde, punten: x.punten, niveau: x.niveau, vak: x.vak, od: x.od, t: x.t })) });
   }
 
   aanwezig(sid){ return this.ctx.getWebSockets(sid).length > 0; }

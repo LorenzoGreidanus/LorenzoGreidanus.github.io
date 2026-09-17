@@ -37,7 +37,7 @@ Een naburig product kan dat niet zomaar overnemen: de spellen en de vragen komen
 
 ## Capabilities and Constraints
 
-- Eenendertig spellen, 1987 vragen in één gedeelde vragenbank (waaronder de examenstof geschiedenis vmbo: staatsinrichting en Nederland en de wereld vanaf 1900), eenendertig lesbrieven.
+- Eenendertig spellen, 2283 vragen in één gedeelde vragenbank (waaronder per vak de examenstof vmbo: geschiedenis, aardrijkskunde, biologie, wiskunde, economie, maatschappijkunde en Engelse examenwoorden), eenendertig lesbrieven.
 - Statische HTML, CSS en JavaScript, één zelfstandig bestand per pagina, zonder bouwstap. Gedeelde bestanden staan in `leermiddelen/`: `basis.css`, `spel.css`, `spel.js`, `avatar.js`, `klas.js`, `rollen.js`, `profiel.js`, `bank.js`.
 - Cloudflare Workers met Durable Objects voor alles wat samen gebeurt: `Kamer` (spelkamers), `Klassement`, `Poort`, `Sets` (eigen vragensets), `Beheer`, `Profiel` (speelcodes).
 - Geen externe scripts en geen CDN's. Alles wordt zelf gehost, ook de lettertypen.
@@ -55,7 +55,7 @@ Een naburig product kan dat niet zomaar overnemen: de spellen en de vragen komen
 
 ## Evidence on Hand
 
-- 1987 vragen in `leermiddelen/bank.js`; 31 lesbrieven in `leermiddelen/lesbrieven.html`; 31 spellen in de catalogus van `leermiddelen/index.html`. De leeromgeving kent naast het niveau een leerjaar (1-2 of 3-4); in leerjaar 3-4 staat de examenstof van het vmbo bij Nederlands (De tekstdetective) en geschiedenis erbij.
+- 2283 vragen in `leermiddelen/bank.js` (negen vakken, met Economie als examenvak); 31 lesbrieven in `leermiddelen/lesbrieven.html`; 31 spellen in de catalogus van `leermiddelen/index.html`. De leeromgeving kent naast het niveau een leerjaar (1-2 of 3-4); in leerjaar 3-4 staat de examenstof van het vmbo erbij: Nederlands (De tekstdetective), geschiedenis, aardrijkskunde, biologie, wiskunde, economie, maatschappijkunde en Engelse examenwoorden. Het klasoverzicht toont per leerling per onderdeel het aandeel goed (formatief). Het Bronnenlab heeft een set van twaalf vaardigheidsbronnen.
 - Acht met de hand gebouwde taferelen op de voorpagina, met bronvermelding onder elk tafereel (bijvoorbeeld Pike e.a., Science 2012, bij de handen in de grot).
 - De Over-pagina met opleiding (tweedegraads lerarenopleiding Geschiedenis, Windesheim Zwolle), werkplek en onderwijsbasis (EDI, formatief evalueren, Positive Behavior Support).
 - **Niet aanwezig, en niet te verzinnen:** aanbevelingen van collega's, gebruikscijfers, bezoekersaantallen, namen van scholen buiten de eigen werkplek, prijzen of licenties.

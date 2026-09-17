@@ -295,7 +295,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   }
 
   /* ---------- de race ---------- */
-  var tijd = 0, punten = 0, reeks = 0, besteReeks = 0, goed = 0, fout = 0, vraag = null, geklikt = -1, klok = null, foutLijst = [], loopt = false, wachtTimer = null;
+  var tijd = 0, punten = 0, reeks = 0, besteReeks = 0, goed = 0, fout = 0, vraag = null, geklikt = -1, klok = null, foutLijst = [], loopt = false, wachtTimer = null, perOnderdeel = {};
   function tekenMeters(){
     $('mTijd').textContent = Math.max(0, Math.ceil(tijd));
     $('mPunten').textContent = punten;
@@ -321,6 +321,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     geklikt = i;
     var isGoed = i === vraag.g;
     slim.toets(isGoed);
+    if (window.KLAS) KLAS.tel(perOnderdeel, vraag.t, isGoed);
     if (isGoed){
       reeks++; goed++; besteReeks = Math.max(besteReeks, reeks);
       punten += reeks >= 3 ? 20 : 10; tijd = Math.min(DUUR + 30, tijd + 3);
@@ -342,7 +343,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   }
   function start(){
     slim.reset(niveau); pot = [];
-    tijd = DUUR; punten = 0; reeks = 0; besteReeks = 0; goed = 0; fout = 0; foutLijst = []; loopt = true; pot = [];
+    tijd = DUUR; punten = 0; reeks = 0; besteReeks = 0; goed = 0; fout = 0; foutLijst = []; loopt = true; pot = []; perOnderdeel = {};
     $('scherm-start').classList.add('hide'); $('scherm-einde').classList.add('hide'); $('scherm-spel').classList.remove('hide'); $('stopBtn').classList.remove('hide');
     tekenMeters(); volgende();
     clearInterval(klok); klok = setInterval(tik, 100);
@@ -360,7 +361,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       return '<div><b>' + schoon(q.v) + '</b><span>Goed was: ' + schoon(q.o[q.g]) + (q.u ? ' · ' + schoon(q.u) : '') + '</span></div>';
     }).join('') : '';
     SPEL.einde({ spel:'race', compact:true, waarde:punten, label:'punten', drempels:[100, 200, 350], klas:false, sleutel:vak + '-' + niveau, deelTekst:punten + ' punten', opnieuwTekst:'Nog een race', opnieuw:function(){ $('nogBtn').click(); } });
-    if (window.KLAS) KLAS.meld({ spel:'race', ronde:goed, punten:punten, niveau:niveau, vak:vak }, 'eindUit');
+    if (window.KLAS) KLAS.meld({ spel:'race', ronde:goed, punten:punten, niveau:niveau, vak:vak, od:perOnderdeel }, 'eindUit');
     scrollTo({ top:0, behavior:'auto' });
   }
   $('startBtn').addEventListener('click', start);

@@ -73,5 +73,12 @@ window.KLAS = (function(){
       })
       .catch(function(){ toon(naId, 'Melden bij de klas lukte niet: geen verbinding.'); return null; });
   }
-  return { lees:lees, zet:zet, wis:wis, wisLokaal:wisLokaal, meld:meld, sid:sid, controleer:controleer };
+  /* een tellertje per onderdeel: tel(od, 'breuken', true) -> od.breuken = [goed, gesteld] */
+  function tel(od, onderdeel, goed){
+    var k = String(onderdeel || 'overig').slice(0, 40);
+    var w = od[k] = od[k] || [0, 0];
+    w[1]++; if (goed) w[0]++;
+    return od;
+  }
+  return { lees:lees, zet:zet, wis:wis, wisLokaal:wisLokaal, meld:meld, sid:sid, controleer:controleer, tel:tel };
 })();

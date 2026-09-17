@@ -134,6 +134,28 @@ td.getal{font-variant-numeric:tabular-nums;text-align:right}
 .samen .regel small{color:var(--muted);font-size:.76rem}
 .samen .leeg{grid-column:1/-1}
 .samen span{display:block;color:var(--muted);font-size:.86rem}
+/* het rooster per onderdeel: een cel per leerling per onderdeel, kleur naar het aandeel goed */
+.rooster{overflow-x:auto;margin-top:12px;border:1px solid var(--rand);border-radius:14px}
+.rooster table{min-width:0;font-size:.88rem}
+.rooster th{white-space:normal;line-height:1.2;vertical-align:bottom;min-width:88px}
+.rooster th.naam,.rooster td.naam{position:sticky;left:0;background:var(--kaart);z-index:1;min-width:150px;white-space:nowrap}
+.rooster th.naam{background:var(--kaart2);z-index:2}
+.rooster td{padding:5px 6px}
+.rooster .cel{display:block;border-radius:9px;padding:6px 4px;text-align:center;font-weight:600;font-variant-numeric:tabular-nums;font-size:.86rem;line-height:1.1}
+.rooster .cel small{display:block;font-weight:400;font-size:.68rem;opacity:.8}
+.rooster .cel.g{background:#d7f1df;color:#155a2d}.rooster .cel.m{background:#fdebc8;color:#7a4a05}.rooster .cel.r{background:#fbd8d2;color:#8a2416}.rooster .cel.leeg{color:var(--muted);font-weight:400}
+.rooster .cel.weinig{outline:1.5px dashed rgba(20,34,76,.2);outline-offset:-1.5px}
+.rooster tr.klas td{background:var(--kaart2);font-weight:600}
+.rooster tr.klas td.naam{background:var(--kaart2)}
+:root[data-theme="dark"] .rooster .cel.g{background:#1f4a30;color:#b8ecc8}:root[data-theme="dark"] .rooster .cel.m{background:#4d3a12;color:#ffd98a}:root[data-theme="dark"] .rooster .cel.r{background:#5a2320;color:#ffc4bb}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .rooster .cel.g{background:#1f4a30;color:#b8ecc8}:root:not([data-theme="light"]) .rooster .cel.m{background:#4d3a12;color:#ffd98a}:root:not([data-theme="light"]) .rooster .cel.r{background:#5a2320;color:#ffc4bb}}
+.legenda{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:.8rem;color:var(--muted)}
+.legenda i{display:inline-block;width:12px;height:12px;border-radius:4px;vertical-align:-1px;margin-right:5px}
+.aandacht{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-top:12px}
+.aandacht div{background:var(--kaart2);border-radius:14px;padding:12px 14px;font-size:.9rem}
+.aandacht b{display:block;margin-bottom:4px}
+.aandacht span{display:block;color:var(--muted);font-size:.84rem;margin-top:2px}
+.aandacht .ok{color:var(--muted)}
 .stappen{display:grid;gap:10px;margin-top:10px}
 .stappen div{display:flex;gap:12px;align-items:flex-start}
 .stappen i{flex:0 0 28px;height:28px;border-radius:9px;background:var(--ocean);color:#fff;display:grid;place-items:center;font-style:normal;font-weight:600}
@@ -205,7 +227,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       <div class="stappen">
         <div><i>1</i><span>Ze gaan naar <b id="linkTekst">meneergreidanus.nl/leermiddelen</b>.</span></div>
         <div><i>2</i><span>Onder <b>klascode van je docent</b> vullen ze de code en een bijnaam in en tikken op koppelen. Dat hoeft maar een keer per apparaat.</span></div>
-        <div><i>3</i><span>Vanaf dan meldt elk spel zijn einduitslag hier: ronde of aantal goed, punten, niveau en vak. De uitslag van een Klasquiz zet je er zelf in, met een knop op het eindscherm van de quiz.</span></div>
+        <div><i>3</i><span>Vanaf dan meldt elk spel zijn einduitslag hier: ronde of aantal goed, punten, niveau en vak, en bij de vragenspellen ook per onderdeel hoeveel er goed ging. De uitslag van een Klasquiz zet je er zelf in, met een knop op het eindscherm van de quiz.</span></div>
       </div>
       <p class="tip" style="margin-top:12px">De bijnaam gaat door hetzelfde filter als in de Klasquiz. Spreek met de klas af welke bijnaam ze gebruiken, dan herken je iedereen.</p>
     </div>
@@ -226,6 +248,14 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     </div>
     <p class="tip" id="ovUit" style="margin-top:8px"></p>
     <div class="stap"><b>Spel</b><div class="chips" id="spelChips"></div></div>
+    <div class="stap" id="odStap">
+      <b>Per onderdeel</b>
+      <p class="tip">Welk deel van de vragen per onderdeel goed ging, per leerling en voor de hele klas. Vragenrace, Torenverdediging, Zwaardvechter en de Klasquiz tellen per onderdeel mee. Handig om te zien welk onderdeel je nog een keer moet uitleggen, en wie extra oefening nodig heeft.</p>
+      <div class="chips" id="vakChips" style="margin-top:8px"></div>
+      <div class="aandacht" id="aandacht"></div>
+      <div class="rooster" id="rooster"></div>
+      <div class="legenda" id="legenda"><span><i style="background:#d7f1df"></i>80% of meer goed</span><span><i style="background:#fdebc8"></i>50 tot 80%</span><span><i style="background:#fbd8d2"></i>onder de 50%</span><span>gestippeld: minder dan vijf vragen, dus nog weinig zeggend</span></div>
+    </div>
     <div class="stap">
       <b>Per leerling</b>
       <div class="samen" id="samen"></div>
@@ -264,10 +294,16 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
   }
   var SPELLEN = { toren:'Torenverdediging', zwaard:'Zwaardvechter', race:'Vragenrace', klasquiz:'Klasquiz', rekenen:'Rekenrace', balans:'De balans', werkwoorden:'Werkwoordrace', irregular:'Irregular verbs', vlaggen:'Vlaggen', landenvormen:'Landenvormen', topografie:'Topografie', lichaam:'Het lichaam', tijdvakken:'Tijdvakken sorteren', bronnenlab:'Bronnenlab', jagers:'Blijven of doorlopen', feodalisme:'Feodalisme', leenmannen:'Verdeel je rijk', stad:'Bouw je stad', handel:'De handelsroute', vergadering:'De vergadering', zinsbouw:'Zinsbouw', tekstdetective:'De tekstdetective', uitverkoop:'De uitverkoop', breukenbakker:'De breukenbakker' };
   var NIVEAUS = { bb:'vmbo-bb', kgt:'vmbo-kgt/tl', havo:'havo', vwo:'vwo' };
-  var VAKKEN = { reken:'Rekenen', ned:'Nederlands', eng:'Engels', ges:'Geschiedenis', aard:'Aardrijkskunde' };
+  var VAKKEN = { reken:'Rekenen', ned:'Nederlands', eng:'Engels', ges:'Geschiedenis', aard:'Aardrijkskunde', bio:'Biologie', wis:'Wiskunde', burg:'Samenleving', eco:'Economie' };
+  /* de namen van de onderdelen komen uit de vragenbank, als die geladen is */
+  function onderdeelNaam(vak, id){
+    var lijst = window.ONDERDELEN && ONDERDELEN[vak];
+    var o = lijst && lijst.filter(function(x){ return x.id === id; })[0];
+    return o ? o.naam : id;
+  }
   $('linkTekst').textContent = location.host.replace(/^www\./, '') + '/leermiddelen';
 
-  var klassen = [], huidig = null, spelFilter = '', data = null, klok = null;
+  var klassen = [], huidig = null, spelFilter = '', vakFilter = '', data = null, klok = null;
   try { klassen = JSON.parse(localStorage.getItem('lg-klas-docent') || '[]'); } catch (e){}
   if (!Array.isArray(klassen)) klassen = [];
   function bewaar(){ try { localStorage.setItem('lg-klas-docent', JSON.stringify(klassen)); } catch (e){} }
@@ -318,7 +354,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     /* per leerling per spel: het beste, hoeveel potjes, wanneer voor het laatst, en een lijntje door de tijd */
     var per = {}, avs = {};
     lijst.forEach(function(r){ var p = per[r.naam] = per[r.naam] || {}; (p[r.spel] = p[r.spel] || []).push(r); if (r.av && (!avs[r.naam] || r.t > avs[r.naam].t)) avs[r.naam] = r; });
-    function avVan(n){ return avs[n] ? avs[n].av : ''; }
+    avVan = function(n){ return avs[n] ? avs[n].av : ''; };
     var namen = Object.keys(per).sort(function(a, b){ return a.localeCompare(b, 'nl'); });
     $('samen').innerHTML = namen.length ? namen.map(function(n){
       return '<div><b class="avrij">' + (window.AVATAR ? AVATAR.svg(n, 34, avVan(n)) : '') + '<span>' + schoon(n) + '</span></b>' + Object.keys(per[n]).map(function(sp){
@@ -330,10 +366,68 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
           '<small>' + potjes.length + (potjes.length === 1 ? ' potje' : ' potjes') + ', laatst ' + wanneer(laatste.t) + trend + '</small></span>';
       }).join('') + '</div>';
     }).join('') : '<p class="leeg">Nog niets gemeld. Zodra een leerling een potje afmaakt, staat het hier.</p>';
+    tekenOnderdelen(lijst);
     $('rijen').innerHTML = lijst.length ? lijst.map(function(r){
       return '<tr><td>' + (window.AVATAR ? AVATAR.svg(r.naam, 24, r.av) : '') + schoon(r.naam) + '</td><td>' + schoon(SPELLEN[r.spel] || r.spel) + '</td><td class="getal">' + r.ronde + '</td><td class="getal">' + r.punten + '</td><td>' + schoon(NIVEAUS[r.niveau] || r.niveau || '') + '</td><td>' + schoon(VAKKEN[r.vak] || r.vak || '') + '</td><td>' + new Date(r.t).toLocaleString('nl-NL', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) + '</td></tr>';
     }).join('') : '<tr><td colspan="7" class="leeg">Nog geen potjes.</td></tr>';
   }
+
+  /* ---------- per onderdeel: het rooster en de aandachtspunten ---------- */
+  function tekenOnderdelen(lijst){
+    var met = lijst.filter(function(r){ return r.od && Object.keys(r.od).length; });
+    var vakken = {}; met.forEach(function(r){ vakken[r.vak || '?'] = true; });
+    var vakIds = Object.keys(vakken).sort();
+    if (vakFilter && !vakken[vakFilter]) vakFilter = '';
+    $('vakChips').innerHTML = vakIds.length > 1 ? [{ id:'', naam:'alle vakken' }].concat(vakIds.map(function(v){ return { id:v, naam:VAKKEN[v] || v }; })).map(function(v){
+      return '<button type="button" data-id="' + schoon(v.id) + '"' + (v.id === vakFilter ? ' class="on"' : '') + '>' + schoon(v.naam) + '</button>';
+    }).join('') : '';
+    Array.prototype.forEach.call($('vakChips').querySelectorAll('button'), function(b){ b.addEventListener('click', function(){ vakFilter = b.getAttribute('data-id'); teken(); }); });
+    if (vakFilter) met = met.filter(function(r){ return (r.vak || '?') === vakFilter; });
+    if (!met.length){
+      $('aandacht').innerHTML = '';
+      $('rooster').innerHTML = '<p class="leeg">Nog geen potjes met een telling per onderdeel. Die komt mee zodra een leerling een Vragenrace, Torenverdediging of Zwaardvechter afmaakt, of als je een Klasquiz meldt.</p>';
+      $('legenda').classList.add('hide');
+      return;
+    }
+    $('legenda').classList.remove('hide');
+    /* kolommen: vak + onderdeel; rijen: leerlingen; cel: goed en gesteld opgeteld over alle potjes */
+    var kol = {}, per = {}, klas = {};
+    met.forEach(function(r){
+      Object.keys(r.od).forEach(function(id){
+        var w = r.od[id]; if (!w || !(w[1] > 0)) return;
+        var k = (r.vak || '?') + '|' + id;
+        kol[k] = kol[k] || { vak:r.vak || '?', id:id, naam:onderdeelNaam(r.vak, id) };
+        var p = per[r.naam] = per[r.naam] || {}; var c = p[k] = p[k] || [0, 0]; c[0] += w[0]; c[1] += w[1];
+        var kc = klas[k] = klas[k] || [0, 0]; kc[0] += w[0]; kc[1] += w[1];
+      });
+    });
+    var kols = Object.keys(kol).sort(function(a, b){ return (klas[a][0] / klas[a][1]) - (klas[b][0] / klas[b][1]); });
+    var namen = Object.keys(per).sort(function(a, b){ return a.localeCompare(b, 'nl'); });
+    function cel(c){
+      if (!c) return '<span class="cel leeg">–</span>';
+      var p = Math.round(c[0] / c[1] * 100), kl = p >= 80 ? 'g' : p >= 50 ? 'm' : 'r';
+      return '<span class="cel ' + kl + (c[1] < 5 ? ' weinig' : '') + '" title="' + c[0] + ' van ' + c[1] + ' goed">' + p + '%<small>' + c[0] + '/' + c[1] + '</small></span>';
+    }
+    var kop = '<tr><th class="naam">Leerling</th>' + kols.map(function(k){ return '<th>' + (vakFilter ? '' : '<small>' + schoon(VAKKEN[kol[k].vak] || kol[k].vak) + '</small><br>') + schoon(kol[k].naam) + '</th>'; }).join('') + '</tr>';
+    var klasRij = '<tr class="klas"><td class="naam">Hele klas</td>' + kols.map(function(k){ return '<td>' + cel(klas[k]) + '</td>'; }).join('') + '</tr>';
+    var rijen = namen.map(function(n){
+      return '<tr><td class="naam">' + (window.AVATAR ? AVATAR.svg(n, 22, avVan(n)) : '') + schoon(n) + '</td>' + kols.map(function(k){ return '<td>' + cel(per[n][k]) + '</td>'; }).join('') + '</tr>';
+    }).join('');
+    $('rooster').innerHTML = '<table><thead>' + kop + '</thead><tbody>' + klasRij + rijen + '</tbody></table>';
+    /* aandachtspunten: de zwakste onderdelen van de klas en wie er per onderdeel onder de helft zit */
+    var zwak = kols.filter(function(k){ return klas[k][1] >= 8 && klas[k][0] / klas[k][1] < 0.6; }).slice(0, 4);
+    var html = zwak.map(function(k){
+      var wie = namen.filter(function(n){ var c = per[n][k]; return c && c[1] >= 3 && c[0] / c[1] < 0.5; });
+      return '<div><b>' + schoon((vakFilter ? '' : (VAKKEN[kol[k].vak] || kol[k].vak) + ': ') + kol[k].naam) + '</b>De klas heeft ' + Math.round(klas[k][0] / klas[k][1] * 100) + '% goed over ' + klas[k][1] + ' vragen.' +
+        (wie.length ? '<span>Onder de helft: ' + schoon(wie.join(', ')) + '.</span>' : '<span>Niemand valt er echt uit; het is breed nog niet gezakt.</span>') + '</div>';
+    }).join('');
+    if (!html){
+      var breed = kols.filter(function(k){ return klas[k][1] >= 8; }).length;
+      html = '<div class="ok">' + (breed ? 'Geen onderdeel waar de klas onder de 60% zit. Kijk in het rooster wie per onderdeel nog oefening nodig heeft.' : 'Nog te weinig vragen per onderdeel om iets over de klas te zeggen; vanaf acht vragen per onderdeel verschijnt hier wat aandacht vraagt.') + '</div>';
+    }
+    $('aandacht').innerHTML = html;
+  }
+  var avVan = function(){ return ''; };
 
   $('maakBtn').addEventListener('click', function(){
     var naam = $('klasNaam').value.trim();
@@ -372,8 +466,9 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
   });
   $('csvBtn').addEventListener('click', function(){
     if (!data) return;
-    var regels = [['leerling', 'spel', 'ronde of goed', 'punten', 'niveau', 'vak', 'wanneer']].concat(data.resultaten.map(function(r){
-      return [r.naam, SPELLEN[r.spel] || r.spel, r.ronde, r.punten, NIVEAUS[r.niveau] || r.niveau || '', VAKKEN[r.vak] || r.vak || '', new Date(r.t).toLocaleString('nl-NL')];
+    var regels = [['leerling', 'spel', 'ronde of goed', 'punten', 'niveau', 'vak', 'wanneer', 'per onderdeel (goed/gesteld)']].concat(data.resultaten.map(function(r){
+      var od = r.od ? Object.keys(r.od).map(function(id){ return onderdeelNaam(r.vak, id) + ' ' + r.od[id][0] + '/' + r.od[id][1]; }).join('; ') : '';
+      return [r.naam, SPELLEN[r.spel] || r.spel, r.ronde, r.punten, NIVEAUS[r.niveau] || r.niveau || '', VAKKEN[r.vak] || r.vak || '', new Date(r.t).toLocaleString('nl-NL'), od];
     }));
     var csv = '﻿' + regels.map(function(rij){ return rij.map(function(v){ return '"' + String(v).replace(/"/g, '""') + '"'; }).join(';'); }).join('\r\n');
     var a = document.createElement('a');
@@ -385,8 +480,11 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
   tekenKlassen();
   var eerst = klassen[0];
   if (eerst) kies(eerst);
+  /* de vragenbank laadt na deze pagina; dan krijgen de onderdelen hun naam */
+  window.addEventListener('load', function(){ if (data) teken(); });
 })();
 </script>
 <script src="thema.js"></script>
+<script src="bank.js" defer></script>
 </body>
 </html>
