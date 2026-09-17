@@ -1133,7 +1133,7 @@ var SPELLEN = [
 (function(){
   var vak0 = document.getElementById('profielvak'); if (!vak0 || !window.PROFIEL || !window.AVATAR) return;
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
-  var open = false, codeOpen = false, koppelOpen = false, melding = '', acc = null, accMelding = '';
+  var open = false, codeOpen = false, koppelOpen = false, melding = '', acc = null, accMelding = '', accVraag = '';
   var MSLOGO = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="0" y="0" width="7.5" height="7.5" fill="#F25022"/><rect x="8.5" y="0" width="7.5" height="7.5" fill="#7FBA00"/><rect x="0" y="8.5" width="7.5" height="7.5" fill="#00A4EF"/><rect x="8.5" y="8.5" width="7.5" height="7.5" fill="#FFB900"/></svg>';
   function naam(){ var k = window.KLAS && KLAS.lees(); return k ? k.naam : 'jij'; }
   function spec(){ return PROFIEL.avatar(); }
@@ -1181,6 +1181,8 @@ var SPELLEN = [
         html += '<a class="ms" href="' + PROFIEL.inlogAdres() + '" id="pfMs">' + MSLOGO + 'Inloggen met Microsoft</a>' +
           '<small>Niet nodig, wel handig: dan hoef je geen speelcode te onthouden. Met je schoolaccount of een Microsoft-account; de site ziet geen wachtwoord en geen e-mail.</small>';
       }
+      if (accVraag) html += '<small><b>Op dit apparaat staat al speelcode ' + schoon(accVraag) + '. Is die van jou?</b></small>' +
+        '<button type="button" class="klein" id="pfJaCode">Ja, die is van mij</button><button type="button" class="klein" id="pfNeeCode">Nee, geef mij een nieuwe</button>';
       if (accMelding) html += '<small><b>' + schoon(accMelding) + '</b></small>';
       html += '</div>';
     }
@@ -1213,7 +1215,22 @@ var SPELLEN = [
     });
     knop('pfUit', function(el){
       el.disabled = true;
-      PROFIEL.uitloggen().then(function(){ accMelding = 'Uitgelogd. Je speelcode staat hier nog.'; return PROFIEL.account(true); }).then(function(a){ acc = a; teken(); });
+      /* uitloggen op een gedeelde laptop: ook je speelcode en klas van dit apparaat halen; inloggen brengt ze terug */
+      PROFIEL.uitloggen().then(function(){
+        PROFIEL.wis(); if (window.KLAS && KLAS.wisLokaal) KLAS.wisLokaal();
+        accMelding = 'Uitgelogd. Je speelcode en klas zijn van dit apparaat gehaald; log in en alles staat er weer.';
+        return PROFIEL.account(true);
+      }).then(function(a){ acc = a; teken(); });
+    });
+    knop('pfJaCode', function(el){
+      el.disabled = true; var c = accVraag;
+      PROFIEL.accountNeemCode(c).then(function(){ accVraag = ''; accMelding = 'Gekoppeld.'; return PROFIEL.account(true); })
+        .catch(function(e){ accMelding = e.message; return PROFIEL.account(true); }).then(function(a){ acc = a; teken(); });
+    });
+    knop('pfNeeCode', function(el){
+      el.disabled = true;
+      PROFIEL.accountNieuweCode().then(function(){ accVraag = ''; location.reload(); })
+        .catch(function(e){ accMelding = e.message; return PROFIEL.account(true).then(function(a){ acc = a; teken(); }); });
     });
     knop('pfAccWeg', function(el){
       if (!confirm('Je Microsoft-account bij deze site weghalen? Je speelcode en je voortgang blijven bestaan; alleen de koppeling verdwijnt.')) return;
@@ -1233,6 +1250,7 @@ var SPELLEN = [
       accMelding = 'Even kijken…'; codeOpen = true;
       PROFIEL.accountAfstemmen().then(function(r){
         if (r.nieuw){ location.reload(); return; }
+        if (r.vraag){ accVraag = r.code; accMelding = ''; return PROFIEL.account(true).then(function(a){ acc = a; teken(); }); }
         accMelding = 'Ingelogd.'; return PROFIEL.account(true).then(function(a){ acc = a; teken(); });
       }).catch(function(e){ accMelding = 'Ingelogd, maar het koppelen lukte niet: ' + e.message; return PROFIEL.account(true).then(function(a){ acc = a; teken(); }); });
       return;

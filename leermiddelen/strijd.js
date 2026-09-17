@@ -227,7 +227,8 @@ window.STRIJD = (function(){
     tik(); telKlok = setInterval(tik, 1000);
   }
   function start(m){
-    if (gestart) return;
+    /* de kamer heeft de motor opnieuw opgebouwd: de pagina stuurt zijn uitrusting of keuze terug */
+    if (gestart){ if (m && m.herstel && hooks && hooks.herstel) hooks.herstel(); return; }
     gestart = true;
     clearInterval(telKlok);
     sluierWeg();

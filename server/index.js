@@ -33,7 +33,9 @@ function eigenSite(req, url){
     return h === url.host || /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(h) || h.replace(/^www\./, "") === url.host.replace(/^www\./, "");
   } catch (e){ return false; }
 }
-/* De poortwachter telt per adres hoe vaak er iets gemaakt of ingestuurd wordt. */
+/* De poortwachter telt per adres hoe vaak er iets gemaakt of ingestuurd wordt.
+   Een hele school zit achter één adres, dus de grenzen zijn ruim: het gaat om
+   het afremmen van een stroom, niet om een enkele klas. */
 async function magDoor(env, req, wat, per, seconden){
   try {
     const ip = req.headers.get("CF-Connecting-IP") || "?";
@@ -96,7 +98,7 @@ export default {
       }
       if (req.method === "POST"){
         if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
-        if (!await magDoor(env, req, "klassement", 12, 120)) return json({ fout: "even wachten" }, 429);
+        if (!await magDoor(env, req, "klassement", 90, 120)) return json({ fout: "even wachten" }, 429);
         let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldige inzending" }, 400); }
         return stub.fetch("https://klassement/zet", { method: "POST", body: JSON.stringify(inz) });
       }
@@ -106,7 +108,7 @@ export default {
     /* eigen vragensets van de Klasquiz: bewaren onder een code, en ophalen */
     if (p === "/api/set" && req.method === "POST"){
       if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
-      if (!await magDoor(env, req, "set", 10, 600)) return json({ fout: "even wachten met nieuwe sets" }, 429);
+      if (!await magDoor(env, req, "set", 40, 600)) return json({ fout: "even wachten met nieuwe sets" }, 429);
       let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldige set" }, 400); }
       return env.SETS.get(env.SETS.idFromName("sets")).fetch("https://sets/zet", { method: "POST", body: JSON.stringify(inz || {}) });
     }
@@ -124,7 +126,7 @@ export default {
     /* de speelcode: een profiel zonder account, acht letters */
     if (p === "/api/profiel" && req.method === "POST"){
       if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
-      if (!await magDoor(env, req, "profiel-maak", 10, 600)) return json({ fout: "even wachten met een nieuwe speelcode" }, 429);
+      if (!await magDoor(env, req, "profiel-maak", 90, 600)) return json({ fout: "even wachten met een nieuwe speelcode" }, 429);
       let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldig profiel" }, 400); }
       for (let poging = 0; poging < 4; poging++){
         const code = nieuweCode(8);
@@ -138,12 +140,12 @@ export default {
       const code = pm[1].toUpperCase();
       const stub = env.PROFIEL.get(env.PROFIEL.idFromName(code));
       if (req.method === "GET"){
-        if (!await magDoor(env, req, "profiel-lees", 30, 60)) return json({ fout: "even wachten" }, 429);
+        if (!await magDoor(env, req, "profiel-lees", 400, 60)) return json({ fout: "even wachten" }, 429);
         return stub.fetch("https://profiel/lees");
       }
       if (req.method === "PUT"){
         if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
-        if (!await magDoor(env, req, "profiel-sync", 240, 60)) return json({ fout: "even wachten" }, 429);
+        if (!await magDoor(env, req, "profiel-sync", 900, 60)) return json({ fout: "even wachten" }, 429);
         let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldig profiel" }, 400); }
         return stub.fetch("https://profiel/sync", { method: "POST", body: JSON.stringify(inz || {}) });
       }
@@ -151,13 +153,13 @@ export default {
     }
     if (p === "/api/melding" && req.method === "POST"){
       if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
-      if (!await magDoor(env, req, "melding", 6, 600)) return json({ fout: "even wachten met een volgende melding" }, 429);
+      if (!await magDoor(env, req, "melding", 40, 600)) return json({ fout: "even wachten met een volgende melding" }, 429);
       let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldige melding" }, 400); }
       return beheer().fetch("https://beheer/melding", { method: "POST", body: JSON.stringify(inz || {}) });
     }
     if (p === "/api/tel" && req.method === "POST"){
       if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
-      if (!await magDoor(env, req, "tel", 60, 60)) return json({ ok: false }, 429);
+      if (!await magDoor(env, req, "tel", 900, 60)) return json({ ok: false }, 429);
       let inz; try { inz = JSON.parse(await req.text()); } catch (e){ return json({ fout: "geen pad" }, 400); }
       return beheer().fetch("https://beheer/tel", { method: "POST", body: JSON.stringify(inz || {}) });
     }
@@ -174,7 +176,7 @@ export default {
 
     if (p === "/api/kamer" && req.method === "POST"){
       if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
-      if (!await magDoor(env, req, "kamer", 15, 600)) return json({ fout: "even wachten met nieuwe kamers" }, 429);
+      if (!await magDoor(env, req, "kamer", 90, 600)) return json({ fout: "even wachten met nieuwe kamers" }, 429);
       let opzet;
       try { opzet = await req.json(); } catch (e){ return json({ fout: "geen geldige opzet" }, 400); }
       if (!opzet || typeof opzet !== "object") return json({ fout: "geen geldige opzet" }, 400);
@@ -199,7 +201,7 @@ export default {
         if (req.method !== "POST") return json({ fout: "onbekend" }, 404);
         if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
         const wat = kl[2].slice(1);
-        if (!await magDoor(env, req, wat, wat === "meld" ? 40 : 10, 60)) return json({ fout: "even wachten" }, 429);
+        if (!await magDoor(env, req, wat, wat === "meld" ? 400 : 40, 60)) return json({ fout: "even wachten" }, 429);
         let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldige melding" }, 400); }
         return stub.fetch("https://kamer/" + wat, { method: "POST", body: JSON.stringify(inz || {}) });
       }

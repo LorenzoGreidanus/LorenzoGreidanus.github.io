@@ -157,7 +157,8 @@ export async function behandel(req, env, url, hulp){
   }
 
   if (p === "/api/account" && req.method === "GET"){
-    if (!await hulp.magDoor("account-lees", 60, 60)) return json({ fout: "even wachten" }, 429);
+    /* bij drukte (een hele klas tegelijk) toch zeggen dat inloggen kan */
+    if (!await hulp.magDoor("account-lees", 900, 60)) return json({ mogelijk: true, ingelogd: false, druk: true });
     const s = await sessie(env, req);
     if (!s) return json({ mogelijk: true, ingelogd: false });
     const r = await (await account(env, s.id)).fetch("https://account/lees");
@@ -167,14 +168,15 @@ export async function behandel(req, env, url, hulp){
   }
 
   if (p === "/api/account/inloggen" && req.method === "GET"){
-    if (!await hulp.magDoor("account-inloggen", 20, 600)) return json({ fout: "even wachten" }, 429);
+    if (!await hulp.magDoor("account-inloggen", 300, 600)) return json({ fout: "even wachten, er logt nu een hele school tegelijk in" }, 429);
     const state = willekeur(24), nonce = willekeur(24), verifier = willekeur(48);
     const challenge = b64url(await sha256(verifier));
     const terug = schoonTerug(url.searchParams.get("terug"));
     const pak = await teken(env, { state, nonce, verifier, terug, tot: Date.now() + AANMELD_SECONDEN * 1000 });
     const q = new URLSearchParams({
       client_id: env.MS_CLIENT_ID, response_type: "code", redirect_uri: terugAdres(url), response_mode: "query",
-      scope: "openid profile", state, nonce, code_challenge: challenge, code_challenge_method: "S256", prompt: "select_account"
+      /* prompt=login: altijd zelf inloggen, ook op een schoollaptop waar de vorige leerling nog bij Microsoft ingelogd is */
+      scope: "openid profile", state, nonce, code_challenge: challenge, code_challenge_method: "S256", prompt: "login"
     });
     return new Response(null, { status: 302, headers: {
       location: basis(env) + "/" + huurder(env) + "/oauth2/v2.0/authorize?" + q.toString(),
@@ -183,7 +185,7 @@ export async function behandel(req, env, url, hulp){
   }
 
   if (p === "/api/account/terug" && req.method === "GET"){
-    if (!await hulp.magDoor("account-terug", 20, 600)) return json({ fout: "even wachten" }, 429);
+    if (!await hulp.magDoor("account-terug", 300, 600)) return json({ fout: "even wachten" }, 429);
     const pak = await lees(env, koekjes(req)[AANMELD_KOEKJE]);
     const terug = pak ? pak.terug : "/leermiddelen/";
     const naar = vlag => new Response(null, { status: 302, headers: { location: url.origin + metVlag(terug, vlag),
@@ -226,7 +228,7 @@ export async function behandel(req, env, url, hulp){
 
   if (p === "/api/account/koppel" && req.method === "POST"){
     if (!hulp.eigenSite()) return json({ fout: "niet vanaf deze site" }, 403);
-    if (!await hulp.magDoor("account-koppel", 20, 60)) return json({ fout: "even wachten" }, 429);
+    if (!await hulp.magDoor("account-koppel", 200, 60)) return json({ fout: "even wachten" }, 429);
     const s = await sessie(env, req);
     if (!s) return json({ fout: "niet ingelogd" }, 401);
     let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldige code" }, 400); }

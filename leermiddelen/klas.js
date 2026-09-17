@@ -22,6 +22,8 @@ window.KLAS = (function(){
     return k;
   }
   function wis(){ try { localStorage.removeItem(SLEUTEL); } catch (e){} if (window.PROFIEL && PROFIEL.klasWeg) PROFIEL.klasWeg(); }
+  /* alleen van dit apparaat, het profiel houdt de klas (bij uitloggen op een gedeelde laptop) */
+  function wisLokaal(){ try { localStorage.removeItem(SLEUTEL); } catch (e){} }
   /* bestaat de klascode nog? Zo niet, dan valt de koppeling weg. Geeft een belofte met true/false. */
   var gecontroleerd = null;
   function controleer(){
@@ -71,5 +73,5 @@ window.KLAS = (function(){
       })
       .catch(function(){ toon(naId, 'Melden bij de klas lukte niet: geen verbinding.'); return null; });
   }
-  return { lees:lees, zet:zet, wis:wis, meld:meld, sid:sid, controleer:controleer };
+  return { lees:lees, zet:zet, wis:wis, wisLokaal:wisLokaal, meld:meld, sid:sid, controleer:controleer };
 })();

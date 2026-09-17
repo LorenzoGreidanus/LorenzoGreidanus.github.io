@@ -204,7 +204,12 @@ export class Kamer extends DurableObject {
       return new Response(null, { status: 101, webSocket: client });
     }
     if (this.strijd){
-      if (this.stand.fase === "bezig" && rol === "speler"){ this.stuur(server, this.startBericht(sid)); if (this.motor) this.stuur(server, { t: "net", d: this.motor.pakket() }); }
+      if (this.stand.fase === "bezig" && rol === "speler"){
+        /* de motor is weg (opnieuw uitgerold, of even niemand aan de lijn): opnieuw opbouwen waar ze waren */
+        const hersteld = this.stand.duel && !this.motor ? this.motorHerstel() : false;
+        this.stuur(server, Object.assign(this.startBericht(sid), hersteld ? { herstel: true } : {}));
+        if (this.motor) this.stuur(server, { t: "net", d: this.motor.pakket() });
+      }
       if (this.stand.fase === "einde") this.stuur(server, this.strijdEinde(rol === "speler" ? sid : null));
       else this.stuur(server, this.standBericht(rol === "speler" ? sid : null));
       /* een duel telt af zodra de tweede speler binnen is; samen met meer pas als de kamer vol is, of als de maker start */
@@ -385,6 +390,30 @@ export class Kamer extends DurableObject {
       if (!this.torenStart()) this.motorWacht = setTimeout(() => { this.motorWacht = null; this.torenStart(true); }, TOREN_WACHT_KEUZE);
     }
   }
+  /* De motor opnieuw opbouwen bij de ronde die de spelers het laatst meldden.
+     Zwaardvechter: de spelers sturen daarna hun uitrusting, leven en munten
+     terug (k:"herstel", een korte tijd toegestaan). Torenverdediging: een
+     nieuw bord bij die ronde, met wat extra munten voor wat er stond. */
+  motorHerstel(){
+    const st = this.stand;
+    if (!st || !st.duel || this.motor || st.fase !== "bezig") return false;
+    const ronde = Math.max(1, ...Object.keys(st.spelers).map(s => st.spelers[s].ronde | 0));
+    if (st.game === "zwaard"){
+      this.motorStart();
+      const W = this.motor; if (!W) return false;
+      if (ronde > 1){ W.ronde = ronde - 1; W.volgendeRonde(); }
+      this.motorHersteld = Date.now();
+      console.log("kamer " + st.code + ": motor Zwaardvechter hersteld bij ronde " + ronde);
+      return true;
+    }
+    if (st.game === "toren"){
+      this.motorRonde = ronde;
+      if (!this.torenStart()) this.motorWacht = setTimeout(() => { this.motorWacht = null; this.torenStart(true); }, TOREN_WACHT_KEUZE);
+      console.log("kamer " + st.code + ": bord Torenverdediging hersteld bij ronde " + ronde);
+      return true;
+    }
+    return false;
+  }
   /* ---------- de motor van Torenverdediging in de kamer ----------
      De gastheer bepaalt de omgeving en het niveau, het menu is van allebei
      (eerst de torens van de gastheer, dan die van zijn maat), en wat een van
@@ -395,7 +424,8 @@ export class Kamer extends DurableObject {
     const eerst = st.gastheer && st.spelers[st.gastheer] ? st.gastheer : sids[0];
     const lijst = [eerst].concat(sids.filter(x => x !== eerst)).slice(0, 2);
     if (lijst.length < 2) return false;
-    const a = this.motorKeuze[lijst[0]], b = this.motorKeuze[lijst[1]];
+    const bewaard = st.keuze || {};
+    const a = this.motorKeuze[lijst[0]] || bewaard[lijst[0]], b = this.motorKeuze[lijst[1]] || bewaard[lijst[1]];
     if (!a || (!b && !nu)) return false;
     const menu = [];
     (Array.isArray(a.gz) ? a.gz : []).concat(Array.isArray(b && b.gz) ? b.gz : []).forEach(id => {
@@ -404,6 +434,8 @@ export class Kamer extends DurableObject {
     const vrij = {};
     ["tonkla", "aap", "eiland", "archipel", "vulkaan"].forEach(k => { vrij[k] = !!((a.vb && a.vb[k]) || (b && b.vb && b.vb[k])); });
     const W = TORENMOTOR.maak({ thema: typeof a.th === "string" ? a.th : "plein", torens: menu, vrij, rang: RANGEN[st.niveau] || Number(a.rang) || 2 });
+    if (this.motorRonde > 1 && W.bank){ W.bank.ronde = this.motorRonde - 1; W.bank.munten += 25 * (this.motorRonde - 1); }
+    this.motorRonde = 0;
     this.motor = W; this.motorSpel = "toren"; this.motorSids = lijst; this.motorTik = 0; this.motorLeeg = 0;
     this.motorZend();
     /* zoveel tikken als er echte tijd verstreken is, en nooit meer dan drie in een keer */
@@ -495,6 +527,11 @@ export class Kamer extends DurableObject {
     } else if (d.k === "stats"){ W.zetStats(i, d.s, d.hp); }
     else if (d.k === "klaar"){ W.zetStats(i, d.s, d.hp); if (W.klaar(i)) this.motorZend(); else this.motorZend(); }
     else if (d.k === "pauze"){ W.pauze = !!d.aan; this.motorZend(); }
+    else if (d.k === "herstel" && this.motorHersteld && Date.now() - this.motorHersteld < 30000){
+      W.zetStats(i, d.s, d.hp);
+      if (typeof d.munten === "number" && isFinite(d.munten)) W.spelers[i].munten = Math.max(0, Math.min(9999, Math.round(d.munten)));
+      this.motorZend();
+    }
   }
   async duelAftellen(){
     this.stand.fase = "aftellen";
@@ -521,6 +558,7 @@ export class Kamer extends DurableObject {
       if (st.fase === "einde" || m.d === undefined) return;
       if (m.d && m.d.k === "kz" && st.game === "toren"){
         this.motorKeuze[wie.sid] = m.d;
+        st.keuze = st.keuze || {}; st.keuze[wie.sid] = m.d; this.ctx.waitUntil(this.bewaar());
         if (st.fase === "bezig" && !this.motor && this.torenStart()){ if (this.motorWacht){ clearTimeout(this.motorWacht); this.motorWacht = null; } }
         return;
       }

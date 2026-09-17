@@ -126,12 +126,21 @@ window.PROFIEL = (function(){
         return koppel(a.code).then(function(){ return { nieuw:true }; });
       }
       if (!a.code){
-        var klaar = hier ? Promise.resolve() : maak();
-        return klaar.then(function(){ return vraag('/api/account/koppel', 'POST', { code:code() }); })
-          .then(function(){ accountStand = null; return { nieuw:!hier }; });
+        /* een speelcode die hier al stond kan van een ander zijn (schoollaptop): dat vraagt de lade */
+        if (hier) return { nieuw:false, vraag:true, code:hier };
+        return maak().then(function(){ return vraag('/api/account/koppel', 'POST', { code:code() }); })
+          .then(function(){ accountStand = null; return { nieuw:true }; });
       }
       return { nieuw:false };
     });
+  }
+  /* het antwoord op die vraag: ja, die code is van mij; of nee, geef me een nieuwe */
+  function accountNeemCode(c){
+    return vraag('/api/account/koppel', 'POST', { code:c || code() }).then(function(){ accountStand = null; zeg(); });
+  }
+  function accountNieuweCode(){
+    wis();
+    return maak().then(function(){ return vraag('/api/account/koppel', 'POST', { code:code() }); }).then(function(){ accountStand = null; zeg(); });
   }
   function uitloggen(){ return vraag('/api/account/uitloggen', 'POST', {}).then(function(){ accountStand = null; zeg(); }); }
   function accountWeg(){
@@ -140,5 +149,5 @@ window.PROFIEL = (function(){
   /* bij het laden even samenvoegen, als er een code is */
   if (code() && typeof fetch === 'function'){ setTimeout(function(){ sync(); }, 1500); }
   return { lees:lees, code:code, avatar:avatar, zetAvatar:zetAvatar, maak:maak, koppel:koppel, sync:sync, wis:wis, verzamel:verzamel, op:op,
-    klasWeg:klasWeg, account:account, accountVlag:function(){ return accountVlag; }, accountAfstemmen:accountAfstemmen, inlogAdres:inlogAdres, uitloggen:uitloggen, accountWeg:accountWeg };
+    klasWeg:klasWeg, account:account, accountNeemCode:accountNeemCode, accountNieuweCode:accountNieuweCode, accountVlag:function(){ return accountVlag; }, accountAfstemmen:accountAfstemmen, inlogAdres:inlogAdres, uitloggen:uitloggen, accountWeg:accountWeg };
 })();

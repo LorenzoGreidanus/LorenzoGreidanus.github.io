@@ -1311,7 +1311,7 @@ function maak(opties){
   };
   /* de helpers die het bord en de menu's nodig hebben */
   W.positie = positie; W.padHoek = padHoek; W.padPlek = padPlek; W.afstandTotPad = afstandTotPad; W.eilanden = eilanden; W.opEiland = opEiland;
-  W.magHier = magHier; W.magOpWeg = magOpWeg; W.torenBij = torenBij; W.wegdingBij = wegdingBij; W.prijsVan = prijsVan; W.maxTorens = maxTorens;
+  W.bank = bank; W.magHier = magHier; W.magOpWeg = magOpWeg; W.torenBij = torenBij; W.wegdingBij = wegdingBij; W.prijsVan = prijsVan; W.maxTorens = maxTorens;
   W.slotPrijs = slotPrijs; W.magSlot = magSlot; W.haastKeer = haastKeer; W.haastExtra = haastExtra; W.inPauzeTussenRondes = inPauzeTussenRondes;
   W.magErbijRoepen = magErbijRoepen; W.golfVan = golfVan; W.baasVan = baasVan; W.isVrij = isVrij; W.past = past; W.gekozen = gekozen;
   W.reeksbonus = reeksbonus; W.toeval = toeval; W.bereikVan = bereikVan; W.ziet = ziet; W.foutNaam = foutNaam;
