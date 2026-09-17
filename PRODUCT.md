@@ -31,13 +31,13 @@ Een naburig product kan dat niet zomaar overnemen: de spellen en de vragen komen
 - **Digibord met de hele klas.** Klasquiz en Klasstrijd, en de rollenspellen (Stem per stand, De crisis, De vergadering van de klas, Langs de meetlat, De Conferentie van Berlijn, De Griekse wereld) waarbij leerlingen meedoen via een code op hun telefoon of laptop en het bord de rollen verdeelt.
 - **Individueel oefenen** op een laptop of telefoon, in de les of thuis.
 - **De collega die kort kijkt.** De lesbrieven vermelden per spel hoe lang het duurt en voor welk niveau het is; dat is de vraag vijf minuten voor de bel.
-- **Klascode** van vier letters, een week geldig, met een bijnaam. De docent ziet daarna in het klasoverzicht wie welk spel tot hoever haalde.
+- **Klascode** van vier letters, geldig tot de docent hem opheft, met een bijnaam. De docent ziet daarna in het klasoverzicht wie welk spel tot hoever haalde.
 - **Speelcode** van acht letters neemt voortgang mee naar een ander apparaat. Nadrukkelijk geen account.
 - Publiceren gaat door te pushen naar `Live-branch`; Cloudflare bouwt en zet live.
 
 ## Capabilities and Constraints
 
-- Drieëndertig spellen, 1684 vragen in één gedeelde vragenbank, vierendertig lesbrieven.
+- Eenendertig spellen, 1987 vragen in één gedeelde vragenbank (waaronder de examenstof geschiedenis vmbo: staatsinrichting en Nederland en de wereld vanaf 1900), eenendertig lesbrieven.
 - Statische HTML, CSS en JavaScript, één zelfstandig bestand per pagina, zonder bouwstap. Gedeelde bestanden staan in `leermiddelen/`: `basis.css`, `spel.css`, `spel.js`, `avatar.js`, `klas.js`, `rollen.js`, `profiel.js`, `bank.js`.
 - Cloudflare Workers met Durable Objects voor alles wat samen gebeurt: `Kamer` (spelkamers), `Klassement`, `Poort`, `Sets` (eigen vragensets), `Beheer`, `Profiel` (speelcodes).
 - Geen externe scripts en geen CDN's. Alles wordt zelf gehost, ook de lettertypen.
@@ -55,7 +55,7 @@ Een naburig product kan dat niet zomaar overnemen: de spellen en de vragen komen
 
 ## Evidence on Hand
 
-- 1684 vragen in `leermiddelen/bank.js`; 34 lesbrieven in `leermiddelen/lesbrieven.html`; 33 spellen in de catalogus van `leermiddelen/index.html`.
+- 1987 vragen in `leermiddelen/bank.js`; 31 lesbrieven in `leermiddelen/lesbrieven.html`; 31 spellen in de catalogus van `leermiddelen/index.html`. De leeromgeving kent naast het niveau een leerjaar (1-2 of 3-4); in leerjaar 3-4 staat de examenstof van het vmbo bij Nederlands (De tekstdetective) en geschiedenis erbij.
 - Acht met de hand gebouwde taferelen op de voorpagina, met bronvermelding onder elk tafereel (bijvoorbeeld Pike e.a., Science 2012, bij de handen in de grot).
 - De Over-pagina met opleiding (tweedegraads lerarenopleiding Geschiedenis, Windesheim Zwolle), werkplek en onderwijsbasis (EDI, formatief evalueren, Positive Behavior Support).
 - **Niet aanwezig, en niet te verzinnen:** aanbevelingen van collega's, gebruikscijfers, bezoekersaantallen, namen van scholen buiten de eigen werkplek, prijzen of licenties.

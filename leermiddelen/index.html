@@ -60,6 +60,7 @@ header{padding:12px 0;border-bottom:1px solid var(--rand);background:#fff;positi
 .niveauvak{flex:0 1 360px;width:360px;max-width:100%;min-width:0}
 .niveauvak .eyebrow{margin-bottom:6px}
 .niveaubalk{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;background:var(--kaart);border:1px solid var(--rand);border-radius:999px;padding:4px}
+.leerjaarbalk{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:6px}
 .niveauknop{background:transparent;border:none;border-radius:999px;padding:8px 10px;font-weight:600;font-size:.86rem;white-space:nowrap;
   transition:background .18s var(--ease),color .18s var(--ease)}
 .niveauknop:hover{background:var(--kaart-aan)}
@@ -128,6 +129,7 @@ header{padding:12px 0;border-bottom:1px solid var(--rand);background:#fff;positi
 .sectie{margin-top:26px}
 .sectiekop{display:flex;align-items:center;gap:12px;padding-bottom:10px;border-bottom:2px solid var(--rand);margin-bottom:14px}
 .sectiekop i{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;flex:none}
+.spel .examen{display:inline-block;margin-top:6px;font-size:.68rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#2f7d52;background:rgba(47,125,82,.12);border-radius:999px;padding:2px 8px}
 .sectiekop i svg{width:19px;height:19px;fill:none;stroke:#FBF6F1;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .sectiekop h2{font-size:1.25rem}
 .sectiekop span{font-size:.82rem;color:var(--muted);margin-left:auto;white-space:nowrap}
@@ -394,6 +396,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
     <div class="niveauvak">
       <p class="niveauregel hide" id="niveauregel"></p>
       <div class="niveaubalk hide" id="niveaubalk" role="group" aria-label="Kies je niveau"></div>
+      <div class="niveaubalk leerjaarbalk hide" id="leerjaarbalk" role="group" aria-label="Kies je leerjaar"></div>
       <p class="niveauhint hide" id="niveauhint"></p>
     </div>
   </section>
@@ -449,6 +452,15 @@ var NIVEAUS = [
   { id:'bb',  kort:'vmbo-bb',        hint:'Kortere teksten, minder keuzes en altijd een hint.' },
   { id:'kgt', kort:'vmbo-kgt en tl', hint:'De gewone versie, met een hint als je erom vraagt.' },
   { id:'hv',  kort:'havo en vwo',    hint:'Meer keuzes, minder hulp en extra verdieping.' }
+];
+/* Het leerjaar: onderbouw of bovenbouw. In de bovenbouw komt de examenstof
+   van het vmbo erbij: bij Nederlands langere examenteksten in De
+   tekstdetective, bij geschiedenis de onderdelen staatsinrichting en
+   Nederland en de wereld vanaf 1900 in Torenverdediging, Zwaardvechter, de
+   Vragenrace en de Klasquiz. */
+var LEERJAREN = [
+  { id:'12', kort:'leerjaar 1 en 2', hint:'De stof van de onderbouw.' },
+  { id:'34', kort:'leerjaar 3 en 4', hint:'Met de examenstof van het vmbo bij Nederlands en geschiedenis.' }
 ];
 
 /* ---------------------------------------------------------------------------
@@ -541,22 +553,22 @@ var SPELLEN = [
     wat:'Kies op de kaart welke polis je bestuurt: Athene, Sparta, Korinthe, Thebe, Argos, Milete of Syracuse. Elk begint anders. Veertig zetels in de vergadering. Jij brengt voorstellen in, ronselt stemmen met een redevoering of met geschenken, en ziet dan zetel voor zetel of je het haalt. Wie er mag stemmen hangt af van de bestuursvorm, en die verandert zodra een groep te lang buitengesloten blijft.',
     leer:'De polis besturen', tijd:'een kwartier of een half uur' },
 
-  { vak:['nederlands','engels','geschiedenis','aardrijkskunde','biologie','wiskunde','mens'], bestand:'race.html', naam:'Vragenrace', kleur:'#EA9836', tv:0,
+  { vak:['nederlands','engels','geschiedenis','aardrijkskunde','biologie','wiskunde','mens'], bestand:'race.html', naam:'Vragenrace', kleur:'#EA9836', tv:0, examen:true,
     ico:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 3h6"/>',
     wat:'Zestig seconden, zoveel mogelijk vragen goed. Elk goed antwoord is punten en drie seconden erbij, elk fout antwoord kost vijf seconden; vanaf drie goed op rij tellen je punten dubbel. Kaal en snel, met de uitleg bij elke fout en aan het eind de vragen om nog even na te kijken. Dezelfde vragen als in Torenverdediging en de Klasquiz, op jouw niveau.',
     leer:'Snel herhalen', tijd:'een paar minuten per race' },
 
-  { vak:['rekenen','nederlands','engels','geschiedenis','aardrijkskunde','biologie','wiskunde','mens'], bestand:'klasquiz.html', naam:'Klasquiz', kleur:'#204ECF', tv:0,
+  { vak:['rekenen','nederlands','engels','geschiedenis','aardrijkskunde','biologie','wiskunde','mens'], bestand:'klasquiz.html', naam:'Klasquiz', kleur:'#204ECF', tv:0, examen:true,
     ico:'<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/><path d="M9.5 8.5a2.5 2.5 0 0 1 5 0c0 1.5-2.5 1.8-2.5 3.5"/><circle cx="12" cy="14" r=".6" fill="#FBF6F1" stroke="none"/>',
     wat:'Met de hele klas tegelijk. De docent opent een kamer op het digibord, jij doet mee op je telefoon met een code van vier letters en een bijnaam. Elke vraag telt goed en snel, na elke vraag zie je de tussenstand op het bord. Dezelfde vragen als in Torenverdediging: rekenen, Nederlands, Engels, geschiedenis, aardrijkskunde, biologie, wiskunde en samenleving, per onderdeel en per niveau.',
     leer:'Samen quizzen', tijd:'5 tot 15 minuten' },
 
-  { vak:['rekenen','nederlands','engels','geschiedenis','aardrijkskunde','biologie','wiskunde','mens'], bestand:'strijd.html', naam:'Klasstrijd', kleur:'#F26749', tv:0,
+  { vak:['rekenen','nederlands','engels','geschiedenis','aardrijkskunde','biologie','wiskunde','mens'], bestand:'strijd.html', naam:'Klasstrijd', kleur:'#F26749', tv:0, examen:true,
     ico:'<path d="M5 19 15 9M15 9l3-3-2-2-3 3M5 19l-2 2 2 0 0-2z"/><path d="M12 13 7 8M7 8 5 10"/><circle cx="18" cy="18" r="3"/>',
     wat:'Torenverdediging op één bord of Zwaardvechter in één arena, samen met een vriend. Nodig hem uit met een code, vanuit het spel zelf, of speel met de hele klas tegelijk: de docent start iedereen op hetzelfde moment en ziet op het digibord live wie in welke ronde zit. Met zijn tweeën bouwen jullie dezelfde torens en vechten jullie in hetzelfde veld tegen dezelfde fouten; in de klasstrijd stuurt vijf goed op rij een extra fout naar de anderen. De beste partijen komen in het klassement van de hele site.',
     leer:'Tegen elkaar', tijd:'een kwartier tot een half uur' },
 
-  { vak:['rekenen','nederlands','engels','geschiedenis','aardrijkskunde','biologie','wiskunde','mens'], bestand:'toren.html', naam:'Torenverdediging', kleur:'#F26749', tv:0,
+  { vak:['rekenen','nederlands','engels','geschiedenis','aardrijkskunde','biologie','wiskunde','mens'], bestand:'toren.html', naam:'Torenverdediging', kleur:'#F26749', tv:0, examen:true,
     ico:'<path d="M5 21V8h14v13z"/><path d="M5 8V4h2.5v2h3V4h3v2h3V4H19v4"/><path d="M9.5 21v-5a2.5 2.5 0 0 1 5 0v5"/><path d="M8.5 11.5h2M13.5 11.5h2"/>',
     wat:'Er lopen fouten over het pad naar de klas. Elk goed antwoord levert munten op. Naast het pad bouw je torens, van een kanon tot een scherpschutter, en op het pad leg je pek, voetangels of een versperring. Onderweg komen er snellere fouten bij, fouten met een schild en elke tiende ronde een baas. Kies uit acht vakken: rekenen, Nederlands, Engels, geschiedenis, aardrijkskunde, biologie, wiskunde en samenleving, en per vak welk onderdeel je oefent. Bij aardrijkskunde raad je landen aan hun vlag of aan hun vorm.',
     leer:'Oefenen, elk vak', tijd:'zolang je het volhoudt' },
@@ -616,7 +628,7 @@ var SPELLEN = [
     wat:'Er licht iets op de kaart op en jij typt hoe het heet. Negen kaarten: Nederland met provincies, Waddeneilanden, hoofdsteden, rivieren of alles door elkaar, en Europa en de wereld met landen of hoofdsteden. Spelfouten mogen: als je er bijna bent telt het gewoon. Rustig oefenen of tegen de klok.',
     leer:'Kaarten en plaatsnamen', tijd:'10 minuten, of zo lang je wilt' },
 
-  { vak:['rekenen','nederlands','engels','geschiedenis','aardrijkskunde','biologie','wiskunde','mens'], bestand:'zwaard.html', naam:'Zwaardvechter', kleur:'#14224C', tv:0,
+  { vak:['rekenen','nederlands','engels','geschiedenis','aardrijkskunde','biologie','wiskunde','mens'], bestand:'zwaard.html', naam:'Zwaardvechter', kleur:'#14224C', tv:0, examen:true,
     ico:'<path d="M5 19 L15 9"/><path d="M14 6l4 4"/><path d="M4 20l-1.5-1.5 4-4 1.5 1.5z"/><path d="M12 12l5-5"/>',
     wat:'Jij staat met een zwaard in een arena en de fouten komen van alle kanten op je af. Loop met de pijltjes, je zwaard slaat vanzelf. Na elke ronde beantwoordt de klas drie vragen; elk goed antwoord is geld, en daarmee koop je een scherper zwaard, een harnas, laarzen of een werpmes. Elke vijfde ronde een van de zes bazen in het midden, elk met eigen aanvallen die je op de grond ziet aankomen en kunt ontwijken. Dezelfde vragen als Torenverdediging, elke vijfde ronde een baas. Hoeveel rondes houd je vol?',
     leer:'Vechten en oefenen', tijd:'zolang je het volhoudt' },
@@ -651,9 +663,9 @@ var SPELLEN = [
     wat:'De woorden van een Engelse zin liggen door elkaar. Tik ze in de goede volgorde: eerst het onderwerp, dan de persoonsvorm, dan de rest. Met vragen, ontkenningen, woorden van frequentie en de continuous. Bij elke zin staat de regel erbij, en je kunt laten zien hoe het hoort.',
     leer:'Word order', tijd:'8 minuten per ronde' },
 
-  { vak:'nederlands', bestand:'tekstdetective.html', naam:'De tekstdetective', kleur:'#204ECF',
+  { vak:'nederlands', bestand:'tekstdetective.html', naam:'De tekstdetective', kleur:'#204ECF', examen:true,
     ico:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/><path d="M7.5 9h6M7.5 12h4"/>',
-    wat:'Per alinea twee dingen: welke zin vat de kern samen, en welk woord verraadt het verband. Informatie, betoog, nieuws en verhaal, met oorzaak, tegenstelling, voorwaarde en conclusie. Bij elk antwoord hoor je waarom, ook als je het goed had.',
+    wat:'Per alinea drie dingen: welke zin vat de kern samen, welk woord verraadt het verband, en wat wil de schrijver (informeren, overtuigen, een mening geven, aanzetten, amuseren, gevoelens oproepen). Informatie, betoog, nieuws, verhaal, instructie en reclame. In leerjaar 3 en 4 komen er langere examenteksten bij, zoals op het centraal examen vmbo. Bij elk antwoord hoor je waarom, ook als je het goed had.',
     leer:'Tekstbegrip', tijd:'8 minuten per ronde' },
 
   { vak:['rekenen','economie'], bestand:'uitverkoop.html', naam:'De uitverkoop', kleur:'#EA9836',
@@ -707,7 +719,7 @@ var SPELLEN = [
   var TORENVAK = { rekenen:'reken', nederlands:'ned', engels:'eng', geschiedenis:'ges', aardrijkskunde:'aard' };
 
   /* ---------- de stand van de pagina ---------- */
-  var stand = { niveau:null, vak:'alle', soort:'alles', tv:0, zoek:'' };
+  var stand = { niveau:null, leerjaar:'12', vak:'alle', soort:'alles', tv:0, zoek:'' };
   function param(naam){
     var m = new RegExp('[?&]' + naam + '=([^&]+)').exec(location.search);
     return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : null;
@@ -715,12 +727,13 @@ var SPELLEN = [
   function onthoud(){
     var d = [];
     if (stand.niveau) d.push('n=' + stand.niveau.id);
+    if (stand.leerjaar === '34') d.push('lj=34');
     if (stand.vak !== 'alle') d.push('vak=' + stand.vak);
     if (stand.soort !== 'alles') d.push('soort=' + stand.soort);
     if (stand.tv) d.push('tv=' + stand.tv);
     if (stand.zoek) d.push('zoek=' + encodeURIComponent(stand.zoek));
     try { history.replaceState(null, '', d.length ? '?' + d.join('&') : location.pathname); } catch (e) {}
-    try { if (stand.niveau) localStorage.setItem('lg-niveau', stand.niveau.id); } catch (e) {}
+    try { if (stand.niveau) localStorage.setItem('lg-niveau', stand.niveau.id); localStorage.setItem('lg-leerjaar', stand.leerjaar); } catch (e) {}
   }
   function alles(){ tekenVakken(); tekenSoorten(); tekenTijdvakken(); tekenSpellen(); onthoud(); }
 
@@ -736,7 +749,23 @@ var SPELLEN = [
     stand.niveau = n;
     Array.prototype.forEach.call(balk.children, function(c, i){ c.classList.toggle('on', NIVEAUS[i] === n); });
     $('niveauhint').textContent = n.hint;
-    if (!stil){ balk.classList.add('hide'); $('niveauhint').classList.add('hide'); }
+    if (!stil){ balk.classList.add('hide'); ljBalk.classList.add('hide'); $('niveauhint').classList.add('hide'); }
+    tekenNiveauregel();
+    onthoud(); tekenSpellen(); tekenSnel(); tekenVerder();
+  }
+  /* het leerjaar: dezelfde balk, twee knoppen */
+  var ljBalk = $('leerjaarbalk');
+  LEERJAREN.forEach(function(l){
+    var b = document.createElement('button');
+    b.className = 'niveauknop'; b.type = 'button'; b.textContent = l.kort;
+    b.addEventListener('click', function(){ zetLeerjaar(l.id); });
+    ljBalk.appendChild(b);
+  });
+  function zetLeerjaar(id, stil){
+    stand.leerjaar = id === '34' ? '34' : '12';
+    Array.prototype.forEach.call(ljBalk.children, function(c, i){ c.classList.toggle('on', LEERJAREN[i].id === stand.leerjaar); });
+    var l = LEERJAREN.filter(function(x){ return x.id === stand.leerjaar; })[0];
+    if (l && !stil) $('niveauhint').textContent = l.hint;
     tekenNiveauregel();
     onthoud(); tekenSpellen(); tekenSnel(); tekenVerder();
   }
@@ -746,11 +775,13 @@ var SPELLEN = [
     var r = $('niveauregel');
     if (!stand.niveau){ r.classList.add('hide'); return; }
     r.classList.remove('hide');
-    r.innerHTML = 'Je speelt op <b>' + schoon(stand.niveau.kort) + '</b>. ';
+    r.innerHTML = 'Je speelt op <b>' + schoon(stand.niveau.kort) + '</b>, <b>' + (stand.leerjaar === '34' ? 'leerjaar 3 en 4' : 'leerjaar 1 en 2') + '</b>' +
+      (stand.leerjaar === '34' ? ' (met de examenstof van het vmbo bij Nederlands en geschiedenis)' : '') + '. ';
     var b = document.createElement('button');
     b.type = 'button'; b.textContent = 'Wisselen';
     b.addEventListener('click', function(){
       var uit = balk.classList.toggle('hide');
+      ljBalk.classList.toggle('hide', uit);
       $('niveauhint').classList.toggle('hide', uit);
       if (!uit) balk.querySelector('button').focus();
     });
@@ -765,6 +796,7 @@ var SPELLEN = [
        een vak gekozen, dan hoeft dat daar niet nog een keer */
     if ((sp.bestand === 'toren.html' || sp.bestand === 'race.html') && stand.vak !== 'alle' && TORENVAK[stand.vak]) mee.push('vak=' + TORENVAK[stand.vak]);
     if (stand.niveau) mee.push('n=' + stand.niveau.id);
+    if (stand.leerjaar === '34' && sp.examen) mee.push('lj=34');
     return sp.bestand + (mee.length ? '?' + mee.join('&') : '');
   }
   function spelMet(bestand){ return SPELLEN.filter(function(s){ return s.bestand === bestand; })[0] || null; }
@@ -908,7 +940,8 @@ var SPELLEN = [
       ' data-start="' + sp.bestand + '" title="' + schoon(k.kort) + '">' +
       tegel(sp) + '<h3>' + schoon(sp.naam) + '</h3>' +
       '<span class="soortje">' + schoon(sp.leer) + '</span>' +
-      (samen ? '<span class="klaspil">met de klas</span>' : '') + '</a>';
+      (samen ? '<span class="klaspil">met de klas</span>' : '') +
+      (stand.leerjaar === '34' && sp.examen ? '<span class="examen">examenstof vmbo</span>' : '') + '</a>';
   }
   function sectie(ico, kleur, titel, onder, tel, lijst){
     return '<section class="sectie"><div class="sectiekop">' +
@@ -1055,6 +1088,10 @@ var SPELLEN = [
   var z = param('zoek');
   if (z){ stand.zoek = z; zoekveld.value = z; $('zoekWis').classList.remove('hide'); $('zoekKbd').classList.add('hide'); }
 
+  /* het leerjaar pas als de andere parameters gelezen zijn: zetLeerjaar herschrijft het adres */
+  var lj = param('lj');
+  if (!lj){ try { lj = localStorage.getItem('lg-leerjaar'); } catch (e){} }
+  zetLeerjaar(lj === '34' ? '34' : '12', true);
   tekenSnel(); tekenVerder(); alles();
   if (n) NIVEAUS.forEach(function(x){ if (x.id === n) zetNiveau(x, true); });
   tekenNiveauregel();
