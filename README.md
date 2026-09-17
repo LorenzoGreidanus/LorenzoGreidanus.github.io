@@ -57,7 +57,6 @@ Een site, twee kanten: de voorkant voor collega's en een aparte leeromgeving voo
 | `leermiddelen/feodalisme.html` | Heer, ridder of boer: keuzes met gevolgen |
 | `leermiddelen/handel.html` | Handelsroute met een markt die reageert op vraag en aanbod |
 | `leermiddelen/vergadering.html` | Onderhandelen met de zeven gewesten, 1672 |
-| `leermiddelen/stad.html` | Bouw je stad, staat nu op binnenkort |
 
 De leeromgeving is dus gewoon een map in dezelfde repository. Bezoekers komen uit op `meneergreidanus.nl/leermiddelen/`.
 
