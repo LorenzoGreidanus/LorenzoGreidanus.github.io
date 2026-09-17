@@ -64,8 +64,8 @@ const FOUTEN = [
    zesde begint de rij opnieuw op een hogere ronde en dus taaier. */
 const BAZEN = [
   { id:'fout',    naam:'De Grote Fout', kleur:'#4a1230', vorm:'ster',  hp:16, r:46, schade:26, schild:0.35,
-    aanvallen:['cirkel', 'laser', 'golf', 'spiraal'],
-    wat:'Cirkels op de grond, een laser die om hem heen draait, een golf die naar buiten rolt en een spiraal van propjes.' },
+    aanvallen:['cirkel', 'laser', 'kegel', 'spiraal'],
+    wat:'Cirkels op de grond, een laser die om hem heen draait, een waaier recht voor zich uit en een spiraal van propjes.' },
   { id:'inkt',    naam:'De Inktvlek',   kleur:'#1b3a8f', vorm:'vlek',  hp:16, r:50, schade:24, schild:0.3,
     aanvallen:['plas', 'kegel', 'cirkel', 'regen'],
     wat:'Spat inkt over de vloer die blijft liggen, spuit een waaier voor zich uit en laat het plofjes regenen. Steeds minder plek om te staan.' },
