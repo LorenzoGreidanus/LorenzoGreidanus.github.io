@@ -89,6 +89,8 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
    hij precies staan waar jij moest zijn. */
 .baasbalk{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid rgba(20,34,76,.09);
   border-radius:12px;padding:7px 13px}
+/* de balk staat er altijd, ook zonder baas, anders verspringt de arena zodra hij binnenkomt */
+.baasbalk.leeg{opacity:.5}
 .baasbalk b{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;color:var(--ink)}
 .baasbalk i{flex:1;min-width:0;display:block;height:14px;border-radius:7px;background:rgba(20,34,76,.15);overflow:hidden}
 .baasbalk i span{display:block;height:100%;border-radius:7px;transition:width .12s linear}
@@ -125,7 +127,9 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
    verhouding van het speelveld. Deze regel moet na de regel hierboven staan,
    anders wint die met zijn width:auto. */
 @media(max-width:1000px){.arenavak{flex:none;width:100%;height:auto;min-height:0}}
-.arenatip{font-size:.86rem;color:var(--muted);background:#fff;border:1px solid rgba(20,34,76,.09);border-radius:12px;padding:8px 13px}
+/* vaste hoogte van twee regels: een langere tekst (een baas, de uitleg) scrolt, en de arena verspringt niet */
+.arenatip{font-size:.86rem;line-height:1.4;color:var(--muted);background:#fff;border:1px solid rgba(20,34,76,.09);border-radius:12px;padding:8px 13px;height:calc(2 * 1.4em + 18px);overflow-y:auto;box-sizing:border-box}
+@media(max-width:1000px){.arenatip{height:auto}}
 /* in de uitlegstand staat hier wat de baas doet, dus dan mag het opvallen */
 .arenatip.uitleg{border-color:var(--amber);background:#fff8ec;color:var(--ink);font-weight:500}
 /* in het donker blijft de rand amber, maar het vlak volgt het thema */
@@ -321,7 +325,7 @@ body.groot .meter b{font-size:1.45rem}
 <section class="wrap spel hide" id="scherm-spel">
   <div class="arenakolom">
     <div class="hudrij"><div class="hud" id="hud"></div><button class="dashknop" type="button" id="wapenBtn">Zwaard<small>dichtbij, hard · Q, E of rechtsklik</small></button><button class="dashknop" type="button" id="dashBtn">Ontwijk<small>spatie of shift</small></button></div>
-    <div class="baasbalk hide" id="baasbalk"></div>
+    <div class="baasbalk leeg" id="baasbalk"><b>Baas in ronde 5</b><i><span style="width:0"></span></i></div>
     <div class="arenavak" id="arenavak"><svg id="arenagrond" viewBox="0 0 1100 620" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"></svg><svg id="arena" viewBox="0 0 1100 620" xmlns="http://www.w3.org/2000/svg"><defs id="arenavast"></defs><g id="arenalaag"></g></svg></div>
     <p class="arenatip" id="arenatip">Pijltjes of WASD om te lopen. Je wapen slaat vanzelf; Q, E, Tab of de rechtermuisknop wisselt tussen zwaard en boog.</p>
     <aside class="zij hide" id="zij"></aside>
@@ -1743,10 +1747,12 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     var el = baasVak || (baasVak = document.getElementById('baasbalk'));
     if (!el) return;
     if (!b){
-      if (!el.classList.contains('hide')){ el.classList.add('hide'); el.innerHTML = ''; baasWas = ''; }
+      /* zonder baas blijft de balk staan (zelfde hoogte), gedimd, met de ronde van de volgende baas */
+      var volgende = (Math.floor(Math.max(0, ronde) / BAASRONDE) + 1) * BAASRONDE, tekst = 'Baas in ronde ' + volgende;
+      if (baasWas !== tekst){ el.classList.add('leeg'); el.innerHTML = '<b>' + tekst + '</b><i><span style="width:0"></span></i>'; baasWas = tekst; }
       return;
     }
-    el.classList.remove('hide');
+    el.classList.remove('leeg');
     var deel = Math.max(0, b.hp / b.maxHp);
     var kwaad = deel <= 0.5;
     var naam = ((b.def && b.def.naam) || 'De baas') + (kwaad ? ' \u00b7 kwaad' : '');
