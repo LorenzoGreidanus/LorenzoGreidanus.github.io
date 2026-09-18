@@ -122,7 +122,9 @@ window.SPEL = (function(){
     /* munten: per goed antwoord, en meer per antwoord in een spel dat langer duurt; alleen voor wie is ingelogd */
     var muntHtml = '';
     if (typeof o.goed === 'number' && o.goed > 0 && window.PROFIEL && PROFIEL.muntenErbij){
-      var nMunt = Math.max(0, Math.round(o.goed * (o.muntFactor || 1) + (o.muntBonus || 0)));
+      /* MUNT_PER_GOED: de munten per goed antwoord, voor elk spel; de bonus per ronde staat er los van */
+      var MUNT_PER_GOED = 1.15;
+      var nMunt = Math.max(0, Math.round(o.goed * (o.muntFactor || 1) * MUNT_PER_GOED + (o.muntBonus || 0)));
       if (nMunt && PROFIEL.ingelogd()){ PROFIEL.muntenErbij(nMunt); muntHtml = '<p class="munten"><b>+' + nMunt + ' munten</b> je hebt er nu ' + PROFIEL.munten() + ' <a href="index.html?winkel=1">naar de winkel</a></p>'; }
       else if (nMunt && PROFIEL.accountMogelijk()) muntHtml = '<p class="munten stil">' + nMunt + ' munten gemist. <a href="index.html">Log in met Microsoft</a> in de leeromgeving, dan spaar je ze voor de winkel.</p>';
     }
