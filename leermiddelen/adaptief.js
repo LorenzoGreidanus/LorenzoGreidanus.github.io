@@ -13,11 +13,14 @@
      slim.toets(goed)      na elk antwoord; geeft 'omhoog', 'omlaag' of null terug
      slim.niveau()         het niveau dat nu voor de vragen geldt
      slim.reset(start)     bij een nieuwe partij
-   Opties: venster (hoeveel antwoorden meetellen, 8), minimum (vanaf hoeveel
-   antwoorden er gekeken wordt, 6), omhoog (deel goed, .85), omlaag (.4). */
+   Opties: venster (hoeveel antwoorden meetellen voor een stap omlaag, 8), minimum
+   (vanaf hoeveel antwoorden er gekeken wordt, 6), omhoog (deel goed, .85), omlaag (.4).
+   Omhoog gaat twee keer zo traag als omlaag: daar tellen zestien antwoorden mee en
+   moeten er minstens twaalf zijn, zodat een goede reeks pas na een tijd telt. */
 window.Adaptief = function(o){
   var ladder = o.ladder, huidig = o.start, basis = o.start, venster = [];
   var VENSTER = o.venster || 8, MINIMUM = o.minimum || 6, OMHOOG = o.omhoog || 0.85, OMLAAG = o.omlaag || 0.4;
+  var VENSTER_OP = VENSTER * 2, MINIMUM_OP = MINIMUM * 2, lang = [];
   var toastEl = null, toastKlok = null;
   function idx(id){ return ladder.indexOf(id); }
   function naam(id){ return o.naam ? o.naam(id) : id; }
@@ -36,7 +39,7 @@ window.Adaptief = function(o){
   }
   function zet(id, omhoog){
     var oud = huidig;
-    huidig = id; venster = [];
+    huidig = id; venster = []; lang = [];
     toast(omhoog
       ? 'Dit gaat je makkelijk af. De vragen gaan een stap omhoog: ' + naam(id) + '.'
       : 'Even een stap terug: de vragen zijn weer op ' + naam(id) + '.');
@@ -44,17 +47,22 @@ window.Adaptief = function(o){
   }
   return {
     toets: function(goed){
-      venster.push(!!goed);
+      venster.push(!!goed); lang.push(!!goed);
       if (venster.length > VENSTER) venster.shift();
+      if (lang.length > VENSTER_OP) lang.shift();
+      var i = idx(huidig);
+      if (lang.length >= MINIMUM_OP){
+        var deelOp = lang.filter(Boolean).length / lang.length;
+        if (deelOp >= OMHOOG && i >= 0 && i < ladder.length - 1){ zet(ladder[i + 1], true); return 'omhoog'; }
+      }
       if (venster.length < MINIMUM) return null;
-      var deel = venster.filter(Boolean).length / venster.length, i = idx(huidig);
-      if (deel >= OMHOOG && i >= 0 && i < ladder.length - 1){ zet(ladder[i + 1], true); return 'omhoog'; }
+      var deel = venster.filter(Boolean).length / venster.length;
       if (deel <= OMLAAG && i > idx(basis)){ zet(ladder[i - 1], false); return 'omlaag'; }
       return null;
     },
     niveau: function(){ return huidig; },
     verhoogd: function(){ return idx(huidig) > idx(basis); },
-    reset: function(start){ huidig = start; basis = start; venster = []; },
+    reset: function(start){ huidig = start; basis = start; venster = []; lang = []; },
     toast: toast
   };
 };
