@@ -99,7 +99,8 @@ function weg(naam, url, pad){ return koekje(naam, "", url, 0, pad); }
 export function mogelijk(env){ return !!(env.MS_CLIENT_ID && env.MS_CLIENT_SECRET && env.SESSIE_GEHEIM); }
 function basis(env){ return String(env.MS_AANMELDBASIS || "https://login.microsoftonline.com").replace(/\/+$/, ""); }
 function huurder(env){ return String(env.MS_TENANT || "common"); }
-function terugAdres(url){ return url.origin + "/api/account/terug"; }
+/* het terugadres zoals het bij Microsoft staat: altijd zonder www */
+function terugAdres(url){ return url.protocol + "//" + url.hostname.replace(/^www./, "") + (url.port ? ":" + url.port : "") + "/api/account/terug"; }
 /* alleen een pad op de eigen site, anders de leeromgeving */
 function schoonTerug(t){
   t = String(t || "");

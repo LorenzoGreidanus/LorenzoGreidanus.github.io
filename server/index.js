@@ -65,6 +65,11 @@ export default {
   async fetch(req, env){
     const url = new URL(req.url);
     const p = url.pathname;
+    /* Een adres, zonder www: anders klopt bij het inloggen met Microsoft het terugadres niet
+       (AADSTS50011) en staat het sessiekoekje op de verkeerde host. */
+    if (url.hostname.startsWith("www.")){
+      return new Response(null, { status: 308, headers: { location: url.protocol + "//" + url.hostname.slice(4) + url.pathname + url.search, "cache-control": "public, max-age=86400" } });
+    }
 
     if (p === "/q" || p.startsWith("/q/")){
       const code = p.slice(3).toUpperCase().replace(/[^A-Z]/g, "");
