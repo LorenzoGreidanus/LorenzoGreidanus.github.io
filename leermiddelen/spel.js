@@ -101,6 +101,8 @@ window.SPEL = (function(){
      sterren, kop, compact (zonder groot getal), plek (id: kaart komt vóór
      dat element), klas (false: niet melden), ronde, punten, niveau, vak,
      opnieuw (functie), opnieuwTekst, deelTekst, kleur ([van, naar]). */
+  /* 5 op rij: 1,1 keer; 10: 1,25; 20: 1,5; 30 en meer: 1,75 */
+  function reeksFactor(r){ r = r | 0; return r >= 30 ? 1.75 : r >= 20 ? 1.5 : r >= 10 ? 1.25 : r >= 5 ? 1.1 : 1; }
   function einde(o){
     o = o || {};
     var sectie = $(o.in || 'scherm-einde');
@@ -124,8 +126,11 @@ window.SPEL = (function(){
     if (typeof o.goed === 'number' && o.goed > 0 && window.PROFIEL && PROFIEL.muntenErbij){
       /* MUNT_PER_GOED: de munten per goed antwoord, voor elk spel; de bonus per ronde staat er los van */
       var MUNT_PER_GOED = 1.15;
-      var nMunt = Math.max(0, Math.round(o.goed * (o.muntFactor || 1) * MUNT_PER_GOED + (o.muntBonus || 0)));
-      if (nMunt && PROFIEL.ingelogd()){ PROFIEL.muntenErbij(nMunt); muntHtml = '<p class="munten"><b>+' + nMunt + ' munten</b> je hebt er nu ' + PROFIEL.munten() + ' <a href="index.html?winkel=1">naar de winkel</a></p>'; }
+      /* de reeksbonus: hoe langer je langste reeks goed op rij, hoe meer elk goed antwoord waard is */
+      var reeksX = reeksFactor(o.reeks);
+      var nMunt = Math.max(0, Math.round(o.goed * (o.muntFactor || 1) * MUNT_PER_GOED * reeksX + (o.muntBonus || 0)));
+      var reeksTekst = reeksX > 1 ? ' (reeks van ' + o.reeks + ': ×' + String(reeksX).replace('.', ',') + ')' : '';
+      if (nMunt && PROFIEL.ingelogd()){ PROFIEL.muntenErbij(nMunt); muntHtml = '<p class="munten"><b>+' + nMunt + ' munten</b>' + reeksTekst + ' je hebt er nu ' + PROFIEL.munten() + ' <a href="index.html?winkel=1">naar de winkel</a></p>'; }
       else if (nMunt && PROFIEL.accountMogelijk()) muntHtml = '<p class="munten stil">' + nMunt + ' munten gemist. <a href="index.html">Log in met Microsoft</a> in de leeromgeving, dan spaar je ze voor de winkel.</p>';
     }
     var kaart = document.createElement('div');
