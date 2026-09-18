@@ -345,11 +345,11 @@ body.groot .meter b{font-size:1.45rem}
 
 <section class="wrap spel hide" id="scherm-spel">
   <div class="arenakolom">
-    <div class="testvak hide" id="testvak"><b>Testpaneel (telt niet mee)</b>
+    <div class="testvak hide" id="testvak"><b>Testpaneel</b>
       <div class="rijtje"><button type="button" data-t="leven">Vol leven</button><button type="button" data-t="god">Onsterfelijk</button><button type="button" data-t="munten">+500 munten</button><button type="button" data-t="crit">Critical klaar</button></div>
       <div class="rijtje"><button type="button" data-t="ronde">Naar ronde…</button><button type="button" data-t="baas">Volgende baas</button><button type="button" data-t="weg">Fouten weg</button><button type="button" data-t="baasweg">Baas op 1 hp</button></div>
       <div class="rijtje"><button type="button" data-t="vaardig">Alle vaardigheden +1</button><button type="button" data-t="uitrusting">Uitrusting vol</button><button type="button" data-t="stijl">Stijl wisselen</button></div>
-      <small>F8 opent of sluit dit paneel. Alleen alleen te spelen; record, klassement en munten tellen dan niet.</small>
+      <small>Sluiten: typ het codewoord nog eens. Alleen als je alleen speelt.</small>
     </div>
     <div class="hudrij"><div class="hud" id="hud"></div><button class="dashknop" type="button" id="wapenBtn">Zwaard<small>dichtbij, hard · Q, E of rechtsklik</small></button><button class="dashknop" type="button" id="dashBtn">Ontwijk<small>spatie of shift</small></button><button class="dashknop hide" type="button" id="blokBtn">Blok<small>houd shift vast</small></button></div>
     <div class="baasbalk leeg" id="baasbalk"><b>Baas in ronde 5</b><i><span style="width:0"></span></i></div>
@@ -709,9 +709,21 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   var fouten = [], messen = [], munt = [], pluis = [], cijfers = [], teSpawnen = 0, aanvallen = [];
   var toetsen = {}, wijs = null, loopt = false, pauze = false, laatste = 0;
   var stijl = 'ridder', vaardig = {}, keuzeOpen = null, tweedeKansOver = 0, zones = [], baasWeg = 0, blokToets = false, trofeeTekst = '';
-  /* het testpaneel: cheats om snel iets te bekijken; zodra er een gebruikt is telt het potje niet mee */
-  var cheat = false, god = false;
+  /* het testpaneel: cheats om snel iets te bekijken. Het gaat open door een codewoord te typen; alleen de
+     sha-256 daarvan staat hier, dus uit de code valt het woord niet te lezen. Er is geen toets en geen url voor. */
+  var cheat = false, god = false, codeBuf = '';
+  var CODE_HASH = '0d0a4e4c4c071849280715e4df29ff427a7966461098d5c29bb7e6745a9472aa', CODE_LENGTE = 10;
   function testPaneel(aan){ var tv = document.getElementById('testvak'); if (!tv) return; tv.classList.toggle('hide', !aan); }
+  function codeToets(k){
+    if (!/^[a-z]$/.test(k) || !window.crypto || !crypto.subtle) return;
+    codeBuf = (codeBuf + k).slice(-CODE_LENGTE);
+    if (codeBuf.length < CODE_LENGTE) return;
+    crypto.subtle.digest('SHA-256', new TextEncoder().encode(codeBuf)).then(function(b){
+      var hex = Array.prototype.map.call(new Uint8Array(b), function(x){ return ('0' + x.toString(16)).slice(-2); }).join('');
+      if (hex !== CODE_HASH) return;
+      codeBuf = ''; var tv = document.getElementById('testvak'); if (tv) testPaneel(tv.classList.contains('hide'));
+    });
+  }
   function testDoe(wat){
     if (co.aan){ document.getElementById('arenatip').textContent = 'Het testpaneel werkt alleen als je alleen speelt.'; return; }
     if (!W) return;
@@ -728,12 +740,11 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     else if (wat === 'uitrusting'){ UITRUSTING.forEach(function(u){ if (!u.los) level[u.id] = u.prijs.length; }); maxHp = maxLeven(); hp = maxHp; W.zetStats(0, mijnStats(), hp); }
     else if (wat === 'stijl'){ var ids = STIJLEN.map(function(x){ return x.id; }); stijl = ids[(ids.indexOf(stijl) + 1) % ids.length]; maxHp = maxLeven(); hp = maxHp; W.zetStats(0, mijnStats(), hp); tekenStijlen(); }
     var gb = document.querySelector('#testvak [data-t="god"]'); if (gb) gb.classList.toggle('aan', god);
-    document.getElementById('arenatip').textContent = 'Test: ' + wat + '. Dit potje telt niet mee.';
+    document.getElementById('arenatip').textContent = 'Test: ' + wat + '.';
     spiegel(); tekenHud(); tekenZij();
   }
   (function(){ var tv = document.getElementById('testvak'); if (!tv) return;
     Array.prototype.forEach.call(tv.querySelectorAll('[data-t]'), function(b){ b.addEventListener('click', function(){ testDoe(b.getAttribute('data-t')); }); });
-    if (/[?&]test=1/.test(location.search)) testPaneel(true);
   })();
   /* een baas geveld: de trofee die erbij hoort, voor wie is ingelogd */
   function trofeeVan(rondeNr){
@@ -1032,7 +1043,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if ((e.key.toLowerCase() === 'q' || e.key.toLowerCase() === 'e' || e.key === 'Tab') && fase === 'ronde' && loopt && !e.repeat){ e.preventDefault(); wisselWapen(); }
     toetsen[e.key.toLowerCase()] = true;
     if ((e.key === 'p' || e.key === 'Escape') && !document.getElementById('scherm-spel').classList.contains('hide')) zetPauze();
-    if (e.key === 'F8'){ e.preventDefault(); var tv = document.getElementById('testvak'); if (tv) testPaneel(tv.classList.contains('hide')); }
+    if (!e.ctrlKey && !e.altKey && !e.metaKey && !document.getElementById('scherm-spel').classList.contains('hide')) codeToets(e.key);
     if (fase === 'vragen' && e.key >= '1' && e.key <= '4') antwoord(parseInt(e.key, 10) - 1);
   });
   addEventListener('keyup', function(e){ toetsen[e.key.toLowerCase()] = false; if (e.key === 'Shift') blokToets = false; });
@@ -1984,7 +1995,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     document.getElementById('pauzeBtn').classList.add('hide');
     document.getElementById('eindKop').textContent = (co.aan ? 'Samen gevallen in ronde ' : 'Gevallen in ronde ') + ronde;
     var record = 0;
-    if (!uitlegstand && !cheat){
+    if (!uitlegstand){
       try { record = parseInt(localStorage.getItem('lg-zwaard-record') || '0', 10); if (ronde > record){ localStorage.setItem('lg-zwaard-record', String(ronde)); } } catch (e){}
     }
     document.getElementById('eindUit').textContent = 'Je velde ' + geveld + ' fouten en beantwoordde ' + goedAantal + ' van de ' + (goedAantal + foutAantal) + ' vragen goed.' +
@@ -1995,9 +2006,9 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       '<div><b>' + goedAantal + '</b><span>vragen goed</span></div><div><b>' + besteReeks + '</b><span>langste reeks</span></div>' +
       '<div><b>' + UITRUSTING.filter(function(u){ return !u.los; }).reduce(function(a, u){ return a + stat(u.id); }, 0) + '</b><span>niveaus gekocht</span></div>';
     SPEL.einde({ spel:'zwaard', reeks:besteReeks, compact:true, waarde:ronde, label:'rondes', sterren: ronde >= 12 ? 3 : ronde >= 6 ? 2 : ronde >= 3 ? 1 : 0, klas:false, plek:'siteLijst',
-      goed:cheat ? 0 : goedAantal, muntFactor:2, muntBonus:Math.max(0, ronde - 1) * 3,
-      sleutel: niveau + (uitlegstand ? '-uitleg' : cheat ? '-test' : ''), deelTekst:'ronde ' + ronde, kop: uitlegstand ? 'jouw oefengevecht' : cheat ? 'jouw testgevecht' : 'jouw gevecht' });
-    if (window.STRIJD && !uitlegstand && !cheat){
+      goed:goedAantal, muntFactor:2, muntBonus:Math.max(0, ronde - 1) * 3,
+      sleutel: niveau + (uitlegstand ? '-uitleg' : ''), deelTekst:'ronde ' + ronde, kop: uitlegstand ? 'jouw oefengevecht' : 'jouw gevecht' });
+    if (window.STRIJD && !uitlegstand){
       STRIJD.klassement.vorm('siteLijst', 'zwaard', function(){
         var nv = NIVEAUS.filter(function(x){ return x.id === niveau; })[0], vk = VAKKEN.filter(function(x){ return x.id === vak; })[0];
         return { ronde:ronde, punten:geveld, waar:'', niveau:nv ? nv.naam : '', vak:vk ? vk.naam : '' };
