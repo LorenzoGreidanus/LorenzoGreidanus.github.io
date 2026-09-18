@@ -100,7 +100,7 @@ export function mogelijk(env){ return !!(env.MS_CLIENT_ID && env.MS_CLIENT_SECRE
 function basis(env){ return String(env.MS_AANMELDBASIS || "https://login.microsoftonline.com").replace(/\/+$/, ""); }
 function huurder(env){ return String(env.MS_TENANT || "common"); }
 /* het terugadres zoals het bij Microsoft staat: altijd zonder www */
-function terugAdres(url){ return url.protocol + "//" + url.hostname.replace(/^www./, "") + (url.port ? ":" + url.port : "") + "/api/account/terug"; }
+function terugAdres(url){ return url.protocol + "//" + url.hostname.replace(/^www\./, "") + (url.port ? ":" + url.port : "") + "/api/account/terug"; }
 /* alleen een pad op de eigen site, anders de leeromgeving */
 function schoonTerug(t){
   t = String(t || "");
