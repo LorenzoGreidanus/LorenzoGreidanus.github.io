@@ -102,6 +102,32 @@ td.aandeel{min-width:120px}
 .balk i{display:block;height:100%;background:var(--ocean);border-radius:999px}
 td.trend{white-space:nowrap;font-variant-numeric:tabular-nums}
 td.trend.op{color:var(--goed)}td.trend.af{color:var(--fout)}
+/* klassement: podium en rijen */
+.podium{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+.podium .pl{background:var(--kaart2);border-radius:16px;padding:14px;display:grid;gap:4px;position:relative;border:1.5px solid transparent}
+.podium .pl:first-child{border-color:var(--amber);background:linear-gradient(180deg,rgba(234,152,54,.16),var(--kaart2))}
+.podium .pl i{font-style:normal;font-size:1.5rem;line-height:1}
+.podium .pl b{font-size:1.1rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.podium .pl .gr{font-size:1.9rem;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.podium .pl .gr small{font-size:.8rem;font-weight:500;color:var(--muted);margin-left:4px}
+.podium .pl .meta{color:var(--muted);font-size:.8rem}
+@media(max-width:600px){.podium{grid-template-columns:1fr}}
+.kl{display:grid;gap:4px;margin-top:14px}
+.kl .rij2{display:grid;grid-template-columns:40px 1fr 110px 80px auto;gap:10px;align-items:center;padding:8px 10px;border-radius:12px;border-bottom:1px solid var(--rand)}
+.kl .rij2:hover{background:var(--kaart2)}
+.kl .rij2.ik{background:rgba(32,78,207,.08)}
+.kl .plek{width:30px;height:30px;border-radius:50%;background:var(--kaart2);display:grid;place-items:center;font-weight:600;font-size:.85rem;font-variant-numeric:tabular-nums}
+.kl .plek.p1{background:var(--amber);color:#14224C}.kl .plek.p2{background:#c9ced9;color:#14224C}.kl .plek.p3{background:#d9a066;color:#14224C}
+.kl .wie b{display:block}
+.kl .wie .meta{color:var(--muted);font-size:.78rem}
+.kl .score{font-variant-numeric:tabular-nums}
+.kl .score b{font-size:1.15rem}
+.kl .score .balk{margin-top:3px}
+.kl .pt{color:var(--muted);font-size:.85rem;font-variant-numeric:tabular-nums;text-align:right}
+.kl .rij2 .knop{opacity:.55}.kl .rij2:hover .knop,.kl .rij2 .knop:focus-visible{opacity:1}
+@media(max-width:640px){.kl .rij2{grid-template-columns:34px 1fr 90px auto}.kl .pt{display:none}}
+details.los{margin-top:16px;color:var(--muted);font-size:.9rem}
+details.los summary{cursor:pointer;font-weight:600}
 tr.spel td:first-child b::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--crab);margin-right:7px;vertical-align:1px}
 tr.site td:first-child b::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--vista);margin-right:7px;vertical-align:1px}
 /* zichtbare focus voor wie met het toetsenbord werkt */
@@ -152,16 +178,23 @@ tr.site td:first-child b::before{content:'';display:inline-block;width:8px;heigh
   </section>
 
   <section class="kaart hide" id="tab-klassement">
-    <h2>Klassement opruimen</h2>
-    <p class="tip">Haal een rij weg op naam (alle rijen met die naam) of op id.</p>
-    <div class="rij" style="margin-top:10px">
-      <select id="kSpel" class="veld"><option value="toren">Torenverdediging</option><option value="zwaard">Zwaardvechter</option></select>
-      <input id="kNaam" class="veld" placeholder="naam" maxlength="16">
-      <input id="kId" class="veld" placeholder="of id" maxlength="40">
-      <button class="knop rood" id="kWeg" type="button">Weghalen</button>
-    </div>
+    <h2>Klassement</h2>
+    <p class="tip">De top vijftig van de hele site. Ga over een rij en kies Weghalen om die ene inzending te schrappen.</p>
+    <div class="knopjes" id="kSpelKnop"><button type="button" data-s="zwaard" class="on">Zwaardvechter</button><button type="button" data-s="toren">Torenverdediging</button>
+      <input id="kZoek" class="veld los" placeholder="Zoek op naam" style="padding:5px 10px;font-size:.85rem;max-width:200px"></div>
+    <select id="kSpel" class="hide"><option value="zwaard">Zwaardvechter</option><option value="toren">Torenverdediging</option></select>
+    <div class="tegels" id="kTegels"></div>
+    <div class="podium" id="kPodium"></div>
+    <div class="kl" id="kLijst"></div>
     <p class="tip" id="kStatus"></p>
-    <div id="kLijst" style="margin-top:12px"></div>
+    <details class="los"><summary>Weghalen op naam of id</summary>
+      <p class="tip">Op naam haalt alle rijen met die naam weg, ook buiten de top vijftig.</p>
+      <div class="rij" style="margin-top:8px">
+        <input id="kNaam" class="veld" placeholder="naam" maxlength="16">
+        <input id="kId" class="veld" placeholder="of id" maxlength="40">
+        <button class="knop rood" id="kWeg" type="button">Weghalen</button>
+      </div>
+    </details>
   </section>
 </main>
 <script>
@@ -270,13 +303,50 @@ tr.site td:first-child b::before{content:'';display:inline-block;width:8px;heigh
     }).catch(function(){ $('status').textContent = 'Geen verbinding met de server.'; });
     tekenKlassement();
   }
+  var klasData = [];
+  function datumKort(t){ if (!t) return ''; var d = new Date(t), nu = new Date(), dag = Math.round((nu.setHours(12,0,0,0) - new Date(d).setHours(12,0,0,0)) / 86400000); return dag === 0 ? 'vandaag' : dag === 1 ? 'gisteren' : dag < 7 ? dag + ' dagen geleden' : d.toLocaleDateString('nl-NL', { day:'numeric', month:'short' }); }
+  function metaVan(r){ return [r.niveau, r.vak, r.waar, datumKort(r.t)].filter(Boolean).map(schoon).join(' · '); }
   function tekenKlassement(){
-    fetch('/api/klassement/' + $('kSpel').value).then(function(r){ return r.json(); }).then(function(j){
-      var l = j.lijst || [];
-      $('kLijst').innerHTML = l.length ? '<table><thead><tr><th>Plek</th><th>Naam</th><th>Ronde</th><th>Punten</th><th>Id</th></tr></thead><tbody>' + l.map(function(r){ return '<tr><td class="getal">' + r.plek + '</td><td>' + schoon(r.naam) + '</td><td class="getal">' + r.ronde + '</td><td class="getal">' + r.punten + '</td><td><code>' + schoon(r.id) + '</code></td></tr>'; }).join('') + '</tbody></table>' : '<p class="leeg">Het klassement is leeg.</p>';
-    }).catch(function(){});
+    $('kStatus').textContent = '';
+    fetch('/api/klassement/' + $('kSpel').value).then(function(r){ return r.json(); }).then(function(j){ klasData = j.lijst || []; tekenKlassementNu(); }).catch(function(){ $('kLijst').innerHTML = '<p class="leeg">Het klassement is nu niet bereikbaar.</p>'; });
   }
-  $('kSpel').addEventListener('change', tekenKlassement);
+  function tekenKlassementNu(){
+    var l = klasData, zoek = $('kZoek').value.trim().toLowerCase();
+    var namen = {}; l.forEach(function(r){ namen[r.naam] = 1; });
+    var laatst = l.reduce(function(a, r){ return r.t > a ? r.t : a; }, 0);
+    var week = l.filter(function(r){ return Date.now() - r.t < 7 * 86400000; }).length;
+    $('kTegels').innerHTML = l.length ?
+      '<div class="tegel"><span>Inzendingen</span><b>' + l.length + '</b><small>' + Object.keys(namen).length + ' verschillende namen</small></div>' +
+      '<div class="tegel"><span>Hoogste ronde</span><b>' + l[0].ronde + '</b><small>' + schoon(l[0].naam) + '</small></div>' +
+      '<div class="tegel"><span>Deze week</span><b>' + week + '</b><small>nieuwe inzendingen</small></div>' +
+      '<div class="tegel"><span>Laatste</span><b style="font-size:1.15rem">' + datumKort(laatst) + '</b><small>' + (laatst ? new Date(laatst).toLocaleTimeString('nl-NL', { hour:'2-digit', minute:'2-digit' }) : '') + '</small></div>' : '';
+    var MED = ['🥇', '🥈', '🥉'];
+    $('kPodium').innerHTML = !zoek && l.length >= 3 ? l.slice(0, 3).map(function(r, i){
+      return '<div class="pl"><i>' + MED[i] + '</i><b>' + schoon(r.naam) + '</b><span class="gr">' + r.ronde + '<small>rondes · ' + r.punten + ' pt</small></span><span class="meta">' + metaVan(r) + '</span></div>';
+    }).join('') : '';
+    var max = l.length ? Math.max(1, l[0].ronde) : 1;
+    var rijen = l.filter(function(r){ return !zoek || r.naam.toLowerCase().indexOf(zoek) >= 0; });
+    $('kLijst').innerHTML = rijen.length ? rijen.map(function(r){
+      return '<div class="rij2" data-id="' + schoon(r.id) + '"><span class="plek' + (r.plek <= 3 ? ' p' + r.plek : '') + '">' + r.plek + '</span>' +
+        '<span class="wie"><b>' + schoon(r.naam) + '</b><span class="meta">' + metaVan(r) + '</span></span>' +
+        '<span class="score"><b>' + r.ronde + '</b> <span class="meta" style="color:var(--muted);font-size:.8rem">rondes</span><span class="balk"><i style="width:' + Math.round(r.ronde / max * 100) + '%"></i></span></span>' +
+        '<span class="pt">' + r.punten + ' pt</span>' +
+        '<button type="button" class="knop stil klein" data-weg-id="' + schoon(r.id) + '" data-weg-naam="' + schoon(r.naam) + '">Weghalen</button></div>';
+    }).join('') : '<p class="leeg">' + (l.length ? 'Geen naam die daarop lijkt.' : 'Het klassement is leeg.') + '</p>';
+    Array.prototype.forEach.call($('kLijst').querySelectorAll('[data-weg-id]'), function(k){
+      k.addEventListener('click', function(){
+        if (!confirm('Rij van ' + k.getAttribute('data-weg-naam') + ' weghalen?')) return;
+        haal('/api/klassement/' + $('kSpel').value, { method:'DELETE', body:JSON.stringify({ id:k.getAttribute('data-weg-id') }) }).then(function(x){
+          $('kStatus').textContent = x.ok ? 'Rij van ' + k.getAttribute('data-weg-naam') + ' weggehaald.' : (x.j.fout || 'Weghalen lukte niet.');
+          tekenKlassement();
+        });
+      });
+    });
+  }
+  Array.prototype.forEach.call($('kSpelKnop').querySelectorAll('[data-s]'), function(k){ k.addEventListener('click', function(){
+    $('kSpel').value = k.getAttribute('data-s'); Array.prototype.forEach.call($('kSpelKnop').querySelectorAll('[data-s]'), function(x){ x.classList.toggle('on', x === k); }); tekenKlassement();
+  }); });
+  $('kZoek').addEventListener('input', tekenKlassementNu);
   $('kWeg').addEventListener('click', function(){
     var body = { naam:$('kNaam').value.trim(), id:$('kId').value.trim() };
     if (!body.naam && !body.id){ $('kStatus').textContent = 'Vul een naam of id in.'; return; }
