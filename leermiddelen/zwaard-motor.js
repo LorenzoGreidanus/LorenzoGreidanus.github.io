@@ -471,7 +471,10 @@ function maak(opties){
   function tref(P, schade, kleur){
     var s2 = P.sp;
     if (s2.raak > 0 || P.neer) return;
-    var klap = Math.max(1, Math.round(schade * NERF * P.stats.pantser * (1 + W.ronde * 0.03) * (s2.blok ? BLOK.deel : 1)));
+    /* De groei per ronde, en vanaf ronde 12 extra plus een stukje van je maximale leven:
+       wie veel leven koopt, blijft anders vanaf ronde 15 onaantastbaar. */
+    var groei = 1 + W.ronde * 0.035 + Math.max(0, W.ronde - 12) * 0.03;
+    var klap = Math.max(1, Math.round((schade * groei + P.maxHp * 0.022 * Math.max(0, W.ronde - 12)) * NERF * P.stats.pantser * (s2.blok ? BLOK.deel : 1)));
     P.hp -= klap; s2.raak = s2.blok ? RAAKPAUZE * 0.5 : RAAKPAUZE; s2.flits = 0.25;
     W.cijfers.push({ x:s2.x, y:s2.y - 26, tekst:(s2.blok ? 'geblokt -' : '-') + klap, leven:0.9, kleur:s2.blok ? '#204ECF' : (kleur || '#c0442c') });
     if (P.hp <= 0){ P.hp = 0; valNeer(P); }

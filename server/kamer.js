@@ -27,7 +27,7 @@ import TORENMOTOR from "../leermiddelen/toren-motor.js";
 const TORENSTAP = 60, TOREN_STAND_OM = 2;   /* Torenverdediging: een tik van zestig milliseconden, de stand om de andere tik */
 const TOREN_WACHT_KEUZE = 1500;             /* zolang wacht de kamer op de keuze van de tweede speler */
 const RANGEN = { bb: 1, kgt: 2, havo: 3, vwo: 4 };
-const MOTORSTAP = 1 / 60, MOTOR_STAND_OM = 3, MOTOR_STIL_OM = 12;   /* per hoeveel tikken de stand gaat: in de ronde, en daarbuiten */
+const MOTORSTAP = 1 / 60, MOTOR_STAND_OM = 2, MOTOR_STIL_OM = 12;   /* per hoeveel tikken de stand gaat: in de ronde, en daarbuiten */
 const MOTOR_ZONDER_SPELERS = 60 * 1000;                            /* zonder een enkele speler stopt de motor na een minuut */
 
 const MAX_SPELERS = 60, MAX_VRAGEN = 60;
