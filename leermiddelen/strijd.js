@@ -52,7 +52,7 @@ window.STRIJD = (function(){
     '#strijdSluier .stijlen{display:grid;gap:6px;margin-bottom:8px}' +
     '#strijdSluier .stijlen button{display:block;width:100%;text-align:left;background:#fff;border:2px solid rgba(20,34,76,.12);border-radius:14px;padding:8px 12px;margin:0;color:#14224C;font:inherit}' +
     '#strijdSluier .stijlen button b{display:block;font-size:.92rem;margin:0}#strijdSluier .stijlen button small{display:block;font-size:.74rem;color:#5b6480;line-height:1.3}' +
-    '#strijdSluier .stijlen button.aan{border-color:#204ECF;background:#f4f7ff}#strijdSluier .stijlen button:disabled{opacity:.6}' +
+    '#strijdSluier .stijlen button.aan{border-color:#204ECF;background:#204ECF;color:#fff}#strijdSluier .stijlen button.aan small{color:rgba(255,255,255,.85)}#strijdSluier .stijlen button.aan em{font-style:normal;font-size:.72rem;font-weight:600;background:#fff;color:#204ECF;border-radius:999px;padding:1px 8px;margin-left:6px;vertical-align:middle}#strijdSluier .stijlen button:disabled{opacity:.7}' +
     '#strijdSluier button.crab{background:#F26749;color:#fff;border-color:#F26749}#strijdSluier button.stil{background:#fff;color:#14224C;border:2px solid rgba(20,34,76,.15)}' +
     '#strijdSluier p{margin:0;color:#5b6480}' +
     '#strijdSluier .code{display:block;font-size:2.6rem;letter-spacing:.25em;font-weight:700;color:#204ECF;margin:10px 0 4px;padding-left:.25em}' +
@@ -166,16 +166,18 @@ window.STRIJD = (function(){
     var rij = [{ naam:naam + ' (jij)', stijl:mijnStijl, klaar:mijnKlaar }].concat(maten).map(function(r){
       return '<li' + (r.klaar ? ' class="klaar"' : '') + '><span>' + schoon(r.naam) + '</span><em>' + schoon(stijlNaam(r.stijl)) + '</em><i>' + (r.klaar ? 'klaar' : 'kiest nog') + '</i></li>';
     }).join('');
-    var keuze = '<div class="stijlen">' + L.stijlen.map(function(x){ return '<button type="button" data-stijl="' + x.id + '"' + (mijnStijl === x.id ? ' class="aan"' : '') + (mijnKlaar ? ' disabled' : '') + '><b>' + x.naam + '</b><small>' + x.uit + '</small></button>'; }).join('') + '</div>';
+    var keuze = '<div class="stijlen">' + L.stijlen.map(function(x){ var aan = mijnStijl === x.id; return '<button type="button" data-stijl="' + x.id + '"' + (aan ? ' class="aan"' : '') + (mijnKlaar ? ' disabled' : '') + '><b>' + (aan ? '\u2713 ' : '') + x.naam + (aan ? ' <em>gekozen</em>' : '') + '</b><small>' + x.uit + '</small></button>'; }).join('') + '</div>';
     var alleKlaar = mijnKlaar && maten.every(function(r){ return r.klaar; });
     var uitleg = '<p>Laat je vrienden naar <strong>' + location.host.replace(/^www\./, '') + '/q</strong> gaan en deze code invullen:</p><span class="code">' + code + '</span>';
-    var knoppen = '<button type="button" data-klaar="1" class="' + (mijnKlaar ? 'stil' : 'crab') + '">' + (mijnKlaar ? 'Toch nog iets veranderen' : 'Klaar!') + '</button> ';
+    var knoppen = '<button type="button" data-klaar="1" class="' + (mijnKlaar ? 'stil' : 'crab') + '">' + (mijnKlaar ? 'Toch nog iets veranderen' : 'Klaar als ' + stijlNaam(mijnStijl).toLowerCase() + '!') + '</button> ';
     if (ikMaak) knoppen += '<button type="button" data-start="1"' + (aantal >= 2 && alleKlaar ? '' : ' disabled') + '>Start met z\'n ' + (aantal <= 2 ? 'tweeën' : aantal === 3 ? 'drieën' : 'vieren') + '</button> ';
     knoppen += '<button type="button">Toch niet</button>';
     var status = aantal < 2 ? 'Zodra er twee zijn en iedereen klaar is, kan het beginnen; met vier begint het vanzelf.'
       : alleKlaar ? (ikMaak ? 'Iedereen is klaar. Druk op start.' : 'Iedereen is klaar; de maker van de kamer start.')
       : 'Het begint als iedereen op Klaar heeft gedrukt' + (ikMaak ? ' en jij start' : '') + '.';
-    return '<b>' + (aantal < 2 ? 'Wacht op je vrienden' : aantal + ' in de kamer') + '</b>' + uitleg + '<ul class="lobby">' + rij + '</ul>' + '<p class="kop">Kies je stijl</p>' + keuze + '<p>' + status + '</p>' + knoppen;
+    return '<b>' + (aantal < 2 ? 'Wacht op je vrienden' : aantal + ' in de kamer') + '</b>' + uitleg + '<ul class="lobby">' + rij + '</ul>' +
+      '<p class="kop">Stap 1: kies je stijl</p>' + keuze +
+      '<p class="kop">Stap 2: druk op Klaar</p><p>' + (mijnKlaar ? 'Je staat klaar als <strong>' + stijlNaam(mijnStijl) + '</strong>. ' : 'Je speelt als <strong>' + stijlNaam(mijnStijl) + '</strong>; druk op Klaar als dat goed is. ') + status + '</p>' + knoppen;
   }
   function wachtTekst(aantal){
     if (duel && maxSamen > 2 && hooks && hooks.lobby) return lobbyTekst(aantal);
@@ -345,12 +347,12 @@ window.STRIJD = (function(){
       if (!k || !k.vak){ fout.textContent = 'Kies eerst een vak.'; return; }
       var knop = this; knop.disabled = true;
       fetch('/api/kamer', { method:'POST', headers:{ 'content-type':'application/json' },
-        body: JSON.stringify({ spel:'strijd', duel:true, game:spel, vak:k.vak, niveau:k.niveau }) })
+        body: JSON.stringify({ spel:'strijd', duel:true, game:spel, vak:k.vak, niveau:k.niveau, deel:(k.deel || []).join(',') }) })
       .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
       .then(function(x){
         knop.disabled = false;
         if (!x.ok){ fout.textContent = x.j.fout || 'Het lukte niet om een duel te maken.'; return; }
-        location.href = spel + '.html?vak=' + encodeURIComponent(k.vak) + '&n=' + encodeURIComponent(k.niveau) + '&kamer=' + x.j.code + '&naam=' + encodeURIComponent(n);
+        location.href = spel + '.html?vak=' + encodeURIComponent(k.vak) + '&n=' + encodeURIComponent(k.niveau) + ((k.deel || []).length ? '&deel=' + encodeURIComponent(k.deel.join(',')) : '') + '&kamer=' + x.j.code + '&naam=' + encodeURIComponent(n);
       })
       .catch(function(){ knop.disabled = false; fout.textContent = 'Geen verbinding met de server.'; });
     });
@@ -365,7 +367,7 @@ window.STRIJD = (function(){
         if (!x.ok){ fout.textContent = x.j.fout || 'Geen kamer met deze code.'; return; }
         if (x.j.spel !== 'strijd'){ location.href = 'klasquiz.html?k=' + c; return; }
         if (x.j.fase === 'einde'){ fout.textContent = 'Dit potje is al afgelopen.'; return; }
-        location.href = x.j.game + '.html?vak=' + encodeURIComponent(x.j.vak) + '&n=' + encodeURIComponent(x.j.niveau) + '&kamer=' + c + '&naam=' + encodeURIComponent(n);
+        location.href = x.j.game + '.html?vak=' + encodeURIComponent(x.j.vak) + '&n=' + encodeURIComponent(x.j.niveau) + (x.j.deel ? '&deel=' + encodeURIComponent(x.j.deel) : '') + '&kamer=' + c + '&naam=' + encodeURIComponent(n);
       })
       .catch(function(){ knop.disabled = false; fout.textContent = 'Geen verbinding met de server.'; });
     });

@@ -133,7 +133,7 @@ export class Kamer extends DurableObject {
     if (this.stand && (this.stand.spel === "klas" ? Date.now() - this.stand.laatst < KLAS_SLAAPT : (this.stand.fase !== "einde" && Date.now() - this.stand.laatst < OPRUIMEN_NA))) return json({ fout: "bezet" }, 409);
     const basis = {
       code: String(opzet.code || "").toUpperCase(), sleutel: sleutelMaken(),
-      vak: schoon(opzet.vak, 20), niveau: schoon(opzet.niveau, 20),
+      vak: schoon(opzet.vak, 20), niveau: schoon(opzet.niveau, 20), deel: schoon(opzet.deel, 300).replace(/[^a-z0-9 ,-]/gi, ""),
       fase: "lobby", spelers: {}, gemaakt: Date.now(), laatst: Date.now(), alarm: null
     };
     if (opzet.spel === "klas"){
@@ -861,7 +861,7 @@ export class Kamer extends DurableObject {
 
   aanwezig(sid){ return this.ctx.getWebSockets(sid).length > 0; }
   overzicht(){
-    const st = this.stand, basis = { code: st.code, spel: st.spel, vak: st.vak, niveau: st.niveau, fase: st.fase };
+    const st = this.stand, basis = { code: st.code, spel: st.spel, vak: st.vak, niveau: st.niveau, deel: st.deel || "", fase: st.fase };
     if (st.spel === "klas") return Object.assign(basis, { naam: st.naam, n: st.resultaten.length, gemaakt: st.gemaakt });
     if (this.strijd){
       const lijst = this.strijdLijst();
