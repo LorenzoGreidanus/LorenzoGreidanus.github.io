@@ -318,7 +318,7 @@ body.groot .meter b{font-size:1.45rem}
     <div><i style="background:var(--ocean)">3</i><b>Vragen zijn munten</b><span>Na elke ronde vijf vragen voor de klas, en hoe verder je komt hoe meer. Goed is munten, op rij goed is meer munten. Weet je het te goed, dan gaan de vragen een niveau omhoog. Fouten die je velt laten ook wat vallen.</span></div>
     <div><i style="background:#6b3fa0">4</i><b>Uitrusting</b><span>Tussen de rondes koop je in de winkel: zwaard, bereik, tempo, harnas, laarzen, werpmes en een drankje. Alles heeft zeven niveaus en geldt alleen voor dit gevecht.</span></div>
     <div><i style="background:#2f9e8f">5</i><b>Drie goed is een critical</b><span>Drie vragen goed op rij en je volgende klap doet dubbel, met een schokgolf die de fouten eromheen meeneemt. Een fout antwoord en je begint opnieuw te tellen.</span></div>
-    <div><i style="background:#3b4759">6</i><b>Gevaren en elitefouten</b><span>Vanaf ronde 4 ligt er iets in de arena: een vuurpoel, een ijsvlak waarop je doorglijdt, of een muur die heen en weer schuift. En er komen elitefouten: de gepantserde (een pijl doet er bijna niets, het zwaard wel), de splitser (valt uiteen in drie stukjes) en de genezer (heelt de fouten om zich heen: die eerst).</span></div>
+    <div><i style="background:#3b4759">6</i><b>Gevaren en elitefouten</b><span>Vanaf ronde 4 ligt er iets in de arena: een vuurpoel, of een ijsvlak waarop je doorglijdt. En er komen elitefouten: de gepantserde (een pijl doet er bijna niets, het zwaard wel), de splitser (valt uiteen in drie stukjes) en de genezer (heelt de fouten om zich heen: die eerst).</span></div>
     <div><i style="background:#EA9836;color:#14224C">7</i><b>Vaardigheden na een baas</b><span>Versla je een baas, dan kies je uit drie vaardigheden: verder springen, een pijl die doorboort, een tweede kans bij een fout antwoord, meer leven, sneller lopen, een muntmagneet of een hardere critical. Ze stapelen. Wie is ingelogd met Microsoft speelt bij elke verslagen baas ook een trofee vrij voor bij zijn gezichtje.</span></div>
   </div>
 
@@ -784,8 +784,13 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (!voorspel.aan){ voorspel.x = sp.x; voorspel.y = sp.y; voorspel.ex = 0; voorspel.ey = 0; voorspel.hist = []; voorspel.dashRest = 0; voorspel.aan = true; }
     var mx = 0, my = 0;
     if (!co.neer && fase === 'ronde' && !pauze){
-      var snel = loopSnel();
-      mx = inv.dx * snel * dt; my = inv.dy * snel * dt;
+      /* dezelfde regels als de motor: blokkeren remt, op het ijs glijd je door */
+      var snel = loopSnel() * (stijl === 'wacht' && blokToets && sp.blokTijd > 0 ? ZWAARDMOTOR.BLOK.traag : 1);
+      var vx = inv.dx * snel, vy = inv.dy * snel;
+      var opIjs = zones.some(function(zn){ return zn.soort === 'ijs' && Math.hypot(voorspel.x - zn.x, voorspel.y - zn.y) < zn.r; });
+      if (opIjs){ var grip = Math.min(1, dt * ZWAARDMOTOR.GEVAAR.ijs.grip); voorspel.gx = (voorspel.gx || 0) + (vx - (voorspel.gx || 0)) * grip; voorspel.gy = (voorspel.gy || 0) + (vy - (voorspel.gy || 0)) * grip; }
+      else { voorspel.gx = vx; voorspel.gy = vy; }
+      mx = voorspel.gx * dt; my = voorspel.gy * dt;
       if (voorspel.dashRest > 0){
         var d = Math.min(dt, voorspel.dashRest); voorspel.dashRest -= d;
         mx += voorspel.ddx * DASH.snel * d; my += voorspel.ddy * DASH.snel * d;
@@ -1063,7 +1068,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
           if (d0){ var wx = p.x - d0.x, wy = p.y - d0.y, wl = Math.hypot(wx, wy) || 1; ddx = wx / wl; ddy = wy / wl; }
           else { ddx = sp.dx; ddy = sp.dy; }
         }
-        voorspel.dashRest = DASH.duur; voorspel.ddx = ddx; voorspel.ddy = ddy;
+        voorspel.dashRest = DASH.duur * (1 + 0.35 * v('dash')); voorspel.ddx = ddx; voorspel.ddy = ddy;
         co.dashVraag = true;
       }
       return;

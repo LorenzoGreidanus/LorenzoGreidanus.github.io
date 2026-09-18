@@ -270,7 +270,7 @@ function maak(opties){
      nooit in het midden waar je begint. De muur schuift heen en weer. */
   function maakZones(n){
     if (n < GEVAAR.vanaf || n % BAASRONDE === 0) return [];
-    var soorten = ['vuur', 'ijs', 'muur'], uit = [], aantal = n >= 8 ? 2 : 1;
+    var soorten = ['vuur', 'ijs'], uit = [], aantal = n >= 8 ? 2 : 1;   /* de schuivende muur is eruit: die bewoog samen niet soepel */
     for (var i = 0; i < aantal; i++){
       var soort = soorten.splice(Math.floor(toeval() * soorten.length), 1)[0], z = { id:++W.nr, soort:soort }, tel = 0;
       do { z.x = 140 + toeval() * (ARENA.b - 280); z.y = 110 + toeval() * (ARENA.h - 220); tel++; } while (tel < 20 && Math.hypot(z.x - ARENA.b / 2, z.y - ARENA.h / 2) < 230);
