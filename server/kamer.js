@@ -430,7 +430,10 @@ export class Kamer extends DurableObject {
     if (st.game === "zwaard"){
       this.motorStart();
       const W = this.motor; if (!W) return false;
-      if (ronde > 1){ W.ronde = ronde - 1; W.volgendeRonde(); }
+      /* Zaten de spelers tussen de rondes (vragen, winkel)? Dan daar verder, niet met een nieuwe ronde: anders slaan ze de vragen over. */
+      const tussen = Object.keys(st.spelers).some(s => st.spelers[s].fase === "tussen" && (st.spelers[s].ronde | 0) >= ronde);
+      if (tussen){ W.ronde = ronde; W.fase = "vragen"; W.spelers.forEach(P => { P.klaar = false; }); }
+      else if (ronde > 1){ W.ronde = ronde - 1; W.volgendeRonde(); }
       this.motorHersteld = Date.now();
       console.log("kamer " + st.code + ": motor Zwaardvechter hersteld bij ronde " + ronde);
       return true;
@@ -621,6 +624,7 @@ export class Kamer extends DurableObject {
       sp.gehaald = Math.max(sp.gehaald, getal(m.gehaald, 999));
       sp.leven = getal(m.leven, 9999);
       sp.punten = Math.max(sp.punten, getal(m.punten, 99999));
+      sp.fase = m.fase === "tussen" ? "tussen" : "ronde";   /* tussen de rondes (vragen, winkel) of erin */
       sp.laatst = Date.now();
       await this.bewaar();
       this.planStand();

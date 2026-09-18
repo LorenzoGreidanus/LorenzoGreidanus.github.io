@@ -1186,14 +1186,20 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
      'van' en een 'naar', en schuift daar in de vijftig milliseconden tot de
      volgende stand tussenin; zo beweegt het zestig keer per seconde vloeiend
      in plaats van twintig keer te springen. */
+  /* Een stand komt ongeveer twintig keer per seconde, maar niet op de klok. Alles schuift
+     van waar het getekend stond naar de nieuwe plek in de tijd die er echt tussen twee
+     standen zat, en als de volgende stand op zich laat wachten loopt het nog even door in
+     dezelfde richting (hoogstens 120 ms) in plaats van stil te staan en dan te springen. */
   function zetDoel(o, x, y, nu){
-    if (o.doelX === undefined || Math.hypot(x - o.x, y - o.y) > 120){ o.x = x; o.y = y; }
+    if (o.doelX === undefined || Math.hypot(x - o.x, y - o.y) > 120){ o.x = x; o.y = y; o.vx = 0; o.vy = 0; o.dur = 50; }
+    else if (o.t0){ var dt = Math.max(16, Math.min(200, nu - o.t0)); o.vx = (x - o.doelX) / dt; o.vy = (y - o.doelY) / dt; o.dur = dt; }
     o.vanX = o.x; o.vanY = o.y; o.doelX = x; o.doelY = y; o.t0 = nu;
   }
   function schuifEen(o, nu){
     if (o.doelX === undefined) return;
-    var k = Math.min(1, (nu - o.t0) / 50);
-    o.x = o.vanX + (o.doelX - o.vanX) * k; o.y = o.vanY + (o.doelY - o.vanY) * k;
+    var dur = o.dur || 50, el = nu - o.t0;
+    if (el <= dur){ var k = el / dur; o.x = o.vanX + (o.doelX - o.vanX) * k; o.y = o.vanY + (o.doelY - o.vanY) * k; }
+    else { var ex = Math.min(el - dur, 120); o.x = o.doelX + (o.vx || 0) * ex; o.y = o.doelY + (o.vy || 0) * ex; }
   }
   function schuif(nu){
     fouten.forEach(function(f){ schuifEen(f, nu); });
@@ -1999,7 +2005,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       net: function(d){ if (co.aan) netOntvang(d); },
       /* de kamer is opnieuw begonnen: mijn uitrusting, leven en munten terug */
       herstel: function(){ if (co.aan) zendNet({ k:'herstel', s:mijnStats(), hp:Math.round(hp), munten:munten }); },
-      stand: function(){ return { ronde:ronde, gehaald:Math.max(0, ronde - 1), leven:Math.round(hp), punten:geveld }; },
+      stand: function(){ return { ronde:ronde, gehaald:Math.max(0, ronde - 1), leven:Math.round(hp), punten:geveld, fase:fase === 'ronde' ? 'ronde' : 'tussen' }; },
       aanval: function(n, van){
         if (co.aan || fase === 'einde' || !loopt || !W) return;
         W.extraFouten(n); spiegel();

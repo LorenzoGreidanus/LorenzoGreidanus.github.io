@@ -314,7 +314,7 @@ window.STRIJD = (function(){
     var sleutel = JSON.stringify(s);
     if (sleutel === laatsteStand) return;
     laatsteStand = sleutel;
-    stuur({ t:'stand', ronde:s.ronde | 0, gehaald:s.gehaald | 0, leven:s.leven | 0, punten:s.punten | 0 });
+    stuur({ t:'stand', ronde:s.ronde | 0, gehaald:s.gehaald | 0, leven:s.leven | 0, punten:s.punten | 0, fase:s.fase || '' });
   }, 2000);
   var laatsteAanval = 0;
 
