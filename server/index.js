@@ -78,7 +78,7 @@ export default {
           const r = await env.KAMERS.get(env.KAMERS.idFromName(code)).fetch("https://kamer/stand");
           if (r.ok){
             const j = await r.json();
-            pagina = j.spel === "strijd" ? "strijd.html" : j.spel === "rollen" ? "rol.html" : "klasquiz.html";
+            pagina = j.spel === "strijd" ? "strijd.html" : j.spel === "rollen" ? (j.game === "teken" ? "tekenslag.html" : "rol.html") : "klasquiz.html";
           }
         } catch (e){}
       }

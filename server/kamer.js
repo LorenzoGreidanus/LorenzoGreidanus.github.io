@@ -37,7 +37,7 @@ const OPRUIMEN_NA = 3 * 60 * 60 * 1000;     /* een kamer leeft hoogstens drie uu
 const NA_EINDE = 30 * 60 * 1000;             /* na de eindstand nog een half uur te bekijken */
 const SPELLEN_STRIJD = { toren: "Torenverdediging", zwaard: "Zwaardvechter" };
 /* spellen met rollen op telefoons: het bord draait het spel, de kamer deelt kaarten uit en geeft acties door */
-const SPELLEN_ROLLEN = { polis: "De vergadering van de klas", meetlat: "Langs de meetlat", staten: "De vergadering", berlijn: "De Conferentie van Berlijn", standen: "Stem per stand", crisis: "De crisis" };
+const SPELLEN_ROLLEN = { polis: "De vergadering van de klas", meetlat: "Langs de meetlat", staten: "De vergadering", berlijn: "De Conferentie van Berlijn", standen: "Stem per stand", crisis: "De crisis", teken: "Tekenslag" };
 const KAART_MAX = 12000, BORD_MAX = 40000, ACTIE_MAX = 4000;
 const KLAS_SLAAPT = 400 * 24 * 60 * 60 * 1000; /* een klascode blijft tot de docent hem opheft, of tot hij ruim een jaar niet gebruikt is */
 const KLAS_MAX = 3000;                        /* hoogstens zoveel gemelde potjes per klas */
@@ -320,6 +320,14 @@ export class Kamer extends DurableObject {
           this.ctx.getWebSockets(sid).forEach(w => { try { w.send(s); } catch (e){} });
         }
         await this.bewaar();
+        return;
+      }
+      /* vlug: van het bord naar alle spelers zonder te bewaren, voor de streken van een tekening */
+      if (m.t === "vlug"){
+        if (m.d === undefined) return;
+        const s = JSON.stringify({ t: "vlug", d: m.d });
+        if (s.length > ACTIE_MAX * 2) return;
+        this.ctx.getWebSockets("speler").forEach(w => { try { w.send(s); } catch (e){} });
         return;
       }
       if (m.t === "alle"){
