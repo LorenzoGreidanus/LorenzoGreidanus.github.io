@@ -218,7 +218,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       <div class="stap">
         <b>Mijn klassen op dit apparaat</b>
         <div class="klassen" id="klassen"></div>
-        <p class="tip" style="margin-top:8px">De sleutel van een klas staat alleen in deze browser. Wis je de browsergegevens, dan zijn de uitslagen niet meer op te halen.</p>
+        <p class="tip" style="margin-top:8px" id="klasTip">De sleutel van een klas staat in deze browser. Ben je ingelogd met Microsoft, dan reist hij mee naar je andere apparaten.</p>
       </div>
     </div>
     <div class="kaart">
@@ -449,6 +449,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
   $('vergeet').addEventListener('click', function(){
     if (!huidig || !confirm('Deze klas van dit apparaat vergeten? De klascode blijft bestaan, maar zonder de sleutel zijn de uitslagen niet meer op te halen.')) return;
     klassen = klassen.filter(function(k){ return k.code !== huidig.code; }); bewaar();
+    if (window.PROFIEL && PROFIEL.docentWeg) PROFIEL.docentWeg(huidig.code);
     kies(null);
   });
   /* opheffen: de code en alle uitslagen weg van de server; leerlingen raken de koppeling kwijt */
@@ -460,6 +461,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       .then(function(x){
         if (!x.ok && x.j.fout !== 'dit is geen klascode'){ alert(x.j.fout || 'Opheffen lukte niet.'); return; }
         klassen = klassen.filter(function(q){ return q.code !== k.code; }); bewaar();
+        if (window.PROFIEL && PROFIEL.docentWeg) PROFIEL.docentWeg(k.code);
         kies(null);
       })
       .catch(function(){ alert('Geen verbinding met de server.'); });
@@ -480,6 +482,16 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
   tekenKlassen();
   var eerst = klassen[0];
   if (eerst) kies(eerst);
+  /* na het inloggen of de sync kunnen er klassen van het account bij zijn gekomen */
+  if (window.PROFIEL && PROFIEL.op){
+    PROFIEL.op(function(){
+      var l = []; try { l = JSON.parse(localStorage.getItem('lg-klas-docent') || '[]'); } catch (e){}
+      if (!Array.isArray(l) || l.length === klassen.length) return;
+      klassen = l; tekenKlassen();
+      if (!huidig && klassen[0]) kies(klassen[0]);
+    });
+    PROFIEL.sync();
+  }
   /* de vragenbank laadt na deze pagina; dan krijgen de onderdelen hun naam */
   window.addEventListener('load', function(){ if (data) teken(); });
 })();

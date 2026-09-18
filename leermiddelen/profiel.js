@@ -45,7 +45,8 @@ window.PROFIEL = (function(){
     var campagne = {}; try { campagne = JSON.parse(ls('lg-toren-campagne') || '{}') || {}; } catch (e){}
     var vrij = {}; ['tonkla', 'aap', 'eiland', 'archipel', 'vulkaan'].forEach(function(x){ if (ls('lg-toren-' + x) === 'ja') vrij[x] = true; });
     var klas = null; try { klas = JSON.parse(ls('lg-klas') || 'null'); } catch (e){}
-    return { avatar:avatar(), beste:beste, campagne:campagne, vrij:vrij, klas:klas && klas.code ? klas : null, niveau:ls('lg-niveau') || '', muntDelta:wachtend(), vrijspeel:vrijWacht() };
+    return { avatar:avatar(), beste:beste, campagne:campagne, vrij:vrij, klas:klas && klas.code ? klas : null, niveau:ls('lg-niveau') || '', muntDelta:wachtend(), vrijspeel:vrijWacht(),
+             docent:docentLijst(), docentWeg:docentWegWacht() };
   }
   /* ---------- munten: het saldo staat op de server, hier wat er nog onderweg is ---------- */
   function wachtend(){ return parseInt(ls('lg-munten-wacht') || '0', 10) || 0; }
@@ -53,6 +54,10 @@ window.PROFIEL = (function(){
   function bezit(){ try { return JSON.parse(ls('lg-bezit') || '{}') || {}; } catch (e){ return {}; } }
   function ingelogd(){ return !!(accountStand && accountStand.ingelogd); }
   function vrijWacht(){ try { return JSON.parse(ls('lg-vrij-wacht') || '[]') || []; } catch (e){ return []; } }
+  /* de klassen van de docent op dit apparaat (code + sleutel), en welke hij hier vergat */
+  function docentLijst(){ try { var l = JSON.parse(ls('lg-klas-docent') || '[]'); return Array.isArray(l) ? l.filter(function(k){ return k && k.code && k.sleutel; }) : []; } catch (e){ return []; } }
+  function docentWegWacht(){ try { return JSON.parse(ls('lg-klas-docent-weg') || '[]') || []; } catch (e){ return []; } }
+  function docentWeg(code){ var w = docentWegWacht(); if (w.indexOf(code) < 0) w.push(code); lsZet('lg-klas-docent-weg', JSON.stringify(w)); return sync(); }
   /* een trofee vrijspelen (een baas verslagen): meteen in bezit, en bij de volgende sync naar de server */
   function vrijspeel(id){
     if (!ingelogd() || !id) return false;
@@ -95,6 +100,12 @@ window.PROFIEL = (function(){
     lsZet('lg-toren-campagne', JSON.stringify(camp));
     Object.keys(pr.vrij || {}).forEach(function(k){ lsZet('lg-toren-' + k, 'ja'); });
     if (pr.klas && pr.klas.code && !ls('lg-klas')) lsZet('lg-klas', JSON.stringify(pr.klas));
+    /* docentklassen van het account erbij op dit apparaat, behalve wat hier net vergeten is */
+    if (Array.isArray(pr.docent) && pr.docent.length){
+      var dl = docentLijst(), dw = docentWegWacht(), erbij = false;
+      pr.docent.forEach(function(k){ if (dw.indexOf(k.code) < 0 && !dl.some(function(x){ return x.code === k.code; })){ dl.push({ code:k.code, sleutel:k.sleutel, naam:k.naam || 'Klas', gemaakt:k.gemaakt || Date.now() }); erbij = true; } });
+      if (erbij) lsZet('lg-klas-docent', JSON.stringify(dl));
+    }
     if (pr.niveau && !ls('lg-niveau')) lsZet('lg-niveau', pr.niveau);
     var p = lees(); if (pr.avatar) p.avatar = pr.avatar; zet(p);
     if (typeof pr.munten === 'number') lsZet('lg-munten', String(Math.max(0, Math.round(pr.munten)) + wachtend()));
@@ -125,11 +136,11 @@ window.PROFIEL = (function(){
     return new Promise(function(res){
       timer = setTimeout(function(){
         var delta = wachtend();
-        var vr = vrijWacht();
+        var vr = vrijWacht(), dw = docentWegWacht();
         var pr = verzamel(), hash = JSON.stringify(pr), sinds = Date.now() - (parseInt(ls('lg-sync-t') || '0', 10) || 0);
         /* hetzelfde als de vorige keer, korter dan een half uur geleden, en niets onderweg: dan hoeft de server het niet te horen */
-        if (hash === ls('lg-sync-hash') && sinds < 1800000 && !delta && !vr.length){ res(null); return; }
-        vraag('/api/profiel/' + c, 'PUT', { profiel:pr }).then(function(j){ lsZet('lg-munten-wacht', String(Math.max(0, wachtend() - delta))); lsZet('lg-vrij-wacht', JSON.stringify(vrijWacht().filter(function(x){ return vr.indexOf(x) < 0; }))); pasToe(j.profiel); lsZet('lg-sync-hash', JSON.stringify(verzamel())); lsZet('lg-sync-t', String(Date.now())); res(j); }).catch(function(){ res(null); });
+        if (hash === ls('lg-sync-hash') && sinds < 1800000 && !delta && !vr.length && !dw.length){ res(null); return; }
+        vraag('/api/profiel/' + c, 'PUT', { profiel:pr }).then(function(j){ lsZet('lg-munten-wacht', String(Math.max(0, wachtend() - delta))); lsZet('lg-vrij-wacht', JSON.stringify(vrijWacht().filter(function(x){ return vr.indexOf(x) < 0; }))); lsZet('lg-klas-docent-weg', JSON.stringify(docentWegWacht().filter(function(x){ return dw.indexOf(x) < 0; }))); pasToe(j.profiel); lsZet('lg-sync-hash', JSON.stringify(verzamel())); lsZet('lg-sync-t', String(Date.now())); res(j); }).catch(function(){ res(null); });
       }, 600);
     });
   }
@@ -194,5 +205,5 @@ window.PROFIEL = (function(){
   /* en even kijken of er iemand is ingelogd, want dan tellen de munten */
   if (typeof fetch === 'function' && !accountStand) setTimeout(function(){ account(); }, 400);
   return { lees:lees, code:code, avatar:avatar, zetAvatar:zetAvatar, maak:maak, koppel:koppel, sync:sync, wis:wis, verzamel:verzamel, op:op,
-    klasWeg:klasWeg, account:account, munten:munten, bezit:bezit, ingelogd:ingelogd, accountMogelijk:accountMogelijk, muntenErbij:muntenErbij, koop:koop, vrijspeel:vrijspeel, accountNeemCode:accountNeemCode, accountNieuweCode:accountNieuweCode, accountVlag:function(){ return accountVlag; }, winkelVlag:function(){ return winkelVlag; }, accountAfstemmen:accountAfstemmen, inlogAdres:inlogAdres, uitloggen:uitloggen, accountWeg:accountWeg };
+    klasWeg:klasWeg, account:account, munten:munten, bezit:bezit, ingelogd:ingelogd, accountMogelijk:accountMogelijk, muntenErbij:muntenErbij, koop:koop, vrijspeel:vrijspeel, accountNeemCode:accountNeemCode, accountNieuweCode:accountNieuweCode, accountVlag:function(){ return accountVlag; }, winkelVlag:function(){ return winkelVlag; }, accountAfstemmen:accountAfstemmen, inlogAdres:inlogAdres, uitloggen:uitloggen, accountWeg:accountWeg, docentWeg:docentWeg };
 })();

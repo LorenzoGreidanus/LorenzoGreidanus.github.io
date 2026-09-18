@@ -37,13 +37,24 @@ function netjes(inz){
   if (inz.klas && typeof inz.klas === "object" && /^[A-Z]{4}$/.test(String(inz.klas.code || "")) && inz.klas.naam){
     p.klas = { code: String(inz.klas.code), naam: schoon(inz.klas.naam, 16), sinds: getal(inz.klas.sinds, 1e14) };
   }
+  /* de klassen die deze docent maakte: code plus sleutel, zodat ze op een ander apparaat na inloggen terug zijn */
+  p.docent = (Array.isArray(inz.docent) ? inz.docent : []).slice(0, 30).map(k => k && typeof k === "object" ? {
+    code: String(k.code || "").toUpperCase(), sleutel: String(k.sleutel || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 80), naam: schoon(k.naam, 30), gemaakt: getal(k.gemaakt, 1e14) } : null)
+    .filter(k => k && /^[A-Z]{4}$/.test(k.code) && k.sleutel);
+  p.docentWeg = (Array.isArray(inz.docentWeg) ? inz.docentWeg : []).slice(0, 30).map(x => String(x || "").toUpperCase()).filter(x => /^[A-Z]{4}$/.test(x));
   return p;
 }
 /* Samenvoegen: het nieuwste record wint, sterren en vrijgespeelde dingen tellen op, de rest komt van het apparaat dat meldt. */
-function voegSamen(oud, nieuw, klasWeg){
+function voegSamen(oud, nieuw, klasWeg, alles){
   const p = { avatar: nieuw.avatar || oud.avatar || "", beste: Object.assign({}, oud.beste), campagne: Object.assign({}, oud.campagne),
               vrij: Object.assign({}, oud.vrij), klas: nieuw.klas || (klasWeg ? null : oud.klas) || null, niveau: nieuw.niveau || oud.niveau || "",
-              munten: Math.max(0, (oud.munten | 0) + (nieuw.muntDelta | 0)), bezit: Object.assign({}, oud.bezit) };
+              munten: Math.max(0, (oud.munten | 0) + (nieuw.muntDelta | 0)), bezit: Object.assign({}, oud.bezit), docent: [] };
+  /* docentklassen: wat er al was plus wat dit apparaat kent, op code; wat het apparaat vergat gaat eruit */
+  const weg = new Set(nieuw.docentWeg || []), gezien = new Set();
+  (oud.docent || []).concat(nieuw.docent || []).forEach(k => { if (!weg.has(k.code) && !gezien.has(k.code)){ gezien.add(k.code); p.docent.push(k); } });
+  p.docent = p.docent.slice(0, 30);
+  /* het beheeraccount heeft alles: alle cosmetica en alle eilanden */
+  if (alles){ COSMETICA.ITEMS.forEach(it => { p.bezit[it.id] = true; }); ["tonkla", "aap", "eiland", "archipel", "vulkaan"].forEach(k => { p.vrij[k] = true; }); }
   /* kopen: alleen wat er nog niet is en wat het saldo toelaat; daarna mag alleen bezit in de spec staan */
   (nieuw.vrijspeel || []).forEach(id => { p.bezit[id] = true; });
   (nieuw.koop || []).forEach(id => { const it = COSMETICA.vind(id); if (it && !p.bezit[id] && p.munten >= it.prijs){ p.munten -= it.prijs; p.bezit[id] = true; } });
@@ -87,11 +98,18 @@ export class Profiel extends DurableObject {
       return json({ ok: true, code: this.stand.code, profiel: this.stand.profiel, gemaakt: this.stand.gemaakt });
     }
     if (url.pathname === "/sync"){
-      const nieuw = voegSamen(this.stand.profiel, netjes(inz.profiel), !!inz.klasWeg);
+      const nieuw = voegSamen(this.stand.profiel, netjes(inz.profiel), !!inz.klasWeg, !!this.stand.alles);
       if (JSON.stringify(nieuw).length > MAX_TEKST) return json({ fout: "profiel te groot" }, 413);
       this.stand.profiel = nieuw;
       await this.bewaar();
       return json({ ok: true, code: this.stand.code, profiel: nieuw });
+    }
+    /* het beheeraccount hangt aan deze code: voortaan alles vrij */
+    if (url.pathname === "/alles"){
+      this.stand.alles = true;
+      this.stand.profiel = voegSamen(this.stand.profiel, netjes({}), false, true);
+      await this.bewaar();
+      return json({ ok: true, profiel: this.stand.profiel });
     }
     if (url.pathname === "/weg"){
       await this.ctx.storage.deleteAll();

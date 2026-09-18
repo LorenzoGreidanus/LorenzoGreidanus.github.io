@@ -61,6 +61,18 @@ function tekstVanB64url(s){ return new TextDecoder().decode(vanB64url(s)); }
 function willekeur(n){ return b64url(crypto.getRandomValues(new Uint8Array(n))); }
 async function sha256(t){ return crypto.subtle.digest("SHA-256", enc.encode(t)); }
 async function hex(t){ return Array.from(new Uint8Array(await sha256(t))).map(b => b.toString(16).padStart(2, "0")).join(""); }
+/* het beheeraccount: alleen de sha-256 van het e-mailadres staat hier, het adres zelf niet */
+const BEHEER_MAIL_HASH = ["478f6b74c9565d4d8847ae12fd3068d5043ee70ba2c67d1afaad10092980a0ac"];
+async function isBeheer(claims){
+  const mail = String(claims.preferred_username || claims.email || claims.upn || "").trim().toLowerCase();
+  if (!mail || mail.indexOf("@") < 0) return false;
+  return BEHEER_MAIL_HASH.indexOf(await hex("lg-beheer|" + mail)) >= 0;
+}
+/* de speelcode van het beheeraccount krijgt alles vrij */
+async function allesVrij(env, code){
+  if (!/^[A-Z]{8}$/.test(code || "")) return;
+  try { await env.PROFIEL.get(env.PROFIEL.idFromName(code)).fetch("https://profiel/alles", { method: "POST", body: "{}" }); } catch (e){ console.warn("account: alles vrij mislukt", e && e.message); }
+}
 
 /* Een getekend pakketje: inhoud.handtekening, met HMAC-SHA256 op het sessiegeheim. */
 async function sleutel(env){
@@ -165,7 +177,7 @@ export async function behandel(req, env, url, hulp){
     const r = await (await account(env, s.id)).fetch("https://account/lees");
     if (!r.ok) return json({ mogelijk: true, ingelogd: false }, 200, { "set-cookie": weg(SESSIE_KOEKJE, url) });
     const a = await r.json();
-    return json({ mogelijk: true, ingelogd: true, naam: a.naam, code: a.code || "" });
+    return json({ mogelijk: true, ingelogd: true, naam: a.naam, code: a.code || "", beheer: !!a.beheer });
   }
 
   if (p === "/api/account/inloggen" && req.method === "GET"){
@@ -213,8 +225,10 @@ export async function behandel(req, env, url, hulp){
     /* het kenmerk van Microsoft komt niet in onze opslag: alleen een hash ervan */
     const id = await hex("lg-account|" + claims.sub);
     const naam = String(claims.name || claims.preferred_username || "").split("@")[0].replace(/[<>]/g, "").slice(0, 40) || "iemand";
-    const r2 = await (await account(env, id)).fetch("https://account/aanmelden", { method: "POST", body: JSON.stringify({ naam }) });
+    const beheer = await isBeheer(claims);
+    const r2 = await (await account(env, id)).fetch("https://account/aanmelden", { method: "POST", body: JSON.stringify({ naam, beheer }) });
     if (!r2.ok) return naar("fout");
+    if (beheer){ const a2 = await r2.json().catch(() => ({})); await allesVrij(env, a2.code); }
     const sessieKoekje = await teken(env, { id, tot: Date.now() + SESSIE_DAGEN * 86400 * 1000 });
     const h = new Headers({ location: url.origin + metVlag(terug, "in"), "cache-control": "no-store" });
     h.append("set-cookie", koekje(SESSIE_KOEKJE, sessieKoekje, url, SESSIE_DAGEN * 86400));
@@ -238,7 +252,10 @@ export async function behandel(req, env, url, hulp){
     /* alleen een speelcode die bestaat */
     const pr = await env.PROFIEL.get(env.PROFIEL.idFromName(code)).fetch("https://profiel/lees");
     if (!pr.ok) return json({ fout: "geen profiel met deze code" }, 404);
-    return (await account(env, s.id)).fetch("https://account/koppel", { method: "POST", body: JSON.stringify({ code }) });
+    const rk = await (await account(env, s.id)).fetch("https://account/koppel", { method: "POST", body: JSON.stringify({ code }) });
+    const jk = await rk.json().catch(() => ({}));
+    if (rk.ok && jk.beheer) await allesVrij(env, code);
+    return json(jk, rk.status);
   }
 
   if (p === "/api/account" && req.method === "DELETE"){
@@ -273,19 +290,20 @@ export class Account extends DurableObject {
     if (url.pathname === "/aanmelden"){
       if (!this.stand) this.stand = { sinds: Date.now(), code: "" };
       this.stand.naam = String(inz.naam || "").slice(0, 40);
+      this.stand.beheer = !!inz.beheer;
       await this.bewaar();
-      return json({ ok: true, naam: this.stand.naam, code: this.stand.code || "" });
+      return json({ ok: true, naam: this.stand.naam, code: this.stand.code || "", beheer: this.stand.beheer });
     }
     if (!this.stand) return json({ fout: "geen account" }, 404);
     if (url.pathname === "/lees"){
-      return json({ ok: true, naam: this.stand.naam, code: this.stand.code || "", sinds: this.stand.sinds });
+      return json({ ok: true, naam: this.stand.naam, code: this.stand.code || "", sinds: this.stand.sinds, beheer: !!this.stand.beheer });
     }
     if (url.pathname === "/koppel"){
       const code = String(inz.code || "").toUpperCase();
       if (!/^[A-Z]{8}$/.test(code)) return json({ fout: "geen geldige code" }, 400);
       this.stand.code = code;
       await this.bewaar();
-      return json({ ok: true, code });
+      return json({ ok: true, code, beheer: !!this.stand.beheer });
     }
     if (url.pathname === "/weg"){
       await this.ctx.storage.deleteAll();
