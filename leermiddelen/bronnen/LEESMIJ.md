@@ -6,7 +6,7 @@ en hebben een vrije licentie; de herkomst staat hieronder en in het spel zelf.
 
 | Bestand | Bron in het spel | Herkomst en licentie |
 |---|---|---|
-| trechterbeker.png | 1. Trechterbeker uit een Drents hunebed | Verzameling trechterbeker-aardewerk, Drents Museum, vrij te gebruiken (Commons: Verzameling TRB-aardewerk.PNG) |
+| trechterbeker.jpg | 1. Trechterbeker uit een Drents hunebed | Verzameling trechterbeker-aardewerk, Drents Museum, vrij te gebruiken (Commons: Verzameling TRB-aardewerk.PNG) |
 | nehalennia.jpg | 2. Altaarsteen voor Nehalennia | Altaar van Placidus, Rijksmuseum van Oudheden; foto Ben Pirard, CC BY-SA 3.0 |
 | doopgelofte.jpg | 3. De Oudsaksische doopgelofte | Tekst zoals afgedrukt in Monumenta Germaniae Historica (1835), publiek domein |
 | stadsrecht-haarlem.jpg | 4. Stadsrechtoorkonde van Haarlem | Noord-Hollands Archief, publiek domein |

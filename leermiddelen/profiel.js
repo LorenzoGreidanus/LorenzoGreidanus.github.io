@@ -126,7 +126,10 @@ window.PROFIEL = (function(){
       timer = setTimeout(function(){
         var delta = wachtend();
         var vr = vrijWacht();
-        vraag('/api/profiel/' + c, 'PUT', { profiel:verzamel() }).then(function(j){ lsZet('lg-munten-wacht', String(Math.max(0, wachtend() - delta))); lsZet('lg-vrij-wacht', JSON.stringify(vrijWacht().filter(function(x){ return vr.indexOf(x) < 0; }))); pasToe(j.profiel); res(j); }).catch(function(){ res(null); });
+        var pr = verzamel(), hash = JSON.stringify(pr), sinds = Date.now() - (parseInt(ls('lg-sync-t') || '0', 10) || 0);
+        /* hetzelfde als de vorige keer, korter dan een half uur geleden, en niets onderweg: dan hoeft de server het niet te horen */
+        if (hash === ls('lg-sync-hash') && sinds < 1800000 && !delta && !vr.length){ res(null); return; }
+        vraag('/api/profiel/' + c, 'PUT', { profiel:pr }).then(function(j){ lsZet('lg-munten-wacht', String(Math.max(0, wachtend() - delta))); lsZet('lg-vrij-wacht', JSON.stringify(vrijWacht().filter(function(x){ return vr.indexOf(x) < 0; }))); pasToe(j.profiel); lsZet('lg-sync-hash', JSON.stringify(verzamel())); lsZet('lg-sync-t', String(Date.now())); res(j); }).catch(function(){ res(null); });
       }, 600);
     });
   }
