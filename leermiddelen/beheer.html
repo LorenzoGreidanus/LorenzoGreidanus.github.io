@@ -77,6 +77,33 @@ th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--rand)}
 th{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
 td.getal{text-align:right;font-variant-numeric:tabular-nums}
 .leeg{color:var(--muted);padding:14px 0}
+/* gebruik: tegels, staafjes per dag, aandeel per pagina */
+.tegels{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px}
+.tegel{background:var(--kaart2);border-radius:14px;padding:12px 14px;display:grid;gap:2px}
+.tegel span{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.tegel b{font-size:1.6rem;line-height:1.1;font-variant-numeric:tabular-nums}
+.tegel small{color:var(--muted)}
+.tegel small.op{color:var(--goed)}.tegel small.af{color:var(--fout)}
+.staven{display:grid;grid-template-columns:repeat(30,1fr);gap:3px;align-items:end;height:120px;margin-top:14px;padding:0 2px}
+.staven i{display:block;background:var(--vista);border-radius:4px 4px 2px 2px;min-height:2px;position:relative}
+.staven i.weekend{background:var(--rand2)}
+.staven i.vandaag{background:var(--crab)}
+.staven i:hover{background:var(--ocean)}
+.staven i::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--ink);color:var(--room);font-size:.72rem;padding:3px 7px;border-radius:7px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity 120ms;z-index:2}
+.staven i:hover::after{opacity:1}
+.asje{display:flex;justify-content:space-between;color:var(--muted);font-size:.75rem;margin-top:4px}
+.knopjes{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;align-items:center}
+.knopjes button{border:1.5px solid var(--rand2);background:var(--kaart);border-radius:999px;padding:5px 11px;font-size:.85rem;font-weight:600}
+.knopjes button.on{background:var(--ink);color:var(--room);border-color:var(--ink)}
+.knopjes .los{margin-left:auto;color:var(--muted);font-size:.85rem}
+td .pad{display:block;color:var(--muted);font-size:.78rem}
+td.aandeel{min-width:120px}
+.balk{display:block;height:8px;border-radius:999px;background:var(--rand);overflow:hidden}
+.balk i{display:block;height:100%;background:var(--ocean);border-radius:999px}
+td.trend{white-space:nowrap;font-variant-numeric:tabular-nums}
+td.trend.op{color:var(--goed)}td.trend.af{color:var(--fout)}
+tr.spel td:first-child b::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--crab);margin-right:7px;vertical-align:1px}
+tr.site td:first-child b::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--vista);margin-right:7px;vertical-align:1px}
 /* zichtbare focus voor wie met het toetsenbord werkt */
 :focus-visible{outline:3px solid var(--amber,#EA9836);outline-offset:3px}
 </style>
@@ -112,9 +139,16 @@ td.getal{text-align:right;font-variant-numeric:tabular-nums}
   </section>
 
   <section class="kaart hide" id="tab-gebruik">
-    <h2>Gebruik per pagina</h2>
-    <p class="tip">Eén tik per paginabezoek, zonder cookie of adres. De laatste dertig dagen, met vandaag apart.</p>
-    <div style="overflow-x:auto;margin-top:10px"><table><thead><tr><th>Pagina</th><th>Vandaag</th><th>7 dagen</th><th>30 dagen</th></tr></thead><tbody id="gebruik"><tr><td colspan="4" class="leeg">Nog niet geladen.</td></tr></tbody></table></div>
+    <h2>Gebruik</h2>
+    <p class="tip">Eén tik per paginabezoek, zonder cookie of adres. Een leerling die drie spellen opent telt drie keer.</p>
+    <div class="tegels" id="gTegels"></div>
+    <p class="eyebrow" style="margin-top:18px">bezoeken per dag, laatste dertig dagen</p>
+    <div class="staven" id="gStaven"></div>
+    <div class="asje" id="gAs"></div>
+    <div class="knopjes" id="gFilter"><button type="button" data-f="alles" class="on">Alles</button><button type="button" data-f="spel">Spellen</button><button type="button" data-f="site">Site</button>
+      <label class="los">Sorteer op <select id="gSorteer" class="veld" style="padding:4px 8px;font-size:.85rem"><option value="m">30 dagen</option><option value="w">7 dagen</option><option value="v">vandaag</option></select></label></div>
+    <div style="overflow-x:auto;margin-top:10px"><table><thead><tr><th>Pagina</th><th style="text-align:right">Vandaag</th><th style="text-align:right">7 dagen</th><th style="text-align:right">30 dagen</th><th>Aandeel</th><th>Trend</th></tr></thead><tbody id="gebruik"><tr><td colspan="6" class="leeg">Nog niet geladen.</td></tr></tbody></table></div>
+    <p class="tip">Aandeel: deel van alle bezoeken in dertig dagen. Trend: deze zeven dagen tegenover de zeven ervoor.</p>
   </section>
 
   <section class="kaart hide" id="tab-klassement">
@@ -158,23 +192,72 @@ td.getal{text-align:right;font-variant-numeric:tabular-nums}
       });
     });
   }
+  /* nette namen voor de paden; wat niet in de lijst staat krijgt de bestandsnaam */
+  var NAMEN = { '/':'Voorpagina', '/nieuw.html':'Wat is nieuw', '/over.html':'Over', '/privacy.html':'Privacy', '/voorwaarden.html':'Voorwaarden', '/404.html':'Niet gevonden',
+    '/leermiddelen/':'Oefenen en spelen', '/leermiddelen/klas.html':'Klasoverzicht', '/leermiddelen/klasquiz.html':'Klasquiz', '/leermiddelen/beheer.html':'Beheer', '/leermiddelen/lesbrieven.html':'Lesbrieven', '/leermiddelen/mee.html':'Meedoen', '/leermiddelen/strijd.html':'Klasstrijd',
+    '/leermiddelen/balans.html':'De balans', '/leermiddelen/berlijn.html':'Conferentie van Berlijn', '/leermiddelen/breukenbakker.html':'De breukenbakker', '/leermiddelen/bronnenlab.html':'Bronnenlab', '/leermiddelen/crisis.html':'De crisis', '/leermiddelen/feodalisme.html':'Feodalisme',
+    '/leermiddelen/handel.html':'De handelsroute', '/leermiddelen/irregular.html':'Irregular verbs', '/leermiddelen/jagers.html':'Blijven of doorlopen', '/leermiddelen/landenvormen.html':'Landenvormen', '/leermiddelen/leenmannen.html':'Verdeel je rijk', '/leermiddelen/lichaam.html':'Het lichaam',
+    '/leermiddelen/meetlat.html':'Langs de meetlat', '/leermiddelen/polis.html':'Wie beslist', '/leermiddelen/race.html':'Vragenrace', '/leermiddelen/rekenen.html':'Rekenrace', '/leermiddelen/rol.html':'Jouw rol', '/leermiddelen/stadsontwerp.html':'Ontwerp je stad', '/leermiddelen/standen.html':'Stem per stand',
+    '/leermiddelen/tekenslag.html':'Tekenslag', '/leermiddelen/tekstdetective.html':'De tekstdetective', '/leermiddelen/tijdvakken.html':'Tijdvakken sorteren', '/leermiddelen/topografie.html':'Topografie', '/leermiddelen/toren.html':'Torenverdediging', '/leermiddelen/uitverkoop.html':'De uitverkoop',
+    '/leermiddelen/vergadering.html':'De vergadering', '/leermiddelen/vergaderklas.html':'Vergadering van de klas', '/leermiddelen/vlaggen.html':'Vlaggen', '/leermiddelen/werkwoorden.html':'Werkwoordrace', '/leermiddelen/zinsbouw.html':'Zinsbouw', '/leermiddelen/zwaard.html':'Zwaardvechter' };
+  var SITEPAGINAS = { '/':1, '/nieuw.html':1, '/over.html':1, '/privacy.html':1, '/voorwaarden.html':1, '/404.html':1, '/leermiddelen/':1, '/leermiddelen/klas.html':1, '/leermiddelen/klasquiz.html':1, '/leermiddelen/beheer.html':1, '/leermiddelen/lesbrieven.html':1, '/leermiddelen/mee.html':1, '/leermiddelen/strijd.html':1 };
+  function naamVan(p){ if (NAMEN[p]) return NAMEN[p]; var m = p.match(/([^\/]+)\.html$/); return m ? m[1].charAt(0).toUpperCase() + m[1].slice(1) : p; }
+  function soortVan(p){ return SITEPAGINAS[p] || !/^\/leermiddelen\/.+\.html$/.test(p) ? 'site' : 'spel'; }
+  function pct(nu, eerder){ if (!eerder) return nu ? '<span>nieuw</span>' : '<span>–</span>'; var d = Math.round((nu - eerder) / eerder * 100); return d > 0 ? '<span class="op">▲ ' + d + '%</span>' : d < 0 ? '<span class="af">▼ ' + (-d) + '%</span>' : '<span>=</span>'; }
+  var gebruikData = null, gebruikFilter = 'alles';
   function tekenGebruik(tellers){
-    var dagen = Object.keys(tellers).sort();
-    var vandaag = new Date().toISOString().slice(0, 10);
-    var som = {};
-    dagen.forEach(function(d){
-      var oud = Math.round((new Date(vandaag) - new Date(d)) / 86400000);
+    gebruikData = tellers; tekenGebruikNu();
+  }
+  function tekenGebruikNu(){
+    var tellers = gebruikData || {};
+    var vandaag = new Date(); vandaag.setHours(12, 0, 0, 0);
+    var vandaagK = vandaag.toISOString().slice(0, 10);
+    var som = {}, perDag = [], tot = { v:0, w:0, w2:0, m:0, m2:0 };
+    for (var i = 29; i >= 0; i--){ var dd = new Date(vandaag.getTime() - i * 86400000); perDag.push({ k:dd.toISOString().slice(0, 10), d:dd, n:0 }); }
+    var perDagK = {}; perDag.forEach(function(x){ perDagK[x.k] = x; });
+    Object.keys(tellers).forEach(function(d){
+      var oud = Math.round((new Date(vandaagK) - new Date(d)) / 86400000);
       Object.keys(tellers[d]).forEach(function(p){
-        var r = som[p] = som[p] || { v:0, w:0, m:0 };
+        var r = som[p] = som[p] || { v:0, w:0, w2:0, m:0 };
         var n = tellers[d][p];
-        if (d === vandaag) r.v += n;
-        if (oud < 7) r.w += n;
-        if (oud < 30) r.m += n;
+        if (d === vandaagK){ r.v += n; tot.v += n; }
+        if (oud < 7){ r.w += n; tot.w += n; } else if (oud < 14){ r.w2 += n; tot.w2 += n; }
+        if (oud < 30){ r.m += n; tot.m += n; if (perDagK[d]) perDagK[d].n += n; } else if (oud < 60) tot.m2 += n;
       });
     });
-    var rijen = Object.keys(som).sort(function(a, b){ return som[b].m - som[a].m; });
-    $('gebruik').innerHTML = rijen.length ? rijen.map(function(p){ var r = som[p]; return '<tr><td>' + schoon(p) + '</td><td class="getal">' + r.v + '</td><td class="getal">' + r.w + '</td><td class="getal">' + r.m + '</td></tr>'; }).join('') : '<tr><td colspan="4" class="leeg">Nog niets geteld.</td></tr>';
+    /* tegels */
+    var gisteren = 0; Object.keys(tellers).forEach(function(d){ if (Math.round((new Date(vandaagK) - new Date(d)) / 86400000) === 1) Object.keys(tellers[d]).forEach(function(p){ gisteren += tellers[d][p]; }); });
+    var drukst = Object.keys(som).sort(function(a, b){ return som[b].w - som[a].w; })[0];
+    var dagenMet = perDag.filter(function(x){ return x.n > 0; }).length;
+    $('gTegels').innerHTML =
+      '<div class="tegel"><span>Vandaag</span><b>' + tot.v + '</b><small>gisteren ' + gisteren + '</small></div>' +
+      '<div class="tegel"><span>Deze week</span><b>' + tot.w + '</b><small>' + pct(tot.w, tot.w2).replace(/<\/?span[^>]*>/g, '') + ' tegenover de week ervoor</small></div>' +
+      '<div class="tegel"><span>30 dagen</span><b>' + tot.m + '</b><small>gemiddeld ' + (dagenMet ? Math.round(tot.m / dagenMet) : 0) + ' per speeldag</small></div>' +
+      '<div class="tegel"><span>Drukst deze week</span><b style="font-size:1.15rem">' + (drukst ? schoon(naamVan(drukst)) : '–') + '</b><small>' + (drukst ? som[drukst].w + ' bezoeken' : 'nog niets') + '</small></div>';
+    /* staafjes per dag */
+    var max = Math.max.apply(null, perDag.map(function(x){ return x.n; }).concat([1]));
+    var WD = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'];
+    $('gStaven').innerHTML = perDag.map(function(x, i){
+      var wd = x.d.getDay(), kl = i === 29 ? ' vandaag' : (wd === 0 || wd === 6) ? ' weekend' : '';
+      return '<i class="' + kl.trim() + '" style="height:' + Math.max(2, Math.round(x.n / max * 100)) + '%" data-tip="' + WD[wd] + ' ' + x.d.getDate() + '/' + (x.d.getMonth() + 1) + ': ' + x.n + '"></i>';
+    }).join('');
+    var f = function(x){ return x.d.getDate() + '/' + (x.d.getMonth() + 1); };
+    $('gAs').innerHTML = '<span>' + f(perDag[0]) + '</span><span>' + f(perDag[15]) + '</span><span>vandaag</span>';
+    /* tabel */
+    var s = $('gSorteer').value;
+    var rijen = Object.keys(som).filter(function(p){ return gebruikFilter === 'alles' || soortVan(p) === gebruikFilter; }).sort(function(a, b){ return som[b][s] - som[a][s] || som[b].m - som[a].m; });
+    var totFilter = rijen.reduce(function(a, p){ return a + som[p].m; }, 0);
+    $('gebruik').innerHTML = rijen.length ? rijen.map(function(p){
+      var r = som[p], deel = totFilter ? r.m / totFilter * 100 : 0, tr = pct(r.w, r.w2);
+      return '<tr class="' + soortVan(p) + '"><td><b>' + schoon(naamVan(p)) + '</b><span class="pad">' + schoon(p) + '</span></td><td class="getal">' + r.v + '</td><td class="getal">' + r.w + '</td><td class="getal">' + r.m + '</td>' +
+        '<td class="aandeel"><span class="balk"><i style="width:' + deel.toFixed(1) + '%"></i></span><span class="pad">' + (deel < 1 && deel > 0 ? '<1' : Math.round(deel)) + '%</span></td>' +
+        '<td class="trend' + (/op"/.test(tr) ? ' op' : /af"/.test(tr) ? ' af' : '') + '">' + tr.replace(/<\/?span[^>]*>/g, '') + '</td></tr>';
+    }).join('') : '<tr><td colspan="6" class="leeg">Nog niets geteld.</td></tr>';
   }
+  Array.prototype.forEach.call($('gFilter').querySelectorAll('[data-f]'), function(k){ k.addEventListener('click', function(){
+    gebruikFilter = k.getAttribute('data-f'); Array.prototype.forEach.call($('gFilter').querySelectorAll('[data-f]'), function(x){ x.classList.toggle('on', x === k); }); tekenGebruikNu();
+  }); });
+  $('gSorteer').addEventListener('change', tekenGebruikNu);
   function laad(){
     if (!sleutel()){ $('status').textContent = 'Vul de beheersleutel in.'; return; }
     try { localStorage.setItem('lg-beheer', sleutel()); } catch (e){}
