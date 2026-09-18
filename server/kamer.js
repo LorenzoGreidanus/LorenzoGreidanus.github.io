@@ -68,7 +68,7 @@ function schoon(tekst, max){
 }
 function getal(x, max){ const n = Number(x); return Number.isFinite(n) ? Math.max(0, Math.min(max, Math.round(n))) : 0; }
 /* een gekozen avatar: v3k2o1m0e4, anders leeg (dan komt hij uit de bijnaam) */
-function schoonAv(a){ a = String(a || "").replace(/[^a-z0-9]/g, "").slice(0, 12); return /^v\dk\do\dm\de\d$/.test(a) ? a : ""; }
+function schoonAv(a){ a = String(a || "").replace(/[^a-z0-9]/g, "").slice(0, 22); return /^v\dk\do\dm\de\d(h\d{1,2})?(r\d{1,2})?(z\d{1,2})?(b\d{1,2})?$/.test(a) ? a : ""; }
 function sleutelMaken(n){
   const r = crypto.getRandomValues(new Uint8Array(n || 12));
   return Array.from(r, b => b.toString(16).padStart(2, "0")).join("");
@@ -536,10 +536,11 @@ export class Kamer extends DurableObject {
       return;
     }
     if (d.k === "in"){
-      W.zetInvoer(i, d.dx, d.dy, Math.max(0, d.nr | 0));
+      W.zetInvoer(i, d.dx, d.dy, Math.max(0, d.nr | 0), !!d.blok);
       if (d.dash) W.spelers[i].dashVraag = true;
       if (d.wapen) W.spelers[i].wapenVraag = true;
     } else if (d.k === "stats"){ W.zetStats(i, d.s, d.hp); }
+    else if (d.k === "crit"){ W.crit(i); }
     else if (d.k === "klaar"){ W.zetStats(i, d.s, d.hp); if (W.klaar(i)) this.motorZend(); else this.motorZend(); }
     else if (d.k === "pauze"){ W.pauze = !!d.aan; this.motorZend(); }
     else if (d.k === "herstel" && this.motorHersteld && Date.now() - this.motorHersteld < 30000){

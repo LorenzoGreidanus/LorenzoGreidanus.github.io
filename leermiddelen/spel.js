@@ -119,6 +119,13 @@ window.SPEL = (function(){
       }
     }
     var sterren = sterrenVan(o, waarde);
+    /* munten: per goed antwoord, en meer per antwoord in een spel dat langer duurt; alleen voor wie is ingelogd */
+    var muntHtml = '';
+    if (typeof o.goed === 'number' && o.goed > 0 && window.PROFIEL && PROFIEL.muntenErbij){
+      var nMunt = Math.max(0, Math.round(o.goed * (o.muntFactor || 1) + (o.muntBonus || 0)));
+      if (nMunt && PROFIEL.ingelogd()){ PROFIEL.muntenErbij(nMunt); muntHtml = '<p class="munten"><b>+' + nMunt + ' munten</b> je hebt er nu ' + PROFIEL.munten() + ' <a href="index.html?winkel=1">naar de winkel</a></p>'; }
+      else if (nMunt && PROFIEL.accountMogelijk()) muntHtml = '<p class="munten stil">' + nMunt + ' munten gemist. <a href="index.html">Log in met Microsoft</a> in de leeromgeving, dan spaar je ze voor de winkel.</p>';
+    }
     var kaart = document.createElement('div');
     kaart.className = 'eindkaart' + (o.compact ? ' compact' : '');
     if (o.kleur){ kaart.style.setProperty('--ek1', o.kleur[0]); kaart.style.setProperty('--ek2', o.kleur[1] || o.kleur[0]); }
@@ -135,7 +142,7 @@ window.SPEL = (function(){
     kaart.innerHTML =
       '<p class="eyebrow">' + schoon(o.kop || 'klaar') + '</p>' +
       (!o.compact && o.score !== undefined && o.score !== null ? '<div class="getal">' + schoon(o.score) + (o.label ? '<small>' + schoon(o.label) + '</small>' : '') + '</div>' : '') +
-      '<div class="rechts">' + sterrenHtml + (besteTekst ? '<p class="beste">' + besteTekst + '</p>' : '') + wieHtml + '</div>' +
+      '<div class="rechts">' + sterrenHtml + (besteTekst ? '<p class="beste">' + besteTekst + '</p>' : '') + wieHtml + muntHtml + '</div>' +
       '<div class="knoppen">' +
         knopje('opnieuw', IC.opnieuw, schoon(o.opnieuwTekst || 'Nog een keer')) +
         knopje('stil deel', IC.deel, 'Delen') +

@@ -45,7 +45,43 @@ window.PROFIEL = (function(){
     var campagne = {}; try { campagne = JSON.parse(ls('lg-toren-campagne') || '{}') || {}; } catch (e){}
     var vrij = {}; ['tonkla', 'aap', 'eiland', 'archipel', 'vulkaan'].forEach(function(x){ if (ls('lg-toren-' + x) === 'ja') vrij[x] = true; });
     var klas = null; try { klas = JSON.parse(ls('lg-klas') || 'null'); } catch (e){}
-    return { avatar:avatar(), beste:beste, campagne:campagne, vrij:vrij, klas:klas && klas.code ? klas : null, niveau:ls('lg-niveau') || '' };
+    return { avatar:avatar(), beste:beste, campagne:campagne, vrij:vrij, klas:klas && klas.code ? klas : null, niveau:ls('lg-niveau') || '', muntDelta:wachtend(), vrijspeel:vrijWacht() };
+  }
+  /* ---------- munten: het saldo staat op de server, hier wat er nog onderweg is ---------- */
+  function wachtend(){ return parseInt(ls('lg-munten-wacht') || '0', 10) || 0; }
+  function munten(){ return parseInt(ls('lg-munten') || '0', 10) || 0; }
+  function bezit(){ try { return JSON.parse(ls('lg-bezit') || '{}') || {}; } catch (e){ return {}; } }
+  function ingelogd(){ return !!(accountStand && accountStand.ingelogd); }
+  function vrijWacht(){ try { return JSON.parse(ls('lg-vrij-wacht') || '[]') || []; } catch (e){ return []; } }
+  /* een trofee vrijspelen (een baas verslagen): meteen in bezit, en bij de volgende sync naar de server */
+  function vrijspeel(id){
+    if (!ingelogd() || !id) return false;
+    var b = bezit(); if (b[id]) return false;
+    b[id] = true; lsZet('lg-bezit', JSON.stringify(b));
+    var w = vrijWacht(); if (w.indexOf(id) < 0) w.push(id); lsZet('lg-vrij-wacht', JSON.stringify(w));
+    zeg(); sync();
+    return true;
+  }
+  function accountMogelijk(){ return !!(accountStand && accountStand.mogelijk); }
+  /* munten erbij: meteen zichtbaar, en bij de volgende sync naar de server */
+  function muntenErbij(n){
+    n = Math.max(0, Math.min(600, Math.round(n))); if (!n || !ingelogd()) return 0;
+    lsZet('lg-munten-wacht', String(wachtend() + n)); lsZet('lg-munten', String(munten() + n));
+    zeg(); sync();
+    return n;
+  }
+  /* kopen: de server rekent af en zegt wat je nu hebt */
+  function koop(id){
+    var c = code(); if (!c || !ingelogd()) return Promise.reject(new Error('Log eerst in met Microsoft.'));
+    clearTimeout(timer);
+    var delta = wachtend();
+    var pr = verzamel(); pr.koop = [id];
+    return vraag('/api/profiel/' + c, 'PUT', { profiel:pr }).then(function(j){
+      lsZet('lg-munten-wacht', String(Math.max(0, wachtend() - delta)));
+      pasToe(j.profiel);
+      if (!(j.profiel && j.profiel.bezit && j.profiel.bezit[id])) throw new Error('Niet genoeg munten.');
+      return j;
+    });
   }
   /* wat van de server komt, hier neerzetten; het nieuwste record wint */
   function pasToe(pr){
@@ -61,6 +97,8 @@ window.PROFIEL = (function(){
     if (pr.klas && pr.klas.code && !ls('lg-klas')) lsZet('lg-klas', JSON.stringify(pr.klas));
     if (pr.niveau && !ls('lg-niveau')) lsZet('lg-niveau', pr.niveau);
     var p = lees(); if (pr.avatar) p.avatar = pr.avatar; zet(p);
+    if (typeof pr.munten === 'number') lsZet('lg-munten', String(Math.max(0, Math.round(pr.munten)) + wachtend()));
+    if (pr.bezit && typeof pr.bezit === 'object'){ var bz = Object.assign({}, pr.bezit); vrijWacht().forEach(function(x){ bz[x] = true; }); lsZet('lg-bezit', JSON.stringify(bz)); }
     zeg();
   }
   function vraag(url, methode, body){
@@ -86,7 +124,9 @@ window.PROFIEL = (function(){
     clearTimeout(timer);
     return new Promise(function(res){
       timer = setTimeout(function(){
-        vraag('/api/profiel/' + c, 'PUT', { profiel:verzamel() }).then(function(j){ pasToe(j.profiel); res(j); }).catch(function(){ res(null); });
+        var delta = wachtend();
+        var vr = vrijWacht();
+        vraag('/api/profiel/' + c, 'PUT', { profiel:verzamel() }).then(function(j){ lsZet('lg-munten-wacht', String(Math.max(0, wachtend() - delta))); lsZet('lg-vrij-wacht', JSON.stringify(vrijWacht().filter(function(x){ return vr.indexOf(x) < 0; }))); pasToe(j.profiel); res(j); }).catch(function(){ res(null); });
       }, 600);
     });
   }
@@ -101,10 +141,10 @@ window.PROFIEL = (function(){
   /* inloggen met Microsoft: de server weet of het aan staat en wie er ingelogd is.
      Terug van Microsoft staat er ?account=in (of een fout) in het adres; dat
      lezen we hier, voordat de pagina zijn eigen adres herschrijft. */
-  var accountStand = null, accountVlag = '', accountBezig = null;
+  var accountStand = null, accountVlag = '', accountBezig = null, winkelVlag = '';
   try {
-    var q0 = new URLSearchParams(location.search); accountVlag = q0.get('account') || '';
-    if (accountVlag){ q0.delete('account'); history.replaceState(null, '', location.pathname + (q0.toString() ? '?' + q0.toString() : '') + location.hash); }
+    var q0 = new URLSearchParams(location.search); accountVlag = q0.get('account') || ''; winkelVlag = q0.get('winkel') || '';
+    if (accountVlag || winkelVlag){ q0.delete('account'); q0.delete('winkel'); history.replaceState(null, '', location.pathname + (q0.toString() ? '?' + q0.toString() : '') + location.hash); }
   } catch (e){}
   function account(vers){
     if (accountStand && !vers) return Promise.resolve(accountStand);
@@ -148,6 +188,8 @@ window.PROFIEL = (function(){
   }
   /* bij het laden even samenvoegen, als er een code is */
   if (code() && typeof fetch === 'function'){ setTimeout(function(){ sync(); }, 1500); }
+  /* en even kijken of er iemand is ingelogd, want dan tellen de munten */
+  if (typeof fetch === 'function' && !accountStand) setTimeout(function(){ account(); }, 400);
   return { lees:lees, code:code, avatar:avatar, zetAvatar:zetAvatar, maak:maak, koppel:koppel, sync:sync, wis:wis, verzamel:verzamel, op:op,
-    klasWeg:klasWeg, account:account, accountNeemCode:accountNeemCode, accountNieuweCode:accountNieuweCode, accountVlag:function(){ return accountVlag; }, accountAfstemmen:accountAfstemmen, inlogAdres:inlogAdres, uitloggen:uitloggen, accountWeg:accountWeg };
+    klasWeg:klasWeg, account:account, munten:munten, bezit:bezit, ingelogd:ingelogd, accountMogelijk:accountMogelijk, muntenErbij:muntenErbij, koop:koop, vrijspeel:vrijspeel, accountNeemCode:accountNeemCode, accountNieuweCode:accountNieuweCode, accountVlag:function(){ return accountVlag; }, winkelVlag:function(){ return winkelVlag; }, accountAfstemmen:accountAfstemmen, inlogAdres:inlogAdres, uitloggen:uitloggen, accountWeg:accountWeg };
 })();

@@ -12,14 +12,19 @@ function json(obj, status){
   return new Response(JSON.stringify(obj), { status: status || 200,
     headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
 }
-function schoonAvatar(a){ a = String(a || "").replace(/[^a-z0-9]/g, "").slice(0, 12); return /^v\dk\do\dm\de\d$/.test(a) ? a : ""; }
+import COSMETICA from "../leermiddelen/cosmetica.js";
+function schoonAvatar(a){ a = String(a || "").replace(/[^a-z0-9]/g, "").slice(0, 22); return COSMETICA.ontleed(a) ? a : ""; }
 function schoon(t, n){ return String(t == null ? "" : t).replace(/[<>]/g, "").slice(0, n); }
 function getal(x, max){ x = Number(x); return isFinite(x) ? Math.max(0, Math.min(max, Math.round(x))) : 0; }
 
 /* Alleen wat we kennen komt het profiel in, met een plafond per veld. */
 function netjes(inz){
   inz = inz && typeof inz === "object" ? inz : {};
-  const p = { avatar: schoonAvatar(inz.avatar), beste: {}, campagne: {}, vrij: {}, klas: null, niveau: schoon(inz.niveau, 6) };
+  const p = { avatar: schoonAvatar(inz.avatar), beste: {}, campagne: {}, vrij: {}, klas: null, niveau: schoon(inz.niveau, 6),
+              /* munten erbij en aankopen zijn wensen van dit apparaat; de server houdt het saldo */
+              muntDelta: getal(inz.muntDelta, 600), koop: (Array.isArray(inz.koop) ? inz.koop : []).slice(0, 6).map(x => schoon(x, 4)).filter(x => COSMETICA.vind(x)),
+              /* trofeeën die het spel meldt: alleen wat een baas oplevert */
+              vrijspeel: (Array.isArray(inz.vrijspeel) ? inz.vrijspeel : []).slice(0, 12).map(x => schoon(x, 4)).filter(x => { const it = COSMETICA.vind(x); return it && it.baas; }) };
   const b = inz.beste && typeof inz.beste === "object" ? inz.beste : {};
   Object.keys(b).slice(0, 300).forEach(k => {
     const s = schoon(k, 60).replace(/[^a-z0-9-]/gi, ""), v = b[k];
@@ -37,7 +42,12 @@ function netjes(inz){
 /* Samenvoegen: het nieuwste record wint, sterren en vrijgespeelde dingen tellen op, de rest komt van het apparaat dat meldt. */
 function voegSamen(oud, nieuw, klasWeg){
   const p = { avatar: nieuw.avatar || oud.avatar || "", beste: Object.assign({}, oud.beste), campagne: Object.assign({}, oud.campagne),
-              vrij: Object.assign({}, oud.vrij), klas: nieuw.klas || (klasWeg ? null : oud.klas) || null, niveau: nieuw.niveau || oud.niveau || "" };
+              vrij: Object.assign({}, oud.vrij), klas: nieuw.klas || (klasWeg ? null : oud.klas) || null, niveau: nieuw.niveau || oud.niveau || "",
+              munten: Math.max(0, (oud.munten | 0) + (nieuw.muntDelta | 0)), bezit: Object.assign({}, oud.bezit) };
+  /* kopen: alleen wat er nog niet is en wat het saldo toelaat; daarna mag alleen bezit in de spec staan */
+  (nieuw.vrijspeel || []).forEach(id => { p.bezit[id] = true; });
+  (nieuw.koop || []).forEach(id => { const it = COSMETICA.vind(id); if (it && !p.bezit[id] && p.munten >= it.prijs){ p.munten -= it.prijs; p.bezit[id] = true; } });
+  p.avatar = COSMETICA.toegestaan(p.avatar, p.bezit);
   Object.keys(nieuw.beste).forEach(k => { const a = p.beste[k], b = nieuw.beste[k]; if (!a || b.t >= a.t) p.beste[k] = b; });
   Object.keys(nieuw.campagne).forEach(k => { p.campagne[k] = Math.max(p.campagne[k] | 0, nieuw.campagne[k]); });
   Object.keys(nieuw.vrij).forEach(k => { p.vrij[k] = true; });
@@ -66,7 +76,7 @@ export class Profiel extends DurableObject {
       if (this.stand) return json({ fout: "bezet" }, 409);
       const code = String(inz.code || "").toUpperCase();
       if (!/^[A-Z]{8}$/.test(code)) return json({ fout: "geen geldige code" }, 400);
-      this.stand = { code, gemaakt: Date.now(), laatst: Date.now(), profiel: netjes(inz.profiel) };
+      this.stand = { code, gemaakt: Date.now(), laatst: Date.now(), profiel: voegSamen({ beste: {}, campagne: {}, vrij: {}, bezit: {}, munten: 0 }, netjes(inz.profiel), false) };
       if (JSON.stringify(this.stand).length > MAX_TEKST) return json({ fout: "profiel te groot" }, 413);
       await this.bewaar();
       return json({ ok: true, code, profiel: this.stand.profiel });

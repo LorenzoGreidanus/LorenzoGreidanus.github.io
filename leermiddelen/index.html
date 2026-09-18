@@ -5,6 +5,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="manifest" href="/manifest.json">
+<script src="cosmetica.js"></script>
 <script src="avatar.js"></script>
 <script src="profiel.js"></script>
 <link rel="apple-touch-icon" href="/icoon-192.png">
@@ -369,6 +370,16 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
 .profielvak a.ms{display:inline-flex;align-items:center;gap:9px;text-decoration:none;border:1.5px solid var(--rand2,rgba(20,34,76,.16));background:var(--kaart,#fff);color:var(--ink);border-radius:999px;padding:7px 14px 7px 11px;font-size:.84rem;font-weight:600}
 .profielvak a.ms:hover{border-color:var(--ocean)}
 .profielvak a.ms svg{width:16px;height:16px;flex:none}
+.muntrij{display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--rand2,rgba(20,34,76,.16))}
+.muntrij .saldo{display:inline-flex;align-items:center;gap:6px;font-size:.86rem;flex:1 1 auto}.muntrij .saldo b{font-size:1rem}
+.muntrij .saldo i{width:16px;height:16px;border-radius:50%;background:#FFE168;border:2px solid #c9971f;display:inline-block}
+.winkel2{margin-top:10px;display:grid;gap:10px}.winkel2 h4{margin:0;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.winkel2 .waren{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:6px}
+.winkel2 .waren button{border:1.5px solid var(--rand2,rgba(20,34,76,.16));background:var(--kaart,#fff);color:var(--ink);border-radius:14px;padding:8px 6px;display:grid;justify-items:center;gap:3px;cursor:pointer;font-size:.74rem;line-height:1.2}
+.winkel2 .waren button b{font-size:.76rem}.winkel2 .waren button small{color:var(--muted)}.winkel2 .waren button .avatar{margin:0}
+.winkel2 .waren button.aan{border-color:var(--ocean);box-shadow:0 0 0 3px rgba(32,78,207,.15)}.winkel2 .waren button.heb small{color:var(--ocean);font-weight:600}
+.winkel2 .waren button:disabled{opacity:.55;cursor:default}.winkel2 .waren button.slot .avatar{filter:grayscale(1);opacity:.5}.winkel2 .zwaardje{width:36px;height:36px}
+.winkel2 p{font-size:.8rem;color:var(--muted);margin:0}
 .kiezer{margin-top:10px;display:grid;gap:8px}
 .kiezer .rijtje{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
 .kiezer .rijtje span{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;width:52px}
@@ -1194,17 +1205,44 @@ var SPELLEN = [
 (function(){
   var vak0 = document.getElementById('profielvak'); if (!vak0 || !window.PROFIEL || !window.AVATAR) return;
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
-  var open = false, codeOpen = false, koppelOpen = false, melding = '', acc = null, accMelding = '', accVraag = '';
+  var open = false, codeOpen = false, koppelOpen = false, melding = '', acc = null, accMelding = '', accVraag = '', winkelOpen = false, winkelMelding = '';
+  if (PROFIEL.winkelVlag && PROFIEL.winkelVlag()) winkelOpen = true;
   var MSLOGO = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="0" y="0" width="7.5" height="7.5" fill="#F25022"/><rect x="8.5" y="0" width="7.5" height="7.5" fill="#7FBA00"/><rect x="0" y="8.5" width="7.5" height="7.5" fill="#00A4EF"/><rect x="8.5" y="8.5" width="7.5" height="7.5" fill="#FFB900"/></svg>';
   function naam(){ var k = window.KLAS && KLAS.lees(); return k ? k.naam : 'jij'; }
   function spec(){ return PROFIEL.avatar(); }
   function huidig(){ return AVATAR.ontleed(spec()) || { v:0, k:2, o:0, m:0, e:5 }; }
+  /* de winkel: per soort de waren, met wat je hebt en wat je draagt */
+  function winkelHtml(h){
+    var bez = PROFIEL.bezit(), o = COSMETICA.ontleed(spec()) || { basis:AVATAR.maak(h), h:0, r:0, z:0, b:0 }, s = '<div class="winkel2">';
+    ['b', 'h', 'r', 'z'].forEach(function(soort){
+      s += '<h4>' + COSMETICA.SOORTEN[soort] + (soort === 'z' ? ' (voor Zwaardvechter)' : '') + '</h4><div class="waren">' + COSMETICA.ITEMS.filter(function(it){ return it.soort === soort; }).map(function(it){
+        var heb = !!bez[it.id], aan = o[soort] === it.n, beeld;
+        if (soort === 'b'){ var o3 = { basis:o.basis, h:0, r:0, z:0, b:it.n }; beeld = AVATAR.svg('', 36, COSMETICA.bouw(o3)); }
+        else if (soort === 'z'){
+          var kl = [null, '#F26749', '#9fd3ff', '#FFD166', '#7CFC9A', '#a5773f'][it.n];
+          beeld = '<svg class="zwaardje" viewBox="-18 -18 36 36" aria-hidden="true"><g transform="rotate(-45)"><path d="M-2,14 h4 v-6 h-4z" fill="#5f4830"/><path d="M-7,8 h14" stroke="#c9971f" stroke-width="3" stroke-linecap="round"/><path d="M0,8 v-24" stroke="' + kl + '" stroke-width="5" stroke-linecap="round"/></g></svg>';
+        } else { var o2 = { basis:o.basis, h:soort === 'h' ? it.n : 0, r:soort === 'r' ? it.n : 0, z:0, b:0 }; beeld = AVATAR.svg('', 36, COSMETICA.bouw(o2)); }
+        var slot = it.baas && !heb;
+        return '<button type="button" data-waar="' + it.id + '" class="' + (aan ? 'aan ' : '') + (heb ? 'heb' : '') + (slot ? ' slot' : '') + '"' + (slot ? ' disabled' : '') + ' title="' + schoon(it.uit) + '">' + beeld + '<b>' + schoon(it.naam) + '</b><small>' + (aan ? 'op' : heb ? 'van jou' : it.baas ? 'versla de baas' : it.prijs + ' munten') + '</small></button>';
+      }).join('') + '</div>';
+    });
+    s += '<p>' + (winkelMelding ? '<b>' + schoon(winkelMelding) + '</b> ' : '') + 'Munten verdien je met elk goed antwoord in de oefenspellen; een lang spel als Torenverdediging of Zwaardvechter geeft er meer per antwoord en een bonus per ronde. De trofeeën speel je vrij door in Zwaardvechter een baas te verslaan. Tik op wat van jou is om het op of af te zetten.</p></div>';
+    return s;
+  }
   function teken(){
     var sp = spec(), code = PROFIEL.code(), h = huidig();
     var html = '<div class="profielkop">' + AVATAR.svg(naam(), 44, sp) + '<div><b>' + (sp ? 'Jouw gezichtje' : 'Je gezichtje') + '</b><small>' +
       (code ? 'speelcode ' + schoon(code) + (acc && acc.ingelogd ? ' \u00b7 Microsoft' : '') : sp ? 'alleen op dit apparaat' : 'komt uit je bijnaam, of kies er zelf een') + '</small></div>' +
       '<div class="knoppen"><button type="button" class="klein' + (open ? ' aan' : '') + '" id="pfKies">' + (open ? 'Klaar' : 'Aanpassen') + '</button>' +
       '<button type="button" class="klein' + (codeOpen ? ' aan' : '') + '" id="pfCode">' + (code ? 'Mijn code' : 'Meenemen') + '</button></div></div>';
+    /* de munten en de winkel, voor wie is ingelogd */
+    if (acc && acc.ingelogd && window.COSMETICA){
+      html += '<div class="muntrij"><span class="saldo"><i></i><b>' + PROFIEL.munten() + '</b> munten</span>' +
+        '<button type="button" class="klein' + (winkelOpen ? ' aan' : '') + '" id="pfWinkel">' + (winkelOpen ? 'Winkel dicht' : 'Winkel') + '</button></div>';
+      if (winkelOpen) html += winkelHtml(h);
+    } else if (acc && acc.mogelijk && !acc.ingelogd && sp){
+      html += '<div class="muntrij"><span class="saldo"><i></i>Log in en spaar munten voor hoeden, randen en zwaarden.</span></div>';
+    }
     if (open){
       var K = AVATAR.KEUZES, rijen = [['vorm', 'v', K.vormen], ['kleur', 'k', K.kleuren], ['ogen', 'o', K.ogen], ['mond', 'm', K.monden], ['extra', 'e', K.extras]];
       html += '<div class="kiezer">' + rijen.map(function(r){
@@ -1248,6 +1286,18 @@ var SPELLEN = [
       html += '</div>';
     }
     vak0.innerHTML = html;
+    knop('pfWinkel', function(){ winkelOpen = !winkelOpen; winkelMelding = ''; teken(); });
+    Array.prototype.forEach.call(vak0.querySelectorAll('[data-waar]'), function(b){
+      b.addEventListener('click', function(){
+        var id = b.getAttribute('data-waar'), it = COSMETICA.vind(id), heb = PROFIEL.bezit()[id], o = COSMETICA.ontleed(spec() || AVATAR.maak(huidig())) || { basis:AVATAR.maak(huidig()), h:0, r:0, z:0, b:0 };
+        if (it.baas && !heb) return;
+        if (heb){ o[it.soort] = o[it.soort] === it.n ? 0 : it.n; PROFIEL.zetAvatar(COSMETICA.bouw(o)); winkelMelding = ''; teken(); return; }
+        if (PROFIEL.munten() < it.prijs){ winkelMelding = 'Nog ' + (it.prijs - PROFIEL.munten()) + ' munten te gaan voor ' + it.naam.toLowerCase() + '.'; teken(); return; }
+        b.disabled = true; winkelMelding = 'Even wachten\u2026'; teken();
+        PROFIEL.koop(id).then(function(){ var o2 = COSMETICA.ontleed(spec()) || o; o2[it.soort] = it.n; PROFIEL.zetAvatar(COSMETICA.bouw(o2)); winkelMelding = it.naam + ' is van jou, en je hebt hem op.'; teken(); })
+          .catch(function(e){ winkelMelding = e.message || 'Kopen lukte niet.'; teken(); });
+      });
+    });
     document.getElementById('pfKies').addEventListener('click', function(){ open = !open; if (open) codeOpen = false; teken(); });
     document.getElementById('pfCode').addEventListener('click', function(){ codeOpen = !codeOpen; if (codeOpen) open = false; melding = ''; teken(); });
     Array.prototype.forEach.call(vak0.querySelectorAll('.kiezer button'), function(b){
@@ -1302,6 +1352,8 @@ var SPELLEN = [
   }
   teken();
   PROFIEL.op(function(){ if (!open) teken(); });
+  /* vanaf een eindkaart naar de winkel: de lade meteen open */
+  if (winkelOpen) setTimeout(function(){ var g = document.getElementById('gezichtknop'); if (g && document.getElementById('gezichtlade').classList.contains('hide')) g.click(); }, 350);
   /* het account: staat het aan, en komen we net terug van Microsoft? */
   (function(){
     var vlag = PROFIEL.accountVlag();
