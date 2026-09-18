@@ -140,7 +140,9 @@ function muurStand(a){
 }
 /* Hoeveel fouten in een ronde, en hoe taai ze zijn. */
 function aantalInRonde(n){ return 6 + Math.round(Math.min(n, 25) * 1.9 + Math.max(0, n - 25) * 0.9); }
-function foutHp(n){ var k = Math.min(n, 20); return Math.round(30 * Math.pow(1.13, k - 1) * (1 + Math.max(0, n - 20) * 0.06 + Math.max(0, n - 35) * 0.05)); }
+/* NERF: de fouten en bazen hebben vijftien procent minder leven en doen vijftien procent minder schade */
+const NERF = 0.85;
+function foutHp(n){ var k = Math.min(n, 20); return Math.round(30 * NERF * Math.pow(1.13, k - 1) * (1 + Math.max(0, n - 20) * 0.06 + Math.max(0, n - 35) * 0.05)); }
 /* welke baas hoort bij deze ronde: om de beurt, daarna weer van voren af aan */
 function baasVan(n){ return BAZEN[(Math.max(1, Math.round(n / BAASRONDE)) - 1) % BAZEN.length]; }
 /* de uitrusting van een speler zonder winkel */
@@ -469,7 +471,7 @@ function maak(opties){
   function tref(P, schade, kleur){
     var s2 = P.sp;
     if (s2.raak > 0 || P.neer) return;
-    var klap = Math.max(1, Math.round(schade * P.stats.pantser * (1 + W.ronde * 0.03) * (s2.blok ? BLOK.deel : 1)));
+    var klap = Math.max(1, Math.round(schade * NERF * P.stats.pantser * (1 + W.ronde * 0.03) * (s2.blok ? BLOK.deel : 1)));
     P.hp -= klap; s2.raak = s2.blok ? RAAKPAUZE * 0.5 : RAAKPAUZE; s2.flits = 0.25;
     W.cijfers.push({ x:s2.x, y:s2.y - 26, tekst:(s2.blok ? 'geblokt -' : '-') + klap, leven:0.9, kleur:s2.blok ? '#204ECF' : (kleur || '#c0442c') });
     if (P.hp <= 0){ P.hp = 0; valNeer(P); }
