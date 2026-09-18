@@ -228,7 +228,7 @@ export class Kamer extends DurableObject {
       if (this.stand.fase === "einde") this.stuur(server, this.strijdEinde(rol === "speler" ? sid : null));
       else this.stuur(server, this.standBericht(rol === "speler" ? sid : null));
       /* een duel telt af zodra de tweede speler binnen is; samen met meer pas als de kamer vol is, of als de maker start */
-      if (this.stand.duel && this.stand.fase === "lobby" && Object.keys(this.stand.spelers).length >= this.samenMax()){
+      if (this.stand.duel && this.stand.fase === "lobby" && Object.keys(this.stand.spelers).length >= this.samenMax() && this.lobbyKlaar()){
         this.ctx.waitUntil(this.duelAftellen());
       }
       this.zegSpelers();
@@ -380,6 +380,12 @@ export class Kamer extends DurableObject {
      ====================================================================== */
   /* hoeveel er in een potje samen passen: Zwaardvechter vier, Torenverdediging twee */
   samenMax(){ return this.stand && this.stand.duel && this.stand.game === "zwaard" ? SAMEN_MAX : 2; }
+  /* Zwaardvechter samen begint pas als iedereen in de lobby klaar is; andere spellen hebben geen lobbykeuze */
+  lobbyKlaar(){
+    const st = this.stand; if (!st || st.game !== "zwaard") return true;
+    const sids = Object.keys(st.spelers);
+    return sids.length >= 2 && sids.every(sid => !!st.spelers[sid].klaar);
+  }
   /* het startsein, met voor Zwaardvechter samen wie welke speler is (de volgorde van de motor) */
   startBericht(sid){
     const b = { t: "start" };
@@ -488,6 +494,7 @@ export class Kamer extends DurableObject {
     this.motorSids = [eerst].concat(sids.filter(x => x !== eerst)).slice(0, SAMEN_MAX);
     if (this.motorSids.length < 2) return;
     const W = ZWAARDMOTOR.maak({ spelers: this.motorSids.map(sid => ({ naam: st.spelers[sid].naam })) });
+    this.motorSids.forEach((sid, i) => { const s2 = st.spelers[sid]; if (s2 && s2.stijl) W.zetStats(i, { stijl: s2.stijl }); });
     this.motor = W; this.motorSpel = "zwaard"; this.motorTik = 0; this.motorLeeg = 0;
     W.volgendeRonde();
     this.motorZend();
@@ -567,7 +574,16 @@ export class Kamer extends DurableObject {
     /* in een duel mag een speler die alleen wacht de kamer sluiten */
     if (m.t === "stop" && st.duel && st.fase !== "einde") return this.strijdKlaar();
     /* samen met meer: de maker start zodra er minstens twee zijn */
-    if (m.t === "start" && st.duel && st.fase === "lobby" && wie.sid === st.gastheer && Object.keys(st.spelers).length >= 2) return this.duelAftellen();
+    if (m.t === "start" && st.duel && st.fase === "lobby" && wie.sid === st.gastheer && Object.keys(st.spelers).length >= 2 && this.lobbyKlaar()) return this.duelAftellen();
+    /* de lobby van Zwaardvechter samen: een stijl kiezen en klaar melden; vol en allemaal klaar begint het vanzelf */
+    if (m.t === "lobby" && st.duel && st.fase === "lobby"){
+      if (["ridder", "schutter", "wacht"].indexOf(m.stijl) >= 0) sp.stijl = m.stijl;
+      sp.klaar = !!m.klaar;
+      await this.bewaar();
+      this.iedereen({ t: "lobby", spelers: this.strijdLijst().map(r => ({ sid: r.sid, naam: r.naam, av: r.av, stijl: r.stijl, klaar: r.klaar, aan: r.aan })) });
+      if (Object.keys(st.spelers).length >= this.samenMax() && this.lobbyKlaar()) return this.duelAftellen();
+      return;
+    }
     /* berichten tussen de spelers onderling (de gedeelde arena): de kamer geeft ze
        alleen door, bewaart niets en kijkt er niet in */
     if (m.t === "net"){
@@ -644,7 +660,7 @@ export class Kamer extends DurableObject {
     return Object.keys(st.spelers).map(sid => {
       const sp = st.spelers[sid];
       return { sid: sp.pid, naam: sp.naam, av: sp.av || "", ronde: sp.ronde, gehaald: sp.gehaald, leven: sp.leven, punten: sp.punten,
-               af: !!sp.af, aanvallen: sp.aanvallen || 0, aan: this.aanwezig(sid) };
+               af: !!sp.af, aanvallen: sp.aanvallen || 0, aan: this.aanwezig(sid), stijl: sp.stijl || "", klaar: !!sp.klaar };
     }).sort((a, b) => (this.stand.duel && a.af !== b.af) ? (a.af ? 1 : -1)   /* in een duel wint wie overeind blijft */
         : (b.gehaald - a.gehaald || b.punten - a.punten || (a.af === b.af ? 0 : a.af ? 1 : -1) || a.naam.localeCompare(b.naam)))
       .map((r, i) => Object.assign(r, { rang: i + 1 }));
@@ -657,7 +673,7 @@ export class Kamer extends DurableObject {
     const pid = this.pid(sid);
     const mij = lijst.filter(r => r.sid === pid)[0];
     const tegen = this.stand.duel ? (lijst.filter(r => r.sid !== pid)[0] || null) : null;
-    const maten = this.stand.duel ? lijst.filter(r => r.sid !== pid).map(r => ({ sid: r.sid, naam: r.naam, av: r.av || "", ronde: r.ronde, leven: r.leven, af: r.af, aan: r.aan })) : undefined;
+    const maten = this.stand.duel ? lijst.filter(r => r.sid !== pid).map(r => ({ sid: r.sid, naam: r.naam, av: r.av || "", ronde: r.ronde, leven: r.leven, af: r.af, aan: r.aan, stijl: r.stijl, klaar: r.klaar })) : undefined;
     return { t: "stand", jouw: mij ? { rang: mij.rang, van: lijst.length } : null, bezig, koploper: kop, fase: this.stand.fase, maten, max: this.stand.duel ? this.samenMax() : undefined,
              tegen: tegen ? { naam: tegen.naam, av: tegen.av || "", ronde: tegen.ronde, leven: tegen.leven, punten: tegen.punten, af: tegen.af, aan: tegen.aan } : null };
   }

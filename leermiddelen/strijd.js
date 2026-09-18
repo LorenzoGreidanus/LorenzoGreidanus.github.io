@@ -45,6 +45,15 @@ window.STRIJD = (function(){
     '#strijdSluier{position:fixed;inset:0;z-index:89;background:rgba(20,34,76,.55);display:grid;place-items:center;padding:20px}' +
     '#strijdSluier>div{background:#fff;color:#14224C;border-radius:22px;padding:26px 28px;text-align:center;max-width:440px;font-family:Poppins,system-ui,sans-serif}' +
     '#strijdSluier b{display:block;font-size:1.4rem;margin-bottom:6px}' +
+    '#strijdSluier ul.lobby{list-style:none;margin:10px 0;padding:0;display:grid;gap:4px;text-align:left}' +
+    '#strijdSluier ul.lobby li{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;background:#f4f7ff;border-radius:10px;padding:6px 10px;font-size:.9rem}' +
+    '#strijdSluier ul.lobby li em{font-style:normal;color:#5b6480;font-size:.8rem}#strijdSluier ul.lobby li i{font-style:normal;font-size:.72rem;font-weight:600;color:#c0442c}#strijdSluier ul.lobby li.klaar i{color:#2f7d52}' +
+    '#strijdSluier p.kop{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:#5b6480;margin:8px 0 4px;font-weight:600}' +
+    '#strijdSluier .stijlen{display:grid;gap:6px;margin-bottom:8px}' +
+    '#strijdSluier .stijlen button{display:block;width:100%;text-align:left;background:#fff;border:2px solid rgba(20,34,76,.12);border-radius:14px;padding:8px 12px;margin:0;color:#14224C;font:inherit}' +
+    '#strijdSluier .stijlen button b{display:block;font-size:.92rem;margin:0}#strijdSluier .stijlen button small{display:block;font-size:.74rem;color:#5b6480;line-height:1.3}' +
+    '#strijdSluier .stijlen button.aan{border-color:#204ECF;background:#f4f7ff}#strijdSluier .stijlen button:disabled{opacity:.6}' +
+    '#strijdSluier button.crab{background:#F26749;color:#fff;border-color:#F26749}#strijdSluier button.stil{background:#fff;color:#14224C;border:2px solid rgba(20,34,76,.15)}' +
     '#strijdSluier p{margin:0;color:#5b6480}' +
     '#strijdSluier .code{display:block;font-size:2.6rem;letter-spacing:.25em;font-weight:700;color:#204ECF;margin:10px 0 4px;padding-left:.25em}' +
     '#strijdSluier .tel{font-size:3.4rem;font-weight:700;color:#F26749;line-height:1;margin:8px 0}' +
@@ -89,6 +98,9 @@ window.STRIJD = (function(){
   if (!naamOk(naam)) naam = 'Leerling';
   var hud, toast, sluier, toastKlok = null, mijnSid = sid(), mijnPid = null;   /* mijnPid: het openbare nummer dat de kamer me geeft */
   var ws = null, dicht = false, pogingen = 0, hooks = null, gestart = false, klaarMet = false, laatsteStand = '', duel = false, tegen = null, gastheer = null, maatNaam = '', maatAv = '', maten = [], maxSamen = 2;
+  /* de lobby van Zwaardvechter samen: mijn stijl en of ik klaar ben */
+  var mijnStijl = '', mijnKlaar = false;
+  function stuurLobby(){ stuur({ t:'lobby', stijl:mijnStijl, klaar:mijnKlaar }); }
   function samen(){ return duel && hooks && hooks.samen; }
 
   function zeg(tekst, goed){
@@ -104,6 +116,8 @@ window.STRIJD = (function(){
     Array.prototype.forEach.call(sluier.querySelectorAll('button'), function(k){
       k.addEventListener('click', function(){
         if (k.getAttribute('data-start')){ k.disabled = true; stuur({ t:'start' }); return; }
+        if (k.getAttribute('data-stijl')){ mijnStijl = k.getAttribute('data-stijl'); if (hooks && hooks.lobby) hooks.lobby.kies(mijnStijl); stuurLobby(); sluierTekst(wachtTekst(maten.length + 1)); return; }
+        if (k.getAttribute('data-klaar')){ mijnKlaar = !mijnKlaar; stuurLobby(); sluierTekst(wachtTekst(maten.length + 1)); return; }
         stuur({ t:'stop' }); location.href = location.pathname;
       });
     });
@@ -144,7 +158,27 @@ window.STRIJD = (function(){
   function stuur(obj){ if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
   setInterval(function(){ if (ws && ws.readyState === 1) ws.send('ping'); }, 25000);
 
+  /* de lobby met stijlkeuze: wie er is, wat hij koos, wie klaar is; de maker start als iedereen klaar is */
+  function lobbyTekst(aantal){
+    var L = hooks.lobby, ikMaak = gastheer === mijnPid;
+    if (!mijnStijl) mijnStijl = L.huidig();
+    function stijlNaam(id){ var x = L.stijlen.filter(function(y){ return y.id === id; })[0]; return x ? x.naam : 'nog geen stijl'; }
+    var rij = [{ naam:naam + ' (jij)', stijl:mijnStijl, klaar:mijnKlaar }].concat(maten).map(function(r){
+      return '<li' + (r.klaar ? ' class="klaar"' : '') + '><span>' + schoon(r.naam) + '</span><em>' + schoon(stijlNaam(r.stijl)) + '</em><i>' + (r.klaar ? 'klaar' : 'kiest nog') + '</i></li>';
+    }).join('');
+    var keuze = '<div class="stijlen">' + L.stijlen.map(function(x){ return '<button type="button" data-stijl="' + x.id + '"' + (mijnStijl === x.id ? ' class="aan"' : '') + (mijnKlaar ? ' disabled' : '') + '><b>' + x.naam + '</b><small>' + x.uit + '</small></button>'; }).join('') + '</div>';
+    var alleKlaar = mijnKlaar && maten.every(function(r){ return r.klaar; });
+    var uitleg = '<p>Laat je vrienden naar <strong>' + location.host.replace(/^www\./, '') + '/q</strong> gaan en deze code invullen:</p><span class="code">' + code + '</span>';
+    var knoppen = '<button type="button" data-klaar="1" class="' + (mijnKlaar ? 'stil' : 'crab') + '">' + (mijnKlaar ? 'Toch nog iets veranderen' : 'Klaar!') + '</button> ';
+    if (ikMaak) knoppen += '<button type="button" data-start="1"' + (aantal >= 2 && alleKlaar ? '' : ' disabled') + '>Start met z\'n ' + (aantal <= 2 ? 'tweeën' : aantal === 3 ? 'drieën' : 'vieren') + '</button> ';
+    knoppen += '<button type="button">Toch niet</button>';
+    var status = aantal < 2 ? 'Zodra er twee zijn en iedereen klaar is, kan het beginnen; met vier begint het vanzelf.'
+      : alleKlaar ? (ikMaak ? 'Iedereen is klaar. Druk op start.' : 'Iedereen is klaar; de maker van de kamer start.')
+      : 'Het begint als iedereen op Klaar heeft gedrukt' + (ikMaak ? ' en jij start' : '') + '.';
+    return '<b>' + (aantal < 2 ? 'Wacht op je vrienden' : aantal + ' in de kamer') + '</b>' + uitleg + '<ul class="lobby">' + rij + '</ul>' + '<p class="kop">Kies je stijl</p>' + keuze + '<p>' + status + '</p>' + knoppen;
+  }
   function wachtTekst(aantal){
+    if (duel && maxSamen > 2 && hooks && hooks.lobby) return lobbyTekst(aantal);
     if (duel && maxSamen > 2){
       /* samen met twee, drie of vier: de maker start zodra er minstens twee zijn; vol begint het vanzelf */
       var ikMaak = gastheer === mijnPid, erbij = maten.length ? '<p>Al in de kamer: <strong>' + namen(maten) + '</strong>.</p>' : '';
@@ -173,7 +207,16 @@ window.STRIJD = (function(){
       if (m.fase === 'bezig') start(m);
       else if (m.fase === 'einde') sluierWeg();
       else if (m.fase === 'aftellen') aftellen(3);
-      else sluierTekst(wachtTekst(aantal));
+      else {
+        /* in de lobby: mijn stijl alvast melden, zodat de anderen hem zien */
+        if (hooks && hooks.lobby){ if (!mijnStijl) mijnStijl = hooks.lobby.huidig(); mijnKlaar = false; stuurLobby(); }
+        sluierTekst(wachtTekst(aantal));
+      }
+      return;
+    }
+    if (m.t === 'lobby'){
+      maten = (m.spelers || []).filter(function(r){ return r.sid !== mijnPid; });
+      if (!gestart) sluierTekst(wachtTekst(maten.length + 1));
       return;
     }
     if (m.t === 'aftellen'){ aftellen(m.s || 3); return; }
