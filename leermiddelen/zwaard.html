@@ -712,6 +712,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   /* het testpaneel: cheats om snel iets te bekijken. Het gaat open door een codewoord te typen; alleen de
      sha-256 daarvan staat hier, dus uit de code valt het woord niet te lezen. Er is geen toets en geen url voor. */
   var cheat = false, god = false, codeBuf = '';
+  var blijTot = 0;   /* tot wanneer je gezichtje blij kijkt na een goed antwoord */
   var CODE_HASH = '0d0a4e4c4c071849280715e4df29ff427a7966461098d5c29bb7e6745a9472aa', CODE_LENGTE = 10;
   function testPaneel(aan){ var tv = document.getElementById('testvak'); if (!tv) return; tv.classList.toggle('hide', !aan); }
   function codeToets(k){
@@ -1402,6 +1403,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     slim.toets(goed);
     if (window.KLAS) KLAS.tel(perOnderdeel, vraag.t, goed);
     if (goed){
+      blijTot = performance.now() + 2500;
       reeks++; goedAantal++; besteReeks = Math.max(besteReeks, reeks);
       if (window.STRIJD) STRIJD.reeks(reeks);
       var winst = Math.round((MUNT_GOED + Math.min(MUNT_REEKSMAX, reeks * MUNT_REEKS)) * (1 + (ronde - 1) * MUNT_GROEI));
@@ -1652,7 +1654,9 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     var ringen = ['', '#dfe6ee', '#b9c4d1', '#8f9db0', '#6b7a90', '#4f5d73', '#3b4759', '#c9971f'];
     var ring = ringen[Math.min(7, harnasLv || 0)];
     var wie = naam ? { naam:naam, av:av || '' } : { naam:eigenNaam(), av:(window.PROFIEL ? PROFIEL.avatar() : '') };
-    s += '<g transform="scale(' + (R / 46).toFixed(3) + ')"' + (sp2.flits > 0 ? ' opacity=".5"' : '') + '><use href="#' + gezichtId(wie.naam, wie.av) + '"/></g>';
+    /* de stemming: au als je net geraakt bent, blij even na een goed antwoord (alleen jijzelf) */
+    var stemming = neer ? 'au' : sp2.flits > 0 ? 'au' : (!naam && blijTot > performance.now()) ? 'blij' : '';
+    s += '<g transform="scale(' + (R / 46).toFixed(3) + ')"' + (sp2.flits > 0 ? ' opacity=".5"' : '') + '><use href="#' + gezichtId(wie.naam, wie.av, stemming) + '"/></g>';
     if (ring) s += '<circle r="' + (R + 2) + '" fill="none" stroke="' + ring + '" stroke-width="3" opacity=".9"/>';
     if (sp2.crit && !neer) s += '<circle r="' + (R + 9) + '" fill="none" stroke="#F26749" stroke-width="3" opacity="' + (0.55 + Math.sin(pols * 10) * 0.35).toFixed(2) + '"/>';
     if (sp2.blok && !neer) s += '<g transform="rotate(' + mikt.toFixed(1) + ')"><path d="M' + (R + 4) + ',-' + (R + 6) + ' A' + (R + 10) + ',' + (R + 10) + ' 0 0 1 ' + (R + 4) + ',' + (R + 6) + '" fill="none" stroke="#204ECF" stroke-width="7" stroke-linecap="round" opacity=".9"/></g>';
@@ -1971,14 +1975,14 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   /* Een gezichtje hoort bij de vormen die blijven staan: het wordt een keer in
      het vaste vakje gezet en daarna alleen nog aangewezen. */
   var gezichten = {}, gezichtNr = 0;
-  function gezichtId(naam, av){
-    var sleutel = naam + '|' + av;
+  function gezichtId(naam, av, stemming){
+    var sleutel = naam + '|' + av + '|' + (stemming || '');
     if (gezichten[sleutel]) return gezichten[sleutel];
     var id = 'gez' + (++gezichtNr);
     gezichten[sleutel] = id;
     var vast = document.getElementById('arenavast');
     if (vast) vast.insertAdjacentHTML('beforeend',
-      '<g id="' + id + '">' + (window.AVATAR ? AVATAR.inhoud(naam, av) : '<circle r="46" fill="#204ECF"/>') + '</g>');
+      '<g id="' + id + '">' + (window.AVATAR ? AVATAR.inhoud(naam, av, stemming) : '<circle r="46" fill="#204ECF"/>') + '</g>');
     return id;
   }
 

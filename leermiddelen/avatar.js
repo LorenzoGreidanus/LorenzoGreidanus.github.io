@@ -106,17 +106,20 @@ window.AVATAR = (function(){
   }
   var cache = {};
   /* de binnenkant (viewBox -50..50), voor wie hem in een eigen svg tekent, zoals de arena van Zwaardvechter */
-  function inhoud(naam, spec){
-    var sleutel = (spec || '') + '|' + String(naam || '').toLowerCase().trim();
+  function inhoud(naam, spec, stemming){
+    var sleutel = (spec || '') + '|' + String(naam || '').toLowerCase().trim() + '|' + (stemming || '');
     if (cache[sleutel]) return cache[sleutel];
-    var s = svg(naam, 100, spec).replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
+    var s = svg(naam, 100, spec, { stemming:stemming }).replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
     if (Object.keys(cache).length > 200) cache = {};
     cache[sleutel] = s;
     return s;
   }
-  function svg(naam, maat, spec){
+  /* opties.stemming: '' (gewoon), 'au' (net geraakt) of 'blij' (goed gedaan); de spellen kiezen die per moment */
+  function svg(naam, maat, spec, opties){
     maat = maat || 32;
-    var sp = ontleed(spec);
+    var sp = ontleed(spec), stemming = opties && opties.stemming || '';
+    /* elk gezichtje ademt en knippert op zijn eigen moment, anders doet een hele klas het tegelijk */
+    var zaadje = hash((spec || '') + '|' + (naam || '')), d1 = (zaadje % 340) / 100, d2 = ((zaadje >>> 8) % 460) / 100;
     /* met een spec hangt niets meer van de naam af: dezelfde keuzes geven overal dezelfde blob */
     var r = toeval(sp ? 7919 * (sp.v + 1) + 17 : hash(naam));
     var kleur = KLEUREN[Math.floor(r() * KLEUREN.length)];
@@ -124,13 +127,19 @@ window.AVATAR = (function(){
     var donker = !!DONKER[kleur], oog = donker ? '#fff' : '#14224C', pupil = '#14224C', mond = donker ? '#14224C' : '#14224C';
     var draai = (r() * 16 - 8).toFixed(1);
     var s = '<svg class="avatar" viewBox="-50 -50 100 100" overflow="visible" width="' + maat + '" height="' + maat + '" aria-hidden="true" focusable="false">';
+    s += '<g class="av-alles" style="animation-delay:-' + d1 + 's">';
     s += '<g transform="rotate(' + draai + ')"><path d="' + blob(r, 46) + '" fill="' + kleur + '"/>';
     /* een lichtere gloed bovenin, zoals het glimmetje op de ridder */
     s += '<path d="M-40,-6 a40,40 0 0 1 80,0 z" fill="#fff" opacity=".14"/></g>';
     /* de ogen: vijf soorten */
     var soort = Math.floor(r() * 5), kijk = (r() - 0.5) * 5, afstand = 15;
     if (sp) soort = sp.o % 5;
-    if (soort === 1){                 /* blij: boogjes */
+    if (stemming === 'blij') soort = 1;
+    if (stemming === 'au') soort = 9;
+    s += '<g class="av-ogen" style="animation-delay:-' + d2 + 's">';
+    if (soort === 9){                 /* au: dichtgeknepen */
+      s += '<path d="M-23,-11 L-12,-4 L-23,3 M23,-11 L12,-4 L23,3" fill="none" stroke="' + oog + '" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>';
+    } else if (soort === 1){          /* blij: boogjes */
       s += '<path d="M-22,-4 q7,-9 14,0 M8,-4 q7,-9 14,0" fill="none" stroke="' + oog + '" stroke-width="4.5" stroke-linecap="round"/>';
     } else if (soort === 2){          /* knipoog */
       s += '<circle cx="-' + afstand + '" cy="-5" r="8" fill="' + oog + '"/><circle cx="' + (-afstand + kijk).toFixed(1) + '" cy="-4" r="4" fill="' + pupil + '"/>';
@@ -147,9 +156,12 @@ window.AVATAR = (function(){
       s += '<circle cx="-' + afstand + '" cy="-5" r="8" fill="' + oog + '"/><circle cx="' + afstand + '" cy="-5" r="8" fill="' + oog + '"/>';
       s += '<circle cx="' + (-afstand + kijk).toFixed(1) + '" cy="-4" r="4" fill="' + pupil + '"/><circle cx="' + (afstand + kijk).toFixed(1) + '" cy="-4" r="4" fill="' + pupil + '"/>';
     }
+    s += '</g>';
     /* de mond: lach, klein rondje, of een streepje */
     var m = Math.floor(r() * 4);
     if (sp) m = sp.m % 4;
+    if (stemming === 'blij') m = 3;
+    if (stemming === 'au') m = 1;
     if (m === 0) s += '<path d="M-10,12 q10,10 20,0" fill="none" stroke="' + mond + '" stroke-width="4" stroke-linecap="round"/>';
     else if (m === 1) s += '<circle cx="0" cy="14" r="4.5" fill="' + mond + '"/>';
     else if (m === 2) s += '<path d="M-7,13 h14" fill="none" stroke="' + mond + '" stroke-width="4" stroke-linecap="round"/>';
@@ -164,8 +176,10 @@ window.AVATAR = (function(){
     else if (e === 3) s += '<path d="M-26,-30 q26,-36 52,0 z" fill="#14224C"/><path d="M-31,-29 h62" stroke="#14224C" stroke-width="7" stroke-linecap="round"/>';
     else if (e === 4) s += '<path d="M30,-30 l3,7 7,1 -5,5 1,7 -6,-4 -6,4 1,-7 -5,-5 7,-1z" fill="#FFD166"/>';
     /* uit de winkel: eerst de rand (achter niets, want hij ligt om het gezicht), dan de hoed erop */
+    s += '</g>';
     if (sp && sp.r) s += rand(sp.r);
-    if (sp && sp.h) s += '<g transform="' + hoedPlek(+draai) + '">' + hoed(sp.h, kleur) + '</g>';
+    /* de hoed ademt mee (zelfde maat en zelfde moment) en wiebelt als je eroverheen gaat */
+    if (sp && sp.h) s += '<g class="av-alles" style="animation-delay:-' + d1 + 's"><g class="av-hoed" transform="' + hoedPlek(+draai) + '">' + hoed(sp.h, kleur) + '</g></g>';
     if (sp && sp.b) s += trofee(sp.b);
     return s + '</svg>';
   }
@@ -177,7 +191,16 @@ window.AVATAR = (function(){
   /* de paar regels stijl die elke pagina nodig heeft */
   try {
     var st = document.createElement('style');
-    st.textContent = '.avatar{display:inline-block;vertical-align:middle;flex:none;margin-right:6px}.avrij{display:flex;align-items:center;gap:8px;min-width:0}.avrij .avatar{margin-right:0}.avrij>span{min-width:0}';
+    st.textContent = '.avatar{display:inline-block;vertical-align:middle;flex:none;margin-right:6px}.avrij{display:flex;align-items:center;gap:8px;min-width:0}.avrij .avatar{margin-right:0}.avrij>span{min-width:0}' +
+      /* leven: ademen, knipperen, en een hoed die wiebelt onder de muis */
+      '@keyframes avAdem{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-1.4px) scale(1.018,1.01)}}' +
+      '@keyframes avKnip{0%,91%,100%{transform:scaleY(1)}94.5%{transform:scaleY(.06)}}' +
+      '@keyframes avHoed{0%,100%{transform:rotate(0) translateY(0)}35%{transform:rotate(-9deg) translateY(-4px)}70%{transform:rotate(4deg) translateY(-1px)}}' +
+      '.av-alles{transform-box:fill-box;transform-origin:50% 100%;animation:avAdem 3.4s ease-in-out infinite}' +
+      '.av-ogen{transform-box:fill-box;transform-origin:center;animation:avKnip 4.6s linear infinite}' +
+      '.av-hoed{transform-box:fill-box;transform-origin:50% 100%}' +
+      '.avatar:hover .av-hoed,.av-wiebel .av-hoed{animation:avHoed .8s ease}' +
+      '@media(prefers-reduced-motion:reduce){.av-alles,.av-ogen,.av-hoed{animation:none !important}}';
     document.head.appendChild(st);
   } catch (e){}
   return { svg:svg, inhoud:inhoud, vul:vul, ontleed:ontleed, maak:maak, KEUZES:KEUZES };
