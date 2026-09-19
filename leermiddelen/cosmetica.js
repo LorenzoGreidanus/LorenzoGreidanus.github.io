@@ -16,7 +16,7 @@
     /* hoeden: h1 tot h8 */
     { id:'h1', soort:'h', n:1, naam:'Kroon',          prijs:900, uit:'voor wie het klassement aanvoert' },
     { id:'h2', soort:'h', n:2, naam:'Tovenaarshoed',  prijs:500,  uit:'paars, met sterren' },
-    { id:'h3', soort:'h', n:3, naam:'Hoge hoed',      prijs:600, uit:'zwart, met een rood lint' },
+    { id:'h3', soort:'h', n:3, naam:'Zweetband',      prijs:600, uit:'wit met rood en blauw, klaar voor de sprint' },
     { id:'h4', soort:'h', n:4, naam:'Piratenhoed',    prijs:600, uit:'met doodshoofd' },
     { id:'h5', soort:'h', n:5, naam:'Hoorntjes',      prijs:400,  uit:'een beetje ondeugend' },
     { id:'h6', soort:'h', n:6, naam:'Halo',           prijs:1200, uit:'een engel, zogenaamd' },

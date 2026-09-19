@@ -13,7 +13,7 @@
 
    Wat hij niet aanraakt: de spelkamers en het klassement (/api/, /ws/, /q),
    want die moeten altijd live zijn. */
-var VERSIE = "v73";
+var VERSIE = "v74";
 var KERN = "kern-" + VERSIE, VOORRAAD = "voorraad-" + VERSIE;
 var STARTSET = [
   "/leermiddelen/", "/leermiddelen/index.html", "/leermiddelen/mee.html", "/leermiddelen/basis.css", "/leermiddelen/thema.js",
