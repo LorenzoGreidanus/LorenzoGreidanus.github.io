@@ -390,6 +390,13 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
 .codevak2 .code{font-size:1.5rem;font-weight:700;letter-spacing:.22em;font-variant-numeric:tabular-nums;background:var(--ink);color:var(--room);border-radius:12px;padding:8px 14px;display:inline-block;margin-right:8px}
 .codevak2 input{border:1.5px solid var(--rand2,rgba(20,34,76,.16));border-radius:12px;padding:8px 10px;background:var(--kaart,#fff);color:var(--ink);font:inherit;width:140px;letter-spacing:.14em;text-transform:uppercase}
 .codevak2 p{font-size:.84rem;color:var(--muted);margin-top:6px}
+.opdrachtkaart{margin:0 0 12px;background:linear-gradient(135deg,#204ECF,#4a6fe0);color:#fff;border-radius:18px;padding:14px 18px;display:grid;gap:4px;box-shadow:0 10px 26px rgba(32,78,207,.22)}
+.opdrachtkaart .eyebrow{color:rgba(255,255,255,.75)}
+.opdrachtkaart b{font-size:1.05rem}
+.opdrachtkaart span{font-size:.9rem;color:rgba(255,255,255,.9)}
+.opdrachtkaart .klaar{color:#d7f1df;font-weight:600}
+.opdrachtkaart .nog{color:#FFE168}
+.opdrachtkaart .knop{justify-self:start;margin-top:6px;background:#fff;color:#204ECF;border-radius:999px;padding:7px 14px;font-weight:600;text-decoration:none}
 </style>
 <link rel="stylesheet" href="basis.css">
 </head>
@@ -1155,7 +1162,27 @@ var SPELLEN = [
 (function(){
   var doel = document.getElementById('klasUit'); if (!doel || !window.KLAS) return;
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
-  var ingelogd = false, gekeken = false;
+  var ingelogd = false, gekeken = false, opdrachtGezien = null;
+  var OP_SPEL = { race:['Vragenrace', 'race.html'], toren:['Torenverdediging', 'toren.html'], zwaard:['Zwaardvechter', 'zwaard.html'] };
+  var OP_VAK = { reken:'rekenen', ned:'Nederlands', eng:'Engels', ges:'geschiedenis', aard:'aardrijkskunde', bio:'biologie', wis:'wiskunde', burg:'samenleving', eco:'economie' };
+  function deelNaam(vak, id){ var l = window.ONDERDELEN && ONDERDELEN[vak], o = l && l.filter(function(x){ return x.id === id; })[0]; return o ? o.naam : id; }
+  /* de opdracht van de docent: de kaart met wat, tot wanneer, en of je hem al gehaald hebt */
+  function toonOpdracht(k){
+    var vak = document.getElementById('opdrachtKaart');
+    if (!vak){ vak = document.createElement('div'); vak.id = 'opdrachtKaart'; vak.className = 'opdrachtkaart hide'; doel.parentNode.insertBefore(vak, doel); }
+    fetch('/api/klas/' + k.code + '/mijn?sid=' + encodeURIComponent(KLAS.sid()), { cache:'no-store' }).then(function(r){ return r.json(); }).then(function(j){
+      var o = j && j.opdracht;
+      if (!o || !OP_SPEL[o.spel]){ vak.classList.add('hide'); return; }
+      var sp = OP_SPEL[o.spel], verlopen = o.tot < Date.now(), maat = o.deel ? 'goed' : o.spel === 'race' ? 'goed' : 'rondes';
+      var link = sp[1] + '?vak=' + encodeURIComponent(o.vak) + (o.deel ? '&deel=' + encodeURIComponent(o.deel) : '');
+      vak.innerHTML = '<p class="eyebrow">opdracht van je docent</p>' +
+        '<b>' + schoon(sp[0]) + ', ' + schoon(OP_VAK[o.vak] || o.vak) + (o.deel ? ', ' + schoon(o.deelNaam || deelNaam(o.vak, o.deel)) : '') + ': minstens ' + o.min + ' ' + maat + '</b>' +
+        '<span>' + (verlopen ? 'De tijd was tot ' : 'Tot ') + new Date(o.tot).toLocaleDateString('nl-NL', { weekday:'long', day:'numeric', month:'long' }) + '.' + (o.tekst ? ' ' + schoon(o.tekst) : '') + '</span>' +
+        (j.gehaald ? '<span class="klaar">Gehaald ✓ Je beste: ' + j.beste + ' ' + maat + '.</span>' : '<span class="nog">' + (j.beste ? 'Je beste tot nu toe: ' + j.beste + ' van ' + o.min + '. ' : '') + (verlopen ? 'Verlopen.' : 'Nog te doen.') + '</span>') +
+        '<a class="knop" href="' + link + '">' + (j.gehaald ? 'Nog een keer' : 'Aan de slag') + '</a>';
+      vak.classList.remove('hide');
+    }).catch(function(){ vak.classList.add('hide'); });
+  }
   function teken(){
     var k = KLAS.lees();
     if (window.VERNIEUWGEZICHT) VERNIEUWGEZICHT();
@@ -1165,10 +1192,12 @@ var SPELLEN = [
         (vast ? '<span class="vast">Je bent ingelogd met Microsoft, dus dit blijft staan tot je docent de klascode opheft.</span>' : '<button type="button" class="los" id="klasLos">Loskoppelen</button>') + '</p>';
       var los = document.getElementById('klasLos');
       if (los) los.addEventListener('click', function(){ KLAS.wis(); teken(); });
+      toonOpdracht(k);
       /* bestaat de code nog? een keer per bezoek kijken */
       if (!gekeken){ gekeken = true; KLAS.controleer().then(function(nog){ if (!nog) teken(); }); }
       return;
     }
+    var ok0 = document.getElementById('opdrachtKaart'); if (ok0) ok0.classList.add('hide');
     doel.innerHTML = '<div class="invulrij"><input id="klasCode" maxlength="4" placeholder="CODE" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Klascode"><input id="klasNaam" class="naam" maxlength="16" placeholder="Je bijnaam" autocomplete="nickname" aria-label="Je bijnaam"><button type="button" id="klasKoppel">Koppelen</button></div>' +
       '<p class="status" id="klasStatus">Alleen als je docent je een code gaf. Zonder code speel je gewoon en wordt er niets opgeslagen.</p>';
     document.getElementById('klasKoppel').addEventListener('click', function(){

@@ -199,9 +199,11 @@ export default {
     }
 
     /* het klasoverzicht: leerlingen melden hun uitslag, de docent haalt ze op met de sleutel */
-    const kl = p.match(/^\/api\/klas\/([A-Za-z]{4})(\/meld|\/melden|\/opheffen)?\/?$/);
+    const kl = p.match(/^\/api\/klas\/([A-Za-z]{4})(\/meld|\/melden|\/opheffen|\/opdracht|\/mijn)?\/?$/);
     if (kl){
       const stub = env.KAMERS.get(env.KAMERS.idFromName(kl[1].toUpperCase()));
+      /* de leerling: heb ik de opdracht gehaald? */
+      if (kl[2] === "/mijn") return stub.fetch("https://kamer/mijn?sid=" + encodeURIComponent(url.searchParams.get("sid") || ""));
       if (kl[2]){
         if (req.method !== "POST") return json({ fout: "onbekend" }, 404);
         if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);

@@ -124,6 +124,19 @@ tr:last-child td{border-bottom:none}
 td.getal{font-variant-numeric:tabular-nums;text-align:right}
 .leeg{padding:22px;color:var(--muted);text-align:center}
 .samen{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-top:12px}
+.opdrachtvak{background:var(--kaart2);border-radius:16px;padding:14px 16px}
+.opdrachtvorm{margin-top:10px;align-items:center}
+.opdrachtvorm .veld{padding:7px 10px;font-size:.92rem}
+.minlabel{display:inline-flex;align-items:center;gap:6px;font-size:.92rem}
+.opdrachtstand{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:8px}
+.opdrachtstand .nu{flex:1;min-width:240px}
+.opdrachtstand .nu b{display:block}
+.opdrachtstand .nu small{color:var(--muted)}
+.gehaald{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.gehaald span{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 11px 4px 6px;font-size:.88rem;background:var(--kaart);border:1px solid var(--rand)}
+.gehaald span.ja{background:#d7f1df;border-color:#b9e3c7;color:#14224C}
+.gehaald span.ja i{font-style:normal;font-weight:700;color:#1f6b41}
+.gehaald span.nee i{font-style:normal;color:var(--muted)}
 .samen div{background:var(--kaart2);border-radius:14px;padding:12px 14px}
 .samen b{display:block;font-size:1.05rem}
 .samen .regel{display:grid;grid-template-columns:minmax(0,1fr) 104px;gap:1px 10px;margin-top:9px;font-size:.86rem;align-items:center}
@@ -247,6 +260,21 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       </div>
     </div>
     <p class="tip" id="ovUit" style="margin-top:8px"></p>
+    <div class="stap opdrachtvak" id="opdrachtVak">
+      <b>Opdracht voor de klas</b>
+      <p class="tip">Eén opdracht tegelijk, bijvoorbeeld: Vragenrace, geschiedenis, tijd van ontdekkers, minstens 15 goed, vóór vrijdag. Leerlingen zien hem bovenaan in de leeromgeving met een knop naar het spel; hier zie je wie hem gehaald heeft.</p>
+      <div id="opdrachtStand"></div>
+      <div class="rij opdrachtvorm" id="opdrachtVorm">
+        <select id="opSpel" class="veld" aria-label="Spel"><option value="race">Vragenrace</option><option value="toren">Torenverdediging</option><option value="zwaard">Zwaardvechter</option></select>
+        <select id="opVak" class="veld" aria-label="Vak"></select>
+        <select id="opDeel" class="veld" aria-label="Onderdeel"><option value="">alle onderdelen</option></select>
+        <label class="minlabel">minstens <input id="opMin" class="veld" type="number" min="1" max="250" value="15" style="width:74px"> <span id="opMaat">goed</span></label>
+        <label class="minlabel">vóór <input id="opTot" class="veld" type="date"></label>
+        <input id="opTekst" class="veld" maxlength="140" placeholder="korte toelichting (mag leeg)" style="flex:1;min-width:200px">
+        <button class="knop crab" id="opZet" type="button">Zet opdracht</button>
+      </div>
+      <p class="tip" id="opFout"></p>
+    </div>
     <div class="stap"><b>Spel</b><div class="chips" id="spelChips"></div></div>
     <div class="stap" id="odStap">
       <b>Per onderdeel</b>
@@ -367,6 +395,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       }).join('') + '</div>';
     }).join('') : '<p class="leeg">Nog niets gemeld. Zodra een leerling een potje afmaakt, staat het hier.</p>';
     tekenOnderdelen(lijst);
+    tekenOpdracht();
     $('rijen').innerHTML = lijst.length ? lijst.map(function(r){
       return '<tr><td>' + (window.AVATAR ? AVATAR.svg(r.naam, 24, r.av) : '') + schoon(r.naam) + '</td><td>' + schoon(SPELLEN[r.spel] || r.spel) + '</td><td class="getal">' + r.ronde + '</td><td class="getal">' + r.punten + '</td><td>' + schoon(NIVEAUS[r.niveau] || r.niveau || '') + '</td><td>' + schoon(VAKKEN[r.vak] || r.vak || '') + '</td><td>' + new Date(r.t).toLocaleString('nl-NL', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) + '</td></tr>';
     }).join('') : '<tr><td colspan="7" class="leeg">Nog geen potjes.</td></tr>';
@@ -428,6 +457,53 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     $('aandacht').innerHTML = html;
   }
   var avVan = function(){ return ''; };
+
+  /* ---------- de opdracht ---------- */
+  var OP_SPEL = { race:'Vragenrace', toren:'Torenverdediging', zwaard:'Zwaardvechter' };
+  function opMaat(spel, deel){ return deel ? 'goed in dat onderdeel' : spel === 'race' ? 'goed' : 'rondes'; }
+  function opVul(){
+    var spel = $('opSpel').value, vakken = Object.keys(VAKKEN).filter(function(v){ return spel !== 'race' || v !== 'reken'; });
+    var vakNu = $('opVak').value;
+    $('opVak').innerHTML = vakken.map(function(v){ return '<option value="' + v + '"' + (v === vakNu ? ' selected' : '') + '>' + schoon(VAKKEN[v]) + '</option>'; }).join('');
+    var vak = $('opVak').value, lijst = (window.ONDERDELEN && ONDERDELEN[vak]) || [], deelNu = $('opDeel').value;
+    $('opDeel').innerHTML = '<option value="">alle onderdelen</option>' + lijst.map(function(o){ return '<option value="' + schoon(o.id) + '"' + (o.id === deelNu ? ' selected' : '') + '>' + schoon(o.naam) + '</option>'; }).join('');
+    $('opMaat').textContent = opMaat(spel, $('opDeel').value);
+  }
+  function haaltOp(r, o){
+    if (r.spel !== o.spel || (r.vak || '') !== o.vak || r.t < o.sinds) return 0;
+    if (o.deel) return r.od && r.od[o.deel] ? (r.od[o.deel][0] | 0) : 0;
+    return r.ronde | 0;
+  }
+  function tekenOpdracht(){
+    var o = data && data.opdracht, doel = $('opdrachtStand');
+    $('opdrachtVorm').classList.toggle('hide', !!o);
+    if (!o){ doel.innerHTML = ''; opVul(); return; }
+    var namen = {}; (data.resultaten || []).forEach(function(r){ namen[r.naam] = Math.max(namen[r.naam] || 0, haaltOp(r, o)); });
+    var lijst = Object.keys(namen).sort(function(a, b){ return a.localeCompare(b, 'nl'); }), n = lijst.filter(function(x){ return namen[x] >= o.min; }).length;
+    var verlopen = o.tot < Date.now();
+    doel.innerHTML = '<div class="opdrachtstand"><div class="nu"><b>' + schoon(OP_SPEL[o.spel] || o.spel) + ' · ' + schoon(VAKKEN[o.vak] || o.vak) + (o.deel ? ' · ' + schoon(onderdeelNaam(o.vak, o.deel)) : '') + ': minstens ' + o.min + ' ' + opMaat(o.spel, o.deel) + '</b>' +
+      '<small>' + (verlopen ? 'verlopen op ' : 'tot ') + new Date(o.tot).toLocaleDateString('nl-NL', { weekday:'long', day:'numeric', month:'long' }) + (o.tekst ? ' · ' + schoon(o.tekst) : '') + ' · gezet ' + wanneer(o.sinds) + '</small></div>' +
+      '<button type="button" class="knop stil klein" id="opWeg">Opdracht weghalen</button></div>' +
+      '<p class="tip" style="margin-top:8px">' + (lijst.length ? n + ' van ' + lijst.length + ' leerlingen gehaald.' : 'Nog geen leerling heeft sinds de opdracht een potje gemeld.') + '</p>' +
+      '<div class="gehaald">' + lijst.map(function(x){ var ja = namen[x] >= o.min; return '<span class="' + (ja ? 'ja' : 'nee') + '">' + (window.AVATAR ? AVATAR.svg(x, 20, avVan(x)) : '') + schoon(x) + ' <i>' + (ja ? '✓' : namen[x] + '/' + o.min) + '</i></span>'; }).join('') + '</div>';
+    $('opWeg').addEventListener('click', function(){ if (!confirm('De opdracht weghalen?')) return; zetOpdracht(null); });
+  }
+  function zetOpdracht(o){
+    if (!huidig) return;
+    $('opFout').textContent = '';
+    fetch('/api/klas/' + huidig.code + '/opdracht', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ sleutel:huidig.sleutel, opdracht:o }) })
+      .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+      .then(function(x){ if (!x.ok){ $('opFout').textContent = x.j.fout || 'Dat lukte niet.'; return; } haal(); })
+      .catch(function(){ $('opFout').textContent = 'Geen verbinding met de server.'; });
+  }
+  ['opSpel', 'opVak', 'opDeel'].forEach(function(id){ $(id).addEventListener('change', opVul); });
+  (function(){ var d = new Date(); d.setDate(d.getDate() + 7); $('opTot').value = d.toISOString().slice(0, 10); })();
+  $('opZet').addEventListener('click', function(){
+    var tot = new Date($('opTot').value + 'T23:59:00');
+    if (isNaN(tot.getTime())){ $('opFout').textContent = 'Kies een datum.'; return; }
+    zetOpdracht({ spel:$('opSpel').value, vak:$('opVak').value, deel:$('opDeel').value, deelNaam:$('opDeel').value ? $('opDeel').options[$('opDeel').selectedIndex].textContent : '', min:parseInt($('opMin').value, 10) || 1, tot:tot.getTime(), tekst:$('opTekst').value.trim() });
+  });
+  opVul();
 
   $('maakBtn').addEventListener('click', function(){
     var naam = $('klasNaam').value.trim();
@@ -493,7 +569,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     PROFIEL.sync();
   }
   /* de vragenbank laadt na deze pagina; dan krijgen de onderdelen hun naam */
-  window.addEventListener('load', function(){ if (data) teken(); });
+  window.addEventListener('load', function(){ opVul(); if (data) teken(); });
 })();
 </script>
 <script src="thema.js"></script>

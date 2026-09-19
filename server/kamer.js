@@ -40,7 +40,15 @@ const SPELLEN_STRIJD = { toren: "Torenverdediging", zwaard: "Zwaardvechter" };
 const SPELLEN_ROLLEN = { polis: "De vergadering van de klas", meetlat: "Langs de meetlat", staten: "De vergadering", berlijn: "De Conferentie van Berlijn", standen: "Stem per stand", crisis: "De crisis", teken: "Tekenslag" };
 const KAART_MAX = 12000, BORD_MAX = 40000, ACTIE_MAX = 4000;
 const KLAS_SLAAPT = 400 * 24 * 60 * 60 * 1000; /* een klascode blijft tot de docent hem opheft, of tot hij ruim een jaar niet gebruikt is */
-const KLAS_MAX = 3000;                        /* hoogstens zoveel gemelde potjes per klas */
+const KLAS_MAX = 3000;
+/* spellen die een opdracht kunnen zijn: bij een onderdeel telt het aantal goed in dat onderdeel, anders de ronde (of het aantal goed bij de Vragenrace) */
+const OPDRACHT_SPELLEN = { race: true, toren: true, zwaard: true };
+function maatVoor(r, o){
+  if (r.spel !== o.spel || (r.vak || "") !== o.vak || r.t < o.sinds) return 0;
+  if (o.deel) return r.od && r.od[o.deel] ? (r.od[o.deel][0] | 0) : 0;
+  return r.ronde | 0;
+}
+function haaltOpdracht(r, o){ return maatVoor(r, o) >= o.min; }                        /* hoogstens zoveel gemelde potjes per klas */
 /* spellen zonder kamer die wel bij een klas melden */
 const KLAS_SPELLEN = { race: "Vragenrace", klasquiz: "Klasquiz", dag: "Dagelijkse uitdaging", fouten: "Oefen je fouten", rekenen: "Rekenrace", balans: "De balans", werkwoorden: "Werkwoordrace", irregular: "Irregular verbs", vlaggen: "Vlaggen", landenvormen: "Landenvormen", topografie: "Topografie", lichaam: "Het lichaam", tijdvakken: "Tijdvakken sorteren", bronnenlab: "Bronnenlab", jagers: "Blijven of doorlopen", feodalisme: "Feodalisme", leenmannen: "Verdeel je rijk", stad: "Bouw je stad", handel: "De handelsroute", vergadering: "De vergadering", zinsbouw: "Zinsbouw", tekstdetective: "De tekstdetective", uitverkoop: "De uitverkoop", breukenbakker: "De breukenbakker" };
 
@@ -120,6 +128,8 @@ export class Kamer extends DurableObject {
       if (url.pathname === "/melden" && req.method === "POST") return await this.melden(await req.json());
       if (url.pathname === "/opheffen" && req.method === "POST") return await this.opheffen(await req.json());
       if (url.pathname === "/resultaten") return await this.resultaten(url.searchParams.get("sleutel"));
+      if (url.pathname === "/opdracht" && req.method === "POST") return await this.opdracht(await req.json());
+      if (url.pathname === "/mijn") return this.mijn(url.searchParams.get("sid"));
       if (req.headers.get("Upgrade") === "websocket") return this.verbind(url);
       return json({ fout: "onbekend" }, 404);
     } catch (e){
@@ -846,6 +856,32 @@ export class Kamer extends DurableObject {
     await this.bewaar();
     return json({ ok: true, n });
   }
+  /* De opdracht van de docent: een spel, een vak, eventueel een onderdeel, een minimum en een einddatum.
+     Leerlingen zien hem in de leeromgeving; wie hem haalt staat in het klasoverzicht aangevinkt. */
+  async opdracht(inz){
+    if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
+    if (!inz || inz.sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
+    const o = inz.opdracht;
+    if (!o){ delete this.stand.opdracht; await this.bewaar(); return json({ ok: true, opdracht: null }); }
+    const spel = String(o.spel || ""), vak = String(o.vak || "").replace(/[^a-z]/g, "").slice(0, 8), deel = schoon(o.deel, 40);
+    if (!OPDRACHT_SPELLEN[spel]) return json({ fout: "dit spel kan geen opdracht zijn" }, 400);
+    if (!vak) return json({ fout: "kies een vak" }, 400);
+    const min = getal(o.min, 250), tot = getal(o.tot, 4e12);
+    if (min < 1) return json({ fout: "het minimum is minstens 1" }, 400);
+    if (tot < Date.now() - 3600000 || tot > Date.now() + 120 * 86400000) return json({ fout: "kies een datum binnen vier maanden" }, 400);
+    this.stand.opdracht = { spel, vak, deel, deelNaam: schoon(o.deelNaam, 60), min, tot, tekst: schoon(o.tekst, 140), sinds: Date.now() };
+    await this.bewaar();
+    return json({ ok: true, opdracht: this.stand.opdracht });
+  }
+  /* heeft een leerling (op kenmerk) de opdracht gehaald? Zonder sleutel: alleen zijn eigen stand. */
+  mijn(sid){
+    if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
+    const o = this.stand.opdracht;
+    if (!o) return json({ opdracht: null });
+    const s = schoon(sid, 40).slice(0, 12);
+    const mijn = this.stand.resultaten.filter(r => r.sid === s);
+    return json({ opdracht: o, gehaald: mijn.some(r => haaltOpdracht(r, o)), beste: mijn.reduce((a, r) => Math.max(a, maatVoor(r, o)), 0) });
+  }
   /* de docent heft de klascode op: alles weg, en de leerlingen merken het bij hun volgende melding */
   async opheffen(inz){
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
@@ -859,14 +895,14 @@ export class Kamer extends DurableObject {
     if (!sleutel || sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
     /* kijken telt ook als gebruik, hoogstens een keer per uur bijgeschreven */
     if (Date.now() - this.stand.laatst > 3600000){ await this.zetAlarm({ wat: "opruimen" }, KLAS_SLAAPT); await this.bewaar(); }
-    return json({ code: this.stand.code, naam: this.stand.naam, gemaakt: this.stand.gemaakt,
+    return json({ code: this.stand.code, naam: this.stand.naam, gemaakt: this.stand.gemaakt, opdracht: this.stand.opdracht || null,
                   resultaten: this.stand.resultaten.map(x => ({ naam: x.naam, av: x.av || "", spel: x.spel, ronde: x.ronde, punten: x.punten, niveau: x.niveau, vak: x.vak, od: x.od, t: x.t })) });
   }
 
   aanwezig(sid){ return this.ctx.getWebSockets(sid).length > 0; }
   overzicht(){
     const st = this.stand, basis = { code: st.code, spel: st.spel, vak: st.vak, niveau: st.niveau, deel: st.deel || "", fase: st.fase };
-    if (st.spel === "klas") return Object.assign(basis, { naam: st.naam, n: st.resultaten.length, gemaakt: st.gemaakt });
+    if (st.spel === "klas") return Object.assign(basis, { naam: st.naam, n: st.resultaten.length, gemaakt: st.gemaakt, opdracht: st.opdracht || null });
     if (this.strijd){
       const lijst = this.strijdLijst();
       return Object.assign(basis, { game: st.game, duel: !!st.duel, max: st.duel ? this.samenMax() : undefined, gastheer: st.gastheer ? this.pid(st.gastheer) : null, gestart: st.gestart, bezig: lijst.filter(r => !r.af).length, spelers: lijst });
