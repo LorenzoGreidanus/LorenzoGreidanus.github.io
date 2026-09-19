@@ -373,8 +373,15 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (window.KLAS) KLAS.meld({ spel:'race', ronde:goed, punten:punten, niveau:niveau, vak:vak, od:perOnderdeel }, 'eindUit');
     scrollTo({ top:0, behavior:'auto' });
   }
-  $('startBtn').addEventListener('click', start);
-  $('nogBtn').addEventListener('click', start);
+  /* eerst de vragen van dit vak ophalen, dan pas beginnen */
+  function startMetVragen(){
+    var knop = $('startBtn');
+    if (!window.BANK || BANK.heeft(vak)) return start();
+    if (knop) knop.disabled = true;
+    BANK.zorg(vak).then(function(){ if (knop) knop.disabled = false; start(); });
+  }
+  $('startBtn').addEventListener('click', startMetVragen);
+  $('nogBtn').addEventListener('click', startMetVragen);
   $('andersBtn').addEventListener('click', function(){ $('scherm-einde').classList.add('hide'); $('scherm-start').classList.remove('hide'); tekenKeuze(); });
   $('stopBtn').addEventListener('click', function(){ tijd = 0; einde(); });
   addEventListener('keydown', function(e){ if (loopt && e.key >= '1' && e.key <= '4') antwoord(parseInt(e.key, 10) - 1); });
