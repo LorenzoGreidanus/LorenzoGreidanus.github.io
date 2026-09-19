@@ -260,6 +260,21 @@ export async function behandel(req, env, url, hulp){
     return json(jk, rk.status);
   }
 
+  /* de klassen van de ingelogde docent: ophalen en bijwerken */
+  if (p === "/api/account/klassen"){
+    if (!hulp.eigenSite()) return json({ fout: "niet vanaf deze site" }, 403);
+    if (!await hulp.magDoor("account-klassen", 300, 60)) return json({ fout: "even wachten" }, 429);
+    const s = await sessie(env, req);
+    if (!s) return json({ fout: "niet ingelogd" }, 401);
+    const stub = await account(env, s.id);
+    if (req.method === "GET") return stub.fetch("https://account/klassen");
+    if (req.method === "POST"){
+      let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldige lijst" }, 400); }
+      return stub.fetch("https://account/klassen", { method: "POST", body: JSON.stringify(inz || {}) });
+    }
+    return json({ fout: "onbekend" }, 404);
+  }
+
   if (p === "/api/account" && req.method === "DELETE"){
     if (!hulp.eigenSite()) return json({ fout: "niet vanaf deze site" }, 403);
     const s = await sessie(env, req);
@@ -299,6 +314,26 @@ export class Account extends DurableObject {
     if (!this.stand) return json({ fout: "geen account" }, 404);
     if (url.pathname === "/lees"){
       return json({ ok: true, naam: this.stand.naam, code: this.stand.code || "", sinds: this.stand.sinds, beheer: !!this.stand.beheer });
+    }
+    /* De klassen van deze docent: code, sleutel, naam. Alleen wie is ingelogd
+       komt hier, want index.js laat alleen een sessie door. */
+    if (url.pathname === "/klassen"){
+      if (req.method !== "POST") return json({ ok: true, klassen: this.stand.klassen || [] });
+      const binnen = Array.isArray(inz.klassen) ? inz.klassen : [];
+      const weg = Array.isArray(inz.weg) ? inz.weg.map(x => String(x || "").toUpperCase()) : [];
+      const heb = {};
+      (this.stand.klassen || []).forEach(k => { heb[k.code] = k; });
+      binnen.slice(0, 60).forEach(k => {
+        if (!k || typeof k !== "object") return;
+        const code = String(k.code || "").toUpperCase();
+        const sleutel = String(k.sleutel || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 80);
+        if (!/^[A-Z]{4}$/.test(code) || !sleutel) return;
+        heb[code] = { code, sleutel, naam: String(k.naam || "Klas").slice(0, 40), gemaakt: Number(k.gemaakt) || Date.now() };
+      });
+      weg.forEach(c => { delete heb[c]; });
+      this.stand.klassen = Object.keys(heb).map(c => heb[c]).slice(0, 60);
+      await this.bewaar();
+      return json({ ok: true, klassen: this.stand.klassen });
     }
     if (url.pathname === "/koppel"){
       const code = String(inz.code || "").toUpperCase();

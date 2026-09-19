@@ -77,6 +77,17 @@ function voegSamen(oud, nieuw, klasWeg, alles){
   return p;
 }
 
+/* Wie een speelcode kent, hoort daarmee niet ook de klassen van een docent te
+   kunnen opheffen. De sleutels blijven wel bewaard (een oud apparaat dat ze nog
+   stuurt raakt niets kwijt), maar ze gaan niet meer mee naar buiten; het
+   account levert ze aan wie is ingelogd. */
+function zonderSleutels(p){
+  if (!p) return p;
+  const uit = Object.assign({}, p);
+  delete uit.docent;
+  return uit;
+}
+
 export class Profiel extends DurableObject {
   constructor(ctx, env){
     super(ctx, env);
@@ -107,14 +118,14 @@ export class Profiel extends DurableObject {
     if (!this.stand) return json({ fout: "geen profiel met deze code" }, 404);
     if (url.pathname === "/lees"){
       await this.bewaar();
-      return json({ ok: true, code: this.stand.code, profiel: this.stand.profiel, gemaakt: this.stand.gemaakt });
+      return json({ ok: true, code: this.stand.code, profiel: zonderSleutels(this.stand.profiel), gemaakt: this.stand.gemaakt });
     }
     if (url.pathname === "/sync"){
       const nieuw = voegSamen(this.stand.profiel, netjes(inz.profiel), !!inz.klasWeg, !!this.stand.alles);
       if (JSON.stringify(nieuw).length > MAX_TEKST) return json({ fout: "profiel te groot" }, 413);
       this.stand.profiel = nieuw;
       await this.bewaar();
-      return json({ ok: true, code: this.stand.code, profiel: nieuw });
+      return json({ ok: true, code: this.stand.code, profiel: zonderSleutels(nieuw) });
     }
     /* het beheeraccount hangt aan deze code: voortaan alles vrij */
     if (url.pathname === "/alles"){

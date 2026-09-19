@@ -446,7 +446,11 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
   var klassen = [], huidig = null, spelFilter = '', vakFilter = '', data = null, klok = null;
   try { klassen = JSON.parse(localStorage.getItem('lg-klas-docent') || '[]'); } catch (e){}
   if (!Array.isArray(klassen)) klassen = [];
-  function bewaar(){ try { localStorage.setItem('lg-klas-docent', JSON.stringify(klassen)); } catch (e){} }
+  function bewaar(){
+    try { localStorage.setItem('lg-klas-docent', JSON.stringify(klassen)); } catch (e){}
+    /* de sleutels horen bij je account, niet bij je speelcode: meteen doorgeven */
+    if (window.PROFIEL && PROFIEL.klassenAfstemmen) PROFIEL.klassenAfstemmen();
+  }
 
   function tekenKlassen(){
     var doel = $('klassen');
@@ -615,7 +619,10 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
         '<button type="button" class="knop stil klein" id="wieUit">Uitloggen</button>';
       $('wieUit').addEventListener('click', function(){ if (window.PROFIEL && PROFIEL.uitloggen) PROFIEL.uitloggen().then(function(){ location.reload(); }); });
     } else {
-      el.innerHTML = '<span class="naam">Nog niet ingelogd<small>een klascode maken kan alleen ingelogd. Zo blijft je klas van jou en staat hij ook op je andere apparaten.</small></span>' +
+      el.innerHTML = '<span class="naam">Nog niet ingelogd<small>een klascode maken kan alleen ingelogd. ' +
+        (klassen.length
+          ? 'Je hebt ' + klassen.length + (klassen.length === 1 ? ' klas' : ' klassen') + ' op dit apparaat staan; log in, dan staan ze ook op je laptop in het lokaal en op het digibord.'
+          : 'Zo blijft je klas van jou en staat hij ook op je andere apparaten.') + '</small></span>' +
         '<a class="msknop" href="' + (window.PROFIEL ? PROFIEL.inlogAdres() : '/api/account/inloggen') + '">' + MSLOGO + 'Inloggen met Microsoft</a>';
     }
     var mag = !acc.mogelijk || acc.ingelogd;
@@ -782,6 +789,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       if (!huidig && klassen[0]) kies(klassen[0]);
     });
     PROFIEL.sync();
+    if (PROFIEL.klassenAfstemmen) PROFIEL.klassenAfstemmen();
   }
   /* de vragenbank laadt na deze pagina; dan krijgen de onderdelen hun naam */
   window.addEventListener('load', function(){ opVul(); if (data) teken(); });

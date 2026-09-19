@@ -46,7 +46,9 @@ window.PROFIEL = (function(){
     var vrij = {}; ['tonkla', 'aap', 'eiland', 'archipel', 'vulkaan'].forEach(function(x){ if (ls('lg-toren-' + x) === 'ja') vrij[x] = true; });
     var klas = null; try { klas = JSON.parse(ls('lg-klas') || 'null'); } catch (e){}
     return { avatar:avatar(), beste:beste, campagne:campagne, vrij:vrij, klas:klas && klas.code ? klas : null, niveau:ls('lg-niveau') || '', muntDelta:wachtend(), vrijspeel:vrijWacht(),
-             docent:docentLijst(), docentWeg:docentWegWacht(), fouten:foutenKort() };
+             /* de klassleutels gaan niet meer mee in het profiel: die horen bij het
+                account, zie klassenAfstemmen() */
+             docentWeg:docentWegWacht(), fouten:foutenKort() };
   }
   /* ---------- munten: het saldo staat op de server, hier wat er nog onderweg is ---------- */
   function wachtend(){ return parseInt(ls('lg-munten-wacht') || '0', 10) || 0; }
@@ -59,6 +61,33 @@ window.PROFIEL = (function(){
   function docentWegWacht(){ try { return JSON.parse(ls('lg-klas-docent-weg') || '[]') || []; } catch (e){ return []; } }
   /* de foutenmap: alleen kenmerk en vak gaan mee; de tekst haalt fouten.html weer uit de bank */
   function foutenKort(){ try { var l = JSON.parse(ls('lg-fouten') || '[]'); return Array.isArray(l) ? l.slice(-80).map(function(x){ return { h:String(x.h || ''), vak:String(x.vak || '') }; }) : []; } catch (e){ return []; } }
+  /* klassen uit een lijst erbij zetten op dit apparaat, behalve wat hier net vergeten is */
+  function neemKlassenOver(lijst){
+    var dl = docentLijst(), dw = docentWegWacht(), erbij = false;
+    (lijst || []).forEach(function(k){
+      if (!k || !k.code || !k.sleutel) return;
+      if (dw.indexOf(k.code) >= 0 || dl.some(function(x){ return x.code === k.code; })) return;
+      dl.push({ code:k.code, sleutel:k.sleutel, naam:k.naam || 'Klas', gemaakt:k.gemaakt || Date.now() });
+      erbij = true;
+    });
+    if (erbij) lsZet('lg-klas-docent', JSON.stringify(dl));
+    return erbij;
+  }
+  /* De klassen van dit apparaat naar het account, en die van het account hierheen.
+     Alleen als je bent ingelogd; zonder account bestaan er ook geen klassen, want
+     een klascode maken kan alleen ingelogd. */
+  function klassenAfstemmen(){
+    if (!ingelogd() || typeof fetch !== 'function') return Promise.resolve(null);
+    var mijne = docentLijst(), weg = docentWegWacht();
+    var vraagje = (mijne.length || weg.length)
+      ? vraag('/api/account/klassen', 'POST', { klassen:mijne, weg:weg })
+      : vraag('/api/account/klassen', 'GET');
+    return vraagje.then(function(j){
+      if (weg.length) lsZet('lg-klas-docent-weg', '[]');
+      if (j && Array.isArray(j.klassen)) neemKlassenOver(j.klassen);
+      return j;
+    }).catch(function(){ return null; });
+  }
   function docentWeg(code){ var w = docentWegWacht(); if (w.indexOf(code) < 0) w.push(code); lsZet('lg-klas-docent-weg', JSON.stringify(w)); return sync(); }
   /* een trofee vrijspelen (een baas verslagen): meteen in bezit, en bij de volgende sync naar de server */
   function vrijspeel(id){
@@ -113,12 +142,10 @@ window.PROFIEL = (function(){
     lsZet('lg-toren-campagne', JSON.stringify(camp));
     Object.keys(pr.vrij || {}).forEach(function(k){ lsZet('lg-toren-' + k, 'ja'); });
     if (pr.klas && pr.klas.code && !ls('lg-klas')) lsZet('lg-klas', JSON.stringify(pr.klas));
-    /* docentklassen van het account erbij op dit apparaat, behalve wat hier net vergeten is */
-    if (Array.isArray(pr.docent) && pr.docent.length){
-      var dl = docentLijst(), dw = docentWegWacht(), erbij = false;
-      pr.docent.forEach(function(k){ if (dw.indexOf(k.code) < 0 && !dl.some(function(x){ return x.code === k.code; })){ dl.push({ code:k.code, sleutel:k.sleutel, naam:k.naam || 'Klas', gemaakt:k.gemaakt || Date.now() }); erbij = true; } });
-      if (erbij) lsZet('lg-klas-docent', JSON.stringify(dl));
-    }
+    /* De klassen van een docent stonden vroeger in het profiel. Nu hangen ze aan
+       het account; een oud profiel dat ze nog meestuurt nemen we wel over, zodat
+       niemand zijn klassen kwijtraakt bij de overstap. */
+    if (Array.isArray(pr.docent) && pr.docent.length) neemKlassenOver(pr.docent);
     if (pr.niveau && !ls('lg-niveau')) lsZet('lg-niveau', pr.niveau);
     /* fouten van het profiel die hier nog niet staan: klaarzetten voor fouten.html, dat ze in de bank terugzoekt */
     if (Array.isArray(pr.fouten) && pr.fouten.length){
@@ -199,6 +226,7 @@ window.PROFIEL = (function(){
   function accountAfstemmen(){
     return account(true).then(function(a){
       if (!a.ingelogd) return { nieuw:false };
+      klassenAfstemmen();
       var hier = code();
       if (a.code && a.code !== hier){
         /* het account kent een code: die nemen we hier over (wat hier stond gaat erbij) */
@@ -231,8 +259,11 @@ window.PROFIEL = (function(){
   /* En als die eerste vraag mislukt (wifi die even wegvalt), proberen we het
      na vier seconden nog een keer: anders telt een heel potje niet mee. */
   if (typeof fetch === 'function' && !accountStand) setTimeout(function(){
-    account().then(function(a){ if (a && a.onbekend) setTimeout(function(){ account(true); }, 4000); });
+    account().then(function(a){
+      if (a && a.onbekend) setTimeout(function(){ account(true); }, 4000);
+      else if (a && a.ingelogd) klassenAfstemmen();
+    });
   }, 400);
   return { lees:lees, code:code, avatar:avatar, zetAvatar:zetAvatar, maak:maak, koppel:koppel, sync:sync, wis:wis, verzamel:verzamel, op:op,
-    klasWeg:klasWeg, account:account, munten:munten, bezit:bezit, ingelogd:ingelogd, accountMogelijk:accountMogelijk, muntenErbij:muntenErbij, koop:koop, vrijspeel:vrijspeel, accountNeemCode:accountNeemCode, accountNieuweCode:accountNieuweCode, accountVlag:function(){ return accountVlag; }, winkelVlag:function(){ return winkelVlag; }, accountAfstemmen:accountAfstemmen, inlogAdres:inlogAdres, uitloggen:uitloggen, accountWeg:accountWeg, docentWeg:docentWeg };
+    klasWeg:klasWeg, account:account, klassenAfstemmen:klassenAfstemmen, munten:munten, bezit:bezit, ingelogd:ingelogd, accountMogelijk:accountMogelijk, muntenErbij:muntenErbij, koop:koop, vrijspeel:vrijspeel, accountNeemCode:accountNeemCode, accountNieuweCode:accountNieuweCode, accountVlag:function(){ return accountVlag; }, winkelVlag:function(){ return winkelVlag; }, accountAfstemmen:accountAfstemmen, inlogAdres:inlogAdres, uitloggen:uitloggen, accountWeg:accountWeg, docentWeg:docentWeg };
 })();
