@@ -12,6 +12,15 @@
     var t = wortel.getAttribute('data-theme');
     return t || (donkerMQ.matches ? 'dark' : 'light');
   }
+  /* Het tabbladicoon: er staat op sommige pagina's een donkere versie klaar met
+     een mediaregel. Kiest iemand zelf een stand, dan zetten we die regel aan of
+     uit, zodat het icoon bij het scherm past en niet bij het apparaat. */
+  function ikoonBij(){
+    var l = document.querySelector('link[rel="icon"][href*="icoon-donker"]');
+    if (!l) return;
+    var t = wortel.getAttribute('data-theme');
+    l.media = t === 'dark' ? 'all' : t === 'light' ? 'not all' : '(prefers-color-scheme: dark)';
+  }
   function bijwerken(){
     var donker = huidig() === 'dark';
     knop.setAttribute('aria-label', donker ? 'Schakel naar licht' : 'Schakel naar donker');
@@ -72,11 +81,35 @@
       wortel.setAttribute('data-theme', nieuw);
       try { localStorage.setItem('thema', nieuw); } catch (e) {}
       bijwerken();
+      ikoonBij();
       document.dispatchEvent(new CustomEvent('themawissel', { detail:{ thema:nieuw } }));
     }, knop);
   });
   if (donkerMQ.addEventListener) donkerMQ.addEventListener('change', bijwerken);
   bijwerken();
+  ikoonBij();
+
+  /* ---------- de drie standen ----------
+     'auto' betekent: niets bewaren en niets op <html> zetten, dan geldt de stand
+     van je apparaat. Andere pagina's kunnen dit aanroepen om een keuze aan te
+     bieden; de knop hierboven blijft gewoon heen en weer schakelen. */
+  function stand(){
+    var t = wortel.getAttribute('data-theme');
+    return t === 'dark' || t === 'light' ? t : 'auto';
+  }
+  function zet(nieuw){
+    if (nieuw === 'auto'){
+      wortel.removeAttribute('data-theme');
+      try { localStorage.removeItem('thema'); } catch (e){}
+    } else {
+      wortel.setAttribute('data-theme', nieuw);
+      try { localStorage.setItem('thema', nieuw); } catch (e){}
+    }
+    bijwerken();
+    ikoonBij();
+    document.dispatchEvent(new CustomEvent('themawissel', { detail:{ thema: nieuw } }));
+  }
+  window.THEMA = { stand: stand, zet: zet, wissel: function(){ knop.click(); } };
 })();
 
 /* De leeromgeving als app: de service worker (sw.js) bewaart de spellen die

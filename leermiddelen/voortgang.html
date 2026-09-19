@@ -82,6 +82,12 @@ h1{font-size:clamp(1.8rem,5vw,2.6rem);line-height:1.1;margin:24px 0 6px}
 .inlog li{margin:3px 0}
 .klaar{background:var(--goed-bg);border-color:var(--goed)}
 .leeg{color:var(--muted)}
+/* de kleurkeuze: drie standen naast elkaar */
+.kleurkeuze{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px}
+.kleurkeuze span.kop{font-size:.78rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;width:100%}
+.kleurkeuze button{border:1.5px solid var(--rand2,rgba(20,34,76,.16));background:var(--kaart,#fff);color:var(--ink);
+  border-radius:999px;padding:7px 13px;font:inherit;font-size:.84rem;font-weight:600;cursor:pointer;min-height:38px}
+.kleurkeuze button.aan{background:var(--ocean);border-color:var(--ocean);color:#fff}
 footer{border-top:1px solid var(--rand);margin-top:26px;padding:18px 0 40px;color:var(--muted);font-size:.88rem}
 @media(max-width:640px){ .vak{grid-template-columns:1fr auto;} .vak .balk{grid-column:1/-1} }
 </style>
@@ -118,6 +124,12 @@ footer{border-top:1px solid var(--rand);margin-top:26px;padding:18px 0 40px;colo
     <h2>Je beste scores</h2>
     <p class="tip">Per spel het beste dat je op dit apparaat hebt gehaald.</p>
     <div class="scores" id="scores"></div>
+  </div>
+
+  <div class="kaart">
+    <h2>Kleuren</h2>
+    <p class="tip">Zonder keuze volgt de site je apparaat: staat Windows of je iPhone in het donker, dan de site ook. Kies je zelf, dan blijft dat zo tot je hier weer op "zoals mijn apparaat" drukt.</p>
+    <div class="kleurkeuze" id="kleurkeuze"></div>
   </div>
 
   <div class="kaart">
@@ -264,7 +276,25 @@ footer{border-top:1px solid var(--rand);margin-top:26px;padding:18px 0 40px;colo
     var kaart = $('cijfers').parentElement;
     kaart.appendChild(doel);
   }
-  cijfers(); scores(); vakken(); inlogvak(); gezicht(); torentje();
+
+  /* Licht, donker of de stand van je apparaat. Zonder keuze volgt de site je
+     apparaat; dat is ook waar je met de derde knop naar terug gaat. */
+  function kleurkeuze(doel){
+    if (!doel || !window.THEMA) return;
+    function teken(){
+      var nu = THEMA.stand();
+      doel.innerHTML = '<span class="kop">kleuren</span>' +
+        [['auto', 'Zoals mijn apparaat'], ['light', 'Licht'], ['dark', 'Donker']].map(function(k){
+          return '<button type="button" data-stand="' + k[0] + '"' + (nu === k[0] ? ' class="aan" aria-pressed="true"' : ' aria-pressed="false"') + '>' + k[1] + '</button>';
+        }).join('');
+      Array.prototype.forEach.call(doel.querySelectorAll('button'), function(b){
+        b.addEventListener('click', function(){ THEMA.zet(b.getAttribute('data-stand')); teken(); });
+      });
+    }
+    teken();
+    document.addEventListener('themawissel', teken);
+  }
+  cijfers(); scores(); vakken(); inlogvak(); gezicht(); torentje(); kleurkeuze($('kleurkeuze'));
   /* Wist de site nog niet of je was ingelogd (wifi die even hapert), dan kijken
      we het even later nog een keer na; anders mist de leerling de uitnodiging. */
   setTimeout(function(){ if (!$('inlogvak').innerHTML) inlogvak(); }, 4000);

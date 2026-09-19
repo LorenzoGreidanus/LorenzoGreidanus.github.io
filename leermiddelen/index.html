@@ -387,6 +387,12 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
 .profielvak .accountrij{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0 0;padding-top:12px;border-top:1px solid var(--rand2,rgba(20,34,76,.16))}
 .profielvak .accountrij small{flex:1 1 100%;color:var(--muted);font-size:.8rem;line-height:1.4}
 .profielvak .accountrij .wie{font-size:.86rem;font-weight:600;color:var(--ink);flex:1 1 auto}
+/* de kleurstand: licht, donker of zoals je apparaat */
+.kleurkeuze{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:12px 0 0;padding-top:12px;border-top:1px solid var(--rand2,rgba(20,34,76,.16))}
+.kleurkeuze span.kop{font-size:.72rem;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;width:100%}
+.kleurkeuze button{border:1.5px solid var(--rand2,rgba(20,34,76,.16));background:var(--kaart,#fff);color:var(--ink);
+  border-radius:999px;padding:6px 12px;font:inherit;font-size:.82rem;font-weight:600;cursor:pointer;min-height:36px}
+.kleurkeuze button.aan{background:var(--ocean);border-color:var(--ocean);color:#fff}
 .profielvak a.ms{display:inline-flex;align-items:center;gap:9px;text-decoration:none;border:1.5px solid var(--rand2,rgba(20,34,76,.16));background:var(--kaart,#fff);color:var(--ink);border-radius:999px;padding:7px 14px 7px 11px;font-size:.84rem;font-weight:600}
 .profielvak a.ms:hover{border-color:var(--ocean)}
 .profielvak a.ms svg{width:16px;height:16px;flex:none}
@@ -1347,6 +1353,24 @@ var SPELLEN = [
     s += '<p>' + (winkelMelding ? '<b>' + schoon(winkelMelding) + '</b> ' : '') + 'Munten verdien je met elk goed antwoord in de oefenspellen; een lang spel als Torenverdediging of Zwaardvechter geeft er meer per antwoord en een bonus per ronde, en een lange reeks goed op rij (5, 10, 20, 30) vermenigvuldigt ze. De trofeeën speel je vrij door in Zwaardvechter een baas te verslaan. Tik op wat van jou is om het op of af te zetten.</p></div>';
     return s;
   }
+  /* Licht, donker of de stand van je apparaat. Zonder keuze volgt de site je
+     apparaat; met de derde knop ga je daarnaar terug. */
+  function kleurkeuze(doel){
+    if (!doel) return;
+    /* thema.js staat onderaan de pagina: even wachten tot hij er is */
+    if (!window.THEMA){ addEventListener('load', function(){ kleurkeuze(doel); }, { once:true }); return; }
+    function tekenKeuze(){
+      var nu = THEMA.stand();
+      doel.innerHTML = '<span class="kop">kleuren</span>' +
+        [['auto', 'Zoals mijn apparaat'], ['light', 'Licht'], ['dark', 'Donker']].map(function(k){
+          return '<button type="button" data-stand="' + k[0] + '"' + (nu === k[0] ? ' class="aan" aria-pressed="true"' : ' aria-pressed="false"') + '>' + k[1] + '</button>';
+        }).join('');
+      Array.prototype.forEach.call(doel.querySelectorAll('button'), function(b){
+        b.addEventListener('click', function(){ THEMA.zet(b.getAttribute('data-stand')); tekenKeuze(); });
+      });
+    }
+    tekenKeuze();
+  }
   function teken(){
     var sp = spec(), code = PROFIEL.code(), h = huidig();
     var html = '<div class="profielkop">' + AVATAR.svg(naam(), 44, sp) + '<div><b>' + (sp ? 'Jouw gezichtje' : 'Je gezichtje') + '</b><small>' +
@@ -1404,7 +1428,9 @@ var SPELLEN = [
       if (accMelding) html += '<small><b>' + schoon(accMelding) + '</b></small>';
       html += '</div>';
     }
+    html += '<div class="kleurkeuze" id="pfKleur"></div>';
     vak0.innerHTML = html;
+    kleurkeuze(document.getElementById('pfKleur'));
     knop('pfWinkel', function(){ winkelOpen = !winkelOpen; winkelMelding = ''; teken(); });
     Array.prototype.forEach.call(vak0.querySelectorAll('[data-waar]'), function(b){
       b.addEventListener('click', function(){
