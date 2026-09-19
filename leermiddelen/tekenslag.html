@@ -118,7 +118,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
   </header>
   <p class="hand">teken het, raad het</p>
   <h1>Tekenslag</h1>
-  <p style="margin-top:8px;max-width:60ch">Een leerling tekent een begrip op zijn laptop, het bord tekent live mee, en zijn team raadt. Om de beurt, tegen de klok, in teams. De begrippen komen uit de vragenbank of uit je eigen lijst.</p>
+  <p style="margin-top:8px;max-width:60ch">Een leerling tekent een begrip op zijn laptop, het bord tekent live mee, en zijn team raadt. Om de beurt, tegen de klok, in teams. De begrippen komen uit de vragenbank (geschiedenis, aardrijkskunde, biologie en Engelse woordjes) of uit je eigen lijst.</p>
   <div class="uitleg">
     <div><i>1</i><span><b>Open een kamer op het digibord.</b> Kies een vak en onderdeel (of typ je eigen woorden), het aantal teams en de tijd per beurt.</span></div>
     <div><i>2</i><span><b>Leerlingen doen mee</b> via <b id="linkTekst">meneergreidanus.nl/q</b> met de code van het bord, op hun laptop. Het bord verdeelt ze in teams.</span></div>
@@ -298,7 +298,14 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
   /* De tekenbare woorden: het begrip uit de vraag (Wat is een hunebed? -> hunebed),
      en bij vakken met korte antwoorden (landen, woordjes, organen) ook het antwoord. */
   var VRAAGRE = /^(?:Wat|Wie|Hoe) (?:is|was|zijn|waren|betekent|betekende|heet|heette|noemen we|noem je|bedoelen we met|bedoel je met|verstaan we onder|versta je onder) (?:een |de |het |'t )?([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ' -]{2,30}?)( in de economie| bij [a-z ]+| in [A-Za-z ]+)?\??$/;
-  var ANTWOORD_OOK = { aard:1, eng:1, bio:1, wis:1 };
+  var ANTWOORD_OOK = { aard:1, eng:1, bio:1 };
+  /* Alleen vakken waar je iets van kunt tekenen. Rekenen, wiskunde, Nederlands, samenleving en economie
+     leverden woorden als procenten, de y-as, signaalwoorden of inflatie: niets om te tekenen. Bij de vakken
+     hieronder staat welke onderdelen meedoen; true betekent alle onderdelen. */
+  var TEKENVAK = { ges:true, aard:['vlaggen', 'landvormen'], bio:true, eng:['woordjes NL naar EN', 'woordjes EN naar NL'] };
+  /* woorden die met zo'n woord beginnen zijn een antwoord op een waar- of hoe-vraag (in de maag, met een microscoop) */
+  var GEEN_START = /^(in|op|met|door|bij|van|naar|uit|over|onder|tussen|hij|zij|ze|je|dat|dit|er|om|een van|de een|het een|niets|geen|alle|elke)\b/i;
+  var MINWOORDEN = 8;   /* een potje heeft minstens acht woorden nodig */
   function woordenUit(vak, onderdelen){
     var lijst = (BRONNEN_B[vak] || []).filter(function(q){ return !onderdelen.length || onderdelen.indexOf(q.t) >= 0; });
     var uit = {}, res = [];
@@ -306,6 +313,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
       w = String(w || '').trim();
       if (!/^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ' -]{2,29}$/.test(w) || w.split(/\s+/).length > 3) return;
       if (/^(synoniem|meervoud|tegenstelling|woord|verleden tijd|voltooid) /i.test(w)) return;
+      if (GEEN_START.test(w)) return;
       var k = norm(w); if (!k || uit[k]) return; uit[k] = 1; res.push(w);
     }
     lijst.forEach(function(q){
@@ -325,13 +333,18 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
     tekenVak();
   }
   function tekenVak(){
-    $('vakChips').innerHTML = VAKKEN_B.map(function(v){ return '<button type="button" data-v="' + v.id + '"' + (vak === v.id ? ' class="on"' : '') + '>' + schoon(v.naam) + '</button>'; }).join('');
+    var tekenbaar = VAKKEN_B.filter(function(v){ return TEKENVAK[v.id]; });
+    if (!TEKENVAK[vak]) { vak = tekenbaar.length ? tekenbaar[0].id : 'ges'; ond = []; }
+    $('vakChips').innerHTML = tekenbaar.map(function(v){ return '<button type="button" data-v="' + v.id + '"' + (vak === v.id ? ' class="on"' : '') + '>' + schoon(v.naam) + '</button>'; }).join('');
     Array.prototype.forEach.call($('vakChips').querySelectorAll('button'), function(b){ b.addEventListener('click', function(){ vak = b.getAttribute('data-v'); ond = []; tekenVak(); }); });
-    var lijst = ONDERDELEN_B[vak] || [];
+    /* alleen de onderdelen die mogen en die genoeg woorden opleveren voor een potje */
+    var mag = TEKENVAK[vak];
+    var lijst = (ONDERDELEN_B[vak] || []).filter(function(o){ return (mag === true || mag.indexOf(o.id) >= 0) && woordenUit(vak, [o.id]).length >= MINWOORDEN; });
+    ond = ond.filter(function(id){ return lijst.some(function(o){ return o.id === id; }); });
     $('ondChips').innerHTML = '<button type="button" data-o=""' + (!ond.length ? ' class="on"' : '') + '>alles</button>' + lijst.map(function(o){ return '<button type="button" data-o="' + schoon(o.id) + '"' + (ond.indexOf(o.id) >= 0 ? ' class="on"' : '') + '>' + schoon(o.naam) + '</button>'; }).join('');
     Array.prototype.forEach.call($('ondChips').querySelectorAll('button'), function(b){ b.addEventListener('click', function(){ var id = b.getAttribute('data-o'); if (!id) ond = []; else { var i = ond.indexOf(id); if (i >= 0) ond.splice(i, 1); else ond.push(id); } tekenVak(); }); });
     var n = woordenUit(vak, ond).length;
-    $('woordTel').textContent = n + ' tekenbare woorden (korte antwoorden uit de bank; vragen met een zin als antwoord doen niet mee).';
+    $('woordTel').textContent = n + ' tekenbare woorden. Alleen begrippen waar iets van te tekenen valt; vakken als rekenen en wiskunde staan er daarom niet bij.';
   }
   tekenBron();
 
