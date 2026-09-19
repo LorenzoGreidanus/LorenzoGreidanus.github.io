@@ -17,6 +17,8 @@ function json(obj, status){
   return new Response(JSON.stringify(obj), { status: status || 200,
     headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
 }
+/* de avatarspec: alleen het vaste patroon uit cosmetica.js mag erin */
+function schoonAv(a){ a = String(a || "").replace(/[^a-z0-9]/g, "").slice(0, 32); return /^v\dk\do\dm\de\d(h\d{1,2})?(r\d{1,2})?(z\d{1,2})?(b\d{1,2})?(a\d{1,2})?(q\d{1,2})?$/.test(a) ? a : ""; }
 function tekst(x, max){ return String(x || "").replace(/[\u0000-\u001f\u007f]/g, "").replace(/\s+/g, " ").trim().slice(0, max); }
 function getal(x, max){ const n = Number(x); return Number.isFinite(n) ? Math.max(0, Math.min(max, Math.round(n))) : 0; }
 
@@ -48,7 +50,7 @@ export class Klassement extends DurableObject {
     const nu = Date.now();
     if (this.laatst[sid] && nu - this.laatst[sid] < WACHT) return json({ fout: "even wachten voor je nog een score instuurt" }, 429);
     const rij = {
-      naam: nette(inz.naam, "Anoniem"), ronde: getal(inz.ronde, MAX_RONDE), punten: getal(inz.punten, MAX_PUNTEN),
+      naam: nette(inz.naam, "Anoniem"), av: schoonAv(inz.av), ronde: getal(inz.ronde, MAX_RONDE), punten: getal(inz.punten, MAX_PUNTEN),
       waar: tekst(inz.waar, 30), niveau: tekst(inz.niveau, 20), vak: tekst(inz.vak, 20),
       t: nu, id: sid.slice(0, 8) + "-" + nu.toString(36)
     };

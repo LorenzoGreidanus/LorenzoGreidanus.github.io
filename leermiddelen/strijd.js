@@ -400,8 +400,10 @@ window.STRIJD = (function(){
     zet: function(spel, g){
       if (!naamOk(g.naam)) return Promise.resolve({ fout: NAAMFOUT });
       bewaarNaam(g.naam);
+      /* je eigen gezichtje gaat mee; anders rekent de lijst er een uit je bijnaam */
+      if (!g.av && window.PROFIEL && PROFIEL.avatar) g = Object.assign({ av:PROFIEL.avatar() }, g);
       return fetch('/api/klassement/' + spel, { method:'POST', headers:{ 'content-type':'application/json' },
-        body: JSON.stringify({ naam:g.naam, ronde:g.ronde, punten:g.punten, waar:g.waar, niveau:g.niveau, vak:g.vak, sid:sid() }) })
+        body: JSON.stringify({ naam:g.naam, av:g.av || '', ronde:g.ronde, punten:g.punten, waar:g.waar, niveau:g.niveau, vak:g.vak, sid:sid() }) })
       .then(function(r){ return r.json(); })
       .catch(function(){ return { fout:'Geen verbinding met de server.' }; });
     },
