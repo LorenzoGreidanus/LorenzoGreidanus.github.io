@@ -81,6 +81,13 @@ header{padding:12px 0;border-bottom:1px solid var(--rand);background:#fff;positi
 /* ---------- het raam: kolom links, spellen rechts ---------- */
 .raam{display:grid;grid-template-columns:250px minmax(0,1fr);gap:28px;align-items:start;margin-top:22px}
 .zijkant{position:sticky;top:76px;display:grid;gap:0;min-width:0;background:var(--kaart);border:1px solid var(--rand);border-radius:20px;padding:6px;box-shadow:0 10px 26px rgba(20,34,76,.05)}
+/* de ingeklapte filters: de kop blijft staan, de knoppen komen pas als je erop tikt */
+.zijkant details.meer summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:8px;justify-content:space-between}
+.zijkant details.meer summary::-webkit-details-marker{display:none}
+.zijkant details.meer summary span{color:var(--muted);font-size:.84rem}
+.zijkant details.meer summary::after{content:"kies";font-size:.78rem;font-weight:600;color:var(--ocean)}
+.zijkant details.meer[open] summary::after{content:"sluit"}
+.zijkant details.meer[open] .lijst{margin-top:8px}
 .blok{padding:10px 6px 12px}
 .blok+.blok{border-top:1px solid var(--rand)}
 .inhoud{min-width:0}
@@ -165,6 +172,12 @@ header{padding:12px 0;border-bottom:1px solid var(--rand);background:#fff;positi
 .spel h3{font-size:.95rem;line-height:1.22;text-wrap:balance}
 .spel .soortje{display:block;font-size:.72rem;color:var(--muted);font-weight:500;margin-top:3px;text-wrap:balance}
 .spel .klaspil{margin-top:8px;font-size:.66rem;font-weight:600;padding:2px 8px;border-radius:999px;background:#e7f3ec;color:#1f6b41}
+.meerspellen{margin-top:10px;border:1.5px solid var(--rand2);background:var(--kaart);border-radius:999px;padding:9px 16px;font-weight:600;font-size:.92rem}
+.meerspellen:hover{border-color:var(--ocean);color:var(--ocean)}
+.lesnoot{margin-top:14px;background:#eef2ff;border:1px solid #c9d5f7;border-radius:14px;padding:12px 16px;color:var(--ink);font-size:.93rem}
+.restspellen{margin-top:18px}
+.restspellen summary{cursor:pointer;font-weight:600;color:var(--muted);padding:10px 0}
+.restspellen[open] summary{color:var(--ink)}
 .leegmelding{background:var(--kaart);border:1px dashed rgba(20,34,76,.20);border-radius:18px;padding:30px;text-align:center;margin-top:20px}
 .leegmelding .hand{font-size:1.4rem;display:block;margin-bottom:6px}
 .leegmelding p{color:var(--muted);max-width:44ch;margin:0 auto}
@@ -421,11 +434,9 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
         <svg class="zon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>
       </button>
       <span class="docentvak" id="docentvak">
-        <a class="docent" href="lesbrieven.html">Lesbrieven</a>
-        <a class="docent" href="klas.html">Klasoverzicht</a>
-        <a class="docent" href="../over.html">Voor docenten</a>
+        <a class="docent" href="klas.html">Voor docenten</a>
       </span>
-      <a class="docent docentkort" href="#collegas">Voor docenten</a></span>
+      <a class="docent docentkort" href="klas.html">Voor docenten</a></span>
   </div>
 </header>
 
@@ -448,8 +459,8 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
   <div class="raam">
     <aside class="zijkant" aria-label="Filters">
       <div class="blok"><h2>Vak</h2><div class="lijst" id="vaklijst" role="group" aria-label="Kies een vak"></div></div>
-      <div class="blok"><h2>Soort spel</h2><div class="lijst" id="soortlijst" role="group" aria-label="Soort spel"></div></div>
-      <div class="blok hide" id="tvblok"><h2>Tijdvak</h2><div class="lijst" id="tvlijst" role="group" aria-label="Kies een tijdvak"></div></div>
+      <details class="blok meer" id="soortblok"><summary><h2>Soort spel</h2><span id="soortNu">alle soorten</span></summary><div class="lijst" id="soortlijst" role="group" aria-label="Soort spel"></div></details>
+      <details class="blok meer hide" id="tvblok"><summary><h2>Tijdvak</h2><span id="tvNu">alle tijdvakken</span></summary><div class="lijst" id="tvlijst" role="group" aria-label="Kies een tijdvak"></div></details>
       <button type="button" class="wisknop hide" id="wisAlles">Alle filters uit</button>
     </aside>
 
@@ -794,7 +805,12 @@ var SPELLEN = [
     try { history.replaceState(null, '', d.length ? '?' + d.join('&') : location.pathname); } catch (e) {}
     try { if (stand.niveau) localStorage.setItem('lg-niveau', stand.niveau.id); localStorage.setItem('lg-leerjaar', stand.leerjaar); } catch (e) {}
   }
-  function alles(){ tekenVakken(); tekenSoorten(); tekenTijdvakken(); tekenSpellen(); onthoud(); }
+  function alles(){ tekenVakken(); tekenSoorten(); tekenTijdvakken(); tekenSpellen(); tekenFilterkop(); onthoud(); }
+  /* op de dichtgeklapte kop staat wat er nu gekozen is */
+  function tekenFilterkop(){
+    var s = $('soortNu'); if (s) s.textContent = stand.soort === 'alles' ? 'alle soorten' : soortNaam(stand.soort).toLowerCase();
+    var t = $('tvNu'); if (t) t.textContent = stand.tv ? 'tijdvak ' + stand.tv : 'alle tijdvakken';
+  }
 
   /* ---------- niveau ---------- */
   var balk = $('niveaubalk');
@@ -1002,6 +1018,15 @@ var SPELLEN = [
       (samen ? '<span class="klaspil">met de klas</span>' : '') +
       (stand.leerjaar === '34' && sp.examen ? '<span class="examen">examenstof vmbo</span>' : '') + '</a>';
   }
+  /* Een lange rij kaarten leest niet. Per vak tonen we er vijf; de rest komt achter een knop vandaan.
+     Zoeken, een gekozen soort of een gekozen tijdvak laat wel alles zien: dan zoek je gericht. */
+  var TOON = 5, uitgeklapt = {};
+  function sectieKort(ico, kleur, titel, onder, lijst, sleutel){
+    if (lijst.length <= TOON + 1 || uitgeklapt[sleutel] || stand.zoek || stand.soort !== 'alles' || stand.tv) return sectie(ico, kleur, titel, onder, lijst.length, lijst);
+    var rest = lijst.length - TOON;
+    return sectie(ico, kleur, titel, onder, lijst.length, lijst.slice(0, TOON)).replace('</section>',
+      '<button type="button" class="meerspellen" data-meer="' + schoon(sleutel) + '">Nog ' + rest + (rest === 1 ? ' spel' : ' spellen') + ' van ' + schoon(titel.toLowerCase()) + '</button></section>');
+  }
   function sectie(ico, kleur, titel, onder, tel, lijst){
     return '<section class="sectie"><div class="sectiekop">' +
       (ico ? '<i style="background:' + kleur + '"><svg viewBox="0 0 24 24" aria-hidden="true">' + ico + '</svg></i>' : '') +
@@ -1062,6 +1087,13 @@ var SPELLEN = [
       });
     });
   }
+  /* Met een klascode: wat de docent koos staat voorop. In de lesmodus is dat alles wat er te zien is. */
+  var les = null;   /* { spellen:[...], lesmodus:bool, naam:'' } zodra de klas het doorgeeft */
+  window.ZETLES = function(o){ les = o; tekenSpellen(); };
+  function magInLes(sp){
+    if (!les || !les.spellen || !les.spellen.length) return true;
+    return les.spellen.indexOf(sp.bestand.replace('.html', '')) >= 0;
+  }
   function tekenSpellenNu(){
     var lijst = gefilterd(), s = '';
     if (!lijst.length){
@@ -1069,6 +1101,23 @@ var SPELLEN = [
         '<p>Geen spel dat hierbij past. Probeer een ander woord, of zet de filters uit.</p>' +
         '<button type="button" id="wisAlles2">Alle filters uit</button></div>';
       $('wisAlles2').addEventListener('click', wisFilters);
+      return;
+    }
+    /* eerst wat de docent koos; in de lesmodus blijft de rest weg */
+    if (les && les.spellen && les.spellen.length && !stand.zoek){
+      var vanDocent = lijst.filter(magInLes), rest = lijst.filter(function(sp){ return !magInLes(sp); });
+      if (vanDocent.length){
+        s += sectie('<path d="M4 5h16v11H4zM8 20h8M12 16v4"/>', 'var(--ocean)', 'Van je docent' + (les.naam ? ' (' + les.naam + ')' : ''), 'hiermee werk je in de les', vanDocent.length, vanDocent);
+      }
+      if (les.lesmodus){
+        s += '<p class="lesnoot">De lesmodus staat aan: je docent heeft de andere spellen even weggezet. Na de les staan ze er weer.</p>';
+        $('secties').innerHTML = s;
+        return;
+      }
+      if (rest.length){
+        s += '<details class="restspellen"' + (uitgeklapt.rest ? ' open' : '') + '><summary>Alle andere spellen (' + rest.length + ')</summary><div class="spellen">' + rest.map(kaart).join('') + '</div></details>';
+      }
+      $('secties').innerHTML = s;
       return;
     }
     if (stand.zoek){
@@ -1083,20 +1132,27 @@ var SPELLEN = [
                : sectie('', '', 'Bij elk tijdvak', 'vaardigheden voor het hele jaar', groep[g].length, groep[g]);
       });
     } else if (stand.vak === 'alle'){
-      /* eerst wat voor elk vak is, daarna per vak */
+      /* eerst wat je in je eentje kunt doen, dan wat de klas samen doet, dan per vak */
       var overal = lijst.filter(function(sp){ return Array.isArray(sp.vak); });
-      if (overal.length) s += sectie('<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>', 'var(--muted)', 'Voor elk vak', 'je kiest het vak in het spel zelf', overal.length, overal);
+      var SAMENSPEL = { strijd:1 };   /* de Klasstrijd staat als oefenspel in de lijst, maar je docent start hem */
+      var samenLijst = overal.filter(function(sp){ var id = sp.bestand.replace('.html', ''); return soortVan(sp) === 'samen' || OOK_SAMEN[id] || SAMENSPEL[id]; });
+      var alleen = overal.filter(function(sp){ return samenLijst.indexOf(sp) < 0; });
+      if (alleen.length) s += sectieKort('<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>', 'var(--muted)', 'Voor elk vak', 'je kiest het vak in het spel zelf', alleen, 'overal');
+      if (samenLijst.length) s += sectie('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/>', 'var(--vista)', 'Samen op het digibord', 'je docent start deze', samenLijst.length, samenLijst);
       VAKKEN.forEach(function(v){
         var mijn = lijst.filter(function(sp){ return !Array.isArray(sp.vak) && sp.vak === v.id; });
         if (!mijn.length) return;
         if (v.id === 'geschiedenis') mijn = opTijd(mijn);
-        s += sectie(v.ico, v.kleur, v.naam, '', mijn.length, mijn);
+        s += sectieKort(v.ico, v.kleur, v.naam, '', mijn, v.id);
       });
     } else {
       var v2 = vakVan(stand.vak);
       s += sectie(v2.ico, v2.kleur, v2.naam, stand.soort !== 'alles' ? soortNaam(stand.soort).toLowerCase() : '', lijst.length, lijst);
     }
     $('secties').innerHTML = s;
+    Array.prototype.forEach.call($('secties').querySelectorAll('[data-meer]'), function(b){
+      b.addEventListener('click', function(){ uitgeklapt[b.getAttribute('data-meer')] = true; tekenSpellen(); });
+    });
   }
 
   /* ---------- verder gaan met wat je laatst speelde ---------- */
@@ -1168,6 +1224,13 @@ var SPELLEN = [
   var OP_SPEL = { race:['Vragenrace', 'race.html'], toren:['Torenverdediging', 'toren.html'], zwaard:['Zwaardvechter', 'zwaard.html'] };
   var OP_VAK = { reken:'rekenen', ned:'Nederlands', eng:'Engels', ges:'geschiedenis', aard:'aardrijkskunde', bio:'biologie', wis:'wiskunde', burg:'samenleving', eco:'economie' };
   function deelNaam(vak, id){ var l = window.ONDERDELEN && ONDERDELEN[vak], o = l && l.filter(function(x){ return x.id === id; })[0]; return o ? o.naam : id; }
+  /* wat de docent koos: de leeromgeving zet die spellen vooraan (zie tekenSpellenNu) */
+  function leesLes(k){
+    fetch('/api/klas/' + k.code + '/mijn?sid=' + encodeURIComponent(KLAS.sid()), { cache:'no-store' })
+      .then(function(r){ return r.json(); })
+      .then(function(j){ if (!j || j.fout) return; if (window.ZETLES) ZETLES({ spellen:j.spellen || [], lesmodus:!!j.lesmodus, naam:j.naam || '' }); })
+      .catch(function(){});
+  }
   /* de opdracht van de docent: de kaart met wat, tot wanneer, en of je hem al gehaald hebt */
   function toonOpdracht(k){
     var vak = document.getElementById('opdrachtKaart');
@@ -1195,6 +1258,7 @@ var SPELLEN = [
       var los = document.getElementById('klasLos');
       if (los) los.addEventListener('click', function(){ KLAS.wis(); teken(); });
       toonOpdracht(k);
+      leesLes(k);
       /* bestaat de code nog? een keer per bezoek kijken */
       if (!gekeken){ gekeken = true; KLAS.controleer().then(function(nog){ if (!nog) teken(); }); }
       return;
