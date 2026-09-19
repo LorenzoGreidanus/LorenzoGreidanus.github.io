@@ -13,7 +13,7 @@ function json(obj, status){
     headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
 }
 import COSMETICA from "../leermiddelen/cosmetica.js";
-function schoonAvatar(a){ a = String(a || "").replace(/[^a-z0-9]/g, "").slice(0, 22); return COSMETICA.ontleed(a) ? a : ""; }
+function schoonAvatar(a){ a = String(a || "").replace(/[^a-z0-9]/g, "").slice(0, 32); return COSMETICA.ontleed(a) ? a : ""; }
 function schoon(t, n){ return String(t == null ? "" : t).replace(/[<>]/g, "").slice(0, n); }
 function getal(x, max){ x = Number(x); return isFinite(x) ? Math.max(0, Math.min(max, Math.round(x))) : 0; }
 
@@ -57,7 +57,7 @@ function voegSamen(oud, nieuw, klasWeg, alles){
   if (alles){ COSMETICA.ITEMS.forEach(it => { p.bezit[it.id] = true; }); ["tonkla", "aap", "eiland", "archipel", "vulkaan"].forEach(k => { p.vrij[k] = true; }); }
   /* kopen: alleen wat er nog niet is en wat het saldo toelaat; daarna mag alleen bezit in de spec staan */
   (nieuw.vrijspeel || []).forEach(id => { p.bezit[id] = true; });
-  (nieuw.koop || []).forEach(id => { const it = COSMETICA.vind(id); if (it && !p.bezit[id] && p.munten >= it.prijs){ p.munten -= it.prijs; p.bezit[id] = true; } });
+  (nieuw.koop || []).forEach(id => { const it = COSMETICA.vind(id); if (it && !it.baas && COSMETICA.inSeizoen(it) && !p.bezit[id] && p.munten >= it.prijs){ p.munten -= it.prijs; p.bezit[id] = true; } });
   p.avatar = COSMETICA.toegestaan(p.avatar, p.bezit);
   Object.keys(nieuw.beste).forEach(k => { const a = p.beste[k], b = nieuw.beste[k]; if (!a || b.t >= a.t) p.beste[k] = b; });
   Object.keys(nieuw.campagne).forEach(k => { p.campagne[k] = Math.max(p.campagne[k] | 0, nieuw.campagne[k]); });

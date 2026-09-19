@@ -68,7 +68,7 @@ function schoon(tekst, max){
 }
 function getal(x, max){ const n = Number(x); return Number.isFinite(n) ? Math.max(0, Math.min(max, Math.round(n))) : 0; }
 /* een gekozen avatar: v3k2o1m0e4, anders leeg (dan komt hij uit de bijnaam) */
-function schoonAv(a){ a = String(a || "").replace(/[^a-z0-9]/g, "").slice(0, 22); return /^v\dk\do\dm\de\d(h\d{1,2})?(r\d{1,2})?(z\d{1,2})?(b\d{1,2})?$/.test(a) ? a : ""; }
+function schoonAv(a){ a = String(a || "").replace(/[^a-z0-9]/g, "").slice(0, 32); return /^v\dk\do\dm\de\d(h\d{1,2})?(r\d{1,2})?(z\d{1,2})?(b\d{1,2})?(a\d{1,2})?(q\d{1,2})?$/.test(a) ? a : ""; }
 function sleutelMaken(n){
   const r = crypto.getRandomValues(new Uint8Array(n || 12));
   return Array.from(r, b => b.toString(16).padStart(2, "0")).join("");

@@ -71,8 +71,8 @@ window.AVATAR = (function(){
   }
   var KEUZES = { vormen:8, kleuren:KLEUREN.length, ogen:5, monden:4, extras:6 };
   /* achter het gezichtje kan cosmetica staan: h (hoed), r (rand), z (zwaard), uit de winkel */
-  function ontleed(spec){ var m = /^v(\d)k(\d)o(\d)m(\d)e(\d)(?:h(\d{1,2}))?(?:r(\d{1,2}))?(?:z(\d{1,2}))?(?:b(\d{1,2}))?$/.exec(String(spec || '')); return m ? { v:+m[1], k:+m[2], o:+m[3], m:+m[4], e:+m[5], h:+(m[6] || 0), r:+(m[7] || 0), z:+(m[8] || 0), b:+(m[9] || 0) } : null; }
-  function maak(o){ return 'v' + (o.v % KEUZES.vormen) + 'k' + (o.k % KEUZES.kleuren) + 'o' + (o.o % KEUZES.ogen) + 'm' + (o.m % KEUZES.monden) + 'e' + (o.e % KEUZES.extras) + (o.h ? 'h' + o.h : '') + (o.r ? 'r' + o.r : '') + (o.z ? 'z' + o.z : '') + (o.b ? 'b' + o.b : ''); }
+  function ontleed(spec){ var m = /^v(\d)k(\d)o(\d)m(\d)e(\d)(?:h(\d{1,2}))?(?:r(\d{1,2}))?(?:z(\d{1,2}))?(?:b(\d{1,2}))?(?:a(\d{1,2}))?(?:q(\d{1,2}))?$/.exec(String(spec || '')); return m ? { v:+m[1], k:+m[2], o:+m[3], m:+m[4], e:+m[5], h:+(m[6] || 0), r:+(m[7] || 0), z:+(m[8] || 0), b:+(m[9] || 0), a:+(m[10] || 0), q:+(m[11] || 0) } : null; }
+  function maak(o){ return 'v' + (o.v % KEUZES.vormen) + 'k' + (o.k % KEUZES.kleuren) + 'o' + (o.o % KEUZES.ogen) + 'm' + (o.m % KEUZES.monden) + 'e' + (o.e % KEUZES.extras) + (o.h ? 'h' + o.h : '') + (o.r ? 'r' + o.r : '') + (o.z ? 'z' + o.z : '') + (o.b ? 'b' + o.b : '') + (o.a ? 'a' + o.a : '') + (o.q ? 'q' + o.q : ''); }
   /* de hoeden en randen uit de winkel, in de maten van het gezichtje (viewBox -50..50) */
   function hoed(n, kleur){
     if (n === 1) return '<path d="M-24,-30 L-28,-48 L-14,-38 L0,-52 L14,-38 L28,-48 L24,-30 Z" fill="#FFD166" stroke="#c9971f" stroke-width="2" stroke-linejoin="round"/><circle cx="0" cy="-42" r="3" fill="#F26749"/><circle cx="-16" cy="-38" r="2.2" fill="#204ECF"/><circle cx="16" cy="-38" r="2.2" fill="#204ECF"/>';
@@ -83,6 +83,12 @@ window.AVATAR = (function(){
     if (n === 6) return '<ellipse cx="0" cy="-53" rx="20" ry="5" fill="none" stroke="#FFD166" stroke-width="4"/><ellipse cx="0" cy="-53" rx="20" ry="5" fill="none" stroke="#fff" stroke-width="1.5" opacity=".7"/>';
     if (n === 7) return '<g><circle cx="-22" cy="-30" r="5" fill="#F26749"/><circle cx="-11" cy="-36" r="5" fill="#FFD166"/><circle cx="0" cy="-38" r="5" fill="#F26749"/><circle cx="11" cy="-36" r="5" fill="#FFD166"/><circle cx="22" cy="-30" r="5" fill="#F26749"/><g fill="#fff"><circle cx="-22" cy="-30" r="1.6"/><circle cx="-11" cy="-36" r="1.6"/><circle cx="0" cy="-38" r="1.6"/><circle cx="11" cy="-36" r="1.6"/><circle cx="22" cy="-30" r="1.6"/></g><path d="M-26,-28 q26,-8 52,0" fill="none" stroke="#2f7d52" stroke-width="3"/></g>';
     if (n === 8) return '<path d="M-16,-28 L0,-52 L16,-28 Z" fill="#204ECF"/><path d="M-11,-36 h22 M-6,-44 h12" stroke="#FFD166" stroke-width="3"/><circle cx="0" cy="-52" r="4" fill="#F26749"/>';
+    /* kerstmuts: rood met een witte rand en een pompon die naar rechts hangt */
+    if (n === 9) return '<path d="M-28,-30 q6,-30 26,-30 q10,0 20,10 q-14,0 -18,20 z" fill="#c0442c"/><path d="M-31,-30 h56" stroke="#F3EFE9" stroke-width="8" stroke-linecap="round"/><circle cx="22" cy="-50" r="6" fill="#F3EFE9"/>';
+    /* pompoenhoed: oranje met ribbels en een steeltje */
+    if (n === 10) return '<path d="M-30,-30 q0,-26 30,-26 q30,0 30,26 z" fill="#EA9836"/><path d="M-12,-30 q0,-22 12,-24 M12,-30 q0,-22 -12,-24" fill="none" stroke="#c0442c" stroke-width="2" opacity=".55"/><path d="M-33,-30 h66" stroke="#c96a1c" stroke-width="5" stroke-linecap="round"/><path d="M0,-56 q6,-6 4,-12" fill="none" stroke="#2f7d52" stroke-width="5" stroke-linecap="round"/>';
+    /* hazenoren: twee lange oren met roze binnenkant */
+    if (n === 11) return '<g fill="#F3EFE9" stroke="#d9cfc4" stroke-width="1.5"><path d="M-16,-30 q-14,-30 -4,-46 q10,10 12,46 z"/><path d="M16,-30 q14,-30 4,-46 q-10,10 -12,46 z"/></g><g fill="#F6B8C6"><path d="M-14,-32 q-8,-22 -4,-36 q6,10 8,36 z"/><path d="M14,-32 q8,-22 4,-36 q-6,10 -8,36 z"/></g>';
     return '';
   }
   /* de trofeeën van de bazen uit Zwaardvechter, rechtsonder bij het gezicht */
@@ -95,6 +101,20 @@ window.AVATAR = (function(){
     else if (n === 5) g += '<circle r="11" fill="#5b6480" stroke="#14224C" stroke-width="1.5"/><circle r="9" fill="none" stroke="#fff" stroke-width=".8" opacity=".6"/><path d="M0,0 L0,-6 M0,0 L4,2" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle r="1.2" fill="#F26749"/>';
     else if (n === 6) g += '<circle r="6" fill="#3b4759"/>' + [0, 60, 120, 180, 240, 300].map(function(a){ return '<circle transform="rotate(' + a + ') translate(0,-11)" r="3" fill="#3b4759"/>'; }).join('') + '<circle cx="-2" cy="-1.5" r="1" fill="#fff"/><circle cx="2" cy="-1.5" r="1" fill="#fff"/>';
     return g + '</g>';
+  }
+  /* de achtergrond uit de winkel: een schijf achter het gezichtje */
+  function achtergrond(n){
+    if (n === 1) return '<defs><radialGradient id="avA1" cx="50%" cy="70%" r="70%"><stop offset="0" stop-color="#FFD166"/><stop offset="1" stop-color="#F26749"/></radialGradient></defs><circle r="49" fill="url(#avA1)"/>';
+    if (n === 2) return '<defs><linearGradient id="avA2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#83A5F2"/><stop offset="1" stop-color="#204ECF"/></linearGradient></defs><circle r="49" fill="url(#avA2)"/><path d="M-34,22 q8,-6 16,0 t16,0 t16,0" fill="none" stroke="#fff" stroke-width="2.5" opacity=".5"/>';
+    if (n === 3) return '<defs><radialGradient id="avA3" cx="50%" cy="30%" r="80%"><stop offset="0" stop-color="#6b3fa0"/><stop offset="1" stop-color="#14224C"/></radialGradient></defs><circle r="49" fill="url(#avA3)"/><g fill="#FFD166"><circle cx="-34" cy="-22" r="2"/><circle cx="30" cy="-30" r="1.6"/><circle cx="38" cy="8" r="1.4"/><circle cx="-38" cy="14" r="1.3"/><circle cx="8" cy="-44" r="1.8"/><circle cx="-12" cy="42" r="1.5"/></g>';
+    return '';
+  }
+  /* de bril uit de winkel, over de ogen heen */
+  function bril(n){
+    if (n === 1) return '<g><rect x="-27" y="-13" width="22" height="16" rx="6" fill="#14224C"/><rect x="5" y="-13" width="22" height="16" rx="6" fill="#14224C"/><path d="M-5,-8 h10 M-27,-8 h-6 M27,-8 h6" stroke="#14224C" stroke-width="3" stroke-linecap="round"/><path d="M-22,-9 h8 M10,-9 h8" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".35"/></g>';
+    if (n === 2) return '<g fill="none" stroke="#c9971f" stroke-width="2.5"><circle cx="15" cy="-4" r="12"/><path d="M25,4 q6,10 2,22" stroke-width="1.5" stroke-dasharray="2 2"/></g>';
+    if (n === 3) return '<g fill="none" stroke="#14224C" stroke-width="2.2"><circle cx="-15" cy="-4" r="12"/><circle cx="15" cy="-4" r="12"/><path d="M-3,-5 h6 M-27,-6 h-6 M27,-6 h6" stroke-linecap="round"/></g>';
+    return '';
   }
   function rand(n){
     if (n === 1) return '<circle r="46" fill="none" stroke="#FFD166" stroke-width="5"/><circle r="46" fill="none" stroke="#c9971f" stroke-width="1.5"/>';
@@ -128,6 +148,7 @@ window.AVATAR = (function(){
     var donker = !!DONKER[kleur], oog = donker ? '#fff' : '#14224C', pupil = '#14224C', mond = donker ? '#14224C' : '#14224C';
     var draai = (r() * 16 - 8).toFixed(1);
     var s = '<svg class="avatar' + (opties && opties.klasse ? ' ' + opties.klasse : '') + '" viewBox="-50 -50 100 100" overflow="visible" width="' + maat + '" height="' + maat + '" aria-hidden="true" focusable="false">';
+    if (sp && sp.a) s += achtergrond(sp.a);
     s += '<g class="av-alles" style="animation-delay:-' + d1 + 's">';
     s += '<g transform="rotate(' + draai + ')"><path d="' + blob(r, 46) + '" fill="' + kleur + '"/>';
     /* een lichtere gloed bovenin, zoals het glimmetje op de ridder */
@@ -143,21 +164,22 @@ window.AVATAR = (function(){
     } else if (soort === 1){          /* blij: boogjes */
       s += '<path d="M-22,-4 q7,-9 14,0 M8,-4 q7,-9 14,0" fill="none" stroke="' + oog + '" stroke-width="4.5" stroke-linecap="round"/>';
     } else if (soort === 2){          /* knipoog */
-      s += '<circle cx="-' + afstand + '" cy="-5" r="8" fill="' + oog + '"/><circle cx="' + (-afstand + kijk).toFixed(1) + '" cy="-4" r="4" fill="' + pupil + '"/>';
+      s += '<circle cx="-' + afstand + '" cy="-5" r="8" fill="' + oog + '"/><circle cx="' + (-afstand + kijk).toFixed(1) + '" cy="-4" r="4" class="av-pupil" fill="' + pupil + '"/>';
       s += '<path d="M8,-5 q7,-7 14,0" fill="none" stroke="' + oog + '" stroke-width="4.5" stroke-linecap="round"/>';
     } else if (soort === 3){          /* bril */
       s += '<circle cx="-' + afstand + '" cy="-4" r="11" fill="' + oog + '" opacity=".95"/><circle cx="' + afstand + '" cy="-4" r="11" fill="' + oog + '" opacity=".95"/>';
       s += '<circle cx="-' + afstand + '" cy="-4" r="11" fill="none" stroke="' + pupil + '" stroke-width="3"/><circle cx="' + afstand + '" cy="-4" r="11" fill="none" stroke="' + pupil + '" stroke-width="3"/><path d="M-4,-4 h8" stroke="' + pupil + '" stroke-width="3"/>';
-      s += '<circle cx="' + (-afstand + kijk).toFixed(1) + '" cy="-3" r="4" fill="' + pupil + '"/><circle cx="' + (afstand + kijk).toFixed(1) + '" cy="-3" r="4" fill="' + pupil + '"/>';
+      s += '<circle cx="' + (-afstand + kijk).toFixed(1) + '" cy="-3" r="4" class="av-pupil" fill="' + pupil + '"/><circle cx="' + (afstand + kijk).toFixed(1) + '" cy="-3" r="4" class="av-pupil" fill="' + pupil + '"/>';
     } else if (soort === 4){          /* grote ogen */
       s += '<circle cx="-' + afstand + '" cy="-4" r="10" fill="' + oog + '"/><circle cx="' + afstand + '" cy="-4" r="10" fill="' + oog + '"/>';
-      s += '<circle cx="' + (-afstand + kijk).toFixed(1) + '" cy="-3" r="5" fill="' + pupil + '"/><circle cx="' + (afstand + kijk).toFixed(1) + '" cy="-3" r="5" fill="' + pupil + '"/>';
-      s += '<circle cx="' + (-afstand + kijk + 2).toFixed(1) + '" cy="-5" r="1.6" fill="#fff"/><circle cx="' + (afstand + kijk + 2).toFixed(1) + '" cy="-5" r="1.6" fill="#fff"/>';
+      s += '<circle cx="' + (-afstand + kijk).toFixed(1) + '" cy="-3" r="5" class="av-pupil" fill="' + pupil + '"/><circle cx="' + (afstand + kijk).toFixed(1) + '" cy="-3" r="5" class="av-pupil" fill="' + pupil + '"/>';
+      s += '<circle cx="' + (-afstand + kijk + 2).toFixed(1) + '" cy="-5" r="1.6" class="av-pupil" fill="#fff"/><circle cx="' + (afstand + kijk + 2).toFixed(1) + '" cy="-5" r="1.6" class="av-pupil" fill="#fff"/>';
     } else {                          /* gewone stipjes, zoals de ridder */
       s += '<circle cx="-' + afstand + '" cy="-5" r="8" fill="' + oog + '"/><circle cx="' + afstand + '" cy="-5" r="8" fill="' + oog + '"/>';
-      s += '<circle cx="' + (-afstand + kijk).toFixed(1) + '" cy="-4" r="4" fill="' + pupil + '"/><circle cx="' + (afstand + kijk).toFixed(1) + '" cy="-4" r="4" fill="' + pupil + '"/>';
+      s += '<circle cx="' + (-afstand + kijk).toFixed(1) + '" cy="-4" r="4" class="av-pupil" fill="' + pupil + '"/><circle cx="' + (afstand + kijk).toFixed(1) + '" cy="-4" r="4" class="av-pupil" fill="' + pupil + '"/>';
     }
     s += '</g>';
+    if (sp && sp.q) s += bril(sp.q);
     /* de mond: lach, klein rondje, of een streepje */
     var m = Math.floor(r() * 4);
     if (sp) m = sp.m % 4;
@@ -191,6 +213,28 @@ window.AVATAR = (function(){
       el.innerHTML = svg(el.getAttribute('data-avatar'), +el.getAttribute('data-maat') || 32, el.getAttribute('data-spec') || '');
     });
   }
+  /* de ogen volgen de muis: per gezichtje op de pagina schuiven de pupillen een stukje richting de muis.
+     Niet in de arena van Zwaardvechter (daar staan ze in een use) en niet als iemand liever geen beweging heeft. */
+  (function(){
+    if (typeof document === 'undefined' || typeof matchMedia !== 'function') return;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches || matchMedia('(hover: none)').matches) return;
+    var mx = -1, my = -1, bezig = false;
+    function kijk(){
+      bezig = false;
+      var vh = innerHeight, vw = innerWidth;
+      Array.prototype.forEach.call(document.querySelectorAll('svg.avatar'), function(el){
+        var r = el.getBoundingClientRect();
+        if (!r.width || r.bottom < 0 || r.top > vh || r.right < 0 || r.left > vw) return;
+        var cx = r.left + r.width / 2, cy = r.top + r.height / 2 - r.height * 0.04;
+        var dx = mx - cx, dy = my - cy, d = Math.hypot(dx, dy) || 1;
+        /* dichtbij: vol uitslaan; ver weg: een klein beetje */
+        var kracht = Math.min(1, d / (r.width * 3)) * 3.2;
+        var tx = (dx / d * kracht).toFixed(2), ty = (dy / d * kracht * 0.7).toFixed(2);
+        Array.prototype.forEach.call(el.querySelectorAll('.av-pupil'), function(p){ p.style.transform = 'translate(' + tx + 'px,' + ty + 'px)'; });
+      });
+    }
+    addEventListener('mousemove', function(e){ mx = e.clientX; my = e.clientY; if (!bezig){ bezig = true; requestAnimationFrame(kijk); } }, { passive:true });
+  })();
   /* de paar regels stijl die elke pagina nodig heeft */
   try {
     var st = document.createElement('style');
@@ -202,6 +246,7 @@ window.AVATAR = (function(){
       '.av-alles{transform-box:fill-box;transform-origin:50% 100%;animation:avAdem 3.4s ease-in-out infinite}' +
       '.av-ogen{transform-box:fill-box;transform-origin:center;animation:avKnip 4.6s linear infinite}' +
       '.av-hoed{transform-box:fill-box;transform-origin:50% 100%}' +
+      '.av-pupil{transition:transform .14s ease-out}' +
       '.avatar:hover .av-hoed,.av-wiebel .av-hoed{animation:avHoed .8s ease}' +
       /* juichen: twee sprongetjes, de hoed wiebelt mee */
       '@keyframes avJuich{0%,100%{transform:translateY(0) rotate(0)}18%{transform:translateY(-.28em) rotate(-7deg)}36%{transform:translateY(0) rotate(0)}54%{transform:translateY(-.2em) rotate(6deg)}72%{transform:translateY(0) rotate(0)}}' +

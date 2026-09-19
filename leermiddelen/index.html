@@ -1218,15 +1218,16 @@ var SPELLEN = [
   function huidig(){ return AVATAR.ontleed(spec()) || { v:0, k:2, o:0, m:0, e:5 }; }
   /* de winkel: per soort de waren, met wat je hebt en wat je draagt */
   function winkelHtml(h){
-    var bez = PROFIEL.bezit(), o = COSMETICA.ontleed(spec()) || { basis:AVATAR.maak(h), h:0, r:0, z:0, b:0 }, s = '<div class="winkel2">';
-    ['b', 'h', 'r', 'z'].forEach(function(soort){
-      s += '<h4>' + COSMETICA.SOORTEN[soort] + (soort === 'z' ? ' (voor Zwaardvechter)' : '') + '</h4><div class="waren">' + COSMETICA.ITEMS.filter(function(it){ return it.soort === soort; }).map(function(it){
+    var bez = PROFIEL.bezit(), o = COSMETICA.ontleed(spec()) || { basis:AVATAR.maak(h), h:0, r:0, z:0, b:0, a:0, q:0 }, s = '<div class="winkel2">';
+    ['b', 'h', 'q', 'a', 'r', 'z'].forEach(function(soort){
+      /* seizoensdingen staan alleen in hun seizoen in de winkel, of als je ze al hebt */
+      s += '<h4>' + COSMETICA.SOORTEN[soort] + (soort === 'z' ? ' (voor Zwaardvechter)' : '') + '</h4><div class="waren">' + COSMETICA.ITEMS.filter(function(it){ return it.soort === soort && (!it.seizoen || COSMETICA.inSeizoen(it) || bez[it.id]); }).map(function(it){
         var heb = !!bez[it.id], aan = o[soort] === it.n, beeld;
         if (soort === 'b'){ var o3 = { basis:o.basis, h:0, r:0, z:0, b:it.n }; beeld = AVATAR.svg('', 36, COSMETICA.bouw(o3)); }
         else if (soort === 'z'){
           var kl = [null, '#F26749', '#9fd3ff', '#FFD166', '#7CFC9A', '#a5773f'][it.n];
           beeld = '<svg class="zwaardje" viewBox="-18 -18 36 36" aria-hidden="true"><g transform="rotate(-45)"><path d="M-2,14 h4 v-6 h-4z" fill="#5f4830"/><path d="M-7,8 h14" stroke="#c9971f" stroke-width="3" stroke-linecap="round"/><path d="M0,8 v-24" stroke="' + kl + '" stroke-width="5" stroke-linecap="round"/></g></svg>';
-        } else { var o2 = { basis:o.basis, h:soort === 'h' ? it.n : 0, r:soort === 'r' ? it.n : 0, z:0, b:0 }; beeld = AVATAR.svg('', 36, COSMETICA.bouw(o2)); }
+        } else { var o2 = { basis:o.basis, h:0, r:0, z:0, b:0, a:0, q:0 }; o2[soort] = it.n; beeld = AVATAR.svg('', 36, COSMETICA.bouw(o2)); }
         var slot = it.baas && !heb;
         return '<button type="button" data-waar="' + it.id + '" class="' + (aan ? 'aan ' : '') + (heb ? 'heb' : '') + (slot ? ' slot' : '') + '"' + (slot ? ' disabled' : '') + ' title="' + schoon(it.uit) + '">' + beeld + '<b>' + schoon(it.naam) + '</b><small>' + (aan ? 'op' : heb ? 'van jou' : it.baas ? 'versla de baas' : it.prijs + ' munten') + '</small></button>';
       }).join('') + '</div>';
@@ -1294,7 +1295,7 @@ var SPELLEN = [
     knop('pfWinkel', function(){ winkelOpen = !winkelOpen; winkelMelding = ''; teken(); });
     Array.prototype.forEach.call(vak0.querySelectorAll('[data-waar]'), function(b){
       b.addEventListener('click', function(){
-        var id = b.getAttribute('data-waar'), it = COSMETICA.vind(id), heb = PROFIEL.bezit()[id], o = COSMETICA.ontleed(spec() || AVATAR.maak(huidig())) || { basis:AVATAR.maak(huidig()), h:0, r:0, z:0, b:0 };
+        var id = b.getAttribute('data-waar'), it = COSMETICA.vind(id), heb = PROFIEL.bezit()[id], o = COSMETICA.ontleed(spec() || AVATAR.maak(huidig())) || { basis:AVATAR.maak(huidig()), h:0, r:0, z:0, b:0, a:0, q:0 };
         if (it.baas && !heb) return;
         if (heb){ o[it.soort] = o[it.soort] === it.n ? 0 : it.n; PROFIEL.zetAvatar(COSMETICA.bouw(o)); winkelMelding = ''; teken(); return; }
         if (PROFIEL.munten() < it.prijs){ winkelMelding = 'Nog ' + (it.prijs - PROFIEL.munten()) + ' munten te gaan voor ' + it.naam.toLowerCase() + '.'; teken(); return; }

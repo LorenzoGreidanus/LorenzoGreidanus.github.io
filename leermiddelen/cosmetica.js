@@ -22,6 +22,18 @@
     { id:'h6', soort:'h', n:6, naam:'Halo',           prijs:1200, uit:'een engel, zogenaamd' },
     { id:'h7', soort:'h', n:7, naam:'Bloemenkrans',   prijs:350,  uit:'lente op je hoofd' },
     { id:'h8', soort:'h', n:8, naam:'Feestmuts',      prijs:250,  uit:'altijd jarig' },
+    /* seizoenshoeden: alleen te koop in hun seizoen (maand/dag van, maand/dag tot); wie hem heeft mag hem altijd op */
+    { id:'h9',  soort:'h', n:9,  naam:'Kerstmuts',    prijs:400, uit:'alleen in december te koop', seizoen:[12, 1, 12, 31] },
+    { id:'h10', soort:'h', n:10, naam:'Pompoenhoed',  prijs:400, uit:'alleen in oktober te koop', seizoen:[10, 1, 10, 31] },
+    { id:'h11', soort:'h', n:11, naam:'Hazenoren',    prijs:400, uit:'alleen rond Pasen te koop (half maart tot eind april)', seizoen:[3, 15, 4, 30] },
+    /* achtergronden: a1 tot a3, een schijf achter het gezichtje */
+    { id:'a1', soort:'a', n:1, naam:'Zonsopgang',     prijs:800,  uit:'oranje en geel achter je' },
+    { id:'a2', soort:'a', n:2, naam:'Oceaan',         prijs:800,  uit:'diep blauw achter je' },
+    { id:'a3', soort:'a', n:3, naam:'Sterrennacht',   prijs:1400, uit:'paars met sterren' },
+    /* brillen: q1 tot q3 */
+    { id:'q1', soort:'q', n:1, naam:'Zonnebril',      prijs:450,  uit:'cool, altijd' },
+    { id:'q2', soort:'q', n:2, naam:'Monocle',        prijs:900,  uit:'deftig, met kettinkje' },
+    { id:'q3', soort:'q', n:3, naam:'Ronde bril',     prijs:500,  uit:'voor wie veel leest' },
     /* randen: r1 tot r5 */
     { id:'r1', soort:'r', n:1, naam:'Gouden ring',    prijs:700, uit:'een rand van goud' },
     { id:'r2', soort:'r', n:2, naam:'Vuurring',       prijs:900, uit:'oranje vlammen' },
@@ -42,15 +54,22 @@
     { id:'b5', soort:'b', n:5, naam:'Wijzerplaat van De Klok',       prijs:0, baas:'klok',  uit:'versla De Klok in Zwaardvechter' },
     { id:'b6', soort:'b', n:6, naam:'Zwermpje van De Zwerm',         prijs:0, baas:'zwerm', uit:'versla De Zwerm in Zwaardvechter' }
   ];
-  var SOORTEN = { h:'Hoeden', r:'Randen', z:'Zwaarden', b:'Trofeeën van de bazen' };
+  var SOORTEN = { h:'Hoeden', q:'Brillen', a:'Achtergronden', r:'Randen', z:'Zwaarden', b:'Trofeeën van de bazen' };
+  /* is dit item nu te koop? Zonder seizoen altijd; met seizoen alleen tussen die dagen (jaar loopt gewoon door) */
+  function inSeizoen(it, nu){
+    if (!it || !it.seizoen) return true;
+    var d = nu || new Date(), m = d.getMonth() + 1, dag = d.getDate(), s = it.seizoen;
+    var na = m > s[0] || (m === s[0] && dag >= s[1]), voor = m < s[2] || (m === s[2] && dag <= s[3]);
+    return s[0] <= s[2] ? (na && voor) : (na || voor);
+  }
   function vanBaas(baasId){ for (var i = 0; i < ITEMS.length; i++) if (ITEMS[i].baas === baasId) return ITEMS[i]; return null; }
   function vind(id){ for (var i = 0; i < ITEMS.length; i++) if (ITEMS[i].id === id) return ITEMS[i]; return null; }
   /* de spec uit elkaar: het gezichtje en wat erop en eromheen zit */
   function ontleed(spec){
-    var m = /^(v\dk\do\dm\de\d)(?:h(\d{1,2}))?(?:r(\d{1,2}))?(?:z(\d{1,2}))?(?:b(\d{1,2}))?$/.exec(String(spec || ''));
-    return m ? { basis:m[1], h:+(m[2] || 0), r:+(m[3] || 0), z:+(m[4] || 0), b:+(m[5] || 0) } : null;
+    var m = /^(v\dk\do\dm\de\d)(?:h(\d{1,2}))?(?:r(\d{1,2}))?(?:z(\d{1,2}))?(?:b(\d{1,2}))?(?:a(\d{1,2}))?(?:q(\d{1,2}))?$/.exec(String(spec || ''));
+    return m ? { basis:m[1], h:+(m[2] || 0), r:+(m[3] || 0), z:+(m[4] || 0), b:+(m[5] || 0), a:+(m[6] || 0), q:+(m[7] || 0) } : null;
   }
-  function bouw(o){ return o.basis + (o.h ? 'h' + o.h : '') + (o.r ? 'r' + o.r : '') + (o.z ? 'z' + o.z : '') + (o.b ? 'b' + o.b : ''); }
+  function bouw(o){ return o.basis + (o.h ? 'h' + o.h : '') + (o.r ? 'r' + o.r : '') + (o.z ? 'z' + o.z : '') + (o.b ? 'b' + o.b : '') + (o.a ? 'a' + o.a : '') + (o.q ? 'q' + o.q : ''); }
   /* haal uit een spec wat niet in het bezit zit */
   function toegestaan(spec, bezit){
     var o = ontleed(spec); if (!o) return '';
@@ -59,8 +78,10 @@
     if (o.r && !bezit['r' + o.r]) o.r = 0;
     if (o.z && !bezit['z' + o.z]) o.z = 0;
     if (o.b && !bezit['b' + o.b]) o.b = 0;
+    if (o.a && !bezit['a' + o.a]) o.a = 0;
+    if (o.q && !bezit['q' + o.q]) o.q = 0;
     return bouw(o);
   }
-  g.COSMETICA = { ITEMS:ITEMS, SOORTEN:SOORTEN, vind:vind, vanBaas:vanBaas, ontleed:ontleed, bouw:bouw, toegestaan:toegestaan };
+  g.COSMETICA = { ITEMS:ITEMS, SOORTEN:SOORTEN, vind:vind, vanBaas:vanBaas, ontleed:ontleed, bouw:bouw, toegestaan:toegestaan, inSeizoen:inSeizoen };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 if (typeof module !== 'undefined' && module.exports) module.exports = globalThis.COSMETICA;

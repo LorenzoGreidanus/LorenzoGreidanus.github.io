@@ -133,6 +133,19 @@ window.SPEL = (function(){
       if (nMunt && PROFIEL.ingelogd()){ PROFIEL.muntenErbij(nMunt); muntHtml = '<p class="munten"><b>+' + nMunt + ' munten</b>' + reeksTekst + ' je hebt er nu ' + PROFIEL.munten() + ' <a href="index.html?winkel=1">naar de winkel</a></p>'; }
       else if (nMunt && PROFIEL.accountMogelijk()) muntHtml = '<p class="munten stil">' + nMunt + ' munten gemist. <a href="index.html">Log in met Microsoft</a> in de leeromgeving, dan spaar je ze voor de winkel.</p>';
     }
+    /* de dagstreak: elke dag dat je iets speelt telt; de eerste keer op een dag krijgt wie is ingelogd een bonus (5 per dag in de reeks, hoogstens 25) */
+    var streakHtml = '';
+    try {
+      var vandaag = new Date(); vandaag.setHours(12, 0, 0, 0);
+      var dagK = vandaag.toISOString().slice(0, 10), gisterenK = new Date(vandaag.getTime() - 86400000).toISOString().slice(0, 10);
+      var st = lees('lg-dagen') || { laatst:'', reeks:0 }, nieuwDag = st.laatst !== dagK;
+      if (nieuwDag){ st.reeks = st.laatst === gisterenK ? (st.reeks | 0) + 1 : 1; st.laatst = dagK; zet('lg-dagen', st); }
+      if (st.reeks >= 2){
+        var bonus = nieuwDag && window.PROFIEL && PROFIEL.ingelogd() ? Math.min(25, 5 * st.reeks) : 0;
+        if (bonus) PROFIEL.muntenErbij(bonus);
+        streakHtml = '<p class="munten stil"><b>' + st.reeks + ' dagen op rij</b> geoefend' + (bonus ? ': +' + bonus + ' munten' : '') + '</p>';
+      }
+    } catch (e){}
     var kaart = document.createElement('div');
     kaart.className = 'eindkaart' + (o.compact ? ' compact' : '');
     if (o.kleur){ kaart.style.setProperty('--ek1', o.kleur[0]); kaart.style.setProperty('--ek2', o.kleur[1] || o.kleur[0]); }
@@ -153,7 +166,7 @@ window.SPEL = (function(){
     kaart.innerHTML =
       '<p class="eyebrow">' + schoon(o.kop || 'klaar') + '</p>' +
       (!o.compact && o.score !== undefined && o.score !== null ? '<div class="getal">' + schoon(o.score) + (o.label ? '<small>' + schoon(o.label) + '</small>' : '') + '</div>' : '') +
-      '<div class="rechts">' + sterrenHtml + (besteTekst ? '<p class="beste">' + besteTekst + '</p>' : '') + wieHtml + muntHtml + '</div>' +
+      '<div class="rechts">' + sterrenHtml + (besteTekst ? '<p class="beste">' + besteTekst + '</p>' : '') + wieHtml + muntHtml + streakHtml + '</div>' +
       '<div class="knoppen">' +
         knopje('opnieuw', IC.opnieuw, schoon(o.opnieuwTekst || 'Nog een keer')) +
         knopje('stil deel', IC.deel, 'Delen') +
