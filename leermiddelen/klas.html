@@ -125,6 +125,8 @@ td.getal{font-variant-numeric:tabular-nums;text-align:right}
 .leeg{padding:22px;color:var(--muted);text-align:center}
 .samen{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-top:12px}
 .opdrachtvak{background:var(--kaart2);border-radius:16px;padding:14px 16px}
+.tip.demo{margin-top:8px;background:#FFE168;color:#14224C;border-radius:12px;padding:8px 12px;display:inline-block}
+.tip.demo a{color:inherit}
 .opdrachtvorm{margin-top:10px;align-items:center}
 .opdrachtvorm .veld{padding:7px 10px;font-size:.92rem}
 .minlabel{display:inline-flex;align-items:center;gap:6px;font-size:.92rem}
@@ -331,6 +333,22 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
   }
   $('linkTekst').textContent = location.host.replace(/^www\./, '') + '/leermiddelen';
 
+  /* de demoklas: verzonnen leerlingen, niets gaat naar de server; voor wie wil zien hoe het eruitziet */
+  var DEMO = /[?&]demo=1/.test(location.search);
+  function demoData(){
+    var namen = ['Noor', 'Sem', 'Jasper', 'Fenna', 'Daan', 'Lotte', 'Max', 'Julia'], nu = Date.now(), uit = [], r = (function(z){ return function(){ z = (z * 9301 + 49297) % 233280; return z / 233280; }; })(42);
+    var spellen = ['race', 'toren', 'zwaard', 'vlaggen', 'race', 'klasquiz'];
+    namen.forEach(function(n, i){
+      var av = 'v' + (i % 8) + 'k' + (i % 9) + 'o' + (i % 5) + 'm' + (i % 4) + 'e' + (i % 6);
+      for (var p = 0; p < 4 + (i % 3); p++){
+        var sp = spellen[(i + p) % spellen.length], t = nu - Math.floor(r() * 9) * 86400000 - Math.floor(r() * 36e5);
+        var od = {}; if (sp === 'race' || sp === 'toren' || sp === 'zwaard' || sp === 'klasquiz'){ ['tv1', 'tv2', 'tv5'].forEach(function(o){ var g = Math.floor(r() * 5), s = g + Math.floor(r() * 3); if (s) od[o] = [g + (i % 2 ? 1 : 0), s + 1]; }); }
+        uit.push({ naam:n, av:av, spel:sp, ronde: sp === 'race' ? 6 + Math.floor(r() * 14) : sp === 'toren' ? 8 + Math.floor(r() * 30) : sp === 'zwaard' ? 4 + Math.floor(r() * 16) : 5 + Math.floor(r() * 10), punten: 40 + Math.floor(r() * 400), niveau: ['bb', 'kgt', 'havo'][i % 3], vak: sp === 'vlaggen' ? 'aard' : 'ges', od: od, t: t });
+      }
+    });
+    return { code:'DEMO', naam:'Demoklas 2H', gemaakt: nu - 20 * 86400000, resultaten: uit,
+             opdracht: { spel:'race', vak:'ges', deel:'tv5', deelNaam:'5 ontdekkers en hervormers', min:4, tot: nu + 4 * 86400000, tekst:'Voor de toets van vrijdag', sinds: nu - 5 * 86400000 } };
+  }
   var klassen = [], huidig = null, spelFilter = '', vakFilter = '', data = null, klok = null;
   try { klassen = JSON.parse(localStorage.getItem('lg-klas-docent') || '[]'); } catch (e){}
   if (!Array.isArray(klassen)) klassen = [];
@@ -359,6 +377,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
   }
   function haal(){
     if (!huidig) return;
+    if (DEMO){ data = demoData(); $('ovUit').textContent = 'Dit is een demoklas met verzonnen leerlingen: niets hiervan staat op de server. Maak je eigen klascode om het echt te gebruiken.'; teken(); return; }
     $('ovUit').textContent = 'Ophalen…';
     fetch('/api/klas/' + huidig.code + '?sleutel=' + encodeURIComponent(huidig.sleutel))
       .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
@@ -486,7 +505,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       '<button type="button" class="knop stil klein" id="opWeg">Opdracht weghalen</button></div>' +
       '<p class="tip" style="margin-top:8px">' + (lijst.length ? n + ' van ' + lijst.length + ' leerlingen gehaald.' : 'Nog geen leerling heeft sinds de opdracht een potje gemeld.') + '</p>' +
       '<div class="gehaald">' + lijst.map(function(x){ var ja = namen[x] >= o.min; return '<span class="' + (ja ? 'ja' : 'nee') + '">' + (window.AVATAR ? AVATAR.svg(x, 20, avVan(x)) : '') + schoon(x) + ' <i>' + (ja ? '✓' : namen[x] + '/' + o.min) + '</i></span>'; }).join('') + '</div>';
-    $('opWeg').addEventListener('click', function(){ if (!confirm('De opdracht weghalen?')) return; zetOpdracht(null); });
+    $('opWeg').addEventListener('click', function(){ if (DEMO){ alert('Niet in de demo.'); return; } if (!confirm('De opdracht weghalen?')) return; zetOpdracht(null); });
   }
   function zetOpdracht(o){
     if (!huidig) return;
@@ -558,6 +577,13 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
   tekenKlassen();
   var eerst = klassen[0];
   if (eerst) kies(eerst);
+  if (DEMO){
+    /* de demoklas: alle knoppen die iets veranderen doen niets */
+    ['maakBtn', 'vergeet', 'opheffen', 'opZet'].forEach(function(id){ var b = $(id); if (b){ b.disabled = true; b.title = 'Niet in de demo'; } });
+    var demoTip = document.createElement('p'); demoTip.className = 'tip demo'; demoTip.innerHTML = '<b>Demoklas.</b> Verzonnen leerlingen, om te zien hoe het eruitziet. <a href="klas.html">Maak je eigen klascode</a> om het echt te gebruiken.';
+    document.querySelector('main h1').insertAdjacentElement('afterend', demoTip);
+    kies({ code:'DEMO', sleutel:'demo', naam:'Demoklas 2H', gemaakt: Date.now() });
+  }
   /* na het inloggen of de sync kunnen er klassen van het account bij zijn gekomen */
   if (window.PROFIEL && PROFIEL.op){
     PROFIEL.op(function(){
