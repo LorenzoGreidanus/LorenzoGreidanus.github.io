@@ -125,6 +125,29 @@ td.getal{font-variant-numeric:tabular-nums;text-align:right}
 .leeg{padding:22px;color:var(--muted);text-align:center}
 .samen{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-top:12px}
 .opdrachtvak{background:var(--kaart2);border-radius:16px;padding:14px 16px}
+/* het dashboard: wie je bent, je klassen, en daaronder de kaarten voor de rest van het docentwerk */
+.wiebalk{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;background:var(--kaart);border:1px solid var(--rand);
+  border-radius:16px;padding:12px 16px;margin-top:14px}
+.wiebalk .naam{font-weight:600;flex:1;min-width:200px}
+.wiebalk .naam small{display:block;color:var(--muted);font-weight:400;font-size:.86rem}
+.msknop{display:inline-flex;align-items:center;gap:9px;border:1.5px solid var(--rand2);background:var(--kaart);
+  border-radius:12px;padding:9px 14px;font-weight:600;text-decoration:none;color:inherit}
+.msknop svg{width:16px;height:16px}
+.deurtjes{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-top:18px}
+.deurtjes a{display:block;background:var(--kaart);border:1px solid var(--rand);border-radius:16px;padding:14px 16px;
+  text-decoration:none;color:inherit}
+.deurtjes a:hover{border-color:var(--ocean)}
+.deurtjes b{display:block;margin-bottom:2px}
+.deurtjes span{color:var(--muted);font-size:.9rem}
+/* de spellenkeuze per klas */
+.spelkeuze{margin-top:10px}
+.spelkeuze .waar{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.spelkeuze .waar button{border:1.5px solid var(--rand2);background:var(--kaart);border-radius:999px;padding:6px 12px;
+  font-size:.88rem;font-weight:500}
+.spelkeuze .waar button.aan{background:var(--ocean);color:#fff;border-color:var(--ocean)}
+.lesmodus{display:flex;align-items:flex-start;gap:9px;margin-top:12px;font-size:.92rem}
+.lesmodus input{margin-top:4px;width:17px;height:17px}
+.lesmodus span{color:var(--muted)}
 .tip.demo{margin-top:8px;background:#FFE168;color:#14224C;border-radius:12px;padding:8px 12px;display:inline-block}
 .tip.demo a{color:inherit}
 .opdrachtvorm{margin-top:10px;align-items:center}
@@ -215,7 +238,8 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
 
 <main class="wrap">
   <p class="eyebrow">voor de docent</p>
-  <h1>Klasoverzicht</h1>
+  <h1>Jouw klassen</h1>
+  <div class="wiebalk" id="wiebalk"></div>
   <p style="margin-top:8px;max-width:64ch"><a href="handleiding.html">Handleiding met plaatjes</a> (ook als pdf) &middot; <a href="klas.html?demo=1">demoklas bekijken</a></p>
   <p style="margin-top:8px;max-width:64ch">Maak een klascode, laat leerlingen die eenmalig invullen in de leeromgeving, en zie na de les wie welk spel tot hoever heeft gehaald. Zonder accounts: een leerling koppelt zich met een bijnaam, en alleen jij ziet de uitslagen, op dit apparaat. Een klascode blijft geldig tot jij hem opheft.</p>
 
@@ -249,6 +273,13 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     </div>
   </div>
 
+  <div class="deurtjes">
+    <a href="handleiding.html"><b>Handleiding</b><span>stap voor stap, met plaatjes; ook als pdf</span></a>
+    <a href="lesbrieven.html"><b>Lesbrieven</b><span>per spel: leerdoel, tijd, werkvorm</span></a>
+    <a href="klasquiz.html"><b>Klasquiz starten</b><span>quiz op het digibord, leerlingen op hun laptop</span></a>
+    <a href="tekenslag.html"><b>Tekenslag starten</b><span>tekenen en raden in teams</span></a>
+  </div>
+
   <section class="kaart hide" id="overzicht" style="margin-top:18px">
     <div class="rij" style="justify-content:space-between">
       <div>
@@ -277,6 +308,13 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
         <button class="knop crab" id="opZet" type="button">Zet opdracht</button>
       </div>
       <p class="tip" id="opFout"></p>
+    </div>
+    <div class="stap opdrachtvak spelkeuze" id="keuzeVak">
+      <b>Welke spellen ziet deze klas?</b>
+      <p class="tip">Vink aan wat je klas mag spelen. Kies je niets, dan zien ze alles. In de lesmodus zien gekoppelde leerlingen alleen jouw keuze; staat de lesmodus uit, dan staat jouw keuze bovenaan en kunnen ze de rest uitklappen.</p>
+      <div class="waar" id="spelKeuze"></div>
+      <label class="lesmodus"><input type="checkbox" id="lesVink"> <span><b>Lesmodus aan</b> — tijdens jouw les zien ze alleen de gekozen spellen en de opdracht. Zet hem na de les weer uit.</span></label>
+      <p class="tip" id="keuzeStatus"></p>
     </div>
     <div class="stap"><b>Spel</b><div class="chips" id="spelChips"></div></div>
     <div class="stap" id="odStap">
@@ -347,7 +385,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
         uit.push({ naam:n, av:av, spel:sp, ronde: sp === 'race' ? 6 + Math.floor(r() * 14) : sp === 'toren' ? 8 + Math.floor(r() * 30) : sp === 'zwaard' ? 4 + Math.floor(r() * 16) : 5 + Math.floor(r() * 10), punten: 40 + Math.floor(r() * 400), niveau: ['bb', 'kgt', 'havo'][i % 3], vak: sp === 'vlaggen' ? 'aard' : 'ges', od: od, t: t });
       }
     });
-    return { code:'DEMO', naam:'Demoklas 2H', gemaakt: nu - 20 * 86400000, resultaten: uit,
+    return { code:'DEMO', naam:'Demoklas 2H', gemaakt: nu - 20 * 86400000, resultaten: uit, spellen:['race', 'toren', 'bronnenlab'], lesmodus:false,
              opdracht: { spel:'race', vak:'ges', deel:'tv5', deelNaam:'5 ontdekkers en hervormers', min:4, tot: nu + 4 * 86400000, tekst:'Voor de toets van vrijdag', sinds: nu - 5 * 86400000 } };
   }
   var klassen = [], huidig = null, spelFilter = '', vakFilter = '', data = null, klok = null;
@@ -416,6 +454,8 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     }).join('') : '<p class="leeg">Nog niets gemeld. Zodra een leerling een potje afmaakt, staat het hier.</p>';
     tekenOnderdelen(lijst);
     tekenOpdracht();
+    /* alleen bij het openen van een klas overnemen; anders overschrijft een verversing wat je net aanklikte */
+    if (data && huidig && keuzeVoor !== huidig.code){ keuzeVoor = huidig.code; keuzeSpellen = Array.isArray(data.spellen) ? data.spellen.slice() : []; lesmodus = !!data.lesmodus; tekenKeuze(); }
     $('rijen').innerHTML = lijst.length ? lijst.map(function(r){
       return '<tr><td>' + (window.AVATAR ? AVATAR.svg(r.naam, 24, r.av) : '') + schoon(r.naam) + '</td><td>' + schoon(SPELLEN[r.spel] || r.spel) + '</td><td class="getal">' + r.ronde + '</td><td class="getal">' + r.punten + '</td><td>' + schoon(NIVEAUS[r.niveau] || r.niveau || '') + '</td><td>' + schoon(VAKKEN[r.vak] || r.vak || '') + '</td><td>' + new Date(r.t).toLocaleString('nl-NL', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) + '</td></tr>';
     }).join('') : '<tr><td colspan="7" class="leeg">Nog geen potjes.</td></tr>';
@@ -477,6 +517,67 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     $('aandacht').innerHTML = html;
   }
   var avVan = function(){ return ''; };
+
+  /* ---------- wie ben je: inloggen met Microsoft hoort bij het docentwerk ---------- */
+  var MSLOGO = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="0" y="0" width="7.5" height="7.5" fill="#F25022"/><rect x="8.5" y="0" width="7.5" height="7.5" fill="#7FBA00"/><rect x="0" y="8.5" width="7.5" height="7.5" fill="#00A4EF"/><rect x="8.5" y="8.5" width="7.5" height="7.5" fill="#FFB900"/></svg>';
+  var acc = null;
+  function tekenWie(){
+    var el = $('wiebalk'); if (!el) return;
+    if (DEMO){ el.innerHTML = '<span class="naam">Demoklas<small>verzonnen leerlingen, om rond te kijken</small></span><a class="msknop" href="klas.html">Naar je eigen klassen</a>'; return; }
+    if (!acc || !acc.mogelijk){ el.classList.add('hide'); return; }
+    el.classList.remove('hide');
+    if (acc.ingelogd){
+      el.innerHTML = '<span class="naam">Ingelogd als ' + schoon(acc.naam || 'docent') + '<small>je klassen staan op al je apparaten</small></span>' +
+        '<button type="button" class="knop stil klein" id="wieUit">Uitloggen</button>';
+      $('wieUit').addEventListener('click', function(){ if (window.PROFIEL && PROFIEL.uitloggen) PROFIEL.uitloggen().then(function(){ location.reload(); }); });
+    } else {
+      el.innerHTML = '<span class="naam">Nog niet ingelogd<small>een klascode maken kan alleen ingelogd. Zo blijft je klas van jou en staat hij ook op je andere apparaten.</small></span>' +
+        '<a class="msknop" href="' + (window.PROFIEL ? PROFIEL.inlogAdres() : '/api/account/inloggen') + '">' + MSLOGO + 'Inloggen met Microsoft</a>';
+    }
+    var mag = !acc.mogelijk || acc.ingelogd;
+    var mb = $('maakBtn'); if (mb && !DEMO){ mb.disabled = !mag; mb.title = mag ? '' : 'Log eerst in met Microsoft'; }
+  }
+  if (window.PROFIEL && PROFIEL.account) PROFIEL.account().then(function(a){ acc = a; tekenWie(); });
+
+  /* ---------- welke spellen mag deze klas zien ---------- */
+  var KLASSPELLEN = [
+    ['race', 'Vragenrace'], ['toren', 'Torenverdediging'], ['zwaard', 'Zwaardvechter'], ['dag', 'Dagelijkse uitdaging'],
+    ['fouten', 'Oefen je fouten'], ['rekenen', 'Rekenrace'], ['werkwoorden', 'Werkwoordrace'], ['irregular', 'Irregular verbs'],
+    ['zinsbouw', 'Zinsbouw'], ['tekstdetective', 'De tekstdetective'], ['bronnenlab', 'Bronnenlab'], ['tijdvakken', 'Tijdvakken sorteren'],
+    ['vlaggen', 'Vlaggen'], ['landenvormen', 'Landenvormen'], ['topografie', 'Topografie'], ['lichaam', 'Het lichaam'],
+    ['uitverkoop', 'De uitverkoop'], ['breukenbakker', 'De breukenbakker'], ['balans', 'De balans'], ['meetlat', 'Langs de meetlat'],
+    ['jagers', 'Blijven of doorlopen'], ['feodalisme', 'Feodalisme'], ['leenmannen', 'Verdeel je rijk'], ['handel', 'De handelsroute'],
+    ['stadsontwerp', 'Ontwerp je stad'], ['polis', 'Wie beslist'], ['vergadering', 'De vergadering'], ['vergaderklas', 'De vergadering van de klas'],
+    ['standen', 'Stem per stand'], ['berlijn', 'Conferentie van Berlijn'], ['crisis', 'De crisis'], ['rol', 'Jouw rol'],
+    ['klasquiz', 'Klasquiz'], ['tekenslag', 'Tekenslag'], ['strijd', 'Klasstrijd']
+  ];
+  var keuzeSpellen = [], lesmodus = false, keuzeVoor = null;   /* keuzeVoor: van welke klas de keuze in het scherm staat */
+  function tekenKeuze(){
+    var doel = $('spelKeuze'); if (!doel) return;
+    doel.innerHTML = KLASSPELLEN.map(function(s){
+      return '<button type="button" data-s="' + s[0] + '"' + (keuzeSpellen.indexOf(s[0]) >= 0 ? ' class="aan"' : '') + '>' + schoon(s[1]) + '</button>';
+    }).join('');
+    Array.prototype.forEach.call(doel.querySelectorAll('[data-s]'), function(b){
+      b.addEventListener('click', function(){
+        var id = b.getAttribute('data-s'), i = keuzeSpellen.indexOf(id);
+        if (i >= 0) keuzeSpellen.splice(i, 1); else keuzeSpellen.push(id);
+        tekenKeuze(); bewaarInstelling();
+      });
+    });
+    $('lesVink').checked = lesmodus;
+    $('keuzeStatus').textContent = keuzeSpellen.length
+      ? keuzeSpellen.length + (keuzeSpellen.length === 1 ? ' spel gekozen.' : ' spellen gekozen.') + (lesmodus ? ' De lesmodus staat aan: ze zien alleen deze.' : ' Ze staan bovenaan; de rest kan de leerling uitklappen.')
+      : 'Niets gekozen, dus je klas ziet alle spellen.';
+  }
+  function bewaarInstelling(){
+    if (!huidig || DEMO) return;
+    fetch('/api/klas/' + huidig.code + '/instelling', { method:'POST', headers:{ 'content-type':'application/json' },
+      body:JSON.stringify({ sleutel:huidig.sleutel, spellen:keuzeSpellen, lesmodus:lesmodus }) })
+      .then(function(r){ return r.json(); })
+      .then(function(j){ if (j && j.fout) $('keuzeStatus').textContent = j.fout; })
+      .catch(function(){ $('keuzeStatus').textContent = 'Opslaan lukte niet: geen verbinding.'; });
+  }
+  $('lesVink').addEventListener('change', function(){ lesmodus = $('lesVink').checked; tekenKeuze(); bewaarInstelling(); });
 
   /* ---------- de opdracht ---------- */
   var OP_SPEL = { race:'Vragenrace', toren:'Torenverdediging', zwaard:'Zwaardvechter' };
@@ -575,12 +676,13 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     document.body.appendChild(a); a.click(); a.remove();
   });
 
+  tekenWie(); tekenKeuze();
   tekenKlassen();
   var eerst = klassen[0];
   if (eerst) kies(eerst);
   if (DEMO){
     /* de demoklas: alle knoppen die iets veranderen doen niets */
-    ['maakBtn', 'vergeet', 'opheffen', 'opZet'].forEach(function(id){ var b = $(id); if (b){ b.disabled = true; b.title = 'Niet in de demo'; } });
+    ['maakBtn', 'vergeet', 'opheffen', 'opZet', 'lesVink'].forEach(function(id){ var b = $(id); if (b){ b.disabled = true; b.title = 'Niet in de demo'; } });
     var demoTip = document.createElement('p'); demoTip.className = 'tip demo'; demoTip.innerHTML = '<b>Demoklas.</b> Verzonnen leerlingen, om te zien hoe het eruitziet. <a href="klas.html">Maak je eigen klascode</a> om het echt te gebruiken.';
     document.querySelector('main h1').insertAdjacentElement('afterend', demoTip);
     kies({ code:'DEMO', sleutel:'demo', naam:'Demoklas 2H', gemaakt: Date.now() });

@@ -108,6 +108,8 @@ function koekje(naam, waarde, url, seconden, pad){
 }
 function weg(naam, url, pad){ return koekje(naam, "", url, 0, pad); }
 
+/* is er iemand ingelogd? Alleen waar of niet waar; index.js gebruikt dit voor het maken van een klascode. */
+export async function ingelogd(req, env){ if (!mogelijk(env)) return false; const s = await sessie(env, req); return !!s; }
 export function mogelijk(env){ return !!(env.MS_CLIENT_ID && env.MS_CLIENT_SECRET && env.SESSIE_GEHEIM); }
 function basis(env){ return String(env.MS_AANMELDBASIS || "https://login.microsoftonline.com").replace(/\/+$/, ""); }
 function huurder(env){ return String(env.MS_TENANT || "common"); }

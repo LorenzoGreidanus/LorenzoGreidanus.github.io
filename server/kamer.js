@@ -129,6 +129,7 @@ export class Kamer extends DurableObject {
       if (url.pathname === "/opheffen" && req.method === "POST") return await this.opheffen(await req.json());
       if (url.pathname === "/resultaten") return await this.resultaten(url.searchParams.get("sleutel"));
       if (url.pathname === "/opdracht" && req.method === "POST") return await this.opdracht(await req.json());
+      if (url.pathname === "/instelling" && req.method === "POST") return await this.instelling(await req.json());
       if (url.pathname === "/mijn") return this.mijn(url.searchParams.get("sid"));
       if (req.headers.get("Upgrade") === "websocket") return this.verbind(url);
       return json({ fout: "onbekend" }, 404);
@@ -873,14 +874,25 @@ export class Kamer extends DurableObject {
     await this.bewaar();
     return json({ ok: true, opdracht: this.stand.opdracht });
   }
+  /* De instellingen van een klas: welke spellen de leerlingen zien, en of de lesmodus aanstaat.
+     Leeg lijstje betekent: alles mag. In de lesmodus ziet een gekoppelde leerling alleen die spellen. */
+  async instelling(inz){
+    if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
+    if (!inz || inz.sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
+    if (Array.isArray(inz.spellen)) this.stand.spellen = inz.spellen.slice(0, 60).map(x => schoon(x, 30).replace(/[^a-z0-9-]/g, "")).filter(Boolean);
+    if (typeof inz.lesmodus === "boolean") this.stand.lesmodus = inz.lesmodus;
+    await this.bewaar();
+    return json({ ok: true, spellen: this.stand.spellen || [], lesmodus: !!this.stand.lesmodus });
+  }
   /* heeft een leerling (op kenmerk) de opdracht gehaald? Zonder sleutel: alleen zijn eigen stand. */
   mijn(sid){
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
     const o = this.stand.opdracht;
-    if (!o) return json({ opdracht: null });
+    const opzet = { spellen: this.stand.spellen || [], lesmodus: !!this.stand.lesmodus, naam: this.stand.naam };
+    if (!o) return json(Object.assign({ opdracht: null }, opzet));
     const s = schoon(sid, 40).slice(0, 12);
     const mijn = this.stand.resultaten.filter(r => r.sid === s);
-    return json({ opdracht: o, gehaald: mijn.some(r => haaltOpdracht(r, o)), beste: mijn.reduce((a, r) => Math.max(a, maatVoor(r, o)), 0) });
+    return json(Object.assign({ opdracht: o, gehaald: mijn.some(r => haaltOpdracht(r, o)), beste: mijn.reduce((a, r) => Math.max(a, maatVoor(r, o)), 0) }, opzet));
   }
   /* de docent heft de klascode op: alles weg, en de leerlingen merken het bij hun volgende melding */
   async opheffen(inz){
@@ -896,6 +908,7 @@ export class Kamer extends DurableObject {
     /* kijken telt ook als gebruik, hoogstens een keer per uur bijgeschreven */
     if (Date.now() - this.stand.laatst > 3600000){ await this.zetAlarm({ wat: "opruimen" }, KLAS_SLAAPT); await this.bewaar(); }
     return json({ code: this.stand.code, naam: this.stand.naam, gemaakt: this.stand.gemaakt, opdracht: this.stand.opdracht || null,
+                  spellen: this.stand.spellen || [], lesmodus: !!this.stand.lesmodus,
                   resultaten: this.stand.resultaten.map(x => ({ naam: x.naam, av: x.av || "", spel: x.spel, ronde: x.ronde, punten: x.punten, niveau: x.niveau, vak: x.vak, od: x.od, t: x.t })) });
   }
 

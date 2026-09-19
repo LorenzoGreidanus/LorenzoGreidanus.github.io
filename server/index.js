@@ -17,7 +17,7 @@ export { Sets } from "./sets.js";
 export { Beheer } from "./beheer.js";
 export { Profiel } from "./profiel.js";
 export { Account } from "./account.js";
-import { behandel as accountBehandel } from "./account.js";
+import { behandel as accountBehandel, ingelogd as accountIngelogd, mogelijk as accountMogelijk } from "./account.js";
 const KLASSEMENTEN = { toren: true, zwaard: true, dag: true };   /* dag: per datum een lijst, dag-2026-09-19 */
 
 /* Een browser stuurt bij elk POST en bij elke WebSocket mee vanaf welke site
@@ -71,6 +71,10 @@ export default {
       return new Response(null, { status: 308, headers: { location: url.protocol + "//" + url.hostname.slice(4) + url.pathname + url.search, "cache-control": "public, max-age=86400" } });
     }
 
+    /* korte weg voor docenten: meneergreidanus.nl/docent */
+    if (p === "/docent" || p === "/docenten"){
+      return new Response(null, { status: 302, headers: { location: "/leermiddelen/klas.html", "cache-control": "no-store" } });
+    }
     if (p === "/q" || p.startsWith("/q/")){
       const code = p.slice(3).toUpperCase().replace(/[^A-Z]/g, "");
       /* met een code kijken we welk spel erbij hoort: de Klasquiz, de Klasstrijd of een rollenspel */
@@ -187,6 +191,10 @@ export default {
       let opzet;
       try { opzet = await req.json(); } catch (e){ return json({ fout: "geen geldige opzet" }, 400); }
       if (!opzet || typeof opzet !== "object") return json({ fout: "geen geldige opzet" }, 400);
+      /* Een klascode hoort bij een docent. Kan er ingelogd worden op deze site, dan kan dat alleen ingelogd:
+         zo blijft een klas van jou, raak je hem niet kwijt met je browsergegevens, en maakt niet elke leerling
+         zijn eigen klas. De andere kamers (klasquiz, klasstrijd, tekenslag) blijven vrij. */
+      if (opzet.spel === "klas" && accountMogelijk(env) && !await accountIngelogd(req, env)) return json({ fout: "log eerst in met Microsoft; dan blijft je klas van jou en staat hij op al je apparaten" }, 401);
       /* een vrije code zoeken: bijna altijd de eerste */
       for (let poging = 0; poging < 8; poging++){
         const code = nieuweCode();
@@ -201,7 +209,7 @@ export default {
     }
 
     /* het klasoverzicht: leerlingen melden hun uitslag, de docent haalt ze op met de sleutel */
-    const kl = p.match(/^\/api\/klas\/([A-Za-z]{4})(\/meld|\/melden|\/opheffen|\/opdracht|\/mijn)?\/?$/);
+    const kl = p.match(/^\/api\/klas\/([A-Za-z]{4})(\/meld|\/melden|\/opheffen|\/opdracht|\/mijn|\/instelling)?\/?$/);
     if (kl){
       const stub = env.KAMERS.get(env.KAMERS.idFromName(kl[1].toUpperCase()));
       /* de leerling: heb ik de opdracht gehaald? */
