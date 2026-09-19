@@ -44,6 +44,17 @@ header{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--room)
   font-weight:600;font-size:.82rem;padding:8px 14px;min-height:38px;display:inline-flex;align-items:center;gap:6px}
 h1{font-size:clamp(1.8rem,5vw,2.6rem);line-height:1.1;margin:24px 0 6px}
 .hand{font-family:'Caveat',cursive;font-weight:600;color:var(--hand);font-size:1.5rem}
+/* jij bovenaan: je eigen gezichtje, met een stemming die past bij je reeks */
+.jij{display:flex;align-items:center;gap:16px;margin-top:22px}
+.jij .gezicht svg{display:block;width:76px;height:76px}
+.jij h1{margin:0}
+.jij .hand{margin:0}
+@media(max-width:520px){ .jij .gezicht svg{width:58px;height:58px} }
+/* de toren groeit mee met wat je speelde */
+.toren{display:flex;align-items:flex-end;gap:14px;margin-top:6px}
+.toren svg{flex:none}
+.toren p{margin:0;color:var(--muted);font-size:.9rem}
+.vlam-groot{font-size:1.9rem}
 .lead{color:var(--muted);max-width:60ch;margin:0 0 20px}
 .kaart{background:var(--kaart);border:1px solid var(--rand);border-radius:20px;padding:18px;box-shadow:var(--schaduw);margin-bottom:14px}
 .kaart h2{margin:0 0 4px;font-size:1.1rem}
@@ -87,8 +98,13 @@ footer{border-top:1px solid var(--rand);margin-top:26px;padding:18px 0 40px;colo
 </header>
 
 <main class="wrap">
-  <p class="hand">alles wat je hebt opgebouwd</p>
-  <h1>Mijn voortgang</h1>
+  <div class="jij">
+    <div class="gezicht" id="mijnGezicht" aria-hidden="true"></div>
+    <div>
+      <p class="hand" id="groet">alles wat je hebt opgebouwd</p>
+      <h1>Mijn voortgang</h1>
+    </div>
+  </div>
   <p class="lead">Dit staat op dit apparaat. Speel je op een andere laptop, dan begin je daar opnieuw, tenzij je inlogt.</p>
 
   <div id="inlogvak"></div>
@@ -218,7 +234,37 @@ footer{border-top:1px solid var(--rand);margin-top:26px;padding:18px 0 40px;colo
     }).catch(function(){ vak.innerHTML = ''; });
   }
 
-  cijfers(); scores(); vakken(); inlogvak();
+  /* je eigen gezichtje, en hoe het kijkt: drie dagen op rij verdient een blije kop */
+  function gezicht(){
+    var doel = $('mijnGezicht'); if (!doel || !window.AVATAR || !window.PROFIEL) return;
+    var dagen = jsn('lg-dagen', { reeks:0 }).reeks | 0;
+    var naam = (jsn('lg-klas', {}) || {}).naam || 'jij';
+    doel.innerHTML = AVATAR.svg(naam, 76, PROFIEL.avatar(), { stemming: dagen >= 3 ? 'blij' : '' });
+    var groet = $('groet');
+    if (groet) groet.textContent = dagen >= 5 ? 'kijk eens wat je al hebt staan' : dagen >= 2 ? 'je bent lekker bezig' : 'alles wat je hebt opgebouwd';
+  }
+  /* een toren die meegroeit: elke vijf gespeelde spellen een verdieping erbij */
+  function torentje(){
+    var doel = document.createElement('div');
+    var potjes = 0;
+    try { for (var i = 0; i < localStorage.length; i++) if (localStorage.key(i).indexOf('lg-beste-') === 0) potjes++; } catch (e){}
+    var lagen = Math.max(1, Math.min(6, Math.ceil(potjes / 3)));
+    var h = 26 + lagen * 18, b = 54;
+    var s = '<svg viewBox="0 0 ' + b + ' ' + (h + 22) + '" width="' + b + '" height="' + (h + 22) + '" aria-hidden="true">';
+    for (var k = 0; k < lagen; k++){
+      s += '<rect x="9" y="' + (h - (k + 1) * 18 + 22) + '" width="36" height="17" rx="3" fill="var(--kaart2)" stroke="var(--rand)"/>';
+    }
+    s += '<path d="M9 ' + (h + 22) + 'h36v-4H9z" fill="var(--ink)" opacity=".18"/>';
+    s += '<path d="M26 ' + (h - lagen * 18 + 22) + 'v-16" stroke="var(--ink)" stroke-width="2.5"/>';
+    s += '<path d="M27 ' + (h - lagen * 18 + 6) + 'l16 6-16 6z" fill="var(--crab)"/></svg>';
+    doel.className = 'toren';
+    doel.innerHTML = s + '<p>' + (potjes
+      ? 'Je toren groeit met elk spel dat je speelt. Nu ' + lagen + (lagen === 1 ? ' verdieping' : ' verdiepingen') + '.'
+      : 'Je eerste steen ligt klaar. Speel een spel, dan begint je toren te groeien.') + '</p>';
+    var kaart = $('cijfers').parentElement;
+    kaart.appendChild(doel);
+  }
+  cijfers(); scores(); vakken(); inlogvak(); gezicht(); torentje();
   /* Wist de site nog niet of je was ingelogd (wifi die even hapert), dan kijken
      we het even later nog een keer na; anders mist de leerling de uitnodiging. */
   setTimeout(function(){ if (!$('inlogvak').innerHTML) inlogvak(); }, 4000);
