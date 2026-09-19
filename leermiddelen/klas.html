@@ -150,6 +150,14 @@ td.getal{font-variant-numeric:tabular-nums;text-align:right}
   font-size:.88rem;font-weight:500}
 .spelkeuze .waar button.aan{background:var(--ocean);color:#fff;border-color:var(--ocean)}
 .lesmodus{display:flex;align-items:flex-start;gap:9px;margin-top:12px;font-size:.92rem}
+/* wie is er gekoppeld: een rijtje naamplaatjes, met een stip bij wie nog niets deed */
+.gekoppeld{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.gekoppeld .wie{display:inline-flex;align-items:center;gap:7px;background:var(--kaart2);border:1.5px solid var(--rand);
+  border-radius:999px;padding:5px 12px 5px 6px;font-size:.9rem}
+.gekoppeld .wie svg{width:26px;height:26px;flex:none}
+.gekoppeld .wie.stil{opacity:.75;border-style:dashed}
+.gekoppeld .wie em{font-style:normal;color:var(--muted);font-size:.8rem}
+.gekoppeld .leeg{color:var(--muted);font-size:.92rem}
 .lesmodus input{margin-top:4px;width:17px;height:17px}
 .lesmodus span{color:var(--muted)}
 .tip.demo{margin-top:8px;background:#FFE168;color:#14224C;border-radius:12px;padding:8px 12px;display:inline-block}
@@ -228,6 +236,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
   :root.themawisselt body{transition:none}
 }
 </style>
+<script src="/vangnet.js" defer></script>
 </head>
 <body>
 <header class="wrap">
@@ -322,6 +331,11 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       <label class="lesmodus"><input type="checkbox" id="lesVink"> <span><b>Lesmodus aan</b> — tijdens jouw les zien ze alleen de gekozen spellen en de opdracht. Zet hem na de les weer uit.</span></label>
       <p class="tip" id="keuzeStatus"></p>
     </div>
+    <div class="stap" id="koppelVak">
+      <b>Wie is er gekoppeld?</b>
+      <p class="tip">Iedereen die jouw klascode heeft ingevuld staat hier, ook als hij nog niets gespeeld heeft. Handig aan het begin van de les: zo zie je in een oogopslag wie er nog niet binnen is.</p>
+      <div class="gekoppeld" id="gekoppeld"></div>
+    </div>
     <div class="stap"><b>Spel</b><div class="chips" id="spelChips"></div></div>
     <div class="stap" id="odStap">
       <b>Per onderdeel</b>
@@ -391,7 +405,12 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
         uit.push({ naam:n, av:av, spel:sp, ronde: sp === 'race' ? 6 + Math.floor(r() * 14) : sp === 'toren' ? 8 + Math.floor(r() * 30) : sp === 'zwaard' ? 4 + Math.floor(r() * 16) : 5 + Math.floor(r() * 10), punten: 40 + Math.floor(r() * 400), niveau: ['bb', 'kgt', 'havo'][i % 3], vak: sp === 'vlaggen' ? 'aard' : 'ges', od: od, t: t });
       }
     });
-    return { code:'DEMO', naam:'Demoklas 2H', gemaakt: nu - 20 * 86400000, resultaten: uit, spellen:['race', 'toren', 'bronnenlab'], lesmodus:false,
+    var wie = {};
+    uit.forEach(function(r){ wie[r.naam] = r.av || ''; });
+    var gekoppeld = Object.keys(wie).map(function(n){ return { naam:n, av:wie[n], sinds: nu - 5 * 86400000, gespeeld:true }; })
+      .concat([{ naam:'Younes', av:'', sinds: nu - 3600000, gespeeld:false }, { naam:'Sanne', av:'', sinds: nu - 1800000, gespeeld:false }])
+      .sort(function(a, b){ return a.naam.localeCompare(b.naam, 'nl'); });
+    return { code:'DEMO', naam:'Demoklas 2H', gemaakt: nu - 20 * 86400000, resultaten: uit, leerlingen: gekoppeld, spellen:['race', 'toren', 'bronnenlab'], lesmodus:false,
              opdracht: { spel:'race', vak:'ges', deel:'tv5', deelNaam:'5 ontdekkers en hervormers', min:4, tot: nu + 4 * 86400000, tekst:'Voor de toets van vrijdag', sinds: nu - 5 * 86400000 } };
   }
   var klassen = [], huidig = null, spelFilter = '', vakFilter = '', data = null, klok = null;
@@ -434,7 +453,27 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       })
       .catch(function(){ $('ovUit').textContent = 'Geen verbinding met de server.'; });
   }
+  /* de gekoppelde leerlingen, met hun gezichtje; wie nog niets speelde staat
+     er gestippeld bij */
+  function tekenGekoppeld(){
+    var vak = $('koppelVak'), doel = $('gekoppeld');
+    if (!vak || !doel) return;
+    var l = (data && data.leerlingen) || [];
+    if (!l.length){
+      doel.innerHTML = '<p class="leeg">Nog niemand gekoppeld. Laat je klas de code invullen in de leeromgeving, bij het rondje met het gezichtje rechtsboven.</p>';
+      return;
+    }
+    var nog = l.filter(function(x){ return !x.gespeeld; }).length;
+    doel.innerHTML = l.map(function(x){
+      var gez = window.AVATAR ? AVATAR.svg(x.naam, 26, x.av || '') : '';
+      return '<span class="wie' + (x.gespeeld ? '' : ' stil') + '">' + gez + '<span>' + schoon(x.naam) +
+             (x.gespeeld ? '' : ' <em>nog niets gespeeld</em>') + '</span></span>';
+    }).join('') +
+      '<p class="leeg" style="flex:1 1 100%;margin:4px 0 0">' + l.length + ' gekoppeld' +
+      (nog ? ', waarvan ' + nog + ' nog niets speelde' : ', iedereen heeft al iets gespeeld') + '.</p>';
+  }
   function teken(){
+    tekenGekoppeld();
     var lijst = data ? data.resultaten.slice() : [];
     var spellen = {}; lijst.forEach(function(r){ spellen[r.spel] = true; });
     $('spelChips').innerHTML = [{ id:'', naam:'alle spellen' }].concat(Object.keys(spellen).map(function(s){ return { id:s, naam:SPELLEN[s] || s }; })).map(function(s){

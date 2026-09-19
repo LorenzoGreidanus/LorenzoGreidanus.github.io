@@ -19,7 +19,19 @@ window.KLAS = (function(){
     var k = { code:String(code || '').toUpperCase().replace(/[^A-Z]/g, ''), naam:String(naam || '').trim().slice(0, 16), sinds:Date.now() };
     try { localStorage.setItem(SLEUTEL, JSON.stringify(k)); } catch (e){}
     if (window.PROFIEL) PROFIEL.sync();
+    /* meteen even zwaaien, zodat de docent aan het begin van de les ziet dat
+       je binnen bent, ook al heb je nog niets gespeeld */
+    zwaai(k);
     return k;
+  }
+  /* zeggen dat je er bent; lukt het niet, dan geeft het niet: bij het eerste
+     potje dat je meldt komt je naam er alsnog bij */
+  function zwaai(k){
+    if (!k || !k.code || typeof fetch !== 'function') return;
+    try {
+      fetch('/api/klas/' + k.code + '/hoi', { method:'POST', headers:{ 'content-type':'application/json' },
+        body:JSON.stringify({ sid:sid(), naam:k.naam, av: window.PROFIEL ? PROFIEL.avatar() : '' }) }).catch(function(){});
+    } catch (e){}
   }
   function wis(){ try { localStorage.removeItem(SLEUTEL); } catch (e){} if (window.PROFIEL && PROFIEL.klasWeg) PROFIEL.klasWeg(); }
   /* alleen van dit apparaat, het profiel houdt de klas (bij uitloggen op een gedeelde laptop) */
@@ -110,5 +122,5 @@ window.KLAS = (function(){
   }
   /* bij het openen van een pagina eerst kijken of er nog iets klaarstaat */
   if (typeof fetch === 'function') setTimeout(wachtLegen, 2000);
-  return { lees:lees, zet:zet, wis:wis, wisLokaal:wisLokaal, meld:meld, sid:sid, controleer:controleer, tel:tel, wachtLegen:wachtLegen };
+  return { lees:lees, zet:zet, wis:wis, wisLokaal:wisLokaal, meld:meld, sid:sid, controleer:controleer, tel:tel, wachtLegen:wachtLegen, zwaai:zwaai };
 })();

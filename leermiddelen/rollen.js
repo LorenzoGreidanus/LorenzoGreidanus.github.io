@@ -36,12 +36,40 @@ window.ROLSPEL = (function(){
   }
   function host(o){
     var ws = null, dicht = false, pogingen = 0, lijst = [], n = 0, wachtrij = [];
+    var MAX_POGINGEN = 8, balk = null;
+    /* Een strook onderaan het bord: eerst dat we opnieuw proberen, daarna dat
+       het niet meer lukt. Leeg haalt hem weer weg. */
+    function balkje(wat){
+      if (!wat){ if (balk && balk.parentNode) balk.parentNode.removeChild(balk); balk = null; return; }
+      if (!document.body) return;
+      if (!balk){
+        balk = document.createElement('div');
+        balk.setAttribute('role', 'status');
+        balk.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;z-index:9998;max-width:560px;margin-inline:auto;' +
+          'border-radius:16px;padding:12px 14px;font:500 .95rem Poppins,system-ui,sans-serif;line-height:1.4;' +
+          'box-shadow:0 14px 34px rgba(0,0,0,.3);display:flex;gap:10px;align-items:center';
+        document.body.appendChild(balk);
+      }
+      if (wat === 'wacht'){
+        balk.style.background = '#EA9836'; balk.style.color = '#14224C';
+        balk.textContent = 'De verbinding met de kamer hapert. Ik probeer het opnieuw\u2026';
+      } else {
+        balk.style.background = '#14224C'; balk.style.color = '#F3EFE9';
+        balk.textContent = 'De verbinding met de kamer is weg. Open de kamer opnieuw; je leerlingen krijgen dan een nieuwe code.';
+        var knop = document.createElement('button');
+        knop.type = 'button'; knop.textContent = 'Opnieuw openen';
+        knop.style.cssText = 'margin-left:auto;flex:none;border:none;border-radius:999px;padding:8px 14px;' +
+          'font:600 .85rem Poppins,system-ui,sans-serif;background:#F3EFE9;color:#14224C;cursor:pointer;min-height:38px';
+        knop.addEventListener('click', function(){ location.reload(); });
+        balk.appendChild(knop);
+      }
+    }
     function open(){
       if (dicht) return;
       var proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
       var s = new WebSocket(proto + location.host + '/ws/' + o.code + '?rol=host&sleutel=' + encodeURIComponent(o.sleutel));
       ws = s;
-      s.onopen = function(){ pogingen = 0; wachtrij.splice(0).forEach(function(m){ stuur(m); }); if (o.onOpen) o.onOpen(); };
+      s.onopen = function(){ if (pogingen){ balkje(''); if (o.onWacht) o.onWacht(0); } pogingen = 0; wachtrij.splice(0).forEach(function(m){ stuur(m); }); if (o.onOpen) o.onOpen(); };
       s.onmessage = function(e){
         var m; try { m = JSON.parse(e.data); } catch (x){ return; }
         if (m.t === 'welkom' || m.t === 'spelers'){ lijst = m.spelers || []; if (o.onSpelers) o.onSpelers(lijst); return; }
@@ -53,6 +81,13 @@ window.ROLSPEL = (function(){
         if (dicht) return;
         if (e.code === 1000 && /gesloten|afgelopen/.test(e.reason || '')){ dicht = true; if (o.onDicht) o.onDicht(e.reason); return; }
         pogingen++;
+        /* Het bord bleef vroeger eindeloos opnieuw verbinden: op het scherm
+           stond dan nog gewoon de lobby met de code, terwijl er niets meer
+           luisterde. Na acht pogingen (ruim een minuut) geven we het op en
+           zeggen we dat, zodat de docent de kamer opnieuw kan openen. */
+        balkje(pogingen > MAX_POGINGEN ? 'weg' : 'wacht');
+        if (o.onWacht) o.onWacht(pogingen);
+        if (pogingen > MAX_POGINGEN){ dicht = true; if (o.onDicht) o.onDicht('de verbinding met de kamer is weg'); return; }
         setTimeout(open, Math.min(8000, 800 * pogingen));
       };
     }

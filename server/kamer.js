@@ -133,6 +133,7 @@ export class Kamer extends DurableObject {
       if (url.pathname === "/resultaten") return await this.resultaten(url.searchParams.get("sleutel"));
       if (url.pathname === "/opdracht" && req.method === "POST") return await this.opdracht(await req.json());
       if (url.pathname === "/instelling" && req.method === "POST") return await this.instelling(await req.json());
+      if (url.pathname === "/hoi" && req.method === "POST") return await this.hoi(await req.json());
       if (url.pathname === "/mijn") return this.mijn(url.searchParams.get("sid"));
       if (req.headers.get("Upgrade") === "websocket") return this.verbind(url);
       return json({ fout: "onbekend" }, 404);
@@ -826,15 +827,37 @@ export class Kamer extends DurableObject {
     const spel = String(inz.spel || "");
     if (!SPELLEN_STRIJD[spel] && !KLAS_SPELLEN[spel]) return json({ fout: "onbekend spel" }, 400);
     const kort = sid.slice(0, 12);
-    if (!this.stand.resultaten.some(r => r.sid === kort)){
+    /* wie er al in zit mag altijd blijven melden; alleen een nieuwe erbij kan geweigerd worden */
+    const bekend = (this.stand.leerlingen && this.stand.leerlingen[kort]) || this.stand.resultaten.some(r => r.sid === kort);
+    if (!bekend){
       const wie = new Set(this.stand.resultaten.map(r => r.sid));
+      Object.keys(this.stand.leerlingen || {}).forEach(x => wie.add(x));
       if (wie.size >= KLAS_LEERLINGEN) return json({ fout: "deze klas zit vol" }, 429);
     }
+    this.stand.leerlingen = this.stand.leerlingen || {};
+    if (!this.stand.leerlingen[kort]) this.stand.leerlingen[kort] = { naam: nette(inz.naam, "Leerling"), av: schoonAv(inz.av), sinds: Date.now(), t: Date.now() };
+    else this.stand.leerlingen[kort].t = Date.now();
     this.voegToe({ sid: kort, naam: nette(inz.naam, "Leerling"), av: schoonAv(inz.av), spel, ronde: getal(inz.ronde, 250), punten: getal(inz.punten, 5000),
                    niveau: schoon(inz.niveau, 10), vak: schoon(inz.vak, 10), od: schoonOd(inz.od), t: Date.now() });
     await this.zetAlarm({ wat: "opruimen" }, KLAS_SLAAPT);
     await this.bewaar();
     return json({ ok: true, n: this.stand.resultaten.length });
+  }
+  /* Een leerling meldt zich zodra hij de klascode invult, nog voor hij iets
+     speelt. Zo ziet de docent aan het begin van de les wie er binnen is. */
+  async hoi(inz){
+    if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
+    if (Date.now() - this.stand.laatst > KLAS_SLAAPT) return json({ fout: "deze klascode is opgeheven" }, 410);
+    const sid = schoon(inz && inz.sid, 40);
+    if (!/^[A-Za-z0-9_-]{8,40}$/.test(sid)) return json({ fout: "geen geldig kenmerk" }, 400);
+    const kort = sid.slice(0, 12);
+    this.stand.leerlingen = this.stand.leerlingen || {};
+    if (!this.stand.leerlingen[kort] && Object.keys(this.stand.leerlingen).length >= KLAS_LEERLINGEN) return json({ fout: "deze klas zit vol" }, 429);
+    const was = this.stand.leerlingen[kort];
+    this.stand.leerlingen[kort] = { naam: nette(inz.naam, "Leerling"), av: schoonAv(inz.av), sinds: was && was.sinds || Date.now(), t: Date.now() };
+    await this.zetAlarm({ wat: "opruimen" }, KLAS_SLAAPT);
+    await this.bewaar();
+    return json({ ok: true, n: Object.keys(this.stand.leerlingen).length });
   }
   /* per leerling per spel hoogstens dertig potjes, en een plafond voor de hele klas */
   voegToe(r){
@@ -919,9 +942,18 @@ export class Kamer extends DurableObject {
     if (Date.now() - this.stand.laatst > 3600000){ await this.zetAlarm({ wat: "opruimen" }, KLAS_SLAAPT); await this.bewaar(); }
     return json({ code: this.stand.code, naam: this.stand.naam, gemaakt: this.stand.gemaakt, opdracht: this.stand.opdracht || null,
                   spellen: this.stand.spellen || [], lesmodus: !!this.stand.lesmodus,
+                  leerlingen: this.gekoppeld(),
                   resultaten: this.stand.resultaten.map(x => ({ naam: x.naam, av: x.av || "", spel: x.spel, ronde: x.ronde, punten: x.punten, niveau: x.niveau, vak: x.vak, od: x.od, t: x.t })) });
   }
 
+  /* Wie is er gekoppeld, en heeft die al iets gespeeld? Het kenmerk zelf gaat
+     niet mee naar buiten; de docent heeft genoeg aan de naam en het vlaggetje. */
+  gekoppeld(){
+    const gespeeld = new Set((this.stand.resultaten || []).map(r => r.sid));
+    const l = this.stand.leerlingen || {};
+    return Object.keys(l).map(s => ({ naam: l[s].naam, av: l[s].av || "", sinds: l[s].sinds, gespeeld: gespeeld.has(s) }))
+      .sort((a, b) => a.naam.localeCompare(b.naam, "nl"));
+  }
   aanwezig(sid){ return this.ctx.getWebSockets(sid).length > 0; }
   overzicht(){
     const st = this.stand, basis = { code: st.code, spel: st.spel, vak: st.vak, niveau: st.niveau, deel: st.deel || "", fase: st.fase };
