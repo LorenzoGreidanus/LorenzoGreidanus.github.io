@@ -123,6 +123,19 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
   .hud{flex:1 1 100%}
   .dashknop{flex:1 1 0;min-width:0;padding:10px 8px;white-space:normal}
 }
+/* Op een telefoon vulden de meters het halve scherm en bleef er voor de arena
+   een strookje over. Ze mogen klein: het getal en de naam naast elkaar op een
+   regel. Alleen het leven houdt zijn balk, want daar gaat het om. */
+@media(max-width:620px){
+  .hud{gap:5px}
+  .meter{display:flex;align-items:baseline;gap:6px;min-width:0;padding:5px 9px;border-radius:11px}
+  .meter i{font-size:.6rem}
+  .meter b{font-size:.98rem}
+  .meter.leven{display:block;flex:1 1 100%;min-width:0;padding:6px 11px}
+  .meter.leven b{font-size:1.05rem}
+  .dashknop{padding:9px 6px;font-size:.78rem}
+  .dashknop small{font-size:.62rem}
+}
 .meter{background:#fff;border:1px solid rgba(20,34,76,.09);border-radius:14px;padding:7px 13px;min-width:88px}
 .meter i{display:block;font-style:normal;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
 .meter b{font-size:1.15rem;font-variant-numeric:tabular-nums}
@@ -147,6 +160,10 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 @media(max-width:1000px){.arenatip{height:auto}}
 /* in de uitlegstand staat hier wat de baas doet, dus dan mag het opvallen */
 .arenatip.uitleg{border-color:var(--amber);background:#fff8ec;color:var(--ink);font-weight:500}
+/* dezelfde uitleg in twee smaken: een voor de muis, een voor de vinger */
+.alsvinger{display:none}
+:root.raak .alsmuis{display:none}
+:root.raak .alsvinger{display:inline}
 /* in het donker blijft de rand amber, maar het vlak volgt het thema */
 :root[data-theme="dark"] .arenatip{background:var(--kaart);border-color:rgba(243,239,233,.14);color:var(--ink)}
 :root[data-theme="dark"] .arenatip.uitleg{background:var(--kaart);border-color:var(--amber);color:var(--ink)}
@@ -371,10 +388,10 @@ body.groot .meter b{font-size:1.45rem}
       <div class="rijtje"><button type="button" data-t="vaardig">Alle vaardigheden +1</button><button type="button" data-t="uitrusting">Uitrusting vol</button><button type="button" data-t="stijl">Stijl wisselen</button></div>
       <small>Sluiten: typ het codewoord nog eens. Alleen als je alleen speelt.</small>
     </div>
-    <div class="hudrij"><div class="hud" id="hud"></div><button class="dashknop" type="button" id="wapenBtn">Zwaard<small>dichtbij, hard · Q, E of rechtsklik</small></button><button class="dashknop" type="button" id="dashBtn">Ontwijk<small>spatie of shift</small></button><button class="dashknop hide" type="button" id="blokBtn">Blok<small>houd shift vast</small></button></div>
+    <div class="hudrij"><div class="hud" id="hud"></div><button class="dashknop" type="button" id="wapenBtn">Zwaard<small>dichtbij, hard<span class="alsmuis"> · Q, E of rechtsklik</span></small></button><button class="dashknop" type="button" id="dashBtn">Ontwijk<small><span class="alsmuis">spatie of shift</span><span class="alsvinger">tik hier</span></small></button><button class="dashknop hide" type="button" id="blokBtn">Blok<small>houd shift vast</small></button></div>
     <div class="baasbalk leeg" id="baasbalk"><b>Baas in ronde 5</b><i><span style="width:0"></span></i></div>
     <div class="arenavak" id="arenavak"><svg id="arenagrond" viewBox="0 0 1100 620" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"></svg><svg id="arena" viewBox="0 0 1100 620" xmlns="http://www.w3.org/2000/svg"><defs id="arenavast"></defs><g id="arenalaag"></g></svg></div>
-    <p class="arenatip" id="arenatip">Pijltjes of WASD om te lopen. Je wapen slaat vanzelf; Q, E, Tab of de rechtermuisknop wisselt tussen zwaard en boog.</p>
+    <p class="arenatip" id="arenatip"><span class="alsmuis">Pijltjes of WASD om te lopen. Je wapen slaat vanzelf; Q, E, Tab of de rechtermuisknop wisselt tussen zwaard en boog.</span><span class="alsvinger">Houd je vinger op de arena en sleep waarheen je wilt lopen. Je wapen slaat vanzelf; met de knop Zwaard of Boog wissel je.</span></p>
     <aside class="zij hide" id="zij"></aside>
   </div>
 </section>
@@ -1023,11 +1040,18 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     scrollTo({ top:0, behavior:'auto' });
     if (!loopt){ loopt = true; laatste = performance.now(); laatsteTik = laatste; if (!rafId) rafId = requestAnimationFrame(tik); }
   }
+  /* Wie met zijn vinger speelt heeft geen WASD en geen rechtermuisknop.
+     Eén zin voor de muis, een andere voor de vinger. */
+  function bediening(){
+    return document.documentElement.classList.contains('raak')
+      ? 'Houd je vinger op de arena en sleep waarheen je wilt lopen, je wapen slaat vanzelf, met de knop Zwaard of Boog wissel je.'
+      : 'Pijltjes of WASD om te lopen, je wapen slaat vanzelf, Q (of E, Tab, rechtsklik) wisselt tussen zwaard en boog.';
+  }
   /* een nieuwe ronde: de tekst onder de arena, en de baas die binnenkomt */
   function rondeTekst(n, aantal, bz){
     fase = 'ronde'; co.klaar = false; co.maatKlaar = false;
     document.getElementById('arenatip').textContent = 'Ronde ' + n + ': ' + aantal + ' fouten' +
-      (bz ? ' en ' + bz.naam + ' in het midden. ' + bz.wat + ' Kijk naar de grond en stap eruit' : '') + '. Pijltjes of WASD om te lopen, je wapen slaat vanzelf, Q (of E, Tab, rechtsklik) wisselt tussen zwaard en boog.';
+      (bz ? ' en ' + bz.naam + ' in het midden. ' + bz.wat + ' Kijk naar de grond en stap eruit' : '') + '. ' + bediening();
     /* in de uitlegstand krijgt een baas eerst even alle aandacht */
     if (bz) stilMoment(bz.naam + ' komt binnen. ' + bz.wat + ' Kijk naar de grond: wat daar oplicht gaat zo raken.', { x:ARENA.b / 2, y:ARENA.h / 2, r:bz.r + 30 });
     tekenZij(); tekenHud();
@@ -1122,7 +1146,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (!k) return;
     var boog = sp.wapen === 'boog';
     k.disabled = fase !== 'ronde';
-    var t = (boog ? 'Boog' : 'Zwaard') + '<small>' + (boog ? 'van ver, minder hard' : 'dichtbij, hard') + ' · Q, E of rechtsklik</small>';
+    var t = (boog ? 'Boog' : 'Zwaard') + '<small>' + (boog ? 'van ver, minder hard' : 'dichtbij, hard') + '<span class="alsmuis"> · Q, E of rechtsklik</span></small>';
     if (t !== wapenWas){ k.innerHTML = t; wapenWas = t; }
   }
   document.getElementById('dashBtn').addEventListener('pointerdown', function(e){ e.preventDefault(); ontwijk(); });
@@ -1141,7 +1165,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (!k) return;
     var klaar = sp.dashKlok <= 0;
     k.disabled = !klaar || fase !== 'ronde';
-    var t = klaar ? 'Ontwijk<small>spatie of shift</small>' : 'Ontwijk<small>nog ' + sp.dashKlok.toFixed(1).replace('.', ',') + ' s</small>';
+    var t = klaar ? 'Ontwijk<small><span class="alsmuis">spatie of shift</span><span class="alsvinger">tik hier</span></small>' : 'Ontwijk<small>nog ' + sp.dashKlok.toFixed(1).replace('.', ',') + ' s</small>';
     if (t !== dashWas){ k.innerHTML = t; dashWas = t; }
   }
 

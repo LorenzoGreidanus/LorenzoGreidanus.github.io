@@ -16,6 +16,12 @@
        (klas.js), tenzij klas:false. Zie einde() voor alle velden. */
 window.SPEL = (function(){
   'use strict';
+  /* Een vinger is geen muis en zeker geen toetsenbord. Wie op een
+     aanraakscherm speelt krijgt de klasse 'raak' op <html>, zodat de
+     opmaak en de uitleg kunnen zeggen "tik" waar ze anders "klik" zeggen. */
+  var raak = false;
+  try { raak = (matchMedia && matchMedia('(pointer:coarse)').matches) || navigator.maxTouchPoints > 0; } catch (e) { raak = false; }
+  if (raak) document.documentElement.classList.add('raak');
   var bestand = (location.pathname.split('/').pop() || 'spel').replace(/\.html$/, '') || 'spel';
   var SITE = 'meneergreidanus.nl';
   function $(id){ return document.getElementById(id); }
@@ -245,5 +251,6 @@ window.SPEL = (function(){
   }
   schoonKlassementen();
 
-  return { uitleg:uitleg, einde:einde, bestand:bestand, naamMag:naamMag, schoonKlassementen:schoonKlassementen };
+  return {
+    raak: raak, uitleg:uitleg, einde:einde, bestand:bestand, naamMag:naamMag, schoonKlassementen:schoonKlassementen };
 })();

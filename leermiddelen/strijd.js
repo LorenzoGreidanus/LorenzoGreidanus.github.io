@@ -64,6 +64,8 @@ window.STRIJD = (function(){
     '.duelvak .rij{display:flex;gap:8px;flex-wrap:wrap;align-items:center}' +
     '.duelvak input{flex:1;min-width:110px;border:1.5px solid rgba(20,34,76,.14);border-radius:12px;padding:10px 12px;font:inherit;font-size:.95rem;background:#FBF6F1;color:inherit}' +
     '.duelvak input.code{flex:0 0 7.5em;text-transform:uppercase;letter-spacing:.2em;font-weight:700;text-align:center}' +
+    /* zestien pixels op een telefoon, anders zoomt Safari het scherm in zodra je in het veld tikt */
+    '@media(max-width:640px){.duelvak input{font-size:16px}}' +
     '.duelvak button{border:none;border-radius:12px;padding:10px 14px;font:600 .9rem Poppins,system-ui,sans-serif;background:#204ECF;color:#fff;cursor:pointer;box-shadow:0 4px 0 rgba(20,34,76,.12)}' +
     '.duelvak button.los{background:#fff;color:#14224C;border:1.5px solid rgba(20,34,76,.14);box-shadow:none}' +
     '.duelvak button:disabled{opacity:.5;cursor:default}' +
