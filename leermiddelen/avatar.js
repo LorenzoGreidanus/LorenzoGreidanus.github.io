@@ -34,8 +34,9 @@ window.AVATAR = (function(){
   }
   /* de blob: acht punten rond een cirkel, elk iets naar binnen of buiten, met
      zachte bochten ertussen (Catmull-Rom naar Bezier) */
+  var laatstePunten = [];   /* de bochtpunten van de laatst getekende blob, voor de hoed */
   function blob(r, straal){
-    var n = 8, p = [];
+    var n = 8, p = [], pts = [];
     for (var i = 0; i < n; i++){
       var a = i / n * Math.PI * 2, s = straal * (0.86 + r() * 0.16);
       p.push([Math.cos(a) * s, Math.sin(a) * s]);
@@ -46,8 +47,27 @@ window.AVATAR = (function(){
       var c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
       var c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
       d += ' C' + c1[0].toFixed(1) + ',' + c1[1].toFixed(1) + ' ' + c2[0].toFixed(1) + ',' + c2[1].toFixed(1) + ' ' + p2[0].toFixed(1) + ',' + p2[1].toFixed(1);
+      /* de bocht zelf, in tien stapjes: zo weten we waar de rand van het hoofd echt loopt */
+      for (var t = 0; t < 1; t += 0.1){ var u = 1 - t, a0 = u*u*u, a1 = 3*u*u*t, a2 = 3*u*t*t, a3 = t*t*t;
+        pts.push([a0*p1[0] + a1*c1[0] + a2*c2[0] + a3*p2[0], a0*p1[1] + a1*c1[1] + a2*c2[1] + a3*p2[1]]); }
     }
+    laatstePunten = pts;
     return d + ' Z';
+  }
+  /* waar de hoed moet zitten: de bovenkant van het (gedraaide) hoofd in het midden, en hoe breed het daar is.
+     De hoeden zijn getekend op een hoofd met de top op -46 en een halve breedte van 33 op de hoedrand (y -32). */
+  function hoedPlek(draai){
+    var a = draai * Math.PI / 180, top = 0, breed = 0;
+    laatstePunten.forEach(function(q){
+      var x = q[0] * Math.cos(a) - q[1] * Math.sin(a), y = q[0] * Math.sin(a) + q[1] * Math.cos(a);
+      if (Math.abs(x) < 8 && y < top) top = y;
+    });
+    laatstePunten.forEach(function(q){
+      var x = q[0] * Math.cos(a) - q[1] * Math.sin(a), y = q[0] * Math.sin(a) + q[1] * Math.cos(a);
+      if (y < top + 18 && Math.abs(x) > breed) breed = Math.abs(x);
+    });
+    var s = Math.max(0.85, Math.min(1.12, breed / 33));
+    return 'translate(0,' + (top + 46 - 30).toFixed(1) + ') scale(' + s.toFixed(3) + ') translate(0,30)';
   }
   var KEUZES = { vormen:8, kleuren:KLEUREN.length, ogen:5, monden:4, extras:6 };
   /* achter het gezichtje kan cosmetica staan: h (hoed), r (rand), z (zwaard), uit de winkel */
@@ -60,7 +80,7 @@ window.AVATAR = (function(){
     if (n === 3) return '<path d="M-30,-24 q30,-40 60,0 v6 h-60 z" fill="#8f9db0" stroke="#4f5d73" stroke-width="2"/><path d="M-26,-20 h52" stroke="#4f5d73" stroke-width="3"/><path d="M0,-50 v12" stroke="#F26749" stroke-width="5" stroke-linecap="round"/>';
     if (n === 4) return '<path d="M-36,-30 q36,-14 72,0 q-10,-28 -36,-28 q-26,0 -36,28 z" fill="#14224C"/><path d="M-36,-30 q36,8 72,0" fill="none" stroke="#14224C" stroke-width="5" stroke-linecap="round"/><circle cx="0" cy="-42" r="4.5" fill="#fff"/><circle cx="-1.6" cy="-43" r="1.1" fill="#14224C"/><circle cx="1.6" cy="-43" r="1.1" fill="#14224C"/>';
     if (n === 5) return '<path d="M-22,-30 q-4,-14 4,-22 q2,12 8,16 z M22,-30 q4,-14 -4,-22 q-2,12 -8,16 z" fill="#c0442c" stroke="#8a2416" stroke-width="1.5" stroke-linejoin="round"/>';
-    if (n === 6) return '<ellipse cx="0" cy="-44" rx="20" ry="5" fill="none" stroke="#FFD166" stroke-width="4"/><ellipse cx="0" cy="-44" rx="20" ry="5" fill="none" stroke="#fff" stroke-width="1.5" opacity=".7"/>';
+    if (n === 6) return '<ellipse cx="0" cy="-53" rx="20" ry="5" fill="none" stroke="#FFD166" stroke-width="4"/><ellipse cx="0" cy="-53" rx="20" ry="5" fill="none" stroke="#fff" stroke-width="1.5" opacity=".7"/>';
     if (n === 7) return '<g><circle cx="-22" cy="-30" r="5" fill="#F26749"/><circle cx="-11" cy="-36" r="5" fill="#FFD166"/><circle cx="0" cy="-38" r="5" fill="#F26749"/><circle cx="11" cy="-36" r="5" fill="#FFD166"/><circle cx="22" cy="-30" r="5" fill="#F26749"/><g fill="#fff"><circle cx="-22" cy="-30" r="1.6"/><circle cx="-11" cy="-36" r="1.6"/><circle cx="0" cy="-38" r="1.6"/><circle cx="11" cy="-36" r="1.6"/><circle cx="22" cy="-30" r="1.6"/></g><path d="M-26,-28 q26,-8 52,0" fill="none" stroke="#2f7d52" stroke-width="3"/></g>';
     if (n === 8) return '<path d="M-16,-28 L0,-52 L16,-28 Z" fill="#204ECF"/><path d="M-11,-36 h22 M-6,-44 h12" stroke="#FFD166" stroke-width="3"/><circle cx="0" cy="-52" r="4" fill="#F26749"/>';
     return '';
@@ -103,7 +123,7 @@ window.AVATAR = (function(){
     if (sp) kleur = KLEUREN[sp.k % KLEUREN.length];
     var donker = !!DONKER[kleur], oog = donker ? '#fff' : '#14224C', pupil = '#14224C', mond = donker ? '#14224C' : '#14224C';
     var draai = (r() * 16 - 8).toFixed(1);
-    var s = '<svg class="avatar" viewBox="-50 -50 100 100" width="' + maat + '" height="' + maat + '" aria-hidden="true" focusable="false">';
+    var s = '<svg class="avatar" viewBox="-50 -50 100 100" overflow="visible" width="' + maat + '" height="' + maat + '" aria-hidden="true" focusable="false">';
     s += '<g transform="rotate(' + draai + ')"><path d="' + blob(r, 46) + '" fill="' + kleur + '"/>';
     /* een lichtere gloed bovenin, zoals het glimmetje op de ridder */
     s += '<path d="M-40,-6 a40,40 0 0 1 80,0 z" fill="#fff" opacity=".14"/></g>';
@@ -139,12 +159,13 @@ window.AVATAR = (function(){
     if (sp) e = sp.e % 6;
     if (e === 0) s += '<circle cx="-26" cy="8" r="5" fill="#F26749" opacity=".45"/><circle cx="26" cy="8" r="5" fill="#F26749" opacity=".45"/>';
     else if (e === 1) s += '<g fill="' + oog + '" opacity=".7"><circle cx="-27" cy="6" r="1.6"/><circle cx="-22" cy="10" r="1.6"/><circle cx="-30" cy="12" r="1.6"/><circle cx="27" cy="6" r="1.6"/><circle cx="22" cy="10" r="1.6"/><circle cx="30" cy="12" r="1.6"/></g>';
+    if (sp && sp.h && (e === 2 || e === 3)) e = -1;   /* een krul of petje past niet onder een hoed */
     else if (e === 2) s += '<path d="M2,-44 q4,-12 14,-6 q-8,-2 -10,6" fill="none" stroke="' + kleur + '" stroke-width="5" stroke-linecap="round"/>';
     else if (e === 3) s += '<path d="M-26,-30 q26,-36 52,0 z" fill="#14224C"/><path d="M-31,-29 h62" stroke="#14224C" stroke-width="7" stroke-linecap="round"/>';
     else if (e === 4) s += '<path d="M30,-30 l3,7 7,1 -5,5 1,7 -6,-4 -6,4 1,-7 -5,-5 7,-1z" fill="#FFD166"/>';
     /* uit de winkel: eerst de rand (achter niets, want hij ligt om het gezicht), dan de hoed erop */
     if (sp && sp.r) s += rand(sp.r);
-    if (sp && sp.h) s += hoed(sp.h, kleur);
+    if (sp && sp.h) s += '<g transform="' + hoedPlek(+draai) + '">' + hoed(sp.h, kleur) + '</g>';
     if (sp && sp.b) s += trofee(sp.b);
     return s + '</svg>';
   }
