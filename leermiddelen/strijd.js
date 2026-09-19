@@ -377,14 +377,33 @@ window.STRIJD = (function(){
   /* ======================================================================
      3. het klassement van de hele site
      ====================================================================== */
+  /* Met terugwerkende kracht: rijen die deze browser eerder instuurde krijgen alsnog het gezichtje van nu.
+     Het id van een rij begint met de eerste acht tekens van het kenmerk van deze browser. */
+  var gezichtGedaan = {};
+  function gezichtBijwerken(spel, lijst){
+    var av = window.PROFIEL && PROFIEL.avatar ? PROFIEL.avatar() : '';
+    if (!av || gezichtGedaan[spel]) return false;
+    var kop = sid().slice(0, 8) + '-';
+    var mijn = lijst.filter(function(r){ return String(r.id || '').indexOf(kop) === 0 && r.av !== av; });
+    if (!mijn.length) return false;
+    gezichtGedaan[spel] = true;
+    return true && (fetch('/api/klassement/' + spel + '/gezicht', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ sid:sid(), av:av }) })
+      .then(function(r){ return r.json(); })
+      .then(function(j){ if (j && j.lijst) klassement.toon(laatsteDoel[spel], spel, laatsteId[spel], laatsteVorm[spel]); })
+      .catch(function(){ klassement.toon(laatsteDoel[spel], spel, laatsteId[spel], laatsteVorm[spel]); }), true);
+  }
+  var laatsteDoel = {}, laatsteId = {}, laatsteVorm = {};
   var klassement = {
     /* de top tien tekenen; id markeert je eigen rij; metVorm voegt het invulvak toe */
     toon: function(doelId, spel, id, vorm){
       var doel = document.getElementById(doelId);
       if (!doel) return;
+      laatsteDoel[spel] = doelId; laatsteId[spel] = id || null; laatsteVorm[spel] = vorm || null;
       doel.className = 'sitelijst';
       doel.innerHTML = '<h3>Klassement van de hele site</h3>' + (vorm ? vorm : '') + '<div class="leeg">Laden…</div>';
       fetch('/api/klassement/' + spel).then(function(r){ return r.json(); }).then(function(j){
+        /* staan er oude rijen van deze browser zonder (of met een ander) gezichtje, dan werken we die eenmalig bij */
+        if (gezichtBijwerken(spel, j.lijst || [])) return;
         var lijst = (j.lijst || []).slice(0, 10);
         var html = '<h3>Klassement van de hele site</h3>' + (vorm ? vorm : '');
         if (!lijst.length) html += '<div class="leeg">Nog niemand. Wie het eerst speelt, staat bovenaan.</div>';

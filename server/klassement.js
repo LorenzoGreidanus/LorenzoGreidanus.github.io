@@ -36,6 +36,7 @@ export class Klassement extends DurableObject {
       const url = new URL(req.url);
       if (url.pathname === "/lijst") return json({ lijst: this.top() });
       if (url.pathname === "/zet" && req.method === "POST") return await this.zet(await req.json());
+      if (url.pathname === "/gezicht" && req.method === "POST") return await this.gezicht(await req.json());
       if (url.pathname === "/weg" && req.method === "POST") return await this.weg(await req.json());
       return json({ fout: "onbekend" }, 404);
     } catch (e){
@@ -67,6 +68,20 @@ export class Klassement extends DurableObject {
     return json({ plek: plek >= 0 ? plek + 1 : 0, id: rij.id, naam: rij.naam, lijst: this.top() });
   }
   /* de beheerder haalt een rij weg (index.js heeft de sleutel al gecontroleerd) */
+  /* Je gezichtje op de rijen die je eerder instuurde. Het id van een rij begint met de eerste acht tekens
+     van het kenmerk van je browser; alleen wie datzelfde kenmerk meestuurt kan die rijen dus veranderen.
+     Er verandert niets anders aan de rij: geen naam, geen score. */
+  async gezicht(inz){
+    const sid = tekst(inz && inz.sid, 40);
+    if (!/^[A-Za-z0-9_-]{8,40}$/.test(sid)) return json({ fout: "geen geldig kenmerk" }, 400);
+    const av = schoonAv(inz && inz.av);
+    if (!av) return json({ fout: "geen geldig gezichtje" }, 400);
+    const kop = sid.slice(0, 8) + "-";
+    let n = 0;
+    for (const r of this.lijst){ if (String(r.id || "").startsWith(kop) && r.av !== av){ r.av = av; n++; } }
+    if (n) await this.ctx.storage.put("lijst", this.lijst);
+    return json({ bijgewerkt: n, lijst: this.top() });
+  }
   async weg(opdr){
     const id = tekst(opdr && opdr.id, 40), naam = tekst(opdr && opdr.naam, 16);
     const voor = this.lijst.length;

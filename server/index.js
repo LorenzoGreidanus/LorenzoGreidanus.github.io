@@ -91,7 +91,7 @@ export default {
     }
 
     /* het klassement van de hele site, per spel */
-    const km = p.match(/^\/api\/klassement\/([a-z]+(?:-\d{4}-\d{2}-\d{2})?)\/?$/);
+    const km = p.match(/^\/api\/klassement\/([a-z]+(?:-\d{4}-\d{2}-\d{2})?)(\/gezicht)?\/?$/);
     if (km){
       if (!KLASSEMENTEN[km[1].split("-")[0]] || (km[1].indexOf("-") > 0) !== (km[1].split("-")[0] === "dag")) return json({ fout: "onbekend spel" }, 404);
       const stub = env.KLASSEMENT.get(env.KLASSEMENT.idFromName(km[1]));
@@ -103,9 +103,11 @@ export default {
       }
       if (req.method === "POST"){
         if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
-        if (!await magDoor(env, req, "klassement", 90, 120)) return json({ fout: "even wachten" }, 429);
+        /* het gezichtje bijwerken op je eigen oude rijen mag vaker dan een score insturen */
+        const wat = km[2] ? "klassement-gezicht" : "klassement";
+        if (!await magDoor(env, req, wat, km[2] ? 300 : 90, 120)) return json({ fout: "even wachten" }, 429);
         let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldige inzending" }, 400); }
-        return stub.fetch("https://klassement/zet", { method: "POST", body: JSON.stringify(inz) });
+        return stub.fetch("https://klassement/" + (km[2] ? "gezicht" : "zet"), { method: "POST", body: JSON.stringify(inz) });
       }
       return stub.fetch("https://klassement/lijst");
     }
