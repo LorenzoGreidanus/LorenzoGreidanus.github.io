@@ -18,7 +18,7 @@ export { Beheer } from "./beheer.js";
 export { Profiel } from "./profiel.js";
 export { Account } from "./account.js";
 import { behandel as accountBehandel } from "./account.js";
-const KLASSEMENTEN = { toren: true, zwaard: true };
+const KLASSEMENTEN = { toren: true, zwaard: true, dag: true };   /* dag: per datum een lijst, dag-2026-09-19 */
 
 /* Een browser stuurt bij elk POST en bij elke WebSocket mee vanaf welke site
    het komt. Alleen de site zelf (en lokaal testen) mag kamers maken, scores
@@ -91,9 +91,9 @@ export default {
     }
 
     /* het klassement van de hele site, per spel */
-    const km = p.match(/^\/api\/klassement\/([a-z]+)\/?$/);
+    const km = p.match(/^\/api\/klassement\/([a-z]+(?:-\d{4}-\d{2}-\d{2})?)\/?$/);
     if (km){
-      if (!KLASSEMENTEN[km[1]]) return json({ fout: "onbekend spel" }, 404);
+      if (!KLASSEMENTEN[km[1].split("-")[0]] || (km[1].indexOf("-") > 0) !== (km[1].split("-")[0] === "dag")) return json({ fout: "onbekend spel" }, 404);
       const stub = env.KLASSEMENT.get(env.KLASSEMENT.idFromName(km[1]));
       /* de beheerder haalt een rij weg: DELETE met de geheime sleutel (wrangler secret put BEHEER) */
       if (req.method === "DELETE"){

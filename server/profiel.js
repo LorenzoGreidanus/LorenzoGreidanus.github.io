@@ -41,6 +41,8 @@ function netjes(inz){
   p.docent = (Array.isArray(inz.docent) ? inz.docent : []).slice(0, 30).map(k => k && typeof k === "object" ? {
     code: String(k.code || "").toUpperCase(), sleutel: String(k.sleutel || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 80), naam: schoon(k.naam, 30), gemaakt: getal(k.gemaakt, 1e14) } : null)
     .filter(k => k && /^[A-Z]{4}$/.test(k.code) && k.sleutel);
+  /* de foutenmap: kenmerk en vak, hoogstens tachtig */
+  p.fouten = (Array.isArray(inz.fouten) ? inz.fouten : []).slice(0, 80).map(x => x && typeof x === "object" ? { h: String(x.h || "").replace(/[^a-z0-9]/g, "").slice(0, 12), vak: schoon(x.vak, 8) } : null).filter(x => x && x.h);
   p.docentWeg = (Array.isArray(inz.docentWeg) ? inz.docentWeg : []).slice(0, 30).map(x => String(x || "").toUpperCase()).filter(x => /^[A-Z]{4}$/.test(x));
   return p;
 }
@@ -53,6 +55,8 @@ function voegSamen(oud, nieuw, klasWeg, alles){
   const weg = new Set(nieuw.docentWeg || []), gezien = new Set();
   (oud.docent || []).concat(nieuw.docent || []).forEach(k => { if (!weg.has(k.code) && !gezien.has(k.code)){ gezien.add(k.code); p.docent.push(k); } });
   p.docent = p.docent.slice(0, 30);
+  /* de foutenmap: het apparaat dat meldt heeft de nieuwste stand (goed = eruit), dus die wint; leeg gemeld = leeg */
+  p.fouten = nieuw.fouten || [];
   /* het beheeraccount heeft alles: alle cosmetica en alle eilanden */
   if (alles){ COSMETICA.ITEMS.forEach(it => { p.bezit[it.id] = true; }); ["tonkla", "aap", "eiland", "archipel", "vulkaan"].forEach(k => { p.vrij[k] = true; }); }
   /* kopen: alleen wat er nog niet is en wat het saldo toelaat; daarna mag alleen bezit in de spec staan */

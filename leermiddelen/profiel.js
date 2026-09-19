@@ -46,7 +46,7 @@ window.PROFIEL = (function(){
     var vrij = {}; ['tonkla', 'aap', 'eiland', 'archipel', 'vulkaan'].forEach(function(x){ if (ls('lg-toren-' + x) === 'ja') vrij[x] = true; });
     var klas = null; try { klas = JSON.parse(ls('lg-klas') || 'null'); } catch (e){}
     return { avatar:avatar(), beste:beste, campagne:campagne, vrij:vrij, klas:klas && klas.code ? klas : null, niveau:ls('lg-niveau') || '', muntDelta:wachtend(), vrijspeel:vrijWacht(),
-             docent:docentLijst(), docentWeg:docentWegWacht() };
+             docent:docentLijst(), docentWeg:docentWegWacht(), fouten:foutenKort() };
   }
   /* ---------- munten: het saldo staat op de server, hier wat er nog onderweg is ---------- */
   function wachtend(){ return parseInt(ls('lg-munten-wacht') || '0', 10) || 0; }
@@ -57,6 +57,8 @@ window.PROFIEL = (function(){
   /* de klassen van de docent op dit apparaat (code + sleutel), en welke hij hier vergat */
   function docentLijst(){ try { var l = JSON.parse(ls('lg-klas-docent') || '[]'); return Array.isArray(l) ? l.filter(function(k){ return k && k.code && k.sleutel; }) : []; } catch (e){ return []; } }
   function docentWegWacht(){ try { return JSON.parse(ls('lg-klas-docent-weg') || '[]') || []; } catch (e){ return []; } }
+  /* de foutenmap: alleen kenmerk en vak gaan mee; de tekst haalt fouten.html weer uit de bank */
+  function foutenKort(){ try { var l = JSON.parse(ls('lg-fouten') || '[]'); return Array.isArray(l) ? l.slice(-80).map(function(x){ return { h:String(x.h || ''), vak:String(x.vak || '') }; }) : []; } catch (e){ return []; } }
   function docentWeg(code){ var w = docentWegWacht(); if (w.indexOf(code) < 0) w.push(code); lsZet('lg-klas-docent-weg', JSON.stringify(w)); return sync(); }
   /* een trofee vrijspelen (een baas verslagen): meteen in bezit, en bij de volgende sync naar de server */
   function vrijspeel(id){
@@ -107,6 +109,10 @@ window.PROFIEL = (function(){
       if (erbij) lsZet('lg-klas-docent', JSON.stringify(dl));
     }
     if (pr.niveau && !ls('lg-niveau')) lsZet('lg-niveau', pr.niveau);
+    /* fouten van het profiel die hier nog niet staan: klaarzetten voor fouten.html, dat ze in de bank terugzoekt */
+    if (Array.isArray(pr.fouten) && pr.fouten.length){
+      try { var heb = {}; (JSON.parse(ls('lg-fouten') || '[]') || []).forEach(function(x){ heb[x.h] = true; }); var nieuw = pr.fouten.filter(function(x){ return x && x.h && !heb[x.h]; }); if (nieuw.length) lsZet('lg-fouten-kort', JSON.stringify(nieuw)); } catch (e){}
+    }
     var p = lees(); if (pr.avatar) p.avatar = pr.avatar; zet(p);
     if (typeof pr.munten === 'number') lsZet('lg-munten', String(Math.max(0, Math.round(pr.munten)) + wachtend()));
     if (pr.bezit && typeof pr.bezit === 'object'){ var bz = Object.assign({}, pr.bezit); vrijWacht().forEach(function(x){ bz[x] = true; }); lsZet('lg-bezit', JSON.stringify(bz)); }
