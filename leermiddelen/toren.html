@@ -63,6 +63,28 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 body.groot .uitleg span{font-size:.95rem}
 body.groot .uitleg b{font-size:1.1rem}
 .kop2{margin:26px 0 12px}
+/* het startscherm in stappen: een nummertje voor elke kop, en de keuzes die bijna niemand aanpast ingeklapt */
+.stapkop{display:flex;align-items:center;gap:10px}
+.stapkop i,.meerkeuzes summary .eyebrow i{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:8px;background:var(--ocean);color:#fff;font-style:normal;font-size:.78rem;letter-spacing:0;font-weight:700}
+.uitlegkeuze{display:flex;align-items:flex-start;gap:8px;margin-top:12px;font-size:.9rem;max-width:64ch;cursor:pointer}
+.uitlegkeuze input{margin-top:4px;width:16px;height:16px}
+.uitlegkeuze span{color:var(--muted)}
+.meerkeuzes{margin-top:26px;border:1px solid rgba(20,34,76,.12);border-radius:18px;padding:0 18px 4px;background:rgba(255,255,255,.55)}
+.meerkeuzes summary{list-style:none;cursor:pointer;padding:14px 0;display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+.meerkeuzes summary::-webkit-details-marker{display:none}
+.meerkeuzes summary .eyebrow{display:flex;align-items:center;gap:10px}
+.meerkeuzes summary .samenvatting{color:var(--muted);font-size:.9rem;flex:1}
+.meerkeuzes summary::after{content:'aanpassen';font-size:.82rem;font-weight:600;color:var(--ocean)}
+.meerkeuzes[open] summary::after{content:'inklappen'}
+.meerkeuzes .kop2:first-of-type{margin-top:6px}
+.meerkeuzes>:last-child{margin-bottom:18px}
+#startBtn{margin-top:22px}
+:root[data-theme="dark"] .meerkeuzes{background:rgba(24,38,82,.6);border-color:rgba(243,239,233,.14)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .meerkeuzes{background:rgba(24,38,82,.6);border-color:rgba(243,239,233,.14)}}
+/* de tip van de uitlegstand: boven het bord, geel, blijft staan tot de volgende stap */
+.uitlegtip{display:flex;gap:10px;align-items:flex-start;background:#FFE168;color:#14224C;border-radius:14px;padding:10px 14px;margin-bottom:8px;font-size:.92rem;line-height:1.45}
+.uitlegtip i{flex:none;display:grid;place-items:center;width:26px;height:26px;border-radius:9px;background:#14224C;color:#FFE168;font-style:normal;font-weight:700;font-size:.8rem}
+.uitlegtip button{margin-left:auto;flex:none;border:none;background:#14224C;color:#fff;border-radius:999px;padding:5px 11px;font-weight:600;font-size:.82rem}
 .niv{display:flex;gap:10px;flex-wrap:wrap}
 .niv button{background:#fff;border:2px solid rgba(20,34,76,.12);border-radius:999px;padding:11px 20px;font-weight:600;font-size:.92rem}
 .niv button:hover{border-color:var(--vista)}
@@ -572,16 +594,21 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
     de uitbetaling, maar levert ook meer fouten op; een ronde telt pas als alles wat erin liep
     geveld is. Pauze zet alles stil, ook met de P. Bord op orde? Zet 2&times; aan.</p>
 
-  <p class="eyebrow">kies je niveau</p>
+  <p class="eyebrow stapkop"><i>1</i>kies je niveau</p>
   <div class="niv" id="niveaus"></div>
   <p class="nivuit" id="nivUit"></p>
+  <label class="uitlegkeuze"><input type="checkbox" id="uitlegVink"> <b>Uitlegstand</b> <span>tips bij je eerste toren, je eerste antwoord en de eerste rondes; telt niet mee voor records en het klassement</span></label>
 
-  <p class="eyebrow kop2" id="vakKop">kies je vak</p>
+  <p class="eyebrow kop2 stapkop" id="vakKop"><i>2</i>kies je vak</p>
   <div class="vakken" id="vakken"></div>
   <p class="nivuit hide" id="vastUit"></p>
 
   <div id="deelvakken"></div>
 
+  <button class="btn" id="startBtn" type="button" disabled>Kies eerst een vak</button>
+
+  <details class="meerkeuzes" id="meerKeuzes">
+    <summary><span class="eyebrow"><i>3</i>meer keuzes</span><span class="samenvatting" id="meerSamen"></span></summary>
   <p class="eyebrow kop2" id="themaKop">kies je omgeving</p>
   <div class="niv" id="themas"></div>
   <p class="nivuit" id="themaUit"></p>
@@ -594,8 +621,8 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
   <p class="eyebrow kop2" id="torenKop">stel je torens samen</p>
   <div class="torens" id="torenkeuze"></div>
   <p class="nivuit" id="torenUit"></p>
+  </details>
 
-  <button class="btn" id="startBtn" type="button" disabled>Kies eerst een vak</button>
   <div id="duelvak"></div>
   <div class="lijst" id="startLijst"></div>
   <div id="siteStartLijst"></div>
@@ -604,6 +631,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offs
 <section class="wrap hide" id="scherm-spel">
   <div class="baan">
     <div class="bordkolom">
+      <div class="uitlegtip hide" id="uitlegTip"><i>?</i><span id="uitlegTipTekst"></span><button type="button" id="uitlegTipWeg">Oké</button></div>
       <div class="bordvak" id="bordvak"></div>
       <p class="bordtip" id="bordtip">Tik naast het pad voor een toren, of op het pad om er iets neer te leggen.</p>
     </div>
@@ -1018,7 +1046,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   var HAAK = {
     melding: function(t){ melding2(t); },
     munt: function(n){ laatMuntZien(n); },
-    klap: function(n){ laatKlapZien(n); },
+    klap: function(n){ laatKlapZien(n); uitlegTip(4); },
     vrij: function(slot){ vrijMaak(slot); },
     log: function(soort, extra){ botLog(soort, extra); },
     fout: function(x){ if (window.console && console.warn) console.warn('vastloper weggehaald', x); }
@@ -1082,7 +1110,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   }
   /* Wat een speler doet gaat als opdracht naar de motor: hier, of in de kamer.
      Samen gaat het de lijn over en staat het alvast als spook op het bord. */
-  function stuurOpdracht(c){
+  var stuurOpdracht = function(c){
     if (co.aan){ spookBij(c); zendNet(c); return true; }
     if (!W) return false;
     var ok = W.voerUit(c); spiegel();
@@ -1094,6 +1122,9 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   function zendNet(d){ if (window.STRIJD && STRIJD.stuurNet) STRIJD.stuurNet(d); }
   /* voor het testen: bouwen zonder het menu, langs dezelfde weg als een tik */
   window.__torenBouw = function(soort, x, y){ return stuurOpdracht({ k:'bouw', soort:soort, x:x, y:y }); };
+  /* de uitlegstand kijkt mee met wat je doet */
+  var stuurOpdrachtEcht = stuurOpdracht;
+  stuurOpdracht = function(c){ var r = stuurOpdrachtEcht(c); if (c && c.k === 'bouw' && r) uitlegTip(1); return r; };
   /* voor het testen: hoe ver lopen de gastheer en de maat uit elkaar */
   window.__torenPas = function(){ return { rol:co.rol, aan:co.aan, lock:false, tikken:co.pakketten || 0, bevestigd:co.pakketten || 0, pakketten:co.pakketten || 0, reserve:0, ronde:bank.ronde, leven:bank.leven, munten:bank.munten, spoken:spoken.length, torens:torens.length, zicht:zichtMunten() }; };
   /* bank.ronde is de ronde waarvan de fouten nu komen. Roep je de volgende er
@@ -1252,6 +1283,31 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
      Bedoeld om zelf een partij te kunnen doorlopen zonder er een half uur voor
      te gaan zitten. Alles hieronder staat uit tenzij je #test achter de URL
      zet, en de knoppen doen niets als het paneel er niet is. */
+  /* De uitlegstand: tips op de momenten die ertoe doen (eerste toren, eerste antwoord, ronde 2, eerste klap, ronde 5).
+     Het spel zelf verandert niet; een partij in de uitlegstand telt niet mee voor records en het klassement. */
+  var uitlegstand = false, uitlegStap = -1, uitlegRondeGezien = 0;
+  try { uitlegstand = localStorage.getItem('lg-toren-uitleg') === 'ja'; } catch (e){}
+  var UITLEG_TIPS = [
+    'Welkom. Tik naast het pad om je eerste toren te bouwen: je begint met 60 munten. Zet hem bij een bocht, daar lopen de fouten het langst in zijn bereik.',
+    'Goed zo. Beantwoord nu de vraag rechts: elk goed antwoord is munten. Fout is geen straf, je leest meteen waarom en speelt door.',
+    'De eerste ronde begint zo: fouten lopen over het pad naar de klas. Je torens schieten vanzelf; jij bouwt en antwoordt.',
+    'Ronde 2. Tik op een toren om hem te versterken, of koop een plek erbij voor een tweede toren. Tik op het pad om er pek of voetangels te leggen.',
+    'Er glipte een fout door: de klas verliest een leven, op nul is het voorbij. Kijk waar het misging en zet daar een toren bij.',
+    'Ronde 5: vanaf nu komen snellere en sterkere fouten, en elke tiende ronde een baas. Haast? Roep de volgende ronde erbij voor extra munten. Je kent het spel nu; zet de uitlegstand uit voor records en het klassement.'
+  ];
+  function uitlegTip(stap){
+    if (!uitlegstand || co.aan || stap <= uitlegStap || !UITLEG_TIPS[stap]) return;
+    uitlegStap = stap;
+    var el = document.getElementById('uitlegTip'); if (!el) return;
+    document.getElementById('uitlegTipTekst').textContent = UITLEG_TIPS[stap];
+    el.classList.remove('hide');
+  }
+  document.getElementById('uitlegTipWeg').addEventListener('click', function(){ document.getElementById('uitlegTip').classList.add('hide'); });
+  (function(){
+    var vk = document.getElementById('uitlegVink'); if (!vk) return;
+    vk.checked = uitlegstand;
+    vk.addEventListener('change', function(){ uitlegstand = vk.checked; try { localStorage.setItem('lg-toren-uitleg', uitlegstand ? 'ja' : 'nee'); } catch (e){} });
+  })();
   var tempo = 1;            /* hoe vaak de klok per tik doorloopt */
   var tekenUit = false;     /* bij snel doorspoelen tekenen we alleen de laatste stap */
   var onsterfelijk = false;
@@ -1592,7 +1648,15 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       '. Wat je hier aanzet staat in het koopmenu; pek, voetangels en de versperring heb je altijd.');
   }
 
+  /* wat er onder 'meer keuzes' staat, in één regel op de samenvatting */
+  function tekenMeerSamen(){
+    var el = document.getElementById('meerSamen'); if (!el) return;
+    var n = gekozen().length;
+    el.textContent = (thema && thema.naam ? thema.naam : 'omgeving') + ' · ' + (campagne !== null ? 'campagne, kaart ' + (campagne + 1) : 'los potje') + ' · ' + n + (n === 1 ? ' toren' : ' torens') + ' gekozen';
+  }
+  document.getElementById('scherm-start').addEventListener('click', function(){ setTimeout(tekenMeerSamen, 0); });
   function tekenStartknop(){
+    tekenMeerSamen();
     var b = document.getElementById('startBtn');
     b.disabled = !vak;
     b.textContent = vak
@@ -1719,6 +1783,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
        en niveaus ook kunnen betalen. */
     var winst = goed ? Math.round((12 + Math.min(12, reeks * 3)) * (1 + (bank.ronde - 1) * 0.035)) : 0;
     gekliktIndex = i;
+    uitlegTip(2);
     reeks = goed ? reeks + 1 : 0;
     if (window.STRIJD) STRIJD.reeks(reeks);
     besteReeks = Math.max(besteReeks, reeks);
@@ -4895,6 +4960,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     lev.textContent = bank.leven;
     document.getElementById('levenVak').classList.toggle('laag', bank.leven <= 3);
     document.getElementById('mRonde').textContent = bank.ronde;
+    if (uitlegstand && bank.ronde !== uitlegRondeGezien){ uitlegRondeGezien = bank.ronde; if (bank.ronde === 2) uitlegTip(3); if (bank.ronde >= 5) uitlegTip(5); }
     /* het karakter van de ronde staat onder het getal, zolang hij loopt */
     var gUit = document.getElementById('mRondeUit');
     if (gUit){
@@ -5284,6 +5350,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     var pk = document.getElementById('pauzeBtn');
     pk.classList.remove('hide', 'aan'); pk.textContent = 'Pauze'; pk.setAttribute('aria-pressed', 'false');
     laatsteDoor = '';
+    uitlegStap = -1; uitlegRondeGezien = 1; document.getElementById('uitlegTip').classList.add('hide');
     var med0 = document.getElementById('eindMedaille'); med0.classList.add('hide'); med0.classList.remove('nieuw');
     var sk = document.getElementById('snelBtn');
     sk.classList.remove('hide'); zetSnel(false);
@@ -5304,6 +5371,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       kaartMelding(); startKlok();
     }
     tekenVraag(); tekenMeters(); tekenBord();
+    if (uitlegstand && !co.aan) setTimeout(function(){ uitlegTip(0); }, 400);
     scrollTo({ top:0, behavior:'auto' });
   }
 
@@ -5358,19 +5426,20 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       try { localStorage.setItem('lg-toren-eiland', 'ja'); } catch (e){}
       tekenThemas();
     }
-    bewaarRecord(rondeGehaald);
+    var oefen = uitlegstand && !co.aan;
+    if (!oefen) bewaarRecord(rondeGehaald);
     /* het klassement: de naam vragen, en de lijst van deze omgeving en dit niveau laten zien */
     opgeslagen = false;
-    document.getElementById('naamvak').classList.remove('hide');
+    document.getElementById('naamvak').classList.toggle('hide', oefen);
     document.getElementById('naamveld').value = laatsteNaam;
     document.getElementById('opslaghint').textContent = '';
     toonKlassement('eindLijst', null);
     var campSt = campAfronden();
     var kaartE = SPEL.einde({ spel:'toren', reeks:besteReeks, goed:goedAantal, muntFactor:2, muntBonus:Math.max(0, rondeGehaald) * 3, compact:true, waarde:rondeGehaald, label:'rondes',
       sterren: campSt !== null ? campSt : (rondeGehaald >= 50 ? 3 : rondeGehaald >= 20 ? 2 : rondeGehaald >= 10 ? 1 : 0),
-      klas:false, plek:'cijfers', sleutel: campSt !== null ? 'campagne-' + (campagne + 1) : niveau, kleur:kleuren,
+      klas:false, plek:'cijfers', sleutel: (campSt !== null ? 'campagne-' + (campagne + 1) : niveau) + (oefen ? '-uitleg' : ''), kleur:kleuren,
       deelTekst:'ronde ' + rondeGehaald + (campSt !== null ? ' op kaart ' + (campagne + 1) + ' van de campagne' : ''),
-      kop: campSt !== null ? 'campagne, kaart ' + (campagne + 1) + ' van ' + CAMPAGNE.length + ', doel ronde ' + CAMPAGNE[campagne].doel.join(', ') : 'jouw partij' });
+      kop: campSt !== null ? 'campagne, kaart ' + (campagne + 1) + ' van ' + CAMPAGNE.length + ', doel ronde ' + CAMPAGNE[campagne].doel.join(', ') : oefen ? 'jouw oefenpartij in de uitlegstand' : 'jouw partij' });
     if (campSt !== null && kaartE){
       var laatsteKaart = campagne + 1 >= CAMPAGNE.length, verder = !laatsteKaart && campOpen(campagne + 1);
       var kn = document.createElement('button'); kn.type = 'button';
