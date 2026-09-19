@@ -19,6 +19,46 @@
     if (meta) meta.setAttribute('content', donker ? '#0F1A3D' : '#FBF6F1');
   }
   var beweegtLiever = window.matchMedia ? matchMedia('(prefers-reduced-motion: reduce)') : { matches:false };
+
+  /* ---------- de cirkel die over het scherm loopt ----------
+     De browser maakt een plaatje van het oude scherm en een van het nieuwe. Wij
+     zetten het nieuwe erboven en laten het als een cirkel opengaan vanaf de
+     knop. Kan de browser dat niet, dan valt alles terug op de zachte overgang
+     van de kleuren zelf. */
+  function cirkelWissel(zet, knop){
+    var wortel = document.documentElement;
+    if (beweegtLiever.matches || !document.startViewTransition || !wortel.animate){ zachtWissel(zet); return; }
+    var r = knop.getBoundingClientRect();
+    var x = r.left + r.width / 2, y = r.top + r.height / 2;
+    var straal = Math.sqrt(Math.pow(Math.max(x, innerWidth - x), 2) + Math.pow(Math.max(y, innerHeight - y), 2));
+    zorgVoorStijl();
+    var wissel = document.startViewTransition(zet);
+    wissel.ready.then(function(){
+      wortel.animate(
+        { clipPath: ['circle(0px at ' + x + 'px ' + y + 'px)', 'circle(' + straal + 'px at ' + x + 'px ' + y + 'px)'] },
+        { duration: 520, easing: 'cubic-bezier(.22,.61,.36,1)', pseudoElement: '::view-transition-new(root)' });
+    }).catch(function(){});
+  }
+  function zachtWissel(zet){
+    var wortel = document.documentElement;
+    if (beweegtLiever.matches){ zet(); return; }
+    wortel.classList.add('themawisselt');
+    zet();
+    setTimeout(function(){ wortel.classList.remove('themawisselt'); }, 640);
+  }
+  /* de twee regels die de standaard kruisvervaging uitzetten, eenmalig */
+  var stijlGezet = false;
+  function zorgVoorStijl(){
+    if (stijlGezet) return;
+    stijlGezet = true;
+    try {
+      var st = document.createElement('style');
+      st.textContent = '::view-transition-old(root),::view-transition-new(root){animation:none;mix-blend-mode:normal}' +
+        '::view-transition-old(root){z-index:0}::view-transition-new(root){z-index:1}';
+      document.head.appendChild(st);
+    } catch (e){}
+  }
+
   knop.addEventListener('click', function(){
     var nieuw = huidig() === 'dark' ? 'light' : 'dark';
     if (!beweegtLiever.matches){
@@ -26,13 +66,14 @@
       knop.classList.remove('draait');
       void knop.offsetWidth;
       knop.classList.add('draait');
-      wortel.classList.add('themawisselt');
-      setTimeout(function(){ knop.classList.remove('draait'); wortel.classList.remove('themawisselt'); }, 640);
+      setTimeout(function(){ knop.classList.remove('draait'); }, 640);
     }
-    wortel.setAttribute('data-theme', nieuw);
-    try { localStorage.setItem('thema', nieuw); } catch (e) {}
-    bijwerken();
-    document.dispatchEvent(new CustomEvent('themawissel', { detail:{ thema:nieuw } }));
+    cirkelWissel(function(){
+      wortel.setAttribute('data-theme', nieuw);
+      try { localStorage.setItem('thema', nieuw); } catch (e) {}
+      bijwerken();
+      document.dispatchEvent(new CustomEvent('themawissel', { detail:{ thema:nieuw } }));
+    }, knop);
   });
   if (donkerMQ.addEventListener) donkerMQ.addEventListener('change', bijwerken);
   bijwerken();
