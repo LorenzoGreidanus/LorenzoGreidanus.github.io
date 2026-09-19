@@ -827,7 +827,7 @@ Frans Hals"></textarea>
     var volgorde = [top[1], top[0], top[2]], klassen = ['p2', 'p1', 'p3'];
     $('hPodium').innerHTML = volgorde.map(function(s, i){
       if (!s) return '<div class="' + klassen[i] + '" style="visibility:hidden"></div>';
-      return '<div class="' + klassen[i] + '"><span class="nr">' + s.rang + '</span>' + (window.AVATAR ? AVATAR.svg(s.naam, 56, s.av) : '') + '<b>' + schoonHtml(s.naam) + '</b><small>' + s.score + ' punten</small></div>';
+      return '<div class="' + klassen[i] + '"><span class="nr">' + s.rang + '</span>' + (window.AVATAR ? AVATAR.svg(s.naam, 56, s.av, { stemming:'blij', klasse: s.rang === 1 ? 'av-juich' : '' }) : '') + '<b>' + schoonHtml(s.naam) + '</b><small>' + s.score + ' punten</small></div>';
     }).join('');
     $('hEindStand').innerHTML = m.stand.slice(3).map(function(s){
       return '<div><b>' + s.rang + '.</b><span>' + (window.AVATAR ? AVATAR.svg(s.naam, 26, s.av) : '') + schoonHtml(s.naam) + '</span><span></span><b>' + s.score + '</b></div>';
@@ -880,10 +880,18 @@ Frans Hals"></textarea>
     $('pScore').textContent = j.score; $('pRang').textContent = j.rang + ' / ' + j.van;
     $('pScoreKop').textContent = j.score; $('pRangKop').textContent = j.rang + ' / ' + j.van;
   }
+  /* het gezichtje bovenaan het spelerscherm, met een stemming: blij of sip na een vraag, juichend bij winst */
+  var pNaamKlok = null;
+  function zetPNaam(stemming, juich){
+    if (!speler) return;
+    clearTimeout(pNaamKlok);
+    $('pNaam').innerHTML = (window.AVATAR ? AVATAR.svg(speler.naam, 28, window.PROFIEL ? PROFIEL.avatar() : '', { stemming:stemming, klasse: juich ? 'av-juich' : '' }) : '') + schoonHtml(speler.naam);
+    if (stemming && !juich) pNaamKlok = setTimeout(function(){ zetPNaam(''); }, 3000);
+  }
   function wordSpeler(code, naam){
     speler = { code:code, naam:naam };
     toon('s-speler'); spelerScherm('p-wacht');
-    $('pNaam').innerHTML = (window.AVATAR ? AVATAR.svg(naam, 28, window.PROFIEL ? PROFIEL.avatar() : '') : '') + schoonHtml(naam);
+    zetPNaam('');
     $('pWachtTekst').textContent = 'Wacht tot de docent start';
     verbind({ code:code, query:'rol=speler&sid=' + encodeURIComponent(sid()) + '&naam=' + encodeURIComponent(naam) + '&av=' + encodeURIComponent(window.PROFIEL ? PROFIEL.avatar() : '') }, spelerBericht);
   }
@@ -926,12 +934,14 @@ Frans Hals"></textarea>
       '<p class="punten">' + (m.delta ? '+' + m.delta + ' punten' : (m.goed ? '' : 'Het goede antwoord was: ' + schoonHtml(m.o[m.g]))) + '</p>' +
       (m.u ? '<p class="uitlegk">' + schoonHtml(m.u) + '</p>' : '');
     zetJouw(m.jouw);
+    zetPNaam(m.goed ? 'blij' : 'sip');
   }
   function spelerEinde(m){
     stopKlok();
     spelerScherm('p-einde');
     var j = m.jouw;
     $('pEindeTekst').textContent = j ? (j.rang === 1 ? 'Je hebt gewonnen!' : j.rang <= 3 ? 'Op het podium!' : 'Goed gedaan, ' + j.naam) : 'Dat was de quiz';
+    zetPNaam(j && j.rang <= 3 ? 'blij' : '', !!(j && j.rang === 1));
     $('pEindScore').textContent = j ? j.score : 0;
     $('pEindRang').textContent = j ? j.rang + ' / ' + j.van : '-';
     zetJouw(j);

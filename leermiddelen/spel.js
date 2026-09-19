@@ -142,8 +142,12 @@ window.SPEL = (function(){
                  : eerste ? 'Je eerste keer op dit apparaat'
                  : 'Beste ooit op dit apparaat: <b>' + schoon(beste.w) + (o.label ? ' ' + schoon(o.label) : '') + '</b>';
     }
-    /* de blob van de leerling, als er een klascode met bijnaam staat */
-    var wie = window.KLAS && KLAS.lees(), wieHtml = wie && window.AVATAR ? '<p class="wie">' + AVATAR.svg(wie.naam, 30, window.PROFIEL ? PROFIEL.avatar() : '') + schoon(wie.naam) + '</p>' : '';
+    /* het gezichtje van de leerling: met de bijnaam van de klascode, of alleen het eigen gezichtje uit het profiel.
+       Het kijkt blij en springt bij een record of drie sterren, en sip bij nul sterren. */
+    var wie = window.KLAS && KLAS.lees(), avSpec = window.PROFIEL ? PROFIEL.avatar() : '';
+    var stemming = (record || sterren === 3) ? 'blij' : sterren === 0 ? 'sip' : '';
+    var wieTekst = wie ? schoon(wie.naam) : record ? 'Nieuw record!' : sterren === 3 ? 'Drie sterren!' : sterren === 0 ? 'Volgende keer beter' : 'Goed bezig';
+    var wieHtml = window.AVATAR && (wie || avSpec) ? '<p class="wie">' + AVATAR.svg(wie ? wie.naam : 'jij', 34, avSpec, { stemming:stemming, klasse: stemming === 'blij' ? 'av-juich' : '' }) + wieTekst + '</p>' : '';
     var sterrenHtml = sterren === null ? '' : '<div class="sterren" aria-label="' + sterren + ' van 3 sterren">' +
       [0, 1, 2].map(function(i){ return IC.ster.replace('<svg ', '<svg class="ster' + (i < sterren ? ' vol' : '') + '" '); }).join('') + '</div>';
     kaart.innerHTML =
