@@ -90,12 +90,23 @@ window.PROFIEL = (function(){
       return j;
     });
   }
-  /* wat van de server komt, hier neerzetten; het nieuwste record wint */
+  /* Welke van twee records is de beste? Bij bijna elk spel is hoger beter; bij
+     De balans en De vergadering telt juist het laagste aantal, en dat staat als
+     l:1 in het record zelf. Zonder die vlag (oude records) geldt hoger is beter. */
+  function beterRecord(a, b){
+    if (!a || typeof a.w !== 'number') return b;
+    if (!b || typeof b.w !== 'number') return a;
+    var lager = !!(a.l || b.l);
+    if (a.w === b.w) return (a.t || 0) >= (b.t || 0) ? a : b;
+    return (lager ? a.w < b.w : a.w > b.w) ? a : b;
+  }
+  /* wat van de server komt, hier neerzetten; het beste record wint */
   function pasToe(pr){
     if (!pr) return;
     Object.keys(pr.beste || {}).forEach(function(k){
       var mijn = null; try { mijn = JSON.parse(ls('lg-beste-' + k) || 'null'); } catch (e){}
-      if (!mijn || (pr.beste[k].t || 0) >= (mijn.t || 0)) lsZet('lg-beste-' + k, JSON.stringify(pr.beste[k]));
+      var best = beterRecord(mijn, pr.beste[k]);
+      if (best && best !== mijn) lsZet('lg-beste-' + k, JSON.stringify(best));
     });
     var camp = {}; try { camp = JSON.parse(ls('lg-toren-campagne') || '{}') || {}; } catch (e){}
     Object.keys(pr.campagne || {}).forEach(function(k){ camp[k] = Math.max(camp[k] | 0, pr.campagne[k] | 0); });
@@ -139,8 +150,13 @@ window.PROFIEL = (function(){
   function sync(){
     var c = code(); if (!c) return Promise.resolve(null);
     clearTimeout(timer);
+    /* De vorige sync stond nog te wachten en wordt nu ingehaald. Zijn belofte
+       moet wel aflopen, anders blijft wie erop wacht eeuwig hangen. */
+    if (wachtKlaar){ wachtKlaar(null); wachtKlaar = null; }
     return new Promise(function(res){
+      wachtKlaar = res;
       timer = setTimeout(function(){
+        wachtKlaar = null;
         var delta = wachtend();
         var vr = vrijWacht(), dw = docentWegWacht();
         var pr = verzamel(), hash = JSON.stringify(pr), sinds = Date.now() - (parseInt(ls('lg-sync-t') || '0', 10) || 0);
@@ -161,7 +177,7 @@ window.PROFIEL = (function(){
   /* inloggen met Microsoft: de server weet of het aan staat en wie er ingelogd is.
      Terug van Microsoft staat er ?account=in (of een fout) in het adres; dat
      lezen we hier, voordat de pagina zijn eigen adres herschrijft. */
-  var accountStand = null, accountVlag = '', accountBezig = null, winkelVlag = '';
+  var accountStand = null, accountVlag = '', accountBezig = null, winkelVlag = '', wachtKlaar = null;
   try {
     var q0 = new URLSearchParams(location.search); accountVlag = q0.get('account') || ''; winkelVlag = q0.get('winkel') || '';
     if (accountVlag || winkelVlag){ q0.delete('account'); q0.delete('winkel'); history.replaceState(null, '', location.pathname + (q0.toString() ? '?' + q0.toString() : '') + location.hash); }
@@ -172,7 +188,10 @@ window.PROFIEL = (function(){
     if (accountBezig && !vers) return accountBezig;
     accountBezig = fetch('/api/account', { cache:'no-store' }).then(function(r){ return r.json(); })
       .then(function(j){ accountStand = j && typeof j === 'object' ? j : { mogelijk:false, ingelogd:false }; accountBezig = null; return accountStand; })
-      .catch(function(){ accountStand = { mogelijk:false, ingelogd:false }; accountBezig = null; return accountStand; });
+      /* Ging het mis (geen verbinding, een 502 van het schoolnetwerk)? Dan weten
+         we niets, en dat is iets anders dan "niet ingelogd". We onthouden het
+         antwoord dus niet, zodat een volgende vraag het opnieuw probeert. */
+      .catch(function(){ accountBezig = null; return accountStand || { mogelijk:false, ingelogd:false, onbekend:true }; });
     return accountBezig;
   }
   function inlogAdres(){ return '/api/account/inloggen?terug=' + encodeURIComponent(location.pathname); }
@@ -209,7 +228,11 @@ window.PROFIEL = (function(){
   /* bij het laden even samenvoegen, als er een code is */
   if (code() && typeof fetch === 'function'){ setTimeout(function(){ sync(); }, 1500); }
   /* en even kijken of er iemand is ingelogd, want dan tellen de munten */
-  if (typeof fetch === 'function' && !accountStand) setTimeout(function(){ account(); }, 400);
+  /* En als die eerste vraag mislukt (wifi die even wegvalt), proberen we het
+     na vier seconden nog een keer: anders telt een heel potje niet mee. */
+  if (typeof fetch === 'function' && !accountStand) setTimeout(function(){
+    account().then(function(a){ if (a && a.onbekend) setTimeout(function(){ account(true); }, 4000); });
+  }, 400);
   return { lees:lees, code:code, avatar:avatar, zetAvatar:zetAvatar, maak:maak, koppel:koppel, sync:sync, wis:wis, verzamel:verzamel, op:op,
     klasWeg:klasWeg, account:account, munten:munten, bezit:bezit, ingelogd:ingelogd, accountMogelijk:accountMogelijk, muntenErbij:muntenErbij, koop:koop, vrijspeel:vrijspeel, accountNeemCode:accountNeemCode, accountNieuweCode:accountNieuweCode, accountVlag:function(){ return accountVlag; }, winkelVlag:function(){ return winkelVlag; }, accountAfstemmen:accountAfstemmen, inlogAdres:inlogAdres, uitloggen:uitloggen, accountWeg:accountWeg, docentWeg:docentWeg };
 })();

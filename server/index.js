@@ -111,7 +111,7 @@ export default {
         const wat = km[2] ? "klassement-gezicht" : "klassement";
         if (!await magDoor(env, req, wat, km[2] ? 300 : 90, 120)) return json({ fout: "even wachten" }, 429);
         let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldige inzending" }, 400); }
-        return stub.fetch("https://klassement/" + (km[2] ? "gezicht" : "zet"), { method: "POST", body: JSON.stringify(inz) });
+        return stub.fetch("https://klassement/" + (km[2] ? "gezicht" : "zet"), { method: "POST", body: JSON.stringify(inz || {}) });
       }
       return stub.fetch("https://klassement/lijst");
     }

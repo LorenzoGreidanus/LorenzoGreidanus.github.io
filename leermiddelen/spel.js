@@ -121,7 +121,7 @@ window.SPEL = (function(){
       var beter = !beste || typeof beste.w !== 'number' ? true : (o.lagerIsBeter ? waarde < beste.w : waarde > beste.w);
       if (beter){
         record = !!(beste && typeof beste.w === 'number'); eerste = !record;
-        zet(sleutel, { w:waarde, t:Date.now() });
+        zet(sleutel, o.lagerIsBeter ? { w:waarde, t:Date.now(), l:1 } : { w:waarde, t:Date.now() });
         beste = { w:waarde };
         if (window.PROFIEL) PROFIEL.sync();
       }
@@ -147,8 +147,11 @@ window.SPEL = (function(){
       var st = lees('lg-dagen') || { laatst:'', reeks:0 }, nieuwDag = st.laatst !== dagK;
       if (nieuwDag){ st.reeks = st.laatst === gisterenK ? (st.reeks | 0) + 1 : 1; st.laatst = dagK; zet('lg-dagen', st); }
       if (st.reeks >= 2){
-        var bonus = nieuwDag && window.PROFIEL && PROFIEL.ingelogd() ? Math.min(25, 5 * st.reeks) : 0;
-        if (bonus) PROFIEL.muntenErbij(bonus);
+        /* De bonus hoort bij de dag. Wie zijn eerste potje speelde voordat de
+           site wist dat hij was ingelogd, kreeg hem vroeger nooit meer; nu komt
+           hij bij het eerstvolgende potje van diezelfde dag alsnog. */
+        var bonus = st.bonusDag !== dagK && window.PROFIEL && PROFIEL.ingelogd() ? Math.min(25, 5 * st.reeks) : 0;
+        if (bonus){ PROFIEL.muntenErbij(bonus); st.bonusDag = dagK; zet('lg-dagen', st); }
         streakHtml = '<p class="munten stil"><b>' + st.reeks + ' dagen op rij</b> geoefend' + (bonus ? ': +' + bonus + ' munten' : '') + '</p>';
       }
     } catch (e){}

@@ -63,7 +63,15 @@ function voegSamen(oud, nieuw, klasWeg, alles){
   (nieuw.vrijspeel || []).forEach(id => { p.bezit[id] = true; });
   (nieuw.koop || []).forEach(id => { const it = COSMETICA.vind(id); if (it && !it.baas && COSMETICA.inSeizoen(it) && !p.bezit[id] && p.munten >= it.prijs){ p.munten -= it.prijs; p.bezit[id] = true; } });
   p.avatar = COSMETICA.toegestaan(p.avatar, p.bezit);
-  Object.keys(nieuw.beste).forEach(k => { const a = p.beste[k], b = nieuw.beste[k]; if (!a || b.t >= a.t) p.beste[k] = b; });
+  /* het beste record wint, niet het laatste; l:1 betekent dat juist het laagste telt */
+  Object.keys(nieuw.beste).forEach(k => {
+    const a = p.beste[k], b = nieuw.beste[k];
+    if (!a || typeof a.w !== "number"){ p.beste[k] = b; return; }
+    if (!b || typeof b.w !== "number") return;
+    const lager = !!(a.l || b.l);
+    if (a.w === b.w) { if ((b.t || 0) > (a.t || 0)) p.beste[k] = b; return; }
+    if (lager ? b.w < a.w : b.w > a.w) p.beste[k] = b;
+  });
   Object.keys(nieuw.campagne).forEach(k => { p.campagne[k] = Math.max(p.campagne[k] | 0, nieuw.campagne[k]); });
   Object.keys(nieuw.vrij).forEach(k => { p.vrij[k] = true; });
   return p;

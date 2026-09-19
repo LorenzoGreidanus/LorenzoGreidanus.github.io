@@ -11,6 +11,8 @@ import { DurableObject } from "cloudflare:workers";
 import { nette } from "./naamfilter.js";
 
 const MAX_LIJST = 100, TOP = 50, WACHT = 20 * 1000;
+/* hoeveel wachttijden er hoogstens bewaard blijven */
+const MAX_WACHT = 4000;
 /* Verder dan dit komt niemand eerlijk; wat erboven zit is verzonnen en wordt afgekapt. */
 const MAX_RONDE = 250, MAX_PUNTEN = 5000;
 function json(obj, status){
@@ -62,6 +64,12 @@ export class Klassement extends DurableObject {
     this.laatst[sid] = nu;
     /* de wachttijden van gisteren hoeven niet bewaard te blijven */
     Object.keys(this.laatst).forEach(k => { if (nu - this.laatst[k] > 24 * 3600 * 1000) delete this.laatst[k]; });
+    /* en op een dag kan iemand duizenden kenmerken verzinnen: dan gaat de oudste helft eruit */
+    let sleutels = Object.keys(this.laatst);
+    if (sleutels.length > MAX_WACHT){
+      sleutels.sort((a, b) => this.laatst[a] - this.laatst[b]);
+      sleutels.slice(0, sleutels.length - MAX_WACHT / 2).forEach(k => delete this.laatst[k]);
+    }
     await this.ctx.storage.put("lijst", this.lijst);
     await this.ctx.storage.put("laatst", this.laatst);
     const plek = this.lijst.findIndex(r => r.id === rij.id);

@@ -41,6 +41,9 @@ const SPELLEN_ROLLEN = { polis: "De vergadering van de klas", meetlat: "Langs de
 const KAART_MAX = 12000, BORD_MAX = 40000, ACTIE_MAX = 4000;
 const KLAS_SLAAPT = 400 * 24 * 60 * 60 * 1000; /* een klascode blijft tot de docent hem opheft, of tot hij ruim een jaar niet gebruikt is */
 const KLAS_MAX = 3000;
+/* hoeveel verschillende leerlingen er in een klas passen: ruim boven alle klassen
+   van een docent bij elkaar, maar wel een grens tegen volduwen */
+const KLAS_LEERLINGEN = 400;
 /* spellen die een opdracht kunnen zijn: bij een onderdeel telt het aantal goed in dat onderdeel, anders de ronde (of het aantal goed bij de Vragenrace) */
 const OPDRACHT_SPELLEN = { race: true, toren: true, zwaard: true };
 function maatVoor(r, o){
@@ -135,7 +138,9 @@ export class Kamer extends DurableObject {
       return json({ fout: "onbekend" }, 404);
     } catch (e){
       console.error("kamer", e && e.stack || e);
-      return json({ fout: "de kamer gaf een fout: " + (e && e.message || e) }, 500);
+      /* de melding blijft algemeen: wat er precies misging staat in het logboek,
+         niet in het antwoord aan de buitenwereld */
+      return json({ fout: "de kamer gaf een fout" }, 500);
     }
   }
 
@@ -160,7 +165,7 @@ export class Kamer extends DurableObject {
       /* een duel: twee spelers, geen docent, begint vanzelf als de tweede er is */
       this.stand = Object.assign(basis, { spel: "strijd", game, gestart: 0, duel: !!opzet.duel });
     } else {
-      const vragen = Array.isArray(opzet.vragen) ? opzet.vragen.slice(0, MAX_VRAGEN).map(q => ({
+      const vragen = Array.isArray(opzet.vragen) ? opzet.vragen.slice(0, MAX_VRAGEN).map(q => q && typeof q === "object" ? ({
         v: schoon(q.v, 300),
         o: (Array.isArray(q.o) ? q.o : []).slice(0, 4).map(x => schoon(x, 120)),
         g: Number(q.g) || 0,
@@ -168,7 +173,7 @@ export class Kamer extends DurableObject {
         t: schoon(q.t, 60),
         vlag: /^[a-z-]{2,8}$/.test(q.vlag || "") ? q.vlag : undefined,
         svg: veiligSvg(q.svg) ? q.svg : undefined
-      })).filter(q => q.v && q.o.length >= 2 && q.g >= 0 && q.g < q.o.length) : [];
+      }) : null).filter(q => q && q.v && q.o.length >= 2 && q.g >= 0 && q.g < q.o.length) : [];
       if (!vragen.length) return json({ fout: "geen vragen" }, 400);
       this.stand = Object.assign(basis, { spel: "quiz", onderdeel: schoon(opzet.onderdeel, 80), vragen,
         tijd: Math.max(5, Math.min(90, Number(opzet.tijd) || 20)), i: -1, vraagStart: 0 });
@@ -820,7 +825,12 @@ export class Kamer extends DurableObject {
     if (!/^[A-Za-z0-9_-]{8,40}$/.test(sid)) return json({ fout: "geen geldig kenmerk" }, 400);
     const spel = String(inz.spel || "");
     if (!SPELLEN_STRIJD[spel] && !KLAS_SPELLEN[spel]) return json({ fout: "onbekend spel" }, 400);
-    this.voegToe({ sid: sid.slice(0, 12), naam: nette(inz.naam, "Leerling"), av: schoonAv(inz.av), spel, ronde: getal(inz.ronde, 250), punten: getal(inz.punten, 5000),
+    const kort = sid.slice(0, 12);
+    if (!this.stand.resultaten.some(r => r.sid === kort)){
+      const wie = new Set(this.stand.resultaten.map(r => r.sid));
+      if (wie.size >= KLAS_LEERLINGEN) return json({ fout: "deze klas zit vol" }, 429);
+    }
+    this.voegToe({ sid: kort, naam: nette(inz.naam, "Leerling"), av: schoonAv(inz.av), spel, ronde: getal(inz.ronde, 250), punten: getal(inz.punten, 5000),
                    niveau: schoon(inz.niveau, 10), vak: schoon(inz.vak, 10), od: schoonOd(inz.od), t: Date.now() });
     await this.zetAlarm({ wat: "opruimen" }, KLAS_SLAAPT);
     await this.bewaar();
