@@ -13,11 +13,11 @@
 
    Wat hij niet aanraakt: de spelkamers en het klassement (/api/, /ws/, /q),
    want die moeten altijd live zijn. */
-var VERSIE = "v95";
+var VERSIE = "v96";
 var KERN = "kern-" + VERSIE, VOORRAAD = "voorraad-" + VERSIE;
 var STARTSET = [
   "/leermiddelen/", "/leermiddelen/index.html", "/leermiddelen/mee.html", "/leermiddelen/basis.css", "/leermiddelen/thema.js",
-  "/leermiddelen/strijd.js", "/leermiddelen/naamfilter.js", "/leermiddelen/adaptief.js", "/leermiddelen/klas.js", "/leermiddelen/spel.js", "/leermiddelen/spel.css", "/leermiddelen/cosmetica.js", "/leermiddelen/avatar.js", "/leermiddelen/profiel.js", "/leermiddelen/bank.js", "/fonts.css", "/manifest.json"
+  "/leermiddelen/strijd.js", "/leermiddelen/naamfilter.js", "/leermiddelen/adaptief.js", "/leermiddelen/klas.js", "/leermiddelen/spel.js", "/leermiddelen/spel.css", "/leermiddelen/iconen.css", "/leermiddelen/cosmetica.js", "/leermiddelen/avatar.js", "/leermiddelen/profiel.js", "/leermiddelen/bank.js", "/fonts.css", "/manifest.json"
 ];
 
 self.addEventListener("install", function(e){

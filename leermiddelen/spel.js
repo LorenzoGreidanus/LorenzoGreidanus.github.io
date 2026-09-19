@@ -136,8 +136,8 @@ window.SPEL = (function(){
       var reeksX = reeksFactor(o.reeks);
       var nMunt = Math.max(0, Math.round(o.goed * (o.muntFactor || 1) * MUNT_PER_GOED * reeksX + (o.muntBonus || 0)));
       var reeksTekst = reeksX > 1 ? ' (reeks van ' + o.reeks + ': ×' + String(reeksX).replace('.', ',') + ')' : '';
-      if (nMunt && PROFIEL.ingelogd()){ PROFIEL.muntenErbij(nMunt); muntHtml = '<p class="munten"><b>+' + nMunt + ' munten</b>' + reeksTekst + ' je hebt er nu ' + PROFIEL.munten() + ' <a href="index.html?winkel=1">naar de winkel</a></p>'; }
-      else if (nMunt && PROFIEL.accountMogelijk()) muntHtml = '<p class="munten stil">' + nMunt + ' munten gemist. <a href="index.html">Log in met Microsoft</a> in de leeromgeving, dan spaar je ze voor de winkel.</p>';
+      if (nMunt && PROFIEL.ingelogd()){ PROFIEL.muntenErbij(nMunt); muntHtml = '<p class="munten"><b>+' + nMunt + ' <span class="ico ico-munt" role="img" aria-label="munten" title="munten"></span></b>' + reeksTekst + ' je hebt er nu ' + PROFIEL.munten() + ' <a href="index.html?winkel=1">naar de winkel</a></p>'; }
+      else if (nMunt && PROFIEL.accountMogelijk()) muntHtml = '<p class="munten stil">' + nMunt + ' <span class="ico ico-munt" role="img" aria-label="munten" title="munten"></span> gemist. <a href="index.html">Log in met Microsoft</a> in de leeromgeving, dan spaar je ze voor de winkel.</p>';
     }
     /* de dagstreak: elke dag dat je iets speelt telt; de eerste keer op een dag krijgt wie is ingelogd een bonus (5 per dag in de reeks, hoogstens 25) */
     var streakHtml = '';

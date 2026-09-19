@@ -138,6 +138,10 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 }
 .meter{background:#fff;border:1px solid rgba(20,34,76,.09);border-radius:14px;padding:7px 13px;min-width:88px}
 .meter i{display:block;font-style:normal;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+/* de tekening staat op de plek van het woord en is iets groter dan de letters waren */
+.meter i .ico{width:1.5em;height:1.5em;vertical-align:-.35em}
+.meter.leven i{font-size:.8rem;letter-spacing:.04em;text-transform:none}
+.meter.leven i .ico{width:1.2em;height:1.2em;vertical-align:-.22em}
 .meter b{font-size:1.15rem;font-variant-numeric:tabular-nums}
 .meter.leven{flex:1;min-width:180px}
 .levenbalk{height:10px;border-radius:99px;background:rgba(20,34,76,.1);overflow:hidden;margin-top:4px}
@@ -155,6 +159,16 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
    verhouding van het speelveld. Deze regel moet na de regel hierboven staan,
    anders wint die met zijn width:auto. */
 @media(max-width:1000px){.arenavak{flex:none;width:100%;height:auto;min-height:0}}
+/* Op een telefoon houdt het vak zijn eigen hoogte aan in plaats van de
+   verhouding van de arena: het scherm beweegt daar toch mee, dus het venster
+   mag vierkanter staan en zoveel hoogte pakken als er is. */
+@media(max-width:700px){
+  .arenavak{aspect-ratio:auto;width:100%;height:clamp(240px,46vh,420px)}
+  /* tijdens het vechten telt elke pixel: het colofon hoeft er niet te staan,
+     en de regel onder de arena blijft op twee regels */
+  #scherm-spel:not(.hide) ~ footer{display:none}
+  .arenatip{max-height:calc(2 * 1.4em + 16px);overflow-y:auto}
+}
 /* vaste hoogte van twee regels: een langere tekst (een baas, de uitleg) scrolt, en de arena verspringt niet */
 .arenatip{font-size:.86rem;line-height:1.4;color:var(--muted);background:#fff;border:1px solid rgba(20,34,76,.09);border-radius:12px;padding:8px 13px;height:calc(2 * 1.4em + 18px);overflow-y:auto;box-sizing:border-box}
 @media(max-width:1000px){.arenatip{height:auto}}
@@ -325,6 +339,7 @@ body.groot .meter b{font-size:1.45rem}
 <script src="adaptief.js"></script>
 <link rel="stylesheet" href="basis.css">
 <link rel="stylesheet" href="spel.css">
+<link rel="stylesheet" href="iconen.css">
 </head>
 <body>
 
@@ -1101,8 +1116,50 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     ['pointerup', 'pointercancel', 'pointerleave'].forEach(function(ev){ bb.addEventListener(ev, function(){ blokToets = false; }); });
   })();
   var vak2 = document.getElementById('arenavak');
+  /* ---------- het meebewegende venster ----------
+     Onder de zevenhonderd pixels breed laten we niet de hele arena zien maar
+     een venster van ongeveer zeshonderd arena-eenheden breed, dat de speler
+     volgt. Het venster heeft precies de verhouding van het vak, zodat er geen
+     rand overblijft, en het blijft binnen de arena: bij de muur schuift het
+     niet verder. Het volgt zacht, anders schokt het beeld bij elke stap. */
+  var KIJK_GRENS = 700, KIJK_BREED = 470;
+  var kijk = { x:0, y:0, b:ARENA.b, h:ARENA.h, aan:false };
+  function kijkVenster(r){
+    /* welk stuk arena past er in dit vak? */
+    var b = Math.min(ARENA.b, KIJK_BREED), h = b * r.height / r.width;
+    if (h > ARENA.h){ h = ARENA.h; b = Math.min(ARENA.b, h * r.width / r.height); }
+    return { b:b, h:h };
+  }
+  function zetKijk(){
+    var r = vak2.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    var aan = r.width < KIJK_GRENS;
+    if (!aan){
+      if (kijk.aan || kijk.b !== ARENA.b){ kijk = { x:0, y:0, b:ARENA.b, h:ARENA.h, aan:false }; schrijfKijk(); }
+      return;
+    }
+    var maat = kijkVenster(r);
+    var mik = sp && isFinite(sp.x) ? sp : { x:ARENA.b / 2, y:ARENA.h / 2 };
+    var wx = Math.max(0, Math.min(ARENA.b - maat.b, mik.x - maat.b / 2));
+    var wy = Math.max(0, Math.min(ARENA.h - maat.h, mik.y - maat.h / 2));
+    if (!kijk.aan){ kijk.x = wx; kijk.y = wy; kijk.aan = true; }
+    else { kijk.x += (wx - kijk.x) * 0.18; kijk.y += (wy - kijk.y) * 0.18; }
+    kijk.b = maat.b; kijk.h = maat.h;
+    schrijfKijk();
+  }
+  function schrijfKijk(){
+    var vb = kijk.x.toFixed(1) + ' ' + kijk.y.toFixed(1) + ' ' + kijk.b.toFixed(1) + ' ' + kijk.h.toFixed(1);
+    var a = document.getElementById('arena'), g = document.getElementById('arenagrond');
+    if (a && a.getAttribute('viewBox') !== vb) a.setAttribute('viewBox', vb);
+    if (g && g.getAttribute('viewBox') !== vb) g.setAttribute('viewBox', vb);
+  }
   function arenaPunt(e){
     var r = vak2.getBoundingClientRect();
+    if (kijk.aan){
+      /* het venster vult het vak precies, dus dit is een rechte omrekening */
+      return { x:kijk.x + (e.clientX - r.left) / r.width * kijk.b,
+               y:kijk.y + (e.clientY - r.top) / r.height * kijk.h };
+    }
     var schaal = Math.min(r.width / ARENA.b, r.height / ARENA.h);
     return { x:(e.clientX - r.left - (r.width - ARENA.b * schaal) / 2) / schaal,
              y:(e.clientY - r.top - (r.height - ARENA.h * schaal) / 2) / schaal };
@@ -1560,16 +1617,18 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
      veranderen. Nu wordt hij eerst opgebouwd en alleen neergezet als hij
      anders is dan wat er staat. */
   var hudVak = null, hudWas = '';
+  /* een tekening in plaats van een woord boven een getal */
+  function ico(naam, woord){ return '<span class="ico ico-' + naam + '" role="img" aria-label="' + woord + '" title="' + woord + '"></span>'; }
   function tekenHud(){
     var deel = Math.max(0, hp / maxHp);
     var h =
-      '<div class="meter leven"><i>Leven ' + Math.max(0, Math.round(hp)) + ' / ' + maxHp + '</i><div class="levenbalk"><i class="' + (deel < 0.3 ? 'laag' : '') + '" style="width:' + (deel * 100).toFixed(1) + '%"></i></div></div>' +
+      '<div class="meter leven"><i>' + ico('hart', 'leven') + ' ' + Math.max(0, Math.round(hp)) + ' / ' + maxHp + '</i><div class="levenbalk"><i class="' + (deel < 0.3 ? 'laag' : '') + '" style="width:' + (deel * 100).toFixed(1) + '%"></i></div></div>' +
       (co.aan ? alleMaten().map(function(m){ return '<div class="meter leven"><i>' + m.naam + ' ' + Math.max(0, Math.round(m.hp)) + ' / ' + m.maxHp + (m.neer ? ' (ligt neer)' : '') + '</i><div class="levenbalk"><i class="' + (m.hp / m.maxHp < 0.3 ? 'laag' : '') + '" style="width:' + (Math.max(0, m.hp / m.maxHp) * 100).toFixed(1) + '%"></i></div></div>'; }).join('') : '') +
-      '<div class="meter"><i>Munten</i><b>' + munten + '</b></div>' +
-      '<div class="meter"><i>Ronde</i><b>' + ronde + '</b></div>' +
-      '<div class="meter"><i>Nog te gaan</i><b>' + (fouten.length + Math.max(0, teSpawnen)) + '</b></div>' +
-      '<div class="meter"><i>Geveld</i><b>' + geveld + '</b></div>' +
-      '<div class="meter"><i>Critical</i><b>' + (sp.crit ? 'klaar!' : (reeks % COMBO) + ' / ' + COMBO) + '</b></div>' +
+      '<div class="meter"><i>' + ico('munt', 'munten') + '</i><b>' + munten + '</b></div>' +
+      '<div class="meter"><i>' + ico('vlag', 'ronde') + '</i><b>' + ronde + '</b></div>' +
+      '<div class="meter"><i>' + ico('doel', 'nog te gaan') + '</i><b>' + (fouten.length + Math.max(0, teSpawnen)) + '</b></div>' +
+      '<div class="meter"><i>' + ico('zwaard', 'geveld') + '</i><b>' + geveld + '</b></div>' +
+      '<div class="meter"><i>' + ico('ster', 'critical') + '</i><b>' + (sp.crit ? 'klaar!' : (reeks % COMBO) + ' / ' + COMBO) + '</b></div>' +
       (stijl === 'wacht' ? '<div class="meter"><i>Blok</i><b>' + (sp.blokTijd || 0).toFixed(1).replace('.', ',') + ' s</b></div>' : '');
     if (h !== hudWas){
       if (!hudVak) hudVak = document.getElementById('hud');
@@ -1721,6 +1780,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     /* De vloer verandert nooit, dus die wordt een keer neergezet in de laag
        eronder in plaats van elk beeld opnieuw ingelezen. */
     if (!grondGezet){ document.getElementById('arenagrond').innerHTML = vloer(); grondGezet = true; }
+    zetKijk();
     var s = '';
     var pols = performance.now() / 1000;
     /* de gevaren op de vloer */
