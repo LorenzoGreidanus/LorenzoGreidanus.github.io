@@ -137,7 +137,9 @@ window.SPEL = (function(){
       var nMunt = Math.max(0, Math.round(o.goed * (o.muntFactor || 1) * MUNT_PER_GOED * reeksX + (o.muntBonus || 0)));
       var reeksTekst = reeksX > 1 ? ' (reeks van ' + o.reeks + ': ×' + String(reeksX).replace('.', ',') + ')' : '';
       if (nMunt && PROFIEL.ingelogd()){ PROFIEL.muntenErbij(nMunt); muntHtml = '<p class="munten"><b>+' + nMunt + ' <span class="ico ico-munt" role="img" aria-label="munten" title="munten"></span></b>' + reeksTekst + ' je hebt er nu ' + PROFIEL.munten() + ' <a href="index.html?winkel=1">naar de winkel</a></p>'; }
-      else if (nMunt && PROFIEL.accountMogelijk()) muntHtml = '<p class="munten stil">' + nMunt + ' <span class="ico ico-munt" role="img" aria-label="munten" title="munten"></span> gemist. <a href="index.html">Log in met Microsoft</a> in de leeromgeving, dan spaar je ze voor de winkel.</p>';
+      else if (nMunt && PROFIEL.accountMogelijk()) muntHtml = '<p class="munten stil">' + nMunt + ' <span class="ico ico-munt" role="img" aria-label="munten" title="munten"></span> gemist. ' +
+        'Zonder inloggen blijft je voortgang alleen in deze browser: je munten, je reeks en je beste scores zijn weg zodra de laptop wordt geleegd. ' +
+        '<a href="voortgang.html">Log in met Microsoft</a> en het staat op je account, op elk apparaat.</p>';
     }
     /* de dagstreak: elke dag dat je iets speelt telt; de eerste keer op een dag krijgt wie is ingelogd een bonus (5 per dag in de reeks, hoogstens 25) */
     var streakHtml = '';
@@ -180,6 +182,7 @@ window.SPEL = (function(){
         knopje('opnieuw', IC.opnieuw, schoon(o.opnieuwTekst || 'Nog een keer')) +
         knopje('stil deel', IC.deel, 'Delen') +
         knopje('stil', IC.alle, 'Alle spellen', 'a', ' href="index.html"') +
+        knopje('stil', IC.alle, 'Mijn voortgang', 'a', ' href="voortgang.html"') +
       '</div>' +
       '<p class="meta" id="eindMeta"></p>';
     var voor = o.plek ? $(o.plek) : null;

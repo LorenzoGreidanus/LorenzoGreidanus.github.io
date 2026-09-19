@@ -158,6 +158,34 @@ td.getal{font-variant-numeric:tabular-nums;text-align:right}
 .gekoppeld .wie.stil{opacity:.75;border-style:dashed}
 .gekoppeld .wie em{font-style:normal;color:var(--muted);font-size:.8rem}
 .gekoppeld .leeg{color:var(--muted);font-size:.92rem}
+/* ---------- op papier ----------
+   Een blad voor in je map of op tafel bij een gesprek: de klas, de datum en de
+   cijfers. Alles waar je op moet klikken heeft op papier geen zin. */
+.printkop{display:none}
+@media print{
+  @page{margin:14mm}
+  body{background:#fff;color:#000;font-size:10.5pt}
+  /* op papier alleen het overzicht zelf; alles erboven is om te klikken */
+  body>*:not(main),main>*:not(#overzicht){display:none !important}
+  #overzicht{display:block !important;border:none;box-shadow:none;padding:0;margin:0}
+  .rij,.chips,.opdrachtvorm,.lesmodus,.tip,#ovUit,#keuzeVak,#opdrachtVak,
+  .knop,.knopjes,.legenda i,#spelStap,#logVak{display:none !important}
+  /* de kop van het rooster komt op elke bladzijde terug, en een regel valt niet uit elkaar */
+  thead{display:table-header-group}
+  tr{break-inside:avoid}
+  .printkop{display:block;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:14px}
+  .printkop b{display:block;font-size:1.4rem}
+  .printkop span{color:#333;font-size:.9rem}
+  .stap{border:none;box-shadow:none;padding:0;margin:0 0 16px;background:none;break-inside:avoid}
+  .stap>b{font-size:1.05rem;display:block;margin-bottom:6px}
+  .gekoppeld .wie{border:1px solid #999;background:none;padding:3px 9px}
+  .gekoppeld .wie svg{display:none}
+  .rooster table,.tabelvak table{width:100%;border-collapse:collapse;font-size:9.5pt}
+  .rooster td,.rooster th,.tabelvak td,.tabelvak th{border:1px solid #bbb;padding:3px 5px}
+  .rooster,.tabelvak{overflow:visible !important}
+  .samen>div{break-inside:avoid}
+  a{color:#000;text-decoration:none}
+}
 .lesmodus input{margin-top:4px;width:17px;height:17px}
 .lesmodus span{color:var(--muted)}
 .tip.demo{margin-top:8px;background:#FFE168;color:#14224C;border-radius:12px;padding:8px 12px;display:inline-block}
@@ -304,11 +332,13 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       <div class="rij">
         <button class="knop stil klein" id="ververs" type="button">Vernieuwen</button>
         <button class="knop stil klein" id="csvBtn" type="button">Download als CSV</button>
+        <button class="knop stil klein" id="printBtn" type="button">Print dit overzicht</button>
         <button class="knop stil klein" id="vergeet" type="button">Vergeet op dit apparaat</button>
         <button class="knop stil klein" id="opheffen" type="button">Klascode opheffen</button>
       </div>
     </div>
     <p class="tip" id="ovUit" style="margin-top:8px"></p>
+    <div class="printkop" id="printkop" aria-hidden="true"></div>
     <div class="stap opdrachtvak" id="opdrachtVak">
       <b>Opdracht voor de klas</b>
       <p class="tip">Eén opdracht tegelijk, bijvoorbeeld: Vragenrace, geschiedenis, tijd van ontdekkers, minstens 15 goed, vóór vrijdag. Leerlingen zien hem bovenaan in de leeromgeving met een knop naar het spel; hier zie je wie hem gehaald heeft.</p>
@@ -336,7 +366,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       <p class="tip">Iedereen die jouw klascode heeft ingevuld staat hier, ook als hij nog niets gespeeld heeft. Handig aan het begin van de les: zo zie je in een oogopslag wie er nog niet binnen is.</p>
       <div class="gekoppeld" id="gekoppeld"></div>
     </div>
-    <div class="stap"><b>Spel</b><div class="chips" id="spelChips"></div></div>
+    <div class="stap" id="spelStap"><b>Spel</b><div class="chips" id="spelChips"></div></div>
     <div class="stap" id="odStap">
       <b>Per onderdeel</b>
       <p class="tip">Welk deel van de vragen per onderdeel goed ging, per leerling en voor de hele klas. Vragenrace, Torenverdediging, Zwaardvechter en de Klasquiz tellen per onderdeel mee. Handig om te zien welk onderdeel je nog een keer moet uitleggen, en wie extra oefening nodig heeft.</p>
@@ -351,7 +381,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     </div>
     <div class="stap">
       <b>Alle potjes</b>
-      <div class="tabelvak"><table><thead><tr><th>Leerling</th><th>Spel</th><th>Ronde of goed</th><th>Punten</th><th>Niveau</th><th>Vak</th><th>Wanneer</th></tr></thead><tbody id="rijen"></tbody></table></div>
+      <div class="tabelvak" id="logVak"><table><thead><tr><th>Leerling</th><th>Spel</th><th>Ronde of goed</th><th>Punten</th><th>Niveau</th><th>Vak</th><th>Wanneer</th></tr></thead><tbody id="rijen"></tbody></table></div>
     </div>
   </section>
 </main>
@@ -474,6 +504,15 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
   }
   function teken(){
     tekenGekoppeld();
+    /* de kop voor op papier: welke klas, welke code, wanneer afgedrukt */
+    var pk = $('printkop');
+    if (pk){
+      var d = new Date();
+      pk.innerHTML = data
+        ? '<b>' + schoon(data.naam || 'Klas') + '</b><span>klascode ' + schoon(data.code || '') + ' &middot; overzicht van ' +
+          d.toLocaleDateString('nl-NL', { day:'numeric', month:'long', year:'numeric' }) + ' &middot; meneergreidanus.nl</span>'
+        : '';
+    }
     var lijst = data ? data.resultaten.slice() : [];
     var spellen = {}; lijst.forEach(function(r){ spellen[r.spel] = true; });
     $('spelChips').innerHTML = [{ id:'', naam:'alle spellen' }].concat(Object.keys(spellen).map(function(s){ return { id:s, naam:SPELLEN[s] || s }; })).map(function(s){
@@ -708,6 +747,8 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       })
       .catch(function(){ alert('Geen verbinding met de server.'); });
   });
+  var pb = $('printBtn');
+  if (pb) pb.addEventListener('click', function(){ window.print(); });
   $('csvBtn').addEventListener('click', function(){
     if (!data) return;
     var regels = [['leerling', 'spel', 'ronde of goed', 'punten', 'niveau', 'vak', 'wanneer', 'per onderdeel (goed/gesteld)']].concat(data.resultaten.map(function(r){
