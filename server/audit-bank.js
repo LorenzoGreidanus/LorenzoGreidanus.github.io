@@ -66,9 +66,14 @@ for (const vak of Object.keys(BRONNEN)){
       const lengtes = q.o.map(o => String(o).length);
       const langste = Math.max(...lengtes);
       const langsteAnder = Math.max(...lengtes.filter((_, j) => j !== q.g));
+      /* Alleen vragen waar een van de vier er echt als langste uitspringt
+         tellen mee. Staan er vier even lange antwoorden (bij wiskunde vaak
+         vier getallen), dan valt er niets te tellen en zou zo'n vraag de
+         verhouding alleen maar vertroebelen. */
+      if (lengtes.filter(x => x === langste).length !== 1) return;
       lengteMee++;
       lengteKans += 1 / q.o.length;
-      if (lengtes[q.g] === langste && lengtes.filter(x => x === langste).length === 1){
+      if (lengtes[q.g] === langste){
         lengteTeller++;
         if (lengtes[q.g] >= langsteAnder + UIT_TEKENS && lengtes[q.g] >= langsteAnder * UIT_KEER){
           waarschuwingen.push(`${waar}: het goede antwoord is ${lengtes[q.g]} tekens, de langste afleider ${langsteAnder}`);
