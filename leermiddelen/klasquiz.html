@@ -103,6 +103,11 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;pa
 .knop:disabled{opacity:.45;cursor:default;box-shadow:none}
 .knop.crab{background:var(--crab);color:#14224C}
 .knop.stil{background:var(--kaart);color:var(--ink);border:1.5px solid var(--rand2);box-shadow:none}
+/* je eigen sets: een pil met de naam en een kruisje om hem uit je lijst te halen */
+.setpil{display:inline-flex;align-items:stretch;gap:0}
+.setpil .knop{border-top-right-radius:0;border-bottom-right-radius:0;padding:10px 14px;font-size:.92rem;min-height:44px}
+.setweg{border:1.5px solid var(--rand2);border-left:none;border-radius:0 14px 14px 0;background:var(--kaart);color:var(--muted);padding:0 12px;min-height:44px;font-size:1.05rem;line-height:1;cursor:pointer}
+.setweg:hover{color:var(--crab);border-color:var(--crab)}
 .knop.groot{font-size:1.2rem;padding:16px 26px;border-radius:18px}
 .veld{width:100%;border:2px solid var(--rand2);border-radius:14px;padding:12px 14px;background:var(--kaart);color:var(--ink);font-size:1.1rem}
 .veld:focus{border-color:var(--ocean)}
@@ -321,6 +326,7 @@ Frans Hals"></textarea>
             <button class="knop" id="setLaad" type="button">Laden</button>
           </div>
           <p class="tip" id="setUit" style="margin-top:6px">Een set krijgt een code van zes tekens; daarmee haal je hem op elk apparaat weer op, een half jaar lang. Wat je hier typt blijft ook op dit apparaat bewaard.</p>
+          <div id="mijnSets" class="hide" style="margin-top:10px"></div>
         </div>
       </div>
       <div class="stap">
@@ -635,6 +641,41 @@ Frans Hals"></textarea>
       if (bron === 'eigen') toonEigen();
     });
   });
+  /* Je eigen sets, als je bent ingelogd met Microsoft. Het account bewaart
+     alleen code en naam; de tekst blijft in de set zelf. */
+  var mijnSets = null;
+  function tekenMijnSets(){
+    var vak = $('mijnSets'); if (!vak) return;
+    if (!mijnSets || !mijnSets.length){ vak.classList.add('hide'); vak.innerHTML = ''; return; }
+    vak.classList.remove('hide');
+    vak.innerHTML = '<b style="display:block;margin-bottom:6px">Jouw sets</b>' +
+      '<div class="rij" style="flex-wrap:wrap;gap:6px">' + mijnSets.map(function(s){
+        return '<span class="setpil"><button type="button" class="knop stil" data-set="' + schoonHtml(s.code) + '">' +
+          schoonHtml(s.naam) + '</button>' +
+          '<button type="button" class="setweg" data-setweg="' + schoonHtml(s.code) + '" aria-label="' + schoonHtml(s.naam) + ' uit je lijst halen" title="uit je lijst halen">&times;</button></span>';
+      }).join('') + '</div>' +
+      '<p class="tip" style="margin-top:6px">Deze staan bij je Microsoft-account, dus ze zijn er ook op een ander apparaat.</p>';
+    Array.prototype.forEach.call(vak.querySelectorAll('[data-set]'), function(b){
+      b.addEventListener('click', function(){ $('setCode').value = b.getAttribute('data-set'); $('setLaad').click(); });
+    });
+    Array.prototype.forEach.call(vak.querySelectorAll('[data-setweg]'), function(b){
+      b.addEventListener('click', function(){
+        var c = b.getAttribute('data-setweg');
+        mijnSets = mijnSets.filter(function(s){ return s.code !== c; });
+        tekenMijnSets();
+        fetch('/api/account/sets', { method:'POST', headers:{ 'content-type':'application/json' }, body: JSON.stringify({ weg:[c] }) }).catch(function(){});
+      });
+    });
+  }
+  function haalMijnSets(){
+    fetch('/api/account/sets', { cache:'no-store' })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){ if (j && Array.isArray(j.sets)){ mijnSets = j.sets; tekenMijnSets(); } })
+      .catch(function(){});
+  }
+  /* de vraag of je bent ingelogd loopt al via profiel.js; die weet het antwoord meestal al */
+  if (window.PROFIEL && PROFIEL.account) PROFIEL.account().then(function(acc){ if (acc && acc.ingelogd) haalMijnSets(); });
+
   $('setBewaar').addEventListener('click', function(){
     var r = toonEigen();
     if (!r.vragen.length){ $('setUit').textContent = 'Eerst een paar vragen typen.'; return; }
@@ -646,6 +687,17 @@ Frans Hals"></textarea>
         if (!x.ok){ $('setUit').textContent = x.j.fout || 'Bewaren lukte niet.'; return; }
         $('setCode').value = x.j.code;
         $('setUit').innerHTML = 'Bewaard. De code is <b>' + schoonHtml(x.j.code) + '</b>: daarmee haal je deze set op elk apparaat op, een half jaar lang.';
+        /* ingelogd? dan hoeft die code niet onthouden te worden */
+        var naam = ($('setNaam').value || '').trim() || 'Eigen set';
+        fetch('/api/account/sets', { method:'POST', headers:{ 'content-type':'application/json' },
+          body: JSON.stringify({ sets:[{ code:x.j.code, naam:naam, gemaakt:Date.now() }] }) })
+          .then(function(r){ return r.ok ? r.json() : null; })
+          .then(function(j){
+            if (!j || !Array.isArray(j.sets)) return;
+            mijnSets = j.sets; tekenMijnSets();
+            $('setUit').innerHTML += ' Hij staat nu ook bij je Microsoft-account, dus je hoeft de code niet te onthouden.';
+          })
+          .catch(function(){});
       })
       .catch(function(){ $('setBewaar').disabled = false; $('setUit').textContent = 'Geen verbinding met de server.'; });
   });

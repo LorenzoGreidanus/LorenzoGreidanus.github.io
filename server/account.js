@@ -274,6 +274,22 @@ export async function behandel(req, env, url, hulp){
     return json(jk, rk.status);
   }
 
+  /* de eigen vragensets van de ingelogde docent: ophalen en bijwerken.
+     Alleen de verwijzing (code en naam); de tekst blijft in het Sets-object. */
+  if (p === "/api/account/sets"){
+    if (!hulp.eigenSite()) return json({ fout: "niet vanaf deze site" }, 403);
+    if (!await hulp.magDoor("account-sets", 300, 60)) return json({ fout: "even wachten" }, 429);
+    const s = await sessie(env, req);
+    if (!s) return json({ fout: "niet ingelogd" }, 401);
+    const stub = await account(env, s.id);
+    if (req.method === "GET") return stub.fetch("https://account/sets");
+    if (req.method === "POST"){
+      let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldige lijst" }, 400); }
+      return stub.fetch("https://account/sets", { method: "POST", body: JSON.stringify(inz || {}) });
+    }
+    return json({ fout: "onbekend" }, 404);
+  }
+
   /* de klassen van de ingelogde docent: ophalen en bijwerken */
   if (p === "/api/account/klassen"){
     if (!hulp.eigenSite()) return json({ fout: "niet vanaf deze site" }, 403);
@@ -348,6 +364,26 @@ export class Account extends DurableObject {
       this.stand.klassen = Object.keys(heb).map(c => heb[c]).slice(0, 60);
       await this.bewaar();
       return json({ ok: true, klassen: this.stand.klassen });
+    }
+    /* De vragensets van deze docent: code, naam, wanneer. Dezelfde vorm als
+       de klassen hierboven: erbij zetten met sets, eruit met weg. */
+    if (url.pathname === "/sets"){
+      if (req.method !== "POST") return json({ ok: true, sets: this.stand.sets || [] });
+      const binnen = Array.isArray(inz.sets) ? inz.sets : [];
+      const weg = Array.isArray(inz.weg) ? inz.weg.map(x => String(x || "").toUpperCase()) : [];
+      const heb = {};
+      (this.stand.sets || []).forEach(s => { heb[s.code] = s; });
+      binnen.slice(0, 60).forEach(s => {
+        if (!s || typeof s !== "object") return;
+        const code = String(s.code || "").toUpperCase();
+        if (!/^[A-Z0-9]{6}$/.test(code)) return;
+        heb[code] = { code, naam: String(s.naam || "Eigen set").slice(0, 60), gemaakt: Number(s.gemaakt) || Date.now() };
+      });
+      weg.forEach(c => { delete heb[c]; });
+      /* de nieuwste bovenaan, en hoogstens zestig */
+      this.stand.sets = Object.keys(heb).map(c => heb[c]).sort((x, y) => y.gemaakt - x.gemaakt).slice(0, 60);
+      await this.bewaar();
+      return json({ ok: true, sets: this.stand.sets });
     }
     if (url.pathname === "/koppel"){
       const code = String(inz.code || "").toUpperCase();
