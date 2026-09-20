@@ -179,7 +179,19 @@ header{padding:12px 0;border-bottom:1px solid var(--rand);background:#fff;positi
 .spel .klaspil{margin-top:8px;font-size:.66rem;font-weight:600;padding:2px 8px;border-radius:999px;background:#e7f3ec;color:#1f6b41}
 .meerspellen{margin-top:10px;border:1.5px solid var(--rand2);background:var(--kaart);border-radius:999px;padding:9px 16px;min-height:44px;font-weight:600;font-size:.92rem}
 .meerspellen:hover{border-color:var(--ocean);color:var(--ocean)}
-.lesnoot{margin-top:14px;background:#eef2ff;border:1px solid #c9d5f7;border-radius:14px;padding:12px 16px;color:var(--ink);font-size:.93rem}
+.lesnoot{margin-top:14px;background:var(--kaart-aan);border:1px solid var(--rand2);border-radius:14px;padding:12px 16px;color:var(--ink);font-size:.93rem}
+
+/* ---------- wat je docent klaarzette ---------- */
+/* Dit blok staat boven het raam, dus boven de filters en het zoekveld: met een
+   klascode is dit waar de pagina op opent. Het heeft geen eigen paneel nodig,
+   want de opdrachtkaart is zelf al het sterkste vlak van de pagina. */
+.lesvak{display:grid;gap:14px;margin-top:20px}
+.lesvak.hide{display:none}
+.lesvak .sectie{margin-top:0}
+.lesvak .opdrachtkaart{margin:0}
+/* lesmodus: er valt niets te kiezen, dus het kiesgereedschap gaat weg */
+main.lesalleen .zijkant,main.lesalleen .bovenrij,main.lesalleen .verder{display:none}
+main.lesalleen .raam{grid-template-columns:minmax(0,1fr)}
 .restspellen{margin-top:18px}
 .restspellen summary{cursor:pointer;font-weight:600;color:var(--muted);padding:10px 0}
 .restspellen[open] summary{color:var(--ink)}
@@ -434,13 +446,13 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
 .codevak2 .code{font-size:1.5rem;font-weight:700;letter-spacing:.22em;font-variant-numeric:tabular-nums;background:var(--ink);color:var(--room);border-radius:12px;padding:8px 14px;display:inline-block;margin-right:8px}
 .codevak2 input{border:1.5px solid var(--rand2,rgba(20,34,76,.16));border-radius:12px;padding:8px 10px;background:var(--kaart,#fff);color:var(--ink);font:inherit;width:140px;letter-spacing:.14em;text-transform:uppercase}
 .codevak2 p{font-size:.84rem;color:var(--muted);margin-top:6px}
-.opdrachtkaart{margin:0 0 12px;background:linear-gradient(135deg,#204ECF,#4a6fe0);color:#fff;border-radius:18px;padding:14px 18px;display:grid;gap:4px;box-shadow:0 10px 26px rgba(32,78,207,.22)}
-.opdrachtkaart .eyebrow{color:rgba(255,255,255,.75)}
+.opdrachtkaart{margin:0 0 12px;background:linear-gradient(135deg,#204ECF,#3a5fd6);color:#fff;border-radius:18px;padding:14px 18px;display:grid;gap:4px;box-shadow:0 10px 26px rgba(32,78,207,.22)}
+.opdrachtkaart .eyebrow{color:rgba(255,255,255,.86)}
 .opdrachtkaart b{font-size:1.05rem}
-.opdrachtkaart span{font-size:.9rem;color:rgba(255,255,255,.9)}
+.opdrachtkaart span{font-size:.9rem;color:rgba(255,255,255,.95)}
 .opdrachtkaart .klaar{color:#d7f1df;font-weight:600}
-.opdrachtkaart .nog{color:#FFE168}
-.opdrachtkaart .knop{justify-self:start;margin-top:6px;background:#fff;color:#204ECF;border-radius:999px;padding:7px 14px;font-weight:600;text-decoration:none}
+.opdrachtkaart .nog{color:#FFE9A0}
+.opdrachtkaart .knop{justify-self:start;margin-top:6px;background:#fff;color:#204ECF;border-radius:999px;padding:7px 16px;min-height:44px;display:inline-flex;align-items:center;font-weight:600;text-decoration:none}
 </style>
 <link rel="stylesheet" href="basis.css">
 <link rel="stylesheet" href="iconen.css">
@@ -487,6 +499,14 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
       <p class="niveauhint hide" id="niveauhint"></p>
     </div>
   </section>
+
+  <!-- Met een klascode het eerste wat je ziet: de opdracht van je docent en
+       de spellen die hij voor deze klas koos. Zonder klascode blijft dit leeg
+       en verborgen. -->
+  <div class="lesvak hide" id="lesvak">
+    <div class="opdrachtkaart hide" id="opdrachtKaart"></div>
+    <div id="lesspellen"></div>
+  </div>
 
   <div class="raam">
     <aside class="zijkant" aria-label="Filters">
@@ -1126,8 +1146,32 @@ var SPELLEN = [
     if (!les || !les.spellen || !les.spellen.length) return true;
     return les.spellen.indexOf(sp.bestand.replace('.html', '')) >= 0;
   }
+  /* Het blok van de docent: het loopt niet door de filters heen, want het is
+     geen deel van de catalogus. Zoekt een leerling, dan gaat het weg. */
+  function tekenLesvak(){
+    var vak = $('lesvak'), waar = $('lesspellen');
+    if (!vak || !waar) return;
+    var aan = !!(les && les.spellen && les.spellen.length && !stand.zoek);
+    if (aan){
+      var vanDocent = SPELLEN.filter(function(sp){ return sp.bestand && magInLes(sp); });
+      waar.innerHTML = vanDocent.length
+        ? sectie('<path d="M4 5h16v11H4zM8 20h8M12 16v4"/>', 'var(--ocean)',
+                 'Van je docent' + (les.naam ? ' (' + les.naam + ')' : ''), 'hiermee werk je in de les', vanDocent.length, vanDocent)
+        : '';
+    } else waar.innerHTML = '';
+    var kaartje = document.getElementById('opdrachtKaart');
+    var iets = waar.innerHTML !== '' || (kaartje && !kaartje.classList.contains('hide'));
+    if (iets) vak.classList.remove('hide'); else vak.classList.add('hide');
+    var m = document.getElementById('main');
+    if (m){ if (aan && les.lesmodus) m.classList.add('lesalleen'); else m.classList.remove('lesalleen'); }
+  }
+  /* De opdrachtkaart komt uit een ander script en komt later binnen; die meldt
+     zich hier zodra hij er staat, zodat het blok op het juiste moment opengaat. */
+  window.LESVAKBIJ = tekenLesvak;
+
   function tekenSpellenNu(){
     var lijst = gefilterd(), s = '';
+    tekenLesvak();
     if (!lijst.length){
       $('secties').innerHTML = '<div class="leegmelding"><span class="hand">niets gevonden</span>' +
         '<p>Geen spel dat hierbij past. Probeer een ander woord, of zet de filters uit.</p>' +
@@ -1135,21 +1179,17 @@ var SPELLEN = [
       $('wisAlles2').addEventListener('click', wisFilters);
       return;
     }
-    /* eerst wat de docent koos; in de lesmodus blijft de rest weg */
+    /* Wat de docent koos staat hierboven al. Hier blijft de rest van de
+       catalogus over, ingeklapt achter een regel; in de lesmodus niets. */
     if (les && les.spellen && les.spellen.length && !stand.zoek){
-      var vanDocent = lijst.filter(magInLes), rest = lijst.filter(function(sp){ return !magInLes(sp); });
-      if (vanDocent.length){
-        s += sectie('<path d="M4 5h16v11H4zM8 20h8M12 16v4"/>', 'var(--ocean)', 'Van je docent' + (les.naam ? ' (' + les.naam + ')' : ''), 'hiermee werk je in de les', vanDocent.length, vanDocent);
-      }
+      var rest = lijst.filter(function(sp){ return !magInLes(sp); });
       if (les.lesmodus){
-        s += '<p class="lesnoot">De lesmodus staat aan: je docent heeft de andere spellen even weggezet. Na de les staan ze er weer.</p>';
-        $('secties').innerHTML = s;
+        $('secties').innerHTML = '<p class="lesnoot">De lesmodus staat aan: je docent heeft de andere spellen even weggezet. Na de les staan ze er weer.</p>';
         return;
       }
-      if (rest.length){
-        s += '<details class="restspellen"' + (uitgeklapt.rest ? ' open' : '') + '><summary>Alle andere spellen (' + rest.length + ')</summary><div class="spellen">' + rest.map(kaart).join('') + '</div></details>';
-      }
-      $('secties').innerHTML = s;
+      $('secties').innerHTML = rest.length
+        ? '<details class="restspellen"' + (uitgeklapt.rest ? ' open' : '') + '><summary>Alle andere spellen (' + rest.length + ')</summary><div class="spellen">' + rest.map(kaart).join('') + '</div></details>'
+        : '';
       return;
     }
     if (stand.zoek){
@@ -1256,29 +1296,36 @@ var SPELLEN = [
   var OP_SPEL = { race:['Vragenrace', 'race.html'], toren:['Torenverdediging', 'toren.html'], zwaard:['Zwaardvechter', 'zwaard.html'] };
   var OP_VAK = { reken:'rekenen', ned:'Nederlands', eng:'Engels', ges:'geschiedenis', aard:'aardrijkskunde', bio:'biologie', wis:'wiskunde', burg:'samenleving', eco:'economie' };
   function deelNaam(vak, id){ var l = window.ONDERDELEN && ONDERDELEN[vak], o = l && l.filter(function(x){ return x.id === id; })[0]; return o ? o.naam : id; }
-  /* wat de docent koos: de leeromgeving zet die spellen vooraan (zie tekenSpellenNu) */
-  function leesLes(k){
+  /* Welke spellen deze klas ziet, of de lesmodus aanstaat en de opdracht van
+     de week komen alle drie uit hetzelfde antwoord. Dus een verzoek, niet twee. */
+  function leesKlas(k){
     fetch('/api/klas/' + k.code + '/mijn?sid=' + encodeURIComponent(KLAS.sid()), { cache:'no-store' })
       .then(function(r){ return r.json(); })
-      .then(function(j){ if (!j || j.fout) return; if (window.ZETLES) ZETLES({ spellen:j.spellen || [], lesmodus:!!j.lesmodus, naam:j.naam || '' }); })
+      .then(function(j){
+        if (!j || j.fout) return;
+        if (window.ZETLES) ZETLES({ spellen:j.spellen || [], lesmodus:!!j.lesmodus, naam:j.naam || '' });
+        toonOpdracht(j);
+      })
       .catch(function(){});
   }
-  /* de opdracht van de docent: de kaart met wat, tot wanneer, en of je hem al gehaald hebt */
-  function toonOpdracht(k){
+  /* De opdracht van de docent: wat, tot wanneer, en of je hem al gehaald hebt.
+     Hij zat in de lade achter het gezichtje. Nu staat hij boven aan de pagina,
+     want het is het eerste wat een leerling in de les wil weten. */
+  function toonOpdracht(j){
     var vak = document.getElementById('opdrachtKaart');
-    if (!vak){ vak = document.createElement('div'); vak.id = 'opdrachtKaart'; vak.className = 'opdrachtkaart hide'; doel.parentNode.insertBefore(vak, doel); }
-    fetch('/api/klas/' + k.code + '/mijn?sid=' + encodeURIComponent(KLAS.sid()), { cache:'no-store' }).then(function(r){ return r.json(); }).then(function(j){
-      var o = j && j.opdracht;
-      if (!o || !OP_SPEL[o.spel]){ vak.classList.add('hide'); return; }
-      var sp = OP_SPEL[o.spel], verlopen = o.tot < Date.now(), maat = o.deel ? 'goed' : o.spel === 'race' ? 'goed' : 'rondes';
-      var link = sp[1] + '?vak=' + encodeURIComponent(o.vak) + (o.deel ? '&deel=' + encodeURIComponent(o.deel) : '');
-      vak.innerHTML = '<p class="eyebrow">opdracht van je docent</p>' +
-        '<b>' + schoon(sp[0]) + ', ' + schoon(OP_VAK[o.vak] || o.vak) + (o.deel ? ', ' + schoon(o.deelNaam || deelNaam(o.vak, o.deel)) : '') + ': minstens ' + o.min + ' ' + maat + '</b>' +
-        '<span>' + (verlopen ? 'De tijd was tot ' : 'Tot ') + new Date(o.tot).toLocaleDateString('nl-NL', { weekday:'long', day:'numeric', month:'long' }) + '.' + (o.tekst ? ' ' + schoon(o.tekst) : '') + '</span>' +
-        (j.gehaald ? '<span class="klaar">Gehaald ✓ Je beste: ' + j.beste + ' ' + maat + '.</span>' : '<span class="nog">' + (j.beste ? 'Je beste tot nu toe: ' + j.beste + ' van ' + o.min + '. ' : '') + (verlopen ? 'Verlopen.' : 'Nog te doen.') + '</span>') +
-        '<a class="knop" href="' + link + '">' + (j.gehaald ? 'Nog een keer' : 'Aan de slag') + '</a>';
-      vak.classList.remove('hide');
-    }).catch(function(){ vak.classList.add('hide'); });
+    if (!vak) return;
+    function klaar(){ if (window.LESVAKBIJ) LESVAKBIJ(); }
+    var o = j && j.opdracht;
+    if (!o || !OP_SPEL[o.spel]){ vak.classList.add('hide'); klaar(); return; }
+    var sp = OP_SPEL[o.spel], verlopen = o.tot < Date.now(), maat = o.deel ? 'goed' : o.spel === 'race' ? 'goed' : 'rondes';
+    var link = sp[1] + '?vak=' + encodeURIComponent(o.vak) + (o.deel ? '&deel=' + encodeURIComponent(o.deel) : '');
+    vak.innerHTML = '<p class="eyebrow">opdracht van je docent</p>' +
+      '<b>' + schoon(sp[0]) + ', ' + schoon(OP_VAK[o.vak] || o.vak) + (o.deel ? ', ' + schoon(o.deelNaam || deelNaam(o.vak, o.deel)) : '') + ': minstens ' + o.min + ' ' + maat + '</b>' +
+      '<span>' + (verlopen ? 'De tijd was tot ' : 'Tot ') + new Date(o.tot).toLocaleDateString('nl-NL', { weekday:'long', day:'numeric', month:'long' }) + '.' + (o.tekst ? ' ' + schoon(o.tekst) : '') + '</span>' +
+      (j.gehaald ? '<span class="klaar">Gehaald ✓ Je beste: ' + j.beste + ' ' + maat + '.</span>' : '<span class="nog">' + (j.beste ? 'Je beste tot nu toe: ' + j.beste + ' van ' + o.min + '. ' : '') + (verlopen ? 'Verlopen.' : 'Nog te doen.') + '</span>') +
+      '<a class="knop" href="' + link + '">' + (j.gehaald ? 'Nog een keer' : 'Aan de slag') + '</a>';
+    vak.classList.remove('hide');
+    klaar();
   }
   function teken(){
     var k = KLAS.lees();
@@ -1291,13 +1338,13 @@ var SPELLEN = [
         (vast ? '<span class="vast">Je bent ingelogd met Microsoft, dus dit blijft staan tot je docent de klascode opheft.</span>' : '<button type="button" class="los" id="klasLos">Loskoppelen</button>') + '</p>';
       var los = document.getElementById('klasLos');
       if (los) los.addEventListener('click', function(){ KLAS.wis(); teken(); });
-      toonOpdracht(k);
-      leesLes(k);
+      leesKlas(k);
       /* bestaat de code nog? een keer per bezoek kijken */
       if (!gekeken){ gekeken = true; KLAS.controleer().then(function(nog){ if (!nog) teken(); }); }
       return;
     }
-    var ok0 = document.getElementById('opdrachtKaart'); if (ok0) ok0.classList.add('hide');
+    var ok0 = document.getElementById('opdrachtKaart'); if (ok0){ ok0.classList.add('hide'); ok0.innerHTML = ''; }
+    if (window.ZETLES) ZETLES(null);
     /* Het veld staat op de pagina zolang er nog geen klas is. In de lade komt
        dan alleen een verwijzing te staan, zodat er niet twee formulieren
        tegelijk in beeld zijn. */
