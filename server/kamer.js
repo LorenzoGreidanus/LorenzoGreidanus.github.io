@@ -155,7 +155,9 @@ export class Kamer extends DurableObject {
     };
     if (opzet.spel === "klas"){
       /* een klascode: geen spel, maar een bak waarin leerlingen hun uitslagen melden en die de docent leest */
-      this.stand = Object.assign(basis, { spel: "klas", naam: schoon(opzet.naam, 40) || "Klas", resultaten: [] });
+      this.stand = Object.assign(basis, { spel: "klas", naam: schoon(opzet.naam, 40) || "Klas", resultaten: [],
+        /* een klas van de eigenaar van de site: index.js zet deze vlag, nooit de browser */
+        vanEigenaar: !!opzet.vanEigenaar });
     } else if (opzet.spel === "rollen"){
       const game = String(opzet.game || "");
       if (!SPELLEN_ROLLEN[game]) return json({ fout: "onbekend spel" }, 400);
@@ -921,7 +923,9 @@ export class Kamer extends DurableObject {
   mijn(sid){
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
     const o = this.stand.opdracht;
-    const opzet = { spellen: this.stand.spellen || [], lesmodus: !!this.stand.lesmodus, naam: this.stand.naam };
+    const opzet = { spellen: this.stand.spellen || [], lesmodus: !!this.stand.lesmodus, naam: this.stand.naam,
+      /* zat deze leerling bij de eigenaar van de site in de klas? */
+      oudleerling: !!this.stand.vanEigenaar };
     if (!o) return json(Object.assign({ opdracht: null }, opzet));
     const s = schoon(sid, 40).slice(0, 12);
     const mijn = this.stand.resultaten.filter(r => r.sid === s);

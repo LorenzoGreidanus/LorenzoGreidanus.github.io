@@ -189,6 +189,10 @@ header{padding:12px 0;border-bottom:1px solid var(--rand);background:#fff;positi
 .lesvak.hide{display:none}
 .lesvak .sectie{margin-top:0}
 .lesvak .opdrachtkaart{margin:0}
+/* een keer, als je iets kreeg omdat je bij de eigenaar van de site in de klas zat */
+.oudmelding{margin:0;background:var(--kaart-aan);border:1.5px solid var(--vista);border-radius:16px;padding:12px 16px;color:var(--ink);font-size:.93rem}
+.oudmelding.hide{display:none}
+.oudmelding b{font-weight:700}
 /* lesmodus: er valt niets te kiezen, dus het kiesgereedschap gaat weg */
 main.lesalleen .zijkant,main.lesalleen .bovenrij,main.lesalleen .verder{display:none}
 main.lesalleen .raam{grid-template-columns:minmax(0,1fr)}
@@ -504,6 +508,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
        de spellen die hij voor deze klas koos. Zonder klascode blijft dit leeg
        en verborgen. -->
   <div class="lesvak hide" id="lesvak">
+    <p class="oudmelding hide" id="oudmelding"></p>
     <div class="opdrachtkaart hide" id="opdrachtKaart"></div>
     <div id="lesspellen"></div>
   </div>
@@ -1159,8 +1164,9 @@ var SPELLEN = [
                  'Van je docent' + (les.naam ? ' (' + les.naam + ')' : ''), 'hiermee werk je in de les', vanDocent.length, vanDocent)
         : '';
     } else waar.innerHTML = '';
-    var kaartje = document.getElementById('opdrachtKaart');
-    var iets = waar.innerHTML !== '' || (kaartje && !kaartje.classList.contains('hide'));
+    var kaartje = document.getElementById('opdrachtKaart'), bericht = document.getElementById('oudmelding');
+    var iets = waar.innerHTML !== '' || (kaartje && !kaartje.classList.contains('hide')) ||
+      (bericht && !bericht.classList.contains('hide'));
     if (iets) vak.classList.remove('hide'); else vak.classList.add('hide');
     var m = document.getElementById('main');
     if (m){ if (aan && les.lesmodus) m.classList.add('lesalleen'); else m.classList.remove('lesalleen'); }
@@ -1304,10 +1310,29 @@ var SPELLEN = [
       .then(function(j){
         if (!j || j.fout) return;
         if (window.ZETLES) ZETLES({ spellen:j.spellen || [], lesmodus:!!j.lesmodus, naam:j.naam || '' });
+        if (j.oudleerling) oudLeerling();
         toonOpdracht(j);
       })
       .catch(function(){});
   }
+  /* Deze klas is van de eigenaar van de site, dus deze leerling krijgt de
+     baret, de krijtcirkel en het krijtje. Het bericht komt een keer; daarna
+     staan de dingen gewoon in de winkel bij je gezichtje. */
+  function oudLeerling(){
+    if (!window.PROFIEL || !PROFIEL.oudLeerling) return;
+    var nieuw = PROFIEL.oudLeerling();
+    var al = false;
+    try { al = localStorage.getItem('lg-oud-gezien') === 'ja'; } catch (e){}
+    if (!nieuw && al) return;
+    var vak = document.getElementById('oudmelding');
+    if (!vak) return;
+    vak.innerHTML = '<b>Je zat bij meneer Greidanus in de klas.</b> Daarom heb je de baret, de krijtcirkel en het krijtje ' +
+      'voor Zwaardvechter gekregen. Niet te koop, alleen zo te krijgen. Zet ze op bij je gezichtje rechtsboven.';
+    vak.classList.remove('hide');
+    if (window.LESVAKBIJ) LESVAKBIJ();
+    try { localStorage.setItem('lg-oud-gezien', 'ja'); } catch (e){}
+  }
+
   /* De opdracht van de docent: wat, tot wanneer, en of je hem al gehaald hebt.
      Hij zat in de lade achter het gezichtje. Nu staat hij boven aan de pagina,
      want het is het eerste wat een leerling in de les wil weten. */
@@ -1419,22 +1444,35 @@ var SPELLEN = [
   function spec(){ return PROFIEL.avatar(); }
   function huidig(){ return AVATAR.ontleed(spec()) || { v:0, k:2, o:0, m:0, e:5 }; }
   /* de winkel: per soort de waren, met wat je hebt en wat je draagt */
-  function winkelHtml(h){
+  /* alleenOud: niet de hele winkel, maar alleen wat je van je docent kreeg.
+     Dat blokje is er ook voor wie niet is ingelogd; de winkel zelf niet, want
+     daar hangen de munten aan. */
+  function winkelHtml(h, alleenOud){
     var bez = PROFIEL.bezit(), o = COSMETICA.ontleed(spec()) || { basis:AVATAR.maak(h), h:0, r:0, z:0, b:0, a:0, q:0 }, s = '<div class="winkel2">';
     ['b', 'h', 'q', 'a', 'r', 'z'].forEach(function(soort){
       /* seizoensdingen staan alleen in hun seizoen in de winkel, of als je ze al hebt */
-      s += '<h4>' + COSMETICA.SOORTEN[soort] + (soort === 'z' ? ' (voor Zwaardvechter)' : '') + '</h4><div class="waren">' + COSMETICA.ITEMS.filter(function(it){ return it.soort === soort && (!it.seizoen || COSMETICA.inSeizoen(it) || bez[it.id]); }).map(function(it){
+      var mijn = COSMETICA.ITEMS.filter(function(it){
+        if (it.soort !== soort) return false;
+        if (alleenOud) return !!(it.oud && bez[it.id]);
+        return !it.seizoen || COSMETICA.inSeizoen(it) || bez[it.id];
+      });
+      if (!mijn.length) return;
+      s += '<h4>' + COSMETICA.SOORTEN[soort] + (soort === 'z' ? ' (voor Zwaardvechter)' : '') + '</h4><div class="waren">' + mijn.map(function(it){
         var heb = !!bez[it.id], aan = o[soort] === it.n, beeld;
         if (soort === 'b'){ var o3 = { basis:o.basis, h:0, r:0, z:0, b:it.n }; beeld = AVATAR.svg('', 36, COSMETICA.bouw(o3)); }
         else if (soort === 'z'){
-          var kl = [null, '#F26749', '#9fd3ff', '#FFD166', '#7CFC9A', '#a5773f'][it.n];
+          var kl = [null, '#F26749', '#9fd3ff', '#FFD166', '#7CFC9A', '#a5773f', '#F3EFE9'][it.n];
           beeld = '<svg class="zwaardje" viewBox="-18 -18 36 36" aria-hidden="true"><g transform="rotate(-45)"><path d="M-2,14 h4 v-6 h-4z" fill="#5f4830"/><path d="M-7,8 h14" stroke="#c9971f" stroke-width="3" stroke-linecap="round"/><path d="M0,8 v-24" stroke="' + kl + '" stroke-width="5" stroke-linecap="round"/></g></svg>';
         } else { var o2 = { basis:o.basis, h:0, r:0, z:0, b:0, a:0, q:0 }; o2[soort] = it.n; beeld = AVATAR.svg('', 36, COSMETICA.bouw(o2)); }
-        var slot = it.baas && !heb;
-        return '<button type="button" data-waar="' + it.id + '" class="' + (aan ? 'aan ' : '') + (heb ? 'heb' : '') + (slot ? ' slot' : '') + '"' + (slot ? ' disabled' : '') + ' title="' + schoon(it.uit) + '">' + beeld + '<b>' + schoon(it.naam) + '</b><small>' + (aan ? 'op' : heb ? 'van jou' : it.baas ? 'versla de baas' : it.prijs + ' munten') + '</small></button>';
+        var slot = (it.baas || it.oud) && !heb;
+        return '<button type="button" data-waar="' + it.id + '" class="' + (aan ? 'aan ' : '') + (heb ? 'heb' : '') + (slot ? ' slot' : '') + '"' + (slot ? ' disabled' : '') + ' title="' + schoon(it.uit) + '">' + beeld + '<b>' + schoon(it.naam) + '</b><small>' + (aan ? 'op' : heb ? 'van jou' : it.baas ? 'versla de baas' : it.oud ? 'van je docent' : it.prijs + ' munten') + '</small></button>';
       }).join('') + '</div>';
     });
-    s += '<p>' + (winkelMelding ? '<b>' + schoon(winkelMelding) + '</b> ' : '') + 'Munten verdien je met elk goed antwoord in de oefenspellen; een lang spel als Torenverdediging of Zwaardvechter geeft er meer per antwoord en een bonus per ronde, en een lange reeks goed op rij (5, 10, 20, 30) vermenigvuldigt ze. De trofeeën speel je vrij door in Zwaardvechter een baas te verslaan. Tik op wat van jou is om het op of af te zetten.</p></div>';
+    if (alleenOud){
+      return s + '<p>Dit kreeg je omdat je bij meneer Greidanus in de klas zat. Tik erop om het op of af te zetten. ' +
+        'Log je in met Microsoft, dan gaat het mee naar elk apparaat.</p></div>';
+    }
+    s += '<p>' + (winkelMelding ? '<b>' + schoon(winkelMelding) + '</b> ' : '') + 'Munten verdien je met elk goed antwoord in de oefenspellen; een lang spel als Torenverdediging of Zwaardvechter geeft er meer per antwoord en een bonus per ronde, en een lange reeks goed op rij (5, 10, 20, 30) vermenigvuldigt ze. De trofeeën speel je vrij door in Zwaardvechter een baas te verslaan; de baret, de krijtcirkel en het krijtje krijg je van je docent. Tik op wat van jou is om het op of af te zetten.</p></div>';
     return s;
   }
   /* Licht, donker of de stand van je apparaat. Zonder keuze volgt de site je
@@ -1467,6 +1505,10 @@ var SPELLEN = [
       html += '<div class="muntrij"><span class="saldo"><span class="ico ico-munt" role="img" aria-label="munten" title="munten"></span><b>' + PROFIEL.munten() + '</b></span>' +
         '<button type="button" class="klein' + (winkelOpen ? ' aan' : '') + '" id="pfWinkel">' + (winkelOpen ? 'Winkel dicht' : 'Winkel') + '</button></div>';
       if (winkelOpen) html += winkelHtml(h);
+    } else if (window.COSMETICA && COSMETICA.ITEMS.some(function(it){ return it.oud && PROFIEL.bezit()[it.id]; })){
+      /* geen account, maar wel iets van je docent gekregen: dan hoort dat hier
+         te staan, anders heb je iets wat je nergens kunt opzetten */
+      html += winkelHtml(h, true);
     } else if (acc && acc.mogelijk && !acc.ingelogd && sp){
       html += '<div class="muntrij"><span class="saldo"><span class="ico ico-munt" role="img" aria-label="munten" title="munten"></span>Log in en spaar munten voor hoeden, randen en zwaarden.</span></div>';
     }
@@ -1519,7 +1561,7 @@ var SPELLEN = [
     Array.prototype.forEach.call(vak0.querySelectorAll('[data-waar]'), function(b){
       b.addEventListener('click', function(){
         var id = b.getAttribute('data-waar'), it = COSMETICA.vind(id), heb = PROFIEL.bezit()[id], o = COSMETICA.ontleed(spec() || AVATAR.maak(huidig())) || { basis:AVATAR.maak(huidig()), h:0, r:0, z:0, b:0, a:0, q:0 };
-        if (it.baas && !heb) return;
+        if ((it.baas || it.oud) && !heb) return;
         if (heb){ o[it.soort] = o[it.soort] === it.n ? 0 : it.n; PROFIEL.zetAvatar(COSMETICA.bouw(o)); winkelMelding = ''; teken(); return; }
         if (PROFIEL.munten() < it.prijs){ winkelMelding = 'Nog ' + (it.prijs - PROFIEL.munten()) + ' munten te gaan voor ' + it.naam.toLowerCase() + '.'; teken(); return; }
         b.disabled = true; winkelMelding = 'Even wachten\u2026'; teken();

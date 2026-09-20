@@ -26,6 +26,8 @@
     { id:'h9',  soort:'h', n:9,  naam:'Kerstmuts',    prijs:400, uit:'alleen in december te koop', seizoen:[12, 1, 12, 31] },
     { id:'h10', soort:'h', n:10, naam:'Pompoenhoed',  prijs:400, uit:'alleen in oktober te koop', seizoen:[10, 1, 10, 31] },
     { id:'h11', soort:'h', n:11, naam:'Hazenoren',    prijs:400, uit:'alleen rond Pasen te koop (half maart tot eind april)', seizoen:[3, 15, 4, 30] },
+    /* alleen voor wie bij de eigenaar van de site in de klas zat: niet te koop */
+    { id:'h12', soort:'h', n:12, naam:'Baret',          prijs:0, oud:true, uit:'omdat je bij meneer Greidanus in de klas zat' },
     /* achtergronden: a1 tot a3, een schijf achter het gezichtje */
     { id:'a1', soort:'a', n:1, naam:'Zonsopgang',     prijs:800,  uit:'oranje en geel achter je' },
     { id:'a2', soort:'a', n:2, naam:'Oceaan',         prijs:800,  uit:'diep blauw achter je' },
@@ -40,12 +42,14 @@
     { id:'r3', soort:'r', n:3, naam:'Regenboog',      prijs:1600, uit:'alle kleuren' },
     { id:'r4', soort:'r', n:4, naam:'IJsring',        prijs:900, uit:'koud blauw' },
     { id:'r5', soort:'r', n:5, naam:'Sterrenkrans',   prijs:1200, uit:'sterren eromheen' },
+    { id:'r6', soort:'r', n:6, naam:'Krijtcirkel',    prijs:0, oud:true, uit:'omdat je bij meneer Greidanus in de klas zat' },
     /* zwaarden voor Zwaardvechter: z1 tot z5 */
     { id:'z1', soort:'z', n:1, naam:'Vlammend zwaard', prijs:1000, uit:'een oranje kling die gloeit' },
     { id:'z2', soort:'z', n:2, naam:'IJszwaard',       prijs:1000, uit:'lichtblauw en koud' },
     { id:'z3', soort:'z', n:3, naam:'Gouden zwaard',   prijs:1500, uit:'van puur goud' },
     { id:'z4', soort:'z', n:4, naam:'Lichtzwaard',     prijs:2200, uit:'groen licht, zoemt niet' },
     { id:'z5', soort:'z', n:5, naam:'Houten oefenzwaard', prijs:200, uit:'doet net zo veel pijn, eerlijk waar' },
+    { id:'z6', soort:'z', n:6, naam:'Krijtje',            prijs:0, oud:true, uit:'omdat je bij meneer Greidanus in de klas zat' },
     /* trofeeën: niet te koop, je speelt ze vrij door een baas in Zwaardvechter te verslaan */
     { id:'b1', soort:'b', n:1, naam:'Sterrenkroon van De Grote Fout', prijs:0, baas:'fout',  uit:'versla De Grote Fout in Zwaardvechter' },
     { id:'b2', soort:'b', n:2, naam:'Inktspat van De Inktvlek',      prijs:0, baas:'inkt',  uit:'versla De Inktvlek in Zwaardvechter' },

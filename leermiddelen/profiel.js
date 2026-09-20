@@ -114,6 +114,26 @@ window.PROFIEL = (function(){
     zeg(); sync();
     return true;
   }
+  /* Je zat bij de eigenaar van de site in de klas. Anders dan een trofee van
+     een baas hoef je hier niet voor ingelogd te zijn: dan blijft het op dit
+     apparaat. Ben je het wel, dan gaat het mee naar je account en blijft het
+     ook als je later loskoppelt. Geeft terug of er iets nieuws bij kwam. */
+  function oudLeerling(){
+    if (!window.COSMETICA) return false;
+    var ids = COSMETICA.ITEMS.filter(function(it){ return it.oud; }).map(function(it){ return it.id; });
+    if (!ids.length) return false;
+    var b = bezit(), nieuw = false;
+    ids.forEach(function(id){ if (!b[id]){ b[id] = true; nieuw = true; } });
+    if (!nieuw) return false;
+    lsZet('lg-bezit', JSON.stringify(b));
+    if (ingelogd()){
+      var w = vrijWacht();
+      ids.forEach(function(id){ if (w.indexOf(id) < 0) w.push(id); });
+      lsZet('lg-vrij-wacht', JSON.stringify(w));
+    }
+    zeg(); sync();
+    return true;
+  }
   function accountMogelijk(){ return !!(accountStand && accountStand.mogelijk); }
   /* munten erbij: meteen zichtbaar, en bij de volgende sync naar de server */
   function muntenErbij(n){
@@ -281,5 +301,5 @@ window.PROFIEL = (function(){
     });
   }, 400);
   return { bewaart:bewaart, lees:lees, code:code, avatar:avatar, zetAvatar:zetAvatar, maak:maak, koppel:koppel, sync:sync, wis:wis, verzamel:verzamel, op:op,
-    klasWeg:klasWeg, account:account, klassenAfstemmen:klassenAfstemmen, munten:munten, bezit:bezit, ingelogd:ingelogd, accountMogelijk:accountMogelijk, muntenErbij:muntenErbij, koop:koop, vrijspeel:vrijspeel, accountNeemCode:accountNeemCode, accountNieuweCode:accountNieuweCode, accountVlag:function(){ return accountVlag; }, winkelVlag:function(){ return winkelVlag; }, accountAfstemmen:accountAfstemmen, inlogAdres:inlogAdres, uitloggen:uitloggen, accountWeg:accountWeg, docentWeg:docentWeg };
+    klasWeg:klasWeg, account:account, klassenAfstemmen:klassenAfstemmen, munten:munten, bezit:bezit, ingelogd:ingelogd, accountMogelijk:accountMogelijk, muntenErbij:muntenErbij, koop:koop, vrijspeel:vrijspeel, oudLeerling:oudLeerling, accountNeemCode:accountNeemCode, accountNieuweCode:accountNieuweCode, accountVlag:function(){ return accountVlag; }, winkelVlag:function(){ return winkelVlag; }, accountAfstemmen:accountAfstemmen, inlogAdres:inlogAdres, uitloggen:uitloggen, accountWeg:accountWeg, docentWeg:docentWeg };
 })();

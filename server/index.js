@@ -17,7 +17,7 @@ export { Sets } from "./sets.js";
 export { Beheer } from "./beheer.js";
 export { Profiel } from "./profiel.js";
 export { Account } from "./account.js";
-import { behandel as accountBehandel, ingelogd as accountIngelogd, mogelijk as accountMogelijk } from "./account.js";
+import { behandel as accountBehandel, ingelogd as accountIngelogd, mogelijk as accountMogelijk, isEigenaar } from "./account.js";
 const KLASSEMENTEN = { toren: true, zwaard: true, dag: true };   /* dag: per datum een lijst, dag-2026-09-19 */
 
 /* Een browser stuurt bij elk POST en bij elke WebSocket mee vanaf welke site
@@ -195,12 +195,16 @@ export default {
          zo blijft een klas van jou, raak je hem niet kwijt met je browsergegevens, en maakt niet elke leerling
          zijn eigen klas. De andere kamers (klasquiz, klasstrijd, tekenslag) blijven vrij. */
       if (opzet.spel === "klas" && accountMogelijk(env) && !await accountIngelogd(req, env)) return json({ fout: "log eerst in met Microsoft; dan blijft je klas van jou en staat hij op al je apparaten" }, 401);
+      /* Is dit een klas van de eigenaar van de site? Dan krijgen zijn
+         leerlingen iets extra's. De vlag zetten we hier zelf, altijd, zodat
+         wat de browser meestuurde er niet toe doet. */
+      const vanEigenaar = opzet.spel === "klas" ? await isEigenaar(req, env) : false;
       /* een vrije code zoeken: bijna altijd de eerste */
       for (let poging = 0; poging < 8; poging++){
         const code = nieuweCode();
         const stub = env.KAMERS.get(env.KAMERS.idFromName(code));
         const r = await stub.fetch("https://kamer/nieuw", { method: "POST",
-          body: JSON.stringify(Object.assign({}, opzet, { code })) });
+          body: JSON.stringify(Object.assign({}, opzet, { code, vanEigenaar })) });
         if (r.status === 200) return json(await r.json());
         /* alleen een bezette code opnieuw proberen; een foute opzet is een fout van de aanvrager */
         if (r.status !== 409) return json(await r.json(), r.status);

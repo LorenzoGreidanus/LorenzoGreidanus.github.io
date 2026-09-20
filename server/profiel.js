@@ -24,7 +24,7 @@ function netjes(inz){
               /* munten erbij en aankopen zijn wensen van dit apparaat; de server houdt het saldo */
               muntDelta: getal(inz.muntDelta, 600), koop: (Array.isArray(inz.koop) ? inz.koop : []).slice(0, 6).map(x => schoon(x, 4)).filter(x => COSMETICA.vind(x)),
               /* trofeeën die het spel meldt: alleen wat een baas oplevert */
-              vrijspeel: (Array.isArray(inz.vrijspeel) ? inz.vrijspeel : []).slice(0, 12).map(x => schoon(x, 4)).filter(x => { const it = COSMETICA.vind(x); return it && it.baas; }) };
+              vrijspeel: (Array.isArray(inz.vrijspeel) ? inz.vrijspeel : []).slice(0, 12).map(x => schoon(x, 4)).filter(x => { const it = COSMETICA.vind(x); return it && (it.baas || it.oud); }) };
   const b = inz.beste && typeof inz.beste === "object" ? inz.beste : {};
   Object.keys(b).slice(0, 300).forEach(k => {
     const s = schoon(k, 60).replace(/[^a-z0-9-]/gi, ""), v = b[k];
@@ -61,7 +61,7 @@ function voegSamen(oud, nieuw, klasWeg, alles){
   if (alles){ COSMETICA.ITEMS.forEach(it => { p.bezit[it.id] = true; }); ["tonkla", "aap", "eiland", "archipel", "vulkaan"].forEach(k => { p.vrij[k] = true; }); }
   /* kopen: alleen wat er nog niet is en wat het saldo toelaat; daarna mag alleen bezit in de spec staan */
   (nieuw.vrijspeel || []).forEach(id => { p.bezit[id] = true; });
-  (nieuw.koop || []).forEach(id => { const it = COSMETICA.vind(id); if (it && !it.baas && COSMETICA.inSeizoen(it) && !p.bezit[id] && p.munten >= it.prijs){ p.munten -= it.prijs; p.bezit[id] = true; } });
+  (nieuw.koop || []).forEach(id => { const it = COSMETICA.vind(id); if (it && !it.baas && !it.oud && COSMETICA.inSeizoen(it) && !p.bezit[id] && p.munten >= it.prijs){ p.munten -= it.prijs; p.bezit[id] = true; } });
   p.avatar = COSMETICA.toegestaan(p.avatar, p.bezit);
   /* het beste record wint, niet het laatste; l:1 betekent dat juist het laagste telt */
   Object.keys(nieuw.beste).forEach(k => {

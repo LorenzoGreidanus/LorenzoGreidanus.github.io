@@ -110,6 +110,20 @@ function weg(naam, url, pad){ return koekje(naam, "", url, 0, pad); }
 
 /* is er iemand ingelogd? Alleen waar of niet waar; index.js gebruikt dit voor het maken van een klascode. */
 export async function ingelogd(req, env){ if (!mogelijk(env)) return false; const s = await sessie(env, req); return !!s; }
+/* Is de ingelogde de eigenaar van de site? Alleen daarvoor, want een klascode
+   van hem geeft zijn leerlingen iets dat niemand anders kan krijgen. Geeft
+   false bij twijfel: liever niets uitdelen dan te veel. */
+export async function isEigenaar(req, env){
+  if (!mogelijk(env)) return false;
+  try {
+    const s = await sessie(env, req);
+    if (!s) return false;
+    const r = await (await account(env, s.id)).fetch("https://account/lees");
+    if (!r.ok) return false;
+    const j = await r.json();
+    return !!(j && j.beheer);
+  } catch (e){ console.warn("account: eigenaar nakijken mislukt", e && e.message); return false; }
+}
 export function mogelijk(env){ return !!(env.MS_CLIENT_ID && env.MS_CLIENT_SECRET && env.SESSIE_GEHEIM); }
 function basis(env){ return String(env.MS_AANMELDBASIS || "https://login.microsoftonline.com").replace(/\/+$/, ""); }
 function huurder(env){ return String(env.MS_TENANT || "common"); }

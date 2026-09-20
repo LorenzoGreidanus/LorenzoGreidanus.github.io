@@ -89,6 +89,8 @@ window.AVATAR = (function(){
     if (n === 10) return '<path d="M-30,-30 q0,-26 30,-26 q30,0 30,26 z" fill="#EA9836"/><path d="M-12,-30 q0,-22 12,-24 M12,-30 q0,-22 -12,-24" fill="none" stroke="#c0442c" stroke-width="2" opacity=".55"/><path d="M-33,-30 h66" stroke="#c96a1c" stroke-width="5" stroke-linecap="round"/><path d="M0,-56 q6,-6 4,-12" fill="none" stroke="#2f7d52" stroke-width="5" stroke-linecap="round"/>';
     /* hazenoren: twee lange oren met roze binnenkant */
     if (n === 11) return '<g fill="#F3EFE9" stroke="#d9cfc4" stroke-width="1.5"><path d="M-16,-30 q-14,-30 -4,-46 q10,10 12,46 z"/><path d="M16,-30 q14,-30 4,-46 q-10,10 -12,46 z"/></g><g fill="#F6B8C6"><path d="M-14,-32 q-8,-22 -4,-36 q6,10 8,36 z"/><path d="M14,-32 q8,-22 4,-36 q-6,10 -8,36 z"/></g>';
+    /* baret: het platte bord met een kwastje, voor wie bij hem in de klas zat */
+    if (n === 12) return '<g><path d="M-20,-38 h40 v10 q-20,9 -40,0 z" fill="#22315f"/><path d="M0,-52 L33,-41 L0,-30 L-33,-41 Z" fill="#14224C"/><path d="M0,-50 L28,-41 L0,-32 L-28,-41 Z" fill="none" stroke="#3b4d82" stroke-width="1"/><circle cx="0" cy="-41" r="2.4" fill="#F26749"/><path d="M0,-41 q22,1 26,4" fill="none" stroke="#F26749" stroke-width="2.2" stroke-linecap="round"/><path d="M26,-37 v8" stroke="#F26749" stroke-width="2.2" stroke-linecap="round"/><path d="M23,-29 h6 l-1,5 h-4 z" fill="#EA9836"/></g>';
     return '';
   }
   /* de trofeeën van de bazen uit Zwaardvechter, rechtsonder bij het gezicht */
@@ -122,6 +124,8 @@ window.AVATAR = (function(){
     if (n === 3) return '<circle r="47" fill="none" stroke="#F26749" stroke-width="2.2"/><circle r="44.5" fill="none" stroke="#EA9836" stroke-width="2.2"/><circle r="42" fill="none" stroke="#FFD166" stroke-width="2.2"/><circle r="39.5" fill="none" stroke="#2f9e8f" stroke-width="2.2"/><circle r="37" fill="none" stroke="#204ECF" stroke-width="2.2"/>';
     if (n === 4) return '<circle r="46" fill="none" stroke="#83A5F2" stroke-width="5"/><circle r="46" fill="none" stroke="#fff" stroke-width="2" stroke-dasharray="3 11"/>';
     if (n === 5) return '<circle r="46" fill="none" stroke="#204ECF" stroke-width="3" opacity=".6"/>' + [0, 60, 120, 180, 240, 300].map(function(a){ return '<path transform="rotate(' + a + ') translate(0,-46)" d="M0,-5 l1.5,3.5 3.5,.5 -2.5,2.5 .5,3.5 -3,-1.8 -3,1.8 .5,-3.5 -2.5,-2.5 3.5,-.5z" fill="#FFD166"/>'; }).join('');
+    /* krijtcirkel: een streep krijt op een schoolbord, met een hand getrokken */
+    if (n === 6) return '<circle r="46" fill="none" stroke="#2b4a3a" stroke-width="7"/><circle r="46" fill="none" stroke="#F3EFE9" stroke-width="3.6" stroke-dasharray="34 6" stroke-linecap="round" opacity=".95"/><circle r="46" fill="none" stroke="#F3EFE9" stroke-width="1.2" stroke-dasharray="18 22" opacity=".45" transform="rotate(9)"/>';
     return '';
   }
   var cache = {};
