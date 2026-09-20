@@ -92,9 +92,33 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;pa
 .printknop:hover{border-color:var(--ocean)}
 .chips button.on{background:var(--ocean);color:#fff;border-color:var(--ocean)}
 .zoek{width:100%;border:2px solid var(--rand2);border-radius:14px;padding:10px 14px;background:var(--kaart);color:var(--ink);font-size:1rem;margin-top:6px}
-.brief{background:var(--kaart);border:1px solid var(--rand);border-radius:20px;padding:20px;box-shadow:var(--schaduw);margin-top:14px;border-left:6px solid var(--kleur,var(--ocean))}
+.allesrij{margin-top:16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.allesrij .tel{margin:0}
+.brief{background:var(--kaart);border:1px solid var(--rand);border-radius:20px;box-shadow:var(--schaduw);margin-top:14px;border-left:6px solid var(--kleur,var(--ocean))}
+/* De rij waarop je kiest: vak, naam, hoe lang en welk niveau. */
+.brief > summary{list-style:none;cursor:pointer;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;
+  padding:14px 20px;min-height:44px}
+.brief > summary::-webkit-details-marker{display:none}
+.brief > summary .naam{font-size:1.05rem;font-weight:600;letter-spacing:-.01em;flex:1 1 14rem;min-width:0}
+.brief > summary .vak{font-size:.72rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);white-space:nowrap;display:inline-flex;align-items:center;gap:7px}
+.brief > summary .vak::before{content:'';width:9px;height:9px;border-radius:50%;flex:none;
+  background:var(--kleur,var(--ocean))}
+.brief > summary .feit{font-size:.82rem;color:var(--muted);white-space:nowrap}
+.brief > summary .pijl{margin-left:auto;font-size:.78rem;font-weight:600;color:var(--muted);white-space:nowrap}
+.brief[open] > summary .pijl::after{content:' \2212'}
+.brief:not([open]) > summary .pijl::after{content:' +'}
+.brief > summary:hover .naam{color:var(--kleur,var(--ocean))}
+.brief .binnen{padding:0 20px 20px}
+/* Op een telefoon past alleen wat echt helpt kiezen. Het niveau is bij bijna
+   elke lesbrief "vmbo-bb tot vwo" en zegt dus weinig; dat staat eronder. */
+@media(max-width:620px){
+  .brief > summary{gap:2px 10px;padding:11px 16px}
+  .brief > summary .feit + .feit{display:none}
+  .brief > summary .pijl{font-size:0}
+  .brief .binnen{padding:0 16px 16px}
+}
 .brief h2{font-size:1.25rem}
-.brief .vak{font-size:.78rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
 .feiten{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
 .feiten span{background:var(--kaart2);border-radius:999px;padding:5px 11px;font-size:.84rem}
 .brief dl{display:grid;grid-template-columns:130px 1fr;gap:6px 14px;margin:10px 0 0}
@@ -104,7 +128,11 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;pa
 .brief a.open:hover{border-color:var(--ocean)}
 .print{margin-top:18px}
 @media(max-width:600px){.brief dl{grid-template-columns:1fr}.brief dd{margin-bottom:6px}}
-@media print{header,.chips,.zoek,.print,.brief a.open,footer{display:none}.brief{break-inside:avoid;box-shadow:none;border:1px solid #ccc}body{background:#fff;color:#000}}
+@media print{header,.chips,.zoek,.print,.brief a.open,.brief > summary .pijl,footer{display:none}
+  .brief{break-inside:avoid;box-shadow:none;border:1px solid #ccc}
+  /* op papier staat alles open; zie ook de haak op beforeprint */
+  .brief > summary{padding-bottom:0}
+  body{background:#fff;color:#000}}
 footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 /* zichtbare focus voor wie met het toetsenbord werkt */
 :focus-visible{outline:3px solid var(--focusring,#B4701A);outline-offset:3px}
@@ -138,7 +166,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   <span class="hd-right">
     <a href="klasquiz.html">Klasquiz</a>
     <a href="klas.html">Klasoverzicht</a>
-    <a href="../over.html">Voor docenten</a>
+    <a href="../over.html">Hoe ik dit in de les gebruik</a>
     <button class="themaknop" id="themaknop" type="button" aria-label="Schakel naar donker" title="Donker of licht">
       <svg class="maan" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
       <svg class="zon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>
@@ -154,8 +182,8 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   <div class="chips" id="vakken"></div>
   <p class="eyebrow" style="margin-top:14px">hoeveel tijd heb je</p>
   <div class="chips" id="duren"></div>
-  <p class="tel" id="tel"></p>
   <input class="zoek" id="zoek" type="search" placeholder="Zoek op naam, onderwerp of tijdvak" aria-label="Zoek een lesbrief">
+  <div class="allesrij"><p class="tel" id="tel"></p><button class="themaknop" id="allesOpen" type="button" aria-pressed="false" style="width:auto;padding:0 14px;border-radius:999px">Alles openklappen</button></div>
   <div id="brieven"></div>
   <p class="print"><button class="themaknop" type="button" style="width:auto;padding:0 14px;border-radius:999px" onclick="print()">Afdrukken of opslaan als pdf</button></p>
 </main>
@@ -227,12 +255,21 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     if (duurNu === 'halfuur') return m > 15 && m <= 35;
     return m > 35;
   }
-  var vakNu = 'alle', duurNu = 'alle', zoek = '';
+  var vakNu = 'alle', duurNu = 'alle', zoek = '', allesOpen = false;
   function tekenChips(){
     $('vakken').innerHTML = VAKKEN.map(function(v){ return '<button type="button" data-id="' + v[0] + '"' + (v[0] === vakNu ? ' class="on"' : '') + '>' + v[1] + '</button>'; }).join('');
     Array.prototype.forEach.call($('vakken').querySelectorAll('button'), function(b){ b.addEventListener('click', function(){ vakNu = b.getAttribute('data-id'); tekenChips(); teken(); }); });
     $('duren').innerHTML = DUREN.map(function(d){ return '<button type="button" data-id="' + d[0] + '"' + (d[0] === duurNu ? ' class="on"' : '') + '>' + d[1] + '</button>'; }).join('');
     Array.prototype.forEach.call($('duren').querySelectorAll('button'), function(b){ b.addEventListener('click', function(){ duurNu = b.getAttribute('data-id'); tekenChips(); teken(); }); });
+  }
+  /* Op de rij hoort alleen wat je nodig hebt om te kiezen. Een lesbrief die
+     bij acht vakken hoort somt ze niet allemaal op, en een tijdsaanduiding als
+     "15 tot 30 minuten; een potje stopt als de klas vol fouten zit" wordt
+     ingekort tot voor de puntkomma. De hele tekst staat eronder. */
+  function kort(t){ return String(t || '').split(';')[0].trim(); }
+  function kortVak(b){
+    var eerste = (VAKKEN.filter(function(x){ return x[0] === b.v[0]; })[0] || ['', b.v[0]])[1];
+    return b.v.length > 1 ? eerste + ' +' + (b.v.length - 1) : eerste;
   }
   function teken(){
     var z = zoek.toLowerCase();
@@ -240,13 +277,43 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     $('tel').textContent = lijst.length === BRIEVEN.length ? BRIEVEN.length + ' lesbrieven' : lijst.length + ' van de ' + BRIEVEN.length + ' lesbrieven';
     $('brieven').innerHTML = lijst.length ? lijst.map(function(b){
       var hoofd = b.v[0], vakNaam = b.v.map(function(v){ return (VAKKEN.filter(function(x){ return x[0] === v; })[0] || ['', v])[1]; }).join(' · ');
-      return '<article class="brief" style="--kleur:' + (KLEUR[hoofd] || 'var(--ocean)') + '"><p class="vak">' + schoon(vakNaam) + '</p><h2>' + schoon(b.n) + '</h2>' +
-        '<div class="feiten"><span>' + schoon(b.tijd) + '</span><span>' + schoon(b.niveau) + '</span></div>' +
+      return '<details class="brief" style="--kleur:' + (KLEUR[hoofd] || 'var(--ocean)') + '"' + (allesOpen ? ' open' : '') + '>' +
+        '<summary><span class="vak">' + schoon(kortVak(b)) + '</span>' +
+        '<span class="naam">' + schoon(b.n) + '</span>' +
+        '<span class="feit">' + schoon(kort(b.tijd)) + '</span>' +
+        '<span class="feit">' + schoon(kort(b.niveau)) + '</span>' +
+        '<span class="pijl">lees</span></summary>' +
+        '<div class="binnen">' +
+        '<div class="feiten"><span>' + schoon(vakNaam) + '</span><span>' + schoon(b.tijd) + '</span><span>' + schoon(b.niveau) + '</span></div>' +
         '<dl><dt>Leerdoel</dt><dd>' + schoon(b.doel) + '</dd><dt>In de les</dt><dd>' + schoon(b.werkvorm) + '</dd>' + (b.na ? '<dt>Nabespreking</dt><dd>' + schoon(b.na) + '</dd>' : '') + '</dl>' +
-        '<a class="open" href="' + schoon(b.b) + '">Open ' + schoon(b.n) + '</a></article>';
+        '<a class="open" href="' + schoon(b.b) + '">Open ' + schoon(b.n) + '</a></div></details>';
     }).join('') : '<p class="lead">Geen lesbrief die hierbij past. Zet de lengte op elke lengte, of kies een ander vak.</p>';
   }
   $('zoek').addEventListener('input', function(){ zoek = $('zoek').value.trim(); teken(); });
+
+  /* Soms wil je niet kiezen maar lezen. Eén knop zet ze allemaal open. */
+  var allesKnop = document.getElementById('allesOpen');
+  if (allesKnop){
+    allesKnop.addEventListener('click', function(){
+      allesOpen = !allesOpen;
+      allesKnop.textContent = allesOpen ? 'Alles inklappen' : 'Alles openklappen';
+      allesKnop.setAttribute('aria-pressed', allesOpen ? 'true' : 'false');
+      teken();
+    });
+  }
+  /* Een dichtgeklapte lesbrief print zijn inhoud niet, dus vlak voor het
+     printen gaan ze allemaal open. Daarna weer terug zoals het was. */
+  var warenOpen = null;
+  window.addEventListener('beforeprint', function(){
+    warenOpen = Array.prototype.map.call(document.querySelectorAll('.brief'), function(d){ return d.open; });
+    Array.prototype.forEach.call(document.querySelectorAll('.brief'), function(d){ d.open = true; });
+  });
+  window.addEventListener('afterprint', function(){
+    if (!warenOpen) return;
+    Array.prototype.forEach.call(document.querySelectorAll('.brief'), function(d, i){ d.open = !!warenOpen[i]; });
+    warenOpen = null;
+  });
+
   tekenChips(); teken();
 })();
 </script>
