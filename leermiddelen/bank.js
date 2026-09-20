@@ -27,6 +27,24 @@ function rnd(n) { return Math.floor(Math.random() * n); }
 function kommaGetal(n, cijfers) { return Number(n).toFixed(cijfers === undefined ? 1 : cijfers).replace('.', ','); }
 function kies(a) { return a[rnd(a.length)]; }
 function euro(n) { return '\u20ac ' + n.toFixed(2).replace('.', ','); }
+/* Het kopje boven een vraag noemt het onderdeel waar hij bij hoort. Bij
+   geschiedenis is dat de naam van een tijdvak, en bij een vraag als "In welk
+   tijdvak hoort dit?" is dat precies het antwoord: dan staat het antwoord
+   boven de vraag en hoeft een leerling de vraag niet te lezen.
+
+   Deze functie geeft het onderdeel terug, tenzij het een van de antwoorden
+   noemt; in dat geval komt er iets neutraals te staan. Bij alle andere vragen
+   verandert er niets. */
+function kopVoorVraag(vraag, terugval) {
+  var kop = String((vraag && vraag.t) || terugval || 'vraag');
+  var klein = kop.toLowerCase();
+  var lekt = ((vraag && vraag.o) || []).some(function (optie) {
+    var a = String(optie).toLowerCase().trim();
+    return a.length > 2 && klein.indexOf(a) >= 0;
+  });
+  return lekt ? (terugval || 'vraag') : kop;
+}
+
 function shuffleVraag(vraag, goedTekst) {
   const o = vraag.o.slice();
   const paren = o.map((t, i) => ({t, g: i === vraag.g}));

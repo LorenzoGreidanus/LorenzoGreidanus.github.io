@@ -137,7 +137,9 @@ window.SPEL = (function(){
       var nMunt = Math.max(0, Math.round(o.goed * (o.muntFactor || 1) * MUNT_PER_GOED * reeksX + (o.muntBonus || 0)));
       var reeksTekst = reeksX > 1 ? ' (reeks van ' + o.reeks + ': ×' + String(reeksX).replace('.', ',') + ')' : '';
       if (nMunt && PROFIEL.ingelogd()){ PROFIEL.muntenErbij(nMunt); muntHtml = '<p class="munten"><b>+' + nMunt + ' <span class="ico ico-munt" role="img" aria-label="munten" title="munten"></span></b>' + reeksTekst + ' je hebt er nu ' + PROFIEL.munten() + ' <a href="index.html?winkel=1">naar de winkel</a></p>'; }
-      else if (nMunt && PROFIEL.accountMogelijk()) muntHtml = '<p class="munten stil">' + nMunt + ' <span class="ico ico-munt" role="img" aria-label="munten" title="munten"></span> gemist. ' +
+      /* Bij nul sterren zegt dit scherm niets over gemiste munten. Een
+         leerling die het niet haalde heeft geen aanbieding nodig. */
+      else if (nMunt && sterren !== 0 && PROFIEL.accountMogelijk()) muntHtml = '<p class="munten stil">' + nMunt + ' <span class="ico ico-munt" role="img" aria-label="munten" title="munten"></span> gemist. ' +
         'Zonder inloggen blijft je voortgang alleen in deze browser: je munten, je reeks en je beste scores zijn weg zodra de laptop wordt geleegd. ' +
         '<a href="voortgang.html">Log in met Microsoft</a> en het staat op je account, op elk apparaat.</p>';
     }
@@ -169,8 +171,11 @@ window.SPEL = (function(){
     /* het gezichtje van de leerling: met de bijnaam van de klascode, of alleen het eigen gezichtje uit het profiel.
        Het kijkt blij en springt bij een record of drie sterren, en sip bij nul sterren. */
     var wie = window.KLAS && KLAS.lees(), avSpec = window.PROFIEL ? PROFIEL.avatar() : '';
-    var stemming = (record || sterren === 3) ? 'blij' : sterren === 0 ? 'sip' : '';
-    var wieTekst = wie ? schoon(wie.naam) : record ? 'Nieuw record!' : sterren === 3 ? 'Drie sterren!' : sterren === 0 ? 'Volgende keer beter' : 'Goed bezig';
+    /* Het gezichtje juicht bij een record en kijkt verder gewoon. Het kijkt
+       nooit sip: de site spreekt een leerling aan als iemand die iets kan. */
+    var stemming = (record || sterren === 3) ? 'blij' : '';
+    var wieTekst = wie ? schoon(wie.naam) : record ? 'Nieuw record!' : sterren === 3 ? 'Drie sterren!' :
+      sterren === 0 ? (typeof o.goed === 'number' && o.goed > 0 ? o.goed + ' goed' : 'Je hebt gespeeld') : 'Goed bezig';
     /* Bewaart dit apparaat wel iets? Zo niet, dan staat er een record op het
        scherm dat straks nergens meer is, en dat hoort de leerling te weten
        voordat hij nog een uur doorspeelt. */
@@ -185,7 +190,11 @@ window.SPEL = (function(){
       '<div class="rechts">' + sterrenHtml + (besteTekst ? '<p class="beste">' + besteTekst + '</p>' : '') + wieHtml + muntHtml + streakHtml + bewaarHtml + '</div>' +
       '<div class="knoppen">' +
         knopje('opnieuw', IC.opnieuw, schoon(o.opnieuwTekst || 'Nog een keer')) +
-        knopje('stil deel', IC.deel, 'Delen') +
+        /* Delen hoort bij een goede uitslag. Ging het mis, dan hoort daar een
+           uitweg: de foutenmap serveert precies de vragen die fout gingen. */
+        (sterren === 0 && window.FOUTENMAP && FOUTENMAP.lijst && FOUTENMAP.lijst().length
+          ? knopje('stil', IC.opnieuw, 'Oefen je fouten', 'a', ' href="fouten.html"')
+          : knopje('stil deel', IC.deel, 'Delen')) +
         knopje('stil', IC.alle, 'Alle spellen', 'a', ' href="index.html"') +
         knopje('stil', IC.alle, 'Mijn voortgang', 'a', ' href="voortgang.html"') +
       '</div>' +
@@ -199,7 +208,8 @@ window.SPEL = (function(){
       var k = ['nogBtn', 'nogeensBtn', 'opnieuwBtn'].map($).filter(Boolean)[0];
       if (k) k.click(); else location.reload();
     });
-    kaart.querySelector('.deel').addEventListener('click', function(){
+    var deelKnop = kaart.querySelector('.deel');
+    if (deelKnop) deelKnop.addEventListener('click', function(){
       var wat = o.deelTekst || (o.score !== undefined && o.score !== null ? String(o.score) + (o.label ? ' ' + o.label : '') : ''),
           tekst = (wat ? 'Ik haalde ' + wat + ' in ' : 'Speel ') + naamVanSpel() + ' op ' + SITE,
           url = location.origin + location.pathname;

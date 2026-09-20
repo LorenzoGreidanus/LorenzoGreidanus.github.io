@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>meneergreidanus.nl · brag (staand, zonder muziek)</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="assets/avatar.js"></script>
+    <style>
+      /* Poppins en Caveat, zelf gehost zoals op de site */
+      @font-face { font-family: 'Poppins'; font-style: normal; font-weight: 400; src: url(assets/fonts/poppins-400-latin-v2.woff2) format('woff2'); }
+      @font-face { font-family: 'Poppins'; font-style: normal; font-weight: 500; src: url(assets/fonts/poppins-500-latin-v2.woff2) format('woff2'); }
+      @font-face { font-family: 'Poppins'; font-style: normal; font-weight: 600; src: url(assets/fonts/poppins-600-latin-v2.woff2) format('woff2'); }
+      @font-face { font-family: 'Poppins'; font-style: normal; font-weight: 700; src: url(assets/fonts/poppins-700-latin-v2.woff2) format('woff2'); }
+      @font-face { font-family: 'Caveat';  font-style: normal; font-weight: 600; src: url(assets/fonts/caveat-600-latin-v2.woff2) format('woff2'); }
+
+      :root {
+        --crab: #F26749; --amber: #EA9836; --ocean: #204ECF; --vista: #83A5F2; --sand: #FCDED6;
+        --navy: #14224C; --cream: #FBF6F1; --room: #FBF6F1; --ink: #14224C; --muted: #5b6480;
+        --paper: #FFFFFF; --hand: #D9522F; --groen: #2f7d52;
+        --r: 22px; --r-s: 16px;
+        --lijn: 1px solid rgb(20 34 76 / .10);
+        --schaduw-s: 0 9px 0 rgb(20 34 76 / .10);
+        --schaduw: 0 24px 60px rgb(20 34 76 / .10);
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; background: var(--room); }
+      body { font-family: 'Poppins', system-ui, sans-serif; color: var(--ink); }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--room); }
+      .clip { position: absolute; inset: 0; overflow: hidden; }
+      .laag { position: absolute; inset: 0; }
+      p, h1, h2, h3 { margin: 0; }
+
+      /* de gezichtjes van de site ademen en knipperen met CSS; in een render staat dat stil */
+      .av-alles, .av-ogen, .av-hoed, .av-juich { animation: none !important; }
+      .avatar { margin-right: 0 !important; }
+
+      /* vormtaal van de site */
+      .hand { font-family: 'Caveat', cursive; font-weight: 600; line-height: 1.15; color: var(--hand); }
+      .kop { font-weight: 700; color: var(--ink); letter-spacing: -.03em; line-height: .92; }
+      .paneel { background: var(--paper); border: var(--lijn); border-radius: var(--r); box-shadow: var(--schaduw-s); }
+      .knop { display: inline-flex; align-items: center; justify-content: center; gap: 10px; font-weight: 600; font-size: 26px;
+              padding: 16px 30px; border-radius: 999px; border: 1.5px solid rgb(20 34 76 / .18); color: var(--ink); background: var(--paper); white-space: nowrap; }
+      .knop.ocean { background: var(--ocean); color: var(--cream); border-color: transparent; }
+      .knop.crab { background: var(--crab); color: var(--navy); border-color: transparent; box-shadow: var(--schaduw-s); }
+      .eyebrow { font-size: 18px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--ocean); }
+      .muted { color: var(--muted); }
+      .will { will-change: transform, opacity; }
+
+      /* ---------- scène 1: de grot ---------- */
+      #s1 { background: #120c10; }
+      .grot { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+      .grot svg { width: 100%; height: 100%; display: block; }
+      .gloed { transform-box: fill-box; transform-origin: 50% 100%; }
+      .handgroep { transform-box: fill-box; transform-origin: 50% 50%; }
+      #s1-tekst { position: absolute; left: 72px; bottom: 400px; color: var(--cream); }
+      #s1-tekst .jaar { font-size: 40px; font-weight: 600; letter-spacing: -.01em; }
+      #s1-tekst .plek { font-size: 28px; font-weight: 400; color: #cbb9a8; margin-top: 8px; }
+
+      /* ---------- scène 2: de kop ---------- */
+      #s2-kolom { position: absolute; left: 70px; top: 210px; width: 940px; }
+      #s2-hand { font-size: 60px; margin-bottom: 18px; }
+      #s2-naam { font-size: 168px; white-space: nowrap; }
+      #s2-naam span { display: inline-block; }
+      #s2-sub { font-size: 34px; line-height: 1.45; color: var(--muted); margin-top: 34px; max-width: 40ch; }
+      #s2-knoppen { display: flex; gap: 14px; margin-top: 40px; }
+      #s2-kijkdoos { position: absolute; left: 70px; top: 810px; width: 940px; padding: 10px; border-radius: var(--r); box-shadow: var(--schaduw); }
+      #s2-doek { position: relative; width: 920px; height: 575px; border-radius: var(--r-s); overflow: hidden; background: #120c10; }
+      #s2-doek .grot { position: absolute; inset: 0; }
+      #s2-chips { display: flex; gap: 8px; padding: 14px 8px 4px; flex-wrap: wrap; }
+      #s2-chips span { flex: none; font-size: 17px; font-weight: 600; padding: 8px 14px; border-radius: 999px; border: var(--lijn); color: var(--ink); background: var(--paper); }
+      #s2-chips span.aan { background: var(--navy); color: var(--cream); border-color: transparent; }
+      #s2-onder { font-size: 18px; color: var(--muted); padding: 6px 8px 8px; line-height: 1.4; }
+
+      /* ---------- scène 3: de leeromgeving ---------- */
+      #s3-kolom { position: absolute; left: 70px; top: 200px; width: 940px; }
+      #s3-hand { font-size: 56px; margin-bottom: 30px; }
+      #s3-kop { font-size: 112px; }
+      #s3-sub { font-size: 30px; line-height: 1.45; color: var(--muted); margin-top: 30px; max-width: 34ch; }
+      #s3-browser { position: absolute; left: 70px; top: 820px; width: 940px; padding: 22px 26px 26px; }
+      #s3-adres { display: flex; align-items: center; gap: 14px; height: 56px; padding: 0 22px; border-radius: 999px; background: var(--room); border: var(--lijn); font-size: 24px; font-weight: 500; color: var(--ink); }
+      #s3-adres .slot { width: 18px; height: 18px; border-radius: 4px; border: 2px solid var(--muted); flex: none; }
+      #s3-adres span { white-space: pre; }
+      #s3-adres .cursor { display: inline-block; width: 2px; height: 28px; background: var(--ink); margin-left: 2px; vertical-align: middle; }
+      .s3-eyebrow { margin-top: 30px; font-size: 16px; }
+      #s3-niveaus { display: flex; gap: 12px; margin-top: 14px; }
+      #s3-niveaus .knop { font-size: 24px; padding: 14px 26px; }
+      #s3-kaarten { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+      .kaart { display: flex; align-items: center; gap: 16px; padding: 26px 26px; border-radius: var(--r-s); border: var(--lijn); background: var(--paper); box-shadow: 0 5px 0 rgb(20 34 76 / .06); }
+      .kaart i { width: 18px; height: 18px; border-radius: 50%; flex: none; }
+      .kaart b { font-size: 28px; font-weight: 600; color: var(--ink); }
+      .aanwijzer { position: absolute; left: 0; top: 0; width: 44px; height: 44px; pointer-events: none; }
+      .aanwijzer svg { width: 100%; height: 100%; display: block; }
+
+      /* ---------- scène 4: Zwaardvechter ---------- */
+      #s4 { background: var(--room); }
+      #s4-scherm { position: absolute; inset: 0; padding: 26px 40px 40px; }
+      #s4-top { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+      .lg { display: inline-flex; align-items: center; gap: 14px; }
+      .lgmark { position: relative; width: 56px; height: 56px; border-radius: 16px; background: var(--navy); color: var(--cream); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 22px; letter-spacing: .02em; }
+      .lgmark .lgdot { position: absolute; right: -5px; top: -5px; width: 16px; height: 16px; border-radius: 50%; background: var(--crab); }
+      .lg b { font-size: 30px; font-weight: 700; color: var(--ink); }
+      #s4-top .knop { font-size: 22px; padding: 12px 24px; }
+      #s4-hud { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 14px; margin-top: 22px; }
+      .hud { background: var(--paper); border: var(--lijn); border-radius: var(--r-s); padding: 16px 22px; min-height: 96px; }
+      .hud small { display: block; font-size: 15px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+      .hud b { display: block; font-size: 40px; font-weight: 700; color: var(--ink); line-height: 1.1; margin-top: 6px; }
+      .hud .balk { height: 14px; border-radius: 999px; background: rgb(20 34 76 / .08); margin-top: 16px; overflow: hidden; }
+      .hud .balk i { display: block; width: 100%; height: 100%; background: var(--groen); border-radius: 999px; }
+      .hud.ontwijk { background: var(--ocean); border-color: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; box-shadow: var(--schaduw-s); }
+      .hud.ontwijk b { color: var(--cream); font-size: 30px; margin: 0; }
+      .hud.ontwijk small { color: var(--cream); text-transform: none; letter-spacing: 0; font-size: 18px; font-weight: 500; margin-top: 2px; }
+      #s4-arena { position: relative; margin-top: 22px; height: 1100px; border-radius: var(--r); overflow: hidden;
+                  background-color: #EFE3CE;
+                  background-image: linear-gradient(rgb(20 34 76 / .05) 1px, transparent 1px), linear-gradient(90deg, rgb(20 34 76 / .05) 1px, transparent 1px);
+                  background-size: 60px 60px; }
+      #s4-rand { position: absolute; inset: 22px; border: 5px solid #E0A870; border-radius: 26px; }
+      #s4-warm { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 60%, rgb(234 152 54 / .22), rgb(234 152 54 / 0) 70%); }
+      .fout { position: absolute; width: 56px; height: 56px; border-radius: 50%; background: #c0442c; color: #fff; font-weight: 700; font-size: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 0 rgb(20 34 76 / .18); }
+      #s4-speler { position: absolute; left: 400px; top: 270px; width: 120px; height: 120px; }
+      #s4-speler .ring { position: absolute; left: -40px; top: -40px; width: 200px; height: 200px; border-radius: 50%; border: 4px solid rgb(224 168 112 / .8); }
+      #s4-speler .gezicht { position: absolute; inset: 0; }
+      #s4-speler .gezicht svg { width: 100%; height: 100%; display: block; }
+      #s4-speler .zwaard { position: absolute; left: 88px; top: -30px; width: 4px; height: 70px; background: var(--vista); border-radius: 2px; transform-origin: 50% 100%; }
+      #s4-flits { position: absolute; left: 0; top: 0; width: 56px; height: 56px; border-radius: 50%; border: 6px solid var(--crab); }
+      #s4-kaart { position: absolute; left: 50%; bottom: 40px; width: 920px; margin-left: -460px; padding: 34px 40px 36px; border-radius: var(--r); background: var(--paper); border: var(--lijn); box-shadow: var(--schaduw); }
+      #s4-kaart .eyebrow { font-size: 16px; }
+      #s4-vraag { font-size: 36px; font-weight: 600; line-height: 1.25; color: var(--ink); margin-top: 10px; }
+      #s4-antw { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 26px; }
+      #s4-antw .knop { font-size: 25px; padding: 18px 22px; justify-content: flex-start; }
+      #s4-label { position: absolute; left: 40px; bottom: 40px; padding: 22px 30px 20px; border-radius: var(--r-s); background: var(--paper); border: var(--lijn); box-shadow: var(--schaduw-s); }
+      #s4-label b { display: block; font-size: 38px; font-weight: 600; color: var(--ink); line-height: 1.1; }
+      #s4-label .hand { font-size: 38px; margin-top: 8px; }
+
+      /* ---------- scène 5: voor de docent ---------- */
+      #s5-kolom { position: absolute; left: 70px; top: 100px; }
+      #s5-hand { font-size: 52px; margin-bottom: 26px; }
+      #s5-kop { font-size: 88px; }
+      #s5-bord { position: absolute; left: 70px; top: 340px; width: 940px; padding: 40px 44px; }
+      #s5-bordkop { display: flex; justify-content: space-between; align-items: flex-start; gap: 30px; }
+      #s5-bordkop h2 { font-size: 54px; font-weight: 700; letter-spacing: -.02em; line-height: 1.05; margin-top: 10px; color: var(--ink); }
+      #s5-link { font-size: 28px; color: var(--muted); margin-top: 16px; line-height: 1.4; }
+      #s5-link b { color: var(--ink); font-weight: 600; }
+      #s5-code { flex: none; text-align: center; padding: 18px 30px 14px; border-radius: var(--r-s); border: var(--lijn); background: var(--room); }
+      #s5-code small { display: block; font-size: 16px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+      #s5-code b { display: block; font-size: 76px; font-weight: 700; letter-spacing: .12em; color: var(--ink); line-height: 1.05; margin-top: 4px; }
+      #s5-spelers { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 34px; }
+      .speler { display: flex; align-items: center; gap: 12px; padding: 10px 22px 10px 12px; border-radius: 999px; border: var(--lijn); background: var(--paper); box-shadow: 0 5px 0 rgb(20 34 76 / .06); }
+      .speler .av { width: 52px; height: 52px; }
+      .speler .av svg { width: 100%; height: 100%; display: block; }
+      .speler b { font-size: 28px; font-weight: 600; color: var(--ink); }
+      #s5-tip { font-size: 22px; color: var(--muted); margin-top: 26px; }
+      #s5-lesbrief { position: absolute; left: 70px; top: 990px; width: 940px; padding: 36px 40px; }
+      #s5-lesbrief h2 { font-size: 46px; font-weight: 700; letter-spacing: -.02em; color: var(--ink); margin-top: 8px; }
+      .rij { margin-top: 16px; }
+      .rij small { display: block; font-size: 15px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+      .rij p { font-size: 22px; line-height: 1.35; color: var(--ink); margin-top: 4px; }
+
+      /* ---------- scène 6: uit ---------- */
+      #s6-midden { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; }
+      #s6-belofte { display: flex; flex-direction: column; align-items: center; gap: 18px; font-size: 32px; font-weight: 500; color: var(--ink); }
+      #s6-belofte span { display: inline-flex; align-items: center; gap: 14px; }
+      #s6-belofte span::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--amber); }
+      #s6-merk { display: flex; align-items: center; gap: 22px; margin-top: 70px; }
+      #s6-merk .lgmark { width: 92px; height: 92px; border-radius: 26px; font-size: 36px; }
+      #s6-merk .lgmark .lgdot { width: 24px; height: 24px; right: -8px; top: -8px; }
+      #s6-merk b { font-size: 78px; font-weight: 700; letter-spacing: -.03em; color: var(--ink); line-height: 1; }
+      #s6-slot { font-size: 58px; margin-top: 64px; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="brag" data-start="0" data-width="1080" data-height="1920" data-duration="24.6" data-fps="30">
+
+      <!-- ============ 1. De hand op de wand (0.00 → 2.60) ============ -->
+      <section id="s1" class="clip" data-start="0" data-duration="2.6" data-track-index="1">
+        <div class="grot" id="grot1"></div>
+        <div id="s1-tekst">
+          <p class="jaar" id="s1-jaar">minstens 37.000 jaar geleden</p>
+          <p class="plek" id="s1-plek">El Castillo, Cantabrië</p>
+        </div>
+      </section>
+
+      <!-- ============ 2. Die leeft (2.60 → 6.34) ============ -->
+      <section id="s2" class="clip" data-start="2.6" data-duration="3.74" data-track-index="1">
+        <div id="s2-kolom">
+          <p class="hand" id="s2-hand">geschiedenis, maar dan</p>
+          <h1 class="kop" id="s2-naam" aria-label="Die leeft">Die leeft</h1>
+          <p id="s2-sub">Spellen en werkvormen van een docent geschiedenis, voor in de les en voor thuis.</p>
+          <div id="s2-knoppen">
+            <span class="knop crab">Naar de leeromgeving</span>
+            <span class="knop">Ik geef les</span>
+          </div>
+        </div>
+        <div class="paneel will" id="s2-kijkdoos">
+          <div id="s2-doek"><div class="grot" id="grot2"></div></div>
+          <div id="s2-chips">
+            <span class="aan">37.000 jaar geleden</span><span>3300 v.Chr.</span><span>430 v.Chr.</span><span>1454</span><span>1602</span><span>1941</span><span>1969</span><span>nu</span>
+          </div>
+          <p id="s2-onder">Acht momenten waar mensen iets deden dat we nog kunnen zien.</p>
+        </div>
+      </section>
+
+      <!-- ============ 3. Een link is genoeg (6.34 → 11.06) ============ -->
+      <section id="s3" class="clip" data-start="6.34" data-duration="4.72" data-track-index="1">
+        <div id="s3-kolom">
+          <p class="hand" id="s3-hand">zonder inloggen</p>
+          <h2 class="kop" id="s3-kop">Een link is genoeg.</h2>
+          <p id="s3-sub">Kies je vak en een spel. Alles blijft op je apparaat, tenzij je docent je een klascode gaf.</p>
+        </div>
+        <div class="paneel will" id="s3-browser">
+          <div id="s3-adres"><i class="slot"></i><span id="s3-getypt"></span><i class="cursor" id="s3-caret"></i></div>
+          <p class="eyebrow s3-eyebrow">Kies je niveau</p>
+          <div id="s3-niveaus">
+            <span class="knop" id="s3-n1">vmbo-bb</span>
+            <span class="knop" id="s3-n2">vmbo-kgt en tl</span>
+            <span class="knop" id="s3-n3">havo en vwo</span>
+          </div>
+          <p class="eyebrow s3-eyebrow">Kies een spel</p>
+          <div id="s3-kaarten">
+            <div class="kaart" id="s3-k1"><i style="background:#14224C"></i><b>Zwaardvechter</b></div>
+            <div class="kaart" id="s3-k2"><i style="background:#F26749"></i><b>Torenverdediging</b></div>
+            <div class="kaart" id="s3-k3"><i style="background:#204ECF"></i><b>Klasquiz</b></div>
+            <div class="kaart" id="s3-k4"><i style="background:#204ECF"></i><b>Bronnenlab</b></div>
+          </div>
+        </div>
+        <div class="aanwijzer" id="s3-cursor" data-layout-ignore>
+          <svg viewBox="0 0 44 44"><path d="M8 4 L36 22 L23 25 L30 40 L24 42 L18 28 L8 36 Z" fill="#fff" stroke="#14224C" stroke-width="3" stroke-linejoin="round"/></svg>
+        </div>
+      </section>
+
+      <!-- ============ 4. Zwaardvechter (11.06 → 16.34) ============ -->
+      <section id="s4" class="clip" data-start="11.06" data-duration="5.28" data-track-index="1">
+        <div id="s4-scherm">
+          <div id="s4-top">
+            <span class="lg"><span class="lgmark">LG<i class="lgdot"></i></span><b>Zwaardvechter</b></span>
+            <span style="display:flex;gap:12px"><span class="knop">Pauze</span><span class="knop">Digibord</span><span class="knop">Opnieuw</span></span>
+          </div>
+          <div id="s4-hud">
+            <div class="hud"><small>Leven 100 / 100</small><div class="balk"><i></i></div></div>
+            <div class="hud"><small>Munten</small><b id="s4-munten">0</b></div>
+            <div class="hud"><small>Ronde</small><b>1</b></div>
+            <div class="hud"><small>Nog te gaan</small><b>8</b></div>
+            <div class="hud"><small>Geveld</small><b id="s4-geveld">0</b></div>
+            <div class="hud ontwijk"><b>Ontwijk</b><small>spatie of shift</small></div>
+          </div>
+          <div id="s4-arena">
+            <div id="s4-warm"></div>
+            <div id="s4-rand"></div>
+            <div class="fout" id="s4-f1" style="left:700px;top:110px">?</div>
+            <div class="fout" id="s4-f2" style="left:870px;top:290px">?</div>
+            <div class="fout" id="s4-f3" style="left:110px;top:200px">?</div>
+            <div class="fout" id="s4-f4" style="left:170px;top:340px">?</div>
+            <div id="s4-flits" data-layout-ignore></div>
+            <div id="s4-speler">
+              <i class="ring"></i>
+              <i class="zwaard" id="s4-zwaard"></i>
+              <div class="gezicht" id="s4-gezicht"></div>
+              <div class="gezicht" id="s4-gezicht-blij"></div>
+            </div>
+            <div id="s4-kaart" class="will">
+              <p class="eyebrow">Geschiedenis · tijdvakken</p>
+              <p id="s4-vraag">In welk tijdvak hoort dit? De VOC wordt opgericht als eerste bedrijf met aandelen</p>
+              <div id="s4-antw">
+                <span class="knop" id="s4-a1">regenten en vorsten</span>
+                <span class="knop" id="s4-a2">steden en staten</span>
+                <span class="knop" id="s4-a3">burgers en stoommachines</span>
+                <span class="knop" id="s4-a4">wereldoorlogen</span>
+              </div>
+            </div>
+            <div id="s4-label" class="will">
+              <b>Goed antwoord is geld</b>
+              <p class="hand">en met geld koop je een scherper zwaard</p>
+            </div>
+          </div>
+        </div>
+        <div class="aanwijzer" id="s4-cursor" data-layout-ignore>
+          <svg viewBox="0 0 44 44"><path d="M8 4 L36 22 L23 25 L30 40 L24 42 L18 28 L8 36 Z" fill="#fff" stroke="#14224C" stroke-width="3" stroke-linejoin="round"/></svg>
+        </div>
+      </section>
+
+      <!-- ============ 5. Morgen in je les (16.34 → 20.54) ============ -->
+      <section id="s5" class="clip" data-start="16.34" data-duration="4.2" data-track-index="1">
+        <div id="s5-kolom">
+          <p class="hand" id="s5-hand">voor de docent</p>
+          <h2 class="kop" id="s5-kop">Morgen in je les.</h2>
+        </div>
+        <div class="paneel will" id="s5-bord">
+          <div id="s5-bordkop">
+            <div>
+              <p class="eyebrow">Klasquiz</p>
+              <h2>Doe mee op je telefoon</h2>
+              <p id="s5-link">Ga naar <b>meneergreidanus.nl/q</b> en vul de code in.</p>
+            </div>
+            <div id="s5-code"><small>code</small><b>MAAN</b></div>
+          </div>
+          <div id="s5-spelers">
+            <span class="speler" id="s5-p1"><span class="av" data-naam="Noor"></span><b>Noor</b></span>
+            <span class="speler" id="s5-p2"><span class="av" data-naam="Sem"></span><b>Sem</b></span>
+            <span class="speler" id="s5-p3"><span class="av" data-naam="Yara"></span><b>Yara</b></span>
+            <span class="speler" id="s5-p4"><span class="av" data-naam="Daan"></span><b>Daan</b></span>
+            <span class="speler" id="s5-p5"><span class="av" data-naam="Lina"></span><b>Lina</b></span>
+            <span class="speler" id="s5-p6"><span class="av" data-naam="Milan"></span><b>Milan</b></span>
+          </div>
+          <p id="s5-tip">Zodra iemand meedoet staat zijn bijnaam hier.</p>
+        </div>
+        <div class="paneel will" id="s5-lesbrief">
+          <p class="eyebrow">Lesbrief</p>
+          <h2>Zwaardvechter</h2>
+          <div class="rij"><small>Leerdoel</small><p>Dezelfde vragenbank als Torenverdediging, in een actiespel: overleef de ronde, beantwoord daarna vragen voor geld.</p></div>
+          <div class="rij"><small>Tijd</small><p>10 tot 25 minuten</p></div>
+          <div class="rij"><small>Niveau</small><p>vmbo-bb tot vwo</p></div>
+          <div class="rij"><small>Werkvorm</small><p>Als beloning of afsluiter, of met twee, drie of vier samen in één arena.</p></div>
+          <div class="rij"><small>Nabespreking</small><p>Vraag welke uitrusting ze kochten en waarom.</p></div>
+        </div>
+      </section>
+
+      <!-- ============ 6. Uit (20.54 → 24.60) ============ -->
+      <section id="s6" class="clip" data-start="20.54" data-duration="4.06" data-track-index="1">
+        <div id="s6-midden">
+          <div id="s6-belofte">
+            <span id="s6-b1">32 spellen, 2435 vragen</span>
+            <span id="s6-b2">zonder inloggen</span>
+            <span id="s6-b3">gratis en vrij te gebruiken</span>
+          </div>
+          <div id="s6-merk" class="will">
+            <span class="lgmark">LG<i class="lgdot" id="s6-dot"></i></span>
+            <b>meneergreidanus.nl</b>
+          </div>
+          <p class="hand" id="s6-slot">Gaan ze de klas uit met een vraag.</p>
+        </div>
+      </section>
+
+      <!-- ============ Geluid ============ -->
+
+      <!-- 1. de hand landt -->
+      <audio id="sfx-hand" data-start="0.45" data-duration="0.18" data-track-index="11" data-volume="0.5" src="assets/sfx/impact/impactSoft_medium_001.ogg"></audio>
+      <!-- 2. Die leeft (beat-locked 3.70) -->
+      <audio id="sfx-kop" data-start="3.70" data-duration="0.15" data-track-index="11" data-volume="0.6" src="assets/sfx/impact/impactSoft_medium_004.ogg"></audio>
+      <!-- 3. typen: om de vier tekens een toets -->
+      <audio id="sfx-t1" data-start="6.40" data-duration="0.25" data-track-index="13" data-volume="0.35" src="assets/sfx/keyboard/keypress-001.wav"></audio>
+      <audio id="sfx-t2" data-start="6.52" data-duration="0.25" data-track-index="14" data-volume="0.32" src="assets/sfx/keyboard/keypress-004.wav"></audio>
+      <audio id="sfx-t3" data-start="6.64" data-duration="0.25" data-track-index="15" data-volume="0.35" src="assets/sfx/keyboard/keypress-007.wav"></audio>
+      <audio id="sfx-t4" data-start="6.76" data-duration="0.25" data-track-index="13" data-volume="0.3" src="assets/sfx/keyboard/keypress-010.wav"></audio>
+      <audio id="sfx-t5" data-start="6.88" data-duration="0.25" data-track-index="14" data-volume="0.35" src="assets/sfx/keyboard/keypress-013.wav"></audio>
+      <audio id="sfx-t6" data-start="7.00" data-duration="0.25" data-track-index="15" data-volume="0.32" src="assets/sfx/keyboard/keypress-016.wav"></audio>
+      <audio id="sfx-t7" data-start="7.12" data-duration="0.25" data-track-index="13" data-volume="0.35" src="assets/sfx/keyboard/keypress-019.wav"></audio>
+      <audio id="sfx-t8" data-start="7.24" data-duration="0.25" data-track-index="14" data-volume="0.3" src="assets/sfx/keyboard/keypress-022.wav"></audio>
+      <!-- 3. niveauknoppen (beat-grid 7.92 / 8.44 / 8.96) -->
+      <audio id="sfx-n1" data-start="7.92" data-duration="0.11" data-track-index="12" data-volume="0.55" src="assets/sfx/interface/drop_001.ogg"></audio>
+      <audio id="sfx-n2" data-start="8.44" data-duration="0.11" data-track-index="12" data-volume="0.5" src="assets/sfx/interface/drop_001.ogg"></audio>
+      <audio id="sfx-n3" data-start="8.96" data-duration="0.11" data-track-index="12" data-volume="0.55" src="assets/sfx/interface/drop_001.ogg"></audio>
+      <!-- 3. tik op havo en vwo (9.50) -->
+      <audio id="sfx-tik1" data-start="9.50" data-duration="0.02" data-track-index="11" data-volume="0.7" src="assets/sfx/interface/click_003.ogg"></audio>
+      <!-- 3. spelkaarten (beat-grid 10.01 / 10.28 / 10.54 / 10.80) -->
+      <audio id="sfx-k1" data-start="10.01" data-duration="0.6" data-track-index="12" data-volume="0.55" src="assets/sfx/casino/card-slide-1.ogg"></audio>
+      <audio id="sfx-k2" data-start="10.28" data-duration="0.19" data-track-index="13" data-volume="0.4" src="assets/sfx/interface/drop_002.ogg"></audio>
+      <audio id="sfx-k3" data-start="10.54" data-duration="0.19" data-track-index="14" data-volume="0.4" src="assets/sfx/interface/drop_002.ogg"></audio>
+      <audio id="sfx-k4" data-start="10.80" data-duration="0.19" data-track-index="13" data-volume="0.45" src="assets/sfx/interface/drop_002.ogg"></audio>
+      <!-- 4. vraagkaart (beat-locked 11.60), antwoorden, tik, klap -->
+      <audio id="sfx-vraag" data-start="11.60" data-duration="0.6" data-track-index="12" data-volume="0.6" src="assets/sfx/casino/card-slide-1.ogg"></audio>
+      <audio id="sfx-a1" data-start="12.12" data-duration="0.11" data-track-index="13" data-volume="0.5" src="assets/sfx/interface/drop_001.ogg"></audio>
+      <audio id="sfx-a4" data-start="12.91" data-duration="0.11" data-track-index="12" data-volume="0.5" src="assets/sfx/interface/drop_001.ogg"></audio>
+      <audio id="sfx-tik2" data-start="14.22" data-duration="0.02" data-track-index="11" data-volume="0.7" src="assets/sfx/interface/click_003.ogg"></audio>
+      <audio id="sfx-klap" data-start="15.28" data-duration="0.26" data-track-index="11" data-volume="0.6" src="assets/sfx/casino/chips-collide-1.ogg"></audio>
+      <!-- 5. de klas komt binnen (beat-grid) -->
+      <audio id="sfx-p1" data-start="17.38" data-duration="0.19" data-track-index="12" data-volume="0.65" src="assets/sfx/interface/drop_002.ogg"></audio>
+      <audio id="sfx-p2" data-start="17.91" data-duration="0.19" data-track-index="13" data-volume="0.5" src="assets/sfx/interface/drop_002.ogg"></audio>
+      <audio id="sfx-p3" data-start="18.44" data-duration="0.19" data-track-index="12" data-volume="0.5" src="assets/sfx/interface/drop_002.ogg"></audio>
+      <audio id="sfx-p4" data-start="18.96" data-duration="0.19" data-track-index="13" data-volume="0.5" src="assets/sfx/interface/drop_002.ogg"></audio>
+      <audio id="sfx-p5" data-start="19.48" data-duration="0.19" data-track-index="12" data-volume="0.5" src="assets/sfx/interface/drop_002.ogg"></audio>
+      <audio id="sfx-p6" data-start="20.02" data-duration="0.19" data-track-index="13" data-volume="0.65" src="assets/sfx/interface/drop_002.ogg"></audio>
+      <!-- 6. beloftechips en het merkje -->
+      <audio id="sfx-b1" data-start="20.58" data-duration="0.11" data-track-index="12" data-volume="0.55" src="assets/sfx/interface/drop_001.ogg"></audio>
+      <audio id="sfx-b2" data-start="21.06" data-duration="0.11" data-track-index="13" data-volume="0.55" src="assets/sfx/interface/drop_001.ogg"></audio>
+      <audio id="sfx-b3" data-start="21.59" data-duration="0.11" data-track-index="12" data-volume="0.55" src="assets/sfx/interface/drop_001.ogg"></audio>
+      <audio id="sfx-bel" data-start="22.12" data-duration="1.48" data-track-index="11" data-volume="0.7" src="assets/sfx/impact/impactBell_heavy_000.ogg"></audio>
+    </div>
+
+    <script>
+      (function () {
+        'use strict';
+
+        /* ---------- de grot, twee keer: vol beeld en in de kijkdoos ---------- */
+        function grot(k) {
+          return '<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' +
+            '<defs>' +
+              '<linearGradient id="gGrot' + k + '" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="900"><stop offset="0" stop-color="#0c0810"/><stop offset="1" stop-color="#2a1810"/></linearGradient>' +
+              '<radialGradient id="gGloed' + k + '" cx="0.5" cy="1" r="0.8"><stop offset="0" stop-color="#EA9836" stop-opacity=".62"/><stop offset=".4" stop-color="#F26749" stop-opacity=".2"/><stop offset="1" stop-color="#F26749" stop-opacity="0"/></radialGradient>' +
+              '<radialGradient id="gRand' + k + '" cx="0.5" cy="0.55" r="0.75"><stop offset=".5" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".75"/></radialGradient>' +
+              '<filter id="fSpuit' + k + '" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="16"/></filter>' +
+              '<symbol id="handvorm' + k + '" viewBox="-70 -90 140 190">' +
+                '<rect x="-30" y="-8" width="60" height="68" rx="22"/><rect x="-25" y="-64" width="15" height="72" rx="7.5"/><rect x="-8" y="-74" width="15" height="82" rx="7.5"/>' +
+                '<rect x="9" y="-66" width="15" height="74" rx="7.5"/><rect x="25" y="-50" width="13" height="60" rx="6.5"/>' +
+                '<rect x="-58" y="-14" width="15" height="52" rx="7.5" transform="rotate(-38 -50 22)"/><rect x="-17" y="52" width="34" height="46" rx="9"/>' +
+              '</symbol>' +
+            '</defs>' +
+            '<rect width="1600" height="900" fill="url(#gGrot' + k + ')"/>' +
+            /* de rots: een paar zachte donkere welvingen */
+            '<ellipse cx="300" cy="200" rx="520" ry="260" fill="#000" opacity=".18"/>' +
+            '<ellipse cx="1350" cy="320" rx="480" ry="300" fill="#000" opacity=".16"/>' +
+            '<ellipse cx="800" cy="120" rx="900" ry="200" fill="#000" opacity=".14"/>' +
+            /* de gloed van het vuur, ademt op de bas */
+            '<g class="gloed"><rect x="0" y="0" width="1600" height="900" fill="url(#gGloed' + k + ')"/></g>' +
+            /* het vuurtje zelf */
+            '<g transform="translate(800,860)"><g class="vuur"><ellipse rx="70" ry="14" fill="#F26749" opacity=".55"/><ellipse cx="0" cy="-18" rx="34" ry="30" fill="#EA9836" opacity=".85"/><ellipse cx="-14" cy="-40" rx="14" ry="22" fill="#F26749" opacity=".8"/><ellipse cx="16" cy="-46" rx="12" ry="26" fill="#EA9836" opacity=".9"/><ellipse cx="0" cy="-24" rx="14" ry="16" fill="#FCDED6" opacity=".9"/></g></g>' +
+            /* de hand: eerst de spuitnevel, dan de afdruk */
+            '<g class="handgroep">' +
+              '<g transform="' + (k === 'a' ? 'translate(800,440) rotate(-8) scale(1.85)' : 'translate(700,420) rotate(-8) scale(2.4)') + '"><use href="#handvorm' + k + '" x="-70" y="-90" width="140" height="190" fill="#F26749" opacity=".55" filter="url(#fSpuit' + k + ')"/></g>' +
+              '<g transform="' + (k === 'a' ? 'translate(800,440) rotate(-8) scale(1.62)' : 'translate(700,420) rotate(-8) scale(2.1)') + '"><use href="#handvorm' + k + '" x="-70" y="-90" width="140" height="190" fill="#F26749" opacity=".92"/></g>' +
+            '</g>' +
+            '<rect width="1600" height="900" fill="url(#gRand' + k + ')"/>' +
+          '</svg>';
+        }
+        document.getElementById('grot1').innerHTML = grot('a');
+        document.getElementById('grot2').innerHTML = grot('b');
+
+        /* ---------- de kop letter voor letter, zoals op de site ---------- */
+        var naam = document.getElementById('s2-naam');
+        var letters = naam.textContent.split('');
+        naam.textContent = '';
+        letters.forEach(function (ch) {
+          var s = document.createElement('span');
+          s.textContent = ch === ' ' ? String.fromCharCode(160) : ch;
+          naam.appendChild(s);
+        });
+
+        /* ---------- het adres, teken voor teken ---------- */
+        var ADRES = 'meneergreidanus.nl/leermiddelen';
+        var getypt = document.getElementById('s3-getypt');
+        ADRES.split('').forEach(function (ch) {
+          var s = document.createElement('span');
+          s.textContent = ch;
+          s.style.opacity = '0';
+          getypt.appendChild(s);
+        });
+
+        /* ---------- de gezichtjes komen uit avatar.js van de site ---------- */
+        document.getElementById('s4-gezicht').innerHTML = window.AVATAR.svg('ridder', 120, 'v3k2o0m0e5');
+        document.getElementById('s4-gezicht-blij').innerHTML = window.AVATAR.svg('ridder', 120, 'v3k2o0m0e5', { stemming: 'blij' });
+        Array.prototype.forEach.call(document.querySelectorAll('#s5-spelers .av'), function (el) {
+          el.innerHTML = window.AVATAR.svg(el.getAttribute('data-naam'), 52);
+        });
+
+        /* ---------- constanten ---------- */
+        var EASE = 'power3.out';          /* dicht bij de --ease van de site: snel op gang, lange uitloop */
+        var S1 = 0, S2 = 2.6, S3 = 6.34, S4 = 11.06, S5 = 16.34, S6 = 20.54;
+
+        function bouw() {
+          var tl = gsap.timeline({ paused: true });
+
+          /* ===== 1. De hand op de wand ===== */
+          var hand1 = document.querySelector('#grot1 .handgroep');
+          tl.fromTo(hand1, { opacity: 0, filter: 'blur(18px)', scale: 1.08 }, { opacity: 1, filter: 'blur(0px)', scale: 1, duration: 0.7, ease: 'power2.out' }, S1 + 0.35);
+          tl.fromTo('#s1-jaar', { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: EASE }, S1 + 1.07);          // beat-grid: 1.07s
+          tl.fromTo('#s1-plek', { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: EASE }, S1 + 1.35);
+
+          /* ===== 2. Die leeft ===== */
+          tl.fromTo('#s2-hand', { clipPath: 'inset(-10% 100% -10% 0)', opacity: 0 }, { clipPath: 'inset(-10% -2% -10% 0)', opacity: 1, duration: 0.7, ease: 'power1.inOut' }, S2 + 0.05);
+          tl.fromTo('#s2-naam span', { y: '0.5em', rotation: 2, opacity: 0 }, { y: 0, rotation: 0, opacity: 1, duration: 0.9, ease: EASE, stagger: 0.045 }, S2 + 1.10);   // beat-locked: 3.70s
+          tl.fromTo('#s2-kijkdoos', { x: 34, opacity: 0 }, { x: 0, opacity: 1, duration: 1.0, ease: EASE }, S2 + 1.63);    // beat-grid: 4.23s
+          tl.fromTo(document.querySelector('#grot2 .handgroep'), { opacity: 0.7 }, { opacity: 1, duration: 0.6 }, S2 + 1.63);
+          tl.fromTo('#s2-sub', { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.9, ease: EASE }, S2 + 2.15);         // beat-grid: 4.75s
+          tl.fromTo('#s2-knoppen', { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.9, ease: EASE }, S2 + 2.55);
+          tl.fromTo('#s2-chips span', { y: 10, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: EASE, stagger: 0.05 }, S2 + 2.4);
+          tl.fromTo('#s2-onder', { opacity: 0 }, { opacity: 1, duration: 0.5 }, S2 + 2.9);
+          /* uitloop: de kop schuift zachtjes weg voor de cut */
+          tl.to('#s2-kolom', { x: -40, opacity: 0, duration: 0.34, ease: 'power2.in' }, S3 - 0.36);
+          tl.to('#s2-kijkdoos', { x: 40, opacity: 0, duration: 0.34, ease: 'power2.in' }, S3 - 0.36);
+
+          /* ===== 3. Een link is genoeg ===== */
+          tl.fromTo('#s3-browser', { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: EASE }, S3 + 0.0);   // beat-locked: 6.34s
+          var tekens = document.querySelectorAll('#s3-getypt span');
+          var stap = 0.9 / tekens.length;
+          Array.prototype.forEach.call(tekens, function (sp, i) {
+            tl.set(sp, { opacity: 1 }, S3 + 0.06 + i * stap);
+          });
+          /* de streep knippert een vast aantal keer, tot het einde van de scène */
+          tl.fromTo('#s3-caret', { opacity: 1 }, { opacity: 0, duration: 0.45, ease: 'steps(1)', repeat: 9, yoyo: true }, S3 + 0.2);
+          tl.fromTo('#s3-hand', { clipPath: 'inset(-10% 100% -10% 0)', opacity: 0 }, { clipPath: 'inset(-10% -2% -10% 0)', opacity: 1, duration: 0.6, ease: 'power1.inOut' }, S3 + 0.52);   // beat-grid: 6.86s
+          tl.fromTo('#s3-kop', { y: 40, rotation: 1.5, opacity: 0 }, { y: 0, rotation: 0, opacity: 1, duration: 0.8, ease: EASE }, S3 + 0.76);
+          tl.fromTo('#s3-sub', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: EASE }, S3 + 1.3);
+          tl.fromTo('.s3-eyebrow', { opacity: 0 }, { opacity: 1, duration: 0.4, stagger: 0.2 }, S3 + 1.2);
+          tl.fromTo('#s3-n1', { y: 16, scale: 0.92, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 0.45, ease: 'back.out(1.6)' }, S3 + 1.58);   // beat-grid: 7.92s
+          tl.fromTo('#s3-n2', { y: 16, scale: 0.92, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 0.45, ease: 'back.out(1.6)' }, S3 + 2.10);   // beat-grid: 8.44s
+          tl.fromTo('#s3-n3', { y: 16, scale: 0.92, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 0.45, ease: 'back.out(1.6)' }, S3 + 2.62);   // beat-grid: 8.96s
+          /* de cursor komt van rechtsonder naar de knop havo en vwo */
+          tl.fromTo('#s3-cursor', { x: 1000, y: 1560, opacity: 0 }, { x: 1000, y: 1560, opacity: 1, duration: 0.1 }, S3 + 2.5);
+          tl.to('#s3-cursor', { x: 650, y: 988, duration: 0.55, ease: 'power2.inOut' }, S3 + 2.62);
+          tl.to('#s3-cursor', { scale: 0.85, duration: 0.08, yoyo: true, repeat: 1, ease: 'power1.inOut' }, S3 + 3.12);
+          tl.to('#s3-n3', { backgroundColor: '#204ECF', color: '#FBF6F1', borderColor: 'rgba(0,0,0,0)', duration: 0.18 }, S3 + 3.16);   // beat-grid: 9.50s
+          tl.to('#s3-cursor', { x: 1000, y: 1560, opacity: 0, duration: 0.5, ease: 'power2.in' }, S3 + 3.4);
+          tl.fromTo('#s3-k1', { x: 40, rotation: 2, opacity: 0 }, { x: 0, rotation: 0, opacity: 1, duration: 0.5, ease: EASE }, S3 + 3.67);   // beat-grid: 10.01s
+          tl.fromTo('#s3-k2', { x: 40, rotation: 2, opacity: 0 }, { x: 0, rotation: 0, opacity: 1, duration: 0.5, ease: EASE }, S3 + 3.94);   // beat-grid: 10.28s
+          tl.fromTo('#s3-k3', { x: 40, rotation: 2, opacity: 0 }, { x: 0, rotation: 0, opacity: 1, duration: 0.5, ease: EASE }, S3 + 4.20);   // beat-grid: 10.54s
+          tl.fromTo('#s3-k4', { x: 40, rotation: 2, opacity: 0 }, { x: 0, rotation: 0, opacity: 1, duration: 0.5, ease: EASE }, S3 + 4.46);   // beat-grid: 10.80s
+
+          /* ===== 4. Zwaardvechter ===== */
+          tl.fromTo('#s4-scherm', { opacity: 0, scale: 1.02 }, { opacity: 1, scale: 1, duration: 0.4, ease: 'power2.out' }, S4 + 0.0);
+          tl.fromTo('#s4-gezicht-blij', { opacity: 0 }, { opacity: 0, duration: 0.01 }, S4);
+          tl.fromTo('#s4-label', { y: 60, opacity: 0 }, { y: 60, opacity: 0, duration: 0.01 }, S4);
+          tl.set('#s4-flits', { x: 700, y: 110, scale: 0, opacity: 0 }, S4);
+          /* de fouten wiegen langzaam, elk op een eigen fase */
+          ['#s4-f1', '#s4-f2', '#s4-f3', '#s4-f4'].forEach(function (id, i) {
+            tl.fromTo(id, { y: -4 + i * 2 }, { y: 4 - i * 2, duration: 1.1 + i * 0.13, ease: 'sine.inOut', yoyo: true, repeat: 3 }, S4 + 0.1 * i);
+          });
+          tl.fromTo('#s4-zwaard', { rotation: 0 }, { rotation: 8, duration: 1.2, ease: 'sine.inOut', yoyo: true, repeat: 2 }, S4);
+          tl.fromTo('#s4-kaart', { y: 520, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: EASE }, S4 + 0.54);   // beat-locked: 11.60s
+          tl.fromTo('#s4-a1', { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: EASE }, S4 + 1.06);   // beat-grid: 12.12s
+          tl.fromTo('#s4-a2', { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: EASE }, S4 + 1.32);   // beat-grid: 12.38s
+          tl.fromTo('#s4-a3', { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: EASE }, S4 + 1.59);   // beat-grid: 12.65s
+          tl.fromTo('#s4-a4', { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: EASE }, S4 + 1.85);   // beat-grid: 12.91s
+          tl.fromTo('#s4-cursor', { x: 1000, y: 1600, opacity: 0 }, { x: 1000, y: 1600, opacity: 1, duration: 0.15 }, S4 + 2.3);
+          tl.to('#s4-cursor', { x: 300, y: 1260, duration: 0.65, ease: 'power2.inOut' }, S4 + 2.47);
+          tl.to('#s4-cursor', { scale: 0.85, duration: 0.08, yoyo: true, repeat: 1, ease: 'power1.inOut' }, S4 + 3.12);
+          tl.to('#s4-a1', { backgroundColor: '#2f7d52', color: '#FBF6F1', borderColor: 'rgba(0,0,0,0)', duration: 0.18 }, S4 + 3.16);   // beat-grid: 14.22s
+          tl.to('#s4-cursor', { opacity: 0, duration: 0.3 }, S4 + 3.45);
+          tl.to('#s4-kaart', { y: 560, opacity: 0, duration: 0.45, ease: 'power2.in' }, S4 + 3.70);   // beat-grid: 14.76s
+          /* de blob stormt op de fout rechtsboven af en slaat */
+          tl.to('#s4-speler', { x: 260, y: -220, duration: 0.5, ease: 'power2.in' }, S4 + 3.72);
+          tl.to('#s4-zwaard', { rotation: 70, duration: 0.14, ease: 'power3.in' }, S4 + 4.10);
+          tl.to('#s4-zwaard', { rotation: 8, duration: 0.4, ease: 'power2.out' }, S4 + 4.3);
+          tl.to('#s4-f1', { scale: 0, opacity: 0, duration: 0.22, ease: 'back.in(2)' }, S4 + 4.20);   // beat-grid: 15.28s
+          tl.fromTo('#s4-flits', { x: 700, y: 110, scale: 0.6, opacity: 1 }, { x: 700, y: 110, scale: 2.6, opacity: 0, duration: 0.45, ease: 'power2.out', immediateRender: false }, S4 + 4.22);
+          tl.to('#s4-gezicht-blij', { opacity: 1, duration: 0.15 }, S4 + 4.26);
+          tl.to('#s4-gezicht', { opacity: 0, duration: 0.15 }, S4 + 4.26);
+          var geveld = { v: 0 }, geveldEl = document.getElementById('s4-geveld');
+          tl.to(geveld, { v: 1, duration: 0.05, ease: 'none', onUpdate: function () { geveldEl.textContent = String(Math.round(geveld.v)); } }, S4 + 4.28);
+          var munten = { v: 0 }, muntEl = document.getElementById('s4-munten');
+          tl.to(munten, { v: 12, duration: 0.4, ease: 'power1.out', onUpdate: function () { muntEl.textContent = String(Math.round(munten.v)); } }, S4 + 4.30);
+          tl.to('#s4-speler', { x: 225, y: -185, duration: 0.5, ease: 'power2.out' }, S4 + 4.35);
+          tl.to('#s4-label', { y: 0, opacity: 1, duration: 0.6, ease: EASE }, S4 + 4.30);   // beat-grid: 15.36s (na de klap)
+          tl.to('#s4-scherm', { x: -60, opacity: 0, duration: 0.34, ease: 'power2.in' }, S5 - 0.36);
+
+          /* ===== 5. Morgen in je les ===== */
+          tl.fromTo('#s5-hand', { clipPath: 'inset(-10% 100% -10% 0)', opacity: 0 }, { clipPath: 'inset(-10% -2% -10% 0)', opacity: 1, duration: 0.6, ease: 'power1.inOut' }, S5 + 0.12);
+          tl.fromTo('#s5-kop', { y: 40, rotation: 1.5, opacity: 0 }, { y: 0, rotation: 0, opacity: 1, duration: 0.8, ease: EASE }, S5 + 0.52);   // beat-grid: 16.86s
+          tl.fromTo('#s5-bord', { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: EASE }, S5 + 0.25);
+          tl.fromTo('#s5-lesbrief', { y: 60, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: EASE }, S5 + 0.76);   // beat-grid: 17.10s
+          var spelers = ['#s5-p1', '#s5-p2', '#s5-p3', '#s5-p4', '#s5-p5', '#s5-p6'];
+          var beats5 = [1.04, 1.57, 2.10, 2.62, 3.14, 3.68];   // beat-grid: 17.38 / 17.91 / 18.44 / 18.96 / 19.48 / 20.02
+          spelers.forEach(function (id, i) {
+            tl.fromTo(id, { y: 18, scale: 0.9, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 0.45, ease: 'back.out(1.7)' }, S5 + beats5[i]);
+          });
+          tl.fromTo('#s5-tip', { opacity: 0 }, { opacity: 1, duration: 0.3 }, S5 + 0.3);
+          tl.to('#s5-tip', { opacity: 0, duration: 0.2 }, S5 + 0.82);
+          tl.to('#s5-kolom', { opacity: 0, y: -30, duration: 0.4, ease: 'power2.in' }, S6 - 0.4);
+          tl.to('#s5-bord', { opacity: 0, y: 30, duration: 0.4, ease: 'power2.in' }, S6 - 0.4);
+          tl.to('#s5-lesbrief', { opacity: 0, y: 30, duration: 0.4, ease: 'power2.in' }, S6 - 0.4);
+
+          /* ===== 6. Uit ===== */
+          tl.fromTo('#s6-b1', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: EASE }, S6 + 0.04);   // beat-grid: 20.58s
+          tl.fromTo('#s6-b2', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: EASE }, S6 + 0.52);   // beat-grid: 21.06s
+          tl.fromTo('#s6-b3', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: EASE }, S6 + 1.05);   // beat-grid: 21.59s
+          tl.fromTo('#s6-merk', { y: 40, scale: 0.94, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 0.8, ease: EASE }, S6 + 1.58);   // beat-locked: 22.12s
+          tl.fromTo('#s6-dot', { scale: 0 }, { scale: 1, duration: 0.5, ease: 'back.out(2)' }, S6 + 1.95);
+          tl.fromTo('#s6-slot', { clipPath: 'inset(-10% 100% -10% 0)', opacity: 0 }, { clipPath: 'inset(-10% -2% -10% 0)', opacity: 1, duration: 0.9, ease: 'power1.inOut' }, S6 + 2.63);   // beat-locked: 23.17s
+          /* het merkje blijft heel zacht ademen tot het einde */
+          tl.fromTo('#s6-merk .lgmark', { rotation: 0 }, { rotation: -3, duration: 0.9, ease: 'sine.inOut', yoyo: true, repeat: 1 }, S6 + 2.3);
+
+          /* ===== het vuur ademt (zonder muziek: op een vaste, trage sinus) ===== */
+          tl.fromTo('.gloed', { scale: 1, opacity: 0.8, transformOrigin: '50% 100%' }, { scale: 1.16, opacity: 1, duration: 1.15, ease: 'sine.inOut', yoyo: true, repeat: 5 }, 0);
+          tl.fromTo('.vuur', { scale: 1, transformOrigin: '50% 100%' }, { scale: 1.08, duration: 0.55, ease: 'sine.inOut', yoyo: true, repeat: 11 }, 0);
+
+          window.__timelines['brag'] = tl;
+          if (window.__hfForceTimelineRebind) window.__hfForceTimelineRebind();
+        }
+
+        if (document.fonts && document.fonts.ready) {
+          document.fonts.ready.then(bouw);
+        } else {
+          bouw();
+        }
+      })();
+    </script>
+  </body>
+</html>

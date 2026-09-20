@@ -35,8 +35,16 @@ vm.runInContext(fs.readFileSync(path.join(MAP, "bank.js"), "utf8"), ctx);
 for (const deel of fs.readdirSync(MAP).filter(f => /^bank-.+[.]js$/.test(f)).sort()){
   vm.runInContext(fs.readFileSync(path.join(MAP, deel), "utf8"), ctx);
 }
-vm.runInContext("this.__uit = { VAKKEN, ONDERDELEN, BRONNEN, NIVOS, NIVEAUS };", ctx);
-const { VAKKEN, ONDERDELEN, BRONNEN, NIVOS } = ctx.__uit;
+vm.runInContext("this.__uit = { VAKKEN, ONDERDELEN, BRONNEN, NIVOS, NIVEAUS, TIJDVAKKEN };", ctx);
+const { VAKKEN, ONDERDELEN, BRONNEN, NIVOS, TIJDVAKKEN } = ctx.__uit;
+
+/* Welk kopje zetten de spellen boven deze vraag? Bij geschiedenis is dat de
+   naam van het tijdvak, bij de andere vakken het onderdeel zelf. */
+function kopjeVan(vak, q){
+  if (vak !== "ges") return String(q.t || "");
+  const tv = TIJDVAKKEN.filter(t => t.id === q.t)[0];
+  return tv ? "tijdvak " + tv.naam.replace(/^\d+ /, "") : "";
+}
 
 const norm = t => String(t || "").toLowerCase().replace(/\s+/g, " ").trim();   /* leestekens tellen mee: bij leestekenvragen zit daar juist het verschil */
 const fouten = [], waarschuwingen = [], lengteRegels = [];
@@ -47,7 +55,7 @@ for (const vak of Object.keys(BRONNEN)){
   totaal += lijst.length;
   if (nivo.length !== lijst.length) fouten.push(`${vak}: ${lijst.length} vragen maar ${nivo.length} niveaus`);
   const gezien = new Map(), zelfdeVraag = new Map(), perOnderdeel = {};
-  let lengteTeller = 0, lengteKans = 0, lengteMee = 0;   /* voor de telling "is het goede antwoord het langste?" */
+  let lengteTeller = 0, lengteKans = 0, lengteMee = 0, kopLekt = 0;   /* voor de telling "is het goede antwoord het langste?" */
   const bekend = new Set((ONDERDELEN[vak] || []).map(o => o.id));
   lijst.forEach((q, i) => {
     const waar = `${vak}[${i}] "${String(q.v).slice(0, 60)}"`;
@@ -59,6 +67,14 @@ for (const vak of Object.keys(BRONNEN)){
     if (q.v.length > MAX_VRAAG) waarschuwingen.push(`${waar}: vraag van ${q.v.length} tekens`);
     q.o.forEach(o => { if (String(o).length > MAX_OPTIE) waarschuwingen.push(`${waar}: optie van ${String(o).length} tekens ("${String(o).slice(0, 40)}…")`); });
     if (!q.u) waarschuwingen.push(`${waar}: geen uitleg`);
+    /* Verklapt het kopje boven de vraag het antwoord? Dat gebeurde bij de
+       tijdvakvragen van geschiedenis: boven "In welk tijdvak hoort dit?" stond
+       de naam van het tijdvak, en dat was precies het goede antwoord. */
+    const kopje = kopjeVan(vak, q).toLowerCase();
+    if (kopje && Array.isArray(q.o)){
+      const noemt = q.o.filter(o => { const a = String(o).toLowerCase().trim(); return a.length > 2 && kopje.includes(a); });
+      if (noemt.length) kopLekt++;
+    }
     /* Is het goede antwoord het langste? Wie dat patroon doorheeft raadt goed
        zonder de stof te kennen. We tellen het per vak en melden de vragen waar
        het goede antwoord er echt uit springt. */
@@ -102,6 +118,9 @@ for (const vak of Object.keys(BRONNEN)){
       else zelfdeVraag.set(vraagSleutel, i);
     }
   });
+  if (kopLekt){
+    waarschuwingen.push(`${vak}: bij ${kopLekt} vragen zou het kopje boven de vraag het antwoord noemen; de spellen zetten daar de naam van het vak neer (kopVoorVraag in bank.js)`);
+  }
   if (lengteMee){
     const deel = 100 * lengteTeller / lengteMee, toeval = 100 * lengteKans / lengteMee;
     lengteRegels.push({ vak, deel, toeval, aantal: lengteMee, teller: lengteTeller });
