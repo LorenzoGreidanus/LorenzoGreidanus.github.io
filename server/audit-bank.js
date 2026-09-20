@@ -40,7 +40,7 @@ const { VAKKEN, ONDERDELEN, BRONNEN, NIVOS } = ctx.__uit;
 
 const norm = t => String(t || "").toLowerCase().replace(/\s+/g, " ").trim();   /* leestekens tellen mee: bij leestekenvragen zit daar juist het verschil */
 const fouten = [], waarschuwingen = [], lengteRegels = [];
-let totaal = 0;
+let totaal = 0, plaatjes = 0;
 
 for (const vak of Object.keys(BRONNEN)){
   const lijst = BRONNEN[vak], nivo = NIVOS[vak] || [];
@@ -62,7 +62,12 @@ for (const vak of Object.keys(BRONNEN)){
     /* Is het goede antwoord het langste? Wie dat patroon doorheeft raadt goed
        zonder de stof te kennen. We tellen het per vak en melden de vragen waar
        het goede antwoord er echt uit springt. */
-    if (Array.isArray(q.o) && q.o.length > 1 && q.g >= 0 && q.g < q.o.length){
+    /* Vragen met een plaatje tellen niet mee. Daar is het antwoord de naam van
+       een land, en aan de lengte van "Griekenland" naast "Finland" valt niets
+       te doen: je kunt een land niet anders noemen om de rij gelijk te maken.
+       Ze meetellen zou de cijfers van aardrijkskunde alleen maar vertroebelen. */
+    if (q.vlag || q.svg) plaatjes++;
+    else if (Array.isArray(q.o) && q.o.length > 1 && q.g >= 0 && q.g < q.o.length){
       const lengtes = q.o.map(o => String(o).length);
       const langste = Math.max(...lengtes);
       const langsteAnder = Math.max(...lengtes.filter((_, j) => j !== q.g));
@@ -120,6 +125,7 @@ waarschuwingen.forEach(w => console.log("  - " + w));
 
 console.log("");
 console.log("Is het goede antwoord het langste?");
+console.log("(vragen met een plaatje tellen niet mee: " + plaatjes + " stuks)");
 let mee = 0, raak = 0, kans = 0;
 for (const r of lengteRegels){
   mee += r.aantal; raak += r.teller; kans += r.toeval * r.aantal / 100;

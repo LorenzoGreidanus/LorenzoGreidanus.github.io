@@ -233,5 +233,39 @@ footer a{color:inherit}
   <nav aria-label="Over deze site"><a href="privacy.html">Privacy</a><a href="voorwaarden.html">Gebruiksvoorwaarden</a><a href="over.html#vragen">Veelgestelde vragen</a><a href="leermiddelen/">Leeromgeving</a></nav>
 </footer>
 <script>document.getElementById('jaar').textContent = new Date().getFullYear();</script>
+<script>
+/* Terug naar waar je vandaan kwam.
+
+   Deze pagina hangt overal onder: onder de voorpagina, maar ook onder het
+   klasoverzicht en de leeromgeving. "Terug naar de startpagina" klopt dan niet;
+   je wilt terug naar de pagina waar je net was. Komt iemand van buiten binnen,
+   of weet de browser het niet, dan blijft de startpagina staan. */
+(function(){
+  var link = document.querySelector('.terug');
+  if (!link) return;
+  var vanaf = '';
+  try { vanaf = document.referrer || ''; } catch (e){ vanaf = ''; }
+  if (!vanaf || vanaf.indexOf(location.origin + '/') !== 0) return;
+  var pad = vanaf.slice(location.origin.length).split('#')[0];
+  if (pad.indexOf('/nieuw.html') === 0) return;                 /* niet naar zichzelf */
+  var namen = [
+    [/^\/leermiddelen\/klas\.html/, 'het klasoverzicht'],
+    [/^\/docent/,                     'het klasoverzicht'],
+    [/^\/leermiddelen\/handleiding/, 'de handleiding'],
+    [/^\/leermiddelen\/lesbrieven/,  'de lesbrieven'],
+    [/^\/leermiddelen\/voortgang/,   'Mijn voortgang'],
+    [/^\/leermiddelen\/?$/,          'de leeromgeving'],
+    [/^\/leermiddelen\/index\.html/, 'de leeromgeving'],
+    [/^\/leermiddelen\//,            'het spel'],
+    [/^\/over\.html/,                'de pagina over mij'],
+    [/^\/$|^\/index\.html/,          'de startpagina']
+  ];
+  var naam = 'waar je was';
+  for (var i = 0; i < namen.length; i++){ if (namen[i][0].test(pad)){ naam = namen[i][1]; break; } }
+  link.setAttribute('href', pad);
+  var tekst = link.lastChild;
+  if (tekst && tekst.nodeType === 3) tekst.nodeValue = 'Terug naar ' + naam;
+})();
+</script>
 </body>
 </html>
