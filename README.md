@@ -78,7 +78,17 @@ npm install
 npm run dev
 ```
 
-Dat geeft http://localhost:8787. De status van de lokale server staat bewust buiten de map (`../.wrangler-state`): in de map zelf zet hij de bestandswaker in een lus, en een lang pad maakt de opslag van de kamers op Windows kapot.
+Dat geeft http://localhost:8787, met de spelkamers, de klascodes, de speelcodes en de meldingen erbij: Durable Objects werken lokaal gewoon. De status van de lokale server staat bewust buiten de map (`../.wrangler-state`): in de map zelf zet hij de bestandswaker in een lus, en een lang pad maakt de opslag van de kamers op Windows kapot.
+
+**Krijg je overal `500 internal error` van `/api/`?** Kijk eerst of er nog een oude `wrangler dev` draait. Wrangler klaagt niet als een poort al bezet is: hij meldt gewoon "Ready on http://127.0.0.1:8787" terwijl je verzoeken bij die oude server binnenkomen, desnoods een van een heel ander project. Zo hebben we een dag lang gedacht dat Durable Objects het op Windows niet deden.
+
+```
+netstat -ano | findstr 8787
+powershell "Get-CimInstance Win32_Process -Filter \"Name='workerd.exe'\" | Select ProcessId, CreationDate"
+powershell "Get-Process node,workerd -EA 0 | Stop-Process -Force"
+```
+
+De laatste regel stopt alles; start daarna `npm run dev` opnieuw. Let er ook op dat je het venster netjes afsluit: een `wrangler dev` die je met het kruisje wegklikt laat zijn `workerd.exe` achter.
 
 ### Wat de server tegenhoudt
 
