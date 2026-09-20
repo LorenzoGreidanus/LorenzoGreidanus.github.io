@@ -100,10 +100,14 @@ const BAZEN = [
 const AANVAL = {
   pauze:function(n){ return Math.max(0.55, 1.6 - n * 0.03); },   /* seconden tussen twee aanvallen: kort, en steeds korter */
   korter:function(n){ return Math.max(0.5, 1 - n * 0.012); },    /* de waarschuwing krimpt langzaam, nooit onder een halve seconde */
-  boosPauze:0.3,                                                 /* onder de helft van zijn leven: nog sneller achter elkaar */
-  boosKorter:0.85,                                               /* kwaad: de waarschuwing nog korter */
-  boosOverlap:0.55,                                              /* kwaad: de volgende aanval begint al voor de vorige klaar is */
-  boosDubbel:0.35,                                               /* kwaad: kans dat er meteen een tweede aanval bij komt */
+  /* Onder de helft van zijn leven wordt hij kwaad. Dat maakt hem niet sneller
+     maar juist trager: hij haalt wijder uit en je ziet het langer aankomen.
+     Eerder liep hier alles tegelijk omhoog en was de tweede helft van een
+     baasgevecht voor de meeste leerlingen niet meer te doen. */
+  boosPauze:1.35,                                                /* kwaad: langer wachten tussen twee aanvallen */
+  boosKorter:1.15,                                               /* kwaad: de waarschuwing blijft langer staan */
+  boosOverlap:1,                                                 /* kwaad: de volgende aanval wacht netjes op de vorige */
+  boosDubbel:0.12,                                               /* kwaad: nog maar zelden twee tegelijk */
   regen:{ r:50, na:0.2, aantal:function(n){ return 7 + Math.floor(n / 8); } },
   muur:{ wacht:1, duur:2.2, breed:44, gat:150, schade:19 },
   spiraal:{ na:0.09, draai:0.5, aantal:function(n){ return 16 + Math.min(12, Math.floor(n / 3)); } },
@@ -789,8 +793,9 @@ function maak(opties){
       b.x = ARENA.b / 2; b.y = ARENA.h / 2;
       b.aanvalKlok -= dt;
       var boos = b.hp <= b.maxHp / 2;
-      /* kwaad wacht hij niet tot de vorige aanval klaar is */
-      var vrij = boos || !W.aanvallen.some(function(a){ return a.soort !== 'plas' && a.soort !== 'schot'; });
+      /* Ook als hij kwaad is wacht hij tot het veld leeg is. Anders stapelen de
+         aanvallen zich op en is er geen plek meer om te staan. */
+      var vrij = !W.aanvallen.some(function(a){ return a.soort !== 'plas' && a.soort !== 'schot'; });
       if (b.aanvalKlok <= 0 && vrij && levend.length){
         if (boos && !b.boosGeweest){
           b.boosGeweest = true;
