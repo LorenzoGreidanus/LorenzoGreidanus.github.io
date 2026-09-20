@@ -200,6 +200,15 @@ td.getal{font-variant-numeric:tabular-nums;text-align:right}
 .lesmodus span{color:var(--muted)}
 .tip.demo{margin-top:8px;background:#FFE168;color:#14224C;border-radius:12px;padding:8px 12px;display:inline-block}
 .tip.demo a{color:inherit}
+/* de regel "wat is er nieuw": een streep aan de zijkant, verder rustig */
+.nieuwsregel{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:12px;padding:10px 14px;
+  background:var(--kaart2);border-radius:14px;font-size:.92rem;max-width:64ch}
+.nieuwsregel .wat{flex:1 1 220px;min-width:0}
+.nieuwsregel .wat b{font-weight:600}
+.nieuwsregel a{font-weight:600}
+.nieuwsregel button{border:none;background:none;color:var(--muted);font:inherit;font-size:.86rem;
+  text-decoration:underline;text-underline-offset:3px;cursor:pointer;min-height:38px;padding:0 4px}
+.nieuwsregel button:hover{color:var(--ink)}
 .opdrachtvorm{margin-top:10px;align-items:center}
 .opdrachtvorm .veld{padding:7px 10px;font-size:.92rem}
 /* zestien pixels op een telefoon: Safari zoomt anders in bij het aantikken */
@@ -293,6 +302,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
   <p class="eyebrow">voor de docent</p>
   <h1>Jouw klassen</h1>
   <div class="wiebalk" id="wiebalk"></div>
+  <div id="nieuwsregel"></div>
   <p style="margin-top:8px;max-width:64ch"><a href="handleiding.html">Handleiding met plaatjes</a> (ook als pdf) &middot; <a href="klas.html?demo=1">demoklas bekijken</a></p>
   <p style="margin-top:8px;max-width:64ch">Maak een klascode, laat leerlingen die eenmalig invullen in de leeromgeving, en zie na de les wie welk spel tot hoever heeft gehaald. Zonder accounts: een leerling koppelt zich met een bijnaam, en alleen jij ziet de uitslagen, op dit apparaat. Een klascode blijft geldig tot jij hem opheft.</p>
 
@@ -801,6 +811,36 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     PROFIEL.sync();
     if (PROFIEL.klassenAfstemmen) PROFIEL.klassenAfstemmen();
   }
+  /* ---------- wat is er nieuw ----------
+     Een collega die om de maand kijkt ziet op de nieuwspagina wel wat er staat,
+     maar niet wat er sinds zijn vorige bezoek bij kwam. Daarom halen we die
+     pagina op, lezen we de datum van het bovenste stuk en vergelijken we die
+     met wat deze browser eerder zag. Is er niets nieuws, dan staat er niets.
+     Lukt het ophalen niet, dan ook niet: dit mag nooit in de weg zitten. */
+  (function(){
+    var SLEUTEL = 'lg-nieuws-gezien', vak = document.getElementById('nieuwsregel');
+    if (!vak || typeof fetch !== 'function') return;
+    function eerder(){ try { return localStorage.getItem(SLEUTEL) || ''; } catch (e){ return ''; } }
+    fetch('/nieuw.html').then(function(r){ return r.ok ? r.text() : null; }).then(function(html){
+      if (!html) return;
+      var d = new DOMParser().parseFromString(html, 'text/html');
+      var tijd = d.querySelector('time[datetime]');
+      var kop = d.querySelector('.kaart h3');
+      if (!tijd) return;
+      var datum = tijd.getAttribute('datetime'), gezien = eerder();
+      if (gezien && gezien >= datum) return;
+      var kopTekst = kop ? kop.textContent.trim() : '';
+      vak.innerHTML = '<div class="nieuwsregel"><span class="wat">' +
+        (gezien ? 'Nieuw sinds je vorige bezoek' : 'Nieuw op de site') +
+        (kopTekst ? ': <b>' + kopTekst.replace(/[<&]/g, ' ') + '</b>' : '') + '</span>' +
+        '<a href="../nieuw.html">Bekijken</a><button type="button" id="nieuwsWeg">Gezien</button></div>';
+      document.getElementById('nieuwsWeg').addEventListener('click', function(){
+        try { localStorage.setItem(SLEUTEL, datum); } catch (e){}
+        vak.innerHTML = '';
+      });
+    }).catch(function(){});
+  })();
+
   /* de vragenbank laadt na deze pagina; dan krijgen de onderdelen hun naam */
   window.addEventListener('load', function(){ opVul(); if (data) teken(); });
 })();

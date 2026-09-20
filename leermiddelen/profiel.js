@@ -13,6 +13,7 @@
      PROFIEL.koppel(code)       een bestaande code op dit apparaat zetten
      PROFIEL.sync()             wat hier staat naar de server, samengevoegd terug
      PROFIEL.wis()              de code van dit apparaat halen (profiel blijft op de server)
+     PROFIEL.bewaart()          of dit apparaat uberhaupt iets kan opslaan
    Optioneel, als de site inloggen met Microsoft aan heeft staan:
      PROFIEL.account()          belofte met { mogelijk, ingelogd, naam, code }
      PROFIEL.accountAfstemmen() na het inloggen: de speelcode van het account hier zetten,
@@ -23,6 +24,21 @@
 window.PROFIEL = (function(){
   'use strict';
   var SLEUTEL = 'lg-profiel', timer = null, luisteraars = [];
+  /* Kan dit apparaat iets bewaren? We schrijven een proefsleutel en lezen hem
+     terug: in een privevenster of met site-gegevens uitgezet gooit de browser
+     hier een fout, en op een volle schijf ook. Het antwoord onthouden we,
+     want dit verandert niet halverwege een potje. */
+  var bewaarKan = null;
+  function bewaart(){
+    if (bewaarKan !== null) return bewaarKan;
+    try {
+      var proef = 'lg-proef-' + Math.random().toString(36).slice(2, 8);
+      localStorage.setItem(proef, 'ja');
+      bewaarKan = localStorage.getItem(proef) === 'ja';
+      localStorage.removeItem(proef);
+    } catch (e){ bewaarKan = false; }
+    return bewaarKan;
+  }
   function lees(){ try { return JSON.parse(localStorage.getItem(SLEUTEL) || '{}') || {}; } catch (e){ return {}; } }
   function zet(p){ try { localStorage.setItem(SLEUTEL, JSON.stringify(p)); } catch (e){} }
   function ls(k){ try { return localStorage.getItem(k); } catch (e){ return null; } }
@@ -264,6 +280,6 @@ window.PROFIEL = (function(){
       else if (a && a.ingelogd) klassenAfstemmen();
     });
   }, 400);
-  return { lees:lees, code:code, avatar:avatar, zetAvatar:zetAvatar, maak:maak, koppel:koppel, sync:sync, wis:wis, verzamel:verzamel, op:op,
+  return { bewaart:bewaart, lees:lees, code:code, avatar:avatar, zetAvatar:zetAvatar, maak:maak, koppel:koppel, sync:sync, wis:wis, verzamel:verzamel, op:op,
     klasWeg:klasWeg, account:account, klassenAfstemmen:klassenAfstemmen, munten:munten, bezit:bezit, ingelogd:ingelogd, accountMogelijk:accountMogelijk, muntenErbij:muntenErbij, koop:koop, vrijspeel:vrijspeel, accountNeemCode:accountNeemCode, accountNieuweCode:accountNieuweCode, accountVlag:function(){ return accountVlag; }, winkelVlag:function(){ return winkelVlag; }, accountAfstemmen:accountAfstemmen, inlogAdres:inlogAdres, uitloggen:uitloggen, accountWeg:accountWeg, docentWeg:docentWeg };
 })();

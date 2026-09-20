@@ -171,13 +171,18 @@ window.SPEL = (function(){
     var wie = window.KLAS && KLAS.lees(), avSpec = window.PROFIEL ? PROFIEL.avatar() : '';
     var stemming = (record || sterren === 3) ? 'blij' : sterren === 0 ? 'sip' : '';
     var wieTekst = wie ? schoon(wie.naam) : record ? 'Nieuw record!' : sterren === 3 ? 'Drie sterren!' : sterren === 0 ? 'Volgende keer beter' : 'Goed bezig';
+    /* Bewaart dit apparaat wel iets? Zo niet, dan staat er een record op het
+       scherm dat straks nergens meer is, en dat hoort de leerling te weten
+       voordat hij nog een uur doorspeelt. */
+    var bewaarHtml = window.PROFIEL && PROFIEL.bewaart && !PROFIEL.bewaart()
+      ? '<p class="bewaarniet">Dit apparaat bewaart niets. Zodra je dit tabblad sluit is je score weg. Dat komt meestal door een priv\u00e9venster of doordat site-gegevens uitstaan.</p>' : '';
     var wieHtml = window.AVATAR && (wie || avSpec) ? '<p class="wie">' + AVATAR.svg(wie ? wie.naam : 'jij', 34, avSpec, { stemming:stemming, klasse: stemming === 'blij' ? 'av-juich' : '' }) + wieTekst + '</p>' : '';
     var sterrenHtml = sterren === null ? '' : '<div class="sterren" aria-label="' + sterren + ' van 3 sterren">' +
       [0, 1, 2].map(function(i){ return IC.ster.replace('<svg ', '<svg class="ster' + (i < sterren ? ' vol' : '') + '" '); }).join('') + '</div>';
     kaart.innerHTML =
       '<p class="eyebrow">' + schoon(o.kop || 'klaar') + '</p>' +
       (!o.compact && o.score !== undefined && o.score !== null ? '<div class="getal">' + schoon(o.score) + (o.label ? '<small>' + schoon(o.label) + '</small>' : '') + '</div>' : '') +
-      '<div class="rechts">' + sterrenHtml + (besteTekst ? '<p class="beste">' + besteTekst + '</p>' : '') + wieHtml + muntHtml + streakHtml + '</div>' +
+      '<div class="rechts">' + sterrenHtml + (besteTekst ? '<p class="beste">' + besteTekst + '</p>' : '') + wieHtml + muntHtml + streakHtml + bewaarHtml + '</div>' +
       '<div class="knoppen">' +
         knopje('opnieuw', IC.opnieuw, schoon(o.opnieuwTekst || 'Nog een keer')) +
         knopje('stil deel', IC.deel, 'Delen') +
