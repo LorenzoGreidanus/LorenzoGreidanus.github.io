@@ -19,7 +19,11 @@ const MAX_VRAAG = 170, MAX_OPTIE = 70, MIN_PER_ONDERDEEL = 15;
 const UIT_TEKENS = 12, UIT_KEER = 1.5;
 /* En per vak: hoe vaak mag het goede antwoord het langste zijn? Bij vier
    opties is dat door het toeval al een op de vier. Meer dan tien punten
-   daarboven is geen toeval meer maar een patroon om mee te raden. */
+   daarboven is geen toeval meer maar een patroon om mee te raden.
+
+   Ver eronder is net zo goed een patroon: wie merkt dat het langste antwoord
+   bijna nooit goed is, streept dat voortaan weg en houdt drie opties over.
+   De grens geldt dus naar twee kanten. */
 const LENGTE_MARGE = 10;
 /* De vragen zelf staan sinds de splitsing in bank-<vak>.js; bank.js houdt
    alleen nog de lijsten en de laadcode. Dus eerst bank.js, dan alle delen. */
@@ -42,7 +46,7 @@ for (const vak of Object.keys(BRONNEN)){
   const lijst = BRONNEN[vak], nivo = NIVOS[vak] || [];
   totaal += lijst.length;
   if (nivo.length !== lijst.length) fouten.push(`${vak}: ${lijst.length} vragen maar ${nivo.length} niveaus`);
-  const gezien = new Map(), perOnderdeel = {};
+  const gezien = new Map(), zelfdeVraag = new Map(), perOnderdeel = {};
   let lengteTeller = 0, lengteKans = 0, lengteMee = 0;   /* voor de telling "is het goede antwoord het langste?" */
   const bekend = new Set((ONDERDELEN[vak] || []).map(o => o.id));
   lijst.forEach((q, i) => {
@@ -77,12 +81,24 @@ for (const vak of Object.keys(BRONNEN)){
     const sleutel = norm(q.v) + " || " + q.o.map(norm).sort().join(" | ") + " || " + (q.vlag || "") + (q.svg ? "svg" : "");   /* dezelfde vraag met andere opties is een andere vraag */
     if (gezien.has(sleutel)) fouten.push(`${waar}: dubbel met ${vak}[${gezien.get(sleutel)}]`);
     else gezien.set(sleutel, i);
+    /* Dezelfde vraag met andere antwoorden is geen dubbeling, maar wel
+       verwarrend: een leerling krijgt twee keer hetzelfde gevraagd en moet de
+       ene keer iets anders aanklikken dan de andere. Bij een vraag met een
+       plaatje erbij ("Van welk land is deze vlag?") ligt dat anders: daar
+       zit de vraag in het plaatje en hoort de tekst juist hetzelfde te zijn. */
+    const vraagSleutel = (q.vlag || q.svg) ? null : norm(q.v);
+    if (vraagSleutel !== null){
+      if (zelfdeVraag.has(vraagSleutel)) waarschuwingen.push(`${waar}: zelfde vraag als ${vak}[${zelfdeVraag.get(vraagSleutel)}], met andere antwoorden`);
+      else zelfdeVraag.set(vraagSleutel, i);
+    }
   });
   if (lengteMee){
     const deel = 100 * lengteTeller / lengteMee, toeval = 100 * lengteKans / lengteMee;
     lengteRegels.push({ vak, deel, toeval, aantal: lengteMee, teller: lengteTeller });
     if (deel > toeval + LENGTE_MARGE){
       waarschuwingen.push(`${vak}: bij ${deel.toFixed(0)}% van de vragen is het goede antwoord het langste (door toeval zou dat ${toeval.toFixed(0)}% zijn)`);
+    } else if (deel < toeval - LENGTE_MARGE){
+      waarschuwingen.push(`${vak}: bij maar ${deel.toFixed(0)}% van de vragen is het goede antwoord het langste (door toeval zou dat ${toeval.toFixed(0)}% zijn); het langste antwoord wegstrepen loont nu`);
     }
   }
   for (const o of (ONDERDELEN[vak] || [])){
@@ -102,7 +118,7 @@ console.log("Is het goede antwoord het langste?");
 let mee = 0, raak = 0, kans = 0;
 for (const r of lengteRegels){
   mee += r.aantal; raak += r.teller; kans += r.toeval * r.aantal / 100;
-  const vlag = r.deel > r.toeval + LENGTE_MARGE ? "   te vaak" : "";
+  const vlag = r.deel > r.toeval + LENGTE_MARGE ? "   te vaak" : r.deel < r.toeval - LENGTE_MARGE ? "   te zelden" : "";
   console.log(`  ${r.vak.padEnd(6)}${String(r.aantal).padStart(5)} vragen   ${r.deel.toFixed(0).padStart(3)}%   (toeval ${r.toeval.toFixed(0)}%)${vlag}`);
 }
 if (mee) console.log(`  ${"samen".padEnd(6)}${String(mee).padStart(5)} vragen   ${(100 * raak / mee).toFixed(0).padStart(3)}%   (toeval ${(100 * kans / mee).toFixed(0)}%)`);
