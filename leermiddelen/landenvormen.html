@@ -335,14 +335,19 @@ var AANTAL = 20;      /* vragen in de oefenstand */
 var PUNT   = 10;      /* punten per goed antwoord */
 var DUBBEL = 5;       /* vanaf zoveel goed op rij tellen ze dubbel */
 
-/* De lijst staat in bank.js (onderdeel 'landvormen' van aardrijkskunde), zodat
+/* De lijst staat bij aardrijkskunde in de vragenbank (onderdeel 'landvormen' van aardrijkskunde), zodat
    Torenverdediging, de Vragenrace en de Klasquiz dezelfde vormen gebruiken. */
-var LANDEN = AARD.map(function(q, i){ return { svg:q.svg, o:q.o, g:q.g, u:q.u, n:q.n3 }; }).filter(function(q, i){ return AARD[i].t === 'landvormen'; });
+var LANDEN = [];
+function vulLanden(){
+  var lijst = (window.BRONNEN && BRONNEN.aard) || [];
+  LANDEN = lijst.filter(function(q){ return q.t === 'landvormen'; })
+                .map(function(q){ return { svg:q.svg, o:q.o, g:q.g, u:q.u, n:q.n3 }; });
+}
 
 /* ============================================================================
    ENGINE
    ============================================================================ */
-(function(){
+function engine(){
   'use strict';
   document.getElementById('jaar').textContent = new Date().getFullYear();
 
@@ -484,6 +489,7 @@ var LANDEN = AARD.map(function(q, i){ return { svg:q.svg, o:q.o, g:q.g, u:q.u, n
     elBeeld.innerHTML = beeldVan(huidig, false);
     elOpties.className = 'opties';
     var opties = husselen(huidig.o);
+    if (window.VOORLEES) VOORLEES.knop(elVraag, function(){ return { v:elVraag.textContent, o:opties }; });
     elOpties.innerHTML = opties.map(function(naam, i){
       return '<button class="opt" type="button" data-naam="' + naam + '"><em>' + (i+1) + '</em>' + naam + '</button>';
     }).join('');
@@ -498,6 +504,7 @@ var LANDEN = AARD.map(function(q, i){ return { svg:q.svg, o:q.o, g:q.g, u:q.u, n
   function vraagTerug(){
     var juist = naamVan(huidig);
     elVraag.textContent = 'Welke vorm is %s?'.replace('%s', juist);
+    if (window.VOORLEES) VOORLEES.knop(elVraag, function(){ return { v:elVraag.textContent }; });
     elBeeld.innerHTML = '';
     elOpties.className = 'opties beeldjes';
 
@@ -739,12 +746,17 @@ var LANDEN = AARD.map(function(q, i){ return { svg:q.svg, o:q.o, g:q.g, u:q.u, n
     var m = document.querySelector('header .mark');
     if (m) m.setAttribute('href', './' + location.search);
   })();
-})();
+}
+
+/* De vragen van aardrijkskunde worden pas opgehaald als een spel erom vraagt.
+   Dit spel heeft ze meteen nodig, dus het wacht erop en begint daarna. */
+BANK.zorg('aard').then(function(){ vulLanden(); engine(); });
 </script>
 <script src="thema.js"></script>
 <script src="klas.js"></script>
 <script src="naamfilter.js"></script>
 <script src="spel.js"></script>
+<script src="voorlezen.js"></script>
 <script>SPEL.uitleg({ doel:"Herken landen aan hun vorm.", tijd:"10 minuten, of tegen de klok", bediening:"Tik het land dat bij de vorm hoort, of andersom: de vorm die bij het land hoort." });</script>
 </body>
 </html>

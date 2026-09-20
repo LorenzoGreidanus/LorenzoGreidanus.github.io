@@ -335,14 +335,19 @@ var AANTAL = 20;      /* vragen in de oefenstand */
 var PUNT   = 10;      /* punten per goed antwoord */
 var DUBBEL = 5;       /* vanaf zoveel goed op rij tellen ze dubbel */
 
-/* De lijst staat in bank.js (onderdeel 'vlaggen' van aardrijkskunde), zodat
+/* De lijst staat bij aardrijkskunde in de vragenbank (onderdeel 'vlaggen' van aardrijkskunde), zodat
    Torenverdediging, de Vragenrace en de Klasquiz dezelfde vlaggen gebruiken. */
-var LANDEN = AARD.map(function(q, i){ return { vlag:q.vlag, o:q.o, g:q.g, u:q.u, n:q.n3 }; }).filter(function(q, i){ return AARD[i].t === 'vlaggen'; });
+var LANDEN = [];
+function vulLanden(){
+  var lijst = (window.BRONNEN && BRONNEN.aard) || [];
+  LANDEN = lijst.filter(function(q){ return q.t === 'vlaggen'; })
+                .map(function(q){ return { vlag:q.vlag, o:q.o, g:q.g, u:q.u, n:q.n3 }; });
+}
 
 /* ============================================================================
    ENGINE
    ============================================================================ */
-(function(){
+function engine(){
   'use strict';
   document.getElementById('jaar').textContent = new Date().getFullYear();
 
@@ -484,6 +489,7 @@ var LANDEN = AARD.map(function(q, i){ return { vlag:q.vlag, o:q.o, g:q.g, u:q.u,
     elBeeld.innerHTML = beeldVan(huidig, false);
     elOpties.className = 'opties';
     var opties = husselen(huidig.o);
+    if (window.VOORLEES) VOORLEES.knop(elVraag, function(){ return { v:elVraag.textContent, o:opties }; });
     elOpties.innerHTML = opties.map(function(naam, i){
       return '<button class="opt" type="button" data-naam="' + naam + '"><em>' + (i+1) + '</em>' + naam + '</button>';
     }).join('');
@@ -498,6 +504,7 @@ var LANDEN = AARD.map(function(q, i){ return { vlag:q.vlag, o:q.o, g:q.g, u:q.u,
   function vraagTerug(){
     var juist = naamVan(huidig);
     elVraag.textContent = 'Welke vlag is van %s?'.replace('%s', juist);
+    if (window.VOORLEES) VOORLEES.knop(elVraag, function(){ return { v:elVraag.textContent }; });
     elBeeld.innerHTML = '';
     elOpties.className = 'opties beeldjes';
 
@@ -739,12 +746,17 @@ var LANDEN = AARD.map(function(q, i){ return { vlag:q.vlag, o:q.o, g:q.g, u:q.u,
     var m = document.querySelector('header .mark');
     if (m) m.setAttribute('href', './' + location.search);
   })();
-})();
+}
+
+/* De vragen van aardrijkskunde worden pas opgehaald als een spel erom vraagt.
+   Dit spel heeft ze meteen nodig, dus het wacht erop en begint daarna. */
+BANK.zorg('aard').then(function(){ vulLanden(); engine(); });
 </script>
 <script src="thema.js"></script>
 <script src="klas.js"></script>
 <script src="naamfilter.js"></script>
 <script src="spel.js"></script>
+<script src="voorlezen.js"></script>
 <script>SPEL.uitleg({ doel:"Herken de vlaggen van landen.", tijd:"10 minuten, of tegen de klok", bediening:"Tik het land dat bij de vlag hoort, of andersom: de vlag die bij het land hoort." });</script>
 </body>
 </html>
