@@ -153,6 +153,16 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
   font-size:.8rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
 .fasebalk.akkoord{background:#e5ecff;color:#204ECF}
 /* het verdrag: vier handtekeningen, en je ziet wie er nog moet */
+/* de lagen boven de kaart */
+.lagen{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.lagen button{border:1.5px solid rgba(20,34,76,.14);background:#fff;border-radius:999px;
+  padding:7px 14px;min-height:44px;font-size:.84rem;font-weight:600;color:var(--muted)}
+.lagen button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.legenda{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;font-size:.78rem;color:var(--muted)}
+.legenda span{display:inline-flex;align-items:center;gap:6px;background:#fff;
+  border:1px solid rgba(20,34,76,.10);border-radius:999px;padding:4px 10px}
+.legenda i{width:11px;height:11px;border-radius:4px;flex:none}
+.legenda p{margin:0;max-width:60ch}
 .tekenrij{display:grid;gap:7px;margin-top:12px}
 .tekenaar{display:flex;align-items:center;gap:10px;background:var(--room);border-radius:14px;padding:9px 12px}
 .tekenaar i{width:17px;height:17px;border-radius:5px;flex:none}
@@ -324,7 +334,11 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
 <section class="wrap hide" id="scherm-spel">
   <p class="fasebalk" id="faseLabel">de conferentie: lijnen op de kaart</p>
   <div class="bord">
-    <div class="kaartvak" id="kaartvak"></div>
+    <div>
+      <div class="lagen" id="lagen" role="group" aria-label="Wat laat de kaart zien?"></div>
+      <div class="kaartvak" id="kaartvak"></div>
+      <div class="legenda" id="legenda"></div>
+    </div>
     <div class="paneel">
       <div class="blok">
         <div class="beurtkop">
@@ -1062,6 +1076,7 @@ var NOODREM = 30;
     tekenden = {}; bezwaarOp = {};
     if (wijze === 'tel'){ if (!kamer || spelers.length < 2) return; deelUit(); }
     elStart.classList.add('hide'); elEinde.classList.add('hide'); elSpel.classList.remove('hide');
+    laag = 'verdeling'; tekenLagen();
     tekenKaart('kaartvak', false);
     noteer('De conferentie is geopend. Vier mogendheden verdelen wat er te verdelen valt. ' +
       'Zodra alles op papier vergeven is, begint de strijd om het ook echt te bezetten.');
@@ -1118,6 +1133,81 @@ var NOODREM = 30;
     verfKaart(doelId, eind);
   }
 
+  /* ---------- lagen ----------
+     Dezelfde kaart, andere informatie erop. 'verdeling' is het spel zelf; de
+     andere drie zijn de kaarten die de lesbrief meegeeft voordat je gaat
+     onderhandelen. */
+  var LAGEN = [
+    { id:'verdeling',  naam:'De verdeling' },
+    { id:'rijken',     naam:'Afrikaanse rijken' },
+    { id:'grond',      naam:'Grondstoffen' },
+    { id:'kolonies',   naam:'Kolonies in 1880' }
+  ];
+  var laag = 'verdeling';
+  /* Een kleur per Afrikaans rijk, uit de naam gerekend, zodat buren van elkaar
+     verschillen en dezelfde staat overal dezelfde kleur heeft. */
+  var RIJKKLEUREN = ['#c9975b', '#9d7f4e', '#b0894a', '#8a6f3f', '#c2a06a', '#a58353', '#94764a', '#bb9159'];
+  function rijkKleur(naam){
+    var h = 0;
+    for (var i = 0; i < naam.length; i++) h = (h * 31 + naam.charCodeAt(i)) % 100000;
+    return RIJKKLEUREN[h % RIJKKLEUREN.length];
+  }
+  /* De naam van een rijk past niet op een vlakje. Lidwoorden en soortnamen
+     (sultanaat, kalifaat, koninkrijk) eruit, dan blijft meestal de eigennaam
+     over: "het sultanaat Marokko" wordt Marokko, "het Sokoto-kalifaat" Sokoto. */
+  var WEGWOORD = /^(het|de|een|van|der|en|onder)$/i;
+  var SOORTWOORD = /^(sultanaat|sultanaten|kalifaat|koninkrijk|koninkrijken|keizerrijk|rijk|staat|staten|stammen|stad|vrije|handelsstaten)$/i;
+  /* zelfde afkorting als bij de rijken: liever een punt dan een half woord */
+  function kort(w){ return w.length > 9 ? w.slice(0, 8) + '.' : w; }
+  function kortRijk(naam){
+    var delen = String(naam || '').split(/[\s,]+/);
+    for (var i = 0; i < delen.length; i++){
+      var w = delen[i].replace(/[^A-Za-z\u00c0-\u00ff-]/g, '').split('-')[0];
+      if (!w || WEGWOORD.test(w) || SOORTWOORD.test(w)) continue;
+      /* een afgekapt woord leest als een typefout; een punt erachter leest als een afkorting */
+      return w.length > 9 ? w.slice(0, 8) + '.' : w;
+    }
+    return '';
+  }
+  function tekenLagen(){
+    var vak = document.getElementById('lagen');
+    if (!vak) return;
+    vak.innerHTML = '';
+    LAGEN.forEach(function(l){
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = l.id === laag ? 'on' : '';
+      b.textContent = l.naam;
+      b.setAttribute('aria-pressed', l.id === laag ? 'true' : 'false');
+      b.addEventListener('click', function(){ laag = l.id; tekenLagen(); verfKaart('kaartvak', false); });
+      vak.appendChild(b);
+    });
+    tekenLegenda();
+  }
+  function tekenLegenda(){
+    var vak = document.getElementById('legenda');
+    if (!vak) return;
+    if (laag === 'verdeling'){ vak.innerHTML = ''; return; }
+    if (laag === 'rijken'){
+      vak.innerHTML = '<p>Elk vlak is een koninkrijk, sultanaat of volk met een eigen bestuur, leger en handel. ' +
+        'Tik een gebied aan om te zien welk. Niemand van hen zat in Berlijn aan tafel.</p>';
+      return;
+    }
+    if (laag === 'grond'){
+      var alles = {};
+      KAART.gebieden.forEach(function(g){ (INFO[g.id].grond || []).forEach(function(x){ alles[x] = true; }); });
+      vak.innerHTML = '<p>Hoe donkerder, hoe meer er te halen viel. Gevonden op deze kaart: ' +
+        Object.keys(alles).sort().join(', ') + '.</p>';
+      return;
+    }
+    var had = {};
+    KAART.gebieden.forEach(function(g){ if (INFO[g.id].bezit) had[INFO[g.id].bezit] = true; });
+    vak.innerHTML = Object.keys(had).map(function(id){
+      return '<span><i style="background:' + kleurVan(id) + '"></i>' + naamVan(id) + '</span>';
+    }).join('') + '<p>Wat er in 1880 al van een Europees land was, of van een staat die niet aan tafel zat. ' +
+      'De rest lag volgens de conferentie open.</p>';
+  }
+
   function verfKaart(doelId, eind){
     var uitgelicht = null;
     KAART.gebieden.forEach(function(g){
@@ -1127,13 +1217,37 @@ var NOODREM = 30;
       var eig = bezit[g.id];
       var klas = 'geb';
       var m = huidige();
-      if (INFO[g.id].vast) klas += ' vast';
+      var i = INFO[g.id];
+
+      /* een andere laag: geen spelkleuren, alleen de informatie erop */
+      if (!eind && laag !== 'verdeling'){
+        if (!eind && gekozen === g.id){ klas += ' aan'; uitgelicht = p; }
+        p.setAttribute('class', klas);
+        if (laag === 'rijken'){
+          p.style.fill = i.staat ? rijkKleur(i.staat) : '';
+          p.style.fillOpacity = i.staat ? '.72' : '';
+          if (t) t.textContent = i.staat ? kortRijk(i.staat) : '';
+        } else if (laag === 'grond'){
+          var n = (i.grond || []).length;
+          p.style.fill = n ? '#2f7d52' : '';
+          p.style.fillOpacity = n ? String(Math.min(0.78, 0.3 + n * 0.24)) : '';
+          if (t) t.textContent = n ? kort(i.grond[0]) : '';
+        } else {
+          var oud = i.bezit;
+          p.style.fill = oud ? kleurVan(oud) : '';
+          p.style.fillOpacity = oud ? '.78' : '';
+          if (t) t.textContent = oud ? (i.kort || kortNaam(oud)) : '';
+        }
+        return;
+      }
+
+      if (i.vast) klas += ' vast';
       else if (!eind && !klaar && m && mens[m.id] && fase === 'conferentie' && !magPakken(g.id, m.id)) klas += ' kan';
       if (!eind && gekozen === g.id){ klas += ' aan'; uitgelicht = p; }
       p.setAttribute('class', klas);
       p.style.fill = eig ? kleurVan(eig) : '';
       p.style.fillOpacity = eig ? '.78' : '';
-      if (t) t.textContent = eig ? (INFO[g.id].kort || kortNaam(eig)) : '';
+      if (t) t.textContent = eig ? (i.kort || kortNaam(eig)) : '';
     });
 
     /* De buurgebieden worden na dit gebied getekend en overschilderen dan de
