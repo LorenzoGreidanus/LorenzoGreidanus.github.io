@@ -55,9 +55,14 @@ var ZOMBIE = { ruik: 460, slaBereik: 30, slaPauze: 1.05, maxInWereld: 150, bijGr
    wereld. Een wereld van drie bij twee kilometer met twintig zombies erin is
    leeg: je ziet er een dertiende van, dus je komt er anderhalve tegen. */
 
-/* De wapens. Tempo is schoten per seconde, spreiding in graden. */
+/* De wapens. Tempo is schoten per seconde, spreiding in graden.
+
+   Het roestige pistool is waar iedereen mee begint. Het is met opzet slecht:
+   je hebt iets, maar je komt er niet ver mee, en dat is wat je naar de kisten
+   drijft. Blote handen zijn het vangnet als je kogels op zijn. */
 var WAPENS = [
   { id:'vuist',   naam:'Blote handen', schade:11, tempo:2.2, bereik:34,  spreid:0,  korrels:1, mag:0,  kogelsnel:0,    nabij:true },
+  { id:'roestig', naam:'Roestig pistool', schade:12, tempo:2.5, bereik:300, spreid:9, korrels:1, mag:1, kogelsnel:760 },
   { id:'pistool', naam:'Pistool',      schade:19, tempo:3.4, bereik:430, spreid:4,  korrels:1, mag:12, kogelsnel:880 },
   { id:'hagel',   naam:'Hagelgeweer',  schade:11, tempo:1.1, bereik:230, spreid:15, korrels:6, mag:6,  kogelsnel:760 },
   { id:'karabijn',naam:'Karabijn',     schade:15, tempo:7.5, bereik:560, spreid:7,  korrels:1, mag:30, kogelsnel:1040 },
@@ -78,6 +83,8 @@ var BUIT = [
   { id:'kroon',    naam:'Gouden kroon',   soort:'schat', waarde:120, kans:4 }
 ];
 
+/* waar je mee begint, en waar je mee terugkomt als je neer bent geweest */
+var START = { wapen: 'roestig', kogels: 30 };
 var EXTRACT = { tijd: 12, straal: 74, waarschuw: 3 };   /* zo lang moet je blijven staan */
 var KOGEL = { leven: 1.4 };
 var GOLF = { pauze: 18, eerste: 2 };                    /* om de zoveel tellen komt er een groepje bij */
@@ -175,7 +182,7 @@ function maak(opzet){
       naam: String(naam || 'speler').slice(0, 16), av: av || '',
       x: p.x, y: p.y, hoek: 0, dx: 0, dy: 0, mx: p.x + 40, my: p.y,
       hp: SPELER.hp, maxHp: SPELER.hp, neer: false, uit: false,
-      wapen: 'vuist', kogels: 0, spullen: [], punten: 0, geveld: 0, gevallen: 0,
+      wapen: START.wapen, kogels: START.kogels, spullen: [], punten: 0, geveld: 0, gevallen: 0,
       schietKlok: 0, raakKlok: 0, trekker: false, extractNr: 0, extractKlok: 0,
       bezigKist: 0, inv: 0
     };
@@ -286,7 +293,10 @@ function maak(opzet){
     p.spullen.forEach(function(id){
       W.buit.push({ nr: nrVan(), x: r1(p.x + tussen(-26, 26)), y: r1(p.y + tussen(-26, 26)), id: id });
     });
-    p.spullen = []; p.punten = 0; p.wapen = 'vuist'; p.kogels = 0;
+    /* Alles wat je gevonden had ben je kwijt, maar je roestige pistool krijg
+       je terug: anders sta je na je eerste fout met lege handen en is het
+       probleem alleen maar verplaatst. */
+    p.spullen = []; p.punten = 0; p.wapen = START.wapen; p.kogels = START.kogels;
     zeg('neer', W.spelers.indexOf(p), door);
   }
   /* de pagina meldt dat de vragen om terug te komen goed waren */
@@ -386,7 +396,12 @@ function maak(opzet){
       zeg('slag', i, raak);
       return;
     }
-    if (w.mag > 0) p.kogels--;
+    if (w.mag > 0){
+      p.kogels--;
+      /* meteen omwisselen als dit de laatste was, anders staat er nog een
+         wapen met nul kogels in beeld tot je opnieuw de trekker overhaalt */
+      if (p.kogels <= 0) p.wapen = 'vuist';
+    }
     for (var k = 0; k < w.korrels; k++){
       var afw = (toeval() - 0.5) * (w.spreid * Math.PI / 180) * 2;
       var h = p.hoek + afw;
@@ -615,6 +630,6 @@ function maak(opzet){
 }
 
 g.ZOMBIEMOTOR = { maak: maak, WERELD: WERELD, KIJK: KIJK, SPELER: SPELER, ZOMBIES: ZOMBIES,
-                  WAPENS: WAPENS, BUIT: BUIT, EXTRACT: EXTRACT, wapenVan: wapenVan };
+                  WAPENS: WAPENS, BUIT: BUIT, EXTRACT: EXTRACT, START: START, wapenVan: wapenVan };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 if (typeof module !== 'undefined' && module.exports) module.exports = globalThis.ZOMBIEMOTOR;
