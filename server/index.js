@@ -5,6 +5,8 @@
    kamer.js) met een code van vier letters; de code is de naam van het object,
    dus dezelfde code komt altijd bij dezelfde kamer uit.
 
+   /api/potje            POST  zoekt een potje van het zombiespel met plek, geeft {code}
+   /ws/z/ABCD?...        WebSocket naar een potje van het zombiespel
    /api/kamer            POST  maakt een kamer, geeft {code, sleutel}
    /api/kamer/ABCD       GET   de stand van de kamer (bestaat hij, welke fase)
    /ws/ABCD?...          WebSocket naar de kamer
@@ -17,6 +19,7 @@ export { Sets } from "./sets.js";
 export { Beheer } from "./beheer.js";
 export { Profiel } from "./profiel.js";
 export { Account } from "./account.js";
+export { Zombiekamer, Veld } from "./zombie.js";
 import { behandel as accountBehandel, ingelogd as accountIngelogd, mogelijk as accountMogelijk, isEigenaar } from "./account.js";
 const KLASSEMENTEN = { toren: true, zwaard: true, dag: true };   /* dag: per datum een lijst, dag-2026-09-19 */
 
@@ -227,6 +230,38 @@ export default {
         return stub.fetch("https://kamer/" + wat, { method: "POST", body: JSON.stringify(inz || {}) });
       }
       return stub.fetch("https://kamer/resultaten?sleutel=" + encodeURIComponent(url.searchParams.get("sleutel") || ""));
+    }
+
+    /* Het zombiespel. De portier zoekt een potje met plek; is er geen, dan
+       maakt hij er hier een met een verse code. Het zoeken zit in een eigen
+       Durable Object omdat het over alle potjes tegelijk gaat. */
+    if (p === "/api/potje" && req.method === "POST"){
+      if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
+      if (!await magDoor(env, req, "potje", 120, 300)) return json({ fout: "even wachten" }, 429);
+      const veld = env.VELD.get(env.VELD.idFromName("veld"));
+      const r = await (await veld.fetch("https://veld/zoek", { method: "POST", body: "{}" })).json();
+      if (r && r.code) return json({ code: r.code, spelers: r.spelers, max: r.max });
+      /* geen potje met plek: een nieuwe openen */
+      for (let poging = 0; poging < 8; poging++){
+        const code = nieuweCode();
+        const stub = env.ZOMBIE.get(env.ZOMBIE.idFromName(code));
+        const gemaakt = await stub.fetch("https://zombie/nieuw", { method: "POST", body: JSON.stringify({ code }) });
+        if (gemaakt.status === 200) return json({ code, spelers: 0, max: r && r.max });
+        if (gemaakt.status !== 409) return json(await gemaakt.json(), gemaakt.status);
+      }
+      return json({ fout: "geen vrij potje gevonden, probeer nog eens" }, 503);
+    }
+    if (p === "/api/potjes"){
+      const veld = env.VELD.get(env.VELD.idFromName("veld"));
+      return veld.fetch("https://veld/lijst");
+    }
+    const zm = p.match(/^\/ws\/z\/([A-Za-z]{4})\/?$/);
+    if (zm){
+      const code = zm[1].toUpperCase();
+      if (!CODE.test(code)) return json({ fout: "geen geldige code" }, 400);
+      if (req.headers.get("Upgrade") !== "websocket") return json({ fout: "hier hoort een WebSocket" }, 426);
+      if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
+      return env.ZOMBIE.get(env.ZOMBIE.idFromName(code)).fetch(req);
     }
 
     const m = p.match(/^\/(api\/kamer|ws)\/([A-Za-z]{4})\/?$/);

@@ -1,0 +1,870 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Het zombieveld &middot; meneer Greidanus</title>
+<meta name="description" content="Een groot veld vol zombies. Kisten gaan alleen open als je de vragen goed hebt, en je buit is pas van jou als je het veld uit komt.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%2314224C'/><circle cx='50' cy='46' r='24' fill='%236f8f5a'/><circle cx='42' cy='42' r='5' fill='%2314224C'/><circle cx='59' cy='42' r='5' fill='%2314224C'/><path d='M38 62h24' stroke='%2314224C' stroke-width='5' stroke-linecap='round'/></svg>">
+<script>
+/* Opgeslagen themakeuze meteen toepassen, nog voor de pagina getekend wordt. */
+(function(){ try { var t = localStorage.getItem('thema'); if (t) document.documentElement.setAttribute('data-theme', t); } catch (e){} })();
+</script>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="../fonts/fonts.css">
+<style>
+:root{
+  --crab:#F26749; --amber:#EA9836; --ocean:#204ECF; --vista:#83A5F2;
+  --room:#FBF6F1; --ink:#14224C; --muted:#5b6480; --kaart:#fff;
+  --rand:rgba(20,34,76,.12); --goed:#2f7d52; --fout:#c0442c;
+  --gras:#e3e7d4; --pad:#d9cdb4; --muur:#b3a98f;
+  --ease:cubic-bezier(.2,.7,.3,1);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--room);color:var(--ink);font-family:Poppins,system-ui,sans-serif;line-height:1.55;
+  overscroll-behavior:none}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+.hide{display:none !important}
+h1{font-size:clamp(2rem,6vw,3.2rem);line-height:1.05;letter-spacing:-.03em;margin:6px 0 0}
+h2{font-size:1.15rem;margin:0}
+.hand{font-family:Caveat,cursive;color:var(--crab);font-size:1.6rem;line-height:1}
+.lead{color:var(--muted);max-width:62ch;margin-top:10px}
+.eyebrow{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:26px 0 8px}
+
+/* ---------- kopbalk ---------- */
+header.hd{position:sticky;top:0;z-index:40;background:rgba(251,246,241,.92);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--rand)}
+.hd .rij{display:flex;align-items:center;gap:12px;padding:10px 0;max-width:1180px;margin:0 auto;padding-inline:20px}
+.hd a.merk{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;font-weight:600;min-height:44px}
+/* Het vierkantje met LG houdt zijn eigen kleuren. Met var(--ink) kantelt het
+   mee in de donkere stand en staat er wit op bijna-wit. */
+.hd a.merk i{width:30px;height:30px;border-radius:9px;background:#14224C;color:#fff;display:grid;place-items:center;
+  font-style:normal;font-size:.8rem;font-weight:700;flex:none}
+.hd .rechts{margin-left:auto;display:flex;gap:8px;align-items:center}
+.knop{border:1.5px solid var(--rand);background:var(--kaart);color:var(--ink);border-radius:999px;
+  padding:0 14px;min-height:44px;font:600 .88rem Poppins,system-ui,sans-serif;cursor:pointer;display:inline-flex;
+  align-items:center;gap:8px;text-decoration:none}
+.knop:hover{border-color:var(--ocean)}
+.knop.vol{background:var(--ocean);color:#fff;border-color:var(--ocean)}
+.knop.crab{background:var(--crab);color:#fff;border-color:var(--crab)}
+.knop:disabled{opacity:.5;cursor:default}
+
+/* ---------- startscherm ---------- */
+.start{padding:24px 0 60px}
+.kaartjes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-top:14px}
+.kaartje{background:var(--kaart);border:1px solid var(--rand);border-radius:16px;padding:14px 16px}
+.kaartje b{display:block;margin-bottom:2px}
+.kaartje span{color:var(--muted);font-size:.9rem}
+.niv{display:flex;gap:8px;flex-wrap:wrap}
+.niv button{border:1.5px solid var(--rand);background:var(--kaart);color:var(--ink);border-radius:999px;
+  padding:0 15px;min-height:44px;font:600 .88rem Poppins,system-ui,sans-serif;cursor:pointer}
+.niv button.on{border-color:var(--ocean);background:#eaf0ff;color:var(--ocean)}
+.startrij{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+
+/* de kluis: wat je eerder hebt binnengehaald */
+.kluis{background:var(--kaart);border:1px solid var(--rand);border-radius:18px;padding:16px 18px;margin-top:14px;max-width:44rem}
+.kluis .som{display:flex;align-items:baseline;gap:10px}
+.kluis .som b{font-size:2.1rem;letter-spacing:-.03em}
+.kluis .som span{color:var(--muted);font-size:.9rem}
+.spullen{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.spullen i{font-style:normal;background:var(--room);border:1px solid var(--rand);border-radius:999px;
+  padding:3px 11px;font-size:.82rem}
+.spullen i b{font-weight:600}
+
+/* ---------- het veld ---------- */
+.spel{position:relative;height:100svh;display:flex;flex-direction:column;background:#20301f}
+#veld{flex:1;min-height:0;display:block;width:100%;touch-action:none;user-select:none;-webkit-user-select:none;cursor:crosshair}
+.hud{position:absolute;left:0;right:0;top:0;padding:10px 12px;display:flex;gap:10px;align-items:flex-start;
+  pointer-events:none;flex-wrap:wrap}
+.meter{background:rgba(20,34,76,.72);color:#F3EFE9;border-radius:12px;padding:6px 11px;font-size:.82rem;
+  min-width:86px;backdrop-filter:blur(4px)}
+.meter i{display:block;font-style:normal;font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;opacity:.72}
+.meter b{font-size:1.05rem;font-variant-numeric:tabular-nums}
+.levenbalk{height:7px;border-radius:99px;background:rgba(255,255,255,.22);overflow:hidden;margin-top:4px}
+.levenbalk i{display:block;height:100%;background:#5fbf88;border-radius:99px;transition:width .15s linear}
+.levenbalk i.laag{background:var(--crab)}
+.hudrechts{margin-left:auto;display:flex;gap:8px;align-items:flex-start;pointer-events:auto}
+
+/* het kaartje rechtsonder */
+.minikaart{position:absolute;right:12px;bottom:12px;width:150px;height:103px;border-radius:12px;overflow:hidden;
+  border:2px solid rgba(243,239,233,.35);background:rgba(20,34,76,.6);pointer-events:none}
+.minikaart svg{display:block;width:100%;height:100%}
+
+/* de balk onderin: wat je nu kunt doen */
+.tip{position:absolute;left:50%;transform:translateX(-50%);bottom:14px;background:rgba(20,34,76,.82);
+  color:#F3EFE9;border-radius:999px;padding:8px 18px;font-size:.86rem;pointer-events:none;max-width:min(92vw,40rem);
+  text-align:center}
+.tip b{color:var(--amber)}
+
+/* de balk als je eruit probeert te stappen */
+.extract{position:absolute;left:50%;transform:translateX(-50%);bottom:64px;width:min(92vw,26rem);
+  background:rgba(20,34,76,.86);border-radius:16px;padding:12px 16px;color:#F3EFE9;pointer-events:none}
+.extract b{display:block;font-size:.95rem}
+.extract .balk{height:10px;border-radius:99px;background:rgba(255,255,255,.2);overflow:hidden;margin-top:8px}
+.extract .balk i{display:block;height:100%;background:var(--amber);border-radius:99px}
+
+/* de vragen: over het veld heen, want je moet er iets voor doen */
+.vraagvak{position:absolute;inset:0;z-index:20;background:rgba(20,34,76,.72);display:flex;padding:16px;
+  overflow-y:auto;overscroll-behavior:contain}
+.vraagkaart{margin:auto;width:min(94vw,34rem);background:var(--kaart);color:var(--ink);border-radius:20px;
+  padding:20px 22px}
+.vraagkaart .kop{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.vraagkaart h3{margin:6px 0 0;font-size:1.25rem;line-height:1.25;letter-spacing:-.02em}
+.opties{display:grid;gap:8px;margin-top:14px}
+.opties button{text-align:left;background:var(--room);border:1.5px solid var(--rand);border-radius:14px;
+  padding:11px 14px;min-height:48px;font:500 .95rem Poppins,system-ui,sans-serif;color:var(--ink);cursor:pointer}
+.opties button:hover{border-color:var(--ocean)}
+.opties button.goed{background:#e9f6ee;border-color:var(--goed);font-weight:600}
+.opties button.fout{background:#fdecea;border-color:var(--fout)}
+.opties button:disabled{cursor:default}
+.uitleg{margin-top:12px;background:#eaf0ff;border-radius:12px;padding:10px 13px;font-size:.9rem}
+.stippen{display:flex;gap:6px;margin-top:12px}
+.stippen i{width:11px;height:11px;border-radius:50%;background:var(--rand);font-style:normal}
+.stippen i.goed{background:var(--goed)}
+.stippen i.fout{background:var(--fout)}
+
+/* het eindscherm */
+.eind{padding:30px 0 60px;text-align:center}
+.eind .cijfers{display:flex;gap:26px;justify-content:center;flex-wrap:wrap;margin-top:18px}
+.eind .cijfers div b{display:block;font-size:2.2rem;letter-spacing:-.03em}
+.eind .cijfers div span{color:var(--muted);font-size:.86rem}
+
+footer{color:var(--muted);font-size:.88rem;padding:26px 0 40px;text-align:center}
+
+/* ---------- donker ---------- */
+:root[data-theme="dark"]{--room:#0F1A3D;--ink:#F3EFE9;--muted:#B3BBD0;--kaart:#182652;
+  --rand:rgba(243,239,233,.14);--gras:#243021;--pad:#3a3426;--muur:#4a4436}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--room:#0F1A3D;--ink:#F3EFE9;--muted:#B3BBD0;
+  --kaart:#182652;--rand:rgba(243,239,233,.14);--gras:#243021;--pad:#3a3426;--muur:#4a4436}}
+:root[data-theme="dark"] header.hd{background:rgba(15,26,61,.92)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) header.hd{background:rgba(15,26,61,.92)}}
+:root[data-theme="dark"] .niv button.on{background:#1f3468}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .niv button.on{background:#1f3468}}
+:root[data-theme="dark"] .uitleg{background:#1f3468}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .uitleg{background:#1f3468}}
+:root[data-theme="dark"] .opties button.goed{background:#1f3a2c}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .opties button.goed{background:#1f3a2c}}
+:root[data-theme="dark"] .opties button.fout{background:#3a1f1b}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .opties button.fout{background:#3a1f1b}}
+</style>
+<!-- De gedeelde opmaak komt na de eigen stijl van deze pagina: basis.css
+     levert de kleuren van de donkere stand en de afwerking die alle spellen
+     delen, spel.css het uitlegpaneel op het startscherm. -->
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+</head>
+<body>
+
+<header class="hd">
+  <div class="rij">
+    <a class="merk" href="index.html"><i>LG</i>Het zombieveld</a>
+    <div class="rechts">
+      <button class="knop" id="themaknop" type="button" aria-label="Donker of licht">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" class="maan"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+      </button>
+      <button class="knop hide" id="wegBtn" type="button">Veld uit</button>
+    </div>
+  </div>
+</header>
+
+<!-- ---------------- startscherm ---------------- -->
+<section class="wrap start" id="scherm-start">
+  <p class="hand">je komt terug met niks of met alles</p>
+  <h1>Het zombieveld</h1>
+  <p class="lead">Een groot veld vol zombies, en ergens anders op datzelfde veld lopen andere spelers rond.
+    Overal staan kisten. Ze gaan alleen open als je drie vragen goed hebt, en wat erin zit is pas van jou
+    als je het veld uit komt bij een van de drie uitgangen. Ga je neer, dan blijft alles wat je bij je had
+    op de grond liggen: voor de zombies, en voor wie het ophaalt.</p>
+
+  <div class="kaartjes">
+    <div class="kaartje"><b>Kisten gaan op vragen open</b><span>Drie vragen, alle drie goed. Het vak wisselt per kist, dus je weet nooit wat je krijgt.</span></div>
+    <div class="kaartje"><b>Ga je neer, dan kom je terug</b><span>Maar niet gratis: twee van de drie vragen goed, en je spullen liggen inmiddels op de grond.</span></div>
+    <div class="kaartje"><b>Twaalf tellen stilstaan</b><span>Zo lang duurt het om eruit te stappen. Iedereen op het veld ziet waar je staat te wachten.</span></div>
+  </div>
+
+  <p class="eyebrow">welk niveau hebben de vragen</p>
+  <div class="niv" id="niveaus"></div>
+
+  <p class="eyebrow">je kluis</p>
+  <div class="kluis" id="kluis"></div>
+
+  <div class="startrij">
+    <button class="knop vol" id="zoekBtn" type="button">Zoek een potje</button>
+    <button class="knop" id="soloBtn" type="button">Alleen oefenen</button>
+  </div>
+  <p class="lead" id="zoekUit" style="margin-top:10px"></p>
+</section>
+
+<!-- ---------------- het veld ---------------- -->
+<section class="spel hide" id="scherm-spel">
+  <svg id="veld" xmlns="http://www.w3.org/2000/svg" aria-label="Het veld"></svg>
+  <div class="hud">
+    <div class="meter"><i>leven</i><b id="mLeven">100</b><div class="levenbalk"><i id="mLevenBalk" style="width:100%"></i></div></div>
+    <div class="meter"><i id="mWapenNaam">wapen</i><b id="mWapen">&mdash;</b></div>
+    <div class="meter"><i>buit</i><b id="mBuit">0</b></div>
+    <div class="meter"><i>geveld</i><b id="mGeveld">0</b></div>
+    <div class="hudrechts">
+      <button class="knop" id="pauzeBtn" type="button">Menu</button>
+    </div>
+  </div>
+  <div class="minikaart"><svg id="mini" viewBox="0 0 320 220" xmlns="http://www.w3.org/2000/svg"></svg></div>
+  <div class="extract hide" id="extractVak"><b id="extractKop">Je stapt eruit</b><div class="balk"><i id="extractBalk" style="width:0"></i></div></div>
+  <p class="tip" id="tip">Lopen met WASD of de pijltjes. Mikken met de muis, schieten met de linkerknop. E om op te rapen of een kist te proberen.</p>
+  <div class="vraagvak hide" id="vraagvak"><div class="vraagkaart" id="vraagkaart"></div></div>
+</section>
+
+<!-- ---------------- eindscherm ---------------- -->
+<section class="wrap eind hide" id="scherm-eind">
+  <p class="hand" id="eindHand">eruit</p>
+  <h1 id="eindKop">Je bent het veld uit</h1>
+  <p class="lead" id="eindUit" style="margin-inline:auto"></p>
+  <div class="cijfers" id="eindCijfers"></div>
+  <div class="startrij" style="justify-content:center">
+    <button class="knop vol" id="nogBtn" type="button">Nog een potje</button>
+    <a class="knop" href="index.html">Terug naar de spellen</a>
+  </div>
+</section>
+
+<footer>Het zombieveld &middot; meneer Greidanus &middot; <span id="jaar"></span></footer>
+
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<script src="naamfilter.js"></script>
+<script src="bank.js"></script>
+<script src="zombie-motor.js"></script>
+<script>
+(function(){
+'use strict';
+document.getElementById('jaar').textContent = new Date().getFullYear();
+function $(id){ return document.getElementById(id); }
+function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]; }); }
+
+var M = window.ZOMBIEMOTOR, WERELD = M.WERELD;
+var KIST_VRAGEN = 3, KIST_NODIG = 3;      /* alle drie goed, anders blijft de kist dicht */
+var NEER_VRAGEN = 3, NEER_NODIG = 2;      /* om terug te komen mag er een fout tussen */
+
+/* ---------- niveau ---------- */
+var niveau = 'kgt';
+try { var bn = localStorage.getItem('lg-niveau'); if (bn) niveau = bn; } catch (e){}
+function tekenNiveaus(){
+  var el = $('niveaus');
+  el.innerHTML = NIVEAUS.map(function(n){
+    return '<button type="button" data-n="' + n.id + '"' + (niveau === n.id ? ' class="on"' : '') + '>' + n.naam + '</button>';
+  }).join('');
+  Array.prototype.forEach.call(el.querySelectorAll('button'), function(b){
+    b.addEventListener('click', function(){
+      niveau = b.getAttribute('data-n');
+      try { localStorage.setItem('lg-niveau', niveau); } catch (e){}
+      tekenNiveaus();
+    });
+  });
+}
+function rang(){ var n = NIVEAUS.filter(function(x){ return x.id === niveau; })[0]; return n ? n.rang : 2; }
+
+/* ---------- de kluis ----------
+   Wat je binnenhaalt blijft staan, ook als je de pagina sluit. Hij staat in
+   deze browser; dat is hetzelfde als waar je beste scores staan als je niet
+   bent ingelogd. */
+var KLUISSLEUTEL = 'lg-zombie-kluis';
+function leesKluis(){
+  try { var j = JSON.parse(localStorage.getItem(KLUISSLEUTEL) || '{}'); return { waarde: j.waarde | 0, spullen: j.spullen || [], potjes: j.potjes | 0, eruit: j.eruit | 0 }; }
+  catch (e){ return { waarde: 0, spullen: [], potjes: 0, eruit: 0 }; }
+}
+function zetKluis(k){ try { localStorage.setItem(KLUISSLEUTEL, JSON.stringify(k)); } catch (e){} }
+function buitNaam(id){ var b = M.BUIT.filter(function(x){ return x.id === id; })[0]; return b ? b.naam : id; }
+function buitWaarde(id){ var b = M.BUIT.filter(function(x){ return x.id === id; })[0]; return b ? b.waarde : 0; }
+function tekenKluis(){
+  var k = leesKluis(), el = $('kluis');
+  var tel = {};
+  k.spullen.forEach(function(id){ tel[id] = (tel[id] || 0) + 1; });
+  var lijst = Object.keys(tel).map(function(id){
+    return '<i><b>' + schoon(buitNaam(id)) + '</b>' + (tel[id] > 1 ? ' &times;' + tel[id] : '') + '</i>';
+  }).join('');
+  el.innerHTML = '<div class="som"><b>' + k.waarde + '</b><span>punten binnengehaald &middot; ' +
+    k.eruit + ' van de ' + k.potjes + ' keer kwam je eruit</span></div>' +
+    (lijst ? '<div class="spullen">' + lijst + '</div>'
+           : '<p class="lead" style="margin-top:6px">Nog niets. Wat je meeneemt komt hier te staan, en alleen als je het veld uit stapt.</p>');
+}
+
+/* ---------- vragen ----------
+   Precies zoals bij de andere spellen: de vragen komen uit dezelfde bank, de
+   pagina stelt ze en het spel hoort alleen of het gelukt is. Het vak wisselt
+   per kist, dus je kunt je er niet op voorbereiden. */
+var VAKKEN_POT = ['reken', 'ned', 'eng', 'ges', 'aard', 'bio', 'wis', 'burg'];
+var potten = {};
+function vraagUit(vak){
+  var r = rang();
+  if (vak === 'reken') return rekenVraag(r, []);
+  var bron = BRONNEN[vak] || [], nivo = NIVOS[vak] || [];
+  if (!bron.length) return rekenVraag(r, []);
+  if (!potten[vak] || !potten[vak].length){
+    var ids = bron.map(function(q, i){ return i; }).filter(function(i){ return (nivo[i] || 2) <= r; });
+    if (ids.length < 10) ids = bron.map(function(q, i){ return i; });
+    potten[vak] = ids.sort(function(){ return Math.random() - 0.5; });
+  }
+  var q = bron[potten[vak].pop()];
+  if (!q) return rekenVraag(r, []);
+  if (vak === 'ges'){
+    var tv = TIJDVAKKEN.filter(function(t){ return t.id === q.t; })[0] || { naam: '' };
+    return shuffleVraag({ v: q.v, o: q.o, g: q.g, u: q.u, t: 'tijdvak ' + tv.naam.replace(/^\d+ /, '') });
+  }
+  if (vak === 'eng' && q.t !== 'irregular verbs'){
+    return shuffleVraag({ v: (q.t === 'woordjes NL naar EN' ? 'Hoe zeg je: ' : 'Wat betekent: ') + q.v + '?', o: q.o, g: q.g, u: q.u, t: q.t });
+  }
+  return shuffleVraag(q);
+}
+function vakNaam(id){ var v = VAKKEN.filter(function(x){ return x.id === id; })[0]; return v ? v.naam : id; }
+
+/* een reeks vragen over het veld heen; klaar() krijgt hoeveel er goed waren */
+var reeks = null;
+function vraagReeks(opzet){
+  reeks = { vak: opzet.vak, n: opzet.n, nodig: opzet.nodig, kop: opzet.kop, uit: opzet.uit,
+            goed: 0, gedaan: 0, stand: [], klaar: opzet.klaar, stoppen: opzet.stoppen, vraag: null, geklikt: -1 };
+  $('vraagvak').classList.remove('hide');
+  volgendeVraag();
+}
+function volgendeVraag(){
+  if (!reeks) return;
+  if (reeks.gedaan >= reeks.n){
+    var gelukt = reeks.goed >= reeks.nodig;
+    var k = reeks.klaar, g = reeks.goed;
+    sluitReeks();
+    k(gelukt, g);
+    return;
+  }
+  reeks.vraag = vraagUit(reeks.vak);
+  reeks.geklikt = -1;
+  tekenVraag();
+}
+function sluitReeks(){ reeks = null; $('vraagvak').classList.add('hide'); }
+function tekenVraag(){
+  if (!reeks || !reeks.vraag) return;
+  var v = reeks.vraag;
+  var stippen = '';
+  for (var i = 0; i < reeks.n; i++){
+    stippen += '<i class="' + (reeks.stand[i] === 1 ? 'goed' : reeks.stand[i] === 0 ? 'fout' : '') + '"></i>';
+  }
+  var h = '<p class="kop">' + schoon(reeks.kop) + ' &middot; ' + schoon(vakNaam(reeks.vak)) +
+    ' &middot; vraag ' + (reeks.gedaan + 1) + ' van ' + reeks.n + '</p>' +
+    '<h3>' + schoon(v.v) + '</h3><div class="stippen">' + stippen + '</div>' +
+    '<div class="opties">' + v.o.map(function(o, i){
+      var kl = reeks.geklikt < 0 ? '' : i === v.g ? ' class="goed"' : i === reeks.geklikt ? ' class="fout"' : '';
+      return '<button type="button" data-i="' + i + '"' + kl + (reeks.geklikt >= 0 ? ' disabled' : '') + '>' + schoon(o) + '</button>';
+    }).join('') + '</div>';
+  if (reeks.geklikt >= 0 && v.u) h += '<div class="uitleg">' + schoon(v.u) + '</div>';
+  if (reeks.uit && reeks.gedaan === 0 && reeks.geklikt < 0) h += '<p class="lead" style="font-size:.88rem;margin-top:12px">' + schoon(reeks.uit) + '</p>';
+  if (reeks.stoppen && reeks.geklikt < 0) h += '<div class="startrij"><button class="knop" type="button" data-stop="1">Laat maar</button></div>';
+  $('vraagkaart').innerHTML = h;
+  Array.prototype.forEach.call($('vraagkaart').querySelectorAll('button'), function(b){
+    b.addEventListener('click', function(){
+      if (b.getAttribute('data-stop')){ var s = reeks.stoppen; sluitReeks(); if (s) s(); return; }
+      if (!reeks || reeks.geklikt >= 0) return;
+      var i = +b.getAttribute('data-i');
+      reeks.geklikt = i;
+      var goed = i === reeks.vraag.g;
+      reeks.stand[reeks.gedaan] = goed ? 1 : 0;
+      if (goed) reeks.goed++;
+      reeks.gedaan++;
+      tekenVraag();
+      setTimeout(function(){ if (reeks) volgendeVraag(); }, goed ? 900 : 2100);
+    });
+  });
+}
+
+/* ---------- toestand ---------- */
+var W = null, co = { aan: false, ws: null, code: '', ik: 0, wereld: null, stand: null, laatst: 0 };
+var loopt = false, laatsteTijd = 0, mijnNaam = 'Speler', mijnAv = '';
+var toetsen = {}, mik = { x: 0, y: 0 }, trekker = false, mijnKist = 0, eindStand = null;
+/* Wat maar een keer over de lijn komt, houden we hier vast: de namen en
+   avatars van de anderen, en de laatste stand van de kisten en de uitgangen.
+   Zo hoeft de kamer ze niet twintig keer per seconde opnieuw te sturen. */
+var bekend = { namen: {}, av: {}, ki: [], ex: [], kv: -1, ev: -1 };
+function onthoud(d){
+  if (d.n) d.n.forEach(function(r){ bekend.namen[r[0]] = r[1]; bekend.av[r[0]] = r[2]; });
+  if (d.ki){ bekend.ki = d.ki; bekend.kv = d.kv; }
+  if (d.ex){ bekend.ex = d.ex; bekend.ev = d.ev; }
+}
+
+try { mijnNaam = (localStorage.getItem('lg-naam') || '').slice(0, 16) || 'Speler'; } catch (e){}
+if (window.PROFIEL && PROFIEL.avatar) { try { mijnAv = PROFIEL.avatar() || ''; } catch (e){} }
+
+/* ---------- beginnen ---------- */
+function naarVeld(){
+  $('scherm-start').classList.add('hide');
+  $('scherm-eind').classList.add('hide');
+  $('scherm-spel').classList.remove('hide');
+  $('wegBtn').classList.remove('hide');
+  document.body.style.overflow = 'hidden';
+  loopt = true; laatsteTijd = performance.now();
+  requestAnimationFrame(lus);
+}
+function naarStart(){
+  loopt = false;
+  document.body.style.overflow = '';
+  $('scherm-spel').classList.add('hide');
+  $('wegBtn').classList.add('hide');
+  $('scherm-start').classList.remove('hide');
+  tekenKluis();
+}
+
+function soloStart(){
+  co.aan = false;
+  W = M.maak({ seed: (Date.now() ^ 0x5bf03635) >>> 0, spelers: [{ naam: mijnNaam, av: mijnAv }] });
+  co.ik = 0; co.wereld = W.wereldPakket();
+  bouwWereld(co.wereld);
+  naarVeld();
+  zetTip('Alleen oefenen: geen andere spelers. Wat je meeneemt telt wel voor je kluis.');
+}
+
+function potjeZoeken(){
+  var knop = $('zoekBtn'), uit = $('zoekUit');
+  knop.disabled = true; uit.textContent = 'Een potje zoeken…';
+  fetch('/api/potje', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })
+    .then(function(r){ return r.json().then(function(j){ return { ok: r.ok, j: j }; }); })
+    .then(function(x){
+      knop.disabled = false;
+      if (!x.ok || !x.j.code){ uit.textContent = (x.j && x.j.fout) || 'Geen potje gevonden. Probeer het zo nog eens, of oefen alleen.'; return; }
+      uit.textContent = 'Potje ' + x.j.code + ' gevonden.';
+      verbind(x.j.code);
+    })
+    .catch(function(){ knop.disabled = false; uit.textContent = 'Geen verbinding. Je kunt wel alleen oefenen.'; });
+}
+
+function verbind(code){
+  co.aan = true; co.code = code;
+  var proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
+  var s = new WebSocket(proto + location.host + '/ws/z/' + code +
+    '?sid=' + encodeURIComponent(sid()) + '&naam=' + encodeURIComponent(mijnNaam) + '&av=' + encodeURIComponent(mijnAv));
+  co.ws = s;
+  s.onmessage = function(e){
+    if (e.data === 'pong') return;
+    var m; try { m = JSON.parse(e.data); } catch (x){ return; }
+    if (m.t === 'hoi'){
+      co.ik = m.ik; co.wereld = m.wereld;
+      bouwWereld(m.wereld);
+      naarVeld();
+      zetTip('Je bent in potje ' + code + '. Zoek kisten, blijf uit de buurt van de zombies, en stap eruit bij een uitgang.');
+      return;
+    }
+    if (m.t === 'st'){ onthoud(m.d); co.stand = m.d; co.laatst = performance.now(); return; }
+    if (m.t === 'kistuit'){ meldBuit(m.d); return; }
+    if (m.t === 'gebruik'){
+      if (m.d && m.d.wat === 'kist') beginKist(m.d.nr);
+      else if (m.d && m.d.wat === 'bezet') zetTip('Iemand anders is met deze kist bezig.');
+      return;
+    }
+  };
+  s.onclose = function(){
+    if (co.ws !== s) return;
+    co.ws = null;
+    if (loopt){ zetTip('De verbinding is weg. Je potje is afgelopen.'); eindScherm(false, 0, 'De verbinding met het potje viel weg.'); }
+  };
+  s.onerror = function(){};
+}
+function zend(o){ if (co.ws && co.ws.readyState === 1) co.ws.send(JSON.stringify(o)); }
+function sid(){
+  try {
+    var s = localStorage.getItem('lg-quiz-sid');
+    if (!s){ s = Math.random().toString(36).slice(2, 14); localStorage.setItem('lg-quiz-sid', s); }
+    return s;
+  } catch (e){ return Math.random().toString(36).slice(2, 14); }
+}
+setInterval(function(){ if (co.ws && co.ws.readyState === 1) co.ws.send('ping'); }, 25000);
+
+/* ---------- de wereld tekenen ----------
+   De muren en de uitgangen veranderen nooit, dus die staan een keer in de svg.
+   Alles wat beweegt komt er elke tik opnieuw in. */
+var veld = $('veld'), vastLaag = null, levendLaag = null;
+function bouwWereld(w){
+  veld.innerHTML =
+    '<defs>' +
+      '<pattern id="grasje" width="46" height="46" patternUnits="userSpaceOnUse">' +
+        '<rect width="46" height="46" fill="var(--gras)"/>' +
+        '<circle cx="9" cy="13" r="1.6" fill="rgba(0,0,0,.07)"/><circle cx="31" cy="34" r="1.3" fill="rgba(0,0,0,.06)"/>' +
+      '</pattern>' +
+    '</defs>' +
+    '<rect id="grond" x="0" y="0" width="' + w.b + '" height="' + w.h + '" fill="url(#grasje)"/>' +
+    '<g id="vast"></g><g id="levend"></g>';
+  vastLaag = veld.querySelector('#vast');
+  levendLaag = veld.querySelector('#levend');
+  var h = '';
+  w.ex.forEach(function(e){
+    h += '<g><circle cx="' + e[1] + '" cy="' + e[2] + '" r="' + e[3] + '" fill="rgba(234,152,54,.18)" stroke="var(--amber)" stroke-width="3" stroke-dasharray="10 8"/>' +
+      '<text x="' + e[1] + '" y="' + (e[2] + 5) + '" text-anchor="middle" font-size="19" font-weight="700" fill="var(--amber)" font-family="Poppins,sans-serif">UIT</text></g>';
+  });
+  w.mu.forEach(function(m){
+    h += '<rect x="' + m[0] + '" y="' + m[1] + '" width="' + m[2] + '" height="' + m[3] + '" rx="4" fill="var(--muur)" stroke="rgba(0,0,0,.18)" stroke-width="2"/>' +
+      '<rect x="' + (m[0] + 7) + '" y="' + (m[1] + 7) + '" width="' + Math.max(0, m[2] - 14) + '" height="' + Math.max(0, m[3] - 14) + '" rx="3" fill="rgba(0,0,0,.09)"/>';
+  });
+  /* Struiken en stenen: ze doen niets, maar zonder iets om je aan te oriënteren
+     is een veld van drie bij twee kilometer een biljartlaken en weet je nooit
+     of je vooruit komt. Ze staan vast op de plek die het zaad ze geeft. */
+  var z = w.seed >>> 0;
+  function tv(){ z = (z + 0x6D2B79F5) >>> 0; var t = Math.imul(z ^ (z >>> 15), 1 | z); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+  for (var i = 0; i < 260; i++){
+    var sx = Math.round(tv() * w.b), sy = Math.round(tv() * w.h), soort = tv();
+    if (soort < 0.55){
+      h += '<circle cx="' + sx + '" cy="' + sy + '" r="' + (7 + Math.round(tv() * 9)) + '" fill="rgba(60,82,48,.5)"/>';
+    } else if (soort < 0.85){
+      h += '<circle cx="' + sx + '" cy="' + sy + '" r="' + (4 + Math.round(tv() * 4)) + '" fill="rgba(120,116,104,.45)"/>';
+    } else {
+      h += '<rect x="' + sx + '" y="' + sy + '" width="' + (16 + Math.round(tv() * 26)) + '" height="6" rx="3" fill="rgba(120,100,70,.4)"/>';
+    }
+  }
+  vastLaag.innerHTML = h;
+  tekenMini(w);
+}
+
+/* het kaartje rechtsonder: waar sta ik, waar zijn de uitgangen */
+var miniVast = false;
+function tekenMini(w){
+  var mini = $('mini');
+  mini.setAttribute('viewBox', '0 0 ' + w.b + ' ' + w.h);
+  var h = '<rect x="0" y="0" width="' + w.b + '" height="' + w.h + '" fill="rgba(0,0,0,.25)"/>';
+  w.mu.forEach(function(m){ h += '<rect x="' + m[0] + '" y="' + m[1] + '" width="' + m[2] + '" height="' + m[3] + '" fill="rgba(243,239,233,.22)"/>'; });
+  h += '<g id="miniLos"></g>';
+  mini.innerHTML = h;
+  miniVast = true;
+}
+
+/* ---------- de stand die we tekenen ----------
+   Alleen spelen: rechtstreeks uit de motor. Samen: uit het laatste pakket. */
+function standNu(){
+  if (!co.aan){
+    if (!W) return null;
+    var d = W.pakketVoor(0);
+    onthoud(d);
+    return d;
+  }
+  return co.stand;
+}
+
+/* ---------- de lus ---------- */
+function lus(nu){
+  if (!loopt) return;
+  var dt = Math.min(0.05, (nu - laatsteTijd) / 1000);
+  laatsteTijd = nu;
+  invoerDoor();
+  if (!co.aan && W) W.stap(dt);
+  teken();
+  requestAnimationFrame(lus);
+}
+
+var zendKlok = 0;
+function invoerDoor(){
+  var dx = 0, dy = 0;
+  if (toetsen.ArrowLeft || toetsen.a || toetsen.q) dx -= 1;
+  if (toetsen.ArrowRight || toetsen.d) dx += 1;
+  if (toetsen.ArrowUp || toetsen.w || toetsen.z) dy -= 1;
+  if (toetsen.ArrowDown || toetsen.s) dy += 1;
+  if (raakStuur.aan){ dx = raakStuur.dx; dy = raakStuur.dy; }
+  var d = standNu();
+  var wx = mik.x, wy = mik.y;
+  if (!co.aan && W){
+    W.zetInvoer(0, dx, dy, wx, wy);
+    W.schiet(0, trekker);
+    return;
+  }
+  zendKlok++;
+  if (zendKlok % 3 === 0) zend({ t: 'in', dx: dx, dy: dy, mx: wx, my: wy, s: trekker });
+}
+
+/* ---------- tekenen ---------- */
+/* de soort zombie komt als cijfer binnen: de plek in de lijst */
+var ZSOORT = M.ZOMBIES;
+function tekenAvatar(naam, av, x, y, r, neer){
+  var inhoud = window.AVATAR ? AVATAR.inhoud(naam, av) : '';
+  return '<g transform="translate(' + x + ' ' + y + ') scale(' + (r / 50) + ')"' + (neer ? ' opacity=".45"' : '') + '>' + inhoud + '</g>';
+}
+function teken(){
+  var d = standNu();
+  if (!d || !co.wereld) return;
+  var mx = d.m[0], my = d.m[1];
+  /* de camera: het venster van de speler, binnen de wereld */
+  var r = veld.getBoundingClientRect();
+  var vb = M.KIJK.b, vh = vb * r.height / r.width;
+  if (vh > M.KIJK.h * 1.6){ vh = M.KIJK.h * 1.6; vb = vh * r.width / r.height; }
+  var cx = Math.max(vb / 2, Math.min(co.wereld.b - vb / 2, mx));
+  var cy = Math.max(vh / 2, Math.min(co.wereld.h - vh / 2, my));
+  veld.setAttribute('viewBox', (cx - vb / 2).toFixed(1) + ' ' + (cy - vh / 2).toFixed(1) + ' ' + vb.toFixed(1) + ' ' + vh.toFixed(1));
+
+  var h = '';
+  /* buit op de grond */
+  d.b.forEach(function(b){
+    h += '<g transform="translate(' + b[1] + ' ' + b[2] + ')"><circle r="11" fill="var(--amber)" stroke="#14224C" stroke-width="2"/>' +
+      '<circle r="4" fill="#14224C"/></g>';
+  });
+  /* kisten: alleen bijgewerkt als er iets veranderd is, dus uit bekend */
+  bekend.ki.forEach(function(k){
+    var op = k[3];
+    h += '<g transform="translate(' + k[1] + ' ' + k[2] + ')">' +
+      '<rect x="-15" y="-11" width="30" height="22" rx="4" fill="' + (op ? '#7d7361' : '#8a5a2b') + '" stroke="#14224C" stroke-width="2.5"/>' +
+      (op ? '' : '<rect x="-15" y="-3" width="30" height="5" fill="#d9a441"/><circle cy="1" r="3" fill="#d9a441"/>') +
+      '</g>';
+  });
+  /* zombies */
+  d.z.forEach(function(z){
+    var soort = ZSOORT[z[4]] || ZSOORT[0];
+    var kl = soort.kleur, zr = soort.r;
+    h += '<g transform="translate(' + z[1] + ' ' + z[2] + ')">' +
+      '<circle r="' + zr + '" fill="' + kl + '" stroke="#14224C" stroke-width="2.5"/>' +
+      '<circle cx="' + (-zr * 0.34) + '" cy="-3" r="' + (zr * 0.2) + '" fill="#14224C"/>' +
+      '<circle cx="' + (zr * 0.34) + '" cy="-3" r="' + (zr * 0.2) + '" fill="#14224C"/>' +
+      '<path d="M' + (-zr * 0.4) + ' ' + (zr * 0.42) + ' h' + (zr * 0.8) + '" stroke="#14224C" stroke-width="2.5" stroke-linecap="round"/>' +
+      '</g>';
+  });
+  /* andere spelers; hun naam en avatar kregen we een keer en staan in bekend */
+  d.s.forEach(function(q){
+    if (!q[8]) return;   /* buiten beeld: alleen op het kaartje */
+    var naam = bekend.namen[q[0]] || 'speler';
+    h += tekenAvatar(naam, bekend.av[q[0]] || '', q[1], q[2], 17, q[5]);
+    h += '<text x="' + q[1] + '" y="' + (q[2] - 24) + '" text-anchor="middle" font-size="12" font-weight="600" fill="#14224C" font-family="Poppins,sans-serif" paint-order="stroke" stroke="rgba(255,255,255,.7)" stroke-width="3">' + schoon(naam) + '</text>';
+  });
+  /* ikzelf */
+  h += tekenAvatar(mijnNaam, mijnAv, mx, my, 17, d.m[5]);
+  var hoek = d.m[2];
+  h += '<line x1="' + mx + '" y1="' + my + '" x2="' + (mx + Math.cos(hoek) * 30) + '" y2="' + (my + Math.sin(hoek) * 30) + '" stroke="#14224C" stroke-width="3.5" stroke-linecap="round"/>';
+  /* kogels: alleen een streepje, dus de hoek is genoeg */
+  d.k.forEach(function(k){
+    h += '<line x1="' + k[0] + '" y1="' + k[1] + '" x2="' + (k[0] - Math.cos(k[2]) * 13).toFixed(1) + '" y2="' + (k[1] - Math.sin(k[2]) * 13).toFixed(1) + '" stroke="#ffd166" stroke-width="3" stroke-linecap="round"/>';
+  });
+  levendLaag.innerHTML = h;
+
+  hud(d);
+  miniLos(d);
+}
+
+function hud(d){
+  var hp = d.m[3], maxHp = d.m[4] || 100;
+  $('mLeven').textContent = Math.max(0, Math.round(hp));
+  var bal = $('mLevenBalk');
+  bal.style.width = Math.max(0, Math.min(100, 100 * hp / maxHp)) + '%';
+  bal.className = hp / maxHp < 0.34 ? 'laag' : '';
+  var w = M.wapenVan(d.m[7]);
+  $('mWapenNaam').textContent = w.mag ? 'kogels' : 'wapen';
+  $('mWapen').textContent = w.mag ? d.m[8] : w.naam;
+  $('mBuit').textContent = d.m[9];
+  $('mGeveld').textContent = d.m[10];
+
+  /* eruit stappen */
+  var vak = $('extractVak');
+  if (d.m[13]){
+    vak.classList.remove('hide');
+    var deel = Math.min(1, d.m[12] / M.EXTRACT.tijd);
+    $('extractBalk').style.width = (deel * 100).toFixed(1) + '%';
+    $('extractKop').textContent = 'Blijf staan… nog ' + Math.max(0, Math.ceil(M.EXTRACT.tijd - d.m[12])) + ' tellen';
+  } else vak.classList.add('hide');
+
+  /* neer: alles wat je bij je had ligt nu op het veld */
+  if (d.m[5] && laatsteSpullen.length) laatsteSpullen = [];
+  /* neer: vragen om terug te komen */
+  if (d.m[5] && !reeks && !neerBezig) neerVragen();
+  /* het veld uit */
+  if (d.m[6] && loopt && !eindStand) eindScherm(true, d.m[9], '');
+}
+
+function miniLos(d){
+  var g = $('mini').querySelector('#miniLos');
+  if (!g) return;
+  var h = '';
+  co.wereld.ex.forEach(function(e){
+    h += '<circle cx="' + e[1] + '" cy="' + e[2] + '" r="' + (e[3] * 0.9) + '" fill="none" stroke="var(--amber)" stroke-width="12"/>';
+  });
+  /* wie staat er te wachten om eruit te stappen: dat mag iedereen zien */
+  bekend.ex.forEach(function(e){
+    if (!e[4]) return;
+    h += '<circle cx="' + e[1] + '" cy="' + e[2] + '" r="' + (e[3] * 1.5) + '" fill="rgba(242,103,73,.5)"><animate attributeName="r" values="' +
+      (e[3] * 1.1) + ';' + (e[3] * 2.1) + ';' + (e[3] * 1.1) + '" dur="1.4s" repeatCount="indefinite"/></circle>';
+  });
+  d.s.forEach(function(q){
+    h += '<circle cx="' + q[1] + '" cy="' + q[2] + '" r="22" fill="' + (q[6] ? 'var(--crab)' : 'rgba(243,239,233,.7)') + '"/>';
+  });
+  h += '<circle cx="' + d.m[0] + '" cy="' + d.m[1] + '" r="26" fill="#5fbf88" stroke="#14224C" stroke-width="6"/>';
+  g.innerHTML = h;
+}
+
+/* ---------- kisten ---------- */
+function beginKist(nr){
+  if (reeks) return;
+  mijnKist = nr;
+  var vak = VAKKEN_POT[Math.floor(Math.random() * VAKKEN_POT.length)];
+  function doorgaan(){
+    vraagReeks({
+      vak: vak, n: KIST_VRAGEN, nodig: KIST_NODIG, kop: 'kist op slot',
+      uit: 'Alle ' + KIST_VRAGEN + ' goed en de kist gaat open. Eén fout en hij blijft dicht; je mag het later opnieuw proberen.',
+      stoppen: function(){ losKist(); },
+      klaar: function(gelukt){
+        if (gelukt){
+          if (co.aan) zend({ t: 'kistop', nr: nr });
+          else { var uit = W.kistOpen(0, nr); if (uit) meldBuit(uit); }
+        } else {
+          losKist();
+          zetTip('De kist blijft dicht. Zoek een andere, of kom later terug.');
+        }
+        mijnKist = 0;
+      }
+    });
+  }
+  if (window.BANK && !BANK.heeft(vak) && vak !== 'reken') BANK.zorg(vak).then(doorgaan);
+  else doorgaan();
+}
+function losKist(){
+  if (!mijnKist) return;
+  if (co.aan) zend({ t: 'kistlos', nr: mijnKist });
+  else W.kistLos(0, mijnKist);
+  mijnKist = 0;
+}
+function meldBuit(lijst){
+  if (!lijst || !lijst.length) return;
+  /* bijhouden wat ik bij me heb: samen spelen hoort het alleen hier */
+  lijst.forEach(function(id){ laatsteSpullen.push(id); });
+  zetTip('Uit de kist: <b>' + lijst.map(function(id){ return schoon(buitNaam(id)); }).join(', ') + '</b>');
+}
+
+/* ---------- neergaan ---------- */
+var neerBezig = false;
+function neerVragen(){
+  neerBezig = true;
+  var vak = VAKKEN_POT[Math.floor(Math.random() * VAKKEN_POT.length)];
+  function doorgaan(){
+    vraagReeks({
+      vak: vak, n: NEER_VRAGEN, nodig: NEER_NODIG, kop: 'je ligt op de grond',
+      uit: 'Alles wat je bij je had ligt nu op het veld. Heb je ' + NEER_NODIG + ' van de ' + NEER_VRAGEN + ' goed, dan sta je weer op, ergens anders.',
+      klaar: function(gelukt){
+        if (gelukt){
+          if (co.aan) zend({ t: 'herleef' });
+          else W.herleef(0);
+          neerBezig = false;
+          zetTip('Je staat weer. Je spullen liggen nog ergens op het veld.');
+        } else {
+          zetTip('Dat was niet genoeg. Nog een keer.');
+          setTimeout(function(){ neerBezig = false; }, 600);
+        }
+      }
+    });
+  }
+  if (window.BANK && !BANK.heeft(vak) && vak !== 'reken') BANK.zorg(vak).then(doorgaan);
+  else doorgaan();
+}
+
+/* ---------- het veld uit ---------- */
+function eindScherm(gelukt, waarde, waarom){
+  if (eindStand) return;
+  eindStand = { gelukt: gelukt, waarde: waarde };
+  loopt = false;
+  document.body.style.overflow = '';
+  sluitReeks();
+  if (co.ws){ try { zend({ t: 'weg' }); co.ws.close(); } catch (e){} co.ws = null; }
+
+  var k = leesKluis();
+  k.potjes++;
+  if (gelukt){
+    k.eruit++;
+    k.waarde += waarde | 0;
+    /* wat je bij je had komt in de kluis; alleen oefenen weet dat zelf, samen
+       spelen houdt het bij aan de hand van wat er uit de kisten kwam */
+    var mee = (!co.aan && W) ? W.spullenVan(0) : laatsteSpullen;
+    (mee || []).forEach(function(id){ k.spullen.push(id); });
+  }
+  laatsteSpullen = [];
+  zetKluis(k);
+
+  $('scherm-spel').classList.add('hide');
+  $('wegBtn').classList.add('hide');
+  $('scherm-eind').classList.remove('hide');
+  $('eindHand').textContent = gelukt ? 'binnen' : 'weg';
+  $('eindKop').textContent = gelukt ? 'Je bent het veld uit' : 'Je bent het veld niet uit gekomen';
+  $('eindUit').textContent = gelukt
+    ? 'Alles wat je bij je had is nu van jou en staat in je kluis.'
+    : (waarom || 'Wat je bij je had is op het veld achtergebleven.');
+  $('eindCijfers').innerHTML =
+    '<div><b>' + (gelukt ? (waarde | 0) : 0) + '</b><span>punten meegenomen</span></div>' +
+    '<div><b>' + k.waarde + '</b><span>in je kluis</span></div>' +
+    '<div><b>' + k.eruit + '/' + k.potjes + '</b><span>keer eruit gekomen</span></div>';
+  tekenKluis();
+}
+/* wat ik bij me heb, bijgehouden zodat het eindscherm het weet */
+var laatsteSpullen = [];
+
+function zetTip(html){
+  var t = $('tip');
+  t.innerHTML = html;
+  clearTimeout(zetTip.klok);
+  zetTip.klok = setTimeout(function(){ t.innerHTML = 'E om op te rapen of een kist te proberen. Blijf in een oranje kring staan om eruit te stappen.'; }, 5200);
+}
+
+/* ---------- invoer ---------- */
+addEventListener('keydown', function(e){
+  if (e.key === 'Escape' && loopt){ return; }
+  toetsen[e.key] = true;
+  if (e.key.length === 1) toetsen[e.key.toLowerCase()] = true;
+  if ((e.key === 'e' || e.key === 'E') && loopt && !reeks){ gebruik(); e.preventDefault(); }
+  if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].indexOf(e.key) >= 0 && loopt) e.preventDefault();
+});
+addEventListener('keyup', function(e){
+  toetsen[e.key] = false;
+  if (e.key.length === 1) toetsen[e.key.toLowerCase()] = false;
+});
+function gebruik(){
+  if (co.aan) zend({ t: 'gebruik' });
+  else {
+    var uit = W.gebruik(0);
+    if (uit && uit.wat === 'kist') beginKist(uit.nr);
+  }
+}
+/* mikken en schieten met de muis */
+function veldPunt(e){
+  var r = veld.getBoundingClientRect();
+  var vbs = (veld.getAttribute('viewBox') || '0 0 100 100').split(' ').map(Number);
+  return { x: vbs[0] + (e.clientX - r.left) / r.width * vbs[2],
+           y: vbs[1] + (e.clientY - r.top) / r.height * vbs[3] };
+}
+veld.addEventListener('pointermove', function(e){ var p = veldPunt(e); mik.x = p.x; mik.y = p.y; });
+veld.addEventListener('pointerdown', function(e){
+  e.preventDefault();
+  var p = veldPunt(e); mik.x = p.x; mik.y = p.y;
+  if (raakStuurAan(e)) return;
+  trekker = true;
+});
+addEventListener('pointerup', function(){ trekker = false; raakStuur.aan = false; raakStuur.id = -1; });
+veld.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+
+/* op een telefoon: links slepen om te lopen, rechts tikken om te schieten */
+var raakStuur = { aan: false, id: -1, x0: 0, y0: 0, dx: 0, dy: 0 };
+function raakStuurAan(e){
+  if (e.pointerType !== 'touch') return false;
+  var r = veld.getBoundingClientRect();
+  if (e.clientX - r.left > r.width * 0.45) return false;
+  raakStuur.aan = true; raakStuur.id = e.pointerId; raakStuur.x0 = e.clientX; raakStuur.y0 = e.clientY;
+  raakStuur.dx = 0; raakStuur.dy = 0;
+  return true;
+}
+veld.addEventListener('pointermove', function(e){
+  if (!raakStuur.aan || e.pointerId !== raakStuur.id) return;
+  var dx = e.clientX - raakStuur.x0, dy = e.clientY - raakStuur.y0, l = Math.hypot(dx, dy) || 1;
+  var k = Math.min(1, l / 54);
+  raakStuur.dx = dx / l * k; raakStuur.dy = dy / l * k;
+});
+
+/* ---------- knoppen ---------- */
+$('zoekBtn').addEventListener('click', potjeZoeken);
+$('soloBtn').addEventListener('click', soloStart);
+$('nogBtn').addEventListener('click', function(){ eindStand = null; neerBezig = false; naarStart(); });
+$('wegBtn').addEventListener('click', function(){
+  if (!confirm('Nu weggaan? Alles wat je bij je hebt blijft op het veld liggen.')) return;
+  eindScherm(false, 0, 'Je bent zelf weggegaan; je spullen zijn op het veld gebleven.');
+});
+$('pauzeBtn').addEventListener('click', function(){ zetTip('Lopen: WASD of de pijltjes. Mikken: de muis. Schieten: de linkerknop. Oprapen en kisten: E.'); });
+
+tekenNiveaus();
+tekenKluis();
+
+/* de vragen van rekenen zitten al in bank.js; de rest komt binnen zodra een kist erom vraagt */
+})();
+</script>
+<script src="thema.js"></script>
+<script src="spel.js"></script>
+<script>SPEL.uitleg({ doel:"Haal buit uit de kisten en kom het veld uit voordat de zombies of de andere spelers je te pakken krijgen.", tijd:"een potje duurt zo lang als je het volhoudt", bediening:"Lopen met WASD of de pijltjes, mikken met de muis, schieten met de linkermuisknop, oprapen en kisten proberen met E. Op een telefoon: links slepen om te lopen, rechts tikken om te schieten." });</script>
+</body>
+</html>
