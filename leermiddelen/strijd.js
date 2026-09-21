@@ -34,6 +34,10 @@ window.STRIJD = (function(){
   var NAAMFOUT = 'Die bijnaam kan niet. Kies een andere.';
 
   /* ---------- opmaak van alles wat dit script tekent ---------- */
+  /* Wat er in het donker anders moet. Een lijst, twee keer gebruikt: een keer
+     voor wie de donkere stand zelf koos en een keer voor wie hem van zijn
+     computer krijgt. Stond hier twee keer woordelijk hetzelfde. */
+  var DONKERREGELS = '.duelvak,.sitelijst .rij,.duelvak input,.sitelijst .naamrij input,.duelvak button.los{background:#182652;color:#F3EFE9;border-color:rgba(243,239,233,.14)}.sitelijst .rij.jij{background:#3a3220;border-color:#EFC64A}.duelvak p,.sitelijst .rij small,.sitelijst .leeg,.sitelijst .hint,.sitelijst .rij .nr{color:#B3BBD0}.duelvak h3,.sitelijst h3{color:#F3EFE9}#strijdSluier>div{background:#182652;color:#F3EFE9}#strijdSluier p{color:#B3BBD0}#strijdSluier button{background:#182652;color:#F3EFE9;border-color:rgba(243,239,233,.2)}#strijdSluier .stijlen button{background:#1f2f5e;color:#F3EFE9}#strijdSluier .stijlen button b{color:#F3EFE9}#strijdSluier .stijlen button.aan{background:#204ECF;color:#fff;border-color:#204ECF}#strijdSluier .stijlen button.aan b{color:#fff}#strijdSluier .lobbykaart{background:#1f2f5e;color:#F3EFE9}#strijdSluier .lobbykaart .klas{color:#B3BBD0}#strijdSluier .lobbykaart.klaar{background:#1f3a2c;border-color:#5fbf88}#strijdSluier .lobbykaart.klaar .vlag{color:#8fd9ae}#strijdSluier .lobbykaart.jij{border-color:#83A5F2}#strijdSluier .lobbykaart.jij.klaar{border-color:#5fbf88}#strijdSluier .lobbykaart.leeg{background:transparent;border-color:rgba(243,239,233,.2);color:#B3BBD0}#strijdSluier .lobbykaart .vlag{color:#F4A28C}#strijdSluier button.crab{background:#F26749;color:#fff;border-color:#F26749}#strijdSluier p.kop{color:#B3BBD0}';
   var css = '#strijdHud{position:fixed;left:12px;bottom:12px;z-index:90;background:#14224C;color:#fff;border-radius:14px;padding:9px 13px;' +
     'font:600 .82rem/1.3 Poppins,system-ui,sans-serif;box-shadow:0 10px 24px rgba(20,34,76,.25);max-width:min(92vw,340px)}' +
     '#strijdHud small{display:block;font-weight:500;opacity:.8}' +
@@ -50,12 +54,35 @@ window.STRIJD = (function(){
     '#strijdSluier>div{background:#fff;color:#14224C;border-radius:22px;padding:26px 28px;text-align:center;' +
       'max-width:440px;width:100%;margin:auto;font-family:Poppins,system-ui,sans-serif}' +
     '#strijdSluier b{display:block;font-size:1.4rem;margin-bottom:6px}' +
-    '#strijdSluier ul.lobby{list-style:none;margin:10px 0;padding:0;display:grid;gap:4px;text-align:left}' +
-    '#strijdSluier ul.lobby li{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;background:#f4f7ff;border-radius:10px;padding:6px 10px;font-size:.9rem}' +
-    '#strijdSluier ul.lobby li em{font-style:normal;color:#5b6480;font-size:.8rem}#strijdSluier ul.lobby li i{font-style:normal;font-size:.72rem;font-weight:600;color:#c0442c}#strijdSluier ul.lobby li.klaar i{color:#2f7d52}' +
+    /* het lobbyscherm: een kaart per speler, met zijn gezichtje erop */
+    '#strijdSluier>div.lobbyscherm{max-width:560px}' +
+    '#strijdSluier .lobbyvak{display:grid;grid-template-columns:1fr;gap:8px;margin:12px 0 2px;text-align:left}' +
+    '@media(min-width:480px){#strijdSluier .lobbyvak{grid-template-columns:1fr 1fr}}' +
+    '#strijdSluier .lobbykaart{display:flex;align-items:center;gap:10px;background:#f4f7ff;' +
+      'border:2px solid transparent;border-radius:14px;padding:9px 11px;min-height:64px;box-sizing:border-box}' +
+    '#strijdSluier .lobbykaart .av{flex:none;width:42px;height:42px;line-height:0}' +
+    '#strijdSluier .lobbykaart .av svg{display:block;width:100%;height:100%}' +
+    '#strijdSluier .lobbykaart .wie{flex:1;min-width:0}' +
+    '#strijdSluier .lobbykaart .wie b{display:block;font-size:.92rem;line-height:1.25;margin:0;' +
+      'white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+    '#strijdSluier .lobbykaart .klas{display:flex;align-items:center;gap:5px;font-size:.78rem;color:#5b6480;min-width:0}' +
+    '#strijdSluier .lobbykaart .klas span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+    '#strijdSluier .lobbykaart .klas svg{flex:none;width:15px;height:15px;fill:none;stroke:currentColor;' +
+      'stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}' +
+    '#strijdSluier .lobbykaart .vlag{flex:none;font-style:normal;font-size:.66rem;font-weight:700;' +
+      'letter-spacing:.07em;text-transform:uppercase;color:#c0442c;text-align:right;line-height:1.2}' +
+    /* klaar hoor je van een afstand te zien: de hele kaart kleurt mee */
+    '#strijdSluier .lobbykaart.klaar{background:#e9f6ee;border-color:#2f7d52}' +
+    '#strijdSluier .lobbykaart.klaar .vlag{color:#2f7d52}' +
+    '#strijdSluier .lobbykaart.jij{border-color:#204ECF}' +
+    '#strijdSluier .lobbykaart.jij.klaar{border-color:#2f7d52}' +
+    /* een plek die nog vrij is: je ziet dat er nog iemand bij kan */
+    '#strijdSluier .lobbykaart.leeg{background:transparent;border:2px dashed rgba(20,34,76,.18);' +
+      'color:#5b6480;font-size:.82rem;justify-content:center;min-height:64px}' +
     '#strijdSluier p.kop{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:#5b6480;margin:8px 0 4px;font-weight:600}' +
     '#strijdSluier .stijlen{display:grid;gap:6px;margin-bottom:8px}' +
     '#strijdSluier .stijlen button{display:block;width:100%;text-align:left;background:#fff;border:2px solid rgba(20,34,76,.12);border-radius:14px;padding:8px 12px;margin:0;color:#14224C;font:inherit}' +
+    '#strijdSluier .stijlen button b svg{width:1.05em;height:1.05em;vertical-align:-.16em;margin-right:.4em;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}' +
     '#strijdSluier .stijlen button b{display:block;font-size:.92rem;margin:0}#strijdSluier .stijlen button small{display:block;font-size:.74rem;color:#5b6480;line-height:1.3}' +
     '#strijdSluier .stijlen button.aan{border-color:#204ECF;background:#204ECF;color:#fff}#strijdSluier .stijlen button.aan small{color:rgba(255,255,255,.85)}#strijdSluier .stijlen button.aan em{font-style:normal;font-size:.72rem;font-weight:600;background:#fff;color:#204ECF;border-radius:999px;padding:1px 8px;margin-left:6px;vertical-align:middle}#strijdSluier .stijlen button:disabled{opacity:.7}' +
     '#strijdSluier button.crab{background:#F26749;color:#fff;border-color:#F26749}#strijdSluier button.stil{background:#fff;color:#14224C;border:2px solid rgba(20,34,76,.15)}' +
@@ -93,8 +120,8 @@ window.STRIJD = (function(){
     '.sitelijst .naamrij button{border:none;border-radius:12px;padding:10px 14px;font:600 .9rem Poppins,system-ui,sans-serif;background:#F26749;color:#fff;cursor:pointer}' +
     '.sitelijst .hint{font-size:.85rem;color:#5b6480;margin:0 0 8px}' +
     /* donker: bij een eigen keuze en bij een apparaat dat donker vraagt */
-    donkerRegels(':root[data-theme="dark"] ', '.duelvak,.sitelijst .rij,.duelvak input,.sitelijst .naamrij input,.duelvak button.los{background:#182652;color:#F3EFE9;border-color:rgba(243,239,233,.14)}.sitelijst .rij.jij{background:#3a3220;border-color:#EFC64A}.duelvak p,.sitelijst .rij small,.sitelijst .leeg,.sitelijst .hint,.sitelijst .rij .nr{color:#B3BBD0}.duelvak h3,.sitelijst h3{color:#F3EFE9}#strijdSluier>div{background:#182652;color:#F3EFE9}#strijdSluier p{color:#B3BBD0}#strijdSluier button{background:#182652;color:#F3EFE9;border-color:rgba(243,239,233,.2)}#strijdSluier .stijlen button{background:#1f2f5e;color:#F3EFE9}#strijdSluier .stijlen button b{color:#F3EFE9}#strijdSluier .stijlen button.aan{background:#204ECF;color:#fff;border-color:#204ECF}#strijdSluier .stijlen button.aan b{color:#fff}#strijdSluier ul.lobby li{background:#1f2f5e;color:#F3EFE9}#strijdSluier button.crab{background:#F26749;color:#fff;border-color:#F26749}#strijdSluier p.kop{color:#B3BBD0}') +
-    '@media(prefers-color-scheme:dark){' + donkerRegels(':root:not([data-theme="light"]) ', '.duelvak,.sitelijst .rij,.duelvak input,.sitelijst .naamrij input,.duelvak button.los{background:#182652;color:#F3EFE9;border-color:rgba(243,239,233,.14)}.sitelijst .rij.jij{background:#3a3220;border-color:#EFC64A}.duelvak p,.sitelijst .rij small,.sitelijst .leeg,.sitelijst .hint,.sitelijst .rij .nr{color:#B3BBD0}.duelvak h3,.sitelijst h3{color:#F3EFE9}#strijdSluier>div{background:#182652;color:#F3EFE9}#strijdSluier p{color:#B3BBD0}#strijdSluier button{background:#182652;color:#F3EFE9;border-color:rgba(243,239,233,.2)}#strijdSluier .stijlen button{background:#1f2f5e;color:#F3EFE9}#strijdSluier .stijlen button b{color:#F3EFE9}#strijdSluier .stijlen button.aan{background:#204ECF;color:#fff;border-color:#204ECF}#strijdSluier .stijlen button.aan b{color:#fff}#strijdSluier ul.lobby li{background:#1f2f5e;color:#F3EFE9}#strijdSluier button.crab{background:#F26749;color:#fff;border-color:#F26749}#strijdSluier p.kop{color:#B3BBD0}') + '}';
+    donkerRegels(':root[data-theme="dark"] ', DONKERREGELS) +
+    '@media(prefers-color-scheme:dark){' + donkerRegels(':root:not([data-theme="light"]) ', DONKERREGELS) + '}';
   /* elke selector in een regelblok krijgt de voorloper */
   function donkerRegels(voor, regels){
     return regels.replace(/(^|\})([^{}]+)\{/g, function(alles, s0, sel){ return s0 + sel.split(',').map(function(x){ return voor + x.trim(); }).join(',') + '{'; });
@@ -122,21 +149,24 @@ window.STRIJD = (function(){
     clearTimeout(toastKlok); toastKlok = setTimeout(function(){ toast.className = ''; }, 2600);
   }
   function hudTekst(kop, onder, wacht){ if (!hud) return; hud.innerHTML = kop + (onder ? '<small>' + onder + '</small>' : ''); hud.className = wacht ? 'wacht' : ''; }
-  function sluierTekst(html){
+  function sluierTekst(html, klas){
     if (!sluier) return;
-    sluier.innerHTML = '<div>' + html + '</div>';
+    /* het balkje in de hoek hoort bij het spelen; zolang er een venster
+       overheen ligt staat het alleen maar in de weg */
+    if (hud) hud.style.display = 'none';
+    sluier.innerHTML = '<div' + (klas ? ' class="' + klas + '"' : '') + '>' + html + '</div>';
     /* de knop 'Toch niet' sluit de kamer; een knop met data-start geeft het startsein */
     Array.prototype.forEach.call(sluier.querySelectorAll('button'), function(k){
       k.addEventListener('click', function(){
         if (k.getAttribute('data-start')){ k.disabled = true; stuur({ t:'start' }); return; }
-        if (k.getAttribute('data-stijl')){ mijnStijl = k.getAttribute('data-stijl'); if (hooks && hooks.lobby) hooks.lobby.kies(mijnStijl); stuurLobby(); sluierTekst(wachtTekst(maten.length + 1)); return; }
-        if (k.getAttribute('data-klaar')){ mijnKlaar = !mijnKlaar; stuurLobby(); sluierTekst(wachtTekst(maten.length + 1)); return; }
+        if (k.getAttribute('data-stijl')){ mijnStijl = k.getAttribute('data-stijl'); if (hooks && hooks.lobby) hooks.lobby.kies(mijnStijl); stuurLobby(); sluierTekst(wachtTekst(maten.length + 1), wachtKlas()); return; }
+        if (k.getAttribute('data-klaar')){ mijnKlaar = !mijnKlaar; stuurLobby(); sluierTekst(wachtTekst(maten.length + 1), wachtKlas()); return; }
         stuur({ t:'stop' }); location.href = location.pathname;
       });
     });
   }
   function namen(lijst){ var n = lijst.map(function(r){ return schoon(r.naam); }); return n.length <= 1 ? n.join('') : n.slice(0, -1).join(', ') + ' en ' + n[n.length - 1]; }
-  function sluierWeg(){ if (sluier && sluier.parentNode) sluier.parentNode.removeChild(sluier); sluier = null; }
+  function sluierWeg(){ if (sluier && sluier.parentNode) sluier.parentNode.removeChild(sluier); sluier = null; if (hud) hud.style.display = ''; }
 
   if (actief){
     hud = document.createElement('div'); hud.id = 'strijdHud'; hud.className = 'wacht'; hud.innerHTML = 'Verbinden…';
@@ -171,27 +201,53 @@ window.STRIJD = (function(){
   function stuur(obj){ if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
   setInterval(function(){ if (ws && ws.readyState === 1) ws.send('ping'); }, 25000);
 
-  /* de lobby met stijlkeuze: wie er is, wat hij koos, wie klaar is; de maker start als iedereen klaar is */
+  /* Het lobbyscherm: een kaart per speler met zijn gezichtje, zijn klasse en
+     of hij klaar staat, plus de plekken die nog vrij zijn. Daaronder kies je
+     je eigen klasse en meld je je klaar; de maker van de kamer start. */
   function lobbyTekst(aantal){
     var L = hooks.lobby, ikMaak = gastheer === mijnPid;
     if (!mijnStijl) mijnStijl = L.huidig();
-    function stijlNaam(id){ var x = L.stijlen.filter(function(y){ return y.id === id; })[0]; return x ? x.naam : 'nog geen stijl'; }
-    var rij = [{ naam:naam + ' (jij)', stijl:mijnStijl, klaar:mijnKlaar }].concat(maten).map(function(r){
-      return '<li' + (r.klaar ? ' class="klaar"' : '') + '><span>' + schoon(r.naam) + '</span><em>' + schoon(stijlNaam(r.stijl)) + '</em><i>' + (r.klaar ? 'klaar' : 'kiest nog') + '</i></li>';
-    }).join('');
-    var keuze = '<div class="stijlen">' + L.stijlen.map(function(x){ var aan = mijnStijl === x.id; return '<button type="button" data-stijl="' + x.id + '"' + (aan ? ' class="aan"' : '') + (mijnKlaar ? ' disabled' : '') + '><b>' + (aan ? '\u2713 ' : '') + x.naam + (aan ? ' <em>gekozen</em>' : '') + '</b><small>' + x.uit + '</small></button>'; }).join('') + '</div>';
+    function stijlVan(id){ return L.stijlen.filter(function(y){ return y.id === id; })[0] || null; }
+    function stijlNaam(id){ var x = stijlVan(id); return x ? x.naam : 'nog geen klasse'; }
+    /* Het tekentje bij een klasse komt van het spel zelf, zodat dit bestand
+       niets van zwaarden of bogen hoeft te weten. */
+    function stijlIco(id){ var x = stijlVan(id); return x && x.ico ? '<svg viewBox="0 0 24 24" aria-hidden="true">' + x.ico + '</svg>' : ''; }
+    function gezicht(n, av){ return window.AVATAR ? AVATAR.svg(n, 42, av || '') : ''; }
+
+    var mijnAv = window.PROFIEL && PROFIEL.avatar ? PROFIEL.avatar() : '';
+    var allen = [{ naam:naam, av:mijnAv, stijl:mijnStijl, klaar:mijnKlaar, ik:true }].concat(maten);
+    var kaarten = allen.map(function(r){
+      return '<div class="lobbykaart' + (r.klaar ? ' klaar' : '') + (r.ik ? ' jij' : '') + '">' +
+        '<span class="av">' + gezicht(r.naam, r.av) + '</span>' +
+        '<span class="wie"><b>' + schoon(r.naam) + (r.ik ? ' (jij)' : '') + '</b>' +
+        '<span class="klas">' + stijlIco(r.stijl) + '<span>' + schoon(stijlNaam(r.stijl)) + '</span></span></span>' +
+        '<i class="vlag">' + (r.klaar ? '\u2713 klaar' : 'kiest nog') + '</i></div>';
+    });
+    for (var v = allen.length; v < maxSamen; v++) kaarten.push('<div class="lobbykaart leeg">plek vrij</div>');
+
+    var keuze = '<div class="stijlen">' + L.stijlen.map(function(x){
+      var aan = mijnStijl === x.id;
+      return '<button type="button" data-stijl="' + x.id + '"' + (aan ? ' class="aan"' : '') + (mijnKlaar ? ' disabled' : '') +
+        '><b>' + (aan ? '\u2713 ' : '') + stijlIco(x.id) + x.naam + (aan ? ' <em>gekozen</em>' : '') + '</b><small>' + x.uit + '</small></button>';
+    }).join('') + '</div>';
+
     var alleKlaar = mijnKlaar && maten.every(function(r){ return r.klaar; });
     var uitleg = '<p>Laat je vrienden naar <strong>' + location.host.replace(/^www\./, '') + '/q</strong> gaan en deze code invullen:</p><span class="code">' + code + '</span>';
     var knoppen = '<button type="button" data-klaar="1" class="' + (mijnKlaar ? 'stil' : 'crab') + '">' + (mijnKlaar ? 'Toch nog iets veranderen' : 'Klaar als ' + stijlNaam(mijnStijl).toLowerCase() + '!') + '</button> ';
-    if (ikMaak) knoppen += '<button type="button" data-start="1"' + (aantal >= 2 && alleKlaar ? '' : ' disabled') + '>Start met z\'n ' + (aantal <= 2 ? 'tweeën' : aantal === 3 ? 'drieën' : 'vieren') + '</button> ';
+    if (ikMaak) knoppen += '<button type="button" data-start="1"' + (aantal >= 2 && alleKlaar ? '' : ' disabled') + '>Start met z\'n ' + (aantal <= 2 ? 'twee\u00ebn' : aantal === 3 ? 'drie\u00ebn' : 'vieren') + '</button> ';
     knoppen += '<button type="button">Toch niet</button>';
-    var status = aantal < 2 ? 'Zodra er twee zijn en iedereen klaar is, kan het beginnen; met vier begint het vanzelf.'
-      : alleKlaar ? (ikMaak ? 'Iedereen is klaar. Druk op start.' : 'Iedereen is klaar; de maker van de kamer start.')
-      : 'Het begint als iedereen op Klaar heeft gedrukt' + (ikMaak ? ' en jij start' : '') + '.';
-    return '<b>' + (aantal < 2 ? 'Wacht op je vrienden' : aantal + ' in de kamer') + '</b>' + uitleg + '<ul class="lobby">' + rij + '</ul>' +
-      '<p class="kop">Stap 1: kies je stijl</p>' + keuze +
-      '<p class="kop">Stap 2: druk op Klaar</p><p>' + (mijnKlaar ? 'Je staat klaar als <strong>' + stijlNaam(mijnStijl) + '</strong>. ' : 'Je speelt als <strong>' + stijlNaam(mijnStijl) + '</strong>; druk op Klaar als dat goed is. ') + status + '</p>' + knoppen;
+    var nogNiet = maten.filter(function(r){ return !r.klaar; });
+    var status = aantal < 2 ? 'Zodra er twee zijn en iedereen klaar staat, kan het beginnen; met vier begint het vanzelf.'
+      : alleKlaar ? (ikMaak ? 'Iedereen staat klaar. Druk op start.' : 'Iedereen staat klaar; de maker van de kamer start.')
+      : !mijnKlaar ? 'Jij moet nog op Klaar drukken.'
+      : 'Wachten op ' + namen(nogNiet) + '.';
+    return '<b>' + (aantal < 2 ? 'Wacht op je vrienden' : aantal + ' in de kamer') + '</b>' + uitleg +
+      '<div class="lobbyvak">' + kaarten.join('') + '</div>' +
+      '<p class="kop">kies je klasse</p>' + keuze +
+      '<p class="kop">en dan</p><p>' + status + '</p>' + knoppen;
   }
+  /* De lobby is breder dan de andere meldingen: er staan kaarten in. */
+  function wachtKlas(){ return (duel && maxSamen > 2 && hooks && hooks.lobby) ? 'lobbyscherm' : ''; }
   function wachtTekst(aantal){
     if (duel && maxSamen > 2 && hooks && hooks.lobby) return lobbyTekst(aantal);
     if (duel && maxSamen > 2){
@@ -225,13 +281,13 @@ window.STRIJD = (function(){
       else {
         /* in de lobby: mijn stijl alvast melden, zodat de anderen hem zien */
         if (hooks && hooks.lobby){ if (!mijnStijl) mijnStijl = hooks.lobby.huidig(); mijnKlaar = false; stuurLobby(); }
-        sluierTekst(wachtTekst(aantal));
+        sluierTekst(wachtTekst(aantal), wachtKlas());
       }
       return;
     }
     if (m.t === 'lobby'){
       maten = (m.spelers || []).filter(function(r){ return r.sid !== mijnPid; });
-      if (!gestart) sluierTekst(wachtTekst(maten.length + 1));
+      if (!gestart) sluierTekst(wachtTekst(maten.length + 1), wachtKlas());
       return;
     }
     if (m.t === 'aftellen'){ aftellen(m.s || 3); return; }
@@ -302,7 +358,7 @@ window.STRIJD = (function(){
     if (klaarMet) return;
     var aantal = m.jouw ? m.jouw.van : 0;
     if (!gestart){
-      if (m.fase === 'lobby') sluierTekst(wachtTekst(aantal));
+      if (m.fase === 'lobby') sluierTekst(wachtTekst(aantal), wachtKlas());
       hudTekst((duel ? 'Duel ' : 'Klasstrijd ') + code, aantal + ' in de kamer, wacht op de start', true);
       return;
     }

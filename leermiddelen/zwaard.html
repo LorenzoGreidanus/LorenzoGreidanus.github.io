@@ -83,6 +83,9 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .vak i{width:38px;height:38px;border-radius:12px 12px 12px 4px;display:grid;place-items:center;font-style:normal;font-weight:600;color:#fff;margin-bottom:10px}
 .vak b{display:block;font-size:1rem;margin-bottom:3px}
 .vak span{font-size:.82rem;color:var(--muted);line-height:1.45}
+/* het tekentje van een klasse, op het startscherm en in de lobby */
+.stijlico{width:1.05em;height:1.05em;vertical-align:-.16em;margin-right:.4em;fill:none;stroke:currentColor;
+  stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .deelvak{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
 .deelvak button{background:var(--room);border:1.5px solid rgba(20,34,76,.12);border-radius:999px;padding:6px 12px;font-size:.78rem;font-weight:600}
 .deelvak button.on{border-color:var(--ocean);background:#eaf0ff;color:var(--ocean)}
@@ -498,10 +501,15 @@ function vragenInRonde(n){ return Math.min(8, 5 + Math.floor((n - 1) / 4)); }
 const MUNT_GOED = 13, MUNT_REEKS = 4, MUNT_REEKSMAX = 14, MUNT_GROEI = 0.04;   /* per goed antwoord, met reeksbonus, en groei per ronde */
 const COMBO = 3;   /* zoveel goed op rij en de volgende klap is een critical */
 /* De stijlen. De getallen staan in de motor (ZWAARDMOTOR.STIJLEN); hier wat je ziet. */
+/* ico is het tekentje dat de lobby bij de naam zet. Het staat hier omdat
+   strijd.js voor alle spellen werkt en dus niets van zwaarden hoort te weten. */
 const STIJLEN = [
-  { id:'ridder',   naam:'Ridder',      uit:'meer leven en een harder zwaard, maar trager slaan en een zwakkere boog' },
-  { id:'schutter', naam:'Schutter',    uit:'de boog schiet harder, sneller en verder; minder leven en een zachter zwaard' },
-  { id:'wacht',    naam:'Schildwacht', uit:'houd Shift vast en je blokkeert: klappen doen een vijfde. De meter loopt leeg en laadt langzaam op; iets meer leven' }
+  { id:'ridder',   naam:'Ridder',      ico:'<path d="M14.5 17.5 3 6V3h3l11.5 11.5"/><path d="m13 19 6-6"/><path d="m16 16 4 4"/><path d="m19 21 2-2"/>',
+    uit:'meer leven en een harder zwaard, maar trager slaan en een zwakkere boog' },
+  { id:'schutter', naam:'Schutter',    ico:'<path d="M9 4a8.5 8.5 0 0 0 0 16"/><path d="M9 4v16"/><path d="M9 12h10"/><path d="m16 9 3 3-3 3"/>',
+    uit:'de boog schiet harder, sneller en verder; minder leven en een zachter zwaard' },
+  { id:'wacht',    naam:'Schildwacht', ico:'<path d="M12 21s7-3 7-9V6l-7-3-7 3v6c0 6 7 9 7 9z"/><path d="M12 11v4"/>',
+    uit:'houd Shift vast en je blokkeert: klappen doen een vijfde. De meter loopt leeg en laadt langzaam op; iets meer leven' }
 ];
 /* De vaardigheden: na elke baas kies je er een uit drie. Ze stapelen. */
 const VAARDIGHEDEN = [
@@ -722,7 +730,11 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   }
   function tekenStijlen(){
     var el = document.getElementById('stijlen'); if (!el) return;
-    el.innerHTML = STIJLEN.map(function(x){ return '<button type="button" data-s="' + x.id + '"' + (stijl === x.id ? ' class="on"' : '') + '><b>' + x.naam + '</b><span>' + x.uit + '</span></button>'; }).join('');
+    el.innerHTML = STIJLEN.map(function(x){
+      return '<button type="button" data-s="' + x.id + '"' + (stijl === x.id ? ' class="on"' : '') + '>' +
+        '<b><svg class="stijlico" viewBox="0 0 24 24" aria-hidden="true">' + x.ico + '</svg>' + x.naam + '</b>' +
+        '<span>' + x.uit + '</span></button>';
+    }).join('');
     Array.prototype.forEach.call(el.querySelectorAll('button'), function(b){
       b.addEventListener('click', function(){ stijl = b.getAttribute('data-s'); try { localStorage.setItem('lg-zwaard-stijl', stijl); } catch (e){} tekenStijlen(); });
     });
