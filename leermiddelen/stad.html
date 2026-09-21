@@ -237,6 +237,8 @@ footer{color:var(--muted);font-size:.88rem;padding:26px 0 40px;text-align:center
   <p class="eyebrow">je kluis</p>
   <div class="kluis" id="kluis"></div>
 
+  <p class="lead" id="hoeveelNu" style="margin-top:6px"></p>
+
   <div class="startrij">
     <button class="knop vol" id="zoekBtn" type="button">Zoek een potje</button>
     <button class="knop" id="soloBtn" type="button">Alleen oefenen</button>
@@ -253,6 +255,7 @@ footer{color:var(--muted);font-size:.88rem;padding:26px 0 40px;text-align:center
     <div class="meter"><i>wapen</i><b id="mWapenNaam">Roestig pistool</b><span class="bij" id="mWapen"></span></div>
     <div class="meter"><i>buit</i><b id="mBuit">0</b></div>
     <div class="meter"><i>geveld</i><b id="mGeveld">0</b></div>
+    <div class="meter"><i>spelers</i><b id="mSpelers">1</b><span class="bij" id="mSpelersBij">in dit potje</span></div>
     <div class="hudrechts">
       <button class="knop" id="pauzeBtn" type="button">Menu</button>
     </div>
@@ -317,6 +320,21 @@ function rang(){ var n = NIVEAUS.filter(function(x){ return x.id === niveau; })[
    Kiezen kan iedereen; kopen alleen wie is ingelogd, want de munten staan aan
    het account. Wat hier getekend wordt is een afschrift van wat de server het
    laatst doorgaf; de server beslist. */
+/* Hoeveel mensen er op dit moment in de hele stad zijn, over alle potjes
+   bij elkaar. Zonder dit begin je aan een potje zonder te weten of er iemand
+   is, en dat is precies wat je wilt weten voor je kiest. */
+function tekenHoeveelNu(){
+  var el = $('hoeveelNu'); if (!el) return;
+  fetch('/api/potjes').then(function(r){ return r.json(); }).then(function(j){
+    var potjes = (j && j.potjes) || [];
+    var samen = potjes.reduce(function(a, p){ return a + (p.spelers | 0); }, 0);
+    el.textContent = samen === 0 ? 'Er is op dit moment niemand in de stad. Je kunt meedoen en wachten, of alleen oefenen.'
+      : samen === 1 ? 'Er is op dit moment een speler in de stad.'
+      : 'Er zijn op dit moment ' + samen + ' spelers in de stad, verdeeld over ' +
+        (potjes.length === 1 ? 'een potje.' : potjes.length + ' potjes.');
+  }).catch(function(){ el.textContent = ''; });
+}
+
 function tekenUitrusting(){
   var el = $('uitrusting'); if (!el || !window.WAPENS) return;
   var heeft = (window.PROFIEL && PROFIEL.wapens) ? PROFIEL.wapens() : {};
@@ -397,6 +415,7 @@ function buitNaam(id){ var b = M.BUIT.filter(function(x){ return x.id === id; })
 function buitWaarde(id){ var b = M.BUIT.filter(function(x){ return x.id === id; })[0]; return b ? b.waarde : 0; }
 function tekenKluis(){
   tekenUitrusting();
+  tekenHoeveelNu();
   var k = leesKluis(), el = $('kluis');
   var tel = {};
   k.spullen.forEach(function(id){ tel[id] = (tel[id] || 0) + 1; });
@@ -544,6 +563,7 @@ function soloStart(){
   co.aan = false;
   /* ook in je eentje ga je met je eigen uitrusting de stad in */
   var soloUit = (window.PROFIEL && PROFIEL.uitrusting) ? PROFIEL.uitrusting() : null;
+  zetSpelersMeter(1, 0);
   W = M.maak({ seed: (Date.now() ^ 0x5bf03635) >>> 0, spelers: [{ naam: mijnNaam, av: mijnAv, uitrusting: soloUit }] });
   co.ik = 0; co.wereld = W.wereldPakket();
   bouwWereld(co.wereld);
@@ -565,6 +585,18 @@ function potjeZoeken(){
     .catch(function(){ knop.disabled = false; uit.textContent = 'Geen verbinding. Je kunt wel alleen oefenen.'; });
 }
 
+/* Hoeveel er in jouw potje zitten. In je eentje oefenen zegt dat er niemand
+   anders is, want daar is het bedoeld, en dan hoeft er geen getal te staan
+   waar je iets uit probeert te lezen. */
+function zetSpelersMeter(n, max){
+  var el = $('mSpelers'), bij = $('mSpelersBij');
+  if (!el) return;
+  if (!co.aan){ el.textContent = '1'; if (bij) bij.textContent = 'je oefent alleen'; return; }
+  n = Math.max(1, n | 0);
+  el.textContent = n + (max ? ' van de ' + max : '');
+  if (bij) bij.textContent = n === 1 ? 'je bent hier alleen' : 'in dit potje';
+}
+
 function verbind(code){
   co.aan = true; co.code = code; co.standen = []; co.voorspel = null;
   var proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
@@ -580,8 +612,10 @@ function verbind(code){
   s.onmessage = function(e){
     if (e.data === 'pong') return;
     var m; try { m = JSON.parse(e.data); } catch (x){ return; }
+    if (m.t === 'wie'){ zetSpelersMeter(m.n, m.max); return; }
     if (m.t === 'hoi'){
       co.ik = m.ik; co.wereld = m.wereld;
+      zetSpelersMeter(m.spelers, m.max);
       bouwWereld(m.wereld);
       naarVeld();
       zetTip('Je bent in potje ' + code + '. Zoek kisten, kijk uit voor de andere spelers, en stap eruit bij een metro-ingang.');
@@ -650,7 +684,28 @@ function sprites(){
       buitTekens[id] + '</g>';
   }).join('');
 
+  /* De juggernaut van bovenaf: schouderplaten die breder zijn dan hij diep is,
+     een helm met een spleet erin, en twee zware armen die vooruit steken. Hij
+     staat stil in de defs en wordt gedraaid, net als alles hier. */
+  var jugVorm =
+    '<g id="jug"><g transform="scale(1.38)">' +
+      '<ellipse cx="2" cy="12" rx="32" ry="12" fill="rgba(0,0,0,.34)"/>' +
+      /* de armen */
+      '<path d="M2-17 L30-11" stroke="#1d222b" stroke-width="15" stroke-linecap="round"/>' +
+      '<path d="M2 17 L30 11" stroke="#1d222b" stroke-width="15" stroke-linecap="round"/>' +
+      '<path d="M2-17 L30-11" stroke="#39404d" stroke-width="10" stroke-linecap="round"/>' +
+      '<path d="M2 17 L30 11" stroke="#39404d" stroke-width="10" stroke-linecap="round"/>' +
+      /* het lijf: breed en plat, met een plaat erop */
+      '<ellipse cx="-4" cy="0" rx="22" ry="27" fill="#2d333d" stroke="#12161d" stroke-width="4"/>' +
+      '<ellipse cx="-4" cy="0" rx="15" ry="19" fill="#3b424e"/>' +
+      '<path d="M-19-9 h30 M-19 9 h30" stroke="#232932" stroke-width="3.5" stroke-linecap="round"/>' +
+      /* de helm, iets naar voren */
+      '<circle cx="11" cy="0" r="13" fill="#454d5b" stroke="#12161d" stroke-width="4"/>' +
+      '<path d="M18-6 a7 7 0 0 1 0 12" stroke="#d8544a" stroke-width="4" fill="none" stroke-linecap="round"/>' +
+    '</g></g>';
+
   return '<defs>' +
+    jugVorm +
     /* Het asfalt onder de hele stad. Alles wat geen huizenblok, park of
        plein is, is straat, dus dit is wat je het meest ziet: gedempt grijs
        met wat scheuren en steentjes erin, zodat je merkt dat je beweegt. */
@@ -689,7 +744,7 @@ function bouwWereld(w){
     '<g id="vast"></g>' +
     /* Een groepje per soort. Wat eerst komt ligt onderop; zo hoeft de
        volgorde niet uit de volgorde van de tekst te komen. */
-    '<g id="levend"><g id="lBuit"></g><g id="lKist"></g>' +
+    '<g id="levend"><g id="lBuit"></g><g id="lKist"></g><g id="lJug"></g>' +
       '<g id="lAnder"></g><g id="lIk"></g><g id="lKogel"></g><g id="lPijl"></g></g>' +
     '<g id="effect"></g>';
   vastLaag = veld.querySelector('#vast');
@@ -888,7 +943,7 @@ function tussen(a, b, deel){ return a + (b - a) * deel; }
    te rekenen. */
 function mengStanden(oud, nieuw, deel){
   var d = { t: nieuw.t, ik: nieuw.ik, n: nieuw.n, kv: nieuw.kv, ki: nieuw.ki, ev: nieuw.ev, ex: nieuw.ex,
-            b: nieuw.b, k: nieuw.k, s: [], z: [] };
+            b: nieuw.b, k: nieuw.k, s: [], j: [] };
   /* ikzelf */
   var a = oud.m, b = nieuw.m;
   d.m = b.slice();
@@ -906,6 +961,19 @@ function mengStanden(oud, nieuw, deel){
     r[2] = tussen(v[2], q[2], deel);
     r[3] = hoekTussen(v[3], q[3], deel);
     d.s.push(r);
+  });
+  /* de juggernauts, op hun nummer; zonder dit springen ze twintig keer per
+     seconde in plaats van te lopen */
+  var oudJ = {};
+  (oud.j || []).forEach(function(z){ oudJ[z[0]] = z; });
+  (nieuw.j || []).forEach(function(z){
+    var v = oudJ[z[0]];
+    if (!v){ d.j.push(z); return; }
+    var r = z.slice();
+    r[1] = tussen(v[1], z[1], deel);
+    r[2] = tussen(v[2], z[2], deel);
+    r[3] = hoekTussen(v[3], z[3], deel);
+    d.j.push(r);
   });
   return d;
 }
@@ -1093,11 +1161,16 @@ function zetSpeler(g, x, y, hoek, neer, kleur, wapenId){
    gaat het leven van een zombie omlaag, dan sloeg er iets in. Dat scheelt
    bandbreedte en het ziet er hetzelfde uit. */
 var effecten = [], vorigeHp = {}, vorigMijnHp = null, schudTot = 0, pijnTot = 0;
+/* het volle leven van een juggernaut, voor de balk boven zijn hoofd */
+var JUGHP = M.JUGGER.hp;
+/* een lopende klok voor het trillen en de krimpende ring */
+var klokNu = 0;
 function effect(soort, x, y, extra){
   effecten.push({ soort: soort, x: x, y: y, t: 0, duur: (extra && extra.duur) || 0.4, tekst: extra && extra.tekst, hoek: (extra && extra.hoek) || 0 });
   if (effecten.length > 70) effecten.splice(0, effecten.length - 70);
 }
 function effectenStap(dt){
+  klokNu += dt;
   for (var i = effecten.length - 1; i >= 0; i--){
     effecten[i].t += dt;
     if (effecten[i].t >= effecten[i].duur) effecten.splice(i, 1);
@@ -1184,6 +1257,76 @@ function teken(dt){
   });
   poel.af('kistring'); poel.af('kist');
   window.__kistBij = kistBij;
+
+  /* De juggernauts. Wat de fase is bepaalt hoe hij eruitziet, want daar hangt
+     alles van af: klaarstaan betekent wegwezen, suf betekent schieten. */
+  d.j.forEach(function(z){
+    var fase = z[5] | 0, deelHp = Math.max(0, Math.min(1, z[4] / JUGHP));
+    var el = poel.pak('jug', 'lJug', function(){ return maakEl('use', { href: '#jug' }); });
+    /* trillen terwijl hij klaarstaat, en scheef hangen als hij suf is */
+    var extra = fase === 1 ? ' translate(' + (Math.sin(klokNu * 40) * 2.5).toFixed(1) + ' 0)'
+              : fase === 3 ? ' rotate(14)' : '';
+    zet(el, 'transform', 'translate(' + z[1] + ' ' + z[2] + ') rotate(' + (z[3] * 180 / Math.PI).toFixed(0) + ')' + extra);
+    zet(el, 'opacity', fase === 4 ? '0.35' : '1');
+
+    if (fase === 1){
+      /* de waarschuwing: een ring die naar binnen trekt, en de lijn waarlangs
+         hij zo gaat. Naar binnen en niet naar buiten, want dat leest als
+         aftellen in plaats van als een klap die al gevallen is. */
+      var krimp = 1 - ((klokNu * 1.1) % 1);
+      var ring = poel.pak('jugring', 'lJug', function(){
+        return maakEl('circle', { fill: 'none', stroke: '#EA9836', 'stroke-width': 5, 'stroke-dasharray': '16 12' });
+      });
+      zet(ring, 'cx', z[1]); zet(ring, 'cy', z[2]);
+      zet(ring, 'r', (40 + krimp * 60).toFixed(0));
+      zet(ring, 'opacity', (0.35 + krimp * 0.5).toFixed(2));
+      var baan = poel.pak('jugbaan', 'lJug', function(){
+        return maakEl('path', { stroke: '#EA9836', 'stroke-width': 4, 'stroke-dasharray': '10 10', opacity: .55, fill: 'none' });
+      });
+      zet(baan, 'd', 'M' + z[1] + ' ' + z[2] + ' L' + (z[1] + Math.cos(z[3]) * 420).toFixed(0) + ' ' + (z[2] + Math.sin(z[3]) * 420).toFixed(0));
+    }
+    if (fase === 3){
+      /* suf: sterretjes, en nu komt alles erin */
+      var ster = poel.pak('jugster', 'lJug', function(){
+        return maakEl('text', { 'text-anchor': 'middle', 'font-size': 20, fill: '#ffd166' });
+      });
+      zet(ster, 'x', (z[1] + Math.cos(klokNu * 6) * 16).toFixed(0));
+      zet(ster, 'y', (z[2] - 86 + Math.sin(klokNu * 6) * 4).toFixed(0));
+      if (ster.textContent !== '\u2736 \u2736') ster.textContent = '\u2736 \u2736';
+    }
+
+    /* de levensbalk, altijd: zonder die balk lijkt schieten zinloos */
+    if (fase !== 4){
+      var bak = poel.pak('jugbalkbak', 'lJug', function(){
+        return maakEl('rect', { width: 76, height: 9, rx: 4.5, fill: 'rgba(10,16,32,.7)' });
+      });
+      zet(bak, 'x', (z[1] - 38).toFixed(0)); zet(bak, 'y', (z[2] - 66).toFixed(0));
+      var bal = poel.pak('jugbalk', 'lJug', function(){ return maakEl('rect', { height: 5, rx: 2.5, fill: '#d8544a' }); });
+      zet(bal, 'x', (z[1] - 36).toFixed(0)); zet(bal, 'y', (z[2] - 64).toFixed(0));
+      zet(bal, 'width', (72 * deelHp).toFixed(1));
+      zet(bal, 'fill', fase === 3 ? '#ffd166' : '#d8544a');
+      var naam = poel.pak('jugnaam', 'lJug', function(){
+        return maakEl('text', { 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 700, fill: '#F3EFE9',
+          'font-family': 'Poppins,sans-serif', 'paint-order': 'stroke', stroke: 'rgba(10,16,32,.75)', 'stroke-width': 4 });
+      });
+      zet(naam, 'x', z[1]); zet(naam, 'y', (z[2] - 72).toFixed(0));
+      if (naam.textContent !== 'Juggernaut') naam.textContent = 'Juggernaut';
+    }
+
+    /* ging er leven af, dan sloeg er iets in */
+    var was = vorigeHp['j' + z[0]];
+    if (was !== undefined && z[4] < was){
+      effect('stof', z[1], z[2]);
+      effect('schade', z[1], z[2] - 46, { tekst: Math.round(was - z[4]), duur: 0.7 });
+    }
+    if (was !== undefined && z[4] <= 0 && was > 0) effect('weg', z[1], z[2], { duur: 0.7 });
+    vorigeHp['j' + z[0]] = z[4];
+  });
+  poel.af('jug'); poel.af('jugring'); poel.af('jugbaan'); poel.af('jugster');
+  poel.af('jugbalkbak'); poel.af('jugbalk'); poel.af('jugnaam');
+  var nogJ = {};
+  d.j.forEach(function(z){ nogJ['j' + z[0]] = 1; });
+  Object.keys(vorigeHp).forEach(function(nr){ if (nr.charAt(0) === 'j' && !nogJ[nr]) delete vorigeHp[nr]; });
 
   /* andere spelers: per speler een poppetje dat blijft staan */
   d.s.forEach(function(q){
