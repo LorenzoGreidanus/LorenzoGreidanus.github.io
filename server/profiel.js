@@ -20,6 +20,7 @@ function json(obj, status){
     headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
 }
 import COSMETICA from "../leermiddelen/cosmetica.js";
+import WAPENKAST from "../leermiddelen/wapens.js";
 function schoonAvatar(a){ a = String(a || "").replace(/[^a-z0-9]/g, "").slice(0, 32); return COSMETICA.ontleed(a) ? a : ""; }
 function schoon(t, n){ return String(t == null ? "" : t).replace(/[<>]/g, "").slice(0, n); }
 function getal(x, max){ x = Number(x); return isFinite(x) ? Math.max(0, Math.min(max, Math.round(x))) : 0; }
@@ -31,7 +32,13 @@ function netjes(inz){
               /* munten erbij en aankopen zijn wensen van dit apparaat; de server houdt het saldo */
               muntDelta: getal(inz.muntDelta, 600), koop: (Array.isArray(inz.koop) ? inz.koop : []).slice(0, 6).map(x => schoon(x, 4)).filter(x => COSMETICA.vind(x)),
               /* trofeeën die het spel meldt: alleen wat een baas oplevert */
-              vrijspeel: (Array.isArray(inz.vrijspeel) ? inz.vrijspeel : []).slice(0, 12).map(x => schoon(x, 4)).filter(x => { const it = COSMETICA.vind(x); return it && (it.baas || it.oud); }) };
+              vrijspeel: (Array.isArray(inz.vrijspeel) ? inz.vrijspeel : []).slice(0, 12).map(x => schoon(x, 4)).filter(x => { const it = COSMETICA.vind(x); return it && (it.baas || it.oud); }),
+              /* de wapenwinkel van De stad: kopen is een wens, de server rekent af */
+              koopWapen: (Array.isArray(inz.koopWapen) ? inz.koopWapen : []).slice(0, 3).map(x => schoon(x, 12))
+                           .filter(x => { const w = WAPENKAST.vind(x); return w && w.prijs > 0; }),
+              /* welk hoofdwapen en zijwapen je meeneemt de stad in */
+              uitrusting: inz.uitrusting && typeof inz.uitrusting === "object"
+                            ? { hoofd: schoon(inz.uitrusting.hoofd, 12), zij: schoon(inz.uitrusting.zij, 12) } : null };
   const b = inz.beste && typeof inz.beste === "object" ? inz.beste : {};
   Object.keys(b).slice(0, 300).forEach(k => {
     const s = schoon(k, 60).replace(/[^a-z0-9-]/gi, ""), v = b[k];
@@ -64,7 +71,7 @@ function voegSamen(oud, nieuw, klasWeg, alles){
   const p = { avatar: nieuw.avatar || oud.avatar || "", beste: Object.assign({}, oud.beste), campagne: Object.assign({}, oud.campagne),
               vrij: Object.assign({}, oud.vrij), klas: nieuw.klas || (klasWeg ? null : oud.klas) || null, niveau: nieuw.niveau || oud.niveau || "",
               munten: Math.max(0, (oud.munten | 0) + erbij), muntBuidel: buidel - erbij, muntKlok: nu,
-              bezit: Object.assign({}, oud.bezit), docent: [] };
+              bezit: Object.assign({}, oud.bezit), wapens: Object.assign({}, oud.wapens), docent: [] };
   /* docentklassen: wat er al was plus wat dit apparaat kent, op code; wat het apparaat vergat gaat eruit */
   const weg = new Set(nieuw.docentWeg || []), gezien = new Set();
   (oud.docent || []).concat(nieuw.docent || []).forEach(k => { if (!weg.has(k.code) && !gezien.has(k.code)){ gezien.add(k.code); p.docent.push(k); } });
@@ -86,6 +93,17 @@ function voegSamen(oud, nieuw, klasWeg, alles){
   }
   /* kopen: alleen wat er nog niet is en wat het saldo toelaat; daarna mag alleen bezit in de spec staan */
   (nieuw.koop || []).forEach(id => { const it = COSMETICA.vind(id); if (it && !it.baas && !it.oud && COSMETICA.inSeizoen(it) && !p.bezit[id] && p.munten >= it.prijs){ p.munten -= it.prijs; p.bezit[id] = true; } });
+  /* Wapens kopen voor De stad. Net als bij een hoed: alleen wat er nog niet
+     is en wat het saldo toelaat, en de prijs komt uit wapens.js zodat de
+     browser hem niet kan verzinnen. */
+  if (alles){ WAPENKAST.LIJST.forEach(w => { p.wapens[w.id] = true; }); }
+  (nieuw.koopWapen || []).forEach(id => {
+    const w = WAPENKAST.vind(id);
+    if (w && w.prijs > 0 && !p.wapens[id] && p.munten >= w.prijs){ p.munten -= w.prijs; p.wapens[id] = true; }
+  });
+  /* De uitrusting wordt langs je bezit gehaald: wie een wapen noemt dat hij
+     niet heeft, gaat met het roestige pistool de stad in. */
+  p.uitrusting = WAPENKAST.schoon(nieuw.uitrusting || oud.uitrusting, p.wapens);
   p.avatar = COSMETICA.toegestaan(p.avatar, p.bezit);
   /* het beste record wint, niet het laatste; l:1 betekent dat juist het laagste telt */
   Object.keys(nieuw.beste).forEach(k => {
@@ -134,7 +152,7 @@ export class Profiel extends DurableObject {
       if (this.stand) return json({ fout: "bezet" }, 409);
       const code = String(inz.code || "").toUpperCase();
       if (!/^[A-Z]{8}$/.test(code)) return json({ fout: "geen geldige code" }, 400);
-      this.stand = { code, gemaakt: Date.now(), laatst: Date.now(), profiel: voegSamen({ beste: {}, campagne: {}, vrij: {}, bezit: {}, munten: 0 }, netjes(inz.profiel), false) };
+      this.stand = { code, gemaakt: Date.now(), laatst: Date.now(), profiel: voegSamen({ beste: {}, campagne: {}, vrij: {}, bezit: {}, wapens: {}, munten: 0 }, netjes(inz.profiel), false) };
       if (JSON.stringify(this.stand).length > MAX_TEKST) return json({ fout: "profiel te groot" }, 413);
       await this.bewaar();
       return json({ ok: true, code, profiel: this.stand.profiel });
@@ -157,6 +175,15 @@ export class Profiel extends DurableObject {
       this.stand.profiel = voegSamen(this.stand.profiel, netjes({}), false, true);
       await this.bewaar();
       return json({ ok: true, profiel: this.stand.profiel });
+    }
+    /* De kamer van De stad vraagt of deze speelcode de wapens van zijn
+       uitrusting echt heeft. Alleen ja of nee en welke uitrusting het dan
+       wordt; er gaat niets anders uit het profiel mee. */
+    if (url.pathname === "/uitrusting"){
+      const p = this.stand.profiel || {};
+      const u = WAPENKAST.schoon(inz.uitrusting || p.uitrusting, p.wapens || {});
+      await this.bewaar();
+      return json({ ok: true, uitrusting: u });
     }
     if (url.pathname === "/weg"){
       await this.ctx.storage.deleteAll();

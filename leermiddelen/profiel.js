@@ -61,7 +61,8 @@ window.PROFIEL = (function(){
     var campagne = {}; try { campagne = JSON.parse(ls('lg-toren-campagne') || '{}') || {}; } catch (e){}
     var vrij = {}; ['tonkla', 'aap', 'eiland', 'archipel', 'vulkaan'].forEach(function(x){ if (ls('lg-toren-' + x) === 'ja') vrij[x] = true; });
     var klas = null; try { klas = JSON.parse(ls('lg-klas') || 'null'); } catch (e){}
-    return { avatar:avatar(), beste:beste, campagne:campagne, vrij:vrij, klas:klas && klas.code ? klas : null, niveau:ls('lg-niveau') || '', muntDelta:wachtend(), vrijspeel:vrijWacht(),
+    var uit = null; try { uit = JSON.parse(ls('lg-uitrusting') || 'null'); } catch (e){}
+    return { avatar:avatar(), beste:beste, campagne:campagne, vrij:vrij, klas:klas && klas.code ? klas : null, niveau:ls('lg-niveau') || '', muntDelta:wachtend(), vrijspeel:vrijWacht(), uitrusting:uit,
              /* de klassleutels gaan niet meer mee in het profiel: die horen bij het
                 account, zie klassenAfstemmen() */
              docentWeg:docentWegWacht(), fouten:foutenKort() };
@@ -70,6 +71,20 @@ window.PROFIEL = (function(){
   function wachtend(){ return parseInt(ls('lg-munten-wacht') || '0', 10) || 0; }
   function munten(){ return parseInt(ls('lg-munten') || '0', 10) || 0; }
   function bezit(){ try { return JSON.parse(ls('lg-bezit') || '{}') || {}; } catch (e){ return {}; } }
+  /* de wapens van De stad, en welke je meeneemt */
+  function wapens(){ try { return JSON.parse(ls('lg-wapens') || '{}') || {}; } catch (e){ return {}; } }
+  function uitrusting(){
+    var u = null; try { u = JSON.parse(ls('lg-uitrusting') || 'null'); } catch (e){}
+    return window.WAPENS ? WAPENS.schoon(u, wapens()) : (u || { hoofd:'roestig', zij:'vuist' });
+  }
+  /* Een andere uitrusting kiezen. Hij gaat meteen naar de server mee, want de
+     kamer van De stad vraagt het daar na en niet hier. */
+  function zetUitrusting(u){
+    u = window.WAPENS ? WAPENS.schoon(u, wapens()) : u;
+    lsZet('lg-uitrusting', JSON.stringify(u));
+    sync();
+    return u;
+  }
   function ingelogd(){ return !!(accountStand && accountStand.ingelogd); }
   function vrijWacht(){ try { return JSON.parse(ls('lg-vrij-wacht') || '[]') || []; } catch (e){ return []; } }
   /* de klassen van de docent op dit apparaat (code + sleutel), en welke hij hier vergat */
@@ -155,6 +170,20 @@ window.PROFIEL = (function(){
       return j;
     });
   }
+  /* Een wapen kopen voor De stad. Net als een hoed: de server rekent af, en
+     als het wapen daarna niet in je kast staat was er niet genoeg. */
+  function koopWapen(id){
+    var c = code(); if (!c || !ingelogd()) return Promise.reject(new Error('Log eerst in met Microsoft.'));
+    clearTimeout(timer);
+    var delta = wachtend();
+    var pr = verzamel(); pr.koopWapen = [id];
+    return vraag('/api/profiel/' + c, 'PUT', { profiel:pr }).then(function(j){
+      lsZet('lg-munten-wacht', String(Math.max(0, wachtend() - delta)));
+      pasToe(j.profiel);
+      if (!(j.profiel && j.profiel.wapens && j.profiel.wapens[id])) throw new Error('Niet genoeg munten.');
+      return j;
+    });
+  }
   /* Welke van twee records is de beste? Bij bijna elk spel is hoger beter; bij
      De balans en De vergadering telt juist het laagste aantal, en dat staat als
      l:1 in het record zelf. Zonder die vlag (oude records) geldt hoger is beter. */
@@ -183,6 +212,9 @@ window.PROFIEL = (function(){
        niemand zijn klassen kwijtraakt bij de overstap. */
     if (Array.isArray(pr.docent) && pr.docent.length) neemKlassenOver(pr.docent);
     if (pr.niveau && !ls('lg-niveau')) lsZet('lg-niveau', pr.niveau);
+    /* de wapenkast en de uitrusting komen van de server: die is de baas */
+    if (pr.wapens) lsZet('lg-wapens', JSON.stringify(pr.wapens));
+    if (pr.uitrusting) lsZet('lg-uitrusting', JSON.stringify(pr.uitrusting));
     /* fouten van het profiel die hier nog niet staan: klaarzetten voor fouten.html, dat ze in de bank terugzoekt */
     if (Array.isArray(pr.fouten) && pr.fouten.length){
       try { var heb = {}; (JSON.parse(ls('lg-fouten') || '[]') || []).forEach(function(x){ heb[x.h] = true; }); var nieuw = pr.fouten.filter(function(x){ return x && x.h && !heb[x.h]; }); if (nieuw.length) lsZet('lg-fouten-kort', JSON.stringify(nieuw)); } catch (e){}
@@ -301,5 +333,6 @@ window.PROFIEL = (function(){
     });
   }, 400);
   return { bewaart:bewaart, lees:lees, code:code, avatar:avatar, zetAvatar:zetAvatar, maak:maak, koppel:koppel, sync:sync, wis:wis, verzamel:verzamel, op:op,
+    wapens:wapens, uitrusting:uitrusting, zetUitrusting:zetUitrusting, koopWapen:koopWapen,
     klasWeg:klasWeg, account:account, klassenAfstemmen:klassenAfstemmen, munten:munten, bezit:bezit, ingelogd:ingelogd, accountMogelijk:accountMogelijk, muntenErbij:muntenErbij, koop:koop, vrijspeel:vrijspeel, oudLeerling:oudLeerling, accountNeemCode:accountNeemCode, accountNieuweCode:accountNieuweCode, accountVlag:function(){ return accountVlag; }, winkelVlag:function(){ return winkelVlag; }, accountAfstemmen:accountAfstemmen, inlogAdres:inlogAdres, uitloggen:uitloggen, accountWeg:accountWeg, docentWeg:docentWeg };
 })();

@@ -34,6 +34,9 @@
 var WERELD = { b: 3200, h: 2200 };
 var KIJK = { b: 980, h: 620 };          /* wat een speler ongeveer ziet; het pakket gaat iets ruimer */
 var RAND = 60;                          /* zoveel blijft er vrij langs de kant van de wereld */
+/* De maten van de stad: hoe breed een straat is en hoe groot een huizenblok.
+   Vier kolommen en drie rijen passen er precies in, met een straat rondom. */
+var STAD = { straat: 160, blokB: 600, blokH: 520 };
 
 var SPELER = {
   r: 15, snel: 205, hp: 100,
@@ -55,28 +58,29 @@ var ZOMBIE = { ruik: 460, slaBereik: 30, slaPauze: 1.05, maxInWereld: 150, bijGr
    wereld. Een wereld van drie bij twee kilometer met twintig zombies erin is
    leeg: je ziet er een dertiende van, dus je komt er anderhalve tegen. */
 
-/* De wapens. Tempo is schoten per seconde, spreiding in graden.
-
-   Het roestige pistool is waar iedereen mee begint. Het is met opzet slecht:
-   je hebt iets, maar je komt er niet ver mee, en dat is wat je naar de kisten
-   drijft. Blote handen zijn het vangnet als je kogels op zijn. */
-var WAPENS = [
-  { id:'vuist',   naam:'Blote handen', schade:11, tempo:2.2, bereik:34,  spreid:0,  korrels:1, mag:0,  kogelsnel:0,    nabij:true },
-  { id:'roestig', naam:'Roestig pistool', schade:12, tempo:2.5, bereik:300, spreid:9, korrels:1, mag:1, kogelsnel:760 },
-  { id:'pistool', naam:'Pistool',      schade:19, tempo:3.4, bereik:430, spreid:4,  korrels:1, mag:12, kogelsnel:880 },
-  { id:'hagel',   naam:'Hagelgeweer',  schade:11, tempo:1.1, bereik:230, spreid:15, korrels:6, mag:6,  kogelsnel:760 },
-  { id:'karabijn',naam:'Karabijn',     schade:15, tempo:7.5, bereik:560, spreid:7,  korrels:1, mag:30, kogelsnel:1040 },
-  { id:'scherp',  naam:'Scherpschutter', schade:62, tempo:0.85, bereik:820, spreid:1, korrels:1, mag:5, kogelsnel:1500 }
-];
-function wapenVan(id){ for (var i = 0; i < WAPENS.length; i++) if (WAPENS[i].id === id) return WAPENS[i]; return WAPENS[0]; }
+/* De wapens staan in wapens.js, want de winkel en de server moeten dezelfde
+   lijst kennen: die rekent de prijs af en weigert een uitrusting met een wapen
+   dat je niet gekocht hebt. In de browser laadt wapens.js als script voor dit
+   bestand; op de server importeert server/zombie.js hem eerst. */
+function kast(){
+  var k = g.WAPENS;
+  if (!k || !k.LIJST) throw new Error('zombie-motor: wapens.js moet eerder geladen zijn');
+  return k;
+}
+function wapenVan(id){
+  var w = kast().vind(id);
+  return w || kast().vind(kast().STANDAARD.hoofd);
+}
 
 /* Wat er in een kist kan zitten. waarde telt mee voor wat je meeneemt als je
    het veld uit komt; dat is waar het om draait. */
 var BUIT = [
-  { id:'pistool',  naam:'Pistool',        soort:'wapen', waarde:20,  kans:20 },
-  { id:'hagel',    naam:'Hagelgeweer',    soort:'wapen', waarde:35,  kans:14 },
-  { id:'karabijn', naam:'Karabijn',       soort:'wapen', waarde:55,  kans:10 },
-  { id:'scherp',   naam:'Scherpschutter', soort:'wapen', waarde:90,  kans:4 },
+  { id:'pistool',  naam:'Pistool',        soort:'wapen', waarde:20,  kans:18 },
+  { id:'revolver', naam:'Revolver',       soort:'wapen', waarde:30,  kans:10 },
+  { id:'hagel',    naam:'Hagelgeweer',    soort:'wapen', waarde:35,  kans:12 },
+  { id:'mp',       naam:'Machinepistool', soort:'wapen', waarde:45,  kans:9 },
+  { id:'karabijn', naam:'Karabijn',       soort:'wapen', waarde:55,  kans:8 },
+  { id:'scherp',   naam:'Scherpschutter', soort:'wapen', waarde:90,  kans:3 },
   { id:'kogels',   naam:'Kogels',         soort:'kogels', aantal:24, waarde:5,  kans:22 },
   { id:'verband',  naam:'Verband',        soort:'leven', leven:45,   waarde:8,  kans:16 },
   { id:'munt',     naam:'Zakje munten',   soort:'schat', waarde:30,  kans:10 },
@@ -128,32 +132,81 @@ function maak(opzet){
   };
   function nrVan(){ return W.volgend++; }
 
-  /* ---------- de wereld bouwen ----------
-     Blokken met ruimte ertussen, want een zombie die achter een muur staat is
-     geen zombie maar een muur. De kisten liggen tussen de blokken in, en de
-     drie plekken om eruit te stappen liggen ver uit elkaar: wie extract moet
-     een stuk lopen, en dat is waar de spanning zit. */
-  (function bouw(){
-    var vakB = WERELD.b / 4, vakH = WERELD.h / 3;
-    for (var rij = 0; rij < 3; rij++){
-      for (var kol = 0; kol < 4; kol++){
-        var n = 1 + Math.floor(toeval() * 3);
-        for (var k = 0; k < n; k++){
-          var b = tussen(90, 260), h = tussen(70, 210);
-          var x = kol * vakB + tussen(40, vakB - b - 40);
-          var y = rij * vakH + tussen(40, vakH - h - 40);
-          if (b < 40 || h < 40) continue;
-          W.muren.push({ x: r1(x), y: r1(y), b: r1(b), h: r1(h) });
-        }
+  /* ---------- de stad bouwen ----------
+     Avenues van noord naar zuid, dwarsstraten van west naar oost, en
+     daartussen huizenblokken. Een blok wordt in vieren gedeeld met stegen
+     ertussen, en er valt er weleens een weg: dan is er een binnenplaats. Een
+     enkel blok is geen huizenblok maar een park, een plein of een bouwput,
+     zodat de stad niet overal hetzelfde is.
+
+     Waarom straten en niet losse blokken, zoals het was. Op een veld met losse
+     blokken zie je overal even ver en is elke route hetzelfde. In een stad kijk
+     je een straat door en zie je iemand van ver aankomen, terwijl je in een
+     steeg pas ziet wie er staat als je er bent. Dat verschil is het spel.
+
+     Voor de motor blijft alles een rechthoek waar je niet doorheen kunt; soort
+     zegt alleen hoe de pagina hem tekent (0 gebouw, 1 muurtje of kiosk,
+     2 container). */
+  (function bouwStad(){
+    var kolommen = Math.floor((WERELD.b - STAD.straat) / (STAD.blokB + STAD.straat));
+    var rijen = Math.floor((WERELD.h - STAD.straat) / (STAD.blokH + STAD.straat));
+    W.stad = { straat: STAD.straat, blokB: STAD.blokB, blokH: STAD.blokH, kolommen: kolommen, rijen: rijen, blokken: [] };
+
+    function muur(x, y, b, h, soort){
+      if (b < 30 || h < 30) return;
+      W.muren.push({ x: r1(x), y: r1(y), b: r1(b), h: r1(h), s: soort || 0 });
+    }
+    /* een huizenblok: in vieren, met een steeg ertussen */
+    function huizen(x0, y0){
+      var steeg = 46;
+      var halfB = (STAD.blokB - steeg) / 2, halfH = (STAD.blokH - steeg) / 2;
+      var weg = Math.floor(toeval() * 5);   /* 4 betekent: alle vier blijven staan */
+      for (var q = 0; q < 4; q++){
+        if (q === weg) continue;
+        var kx = x0 + (q % 2) * (halfB + steeg), ky = y0 + Math.floor(q / 2) * (halfH + steeg);
+        /* niet elk huis vult zijn kwart helemaal: dat geeft portieken */
+        var kb = halfB - Math.floor(toeval() * 60), kh = halfH - Math.floor(toeval() * 50);
+        muur(kx, ky, kb, kh, 0);
       }
     }
-    for (var i = 0; i < 16; i++){
+    /* een park: niets in de weg, wel een paar bankjes langs de rand */
+    function park(x0, y0){
+      for (var q = 0; q < 4; q++){
+        muur(x0 + 40 + toeval() * (STAD.blokB - 160), y0 + 40 + toeval() * (STAD.blokH - 130), 70, 34, 1);
+      }
+    }
+    /* een plein: een kiosk in het midden en verder open */
+    function plein(x0, y0){
+      muur(x0 + STAD.blokB / 2 - 70, y0 + STAD.blokH / 2 - 55, 140, 110, 1);
+    }
+    /* een bouwput: containers, kriskras */
+    function bouwput(x0, y0){
+      for (var q = 0; q < 6; q++){
+        muur(x0 + 50 + toeval() * (STAD.blokB - 200), y0 + 50 + toeval() * (STAD.blokH - 150), 110, 58, 2);
+      }
+    }
+    for (var rij = 0; rij < rijen; rij++){
+      for (var kol = 0; kol < kolommen; kol++){
+        var x0 = STAD.straat + kol * (STAD.blokB + STAD.straat);
+        var y0 = STAD.straat + rij * (STAD.blokH + STAD.straat);
+        var rol = toeval();
+        var soort = rol < 0.64 ? 'huizen' : rol < 0.78 ? 'park' : rol < 0.9 ? 'plein' : 'bouwput';
+        W.stad.blokken.push({ x: r1(x0), y: r1(y0), soort: soort });
+        if (soort === 'huizen') huizen(x0, y0);
+        else if (soort === 'park') park(x0, y0);
+        else if (soort === 'plein') plein(x0, y0);
+        else bouwput(x0, y0);
+      }
+    }
+    /* de kisten staan in de straten, de stegen en de parken */
+    for (var i = 0; i < 18; i++){
       var p = vrijePlek(40);
       W.kisten.push({ nr: nrVan(), x: r1(p.x), y: r1(p.y), open: false, bezig: 0, vak: '' });
     }
+    /* drie metro-ingangen, ver uit elkaar: wie eruit wil moet een eind lopen */
     var hoeken = [
-      { x: RAND + 120, y: RAND + 120 }, { x: WERELD.b - RAND - 120, y: RAND + 140 },
-      { x: WERELD.b / 2, y: WERELD.h - RAND - 120 }
+      { x: RAND + 130, y: RAND + 130 }, { x: WERELD.b - RAND - 130, y: RAND + 150 },
+      { x: WERELD.b / 2, y: WERELD.h - RAND - 130 }
     ];
     hoeken.forEach(function(h){ W.extracties.push({ nr: nrVan(), x: r1(h.x), y: r1(h.y), r: EXTRACT.straal }); });
   })();
@@ -175,22 +228,36 @@ function maak(opzet){
     return { x: WERELD.b / 2, y: WERELD.h / 2 };
   }
 
-  /* ---------- spelers ---------- */
-  function nieuweSpeler(naam, av){
+  /* ---------- spelers ----------
+     Je uitrusting is het hoofdwapen en het zijwapen die je gekocht hebt. Die
+     krijg je terug zodra je neergaat; wat je in de stad vond ben je dan kwijt.
+     Wie niets gekocht heeft begint met het roestige pistool, en dat is met
+     opzet een slecht wapen. */
+  function nieuweSpeler(naam, av, uitrusting){
     var p = vrijePlek(SPELER.r);
+    var u = kast().schoon(uitrusting, alles(uitrusting));
     return {
       naam: String(naam || 'speler').slice(0, 16), av: av || '',
       x: p.x, y: p.y, hoek: 0, dx: 0, dy: 0, mx: p.x + 40, my: p.y,
       hp: SPELER.hp, maxHp: SPELER.hp, neer: false, uit: false,
-      wapen: START.wapen, kogels: START.kogels, spullen: [], punten: 0, geveld: 0, gevallen: 0,
+      uitrusting: u, wapen: u.hoofd, kogels: kast().KOGELS_MEE, spullen: [], punten: 0, geveld: 0, gevallen: 0,
       schietKlok: 0, raakKlok: 0, trekker: false, extractNr: 0, extractKlok: 0,
       bezigKist: 0, inv: 0
     };
   }
-  (opzet.spelers || [{ naam: 'jij' }]).forEach(function(s){ W.spelers.push(nieuweSpeler(s.naam, s.av)); });
+  /* De kamer heeft al nagekeken of deze speler zijn uitrusting bezit (dat kan
+     alleen daar, want daar staat het profiel). Hier wordt alleen nog gekeken
+     of de wapens bestaan en of het zijwapen licht genoeg is. */
+  function alles(u){
+    var b = {};
+    if (u && u.hoofd) b[u.hoofd] = true;
+    if (u && u.zij) b[u.zij] = true;
+    return b;
+  }
+  (opzet.spelers || [{ naam: 'jij' }]).forEach(function(s){ W.spelers.push(nieuweSpeler(s.naam, s.av, s.uitrusting)); });
 
-  W.erbij = function(naam, av){
-    var p = nieuweSpeler(naam, av);
+  W.erbij = function(naam, av, uitrusting){
+    var p = nieuweSpeler(naam, av, uitrusting);
     W.spelers.push(p);
     /* iedereen moet de naam van de nieuwe nog krijgen, en hij die van hen */
     W.spelers.forEach(function(q, j){ if (W.vergeet) W.vergeet(j); });
@@ -293,10 +360,13 @@ function maak(opzet){
     p.spullen.forEach(function(id){
       W.buit.push({ nr: nrVan(), x: r1(p.x + tussen(-26, 26)), y: r1(p.y + tussen(-26, 26)), id: id });
     });
-    /* Alles wat je gevonden had ben je kwijt, maar je roestige pistool krijg
-       je terug: anders sta je na je eerste fout met lege handen en is het
-       probleem alleen maar verplaatst. */
-    p.spullen = []; p.punten = 0; p.wapen = START.wapen; p.kogels = START.kogels;
+    /* Alles wat je in de stad gevonden had ben je kwijt. Je eigen uitrusting
+       krijg je terug: die heb je gekocht, en wat je koopt blijft van jou. Wie
+       niets gekocht heeft staat er weer met het roestige pistool, en dat is
+       precies de reden om iets te kopen. */
+    p.spullen = []; p.punten = 0;
+    p.wapen = (p.uitrusting && p.uitrusting.hoofd) || START.wapen;
+    p.kogels = kast().KOGELS_MEE;
     zeg('neer', W.spelers.indexOf(p), door);
   }
   /* de pagina meldt dat de vragen om terug te komen goed waren */
@@ -400,7 +470,12 @@ function maak(opzet){
       p.kogels--;
       /* meteen omwisselen als dit de laatste was, anders staat er nog een
          wapen met nul kogels in beeld tot je opnieuw de trekker overhaalt */
-      if (p.kogels <= 0) p.wapen = 'vuist';
+      /* leeg: eerst je zijwapen, en pas als dat ook niets is je vuisten */
+      if (p.kogels <= 0){
+        var zij = (p.uitrusting && p.uitrusting.zij) || 'vuist';
+        p.wapen = zij === p.wapen ? 'vuist' : zij;
+        if (p.wapen !== 'vuist') p.kogels = Math.round(kast().KOGELS_MEE / 2);
+      }
     }
     for (var k = 0; k < w.korrels; k++){
       var afw = (toeval() - 0.5) * (w.spreid * Math.PI / 180) * 2;
@@ -621,7 +696,8 @@ function maak(opzet){
   /* de wereld zelf verandert niet, dus die gaat een keer over de lijn */
   W.wereldPakket = function(){
     return { b: WERELD.b, h: WERELD.h, seed: W.seed,
-             mu: W.muren.map(function(m){ return [m.x, m.y, m.b, m.h]; }),
+             mu: W.muren.map(function(m){ return [m.x, m.y, m.b, m.h, m.s || 0]; }),
+             stad: W.stad,
              ex: W.extracties.map(function(e){ return [e.nr, e.x, e.y, e.r]; }) };
   };
 
@@ -629,7 +705,9 @@ function maak(opzet){
   return W;
 }
 
-g.ZOMBIEMOTOR = { maak: maak, WERELD: WERELD, KIJK: KIJK, SPELER: SPELER, ZOMBIES: ZOMBIES,
-                  WAPENS: WAPENS, BUIT: BUIT, EXTRACT: EXTRACT, START: START, wapenVan: wapenVan };
+g.ZOMBIEMOTOR = { maak: maak, WERELD: WERELD, KIJK: KIJK, SPELER: SPELER, ZOMBIES: ZOMBIES, STAD: STAD,
+                  BUIT: BUIT, EXTRACT: EXTRACT, START: START, wapenVan: wapenVan,
+                  /* de wapenkast zit in wapens.js; dit is er alleen een doorgeefluik naartoe */
+                  get WAPENS(){ return kast().LIJST; } };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 if (typeof module !== 'undefined' && module.exports) module.exports = globalThis.ZOMBIEMOTOR;
