@@ -98,7 +98,7 @@ export default {
     }
 
     /* het klassement van de hele site, per spel */
-    const km = p.match(/^\/api\/klassement\/([a-z]+(?:-\d{4}-\d{2}-\d{2})?)(\/gezicht)?\/?$/);
+    const km = p.match(/^\/api\/klassement\/([a-z]+(?:-\d{4}-\d{2}-\d{2})?)(\/gezicht|\/bon)?\/?$/);
     if (km){
       if (!KLASSEMENTEN[km[1].split("-")[0]] || (km[1].indexOf("-") > 0) !== (km[1].split("-")[0] === "dag")) return json({ fout: "onbekend spel" }, 404);
       const stub = env.KLASSEMENT.get(env.KLASSEMENT.idFromName(km[1]));
@@ -110,11 +110,14 @@ export default {
       }
       if (req.method === "POST"){
         if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
-        /* het gezichtje bijwerken op je eigen oude rijen mag vaker dan een score insturen */
-        const wat = km[2] ? "klassement-gezicht" : "klassement";
-        if (!await magDoor(env, req, wat, km[2] ? 300 : 90, 120)) return json({ fout: "even wachten" }, 429);
+        /* Drie soorten POST, elk met een eigen ruimte. Een bon vragen doet de
+           pagina bij elk potje, dus die grens ligt het hoogst; een score
+           insturen gebeurt maar eens per partij. */
+        const deel = km[2] === "/gezicht" ? "gezicht" : km[2] === "/bon" ? "bon" : "zet";
+        const ruimte = { gezicht: 300, bon: 240, zet: 90 }[deel];
+        if (!await magDoor(env, req, "klassement-" + deel, ruimte, 120)) return json({ fout: "even wachten" }, 429);
         let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldige inzending" }, 400); }
-        return stub.fetch("https://klassement/" + (km[2] ? "gezicht" : "zet"), { method: "POST", body: JSON.stringify(inz || {}) });
+        return stub.fetch("https://klassement/" + deel, { method: "POST", body: JSON.stringify(inz || {}) });
       }
       return stub.fetch("https://klassement/lijst");
     }
@@ -128,6 +131,11 @@ export default {
     }
     const sm = p.match(/^\/api\/set\/([A-Za-z0-9]{6})\/?$/);
     if (sm && req.method === "GET"){
+      /* Een setcode is zes tekens uit tweeendertig, dus raden schiet niet op,
+         maar zonder rem kon iemand er wel eindeloos naar blijven vragen en
+         daarmee de opslag bezighouden. Een klas die allemaal tegelijk dezelfde
+         set opent komt hier ruim onder. */
+      if (!await magDoor(env, req, "set-lees", 400, 60)) return json({ fout: "even wachten" }, 429);
       return env.SETS.get(env.SETS.idFromName("sets")).fetch("https://sets/haal?code=" + sm[1].toUpperCase());
     }
 

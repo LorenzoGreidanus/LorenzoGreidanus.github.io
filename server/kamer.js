@@ -568,6 +568,28 @@ export class Kamer extends DurableObject {
     if (this.motorSpel === "toren"){
       /* alles wat een speler op het bord doet; de kamer past dezelfde regels toe als het bord zelf */
       if (["bouw", "sterker", "weg", "zet", "kracht", "wegding", "dingweg", "slot", "ronde", "munt", "vrij", "pz", "snel"].indexOf(d.k) < 0) return;
+      /* Munten komen van een goed antwoord, en een vraag beantwoorden kost
+         tijd. Zonder rem paste er zestigduizend munten per seconde in de
+         gedeelde kas. Hoogstens een melding per anderhalve seconde en
+         vierduizend munten per minuut is ruim boven wat vragen opleveren. */
+      if (d.k === "munt"){
+        const nu = Date.now();
+        this.muntKlok = this.muntKlok || {}; this.muntTeller = this.muntTeller || {};
+        const vorig = this.muntKlok[wie.sid] || 0;
+        if (nu - vorig < 1500) return;
+        const bak = this.muntTeller[wie.sid] || { t: nu, n: 0 };
+        if (nu - bak.t > 60000){ bak.t = nu; bak.n = 0; }
+        const w = Math.max(0, Math.min(500, d.w | 0));
+        if (bak.n + w > 4000) return;
+        bak.n += w; this.muntTeller[wie.sid] = bak; this.muntKlok[wie.sid] = nu;
+      }
+      /* de pauzeknop is van iedereen, dus hij mag niet als knipperlicht dienen */
+      if (d.k === "pz"){
+        const nu2 = Date.now();
+        this.pauzeKlok = this.pauzeKlok || {};
+        if (nu2 - (this.pauzeKlok[wie.sid] || 0) < 1500) return;
+        this.pauzeKlok[wie.sid] = nu2;
+      }
       W.voerUit(d);
       if (d.k === "pz" || d.k === "snel" || d.k === "bouw" || d.k === "zet") this.motorZend();
       return;
@@ -601,8 +623,11 @@ export class Kamer extends DurableObject {
     }
     const sp = st.spelers[wie.sid];
     if (!sp) return;
-    /* in een duel mag een speler die alleen wacht de kamer sluiten */
-    if (m.t === "stop" && st.duel && st.fase !== "einde") return this.strijdKlaar();
+    /* In een duel mag een speler die alleen wacht de kamer sluiten. Wie al
+       speelt niet meer: die kon anders vlak voor zijn val op stop drukken en
+       zo de uitslag vastzetten terwijl hij voorstond. */
+    if (m.t === "stop" && st.duel && st.fase !== "einde" &&
+        (st.fase === "lobby" || Object.keys(st.spelers).length <= 1)) return this.strijdKlaar();
     /* samen met meer: de maker start zodra er minstens twee zijn */
     if (m.t === "start" && st.duel && st.fase === "lobby" && wie.sid === st.gastheer && Object.keys(st.spelers).length >= 2 && this.lobbyKlaar()) return this.duelAftellen();
     /* de lobby van Zwaardvechter samen: een stijl kiezen en klaar melden; vol en allemaal klaar begint het vanzelf */
@@ -639,10 +664,11 @@ export class Kamer extends DurableObject {
       if (sp.standLaatst && nu0 - sp.standLaatst < 400) return;   /* vaker dan dit hoeft niet */
       sp.standLaatst = nu0;
       /* de ronde loopt alleen op; een speler die opnieuw begint gaat niet terug */
-      sp.ronde = Math.max(sp.ronde, getal(m.ronde, 999));
-      sp.gehaald = Math.max(sp.gehaald, getal(m.gehaald, 999));
+      const dak = this.rondeDak();
+      sp.ronde = Math.max(sp.ronde, Math.min(getal(m.ronde, 999), dak));
+      sp.gehaald = Math.max(sp.gehaald, Math.min(getal(m.gehaald, 999), dak));
       sp.leven = getal(m.leven, 9999);
-      sp.punten = Math.max(sp.punten, getal(m.punten, 99999));
+      sp.punten = Math.max(sp.punten, Math.min(getal(m.punten, 99999), dak * 200));
       sp.fase = m.fase === "tussen" ? "tussen" : "ronde";   /* tussen de rondes (vragen, winkel) of erin */
       sp.laatst = Date.now();
       await this.bewaar();
@@ -668,10 +694,11 @@ export class Kamer extends DurableObject {
       return;
     }
     if (m.t === "af"){
+      const dak2 = this.rondeDak();
       sp.af = true; sp.afTijd = Date.now();
-      sp.ronde = Math.max(sp.ronde, getal(m.ronde, 999));
-      sp.gehaald = Math.max(sp.gehaald, getal(m.ronde, 999));
-      sp.punten = Math.max(sp.punten, getal(m.punten, 99999));
+      sp.ronde = Math.max(sp.ronde, Math.min(getal(m.ronde, 999), dak2));
+      sp.gehaald = Math.max(sp.gehaald, Math.min(getal(m.ronde, 999), dak2));
+      sp.punten = Math.max(sp.punten, Math.min(getal(m.punten, 99999), dak2 * 200));
       await this.bewaar();
       this.planStand();
       const alle = Object.keys(st.spelers);
@@ -679,6 +706,16 @@ export class Kamer extends DurableObject {
       if (st.duel && alle.length >= 2) return this.strijdKlaar();
       if (alle.length && alle.every(id => st.spelers[id].af)) return this.strijdKlaar();
     }
+  }
+  /* Hoeveel rondes er op zijn hoogst gespeeld kunnen zijn. Een speler meldt
+     zelf hoe ver hij is en dat bord hangt vooraan in de klas, dus het loont om
+     er een groot getal in te zetten. Narekenen kan de kamer niet, maar de klok
+     kent hij wel: vier seconden per ronde is ruim onder wat een ronde echt
+     kost, met twee rondes speling voor het begin. */
+  rondeDak(){
+    const gestart = this.stand && this.stand.gestart;
+    if (!gestart) return 999;
+    return Math.min(999, 2 + Math.floor((Date.now() - gestart) / 4000));
   }
   /* de stand gaat op zijn vroegst om de ruim een seconde naar iedereen, hoe
      vaak de spelers ook melden */

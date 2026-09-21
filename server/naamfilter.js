@@ -102,7 +102,11 @@ export function verboden(naam){
 
 /* een nette naam: geschoond, en vervangen als hij niet door het filter komt */
 export function nette(naam, anders){
-  const s = String(naam || "").replace(/[\u0000-\u001f\u007f]/g, "").replace(/\s+/g, " ").trim().slice(0, 16);
+  /* Punthaken en aanhalingstekens gaan eruit. Een bijnaam heeft ze nergens
+     voor nodig, en ze stonden bij de anderen in beeld op plekken waar de naam
+     als opmaak werd geplakt in plaats van als tekst. De & blijft: die kan in
+     zijn eentje geen element beginnen, en Tom & Jerry mag gewoon. */
+  const s = String(naam || "").replace(/[\u0000-\u001f\u007f<>"'`]/g, "").replace(/\s+/g, " ").trim().slice(0, 16);
   if (!s) return anders || "Leerling";
   return verboden(s) ? (anders || "Leerling") : s;
 }

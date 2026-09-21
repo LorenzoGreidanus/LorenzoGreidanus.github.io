@@ -929,7 +929,7 @@ function tekenOnderdeel(o, item, geselecteerd){
       .forEach(function(x){ s += tekenOnderdeel(onderdeel(x.id), x, x.i === gekozenStuk); });
 
     s += '<text class="stadsnaam" x="' + (VEL.breed - 40) + '" y="' + (VEL.hoog - 34) + '" text-anchor="end">' +
-         stadnaam + '</text>';
+         sschoon(stadnaam) + '</text>';
     s += '</svg>';
     elVel.innerHTML = s;
 
@@ -1075,6 +1075,9 @@ function tekenOnderdeel(o, item, geselecteerd){
     tekenVel(); tekenLegenda(); tekenRaad();
   }
 
+  /* De stadsnaam komt van wie er achter deze computer zat en gaat de opmaak
+     in, dus hij wordt eerst tekst. */
+  function sschoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
   function melding(t){ document.getElementById('hint').innerHTML = t; }
 
   /* ---------- steden bewaren ----------
@@ -1095,7 +1098,7 @@ function tekenOnderdeel(o, item, geselecteerd){
     var alles = leesAlles();
     alles[naam] = { op:Date.now(), potlood:potloodNu, stukken:stukken, teller:teller };
     if (schrijfAlles(alles)){
-      melding('<b>' + naam + '</b> is bewaard op deze computer. Met <b>Openen</b> haal je hem terug.');
+      melding('<b>' + sschoon(naam) + '</b> is bewaard op deze computer. Met <b>Openen</b> haal je hem terug.');
     } else {
       melding('Bewaren lukt niet in deze browser. Sla je stad op als afbeelding.');
     }
@@ -1115,7 +1118,7 @@ function tekenOnderdeel(o, item, geselecteerd){
     document.getElementById('scherm-start').classList.add('hide');
     document.getElementById('scherm-bank').classList.remove('hide');
     tekenVel(); tekenLegenda(); tekenRaad(); tekenGereedschap(); tekenBewaarlijst();
-    melding('<b>' + naam + '</b> staat weer op het vel, met ' + stukken.length + ' onderdelen.');
+    melding('<b>' + sschoon(naam) + '</b> staat weer op het vel, met ' + stukken.length + ' onderdelen.');
   }
   function tekenBewaarlijst(){
     var vak = document.getElementById('bewaarlijst');
@@ -1124,9 +1127,10 @@ function tekenOnderdeel(o, item, geselecteerd){
     var namen = Object.keys(alles).sort(function(a, b){ return (alles[b].op || 0) - (alles[a].op || 0); });
     if (!namen.length){ vak.innerHTML = ''; return; }
     vak.innerHTML = '<p class="eyebrow">bewaarde steden</p>' + namen.map(function(n){
-      return '<span class="bewaard"><button type="button" data-open="' + n + '">' + n +
+      var v = sschoon(n);
+      return '<span class="bewaard"><button type="button" data-open="' + v + '">' + v +
         '<small>' + (alles[n].stukken || []).length + '</small></button>' +
-        '<button type="button" class="wegknop" data-weg="' + n + '" aria-label="' + n + ' weggooien">&times;</button></span>';
+        '<button type="button" class="wegknop" data-weg="' + v + '" aria-label="' + v + ' weggooien">&times;</button></span>';
     }).join('');
     Array.prototype.forEach.call(vak.querySelectorAll('[data-open]'), function(b){
       b.addEventListener('click', function(){ openStad(b.getAttribute('data-open')); });
@@ -1136,7 +1140,7 @@ function tekenOnderdeel(o, item, geselecteerd){
         var n = b.getAttribute('data-weg');
         var alles2 = leesAlles(); delete alles2[n]; schrijfAlles(alles2);
         tekenBewaarlijst();
-        melding('<b>' + n + '</b> is weggegooid.');
+        melding('<b>' + sschoon(n) + '</b> is weggegooid.');
       });
     });
   }

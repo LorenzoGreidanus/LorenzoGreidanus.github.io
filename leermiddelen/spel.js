@@ -273,5 +273,8 @@ window.SPEL = (function(){
   schoonKlassementen();
 
   return {
-    raak: raak, uitleg:uitleg, einde:einde, bestand:bestand, naamMag:naamMag, schoonKlassementen:schoonKlassementen };
+    raak: raak, uitleg:uitleg, einde:einde, bestand:bestand, naamMag:naamMag, schoonKlassementen:schoonKlassementen,
+    /* een naam of iets anders van de speler als tekst in de opmaak zetten;
+       de klassementen van deze computer gebruiken hem */
+    schoon: schoon };
 })();

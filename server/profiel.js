@@ -6,6 +6,13 @@
 import { DurableObject } from "cloudflare:workers";
 
 const LEEFT = 400 * 24 * 60 * 60 * 1000;   /* zonder gebruik: na ruim een jaar weg */
+/* De buidel: hoeveel munten er per minuut bij mogen, hoeveel hij vasthoudt, en
+   waarmee een nieuw profiel begint (genoeg voor het eerste potje). Spelen
+   levert ongeveer tien tot vijftien munten per minuut op, dus zestig raakt
+   niemand die gewoon speelt. Zie de kop van dit bestand voor het waarom. */
+const MUNT_PER_MIN = 60, MUNT_BUIDEL = 2000, MUNT_START = 300;
+/* Trofeeën van een baas: hoogstens een per bericht en vier per uur. */
+const VRIJ_PER_UUR = 4;
 const MAX_TEKST = 24000;                    /* een profiel als JSON, ruim genoeg voor honderden spellen */
 
 function json(obj, status){
@@ -48,9 +55,16 @@ function netjes(inz){
 }
 /* Samenvoegen: het nieuwste record wint, sterren en vrijgespeelde dingen tellen op, de rest komt van het apparaat dat meldt. */
 function voegSamen(oud, nieuw, klasWeg, alles){
+  const nu = Date.now();
+  /* De buidel loopt vol met de tijd die voorbij is sinds de vorige melding,
+     en wat erin zit is het meeste dat er nu bij mag. */
+  const sinds = Math.max(0, nu - (typeof oud.muntKlok === "number" ? oud.muntKlok : nu));
+  const buidel = Math.min(MUNT_BUIDEL, (typeof oud.muntBuidel === "number" ? oud.muntBuidel : MUNT_START) + sinds / 60000 * MUNT_PER_MIN);
+  const erbij = Math.max(0, Math.min(nieuw.muntDelta | 0, Math.floor(buidel)));
   const p = { avatar: nieuw.avatar || oud.avatar || "", beste: Object.assign({}, oud.beste), campagne: Object.assign({}, oud.campagne),
               vrij: Object.assign({}, oud.vrij), klas: nieuw.klas || (klasWeg ? null : oud.klas) || null, niveau: nieuw.niveau || oud.niveau || "",
-              munten: Math.max(0, (oud.munten | 0) + (nieuw.muntDelta | 0)), bezit: Object.assign({}, oud.bezit), docent: [] };
+              munten: Math.max(0, (oud.munten | 0) + erbij), muntBuidel: buidel - erbij, muntKlok: nu,
+              bezit: Object.assign({}, oud.bezit), docent: [] };
   /* docentklassen: wat er al was plus wat dit apparaat kent, op code; wat het apparaat vergat gaat eruit */
   const weg = new Set(nieuw.docentWeg || []), gezien = new Set();
   (oud.docent || []).concat(nieuw.docent || []).forEach(k => { if (!weg.has(k.code) && !gezien.has(k.code)){ gezien.add(k.code); p.docent.push(k); } });
@@ -59,8 +73,18 @@ function voegSamen(oud, nieuw, klasWeg, alles){
   p.fouten = nieuw.fouten || [];
   /* het beheeraccount heeft alles: alle cosmetica en alle eilanden */
   if (alles){ COSMETICA.ITEMS.forEach(it => { p.bezit[it.id] = true; }); ["tonkla", "aap", "eiland", "archipel", "vulkaan"].forEach(k => { p.vrij[k] = true; }); }
+  /* Trofeeën van een baas: hoogstens een per melding, en vier per uur. De
+     server ziet die baas niet sneuvelen, dus hij kan alleen op de klok letten;
+     zo blijft het verslaan van een baas de weg ernaartoe. */
+  p.vrijLog = (Array.isArray(oud.vrijLog) ? oud.vrijLog : []).filter(t => nu - t < 3600000).slice(-VRIJ_PER_UUR);
+  if (!alles){
+    const wens = (nieuw.vrijspeel || []).filter(id => !p.bezit[id]);
+    if (wens.length && p.vrijLog.length < VRIJ_PER_UUR){
+      p.bezit[wens[0]] = true;
+      p.vrijLog.push(nu);
+    }
+  }
   /* kopen: alleen wat er nog niet is en wat het saldo toelaat; daarna mag alleen bezit in de spec staan */
-  (nieuw.vrijspeel || []).forEach(id => { p.bezit[id] = true; });
   (nieuw.koop || []).forEach(id => { const it = COSMETICA.vind(id); if (it && !it.baas && !it.oud && COSMETICA.inSeizoen(it) && !p.bezit[id] && p.munten >= it.prijs){ p.munten -= it.prijs; p.bezit[id] = true; } });
   p.avatar = COSMETICA.toegestaan(p.avatar, p.bezit);
   /* het beste record wint, niet het laatste; l:1 betekent dat juist het laagste telt */

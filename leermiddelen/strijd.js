@@ -316,8 +316,8 @@ window.STRIJD = (function(){
       } else if (duel){
         var winnaar = lijst[0], ander = lijst.filter(function(r){ return r.sid !== mijnPid; })[0];
         var gewonnen = !!(winnaar && winnaar.sid === mijnPid);
-        hudTekst(gewonnen ? 'Je hebt het duel gewonnen!' : (winnaar ? winnaar.naam + ' heeft gewonnen' : 'Het duel is voorbij'),
-          ander ? ander.naam + ' kwam tot ronde ' + ander.ronde : '', false);
+        hudTekst(gewonnen ? 'Je hebt het duel gewonnen!' : (winnaar ? schoon(winnaar.naam) + ' heeft gewonnen' : 'Het duel is voorbij'),
+          ander ? schoon(ander.naam) + ' kwam tot ronde ' + (ander.ronde | 0) : '', false);
         zeg(gewonnen ? 'Gewonnen! Je tegenstander is gevallen.' : 'Verloren. ' + (winnaar ? winnaar.naam + ' hield het langer vol.' : ''), gewonnen);
       } else {
         hudTekst('Klasstrijd afgelopen', j ? 'jij werd ' + j.rang + 'e van ' + j.van : '', false);
@@ -369,12 +369,12 @@ window.STRIJD = (function(){
     if (duel){
       tegen = m.tegen || null;
       hudTekst(tegen ? (samen() ? 'Samen met ' : 'Tegen ') + schoon(tegen.naam) : 'Duel ' + code,
-        tegen ? (tegen.af ? tegen.naam + ' is gevallen in ronde ' + tegen.ronde : 'ronde ' + tegen.ronde + ' · ' + tegen.leven + ' levens' + (tegen.aan ? '' : ' · even weg')) : 'wacht op je tegenstander', false);
+        tegen ? (tegen.af ? schoon(tegen.naam) + ' is gevallen in ronde ' + (tegen.ronde | 0) : 'ronde ' + tegen.ronde + ' · ' + tegen.leven + ' levens' + (tegen.aan ? '' : ' · even weg')) : 'wacht op je tegenstander', false);
       return;
     }
     var j = m.jouw;
     hudTekst('Klasstrijd: ' + (j ? j.rang + 'e van ' + j.van : '…'),
-      m.bezig + ' nog in het spel' + (m.koploper ? ' · ' + m.koploper.naam + ' ronde ' + m.koploper.ronde : ''), false);
+      m.bezig + ' nog in het spel' + (m.koploper ? ' · ' + schoon(m.koploper.naam) + ' ronde ' + (m.koploper.ronde | 0) : ''), false);
   }
   /* om de paar seconden de stand doorgeven, en meteen als hij verandert */
   setInterval(function(){
@@ -448,18 +448,51 @@ window.STRIJD = (function(){
      ====================================================================== */
   /* Met terugwerkende kracht: rijen die deze browser eerder instuurde krijgen alsnog het gezichtje van nu.
      Het id van een rij begint met de eerste acht tekens van het kenmerk van deze browser. */
-  var gezichtGedaan = {};
-  function gezichtBijwerken(spel, lijst){
-    var av = window.PROFIEL && PROFIEL.avatar ? PROFIEL.avatar() : '';
-    if (!av || gezichtGedaan[spel]) return false;
-    var kop = sid().slice(0, 8) + '-';
-    var mijn = lijst.filter(function(r){ return String(r.id || '').indexOf(kop) === 0 && r.av !== av; });
-    if (!mijn.length) return false;
-    gezichtGedaan[spel] = true;
-    return true && (fetch('/api/klassement/' + spel + '/gezicht', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ sid:sid(), av:av }) })
+  /* De bon. De server telt de score niet zelf na, dus zonder meer kon iedereen
+     met een regel in de console ronde 250 insturen. Daarom vraagt de pagina een
+     bon zodra het klassement in beeld komt (dat is het startscherm, dus het
+     begin van het potje) en stuurt die mee. De server weet dan hoe lang het
+     potje duurde en weigert wat sneller ging dan spelen kan. */
+  var bonnen = {}, bonBezig = {};
+  function zorgBon(spel){
+    if (bonnen[spel] || bonBezig[spel]) return;
+    bonBezig[spel] = true;
+    fetch('/api/klassement/' + spel + '/bon', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ sid:sid() }) })
       .then(function(r){ return r.json(); })
-      .then(function(j){ if (j && j.lijst) klassement.toon(laatsteDoel[spel], spel, laatsteId[spel], laatsteVorm[spel]); })
-      .catch(function(){ klassement.toon(laatsteDoel[spel], spel, laatsteId[spel], laatsteVorm[spel]); }), true);
+      .then(function(j){ bonBezig[spel] = false; if (j && j.bon) bonnen[spel] = j.bon; })
+      .catch(function(){ bonBezig[spel] = false; });
+  }
+
+  /* De knoeivlag. De spellen hebben testluiken om snel naar een late ronde te
+     springen of weer vol leven te krijgen; die zijn er voor mij, niet om mee te
+     scoren. Wie er een gebruikt zet deze vlag aan, en dan gaat er van dit potje
+     niets meer naar het klassement. Wie de vlag weet te vinden kan hem
+     weghalen, maar dan houdt de bon hierboven het nog tegen. */
+  var geknoeid = false;
+  function knoei(){ geknoeid = true; }
+
+  /* Je gezichtje op de rijen die je eerder instuurde. Vroeger zocht de browser
+     die rijen zelf op aan het begin van het id, want dat begon met de eerste
+     acht tekens van je kenmerk. Daarmee stond dat stukje kenmerk dus in de
+     openbare lijst en kon iedereen het gezichtje van een ander veranderen. Nu
+     zoekt de server ze op aan de hand van het hele kenmerk, en vraagt de
+     browser er alleen om als hij ooit iets instuurde en het gezichtje sindsdien
+     veranderd is. */
+  var gezichtGedaan = {};
+  function gezichtSleutel(spel){ return 'lg-kl-av-' + spel; }
+  function gezichtOnthoud(spel, av){ try { localStorage.setItem(gezichtSleutel(spel), av || '-'); } catch (e){} }
+  function gezichtBijwerken(spel){
+    var av = window.PROFIEL && PROFIEL.avatar ? PROFIEL.avatar() : '';
+    if (!av || gezichtGedaan[spel]) return;
+    var vorige = null;
+    try { vorige = localStorage.getItem(gezichtSleutel(spel)); } catch (e){}
+    if (!vorige || vorige === av) return;
+    gezichtGedaan[spel] = true;
+    gezichtOnthoud(spel, av);
+    fetch('/api/klassement/' + spel + '/gezicht', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ sid:sid(), av:av }) })
+      .then(function(r){ return r.json(); })
+      .then(function(j){ if (j && j.bijgewerkt) klassement.toon(laatsteDoel[spel], spel, laatsteId[spel], laatsteVorm[spel]); })
+      .catch(function(){});
   }
   var laatsteDoel = {}, laatsteId = {}, laatsteVorm = {};
   var klassement = {
@@ -470,9 +503,11 @@ window.STRIJD = (function(){
       laatsteDoel[spel] = doelId; laatsteId[spel] = id || null; laatsteVorm[spel] = vorm || null;
       doel.className = 'sitelijst';
       doel.innerHTML = '<h3>Klassement van de hele site</h3>' + (vorm ? vorm : '') + '<div class="leeg">Laden…</div>';
+      /* het klassement staat in beeld, dus er wordt zo gespeeld: alvast een bon */
+      zorgBon(spel);
       fetch('/api/klassement/' + spel).then(function(r){ return r.json(); }).then(function(j){
-        /* staan er oude rijen van deze browser zonder (of met een ander) gezichtje, dan werken we die eenmalig bij */
-        if (gezichtBijwerken(spel, j.lijst || [])) return;
+        /* is het gezichtje veranderd sinds je laatste inzending, werk je oude rijen dan bij */
+        gezichtBijwerken(spel);
         var lijst = (j.lijst || []).slice(0, 10);
         var html = '<h3>Klassement van de hele site</h3>' + (vorm ? vorm : '');
         if (!lijst.length) html += '<div class="leeg">Nog niemand. Wie het eerst speelt, staat bovenaan.</div>';
@@ -486,17 +521,30 @@ window.STRIJD = (function(){
     },
     /* een score insturen; geeft een belofte met { plek, id } of { fout } */
     zet: function(spel, g){
+      if (geknoeid) return Promise.resolve({ fout:'Je hebt het testpaneel gebruikt, dus dit potje telt niet mee voor het klassement.' });
       if (!naamOk(g.naam)) return Promise.resolve({ fout: NAAMFOUT });
       bewaarNaam(g.naam);
       /* je eigen gezichtje gaat mee; anders rekent de lijst er een uit je bijnaam */
       if (!g.av && window.PROFIEL && PROFIEL.avatar) g = Object.assign({ av:PROFIEL.avatar() }, g);
+      var bon = bonnen[spel] || '';
+      if (!bon) return Promise.resolve({ fout:'Deze partij is niet meer geldig. Ververs de pagina en speel opnieuw.' });
+      /* de bon is er maar een, ook als het insturen mislukt: anders kan een
+         mislukte poging eindeloos herhaald worden */
+      bonnen[spel] = null;
       return fetch('/api/klassement/' + spel, { method:'POST', headers:{ 'content-type':'application/json' },
-        body: JSON.stringify({ naam:g.naam, av:g.av || '', ronde:g.ronde, punten:g.punten, waar:g.waar, niveau:g.niveau, vak:g.vak, sid:sid() }) })
+        body: JSON.stringify({ bon:bon, naam:g.naam, av:g.av || '', ronde:g.ronde, punten:g.punten, waar:g.waar, niveau:g.niveau, vak:g.vak, sid:sid() }) })
       .then(function(r){ return r.json(); })
-      .catch(function(){ return { fout:'Geen verbinding met de server.' }; });
+      .then(function(j){
+        /* het volgende potje begint nu, dus meteen een verse bon */
+        zorgBon(spel);
+        if (j && j.id) gezichtOnthoud(spel, g.av || '');
+        return j;
+      })
+      .catch(function(){ zorgBon(spel); return { fout:'Geen verbinding met de server.' }; });
     },
     /* het invulvak voor het eindscherm: naam, knop, hint, en daarna de lijst met je eigen rij */
     vorm: function(doelId, spel, gegevens){
+      if (geknoeid){ klassement.toon(doelId, spel, null, '<p class="hint">Je hebt het testpaneel gebruikt, dus dit potje telt niet mee voor het klassement.</p>'); return; }
       var html = '<p class="hint">Zet je score in het klassement van de hele site.</p><div class="naamrij"><input type="text" id="siteNaam" maxlength="16" placeholder="Je bijnaam" value="' + schoon(bewaardeNaam()) + '"><button type="button" id="siteZet">Insturen</button></div><p class="hint" id="siteHint"></p>';
       klassement.toon(doelId, spel, null, html);
       /* de knop bestaat pas na het laden; daarom via de container luisteren */
@@ -539,6 +587,7 @@ window.STRIJD = (function(){
     },
     duelBlok: duelBlok,
     klassement: klassement,
+    knoei: knoei,
     naamOk: naamOk
   };
 })();

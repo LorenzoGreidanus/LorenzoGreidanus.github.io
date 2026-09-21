@@ -209,11 +209,27 @@ function maak(opties){
   W.crit = function(i){ var P = W.spelers[i]; if (P) P.sp.crit = true; };
   W.ontwijk = function(i){ var P = W.spelers[i]; if (P && W.fase === 'ronde' && !W.pauze) ontwijkMet(P.sp); };
   W.wapen = function(i){ var P = W.spelers[i]; if (P && W.fase === 'ronde' && !W.pauze) wisselWapenVan(P.sp); };
+  /* Wat een waarde hoogstens mag zijn. De winkel draait in de browser, dus de
+     motor krijgt de uitrusting aangereikt en kan hem niet narekenen. Zonder
+     plafond was {schade:99999, maxHp:99999} genoeg om in een gedeelde arena
+     alles in een klap te vellen. Twaalf keer de uitgangswaarde ligt ruim boven
+     alles wat de winkel ooit uitdeelt, dus wie gewoon speelt merkt er niets
+     van. Pantser deelt de schade die je krijgt, dus daar is juist een bodem
+     nodig; de rest van de lijst begint op nul en heeft een eigen plafond. */
+  var STATS_KEER = 12;
+  var STATS_DAK = { mesTempo:20, mesSchade:200, harnas:100, dashX:6, pijlDoor:10, critX:8, magneet:1000, blokMax:60 };
+  function statBinnen(k, v){
+    if (k === 'pantser') return Math.max(0.05, Math.min(1, v));
+    if (STATS_DAK[k] !== undefined) return Math.max(0, Math.min(STATS_DAK[k], v));
+    var basis = basisStats()[k];
+    if (typeof basis === 'number' && basis > 0) return Math.max(0, Math.min(basis * STATS_KEER, v));
+    return Math.max(0, v);
+  }
   W.zetStats = function(i, st, hpNu){
     var P = W.spelers[i]; if (!P || !st) return;
     ['schade', 'bereik', 'tempo', 'snel', 'pantser', 'mesTempo', 'mesSchade', 'harnas', 'maxHp', 'boogSchade', 'boogBereik', 'boogTempo',
      'dashX', 'pijlDoor', 'critX', 'magneet', 'blokMax'].forEach(function(k){
-      if (typeof st[k] === 'number' && isFinite(st[k])) P.stats[k] = st[k];
+      if (typeof st[k] === 'number' && isFinite(st[k])) P.stats[k] = statBinnen(k, st[k]);
     });
     if (STIJLEN[st.stijl]) P.stijl = st.stijl;
     P.sp.dashX = P.stats.dashX || 1;
