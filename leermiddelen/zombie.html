@@ -73,7 +73,10 @@ header.hd{position:sticky;top:0;z-index:40;background:rgba(251,246,241,.92);back
 .spullen i b{font-weight:600}
 
 /* ---------- het veld ---------- */
-.spel{position:relative;height:100svh;display:flex;flex-direction:column;background:#20301f}
+/* De kopbalk staat erboven in de stroom, dus zijn hoogte gaat eraf. Stond
+   hier 100svh, dan loopt het vak onder het venster door en staat de minikaart
+   buiten beeld: gemeten liep hij van 818 tot 953 in een venster van 900. */
+.spel{position:relative;height:calc(100svh - var(--kophoogte, 65px));display:flex;flex-direction:column;background:#20301f}
 #veld{flex:1;min-height:0;display:block;width:100%;touch-action:none;user-select:none;-webkit-user-select:none;cursor:crosshair}
 .hud{position:absolute;left:0;right:0;top:0;padding:10px 12px;display:flex;gap:10px;align-items:flex-start;
   pointer-events:none;flex-wrap:wrap}
@@ -405,7 +408,16 @@ try { mijnNaam = (localStorage.getItem('lg-naam') || '').slice(0, 16) || 'Speler
 if (window.PROFIEL && PROFIEL.avatar) { try { mijnAv = PROFIEL.avatar() || ''; } catch (e){} }
 
 /* ---------- beginnen ---------- */
+/* De kopbalk is niet overal even hoog (lettergrootte, telefoon), dus meten we
+   hem en zetten we het als maat klaar voor de css. */
+function meetKop(){
+  var k = document.querySelector('header.hd');
+  if (k) document.documentElement.style.setProperty('--kophoogte', Math.round(k.getBoundingClientRect().height) + 'px');
+}
+addEventListener('resize', meetKop);
+
 function naarVeld(){
+  meetKop();
   $('scherm-start').classList.add('hide');
   $('scherm-eind').classList.add('hide');
   $('scherm-spel').classList.remove('hide');
@@ -574,56 +586,90 @@ function sprites(){
     '</defs>';
 }
 
+/* Het decor als lijst in plaats van als tekst, zodat we er later uit kunnen
+   kiezen wat in beeld staat. */
+var decor = [], decorOm = { x: -1e9, y: -1e9 };
 function bouwWereld(w){
   veld.innerHTML = sprites() +
     '<rect id="grond" x="0" y="0" width="' + w.b + '" height="' + w.h + '" fill="url(#grasje)"/>' +
-    '<g id="vast"></g><g id="levend"></g><g id="effect"></g>';
+    '<g id="vast"></g>' +
+    /* Een groepje per soort. Wat eerst komt ligt onderop; zo hoeft de
+       volgorde niet uit de volgorde van de tekst te komen. */
+    '<g id="levend"><g id="lBuit"></g><g id="lKist"></g><g id="lZombie"></g><g id="lBalk"></g>' +
+      '<g id="lAnder"></g><g id="lIk"></g><g id="lKogel"></g><g id="lPijl"></g></g>' +
+    '<g id="effect"></g>';
   vastLaag = veld.querySelector('#vast');
   levendLaag = veld.querySelector('#levend');
   effectLaag = veld.querySelector('#effect');
+  poel.leeg();
 
   /* Het decor staat vast: dezelfde wereld geeft altijd hetzelfde beeld. */
   var z = w.seed >>> 0;
   function tv(){ z = (z + 0x6D2B79F5) >>> 0; var t = Math.imul(z ^ (z >>> 15), 1 | z); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
 
-  var h = '';
+  decor = [];
   /* eerst vlekken grond: aarde en gras door elkaar, zodat het niet één laken is */
-  for (var v = 0; v < 90; v++){
-    var vx = tv() * w.b, vy = tv() * w.h, vr = 50 + tv() * 170;
-    h += '<ellipse cx="' + vx.toFixed(0) + '" cy="' + vy.toFixed(0) + '" rx="' + vr.toFixed(0) + '" ry="' + (vr * (0.5 + tv() * 0.4)).toFixed(0) + '" fill="' + (tv() < 0.5 ? 'rgba(112,92,56,.22)' : 'rgba(58,86,44,.3)') + '"/>';
+  for (var v = 0; v < 80; v++){
+    var vr = 50 + tv() * 170;
+    decor.push({ s: 'vlek', x: Math.round(tv() * w.b), y: Math.round(tv() * w.h), r: Math.round(vr),
+                 r2: Math.round(vr * (0.5 + tv() * 0.4)), kl: tv() < 0.5 ? 'rgba(112,92,56,.22)' : 'rgba(58,86,44,.3)' });
   }
-  /* de uitgangen: een lichtkring op de grond, zodat je ze van ver ziet liggen */
-  w.ex.forEach(function(e){
-    h += '<g><circle cx="' + e[1] + '" cy="' + e[2] + '" r="' + (e[3] * 2.2) + '" fill="url(#uitgloed)"/>' +
-      '<circle cx="' + e[1] + '" cy="' + e[2] + '" r="' + e[3] + '" fill="rgba(234,152,54,.16)" stroke="#EA9836" stroke-width="4" stroke-dasharray="14 10"/>' +
-      '<circle cx="' + e[1] + '" cy="' + e[2] + '" r="' + (e[3] - 14) + '" fill="none" stroke="rgba(234,152,54,.45)" stroke-width="2"/>' +
-      '<text x="' + e[1] + '" y="' + (e[2] + 7) + '" text-anchor="middle" font-size="22" font-weight="700" fill="#EA9836" font-family="Poppins,sans-serif" letter-spacing="2">UITGANG</text></g>';
-  });
   /* struiken en stenen; ze houden je niet tegen maar geven je iets om op te mikken */
-  for (var i = 0; i < 300; i++){
+  for (var i = 0; i < 260; i++){
     var sx = Math.round(tv() * w.b), sy = Math.round(tv() * w.h), soort = tv();
-    if (soort < 0.5){
-      var br = 9 + Math.round(tv() * 10);
-      h += '<ellipse cx="' + sx + '" cy="' + (sy + br * 0.5) + '" rx="' + br + '" ry="' + (br * 0.4) + '" fill="rgba(0,0,0,.18)"/>' +
-        '<circle cx="' + sx + '" cy="' + sy + '" r="' + br + '" fill="#3f5c30"/>' +
-        '<circle cx="' + (sx - br * 0.3) + '" cy="' + (sy - br * 0.3) + '" r="' + (br * 0.55) + '" fill="#4d7039"/>';
-    } else if (soort < 0.82){
-      var sr = 5 + Math.round(tv() * 5);
-      h += '<ellipse cx="' + sx + '" cy="' + (sy + 2) + '" rx="' + sr + '" ry="' + (sr * 0.5) + '" fill="rgba(0,0,0,.16)"/>' +
-        '<circle cx="' + sx + '" cy="' + sy + '" r="' + sr + '" fill="#8d8a80"/>';
-    } else {
-      h += '<rect x="' + sx + '" y="' + sy + '" width="' + (20 + Math.round(tv() * 30)) + '" height="7" rx="3" fill="rgba(104,86,58,.55)"/>';
+    if (soort < 0.5) decor.push({ s: 'struik', x: sx, y: sy, r: 9 + Math.round(tv() * 10) });
+    else if (soort < 0.82) decor.push({ s: 'steen', x: sx, y: sy, r: 5 + Math.round(tv() * 5) });
+    else decor.push({ s: 'tak', x: sx, y: sy, r: 20 + Math.round(tv() * 30) });
+  }
+  /* de uitgangen en de gebouwen horen er ook bij, met hun eigen maat zodat ze
+     pas wegvallen als ze echt ver weg zijn */
+  w.ex.forEach(function(e){ decor.push({ s: 'uit', x: e[1], y: e[2], r: e[3] }); });
+  w.mu.forEach(function(m){ decor.push({ s: 'muur', x: m[0], y: m[1], b: m[2], h: m[3] }); });
+
+  decorOm = { x: -1e9, y: -1e9 };
+  tekenDecor(WERELDMIDDEN(w));
+  tekenMini(w);
+}
+function WERELDMIDDEN(w){ return { x: w.b / 2, y: w.h / 2 }; }
+
+/* Alleen wat in de buurt van de camera staat gaat in de vaste laag. Hij wordt
+   opnieuw opgebouwd zodra je een flink stuk verder bent, niet elk beeld: dat
+   is een paar keer per seconde honderd elementen in plaats van zestig keer
+   per seconde achthonderd. */
+var DECOR_MARGE = 620, DECOR_STAP = 260;
+function tekenDecor(mid){
+  if (Math.abs(mid.x - decorOm.x) < DECOR_STAP && Math.abs(mid.y - decorOm.y) < DECOR_STAP) return;
+  decorOm = { x: mid.x, y: mid.y };
+  var bx = M.KIJK.b / 2 + DECOR_MARGE, by = M.KIJK.h / 2 + DECOR_MARGE;
+  var h = '';
+  for (var i = 0; i < decor.length; i++){
+    var d = decor[i];
+    var w2 = (d.b || d.r || 0), h2 = (d.h || d.r || 0);
+    if (Math.abs(d.x + w2 / 2 - mid.x) > bx + w2 || Math.abs(d.y + h2 / 2 - mid.y) > by + h2) continue;
+    if (d.s === 'vlek'){
+      h += '<ellipse cx="' + d.x + '" cy="' + d.y + '" rx="' + d.r + '" ry="' + d.r2 + '" fill="' + d.kl + '"/>';
+    } else if (d.s === 'struik'){
+      h += '<ellipse cx="' + d.x + '" cy="' + (d.y + d.r * 0.5) + '" rx="' + d.r + '" ry="' + (d.r * 0.4) + '" fill="rgba(0,0,0,.18)"/>' +
+        '<circle cx="' + d.x + '" cy="' + d.y + '" r="' + d.r + '" fill="#3f5c30"/>' +
+        '<circle cx="' + (d.x - d.r * 0.3) + '" cy="' + (d.y - d.r * 0.3) + '" r="' + (d.r * 0.55) + '" fill="#4d7039"/>';
+    } else if (d.s === 'steen'){
+      h += '<ellipse cx="' + d.x + '" cy="' + (d.y + 2) + '" rx="' + d.r + '" ry="' + (d.r * 0.5) + '" fill="rgba(0,0,0,.16)"/>' +
+        '<circle cx="' + d.x + '" cy="' + d.y + '" r="' + d.r + '" fill="#8d8a80"/>';
+    } else if (d.s === 'tak'){
+      h += '<rect x="' + d.x + '" y="' + d.y + '" width="' + d.r + '" height="7" rx="3" fill="rgba(104,86,58,.55)"/>';
+    } else if (d.s === 'uit'){
+      h += '<circle cx="' + d.x + '" cy="' + d.y + '" r="' + (d.r * 2.2) + '" fill="url(#uitgloed)"/>' +
+        '<circle cx="' + d.x + '" cy="' + d.y + '" r="' + d.r + '" fill="rgba(234,152,54,.16)" stroke="#EA9836" stroke-width="4" stroke-dasharray="14 10"/>' +
+        '<circle cx="' + d.x + '" cy="' + d.y + '" r="' + (d.r - 14) + '" fill="none" stroke="rgba(234,152,54,.45)" stroke-width="2"/>' +
+        '<text x="' + d.x + '" y="' + (d.y + 7) + '" text-anchor="middle" font-size="22" font-weight="700" fill="#EA9836" font-family="Poppins,sans-serif" letter-spacing="2">UITGANG</text>';
+    } else if (d.s === 'muur'){
+      h += '<rect x="' + (d.x + 6) + '" y="' + (d.y + 10) + '" width="' + d.b + '" height="' + d.h + '" rx="5" fill="rgba(0,0,0,.28)"/>' +
+        '<rect x="' + d.x + '" y="' + d.y + '" width="' + d.b + '" height="' + d.h + '" rx="5" fill="#7d6b52" stroke="#2a2418" stroke-width="3"/>' +
+        '<rect x="' + (d.x + 6) + '" y="' + (d.y + 6) + '" width="' + Math.max(0, d.b - 12) + '" height="' + Math.max(0, d.h - 12) + '" rx="3" fill="#8e7b5f"/>' +
+        '<rect x="' + (d.x + 6) + '" y="' + (d.y + 6) + '" width="' + Math.max(0, d.b - 12) + '" height="7" fill="rgba(255,255,255,.14)"/>';
     }
   }
-  /* de gebouwen: een schaduw, een muur en een lichte bovenrand, zodat ze staan */
-  w.mu.forEach(function(m){
-    h += '<rect x="' + (m[0] + 6) + '" y="' + (m[1] + 10) + '" width="' + m[2] + '" height="' + m[3] + '" rx="5" fill="rgba(0,0,0,.28)"/>' +
-      '<rect x="' + m[0] + '" y="' + m[1] + '" width="' + m[2] + '" height="' + m[3] + '" rx="5" fill="#7d6b52" stroke="#2a2418" stroke-width="3"/>' +
-      '<rect x="' + (m[0] + 6) + '" y="' + (m[1] + 6) + '" width="' + Math.max(0, m[2] - 12) + '" height="' + Math.max(0, m[3] - 12) + '" rx="3" fill="#8e7b5f"/>' +
-      '<rect x="' + (m[0] + 6) + '" y="' + (m[1] + 6) + '" width="' + Math.max(0, m[2] - 12) + '" height="7" fill="rgba(255,255,255,.14)"/>';
-  });
   vastLaag.innerHTML = h;
-  tekenMini(w);
 }
 
 function tekenMini(w){
@@ -676,36 +722,100 @@ function invoerDoor(){
   if (zendKlok % 3 === 0) zend({ t: 'in', dx: dx, dy: dy, mx: wx, my: wy, s: trekker });
 }
 
+/* ---------- de poel ----------
+   Elk element wordt een keer gemaakt en daarna hergebruikt. Wie even niet
+   nodig is wordt verborgen, niet weggegooid. */
+var SVGNS = 'http://www.w3.org/2000/svg';
+var poel = (function(){
+  var vakken = {};
+  function vak(naam){
+    if (!vakken[naam]) vakken[naam] = { laag: null, lijst: [], n: 0 };
+    return vakken[naam];
+  }
+  return {
+    leeg: function(){ vakken = {}; },
+    /* geef me het volgende element van deze soort, of maak er een */
+    pak: function(naam, laagId, maak){
+      var v = vak(naam);
+      if (!v.laag) v.laag = document.getElementById(laagId);
+      var el = v.lijst[v.n];
+      if (!el){
+        el = maak();
+        v.lijst[v.n] = el;
+        if (v.laag) v.laag.appendChild(el);
+      } else if (el.getAttribute('display') === 'none'){
+        el.removeAttribute('display');
+      }
+      v.n++;
+      return el;
+    },
+    /* wat er deze keer niet gebruikt is, gaat uit beeld */
+    af: function(naam){
+      var v = vak(naam);
+      for (var i = v.n; i < v.lijst.length; i++){
+        if (v.lijst[i].getAttribute('display') !== 'none') v.lijst[i].setAttribute('display', 'none');
+      }
+      v.n = 0;
+    },
+    alleAf: function(){ for (var k in vakken) this.af(k); }
+  };
+})();
+function maakEl(soort, opzet){
+  var el = document.createElementNS(SVGNS, soort);
+  if (opzet) for (var k in opzet) el.setAttribute(k, opzet[k]);
+  return el;
+}
+/* alleen schrijven als het echt anders is: een attribuut zetten dat al goed
+   stond kost niets, maar het kost wel als het de browser aan het werk zet */
+function zet(el, naam, waarde){
+  if (el.getAttribute(naam) !== waarde) el.setAttribute(naam, waarde);
+}
+
 /* ---------- tekenen ---------- */
 var ZSOORT = M.ZOMBIES;
 var BUITSOORT = {};
 M.BUIT.forEach(function(b){ BUITSOORT[b.id] = b; });
 
 /* Een speler: een ring op de grond in de kleur van wie hij is, zijn eigen
-   gezichtje erop, en een wapen dat meedraait met waar hij heen mikt. Een
-   zombie heeft geen ring, geen gezicht en een heel ander silhouet; zo zie je
-   in een oogopslag wie een mens is. */
-function tekenSpeler(naam, av, x, y, hoek, neer, kleur, naamErbij, wapen){
-  var g = '<g transform="translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ')"' + (neer ? ' opacity=".5"' : '') + '>' +
-    '<ellipse cy="15" rx="17" ry="6" fill="rgba(0,0,0,.28)"/>' +
-    '<circle r="20" fill="none" stroke="' + kleur + '" stroke-width="3.5"/>' +
-    '<circle r="20" fill="' + kleur + '" opacity=".16"/>';
-  if (!neer && wapen && wapen !== 'vuist'){
-    /* het wapen steekt uit in de richting waarin je mikt */
-    g += '<g transform="rotate(' + (hoek * 180 / Math.PI).toFixed(1) + ')">' +
-      '<rect x="8" y="-3" width="26" height="6" rx="2" fill="#2b3550" stroke="#101725" stroke-width="1.6"/>' +
-      '<rect x="6" y="-5" width="8" height="10" rx="2" fill="#4a5a78" stroke="#101725" stroke-width="1.6"/></g>';
-  } else if (!neer){
-    g += '<g transform="rotate(' + (hoek * 180 / Math.PI).toFixed(1) + ')"><circle cx="20" r="5" fill="#e8b48a" stroke="#101725" stroke-width="1.8"/></g>';
-  }
-  g += '<g transform="scale(.33)">' + (window.AVATAR ? AVATAR.inhoud(naam, av || '') : '') + '</g>';
-  if (neer) g += '<path d="M-11-11 l22 22 M11-11 l-22 22" stroke="#c0442c" stroke-width="3.5" stroke-linecap="round"/>';
-  g += '</g>';
-  if (naamErbij){
-    g += '<text x="' + x.toFixed(1) + '" y="' + (y - 28).toFixed(1) + '" text-anchor="middle" font-size="13" font-weight="700" ' +
-      'fill="#F3EFE9" font-family="Poppins,sans-serif" paint-order="stroke" stroke="rgba(10,16,32,.75)" stroke-width="4">' + schoon(naamErbij) + '</text>';
-  }
+   gezichtje erop, en een wapen dat meedraait met waar hij mikt. Een zombie
+   heeft geen ring, geen gezicht en een heel ander silhouet; zo zie je in een
+   oogopslag wie een mens is.
+
+   Het poppetje wordt een keer opgebouwd en daarna alleen nog verplaatst. */
+function maakSpeler(naam, av){
+  var g = maakEl('g');
+  g.appendChild(maakEl('ellipse', { cy: 15, rx: 17, ry: 6, fill: 'rgba(0,0,0,.28)' }));
+  var ring = maakEl('circle', { r: 20, fill: 'none', 'stroke-width': 3.5 });
+  var vul = maakEl('circle', { r: 20, opacity: .16 });
+  g.appendChild(vul); g.appendChild(ring);
+  var wapen = maakEl('g');
+  var loop = maakEl('rect', { x: 8, y: -3, width: 26, height: 6, rx: 2, fill: '#2b3550', stroke: '#101725', 'stroke-width': 1.6 });
+  var greep = maakEl('rect', { x: 6, y: -5, width: 8, height: 10, rx: 2, fill: '#4a5a78', stroke: '#101725', 'stroke-width': 1.6 });
+  var vuist = maakEl('circle', { cx: 20, r: 5, fill: '#e8b48a', stroke: '#101725', 'stroke-width': 1.8 });
+  wapen.appendChild(loop); wapen.appendChild(greep); wapen.appendChild(vuist);
+  g.appendChild(wapen);
+  var avg = maakEl('g', { transform: 'scale(.33)' });
+  avg.innerHTML = window.AVATAR ? AVATAR.inhoud(naam, av || '') : '';
+  g.appendChild(avg);
+  var kruis = maakEl('path', { d: 'M-11-11 l22 22 M11-11 l-22 22', stroke: '#c0442c', 'stroke-width': 3.5, 'stroke-linecap': 'round', display: 'none' });
+  g.appendChild(kruis);
+  g.__delen = { ring: ring, vul: vul, wapen: wapen, loop: loop, greep: greep, vuist: vuist, kruis: kruis, av: avg };
   return g;
+}
+function zetSpeler(g, x, y, hoek, neer, kleur, wapenId){
+  var d = g.__delen;
+  zet(g, 'transform', 'translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ')');
+  zet(g, 'opacity', neer ? '0.5' : '1');
+  zet(d.ring, 'stroke', kleur);
+  zet(d.vul, 'fill', kleur);
+  zet(d.kruis, 'display', neer ? 'inline' : 'none');
+  if (neer){ zet(d.wapen, 'display', 'none'); return; }
+  zet(d.wapen, 'display', 'inline');
+  zet(d.wapen, 'transform', 'rotate(' + (hoek * 180 / Math.PI).toFixed(1) + ')');
+  var metWapen = wapenId && wapenId !== 'vuist';
+  zet(d.loop, 'display', metWapen ? 'inline' : 'none');
+  zet(d.greep, 'display', metWapen ? 'inline' : 'none');
+  zet(d.vuist, 'display', metWapen ? 'none' : 'inline');
 }
 
 /* ---------- korte effectjes ----------
@@ -714,8 +824,8 @@ function tekenSpeler(naam, av, x, y, hoek, neer, kleur, naamErbij, wapen){
    bandbreedte en het ziet er hetzelfde uit. */
 var effecten = [], vorigeHp = {}, vorigMijnHp = null, schudTot = 0, pijnTot = 0;
 function effect(soort, x, y, extra){
-  effecten.push({ soort: soort, x: x, y: y, t: 0, duur: extra && extra.duur || 0.4, tekst: extra && extra.tekst, hoek: extra && extra.hoek || 0 });
-  if (effecten.length > 90) effecten.splice(0, effecten.length - 90);
+  effecten.push({ soort: soort, x: x, y: y, t: 0, duur: (extra && extra.duur) || 0.4, tekst: extra && extra.tekst, hoek: (extra && extra.hoek) || 0 });
+  if (effecten.length > 70) effecten.splice(0, effecten.length - 70);
 }
 function effectenStap(dt){
   for (var i = effecten.length - 1; i >= 0; i--){
@@ -723,24 +833,39 @@ function effectenStap(dt){
     if (effecten[i].t >= effecten[i].duur) effecten.splice(i, 1);
   }
 }
-function effectenHtml(){
-  var h = '';
+function effectenTeken(){
   effecten.forEach(function(e){
-    var deel = e.t / e.duur;
-    if (e.soort === 'stof'){
-      h += '<circle cx="' + e.x + '" cy="' + e.y + '" r="' + (4 + deel * 13).toFixed(1) + '" fill="none" stroke="rgba(255,236,190,' + (0.85 * (1 - deel)).toFixed(2) + ')" stroke-width="' + (3 * (1 - deel) + 1).toFixed(1) + '"/>';
+    var deel = e.t / e.duur, el;
+    if (e.soort === 'schade'){
+      el = poel.pak('eftekst', 'effect', function(){
+        return maakEl('text', { 'text-anchor': 'middle', 'font-size': 15, 'font-weight': 700, fill: '#ffd166',
+          'font-family': 'Poppins,sans-serif', 'paint-order': 'stroke', stroke: 'rgba(10,16,32,.8)', 'stroke-width': 3.5 });
+      });
+      zet(el, 'x', e.x.toFixed(1)); zet(el, 'y', (e.y - deel * 26).toFixed(1));
+      zet(el, 'opacity', (1 - deel).toFixed(2));
+      if (el.textContent !== String(e.tekst)) el.textContent = e.tekst;
     } else if (e.soort === 'flits'){
-      h += '<g transform="translate(' + e.x + ' ' + e.y + ') rotate(' + (e.hoek * 180 / Math.PI).toFixed(1) + ')" opacity="' + (1 - deel).toFixed(2) + '">' +
-        '<path d="M0 0 l18-7 l-3 7 l3 7z" fill="#ffd166"/></g>';
-    } else if (e.soort === 'schade'){
-      h += '<text x="' + e.x + '" y="' + (e.y - deel * 26).toFixed(1) + '" text-anchor="middle" font-size="15" font-weight="700" ' +
-        'fill="#ffd166" opacity="' + (1 - deel).toFixed(2) + '" font-family="Poppins,sans-serif" paint-order="stroke" stroke="rgba(10,16,32,.8)" stroke-width="3.5">' + e.tekst + '</text>';
-    } else if (e.soort === 'weg'){
-      h += '<circle cx="' + e.x + '" cy="' + e.y + '" r="' + (6 + deel * 22).toFixed(1) + '" fill="none" stroke="rgba(160,200,140,' + (0.7 * (1 - deel)).toFixed(2) + ')" stroke-width="' + (4 * (1 - deel) + 1).toFixed(1) + '"/>';
+      el = poel.pak('efflits', 'effect', function(){ return maakEl('path', { d: 'M0 0 l18-7 l-3 7 l3 7z', fill: '#ffd166' }); });
+      zet(el, 'transform', 'translate(' + e.x.toFixed(1) + ' ' + e.y.toFixed(1) + ') rotate(' + (e.hoek * 180 / Math.PI).toFixed(1) + ')');
+      zet(el, 'opacity', (1 - deel).toFixed(2));
+    } else {
+      el = poel.pak('efring', 'effect', function(){ return maakEl('circle', { fill: 'none' }); });
+      var groot = e.soort === 'weg';
+      zet(el, 'cx', e.x.toFixed(1)); zet(el, 'cy', e.y.toFixed(1));
+      zet(el, 'r', ((groot ? 6 : 4) + deel * (groot ? 22 : 13)).toFixed(1));
+      zet(el, 'stroke', groot ? 'rgba(160,200,140,' + (0.7 * (1 - deel)).toFixed(2) + ')' : 'rgba(255,236,190,' + (0.85 * (1 - deel)).toFixed(2) + ')');
+      zet(el, 'stroke-width', ((groot ? 4 : 3) * (1 - deel) + 1).toFixed(1));
     }
   });
-  return h;
+  poel.af('eftekst'); poel.af('efflits'); poel.af('efring');
 }
+
+/* De maat van het speelveld, onthouden tot het venster verandert. Elk beeld
+   opvragen kost een volledige herberekening van de opmaak, en dat is precies
+   wat je niet wilt in een lus die zestig keer per seconde draait. */
+var veldRect = null;
+function veldMaat(){ if (!veldRect) veldRect = veld.getBoundingClientRect(); return veldRect; }
+addEventListener('resize', function(){ veldRect = null; });
 
 function teken(dt){
   var d = standNu();
@@ -748,39 +873,54 @@ function teken(dt){
   effectenStap(dt || 0.016);
   var mx = d.m[0], my = d.m[1];
 
-  /* de camera volgt je, maar blijft binnen de wereld */
-  var r = veld.getBoundingClientRect();
+  /* De camera volgt je, maar blijft binnen de wereld.
+     De maat van het veld vragen we niet elk beeld op: getBoundingClientRect
+     dwingt de browser om de hele opmaak opnieuw uit te rekenen voordat hij
+     antwoord geeft. Hij verandert alleen als het venster verandert. */
+  var r = veldMaat();
   var vb = M.KIJK.b, vh = vb * r.height / r.width;
   if (vh > M.KIJK.h * 1.6){ vh = M.KIJK.h * 1.6; vb = vh * r.width / r.height; }
   var cx = Math.max(vb / 2, Math.min(co.wereld.b - vb / 2, mx));
   var cy = Math.max(vh / 2, Math.min(co.wereld.h - vh / 2, my));
   var nu = performance.now();
   if (nu < schudTot){ cx += (Math.random() - 0.5) * 7; cy += (Math.random() - 0.5) * 7; }
-  veld.setAttribute('viewBox', (cx - vb / 2).toFixed(1) + ' ' + (cy - vh / 2).toFixed(1) + ' ' + vb.toFixed(1) + ' ' + vh.toFixed(1));
-
-  var h = '';
+  zet(veld, 'viewBox', (cx - vb / 2).toFixed(1) + ' ' + (cy - vh / 2).toFixed(1) + ' ' + vb.toFixed(1) + ' ' + vh.toFixed(1));
+  /* het decor volgt de camera, maar alleen als je een flink stuk verder bent */
+  tekenDecor({ x: cx, y: cy });
 
   /* buit op de grond, met een tekentje per soort */
   d.b.forEach(function(b){
-    h += '<use href="#bt-' + b[3] + '" x="0" y="0" transform="translate(' + b[1] + ' ' + b[2] + ')"/>';
+    var el = poel.pak('buit', 'lBuit', function(){ return maakEl('use'); });
+    zet(el, 'href', '#bt-' + b[3]);
+    zet(el, 'transform', 'translate(' + b[1] + ' ' + b[2] + ')');
   });
+  poel.af('buit');
 
   /* kisten; die binnen handbereik ligt krijgt een ring */
   var kistBij = null;
   bekend.ki.forEach(function(k){
     var af = Math.hypot(k[1] - mx, k[2] - my);
-    if (!k[3] && af < M.SPELER.rapen + 8 && (!kistBij || af < kistBij.af)) kistBij = { af: af, nr: k[0] };
-    if (!k[3] && af < M.SPELER.rapen + 8){
-      h += '<circle cx="' + k[1] + '" cy="' + k[2] + '" r="30" fill="none" stroke="#ffd166" stroke-width="3" stroke-dasharray="6 6"/>';
+    var bij = !k[3] && af < M.SPELER.rapen + 8;
+    if (bij && (!kistBij || af < kistBij.af)) kistBij = { af: af, nr: k[0] };
+    if (bij){
+      var ring = poel.pak('kistring', 'lKist', function(){
+        return maakEl('circle', { r: 30, fill: 'none', stroke: '#ffd166', 'stroke-width': 3, 'stroke-dasharray': '6 6' });
+      });
+      zet(ring, 'cx', k[1]); zet(ring, 'cy', k[2]);
     }
-    h += '<use href="#' + (k[3] ? 'kist-open' : 'kist-dicht') + '" transform="translate(' + k[1] + ' ' + k[2] + ')"/>';
+    var el = poel.pak('kist', 'lKist', function(){ return maakEl('use'); });
+    zet(el, 'href', k[3] ? '#kist-open' : '#kist-dicht');
+    zet(el, 'transform', 'translate(' + k[1] + ' ' + k[2] + ')');
   });
+  poel.af('kistring'); poel.af('kist');
   window.__kistBij = kistBij;
 
   /* zombies: een vorm uit de defs, en een balkje als ze geraakt zijn */
   d.z.forEach(function(z){
     var soort = ZSOORT[z[4]] || ZSOORT[0];
-    h += '<use href="#z' + (z[4] | 0) + '" transform="translate(' + z[1] + ' ' + z[2] + ') rotate(' + (z[3] * 180 / Math.PI).toFixed(1) + ')"/>';
+    var el = poel.pak('zombie', 'lZombie', function(){ return maakEl('use'); });
+    zet(el, 'href', '#z' + (z[4] | 0));
+    zet(el, 'transform', 'translate(' + z[1] + ' ' + z[2] + ') rotate(' + (z[3] * 180 / Math.PI).toFixed(0) + ')');
     var was = vorigeHp[z[0]];
     if (was !== undefined && z[5] < was){
       effect('stof', z[1], z[2]);
@@ -788,36 +928,51 @@ function teken(dt){
     }
     vorigeHp[z[0]] = z[5];
     if (z[5] < soort.hp){
-      var deel = Math.max(0, z[5] / soort.hp);
-      h += '<rect x="' + (z[1] - 15) + '" y="' + (z[2] - soort.r - 12) + '" width="30" height="5" rx="2.5" fill="rgba(10,16,32,.6)"/>' +
-        '<rect x="' + (z[1] - 14) + '" y="' + (z[2] - soort.r - 11) + '" width="' + (28 * deel).toFixed(1) + '" height="3" rx="1.5" fill="#d8544a"/>';
+      var bak = poel.pak('balkbak', 'lBalk', function(){ return maakEl('rect', { width: 30, height: 5, rx: 2.5, fill: 'rgba(10,16,32,.6)' }); });
+      zet(bak, 'x', (z[1] - 15).toFixed(0)); zet(bak, 'y', (z[2] - soort.r - 12).toFixed(0));
+      var bal = poel.pak('balk', 'lBalk', function(){ return maakEl('rect', { height: 3, rx: 1.5, fill: '#d8544a' }); });
+      zet(bal, 'x', (z[1] - 14).toFixed(0)); zet(bal, 'y', (z[2] - soort.r - 11).toFixed(0));
+      zet(bal, 'width', (28 * Math.max(0, z[5] / soort.hp)).toFixed(1));
     }
   });
-  /* zombies die weg zijn: een wolkje op hun laatste plek */
+  poel.af('zombie'); poel.af('balkbak'); poel.af('balk');
   var nogDaar = {};
   d.z.forEach(function(z){ nogDaar[z[0]] = 1; });
   Object.keys(vorigeHp).forEach(function(nr){ if (!nogDaar[nr]) delete vorigeHp[nr]; });
 
-  /* andere spelers */
+  /* andere spelers: per speler een poppetje dat blijft staan */
   d.s.forEach(function(q){
     if (!q[8]) return;
     var naam = bekend.namen[q[0]] || 'speler';
-    h += tekenSpeler(naam, bekend.av[q[0]] || '', q[1], q[2], q[3], !!q[5], q[6] ? '#EA9836' : '#d8544a', naam, null);
+    var g = poel.pak('ander', 'lAnder', function(){ return maakSpeler(naam, bekend.av[q[0]] || ''); });
+    zetSpeler(g, q[1], q[2], q[3], !!q[5], q[6] ? '#EA9836' : '#d8544a', null);
+    var t = poel.pak('anderNaam', 'lAnder', function(){
+      return maakEl('text', { 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 700, fill: '#F3EFE9',
+        'font-family': 'Poppins,sans-serif', 'paint-order': 'stroke', stroke: 'rgba(10,16,32,.75)', 'stroke-width': 4 });
+    });
+    zet(t, 'x', q[1]); zet(t, 'y', (q[2] - 28).toFixed(0));
+    if (t.textContent !== naam) t.textContent = naam;
   });
+  poel.af('ander'); poel.af('anderNaam');
 
   /* ikzelf, altijd bovenop en in het groen */
-  h += tekenSpeler(mijnNaam, mijnAv, mx, my, d.m[2], !!d.m[5], '#5fbf88', null, d.m[7]);
+  var ik = poel.pak('ik', 'lIk', function(){ return maakSpeler(mijnNaam, mijnAv); });
+  zetSpeler(ik, mx, my, d.m[2], !!d.m[5], '#5fbf88', d.m[7]);
+  poel.af('ik');
 
   /* kogels */
   d.k.forEach(function(k){
-    h += '<line x1="' + k[0] + '" y1="' + k[1] + '" x2="' + (k[0] - Math.cos(k[2]) * 15).toFixed(1) + '" y2="' + (k[1] - Math.sin(k[2]) * 15).toFixed(1) + '" stroke="#ffd166" stroke-width="3.5" stroke-linecap="round"/>';
+    var el = poel.pak('kogel', 'lKogel', function(){
+      return maakEl('line', { stroke: '#ffd166', 'stroke-width': 3.5, 'stroke-linecap': 'round' });
+    });
+    zet(el, 'x1', k[0]); zet(el, 'y1', k[1]);
+    zet(el, 'x2', (k[0] - Math.cos(k[2]) * 15).toFixed(0));
+    zet(el, 'y2', (k[1] - Math.sin(k[2]) * 15).toFixed(0));
   });
+  poel.af('kogel');
 
-  /* pijlen langs de rand naar wat je moet weten maar niet ziet */
-  h += randPijlen(d, cx, cy, vb, vh);
-
-  levendLaag.innerHTML = h;
-  effectLaag.innerHTML = effectenHtml();
+  randPijlen(d, cx, cy, vb, vh);
+  effectenTeken();
 
   /* geraakt worden voel je: het scherm schudt en er komt een rode rand */
   var mijnHp = d.m[3];
@@ -827,7 +982,8 @@ function teken(dt){
     effect('schade', mx, my - 26, { tekst: '-' + (vorigMijnHp - mijnHp), duur: 0.8 });
   }
   vorigMijnHp = mijnHp;
-  $('pijn').style.opacity = nu < pijnTot ? Math.min(0.75, (pijnTot - nu) / 500).toFixed(2) : 0;
+  var pijnNu = nu < pijnTot ? Math.min(0.75, (pijnTot - nu) / 500).toFixed(2) : '0';
+  if ($('pijn').style.opacity !== pijnNu) $('pijn').style.opacity = pijnNu;
 
   hud(d);
   miniLos(d);
@@ -837,8 +993,7 @@ function teken(dt){
    iedereen die ergens staat te extraheren. Een pijl langs de rand wijst
    erheen, met hoe ver het nog is. */
 function randPijlen(d, cx, cy, vb, vh){
-  var h = '', doelen = [];
-  var dichtst = null;
+  var doelen = [], dichtst = null;
   bekend.ex.forEach(function(e){
     var af = Math.hypot(e[1] - d.m[0], e[2] - d.m[1]);
     if (!dichtst || af < dichtst.af) dichtst = { x: e[1], y: e[2], af: af, kleur: '#EA9836', tekst: Math.round(af / 10) + 'm' };
@@ -846,19 +1001,31 @@ function randPijlen(d, cx, cy, vb, vh){
   });
   if (dichtst) doelen.push(dichtst);
   doelen.forEach(function(t){
-    var binnen = Math.abs(t.x - cx) < vb / 2 - 50 && Math.abs(t.y - cy) < vh / 2 - 50;
-    if (binnen) return;
+    if (Math.abs(t.x - cx) < vb / 2 - 50 && Math.abs(t.y - cy) < vh / 2 - 50) return;
     var hk = Math.atan2(t.y - cy, t.x - cx);
     var rx = vb / 2 - 46, ry = vh / 2 - 46;
     var sc = Math.min(rx / Math.max(1e-6, Math.abs(Math.cos(hk))), ry / Math.max(1e-6, Math.abs(Math.sin(hk))));
     var px = cx + Math.cos(hk) * sc, py = cy + Math.sin(hk) * sc;
-    h += '<g transform="translate(' + px.toFixed(1) + ' ' + py.toFixed(1) + ')">' +
-      '<circle r="19" fill="rgba(10,16,32,.72)" stroke="' + t.kleur + '" stroke-width="2.5"/>' +
-      '<g transform="rotate(' + (hk * 180 / Math.PI).toFixed(1) + ')"><path d="M-5-7 l9 7 l-9 7z" fill="' + t.kleur + '"/></g>' +
-      '<text y="33" text-anchor="middle" font-size="12" font-weight="700" fill="' + t.kleur + '" font-family="Poppins,sans-serif" ' +
-      'paint-order="stroke" stroke="rgba(10,16,32,.8)" stroke-width="3.5">' + t.tekst + '</text></g>';
+    var g = poel.pak('pijl', 'lPijl', function(){
+      var el = maakEl('g');
+      var kring = maakEl('circle', { r: 19, fill: 'rgba(10,16,32,.72)', 'stroke-width': 2.5 });
+      var punt = maakEl('g');
+      punt.appendChild(maakEl('path', { d: 'M-5-7 l9 7 l-9 7z' }));
+      var tekst = maakEl('text', { y: 33, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 700,
+        'font-family': 'Poppins,sans-serif', 'paint-order': 'stroke', stroke: 'rgba(10,16,32,.8)', 'stroke-width': 3.5 });
+      el.appendChild(kring); el.appendChild(punt); el.appendChild(tekst);
+      el.__delen = { kring: kring, punt: punt, pad: punt.firstChild, tekst: tekst };
+      return el;
+    });
+    var dl = g.__delen;
+    zet(g, 'transform', 'translate(' + px.toFixed(0) + ' ' + py.toFixed(0) + ')');
+    zet(dl.kring, 'stroke', t.kleur);
+    zet(dl.pad, 'fill', t.kleur);
+    zet(dl.punt, 'transform', 'rotate(' + (hk * 180 / Math.PI).toFixed(0) + ')');
+    zet(dl.tekst, 'fill', t.kleur);
+    if (dl.tekst.textContent !== t.tekst) dl.tekst.textContent = t.tekst;
   });
-  return h;
+  poel.af('pijl');
 }
 
 function hud(d){
