@@ -191,6 +191,9 @@ var BANK = (function(){
   return { zorg: zorg, vakken: ALLE, heeft: function(v){ return !!klaar[v]; } };
 })();
 
+/* De soorten sommen per niveau. Deze lijst geldt als je niets kiest; koos je
+   zelf onderdelen, dan tellen die en zegt het niveau alleen nog iets over de
+   getallen. */
 function rekenVraag(rang, toegestaan) {
   const r = rang || 2;
   const potten = {
@@ -199,8 +202,12 @@ function rekenVraag(rang, toegestaan) {
     3: ['tafels','hoofd','breuk','procent','verhouding','tijdgeld','meten','komma','gemiddelde','machten','negatief'],
     4: ['hoofd','breuk','procent','verhouding','verhouding','meten','machten','machten','negatief','gemiddelde']
   };
-  const mag = toegestaan && toegestaan.length ? potten[r].filter(s => toegestaan.includes(s)) : potten[r];
-  const soort = kies(mag.length ? mag : (toegestaan && toegestaan.length ? toegestaan : potten[r]));
+  /* Heb je zelf onderdelen aangewezen, dan zijn dat ze, en bepaalt het niveau
+     alleen nog hoe zwaar de som binnen dat onderdeel wordt. Eerst kijken wat
+     er bij dit niveau hoort en daarna pas naar jouw keuze werkte averechts:
+     tafels staan niet in de lijst van vwo, dus wie tafels en breuken koos en
+     een stap omhoog ging hield alleen nog breuken over. */
+  const soort = toegestaan && toegestaan.length ? kies(toegestaan) : kies(potten[r]);
   if (soort === 'tafels') {
     /* Welke tafels je krijgt hangt af van het niveau. De foute antwoorden zijn
        geen willekeurige getallen maar de fouten die leerlingen echt maken: een

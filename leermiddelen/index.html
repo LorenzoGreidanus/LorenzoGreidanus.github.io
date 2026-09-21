@@ -364,6 +364,16 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
 .klasstrip button{border:none;border-radius:12px;padding:8px 14px;min-height:44px;background:var(--ocean,#204ECF);
   color:#fff;font:inherit;font-weight:600;cursor:pointer}
 .klasstrip p.status{font-size:.84rem;color:var(--muted);margin-top:8px}
+/* de regel eronder: speel je als gast of ben je ingelogd */
+.klasstrip .wierij{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-top:10px;
+  padding-top:10px;border-top:1px solid var(--rand2,rgba(20,34,76,.12))}
+.klasstrip .wierij p{font-size:.84rem;color:var(--muted);margin:0;flex:1 1 15rem;min-width:0}
+.klasstrip .wierij p b{color:var(--ink);font-weight:600}
+.klasstrip a.msknop{display:inline-flex;align-items:center;gap:8px;border-radius:12px;padding:8px 14px;
+  min-height:44px;box-sizing:border-box;background:var(--kaart,#fff);color:var(--ink);text-decoration:none;
+  border:1.5px solid var(--rand2,rgba(20,34,76,.16));font-size:.86rem;font-weight:600;white-space:nowrap}
+.klasstrip a.msknop:hover{border-color:var(--ocean,#204ECF)}
+.klasstrip a.msknop svg{width:16px;height:16px;flex:none}
 /* Op een telefoon stond er anderhalf scherm instelwerk voor het eerste spel.
    De drie docentenlinks worden er een; klascode en gezichtje zitten in de
    lade onder je eigen gezichtje in de kopbalk. */
@@ -1299,6 +1309,26 @@ var SPELLEN = [
   var doel = document.getElementById('klasUit'); if (!doel || !window.KLAS) return;
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
   var ingelogd = false, gekeken = false, opdrachtGezien = null;
+  /* wat de server over je account zegt: kan inloggen hier, en ben je het */
+  var acc = null;
+  var MSRUIT = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="0" y="0" width="7.5" height="7.5" fill="#F25022"/>' +
+    '<rect x="8.5" y="0" width="7.5" height="7.5" fill="#7FBA00"/><rect x="0" y="8.5" width="7.5" height="7.5" fill="#00A4EF"/>' +
+    '<rect x="8.5" y="8.5" width="7.5" height="7.5" fill="#FFB900"/></svg>';
+  /* De regel die zegt wie je bent. Staat onder de klascode, want dat is waar
+     je toch al aan het instellen bent, en het gaat over hetzelfde: waar blijft
+     wat ik doe. */
+  function wieRij(){
+    if (ingelogd){
+      return '<div class="wierij"><p>Je bent ingelogd met Microsoft' +
+        (acc && acc.naam ? ' als <b>' + schoon(acc.naam) + '</b>' : '') +
+        '. Je voortgang reist mee naar elke computer waar je inlogt.</p></div>';
+    }
+    var kan = !!(acc && acc.mogelijk) && window.PROFIEL && PROFIEL.inlogAdres;
+    return '<div class="wierij"><p>Je speelt als <b>gast</b>. Je munten, je reeks, je beste scores en je foutenmap ' +
+      'blijven in deze browser staan en gaan niet mee naar een andere computer.</p>' +
+      (kan ? '<a class="msknop" href="' + PROFIEL.inlogAdres() + '">' + MSRUIT + 'Inloggen met Microsoft</a>' : '') +
+      '</div>';
+  }
   var OP_SPEL = { race:['Vragenrace', 'race.html'], toren:['Torenverdediging', 'toren.html'], zwaard:['Zwaardvechter', 'zwaard.html'] };
   var OP_VAK = { reken:'rekenen', ned:'Nederlands', eng:'Engels', ges:'geschiedenis', aard:'aardrijkskunde', bio:'biologie', wis:'wiskunde', burg:'samenleving', eco:'economie' };
   function deelNaam(vak, id){ var l = window.ONDERDELEN && ONDERDELEN[vak], o = l && l.filter(function(x){ return x.id === id; })[0]; return o ? o.naam : id; }
@@ -1387,7 +1417,8 @@ var SPELLEN = [
   function koppelVorm(waar, kop){
     waar.innerHTML = (kop || '') +
       '<div class="invulrij"><input id="klasCode" maxlength="4" placeholder="CODE" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Klascode"><input id="klasNaam" class="naam" maxlength="16" placeholder="Je bijnaam" autocomplete="nickname" aria-label="Je bijnaam"><button type="button" id="klasKoppel">Koppelen</button></div>' +
-      '<p class="status" id="klasStatus">Alleen als je docent je een code gaf. Zonder code speel je gewoon en wordt er niets opgeslagen.</p>';
+      '<p class="status" id="klasStatus">Alleen als je docent je een code gaf. Zonder code speel je gewoon en wordt er niets opgeslagen.</p>' +
+      wieRij();
     waar.querySelector('#klasKoppel').addEventListener('click', function(){
       var code = waar.querySelector('#klasCode').value.toUpperCase().replace(/[^A-Z]/g, ''), naam = waar.querySelector('#klasNaam').value.trim(), st = waar.querySelector('#klasStatus');
       if (code.length !== 4){ st.textContent = 'Een klascode heeft vier letters.'; return; }
@@ -1402,7 +1433,9 @@ var SPELLEN = [
   teken();
   if (window.PROFIEL){
     PROFIEL.op(teken);
-    PROFIEL.account().then(function(a){ ingelogd = !!(a && a.ingelogd); if (ingelogd) teken(); });
+    /* Ook als je niet bent ingelogd opnieuw tekenen: dan weten we pas of
+       inloggen hier überhaupt kan, en dus of de knop erbij hoort. */
+    PROFIEL.account().then(function(a){ acc = a || null; ingelogd = !!(a && a.ingelogd); teken(); });
   }
 })();
 </script>

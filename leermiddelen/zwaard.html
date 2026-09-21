@@ -112,29 +112,43 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 :root[data-theme="dark"] .baasbalk{background:var(--kaart);border-color:rgba(243,239,233,.14)}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .baasbalk{background:var(--kaart);border-color:rgba(243,239,233,.14)}}
 
-/* de ontwijkknop: voor wie op een aanraakscherm speelt, en als teller voor de rest */
-.dashknop{border:none;background:var(--ocean);color:#fff;font-weight:600;border-radius:14px;padding:7px 14px;
-  min-width:118px;font-size:.82rem;line-height:1.2;box-shadow:0 3px 10px rgba(20,34,76,.12);white-space:nowrap}
+/* de ontwijkknop: voor wie op een aanraakscherm speelt, en als teller voor de rest.
+
+   De hoogte staat vast en de ondertitel blijft op een regel. Anders gebeurt
+   dit: je wisselt van zwaard naar boog, "van ver, minder hard" is langer dan
+   "dichtbij, hard", de tekst valt op een tweede regel, de balk wordt hoger en
+   de arena eronder krimpt. Midden in een gevecht. */
+.dashknop{border:none;background:var(--ocean);color:#fff;font-weight:600;border-radius:14px;padding:0 14px;
+  min-width:118px;font-size:.82rem;line-height:1.2;box-shadow:0 3px 10px rgba(20,34,76,.12);white-space:nowrap;
+  height:46px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;overflow:hidden}
 .dashknop:disabled{background:#fff;color:var(--muted);border:1px solid rgba(20,34,76,.09);box-shadow:none;cursor:default}
-.dashknop small{display:block;font-size:.7rem;font-weight:500;opacity:.85}
+.dashknop small{display:block;font-size:.7rem;font-weight:500;opacity:.85;max-width:100%;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* smal scherm: de meters op een eigen regel, de knoppen eronder naast elkaar */
 @media(max-width:700px){
-  .hudrij{flex-wrap:wrap}
+  .hudrij{flex-wrap:wrap;gap:6px}
   .hud{flex:1 1 100%}
-  .dashknop{flex:1 1 0;min-width:0;padding:10px 8px;white-space:normal}
+  .dashknop{flex:1 1 0;min-width:0;padding:0 8px;height:42px}
 }
 /* Op een telefoon vulden de meters het halve scherm en bleef er voor de arena
    een strookje over. Ze mogen klein: het getal en de naam naast elkaar op een
    regel. Alleen het leven houdt zijn balk, want daar gaat het om. */
 @media(max-width:620px){
   .hud{gap:5px}
-  .meter{display:flex;align-items:baseline;gap:6px;min-width:0;padding:5px 9px;border-radius:11px}
+  .meter{display:flex;align-items:baseline;gap:6px;min-width:0;padding:4px 8px;border-radius:11px}
   .meter i{font-size:.6rem}
-  .meter b{font-size:.98rem}
-  .meter.leven{display:block;flex:1 1 100%;min-width:0;padding:6px 11px}
-  .meter.leven b{font-size:1.05rem}
-  .dashknop{padding:9px 6px;font-size:.78rem}
-  .dashknop small{font-size:.7rem}
+  .meter b{font-size:.94rem}
+  /* Het leven hield een hele regel voor zich. Het mag naast de rest staan; de
+     balk eronder blijft, want daar gaat het om, maar hij hoeft niet breed. */
+  .meter.leven{display:block;flex:1 1 128px;min-width:0;padding:4px 9px}
+  .meter.leven b{font-size:1rem}
+  .levenbalk{height:7px;margin-top:2px}
+  .dashknop{font-size:.78rem;height:40px}
+  .dashknop small{font-size:.68rem}
+  /* de balk van de baas is een balk; de woorden erboven hoeven niet mee */
+  .baasbalk{padding:4px 10px;gap:8px}
+  .baasbalk b{font-size:.64rem}
+  .baasbalk i{height:10px}
 }
 .meter{background:#fff;border:1px solid rgba(20,34,76,.09);border-radius:14px;padding:7px 13px;min-width:88px}
 .meter i{display:block;font-style:normal;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
@@ -163,11 +177,14 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
    verhouding van de arena: het scherm beweegt daar toch mee, dus het venster
    mag vierkanter staan en zoveel hoogte pakken als er is. */
 @media(max-width:700px){
-  .arenavak{aspect-ratio:auto;width:100%;height:clamp(240px,46vh,420px)}
+  /* Alles boven en onder het veld nam meer dan de helft van de telefoon in
+     beslag. Nu de knoppen en de meters smaller zijn, mag de arena die ruimte
+     hebben: daar gebeurt het. */
+  .arenavak{aspect-ratio:auto;width:100%;height:clamp(280px,58vh,520px)}
   /* tijdens het vechten telt elke pixel: het colofon hoeft er niet te staan,
      en de regel onder de arena blijft op twee regels */
   #scherm-spel:not(.hide) ~ footer{display:none}
-  .arenatip{max-height:calc(2 * 1.4em + 16px);overflow-y:auto}
+  .arenatip{max-height:calc(2 * 1.4em + 12px);overflow-y:auto;padding:5px 11px;font-size:.8rem}
 }
 /* vaste hoogte van twee regels: een langere tekst (een baas, de uitleg) scrolt, en de arena verspringt niet */
 .arenatip{font-size:.86rem;line-height:1.4;color:var(--muted);background:#fff;border:1px solid rgba(20,34,76,.09);border-radius:12px;padding:8px 13px;height:calc(2 * 1.4em + 18px);overflow-y:auto;box-sizing:border-box}
@@ -721,16 +738,25 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   function nieuweVraag(){
     var r = vraagRang(), gekozen2 = keuze[vak] || [];
     if (vak === 'reken') return rekenVraag(r, gekozen2);
-    var bron = BRONNEN[vak], nivo = NIVOS[vak];
+    /* Zijn de vragen er niet, dan blijft de stapel leeg en valt hij verderop
+       terug op een rekenvraag. Nooit omvallen: dit draait ook tijdens het
+       verwerken van de stand uit een kamer, en daar neemt een fout het hele
+       spel mee. */
+    var bron = BRONNEN[vak] || [], nivo = NIVOS[vak] || [];
     if (!pot || !pot.length){
       var magTag = function(i){ return !gekozen2.length || gekozen2.indexOf(bron[i].t) >= 0; };
       var ondergrens = r >= 4 ? r - 2 : r - 1;
-      var ids = bron.map(function(q, i){ return i; }).filter(function(i){ return magTag(i) && (nivo[i] || 2) <= r && (nivo[i] || 2) >= ondergrens; });
-      if (ids.length < 14) ids = bron.map(function(q, i){ return i; }).filter(function(i){ return magTag(i) && (nivo[i] || 2) <= r; });
-      if (ids.length < 14) ids = bron.map(function(q, i){ return i; }).filter(magTag);
+      var alles = bron.map(function(q, i){ return i; }).filter(magTag);
+      var ids = alles.filter(function(i){ return (nivo[i] || 2) <= r && (nivo[i] || 2) >= ondergrens; });
+      if (ids.length < 14) ids = alles.filter(function(i){ return (nivo[i] || 2) <= r; });
+      /* Ruimer dan dit wordt het niet: buiten de gekozen onderdelen kijken we
+         nooit, ook niet als er te weinig vragen overblijven. Het niveau mag
+         meegroeien binnen wat je koos, niet erbuiten. */
+      if (ids.length < 14) ids = alles;
       pot = ids.sort(function(){ return Math.random() - 0.5; });
     }
     var q = bron[pot.pop()];
+    if (!q) return rekenVraag(r, []);
     if (vak === 'ges'){
       var tv = TIJDVAKKEN.filter(function(t){ return t.id === q.t; })[0] || { naam:'' };
       return shuffleVraag({ v:q.v, o:q.o, g:q.g, u:q.u, t:'tijdvak ' + tv.naam.replace(/^\d+ /, '') });
@@ -1120,11 +1146,16 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   var vak2 = document.getElementById('arenavak');
   /* ---------- het meebewegende venster ----------
      Onder de zevenhonderd pixels breed laten we niet de hele arena zien maar
-     een venster van ongeveer zeshonderd arena-eenheden breed, dat de speler
-     volgt. Het venster heeft precies de verhouding van het vak, zodat er geen
-     rand overblijft, en het blijft binnen de arena: bij de muur schuift het
-     niet verder. Het volgt zacht, anders schokt het beeld bij elke stap. */
-  var KIJK_GRENS = 700, KIJK_BREED = 470;
+     een venster dat de speler volgt. Het venster heeft precies de verhouding
+     van het vak, zodat er geen rand overblijft, en het blijft binnen de arena:
+     bij de muur schuift het niet verder. Het volgt zacht, anders schokt het
+     beeld bij elke stap.
+
+     Het was 470 van de 1100 breed. Dat staat zo dicht op je dat een fout pas
+     in beeld komt als hij er al bijna is, en dat speelt oneerlijk: je kunt
+     niet zien wat je moet ontwijken. 620 laat bijna de helft meer zien en de
+     figuren blijven groot genoeg om ze uit elkaar te houden. */
+  var KIJK_GRENS = 700, KIJK_BREED = 620;
   var kijk = { x:0, y:0, b:ARENA.b, h:ARENA.h, aan:false };
   function kijkVenster(r){
     /* welk stuk arena past er in dit vak? */
@@ -2138,16 +2169,17 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   }
 
   /* ---------- knoppen ---------- */
+  /* De vragen van een vak komen pas binnen als iemand dat vak kiest. Elk pad
+     dat een potje begint moet hier langs: de startknop, en ook de kamer die
+     het spel van buitenaf start. Rekenen heeft geen bestand nodig. */
+  function metVragen(daarna, knop){
+    if (!vak || !window.BANK || BANK.heeft(vak)) return daarna();
+    if (knop) knop.disabled = true;
+    BANK.zorg(vak).then(function(){ if (knop) knop.disabled = false; daarna(); });
+  }
   document.getElementById('startBtn').addEventListener('click', function(){
     if (!vak) return;
-    /* de vragen van dit vak komen pas binnen als je het kiest */
-    if (window.BANK && !BANK.heeft(vak)){
-      var knop = this;
-      knop.disabled = true;
-      BANK.zorg(vak).then(function(){ knop.disabled = false; begin(); });
-      return;
-    }
-    begin();
+    metVragen(begin, this);
   });
   document.getElementById('nogBtn').addEventListener('click', function(){
     document.getElementById('scherm-einde').classList.add('hide'); document.getElementById('scherm-start').classList.remove('hide');
@@ -2196,7 +2228,10 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       lobby: { stijlen:STIJLEN, huidig:function(){ return stijl; }, kies:function(id){ if (STIJLEN.some(function(x){ return x.id === id; })){ stijl = id; try { localStorage.setItem('lg-zwaard-stijl', stijl); } catch (e){} tekenStijlen(); } } },
       start: function(info){
         if (info && info.duel){ co.aan = true; co.mij = typeof info.mij === 'number' && info.mij >= 0 ? info.mij : (info.rol === 'host' ? 0 : 1); co.spelers = info.spelers || null; co.maatNaam = info.maat || 'je maat'; }
-        if (!document.getElementById('scherm-start').classList.contains('hide') && vak) begin();
+        /* De vragen van dit vak staan er nog niet: dit pad komt niet langs de
+           startknop, die ze normaal ophaalt. Zonder deze regel is BRONNEN[vak]
+           leeg en valt het spel stil zodra de eerste ronde overleefd is. */
+        if (!document.getElementById('scherm-start').classList.contains('hide') && vak) metVragen(begin);
       },
       maatNaam: function(naam, av){
         if (naam) co.maatNaam = naam; if (av !== undefined) co.maatAv = av || '';

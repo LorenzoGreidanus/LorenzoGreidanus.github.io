@@ -1596,6 +1596,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
           var k = keuze[vak].indexOf(d);
           if (k >= 0) keuze[vak].splice(k, 1); else keuze[vak].push(d);
         }
+        /* de stapel is gevuld met de vorige keuze en moet dus weg */
+        pot = null;
         tekenDeelvakken();
       });
     });
@@ -1728,7 +1730,11 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   function nieuweVraag(){
     var r = vraagRang(), gekozen2 = keuze[vak] || [];
     if (vak === 'reken') return rekenVraag(r, gekozen2);
-    var bron = BRONNEN[vak], nivo = NIVOS[vak];
+    /* Zijn de vragen er niet, dan blijft de stapel leeg en valt hij verderop
+       terug op een rekenvraag. Nooit omvallen: dit draait ook tijdens het
+       verwerken van de stand uit een kamer, en daar neemt een fout het hele
+       spel mee. */
+    var bron = BRONNEN[vak] || [], nivo = NIVOS[vak] || [];
     if (!pot || !pot.length){
       var magTag = function(i){ return !gekozen2.length || gekozen2.indexOf(bron[i].t) >= 0; };
       /* Eerst vragen die precies bij het niveau passen. Blijft die stapel klein,
@@ -1736,12 +1742,17 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
          dezelfde. Op het hoogste niveau kijken we sowieso twee stappen terug,
          omdat er weinig vragen zijn die alleen voor vwo bedoeld zijn. */
       var ondergrens = r >= 4 ? r - 2 : r - 1;
-      var ids = bron.map(function(q, i){ return i; }).filter(function(i){ return magTag(i) && nivo[i] <= r && nivo[i] >= ondergrens; });
-      if (ids.length < 14) ids = bron.map(function(q, i){ return i; }).filter(function(i){ return magTag(i) && nivo[i] <= r; });
-      if (ids.length < 14) ids = bron.map(function(q, i){ return i; }).filter(magTag);
+      var alles = bron.map(function(q, i){ return i; }).filter(magTag);
+      var ids = alles.filter(function(i){ return nivo[i] <= r && nivo[i] >= ondergrens; });
+      if (ids.length < 14) ids = alles.filter(function(i){ return nivo[i] <= r; });
+      /* Ruimer dan dit wordt het niet: buiten de gekozen onderdelen kijken we
+         nooit, ook niet als er te weinig vragen overblijven. Het niveau mag
+         meegroeien binnen wat je koos, niet erbuiten. */
+      if (ids.length < 14) ids = alles;
       pot = ids.sort(function(){ return Math.random() - 0.5; });
     }
     var i2 = pot.pop(), q = bron[i2];
+    if (!q) return rekenVraag(r, []);
     if (vak === 'ges'){
       var tv = TIJDVAKKEN.filter(function(t){ return t.id === q.t; })[0] || { naam:'' };
       return shuffleVraag({ v:q.v, o:q.o, g:q.g, u:q.u, t:'tijdvak ' + tv.naam.replace(/^\d+ /, '') });
@@ -5589,16 +5600,17 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   }
 
   /* ---------- knoppen ---------- */
+  /* De vragen van een vak komen pas binnen als iemand dat vak kiest. Elk pad
+     dat een potje begint moet hier langs: de startknop, en ook de kamer die
+     het spel van buitenaf start. Rekenen heeft geen bestand nodig. */
+  function metVragen(daarna, knop){
+    if (!vak || !window.BANK || BANK.heeft(vak)) return daarna();
+    if (knop) knop.disabled = true;
+    BANK.zorg(vak).then(function(){ if (knop) knop.disabled = false; daarna(); });
+  }
   document.getElementById('startBtn').addEventListener('click', function(){
     if (!vak) return;
-    /* de vragen van dit vak komen pas binnen als je het kiest */
-    if (window.BANK && !BANK.heeft(vak)){
-      var knop = this;
-      knop.disabled = true;
-      BANK.zorg(vak).then(function(){ knop.disabled = false; begin(); });
-      return;
-    }
-    begin();
+    metVragen(begin, this);
   });
   /* De wachttijd tussen rondes overslaan. Wie dat aandurft krijgt de resterende
      seconden uitbetaald in munten, dus haasten loont. */
@@ -5940,7 +5952,9 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
           zendNet({ k:'kz', gz:gekozen(), th:thema.id, rang:rang(),
                     vb:{ tonkla:tonklaVrij, aap:aapVrij, eiland:eilandVrij, archipel:archipelVrij, vulkaan:vulkaanVrij } });
         }
-        if (!inSpel() && vak) begin();
+        /* De vragen van dit vak staan er nog niet: dit pad komt niet langs de
+           startknop, die ze normaal ophaalt. */
+        if (!inSpel() && vak) metVragen(begin);
       },
       maatNaam: function(naam){ if (naam) co.maat = naam; },
       /* de kamer bouwt het bord opnieuw: mijn keuze nog eens */

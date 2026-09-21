@@ -42,8 +42,13 @@ window.STRIJD = (function(){
     'padding:10px 18px;font:600 .9rem/1.2 Poppins,system-ui,sans-serif;box-shadow:0 10px 24px rgba(20,34,76,.25);opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;max-width:92vw;text-align:center}' +
     '#strijdToast.aan{opacity:1;transform:translate(-50%,0)}' +
     '#strijdToast.goed{background:#2f7d52}' +
-    '#strijdSluier{position:fixed;inset:0;z-index:89;background:rgba(20,34,76,.55);display:grid;place-items:center;padding:20px}' +
-    '#strijdSluier>div{background:#fff;color:#14224C;border-radius:22px;padding:26px 28px;text-align:center;max-width:440px;font-family:Poppins,system-ui,sans-serif}' +
+    '#strijdSluier{position:fixed;inset:0;z-index:89;background:rgba(20,34,76,.55);display:flex;padding:20px;' +
+      'overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}' +
+    /* margin:auto zet het blok in het midden als het past, en laat het gewoon
+       van boven beginnen als het niet past. Een grid dat centreert schuift het
+       dan over de bovenrand en daar kom je met geen scroll bij. */
+    '#strijdSluier>div{background:#fff;color:#14224C;border-radius:22px;padding:26px 28px;text-align:center;' +
+      'max-width:440px;width:100%;margin:auto;font-family:Poppins,system-ui,sans-serif}' +
     '#strijdSluier b{display:block;font-size:1.4rem;margin-bottom:6px}' +
     '#strijdSluier ul.lobby{list-style:none;margin:10px 0;padding:0;display:grid;gap:4px;text-align:left}' +
     '#strijdSluier ul.lobby li{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;background:#f4f7ff;border-radius:10px;padding:6px 10px;font-size:.9rem}' +
@@ -58,6 +63,12 @@ window.STRIJD = (function(){
     '#strijdSluier .code{display:block;font-size:2.6rem;letter-spacing:.25em;font-weight:700;color:#204ECF;margin:10px 0 4px;padding-left:.25em}' +
     '#strijdSluier .tel{font-size:3.4rem;font-weight:700;color:#F26749;line-height:1;margin:8px 0}' +
     '#strijdSluier button{margin-top:14px;border:1.5px solid rgba(20,34,76,.18);background:#fff;border-radius:999px;padding:8px 16px;font:600 .9rem Poppins,system-ui,sans-serif;color:#14224C;cursor:pointer}' +
+    /* Op een telefoon past de lobby maar net. Iets minder lucht en een kortere
+       uitleg onder elke stijl scheelt een half scherm scrollen. */
+    '@media(max-height:720px){#strijdSluier{padding:12px}#strijdSluier>div{padding:18px 20px}' +
+      '#strijdSluier b{font-size:1.2rem}#strijdSluier .code{font-size:2.1rem;margin:6px 0 2px}' +
+      '#strijdSluier .stijlen{gap:4px}#strijdSluier .stijlen button{padding:6px 10px}' +
+      '#strijdSluier .stijlen button small{display:none}}' +
     '.duelvak{max-width:560px;margin:18px auto 0;background:#fff;border:1px solid rgba(20,34,76,.08);border-radius:18px;padding:16px 18px;text-align:left;font-family:Poppins,system-ui,sans-serif}' +
     '.duelvak h3{margin:0 0 4px;font-size:1rem;font-weight:600}' +
     '.duelvak p{margin:0 0 10px;font-size:.86rem;color:#5b6480}' +
