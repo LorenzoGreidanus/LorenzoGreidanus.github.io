@@ -1,10 +1,10 @@
-/* De motor van Het zombiespel: alles wat rekent en niets wat tekent.
+/* De motor van De stad: alles wat rekent en niets wat tekent.
 
    Dezelfde motor draait op twee plekken, net als die van Zwaardvechter. Wie
    alleen oefent heeft hem in zijn eigen browser. Wie meedoet aan een potje
    heeft hem in de spelkamer op de server: die tikt en stuurt de stand terug.
 
-   Wat hierin zit: de wereld met zijn muren, de spelers, de zombies, de
+   Wat hierin zit: de wereld met zijn muren, de spelers, de
    kisten, de buit die op de grond ligt, het schieten, en de plekken waar je
    eruit kunt stappen. Wat er niet in zit: vragen, tekenen, toetsen. De vragen
    horen bij de pagina, precies zoals bij de andere spellen; de motor weet
@@ -18,14 +18,14 @@
    hoeveel mensen er tegelijk in kunnen.
 
    Gebruik:
-     var W = ZOMBIEMOTOR.maak({ seed:123, spelers:[{ naam:'jij' }], haak:{ ... } });
+     var W = STADMOTOR.maak({ seed:123, spelers:[{ naam:'jij' }], haak:{ ... } });
      W.zetInvoer(i, dx, dy, mx, my);   lopen (-1..1) en waar je heen mikt
      W.schiet(i, aan);                 de trekker vast of los
      W.gebruik(i);                     oprapen, een kist proberen, extractie starten
      W.stap(dt);                       een stap van de klok
      W.pakketVoor(i);                  wat speler i mag zien
 
-   Dit bestand laadt als gewoon script in de browser (ZOMBIEMOTOR op window)
+   Dit bestand laadt als gewoon script in de browser (STADMOTOR op window)
    en als module op de server (module.exports). */
 (function(g){
 'use strict';
@@ -45,26 +45,13 @@ var SPELER = {
   rapen: 46                             /* tot zover kun je iets oppakken */
 };
 
-/* De zombies. Ze zijn hier geen mensen maar vlekken, net als de fouten in
-   Zwaardvechter: dit is een schoolsite en het hoeft niet echt te lijken. */
-var ZOMBIES = [
-  { id:'sloffer', naam:'Sloffer',  hp:44,  snel:52,  schade:9,  r:15, kleur:'#6f8f5a', kans:58, punt:6 },
-  { id:'renner',  naam:'Renner',   hp:26,  snel:132, schade:7,  r:13, kleur:'#c9803f', kans:28, punt:9 },
-  { id:'dikkerd', naam:'Dikkerd',  hp:150, snel:38,  schade:17, r:22, kleur:'#7a5a86', kans:14, punt:20 }
-];
-var ZOMBIE = { ruik: 460, slaBereik: 30, slaPauze: 1.05, maxInWereld: 150, bijGroeien: 3.2,
-               bijSpeler: 0.62, minAf: 340, maxAf: 900 };
-/* Hoeveel er in de buurt van de spelers verschijnen in plaats van ergens in de
-   wereld. Een wereld van drie bij twee kilometer met twintig zombies erin is
-   leeg: je ziet er een dertiende van, dus je komt er anderhalve tegen. */
-
 /* De wapens staan in wapens.js, want de winkel en de server moeten dezelfde
    lijst kennen: die rekent de prijs af en weigert een uitrusting met een wapen
    dat je niet gekocht hebt. In de browser laadt wapens.js als script voor dit
-   bestand; op de server importeert server/zombie.js hem eerst. */
+   bestand; op de server importeert server/stad.js hem eerst. */
 function kast(){
   var k = g.WAPENS;
-  if (!k || !k.LIJST) throw new Error('zombie-motor: wapens.js moet eerder geladen zijn');
+  if (!k || !k.LIJST) throw new Error('stad-motor: wapens.js moet eerder geladen zijn');
   return k;
 }
 function wapenVan(id){
@@ -91,7 +78,6 @@ var BUIT = [
 var START = { wapen: 'roestig', kogels: 30 };
 var EXTRACT = { tijd: 12, straal: 74, waarschuw: 3 };   /* zo lang moet je blijven staan */
 var KOGEL = { leven: 1.4 };
-var GOLF = { pauze: 18, eerste: 2 };                    /* om de zoveel tellen komt er een groepje bij */
 
 /* ---------- gereedschap ---------- */
 function r1(n){ return Math.round(n); }
@@ -123,8 +109,8 @@ function maak(opzet){
 
   var W = {
     seed: opzet.seed || 1, tijd: 0, fase: 'bezig',
-    muren: [], kisten: [], buit: [], zombies: [], kogels: [], extracties: [],
-    spelers: [], golfKlok: GOLF.eerste, volgend: 1,
+    muren: [], kisten: [], buit: [], kogels: [], extracties: [],
+    spelers: [], volgend: 1,
     /* Tellertjes voor wat zelden verandert. Een pakket zegt welk nummer de
        ontvanger al heeft; is het gelijk, dan gaan de kisten en de uitgangen
        er niet in mee. Scheelt elke tik een paar honderd bytes voor niets. */
@@ -382,43 +368,13 @@ function maak(opzet){
   W.stap = function(dt){
     dt = Math.min(dt || 1 / 60, 0.05);
     W.tijd += dt;
-    zombiesErbij(dt);
     spelersStap(dt);
-    zombiesStap(dt);
     kogelsStap(dt);
     extractStap(dt);
   };
 
   function levendeSpelers(){
     return W.spelers.filter(function(p){ return !p.neer && !p.uit; });
-  }
-
-  function zombiesErbij(dt){
-    W.golfKlok -= dt;
-    if (W.golfKlok > 0) return;
-    W.golfKlok = GOLF.pauze;
-    var levend = levendeSpelers();
-    var wil = Math.min(ZOMBIE.maxInWereld, 40 + Math.floor(W.tijd / GOLF.pauze) * ZOMBIE.bijGroeien + levend.length * 6);
-    var tekort = Math.max(0, Math.round(wil) - W.zombies.length);
-    for (var i = 0; i < tekort; i++){
-      var s = trek(ZOMBIES), p;
-      /* Het merendeel komt in de buurt van iemand binnen, maar buiten beeld:
-         ver genoeg om niet uit het niets op te duiken, dichtbij genoeg om
-         binnen een halve minuut iets tegen te komen. */
-      if (levend.length && toeval() < ZOMBIE.bijSpeler){
-        var q = levend[Math.floor(toeval() * levend.length)];
-        p = null;
-        for (var poging = 0; poging < 14 && !p; poging++){
-          var h = toeval() * Math.PI * 2, af = tussen(ZOMBIE.minAf, ZOMBIE.maxAf);
-          var kx = klem(q.x + Math.cos(h) * af, RAND + s.r, WERELD.b - RAND - s.r);
-          var ky = klem(q.y + Math.sin(h) * af, RAND + s.r, WERELD.h - RAND - s.r);
-          if (!raaktMuur(kx, ky, s.r + 10) && Math.hypot(kx - q.x, ky - q.y) > ZOMBIE.minAf * 0.8) p = { x: kx, y: ky };
-        }
-      }
-      if (!p) p = vrijePlek(s.r);
-      W.zombies.push({ nr: nrVan(), soort: s.id, x: p.x, y: p.y, hp: s.hp, maxHp: s.hp, slaKlok: 0, hoek: 0 });
-    }
-    zeg('golf', W.zombies.length);
   }
 
   function schuif(e, nx, ny, r){
@@ -449,13 +405,6 @@ function maak(opzet){
     if (w.nabij){
       /* blote handen: alles vlak voor je neus krijgt een tik */
       var raak = false;
-      W.zombies.forEach(function(z){
-        if (raak) return;
-        var d = Math.hypot(z.x - p.x, z.y - p.y);
-        if (d < w.bereik + 15 && Math.abs(hoekVerschil(Math.atan2(z.y - p.y, z.x - p.x), p.hoek)) < 0.9){
-          raakZombie(z, w.schade, i); raak = true;
-        }
-      });
       W.spelers.forEach(function(q, j){
         if (raak || j === i || q.neer || q.uit) return;
         var d2 = Math.hypot(q.x - p.x, q.y - p.y);
@@ -488,65 +437,18 @@ function maak(opzet){
   }
   function hoekVerschil(a, b){ var d = a - b; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; }
 
-  function raakZombie(z, schade, door){
-    z.hp -= schade;
-    if (z.hp > 0) return;
-    var s = soortVan(z.soort);
-    var p = W.spelers[door];
-    if (p && !p.uit){ p.punten += s.punt; p.geveld++; }
-    /* af en toe laat een zombie iets vallen; anders loont schieten niet */
-    if (toeval() < 0.16){
-      var b = trek(BUIT);
-      W.buit.push({ nr: nrVan(), x: r1(z.x), y: r1(z.y), id: b.id });
-    }
-    z.hp = 0;
-    zeg('zombieweg', z.nr, door);
-  }
   function raakSpeler(q, schade, door){
     if (q.raakKlok > 0 || q.neer || q.uit) return;
     q.hp -= schade;
     q.raakKlok = SPELER.raakPauze;
     if (q.hp <= 0){
       var p = W.spelers[door];
-      if (p && !p.uit && door !== W.spelers.indexOf(q)) p.punten += 40;
+      /* geveld telde zombies; nu telt het spelers, anders staat er een teller
+         in beeld die nooit meer verandert */
+      if (p && !p.uit && door !== W.spelers.indexOf(q)){ p.punten += 40; p.geveld++; }
       velT(q, door);
     }
   }
-  function soortVan(id){ for (var i = 0; i < ZOMBIES.length; i++) if (ZOMBIES[i].id === id) return ZOMBIES[i]; return ZOMBIES[0]; }
-
-  function zombiesStap(dt){
-    var levend = levendeSpelers();
-    W.zombies.forEach(function(z){
-      if (z.hp <= 0) return;
-      var s = soortVan(z.soort);
-      if (z.slaKlok > 0) z.slaKlok -= dt;
-      /* wie is het dichtst in de buurt? verder dan ruiken kijkt hij niet */
-      var doel = null, best = ZOMBIE.ruik;
-      for (var i = 0; i < levend.length; i++){
-        var d = Math.hypot(levend[i].x - z.x, levend[i].y - z.y);
-        if (d < best){ best = d; doel = levend[i]; }
-      }
-      if (!doel){
-        /* niemand in de buurt: langzaam rondscharrelen */
-        if (!z.zwerf || z.zwerfKlok <= 0){ z.zwerf = toeval() * Math.PI * 2; z.zwerfKlok = tussen(1.5, 4); }
-        z.zwerfKlok -= dt;
-        schuif(z, z.x + Math.cos(z.zwerf) * s.snel * 0.35 * dt, z.y + Math.sin(z.zwerf) * s.snel * 0.35 * dt, s.r);
-        z.hoek = z.zwerf;
-        return;
-      }
-      var h = Math.atan2(doel.y - z.y, doel.x - z.x);
-      z.hoek = h;
-      if (best > ZOMBIE.slaBereik){
-        schuif(z, z.x + Math.cos(h) * s.snel * dt, z.y + Math.sin(h) * s.snel * dt, s.r);
-      } else if (z.slaKlok <= 0){
-        z.slaKlok = ZOMBIE.slaPauze;
-        raakSpeler(doel, s.schade, -1);
-        zeg('zombieslag', z.nr);
-      }
-    });
-    W.zombies = W.zombies.filter(function(z){ return z.hp > 0; });
-  }
-
   function kogelsStap(dt){
     W.kogels.forEach(function(k){
       if (k.leven <= 0) return;
@@ -558,12 +460,6 @@ function maak(opzet){
       if (nx < 0 || ny < 0 || nx > WERELD.b || ny > WERELD.h){ k.leven = 0; return; }
       /* wie zit er tussen waar hij was en waar hij komt? */
       var i;
-      for (i = 0; i < W.zombies.length; i++){
-        var z = W.zombies[i];
-        if (z.hp > 0 && lijnRaakt(k.x, k.y, nx, ny, z.x, z.y, soortVan(z.soort).r)){
-          raakZombie(z, k.schade, k.van); k.leven = 0; return;
-        }
-      }
       for (i = 0; i < W.spelers.length; i++){
         var q = W.spelers[i];
         if (i === k.van || q.neer || q.uit) continue;
@@ -627,9 +523,6 @@ function maak(opzet){
   }
   W.vergeet = function(i){ weet[i] = null; };
 
-  var SOORTNR = {};
-  ZOMBIES.forEach(function(z, i){ SOORTNR[z.id] = i; });
-
   W.pakketVoor = function(i){
     var p = W.spelers[i];
     if (!p) return null;
@@ -638,7 +531,7 @@ function maak(opzet){
       t: r2(W.tijd), ik: i,
       m: [r1(p.x), r1(p.y), r2(p.hoek), r1(p.hp), r1(p.maxHp), p.neer ? 1 : 0, p.uit ? 1 : 0,
           p.wapen, p.kogels, p.punten, p.geveld, p.gevallen, r2(p.extractKlok), p.extractNr, p.bezigKist],
-      s: [], z: [], k: [], b: []
+      s: [], k: [], b: []
     };
     /* De naam en de avatar van een ander gaan een keer mee, zodra hij voor
        het eerst in beeld komt. Daarna alleen nog zijn nummer: dat scheelde
@@ -657,11 +550,6 @@ function maak(opzet){
     });
     if (nieuw) d.n = nieuw;
 
-    W.zombies.forEach(function(z){
-      if (!dichtbij(p, z.x, z.y)) return;
-      /* de soort als cijfer in plaats van als woord */
-      d.z.push([z.nr, r1(z.x), r1(z.y), r2(z.hoek), SOORTNR[z.soort] || 0, r1(z.hp)]);
-    });
     /* Een kogel wordt een streepje op het scherm; daar is de hoek genoeg voor.
        De snelheid in x en y waren twee getallen van vier cijfers voor niets. */
     W.kogels.forEach(function(g){
@@ -705,9 +593,9 @@ function maak(opzet){
   return W;
 }
 
-g.ZOMBIEMOTOR = { maak: maak, WERELD: WERELD, KIJK: KIJK, SPELER: SPELER, ZOMBIES: ZOMBIES, STAD: STAD,
+g.STADMOTOR = { maak: maak, WERELD: WERELD, KIJK: KIJK, SPELER: SPELER, STAD: STAD,
                   BUIT: BUIT, EXTRACT: EXTRACT, START: START, wapenVan: wapenVan,
                   /* de wapenkast zit in wapens.js; dit is er alleen een doorgeefluik naartoe */
                   get WAPENS(){ return kast().LIJST; } };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
-if (typeof module !== 'undefined' && module.exports) module.exports = globalThis.ZOMBIEMOTOR;
+if (typeof module !== 'undefined' && module.exports) module.exports = globalThis.STADMOTOR;

@@ -5,8 +5,8 @@
    kamer.js) met een code van vier letters; de code is de naam van het object,
    dus dezelfde code komt altijd bij dezelfde kamer uit.
 
-   /api/potje            POST  zoekt een potje van het zombiespel met plek, geeft {code}
-   /ws/z/ABCD?...        WebSocket naar een potje van het zombiespel
+   /api/potje            POST  zoekt een potje van De stad met plek, geeft {code}
+   /ws/z/ABCD?...        WebSocket naar een potje van De stad
    /api/kamer            POST  maakt een kamer, geeft {code, sleutel}
    /api/kamer/ABCD       GET   de stand van de kamer (bestaat hij, welke fase)
    /ws/ABCD?...          WebSocket naar de kamer
@@ -19,7 +19,9 @@ export { Sets } from "./sets.js";
 export { Beheer } from "./beheer.js";
 export { Profiel } from "./profiel.js";
 export { Account } from "./account.js";
-export { Zombiekamer, Veld } from "./zombie.js";
+/* De klassen heten nog Zombiekamer omdat een Durable Object hernoemen om een
+   migratie vraagt; het spel zelf heet De stad. */
+export { Zombiekamer, Veld } from "./stad.js";
 import { behandel as accountBehandel, ingelogd as accountIngelogd, mogelijk as accountMogelijk, isEigenaar } from "./account.js";
 const KLASSEMENTEN = { toren: true, zwaard: true, dag: true };   /* dag: per datum een lijst, dag-2026-09-19 */
 
@@ -240,7 +242,7 @@ export default {
       return stub.fetch("https://kamer/resultaten?sleutel=" + encodeURIComponent(url.searchParams.get("sleutel") || ""));
     }
 
-    /* Het zombiespel. De portier zoekt een potje met plek; is er geen, dan
+    /* De stad. De portier zoekt een potje met plek; is er geen, dan
        maakt hij er hier een met een verse code. Het zoeken zit in een eigen
        Durable Object omdat het over alle potjes tegelijk gaat. */
     if (p === "/api/potje" && req.method === "POST"){
@@ -253,7 +255,7 @@ export default {
       for (let poging = 0; poging < 8; poging++){
         const code = nieuweCode();
         const stub = env.ZOMBIE.get(env.ZOMBIE.idFromName(code));
-        const gemaakt = await stub.fetch("https://zombie/nieuw", { method: "POST", body: JSON.stringify({ code }) });
+        const gemaakt = await stub.fetch("https://stad/nieuw", { method: "POST", body: JSON.stringify({ code }) });
         if (gemaakt.status === 200) return json({ code, spelers: 0, max: r && r.max });
         if (gemaakt.status !== 409) return json(await gemaakt.json(), gemaakt.status);
       }
