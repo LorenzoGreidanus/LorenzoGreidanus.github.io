@@ -481,7 +481,7 @@ function verbind(code){
       /* de laatste twee standen bewaren, met het moment waarop ze binnenkwamen:
          daartussen wordt straks getekend */
       co.standen.push({ t: co.laatst, d: m.d });
-      if (co.standen.length > 3) co.standen.shift();
+      if (co.standen.length > 5) co.standen.shift();
       return;
     }
     if (m.t === 'kistuit'){ meldBuit(m.d); return; }
@@ -691,9 +691,14 @@ function tekenMini(w){
   mini.innerHTML = h;
 }
 
-/* Hoe ver we in het verleden tekenen. Twee pakketten: dan is er altijd een
-   volgende om naartoe te rekenen, ook als er eentje te laat komt. */
-var TUSSEN_MS = 100;
+/* Hoe ver we in het verleden tekenen. Anderhalf pakket: ver genoeg dat er
+   altijd twee standen omheen liggen om tussen te rekenen, dichtbij genoeg dat
+   je het niet merkt. Honderd was te ver: dan lag het doelmoment precies op of
+   voor de oudste stand die we hadden, klemde het aan de rand vast en zag je
+   dezelfde sprongen als daarvoor. Gemeten: een zombie veranderde toen in 38
+   procent van de beelden van plek, wat neerkomt op de twintig standen per
+   seconde zonder iets ertussen. */
+var TUSSEN_MS = 75;
 
 function hoekTussen(a, b, deel){
   /* over de korte kant, anders draait een zombie een hele slag om */
@@ -775,8 +780,16 @@ function standNu(){
   var n = co.standen.length;
   if (!n) return null;
   if (n === 1) return co.standen[0].d;
-  var a = co.standen[n - 2], b = co.standen[n - 1];
   var doel = performance.now() - TUSSEN_MS;
+  /* het paar standen zoeken waar het doelmoment tussen ligt; met alleen de
+     laatste twee klemt hij vast aan de rand en beweegt er niets */
+  var i = n - 2;
+  for (var j = n - 2; j >= 0; j--){
+    if (co.standen[j].t <= doel){ i = j; break; }
+    i = j;
+  }
+  if (i > n - 2) i = n - 2;
+  var a = co.standen[i], b = co.standen[i + 1];
   var spanne = Math.max(1, b.t - a.t);
   var deel = (doel - a.t) / spanne;
   deel = deel < 0 ? 0 : deel > 1 ? 1 : deel;
