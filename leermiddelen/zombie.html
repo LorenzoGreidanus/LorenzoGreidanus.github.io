@@ -391,7 +391,8 @@ function tekenVraag(){
 }
 
 /* ---------- toestand ---------- */
-var W = null, co = { aan: false, ws: null, code: '', ik: 0, wereld: null, stand: null, laatst: 0 };
+var W = null, co = { aan: false, ws: null, code: '', ik: 0, wereld: null, stand: null, laatst: 0,
+                     standen: [], voorspel: null };
 var loopt = false, laatsteTijd = 0, mijnNaam = 'Speler', mijnAv = '';
 var toetsen = {}, mik = { x: 0, y: 0 }, trekker = false, mijnKist = 0, eindStand = null;
 /* Wat maar een keer over de lijn komt, houden we hier vast: de namen en
@@ -459,7 +460,7 @@ function potjeZoeken(){
 }
 
 function verbind(code){
-  co.aan = true; co.code = code;
+  co.aan = true; co.code = code; co.standen = []; co.voorspel = null;
   var proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
   var s = new WebSocket(proto + location.host + '/ws/z/' + code +
     '?sid=' + encodeURIComponent(sid()) + '&naam=' + encodeURIComponent(mijnNaam) + '&av=' + encodeURIComponent(mijnAv));
@@ -474,7 +475,15 @@ function verbind(code){
       zetTip('Je bent in potje ' + code + '. Zoek kisten, blijf uit de buurt van de zombies, en stap eruit bij een uitgang.');
       return;
     }
-    if (m.t === 'st'){ onthoud(m.d); co.stand = m.d; co.laatst = performance.now(); return; }
+    if (m.t === 'st'){
+      onthoud(m.d);
+      co.stand = m.d; co.laatst = performance.now();
+      /* de laatste twee standen bewaren, met het moment waarop ze binnenkwamen:
+         daartussen wordt straks getekend */
+      co.standen.push({ t: co.laatst, d: m.d });
+      if (co.standen.length > 3) co.standen.shift();
+      return;
+    }
     if (m.t === 'kistuit'){ meldBuit(m.d); return; }
     if (m.t === 'gebruik'){
       if (m.d && m.d.wat === 'kist') beginKist(m.d.nr);
@@ -682,6 +691,80 @@ function tekenMini(w){
   mini.innerHTML = h;
 }
 
+/* Hoe ver we in het verleden tekenen. Twee pakketten: dan is er altijd een
+   volgende om naartoe te rekenen, ook als er eentje te laat komt. */
+var TUSSEN_MS = 100;
+
+function hoekTussen(a, b, deel){
+  /* over de korte kant, anders draait een zombie een hele slag om */
+  var d = b - a;
+  while (d > Math.PI) d -= 2 * Math.PI;
+  while (d < -Math.PI) d += 2 * Math.PI;
+  return a + d * deel;
+}
+function tussen(a, b, deel){ return a + (b - a) * deel; }
+
+/* Twee standen tot een tussenstand rekenen. Wat een plek heeft schuift mee;
+   wat een getal of een naam is komt van de nieuwste, want daar valt niets aan
+   te rekenen. */
+function mengStanden(oud, nieuw, deel){
+  var d = { t: nieuw.t, ik: nieuw.ik, n: nieuw.n, kv: nieuw.kv, ki: nieuw.ki, ev: nieuw.ev, ex: nieuw.ex,
+            b: nieuw.b, k: nieuw.k, s: [], z: [] };
+  /* ikzelf */
+  var a = oud.m, b = nieuw.m;
+  d.m = b.slice();
+  d.m[0] = tussen(a[0], b[0], deel);
+  d.m[1] = tussen(a[1], b[1], deel);
+  d.m[2] = hoekTussen(a[2], b[2], deel);
+  /* de anderen, op hun nummer */
+  var oudS = {};
+  oud.s.forEach(function(q){ oudS[q[0]] = q; });
+  nieuw.s.forEach(function(q){
+    var v = oudS[q[0]];
+    if (!v){ d.s.push(q); return; }
+    var r = q.slice();
+    r[1] = tussen(v[1], q[1], deel);
+    r[2] = tussen(v[2], q[2], deel);
+    r[3] = hoekTussen(v[3], q[3], deel);
+    d.s.push(r);
+  });
+  /* de zombies, op hun nummer */
+  var oudZ = {};
+  oud.z.forEach(function(z){ oudZ[z[0]] = z; });
+  nieuw.z.forEach(function(z){
+    var v = oudZ[z[0]];
+    if (!v){ d.z.push(z); return; }
+    var r = z.slice();
+    r[1] = tussen(v[1], z[1], deel);
+    r[2] = tussen(v[2], z[2], deel);
+    r[3] = hoekTussen(v[3], z[3], deel);
+    d.z.push(r);
+  });
+  return d;
+}
+
+/* Vooruitlopen op je eigen poppetje. Wachten op de kamer voordat je beweegt
+   voelt plakkerig; nu loopt hij meteen mee en schuift hij zachtjes terug naar
+   wat de kamer zegt. Staat hij er ver naast, dan springt hij: de kamer heeft
+   gelijk, hij mag het alleen zachtjes zeggen. */
+var VOORUIT_TERUG = 0.12, VOORUIT_SPRONG = 130;
+function vooruitStap(dx, dy, dt){
+  var v = co.voorspel;
+  if (!v) return;
+  var l = Math.hypot(dx, dy);
+  if (l > 0.01){
+    var snel = M.SPELER.snel * dt / (l > 1 ? l : 1);
+    v.x += dx * snel; v.y += dy * snel;
+  }
+}
+function vooruitTerug(wx, wy){
+  var v = co.voorspel;
+  if (!v){ co.voorspel = { x: wx, y: wy }; return; }
+  if (Math.hypot(v.x - wx, v.y - wy) > VOORUIT_SPRONG){ v.x = wx; v.y = wy; return; }
+  v.x += (wx - v.x) * VOORUIT_TERUG;
+  v.y += (wy - v.y) * VOORUIT_TERUG;
+}
+
 function standNu(){
   if (!co.aan){
     if (!W) return null;
@@ -689,7 +772,19 @@ function standNu(){
     onthoud(d);
     return d;
   }
-  return co.stand;
+  var n = co.standen.length;
+  if (!n) return null;
+  if (n === 1) return co.standen[0].d;
+  var a = co.standen[n - 2], b = co.standen[n - 1];
+  var doel = performance.now() - TUSSEN_MS;
+  var spanne = Math.max(1, b.t - a.t);
+  var deel = (doel - a.t) / spanne;
+  deel = deel < 0 ? 0 : deel > 1 ? 1 : deel;
+  var uit = mengStanden(a.d, b.d, deel);
+  /* mijn eigen plek komt niet van de kamer maar van vooruitlopen */
+  vooruitTerug(uit.m[0], uit.m[1]);
+  if (co.voorspel && !uit.m[5] && !uit.m[6]){ uit.m[0] = co.voorspel.x; uit.m[1] = co.voorspel.y; }
+  return uit;
 }
 
 /* ---------- de lus ---------- */
@@ -697,27 +792,28 @@ function lus(nu){
   if (!loopt) return;
   var dt = Math.min(0.05, (nu - laatsteTijd) / 1000);
   laatsteTijd = nu;
-  invoerDoor();
+  invoerDoor(dt);
   if (!co.aan && W) W.stap(dt);
   teken(dt);
   requestAnimationFrame(lus);
 }
 
 var zendKlok = 0;
-function invoerDoor(){
+function invoerDoor(dt){
   var dx = 0, dy = 0;
   if (toetsen.ArrowLeft || toetsen.a || toetsen.q) dx -= 1;
   if (toetsen.ArrowRight || toetsen.d) dx += 1;
   if (toetsen.ArrowUp || toetsen.w || toetsen.z) dy -= 1;
   if (toetsen.ArrowDown || toetsen.s) dy += 1;
   if (raakStuur.aan){ dx = raakStuur.dx; dy = raakStuur.dy; }
-  var d = standNu();
   var wx = mik.x, wy = mik.y;
   if (!co.aan && W){
     W.zetInvoer(0, dx, dy, wx, wy);
     W.schiet(0, trekker);
     return;
   }
+  /* meteen meebewegen, zonder op de kamer te wachten */
+  vooruitStap(dx, dy, dt || 0.016);
   zendKlok++;
   if (zendKlok % 3 === 0) zend({ t: 'in', dx: dx, dy: dy, mx: wx, my: wy, s: trekker });
 }
