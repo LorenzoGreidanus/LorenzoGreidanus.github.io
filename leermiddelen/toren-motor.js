@@ -225,7 +225,10 @@ function afstandTotPadOp(PAD, x, y){
 var VELDEN = {
   v:['id','d','hp','maxHp','snelheid','traag','ijs','onder','soort','kleur','mark','schild','schildOp','camo','dik','brand','flits','fase','fasen','baas','baassoort','mega','mini','vorm','dood'],
   t:['id','x','y','soort','niveau','kracht','loop','mikt','uit','heet','terugslag','golfKlok'],
-  vl:['fase','laad','laadVol'],
+  /* Het vliegtuig van de Bommenwerper. Waar het vliegt en welke kant het op
+     kijkt moet mee over de lijn: de gast rekent de vlucht niet zelf uit, dus
+     zonder deze velden tekent hij een toestel zonder plek en zonder hoek. */
+  vl:['fase','laad','laadVol','x','y','hoek','bommen'],
   s:['x','y','hoek','len','leven','kleur','dik','banaan','boot'],
   ko:['x0','y0','x1','y1','t','duur','draai','bom','dart','roos','lava','raket','straal','valt'],
   go:['x','y','r','leven','kleur','dik'],

@@ -4740,6 +4740,11 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
        met de bom al onder de romp. */
     var klV = kleurVan(SOORTEN.bommenwerper.kleur);
     function toestel(x, y, hk, metBom){
+      /* Een enkel getal kan ontbreken als de stand van een ander scherm komt;
+         het bord blijft dan gewoon staan in plaats van om te vallen. */
+      x = typeof x === 'number' ? x : 0;
+      y = typeof y === 'number' ? y : 0;
+      hk = typeof hk === 'number' ? hk : 0;
       s += '<ellipse cx="' + (x + 6).toFixed(1) + '" cy="' + (y + 12).toFixed(1) +
         '" rx="12" ry="5" fill="rgba(20,34,76,.2)" transform="rotate(' + hk.toFixed(1) + ' ' +
         (x + 6).toFixed(1) + ' ' + (y + 12).toFixed(1) + ')"/>';
@@ -5239,6 +5244,15 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     torens = uitpak(d.t, VELDEN.t).map(function(nt, i){
       var rv = d.t[i][VELDEN.t.length];
       nt.vlieger = rv ? uitpak([rv], VELDEN.vl)[0] : undefined;
+      /* Speelt de gastheer nog op code van vorige week, dan mist de plek en de
+         hoek van het toestel. Dan liever boven de toren dan helemaal niet. */
+      if (nt.vlieger){
+        var vg = nt.vlieger;
+        if (typeof vg.x !== 'number') vg.x = nt.x;
+        if (typeof vg.y !== 'number') vg.y = nt.y - 1;
+        if (typeof vg.hoek !== 'number') vg.hoek = 0;
+        if (typeof vg.bommen !== 'number') vg.bommen = 0;
+      }
       var t = oud[nt.id];
       if (!t) return nt;
       VELDEN.t.concat(['vlieger']).forEach(function(k){ if (sleep && sleep.toren === t && (k === 'x' || k === 'y')) return; t[k] = nt[k]; });

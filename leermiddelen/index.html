@@ -755,6 +755,11 @@ var SPELLEN = [
     wat:'Vergelijkingen oplossen met een weegschaal. Een blauw zakje is x, een oranje blokje is 1. Haal aan beide kanten hetzelfde weg tot er nog een zakje over is. Doe je het maar aan een kant, dan slaat de weegschaal door.',
     leer:'Vergelijkingen oplossen', tijd:'ongeveer 15 minuten' },
 
+  { vak:'wiskunde', bestand:'vlakken.html', naam:'Vlakken herkennen', kleur:'#204ECF',
+    ico:'<rect x="3" y="4" width="9" height="9" rx="1"/><path d="M16.5 10.5 21.5 20h-10z"/><circle cx="7" cy="18" r="3.2"/>',
+    wat:'Een figuur staat los op het vlak, zonder rooster en zonder maten, en elke keer een beetje gedraaid. Jij zegt hoe hij heet, of je krijgt de naam en zoekt hem tussen vier figuren. Of je telt wat je aan hem ziet: zijden, rechte hoeken, evenwijdige zijden en symmetrieassen. De foute antwoorden zijn juist de vormen waar deze mee te verwarren is, dus een ruit staat naast een vierkant en een parallellogram.',
+    leer:'Vlakke figuren en hun eigenschappen', tijd:'10 minuten, of tegen de klok' },
+
   { vak:'engels', bestand:'irregular.html', naam:'Irregular verbs', kleur:'#204ECF',
     ico:'<path d="M4 19.5V6a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 1.5z"/><path d="M9 9h6M9 13h4"/>',
     wat:'Van elk werkwoord zie je twee vormen, jij typt de derde. Go, went, gone. Kies of je alleen de verleden tijd oefent, alleen het deelwoord, of alle drie door elkaar. Honderddrieëndertig werkwoorden in vier sets, van de bekendste tot de zeldzame, met de Nederlandse betekenis erbij.',
@@ -864,6 +869,13 @@ var SPELLEN = [
   function soortVan(sp){ return SOORT[(sp.bestand || '').replace('.html', '')] || 'oefenen'; }
   function soortNaam(id){ return (SOORTEN.filter(function(s){ return s.id === id; })[0] || {}).naam || ''; }
   function hoortBij(sp, id){ return Array.isArray(sp.vak) ? sp.vak.indexOf(id) >= 0 : sp.vak === id; }
+  /* Hoeveel vakken hoort een spel bij? Een spel waarin je het vak zelf kiest
+     hoort bij bijna alles en staat daarom bovenaan onder "Voor elk vak". Een
+     spel voor een of twee vakken hoort gewoon onder die vakken: De uitverkoop
+     staat bij Rekenen en bij Economie, het DHTE-schema alleen bij Rekenen. */
+  var BREED = 4;
+  function vakkenVan(sp){ return Array.isArray(sp.vak) ? sp.vak : [sp.vak]; }
+  function isBreed(sp){ return vakkenVan(sp).length >= BREED; }
   function eersteTv(sp){ return !sp.tv ? 0 : (Array.isArray(sp.tv) ? sp.tv[0] : sp.tv); }
   function tvLijst(sp){ return !sp.tv ? [] : (Array.isArray(sp.tv) ? sp.tv : [sp.tv]); }
   function tvVan(nr){ return TIJDVAKKEN.filter(function(t){ return t.nr === nr; })[0] || null; }
@@ -1236,14 +1248,14 @@ var SPELLEN = [
       });
     } else if (stand.vak === 'alle'){
       /* eerst wat je in je eentje kunt doen, dan wat de klas samen doet, dan per vak */
-      var overal = lijst.filter(function(sp){ return Array.isArray(sp.vak); });
+      var overal = lijst.filter(isBreed);
       var SAMENSPEL = { strijd:1 };   /* de Klasstrijd staat als oefenspel in de lijst, maar je docent start hem */
       var samenLijst = overal.filter(function(sp){ var id = sp.bestand.replace('.html', ''); return soortVan(sp) === 'samen' || OOK_SAMEN[id] || SAMENSPEL[id]; });
       var alleen = overal.filter(function(sp){ return samenLijst.indexOf(sp) < 0; });
       if (alleen.length) s += sectieKort('<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>', 'var(--muted)', 'Voor elk vak', 'je kiest het vak in het spel zelf', alleen, 'overal');
       if (samenLijst.length) s += sectie('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/>', 'var(--vista)', 'Samen op het digibord', 'je docent start deze', samenLijst.length, samenLijst);
       VAKKEN.forEach(function(v){
-        var mijn = lijst.filter(function(sp){ return !Array.isArray(sp.vak) && sp.vak === v.id; });
+        var mijn = lijst.filter(function(sp){ return !isBreed(sp) && hoortBij(sp, v.id); });
         if (!mijn.length) return;
         if (v.id === 'geschiedenis') mijn = opTijd(mijn);
         s += sectieKort(v.ico, v.kleur, v.naam, '', mijn, v.id);
