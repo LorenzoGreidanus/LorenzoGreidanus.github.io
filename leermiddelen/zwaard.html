@@ -91,6 +91,17 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
    als een kop uitzien en niet als zomaar weer een knopje. Daarom smaller,
    in hoofdletters en zonder rand tot je hem kiest. */
 .deelvak .deelbreek{flex-basis:100%;height:0;margin:0;padding:0;border:none}
+/* de nachtmerrie op het startscherm */
+.nmvak{background:var(--kaart);border:1px solid var(--rand);border-radius:22px;padding:18px 20px;margin:22px auto 0;max-width:46rem;text-align:left}
+.nmvak h3{font-size:1.08rem;margin:0 0 6px}
+.nmvak p{color:var(--muted);font-size:.92rem;margin:0 0 12px}
+.nmrij{display:flex;flex-wrap:wrap;gap:8px}
+.nmrij button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:48px;padding:9px 14px;
+  border:2px solid var(--rand);border-radius:14px;background:var(--room);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.nmrij button b{font-size:.95rem}
+.nmrij button small{color:var(--muted);font-size:.78rem}
+.nmrij button:hover{border-color:var(--crab)}
+.nmrij button.gehaald{border-color:var(--op)}
 .deelvak .deelkop{font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;font-weight:700;
   border-style:dashed;opacity:.85;padding-left:12px;padding-right:12px}
 .deelvak .deelkop.on{opacity:1;border-style:solid}
@@ -413,6 +424,8 @@ body.groot .meter b{font-size:1.45rem}
   <div class="vakken" id="vakken"></div>
   <p class="nivuit hide" id="vastUit"></p>
   <div id="deelvakken"></div>
+
+  <div class="nmvak hide" id="nmvak"></div>
 
   <label class="uitlegvak" id="uitlegvak">
     <input type="checkbox" id="uitlegAan">
@@ -751,6 +764,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     return l.length && l.every(function(x){ return keuze[vak].indexOf(x) >= 0; });
   }
   function tekenDeelvakken(){
+    /* het nachtmerrievak hoort bij hetzelfde startscherm en wordt hier mee bijgewerkt */
+    try { tekenNachtmerrie(); } catch (e){}
     var el = document.getElementById('deelvakken');
     if (!vak){ el.innerHTML = ''; return; }
     var aan = keuze[vak] || [];
@@ -854,6 +869,14 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   var fouten = [], messen = [], munt = [], pluis = [], cijfers = [], teSpawnen = 0, aanvallen = [];
   var toetsen = {}, wijs = null, loopt = false, pauze = false, laatste = 0;
   var stijl = 'ridder', vaardig = {}, keuzeOpen = null, tweedeKansOver = 0, zones = [], baasWeg = 0, blokToets = false, trofeeTekst = '';
+  /* welke baas je nu in de nachtmerrie bevecht, of niets in een gewoon potje */
+  var nachtmerrie = null;
+  var NMSLEUTEL = 'lg-zwaard-bazen', NMGEHAALD = 'lg-zwaard-nachtmerries';
+  function lijstUit(sleutel){ try { var l = JSON.parse(localStorage.getItem(sleutel) || '[]'); return Array.isArray(l) ? l : []; } catch (e){ return []; } }
+  function lijstBij(sleutel, id){
+    var l = lijstUit(sleutel);
+    if (l.indexOf(id) < 0){ l.push(id); try { localStorage.setItem(sleutel, JSON.stringify(l)); } catch (e){} }
+  }
   /* het testpaneel: cheats om snel iets te bekijken. Het gaat open door een codewoord te typen; alleen de
      sha-256 daarvan staat hier, dus uit de code valt het woord niet te lezen. Er is geen toets en geen url voor. */
   var cheat = false, god = false, codeBuf = '';
@@ -892,6 +915,59 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   (function(){ var tv = document.getElementById('testvak'); if (!tv) return;
     Array.prototype.forEach.call(tv.querySelectorAll('[data-t]'), function(b){ b.addEventListener('click', function(){ testDoe(b.getAttribute('data-t')); }); });
   })();
+  /* Het vak met de nachtmerries. Alleen bazen die je al versloeg staan erin:
+     tegen een baas die je nog nooit gezien hebt is dit geen uitdaging maar een
+     muur. Heb je er nog geen een verslagen, dan staat er waarom. */
+  function tekenNachtmerrie(){
+    var el = document.getElementById('nmvak');
+    if (!el || co.aan){ if (el) el.classList.add('hide'); return; }
+    var gedaan = lijstUit(NMSLEUTEL), gehaald = lijstUit(NMGEHAALD);
+    el.classList.remove('hide');
+    if (!gedaan.length){
+      el.innerHTML = '<h3>Baas Nightmare</h3><p>Versla eerst een baas in een gewoon potje. Daarna kun je hem hier nog een keer tegenkomen, ' +
+        'maar dan alleen en met alles gekocht, en met ruim vier keer zoveel leven.</p>';
+      return;
+    }
+    el.innerHTML = '<h3>Baas Nightmare</h3>' +
+      '<p>Alleen jij tegen de baas, met je uitrusting helemaal vol. Hij heeft ruim vier keer zoveel leven, slaat harder ' +
+      'en gaat in drie fasen steeds sneller aanvallen. Versla je hem, dan win je iets voor bij je gezichtje.</p>' +
+      '<div class="nmrij">' + BAZEN.filter(function(b){ return gedaan.indexOf(b.id) >= 0; }).map(function(b){
+        var it = window.COSMETICA && COSMETICA.vanNachtmerrie ? COSMETICA.vanNachtmerrie(b.id) : null;
+        var had = gehaald.indexOf(b.id) >= 0;
+        return '<button type="button" class="' + (had ? 'gehaald' : '') + '" data-nm="' + b.id + '"><b>' + b.naam + '</b><small>' +
+          (had ? 'gehaald \u00b7 ' : '') + (it ? it.naam.toLowerCase() : 'een beloning') + '</small></button>';
+      }).join('') + '</div>';
+    Array.prototype.forEach.call(el.querySelectorAll('[data-nm]'), function(k){
+      k.addEventListener('click', function(){ startNachtmerrie(k.getAttribute('data-nm')); });
+    });
+  }
+  /* alles kopen en beginnen: de nachtmerrie gaat over ontwijken en raken, niet
+     over eerst een half uur munten sparen */
+  function startNachtmerrie(baasId){
+    var def = BAZEN.filter(function(b){ return b.id === baasId; })[0];
+    if (!def) return;
+    if (!vak){ tipTekst('Kies eerst een vak: de vragen tussendoor blijven ook in de nachtmerrie.'); return; }
+    metVragen(function(){
+      begin();
+      /* na begin(), want die zet een gewoon potje op en wist de nachtmerrie */
+      nachtmerrie = { def: def };
+      /* alles vol, na begin() want die maakt de uitrusting leeg */
+      UITRUSTING.forEach(function(u){ if (!u.los) level[u.id] = u.prijs.length; });
+      VAARDIGHEDEN.forEach(function(x){ if (!x.alleen || x.alleen === stijl) vaardig[x.id] = x.max || 1; });
+      maxHp = maxLeven(); hp = maxHp;
+      if (W){
+        W.nachtmerrie = { def: def };
+        W.zetStats(0, mijnStats(), hp);
+        /* de ronde zetten op de ronde waarin deze baas normaal komt, zodat zijn
+           leven en zijn aanvallen bij hem passen */
+        W.ronde = (BAZEN.indexOf(def) + 1) * BAASRONDE - 1;
+        W.volgendeRonde();
+        spiegel();
+      }
+      tipTekst(def.naam + ' in de nachtmerrie. Drie fasen, en hij wordt elke fase sneller. Blijf bewegen.');
+    });
+  }
+
   /* een baas geveld: de trofee die erbij hoort, voor wie is ingelogd */
   function trofeeVan(rondeNr){
     var def = ZWAARDMOTOR.baasVan(rondeNr), it = window.COSMETICA ? COSMETICA.vanBaas(def.id) : null;
@@ -903,6 +979,24 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   }
   try { var st0 = localStorage.getItem('lg-zwaard-stijl'); if (STIJLEN.some(function(x){ return x.id === st0; })) stijl = st0; } catch (e){}
   function v(id){ return vaardig[id] || 0; }
+  /* de regel onder de arena; hij staat er al, maar niet als functie */
+  function tipTekst(t){ var el = document.getElementById('arenatip'); if (el) el.textContent = t; }
+  /* de nachtmerrie gehaald: de beloning erbij en het potje is klaar */
+  function nachtmerrieGehaald(){
+    var def = nachtmerrie.def;
+    lijstBij(NMGEHAALD, def.id);
+    var it = window.COSMETICA && COSMETICA.vanNachtmerrie ? COSMETICA.vanNachtmerrie(def.id) : null;
+    if (it && window.PROFIEL && PROFIEL.ingelogd && PROFIEL.ingelogd()){
+      PROFIEL.vrijspeel(it.id);
+      trofeeTekst = 'Gewonnen: ' + it.naam + '. Zet hem op in de leeromgeving, bij je gezichtje.';
+    } else if (it){
+      trofeeTekst = 'Je versloeg ' + def.naam + ' in de nachtmerrie. Bij hem hoort ' + it.naam.toLowerCase() +
+        '. Log in met Microsoft in de leeromgeving, dan speel je hem vrij.';
+    }
+    tipTekst(def.naam + ' is gevallen. ' + trofeeTekst);
+    /* het gevecht is voorbij; er komt geen volgende ronde */
+    setTimeout(function(){ if (W) W.fase = 'einde'; einde(); }, 1400);
+  }
   function stijlDef(){ return (window.ZWAARDMOTOR && ZWAARDMOTOR.STIJLEN[stijl]) || {}; }
   var W = null, muntWas = 0, geveldWas = 0;
   var STAP = 1 / 60;
@@ -1005,7 +1099,13 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     vragen: function(){ spiegel(); naarVragen(); },
     rapen: function(nog){ document.getElementById('arenatip').textContent = 'De ronde is gehaald. Nog ' + nog + ' seconde' + (nog === 1 ? '' : 'n') + ' om de munten op te rapen.'; },
     einde: function(){ spiegel(); einde(); },
-    baasWeg: function(f){ baasWeg = W ? W.ronde : ronde; }
+    baasWeg: function(f){
+      baasWeg = W ? W.ronde : ronde;
+      /* onthouden welke baas je versloeg: dat bepaalt welke nachtmerrie je mag proberen */
+      if (f && f.def && f.def.id) lijstBij(NMSLEUTEL, f.def.id);
+      if (nachtmerrie && f && f.def && f.def.id === nachtmerrie.def.id) nachtmerrieGehaald();
+    },
+    nmfase: function(n){ tipTekst(nachtmerrie ? nachtmerrie.def.naam + ' gaat naar fase ' + n + '.' : ''); }
   };
 
 
@@ -1126,6 +1226,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     co.klaar = false; co.maatKlaar = false; co.neer = false; co.inNr = 0; co.verzonden = {}; co.lag = 80; co.laatsteFase = ''; co.pakketten = 0;
     co.dashVraag = false; co.wapenVraag = false; co.laatsteInvoer = '';
     vaardig = {}; keuzeOpen = null; tweedeKansOver = 0; zones = []; baasWeg = 0; blokToets = false; cheat = false; god = false;
+    nachtmerrie = null;
     voorspel.aan = false; voorspel.hist = []; voorspel.dashRest = 0;
     fouten = []; messen = []; munt = []; pluis = []; cijfers = []; aanvallen = []; teSpawnen = 0; tijdInRonde = 0;
     slim.reset(niveau); pot = null;

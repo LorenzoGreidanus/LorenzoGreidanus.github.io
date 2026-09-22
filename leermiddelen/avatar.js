@@ -90,6 +90,10 @@ window.AVATAR = (function(){
     /* hazenoren: twee lange oren met roze binnenkant */
     if (n === 11) return '<g fill="#F3EFE9" stroke="#d9cfc4" stroke-width="1.5"><path d="M-16,-30 q-14,-30 -4,-46 q10,10 12,46 z"/><path d="M16,-30 q14,-30 4,-46 q-10,10 -12,46 z"/></g><g fill="#F6B8C6"><path d="M-14,-32 q-8,-22 -4,-36 q6,10 8,36 z"/><path d="M14,-32 q8,-22 4,-36 q-6,10 -8,36 z"/></g>';
     /* baret: het platte bord met een kwastje, voor wie bij hem in de klas zat */
+    /* nachtmerriekroon van De Grote Fout: donker met een rode gloed eronder */
+    if (n === 13) return '<path d="M-26,-30 L-30,-52 L-15,-40 L0,-56 L15,-40 L30,-52 L26,-30 Z" fill="#2b0d1c" stroke="#c0442c" stroke-width="2.4" stroke-linejoin="round"/><circle cx="0" cy="-44" r="3.4" fill="#F26749"/><circle cx="-17" cy="-39" r="2.4" fill="#c0442c"/><circle cx="17" cy="-39" r="2.4" fill="#c0442c"/><path d="M-26,-29 h52" stroke="#F26749" stroke-width="2" opacity=".7"/>';
+    /* propkroon van De Prop: verfrommeld papier met scherpe punten */
+    if (n === 14) return '<path d="M-28,-29 L-22,-44 L-12,-36 L-2,-50 L8,-36 L20,-46 L28,-29 Z" fill="#e8dcc0" stroke="#8a7350" stroke-width="2.2" stroke-linejoin="round"/><path d="M-16,-33 l6,-6 M2,-34 l5,-7 M16,-33 l4,-6" stroke="#8a7350" stroke-width="1.4" opacity=".7"/>';
     if (n === 12) return '<g><path d="M-20,-38 h40 v10 q-20,9 -40,0 z" fill="#22315f"/><path d="M0,-52 L33,-41 L0,-30 L-33,-41 Z" fill="#14224C"/><path d="M0,-50 L28,-41 L0,-32 L-28,-41 Z" fill="none" stroke="#3b4d82" stroke-width="1"/><circle cx="0" cy="-41" r="2.4" fill="#F26749"/><path d="M0,-41 q22,1 26,4" fill="none" stroke="#F26749" stroke-width="2.2" stroke-linecap="round"/><path d="M26,-37 v8" stroke="#F26749" stroke-width="2.2" stroke-linecap="round"/><path d="M23,-29 h6 l-1,5 h-4 z" fill="#EA9836"/></g>';
     return '';
   }
@@ -108,6 +112,8 @@ window.AVATAR = (function(){
   function achtergrond(n){
     if (n === 1) return '<defs><radialGradient id="avA1" cx="50%" cy="70%" r="70%"><stop offset="0" stop-color="#FFD166"/><stop offset="1" stop-color="#F26749"/></radialGradient></defs><circle r="49" fill="url(#avA1)"/>';
     if (n === 2) return '<defs><linearGradient id="avA2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#83A5F2"/><stop offset="1" stop-color="#204ECF"/></linearGradient></defs><circle r="49" fill="url(#avA2)"/><path d="M-34,22 q8,-6 16,0 t16,0 t16,0" fill="none" stroke="#fff" stroke-width="2.5" opacity=".5"/>';
+    /* middernacht van De Klok: een wijzerplaat achter je gezichtje */
+    if (n === 4) return '<defs><radialGradient id="avA4" cx="50%" cy="40%" r="80%"><stop offset="0" stop-color="#3a2a5e"/><stop offset="1" stop-color="#14112b"/></radialGradient></defs><circle r="49" fill="url(#avA4)"/><g stroke="#FFD166" stroke-width="2" opacity=".75">' + [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map(function(a){ return '<path transform="rotate(' + a + ')" d="M0,-45 v-4"/>'; }).join('') + '</g><path d="M0,0 L0,-30" stroke="#F26749" stroke-width="2.6" stroke-linecap="round" opacity=".8"/><path d="M0,0 L20,10" stroke="#FFD166" stroke-width="2.6" stroke-linecap="round" opacity=".8"/>';
     if (n === 3) return '<defs><radialGradient id="avA3" cx="50%" cy="30%" r="80%"><stop offset="0" stop-color="#6b3fa0"/><stop offset="1" stop-color="#14224C"/></radialGradient></defs><circle r="49" fill="url(#avA3)"/><g fill="#FFD166"><circle cx="-34" cy="-22" r="2"/><circle cx="30" cy="-30" r="1.6"/><circle cx="38" cy="8" r="1.4"/><circle cx="-38" cy="14" r="1.3"/><circle cx="8" cy="-44" r="1.8"/><circle cx="-12" cy="42" r="1.5"/></g>';
     return '';
   }
@@ -116,6 +122,8 @@ window.AVATAR = (function(){
     if (n === 1) return '<g><rect x="-27" y="-13" width="22" height="16" rx="6" fill="#14224C"/><rect x="5" y="-13" width="22" height="16" rx="6" fill="#14224C"/><path d="M-5,-8 h10 M-27,-8 h-6 M27,-8 h6" stroke="#14224C" stroke-width="3" stroke-linecap="round"/><path d="M-22,-9 h8 M10,-9 h8" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".35"/></g>';
     if (n === 2) return '<g fill="none" stroke="#c9971f" stroke-width="2.5"><circle cx="15" cy="-4" r="12"/><path d="M25,4 q6,10 2,22" stroke-width="1.5" stroke-dasharray="2 2"/></g>';
     if (n === 3) return '<g fill="none" stroke="#14224C" stroke-width="2.2"><circle cx="-15" cy="-4" r="12"/><circle cx="15" cy="-4" r="12"/><path d="M-3,-5 h6 M-27,-6 h-6 M27,-6 h6" stroke-linecap="round"/></g>';
+    /* inktbril van De Inktvlek: donkere glazen met een spat eroverheen */
+    if (n === 4) return '<g><rect x="-28" y="-14" width="24" height="18" rx="7" fill="#101c3f"/><rect x="4" y="-14" width="24" height="18" rx="7" fill="#101c3f"/><path d="M-4,-8 h8 M-28,-9 h-5 M28,-9 h5" stroke="#101c3f" stroke-width="3" stroke-linecap="round"/><path d="M-20,-11 q5,7 12,3 q-3,8 -11,5 q-6,-3 -1,-8z" fill="#1b3a8f" opacity=".85"/><circle cx="14" cy="-6" r="3.4" fill="#1b3a8f" opacity=".85"/><circle cx="21" cy="-11" r="1.8" fill="#1b3a8f" opacity=".7"/></g>';
     return '';
   }
   function rand(n){
@@ -125,6 +133,10 @@ window.AVATAR = (function(){
     if (n === 4) return '<circle r="46" fill="none" stroke="#83A5F2" stroke-width="5"/><circle r="46" fill="none" stroke="#fff" stroke-width="2" stroke-dasharray="3 11"/>';
     if (n === 5) return '<circle r="46" fill="none" stroke="#204ECF" stroke-width="3" opacity=".6"/>' + [0, 60, 120, 180, 240, 300].map(function(a){ return '<path transform="rotate(' + a + ') translate(0,-46)" d="M0,-5 l1.5,3.5 3.5,.5 -2.5,2.5 .5,3.5 -3,-1.8 -3,1.8 .5,-3.5 -2.5,-2.5 3.5,-.5z" fill="#FFD166"/>'; }).join('');
     /* krijtcirkel: een streep krijt op een schoolbord, met een hand getrokken */
+    /* rode streep van De Rode Pen: een halo met een doorgehaalde streep */
+    if (n === 7) return '<circle r="46" fill="none" stroke="#c0442c" stroke-width="5"/><circle r="46" fill="none" stroke="#8a2416" stroke-width="1.6"/><path d="M-46,-12 q46,10 92,0" fill="none" stroke="#c0442c" stroke-width="3" stroke-linecap="round" opacity=".8" transform="translate(-46,0)"/>';
+    /* zwermring van De Zwerm: losse propjes rond je gezicht */
+    if (n === 8) return '<circle r="46" fill="none" stroke="#7d1f12" stroke-width="2" opacity=".5"/>' + [0, 45, 90, 135, 180, 225, 270, 315].map(function(a){ return '<circle transform="rotate(' + a + ') translate(0,-46)" r="4" fill="#7d1f12"/>'; }).join('');
     if (n === 6) return '<circle r="46" fill="none" stroke="#2b4a3a" stroke-width="7"/><circle r="46" fill="none" stroke="#F3EFE9" stroke-width="3.6" stroke-dasharray="34 6" stroke-linecap="round" opacity=".95"/><circle r="46" fill="none" stroke="#F3EFE9" stroke-width="1.2" stroke-dasharray="18 22" opacity=".45" transform="rotate(9)"/>';
     return '';
   }

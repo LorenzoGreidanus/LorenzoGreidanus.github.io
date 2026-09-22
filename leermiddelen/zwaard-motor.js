@@ -278,12 +278,14 @@ function maak(opties){
       P.klaar = false; P.inv = { dx:0, dy:0 };
     });
     /* in een baasronde komen er minder gewone fouten bij: de baas is het werk */
-    W.teSpawnen = Math.round(aantalInRonde(W.ronde) * (W.ronde % BAASRONDE === 0 ? 0.6 : 1) * meer()) + W.extra; W.extra = 0;
+    /* in een nachtmerrie is er alleen de baas: geen gewone fouten ertussen */
+    W.teSpawnen = W.nachtmerrie ? 0 : Math.round(aantalInRonde(W.ronde) * (W.ronde % BAASRONDE === 0 ? 0.6 : 1) * meer()) + W.extra;
+    W.extra = 0;
     W.spawnKlok = 0.6;
     W.tijdInRonde = 0; W.rondeUit = 0; W.raapTeller = -1;
-    W.zones = maakZones(W.ronde);
+    W.zones = W.nachtmerrie ? [] : maakZones(W.ronde);
     W.spelers.forEach(function(P){ P.sp.blok = false; P.sp.blokTijd = P.stats.blokMax || BLOK.max; P.sp.gx = 0; P.sp.gy = 0; P.sp.vuurKlok = 0; P.sp.dashX = P.stats.dashX || 1; });
-    if (W.ronde % BAASRONDE === 0) spawnBaas();
+    if (W.nachtmerrie || W.ronde % BAASRONDE === 0) spawnBaas();
     zeg('ronde', W.ronde, W.teSpawnen, W.ronde % BAASRONDE === 0 ? baasVan(W.ronde) : null);
   };
   /* De gevaren: vanaf ronde 4 een, vanaf ronde 8 twee, nooit in een baasronde en
@@ -357,10 +359,30 @@ function maak(opties){
      zijn uitrusting op orde had in een halve minuut voorbij, en dan heb je geen
      baasgevecht maar een grote fout. */
   var BAASLEVEN = 1.25;
+  /* De nachtmerrie: drie fasen, en per fase wacht hij korter en doet hij vaker
+     twee dingen tegelijk. De waarschuwing blijft even lang staan, want anders
+     is het niet meer te ontwijken en dan is het geen uitdaging maar pech. */
+  var NACHTMERRIE = {
+    hpX: 4.2,            /* zoveel keer zoveel leven als een gewone baas van die ronde */
+    schadeX: 1.35,       /* en zoveel harder */
+    fases: [
+      { vanaf: 1,    pauze: 0.86, dubbel: 0.14 },
+      { vanaf: 0.66, pauze: 0.72, dubbel: 0.26 },
+      { vanaf: 0.33, pauze: 0.6,  dubbel: 0.4 }
+    ]
+  };
+  /* in welke fase zit deze baas, op zijn leven */
+  function nmFase(b){
+    var deel = b.maxHp ? b.hp / b.maxHp : 1, f = 0;
+    for (var i = 0; i < NACHTMERRIE.fases.length; i++) if (deel <= NACHTMERRIE.fases[i].vanaf) f = i;
+    return f;
+  }
   function spawnBaas(){
-    var def = baasVan(W.ronde), h = Math.round(foutHp(W.ronde) * def.hp * BAASLEVEN * (samen ? 0.7 + 0.3 * W.spelers.length : 1));
+    var nm = W.nachtmerrie;
+    var def = nm ? nm.def : baasVan(W.ronde);
+    var h = Math.round(foutHp(W.ronde) * def.hp * BAASLEVEN * (samen ? 0.7 + 0.3 * W.spelers.length : 1) * (nm ? NACHTMERRIE.hpX : 1));
     var b = { id:++W.nr, soort:def, def:def, x:ARENA.b / 2, y:ARENA.h / 2, hp:h, maxHp:h, r:def.r, snel:0, flits:0, stap:0,
-              schild:def.schild, slaKlok:0, baas:true, aanvalKlok:2.2, laatste:-1, eerste:true };
+              schild:def.schild, slaKlok:0, baas:true, aanvalKlok:2.2, laatste:-1, eerste:true, nmFase:0 };
     W.fouten.push(b);
     /* de spelers beginnen in het midden: even opzij, anders sta je in de baas */
     W.spelers.forEach(function(P, i){ P.sp.x = ARENA.b / 2 + (i === 0 ? -150 : 150); });
@@ -397,8 +419,9 @@ function maak(opties){
     if (i === b.laatste && rij.length > 1) i = (i + 1) % rij.length;
     b.laatste = i;
     zetAanval(rij[i], b, levend, k);
-    /* kwaad: soms twee aanvallen tegelijk */
-    if (boos && toeval() < AANVAL.boosDubbel){
+    /* kwaad: soms twee aanvallen tegelijk; in een nachtmerrie vaker */
+    var kansDubbel = W.nachtmerrie ? NACHTMERRIE.fases[b.nmFase || 0].dubbel : (boos ? AANVAL.boosDubbel : 0);
+    if (toeval() < kansDubbel){
       var j = (i + 1 + Math.floor(toeval() * (rij.length - 1))) % rij.length;
       zetAanval(rij[j], b, levend, k);
     }
@@ -520,7 +543,10 @@ function maak(opties){
     /* De groei per ronde, en vanaf ronde 12 extra plus een stukje van je maximale leven:
        wie veel leven koopt, blijft anders vanaf ronde 15 onaantastbaar. */
     var groei = 1 + W.ronde * 0.035 + Math.max(0, W.ronde - 12) * 0.03;
-    var klap = Math.max(1, Math.round((schade * groei + P.maxHp * 0.022 * Math.max(0, W.ronde - 12)) * NERF * P.stats.pantser * (s2.blok ? BLOK.deel : 1)));
+    /* in een nachtmerrie slaat hij harder; de waarschuwing blijft even lang
+       staan, dus je kunt het nog steeds ontwijken */
+    var nmX = W.nachtmerrie ? NACHTMERRIE.schadeX : 1;
+    var klap = Math.max(1, Math.round((schade * groei + P.maxHp * 0.022 * Math.max(0, W.ronde - 12)) * NERF * nmX * P.stats.pantser * (s2.blok ? BLOK.deel : 1)));
     P.hp -= klap; s2.raak = s2.blok ? RAAKPAUZE * 0.5 : RAAKPAUZE; s2.flits = 0.25;
     W.cijfers.push({ x:s2.x, y:s2.y - 26, tekst:(s2.blok ? 'geblokt -' : '-') + klap, leven:0.9, kleur:s2.blok ? '#204ECF' : (kleur || '#c0442c') });
     if (P.hp <= 0){ P.hp = 0; valNeer(P); }
@@ -840,6 +866,15 @@ function maak(opties){
       b.x = ARENA.b / 2; b.y = ARENA.h / 2;
       b.aanvalKlok -= dt;
       var boos = b.hp <= b.maxHp / 2;
+      /* de nachtmerrie gaat per fase een tandje sneller */
+      if (W.nachtmerrie){
+        var f = nmFase(b);
+        if (f > b.nmFase){
+          b.nmFase = f;
+          W.cijfers.push({ x:b.x, y:b.y - b.r - 16, tekst:'Fase ' + (f + 1), leven:2.2, kleur:b.def.kleur });
+          zeg('nmfase', f + 1, b);
+        }
+      }
       /* Ook als hij kwaad is wacht hij tot het veld leeg is. Anders stapelen de
          aanvallen zich op en is er geen plek meer om te staan. */
       var vrij = !W.aanvallen.some(function(a){ return a.soort !== 'plas' && a.soort !== 'schot'; });
@@ -849,7 +884,8 @@ function maak(opties){
           W.cijfers.push({ x:b.x, y:b.y - b.r - 16, tekst:b.def.naam + ' wordt kwaad', leven:2, kleur:b.def.kleur });
         }
         baasValtAan(b, levend, boos);
-        b.aanvalKlok = AANVAL.pauze(ronde) * (boos ? AANVAL.boosPauze : 1) + duurVan(b.def.aanvallen[b.laatste]) * (boos ? AANVAL.boosOverlap : 1);
+        b.aanvalKlok = AANVAL.pauze(ronde) * (boos ? AANVAL.boosPauze : 1) * (W.nachtmerrie ? NACHTMERRIE.fases[b.nmFase].pauze : 1)
+                     + duurVan(b.def.aanvallen[b.laatste]) * (boos ? AANVAL.boosOverlap : 1);
       }
     });
     stapAanvallen(dt, levend);

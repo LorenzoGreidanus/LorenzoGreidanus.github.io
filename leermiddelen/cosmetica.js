@@ -56,7 +56,18 @@
     { id:'b3', soort:'b', n:3, naam:'Pen van De Rode Pen',           prijs:0, baas:'pen',   uit:'versla De Rode Pen in Zwaardvechter' },
     { id:'b4', soort:'b', n:4, naam:'Propje van De Prop',            prijs:0, baas:'prop',  uit:'versla De Prop in Zwaardvechter' },
     { id:'b5', soort:'b', n:5, naam:'Wijzerplaat van De Klok',       prijs:0, baas:'klok',  uit:'versla De Klok in Zwaardvechter' },
-    { id:'b6', soort:'b', n:6, naam:'Zwermpje van De Zwerm',         prijs:0, baas:'zwerm', uit:'versla De Zwerm in Zwaardvechter' }
+    { id:'b6', soort:'b', n:6, naam:'Zwermpje van De Zwerm',         prijs:0, baas:'zwerm', uit:'versla De Zwerm in Zwaardvechter' },
+    /* De nachtmerrie: alleen tegen een baas, met alles gekocht, en hij is veel
+       taaier. Elke baas geeft een ander soort ding, zodat het opvalt dat je het
+       gehaald hebt. baas:'nm-...' zorgt dat de winkel ze weigert en het
+       vrijspelen ze wel doorlaat; er hoefde daardoor niets aan de server te
+       veranderen. */
+    { id:'h13', soort:'h', n:13, naam:'Nachtmerriekroon',   prijs:0, baas:'nm-fout',  uit:'versla De Grote Fout in de nachtmerrie' },
+    { id:'q4',  soort:'q', n:4,  naam:'Inktbril',           prijs:0, baas:'nm-inkt',  uit:'versla De Inktvlek in de nachtmerrie' },
+    { id:'r7',  soort:'r', n:7,  naam:'Rode streep',        prijs:0, baas:'nm-pen',   uit:'versla De Rode Pen in de nachtmerrie' },
+    { id:'h14', soort:'h', n:14, naam:'Propkroon',          prijs:0, baas:'nm-prop',  uit:'versla De Prop in de nachtmerrie' },
+    { id:'a4',  soort:'a', n:4,  naam:'Middernacht',        prijs:0, baas:'nm-klok',  uit:'versla De Klok in de nachtmerrie' },
+    { id:'r8',  soort:'r', n:8,  naam:'Zwermring',          prijs:0, baas:'nm-zwerm', uit:'versla De Zwerm in de nachtmerrie' }
   ];
   var SOORTEN = { h:'Hoeden', q:'Brillen', a:'Achtergronden', r:'Randen', z:'Zwaarden', b:'Trofeeën van de bazen' };
   /* is dit item nu te koop? Zonder seizoen altijd; met seizoen alleen tussen die dagen (jaar loopt gewoon door) */
@@ -67,6 +78,8 @@
     return s[0] <= s[2] ? (na && voor) : (na || voor);
   }
   function vanBaas(baasId){ for (var i = 0; i < ITEMS.length; i++) if (ITEMS[i].baas === baasId) return ITEMS[i]; return null; }
+  /* wat je wint als je deze baas in de nachtmerrie verslaat */
+  function vanNachtmerrie(baasId){ return vanBaas('nm-' + baasId); }
   function vind(id){ for (var i = 0; i < ITEMS.length; i++) if (ITEMS[i].id === id) return ITEMS[i]; return null; }
   /* de spec uit elkaar: het gezichtje en wat erop en eromheen zit */
   function ontleed(spec){
@@ -86,6 +99,6 @@
     if (o.q && !bezit['q' + o.q]) o.q = 0;
     return bouw(o);
   }
-  g.COSMETICA = { ITEMS:ITEMS, SOORTEN:SOORTEN, vind:vind, vanBaas:vanBaas, ontleed:ontleed, bouw:bouw, toegestaan:toegestaan, inSeizoen:inSeizoen };
+  g.COSMETICA = { ITEMS:ITEMS, SOORTEN:SOORTEN, vind:vind, vanBaas:vanBaas, vanNachtmerrie:vanNachtmerrie, ontleed:ontleed, bouw:bouw, toegestaan:toegestaan, inSeizoen:inSeizoen };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 if (typeof module !== 'undefined' && module.exports) module.exports = globalThis.COSMETICA;
