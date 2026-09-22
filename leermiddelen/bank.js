@@ -75,8 +75,16 @@ var TIJDVAKKEN = [
 
 var ONDERDELEN = {
   reken: [{id:'tafels',naam:'tafels'},{id:'hoofd',naam:'hoofdrekenen'},{id:'machten',naam:'machten en wortels'},{id:'negatief',naam:'negatieve getallen'},{id:'komma',naam:'kommagetallen'},{id:'gemiddelde',naam:'gemiddelde en schaal'},{id:'breuk',naam:'breuken'},{id:'procent',naam:'procenten'},{id:'verhouding',naam:'verhoudingen'},{id:'tijdgeld',naam:'tijd en geld'},{id:'meten',naam:'meten en meetkunde'}],
-  ned: [{id:'werkwoordspelling',naam:'werkwoordspelling'},{id:'spelling',naam:'spelling'},{id:'synoniemen',naam:'synoniemen'},{id:'betekenis',naam:'betekenis van woorden'},{id:'leestekens',naam:'leestekens'},{id:'meervoud',naam:'enkel en meervoud'},{id:'zinsdelen',naam:'zinsdelen en woordsoorten'},{id:'tekstverbanden',naam:'signaalwoorden'},{id:'uitdrukkingen',naam:'uitdrukkingen'},{id:'verwijswoorden',naam:'verwijswoorden'}],
-  eng: [{id:'woordjes NL naar EN',naam:'woordjes NL naar EN'},{id:'woordjes EN naar NL',naam:'woordjes EN naar NL'},{id:'grammatica',naam:'grammatica'},{id:'voorzetselwerkwoorden',naam:'werkwoord met voorzetsel'},{id:'valse vrienden',naam:'valse vrienden'},{id:'irregular verbs',naam:'irregular verbs'}],
+  /* groep zet de onderdelen onder een kop in de kiezer; zie GROEPEN hieronder */
+  ned: [{id:'werkwoordspelling',naam:'werkwoordspelling',groep:'spelling'},{id:'spelling',naam:'los van het werkwoord',groep:'spelling'},{id:'meervoud',naam:'enkel en meervoud',groep:'spelling'},
+        {id:'leestekens',naam:'leestekens',groep:'interpunctie'},
+        {id:'woordsoorten',naam:'welk woord is wat',groep:'woordsoorten'},
+        {id:'zinsontleding',naam:'zinsdelen benoemen',groep:'zinsontleding'},
+        {id:'verwijswoorden',naam:'verwijswoorden',groep:'grammatica'},
+        {id:'betekenis',naam:'betekenis van woorden',groep:'lezen'},{id:'synoniemen',naam:'synoniemen',groep:'lezen'},{id:'uitdrukkingen',naam:'uitdrukkingen',groep:'lezen'},{id:'tekstverbanden',naam:'signaalwoorden',groep:'lezen'}],
+  eng: [{id:'woordjes NL naar EN',naam:'woordjes NL naar EN',groep:'woordenschat'},{id:'woordjes EN naar NL',naam:'woordjes EN naar NL',groep:'woordenschat'},{id:'valse vrienden',naam:'valse vrienden',groep:'woordenschat'},
+        {id:'irregular verbs',naam:'irregular verbs',groep:'werkwoorden'},{id:'voorzetselwerkwoorden',naam:'werkwoord met voorzetsel',groep:'werkwoorden'},
+        {id:'grammatica',naam:'grammatica',groep:'grammatica'}],
   ges: TIJDVAKKEN.map(t => ({id: t.id, naam: t.naam})).concat([{id:'staat', naam:'staatsinrichting (examen vmbo)'}, {id:'nl1900', naam:'Nederland en de wereld vanaf 1900 (examen vmbo)'}]),
   aard: [{id:'vlaggen',naam:'vlaggen van landen'},{id:'landvormen',naam:'vormen van landen'}],
   bio: [{id:'organen',naam:'organen'},{id:'bloed',naam:'bloed en ademhaling'},{id:'vertering',naam:'vertering en voeding'},{id:'planten',naam:'planten'},{id:'cellen',naam:'cellen'},{id:'zintuigen',naam:'zintuigen en zenuwen'},{id:'ordening',naam:'ordening en ecologie'},{id:'erfelijkheid',naam:'erfelijkheid'}],
@@ -87,8 +95,50 @@ ONDERDELEN.aard.push({id:'examen-ak', naam:'weer, water, bevolking (examen vmbo)
 ONDERDELEN.bio.push({id:'examen-bio', naam:'examenstof vmbo'});
 ONDERDELEN.wis.push({id:'examen-wis', naam:'examenstof vmbo'});
 ONDERDELEN.burg.push({id:'examen-mk', naam:'maatschappijkunde (examen vmbo)'});
-ONDERDELEN.eng.push({id:'examen-eng', naam:'examenwoorden en signaalwoorden (examen vmbo)'});
+ONDERDELEN.eng.push({id:'examen-eng', naam:'examenwoorden en signaalwoorden (examen vmbo)', groep:'lezen'});
 ONDERDELEN.eco = [{id:'examen-eco', naam:'examenstof vmbo'}];
+
+/* De koppen boven de onderdelen. Een vak zonder groepen houdt gewoon zijn
+   platte lijstje; alleen Nederlands en Engels hebben er genoeg onderdelen voor
+   dat je ze wilt ordenen.
+
+   De volgorde hier is de volgorde in de kiezer. Bij Nederlands staat spelling
+   vooraan omdat daar de meeste vragen zitten en het het vaakst geoefend wordt;
+   zinsontleding en woordsoorten staan bij elkaar omdat ze op elkaar lijken en
+   je het verschil juist moet leren zien. */
+var GROEPEN = {
+  ned: [{id:'spelling',naam:'Spelling'},{id:'grammatica',naam:'Grammatica'},{id:'lezen',naam:'Lezen'},
+        {id:'interpunctie',naam:'Interpunctie'},{id:'woordsoorten',naam:'Woordsoorten'},{id:'zinsontleding',naam:'Zinsontleding'}],
+  eng: [{id:'woordenschat',naam:'Woordenschat'},{id:'werkwoorden',naam:'Werkwoorden'},
+        {id:'grammatica',naam:'Grammatica'},{id:'lezen',naam:'Lezen'}]
+};
+/* De onderdelen van een vak, op groep. Een vak zonder groepen geeft een lijst
+   met een naamloze groep, zodat een kiezer altijd dezelfde vorm krijgt. */
+/* De kiezers tekenen hier allemaal hetzelfde rijtje uit: een kop, dan de
+   onderdelen die eronder horen, dan de volgende kop. Zo staat de indeling op
+   een plek in plaats van in vier pagina's.
+
+   Een vak zonder groepen geeft alleen onderdelen terug, dus die kiezers zien er
+   precies zo uit als altijd. */
+function deelItems(vak){
+  var uit = [];
+  groepen(vak).forEach(function(g){
+    if (g.naam) uit.push({ soort: 'kop', id: g.id, naam: g.naam, aantal: g.onderdelen.length });
+    g.onderdelen.forEach(function(o){ uit.push({ soort: 'deel', id: o.id, naam: o.naam, groep: g.id }); });
+  });
+  return uit;
+}
+function groepen(vak){
+  var lijst = ONDERDELEN[vak] || [], koppen = GROEPEN[vak];
+  if (!koppen) return [{ id:'', naam:'', onderdelen: lijst.slice() }];
+  var uit = koppen.map(function(g){
+    return { id: g.id, naam: g.naam, onderdelen: lijst.filter(function(o){ return o.groep === g.id; }) };
+  }).filter(function(g){ return g.onderdelen.length; });
+  /* wat geen groep heeft valt er niet buiten, dat gaat onderaan */
+  var los = lijst.filter(function(o){ return !o.groep; });
+  if (los.length) uit.push({ id:'', naam:'overig', onderdelen: los });
+  return uit;
+}
 
 /* ---------------------------------------------------------------------------
    Extra vragen. De Engelse werkwoorden komen uit Irregular verbs en de
@@ -188,7 +238,10 @@ var BANK = (function(){
     lijst = lijst.filter(function(v){ return ALLE.indexOf(v) >= 0; });
     return Promise.all(lijst.map(een));
   }
-  return { zorg: zorg, vakken: ALLE, heeft: function(v){ return !!klaar[v]; } };
+  return { zorg: zorg, vakken: ALLE, heeft: function(v){ return !!klaar[v]; },
+           /* de onderdelen van een vak, op kop; zie GROEPEN verderop */
+           groepen: function(v){ return groepen(v); },
+           deelItems: function(v){ return deelItems(v); } };
 })();
 
 /* De soorten sommen per niveau. Deze lijst geldt als je niets kiest; koos je

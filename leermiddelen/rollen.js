@@ -96,7 +96,11 @@ window.ROLSPEL = (function(){
       else if (wachtrij.length < 200) wachtrij.push(m);
     }
     open();
-    return {
+    /* De lobby krijgt alleen een lijst spelers mee en weet dus niet bij welke
+       kamer hij hoort. Hier wordt de laatst geopende onthouden, zodat het
+       kruisje achter een naam weet waar hij heen moet. Een pagina heeft er
+       nooit meer dan een tegelijk open. */
+    var kamer = {
       naar: function(pid, d){ d.n = ++n; stuur({ t:'naar', pid:pid, d:d }); },
       kaarten: function(l){ l.forEach(function(k){ k.d.n = ++n; }); for (var i = 0; i < l.length; i += 40) stuur({ t:'kaarten', lijst:l.slice(i, i + 40) }); },
       alle: function(d){ d.n = ++n; stuur({ t:'alle', d:d }); },
@@ -106,7 +110,11 @@ window.ROLSPEL = (function(){
       spelers: function(){ return lijst; },
       sluit: function(){ dicht = true; if (ws){ try { ws.close(1000, 'klaar'); } catch (e){} } ws = null; }
     };
+    laatsteKamer = kamer;
+    return kamer;
   }
+  /* de kamer die het laatst geopend is; de lobby heeft hem nodig voor het kruisje */
+  var laatsteKamer = null;
   /* Rollen verdelen: eerst de rollen met een vast aantal, in volgorde; wat
      overblijft gaat naar de rol zonder aantal (of naar de laatste). Wie al een
      rol had (in 'vast') houdt die, zodat een laatkomer niet alles omgooit. */
@@ -181,8 +189,21 @@ window.ROLSPEL = (function(){
         '<small>en vul deze code in</small><b>' + schoon(code) + '</b></div>' +
       '<div><p class="rollen-tel">' + (spelers.length ? spelers.length + (spelers.length === 1 ? ' apparaat' : ' apparaten') + ' aangemeld' : 'Nog niemand. Zodra iemand meedoet staat zijn bijnaam hier.') + '</p>' +
       '<div class="rollen-chips">' + spelers.map(function(s){
-        return '<span class="rollen-chip' + (s.aan ? '' : ' uit') + '">' + (window.AVATAR ? AVATAR.svg(s.naam, 22, s.av) : '') + schoon(s.naam) + (s.rol ? '<small>' + schoon(s.rol) + '</small>' : '') + '</span>';
+        return '<span class="rollen-chip' + (s.aan ? '' : ' uit') + '">' + (window.AVATAR ? AVATAR.svg(s.naam, 22, s.av) : '') + schoon(s.naam) +
+          (s.rol ? '<small>' + schoon(s.rol) + '</small>' : '') +
+          '<button type="button" class="rollen-weg" title="' + schoon(s.naam) + ' verwijderen" aria-label="' + schoon(s.naam) + ' verwijderen" data-weg="' + schoon(s.sid) + '">\u00d7</button></span>';
       }).join('') + '</div>' + (tekst ? '<p class="rollen-tel">' + schoon(tekst) + '</p>' : '') + '</div></div>';
+    /* De lobby wordt bij elke verandering opnieuw getekend, dus de luisteraar
+       hangt aan de houder en niet aan de knopjes zelf. */
+    if (el.__wegHaak) return;
+    el.__wegHaak = true;
+    el.addEventListener('click', function(e){
+      var b = e.target && e.target.closest ? e.target.closest('[data-weg]') : null;
+      if (!b || !laatsteKamer) return;
+      var wie = b.getAttribute('title') || 'deze leerling';
+      if (!confirm(wie.replace(' verwijderen', '') + ' uit de kamer halen? Hij kan daarna opnieuw meedoen met de code.')) return;
+      laatsteKamer.weg(b.getAttribute('data-weg'));
+    });
   }
   /* de stijl van de lobby en de chips, één keer */
   try {
@@ -193,7 +214,10 @@ window.ROLSPEL = (function(){
       '.rollen-code i{display:block;font-style:normal;font-weight:600;font-size:clamp(1rem,3.4vw,1.4rem);margin:2px 0 8px;overflow-wrap:anywhere}' +
       '.rollen-code b{display:block;font-size:clamp(2.2rem,11vw,3.6rem);letter-spacing:.18em;line-height:1.15;font-weight:700;margin:4px 0 0 .18em}' +
       '.rollen-tel{color:var(--muted);font-size:.9rem;margin:0 0 8px}.rollen-chips{display:flex;flex-wrap:wrap;gap:6px}' +
-      '.rollen-chip{display:inline-flex;align-items:center;gap:6px;background:var(--kaart,#fff);border:1px solid rgba(20,34,76,.12);border-radius:999px;padding:5px 11px 5px 6px;font-weight:600;font-size:.88rem}.rollen-chip.uit{opacity:.45}.rollen-chip small{font-weight:500;color:var(--muted);font-size:.76rem}' +
+      '.rollen-chip{display:inline-flex;align-items:center;gap:6px;background:var(--kaart,#fff);border:1px solid rgba(20,34,76,.12);border-radius:999px;padding:5px 6px 5px 6px;font-weight:600;font-size:.88rem}.rollen-chip.uit{opacity:.45}.rollen-chip small{font-weight:500;color:var(--muted);font-size:.76rem}' +
+      /* het kruisje om iemand eruit te halen; ruim genoeg om met een vinger te raken */
+      '.rollen-weg{border:none;background:none;color:var(--muted);cursor:pointer;font-size:1.05rem;line-height:1;min-width:44px;min-height:44px;margin:-14px -6px -14px 0;padding:0}' +
+      '.rollen-weg:hover,.rollen-weg:focus-visible{color:#c0442c}' +
       '.rollen-stem{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:12px 0}.rollen-stem div{background:var(--kaart,#fff);border:1px solid rgba(20,34,76,.12);border-radius:16px;padding:12px 14px}.rollen-stem b{display:block;font-size:1.8rem;line-height:1.1}.rollen-stem span{font-size:.8rem;color:var(--muted)}' +
       '@media(max-width:620px){.rollen-lobby{grid-template-columns:minmax(0,1fr);gap:12px}.rollen-code{padding:12px 14px}}' +
       ':root[data-theme="dark"] .rollen-chip,:root[data-theme="dark"] .rollen-stem div{background:#182652;border-color:rgba(243,239,233,.14)}' +

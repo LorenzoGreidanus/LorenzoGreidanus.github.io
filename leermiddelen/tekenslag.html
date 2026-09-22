@@ -68,6 +68,10 @@ textarea.veld{min-height:120px;resize:vertical}
 .speler-chip{display:inline-flex;align-items:center;gap:6px;background:var(--kaart2);border-radius:999px;padding:5px 12px 5px 8px;font-size:.92rem;font-weight:500}
 .speler-chip.uit{opacity:.5}
 .speler-chip .avatar{margin:0}
+/* het kruisje om iemand uit de kamer te halen; ruim genoeg om met een vinger te raken */
+.speler-chip button{border:none;background:none;color:var(--muted);cursor:pointer;font-size:1.05rem;line-height:1;
+  min-width:44px;min-height:44px;margin:-14px -8px -14px 0;padding:0}
+.speler-chip button:hover,.speler-chip button:focus-visible{color:#c0442c}
 .teams{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:12px}
 .team{border-radius:16px;padding:12px 14px;background:var(--kaart2);border-top:6px solid var(--tk)}
 .team b{display:flex;justify-content:space-between;font-size:1.05rem}
@@ -422,7 +426,21 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
     if (m.t === 'actie') actieVanSpeler(m);
   }
   function tekenLobbySpelers(){
-    $('bSpelers').innerHTML = spelersLijst.map(function(s){ return '<span class="speler-chip' + (s.aan ? '' : ' uit') + '">' + (window.AVATAR ? AVATAR.svg(s.naam, 22, s.av) : '') + schoon(s.naam) + '</span>'; }).join('');
+    $('bSpelers').innerHTML = spelersLijst.map(function(s){
+      return '<span class="speler-chip' + (s.aan ? '' : ' uit') + '">' + (window.AVATAR ? AVATAR.svg(s.naam, 22, s.av) : '') + schoon(s.naam) +
+        '<button type="button" title="' + schoon(s.naam) + ' verwijderen" aria-label="' + schoon(s.naam) + ' verwijderen" data-weg="' + schoon(s.sid) + '">\u00d7</button></span>';
+    }).join('');
+    /* het rijtje wordt telkens opnieuw gezet, dus luisteren gaat via de houder */
+    if (!$('bSpelers').__wegHaak){
+      $('bSpelers').__wegHaak = true;
+      $('bSpelers').addEventListener('click', function(e){
+        var b = e.target && e.target.closest ? e.target.closest('[data-weg]') : null;
+        if (!b) return;
+        var wie = (b.getAttribute('title') || '').replace(' verwijderen', '') || 'deze leerling';
+        if (!confirm(wie + ' uit de kamer halen? Hij kan daarna opnieuw meedoen met de code.')) return;
+        stuur({ t:'weg', sid:b.getAttribute('data-weg') });
+      });
+    }
     var n = spelersLijst.length;
     $('bAantal').textContent = n ? n + (n === 1 ? ' leerling' : ' leerlingen') + ' in de kamer' : 'Nog niemand. Zodra iemand meedoet staat zijn bijnaam hier.';
     $('startBtn').disabled = n < 2;

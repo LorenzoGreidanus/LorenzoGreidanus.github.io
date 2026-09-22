@@ -170,6 +170,13 @@ td.getal{font-variant-numeric:tabular-nums;text-align:right}
 .gekoppeld .wie svg{width:26px;height:26px;flex:none}
 .gekoppeld .wie.stil{opacity:.75;border-style:dashed}
 .gekoppeld .wie em{font-style:normal;color:var(--muted);font-size:.8rem}
+/* de naam van het Microsoft-account, tussen haakjes achter de bijnaam */
+.gekoppeld .wie i{font-style:normal;color:var(--muted);font-size:.84rem}
+/* het kruisje om een leerling uit de klas te halen; ruim genoeg voor een vinger */
+.gekoppeld .wie button{border:none;background:none;color:var(--muted);cursor:pointer;font-size:1.05rem;
+  line-height:1;min-width:44px;min-height:44px;margin:-14px -10px -14px 0;padding:0}
+.gekoppeld .wie button:hover,.gekoppeld .wie button:focus-visible{color:var(--crab)}
+@media print{.gekoppeld .wie button{display:none}}
 .gekoppeld .leeg{color:var(--muted);font-size:.92rem}
 /* ---------- op papier ----------
    Een blad voor in je map of op tafel bij een gesprek: de klas, de datum en de
@@ -460,8 +467,11 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     });
     var wie = {};
     uit.forEach(function(r){ wie[r.naam] = r.av || ''; });
-    var gekoppeld = Object.keys(wie).map(function(n){ return { naam:n, av:wie[n], sinds: nu - 5 * 86400000, gespeeld:true }; })
-      .concat([{ naam:'Younes', av:'', sinds: nu - 3600000, gespeeld:false }, { naam:'Sanne', av:'', sinds: nu - 1800000, gespeeld:false }])
+    /* ms is de naam van het Microsoft-account; de helft van de demoklas speelt als gast */
+    var msNamen = ['Fatima el Amrani', 'Jesse de Boer', 'Lotte Visser', 'Omar Haddad', 'Sven Bakker'];
+    var gekoppeld = Object.keys(wie).map(function(n, i){ return { id:'demo' + i, naam:n, av:wie[n], ms: i % 2 ? '' : (msNamen[i % msNamen.length] || ''), sinds: nu - 5 * 86400000, gespeeld:true }; })
+      .concat([{ id:'demoY', naam:'Younes', av:'', ms:'Younes Ouahabi', sinds: nu - 3600000, gespeeld:false },
+               { id:'demoS', naam:'Sanne', av:'', ms:'', sinds: nu - 1800000, gespeeld:false }])
       .sort(function(a, b){ return a.naam.localeCompare(b.naam, 'nl'); });
     return { code:'DEMO', naam:'Demoklas 2H', gemaakt: nu - 20 * 86400000, resultaten: uit, leerlingen: gekoppeld, spellen:['race', 'toren', 'bronnenlab'], lesmodus:false,
              opdracht: { spel:'race', vak:'ges', deel:'tv5', deelNaam:'5 ontdekkers en hervormers', min:4, tot: nu + 4 * 86400000, tekst:'Voor de toets van vrijdag', sinds: nu - 5 * 86400000 } };
@@ -524,10 +534,34 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     doel.innerHTML = l.map(function(x){
       var gez = window.AVATAR ? AVATAR.svg(x.naam, 26, x.av || '') : '';
       return '<span class="wie' + (x.gespeeld ? '' : ' stil') + '">' + gez + '<span>' + schoon(x.naam) +
-             (x.gespeeld ? '' : ' <em>nog niets gespeeld</em>') + '</span></span>';
+             /* de naam van het Microsoft-account; wie als gast speelt heeft er geen */
+             (x.ms ? ' <i>(' + schoon(x.ms) + ')</i>' : '') +
+             (x.gespeeld ? '' : ' <em>nog niets gespeeld</em>') + '</span>' +
+             (x.id ? '<button type="button" title="' + schoon(x.naam) + ' uit de klas halen" aria-label="' +
+                     schoon(x.naam) + ' uit de klas halen" data-weg="' + schoon(x.id) + '">\u00d7</button>' : '') +
+             '</span>';
     }).join('') +
       '<p class="leeg" style="flex:1 1 100%;margin:4px 0 0">' + l.length + ' gekoppeld' +
       (nog ? ', waarvan ' + nog + ' nog niets speelde' : ', iedereen heeft al iets gespeeld') + '.</p>';
+    /* de lijst wordt elke twintig seconden opnieuw gezet, dus luisteren gaat via de houder */
+    if (doel.__wegHaak) return;
+    doel.__wegHaak = true;
+    doel.addEventListener('click', function(e){
+      var b = e.target && e.target.closest ? e.target.closest('[data-weg]') : null;
+      if (!b || !huidig) return;
+      if (DEMO){ alert('Niet in de demo.'); return; }
+      var wie = (b.getAttribute('title') || '').replace(' uit de klas halen', '') || 'deze leerling';
+      if (!confirm(wie + ' uit klas ' + huidig.code + ' halen? Zijn uitslagen gaan mee. Hij kan zich daarna opnieuw koppelen met de code.')) return;
+      b.disabled = true;
+      fetch('/api/klas/' + huidig.code + '/leerlingweg', { method:'POST', headers:{ 'content-type':'application/json' },
+        body: JSON.stringify({ sleutel: huidig.sleutel, id: b.getAttribute('data-weg') }) })
+        .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+        .then(function(x){
+          if (!x.ok){ alert(x.j.fout || 'Verwijderen lukte niet.'); b.disabled = false; return; }
+          haal();
+        })
+        .catch(function(){ alert('Geen verbinding met de server.'); b.disabled = false; });
+    });
   }
   function teken(){
     tekenGekoppeld();

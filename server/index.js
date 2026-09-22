@@ -22,7 +22,7 @@ export { Account } from "./account.js";
 /* De klassen heten nog Zombiekamer omdat een Durable Object hernoemen om een
    migratie vraagt; het spel zelf heet De stad. */
 export { Zombiekamer, Veld } from "./stad.js";
-import { behandel as accountBehandel, ingelogd as accountIngelogd, mogelijk as accountMogelijk, isEigenaar } from "./account.js";
+import { behandel as accountBehandel, ingelogd as accountIngelogd, mogelijk as accountMogelijk, isEigenaar, naamVan as accountNaam } from "./account.js";
 const KLASSEMENTEN = { toren: true, zwaard: true, dag: true };   /* dag: per datum een lijst, dag-2026-09-19 */
 
 /* Een browser stuurt bij elk POST en bij elke WebSocket mee vanaf welke site
@@ -226,7 +226,7 @@ export default {
     }
 
     /* het klasoverzicht: leerlingen melden hun uitslag, de docent haalt ze op met de sleutel */
-    const kl = p.match(/^\/api\/klas\/([A-Za-z]{4})(\/meld|\/melden|\/opheffen|\/opdracht|\/mijn|\/instelling|\/hoi)?\/?$/);
+    const kl = p.match(/^\/api\/klas\/([A-Za-z]{4})(\/meld|\/melden|\/opheffen|\/opdracht|\/mijn|\/instelling|\/hoi|\/leerlingweg)?\/?$/);
     if (kl){
       const stub = env.KAMERS.get(env.KAMERS.idFromName(kl[1].toUpperCase()));
       /* de leerling: heb ik de opdracht gehaald? */
@@ -237,6 +237,10 @@ export default {
         const wat = kl[2].slice(1);
         if (!await magDoor(env, req, wat, wat === "meld" ? 400 : 40, 60)) return json({ fout: "even wachten" }, 429);
         let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldige melding" }, 400); }
+        /* De naam van het Microsoft-account komt hier uit het sessiekoekje en
+           niet uit het bericht: anders typt een leerling er zelf een naam in.
+           Dezelfde weg als vanEigenaar bij het maken van een klascode. */
+        if (wat === "hoi") inz = Object.assign({}, inz || {}, { ms: await accountNaam(req, env) });
         return stub.fetch("https://kamer/" + wat, { method: "POST", body: JSON.stringify(inz || {}) });
       }
       return stub.fetch("https://kamer/resultaten?sleutel=" + encodeURIComponent(url.searchParams.get("sleutel") || ""));

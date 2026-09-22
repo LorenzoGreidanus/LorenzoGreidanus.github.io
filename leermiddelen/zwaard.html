@@ -87,6 +87,13 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .stijlico{width:1.05em;height:1.05em;vertical-align:-.16em;margin-right:.4em;fill:none;stroke:currentColor;
   stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .deelvak{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+/* Een kop in de onderdeelkiezer: hij kiest de hele groep, maar hij moet er
+   als een kop uitzien en niet als zomaar weer een knopje. Daarom smaller,
+   in hoofdletters en zonder rand tot je hem kiest. */
+.deelvak .deelbreek{flex-basis:100%;height:0;margin:0;padding:0;border:none}
+.deelvak .deelkop{font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;font-weight:700;
+  border-style:dashed;opacity:.85;padding-left:12px;padding-right:12px}
+.deelvak .deelkop.on{opacity:1;border-style:solid}
 .deelvak button{background:var(--room);border:1.5px solid rgba(20,34,76,.12);border-radius:999px;padding:6px 12px;font-size:.78rem;font-weight:600}
 .deelvak button.on{border-color:var(--ocean);background:#eaf0ff;color:var(--ocean)}
 .btn{display:inline-block;border:none;background:var(--crab);color:#fff;font-weight:600;padding:14px 32px;border-radius:999px;
@@ -709,20 +716,50 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       });
     });
   }
+  /* welke onderdelen horen bij deze kop */
+  function groepLeden(groep){
+    var g = (window.BANK && BANK.groepen) ? BANK.groepen(vak) : [];
+    for (var i = 0; i < g.length; i++) if (g[i].id === groep) return g[i].onderdelen.map(function(o){ return o.id; });
+    return [];
+  }
+  /* een kop aantikken zet de hele groep aan, of uit als hij al helemaal aan stond */
+  function groepKlik(groep){
+    var l = groepLeden(groep), heel = l.length && l.every(function(x){ return keuze[vak].indexOf(x) >= 0; });
+    l.forEach(function(x){
+      var k = keuze[vak].indexOf(x);
+      if (heel && k >= 0) keuze[vak].splice(k, 1);
+      if (!heel && k < 0) keuze[vak].push(x);
+    });
+  }
+  function groepHeel(groep){
+    var l = groepLeden(groep);
+    return l.length && l.every(function(x){ return keuze[vak].indexOf(x) >= 0; });
+  }
   function tekenDeelvakken(){
     var el = document.getElementById('deelvakken');
     if (!vak){ el.innerHTML = ''; return; }
-    var lijst = ONDERDELEN[vak] || [], aan = keuze[vak] || [];
+    var aan = keuze[vak] || [];
+    var items = (window.BANK && BANK.deelItems) ? BANK.deelItems(vak)
+             : (ONDERDELEN[vak] || []).map(function(o){ return { soort:'deel', id:o.id, naam:o.naam }; });
     el.innerHTML = '<p class="eyebrow kop2">welke onderdelen</p><div class="deelvak">' +
       '<button type="button"' + (!aan.length ? ' class="on"' : '') + ' data-d="">alles door elkaar</button>' +
-      lijst.map(function(o){
+      items.map(function(o){
+        if (o.soort === 'kop'){
+          /* een lege reep die de hele breedte pakt: zo begint elke groep op een
+             nieuwe regel en zie je waar hij ophoudt */
+          return '<span class="deelbreek"></span><button type="button" class="deelkop' + (groepHeel(o.id) ? ' on' : '') + '" data-g="' + o.id + '">' + o.naam + '</button>';
+        }
         return '<button type="button"' + (aan.indexOf(o.id) >= 0 ? ' class="on"' : '') + ' data-d="' + o.id + '">' + o.naam + '</button>';
       }).join('') + '</div>';
     Array.prototype.forEach.call(el.querySelectorAll('button'), function(b){
       b.addEventListener('click', function(){
-        var id = b.getAttribute('data-d');
-        if (!id) keuze[vak] = [];
-        else { var i = keuze[vak].indexOf(id); if (i >= 0) keuze[vak].splice(i, 1); else keuze[vak].push(id); }
+        var g = b.getAttribute('data-g');
+        if (g) groepKlik(g);
+        else {
+          var id = b.getAttribute('data-d');
+          if (!id) keuze[vak] = [];
+          else { var i = keuze[vak].indexOf(id); if (i >= 0) keuze[vak].splice(i, 1); else keuze[vak].push(id); }
+        }
         pot = null;
         tekenDeelvakken();
       });

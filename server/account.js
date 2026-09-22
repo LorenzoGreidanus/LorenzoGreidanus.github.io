@@ -124,6 +124,21 @@ export async function isEigenaar(req, env){
     return !!(j && j.beheer);
   } catch (e){ console.warn("account: eigenaar nakijken mislukt", e && e.message); return false; }
 }
+/* De naam van wie dit verzoek stuurt, of een lege tekst. De klas gebruikt hem
+   om achter de bijnaam van een leerling te zetten wie het is. Hij komt uit het
+   sessiekoekje en niet uit het bericht: anders typt iedereen er zelf een naam
+   in. Bij twijfel leeg, want een verkeerde naam is erger dan geen naam. */
+export async function naamVan(req, env){
+  if (!mogelijk(env)) return "";
+  try {
+    const s = await sessie(env, req);
+    if (!s) return "";
+    const r = await (await account(env, s.id)).fetch("https://account/lees");
+    if (!r.ok) return "";
+    const j = await r.json();
+    return String((j && j.naam) || "").slice(0, 40);
+  } catch (e){ console.warn("account: naam opzoeken mislukt", e && e.message); return ""; }
+}
 export function mogelijk(env){ return !!(env.MS_CLIENT_ID && env.MS_CLIENT_SECRET && env.SESSIE_GEHEIM); }
 function basis(env){ return String(env.MS_AANMELDBASIS || "https://login.microsoftonline.com").replace(/\/+$/, ""); }
 function huurder(env){ return String(env.MS_TENANT || "common"); }

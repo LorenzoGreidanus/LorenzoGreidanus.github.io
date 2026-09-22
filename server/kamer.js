@@ -134,6 +134,7 @@ export class Kamer extends DurableObject {
       if (url.pathname === "/opdracht" && req.method === "POST") return await this.opdracht(await req.json());
       if (url.pathname === "/instelling" && req.method === "POST") return await this.instelling(await req.json());
       if (url.pathname === "/hoi" && req.method === "POST") return await this.hoi(await req.json());
+      if (url.pathname === "/leerlingweg" && req.method === "POST") return await this.leerlingWeg(await req.json());
       if (url.pathname === "/mijn") return this.mijn(url.searchParams.get("sid"));
       if (req.headers.get("Upgrade") === "websocket") return this.verbind(url);
       return json({ fout: "onbekend" }, 404);
@@ -893,7 +894,12 @@ export class Kamer extends DurableObject {
     this.stand.leerlingen = this.stand.leerlingen || {};
     if (!this.stand.leerlingen[kort] && Object.keys(this.stand.leerlingen).length >= KLAS_LEERLINGEN) return json({ fout: "deze klas zit vol" }, 429);
     const was = this.stand.leerlingen[kort];
-    this.stand.leerlingen[kort] = { naam: nette(inz.naam, "Leerling"), av: schoonAv(inz.av), sinds: was && was.sinds || Date.now(), t: Date.now() };
+    /* ms is de naam van het Microsoft-account, door index.js uit het
+       sessiekoekje gehaald. Is die er niet (niet ingelogd), dan blijft staan
+       wat er stond: uitloggen hoort de docent niet meteen zijn zicht te kosten. */
+    const ms = schoon(inz.ms, 40) || (was && was.ms) || "";
+    this.stand.leerlingen[kort] = { naam: nette(inz.naam, "Leerling"), av: schoonAv(inz.av), ms,
+                                    sinds: was && was.sinds || Date.now(), t: Date.now() };
     await this.zetAlarm({ wat: "opruimen" }, KLAS_SLAAPT);
     await this.bewaar();
     return json({ ok: true, n: Object.keys(this.stand.leerlingen).length });
@@ -968,6 +974,23 @@ export class Kamer extends DurableObject {
     const mijn = this.stand.resultaten.filter(r => r.sid === s);
     return json(Object.assign({ opdracht: o, gehaald: mijn.some(r => haaltOpdracht(r, o)), beste: mijn.reduce((a, r) => Math.max(a, maatVoor(r, o)), 0) }, opzet));
   }
+  /* Een leerling uit de klas halen: hij verdwijnt uit de lijst en zijn
+     uitslagen gaan mee. Hij kan zich daarna gewoon opnieuw koppelen met de
+     code, want dit is bedoeld voor wie er per ongeluk in zit, niet als straf. */
+  async leerlingWeg(inz){
+    if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
+    if (!inz || inz.sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
+    const id = schoon(inz.id, 12);
+    if (!id) return json({ fout: "geen leerling" }, 400);
+    const l = this.stand.leerlingen || {};
+    const had = !!l[id];
+    delete l[id];
+    const voor = this.stand.resultaten.length;
+    this.stand.resultaten = this.stand.resultaten.filter(r => r.sid !== id);
+    if (!had && voor === this.stand.resultaten.length) return json({ fout: "die leerling zit niet in deze klas" }, 404);
+    await this.bewaar();
+    return json({ ok: true, weg: voor - this.stand.resultaten.length, leerlingen: this.gekoppeld() });
+  }
   /* de docent heft de klascode op: alles weg, en de leerlingen merken het bij hun volgende melding */
   async opheffen(inz){
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
@@ -992,7 +1015,7 @@ export class Kamer extends DurableObject {
   gekoppeld(){
     const gespeeld = new Set((this.stand.resultaten || []).map(r => r.sid));
     const l = this.stand.leerlingen || {};
-    return Object.keys(l).map(s => ({ naam: l[s].naam, av: l[s].av || "", sinds: l[s].sinds, gespeeld: gespeeld.has(s) }))
+    return Object.keys(l).map(s => ({ id: s, naam: l[s].naam, av: l[s].av || "", ms: l[s].ms || "", sinds: l[s].sinds, gespeeld: gespeeld.has(s) }))
       .sort((a, b) => a.naam.localeCompare(b.naam, "nl"));
   }
   aanwezig(sid){ return this.ctx.getWebSockets(sid).length > 0; }
