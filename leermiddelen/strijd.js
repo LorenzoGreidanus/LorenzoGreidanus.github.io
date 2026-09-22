@@ -37,7 +37,7 @@ window.STRIJD = (function(){
   /* Wat er in het donker anders moet. Een lijst, twee keer gebruikt: een keer
      voor wie de donkere stand zelf koos en een keer voor wie hem van zijn
      computer krijgt. Stond hier twee keer woordelijk hetzelfde. */
-  var DONKERREGELS = '.duelvak,.sitelijst .rij,.duelvak input,.sitelijst .naamrij input,.duelvak button.los{background:#182652;color:#F3EFE9;border-color:rgba(243,239,233,.14)}.sitelijst .rij.jij{background:#3a3220;border-color:#EFC64A}.duelvak p,.sitelijst .rij small,.sitelijst .leeg,.sitelijst .hint,.sitelijst .rij .nr{color:#B3BBD0}.duelvak h3,.sitelijst h3{color:#F3EFE9}#strijdSluier>div{background:#182652;color:#F3EFE9}#strijdSluier p{color:#B3BBD0}#strijdSluier button{background:#182652;color:#F3EFE9;border-color:rgba(243,239,233,.2)}#strijdSluier .stijlen button{background:#1f2f5e;color:#F3EFE9}#strijdSluier .stijlen button b{color:#F3EFE9}#strijdSluier .stijlen button.aan{background:#204ECF;color:#fff;border-color:#204ECF}#strijdSluier .stijlen button.aan b{color:#fff}#strijdSluier .lobbykaart{background:#1f2f5e;color:#F3EFE9}#strijdSluier .lobbykaart .klas{color:#B3BBD0}#strijdSluier .lobbykaart.klaar{background:#1f3a2c;border-color:#5fbf88}#strijdSluier .lobbykaart.klaar .vlag{color:#8fd9ae}#strijdSluier .lobbykaart.jij{border-color:#83A5F2}#strijdSluier .lobbykaart.jij.klaar{border-color:#5fbf88}#strijdSluier .lobbykaart.leeg{background:transparent;border-color:rgba(243,239,233,.2);color:#B3BBD0}#strijdSluier .lobbykaart .vlag{color:#F4A28C}#strijdSluier button.crab{background:#F26749;color:#fff;border-color:#F26749}#strijdSluier p.kop{color:#B3BBD0}';
+  var DONKERREGELS = '.duelvak,.sitelijst .rij,.duelvak input,.sitelijst .naamrij input,.duelvak button.los{background:#182652;color:#F3EFE9;border-color:rgba(243,239,233,.14)}.sitelijst .rij.jij{background:#3a3220;border-color:#EFC64A}.duelvak p,.sitelijst .rij small,.sitelijst .leeg,.sitelijst .hint,.sitelijst .rij .nr{color:#B3BBD0}.duelvak h3,.sitelijst h3{color:#F3EFE9}#strijdSluier>div{background:#182652;color:#F3EFE9}#strijdSluier p{color:#B3BBD0}#strijdSluier button{background:#182652;color:#F3EFE9;border-color:rgba(243,239,233,.2)}#strijdSluier .stijlen button{background:#1f2f5e;color:#F3EFE9}#strijdSluier .stijlen button b{color:#F3EFE9}#strijdSluier .stijlen button.aan{background:#204ECF;color:#fff;border-color:#204ECF}#strijdSluier .stijlen button.aan b{color:#fff}#strijdSluier .lobbykaart{background:#1f2f5e;color:#F3EFE9}#strijdSluier .lobbykaart .klas{color:#B3BBD0}#strijdSluier .lobbykaart.klaar{background:#1f3a2c;border-color:#5fbf88}#strijdSluier .lobbykaart.klaar .vlag{color:#8fd9ae}#strijdSluier .lobbykaart.jij{border-color:#83A5F2}#strijdSluier .lobbykaart.jij.klaar{border-color:#5fbf88}#strijdSluier .lobbykaart.leeg{background:transparent;border-color:rgba(243,239,233,.2);color:#B3BBD0}#strijdSluier .lobbykaart .vlag{color:#F4A28C}#strijdSluier button.crab{background:#F26749;color:#fff;border-color:#F26749}#strijdSluier p.kop{color:#B3BBD0}#strijdSluier .afopties button.goed{background:#1f3a2c;border-color:#5fbf88;color:#c9ecd8}#strijdSluier .afopties button.fout{background:#3b201a;border-color:#e0806b;color:#f4c8bd}#strijdSluier .afdoelen button small{color:#B3BBD0}#strijdSluier .afbalk{color:#B3BBD0}';
   var css = '#strijdHud{position:fixed;left:12px;bottom:12px;z-index:90;background:#14224C;color:#fff;border-radius:14px;padding:9px 13px;' +
     'font:600 .82rem/1.3 Poppins,system-ui,sans-serif;box-shadow:0 10px 24px rgba(20,34,76,.25);max-width:min(92vw,340px)}' +
     '#strijdHud small{display:block;font-weight:500;opacity:.8}' +
@@ -56,6 +56,25 @@ window.STRIJD = (function(){
     '#strijdSluier b{display:block;font-size:1.4rem;margin-bottom:6px}' +
     /* het lobbyscherm: een kaart per speler, met zijn gezichtje erop */
     '#strijdSluier>div.lobbyscherm{max-width:560px}' +
+    /* het paneel voor wie af is: vragen beantwoorden en fouten doorsturen */
+    '#strijdSluier>div.afscherm{max-width:600px;text-align:left}' +
+    '#strijdSluier .afvraag{font-size:1.12rem;font-weight:600;margin:10px 0 12px}' +
+    '#strijdSluier .afopties{display:grid;gap:8px}' +
+    '#strijdSluier .afopties button{width:100%;text-align:left;padding:12px 14px;border-radius:14px;min-height:48px;font-weight:600}' +
+    '#strijdSluier .afopties button.goed{background:#e6f4ec;border-color:#2f7d52;color:#1d5236}' +
+    '#strijdSluier .afopties button.fout{background:#fbe9e5;border-color:#c0442c;color:#8d2f1e}' +
+    '#strijdSluier .afuit{margin:12px 0 0;font-size:.95rem}' +
+    '#strijdSluier .afdoelen{display:grid;gap:8px;margin-top:10px}' +
+    '#strijdSluier .afdoelen button{display:flex;align-items:center;gap:10px;text-align:left;padding:10px 14px;border-radius:14px;min-height:48px}' +
+    '#strijdSluier .afdoelen button .av{flex:none;width:32px;height:32px;line-height:0}' +
+    '#strijdSluier .afdoelen button .av svg{display:block;width:100%;height:100%}' +
+    '#strijdSluier .afdoelen button small{margin-left:auto;color:var(--muted,#5b6785);font-weight:500}' +
+    '#strijdSluier .afbalk{display:flex;gap:14px;flex-wrap:wrap;color:#5b6785;font-size:.9rem;margin:0 0 4px}' +
+    '#strijdSluier .afweg{margin-top:14px}' +
+    /* het knopje om het paneel terug te halen als je je eindscherm bekeek */
+    '#strijdTerug{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:88;' +
+      'border:none;border-radius:999px;padding:12px 20px;min-height:48px;cursor:pointer;' +
+      'background:#F26749;color:#fff;font:700 .95rem Poppins,system-ui,sans-serif;box-shadow:0 8px 24px rgba(20,34,76,.28)}' +
     '#strijdSluier .lobbyvak{display:grid;grid-template-columns:1fr;gap:8px;margin:12px 0 2px;text-align:left}' +
     '@media(min-width:480px){#strijdSluier .lobbyvak{grid-template-columns:1fr 1fr}}' +
     '#strijdSluier .lobbykaart{display:flex;align-items:center;gap:10px;background:#f4f7ff;' +
@@ -166,6 +185,114 @@ window.STRIJD = (function(){
     });
   }
   function namen(lijst){ var n = lijst.map(function(r){ return schoon(r.naam); }); return n.length <= 1 ? n.join('') : n.slice(0, -1).join(', ') + ' en ' + n[n.length - 1]; }
+  /* ---------- het paneel voor wie af is ----------
+     Alles wat het paneel bijhoudt staat hier bij elkaar: de vraag die nu op het
+     scherm staat, wie er nog spelen, en hoeveel je er al goed had. */
+  var afAan = false, afVraag = null, afGoed = 0, afTotaal = 0, afGestuurd = 0, afDoelen = [], afTerug = null, afWacht = false;
+  var AF_FOUTEN = 2;   /* zoveel extra fouten levert een goed antwoord op */
+
+  function afStart(){
+    if (afAan || duel || samen() || !hooks || !hooks.vraag) return;
+    afAan = true;
+    afVolgende();
+  }
+  function afVolgende(){
+    afWacht = false;
+    try { afVraag = hooks.vraag(); } catch (e){ afVraag = null; }
+    if (!afVraag){ afAan = false; return; }
+    afTeken();
+  }
+  function afTeken(){
+    if (!afAan) return;
+    if (!sluier){
+      sluier = document.createElement('div'); sluier.id = 'strijdSluier';
+      document.body.appendChild(sluier);
+    }
+    if (afTerug){ afTerug.remove(); afTerug = null; }
+    var h = '<b>Je bent af, maar je bent niet klaar</b>' +
+      '<p>Elke vraag die je goed hebt stuurt ' + AF_FOUTEN + ' extra fouten naar iemand die nog speelt. Jij kiest naar wie.</p>' +
+      '<p class="afbalk"><span>' + afGoed + ' van de ' + afTotaal + ' goed</span><span>' + afGestuurd +
+        (afGestuurd === 1 ? ' fout verstuurd' : ' fouten verstuurd') + '</span></p>' +
+      '<p class="afvraag">' + schoon(afVraag.v) + '</p>' +
+      '<div class="afopties">' + afVraag.o.map(function(x, i){
+        return '<button type="button" class="los" data-af="' + i + '">' + schoon(x) + '</button>';
+      }).join('') + '</div>' +
+      '<div class="afweg"><button type="button" class="los" data-afweg="1">Even mijn eindscherm bekijken</button></div>';
+    sluier.innerHTML = '<div class="afscherm">' + h + '</div>';
+    if (hud) hud.style.display = 'none';
+    Array.prototype.forEach.call(sluier.querySelectorAll('[data-af]'), function(k){
+      k.addEventListener('click', function(){ afAntwoord(+k.getAttribute('data-af'), k); });
+    });
+    var weg = sluier.querySelector('[data-afweg]');
+    if (weg) weg.addEventListener('click', afOpzij);
+  }
+  function afAntwoord(i, knop){
+    if (afWacht || !afVraag) return;
+    afWacht = true;
+    afTotaal++;
+    var goed = i === afVraag.g;
+    Array.prototype.forEach.call(sluier.querySelectorAll('[data-af]'), function(k){ k.disabled = true; });
+    knop.className = 'los ' + (goed ? 'goed' : 'fout');
+    if (!goed){
+      var j = sluier.querySelector('[data-af="' + afVraag.g + '"]');
+      if (j) j.className = 'los goed';
+    }
+    var uit = document.createElement('p');
+    uit.className = 'afuit';
+    uit.innerHTML = (goed ? '<b>Goed.</b> ' : '<b>Niet goed.</b> ') + (afVraag.u ? schoon(afVraag.u) : '');
+    sluier.querySelector('.afopties').insertAdjacentElement('afterend', uit);
+    if (goed){ afGoed++; afKies(uit); }
+    else {
+      var door = document.createElement('button');
+      door.type = 'button'; door.className = 'los'; door.textContent = 'Volgende vraag';
+      door.style.marginTop = '12px';
+      door.addEventListener('click', afVolgende);
+      uit.insertAdjacentElement('afterend', door);
+    }
+  }
+  /* naar wie gaan de fouten? alleen wie nog speelt staat in de lijst */
+  function afKies(na){
+    var vak = document.createElement('div');
+    vak.className = 'afdoelen';
+    if (!afDoelen.length){
+      vak.innerHTML = '<p class="afuit">Er speelt op dit moment niemand meer. Zodra er weer iemand bezig is kun je sturen.</p>';
+      var door = document.createElement('button');
+      door.type = 'button'; door.className = 'los'; door.textContent = 'Volgende vraag';
+      door.addEventListener('click', afVolgende);
+      vak.appendChild(door);
+    } else {
+      vak.innerHTML = '<p class="afuit" style="margin:0">Naar wie sturen?</p>' + afDoelen.slice(0, 12).map(function(d){
+        return '<button type="button" data-naar="' + schoon(d.sid) + '"><span class="av">' +
+          (window.AVATAR ? AVATAR.svg(d.naam, 32, d.av || '') : '') + '</span>' + schoon(d.naam) +
+          '<small>ronde ' + (d.ronde | 0) + '</small></button>';
+      }).join('');
+    }
+    na.insertAdjacentElement('afterend', vak);
+    Array.prototype.forEach.call(vak.querySelectorAll('[data-naar]'), function(k){
+      k.addEventListener('click', function(){
+        Array.prototype.forEach.call(vak.querySelectorAll('button'), function(b){ b.disabled = true; });
+        stuur({ t: 'aanval', n: AF_FOUTEN, naar: k.getAttribute('data-naar') });
+        afGestuurd += AF_FOUTEN;
+        zeg(AF_FOUTEN + ' fouten onderweg naar ' + k.textContent.replace(/ronde \d+$/, '').trim() + '.', true);
+        setTimeout(afVolgende, 600);
+      });
+    });
+  }
+  /* het paneel opzij zetten zodat je je eigen eindscherm kunt bekijken */
+  function afOpzij(){
+    sluierWeg();
+    if (afTerug) return;
+    afTerug = document.createElement('button');
+    afTerug.type = 'button'; afTerug.id = 'strijdTerug';
+    afTerug.textContent = 'Vragen beantwoorden en fouten sturen';
+    afTerug.addEventListener('click', function(){ afTeken(); });
+    document.body.appendChild(afTerug);
+  }
+  function afStop(){
+    afAan = false;
+    if (afTerug){ afTerug.remove(); afTerug = null; }
+  }
+
   function sluierWeg(){ if (sluier && sluier.parentNode) sluier.parentNode.removeChild(sluier); sluier = null; if (hud) hud.style.display = ''; }
 
   if (actief){
@@ -296,6 +423,7 @@ window.STRIJD = (function(){
     if (m.t === 'stand'){
       if (m.max) maxSamen = m.max;
       if (m.maten) maten = m.maten;
+      if (m.doelen) afDoelen = m.doelen;
       if (m.tegen && m.tegen.naam){ maatNaam = m.tegen.naam; maatAv = m.tegen.av || maatAv; if (hooks && hooks.maatNaam) hooks.maatNaam(maatNaam, maatAv); }
       toonStand(m); return;
     }
@@ -322,6 +450,7 @@ window.STRIJD = (function(){
       } else {
         hudTekst('Klasstrijd afgelopen', j ? 'jij werd ' + j.rang + 'e van ' + j.van : '', false);
       }
+      afStop();
       sluierWeg();
       if (ws){ try { ws.close(1000, 'klaar'); } catch (e){} }
       return;
@@ -584,6 +713,8 @@ window.STRIJD = (function(){
       klaarMet = true;
       stuur({ t:'af', ronde:(uit && uit.ronde) | 0, punten:(uit && uit.punten) | 0 });
       hudTekst(duel ? 'Je bent gevallen' : 'Klasstrijd ' + code, duel ? 'de uitslag komt zo' : 'je bent af, de anderen spelen nog; de eindstand komt op het bord', false);
+      /* wie af is mag blijven oefenen en zijn goede antwoorden doorsturen */
+      afStart();
     },
     duelBlok: duelBlok,
     klassement: klassement,
