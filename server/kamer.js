@@ -750,7 +750,9 @@ export class Kamer extends DurableObject {
     /* Wie af is krijgt de lijst met wie er nog speelt, zodat hij kan kiezen
        naar wie zijn fouten gaan. Wie nog speelt heeft die lijst niet nodig en
        krijgt hem dus ook niet. */
-    const doelen = (mij && mij.af) ? lijst.filter(r => !r.af && r.sid !== pid).map(r => ({ sid: r.sid, naam: r.naam, av: r.av || "", ronde: r.ronde })) : undefined;
+    /* aan telt mee: wie zijn tabblad dicht deed staat nog in de lijst maar
+       merkt niets van je fouten, en dan gooi je een goed antwoord weg */
+    const doelen = (mij && mij.af) ? lijst.filter(r => !r.af && r.aan && r.sid !== pid).map(r => ({ sid: r.sid, naam: r.naam, av: r.av || "", ronde: r.ronde })) : undefined;
     return { t: "stand", jouw: mij ? { rang: mij.rang, van: lijst.length, af: !!mij.af } : null, bezig, koploper: kop, fase: this.stand.fase, maten, doelen, max: this.stand.duel ? this.samenMax() : undefined,
              tegen: tegen ? { naam: tegen.naam, av: tegen.av || "", ronde: tegen.ronde, leven: tegen.leven, punten: tegen.punten, af: tegen.af, aan: tegen.aan } : null };
   }
