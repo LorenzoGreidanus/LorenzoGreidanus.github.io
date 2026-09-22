@@ -505,7 +505,11 @@ const aantalInRonde = ZWAARDMOTOR.aantalInRonde, foutHp = ZWAARDMOTOR.foutHp, ba
 /* Drie vragen per ronde was te weinig om echt te oefenen. Nu vijf, en elke
    vier rondes een erbij tot acht. */
 function vragenInRonde(n){ return Math.min(8, 5 + Math.floor((n - 1) / 4)); }
+/* Tien procent meer munten per goed antwoord dan eerst (12, 3,6 en 12,7).
+   De winkel is de reden dat je de vragen serieus neemt, en die moet je binnen
+   een potje kunnen halen. */
 const MUNT_GOED = 13, MUNT_REEKS = 4, MUNT_REEKSMAX = 14, MUNT_GROEI = 0.04;   /* per goed antwoord, met reeksbonus, en groei per ronde */
+const MUNT_EXTRA = 1.1;
 const COMBO = 3;   /* zoveel goed op rij en de volgende klap is een critical */
 /* De stijlen. De getallen staan in de motor (ZWAARDMOTOR.STIJLEN); hier wat je ziet. */
 /* ico is het tekentje dat de lobby bij de naam zet. Het staat hier omdat
@@ -546,6 +550,17 @@ const UITRUSTING = [
     uit:'+10% loopsnelheid per niveau' },
   { id:'mes',     naam:'Werpmes',   kleur:'#6b3fa0', ico:'mes',    prijs:[70, 100, 140, 190, 260, 350, 470], onder:'gooit vanzelf een mes naar de verste fout',
     uit:'eerst een mes per 2,2 s, elk niveau sneller en harder' },
+  /* De boog was een afgeleide van het zwaard: hij werd sterker als je zwaard
+     sterker werd, maar je kon er zelf niets aan doen. Nu een eigen stuk, zodat
+     wie liever op afstand speelt daarin kan investeren. */
+  { id:'boog',    naam:'Pijlboog',  kleur:'#2f9e8f', ico:'bereik', prijs:[45, 75, 115, 165, 235, 325, 440], onder:'hardere pijlen, verder en sneller achter elkaar',
+    uit:'+18% pijlschade, +6% bereik en 6% sneller schieten per niveau' },
+  /* Het critical deed altijd het dubbele; hier komt een schep bovenop. */
+  /* critical en niet crit: er bestaat al een vaardigheid die crit heet, en
+     twee dingen met dezelfde naam in twee verschillende lijsten is vragen om
+     de verkeerde op te zoeken. */
+  { id:'critical', naam:'Critical',  kleur:'#F26749', ico:'zwaard', prijs:[60, 110, 170, 250, 350], onder:'je critical slaat nog harder aan',
+    uit:'+5% critical-schade per niveau, tot +25%' },
   { id:'drank',   naam:'Drankje',   kleur:'#F26749', ico:'drank',  prijs:[30], onder:'meteen de helft van je leven terug',
     uit:'geen niveau: koop hem wanneer je hem nodig hebt', los:true }
 ];
@@ -1093,9 +1108,13 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   function mesSchade(){ return zwaardSchade() * 0.6 * Math.pow(1.2, stat('mes') - 1); }
   /* Pijl en boog: minder schade en trager dan het zwaard, maar van ver. Een
      langer zwaard helpt hem ook een beetje, want mikken is mikken. */
-  function boogSchade(){ return zwaardSchade() * SPELER.pijlboog.deel; }
-  function boogBereik(){ return SPELER.pijlboog.bereik * Math.pow(1.08, stat('bereik')); }
-  function boogTempo(){ return zwaardTempo() * SPELER.pijlboog.tempo; }
+  /* de boog heeft sinds kort eigen niveaus, naast wat hij van het zwaard en
+     het bereik meekrijgt */
+  function boogSchade(){ return zwaardSchade() * SPELER.pijlboog.deel * Math.pow(1.18, stat('boog')); }
+  function boogBereik(){ return SPELER.pijlboog.bereik * Math.pow(1.08, stat('bereik')) * Math.pow(1.06, stat('boog')); }
+  function boogTempo(){ return zwaardTempo() * SPELER.pijlboog.tempo * Math.pow(0.94, stat('boog')); }
+  /* vijf procent extra critical-schade per niveau, tot een kwart */
+  function critExtra(){ return 0.05 * stat('critical'); }
 
 
   /* ---------- beginnen ---------- */
@@ -1382,7 +1401,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     return { schade:zwaardSchade() * (d.schade || 1), bereik:zwaardBereik(), tempo:zwaardTempo() * (d.tempo || 1), snel:loopSnel(), pantser:pantser(),
              mesTempo:mesTempo(), mesSchade:mesSchade(), harnas:stat('harnas'), maxHp:maxHp,
              boogSchade:boogSchade() * (d.boogSchade || 1), boogBereik:boogBereik() * (d.boogBereik || 1), boogTempo:boogTempo() * (d.boogTempo || 1),
-             dashX:1 + 0.35 * v('dash'), pijlDoor:v('pijl'), critX:2 + v('crit'), magneet:1 + v('magneet'), blokMax:3 + 2 * v('blok'), stijl:stijl };
+             dashX:1 + 0.35 * v('dash'), pijlDoor:v('pijl'), critX:2 + v('crit'), critExtra:critExtra(), magneet:1 + v('magneet'), blokMax:3 + 2 * v('blok'), stijl:stijl };
   }
   function eigenInvoer(){
     var dx = 0, dy = 0;
@@ -1597,7 +1616,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       blijTot = performance.now() + 2500;
       reeks++; goedAantal++; besteReeks = Math.max(besteReeks, reeks);
       if (window.STRIJD) STRIJD.reeks(reeks);
-      var winst = Math.round((MUNT_GOED + Math.min(MUNT_REEKSMAX, reeks * MUNT_REEKS)) * (1 + (ronde - 1) * MUNT_GROEI));
+      var winst = Math.round((MUNT_GOED + Math.min(MUNT_REEKSMAX, reeks * MUNT_REEKS)) * (1 + (ronde - 1) * MUNT_GROEI) * MUNT_EXTRA);
       munten += winst;
       vraag.winst = winst;
       if (reeks % COMBO === 0){ vraag.crit = true; if (co.aan) zendNet({ k:'crit' }); else if (W) W.crit(0); }

@@ -77,22 +77,22 @@ const CRIT = { x:2, straal:90, deel:0.5 };
    zesde begint de rij opnieuw op een hogere ronde en dus taaier. */
 const BAZEN = [
   { id:'fout',    naam:'De Grote Fout', kleur:'#4a1230', vorm:'ster',  hp:16, r:46, schade:26, schild:0.35,
-    aanvallen:['cirkel', 'laser', 'kegel', 'spiraal'],
+    aanvallen:['cirkel', 'laser', 'kegel', 'spiraal', 'baan', 'tik'],
     wat:'Cirkels op de grond, een laser die om hem heen draait, een waaier recht voor zich uit en een spiraal van propjes.' },
   { id:'inkt',    naam:'De Inktvlek',   kleur:'#1b3a8f', vorm:'vlek',  hp:16, r:50, schade:24, schild:0.3,
-    aanvallen:['plas', 'kegel', 'cirkel', 'regen'],
+    aanvallen:['plas', 'kegel', 'cirkel', 'regen', 'golf', 'krimp'],
     wat:'Spat inkt over de vloer die blijft liggen, spuit een waaier voor zich uit en laat het plofjes regenen. Steeds minder plek om te staan.' },
   { id:'pen',     naam:'De Rode Pen',   kleur:'#c0442c', vorm:'pen',   hp:18, r:42, schade:26, schild:0.35,
-    aanvallen:['baan', 'kruis', 'laser', 'muur'],
+    aanvallen:['baan', 'kruis', 'laser', 'muur', 'cirkel', 'kegel'],
     wat:'Streept de arena door met rechte halen, zet er kruisen doorheen en veegt een streep over de vloer met een gat erin.' },
   { id:'prop',    naam:'De Prop',       kleur:'#8a7350', vorm:'prop',  hp:21, r:52, schade:28, schild:0.4,
-    aanvallen:['kogel', 'golf', 'baan', 'bom'],
+    aanvallen:['kogel', 'golf', 'baan', 'bom', 'cirkel', 'regen'],
     wat:'Schiet propjes in alle richtingen, rolt over de vloer en gooit bommen die in scherven uiteenspatten. Taai.' },
   { id:'klok',    naam:'De Klok',       kleur:'#6b3fa0', vorm:'klok',  hp:17, r:46, schade:24, schild:0.35,
-    aanvallen:['wijzers', 'tik', 'krimp', 'spiraal'],
+    aanvallen:['wijzers', 'tik', 'krimp', 'spiraal', 'laser', 'kegel'],
     wat:'Twee wijzers draaien rond, de uren tikken een voor een af, de ring loopt naar binnen en de seconden spiralen naar buiten.' },
   { id:'zwerm',   naam:'De Zwerm',      kleur:'#7d1f12', vorm:'zwerm', hp:16, r:48, schade:22, schild:0.3,
-    aanvallen:['kogel', 'krimp', 'cirkel', 'bom'],
+    aanvallen:['kogel', 'krimp', 'cirkel', 'bom', 'regen', 'spiraal'],
     wat:'Barst uit elkaar in propjes, sluit je in met een ring en gooit bommen. Het minste leven, het meeste in de lucht.' }
 ];
 /* De aanvallen. Elke aanval heeft eerst een waarschuwing die je op de grond
@@ -217,7 +217,7 @@ function maak(opties){
      van. Pantser deelt de schade die je krijgt, dus daar is juist een bodem
      nodig; de rest van de lijst begint op nul en heeft een eigen plafond. */
   var STATS_KEER = 12;
-  var STATS_DAK = { mesTempo:20, mesSchade:200, harnas:100, dashX:6, pijlDoor:10, critX:8, magneet:1000, blokMax:60 };
+  var STATS_DAK = { mesTempo:20, mesSchade:200, harnas:100, dashX:6, pijlDoor:10, critX:8, critExtra:0.5, magneet:1000, blokMax:60 };
   function statBinnen(k, v){
     if (k === 'pantser') return Math.max(0.05, Math.min(1, v));
     if (STATS_DAK[k] !== undefined) return Math.max(0, Math.min(STATS_DAK[k], v));
@@ -228,7 +228,7 @@ function maak(opties){
   W.zetStats = function(i, st, hpNu){
     var P = W.spelers[i]; if (!P || !st) return;
     ['schade', 'bereik', 'tempo', 'snel', 'pantser', 'mesTempo', 'mesSchade', 'harnas', 'maxHp', 'boogSchade', 'boogBereik', 'boogTempo',
-     'dashX', 'pijlDoor', 'critX', 'magneet', 'blokMax'].forEach(function(k){
+     'dashX', 'pijlDoor', 'critX', 'critExtra', 'magneet', 'blokMax'].forEach(function(k){
       if (typeof st[k] === 'number' && isFinite(st[k])) P.stats[k] = statBinnen(k, st[k]);
     });
     if (STIJLEN[st.stijl]) P.stijl = st.stijl;
@@ -353,8 +353,12 @@ function maak(opties){
     }
     zeg('spawn', soort, eerste);
   }
+  /* Een baas heeft een kwart meer leven dan vroeger. Het gevecht was voor wie
+     zijn uitrusting op orde had in een halve minuut voorbij, en dan heb je geen
+     baasgevecht maar een grote fout. */
+  var BAASLEVEN = 1.25;
   function spawnBaas(){
-    var def = baasVan(W.ronde), h = Math.round(foutHp(W.ronde) * def.hp * (samen ? 0.7 + 0.3 * W.spelers.length : 1));
+    var def = baasVan(W.ronde), h = Math.round(foutHp(W.ronde) * def.hp * BAASLEVEN * (samen ? 0.7 + 0.3 * W.spelers.length : 1));
     var b = { id:++W.nr, soort:def, def:def, x:ARENA.b / 2, y:ARENA.h / 2, hp:h, maxHp:h, r:def.r, snel:0, flits:0, stap:0,
               schild:def.schild, slaKlok:0, baas:true, aanvalKlok:2.2, laatste:-1, eerste:true };
     W.fouten.push(b);
@@ -364,11 +368,33 @@ function maak(opties){
   }
 
   /* ---------- de bazen en hun aanvallen ---------- */
+  /* Welke aanvallen reiken over de hele arena, en welke zijn bedoeld om je
+     van hem af te duwen. De rest staat in allebei de lijsten en past altijd. */
+  var VERAANVAL = { laser:1, baan:1, kruis:1, golf:1, regen:1, muur:1, wijzers:1, krimp:1, kogel:1 };
+  var DICHTBIJAANVAL = { cirkel:1, kegel:1, tik:1, spiraal:1, bom:1, plas:1, krimp:1, kogel:1 };
+  /* Hoe ver is de dichtstbijzijnde speler? Daaronder heet dichtbij. */
+  var DICHTBIJ = 210;
+  function dichtsteAf(b, levend){
+    var kort = 1e9;
+    for (var i = 0; i < levend.length; i++){
+      var d = Math.hypot(levend[i].sp.x - b.x, levend[i].sp.y - b.y);
+      if (d < kort) kort = d;
+    }
+    return kort;
+  }
   function baasValtAan(b, levend, boos){
     var rij = b.def.aanvallen, k = AANVAL.korter(W.ronde) * (boos ? AANVAL.boosKorter : 1);
-    var i = b.eerste ? 0 : Math.floor(toeval() * rij.length);
+    /* Sta je ver, dan komt wat over de arena reikt; sta je dichtbij, dan komt
+       wat je wegduwt. Zo is er geen plek waar je veilig staat te wachten, en
+       die was er wel: op afstand rondjes lopen werkte bij de helft van de
+       bazen. Past er niets, dan doet hij gewoon iets uit zijn eigen rij. */
+    var ver = dichtsteAf(b, levend) > DICHTBIJ;
+    var wens = rij.filter(function(a){ return (ver ? VERAANVAL : DICHTBIJAANVAL)[a]; });
+    if (!wens.length) wens = rij;
+    var i = b.eerste ? rij.indexOf(wens[0]) : rij.indexOf(wens[Math.floor(toeval() * wens.length)]);
+    if (i < 0) i = 0;
     b.eerste = false;
-    if (i === b.laatste) i = (i + 1) % rij.length;
+    if (i === b.laatste && rij.length > 1) i = (i + 1) % rij.length;
     b.laatste = i;
     zetAanval(rij[i], b, levend, k);
     /* kwaad: soms twee aanvallen tegelijk */
@@ -737,7 +763,12 @@ function maak(opties){
   }
   function raak(f, schade, vanaf, P, pijl){
     var crit = !!(P && P.sp.crit);
-    if (crit){ P.sp.crit = false; schade *= P.stats.critX || CRIT.x; }
+    if (crit){
+      P.sp.crit = false;
+      /* critExtra is de schep erbovenop uit de winkel: vijf procent per
+         niveau. Zonder winkel blijft het gewoon het dubbele. */
+      schade *= (P.stats.critX || CRIT.x) * (1 + (P.stats.critExtra || 0));
+    }
     var echt = Math.round(schade * (f.schild ? 1 - f.schild : 1));
     f.hp -= echt; f.flits = 0.15;
     W.cijfers.push({ x:f.x, y:f.y - f.r - 8, tekst:(crit ? 'CRIT -' : '-') + echt, leven:crit ? 1.1 : 0.7, kleur:crit ? '#F26749' : '#14224C' });
