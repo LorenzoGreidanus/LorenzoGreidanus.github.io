@@ -53,7 +53,12 @@ function maatVoor(r, o){
 }
 function haaltOpdracht(r, o){ return maatVoor(r, o) >= o.min; }                        /* hoogstens zoveel gemelde potjes per klas */
 /* spellen zonder kamer die wel bij een klas melden */
-const KLAS_SPELLEN = { race: "Vragenrace", klasquiz: "Klasquiz", dag: "Dagelijkse uitdaging", fouten: "Oefen je fouten", rekenen: "Rekenrace", balans: "De balans", werkwoorden: "Werkwoordrace", irregular: "Irregular verbs", vlaggen: "Vlaggen", landenvormen: "Landenvormen", topografie: "Topografie", lichaam: "Het lichaam", tijdvakken: "Tijdvakken sorteren", bronnenlab: "Bronnenlab", jagers: "Blijven of doorlopen", feodalisme: "Feodalisme", leenmannen: "Verdeel je rijk", stad: "Bouw je stad", handel: "De handelsroute", vergadering: "De vergadering", zinsbouw: "Zinsbouw", tekstdetective: "De tekstdetective", uitverkoop: "De uitverkoop", breukenbakker: "De breukenbakker", dhte: "Het DHTE-schema", vlakken: "Vlakken herkennen", organisme: "Bouw het organisme" };
+const KLAS_SPELLEN = { race: "Vragenrace", klasquiz: "Klasquiz", dag: "Dagelijkse uitdaging", fouten: "Oefen je fouten", rekenen: "Rekenrace", balans: "De balans", werkwoorden: "Werkwoordrace", irregular: "Irregular verbs", vlaggen: "Vlaggen", landenvormen: "Landenvormen", topografie: "Topografie", lichaam: "Het lichaam", tijdvakken: "Tijdvakken sorteren", bronnenlab: "Bronnenlab", jagers: "Blijven of doorlopen", feodalisme: "Feodalisme", leenmannen: "Verdeel je rijk", stad: "Bouw je stad", handel: "De handelsroute", vergadering: "De vergadering", zinsbouw: "Zinsbouw", tekstdetective: "De tekstdetective", uitverkoop: "De uitverkoop", breukenbakker: "De breukenbakker",
+  /* Deze meldden hun uitslag wel, maar stonden hier niet, dus de klas kreeg ze
+     nooit te zien: de melding werd geweigerd met "onbekend spel". */
+  dhte: "Het DHTE-schema", vlakken: "Vlakken herkennen", organisme: "Bouw het organisme" };
+/* Hoeveel periodes een docent mag instellen, en hoe lang een naam mag zijn. */
+const PERIODES_MAX = 12, PERIODE_NAAM = 40;
 
 /* per onderdeel [goed, gesteld]: hoogstens dertig onderdelen, korte namen, kleine getallen */
 function schoonOd(od){
@@ -133,6 +138,7 @@ export class Kamer extends DurableObject {
       if (url.pathname === "/resultaten") return await this.resultaten(url.searchParams.get("sleutel"));
       if (url.pathname === "/opdracht" && req.method === "POST") return await this.opdracht(await req.json());
       if (url.pathname === "/instelling" && req.method === "POST") return await this.instelling(await req.json());
+      if (url.pathname === "/periodes" && req.method === "POST") return await this.periodes(await req.json());
       if (url.pathname === "/hoi" && req.method === "POST") return await this.hoi(await req.json());
       if (url.pathname === "/leerlingweg" && req.method === "POST") return await this.leerlingWeg(await req.json());
       if (url.pathname === "/mijn") return this.mijn(url.searchParams.get("sid"));
@@ -972,6 +978,30 @@ export class Kamer extends DurableObject {
     await this.bewaar();
     return json({ ok: true, spellen: this.stand.spellen || [], lesmodus: !!this.stand.lesmodus });
   }
+  /* De periodes van de docent: zelf ingestelde stukken van het jaar, met een
+     naam en een begin- en einddatum. Ze doen niets met wat er bewaard wordt;
+     ze zijn er om het overzicht mee te filteren, zodat je "periode 2" kunt
+     bekijken zonder de rest van het jaar erbij. De hele lijst gaat in een keer
+     heen en weer: dat is minder verkeer dan per periode een verzoek, en de
+     docent bewerkt ze toch als een lijstje. */
+  async periodes(inz){
+    if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
+    if (!inz || inz.sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
+    if (!Array.isArray(inz.periodes)) return json({ fout: "geen periodes" }, 400);
+    const grens = 3 * 365 * 86400000, nu = Date.now();
+    const uit = [];
+    for (const p of inz.periodes.slice(0, PERIODES_MAX)){
+      const naam = schoon(p && p.naam, PERIODE_NAAM);
+      const van = getal(p && p.van, 4e12), tot = getal(p && p.tot, 4e12);
+      if (!naam) return json({ fout: "geef elke periode een naam" }, 400);
+      if (!van || !tot || tot <= van) return json({ fout: "de einddatum van " + naam + " ligt voor de begindatum" }, 400);
+      if (van < nu - grens || tot > nu + grens) return json({ fout: naam + " ligt te ver weg; houd het binnen drie jaar" }, 400);
+      uit.push({ id: schoon(p.id, 12).replace(/[^a-z0-9]/gi, "") || ("p" + uit.length + Math.random().toString(36).slice(2, 6)), naam, van, tot });
+    }
+    this.stand.periodes = uit;
+    await this.bewaar();
+    return json({ ok: true, periodes: uit });
+  }
   /* heeft een leerling (op kenmerk) de opdracht gehaald? Zonder sleutel: alleen zijn eigen stand. */
   mijn(sid){
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
@@ -1016,6 +1046,7 @@ export class Kamer extends DurableObject {
     if (Date.now() - this.stand.laatst > 3600000){ await this.zetAlarm({ wat: "opruimen" }, KLAS_SLAAPT); await this.bewaar(); }
     return json({ code: this.stand.code, naam: this.stand.naam, gemaakt: this.stand.gemaakt, opdracht: this.stand.opdracht || null,
                   spellen: this.stand.spellen || [], lesmodus: !!this.stand.lesmodus,
+                  periodes: this.stand.periodes || [],
                   leerlingen: this.gekoppeld(),
                   resultaten: this.stand.resultaten.map(x => ({ naam: x.naam, av: x.av || "", spel: x.spel, ronde: x.ronde, punten: x.punten, niveau: x.niveau, vak: x.vak, od: x.od, t: x.t })) });
   }
