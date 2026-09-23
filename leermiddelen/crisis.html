@@ -482,6 +482,7 @@ var DAGEN = [
   /* ---------- een dag ---------- */
   function vraagKampen(){
     keuze = { wit:null, rood:null };
+    bewaarNu();
     $('besluitBtn').classList.add('hide'); $('verderBtn').classList.add('hide');
     $('gevolg').innerHTML = '';
     tekenBord();
@@ -601,6 +602,7 @@ var DAGEN = [
   }
   function einde(){
     if (klaar) return; klaar = true;
+    ROLSPEL.vergeet('crisis');
     $('scherm-spel').classList.add('hide'); $('scherm-einde').classList.remove('hide'); $('stopBtn').classList.add('hide');
     var kop, slot;
     if (spanning >= 100){ kop = 'Het ging mis'; slot = 'De spanning liep op tot er niets meer te beslissen viel. In het echt is dit niet gebeurd, en het scheelde weinig: op zwarte zaterdag hield \u00e9\u00e9n Russische officier op een onderzeeboot een kernwapen tegen.'; }
@@ -633,12 +635,17 @@ var DAGEN = [
   function actie(pid, d){
     KAMPEN.forEach(function(k){ if (deleg[k.id] && !deleg[k.id].af()) deleg[k.id].actie(pid, d); });
   }
+  /* de kamer aan het bord hangen: een nieuwe, of na herladen dezelfde */
+  var naSpelers = null;
+  function koppel(k){
+    kamerInfo = k;
+    kamer = ROLSPEL.host({ game:'crisis', code:k.code, sleutel:k.sleutel,
+      onSpelers:function(l){ spelers = l; tekenLobby(); if (naSpelers){ var f = naSpelers; naSpelers = null; f(); } }, onActie:actie });
+  }
   function openKamer(){
     $('kamerFout').textContent = ''; $('openBtn').disabled = true;
     ROLSPEL.maak('crisis').then(function(k){
-      kamerInfo = k;
-      kamer = ROLSPEL.host({ game:'crisis', code:k.code, sleutel:k.sleutel,
-        onSpelers:function(l){ spelers = l; tekenLobby(); }, onActie:actie });
+      koppel(k);
       $('lobbyvak').classList.remove('hide'); $('startBtn').classList.remove('hide');
       tekenLobby();
     }).catch(function(e){
@@ -668,6 +675,25 @@ var DAGEN = [
   $('verderBtn').addEventListener('click', function(){
     if (spanning >= 100 || steun.wit <= 0 || steun.rood <= 0 || dag + 1 >= DAGEN.length){ einde(); return; }
     dag++; vraagKampen();
+  });
+
+  /* ---------- verder na herladen ---------- */
+  function bewaarNu(){
+    ROLSPEL.bewaar('crisis', modus === 'telefoon' ? kamerInfo : null,
+      { modus:modus, dag:dag, spanning:spanning, steun:steun, geheim:geheim, raketten:raketten, blokkade:blokkade, log:log, rollen:rollen });
+  }
+  ROLSPEL.hervat('crisis', $('scherm-start'), function(b){
+    var st = b.stand;
+    zetModus(st.modus || 'telefoon');
+    dag = st.dag | 0; spanning = st.spanning; steun = st.steun; geheim = st.geheim; raketten = st.raketten; blokkade = !!st.blokkade;
+    log = st.log || []; rollen = st.rollen || {}; klaar = false;
+    $('scherm-start').classList.add('hide'); $('scherm-einde').classList.add('hide');
+    $('scherm-spel').classList.remove('hide'); $('stopBtn').classList.remove('hide');
+    $('lobbyvak').classList.add('hide');
+    $('log').innerHTML = log.slice(0, 8).map(function(r){ return '<p' + (r.s ? ' class="sterk"' : '') + '>' + schoon(r.t) + '</p>'; }).join('');
+    if (b.kamer && modus === 'telefoon'){ naSpelers = vraagKampen; koppel(b.kamer); }
+    else vraagKampen();
+    scrollTo({ top:0, behavior:'auto' });
   });
 })();
 </script>

@@ -828,6 +828,7 @@ var KWESTIES = [
   });
 
   function naarStart(){
+    ROLSPEL.vergeet('vergaderklas');
     elRollen.classList.add('hide'); elSpel.classList.add('hide'); elEinde.classList.add('hide');
     elStart.classList.remove('hide');
     document.getElementById('pillVorm').textContent = ''; document.getElementById('pillVorm').classList.add('hide');
@@ -892,6 +893,12 @@ var KWESTIES = [
      verdeelt het bord de rollen (dezelfde verhouding als bij handen tellen)
      en stuurt elke telefoon zijn rolkaart. Bij elke wet krijgt wie mag
      stemmen twee knoppen, de rest ziet waarom niet. Het bord telt. */
+  /* de kamer aan het bord hangen: een nieuwe, of na herladen dezelfde */
+  var naSpelers = null;
+  function koppel(k){
+    kamerInfo = k;
+    kamer = ROLSPEL.host({ game:'polis', code:k.code, sleutel:k.sleutel, onSpelers:function(l){ spelers = l; tekenLobby(); laatkomers(); if (naSpelers){ var f = naSpelers; naSpelers = null; f(); } }, onActie:actie });
+  }
   function naarLobby(){
     elStart.classList.add('hide'); elRollen.classList.remove('hide');
     document.getElementById('rolKop').textContent = 'Doe mee op je telefoon of laptop';
@@ -904,8 +911,7 @@ var KWESTIES = [
     if (kamer){ tekenLobby(); return; }
     document.getElementById('rollen').innerHTML = '<p style="text-align:center;color:var(--muted)">Kamer maken\u2026</p>';
     ROLSPEL.maak('polis').then(function(k){
-      kamerInfo = k;
-      kamer = ROLSPEL.host({ game:'polis', code:k.code, sleutel:k.sleutel, onSpelers:function(l){ spelers = l; tekenLobby(); laatkomers(); }, onActie:actie });
+      koppel(k);
       tekenLobby();
     }).catch(function(e){ document.getElementById('rollen').innerHTML = '<p style="text-align:center;color:var(--crab)">' + ROLSPEL.schoon(e.message) + '</p>'; });
   }
@@ -1038,6 +1044,7 @@ var KWESTIES = [
   function toonWet(){
     if (nr >= rij.length){ toonEinde(); return; }
     gekozen = null; voor = 0; tegen = 0; fase = 'kiezen';
+    bewaarNu();
     tekenBanner();
     var k = rij[nr];
     if (kamer) kamer.alle({ soort:'wacht', titel:'wet ' + (nr + 1) + ' van ' + rij.length, tekst:k.titel + '. Het bord kiest welk voorstel in stemming gaat.' });
@@ -1237,6 +1244,7 @@ var KWESTIES = [
 
   /* ---------- einde ---------- */
   function toonEinde(){
+    ROLSPEL.vergeet('vergaderklas');
     elSpel.classList.add('hide'); elEinde.classList.remove('hide');
     var p = POLEIS[polisId], eind = VORMEN[s.vorm];
     var nu = eind.stemt.reduce(function(a, r){ return a + verdeling[r]; }, 0);
@@ -1291,6 +1299,26 @@ var KWESTIES = [
     var kk = parseInt(param('k'), 10);
     if (kk >= 8 && kk <= 36){ klas = kk; tekenKlas(); }
   })();
+
+  /* ---------- verder na herladen ----------
+     Met de bestuursvorm en zijn geschiedenis, wie de heerser is, en welke
+     omwentelingen al geweest zijn: die mogen maar een keer gebeuren. */
+  function bewaarNu(){
+    ROLSPEL.bewaar('vergaderklas', wijze === 'telefoons' ? kamerInfo : null, { wijze:wijze, polisId:polisId, klas:klas, verdeling:verdeling, s:s,
+      rij:rij.map(function(k){ return KWESTIES.indexOf(k); }), nr:nr, rolVan:rolVan, heerser:heerser,
+      gedaan:(VERLOOP[polisId] || []).map(function(g){ return !!g.gedaan; }) });
+  }
+  ROLSPEL.hervat('vergaderklas', elStart, function(b){
+    var st = b.stand;
+    wijze = st.wijze || 'handen'; polisId = st.polisId; klas = st.klas || klas; verdeling = st.verdeling || {}; s = st.s;
+    rij = (st.rij || []).map(function(i){ return KWESTIES[i]; }).filter(Boolean); nr = st.nr | 0;
+    rolVan = st.rolVan || {}; heerser = st.heerser || null;
+    (VERLOOP[polisId] || []).forEach(function(g, i){ if ((st.gedaan || [])[i]) g.gedaan = true; else delete g.gedaan; });
+    elStart.classList.add('hide'); elRollen.classList.add('hide'); elEinde.classList.add('hide'); elSpel.classList.remove('hide');
+    if (b.kamer && wijze === 'telefoons'){ gestart = true; naSpelers = toonWet; koppel(b.kamer); }
+    else toonWet();
+    scrollTo({ top:0, behavior:'auto' });
+  });
 })();
 </script>
 <script src="thema.js"></script>

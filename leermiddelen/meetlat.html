@@ -513,6 +513,12 @@ var SLEUTEL = 'meetlat-oordelen-v1';
   function aantalSpelers(){ return isTel() ? volgorde.length : isKlas() ? groepen : 1; }
   function spelerNaam(i){ return isTel() ? (naamVan[i] || '') : isKlas() ? 'Groep ' + (i + 1) : 'Jij'; }
   function kleurVan(i){ return isTel() ? GROEPKLEUR[volgorde.indexOf(i) % GROEPKLEUR.length] : isKlas() ? GROEPKLEUR[i] : '#204ECF'; }
+  /* de kamer aan het bord hangen: een nieuwe, of na herladen dezelfde */
+  var naSpelers = null;
+  function koppel(k){
+    kamerInfo = k;
+    kamer = ROLSPEL.host({ game:'meetlat', code:k.code, sleutel:k.sleutel, onSpelers:function(l){ spelers = l; tekenLobby(); laatkomers(); if (naSpelers){ var f = naSpelers; naSpelers = null; f(); } }, onActie:actie });
+  }
   function naarLobby(){
     var vak = document.getElementById('lobbyvak');
     vak.classList.remove('hide');
@@ -520,8 +526,7 @@ var SLEUTEL = 'meetlat-oordelen-v1';
     if (kamer){ tekenLobby(); return; }
     vak.innerHTML = '<p style="color:var(--muted)">Kamer maken\u2026</p>';
     ROLSPEL.maak('meetlat').then(function(k){
-      kamerInfo = k;
-      kamer = ROLSPEL.host({ game:'meetlat', code:k.code, sleutel:k.sleutel, onSpelers:function(l){ spelers = l; tekenLobby(); laatkomers(); }, onActie:actie });
+      koppel(k);
       tekenLobby();
     }).catch(function(e){ vak.innerHTML = '<p style="color:var(--crab)">' + ROLSPEL.schoon(e.message) + '</p>'; });
   }
@@ -591,6 +596,7 @@ var SLEUTEL = 'meetlat-oordelen-v1';
   });
 
   function naarStart(){
+    ROLSPEL.vergeet('meetlat');
     if (kamer){ kamer.sluit(); kamer = null; kamerInfo = null; gestart = false; volgorde = []; spelers = []; document.getElementById('lobbyvak').innerHTML = ''; if (isTel()) naarLobby(); }
     elSpel.classList.add('hide'); elEinde.classList.add('hide'); elStart.classList.remove('hide');
     scrollTo({top:0,behavior:'auto'});
@@ -787,6 +793,7 @@ var SLEUTEL = 'meetlat-oordelen-v1';
   /* ---------- kaarten ---------- */
   function nieuweKaart(){
     fase = 'oordeel'; oordeel = {}; eerste = {}; aanBeurt = 0; cursor = 50; aangeraakt = false;
+    bewaarNu();
     elLat.classList.add('onaangeraakt');
     var k = rij[nr];
     var tinten = ['#5b6480', '#3f6b8f', '#7a5c8a', '#8a6a45', '#4f7d6e', '#8f5f5f'];
@@ -973,6 +980,7 @@ var SLEUTEL = 'meetlat-oordelen-v1';
       ? 'Zestien kaarten, ' + groepen + ' groepen. Bij ' + verplaatst +
         ' kaarten schoof het oordeel nadat jullie hoorden hoe het verderging.'
       : 'Zestien kaarten. Bij ' + verplaatst + ' ervan verschoof je oordeel nadat je las hoe het verderging.';
+    ROLSPEL.vergeet('meetlat');
     SPEL.einde({ spel:'meetlat', kop:'klaar', compact:true, klas:false });
 
     var h = '';
@@ -1037,6 +1045,27 @@ var SLEUTEL = 'meetlat-oordelen-v1';
       if (idx !== -1 && gk.children[idx]) gk.children[idx].click();
     }
   })();
+
+  /* ---------- verder na herladen ---------- */
+  function bewaarNu(){
+    ROLSPEL.bewaar('meetlat', isTel() ? kamerInfo : null, { stand:stand ? stand.id : '', groepen:groepen,
+      rij:rij.map(function(k){ return KAARTEN.indexOf(k); }), nr:nr,
+      uitkomst:uitkomst.map(function(u){ return { i:KAARTEN.indexOf(u.kaart), eind:u.eind, begin:u.begin }; }),
+      volgorde:volgorde, naamVan:naamVan });
+  }
+  ROLSPEL.hervat('meetlat', elStart, function(b){
+    var st = b.stand;
+    stand = STANDEN.filter(function(x){ return x.id === st.stand; })[0] || STANDEN[0];
+    groepen = st.groepen || 4; nr = st.nr | 0;
+    rij = (st.rij || []).map(function(i){ return KAARTEN[i]; }).filter(Boolean);
+    uitkomst = (st.uitkomst || []).map(function(u){ return { kaart:KAARTEN[u.i], eind:u.eind, begin:u.begin }; }).filter(function(u){ return u.kaart; });
+    volgorde = st.volgorde || []; naamVan = st.naamVan || {};
+    elStart.classList.add('hide'); elEinde.classList.add('hide'); elSpel.classList.remove('hide');
+    if (!document.querySelector('#staaf .streep')) bouwStrepen();
+    if (b.kamer && isTel()){ gestart = true; naSpelers = nieuweKaart; koppel(b.kamer); }
+    else nieuweKaart();
+    scrollTo({ top:0, behavior:'auto' });
+  });
 })();
 
 (function(){

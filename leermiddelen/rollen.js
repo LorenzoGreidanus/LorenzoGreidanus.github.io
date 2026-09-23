@@ -227,5 +227,59 @@ window.ROLSPEL = (function(){
       '@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .rollen-chip,:root:not([data-theme="light"]) .rollen-stem div{background:#182652;border-color:rgba(243,239,233,.14)}}';
     document.head.appendChild(st);
   } catch (e){}
-  return { maak:maak, host:host, verdeel:verdeel, delegatie:delegatie, lobby:lobby, startknop:startknop, schoon:schoon };
+  /* ---------- verder na herladen ----------
+     Een rolspel speelt zich af in de pagina van het bord: de stand, de beurt,
+     wie welke rol heeft. Herlaadde het digibord per ongeluk, dan was dat weg,
+     terwijl de kamer en de telefoons gewoon doorliepen. Nu bewaart elk spel
+     aan het begin van elke stap zijn stand in deze browser, en biedt het na
+     herladen aan om verder te gaan zolang de kamer nog loopt. De telefoons
+     hoeven niets: de kamer bewaart per leerling zijn laatste kaart.
+
+       ROLSPEL.bewaar(spel, kamerInfo of null, stand)
+       ROLSPEL.vergeet(spel)                       aan het einde, of bij opnieuw beginnen
+       ROLSPEL.hervat(spel, plek, function(b){})   b.stand en b.kamer ({ code, sleutel }) */
+  var HOUD = 4 * 3600000;
+  function bewaarNaam(spel){ return 'lg-rol-' + spel; }
+  function bewaar(spel, kamerInfo, stand){
+    try {
+      localStorage.setItem(bewaarNaam(spel), JSON.stringify({ t:Date.now(), stand:stand,
+        kamer: kamerInfo && kamerInfo.code ? { code:kamerInfo.code, sleutel:kamerInfo.sleutel } : null }));
+    } catch (e){}
+  }
+  function vergeet(spel){ try { localStorage.removeItem(bewaarNaam(spel)); } catch (e){} }
+  function hervat(spel, plek, verder){
+    var b = null;
+    try { b = JSON.parse(localStorage.getItem(bewaarNaam(spel)) || 'null'); } catch (e){}
+    if (!b || !b.stand || Date.now() - b.t > HOUD){ vergeet(spel); return; }
+    function toon(){
+      if (!plek) return;
+      var k = document.createElement('div');
+      k.className = 'rollen-hervat';
+      k.innerHTML = '<b>Er loopt nog een spel' + (b.kamer ? ' in kamer ' + schoon(b.kamer.code) : '') + '</b>' +
+        '<span>Het bord is herladen, maar de stand is bewaard' + (b.kamer ? ' en de telefoons zijn er nog' : '') +
+        '. Ga verder waar je was: de stap die bezig was, begint opnieuw.</span>' +
+        '<div><button type="button" class="ja">Verder met dit spel</button><button type="button" class="nee">Nee, opnieuw beginnen</button></div>';
+      plek.insertBefore(k, plek.firstChild);
+      k.querySelector('.nee').addEventListener('click', function(){ vergeet(spel); k.remove(); });
+      k.querySelector('.ja').addEventListener('click', function(){ k.remove(); verder(b); });
+      k.querySelector('.ja').focus({ preventScroll:true });
+    }
+    if (!b.kamer){ toon(); return; }
+    /* loopt die kamer nog? Een afgelopen of opgeruimde kamer bieden we niet aan */
+    fetch('/api/kamer/' + b.kamer.code).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
+      if (!j || j.fase === 'einde'){ vergeet(spel); return; }
+      toon();
+    }).catch(function(){});
+  }
+  try {
+    var st2 = document.createElement('style');
+    st2.textContent = '.rollen-hervat{display:grid;gap:6px;background:var(--kaart,#fff);color:var(--ink,#14224C);border:2px solid #EA9836;border-radius:18px;padding:16px 18px;margin:0 0 18px}' +
+      '.rollen-hervat b{font-size:1.1rem}.rollen-hervat span{color:var(--muted,#5b6480);font-size:.92rem}' +
+      '.rollen-hervat div{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}' +
+      '.rollen-hervat button{min-height:44px;border-radius:999px;padding:8px 18px;font:600 .95rem Poppins,system-ui,sans-serif;cursor:pointer;border:1.5px solid rgba(20,34,76,.18);background:var(--kaart,#fff);color:var(--ink,#14224C)}' +
+      '.rollen-hervat button.ja{background:#F26749;border-color:#F26749;color:#14224C}';
+    document.head.appendChild(st2);
+  } catch (e){}
+  return { maak:maak, host:host, verdeel:verdeel, delegatie:delegatie, lobby:lobby, startknop:startknop, schoon:schoon,
+           bewaar:bewaar, vergeet:vergeet, hervat:hervat };
 })();

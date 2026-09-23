@@ -537,14 +537,19 @@ var NIVEAUS = [
     });
     wijzeVak.appendChild(b);
   });
+  /* de kamer aan het bord hangen: een nieuwe, of na herladen dezelfde */
+  var naSpelers = null;
+  function koppel(k){
+    kamerInfo = k;
+    kamer = ROLSPEL.host({ game:'staten', code:k.code, sleutel:k.sleutel, onSpelers:function(l){ spelers = l; tekenLobby(); laatkomers(); if (naSpelers){ var f = naSpelers; naSpelers = null; f(); } }, onActie:actie });
+  }
   function naarLobby(){
     var vak = document.getElementById('lobbyvak');
     document.getElementById('startBtn').disabled = true;
     if (kamer){ tekenLobby(); return; }
     vak.innerHTML = '<p style="color:var(--muted)">Kamer maken\u2026</p>';
     ROLSPEL.maak('staten').then(function(k){
-      kamerInfo = k;
-      kamer = ROLSPEL.host({ game:'staten', code:k.code, sleutel:k.sleutel, onSpelers:function(l){ spelers = l; tekenLobby(); laatkomers(); }, onActie:actie });
+      koppel(k);
       tekenLobby();
     }).catch(function(e){ vak.innerHTML = '<p style="color:var(--crab)">' + ROLSPEL.schoon(e.message) + '</p>'; });
   }
@@ -667,6 +672,7 @@ var NIVEAUS = [
     this.textContent = document.body.classList.contains('groot') ? 'Normaal' : 'Digibord';
   });
   function naarStart(){
+    ROLSPEL.vergeet('vergadering');
     if (kamer){ kamer.sluit(); kamer = null; kamerInfo = null; gestart = false; gewestVan = {}; spelers = []; stemVraag = null; if (wijze === 'tel') naarLobby(); }
     elSpel.classList.add('hide'); elEinde.classList.add('hide'); elStart.classList.remove('hide');
     scrollTo({top:0,behavior:'auto'});
@@ -687,7 +693,7 @@ var NIVEAUS = [
 
   /* ---------- tekenen ---------- */
   var netVeranderd = {};      /* welke gewesten net verschoven zijn, voor de flits op de kaart */
-  function tekenAlles(){ tekenKaart(); tekenStatus(); tekenLijst(); tekenActies(); tekenVerslag(); tekenStemUit(); netVeranderd = {}; stuurStand(); }
+  function tekenAlles(){ tekenKaart(); tekenStatus(); tekenLijst(); tekenActies(); tekenVerslag(); tekenStemUit(); netVeranderd = {}; stuurStand(); bewaarNu(); }
   function jaTal(){ return stemmers.filter(function(g){ return staat[g.id] >= niveau.drempel; }).length; }
 
   function tekenKaart(){
@@ -1012,6 +1018,7 @@ var NIVEAUS = [
   /* ---------- einde ---------- */
   function toonEinde(gelukt, reden){
     klaar = true;
+    ROLSPEL.vergeet('vergadering');
     if (kamer){ kamer.alle({ soort:'uitslag', kop: gelukt ? 'aangenomen' : 'geen besluit', titel: gelukt ? 'De oorlogsbelasting komt er' : 'De vergadering loopt vast', tekst: gelukt ? 'Alle zeven gewesten stemden voor, na ' + dag + ' dagen.' : 'De dagen zijn op zonder besluit.' }); kamer.stop(); }
     elSpel.classList.add('hide'); elEinde.classList.remove('hide');
     var uitgegeven = niveau.geld - geld;
@@ -1099,6 +1106,25 @@ var NIVEAUS = [
     }
   })();
 
+  /* ---------- verder na herladen ----------
+     Een stemming die bezig was, begint opnieuw: de docent zet hem weer in. */
+  function bewaarNu(){
+    if (klaar || !niveau) return;
+    ROLSPEL.bewaar('vergadering', wijze === 'tel' ? kamerInfo : null, { wijze:wijze, niveau:niveau.id, dag:dag, geld:geld, krediet:krediet,
+      staat:staat, gedaan:gedaan, gepolst:gepolst, verslag:verslag, stemrondes:stemrondes, gewestVan:gewestVan });
+  }
+  ROLSPEL.hervat('vergadering', elStart, function(b){
+    var st = b.stand;
+    wijze = st.wijze || 'bord';
+    niveau = NIVEAUS.filter(function(n){ return n.id === st.niveau; })[0] || NIVEAUS[0];
+    dag = st.dag | 0; geld = st.geld; krediet = st.krediet; staat = st.staat || {}; gedaan = st.gedaan || {}; gepolst = st.gepolst || {};
+    verslag = st.verslag || []; stemrondes = st.stemrondes | 0; gewestVan = st.gewestVan || {};
+    gekozen = null; stemVraag = null; klaar = false;
+    elStart.classList.add('hide'); elEinde.classList.add('hide'); elSpel.classList.remove('hide');
+    if (b.kamer && wijze === 'tel'){ gestart = true; naSpelers = tekenAlles; koppel(b.kamer); }
+    else tekenAlles();
+    scrollTo({ top:0, behavior:'auto' });
+  });
 })();
 
   /* De knop linksboven gaat terug naar het spellenmenu, met je niveau erbij. */

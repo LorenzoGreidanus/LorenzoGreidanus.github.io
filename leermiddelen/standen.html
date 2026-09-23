@@ -524,6 +524,7 @@ var NATIONALE = { id:'nationale', titel:'De Derde Stand noemt zich Nationale Ver
   /* ---------- de ronde ---------- */
   function volgende(){
     if (nr >= rij.length || onrust >= 100){ einde(); return; }
+    bewaarNu();
     var v = rij[nr];
     stemmen = {}; handen = {}; lopend = v;
     $('voorstelKop').textContent = 'Voorstel ' + (nr + 1) + ' van ' + rij.length;
@@ -638,6 +639,7 @@ var NATIONALE = { id:'nationale', titel:'De Derde Stand noemt zich Nationale Ver
   }
   function einde(){
     if (klaar) return; klaar = true;
+    ROLSPEL.vergeet('standen');
     $('scherm-spel').classList.add('hide'); $('scherm-einde').classList.remove('hide'); $('stopBtn').classList.add('hide');
     var slot, kop;
     if (onrust >= 85){ kop = 'De straat beslist'; slot = 'De vergadering praat nog, maar buiten is het al voorbij. Op 14 juli loopt een menigte de Bastille binnen. Wat in de zaal niet lukte, gebeurt op straat.'; }
@@ -672,13 +674,18 @@ var NATIONALE = { id:'nationale', titel:'De Derde Stand noemt zich Nationale Ver
     stemmen[pid] = d.keuze === 'voor' ? 'voor' : 'tegen';
     telStand();
   }
+  /* de kamer aan het bord hangen: een nieuwe, of na herladen dezelfde */
+  var naSpelers = null;
+  function koppel(k){
+    kamerInfo = k;
+    kamer = ROLSPEL.host({ game:'standen', code:k.code, sleutel:k.sleutel,
+      onSpelers:function(l){ spelers = l; tekenLobby(); if (naSpelers){ var f = naSpelers; naSpelers = null; f(); } }, onActie:actie });
+  }
   function openKamer(){
     $('kamerFout').textContent = '';
     $('openBtn').disabled = true;
     ROLSPEL.maak('standen').then(function(k){
-      kamerInfo = k;
-      kamer = ROLSPEL.host({ game:'standen', code:k.code, sleutel:k.sleutel,
-        onSpelers:function(l){ spelers = l; tekenLobby(); }, onActie:actie });
+      koppel(k);
       $('lobbyvak').classList.remove('hide');
       $('startBtn').classList.remove('hide');
       tekenLobby();
@@ -707,6 +714,30 @@ var NATIONALE = { id:'nationale', titel:'De Derde Stand noemt zich Nationale Ver
   $('stopBtn').addEventListener('click', einde);
   $('telBtn').addEventListener('click', tellen);
   $('verderBtn').addEventListener('click', function(){ nr++; volgende(); });
+
+  /* ---------- verder na herladen ----------
+     De voorstellen gaan als namen mee: het voorstel over de Nationale
+     Vergadering kan onderweg zijn ingevoegd. */
+  function bewaarNu(){
+    ROLSPEL.bewaar('standen', modus === 'telefoon' ? kamerInfo : null,
+      { modus:modus, rollen:rollen, persoon:persoon, hoofdelijk:hoofdelijk, nationaal:nationaal, brood:brood, gezag:gezag, onrust:onrust,
+        rij:rij.map(function(v){ return v.id; }), nr:nr, log:log });
+  }
+  ROLSPEL.hervat('standen', $('scherm-start'), function(b){
+    var st = b.stand, alle = VOORSTELLEN.concat([NATIONALE]);
+    zetModus(st.modus || 'telefoon');
+    rollen = st.rollen || {}; persoon = st.persoon || {}; hoofdelijk = !!st.hoofdelijk; nationaal = !!st.nationaal;
+    brood = st.brood; gezag = st.gezag; onrust = st.onrust; nr = st.nr | 0; log = st.log || []; klaar = false;
+    rij = (st.rij || []).map(function(id){ return alle.filter(function(v){ return v.id === id; })[0]; }).filter(Boolean);
+    $('scherm-start').classList.add('hide'); $('scherm-einde').classList.add('hide');
+    $('scherm-spel').classList.remove('hide'); $('stopBtn').classList.remove('hide');
+    $('lobbyvak').classList.add('hide');
+    meters(); regel();
+    $('log').innerHTML = log.slice(0, 8).map(function(r){ return '<p' + (r.s ? ' class="sterk"' : '') + '>' + schoon(r.t) + '</p>'; }).join('');
+    if (b.kamer && modus === 'telefoon'){ naSpelers = volgende; koppel(b.kamer); }
+    else volgende();
+    scrollTo({ top:0, behavior:'auto' });
+  });
 })();
 </script>
 <script src="thema.js"></script>

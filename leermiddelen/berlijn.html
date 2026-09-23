@@ -841,14 +841,19 @@ var NOODREM = 30;
     });
     wijzeVak.appendChild(b);
   });
+  /* de kamer aan het bord hangen: een nieuwe, of na herladen dezelfde */
+  var naSpelers = null;
+  function koppel(k){
+    kamerInfo = k;
+    kamer = ROLSPEL.host({ game:'berlijn', code:k.code, sleutel:k.sleutel, onSpelers:function(l){ spelers = l; tekenLobby(); laatkomers(); if (naSpelers){ var f = naSpelers; naSpelers = null; f(); } }, onActie:actie });
+  }
   function naarLobby(){
     var vak = document.getElementById('lobbyvak');
     document.getElementById('startBtn').disabled = true;
     if (kamer){ tekenLobby(); return; }
     vak.innerHTML = '<p style="color:var(--muted)">Kamer maken\u2026</p>';
     ROLSPEL.maak('berlijn').then(function(k){
-      kamerInfo = k;
-      kamer = ROLSPEL.host({ game:'berlijn', code:k.code, sleutel:k.sleutel, onSpelers:function(l){ spelers = l; tekenLobby(); laatkomers(); }, onActie:actie });
+      koppel(k);
       tekenLobby();
     }).catch(function(e){ vak.innerHTML = '<p style="color:var(--crab)">' + ROLSPEL.schoon(e.message) + '</p>'; });
   }
@@ -1095,6 +1100,7 @@ var NOODREM = 30;
   });
 
   function naarStart(){
+    ROLSPEL.vergeet('berlijn');
     if (kamer){ kamer.sluit(); kamer = null; kamerInfo = null; gestart = false; machtVan = {}; spelers = []; deleg = null; if (wijze === 'tel') naarLobby(); }
     elSpel.classList.add('hide'); elEinde.classList.add('hide'); elStart.classList.remove('hide');
     scrollTo({top:0,behavior:'auto'});
@@ -1385,6 +1391,7 @@ var NOODREM = 30;
 
   function nieuweBeurt(){
     gekozen = null;
+    bewaarNu();
     var m = huidige();
     document.getElementById('beurtVlag').style.background = m.kleur;
     document.getElementById('beurtNaam').textContent = m.naam;
@@ -1707,6 +1714,7 @@ var NOODREM = 30;
   /* ---------- einde ---------- */
   function toonEinde(){
     klaar = true;
+    ROLSPEL.vergeet('berlijn');
     if (kamer){ kamer.alle({ soort:'uitslag', kop:'einde', titel:'De conferentie is gesloten', tekst:'Kijk op het bord wie zijn doelen haalde, en wie er de hele tijd niet aan tafel zat.' }); kamer.stop(); }
     elSpel.classList.add('hide'); elEinde.classList.remove('hide');
     tekenKaart('eindKaart', true);
@@ -1778,6 +1786,34 @@ var NOODREM = 30;
 
     scrollTo({top:0,behavior:'smooth'});
   }
+
+  /* ---------- verder na herladen ----------
+     Met de kaart zoals hij nu is, en de gebieden die door een gebeurtenis
+     vast zijn komen te liggen of onafhankelijk werden. */
+  function bewaarNu(){
+    if (klaar) return;
+    var info = {};
+    Object.keys(INFO).forEach(function(k){ if (INFO[k].vast || INFO[k].onafh) info[k] = { vast:!!INFO[k].vast, onafh:!!INFO[k].onafh }; });
+    ROLSPEL.bewaar('berlijn', wijze === 'tel' ? kamerInfo : null, { wijze:wijze, bezit:bezit, mens:mens, machtVan:machtVan, beurt:beurt, ronde:ronde,
+      regels:regels, fase:fase, tekenden:tekenden, bezwaarOp:bezwaarOp, gehad:gehad, gebSoort:gebSoort.id, info:info });
+  }
+  ROLSPEL.hervat('berlijn', elStart, function(b){
+    var st = b.stand;
+    wijze = st.wijze || 'bord';
+    bezit = st.bezit || {}; mens = st.mens || {}; machtVan = st.machtVan || {}; beurt = st.beurt | 0; ronde = st.ronde || 1;
+    regels = st.regels || []; fase = st.fase || 'conferentie'; tekenden = st.tekenden || {}; bezwaarOp = st.bezwaarOp || {}; gehad = st.gehad || [];
+    gebSoort = SOORTEN_GEB.filter(function(x){ return x.id === st.gebSoort; })[0] || gebSoort;
+    Object.keys(BEGINSTAAT).forEach(function(k){ INFO[k].vast = BEGINSTAAT[k].vast; delete INFO[k].onafh; });
+    Object.keys(st.info || {}).forEach(function(k){ if (!INFO[k]) return; INFO[k].vast = !!st.info[k].vast; if (st.info[k].onafh) INFO[k].onafh = true; });
+    gekozen = null; klaar = false; nieuwsNu = null; deleg = null;
+    elStart.classList.add('hide'); elEinde.classList.add('hide'); elSpel.classList.remove('hide');
+    laag = 'verdeling'; tekenLagen();
+    tekenKaart('kaartvak', false);
+    document.getElementById('log').innerHTML = regels.map(function(r){ return '<div>' + r + '</div>'; }).join('');
+    if (b.kamer && wijze === 'tel'){ gestart = true; naSpelers = nieuweBeurt; koppel(b.kamer); }
+    else nieuweBeurt();
+    scrollTo({ top:0, behavior:'auto' });
+  });
 })();
 
 /* De knop linksboven gaat terug naar het spellenmenu. */
