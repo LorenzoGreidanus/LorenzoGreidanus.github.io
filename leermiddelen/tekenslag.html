@@ -385,6 +385,15 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
   function tekenVak(){
     var tekenbaar = VAKKEN_B.filter(function(v){ return TEKENVAK[v.id]; });
     if (!TEKENVAK[vak]) { vak = tekenbaar.length ? tekenbaar[0].id : 'ges'; ond = []; }
+    /* De woorden van een vak komen pas binnen als iemand erom vraagt. Zonder dit
+       stond er "0 tekenbare woorden" en alleen "alles" tot je op Kamer openen
+       drukte; nu halen we ze meteen, en tekenen het daarna opnieuw. */
+    tekenVak.gevraagd = tekenVak.gevraagd || {};
+    if (window.BANK && bron !== 'eigen' && !BANK.heeft(vak) && !tekenVak.gevraagd[vak]){
+      tekenVak.gevraagd[vak] = true;   /* een keer per vak: lukt het laden niet, dan niet eindeloos opnieuw */
+      var nu = vak;
+      BANK.zorg(vak).then(function(){ BRONNEN_B = window.BRONNEN || {}; if (vak === nu) tekenVak(); });
+    }
     $('vakChips').innerHTML = tekenbaar.map(function(v){ return '<button type="button" data-v="' + v.id + '"' + (vak === v.id ? ' class="on"' : '') + '>' + schoon(v.naam) + '</button>'; }).join('');
     Array.prototype.forEach.call($('vakChips').querySelectorAll('button'), function(b){ b.addEventListener('click', function(){ vak = b.getAttribute('data-v'); ond = []; tekenVak(); }); });
     /* alleen de onderdelen die mogen en die genoeg woorden opleveren voor een potje */
