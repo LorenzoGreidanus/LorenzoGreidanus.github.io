@@ -263,7 +263,7 @@ td.getal{font-variant-numeric:tabular-nums;text-align:right}
 .kern span{display:block;font-size:.84rem;color:var(--muted)}
 /* per vak een balk: hoe breed is het deel dat goed ging */
 .vakbalken{display:grid;gap:8px;margin-top:10px}
-.vakbalk{display:grid;grid-template-columns:minmax(110px,160px) 1fr 64px;gap:10px;align-items:center;border:none;background:none;
+.vakbalk{display:grid;grid-template-columns:minmax(110px,200px) 1fr 64px;gap:10px;align-items:center;border:none;background:none;
   text-align:left;padding:6px 8px;border-radius:12px;min-height:44px;cursor:pointer;color:inherit}
 .vakbalk:hover,.vakbalk:focus-visible{background:var(--kaart2)}
 .vakbalk .naam{font-weight:600}
@@ -279,11 +279,13 @@ td.getal{font-variant-numeric:tabular-nums;text-align:right}
 /* een cel in de tabel per spel: een getal, geen kleur, want er is geen norm voor goed */
 .rooster .cel.spelcel{background:var(--kaart2);color:var(--ink)}
 .chips button.stil{opacity:.62}
-.vakbalk .pct small{font-weight:400;font-size:.74rem;color:var(--muted)}
+.vakbalk .baan.geenod{height:auto;background:none;border-radius:0;text-align:left;font-size:.82rem;color:var(--muted);overflow:visible;overflow-wrap:break-word;grid-column:2 / -1;min-width:0}
+@media(max-width:600px){.vakbalk{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr) 48px}.vakbalk .naam{hyphens:auto;-webkit-hyphens:auto}.vakbalk .naam small{hyphens:manual;-webkit-hyphens:manual}}
 /* De koppen van het rooster in gewone letters: in hoofdletters met ruimte ertussen
    braken lange woorden als werkwoordspelling midden in een lettergreep af. */
-.rooster th{text-transform:none;letter-spacing:0;font-size:.8rem;color:var(--ink);overflow-wrap:normal;word-break:normal;hyphens:auto;-webkit-hyphens:auto}
-.rooster th small{text-transform:uppercase;letter-spacing:.1em;font-size:.66rem}
+.rooster th{text-transform:none;letter-spacing:0;font-size:.8rem;color:var(--ink);overflow-wrap:normal;word-break:normal;hyphens:manual;-webkit-hyphens:manual}
+/* geen afbreekstreepjes meer: de kolom wordt zo breed als het langste woord, en de tabel scrollt */
+.rooster th small{text-transform:uppercase;letter-spacing:.06em;font-size:.66rem;white-space:nowrap}
 .rooster th.naam{text-transform:uppercase;letter-spacing:.12em;font-size:.72rem;color:var(--muted)}
 .filterrij .chips{flex:1 1 0;min-width:0}
 /* twee filterrijen onder elkaar in een tabblad: anders raken de knoppen elkaar precies */
@@ -438,7 +440,7 @@ td.getal{font-variant-numeric:tabular-nums;text-align:right}
 .rooster tr.klas td.naam{background:var(--kaart2)}
 :root[data-theme="dark"] .rooster .cel.g{background:#1f4a30;color:#b8ecc8}:root[data-theme="dark"] .rooster .cel.m{background:#4d3a12;color:#ffd98a}:root[data-theme="dark"] .rooster .cel.r{background:#5a2320;color:#ffc4bb}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .rooster .cel.g{background:#1f4a30;color:#b8ecc8}:root:not([data-theme="light"]) .rooster .cel.m{background:#4d3a12;color:#ffd98a}:root:not([data-theme="light"]) .rooster .cel.r{background:#5a2320;color:#ffc4bb}}
-.legenda{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:.8rem;color:var(--muted)}
+.legenda{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:16px;font-size:.8rem;color:var(--muted)}
 .legenda i{display:inline-block;width:12px;height:12px;border-radius:4px;vertical-align:-1px;margin-right:5px}
 /* de vakjes in dezelfde kleuren als de cellen, ook in donker */
 .legenda i.g{background:#d7f1df}.legenda i.m{background:#fdebc8}.legenda i.r{background:#fbd8d2}
@@ -609,8 +611,8 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
         <span class="filternaam">Detail</span>
         <div class="chips" id="odStandChips"></div>
       </div>
-      <div class="rooster" id="rooster"></div>
       <div class="legenda" id="legenda"><span><i class="g"></i>80% of meer goed</span><span><i class="m"></i>60 tot 80%: bijna</span><span><i class="r"></i>onder de 60%: nog niet</span><span>gestippeld: minder dan vijf vragen, dus nog weinig zeggend</span><span><b>&#10003;</b> beheerst: 80% of meer goed over minstens tien vragen</span></div>
+      <div class="rooster" id="rooster"></div>
       <div id="vakSpellen"></div>
     </div>
 
@@ -1251,8 +1253,9 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       var c = T.vak[v], p = c ? pct(c) : 0, x = inVak[v];
       return '<button type="button" class="vakbalk" data-vak="' + schoon(v) + '"><span class="naam">' + schoon(vakNaam(v)) +
         '<small>' + x.potjes + (x.potjes === 1 ? ' potje, ' : ' potjes, ') + Object.keys(x.wie).length + ' leerlingen' + (c ? ', ' + c[1] + ' vragen geteld' : '') + '</small></span>' +
-        '<span class="baan" aria-hidden="true">' + (c ? '<i class="' + kleurVan(p) + '" style="width:' + p + '%"></i>' : '') + '</span>' +
-        '<span class="pct">' + (c ? p + '%' : '<small>niet geteld</small>') + '</span></button>';
+        /* zonder vragen per onderdeel geen lege balk, die leest als 0% */
+        (c ? '<span class="baan" aria-hidden="true"><i class="' + kleurVan(p) + '" style="width:' + p + '%"></i></span><span class="pct">' + p + '%</span>'
+           : '<span class="baan geenod">gespeeld met spellen die niet per onderdeel tellen</span>') + '</button>';
     }).join('') : '<p class="leeg">In deze selectie is nog niets gespeeld.</p>';
     Array.prototype.forEach.call($('vakBalken').querySelectorAll('[data-vak]'), function(b){
       b.addEventListener('click', function(){ vakFilter = b.getAttribute('data-vak'); odStand = ''; zetTab('od'); teken(); });
