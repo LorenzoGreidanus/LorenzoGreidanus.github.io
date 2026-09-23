@@ -24,5 +24,17 @@ jobs:
       # de vragenbank: dubbele vragen, een goed antwoord buiten de opties,
       # en of vragen en niveaus nog even lang zijn
       - run: node server/audit-bank.js
-      # de donkere stand: leesbaarheid en aanraakvlakken
-      - run: node server/audit-donker.js
+      # De donkere stand: leesbaarheid en aanraakvlakken. Die toets kijkt met een
+      # echte browser naar de echte pagina's, dus daar moeten een webserver met
+      # de site en een headless Chrome voor draaien. Zonder die twee viel hij
+      # direct om met "geen browser op poort 9222", bij elke duw.
+      - name: webserver en browser voor de donkertoets
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/server.log 2>&1 &
+          google-chrome --headless=new --no-sandbox --disable-gpu --remote-debugging-port=9222 --user-data-dir=/tmp/chrome about:blank >/tmp/chrome.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:9222/json/version >/dev/null && curl -sf http://127.0.0.1:8765/leermiddelen/index.html >/dev/null; then echo klaar; exit 0; fi
+            sleep 1
+          done
+          echo "server of browser kwam niet op"; cat /tmp/server.log /tmp/chrome.log; exit 1
+      - run: node server/audit-donker.js http://127.0.0.1:8765
