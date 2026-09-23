@@ -780,4 +780,87 @@ var ENG_EX = [
 var ENG_EX_N = [1,1,1,1,2,3,2,1,2,2,2,1,3,2,2,2,2,1,3,2,1,1,2,1,2,2,2,2,2,1,2,1,1,2,1,1,1,1,3,2,2,1,3,1,2,1,3,2,1,2,2,2,3,2,1,1,1,2,2,2,2,1,1,2,1,1,2,2,1,1,2];
 BRONNEN.eng = ENG.concat(ENG2, ENG3, ENG_EX);
 NIVOS.eng = [1,1,1,2,1,1,3,2,2,3,1,1,2,1,4,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,1,1,1,1,1,1,1,2,2,2,2,2,3,3,2,2,3,3,1,1,3,3,2,2,4,3,3,3,4,3,2,3,4,3,3,3,4,4,4,3,2,2,2,3,3,4,4,4,4,4,3,3,2,3,3,4,4,4,3,3,4,4,3,4,4,4,4,4,4,4,4,3,4,4,1,2,3,3,3,3,2,3,3,2,3,4,4,4,2,3,3,4,4,2,4,3,3,2,3,4,3,4,1,2,2,3,2,2,2,4,4,4,4,3,3,4,4,4,2,4,4,4,4,3,3,4,3,3,4,4,4,4,4,3,3,4,4,3,4,4,3,1,1,1,2,2,2,2,2,3,3,3,3,3,4,4,4,4,4,1,1,2,2,2,3,3,3,4,4,4,1,1,2,2,3,3,4,4,2,2,3,3,4,2,2,3,3,4,1,1,1,1,1,2,2,2,2,2,3,3,3,4,4,1,1,1,1,1,2,2,2,2,2,3,3,4,4,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,2,2,2,2,3,3,3,3,3,4,4,4,2,2,2,2,3,3,3,3,3,4,4,4,4,1,1,1,1,2,1,2,2,3,4,4,4,4,4,4,3,3,3,3,4,4,4,4,2,1,1,3,1,1,1,2,2,1,2,2,2,1,3,2,2,2,2,1,3,2,1,1,2,1,2,2,2,2,2,1,2,1,1,2,1,1,1,1,3,2,2,1,1,2,1,3,2,1,2,2,2,3,1,1,1,2,2,2,2,1,1,2,1,1,2,2,1,1,2];   /* een niveau per vraag, op volgorde; server/audit-bank.js bewaakt dat ze gelijk blijven lopen */
+/* Uitbreiding van september 2026: meer vragen per onderdeel, vooral op de
+   hogere niveaus, en andere vraagvormen (welke hoort er niet bij, oorzaak en
+   gevolg, rekenen in een situatie). Bij deze vragen staat het niveau in n. */
+var ENG_PLUS = [
+/* grammatica */
+{v:'You are coming tomorrow, ___?',o:['aren\'t you','don\'t you','isn\'t it','won\'t you'],g:0,u:'Een question tag herhaalt het hulpwerkwoord uit de zin, ontkennend: you are... aren\'t you?',t:'grammatica',n:3},
+{v:'She can swim, ___?',o:['can\'t she','doesn\'t she','isn\'t she','can she'],g:0,u:'Is de zin bevestigend, dan is de tag ontkennend, met hetzelfde hulpwerkwoord: can\'t she?',t:'grammatica',n:3},
+{v:'I ___ play football, but now I prefer tennis.',o:['used to','use to','am used to','was used'],g:0,u:'Used to + hele werkwoord: iets wat je vroeger deed en nu niet meer.',t:'grammatica',n:3},
+{v:'There are ___ apples in the fridge.',o:['a few','a little','much','any'],g:0,u:'Bij telbare dingen (apples) gebruik je few, bij ontelbare (water) little.',t:'grammatica',n:2},
+{v:'I don\'t have ___ time left.',o:['much','many','few','a few'],g:0,u:'Time is ontelbaar, dus much. Many hoort bij telbare dingen: many minutes.',t:'grammatica',n:2},
+{v:'She sings ___.',o:['beautifully','beautiful','more beautiful','beauty'],g:0,u:'Zegt het woord iets over hoe ze zingt (een werkwoord), dan gebruik je het bijwoord met -ly.',t:'grammatica',n:2},
+{v:'If I had known, I ___ you.',o:['would have told','would tell','will tell','had told'],g:0,u:'Derde conditional: if + had + voltooid deelwoord, dan would have + voltooid deelwoord. Het gaat over iets wat niet meer kan.',t:'grammatica',n:4},
+{v:'He enjoys ___ in the sea.',o:['swimming','to swim','swim','swam'],g:0,u:'Na enjoy komt altijd de -ing-vorm. Net als na finish, avoid en mind.',t:'grammatica',n:3},
+{v:'I want ___ a new phone.',o:['to buy','buying','buy','bought'],g:0,u:'Na want komt to + het hele werkwoord.',t:'grammatica',n:2},
+{v:'He said: "I am tired." In reported speech: He said that he ___ tired.',o:['was','is','has been','were'],g:0,u:'In de indirecte rede schuift de tijd een stap terug: am wordt was.',t:'grammatica',n:4},
+{v:'She hurt ___ when she fell.',o:['herself','her','hers','she'],g:0,u:'Doet iemand iets met zichzelf, dan gebruik je een wederkerend voornaamwoord: herself.',t:'grammatica',n:2},
+{v:'I have lived here ___ ten years.',o:['for','since','ago','during'],g:0,u:'For + een tijdsduur (ten years), since + een beginpunt (2015).',t:'grammatica',n:2},
+{v:'Which sentence is correct?',o:['I saw him two days ago.','I have seen him two days ago.','I have saw him two days ago.','I seen him two days ago.'],g:0,u:'Met een afgesloten tijdstip in het verleden (two days ago) gebruik je de past simple, niet de present perfect.',t:'grammatica',n:3},
+{v:'___ Netherlands is a small country.',o:['The','A','An','-'],g:0,u:'Bij landnamen met een meervoud of met Kingdom/States gebruik je the: the Netherlands, the United States.',t:'grammatica',n:3},
+{v:'The girl ___ bike was stolen called the police.',o:['whose','who','which','whom'],g:0,u:'Whose gebruik je voor bezit: het meisje van wie de fiets gestolen was.',t:'grammatica',n:4},
+{v:'This car is ___ expensive than that one.',o:['more','most','much','the most'],g:0,u:'Lange bijvoeglijke naamwoorden krijgen more in de vergrotende trap: more expensive.',t:'grammatica',n:1},
+{v:'It\'s the ___ day of the year.',o:['hottest','hotest','most hot','hotter'],g:0,u:'Hot: korte klinker + medeklinker, dus de t verdubbelt: hottest.',t:'grammatica',n:2},
+{v:'If it ___ tomorrow, we will stay inside.',o:['rains','will rain','rained','would rain'],g:0,u:'Eerste conditional: if + present simple, dan will. Na if komt geen will.',t:'grammatica',n:3},
+{v:'Many houses ___ destroyed by the storm last night.',o:['were','was','are','have'],g:0,u:'Lijdende vorm in het verleden, meervoud: were + voltooid deelwoord.',t:'grammatica',n:3},
+{v:'You ___ smoke here. It is not allowed.',o:['mustn\'t','don\'t have to','needn\'t','can'],g:0,u:'Mustn\'t is een verbod. Don\'t have to betekent: het hoeft niet.',t:'grammatica',n:4},
+{v:'Do you have ___ questions?',o:['any','some','a','much'],g:0,u:'In vragen en ontkenningen gebruik je meestal any.',t:'grammatica',n:1},
+{v:'She ___ her keys, so she can\'t get in.',o:['has lost','lost','loses','is losing'],g:0,u:'Present perfect: het gebeurde in het verleden en heeft nu nog gevolg (ze kan er niet in).',t:'grammatica',n:4},
+/* valse vrienden */
+{v:'Valse vriend: wat betekent to become?',o:['worden','bekomen','krijgen','bekend maken'],g:0,u:'To become is worden: she became a doctor. Krijgen is to get of to receive.',t:'valse vrienden',n:2},
+{v:'Valse vriend: wat betekent a preservative?',o:['een conserveermiddel','een condoom','een voorzitter','een reservering'],g:0,u:'Een preservative houdt eten langer goed. Een condoom is a condom.',t:'valse vrienden',n:4},
+{v:'Valse vriend: wat betekent to want?',o:['willen','wanten','wachten','verwachten'],g:0,u:'To want is willen. Want in het Nederlands is because.',t:'valse vrienden',n:1},
+{v:'Valse vriend: wat betekent a physician?',o:['een arts','een natuurkundige','een fysiotherapeut','een filosoof'],g:0,u:'A physician is een dokter. Een natuurkundige is a physicist.',t:'valse vrienden',n:4},
+{v:'Valse vriend: wat betekent to prove?',o:['bewijzen','proeven','proberen','prikken'],g:0,u:'To prove is bewijzen. Proeven is to taste, proberen is to try.',t:'valse vrienden',n:2},
+{v:'Valse vriend: wat betekent a camera?',o:['een fototoestel','een kamer','een kameraad','een kraam'],g:0,u:'Een kamer is a room. A camera maakt foto\'s.',t:'valse vrienden',n:1},
+{v:'Valse vriend: wat betekent sympathetic?',o:['meelevend','sympathiek','aardig om te zien','symmetrisch'],g:0,u:'Sympathetic is meelevend. Sympathiek is nice of likeable.',t:'valse vrienden',n:3},
+{v:'Valse vriend: wat betekent a costume?',o:['een verkleedpak','een kostuum met stropdas','een gewoonte','een klant'],g:0,u:'A costume is verkleedkleding. Een pak voor naar je werk is a suit.',t:'valse vrienden',n:3},
+/* werkwoorden met voorzetsel */
+{v:'Wat betekent to call off?',o:['afgelasten','iemand opbellen','hard roepen','iemand terugbellen'],g:0,u:'The match was called off because of the rain: afgelast.',t:'voorzetselwerkwoorden',n:3},
+{v:'Wat betekent to point out?',o:['wijzen op, opmerken','naar buiten wijzen','weglopen','uitschelden'],g:0,u:'She pointed out a mistake: ze wees op een fout.',t:'voorzetselwerkwoorden',n:3},
+{v:'Wat betekent to make up?',o:['verzinnen, of weer goedmaken','je bed netjes opmaken','iemand wakker maken','iets omhoog tillen'],g:0,u:'He made up a story (verzonnen). They made up after the fight (het weer goedgemaakt).',t:'voorzetselwerkwoorden',n:4},
+{v:'I\'m looking forward ___ the holidays.',o:['to','for','at','on'],g:0,u:'To look forward to: ergens naar uitkijken.',t:'voorzetselwerkwoorden',n:2},
+{v:'Can you pick me ___ at the station?',o:['up','on','in','off'],g:0,u:'To pick someone up: iemand ophalen.',t:'voorzetselwerkwoorden',n:1},
+{v:'Please fill ___ this form.',o:['in','up','on','at'],g:0,u:'To fill in (a form): een formulier invullen.',t:'voorzetselwerkwoorden',n:1},
+{v:'Wat betekent to go on?',o:['doorgaan','aangaan','opgaan','weggaan'],g:0,u:'Go on! Ga door! What\'s going on? Wat is er aan de hand?',t:'voorzetselwerkwoorden',n:2},
+{v:'Wat betekent to figure out?',o:['uitzoeken','een tekening maken','iets weggooien','getallen optellen'],g:0,u:'I can\'t figure out this puzzle: ik snap het niet.',t:'voorzetselwerkwoorden',n:3},
+/* woordjes Engels naar Nederlands */
+{v:'reliable',o:['betrouwbaar','afhankelijk','verantwoordelijk','bereikbaar'],g:0,u:'A reliable source is een betrouwbare bron.',t:'woordjes EN naar NL',n:3},
+{v:'to achieve',o:['bereiken','proberen','afwachten','aankomen'],g:0,u:'To achieve a goal: een doel bereiken.',t:'woordjes EN naar NL',n:3},
+{v:'knowledge',o:['kennis','knokpartij','bewustzijn','mening'],g:0,u:'To know is weten; knowledge is kennis. De k spreek je niet uit.',t:'woordjes EN naar NL',n:2},
+{v:'to suggest',o:['voorstellen','vragen','beweren','vermoeden'],g:0,u:'I suggest we leave now: ik stel voor dat we nu gaan.',t:'woordjes EN naar NL',n:3},
+{v:'to persuade',o:['overtuigen','doorzetten','achtervolgen','toestaan'],g:0,u:'She persuaded me to come: ze haalde me over om te komen.',t:'woordjes EN naar NL',n:3},
+{v:'curious',o:['nieuwsgierig','vreemd gekleurd','voorzichtig','gekruld'],g:0,u:'I\'m curious about the results: ik ben nieuwsgierig naar de uitslag.',t:'woordjes EN naar NL',n:2},
+{v:'harvest',o:['oogst','haven','herfst','hagel'],g:0,u:'The harvest was good this year: de oogst was goed.',t:'woordjes EN naar NL',n:2},
+{v:'to decline',o:['afwijzen, of afnemen','verklaren','versieren','neerleggen'],g:0,u:'She declined the offer (wees af). Sales declined (namen af).',t:'woordjes EN naar NL',n:4},
+{v:'to measure',o:['meten','mengen','bedoelen','meenemen'],g:0,u:'To measure the room: de kamer opmeten. A measure is ook een maatregel.',t:'woordjes EN naar NL',n:2},
+{v:'to overcome',o:['overwinnen','overkomen','overkoken','omverwerpen'],g:0,u:'To overcome a fear: een angst overwinnen.',t:'woordjes EN naar NL',n:4},
+{v:'environment',o:['milieu','omweg','inkomen','regering'],g:0,u:'Protect the environment: bescherm het milieu.',t:'woordjes EN naar NL',n:2},
+{v:'to require',o:['vereisen','herhalen','verzoeken om hulp','terugvragen'],g:0,u:'This job requires experience: voor deze baan is ervaring vereist.',t:'woordjes EN naar NL',n:4},
+/* woordjes Nederlands naar Engels */
+{v:'de toekomst',o:['the future','the arrival','the past','the forecast'],g:0,u:'In the future: in de toekomst.',t:'woordjes NL naar EN',n:1},
+{v:'het onderzoek',o:['the research','the search','the test','the underground'],g:0,u:'Research is ontelbaar: you do research, niet a research.',t:'woordjes NL naar EN',n:3},
+{v:'ontevreden',o:['dissatisfied','unhappy with money','uncomfortable','disappointed in time'],g:0,u:'Satisfied is tevreden, dissatisfied ontevreden.',t:'woordjes NL naar EN',n:4},
+{v:'het voordeel',o:['the advantage','the advice','the profit margin','the adventure'],g:0,u:'Advantage tegenover disadvantage (nadeel).',t:'woordjes NL naar EN',n:2},
+{v:'de mening',o:['the opinion','the meaning','the mind','the minute'],g:0,u:'Meaning is betekenis. Een mening is an opinion.',t:'woordjes NL naar EN',n:2},
+{v:'verbieden',o:['to forbid','to forget','to offer','to allow'],g:0,u:'To forbid (forbade, forbidden). Het tegenovergestelde is to allow.',t:'woordjes NL naar EN',n:3},
+{v:'de oplossing',o:['the solution','the dissolution','the release','the answer sheet'],g:0,u:'To solve a problem: een probleem oplossen. The solution: de oplossing.',t:'woordjes NL naar EN',n:2},
+{v:'onafhankelijk',o:['independent','undependable','unrelated','unemployed'],g:0,u:'Dependent is afhankelijk, independent onafhankelijk.',t:'woordjes NL naar EN',n:3},
+{v:'het gedrag',o:['the behaviour','the dress','the carrying','the attitude of a road'],g:0,u:'Good behaviour is goed gedrag. Amerikaans: behavior.',t:'woordjes NL naar EN',n:4},
+{v:'de werkloosheid',o:['unemployment','worklessness','unworking','jobless work'],g:0,u:'Unemployed is werkloos, unemployment werkloosheid.',t:'woordjes NL naar EN',n:4},
+/* examen: woorden en signaalwoorden in een zin */
+{v:'"The plan failed. Nevertheless, they tried again." Wat betekent nevertheless hier?',o:['toch','daarom','bovendien','ten slotte'],g:0,u:'Nevertheless geeft een tegenstelling: het plan mislukte, maar ze probeerden het toch.',t:'examen-eng',n:3},
+{v:'"Prices rose sharply. As a result, fewer people bought cars." Welk verband geeft as a result?',o:['een gevolg','een voorbeeld','een tegenstelling','een voorwaarde'],g:0,u:'As a result: als gevolg daarvan. Minder mensen kochten auto\'s omdat de prijzen stegen.',t:'examen-eng',n:2},
+{v:'"You can join the team, provided that you train twice a week." Wat betekent provided that?',o:['op voorwaarde dat','omdat je het wilt','hoewel het moeilijk is','zodat je beter wordt'],g:0,u:'Provided that geeft een voorwaarde, net als on condition that.',t:'examen-eng',n:4},
+{v:'"Unlike her sister, Emma hates sports." Wat betekent unlike?',o:['anders dan','net als','dankzij','samen met'],g:0,u:'Unlike geeft een tegenstelling: haar zus houdt wel van sport.',t:'examen-eng',n:3},
+{v:'"The museum is free. However, you have to book a ticket online." Wat bedoelt de schrijver?',o:['het is gratis, maar reserveren moet wel','je betaalt online voor je kaartje','het museum bestaat alleen online','je hoeft niets te doen om binnen te komen'],g:0,u:'However kondigt een tegenstelling of beperking aan.',t:'examen-eng',n:2},
+{v:'"Due to heavy snow, the school was closed." Waarom was de school dicht?',o:['vanwege de sneeuw','ondanks de sneeuw','voor de sneeuwpret','na de sneeuw'],g:0,u:'Due to betekent vanwege: het geeft een oorzaak.',t:'examen-eng',n:2},
+{v:'"Most students agreed, whereas the teachers were against the plan." Wat betekent whereas?',o:['daarentegen','omdat het zo is','zodra het kan','tenzij het misgaat'],g:0,u:'Whereas zet twee groepen tegenover elkaar.',t:'examen-eng',n:3},
+{v:'"She hardly slept last night." Wat betekent hardly?',o:['nauwelijks','hard','heel lang','goed'],g:0,u:'Hardly betekent bijna niet. Niet te verwarren met hard.',t:'examen-eng',n:4},
+{v:'"The survey shows that teenagers spend on average three hours a day online." Wat is een survey?',o:['een onderzoek, enquête','een overleving','een samenvatting','een bewakingscamera'],g:0,u:'A survey is een onderzoek waarbij je veel mensen dezelfde vragen stelt.',t:'examen-eng',n:2},
+{v:'"Although it was late, he kept working." Welk verband geeft although?',o:['een toegeving','een oorzaak','een doel','een tijdsvolgorde'],g:0,u:'Although (hoewel): je zou verwachten dat hij stopte, maar hij werkte door.',t:'examen-eng',n:3}
+];
+BRONNEN.eng = BRONNEN.eng.concat(ENG_PLUS);
+NIVOS.eng = NIVOS.eng.concat(ENG_PLUS.map(function(q){ return q.n; }));
 })();

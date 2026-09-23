@@ -351,6 +351,175 @@ function cijferVraag(r){
     'Is het onderste cijfer groter, dan leen je 1 van de kolom ernaast: daar komt er 1 af, hier 10 bij. Nooit de kleine van de grote aftrekken. ' + a + ' − ' + b + ' = ' + som + '.', 'aftrekken onder elkaar');
 }
 
+/* Meer soorten sommen binnen hetzelfde onderdeel, zodat een race niet tien
+   keer dezelfde vorm geeft: omgekeerde tafels, volgorde van bewerkingen,
+   afronden, procent erbij en eraf, een recept omrekenen, tijdsduur, liters en
+   kilo's, de mediaan. Geeft null als er voor dit onderdeel niets extra is. */
+function rekenExtra(soort, r) {
+  const g1 = function(n){ return kommaGetal(n, n % 1 ? (Math.round(n * 10) === n * 10 ? 1 : 2) : 0); };
+  if (soort === 'tafels') {
+    const a = r <= 1 ? 2 + rnd(9) : 3 + rnd(10), b = 2 + rnd(9), p = a * b;
+    return bouw('? × ' + a + ' = ' + p, String(b),
+      () => String(kies([b + 1, b - 1, b + 2, b - 2, b + 3].filter(n => n > 0 && n !== b))),
+      'Welk getal keer ' + a + ' is ' + p + '? Dat is ' + p + ' : ' + a + ' = ' + b + '.', 'tafels omgekeerd');
+  }
+  if (soort === 'hoofd') {
+    const v = rnd(3);
+    if (v === 0 || r <= 1) {
+      /* volgorde van bewerkingen: eerst keer, dan plus */
+      const a = 2 + rnd(9), b = 2 + rnd(6), c = 2 + rnd(6), goed = a + b * c;
+      return bouw(a + ' + ' + b + ' × ' + c, String(goed),
+        () => String(kies([(a + b) * c, goed + c, goed - b, a * b + c].filter(n => n !== goed))),
+        'Eerst keer, dan plus: ' + b + ' × ' + c + ' = ' + (b * c) + ', en ' + a + ' + ' + (b * c) + ' = ' + goed + '. Niet eerst ' + a + ' + ' + b + '.', 'volgorde van bewerkingen');
+    }
+    if (v === 1) {
+      /* afronden */
+      const n = 1000 + rnd(r >= 3 ? 90000 : 9000), op = kies(r >= 3 ? [10, 100, 1000] : [10, 100]);
+      const goed = Math.round(n / op) * op, naam = { 10:'tientallen', 100:'honderdtallen', 1000:'duizendtallen' }[op];
+      return bouw('Rond ' + n + ' af op ' + naam, String(goed),
+        () => String(kies([goed - op, goed + op, n, Math.floor(n / op) * op, Math.ceil(n / op) * op, goed + 2 * op].filter(x => x > 0 && x !== goed))),
+        'Kijk naar het cijfer rechts van de ' + naam + '. Is dat 5 of meer, dan rond je naar boven af, anders naar beneden. ' + n + ' wordt ' + goed + '.', 'afronden');
+    }
+    /* haakjes */
+    const a = 2 + rnd(8), b = 2 + rnd(8), c = 2 + rnd(5), goed = (a + b) * c;
+    return bouw('(' + a + ' + ' + b + ') × ' + c, String(goed),
+      () => String(kies([a + b * c, goed + c, goed - c, a * c + b].filter(n => n !== goed))),
+      'Wat tussen haakjes staat reken je eerst uit: ' + a + ' + ' + b + ' = ' + (a + b) + ', keer ' + c + ' is ' + goed + '.', 'haakjes');
+  }
+  if (soort === 'breuk') {
+    const v = rnd(3);
+    if (v === 0) {
+      /* vereenvoudigen */
+      const k = kies([[1,2],[1,3],[2,3],[1,4],[3,4],[2,5],[3,5]]), m = 2 + rnd(r >= 3 ? 5 : 3);
+      const goed = k[0] + '/' + k[1];
+      return bouw('Schrijf zo kort mogelijk: ' + (k[0] * m) + '/' + (k[1] * m), goed,
+        () => kies([(k[0] * m) + '/' + k[1], k[0] + '/' + (k[1] * m), (k[0] + 1) + '/' + k[1], k[0] + '/' + (k[1] + 1), (k[0] * 2) + '/' + (k[1] * 2)].filter(x => x !== goed)),
+        'Deel teller en noemer allebei door ' + m + ': ' + (k[0] * m) + ' : ' + m + ' = ' + k[0] + ' en ' + (k[1] * m) + ' : ' + m + ' = ' + k[1] + '.', 'vereenvoudigen');
+    }
+    if (v === 1) {
+      /* optellen, gelijke noemer */
+      const n = kies([5, 6, 8, 9, 10, 12]), a = 1 + rnd(n - 2), b = 1 + rnd(n - a - 1), goed = (a + b) + '/' + n;
+      return bouw(a + '/' + n + ' + ' + b + '/' + n, goed,
+        () => kies([(a + b) + '/' + (2 * n), (a + b + 1) + '/' + n, (a * b) + '/' + n, (a + b) + '/' + (n + 1)].filter(x => x !== goed)),
+        'Gelijke noemers: tel alleen de tellers op. ' + a + ' + ' + b + ' = ' + (a + b) + ', dus ' + goed + '. De noemer blijft ' + n + '.', 'breuken optellen');
+    }
+    /* welke is groter */
+    const paren = [[[1,2],[2,5]],[[2,3],[3,5]],[[3,4],[2,3]],[[3,8],[1,3]],[[5,6],[4,5]],[[2,7],[1,4]],[[3,5],[5,8]]];
+    const p = kies(paren), x = p[0], y = p[1];
+    const groot = x[0] / x[1] > y[0] / y[1] ? x : y, klein = groot === x ? y : x;
+    return bouw('Welke breuk is groter: ' + x[0] + '/' + x[1] + ' of ' + y[0] + '/' + y[1] + '?', groot[0] + '/' + groot[1],
+      () => kies([klein[0] + '/' + klein[1], 'ze zijn even groot', 'dat kun je niet zien']),
+      'Reken ze om naar procenten: ' + x[0] + '/' + x[1] + ' is ongeveer ' + Math.round(x[0] / x[1] * 100) + '% en ' + y[0] + '/' + y[1] + ' is ongeveer ' + Math.round(y[0] / y[1] * 100) + '%.', 'breuken vergelijken');
+  }
+  if (soort === 'procent') {
+    const v = rnd(3);
+    if (v === 0) {
+      /* prijs gaat omhoog */
+      const p = kies(r <= 2 ? [10, 20, 25, 50] : [5, 15, 30, 35, 12]), b = kies([40, 60, 80, 120, 200, 250]), goed = b * (100 + p) / 100;
+      return bouw('Een prijs van € ' + b + ' stijgt met ' + p + '%. Wat is de nieuwe prijs?', '€ ' + g1(goed),
+        () => '€ ' + g1(kies([b * p / 100, b + p, b * (100 - p) / 100, goed + 10, goed - 5, b * (100 + 2 * p) / 100].filter(n => n > 0 && n !== goed))),
+        p + '% van ' + b + ' is ' + g1(b * p / 100) + '. Erbij: ' + b + ' + ' + g1(b * p / 100) + ' = ' + g1(goed) + '. Of in één keer: ' + b + ' × ' + kommaGetal((100 + p) / 100, 2) + '.', 'procent erbij');
+    }
+    if (v === 1) {
+      /* hoeveel procent is het */
+      const tot = kies([20, 25, 40, 50, 80, 200]), p = kies([10, 20, 25, 40, 50, 75]), deel = tot * p / 100;
+      if (deel % 1) return null;
+      return bouw(deel + ' van de ' + tot + ' leerlingen komt met de fiets. Hoeveel procent is dat?', p + '%',
+        () => kies([deel + '%', (p + 10) + '%', (p - 5) + '%', Math.round(tot / deel) + '%', (100 - p) + '%', (p * 2) + '%'].filter(x => x !== p + '%' && x !== '0%')),
+        'Deel het deel door het geheel: ' + deel + ' : ' + tot + ' = ' + kommaGetal(deel / tot, 2) + ', en keer 100 is ' + p + '%.', 'hoeveel procent');
+    }
+    /* korting eraf */
+    const p = kies([10, 20, 25, 30, 40]), b = kies([30, 50, 60, 80, 120]), goed = b * (100 - p) / 100;
+    return bouw('Een jas van € ' + b + ' heeft ' + p + '% korting. Wat betaal je?', '€ ' + g1(goed),
+      () => '€ ' + g1(kies([b * p / 100, b - p, b * (100 + p) / 100, goed - 5, goed + 5, goed + 10].filter(n => n > 0 && n !== goed))),
+      'Je betaalt ' + (100 - p) + '%: ' + b + ' : 100 × ' + (100 - p) + ' = ' + g1(goed) + '.', 'korting');
+  }
+  if (soort === 'verhouding') {
+    if (rnd(2)) {
+      /* recept */
+      const pers = kies([2, 4]), naar = pers === 2 ? kies([3, 5, 6]) : kies([6, 10, 12]), gram = kies([100, 150, 200, 250, 300]);
+      const goed = gram / pers * naar;
+      return bouw('Voor ' + pers + ' personen heb je ' + gram + ' gram pasta nodig. Hoeveel voor ' + naar + ' personen?', g1(goed) + ' gram',
+        () => g1(kies([gram + naar, gram * naar, goed + 50, goed - 50, goed + 25, gram * 2].filter(n => n > 0 && n !== goed))) + ' gram',
+        'Eerst voor 1 persoon: ' + gram + ' : ' + pers + ' = ' + g1(gram / pers) + ' gram. Dan × ' + naar + ' = ' + g1(goed) + ' gram.', 'recept');
+    }
+    /* snelheid */
+    const km = kies([60, 80, 90, 100, 120]), uur = kies([0.5, 1.5, 2, 2.5, 3]), goed = km * uur;
+    return bouw('Een auto rijdt ' + km + ' km per uur. Hoe ver komt hij in ' + kommaGetal(uur, uur % 1 ? 1 : 0) + ' uur?', g1(goed) + ' km',
+      () => g1(kies([km + uur, goed + km / 2, goed - km / 2, km * 2, goed + km, goed + 10].filter(n => n > 0 && n !== goed))) + ' km',
+      'Afstand = snelheid × tijd: ' + km + ' × ' + kommaGetal(uur, uur % 1 ? 1 : 0) + ' = ' + g1(goed) + ' km.', 'snelheid');
+  }
+  if (soort === 'tijdgeld') {
+    if (rnd(2)) {
+      /* hoe lang duurt het */
+      const u = 8 + rnd(8), m = kies([0, 10, 15, 20, 30, 45]), duur = kies([35, 50, 75, 90, 105, 125, 140]);
+      const pad = n => (n < 10 ? '0' : '') + n, eind = u * 60 + m + duur;
+      const goed = Math.floor(duur / 60) ? Math.floor(duur / 60) + ' uur en ' + (duur % 60) + ' minuten' : duur + ' minuten';
+      const tekst = function(d){ return Math.floor(d / 60) ? Math.floor(d / 60) + ' uur en ' + (d % 60) + ' minuten' : d + ' minuten'; };
+      return bouw('De film begint om ' + pad(u) + ':' + pad(m) + ' en is afgelopen om ' + pad(Math.floor(eind / 60)) + ':' + pad(eind % 60) + '. Hoe lang duurt hij?', goed,
+        () => tekst(kies([duur + 10, duur - 10, duur + 40, duur - 40, duur + 60].filter(n => n > 0 && n % 60 !== 0 && n !== duur))),
+        'Tel eerst tot het hele uur, en dan verder. Samen ' + goed + '.', 'tijdsduur');
+    }
+    const bedragen = [0.05, 0.10, 0.20, 0.50, 1, 2];
+    const n = 3 + rnd(3), mm = []; for (let i = 0; i < n; i++) mm.push(kies(bedragen));
+    const goed = Math.round(mm.reduce((a, b) => a + b, 0) * 100) / 100;
+    return bouw('Hoeveel is samen: ' + mm.map(euro).join(' + ') + '?', euro(goed),
+      () => euro(Math.max(0.05, Math.round((goed + kies([-0.5, -0.1, 0.1, 0.5, 1])) * 100) / 100)),
+      'Tel eerst de hele euro’s, dan de munten van 50, 20, 10 en 5 cent. Samen ' + euro(goed) + '.', 'munten tellen');
+  }
+  if (soort === 'meten') {
+    const v = rnd(3);
+    if (v === 0) {
+      const l = kies([0.25, 0.5, 0.75, 1.5, 2.5, 0.33]), goed = Math.round(l * 1000) + ' ml';
+      return bouw(kommaGetal(l, 2).replace(/,?0+$/, '') + ' liter is hoeveel milliliter?', goed,
+        () => Math.round(l * kies([100, 10, 10000])) + ' ml', '1 liter is 1000 ml, dus ' + kommaGetal(l, 2).replace(/,?0+$/, '') + ' liter is ' + goed + '.', 'inhoud');
+    }
+    if (v === 1) {
+      const g = kies([250, 750, 1500, 2250, 3400, 500]), goed = kommaGetal(g / 1000, 2).replace(/,?0+$/, '') + ' kg';
+      return bouw(g + ' gram is hoeveel kilogram?', goed,
+        () => kommaGetal(g / kies([100, 10, 10000]), 3).replace(/,?0+$/, '') + ' kg', '1 kilogram is 1000 gram, dus deel door 1000: ' + goed + '.', 'gewicht');
+    }
+    const b = 4 + 2 * rnd(8), h = 3 + rnd(9), goed = b * h / 2;
+    return bouw('Oppervlakte van een driehoek met basis ' + b + ' cm en hoogte ' + h + ' cm', g1(goed) + ' cm²',
+      () => g1(kies([b * h, b + h, goed + h, (b + h) * 2, goed + 2, goed + b].filter(n => n !== goed))) + ' cm²',
+      'Een driehoek is de helft van een rechthoek: ' + b + ' × ' + h + ' : 2 = ' + g1(goed) + ' cm².', 'oppervlakte driehoek');
+  }
+  if (soort === 'komma') {
+    if (rnd(2)) {
+      const a = (10 + rnd(990)) / 100, k = kies([10, 100, 1000]), goed = Math.round(a * k * 1000) / 1000;
+      return bouw(kommaGetal(a, 2) + ' × ' + k, g1(goed),
+        () => g1(kies([a * k / 10, a * k * 10, a * k / 100, a * 10].map(n => Math.round(n * 1000) / 1000).filter(n => n !== goed))),
+        'Keer ' + k + ': elk cijfer wordt ' + k + ' keer zoveel waard. Het lijkt of de komma ' + (String(k).length - 1) + (k === 10 ? ' plaats' : ' plaatsen') + ' naar rechts schuift: ' + g1(goed) + '.', 'keer 10, 100, 1000');
+    }
+    let a; do { a = (100 + rnd(900)) / 100; } while (Math.round(a * 100) % 10 === 0);
+    const goed = kommaGetal(Math.round(a * 10) / 10, 1);
+    return bouw('Rond ' + kommaGetal(a, 2) + ' af op één cijfer achter de komma', goed,
+      () => kies([kommaGetal(Math.floor(a * 10) / 10, 1), kommaGetal(Math.ceil(a * 10) / 10, 1), kommaGetal(Math.round(a), 0), kommaGetal(Math.round(a * 10) / 10 + 0.2, 1), kommaGetal(Math.round(a * 10) / 10 - 0.2, 1)].filter(x => x !== goed)),
+      'Kijk naar het tweede cijfer achter de komma. Is het 5 of meer, dan gaat het eerste cijfer een omhoog.', 'afronden');
+  }
+  if (soort === 'negatief') {
+    const a = 2 + rnd(10), b = -(2 + rnd(12)), goed = a - b;
+    return bouw('Overdag is het ' + a + ' graden, ’s nachts ' + b + ' graden. Hoeveel graden verschil is dat?', goed + ' graden',
+      () => kies([a + b, -(a + b), goed + 1, goed - 2, goed + 2, -goed].filter(n => n !== goed)) + ' graden',
+      'Van ' + b + ' naar 0 is ' + (-b) + ' graden, en van 0 naar ' + a + ' nog ' + a + '. Samen ' + goed + '.', 'temperatuur');
+  }
+  if (soort === 'machten') {
+    const g = kies([2, 3, 5, 10]), e = g === 10 ? 2 + rnd(4) : g === 2 ? 3 + rnd(5) : 2 + rnd(3), goed = Math.pow(g, e);
+    return bouw(g + ' tot de macht ' + e, String(goed),
+      () => String(kies([g * e, Math.pow(g, e - 1), Math.pow(g, e + 1), goed + g, goed * 2].filter(n => n !== goed))),
+      g + ' tot de macht ' + e + ' is ' + e + ' keer ' + g + ' met zichzelf vermenigvuldigen: ' + Array(e).fill(g).join(' × ') + ' = ' + goed + '.', 'machten');
+  }
+  if (soort === 'gemiddelde' && r >= 2) {
+    const l = []; for (let i = 0; i < 5; i++) l.push(2 + rnd(9));
+    const s2 = l.slice().sort((x, y) => x - y), goed = s2[2];
+    const gem = Math.round(l.reduce((x, y) => x + y, 0) / 5 * 10) / 10;
+    return bouw('Wat is de mediaan van ' + l.join(', ') + '?', String(goed),
+      () => String(kies([l[2], kommaGetal(gem, gem % 1 ? 1 : 0), s2[0], s2[1], s2[3], s2[4], goed + 1, goed - 1, goed + 2].map(String).filter(n => n !== String(goed)))),
+      'Zet ze op volgorde: ' + s2.join(', ') + '. De mediaan is het middelste getal: ' + goed + '.', 'mediaan');
+  }
+  return null;
+}
+
 function rekenSom(rang, toegestaan) {
   const r = rang || 2;
   const potten = {
@@ -367,6 +536,8 @@ function rekenSom(rang, toegestaan) {
   const soort = toegestaan && toegestaan.length ? kies(toegestaan) : kies(potten[r]);
   rekenLaatste = soort;
   if (soort === 'cijferen') return cijferVraag(r);
+  /* een op de drie keer een andere vorm binnen hetzelfde onderdeel */
+  if (rnd(3) === 0){ const extra = rekenExtra(soort, r); if (extra) return extra; }
   if (soort === 'tafels') {
     /* Welke tafels je krijgt hangt af van het niveau. De foute antwoorden zijn
        geen willekeurige getallen maar de fouten die leerlingen echt maken: een

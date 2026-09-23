@@ -281,4 +281,86 @@ var WIS_VLAK = [
 ];
 BRONNEN.wis = WIS.concat(WIS_EX, WIS_VLAK);
 NIVOS.wis = [1,1,1,2,2,3,2,3,3,2,1,2,3,3,2,2,3,4,1,1,2,3,3,3,2,1,3,4,1,1,3,3,2,1,1,1,2,2,3,1,3,3,2,4,1,2,1,2,2,4,4,1,3,4,2,2,3,3,3,3,3,4,4,3,1,1,1,2,2,2,2,3,3,3,3,4,4,4,1,1,1,2,2,2,2,3,3,3,3,4,4,4,1,1,1,2,2,2,2,3,3,3,3,4,4,4,1,1,1,2,2,2,3,3,3,4,4,4,1,1,1,2,2,2,2,3,3,3,4,4,4,1,1,1,2,2,2,2,3,3,3,3,4,4,4,1,1,1,2,2,2,2,3,3,3,3,4,4,4,1,1,1,2,2,2,2,3,3,3,3,4,4,4,1,2,2,1,2,2,2,3,1,1,2,2,1,1,1,1,1,1,1,2,2,1,2,1,1,1,1,2,2,1,1,1,1,2,3,1,1,2,1,2,2,2,1,2,2,1,2,3,1,2,1,3,1,1,2,2,2,1,1,1,2,1,1,3,1,2,2,1,1,1,2,2,2,2,2,2,1,1,2,1,2,3,3,3,3,3,4,1,2,2,3,4,1];   /* een niveau per vraag, op volgorde; server/audit-bank.js bewaakt dat ze gelijk blijven lopen */   /* een niveau per vraag, op volgorde; server/audit-bank.js bewaakt dat ze gelijk blijven lopen */
+/* Uitbreiding van september 2026: meer vragen per onderdeel, vooral op de
+   hogere niveaus, en andere vraagvormen (welke hoort er niet bij, oorzaak en
+   gevolg, rekenen in een situatie). Bij deze vragen staat het niveau in n. */
+var WIS_PLUS = [
+/* vergelijkingen */
+{v:'Los op: 6x - 4 = 3x + 11.',o:['x = 5','x = 7','x = 3','x = 15'],g:0,u:'Haal aan beide kanten 3x weg: 3x - 4 = 11. Tel 4 op: 3x = 15. Deel door 3: x = 5.',t:'vergelijking',n:3},
+{v:'Los op: 4(x + 2) = 2(x + 9).',o:['x = 5','x = 7','x = 2','x = 9'],g:0,u:'Haakjes wegwerken: 4x + 8 = 2x + 18. Dan 2x = 10, dus x = 5.',t:'vergelijking',n:3},
+{v:'Anna is drie keer zo oud als haar broertje. Samen zijn ze 24. Hoe oud is Anna?',o:['18','16','21','12'],g:0,u:'Broertje is x, Anna is 3x. Samen 4x = 24, dus x = 6. Anna is 3 × 6 = 18.',t:'vergelijking',n:2},
+{v:'Je denkt aan een getal, doet het keer 5 en haalt er 7 af. Je krijgt 38. Welk getal was het?',o:['9','7','45','6'],g:0,u:'5x - 7 = 38, dus 5x = 45 en x = 9. Terugrekenen: 38 + 7 = 45, en 45 : 5 = 9.',t:'vergelijking',n:2},
+{v:'Welke waarde van x is een oplossing van x² - 5x = 0?',o:['x = 5','x = -5','x = 25','x = 2,5'],g:0,u:'x² - 5x = x(x - 5) = 0. Dus x = 0 of x = 5.',t:'vergelijking',n:4},
+{v:'Los op: x/2 - 3 = 5.',o:['x = 16','x = 4','x = 13','x = 1'],g:0,u:'Tel 3 op: x/2 = 8. Keer 2: x = 16.',t:'vergelijking',n:2},
+{v:'Welke fout maakt iemand die bij 3x + 6 = 21 als antwoord x = 9 geeft?',o:['hij telde 6 op in plaats van eraf te halen','hij deelde door 6 in plaats van 3','hij vergat dat het antwoord negatief is','hij rekende goed, x is 9'],g:0,u:'Goed is: 3x = 21 - 6 = 15, dus x = 5. Wie 21 + 6 = 27 doet en deelt door 3, krijgt 9.',t:'vergelijking',n:3},
+{v:'Los op: 2x + 3 > 11.',o:['x > 4','x < 4','x > 7','x = 4'],g:0,u:'Een ongelijkheid los je op zoals een vergelijking: 2x > 8, dus x > 4.',t:'vergelijking',n:4},
+/* formules */
+{v:'De formule is k = 15 + 0,25 × m. Wat betekent de 15?',o:['een vast bedrag dat je altijd betaalt','het bedrag per minuut','het aantal minuten dat gratis is','de korting die je krijgt'],g:0,u:'Het getal zonder variabele is het startgetal: dat betaal je ook bij 0 minuten.',t:'formule',n:2},
+{v:'Bij y = 3x² - 2: wat is y als x = -2?',o:['10','-14','14','-10'],g:0,u:'(-2)² = 4, want min keer min is plus. 3 × 4 - 2 = 10.',t:'formule',n:4},
+{v:'Een kaars van 20 cm brandt 2 cm per uur op. Welke formule geeft de lengte L na t uur?',o:['L = 20 - 2t','L = 2t + 20','L = 20t - 2','L = 2 - 20t'],g:0,u:'Je begint bij 20 en er gaat elk uur 2 af: L = 20 - 2t.',t:'formule',n:2},
+{v:'Na hoeveel uur is de kaars uit bij L = 20 - 2t?',o:['10 uur','20 uur','18 uur','8 uur'],g:0,u:'L = 0 geeft 20 - 2t = 0, dus 2t = 20 en t = 10.',t:'formule',n:2},
+{v:'Welke formule hoort bij: het aantal wielen w van f fietsen en a auto\'s?',o:['w = 2f + 4a','w = 4f + 2a','w = 6(f + a)','w = f + a + 6'],g:0,u:'Een fiets heeft 2 wielen, een auto 4.',t:'formule',n:3},
+{v:'Een bedrag van € 1000 groeit elk jaar met 5 procent. Welke formule hoort daarbij?',o:['B = 1000 × 1,05^t','B = 1000 + 5t','B = 1000 × 5t','B = 1000 + 1,05t'],g:0,u:'Elk jaar keer 1,05. Na t jaar is dat t keer: 1,05 tot de macht t. Dat heet exponentiële groei.',t:'formule',n:4},
+{v:'Vereenvoudig: 5a + 3b - 2a + b.',o:['3a + 4b','7a + 4b','3a + 2b','7ab'],g:0,u:'Tel gelijksoortige termen op: 5a - 2a = 3a, en 3b + b = 4b.',t:'formule',n:3},
+{v:'Werk de haakjes weg: 3(2x - 5).',o:['6x - 15','6x - 5','5x - 15','6x + 15'],g:0,u:'Alles binnen de haakjes keer 3: 3 × 2x = 6x en 3 × -5 = -15.',t:'formule',n:3},
+{v:'Werk de haakjes weg: (x + 3)(x + 2).',o:['x² + 5x + 6','x² + 6','x² + 6x + 5','2x + 5'],g:0,u:'Iedere term keer iedere term: x·x + 2x + 3x + 6 = x² + 5x + 6.',t:'formule',n:4},
+/* oppervlakte en inhoud */
+{v:'Een kamer van 5 bij 4 meter krijgt nieuwe vloer. Een pak laminaat is 2 m². Hoeveel pakken zijn er minstens nodig?',o:['10 pakken','20 pakken','9 pakken','18 pakken'],g:0,u:'De vloer is 5 × 4 = 20 m². 20 : 2 = 10 pakken.',t:'oppervlakte',n:1},
+{v:'Hoeveel m² is 25.000 cm²?',o:['2,5 m²','25 m²','250 m²','0,25 m²'],g:0,u:'1 m² = 10.000 cm², want 100 × 100. Dus 25.000 : 10.000 = 2,5 m².',t:'oppervlakte',n:3},
+{v:'Een zwembad is 25 m lang, 10 m breed en 2 m diep. Hoeveel m³ water gaat erin?',o:['500 m³','370 m³','250 m³','50 m³'],g:0,u:'Inhoud = lengte × breedte × hoogte = 25 × 10 × 2 = 500 m³.',t:'oppervlakte',n:2},
+{v:'Hoeveel liter is 500 m³?',o:['500.000 liter','5.000 liter','50.000 liter','500 liter'],g:0,u:'1 m³ = 1000 liter. Dus 500 × 1000 = 500.000 liter.',t:'oppervlakte',n:3},
+{v:'Je verdubbelt lengte en breedte van een rechthoek. Wat gebeurt er met de oppervlakte?',o:['die wordt vier keer zo groot','die wordt twee keer zo groot','die blijft gelijk','die wordt acht keer zo groot'],g:0,u:'2 × 2 = 4. Bij oppervlakte telt de vergroting twee keer, bij inhoud drie keer.',t:'oppervlakte',n:4},
+{v:'Wat is de oppervlakte van een ruit met diagonalen van 8 en 6 cm?',o:['24 cm²','48 cm²','14 cm²','28 cm²'],g:0,u:'Een ruit is de helft van de rechthoek om de diagonalen heen: 8 × 6 : 2 = 24 cm².',t:'oppervlakte',n:4},
+{v:'Een cilinder heeft een grondvlak van 20 cm² en is 15 cm hoog. Wat is de inhoud?',o:['300 cm³','35 cm³','150 cm³','3000 cm³'],g:0,u:'Inhoud van een prisma of cilinder = oppervlakte grondvlak × hoogte = 20 × 15.',t:'oppervlakte',n:3},
+{v:'Welke eenheid hoort bij oppervlakte?',o:['m²','m','m³','liter'],g:0,u:'Oppervlakte meet je in vierkante eenheden: m², cm². Inhoud in kubieke eenheden of liters.',t:'oppervlakte',n:1},
+/* omtrek */
+{v:'Een hek om een vierkant weiland is 200 meter lang. Hoe lang is een zijde?',o:['50 meter','100 meter','40 meter','20 meter'],g:0,u:'Een vierkant heeft vier gelijke zijden: 200 : 4 = 50 meter.',t:'omtrek',n:1},
+{v:'Een fietswiel heeft een diameter van 70 cm. Hoeveel keer draait het wiel ongeveer rond op 1 km?',o:['ongeveer 455 keer','ongeveer 1430 keer','ongeveer 45 keer','ongeveer 4550 keer'],g:0,u:'Omtrek = π × 70 ≈ 220 cm = 2,2 m. 1000 : 2,2 ≈ 455.',t:'omtrek',n:4},
+{v:'Wat is de omtrek van een L-vormige kamer van 6 bij 4 meter, waar een hoek van 2 bij 2 meter uit is?',o:['20 meter','16 meter','24 meter','18 meter'],g:0,u:'Een hoek eruit halen verandert de omtrek van een rechthoek niet: de twee stukjes naar binnen zijn net zo lang als wat eraf gaat. 2 × (6 + 4) = 20.',t:'omtrek',n:4},
+{v:'Hoe lang is de straal als de diameter 18 cm is?',o:['9 cm','36 cm','18 cm','6 cm'],g:0,u:'De straal is de helft van de diameter.',t:'omtrek',n:1},
+{v:'Een regelmatige zeshoek heeft zijden van 5 cm. Wat is de omtrek?',o:['30 cm','25 cm','35 cm','60 cm'],g:0,u:'Zes gelijke zijden: 6 × 5 = 30 cm.',t:'omtrek',n:1},
+{v:'Een rechthoek is 3 keer zo lang als breed en heeft een omtrek van 48 cm. Hoe breed is hij?',o:['6 cm','8 cm','12 cm','16 cm'],g:0,u:'Breedte b, lengte 3b. Omtrek 2(b + 3b) = 8b = 48, dus b = 6.',t:'omtrek',n:3},
+/* hoeken */
+{v:'Hoeveel graden draait de grote wijzer in 20 minuten?',o:['120 graden','20 graden','60 graden','200 graden'],g:0,u:'Een heel rondje is 360 graden in 60 minuten, dus 6 graden per minuut. 20 × 6 = 120.',t:'hoeken',n:2},
+{v:'Hoe heet een hoek tussen 90 en 180 graden?',o:['een stompe hoek','een scherpe hoek','een gestrekte hoek','een rechte hoek'],g:0,u:'Scherp is minder dan 90, recht is 90, stomp tussen 90 en 180, gestrekt precies 180.',t:'hoeken',n:1},
+{v:'Hoeveel graden zijn de hoeken van een zeshoek samen?',o:['720 graden','540 graden','1080 graden','360 graden'],g:0,u:'Een n-hoek kun je in n - 2 driehoeken verdelen: (6 - 2) × 180 = 720.',t:'hoeken',n:4},
+{v:'Een windroos: van noord naar zuidoost met de klok mee. Hoeveel graden is dat?',o:['135 graden','90 graden','45 graden','225 graden'],g:0,u:'Noord 0, oost 90, zuidoost ligt daar 45 graden verder: 135.',t:'hoeken',n:3},
+{v:'In een vierhoek zijn drie hoeken 90, 80 en 110 graden. Hoe groot is de vierde?',o:['80 graden','90 graden','100 graden','70 graden'],g:0,u:'Samen 360. 360 - 90 - 80 - 110 = 80.',t:'hoeken',n:2},
+{v:'Welk gereedschap gebruik je om een hoek te meten?',o:['een geodriehoek','een passer','een liniaal zonder schaal','een rekenmachine'],g:0,u:'Op een geodriehoek staat een gradenboog waarmee je hoeken meet en tekent.',t:'hoeken',n:1},
+{v:'Twee hoeken zijn samen 90 graden en de een is twee keer zo groot als de ander. Hoe groot is de grootste?',o:['60 graden','45 graden','30 graden','70 graden'],g:0,u:'x + 2x = 90, dus x = 30. De grootste is 60.',t:'hoeken',n:3},
+/* grafieken */
+{v:'Welk punt ligt op de lijn y = 2x - 1?',o:['(3, 5)','(3, 7)','(2, 5)','(5, 3)'],g:0,u:'Vul x = 3 in: 2 × 3 - 1 = 5. Dus (3, 5) ligt erop.',t:'grafiek',n:2},
+{v:'Een grafiek van de temperatuur stijgt steeds minder snel. Hoe ziet hij eruit?',o:['een kromme die afvlakt','een rechte lijn omhoog','een lijn die steeds steiler wordt','een horizontale lijn'],g:0,u:'Stijgt iets steeds minder snel, dan buigt de grafiek af en wordt hij vlakker.',t:'grafiek',n:3},
+{v:'Wat is de richtingscoëfficiënt van y = -0,5x + 3?',o:['-0,5','3','0,5','-3'],g:0,u:'In y = ax + b is a de richtingscoëfficiënt. Hier -0,5: de lijn daalt een halve stap per stap naar rechts.',t:'grafiek',n:3},
+{v:'Welke formule hoort bij een lijn door de oorsprong die per stap 4 omhoog gaat?',o:['y = 4x','y = x + 4','y = 4','y = -4x'],g:0,u:'Door de oorsprong betekent startgetal 0. Helling 4: y = 4x.',t:'grafiek',n:2},
+{v:'Een woordgrafiek: de waterstand daalt tot laag water en stijgt dan weer, steeds opnieuw. Welk verband is dat?',o:['periodiek','lineair','exponentieel','constant'],g:0,u:'Eb en vloed herhalen zich steeds. Zo\'n verband heet periodiek.',t:'grafiek',n:3},
+{v:'Wat is de top van de parabool y = (x - 3)² + 1?',o:['(3, 1)','(-3, 1)','(1, 3)','(3, -1)'],g:0,u:'(x - 3)² is het kleinst (0) bij x = 3. Dan is y = 1. De top is (3, 1).',t:'grafiek',n:4},
+{v:'Welk punt ligt op de x-as?',o:['(5, 0)','(0, 5)','(5, 5)','(-5, 5)'],g:0,u:'Op de x-as is y altijd 0.',t:'grafiek',n:1},
+/* statistiek en kans */
+{v:'Je trekt een kaart uit 52 speelkaarten. Wat is de kans op een aas?',o:['1 op 13','1 op 52','1 op 4','4 op 13'],g:0,u:'Er zitten 4 azen in het spel. 4/52 = 1/13.',t:'statistiek',n:3},
+{v:'In een zak zitten 3 rode en 5 blauwe knikkers. Wat is de kans op rood?',o:['3/8','3/5','5/8','1/3'],g:0,u:'Kans = gunstig : totaal = 3 : 8.',t:'statistiek',n:2},
+{v:'De gemiddelde lengte van 5 spelers is 180 cm. Er komt een speler van 186 cm bij. Wat is het nieuwe gemiddelde?',o:['181 cm','183 cm','186 cm','180 cm'],g:0,u:'Totaal eerst 5 × 180 = 900. Erbij 186 is 1086. Gedeeld door 6 is 181.',t:'statistiek',n:4},
+{v:'Welk getal verandert het meest als er één extreem hoge uitschieter bij komt?',o:['het gemiddelde','de mediaan','de modus','het aantal waarnemingen niet'],g:0,u:'Het gemiddelde telt elk getal mee, dus ook de uitschieter. De mediaan schuift hoogstens een plek op.',t:'statistiek',n:3},
+{v:'Wat is een frequentietabel?',o:['een tabel die laat zien hoe vaak elke waarde voorkomt','een tabel met alleen gemiddelden','een tabel met de tijden van een wedstrijd','een tabel met kansen van een dobbelsteen'],g:0,u:'Frequentie betekent hoe vaak iets voorkomt. Turven helpt bij het invullen.',t:'statistiek',n:1},
+{v:'Hoeveel verschillende volgordes zijn er om 3 boeken naast elkaar te zetten?',o:['6','3','9','27'],g:0,u:'Voor de eerste plek 3 keuzes, dan 2, dan 1: 3 × 2 × 1 = 6.',t:'statistiek',n:4},
+{v:'Een grafiek begint niet bij 0 op de y-as. Wat is het gevaar?',o:['verschillen lijken groter dan ze zijn','de grafiek wordt onleesbaar','de getallen kloppen niet meer','je ziet geen stijging meer'],g:0,u:'Zonder nul lijkt een kleine stijging enorm. Kijk daarom altijd naar de schaal op de as.',t:'statistiek',n:3},
+/* Pythagoras */
+{v:'Een tv-scherm is 80 cm breed en 60 cm hoog. Hoe lang is de diagonaal?',o:['100 cm','140 cm','70 cm','120 cm'],g:0,u:'80² + 60² = 6400 + 3600 = 10.000. De wortel is 100 cm.',t:'pythagoras',n:2},
+{v:'Een rechthoekige driehoek heeft rechthoekszijden 9 en 12. Hoe lang is de schuine zijde?',o:['15','21','13','18'],g:0,u:'81 + 144 = 225. De wortel van 225 is 15.',t:'pythagoras',n:2},
+{v:'Hoe ver liggen de punten (0, 0) en (5, 12) uit elkaar?',o:['13','17','7','15'],g:0,u:'Stap 5 naar rechts en 12 omhoog: 25 + 144 = 169, wortel is 13.',t:'pythagoras',n:3},
+{v:'Een vlieger hangt aan een touw van 50 m. Je staat 30 m van het punt recht onder de vlieger. Hoe hoog hangt hij?',o:['40 m','20 m','80 m','58 m'],g:0,u:'Het touw is de schuine zijde: 50² - 30² = 2500 - 900 = 1600. Wortel is 40.',t:'pythagoras',n:3},
+{v:'Is een driehoek met zijden 5, 6 en 8 rechthoekig?',o:['nee, want 25 + 36 is geen 64','ja, want 5 + 6 is meer dan 8','ja, want 8 is de langste zijde','nee, want 5 + 6 is geen 8'],g:0,u:'Controleer a² + b² = c²: 25 + 36 = 61, en 8² = 64. Dat is niet gelijk.',t:'pythagoras',n:4},
+{v:'Wat is de wortel van 50, afgerond op één decimaal?',o:['7,1','7,5','25,0','6,9'],g:0,u:'7² = 49 en 7,1² = 50,41. De wortel van 50 is ongeveer 7,07, afgerond 7,1.',t:'pythagoras',n:3},
+/* examenstof */
+{v:'Een lening van € 2000 met 3% rente per jaar, zonder aflossen. Hoeveel rente betaal je het eerste jaar?',o:['€ 60','€ 600','€ 6','€ 2060'],g:0,u:'3% van 2000 = 2000 : 100 × 3 = 60 euro.',t:'examen-wis',n:1},
+{v:'Een auto verliest elk jaar 15% van zijn waarde. Met welk getal vermenigvuldig je per jaar?',o:['0,85','1,15','0,15','85'],g:0,u:'Er blijft 100% - 15% = 85% over, en dat is keer 0,85.',t:'examen-wis',n:3},
+{v:'Een recept voor 4 personen vraagt 300 gram bloem. Hoeveel voor 10 personen?',o:['750 gram','1200 gram','600 gram','3000 gram'],g:0,u:'Voor 1 persoon 75 gram. Voor 10 personen 750 gram.',t:'examen-wis',n:1},
+{v:'Een treinreis van 2 uur en 15 minuten begint om 22:50. Hoe laat kom je aan?',o:['01:05','00:05','00:65','01:15'],g:0,u:'22:50 + 2 uur = 00:50. Plus 15 minuten = 01:05.',t:'examen-wis',n:2},
+{v:'Op een kaart met schaal 1 : 25.000 ligt een pad van 8 cm. Hoe lang is het echt?',o:['2 km','200 m','20 km','8 km'],g:0,u:'8 × 25.000 = 200.000 cm = 2000 m = 2 km.',t:'examen-wis',n:2},
+{v:'Wat is een netwerk in de wiskunde?',o:['punten verbonden door lijnen, zoals een wegenkaart','een tabel met alle uitkomsten','een grafiek van een lineair verband','een figuur met alleen rechte hoeken'],g:0,u:'In een netwerk (graaf) staan knooppunten en verbindingen. Je zoekt er bijvoorbeeld de kortste route mee.',t:'examen-wis',n:2},
+{v:'Wat is 0,000 045 in wetenschappelijke notatie?',o:['4,5 × 10⁻⁵','4,5 × 10⁵','45 × 10⁻⁴','4,5 × 10⁻⁴'],g:0,u:'Schuif de komma 5 plaatsen naar rechts om 4,5 te krijgen. Dus 4,5 × 10 tot de macht -5.',t:'examen-wis',n:4},
+{v:'Een fiets kost € 480 inclusief 21% btw. Wat is de prijs zonder btw, ongeveer?',o:['€ 397','€ 379','€ 459','€ 380'],g:0,u:'Met btw is 121%. 480 : 1,21 ≈ 396,69, dus ongeveer € 397. Niet 21% van 480 eraf halen.',t:'examen-wis',n:4}
+];
+BRONNEN.wis = BRONNEN.wis.concat(WIS_PLUS);
+NIVOS.wis = NIVOS.wis.concat(WIS_PLUS.map(function(q){ return q.n; }));
 })();

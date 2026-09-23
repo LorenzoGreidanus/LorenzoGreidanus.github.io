@@ -414,4 +414,106 @@ var NED4 = [
 ];
 BRONNEN.ned = NED.concat(NED2, NED3, NED4);
 NIVOS.ned = [1,1,2,2,3,1,1,1,3,3,2,4,3,2,4,2,1,3,1,1,4,1,1,1,1,1,1,1,2,2,2,2,2,2,2,3,3,2,2,2,2,2,2,2,3,3,3,3,3,3,1,1,1,1,2,1,1,2,2,2,2,3,3,3,3,1,1,1,1,1,1,2,2,2,2,3,3,3,3,3,3,1,1,1,1,1,2,2,2,2,3,2,1,1,1,1,2,3,2,3,2,1,1,1,2,1,2,2,2,2,2,2,1,3,2,1,1,2,2,2,3,2,3,1,2,3,3,3,4,3,2,4,2,3,2,2,2,3,3,3,2,3,2,3,4,4,3,2,3,4,4,3,2,3,3,3,2,3,4,4,2,4,3,2,2,4,3,3,4,2,3,2,2,4,4,3,3,4,2,3,4,2,4,4,4,3,3,4,4,4,4,2,4,2,4,4,2,3,3,2,2,2,4,3,4,3,2,2,2,2,2,4,3,2,1,3,2,2,2,2,1,3,2,4,2,2,2,3,2,2,3,4,3,3,2,3,4,2,3,4,3,2,3,2,2,3,4,2,4,4,1,1,1,1,2,2,2,2,3,3,3,4,4,1,3,2,3,3,1,2,2,3,3,4,1,2,3,4,1,2,2,3,4,1,2,2,3,4,2,3,4,1,2,3,4,1,1,1,1,2,2,2,3,3,2,4,1,1,1,2,2,3,4,1,1,2,2,3,3,4,4,1,1,2,3,1,1,2,2,3,3,4,1,1,2,2,3,3,4,4,1,2,2,3,3,4,1,2,2,3,3,4,1,2,2,3,3,4,1,1,1,1,1,1,1,1,1,1,1,1,1,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,3,1,1,1,2,2,2,3,3];   /* een niveau per vraag, op volgorde; server/audit-bank.js bewaakt dat ze gelijk blijven lopen */   /* een niveau per vraag, op volgorde; server/audit-bank.js bewaakt dat ze gelijk blijven lopen */
+/* Uitbreiding van september 2026: meer vragen per onderdeel, vooral op de
+   hogere niveaus, en andere vraagvormen (welke hoort er niet bij, oorzaak en
+   gevolg, rekenen in een situatie). Bij deze vragen staat het niveau in n. */
+var NED_PLUS = [
+/* werkwoordspelling */
+{v:'Ik heb dat bestand al ___. (downloaden)',o:['gedownload','gedownloadt','gedownloat','downgeload'],g:0,u:'Stam download eindigt op een d. Het voltooid deelwoord is ge + stam, en er komt geen t achter: gedownload.',t:'werkwoordspelling',n:3},
+{v:'Zij heeft haar profiel ___. (updaten)',o:['geüpdatet','geupdate','geüpdated','geupdated'],g:0,u:'Updaten krijgt de Nederlandse regels: stam update, en de t uit \'t kofschip. Met een trema: geüpdatet.',t:'werkwoordspelling',n:4},
+{v:'We aten de ___ pizza toch op. (verbranden)',o:['verbrande','verbrandde','verbrandt','verbranden'],g:0,u:'Hier is het een bijvoeglijk naamwoord: de pizza is verbrand. Voor een zelfstandig naamwoord komt er een e bij: verbrande.',t:'werkwoordspelling',n:4},
+{v:'___ je broer ook uitgenodigd?',o:['Wordt','Word','Wort','Worden'],g:0,u:'Het onderwerp is je broer, dat is een hij. Je is hier niet het onderwerp, dus de t blijft: wordt.',t:'werkwoordspelling',n:4},
+{v:'Gisteren ___ ik naar het station. (lopen)',o:['liep','loopte','liepte','loopde'],g:0,u:'Lopen is een sterk werkwoord: de klinker verandert. Verleden tijd liep, voltooid deelwoord gelopen.',t:'werkwoordspelling',n:1},
+{v:'Hij ___ het boek op tafel. (leggen, verleden tijd)',o:['legde','legte','legdde','leggde'],g:0,u:'Leggen: de g zit niet in \'t kofschip, dus de. De stam is leg: legde.',t:'werkwoordspelling',n:2},
+{v:'De ___ feiten zijn niet meer te veranderen. (gebeuren)',o:['gebeurde','gebeurden','gebeurt','gebeurte'],g:0,u:'Het bijvoeglijk gebruikte voltooid deelwoord gebeurd krijgt een e: de gebeurde feiten.',t:'werkwoordspelling',n:4},
+{v:'Jij ___ je vaak in de tijd. (vergissen)',o:['vergist','vergis','vergisd','vergissen'],g:0,u:'Jij staat voor het werkwoord, dus stam + t: jij vergist je.',t:'werkwoordspelling',n:2},
+{v:'Ik ___ morgen of ik meega. (beslissen)',o:['beslis','beslist','beslisd','beslisst'],g:0,u:'Bij ik gebruik je alleen de stam: ik beslis.',t:'werkwoordspelling',n:2},
+{v:'De dief werd door de politie ___. (betrappen)',o:['betrapt','betrapd','betrappt','gebetrapt'],g:0,u:'Werkwoorden die met be- beginnen krijgen geen ge-. De p zit in \'t kofschip, dus een t: betrapt.',t:'werkwoordspelling',n:3},
+/* spelling los van het werkwoord */
+{v:'Welk meervoud met een trema is goed geschreven?',o:['ideeën','ideeen','ideën','ideéen'],g:0,u:'Het trema geeft aan dat er een nieuwe lettergreep begint: i-de-e-en.',t:'spelling',n:2},
+{v:'Welke samenstelling is goed geschreven?',o:['ruggengraat','ruggegraat','ruggengraad','ruggegraad'],g:0,u:'Rug heeft als meervoud ruggen, dus met tussen-n. Graat eindigt op een t: ruggengraat.',t:'spelling',n:3},
+{v:'Welke zin heeft de hoofdletters goed?',o:['In de middeleeuwen spraken ze geen Engels.','In de Middeleeuwen spraken ze geen Engels.','In de middeleeuwen spraken ze geen engels.','In de Middeleeuwen spraken ze geen engels.'],g:0,u:'Namen van tijdperken krijgen geen hoofdletter. Talen wel: Engels.',t:'spelling',n:3},
+{v:'Welke vergelijking is goed?',o:['Hij is groter dan ik.','Hij is groter als ik.','Hij is groter dan mij.','Hij is groter als mij.'],g:0,u:'Na een vergrotende trap gebruik je dan. En het is dan ik, want je bedoelt: dan ik ben.',t:'spelling',n:2},
+{v:'Hoe schrijf je het goed?',o:['\'s avonds','s\'avonds','savonds','\'savonds'],g:0,u:'\'s is een verkorting van des. Het weglatingsteken staat op de plek van de weggelaten letters.',t:'spelling',n:2},
+{v:'Hoe schrijf je het adres voor je mail?',o:['e-mailadres','emailadres','e-mail-adres','e mailadres'],g:0,u:'Na de e komt een koppelteken, en de samenstelling met adres schrijf je aan elkaar: e-mailadres.',t:'spelling',n:3},
+{v:'Welke schrijfwijze van coördinatie is goed?',o:['coördinatie','cöordinatie','coordinatie','coördinattie'],g:0,u:'Zonder trema zou je oo als één klank lezen. Het trema maakt er co-ör van.',t:'spelling',n:4},
+{v:'Welke zin heeft de verkorting goed?',o:['Ik heb zo\'n zin in vakantie.','Ik heb zon zin in vakantie.','Ik heb zo n zin in vakantie.','Ik heb zo\'ne zin in vakantie.'],g:0,u:'Zo\'n is de korte vorm van zo een. De apostrof staat op de plek van het weggelaten stuk.',t:'spelling',n:1},
+{v:'Hoe schrijf je de naam van de gele bloem in het gras?',o:['paardenbloem','paardebloem','paardeblom','paardenblom'],g:0,u:'Paard heeft als meervoud paarden, dus met tussen-n.',t:'spelling',n:2},
+{v:'Welke zin is goed in geschreven taal?',o:['Dat is mijn fiets.','Dat is me fiets.','Dat is m\'n fiets\'.','Dat is mij fiets.'],g:0,u:'In geschreven taal schrijf je het bezittelijk voornaamwoord mijn voluit.',t:'spelling',n:1},
+/* meervoud */
+{v:'Wat is het meervoud van bureau?',o:['bureaus','bureau\'s','bureaux','bureauen'],g:0,u:'Eindigt een woord op -eau, dan komt er alleen een s achter: bureaus, cadeaus.',t:'meervoud',n:3},
+{v:'Wat is het meervoud van smid?',o:['smeden','smidden','smids','smiden'],g:0,u:'De klinker verandert: smid wordt smeden, net als lid wordt leden.',t:'meervoud',n:3},
+{v:'Wat is het meervoud van café?',o:['cafés','café\'s','cafeeën','cafées'],g:0,u:'Eindigt een woord op een é, dan komt er een s achter zonder apostrof: cafés.',t:'meervoud',n:3},
+{v:'Wat is het meervoud van het blad van een boom?',o:['bladeren','bladen','blads','bladderen'],g:0,u:'De bladeren van een boom. Bladen gebruik je voor tijdschriften of tafelbladen.',t:'meervoud',n:4},
+{v:'Wat is het meervoud van baby?',o:['baby\'s','babys','babies','babyen'],g:0,u:'Na een y aan het eind komt een apostrof en een s, anders lees je het verkeerd.',t:'meervoud',n:1},
+{v:'Wat is het meervoud van hertog?',o:['hertogen','hertoggen','hertogs','hertogden'],g:0,u:'Hertog krijgt -en, en de o blijft kort voor de g: hertogen.',t:'meervoud',n:2},
+{v:'Wat is het meervoud van weg?',o:['wegen','weggen','wegs','weegen'],g:0,u:'Bij weg wordt de klinker lang in het meervoud: wegen. Net als dal wordt dalen.',t:'meervoud',n:2},
+/* leestekens */
+{v:'Welke is goed geschreven?',o:['Anna\'s fiets','Annas fiets','Anna´s fiets','Annas\' fiets'],g:0,u:'Na een klinker aan het eind komt een apostrof voor de s, anders lees je Annas met een korte a.',t:'leestekens',n:2},
+{v:'Welke is goed geschreven?',o:['Kees\' fiets','Kees\'s fiets','Keess fiets','Keeses fiets'],g:0,u:'Eindigt een naam op een s-klank, dan komt er alleen een apostrof achter: Kees\' fiets.',t:'leestekens',n:4},
+{v:'Welke zin heeft de komma goed?',o:['Hij zei dat hij, als het regende, thuis zou blijven.','Hij zei, dat hij als het regende thuis zou blijven.','Hij zei dat hij als, het regende thuis zou blijven.','Hij zei dat hij als het regende, thuis, zou blijven.'],g:0,u:'De ingeschoven bijzin als het regende staat tussen twee komma\'s.',t:'leestekens',n:4},
+{v:'Welk leesteken hoort op de plek van de streepjes: Ik heb drie huisdieren ___ een hond, een kat en een konijn.',o:['een dubbele punt','een puntkomma','een komma','een vraagteken'],g:0,u:'Een dubbele punt kondigt een opsomming of uitleg aan.',t:'leestekens',n:2},
+{v:'Welke zin heeft de aanhalingstekens goed?',o:['"Ik ben moe," zei Tim.','"Ik ben moe", zei Tim','Ik ben moe," zei Tim.','"Ik ben moe" zei, Tim.'],g:0,u:'De komma hoort bij het citaat en staat binnen de aanhalingstekens; daarna volgt wie het zei.',t:'leestekens',n:4},
+{v:'Wanneer gebruik je een uitroepteken?',o:['bij een bevel of emotie','aan het eind van elke vraag die je stelt','na elke opsomming van drie of meer dingen','aan het begin van een letterlijk citaat'],g:0,u:'Kom hier! Wat mooi! Een uitroepteken geeft kracht, maar gebruik het niet te vaak.',t:'leestekens',n:1},
+{v:'Welke uitroep heeft het goede leesteken?',o:['Wat een mooie dag!','Wat een mooie dag?','Wat, een mooie dag.','Wat een, mooie dag!'],g:0,u:'Dit is geen vraag maar een uitroep, dus een uitroepteken.',t:'leestekens',n:1},
+/* woordsoorten */
+{v:'Welk woord is een wederkerend voornaamwoord in: Hij schaamt zich?',o:['zich','hij','schaamt','geen van deze'],g:0,u:'Zich verwijst terug naar het onderwerp. Het hoort vast bij het werkwoord zich schamen.',t:'woordsoorten',n:3},
+{v:'Welk woord is een wederkerig voornaamwoord?',o:['elkaar','zich','zelf','hun'],g:0,u:'Elkaar gebruik je als twee of meer mensen iets met elkaar doen: ze helpen elkaar.',t:'woordsoorten',n:4},
+{v:'Welk woord is een tussenwerpsel?',o:['au','maar','onder','snel'],g:0,u:'Tussenwerpsels zijn uitroepjes: au, hè, oh, hoera.',t:'woordsoorten',n:2},
+{v:'Wat is heeft in: Zij heeft hard gewerkt?',o:['een hulpwerkwoord','een koppelwerkwoord','een zelfstandig werkwoord','een voegwoord'],g:0,u:'Heeft helpt het voltooid deelwoord gewerkt de tijd aan te geven. Het is een hulpwerkwoord van tijd.',t:'woordsoorten',n:3},
+{v:'Wat is lijkt in: Hij lijkt moe?',o:['een koppelwerkwoord','een hulpwerkwoord','een bijwoord','een voorzetsel'],g:0,u:'Koppelwerkwoorden zijn zijn, worden, blijven, lijken, blijken, schijnen en dunken. Ze verbinden het onderwerp met een eigenschap.',t:'woordsoorten',n:4},
+{v:'Welk woord is een betrekkelijk voornaamwoord in: De man die daar loopt, is mijn oom?',o:['die','daar','mijn','is'],g:0,u:'Die leidt een bijzin in die iets zegt over de man.',t:'woordsoorten',n:3},
+{v:'Welk woord is een aanwijzend voornaamwoord in: Wil je deze of die?',o:['deze','wil','je','of'],g:0,u:'Deze en die wijzen iets aan. Hier staan ze zelfstandig, zonder zelfstandig naamwoord erachter.',t:'woordsoorten',n:3},
+{v:'Welk woord is een bezittelijk voornaamwoord in: Sanne pakt haar tas?',o:['haar','Sanne','pakt','tas'],g:0,u:'Haar zegt van wie de tas is.',t:'woordsoorten',n:1},
+/* zinsontleding */
+{v:'Wat is het onderwerp in: Er zitten drie vogels op het dak?',o:['drie vogels','er','het dak','zitten'],g:0,u:'Wie of wat zit? Drie vogels. Er is hier alleen een plaatsvervanger.',t:'zinsontleding',n:3},
+{v:'Wat is de persoonsvorm in: Heb jij mijn sleutels gezien?',o:['heb','gezien','jij','mijn'],g:0,u:'In een vraagzin staat de persoonsvorm vooraan. Maak de zin in een andere tijd: had jij... Heb verandert, dus dat is de pv.',t:'zinsontleding',n:1},
+{v:'Wat is het werkwoordelijk gezegde in: Zij heeft de hele dag gewerkt?',o:['heeft gewerkt','heeft','gewerkt','de hele dag gewerkt'],g:0,u:'Het werkwoordelijk gezegde bestaat uit alle werkwoorden in de zin: heeft en gewerkt.',t:'zinsontleding',n:2},
+{v:'Wat is het voorzetselvoorwerp in: Hij wacht op zijn moeder?',o:['op zijn moeder','zijn moeder','wacht','hij'],g:0,u:'Wachten op hoort vast bij elkaar. Het voorzetsel kun je niet vervangen zonder dat de betekenis verandert.',t:'zinsontleding',n:4},
+{v:'Wat is het naamwoordelijk deel van het gezegde in: De soep wordt koud?',o:['koud','wordt','de soep','wordt koud'],g:0,u:'Wordt is hier een koppelwerkwoord. Het naamwoordelijk deel is wat over de soep gezegd wordt: koud.',t:'zinsontleding',n:4},
+{v:'Wat is het lijdend voorwerp in: Wie heb je gisteren gezien?',o:['wie','je','gisteren','gezien'],g:0,u:'Je hebt iemand gezien: je is het onderwerp. Wie of wat heb je gezien? Wie. Dat is het lijdend voorwerp.',t:'zinsontleding',n:4},
+{v:'Hoe vind je de persoonsvorm het makkelijkst?',o:['zet de zin in een andere tijd','zoek het langste woord','neem het eerste woord','zoek het woord met een hoofdletter'],g:0,u:'Het werkwoord dat verandert als je de tijd verandert, is de persoonsvorm. Of maak er een vraagzin van.',t:'zinsontleding',n:1},
+{v:'Welk zinsdeel is op zijn fiets in: Hij rijdt op zijn fiets naar school?',o:['bijwoordelijke bepaling','lijdend voorwerp','meewerkend voorwerp','onderwerp'],g:0,u:'Op zijn fiets zegt hoe hij rijdt. Dat is een bijwoordelijke bepaling.',t:'zinsontleding',n:3},
+/* verwijswoorden */
+{v:'Welk woord hoort hier: Dat is iets ___ ik niet snap.',o:['wat','dat','die','wie'],g:0,u:'Na iets, alles, niets en het beste gebruik je wat.',t:'verwijswoorden',n:3},
+{v:'Welk woord hoort hier: De vriend met ___ ik op vakantie ging, belde net.',o:['wie','die','wat','waar'],g:0,u:'Na een voorzetsel en een persoon gebruik je wie: met wie.',t:'verwijswoorden',n:4},
+{v:'Welk woord hoort hier: Het huis ___ ik woon, is oud.',o:['waarin','wat','die','dat'],g:0,u:'Bij een ding met een voorzetsel gebruik je waar + voorzetsel: waarin, waarmee, waarover.',t:'verwijswoorden',n:4},
+{v:'Welke zin met zij of hun is goed?',o:['Zij hebben gewonnen.','Hun hebben gewonnen.','Hen hebben gewonnen.','Haar hebben gewonnen.'],g:0,u:'Als onderwerp gebruik je zij. Hun hebben is fout in geschreven taal.',t:'verwijswoorden',n:1},
+{v:'Welk woord hoort hier: Ik geef ___ het boek. (de kinderen)',o:['hun','hen','zij','haar'],g:0,u:'Het is een meewerkend voorwerp zonder voorzetsel: hun. Met een voorzetsel is het hen: aan hen.',t:'verwijswoorden',n:4},
+{v:'Welk woord hoort hier: Alles ___ hij zei, was waar.',o:['wat','dat','die','welke'],g:0,u:'Na alles gebruik je wat.',t:'verwijswoorden',n:3},
+/* betekenis */
+{v:'Wat betekent cruciaal?',o:['doorslaggevend','een beetje onhandig','heel voorzichtig en rustig','zonder enige twijfel'],g:0,u:'Iets cruciaals is zo belangrijk dat het de afloop bepaalt.',t:'betekenis',n:3},
+{v:'Wat betekent subjectief?',o:['gekleurd door je eigen mening','gebaseerd op controleerbare feiten','voor iedereen hetzelfde','zonder duidelijke bron'],g:0,u:'Het tegenovergestelde is objectief: los van je eigen gevoel.',t:'betekenis',n:3},
+{v:'Wat is een hypothese?',o:['een veronderstelling die je onderzoekt','een natuurwet die al lang bewezen is','een korte samenvatting van een lange tekst','een vraag die je stelt in een enquête'],g:0,u:'Bij een onderzoek bedenk je eerst een hypothese. Daarna kijk je of die klopt.',t:'betekenis',n:4},
+{v:'Wat betekent anoniem?',o:['zonder naam','zonder geld','zonder vrienden','zonder toestemming'],g:0,u:'Een anonieme brief is niet ondertekend: je weet niet van wie hij is.',t:'betekenis',n:1},
+{v:'Wat is een dilemma?',o:['een lastige keuze tussen twee dingen','een vraag waar geen antwoord op is','een ruzie tussen twee mensen','een grappig misverstand'],g:0,u:'Bij een dilemma heeft elke keuze nadelen. Je moet toch kiezen.',t:'betekenis',n:2},
+{v:'Wat betekent consensus?',o:['overeenstemming tussen iedereen','een meerderheid van stemmen','een felle discussie','een besluit van de leider alleen'],g:0,u:'Bij consensus is iedereen het (ongeveer) eens. Dat is meer dan een meerderheid.',t:'betekenis',n:4},
+{v:'Wat betekent expliciet?',o:['duidelijk uitgesproken','alleen bedoeld, niet gezegd','heel ingewikkeld','met veel voorbeelden'],g:0,u:'Het tegenovergestelde is impliciet: bedoeld zonder het letterlijk te zeggen.',t:'betekenis',n:4},
+{v:'Wat betekent arrogant?',o:['verwaand','verlegen in een groep','boos zonder duidelijke reden','heel slim in rekenen'],g:0,u:'Een arrogant iemand kijkt neer op anderen.',t:'betekenis',n:2},
+/* synoniemen */
+{v:'Wat is een synoniem van plotseling?',o:['opeens','langzaam','vaak','nooit'],g:0,u:'Plotseling en opeens betekenen allebei: zonder dat je het verwacht.',t:'synoniemen',n:1},
+{v:'Wat is een synoniem van beweren?',o:['stellen','ontkennen','vragen','zwijgen'],g:0,u:'Iets beweren of stellen is zeggen dat het zo is, zonder dat het bewezen hoeft te zijn.',t:'synoniemen',n:3},
+{v:'Wat is een synoniem van vermoedelijk?',o:['waarschijnlijk','zeker weten','helemaal nooit','gelukkig maar'],g:0,u:'Vermoedelijk: je denkt dat het zo is, maar je weet het niet zeker.',t:'synoniemen',n:2},
+{v:'Wat is het tegenovergestelde van optimistisch?',o:['pessimistisch','realistisch','enthousiast','fantastisch'],g:0,u:'Een optimist ziet het van de zonnige kant, een pessimist van de sombere.',t:'synoniemen',n:2},
+{v:'Wat is een synoniem van weigeren?',o:['afwijzen','aannemen','toestaan','vragen'],g:0,u:'Iets weigeren is nee zeggen: afwijzen.',t:'synoniemen',n:1},
+{v:'Wat is een synoniem van kritiek?',o:['commentaar met bezwaren','lof en complimenten van anderen','een samenvatting van een boek','een uitnodiging voor een feest'],g:0,u:'Kritiek is een oordeel, vaak met bezwaren. Opbouwende kritiek helpt je verder.',t:'synoniemen',n:2},
+/* uitdrukkingen en spreekwoorden */
+{v:'Wat betekent: iets uit je duim zuigen?',o:['iets verzinnen','iets snel opeten','iets heel precies onthouden','iets stiekem meenemen'],g:0,u:'Wie iets uit zijn duim zuigt, bedenkt het zelf: het is niet waar.',t:'uitdrukkingen',n:2},
+{v:'Wat betekent: de appel valt niet ver van de boom?',o:['kinderen lijken op hun ouders','fruit blijft het langst vers','je moet dicht bij huis blijven','wat valt, is niet meer te redden'],g:0,u:'Kinderen hebben vaak dezelfde eigenschappen als hun ouders.',t:'uitdrukkingen',n:1},
+{v:'Wat betekent: de koe bij de horens vatten?',o:['een probleem meteen aanpakken','boos worden op een dier','iets gevaarlijks vermijden','een ander de schuld geven'],g:0,u:'Je gaat een lastig probleem niet uit de weg, maar pakt het aan.',t:'uitdrukkingen',n:2},
+{v:'Wat betekent: een kat in de zak kopen?',o:['iets kopen dat tegenvalt','een huisdier kopen','heel voordelig inkopen','iets kopen voor een ander'],g:0,u:'Je koopt iets zonder het goed te bekijken, en het blijkt slecht te zijn.',t:'uitdrukkingen',n:2},
+{v:'Wat betekent: uit de school klappen?',o:['geheimen doorvertellen','van school gestuurd worden','applaudisseren na de les','te laat komen op school'],g:0,u:'Wie uit de school klapt, vertelt iets verder wat geheim had moeten blijven.',t:'uitdrukkingen',n:3},
+{v:'Wat betekent: de spijker op de kop slaan?',o:['precies het goede zeggen','hard werken met je handen','iemand een klap geven','een fout maken'],g:0,u:'Je zegt precies wat de kern van de zaak is.',t:'uitdrukkingen',n:2},
+{v:'Wat betekent: tussen wal en schip vallen?',o:['nergens hulp krijgen omdat je nergens bij past','bij het instappen in het water vallen','een verkeerde keuze maken en daar spijt van krijgen','net op het laatste moment toch nog op tijd komen'],g:0,u:'Iemand die tussen wal en schip valt, past bij geen enkele regeling en krijgt daardoor geen hulp.',t:'uitdrukkingen',n:4},
+{v:'Wat betekent: boontje komt om zijn loontje?',o:['wie iets slechts doet, wordt gestraft','wie hard werkt, verdient uiteindelijk veel geld','kleine dingen zijn net zo belangrijk als grote','je moet je loon eerlijk delen met je collega\'s'],g:0,u:'Wie iets verkeerds doet, krijgt vroeg of laat de gevolgen.',t:'uitdrukkingen',n:3},
+/* signaalwoorden */
+{v:'Welk verband geeft zodat aan?',o:['een gevolg','een tegenstelling','een voorwaarde','een opsomming'],g:0,u:'Hij sprak hard, zodat iedereen het kon horen. Het tweede deel is het gevolg van het eerste.',t:'tekstverbanden',n:2},
+{v:'Welk verband geeft aangezien aan?',o:['een reden','een tegenstelling','een tijdsvolgorde','een voorbeeld'],g:0,u:'Aangezien betekent omdat: het geeft een reden.',t:'tekstverbanden',n:3},
+{v:'Welk verband geeft met andere woorden aan?',o:['een uitleg','een tegenstelling','een voorwaarde','een oorzaak en gevolg'],g:0,u:'Na met andere woorden komt hetzelfde nog eens, maar anders gezegd.',t:'tekstverbanden',n:3},
+{v:'Welk signaalwoord past: ___ de regen gingen we toch naar het strand.',o:['Ondanks','Doordat','Zodat','Omdat'],g:0,u:'Ondanks geeft aan dat iets gebeurt terwijl je het tegendeel zou verwachten.',t:'tekstverbanden',n:2},
+{v:'Welk signaalwoord past: Enerzijds wil ik mee, ___ heb ik veel huiswerk.',o:['anderzijds','daarom','bovendien','bijvoorbeeld'],g:0,u:'Enerzijds en anderzijds horen bij elkaar: je zet twee kanten tegenover elkaar.',t:'tekstverbanden',n:3},
+{v:'Welk verband geeft ter illustratie aan?',o:['een voorbeeld','een conclusie','een voorwaarde','een tegenstelling'],g:0,u:'Ter illustratie betekent: om het te laten zien. Daarna volgt een voorbeeld.',t:'tekstverbanden',n:4}
+];
+BRONNEN.ned = BRONNEN.ned.concat(NED_PLUS);
+NIVOS.ned = NIVOS.ned.concat(NED_PLUS.map(function(q){ return q.n; }));
 })();
