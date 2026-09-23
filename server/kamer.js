@@ -224,7 +224,15 @@ export class Kamer extends DurableObject {
     server.serializeAttachment({ rol, sid });
     if (rol === "speler"){
       const bestaand = this.stand.spelers[sid];
+      /* Wie terugkomt houdt zijn plek, zijn nummer en zijn punten; alleen wie
+         nieuw is krijgt een nieuwe. Let op: tussen deze if en zijn else mag
+         niets anders staan, anders hangt de else aan de verkeerde if en is
+         iedereen die opnieuw verbindt weer nieuw. */
       if (bestaand){ bestaand.naam = naam; bestaand.av = av; delete bestaand.weg; }
+      else this.stand.spelers[sid] = this.strijd
+        ? { naam, av, pid: sleutelMaken(4), ronde: 0, gehaald: 0, leven: 0, punten: 0, af: false, aanvallen: 0, sinds: Date.now() }
+        : this.rollen ? { naam, av, pid: sleutelMaken(4), kaart: null, sinds: Date.now() }
+        : { naam, av, pid: sleutelMaken(4), score: 0, antw: {}, sinds: Date.now() };
       /* terug binnen de wachttijd: dan hoeft hij niet meer weg */
       if (this.wegKlok && this.wegKlok[sid]){ clearTimeout(this.wegKlok[sid]); delete this.wegKlok[sid]; }
       /* terug in een arena die al loopt: zijn held staat de volgende ronde weer op */
@@ -232,10 +240,6 @@ export class Kamer extends DurableObject {
         const mi = this.motorSids.indexOf(sid);
         if (mi >= 0) this.motor.terug(mi);
       }
-      else this.stand.spelers[sid] = this.strijd
-        ? { naam, av, pid: sleutelMaken(4), ronde: 0, gehaald: 0, leven: 0, punten: 0, af: false, aanvallen: 0, sinds: Date.now() }
-        : this.rollen ? { naam, av, pid: sleutelMaken(4), kaart: null, sinds: Date.now() }
-        : { naam, av, pid: sleutelMaken(4), score: 0, antw: {}, sinds: Date.now() };
       /* Naar buiten toe heet een speler bij zijn korte, openbare nummer (pid);
          het kenmerk waarmee hij verbindt (sid) blijft geheim, anders kon een
          ander zich voor hem uitgeven. */
