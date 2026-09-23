@@ -74,7 +74,7 @@ var TIJDVAKKEN = [
 ];
 
 var ONDERDELEN = {
-  reken: [{id:'tafels',naam:'tafels'},{id:'hoofd',naam:'hoofdrekenen'},{id:'machten',naam:'machten en wortels'},{id:'negatief',naam:'negatieve getallen'},{id:'komma',naam:'kommagetallen'},{id:'gemiddelde',naam:'gemiddelde en schaal'},{id:'breuk',naam:'breuken'},{id:'procent',naam:'procenten'},{id:'verhouding',naam:'verhoudingen'},{id:'tijdgeld',naam:'tijd en geld'},{id:'meten',naam:'meten en meetkunde'}],
+  reken: [{id:'tafels',naam:'tafels'},{id:'hoofd',naam:'hoofdrekenen'},{id:'cijferen',naam:'plaatswaarde en cijferen'},{id:'machten',naam:'machten en wortels'},{id:'negatief',naam:'negatieve getallen'},{id:'komma',naam:'kommagetallen'},{id:'gemiddelde',naam:'gemiddelde en schaal'},{id:'breuk',naam:'breuken'},{id:'procent',naam:'procenten'},{id:'verhouding',naam:'verhoudingen'},{id:'tijdgeld',naam:'tijd en geld'},{id:'meten',naam:'meten en meetkunde'}],
   /* groep zet de onderdelen onder een kop in de kiezer; zie GROEPEN hieronder */
   ned: [{id:'werkwoordspelling',naam:'werkwoordspelling',groep:'spelling'},{id:'spelling',naam:'los van het werkwoord',groep:'spelling'},{id:'meervoud',naam:'enkel en meervoud',groep:'spelling'},
         {id:'leestekens',naam:'leestekens',groep:'interpunctie'},
@@ -86,7 +86,7 @@ var ONDERDELEN = {
         {id:'irregular verbs',naam:'irregular verbs',groep:'werkwoorden'},{id:'voorzetselwerkwoorden',naam:'werkwoord met voorzetsel',groep:'werkwoorden'},
         {id:'grammatica',naam:'grammatica',groep:'grammatica'}],
   ges: TIJDVAKKEN.map(t => ({id: t.id, naam: t.naam})).concat([{id:'staat', naam:'staatsinrichting (examen vmbo)'}, {id:'nl1900', naam:'Nederland en de wereld vanaf 1900 (examen vmbo)'}]),
-  aard: [{id:'vlaggen',naam:'vlaggen van landen'},{id:'landvormen',naam:'vormen van landen'}],
+  aard: [{id:'vlaggen',naam:'vlaggen van landen'},{id:'landvormen',naam:'vormen van landen'},{id:'topografie',naam:'topografie: hoofdsteden'}],
   bio: [{id:'organen',naam:'organen'},{id:'bloed',naam:'bloed en ademhaling'},{id:'vertering',naam:'vertering en voeding'},{id:'planten',naam:'planten'},{id:'cellen',naam:'cellen'},{id:'zintuigen',naam:'zintuigen en zenuwen'},{id:'ordening',naam:'ordening en ecologie'},{id:'erfelijkheid',naam:'erfelijkheid'}],
   wis: [{id:'vergelijking',naam:'vergelijkingen'},{id:'formule',naam:'formules'},{id:'oppervlakte',naam:'oppervlakte en inhoud'},{id:'omtrek',naam:'omtrek'},{id:'hoeken',naam:'hoeken'},{id:'grafiek',naam:'grafieken en assenstelsel'},{id:'statistiek',naam:'statistiek'},{id:'pythagoras',naam:'stelling van Pythagoras'},{id:'vlakken',naam:'vlakken herkennen'}],
   burg: [{id:'democratie',naam:'democratie en verkiezingen'},{id:'rechtsstaat',naam:'rechtsstaat en grondrechten'},{id:'media',naam:'media en nieuws'},{id:'europa',naam:'Europa en de wereld'},{id:'samenleven',naam:'samenleven'},{id:'geld',naam:'geld en werk'}]
@@ -123,7 +123,7 @@ var GROEPEN = {
    lijst daarboven leesbaar blijft. Wat hier niet genoemd wordt valt onder
    "overig" en verdwijnt dus niet. */
 var IN_GROEP = {
-  reken:{ tafels:'getallen', hoofd:'getallen', machten:'getallen', negatief:'getallen', komma:'getallen',
+  reken:{ tafels:'getallen', hoofd:'getallen', cijferen:'getallen', machten:'getallen', negatief:'getallen', komma:'getallen',
           breuk:'verhoudingen', procent:'verhoudingen', verhouding:'verhoudingen', gemiddelde:'verhoudingen',
           tijdgeld:'meten', meten:'meten',
           /* het DHTE-schema telt per onderdeel van zijn eigen spel */
@@ -136,7 +136,7 @@ var IN_GROEP = {
           /* Bouw het organisme telt per stap van zijn eigen spel; dat hoort allemaal bij de cel */
           'de ladder':'cellen', cel:'cellen', weefsel:'cellen', orgaan:'cellen', orgaanstelsel:'cellen',
           organisme:'cellen', 'plantcel of diercel':'cellen', taken:'cellen' },
-  aard: { vlaggen:'landen', landvormen:'landen', 'examen-ak':'examen' },
+  aard: { vlaggen:'landen', landvormen:'landen', topografie:'landen', 'examen-ak':'examen' },
   burg: { democratie:'staat', rechtsstaat:'staat', media:'samen', samenleven:'samen',
           europa:'wereld', geld:'wereld', 'examen-mk':'examen' },
   ges:  { staat:'examen', nl1900:'examen' }
@@ -299,12 +299,64 @@ var BANK = (function(){
 /* De soorten sommen per niveau. Deze lijst geldt als je niets kiest; koos je
    zelf onderdelen, dan tellen die en zegt het niveau alleen nog iets over de
    getallen. */
+/* Elke rekenvraag draagt zijn onderdeel in t, net als de vragen van de andere
+   vakken. Daarvoor stond er een fijnere naam in, zoals "tafel van 7"; die
+   staat nu in fijn. Zo telt het klasoverzicht per onderdeel (tafels), en niet
+   per tafel onder een kop waar hij niet hoort. */
+var rekenLaatste = '';
 function rekenVraag(rang, toegestaan) {
+  var q = rekenSom(rang, toegestaan);
+  if (q && rekenLaatste){ q.fijn = q.t; q.t = rekenLaatste; }
+  return q;
+}
+
+/* Plaatswaarde en cijferen, zoals in het DHTE-schema: welk cijfer staat op
+   welke plek, en optellen en aftrekken onder elkaar met onthouden en lenen.
+   De foute antwoorden zijn de fouten die leerlingen echt maken: het onthouden
+   vergeten, of bij lenen de kleine van de grote aftrekken. */
+function cijferVraag(r){
+  var kolommen = r <= 1 ? 2 : r === 2 ? 3 : 4, max = Math.pow(10, kolommen), laag = Math.pow(10, kolommen - 1);
+  var NAMEN = ['eenheden', 'tientallen', 'honderdtallen', 'duizendtallen'];
+  function cijfers(n){ return String(n).split('').reverse().map(Number); }
+  /* optellen zonder te onthouden: per kolom alleen het laatste cijfer */
+  function zonderOnthouden(a, b){ var x = cijfers(a), y = cijfers(b), uit = 0; for (var i = 0; i < Math.max(x.length, y.length); i++) uit += (((x[i] || 0) + (y[i] || 0)) % 10) * Math.pow(10, i); return uit; }
+  /* aftrekken zonder te lenen: per kolom de kleine van de grote */
+  function zonderLenen(a, b){ var x = cijfers(a), y = cijfers(b), uit = 0; for (var i = 0; i < x.length; i++) uit += Math.abs((x[i] || 0) - (y[i] || 0)) * Math.pow(10, i); return uit; }
+  var soort = rnd(3);
+  if (soort === 0){
+    var n, c;
+    do { n = laag + rnd(max - laag); c = cijfers(n); } while (new Set(c).size < Math.min(kolommen, 3));
+    var plek = rnd(kolommen), goed = String(c[plek]);
+    var anders = c.filter(function(x, i){ return i !== plek; }).map(String).concat([String((c[plek] + 1) % 10), String((c[plek] + 9) % 10)]);
+    return bouw('Welk cijfer staat bij de ' + NAMEN[plek] + ' in ' + n + '?', goed,
+      function(){ return kies(anders); },
+      'In ' + n + ' staat de ' + goed + ' bij de ' + NAMEN[plek] + '. Van rechts naar links: eenheden, tientallen, honderdtallen, duizendtallen.', 'plaatswaarde');
+  }
+  var a, b, som;
+  if (soort === 1){
+    /* optellen waarbij je minstens een keer moet onthouden */
+    do { a = Math.floor(laag / 2) + rnd(Math.floor(max / 2)); b = Math.floor(laag / 2) + rnd(Math.floor(max / 2)); som = a + b; }
+    while (som >= max || zonderOnthouden(a, b) === som);
+    var fout1 = zonderOnthouden(a, b);
+    return bouw(a + ' + ' + b + ' onder elkaar', String(som),
+      function(){ return String(kies([fout1, som + 10, som - 10, som + 100, fout1 + 10].filter(function(x){ return x > 0 && x !== som; }))); },
+      'Van rechts naar links, kolom voor kolom. Komt een kolom boven de 9, dan schrijf je de eenheid op en onthoud je 1 voor de kolom ernaast. ' + a + ' + ' + b + ' = ' + som + '.', 'optellen onder elkaar');
+  }
+  /* aftrekken waarbij je minstens een keer moet lenen */
+  do { a = laag + rnd(max - laag); b = Math.floor(laag / 2) + rnd(a - Math.floor(laag / 2)); som = a - b; }
+  while (som <= 0 || zonderLenen(a, b) === som);
+  var fout2 = zonderLenen(a, b);
+  return bouw(a + ' − ' + b + ' onder elkaar', String(som),
+    function(){ return String(kies([fout2, som + 10, som - 10, som + 100, fout2 - 10].filter(function(x){ return x > 0 && x !== som; }))); },
+    'Is het onderste cijfer groter, dan leen je 1 van de kolom ernaast: daar komt er 1 af, hier 10 bij. Nooit de kleine van de grote aftrekken. ' + a + ' − ' + b + ' = ' + som + '.', 'aftrekken onder elkaar');
+}
+
+function rekenSom(rang, toegestaan) {
   const r = rang || 2;
   const potten = {
-    1: ['tafels','tafels','hoofd','hoofd','breuk','tijdgeld','komma'],
-    2: ['tafels','tafels','hoofd','hoofd','breuk','procent','tijdgeld','meten','komma','gemiddelde'],
-    3: ['tafels','hoofd','breuk','procent','verhouding','tijdgeld','meten','komma','gemiddelde','machten','negatief'],
+    1: ['tafels','tafels','hoofd','hoofd','cijferen','breuk','tijdgeld','komma'],
+    2: ['tafels','tafels','hoofd','hoofd','cijferen','breuk','procent','tijdgeld','meten','komma','gemiddelde'],
+    3: ['tafels','hoofd','cijferen','breuk','procent','verhouding','tijdgeld','meten','komma','gemiddelde','machten','negatief'],
     4: ['hoofd','breuk','procent','verhouding','verhouding','meten','machten','machten','negatief','gemiddelde']
   };
   /* Heb je zelf onderdelen aangewezen, dan zijn dat ze, en bepaalt het niveau
@@ -313,6 +365,8 @@ function rekenVraag(rang, toegestaan) {
      tafels staan niet in de lijst van vwo, dus wie tafels en breuken koos en
      een stap omhoog ging hield alleen nog breuken over. */
   const soort = toegestaan && toegestaan.length ? kies(toegestaan) : kies(potten[r]);
+  rekenLaatste = soort;
+  if (soort === 'cijferen') return cijferVraag(r);
   if (soort === 'tafels') {
     /* Welke tafels je krijgt hangt af van het niveau. De foute antwoorden zijn
        geen willekeurige getallen maar de fouten die leerlingen echt maken: een

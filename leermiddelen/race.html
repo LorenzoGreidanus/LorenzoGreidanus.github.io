@@ -248,7 +248,10 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   function $(id){ return document.getElementById(id); }
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
   function param(naam){ var m = new RegExp('[?&]' + naam + '=([^&#]+)').exec(location.search); return m ? decodeURIComponent(m[1]) : ''; }
-  var VAK_RACE = VAKKEN.filter(function(v){ return v.id !== 'reken'; });   /* rekenen heeft zijn eigen Rekenrace */
+  /* Rekenen doet ook mee: de sommen worden ter plekke gemaakt, zodat je bijvoorbeeld
+     plaatswaarde en cijferen (het DHTE-schema) of breuken in een race kunt oefenen.
+     De Rekenrace blijft er voor snel hoofdrekenen. */
+  var VAK_RACE = VAKKEN.slice();
   var vak = VAK_RACE.some(function(v){ return v.id === param('vak'); }) ? param('vak') : 'ges';
 /* Onthoudt het gekozen niveau voor de leeromgeving, zodat je het maar een
    keer kiest: in het eerste spel dat je speelt. */
@@ -295,9 +298,12 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   /* de naam van het vak, als terugval voor het kopje boven de vraag */
   function vakNaamVan(id){ var v = VAKKEN.filter(function(x){ return x.id === id; })[0]; return v ? v.naam.toLowerCase() : 'vraag'; }
   function nieuweVraag(){
-    if (!pot.length) vulPot();
-    var q = BRONNEN[vak][pot.pop()];
+    /* rekenen heeft geen lijst: de som wordt gemaakt op het niveau van dit moment */
+    var q;
+    if (vak === 'reken') q = rekenVraag(rangVan(slim.niveau()), onderdeel ? [onderdeel] : []);
+    else { if (!pot.length) vulPot(); q = BRONNEN[vak][pot.pop()]; }
     var kop = q.t || vak;
+    if (vak === 'reken'){ var od = (ONDERDELEN.reken || []).filter(function(o){ return o.id === q.t; })[0]; kop = od ? od.naam : 'rekenen'; }
     if (vak === 'ges'){ var tv = TIJDVAKKEN.filter(function(t){ return t.id === q.t; })[0]; kop = tv ? 'tijdvak ' + tv.naam.replace(/^\d+ /, '') : 'geschiedenis'; }
     /* noemt het kopje een van de antwoorden, dan verklapt het de vraag */
     kop = kopVoorVraag({ t:kop, o:q.o }, vakNaamVan(vak));
