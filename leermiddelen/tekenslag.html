@@ -88,7 +88,22 @@ textarea.veld{min-height:120px;resize:vertical}
 .klokrij{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;flex-wrap:wrap}
 .klok{font-size:2.4rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
 .klok.haast{color:var(--crab)}
-.woord{font-size:1.6rem;font-weight:700;background:var(--kaart2);border-radius:14px;padding:6px 16px}
+/* Het woord voor de tekenaar: groot, boven het vel, in amber met donkere
+   letters, in beide standen hetzelfde. Het oude labeltje naast de klok viel
+   niet op, en dan tekende iemand het vorige woord nog. */
+.woord{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:center;gap:2px 14px;margin:0 0 10px;padding:12px 18px;
+  border-radius:16px;background:#EA9836;color:#14224C;text-align:center;box-shadow:0 6px 0 rgba(20,34,76,.14)}
+.woord span{font-size:.78rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase}
+.woord b{font-size:clamp(2rem,7vw,3.4rem);line-height:1.05;letter-spacing:-.01em;overflow-wrap:anywhere}
+.woord small{flex-basis:100%;font-size:.86rem;font-weight:500}
+.woord.nieuw{animation:woordNieuw .7s cubic-bezier(.34,1.56,.64,1)}
+@keyframes woordNieuw{0%{transform:scale(.9)}60%{transform:scale(1.04)}100%{transform:scale(1)}}
+/* even groot op het vel zelf; tekenen gaat er gewoon doorheen */
+.papier .over.onthul{pointer-events:none;background:rgba(234,152,54,.94);color:#14224C}
+.papier .over.onthul p{font-size:1.05rem;font-weight:600;opacity:1;margin:0 0 4px}
+.papier .over.onthul b{font-size:clamp(2.6rem,9vw,5rem)}
+@media(prefers-reduced-motion:reduce){.woord.nieuw{animation:none}}
+.team small .weg{opacity:.5;text-decoration:line-through}
 .feed{display:grid;gap:6px;align-content:start;max-height:520px;overflow:auto}
 .feed div{background:var(--kaart2);border-radius:12px;padding:7px 11px;font-size:.92rem;display:flex;gap:8px;align-items:center}
 .feed div.goed{background:#d7f1df;color:#155a2d;font-weight:600}
@@ -216,7 +231,8 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
     <a class="mark" href="index.html"><i>LG</i><span>Tekenslag</span><span class="lghoi">alle spellen</span></a>
     <span class="rij" id="pWie"></span>
   </header>
-  <div class="klokrij"><div class="rij"><span class="eyebrow" id="pRol">wachten</span><b id="pTeam"></b></div><span class="klok" id="pKlok"></span><span class="woord hide" id="pWoord"></span></div>
+  <div class="klokrij"><div class="rij"><span class="eyebrow" id="pRol">wachten</span><b id="pTeam"></b></div><span class="klok" id="pKlok"></span></div>
+  <div class="woord hide" id="pWoord" role="status" aria-live="assertive"></div>
   <div class="bord">
     <div>
       <div class="papier"><canvas id="pCanvas" width="1000" height="600"></canvas><div class="over" id="pOver"><div><b>Je doet mee</b><p>Wacht tot het bord begint. Je team en je beurt komen hier vanzelf.</p></div></div></div>
@@ -423,7 +439,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
     verbind(host.code, 'rol=host&sleutel=' + encodeURIComponent(host.sleutel), bordBericht, function(t){ $('bUit').textContent = t; });
   }
   function bordBericht(m){
-    if (m.t === 'welkom' || m.t === 'spelers'){ spelersLijst = m.spelers || []; tekenLobbySpelers(); if (spel) tekenTeamsKort(); return; }
+    if (m.t === 'welkom' || m.t === 'spelers'){ spelersLijst = m.spelers || []; tekenLobbySpelers(); if (spel) laatkomers(); return; }
     if (m.t === 'actie') actieVanSpeler(m);
   }
   function tekenLobbySpelers(){
@@ -455,12 +471,47 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
     spel = { ronde:1, team:0, woordNr:0, gedaan:[], loopt:false, woord:'', tekenaar:null, tijdEinde:0, klok:null };
     $('b-lobby').classList.add('hide'); $('b-spel').classList.remove('hide');
     stuur({ t:'start' });
-    stuur({ t:'alle', d:{ k:'teams', teams:teams.map(function(t){ return { naam:t.naam, kleur:t.kleur, leden:t.leden.map(function(l){ return l.sid; }), punten:t.punten }; }) } });
+    stuur({ t:'alle', d:{ k:'teams', teams:teamsKort() } });
     beurtKlaarzetten();
   });
+  /* de teams zoals de telefoons ze kennen: naam, kleur, leden (op nummer), punten */
+  function teamsKort(){ return teams.map(function(t){ return { naam:t.naam, kleur:t.kleur, leden:t.leden.map(function(l){ return l.sid; }), punten:t.punten }; }); }
+  /* is deze leerling nu verbonden? */
+  function isAan(pid){ var s2 = spelersLijst.filter(function(x){ return x.sid === pid; })[0]; return !!(s2 && s2.aan); }
+  /* Wie binnenkomt terwijl het spel loopt en nog in geen team zit, gaat bij
+     het kleinste team. Hij krijgt de stand meteen, de rest merkt er niets van. */
+  function laatkomers(){
+    if (!spel || !teams.length) return;
+    spelersLijst.forEach(function(s2){
+      if (!s2.aan || teams.some(function(t){ return t.leden.some(function(l){ return l.sid === s2.sid; }); })) return;
+      var kleinst = teams.slice().sort(function(a, b){ return a.leden.length - b.leden.length; })[0];
+      kleinst.leden.push({ sid:s2.sid, naam:s2.naam, av:s2.av || '' });
+      syncNaar(s2.sid);
+    });
+    tekenTeamsKort();
+  }
+  /* Alles wat een telefoon nodig heeft om mee te doen: zijn team, de beurt,
+     en de tekening tot nu toe. Bij een nieuwe verbinding, en voor een laatkomer. */
+  function syncNaar(pid){
+    if (!spel || !teams.length) return;
+    var lijst = [{ pid:pid, d:{ k:'teams', teams:teamsKort(), stil:1 } }];
+    if (spel.loopt && spel.tekenaar){
+      if (pid === spel.tekenaar.sid) lijst.push({ pid:pid, d:{ k:'teken', woord:spel.woord, tot:spel.tijdEinde } });
+      else lijst.push({ pid:pid, d:{ k:'raad', team:spel.team, tekenaar:spel.tekenaar.sid, naam:spel.tekenaar.naam, tot:spel.tijdEinde } });
+      /* de streken in stukken, want een kaart mag niet te groot zijn */
+      var bak = [], maat = 0;
+      (spel.strepen || []).forEach(function(p){
+        var n = JSON.stringify(p).length;
+        if (maat + n > 9000 && bak.length){ lijst.push({ pid:pid, d:{ k:'strepen', lijst:bak } }); bak = []; maat = 0; }
+        bak.push(p); maat += n;
+      });
+      if (bak.length) lijst.push({ pid:pid, d:{ k:'strepen', lijst:bak } });
+    } else if (spel.stand) lijst.push({ pid:pid, d:spel.stand });
+    stuur({ t:'kaarten', lijst:lijst.slice(0, 60) });
+  }
   function tekenTeamsKort(){
     $('bTeamsKort').innerHTML = teams.map(function(t, i){
-      return '<span class="team' + (spel && spel.team === i ? ' beurt' : '') + '" style="--tk:' + t.kleur + ';padding:6px 12px"><b>' + t.naam + ' <span>' + t.punten + '</span></b><small>' + t.leden.map(function(l){ return schoon(l.naam); }).join(', ') + '</small></span>';
+      return '<span class="team' + (spel && spel.team === i ? ' beurt' : '') + '" style="--tk:' + t.kleur + ';padding:6px 12px"><b>' + t.naam + ' <span>' + t.punten + '</span></b><small>' + t.leden.map(function(l){ return isAan(l.sid) ? schoon(l.naam) : '<span class="weg" title="niet verbonden">' + schoon(l.naam) + '</span>'; }).join(', ') + '</small></span>';
     }).join('');
   }
   function volgendWoord(){
@@ -471,8 +522,11 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
   function beurtKlaarzetten(){
     var t = teams[spel.team];
     if (!t.leden.length){ volgendeBeurt(); return; }
-    spel.tekenaar = t.leden[t.beurt % t.leden.length]; t.beurt++;
-    spel.loopt = false; spel.gokken = [];
+    /* de eerstvolgende tekenaar die er ook echt is; zijn ze allemaal weg, dan toch de eerstvolgende */
+    var kies = null;
+    for (var z = 0; z < t.leden.length && !kies; z++){ var l = t.leden[(t.beurt + z) % t.leden.length]; if (isAan(l.sid)){ kies = l; t.beurt += z; } }
+    spel.tekenaar = kies || t.leden[t.beurt % t.leden.length]; t.beurt++;
+    spel.loopt = false; spel.gokken = []; spel.strepen = [];
     bPapier.wis(); $('bFeed').innerHTML = '';
     tekenTeamsKort();
     $('bBeurt').textContent = t.naam + ': ' + spel.tekenaar.naam + ' tekent';
@@ -480,7 +534,8 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
     $('bOver').classList.remove('hide'); $('bOver').innerHTML = '<div><b>' + schoon(spel.tekenaar.naam) + ' gaat tekenen</b><p>voor team ' + t.naam + ' · ronde ' + spel.ronde + ' van ' + host.rondes + '. Het begint over een paar tellen.</p></div>';
     $('bVolgende').disabled = true; $('bOverslaan').disabled = true;
     $('bUit').textContent = 'Team ' + t.naam + ' raadt; de andere teams kijken mee.';
-    stuur({ t:'alle', d:{ k:'klaar', team:spel.team, tekenaar:spel.tekenaar.sid, naam:spel.tekenaar.naam, tijd:host.tijd, ronde:spel.ronde, rondes:host.rondes, punten:teams.map(function(x){ return x.punten; }) } });
+    spel.stand = { k:'klaar', team:spel.team, tekenaar:spel.tekenaar.sid, naam:spel.tekenaar.naam, tijd:host.tijd, ronde:spel.ronde, rondes:host.rondes, punten:teams.map(function(x){ return x.punten; }) };
+    stuur({ t:'alle', d:spel.stand });
     setTimeout(beurtStart, 4000);
   }
   function beurtStart(){
@@ -498,7 +553,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
     if (over <= 0) beurtEinde();
   }
   function nieuwWoordInBeurt(){
-    spel.woord = volgendWoord(); bPapier.wis();
+    spel.woord = volgendWoord(); bPapier.wis(); spel.strepen = [];
     stuur({ t:'naar', pid:spel.tekenaar.sid, d:{ k:'teken', woord:spel.woord, tot:spel.tijdEinde } });
     stuur({ t:'vlug', d:{ k:'wis' } });
   }
@@ -508,7 +563,8 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
     var t = teams[spel.team];
     spel.gedaan.push({ team:t.naam, woord:spel.woord, goed:false, tekenaar:spel.tekenaar.naam });
     $('bOver').classList.remove('hide'); $('bOver').innerHTML = '<div><b>Tijd!</b><p>Het woord was <strong>' + schoon(spel.woord) + '</strong>. Team ' + t.naam + ' heeft nu ' + t.punten + ' punten.</p></div>';
-    stuur({ t:'vlug', d:{ k:'tijd', woord:spel.woord, punten:teams.map(function(x){ return x.punten; }) } });
+    spel.stand = { k:'tijd', woord:spel.woord, punten:teams.map(function(x){ return x.punten; }) };
+    stuur({ t:'vlug', d:spel.stand });
     stuur({ t:'naar', pid:spel.tekenaar.sid, d:{ k:'wacht', tekst:'Tijd! Het woord was ' + spel.woord + '.' } });
     $('bVolgende').disabled = false; $('bOverslaan').disabled = true;
     tekenTeamsKort();
@@ -526,9 +582,12 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
   function actieVanSpeler(m){
     if (!spel) return;
     var d = m.d || {};
+    /* een telefoon die (opnieuw) verbonden is, vraagt waar we zijn */
+    if (d.k === 'sync'){ syncNaar(m.van); return; }
     if (d.k === 's' || d.k === 'wis'){
       if (!spel.loopt || m.van !== spel.tekenaar.sid) return;
-      if (d.k === 'wis') bPapier.wis(); else bPapier.streek(d);
+      if (d.k === 'wis'){ bPapier.wis(); spel.strepen = []; }
+      else { bPapier.streek(d); spel.strepen = spel.strepen || []; if (spel.strepen.length < 500) spel.strepen.push(d); }
       stuur({ t:'vlug', d:d });
       return;
     }
@@ -617,6 +676,15 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
     function z(){ var over = Math.max(0, Math.ceil((tot - Date.now()) / 1000)); $('pKlok').textContent = over; $('pKlok').classList.toggle('haast', over <= 10); if (over <= 0) clearInterval(pKlokTimer); }
     z(); pKlokTimer = setInterval(z, 250);
   }
+  /* het woord even groot op het vel; tekenen gaat er gewoon doorheen */
+  var onthulKlok = null;
+  function onthul(woord, kop){
+    clearTimeout(onthulKlok);
+    $('pOver').classList.add('onthul'); $('pOver').classList.remove('hide');
+    $('pOver').innerHTML = '<div><p>' + kop + '</p><b>' + schoon(woord) + '</b></div>';
+    onthulKlok = setTimeout(function(){ if ($('pOver').classList.contains('onthul')){ $('pOver').classList.add('hide'); $('pOver').classList.remove('onthul'); } }, 1800);
+  }
+  function stopOnthul(){ clearTimeout(onthulKlok); $('pOver').classList.remove('onthul'); }
   function stand(){
     var t = mijnTeam >= 0 ? pTeams[mijnTeam] : null;
     $('pTeam').innerHTML = t ? '<span style="color:' + t.kleur + '">team ' + t.naam + '</span>' + (pTeams.length ? ' · ' + pTeams.map(function(x){ return x.naam + ' ' + (x.punten || 0); }).join(', ') : '') : '';
@@ -629,20 +697,25 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
       pTekenaar.zet(false); $('pGereedschap').classList.add('hide'); $('pRaadRij').classList.add('hide');
       return;
     }
-    if (m.t === 'welkom'){ mijnPid = m.jij; return; }
+    /* bij elke (nieuwe) verbinding het bord om de stand vragen: team, beurt en tekening */
+    if (m.t === 'welkom'){ mijnPid = m.jij; stuur({ t:'actie', d:{ k:'sync' } }); return; }
     if (m.t === 'einde'){ $('pOver').classList.remove('hide'); if (!huidig || huidig.k !== 'einde') $('pOver').innerHTML = '<div><b>Afgelopen</b><p>Kijk naar het bord.</p></div>'; pTekenaar.zet(false); $('pGereedschap').classList.add('hide'); $('pRaadRij').classList.add('hide'); return; }
     var d = m.d; if (!d || typeof d !== 'object') return;
     if (m.t === 'kaart' || m.t === 'bord'){ huidig = d; }
+    /* elk ander bericht over de beurt haalt het grote woord van het vel */
+    if (['s', 'gok', 'goed', 'teken', 'strepen', 'wis'].indexOf(d.k) < 0) stopOnthul();
     if (d.k === 'teams'){
       pTeams = d.teams.map(function(t){ return { naam:t.naam, kleur:t.kleur, leden:t.leden, punten:t.punten }; });
       mijnTeam = -1; pTeams.forEach(function(t, i){ if (t.leden.indexOf(mijnPid) >= 0) mijnTeam = i; });
       stand();
-      $('pOver').innerHTML = '<div><b>Je zit in team ' + (mijnTeam >= 0 ? pTeams[mijnTeam].naam : '?') + '</b><p>Wacht op de eerste beurt.</p></div>';
+      /* stil: dit hoort bij het bijpraten na een nieuwe verbinding, de beurt komt zo */
+      if (!d.stil) $('pOver').innerHTML = '<div><b>Je zit in team ' + (mijnTeam >= 0 ? pTeams[mijnTeam].naam : '?') + '</b><p>Wacht op de eerste beurt.</p></div>';
       return;
     }
+    if (d.k === 'strepen'){ (d.lijst || []).forEach(function(p){ pPapier.streek(p); }); return; }
     if (d.k === 'klaar'){
       if (d.punten) pTeams.forEach(function(t, i){ t.punten = d.punten[i] || 0; }); stand();
-      pPapier.wis(); pTekenaar.zet(false); $('pGereedschap').classList.add('hide'); $('pRaadRij').classList.add('hide'); $('pWoord').classList.add('hide'); $('pKlok').textContent = d.tijd;
+      pPapier.wis(); pTekenaar.zet(false); $('pGereedschap').classList.add('hide'); $('pRaadRij').classList.add('hide'); $('pWoord').classList.add('hide'); $('pWoord').removeAttribute('data-woord'); $('pKlok').textContent = d.tijd;
       var ik = d.tekenaar === mijnPid, mijn = d.team === mijnTeam;
       $('pRol').textContent = ik ? 'jij gaat tekenen' : mijn ? 'jouw team raadt zo' : 'kijk mee';
       $('pOver').classList.remove('hide');
@@ -650,10 +723,18 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
       return;
     }
     if (d.k === 'teken'){
-      /* ik ben de tekenaar */
+      /* ik ben de tekenaar: het woord groot boven het vel, en bij een nieuw woord even groot op het vel */
+      var vorig = $('pWoord').getAttribute('data-woord') || '';
       $('pOver').classList.add('hide'); pPapier.wis(); pTekenaar.zet(true);
       $('pGereedschap').classList.remove('hide'); $('pRaadRij').classList.add('hide');
-      $('pRol').textContent = 'teken dit'; $('pWoord').textContent = d.woord; $('pWoord').classList.remove('hide');
+      $('pRol').textContent = 'jij tekent';
+      $('pWoord').innerHTML = '<span>Teken dit woord</span><b>' + schoon(d.woord) + '</b><small>Niet schrijven en niet zeggen: je team moet het aan je tekening raden.</small>';
+      $('pWoord').classList.remove('hide');
+      if (vorig !== d.woord){
+        $('pWoord').setAttribute('data-woord', d.woord);
+        $('pWoord').classList.remove('nieuw'); void $('pWoord').offsetWidth; $('pWoord').classList.add('nieuw');
+        onthul(d.woord, vorig ? 'Nieuw woord' : 'Jouw woord');
+      }
       pKlok(d.tot);
       return;
     }
