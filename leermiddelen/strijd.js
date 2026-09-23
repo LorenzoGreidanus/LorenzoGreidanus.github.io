@@ -420,6 +420,8 @@ window.STRIJD = (function(){
     /* de docent haalde je uit de kamer: niet opnieuw verbinden, en zeggen wat er gebeurde */
     if (m.t === 'eruit'){
       dicht = true; klaarMet = true;
+      /* de server hangt op, maar dat komt niet altijd aan: zelf ophangen */
+      try { if (ws) ws.close(1000, 'eruit'); } catch (x){} ws = null;
       clearInterval(telKlok); afStop();
       hudTekst('Uit de kamer', 'je docent heeft je eruit gehaald', true);
       sluierTekst('<b>Je docent heeft je uit kamer ' + code + ' gehaald.</b><p>Je telt niet meer mee in dit potje. Vraag je docent als dat een vergissing was.</p><button type="button">Terug</button>');
