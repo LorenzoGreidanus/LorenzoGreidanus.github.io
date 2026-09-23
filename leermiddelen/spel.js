@@ -8,6 +8,9 @@
        het spel. Lange uitleg die al op het startscherm stond (.uitleg en
        .tip) verhuist naar "Alle regels" in het paneel. Wie op "Begrepen"
        tikt ziet het paneel de volgende keer ingeklapt (localStorage).
+       Heeft het spel een uitleg stap voor stap (uitleg/<spel>.js, zie
+       MET_STAPPEN), dan komt er een knop bij die hem opent; met ?uitleg in
+       het adres gaat hij meteen open, handig op het digibord.
      SPEL.einde({ spel:'toren', score:12, label:'rondes', max:20, sterren:2,
                   ronde:12, punten:340, niveau:'havo', vak:'ges', ... })
        Zet bovenaan het eindscherm een kaart met de score, sterren, het beste
@@ -41,8 +44,45 @@ window.SPEL = (function(){
     ster:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.3L12 17.1l-5.7 3.1 1.2-6.3L2.8 9.5l6.4-.8z"/></svg>',
     deel:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M12 15V3M8 7l4-4 4 4"/></svg>',
     opnieuw:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3L20 8M20 4v4h-4M20 12a8 8 0 0 1-14 5.3L4 16M4 20v-4h4"/></svg>',
-    alle:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>'
+    alle:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>',
+    trap:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20h5v-5h5v-5h5V5h3"/></svg>'
   };
+
+  /* ---------- uitleg stap voor stap ----------
+     De spellen met een eigen uitleg in uitleg/<spel>.js. De speler zelf
+     (stappen.js) en de inhoud komen pas binnen als iemand erom vraagt. */
+  var MET_STAPPEN = [
+    'balans', 'berlijn', 'breukenbakker', 'bronnenlab', 'crisis', 'dag', 'dhte', 'feodalisme', 'fouten',
+    'handel', 'irregular', 'jagers', 'landenvormen', 'leenmannen', 'lichaam', 'meetlat', 'organisme', 'polis',
+    'race', 'rekenen', 'stad', 'stadsontwerp', 'standen', 'tekstdetective', 'tijdvakken', 'topografie', 'toren',
+    'uitverkoop', 'vergadering', 'vlaggen', 'vlakken', 'werkwoorden', 'zinsbouw', 'zwaard'
+  ];
+  var MAP = (function(){
+    try {
+      var s = document.currentScript || [].slice.call(document.scripts).filter(function(x){ return /(^|\/)spel\.js/.test(x.src); })[0];
+      if (s && s.src) return s.src.replace(/spel\.js.*$/, '');
+    } catch (e){}
+    return '';
+  })();
+  var geladen = {};
+  function laad(pad){
+    if (geladen[pad]) return geladen[pad];
+    geladen[pad] = new Promise(function(klaar, mis){
+      var s = document.createElement('script');
+      s.src = MAP + pad; s.onload = klaar;
+      s.onerror = function(){ delete geladen[pad]; mis(new Error('niet geladen: ' + pad)); };
+      document.head.appendChild(s);
+    });
+    return geladen[pad];
+  }
+  function heeftStappen(){ return MET_STAPPEN.indexOf(bestand) >= 0; }
+  /* welke: het kenmerk van een uitleg om meteen te openen (anders de kiezer) */
+  function stappen(welke){
+    if (!heeftStappen()) return Promise.resolve(false);
+    return laad('stappen.js').then(function(){ return laad('uitleg/' + bestand + '.js'); })
+      .then(function(){ return window.STAPPEN ? STAPPEN.open(bestand, naamVanSpel(), welke) : false; })
+      .catch(function(){ return false; });
+  }
 
   /* ---------- het uitlegpaneel ---------- */
   function uitleg(o){
@@ -61,7 +101,9 @@ window.SPEL = (function(){
         (o.doel ? '<div class="regel">' + IC.doel + '<span><b>Doel</b>' + schoon(o.doel) + '</span></div>' : '') +
         (o.tijd ? '<div class="regel">' + IC.tijd + '<span><b>Tijd</b>' + schoon(o.tijd) + '</span></div>' : '') +
         (o.bediening ? '<div class="regel">' + IC.hand + '<span><b>Bediening</b>' + schoon(o.bediening) + '</span></div>' : '') +
-        '<div class="knoppen"><button type="button" class="begrepen">Begrepen</button><button type="button" class="stil regels-knop">Alle regels</button></div>' +
+        '<div class="knoppen"><button type="button" class="begrepen">Begrepen</button>' +
+          (heeftStappen() ? '<button type="button" class="stil stappen-knop">' + IC.trap + 'Uitleg stap voor stap</button>' : '') +
+          '<button type="button" class="stil regels-knop">Alle regels</button></div>' +
         '<div class="meer"></div>' +
       '</div>';
     /* wat er al aan lange uitleg stond, gaat achter "Alle regels" */
@@ -79,15 +121,30 @@ window.SPEL = (function(){
     var knop = document.createElement('button');
     knop.type = 'button'; knop.className = 'uitlegknop';
     knop.innerHTML = IC.vraag + 'Hoe werkt het?';
+    /* ingeklapt staat de stap-voor-stapknop naast "Hoe werkt het?" */
+    var stapKnop = null;
+    if (heeftStappen()){
+      stapKnop = document.createElement('button');
+      stapKnop.type = 'button'; stapKnop.className = 'uitlegknop stapknop';
+      stapKnop.innerHTML = IC.trap + 'Uitleg stap voor stap';
+      stapKnop.addEventListener('click', function(){ stappen(); });
+      paneel.querySelector('.stappen-knop').addEventListener('click', function(){ stappen(); });
+    }
     function toon(open){
       paneel.hidden = !open; knop.hidden = open;
+      if (stapKnop) stapKnop.hidden = open;
     }
     paneel.querySelector('.begrepen').addEventListener('click', function(){ zet(sleutel, 1); toon(false); });
     knop.addEventListener('click', function(){ toon(true); });
     var na = start.querySelector('.lead');
-    if (na && na.parentNode === start){ na.insertAdjacentElement('afterend', knop); na.insertAdjacentElement('afterend', paneel); }
-    else { start.insertBefore(knop, start.firstChild); start.insertBefore(paneel, start.firstChild); }
+    if (na && na.parentNode === start){ if (stapKnop) na.insertAdjacentElement('afterend', stapKnop); na.insertAdjacentElement('afterend', knop); na.insertAdjacentElement('afterend', paneel); }
+    else { if (stapKnop) start.insertBefore(stapKnop, start.firstChild); start.insertBefore(knop, start.firstChild); start.insertBefore(paneel, start.firstChild); }
     toon(!gezien);
+    /* ?uitleg of ?uitleg=optellen in het adres: meteen open */
+    try {
+      var q = new URLSearchParams(location.search);
+      if (q.has('uitleg') && heeftStappen()) stappen(q.get('uitleg') || null);
+    } catch (e){}
     return { open:function(){ toon(true); }, dicht:function(){ toon(false); } };
   }
 
@@ -273,7 +330,7 @@ window.SPEL = (function(){
   schoonKlassementen();
 
   return {
-    raak: raak, uitleg:uitleg, einde:einde, bestand:bestand, naamMag:naamMag, schoonKlassementen:schoonKlassementen,
+    raak: raak, uitleg:uitleg, stappen:stappen, einde:einde, bestand:bestand, naamMag:naamMag, schoonKlassementen:schoonKlassementen,
     /* een naam of iets anders van de speler als tekst in de opmaak zetten;
        de klassementen van deze computer gebruiken hem */
     schoon: schoon };
