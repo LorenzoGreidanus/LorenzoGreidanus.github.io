@@ -593,7 +593,7 @@ var PER_RONDE = 10;
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
   function husselen(a){ a = a.slice(); for (var i = a.length - 1; i > 0; i--){ var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
 
-  var niveau = 2, onderdeel = '', rij = [], nr = 0, goed = 0, fout = 0, reeks = 0, besteReeks = 0;
+  var niveau = 2, onderdeel = '', rij = [], nr = 0, goed = 0, fout = 0, reeks = 0, besteReeks = 0, od = {};
   var gelegd = [], over = [], huidig = null, nagekeken = false, eersteKeer = true, foutLijst = [];
 
   /* ---------- keuzes ---------- */
@@ -622,7 +622,7 @@ var PER_RONDE = 10;
   /* ---------- de ronde ---------- */
   function begin(){
     rij = husselen(kiesZinnen()).slice(0, PER_RONDE);
-    nr = 0; goed = 0; fout = 0; reeks = 0; besteReeks = 0; foutLijst = [];
+    nr = 0; goed = 0; fout = 0; reeks = 0; besteReeks = 0; foutLijst = []; od = {};
     $('scherm-start').classList.add('hide'); $('scherm-einde').classList.add('hide');
     $('scherm-spel').classList.remove('hide'); $('stopBtn').classList.remove('hide');
     volgende();
@@ -670,6 +670,8 @@ var PER_RONDE = 10;
     if (over.length || nagekeken) return;
     /* hetzelfde woord op een andere plek is dezelfde zin: kijk naar wat er staat */
     var klopt = gelegd.every(function(x, i){ return x.w === huidig.w[i]; });
+    /* alleen de eerste poging telt, per soort zin */
+    if (eersteKeer) if (window.KLAS && KLAS.tel) KLAS.tel(od, (ONDERDELEN.filter(function(o){ return o.id === huidig.s; })[0] || { naam:'woordvolgorde' }).naam, klopt);
     nagekeken = true;
     var t = $('terug');
     if (klopt){
@@ -717,7 +719,7 @@ var PER_RONDE = 10;
     $('fouten').innerHTML = foutLijst.length ? '<p class="eyebrow">nog even nakijken</p>' + foutLijst.map(function(z){
       return '<div><b>' + schoon(z.w.join(' ')) + '</b><span>' + schoon(z.r) + '. ' + schoon(z.u) + '</span></div>';
     }).join('') : '';
-    SPEL.einde({ spel:'zinsbouw', reeks:besteReeks, goed:goed, compact:true, deelTekst:goed + ' van de ' + rij.length + ' goed', score:goed, label:'van de ' + rij.length + ' goed', max:rij.length,
+    SPEL.einde({ spel:'zinsbouw', vak:'eng', od:od, reeks:besteReeks, goed:goed, compact:true, deelTekst:goed + ' van de ' + rij.length + ' goed', score:goed, label:'van de ' + rij.length + ' goed', max:rij.length,
       ronde:goed, punten:goed * 10, niveau:['', 'bb', 'kgt', 'hv'][niveau], vak:'eng', sleutel:niveau + (onderdeel || 'alles') });
     scrollTo({ top:0, behavior:'auto' });
   }

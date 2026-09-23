@@ -336,7 +336,7 @@ var RACE = { start:60, erbij:4, eraf:6 };
 
   var SLEUTEL = 'werkwoorden-klassement-v1';
   var niveau = null, onderdeel = null, modus = null;
-  var rij = [], nr = 0, goed = 0, totaal = 0, fouten = [], punten = 0, reeks = 0, besteReeks = 0;
+  var rij = [], nr = 0, goed = 0, totaal = 0, fouten = [], punten = 0, reeks = 0, besteReeks = 0, od = {};
   var tijd = 0, loopt = false, laatsteTik = 0, bezig = false, opgeslagen = false;
   var huidig = null, volgorde = [], wachter = null;
 
@@ -428,7 +428,7 @@ var RACE = { start:60, erbij:4, eraf:6 };
 
   function start(){
     slim.reset(niveau.id);
-    goed = 0; totaal = 0; fouten = []; punten = 0; reeks = 0; besteReeks = 0;
+    goed = 0; totaal = 0; fouten = []; punten = 0; reeks = 0; besteReeks = 0; od = {};
     nr = 0; bezig = false; opgeslagen = false; volgorde = [];
     rij = husselen(selectie());
     tijd = RACE.start;
@@ -516,6 +516,8 @@ var RACE = { start:60, erbij:4, eraf:6 };
     if (bezig) return;
     bezig = true;
     totaal++;
+    /* per onderdeel: tegenwoordige tijd, verleden tijd, voltooid deelwoord, de d of t val */
+    if (window.KLAS && KLAS.tel) KLAS.tel(od, (ONDERDELEN.filter(function(o){ return o.id === huidig.s; })[0] || { naam:'werkwoordspelling' }).naam.toLowerCase(), klopt);
 
     if (klopt){
       goed++; reeks++;
@@ -606,7 +608,7 @@ var RACE = { start:60, erbij:4, eraf:6 };
       html = '<div class="rij"><span>Alles goed</span><b>geen missers</b></div>';
     }
     document.getElementById('eindOverzicht').innerHTML = html;
-    SPEL.einde({ spel:'werkwoorden', reeks:besteReeks, goed:goed, score: isRace() ? punten : goed, label: isRace() ? 'punten' : 'van ' + totaal + ' goed', max: isRace() ? null : totaal, ronde:goed, punten: isRace() ? punten : goed, sleutel: isRace() ? 'race' : 'oefen', vak:'ned' });
+    SPEL.einde({ spel:'werkwoorden', reeks:besteReeks, goed:goed, score: isRace() ? punten : goed, label: isRace() ? 'punten' : 'van ' + totaal + ' goed', max: isRace() ? null : totaal, ronde:goed, punten: isRace() ? punten : goed, sleutel: isRace() ? 'race' : 'oefen', vak:'ned', od:od });
 
     document.getElementById('naamvak').classList.toggle('hide', !isRace() || opgeslagen || totaal === 0);
     if (isRace() && !opgeslagen) document.getElementById('naamveld').value = '';

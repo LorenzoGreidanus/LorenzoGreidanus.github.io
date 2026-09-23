@@ -661,7 +661,7 @@ var PER_RONDE = 6;
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
   function husselaar(a){ a = a.slice(); for (var i = a.length - 1; i > 0; i--){ var j = Math.floor(Math.random() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
 
-  var niveau = 2, soort = '', rij = [], nr = 0, goed = 0, fout = 0, stap = 1, foutLijst = [], punten = 0;
+  var niveau = 2, soort = '', rij = [], nr = 0, goed = 0, fout = 0, stap = 1, foutLijst = [], punten = 0, od = {};
   /* het leerjaar: uit de link (?lj=34), anders uit het geheugen van de leeromgeving */
   var leerjaar = '12';
   try { var ljUit = /[?&]lj=(12|34)/.exec(location.search); leerjaar = ljUit ? ljUit[1] : (localStorage.getItem('lg-leerjaar') || '12'); } catch (e){}
@@ -770,6 +770,7 @@ var PER_RONDE = 6;
       if (bd === goedDoel) b.classList.add('juist'); else if (bd === id) b.classList.add('mis');
     });
     var t = $('terug');
+    if (window.KLAS && KLAS.tel) KLAS.tel(od, 'schrijfdoel', id === goedDoel);
     if (id === goedDoel){
       goed++; punten += 10;
       t.className = 'terugkoppeling goed';
@@ -792,6 +793,7 @@ var PER_RONDE = 6;
       if (bi === a.g) b.classList.add('juist'); else if (bi === i) b.classList.add('mis');
     });
     var t = $('terug');
+    if (window.KLAS && KLAS.tel) KLAS.tel(od, 'kernzin', i === a.g);
     if (i === a.g){
       goed++; punten += 10;
       t.className = 'terugkoppeling goed';
@@ -814,6 +816,7 @@ var PER_RONDE = 6;
     });
     if (!klopt) knop.classList.add('mis');
     var vb = VERBANDEN.filter(function(x){ return x.id === a.v; })[0], t = $('terug');
+    if (window.KLAS && KLAS.tel) KLAS.tel(od, 'tekstverbanden', klopt);
     if (klopt){
       goed++; punten += 10;
       t.className = 'terugkoppeling goed';
@@ -831,7 +834,7 @@ var PER_RONDE = 6;
   function begin(){
     rij = husselaar(passend()).slice(0, PER_RONDE);
     rij.forEach(function(a){ a._volgorde = null; a._doelen = null; });
-    nr = 0; goed = 0; fout = 0; punten = 0; stap = 1; foutLijst = [];
+    nr = 0; goed = 0; fout = 0; punten = 0; stap = 1; foutLijst = []; od = {};
     $('scherm-start').classList.add('hide'); $('scherm-einde').classList.add('hide');
     $('scherm-spel').classList.remove('hide'); $('stopBtn').classList.remove('hide');
     toonStap();
@@ -846,7 +849,7 @@ var PER_RONDE = 6;
     $('fouten').innerHTML = foutLijst.length ? '<p class="eyebrow">nog even nakijken</p>' + foutLijst.map(function(f){
       return '<div><b>' + schoon(f.v) + ': ' + schoon(f.j) + '</b><span>' + schoon(f.hoe) + '</span></div>';
     }).join('') : '';
-    SPEL.einde({ spel:'tekstdetective', goed:goed, compact:true, waarde:punten, label:'punten', deelTekst:punten + ' punten',
+    SPEL.einde({ spel:'tekstdetective', vak:'ned', od:od, goed:goed, compact:true, waarde:punten, label:'punten', deelTekst:punten + ' punten',
       max:gedaan * 10 || 1, ronde:goed, punten:punten, niveau:['', 'bb', 'kgt', 'hv'][niveau], vak:'ned', sleutel:niveau + (soort || 'alles') });
     scrollTo({ top:0, behavior:'auto' });
   }

@@ -335,6 +335,14 @@ td.getal{font-variant-numeric:tabular-nums;text-align:right}
 .rooster .cel{display:block;border-radius:9px;padding:6px 4px;text-align:center;font-weight:600;font-variant-numeric:tabular-nums;font-size:.86rem;line-height:1.1}
 .rooster .cel small{display:block;font-weight:400;font-size:.68rem;opacity:.8}
 .rooster .cel.g{background:#d7f1df;color:#155a2d}.rooster .cel.m{background:#fdebc8;color:#7a4a05}.rooster .cel.r{background:#fbd8d2;color:#8a2416}.rooster .cel.leeg{color:var(--muted);font-weight:400}
+.rooster .cel.beheerst{box-shadow:inset 0 0 0 2px #2f7d52}
+.samen .beh{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.samen .beh span{display:inline-block;border-radius:999px;padding:2px 9px;font-size:.78rem;font-weight:600}
+.samen .beh .b1{background:#d7f1df;color:#155a2d}.samen .beh .b2{background:#fdebc8;color:#7a4a05}.samen .beh .b3{background:#fbd8d2;color:#8a2416}
+.samen .behleeg{display:block;margin-top:6px;color:var(--muted);font-size:.8rem}
+.samen .behnog{display:block;margin-top:4px;color:var(--muted);font-size:.76rem}
+:root[data-theme="dark"] .samen .beh .b1{background:#1f4a30;color:#b8ecc8}:root[data-theme="dark"] .samen .beh .b2{background:#4d3a12;color:#ffd98a}:root[data-theme="dark"] .samen .beh .b3{background:#5a2320;color:#ffc4bb}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .samen .beh .b1{background:#1f4a30;color:#b8ecc8}:root:not([data-theme="light"]) .samen .beh .b2{background:#4d3a12;color:#ffd98a}:root:not([data-theme="light"]) .samen .beh .b3{background:#5a2320;color:#ffc4bb}}
 .rooster .cel.weinig{outline:1.5px dashed rgba(20,34,76,.2);outline-offset:-1.5px}
 .rooster tr.klas td{background:var(--kaart2);font-weight:600}
 .rooster tr.klas td.naam{background:var(--kaart2)}
@@ -513,12 +521,12 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
         <div class="chips" id="odStandChips"></div>
       </div>
       <div class="rooster" id="rooster"></div>
-      <div class="legenda" id="legenda"><span><i style="background:#d7f1df"></i>80% of meer goed</span><span><i style="background:#fdebc8"></i>50 tot 80%</span><span><i style="background:#fbd8d2"></i>onder de 50%</span><span>gestippeld: minder dan vijf vragen, dus nog weinig zeggend</span></div>
+      <div class="legenda" id="legenda"><span><i style="background:#d7f1df"></i>80% of meer goed</span><span><i style="background:#fdebc8"></i>50 tot 80%</span><span><i style="background:#fbd8d2"></i>onder de 50%</span><span>gestippeld: minder dan vijf vragen, dus nog weinig zeggend</span><span><b>\u2713</b> beheerst: 80% of meer goed over minstens tien vragen</span></div>
       <div id="vakSpellen"></div>
     </div>
 
     <div class="paneel" role="tabpanel" id="paneel-ll" aria-labelledby="tab-ll" hidden>
-      <p class="tip">Per leerling per spel: het beste potje, hoeveel potjes en of het de goede kant op gaat.</p>
+      <p class="tip">Per leerling eerst wat hij beheerst: 80% of meer goed over minstens tien vragen in een onderdeel. Bijna is 60 tot 80%, nog niet is minder. Houd de muis op een getal voor de onderdelen. Daaronder per spel het beste potje, hoeveel potjes en of het de goede kant op gaat.</p>
       <div class="samen" id="samen"></div>
     </div>
 
@@ -634,7 +642,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
         var od = {}, samen = 0;
         s.delen.forEach(function(d, di){
           if (r() > 0.85) return;
-          var gesteld = 3 + Math.floor(r() * 5), kans = Math.max(0.1, Math.min(0.95, sterk - di * 0.07 + (r() - 0.5) * 0.25)), goed = 0;
+          var gesteld = 6 + Math.floor(r() * 8), kans = Math.max(0.1, Math.min(0.95, sterk - di * 0.07 + (r() - 0.5) * 0.25)), goed = 0;
           for (var k = 0; k < gesteld; k++) if (r() < kans) goed++;
           od[d] = [goed, gesteld]; samen += goed;
         });
@@ -793,8 +801,9 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     lijst.forEach(function(r){ var p = per[r.naam] = per[r.naam] || {}; (p[r.spel] = p[r.spel] || []).push(r); if (r.av && (!avs[r.naam] || r.t > avs[r.naam].t)) avs[r.naam] = r; });
     avVan = function(n){ return avs[n] ? avs[n].av : ''; };
     var namen = Object.keys(per).sort(function(a, b){ return a.localeCompare(b, 'nl'); });
+    var beh = beheersing(lijst);
     $('samen').innerHTML = namen.length ? namen.map(function(n){
-      return '<div><b class="avrij">' + (window.AVATAR ? AVATAR.svg(n, 34, avVan(n)) : '') + '<span>' + schoon(n) + '</span></b>' + Object.keys(per[n]).map(function(sp){
+      return '<div><b class="avrij">' + (window.AVATAR ? AVATAR.svg(n, 34, avVan(n)) : '') + '<span>' + schoon(n) + '</span></b>' + behRegel(beh[n]) + Object.keys(per[n]).map(function(sp){
         var potjes = per[n][sp].slice().sort(function(a, b){ return a.t - b.t; }), m = maat(sp);
         var w = potjes.map(function(r){ return r[m.v] | 0; }), beste = Math.max.apply(null, w), laatste = potjes[potjes.length - 1];
         var trend = w.length >= 2 ? (w[w.length - 1] > w[0] ? ', stijgend' : w[w.length - 1] < w[0] ? ', dalend' : ', gelijk') : '';
@@ -828,9 +837,12 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     /* de vragenbank laadt na deze pagina; tot die er is niets onthouden */
     if (!g.length) return { groepen:{}, volgorde:{} };
     var uit = { groepen:{}, volgorde:{} };
+    /* eerst alle koppen van het vak, ook die zonder vragen in de bank, in hun volgorde */
+    ((window.BANK && BANK.koppen) ? BANK.koppen(vak) : []).forEach(function(k, ki){ uit.groepen[k.id] = { naam:k.naam, orde:ki }; });
     g.forEach(function(gr, gi){
-      uit.groepen[gr.id] = { naam: gr.naam || '', orde: gi };
-      gr.onderdelen.forEach(function(o, oi){ uit.volgorde[o.id] = gi * 100 + oi; });
+      if (!uit.groepen[gr.id]) uit.groepen[gr.id] = { naam: gr.naam || '', orde: 50 + gi };
+      var orde = uit.groepen[gr.id].orde;
+      gr.onderdelen.forEach(function(o, oi){ uit.volgorde[o.id] = orde * 100 + oi; });
     });
     return (indelingen[vak] = uit);
   }
@@ -874,10 +886,33 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     var kols = Object.keys(kol).sort(function(a, b){ return kol[a].orde - kol[b].orde || kol[a].naam.localeCompare(kol[b].naam, 'nl'); });
     return { kol:kol, kols:kols, per:per, klas:klas, vak:vak };
   }
+  /* beheerst: 80% of meer goed over minstens tien vragen */
+  var BEHEERST = 0.8, BIJNA = 0.6, GENOEG = 10;
+  function oordeel(c){ return !c || c[1] < GENOEG ? '' : c[0] / c[1] >= BEHEERST ? 'beheerst' : c[0] / c[1] >= BIJNA ? 'bijna' : 'nog'; }
   function cel(c){
     if (!c) return '<span class="cel leeg">–</span>';
-    var p = pct(c);
-    return '<span class="cel ' + kleurVan(p) + (c[1] < 5 ? ' weinig' : '') + '" title="' + c[0] + ' van ' + c[1] + ' goed">' + p + '%<small>' + c[0] + '/' + c[1] + '</small></span>';
+    var p = pct(c), o = oordeel(c);
+    return '<span class="cel ' + kleurVan(p) + (c[1] < 5 ? ' weinig' : '') + (o === 'beheerst' ? ' beheerst' : '') + '" title="' + c[0] + ' van ' + c[1] + ' goed' + (o === 'beheerst' ? ', beheerst' : '') + '">' +
+      (o === 'beheerst' ? '\u2713 ' : '') + p + '%<small>' + c[0] + '/' + c[1] + '</small></span>';
+  }
+  /* per leerling: welke onderdelen hij beheerst, bijna, en nog niet */
+  function beheersing(lijst){
+    var T = telOd(metOd(lijst), 'deel'), uit = {};
+    Object.keys(T.per).forEach(function(n){
+      var r = uit[n] = { beheerst:[], bijna:[], nog:[] };
+      Object.keys(T.per[n]).forEach(function(k){
+        var o = oordeel(T.per[n][k]); if (!o) return;
+        r[o].push(vakNaam(T.kol[k].vak) + ': ' + T.kol[k].naam);
+      });
+    });
+    return uit;
+  }
+  function behRegel(b){
+    if (!b || !(b.beheerst.length + b.bijna.length + b.nog.length)) return '<span class="behleeg">Nog te weinig vragen per onderdeel om iets te zeggen.</span>';
+    return '<span class="beh"><span class="b1" title="' + schoon(b.beheerst.join(', ')) + '">\u2713 ' + b.beheerst.length + ' beheerst</span>' +
+      '<span class="b2" title="' + schoon(b.bijna.join(', ')) + '">' + b.bijna.length + ' bijna</span>' +
+      '<span class="b3" title="' + schoon(b.nog.join(', ')) + '">' + b.nog.length + ' nog niet</span></span>' +
+      (b.nog.length ? '<small class="behnog">Nog niet: ' + schoon(b.nog.slice(0, 3).join('; ')) + (b.nog.length > 3 ? ' en nog ' + (b.nog.length - 3) : '') + '</small>' : '');
   }
   function metOd(lijst){ return lijst.filter(function(r){ return r.od && Object.keys(r.od).length; }); }
 

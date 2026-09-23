@@ -466,7 +466,7 @@ var PER_RONDE = 8;
   function onthoudNiveau(n){ try { localStorage.setItem('lg-niveau', ['', 'bb', 'kgt', 'hv'][n]); } catch (e){} }
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
 
-  var niveau = 2, soortId = '', nr = 0, goed = 0, fout = 0, reeks = 0, besteReeks = 0, foutLijst = [], huidig = null, beantwoord = false;
+  var niveau = 2, soortId = '', nr = 0, goed = 0, fout = 0, reeks = 0, besteReeks = 0, foutLijst = [], huidig = null, beantwoord = false, od = {};
 
   function magSoorten(){ return SOORTEN.filter(function(s){ return !s.niv || s.niv <= niveau; }); }
   function chips(id, lijst, nu, zet){
@@ -611,6 +611,8 @@ var PER_RONDE = 8;
       $('teller1').disabled = true; $('noemer1').disabled = true;
     }
     beantwoord = true;
+    /* per soort breuk: lezen, gelijk, optellen... */
+    if (window.KLAS && KLAS.tel) KLAS.tel(od, huidig.soort.naam, klopt);
     var t = $('terug');
     if (klopt){
       goed++; reeks++; besteReeks = Math.max(besteReeks, reeks);
@@ -631,7 +633,7 @@ var PER_RONDE = 8;
     $('mGoed').textContent = goed; $('mFout').textContent = fout; $('mReeks').textContent = reeks;
   }
   function begin(){
-    nr = 0; goed = 0; fout = 0; reeks = 0; besteReeks = 0; foutLijst = [];
+    nr = 0; goed = 0; fout = 0; reeks = 0; besteReeks = 0; foutLijst = []; od = {};
     $('scherm-start').classList.add('hide'); $('scherm-einde').classList.add('hide');
     $('scherm-spel').classList.remove('hide'); $('stopBtn').classList.remove('hide');
     nieuweOpgave();
@@ -646,7 +648,7 @@ var PER_RONDE = 8;
     $('fouten').innerHTML = foutLijst.length ? '<p class="eyebrow">nog even nakijken</p>' + foutLijst.map(function(f){
       return '<div><b>' + schoon(f.v) + ' ' + schoon(f.j) + '</b><span>' + schoon(f.hoe) + '</span></div>';
     }).join('') : '';
-    SPEL.einde({ spel:'breukenbakker', reeks:besteReeks, goed:goed, compact:true, score:goed, label:'van de ' + gedaan + ' goed', deelTekst:goed + ' van de ' + gedaan + ' goed',
+    SPEL.einde({ spel:'breukenbakker', vak:'reken', od:od, reeks:besteReeks, goed:goed, compact:true, score:goed, label:'van de ' + gedaan + ' goed', deelTekst:goed + ' van de ' + gedaan + ' goed',
       max:gedaan || 1, ronde:goed, punten:goed * 10, niveau:['', 'bb', 'kgt', 'hv'][niveau], vak:'reken', sleutel:niveau + (soortId || 'alles') });
     scrollTo({ top:0, behavior:'auto' });
   }

@@ -116,7 +116,7 @@ var GROEPEN = {
   bio:  [{id:'lichaam',naam:'Het lichaam'},{id:'cellen',naam:'Cellen en erfelijkheid'},{id:'natuur',naam:'Planten en ecologie'},{id:'examen',naam:'Examenstof'}],
   aard: [{id:'landen',naam:'Landen herkennen'},{id:'examen',naam:'Examenstof'}],
   burg: [{id:'staat',naam:'Democratie en rechtsstaat'},{id:'samen',naam:'Samenleven en media'},{id:'wereld',naam:'Europa en economie'},{id:'examen',naam:'Examenstof'}],
-  ges:  [{id:'tijdvakken',naam:'Tijdvakken'},{id:'examen',naam:'Examenstof'}]
+  ges:  [{id:'tijdvakken',naam:'Tijdvakken'},{id:'vaardig',naam:'Vaardigheden'},{id:'examen',naam:'Examenstof'}]
 };
 /* De groep van een onderdeel staat bij het onderdeel zelf (zie ONDERDELEN
    hierboven); voor de vakken die er later bij kwamen staat hij hier, zodat de
@@ -143,7 +143,23 @@ var IN_GROEP = {
 };
 /* de tijdvakken horen allemaal onder een kop, zonder dat ze los genoemd hoeven */
 TIJDVAKKEN.forEach(function(t){ IN_GROEP.ges[t.id] = 'tijdvakken'; });
-function groepVan(vak, o){ return o.groep || (IN_GROEP[vak] && IN_GROEP[vak][o.id]) || ''; }
+/* De spellen zonder vragenbank tellen onder hun eigen namen: "DHTE optellen
+   tot 1000", "korting uitrekenen", "topografie: Europa, landen". Die staan
+   niet los in de lijst hierboven; hun groep volgt uit hoe de naam begint. */
+var IN_PATROON = {
+  reken: [[/^DHTE /, 'getallen'], [/./, 'verhoudingen']],
+  ned:   [[/^(tegenwoordige tijd|verleden tijd|voltooid deelwoord|de d of t val)$/, 'spelling'], [/^(kernzin|schrijfdoel)$/, 'lezen']],
+  eng:   [[/^irregular /, 'werkwoorden'], [/./, 'grammatica']],
+  aard:  [[/^topografie/, 'landen']],
+  ges:   [[/^werken met bronnen$/, 'vaardig']]
+};
+function groepVan(vak, o){
+  var g = o.groep || (IN_GROEP[vak] && IN_GROEP[vak][o.id]);
+  if (g) return g;
+  var p = IN_PATROON[vak] || [];
+  for (var i = 0; i < p.length; i++) if (p[i][0].test(String(o.id || ''))) return p[i][1];
+  return '';
+}
 /* De onderdelen van een vak, op groep. Een vak zonder groepen geeft een lijst
    met een naamloze groep, zodat een kiezer altijd dezelfde vorm krijgt. */
 /* De kiezers tekenen hier allemaal hetzelfde rijtje uit: een kop, dan de
@@ -274,6 +290,8 @@ var BANK = (function(){
            /* de onderdelen van een vak, op kop; zie GROEPEN verderop */
            groepen: function(v){ return groepen(v); },
            /* bij welke kop hoort dit onderdeel; ook voor namen die niet in de lijst staan */
+           /* alle koppen van een vak, ook die nog geen onderdeel uit de vragenbank hebben */
+           koppen: function(v){ return (GROEPEN[v] || []).slice(); },
            groepVan: function(v, id){ var o = (ONDERDELEN[v] || []).filter(function(x){ return x.id === id; })[0] || { id: id }; return groepVan(v, o); },
            deelItems: function(v){ return deelItems(v); } };
 })();

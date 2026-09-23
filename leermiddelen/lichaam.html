@@ -366,7 +366,10 @@ var MODUSSEN = [
   document.getElementById('jaar').textContent = new Date().getFullYear();
 
   var modus = 'wijs', niveau = 'kgt', gekozen = [];
-  var rij = [], nu = null, goed = 0, fout = 0, gemist = [], alGefaald = false;
+  var rij = [], nu = null, goed = 0, fout = 0, gemist = [], alGefaald = false, od = {};
+  /* elk stelsel hoort bij een onderdeel van biologie, zodat het klasoverzicht het bij elkaar zet */
+  var STELSELDEEL = { spijsvertering:'vertering', ademhaling:'bloed', bloedsomloop:'bloed', zenuwstelsel:'zintuigen', zintuigen:'zintuigen' };
+  function stelselDeel(s){ return STELSELDEEL[s] || 'organen'; }
   var beurt = 'wijs';
 
   function rang(){ var n = NIVEAUS.filter(function(x){ return x.id === niveau; })[0]; return n ? n.rang : 2; }
@@ -601,6 +604,7 @@ var MODUSSEN = [
     if (!nu || nu.af) return;
     var o = ORGANEN.filter(function(x){ return x.id === nu.id; })[0];
     if (id === nu.id){
+      if (window.KLAS && KLAS.tel) KLAS.tel(od, stelselDeel(o.stelsel), !alGefaald);
       if (!alGefaald) goed++; 
       nu.af = true;
       toonUitleg(o, true);
@@ -622,6 +626,7 @@ var MODUSSEN = [
     nu.af = true;
     var o = ORGANEN.filter(function(x){ return x.id === nu.id; })[0];
     var juist = id === nu.id;
+    if (window.KLAS && KLAS.tel) KLAS.tel(od, stelselDeel(o.stelsel), juist);
     if (juist) goed++; else { fout++; gemist.push(o.naam); }
     Array.prototype.forEach.call(document.getElementById('opties').querySelectorAll('.optie'), function(b){
       b.disabled = true;
@@ -637,7 +642,7 @@ var MODUSSEN = [
     var lijst = mee();
     lootLetters();
     rij = husl(lijst.map(function(o){ return o.id; }));
-    goed = 0; fout = 0; gemist = [];
+    goed = 0; fout = 0; gemist = []; od = {};
     document.getElementById('mGoed').textContent = 0;
     document.getElementById('mFout').textContent = 0;
     document.getElementById('scherm-start').classList.add('hide');
@@ -673,7 +678,7 @@ var MODUSSEN = [
         }).join('')
       : '';
     bewaar(deel);
-    SPEL.einde({ spel:'lichaam', goed:goed, score:deel + '%', waarde:deel, label:'in een keer goed', max:100, ronde:goed, punten:deel, sleutel:niveau });
+    SPEL.einde({ spel:'lichaam', vak:'bio', od:od, goed:goed, score:deel + '%', waarde:deel, label:'in een keer goed', max:100, ronde:goed, punten:deel, sleutel:niveau });
     scrollTo({ top:0, behavior:'auto' });
   }
 

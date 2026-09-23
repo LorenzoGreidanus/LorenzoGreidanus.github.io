@@ -484,7 +484,7 @@ function maakOpties(goed, decimalen){
   document.getElementById('jaar').textContent = new Date().getFullYear();
 
   var SLEUTEL = 'rekenrace-klassement-v1';
-  var bereik = null, tempo = null, soort = null, tijd = 0, punten = 0, goed = 0, fout = 0, reeks = 0, besteReeks = 0,
+  var bereik = null, tempo = null, soort = null, tijd = 0, punten = 0, goed = 0, fout = 0, reeks = 0, besteReeks = 0, od = {},
       huidige = null, bezig = false, laatsteTik = 0, opgeslagen = false;
   var gekozenTafels = [], tafelsGeraakt = false;
 
@@ -656,7 +656,7 @@ function maakOpties(goed, decimalen){
 
   /* ---------- de race ---------- */
   function start(){
-    tijd = tempo.start; punten = 0; goed = 0; fout = 0; reeks = 0; besteReeks = 0;
+    tijd = tempo.start; punten = 0; goed = 0; fout = 0; reeks = 0; besteReeks = 0; od = {};
     bezig = true; opgeslagen = false;
     elStart.classList.add('hide'); elEinde.classList.add('hide'); elSpel.classList.remove('hide');
     document.getElementById('naamvak').classList.remove('hide');
@@ -705,9 +705,20 @@ function maakOpties(goed, decimalen){
       : 'Vijf goed op rij levert dubbele punten op.';
   }
 
+  function rekenDeel(s){
+    s = String(s || '');
+    if (/^tafel/.test(s)) return 'tafels';
+    if (/komma|^keer |^delen door/.test(s)) return 'komma';
+    if (s === 'procenten') return 'procent';
+    if (s === 'breuken') return 'breuk';
+    if (s === 'negatieve getallen') return 'negatief';
+    return 'hoofd';
+  }
   function antwoord(gekozen, knop){
     if (!bezig) return;
     var klopt = dicht(gekozen, huidige.antwoord);
+    /* per soort som, onder de onderdelen van rekenen: tafels, hoofdrekenen, kommagetallen... */
+    if (window.KLAS && KLAS.tel) KLAS.tel(od, rekenDeel(huidige.soort), klopt);
     Array.prototype.forEach.call(document.getElementById('opties').children, function(c){ c.disabled = true; });
 
     if (klopt){
@@ -758,7 +769,7 @@ function maakOpties(goed, decimalen){
     document.getElementById('eindTekst').textContent =
       'Je maakte ' + totaal + ' sommen, waarvan ' + goed + ' goed (' + deel + ' procent). ' +
       'Je langste reeks was ' + besteReeks + '.';
-    SPEL.einde({ spel:'rekenen', reeks:besteReeks, goed:goed, score:punten, label:'punten', ronde:goed, punten:punten, sleutel: tempo && tempo.id, vak:'reken' });
+    SPEL.einde({ spel:'rekenen', reeks:besteReeks, goed:goed, score:punten, label:'punten', ronde:goed, punten:punten, sleutel: tempo && tempo.id, vak:'reken', od:od });
     document.getElementById('samenvatting').innerHTML =
       '<div class="sam"><i>Goed</i><b>' + goed + '</b></div>' +
       '<div class="sam"><i>Fout</i><b>' + fout + '</b></div>' +
