@@ -178,6 +178,8 @@ window.STRIJD = (function(){
     Array.prototype.forEach.call(sluier.querySelectorAll('button'), function(k){
       k.addEventListener('click', function(){
         if (k.getAttribute('data-start')){ k.disabled = true; stuur({ t:'start' }); return; }
+        /* opnieuw meedoen na het kruisje van de docent: de pagina met dezelfde kamer opnieuw laden */
+        if (k.getAttribute('data-opnieuw')){ location.reload(); return; }
         if (k.getAttribute('data-stijl')){ mijnStijl = k.getAttribute('data-stijl'); if (hooks && hooks.lobby) hooks.lobby.kies(mijnStijl); stuurLobby(); sluierTekst(wachtTekst(maten.length + 1), wachtKlas()); return; }
         if (k.getAttribute('data-klaar')){ mijnKlaar = !mijnKlaar; stuurLobby(); sluierTekst(wachtTekst(maten.length + 1), wachtKlas()); return; }
         vertrekNu();
@@ -424,8 +426,7 @@ window.STRIJD = (function(){
       try { if (ws) ws.close(1000, 'eruit'); } catch (x){} ws = null;
       clearInterval(telKlok); afStop();
       hudTekst('Uit de kamer', 'je docent heeft je eruit gehaald', true);
-      sluierTekst('<b>Je docent heeft je uit kamer ' + code + ' gehaald.</b><p>Je telt niet meer mee in dit potje. Vraag je docent als dat een vergissing was.</p><button type="button">Terug</button>');
-      try { localStorage.removeItem('lg-laatste-kamer'); } catch (e){}
+      sluierTekst('<b>Je docent heeft je uit kamer ' + code + ' gehaald.</b><p>Was dat een vergissing? Dan kun je gewoon opnieuw meedoen.</p><button type="button" data-opnieuw="1">Opnieuw meedoen</button> <button type="button">Terug</button>');
       return;
     }
     if (m.t === 'welkom'){

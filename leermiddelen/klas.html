@@ -252,6 +252,7 @@ td.getal{font-variant-numeric:tabular-nums;text-align:right}
   .rooster th{min-width:76px}
 }
 .knop.gevaar{color:#a8371f;border-color:rgba(168,55,31,.4)}
+#naamLink{display:inline-flex;align-items:center;margin-left:10px;vertical-align:middle}
 :root[data-theme="dark"] .knop.gevaar{color:#ffb3a6;border-color:rgba(255,179,166,.4)}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .knop.gevaar{color:#ffb3a6;border-color:rgba(255,179,166,.4)}}
 /* ---------- op papier ----------
@@ -439,6 +440,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       <div>
         <p class="eyebrow" id="ovNaam">klas</p>
         <span class="code" id="ovCode">····</span>
+        <button class="linkknop" id="naamLink" type="button">Naam wijzigen</button>
       </div>
       <div class="rij knopjes">
         <button class="knop stil klein" id="ververs" type="button">Vernieuwen</button>
@@ -548,8 +550,13 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
         <p class="tip" id="keuzeStatus"></p>
       </div>
       <div class="stap opdrachtvak">
-        <b>De klascode zelf</b>
-        <p class="tip">Vergeten haalt de klas alleen van dit apparaat. Opheffen wist de code en alle uitslagen op de server, en dat is niet terug te draaien.</p>
+        <b>De klas zelf</b>
+        <p class="tip">De naam zie jij en zien je leerlingen in de leeromgeving; de code blijft dezelfde. Vergeten haalt de klas alleen van dit apparaat. Opheffen wist de code en alle uitslagen op de server, en dat is niet terug te draaien.</p>
+        <div class="rij" style="margin-top:10px">
+          <input id="naamNieuw" class="veld" maxlength="40" aria-label="Naam van de klas" placeholder="bijv. B3" style="flex:1;min-width:180px;max-width:320px">
+          <button class="knop klein" id="naamZet" type="button">Naam opslaan</button>
+        </div>
+        <p class="fout-melding" id="naamFout" role="status" aria-live="polite"></p>
         <div class="rij" style="margin-top:10px">
           <button class="knop stil klein" id="vergeet" type="button">Vergeet op dit apparaat</button>
           <button class="knop stil klein gevaar" id="opheffen" type="button">Klascode opheffen</button>
@@ -683,6 +690,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     if (klok){ clearInterval(klok); klok = null; }
     if (!huidig) return;
     $('ovNaam').textContent = huidig.naam || 'klas';
+    $('naamNieuw').value = huidig.naam || ''; $('naamFout').textContent = '';
     $('ovCode').textContent = huidig.code;
     leesPeriode(); spelFilter = ''; vakFilter = ''; odStand = '';
     periodeOpen(false);
@@ -698,6 +706,8 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       .then(function(x){
         if (!x.ok){ $('ovUit').textContent = x.j.fout || 'Ophalen lukte niet.'; data = null; teken(); return; }
         data = x.j;
+        /* heeft de klas op de server een andere naam (gewijzigd op een ander apparaat), dan die */
+        if (data.naam && huidig && data.naam !== huidig.naam) zetNaamHier(data.naam);
         $('ovUit').textContent = data.resultaten.length + (data.resultaten.length === 1 ? ' potje gemeld' : ' potjes gemeld') + ' · geldig tot je de code opheft · ververst vanzelf';
         teken();
       })
@@ -1270,6 +1280,36 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       .catch(function(){ $('maakBtn').disabled = false; $('maakFout').textContent = 'Geen verbinding met de server.'; });
   });
   $('ververs').addEventListener('click', haal);
+  /* ---------- de naam van de klas ---------- */
+  function zetNaamHier(naam){
+    if (!huidig) return;
+    huidig.naam = naam;
+    klassen.forEach(function(k){ if (k.code === huidig.code) k.naam = naam; });
+    bewaar(); tekenKlassen();
+    $('ovNaam').textContent = naam;
+    if (document.activeElement !== $('naamNieuw')) $('naamNieuw').value = naam;
+    if (data) data.naam = naam;
+  }
+  $('naamLink').addEventListener('click', function(){ zetTab('inst'); $('naamNieuw').focus(); $('naamNieuw').select(); });
+  $('naamNieuw').addEventListener('keydown', function(e){ if (e && e.key === 'Enter') $('naamZet').click(); });
+  $('naamZet').addEventListener('click', function(){
+    var naam = $('naamNieuw').value.trim();
+    if (!huidig) return;
+    if (naam.length < 2){ $('naamFout').textContent = 'Geef je klas een naam van minstens twee tekens, bijvoorbeeld B3.'; return; }
+    if (naam === huidig.naam){ $('naamFout').textContent = 'Zo heet de klas al.'; return; }
+    if (DEMO){ $('naamFout').textContent = 'Niet in de demo.'; return; }
+    var knop = $('naamZet'); knop.disabled = true; $('naamFout').textContent = 'Opslaan…';
+    fetch('/api/klas/' + huidig.code + '/naam', { method:'POST', headers:{ 'content-type':'application/json' },
+      body: JSON.stringify({ sleutel: huidig.sleutel, naam: naam }) })
+      .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+      .then(function(x){
+        knop.disabled = false;
+        if (!x.ok){ $('naamFout').textContent = x.j.fout || 'Opslaan lukte niet.'; return; }
+        zetNaamHier(x.j.naam || naam);
+        $('naamFout').textContent = 'Opgeslagen: de klas heet nu ' + (x.j.naam || naam) + '.';
+      })
+      .catch(function(){ knop.disabled = false; $('naamFout').textContent = 'Geen verbinding met de server.'; });
+  });
   $('vergeet').addEventListener('click', function(){
     if (!huidig || !confirm('Deze klas van dit apparaat vergeten? De klascode blijft bestaan, maar zonder de sleutel zijn de uitslagen niet meer op te halen.')) return;
     klassen = klassen.filter(function(k){ return k.code !== huidig.code; }); bewaar();

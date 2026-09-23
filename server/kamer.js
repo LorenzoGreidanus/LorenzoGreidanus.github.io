@@ -143,6 +143,7 @@ export class Kamer extends DurableObject {
       if (url.pathname === "/opdracht" && req.method === "POST") return await this.opdracht(await req.json());
       if (url.pathname === "/instelling" && req.method === "POST") return await this.instelling(await req.json());
       if (url.pathname === "/periodes" && req.method === "POST") return await this.periodes(await req.json());
+      if (url.pathname === "/naam" && req.method === "POST") return await this.klasNaam(await req.json());
       if (url.pathname === "/hoi" && req.method === "POST") return await this.hoi(await req.json());
       if (url.pathname === "/leerlingweg" && req.method === "POST") return await this.leerlingWeg(await req.json());
       if (url.pathname === "/mijn") return this.mijn(url.searchParams.get("sid"));
@@ -211,9 +212,6 @@ export class Kamer extends DurableObject {
       sid = "host";
     } else {
       if (!/^[A-Za-z0-9_-]{8,40}$/.test(sid)) return json({ fout: "geen geldig kenmerk" }, 400);
-      /* door de docent uit de kamer gehaald: dan niet stilletjes weer binnen na
-         een herlaadbeurt, maar dezelfde boodschap nog een keer */
-      if (this.stand.eruit && this.stand.eruit[sid]) return this.eruitVerbinding();
       if (this.stand.fase === "einde") return json({ fout: "dit potje is al afgelopen" }, 410);
       const vol = this.stand.duel ? this.samenMax() : MAX_SPELERS;
       if (!this.stand.spelers[sid] && Object.keys(this.stand.spelers).length >= vol) return json({ fout: this.stand.duel ? (vol === 2 ? "dit duel heeft al twee spelers" : "deze kamer zit vol: vier spelers") : "de kamer zit vol" }, 409);
@@ -295,9 +293,6 @@ export class Kamer extends DurableObject {
     const wegSid = wie.rol === "host" && m.t === "weg" ? this.sidVanPid(m.sid) : null;
     if (wegSid){
       delete this.stand.spelers[wegSid];
-      /* onthouden, zodat een herlaadbeurt hem er niet weer in zet */
-      this.stand.eruit = this.stand.eruit || {};
-      if (Object.keys(this.stand.eruit).length < 200) this.stand.eruit[wegSid] = 1;
       /* eerst zeggen wat er gebeurt, dan pas ophangen: aan een gesloten
          verbinding alleen zag de pagina niet dat hij eruit was */
       this.ctx.getWebSockets(wegSid).forEach(s => { this.stuur(s, { t: "eruit" }); try { s.close(1000, "verwijderd door de docent"); } catch (e){} });
@@ -388,16 +383,7 @@ export class Kamer extends DurableObject {
     this.zegSpelers();
     if (this.strijd) this.planStand();
   }
-  /* Een verbinding van iemand die de docent uit de kamer haalde: we nemen hem
-     aan, zeggen het, en hangen op. Een geweigerde verbinding ziet een pagina
-     alleen als "geen verbinding" en dan blijft hij het proberen. */
-  eruitVerbinding(){
-    const pair = new WebSocketPair();
-    const [client, server] = Object.values(pair);
-    server.accept();
-    try { server.send(JSON.stringify({ t: "eruit" })); server.close(1000, "verwijderd door de docent"); } catch (e){}
-    return new Response(null, { status: 101, webSocket: client });
-  }
+
 
   /* ======================================================================
      De rollenkamer: het bord stuurt kaarten (naar een speler of naar
@@ -1094,6 +1080,18 @@ export class Kamer extends DurableObject {
     this.stand.periodes = uit;
     await this.bewaar();
     return json({ ok: true, periodes: uit });
+  }
+  /* Een klas een andere naam geven, bijvoorbeeld van B2 naar B3 als het
+     schooljaar om is. De naam staat hier, bij de klas; de pagina van de
+     docent neemt hem over zodra hij de klas opent, ook op zijn andere apparaten. */
+  async klasNaam(inz){
+    if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
+    if (!inz || inz.sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
+    const naam = schoon(inz.naam, 40).trim();
+    if (naam.length < 2) return json({ fout: "geef je klas een naam van minstens twee tekens" }, 400);
+    this.stand.naam = naam;
+    await this.bewaar();
+    return json({ ok: true, naam });
   }
   /* heeft een leerling (op kenmerk) de opdracht gehaald? Zonder sleutel: alleen zijn eigen stand. */
   mijn(sid){
