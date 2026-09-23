@@ -376,7 +376,8 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
     s.onmessage = function(e){ var m; try { m = JSON.parse(e.data); } catch (x){ return; } opBericht(m); };
     s.onclose = function(e){
       if (ws !== s) return; ws = null; if (dicht) return;
-      if (e.code === 1000 && /gesloten|afgelopen|verwijderd/.test(e.reason || '')){ dicht = true; opStatus(e.reason); return; }
+      if (e.code === 1000 && /verwijderd/.test(e.reason || '')){ dicht = true; opBericht({ t:'eruit' }); return; }
+      if (e.code === 1000 && /gesloten|afgelopen/.test(e.reason || '')){ dicht = true; opStatus(e.reason); return; }
       pogingen++; opStatus('Opnieuw verbinden…');
       setTimeout(function(){ verbind(code, query, opBericht, opStatus); }, Math.min(8000, 800 * pogingen));
     };
@@ -621,6 +622,13 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
     $('pTeam').innerHTML = t ? '<span style="color:' + t.kleur + '">team ' + t.naam + '</span>' + (pTeams.length ? ' · ' + pTeams.map(function(x){ return x.naam + ' ' + (x.punten || 0); }).join(', ') : '') : '';
   }
   function spelerBericht(m){
+    if (m.t === 'eruit'){
+      dicht = true;
+      $('pOver').classList.remove('hide');
+      $('pOver').innerHTML = '<div><b>Je bent uit het spel gehaald</b><p>Je docent heeft je uit deze kamer gehaald.</p><p><a href="tekenslag.html">Terug</a></p></div>';
+      pTekenaar.zet(false); $('pGereedschap').classList.add('hide'); $('pRaadRij').classList.add('hide');
+      return;
+    }
     if (m.t === 'welkom'){ mijnPid = m.jij; return; }
     if (m.t === 'einde'){ $('pOver').classList.remove('hide'); if (!huidig || huidig.k !== 'einde') $('pOver').innerHTML = '<div><b>Afgelopen</b><p>Kijk naar het bord.</p></div>'; pTekenaar.zet(false); $('pGereedschap').classList.add('hide'); $('pRaadRij').classList.add('hide'); return; }
     var d = m.d; if (!d || typeof d !== 'object') return;

@@ -274,7 +274,7 @@ function maak(opties){
       /* naast elkaar rond het midden */
       s.x = ARENA.b / 2 + (samen ? (i - (W.spelers.length - 1) / 2) * 70 : 0); s.y = ARENA.h / 2;
       s.raak = 0; s.klok = 0; s.mesKlok = 0; s.dash = 0; s.dashKlok = 0;
-      if (P.neer){ P.neer = false; P.hp = Math.max(1, Math.round(P.maxHp / 2)); }
+      if (P.neer && !P.weg){ P.neer = false; P.hp = Math.max(1, Math.round(P.maxHp / 2)); }
       P.klaar = false; P.inv = { dx:0, dy:0 };
     });
     /* in een baasronde komen er minder gewone fouten bij: de baas is het werk */
@@ -312,7 +312,7 @@ function maak(opties){
     if (samen){ var elk = Math.floor(rest / W.spelers.length), over = rest - elk * W.spelers.length; W.spelers.forEach(function(P, i){ P.munten += elk + (i < over ? 1 : 0); }); }
     else W.spelers[0].munten += rest;
     W.munt = []; W.rondeUit = 0; W.raapTeller = -1;
-    W.spelers.forEach(function(P){ P.klaar = false; });
+    W.spelers.forEach(function(P){ P.klaar = !!P.weg; });
     W.fase = 'vragen';
     zeg('vragen', W.ronde);
   }
@@ -320,8 +320,25 @@ function maak(opties){
   W.klaar = function(i){
     var P = W.spelers[i]; if (!P || W.fase === 'ronde' || W.fase === 'einde') return false;
     P.klaar = true;
-    if (W.spelers.every(function(Q){ return Q.klaar; })){ W.volgendeRonde(); return true; }
+    if (W.spelers.every(function(Q){ return Q.klaar || Q.weg; })){ W.volgendeRonde(); return true; }
     return false;
+  };
+  /* Een speler gaat weg: zijn tabblad dicht, of hij koos zelf om te stoppen.
+     Hij ligt vanaf nu neer en telt als klaar, zodat de anderen niet op hem
+     blijven wachten. Waren de anderen al klaar, dan begint de ronde meteen. */
+  W.vertrek = function(i){
+    var P = W.spelers[i]; if (!P || P.weg) return;
+    P.weg = true; P.neer = true; P.klaar = true; P.inv = { dx:0, dy:0 };
+    if (W.fase === 'einde') return;
+    W.cijfers.push({ x:P.sp.x, y:P.sp.y - 40, tekst:P.naam + ' is weg', leven:1.6, kleur:'#14224C' });
+    if (W.spelers.every(function(Q){ return Q.neer; })){ einde(); return; }
+    if (W.fase === 'vragen' && W.spelers.every(function(Q){ return Q.klaar || Q.weg; })) W.volgendeRonde();
+  };
+  /* Terug van weggeweest: hij ligt neer tot de volgende ronde begint. */
+  W.terug = function(i){
+    var P = W.spelers[i]; if (!P || !P.weg) return;
+    P.weg = false;
+    if (W.fase === 'vragen') P.klaar = false;
   };
 
   /* ---------- de fouten ---------- */
@@ -1000,7 +1017,7 @@ function maak(opties){
   function inpak(P){
     var s2 = P.sp;
     return [r1(s2.x), r1(s2.y), r2(s2.mikt), r2(s2.zwaai), r2(s2.raak), r2(s2.dash), r2(s2.dx), r2(s2.dy), s2.loopt ? 1 : 0, r2(s2.flits),
-            Math.round(P.hp), Math.round(P.maxHp), P.stats.harnas, P.neer ? 1 : 0, Math.round(P.stats.bereik), r2(s2.dashKlok), s2.wapen === 'boog' ? 1 : 0,
+            Math.round(P.hp), Math.round(P.maxHp), P.stats.harnas, P.weg ? 2 : P.neer ? 1 : 0, Math.round(P.stats.bereik), r2(s2.dashKlok), s2.wapen === 'boog' ? 1 : 0,
             P.munten, P.geveld, P.inNr, P.klaar ? 1 : 0, s2.blok ? 1 : 0, r1(s2.blokTijd), s2.crit ? 1 : 0, P.stijl || ''];
   }
   W.pakket = function(){

@@ -57,6 +57,10 @@ const KLAS_SPELLEN = { race: "Vragenrace", klasquiz: "Klasquiz", dag: "Dagelijks
   /* Deze meldden hun uitslag wel, maar stonden hier niet, dus de klas kreeg ze
      nooit te zien: de melding werd geweigerd met "onbekend spel". */
   dhte: "Het DHTE-schema", vlakken: "Vlakken herkennen", organisme: "Bouw het organisme" };
+/* Hoe lang de kamer wacht voor hij iemand die wegviel ook echt weghaalt. In de
+   lobby kort: herladen duurt een paar tellen. In de arena langer: een
+   telefoon die even geen bereik heeft, hoort er niet meteen uit te liggen. */
+const LOBBY_WACHT = 8000, ARENA_WACHT = 20000;
 /* Hoeveel periodes een docent mag instellen, en hoe lang een naam mag zijn. */
 const PERIODES_MAX = 12, PERIODE_NAAM = 40;
 
@@ -207,6 +211,9 @@ export class Kamer extends DurableObject {
       sid = "host";
     } else {
       if (!/^[A-Za-z0-9_-]{8,40}$/.test(sid)) return json({ fout: "geen geldig kenmerk" }, 400);
+      /* door de docent uit de kamer gehaald: dan niet stilletjes weer binnen na
+         een herlaadbeurt, maar dezelfde boodschap nog een keer */
+      if (this.stand.eruit && this.stand.eruit[sid]) return this.eruitVerbinding();
       if (this.stand.fase === "einde") return json({ fout: "dit potje is al afgelopen" }, 410);
       const vol = this.stand.duel ? this.samenMax() : MAX_SPELERS;
       if (!this.stand.spelers[sid] && Object.keys(this.stand.spelers).length >= vol) return json({ fout: this.stand.duel ? (vol === 2 ? "dit duel heeft al twee spelers" : "deze kamer zit vol: vier spelers") : "de kamer zit vol" }, 409);
@@ -219,7 +226,14 @@ export class Kamer extends DurableObject {
     server.serializeAttachment({ rol, sid });
     if (rol === "speler"){
       const bestaand = this.stand.spelers[sid];
-      if (bestaand){ bestaand.naam = naam; bestaand.av = av; }
+      if (bestaand){ bestaand.naam = naam; bestaand.av = av; delete bestaand.weg; }
+      /* terug binnen de wachttijd: dan hoeft hij niet meer weg */
+      if (this.wegKlok && this.wegKlok[sid]){ clearTimeout(this.wegKlok[sid]); delete this.wegKlok[sid]; }
+      /* terug in een arena die al loopt: zijn held staat de volgende ronde weer op */
+      if (bestaand && this.motor && this.motorSpel === "zwaard" && this.motor.terug){
+        const mi = this.motorSids.indexOf(sid);
+        if (mi >= 0) this.motor.terug(mi);
+      }
       else this.stand.spelers[sid] = this.strijd
         ? { naam, av, pid: sleutelMaken(4), ronde: 0, gehaald: 0, leven: 0, punten: 0, af: false, aanvallen: 0, sinds: Date.now() }
         : this.rollen ? { naam, av, pid: sleutelMaken(4), kaart: null, sinds: Date.now() }
@@ -281,11 +295,17 @@ export class Kamer extends DurableObject {
     const wegSid = wie.rol === "host" && m.t === "weg" ? this.sidVanPid(m.sid) : null;
     if (wegSid){
       delete this.stand.spelers[wegSid];
-      this.ctx.getWebSockets(wegSid).forEach(s => { try { s.close(1000, "verwijderd door de docent"); } catch (e){} });
+      /* onthouden, zodat een herlaadbeurt hem er niet weer in zet */
+      this.stand.eruit = this.stand.eruit || {};
+      if (Object.keys(this.stand.eruit).length < 200) this.stand.eruit[wegSid] = 1;
+      /* eerst zeggen wat er gebeurt, dan pas ophangen: aan een gesloten
+         verbinding alleen zag de pagina niet dat hij eruit was */
+      this.ctx.getWebSockets(wegSid).forEach(s => { this.stuur(s, { t: "eruit" }); try { s.close(1000, "verwijderd door de docent"); } catch (e){} });
       await this.bewaar(); this.zegSpelers();
       if (this.strijd) this.planStand();
       return;
     }
+    if (wie.rol === "speler" && m.t === "vertrek") return this.vertrek(wie.sid);
     if (this.strijd) return this.strijdBericht(ws, wie, m);
     if (this.rollen) return this.rollenBericht(ws, wie, m);
     if (wie.rol === "host"){
@@ -310,7 +330,74 @@ export class Kamer extends DurableObject {
       if (geteld.n >= geteld.van && geteld.van > 0) return this.sluitVraag();
     }
   }
-  async webSocketClose(ws){ this.zegSpelers(); if (this.strijd) this.planStand(); }
+  async webSocketClose(ws){
+    this.zegSpelers(); if (this.strijd) this.planStand();
+    const wie = ws.deserializeAttachment() || {};
+    if (wie.rol === "speler" && wie.sid) this.planVertrek(wie.sid);
+  }
+  /* Een verbinding viel weg. Komt hij niet op tijd terug, dan halen we hem
+     weg: uit de lobby helemaal, uit een lopende arena als speler die weg is.
+     Een klasstrijd of quiz die al loopt laten we staan: daar hoort zijn
+     uitslag bij de klas. */
+  planVertrek(sid){
+    const st = this.stand;
+    if (!st || st.spel === "klas" || !st.spelers[sid]) return;
+    const inLobby = st.fase === "lobby" || st.fase === "aftellen";
+    const inArena = this.strijd && st.fase === "bezig" && this.motor && this.motorSpel === "zwaard" && this.motorSids.indexOf(sid) >= 0;
+    if (!inLobby && !inArena) return;
+    this.wegKlok = this.wegKlok || {};
+    clearTimeout(this.wegKlok[sid]);
+    this.wegKlok[sid] = setTimeout(() => {
+      delete this.wegKlok[sid];
+      if (this.aanwezig(sid)) return;
+      this.vertrek(sid).catch(e => console.error("vertrek", e && e.stack || e));
+    }, inLobby ? LOBBY_WACHT : ARENA_WACHT);
+  }
+  /* Weggaan. In de lobby ben je dan echt weg en komt je plek vrij; ging je
+     weg terwijl je de kamer had gemaakt, dan neemt de volgende het over. Zat
+     je al in een arena, dan telt je held niet meer mee en verdwijnt je naam,
+     maar kun je met dezelfde code terug. */
+  async vertrek(sid){
+    const st = this.stand;
+    if (!st || !st.spelers[sid] || st.fase === "einde") return;
+    if (st.fase === "lobby" || st.fase === "aftellen"){
+      delete st.spelers[sid];
+      if (this.strijd && st.duel){
+        const rest = Object.keys(st.spelers);
+        if (st.gastheer === sid) st.gastheer = rest[0] || null;
+        /* niemand meer over: de kamer is klaar */
+        if (!rest.length){ await this.strijdKlaar(); return; }
+        /* aan het aftellen en nu te weinig, of niet meer allemaal klaar: terug naar de lobby.
+           Het alarm kijkt of er nog afgeteld wordt, dus dat doet dan niets. */
+        if (st.fase === "aftellen" && (rest.length < 2 || !this.lobbyKlaar())) st.fase = "lobby";
+        await this.bewaar();
+        this.iedereen({ t: "lobby", fase: st.fase, gastheer: st.gastheer ? this.pid(st.gastheer) : null,
+          spelers: this.strijdLijst().map(r => ({ sid: r.sid, naam: r.naam, av: r.av, stijl: r.stijl, klaar: r.klaar, aan: r.aan })) });
+        this.planStand();
+      } else await this.bewaar();
+      this.zegSpelers();
+      return;
+    }
+    const sp = st.spelers[sid];
+    if (this.strijd && this.motor && this.motorSpel === "zwaard" && this.motor.vertrek){
+      const mi = this.motorSids.indexOf(sid);
+      if (mi >= 0){ this.motor.vertrek(mi); this.motorZend(); }
+    }
+    sp.weg = true;
+    await this.bewaar();
+    this.zegSpelers();
+    if (this.strijd) this.planStand();
+  }
+  /* Een verbinding van iemand die de docent uit de kamer haalde: we nemen hem
+     aan, zeggen het, en hangen op. Een geweigerde verbinding ziet een pagina
+     alleen als "geen verbinding" en dan blijft hij het proberen. */
+  eruitVerbinding(){
+    const pair = new WebSocketPair();
+    const [client, server] = Object.values(pair);
+    server.accept();
+    try { server.send(JSON.stringify({ t: "eruit" })); server.close(1000, "verwijderd door de docent"); } catch (e){}
+    return new Response(null, { status: 101, webSocket: client });
+  }
 
   /* ======================================================================
      De rollenkamer: het bord stuurt kaarten (naar een speler of naar
@@ -456,6 +543,7 @@ export class Kamer extends DurableObject {
     if (st.game === "zwaard"){
       this.motorStart();
       const W = this.motor; if (!W) return false;
+      if (W.vertrek) this.motorSids.forEach((s, i) => { if (st.spelers[s] && st.spelers[s].weg) W.vertrek(i); });
       /* Zaten de spelers tussen de rondes (vragen, winkel)? Dan daar verder, niet met een nieuwe ronde: anders slaan ze de vragen over. */
       const tussen = Object.keys(st.spelers).some(s => st.spelers[s].fase === "tussen" && (st.spelers[s].ronde | 0) >= ronde);
       if (tussen){ W.ronde = ronde; W.fase = "vragen"; W.spelers.forEach(P => { P.klaar = false; }); }
@@ -633,8 +721,13 @@ export class Kamer extends DurableObject {
     /* In een duel mag een speler die alleen wacht de kamer sluiten. Wie al
        speelt niet meer: die kon anders vlak voor zijn val op stop drukken en
        zo de uitslag vastzetten terwijl hij voorstond. */
-    if (m.t === "stop" && st.duel && st.fase !== "einde" &&
-        (st.fase === "lobby" || Object.keys(st.spelers).length <= 1)) return this.strijdKlaar();
+    if (m.t === "stop" && st.duel && st.fase !== "einde"){
+      /* Een oudere pagina stuurt stop als je in de lobby weggaat. Zijn er nog
+         anderen, dan ga alleen jij weg; vroeger sloot dat de kamer voor
+         iedereen en kon niemand meer terug. */
+      if ((st.fase === "lobby" || st.fase === "aftellen") && Object.keys(st.spelers).length > 1) return this.vertrek(wie.sid);
+      if (st.fase === "lobby" || Object.keys(st.spelers).length <= 1) return this.strijdKlaar();
+    }
     /* samen met meer: de maker start zodra er minstens twee zijn */
     if (m.t === "start" && st.duel && st.fase === "lobby" && wie.sid === st.gastheer && Object.keys(st.spelers).length >= 2 && this.lobbyKlaar()) return this.duelAftellen();
     /* de lobby van Zwaardvechter samen: een stijl kiezen en klaar melden; vol en allemaal klaar begint het vanzelf */
@@ -739,7 +832,7 @@ export class Kamer extends DurableObject {
     return Object.keys(st.spelers).map(sid => {
       const sp = st.spelers[sid];
       return { sid: sp.pid, naam: sp.naam, av: sp.av || "", ronde: sp.ronde, gehaald: sp.gehaald, leven: sp.leven, punten: sp.punten,
-               af: !!sp.af, aanvallen: sp.aanvallen || 0, aan: this.aanwezig(sid), stijl: sp.stijl || "", klaar: !!sp.klaar };
+               af: !!sp.af, aanvallen: sp.aanvallen || 0, aan: this.aanwezig(sid), stijl: sp.stijl || "", klaar: !!sp.klaar, weg: !!sp.weg };
     }).sort((a, b) => (this.stand.duel && a.af !== b.af) ? (a.af ? 1 : -1)   /* in een duel wint wie overeind blijft */
         : (b.gehaald - a.gehaald || b.punten - a.punten || (a.af === b.af ? 0 : a.af ? 1 : -1) || a.naam.localeCompare(b.naam)))
       .map((r, i) => Object.assign(r, { rang: i + 1 }));
@@ -752,7 +845,7 @@ export class Kamer extends DurableObject {
     const pid = this.pid(sid);
     const mij = lijst.filter(r => r.sid === pid)[0];
     const tegen = this.stand.duel ? (lijst.filter(r => r.sid !== pid)[0] || null) : null;
-    const maten = this.stand.duel ? lijst.filter(r => r.sid !== pid).map(r => ({ sid: r.sid, naam: r.naam, av: r.av || "", ronde: r.ronde, leven: r.leven, af: r.af, aan: r.aan, stijl: r.stijl, klaar: r.klaar })) : undefined;
+    const maten = this.stand.duel ? lijst.filter(r => r.sid !== pid && !r.weg).map(r => ({ sid: r.sid, naam: r.naam, av: r.av || "", ronde: r.ronde, leven: r.leven, af: r.af, aan: r.aan, stijl: r.stijl, klaar: r.klaar })) : undefined;
     /* Wie af is krijgt de lijst met wie er nog speelt, zodat hij kan kiezen
        naar wie zijn fouten gaan. Wie nog speelt heeft die lijst niet nodig en
        krijgt hem dus ook niet. */

@@ -180,7 +180,7 @@ window.STRIJD = (function(){
         if (k.getAttribute('data-start')){ k.disabled = true; stuur({ t:'start' }); return; }
         if (k.getAttribute('data-stijl')){ mijnStijl = k.getAttribute('data-stijl'); if (hooks && hooks.lobby) hooks.lobby.kies(mijnStijl); stuurLobby(); sluierTekst(wachtTekst(maten.length + 1), wachtKlas()); return; }
         if (k.getAttribute('data-klaar')){ mijnKlaar = !mijnKlaar; stuurLobby(); sluierTekst(wachtTekst(maten.length + 1), wachtKlas()); return; }
-        stuur({ t:'stop' }); location.href = location.pathname;
+        vertrekNu();
       });
     });
   }
@@ -319,7 +319,8 @@ window.STRIJD = (function(){
       if (ws !== s) return;
       ws = null;
       if (dicht) return;
-      if (e.code === 1000 && /gesloten|afgelopen|verwijderd|nieuwe kamer|twee spelers/.test(e.reason || '')){ hudTekst('Samen spelen', e.reason, true); sluierTekst('<b>' + schoon(e.reason) + '</b><button type="button">Terug</button>'); dicht = true; return; }
+      if (e.code === 1000 && /verwijderd/.test(e.reason || '')){ bericht({ t:'eruit' }); return; }
+      if (e.code === 1000 && /gesloten|afgelopen|nieuwe kamer|twee spelers/.test(e.reason || '')){ hudTekst('Samen spelen', e.reason, true); sluierTekst('<b>' + schoon(e.reason) + '</b><button type="button">Terug</button>'); dicht = true; return; }
       pogingen++;
       hudTekst('Kamer ' + code, 'verbinding kwijt, opnieuw proberen…', true);
       setTimeout(open, Math.min(8000, 600 * pogingen));
@@ -327,6 +328,28 @@ window.STRIJD = (function(){
   }
   function stuur(obj){ if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
   setInterval(function(){ if (ws && ws.readyState === 1) ws.send('ping'); }, 25000);
+
+  /* Weggaan uit de kamer. Eerst zeggen dat je gaat, dan pas ophangen en
+     naar het startscherm: een bericht dat vlak voor het wegnavigeren wordt
+     verstuurd, komt anders niet altijd aan. De kamer blijft open voor de
+     anderen, en zolang het potje loopt kun je met dezelfde code terug. */
+  function zonderKamer(){
+    var q = location.search.replace(/^\?/, '').split('&').filter(function(x){ return x && !/^kamer=/.test(x); }).join('&');
+    return location.pathname + (q ? '?' + q : '');
+  }
+  function vertrekNu(){
+    var weg = function(){ location.href = zonderKamer(); };
+    if (!ws || ws.readyState !== 1){ dicht = true; weg(); return; }
+    stuur({ t:'vertrek' });
+    dicht = true;
+    var s = ws;
+    setTimeout(function(){ try { s.close(1000, 'weg'); } catch (e){} weg(); }, 180);
+  }
+  /* de laatste kamer onthouden, zodat de code er nog staat als je terug wilt */
+  function onthoudKamer(){ try { localStorage.setItem('lg-laatste-kamer', JSON.stringify({ code:code, t:Date.now() })); } catch (e){} }
+  function laatsteKamer(){
+    try { var k = JSON.parse(localStorage.getItem('lg-laatste-kamer') || 'null'); return k && k.code && Date.now() - k.t < 3 * 3600000 ? k.code : ''; } catch (e){ return ''; }
+  }
 
   /* Het lobbyscherm: een kaart per speler met zijn gezichtje, zijn klasse en
      of hij klaar staat, plus de plekken die nog vrij zijn. Daaronder kies je
@@ -394,7 +417,17 @@ window.STRIJD = (function(){
     return '<b>Wacht tot de docent start</b><p>Je doet mee als <strong>' + schoon(naam) + '</strong>' + (aantal ? ', met ' + (aantal - 1) + ' ' + (aantal === 2 ? 'ander' : 'anderen') : '') + '. Zodra het bord op start drukt, begint het bij iedereen tegelijk.</p>';
   }
   function bericht(m){
+    /* de docent haalde je uit de kamer: niet opnieuw verbinden, en zeggen wat er gebeurde */
+    if (m.t === 'eruit'){
+      dicht = true; klaarMet = true;
+      clearInterval(telKlok); afStop();
+      hudTekst('Uit de kamer', 'je docent heeft je eruit gehaald', true);
+      sluierTekst('<b>Je docent heeft je uit kamer ' + code + ' gehaald.</b><p>Je telt niet meer mee in dit potje. Vraag je docent als dat een vergissing was.</p><button type="button">Terug</button>');
+      try { localStorage.removeItem('lg-laatste-kamer'); } catch (e){}
+      return;
+    }
     if (m.t === 'welkom'){
+      if (m.spel === 'strijd') onthoudKamer();
       if (m.spel !== 'strijd'){ hudTekst('Samen spelen', 'deze code hoort bij een ander spel', true); sluierTekst('<b>Deze code hoort bij een ander spel.</b><button type="button">Terug</button>'); return; }
       duel = !!m.duel; gastheer = m.gastheer || null; if (m.max) maxSamen = m.max;
       if (m.jij) mijnPid = m.jij;
@@ -414,6 +447,9 @@ window.STRIJD = (function(){
     }
     if (m.t === 'lobby'){
       maten = (m.spelers || []).filter(function(r){ return r.sid !== mijnPid; });
+      /* ging de maker weg, dan beheert een ander de kamer; en wie aan het aftellen was maar nu te weinig heeft, wacht weer */
+      if (m.gastheer !== undefined) gastheer = m.gastheer;
+      if (m.fase === 'lobby') clearInterval(telKlok);
       if (!gestart) sluierTekst(wachtTekst(maten.length + 1), wachtKlas());
       return;
     }
@@ -569,7 +605,13 @@ window.STRIJD = (function(){
       })
       .catch(function(){ knop.disabled = false; fout.textContent = 'Geen verbinding met de server.'; });
     });
-    document.getElementById('duelCode').addEventListener('keydown', function(e){ if (e.key === 'Enter') document.getElementById('duelDoe').click(); });
+    document.getElementById('duelCode').addEventListener('keydown', function(e){ if (e && e.key === 'Enter') document.getElementById('duelDoe').click(); });
+    var vorige = laatsteKamer();
+    if (vorige){
+      document.getElementById('duelCode').value = vorige;
+      document.getElementById('duelDoe').textContent = 'Terug naar ' + vorige;
+      document.getElementById('duelCode').addEventListener('input', function(){ document.getElementById('duelDoe').textContent = 'Doe mee met een code'; });
+    }
   }
 
   /* ======================================================================
@@ -716,6 +758,8 @@ window.STRIJD = (function(){
       /* wie af is mag blijven oefenen en zijn goede antwoorden doorsturen */
       afStart();
     },
+    /* de knop Opnieuw in een spel: in een kamer betekent dat weggaan */
+    vertrek: function(){ if (!actief) return false; vertrekNu(); return true; },
     duelBlok: duelBlok,
     klassement: klassement,
     knoei: knoei,

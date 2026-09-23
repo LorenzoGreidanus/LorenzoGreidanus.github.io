@@ -504,7 +504,8 @@ Frans Hals"></textarea>
       ws = null;
       if (dicht) return;
       /* een nette afsluiting door de kamer: niet blijven proberen */
-      if (e.code === 1000 && /gesloten|afgelopen|verwijderd|nieuwe kamer/.test(e.reason || '')){
+      if (e.code === 1000 && /verwijderd/.test(e.reason || '')){ dicht = true; opBericht({ t:'eruit' }); return; }
+      if (e.code === 1000 && /gesloten|afgelopen|nieuwe kamer/.test(e.reason || '')){
         zegStatus(e.reason); dicht = true; return;
       }
       wsPogingen++;
@@ -976,6 +977,14 @@ Frans Hals"></textarea>
     verbind({ code:code, query:'rol=speler&sid=' + encodeURIComponent(sid()) + '&naam=' + encodeURIComponent(naam) + '&av=' + encodeURIComponent(window.PROFIEL ? PROFIEL.avatar() : '') }, spelerBericht);
   }
   function spelerBericht(m){
+    /* de docent haalde je uit de quiz: het eindscherm, met een knop terug */
+    if (m.t === 'eruit'){
+      dicht = true; stopKlok();
+      spelerScherm('p-einde');
+      $('pEindeTekst').textContent = 'Je docent heeft je uit de quiz gehaald';
+      $('pEindScore').textContent = '-'; $('pEindRang').textContent = '-';
+      return;
+    }
     if (m.t === 'welkom'){
       if (m.naam && m.naam !== speler.naam){ speler.naam = m.naam; $('pNaam').textContent = m.naam; }
       if (m.fase === 'lobby') spelerScherm('p-wacht');

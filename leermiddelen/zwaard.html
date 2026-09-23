@@ -1012,7 +1012,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
              maatNaam:'', maatAv:'' };
   var maat = null;   /* de ander: { naam, av, sp, stats:{ bereik, harnas }, hp, maxHp, neer } (de eerste maat, voor teksten) */
   var maten = {};    /* alle anderen, op hun nummer in de motor: { naam, av, sp, stats, hp, maxHp, neer, klaar } */
-  function alleMaten(){ return Object.keys(maten).map(function(k){ return maten[k]; }); }
+  function alleMaten(){ return Object.keys(maten).map(function(k){ return maten[k]; }).filter(function(m){ return !m.weg; }); }
   /* een naam als tekst in de opmaak; deze namen komen van je maten */
   function hschoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
   function matenNaam(lijst){ var n = lijst.map(function(m){ return m.naam; }); return n.length <= 1 ? (n[0] || 'je maat') : n.slice(0, -1).join(', ') + ' en ' + n[n.length - 1]; }
@@ -1647,7 +1647,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
         if (!maat) maat = m2;
       }
       zetDoel(m2.sp, hijA[0], hijA[1], nu); uitpak(m2.sp, hijA);
-      m2.hp = hijA[10]; m2.maxHp = hijA[11]; m2.stats.harnas = hijA[12]; m2.neer = !!hijA[13]; m2.stats.bereik = hijA[14]; m2.klaar = !!hijA[20];
+      m2.hp = hijA[10]; m2.maxHp = hijA[11]; m2.stats.harnas = hijA[12]; m2.neer = !!hijA[13]; m2.weg = hijA[13] === 2; m2.stats.bereik = hijA[14]; m2.klaar = !!hijA[20];
     }
     co.maatKlaar = alleMaten().length > 0 && wieNietKlaar().length === 0;
     if (fase !== 'ronde') return;
@@ -2359,6 +2359,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     scrollTo({ top:0, behavior:'smooth' });
   });
   document.getElementById('opnieuwBtn').addEventListener('click', function(){
+    /* in een kamer liep het potje door terwijl jij op het startscherm stond, en terug kon je dan niet meer */
+    if (window.STRIJD && STRIJD.actief){ if (confirm('Wil je de kamer verlaten? De anderen spelen door, en zolang het potje loopt kom je met dezelfde code terug.')) STRIJD.vertrek(); return; }
     loopt = false; fase = 'ronde'; pauze = false;
     document.getElementById('pauzeBtn').classList.add('hide');
     document.getElementById('scherm-spel').classList.add('hide'); document.getElementById('scherm-einde').classList.add('hide');
