@@ -467,6 +467,14 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
 .opdrachtkaart .klaar{color:#d7f1df;font-weight:600}
 .opdrachtkaart .nog{color:#FFE9A0}
 .opdrachtkaart .knop{justify-self:start;margin-top:6px;background:#fff;color:#204ECF;border-radius:999px;padding:7px 16px;min-height:44px;display:inline-flex;align-items:center;font-weight:600;text-decoration:none}
+/* meer opdrachten onder elkaar in dezelfde kaart, met een dunne lijn ertussen */
+.opdrachtkaart .opstuk{display:grid;gap:4px}
+.opdrachtkaart .opstuk + .opstuk{border-top:1px solid rgba(255,255,255,.28);padding-top:12px;margin-top:8px}
+.opdrachtkaart .opstuk.af{opacity:.82}
+/* het klasdoel: een balk die samen vol moet */
+.opdrachtkaart .doelbalk{height:12px;border-radius:999px;background:rgba(255,255,255,.22);overflow:hidden;margin:4px 0 2px}
+.opdrachtkaart .doelbalk i{display:block;height:100%;border-radius:999px;background:#FFE9A0}
+.opdrachtkaart .doelbalk.vol i{background:#d7f1df}
 </style>
 <link rel="stylesheet" href="basis.css">
 <link rel="stylesheet" href="iconen.css">
@@ -1397,15 +1405,36 @@ var SPELLEN = [
     var vak = document.getElementById('opdrachtKaart');
     if (!vak) return;
     function klaar(){ if (window.LESVAKBIJ) LESVAKBIJ(); }
-    var o = j && j.opdracht;
-    if (!o || !OP_SPEL[o.spel]){ vak.classList.add('hide'); klaar(); return; }
-    var sp = OP_SPEL[o.spel], verlopen = o.tot < Date.now(), maat = o.deel ? 'goed' : o.spel === 'race' ? 'goed' : 'rondes';
-    var link = sp[1] + '?vak=' + encodeURIComponent(o.vak) + (o.deel ? '&deel=' + encodeURIComponent(o.deel) : '');
-    vak.innerHTML = '<p class="eyebrow">opdracht van je docent</p>' +
-      '<b>' + schoon(sp[0]) + ', ' + schoon(OP_VAK[o.vak] || o.vak) + (o.deel ? ', ' + schoon(o.deelNaam || deelNaam(o.vak, o.deel)) : '') + ': minstens ' + o.min + ' ' + maat + '</b>' +
-      '<span>' + (verlopen ? 'De tijd was tot ' : 'Tot ') + new Date(o.tot).toLocaleDateString('nl-NL', { weekday:'long', day:'numeric', month:'long' }) + '.' + (o.tekst ? ' ' + schoon(o.tekst) : '') + '</span>' +
-      (j.gehaald ? '<span class="klaar">Gehaald ✓ Je beste: ' + j.beste + ' ' + maat + '.</span>' : '<span class="nog">' + (j.beste ? 'Je beste tot nu toe: ' + j.beste + ' van ' + o.min + '. ' : '') + (verlopen ? 'Verlopen.' : 'Nog te doen.') + '</span>') +
-      '<a class="knop" href="' + link + '">' + (j.gehaald ? 'Nog een keer' : 'Aan de slag') + '</a>';
+    /* een oudere server stuurt nog een losse opdracht, met gehaald en beste ernaast */
+    var lijst = (j && j.opdrachten) || (j && j.opdracht ? [Object.assign({ gehaald: j.gehaald, beste: j.beste }, j.opdracht)] : []);
+    lijst = lijst.filter(function(o){ return OP_SPEL[o.spel]; });
+    /* eerst wat nog moet, dan wat gehaald is, en verlopen achteraan */
+    var nu = Date.now();
+    function rang(o){ return o.gehaald ? 1 : o.tot < nu ? 2 : 0; }
+    lijst.sort(function(a, b){ return rang(a) - rang(b) || a.tot - b.tot; });
+    var doel = j && j.klasdoel;
+    if (!lijst.length && !doel){ vak.classList.add('hide'); vak.innerHTML = ''; klaar(); return; }
+    var html = '';
+    if (lijst.length) html += '<p class="eyebrow">' + (lijst.length > 1 ? lijst.length + ' opdrachten' : 'opdracht') + ' van je docent</p>';
+    html += lijst.map(function(o){
+      var sp = OP_SPEL[o.spel], verlopen = o.tot < nu, maat = o.deel ? 'goed' : o.spel === 'race' ? 'goed' : 'rondes';
+      var link = sp[1] + '?vak=' + encodeURIComponent(o.vak) + (o.deel ? '&deel=' + encodeURIComponent(o.deel) : '');
+      return '<div class="opstuk' + (o.gehaald || verlopen ? ' af' : '') + '">' +
+        '<b>' + schoon(sp[0]) + ', ' + schoon(OP_VAK[o.vak] || o.vak) + (o.deel ? ', ' + schoon(o.deelNaam || deelNaam(o.vak, o.deel)) : '') + ': minstens ' + o.min + ' ' + maat + '</b>' +
+        '<span>' + (verlopen ? 'De tijd was tot ' : 'Tot ') + new Date(o.tot).toLocaleDateString('nl-NL', { weekday:'long', day:'numeric', month:'long' }) + '.' + (o.tekst ? ' ' + schoon(o.tekst) : '') + '</span>' +
+        (o.gehaald ? '<span class="klaar">Gehaald ✓ Je beste: ' + o.beste + ' ' + maat + '.</span>' : '<span class="nog">' + (o.beste ? 'Je beste tot nu toe: ' + o.beste + ' van ' + o.min + '. ' : '') + (verlopen ? 'Verlopen.' : 'Nog te doen.') + '</span>') +
+        '<a class="knop" href="' + link + '">' + (o.gehaald ? 'Nog een keer' : 'Aan de slag') + '</a></div>';
+    }).join('');
+    /* het klasdoel: samen zoveel goede antwoorden deze week */
+    if (doel){
+      var pr = Math.min(100, Math.round(100 * doel.stand / doel.doel)), vol = doel.stand >= doel.doel;
+      html += '<div class="opstuk"><p class="eyebrow">klasdoel deze week</p>' +
+        '<b>Samen ' + doel.doel + ' goede antwoorden</b>' +
+        '<div class="doelbalk' + (vol ? ' vol' : '') + '" role="progressbar" aria-valuemin="0" aria-valuemax="' + doel.doel + '" aria-valuenow="' + Math.min(doel.stand, doel.doel) + '" aria-label="Klasdoel"><i style="width:' + pr + '%"></i></div>' +
+        '<span' + (vol ? ' class="klaar"' : '') + '>' + (vol ? 'Gehaald ✓ De klas staat op ' + doel.stand + '.' : 'De klas staat op ' + doel.stand + ', nog ' + (doel.doel - doel.stand) + ' te gaan.') +
+        (doel.jij ? ' Jij deed er ' + doel.jij + ' van.' : ' Speel een potje om mee te helpen.') + '</span></div>';
+    }
+    vak.innerHTML = html;
     vak.classList.remove('hide');
     klaar();
   }

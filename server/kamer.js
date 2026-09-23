@@ -52,6 +52,23 @@ function maatVoor(r, o){
   return r.ronde | 0;
 }
 function haaltOpdracht(r, o){ return maatVoor(r, o) >= o.min; }                        /* hoogstens zoveel gemelde potjes per klas */
+/* hoogstens zoveel opdrachten tegelijk */
+const OPDRACHTEN_MAX = 5;
+/* Het begin van deze week: maandag 0:00, Nederlandse tijd bij benadering
+   (UTC plus een uur; in de zomer valt maandag een uur eerder, dat is goed genoeg). */
+function weekBegin(nu){
+  const d = new Date(nu + 3600000);
+  const dag = (d.getUTCDay() + 6) % 7;
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - dag) - 3600000;
+}
+/* hoeveel goede antwoorden een potje oplevert voor het klasdoel */
+function goedVan(r){
+  if (r.od && typeof r.od === "object"){
+    let n = 0; for (const k of Object.keys(r.od)){ const w = r.od[k]; if (Array.isArray(w)) n += w[0] | 0; }
+    if (n) return n;
+  }
+  return Math.min(r.ronde | 0, 250);
+}
 /* spellen zonder kamer die wel bij een klas melden */
 const KLAS_SPELLEN = { race: "Vragenrace", klasquiz: "Klasquiz", dag: "Dagelijkse uitdaging", fouten: "Oefen je fouten", rekenen: "Rekenrace", balans: "De balans", werkwoorden: "Werkwoordrace", irregular: "Irregular verbs", vlaggen: "Vlaggen", landenvormen: "Landenvormen", topografie: "Topografie", lichaam: "Het lichaam", tijdvakken: "Tijdvakken sorteren", bronnenlab: "Bronnenlab", jagers: "Blijven of doorlopen", feodalisme: "Feodalisme", leenmannen: "Verdeel je rijk", stad: "Bouw je stad", handel: "De handelsroute", vergadering: "De vergadering", zinsbouw: "Zinsbouw", tekstdetective: "De tekstdetective", uitverkoop: "De uitverkoop", breukenbakker: "De breukenbakker",
   /* Deze meldden hun uitslag wel, maar stonden hier niet, dus de klas kreeg ze
@@ -144,6 +161,7 @@ export class Kamer extends DurableObject {
       if (url.pathname === "/instelling" && req.method === "POST") return await this.instelling(await req.json());
       if (url.pathname === "/periodes" && req.method === "POST") return await this.periodes(await req.json());
       if (url.pathname === "/naam" && req.method === "POST") return await this.klasNaam(await req.json());
+      if (url.pathname === "/echt" && req.method === "POST") return await this.echteNamen(await req.json());
       if (url.pathname === "/hoi" && req.method === "POST") return await this.hoi(await req.json());
       if (url.pathname === "/leerlingweg" && req.method === "POST") return await this.leerlingWeg(await req.json());
       if (url.pathname === "/mijn") return this.mijn(url.searchParams.get("sid"));
@@ -1036,20 +1054,39 @@ export class Kamer extends DurableObject {
   }
   /* De opdracht van de docent: een spel, een vak, eventueel een onderdeel, een minimum en een einddatum.
      Leerlingen zien hem in de leeromgeving; wie hem haalt staat in het klasoverzicht aangevinkt. */
+  /* de opdrachten van deze klas, ook als ze er nog als een losse opdracht staan */
+  opdrachtLijst(){
+    const st = this.stand;
+    if (!Array.isArray(st.opdrachten)){
+      st.opdrachten = st.opdracht ? [Object.assign({ id: "o1" }, st.opdracht)] : [];
+      delete st.opdracht;
+    }
+    return st.opdrachten;
+  }
   async opdracht(inz){
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
     if (!inz || inz.sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
+    const lijst = this.opdrachtLijst();
+    /* een weghalen */
+    if (inz.weg){
+      this.stand.opdrachten = lijst.filter(x => x.id !== String(inz.weg));
+      await this.bewaar();
+      return json({ ok: true, opdrachten: this.stand.opdrachten });
+    }
     const o = inz.opdracht;
-    if (!o){ delete this.stand.opdracht; await this.bewaar(); return json({ ok: true, opdracht: null }); }
+    /* een oudere pagina haalt met null alles weg */
+    if (!o){ this.stand.opdrachten = []; await this.bewaar(); return json({ ok: true, opdracht: null, opdrachten: [] }); }
+    if (lijst.length >= OPDRACHTEN_MAX) return json({ fout: "er staan al " + OPDRACHTEN_MAX + " opdrachten; haal er eerst een weg" }, 400);
     const spel = String(o.spel || ""), vak = String(o.vak || "").replace(/[^a-z]/g, "").slice(0, 8), deel = schoon(o.deel, 40);
     if (!OPDRACHT_SPELLEN[spel]) return json({ fout: "dit spel kan geen opdracht zijn" }, 400);
     if (!vak) return json({ fout: "kies een vak" }, 400);
     const min = getal(o.min, 250), tot = getal(o.tot, 4e12);
     if (min < 1) return json({ fout: "het minimum is minstens 1" }, 400);
     if (tot < Date.now() - 3600000 || tot > Date.now() + 120 * 86400000) return json({ fout: "kies een datum binnen vier maanden" }, 400);
-    this.stand.opdracht = { spel, vak, deel, deelNaam: schoon(o.deelNaam, 60), min, tot, tekst: schoon(o.tekst, 140), sinds: Date.now() };
+    const nieuw = { id: sleutelMaken(3), spel, vak, deel, deelNaam: schoon(o.deelNaam, 60), min, tot, tekst: schoon(o.tekst, 140), sinds: Date.now() };
+    lijst.push(nieuw);
     await this.bewaar();
-    return json({ ok: true, opdracht: this.stand.opdracht });
+    return json({ ok: true, opdracht: nieuw, opdrachten: lijst });
   }
   /* De instellingen van een klas: welke spellen de leerlingen zien, en of de lesmodus aanstaat.
      Leeg lijstje betekent: alles mag. In de lesmodus ziet een gekoppelde leerling alleen die spellen. */
@@ -1058,8 +1095,13 @@ export class Kamer extends DurableObject {
     if (!inz || inz.sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
     if (Array.isArray(inz.spellen)) this.stand.spellen = inz.spellen.slice(0, 60).map(x => schoon(x, 30).replace(/[^a-z0-9-]/g, "")).filter(Boolean);
     if (typeof inz.lesmodus === "boolean") this.stand.lesmodus = inz.lesmodus;
+    /* het klasdoel: zoveel goede antwoorden deze week, samen; 0 zet het uit */
+    if (inz.klasdoel !== undefined){
+      const d = getal(inz.klasdoel, 20000);
+      if (d > 0) this.stand.klasdoel = d; else delete this.stand.klasdoel;
+    }
     await this.bewaar();
-    return json({ ok: true, spellen: this.stand.spellen || [], lesmodus: !!this.stand.lesmodus });
+    return json({ ok: true, spellen: this.stand.spellen || [], lesmodus: !!this.stand.lesmodus, klasdoel: this.klasdoelStand() });
   }
   /* De periodes van de docent: zelf ingestelde stukken van het jaar, met een
      naam en een begin- en einddatum. Ze doen niets met wat er bewaard wordt;
@@ -1098,16 +1140,51 @@ export class Kamer extends DurableObject {
     return json({ ok: true, naam });
   }
   /* heeft een leerling (op kenmerk) de opdracht gehaald? Zonder sleutel: alleen zijn eigen stand. */
+  /* De echte namen bij de bijnamen. Leerlingen spelen met een bijnaam; de
+     docent wil in het overzicht weten wie dat is. De lijst gaat alleen mee
+     naar wie de sleutel heeft, nooit naar een leerling. Een lege naam haalt
+     hem weg. De hele lijst gaat in een keer, net als de periodes. */
+  async echteNamen(inz){
+    if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
+    if (!inz || inz.sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
+    const binnen = inz.namen && typeof inz.namen === "object" ? inz.namen : {};
+    const uit = {}; let n = 0;
+    for (const k of Object.keys(binnen)){
+      if (n >= 80) break;
+      const bij = schoon(k, 40), echt = schoon(binnen[k], 60);
+      if (!bij || !echt) continue;
+      uit[bij] = echt; n++;
+    }
+    if (n) this.stand.echt = uit; else delete this.stand.echt;
+    await this.bewaar();
+    return json({ ok: true, echt: this.stand.echt || {} });
+  }
+  /* het klasdoel van deze week: het doel, hoe ver de klas is, en (met een kenmerk) wat jij bijdroeg */
+  klasdoelStand(sid){
+    const doel = this.stand.klasdoel;
+    if (!doel) return null;
+    const van = weekBegin(Date.now());
+    let stand = 0, jij = 0;
+    for (const r of this.stand.resultaten){
+      if (r.t < van) continue;
+      const n = goedVan(r);
+      stand += n;
+      if (sid && r.sid === sid) jij += n;
+    }
+    return { doel, stand, jij: sid ? jij : undefined, vanaf: van };
+  }
   mijn(sid){
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
-    const o = this.stand.opdracht;
+    const s = schoon(sid, 40).slice(0, 12);
     const opzet = { spellen: this.stand.spellen || [], lesmodus: !!this.stand.lesmodus, naam: this.stand.naam,
       /* zat deze leerling bij de eigenaar van de site in de klas? */
-      oudleerling: !!this.stand.vanEigenaar };
-    if (!o) return json(Object.assign({ opdracht: null }, opzet));
-    const s = schoon(sid, 40).slice(0, 12);
+      oudleerling: !!this.stand.vanEigenaar, klasdoel: this.klasdoelStand(s) };
     const mijn = this.stand.resultaten.filter(r => r.sid === s);
-    return json(Object.assign({ opdracht: o, gehaald: mijn.some(r => haaltOpdracht(r, o)), beste: mijn.reduce((a, r) => Math.max(a, maatVoor(r, o)), 0) }, opzet));
+    const lijst = this.opdrachtLijst().map(o => Object.assign({}, o, {
+      gehaald: mijn.some(r => haaltOpdracht(r, o)), beste: mijn.reduce((a, r) => Math.max(a, maatVoor(r, o)), 0) }));
+    /* de eerste ook los, voor een pagina van voor de lijst */
+    const eerste = lijst[0] || null;
+    return json(Object.assign({ opdrachten: lijst, opdracht: eerste, gehaald: eerste ? eerste.gehaald : false, beste: eerste ? eerste.beste : 0 }, opzet));
   }
   /* Een leerling uit de klas halen: hij verdwijnt uit de lijst en zijn
      uitslagen gaan mee. Hij kan zich daarna gewoon opnieuw koppelen met de
@@ -1139,9 +1216,11 @@ export class Kamer extends DurableObject {
     if (!sleutel || sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
     /* kijken telt ook als gebruik, hoogstens een keer per uur bijgeschreven */
     if (Date.now() - this.stand.laatst > 3600000){ await this.zetAlarm({ wat: "opruimen" }, KLAS_SLAAPT); await this.bewaar(); }
-    return json({ code: this.stand.code, naam: this.stand.naam, gemaakt: this.stand.gemaakt, opdracht: this.stand.opdracht || null,
+    const opdrachten = this.opdrachtLijst();
+    return json({ code: this.stand.code, naam: this.stand.naam, gemaakt: this.stand.gemaakt, opdracht: opdrachten[0] || null, opdrachten,
+                  klasdoel: this.klasdoelStand(),
                   spellen: this.stand.spellen || [], lesmodus: !!this.stand.lesmodus,
-                  periodes: this.stand.periodes || [],
+                  periodes: this.stand.periodes || [], echt: this.stand.echt || {},
                   leerlingen: this.gekoppeld(),
                   resultaten: this.stand.resultaten.map(x => ({ naam: x.naam, av: x.av || "", spel: x.spel, ronde: x.ronde, punten: x.punten, niveau: x.niveau, vak: x.vak, od: x.od, t: x.t })) });
   }
@@ -1157,7 +1236,7 @@ export class Kamer extends DurableObject {
   aanwezig(sid){ return this.ctx.getWebSockets(sid).length > 0; }
   overzicht(){
     const st = this.stand, basis = { code: st.code, spel: st.spel, vak: st.vak, niveau: st.niveau, deel: st.deel || "", fase: st.fase };
-    if (st.spel === "klas") return Object.assign(basis, { naam: st.naam, n: st.resultaten.length, gemaakt: st.gemaakt, opdracht: st.opdracht || null });
+    if (st.spel === "klas") return Object.assign(basis, { naam: st.naam, n: st.resultaten.length, gemaakt: st.gemaakt, opdracht: (this.opdrachtLijst()[0]) || null });
     if (this.strijd){
       const lijst = this.strijdLijst();
       return Object.assign(basis, { game: st.game, duel: !!st.duel, max: st.duel ? this.samenMax() : undefined, gastheer: st.gastheer ? this.pid(st.gastheer) : null, gestart: st.gestart, bezig: lijst.filter(r => !r.af).length, spelers: lijst });

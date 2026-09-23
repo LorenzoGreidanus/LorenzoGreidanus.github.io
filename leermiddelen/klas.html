@@ -307,6 +307,8 @@ td.getal{font-variant-numeric:tabular-nums;text-align:right}
 @media(max-width:640px){.opdrachtvorm .veld{font-size:16px}}
 .minlabel{display:inline-flex;align-items:center;gap:6px;font-size:.92rem}
 .opdrachtstand{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:8px}
+.opdrachtstuk{padding:12px 0;border-bottom:1px solid var(--rand)}
+.opdrachtstuk:first-child{padding-top:4px}
 .opdrachtstand .nu{flex:1;min-width:240px}
 .opdrachtstand .nu b{display:block}
 .opdrachtstand .nu small{color:var(--muted)}
@@ -355,6 +357,19 @@ td.getal{font-variant-numeric:tabular-nums;text-align:right}
 .aandacht b{display:block;margin-bottom:4px}
 .aandacht span{display:block;color:var(--muted);font-size:.84rem;margin-top:2px}
 .aandacht .ok{color:var(--muted)}
+.aandacht .wblink{display:inline-flex;align-items:center;min-height:44px;font-size:.86rem;margin-bottom:-10px}
+/* voor de les: dezelfde kaartjes als wat aandacht vraagt, met de knoppen erboven */
+.voorleskop{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between}
+.voorleskop .rij{gap:8px}
+.aandacht .doelbaan{display:block;height:10px;border-radius:999px;background:var(--rand);overflow:hidden;margin:6px 0 2px}
+.aandacht .doelbaan i{display:block;height:100%;border-radius:999px;background:var(--ocean)}
+/* echte namen: een bijnaam en een vakje ernaast */
+.echtlijst{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px 16px;margin-top:10px}
+.echtlijst label{display:grid;grid-template-columns:minmax(90px,40%) 1fr;gap:8px;align-items:center;font-size:.92rem}
+.echtlijst label span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.echtlijst .veld{padding:7px 10px;font-size:.92rem;min-width:0}
+@media(max-width:640px){.echtlijst .veld{font-size:16px}}
+.naamecht{color:var(--muted);font-weight:400}
 .stappen{display:grid;gap:10px;margin-top:10px}
 .stappen div{display:flex;gap:12px;align-items:flex-start}
 .stappen i{flex:0 0 28px;height:28px;border-radius:9px;background:var(--ocean);color:#fff;display:grid;place-items:center;font-style:normal;font-weight:600}
@@ -403,7 +418,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
   <h1>Jouw klassen</h1>
   <div class="wiebalk" id="wiebalk"></div>
   <div id="nieuwsregel"></div>
-  <p style="margin-top:8px;max-width:64ch"><a href="handleiding.html">Handleiding met plaatjes</a> (ook als pdf) &middot; <a href="klas.html?demo=1">demoklas bekijken</a></p>
+  <p style="margin-top:8px;max-width:64ch"><a href="handleiding.html">Handleiding met plaatjes</a> (ook als pdf) &middot; <a href="klas.html?demo=1">demoklas bekijken</a> &middot; <a href="werkblad.html">werkblad maken</a></p>
   <p style="margin-top:8px;max-width:64ch">Maak een klascode, laat leerlingen die eenmalig invullen in de leeromgeving, en zie na de les wie welk spel tot hoever heeft gehaald. Zonder accounts: een leerling koppelt zich met een bijnaam, en alleen jij ziet de uitslagen, op dit apparaat. Een klascode blijft geldig tot jij hem opheft.</p>
 
   <div class="twee">
@@ -489,10 +504,22 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       <button type="button" role="tab" id="tab-od" data-tab="od" aria-controls="paneel-od">Per vak en onderdeel</button>
       <button type="button" role="tab" id="tab-ll" data-tab="ll" aria-controls="paneel-ll">Per leerling</button>
       <button type="button" role="tab" id="tab-potjes" data-tab="potjes" aria-controls="paneel-potjes">Alle potjes</button>
-      <button type="button" role="tab" id="tab-inst" data-tab="inst" aria-controls="paneel-inst">Opdracht en instellingen</button>
+      <button type="button" role="tab" id="tab-inst" data-tab="inst" aria-controls="paneel-inst">Opdrachten en instellingen</button>
     </div>
 
     <div class="paneel" role="tabpanel" id="paneel-kort" aria-labelledby="tab-kort">
+      <div class="stap" id="voorLes">
+        <div class="voorleskop">
+          <b>Voor de les</b>
+          <span class="rij">
+            <button class="knop klein" id="lesMail" type="button">Mail naar mezelf</button>
+            <button class="knop stil klein" id="lesKopie" type="button">Kopieer</button>
+          </span>
+        </div>
+        <p class="tip">Deze week, sinds maandag, los van de filters hierboven: wie nog niet speelde, hoe het met de opdrachten staat en welke onderdelen wegzakken. Met Mail naar mezelf gaat het als tekst naar je eigen mailprogramma.</p>
+        <div class="aandacht" id="voorLesInhoud"></div>
+        <p class="tip" id="lesStatus" role="status" aria-live="polite"></p>
+      </div>
       <div class="kern" id="kern"></div>
       <div class="stap">
         <b>Per vak</b>
@@ -536,8 +563,8 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
 
     <div class="paneel" role="tabpanel" id="paneel-inst" aria-labelledby="tab-inst" hidden>
       <div class="stap opdrachtvak" id="opdrachtVak">
-        <b>Opdracht voor de klas</b>
-        <p class="tip">Eén opdracht tegelijk, bijvoorbeeld: Vragenrace, geschiedenis, tijd van ontdekkers, minstens 15 goed, vóór vrijdag. Leerlingen zien hem bovenaan in de leeromgeving met een knop naar het spel; hier zie je wie hem gehaald heeft.</p>
+        <b>Opdrachten voor de klas</b>
+        <p class="tip">Tot vijf opdrachten tegelijk, bijvoorbeeld: Vragenrace, geschiedenis, tijd van ontdekkers, minstens 15 goed, vóór vrijdag. Leerlingen zien ze bovenaan in de leeromgeving met een knop naar het spel; hier zie je per opdracht wie hem gehaald heeft.</p>
         <div id="opdrachtStand"></div>
         <div class="rij opdrachtvorm" id="opdrachtVorm">
           <select id="opSpel" class="veld" aria-label="Spel"><option value="race">Vragenrace</option><option value="toren">Torenverdediging</option><option value="zwaard">Zwaardvechter</option></select>
@@ -546,7 +573,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
           <label class="minlabel">minstens <input id="opMin" class="veld" type="number" min="1" max="250" value="15" style="width:74px"> <span id="opMaat">goed</span></label>
           <label class="minlabel">vóór <input id="opTot" class="veld" type="date"></label>
           <input id="opTekst" class="veld" maxlength="140" placeholder="korte toelichting (mag leeg)" style="flex:1;min-width:200px">
-          <button class="knop crab" id="opZet" type="button">Zet opdracht</button>
+          <button class="knop crab" id="opZet" type="button">Opdracht erbij</button>
         </div>
         <p class="tip" id="opFout"></p>
       </div>
@@ -557,6 +584,22 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
         <label class="lesmodus"><input type="checkbox" id="lesVink"> <span><b>Lesmodus aan</b> — tijdens jouw les zien ze alleen de gekozen spellen en de opdracht. Zet hem na de les weer uit.</span></label>
         <p class="tip" id="keuzeStatus"></p>
       </div>
+      <div class="stap opdrachtvak" id="doelVak">
+        <b>Klasdoel voor de week</b>
+        <p class="tip">Samen een aantal goede antwoorden halen, van maandag tot en met zondag. Leerlingen zien in de leeromgeving een balk die samen vol moet, en hoeveel zij zelf bijdroegen. Zet 0 om het uit te zetten.</p>
+        <div class="rij opdrachtvorm">
+          <label class="minlabel">samen <input id="doelGetal" class="veld" type="number" min="0" max="20000" step="50" style="width:100px"> goede antwoorden per week</label>
+          <button class="knop klein" id="doelZet" type="button">Opslaan</button>
+        </div>
+        <p class="tip" id="doelStand" role="status" aria-live="polite"></p>
+      </div>
+      <div class="stap opdrachtvak" id="echtVak">
+        <b>Echte namen</b>
+        <p class="tip">Leerlingen spelen met een bijnaam. Zet hier wie dat is. Alleen jij ziet deze namen, en een collega met wie je de klas deelt: in het overzicht, bij de opdrachten en in de CSV. Leerlingen zien ze nooit.</p>
+        <div class="echtlijst" id="echtLijst"></div>
+        <div class="rij" style="margin-top:10px"><button class="knop klein" id="echtZet" type="button">Namen opslaan</button></div>
+        <p class="tip" id="echtStatus" role="status" aria-live="polite"></p>
+      </div>
       <div class="stap opdrachtvak">
         <b>De klas zelf</b>
         <p class="tip">De naam zie jij en zien je leerlingen in de leeromgeving; de code blijft dezelfde. Vergeten haalt de klas alleen van dit apparaat. Opheffen wist de code en alle uitslagen op de server, en dat is niet terug te draaien.</p>
@@ -565,10 +608,18 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
           <button class="knop klein" id="naamZet" type="button">Naam opslaan</button>
         </div>
         <p class="fout-melding" id="naamFout" role="status" aria-live="polite"></p>
+        </div>
         <div class="rij" style="margin-top:10px">
+          <button class="knop stil klein" id="deelBtn" type="button" aria-expanded="false" aria-controls="deelVak">Deel met een collega</button>
           <button class="knop stil klein" id="vergeet" type="button">Vergeet op dit apparaat</button>
           <button class="knop stil klein gevaar" id="opheffen" type="button">Klascode opheffen</button>
         </div>
+        <div class="hide" id="deelVak" style="margin-top:10px">
+          <p class="tip"><b>Let op:</b> met deze link kan je collega alles wat jij kunt: de uitslagen en echte namen zien, opdrachten zetten en de klascode opheffen. Stuur hem alleen naar iemand die je vertrouwt, en niet in een groep met leerlingen.</p>
+          <div class="rij" style="margin-top:8px">
+            <input id="deelLink" class="veld" readonly aria-label="Link om de klas te delen" style="flex:1;min-width:200px">
+            <button class="knop klein" id="deelKopie" type="button">Kopieer</button>
+          </div>
       </div>
     </div>
   </section>
@@ -666,7 +717,10 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     ];
     return { code:'DEMO', naam:'Demoklas 2H', gemaakt: nu - 80 * DAG, resultaten: uit, leerlingen: gekoppeld, spellen:['race', 'toren', 'bronnenlab'], lesmodus:false,
              periodes: demoPeriodes.slice(),
-             opdracht: { spel:'race', vak:'ges', deel:'tv5', deelNaam:'5 ontdekkers en hervormers', min:4, tot: nu + 4 * DAG, tekst:'Voor de toets van vrijdag', sinds: nu - 5 * DAG } };
+             echt: { Noor:'Noor Bakker', Sem:'Sem de Jong', Fenna:'Fenna Visser' },
+             klasdoel: { doel:400, stand: uit.filter(function(x){ return x.t >= weekBeginLokaal(nu); }).reduce(function(a, x){ var n = 0; if (x.od) Object.keys(x.od).forEach(function(k){ n += x.od[k][0]; }); return a + (n || Math.min(x.ronde, 250)); }, 0) },
+             opdrachten: [{ id:'d1', spel:'race', vak:'ges', deel:'tv5', deelNaam:'5 ontdekkers en hervormers', min:4, tot: nu + 4 * DAG, tekst:'Voor de toets van vrijdag', sinds: nu - 5 * DAG },
+                          { id:'d2', spel:'toren', vak:'aard', deel:'', deelNaam:'', min:6, tot: nu + 6 * DAG, tekst:'', sinds: nu - 3 * DAG }] };
   }
   var klassen = [], huidig = null, spelFilter = '', vakFilter = '', data = null, klok = null;
   /* periodeKeuze: 'alles', 'week', 'maand' of het kenmerk van een eigen periode.
@@ -734,7 +788,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     var nog = l.filter(function(x){ return !x.gespeeld; }).length;
     doel.innerHTML = l.map(function(x){
       var gez = window.AVATAR ? AVATAR.svg(x.naam, 26, x.av || '') : '';
-      return '<span class="wie' + (x.gespeeld ? '' : ' stil') + '">' + gez + '<span>' + schoon(x.naam) +
+      return '<span class="wie' + (x.gespeeld ? '' : ' stil') + '">' + gez + '<span>' + wieHtml(x.naam) +
              /* de naam van het Microsoft-account; wie als gast speelt heeft er geen */
              (x.ms ? ' <i>(' + schoon(x.ms) + ')</i>' : '') +
              (x.gespeeld ? '' : ' <em>nog niets gespeeld</em>') + '</span>' +
@@ -803,7 +857,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     var namen = Object.keys(per).sort(function(a, b){ return a.localeCompare(b, 'nl'); });
     var beh = beheersing(lijst);
     $('samen').innerHTML = namen.length ? namen.map(function(n){
-      return '<div><b class="avrij">' + (window.AVATAR ? AVATAR.svg(n, 34, avVan(n)) : '') + '<span>' + schoon(n) + '</span></b>' + behRegel(beh[n]) + Object.keys(per[n]).map(function(sp){
+      return '<div><b class="avrij">' + (window.AVATAR ? AVATAR.svg(n, 34, avVan(n)) : '') + '<span>' + wieHtml(n) + '</span></b>' + behRegel(beh[n]) + Object.keys(per[n]).map(function(sp){
         var potjes = per[n][sp].slice().sort(function(a, b){ return a.t - b.t; }), m = maat(sp);
         var w = potjes.map(function(r){ return r[m.v] | 0; }), beste = Math.max.apply(null, w), laatste = potjes[potjes.length - 1];
         var trend = w.length >= 2 ? (w[w.length - 1] > w[0] ? ', stijgend' : w[w.length - 1] < w[0] ? ', dalend' : ', gelijk') : '';
@@ -816,10 +870,13 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     tekenOnderdelen(lijst);
     tekenKort(lijst);
     tekenOpdracht();
+    tekenVoorLes();
+    tekenDoel();
+    tekenEcht();
     /* alleen bij het openen van een klas overnemen; anders overschrijft een verversing wat je net aanklikte */
     if (data && huidig && keuzeVoor !== huidig.code){ keuzeVoor = huidig.code; keuzeSpellen = Array.isArray(data.spellen) ? data.spellen.slice() : []; lesmodus = !!data.lesmodus; tekenKeuze(); }
     $('rijen').innerHTML = lijst.length ? lijst.map(function(r){
-      return '<tr><td>' + (window.AVATAR ? AVATAR.svg(r.naam, 24, r.av) : '') + schoon(r.naam) + '</td><td>' + schoon(SPELLEN[r.spel] || r.spel) + '</td><td class="getal">' + r.ronde + '</td><td class="getal">' + r.punten + '</td><td>' + schoon(NIVEAUS[r.niveau] || r.niveau || '') + '</td><td>' + schoon(VAKKEN[r.vak] || r.vak || '') + '</td><td>' + new Date(r.t).toLocaleString('nl-NL', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) + '</td></tr>';
+      return '<tr><td>' + (window.AVATAR ? AVATAR.svg(r.naam, 24, r.av) : '') + wieHtml(r.naam) + '</td><td>' + schoon(SPELLEN[r.spel] || r.spel) + '</td><td class="getal">' + r.ronde + '</td><td class="getal">' + r.punten + '</td><td>' + schoon(NIVEAUS[r.niveau] || r.niveau || '') + '</td><td>' + schoon(VAKKEN[r.vak] || r.vak || '') + '</td><td>' + new Date(r.t).toLocaleString('nl-NL', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) + '</td></tr>';
     }).join('') : '<tr><td colspan="7" class="leeg">Nog geen potjes.</td></tr>';
   }
 
@@ -971,7 +1028,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     }
     var klasRij = '<tr class="klas"><td class="naam">Hele klas</td>' + kols.map(function(k){ return '<td' + sc(k) + '>' + cel(T.klas[k]) + '</td>'; }).join('') + '</tr>';
     var rijen = namen.map(function(n){
-      return '<tr><td class="naam">' + (window.AVATAR ? AVATAR.svg(n, 22, avVan(n)) : '') + schoon(n) + '</td>' + kols.map(function(k){ return '<td' + sc(k) + '>' + cel(T.per[n][k]) + '</td>'; }).join('') + '</tr>';
+      return '<tr><td class="naam">' + (window.AVATAR ? AVATAR.svg(n, 22, avVan(n)) : '') + wieHtml(n) + '</td>' + kols.map(function(k){ return '<td' + sc(k) + '>' + cel(T.per[n][k]) + '</td>'; }).join('') + '</tr>';
     }).join('');
     $('rooster').innerHTML = '<table><thead>' + kop + '</thead><tbody>' + klasRij + rijen + '</tbody></table>';
   }
@@ -993,7 +1050,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     var namen = Object.keys(per).sort(function(a, b){ return a.localeCompare(b, 'nl'); });
     var kop = '<tr><th class="naam">Leerling</th>' + ids.map(function(id){ return '<th>' + schoon(SPELLEN[id] || id) + '<small>beste, in ' + schoon(maat(id).l) + '</small></th>'; }).join('') + '</tr>';
     var rijen = namen.map(function(n){
-      return '<tr><td class="naam">' + (window.AVATAR ? AVATAR.svg(n, 22, avVan(n)) : '') + schoon(n) + '</td>' + ids.map(function(id){
+      return '<tr><td class="naam">' + (window.AVATAR ? AVATAR.svg(n, 22, avVan(n)) : '') + wieHtml(n) + '</td>' + ids.map(function(id){
         var c = per[n][id];
         return '<td>' + (c ? '<span class="cel spelcel">' + c.beste + '<small>' + c.n + (c.n === 1 ? ' potje' : ' potjes') + '</small></span>' : '<span class="cel leeg">–</span>') + '</td>';
       }).join('') + '</tr>';
@@ -1042,7 +1099,8 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     var html = zwak.map(function(k){
       var c = T.kol[k], wie = namen.filter(function(n){ var x = T.per[n][k]; return x && x[1] >= 3 && x[0] / x[1] < 0.5; }).sort(function(a, b){ return a.localeCompare(b, 'nl'); });
       return '<div><b>' + schoon(vakNaam(c.vak) + (c.groepNaam && c.groepNaam !== 'overig' ? ' › ' + c.groepNaam : '') + ' › ' + c.naam) + '</b>De klas heeft ' + pct(T.klas[k]) + '% goed over ' + T.klas[k][1] + ' vragen.' +
-        (wie.length ? '<span>Onder de helft: ' + schoon(wie.join(', ')) + '.</span>' : '<span>Niemand valt er echt uit; het is breed nog niet gezakt.</span>') + '</div>';
+        (wie.length ? '<span>Onder de helft: ' + schoon(wie.map(wieTekst).join(', ')) + '.</span>' : '<span>Niemand valt er echt uit; het is breed nog niet gezakt.</span>') +
+        '<a class="wblink" href="werkblad.html?vak=' + encodeURIComponent(c.vak) + '&amp;deel=' + encodeURIComponent(c.id) + '">Werkblad over dit onderdeel</a></div>';
     }).join('');
     if (!html){
       var breed = T.kols.filter(function(k){ return T.klas[k][1] >= 8; }).length;
@@ -1051,6 +1109,194 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     $('aandacht').innerHTML = html;
   }
   var avVan = function(){ return ''; };
+  /* de echte naam bij een bijnaam, als de docent die gezet heeft */
+  function echtVan(n){ return (data && data.echt && data.echt[n]) || ''; }
+  /* voor op het scherm: de echte naam met de bijnaam erachter, al schoongemaakt */
+  function wieHtml(n){ var e = echtVan(n); return e ? schoon(e) + ' <span class="naamecht">(' + schoon(n) + ')</span>' : schoon(n); }
+  /* voor in tekst (mail, CSV, lijstjes met komma's) */
+  function wieTekst(n){ var e = echtVan(n); return e ? e + ' (' + n + ')' : n; }
+
+  /* ---------- voor de les ----------
+     Wat een docent aan het begin van de les wil weten, over deze week: wie
+     nog niets speelde, hoe het met elke opdracht staat, welke onderdelen
+     wegzakken en hoe ver het klasdoel is. Los van de filters, want die gaan
+     over het jaar; dit gaat over nu. Hetzelfde komt als platte tekst in de
+     mail, zodat je het op maandagochtend in je postvak hebt. */
+  function weekBeginLokaal(nu){ var d = new Date(nu); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d.getTime(); }
+  var voorLesTekst = '';
+  function voorLesStukken(){
+    var nu = Date.now(), van = weekBeginLokaal(nu), alle = (data && data.resultaten) || [];
+    var week = alle.filter(function(r){ return r.t >= van; });
+    var gekoppeld = ((data && data.leerlingen) || []).map(function(x){ return x.naam; });
+    /* wie hoort bij de klas: de gekoppelde leerlingen, of anders iedereen die ooit speelde */
+    var klas = gekoppeld.length ? gekoppeld : Object.keys(alle.reduce(function(a, r){ a[r.naam] = 1; return a; }, {}));
+    klas = klas.slice().sort(function(a, b){ return wieTekst(a).localeCompare(wieTekst(b), 'nl'); });
+    var speelde = {}; week.forEach(function(r){ speelde[r.naam] = true; });
+    var stukken = [];
+    /* 1. wie nog niets speelde deze week */
+    var niet = klas.filter(function(n){ return !speelde[n]; });
+    stukken.push({ kop: niet.length ? niet.length + ' van de ' + klas.length + ' speelden nog niets' : (klas.length ? 'Iedereen speelde al' : 'Nog niemand in de klas'),
+      regels: niet.length ? [niet.map(wieTekst).join(', ')] : [klas.length ? 'Alle ' + klas.length + ' leerlingen speelden deze week minstens een potje.' : 'Zodra leerlingen de code invullen, staan ze hier.'] });
+    /* 2. elke opdracht: hoeveel gehaald, wie nog niet */
+    opdrachtenVan(data).forEach(function(o){
+      var beste = {}; alle.forEach(function(r){ beste[r.naam] = Math.max(beste[r.naam] || 0, haaltOp(r, o)); });
+      var ja = klas.filter(function(n){ return (beste[n] || 0) >= o.min; }), nee = klas.filter(function(n){ return (beste[n] || 0) < o.min; });
+      var verlopen = o.tot < nu;
+      stukken.push({ kop: 'Opdracht: ' + (OP_SPEL[o.spel] || o.spel) + ', ' + (VAKKEN[o.vak] || o.vak) + (o.deel ? ', ' + onderdeelNaam(o.vak, o.deel) : ''),
+        regels: [ja.length + ' van de ' + klas.length + ' gehaald, ' + (verlopen ? 'verlopen op ' : 'tot ') + new Date(o.tot).toLocaleDateString('nl-NL', { weekday:'long', day:'numeric', month:'long' }) + '.']
+          .concat(nee.length && ja.length ? ['Nog niet: ' + nee.map(function(n){ return wieTekst(n) + (beste[n] ? ' ' + beste[n] + '/' + o.min : ''); }).join(', ') + '.'] : []) });
+    });
+    /* 3. wat wegzakt: onderdelen die de laatste twee weken slechter gaan dan daarvoor */
+    var grens = nu - 14 * DAG;
+    var Tn = telOd(metOd(alle.filter(function(r){ return r.t >= grens; })), 'deel'), Tv = telOd(metOd(alle.filter(function(r){ return r.t < grens; })), 'deel');
+    var zakt = Tn.kols.filter(function(k){ var a = Tn.klas[k], b = Tv.klas[k]; return a[1] >= 8 && b && b[1] >= 8 && pct(a) <= pct(b) - 10; })
+      .sort(function(a, b){ return (pct(Tn.klas[a]) - pct(Tv.klas[a])) - (pct(Tn.klas[b]) - pct(Tv.klas[b])); }).slice(0, 4);
+    var zwak = Tn.kols.filter(function(k){ return zakt.indexOf(k) < 0 && Tn.klas[k][1] >= 8 && pct(Tn.klas[k]) < 60; })
+      .sort(function(a, b){ return pct(Tn.klas[a]) - pct(Tn.klas[b]); }).slice(0, Math.max(0, 4 - zakt.length));
+    function odNaam(T, k){ var c = T.kol[k]; return vakNaam(c.vak) + ' › ' + c.naam; }
+    stukken.push({ kop: zakt.length ? 'Zakt weg' : 'Wat aandacht vraagt',
+      regels: zakt.map(function(k){ return odNaam(Tn, k) + ': ' + pct(Tv.klas[k]) + '% naar ' + pct(Tn.klas[k]) + '% goed.'; })
+        .concat(zwak.map(function(k){ return odNaam(Tn, k) + ': ' + pct(Tn.klas[k]) + '% goed over ' + Tn.klas[k][1] + ' vragen.'; }))
+        .concat(zakt.length || zwak.length ? [] : ['Niets dat wegzakt of onder de 60% zit in de laatste twee weken.']) });
+    /* 4. het klasdoel */
+    var d = data && data.klasdoel;
+    if (d) stukken.push({ kop: 'Klasdoel: ' + d.stand + ' van ' + d.doel + ' goed', doel: d,
+      regels: [d.stand >= d.doel ? 'Gehaald deze week.' : 'Nog ' + (d.doel - d.stand) + ' te gaan tot zondag.'] });
+    return { stukken: stukken, van: van };
+  }
+  function tekenVoorLes(){
+    var doel = $('voorLesInhoud'); if (!doel) return;
+    if (!data){ doel.innerHTML = ''; voorLesTekst = ''; return; }
+    var v = voorLesStukken();
+    doel.innerHTML = v.stukken.map(function(s){
+      return '<div><b>' + schoon(s.kop) + '</b>' +
+        (s.doel ? '<span class="doelbaan" aria-hidden="true"><i style="width:' + Math.min(100, Math.round(100 * s.doel.stand / s.doel.doel)) + '%"></i></span>' : '') +
+        s.regels.map(function(r){ return '<span>' + schoon(r) + '</span>'; }).join('') + '</div>';
+    }).join('');
+    voorLesTekst = 'Klas ' + (data.naam || '') + ' (' + (data.code || '') + '), week van ' + new Date(v.van).toLocaleDateString('nl-NL', { day:'numeric', month:'long' }) + '\n\n' +
+      v.stukken.map(function(s){ return s.kop + '\n' + s.regels.map(function(r){ return '- ' + r; }).join('\n'); }).join('\n\n') +
+      '\n\nHet hele overzicht: ' + location.origin + '/leermiddelen/klas.html';
+  }
+  $('lesMail').addEventListener('click', function(){
+    if (!voorLesTekst) return;
+    /* een mailto-adres mag niet eindeloos lang zijn; de rest staat in het overzicht */
+    var body = voorLesTekst.length > 1800 ? voorLesTekst.slice(0, 1800) + '\n…' : voorLesTekst;
+    location.href = 'mailto:?subject=' + encodeURIComponent('Voor de les: ' + ((data && data.naam) || 'klas')) + '&body=' + encodeURIComponent(body);
+  });
+  $('lesKopie').addEventListener('click', function(){
+    if (!voorLesTekst) return;
+    kopieer(voorLesTekst, $('lesStatus'), 'Gekopieerd. Plak het in een mail of in je lesvoorbereiding.');
+  });
+  function kopieer(tekst, status, ok){
+    function klaar(){ status.textContent = ok; setTimeout(function(){ if (status.textContent === ok) status.textContent = ''; }, 4000); }
+    if (navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(tekst).then(klaar, function(){ status.textContent = 'Kopiëren lukte niet; selecteer de tekst zelf.'; }); return; }
+    var t = document.createElement('textarea'); t.value = tekst; document.body.appendChild(t); t.select();
+    try { document.execCommand('copy'); klaar(); } catch (e){ status.textContent = 'Kopiëren lukte niet; selecteer de tekst zelf.'; }
+    t.remove();
+  }
+
+  /* ---------- het klasdoel ---------- */
+  var doelVoor = null;
+  function tekenDoel(){
+    var d = data && data.klasdoel;
+    /* het getal alleen bij het openen van een klas invullen, niet bij elke verversing */
+    if (data && huidig && doelVoor !== huidig.code){
+      doelVoor = huidig.code;
+      var n = ((data.leerlingen || []).length) || 25;
+      $('doelGetal').value = d ? d.doel : '';
+      $('doelGetal').placeholder = String(Math.round(n * 20 / 50) * 50 || 500);
+    }
+    $('doelStand').textContent = d ? 'Deze week: ' + d.stand + ' van ' + d.doel + ' goed' + (d.stand >= d.doel ? ', gehaald.' : '.') : 'Er staat geen klasdoel.';
+  }
+  $('doelZet').addEventListener('click', function(){
+    if (!huidig) return;
+    if (DEMO){ alert('Niet in de demo.'); return; }
+    var n = parseInt($('doelGetal').value, 10) || 0;
+    $('doelStand').textContent = 'Opslaan…';
+    fetch('/api/klas/' + huidig.code + '/instelling', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ sleutel:huidig.sleutel, klasdoel:n }) })
+      .then(function(r){ return r.json(); })
+      .then(function(j){ if (j && j.fout){ $('doelStand').textContent = j.fout; return; } if (data) data.klasdoel = j.klasdoel; tekenDoel(); tekenVoorLes(); })
+      .catch(function(){ $('doelStand').textContent = 'Opslaan lukte niet: geen verbinding.'; });
+  });
+
+  /* ---------- echte namen ----------
+     Een vakje per bijnaam: iedereen die gekoppeld is of ooit iets speelde. De
+     lijst wordt niet bij elke verversing opnieuw gezet, anders verdwijnt wat
+     je aan het typen bent; alleen als er een nieuwe naam bij komt en je niets
+     veranderd hebt. */
+  var echtVoor = '', echtVies = false;
+  function echtNamen(){
+    var n = {};
+    ((data && data.leerlingen) || []).forEach(function(x){ n[x.naam] = 1; });
+    ((data && data.resultaten) || []).forEach(function(r){ n[r.naam] = 1; });
+    Object.keys((data && data.echt) || {}).forEach(function(k){ n[k] = 1; });
+    return Object.keys(n).sort(function(a, b){ return a.localeCompare(b, 'nl'); });
+  }
+  function tekenEcht(){
+    var doel = $('echtLijst'); if (!doel) return;
+    var namen = echtNamen(), sleutel = (huidig ? huidig.code : '') + '|' + namen.join('|');
+    if (sleutel === echtVoor || (echtVies && huidig && echtVoor.indexOf(huidig.code + '|') === 0)) return;
+    echtVoor = sleutel; echtVies = false;
+    doel.innerHTML = namen.length ? namen.map(function(n, i){
+      return '<label><span title="' + schoon(n) + '">' + schoon(n) + '</span><input class="veld" maxlength="60" id="echt' + i + '" data-bij="' + schoon(n) + '" value="' + schoon(echtVan(n)) + '" placeholder="echte naam" autocomplete="off"></label>';
+    }).join('') : '<p class="leeg">Nog geen leerlingen. Zodra iemand de code invult of een potje speelt, staat de bijnaam hier.</p>';
+    $('echtZet').classList.toggle('hide', !namen.length);
+  }
+  $('echtLijst').addEventListener('input', function(){ echtVies = true; $('echtStatus').textContent = 'Nog niet opgeslagen.'; });
+  $('echtZet').addEventListener('click', function(){
+    if (!huidig) return;
+    if (DEMO){ alert('Niet in de demo.'); return; }
+    var namen = {};
+    [].forEach.call($('echtLijst').querySelectorAll('[data-bij]'), function(v){ var e = v.value.trim(); if (e) namen[v.getAttribute('data-bij')] = e; });
+    $('echtStatus').textContent = 'Opslaan…';
+    fetch('/api/klas/' + huidig.code + '/echt', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ sleutel:huidig.sleutel, namen:namen }) })
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if (j && j.fout){ $('echtStatus').textContent = j.fout; return; }
+        if (data) data.echt = j.echt || {};
+        echtVies = false; echtVoor = '';
+        $('echtStatus').textContent = 'Opgeslagen.';
+        teken();
+      })
+      .catch(function(){ $('echtStatus').textContent = 'Opslaan lukte niet: geen verbinding.'; });
+  });
+
+  /* ---------- de klas delen met een collega ----------
+     De link draagt de code en de sleutel achter een hekje: dat deel van een
+     adres gaat nooit naar de server, en na het openen halen we het meteen uit
+     de adresbalk. Wie de link heeft, heeft de klas. */
+  $('deelBtn').addEventListener('click', function(){
+    if (!huidig) return;
+    var open = $('deelVak').classList.toggle('hide') === false;
+    $('deelBtn').setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (!open) return;
+    $('deelLink').value = DEMO ? 'Niet in de demo.' : location.origin + '/leermiddelen/klas.html#deel=' + huidig.code + '.' + huidig.sleutel;
+  });
+  $('deelKopie').addEventListener('click', function(){
+    if (DEMO || !$('deelLink').value) return;
+    $('deelLink').select();
+    kopieer($('deelLink').value, $('naamFout'), 'Link gekopieerd. Stuur hem naar je collega.');
+  });
+  function neemDeelOver(){
+    var m = (location.hash || '').match(/^#deel=([A-Za-z]{4})\.([A-Za-z0-9_-]{4,80})$/);
+    if (!m || DEMO) return false;
+    var code = m[1].toUpperCase(), sleutel = m[2];
+    /* de sleutel meteen uit de adresbalk, zodat hij niet in de geschiedenis of een schermafbeelding blijft staan */
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e){}
+    var al = klassen.filter(function(k){ return k.code === code; })[0];
+    if (al){ kies(al); return true; }
+    fetch('/api/klas/' + code + '?sleutel=' + encodeURIComponent(sleutel))
+      .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+      .then(function(x){
+        if (!x.ok){ alert('Deze gedeelde klas werkt niet (meer): ' + (x.j.fout || 'onbekende fout') + '.'); return; }
+        var naam = x.j.naam || 'Klas';
+        if (!confirm('Klas ' + naam + ' (' + code + ') is met je gedeeld. Toevoegen aan je klassen?')) return;
+        var k = { code:code, sleutel:sleutel, naam:naam, gemaakt:x.j.gemaakt || Date.now() };
+        klassen.push(k); bewaar(); kies(k);
+      })
+      .catch(function(){ alert('Geen verbinding met de server; open de link straks opnieuw.'); });
+    return true;
+  }
 
   /* ---------- periodes ----------
      Drie vaste (alles, de laatste zeven dagen, de laatste dertig dagen) en de
@@ -1260,24 +1506,38 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     if (o.deel) return r.od && r.od[o.deel] ? (r.od[o.deel][0] | 0) : 0;
     return r.ronde | 0;
   }
+  var OPDRACHTEN_MAX = 5;
+  function opdrachtenVan(d){ return d ? (d.opdrachten || (d.opdracht ? [d.opdracht] : [])) : []; }
   function tekenOpdracht(){
-    var o = data && data.opdracht, doel = $('opdrachtStand');
-    $('opdrachtVorm').classList.toggle('hide', !!o);
-    if (!o){ doel.innerHTML = ''; opVul(); return; }
+    var lijst = opdrachtenVan(data), doel = $('opdrachtStand');
+    $('opdrachtVorm').classList.toggle('hide', lijst.length >= OPDRACHTEN_MAX);
+    opVul();
+    doel.innerHTML = lijst.map(function(o, i){ return '<div class="opdrachtstuk">' + opdrachtStuk(o, i) + '</div>'; }).join('') +
+      (lijst.length >= OPDRACHTEN_MAX ? '<p class="tip">Er staan er vijf. Haal er een weg om een nieuwe te zetten.</p>' : '');
+    [].forEach.call(doel.querySelectorAll('[data-opweg]'), function(k){
+      k.addEventListener('click', function(){
+        if (DEMO){ alert('Niet in de demo.'); return; }
+        if (!confirm('Deze opdracht weghalen?')) return;
+        zetOpdracht(null, k.getAttribute('data-opweg'));
+      });
+    });
+  }
+  function opdrachtStuk(o, i){
     var namen = {}; (data.resultaten || []).forEach(function(r){ namen[r.naam] = Math.max(namen[r.naam] || 0, haaltOp(r, o)); });
     var lijst = Object.keys(namen).sort(function(a, b){ return a.localeCompare(b, 'nl'); }), n = lijst.filter(function(x){ return namen[x] >= o.min; }).length;
     var verlopen = o.tot < Date.now();
-    doel.innerHTML = '<div class="opdrachtstand"><div class="nu"><b>' + schoon(OP_SPEL[o.spel] || o.spel) + ' · ' + schoon(VAKKEN[o.vak] || o.vak) + (o.deel ? ' · ' + schoon(onderdeelNaam(o.vak, o.deel)) : '') + ': minstens ' + o.min + ' ' + opMaat(o.spel, o.deel) + '</b>' +
+    return '<div class="opdrachtstand"><div class="nu"><b>' + schoon(OP_SPEL[o.spel] || o.spel) + ' · ' + schoon(VAKKEN[o.vak] || o.vak) + (o.deel ? ' · ' + schoon(onderdeelNaam(o.vak, o.deel)) : '') + ': minstens ' + o.min + ' ' + opMaat(o.spel, o.deel) + '</b>' +
       '<small>' + (verlopen ? 'verlopen op ' : 'tot ') + new Date(o.tot).toLocaleDateString('nl-NL', { weekday:'long', day:'numeric', month:'long' }) + (o.tekst ? ' · ' + schoon(o.tekst) : '') + ' · gezet ' + wanneer(o.sinds) + '</small></div>' +
-      '<button type="button" class="knop stil klein" id="opWeg">Opdracht weghalen</button></div>' +
+      '<button type="button" class="knop stil klein" data-opweg="' + schoon(o.id || '') + '">Weghalen</button></div>' +
       '<p class="tip" style="margin-top:8px">' + (lijst.length ? n + ' van ' + lijst.length + ' leerlingen gehaald.' : 'Nog geen leerling heeft sinds de opdracht een potje gemeld.') + '</p>' +
-      '<div class="gehaald">' + lijst.map(function(x){ var ja = namen[x] >= o.min; return '<span class="' + (ja ? 'ja' : 'nee') + '">' + (window.AVATAR ? AVATAR.svg(x, 20, avVan(x)) : '') + schoon(x) + ' <i>' + (ja ? '✓' : namen[x] + '/' + o.min) + '</i></span>'; }).join('') + '</div>';
-    $('opWeg').addEventListener('click', function(){ if (DEMO){ alert('Niet in de demo.'); return; } if (!confirm('De opdracht weghalen?')) return; zetOpdracht(null); });
+      '<div class="gehaald">' + lijst.map(function(x){ var ja = namen[x] >= o.min; return '<span class="' + (ja ? 'ja' : 'nee') + '">' + (window.AVATAR ? AVATAR.svg(x, 20, avVan(x)) : '') + wieHtml(x) + ' <i>' + (ja ? '✓' : namen[x] + '/' + o.min) + '</i></span>'; }).join('') + '</div>';
   }
-  function zetOpdracht(o){
+  /* een opdracht erbij, of met weg het kenmerk van een die weg moet */
+  function zetOpdracht(o, weg){
     if (!huidig) return;
+    if (DEMO){ alert('Niet in de demo.'); return; }
     $('opFout').textContent = '';
-    fetch('/api/klas/' + huidig.code + '/opdracht', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ sleutel:huidig.sleutel, opdracht:o }) })
+    fetch('/api/klas/' + huidig.code + '/opdracht', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify(weg ? { sleutel:huidig.sleutel, weg:weg } : { sleutel:huidig.sleutel, opdracht:o }) })
       .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
       .then(function(x){ if (!x.ok){ $('opFout').textContent = x.j.fout || 'Dat lukte niet.'; return; } haal(); })
       .catch(function(){ $('opFout').textContent = 'Geen verbinding met de server.'; });
@@ -1369,9 +1629,9 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
   if (pb) pb.addEventListener('click', function(){ window.print(); });
   $('csvBtn').addEventListener('click', function(){
     if (!data) return;
-    var regels = [['leerling', 'spel', 'ronde of goed', 'punten', 'niveau', 'vak', 'wanneer', 'per onderdeel (goed/gesteld)']].concat(zichtbaar.map(function(r){
+    var regels = [['leerling', 'echte naam', 'spel', 'ronde of goed', 'punten', 'niveau', 'vak', 'wanneer', 'per onderdeel (goed/gesteld)']].concat(zichtbaar.map(function(r){
       var od = r.od ? Object.keys(r.od).map(function(id){ return onderdeelNaam(r.vak, id) + ' ' + r.od[id][0] + '/' + r.od[id][1]; }).join('; ') : '';
-      return [r.naam, SPELLEN[r.spel] || r.spel, r.ronde, r.punten, NIVEAUS[r.niveau] || r.niveau || '', VAKKEN[r.vak] || r.vak || '', new Date(r.t).toLocaleString('nl-NL'), od];
+      return [r.naam, echtVan(r.naam), SPELLEN[r.spel] || r.spel, r.ronde, r.punten, NIVEAUS[r.niveau] || r.niveau || '', VAKKEN[r.vak] || r.vak || '', new Date(r.t).toLocaleString('nl-NL'), od];
     }));
     var csv = '﻿' + regels.map(function(rij){ return rij.map(function(v){ return '"' + String(v).replace(/"/g, '""') + '"'; }).join(';'); }).join('\r\n');
     var a = document.createElement('a');
@@ -1384,10 +1644,11 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
   tekenWie(); tekenKeuze();
   tekenKlassen();
   var eerst = klassen[0];
-  if (eerst) kies(eerst);
+  /* een gedeelde klas via de link gaat voor; anders de eerste */
+  if (!neemDeelOver() && eerst) kies(eerst);
   if (DEMO){
     /* de demoklas: alle knoppen die iets veranderen doen niets */
-    ['maakBtn', 'vergeet', 'opheffen', 'opZet', 'lesVink'].forEach(function(id){ var b = $(id); if (b){ b.disabled = true; b.title = 'Niet in de demo'; } });
+    ['maakBtn', 'vergeet', 'opheffen', 'opZet', 'lesVink', 'doelZet', 'echtZet'].forEach(function(id){ var b = $(id); if (b){ b.disabled = true; b.title = 'Niet in de demo'; } });
     var demoTip = document.createElement('p'); demoTip.className = 'tip demo'; demoTip.innerHTML = '<b>Demoklas.</b> Verzonnen leerlingen, om te zien hoe het eruitziet. Periodes instellen kun je hier uitproberen; niets gaat naar de server. <a href="klas.html">Maak je eigen klascode</a> om het echt te gebruiken.';
     document.querySelector('main h1').insertAdjacentElement('afterend', demoTip);
     kies({ code:'DEMO', sleutel:'demo', naam:'Demoklas 2H', gemaakt: Date.now() });
