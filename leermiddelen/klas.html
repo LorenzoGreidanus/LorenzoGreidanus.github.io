@@ -290,9 +290,31 @@ td.getal{font-variant-numeric:tabular-nums;text-align:right}
   .rooster th{min-width:76px}
 }
 .knop.gevaar{color:#a8371f;border-color:rgba(168,55,31,.4)}
+/* weghalen staat apart: een rand in de kleur van gevaar, elke knop met zijn eigen uitleg */
+.gevarenzone{border:1.5px solid rgba(168,55,31,.35);border-radius:16px;padding:16px}
+.gevaarrij{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;margin-top:12px}
+.gevaarrij+.gevaarrij{border-top:1px solid var(--rand);padding-top:12px}
+.gevaarrij>div{flex:1 1 260px;min-width:0}
+.gevaarrij>div>b{display:block}
+.gevaarrij .tip{margin-top:2px}
+.knop.gevaarvol{background:#a8371f;color:#fff}
+.dialoog{border:none;border-radius:20px;padding:24px;background:var(--kaart);color:var(--ink);width:min(460px,calc(100vw - 32px));box-shadow:0 24px 60px rgba(10,16,40,.35)}
+.dialoog::backdrop{background:rgba(10,16,40,.55)}
+.dialoog h2{font-size:1.3rem;margin-bottom:12px}
+.dialoog p{margin-top:8px}
+.dialoog .veld{margin-top:8px;font-size:1.3rem;letter-spacing:.2em;text-transform:uppercase;max-width:200px}
+.dialoog .rij{margin-top:8px}
+.dialoog label{display:block;margin-top:16px}
+.meldregel:empty{display:none}
+.meldregel{margin-top:16px}
+/* lukt het ophalen niet en is er nog niets, dan geen lege koppen en filters */
+#overzicht.zonderdata .voorles,#overzicht.zonderdata .filters,#overzicht.zonderdata .paneel:not(#paneel-inst){display:none}
+#ovUit .linkknop{min-height:32px}
 #naamLink{display:inline-flex;align-items:center;margin-left:10px;vertical-align:middle}
 :root[data-theme="dark"] .knop.gevaar{color:#ffb3a6;border-color:rgba(255,179,166,.4)}
-@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .knop.gevaar{color:#ffb3a6;border-color:rgba(255,179,166,.4)}}
+:root[data-theme="dark"] .gevarenzone{border-color:rgba(255,179,166,.35)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .knop.gevaar{color:#ffb3a6;border-color:rgba(255,179,166,.4)}
+  :root:not([data-theme="light"]) .gevarenzone{border-color:rgba(255,179,166,.35)}}
 /* ---------- op papier ----------
    Een blad voor in je map of op tafel bij een gesprek: de klas, de datum en de
    cijfers. Alles waar je op moet klikken heeft op papier geen zin. */
@@ -615,17 +637,14 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       </div>
       <div class="stap opdrachtvak">
         <b>De klas zelf</b>
-        <p class="tip">De naam zie jij en zien je leerlingen in de leeromgeving; de code blijft dezelfde. Van dit apparaat halen laat de klas en de uitslagen bestaan; alleen deze browser vergeet hem. Opheffen wist de code en alle uitslagen op de server, en dat is niet terug te draaien.</p>
+        <p class="tip">De naam zie jij en zien je leerlingen in de leeromgeving; de code blijft dezelfde.</p>
         <div class="rij" style="margin-top:10px">
           <input id="naamNieuw" class="veld" maxlength="40" aria-label="Naam van de klas" placeholder="bijv. B3" style="flex:1;min-width:180px;max-width:320px">
           <button class="knop klein" id="naamZet" type="button">Naam opslaan</button>
         </div>
         <p class="fout-melding" id="naamFout" role="status" aria-live="polite"></p>
-        </div>
-        <div class="rij" style="margin-top:10px">
+        <div class="rij" style="margin-top:8px">
           <button class="knop stil klein" id="deelBtn" type="button" aria-expanded="false" aria-controls="deelVak">Deel met een collega</button>
-          <button class="knop stil klein" id="vergeet" type="button">Van dit apparaat halen</button>
-          <button class="knop stil klein gevaar" id="opheffen" type="button">Klascode opheffen</button>
         </div>
         <div class="hide" id="deelVak" style="margin-top:10px">
           <p class="tip"><b>Let op:</b> met deze link kan je collega alles wat jij kunt: de uitslagen en echte namen zien, opdrachten zetten en de klascode opheffen. Stuur hem alleen naar iemand die je vertrouwt, en niet in een groep met leerlingen.</p>
@@ -633,9 +652,35 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
             <input id="deelLink" class="veld" readonly aria-label="Link om de klas te delen" style="flex:1;min-width:200px">
             <button class="knop klein" id="deelKopie" type="button">Kopieer</button>
           </div>
+        </div>
+      </div>
+      <!-- Wat niet terug te draaien is staat apart, onderaan, met eigen uitleg. -->
+      <div class="stap gevarenzone" id="gevarenzone">
+        <b>Weghalen</b>
+        <div class="gevaarrij">
+          <div><b>Van dit apparaat halen</b><p class="tip" id="vergeetUitleg">De klas en de uitslagen blijven bestaan; alleen deze browser vergeet hem.</p></div>
+          <button class="knop stil klein" id="vergeet" type="button">Van dit apparaat halen</button>
+        </div>
+        <div class="gevaarrij">
+          <div><b>Klascode opheffen</b><p class="tip">Wist de code en alle uitslagen op de server. Je leerlingen raken de koppeling kwijt. Dit is niet terug te draaien.</p></div>
+          <button class="knop stil klein gevaar" id="opheffen" type="button">Klascode opheffen</button>
+        </div>
       </div>
     </div>
   </section>
+  <p class="tip meldregel" id="meldRegel" role="status" aria-live="polite"></p>
+  <dialog class="dialoog" id="ophefDialoog" aria-labelledby="ophefKop">
+    <h2 id="ophefKop">Klascode opheffen</h2>
+    <p>Hiermee verdwijnen <b id="ophefNaam"></b> en alle uitslagen van de server. Je leerlingen zijn losgekoppeld. Dit is niet terug te draaien.</p>
+    <p class="tip">Wil je de klas alleen hier niet meer zien? Kies dan Van dit apparaat halen.</p>
+    <label class="stap" for="ophefInvoer"><b>Typ de klascode <span id="ophefCode"></span> om te bevestigen</b></label>
+    <input class="veld" id="ophefInvoer" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="4">
+    <p class="fout-melding" id="ophefFout" role="status" aria-live="polite"></p>
+    <div class="rij">
+      <button class="knop gevaarvol" id="ophefJa" type="button" disabled>Klascode opheffen</button>
+      <button class="knop stil" id="ophefNee" type="button">Annuleren</button>
+    </div>
+  </dialog>
   <details class="beginnen" id="beginnen">
     <summary><span>Een klas maken en leerlingen koppelen</span><small>in twee stappen</small></summary>
   <p class="intro">Maak een klascode en laat je leerlingen die één keer invullen in de leeromgeving. Daarna zie je hier na elk potje wie wat speelde en hoe het per onderdeel gaat. Leerlingen hebben geen account nodig: ze koppelen zich met een bijnaam. Jij logt in met Microsoft om een klas te maken. De uitslagen zie alleen jij, en een collega met wie je de klas deelt. Een klascode blijft geldig tot jij hem opheft.</p>
@@ -820,6 +865,9 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     $('ovNaam').textContent = huidig.naam || 'klas';
     $('naamNieuw').value = huidig.naam || ''; $('naamFout').textContent = '';
     $('ovCode').textContent = huidig.code;
+    tekenVergeet();
+    /* geen uitslagen van de vorige klas laten staan terwijl deze laadt */
+    data = null; $('overzicht').classList.remove('zonderdata');
     $('ovCode').classList.remove('groot'); $('codeGroot').setAttribute('aria-pressed', 'false'); $('codeGroot').textContent = 'Groot op het bord';
     leesPeriode(); spelFilter = ''; vakFilter = ''; odStand = '';
     periodeOpen(false);
@@ -831,18 +879,40 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     if (DEMO){ data = demoData(); $('ovUit').textContent = 'Dit is een demoklas met verzonnen leerlingen: niets hiervan staat op de server. Maak je eigen klascode om het echt te gebruiken.'; teken(); return; }
     /* alleen de eerste keer "Ophalen…"; het verversen elke twintig seconden gebeurt stil */
     if (!data) $('ovUit').textContent = 'Uitslagen ophalen…';
-    fetch('/api/klas/' + huidig.code + '?sleutel=' + encodeURIComponent(huidig.sleutel))
+    var k = huidig;
+    fetch('/api/klas/' + k.code, { headers:{ 'x-sleutel':k.sleutel } })
       .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
       .then(function(x){
-        if (!x.ok){ $('ovUit').textContent = x.j.fout || 'Ophalen lukte niet.'; data = null; teken(); return; }
-        data = x.j;
+        if (k !== huidig) return;
+        if (!x.ok){
+          data = null; teken(); zonderData();
+          if (x.j.fout === 'dit is geen klascode') ophaalFout('Deze klascode bestaat niet meer. Misschien is hij op een ander apparaat opgeheven.', 'Van dit apparaat halen', function(){ $('vergeet').click(); });
+          else if (x.j.fout === 'dit is niet jouw klas') ophaalFout('Deze browser heeft niet de goede sleutel voor deze klas. Open de link van je collega opnieuw, of log in met het account waarmee je de klas maakte.');
+          else ophaalFout(x.j.fout ? 'Ophalen lukte niet: ' + x.j.fout + '.' : 'Ophalen lukte niet.', 'Opnieuw proberen', haal);
+          return;
+        }
+        data = x.j; zonderData();
         /* heeft de klas op de server een andere naam (gewijzigd op een ander apparaat), dan die */
         if (data.naam && huidig && data.naam !== huidig.naam) zetNaamHier(data.naam);
         $('ovUit').textContent = data.resultaten.length + (data.resultaten.length === 1 ? ' potje gemeld' : ' potjes gemeld') + ' · bijgewerkt om ' + new Date().toLocaleTimeString('nl-NL', { hour:'2-digit', minute:'2-digit' }) + ' · ververst elke 20 seconden';
         teken();
       })
-      .catch(function(){ $('ovUit').textContent = 'Geen verbinding. Wat je ziet is van ' + (data ? 'de laatste keer' : 'niets') + '; over 20 seconden probeert de pagina het opnieuw.'; });
+      .catch(function(){
+        if (k !== huidig) return;
+        zonderData();
+        ophaalFout(data ? 'Geen verbinding. Je ziet de stand van de laatste keer; over 20 seconden probeert de pagina het opnieuw.' : 'Geen verbinding, dus nog geen uitslagen. Over 20 seconden probeert de pagina het opnieuw.', 'Nu opnieuw proberen', haal);
+      });
   }
+  /* een foutregel met een knop die er iets aan doet */
+  function ophaalFout(tekst, knop, doe){
+    var el = $('ovUit');
+    el.textContent = tekst + ' ';
+    if (!knop) return;
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'linkknop'; b.textContent = knop;
+    b.addEventListener('click', function(){ if (doe === haal) el.textContent = 'Uitslagen ophalen…'; doe(); });
+    el.appendChild(b);
+  }
+  function zonderData(){ $('overzicht').classList.toggle('zonderdata', !data && !DEMO); }
   /* de gekoppelde leerlingen, met hun gezichtje; wie nog niets speelde staat
      er gestippeld bij */
   function tekenGekoppeld(){
@@ -1359,7 +1429,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     try { history.replaceState(null, '', location.pathname + location.search); } catch (e){}
     var al = klassen.filter(function(k){ return k.code === code; })[0];
     if (al){ kies(al); return true; }
-    fetch('/api/klas/' + code + '?sleutel=' + encodeURIComponent(sleutel))
+    fetch('/api/klas/' + code, { headers:{ 'x-sleutel':sleutel } })
       .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
       .then(function(x){
         if (!x.ok){ alert('Deze gedeelde klas werkt niet (meer): ' + (x.j.fout || 'onbekende fout') + '.'); return; }
@@ -1522,7 +1592,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     var mag = !acc.mogelijk || acc.ingelogd;
     var mb = $('maakBtn'); if (mb && !DEMO){ mb.disabled = !mag; mb.title = ''; var mu = $('maakUitleg'); if (mu) mu.hidden = mag; }
   }
-  if (window.PROFIEL && PROFIEL.account) PROFIEL.account().then(function(a){ acc = a; tekenWie(); });
+  if (window.PROFIEL && PROFIEL.account) PROFIEL.account().then(function(a){ acc = a; tekenWie(); tekenVergeet(); });
 
   /* ---------- welke spellen mag deze klas zien ---------- */
   var KLASSPELLEN = [
@@ -1697,24 +1767,56 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       .catch(function(){ knop.disabled = false; $('naamFout').textContent = 'Geen verbinding. Controleer je internet en probeer het opnieuw.'; });
   });
   $('vergeet').addEventListener('click', function(){
-    if (!huidig || !confirm('Klas ' + (huidig.naam || huidig.code) + ' van dit apparaat halen?\n\nDe klascode en de uitslagen blijven bestaan. Ben je ingelogd met Microsoft, dan staat hij nog op je andere apparaten. Zonder inlog kun je hem hier niet meer terugzetten.')) return;
-    klassen = klassen.filter(function(k){ return k.code !== huidig.code; }); bewaar();
-    if (window.PROFIEL && PROFIEL.docentWeg) PROFIEL.docentWeg(huidig.code);
-    kies(null);
-  });
-  /* opheffen: de code en alle uitslagen weg van de server; leerlingen raken de koppeling kwijt */
-  $('opheffen').addEventListener('click', function(){
-    if (!huidig || !confirm('Klascode ' + huidig.code + ' (' + (huidig.naam || 'klas') + ') opheffen?\n\nAlle uitslagen worden gewist en de leerlingen zijn losgekoppeld. Dit is niet terug te draaien. Wil je hem alleen hier niet meer zien? Kies dan Van dit apparaat halen.')) return;
+    if (!huidig) return;
+    var ingelogd = acc && acc.ingelogd;
+    if (!confirm('Klas ' + (huidig.naam || huidig.code) + ' van dit apparaat halen?\n\nDe klascode en de uitslagen blijven bestaan.' + (ingelogd
+      ? ' Hij staat nog op je andere apparaten.'
+      : ' Je bent niet ingelogd, dus zonder de link van Deel met een collega kom je daarna niet meer bij deze klas. Bewaar die link eerst als je hem later nog wilt zien.'))) return;
     var k = huidig;
+    klassen = klassen.filter(function(q){ return q.code !== k.code; }); bewaar();
+    if (window.PROFIEL && PROFIEL.docentWeg) PROFIEL.docentWeg(k.code);
+    naWeg('Klas ' + (k.naam || k.code) + ' staat niet meer op dit apparaat.');
+  });
+  /* na het weghalen: de volgende klas, of het maken van een nieuwe als er geen meer is */
+  function tekenVergeet(){
+    $('vergeetUitleg').textContent = 'De klas en de uitslagen blijven bestaan; alleen deze browser vergeet hem.' +
+      (DEMO || (acc && acc.ingelogd) ? '' : ' Je bent niet ingelogd: bewaar eerst de link van Deel met een collega, anders kom je daarna niet meer bij deze klas.');
+  }
+  function naWeg(tekst){
+    kies(klassen[0] || null);
+    if (!klassen.length) $('beginnen').open = true;
+    $('meldRegel').textContent = tekst;
+    setTimeout(function(){ $('meldRegel').textContent = ''; }, 8000);
+  }
+  /* opheffen: de code en alle uitslagen weg van de server; leerlingen raken de koppeling kwijt */
+  /* Opheffen vraagt de klascode over te typen: een klik op OK gaat uit gewoonte,
+     vier letters typen niet. */
+  $('opheffen').addEventListener('click', function(){
+    if (!huidig) return;
+    $('ophefNaam').textContent = (huidig.naam || 'de klas') + ' (' + huidig.code + ')';
+    $('ophefCode').textContent = huidig.code;
+    $('ophefInvoer').value = ''; $('ophefFout').textContent = ''; $('ophefJa').disabled = true;
+    $('ophefDialoog').showModal(); $('ophefInvoer').focus();
+  });
+  $('ophefInvoer').addEventListener('input', function(){ $('ophefJa').disabled = !huidig || this.value.trim().toUpperCase() !== huidig.code; });
+  $('ophefInvoer').addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); if (!$('ophefJa').disabled) $('ophefJa').click(); } });
+  $('ophefNee').addEventListener('click', function(){ $('ophefDialoog').close(); });
+  $('ophefJa').addEventListener('click', function(){
+    var k = huidig, knop = this;
+    if (!k) return;
+    knop.disabled = true; knop.textContent = 'Bezig met opheffen…'; $('ophefFout').textContent = '';
+    function terug(tekst){ knop.disabled = false; knop.textContent = 'Klascode opheffen'; $('ophefFout').textContent = tekst; }
     fetch('/api/klas/' + k.code + '/opheffen', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ sleutel:k.sleutel }) })
       .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
       .then(function(x){
-        if (!x.ok && x.j.fout !== 'dit is geen klascode'){ alert(x.j.fout || 'Opheffen lukte niet.'); return; }
+        if (!x.ok && x.j.fout !== 'dit is geen klascode'){ terug((x.j.fout ? 'Opheffen lukte niet: ' + x.j.fout + '.' : 'Opheffen lukte niet.') + ' Probeer het opnieuw.'); return; }
         klassen = klassen.filter(function(q){ return q.code !== k.code; }); bewaar();
         if (window.PROFIEL && PROFIEL.docentWeg) PROFIEL.docentWeg(k.code);
-        kies(null);
+        knop.textContent = 'Klascode opheffen';
+        $('ophefDialoog').close();
+        naWeg('Klascode ' + k.code + ' is opgeheven. De uitslagen zijn gewist.');
       })
-      .catch(function(){ alert('Geen verbinding. Controleer je internet en probeer het opnieuw.'); });
+      .catch(function(){ terug('Geen verbinding. Er is niets opgeheven. Controleer je internet en probeer het opnieuw.'); });
   });
   var pb = $('printBtn');
   if (pb) pb.addEventListener('click', function(){ window.print(); });

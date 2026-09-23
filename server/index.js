@@ -243,7 +243,11 @@ export default {
         if (wat === "hoi") inz = Object.assign({}, inz || {}, { ms: await accountNaam(req, env) });
         return stub.fetch("https://kamer/" + wat, { method: "POST", body: JSON.stringify(inz || {}) });
       }
-      return stub.fetch("https://kamer/resultaten?sleutel=" + encodeURIComponent(url.searchParams.get("sleutel") || ""));
+      /* De sleutel komt in een kopregel, niet in het adres: adressen belanden in
+         logboeken en in de geschiedenis van de browser. Het adres blijft werken
+         voor een pagina die nog uit de cache komt. */
+      const sleutel = req.headers.get("x-sleutel") || url.searchParams.get("sleutel") || "";
+      return stub.fetch("https://kamer/resultaten?sleutel=" + encodeURIComponent(sleutel));
     }
 
     /* De stad. De portier zoekt een potje met plek; is er geen, dan
