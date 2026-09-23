@@ -36,6 +36,9 @@ window.ROLSPEL = (function(){
   }
   function host(o){
     var ws = null, dicht = false, pogingen = 0, lijst = [], n = 0, wachtrij = [];
+    /* de verbinding levend houden, en merken als hij na slaap of wifi-uitval stil dood is (wakker.js) */
+    (function(){ function aan(){ if (window.WAKKER) WAKKER({ ws:function(){ return ws; }, dicht:function(){ return dicht; } }); }
+      if (document.readyState === 'complete') aan(); else addEventListener('load', aan); })();
     var MAX_POGINGEN = 8, balk = null;
     /* Een strook onderaan het bord: eerst dat we opnieuw proberen, daarna dat
        het niet meer lukt. Leeg haalt hem weer weg. */

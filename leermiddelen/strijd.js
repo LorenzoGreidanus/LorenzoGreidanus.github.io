@@ -157,6 +157,9 @@ window.STRIJD = (function(){
   if (!naamOk(naam)) naam = 'Leerling';
   var hud, toast, sluier, toastKlok = null, mijnSid = sid(), mijnPid = null;   /* mijnPid: het openbare nummer dat de kamer me geeft */
   var ws = null, dicht = false, pogingen = 0, hooks = null, gestart = false, klaarMet = false, laatsteStand = '', duel = false, tegen = null, gastheer = null, maatNaam = '', maatAv = '', maten = [], maxSamen = 2;
+  /* de verbinding levend houden, en merken als hij na slaap of wifi-uitval stil dood is (wakker.js) */
+  if (actief) (function(){ function aan(){ if (window.WAKKER) WAKKER({ ws:function(){ return ws; }, dicht:function(){ return dicht; } }); }
+    if (document.readyState === 'complete') aan(); else addEventListener('load', aan); })();
   /* de lobby van Zwaardvechter samen: mijn stijl en of ik klaar ben */
   var mijnStijl = '', mijnKlaar = false;
   function stuurLobby(){ stuur({ t:'lobby', stijl:mijnStijl, klaar:mijnKlaar }); }

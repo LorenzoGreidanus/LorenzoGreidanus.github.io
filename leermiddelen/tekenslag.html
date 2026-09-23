@@ -152,6 +152,7 @@ textarea.veld{min-height:120px;resize:vertical}
 a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(--focusring,#B4701A);outline-offset:3px}
 </style>
 <script src="/vangnet.js" defer></script>
+<script src="wakker.js"></script>
 </head>
 <body>
 
@@ -434,6 +435,9 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
     return s;
   }
   var ws = null, dicht = false, pogingen = 0;
+  /* de verbinding levend houden, en merken als hij na slaap of wifi-uitval stil dood is (wakker.js) */
+  (function(){ function aan(){ if (window.WAKKER) WAKKER({ ws:function(){ return ws; }, dicht:function(){ return dicht; } }); }
+    if (document.readyState === 'complete') aan(); else addEventListener('load', aan); })();
   function verbind(code, query, opBericht, opStatus){
     if (dicht) return;
     var proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
@@ -495,7 +499,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
     verbind(host.code, 'rol=host&sleutel=' + encodeURIComponent(host.sleutel), bordBericht, function(t){ $('bUit').textContent = t; });
   }
   function bordBericht(m){
-    if (m.t === 'welkom' || m.t === 'spelers'){ spelersLijst = m.spelers || []; tekenLobbySpelers(); if (spel) laatkomers(); return; }
+    if (m.t === 'welkom' || m.t === 'spelers'){ spelersLijst = m.spelers || []; tekenLobbySpelers(); if (hervat && spel){ hervatNu(); return; } if (spel) laatkomers(); return; }
     if (m.t === 'actie') actieVanSpeler(m);
   }
   function tekenLobbySpelers(){
@@ -538,6 +542,48 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
   var volgorde = [];  /* solo: wie er na elkaar tekent */
   var DOCENT = { sid:'docent', naam:'de docent' };
   var bTekenaar = null;
+
+  /* ---------- verder na herladen ---------- */
+  var BEWAAR = 'lg-teken-spel', hervat = false;
+  function bewaarBord(){
+    if (!host || !spel) return;
+    try {
+      localStorage.setItem(BEWAAR, JSON.stringify({ t:Date.now(), host:host, teams:teams, scores:scores, volgorde:volgorde,
+        spel:{ ronde:spel.ronde, team:spel.team, woordNr:spel.woordNr, gedaan:spel.gedaan, beurten:spel.beurten, beurtNr:spel.beurtNr } }));
+    } catch (e){}
+  }
+  function vergeetBord(){ try { localStorage.removeItem(BEWAAR); } catch (e){} }
+  /* Staat er een spel van de afgelopen vier uur, en loopt die kamer nog? Dan bovenaan de vraag of je verder wilt. */
+  (function(){
+    var b = null; try { b = JSON.parse(localStorage.getItem(BEWAAR) || 'null'); } catch (e){}
+    if (!b || !b.host || !b.host.code || Date.now() - b.t > 4 * 3600000){ vergeetBord(); return; }
+    fetch('/api/kamer/' + b.host.code).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
+      if (!j || j.fase === 'einde' || j.game !== 'teken'){ vergeetBord(); return; }
+      var kaart = document.createElement('div');
+      kaart.className = 'kaart hervat';
+      kaart.innerHTML = '<p class="eyebrow">nog bezig</p><h2>Er loopt nog een spel in kamer ' + schoon(b.host.code) + '</h2>' +
+        '<p class="tip" style="margin-top:6px">Het bord is herladen, maar de kamer en de punten zijn er nog. Ga verder waar je was: de beurt die bezig was, begint opnieuw.</p>' +
+        '<div class="rij" style="margin-top:12px"><button class="knop crab" type="button" data-hervat="1">Verder met dit spel</button><button class="knop stil" type="button" data-nieuw="1">Nee, een nieuw spel</button></div>';
+      var doel = $('openBtn').closest('.kaart');
+      doel.parentNode.insertBefore(kaart, doel);
+      kaart.querySelector('[data-nieuw]').addEventListener('click', function(){ vergeetBord(); kaart.remove(); });
+      kaart.querySelector('[data-hervat]').addEventListener('click', function(){
+        host = b.host; teams = b.teams || []; scores = b.scores || {}; volgorde = b.volgorde || [];
+        spel = Object.assign({ loopt:false, woord:'', tekenaar:null, tijdEinde:0, klok:null, strepen:[], geraden:[], gedaan:[], beurten:0, beurtNr:0 }, b.spel || {});
+        hervat = true;
+        kaart.remove();
+        bordOpen();
+      });
+    }).catch(function(){});
+  })();
+  /* na de eerste lijst met leerlingen: het spel weer neerzetten en de beurt opnieuw beginnen */
+  function hervatNu(){
+    hervat = false;
+    $('b-lobby').classList.add('hide'); $('b-spel').classList.remove('hide');
+    stuur({ t:'alle', d: isTeams() ? { k:'teams', teams:teamsKort() } : { k:'modus', modus:host.modus, lijst:scoreLijst() } });
+    laatkomers();
+    beurtKlaarzetten();
+  }
 
   $('startBtn').addEventListener('click', function(){
     spel = { ronde:1, team:0, woordNr:0, gedaan:[], loopt:false, woord:'', tekenaar:null, tijdEinde:0, klok:null, strepen:[], geraden:[], beurten:0, beurtNr:0 };
@@ -709,6 +755,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
     spel.stand = { k:'klaar', modus:host.modus || 'teams', team:spel.team, tekenaar:spel.tekenaar.sid, naam:spel.tekenaar.naam, tijd:host.tijd, ronde:spel.ronde, rondes:host.rondes,
       punten: isTeams() ? teams.map(function(x){ return x.punten; }) : undefined, lijst: isTeams() ? undefined : scoreLijst() };
     stuur({ t:'alle', d:spel.stand });
+    bewaarBord();
     clearTimeout(spel.startKlok);
     spel.startKlok = setTimeout(beurtStart, 4000);
   }
@@ -756,6 +803,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
     if (spel.tekenaar.sid !== 'docent') stuur({ t:'naar', pid:spel.tekenaar.sid, d:{ k:'wacht', tekst:'Tijd! Het woord was ' + spel.woord + '.' } });
     $('bVolgende').disabled = false; $('bOverslaan').disabled = true;
     tekenStand();
+    bewaarBord();
   }
   function volgendeBeurt(){
     if (isTeams()){
@@ -804,6 +852,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
         feed(gezicht(lid.naam, m.van) + '<span><b>' + schoon(lid.naam) + '</b> raadt het: ' + schoon(spel.woord) + '</span>', 'goed');
         stuur({ t:'vlug', d:{ k:'goed', naam:lid.naam, woord:spel.woord, punten:teams.map(function(x){ return x.punten; }) } });
         tekenTeamsKort();
+        bewaarBord();
         nieuwWoordInBeurt();
       } else if (oordeel === 'bijna'){
         feed(gezicht(lid.naam, m.van) + '<span>' + schoon(lid.naam) + ': ' + schoon(tekst) + ' <b>(bijna!)</b></span>', 'bijna');
@@ -828,6 +877,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
       stuur({ t:'naar', pid:m.van, d:{ k:'goedjij', woord:spel.woord, plek:plek, punten:pt, totaal:wie.punten } });
       stuur({ t:'vlug', d:{ k:'geraden', naam:wie.naam, plek:plek, tekenaar:spel.tekenaar.sid, lijst:scoreLijst() } });
       tekenStand();
+      bewaarBord();
       /* heeft iedereen die er is het, dan hoeft niemand op de klok te wachten */
       var nog = spelersLijst.filter(function(s2){ return s2.aan && scores[s2.sid] && s2.sid !== spel.tekenaar.sid && spel.geraden.indexOf(s2.sid) < 0; });
       if (!nog.length) beurtEinde();
@@ -842,6 +892,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
   }
   function bordEinde(){
     clearInterval(spel.klok); clearTimeout(spel.startKlok); bordTekenen(false);
+    vergeetBord();
     $('b-spel').classList.add('hide'); $('b-einde').classList.remove('hide');
     if (isTeams()){
       var volg = teams.slice().sort(function(a, b){ return b.punten - a.punten; });
@@ -863,7 +914,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
     stuur({ t:'stop' });
   }
   $('bNogeens').addEventListener('click', function(){ location.href = location.pathname; });
-  $('stopBtn').addEventListener('click', function(){ if (confirm('Het spel stoppen? De leerlingen zien dan het einde.')) { if (spel) bordEinde(); else { stuur({ t:'stop' }); location.href = location.pathname; } } });
+  $('stopBtn').addEventListener('click', function(){ if (confirm('Het spel stoppen? De leerlingen zien dan het einde.')) { if (spel) bordEinde(); else { vergeetBord(); stuur({ t:'stop' }); location.href = location.pathname; } } });
 
   /* ======================================================================
      DE LEERLING
@@ -1072,7 +1123,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
   $('pRaadBtn').addEventListener('click', raad);
   $('pRaad').addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); raad(); } });
 
-  /* een bord dat opnieuw laadt terwijl het spel loopt, gaat terug naar het begin (de lobby is niet te herstellen zonder de teams) */
+  /* een bord dat opnieuw laadt terwijl het spel loopt, kan verder: zie "verder na herladen" bij het bord */
 })();
 </script>
 </body>
