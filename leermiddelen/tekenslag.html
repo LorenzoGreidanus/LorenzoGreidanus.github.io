@@ -684,7 +684,12 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
     $('pOver').innerHTML = '<div><p>' + kop + '</p><b>' + schoon(woord) + '</b></div>';
     onthulKlok = setTimeout(function(){ if ($('pOver').classList.contains('onthul')){ $('pOver').classList.add('hide'); $('pOver').classList.remove('onthul'); } }, 1800);
   }
-  function stopOnthul(){ clearTimeout(onthulKlok); $('pOver').classList.remove('onthul'); }
+  /* Het grote woord weghalen, en het venster zelf ook: alleen de kleur weghalen
+     liet een grijs venster over het vel staan, en daar kon je niet doorheen tekenen. */
+  function stopOnthul(){
+    clearTimeout(onthulKlok);
+    if ($('pOver').classList.contains('onthul')){ $('pOver').classList.remove('onthul'); $('pOver').classList.add('hide'); }
+  }
   function stand(){
     var t = mijnTeam >= 0 ? pTeams[mijnTeam] : null;
     $('pTeam').innerHTML = t ? '<span style="color:' + t.kleur + '">team ' + t.naam + '</span>' + (pTeams.length ? ' · ' + pTeams.map(function(x){ return x.naam + ' ' + (x.punten || 0); }).join(', ') : '') : '';
@@ -703,7 +708,8 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
     var d = m.d; if (!d || typeof d !== 'object') return;
     if (m.t === 'kaart' || m.t === 'bord'){ huidig = d; }
     /* elk ander bericht over de beurt haalt het grote woord van het vel */
-    if (['s', 'gok', 'goed', 'teken', 'strepen', 'wis'].indexOf(d.k) < 0) stopOnthul();
+    /* (het bericht dat ik zelf teken, hoort daar niet bij: dat komt vlak na mijn woord) */
+    if (['s', 'gok', 'goed', 'teken', 'strepen', 'wis'].indexOf(d.k) < 0 && !(d.k === 'raad' && d.tekenaar === mijnPid)) stopOnthul();
     if (d.k === 'teams'){
       pTeams = d.teams.map(function(t){ return { naam:t.naam, kleur:t.kleur, leden:t.leden, punten:t.punten }; });
       mijnTeam = -1; pTeams.forEach(function(t, i){ if (t.leden.indexOf(mijnPid) >= 0) mijnTeam = i; });
