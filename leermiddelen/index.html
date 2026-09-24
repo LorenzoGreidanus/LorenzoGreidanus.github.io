@@ -84,7 +84,11 @@ header{padding:12px 0;border-bottom:1px solid var(--rand);background:#fff;positi
 @media(max-width:600px){header .mark .lgnaam{display:none}header .hd a.docent{font-size:.78rem;padding:8px 10px}.hd{gap:8px}.niveaubalk{grid-template-columns:repeat(3,minmax(0,1fr))}.leerjaarbalk{grid-template-columns:repeat(2,minmax(0,1fr))}.niveaubalk .niveauknop{font-size:.78rem;padding:8px 4px;white-space:normal;line-height:1.15}}
 
 /* ---------- het raam: kolom links, spellen rechts ---------- */
-.raam{display:grid;grid-template-columns:250px minmax(0,1fr);gap:28px;align-items:start;margin-top:22px}
+.raam{display:grid;grid-template-columns:250px minmax(0,1fr);column-gap:28px;row-gap:0;align-items:start;margin-top:22px}
+/* de filters links over de hele hoogte; rechts eerst wat je docent klaarzette, dan de catalogus */
+.raam>.zijkant{grid-column:1;grid-row:1 / span 2}
+.raam>.lesvak{grid-column:2;grid-row:1;margin-bottom:22px}
+.raam>.inhoud{grid-column:2;grid-row:2}
 .zijkant{position:sticky;top:76px;display:grid;gap:0;min-width:0;background:var(--kaart);border:1px solid var(--rand);border-radius:20px;padding:6px;box-shadow:0 10px 26px rgba(20,34,76,.05)}
 /* de ingeklapte filters: de kop blijft staan, de knoppen komen pas als je erop tikt */
 .zijkant details.meer summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;justify-content:space-between;min-height:44px}
@@ -168,7 +172,7 @@ header{padding:12px 0;border-bottom:1px solid var(--rand);background:#fff;positi
 .sectiekop i{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;flex:none}
 .spel .examen{display:inline-block;margin-top:6px;font-size:.68rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#2f7d52;background:rgba(47,125,82,.12);border-radius:999px;padding:2px 8px}
 .sectiekop i svg{width:19px;height:19px;fill:none;stroke:#FBF6F1;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-.sectiekop h2{font-size:1.25rem}
+.sectiekop h2{font-size:1.25rem;min-width:0;overflow-wrap:anywhere}
 .sectiekop span{font-size:.82rem;color:var(--muted);margin-left:auto;white-space:nowrap}
 .sectiekop small{display:block;font-size:.8rem;color:var(--muted);font-weight:400}
 .spellen{display:grid;grid-template-columns:repeat(auto-fill,minmax(164px,1fr));gap:10px;align-items:stretch;grid-auto-rows:1fr}
@@ -207,7 +211,7 @@ header{padding:12px 0;border-bottom:1px solid var(--rand);background:#fff;positi
 /* Dit blok staat boven het raam, dus boven de filters en het zoekveld: met een
    klascode is dit waar de pagina op opent. Het heeft geen eigen paneel nodig,
    want de opdrachtkaart is zelf al het sterkste vlak van de pagina. */
-.lesvak{display:grid;gap:14px;margin-top:20px}
+.lesvak{display:grid;gap:14px;min-width:0}
 .lesvak.hide{display:none}
 .lesvak .sectie{margin-top:0}
 .lesvak .opdrachtkaart{margin:0}
@@ -218,6 +222,7 @@ header{padding:12px 0;border-bottom:1px solid var(--rand);background:#fff;positi
 /* lesmodus: er valt niets te kiezen, dus het kiesgereedschap gaat weg */
 main.lesalleen .zijkant,main.lesalleen .bovenrij,main.lesalleen .verder{display:none}
 main.lesalleen .raam{grid-template-columns:minmax(0,1fr)}
+main.lesalleen .raam>*{grid-column:1}
 .restspellen{margin-top:18px}
 .restspellen summary{cursor:pointer;font-weight:600;color:var(--muted);padding:10px 0}
 .restspellen[open] summary{color:var(--ink)}
@@ -267,6 +272,8 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
 /* ---------- smal: de kolom wordt rijen chips bovenaan ---------- */
 @media(max-width:860px){
   .raam{grid-template-columns:minmax(0,1fr);gap:14px}
+  .raam>.zijkant,.raam>.lesvak,.raam>.inhoud{grid-column:1;grid-row:auto}
+  .raam>.lesvak{margin-bottom:0}
   .zijkant,.inhoud{min-width:0;max-width:100%}
   .zijkant{position:static;gap:0;background:none;border:none;box-shadow:none;padding:0}
   .blok{padding:6px 0 8px}
@@ -408,6 +415,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
 .klasstrip input.naam{flex:1 1 120px;width:auto}
 .klasstrip button{border:none;border-radius:12px;padding:8px 14px;min-height:44px;background:var(--ocean,#204ECF);
   color:#fff;font:inherit;font-weight:600;cursor:pointer}
+.klasstrip button:disabled{opacity:.55;cursor:progress}
 .klasstrip p.status{font-size:.84rem;color:var(--muted);margin-top:8px}
 /* Op een telefoon stond er anderhalf scherm instelwerk voor het eerste spel.
    De drie docentenlinks worden er een; klascode en gezichtje zitten in de
@@ -559,16 +567,16 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
     </div>
   </section>
 
-  <!-- Met een klascode het eerste wat je ziet: de opdracht van je docent en
-       de spellen die hij voor deze klas koos. Zonder klascode blijft dit leeg
-       en verborgen. -->
-  <div class="lesvak hide" id="lesvak">
-    <p class="oudmelding hide" id="oudmelding"></p>
-    <div class="opdrachtkaart hide" id="opdrachtKaart"></div>
-    <div id="lesspellen"></div>
-  </div>
-
   <div class="raam">
+    <!-- Met een klascode het eerste wat je ziet: de opdracht van je docent en
+         de spellen die hij voor deze klas koos. Het staat in dezelfde kolom als
+         de catalogus, zodat alles wat je kunt spelen op een lijn begint; op een
+         telefoon staat het boven de filters. Zonder klascode leeg en verborgen. -->
+    <div class="lesvak hide" id="lesvak">
+      <p class="oudmelding hide" id="oudmelding"></p>
+      <div class="opdrachtkaart hide" id="opdrachtKaart"></div>
+      <div id="lesspellen"></div>
+    </div>
     <aside class="zijkant" aria-label="Filters">
       <div class="blok"><h2>Vak</h2><div class="lijst" id="vaklijst" role="group" aria-label="Kies een vak"></div></div>
       <details class="blok meer" id="soortblok"><summary><h2>Soort spel</h2><span id="soortNu">alle soorten</span></summary><div class="lijst" id="soortlijst" role="group" aria-label="Soort spel"></div></details>
@@ -580,7 +588,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
       <div class="bovenrij">
         <label class="zoek">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-          <input type="search" id="zoek" placeholder="Zoek een spel of onderwerp" autocomplete="off" aria-label="Zoeken">
+          <input type="search" id="zoek" placeholder="Zoek een spel of onderwerp" autocomplete="off" aria-label="Zoeken" maxlength="60">
           <kbd id="zoekKbd">/</kbd>
           <button type="button" class="wis hide" id="zoekWis" aria-label="Zoekopdracht wissen">&times;</button>
         </label>
@@ -930,7 +938,9 @@ var SPELLEN = [
   var stand = { niveau:null, leerjaar:'12', vak:'alle', soort:'alles', tv:0, zoek:'' };
   function param(naam){
     var m = new RegExp('[?&]' + naam + '=([^&]+)').exec(location.search);
-    return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : null;
+    if (!m) return null;
+    /* een adres met een losse % (zoek=100%) laat decodeURIComponent vallen, en dan stond de hele pagina stil */
+    try { return decodeURIComponent(m[1].replace(/\+/g, ' ')); } catch (e){ return m[1].replace(/\+/g, ' '); }
   }
   function onthoud(){
     var d = [];
@@ -1099,7 +1109,7 @@ var SPELLEN = [
   function zoektekst(sp){
     var namen = tvLijst(sp).map(function(nr){ var t = tvVan(nr); return t ? t.naam + ' tijdvak ' + nr : ''; }).join(' ');
     var vakken = (Array.isArray(sp.vak) ? sp.vak : [sp.vak]).map(function(id){ var v = vakVan(id); return v ? v.naam : id; }).join(' ');
-    return (sp.naam + ' ' + sp.wat + ' ' + sp.leer + ' ' + sp.tijd + ' ' + namen + ' ' + vakken + ' ' + soortNaam(soortVan(sp))).toLowerCase();
+    return plat(sp.naam + ' ' + sp.wat + ' ' + sp.leer + ' ' + sp.tijd + ' ' + namen + ' ' + vakken + ' ' + soortNaam(soortVan(sp)));
   }
   zoekveld.addEventListener('input', function(){
     clearTimeout(zoekTimer);
@@ -1117,8 +1127,10 @@ var SPELLEN = [
   });
 
   /* ---------- de lijst ---------- */
+  /* zonder accenten vergelijken: wie cafe of reunie typt, vindt café en reünie ook */
+  function plat(x){ x = String(x || '').toLowerCase(); return x.normalize ? x.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : x; }
   function gefilterd(){
-    var woorden = stand.zoek.toLowerCase().split(/\s+/).filter(Boolean);
+    var woorden = plat(stand.zoek).split(/\s+/).filter(Boolean);
     return SPELLEN.filter(function(sp){
       if (!sp.bestand) return false;
       if (stand.vak !== 'alle' && !hoortBij(sp, stand.vak)) return false;
@@ -1158,7 +1170,7 @@ var SPELLEN = [
   }
   /* Een lange rij kaarten leest niet. Per vak tonen we er vijf; de rest komt achter een knop vandaan.
      Zoeken, een gekozen soort of een gekozen tijdvak laat wel alles zien: dan zoek je gericht. */
-  var TOON = 5, uitgeklapt = {};
+  var TOON = 5, uitgeklapt = {}, restFilter = '';
   function sectieKort(ico, kleur, titel, onder, lijst, sleutel){
     if (lijst.length <= TOON + 1 || uitgeklapt[sleutel] || stand.zoek || stand.soort !== 'alles' || stand.tv) return sectie(ico, kleur, titel, onder, lijst.length, lijst);
     var rest = lijst.length - TOON;
@@ -1296,9 +1308,18 @@ var SPELLEN = [
         $('secties').innerHTML = '<p class="lesnoot">De lesmodus staat aan: je docent heeft de andere spellen even weggezet. Na de les staan ze er weer.</p>';
         return;
       }
+      /* Wie een vak of soort kiest, wil zien wat eruit komt: dan staat de rest
+         open, met in de kop waarop gefilterd is. Zelf dichtklappen blijft
+         bewaard tot je weer filtert. */
+      var gefilterdOp = [stand.vak !== 'alle' ? (vakVan(stand.vak) || {}).naam : '', stand.soort !== 'alles' ? soortNaam(stand.soort).toLowerCase() : '', stand.tv && tvVan(stand.tv) ? 'tijdvak ' + stand.tv : ''].filter(Boolean);
+      var sleutelNu = gefilterdOp.join('|');
+      if (sleutelNu !== restFilter){ restFilter = sleutelNu; if (sleutelNu) uitgeklapt.rest = true; }
+      var kop = gefilterdOp.length ? 'Andere spellen: ' + gefilterdOp.join(', ') : 'Alle andere spellen';
       $('secties').innerHTML = rest.length
-        ? '<details class="restspellen"' + (uitgeklapt.rest ? ' open' : '') + '><summary>Alle andere spellen (' + rest.length + ')</summary><div class="spellen">' + rest.map(kaart).join('') + '</div></details>'
-        : '';
+        ? '<details class="restspellen" id="restSpellen"' + (uitgeklapt.rest ? ' open' : '') + '><summary>' + schoon(kop) + ' (' + rest.length + ')</summary><div class="spellen">' + rest.map(kaart).join('') + '</div></details>'
+        : (gefilterdOp.length ? '<p class="lesnoot">Wat hierbij past, staat hierboven al bij je docent.</p>' : '');
+      var rs = $('restSpellen');
+      if (rs) rs.addEventListener('toggle', function(){ uitgeklapt.rest = rs.open; });
       return;
     }
     if (stand.zoek){
@@ -1528,16 +1549,24 @@ var SPELLEN = [
   function koppelVorm(waar, kop){
     waar.innerHTML = (kop || '') +
       '<div class="invulrij"><input id="klasCode" maxlength="4" placeholder="CODE" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Klascode"><input id="klasNaam" class="naam" maxlength="16" placeholder="Je bijnaam" autocomplete="nickname" aria-label="Je bijnaam"><button type="button" id="klasKoppel">Koppelen</button></div>' +
-      '<p class="status" id="klasStatus">Alleen als je docent je een code gaf. Zonder code speel je gewoon en wordt er niets opgeslagen.</p>';
-    waar.querySelector('#klasKoppel').addEventListener('click', function(){
-      var code = waar.querySelector('#klasCode').value.toUpperCase().replace(/[^A-Z]/g, ''), naam = waar.querySelector('#klasNaam').value.trim(), st = waar.querySelector('#klasStatus');
-      if (code.length !== 4){ st.textContent = 'Een klascode heeft vier letters.'; return; }
-      if (naam.length < 2){ st.textContent = 'Vul een bijnaam in.'; return; }
+      '<p class="status" id="klasStatus" role="status" aria-live="polite">Alleen als je docent je een code gaf. Zonder code speel je gewoon en wordt er niets opgeslagen.</p>';
+    var knop = waar.querySelector('#klasKoppel'), codeVeld = waar.querySelector('#klasCode'), naamVeld = waar.querySelector('#klasNaam');
+    /* Enter in een van de twee velden koppelt ook */
+    [codeVeld, naamVeld].forEach(function(v){ v.addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); knop.click(); } }); });
+    knop.addEventListener('click', function(){
+      if (knop.disabled) return;
+      var code = codeVeld.value.toUpperCase().replace(/[^A-Z]/g, ''), naam = naamVeld.value.trim(), st = waar.querySelector('#klasStatus');
+      if (code.length !== 4){ st.textContent = 'Een klascode heeft vier letters, bijvoorbeeld KRBT.'; codeVeld.focus(); return; }
+      if (naam.length < 2){ st.textContent = 'Vul een bijnaam in, zodat je docent ziet wie je bent.'; naamVeld.focus(); return; }
+      codeVeld.value = code;
+      /* de knop even uit, anders koppel je bij twee keer tikken twee keer */
+      knop.disabled = true;
       st.textContent = 'Even kijken\u2026';
       fetch('/api/kamer/' + code).then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); }).then(function(x){
-        if (!x.ok || x.j.spel !== 'klas'){ st.textContent = 'Geen klas met deze code.'; return; }
+        knop.disabled = false;
+        if (!x.ok || x.j.spel !== 'klas'){ st.textContent = 'Er is geen klas met code ' + code + '. Kijk of je hem goed overnam.'; codeVeld.focus(); return; }
         KLAS.zet(code, naam); teken();
-      }).catch(function(){ st.textContent = 'Geen verbinding.'; });
+      }).catch(function(){ knop.disabled = false; st.textContent = 'Geen verbinding. Kijk of je internet hebt en tik dan nog een keer op Koppelen.'; });
     });
   }
   teken();
