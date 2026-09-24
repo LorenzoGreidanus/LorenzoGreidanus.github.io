@@ -7,7 +7,10 @@
  * met de lesnoot in de leeromgeving en met de opdrachtkaart gebeurde, en die
  * fouten zijn alleen te zien als je ernaar kijkt in de goede stand.
  *
- * Deze toets kijkt voor je: elke zichtbare regel tekst, in beide standen,
+ * Deze toets kijkt voor je: elke zichtbare regel tekst, in drie standen
+ * (licht, donker volgens het systeem, en donker met de knop op de site, die
+ * via eigen regels werkt en dus los kan misgaan), op het beginscherm, na op
+ * Start drukken en in de uitleg stap voor stap,
  * tegen de norm van 4,5:1 (of 3:1 voor grote tekst). En meteen ook of een
  * knop of link minstens 44 bij 44 beeldpunten is, want dat belooft de site
  * over zichzelf.
@@ -30,12 +33,17 @@ const BASIS = process.argv[2] && /^https?:/.test(process.argv[2]) ? process.argv
 const GEVRAAGD = process.argv.slice(process.argv[2] && /^https?:/.test(process.argv[2]) ? 3 : 2);
 const MAP = path.join(__dirname, '..', 'leermiddelen');
 
-/* Pagina's die geen spel zijn of die alleen achter een code te zien zijn. */
-const OVERSLAAN = ['beheer.html', 'mee.html', 'rol.html', 'standen.html'];
+/* beheer.html is alleen voor de eigenaar en vraagt meteen om een sleutel. */
+const OVERSLAAN = ['beheer.html'];
 
+/* Alles in leermiddelen/ en de pagina's van de site zelf (voorpagina, over,
+   nieuw, privacy), met hun pad vanaf de hoofdmap. */
 function paginas(){
-  if (GEVRAAGD.length) return GEVRAAGD.map(n => n.endsWith('.html') ? n : n + '.html');
-  return fs.readdirSync(MAP).filter(f => /\.html$/.test(f) && OVERSLAAN.indexOf(f) < 0).sort();
+  if (GEVRAAGD.length) return GEVRAAGD.map(n => n.endsWith('.html') ? n : n + '.html')
+    .map(n => n.indexOf('/') >= 0 ? n : (fs.existsSync(path.join(MAP, n)) ? 'leermiddelen/' + n : n));
+  const lm = fs.readdirSync(MAP).filter(f => /\.html$/.test(f) && OVERSLAAN.indexOf(f) < 0).sort().map(f => 'leermiddelen/' + f);
+  const top = fs.readdirSync(path.join(MAP, '..')).filter(f => /\.html$/.test(f)).sort();
+  return top.concat(lm);
 }
 
 /* ---------- een heel klein laagje om het devtools-protocol ---------- */
@@ -157,56 +165,80 @@ const METEN = `(function(){
   const br = await verbind(versie.webSocketDebuggerUrl);
   const { targetId } = await br.zeg('Target.createTarget', { url: 'about:blank' });
   const { sessionId } = await br.zeg('Target.attachToTarget', { targetId, flatten: true });
-  await br.zeg('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false }, sessionId);
   await br.zeg('Emulation.setScrollbarsHidden', { hidden: true }, sessionId);
   await br.zeg('Network.enable', {}, sessionId);
   await br.zeg('Network.setCacheDisabled', { cacheDisabled: true }, sessionId);
   await br.zeg('Page.enable', {}, sessionId);
   await br.zeg('Runtime.enable', {}, sessionId);
+  /* Animaties en overgangen uit: een tekst die net invliegt of een kleur die
+     nog overloopt, gaf soms een fout die er een tel later niet meer was. Een
+     toets die de ene keer valt en de andere keer niet, zegt niets. De stand
+     van de knop (localStorage thema) wordt gezet voor de pagina hem leest. */
+  let thema = '';
+  await br.zeg('Page.addScriptToEvaluateOnNewDocument', { source:
+    "(function(){var z=function(){var s=document.createElement('style');s.textContent='*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}';(document.head||document.documentElement).appendChild(s)};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',z);else z();})();" }, sessionId);
+  let themaScript = null;
+
+  const doe = async (expr, wacht) => {
+    const r = await br.zeg('Runtime.evaluate', { returnByValue: true, awaitPromise: true, expression: expr }, sessionId);
+    if (wacht) await new Promise(k => setTimeout(k, wacht));
+    return r.exceptionDetails ? null : r.result.value;
+  };
+  async function laad(pagina, stand, breed){
+    await br.zeg('Emulation.setDeviceMetricsOverride', { width: breed, height: breed < 700 ? 812 : 900, deviceScaleFactor: 1, mobile: breed < 700 }, sessionId);
+    await br.zeg('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: stand === 'dark' ? 'dark' : 'light' }, { name: 'prefers-reduced-motion', value: 'reduce' }] }, sessionId);
+    const nu = stand === 'knop' ? 'dark' : stand === 'light' ? 'light' : '';
+    if (nu !== thema || !themaScript){
+      if (themaScript) await br.zeg('Page.removeScriptToEvaluateOnNewDocument', { identifier: themaScript }, sessionId);
+      const r = await br.zeg('Page.addScriptToEvaluateOnNewDocument', { source: nu ? "try{localStorage.setItem('thema','" + nu + "')}catch(e){}" : "try{localStorage.removeItem('thema')}catch(e){}" }, sessionId);
+      themaScript = r.identifier; thema = nu;
+    }
+    const geladen = new Promise(k => br.opGebeurtenis(b => { if (b.method === 'Page.loadEventFired' && b.sessionId === sessionId) k(); }));
+    await br.zeg('Page.navigate', { url: BASIS + '/' + pagina }, sessionId);
+    await geladen;
+    /* de service worker deelt anders de vorige versie uit; en wachten op de lettertypes, anders meet je de reserveletter */
+    await doe("(async()=>{try{for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); for (const k of await caches.keys()) await caches.delete(k);}catch(e){} try{await document.fonts.ready}catch(e){} return 1;})()", 1200);
+  }
+  const meet = async () => { const v = await doe(METEN); return v ? JSON.parse(v) : { tekst: [{ sel: '-', t: 'meten mislukt', v: 0, norm: 0 }], doelen: [] }; };
+  /* De toestanden na het begin: op Start drukken, en de uitleg stap voor stap openen. */
+  const START = "(function(){var b=[].filter.call(document.querySelectorAll('button,a.btn,a.knop'),function(x){return x.offsetParent&&!x.disabled&&(/^(start|startbtn|begin|beginbtn|speel|spelen)$/i.test(x.id)||/^(start|begin|beginnen|speel|spelen|nieuw spel)\b/i.test((x.textContent||'').trim()))})[0];if(!b)return 0;b.click();return 1})()";
+  const UITLEG = "(function(){var b=document.querySelector('.stapknop,.stappen-knop');if(!b||!b.offsetParent)return 0;b.click();return 1})()";
 
   const lijst = paginas();
   let totaalTekst = 0, totaalDoelen = 0, stuk = 0;
-
   for (const pagina of lijst){
-    const perStand = {};
-    for (const stand of ['light', 'dark']){
-      await br.zeg('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: stand }] }, sessionId);
-      const geladen = new Promise(k => br.opGebeurtenis(b => {
-        if (b.method === 'Page.loadEventFired' && b.sessionId === sessionId) k();
-      }));
-      await br.zeg('Page.navigate', { url: BASIS + '/leermiddelen/' + pagina }, sessionId);
-      await geladen;
-      /* de service worker deelt anders de vorige versie uit */
-      await br.zeg('Runtime.evaluate', { awaitPromise: true, expression:
-        "(async()=>{try{for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); for (const k of await caches.keys()) await caches.delete(k);}catch(e){} return 1;})()" }, sessionId);
-      await new Promise(r => setTimeout(r, 1200));
-      const uit = await br.zeg('Runtime.evaluate', { returnByValue: true, expression: METEN }, sessionId);
-      if (uit.exceptionDetails){ perStand[stand] = { fout: uit.exceptionDetails.text }; continue; }
-      perStand[stand] = JSON.parse(uit.result.value);
+    const fouten = [];
+    const noteer = (stand, toestand, uit) => {
+      (uit.tekst || []).forEach(x => fouten.push('[' + stand + (toestand ? ', ' + toestand : '') + '] ' + String(x.v).padStart(5) + ':1 (norm ' + x.norm + ')  ' + x.sel.padEnd(26) + ' ' + JSON.stringify(x.t)));
+    };
+    for (const stand of ['light', 'dark', 'knop']){
+      await laad(pagina, stand, 1280);
+      noteer(stand, '', await meet());
+      /* na Start alleen de tekst: tijdens een spel mogen dingen op het speelveld klein zijn */
+      if (await doe(START, 1500)) noteer(stand, 'na start', await meet());
+      if (/^leermiddelen\//.test(pagina)){
+        await laad(pagina, stand, 1280);
+        if (await doe(UITLEG, 900)) noteer(stand, 'uitleg', await meet());
+      }
     }
-
-    const t = (perStand.light.tekst || []).length + (perStand.dark.tekst || []).length;
-    const d = (perStand.dark.doelen || []).length;
+    /* tikdoelen, op de telefoon en op de computer */
+    const doelen = new Map();
+    for (const breed of [375, 1280]){
+      await laad(pagina, 'dark', breed);
+      ((await meet()).doelen || []).forEach(x => doelen.set(x.sel + '|' + x.t, '[tikdoel ' + breed + '] ' + x.b + '×' + x.h + '  ' + x.sel.padEnd(26) + ' ' + JSON.stringify(x.t)));
+    }
+    const uniek = [...new Set(fouten)];
+    const t = uniek.length, d = doelen.size;
     totaalTekst += t; totaalDoelen += d;
     if (t || d) stuk++;
-
-    if (!t && !d){ console.log('  ' + pagina.padEnd(22) + 'in orde'); continue; }
-    console.log('! ' + pagina.padEnd(22) + t + ' regels onder de norm, ' + d + ' tikdoelen te klein');
-    ['light', 'dark'].forEach(stand => {
-      (perStand[stand].tekst || []).forEach(x => {
-        console.log('      [' + stand + '] ' + String(x.v).padStart(5) + ':1 (norm ' + x.norm + ')  ' +
-          x.sel.padEnd(26) + ' ' + JSON.stringify(x.t));
-      });
-    });
-    (perStand.dark.doelen || []).forEach(x => {
-      console.log('      [tikdoel] ' + x.b + '×' + x.h + '  ' + x.sel.padEnd(26) + ' ' + JSON.stringify(x.t));
-    });
+    if (!t && !d){ console.log('  ' + pagina.padEnd(36) + 'in orde'); continue; }
+    console.log('! ' + pagina.padEnd(36) + t + ' regels onder de norm, ' + d + ' tikdoelen te klein');
+    uniek.forEach(r => console.log('      ' + r));
+    [...doelen.values()].forEach(r => console.log('      ' + r));
   }
-
   console.log('');
-  console.log(lijst.length + ' pagina\'s nagekeken, ' + stuk + ' met iets mis.');
+  console.log(lijst.length + " pagina's nagekeken, " + stuk + ' met iets mis.');
   console.log(totaalTekst + ' regels tekst onder de norm, ' + totaalDoelen + ' tikdoelen onder 44 beeldpunten.');
-
   await br.zeg('Target.closeTarget', { targetId });
   br.sluit();
   process.exit(totaalTekst + totaalDoelen ? 1 : 0);

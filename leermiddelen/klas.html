@@ -745,6 +745,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
   <div class="deurtjes">
     <a href="handleiding.html"><b>Handleiding</b><span>stap voor stap, met plaatjes; ook als pdf</span></a>
     <a href="lesbrieven.html"><b>Lesbrieven</b><span>per spel: leerdoel, tijd, werkvorm</span></a>
+    <a href="maken.html"><b>Eigen materiaal</b><span>woordenlijsten voor de spellen, oefeningen en toetsen met sleepvragen</span></a>
     <a href="klasquiz.html"><b>Klasquiz starten</b><span>quiz op het digibord, leerlingen op hun laptop</span></a>
     <a href="tekenslag.html"><b>Tekenslag starten</b><span>tekenen en raden in teams</span></a>
   </div>
@@ -778,10 +779,10 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     var d = new Date(t), nu = new Date(), dag = Math.round((nu.setHours(0, 0, 0, 0) - new Date(d).setHours(0, 0, 0, 0)) / 86400000);
     return dag === 0 ? 'vandaag' : dag === 1 ? 'gisteren' : d.toLocaleDateString('nl-NL', { day:'numeric', month:'short' });
   }
-  var SPELLEN = { toren:'Torenverdediging', zwaard:'Zwaardvechter', race:'Vragenrace', klasquiz:'Klasquiz', rekenen:'Rekenrace', balans:'De balans', werkwoorden:'Werkwoordrace', irregular:'Irregular verbs', vlaggen:'Vlaggen', landenvormen:'Landenvormen', topografie:'Topografie', lichaam:'Het lichaam', tijdvakken:'Tijdvakken sorteren', bronnenlab:'Bronnenlab', jagers:'Blijven of doorlopen', feodalisme:'Feodalisme', leenmannen:'Verdeel je rijk', stad:'Bouw je stad', handel:'De handelsroute', vergadering:'De vergadering', zinsbouw:'Zinsbouw', tekstdetective:'De tekstdetective', uitverkoop:'De uitverkoop', breukenbakker:'De breukenbakker',
+  var SPELLEN = { eigen:'Eigen oefening', toren:'Torenverdediging', zwaard:'Zwaardvechter', race:'Vragenrace', klasquiz:'Klasquiz', rekenen:'Rekenrace', balans:'De balans', werkwoorden:'Werkwoordrace', irregular:'Irregular verbs', vlaggen:'Vlaggen', landenvormen:'Landenvormen', topografie:'Topografie', lichaam:'Het lichaam', tijdvakken:'Tijdvakken sorteren', bronnenlab:'Bronnenlab', jagers:'Blijven of doorlopen', feodalisme:'Feodalisme', leenmannen:'Verdeel je rijk', stad:'Bouw je stad', handel:'De handelsroute', vergadering:'De vergadering', zinsbouw:'Zinsbouw', tekstdetective:'De tekstdetective', uitverkoop:'De uitverkoop', breukenbakker:'De breukenbakker',
     dhte:'Het DHTE-schema', vlakken:'Vlakken herkennen', organisme:'Bouw het organisme', dag:'Dagelijkse uitdaging', fouten:'Oefen je fouten', strijd:'Klasstrijd' };
   var NIVEAUS = { bb:'vmbo-bb', kgt:'vmbo-kgt/tl', havo:'havo', vwo:'vwo' };
-  var VAKKEN = { reken:'Rekenen', ned:'Nederlands', eng:'Engels', ges:'Geschiedenis', aard:'Aardrijkskunde', bio:'Biologie', wis:'Wiskunde', burg:'Samenleving', eco:'Economie' };
+  var VAKKEN = { reken:'Rekenen', ned:'Nederlands', eng:'Engels', ges:'Geschiedenis', aard:'Aardrijkskunde', bio:'Biologie', wis:'Wiskunde', burg:'Samenleving', eco:'Economie', eigen:'Eigen lijst' };
   /* de namen van de onderdelen komen uit de vragenbank, als die geladen is */
   function onderdeelNaam(vak, id){
     var lijst = window.ONDERDELEN && ONDERDELEN[vak];
@@ -1043,7 +1044,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     /* alleen bij het openen van een klas overnemen; anders overschrijft een verversing wat je net aanklikte */
     if (data && huidig && keuzeVoor !== huidig.code){ keuzeVoor = huidig.code; keuzeSpellen = Array.isArray(data.spellen) ? data.spellen.slice() : []; lesmodus = !!data.lesmodus; tekenKeuze(); }
     $('rijen').innerHTML = lijst.length ? lijst.map(function(r){
-      return '<tr><td>' + (window.AVATAR ? AVATAR.svg(r.naam, 24, r.av) : '') + wieHtml(r.naam) + '</td><td>' + schoon(SPELLEN[r.spel] || r.spel) + '</td><td class="getal">' + r.ronde + '</td><td class="getal">' + r.punten + '</td><td>' + schoon(NIVEAUS[r.niveau] || r.niveau || '') + '</td><td>' + schoon(VAKKEN[r.vak] || r.vak || '') + '</td><td>' + new Date(r.t).toLocaleString('nl-NL', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) + '</td></tr>';
+      return '<tr><td>' + (window.AVATAR ? AVATAR.svg(r.naam, 24, r.av) : '') + wieHtml(r.naam) + '</td><td>' + schoon(SPELLEN[r.spel] || r.spel) + '</td><td class="getal">' + r.ronde + '</td><td class="getal">' + r.punten + '</td><td>' + schoon(NIVEAUS[r.niveau] || r.niveau || '') + '</td><td>' + schoon(r.vak ? vakNaam(r.vak) : '') + '</td><td>' + new Date(r.t).toLocaleString('nl-NL', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) + '</td></tr>';
     }).join('') : '<tr><td colspan="7" class="leeg">Nog geen potjes.</td></tr>';
   }
 
@@ -1077,7 +1078,16 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     return { groep: gid, groepNaam: g ? g.naam : 'overig', gOrde: g ? g.orde : 99,
              dOrde: ind.volgorde[id] !== undefined ? ind.volgorde[id] : 9000 };
   }
-  function vakNaam(v){ return VAKKEN[v] || v || 'Onbekend vak'; }
+  function vakNaam(v){
+    /* m:CODE is een eigen oefening; de naam staat in de lijst van wie hem maakte */
+    var m = /^m:([A-Z0-9]{6})$/.exec(v || '');
+    if (m){
+      var eigen = []; try { eigen = JSON.parse(localStorage.getItem('lg-materiaal') || '[]') || []; } catch (e){}
+      var x = eigen.filter(function(y){ return y && y.code === m[1]; })[0];
+      return x ? x.naam : 'Eigen oefening ' + m[1];
+    }
+    return VAKKEN[v] || v || 'Onbekend vak';
+  }
   /* Niet elk spel geeft zijn vak mee bij de uitslag; dan weten we het van
      het spel zelf. Een uitslag die wel een vak meegeeft, houdt dat. */
   var SPELVAK = { dhte:'reken', uitverkoop:'reken', breukenbakker:'reken', rekenen:'reken',

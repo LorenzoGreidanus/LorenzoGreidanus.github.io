@@ -313,6 +313,21 @@ export async function behandel(req, env, url, hulp){
     return json({ fout: "onbekend" }, 404);
   }
 
+  /* het eigen materiaal van de ingelogde docent: code, sleutel, naam en soort */
+  if (p === "/api/account/materiaal"){
+    if (!hulp.eigenSite()) return json({ fout: "niet vanaf deze site" }, 403);
+    if (!await hulp.magDoor("account-materiaal", 300, 60)) return json({ fout: "even wachten" }, 429);
+    const s = await sessie(env, req);
+    if (!s) return json({ fout: "niet ingelogd" }, 401);
+    const stub = await account(env, s.id);
+    if (req.method === "GET") return stub.fetch("https://account/materiaal");
+    if (req.method === "POST"){
+      let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldige lijst" }, 400); }
+      return stub.fetch("https://account/materiaal", { method: "POST", body: JSON.stringify(inz || {}) });
+    }
+    return json({ fout: "onbekend" }, 404);
+  }
+
   /* de klassen van de ingelogde docent: ophalen en bijwerken */
   if (p === "/api/account/klassen"){
     if (!hulp.eigenSite()) return json({ fout: "niet vanaf deze site" }, 403);
@@ -407,6 +422,26 @@ export class Account extends DurableObject {
       this.stand.sets = Object.keys(heb).map(c => heb[c]).sort((x, y) => y.gemaakt - x.gemaakt).slice(0, 60);
       await this.bewaar();
       return json({ ok: true, sets: this.stand.sets });
+    }
+    /* Het eigen materiaal van deze docent: code, sleutel, naam, soort. Dezelfde
+       vorm als de klassen: erbij met materiaal, eruit met weg. */
+    if (url.pathname === "/materiaal"){
+      if (req.method !== "POST") return json({ ok: true, materiaal: this.stand.materiaal || [] });
+      const binnen = Array.isArray(inz.materiaal) ? inz.materiaal : [];
+      const weg = Array.isArray(inz.weg) ? inz.weg.map(x => String(x || "").toUpperCase()) : [];
+      const heb = {};
+      (this.stand.materiaal || []).forEach(m => { heb[m.code] = m; });
+      binnen.slice(0, 200).forEach(m => {
+        if (!m || typeof m !== "object") return;
+        const code = String(m.code || "").toUpperCase();
+        if (!/^[A-Z0-9]{6}$/.test(code) || !/^[A-Z0-9]{20}$/.test(String(m.sleutel || ""))) return;
+        heb[code] = { code, sleutel: String(m.sleutel), naam: String(m.naam || "Eigen materiaal").slice(0, 80),
+                      soort: m.soort === "lijst" ? "lijst" : "oefening", gemaakt: Number(m.gemaakt) || Date.now() };
+      });
+      weg.forEach(c => { delete heb[c]; });
+      this.stand.materiaal = Object.keys(heb).map(c => heb[c]).sort((x, y) => y.gemaakt - x.gemaakt).slice(0, 200);
+      await this.bewaar();
+      return json({ ok: true, materiaal: this.stand.materiaal });
     }
     if (url.pathname === "/koppel"){
       const code = String(inz.code || "").toUpperCase();

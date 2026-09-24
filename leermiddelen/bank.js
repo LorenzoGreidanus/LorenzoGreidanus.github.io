@@ -98,6 +98,15 @@ ONDERDELEN.burg.push({id:'examen-mk', naam:'maatschappijkunde (examen vmbo)'});
 ONDERDELEN.eng.push({id:'examen-eng', naam:'examenwoorden en signaalwoorden (examen vmbo)', groep:'lezen'});
 ONDERDELEN.eco = [{id:'examen-eco', naam:'examenstof vmbo'}];
 
+/* Een woordenlijst van de docent (maken.html): met ?lijst=CODE in het adres
+   staat hij als vak "Eigen lijst" tussen de andere, en BANK.zorg('eigen')
+   haalt hem op. Zonder die code bestaat het vak niet. */
+var EIGEN_LIJST = (function(){ try { var m = /[?&]lijst=([A-Za-z0-9]{6})/.exec(location.search); return m ? m[1].toUpperCase() : ''; } catch (e){ return ''; } })();
+if (EIGEN_LIJST){
+  VAKKEN.push({id:'eigen', naam:'Eigen lijst', mark:'L', kleur:'var(--crab)', onder:'De woordenlijst van je docent'});
+  ONDERDELEN.eigen = [{id:'heen', naam:'heen'}, {id:'terug', naam:'terug'}];
+}
+
 /* De koppen boven de onderdelen. Een vak zonder groepen houdt gewoon zijn
    platte lijstje; alleen Nederlands en Engels hebben er genoeg onderdelen voor
    dat je ze wilt ordenen.
@@ -259,6 +268,7 @@ var BRONNEN = {}, NIVOS = {};
 var BANK = (function(){
   var bezig = {}, klaar = {};
   var ALLE = ["ned", "eng", "ges", "aard", "bio", "wis", "burg", "eco"];
+  if (EIGEN_LIJST) ALLE.push("eigen");
   /* waar staat bank.js zelf? daarnaast staan de vakbestanden */
   function map(){
     try {
@@ -271,6 +281,7 @@ var BANK = (function(){
   function een(vak){
     if (klaar[vak]) return Promise.resolve();
     if (bezig[vak]) return bezig[vak];
+    if (vak === "eigen") return (bezig[vak] = eigen());
     bezig[vak] = new Promise(function(res){
       var s = document.createElement("script");
       s.src = BASIS + "bank-" + vak + ".js";
@@ -280,6 +291,22 @@ var BANK = (function(){
       document.head.appendChild(s);
     });
     return bezig[vak];
+  }
+  /* de eigen woordenlijst: eigen.js maakt er meerkeuzevragen van, beide kanten op */
+  function eigen(){
+    var laadEigen = window.EIGEN ? Promise.resolve() : new Promise(function(res){
+      var s = document.createElement("script"); s.src = BASIS + "eigen.js"; s.onload = s.onerror = function(){ res(); }; document.head.appendChild(s);
+    });
+    return laadEigen.then(function(){ return window.EIGEN ? EIGEN.haal(EIGEN_LIJST) : null; }).then(function(m){
+      if (m && m.soort === "lijst"){
+        BRONNEN.eigen = EIGEN.vragenUitLijst(m);
+        /* iedereen krijgt de hele lijst, welk niveau je ook hebt */
+        NIVOS.eigen = BRONNEN.eigen.map(function(){ return 1; });
+        var v = VAKKEN.filter(function(x){ return x.id === "eigen"; })[0];
+        if (v){ v.naam = m.naam; v.onder = (m.kopA && m.kopB ? m.kopA + " en " + m.kopB + ", " : "") + m.paren.length + " woorden"; }
+        if (m.kopA && m.kopB) ONDERDELEN.eigen = [{id:'heen', naam:m.kopA + ' naar ' + m.kopB}, {id:'terug', naam:m.kopB + ' naar ' + m.kopA}];
+      }
+    }).catch(function(){}).then(function(){ klaar.eigen = true; });
   }
   function zorg(vak){
     var lijst = !vak ? ALLE : (Array.isArray(vak) ? vak : [vak]);

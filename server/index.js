@@ -16,6 +16,7 @@ export { Kamer } from "./kamer.js";
 export { Klassement } from "./klassement.js";
 export { Poort } from "./poort.js";
 export { Sets } from "./sets.js";
+export { Materiaal } from "./materiaal.js";
 export { Beheer } from "./beheer.js";
 export { Profiel } from "./profiel.js";
 export { Account } from "./account.js";
@@ -139,6 +140,30 @@ export default {
          set opent komt hier ruim onder. */
       if (!await magDoor(env, req, "set-lees", 400, 60)) return json({ fout: "even wachten" }, 429);
       return env.SETS.get(env.SETS.idFromName("sets")).fetch("https://sets/haal?code=" + sm[1].toUpperCase());
+    }
+
+    /* Eigen materiaal van docenten: woordenlijsten en oefeningen (materiaal.js).
+       Maken, aanpassen en weghalen vanaf de site zelf; ophalen met de code. */
+    if (p === "/api/materiaal" && req.method === "POST"){
+      if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
+      if (!await magDoor(env, req, "materiaal", 60, 600)) return json({ fout: "even wachten met nieuw materiaal" }, 429);
+      let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldig materiaal" }, 400); }
+      return env.MATERIAAL.get(env.MATERIAAL.idFromName("materiaal")).fetch("https://materiaal/zet", { method: "POST", body: JSON.stringify(inz || {}) });
+    }
+    const mm = p.match(/^\/api\/materiaal\/([A-Za-z0-9]{6})(\/werk|\/weg)?\/?$/);
+    if (mm){
+      const stub = env.MATERIAAL.get(env.MATERIAAL.idFromName("materiaal"));
+      if (req.method === "GET"){
+        if (!await magDoor(env, req, "materiaal-lees", 400, 60)) return json({ fout: "even wachten" }, 429);
+        return stub.fetch("https://materiaal/haal?code=" + mm[1].toUpperCase());
+      }
+      if (req.method === "POST" && mm[2]){
+        if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
+        if (!await magDoor(env, req, "materiaal-werk", 120, 600)) return json({ fout: "even wachten" }, 429);
+        let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldig materiaal" }, 400); }
+        return stub.fetch("https://materiaal" + mm[2] + "?code=" + mm[1].toUpperCase(), { method: "POST", body: JSON.stringify(inz || {}) });
+      }
+      return json({ fout: "onbekend" }, 404);
     }
 
     /* inloggen met Microsoft, optioneel, gekoppeld aan een speelcode (account.js) */
