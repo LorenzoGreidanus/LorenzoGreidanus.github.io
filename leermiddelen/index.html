@@ -167,11 +167,26 @@ header{padding:12px 0;border-bottom:1px solid var(--rand);background:#fff;positi
   font-size:.86rem;font-weight:600;color:var(--link,#204ECF);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .uitlicht{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 @media(max-width:640px){.uitlicht{grid-template-columns:minmax(0,1fr)}}
-.uitkaart{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:14px;align-items:start;background:var(--kaart);
-  border:1px solid var(--rand);border-radius:18px;padding:14px 16px;text-decoration:none;color:inherit;
+.uitkaart{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto 1fr;overflow:hidden;background:var(--kaart);
+  border:1px solid var(--rand);border-radius:18px;padding:0;text-decoration:none;color:inherit;
   box-shadow:0 8px 20px rgba(20,34,76,.04);transition:transform .18s var(--ease),box-shadow .18s var(--ease)}
 .uitkaart:hover{transform:translateY(-2px);box-shadow:0 14px 30px rgba(20,34,76,.09)}
 .uitkaart:focus-visible{border-radius:18px}
+/* Het mechanisme in een schema: wat je in het spel doet, in vormen en getallen.
+   Geen plaatje van een ridder, wel de zetels, de ploegen, de meetlat. De
+   achtergrond is de kleur van het spel, heel licht, zodat elke kaart zijn
+   eigen spel draagt. */
+.uitkaart .mech{display:block;height:112px;padding:10px 12px 8px;color:var(--ink);
+  background:color-mix(in srgb,var(--k,#204ECF) 13%,var(--kaart));border-bottom:1px solid color-mix(in srgb,var(--k,#204ECF) 22%,transparent)}
+.uitkaart .mech svg{display:block;width:100%;height:100%;overflow:visible}
+.mech .k{fill:var(--k,#204ECF)}
+.mech .kl{fill:color-mix(in srgb,var(--k,#204ECF) 38%,transparent)}
+.mech .z{fill:currentColor;opacity:.2}
+.mech .l{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.mech .lk{fill:none;stroke:var(--k,#204ECF);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.mech text{font:600 9.5px 'Poppins',system-ui,sans-serif;fill:currentColor}
+.mech text.s{font-weight:500;opacity:.75}
+.uitkaart .tekst{display:block;padding:12px 16px 14px}
 .uitkaart .tegel{width:48px;height:48px;border-radius:15px;display:grid;place-items:center;grid-row:span 3}
 .uitkaart .tegel svg{width:26px;height:26px;fill:none;stroke:#FBF6F1;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .uitkaart h3{font-size:1rem;line-height:1.22}
@@ -222,6 +237,8 @@ header{padding:12px 0;border-bottom:1px solid var(--rand);background:#fff;positi
 .spel .tegel svg{width:26px;height:26px;fill:none;stroke:#FBF6F1;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .spel h3{font-size:.95rem;line-height:1.22;text-wrap:balance}
 .spel .soortje{display:block;font-size:.72rem;color:var(--muted);font-weight:500;margin-top:3px;text-wrap:balance}
+/* wat je doet, voor spellen waar de naam dat niet zegt */
+.spel .doe{display:block;font-size:.74rem;color:var(--ink);opacity:.82;font-weight:500;margin-top:4px;line-height:1.35;text-wrap:balance}
 /* hoe lang het duurt: de vraag die een docent bij elk spel heeft */
 .spel .duurtje{display:block;font-size:.72rem;font-weight:500;color:var(--muted);margin-top:4px;text-wrap:balance}
 /* het klokje staat in de regel, zodat een lange duur als gewone tekst afbreekt */
@@ -1232,6 +1249,21 @@ var SPELLEN = [
     /* per race, per dag, per ronde: op een kaart gaat het om hoe lang, niet waarover */
     return x.replace(/ per (race|dag|ronde|stelsel)$/, '');
   }
+  /* Wat je doet, voor de spellen met een naam die dat niet zegt. Op een
+     telefoon is er geen titelveld om op te blijven staan. */
+  var DOE = {
+    jagers:'Verdeel elk jaar zes ploegen: blijven of verder trekken?',
+    polis:'Win stemmen in de vergadering, zetel voor zetel',
+    feodalisme:'Ruil als heer, ridder of boer werk voor bescherming',
+    handel:'Koop goedkoop, verkoop duur, en zie de prijs bewegen',
+    vergadering:'Krijg alle zeven gewesten op een lijn',
+    leenmannen:'Geef je rijk weg en zie wat de zonen ermee doen',
+    stadsontwerp:'Teken een middeleeuwse stad, onderdeel voor onderdeel',
+    berlijn:'Onderhandel met vier landen over dertig gebieden',
+    meetlat:'Zet zestien mensen op een meetlat van goed tot fout',
+    standen:'Stem met de klas als Derde Stand in 1789',
+    crisis:'Kies met de klas een zet als Witte Huis of Kremlin'
+  };
   function kaart(sp){
     var k = knip(sp.wat), soort = soortVan(sp), id = sp.bestand.replace('.html', '');
     var samen = soort === 'samen' || OOK_SAMEN[id];
@@ -1239,6 +1271,7 @@ var SPELLEN = [
       ' data-start="' + sp.bestand + '" title="' + schoon(k.kort) + '">' +
       tegel(sp) + '<h3>' + schoon(sp.naam) + '</h3>' +
       '<span class="soortje">' + schoon(sp.leer) + '</span>' +
+      (DOE[sp.bestand.replace('.html', '')] ? '<span class="doe">' + schoon(DOE[sp.bestand.replace('.html', '')]) + '</span>' : '') +
       (sp.tijd ? '<span class="duurtje">' + KLOK + schoon(kortTijd(sp.tijd)) + '</span>' : '') +
       (samen ? '<span class="klaspil">met de klas</span>' : '') +
       (stand.leerjaar === '34' && sp.examen ? '<span class="examen">examenstof vmbo</span>' : '') + '</a>';
@@ -1267,10 +1300,103 @@ var SPELLEN = [
      dag vier andere, zodat de rij niet elke keer hetzelfde zegt. */
   function isBeleven(sp){ return soortVan(sp) === 'beleven'; }
   var KLOK = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+  /* ---------- het mechanisme van elk belevingsspel, als schema ----------
+     Elke functie geeft de binnenkant van een svg van 240 bij 84. Vormen en
+     getallen uit het spel zelf: veertig zetels, zes ploegen, dertig gebieden. */
+  function tk(x, y, tekst, klasse, anker){ return '<text x="' + x + '" y="' + y + '"' + (klasse ? ' class="' + klasse + '"' : '') + (anker ? ' text-anchor="' + anker + '"' : '') + '>' + tekst + '</text>'; }
+  var MECH = {
+    /* zes ploegen verdelen over vier taken */
+    jagers: function(){
+      var taken = [['jagen', 2], ['verzamelen', 1], ['zaaien', 2], ['bouwen', 1]], h = tk(4, 11, 'elk jaar zes ploegen verdelen', 's');
+      h += '<line class="l" x1="8" y1="62" x2="232" y2="62"/>';
+      taken.forEach(function(tt, i){
+        var x = 34 + i * 58;
+        for (var j = 0; j < 3; j++) h += '<circle cx="' + x + '" cy="' + (52 - j * 15) + '" r="6.5" class="' + (j < tt[1] ? 'k' : 'z') + '"/>';
+        h += tk(x, 78, tt[0], '', 'middle');
+      });
+      return h;
+    },
+    /* veertig zetels, zetel voor zetel naar de meerderheid */
+    polis: function(){
+      var h = '', n = 0, rijen = [[62, 22], [46, 18]];
+      rijen.forEach(function(rij){
+        for (var i = 0; i < rij[1]; i++){
+          var a = Math.PI - Math.PI * (i + .5) / rij[1], x = 120 + rij[0] * Math.cos(a), y = 76 - rij[0] * Math.sin(a) * .95;
+          h += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="4.2" class="' + (i < rij[1] * .6 ? 'k' : 'z') + '"/>';
+          n++;
+        }
+      });
+      return h + tk(120, 70, '24 van 40', '', 'middle') + tk(120, 81, 'nodig: 21', 's', 'middle');
+    },
+    /* heer, ridder en boer: bescherming naar beneden, arbeid naar boven */
+    feodalisme: function(){
+      return '<rect x="92" y="4" width="56" height="20" rx="5" class="k"/>' + tk(120, 18, 'heer', '', 'middle').replace('<text', '<text style="fill:#14224C"') +
+        '<rect x="66" y="30" width="108" height="20" rx="5" class="kl"/>' + tk(120, 44, 'ridders', '', 'middle') +
+        '<rect x="38" y="56" width="164" height="20" rx="5" class="kl"/>' + tk(120, 70, 'boeren', '', 'middle') +
+        '<path class="l" d="M210 8v52m-5-6 5 6 5-6"/>' + tk(210, 76, 'bescherming', 's', 'middle') +
+        '<path class="l" d="M26 60V8m-5 6 5-6 5 6"/>' + tk(26, 76, 'arbeid', 's', 'middle');
+    },
+    /* goedkoop kopen, duur verkopen, en jouw handel zet de prijs in beweging */
+    handel: function(){
+      return '<path class="lk" d="M22 62C70 10 170 10 218 56" stroke-dasharray="5 6"/>' +
+        '<circle cx="22" cy="62" r="7" class="k"/><circle cx="120" cy="24" r="7" class="k"/><circle cx="218" cy="56" r="7" class="k"/>' +
+        '<path d="M66 30l14-4-4 12z" class="k"/>' +
+        tk(22, 82, 'koop 2', '', 'middle') + tk(120, 10, 'prijs?', 's', 'middle') + tk(218, 78, 'verkoop 5', '', 'middle') +
+        '<path class="l" d="M232 44v-14m-4 4 4-4 4 4"/>';
+    },
+    /* zeven gewesten, en ze moeten allemaal ja zeggen */
+    vergadering: function(){
+      var h = tk(4, 11, 'alle zeven moeten ja zeggen', 's');
+      for (var i = 0; i < 7; i++){
+        var x = 22 + i * 32.5, r = i === 0 ? 14 : 11, ja = i < 4;
+        h += '<circle cx="' + x + '" cy="46" r="' + r + '" class="' + (ja ? 'k' : 'z') + '"/>';
+        if (ja) h += '<path d="M' + (x - 5) + ' 46l3.5 3.5 6.5-7" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>';
+      }
+      return h + tk(22, 78, 'Holland', '', 'middle');
+    },
+    /* het rijk in stukken weggeven aan leenmannen */
+    leenmannen: function(){
+      var stukken = ['96,6 150,6 142,30 102,30', '40,20 96,6 102,30 100,50 36,46', '142,30 150,6 206,18 204,50 140,50',
+        '36,46 100,50 118,80 50,80', '140,50 204,50 190,80 118,80'];
+      return stukken.map(function(p, i){ return '<polygon points="' + p + '" class="' + (i % 2 ? 'kl' : 'z') + '" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>'; }).join('') +
+        '<rect x="102" y="30" width="38" height="20" rx="3" class="k"/>' + tk(121, 44, 'jij', '', 'middle').replace('<text', '<text style="fill:#14224C"') +
+        tk(218, 40, '5 leen-', 's') + tk(218, 51, 'mannen', 's');
+    },
+    /* muur, poorten, markt en kerk, genummerd zoals op de legenda */
+    stadsontwerp: function(){
+      var h = '<path class="l" d="M70 6c10 12 -6 24 4 36s-6 24 2 38" style="stroke:var(--vista);stroke-width:3"/>';
+      h += '<circle cx="124" cy="42" r="34" fill="none" stroke="currentColor" stroke-width="4" stroke-dasharray="40 10"/>';
+      h += '<rect x="112" y="32" width="24" height="18" rx="2" class="k"/>';
+      [[102, 22, 1], [150, 30, 2], [140, 62, 3], [98, 58, 4]].forEach(function(p){
+        h += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="7" class="kl"/>' + tk(p[0], p[1] + 3.5, p[2], '', 'middle');
+      });
+      return h + tk(176, 30, 'muur, poort,', 's') + tk(176, 42, 'markt, kerk:', 's') + tk(176, 54, '16 onderdelen', 's');
+    },
+    /* dertig gebieden, vier onderhandelaars */
+    berlijn: function(){
+      var kleuren = ['var(--crab)', 'var(--ocean)', 'var(--amber)', 'var(--vista)'], h = '';
+      for (var i = 0; i < 30; i++){
+        var x = 8 + (i % 10) * 23, y = 6 + Math.floor(i / 10) * 23, open = [3, 8, 14, 21, 27].indexOf(i) >= 0;
+        h += '<rect x="' + x + '" y="' + y + '" width="19" height="19" rx="4" ' + (open ? 'class="z"' : 'style="fill:' + kleuren[(i * 7 + Math.floor(i / 10)) % 4] + '"') + '/>';
+      }
+      return h + tk(8, 82, '30 gebieden, 4 aan tafel', 's');
+    },
+    /* zestien mensen op een meetlat van goed tot fout */
+    meetlat: function(){
+      var h = '<line class="l" x1="20" y1="40" x2="220" y2="40"/>' + '<line class="l" x1="20" y1="32" x2="20" y2="48"/><line class="l" x1="220" y1="32" x2="220" y2="48"/>';
+      [34, 48, 61, 70, 86, 97, 108, 123, 134, 150, 163, 171, 186, 199, 210].forEach(function(x, i){
+        h += '<circle cx="' + x + '" cy="' + (i % 2 ? 30 : 50) + '" r="4.5" class="z"/>';
+      });
+      h += '<circle cx="142" cy="40" r="8" class="k"/><circle cx="142" cy="40" r="12" fill="none" stroke="var(--k,#204ECF)" stroke-width="1.6"/>';
+      return h + tk(20, 70, 'goed', '', 'middle') + tk(220, 70, 'fout', '', 'middle') + tk(120, 80, 'geen goed antwoord', 's', 'middle');
+    }
+  };
   function uitKaart(sp){
-    return '<a class="uitkaart" href="' + linkNaar(sp) + '" data-start="' + sp.bestand + '">' + tegel(sp) +
-      '<h3>' + schoon(sp.naam) + '</h3><span class="zin">' + schoon(knip(sp.wat).kort) + '</span>' +
-      (sp.tijd ? '<span class="duur">' + KLOK + schoon(sp.tijd) + '</span>' : '') + '</a>';
+    var id = sp.bestand.replace('.html', ''), m = MECH[id];
+    return '<a class="uitkaart" href="' + linkNaar(sp) + '" data-start="' + sp.bestand + '" style="--k:' + sp.kleur + '">' +
+      (m ? '<span class="mech" aria-hidden="true"><svg viewBox="0 0 240 84" focusable="false">' + m() + '</svg></span>' : '<span class="mech" aria-hidden="true"></span>') +
+      '<span class="tekst"><h3>' + schoon(sp.naam) + '</h3><span class="zin">' + schoon(knip(sp.wat).kort) + '</span>' +
+      (sp.tijd ? '<span class="duur">' + KLOK + schoon(sp.tijd) + '</span>' : '') + '</span></a>';
   }
   function uitgelicht(lijst){
     var alle = lijst.filter(isBeleven).sort(function(a, b){ return a.naam.localeCompare(b.naam, 'nl'); });
