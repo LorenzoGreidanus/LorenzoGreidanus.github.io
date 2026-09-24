@@ -61,6 +61,7 @@
       <button class="linkknop" id="terugNaarLijst" type="button">&larr; Terug naar mijn materiaal</button>
     </div>
     <h2 id="bewerkKop" style="font-size:1.4rem;margin-top:6px">Nieuwe woordenlijst</h2>
+    <p class="waarschuw hide" id="inleverWaarschuw" role="note"></p>
     <div class="bewerk">
       <div class="kaart velden">
         <label class="veldnaam">Naam<input class="veld" id="naam" maxlength="80" placeholder="bijv. Engels hoofdstuk 3"></label>
@@ -91,7 +92,11 @@
       <div class="kaart hide" id="oefEditor">
         <div class="modus" role="radiogroup" aria-label="Soort">
           <label><input type="radio" name="modus" value="oefenen" checked><span><b>Oefenen</b><br><span class="tip">Na elke vraag zien leerlingen of het goed was, met de uitleg.</span></span></label>
-          <label><input type="radio" name="modus" value="toets"><span><b>Toets</b><br><span class="tip">Pas aan het eind zien ze hun score en wat er goed en fout was.</span></span></label>
+          <label><input type="radio" name="modus" value="toets"><span><b>Toets</b><br><span class="tip">Leerlingen leveren een keer in. Jij kijkt na en zet er een cijfer bij, bij Resultaten.</span></span></label>
+        </div>
+        <div class="terugzien hide" id="terugzienVak">
+          <label class="vink"><input type="checkbox" id="terugzien"> Na het inleveren zien leerlingen welke vragen goed waren, met het goede antwoord</label>
+          <p class="tip">Uit: ze zien alleen hun score. Laat het uit zolang dezelfde toets nog in een andere klas komt.</p>
         </div>
         <h3 style="font-size:1.05rem;margin-top:16px">Vragen</h3>
         <div class="items" id="items" style="margin-top:10px"></div>
@@ -99,11 +104,15 @@
         <div class="soortknoppen" id="soortknoppen" style="margin-top:6px"></div>
       </div>
 
-      <div class="rij">
-        <button class="knop" id="bewaar" type="button">Bewaren</button>
-        <button class="knop stil" id="probeer" type="button" disabled>Uitproberen</button>
+      <!-- blijft onderaan in beeld: bewaren kan altijd, en je ziet of er nog iets niet bewaard is -->
+      <div class="bewaarbalk" id="bewaarbalk">
+        <div class="rij">
+          <button class="knop" id="bewaar" type="button">Bewaren</button>
+          <button class="knop stil" id="probeer" type="button" disabled>Uitproberen</button>
+          <span class="bewaarstand" id="bewaarStand" aria-live="polite"></span>
+        </div>
+        <p class="melding" id="bewaarMelding" role="status" aria-live="polite"></p>
       </div>
-      <p class="melding" id="bewaarMelding" role="status" aria-live="polite"></p>
 
       <div class="deelvak hide" id="deelvak" aria-live="polite"></div>
     </div>
@@ -147,6 +156,13 @@
   ];
   var VORMNAAM = {}; VORMEN.forEach(function(v){ VORMNAAM[v[0]] = v[1]; });
   var bezig = null;   /* { soort, code? } */
+  var vies = false;   /* is er iets veranderd dat nog niet bewaard is? */
+  function zetVies(v){
+    vies = v;
+    var st = $('bewaarStand');
+    st.textContent = v ? 'Niet bewaard' : (bezig && bezig.code ? 'Alles bewaard' : '');
+    st.className = 'bewaarstand' + (v ? ' vies' : '');
+  }
   function melding(el, tekst, soort){ el.textContent = tekst || ''; el.className = 'melding' + (soort ? ' ' + soort : ''); }
 
   /* ---------- de lijst ---------- */
@@ -171,7 +187,7 @@
     if (werk) laadVoorBewerken(werk);
     if (kopie) kopieer(adres('oefen.html?code=' + kopie), $('lijstMelding'));
     if (weg){
-      if (!confirm('"' + b.getAttribute('data-naam') + '" weghalen? Leerlingen kunnen het daarna niet meer openen, ook niet met de code. Dit kan niet terug.')) return;
+      if (!confirm('"' + b.getAttribute('data-naam') + '" weghalen? Leerlingen kunnen het daarna niet meer openen, en alle inleveringen en je nakijkwerk zijn ook weg. Dit kan niet terug.')) return;
       b.disabled = true;
       EIGEN.weg(weg).then(function(){ tekenLijst(); melding($('lijstMelding'), 'Weggehaald.', 'goed'); })
         .catch(function(f){ b.disabled = false; melding($('lijstMelding'), f.message + ' Probeer het opnieuw.', 'fout'); });
@@ -198,10 +214,36 @@
     $('oefEditor').classList.toggle('hide', soort === 'lijst');
     $('bewerkKop').textContent = (code ? 'Bewerken: ' : 'Nieuwe ') + (soort === 'lijst' ? 'woordenlijst' : 'oefening of toets');
     $('deelvak').classList.add('hide'); $('probeer').disabled = !code;
+    $('inleverWaarschuw').classList.add('hide');
     melding($('bewaarMelding'), '');
+    [].forEach.call(document.querySelectorAll('#bewerkvak .item.fout'), wisFout);
+    $('naam').removeAttribute('aria-invalid');
+    toonTerugzien(); groeiAlles(); zetVies(false);
     window.scrollTo(0, 0); $('naam').focus();
   }
-  function sluit(){ $('bewerkvak').classList.add('hide'); $('lijstvak').classList.remove('hide'); tekenLijst(); bezig = null; }
+  function sluit(){
+    if (vies && !confirm('Je hebt wijzigingen die nog niet bewaard zijn. Toch terug? Dan ben je ze kwijt.')) return;
+    zetVies(false);
+    $('bewerkvak').classList.add('hide'); $('lijstvak').classList.remove('hide'); tekenLijst(); bezig = null;
+  }
+  /* niet per ongeluk de pagina dicht met werk dat nog niet bewaard is */
+  window.addEventListener('beforeunload', function(e){
+    if (bezig && vies && !$('bewerkvak').classList.contains('hide')){ e.preventDefault(); e.returnValue = ''; }
+  });
+  /* alles wat je in de editor verandert, telt als niet bewaard */
+  $('bewerkvak').addEventListener('input', function(e){
+    if (e.target.id === 'deelLink') return;
+    zetVies(true);
+    if (e.target.getAttribute('aria-invalid')) e.target.removeAttribute('aria-invalid');
+    var it = e.target.closest('.item'); if (it) wisFout(it);
+    if (e.target.tagName === 'TEXTAREA' && e.target.closest('.item')) groei(e.target);
+  });
+  $('bewerkvak').addEventListener('change', function(e){ if (e.target.name === 'modus' || e.target.id === 'terugzien' || e.target.id === 'vak') zetVies(true); if (e.target.name === 'modus') toonTerugzien(); });
+  function toonTerugzien(){ var t = (document.querySelector('input[name="modus"]:checked') || {}).value === 'toets'; $('terugzienVak').classList.toggle('hide', !t); }
+  /* een tekstvak groeit mee met wat erin staat, dan zie je alle regels */
+  function groei(t){ t.style.height = 'auto'; t.style.height = (t.scrollHeight + 4) + 'px'; }
+  function groeiAlles(){ [].forEach.call(document.querySelectorAll('#items textarea'), groei); }
+  function wisFout(it){ it.classList.remove('fout'); var p = it.querySelector('.itemfout'); if (p) p.remove(); [].forEach.call(it.querySelectorAll('[aria-invalid]'), function(v){ v.removeAttribute('aria-invalid'); v.removeAttribute('aria-describedby'); }); }
   function naarLijst(){ ['bewerkvak', 'uitslagvak', 'vergelijkvak'].forEach(function(s){ $(s).classList.add('hide'); }); $('lijstvak').classList.remove('hide'); $('paginakop').classList.remove('hide'); tekenLijst(); window.scrollTo(0, 0); }
   $('vergelijkKnop').addEventListener('click', function(){ UITSLAG.vergelijk({ terug: naarLijst }); });
   $('terugNaarLijst').addEventListener('click', sluit);
@@ -214,7 +256,10 @@
       melding($('lijstMelding'), '');
       if (m.soort === 'lijst') vulLijst(m); else vulOef(m);
       open(m.soort, code);
-      if (m.n) melding($('bewaarMelding'), 'Er ' + (m.n === 1 ? 'is al een leerling die heeft' : 'zijn al ' + m.n + ' leerlingen die hebben') + ' ingeleverd. Verander je een antwoord, dan wordt hun werk opnieuw nagekeken; haal je een vraag weg of zet je ze in een andere volgorde, dan kloppen hun antwoorden niet meer.');
+      if (m.n){
+        $('inleverWaarschuw').textContent = 'Er ' + (m.n === 1 ? 'is al een leerling die heeft' : 'zijn al ' + m.n + ' leerlingen die hebben') + ' ingeleverd. Verander je een antwoord, dan wordt hun werk opnieuw nagekeken. Haal je een vraag weg of zet je de vragen in een andere volgorde, dan kloppen hun antwoorden niet meer; maak dan liever een nieuwe toets.';
+        $('inleverWaarschuw').classList.remove('hide');
+      }
     }).catch(function(f){ melding($('lijstMelding'), f.message, 'fout'); });
   }
 
@@ -234,7 +279,7 @@
   function koppen(){ $('kopAtoon').textContent = $('kopA').value.trim() || 'Woord'; $('kopBtoon').textContent = $('kopB').value.trim() || 'Betekenis'; }
   $('kopA').addEventListener('input', koppen); $('kopB').addEventListener('input', koppen);
   $('paren').addEventListener('input', tel);
-  $('paren').addEventListener('click', function(e){ if (e.target.classList.contains('weg')){ e.target.closest('.paar').remove(); tel(); } });
+  $('paren').addEventListener('click', function(e){ if (e.target.classList.contains('weg')){ e.target.closest('.paar').remove(); tel(); zetVies(true); } });
   $('paren').addEventListener('keydown', function(e){
     /* Enter in de laatste regel: een nieuwe regel, zo typ je een lijst snel door */
     if (e.key !== 'Enter' || e.target.tagName !== 'INPUT') return;
@@ -253,7 +298,7 @@
     leeg.forEach(function(r){ r.remove(); });
     $('paren').insertAdjacentHTML('beforeend', nieuw.map(paarHtml).join(''));
     $('plakvak').value = ''; $('plakUit').textContent = nieuw.length + (nieuw.length === 1 ? ' paar' : ' paren') + ' erbij gezet.';
-    tel();
+    tel(); zetVies(true);
   });
 
   /* ---------- oefening ---------- */
@@ -261,7 +306,7 @@
   $('soortknoppen').addEventListener('click', function(e){
     var b = e.target.closest('[data-nieuw]'); if (!b) return;
     $('items').insertAdjacentHTML('beforeend', itemHtml({ vorm: b.getAttribute('data-nieuw') }));
-    nummer();
+    nummer(); zetVies(true); groeiAlles();
     var laatste = $('items').lastElementChild; laatste.scrollIntoView({ block:'nearest' }); var eerste = laatste.querySelector('input,textarea'); if (eerste) eerste.focus();
   });
   function veld(naam, waarde, plek, lang){
@@ -273,11 +318,11 @@
     var h = '', v = x.vorm;
     if (v === 'mk'){
       h = label('Vraag', veld('vraag', x.vraag, 'bijv. Wat is de hoofdstad van Frankrijk?')) +
-          label('Goede antwoord', veld('goed', x.goed, 'Parijs')) +
-          label('Foute antwoorden (een per regel, een tot vijf)', veld('fout', (x.fout || []).join('\n'), 'Lyon\nMarseille\nNice', true));
+          label('Goede antwoord', veld('goed', x.goed, 'bijv. Parijs')) +
+          label('Foute antwoorden (een per regel, een tot vijf)', veld('fout', (x.fout || []).join('\n'), 'bijv. Lyon\nMarseille\nNice', true));
     } else if (v === 'open'){
       h = label('Vraag', veld('vraag', x.vraag, 'bijv. In welk jaar viel de Berlijnse Muur?')) +
-          label('Goede antwoorden (een per regel; hoofdletters en spaties tellen niet). Leeg laten: je kijkt hem zelf na bij de resultaten.', veld('antwoorden', (x.antwoorden || []).join('\n'), '1989', true));
+          label('Goede antwoorden (een per regel; hoofdletters en spaties tellen niet). Leeg laten: je kijkt hem zelf na bij de resultaten.', veld('antwoorden', (x.antwoorden || []).join('\n'), 'leeg: je kijkt hem zelf na', true));
     } else if (v === 'koppel'){
       h = label('Opdracht', veld('vraag', x.vraag || 'Koppel wat bij elkaar hoort.', '')) +
           label('Paren (een per regel: links = rechts, twee tot tien)', veld('paren', (x.paren || []).map(function(p){ return p.a + ' = ' + p.b; }).join('\n'), 'hart = pompt het bloed rond\nlongen = gaswisseling', true));
@@ -293,17 +338,22 @@
           label('Tekst, met de woorden die weg moeten tussen [haken]', veld('tekst', x.tekst, 'De [maag] mengt het voedsel met [maagsap].', true)) +
           label('Extra woorden om het lastiger te maken (mag leeg, een per regel)', veld('extra', (x.extra || []).join('\n'), 'gal', true));
     }
-    h += label('Uitleg na de vraag (mag leeg)', veld('uitleg', x.uitleg, 'Waarom is dit het antwoord?'));
+    h += label('Uitleg na de vraag (mag leeg)', veld('uitleg', x.uitleg, 'bijv. waarom dit het antwoord is'));
     return '<div class="item" data-vorm="' + v + '"><div class="itemkop"><b class="nr"></b><span class="soortpil">' + VORMNAAM[v] + '</span>' +
       '<label class="puntveld">punten <input class="veld mini" type="number" min="1" max="10" step="1" data-v="punten" value="' + (x.punten || 1) + '"></label>' +
-      '<span class="rechts"><button type="button" data-actie="op" aria-label="Omhoog">&uarr;</button><button type="button" data-actie="neer" aria-label="Omlaag">&darr;</button>' +
+      '<span class="rechts"><button type="button" data-actie="op" aria-label="Vraag omhoog">&uarr;</button><button type="button" data-actie="neer" aria-label="Vraag omlaag">&darr;</button>' +
       '<button type="button" data-actie="weg" aria-label="Vraag weghalen">&times;</button></span></div><div class="velden2">' + h + '</div></div>';
   }
-  function nummer(){ [].forEach.call($('items').children, function(it, i){ it.querySelector('.nr').textContent = 'Vraag ' + (i + 1); }); }
+  /* het nummer ook in de namen van de knoppen, anders zijn het twintig keer "omhoog" */
+  function nummer(){ [].forEach.call($('items').children, function(it, i){
+    it.querySelector('.nr').textContent = 'Vraag ' + (i + 1);
+    [['op', 'omhoog'], ['neer', 'omlaag'], ['weg', 'weghalen']].forEach(function(a){ it.querySelector('[data-actie="' + a[0] + '"]').setAttribute('aria-label', 'Vraag ' + (i + 1) + ' ' + a[1]); });
+  }); }
   $('items').addEventListener('click', function(e){
     var b = e.target.closest('[data-actie]'); if (!b) return;
     var it = b.closest('.item'), a = b.getAttribute('data-actie');
     if (a === 'weg'){ if (!confirm('Deze vraag weghalen?')) return; it.remove(); }
+    zetVies(true);
     if (a === 'op' && it.previousElementSibling) it.parentNode.insertBefore(it, it.previousElementSibling);
     if (a === 'neer' && it.nextElementSibling) it.parentNode.insertBefore(it.nextElementSibling, it);
     nummer(); b.focus();
@@ -311,6 +361,8 @@
   function vulOef(m){
     $('naam').value = m.naam || ''; $('vak').value = m.vak || '';
     [].forEach.call(document.querySelectorAll('input[name="modus"]'), function(r){ r.checked = r.value === (m.modus || 'oefenen'); });
+    /* een nieuwe toets: standaard alleen de score; een oudere toets zonder die keuze liet de antwoorden zien */
+    $('terugzien').checked = m.terugzien === undefined ? !!m.code : !!m.terugzien;
     $('items').innerHTML = (m.items || []).map(itemHtml).join('');
     nummer();
   }
@@ -327,6 +379,21 @@
     return x;
   }
   /* Wat er mist, per vraag, in gewone taal: dan weet je waar je moet kijken. */
+  /* welk veld hoort bij het probleem: daar gaat de focus heen */
+  function foutVeld(x){
+    if (x.vorm === 'mk') return !x.vraag ? 'vraag' : !x.goed ? 'goed' : 'fout';
+    return { open: 'vraag', koppel: 'paren', volgorde: 'stappen', groepen: 'groepen', gaten: 'tekst' }[x.vorm];
+  }
+  /* de fout staat bij de vraag zelf, het veld krijgt de focus en schermlezers horen wat er mist */
+  function toonFout(it, tekst, veldnaam){
+    wisFout(it);
+    it.classList.add('fout');
+    var id = 'fout-' + Date.now();
+    it.querySelector('.itemkop').insertAdjacentHTML('afterend', '<p class="itemfout" id="' + id + '">' + schoon(tekst) + '</p>');
+    var v = it.querySelector('[data-v="' + veldnaam + '"]');
+    if (v){ v.setAttribute('aria-invalid', 'true'); v.setAttribute('aria-describedby', id); v.focus({ preventScroll: true }); }
+    it.scrollIntoView({ block: 'center' });
+  }
   function probleem(x, i){
     var n = 'Vraag ' + (i + 1) + ': ';
     if (x.vorm === 'mk' && (!x.vraag || !x.goed || !x.fout.length)) return n + 'vul de vraag, het goede antwoord en minstens een fout antwoord in.';
@@ -342,29 +409,47 @@
   $('bewaar').addEventListener('click', function(){
     if (!bezig) return;
     var m = { soort: bezig.soort, naam: $('naam').value.trim(), vak: $('vak').value };
-    if (!m.naam){ melding($('bewaarMelding'), 'Geef het een naam, zodat je het terugvindt.', 'fout'); $('naam').focus(); return; }
+    if (!m.naam){ melding($('bewaarMelding'), 'Geef het een naam, zodat je het terugvindt.', 'fout'); $('naam').setAttribute('aria-invalid', 'true'); $('naam').focus(); return; }
     if (bezig.soort === 'lijst'){
       m.kopA = $('kopA').value.trim(); m.kopB = $('kopB').value.trim(); m.paren = paren();
-      if (m.paren.length < 4){ melding($('bewaarMelding'), 'Een woordenlijst heeft minstens vier paren nodig; de spellen maken er meerkeuzevragen van.', 'fout'); return; }
+      if (m.paren.length < 4){
+        melding($('bewaarMelding'), 'Een woordenlijst heeft minstens vier paren nodig; de spellen maken er meerkeuzevragen van.', 'fout');
+        var leeg = [].filter.call($('paren').querySelectorAll('input'), function(v){ return !v.value.trim(); })[0];
+        if (leeg) leeg.focus(); else $('paarErbij').focus();
+        return;
+      }
     } else {
       m.modus = (document.querySelector('input[name="modus"]:checked') || {}).value || 'oefenen';
+      m.terugzien = m.modus === 'toets' ? $('terugzien').checked : true;
       m.items = [].map.call($('items').children, lees);
-      if (!m.items.length){ melding($('bewaarMelding'), 'Zet er minstens een vraag in.', 'fout'); return; }
-      for (var i = 0; i < m.items.length; i++){ var p = probleem(m.items[i], i); if (p){ melding($('bewaarMelding'), p, 'fout'); $('items').children[i].scrollIntoView({ block:'center' }); return; } }
+      if (!m.items.length){ melding($('bewaarMelding'), 'Zet er minstens een vraag in.', 'fout'); $('soortknoppen').querySelector('button').focus(); return; }
+      var fouten = 0, eerste = -1;
+      [].forEach.call($('items').children, wisFout);
+      for (var i = 0; i < m.items.length; i++){ var p = probleem(m.items[i], i); if (p){ fouten++; if (eerste < 0) eerste = i; $('items').children[i].classList.add('fout'); $('items').children[i].querySelector('.itemkop').insertAdjacentHTML('afterend', '<p class="itemfout">' + schoon(p) + '</p>'); } }
+      if (fouten){
+        var it0 = $('items').children[eerste];
+        toonFout(it0, probleem(m.items[eerste], eerste), foutVeld(m.items[eerste]));
+        melding($('bewaarMelding'), fouten === 1 ? 'Een vraag is nog niet af; hij is rood omrand.' : fouten + ' vragen zijn nog niet af; ze zijn rood omrand.', 'fout');
+        return;
+      }
     }
     var knop = $('bewaar'); knop.disabled = true; melding($('bewaarMelding'), 'Bewaren…');
     EIGEN.bewaar(m, bezig.code).then(function(j){
-      knop.disabled = false; bezig.code = j.code; $('probeer').disabled = false;
+      knop.disabled = false; bezig.code = j.code; $('probeer').disabled = false; zetVies(false);
       $('bewerkKop').textContent = 'Bewerken: ' + m.naam;
-      melding($('bewaarMelding'), 'Bewaard. Wijzig je later nog iets, klik dan weer op Bewaren; de code blijft hetzelfde.', 'goed');
+      melding($('bewaarMelding'), '');
       toonDelen(j.code, m);
     }).catch(function(f){ knop.disabled = false; melding($('bewaarMelding'), (f.message || 'Bewaren lukte niet.') + ' Controleer je internet en probeer het opnieuw.', 'fout'); });
   });
-  $('probeer').addEventListener('click', function(){ if (bezig && bezig.code) window.open('oefen.html?code=' + bezig.code, '_blank'); });
+  $('probeer').addEventListener('click', function(){
+    if (!bezig || !bezig.code) return;
+    if (vies) melding($('bewaarMelding'), 'Je probeert de laatst bewaarde versie; je wijzigingen van daarna zitten er nog niet in.', '');
+    window.open('oefen.html?code=' + bezig.code, '_blank');
+  });
   /* Na het bewaren: de code en waar leerlingen hem openen. Een woordenlijst ook in de spellen. */
   function toonDelen(code, m){
     var spel = function(bestand, naam, uit){ return '<a href="' + bestand + (bestand.indexOf('?') < 0 ? '?' : '&') + 'vak=eigen&lijst=' + code + '"><b>' + naam + '</b><small>' + uit + '</small></a>'; };
-    $('deelvak').innerHTML = '<p class="tip">Leerlingen openen het met deze code op <b>meneergreidanus.nl/leermiddelen/oefen.html</b>, of met de link:</p>' +
+    $('deelvak').innerHTML = '<p class="tip">Bewaard. Pas je later nog iets aan, dan blijft de code hetzelfde.</p><p class="tip">Leerlingen openen het met deze code op <b>meneergreidanus.nl/leermiddelen/oefen.html</b>, of met de link:</p>' +
       '<div class="codegroot">' + code + '</div>' +
       '<div class="rij"><input class="veld" id="deelLink" readonly value="' + schoon(adres('oefen.html?code=' + code)) + '" style="flex:1 1 260px"><button class="knop klein" type="button" id="deelKopie">Kopieer</button></div>' +
       (m.soort === 'lijst' ? '<p class="tip">Of speel de lijst in een spel. De link neemt de lijst mee:</p><div class="spellinks">' +

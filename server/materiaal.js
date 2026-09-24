@@ -59,6 +59,9 @@ function netjes(inz){
     if (uit.paren.length < 4) return { fout: "een woordenlijst heeft minstens vier paren nodig" };
   } else {
     uit.modus = inz.modus === "toets" ? "toets" : "oefenen";
+    /* een toets: zien leerlingen na het inleveren de goede antwoorden? Standaard niet,
+       want dezelfde toets gaat vaak later nog naar een andere klas */
+    if (uit.modus === "toets") uit.terugzien = inz.terugzien === true;
     uit.items = (Array.isArray(inz.items) ? inz.items : []).map(item).filter(Boolean).slice(0, MAX_ITEMS);
     if (!uit.items.length) return { fout: "een oefening heeft minstens een vraag nodig" };
   }
@@ -218,7 +221,7 @@ export class Materiaal extends DurableObject {
     if (m.fout) return json({ fout: m.fout }, 400);
     /* de instellingen van het nakijken blijven staan */
     const blijft = { sleutel: oud.sleutel, gemaakt: oud.gemaakt, bijgewerkt: Date.now(), gebruikt: Date.now(), n: oud.n || 0 };
-    ["norm", "neutraal", "terugzien"].forEach(k => { if (oud[k] !== undefined) blijft[k] = oud[k]; });
+    ["norm", "neutraal"].forEach(k => { if (oud[k] !== undefined) blijft[k] = oud[k]; });
     if (Array.isArray(blijft.neutraal) && m.items) blijft.neutraal = blijft.neutraal.filter(i => i < m.items.length);
     await this.ctx.storage.put("m:" + code, Object.assign(m, blijft));
     return json({ ok: true, code });

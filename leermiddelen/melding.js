@@ -14,6 +14,15 @@ window.MELDING = (function(){
     wrap.querySelector('.meldweg').addEventListener('click', function(){ form.classList.add('hide'); });
     wrap.querySelector('.meldstuur').addEventListener('click', function(){
       var g = null; try { g = gegevens ? gegevens() : {}; } catch (e){ g = {}; }
+      /* geeft het spel de vraag zelf mee (q), dan gaan de opties en het goede antwoord erbij:
+         dan ziet de beheerder meteen wat er stond, zonder te zoeken */
+      if (g && g.q){
+        var q = g.q;
+        if (!g.vraag) g.vraag = q.v || '';
+        if (Array.isArray(q.o)){ g.opties = q.o.slice(0, 6).map(String); if (typeof q.g === 'number') g.goed = String(q.o[q.g] == null ? '' : q.o[q.g]); }
+        if (q.t) g.onderdeel = String(q.t);
+        delete g.q;
+      }
       var body = Object.assign({ pad: location.pathname }, g || {}, { opmerking: ta.value.trim() });
       if (!body.opmerking && !body.vraag){ st.textContent = 'Typ eerst wat er niet klopt.'; return; }
       st.textContent = 'Versturen…';

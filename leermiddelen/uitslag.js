@@ -61,7 +61,7 @@ var UITSLAG = (function(){
             '<label><input type="radio" name="normm" value="nterm"' + (n.methode === 'nterm' ? ' checked' : '') + '><span><b>N-term</b>: 9 × score / max + <input class="veld mini" id="normN" type="number" min="0" max="3" step="0.1" value="' + n.n + '" aria-label="N-term"></span></label>' +
             '<label><input type="radio" name="normm" value="auto"' + (n.methode === 'auto' ? ' checked' : '') + '><span><b>Automatisch</b> (Cohen-Schotanus): de cesuur schuift mee met hoe de beste leerlingen het deden, rekening houdend met de raadkans. <span class="tip" id="autoCes"></span></span></label>' +
           '</div>' +
-          '<label class="vink"><input type="checkbox" id="terugzien"' + (u.terugzien ? ' checked' : '') + '> Leerlingen zien na het inleveren de goede antwoorden</label>' +
+          (u.modus === 'toets' ? '<p class="tip" style="margin-top:8px">Na het inleveren zien leerlingen ' + (u.terugzien ? 'hun score en de goede antwoorden' : 'alleen hun score') + '. Dat zet je bij Bewerken.</p>' : '') +
           '<p class="melding" id="normMelding" role="status" aria-live="polite"></p>' +
         '</div>' +
         '<div class="kaart"><h3>Verdeling van de cijfers</h3><div class="balkjes" id="verdeling" role="img"></div></div>' +
@@ -76,7 +76,6 @@ var UITSLAG = (function(){
     [].forEach.call(document.querySelectorAll('input[name="normm"]'), function(r){ r.addEventListener('change', normVeranderd); });
     $('normCes').addEventListener('input', function(){ zetMethode('cesuur'); normVeranderd(); });
     $('normN').addEventListener('input', function(){ zetMethode('nterm'); normVeranderd(); });
-    $('terugzien').addEventListener('change', function(){ bewaarInstel({ terugzien: this.checked }, 'Opgeslagen.'); });
     if ($('klasKies')) $('klasKies').addEventListener('change', function(){ klasFilter = this.value; teken(); });
     $('csv').addEventListener('click', downloadCsv);
   }
