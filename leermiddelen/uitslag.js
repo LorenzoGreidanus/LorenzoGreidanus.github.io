@@ -53,7 +53,7 @@ var UITSLAG = (function(){
     u.rijen.forEach(function(r){ if (r.klas) klassen[r.klas] = 1; });
     var kl = Object.keys(klassen).sort();
     $('uitslagInhoud').innerHTML =
-      '<div class="samenvatting" id="samen"></div>' +
+      '<div id="oproep"></div><div class="samenvatting" id="samen"></div>' +
       '<div class="uitslaggrid">' +
         '<div class="kaart"><h3>Norm</h3>' +
           '<div class="modus" role="radiogroup" aria-label="Norm">' +
@@ -69,9 +69,9 @@ var UITSLAG = (function(){
       '<div class="kaart"><div class="rij" style="justify-content:space-between"><h3>Leerlingen</h3><span class="rij">' +
         (kl.length > 1 ? '<label class="tip">Klas <select class="veld mini" id="klasKies"><option value="">alle</option>' + kl.map(function(k){ return '<option>' + k + '</option>'; }).join('') + '</select></label>' : '') +
         '<button class="knop stil klein" type="button" id="csv">Downloaden (Excel)</button></span></div>' +
-        '<div class="schuif"><table class="tabel" id="leerlingTabel"></table></div></div>' +
+        '<div class="schuif"><table class="tabel kaartjes" id="leerlingTabel"></table></div></div>' +
       '<div class="kaart"><h3>Per vraag</h3><p class="tip">p: het deel van de punten dat de klas haalde. rit: of wie het goed doet op de rest, het hier ook goed doet (onder 0,2 is zwak). Vink een vraag uit om hem niet mee te laten tellen.</p>' +
-        '<div class="schuif"><table class="tabel" id="vraagTabel"></table></div></div>' +
+        '<div class="schuif"><table class="tabel kaartjes" id="vraagTabel"></table></div></div>' +
       '<div class="kaart hide" id="nakijkPaneel" tabindex="-1"></div>';
     [].forEach.call(document.querySelectorAll('input[name="normm"]'), function(r){ r.addEventListener('change', normVeranderd); });
     $('normCes').addEventListener('input', function(){ zetMethode('cesuur'); normVeranderd(); });
@@ -92,12 +92,24 @@ var UITSLAG = (function(){
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', luister); else luister();
   function zetMethode(m){ [].forEach.call(document.querySelectorAll('input[name="normm"]'), function(r){ r.checked = r.value === m; }); }
+  /* wat een andere norm doet: wie zakt eronder, wie komt erboven, en wat het gemiddelde doet */
+  var normEffect = '';
   function normVeranderd(){
     var m = (document.querySelector('input[name="normm"]:checked') || {}).value || 'cesuur';
+    var voor = {}; if (b) b.rijen.forEach(function(r){ voor[r.sid] = r.cijfer; });
+    var gemVoor = b ? b.gem : null;
     u.norm = { methode: m, cesuur: Number($('normCes').value) || 55, n: $('normN').value === '' ? 1 : Number($('normN').value) };
     teken();
+    var zakt = 0, stijgt = 0;
+    b.rijen.forEach(function(r){ var v = voor[r.sid]; if (v == null || r.cijfer == null) return; if (v >= 5.5 && r.cijfer < 5.5) zakt++; if (v < 5.5 && r.cijfer >= 5.5) stijgt++; });
+    var delen = [];
+    if (zakt) delen.push(zakt + (zakt === 1 ? ' leerling zakt' : ' leerlingen zakken') + ' onder de 5,5');
+    if (stijgt) delen.push(stijgt + (stijgt === 1 ? ' leerling komt' : ' leerlingen komen') + ' erboven');
+    if (gemVoor != null && b.gem != null && gemVoor !== b.gem) delen.push('gemiddelde van ' + komma(gemVoor) + ' naar ' + komma(b.gem));
+    normEffect = delen.length ? delen.join(', ') + '.' : 'Geen cijfer verandert van kant.';
+    melding($('normMelding'), normEffect, '');
     clearTimeout(bewaarTimer);
-    bewaarTimer = setTimeout(function(){ bewaarInstel({ norm: u.norm }, 'Norm opgeslagen.'); }, 700);
+    bewaarTimer = setTimeout(function(){ bewaarInstel({ norm: u.norm }, 'Norm opgeslagen. ' + normEffect); }, 700);
   }
   function bewaarInstel(x, klaar){
     EIGEN.instel(code, x).then(function(){ melding($('normMelding'), klaar, 'goed'); })
@@ -110,9 +122,15 @@ var UITSLAG = (function(){
     var gem = cijfers.length ? cijfers.reduce(function(a, c){ return a + c; }, 0) / cijfers.length : null;
     var vold = cijfers.length ? Math.round(cijfers.filter(function(c){ return c >= 5.5; }).length / cijfers.length * 100) : null;
     var open = rijen.reduce(function(a, r){ return a + r.open; }, 0);
-    $('samen').innerHTML = tegel(rijen.length, 'ingeleverd') + tegel(komma(gem), 'gemiddeld cijfer') + tegel(vold == null ? '–' : vold + '%', 'voldoende') +
-      tegel(open, open === 1 ? 'antwoord na te kijken' : 'antwoorden na te kijken', open ? 'let' : '');
-    $('autoCes').textContent = b.norm.methode === 'auto' && b.cesuur != null ? 'Nu: een 5,5 bij ' + komma(b.cesuur, 1) + '% van de punten.' : '';
+    var eersteOpen = an.filter(function(a){ return a.open; })[0];
+    /* eerst nakijken, dan pas cijfers: zolang er antwoorden open staan is elk cijfer voorlopig */
+    $('oproep').innerHTML = open ? '<div class="nakijkoproep"><div><b>' + open + (open === 1 ? ' antwoord wacht' : ' antwoorden wachten') + ' op jou.</b><span>Tot je ze hebt nagekeken zijn de cijfers hieronder voorlopig.</span></div>' +
+      '<button class="knop" type="button" data-beginnakijk="' + (eersteOpen ? eersteOpen.i : 0) + '">Begin met nakijken</button></div>' : '';
+    $('samen').innerHTML = tegel(rijen.length, 'ingeleverd') + tegel(komma(gem), open ? 'gemiddeld cijfer, voorlopig' : 'gemiddeld cijfer', open ? 'voorlopig' : '') +
+      tegel(vold == null ? '–' : vold + '%', open ? 'voldoende, voorlopig' : 'voldoende', open ? 'voorlopig' : '') +
+      (open ? '' : tegel(b.max, 'punten te halen'));
+    var klein = rijen.length && rijen.length < 20 ? ' Met ' + rijen.length + (rijen.length === 1 ? ' leerling' : ' leerlingen') + ' is dat wankel: de bovenste 5% is dan ' + Math.max(1, Math.ceil(rijen.length * 0.05)) + (Math.max(1, Math.ceil(rijen.length * 0.05)) === 1 ? ' leerling' : ' leerlingen') + '.' : '';
+    $('autoCes').textContent = b.norm.methode === 'auto' && b.cesuur != null ? 'Nu: een 5,5 bij ' + komma(b.cesuur, 1) + '% van de punten.' + klein : (rijen.length && rijen.length < 20 ? 'Bij minder dan twintig leerlingen is deze berekening wankel.' : '');
     /* verdeling */
     var ver = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; cijfers.forEach(function(c){ ver[Math.min(9, Math.max(0, Math.floor(c) - 1))]++; });
     var hoog = Math.max.apply(null, ver.concat([1]));
@@ -121,21 +139,21 @@ var UITSLAG = (function(){
     /* leerlingen */
     $('leerlingTabel').innerHTML = '<thead><tr><th>Naam</th><th>Klas</th><th class="getal">Punten</th><th class="getal">%</th><th class="getal">Cijfer</th><th>Nakijken</th><th></th></tr></thead><tbody>' +
       rijen.map(function(r){
-        return '<tr><td>' + schoon(r.naam) + (r.pogingen > 1 ? ' <small class="tip">(' + r.pogingen + '×)</small>' : '') + '</td><td>' + schoon(r.klas) + '</td>' +
-          '<td class="getal">' + komma(r.score, r.score % 1 ? 1 : 0) + ' / ' + b.max + '</td><td class="getal">' + r.pct + '</td>' +
-          '<td class="getal' + (r.cijfer < 5.5 ? ' onv' : '') + '"><b>' + komma(r.cijfer) + '</b>' + (r.open ? '<small>voorlopig</small>' : '') + '</td>' +
-          '<td>' + (r.open ? '<span class="pil let">' + r.open + ' open</span>' : '<span class="tip">klaar</span>') + '</td>' +
-          '<td><button class="knop stil klein" type="button" data-leerling="' + r.sid + '">Bekijk</button></td></tr>';
+        return '<tr><td data-l="Naam"><b>' + schoon(r.naam) + '</b>' + (r.pogingen > 1 ? ' <small class="tip">(' + r.pogingen + '×)</small>' : '') + '</td><td data-l="Klas">' + schoon(r.klas) + '</td>' +
+          '<td class="getal" data-l="Punten">' + komma(r.score, r.score % 1 ? 1 : 0) + ' / ' + b.max + '</td><td class="getal" data-l="Procent">' + r.pct + '</td>' +
+          '<td class="getal' + (r.cijfer < 5.5 ? ' onv' : '') + '" data-l="Cijfer"><b>' + komma(r.cijfer) + '</b>' + (r.open ? '<small>voorlopig</small>' : '') + '</td>' +
+          '<td data-l="Nakijken">' + (r.open ? '<span class="pil let">' + r.open + ' open</span>' : '<span class="tip">klaar</span>') + '</td>' +
+          '<td class="actie"><button class="knop stil klein" type="button" data-leerling="' + r.sid + '" aria-label="Bekijk ' + schoon(r.naam) + '">Bekijk</button></td></tr>';
       }).join('') + '</tbody>';
     /* per vraag */
     $('vraagTabel').innerHTML = '<thead><tr><th>#</th><th>Vraag</th><th class="getal">Punten</th><th class="getal">p</th><th class="getal">rit</th><th>Telt mee</th><th></th></tr></thead><tbody>' +
       an.map(function(a){
-        return '<tr' + (a.telt ? '' : ' class="uit"') + '><td>' + (a.i + 1) + '</td><td><span class="soortpil">' + VORMNAAM[a.vorm] + '</span> ' + schoon(a.vraag) +
+        return '<tr' + (a.telt ? '' : ' class="uit"') + '><td class="nr">' + (a.i + 1) + '</td><td class="vraagcel"><span class="soortpil">' + VORMNAAM[a.vorm] + '</span> ' + schoon(a.vraag) +
           (a.let ? '<small class="letop">' + schoon(a.let) + '</small>' : '') + '</td>' +
-          '<td class="getal">' + a.punten + '</td><td class="getal">' + (a.p == null ? '–' : komma(a.p, 2)) + '<span class="pbalk"><i style="width:' + Math.round((a.p || 0) * 100) + '%"></i></span></td>' +
-          '<td class="getal' + (a.rit != null && a.rit < 0.2 ? ' onv' : '') + '">' + (a.rit == null ? '–' : komma(a.rit, 2)) + '</td>' +
-          '<td><input type="checkbox" data-telt="' + a.i + '"' + (a.telt ? ' checked' : '') + ' aria-label="Vraag ' + (a.i + 1) + ' telt mee"></td>' +
-          '<td><button class="knop ' + (a.open ? '' : 'stil ') + 'klein" type="button" data-vraag="' + a.i + '">' + (a.open ? 'Nakijken (' + a.open + ')' : 'Antwoorden') + '</button></td></tr>';
+          '<td class="getal" data-l="Punten">' + a.punten + '</td><td class="getal" data-l="p">' + (a.p == null ? '–' : komma(a.p, 2)) + '<span class="pbalk"><i style="width:' + Math.round((a.p || 0) * 100) + '%"></i></span></td>' +
+          '<td class="getal' + (a.rit != null && a.rit < 0.2 ? ' onv' : '') + '" data-l="rit">' + (a.rit == null ? '–' : komma(a.rit, 2)) + '</td>' +
+          '<td data-l="Telt mee"><label class="vink klein"><input type="checkbox" data-telt="' + a.i + '"' + (a.telt ? ' checked' : '') + ' aria-label="Vraag ' + (a.i + 1) + ' telt mee"><span class="alleen-klein">telt mee</span></label></td>' +
+          '<td class="actie"><button class="knop ' + (a.open ? '' : 'stil ') + 'klein" type="button" data-vraag="' + a.i + '">' + (a.open ? 'Nakijken (' + a.open + ')' : 'Antwoorden') + '</button></td></tr>';
       }).join('') + '</tbody>';
     if (paneel) tekenPaneel();
   }
@@ -145,6 +163,8 @@ var UITSLAG = (function(){
   function klik(e){
     var k = e.target.closest('button'); if (!k) return;
     if (k.hasAttribute('data-vraag')){ paneel = { soort: 'vraag', i: Number(k.getAttribute('data-vraag')), alleenOpen: an[Number(k.getAttribute('data-vraag'))].open > 0 }; tekenPaneel(true); }
+    else if (k.hasAttribute('data-beginnakijk')){ paneel = { soort: 'vraag', i: Number(k.getAttribute('data-beginnakijk')), alleenOpen: true }; tekenPaneel(true); }
+    else if (k.hasAttribute('data-stapnaar')){ paneel = { soort: 'vraag', i: Number(k.getAttribute('data-stapnaar')), alleenOpen: true }; tekenPaneel(true); }
     else if (k.hasAttribute('data-leerling')){ paneel = { soort: 'leerling', sid: k.getAttribute('data-leerling') }; tekenPaneel(true); }
     else if (k.hasAttribute('data-nk')){ var d = k.getAttribute('data-nk').split('|'); zetPunt(d[0], Number(d[1]), d[2] === 'auto' ? null : Number(d[2])); }
     else if (k.hasAttribute('data-stap')){ paneel.i = Math.max(0, Math.min(u.items.length - 1, paneel.i + Number(k.getAttribute('data-stap')))); tekenPaneel(true); }
@@ -178,7 +198,7 @@ var UITSLAG = (function(){
         '<button class="linkknop" type="button" data-alleenopen>' + (paneel.alleenOpen ? 'Laat alle antwoorden zien' : 'Alleen wat nog nagekeken moet worden') + '</button>' +
         '<div class="nklijst">' + (rijen.length ? rijen.map(function(r){
           return '<div class="nkrij"><div><b>' + schoon(r.naam) + '</b><p>' + schoon(antwoordTekst(it, r.a[i])) + '</p></div>' + knoppen(r, i) + '</div>';
-        }).join('') : '<p class="leeg">Alles bij deze vraag is nagekeken.</p>') + '</div>';
+        }).join('') : klaarTekst(i)) + '</div>';
     } else {
       var r = u.rijen.filter(function(x){ return x.sid === paneel.sid; })[0];
       if (!r){ el.classList.add('hide'); return; }
@@ -198,6 +218,13 @@ var UITSLAG = (function(){
     }
     el.innerHTML = h;
     if (focus){ el.scrollIntoView({ block: 'start' }); el.focus({ preventScroll: true }); }
+  }
+  /* alles bij deze vraag is nagekeken: door naar de volgende vraag met open antwoorden, of klaar */
+  function klaarTekst(i){
+    var volgende = an.filter(function(a){ return a.open && a.i !== i; })[0];
+    if (volgende) return '<p class="leeg">Alles bij deze vraag is nagekeken. <button class="knop klein" type="button" data-stapnaar="' + volgende.i + '">Door naar vraag ' + (volgende.i + 1) + ' (' + volgende.open + ' open)</button></p>';
+    var nogOpen = an.reduce(function(a, x){ return a + x.open; }, 0);
+    return '<p class="leeg">' + (nogOpen ? 'Alles bij deze vraag is nagekeken.' : 'Alles is nagekeken. De cijfers hierboven zijn nu definitief.') + '</p>';
   }
   function zetPunt(sid, i, punt){
     var r = u.rijen.filter(function(x){ return x.sid === sid; })[0]; if (!r) return;

@@ -103,7 +103,7 @@ var NAKIJK = (function(){
       var let_ = '';
       if (x.length >= 5){
         if (p !== null && p < 0.25) let_ = 'Bijna niemand had deze goed. Klopt de antwoordsleutel, en is de stof behandeld?';
-        else if (rit !== null && rit < 0.05) let_ = 'Wie het goed doet op de rest, doet het hier niet beter. Is de vraag duidelijk?';
+        else if (rit !== null && rit < 0.2) let_ = 'Wie het goed doet op de rest, doet het hier niet beter. Is de vraag duidelijk?';
         else if (p !== null && p > 0.95) let_ = 'Bijna iedereen had deze goed.';
       }
       return { i: i, vorm: it.vorm, vraag: it.vraag, punten: punten(it), p: p, rit: rit, n: x.length, open: open, telt: telt(u, i), let: let_ };

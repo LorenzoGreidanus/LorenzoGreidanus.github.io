@@ -98,7 +98,7 @@
           <label class="vink"><input type="checkbox" id="terugzien"> Na het inleveren zien leerlingen welke vragen goed waren, met het goede antwoord</label>
           <p class="tip">Uit: ze zien alleen hun score. Laat het uit zolang dezelfde toets nog in een andere klas komt.</p>
         </div>
-        <h3 style="font-size:1.05rem;margin-top:16px">Vragen</h3>
+        <div class="rij" style="margin-top:16px;justify-content:space-between"><h3 style="font-size:1.05rem">Vragen</h3><button class="linkknop hide" id="alleDicht" type="button">Alles inklappen</button></div>
         <div class="items" id="items" style="margin-top:10px"></div>
         <p class="tip" style="margin-top:14px">Vraag erbij:</p>
         <div class="soortknoppen" id="soortknoppen" style="margin-top:6px"></div>
@@ -342,17 +342,45 @@
     return '<div class="item" data-vorm="' + v + '"><div class="itemkop"><b class="nr"></b><span class="soortpil">' + VORMNAAM[v] + '</span>' +
       '<label class="puntveld">punten <input class="veld mini" type="number" min="1" max="10" step="1" data-v="punten" value="' + (x.punten || 1) + '"></label>' +
       '<span class="rechts"><button type="button" data-actie="op" aria-label="Vraag omhoog">&uarr;</button><button type="button" data-actie="neer" aria-label="Vraag omlaag">&darr;</button>' +
-      '<button type="button" data-actie="weg" aria-label="Vraag weghalen">&times;</button></span></div><div class="velden2">' + h + '</div></div>';
+      '<button type="button" data-actie="dicht" aria-label="Vraag inklappen" aria-expanded="true">&minus;</button>' +
+      '<button type="button" data-actie="weg" aria-label="Vraag weghalen">&times;</button></span></div>' +
+      '<p class="kort" hidden></p><div class="velden2">' + h +
+      '<div class="rij itemvoet"><button class="linkknop" type="button" data-actie="kopie">Dupliceren</button><button class="linkknop" type="button" data-actie="hierna">Nieuwe ' + VORMNAAM[v].replace(/ \(slepen\)/, '').toLowerCase() + ' hierna</button></div></div></div>';
   }
   /* het nummer ook in de namen van de knoppen, anders zijn het twintig keer "omhoog" */
   function nummer(){ [].forEach.call($('items').children, function(it, i){
     it.querySelector('.nr').textContent = 'Vraag ' + (i + 1);
     [['op', 'omhoog'], ['neer', 'omlaag'], ['weg', 'weghalen']].forEach(function(a){ it.querySelector('[data-actie="' + a[0] + '"]').setAttribute('aria-label', 'Vraag ' + (i + 1) + ' ' + a[1]); });
-  }); }
+    it.querySelector('[data-actie="dicht"]').setAttribute('aria-label', 'Vraag ' + (i + 1) + (it.classList.contains('dicht') ? ' uitklappen' : ' inklappen'));
+  });
+  $('alleDicht').classList.toggle('hide', $('items').children.length < 3);
+  $('alleDicht').textContent = [].every.call($('items').children, function(it){ return it.classList.contains('dicht'); }) && $('items').children.length ? 'Alles uitklappen' : 'Alles inklappen'; }
+  /* ingeklapt: een regel met de vraag, zodat een lange toets overzichtelijk blijft */
+  function klap(it, dicht){
+    it.classList.toggle('dicht', dicht);
+    var v = it.querySelector('[data-v="vraag"]'), t = it.querySelector('[data-v="tekst"]');
+    it.querySelector('.kort').textContent = (v && v.value.trim()) || (t && t.value.trim()) || '(nog leeg)';
+    it.querySelector('.kort').hidden = !dicht;
+    it.querySelector('[data-actie="dicht"]').setAttribute('aria-expanded', dicht ? 'false' : 'true');
+    it.querySelector('[data-actie="dicht"]').innerHTML = dicht ? '+' : '&minus;';
+  }
+  $('alleDicht').addEventListener('click', function(){
+    var dicht = this.textContent === 'Alles inklappen';
+    [].forEach.call($('items').children, function(it){ klap(it, dicht); });
+    nummer();
+  });
   $('items').addEventListener('click', function(e){
     var b = e.target.closest('[data-actie]'); if (!b) return;
     var it = b.closest('.item'), a = b.getAttribute('data-actie');
     if (a === 'weg'){ if (!confirm('Deze vraag weghalen?')) return; it.remove(); }
+    if (a === 'dicht'){ klap(it, !it.classList.contains('dicht')); nummer(); b.focus(); return; }
+    if (a === 'kopie' || a === 'hierna'){
+      var x = a === 'kopie' ? lees(it) : { vorm: it.getAttribute('data-vorm') };
+      it.insertAdjacentHTML('afterend', itemHtml(x));
+      var nieuw = it.nextElementSibling; nummer(); zetVies(true); groeiAlles();
+      nieuw.scrollIntoView({ block: 'nearest' }); var eerste = nieuw.querySelector('input,textarea'); if (eerste) eerste.focus();
+      return;
+    }
     zetVies(true);
     if (a === 'op' && it.previousElementSibling) it.parentNode.insertBefore(it, it.previousElementSibling);
     if (a === 'neer' && it.nextElementSibling) it.parentNode.insertBefore(it.nextElementSibling, it);
@@ -364,6 +392,8 @@
     /* een nieuwe toets: standaard alleen de score; een oudere toets zonder die keuze liet de antwoorden zien */
     $('terugzien').checked = m.terugzien === undefined ? !!m.code : !!m.terugzien;
     $('items').innerHTML = (m.items || []).map(itemHtml).join('');
+    /* een bestaande toets komt ingeklapt binnen: eerst het overzicht, dan pas de details */
+    if ((m.items || []).length >= 3) [].forEach.call($('items').children, function(it){ klap(it, true); });
     nummer();
   }
   function regels(t){ return String(t || '').split(/\r?\n/).map(function(x){ return x.trim(); }).filter(Boolean); }
@@ -386,7 +416,7 @@
   }
   /* de fout staat bij de vraag zelf, het veld krijgt de focus en schermlezers horen wat er mist */
   function toonFout(it, tekst, veldnaam){
-    wisFout(it);
+    wisFout(it); klap(it, false);
     it.classList.add('fout');
     var id = 'fout-' + Date.now();
     it.querySelector('.itemkop').insertAdjacentHTML('afterend', '<p class="itemfout" id="' + id + '">' + schoon(tekst) + '</p>');
@@ -425,7 +455,7 @@
       if (!m.items.length){ melding($('bewaarMelding'), 'Zet er minstens een vraag in.', 'fout'); $('soortknoppen').querySelector('button').focus(); return; }
       var fouten = 0, eerste = -1;
       [].forEach.call($('items').children, wisFout);
-      for (var i = 0; i < m.items.length; i++){ var p = probleem(m.items[i], i); if (p){ fouten++; if (eerste < 0) eerste = i; $('items').children[i].classList.add('fout'); $('items').children[i].querySelector('.itemkop').insertAdjacentHTML('afterend', '<p class="itemfout">' + schoon(p) + '</p>'); } }
+      for (var i = 0; i < m.items.length; i++){ var p = probleem(m.items[i], i); if (p){ fouten++; if (eerste < 0) eerste = i; $('items').children[i].classList.add('fout'); klap($('items').children[i], false); $('items').children[i].querySelector('.itemkop').insertAdjacentHTML('afterend', '<p class="itemfout">' + schoon(p) + '</p>'); } }
       if (fouten){
         var it0 = $('items').children[eerste];
         toonFout(it0, probleem(m.items[eerste], eerste), foutVeld(m.items[eerste]));
