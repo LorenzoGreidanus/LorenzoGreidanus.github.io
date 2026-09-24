@@ -143,9 +143,10 @@ main h1{font-size:clamp(1.7rem,4vw,2.4rem);margin-top:4px}
   body{background:#fff;color:#14224C}
   header,.keuzes,.intro,main>.eyebrow,main>h1,footer,.schermtip{display:none !important}
   .wrap{width:100%}
-  .bladen{margin:0;gap:0}
-  .blad{box-shadow:none;border-radius:0;padding:0;max-width:none}
-  .blad + .blad{break-before:page}
+  .bladen{margin:0;gap:0;display:block}
+  .blad{box-shadow:none;border-radius:0;padding:0;max-width:none;display:block}
+  /* in een raster (grid) negeert de browser een pagina-einde; daarom hierboven gewone blokken */
+  .blad + .blad{break-before:page;page-break-before:always;margin-top:0}
   .blad li::before,.blad svg,.blad .breukvak span{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .blad li{padding-top:7px;padding-bottom:7px}
   .blad li::before{top:7px}
@@ -170,12 +171,13 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
 <main class="wrap">
   <p class="eyebrow">voor de docent</p>
   <h1>Werkblad maken</h1>
-  <p class="intro">Kies een vak, de onderdelen en een niveau. Je krijgt genummerde vragen uit dezelfde vragenbank als de spellen, en op een apart blad de antwoorden. Onder Vak staan ook drie spellen: alinea’s van de Tekstdetective, breuken van de Breukenbakker en sommen in het DHTE-schema. Elke keer dat je op Andere vragen tikt, komt er een nieuwe trekking.</p>
+  <p class="intro">Kies een vak, de onderdelen en een niveau. Je krijgt genummerde vragen uit dezelfde vragenbank als de spellen, en op een apart blad de antwoorden. Bij Nederlands en Rekenen kun je ook een werkblad uit een spel kiezen: alinea’s van de Tekstdetective, breuken van de Breukenbakker of sommen in het DHTE-schema. Elke keer dat je op Andere vragen tikt, komt er een nieuwe trekking.</p>
 
   <div class="keuzes">
     <div class="kaart">
       <div class="velden">
         <label>Vak<select id="vak" class="veld"></select></label>
+        <label id="bladVeld" class="hide">Werkblad<select id="blad" class="veld"></select></label>
         <label id="niveauVeld">Niveau<select id="niveau" class="veld"></select></label>
         <label><span id="aantalNaam">Aantal vragen</span><select id="aantal" class="veld"><option>10</option><option selected>20</option><option>30</option><option>40</option></select></label>
         <label id="vormVeld">Soort vragen<select id="vorm" class="veld"><option value="mk">meerkeuze (a, b, c, d)</option><option value="open">open, met een lijn</option></select></label>
@@ -220,11 +222,23 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
 
   /* ---------- de keuzes, ook uit het adres (klas.html linkt hierheen met vak en onderdeel) ---------- */
   var zoek = new URLSearchParams(location.search);
-  $('vak').innerHTML = '<optgroup label="Vragenbank">' + VAKKEN.map(function(v){ return '<option value="' + v.id + '">' + schoon(v.naam) + '</option>'; }).join('') + '</optgroup>' +
-    '<optgroup label="Uit een spel">' + Object.keys(SPELBLAD).map(function(id){ return '<option value="' + id + '">' + schoon(SPELBLAD[id].naam) + '</option>'; }).join('') + '</optgroup>';
-  function spel(){ return SPELBLAD[$('vak').value] || null; }
+  /* Eerst het vak; heeft dat vak ook werkbladen uit een spel, dan kies je
+     daarna welk werkblad: vragen uit de bank of een van die spellen. */
+  $('vak').innerHTML = VAKKEN.map(function(v){ return '<option value="' + v.id + '">' + schoon(v.naam) + '</option>'; }).join('');
+  function spellenVan(vak){ return Object.keys(SPELBLAD).filter(function(id){ return SPELBLAD[id].vak === vak; }); }
+  function tekenBlad(kies){
+    var ids = spellenVan($('vak').value);
+    $('bladVeld').classList.toggle('hide', !ids.length);
+    $('blad').innerHTML = '<option value="">Vragen uit de vragenbank</option>' + ids.map(function(id){ return '<option value="' + id + '">' + schoon(SPELBLAD[id].naam) + '</option>'; }).join('');
+    $('blad').value = kies && ids.indexOf(kies) >= 0 ? kies : '';
+  }
+  function spel(){ return SPELBLAD[$('blad').value] || null; }
   $('niveau').innerHTML = NIVEAUS.map(function(n){ return '<option value="' + n.id + '">' + schoon(n.naam) + '</option>'; }).join('');
-  if (zoek.get('vak') && (VAKKEN.some(function(v){ return v.id === zoek.get('vak'); }) || SPELBLAD[zoek.get('vak')])) $('vak').value = zoek.get('vak');
+  /* een oude link met vak=tekstdetective wordt vak=ned met werkblad=tekstdetective */
+  var vakUit = zoek.get('vak'), bladUit = zoek.get('blad');
+  if (vakUit && SPELBLAD[vakUit]){ bladUit = vakUit; vakUit = SPELBLAD[vakUit].vak; }
+  if (vakUit && VAKKEN.some(function(v){ return v.id === vakUit; })) $('vak').value = vakUit;
+  tekenBlad(bladUit);
   if (zoek.get('n') && NIVEAUS.some(function(v){ return v.id === zoek.get('n'); })) $('niveau').value = zoek.get('n');
   else $('niveau').value = 'kgt';
   var gevraagd = (zoek.get('deel') || '').split(',').filter(Boolean);
@@ -254,7 +268,8 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
   }
   function gekozen(){ return [].map.call($('delen').querySelectorAll('input:checked'), function(x){ return x.value; }); }
   function niveauNaam(){ return (NIVEAUS.filter(function(x){ return x.id === $('niveau').value; })[0] || {}).naam || ''; }
-  $('vak').addEventListener('change', function(){ tekenDelen([]); });
+  $('vak').addEventListener('change', function(){ tekenBlad(''); tekenDelen([]); });
+  $('blad').addEventListener('change', function(){ tekenDelen([]); });
   $('alleDelen').addEventListener('click', function(){ [].forEach.call($('delen').querySelectorAll('input'), function(x){ x.checked = true; }); });
   $('geenDelen').addEventListener('click', function(){ [].forEach.call($('delen').querySelectorAll('input'), function(x){ x.checked = false; }); });
   tekenDelen(gevraagd);
@@ -312,8 +327,17 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
     return q.svg ? '<div class="beeld">' + q.svg + '</div>' : '';
   }
   var laatste = null;
+  /* Welke zin heeft de komma goed? Zonder de zinnen is dat geen vraag. Zulke
+     vragen houden hun keuzes, ook als je open vragen kiest. */
+  function keuzesNodig(v){
+    v = String(v || '');
+    return /\bwelke?\b[^.?]*\b(goed|juist|fout|onjuist|klopt)\b[^.?]*\?\s*$/i.test(v) ||
+      /^(wat is goed|hoe schrijf je (dit|het) (goed|juist))/i.test(v) ||
+      /\bvan deze\b|hoort er niet bij|past niet in|\bhet (eerst|laatst)\b/i.test(v);
+  }
   function adres(vak, n, delen, vorm){
     var q = new URLSearchParams({ vak:vak, n:$('niveau').value, aantal:String(n) });
+    if ($('blad').value) q.set('blad', $('blad').value);
     if (vorm) q.set('vorm', vorm);
     if (delen.length) q.set('deel', delen.join(','));
     try { history.replaceState(null, '', location.pathname + '?' + q.toString()); } catch (e){}
@@ -365,13 +389,14 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
     /* het kopje boven een vraag alleen als er meer onderdelen door elkaar staan */
     var kopjes = w.delen.length !== 1;
     var vragen = w.vragen.map(function(q){
+      var open = w.open && !keuzesNodig(q.v);
       return '<li>' + (kopjes && q.kop ? '<span class="odkop">' + schoon(q.kop) + '</span>' : '') +
         '<span class="vr">' + schoon(q.v) + '</span>' + beeld(q) +
-        (w.open ? '<span class="lijn" aria-hidden="true"></span>'
+        (open ? '<span class="lijn" aria-hidden="true"></span>'
                 : '<div class="opties">' + q.o.map(function(o, i){ return '<span><b>' + LETTERS[i] + '</b>' + schoon(o) + '</span>'; }).join('') + '</div>') + '</li>';
     }).join('');
     var antwoorden = w.vragen.map(function(q){
-      return '<li><span class="goed">' + (w.open ? '' : LETTERS[q.g] + '. ') + schoon(q.o[q.g]) + '</span>' + (w.uitleg && q.u ? '<small>' + schoon(q.u) + '</small>' : '') + '</li>';
+      return '<li><span class="goed">' + (w.open && !keuzesNodig(q.v) ? '' : LETTERS[q.g] + '. ') + schoon(q.o[q.g]) + '</span>' + (w.uitleg && q.u ? '<small>' + schoon(q.u) + '</small>' : '') + '</li>';
     }).join('');
     papier(titel, sub, '', vragen, antwoorden);
   }

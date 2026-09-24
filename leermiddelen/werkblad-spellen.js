@@ -27,7 +27,7 @@ var SPELBLAD = (function(){
   /* ---------- Tekstdetective ---------- */
   var T = window.TEKSTOPGAVEN;
   var tekst = T && {
-    naam:'Tekstdetective: alinea’s lezen',
+    naam:'Tekstdetective: alinea’s lezen', vak:'ned',
     aantallen:[4, 6, 8, 10], standaard:6, aantalNaam:'Aantal alinea’s',
     delenKop:'Wat komt erin',
     delenTip:'Bij elke alinea de vragen die je aanvinkt. Kies je geen soort tekst, dan komen alle soorten aan bod.',
@@ -126,7 +126,7 @@ var SPELBLAD = (function(){
     return String(q.antwoord.t).replace('.', ',') + (q.eenheid === 'procent' ? '%' : '');
   }
   var breuk = B && {
-    naam:'Breukenbakker: breuken',
+    naam:'Breukenbakker: breuken', vak:'reken',
     aantallen:[8, 12, 16, 20], standaard:12, aantalNaam:'Aantal sommen',
     delenKop:'Soorten sommen',
     delenTip:'Kies je niets, dan komen alle soorten die bij het niveau passen aan bod. De taarten worden grijs geprint: grijs is wat er nog is.',
@@ -180,7 +180,7 @@ var SPELBLAD = (function(){
     return h + '</table>';
   }
   var dhte = D && {
-    naam:'DHTE-schema: optellen en aftrekken',
+    naam:'DHTE-schema: optellen en aftrekken', vak:'reken',
     eigenNiveau:true,
     aantallen:[6, 9, 12, 15], standaard:9, aantalNaam:'Aantal sommen',
     delenKop:'Getallen en sommen',
