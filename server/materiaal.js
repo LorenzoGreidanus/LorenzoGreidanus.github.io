@@ -21,7 +21,13 @@
    POST   /uitslagen?code=X     { sleutel }                        -> alle inleveringen met hun score
    POST   /nakijk?code=X        { sleutel, sid, i, punt }          -> een vraag met de hand nakijken (punt null: weer automatisch)
    POST   /instel?code=X        { sleutel, norm, neutraal, terugzien }
-   POST   /wisuitslag?code=X    { sleutel, sid }                   -> een inlevering weg, dan mag die leerling opnieuw */
+   POST   /wisuitslag?code=X    { sleutel, sid }                   -> een inlevering weg, dan mag die leerling opnieuw
+   POST   /afb?code=X           { sleutel, data: "data:image/jpeg;base64,..." } -> { id }   een plaatje bij de toets
+   GET    /afb?code=X&id=Y                                         -> het plaatje zelf
+
+   Plaatjes staan in stukken van 96.000 tekens base64 onder a:CODE:ID:n, met
+   a:CODE:ID:m als beschrijving; het stuk zelf houdt in afbs bij welke er zijn.
+   Gaat de toets weg, of verwijst geen vraag er meer naar, dan gaan ze mee. */
 import { DurableObject } from "cloudflare:workers";
 
 const LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -31,7 +37,9 @@ const MAX_JSON = 80000;                           /* een stuk hoogstens zoveel t
 const MAX_ITEMS = 200;
 const MAX_UITSLAGEN = 400;                        /* inleveringen per stuk */
 const SOORTEN = { lijst: 1, oefening: 1 };
-const VORMEN = { mk: 1, open: 1, koppel: 1, volgorde: 1, groepen: 1, gaten: 1 };
+const VORMEN = { mk: 1, open: 1, koppel: 1, volgorde: 1, groepen: 1, gaten: 1, aanwijzen: 1 };
+const MAX_AFB = 12, AFB_BYTES = 400 * 1024, STUK = 96000;
+const AFB_ID = /^[A-Z0-9]{8}$/;
 
 function json(obj, status){
   return new Response(JSON.stringify(obj), { status: status || 200,
@@ -72,7 +80,7 @@ function item(x){
   if (!x || !VORMEN[x.vorm]) return null;
   const v = t(x.vraag, 300), u = t(x.uitleg, 300);
   const punten = Math.max(1, Math.min(10, Math.round(Number(x.punten) || 1)));
-  const met = o => Object.assign(o, { uitleg: u, punten });
+  const met = o => Object.assign(o, { uitleg: u, punten, afb: AFB_ID.test(String(x.afb || "")) ? String(x.afb) : "" });
   switch (x.vorm){
     case "mk": {
       const goed = t(x.goed, 150), fout = lijstVan(x.fout, 5, 150);
@@ -101,12 +109,18 @@ function item(x){
       const tekst = t(x.tekst, 1200);
       return gatenVan(tekst).length ? met({ vorm: "gaten", vraag: v, tekst, extra: lijstVan(x.extra, 6, 40) }) : null;
     }
+    case "aanwijzen": {
+      /* nummers op een plaatje, elk met het woord dat erbij hoort; x en y in procenten */
+      const proc = n => Math.round(Math.max(0, Math.min(100, Number(n) || 0)) * 10) / 10;
+      const plekken = (Array.isArray(x.plekken) ? x.plekken : []).map(p => ({ x: proc(p && p.x), y: proc(p && p.y), naam: t(p && p.naam, 80) })).filter(p => p.naam).slice(0, 12);
+      return plekken.length >= 2 ? met({ vorm: "aanwijzen", vraag: v, plekken, extra: lijstVan(x.extra, 6, 80) }) : null;
+    }
   }
   return null;
 }
 /* Een toets zonder antwoorden: wat de leerling nodig heeft om te antwoorden, meer niet. */
 function verborgen(it){
-  const b = { vorm: it.vorm, vraag: it.vraag, punten: it.punten };
+  const b = { vorm: it.vorm, vraag: it.vraag, punten: it.punten, afb: it.afb || "" };
   switch (it.vorm){
     case "mk": b.opties = schud([it.goed].concat(it.fout)); break;
     case "koppel": b.links = it.paren.map(p => p.a); b.rechts = schud(it.paren.map(p => p.b)); break;
@@ -117,6 +131,7 @@ function verborgen(it){
     }
     case "groepen": b.groepen = it.groepen.map(g => g.naam); b.dingen = schud([].concat(...it.groepen.map(g => g.dingen))); break;
     case "gaten": b.delen = String(it.tekst).split(/\[[^\]]+\]/); b.woorden = schud(gatenVan(it.tekst).concat(it.extra || [])); break;
+    case "aanwijzen": b.plekken = it.plekken.map(p => ({ x: p.x, y: p.y })); b.woorden = schud(it.plekken.map(p => p.naam).concat(it.extra || [])); break;
   }
   return b;
 }
@@ -130,6 +145,7 @@ function antwoordVan(it, a){
     case "volgorde": return lijst(a, 10, 120);
     case "groepen": return (Array.isArray(a) ? a : []).slice(0, 40).map(p => [t(p && p[0], 80), t(p && p[1], 40)]);
     case "gaten": return lijst(a, 30, 40);
+    case "aanwijzen": return lijst(a, 12, 80);
   }
   return "";
 }
@@ -147,6 +163,7 @@ function scoor(it, a){
       return alle ? n / alle : 0;
     }
     case "gaten": { const g = gatenVan(it.tekst); const n = g.filter((w, i) => gelijk((a || [])[i], w)).length; return n / g.length; }
+    case "aanwijzen": { const n = it.plekken.filter((p, i) => gelijk((a || [])[i], p.naam)).length; return n / it.plekken.length; }
   }
   return 0;
 }
@@ -159,6 +176,7 @@ function juistVan(it){
     case "volgorde": return it.stappen.join(" → ");
     case "groepen": return it.groepen.map(g => g.naam + ": " + g.dingen.join(", ")).join("; ");
     case "gaten": return String(it.tekst).replace(/\[([^\]]+)\]/g, "$1");
+    case "aanwijzen": return it.plekken.map((p, i) => (i + 1) + ": " + p.naam).join("; ");
   }
   return "";
 }
@@ -175,6 +193,7 @@ export class Materiaal extends DurableObject {
     try {
       const url = new URL(req.url), code = String(url.searchParams.get("code") || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
       if (url.pathname === "/haal") return await this.haal(code);
+      if (url.pathname === "/afb" && req.method === "GET") return await this.afbHaal(code, url.searchParams.get("id"));
       if (req.method !== "POST") return json({ fout: "onbekend" }, 404);
       let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldig materiaal" }, 400); }
       switch (url.pathname){
@@ -187,6 +206,7 @@ export class Materiaal extends DurableObject {
         case "/nakijk": return await this.nakijk(code, inz);
         case "/instel": return await this.instel(code, inz);
         case "/wisuitslag": return await this.wisUitslag(code, inz);
+        case "/afb": return await this.afbZet(code, inz);
       }
       return json({ fout: "onbekend" }, 404);
     } catch (e){
@@ -220,19 +240,64 @@ export class Materiaal extends DurableObject {
     if (!m) return json({ fout: "geen geldig materiaal" }, 400);
     if (m.fout) return json({ fout: m.fout }, 400);
     /* de instellingen van het nakijken blijven staan */
-    const blijft = { sleutel: oud.sleutel, gemaakt: oud.gemaakt, bijgewerkt: Date.now(), gebruikt: Date.now(), n: oud.n || 0 };
+    const blijft = { sleutel: oud.sleutel, gemaakt: oud.gemaakt, bijgewerkt: Date.now(), gebruikt: Date.now(), n: oud.n || 0, afbs: oud.afbs || [] };
     ["norm", "neutraal"].forEach(k => { if (oud[k] !== undefined) blijft[k] = oud[k]; });
     if (Array.isArray(blijft.neutraal) && m.items) blijft.neutraal = blijft.neutraal.filter(i => i < m.items.length);
     await this.ctx.storage.put("m:" + code, Object.assign(m, blijft));
+    /* plaatjes waar geen vraag meer naar verwijst, gaan weg */
+    await this.afbWeg(code, m, new Set((m.items || []).map(i => i.afb).filter(Boolean)));
     return json({ ok: true, code });
   }
   async weg(code, inz){
     const oud = await this.ctx.storage.get("m:" + code);
     if (!oud) return json({ ok: true });
     if (!inz || inz.sleutel !== oud.sleutel) return json({ fout: "je kunt alleen je eigen materiaal weghalen" }, 403);
+    await this.afbWeg(code, oud, new Set());
     await this.ctx.storage.delete("m:" + code);
     await this.uitslagenWeg(code);
     return json({ ok: true });
+  }
+  /* de plaatjes van een stuk weg, behalve die in houd; slaat de lijst afbs op als er iets verandert */
+  async afbWeg(code, m, houd){
+    const l = Array.isArray(m.afbs) ? m.afbs : [];
+    const weg = l.filter(id => !houd.has(id));
+    if (!weg.length) return;
+    for (const id of weg){
+      const meta = await this.ctx.storage.get("a:" + code + ":" + id + ":m");
+      const keys = ["a:" + code + ":" + id + ":m"];
+      for (let i = 0; i < (meta ? meta.n : 0); i++) keys.push("a:" + code + ":" + id + ":" + i);
+      await this.ctx.storage.delete(keys);
+    }
+    m.afbs = l.filter(id => houd.has(id));
+    if (await this.ctx.storage.get("m:" + code)) await this.ctx.storage.put("m:" + code, m);
+  }
+  async afbZet(code, inz){
+    const { m, fout } = await this.vanMij(code, inz);
+    if (fout) return fout;
+    const d = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(inz.data || ""));
+    if (!d) return json({ fout: "geen geldig plaatje (jpg, png of webp)" }, 400);
+    const bytes = Math.floor(d[2].length * 3 / 4);
+    if (bytes > AFB_BYTES) return json({ fout: "dit plaatje is te groot; hoogstens 400 kB" }, 400);
+    m.afbs = Array.isArray(m.afbs) ? m.afbs : [];
+    if (m.afbs.length >= MAX_AFB) return json({ fout: "hoogstens " + MAX_AFB + " plaatjes per toets; haal er eerst een weg" }, 400);
+    const id = willekeurig(8, LETTERS), stukken = [];
+    for (let i = 0; i < d[2].length; i += STUK) stukken.push(d[2].slice(i, i + STUK));
+    for (let i = 0; i < stukken.length; i++) await this.ctx.storage.put("a:" + code + ":" + id + ":" + i, stukken[i]);
+    await this.ctx.storage.put("a:" + code + ":" + id + ":m", { type: d[1], n: stukken.length, bytes, t: Date.now() });
+    m.afbs.push(id); m.gebruikt = Date.now();
+    await this.ctx.storage.put("m:" + code, m);
+    return json({ ok: true, id });
+  }
+  async afbHaal(code, id){
+    id = String(id || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (!/^[A-Z0-9]{6}$/.test(code) || !AFB_ID.test(id)) return json({ fout: "geen geldig plaatje" }, 400);
+    const meta = await this.ctx.storage.get("a:" + code + ":" + id + ":m");
+    if (!meta) return json({ fout: "geen plaatje" }, 404);
+    let b64 = "";
+    for (let i = 0; i < meta.n; i++) b64 += (await this.ctx.storage.get("a:" + code + ":" + id + ":" + i)) || "";
+    const bin = atob(b64), bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new Response(bytes, { headers: { "content-type": meta.type, "cache-control": "public, max-age=31536000, immutable", "x-content-type-options": "nosniff" } });
   }
   async uitslagenWeg(code){
     const r = await this.ctx.storage.list({ prefix: "r:" + code + ":" });
@@ -335,7 +400,7 @@ export class Materiaal extends DurableObject {
     const weg = [];
     for (const [k, m] of alles) if (nu - (m.gebruikt || m.gemaakt || 0) > BEWAAR) weg.push(k);
     for (let i = 0; i < weg.length; i += 100) await this.ctx.storage.delete(weg.slice(i, i + 100));
-    for (const k of weg) await this.uitslagenWeg(k.slice(2));
+    for (const k of weg){ await this.uitslagenWeg(k.slice(2)); await this.afbWeg(k.slice(2), alles.get(k) || {}, new Set()); }
     if (alles.size > weg.length) await this.ctx.storage.setAlarm(nu + DAG);
   }
 }

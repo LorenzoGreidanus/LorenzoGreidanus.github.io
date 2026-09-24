@@ -80,6 +80,7 @@
     <div class="kaart">
       <p class="vraagtekst" id="vraagtekst" tabindex="-1"></p>
       <p class="tip" id="hoe" style="margin:-6px 0 12px"></p>
+      <div class="vraagafb" id="vraagafb"></div>
       <div id="veld"></div>
       <div class="terug hide" id="terug"></div>
       <div class="volgende">
@@ -205,7 +206,9 @@
   function toets(){ return oef.modus === 'toets'; }
   var HOE = { mk: '', open: 'Typ je antwoord.', koppel: 'Sleep elk antwoord naar de goede plek, of tik het aan en tik dan op de plek.',
     volgorde: 'Sleep de stappen op volgorde, of gebruik de pijltjes.', groepen: 'Sleep elk woord naar de goede groep, of tik het aan en tik dan op de groep.',
-    gaten: 'Sleep de woorden naar de gaten, of tik een woord aan en tik dan op een gat.' };
+    gaten: 'Sleep de woorden naar de gaten, of tik een woord aan en tik dan op een gat.',
+    aanwijzen: 'Sleep elk woord naar het nummer waar het bij hoort, of tik het aan en tik dan op het nummer.' };
+  function afbAdres(id){ return EIGEN.afbAdres(code, id); }
   function toonVraag(){
     var it = oef.items[nr];
     $('teller').textContent = 'Vraag ' + (nr + 1) + ' van ' + oef.items.length + (it.punten > 1 ? ' · ' + it.punten + ' punten' : '');
@@ -214,6 +217,8 @@
     $('hoe').textContent = HOE[it.vorm] || '';
     $('terug').className = 'terug hide'; $('terug').innerHTML = '';
     $('veld').innerHTML = '';
+    /* een plaatje bij de vraag; bij aanwijzen tekent de vorm het zelf, met de nummers erop */
+    $('vraagafb').innerHTML = it.afb && it.vorm !== 'aanwijzen' ? '<img alt="" src="' + afbAdres(it.afb) + '">' : '';
     huidig = VORM[it.vorm](it, $('veld'), klaarVoorNakijken, !!oef.verborgen);
     $('nakijk').textContent = toets() ? (nr === oef.items.length - 1 ? 'Inleveren' : 'Volgende') : 'Nakijken';
     $('nakijk').classList.toggle('hide', it.vorm === 'mk' && !toets());
@@ -469,6 +474,31 @@
           plekken.forEach(function(p, i){ var ok = gelijk(waardeIn(p.el), gaten[i]); if (ok) n++; if (toon) p.el.classList.add(ok ? 'goed' : 'fout'); });
           if (toon) bord.uit();
           return { punt: n / plekken.length, juist: String(it.tekst || '').replace(/\[([^\]]+)\]/g, '$1') };
+        } };
+    },
+    aanwijzen: function(it, veld, veranderd, verborgen){
+      var plekkenIt = it.plekken || [];
+      var woorden = verborgen ? it.woorden : schud(plekkenIt.map(function(p){ return p.naam; }).concat(it.extra || []));
+      veld.innerHTML = '<div class="aanwijs"><div class="beeld"><img alt="" src="' + schoon(afbAdres(it.afb)) + '">' +
+        plekkenIt.map(function(p, i){ return '<span class="stip" style="left:' + Number(p.x) + '%;top:' + Number(p.y) + '%">' + (i + 1) + '</span>'; }).join('') + '</div></div>' +
+        '<div class="tegels"></div><div class="koppels"></div>';
+      var bak = veld.querySelector('.tegels'), rijen = veld.querySelector('.koppels'), plekken = [];
+      plekkenIt.forEach(function(p, i){
+        var r = document.createElement('div'); r.className = 'koppel nr';
+        r.innerHTML = '<span class="links"><i>' + (i + 1) + '</i></span>';
+        var plek = document.createElement('div'); plek.className = 'plek'; plek.setAttribute('role', 'button'); plek.tabIndex = 0; plek.setAttribute('aria-label', 'Plek bij nummer ' + (i + 1));
+        r.appendChild(plek); rijen.appendChild(r);
+        plekken.push({ el: plek, leeg: 'nummer ' + (i + 1) });
+      });
+      var bord = tegelbord(bak, plekken, veranderd);
+      vul(bak, woorden, bord); toetsbaar(plekken);
+      return { klaar: function(){ return plekken.every(function(p){ return p.el.querySelector('.tegel'); }); },
+        antwoord: function(){ return plekken.map(function(p){ return waardeIn(p.el); }); },
+        nakijken: function(toon){
+          var n = 0;
+          plekken.forEach(function(p, i){ var t = p.el.querySelector('.tegel'), ok = t && gelijk(t.getAttribute('data-w'), plekkenIt[i].naam); if (ok) n++; if (toon && t) t.classList.add(ok ? 'goed' : 'fout'); });
+          if (toon) bord.uit();
+          return { punt: n / plekken.length, juist: plekkenIt.map(function(p, i){ return (i + 1) + ': ' + p.naam; }).join('; ') };
         } };
     },
     volgorde: function(it, veld, veranderd, verborgen){

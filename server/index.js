@@ -68,7 +68,7 @@ function json(obj, status){
 const CODE = /^[A-Z]{4}$/;
 
 export default {
-  async fetch(req, env){
+  async fetch(req, env, ctx){
     const url = new URL(req.url);
     const p = url.pathname;
     /* Een adres, zonder www: anders klopt bij het inloggen met Microsoft het terugadres niet
@@ -150,7 +150,17 @@ export default {
       let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldig materiaal" }, 400); }
       return env.MATERIAAL.get(env.MATERIAAL.idFromName("materiaal")).fetch("https://materiaal/zet", { method: "POST", body: JSON.stringify(inz || {}) });
     }
-    const mm = p.match(/^\/api\/materiaal\/([A-Za-z0-9]{6})(\/werk|\/weg|\/volledig|\/inlever|\/uitslagen|\/nakijk|\/instel|\/wisuitslag)?\/?$/);
+    /* een plaatje bij een toets: openbaar, en een jaar in de cache (het adres verandert als het plaatje verandert) */
+    const ma = p.match(/^\/api\/materiaal\/([A-Za-z0-9]{6})\/afb\/([A-Za-z0-9]{8})\/?$/);
+    if (ma && req.method === "GET"){
+      const cache = caches.default;
+      const hit = await cache.match(req).catch(() => null);
+      if (hit) return hit;
+      const r = await env.MATERIAAL.get(env.MATERIAAL.idFromName("materiaal")).fetch("https://materiaal/afb?code=" + ma[1].toUpperCase() + "&id=" + ma[2].toUpperCase());
+      if (r.ok && ctx && ctx.waitUntil) ctx.waitUntil(cache.put(req, r.clone()).catch(() => {}));
+      return r;
+    }
+    const mm = p.match(/^\/api\/materiaal\/([A-Za-z0-9]{6})(\/werk|\/weg|\/volledig|\/inlever|\/uitslagen|\/nakijk|\/instel|\/wisuitslag|\/afb)?\/?$/);
     if (mm){
       const stub = env.MATERIAAL.get(env.MATERIAAL.idFromName("materiaal"));
       if (req.method === "GET"){
@@ -160,7 +170,7 @@ export default {
       if (req.method === "POST" && mm[2]){
         if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
         /* inleveren: een hele klas achter een schooladres tegelijk; nakijken: veel kleine klikjes */
-        const emmer = mm[2] === "/inlever" ? ["materiaal-inlever", 900] : /^\/(nakijk|uitslagen|instel|volledig)$/.test(mm[2]) ? ["materiaal-nakijk", 1500] : ["materiaal-werk", 120];
+        const emmer = mm[2] === "/inlever" ? ["materiaal-inlever", 900] : /^\/(nakijk|uitslagen|instel|volledig)$/.test(mm[2]) ? ["materiaal-nakijk", 1500] : mm[2] === "/afb" ? ["materiaal-afb", 60] : ["materiaal-werk", 120];
         if (!await magDoor(env, req, emmer[0], emmer[1], 600)) return json({ fout: "even wachten" }, 429);
         let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldig materiaal" }, 400); }
         return stub.fetch("https://materiaal" + mm[2] + "?code=" + mm[1].toUpperCase(), { method: "POST", body: JSON.stringify(inz || {}) });

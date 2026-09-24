@@ -12,7 +12,12 @@ var UITSLAG = (function(){
   function melding(el, tekst, soort){ el.textContent = tekst || ''; el.className = 'melding' + (soort ? ' ' + soort : ''); }
   function komma(x, n){ return x == null ? '–' : Number(x).toFixed(n == null ? 1 : n).replace('.', ','); }
   function pct(w){ return w == null ? 'nakijken' : Math.round(w * 100) + '%'; }
-  var VORMNAAM = { mk: 'Meerkeuze', open: 'Open', koppel: 'Koppelen', volgorde: 'Volgorde', groepen: 'Groepen', gaten: 'Gatentekst' };
+  var VORMNAAM = { mk: 'Meerkeuze', open: 'Open', koppel: 'Koppelen', volgorde: 'Volgorde', groepen: 'Groepen', gaten: 'Gatentekst', aanwijzen: 'Aanwijzen' };
+  function afbHtml(it){
+    if (!it.afb) return '';
+    return '<div class="paneelafb"><div class="beeld"><img alt="" src="' + EIGEN.afbAdres(code, it.afb) + '">' +
+      (it.vorm === 'aanwijzen' ? it.plekken.map(function(p, i){ return '<span class="stip" style="left:' + Number(p.x) + '%;top:' + Number(p.y) + '%">' + (i + 1) + '</span>'; }).join('') : '') + '</div></div>';
+  }
   var terug = function(){};
   var code = '', u = null, b = null, an = null, paneel = null, bewaarTimer = null, klasFilter = '';
 
@@ -26,6 +31,7 @@ var UITSLAG = (function(){
       case 'volgorde': return a.join(' → ');
       case 'groepen': return it.groepen.map(function(g){ return g.naam + ': ' + (a.filter(function(x){ return x[1] === g.naam; }).map(function(x){ return x[0]; }).join(', ') || '—'); }).join('; ');
       case 'gaten': { var i = 0; return String(it.tekst).replace(/\[[^\]]+\]/g, function(){ return '[' + (a[i++] || '…') + ']'; }); }
+      case 'aanwijzen': return it.plekken.map(function(p, k){ return (k + 1) + ': ' + (a[k] || '—'); }).join('; ');
     }
     return String(a);
   }
@@ -193,7 +199,7 @@ var UITSLAG = (function(){
       h = '<div class="rij" style="justify-content:space-between"><h3>Vraag ' + (i + 1) + ' van ' + u.items.length + '</h3><span class="rij">' +
         '<button class="knop stil klein" type="button" data-stap="-1"' + (i ? '' : ' disabled') + '>Vorige</button><button class="knop stil klein" type="button" data-stap="1"' + (i < u.items.length - 1 ? '' : ' disabled') + '>Volgende</button>' +
         '<button class="knop stil klein" type="button" data-sluit>Sluiten</button></span></div>' +
-        '<p><span class="soortpil">' + VORMNAAM[it.vorm] + '</span> <b>' + schoon(it.vraag) + '</b></p>' +
+        '<p><span class="soortpil">' + VORMNAAM[it.vorm] + '</span> <b>' + schoon(it.vraag) + '</b></p>' + afbHtml(it) +
         '<p class="tip">Goed antwoord: ' + schoon(u.juist[i] || (it.vorm === 'open' ? 'geen, je kijkt zelf na' : '')) + (it.uitleg ? ' · ' + schoon(it.uitleg) : '') + '</p>' +
         '<button class="linkknop" type="button" data-alleenopen>' + (paneel.alleenOpen ? 'Laat alle antwoorden zien' : 'Alleen wat nog nagekeken moet worden') + '</button>' +
         '<div class="nklijst">' + (rijen.length ? rijen.map(function(r){

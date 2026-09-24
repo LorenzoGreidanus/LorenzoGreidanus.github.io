@@ -152,8 +152,12 @@
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
   var VORMEN = [
     ['mk', 'Meerkeuze'], ['open', 'Open vraag'], ['koppel', 'Koppelen (slepen)'],
-    ['volgorde', 'Volgorde (slepen)'], ['groepen', 'In groepen (slepen)'], ['gaten', 'Gatentekst (slepen)']
+    ['volgorde', 'Volgorde (slepen)'], ['groepen', 'In groepen (slepen)'], ['gaten', 'Gatentekst (slepen)'],
+    ['aanwijzen', 'Aanwijzen op een plaatje (slepen)']
   ];
+  /* de code van het stuk dat open staat: nodig om een plaatje te tonen */
+  var plaatjesCode = '';
+  function afbAdres(id){ return plaatjesCode ? EIGEN.afbAdres(plaatjesCode, id) : ''; }
   var VORMNAAM = {}; VORMEN.forEach(function(v){ VORMNAAM[v[0]] = v[1]; });
   var bezig = null;   /* { soort, code? } */
   var vies = false;   /* is er iets veranderd dat nog niet bewaard is? */
@@ -248,12 +252,12 @@
   $('vergelijkKnop').addEventListener('click', function(){ UITSLAG.vergelijk({ terug: naarLijst }); });
   $('terugNaarLijst').addEventListener('click', sluit);
   $('nieuwLijst').addEventListener('click', function(){ vulLijst({ naam:'', vak:'', kopA:'', kopB:'', paren:[] }); open('lijst'); });
-  $('nieuwOef').addEventListener('click', function(){ vulOef({ naam:'', vak:'', modus:'oefenen', items:[] }); open('oefening'); });
+  $('nieuwOef').addEventListener('click', function(){ plaatjesCode = ''; vulOef({ naam:'', vak:'', modus:'oefenen', items:[] }); open('oefening'); });
   function laadVoorBewerken(code){
     melding($('lijstMelding'), 'Ophalen…');
     /* met de sleutel: een toets komt anders zonder antwoorden */
     EIGEN.volledig(code).then(function(m){
-      melding($('lijstMelding'), '');
+      melding($('lijstMelding'), ''); plaatjesCode = code;
       if (m.soort === 'lijst') vulLijst(m); else vulOef(m);
       open(m.soort, code);
       if (m.n){
@@ -337,7 +341,14 @@
       h = label('Opdracht', veld('vraag', x.vraag || 'Sleep de woorden naar de goede plek.', '')) +
           label('Tekst, met de woorden die weg moeten tussen [haken]', veld('tekst', x.tekst, 'De [maag] mengt het voedsel met [maagsap].', true)) +
           label('Extra woorden om het lastiger te maken (mag leeg, een per regel)', veld('extra', (x.extra || []).join('\n'), 'gal', true));
+    } else if (v === 'aanwijzen'){
+      h = label('Opdracht', veld('vraag', x.vraag || 'Sleep elk woord naar het goede nummer.', '')) +
+          afbRij(x, true) +
+          '<p class="tip">Klik op het plaatje om een nummer te zetten, en typ eronder wat daar staat. Klik op een nummer om het weg te halen.</p>' +
+          '<div class="pleklijst">' + (x.plekken || []).map(function(p, i){ return plekRij(i, p.naam); }).join('') + '</div>' +
+          label('Extra woorden om het lastiger te maken (mag leeg, een per regel)', veld('extra', (x.extra || []).join('\n'), 'bijv. lever', true));
     }
+    if (v !== 'aanwijzen') h += afbRij(x, false);
     h += label('Uitleg na de vraag (mag leeg)', veld('uitleg', x.uitleg, 'bijv. waarom dit het antwoord is'));
     return '<div class="item" data-vorm="' + v + '"><div class="itemkop"><b class="nr"></b><span class="soortpil">' + VORMNAAM[v] + '</span>' +
       '<label class="puntveld">punten <input class="veld mini" type="number" min="1" max="10" step="1" data-v="punten" value="' + (x.punten || 1) + '"></label>' +
@@ -348,6 +359,60 @@
       '<div class="rij itemvoet"><button class="linkknop" type="button" data-actie="kopie">Dupliceren</button><button class="linkknop" type="button" data-actie="hierna">Nieuwe ' + VORMNAAM[v].replace(/ \(slepen\)/, '').toLowerCase() + ' hierna</button></div></div></div>';
   }
   /* het nummer ook in de namen van de knoppen, anders zijn het twintig keer "omhoog" */
+  /* het plaatje bij een vraag: een voorbeeld, een kiesknop, en bij aanwijzen de nummers erop */
+  function afbRij(x, aanwijzen){
+    var src = x.afbData || (x.afb ? afbAdres(x.afb) : '');
+    return '<div class="afbrij"><span class="veldnaam">' + (aanwijzen ? 'Het plaatje' : 'Plaatje bij de vraag (mag leeg)') + '</span>' +
+      '<div class="afbvak' + (src ? ' heeft' : '') + (aanwijzen ? ' aanwijs' : '') + '"><div class="beeld"><img class="afbvoor" alt="" src="' + schoon(src) + '"' + (x.afb ? ' data-afb="' + schoon(x.afb) + '"' : '') + '>' +
+      (aanwijzen ? (x.plekken || []).map(function(p, i){ return markHtml(p.x, p.y, p.naam, i); }).join('') : '') + '</div>' +
+      '<div class="rij afbknoppen"><label class="knop stil klein"><input type="file" accept="image/jpeg,image/png,image/webp" class="afbkies" hidden><span>' + (src ? 'Ander plaatje' : 'Kies een plaatje') + '</span></label>' +
+      (aanwijzen ? '' : '<button type="button" class="linkknop" data-afbweg>Plaatje weg</button>') + '<span class="tip afbtip"></span></div></div></div>';
+  }
+  function markHtml(x, y, naam, i){ return '<button type="button" class="stip" style="left:' + Number(x) + '%;top:' + Number(y) + '%" data-naam="' + schoon(naam || '') + '" aria-label="Nummer ' + (i + 1) + ' weghalen">' + (i + 1) + '</button>'; }
+  function plekRij(i, naam){ return '<div class="plekrij"><i>' + (i + 1) + '</i><input class="veld" data-plek="' + i + '" maxlength="80" value="' + schoon(naam || '') + '" placeholder="wat staat bij nummer ' + (i + 1) + '?" aria-label="Woord bij nummer ' + (i + 1) + '"></div>'; }
+  /* de nummers op het plaatje en de regels eronder lopen gelijk */
+  function hernummer(it){
+    var marks = it.querySelectorAll('.stip');
+    [].forEach.call(marks, function(m, i){ m.textContent = i + 1; m.setAttribute('aria-label', 'Nummer ' + (i + 1) + ' weghalen'); });
+    it.querySelector('.pleklijst').innerHTML = [].map.call(marks, function(m, i){ return plekRij(i, m.getAttribute('data-naam')); }).join('');
+  }
+  $('items').addEventListener('change', function(e){
+    var inp = e.target.closest('.afbkies'); if (!inp || !inp.files || !inp.files[0]) return;
+    var vak = inp.closest('.afbvak'), img = vak.querySelector('.afbvoor'), tip = vak.querySelector('.afbtip');
+    tip.textContent = 'Verkleinen…';
+    EIGEN.verklein(inp.files[0]).then(function(data){
+      img.src = data; img.removeAttribute('data-afb'); vak.classList.add('heeft');
+      tip.textContent = Math.round(data.length * 0.75 / 1024) + ' kB; gaat mee bij Bewaren';
+      vak.querySelector('label.knop span').textContent = 'Ander plaatje';
+      zetVies(true);
+    }).catch(function(f){ tip.textContent = f.message || 'Dit bestand kan ik niet lezen als plaatje.'; });
+    inp.value = '';
+  });
+  $('items').addEventListener('click', function(e){
+    var it = e.target.closest('.item'); if (!it) return;
+    if (e.target.closest('[data-afbweg]')){
+      var vak = it.querySelector('.afbvak'), img = vak.querySelector('.afbvoor');
+      vak.classList.remove('heeft'); img.removeAttribute('src'); img.removeAttribute('data-afb'); vak.querySelector('.afbtip').textContent = ''; vak.querySelector('label.knop span').textContent = 'Kies een plaatje';
+      zetVies(true); return;
+    }
+    var mark = e.target.closest('.stip');
+    if (mark){ mark.remove(); hernummer(it); zetVies(true); return; }
+    var beeld = e.target.closest('.afbvak.aanwijs.heeft .afbvoor');
+    if (beeld){
+      var r = beeld.getBoundingClientRect();
+      var x = Math.round((e.clientX - r.left) / r.width * 1000) / 10, y = Math.round((e.clientY - r.top) / r.height * 1000) / 10;
+      var n = it.querySelectorAll('.stip').length;
+      if (n >= 12){ it.querySelector('.afbtip').textContent = 'Hoogstens twaalf nummers per plaatje.'; return; }
+      beeld.parentNode.insertAdjacentHTML('beforeend', markHtml(x, y, '', n));
+      hernummer(it); zetVies(true);
+      var inputs = it.querySelectorAll('[data-plek]'); inputs[inputs.length - 1].focus();
+    }
+  });
+  $('items').addEventListener('input', function(e){
+    if (!e.target.hasAttribute('data-plek')) return;
+    var it = e.target.closest('.item'), m = it.querySelectorAll('.stip')[Number(e.target.getAttribute('data-plek'))];
+    if (m) m.setAttribute('data-naam', e.target.value);
+  });
   function nummer(){ [].forEach.call($('items').children, function(it, i){
     it.querySelector('.nr').textContent = 'Vraag ' + (i + 1);
     [['op', 'omhoog'], ['neer', 'omlaag'], ['weg', 'weghalen']].forEach(function(a){ it.querySelector('[data-actie="' + a[0] + '"]').setAttribute('aria-label', 'Vraag ' + (i + 1) + ' ' + a[1]); });
@@ -406,13 +471,22 @@
     if (v === 'volgorde') x.stappen = regels(w('stappen'));
     if (v === 'groepen') x.groepen = regels(w('groepen')).map(function(r){ var i = r.indexOf(':'); return i < 0 ? null : { naam: r.slice(0, i).trim(), dingen: r.slice(i + 1).split(/[,;]/).map(function(y){ return y.trim(); }).filter(Boolean) }; }).filter(Boolean);
     if (v === 'gaten'){ x.tekst = w('tekst').trim(); x.extra = regels(w('extra')); }
+    if (v === 'aanwijzen'){
+      x.plekken = [].map.call(it.querySelectorAll('.stip'), function(m){ return { x: parseFloat(m.style.left), y: parseFloat(m.style.top), naam: (m.getAttribute('data-naam') || '').trim() }; });
+      x.extra = regels(w('extra'));
+    }
+    var vak = it.querySelector('.afbvak'), img = vak && vak.querySelector('.afbvoor');
+    if (img && vak.classList.contains('heeft')){
+      if (img.getAttribute('data-afb')) x.afb = img.getAttribute('data-afb');
+      else if (/^data:/.test(img.getAttribute('src') || '')) x.afbData = img.getAttribute('src');
+    }
     return x;
   }
   /* Wat er mist, per vraag, in gewone taal: dan weet je waar je moet kijken. */
   /* welk veld hoort bij het probleem: daar gaat de focus heen */
   function foutVeld(x){
     if (x.vorm === 'mk') return !x.vraag ? 'vraag' : !x.goed ? 'goed' : 'fout';
-    return { open: 'vraag', koppel: 'paren', volgorde: 'stappen', groepen: 'groepen', gaten: 'tekst' }[x.vorm];
+    return { open: 'vraag', koppel: 'paren', volgorde: 'stappen', groepen: 'groepen', gaten: 'tekst', aanwijzen: 'vraag' }[x.vorm];
   }
   /* de fout staat bij de vraag zelf, het veld krijgt de focus en schermlezers horen wat er mist */
   function toonFout(it, tekst, veldnaam){
@@ -432,6 +506,11 @@
     if (x.vorm === 'volgorde' && x.stappen.length < 2) return n + 'zet minstens twee stappen neer, elk op een eigen regel.';
     if (x.vorm === 'groepen' && x.groepen.length < 2) return n + 'zet minstens twee groepen neer, zoals zoogdier: hond, walvis.';
     if (x.vorm === 'gaten' && !/\[[^\]]+\]/.test(x.tekst)) return n + 'zet de woorden die weg moeten tussen [haken].';
+    if (x.vorm === 'aanwijzen'){
+      if (!x.afb && !x.afbData) return n + 'kies eerst een plaatje.';
+      if (x.plekken.length < 2) return n + 'zet minstens twee nummers op het plaatje.';
+      if (x.plekken.some(function(p){ return !p.naam; })) return n + 'vul bij elk nummer in wat daar staat.';
+    }
     return '';
   }
 
@@ -464,13 +543,33 @@
       }
     }
     var knop = $('bewaar'); knop.disabled = true; melding($('bewaarMelding'), 'Bewaren…');
-    EIGEN.bewaar(m, bezig.code).then(function(j){
-      knop.disabled = false; bezig.code = j.code; $('probeer').disabled = false; zetVies(false);
+    bewaarMetPlaatjes(m, bezig.code).then(function(j){
+      knop.disabled = false; bezig.code = j.code; plaatjesCode = j.code; $('probeer').disabled = false; zetVies(false);
+      /* de nieuwe plaatjes hebben nu een nummer: dat komt in de editor te staan, en het plaatje laadt voortaan van de server */
+      (m.items || []).forEach(function(it, i){ var el = $('items').children[i], img = el && el.querySelector('.afbvoor'); if (img && it.afb && !img.getAttribute('data-afb')){ img.setAttribute('data-afb', it.afb); img.src = afbAdres(it.afb); } });
       $('bewerkKop').textContent = 'Bewerken: ' + m.naam;
       melding($('bewaarMelding'), '');
       toonDelen(j.code, m);
-    }).catch(function(f){ knop.disabled = false; melding($('bewaarMelding'), (f.message || 'Bewaren lukte niet.') + ' Controleer je internet en probeer het opnieuw.', 'fout'); });
+    }).catch(function(f){
+      knop.disabled = false;
+      if (f.deels){ bezig.code = f.deels.code; plaatjesCode = f.deels.code; $('probeer').disabled = false; }
+      melding($('bewaarMelding'), (f.message || 'Bewaren lukte niet.') + (f.deels ? '' : ' Controleer je internet en probeer het opnieuw.'), 'fout');
+    });
   });
+  /* Plaatjes gaan apart: eerst het stuk (dan is er een code), dan elk nieuw
+     plaatje, dan het stuk nog eens met de nummers van de plaatjes erin. */
+  function bewaarMetPlaatjes(m, code){
+    var nieuw = (m.items || []).filter(function(it){ return it.afbData; });
+    var kaal = Object.assign({}, m, { items: (m.items || []).map(function(it){ var y = Object.assign({}, it); delete y.afbData; return y; }) });
+    return EIGEN.bewaar(kaal, code).then(function(j){
+      if (!nieuw.length) return j;
+      melding($('bewaarMelding'), 'Bewaard; nu ' + (nieuw.length === 1 ? 'het plaatje' : 'de ' + nieuw.length + ' plaatjes') + '…');
+      var ketting = Promise.resolve();
+      nieuw.forEach(function(it){ ketting = ketting.then(function(){ return EIGEN.afbeelding(j.code, it.afbData).then(function(r){ it.afb = r.id; delete it.afbData; }); }); });
+      return ketting.then(function(){ return EIGEN.bewaar(m, j.code); }).then(function(){ return j; })
+        .catch(function(f){ var e = new Error('De toets is bewaard, maar een plaatje niet: ' + (f.message || 'geen verbinding') + '. Klik nog eens op Bewaren.'); e.deels = j; throw e; });
+    });
+  }
   $('probeer').addEventListener('click', function(){
     if (!bezig || !bezig.code) return;
     if (vies) melding($('bewaarMelding'), 'Je probeert de laatst bewaarde versie; je wijzigingen van daarna zitten er nog niet in.', '');

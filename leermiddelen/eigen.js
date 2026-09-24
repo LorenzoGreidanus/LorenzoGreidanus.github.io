@@ -68,6 +68,30 @@ var EIGEN = (function(){
   function nakijk(code, sid, i, punt){ return metSleutel(code, 'nakijk', { sid: sid, i: i, punt: punt }); }
   function instel(code, x){ return metSleutel(code, 'instel', x); }
   function wisUitslag(code, sid){ return metSleutel(code, 'wisuitslag', { sid: sid }); }
+  /* een plaatje bij de toets zetten (data-url), en waar het daarna staat */
+  function afbeelding(code, data){ return metSleutel(code, 'afb', { data: data }); }
+  function afbAdres(code, id){ return '/api/materiaal/' + code + '/afb/' + id; }
+  /* Een plaatje verkleinen in de browser: hoogstens 1200 beeldpunten, als jpeg.
+     Zo blijft het onder de 400 kB die de server aanneemt. */
+  function verklein(file, max){
+    max = max || 1200;
+    return new Promise(function(res, rej){
+      if (!file || !/^image\//.test(file.type)) return rej(new Error('Kies een plaatje: jpg, png of webp.'));
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function(){
+        URL.revokeObjectURL(url);
+        var s = Math.min(1, max / Math.max(img.naturalWidth || 1, img.naturalHeight || 1));
+        var c = document.createElement('canvas'); c.width = Math.max(1, Math.round(img.naturalWidth * s)); c.height = Math.max(1, Math.round(img.naturalHeight * s));
+        var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+        var q = 0.82, uit = c.toDataURL('image/jpeg', q);
+        while (uit.length > 520000 && q > 0.4){ q -= 0.12; uit = c.toDataURL('image/jpeg', q); }
+        if (uit.length > 520000) return rej(new Error('Dit plaatje blijft te groot, ook verkleind. Snijd het bij of kies een ander.'));
+        res(uit);
+      };
+      img.onerror = function(){ URL.revokeObjectURL(url); rej(new Error('Dit bestand kan ik niet lezen als plaatje.')); };
+      img.src = url;
+    });
+  }
   /* een leerling levert zijn antwoorden in */
   function inlever(code, body){ return vraag('/api/materiaal/' + code + '/inlever', 'POST', body); }
 
@@ -137,5 +161,6 @@ var EIGEN = (function(){
   }
   return { haal: haal, bewaar: bewaar, weg: weg, mijn: mijn, afstemmen: afstemmen,
            volledig: volledig, uitslagen: uitslagen, nakijk: nakijk, instel: instel, wisUitslag: wisUitslag, inlever: inlever,
+           afbeelding: afbeelding, afbAdres: afbAdres, verklein: verklein,
            vragenUitLijst: vragenUitLijst, oefeningUitLijst: oefeningUitLijst, plakken: plakken, schud: schud };
 })();
