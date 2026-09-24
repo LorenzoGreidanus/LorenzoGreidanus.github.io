@@ -10,7 +10,9 @@
      EIGEN.afstemmen()           -> de eigen lijst met het Microsoft-account gelijk trekken
      EIGEN.vragenUitLijst(m)     -> een woordenlijst als meerkeuzevragen voor de spellen
      EIGEN.oefeningUitLijst(m,n) -> een woordenlijst als oefening voor oefen.html
-     EIGEN.plakken(tekst)        -> paren uit geplakte tekst (tab, =, ;, : of " - ") */
+     EIGEN.plakken(tekst)        -> paren uit geplakte tekst (tab, =, ;, : of " - ")
+     EIGEN.volledig/uitslagen/nakijk/instel/wisUitslag(code, ...)  -> met de sleutel, voor de docent
+     EIGEN.inlever(code, { sid, naam, klas, a })                   -> de leerling levert in, de server rekent */
 var EIGEN = (function(){
   'use strict';
   var SLEUTEL = 'lg-materiaal', WEG = 'lg-materiaal-weg';
@@ -55,6 +57,20 @@ var EIGEN = (function(){
     if (!eigen){ klaar(); return Promise.resolve(); }
     return vraag('/api/materiaal/' + code + '/weg', 'POST', { sleutel: eigen.sleutel }).then(klaar);
   }
+  /* Met de sleutel van wie het maakte: alles ophalen, de uitslagen, nakijken en de norm. */
+  function metSleutel(code, pad, extra){
+    var eigen = mijn().filter(function(x){ return x.code === code; })[0];
+    if (!eigen) return Promise.reject(new Error('Dit materiaal staat niet bij jou.'));
+    return vraag('/api/materiaal/' + code + '/' + pad, 'POST', Object.assign({ sleutel: eigen.sleutel }, extra || {}));
+  }
+  function volledig(code){ return metSleutel(code, 'volledig'); }
+  function uitslagen(code){ return metSleutel(code, 'uitslagen'); }
+  function nakijk(code, sid, i, punt){ return metSleutel(code, 'nakijk', { sid: sid, i: i, punt: punt }); }
+  function instel(code, x){ return metSleutel(code, 'instel', x); }
+  function wisUitslag(code, sid){ return metSleutel(code, 'wisuitslag', { sid: sid }); }
+  /* een leerling levert zijn antwoorden in */
+  function inlever(code, body){ return vraag('/api/materiaal/' + code + '/inlever', 'POST', body); }
+
   /* Met Microsoft ingelogd: de lijst gaat mee naar het account en komt terug op
      een ander apparaat. Niet ingelogd: dan blijft hij hier, en dat is genoeg. */
   function afstemmen(){
@@ -120,5 +136,6 @@ var EIGEN = (function(){
     }).filter(Boolean);
   }
   return { haal: haal, bewaar: bewaar, weg: weg, mijn: mijn, afstemmen: afstemmen,
+           volledig: volledig, uitslagen: uitslagen, nakijk: nakijk, instel: instel, wisUitslag: wisUitslag, inlever: inlever,
            vragenUitLijst: vragenUitLijst, oefeningUitLijst: oefeningUitLijst, plakken: plakken, schud: schud };
 })();

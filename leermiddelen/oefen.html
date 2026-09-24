@@ -54,10 +54,17 @@
     <h1 id="beginNaam"></h1>
     <p class="intro" id="beginUitleg"></p>
     <div class="woordlijst hide" id="woordlijst"></div>
+    <div class="naamvak hide" id="naamVak">
+      <label class="veldnaam" for="naamIn" id="naamLabel">Je naam</label>
+      <input class="veld" id="naamIn" maxlength="40" autocomplete="name" spellcheck="false">
+      <p class="tip" id="naamTip"></p>
+    </div>
+    <p class="tip hide" id="alsWie"></p>
     <div class="rij" style="margin-top:18px">
       <button class="knop" id="startKnop" type="button">Beginnen</button>
       <button class="linkknop" id="andereCode" type="button">Andere code</button>
     </div>
+    <p class="melding" id="beginMelding" role="status" aria-live="polite"></p>
     <div class="hide" id="lijstSpellen">
       <h2 style="font-size:1.15rem;margin-top:26px">Of speel de lijst in een spel</h2>
       <div class="spellinks" id="spellinks"></div>
@@ -89,7 +96,9 @@
       <p class="score" id="score"></p>
       <p id="eindTekst"></p>
       <p class="tip" id="eindUit"></p>
+      <p class="melding" id="inleverMelding" role="status" aria-live="polite"></p>
       <div class="rij" style="justify-content:center;margin-top:14px">
+        <button class="knop hide" id="opnieuwInleveren" type="button">Opnieuw inleveren</button>
         <button class="knop" id="nogEens" type="button">Nog een keer</button>
         <a class="knop stil" href="index.html">Naar de leeromgeving</a>
       </div>
@@ -98,7 +107,7 @@
   </section>
 </main>
 
-<footer class="wrap">Je antwoorden blijven op dit apparaat. Ben je gekoppeld aan een klas, dan ziet je docent je score.</footer>
+<footer class="wrap">Bij een oefening of toets van je docent gaan je naam en je antwoorden naar je docent. Zie de <a href="../privacy.html">privacyverklaring</a>.</footer>
 
 <script src="thema.js"></script>
 <script src="profiel.js"></script>
@@ -113,9 +122,10 @@
   function melding(el, tekst, soort){ el.textContent = tekst || ''; el.className = 'melding' + (soort ? ' ' + soort : ''); }
   /* hoofdletters, spaties en een punt aan het eind tellen niet mee */
   function gelijk(a, b){ var n = function(x){ return String(x || '').toLowerCase().replace(/\s+/g, ' ').replace(/[.!?,;:]+$/, '').trim(); }; return n(a) === n(b); }
+  function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e){ return null; } }
   var schud = EIGEN.schud;
 
-  var code = '', mat = null, oef = null, nr = 0, uitslag = [], huidig = null;
+  var code = '', mat = null, oef = null, nr = 0, uitslag = [], antwoorden = [], huidig = null, wacht = null;
 
   /* ---------- code ---------- */
   $('codeForm').addEventListener('submit', function(e){ e.preventDefault(); laad($('codeIn').value); });
@@ -134,16 +144,19 @@
       melding($('codeMelding'), f.status === 404 ? 'Deze code bestaat niet (meer). Kijk of je hem goed hebt overgenomen.' : f.message, 'fout');
     });
   }
+  function isToets(){ return mat && mat.modus === 'toets'; }
+  function klas(){ return window.KLAS ? KLAS.lees() : null; }
+  function ingeleverd(){ try { return JSON.parse(ls('lg-ingeleverd') || '[]'); } catch (e){ return []; } }
   function toonBegin(){
     var lijst = mat.soort === 'lijst';
     document.title = mat.naam + ' · meneer Greidanus';
     $('beginNaam').textContent = mat.naam;
-    $('beginSoort').textContent = lijst ? 'woordenlijst' : (mat.modus === 'toets' ? 'toets' : 'oefening');
+    $('beginSoort').textContent = lijst ? 'woordenlijst' : (isToets() ? 'toets' : 'oefening');
     var n = lijst ? mat.paren.length : mat.items.length;
     $('beginUitleg').textContent = lijst
       ? n + ' woorden' + (mat.kopA && mat.kopB ? ' (' + mat.kopA + ' en ' + mat.kopB + ')' : '') + '. Je krijgt meerkeuzevragen beide kanten op, een paar keer typen en een ronde koppelen.'
-      : n + (n === 1 ? ' vraag' : ' vragen') + '. ' + (mat.modus === 'toets'
-        ? 'Dit is een toets: pas aan het eind zie je wat goed en fout was.'
+      : n + (n === 1 ? ' vraag' : ' vragen') + '. ' + (isToets()
+        ? 'Dit is een toets: je levert hem een keer in, en pas daarna zie je je score.'
         : 'Na elke vraag zie je of het goed was.');
     $('woordlijst').classList.toggle('hide', !lijst);
     if (lijst) $('woordlijst').innerHTML = mat.paren.map(function(p){ return '<span><b>' + schoon(p.a) + '</b> – ' + schoon(p.b) + '</span>'; }).join('');
@@ -153,15 +166,39 @@
       $('spellinks').innerHTML = spel('race.html', 'Vragenrace', 'zo veel mogelijk goed') + spel('toren.html', 'Torenverdediging', 'goed antwoord, sterkere toren') +
         spel('zwaard.html', 'Zwaardvechter', 'goed antwoord, harde klap');
     }
+    /* wie ben je: van de klascode, of je typt je naam */
+    var k = klas();
+    $('naamVak').classList.toggle('hide', lijst || !!k);
+    $('alsWie').classList.toggle('hide', lijst || !k);
+    if (k) $('alsWie').textContent = 'Je levert in als ' + k.naam + ', in klas ' + k.code + '.';
+    $('naamIn').value = ls('lg-oefen-naam') || '';
+    $('naamLabel').textContent = isToets() ? 'Je naam (voor- en achternaam)' : 'Je naam (mag leeg)';
+    $('naamTip').textContent = isToets() ? 'Zodat je docent weet van wie de toets is.' : 'Vul je hem in, dan ziet je docent je score.';
+    melding($('beginMelding'), '');
+    $('startKnop').disabled = false;
+    if (isToets() && ingeleverd().indexOf(code) >= 0){
+      melding($('beginMelding'), 'Je hebt deze toets op dit apparaat al ingeleverd.', 'fout');
+      $('startKnop').disabled = true;
+    }
     scherm('beginScherm'); $('startKnop').focus();
+  }
+  function wie(){
+    var k = klas();
+    if (k) return { naam: k.naam, klas: k.code };
+    var n = $('naamIn').value.trim().replace(/\s+/g, ' ');
+    return n ? { naam: n, klas: '' } : null;
   }
 
   /* ---------- spelen ---------- */
-  $('startKnop').addEventListener('click', begin);
-  $('nogEens').addEventListener('click', begin);
+  $('startKnop').addEventListener('click', function(){
+    if (mat.soort !== 'lijst' && isToets() && !wie()){ melding($('beginMelding'), 'Vul eerst je naam in.', 'fout'); $('naamIn').focus(); return; }
+    if (!klas() && $('naamIn').value.trim()) ls('lg-oefen-naam', $('naamIn').value.trim());
+    begin();
+  });
+  $('nogEens').addEventListener('click', function(){ if (isToets()){ toonBegin(); return; } begin(); });
   function begin(){
     oef = mat.soort === 'lijst' ? EIGEN.oefeningUitLijst(mat, 12) : mat;
-    nr = 0; uitslag = [];
+    nr = 0; uitslag = []; antwoorden = [];
     $('speelNaam').textContent = mat.naam;
     scherm('speelScherm'); toonVraag();
   }
@@ -171,13 +208,13 @@
     gaten: 'Sleep de woorden naar de gaten, of tik een woord aan en tik dan op een gat.' };
   function toonVraag(){
     var it = oef.items[nr];
-    $('teller').textContent = 'Vraag ' + (nr + 1) + ' van ' + oef.items.length;
+    $('teller').textContent = 'Vraag ' + (nr + 1) + ' van ' + oef.items.length + (it.punten > 1 ? ' · ' + it.punten + ' punten' : '');
     $('balk').style.width = (nr / oef.items.length * 100) + '%';
     $('vraagtekst').textContent = it.vraag || '';
     $('hoe').textContent = HOE[it.vorm] || '';
     $('terug').className = 'terug hide'; $('terug').innerHTML = '';
     $('veld').innerHTML = '';
-    huidig = VORM[it.vorm](it, $('veld'), klaarVoorNakijken);
+    huidig = VORM[it.vorm](it, $('veld'), klaarVoorNakijken, !!oef.verborgen);
     $('nakijk').textContent = toets() ? (nr === oef.items.length - 1 ? 'Inleveren' : 'Volgende') : 'Nakijken';
     $('nakijk').classList.toggle('hide', it.vorm === 'mk' && !toets());
     $('nakijk').disabled = !huidig.klaar();
@@ -187,12 +224,18 @@
   function klaarVoorNakijken(){ $('nakijk').disabled = !huidig.klaar(); }
   $('nakijk').addEventListener('click', function(){ if (!huidig.klaar()) return; nakijken(); });
   function nakijken(){
-    var it = oef.items[nr], u = huidig.nakijken(!toets());
-    uitslag.push({ vraag: it.vraag, punt: u.punt, juist: u.juist, uitleg: it.uitleg || '' });
-    if (toets()){ volgende(); return; }
+    var it = oef.items[nr];
+    antwoorden[nr] = huidig.antwoord();
+    if (toets()){
+      if (nr === oef.items.length - 1 && !confirm('Inleveren? Daarna kun je niets meer veranderen.')) return;
+      volgende(); return;
+    }
+    var u = huidig.nakijken(true);
+    uitslag.push({ vraag: it.vraag, punt: u.punt, juist: u.juist, uitleg: it.uitleg || '', punten: it.punten || 1 });
     var goed = u.punt >= 1;
-    $('terug').className = 'terug ' + (goed ? 'goed' : 'fout');
-    $('terug').innerHTML = '<b>' + (goed ? 'Goed!' : u.punt > 0 ? 'Deels goed: ' + Math.round(u.punt * 100) + '%' : 'Niet goed') + '</b>' +
+    $('terug').className = 'terug ' + (u.punt === null ? '' : goed ? 'goed' : 'fout');
+    $('terug').innerHTML = u.punt === null ? '<b>Je docent kijkt deze vraag na.</b>'
+      : '<b>' + (goed ? 'Goed!' : u.punt > 0 ? 'Deels goed: ' + Math.round(u.punt * 100) + '%' : 'Niet goed') + '</b>' +
       (!goed && u.juist ? '<span>Het goede antwoord: ' + schoon(u.juist) + '</span>' : '') + (it.uitleg ? '<span style="display:block;margin-top:4px">' + schoon(it.uitleg) + '</span>' : '');
     $('nakijk').classList.add('hide');
     $('verder').textContent = nr === oef.items.length - 1 ? 'Naar de uitslag' : 'Volgende';
@@ -200,22 +243,70 @@
   }
   $('verder').addEventListener('click', volgende);
   function volgende(){ nr++; if (nr < oef.items.length) toonVraag(); else eind(); }
-  function eind(){
-    var totaal = uitslag.reduce(function(s, x){ return s + x.punt; }, 0), n = uitslag.length;
-    var pct = Math.round(totaal / n * 100), heel = uitslag.filter(function(x){ return x.punt >= 1; }).length;
-    $('score').textContent = pct + '%';
-    $('eindKop').textContent = pct >= 80 ? 'sterk gedaan' : pct >= 55 ? 'voldoende' : 'nog even oefenen';
-    $('eindTekst').textContent = heel + ' van de ' + n + ' vragen helemaal goed.';
-    $('overzicht').innerHTML = uitslag.map(function(x, i){
-      var cls = x.punt >= 1 ? 'goed' : 'fout';
-      return '<div class="' + cls + '"><b>' + (i + 1) + '. ' + schoon(x.vraag) + '</b>' +
-        (x.punt >= 1 ? '<small>Goed</small>' : '<small>' + (x.punt > 0 ? 'Deels goed (' + Math.round(x.punt * 100) + '%). ' : '') + 'Goed antwoord: ' + schoon(x.juist) + '</small>') +
-        (x.uitleg && toets() ? '<small>' + schoon(x.uitleg) + '</small>' : '') + '</div>';
-    }).join('');
-    $('eindUit').textContent = '';
-    scherm('eindScherm');
-    if (window.KLAS && KLAS.lees()) KLAS.meld({ spel: 'eigen', ronde: heel, punten: pct, vak: 'm:' + code }, 'eindUit');
+
+  /* ---------- het eind ---------- */
+  function scoreVan(l){
+    var s = 0, max = 0, open = 0;
+    l.forEach(function(x){ if (x.punt === null){ open++; return; } s += x.punt * x.punten; max += x.punten; });
+    return { pct: max ? Math.round(s / max * 100) : 0, open: open, heel: l.filter(function(x){ return x.punt >= 1; }).length };
   }
+  function toonEind(l, terugzien){
+    var sc = scoreVan(l), n = l.length;
+    $('score').textContent = sc.pct + '%';
+    $('eindKop').textContent = sc.open ? 'ingeleverd' : sc.pct >= 80 ? 'sterk gedaan' : sc.pct >= 55 ? 'voldoende' : 'nog even oefenen';
+    $('eindTekst').textContent = sc.heel + ' van de ' + n + ' vragen helemaal goed.' +
+      (sc.open ? ' ' + sc.open + (sc.open === 1 ? ' vraag kijkt' : ' vragen kijkt') + ' je docent nog na; dit is je score zonder die vragen.' : '') +
+      (isToets() ? ' Je cijfer hoor je van je docent.' : '');
+    $('overzicht').innerHTML = terugzien === false ? '' : l.map(function(x, i){
+      var cls = x.punt === null ? '' : x.punt >= 1 ? 'goed' : 'fout';
+      return '<div class="' + cls + '"><b>' + (i + 1) + '. ' + schoon(x.vraag) + '</b>' +
+        (x.punt === null ? '<small>Je docent kijkt deze na.</small>' : x.punt >= 1 ? '<small>Goed</small>' : '<small>' + (x.punt > 0 ? 'Deels goed (' + Math.round(x.punt * 100) + '%). ' : '') + (x.juist ? 'Goed antwoord: ' + schoon(x.juist) : '') + '</small>') +
+        (x.uitleg && isToets() ? '<small>' + schoon(x.uitleg) + '</small>' : '') + '</div>';
+    }).join('');
+    $('nogEens').classList.toggle('hide', isToets());
+    scherm('eindScherm');
+    return sc;
+  }
+  function eind(){
+    $('eindUit').textContent = ''; melding($('inleverMelding'), ''); $('opnieuwInleveren').classList.add('hide');
+    var w = wie();
+    if (mat.soort === 'lijst' || !w){
+      var sc = toonEind(uitslag);
+      if (klas()) KLAS.meld({ spel: 'eigen', ronde: sc.heel, punten: sc.pct, vak: mat.soort === 'lijst' ? 'eigen' : 'm:' + code }, 'eindUit');
+      return;
+    }
+    wacht = { sid: KLAS.sid(), naam: w.naam, klas: w.klas, a: antwoorden };
+    if (!isToets()) toonEind(uitslag);
+    else { $('score').textContent = ''; $('eindTekst').textContent = ''; $('overzicht').innerHTML = ''; $('eindKop').textContent = 'inleveren'; $('nogEens').classList.add('hide'); scherm('eindScherm'); }
+    lever();
+  }
+  /* Inleveren. Lukt het niet (geen internet), dan blijven de antwoorden staan en probeer je het opnieuw. */
+  function lever(){
+    melding($('inleverMelding'), 'Inleveren…');
+    $('opnieuwInleveren').classList.add('hide');
+    EIGEN.inlever(code, wacht).then(function(r){
+      melding($('inleverMelding'), 'Ingeleverd. Je docent ziet je antwoorden.', 'goed');
+      if (isToets()){
+        var l = oef.items.map(function(it, i){ return { vraag: it.vraag, punt: r.p[i], punten: r.punten[i] || 1, juist: r.juist ? r.juist[i] : '', uitleg: r.uitleg ? r.uitleg[i] : '' }; });
+        var sc = toonEind(l, !!r.juist);
+        var al = ingeleverd(); if (al.indexOf(code) < 0){ al.push(code); ls('lg-ingeleverd', JSON.stringify(al.slice(-100))); }
+        if (klas()) KLAS.meld({ spel: 'eigen', ronde: sc.heel, punten: sc.pct, vak: 'm:' + code }, 'eindUit');
+      } else if (klas()){
+        var s2 = scoreVan(uitslag);
+        KLAS.meld({ spel: 'eigen', ronde: s2.heel, punten: s2.pct, vak: 'm:' + code }, 'eindUit');
+      }
+      wacht = null;
+    }).catch(function(f){
+      if (f.status === 409){ melding($('inleverMelding'), 'Je hebt deze toets al eerder ingeleverd. Je docent heeft je eerste poging.', 'fout'); return; }
+      melding($('inleverMelding'), 'Inleveren lukte niet' + (f.status ? ': ' + f.message : ': geen verbinding') + '. Je antwoorden staan nog klaar.', 'fout');
+      $('opnieuwInleveren').classList.remove('hide'); $('opnieuwInleveren').focus();
+    });
+  }
+  $('opnieuwInleveren').addEventListener('click', function(){ if (wacht) lever(); });
+  /* niet per ongeluk weg tijdens een toets */
+  window.addEventListener('beforeunload', function(e){
+    if (mat && isToets() && (!$('speelScherm').classList.contains('hide') || wacht)){ e.preventDefault(); e.returnValue = ''; }
+  });
 
   /* ---------- tegels: tikken of slepen ----------
      Een tegel oppakken (tikken of slepen) en neerzetten op een plek. Plekken
@@ -265,18 +356,19 @@
     bak.addEventListener('drop', function(e){ e.preventDefault(); terugInBak(sleep); });
     return { tegel: tegel, bij: bij, uit: function(){ pak(null); [].forEach.call(document.querySelectorAll('#veld .tegel'), function(t){ t.disabled = true; t.draggable = false; }); } };
   }
-  function bakMaken(veld, woorden, bord){
-    woorden.forEach(function(w){ veld.bak.appendChild(bord.tegel(w)); });
-  }
+  function vul(bak, woorden, bord){ woorden.forEach(function(w){ bak.appendChild(bord.tegel(w)); }); bord.bij(); }
+  function waardeIn(el){ var t = el.querySelector('.tegel'); return t ? t.getAttribute('data-w') : ''; }
 
   /* ---------- de zes vormen ----------
-     Elke vorm tekent zich in veld en geeft terug: klaar() en nakijken(toon)
-     met { punt: 0 tot 1, juist: het goede antwoord als tekst }. */
+     Elke vorm tekent zich in veld en geeft terug: klaar(), antwoord() (wat er
+     naar de docent gaat) en nakijken(toon) met { punt: 0 tot 1 of null als de
+     docent nakijkt, juist: het goede antwoord als tekst }. Bij een toets zijn
+     de antwoorden er niet (verborgen); dan wordt er alleen ingeleverd. */
   var VORM = {
-    mk: function(it, veld, veranderd){
+    mk: function(it, veld, veranderd, verborgen){
       var gekozen = null, knoppen = [];
       var box = document.createElement('div'); box.className = 'keuzes'; veld.appendChild(box);
-      schud([it.goed].concat(it.fout || [])).forEach(function(o){
+      (verborgen ? it.opties : schud([it.goed].concat(it.fout || []))).forEach(function(o){
         var b = document.createElement('button'); b.type = 'button'; b.className = 'keuze'; b.textContent = o;
         b.addEventListener('click', function(){
           if (b.disabled) return;
@@ -286,93 +378,104 @@
         });
         knoppen.push(b); box.appendChild(b);
       });
-      return { klaar: function(){ return gekozen != null; },
+      return { klaar: function(){ return gekozen != null; }, antwoord: function(){ return gekozen; },
         nakijken: function(toon){
           if (toon) knoppen.forEach(function(k){ k.disabled = true; k.classList.remove('gekozen'); if (k.textContent === it.goed) k.classList.add('goed'); else if (k.textContent === gekozen) k.classList.add('fout'); });
           return { punt: gekozen === it.goed ? 1 : 0, juist: it.goed };
         } };
     },
     open: function(it, veld, veranderd){
-      veld.innerHTML = '<form class="open" autocomplete="off"><label class="sronly" for="openIn">Je antwoord</label><input class="veld" id="openIn" maxlength="200" spellcheck="false"></form>';
-      var inp = veld.querySelector('input');
+      veld.innerHTML = '<form class="open" autocomplete="off"><label class="sronly" for="openIn">Je antwoord</label>' +
+        (it.antwoorden && !it.antwoorden.length || !it.antwoorden ? '<textarea class="veld" id="openIn" maxlength="400" rows="4" spellcheck="true"></textarea>' : '<input class="veld" id="openIn" maxlength="200" spellcheck="false">') + '</form>';
+      var inp = veld.querySelector('#openIn');
       inp.addEventListener('input', veranderd);
       veld.querySelector('form').addEventListener('submit', function(e){ e.preventDefault(); if (inp.value.trim()) $('nakijk').click(); });
+      if (inp.tagName === 'INPUT') inp.addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); if (inp.value.trim()) $('nakijk').click(); } });
       setTimeout(function(){ inp.focus(); }, 0);
-      return { klaar: function(){ return !!inp.value.trim(); },
+      return { klaar: function(){ return !!inp.value.trim(); }, antwoord: function(){ return inp.value.trim(); },
         nakijken: function(toon){
-          var goed = (it.antwoorden || []).some(function(a){ return gelijk(a, inp.value); });
+          var l = it.antwoorden || [];
+          if (!l.length){ if (toon) inp.disabled = true; return { punt: null, juist: '' }; }
+          var goed = l.some(function(a){ return gelijk(a, inp.value); });
           if (toon){ inp.disabled = true; inp.style.borderColor = goed ? 'var(--goed)' : 'var(--fout)'; }
-          return { punt: goed ? 1 : 0, juist: (it.antwoorden || [])[0] || '' };
+          return { punt: goed ? 1 : 0, juist: l[0] };
         } };
     },
-    koppel: function(it, veld, veranderd){
+    koppel: function(it, veld, veranderd, verborgen){
       veld.innerHTML = '<div class="tegels"></div><div class="koppels"></div>';
       var bak = veld.querySelector('.tegels'), rijen = veld.querySelector('.koppels'), plekken = [];
-      it.paren.forEach(function(p){
+      var links = verborgen ? it.links : it.paren.map(function(p){ return p.a; });
+      var rechts = verborgen ? it.rechts : schud(it.paren.map(function(p){ return p.b; }));
+      links.forEach(function(a){
         var r = document.createElement('div'); r.className = 'koppel';
-        r.innerHTML = '<span class="links">' + schoon(p.a) + '</span>';
-        var plek = document.createElement('div'); plek.className = 'plek'; plek.setAttribute('role', 'button'); plek.tabIndex = 0; plek.setAttribute('aria-label', 'Plek bij ' + p.a);
+        r.innerHTML = '<span class="links">' + schoon(a) + '</span>';
+        var plek = document.createElement('div'); plek.className = 'plek'; plek.setAttribute('role', 'button'); plek.tabIndex = 0; plek.setAttribute('aria-label', 'Plek bij ' + a);
         r.appendChild(plek); rijen.appendChild(r);
-        plekken.push({ el: plek, paar: p, leeg: 'zet hier neer' });
+        plekken.push({ el: plek, leeg: 'zet hier neer' });
       });
       var bord = tegelbord(bak, plekken, veranderd);
-      bakMaken({ bak: bak }, schud(it.paren.map(function(p){ return p.b; })), bord); bord.bij();
-      toetsbaar(plekken);
+      vul(bak, rechts, bord); toetsbaar(plekken);
       return { klaar: function(){ return plekken.every(function(p){ return p.el.querySelector('.tegel'); }); },
+        antwoord: function(){ return plekken.map(function(p){ return waardeIn(p.el); }); },
         nakijken: function(toon){
           var n = 0;
-          plekken.forEach(function(p){ var t = p.el.querySelector('.tegel'), ok = t && t.getAttribute('data-w') === p.paar.b; if (ok) n++; if (toon && t) t.classList.add(ok ? 'goed' : 'fout'); });
+          plekken.forEach(function(p, i){ var t = p.el.querySelector('.tegel'), ok = t && t.getAttribute('data-w') === it.paren[i].b; if (ok) n++; if (toon && t) t.classList.add(ok ? 'goed' : 'fout'); });
           if (toon) bord.uit();
           return { punt: n / plekken.length, juist: it.paren.map(function(p){ return p.a + ' = ' + p.b; }).join('; ') };
         } };
     },
-    groepen: function(it, veld, veranderd){
+    groepen: function(it, veld, veranderd, verborgen){
       veld.innerHTML = '<div class="tegels"></div><div class="groepvakken"></div>';
-      var bak = veld.querySelector('.tegels'), vakken = veld.querySelector('.groepvakken'), plekken = [], alle = [];
-      it.groepen.forEach(function(g){
-        var v = document.createElement('div'); v.className = 'groepvak'; v.setAttribute('role', 'button'); v.tabIndex = 0; v.setAttribute('aria-label', 'Groep ' + g.naam);
-        v.innerHTML = '<b>' + schoon(g.naam) + '</b><div class="erin"></div>';
+      var bak = veld.querySelector('.tegels'), vakken = veld.querySelector('.groepvakken'), plekken = [];
+      var namen = verborgen ? it.groepen : it.groepen.map(function(g){ return g.naam; });
+      var dingen = verborgen ? it.dingen : schud([].concat.apply([], it.groepen.map(function(g){ return g.dingen; })));
+      namen.forEach(function(naam){
+        var v = document.createElement('div'); v.className = 'groepvak'; v.setAttribute('role', 'button'); v.tabIndex = 0; v.setAttribute('aria-label', 'Groep ' + naam);
+        v.innerHTML = '<b>' + schoon(naam) + '</b><div class="erin"></div>';
         vakken.appendChild(v);
-        plekken.push({ el: v, vak: v.querySelector('.erin'), meer: true, groep: g });
-        g.dingen.forEach(function(d){ alle.push(d); });
+        plekken.push({ el: v, vak: v.querySelector('.erin'), meer: true, naam: naam });
       });
       var bord = tegelbord(bak, plekken, veranderd);
-      bakMaken({ bak: bak }, schud(alle), bord); bord.bij();
-      toetsbaar(plekken);
+      vul(bak, dingen, bord); toetsbaar(plekken);
       return { klaar: function(){ return !bak.querySelector('.tegel'); },
+        antwoord: function(){ var uit = []; plekken.forEach(function(p){ [].forEach.call(p.vak.querySelectorAll('.tegel'), function(t){ uit.push([t.getAttribute('data-w'), p.naam]); }); }); return uit; },
         nakijken: function(toon){
           var n = 0;
-          plekken.forEach(function(p){ [].forEach.call(p.vak.querySelectorAll('.tegel'), function(t){
-            var ok = p.groep.dingen.indexOf(t.getAttribute('data-w')) >= 0; if (ok) n++; if (toon) t.classList.add(ok ? 'goed' : 'fout'); }); });
+          plekken.forEach(function(p, i){ [].forEach.call(p.vak.querySelectorAll('.tegel'), function(t){
+            var ok = it.groepen[i].dingen.indexOf(t.getAttribute('data-w')) >= 0; if (ok) n++; if (toon) t.classList.add(ok ? 'goed' : 'fout'); }); });
           if (toon) bord.uit();
-          return { punt: n / alle.length, juist: it.groepen.map(function(g){ return g.naam + ': ' + g.dingen.join(', '); }).join('; ') };
+          return { punt: n / dingen.length, juist: it.groepen.map(function(g){ return g.naam + ': ' + g.dingen.join(', '); }).join('; ') };
         } };
     },
-    gaten: function(it, veld, veranderd){
-      var delen = String(it.tekst || '').split(/\[([^\]]+)\]/), gaten = [], plekken = [];
+    gaten: function(it, veld, veranderd, verborgen){
+      var delen = verborgen ? it.delen : String(it.tekst || '').split(/\[[^\]]+\]/);
+      var gaten = verborgen ? [] : (String(it.tekst || '').match(/\[([^\]]+)\]/g) || []).map(function(x){ return x.slice(1, -1).trim(); });
+      var woorden = verborgen ? it.woorden : schud(gaten.concat(it.extra || []));
+      var plekken = [];
       veld.innerHTML = '<div class="tegels"></div><p class="gatentekst"></p>';
       var bak = veld.querySelector('.tegels'), tekst = veld.querySelector('.gatentekst');
       delen.forEach(function(d, i){
-        if (i % 2 === 0){ tekst.appendChild(document.createTextNode(d)); return; }
-        var g = document.createElement('span'); g.className = 'gat'; g.setAttribute('role', 'button'); g.tabIndex = 0; g.setAttribute('aria-label', 'Gat ' + (gaten.length + 1));
-        tekst.appendChild(g); gaten.push(d.trim()); plekken.push({ el: g, woord: d.trim() });
+        tekst.appendChild(document.createTextNode(d));
+        if (i === delen.length - 1) return;
+        var g = document.createElement('span'); g.className = 'gat'; g.setAttribute('role', 'button'); g.tabIndex = 0; g.setAttribute('aria-label', 'Gat ' + (i + 1));
+        tekst.appendChild(g); plekken.push({ el: g });
       });
       var bord = tegelbord(bak, plekken, veranderd);
-      bakMaken({ bak: bak }, schud(gaten.concat(it.extra || [])), bord); bord.bij();
-      toetsbaar(plekken);
+      vul(bak, woorden, bord); toetsbaar(plekken);
       return { klaar: function(){ return plekken.every(function(p){ return p.el.querySelector('.tegel'); }); },
+        antwoord: function(){ return plekken.map(function(p){ return waardeIn(p.el); }); },
         nakijken: function(toon){
           var n = 0;
-          plekken.forEach(function(p){ var t = p.el.querySelector('.tegel'), ok = t && gelijk(t.getAttribute('data-w'), p.woord); if (ok) n++; if (toon){ p.el.classList.add(ok ? 'goed' : 'fout'); } });
+          plekken.forEach(function(p, i){ var ok = gelijk(waardeIn(p.el), gaten[i]); if (ok) n++; if (toon) p.el.classList.add(ok ? 'goed' : 'fout'); });
           if (toon) bord.uit();
           return { punt: n / plekken.length, juist: String(it.tekst || '').replace(/\[([^\]]+)\]/g, '$1') };
         } };
     },
-    volgorde: function(it, veld, veranderd){
+    volgorde: function(it, veld, veranderd, verborgen){
       var ol = document.createElement('ol'); ol.className = 'volgorde'; veld.appendChild(ol);
-      var start = schud(it.stappen);
+      var start = verborgen ? it.stappen.slice() : schud(it.stappen);
       /* niet meteen al goed */
-      if (start.length > 1 && start.join('\u0001') === it.stappen.join('\u0001')) start.push(start.shift());
+      if (!verborgen && start.length > 1 && start.join('\u0001') === it.stappen.join('\u0001')) start.push(start.shift());
       var op = null, sleep = null, af = false;
       start.forEach(function(s){
         var li = document.createElement('li'); li.draggable = true; li.setAttribute('data-w', s);
@@ -393,6 +496,7 @@
         op.classList.remove('op'); op = null;
       });
       return { klaar: function(){ return true; },
+        antwoord: function(){ return [].map.call(ol.children, function(li){ return li.getAttribute('data-w'); }); },
         nakijken: function(toon){
           var n = 0; af = true;
           [].forEach.call(ol.children, function(li, i){ var ok = li.getAttribute('data-w') === it.stappen[i]; if (ok) n++; if (toon){ li.classList.add(ok ? 'goed' : 'fout'); li.draggable = false; [].forEach.call(li.querySelectorAll('button'), function(b){ b.disabled = true; }); } });

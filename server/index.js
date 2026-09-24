@@ -150,7 +150,7 @@ export default {
       let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldig materiaal" }, 400); }
       return env.MATERIAAL.get(env.MATERIAAL.idFromName("materiaal")).fetch("https://materiaal/zet", { method: "POST", body: JSON.stringify(inz || {}) });
     }
-    const mm = p.match(/^\/api\/materiaal\/([A-Za-z0-9]{6})(\/werk|\/weg)?\/?$/);
+    const mm = p.match(/^\/api\/materiaal\/([A-Za-z0-9]{6})(\/werk|\/weg|\/volledig|\/inlever|\/uitslagen|\/nakijk|\/instel|\/wisuitslag)?\/?$/);
     if (mm){
       const stub = env.MATERIAAL.get(env.MATERIAAL.idFromName("materiaal"));
       if (req.method === "GET"){
@@ -159,7 +159,9 @@ export default {
       }
       if (req.method === "POST" && mm[2]){
         if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
-        if (!await magDoor(env, req, "materiaal-werk", 120, 600)) return json({ fout: "even wachten" }, 429);
+        /* inleveren: een hele klas achter een schooladres tegelijk; nakijken: veel kleine klikjes */
+        const emmer = mm[2] === "/inlever" ? ["materiaal-inlever", 900] : /^\/(nakijk|uitslagen|instel|volledig)$/.test(mm[2]) ? ["materiaal-nakijk", 1500] : ["materiaal-werk", 120];
+        if (!await magDoor(env, req, emmer[0], emmer[1], 600)) return json({ fout: "even wachten" }, 429);
         let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldig materiaal" }, 400); }
         return stub.fetch("https://materiaal" + mm[2] + "?code=" + mm[1].toUpperCase(), { method: "POST", body: JSON.stringify(inz || {}) });
       }

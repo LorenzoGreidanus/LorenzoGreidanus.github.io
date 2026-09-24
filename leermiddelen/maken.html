@@ -36,15 +36,18 @@
 </header>
 
 <main class="wrap" id="main">
+  <div id="paginakop">
   <p class="hand">voor de docent</p>
   <h1>Eigen materiaal</h1>
   <p class="intro">Een <b>woordenlijst</b> speel je in de Vragenrace, Torenverdediging, Zwaardvechter en de Klasquiz, of je print hem als werkblad. Een <b>oefening</b> maak je met meerkeuze, open vragen en sleepvragen: koppelen, op volgorde zetten, in groepen verdelen en gatenteksten. Zet hem op toets, dan zien leerlingen pas aan het eind wat goed was. Alles krijgt een code; leerlingen openen het met die code.</p>
+  </div>
 
   <!-- de lijst: wat deze docent al maakte -->
   <section id="lijstvak" style="margin-top:22px">
     <div class="rij">
       <button class="knop" id="nieuwLijst" type="button">Nieuwe woordenlijst</button>
       <button class="knop" id="nieuwOef" type="button">Nieuwe oefening of toets</button>
+      <button class="knop stil" id="vergelijkKnop" type="button">Toetsen vergelijken</button>
     </div>
     <p class="tip" id="accTip" style="margin-top:10px"></p>
     <h2 style="font-size:1.2rem;margin-top:22px">Mijn materiaal</h2>
@@ -105,6 +108,24 @@
       <div class="deelvak hide" id="deelvak" aria-live="polite"></div>
     </div>
   </section>
+
+  <!-- de resultaten van een stuk: nakijken, norm, analyse (uitslag.js) -->
+  <section id="uitslagvak" class="hide" aria-labelledby="uitslagKop">
+    <div class="rij" style="margin-top:18px"><button class="linkknop" type="button" data-uitslagterug>&larr; Terug naar mijn materiaal</button></div>
+    <p class="hand">resultaten</p>
+    <h2 id="uitslagKop" style="font-size:1.5rem">Resultaten</h2>
+    <p class="melding" id="uitslagMelding" role="status" aria-live="polite"></p>
+    <div class="uitslag" id="uitslagInhoud"></div>
+  </section>
+
+  <!-- alle toetsen naast elkaar -->
+  <section id="vergelijkvak" class="hide" aria-labelledby="vergelijkKop">
+    <div class="rij" style="margin-top:18px"><button class="linkknop" type="button" data-uitslagterug>&larr; Terug naar mijn materiaal</button></div>
+    <p class="hand">vergelijken</p>
+    <h2 id="vergelijkKop" style="font-size:1.5rem">Toetsen vergelijken</h2>
+    <p class="melding" id="vergelijkMelding" role="status" aria-live="polite"></p>
+    <div class="uitslag" id="vergelijkInhoud"></div>
+  </section>
 </main>
 
 <footer class="wrap">Je materiaal staat op de server onder een code; alleen jij kunt het aanpassen of weghalen. Wat ruim een jaar niet geopend is, wordt gewist. Zie de <a href="../privacy.html">privacyverklaring</a>.</footer>
@@ -113,6 +134,8 @@
 <script src="bank.js"></script>
 <script src="profiel.js"></script>
 <script src="eigen.js"></script>
+<script src="nakijk.js"></script>
+<script src="uitslag.js"></script>
 <script>
 (function(){
   'use strict';
@@ -134,7 +157,8 @@
     $('stukken').innerHTML = l.length ? l.map(function(m){
       return '<div class="stuk"><div><b>' + schoon(m.naam) + '<span class="code">' + schoon(m.code) + '</span></b>' +
         '<small>' + (m.soort === 'lijst' ? 'Woordenlijst' : 'Oefening') + ' · gemaakt ' + new Date(m.gemaakt).toLocaleDateString('nl-NL', { day:'numeric', month:'short', year:'numeric' }) + '</small></div>' +
-        '<div class="acties"><button class="knop stil klein" type="button" data-werk="' + m.code + '">Bewerken</button>' +
+        '<div class="acties">' + (m.soort === 'lijst' ? '' : '<button class="knop klein" type="button" data-uitslag="' + m.code + '">Resultaten</button>') +
+        '<button class="knop stil klein" type="button" data-werk="' + m.code + '">Bewerken</button>' +
         '<a class="knop stil klein" href="oefen.html?code=' + m.code + '">Openen</a>' +
         '<button class="knop stil klein" type="button" data-kopie="' + m.code + '">Link kopiëren</button>' +
         '<button class="knop gevaar klein" type="button" data-weg="' + m.code + '" data-naam="' + schoon(m.naam) + '">Weghalen</button></div></div>';
@@ -142,7 +166,8 @@
   }
   $('stukken').addEventListener('click', function(e){
     var b = e.target.closest('button'); if (!b) return;
-    var werk = b.getAttribute('data-werk'), kopie = b.getAttribute('data-kopie'), weg = b.getAttribute('data-weg');
+    var werk = b.getAttribute('data-werk'), kopie = b.getAttribute('data-kopie'), weg = b.getAttribute('data-weg'), uit = b.getAttribute('data-uitslag');
+    if (uit) UITSLAG.open(uit, { terug: naarLijst });
     if (werk) laadVoorBewerken(werk);
     if (kopie) kopieer(adres('oefen.html?code=' + kopie), $('lijstMelding'));
     if (weg){
@@ -177,15 +202,19 @@
     window.scrollTo(0, 0); $('naam').focus();
   }
   function sluit(){ $('bewerkvak').classList.add('hide'); $('lijstvak').classList.remove('hide'); tekenLijst(); bezig = null; }
+  function naarLijst(){ ['bewerkvak', 'uitslagvak', 'vergelijkvak'].forEach(function(s){ $(s).classList.add('hide'); }); $('lijstvak').classList.remove('hide'); $('paginakop').classList.remove('hide'); tekenLijst(); window.scrollTo(0, 0); }
+  $('vergelijkKnop').addEventListener('click', function(){ UITSLAG.vergelijk({ terug: naarLijst }); });
   $('terugNaarLijst').addEventListener('click', sluit);
   $('nieuwLijst').addEventListener('click', function(){ vulLijst({ naam:'', vak:'', kopA:'', kopB:'', paren:[] }); open('lijst'); });
   $('nieuwOef').addEventListener('click', function(){ vulOef({ naam:'', vak:'', modus:'oefenen', items:[] }); open('oefening'); });
   function laadVoorBewerken(code){
     melding($('lijstMelding'), 'Ophalen…');
-    EIGEN.haal(code).then(function(m){
+    /* met de sleutel: een toets komt anders zonder antwoorden */
+    EIGEN.volledig(code).then(function(m){
       melding($('lijstMelding'), '');
       if (m.soort === 'lijst') vulLijst(m); else vulOef(m);
       open(m.soort, code);
+      if (m.n) melding($('bewaarMelding'), 'Er ' + (m.n === 1 ? 'is al een leerling die heeft' : 'zijn al ' + m.n + ' leerlingen die hebben') + ' ingeleverd. Verander je een antwoord, dan wordt hun werk opnieuw nagekeken; haal je een vraag weg of zet je ze in een andere volgorde, dan kloppen hun antwoorden niet meer.');
     }).catch(function(f){ melding($('lijstMelding'), f.message, 'fout'); });
   }
 
@@ -248,7 +277,7 @@
           label('Foute antwoorden (een per regel, een tot vijf)', veld('fout', (x.fout || []).join('\n'), 'Lyon\nMarseille\nNice', true));
     } else if (v === 'open'){
       h = label('Vraag', veld('vraag', x.vraag, 'bijv. In welk jaar viel de Berlijnse Muur?')) +
-          label('Goede antwoorden (een per regel; hoofdletters en spaties tellen niet)', veld('antwoorden', (x.antwoorden || []).join('\n'), '1989', true));
+          label('Goede antwoorden (een per regel; hoofdletters en spaties tellen niet). Leeg laten: je kijkt hem zelf na bij de resultaten.', veld('antwoorden', (x.antwoorden || []).join('\n'), '1989', true));
     } else if (v === 'koppel'){
       h = label('Opdracht', veld('vraag', x.vraag || 'Koppel wat bij elkaar hoort.', '')) +
           label('Paren (een per regel: links = rechts, twee tot tien)', veld('paren', (x.paren || []).map(function(p){ return p.a + ' = ' + p.b; }).join('\n'), 'hart = pompt het bloed rond\nlongen = gaswisseling', true));
@@ -266,6 +295,7 @@
     }
     h += label('Uitleg na de vraag (mag leeg)', veld('uitleg', x.uitleg, 'Waarom is dit het antwoord?'));
     return '<div class="item" data-vorm="' + v + '"><div class="itemkop"><b class="nr"></b><span class="soortpil">' + VORMNAAM[v] + '</span>' +
+      '<label class="puntveld">punten <input class="veld mini" type="number" min="1" max="10" step="1" data-v="punten" value="' + (x.punten || 1) + '"></label>' +
       '<span class="rechts"><button type="button" data-actie="op" aria-label="Omhoog">&uarr;</button><button type="button" data-actie="neer" aria-label="Omlaag">&darr;</button>' +
       '<button type="button" data-actie="weg" aria-label="Vraag weghalen">&times;</button></span></div><div class="velden2">' + h + '</div></div>';
   }
@@ -287,7 +317,7 @@
   function regels(t){ return String(t || '').split(/\r?\n/).map(function(x){ return x.trim(); }).filter(Boolean); }
   function lees(it){
     var v = it.getAttribute('data-vorm'), w = function(n){ var el = it.querySelector('[data-v="' + n + '"]'); return el ? el.value : ''; };
-    var x = { vorm: v, vraag: w('vraag').trim(), uitleg: w('uitleg').trim() };
+    var x = { vorm: v, vraag: w('vraag').trim(), uitleg: w('uitleg').trim(), punten: Math.max(1, Math.min(10, Math.round(Number(w('punten')) || 1))) };
     if (v === 'mk'){ x.goed = w('goed').trim(); x.fout = regels(w('fout')); }
     if (v === 'open') x.antwoorden = regels(w('antwoorden'));
     if (v === 'koppel') x.paren = EIGEN.plakken(w('paren'));
@@ -300,7 +330,7 @@
   function probleem(x, i){
     var n = 'Vraag ' + (i + 1) + ': ';
     if (x.vorm === 'mk' && (!x.vraag || !x.goed || !x.fout.length)) return n + 'vul de vraag, het goede antwoord en minstens een fout antwoord in.';
-    if (x.vorm === 'open' && (!x.vraag || !x.antwoorden.length)) return n + 'vul de vraag en minstens een goed antwoord in.';
+    if (x.vorm === 'open' && !x.vraag) return n + 'vul de vraag in.';
     if (x.vorm === 'koppel' && x.paren.length < 2) return n + 'zet minstens twee paren neer, zoals hart = pompt bloed.';
     if (x.vorm === 'volgorde' && x.stappen.length < 2) return n + 'zet minstens twee stappen neer, elk op een eigen regel.';
     if (x.vorm === 'groepen' && x.groepen.length < 2) return n + 'zet minstens twee groepen neer, zoals zoogdier: hond, walvis.';
