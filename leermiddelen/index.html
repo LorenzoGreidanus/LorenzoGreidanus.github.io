@@ -446,6 +446,18 @@ a:focus-visible,button:focus-visible,input:focus-visible,summary:focus-visible{o
   color:#fff;font:inherit;font-weight:600;cursor:pointer}
 .klasstrip button:disabled{opacity:.55;cursor:progress}
 .klasstrip p.status{font-size:.84rem;color:var(--muted);margin-top:8px}
+/* een fout ziet er anders uit dan de hulpregel eronder */
+.klasstrip p.status.fout{color:#a8371f;font-weight:600}
+:root[data-theme="dark"] .klasstrip p.status.fout{color:#ffb3a6}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .klasstrip p.status.fout{color:#ffb3a6}}
+/* het moment dat je in de klas zit, en het moment dat je eruit stapt */
+.klaswelkom{display:flex;align-items:center;gap:10px;margin-top:12px;max-width:34rem;padding:10px 14px;border-radius:14px;
+  background:var(--goed-bg,#e7f3ec);color:var(--ink);font-size:.92rem}
+.klaswelkom .avatar{flex:none;margin:0}
+.klaswelkom b{font-weight:600}
+.klasvak .terug{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}
+.klasvak .terug button{border:none;background:none;color:var(--link,#204ECF);font:inherit;font-weight:600;text-decoration:underline;
+  text-underline-offset:3px;min-height:44px;padding:0 2px;cursor:pointer}
 /* Op een telefoon stond er anderhalf scherm instelwerk voor het eerste spel.
    De drie docentenlinks worden er een; klascode en gezichtje zitten in de
    lade onder je eigen gezichtje in de kopbalk. */
@@ -1500,7 +1512,7 @@ var SPELLEN = [
 (function(){
   var doel = document.getElementById('klasUit'); if (!doel || !window.KLAS) return;
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
-  var ingelogd = false, gekeken = false, opdrachtGezien = null;
+  var ingelogd = false, gekeken = false, opdrachtGezien = null, netGekoppeld = false, weg = null, wegTimer = null;
   /* wat de server over je account zegt: kan inloggen hier, en ben je het */
   var acc = null;
   var OP_SPEL = { race:['Vragenrace', 'race.html'], toren:['Torenverdediging', 'toren.html'], zwaard:['Zwaardvechter', 'zwaard.html'] };
@@ -1582,13 +1594,27 @@ var SPELLEN = [
     if (window.VERNIEUWGEZICHT) VERNIEUWGEZICHT();
     if (k){
       var stripWeg = document.getElementById('klasstrip');
-      if (stripWeg){ stripWeg.classList.add('hide'); stripWeg.innerHTML = ''; }
+      if (stripWeg){
+        /* net gekoppeld: op de plek van het formulier zeggen dat het gelukt is, met je gezichtje */
+        if (netGekoppeld){
+          stripWeg.innerHTML = '<p class="klaswelkom" role="status">' + (window.AVATAR ? AVATAR.svg(k.naam, 34) : '') +
+            '<span><b>Je zit nu in klas ' + schoon(k.code) + ' als ' + schoon(k.naam) + '.</b> Vanaf nu gaan je uitslagen naar je docent.</span></p>';
+          stripWeg.classList.remove('hide');
+        } else { stripWeg.classList.add('hide'); stripWeg.innerHTML = ''; }
+      }
       var vast = ingelogd;
       doel.innerHTML = '<p class="status">' + (window.AVATAR ? AVATAR.svg(k.naam, 30) : '') + 'Gekoppeld aan klas <b>' + schoon(k.code) + '</b> als <b>' + schoon(k.naam) + '</b>. Je uitslagen gaan naar je docent, met dit gezichtje erbij. ' +
         (vast ? '<span class="vast">Je bent ingelogd met Microsoft, dus dit blijft staan tot je docent de klascode opheft.</span>' : '<button type="button" class="los" id="klasLos">Loskoppelen</button>') + '</p>';
       zetUitregel(k);
       var los = document.getElementById('klasLos');
-      if (los) los.addEventListener('click', function(){ KLAS.wis(); teken(); });
+      if (los) los.addEventListener('click', function(){
+        /* Een tik te veel mag geen klas kosten: tien tellen kun je het terugdraaien. */
+        weg = k; netGekoppeld = false;
+        KLAS.wis(); teken();
+        clearTimeout(wegTimer);
+        wegTimer = setTimeout(function(){ weg = null; teken(); }, 10000);
+        var t2 = document.getElementById('klasTerug'); if (t2) t2.focus();
+      });
       leesKlas(k);
       /* bestaat de code nog? een keer per bezoek kijken */
       if (!gekeken){ gekeken = true; KLAS.controleer().then(function(nog){ if (!nog) teken(); }); }
@@ -1616,8 +1642,14 @@ var SPELLEN = [
       });
     }
     if (strip) strip.classList.remove('hide');
-    doel.innerHTML = '<p class="status">Heb je een klascode van je docent? Die vul je in op de pagina zelf, bij Code van je docent onder de titel. ' +
+    var terugRegel = weg ? '<p class="status terug" role="status">Losgekoppeld van klas ' + schoon(weg.code) + '. <button type="button" id="klasTerug">Ongedaan maken</button></p>' : '';
+    doel.innerHTML = terugRegel + '<p class="status">Heb je een klascode van je docent? Die vul je in op de pagina zelf, bij Code van je docent onder de titel. ' +
       'Zonder code speel je gewoon, en blijft wat je doet op dit apparaat.</p>';
+    var terug = document.getElementById('klasTerug');
+    if (terug) terug.addEventListener('click', function(){
+      var k2 = weg; weg = null; clearTimeout(wegTimer);
+      if (k2){ KLAS.zet(k2.code, k2.naam); teken(); var l2 = document.getElementById('klasLos'); if (l2) l2.focus(); }
+    });
     zetUitregel(null);
   }
 
@@ -1642,17 +1674,17 @@ var SPELLEN = [
     knop.addEventListener('click', function(){
       if (knop.disabled) return;
       var code = codeVeld.value.toUpperCase().replace(/[^A-Z]/g, ''), naam = naamVeld.value.trim(), st = waar.querySelector('#klasStatus');
-      if (code.length !== 4){ st.textContent = 'Een klascode heeft vier letters, bijvoorbeeld KRBT.'; codeVeld.focus(); return; }
-      if (naam.length < 2){ st.textContent = 'Vul een bijnaam in, zodat je docent ziet wie je bent.'; naamVeld.focus(); return; }
+      if (code.length !== 4){ st.textContent = 'Een klascode heeft vier letters, bijvoorbeeld KRBT.'; st.classList.add('fout'); codeVeld.focus(); return; }
+      if (naam.length < 2){ st.textContent = 'Vul een bijnaam in, zodat je docent ziet wie je bent.'; st.classList.add('fout'); naamVeld.focus(); return; }
       codeVeld.value = code;
       /* de knop even uit, anders koppel je bij twee keer tikken twee keer */
       knop.disabled = true;
-      st.textContent = 'Even kijken\u2026';
+      st.classList.remove('fout'); st.textContent = 'Even kijken\u2026';
       fetch('/api/kamer/' + code).then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); }).then(function(x){
         knop.disabled = false;
-        if (!x.ok || x.j.spel !== 'klas'){ st.textContent = 'Er is geen klas met code ' + code + '. Kijk of je hem goed overnam.'; codeVeld.focus(); return; }
-        KLAS.zet(code, naam); teken();
-      }).catch(function(){ knop.disabled = false; st.textContent = 'Geen verbinding. Kijk of je internet hebt en tik dan nog een keer op Koppelen.'; });
+        if (!x.ok || x.j.spel !== 'klas'){ st.textContent = 'Er is geen klas met code ' + code + '. Kijk of je hem goed overnam.'; st.classList.add('fout'); codeVeld.focus(); return; }
+        KLAS.zet(code, naam); netGekoppeld = true; teken();
+      }).catch(function(){ knop.disabled = false; st.textContent = 'Geen verbinding. Kijk of je internet hebt en tik dan nog een keer op Koppelen.'; st.classList.add('fout'); });
     });
   }
   teken();
