@@ -22,7 +22,7 @@ export { Account } from "./account.js";
 /* De klassen heten nog Zombiekamer omdat een Durable Object hernoemen om een
    migratie vraagt; het spel zelf heet De stad. */
 export { Zombiekamer, Veld } from "./stad.js";
-import { behandel as accountBehandel, ingelogd as accountIngelogd, mogelijk as accountMogelijk, isEigenaar, naamVan as accountNaam } from "./account.js";
+import { behandel as accountBehandel, ingelogd as accountIngelogd, mogelijk as accountMogelijk, isEigenaar, naamVan as accountNaam, kenmerkVan as accountKenmerk } from "./account.js";
 const KLASSEMENTEN = { toren: true, zwaard: true, dag: true };   /* dag: per datum een lijst, dag-2026-09-19 */
 
 /* Een browser stuurt bij elk POST en bij elke WebSocket mee vanaf welke site
@@ -240,7 +240,18 @@ export default {
         /* De naam van het Microsoft-account komt hier uit het sessiekoekje en
            niet uit het bericht: anders typt een leerling er zelf een naam in.
            Dezelfde weg als vanEigenaar bij het maken van een klascode. */
-        if (wat === "hoi") inz = Object.assign({}, inz || {}, { ms: await accountNaam(req, env) });
+        /* Bij hoi en bij elke uitslag: wie inlogde komt zo ook later nog met zijn
+           accountnaam in het overzicht, en een tweede apparaat van hetzelfde
+           account wordt dezelfde leerling. Het kenmerk is per klas anders. */
+        if (wat === "hoi" || wat === "meld"){
+          const ms = await accountNaam(req, env), id = ms ? await accountKenmerk(req, env) : "";
+          let acc = "";
+          if (id){
+            const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(id + "|klas|" + kl[1].toUpperCase()));
+            acc = Array.from(new Uint8Array(h)).slice(0, 12).map(b => b.toString(16).padStart(2, "0")).join("");
+          }
+          inz = Object.assign({}, inz || {}, { ms, acc });
+        }
         return stub.fetch("https://kamer/" + wat, { method: "POST", body: JSON.stringify(inz || {}) });
       }
       /* De sleutel komt in een kopregel, niet in het adres: adressen belanden in

@@ -61,6 +61,8 @@ function weekBegin(nu){
   const dag = (d.getUTCDay() + 6) % 7;
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - dag) - 3600000;
 }
+/* een bijnaam om te vergelijken: hoofdletters, spaties en accenten tellen niet */
+function normNaam(n){ return String(n || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim(); }
 /* hoeveel goede antwoorden een potje oplevert voor het klasdoel */
 function goedVan(r){
   if (r.od && typeof r.od === "object"){
@@ -985,6 +987,59 @@ export class Kamer extends DurableObject {
      Gedeeld
      ====================================================================== */
   /* ---------- het klasoverzicht ---------- */
+  /* Welke leerling hoort bij dit kenmerk? Een browser krijgt een willekeurig
+     kenmerk; dezelfde leerling op een tweede apparaat kreeg dus een tweede
+     regel in het overzicht. Nu: hetzelfde Microsoft-account (per klas
+     afgeleid) is dezelfde leerling, en zonder account is dezelfde bijnaam
+     dezelfde leerling, zolang er geen twee verschillende accounts achter
+     zitten. Het nieuwe kenmerk wordt dan een verwijzing naar het oude. */
+  klasLeerling(kort, naam, acc){
+    const st = this.stand;
+    st.leerlingen = st.leerlingen || {}; st.alias = st.alias || {}; st.accounts = st.accounts || {};
+    this.samenvoegen();
+    if (st.alias[kort]) kort = st.alias[kort];
+    const l = st.leerlingen;
+    let doel = null;
+    if (acc && st.accounts[acc] && st.accounts[acc] !== kort && l[st.accounts[acc]]) doel = st.accounts[acc];
+    else if (!l[kort]){
+      const n = normNaam(naam);
+      doel = Object.keys(l).find(k => normNaam(l[k].naam) === n && !(acc && l[k].acc && l[k].acc !== acc)) || null;
+    }
+    if (doel && doel !== kort){
+      st.alias[kort] = doel;
+      /* uitslagen die al onder het nieuwe kenmerk stonden gaan mee */
+      st.resultaten.forEach(r => { if (r.sid === kort) r.sid = doel; });
+      if (l[kort]){ if (!l[doel].ms && l[kort].ms) l[doel].ms = l[kort].ms; delete l[kort]; }
+      kort = doel;
+    }
+    if (acc){ st.accounts[acc] = kort; if (l[kort]) l[kort].acc = acc; }
+    return kort;
+  }
+  /* Een keer per klas: wie er al dubbel in stond met dezelfde bijnaam, wordt
+     samengevoegd onder de oudste regel. */
+  samenvoegen(){
+    const st = this.stand;
+    if (st.samengevoegd) return;
+    st.samengevoegd = 1;
+    st.alias = st.alias || {};
+    const l = st.leerlingen || {}, groep = {};
+    Object.keys(l).forEach(k => { const n = normNaam(l[k].naam); (groep[n] = groep[n] || []).push(k); });
+    Object.keys(groep).forEach(n => {
+      const ks = groep[n].sort((a, b) => (l[a].sinds || 0) - (l[b].sinds || 0));
+      const eerste = ks[0];
+      ks.slice(1).forEach(k => {
+        if (l[eerste].acc && l[k].acc && l[eerste].acc !== l[k].acc) return;   /* twee echte accounts: twee leerlingen */
+        st.alias[k] = eerste;
+        st.resultaten.forEach(r => { if (r.sid === k) r.sid = eerste; });
+        if (!l[eerste].ms && l[k].ms) l[eerste].ms = l[k].ms;
+        if (!l[eerste].acc && l[k].acc) l[eerste].acc = l[k].acc;
+        delete l[k];
+      });
+    });
+    /* quizuitslagen die de docent eerder invoerde onder een eigen kenmerk, bij de leerling met die bijnaam zetten */
+    const perNaam = {}; Object.keys(l).forEach(k => { perNaam[normNaam(l[k].naam)] = k; });
+    st.resultaten.forEach(r => { if (/^kq-/.test(r.sid) && perNaam[normNaam(r.naam)]) r.sid = perNaam[normNaam(r.naam)]; });
+  }
   async meld(inz){
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
     if (Date.now() - this.stand.laatst > KLAS_SLAAPT) return json({ fout: "deze klascode is opgeheven" }, 410);
@@ -992,7 +1047,8 @@ export class Kamer extends DurableObject {
     if (!/^[A-Za-z0-9_-]{8,40}$/.test(sid)) return json({ fout: "geen geldig kenmerk" }, 400);
     const spel = String(inz.spel || "");
     if (!SPELLEN_STRIJD[spel] && !KLAS_SPELLEN[spel]) return json({ fout: "onbekend spel" }, 400);
-    const kort = sid.slice(0, 12);
+    const acc = /^[0-9a-f]{24}$/.test(String(inz.acc || "")) ? inz.acc : "";
+    const kort = this.klasLeerling(sid.slice(0, 12), inz.naam, acc);
     /* wie er al in zit mag altijd blijven melden; alleen een nieuwe erbij kan geweigerd worden */
     const bekend = (this.stand.leerlingen && this.stand.leerlingen[kort]) || this.stand.resultaten.some(r => r.sid === kort);
     if (!bekend){
@@ -1003,6 +1059,10 @@ export class Kamer extends DurableObject {
     this.stand.leerlingen = this.stand.leerlingen || {};
     if (!this.stand.leerlingen[kort]) this.stand.leerlingen[kort] = { naam: nette(inz.naam, "Leerling"), av: schoonAv(inz.av), sinds: Date.now(), t: Date.now() };
     else this.stand.leerlingen[kort].t = Date.now();
+    /* ingelogd: de accountnaam ook bij een uitslag bijwerken */
+    const msM = schoon(inz.ms, 40);
+    if (msM) this.stand.leerlingen[kort].ms = msM;
+    if (acc) this.stand.leerlingen[kort].acc = acc;
     this.voegToe({ sid: kort, naam: nette(inz.naam, "Leerling"), av: schoonAv(inz.av), spel, ronde: getal(inz.ronde, 250), punten: getal(inz.punten, 5000),
                    niveau: schoon(inz.niveau, 10), vak: schoon(inz.vak, 10), od: schoonOd(inz.od), t: Date.now() });
     await this.zetAlarm({ wat: "opruimen" }, KLAS_SLAAPT);
@@ -1016,15 +1076,15 @@ export class Kamer extends DurableObject {
     if (Date.now() - this.stand.laatst > KLAS_SLAAPT) return json({ fout: "deze klascode is opgeheven" }, 410);
     const sid = schoon(inz && inz.sid, 40);
     if (!/^[A-Za-z0-9_-]{8,40}$/.test(sid)) return json({ fout: "geen geldig kenmerk" }, 400);
-    const kort = sid.slice(0, 12);
-    this.stand.leerlingen = this.stand.leerlingen || {};
+    const acc = /^[0-9a-f]{24}$/.test(String(inz.acc || "")) ? inz.acc : "";
+    const kort = this.klasLeerling(sid.slice(0, 12), inz.naam, acc);
     if (!this.stand.leerlingen[kort] && Object.keys(this.stand.leerlingen).length >= KLAS_LEERLINGEN) return json({ fout: "deze klas zit vol" }, 429);
     const was = this.stand.leerlingen[kort];
     /* ms is de naam van het Microsoft-account, door index.js uit het
        sessiekoekje gehaald. Is die er niet (niet ingelogd), dan blijft staan
        wat er stond: uitloggen hoort de docent niet meteen zijn zicht te kosten. */
     const ms = schoon(inz.ms, 40) || (was && was.ms) || "";
-    this.stand.leerlingen[kort] = { naam: nette(inz.naam, "Leerling"), av: schoonAv(inz.av), ms,
+    this.stand.leerlingen[kort] = { naam: nette(inz.naam, "Leerling"), av: schoonAv(inz.av), ms, acc: acc || (was && was.acc) || "",
                                     sinds: was && was.sinds || Date.now(), t: Date.now() };
     await this.zetAlarm({ wat: "opruimen" }, KLAS_SLAAPT);
     await this.bewaar();
@@ -1053,7 +1113,9 @@ export class Kamer extends DurableObject {
     for (const r of lijst){
       const naam = nette(r && r.naam, "");
       if (!naam) continue;
-      const sid = ("kq-" + naam.toLowerCase().replace(/[^a-z0-9]/g, "") + "xxxxxxxx").slice(0, 12);
+      /* staat deze bijnaam al in de klas, dan hoort de quizuitslag bij die leerling en niet bij een tweede regel */
+      const l0 = this.stand.leerlingen || {}, bekend = Object.keys(l0).find(k => normNaam(l0[k].naam) === normNaam(naam));
+      const sid = bekend || ("kq-" + naam.toLowerCase().replace(/[^a-z0-9]/g, "") + "xxxxxxxx").slice(0, 12);
       this.voegToe({ sid, naam, av: schoonAv(r.av), spel, ronde: getal(r.ronde, 250), punten: getal(r.punten, 5000), niveau: schoon(inz.niveau, 10), vak: schoon(inz.vak, 10), od: schoonOd(r.od), t });
       n++;
     }
@@ -1184,7 +1246,9 @@ export class Kamer extends DurableObject {
   }
   mijn(sid){
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
-    const s = schoon(sid, 40).slice(0, 12);
+    let s = schoon(sid, 40).slice(0, 12);
+    /* een tweede apparaat dat al is samengevoegd, ziet de voortgang van de leerling zelf */
+    if (this.stand.alias && this.stand.alias[s]) s = this.stand.alias[s];
     const opzet = { spellen: this.stand.spellen || [], lesmodus: !!this.stand.lesmodus, naam: this.stand.naam,
       /* zat deze leerling bij de eigenaar van de site in de klas? */
       oudleerling: !!this.stand.vanEigenaar, klasdoel: this.klasdoelStand(s) };
@@ -1206,6 +1270,10 @@ export class Kamer extends DurableObject {
     const l = this.stand.leerlingen || {};
     const had = !!l[id];
     delete l[id];
+    /* ook de verwijzingen van andere apparaten en het account, anders komt hij via die weg terug */
+    const st = this.stand;
+    Object.keys(st.alias || {}).forEach(k => { if (st.alias[k] === id) delete st.alias[k]; });
+    Object.keys(st.accounts || {}).forEach(a => { if (st.accounts[a] === id) delete st.accounts[a]; });
     const voor = this.stand.resultaten.length;
     this.stand.resultaten = this.stand.resultaten.filter(r => r.sid !== id);
     if (!had && voor === this.stand.resultaten.length) return json({ fout: "die leerling zit niet in deze klas" }, 404);
@@ -1223,6 +1291,8 @@ export class Kamer extends DurableObject {
   async resultaten(sleutel){
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
     if (!sleutel || sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
+    /* oude dubbelingen eerst samenvoegen, zodat de uitslagen hieronder al goed staan */
+    if (!this.stand.samengevoegd){ this.samenvoegen(); await this.bewaar(); }
     /* kijken telt ook als gebruik, hoogstens een keer per uur bijgeschreven */
     if (Date.now() - this.stand.laatst > 3600000){ await this.zetAlarm({ wat: "opruimen" }, KLAS_SLAAPT); await this.bewaar(); }
     const opdrachten = this.opdrachtLijst();
@@ -1231,12 +1301,14 @@ export class Kamer extends DurableObject {
                   spellen: this.stand.spellen || [], lesmodus: !!this.stand.lesmodus,
                   periodes: this.stand.periodes || [], echt: this.stand.echt || {},
                   leerlingen: this.gekoppeld(),
-                  resultaten: this.stand.resultaten.map(x => ({ naam: x.naam, av: x.av || "", spel: x.spel, ronde: x.ronde, punten: x.punten, niveau: x.niveau, vak: x.vak, od: x.od, t: x.t })) });
+                  /* elke uitslag onder de huidige bijnaam van de leerling: wie van naam wisselde of op een tweede apparaat speelde, staat er zo een keer in */
+                  resultaten: this.stand.resultaten.map(x => ({ naam: ((this.stand.leerlingen || {})[x.sid] || {}).naam || x.naam, av: x.av || "", spel: x.spel, ronde: x.ronde, punten: x.punten, niveau: x.niveau, vak: x.vak, od: x.od, t: x.t })) });
   }
 
   /* Wie is er gekoppeld, en heeft die al iets gespeeld? Het kenmerk zelf gaat
      niet mee naar buiten; de docent heeft genoeg aan de naam en het vlaggetje. */
   gekoppeld(){
+    this.samenvoegen();
     const gespeeld = new Set((this.stand.resultaten || []).map(r => r.sid));
     const l = this.stand.leerlingen || {};
     return Object.keys(l).map(s => ({ id: s, naam: l[s].naam, av: l[s].av || "", ms: l[s].ms || "", sinds: l[s].sinds, gespeeld: gespeeld.has(s) }))

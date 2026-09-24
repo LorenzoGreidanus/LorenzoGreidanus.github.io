@@ -139,6 +139,14 @@ export async function naamVan(req, env){
     return String((j && j.naam) || "").slice(0, 40);
   } catch (e){ console.warn("account: naam opzoeken mislukt", e && e.message); return ""; }
 }
+/* Het kenmerk van wie er is ingelogd (al een hash van het Microsoft-nummer),
+   of leeg. index.js maakt daar per klas een eigen afgeleide van, zodat een klas
+   hetzelfde account op een tweede apparaat herkent zonder dat twee klassen
+   aan elkaar te koppelen zijn. */
+export async function kenmerkVan(req, env){
+  if (!mogelijk(env)) return "";
+  try { const s = await sessie(env, req); return s && s.id ? String(s.id) : ""; } catch (e){ return ""; }
+}
 export function mogelijk(env){ return !!(env.MS_CLIENT_ID && env.MS_CLIENT_SECRET && env.SESSIE_GEHEIM); }
 function basis(env){ return String(env.MS_AANMELDBASIS || "https://login.microsoftonline.com").replace(/\/+$/, ""); }
 function huurder(env){ return String(env.MS_TENANT || "common"); }
