@@ -792,8 +792,17 @@ export class Kamer extends DurableObject {
          speelt stuurt zijn reeks naar iedereen, zoals het al ging. */
       const naar = m.naar ? this.sidVanPid(String(m.naar).slice(0, 40)) : null;
       if (sp.af && !naar) return;
+      /* Niet twee keer op rij naar dezelfde: anders zit één leerling de hele
+         ronde onder de fouten van iemand die af is. Speelt er nog maar één,
+         dan mag het wel, want dan is er niemand anders. */
+      if (naar && naar === sp.laatsteNaar){
+        const anderen = Object.keys(st.spelers).filter(s => s !== wie.sid && s !== naar && !st.spelers[s].af && this.aanwezig(s));
+        if (anderen.length) return;
+      }
+      if (naar) sp.laatsteNaar = naar;
       sp.aanvallen = (sp.aanvallen || 0) + 1;
-      const bericht = JSON.stringify({ t: "aanval", van: sp.naam, n });
+      /* anoniem: de ontvanger ziet "iemand"; alleen wie af is kiest een doel, dus alleen die kan het */
+      const bericht = JSON.stringify({ t: "aanval", van: naar && m.anoniem ? "" : sp.naam, n });
       this.ctx.getWebSockets("speler").forEach(s => {
         const w = s.deserializeAttachment() || {};
         const ander = st.spelers[w.sid];

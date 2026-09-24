@@ -69,6 +69,9 @@ window.STRIJD = (function(){
     '#strijdSluier .afdoelen button .av{flex:none;width:32px;height:32px;line-height:0}' +
     '#strijdSluier .afdoelen button .av svg{display:block;width:100%;height:100%}' +
     '#strijdSluier .afdoelen button small{margin-left:auto;color:var(--muted,#5b6785);font-weight:500}' +
+    '#strijdSluier .afdoelen button.net{opacity:.55;cursor:default}' +
+    '#strijdSluier .afanoniem{display:flex;align-items:center;gap:10px;min-height:44px;font-size:.92rem;cursor:pointer}' +
+    '#strijdSluier .afanoniem input{width:20px;height:20px;flex:none;margin:0;accent-color:#204ECF}' +
     '#strijdSluier .afbalk{display:flex;gap:14px;flex-wrap:wrap;color:#5b6785;font-size:.9rem;margin:0 0 4px}' +
     '#strijdSluier .afweg{margin-top:14px}' +
     /* het knopje om het paneel terug te halen als je je eindscherm bekeek */
@@ -193,7 +196,7 @@ window.STRIJD = (function(){
   /* ---------- het paneel voor wie af is ----------
      Alles wat het paneel bijhoudt staat hier bij elkaar: de vraag die nu op het
      scherm staat, wie er nog spelen, en hoeveel je er al goed had. */
-  var afAan = false, afVraag = null, afGoed = 0, afTotaal = 0, afGestuurd = 0, afDoelen = [], afTerug = null, afWacht = false;
+  var afAan = false, afVraag = null, afGoed = 0, afTotaal = 0, afGestuurd = 0, afDoelen = [], afLaatst = null, afAnoniem = false, afTerug = null, afWacht = false;
   var AF_FOUTEN = 2;   /* zoveel extra fouten levert een goed antwoord op */
 
   function afStart(){
@@ -266,19 +269,27 @@ window.STRIJD = (function(){
       door.addEventListener('click', afVolgende);
       vak.appendChild(door);
     } else {
-      vak.innerHTML = '<p class="afuit" style="margin:0">Naar wie sturen?</p>' + afDoelen.slice(0, 12).map(function(d){
-        return '<button type="button" data-naar="' + schoon(d.sid) + '"><span class="av">' +
+      /* niet twee keer op rij naar dezelfde, tenzij er maar één over is */
+      var keus = afDoelen.length > 1;
+      vak.innerHTML = '<p class="afuit" style="margin:0">Naar wie sturen?' + (keus && afLaatst ? ' Niet twee keer op rij naar dezelfde.' : '') + '</p>' +
+        '<label class="afanoniem"><input type="checkbox"' + (afAnoniem ? ' checked' : '') + '> <span><b>Anoniem sturen</b>: ze zien niet dat het van jou komt</span></label>' +
+        afDoelen.slice(0, 12).map(function(d){
+        var net = keus && d.sid === afLaatst;
+        return '<button type="button"' + (net ? ' disabled class="net"' : ' data-naar="' + schoon(d.sid) + '"') + '><span class="av">' +
           (window.AVATAR ? AVATAR.svg(d.naam, 32, d.av || '') : '') + '</span>' + schoon(d.naam) +
-          '<small>ronde ' + (d.ronde | 0) + '</small></button>';
+          '<small>' + (net ? 'kreeg je vorige fouten' : 'ronde ' + (d.ronde | 0)) + '</small></button>';
       }).join('');
     }
     na.insertAdjacentElement('afterend', vak);
+    var anon = vak.querySelector('.afanoniem input');
+    if (anon) anon.addEventListener('change', function(){ afAnoniem = anon.checked; });
     Array.prototype.forEach.call(vak.querySelectorAll('[data-naar]'), function(k){
       k.addEventListener('click', function(){
         Array.prototype.forEach.call(vak.querySelectorAll('button'), function(b){ b.disabled = true; });
-        stuur({ t: 'aanval', n: AF_FOUTEN, naar: k.getAttribute('data-naar') });
+        afLaatst = k.getAttribute('data-naar');
+        stuur({ t: 'aanval', n: AF_FOUTEN, naar: afLaatst, anoniem: afAnoniem });
         afGestuurd += AF_FOUTEN;
-        zeg(AF_FOUTEN + ' fouten onderweg naar ' + k.textContent.replace(/ronde \d+$/, '').trim() + '.', true);
+        zeg(AF_FOUTEN + ' fouten ' + (afAnoniem ? 'anoniem ' : '') + 'onderweg naar ' + k.textContent.replace(/ronde \d+$/, '').trim() + '.', true);
         setTimeout(afVolgende, 600);
       });
     });
