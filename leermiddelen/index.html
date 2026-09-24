@@ -93,6 +93,11 @@ header{padding:12px 0;border-bottom:1px solid var(--rand);background:#fff;positi
 .raam>.zijkant{grid-column:1;grid-row:1 / span 2}
 .raam>.lesvak{grid-column:2;grid-row:1;margin-bottom:22px}
 .raam>.inhoud{grid-column:2;grid-row:2}
+/* Met een klascode: je les bovenaan over de volle breedte, daaronder vrij spelen
+   met de filters ernaast. De filters werken alleen op wat eronder staat, dus
+   staan ze daar ook. */
+.raam.metles>.lesvak{grid-column:1 / -1}
+.raam.metles>.zijkant{grid-row:2}
 .zijkant{position:sticky;top:76px;display:grid;gap:0;min-width:0;background:var(--kaart);border:1px solid var(--rand);border-radius:20px;padding:6px;box-shadow:0 10px 26px rgba(20,34,76,.05)}
 /* de ingeklapte filters: de kop blijft staan, de knoppen komen pas als je erop tikt */
 .zijkant details.meer summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;justify-content:space-between;min-height:44px}
@@ -293,6 +298,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,summary:focus-visible{o
   .raam{grid-template-columns:minmax(0,1fr);grid-template-rows:none;gap:14px}
   .raam>.zijkant,.raam>.lesvak,.raam>.inhoud{grid-column:1;grid-row:auto}
   .raam>.lesvak{margin-bottom:0}
+  .raam.metles>.lesvak,.raam.metles>.zijkant{grid-column:1;grid-row:auto}
   .zijkant,.inhoud{min-width:0;max-width:100%}
   .zijkant{position:static;gap:0;background:none;border:none;box-shadow:none;padding:0}
   .blok{padding:6px 0 8px}
@@ -1075,6 +1081,8 @@ var SPELLEN = [
   /* ---------- snel starten ---------- */
   function tekenSnel(){
     var quiz = spelMet('klasquiz.html'), toren = spelMet('toren.html'), s = '';
+    if (alInLes(quiz)) quiz = null;
+    if (alInLes(toren)) toren = null;
     if (quiz) s += '<a class="snelknop" href="' + linkNaar(quiz) + '" data-start="' + quiz.bestand + '" title="Doe mee met de quiz op het digibord; je docent geeft de code">' + tegel(quiz) + 'Klasquiz meedoen</a>';
     if (toren) s += '<a class="snelknop" href="' + linkNaar(toren) + '" data-start="' + toren.bestand + '" title="Oefenen voor een toets, elk vak">' + tegel(toren) + 'Torenverdediging</a>';
     s += '<button class="snelknop" type="button" id="verras" title="Een willekeurig spel uit je keuze"><span class="tegel" style="background:var(--amber)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.4" fill="#FBF6F1" stroke="none"/><circle cx="16" cy="8" r="1.4" fill="#FBF6F1" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="#FBF6F1" stroke="none"/><circle cx="8" cy="16" r="1.4" fill="#FBF6F1" stroke="none"/><circle cx="16" cy="16" r="1.4" fill="#FBF6F1" stroke="none"/></svg></span>Verras me</button>';
@@ -1317,7 +1325,11 @@ var SPELLEN = [
   }
   /* Met een klascode: wat de docent koos staat voorop. In de lesmodus is dat alles wat er te zien is. */
   var les = null;   /* { spellen:[...], lesmodus:bool, naam:'' } zodra de klas het doorgeeft */
-  window.ZETLES = function(o){ les = o; tekenSpellen(); };
+  window.ZETLES = function(o){ les = o; tekenSpellen(); tekenSnel(); tekenVerder(); };
+  /* Wat de docent klaarzette staat al in het lesblok; dezelfde spellen niet nog
+     een keer als snelknop of bij verder spelen. */
+  function metLes(){ return !!(les && les.spellen && les.spellen.length); }
+  function alInLes(sp){ return metLes() && sp && magInLes(sp); }
   function magInLes(sp){
     if (!les || !les.spellen || !les.spellen.length) return true;
     return les.spellen.indexOf(sp.bestand.replace('.html', '')) >= 0;
@@ -1339,6 +1351,8 @@ var SPELLEN = [
     var iets = waar.innerHTML !== '' || (kaartje && !kaartje.classList.contains('hide')) ||
       (bericht && !bericht.classList.contains('hide'));
     if (iets) vak.classList.remove('hide'); else vak.classList.add('hide');
+    /* met een lesblok: dat over de volle breedte, en de filters horen bij wat eronder staat */
+    var raam = document.querySelector('.raam'); if (raam) raam.classList.toggle('metles', !!iets);
     var m = document.getElementById('main');
     if (m){ if (aan && les.lesmodus) m.classList.add('lesalleen'); else m.classList.remove('lesalleen'); }
   }
@@ -1430,7 +1444,7 @@ var SPELLEN = [
     try { localStorage.setItem('lg-recent', JSON.stringify(lijst.slice(0, 4))); } catch (e){}
   }
   function tekenVerder(){
-    var lijst = leesRecent().map(spelMet).filter(Boolean);
+    var lijst = leesRecent().map(spelMet).filter(function(sp){ return sp && !alInLes(sp); });
     var vak = $('verder');
     vak.classList.toggle('hide', !lijst.length);
     if (!lijst.length) return;
