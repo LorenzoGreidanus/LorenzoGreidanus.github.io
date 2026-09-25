@@ -75,12 +75,32 @@ body.groot .vtabel input{height:62px;font-size:1.4rem}
   }
   function toon(s, x){ return s.geld ? geld(x) : net(x); }
 
+  /* De dubbele getallenlijn: boven de aantallen, onder wat erbij hoort, op
+     schaal. Zo zie je dat twee keer zoveel ook twee keer zo ver is. */
+  function strook(o){
+    var kol = o.kolommen.slice().sort(function(x, y){ return x.b - y.b; }), max = kol[kol.length - 1].b;
+    var B = 460, L = 34, R = 426, H = 100;
+    function x(b){ return L + (R - L) * (b / max); }
+    var uit = '<svg viewBox="0 0 ' + B + ' ' + H + '" width="' + B + '" style="max-width:100%;font-family:inherit" aria-hidden="true">' +
+      '<line x1="' + L + '" y1="34" x2="' + R + '" y2="34" stroke="var(--ink)" stroke-width="2"/>' +
+      '<line x1="' + L + '" y1="62" x2="' + R + '" y2="62" stroke="var(--ink)" stroke-width="2"/>' +
+      '<text x="' + (L - 4) + '" y="18" font-size="11" fill="var(--muted)" text-anchor="start">' + S(o.boven) + '</text>' +
+      '<text x="' + (L - 4) + '" y="96" font-size="11" fill="var(--muted)" text-anchor="start">' + S(o.onder) + '</text>';
+    kol.forEach(function(k){
+      var px = x(k.b), een = k.b === 1;
+      uit += '<line x1="' + px + '" y1="28" x2="' + px + '" y2="68" stroke="' + (een ? 'var(--nadruk)' : 'var(--muted)') + '" stroke-width="' + (een ? 2 : 1.2) + '" stroke-dasharray="' + (een ? '' : '3 3') + '"/>' +
+        '<text x="' + px + '" y="' + (k.vraagB ? 30 : 30) + '" font-size="15" font-weight="600" fill="' + (k.vraagB ? 'var(--fout)' : 'var(--ink)') + '" text-anchor="middle" dy="-8">' + (k.vraagB ? '?' : S(toon({ geld:false }, k.b))) + '</text>' +
+        '<text x="' + px + '" y="80" font-size="15" font-weight="600" fill="' + (k.vraagO ? 'var(--fout)' : 'var(--ink)') + '" text-anchor="middle">' + (k.vraagO ? '?' : S(toon(o.s, k.o))) + '</text>';
+    });
+    return uit + '</svg>';
+  }
   /* ---------- de tabel als eigen vorm: vakjes in de tabel zelf ---------- */
   function tabelOpgave(o){
     /* o: { boven, onder, kolommen:[{b, o, vraagB, vraagO}], s, uitleg, vraag, onderdeel } */
     return {
       onderdeel: o.onderdeel, onderdeelNaam: o.onderdeelNaam, vraag: o.vraag, opdracht: o.opdracht || 'Vul de lege vakjes in. Een komma mag: 2,5.',
       uitleg: o.uitleg, antwoordTekst: o.antwoordTekst, vorm: 'eigen', sleutel: o.sleutel,
+      beeld: strook(o),
       teken: function(el, api){
         el.innerHTML = '<div style="overflow-x:auto;max-width:100%"><table class="vtabel"><tr><th>' + S(o.boven) + '</th>' + o.kolommen.map(function(k, i){
           return '<td class="' + (k.vraagB ? '' : 'vast' + (k.b === 1 ? ' een' : '')) + '">' + (k.vraagB ? '<input inputmode="decimal" autocomplete="off" aria-label="' + S(o.boven) + ' ' + (i + 1) + '" data-a="' + k.b + '"><span class="vantwoord"></span>' : S(toon({ geld:false }, k.b))) + '</td>';

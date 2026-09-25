@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Translate the sentence, versie 1.0: op vakspel.js; de zinnen staan in translate-opgaven.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Translate the sentence &middot; meneer Greidanus</title>
+<meta name="description" content="Nederlandse zinnen naar het Engels en terug: typ de vertaling, kies de goede uit vier met typische fouten, of vind het woord dat fout is. Met het grammaticapunt erbij.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Translate the sentence">
+<meta property="og:description" content="Zinnen vertalen naar het Engels en terug, met het grammaticapunt erbij.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/translate.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%23204ECF'/><g fill='none' stroke='%23FBF6F1' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'><path d='M22 40h30M37 30l15 10-15 10M78 60H48M63 50 48 60l15 10'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+/* het kaartje met de zin: een label in de hoek, de zin groot */
+.zinkaart{width:100%;max-width:560px;background:var(--kaart2);border-radius:16px;padding:14px 18px 14px 20px;text-align:left;position:relative;border-left:5px solid var(--nadruk)}
+.zinkaart+.zinkaart{margin-top:10px}
+.zinkaart small{display:block;font-size:.7rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.zinkaart p{font-size:1.15rem;font-weight:600;line-height:1.4}
+.zinkaart.fout{border-left-color:var(--fout)}
+.zinkaart.fout p{font-weight:500}
+.zinkaart .goedw{color:var(--goed);font-weight:600}
+.beeld .zinnen{width:100%;display:grid;place-items:center}
+.veldje input.breed{width:min(30em,calc(100vw - 60px))}
+body.groot .zinkaart p{font-size:1.5rem}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script src="translate-opgaven.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon, Z = window.TRANSLATE_OPGAVEN;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+
+  /* ---------- varianten: samentrekkingen en je/jij, zodat allebei goed is ---------- */
+  var SAMEN = [['do not', 'don\'t'], ['does not', 'doesn\'t'], ['did not', 'didn\'t'], ['is not', 'isn\'t'], ['are not', 'aren\'t'], ['was not', 'wasn\'t'], ['were not', 'weren\'t'],
+    ['have not', 'haven\'t'], ['has not', 'hasn\'t'], ['had not', 'hadn\'t'], ['will not', 'won\'t'], ['would not', 'wouldn\'t'], ['cannot', 'can\'t'], ['could not', 'couldn\'t'], ['should not', 'shouldn\'t'], ['must not', 'mustn\'t'],
+    ['I am', 'I\'m'], ['you are', 'you\'re'], ['we are', 'we\'re'], ['they are', 'they\'re'], ['he is', 'he\'s'], ['she is', 'she\'s'], ['it is', 'it\'s'], ['that is', 'that\'s'], ['there is', 'there\'s'], ['what is', 'what\'s'], ['who is', 'who\'s'], ['where is', 'where\'s'], ['when is', 'when\'s'],
+    ['I have', 'I\'ve'], ['you have', 'you\'ve'], ['we have', 'we\'ve'], ['they have', 'they\'ve'], ['I will', 'I\'ll'], ['you will', 'you\'ll'], ['we will', 'we\'ll'], ['he will', 'he\'ll'], ['she will', 'she\'ll'], ['they will', 'they\'ll'], ['it will', 'it\'ll'], ['I would', 'I\'d'], ['you would', 'you\'d'], ['we would', 'we\'d'], ['let us', 'let\'s']];
+  function alles(zin, van, naar){ return SAMEN.reduce(function(z, p){ return z.replace(new RegExp('\\b' + p[van].replace(/'/g, '\'') + '\\b', 'gi'), function(m){ return m.charAt(0) === m.charAt(0).toUpperCase() ? p[naar].charAt(0).toUpperCase() + p[naar].slice(1) : p[naar]; }); }, zin); }
+  function uniek(a){ var z = {}; return a.filter(function(x){ var k = x.toLowerCase(); if (z[k]) return false; z[k] = 1; return true; }); }
+  function enVarianten(lijst){ var uit = []; lijst.forEach(function(z){ uit.push(z, alles(z, 0, 1), alles(z, 1, 0)); }); return uniek(uit); }
+  var NLPAAR = [['jij', 'je'], ['zij', 'ze'], ['wij', 'we'], ['jouw', 'je'], ['houd', 'hou']];
+  function nlAlles(zin, van, naar){ return NLPAAR.reduce(function(z, p){ return z.replace(new RegExp('\\b' + p[van] + '\\b', 'gi'), function(m){ return m.charAt(0) === m.charAt(0).toUpperCase() ? p[naar].charAt(0).toUpperCase() + p[naar].slice(1) : p[naar]; }); }, zin); }
+  function nlVarianten(z){ var lijst = [z.nl].concat(z.nlv || []), uit = []; lijst.forEach(function(x){ uit.push(x, nlAlles(x, 0, 1), nlAlles(x, 1, 0)); }); return uniek(uit); }
+
+  /* ---------- geen herhaling binnen een ronde ---------- */
+  var gebruikt = {};
+  function vers(lijst, deel){
+    var over = lijst.filter(function(z){ return !gebruikt[deel + z.nl]; });
+    var z = kies(over.length ? over : lijst);
+    gebruikt[deel + z.nl] = 1;
+    return z;
+  }
+  function pool(niveau, deel){ return Z.filter(function(z){ return z.n === niveau && (deel === 'kies' ? !!z.fout : deel === 'verbeter' ? !!z.mis : true); }); }
+  function kaart(label, tekst, klas){ return '<div class="zinkaart' + (klas ? ' ' + klas : '') + '"><small>' + label + '</small><p>' + tekst + '</p></div>'; }
+
+  /* 1. naar het Engels: typ de vertaling */
+  function naarEngels(niveau){
+    var z = vers(pool(niveau, 'en'), 'en');
+    return {
+      onderdeel:'translate: naar het Engels', onderdeelNaam:'naar het Engels', vorm:'invul', sleutel:'en' + z.nl,
+      vraag: 'Vertaal naar het Engels.', opdracht: 'Typ de hele zin. Hoofdletters en leestekens tellen niet mee; don\'t en do not zijn allebei goed.',
+      beeld: kaart('Nederlands', S(z.nl)),
+      velden:[{ label:'in het Engels', antwoord: enVarianten(z.en), type:'tekst', breed:true, toon: z.en[0] }],
+      uitleg: 'De beste vertaling: <b>' + S(z.en[0]) + '</b>. ' + z.punt, antwoordTekst: z.nl + ' = ' + z.en[0]
+    };
+  }
+  /* 2. naar het Nederlands */
+  function naarNederlands(niveau){
+    var z = vers(pool(niveau, 'nl'), 'nl');
+    return {
+      onderdeel:'translate: naar het Nederlands', onderdeelNaam:'naar het Nederlands', vorm:'invul', sleutel:'nl' + z.nl,
+      vraag: 'Vertaal naar het Nederlands.', opdracht: 'Typ de hele zin. Hoofdletters en leestekens tellen niet mee.',
+      beeld: kaart('English', S(z.en[0])),
+      velden:[{ label:'in het Nederlands', antwoord: nlVarianten(z), type:'tekst', breed:true, toon: z.nl }],
+      uitleg: 'Vertaling: <b>' + S(z.nl) + '</b>. ' + z.punt, antwoordTekst: z.en[0] + ' = ' + z.nl
+    };
+  }
+  /* 3. kies de vertaling: een goede en drie met een typische fout */
+  function kiesVertaling(niveau){
+    var z = vers(pool(niveau, 'kies'), 'kies');
+    var opties = [z.en[0]].concat(z.fout);
+    return {
+      onderdeel:'translate: kies de vertaling', onderdeelNaam:'kies de vertaling', vorm:'meerkeuze', sleutel:'kies' + z.nl,
+      vraag: 'Welke vertaling is goed?', opdracht: 'Drie vertalingen hebben een fout: de volgorde, de tijd of een woord dat er Engels uitziet maar iets anders betekent.',
+      beeld: kaart('Nederlands', S(z.nl)),
+      opties: opties.map(S), goed: 0,
+      uitleg: (z.f || '') + ' ' + z.punt, antwoordTekst: z.en[0]
+    };
+  }
+  /* 4. verbeter: welk woord in deze vertaling is fout */
+  function verbeter(niveau){
+    var z = vers(pool(niveau, 'verbeter'), 'verbeter'), m = z.mis;
+    var woorden = m.zin.split(' ').map(function(w){ return w.replace(/^[^\w']+|[^\w']+$/g, ''); }).filter(Boolean);
+    var i = woorden.indexOf(m.woord), opties = uniek(woorden);
+    if (opties.length > 7){ var a = Math.max(0, Math.min(i - 3, opties.length - 7)); opties = opties.slice(a, a + 7); }
+    return {
+      onderdeel:'translate: verbeter', onderdeelNaam:'verbeter', vorm:'meerkeuze', sleutel:'verbeter' + z.nl, vasteVolgorde:true,
+      vraag: 'Welk woord is fout in deze vertaling?', opdracht: 'Een woord klopt niet, of hoort er niet te staan.',
+      beeld: '<div class="zinnen">' + kaart('Nederlands', S(z.nl)) + kaart('English, met een fout', S(m.zin), 'fout') + '</div>',
+      opties: opties.map(S), goed: opties.indexOf(m.woord),
+      uitleg: (m.goed ? '<b>' + S(m.woord) + '</b> moet <b>' + S(m.goed) + '</b> zijn' : '<b>' + S(m.woord) + '</b> hoort er niet te staan') + ': <i>' + S(z.en[0]) + '</i>. ' + z.punt,
+      antwoordTekst: m.woord + (m.goed ? ' → ' + m.goed : ' (weg)')
+    };
+  }
+
+  var SOORTEN = { engels: naarEngels, nederlands: naarNederlands, kies: kiesVertaling, verbeter: verbeter };
+  VAKSPEL.maak({
+    id:'translate', naam:'Translate the sentence', vak:'eng', kleur:'#204ECF',
+    hand:'I have twelve years is geen Engels',
+    lead:'Een Nederlandse zin, en jij typt hem in het Engels. Of andersom. Je kiest de goede vertaling uit vier, waarvan er drie een typische fout hebben, en je zoekt in een foute vertaling het woord dat niet klopt. Bij elk antwoord staat de beste vertaling en het grammaticapunt erbij.',
+    hoe:[
+      { kop:'Typ de vertaling', tekst:'Hoofdletters en leestekens tellen niet mee. <b>Don\'t</b> en <b>do not</b> zijn allebei goed, en er zijn meestal meer goede vertalingen.' },
+      { kop:'Typische fouten', tekst:'Woordvolgorde (<i>yesterday went I</i>), de verkeerde tijd (<i>I have bought it last week</i>) en woorden die Engels lijken maar iets anders betekenen.' },
+      { kop:'Per niveau', tekst:'bb: present simple, to be, have got. kgt: past simple, going to, vergelijken, vraagwoorden. hv: present perfect, conditionals, passive, relative clauses.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb (A1-A2)', uit:'Korte zinnen: present simple, to be, have got.' },
+        { id:'kgt', naam:'vmbo-kgt en tl (A2)', uit:'Past simple, going to, vergelijken (bigger than) en vraagwoorden.' },
+        { id:'hv', naam:'havo en vwo (B1)', uit:'Present perfect, conditionals, passive en relative clauses.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' }, { id:'engels', naam:'naar het Engels' }, { id:'nederlands', naam:'naar het Nederlands' }, { id:'kies', naam:'kies de vertaling' }, { id:'verbeter', naam:'verbeter' } ] }
+    ],
+    aantal:10,
+    maak:function(keuze, nr){
+      if (nr === 1) gebruikt = {};
+      var soort = keuze.soort === 'alles' ? kies(['engels', 'engels', 'nederlands', 'kies', 'verbeter']) : keuze.soort;
+      return SOORTEN[soort](keuze.niveau);
+    },
+    uitleg:{ doel:'Zinnen vertalen tussen Nederlands en Engels, met de grammatica van je niveau.', tijd:'tien zinnen per ronde', bediening:'Typ de zin en druk op Nakijken of Enter. Bij de meerkeuzevragen tik je een antwoord aan, of je gebruikt de toetsen 1 tot 4.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>

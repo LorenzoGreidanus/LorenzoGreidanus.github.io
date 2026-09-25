@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Het huishoudboekje, versie 1.0: op vakspel.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Het huishoudboekje &middot; meneer Greidanus</title>
+<meta name="description" content="Een kasboek optellen, vaste lasten en variabele uitgaven uit elkaar houden, een verstandige keuze maken als het geld tekortschiet, en rekenen met sparen en lenen.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Het huishoudboekje">
+<meta property="og:description" content="Een kasboek optellen, vaste lasten en variabele uitgaven uit elkaar houden, en rekenen met sparen en lenen.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/huishoudboekje.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%23EA9836'/><g fill='none' stroke='%2314224C' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'><path d='M28 22h44v56H28z'/><path d='M38 36h24M38 48h24M38 60h14'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+/* het kasboek: posten met een bedrag en een balkje dat de grootte laat zien */
+.beeld .kasboek{border-collapse:separate;border-spacing:0;width:min(100%,540px);font-size:.95rem;font-variant-numeric:tabular-nums}
+.beeld .kasboek th{text-align:left;padding:7px 10px;background:var(--kaart2);font-weight:600;border:none;min-width:0}
+.beeld .kasboek th:first-child{border-radius:10px 0 0 10px}
+.beeld .kasboek th:last-child{border-radius:0 10px 10px 0}
+.beeld .kasboek th small{font-weight:500;color:var(--muted);margin-left:6px}
+.beeld .kasboek td{padding:5px 10px;border:none;border-bottom:1px solid var(--rand);text-align:left;min-width:0}
+.beeld .kasboek td.bedrag{text-align:right;white-space:nowrap;font-weight:600}
+.beeld .kasboek td.balk{width:150px;padding-right:0}
+.beeld .kasboek .balk i{display:block;height:10px;border-radius:99px;background:var(--nadruk);min-width:4px;max-width:100%}
+.beeld .kasboek .uit .balk i{background:var(--amber)}
+.beeld .kasboek tr.som td{font-weight:700;border-bottom:none}
+.beeld .kasboek td.min{color:var(--fout)}
+.beeld .kasboek td.plus{color:var(--goed)}
+.beeld .kasboek td.vraagteken{color:var(--muted);text-align:right}
+.beeld .maanden td.bedrag{font-weight:500}
+.beeld .maanden th.mnd{text-align:right}
+.beeld .grafiek text{fill:var(--ink);font-size:11px;font-family:inherit}
+.beeld .grafiek .as{stroke:var(--muted);stroke-width:1}
+.beeld .grafiek .doel{stroke:var(--fout);stroke-width:2;stroke-dasharray:6 4}
+.beeld .grafiek .staaf{fill:var(--amber)}
+.beeld .grafiek .staaf.start{fill:var(--nadruk)}
+.beeld .grafiek .munt{fill:var(--amber);stroke:var(--kaart);stroke-width:1}
+.beeld .grafiek .leen{fill:var(--nadruk)}
+.beeld .grafiek .rente{fill:var(--amber)}
+.beeld .grafiek text.licht{fill:#fff;font-weight:600}
+.beeld .grafiek text.mut{fill:var(--muted)}
+@media(max-width:480px){.beeld .kasboek{font-size:.86rem}.beeld .kasboek td,.beeld .kasboek th{padding:5px 6px}.beeld .kasboek td.balk{width:70px}}
+body.groot .beeld .kasboek{font-size:1.15rem}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  function tussen(a, b){ return a + Math.floor(Math.random() * (b - a + 1)); }
+  function rond(x){ return Math.round(x * 100) / 100; }
+  function geld(x){ x = rond(x); var neg = x < 0; x = Math.abs(x); var s = x.toFixed(2), d = s.split('.'); d[0] = d[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.'); return (neg ? '−€ ' : '€ ') + d[0] + ',' + d[1]; }
+  function net(x){ x = rond(x); var s = String(Math.abs(x)), d = s.split('.'); d[0] = d[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.'); return (x < 0 ? '−' : '') + d[0] + (d[1] ? ',' + d[1] : ''); }
+  /* een bedrag lezen zoals leerlingen het typen: 1.250 of 1250 of 1.250,50 of 12,5 of 12.5 */
+  function bedrag(t){
+    var s = String(t == null ? '' : t).trim().replace(/€|\s|−/g, function(c){ return c === '−' ? '-' : ''; });
+    if (/^[-+]?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g, '');
+    s = s.replace(',', '.');
+    if (!s || !/^[-+]?\d*\.?\d+$/.test(s)) return null;
+    return parseFloat(s);
+  }
+
+  /* ---------- de eigen invulvorm: dezelfde vakjes als de motor, maar met bedragen ---------- */
+  function veldenOpgave(o){
+    var velden = o.velden;
+    o.vorm = 'eigen';
+    o.teken = function(el, api){
+      el.innerHTML = '<div class="velden">' + velden.map(function(v, i){
+        return '<div class="veldje"><label for="hb-' + i + '">' + S(v.label) + '</label><div class="rij">' + (v.voor ? '<span class="eenheid">' + S(v.voor) + '</span>' : '') +
+          '<input id="hb-' + i + '" inputmode="decimal" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="' + S(v.label) + '">' + (v.eenheid ? '<span class="eenheid">' + S(v.eenheid) + '</span>' : '') + '</div><span class="juist"></span></div>';
+      }).join('') + '</div>';
+      var invoer = el.querySelectorAll('input');
+      var knop = api.knop('Nakijken', function(){
+        var alles = true;
+        velden.forEach(function(v, i){
+          var inp = invoer[i], g = bedrag(inp.value), ok = g !== null && Math.abs(g - v.antwoord) <= (v.tol || 0.005);
+          inp.disabled = true; inp.classList.add(ok ? 'goed' : 'fout');
+          if (!ok){ alles = false; inp.parentNode.parentNode.querySelector('.juist').textContent = 'goed: ' + (v.toon || net(v.antwoord)); }
+        });
+        knop.disabled = true;
+        api.klaar(alles, '');
+      });
+      Array.prototype.forEach.call(invoer, function(inp, i){ inp.addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); if (invoer[i + 1]) invoer[i + 1].focus(); else knop.click(); } }); });
+      setTimeout(function(){ if (invoer[0]) invoer[0].focus(); }, 50);
+      el.proef = function(){ velden.forEach(function(v, i){ invoer[i].value = String(v.antwoord).replace('.', ','); }); knop.click(); };
+      el.proefFout = function(){ velden.forEach(function(v, i){ invoer[i].value = 'xx'; }); knop.click(); };
+    };
+    return o;
+  }
+
+  /* ---------- de posten: wat er in een kasboek kan staan ---------- */
+  var NAMEN = ['Sam', 'Noor', 'Daan', 'Lina', 'Finn', 'Yara', 'Milan', 'Sofia', 'Jesse', 'Amira', 'Tim', 'Zoë'];
+  var GEZINNEN = ['het gezin De Vries', 'de familie Bakker', 'het gezin Yilmaz', 'de familie Jansen', 'het gezin Pietersen', 'de familie Okafor'];
+  var MAANDEN = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'september', 'oktober', 'november'];
+  /* per post: naam, van, tot, stap, soort (in, vast, var, res) */
+  var JONGERE = {
+    in:  [['zakgeld', 20, 40, 5], ['bijbaan in de supermarkt', 80, 200, 10], ['kleedgeld van je ouders', 30, 50, 5], ['oppassen', 20, 60, 5], ['krantenwijk', 40, 90, 5], ['bijbaan bij de bakker', 60, 150, 10]],
+    vast:[['telefoonabonnement', 10, 25, 1], ['contributie sportclub', 15, 35, 1], ['streamingabonnement', 6, 13, 1], ['busabonnement', 20, 60, 5], ['sportschool', 20, 30, 1], ['muziekles', 25, 45, 5]],
+    var: [['kleding', 15, 60, 5], ['uitgaan en bioscoop', 10, 40, 5], ['snacks en drinken', 10, 30, 1], ['games en apps', 5, 30, 1], ['cadeautjes', 5, 25, 1], ['kapper', 15, 30, 1]],
+    res: [['sparen voor een fiets', 20, 40, 5], ['sparen voor een nieuwe telefoon', 15, 40, 5], ['sparen voor de zomervakantie', 20, 50, 5], ['sparen voor een scooter', 30, 60, 5]]
+  };
+  var GEZIN = {
+    in:  [['loon (netto)', 2000, 3200, 50], ['loon partner (parttime)', 900, 1800, 50], ['kinderbijslag', 90, 280, 10], ['zorgtoeslag', 50, 150, 5], ['huurtoeslag', 100, 300, 10]],
+    vast:[['huur', 650, 1200, 10], ['energie (gas en stroom)', 110, 250, 5], ['zorgverzekering', 130, 320, 5], ['internet en tv', 40, 70, 1], ['gemeentebelasting', 30, 60, 1], ['autoverzekering', 40, 90, 1], ['telefoonabonnementen', 30, 60, 1], ['inboedelverzekering', 10, 25, 1]],
+    var: [['boodschappen', 350, 700, 10], ['benzine', 80, 250, 5], ['kleding', 50, 200, 5], ['uitjes en uit eten', 30, 150, 5], ['cadeaus', 10, 80, 5], ['klusspullen', 20, 100, 5]],
+    res: [['sparen voor de vakantie', 100, 300, 10], ['sparen voor een nieuwe wasmachine', 25, 75, 5], ['sparen voor een andere auto', 100, 250, 10], ['sparen voor de studie van de kinderen', 50, 150, 10]]
+  };
+  function pak(lijst, n){ return H(lijst).slice(0, n); }
+  /* inkomsten kiezen: een gezin heeft altijd loon, de rest is willekeurig */
+  function inkomsten(P, n){ return P === GEZIN ? [P.in[0]].concat(pak(P.in.slice(1), n - 1)) : pak(P.in, n); }
+  function post(p, soort, centen){
+    var b = p[1] + Math.round(Math.random() * ((p[2] - p[1]) / p[3])) * p[3];
+    if (centen && soort !== 'in' && Math.random() < 0.5) b += kies([0.5, 0.95, 0.25, 0.75]);
+    return { naam: p[0], bedrag: rond(b), soort: soort };
+  }
+  function som(lijst){ return rond(lijst.reduce(function(t, p){ return t + p.bedrag; }, 0)); }
+
+  /* het kasboek als tabel: inkomsten boven, uitgaven eronder, elk met een balkje */
+  function kasboekHtml(inn, uit, opties){
+    opties = opties || {};
+    var max = Math.max.apply(null, inn.concat(uit).map(function(p){ return p.bedrag; }));
+    function rij(p, klas){ return '<tr class="' + klas + '"><td>' + S(p.naam) + '</td><td class="balk"><i style="width:' + Math.max(4, Math.round(p.bedrag / max * 140)) + 'px"></i></td><td class="bedrag">' + geld(p.bedrag) + '</td></tr>'; }
+    var h = '<table class="kasboek"><tr><th colspan="3">Inkomsten' + (opties.kop ? '<small>' + S(opties.kop) + '</small>' : '') + '</th></tr>' + inn.map(function(p){ return rij(p, 'in'); }).join('');
+    if (opties.sommen) h += '<tr class="som"><td>inkomsten samen</td><td></td><td class="bedrag">' + geld(som(inn)) + '</td></tr>';
+    h += '<tr><th colspan="3">Uitgaven</th></tr>' + uit.map(function(p){ return rij(p, 'uit'); }).join('');
+    if (opties.sommen){ var over = rond(som(inn) - som(uit)); h += '<tr class="som"><td>uitgaven samen</td><td></td><td class="bedrag">' + geld(som(uit)) + '</td></tr><tr class="som"><td>' + (over < 0 ? 'tekort' : 'over') + '</td><td></td><td class="bedrag ' + (over < 0 ? 'min' : 'plus') + '">' + geld(over) + '</td></tr>'; }
+    else if (opties.vraag) h += '<tr class="som"><td>samen</td><td></td><td class="vraagteken">?</td></tr>';
+    return h + '</table>';
+  }
+
+  /* 1. optellen: inkomsten, uitgaven en wat er overblijft */
+  function optellen(niveau){
+    var jong = niveau === 'bb' || (niveau === 'kgt' && Math.random() < 0.5);
+    var P = jong ? JONGERE : GEZIN, centen = niveau === 'hv';
+    var nIn = niveau === 'bb' ? 2 : jong ? tussen(2, 3) : 3, nUit = niveau === 'bb' ? 3 : niveau === 'kgt' ? 4 : tussen(5, 6);
+    var inn = inkomsten(P, nIn).map(function(p){ return post(p, 'in', false); });
+    var uitLijst = pak(P.vast, Math.ceil(nUit / 2)).concat(pak(P.var, Math.floor(nUit / 2)));
+    if (niveau === 'hv') uitLijst = uitLijst.slice(0, nUit - 1).concat(pak(P.res, 1));
+    var uit = H(uitLijst.map(function(p){ return post(p, 'uit', centen); }));
+    var tIn = som(inn), tUit = som(uit), over = rond(tIn - tUit);
+    if (niveau === 'bb' && over < 0) return optellen(niveau);
+    var wie = jong ? kies(NAMEN) : kies(GEZINNEN), maand = kies(MAANDEN);
+    return veldenOpgave({
+      onderdeel:'huishoudboekje: optellen', onderdeelNaam:'optellen', sleutel:'op' + tIn + '-' + tUit,
+      vraag: 'Het kasboek van <b>' + S(wie) + '</b> in ' + maand + '. Hoeveel komt er binnen, hoeveel gaat eruit, en wat blijft er over?',
+      opdracht: 'Tel de inkomsten op, tel de uitgaven op, en trek ze van elkaar af.' + (niveau === 'bb' ? '' : ' Komt er geld tekort? Zet dan een min voor het getal, zoals -25.'),
+      beeld: kasboekHtml(inn, uit, { kop: maand, vraag: true }),
+      velden: [{ label:'inkomsten samen', voor:'€', antwoord: tIn, toon: geld(tIn) }, { label:'uitgaven samen', voor:'€', antwoord: tUit, toon: geld(tUit) }, { label: over < 0 ? 'tekort (met een min)' : 'blijft over', voor:'€', antwoord: over, toon: geld(over) }],
+      uitleg: 'Inkomsten: ' + inn.map(function(p){ return net(p.bedrag); }).join(' + ') + ' = ' + geld(tIn) + '. Uitgaven: ' + uit.map(function(p){ return net(p.bedrag); }).join(' + ') + ' = ' + geld(tUit) + '. ' + net(tIn) + ' − ' + net(tUit) + ' = ' + geld(over) + (over < 0 ? ': er gaat meer uit dan er binnenkomt, een tekort.' : over === 0 ? ': precies rond.' : ': dat blijft er over om te sparen of uit te geven.'),
+      antwoordTekst: 'in ' + geld(tIn) + ', uit ' + geld(tUit) + ', over ' + geld(over)
+    });
+  }
+
+  /* 2. vast of variabel: posten slepen. De tabel laat drie maanden zien: vaste lasten zijn elke maand gelijk */
+  function vastVariabel(niveau){
+    var jong = niveau !== 'hv' && Math.random() < 0.65, P = jong ? JONGERE : GEZIN;
+    var vast = pak(P.vast, niveau === 'bb' ? 2 : 3), varb = pak(P.var, niveau === 'bb' ? 2 : 3);
+    var extraSoort = niveau === 'hv' ? 'res' : 'in', extra = pak(P[extraSoort], 1);
+    var posten = [{ p: extra[0], soort: extraSoort }].concat(vast.map(function(p){ return { p: p, soort: 'vast' }; }), varb.map(function(p){ return { p: p, soort: 'var' }; }));
+    var mnd = MAANDEN.slice(0, 3);
+    posten.forEach(function(x, i){
+      x.id = 'k' + i;
+      var basis = post(x.p, x.soort, false).bedrag;
+      x.per = x.soort === 'var' ? mnd.map(function(){ return post(x.p, 'var', false).bedrag; }) : [basis, basis, basis];
+      if (x.soort === 'var' && x.per[0] === x.per[1] && x.per[1] === x.per[2]) x.per[1] = rond(x.per[1] + x.p[3]);
+    });
+    var vakken = [
+      extraSoort === 'in' ? { id:'in', naam:'inkomst', uit:'geld dat binnenkomt' } : { id:'res', naam:'reserveringsuitgave', uit:'apart zetten voor iets groots later' },
+      { id:'vast', naam:'vaste lasten', uit:'elke maand hetzelfde bedrag' },
+      { id:'var', naam:'variabele uitgaven', uit:'elke maand anders, je kiest het zelf' }
+    ].map(function(v){ v.hoort = posten.filter(function(x){ return x.soort === v.id; }).map(function(x){ return x.id; }); return v; });
+    var beeld = '<table class="kasboek maanden"><tr><th>post</th>' + mnd.map(function(m){ return '<th class="mnd">' + m + '</th>'; }).join('') + '</tr>' +
+      H(posten).map(function(x){ return '<tr><td>' + S(x.p[0]) + '</td>' + x.per.map(function(b){ return '<td class="bedrag">' + geld(b) + '</td>'; }).join('') + '</tr>'; }).join('') + '</table>';
+    return {
+      onderdeel:'huishoudboekje: vast of variabel', onderdeelNaam:'vast of variabel', vorm:'sleep', sleutel:'vv' + posten.map(function(x){ return x.p[0]; }).join(''),
+      vraag: 'Uit het kasboek van <b>' + S(jong ? kies(NAMEN) : kies(GEZINNEN)) + '</b>: welke post hoort waar?',
+      opdracht: 'Kijk naar de drie maanden: een vaste last is elke maand even hoog. ' + (extraSoort === 'in' ? 'Eén post is geen uitgave maar een inkomst.' : 'Eén post is geld dat apart wordt gezet voor later: een reserveringsuitgave.'),
+      beeld: beeld,
+      kaarten: posten.map(function(x){ return { id: x.id, tekst: S(x.p[0]) }; }),
+      vakken: vakken,
+      uitleg: 'Vaste lasten: ' + vast.map(function(p){ return p[0]; }).join(', ') + ' (elke maand hetzelfde, je zit eraan vast). Variabele uitgaven: ' + varb.map(function(p){ return p[0]; }).join(', ') + ' (wisselt per maand, daar kun je op besparen). ' + (extraSoort === 'in' ? extra[0][0].charAt(0).toUpperCase() + extra[0][0].slice(1) + ' is een inkomst: dat komt binnen.' : extra[0][0].charAt(0).toUpperCase() + extra[0][0].slice(1) + ' is een reserveringsuitgave: je zet nu geld apart voor een grote uitgave later.'),
+      antwoordTekst: vakken.map(function(v){ return v.naam + ': ' + v.hoort.map(function(id){ return posten.filter(function(x){ return x.id === id; })[0].p[0]; }).join(', '); }).join('; ')
+    };
+  }
+
+  /* 3. keuze maken: het geld schiet tekort. Wat is verstandig? */
+  var KEUZES = {
+    jong: {
+      goed: ['deze maand minder uitgeven aan snacks en uitgaan', 'de nieuwe sneakers een maand uitstellen', 'een extra dienst vragen bij je bijbaan', 'eerst je telefoonabonnement en je sportclub betalen, dan kijken wat er over is', 'een streamingabonnement opzeggen dat je bijna niet gebruikt', 'je uitgaven een maand bijhouden en de variabele uitgaven verlagen', 'geen nieuwe game kopen tot je weer geld over hebt', 'een tweedehands jas kopen in plaats van een nieuwe'],
+      fout: ['de telefoonrekening deze maand gewoon niet betalen', 'rood gaan staan en er later wel naar kijken', 'geld lenen bij een vriend voor de nieuwe game', 'de contributie van de sportclub niet betalen, dat merken ze toch niet', 'een dure telefoon op afbetaling kopen, dan heb je tenminste iets nieuws', 'je spaargeld voor de fiets opmaken aan kleding', 'met de bus reizen zonder te betalen', 'bij iemand anders lenen om de eerste lening terug te betalen', 'toch elke dag snacks halen, want dat is gezellig']
+    },
+    gezin: {
+      goed: ['deze maand minder uit eten en geen uitjes', 'eerst de huur, de energie en de zorgverzekering betalen', 'de vakantie goedkoper plannen of een jaar uitstellen', 'een abonnement opzeggen dat niemand gebruikt', 'goedkopere boodschappen doen en aanbiedingen gebruiken', 'een overzicht maken van alle uitgaven en de variabele uitgaven verlagen', 'nakijken of het gezin recht heeft op een toeslag', 'de nieuwe bank pas kopen als ervoor gespaard is'],
+      fout: ['de huur deze maand overslaan', 'de zorgverzekering opzeggen om geld te besparen', 'een lening afsluiten voor een nieuwe televisie', 'rood staan en hopen dat het volgende maand beter gaat', 'de energierekening niet betalen tot er een aanmaning komt', 'een tweede lening nemen om de eerste af te lossen', 'de boodschappen op de creditcard zetten en de rente later betalen', 'het spaargeld voor de wasmachine uitgeven aan een weekendje weg', 'de gemeentebelasting negeren, die komt vanzelf wel weer']
+    }
+  };
+  var NODIG = { jong: ['telefoonabonnement', 'contributie sportclub', 'busabonnement naar school', 'schoolspullen', 'lunch voor school'], gezin: ['huur', 'energie', 'zorgverzekering', 'boodschappen', 'gemeentebelasting', 'autoverzekering'] };
+  var LUXE = { jong: ['nieuwe sneakers', 'bioscoop', 'een nieuwe game', 'snacks na school', 'een tweede streamingabonnement', 'nieuwe oordopjes'], gezin: ['weekendje weg', 'een nieuwe televisie', 'uit eten', 'een tweede streamingabonnement', 'een nieuwe bank', 'een duurder telefoonabonnement'] };
+  function keuzeMaken(niveau){
+    var jong = niveau === 'bb' || Math.random() < 0.5, wie = jong ? kies(NAMEN) : kies(GEZINNEN), soort = jong ? 'jong' : 'gezin';
+    var P = jong ? JONGERE : GEZIN;
+    var inn = inkomsten(P, 2).map(function(p){ return post(p, 'in'); }), uit = (jong ? pak(P.vast, 2).concat(pak(P.var, 2)) : pak(P.vast, 4).concat(pak(P.var, 3))).map(function(p){ return post(p, 'uit'); });
+    var tekort = rond(som(uit) - som(inn));
+    /* komt het toch uit? dan een onverwachte rekening erbij, zodat er echt een tekort is */
+    if (tekort <= 0){ var bij = jong ? kies([15, 20, 25, 30, 40]) : kies([100, 150, 200, 250]); uit.push({ naam: jong ? kies(['kapotte telefoon', 'boete in de bus', 'schoolreis', 'nieuwe schoolboeken']) : kies(['reparatie auto', 'kapotte koelkast', 'tandartsrekening', 'nieuwe cv-ketel']), bedrag: rond(Math.abs(tekort) + bij), soort: 'uit' }); tekort = rond(som(uit) - som(inn)); }
+    var vorm = niveau === 'bb' ? kies(['tekort', 'schrappen', 'moet']) : kies(['tekort', 'tekort', 'schrappen', 'moet']);
+    var beeld = kasboekHtml(inn, uit, { sommen: true });
+    if (vorm === 'tekort'){
+      var g = kies(KEUZES[soort].goed), f = pak(KEUZES[soort].fout, 3), opties = H([g].concat(f));
+      return {
+        onderdeel:'huishoudboekje: keuze maken', onderdeelNaam:'keuze maken', vorm:'meerkeuze', sleutel:'km' + g,
+        vraag: (jong ? S(wie) + ' komt' : S(wie.charAt(0).toUpperCase() + wie.slice(1)) + ' komt') + ' deze maand <b>' + geld(tekort) + '</b> tekort. Wat is verstandig?',
+        opdracht: 'Denk aan de volgorde: eerst wat moet, dan wat je wilt. Lenen of niet betalen maakt het tekort later groter.',
+        beeld: beeld, opties: opties, goed: opties.indexOf(g),
+        uitleg: 'Verstandig is: ' + g + '. Bij een tekort betaal je eerst de vaste lasten en de noodzakelijke dingen (' + (jong ? 'abonnementen, eten, vervoer' : 'huur, energie, verzekering, eten') + '). Dan bespaar je op de variabele uitgaven: dat zijn de dingen die je zelf kiest. Rood staan, lenen of rekeningen niet betalen kost rente of een boete, en dan is het tekort volgende maand nog groter.',
+        antwoordTekst: g
+      };
+    }
+    var nodig = NODIG[soort], luxe = LUXE[soort];
+    if (vorm === 'schrappen'){
+      var l = kies(luxe), o2 = H([l].concat(pak(nodig, 3)));
+      return {
+        onderdeel:'huishoudboekje: keuze maken', onderdeelNaam:'keuze maken', vorm:'meerkeuze', sleutel:'ks' + l,
+        vraag: (jong ? S(wie) : S(wie.charAt(0).toUpperCase() + wie.slice(1))) + ' komt <b>' + geld(tekort) + '</b> tekort. Welke uitgave kun je het makkelijkst schrappen?',
+        opdracht: 'Noodzakelijk of luxe? Luxe kun je overslaan, noodzakelijk niet.',
+        beeld: beeld, opties: o2, goed: o2.indexOf(l),
+        uitleg: l.charAt(0).toUpperCase() + l.slice(1) + ' is een luxe uitgave: leuk, maar niet nodig. ' + o2.filter(function(x){ return x !== l; }).join(', ') + ' zijn noodzakelijk: die moet je betalen, anders krijg je problemen (een boete, geen eten, geen vervoer).',
+        antwoordTekst: l
+      };
+    }
+    var n = kies(nodig), o3 = H([n].concat(pak(luxe, 3)));
+    return {
+      onderdeel:'huishoudboekje: keuze maken', onderdeelNaam:'keuze maken', vorm:'meerkeuze', sleutel:'kn' + n,
+      vraag: 'Er is <b>' + geld(tekort) + '</b> te weinig. Welke uitgave moet in elk geval betaald worden?',
+      opdracht: 'Wat gebeurt er als je het niet betaalt? Dat zegt of het noodzakelijk is.',
+      beeld: beeld, opties: o3, goed: o3.indexOf(n),
+      uitleg: n.charAt(0).toUpperCase() + n.slice(1) + ' is noodzakelijk: sla je het over, dan krijg je een aanmaning, een boete of je mist iets wat je echt nodig hebt. ' + o3.filter(function(x){ return x !== n; }).join(', ') + ' zijn luxe: die kun je uitstellen tot er weer geld over is.',
+      antwoordTekst: n
+    };
+  }
+
+  /* 4. sparen en lenen: hoe lang spaar je, wat betaal je terug */
+  function spaarGrafiek(maanden, per, doel, start){
+    var w = 420, h = 200, links = 44, onder = 30, top = 14, bw = (w - links - 10) / maanden;
+    var max = Math.max(doel, start + per * maanden), schaal = (h - top - onder) / max;
+    var s = '<svg class="grafiek" viewBox="0 0 ' + w + ' ' + h + '" width="' + w + '" role="img" aria-label="Spaargrafiek: elke maand komt er ' + net(per) + ' euro bij tot het doel van ' + net(doel) + ' euro">';
+    s += '<line class="as" x1="' + links + '" y1="' + top + '" x2="' + links + '" y2="' + (h - onder) + '"/><line class="as" x1="' + links + '" y1="' + (h - onder) + '" x2="' + (w - 6) + '" y2="' + (h - onder) + '"/>';
+    for (var m = 1; m <= maanden; m++){
+      var tot = start + per * m, x = links + (m - 1) * bw + bw * 0.15, bwi = bw * 0.7;
+      if (start) s += '<rect class="staaf start" x="' + x + '" y="' + (h - onder - start * schaal) + '" width="' + bwi + '" height="' + (start * schaal) + '"/>';
+      s += '<rect class="staaf" x="' + x + '" y="' + (h - onder - tot * schaal) + '" width="' + bwi + '" height="' + (per * m * schaal) + '" rx="2"/>';
+      if (maanden <= 12 || m % 3 === 0 || m === maanden) s += '<text x="' + (x + bwi / 2) + '" y="' + (h - onder + 14) + '" text-anchor="middle">' + m + '</text>';
+    }
+    var yd = h - onder - doel * schaal;
+    s += '<line class="doel" x1="' + links + '" y1="' + yd + '" x2="' + (w - 6) + '" y2="' + yd + '"/><text x="' + (links + 4) + '" y="' + (yd - 4) + '">doel ' + geld(doel) + '</text>';
+    s += '<text x="' + (w - 6) + '" y="' + (h - 4) + '" text-anchor="end" class="mut">maanden</text><text x="' + (links - 4) + '" y="' + (h - onder) + '" text-anchor="end">0</text>';
+    return s + '</svg>';
+  }
+  function leenGrafiek(leen, rente){
+    var w = 420, h = 110, tot = leen + rente, x0 = 10, bw = w - 20, bl = bw * leen / tot;
+    return '<svg class="grafiek" viewBox="0 0 ' + w + ' ' + h + '" width="' + w + '" role="img" aria-label="Geleend ' + net(leen) + ' euro plus rente is wat je terugbetaalt">' +
+      '<text x="' + x0 + '" y="18">geleend</text><text x="' + (x0 + bl + 6) + '" y="18">+ rente</text>' +
+      '<rect class="leen" x="' + x0 + '" y="26" width="' + bl + '" height="40" rx="8"/><rect class="rente" x="' + (x0 + bl) + '" y="26" width="' + (bw - bl) + '" height="40" rx="8"/><rect class="leen" x="' + (x0 + bl - 8) + '" y="26" width="8" height="40"/>' +
+      '<text class="licht" x="' + (x0 + bl / 2) + '" y="51" text-anchor="middle">' + geld(leen) + '</text>' +
+      '<text x="' + (x0 + bw / 2) + '" y="92" text-anchor="middle">terugbetalen = geleend + rente = ?</text></svg>';
+  }
+  function sparenLenen(niveau){
+    var wie = kies(NAMEN), vorm = niveau === 'bb' ? 'sparen' : niveau === 'kgt' ? kies(['sparen', 'lenen1']) : kies(['sparenStart', 'lenen2', 'spaarrente', 'lenen1']);
+    if (vorm === 'sparen' || vorm === 'sparenStart'){
+      var per = niveau === 'bb' ? kies([10, 20, 25, 30, 50]) : kies([15, 20, 25, 30, 35, 40, 45, 50, 60, 75]), n = tussen(4, niveau === 'bb' ? 12 : 24), start = vorm === 'sparenStart' ? per * tussen(1, 4) + kies([0, 5, 10]) : 0;
+      var doel = start + per * n, ding = kies(['een fiets', 'een nieuwe telefoon', 'een scooter', 'een laptop', 'een festivalkaartje', 'een spelcomputer', 'een reis naar Berlijn']);
+      return veldenOpgave({
+        onderdeel:'huishoudboekje: sparen en lenen', onderdeelNaam:'sparen en lenen', sleutel:'sp' + per + '-' + n + '-' + start,
+        vraag: S(wie) + ' spaart voor ' + ding + ' van <b>' + geld(doel) + '</b>' + (start ? ', en heeft al ' + geld(start) + ' op de spaarrekening' : '') + '. Elke maand gaat er ' + geld(per) + ' bij. Na hoeveel maanden is het doel bereikt?',
+        opdracht: (start ? 'Trek eerst af wat er al is. ' : '') + 'Deel wat er nog gespaard moet worden door het bedrag per maand.',
+        beeld: spaarGrafiek(n, per, doel, start),
+        velden: [{ label:'aantal maanden', antwoord: n, eenheid:'maanden' }],
+        uitleg: (start ? 'Nog te sparen: ' + net(doel) + ' − ' + net(start) + ' = ' + geld(doel - start) + '. ' : '') + net(doel - start) + ' ÷ ' + net(per) + ' = ' + n + ' maanden' + (n >= 12 ? ' (' + (n === 12 ? 'een jaar' : n === 24 ? 'twee jaar' : Math.floor(n / 12) + ' jaar en ' + (n % 12) + ' maanden') + ')' : '') + '. Sparen is geld apart zetten: je wacht tot je genoeg hebt, en je betaalt geen rente.',
+        antwoordTekst: n + ' maanden'
+      });
+    }
+    if (vorm === 'spaarrente'){
+      var spaar = kies([500, 800, 1000, 1200, 1500, 2000, 2500]), r = kies([1, 1.5, 2, 2.5, 3]), rente = rond(spaar * r / 100);
+      return veldenOpgave({
+        onderdeel:'huishoudboekje: sparen en lenen', onderdeelNaam:'sparen en lenen', sleutel:'sr' + spaar + '-' + r,
+        vraag: S(wie) + ' zet <b>' + geld(spaar) + '</b> een jaar op een spaarrekening met <b>' + net(r) + '% rente</b> per jaar. Hoeveel rente krijgt ' + wie + ' na een jaar, en hoeveel staat er dan?',
+        opdracht: 'Rente is een percentage van het bedrag. 1% is het bedrag gedeeld door 100.',
+        beeld: leenGrafiek(spaar, rente).replace('geleend', 'spaargeld').replace('terugbetalen = geleend + rente = ?', 'na een jaar = spaargeld + rente = ?').replace('Geleend', 'Gespaard'),
+        velden: [{ label:'rente na een jaar', voor:'€', antwoord: rente, toon: geld(rente) }, { label:'op de rekening na een jaar', voor:'€', antwoord: spaar + rente, toon: geld(spaar + rente) }],
+        uitleg: net(r) + '% van ' + net(spaar) + ' = ' + net(spaar) + ' ÷ 100 × ' + net(r) + ' = ' + geld(rente) + '. Op de rekening: ' + net(spaar) + ' + ' + net(rente) + ' = ' + geld(spaar + rente) + '. Bij sparen krijg jíj rente van de bank; bij lenen betaal je rente aan de bank.',
+        antwoordTekst: 'rente ' + geld(rente) + ', saldo ' + geld(spaar + rente)
+      });
+    }
+    if (vorm === 'lenen1'){
+      var leen = kies([200, 300, 400, 500, 600, 800, 1000, 1200, 1500]), p = kies([4, 5, 6, 8, 10, 12]), rt = rond(leen * p / 100);
+      return veldenOpgave({
+        onderdeel:'huishoudboekje: sparen en lenen', onderdeelNaam:'sparen en lenen', sleutel:'l1' + leen + '-' + p,
+        vraag: S(wie) + ' leent <b>' + geld(leen) + '</b> voor een jaar tegen <b>' + p + '% rente</b>. Hoeveel rente betaalt ' + wie + ', en hoeveel moet er in totaal terugbetaald worden?',
+        opdracht: 'Rente is een percentage van het geleende bedrag. Terugbetalen = geleend + rente.',
+        beeld: leenGrafiek(leen, rt),
+        velden: [{ label:'rente', voor:'€', antwoord: rt, toon: geld(rt) }, { label:'totaal terugbetalen', voor:'€', antwoord: leen + rt, toon: geld(leen + rt) }],
+        uitleg: p + '% van ' + net(leen) + ' = ' + net(leen) + ' ÷ 100 × ' + p + ' = ' + geld(rt) + '. Terugbetalen: ' + net(leen) + ' + ' + net(rt) + ' = ' + geld(leen + rt) + '. Lenen kost dus geld: je betaalt meer terug dan je kreeg. Daarom is sparen goedkoper dan lenen.',
+        antwoordTekst: 'rente ' + geld(rt) + ', terug ' + geld(leen + rt)
+      });
+    }
+    /* lenen2: twee jaar rente, en het maandbedrag */
+    var l2, p2, tot2, probeer = 0;
+    do { l2 = kies([1200, 1800, 2400, 3000, 3600, 4800, 6000]); p2 = kies([4, 5, 6, 8, 10]); tot2 = l2 + l2 * p2 / 100 * 2; probeer++; } while (tot2 % 24 !== 0 && probeer < 40);
+    if (tot2 % 24 !== 0){ l2 = 2400; p2 = 5; tot2 = 2640; }
+    var r2 = l2 * p2 / 100 * 2, mnd = tot2 / 24;
+    return veldenOpgave({
+      onderdeel:'huishoudboekje: sparen en lenen', onderdeelNaam:'sparen en lenen', sleutel:'l2' + l2 + '-' + p2,
+      vraag: S(wie) + ' leent <b>' + geld(l2) + '</b> voor twee jaar. De rente is <b>' + p2 + '% per jaar</b> over het geleende bedrag. Hoeveel is het totaal, en hoeveel per maand?',
+      opdracht: 'Rente per jaar × 2, optellen bij het geleende bedrag, en delen door 24 maanden.',
+      beeld: leenGrafiek(l2, r2),
+      velden: [{ label:'totaal terugbetalen', voor:'€', antwoord: tot2, toon: geld(tot2) }, { label:'per maand', voor:'€', antwoord: mnd, toon: geld(mnd) }],
+      uitleg: 'Rente per jaar: ' + p2 + '% van ' + net(l2) + ' = ' + geld(l2 * p2 / 100) + ', twee jaar is ' + geld(r2) + '. Totaal: ' + net(l2) + ' + ' + net(r2) + ' = ' + geld(tot2) + '. Per maand: ' + net(tot2) + ' ÷ 24 = ' + geld(mnd) + '. Elke maand los je een deel af én betaal je een deel rente.',
+      antwoordTekst: 'totaal ' + geld(tot2) + ', per maand ' + geld(mnd)
+    });
+  }
+
+  /* 5. begrippen: bij een beschrijving het begrip, of andersom. n:2 is voor kgt en hv */
+  var BEGRIPPEN = [
+    ['budget', 'een overzicht van wat er binnenkomt en wat je uitgeeft', 1],
+    ['inkomsten', 'het geld dat je binnenkrijgt, zoals zakgeld of loon', 1],
+    ['uitgaven', 'het geld dat je uitgeeft', 1],
+    ['vaste lasten', 'uitgaven die elke maand terugkomen en ongeveer even hoog zijn, zoals huur of een abonnement', 1],
+    ['variabele uitgaven', 'uitgaven die per maand verschillen, zoals kleding of uitgaan', 1],
+    ['reserveringsuitgaven', 'geld dat je apart zet voor een grote uitgave later, zoals een nieuwe fiets', 2],
+    ['rood staan', 'meer geld uitgeven dan er op je rekening staat', 1],
+    ['rente', 'de vergoeding die je betaalt als je leent, of krijgt als je spaart', 1],
+    ['aflossen', 'een deel van een lening terugbetalen', 1],
+    ['sparen', 'geld opzijzetten om later te gebruiken', 1],
+    ['lenen', 'geld van een ander gebruiken dat je later moet terugbetalen', 1],
+    ['kasboek', 'een boekje of app waarin je bijhoudt wat er binnenkomt en uitgaat', 1],
+    ['zakgeld', 'geld dat je van je ouders krijgt om zelf uit te geven', 1],
+    ['bijbaan', 'werk naast school waarmee je geld verdient', 1],
+    ['loon', 'het geld dat je krijgt voor het werk dat je doet', 1],
+    ['brutoloon', 'je loon voordat belasting en premies eraf gaan', 2],
+    ['nettoloon', 'het loon dat je overhoudt na belasting en premies', 2],
+    ['hypotheek', 'een lening om een huis te kopen, met het huis als onderpand', 2],
+    ['huur', 'het bedrag dat je elke maand betaalt om in een woning te mogen wonen', 1],
+    ['abonnement', 'een vaste afspraak waarbij je elke maand betaalt voor een dienst, zoals je telefoon', 1],
+    ['schuld', 'geld dat je nog aan iemand moet terugbetalen', 1],
+    ['BKR', 'de instantie die bijhoudt welke leningen mensen hebben en of ze die terugbetalen', 2],
+    ['incasso', 'het innen van een rekening die nog niet betaald is', 2],
+    ['tekort', 'je geeft meer uit dan er binnenkomt', 1],
+    ['overschot', 'je houdt geld over aan het eind van de maand', 1],
+    ['begroting', 'een plan vooraf van je inkomsten en uitgaven', 1],
+    ['koopkracht', 'hoeveel je met je geld kunt kopen', 2],
+    ['inflatie', 'de prijzen stijgen, dus je kunt voor hetzelfde geld minder kopen', 2],
+    ['impulsaankoop', 'iets kopen zonder erover na te denken', 1],
+    ['verzekering', 'je betaalt elke maand een bedrag en krijgt schade vergoed als er iets gebeurt', 1],
+    ['premie', 'het bedrag dat je betaalt voor een verzekering', 2],
+    ['eigen risico', 'het deel van de zorgkosten dat je eerst zelf betaalt', 2],
+    ['btw', 'belasting die in de prijs van producten zit: 21% of 9%', 1],
+    ['korting', 'een lagere prijs dan de gewone prijs', 1],
+    ['borg', 'geld dat je vooraf betaalt en terugkrijgt als alles in orde is', 1],
+    ['contant geld', 'munten en briefjes', 1],
+    ['giraal geld', 'geld dat op je bankrekening staat', 1],
+    ['spaarrekening', 'een rekening waar je geld op zet en rente over krijgt', 1],
+    ['toeslag', 'extra geld van de overheid, zoals zorgtoeslag of huurtoeslag', 2],
+    ['kinderbijslag', 'geld van de overheid voor ouders met kinderen', 1],
+    ['looptijd', 'de tijd waarin je een lening moet terugbetalen', 2],
+    ['kredietlimiet', 'het hoogste bedrag dat je rood mag staan', 2],
+    ['garantie', 'de belofte dat een product werkt; anders wordt het gerepareerd of vergoed', 1],
+    ['noodzakelijke uitgaven', 'uitgaven die je niet kunt overslaan, zoals eten en huur', 1],
+    ['luxe uitgaven', 'uitgaven die leuk zijn maar niet nodig', 1],
+    ['prioriteit', 'wat je het eerst betaalt omdat het het belangrijkst is', 1]
+  ];
+  function begrippen(niveau){
+    var lijst = niveau === 'bb' ? BEGRIPPEN.filter(function(b){ return b[2] === 1; }) : BEGRIPPEN;
+    var b = kies(lijst), andersom = niveau !== 'bb' && Math.random() < 0.4;
+    var anderen = pak(lijst.filter(function(x){ return x !== b; }), 3);
+    var opties = H([b].concat(anderen)), beeld = '<table class="kasboek"><tr><th>begrip</th><th>betekenis</th></tr><tr><td>' + (andersom ? '<b>' + S(b[0]) + '</b>' : '?') + '</td><td>' + (andersom ? '?' : S(b[1])) + '</td></tr></table>';
+    return {
+      onderdeel:'huishoudboekje: begrippen', onderdeelNaam:'begrippen', vorm:'meerkeuze', sleutel:'bg' + b[0] + andersom,
+      vraag: andersom ? 'Wat betekent <b>' + S(b[0]) + '</b>?' : 'Welk begrip past bij: <b>' + S(b[1]) + '</b>?',
+      beeld: beeld,
+      opties: opties.map(function(x){ return S(andersom ? x[1] : x[0]); }), goed: opties.indexOf(b),
+      uitleg: b[0].charAt(0).toUpperCase() + b[0].slice(1) + ': ' + b[1] + '.',
+      antwoordTekst: andersom ? b[1] : b[0]
+    };
+  }
+
+  var SOORTEN = { optellen: optellen, vastvariabel: vastVariabel, keuze: keuzeMaken, sparen: sparenLenen, begrippen: begrippen };
+  VAKSPEL.maak({
+    id:'huishoudboekje', naam:'Het huishoudboekje', vak:'eco', kleur:'#EA9836',
+    hand:'wat komt erin, wat gaat eruit',
+    lead:'Zakgeld, een bijbaan, een telefoonabonnement en de sportclub: in een kasboek zie je wat er binnenkomt en wat eruit gaat. Je telt op, houdt vaste lasten en variabele uitgaven uit elkaar, kiest verstandig als het geld tekortschiet, en rekent met sparen en lenen. Bij elke opgave staat het kasboek of een grafiek erbij.',
+    hoe:[
+      { kop:'Het kasboek', tekst:'Inkomsten boven, uitgaven eronder. <b>Inkomsten min uitgaven</b> is wat je overhoudt. Is dat een min, dan kom je tekort.' },
+      { kop:'Vast of variabel', tekst:'Vaste lasten zijn elke maand hetzelfde en je zit eraan vast. Variabele uitgaven kies je zelf: daar bespaar je op als het krap is.' },
+      { kop:'Sparen en lenen', tekst:'Sparen: wachten tot je genoeg hebt, en je krijgt rente. Lenen: meteen hebben, maar je betaalt rente terug. Tien opgaven per ronde.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'Het kasboek van een jongere, ronde bedragen, en de gewone begrippen.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Ook het huishoudboekje van een gezin, tekorten, en rekenen met sparen en rente.' },
+        { id:'hv', naam:'havo en vwo', uit:'Bedragen met centen, reserveringsuitgaven, lenen over twee jaar en spaarrente.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' }, { id:'optellen', naam:'optellen' }, { id:'vastvariabel', naam:'vast of variabel' }, { id:'keuze', naam:'keuze maken' }, { id:'sparen', naam:'sparen en lenen' }, { id:'begrippen', naam:'begrippen' } ] }
+    ],
+    aantal:10,
+    maak:function(keuze, nr){
+      var soort = keuze.soort;
+      if (soort === 'alles') soort = kies(keuze.niveau === 'bb' ? ['optellen', 'optellen', 'vastvariabel', 'keuze', 'begrippen'] : ['optellen', 'optellen', 'vastvariabel', 'keuze', 'sparen', 'sparen', 'begrippen']);
+      return SOORTEN[soort](keuze.niveau);
+    },
+    uitleg:{ doel:'Een kasboek lezen en optellen, vaste lasten en variabele uitgaven herkennen, verstandig kiezen bij een tekort, en rekenen met sparen en lenen.', tijd:'tien opgaven per ronde', bediening:'Typ het bedrag en druk op Nakijken of Enter. Bij vast of variabel sleep je de posten naar het vak; op een telefoon tik je eerst de post en dan het vak.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>

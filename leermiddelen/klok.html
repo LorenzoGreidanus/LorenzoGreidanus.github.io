@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Klokkijken en tijdrekenen, versie 1.0: op vakspel.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Klokkijken en tijdrekenen &middot; meneer Greidanus</title>
+<meta name="description" content="De analoge klok aflezen, de goede klok bij een digitale tijd kiezen, en rekenen met tijd: hoe laat is het over anderhalf uur, en hoe lang duurt het van 9:50 tot 12:20.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Klokkijken en tijdrekenen">
+<meta property="og:description" content="De klok aflezen, wijzers zetten, tijd erbij en hoe lang iets duurt.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/klok.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%23EA9836'/><g fill='none' stroke='%2314224C' stroke-width='6' stroke-linecap='round'><circle cx='50' cy='50' r='30'/><path d='M50 30v20l14 8'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+/* vier klokjes naast elkaar, ook op een telefoon twee per rij */
+#antwoordvak.klokkeus .opties{grid-template-columns:repeat(2,1fr)}
+#antwoordvak.klokkeus .opties button.optie{text-align:center;padding:10px}
+.opties .optie svg,.uitslagregel svg.klok{display:block;margin:0 auto;max-width:150px;width:100%}
+.beeld svg.klok{max-width:250px;width:100%}
+.beeld svg.lijn,.uitslagregel svg.lijn{max-width:560px;width:100%;display:block;margin:6px auto 0}
+.klokuit{display:block;text-align:center;font-size:.84rem;color:var(--muted);margin-top:4px}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  function tussen(a, b){ return a + Math.floor(Math.random() * (b - a + 1)); }
+  function twee(n){ return (n < 10 ? '0' : '') + n; }
+  function tijd(min){ min = ((min % 1440) + 1440) % 1440; return Math.floor(min / 60) + ':' + twee(min % 60); }
+  function duur(min){ var u = Math.floor(min / 60), m = min % 60; return (u ? u + ' uur' : '') + (u && m ? ' en ' : '') + (m ? m + ' minuten' : ''); }
+  function h12(h){ h = h % 12; return h === 0 ? 12 : h; }
+
+  /* ---------- de analoge klok ----------
+     een cirkel met twaalf cijfers; de korte wijzer loopt mee met de minuten,
+     de lange wijzer wijst de minuten. hoeken mogen ook los gegeven worden
+     (voor de foute klokjes bij wijzers zetten). fijn = ook minuutstreepjes */
+  function klokHoeken(h, m){ return { ku: (h % 12) * 30 + m / 2, lm: m * 6 }; }
+  function klok(hoek, fijn, klasse, label){
+    var c = 100, r = 90, uit = '<svg class="klok ' + (klasse || '') + '" viewBox="0 0 200 200" role="img" aria-label="' + S(label || 'klok') + '">';
+    uit += '<circle cx="' + c + '" cy="' + c + '" r="' + r + '" style="fill:var(--kaart2);stroke:var(--ink);stroke-width:3"/>';
+    for (var i = 0; i < 60; i++){
+      if (i % 5 && !fijn) continue;
+      var a = i * 6 * Math.PI / 180, groot = i % 5 === 0, r1 = groot ? r - 10 : r - 5;
+      uit += '<line x1="' + (c + r1 * Math.sin(a)) + '" y1="' + (c - r1 * Math.cos(a)) + '" x2="' + (c + (r - 2) * Math.sin(a)) + '" y2="' + (c - (r - 2) * Math.cos(a)) + '" style="stroke:var(' + (groot ? '--ink' : '--muted') + ');stroke-width:' + (groot ? 3 : 1.5) + '"/>';
+    }
+    for (var n = 1; n <= 12; n++){
+      var b = n * 30 * Math.PI / 180;
+      uit += '<text x="' + (c + (r - 25) * Math.sin(b)) + '" y="' + (c - (r - 25) * Math.cos(b) + 6) + '" text-anchor="middle" font-size="17" font-weight="600" style="fill:var(--ink)">' + n + '</text>';
+    }
+    var ku = hoek.ku * Math.PI / 180, lm = hoek.lm * Math.PI / 180;
+    uit += '<line x1="' + (c - 8 * Math.sin(ku)) + '" y1="' + (c + 8 * Math.cos(ku)) + '" x2="' + (c + 50 * Math.sin(ku)) + '" y2="' + (c - 50 * Math.cos(ku)) + '" style="stroke:var(--ink);stroke-width:7;stroke-linecap:round"/>';
+    uit += '<line x1="' + (c - 10 * Math.sin(lm)) + '" y1="' + (c + 10 * Math.cos(lm)) + '" x2="' + (c + 74 * Math.sin(lm)) + '" y2="' + (c - 74 * Math.cos(lm)) + '" style="stroke:var(--nadruk);stroke-width:4;stroke-linecap:round"/>';
+    uit += '<circle cx="' + c + '" cy="' + c + '" r="5" style="fill:var(--nadruk)"/>';
+    return uit + '</svg>';
+  }
+
+  /* ---------- de tijdlijn ----------
+     hele uren als streepjes, begin en eind als stippen; sprongen (voor de uitleg)
+     als bogen erboven: eerst naar het hele uur, dan hele uren, dan de rest */
+  function tijdlijn(van, tot, sprongen, label){
+    var lo = Math.min(van, tot), hi = Math.max(van, tot), h0 = Math.floor(lo / 60), h1 = Math.ceil(hi / 60); if (h1 === h0) h1++;
+    var W = 560, P = 34, Y = 62, sch = (W - 2 * P) / ((h1 - h0) * 60), uit = '<svg class="lijn" viewBox="0 0 ' + W + ' 96" role="img" aria-label="' + S(label || 'tijdlijn van ' + tijd(van) + ' tot ' + tijd(tot)) + '">';
+    function x(min){ return P + (min - h0 * 60) * sch; }
+    uit += '<line x1="' + P + '" y1="' + Y + '" x2="' + (W - P) + '" y2="' + Y + '" style="stroke:var(--ink);stroke-width:2"/>';
+    for (var h = h0; h <= h1; h++) uit += '<line x1="' + x(h * 60) + '" y1="' + (Y - 8) + '" x2="' + x(h * 60) + '" y2="' + (Y + 8) + '" style="stroke:var(--ink);stroke-width:2"/><text x="' + x(h * 60) + '" y="' + (Y + 26) + '" text-anchor="middle" font-size="' + (h1 - h0 > 7 ? 11 : 13) + '" style="fill:var(--muted)">' + tijd(h * 60) + '</text>';
+    (sprongen || []).forEach(function(s, i){
+      var x1 = x(s.van), x2 = x(s.tot), xm = (x1 + x2) / 2, top = Y - 26 - (i % 2 ? 0 : 8);
+      uit += '<path d="M' + x1 + ' ' + (Y - 4) + ' Q' + xm + ' ' + (top - 14) + ' ' + x2 + ' ' + (Y - 4) + '" style="fill:none;stroke:var(--nadruk);stroke-width:2"/>' +
+        '<text x="' + xm + '" y="' + (top - 6) + '" text-anchor="middle" font-size="13" font-weight="600" style="fill:var(--nadruk)">' + s.tekst + '</text>';
+    });
+    [van, tot].forEach(function(t, i){
+      uit += '<circle cx="' + x(t) + '" cy="' + Y + '" r="6" style="fill:var(--' + (i ? 'goed' : 'nadruk') + ')"/>' +
+        (sprongen ? '' : '<text x="' + x(t) + '" y="' + (Y - 14) + '" text-anchor="middle" font-size="15" font-weight="600" style="fill:var(--' + (i ? 'goed' : 'nadruk') + ')">' + tijd(t) + '</text>');
+    });
+    return uit + '</svg>';
+  }
+  /* de sprongen van a naar b (in minuten): naar het hele uur, hele uren, de rest */
+  function sprongen(a, b){
+    var s = [], cur = a, rest = Math.abs(b - a), richting = b >= a ? 1 : -1, teken = richting > 0 ? '+ ' : '− ';
+    var naarHeel = richting > 0 ? (60 - cur % 60) % 60 : cur % 60;
+    if (naarHeel && rest >= naarHeel){ s.push({ van: cur, tot: cur + richting * naarHeel, tekst: teken + naarHeel + ' min' }); cur += richting * naarHeel; rest -= naarHeel; }
+    var uren = Math.floor(rest / 60);
+    if (uren){ s.push({ van: cur, tot: cur + richting * uren * 60, tekst: teken + uren + ' uur' }); cur += richting * uren * 60; rest -= uren * 60; }
+    if (rest){ s.push({ van: cur, tot: cur + richting * rest, tekst: teken + rest + ' min' }); cur += richting * rest; }
+    return s;
+  }
+  function sprongTekst(a, s){ var cur = a; return s.map(function(x){ cur = x.tot; return x.tekst.replace('min', 'minuten') + ' = ' + tijd(cur); }).join(', '); }
+
+  /* minuten die bij het niveau passen */
+  function minuten(niveau){ return niveau === 'bb' ? kies([0, 15, 30, 45]) : niveau === 'kgt' ? tussen(0, 11) * 5 : tussen(0, 59); }
+  function velden(u, m){ return [{ label:'uur', antwoord:u, tol:0 }, { label:'minuten', antwoord:m, tol:0 }]; }
+  function dagdeel(h){ return h < 12 ? 'ochtend' : h < 18 ? 'middag' : 'avond'; }
+
+  /* ---------- 1. aflezen: de klok staat er, jij typt de tijd ---------- */
+  function aflezen(niveau){
+    var m = minuten(niveau), middag = niveau !== 'bb' && Math.random() < (niveau === 'hv' ? 0.5 : 0.3);
+    var h = middag ? tussen(12, 23) : tussen(1, 11), dd = dagdeel(h), v = h12(h), vn = h12(h + 1);
+    var lang = m === 0 ? 'precies op de 12: 0 minuten' : m % 5 === 0 ? 'op de ' + (m / 5) + ': ' + (m / 5) + ' × 5 = ' + m + ' minuten' : 'net voorbij de ' + Math.floor(m / 5) + ': ' + Math.floor(m / 5) + ' × 5 + ' + (m % 5) + ' = ' + m + ' minuten';
+    return {
+      onderdeel:'klok: aflezen', onderdeelNaam:'aflezen', vorm:'invul', sleutel:'a' + h + ':' + m,
+      vraag: 'Hoe laat is het? <b>Het is ' + dd + '.</b>',
+      opdracht: 'Typ de tijd zoals op een digitale klok: het uur en de minuten.' + (middag ? ' Na twaalf uur tel je door: 1 uur ’s middags is 13:00.' : ''),
+      beeld: klok(klokHoeken(h, m), niveau !== 'bb', '', 'klok die ' + tijd(h * 60 + m) + ' aanwijst'),
+      velden: velden(h, m),
+      uitleg: 'De korte wijzer staat ' + (m === 0 ? 'precies op de ' + v + '.' : 'tussen de ' + v + ' en de ' + vn + ': het is ' + v + ' uur geweest.') + ' De lange wijzer staat ' + lang + '.' + (middag ? ' Het is ' + dd + ', dus ' + v + ' + 12 = ' + h + '.' : '') + ' Dus ' + tijd(h * 60 + m) + '.',
+      antwoordTekst: tijd(h * 60 + m)
+    };
+  }
+
+  /* ---------- 2. wijzers zetten: welke van de vier klokken klopt ---------- */
+  function wijzers(niveau){
+    var m = minuten(niveau), h = niveau === 'bb' ? tussen(1, 11) : tussen(1, 23), goed = klokHoeken(h, m);
+    var kand = [
+      { ku: m * 6, lm: (h % 12) * 30 },                                  /* wijzers verwisseld */
+      { ku: (h % 12) * 30, lm: m * 6 },                                   /* korte wijzer loopt niet mee */
+      { ku: ((h + 1) % 12) * 30 + m / 2, lm: m * 6 },                    /* een uur te laat */
+      { ku: (h % 12) * 30 + ((m + 30) % 60) / 2, lm: ((m + 30) % 60) * 6 }, /* een half uur ernaast */
+      { ku: (h % 12) * 30 + ((m + 15) % 60) / 2, lm: ((m + 15) % 60) * 6 }, /* een kwartier ernaast */
+      { ku: ((h + 11) % 12) * 30 + m / 2, lm: m * 6 }                    /* een uur te vroeg */
+    ];
+    var opties = [goed];
+    function zelfde(a, b){ return Math.abs(((a.ku - b.ku) % 360 + 360) % 360) < 1 && Math.abs(((a.lm - b.lm) % 360 + 360) % 360) < 1; }
+    H(kand).forEach(function(k){ if (opties.length < 4 && !opties.some(function(o){ return zelfde(o, k); })) opties.push(k); });
+    return {
+      onderdeel:'klok: wijzers zetten', onderdeelNaam:'wijzers zetten', vorm:'meerkeuze', sleutel:'w' + h + ':' + m,
+      vraag: 'Welke klok staat op <b>' + tijd(h * 60 + m) + '</b>?',
+      opdracht: (h > 12 ? tijd(h * 60 + m) + ' is ' + h12(h) + ' uur ’s ' + (h < 18 ? 'middags' : 'avonds') + ' op een gewone klok. ' : '') + 'Let op allebei de wijzers.',
+      opties: opties.map(function(o, i){ return klok(o, niveau !== 'bb', '', 'klok ' + (i + 1)); }), goed: 0,
+      na: function(vak){ vak.classList.add('klokkeus'); },
+      uitleg: 'Om ' + tijd(h * 60 + m) + ' staat de lange wijzer ' + (m === 0 ? 'op de 12' : m % 5 === 0 ? 'op de ' + (m / 5) : 'net voorbij de ' + Math.floor(m / 5)) + ' (' + m + ' minuten) en de korte wijzer ' + (m === 0 ? 'precies op de ' + h12(h) : m < 30 ? 'een stukje voorbij de ' + h12(h) + ', want het uur is al voor een deel om' : 'al bijna bij de ' + h12(h + 1) + ', want het uur is meer dan half om') + '.',
+      antwoordTekst: 'de klok met de korte wijzer ' + (m === 0 ? 'op de ' + h12(h) : 'tussen de ' + h12(h) + ' en de ' + h12(h + 1)) + ' en de lange wijzer op ' + m + ' minuten'
+    };
+  }
+
+  /* ---------- 3. tijd erbij (of eraf): hoe laat is het dan ---------- */
+  function erbij(niveau){
+    var eraf = niveau !== 'bb' && Math.random() < 0.4;
+    var start = tussen(niveau === 'bb' ? 1 : 6, niveau === 'bb' ? 9 : 20) * 60 + minuten(niveau);
+    var d = (niveau === 'bb' ? kies([0, 1, 1, 2]) : tussen(0, 3)) * 60 + minuten(niveau); if (!d) d = 45;
+    if (niveau === 'bb' && start + d >= 12 * 60) d = 60 + 15;
+    var eind = eraf ? start - d : start + d; if (eind < 0){ eraf = false; eind = start + d; }
+    var s = sprongen(start, eind);
+    return {
+      onderdeel:'klok: tijd erbij', onderdeelNaam:'tijd erbij', vorm:'invul', sleutel:'e' + start + (eraf ? '-' : '+') + d,
+      vraag: 'Het is <b>' + tijd(start) + '</b>. Hoe laat ' + (eraf ? 'was het <b>' + duur(d) + '</b> geleden?' : 'is het over <b>' + duur(d) + '</b>?'),
+      opdracht: 'Reken in stappen: eerst naar het hele uur, dan de hele uren, dan de rest. Typ het uur en de minuten.',
+      beeld: '<div>' + klok(klokHoeken(Math.floor(start / 60), start % 60), niveau !== 'bb', '', 'klok die ' + tijd(start) + ' aanwijst') + '<span class="klokuit">nu: ' + tijd(start) + '</span></div>',
+      velden: velden(Math.floor(eind / 60), eind % 60),
+      uitleg: tijd(start) + ' ' + sprongTekst(start, s) + '.' + tijdlijn(start, eind, s),
+      antwoordTekst: tijd(eind)
+    };
+  }
+
+  /* ---------- 4. hoe lang: van ... tot ... ---------- */
+  var VERHALEN = [
+    ['De film begint om {a} en is om {b} afgelopen. Hoe lang duurt de film?', 'de film'],
+    ['De trein vertrekt om {a} en komt om {b} aan. Hoe lang is de reis?', 'de reis'],
+    ['De les begint om {a} en duurt tot {b}. Hoe lang duurt de les?', 'de les'],
+    ['Sam gaat om {a} de deur uit en is om {b} weer thuis. Hoe lang is Sam weg?', 'Sam is weg'],
+    ['De winkel gaat om {a} open en om {b} dicht. Hoe lang is de winkel open?', 'de winkel is open'],
+    ['Van {a} tot {b}: hoe lang is dat?', 'van ... tot ...']
+  ];
+  function hoelang(niveau){
+    var start = tussen(7, 19) * 60 + minuten(niveau), d = tussen(0, niveau === 'bb' ? 2 : 4) * 60 + minuten(niveau);
+    if (d < 20) d += 60; if (start + d > 23 * 60 + 30) start -= 4 * 60;
+    var eind = start + d, s = sprongen(start, eind), v = kies(VERHALEN);
+    return {
+      onderdeel:'klok: hoe lang', onderdeelNaam:'hoe lang', vorm:'invul', sleutel:'h' + start + '-' + eind,
+      vraag: v[0].replace('{a}', '<b>' + tijd(start) + '</b>').replace('{b}', '<b>' + tijd(eind) + '</b>'),
+      opdracht: 'Spring eerst naar het hele uur, dan hele uren, dan de rest. Typ de uren en de minuten (0 mag).',
+      beeld: tijdlijn(start, eind),
+      velden: velden(Math.floor(d / 60), d % 60),
+      uitleg: 'Van ' + tijd(start) + ': ' + sprongTekst(start, s) + '. Samen ' + s.map(function(x){ return x.tekst.replace('+ ', ''); }).join(' + ') + ' = ' + duur(d) + '.' + tijdlijn(start, eind, s),
+      antwoordTekst: duur(d)
+    };
+  }
+
+  var SOORTEN = { aflezen: aflezen, wijzers: wijzers, erbij: erbij, hoelang: hoelang };
+  VAKSPEL.maak({
+    id:'klok', naam:'Klokkijken en tijdrekenen', vak:'reken', kleur:'#EA9836',
+    hand:'de korte wijzer loopt stiekem mee',
+    lead:'Een klok aflezen, de goede klok bij een digitale tijd kiezen, en rekenen met tijd: hoe laat is het over anderhalf uur, en hoe lang duurt het van 9:50 tot 12:20. Bij elke opgave staat een klok of een tijdlijn, en na je antwoord zie je de stappen.',
+    hoe:[
+      { kop:'Twee wijzers', tekst:'De lange wijzer wijst de minuten: elk cijfer is <b>5 minuten</b>. De korte wijzer wijst het uur en schuift langzaam door naar het volgende cijfer.' },
+      { kop:'Rekenen in sprongen', tekst:'Van 9:50 naar 12:20: eerst 10 minuten naar 10:00, dan 2 uur naar 12:00, dan nog 20 minuten. Samen 2 uur en 30 minuten.' },
+      { kop:'Digitaal', tekst:'Na twaalf uur tel je door: 2 uur ’s middags is 14:00. Je typt het uur en de minuten in twee vakjes.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'Hele uren, halve uren en kwartieren, alleen ’s ochtends.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Per 5 minuten, ook ’s middags (14:35), en tijd eraf.' },
+        { id:'hv', naam:'havo en vwo', uit:'Per minuut, over de middag heen, en langere sprongen.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' }, { id:'aflezen', naam:'aflezen' }, { id:'wijzers', naam:'wijzers zetten' }, { id:'erbij', naam:'tijd erbij' }, { id:'hoelang', naam:'hoe lang' } ] }
+    ],
+    aantal:10,
+    maak:function(keuze, nr){
+      var soort = keuze.soort === 'alles' ? kies(['aflezen', 'wijzers', 'erbij', 'hoelang']) : keuze.soort;
+      return SOORTEN[soort](keuze.niveau);
+    },
+    uitleg:{ doel:'De klok aflezen en rekenen met tijd, in sprongen via het hele uur.', tijd:'tien opgaven per ronde', bediening:'Typ het uur en de minuten en druk op Nakijken of Enter. Bij wijzers zetten kies je een klok, ook met de toetsen 1 tot 4.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>

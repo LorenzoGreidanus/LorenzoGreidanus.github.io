@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Grafieken en formules, versie 1.0: op vakspel.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Grafieken en formules &middot; meneer Greidanus</title>
+<meta name="description" content="Grafieken aflezen, de formule bij een lijn vinden, zelf een lijn tekenen op het rooster en het startgetal en de helling bepalen.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Grafieken en formules">
+<meta property="og:description" content="Grafieken aflezen, de formule bij een lijn vinden, zelf een lijn tekenen en het startgetal en de helling bepalen.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/grafieken.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%23F26749'/><g fill='none' stroke='%2314224C' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'><path d='M24 22v54h54'/><path d='M32 62l16-20 14 10 16-26'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+/* de grafieken: even breed als de kaart, tot 420 px */
+.beeld svg.gr{width:100%;max-width:min(100%,420px);height:auto;display:block}
+/* het tekenrooster: roosterpunten die je aantikt */
+.tekenraster svg{width:100%;max-width:min(100%,440px);height:auto;display:block;margin:0 auto;touch-action:manipulation}
+.tekenraster .rp{fill:transparent;cursor:pointer;pointer-events:all}
+.tekenraster .rp:hover{fill:var(--nadruk-zacht)}
+.tekenraster .stip{display:none;fill:var(--nadruk)}
+.tekenraster .stip.aan{display:inline}
+.tekenraster .stip.goed{fill:var(--goed)}
+.tekenraster .stip.mis{fill:var(--fout)}
+.tekenraster.klaar .rp{cursor:default;pointer-events:none}
+.tekenraster.klaar .rp:hover{fill:transparent}
+.tekenuit{text-align:center;color:var(--muted);font-size:.84rem;margin-top:8px}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  function tussen(a, b){ return a + Math.floor(Math.random() * (b - a + 1)); }
+  function net(x){ x = Math.round(x * 100) / 100; return String(x).replace('.', ','); }
+  /* voor op het scherm: een echt minteken */
+  function toon(x){ return net(x).replace('-', '−'); }
+  var teller = 0;
+
+  /* ---------- het assenstelsel ----------
+     o: { xmin, xmax, ymin, ymax, xstap, ystap, xnaam, ynaam, hoog }. Geeft X(x) en Y(y) die
+     een punt naar de svg vertalen, de kop met rooster en assen, en lijn(), kromme() en stip(). */
+  function stelsel(o){
+    /* een korte asnaam (x) staat rechts naast de as, een lange (maanden) eronder */
+    var korteX = (o.xnaam || 'x').length <= 2;
+    var W = 380, Hh = o.hoog || 300, L = 46, R = korteX ? 26 : 16, T = 26, B = korteX ? 42 : 62;
+    var xstap = o.xstap || 1, ystap = o.ystap || 1;
+    var sx = (W - L - R) / (o.xmax - o.xmin), sy = (Hh - T - B) / (o.ymax - o.ymin);
+    function X(x){ return Math.round((L + (x - o.xmin) * sx) * 10) / 10; }
+    function Y(y){ return Math.round((T + (o.ymax - y) * sy) * 10) / 10; }
+    var id = 'k' + (++teller), s = '', x, y, i;
+    s += '<defs><clipPath id="' + id + '"><rect x="' + L + '" y="' + T + '" width="' + (W - L - R) + '" height="' + (Hh - T - B) + '"/></clipPath></defs>';
+    s += '<g stroke="var(--rand2)" stroke-width="1">';
+    for (x = o.xmin; x <= o.xmax + 1e-9; x += xstap) s += '<line x1="' + X(x) + '" y1="' + T + '" x2="' + X(x) + '" y2="' + (Hh - B) + '"/>';
+    for (y = o.ymin; y <= o.ymax + 1e-9; y += ystap) s += '<line x1="' + L + '" y1="' + Y(y) + '" x2="' + (W - R) + '" y2="' + Y(y) + '"/>';
+    s += '</g>';
+    /* de assen: door de oorsprong als die in beeld is, anders langs de rand */
+    var ax = o.ymin <= 0 && o.ymax >= 0 ? Y(0) : Y(o.ymin), ay = o.xmin <= 0 && o.xmax >= 0 ? X(0) : X(o.xmin);
+    s += '<g stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="' + (L - 4) + '" y1="' + ax + '" x2="' + (W - R + 6) + '" y2="' + ax + '"/><line x1="' + ay + '" y1="' + (T - 8) + '" x2="' + ay + '" y2="' + (Hh - B + 4) + '"/></g>';
+    /* de getallen: bij elke lijn, of om en om als het er veel zijn; de oorsprong heet O */
+    var nX = Math.round((o.xmax - o.xmin) / xstap), nY = Math.round((o.ymax - o.ymin) / ystap), elkeX = nX > 12 ? 2 : 1, elkeY = nY > 12 ? 2 : 1;
+    s += '<g font-size="14" fill="var(--muted)">';
+    for (i = 0; i <= nX; i++){ x = o.xmin + i * xstap; if (i % elkeX || Math.abs(x) < 1e-9) continue; s += '<text x="' + X(x) + '" y="' + (ax + 18) + '" text-anchor="middle">' + toon(x) + '</text>'; }
+    for (i = 0; i <= nY; i++){ y = o.ymin + i * ystap; if (i % elkeY || Math.abs(y) < 1e-9) continue; s += '<text x="' + (ay - 7) + '" y="' + (Y(y) + 5) + '" text-anchor="end">' + toon(y) + '</text>'; }
+    s += '<text x="' + (ay - 7) + '" y="' + (ax + 18) + '" text-anchor="end">O</text>';
+    s += '</g><g font-size="15" font-weight="600" fill="currentColor">';
+    s += korteX ? '<text x="' + (W - R + 12) + '" y="' + (ax + 5) + '">' + S(o.xnaam || 'x') + '</text>'
+      : '<text x="' + (W - R) + '" y="' + (ax + 40) + '" text-anchor="end">' + S(o.xnaam) + '</text>';
+    s += '<text x="' + (ay + 9) + '" y="' + (T - 10) + '">' + S(o.ynaam || 'y') + '</text></g>';
+    return {
+      X: X, Y: Y, id: id,
+      kop: '<svg class="gr" viewBox="0 0 ' + W + ' ' + Hh + '" font-family="inherit" role="img" aria-label="assenstelsel">' + s,
+      staart: '</svg>',
+      lijn: function(a, b, kleur, dik){
+        return '<line clip-path="url(#' + id + ')" x1="' + X(o.xmin) + '" y1="' + Y(a * o.xmin + b) + '" x2="' + X(o.xmax) + '" y2="' + Y(a * o.xmax + b) + '" stroke="' + (kleur || 'var(--nadruk)') + '" stroke-width="' + (dik || 3) + '" stroke-linecap="round"/>';
+      },
+      kromme: function(punten, kleur){
+        return '<polyline clip-path="url(#' + id + ')" points="' + punten.map(function(p){ return X(p[0]) + ',' + Y(p[1]); }).join(' ') + '" fill="none" stroke="' + (kleur || 'var(--nadruk)') + '" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>';
+      },
+      stip: function(x, y, kleur, r){ return '<circle cx="' + X(x) + '" cy="' + Y(y) + '" r="' + (r || 4.5) + '" fill="' + (kleur || 'var(--nadruk)') + '"/>'; }
+    };
+  }
+  /* een tabel als svg: x boven, y onder */
+  function tabelSvg(xs, ys){
+    var cw = 58, ch = 38, W = cw * (xs.length + 1) + 2, s = '<svg class="gr" viewBox="0 0 ' + W + ' ' + (ch * 2 + 2) + '" style="max-width:min(100%,' + W + 'px)" font-family="inherit" font-size="18" role="img" aria-label="tabel">';
+    function cel(i, rij, tekst, kop){
+      return '<rect x="' + (1 + i * cw) + '" y="' + (1 + rij * ch) + '" width="' + cw + '" height="' + ch + '" fill="' + (kop ? 'var(--kaart2)' : 'none') + '" stroke="var(--rand2)"/>' +
+        '<text x="' + (1 + i * cw + cw / 2) + '" y="' + (1 + rij * ch + ch / 2 + 6) + '" text-anchor="middle" fill="currentColor"' + (kop ? ' font-weight="600"' : '') + '>' + tekst + '</text>';
+    }
+    s += cel(0, 0, 'x', true) + cel(0, 1, 'y', true);
+    xs.forEach(function(x, i){ s += cel(i + 1, 0, toon(x)) + cel(i + 1, 1, toon(ys[i])); });
+    return s + '</svg>';
+  }
+  /* de formule y = ax + b als tekst */
+  function coef(a){ return a === 1 ? '' : a === -1 ? '−' : toon(a); }
+  function formule(a, b){ if (a === 0) return 'y = ' + toon(b); return 'y = ' + coef(a) + 'x' + (b > 0 ? ' + ' + toon(b) : b < 0 ? ' − ' + toon(-b) : ''); }
+  function hellingZin(a){
+    var op = a > 0 ? 'omhoog' : 'omlaag', g = Math.abs(a);
+    if (g === Math.round(g)) return 'elke stap naar rechts gaat de lijn ' + toon(g) + ' ' + op;
+    return 'elke 2 stappen naar rechts gaat de lijn ' + toon(g * 2) + ' ' + op + ' (dus ' + toon(g) + ' per stap)';
+  }
+  function stapVoor(max){ var st = [1, 2, 4, 5, 10, 20, 25, 50], i; for (i = 0; i < st.length; i++) if (max / st[i] <= 16) return st[i]; return 100; }
+  var ROOSTER = { bb: { xmin:0, xmax:8, ymin:0, ymax:12, hoog:330 }, kgt: { xmin:-5, xmax:5, ymin:-8, ymax:8, hoog:340 }, hv: { xmin:-5, xmax:5, ymin:-8, ymax:8, hoog:340 } };
+
+  /* ---------- 1. aflezen ---------- */
+  var LINEAIR = [
+    { naam:'de kosten van een taxirit', xnaam:'km', ynaam:'euro', a:[2, 3, 4], b:[2, 3, 4, 5, 6], xmax:8, vraag:'Wat kost een rit van <b>#x km</b>?', eenheid:'euro' },
+    { naam:'het water in een bad', xnaam:'minuten', ynaam:'liter', a:[5, 10, 15], b:[0, 10, 20], xmax:8, vraag:'Hoeveel liter water zit er na <b>#x minuten</b> in het bad?', eenheid:'liter' },
+    { naam:'een fietser onderweg', xnaam:'uur', ynaam:'km', a:[12, 15, 18, 20], b:[0], xmax:5, vraag:'Hoeveel km heeft de fietser na <b>#x uur</b> gefietst?', eenheid:'km' },
+    { naam:'een abonnement op de sportschool', xnaam:'maanden', ynaam:'euro', a:[20, 25, 30], b:[0, 10, 20, 40], xmax:6, vraag:'Wat heb je na <b>#x maanden</b> in totaal betaald?', eenheid:'euro' },
+    { naam:'een kaars die opbrandt', xnaam:'uur', ynaam:'cm', a:[-2, -3, -4], b:[20, 24, 30], xmax:6, vraag:'Hoe lang is de kaars na <b>#x uur</b>?', eenheid:'cm', niveau:['kgt', 'hv'] },
+    { naam:'een zwembad dat leegloopt', xnaam:'uur', ynaam:'m³', a:[-5, -10], b:[40, 50, 60], xmax:8, vraag:'Hoeveel m³ water zit er na <b>#x uur</b> nog in?', eenheid:'m³', niveau:['kgt', 'hv'] }
+  ];
+  function aflezenLijn(niveau){
+    var c, a, b, xmax, x, y, ystap, ymax, top, poging = 0;
+    do {
+      c = kies(LINEAIR.filter(function(k){ return !k.niveau || k.niveau.indexOf(niveau) >= 0; }));
+      a = kies(c.a); b = kies(c.b); xmax = c.xmax; if (a < 0) xmax = Math.min(xmax, Math.floor(b / -a));
+      x = tussen(2, xmax); y = a * x + b;
+      top = Math.max(b, a * xmax + b); ystap = stapVoor(top); ymax = Math.ceil(top / ystap) * ystap; if (ymax - top < ystap / 2) ymax += ystap;
+    } while (y % ystap !== 0 && ++poging < 40);
+    var st = stelsel({ xmin:0, xmax:xmax, ymin:0, ymax:ymax, ystap:ystap, xnaam:c.xnaam, ynaam:c.ynaam });
+    return {
+      onderdeel:'grafieken: aflezen', onderdeelNaam:'aflezen', vorm:'invul', sleutel:'al' + c.xnaam + a + '_' + b + '_' + x,
+      vraag: 'De grafiek laat ' + c.naam + ' zien. ' + c.vraag.replace('#x', x),
+      opdracht: 'Lees het antwoord af uit de grafiek.',
+      beeld: st.kop + st.lijn(a, b) + st.staart,
+      velden:[{ label: 'bij ' + x + ' ' + c.xnaam, antwoord: y, eenheid: c.eenheid }],
+      uitleg: 'Ga bij ' + x + ' op de as recht omhoog tot de lijn, en dan naar links naar de andere as: daar staat ' + y + '. Klopt met rekenen: ' + (a > 0 ? b + ' + ' + a + ' × ' + x : b + ' − ' + (-a) + ' × ' + x) + ' = ' + y + '.',
+      antwoordTekst: y + ' ' + c.eenheid
+    };
+  }
+  function aflezenKromme(niveau){
+    if (Math.random() < 0.5){
+      /* de temperatuur per uur: een gebroken lijn door de metingen */
+      var w = [tussen(2, 6)], i, d;
+      for (i = 1; i <= 12; i++){ d = i <= 7 ? kies([0, 1, 2, 2]) : kies([0, -1, -2, -2]); w.push(Math.max(0, Math.min(18, w[i - 1] + d))); }
+      var x = tussen(3, 11), st = stelsel({ xmin:0, xmax:12, ymin:0, ymax:18, xnaam:'uur', ynaam:'°C', hoog:330 });
+      var punten = w.map(function(t, i){ return [i, t]; });
+      return {
+        onderdeel:'grafieken: aflezen', onderdeelNaam:'aflezen', vorm:'invul', sleutel:'at' + w.join(''),
+        vraag: 'De grafiek laat de temperatuur op een dag zien. Hoe warm was het om <b>' + x + ' uur</b>?',
+        opdracht: 'Lees het antwoord af uit de grafiek.',
+        beeld: st.kop + st.kromme(punten) + punten.map(function(p){ return st.stip(p[0], p[1]); }).join('') + st.staart,
+        velden:[{ label: 'om ' + x + ' uur', antwoord: w[x], eenheid: '°C' }],
+        uitleg: 'Ga bij ' + x + ' uur recht omhoog tot de stip op de grafiek, en dan naar links: daar staat ' + w[x] + ' graden.',
+        antwoordTekst: w[x] + ' °C'
+      };
+    }
+    /* een bal omhoog: hoogte = v·t − 5t², een kromme */
+    var v = kies([20, 30]), tmax = v / 5, t = tussen(1, tmax - 1), h = v * t - 5 * t * t, st2 = stelsel({ xmin:0, xmax:tmax, ymin:0, ymax:v * v / 20, ystap:5, xnaam:'seconden', ynaam:'meter', hoog:330 });
+    var pad = [], s2;
+    for (s2 = 0; s2 <= tmax + 1e-9; s2 += 0.25) pad.push([s2, v * s2 - 5 * s2 * s2]);
+    return {
+      onderdeel:'grafieken: aflezen', onderdeelNaam:'aflezen', vorm:'invul', sleutel:'ab' + v + '_' + t,
+      vraag: 'Je gooit een bal recht omhoog. De grafiek laat de hoogte zien. Hoe hoog is de bal na <b>' + t + ' seconden</b>?',
+      opdracht: 'Lees het antwoord af uit de grafiek.',
+      beeld: st2.kop + st2.kromme(pad) + st2.staart,
+      velden:[{ label: 'na ' + t + ' seconden', antwoord: h, eenheid: 'meter' }],
+      uitleg: 'Ga bij ' + t + ' seconden recht omhoog tot de kromme, en dan naar links: daar staat ' + h + ' meter.' + (t * 2 === tmax ? ' Dat is het hoogste punt.' : ''),
+      antwoordTekst: h + ' meter'
+    };
+  }
+  function snijpunt(){
+    var p = tussen(-3, 3), q = tussen(-4, 4), a1 = kies([-2, -1, 1, 2]), a2 = kies([-2, -1, 1, 2, 0.5, -0.5]);
+    while (a2 === a1) a2 = kies([-2, -1, 1, 2, 0.5, -0.5]);
+    var b1 = q - a1 * p, b2 = q - a2 * p, st = stelsel(Object.assign({ xnaam:'x', ynaam:'y' }, ROOSTER.hv));
+    return {
+      onderdeel:'grafieken: aflezen', onderdeelNaam:'aflezen', vorm:'invul', sleutel:'sn' + p + '_' + q + '_' + a1 + '_' + a2,
+      vraag: 'Twee lijnen: <b>' + formule(a1, b1) + '</b> (blauw) en <b>' + formule(a2, b2) + '</b> (rood). Waar snijden ze elkaar?',
+      opdracht: 'Lees het snijpunt af.',
+      beeld: st.kop + st.lijn(a1, b1) + st.lijn(a2, b2, 'var(--hand)') + st.staart,
+      velden:[{ label: 'x', antwoord: p }, { label: 'y', antwoord: q }],
+      uitleg: 'De lijnen kruisen elkaar in (' + toon(p) + ', ' + toon(q) + '). Controle: ' + toon(a1) + ' × ' + toon(p) + ' + ' + toon(b1) + ' = ' + toon(q) + ' en ' + toon(a2) + ' × ' + toon(p) + ' + ' + toon(b2) + ' = ' + toon(q) + '.',
+      antwoordTekst: '(' + toon(p) + ', ' + toon(q) + ')'
+    };
+  }
+  function aflezen(niveau){
+    if (niveau === 'bb') return aflezenLijn(niveau);
+    if (niveau === 'hv' && Math.random() < 0.35) return snijpunt();
+    return Math.random() < 0.55 ? aflezenLijn(niveau) : aflezenKromme(niveau);
+  }
+
+  /* ---------- 2. de formule bij een grafiek ---------- */
+  function lijnVoor(niveau){
+    if (niveau === 'bb') return { a: kies([1, 2, 3]), b: tussen(0, 5) };
+    if (niveau === 'kgt') return { a: kies([-3, -2, -1, 1, 2, 3]), b: tussen(-5, 5) };
+    return { a: kies([-2, -1.5, -1, -0.5, 0.5, 1, 1.5, 2, 3]), b: tussen(-6, 6) };
+  }
+  function formuleBij(niveau){
+    var l = lijnVoor(niveau), a = l.a, b = l.b, o = ROOSTER[niveau], st = stelsel(Object.assign({ xnaam:'x', ynaam:'y' }, o));
+    /* afleiders: verwisseld, een teken anders, een stap ernaast */
+    var kandidaten = [[b, a], [-a, b], [a, -b], [a + 1, b], [a - 1, b], [a, b + 1], [a, b - 1], [a * 2, b]];
+    var gezien = { }, opties = [formule(a, b)]; gezien[opties[0]] = 1;
+    H(kandidaten).forEach(function(k){
+      if (opties.length >= 4 || k[0] === 0) return;
+      if (niveau === 'bb' && (k[0] < 0 || k[1] < 0)) return;
+      var f = formule(k[0], k[1]); if (gezien[f]) return; gezien[f] = 1; opties.push(f);
+    });
+    return {
+      onderdeel:'grafieken: formule bij grafiek', onderdeelNaam:'formule bij grafiek', vorm:'meerkeuze', sleutel:'fb' + a + '_' + b,
+      vraag: 'Welke formule hoort bij deze lijn?',
+      opdracht: 'Kijk waar de lijn de y-as snijdt (startgetal) en hoeveel hij per stap stijgt of daalt (helling).',
+      beeld: st.kop + st.lijn(a, b) + st.staart,
+      opties: opties, goed: 0,
+      uitleg: 'De lijn snijdt de y-as bij ' + toon(b) + ': dat is het startgetal. En ' + hellingZin(a) + ': de helling is ' + toon(a) + '. Dus ' + formule(a, b) + '.',
+      antwoordTekst: formule(a, b)
+    };
+  }
+
+  /* ---------- 3. tekenen: roosterpunten aantikken ---------- */
+  function tekenen(niveau){
+    var l, a, b, o = ROOSTER[niveau], punten, poging = 0, x, y;
+    do {
+      l = lijnVoor(niveau); a = l.a; b = l.b; if (niveau === 'bb' && a === 3) a = 2;
+      punten = [];
+      for (x = o.xmin; x <= o.xmax; x++){ y = a * x + b; if (y === Math.round(y) && y >= o.ymin && y <= o.ymax) punten.push([x, y]); }
+    } while (punten.length < 3 && ++poging < 40);
+    var f = formule(a, b);
+    function opLijn(x, y){ return Math.abs(a * x + b - y) < 1e-9; }
+    return {
+      onderdeel:'grafieken: tekenen', onderdeelNaam:'tekenen', vorm:'eigen', sleutel:'tk' + a + '_' + b,
+      vraag: 'Teken de grafiek van <b>' + f + '</b>.',
+      opdracht: 'Tik minstens drie roosterpunten aan die op de lijn liggen. Nog eens tikken haalt een stip weer weg.',
+      uitleg: 'Het startgetal is ' + toon(b) + ': de lijn gaat door (0, ' + toon(b) + '). De helling is ' + toon(a) + ': ' + hellingZin(a) + '. Punten op de lijn: ' + punten.slice(0, 3).map(function(p){ return '(' + toon(p[0]) + ', ' + toon(p[1]) + ')'; }).join(', ') + '.',
+      antwoordTekst: 'bijvoorbeeld ' + punten.slice(0, 3).map(function(p){ return '(' + toon(p[0]) + ', ' + toon(p[1]) + ')'; }).join(', '),
+      teken: function(el, api){
+        var st = stelsel(Object.assign({ xnaam:'x', ynaam:'y' }, o)), stippen = '', doelen = '', px, py;
+        for (px = o.xmin; px <= o.xmax; px++) for (py = o.ymin; py <= o.ymax; py++){
+          stippen += '<circle class="stip" data-k="' + px + ',' + py + '" cx="' + st.X(px) + '" cy="' + st.Y(py) + '" r="6"/>';
+          doelen += '<circle class="rp" data-k="' + px + ',' + py + '" cx="' + st.X(px) + '" cy="' + st.Y(py) + '" r="12"><title>(' + toon(px) + ', ' + toon(py) + ')</title></circle>';
+        }
+        el.innerHTML = '<div class="tekenraster" id="tekenraster">' + st.kop + '<g class="na"></g><g>' + stippen + '</g><g>' + doelen + '</g>' + st.staart + '</div><p class="tekenuit" id="tekenuit">nog geen stippen</p>';
+        var raster = el.querySelector('#tekenraster'), uit = el.querySelector('#tekenuit');
+        function gezet(){ return Array.prototype.map.call(raster.querySelectorAll('.stip.aan'), function(c){ return c.getAttribute('data-k').split(',').map(Number); }); }
+        function tel(){ var n = gezet().length; uit.textContent = n === 0 ? 'nog geen stippen' : n === 1 ? '1 stip, nog minstens 2' : n === 2 ? '2 stippen, nog minstens 1' : n + ' stippen'; }
+        raster.addEventListener('click', function(e){
+          if (!api.bezig()) return;
+          var d = e.target.closest ? e.target.closest('.rp') : null; if (!d) return;
+          var k = d.getAttribute('data-k'), stip = raster.querySelector('.stip[data-k="' + k + '"]');
+          stip.classList.toggle('aan'); tel();
+        });
+        var knop = api.knop('Nakijken', function(){
+          var g = gezet(), alles = g.length >= 3, mis = 0;
+          g.forEach(function(p){ var ok = opLijn(p[0], p[1]), stip = raster.querySelector('.stip[data-k="' + p[0] + ',' + p[1] + '"]'); stip.classList.add(ok ? 'goed' : 'mis'); if (!ok){ alles = false; mis++; } });
+          raster.classList.add('klaar'); knop.disabled = true;
+          if (!alles) raster.querySelector('.na').innerHTML = st.lijn(a, b, 'var(--goed)');
+          api.klaar(alles, alles ? '' : g.length < 3 ? 'Je zette ' + g.length + (g.length === 1 ? ' stip' : ' stippen') + '; drie is genoeg. De groene lijn is de grafiek.' : mis + (mis === 1 ? ' stip ligt' : ' stippen liggen') + ' niet op de lijn. De groene lijn is de grafiek.');
+        });
+        /* voor de proef: de goede punten aantikken en nakijken, of een punt ernaast */
+        function tik(p){ var d = raster.querySelector('.rp[data-k="' + p[0] + ',' + p[1] + '"]'); if (d) d.dispatchEvent(new MouseEvent('click', { bubbles:true })); }
+        el.proef = function(){ punten.slice(0, 3).forEach(tik); knop.click(); };
+        el.proefFout = function(){ var q = [o.xmin, o.ymin]; if (opLijn(q[0], q[1])) q = [o.xmax, o.ymin]; if (opLijn(q[0], q[1])) q = [o.xmin, o.ymax]; tik(q); knop.click(); };
+      }
+    };
+  }
+
+  /* ---------- 4. helling en startgetal ---------- */
+  function helling(niveau){
+    var l = lijnVoor(niveau), a = l.a, b = l.b, o = ROOSTER[niveau], viaTabel = niveau !== 'bb' && Math.random() < 0.5, beeld, xs, ys, bron;
+    if (viaTabel){
+      xs = a === Math.round(a) ? (niveau === 'hv' && Math.random() < 0.5 ? [-2, -1, 0, 1, 2] : [0, 1, 2, 3, 4]) : [0, 2, 4, 6];
+      ys = xs.map(function(x){ return a * x + b; });
+      beeld = tabelSvg(xs, ys); bron = 'de formule die bij deze tabel hoort';
+    } else {
+      var st = stelsel(Object.assign({ xnaam:'x', ynaam:'y' }, o));
+      beeld = st.kop + st.lijn(a, b) + st.staart; bron = 'deze lijn';
+    }
+    var stap = xs && xs[1] - xs[0] === 2 ? 2 : 1;
+    return {
+      onderdeel:'grafieken: helling en startgetal', onderdeelNaam:'helling en startgetal', vorm:'invul', sleutel:'hs' + a + '_' + b + (viaTabel ? 't' : 'g'),
+      vraag: 'Wat is het startgetal en wat is de helling van ' + bron + '?',
+      opdracht: viaTabel ? 'Het startgetal is de y bij x = 0. De helling is hoeveel y verandert per stap van 1 naar rechts.' : 'Het startgetal is waar de lijn de y-as snijdt. De helling is hoeveel de lijn per stap naar rechts stijgt of daalt.',
+      beeld: beeld,
+      velden:[{ label:'startgetal', antwoord: b }, { label:'helling', antwoord: a, tol: 0.001 }],
+      uitleg: (viaTabel ? 'Bij x = 0 hoort y = ' + toon(b) + ': het startgetal. Van x = 0 naar x = ' + stap + ' gaat y van ' + toon(b) + ' naar ' + toon(a * stap + b) + ', dat is ' + toon(a * stap) + (stap === 2 ? ' per 2 stappen, dus ' + toon(a) + ' per stap' : '') + ': de helling.'
+        : 'De lijn snijdt de y-as bij ' + toon(b) + ': het startgetal. En ' + hellingZin(a) + ': de helling is ' + toon(a) + '.') + ' De formule is ' + formule(a, b) + '.',
+      antwoordTekst: 'startgetal ' + toon(b) + ', helling ' + toon(a)
+    };
+  }
+
+  var SOORTEN = { aflezen: aflezen, formule: formuleBij, tekenen: tekenen, helling: helling };
+  VAKSPEL.maak({
+    id:'grafieken', naam:'Grafieken en formules', vak:'wis', kleur:'#F26749',
+    hand:'een lijn vertelt een verhaal',
+    lead:'Aflezen uit een grafiek, de formule bij een lijn vinden, zelf een lijn tekenen op het rooster en het startgetal en de helling bepalen. Bij elke opgave staat een assenstelsel, en na je antwoord staat erbij hoe het zit.',
+    hoe:[
+      { kop:'Aflezen', tekst:'Ga bij het getal op de x-as recht omhoog tot de grafiek, en dan naar links naar de y-as. Daar staat je antwoord.' },
+      { kop:'Startgetal en helling', tekst:'Bij y = 2x + 3 is <b>3</b> het startgetal: daar snijdt de lijn de y-as. De helling <b>2</b> zegt: elke stap naar rechts gaat de lijn 2 omhoog.' },
+      { kop:'Zelf tekenen', tekst:'Tik roosterpunten aan die op de lijn liggen. Drie is genoeg, en je ziet meteen of ze kloppen. Tien opgaven per ronde.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'Hele getallen, stijgende lijnen, en het rooster begint bij 0.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Ook negatieve getallen, dalende lijnen, krommen en tabellen.' },
+        { id:'hv', naam:'havo en vwo', uit:'Ook hellingen als 0,5 en −1,5, en het snijpunt van twee lijnen aflezen.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' }, { id:'aflezen', naam:'aflezen' }, { id:'formule', naam:'formule bij grafiek' }, { id:'tekenen', naam:'tekenen' }, { id:'helling', naam:'helling en startgetal' } ] }
+    ],
+    aantal:10,
+    maak:function(keuze, nr){
+      var soort = keuze.soort === 'alles' ? kies(['aflezen', 'formule', 'tekenen', 'helling']) : keuze.soort;
+      return SOORTEN[soort](keuze.niveau);
+    },
+    uitleg:{ doel:'Grafieken aflezen, de formule bij een lijn vinden, lijnen tekenen en de helling en het startgetal bepalen.', tijd:'tien opgaven per ronde', bediening:'Typ je antwoord en druk op Nakijken of Enter. Bij tekenen tik je roosterpunten aan en druk je dan op Nakijken.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>

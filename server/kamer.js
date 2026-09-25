@@ -76,7 +76,19 @@ const KLAS_SPELLEN = { race: "Vragenrace", eigen: "Eigen oefening", klasquiz: "K
   /* Deze meldden hun uitslag wel, maar stonden hier niet, dus de klas kreeg ze
      nooit te zien: de melding werd geweigerd met "onbekend spel". */
   dhte: "Het DHTE-schema", vlakken: "Vlakken herkennen", organisme: "Bouw het organisme",
-  verhoudingen: "De verhoudingstabel" };
+  verhoudingen: "De verhoudingstabel",
+  cijferen: "Cijferend vermenigvuldigen en delen",
+  klok: "Klokkijken en tijdrekenen",
+  schatten: "Schatten en afronden",
+  grafieken: "Grafieken en formules",
+  pythagoras: "De stelling van Pythagoras",
+  hoeken: "Hoeken meten en berekenen",
+  phrasal: "Phrasal verbs en collocations",
+  translate: "Translate the sentence",
+  klimaatgrafiek: "Klimaatgrafieken",
+  kaartvaardigheid: "Kaartvaardigheden",
+  voedselweb: "Voedselketen en voedselweb",
+  huishoudboekje: "Het huishoudboekje" };
 /* Hoe lang de kamer wacht voor hij iemand die wegviel ook echt weghaalt. In de
    lobby kort: herladen duurt een paar tellen. In de arena langer: een
    telefoon die even geen bereik heeft, hoort er niet meteen uit te liggen. */

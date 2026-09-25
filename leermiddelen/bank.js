@@ -74,7 +74,7 @@ var TIJDVAKKEN = [
 ];
 
 var ONDERDELEN = {
-  reken: [[/^metriek: /, 'meten'], [/^verhoudingstabel: /, 'verhoudingen'], {id:'tafels',naam:'tafels'},{id:'hoofd',naam:'hoofdrekenen'},{id:'cijferen',naam:'plaatswaarde en cijferen'},{id:'dhte',naam:'het DHTE-schema'},{id:'machten',naam:'machten en wortels'},{id:'negatief',naam:'negatieve getallen'},{id:'komma',naam:'kommagetallen'},{id:'gemiddelde',naam:'gemiddelde en schaal'},{id:'breuk',naam:'breuken'},{id:'procent',naam:'procenten'},{id:'verhouding',naam:'verhoudingen'},{id:'tijdgeld',naam:'tijd en geld'},{id:'meten',naam:'meten en meetkunde'}],
+  reken: [[/^schatten: /, 'getallen'], [/^klok: /, 'meten'], [/^cijferen: /, 'getallen'], [/^metriek: /, 'meten'], [/^verhoudingstabel: /, 'verhoudingen'], {id:'tafels',naam:'tafels'},{id:'hoofd',naam:'hoofdrekenen'},{id:'cijferen',naam:'plaatswaarde en cijferen'},{id:'dhte',naam:'het DHTE-schema'},{id:'machten',naam:'machten en wortels'},{id:'negatief',naam:'negatieve getallen'},{id:'komma',naam:'kommagetallen'},{id:'gemiddelde',naam:'gemiddelde en schaal'},{id:'breuk',naam:'breuken'},{id:'procent',naam:'procenten'},{id:'verhouding',naam:'verhoudingen'},{id:'tijdgeld',naam:'tijd en geld'},{id:'meten',naam:'meten en meetkunde'}],
   /* groep zet de onderdelen onder een kop in de kiezer; zie GROEPEN hieronder */
   ned: [{id:'werkwoordspelling',naam:'werkwoordspelling',groep:'spelling'},{id:'spelling',naam:'los van het werkwoord',groep:'spelling'},{id:'meervoud',naam:'enkel en meervoud',groep:'spelling'},
         {id:'leestekens',naam:'leestekens',groep:'interpunctie'},
@@ -82,13 +82,13 @@ var ONDERDELEN = {
         {id:'zinsontleding',naam:'zinsdelen benoemen',groep:'zinsontleding'},
         {id:'verwijswoorden',naam:'verwijswoorden',groep:'grammatica'},
         {id:'betekenis',naam:'betekenis van woorden',groep:'lezen'},{id:'synoniemen',naam:'synoniemen',groep:'lezen'},{id:'uitdrukkingen',naam:'uitdrukkingen',groep:'lezen'},{id:'tekstverbanden',naam:'signaalwoorden',groep:'lezen'}],
-  eng: [{id:'woordjes NL naar EN',naam:'woordjes NL naar EN',groep:'woordenschat'},{id:'woordjes EN naar NL',naam:'woordjes EN naar NL',groep:'woordenschat'},{id:'valse vrienden',naam:'valse vrienden',groep:'woordenschat'},
+  eng: [[/^translate: /, 'grammatica'], [/^phrasal: /, 'woordenschat'], {id:'woordjes NL naar EN',naam:'woordjes NL naar EN',groep:'woordenschat'},{id:'woordjes EN naar NL',naam:'woordjes EN naar NL',groep:'woordenschat'},{id:'valse vrienden',naam:'valse vrienden',groep:'woordenschat'},
         {id:'irregular verbs',naam:'irregular verbs',groep:'werkwoorden'},{id:'voorzetselwerkwoorden',naam:'werkwoord met voorzetsel',groep:'werkwoorden'},
         {id:'grammatica',naam:'grammatica',groep:'grammatica'}],
   ges: TIJDVAKKEN.map(t => ({id: t.id, naam: t.naam})).concat([{id:'staat', naam:'staatsinrichting (examen vmbo)'}, {id:'nl1900', naam:'Nederland en de wereld vanaf 1900 (examen vmbo)'}]),
   aard: [{id:'vlaggen',naam:'vlaggen van landen'},{id:'landvormen',naam:'vormen van landen'},{id:'topografie',naam:'topografie: hoofdsteden'}],
-  bio: [{id:'organen',naam:'organen'},{id:'bloed',naam:'bloed en ademhaling'},{id:'vertering',naam:'vertering en voeding'},{id:'planten',naam:'planten'},{id:'cellen',naam:'cellen'},{id:'zintuigen',naam:'zintuigen en zenuwen'},{id:'ordening',naam:'ordening en ecologie'},{id:'erfelijkheid',naam:'erfelijkheid'}],
-  wis: [{id:'vergelijking',naam:'vergelijkingen'},{id:'formule',naam:'formules'},{id:'oppervlakte',naam:'oppervlakte en inhoud'},{id:'omtrek',naam:'omtrek'},{id:'hoeken',naam:'hoeken'},{id:'grafiek',naam:'grafieken en assenstelsel'},{id:'statistiek',naam:'statistiek'},{id:'pythagoras',naam:'stelling van Pythagoras'},{id:'vlakken',naam:'vlakken herkennen'}],
+  bio: [[/^voedselweb: /, 'natuur'], {id:'organen',naam:'organen'},{id:'bloed',naam:'bloed en ademhaling'},{id:'vertering',naam:'vertering en voeding'},{id:'planten',naam:'planten'},{id:'cellen',naam:'cellen'},{id:'zintuigen',naam:'zintuigen en zenuwen'},{id:'ordening',naam:'ordening en ecologie'},{id:'erfelijkheid',naam:'erfelijkheid'}],
+  wis: [[/^hoeken: /, 'meetkunde'], [/^pythagoras: /, 'meetkunde'], [/^grafieken: /, 'verwerken'], {id:'vergelijking',naam:'vergelijkingen'},{id:'formule',naam:'formules'},{id:'oppervlakte',naam:'oppervlakte en inhoud'},{id:'omtrek',naam:'omtrek'},{id:'hoeken',naam:'hoeken'},{id:'grafiek',naam:'grafieken en assenstelsel'},{id:'statistiek',naam:'statistiek'},{id:'pythagoras',naam:'stelling van Pythagoras'},{id:'vlakken',naam:'vlakken herkennen'}],
   burg: [{id:'democratie',naam:'democratie en verkiezingen'},{id:'rechtsstaat',naam:'rechtsstaat en grondrechten'},{id:'media',naam:'media en nieuws'},{id:'europa',naam:'Europa en de wereld'},{id:'samenleven',naam:'samenleven'},{id:'geld',naam:'geld en werk'}]
 };
 ONDERDELEN.aard.push({id:'examen-ak', naam:'weer, water, bevolking (examen vmbo)'});

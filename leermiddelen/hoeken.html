@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Hoeken meten en berekenen, versie 1.0: op vakspel.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Hoeken meten en berekenen &middot; meneer Greidanus</title>
+<meta name="description" content="Scherp, recht, stomp of gestrekt; aflezen op de gradenboog, schatten, en hoeken berekenen in driehoeken, bij snijdende lijnen en bij evenwijdige lijnen.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Hoeken meten en berekenen">
+<meta property="og:description" content="Soorten hoeken, aflezen op de gradenboog, schatten, en hoeken berekenen in driehoeken en bij lijnen.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/hoeken.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%23F26749'/><g fill='none' stroke='%2314224C' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'><path d='M24 74h54M24 74L66 30'/><path d='M50 74a26 26 0 0 0-8-19'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+/* de tekeningen: even breed als de kaart, tot 400 px */
+.beeld svg.gr{width:100%;max-width:min(100%,400px);height:auto;display:block}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  function tussen(a, b){ return a + Math.floor(Math.random() * (b - a + 1)); }
+  function gr(x){ return x + '°'; }
+
+  /* ---------- tekenen in graden ----------
+     Alles in svg-punten. Hoeken lopen tegen de klok in, zoals in de wiskunde: 0° naar rechts, 90° omhoog. */
+  function pt(V, g, r){ var a = g * Math.PI / 180; return [Math.round((V[0] + r * Math.cos(a)) * 10) / 10, Math.round((V[1] - r * Math.sin(a)) * 10) / 10]; }
+  function str(opt){ opt = opt || {}; return 'stroke="' + (opt.kleur || 'currentColor') + '" stroke-width="' + (opt.dik || 2.5) + '" stroke-linecap="round" stroke-linejoin="round"' + (opt.stippel ? ' stroke-dasharray="6 5"' : '') + ' fill="' + (opt.vul || 'none') + '"'; }
+  function lijn(p, q, opt){ return '<line x1="' + p[0] + '" y1="' + p[1] + '" x2="' + q[0] + '" y2="' + q[1] + '" ' + str(opt) + '/>'; }
+  /* een been van hoekpunt V in richting g, lengte r */
+  function been(V, g, r, opt){ return lijn(V, pt(V, g, r), opt); }
+  /* het boogje van een hoek tussen richting van en tot; een rechte hoek krijgt een hoekje */
+  function boog(V, van, tot, r, opt){
+    opt = opt || {};
+    if (Math.abs(tot - van - 90) < 1e-9 && !opt.geenHoekje){ var s = r * 0.62, a = pt(V, van, s), b = pt(V, tot, s), c = [a[0] + b[0] - V[0], a[1] + b[1] - V[1]]; return '<path d="M' + a.join(' ') + 'L' + c.join(' ') + 'L' + b.join(' ') + '" ' + str({ kleur: opt.kleur || 'var(--nadruk)', dik: opt.dik || 2.5 }) + '/>'; }
+    var p = pt(V, van, r), q = pt(V, tot, r);
+    return '<path d="M' + p.join(' ') + 'A' + r + ' ' + r + ' 0 ' + (tot - van > 180 ? 1 : 0) + ' 0 ' + q.join(' ') + '" ' + str({ kleur: opt.kleur || 'var(--nadruk)', dik: opt.dik || 2.5 }) + '/>';
+  }
+  /* de tekst bij een hoek: op de bissectrice; bij een kleine hoek buiten het hoekpunt, anders erin */
+  function hoekTekst(V, van, tot, tekst, r){
+    var g = tot - van, vraag = tekst === '?', mid = van + g / 2, p;
+    if (g < 32) p = pt(V, mid + 180, r ? r * 0.7 : 24); else p = pt(V, mid, r || (g < 60 ? 46 : 40));
+    return '<text x="' + p[0] + '" y="' + (p[1] + (vraag ? 8 : 6)) + '" text-anchor="middle" font-size="' + (vraag ? 24 : 17) + '" font-weight="600" fill="' + (vraag ? 'var(--nadruk)' : 'currentColor') + '">' + S(tekst) + '</text>';
+  }
+  function svg(W, Hh, naam, inhoud){ return '<svg class="gr" viewBox="0 0 ' + W + ' ' + Hh + '" font-family="inherit" role="img" aria-label="' + S(naam) + '">' + inhoud + '</svg>'; }
+
+  /* een losse hoek: gedraaid als dat mag, of met een gradenboog (per 10, 5 of 1 graad) op de basis */
+  function hoekSvg(graden, o){
+    o = o || {};
+    if (o.gradenboog){
+      var V = [170, 200], R = 150, s = '', g, r1;
+      s += '<path d="M' + (V[0] + R) + ' ' + V[1] + 'A' + R + ' ' + R + ' 0 0 0 ' + (V[0] - R) + ' ' + V[1] + 'Z" fill="var(--kaart2)" stroke="var(--muted)" stroke-width="1.5"/>';
+      s += '<circle cx="' + V[0] + '" cy="' + V[1] + '" r="4" fill="currentColor"/>';
+      var fijn = o.gradenboog === 'per1' ? 1 : o.gradenboog === 'per5' ? 5 : 10;
+      s += '<g stroke="currentColor" stroke-width="1">';
+      for (g = 0; g <= 180; g += fijn){ r1 = g % 10 === 0 ? 134 : g % 5 === 0 ? 141 : 145; s += lijn(pt(V, g, r1), pt(V, g, R), { dik: g % 10 === 0 ? 1.6 : 1 }); }
+      s += '</g><g font-size="13" fill="var(--muted)">';
+      for (g = 0; g <= 180; g += 10){ var q = pt(V, g, 121); s += '<text x="' + q[0] + '" y="' + q[1] + '" text-anchor="middle" dominant-baseline="middle" transform="rotate(' + (90 - g) + ' ' + q[0] + ' ' + q[1] + ')">' + g + '</text>'; }
+      s += '</g>';
+      s += been(V, 0, R + 20, { dik:3 }) + been(V, graden, R + 20, { dik:3, kleur:'var(--nadruk)' }) + boog(V, 0, graden, 28, { kleur:'var(--nadruk)' });
+      return svg(340, 230, 'hoek van ' + graden + ' graden op een gradenboog', s);
+    }
+    var V2 = [170, 160], R2 = 125, draai = o.draai ? tussen(-30, 30) : 0, spiegel = o.draai && Math.random() < 0.5;
+    var inhoud = '<g transform="' + (spiegel ? 'translate(340 0) scale(-1 1) ' : '') + 'rotate(' + (-draai) + ' ' + V2[0] + ' ' + V2[1] + ')">' +
+      been(V2, 0, R2, { dik:3 }) + been(V2, graden, R2, { dik:3 }) + boog(V2, 0, graden, 30) + '<circle cx="' + V2[0] + '" cy="' + V2[1] + '" r="4" fill="currentColor"/>' +
+      (o.label ? hoekTekst(V2, 0, graden, o.label, 52) : '') + '</g>';
+    return svg(340, 250, 'een hoek', inhoud);
+  }
+
+  /* ---------- 1. de soort ---------- */
+  var SOORTEN_HOEK = ['scherp', 'recht', 'stomp', 'gestrekt'];
+  function soort(niveau){
+    var welke = kies([0, 0, 1, 2, 2, 3]), graden = welke === 0 ? tussen(2, 8) * 10 : welke === 1 ? 90 : welke === 2 ? tussen(10, 17) * 10 : 180;
+    if (niveau !== 'bb' && welke !== 1 && welke !== 3) graden += kies([0, 3, 5, 7]);
+    return {
+      onderdeel:'hoeken: soort', onderdeelNaam:'soort hoek', vorm:'meerkeuze', sleutel:'so' + graden, vasteVolgorde:true,
+      vraag: 'Wat voor hoek is dit?',
+      opdracht: 'Kleiner dan 90° is scherp, precies 90° is recht, tussen 90° en 180° is stomp, precies 180° is gestrekt.',
+      beeld: hoekSvg(graden, { draai:true }),
+      opties: SOORTEN_HOEK, goed: welke,
+      uitleg: 'Deze hoek is ' + gr(graden) + ', dus ' + SOORTEN_HOEK[welke] + '. ' + (welke === 0 ? 'Kleiner dan een rechte hoek.' : welke === 1 ? 'Precies een kwart draai, met het hoekje als teken.' : welke === 2 ? 'Groter dan een rechte hoek, maar nog geen rechte lijn.' : 'De benen liggen op één rechte lijn.'),
+      antwoordTekst: SOORTEN_HOEK[welke]
+    };
+  }
+
+  /* ---------- 2. aflezen op de gradenboog ---------- */
+  function aflezen(niveau){
+    var graden = niveau === 'bb' ? tussen(1, 17) * 10 : niveau === 'kgt' ? tussen(2, 35) * 5 : tussen(7, 173);
+    var fijn = niveau === 'hv' ? 'per1' : 'per5';
+    return {
+      onderdeel:'hoeken: aflezen', onderdeelNaam:'aflezen', vorm:'invul', sleutel:'af' + graden,
+      vraag: 'Hoe groot is deze hoek? Lees af op de gradenboog.',
+      opdracht: 'Het ene been ligt op de 0. Kijk waar het blauwe been de schaal snijdt.' + (niveau === 'hv' ? ' De kleine streepjes zijn per graad.' : ' De middelste streepjes zijn per 5 graden.'),
+      beeld: hoekSvg(graden, { gradenboog: fijn }),
+      velden:[{ label:'de hoek', antwoord: graden, tol: 2, eenheid: '°' }],
+      uitleg: 'Het blauwe been snijdt de schaal bij ' + graden + ': de hoek is ' + gr(graden) + '. ' + (graden < 90 ? 'Scherp, dus je leest onder de 90.' : graden > 90 ? 'Stomp, dus je leest boven de 90.' : 'Precies recht.'),
+      antwoordTekst: gr(graden)
+    };
+  }
+
+  /* ---------- 3. schatten ---------- */
+  function schatten(niveau){
+    var graden = niveau === 'bb' ? tussen(2, 16) * 10 : tussen(3, 34) * 5, opties = [gr(graden)], gezien = {}; gezien[graden] = 1;
+    var poging = 0;
+    while (opties.length < 4 && ++poging < 60){
+      var d = kies([15, 20, 25, 30, 35, 40]) * kies([1, -1]), w = graden + d;
+      if (w < 5 || w > 175 || gezien[w]) continue;
+      gezien[w] = 1; opties.push(gr(w));
+    }
+    return {
+      onderdeel:'hoeken: schatten', onderdeelNaam:'schatten', vorm:'meerkeuze', sleutel:'sc' + graden,
+      vraag: 'Hoe groot is deze hoek ongeveer?',
+      opdracht: 'Zonder gradenboog. Vergelijk met een rechte hoek (90°) en een halve rechte hoek (45°).',
+      beeld: hoekSvg(graden, { draai:true }),
+      opties: opties, goed: 0,
+      uitleg: 'De hoek is ' + gr(graden) + '. ' + (graden < 45 ? 'Minder dan de helft van een rechte hoek.' : graden < 90 ? 'Meer dan 45° maar minder dan 90°.' : graden === 90 ? 'Precies recht.' : graden < 135 ? 'Iets meer dan een rechte hoek.' : 'Dicht bij een gestrekte hoek van 180°.'),
+      antwoordTekst: gr(graden)
+    };
+  }
+
+  /* ---------- 4. berekenen ---------- */
+  function hoekVoor(niveau, min, max){ var st = niveau === 'bb' ? 10 : niveau === 'kgt' ? 5 : 1; return tussen(Math.ceil(min / st), Math.floor(max / st)) * st; }
+  /* een driehoek uit twee hoeken, op schaal; de derde berekenen */
+  function driehoek(niveau){
+    var min = niveau === 'bb' ? 30 : niveau === 'kgt' ? 25 : 20, A, B, C, poging = 0;
+    do { A = hoekVoor(niveau, min, 110); B = hoekVoor(niveau, min, 110); C = 180 - A - B; } while ((C < min || C > 120) && ++poging < 60);
+    var vraag = kies([0, 1, 2]), hoeken = [A, B, C], rad = Math.PI / 180;
+    var L = 270, h = L * Math.sin(A * rad) * Math.sin(B * rad) / Math.sin(C * rad);
+    if (h > 175){ L = L * 175 / h; }
+    var P = [[(340 - L) / 2, 228], [(340 + L) / 2, 228]], AC = L * Math.sin(B * rad) / Math.sin(C * rad);
+    P.push(pt(P[0], A, AC));
+    var s = '<polygon points="' + P.map(function(p){ return p.join(','); }).join(' ') + '" ' + str({ vul:'var(--kaart2)', dik:2.5 }) + '/>';
+    s += boog(P[0], 0, A, 26) + boog(P[1], 180 - B, 180, 26) + boog(P[2], 180 + A, 360 - B, 26);
+    s += hoekTekst(P[0], 0, A, vraag === 0 ? '?' : gr(A)) + hoekTekst(P[1], 180 - B, 180, vraag === 1 ? '?' : gr(B)) + hoekTekst(P[2], 180 + A, 360 - B, vraag === 2 ? '?' : gr(C));
+    var bekend = hoeken.filter(function(x, i){ return i !== vraag; });
+    return {
+      onderdeel:'hoeken: berekenen', onderdeelNaam:'berekenen', vorm:'invul', sleutel:'dr' + A + '_' + B + '_' + vraag,
+      vraag: 'Bereken de hoek met het vraagteken.',
+      opdracht: 'De drie hoeken van een driehoek zijn samen 180°.',
+      beeld: svg(340, 260, 'driehoek met twee bekende hoeken', s),
+      velden:[{ label:'de hoek', antwoord: hoeken[vraag], eenheid: '°' }],
+      uitleg: '180° − ' + bekend[0] + '° − ' + bekend[1] + '° = ' + gr(hoeken[vraag]) + '. De hoeken van een driehoek zijn samen altijd 180°.',
+      antwoordTekst: gr(hoeken[vraag])
+    };
+  }
+  /* gelijkbenig: de tophoek of een basishoek gegeven */
+  function gelijkbenig(niveau){
+    var top = tussen(10, 70) * 2, basis = (180 - top) / 2, vraagTop = Math.random() < 0.5, rad = Math.PI / 180;
+    var L = 240, h = L / 2 * Math.tan(basis * rad); if (h > 180){ L = L * 180 / h; h = 180; }
+    var A = [(340 - L) / 2, 230], B = [(340 + L) / 2, 230], C = [170, 230 - h];
+    var s = '<polygon points="' + [A, B, C].map(function(p){ return p.join(','); }).join(' ') + '" ' + str({ vul:'var(--kaart2)', dik:2.5 }) + '/>';
+    /* streepjes op de twee gelijke benen */
+    function streep(p, q){ var m = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2], dx = q[0] - p[0], dy = q[1] - p[1], l = Math.hypot(dx, dy), nx = -dy / l * 7, ny = dx / l * 7; return lijn([m[0] - nx, m[1] - ny], [m[0] + nx, m[1] + ny], { dik:2.5 }); }
+    s += streep(A, C) + streep(B, C);
+    s += boog(A, 0, basis, 26) + boog(B, 180 - basis, 180, 26) + boog(C, 180 + basis, 360 - basis, 26);
+    s += hoekTekst(A, 0, basis, vraagTop ? gr(basis) : '?') + hoekTekst(C, 180 + basis, 360 - basis, vraagTop ? '?' : gr(top));
+    return {
+      onderdeel:'hoeken: berekenen', onderdeelNaam:'berekenen', vorm:'invul', sleutel:'gb' + top + (vraagTop ? 't' : 'b'),
+      vraag: 'Deze driehoek is <b>gelijkbenig</b>: de twee benen met een streepje zijn even lang. Bereken de hoek met het vraagteken.',
+      opdracht: 'In een gelijkbenige driehoek zijn de twee basishoeken even groot.',
+      beeld: svg(340, 260, 'gelijkbenige driehoek', s),
+      velden:[{ label:'de hoek', antwoord: vraagTop ? top : basis, eenheid: '°' }],
+      uitleg: vraagTop ? 'De twee basishoeken zijn allebei ' + basis + '°. De tophoek is 180° − 2 × ' + basis + '° = ' + gr(top) + '.'
+        : 'De tophoek is ' + top + '°, dus de twee basishoeken zijn samen 180° − ' + top + '° = ' + (180 - top) + '°. Ze zijn even groot: ' + (180 - top) + '° ÷ 2 = ' + gr(basis) + '.',
+      antwoordTekst: gr(vraagTop ? top : basis)
+    };
+  }
+  /* twee snijdende lijnen: overstaande hoeken zijn gelijk */
+  function overstaand(niveau){
+    var a = hoekVoor(niveau, 25, 155); if (a === 90) a = niveau === 'bb' ? 60 : 85;
+    var f = tussen(5, 30), O = [170, 130], s = '';
+    s += lijn(pt(O, f + 180, 145), pt(O, f, 145), { dik:2.5 }) + lijn(pt(O, f + a + 180, 145), pt(O, f + a, 145), { dik:2.5 });
+    s += boog(O, f, f + a, 30) + boog(O, f + 180, f + 180 + a, 30);
+    s += hoekTekst(O, f, f + a, gr(a), 50) + hoekTekst(O, f + 180, f + 180 + a, '?', 50);
+    return {
+      onderdeel:'hoeken: berekenen', onderdeelNaam:'berekenen', vorm:'invul', sleutel:'ov' + a + '_' + f,
+      vraag: 'Twee lijnen snijden elkaar. Bereken de hoek met het vraagteken.',
+      opdracht: 'Overstaande hoeken zijn even groot.',
+      beeld: svg(340, 260, 'twee snijdende lijnen', s),
+      velden:[{ label:'de hoek', antwoord: a, eenheid: '°' }],
+      uitleg: 'De hoek met het vraagteken ligt recht tegenover de hoek van ' + a + '°: dat zijn overstaande hoeken, en die zijn even groot. Dus ' + gr(a) + '.',
+      antwoordTekst: gr(a)
+    };
+  }
+  /* hoeken op een rechte lijn: samen 180° */
+  function rechteLijn(niveau){
+    var drie = niveau === 'hv' && Math.random() < 0.5, P = [170, 200], s = lijn([20, 200], [320, 200], { dik:2.5 }) + '<circle cx="170" cy="200" r="4" fill="currentColor"/>';
+    var a, b, c, vraag, uitleg, antwoord;
+    if (!drie){
+      a = hoekVoor(niveau, 20, 160); if (a === 90) a = 80; b = 180 - a; vraag = Math.random() < 0.5 ? 0 : 1;
+      s += been(P, a, 150, { dik:2.5 }) + boog(P, 0, a, 30) + boog(P, a, 180, 44) + hoekTekst(P, 0, a, vraag === 0 ? '?' : gr(a), 56) + hoekTekst(P, a, 180, vraag === 1 ? '?' : gr(b), 66);
+      antwoord = vraag === 0 ? a : b;
+      uitleg = 'De twee hoeken liggen samen op een rechte lijn, dus samen 180°. 180° − ' + (vraag === 0 ? b : a) + '° = ' + gr(antwoord) + '.';
+    } else {
+      a = tussen(25, 70); b = tussen(25, 70); c = 180 - a - b; vraag = kies([0, 1, 2]);
+      var hoeken = [a, b, c], bekend = hoeken.filter(function(x, i){ return i !== vraag; });
+      s += been(P, a, 150, { dik:2.5 }) + been(P, a + b, 150, { dik:2.5 }) + boog(P, 0, a, 30) + boog(P, a, a + b, 44) + boog(P, a + b, 180, 58) +
+        hoekTekst(P, 0, a, vraag === 0 ? '?' : gr(a), 60) + hoekTekst(P, a, a + b, vraag === 1 ? '?' : gr(b), 70) + hoekTekst(P, a + b, 180, vraag === 2 ? '?' : gr(c), 80);
+      antwoord = hoeken[vraag];
+      uitleg = 'De drie hoeken liggen samen op een rechte lijn, dus samen 180°. 180° − ' + bekend[0] + '° − ' + bekend[1] + '° = ' + gr(antwoord) + '.';
+    }
+    return {
+      onderdeel:'hoeken: berekenen', onderdeelNaam:'berekenen', vorm:'invul', sleutel:'rl' + a + '_' + (b || 0) + '_' + vraag,
+      vraag: 'Bereken de hoek met het vraagteken.',
+      opdracht: 'Hoeken op een rechte lijn zijn samen 180°.',
+      beeld: svg(340, 240, 'hoeken op een rechte lijn', s),
+      velden:[{ label:'de hoek', antwoord: antwoord, eenheid: '°' }],
+      uitleg: uitleg,
+      antwoordTekst: gr(antwoord)
+    };
+  }
+  /* F- en Z-hoeken bij twee evenwijdige lijnen en een snijlijn */
+  function evenwijdig(niveau){
+    var f = tussen(35, 70), rad = Math.PI / 180, T2 = [110, 190], T1 = [Math.round(110 + 110 / Math.tan(f * rad)), 80], soortH = kies(['F', 'Z']);
+    var s = lijn([20, 80], [320, 80], { dik:2.5 }) + lijn([20, 190], [320, 190], { dik:2.5 });
+    /* pijltjes: de lijnen zijn evenwijdig */
+    s += '<path d="M282 74l8 6-8 6M282 184l8 6-8 6" ' + str({ dik:2 }) + '/>';
+    s += lijn(pt(T2, f + 180, 50), pt(T1, f, 50), { dik:2.5 });
+    /* gebieden: [van, tot] rond elk snijpunt; F: hetzelfde gebied boven en onder; Z: binnen, aan weerskanten */
+    var gebieden = [[0, f], [f, 180], [180, 180 + f], [180 + f, 360]], g1, g2;
+    if (soortH === 'F'){ g1 = g2 = kies([0, 1, 2, 3]); }
+    else { var z = kies([[2, 0], [3, 1]]); g1 = z[0]; g2 = z[1]; }
+    var hoek = gebieden[g1][1] - gebieden[g1][0], vraagBoven = Math.random() < 0.5;
+    s += boog(T1, gebieden[g1][0], gebieden[g1][1], 24) + boog(T2, gebieden[g2][0], gebieden[g2][1], 24);
+    s += hoekTekst(T1, gebieden[g1][0], gebieden[g1][1], vraagBoven ? '?' : gr(hoek), 44) + hoekTekst(T2, gebieden[g2][0], gebieden[g2][1], vraagBoven ? gr(hoek) : '?', 44);
+    return {
+      onderdeel:'hoeken: berekenen', onderdeelNaam:'berekenen', vorm:'invul', sleutel:'ew' + f + soortH + g1 + (vraagBoven ? 'b' : 'o'),
+      vraag: 'De twee lijnen met een pijltje zijn <b>evenwijdig</b>. Bereken de hoek met het vraagteken.',
+      opdracht: 'Zoek een F of een Z in de figuur.',
+      beeld: svg(340, 270, 'evenwijdige lijnen met een snijlijn', s),
+      velden:[{ label:'de hoek', antwoord: hoek, eenheid: '°' }],
+      uitleg: (soortH === 'F' ? 'De twee hoeken vormen samen een F: het zijn F-hoeken (overeenkomstige hoeken), en die zijn bij evenwijdige lijnen even groot.' : 'De twee hoeken vormen samen een Z: het zijn Z-hoeken (verwisselende hoeken), en die zijn bij evenwijdige lijnen even groot.') + ' Dus ' + gr(hoek) + '.',
+      antwoordTekst: gr(hoek)
+    };
+  }
+  function berekenen(niveau){
+    var lijst = niveau === 'bb' ? [driehoek, driehoek, rechteLijn, overstaand] : niveau === 'kgt' ? [driehoek, driehoek, rechteLijn, overstaand] : [driehoek, rechteLijn, overstaand, gelijkbenig, evenwijdig, evenwijdig];
+    return kies(lijst)(niveau);
+  }
+
+  var SOORTEN = { soort: soort, aflezen: aflezen, schatten: schatten, berekenen: berekenen };
+  VAKSPEL.maak({
+    id:'hoeken', naam:'Hoeken meten en berekenen', vak:'wis', kleur:'#F26749',
+    hand:'een rechte hoek is 90 graden',
+    lead:'Scherp, recht, stomp of gestrekt. Je leest hoeken af op een gradenboog, schat ze zonder, en berekent ze in driehoeken, bij snijdende lijnen en bij evenwijdige lijnen. Elke hoek is echt op maat getekend.',
+    hoe:[
+      { kop:'Meten', tekst:'Leg het middelpunt van de gradenboog op het hoekpunt en de 0 op een been. Lees af waar het andere been de schaal snijdt.' },
+      { kop:'Driehoek', tekst:'De drie hoeken van een driehoek zijn samen <b>180°</b>. Twee bekend? Trek ze van 180 af.' },
+      { kop:'Lijnen', tekst:'Hoeken op een rechte lijn zijn samen 180°. Overstaande hoeken zijn gelijk. Bij evenwijdige lijnen zoek je een F of een Z. Tien opgaven per ronde.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'Hoeken in hele tientallen, aflezen per 5 graden, driehoeken en rechte lijnen.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Hoeken per 5 graden, ook overstaande hoeken.' },
+        { id:'hv', naam:'havo en vwo', uit:'Aflezen per graad, gelijkbenige driehoeken, en F- en Z-hoeken bij evenwijdige lijnen.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' }, { id:'soort', naam:'soort hoek' }, { id:'aflezen', naam:'aflezen' }, { id:'schatten', naam:'schatten' }, { id:'berekenen', naam:'berekenen' } ] }
+    ],
+    aantal:10,
+    maak:function(keuze, nr){
+      var lijst = keuze.niveau === 'bb' ? ['soort', 'soort', 'aflezen', 'aflezen', 'schatten', 'berekenen', 'berekenen'] : ['soort', 'aflezen', 'aflezen', 'schatten', 'berekenen', 'berekenen', 'berekenen'];
+      var soortKeuze = keuze.soort === 'alles' ? kies(lijst) : keuze.soort;
+      return SOORTEN[soortKeuze](keuze.niveau);
+    },
+    uitleg:{ doel:'Hoeken herkennen, aflezen op de gradenboog, schatten en berekenen.', tijd:'tien opgaven per ronde', bediening:'Kies een antwoord, of typ het aantal graden en druk op Nakijken of Enter. Bij aflezen mag je er 2 graden naast zitten.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>

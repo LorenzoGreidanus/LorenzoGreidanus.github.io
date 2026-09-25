@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- De stelling van Pythagoras, versie 1.0: op vakspel.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>De stelling van Pythagoras &middot; meneer Greidanus</title>
+<meta name="description" content="De schuine zijde en een rechthoekszijde berekenen, Pythagoras in het echt met ladders, schermen en daken, en nagaan of een driehoek rechthoekig is.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="De stelling van Pythagoras">
+<meta property="og:description" content="De schuine zijde en een rechthoekszijde berekenen, Pythagoras in het echt, en nagaan of een driehoek rechthoekig is.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/pythagoras.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%23F26749'/><g fill='none' stroke='%2314224C' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'><path d='M26 74h48L26 26z'/><path d='M26 62h12v12'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+/* de tekeningen: even breed als de kaart, tot 400 px */
+.beeld svg.gr{width:100%;max-width:min(100%,400px);height:auto;display:block}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  function tussen(a, b){ return a + Math.floor(Math.random() * (b - a + 1)); }
+  function r1(x){ return Math.round(x * 10) / 10; }
+  function net(x){ return String(r1(x)).replace('.', ','); }
+  function net2(x){ return String(Math.round(x * 100) / 100).replace('.', ','); }
+  function heel(x){ return Math.abs(x - Math.round(x)) < 1e-9; }
+  /* de wortel netjes: = als het precies is, anders ≈ */
+  function wortelZin(kw){ var w = Math.sqrt(kw); return '√' + net2(kw) + (heel(w) ? ' = ' : ' ≈ ') + net(w); }
+
+  /* ---------- een tekening op schaal ----------
+     Punten in echte eenheden (cm, m), y omhoog. De svg is 380 bij 270 en schaalt de punten zo dat ze
+     passen, met ruimte voor de teksten. Geeft X(), Y() en tekenfuncties. */
+  function tekening(punten, o){
+    o = o || {};
+    var W = 380, Hh = o.hoog || 270, mx = o.mx || 62, my = o.my || 40;
+    var xs = punten.map(function(p){ return p[0]; }), ys = punten.map(function(p){ return p[1]; });
+    var minx = Math.min.apply(null, xs), maxx = Math.max.apply(null, xs), miny = Math.min.apply(null, ys), maxy = Math.max.apply(null, ys);
+    var bw = maxx - minx || 1, bh = maxy - miny || 1, sc = Math.min((W - 2 * mx) / bw, (Hh - 2 * my) / bh);
+    var ox = (W - bw * sc) / 2 - minx * sc, oy = (Hh + bh * sc) / 2 + miny * sc;
+    function X(x){ return Math.round((ox + x * sc) * 10) / 10; }
+    function Y(y){ return Math.round((oy - y * sc) * 10) / 10; }
+    function str(opt){ opt = opt || {}; return 'stroke="' + (opt.kleur || 'currentColor') + '" stroke-width="' + (opt.dik || 2.5) + '" stroke-linecap="round" stroke-linejoin="round"' + (opt.stippel ? ' stroke-dasharray="6 5"' : '') + ' fill="' + (opt.vul || 'none') + '"'; }
+    return {
+      X: X, Y: Y, sc: sc,
+      kop: '<svg class="gr" viewBox="0 0 ' + W + ' ' + Hh + '" font-family="inherit" role="img" aria-label="' + S(o.naam || 'tekening') + '">',
+      staart: '</svg>',
+      lijn: function(p, q, opt){ return '<line x1="' + X(p[0]) + '" y1="' + Y(p[1]) + '" x2="' + X(q[0]) + '" y2="' + Y(q[1]) + '" ' + str(opt) + '/>'; },
+      poly: function(pts, opt){ return '<polygon points="' + pts.map(function(p){ return X(p[0]) + ',' + Y(p[1]); }).join(' ') + '" ' + str(opt) + '/>'; },
+      punt: function(p, kleur){ return '<circle cx="' + X(p[0]) + '" cy="' + Y(p[1]) + '" r="5" fill="' + (kleur || 'var(--nadruk)') + '"/>'; },
+      /* een tekst bij de zijde p-q, aan de kant die van punt weg af ligt; '?' is groot en blauw */
+      label: function(p, q, tekst, weg, afstand){
+        var mx1 = (X(p[0]) + X(q[0])) / 2, my1 = (Y(p[1]) + Y(q[1])) / 2, dx = X(q[0]) - X(p[0]), dy = Y(q[1]) - Y(p[1]), l = Math.hypot(dx, dy) || 1;
+        var nx = -dy / l, ny = dx / l;
+        if ((mx1 - X(weg[0])) * nx + (my1 - Y(weg[1])) * ny < 0){ nx = -nx; ny = -ny; }
+        /* naast een steile zijde moet de tekst verder weg: de helft van zijn breedte erbij */
+        var vraag = tekst === '?', d = (afstand || (vraag ? 20 : 16)) + Math.abs(nx) * tekst.length * 4.4;
+        return '<text x="' + Math.round(mx1 + nx * d) + '" y="' + Math.round(my1 + ny * d + (vraag ? 8 : 6)) + '" text-anchor="middle" font-size="' + (vraag ? 24 : 17) + '" font-weight="600" fill="' + (vraag ? 'var(--nadruk)' : 'currentColor') + '">' + S(tekst) + '</text>';
+      },
+      /* het hoekje van de rechte hoek bij p0, tussen de zijden naar p1 en p2 */
+      recht: function(p0, p1, p2){
+        var ux = X(p1[0]) - X(p0[0]), uy = Y(p1[1]) - Y(p0[1]), ul = Math.hypot(ux, uy) || 1, vx = X(p2[0]) - X(p0[0]), vy = Y(p2[1]) - Y(p0[1]), vl = Math.hypot(vx, vy) || 1, s = 13;
+        ux = ux / ul * s; uy = uy / ul * s; vx = vx / vl * s; vy = vy / vl * s;
+        return '<path d="M' + (X(p0[0]) + ux) + ' ' + (Y(p0[1]) + uy) + 'L' + (X(p0[0]) + ux + vx) + ' ' + (Y(p0[1]) + uy + vy) + 'L' + (X(p0[0]) + vx) + ' ' + (Y(p0[1]) + vy) + '" fill="none" stroke="currentColor" stroke-width="2"/>';
+      },
+      tekst: function(p, tekst, opt){ opt = opt || {}; return '<text x="' + (X(p[0]) + (opt.dx || 0)) + '" y="' + (Y(p[1]) + (opt.dy || 0)) + '" text-anchor="' + (opt.anker || 'middle') + '" font-size="' + (opt.grootte || 15) + '" fill="' + (opt.kleur || 'var(--muted)') + '"' + (opt.vet ? ' font-weight="600"' : '') + '>' + S(tekst) + '</text>'; }
+    };
+  }
+  /* een rechthoekige driehoek met rechthoekszijden a en b, in een willekeurige stand; lab: { a, b, c } */
+  function driehoek(a, b, lab){
+    var fx = kies([1, -1]), fy = kies([1, -1]), wissel = Math.random() < 0.5;
+    var P0 = [0, 0], P1 = wissel ? [0, fy * a] : [fx * a, 0], P2 = wissel ? [fx * b, 0] : [0, fy * b];
+    var t = tekening([P0, P1, P2], { naam:'rechthoekige driehoek' });
+    return t.kop + t.poly([P0, P1, P2], { vul:'var(--kaart2)' }) + t.recht(P0, P1, P2) + t.label(P0, P1, lab.a, P2) + t.label(P0, P2, lab.b, P1) + t.label(P1, P2, lab.c, P0) + t.staart;
+  }
+
+  var DRIETALLEN = [[3, 4, 5], [6, 8, 10], [5, 12, 13], [8, 15, 17], [9, 12, 15], [12, 16, 20], [7, 24, 25], [20, 21, 29], [15, 20, 25], [10, 24, 26], [12, 35, 37], [9, 40, 41]];
+  function drietal(niveau){ var d = kies(niveau === 'bb' ? DRIETALLEN.slice(0, 6) : DRIETALLEN); return Math.random() < 0.5 ? d : [d[1], d[0], d[2]]; }
+  function zijden(niveau){
+    if (niveau === 'bb') return drietal('bb');
+    var a = tussen(2, 12), b = tussen(2, 12);
+    if (niveau === 'hv' && Math.random() < 0.5) a += 0.5;
+    return [a, b, Math.sqrt(a * a + b * b)];
+  }
+  function opdrachtVoor(x){ return heel(x) ? 'Reken uit met de stelling van Pythagoras.' : 'Rond af op 1 decimaal. Een komma mag.'; }
+
+  /* ---------- 1. de schuine zijde ---------- */
+  function schuine(niveau){
+    var z = zijden(niveau), a = z[0], b = z[1], c = z[2];
+    return {
+      onderdeel:'pythagoras: schuine zijde', onderdeelNaam:'schuine zijde', vorm:'invul', sleutel:'sz' + a + '_' + b,
+      vraag: 'Bereken de <b>schuine zijde</b> van deze rechthoekige driehoek.',
+      opdracht: opdrachtVoor(c),
+      beeld: driehoek(a, b, { a: net(a) + ' cm', b: net(b) + ' cm', c: '?' }),
+      velden:[{ label:'schuine zijde', antwoord: r1(c), tol: 0.06, eenheid: 'cm' }],
+      uitleg: 'schuine zijde² = ' + net(a) + '² + ' + net(b) + '² = ' + net2(a * a) + ' + ' + net2(b * b) + ' = ' + net2(a * a + b * b) + '. Dus schuine zijde = ' + wortelZin(a * a + b * b) + ' cm.',
+      antwoordTekst: net(c) + ' cm'
+    };
+  }
+
+  /* ---------- 2. een rechthoekszijde ---------- */
+  function rechthoekszijde(niveau){
+    var a, b, c;
+    if (niveau === 'bb'){ var d = drietal('bb'); a = d[0]; b = d[1]; c = d[2]; }
+    else {
+      c = tussen(5, 15); a = tussen(2, c - 1);
+      if (niveau === 'hv' && Math.random() < 0.5) c += 0.5;
+      b = Math.sqrt(c * c - a * a);
+    }
+    return {
+      onderdeel:'pythagoras: rechthoekszijde', onderdeelNaam:'rechthoekszijde', vorm:'invul', sleutel:'rz' + a + '_' + c,
+      vraag: 'Bereken de <b>rechthoekszijde</b> met het vraagteken.',
+      opdracht: opdrachtVoor(b),
+      beeld: driehoek(a, b, { a: net(a) + ' cm', b: '?', c: net(c) + ' cm' }),
+      velden:[{ label:'rechthoekszijde', antwoord: r1(b), tol: 0.06, eenheid: 'cm' }],
+      uitleg: 'De schuine zijde is ' + net(c) + ', dus: ' + net(c) + '² = ' + net(a) + '² + ?². Dan ?² = ' + net2(c * c) + ' − ' + net2(a * a) + ' = ' + net2(c * c - a * a) + ', dus ? = ' + wortelZin(c * c - a * a) + ' cm. Bij een rechthoekszijde trek je af.',
+      antwoordTekst: net(b) + ' cm'
+    };
+  }
+
+  /* ---------- 3. in het echt ---------- */
+  function ladder(niveau){
+    var a, b, c, vraagB = niveau !== 'bb' && Math.random() < 0.5;
+    if (niveau === 'bb'){ var d = kies([[3, 4, 5], [1.5, 2, 2.5], [6, 8, 10]]); a = d[0]; b = d[1]; c = d[2]; }
+    else if (vraagB){ a = kies([1, 1.5, 2, 2.5, 3]); c = kies([4, 4.5, 5, 6, 7]); b = Math.sqrt(c * c - a * a); }
+    else { a = kies([1, 1.5, 2, 2.5, 3]); b = kies([3, 3.5, 4, 5, 6]); c = Math.sqrt(a * a + b * b); }
+    var t = tekening([[-0.3, 0], [a + 0.6, 0], [0, b + 0.6]], { naam:'ladder tegen een muur' });
+    var beeld = t.kop + t.lijn([0, -0.05], [0, b + 0.6], { dik:7, kleur:'var(--muted)' }) + t.lijn([-0.3, 0], [a + 0.6, 0], { dik:4, kleur:'var(--muted)' }) +
+      t.lijn([a, 0], [0, b], { dik:6, kleur:'var(--amber)' }) + t.lijn([a, 0], [0, b], { dik:1, kleur:'var(--navy)' }) + t.recht([0, 0], [a, 0], [0, b]) +
+      t.label([0, 0], [a, 0], net(a) + ' m', [0, b]) + t.label([0, 0], [0, b], vraagB ? '?' : net(b) + ' m', [a, 0], 14) + t.label([a, 0], [0, b], vraagB ? net(c) + ' m' : '?', [0, 0]) + t.staart;
+    return {
+      onderdeel:'pythagoras: in het echt', onderdeelNaam:'in het echt', vorm:'invul', sleutel:'la' + a + '_' + b + (vraagB ? 'b' : 'c'),
+      vraag: vraagB ? 'Een ladder van <b>' + net(c) + ' m</b> staat tegen een muur. De voet staat <b>' + net(a) + ' m</b> van de muur. Hoe hoog komt de ladder?'
+        : 'Een ladder staat <b>' + net(a) + ' m</b> van de muur en komt <b>' + net(b) + ' m</b> hoog. Hoe lang is de ladder?',
+      opdracht: opdrachtVoor(vraagB ? b : c),
+      beeld: beeld,
+      velden:[{ label: vraagB ? 'hoogte' : 'lengte ladder', antwoord: r1(vraagB ? b : c), tol: 0.06, eenheid: 'm' }],
+      uitleg: vraagB ? 'De ladder is de schuine zijde. hoogte² = ' + net(c) + '² − ' + net(a) + '² = ' + net2(c * c) + ' − ' + net2(a * a) + ' = ' + net2(c * c - a * a) + ', dus hoogte = ' + wortelZin(c * c - a * a) + ' m.'
+        : 'De ladder is de schuine zijde. ladder² = ' + net(a) + '² + ' + net(b) + '² = ' + net2(a * a) + ' + ' + net2(b * b) + ' = ' + net2(a * a + b * b) + ', dus ladder = ' + wortelZin(a * a + b * b) + ' m.',
+      antwoordTekst: net(vraagB ? b : c) + ' m'
+    };
+  }
+  function scherm(niveau){
+    var w, h, d, vraagH = niveau !== 'bb' && Math.random() < 0.4;
+    if (niveau === 'bb'){ var t3 = kies([[80, 60, 100], [40, 30, 50], [120, 90, 150], [48, 36, 60]]); w = t3[0]; h = t3[1]; d = t3[2]; }
+    else if (vraagH){ w = kies([60, 80, 100, 110]); d = w + kies([10, 15, 20, 25]); h = Math.sqrt(d * d - w * w); }
+    else { w = kies([50, 60, 70, 80, 100, 110]); h = kies([30, 35, 40, 45, 50, 60]); d = Math.sqrt(w * w + h * h); }
+    var t = tekening([[0, 0], [w, 0], [w, h], [0, h]], { naam:'een scherm met diagonaal' });
+    var beeld = t.kop + t.poly([[0, 0], [w, 0], [w, h], [0, h]], { vul:'var(--kaart2)', dik:3 }) + t.lijn([0, 0], [w, h], { kleur:'var(--nadruk)', dik:3, stippel:true }) + t.recht([w, 0], [0, 0], [w, h]) +
+      t.label([0, 0], [w, 0], net(w) + ' cm', [w, h]) + t.label([w, 0], [w, h], vraagH ? '?' : net(h) + ' cm', [0, 0]) + t.label([0, 0], [w, h], vraagH ? net(d) + ' cm' : '?', [w, 0], 26) + t.staart;
+    return {
+      onderdeel:'pythagoras: in het echt', onderdeelNaam:'in het echt', vorm:'invul', sleutel:'tv' + w + '_' + h,
+      vraag: vraagH ? 'Een scherm is <b>' + net(w) + ' cm</b> breed en de diagonaal is <b>' + net(d) + ' cm</b>. Hoe hoog is het scherm?'
+        : 'Een scherm is <b>' + net(w) + ' cm</b> breed en <b>' + net(h) + ' cm</b> hoog. Hoe lang is de diagonaal?',
+      opdracht: opdrachtVoor(vraagH ? h : d),
+      beeld: beeld,
+      velden:[{ label: vraagH ? 'hoogte' : 'diagonaal', antwoord: r1(vraagH ? h : d), tol: 0.06, eenheid: 'cm' }],
+      uitleg: vraagH ? 'De diagonaal is de schuine zijde. hoogte² = ' + net(d) + '² − ' + net(w) + '² = ' + net2(d * d) + ' − ' + net2(w * w) + ' = ' + net2(d * d - w * w) + ', dus hoogte = ' + wortelZin(d * d - w * w) + ' cm.'
+        : 'De diagonaal is de schuine zijde van een rechthoekige driehoek. diagonaal² = ' + net(w) + '² + ' + net(h) + '² = ' + net2(w * w) + ' + ' + net2(h * h) + ' = ' + net2(w * w + h * h) + ', dus diagonaal = ' + wortelZin(w * w + h * h) + ' cm.',
+      antwoordTekst: net(vraagH ? h : d) + ' cm'
+    };
+  }
+  function dak(niveau){
+    var half, h, s;
+    if (niveau === 'bb'){ var d = kies([[3, 4, 5], [4, 3, 5], [6, 8, 10], [8, 6, 10]]); half = d[0]; h = d[1]; s = d[2]; }
+    else { half = kies([3, 3.5, 4, 4.5, 5, 6]); h = kies([2, 2.5, 3, 3.5, 4]); s = Math.sqrt(half * half + h * h); }
+    var w = half * 2, hb = Math.max(2, w * 0.45);
+    var t = tekening([[0, 0], [w, 0], [w, hb + h], [0, hb + h]], { naam:'huis met puntdak' });
+    var beeld = t.kop + t.poly([[0, 0], [w, 0], [w, hb], [0, hb]], { vul:'var(--kaart2)', dik:2 }) + t.poly([[0, hb], [w, hb], [half, hb + h]], { vul:'var(--kaart2)', dik:3 }) +
+      t.lijn([half, hb], [half, hb + h], { stippel:true, kleur:'var(--muted)', dik:2 }) + t.recht([half, hb], [w, hb], [half, hb + h]) +
+      t.label([half, hb], [w, hb], net(half) + ' m', [half, hb + h], 18) + t.label([half, hb], [half, hb + h], net(h) + ' m', [0, hb], 26) + t.label([w, hb], [half, hb + h], '?', [half, hb]) +
+      '<rect x="' + (t.X(w * 0.4) - 9) + '" y="' + t.Y(hb * 0.55) + '" width="18" height="' + (t.Y(0) - t.Y(hb * 0.55)) + '" fill="var(--muted)" opacity=".5"/>' + t.staart;
+    return {
+      onderdeel:'pythagoras: in het echt', onderdeelNaam:'in het echt', vorm:'invul', sleutel:'dk' + half + '_' + h,
+      vraag: 'Een huis is <b>' + net(w) + ' m</b> breed. De nok van het dak zit <b>' + net(h) + ' m</b> boven de goot. Hoe lang is de schuine kant van het dak?',
+      opdracht: 'De helft van de breedte is ' + net(half) + ' m. ' + opdrachtVoor(s),
+      beeld: beeld,
+      velden:[{ label:'schuine kant', antwoord: r1(s), tol: 0.06, eenheid: 'm' }],
+      uitleg: 'Het dak bestaat uit twee rechthoekige driehoeken met rechthoekszijden ' + net(half) + ' (de halve breedte) en ' + net(h) + '. schuine kant² = ' + net2(half * half) + ' + ' + net2(h * h) + ' = ' + net2(half * half + h * h) + ', dus schuine kant = ' + wortelZin(half * half + h * h) + ' m.',
+      antwoordTekst: net(s) + ' m'
+    };
+  }
+  function rooster(niveau){
+    var dx, dy, d;
+    if (niveau === 'bb'){ var t3 = kies([[3, 4], [4, 3], [6, 8], [8, 6]]); dx = t3[0]; dy = t3[1]; }
+    else { dx = tussen(2, 8); dy = tussen(2, 7); }
+    d = Math.sqrt(dx * dx + dy * dy);
+    var ax = tussen(0, 2), ay = tussen(0, 1), bx = ax + dx, by = ay + dy, nx = bx + tussen(1, 2), ny = by + 1, x, y;
+    var t = tekening([[0, 0], [nx, ny]], { naam:'twee punten op een rooster', mx:40, my:30 }), s = t.kop;
+    for (x = 0; x <= nx; x++) s += t.lijn([x, 0], [x, ny], { kleur:'var(--rand2)', dik:1 });
+    for (y = 0; y <= ny; y++) s += t.lijn([0, y], [nx, y], { kleur:'var(--rand2)', dik:1 });
+    s += t.lijn([ax, ay], [bx, ay], { stippel:true, kleur:'var(--muted)', dik:2 }) + t.lijn([bx, ay], [bx, by], { stippel:true, kleur:'var(--muted)', dik:2 }) + t.recht([bx, ay], [ax, ay], [bx, by]) +
+      t.lijn([ax, ay], [bx, by], { kleur:'var(--nadruk)', dik:3 }) + t.punt([ax, ay]) + t.punt([bx, by]) +
+      t.tekst([ax, ay], 'A', { dx:-12, dy:14, kleur:'currentColor', vet:true, grootte:17 }) + t.tekst([bx, by], 'B', { dx:12, dy:-8, kleur:'currentColor', vet:true, grootte:17 }) +
+      t.label([ax, ay], [bx, ay], dx + '', [bx, by], 16) + t.label([bx, ay], [bx, by], dy + '', [ax, ay], 16) + t.label([ax, ay], [bx, by], '?', [bx, ay]) + t.staart;
+    return {
+      onderdeel:'pythagoras: in het echt', onderdeelNaam:'in het echt', vorm:'invul', sleutel:'ro' + dx + '_' + dy,
+      vraag: 'Elk hokje is 1 bij 1. Hoe lang is het lijnstuk van <b>A</b> naar <b>B</b>?',
+      opdracht: 'Tel hoeveel hokjes je naar rechts en omhoog gaat. ' + opdrachtVoor(d),
+      beeld: s,
+      velden:[{ label:'lengte AB', antwoord: r1(d), tol: 0.06 }],
+      uitleg: 'Van A naar B is ' + dx + ' naar rechts en ' + dy + ' omhoog: twee rechthoekszijden. AB² = ' + dx + '² + ' + dy + '² = ' + (dx * dx) + ' + ' + (dy * dy) + ' = ' + (dx * dx + dy * dy) + ', dus AB = ' + wortelZin(dx * dx + dy * dy) + '.',
+      antwoordTekst: net(d)
+    };
+  }
+  function balk(){
+    var l = kies([4, 5, 6, 8, 10, 12]), b = kies([3, 4, 5, 6]), h = kies([2, 3, 4, 5, 6]);
+    var d1 = Math.sqrt(l * l + b * b), d2 = Math.sqrt(l * l + b * b + h * h), k = 0.5;
+    var A = [0, 0], B = [l, 0], C = [l, h], D = [0, h], E = [b * k, b * k], F = [l + b * k, b * k], G = [l + b * k, h + b * k], Hp = [b * k, h + b * k];
+    var t = tekening([A, B, G, Hp, [-0.6, 0], [l + b * k + 0.6, 0]], { naam:'een balk' });
+    var beeld = t.kop + t.poly([A, B, C, D], { vul:'var(--kaart2)', dik:2.5 }) + t.poly([D, C, G, Hp], { vul:'var(--kaart2)', dik:2.5 }) + t.poly([B, F, G, C], { vul:'var(--kaart2)', dik:2.5 }) +
+      t.lijn(A, E, { stippel:true, dik:1.5, kleur:'var(--muted)' }) + t.lijn(E, F, { stippel:true, dik:1.5, kleur:'var(--muted)' }) + t.lijn(E, Hp, { stippel:true, dik:1.5, kleur:'var(--muted)' }) +
+      t.lijn(A, F, { stippel:true, dik:2.5, kleur:'var(--hand)' }) + t.lijn(A, G, { dik:3, kleur:'var(--nadruk)' }) +
+      t.label(A, B, l + ' cm', D) + t.label(A, D, h + ' cm', B, 14) + t.label(B, F, b + ' cm', A, 22) + t.staart;
+    return {
+      onderdeel:'pythagoras: in het echt', onderdeelNaam:'in het echt', vorm:'invul', sleutel:'bk' + l + '_' + b + '_' + h,
+      vraag: 'Een balk is <b>' + l + ' bij ' + b + ' bij ' + h + ' cm</b>. Bereken eerst de diagonaal van het grondvlak (rood) en dan de lichaamsdiagonaal (blauw).',
+      opdracht: 'Twee keer Pythagoras. Rond af op 1 decimaal.',
+      beeld: beeld,
+      velden:[{ label:'diagonaal grondvlak', antwoord: r1(d1), tol: 0.06, eenheid: 'cm' }, { label:'lichaamsdiagonaal', antwoord: r1(d2), tol: 0.06, eenheid: 'cm' }],
+      uitleg: 'Grondvlak: diagonaal² = ' + l + '² + ' + b + '² = ' + (l * l + b * b) + ', dus ' + wortelZin(l * l + b * b) + ' cm. Dan een rechthoekige driehoek met die diagonaal en de hoogte: lichaamsdiagonaal² = ' + (l * l + b * b) + ' + ' + h + '² = ' + (l * l + b * b + h * h) + ', dus ' + wortelZin(l * l + b * b + h * h) + ' cm. Reken met het precieze kwadraat, niet met het afgeronde getal.',
+      antwoordTekst: net(d1) + ' cm en ' + net(d2) + ' cm'
+    };
+  }
+  function echt(niveau){
+    var lijst = [ladder, scherm, dak, rooster];
+    if (niveau === 'hv') lijst.push(balk, balk);
+    return kies(lijst)(niveau);
+  }
+
+  /* ---------- 4. is hij rechthoekig ---------- */
+  function rechthoekig(niveau){
+    var d = drietal(niveau), a = Math.min(d[0], d[1]), b = Math.max(d[0], d[1]), c = d[2], ja = Math.random() < 0.5;
+    if (niveau === 'bb' && d[2] > 13){ d = kies(DRIETALLEN.slice(0, 3)); a = d[0]; b = d[1]; c = d[2]; }
+    if (!ja){
+      /* net niet: een zijde een of twee anders, en nog steeds een driehoek */
+      var wat = kies(['a', 'b', 'c', 'c']), st = niveau === 'bb' ? kies([1, 2]) : kies([1, 1, 2]);
+      if (wat === 'a') a += kies([-1, 1]) * st; else if (wat === 'b') b += kies([-1, 1]) * st; else c += kies([-1, 1]) * st;
+      if (a < 1) a = 1;
+      if (c <= Math.abs(b - a) || c >= a + b) c = a + b - 1;
+    }
+    var zij = [a, b, c].sort(function(p, q){ return p - q; }), p = zij[0], q = zij[1], r = zij[2];
+    var recht = p * p + q * q === r * r;
+    /* de driehoek op schaal: langste zijde r als basis, top uit de twee andere */
+    var x = (q * q + r * r - p * p) / (2 * r), y = Math.sqrt(Math.max(0, q * q - x * x)), fy = kies([1, -1]);
+    var A = [0, 0], B = [r, 0], C = [x, fy * y];
+    var t = tekening([A, B, C], { naam:'driehoek met drie zijden' });
+    var beeld = t.kop + t.poly([A, B, C], { vul:'var(--kaart2)' }) + t.label(A, B, r + ' cm', C) + t.label(A, C, q + ' cm', B) + t.label(B, C, p + ' cm', A) + t.staart;
+    return {
+      onderdeel:'pythagoras: is hij rechthoekig', onderdeelNaam:'is hij rechthoekig', vorm:'meerkeuze', sleutel:'rh' + p + '_' + q + '_' + r,
+      vraag: 'Een driehoek heeft zijden van <b>' + p + '</b>, <b>' + q + '</b> en <b>' + r + ' cm</b>. Is deze driehoek rechthoekig?',
+      opdracht: 'Controleer met de stelling van Pythagoras. De langste zijde zou de schuine zijde zijn.',
+      beeld: beeld,
+      opties: ['ja', 'nee'], goed: recht ? 0 : 1,
+      uitleg: p + '² + ' + q + '² = ' + (p * p) + ' + ' + (q * q) + ' = ' + (p * p + q * q) + ' en ' + r + '² = ' + (r * r) + '. ' + (recht ? 'Dat is gelijk, dus de hoek tegenover de zijde van ' + r + ' is recht.' : 'Dat is niet gelijk, dus de driehoek is niet rechthoekig. De stelling geldt alleen bij een rechte hoek.'),
+      antwoordTekst: recht ? 'ja' : 'nee'
+    };
+  }
+
+  var SOORTEN = { schuine: schuine, rechthoekszijde: rechthoekszijde, echt: echt, rechthoekig: rechthoekig };
+  VAKSPEL.maak({
+    id:'pythagoras', naam:'De stelling van Pythagoras', vak:'wis', kleur:'#F26749',
+    hand:'a² + b² = c²',
+    lead:'In een rechthoekige driehoek is het kwadraat van de schuine zijde gelijk aan de twee andere kwadraten bij elkaar. Je berekent de schuine zijde, een rechthoekszijde, en je past de stelling toe op ladders, schermen, daken en afstanden op een rooster. Elke driehoek staat op schaal getekend.',
+    hoe:[
+      { kop:'De schuine zijde', tekst:'De schuine zijde ligt tegenover de rechte hoek en is altijd de langste. Kwadrateer de twee rechthoekszijden, tel op en trek de wortel: <b>c² = a² + b²</b>.' },
+      { kop:'Een rechthoekszijde', tekst:'Is de schuine zijde bekend, dan trek je af in plaats van optellen: <b>a² = c² − b²</b>. Dan de wortel.' },
+      { kop:'Omgekeerd', tekst:'Klopt a² + b² = c² met de langste zijde als c, dan is de driehoek rechthoekig. Klopt het niet, dan niet. Tien opgaven per ronde.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'Alleen driehoeken als 3-4-5 en 6-8-10: de antwoorden zijn hele getallen.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Alle getallen, afronden op 1 decimaal, en situaties met een tekening.' },
+        { id:'hv', naam:'havo en vwo', uit:'Ook kommagetallen, de lichaamsdiagonaal van een balk in twee stappen, en lastiger controles.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' }, { id:'schuine', naam:'schuine zijde' }, { id:'rechthoekszijde', naam:'rechthoekszijde' }, { id:'echt', naam:'in het echt' }, { id:'rechthoekig', naam:'is hij rechthoekig' } ] }
+    ],
+    aantal:10,
+    maak:function(keuze, nr){
+      var soort = keuze.soort === 'alles' ? kies(['schuine', 'schuine', 'rechthoekszijde', 'rechthoekszijde', 'echt', 'echt', 'rechthoekig']) : keuze.soort;
+      return SOORTEN[soort](keuze.niveau);
+    },
+    uitleg:{ doel:'De stelling van Pythagoras gebruiken: de schuine zijde, een rechthoekszijde, situaties uit het echt en de omgekeerde stelling.', tijd:'tien opgaven per ronde', bediening:'Typ je antwoord en druk op Nakijken of Enter. Afronden op 1 decimaal, een komma mag.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>

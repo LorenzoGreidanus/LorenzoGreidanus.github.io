@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Schatten en afronden, versie 1.0: op vakspel.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Schatten en afronden &middot; meneer Greidanus</title>
+<meta name="description" content="Afronden op de getallenlijn, een som schatten met mooie getallen, kijken of een bon of een uitkomst kan kloppen, en hoeveelheden en maten schatten.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Schatten en afronden">
+<meta property="og:description" content="Afronden, sommen schatten, kijken of het kan kloppen, en hoeveelheden schatten.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/schatten.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%23EA9836'/><g fill='none' stroke='%2314224C' stroke-width='6' stroke-linecap='round'><path d='M20 62h60M32 54v16M68 54v16M50 50v20'/><circle cx='58' cy='62' r='5' fill='%2314224C' stroke='none'/><path d='M38 30c6-8 18-8 24 0'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+.beeld svg.lijn{max-width:420px;width:100%;display:block}
+.beeld svg.strook{max-width:460px;width:100%;display:block}
+.beeld svg.bon{max-width:240px;width:100%;display:block}
+.beeld svg.scherm{max-width:300px;width:100%;display:block}
+.beeld svg.tel{max-width:440px;width:100%;display:block}
+.beeld svg.ico{max-width:120px;width:100%;display:block}
+.uitslagregel svg{max-width:420px;width:100%;display:block;margin:6px auto 0}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  function tussen(a, b){ return a + Math.floor(Math.random() * (b - a + 1)); }
+  function vast(x){ return Math.round(x * 1e6) / 1e6; }
+  /* getallen zoals in het boek: een spatie per duizendtal, een komma voor de tienden */
+  function dz(x, dec){ var s = dec != null ? Math.abs(x).toFixed(dec) : String(vast(Math.abs(x))); var d = s.split('.'); return (x < 0 ? '-' : '') + d[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + (d[1] ? ',' + d[1] : ''); }
+  function geld(x){ return '€ ' + dz(x, 2); }
+  function pow10(n){ return Math.pow(10, Math.floor(Math.log10(Math.abs(n)))); }
+  /* afronden op het eerste cijfer: 387 wordt 400, 4,9 wordt 5, 2 878 wordt 3 000 */
+  function rond1(n){ var p = pow10(n); return vast(Math.round(n / p) * p); }
+  function naam(p){ return { 10000:'tienduizendtallen', 1000:'duizendtallen', 100:'honderdtallen', 10:'tientallen', 1:'hele getallen', 0.1:'één cijfer achter de komma' }[p]; }
+  function decVan(p){ return p < 1 ? 1 : 0; }
+
+  /* ---------- beelden ---------- */
+  /* een getallenlijn van lo tot hi, het midden gemerkt, en waar n zit */
+  function lijn(n, p, dec){
+    p = p || pow10(n); if (dec == null) dec = decVan(p);
+    var lo = vast(Math.floor(n / p + 1e-9) * p), hi = vast(lo + p), W = 420, x = 30 + (n - lo) / p * (W - 60);
+    return '<svg class="lijn" viewBox="0 0 ' + W + ' 60" role="img" aria-label="getallenlijn van ' + dz(lo, dec) + ' tot ' + dz(hi, dec) + ' met ' + dz(n) + '">' +
+      '<line x1="30" y1="28" x2="' + (W - 30) + '" y2="28" style="stroke:var(--ink);stroke-width:2"/>' +
+      [0, 0.5, 1].map(function(t){ return '<line x1="' + (30 + t * (W - 60)) + '" y1="' + (t === 0.5 ? 21 : 17) + '" x2="' + (30 + t * (W - 60)) + '" y2="' + (t === 0.5 ? 35 : 39) + '" style="stroke:var(--ink);stroke-width:2"/>'; }).join('') +
+      '<text x="30" y="56" text-anchor="middle" font-size="14" font-weight="600" style="fill:var(--ink)">' + dz(lo, dec) + '</text>' +
+      '<text x="' + (W / 2) + '" y="56" text-anchor="middle" font-size="12" style="fill:var(--muted)">' + dz(vast(lo + p / 2), p < 1 ? 2 : dec) + '</text>' +
+      '<text x="' + (W - 30) + '" y="56" text-anchor="middle" font-size="14" font-weight="600" style="fill:var(--ink)">' + dz(hi, dec) + '</text>' +
+      '<circle cx="' + x + '" cy="28" r="6" style="fill:var(--nadruk)"/><text x="' + x + '" y="12" text-anchor="middle" font-size="14" font-weight="600" style="fill:var(--nadruk)">' + dz(n) + '</text></svg>';
+  }
+  /* stroken: elk getal een balk, met streepjes per honderdtal (of wat het afrondgetal is) */
+  function stroken(getallen, p){
+    var max = Math.max.apply(null, getallen), top = Math.ceil(max / p) * p + p, W = 460, L = 70, uit = '<svg class="strook" viewBox="0 0 ' + W + ' ' + (getallen.length * 34 + 26) + '" role="img" aria-label="stroken van ' + getallen.map(function(g){ return dz(g); }).join(' en ') + '">';
+    var sch = (W - L - 10) / top, n = top / p;
+    for (var i = 0; i <= n; i++){ var x = L + i * p * sch; uit += '<line x1="' + x + '" y1="4" x2="' + x + '" y2="' + (getallen.length * 34 + 6) + '" style="stroke:var(--rand2);stroke-width:1"/>' + (i % (n <= 6 ? 1 : n <= 12 ? 2 : 4) === 0 ? '<text x="' + x + '" y="' + (getallen.length * 34 + 22) + '" text-anchor="middle" font-size="11" style="fill:var(--muted)">' + dz(vast(i * p)) + '</text>' : ''); }
+    getallen.forEach(function(g, i){
+      uit += '<rect x="' + L + '" y="' + (8 + i * 34) + '" width="' + (g * sch) + '" height="22" rx="4" style="fill:var(--' + (i ? 'kaart-aan' : 'kaart2') + ');stroke:var(--ink);stroke-width:1.5"/>' +
+        '<text x="' + (L - 8) + '" y="' + (24 + i * 34) + '" text-anchor="end" font-size="14" font-weight="600" style="fill:var(--ink)">' + dz(g) + '</text>';
+    });
+    return uit + '</svg>';
+  }
+  /* een kassabon */
+  function bon(regels){
+    var Hh = 52 + regels.length * 22 + 18, uit = '<svg class="bon" viewBox="0 0 240 ' + Hh + '" role="img" aria-label="kassabon met ' + regels.length + ' dingen">';
+    var kartel = ''; for (var k = 0; k < 12; k++) kartel += 'l-9 8-9-8';
+    uit += '<path d="M12 6h216v' + (Hh - 18) + kartel + 'z" style="fill:var(--kaart);stroke:var(--rand2);stroke-width:1.5"/>';
+    uit += '<text x="120" y="28" text-anchor="middle" font-size="12" font-weight="700" letter-spacing="2" style="fill:var(--muted)">KASSABON</text><line x1="26" y1="36" x2="214" y2="36" style="stroke:var(--rand2);stroke-dasharray:3 3"/>';
+    regels.forEach(function(r, i){ var y = 56 + i * 22; uit += '<text x="26" y="' + y + '" font-size="13" style="fill:var(--ink)">' + S(r[0]) + '</text><text x="214" y="' + y + '" text-anchor="end" font-size="13" font-weight="600" style="fill:var(--ink);font-variant-numeric:tabular-nums">' + dz(r[1], 2) + '</text>'; });
+    uit += '<line x1="26" y1="' + (52 + regels.length * 22) + '" x2="214" y2="' + (52 + regels.length * 22) + '" style="stroke:var(--rand2);stroke-dasharray:3 3"/><text x="120" y="' + (52 + regels.length * 22 + 14) + '" text-anchor="middle" font-size="12" font-weight="600" style="fill:var(--nadruk)">samen: ?</text>';
+    return uit + '</svg>';
+  }
+  /* een rekenmachine-scherm met een som erop */
+  function scherm(tekst){
+    return '<svg class="scherm" viewBox="0 0 300 70" role="img" aria-label="rekenmachine: ' + S(tekst) + '"><rect x="2" y="2" width="296" height="66" rx="12" style="fill:var(--ink)"/><rect x="14" y="12" width="272" height="46" rx="6" style="fill:var(--kaart2);stroke:var(--rand2)"/>' +
+      '<text x="272" y="44" text-anchor="end" font-size="22" font-weight="600" style="fill:var(--ink);font-variant-numeric:tabular-nums">' + S(tekst) + '</text></svg>';
+  }
+  /* stippen, blokjes of munten, in groepjes van tien (twee rijen van vijf) */
+  function tel(n, soort){
+    var groepen = Math.ceil(n / 10), perRij = 5, rijen = Math.ceil(groepen / perRij), GW = 82, GH = 40, uit = '<svg class="tel" viewBox="0 0 ' + (perRij * GW + 8) + ' ' + (rijen * GH + 8) + '" role="img" aria-label="' + n + ' ' + soort + '">', k = 0;
+    for (var g = 0; g < groepen; g++){
+      var gx = 6 + (g % perRij) * GW, gy = 6 + Math.floor(g / perRij) * GH;
+      for (var i = 0; i < 10 && k < n; i++, k++){
+        var x = gx + (i % 5) * 15 + 7 + (Math.random() * 3 - 1.5), y = gy + Math.floor(i / 5) * 16 + 8 + (Math.random() * 3 - 1.5);
+        if (soort === 'blokjes') uit += '<rect x="' + (x - 5.5) + '" y="' + (y - 5.5) + '" width="11" height="11" rx="2" style="fill:var(--nadruk)"/>';
+        else if (soort === 'munten') uit += '<circle cx="' + x + '" cy="' + y + '" r="6.5" style="fill:var(--amber);stroke:var(--ink);stroke-width:1"/><text x="' + x + '" y="' + (y + 3) + '" text-anchor="middle" font-size="8" font-weight="700" style="fill:var(--navy)">1</text>';
+        else uit += '<circle cx="' + x + '" cy="' + y + '" r="5.5" style="fill:var(--ink)"/>';
+      }
+    }
+    return uit + '</svg>';
+  }
+  /* een pictogram per soort maat */
+  var ICO = {
+    lengte: '<svg class="ico" viewBox="0 0 120 50" aria-hidden="true"><rect x="4" y="12" width="112" height="26" rx="4" style="fill:var(--amber);stroke:var(--ink);stroke-width:2"/>' + [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(function(i){ return '<line x1="' + (4 + i * 9.33) + '" y1="12" x2="' + (4 + i * 9.33) + '" y2="' + (i % 5 === 0 ? 30 : i % 5 === 2.5 ? 26 : 21) + '" style="stroke:var(--ink);stroke-width:1.5"/>'; }).join('') + '</svg>',
+    gewicht: '<svg class="ico" viewBox="0 0 120 70" aria-hidden="true"><path d="M60 8v40M20 48h80M30 48l-14 0M24 22l-14 26h28z M96 22l-14 26h28z" style="fill:var(--kaart2);stroke:var(--ink);stroke-width:2;stroke-linejoin:round"/><line x1="24" y1="22" x2="96" y2="22" style="stroke:var(--ink);stroke-width:2"/><rect x="42" y="48" width="36" height="14" rx="3" style="fill:var(--amber);stroke:var(--ink);stroke-width:2"/></svg>',
+    inhoud: '<svg class="ico" viewBox="0 0 120 80" aria-hidden="true"><path d="M30 8h50l8 64H22z" style="fill:var(--kaart2);stroke:var(--ink);stroke-width:2;stroke-linejoin:round"/><path d="M27 40l4-2 5 2 5-2 5 2 5-2 5 2 5-2 5 2 5-2 5 2 5-2 4 2L86 72H24z" style="fill:var(--nadruk);opacity:.8"/><path d="M80 20c10 0 12 14 4 22" style="fill:none;stroke:var(--ink);stroke-width:2"/></svg>',
+    tijd: '<svg class="ico" viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="34" style="fill:var(--kaart2);stroke:var(--ink);stroke-width:2.5"/><path d="M40 16v24l14 8" style="fill:none;stroke:var(--ink);stroke-width:3;stroke-linecap:round"/></svg>'
+  };
+
+  /* ---------- 1. afronden: invullen ---------- */
+  function afronden(niveau){
+    /* het getal staat als een geheel getal (ruw) op een schaal, zodat de komma nooit zweeft */
+    var schaal = 1, ruw, p;
+    if (niveau === 'bb'){ ruw = tussen(11, 999); p = ruw < 100 ? 10 : kies([10, 100]); }
+    else if (niveau === 'kgt'){
+      if (Math.random() < 0.3){ schaal = 100; ruw = tussen(101, 9999); p = kies([1, 0.1]); }
+      else { ruw = tussen(101, 99999); p = ruw < 1000 ? kies([10, 100]) : kies([10, 100, 1000]); }
+    } else {
+      if (Math.random() < 0.3){ schaal = 100; ruw = tussen(101, 99999); p = kies([1, 0.1]); }
+      else { ruw = tussen(1001, 999999); p = ruw < 10000 ? kies([100, 1000]) : kies([100, 1000, 10000]); }
+    }
+    var pI = Math.round(p * schaal);
+    if (ruw % pI === pI / 2) ruw += 1;
+    if (ruw % pI === 0) ruw += tussen(1, pI - 1);
+    var n = ruw / schaal, lo = Math.floor(ruw / pI) * pI, hi = lo + pI, boven = ruw - lo > pI / 2, afg = (boven ? hi : lo) / schaal, dec = decVan(p);
+    var cijfer = Math.floor((ruw % pI) / (pI / 10));
+    var verhaal = niveau === 'hv' && p >= 1000 && Math.random() < 0.5;
+    return {
+      onderdeel:'schatten: afronden', onderdeelNaam:'afronden', vorm:'invul', sleutel:'af' + ruw + '/' + schaal + 'p' + p,
+      vraag: verhaal ? 'Een stad heeft <b>' + dz(n) + '</b> inwoners. In de krant staat het afgerond op ' + naam(p) + '. Welk getal staat er?' : 'Rond <b>' + dz(n) + '</b> af op <b>' + naam(p) + '</b>.',
+      opdracht: 'Kijk tussen welke twee getallen het ligt, en welke het dichtstbij is. Een spatie in een groot getal mag.',
+      beeld: lijn(n, p, dec),
+      velden: [{ label: dz(n) + ' wordt', antwoord: afg, tol: 0.001, toon: dz(afg, dec) }],
+      uitleg: dz(n) + ' ligt tussen ' + dz(lo / schaal, dec) + ' en ' + dz(hi / schaal, dec) + '. Het cijfer erachter is ' + cijfer + ': ' + (boven ? '5 of meer, dus naar boven' : 'minder dan 5, dus naar beneden') + '. Afgerond: ' + dz(afg, dec) + '.',
+      antwoordTekst: dz(afg, dec)
+    };
+  }
+
+  /* ---------- 2. som schatten: meerkeuze ---------- */
+  var VERHALEN = [
+    ['Een bioscoopzaal heeft {a} rijen van {b} stoelen. Ongeveer hoeveel stoelen zijn er?', '×'],
+    ['Een school heeft {a} klassen met elk {b} leerlingen. Ongeveer hoeveel leerlingen zijn er?', '×'],
+    ['Voor een concert zijn {a} kaartjes van € {b} verkocht. Ongeveer hoeveel euro is dat?', '×'],
+    ['Een boek heeft {a} bladzijden. Je leest {b} bladzijden per dag. Ongeveer hoeveel dagen doe je erover?', '÷'],
+    ['{a} leerlingen gaan met bussen van {b} personen. Ongeveer hoeveel bussen zijn er nodig?', '÷'],
+    ['Sam heeft {a} euro gespaard en krijgt er {b} euro bij. Ongeveer hoeveel heeft Sam dan?', '+'],
+    ['Een winkel had {a} flessen en verkocht er {b}. Ongeveer hoeveel zijn er nog?', '−']
+  ];
+  function operanden(op, niveau){
+    var a, b;
+    if (op === '+' || op === '−'){
+      if (niveau === 'bb'){ a = tussen(110, 999); b = tussen(110, 999); }
+      else if (niveau === 'kgt'){ if (Math.random() < 0.3){ a = tussen(11, 99) / 10; b = tussen(11, 99) / 10; } else { a = tussen(1100, 99999); b = tussen(1100, 99999); } }
+      else { if (Math.random() < 0.3){ a = tussen(101, 999) / 10; b = tussen(101, 999) / 10; } else { a = tussen(1100, 999999); b = tussen(1100, 999999); } }
+      if (op === '−' && b > a){ var t = a; a = b; b = t; }
+      if (op === '−' && a === b) a += 100;
+    } else if (op === '×'){
+      if (niveau === 'kgt'){ a = tussen(12, 99); b = tussen(12, 99); }
+      else { if (Math.random() < 0.4){ a = tussen(11, 99) / 10; b = tussen(12, 99); } else { a = tussen(120, 999); b = tussen(12, 99); } }
+    } else {
+      /* delen: de afgeronde getallen moeten mooi op elkaar delen */
+      for (var k = 0; k < 40; k++){
+        b = kies([3, 4, 5, 6, 7, 8, 9, 20, 30, 40, 50, 60, 70, 80, 90]); var q = kies([10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300]), ra = b * q;
+        if (rond1(ra) !== ra) continue;
+        var rb = b < 10 ? b : b + tussen(-4, 4); if (rb < 10 || rond1(rb) !== b) rb = b;
+        a = ra + tussen(-Math.floor(ra * 0.08), Math.floor(ra * 0.08)); if (a === ra) a += 3;
+        if (rond1(a) !== ra || a < 10) continue;
+        b = rb; break;
+      }
+    }
+    return [a, b];
+  }
+  function reken(a, b, op){ return op === '+' ? a + b : op === '−' ? a - b : op === '×' ? a * b : a / b; }
+  function som(niveau){
+    var ops = niveau === 'bb' ? ['+', '+', '−'] : niveau === 'kgt' ? ['+', '−', '×', '×'] : ['+', '−', '×', '×', '÷', '÷'];
+    var op = kies(ops), ab = operanden(op, niveau), a = ab[0], b = ab[1], ra = rond1(a), rb = rond1(b);
+    var est = vast(reken(ra, rb, op)), exact = vast(reken(a, b, op));
+    /* een schatting moet in de buurt zitten; anders nog een keer */
+    if (!est || est <= 0 || Math.abs(est - exact) > Math.abs(exact) * 0.3 || est !== Math.round(est)) return som(niveau);
+    var p = pow10(est), kand = [est * 10, est / 10, est * 2, est / 2, est + p, est - p, est + 2 * p, est - 2 * p, est * 3];
+    var opties = [est];
+    H(kand).forEach(function(k){ if (opties.length < 4 && k > 0 && k === Math.round(k) && opties.indexOf(k) < 0 && Math.abs(k - exact) > Math.abs(est - exact) + p / 2) opties.push(k); });
+    for (var i = 3; opties.length < 4; i++){ var k2 = est + i * p; if (opties.indexOf(k2) < 0) opties.push(k2); }
+    opties = H(opties);
+    var verhaal = niveau !== 'bb' && Math.random() < 0.4 ? kies(VERHALEN.filter(function(v){ return v[1] === op; })) : null;
+    if (verhaal && (a !== Math.round(a) || b !== Math.round(b))) verhaal = null;
+    var somTekst = dz(a) + ' ' + op + ' ' + dz(b);
+    return {
+      onderdeel:'schatten: som schatten', onderdeelNaam:'som schatten', vorm:'meerkeuze', sleutel:'so' + a + op + b,
+      vraag: verhaal ? verhaal[0].replace('{a}', '<b>' + dz(a) + '</b>').replace('{b}', '<b>' + dz(b) + '</b>') : '<b>' + somTekst + '</b> is ongeveer?',
+      opdracht: 'Rond elk getal af op het eerste cijfer en reken dan uit je hoofd.' + (verhaal ? ' Het is ' + somTekst + '.' : ''),
+      beeld: (op === '+' || op === '−') && a === Math.round(a) ? stroken([a, b], pow10(Math.max(a, b))) : '<div>' + lijn(a) + (b >= 10 || b !== Math.round(b) ? lijn(b) : '') + '</div>',
+      opties: opties.map(function(o){ return 'ongeveer ' + dz(o); }), goed: opties.indexOf(est),
+      uitleg: dz(a) + ' is ongeveer ' + dz(ra) + (rb !== b ? ' en ' + dz(b) + ' is ongeveer ' + dz(rb) : '') + '. ' + dz(ra) + ' ' + op + ' ' + dz(rb) + ' = ' + dz(est) + '. Precies is het ' + dz(Math.round(exact * 100) / 100) + '.',
+      antwoordTekst: 'ongeveer ' + dz(est)
+    };
+  }
+
+  /* ---------- 3. past dit: de bon, of een uitkomst die wel of niet kan ---------- */
+  var DINGEN = ['brood', 'melk', 'kaas', 'appels', 'chips', 'cola', 'shampoo', 'pasta', 'tomaten', 'pindakaas', 'koekjes', 'bananen', 'yoghurt', 'rijst', 'eieren', 'boter', 'sap', 'druiven', 'tandpasta', 'thee'];
+  function prijs(niveau){
+    if (niveau === 'bb') return tussen(1, 7) + kies([0, 0.5, 0.5, 0.95]);
+    if (niveau === 'kgt') return tussen(0, 9) + kies([0.25, 0.49, 0.75, 0.89, 0.99, 0.5, 0.29]);
+    return tussen(1, 24) + tussen(5, 99) / 100;
+  }
+  function bonOpgave(niveau){
+    for (var k = 0; k < 60; k++){
+      var aantal = niveau === 'bb' ? tussen(4, 5) : tussen(4, 6), regels = H(DINGEN).slice(0, aantal).map(function(d){ return [d, prijs(niveau)]; });
+      var totaal = vast(regels.reduce(function(s, r){ return s + r[1]; }, 0)), grens = kies(niveau === 'bb' ? [10, 20, 25] : niveau === 'kgt' ? [20, 25, 30, 50] : [25, 50, 75, 100]);
+      if (Math.abs(totaal - grens) < grens * 0.07 || Math.abs(totaal - grens) > grens * 0.35) continue;
+      var meer = totaal > grens, afg = regels.map(function(r){ return Math.round(r[1]); }), afgSom = afg.reduce(function(s, x){ return s + x; }, 0);
+      return {
+        onderdeel:'schatten: past dit', onderdeelNaam:'past dit', vorm:'meerkeuze', sleutel:'bon' + totaal,
+        vraag: 'Is dit samen <b>meer of minder dan ' + geld(grens).replace(',00', '') + '</b>?',
+        opdracht: 'Rond elke prijs af op hele euro’s en tel op. Je hoeft niet precies te rekenen.',
+        beeld: bon(regels),
+        opties: ['meer dan ' + geld(grens).replace(',00', ''), 'minder dan ' + geld(grens).replace(',00', '')], goed: meer ? 0 : 1, vasteVolgorde: true,
+        uitleg: 'Afgerond: ' + afg.join(' + ') + ' = ' + afgSom + ' euro. Dat is ' + (afgSom > grens ? 'meer' : afgSom < grens ? 'minder' : 'ongeveer') + ' dan ' + grens + (afgSom === grens ? ', dus even precies kijken' : '') + '. Precies: ' + geld(totaal) + ', dus ' + (meer ? 'meer' : 'minder') + '.',
+        antwoordTekst: (meer ? 'meer' : 'minder') + ' dan ' + geld(grens).replace(',00', '') + ' (' + geld(totaal) + ')'
+      };
+    }
+    return bonOpgave(niveau);
+  }
+  function kloptOpgave(niveau){
+    var a, b, op = '×';
+    if (niveau === 'bb'){ a = tussen(12, 99); b = tussen(3, 9); }
+    else if (niveau === 'kgt'){ if (Math.random() < 0.5){ a = tussen(12, 99); b = tussen(12, 49); } else { a = tussen(120, 999); b = tussen(3, 9); } }
+    else { op = kies(['×', '×', '÷']); if (op === '÷'){ var ab = operanden('÷', 'hv'); a = ab[0]; b = ab[1]; } else if (Math.random() < 0.4){ a = tussen(11, 99) / 10; b = tussen(12, 99); } else { a = tussen(120, 999); b = tussen(12, 99); } }
+    var ra = rond1(a), rb = rond1(b), est = vast(reken(ra, rb, op)), exact = vast(reken(a, b, op));
+    if (Math.abs(est - exact) > Math.abs(exact) * 0.3) return kloptOpgave(niveau);
+    var klopt = Math.random() < 0.5, toon = exact;
+    if (!klopt){
+      var fout = [exact * 10, exact / 10, exact + est * 0.6, exact - est * 0.6, exact * 2].filter(function(f){ return f > 0 && Math.abs(f - est) > est * 0.4 && (op === '÷' || f === Math.round(f * 100) / 100); });
+      toon = vast(kies(fout));
+    }
+    var toonTekst = dz(Math.round(toon * 100) / 100);
+    return {
+      onderdeel:'schatten: past dit', onderdeelNaam:'past dit', vorm:'meerkeuze', sleutel:'kl' + a + op + b + toon,
+      vraag: 'Op de rekenmachine staat <b>' + dz(a) + ' ' + op + ' ' + dz(b) + ' = ' + toonTekst + '</b>. Kan dat kloppen?',
+      opdracht: 'Schat eerst met afgeronde getallen. Zit de uitkomst daar dichtbij, dan kan het kloppen.',
+      beeld: scherm(dz(a) + ' ' + op + ' ' + dz(b) + ' = ' + toonTekst),
+      opties: ['ja, dat kan kloppen', 'nee, dat kan niet'], goed: klopt ? 0 : 1, vasteVolgorde: true,
+      uitleg: 'Schat: ' + dz(ra) + ' ' + op + ' ' + dz(rb) + ' = ' + dz(est) + '. ' + toonTekst + ' zit daar ' + (klopt ? 'dichtbij, dus dat kan kloppen.' : 'ver vandaan, dus dat kan niet. Precies is het ' + dz(Math.round(exact * 100) / 100) + '.'),
+      antwoordTekst: klopt ? 'ja, ongeveer ' + dz(est) : 'nee, het is ongeveer ' + dz(est)
+    };
+  }
+  function past(niveau){ return Math.random() < 0.55 ? bonOpgave(niveau) : kloptOpgave(niveau); }
+
+  /* ---------- 4. hoeveel: tellen in groepjes, en maten van bekende dingen ---------- */
+  var GRENZEN = [5, 10, 20, 40, 80, 160, 320];
+  function tellen(niveau){
+    var soort = kies(['stippen', 'blokjes', 'munten']);
+    var n = niveau === 'bb' ? tussen(6, 79) : niveau === 'kgt' ? tussen(11, 159) : tussen(21, 319);
+    var i = 0; while (GRENZEN[i + 1] <= n) i++;
+    if (n === GRENZEN[i]) n += 1;
+    var start = Math.max(0, Math.min(GRENZEN.length - 4, i - tussen(0, 3)));
+    var opties = [0, 1, 2, 3].map(function(j){ return start + j; });
+    var vol = Math.floor(n / 10), rest = n % 10;
+    return {
+      onderdeel:'schatten: hoeveel', onderdeelNaam:'hoeveel', vorm:'meerkeuze', sleutel:'tel' + n + soort,
+      vraag: 'Ongeveer hoeveel ' + soort + ' zijn dit?',
+      opdracht: 'Niet één voor één tellen: kijk naar de groepjes van tien en schat.',
+      beeld: tel(n, soort),
+      opties: opties.map(function(j){ return 'tussen ' + GRENZEN[j] + ' en ' + GRENZEN[j + 1]; }), goed: opties.indexOf(i), vasteVolgorde: true,
+      uitleg: 'Elk groepje is 10. Er zijn ' + vol + ' volle groepjes' + (rest ? ' en nog ' + rest : '') + ': ' + n + ' ' + soort + '. Dat zit tussen ' + GRENZEN[i] + ' en ' + GRENZEN[i + 1] + '.',
+      antwoordTekst: 'tussen ' + GRENZEN[i] + ' en ' + GRENZEN[i + 1] + ' (het zijn er ' + n + ')'
+    };
+  }
+  var MATEN = [
+    ['Hoe lang is een klaslokaal?', '8 m', ['3 m', '30 m'], 'lengte'], ['Hoe hoog is een deur?', '2 m', ['1 m', '4 m'], 'lengte'], ['Hoe lang is een fiets?', '2 m', ['50 cm', '5 m'], 'lengte'],
+    ['Hoe lang is een voetbalveld?', '100 m', ['30 m', '500 m'], 'lengte'], ['Hoe dik is een euromunt?', '2 mm', ['1 cm', '3 cm'], 'lengte'], ['Hoe ver is het van Amsterdam naar Utrecht?', '40 km', ['4 km', '400 km'], 'lengte'],
+    ['Hoe lang is een volwassene?', '175 cm', ['120 cm', '250 cm'], 'lengte'], ['Hoe lang is een potlood?', '18 cm', ['5 cm', '50 cm'], 'lengte'], ['Hoe hoog is een flat van tien verdiepingen?', '30 m', ['10 m', '100 m'], 'lengte'],
+    ['Hoe zwaar is een appel?', '150 g', ['15 g', '1,5 kg'], 'gewicht'], ['Hoe zwaar is een pak suiker?', '1 kg', ['100 g', '10 kg'], 'gewicht'], ['Hoe zwaar is een volwassen man?', '80 kg', ['30 kg', '200 kg'], 'gewicht'],
+    ['Hoe zwaar is een auto?', '1 200 kg', ['200 kg', '12 000 kg'], 'gewicht'], ['Hoe zwaar is een brief?', '20 g', ['2 g', '200 g'], 'gewicht'], ['Hoe zwaar is een fiets?', '15 kg', ['3 kg', '60 kg'], 'gewicht'],
+    ['Hoe zwaar is een liter water?', '1 kg', ['100 g', '10 kg'], 'gewicht'], ['Hoe zwaar is een olifant?', '5 000 kg', ['500 kg', '50 000 kg'], 'gewicht'],
+    ['Hoeveel past er in een emmer?', '10 l', ['1 l', '100 l'], 'inhoud'], ['Hoeveel past er in een glas?', '200 ml', ['20 ml', '2 l'], 'inhoud'], ['Hoeveel past er in een badkuip?', '150 l', ['15 l', '1 500 l'], 'inhoud'],
+    ['Hoeveel zit er in een pak melk?', '1 l', ['10 cl', '10 l'], 'inhoud'], ['Hoeveel gaat er op een theelepel?', '5 ml', ['50 ml', '500 ml'], 'inhoud'], ['Hoeveel zit er in een blikje cola?', '33 cl', ['33 ml', '3,3 l'], 'inhoud'],
+    ['Hoeveel past er in de tank van een auto?', '50 l', ['5 l', '500 l'], 'inhoud'],
+    ['Hoe lang duurt een les?', '50 minuten', ['5 minuten', '5 uur'], 'tijd'], ['Hoe lang loop je over 1 km?', '12 minuten', ['1 minuut', '1 uur'], 'tijd'], ['Hoe lang duurt een film?', '2 uur', ['20 minuten', '10 uur'], 'tijd'],
+    ['Hoe lang slaap je per nacht?', '8 uur', ['3 uur', '15 uur'], 'tijd'], ['Hoe lang doe je over 10 km fietsen?', '35 minuten', ['5 minuten', '3 uur'], 'tijd']
+  ];
+  function maat(niveau){
+    var m = kies(MATEN), opties = H([m[1]].concat(m[2]));
+    return {
+      onderdeel:'schatten: hoeveel', onderdeelNaam:'hoeveel', vorm:'meerkeuze', sleutel:'maat' + m[0],
+      vraag: m[0],
+      opdracht: 'Vergelijk met iets wat je kent: jij bent ongeveer 1,5 tot 1,8 meter, een pak suiker is 1 kilo, een pak melk is 1 liter.',
+      beeld: ICO[m[3]],
+      opties: opties, goed: opties.indexOf(m[1]),
+      uitleg: m[0].replace('?', '') + ': ongeveer ' + m[1] + '. ' + m[2][0] + ' en ' + m[2][1] + ' zijn veel te ' + (m[3] === 'tijd' ? 'kort of te lang' : m[3] === 'gewicht' ? 'licht of te zwaar' : m[3] === 'inhoud' ? 'weinig of te veel' : 'klein of te groot') + '.',
+      antwoordTekst: m[1]
+    };
+  }
+  function hoeveel(niveau){ return Math.random() < 0.55 ? tellen(niveau) : maat(niveau); }
+
+  var SOORTEN = { afronden: afronden, som: som, past: past, hoeveel: hoeveel };
+  VAKSPEL.maak({
+    id:'schatten', naam:'Schatten en afronden', vak:'reken', kleur:'#EA9836',
+    hand:'in de buurt is goed genoeg',
+    lead:'Afronden op de getallenlijn, een som schatten met mooie getallen, kijken of een kassabon of een uitkomst kan kloppen, en hoeveelheden en maten schatten. Bij elke opgave staat een beeld: een getallenlijn, stroken, een bon of een handvol stippen.',
+    hoe:[
+      { kop:'Afronden', tekst:'Kijk tussen welke twee ronde getallen het ligt en welke het dichtstbij is. Het cijfer erachter beslist: <b>5 of meer</b> is naar boven.' },
+      { kop:'Schatten', tekst:'Rond elk getal af op het eerste cijfer: 387 + 412 wordt 400 + 400 = 800. Uit je hoofd, in een paar seconden.' },
+      { kop:'Kan dat kloppen?', tekst:'Een uitkomst van 46 × 21 moet in de buurt van 50 × 20 = 1 000 zitten. Zo controleer je jezelf en de rekenmachine.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'Getallen tot 1 000, afronden op tientallen en honderdtallen, hele en halve euro’s.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Getallen tot 100 000, ook kommagetallen, keer schatten en verhaaltjes.' },
+        { id:'hv', naam:'havo en vwo', uit:'Ook duizendtallen, delen en kommagetallen, en schatten in verhalen: in de buurt is goed.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' }, { id:'afronden', naam:'afronden' }, { id:'som', naam:'som schatten' }, { id:'past', naam:'past dit' }, { id:'hoeveel', naam:'hoeveel' } ] }
+    ],
+    aantal:10,
+    maak:function(keuze, nr){
+      var soort = keuze.soort === 'alles' ? kies(['afronden', 'som', 'past', 'hoeveel']) : keuze.soort;
+      return SOORTEN[soort](keuze.niveau);
+    },
+    uitleg:{ doel:'Afronden en schatten, en zo je eigen antwoorden controleren.', tijd:'tien opgaven per ronde', bediening:'Bij afronden typ je het getal en druk je op Nakijken. Bij de rest kies je een antwoord, ook met de toetsen 1 tot 4.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>

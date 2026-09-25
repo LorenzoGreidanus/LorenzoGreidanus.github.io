@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Klimaatgrafieken, versie 1.0: op vakspel.js; de stations staan in klimaatgrafiek-opgaven.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Klimaatgrafieken &middot; meneer Greidanus</title>
+<meta name="description" content="Klimaatgrafieken aflezen, het klimaattype herkennen, noordelijk of zuidelijk halfrond, en welke stad erbij hoort. Ruim twintig echte stations.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Klimaatgrafieken">
+<meta property="og:description" content="Klimaatgrafieken aflezen, het klimaattype herkennen, noordelijk of zuidelijk halfrond, en welke stad erbij hoort.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/klimaatgrafiek.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%232f7d52'/><g fill='none' stroke='%23FBF6F1' stroke-width='6' stroke-linecap='round'><path d='M24 24v52h52'/><path d='M34 66v-14M48 66v-26M62 66v-18'/><path d='M30 46c10-16 22-22 40-24'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+/* de grafieken: tekst in de svg leest de kleur van de kaart, de staven en de lijn zijn vast blauw en rood */
+.kg{font-family:inherit;color:var(--ink)}
+.kg text{fill:currentColor;font-size:12px}
+.kg .as{stroke:currentColor;stroke-width:1.2;fill:none}
+.kg .raster{stroke:var(--rand2);stroke-width:1;fill:none}
+.kg .staaf{fill:#204ECF;opacity:.82}
+.kg .staaf.licht{opacity:1;stroke:var(--ink);stroke-width:1.5}
+.kg .lijn{fill:none;stroke:#F26749;stroke-width:2.6;stroke-linejoin:round}
+.kg .stip{fill:#F26749}
+.kg .titel{font-weight:600;font-size:13px}
+.kg .maand.licht{font-weight:700;fill:var(--nadruk)}
+.kg .klein{font-size:10.5px;fill:var(--muted)}
+.wk{color:var(--ink)}
+.wk text{fill:currentColor;font-size:11px}
+.wk .rand{fill:var(--kaart2);stroke:var(--ink);stroke-width:1.2}
+.wk .lijn{stroke:var(--muted);stroke-width:1;fill:none}
+.wk .stip{fill:var(--nadruk)}
+.wk .nr{fill:#fff;font-weight:700;font-size:11px}
+.twee{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;align-items:flex-start;width:100%}
+.twee svg{width:360px;max-width:100%;flex:1 1 300px}
+.beeld .stapel{display:grid;gap:12px;justify-items:center;width:100%}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script src="klimaatgrafiek-opgaven.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon;
+  var G = window.KLIMAAT_GEGEVENS, ST = G.stations, SOORT = G.soorten;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  function net(x, d){ var f = Math.pow(10, d === undefined ? 1 : d); return String(Math.round(x * f) / f).replace('.', ','); }
+  var MAAND = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
+  var LETTER = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+  function max(a){ return Math.max.apply(null, a); }
+  function min(a){ return Math.min.apply(null, a); }
+  function som(a){ return a.reduce(function(s, x){ return s + x; }, 0); }
+  function iMax(a){ var i = 0; a.forEach(function(x, j){ if (x > a[i]) i = j; }); return i; }
+  function iMin(a){ var i = 0; a.forEach(function(x, j){ if (x < a[i]) i = j; }); return i; }
+  function halfrond(st){ return st.lat < 0 ? 'zuidelijk' : 'noordelijk'; }
+  function ligging(st){ return net(Math.abs(st.lat), 0) + '° ' + (st.lat < 0 ? 'ZB' : 'NB'); }
+
+  /* ---------- de klimaatgrafiek: staven neerslag (rechteras), lijn temperatuur (linkeras) ---------- */
+  function grafiek(st, o){
+    o = o || {};
+    var W = 400, Hh = 284, L = 46, R = 50, T = 40, B = 48, pw = W - L - R, ph = Hh - T - B;
+    var tLaag = Math.min(0, Math.floor(min(st.temp) / 10) * 10), tHoog = Math.ceil((max(st.temp) + 1) / 10) * 10;
+    if (tHoog - tLaag < 30) tHoog = tLaag + 30;
+    var stapT = tHoog - tLaag > 40 ? 20 : 10;
+    var nHoog = Math.max(100, Math.ceil(max(st.neerslag) / 50) * 50);
+    var stapN = nHoog <= 200 ? 50 : nHoog <= 500 ? 100 : 200;
+    if (nHoog % stapN) nHoog = Math.ceil(nHoog / stapN) * stapN;
+    function x(i){ return L + (i + 0.5) * pw / 12; }
+    function yT(t){ return T + (tHoog - t) / (tHoog - tLaag) * ph; }
+    function yN(n){ return T + ph - n / nHoog * ph; }
+    var s = '<svg class="kg" viewBox="0 0 ' + W + ' ' + Hh + '" width="' + W + '" height="' + Hh + '" role="img" aria-label="' + S(o.titel || 'klimaatgrafiek') + '">';
+    s += '<text class="titel" x="' + L + '" y="16">' + S(o.titel || 'klimaatgrafiek') + '</text>';
+    /* legenda onder de maandletters */
+    var ly = Hh - (o.onder ? 20 : 8);
+    s += '<rect class="staaf" x="' + (W / 2 - 92) + '" y="' + (ly - 9) + '" width="10" height="10"/><text class="klein" x="' + (W / 2 - 78) + '" y="' + ly + '">neerslag (mm)</text>';
+    s += '<path class="lijn" d="M' + (W / 2 + 14) + ' ' + (ly - 4) + 'h14"/><text class="klein" x="' + (W / 2 + 32) + '" y="' + ly + '">temperatuur (°C)</text>';
+    /* rasterlijnen en linkeras */
+    for (var t = tLaag; t <= tHoog; t += stapT){
+      s += '<path class="' + (t === 0 ? 'as' : 'raster') + '" d="M' + L + ' ' + yT(t) + 'H' + (W - R) + '"/>';
+      s += '<text x="' + (L - 6) + '" y="' + (yT(t) + 4) + '" text-anchor="end">' + t + '</text>';
+    }
+    for (var n = 0; n <= nHoog; n += stapN) s += '<text x="' + (W - R + 6) + '" y="' + (yN(n) + 4) + '">' + n + '</text>';
+    s += '<text class="klein" x="' + (L - 6) + '" y="' + (T - 8) + '" text-anchor="end">°C</text><text class="klein" x="' + (W - R + 6) + '" y="' + (T - 8) + '">mm</text>';
+    /* staven */
+    var bw = pw / 12 * 0.62;
+    st.neerslag.forEach(function(nn, i){
+      var hgt = Math.max(0, T + ph - yN(nn));
+      s += '<rect class="staaf' + (o.maand === i ? ' licht' : '') + '" x="' + (x(i) - bw / 2) + '" y="' + yN(nn) + '" width="' + bw + '" height="' + (hgt < 1 && nn > 0 ? 1 : hgt) + '"/>';
+    });
+    /* assen */
+    s += '<path class="as" d="M' + L + ' ' + T + 'V' + (T + ph) + 'H' + (W - R) + 'V' + T + '"/>';
+    /* de lijn */
+    s += '<path class="lijn" d="' + st.temp.map(function(tt, i){ return (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + yT(tt).toFixed(1); }).join('') + '"/>';
+    st.temp.forEach(function(tt, i){ s += '<circle class="stip" cx="' + x(i).toFixed(1) + '" cy="' + yT(tt).toFixed(1) + '" r="' + (o.maand === i ? 4.5 : 3) + '"/>'; });
+    /* maandletters */
+    LETTER.forEach(function(l, i){ s += '<text class="maand' + (o.maand === i ? ' licht' : '') + '" x="' + x(i).toFixed(1) + '" y="' + (T + ph + 16) + '" text-anchor="middle">' + l + '</text>'; });
+    if (o.onder) s += '<text class="klein" x="' + (W / 2) + '" y="' + (Hh - 4) + '" text-anchor="middle">' + S(o.onder) + '</text>';
+    s += '</svg>';
+    return s;
+  }
+
+  /* ---------- het wereldkaartje: een ellips met de evenaar, de keerkringen en genummerde stippen ---------- */
+  function wereld(punten){
+    var W = 400, Hh = 200, cx = 200, cy = 100, rx = 186, ry = 88;
+    function xy(lat, lon){ var f = Math.sqrt(Math.max(0, 1 - Math.pow(lat / 90, 2))); return [cx + lon / 180 * rx * f, cy - lat / 90 * ry]; }
+    function breedtelijn(lat, klasse, naam){
+      var y = cy - lat / 90 * ry, hx = rx * Math.sqrt(1 - Math.pow(lat / 90, 2));
+      return '<path class="lijn" stroke-dasharray="' + klasse + '" d="M' + (cx - hx) + ' ' + y + 'H' + (cx + hx) + '"/>' + (naam ? '<text class="klein" x="' + (cx + hx - 4) + '" y="' + (y - 3) + '" text-anchor="end" style="font-size:10px;fill:var(--muted)">' + naam + '</text>' : '');
+    }
+    var s = '<svg class="wk" viewBox="0 0 ' + W + ' ' + Hh + '" width="' + W + '" height="' + Hh + '" role="img" aria-label="wereldkaartje met de vier steden">';
+    s += '<ellipse class="rand" cx="' + cx + '" cy="' + cy + '" rx="' + rx + '" ry="' + ry + '"/>';
+    s += breedtelijn(66.5, '2 3', 'noordpoolcirkel') + breedtelijn(23.5, '5 4', 'Kreeftskeerkring') + breedtelijn(0, '0', 'evenaar') + breedtelijn(-23.5, '5 4', 'Steenbokskeerkring') + breedtelijn(-66.5, '2 3', 'zuidpoolcirkel');
+    /* stippen die op elkaar zitten een beetje uit elkaar duwen */
+    var p = punten.map(function(q){ var c = xy(q.lat, q.lon); return { x:c[0], y:c[1], nr:q.nr }; });
+    for (var k = 0; k < 6; k++) for (var i = 0; i < p.length; i++) for (var j = i + 1; j < p.length; j++){
+      var dx = p[j].x - p[i].x, dy = p[j].y - p[i].y, d = Math.hypot(dx, dy);
+      if (d < 22){ var px = d ? dx / d : 1, py = d ? dy / d : 0, w = (22 - d) / 2; p[i].x -= px * w; p[i].y -= py * w; p[j].x += px * w; p[j].y += py * w; }
+    }
+    p.forEach(function(q){ s += '<circle class="stip" cx="' + q.x.toFixed(1) + '" cy="' + q.y.toFixed(1) + '" r="9"/><text class="nr" x="' + q.x.toFixed(1) + '" y="' + (q.y + 4).toFixed(1) + '" text-anchor="middle">' + q.nr + '</text>'; });
+    s += '</svg>';
+    return s;
+  }
+
+  function stationsVoor(f){ return ST.filter(f || function(){ return true; }); }
+  function andereMaanden(m, n){ var lijst = H(MAAND.map(function(x, i){ return i; }).filter(function(i){ return i !== m; })).slice(0, n); return lijst; }
+  function warmsteUit(st){ var im = iMax(st.temp); return 'De rode lijn is het hoogst in ' + MAAND[im] + ': ' + net(st.temp[im]) + ' graden.'; }
+  function koudsteUit(st){ var im = iMin(st.temp); return 'De rode lijn is het laagst in ' + MAAND[im] + ': ' + net(st.temp[im]) + ' graden.'; }
+  function uniek(a){ var s = a.slice().sort(function(x, y){ return y - x; }); return s[0] - s[1] >= 0.4; }
+
+  /* ---------- 1. aflezen ---------- */
+  function aflezen(niveau){
+    var types = niveau === 'bb' ? ['warmste', 'koudste', 'neerslagMk', 'tempMk'] : niveau === 'kgt' ? ['warmste', 'koudste', 'neerslag', 'temp', 'jaarneerslagMk'] : ['warmste', 'koudste', 'neerslag', 'temp', 'jaarneerslag', 'jaartemp'];
+    var type = kies(types), st = kies(ST), m = Math.floor(Math.random() * 12);
+    var basis = { onderdeel:'klimaatgrafiek: aflezen', onderdeelNaam:'aflezen', sleutel:'af' + type + st.id + m };
+    var titel = st.naam + ' (' + st.land + ')';
+    if (type === 'warmste' || type === 'koudste'){
+      var warm = type === 'warmste', reeks = warm ? st.temp : st.temp.map(function(t){ return -t; });
+      if (!uniek(reeks)) return aflezen(niveau);
+      var im = iMax(reeks), opties = andereMaanden(im, 3).concat([im]).sort(function(a, b){ return a - b; });
+      return Object.assign(basis, { vorm:'meerkeuze', vasteVolgorde:true,
+        vraag: 'Welke maand is in <b>' + S(st.naam) + '</b> het ' + (warm ? 'warmst' : 'koudst') + '?',
+        opdracht: 'Kijk naar de rode lijn: dat is de temperatuur.', beeld: grafiek(st, { titel: titel }),
+        opties: opties.map(function(i){ return MAAND[i]; }), goed: opties.indexOf(im),
+        uitleg: warm ? warmsteUit(st) : koudsteUit(st), antwoordTekst: MAAND[im] });
+    }
+    if (type === 'neerslag' || type === 'neerslagMk'){
+      var v = st.neerslag[m], nHoog = Math.max(100, Math.ceil(max(st.neerslag) / 50) * 50);
+      var uit = 'De blauwe staaf van ' + MAAND[m] + ' komt tot ongeveer ' + v + ' mm. Lees de staven af op de rechteras, die is in millimeters.';
+      if (type === 'neerslag') return Object.assign(basis, { vorm:'invul',
+        vraag: 'Hoeveel neerslag valt er in <b>' + S(st.naam) + '</b> in ' + MAAND[m] + '?',
+        opdracht: 'Lees de blauwe staaf af op de rechteras. Een beetje ernaast mag.', beeld: grafiek(st, { titel: titel, maand: m }),
+        velden:[{ label: 'neerslag in ' + MAAND[m], antwoord: v, tol: Math.max(10, Math.round(nHoog * 0.06)), eenheid: 'mm' }],
+        uitleg: uit, antwoordTekst: v + ' mm' });
+      var kand = [v, Math.max(0, Math.round(v * 0.4 / 10) * 10), Math.round((v * 1.8 + 20) / 10) * 10, Math.round((v + 60) / 10) * 10, v + 100, Math.round(v * 2.5 / 10) * 10 + 10];
+      var mk = []; kand.forEach(function(k){ if (mk.indexOf(k) < 0 && (k === v || Math.abs(k - v) >= Math.max(15, nHoog * 0.12))) mk.push(k); });
+      mk = [v].concat(mk.filter(function(k){ return k !== v; }).slice(0, 3)).sort(function(a, b){ return a - b; });
+      return Object.assign(basis, { vorm:'meerkeuze', vasteVolgorde:true,
+        vraag: 'Hoeveel neerslag valt er in <b>' + S(st.naam) + '</b> ongeveer in ' + MAAND[m] + '?',
+        opdracht: 'De blauwe staven zijn de neerslag. Lees af op de rechteras.', beeld: grafiek(st, { titel: titel, maand: m }),
+        opties: mk.map(function(k){ return k + ' mm'; }), goed: mk.indexOf(v), uitleg: uit, antwoordTekst: v + ' mm' });
+    }
+    if (type === 'temp' || type === 'tempMk'){
+      var tv = st.temp[m], uitT = 'De rode stip van ' + MAAND[m] + ' staat op ongeveer ' + net(tv) + ' graden. Lees de lijn af op de linkeras, die is in graden Celsius.';
+      if (type === 'temp') return Object.assign(basis, { vorm:'invul',
+        vraag: 'Hoe warm is het in <b>' + S(st.naam) + '</b> gemiddeld in ' + MAAND[m] + '?',
+        opdracht: 'Lees de rode lijn af op de linkeras. Een graad ernaast mag; onder nul typ je een min.', beeld: grafiek(st, { titel: titel, maand: m }),
+        velden:[{ label: 'temperatuur in ' + MAAND[m], antwoord: Math.round(tv), tol: 1.6, eenheid: '°C', toon: net(tv) + ' °C' }],
+        uitleg: uitT, antwoordTekst: net(tv) + ' °C' });
+      var r = Math.round(tv), kandT = [r, r - 10, r + 10, r + 20, r - 20, r + 5];
+      var mkT = [r]; kandT.forEach(function(k){ if (mkT.length < 4 && mkT.every(function(q){ return Math.abs(q - k) >= 4; })) mkT.push(k); });
+      mkT.sort(function(a, b){ return a - b; });
+      return Object.assign(basis, { vorm:'meerkeuze', vasteVolgorde:true,
+        vraag: 'Hoe warm is het in <b>' + S(st.naam) + '</b> ongeveer in ' + MAAND[m] + '?',
+        opdracht: 'De rode lijn is de temperatuur. Lees af op de linkeras.', beeld: grafiek(st, { titel: titel, maand: m }),
+        opties: mkT.map(function(k){ return String(k).replace('-', '−') + ' °C'; }), goed: mkT.indexOf(r), uitleg: uitT, antwoordTekst: net(tv) + ' °C' });
+    }
+    if (type === 'jaarneerslag' || type === 'jaarneerslagMk'){
+      var tot = som(st.neerslag), uitJ = 'Tel de twaalf staven op: ' + st.neerslag.join(' + ') + ' = ' + tot + ' mm per jaar.';
+      if (type === 'jaarneerslag') return Object.assign(basis, { vorm:'invul',
+        vraag: 'Hoeveel neerslag valt er in <b>' + S(st.naam) + '</b> in een heel jaar?',
+        opdracht: 'Lees elke staaf af en tel ze op. Tien procent ernaast mag.', beeld: grafiek(st, { titel: titel }),
+        velden:[{ label: 'jaarneerslag', antwoord: tot, tol: Math.max(30, Math.round(tot * 0.1)), eenheid: 'mm' }],
+        uitleg: uitJ, antwoordTekst: tot + ' mm' });
+      var rond = function(x){ return Math.max(0, Math.round(x / 50) * 50); };
+      var kandJ = [rond(tot), rond(tot * 0.45), rond(tot * 2.1), rond(tot * 1.5) + 50, rond(tot) + 300];
+      var mkJ = []; kandJ.forEach(function(k){ if (mkJ.length < 4 && mkJ.every(function(q){ return Math.abs(q - k) >= Math.max(100, tot * 0.3); })) mkJ.push(k); });
+      if (mkJ.length < 4) mkJ.push(rond(tot) + 1000);
+      mkJ.sort(function(a, b){ return a - b; });
+      return Object.assign(basis, { vorm:'meerkeuze', vasteVolgorde:true,
+        vraag: 'Hoeveel neerslag valt er in <b>' + S(st.naam) + '</b> ongeveer in een heel jaar?',
+        opdracht: 'Schat de staven en tel ze op.', beeld: grafiek(st, { titel: titel }),
+        opties: mkJ.map(function(k){ return 'ongeveer ' + k + ' mm'; }), goed: mkJ.indexOf(rond(tot)), uitleg: uitJ + ' Dat ligt het dichtst bij ' + rond(tot) + '.', antwoordTekst: 'ongeveer ' + rond(tot) + ' mm' });
+    }
+    /* jaartemp */
+    var gem = som(st.temp) / 12;
+    return Object.assign(basis, { vorm:'invul',
+      vraag: 'Wat is de gemiddelde <b>jaartemperatuur</b> van ' + S(st.naam) + '?',
+      opdracht: 'Lees de twaalf maanden af, tel ze op en deel door 12. Een graad ernaast mag.', beeld: grafiek(st, { titel: titel }),
+      velden:[{ label: 'jaartemperatuur', antwoord: Math.round(gem * 10) / 10, tol: 1.2, eenheid: '°C' }],
+      uitleg: 'De twaalf maandtemperaturen opgeteld zijn ' + net(som(st.temp)) + '; gedeeld door 12 is dat ' + net(gem) + ' graden.',
+      antwoordTekst: net(gem) + ' °C' });
+  }
+
+  /* ---------- 2. welk klimaat ---------- */
+  function klimaatUitleg(st){
+    var k = st.klimaat, im = iMax(st.temp), ik = iMin(st.temp), tot = som(st.neerslag), nMax = iMax(st.neerslag), nMin = iMin(st.neerslag), z = '';
+    if (k === 'regenwoud') z = 'Alle maanden zijn warmer dan 18 graden (de koudste is ' + MAAND[ik] + ' met ' + net(st.temp[ik]) + ') en elke maand valt er veel regen: ' + tot + ' mm per jaar.';
+    else if (k === 'savanne') z = 'Alle maanden zijn warmer dan 18 graden, maar er is een natte tijd (' + MAAND[nMax] + ': ' + st.neerslag[nMax] + ' mm) en een droge tijd (' + MAAND[nMin] + ': ' + st.neerslag[nMin] + ' mm).';
+    else if (k === 'woestijn') z = 'Er valt maar ' + tot + ' mm neerslag per jaar, ver onder de 250 mm: veel te weinig voor planten.';
+    else if (k === 'steppe') z = 'Er valt ' + tot + ' mm per jaar: te weinig voor bos, net genoeg voor gras. De winter is koud (' + net(st.temp[ik]) + ' graden) en de zomer warm (' + net(st.temp[im]) + ').';
+    else if (k === 'zee') z = 'De koudste maand is ' + net(st.temp[ik]) + ' graden (boven de -3) en de warmste ' + net(st.temp[im]) + ': een klein verschil, en het regent het hele jaar. Zee houdt de temperatuur gelijkmatig.';
+    else if (k === 'middellandse') z = 'De zomer is heet en droog (' + MAAND[im] + ': ' + net(st.temp[im]) + ' graden en maar ' + st.neerslag[im] + ' mm), de winter zacht en nat (' + MAAND[ik] + ': ' + net(st.temp[ik]) + ' graden, ' + st.neerslag[ik] + ' mm).';
+    else if (k === 'land') z = 'De koudste maand is ' + net(st.temp[ik]) + ' graden, ver onder de -3, en de warmste ' + net(st.temp[im]) + ': een verschil van ' + net(st.temp[im] - st.temp[ik], 0) + ' graden. Zo\'n grote schommeling zie je alleen ver van zee.';
+    else if (k === 'toendra') z = 'De warmste maand komt maar tot ' + net(st.temp[im]) + ' graden, onder de 10: te koud voor bomen.';
+    else if (k === 'hooggebergte') z = 'Het station ligt op ' + ligging(st) + ', dicht bij de evenaar, en toch wordt het nooit warmer dan ' + net(st.temp[im]) + ' graden. Dat komt door de hoogte: ' + (st.hoogte || 3000) + ' meter.';
+    return z + ' Dat is het ' + SOORT[k].naam + ' (Köppen ' + SOORT[k].groep + ').';
+  }
+  function welkKlimaat(niveau){
+    var kand = stationsVoor(function(s){ return s.klimaatVraag !== false && (niveau !== 'bb' || SOORT[s.klimaat].groep !== 'H'); });
+    var st = kies(kand), k = st.klimaat;
+    var opties, goedTekst;
+    if (niveau === 'bb'){
+      var groepen = { A:'tropisch klimaat', B:'droog klimaat (woestijn of steppe)', C:'gematigd klimaat (zeeklimaat)', D:'landklimaat', E:'polair klimaat' };
+      var g = SOORT[k].groep;
+      var rest = H(Object.keys(groepen).filter(function(x){ return x !== g; })).slice(0, 3);
+      opties = H([g].concat(rest)).map(function(x){ return groepen[x]; }); goedTekst = groepen[g];
+    } else {
+      var ids = Object.keys(SOORT).filter(function(x){ return x !== k; });
+      /* eerst een buur uit dezelfde hoofdgroep, dan de rest */
+      var buur = ids.filter(function(x){ return SOORT[x].groep === SOORT[k].groep; }), ander = H(ids.filter(function(x){ return SOORT[x].groep !== SOORT[k].groep; }));
+      var rest2 = H(buur).slice(0, 1).concat(ander).slice(0, 3);
+      opties = H([k].concat(rest2)).map(function(x){ return SOORT[x].naam; }); goedTekst = SOORT[k].naam;
+    }
+    return { onderdeel:'klimaatgrafiek: welk klimaat', onderdeelNaam:'welk klimaat', vorm:'meerkeuze', sleutel:'kl' + st.id,
+      vraag: 'Welk klimaat hoort bij deze grafiek?',
+      opdracht: niveau === 'bb' ? 'Kijk hoe warm het is en hoeveel regen er valt.' : 'Kijk naar de koudste en warmste maand, en naar de neerslag per jaar en per seizoen.',
+      beeld: grafiek(st, { titel: 'klimaatgrafiek van een station op ' + ligging(st) }),
+      opties: opties, goed: opties.indexOf(goedTekst),
+      uitleg: klimaatUitleg(st) + ' Het station is ' + st.naam + '.', antwoordTekst: goedTekst };
+  }
+
+  /* ---------- 3. welk halfrond ---------- */
+  function welkHalfrond(niveau){
+    var st = kies(stationsVoor(function(s){ return s.halfrondVraag !== false && Math.abs(s.lat) >= 12; }));
+    var im = iMax(st.temp), ik = iMin(st.temp), zuid = st.lat < 0;
+    var opties = ['noordelijk halfrond', 'zuidelijk halfrond'];
+    return { onderdeel:'klimaatgrafiek: welk halfrond', onderdeelNaam:'welk halfrond', vorm:'meerkeuze', vasteVolgorde:true, sleutel:'hf' + st.id,
+      vraag: 'Ligt dit station op het <b>noordelijk</b> of het <b>zuidelijk</b> halfrond?',
+      opdracht: 'Kijk in welke maanden het het warmst is.',
+      beeld: grafiek(st, { titel: 'klimaatgrafiek van een station' }),
+      opties: opties, goed: zuid ? 1 : 0,
+      uitleg: zuid ? 'De warmste maand is ' + MAAND[im] + ' en de koudste ' + MAAND[ik] + ': de zomer valt in december tot februari, als wij winter hebben. Dat is het zuidelijk halfrond. Het station is ' + st.naam + '.'
+                   : 'De warmste maand is ' + MAAND[im] + ' en de koudste ' + MAAND[ik] + ': zomer in juni tot augustus, net als bij ons. Dat is het noordelijk halfrond. Het station is ' + st.naam + '.',
+      antwoordTekst: opties[zuid ? 1 : 0] };
+  }
+
+  /* ---------- 4. welke stad: grafiek plus wereldkaartje met vier genummerde steden ---------- */
+  function welkeStad(niveau){
+    var st = kies(ST), rest = H(ST.filter(function(s){ return s.id !== st.id; })), anderen = [];
+    rest.forEach(function(s){
+      if (anderen.length >= 3) return;
+      var verschil = niveau === 'bb' ? SOORT[s.klimaat].groep !== SOORT[st.klimaat].groep && anderen.every(function(a){ return SOORT[a.klimaat].groep !== SOORT[s.klimaat].groep; })
+                                     : s.klimaat !== st.klimaat && anderen.every(function(a){ return a.klimaat !== s.klimaat; });
+      if (verschil) anderen.push(s);
+    });
+    if (anderen.length < 3) return welkeStad(niveau);
+    var vier = H([st].concat(anderen)).map(function(s, i){ return { st:s, nr:i + 1 }; });
+    var opties = vier.map(function(v){ return v.nr + '. ' + v.st.naam + ' (' + v.st.land + ')'; });
+    var goedI = vier.map(function(v){ return v.st.id; }).indexOf(st.id);
+    var im = iMax(st.temp);
+    var waarom = 'Nummer ' + vier[goedI].nr + ', ' + st.naam + ', ligt op ' + ligging(st) + (Math.abs(st.lat) < 10 ? ', vlak bij de evenaar' : st.lat < 0 ? ', op het zuidelijk halfrond: de warmste maand is ' + MAAND[im] : ', op het noordelijk halfrond: de warmste maand is ' + MAAND[im]) + '. ' + klimaatUitleg(st);
+    return { onderdeel:'klimaatgrafiek: welke stad', onderdeelNaam:'welke stad', vorm:'meerkeuze', vasteVolgorde:true, sleutel:'ws' + st.id,
+      vraag: 'Bij welke stad hoort deze klimaatgrafiek?',
+      opdracht: 'De vier steden staan als nummers op het kaartje. Kijk naar het halfrond, de afstand tot de evenaar en de neerslag.',
+      beeld: '<div class="stapel">' + grafiek(st, { titel: 'klimaatgrafiek' }) + wereld(vier.map(function(v){ return { lat:v.st.lat, lon:v.st.lon, nr:v.nr }; })) + '</div>',
+      opties: opties, goed: goedI, uitleg: waarom, antwoordTekst: opties[goedI] };
+  }
+
+  /* ---------- 5. vergelijken: zee tegenover binnenland ---------- */
+  var ZEE = ['amsterdam', 'reykjavik', 'sydney', 'tokio', 'buenosaires', 'kaapstad'], BINNEN = ['moskou', 'winnipeg', 'ulaanbaatar', 'denver', 'madrid'];
+  function bijId(id){ return ST.filter(function(s){ return s.id === id; })[0]; }
+  function schommeling(st){ return max(st.temp) - min(st.temp); }
+  function vergelijken(niveau){
+    var z = bijId(kies(ZEE)), b = bijId(kies(BINNEN));
+    var eerst = Math.random() < 0.5, A = eerst ? z : b, B = eerst ? b : z;
+    var type = niveau === 'hv' ? kies(['zee', 'binnen', 'schommeling', 'schommeling']) : kies(['zee', 'binnen']);
+    var beeld = '<div class="twee">' + grafiek(A, { titel: 'station A' }) + grafiek(B, { titel: 'station B' }) + '</div>';
+    var getallen = 'Station A: warmste maand ' + net(max(A.temp)) + ', koudste ' + net(min(A.temp)) + ', schommeling ' + net(schommeling(A), 0) + ' graden. Station B: ' + net(max(B.temp)) + ' en ' + net(min(B.temp)) + ', schommeling ' + net(schommeling(B), 0) + ' graden.';
+    var wie = ' A is ' + A.naam + ', B is ' + B.naam + '.';
+    var basis = { onderdeel:'klimaatgrafiek: vergelijken', onderdeelNaam:'vergelijken', sleutel:'vg' + type + A.id + B.id, beeld: beeld };
+    if (type === 'schommeling'){
+      var welk = kies([A, B]), letter = welk === A ? 'A' : 'B', sch = schommeling(welk);
+      return Object.assign(basis, { vorm:'invul',
+        vraag: 'Hoe groot is de <b>jaarlijkse temperatuurschommeling</b> van station ' + letter + '?',
+        opdracht: 'Warmste maand min koudste maand. Lees af op de linkeras; een graad ernaast mag.',
+        velden:[{ label: 'schommeling station ' + letter, antwoord: Math.round(sch * 10) / 10, tol: 1.6, eenheid: '°C' }],
+        uitleg: 'Warmste maand ' + net(max(welk.temp)) + ' graden, koudste ' + net(min(welk.temp)) + ': ' + net(max(welk.temp)) + ' − (' + net(min(welk.temp)) + ') = ' + net(sch) + ' graden. ' + (welk.zee ? 'Zo\'n kleine schommeling hoort bij een ligging aan zee.' : 'Zo\'n grote schommeling hoort bij het binnenland.') + wie,
+        antwoordTekst: net(sch) + ' °C' });
+    }
+    var vraagZee = type === 'zee', goedIsA = vraagZee ? A.zee : !A.zee;
+    return Object.assign(basis, { vorm:'meerkeuze', vasteVolgorde:true,
+      vraag: 'Welk station ligt ' + (vraagZee ? '<b>aan zee</b>' : '<b>in het binnenland</b>') + '?',
+      opdracht: 'Vergelijk het verschil tussen de warmste en de koudste maand.',
+      opties: ['station A', 'station B'], goed: goedIsA ? 0 : 1,
+      uitleg: getallen + ' Zee warmt langzaam op en koelt langzaam af, dus aan zee is de schommeling klein; in het binnenland is de zomer heet en de winter streng.' + wie,
+      antwoordTekst: goedIsA ? 'station A' : 'station B' });
+  }
+
+  var SOORTEN = { aflezen: aflezen, klimaat: welkKlimaat, halfrond: welkHalfrond, stad: welkeStad, vergelijken: vergelijken };
+  VAKSPEL.maak({
+    id:'klimaatgrafiek', naam:'Klimaatgrafieken', vak:'aard', kleur:'#2f7d52',
+    hand:'rode lijn, blauwe staven',
+    lead:'Een klimaatgrafiek laat in één beeld zien hoe warm het ergens is en hoeveel regen er valt. Je leest ze af, herkent het klimaat, ziet aan de zomer op welk halfrond een station ligt en zoekt op het wereldkaartje welke stad erbij hoort. Ruim twintig echte stations, van Utqiagvik tot Singapore.',
+    hoe:[
+      { kop:'Lezen', tekst:'De <b>rode lijn</b> is de temperatuur, op de linkeras in graden. De <b>blauwe staven</b> zijn de neerslag, op de rechteras in millimeters. Onderaan de maanden, van januari tot december.' },
+      { kop:'Herkennen', tekst:'Warmste maand onder de 10 graden: polair. Alle maanden boven de 18: tropisch. Minder dan 250 mm per jaar: woestijn. Koudste maand onder de -3: landklimaat. Warm in december: zuidelijk halfrond.' },
+      { kop:'Vijf onderdelen', tekst:'Aflezen, welk klimaat, welk halfrond, welke stad, en op havo en vwo twee grafieken vergelijken: zee of binnenland. Tien opgaven per ronde, meteen nagekeken.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'Aflezen met keuzes, en de vijf hoofdklimaten: tropisch, droog, gematigd, landklimaat en polair.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Waarden zelf aflezen en invullen, en de klimaatsoorten: van regenwoud tot toendra.' },
+        { id:'hv', naam:'havo en vwo', uit:'Ook de jaartemperatuur en de jaarneerslag berekenen, en twee grafieken vergelijken: zee of binnenland, met de temperatuurschommeling.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' }, { id:'aflezen', naam:'aflezen' }, { id:'klimaat', naam:'welk klimaat' }, { id:'halfrond', naam:'welk halfrond' }, { id:'stad', naam:'welke stad' }, { id:'vergelijken', naam:'vergelijken' } ] }
+    ],
+    aantal:10,
+    maak:function(keuze, nr){
+      var soort = keuze.soort;
+      if (soort === 'alles') soort = kies(keuze.niveau === 'hv' ? ['aflezen', 'aflezen', 'klimaat', 'klimaat', 'halfrond', 'stad', 'vergelijken', 'vergelijken'] : ['aflezen', 'aflezen', 'klimaat', 'klimaat', 'halfrond', 'stad']);
+      return SOORTEN[soort](keuze.niveau);
+    },
+    uitleg:{ doel:'Klimaatgrafieken aflezen en het klimaat, het halfrond en de stad herkennen.', tijd:'tien opgaven per ronde', bediening:'Kies een antwoord, of typ een getal en druk op Nakijken. Een graad of een paar millimeter ernaast mag.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>

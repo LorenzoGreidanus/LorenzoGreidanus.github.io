@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Cijferend vermenigvuldigen en delen, versie 1.0: op vakspel.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Cijferend vermenigvuldigen en delen &middot; meneer Greidanus</title>
+<meta name="description" content="Keer en gedeeld door onder elkaar: het schema staat op het scherm, jij vult de stappen in. Eerst schatten, dan rekenen, en elke stap wordt meteen nagekeken.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Cijferend vermenigvuldigen en delen">
+<meta property="og:description" content="Keer en gedeeld door onder elkaar: het schema staat op het scherm, jij vult de stappen in.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/cijferen.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%23EA9836'/><g fill='none' stroke='%2314224C' stroke-width='6' stroke-linecap='round'><path d='M34 30l32 32M66 30L34 62M28 78h44'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+/* het schema, zoals in het schrift: getallen rechts uitgelijnd, de stappen
+   ernaast in het klein, en een streep boven de rij die eronder komt */
+.cschema{border-collapse:collapse;margin:0 auto;font-variant-numeric:tabular-nums;font-size:1.2rem;font-weight:600;line-height:1.3}
+.cschema td{padding:3px 6px;text-align:right;white-space:nowrap;vertical-align:middle}
+.cschema td.lab{text-align:left;color:var(--muted);font-size:.82rem;font-weight:600}
+.cschema td.lab input{width:3.6em}
+.cschema tr.streep td.get{border-top:2px solid var(--ink)}
+.cschema tr.plus td.get{border-top:2px solid var(--ink)}
+.cschema td.get .teken{display:inline-block;width:1.2em;text-align:right;color:var(--muted)}
+.cschema .deler{color:var(--nadruk)}
+.cschema .komma{color:var(--nadruk)}
+.cschema input{width:5.6em;height:46px;border-radius:12px;border:2px solid var(--rand2);background:var(--kaart);color:var(--ink);font-size:1.1rem;font-weight:600;text-align:right;padding:0 10px;font-variant-numeric:tabular-nums}
+.cschema input:focus{outline:none;border-color:var(--nadruk);box-shadow:0 0 0 4px var(--nadruk-zacht)}
+.cschema input.goed{background:var(--goed-bg);border-color:var(--goed);color:var(--goed)}
+.cschema input.fout{background:var(--fout-bg);border-color:var(--fout);color:var(--fout)}
+.cschema .stap{display:block;font-size:.74rem;color:var(--fout);font-weight:600;text-align:right;line-height:1.2;white-space:normal;max-width:12em;margin-left:auto}
+.cschema td.eind{text-align:center;padding-top:14px;font-size:1rem}
+.cschema td.eind .cvak{margin:0 4px}
+.cschema .cvak{display:inline-block;vertical-align:middle}
+.cschema tr.kop td{padding-bottom:2px}
+.cwrap{overflow-x:auto;max-width:100%}
+.cuit{display:block;text-align:center;color:var(--muted);font-size:.82rem;margin:6px 0 2px}
+@media(max-width:480px){
+  .cschema{font-size:1.05rem}
+  .cschema td{padding:3px 3px}
+  .cschema input{width:4.8em;height:42px;font-size:1rem;padding:0 6px}
+  .cschema td.lab input{width:3.2em}
+  .cschema td.lab{font-size:.76rem}
+}
+body.groot .cschema{font-size:1.5rem}
+body.groot .cschema input{height:60px;font-size:1.4rem}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  function tussen(a, b){ return a + Math.floor(Math.random() * (b - a + 1)); }
+  /* getallen zoals in het boek: een spatie per duizendtal, een komma voor de tienden */
+  function dz(n){ var neg = n < 0, s = String(Math.abs(n)); var d = s.split('.'), t = d[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' '); return (neg ? '-' : '') + t + (d[1] ? ',' + d[1] : ''); }
+  function net(x){ x = Math.round(x * 100) / 100; return dz(x); }
+
+  /* ---------- het schema als eigen vorm ----------
+     rijen: [{ get, lab, invoer:{ a, stap }, klasse }]; elke invoer is een vakje
+     met het goede antwoord (a) en de stap die erbij hoort (stap) voor als het rood wordt */
+  function schemaOpgave(o){
+    return {
+      onderdeel:o.onderdeel, onderdeelNaam:o.onderdeelNaam, vraag:o.vraag, opdracht:o.opdracht, beeld:o.beeld,
+      uitleg:o.uitleg, antwoordTekst:o.antwoordTekst, vorm:'eigen', sleutel:o.sleutel,
+      teken:function(el, api){
+        var n = 0;
+        function vakje(v, na){ n++; return '<span class="cvak"><input inputmode="decimal" autocomplete="off" aria-label="' + S(v.label || ('stap ' + n)) + '" data-a="' + v.a + '" data-stap="' + S(v.stap || '') + '">' + (na || '') + '<span class="stap"></span></span>'; }
+        el.innerHTML = '<div class="cwrap"><table class="cschema">' + o.rijen.map(function(r){
+          if (r.eind) return '<tr><td class="eind" colspan="2">' + r.eind.map(function(d){ return typeof d === 'string' ? d : vakje(d); }).join('') + '</td></tr>';
+          return '<tr class="' + (r.klasse || '') + '"><td class="get">' + (typeof r.get === 'string' ? r.get : vakje(r.get)) + '</td><td class="lab">' + (r.lab == null ? '' : typeof r.lab === 'string' ? r.lab : vakje(r.lab, r.labNa)) + '</td></tr>';
+        }).join('') + '</table></div>' + (o.onder ? '<span class="cuit">' + o.onder + '</span>' : '');
+        var invoer = el.querySelectorAll('input');
+        Array.prototype.forEach.call(invoer, function(inp, i){ inp.addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); if (invoer[i + 1]) invoer[i + 1].focus(); else knop.click(); } }); });
+        setTimeout(function(){ if (invoer[0]) invoer[0].focus(); }, 50);
+        var knop = api.knop('Nakijken', function(){
+          var alles = true;
+          Array.prototype.forEach.call(invoer, function(inp){
+            var a = parseFloat(inp.getAttribute('data-a')), g = api.getal(inp.value), ok = g !== null && Math.abs(g - a) < 0.001;
+            inp.disabled = true; inp.classList.add(ok ? 'goed' : 'fout');
+            if (!ok){ alles = false; inp.parentNode.querySelector('.stap').textContent = inp.getAttribute('data-stap') || ('goed: ' + net(a)); }
+          });
+          knop.disabled = true;
+          api.klaar(alles, '');
+        });
+        /* voor de proef: het goede antwoord invullen en nakijken */
+        el.proef = function(){ Array.prototype.forEach.call(invoer, function(inp){ inp.value = inp.getAttribute('data-a').replace('.', ','); }); knop.click(); };
+        el.proefFout = function(){ Array.prototype.forEach.call(invoer, function(inp){ inp.value = '-1'; }); knop.click(); };
+      }
+    };
+  }
+
+  /* ---------- het oppervlaktemodel: een rechthoek in stukken ----------
+     kolommen zijn de delen van het ene getal, rijen de delen van het andere;
+     niet op schaal, anders wordt 3 naast 200 onleesbaar */
+  function splits(n){ var d = String(n).split('').map(Number), p = []; d.forEach(function(c, i){ var w = c * Math.pow(10, d.length - 1 - i); if (w) p.push(w); }); return p; }
+  function model(a, b){
+    var kol = splits(a), rij = splits(b), W = 360, Hh = 150, L = 46, T = 22;
+    function maten(delen, totaal){ var som = delen.reduce(function(s, x){ return s + x; }, 0), r = delen.map(function(x){ return Math.max(0.28, x / som); }), s2 = r.reduce(function(s, x){ return s + x; }, 0); return r.map(function(x){ return x / s2 * totaal; }); }
+    var bw = maten(kol, W - L), bh = maten(rij, Hh - T), uit = '', x = L, y = T;
+    uit += '<svg viewBox="0 0 ' + (W + 6) + ' ' + (Hh + 6) + '" style="max-width:380px;width:100%;display:block;margin:8px auto 0" role="img" aria-label="oppervlaktemodel van ' + a + ' keer ' + b + '">';
+    kol.forEach(function(k, i){ uit += '<text x="' + (x + bw[i] / 2) + '" y="15" text-anchor="middle" font-size="13" font-weight="600" style="fill:var(--ink)">' + dz(k) + '</text>'; x += bw[i]; });
+    rij.forEach(function(r, j){ uit += '<text x="' + (L - 6) + '" y="' + (y + bh[j] / 2 + 5) + '" text-anchor="end" font-size="13" font-weight="600" style="fill:var(--ink)">' + dz(r) + '</text>'; y += bh[j]; });
+    y = T;
+    rij.forEach(function(r, j){
+      x = L;
+      kol.forEach(function(k, i){
+        uit += '<rect x="' + x + '" y="' + y + '" width="' + bw[i] + '" height="' + bh[j] + '" rx="3" style="fill:var(--kaart2);stroke:var(--ink);stroke-width:1.5"/>' +
+          '<text x="' + (x + bw[i] / 2) + '" y="' + (y + bh[j] / 2 + 4) + '" text-anchor="middle" font-size="12" style="fill:var(--nadruk);font-weight:600">' + dz(k * r) + '</text>';
+        x += bw[i];
+      });
+      y += bh[j];
+    });
+    return uit + '</svg>';
+  }
+  /* een strook in happen: zoveel keer de deler, en wat er overblijft */
+  function strook(n, happen, d, rest){
+    var W = 380, uit = '<svg viewBox="0 0 ' + W + ' 58" style="max-width:380px;width:100%;display:block;margin:8px auto 0" role="img" aria-label="strook van ' + n + ' in happen">', x = 0;
+    var delen = happen.map(function(h){ return { w: h.eraf, t: net(h.keer) + ' × ' + d }; }); if (rest) delen.push({ w: rest, t: 'rest ' + rest, rest:true });
+    var som = delen.reduce(function(s, p){ return s + p.w; }, 0);
+    delen.forEach(function(p, i){
+      var w = Math.max(p.rest ? 48 : 54, p.w / som * (W - 2));
+      uit += '<rect x="' + (x + 1) + '" y="8" width="' + w + '" height="30" rx="4" style="fill:' + (p.rest ? 'var(--fout-bg)' : i % 2 ? 'var(--kaart-aan)' : 'var(--kaart2)') + ';stroke:var(--ink);stroke-width:1.5"/>';
+      if (!p.rest) uit += '<text x="' + (x + 1 + w / 2) + '" y="27" text-anchor="middle" font-size="12" font-weight="600" style="fill:var(--ink)">' + dz(p.w) + '</text>';
+      uit += '<text x="' + (x + 1 + w / 2) + '" y="52" text-anchor="middle" font-size="11" style="fill:var(--muted)">' + p.t + '</text>';
+      x += w;
+    });
+    /* de stroken zijn niet op schaal als een deel te klein is: opnieuw passend maken */
+    return uit.replace('viewBox="0 0 ' + W + ' 58"', 'viewBox="0 0 ' + Math.max(W, Math.ceil(x + 2)) + ' 58"') + '</svg>';
+  }
+
+  /* ---------- 1. vermenigvuldigen ---------- */
+  function verm(niveau){
+    var a, b, komma = 0;
+    if (niveau === 'bb'){ a = tussen(12, 99); b = tussen(2, 9); }
+    else if (niveau === 'kgt'){ a = tussen(112, 999); b = Math.random() < 0.5 ? tussen(3, 9) : tussen(12, 49); }
+    else { a = tussen(112, 999); b = tussen(12, 89); if (Math.random() < 0.5) komma = 1; }
+    if (b > 9 && b % 10 === 0) b += tussen(1, 9);
+    if (a % 10 === 0) a += tussen(1, 9);
+    var rijen = [], stappen = [], som = a * b, aT = komma ? net(a / 10) : dz(a);
+    /* met 1 cijfer splits je het bovenste getal; met 2 cijfers de vermenigvuldiger (4 × 23, dan 10 × 23) */
+    var delen = b < 10 ? splits(a).reverse().map(function(p){ return { f: b, g: p }; }) : splits(b).reverse().map(function(p){ return { f: p, g: a }; });
+    rijen.push({ klasse:'kop', get: aT, lab: komma ? 'reken eerst zonder komma: ' + dz(a) : '' });
+    rijen.push({ get: '<span class="teken">' + dz(b) + '</span> ×', lab: '' });
+    delen.forEach(function(p, i){
+      rijen.push({ klasse: i === 0 ? 'streep' : '', get: { a: p.f * p.g, label: p.f + ' keer ' + p.g, stap: dz(p.f) + ' × ' + dz(p.g) + ' = ' + dz(p.f * p.g) }, lab: dz(p.f) + ' × ' + dz(p.g) });
+      stappen.push(dz(p.f) + ' × ' + dz(p.g) + ' = ' + dz(p.f * p.g));
+    });
+    rijen.push({ klasse:'plus', get: { a: som, label:'alles bij elkaar', stap: stappen.map(function(s){ return s.split(' = ')[1]; }).join(' + ') + ' = ' + dz(som) }, lab: 'bij elkaar +' });
+    var antwoord = komma ? som / 10 : som;
+    if (komma) rijen.push({ get: { a: antwoord, label:'met de komma', stap: dz(som) + ' met 1 cijfer achter de komma: ' + net(antwoord) }, lab: '<span class="komma">komma terug</span>: 1 cijfer achter de komma' });
+    return schemaOpgave({
+      onderdeel:'cijferen: vermenigvuldigen', onderdeelNaam:'vermenigvuldigen', sleutel:'v' + a + 'x' + b + komma,
+      vraag: '<b>' + aT + ' × ' + dz(b) + '</b>',
+      opdracht: 'Vul elke rij van het schema in: ' + (b < 10 ? 'eerst de eenheden, dan de tientallen' + (a > 99 ? ', dan de honderdtallen' : '') : 'eerst ' + (b % 10) + ' × ' + dz(a) + ', dan ' + dz(b - b % 10) + ' × ' + dz(a)) + '. Onderaan tel je alles bij elkaar.' + (komma ? ' Reken zonder komma en zet hem aan het eind terug.' : ''),
+      rijen: rijen,
+      uitleg: stappen.join(', ') + '. Bij elkaar: ' + dz(som) + '.' + (komma ? ' ' + aT + ' heeft 1 cijfer achter de komma, dus het antwoord ook: ' + net(antwoord) + '.' : '') + ' In het oppervlaktemodel zie je elke rij van het schema als een strook:' + model(a, b),
+      antwoordTekst: aT + ' × ' + dz(b) + ' = ' + net(antwoord)
+    });
+  }
+
+  /* ---------- 2. delen met de hapmethode ---------- */
+  function deel(niveau){
+    var d, q, r = 0, tienden = 0;
+    if (niveau === 'bb'){ d = tussen(2, 9); q = tussen(4, Math.floor(999 / d)); }
+    else if (niveau === 'kgt'){ d = Math.random() < 0.5 ? tussen(3, 9) : tussen(11, 25); q = tussen(6, Math.floor(999 / d)); if (Math.random() < 0.5) r = tussen(1, d - 1); }
+    else {
+      d = Math.random() < 0.6 ? tussen(11, 29) : tussen(3, 9);
+      if (Math.random() < 0.5){ q = tussen(12, Math.floor(1999 / d)); r = tussen(1, d - 1); }
+      else {
+        /* een antwoord met tienden: de deler even en het antwoord op ,5, of de deler een vijfvoud */
+        if (d % 2 && d % 5) d = kies([4, 6, 8, 12, 14, 15, 16, 18, 22, 24, 25]);
+        q = tussen(12, Math.floor(999 / d)); tienden = d % 2 === 0 ? 5 : kies([2, 4, 6, 8]);
+        r = d * tienden / 10;
+      }
+    }
+    if (q % 10 === 0) q += tussen(1, 9);
+    var n = d * q + r;
+    /* de happen: steeds de grootste, per honderdtal, tiental, eenheid */
+    var over = n, happen = [];
+    [1000, 100, 10, 1].forEach(function(p){ var k = Math.floor(over / (d * p)); if (k > 0){ happen.push({ keer: k * p, eraf: k * p * d, rest: over - k * p * d }); over -= k * p * d; } });
+    if (tienden){ happen.push({ keer: tienden / 10, eraf: r, rest: 0, tienden:true }); }
+    var rijen = [{ klasse:'kop', get: '<span class="deler">' + dz(d) + '</span> / ' + dz(n) + ' \\', lab: '' }], stappen = [];
+    happen.forEach(function(h, i){
+      var restNa = h.tienden ? 0 : h.rest;
+      rijen.push({ get: { a: h.eraf, label:'wat je eraf haalt', stap: net(h.keer) + ' × ' + d + ' = ' + net(h.eraf) }, lab: { a: h.keer, label:'hoeveel keer', stap: 'hap: ' + net(h.keer) + ' ×' }, labNa: ' ×' });
+      rijen.push({ klasse:'streep', get: { a: restNa, label:'wat er overblijft', stap: net(i ? happen[i - 1].rest : n) + ' − ' + net(h.eraf) + ' = ' + net(restNa) }, lab: h.tienden ? 'klaar' : (h.rest && i === happen.length - 1 ? 'de rest' : 'blijft over') });
+      stappen.push((h.tienden ? 'de rest ' + r + ' is ' + (r * 10) + ' tienden, ' : '') + net(h.keer) + ' × ' + d + ' = ' + net(h.eraf) + ', blijft ' + net(restNa));
+    });
+    var antwoord = tienden ? q + tienden / 10 : q, eind = [dz(n) + ' ÷ ' + d + ' = ', { a: antwoord, label:'het antwoord', stap: happen.map(function(h){ return net(h.keer); }).join(' + ') + ' = ' + net(antwoord) }];
+    if (r && !tienden) eind.push(' rest ', { a: r, label:'de rest', stap: 'rest ' + r });
+    rijen.push({ eind: eind });
+    return schemaOpgave({
+      onderdeel:'cijferen: delen', onderdeelNaam:'delen', sleutel:'d' + n + ':' + d,
+      vraag: '<b>' + dz(n) + ' ÷ ' + d + '</b>',
+      opdracht: 'Neem steeds de grootste hap: eerst ' + (happen[0].keer >= 100 ? 'honderdtallen' : 'tientallen') + ' keer ' + d + ', dan kleiner. Links wat je eraf haalt, rechts hoeveel keer. Onderaan tel je de happen op.' + (r && !tienden ? ' Wat overblijft is de rest.' : '') + (tienden ? ' Reken door achter de komma: de rest zijn tienden.' : ''),
+      rijen: rijen,
+      onder: happen.length > 2 ? 'drie happen' : '',
+      uitleg: stappen.join('. ') + '. Samen ' + happen.map(function(h){ return net(h.keer); }).join(' + ') + ' = ' + net(antwoord) + (r && !tienden ? ', rest ' + r : '') + '.' + strook(n, happen.filter(function(h){ return !h.tienden; }), d, tienden ? 0 : r),
+      antwoordTekst: dz(n) + ' ÷ ' + d + ' = ' + net(antwoord) + (r && !tienden ? ' rest ' + r : '')
+    });
+  }
+
+  /* ---------- 3. schatten eerst: meerkeuze ---------- */
+  function rond(n){ var p = n < 100 ? 10 : n < 1000 ? 100 : 1000; return Math.round(n / p) * p; }
+  function lijn(n){
+    /* een getallenlijn met de twee buren en waar het getal zit */
+    var p = n < 100 ? 10 : n < 1000 ? 100 : 1000, lo = Math.floor(n / p) * p, hi = lo + p, W = 320, x = 20 + (n - lo) / p * (W - 40);
+    return '<svg viewBox="0 0 ' + W + ' 54" style="max-width:320px;width:100%;display:block" role="img" aria-label="getallenlijn van ' + lo + ' tot ' + hi + ' met ' + n + '">' +
+      '<line x1="20" y1="24" x2="' + (W - 20) + '" y2="24" style="stroke:var(--ink);stroke-width:2"/>' +
+      [0, 0.5, 1].map(function(t){ return '<line x1="' + (20 + t * (W - 40)) + '" y1="' + (t === 0.5 ? 18 : 14) + '" x2="' + (20 + t * (W - 40)) + '" y2="' + (t === 0.5 ? 30 : 34) + '" style="stroke:var(--ink);stroke-width:2"/>'; }).join('') +
+      '<text x="20" y="50" text-anchor="middle" font-size="12" font-weight="600" style="fill:var(--ink)">' + dz(lo) + '</text><text x="' + (W - 20) + '" y="50" text-anchor="middle" font-size="12" font-weight="600" style="fill:var(--ink)">' + dz(hi) + '</text>' +
+      '<circle cx="' + x + '" cy="24" r="5" style="fill:var(--nadruk)"/><text x="' + x + '" y="10" text-anchor="middle" font-size="12" font-weight="600" style="fill:var(--nadruk)">' + dz(n) + '</text></svg>';
+  }
+  function schat(niveau){
+    var a, b, delen = false;
+    if (niveau === 'bb'){ a = tussen(12, 99); b = tussen(2, 9); }
+    else if (niveau === 'kgt'){ a = tussen(112, 999); b = Math.random() < 0.5 ? tussen(3, 9) : tussen(12, 49); delen = Math.random() < 0.35; }
+    else { a = tussen(112, 999); b = tussen(12, 89); delen = Math.random() < 0.5; }
+    if (a % 10 === 0) a += tussen(1, 9);
+    var rb = b < 10 ? b : rond(b), ra, est;
+    if (delen){ /* bij delen is het te delen getal een mooi veelvoud van de afgeronde deler, plus een beetje */
+      est = kies([20, 30, 40, 50, 60, 70, 80, 90]); ra = rb * est; var af = tussen(-Math.floor(rb / 2), Math.floor(rb / 2)); a = ra + (af || 1); }
+    else { ra = rond(a); est = ra * rb; }
+    var exact = delen ? a / b : a * b;
+    var kandidaat = [est * 10, est / 10, est * 2, est / 2, est + (est < 100 ? 10 : est < 1000 ? 100 : 1000), est - (est < 100 ? 10 : est < 1000 ? 100 : 1000), est * 3];
+    var opties = [est], stap = est < 100 ? 10 : est < 1000 ? 100 : 1000;
+    H(kandidaat).forEach(function(k){ if (opties.length < 4 && k > 0 && k === Math.round(k) && opties.indexOf(k) < 0 && Math.abs(k - exact) > Math.abs(est - exact) + stap / 2) opties.push(k); });
+    while (opties.length < 4){ var k2 = est + stap * opties.length * 2; if (opties.indexOf(k2) < 0) opties.push(k2); }
+    opties = H(opties);
+    return {
+      onderdeel:'cijferen: schatten eerst', onderdeelNaam:'schatten eerst', vorm:'meerkeuze', sleutel:'s' + a + (delen ? ':' : 'x') + b,
+      vraag: 'Ongeveer hoeveel is <b>' + dz(a) + (delen ? ' ÷ ' : ' × ') + dz(b) + '</b>?',
+      opdracht: 'Rond eerst af naar een mooi getal, en reken dan uit je hoofd. Zo weet je straks of je antwoord kan kloppen.',
+      beeld: '<div>' + lijn(a) + (b > 9 && !delen ? lijn(b) : '') + '</div>',
+      opties: opties.map(function(o){ return 'ongeveer ' + dz(o); }), goed: opties.indexOf(est),
+      uitleg: (delen ? dz(a) + ' is ongeveer ' + dz(ra) + (rb !== b ? ' en ' + b + ' is ongeveer ' + rb : '') + ': ' + dz(ra) + ' ÷ ' + rb + ' = ' + dz(est) : dz(a) + ' is ongeveer ' + dz(ra) + (rb !== b ? ' en ' + dz(b) + ' is ongeveer ' + dz(rb) : '') + ': ' + dz(ra) + ' × ' + dz(rb) + ' = ' + dz(est)) + '. Precies is het ' + net(exact) + '.',
+      antwoordTekst: 'ongeveer ' + dz(est)
+    };
+  }
+
+  var SOORTEN = { verm: verm, deel: deel, schat: schat };
+  VAKSPEL.maak({
+    id:'cijferen', naam:'Cijferend vermenigvuldigen en delen', vak:'reken', kleur:'#EA9836',
+    hand:'eerst schatten, dan rekenen',
+    lead:'Keer en gedeeld door onder elkaar, zoals in je schrift. Het schema staat op het scherm en jij vult de stappen in: elke rij wordt groen of rood, en bij rood staat de stap uitgeschreven. Tussendoor oefen je schatten, zodat je zelf ziet of je antwoord kan kloppen.',
+    hoe:[
+      { kop:'Vermenigvuldigen', tekst:'Splits het getal: 23 × 14 is <b>4 × 23</b> en <b>10 × 23</b>. Elke rij in het schema, en onderaan alles bij elkaar.' },
+      { kop:'Delen met happen', tekst:'Neem steeds de grootste hap: 348 ÷ 7, eerst 40 × 7 = 280, dan 9 × 7 = 63. Wat overblijft is de rest.' },
+      { kop:'Schatten eerst', tekst:'47 × 6 is ongeveer 50 × 6 = 300. Kom je op 2 820 uit, dan weet je meteen dat er iets misging.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'Twee cijfers keer één cijfer, en delen zonder rest.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Drie cijfers keer één of twee cijfers, delen door twee cijfers, soms met rest.' },
+        { id:'hv', naam:'havo en vwo', uit:'Ook kommagetallen: reken zonder komma en zet hem terug, en deel door tot achter de komma.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' }, { id:'verm', naam:'vermenigvuldigen' }, { id:'deel', naam:'delen' }, { id:'schat', naam:'schatten eerst' } ] }
+    ],
+    aantal:10,
+    maak:function(keuze, nr){
+      var soort = keuze.soort === 'alles' ? kies(['verm', 'verm', 'deel', 'deel', 'schat']) : keuze.soort;
+      return SOORTEN[soort](keuze.niveau);
+    },
+    uitleg:{ doel:'Cijferend vermenigvuldigen en delen met het schema, en eerst schatten.', tijd:'tien opgaven per ronde', bediening:'Typ in de vakjes van het schema en druk op Nakijken of Enter. Bij schatten kies je een antwoord.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>
