@@ -774,8 +774,16 @@ Frans Hals"></textarea>
      Stuur de leerling dus naar de pagina van dat spel: /q komt hier binnen
      zonder dat iemand weet of het een quiz, de Klasstrijd of een rollenspel
      wordt. */
+  /* Waar hoort een code van een ander spel thuis? Alleen de soorten die we
+     kennen; de rest krijgt een uitleg en geen doorverwijzing. Vroeger was de
+     rest "klasquiz.html", en dat was deze pagina zelf: een klascode van vier
+     letters liet hem dan eindeloos naar zichzelf springen. */
   function paginaVoorSpel(spel){
-    return spel === 'rollen' ? 'rol.html' : spel === 'strijd' ? 'strijd.html' : 'klasquiz.html';
+    return { rollen:'rol.html', strijd:'strijd.html', teken:'tekenslag.html' }[spel] || '';
+  }
+  function uitlegBijSoort(spel){
+    if (spel === 'klas') return 'Dit is een klascode van een docent, geen quizcode. Die vul je in de leeromgeving in, bij "Code van je docent".';
+    return 'Deze code hoort bij een ander spel. Vraag je docent welke pagina je moet openen.';
   }
   /* meedoen */
   (function(){
@@ -785,7 +793,11 @@ Frans Hals"></textarea>
     if (k) $('joinNaam').focus();
     /* Wie via de instappagina komt heeft daar al op Meedoen gedrukt, met code
        en bijnaam en wel. Dan hoeft het hier niet nog een keer. */
-    if (k && new URLSearchParams(location.search).get('ga') && $('joinNaam').value.trim()) setTimeout(doeMee, 0);
+    if (k && new URLSearchParams(location.search).get('ga') && $('joinNaam').value.trim()){
+      /* een keer, en niet nog eens bij een ververste pagina */
+      try { history.replaceState(null, '', location.pathname + '?k=' + encodeURIComponent(k)); } catch (e){}
+      setTimeout(doeMee, 0);
+    }
   })();
   function doeMee(){
     var code = $('joinCode').value.toUpperCase().replace(/[^A-Z]/g, ''), naam = $('joinNaam').value.trim();
@@ -799,7 +811,11 @@ Frans Hals"></textarea>
     .then(function(x){
       $('joinBtn').disabled = false;
       if (!x.ok){ $('joinFout').textContent = x.j.fout || 'Geen kamer met deze code.'; return; }
-      if (x.j.spel && x.j.spel !== 'quiz'){ location.href = paginaVoorSpel(x.j.spel) + '?k=' + code + '&ga=1'; return; }
+      if (x.j.spel && x.j.spel !== 'quiz'){
+        var doel = paginaVoorSpel(x.j.spel);
+        if (!doel || doel === location.pathname.split('/').pop()){ $('joinFout').textContent = uitlegBijSoort(x.j.spel); return; }
+        location.href = doel + '?k=' + code + '&ga=1'; return;
+      }
       if (x.j.fase === 'einde'){ $('joinFout').textContent = 'Deze quiz is al afgelopen.'; return; }
       wordSpeler(code, naam);
     })

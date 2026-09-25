@@ -149,8 +149,10 @@ footer{text-align:center;font-size:.8rem;color:var(--muted);padding:22px 0}
 
   /* Welke pagina hoort bij welk spel. De kamer weet zelf wat hij is; deze
      pagina hoeft dus niets te weten van de spellen zelf. */
-  function paginaVoorSpel(spel){
-    return spel === 'rollen' ? 'rol.html' : spel === 'strijd' ? 'strijd.html' : 'klasquiz.html';
+  /* alleen soorten die we kennen; een klascode of iets onbekends krijgt een uitleg */
+  function paginaVoorSpel(spel, game){
+    if (spel === 'rollen') return game === 'teken' ? 'tekenslag.html' : 'rol.html';
+    return { strijd:'strijd.html', quiz:'klasquiz.html' }[spel] || '';
   }
 
   function meedoen(){
@@ -174,7 +176,13 @@ footer{text-align:center;font-size:.8rem;color:var(--muted);padding:22px 0}
           return;
         }
         /* ga=1 zegt tegen het spel: deze leerling heeft al op Meedoen gedrukt */
-        location.href = paginaVoorSpel(x.j.spel) + '?k=' + code + '&ga=1';
+        var doel = paginaVoorSpel(x.j.spel, x.j.game);
+        if (!doel){
+          $('doe').disabled = false; $('doe').textContent = 'Meedoen';
+          $('fout').textContent = x.j.spel === 'klas' ? 'Dit is een klascode van een docent, geen spelcode. Die vul je in de leeromgeving in, bij "Code van je docent".' : 'Deze code hoort bij een ander spel. Vraag je docent welke pagina je moet openen.';
+          return;
+        }
+        location.href = doel + '?k=' + code + '&ga=1';
       })
       .catch(function(){
         $('doe').disabled = false; $('doe').textContent = 'Meedoen';

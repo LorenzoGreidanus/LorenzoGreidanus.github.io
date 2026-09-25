@@ -135,8 +135,10 @@ footer{text-align:center;font-size:.8rem;color:var(--muted);padding:20px 0}
     fetch('/api/kamer/' + code).then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); }).then(function(x){
       if (x.ok && x.j.spel === 'rollen' && x.j.game === 'teken'){ location.href = 'tekenslag.html?k=' + code + '&ga=1'; return; }
       if (x.ok && x.j.spel && x.j.spel !== 'rollen'){
-        /* deze code hoort bij een ander spel van de docent */
-        location.href = (x.j.spel === 'strijd' ? 'strijd.html' : 'klasquiz.html') + '?k=' + code + '&ga=1'; return;
+        /* deze code hoort bij een ander spel van de docent; alleen soorten die we kennen krijgen een doorverwijzing */
+        var doel = { strijd:'strijd.html', quiz:'klasquiz.html' }[x.j.spel];
+        if (!doel){ $('joinFout').textContent = x.j.spel === 'klas' ? 'Dit is een klascode van een docent, geen spelcode. Die vul je in de leeromgeving in, bij "Code van je docent".' : 'Deze code hoort bij een ander spel. Vraag je docent welke pagina je moet openen.'; return; }
+        location.href = doel + '?k=' + code + '&ga=1'; return;
       }
       if (!x.ok || x.j.spel !== 'rollen'){ $('joinFout').textContent = 'Geen spel met deze code. Kijk of je hem goed hebt overgenomen.'; return; }
       $('s-join').classList.add('hide'); $('s-spel').classList.remove('hide');
