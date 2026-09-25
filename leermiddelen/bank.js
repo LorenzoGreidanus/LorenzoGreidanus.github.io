@@ -74,7 +74,7 @@ var TIJDVAKKEN = [
 ];
 
 var ONDERDELEN = {
-  reken: [{id:'tafels',naam:'tafels'},{id:'hoofd',naam:'hoofdrekenen'},{id:'cijferen',naam:'plaatswaarde en cijferen'},{id:'dhte',naam:'het DHTE-schema'},{id:'machten',naam:'machten en wortels'},{id:'negatief',naam:'negatieve getallen'},{id:'komma',naam:'kommagetallen'},{id:'gemiddelde',naam:'gemiddelde en schaal'},{id:'breuk',naam:'breuken'},{id:'procent',naam:'procenten'},{id:'verhouding',naam:'verhoudingen'},{id:'tijdgeld',naam:'tijd en geld'},{id:'meten',naam:'meten en meetkunde'}],
+  reken: [[/^metriek: /, 'meten'], [/^verhoudingstabel: /, 'verhoudingen'], {id:'tafels',naam:'tafels'},{id:'hoofd',naam:'hoofdrekenen'},{id:'cijferen',naam:'plaatswaarde en cijferen'},{id:'dhte',naam:'het DHTE-schema'},{id:'machten',naam:'machten en wortels'},{id:'negatief',naam:'negatieve getallen'},{id:'komma',naam:'kommagetallen'},{id:'gemiddelde',naam:'gemiddelde en schaal'},{id:'breuk',naam:'breuken'},{id:'procent',naam:'procenten'},{id:'verhouding',naam:'verhoudingen'},{id:'tijdgeld',naam:'tijd en geld'},{id:'meten',naam:'meten en meetkunde'}],
   /* groep zet de onderdelen onder een kop in de kiezer; zie GROEPEN hieronder */
   ned: [{id:'werkwoordspelling',naam:'werkwoordspelling',groep:'spelling'},{id:'spelling',naam:'los van het werkwoord',groep:'spelling'},{id:'meervoud',naam:'enkel en meervoud',groep:'spelling'},
         {id:'leestekens',naam:'leestekens',groep:'interpunctie'},

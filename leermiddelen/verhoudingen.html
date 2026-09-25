@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- De verhoudingstabel, versie 1.0: op vakspel.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>De verhoudingstabel &middot; meneer Greidanus</title>
+<meta name="description" content="Verhoudingstabellen invullen: via 1, met vermenigvuldigen en delen, en met recepten, prijzen en snelheden.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="De verhoudingstabel">
+<meta property="og:description" content="Verhoudingstabellen invullen: via 1, met vermenigvuldigen en delen, en met recepten, prijzen en snelheden.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/verhoudingen.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%23EA9836'/><g fill='none' stroke='%2314224C' stroke-width='6' stroke-linecap='round'><path d='M22 38h56M22 62h56M40 26v48M60 26v48'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+/* de tabel met invulvakjes erin */
+.vtabel{border-collapse:separate;border-spacing:0;margin:0 auto;font-size:1.05rem}
+.vtabel th{background:var(--kaart2);text-align:left;padding:8px 14px;border-radius:12px 0 0 12px;font-weight:600;white-space:nowrap}
+.vtabel td{padding:6px 8px;text-align:center;min-width:74px;font-weight:600;font-variant-numeric:tabular-nums}
+.vtabel td.vast{background:var(--kaart2)}
+.vtabel td.vast.een{background:var(--kaart-aan);color:var(--nadruk)}
+.vtabel td:last-child{border-radius:0 12px 12px 0}
+.vtabel input{width:5.4em;height:50px;border-radius:12px;border:2px solid var(--rand2);background:var(--kaart);color:var(--ink);font-size:1.1rem;font-weight:600;text-align:center;padding:0 6px}
+.vtabel input:focus{outline:none;border-color:var(--nadruk);box-shadow:0 0 0 4px var(--nadruk-zacht)}
+.vtabel input.goed{background:var(--goed-bg);border-color:var(--goed);color:var(--goed)}
+.vtabel input.fout{background:var(--fout-bg);border-color:var(--fout);color:var(--fout)}
+.vtabel .pijl{display:block;font-size:.72rem;color:var(--muted);font-weight:600}
+.vantwoord{display:block;font-size:.78rem;color:var(--goed);font-weight:600;margin-top:2px;min-height:1em}
+@media(max-width:480px){.vtabel{font-size:.92rem}.vtabel th{padding:6px 8px}.vtabel td{min-width:0;padding:4px 3px}.vtabel input{width:4.3em;height:44px;font-size:1rem;padding:0 4px}}
+body.groot .vtabel{font-size:1.3rem}
+body.groot .vtabel input{height:62px;font-size:1.4rem}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  function tussen(a, b){ return a + Math.floor(Math.random() * (b - a + 1)); }
+  function geld(x){ return '€ ' + (Math.round(x * 100) / 100).toFixed(2).replace('.', ','); }
+  function net(x){ x = Math.round(x * 100) / 100; return String(x).replace('.', ','); }
+
+  /* situaties: wat er in de tabel staat. boven is de teleenheid, onder wat erbij hoort */
+  var SITUATIES = [
+    { boven:'aantal', onder:'prijs', eenheidOnder:'€', dingen:['broodjes', 'pennen', 'appels', 'flesjes water', 'kaartjes', 'stickers'], per:[0.5, 3.5, 0.25], geld:true },
+    { boven:'kilo', onder:'prijs', eenheidOnder:'€', dingen:['aardappelen', 'kaas', 'druiven', 'gehakt'], per:[1, 12, 0.5], geld:true },
+    { boven:'uur', onder:'kilometer', dingen:['de fiets', 'de auto', 'de trein', 'de scooter'], per:[15, 120, 5] },
+    { boven:'personen', onder:'gram', dingen:['pasta', 'rijst', 'bloem', 'suiker'], per:[50, 150, 25] },
+    { boven:'minuten', onder:'liter', dingen:['de kraan', 'de tuinslang', 'de douche'], per:[4, 12, 1] },
+    { boven:'zakjes', onder:'stuks', dingen:['knikkers', 'schroeven', 'snoepjes'], per:[6, 30, 2] }
+  ];
+  function perVan(s, niveau){
+    var min = s.per[0], max = s.per[1], stap = s.per[2];
+    var n = Math.round((min + Math.random() * (max - min)) / stap) * stap;
+    if (niveau === 'bb') n = Math.round(n);
+    if (niveau === 'hv' && s.geld && Math.random() < 0.5) n = Math.round(n * 100) / 100 + 0.05 * tussen(1, 9);
+    return Math.round(n * 100) / 100;
+  }
+  function toon(s, x){ return s.geld ? geld(x) : net(x); }
+
+  /* ---------- de tabel als eigen vorm: vakjes in de tabel zelf ---------- */
+  function tabelOpgave(o){
+    /* o: { boven, onder, kolommen:[{b, o, vraagB, vraagO}], s, uitleg, vraag, onderdeel } */
+    return {
+      onderdeel: o.onderdeel, onderdeelNaam: o.onderdeelNaam, vraag: o.vraag, opdracht: o.opdracht || 'Vul de lege vakjes in. Een komma mag: 2,5.',
+      uitleg: o.uitleg, antwoordTekst: o.antwoordTekst, vorm: 'eigen', sleutel: o.sleutel,
+      teken: function(el, api){
+        el.innerHTML = '<div style="overflow-x:auto;max-width:100%"><table class="vtabel"><tr><th>' + S(o.boven) + '</th>' + o.kolommen.map(function(k, i){
+          return '<td class="' + (k.vraagB ? '' : 'vast' + (k.b === 1 ? ' een' : '')) + '">' + (k.vraagB ? '<input inputmode="decimal" autocomplete="off" aria-label="' + S(o.boven) + ' ' + (i + 1) + '" data-a="' + k.b + '"><span class="vantwoord"></span>' : S(toon({ geld:false }, k.b))) + '</td>';
+        }).join('') + '</tr><tr><th>' + S(o.onder) + '</th>' + o.kolommen.map(function(k, i){
+          return '<td class="' + (k.vraagO ? '' : 'vast') + '">' + (k.vraagO ? '<input inputmode="decimal" autocomplete="off" aria-label="' + S(o.onder) + ' ' + (i + 1) + '" data-a="' + k.o + '"><span class="vantwoord"></span>' : S(toon(o.s, k.o))) + '</td>';
+        }).join('') + '</tr></table></div>';
+        var invoer = el.querySelectorAll('input');
+        Array.prototype.forEach.call(invoer, function(inp, i){ inp.addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); if (invoer[i + 1]) invoer[i + 1].focus(); else knop.click(); } }); });
+        setTimeout(function(){ if (invoer[0]) invoer[0].focus(); }, 50);
+        var knop = api.knop('Nakijken', function(){
+          var alles = true;
+          Array.prototype.forEach.call(invoer, function(inp){
+            var a = parseFloat(inp.getAttribute('data-a')), g = api.getal(inp.value), ok = g !== null && Math.abs(g - a) < 0.006;
+            inp.disabled = true; inp.classList.add(ok ? 'goed' : 'fout');
+            if (!ok){ alles = false; inp.nextElementSibling.textContent = 'goed: ' + net(a); }
+          });
+          knop.disabled = true;
+          api.klaar(alles, '');
+        });
+        /* voor de proef: het goede antwoord invullen en nakijken */
+        el.proef = function(){ Array.prototype.forEach.call(invoer, function(inp){ inp.value = inp.getAttribute('data-a'); }); knop.click(); };
+        el.proefFout = function(){ Array.prototype.forEach.call(invoer, function(inp){ inp.value = '999'; }); knop.click(); };
+      }
+    };
+  }
+
+  /* 1. via 1: van een aantal naar 1, en dan naar een ander aantal */
+  function via1(niveau){
+    var s = kies(SITUATIES), per = perVan(s, niveau), ding = kies(s.dingen);
+    var a = niveau === 'bb' ? kies([2, 4, 5, 10]) : tussen(2, 12), b = tussen(2, 15); while (b === a) b = tussen(2, 15);
+    var kol = [{ b:a, o:Math.round(a * per * 100) / 100 }, { b:1, o:per, vraagO:true }, { b:b, o:Math.round(b * per * 100) / 100, vraagO:true }];
+    return tabelOpgave({ s:s, boven:s.boven, onder:s.onder, kolommen:kol, onderdeel:'verhoudingstabel: via 1', onderdeelNaam:'via 1',
+      sleutel:'via1' + a + '-' + b + '-' + per,
+      vraag: a + ' ' + s.boven + ' ' + (s.boven === 'uur' || s.boven === 'minuten' ? 'met ' : '') + ding + (s.boven === 'personen' ? '' : '') + ': ' + toon(s, a * per) + (s.eenheidOnder ? '' : ' ' + s.onder) + '. Hoeveel is dat voor 1, en voor ' + b + '?',
+      uitleg: 'Eerst naar 1: ' + toon(s, a * per) + ' ÷ ' + a + ' = ' + toon(s, per) + '. Dan keer ' + b + ': ' + toon(s, per) + ' × ' + b + ' = ' + toon(s, b * per) + '.',
+      antwoordTekst: '1 → ' + toon(s, per) + ', ' + b + ' → ' + toon(s, b * per) });
+  }
+  /* 2. keer en gedeeld door: een tabel met een handige stap */
+  function keerDelen(niveau){
+    var s = kies(SITUATIES), per = perVan(s, niveau), ding = kies(s.dingen);
+    var a = kies([2, 3, 4, 5, 6, 8]), k = niveau === 'bb' ? kies([2, 3, 10]) : kies([2, 3, 4, 5, 10]);
+    var b = a * k, c = niveau === 'hv' ? a * k * kies([2, 3]) / kies([2, 4]) : b * kies([2, 3]);
+    if (c === b || c !== Math.round(c)) c = b * 2;
+    var kol = [{ b:a, o:Math.round(a * per * 100) / 100 }, { b:b, o:Math.round(b * per * 100) / 100, vraagO:true }, { b:c, o:Math.round(c * per * 100) / 100, vraagO:true }];
+    return tabelOpgave({ s:s, boven:s.boven, onder:s.onder, kolommen:kol, onderdeel:'verhoudingstabel: keer en delen', onderdeelNaam:'keer en delen',
+      sleutel:'kd' + a + '-' + b + '-' + c + '-' + per,
+      vraag: 'Bij ' + a + ' ' + s.boven + ' (' + ding + ') hoort ' + toon(s, a * per) + (s.eenheidOnder ? '' : ' ' + s.onder) + '. Vul de tabel aan.',
+      uitleg: 'Van ' + a + ' naar ' + b + ' is keer ' + k + ', dus ' + toon(s, a * per) + ' × ' + k + ' = ' + toon(s, b * per) + '. Van ' + b + ' naar ' + c + ' is keer ' + net(c / b) + ': ' + toon(s, c * per) + '. Wat je boven doet, doe je onder ook.',
+      antwoordTekst: b + ' → ' + toon(s, b * per) + ', ' + c + ' → ' + toon(s, c * per) });
+  }
+  /* 3. terug: het aantal vinden bij een bedrag */
+  function terug(niveau){
+    var s = kies(SITUATIES), per = perVan(s, niveau), ding = kies(s.dingen);
+    var a = tussen(2, 8), b = niveau === 'bb' ? a * kies([2, 3, 5]) : tussen(3, 20); while (b === a) b = tussen(3, 20);
+    var kol = [{ b:a, o:Math.round(a * per * 100) / 100 }, { b:1, o:per, vraagO:true }, { b:b, o:Math.round(b * per * 100) / 100, vraagB:true }];
+    return tabelOpgave({ s:s, boven:s.boven, onder:s.onder, kolommen:kol, onderdeel:'verhoudingstabel: terugrekenen', onderdeelNaam:'terugrekenen',
+      sleutel:'tr' + a + '-' + b + '-' + per,
+      vraag: a + ' ' + s.boven + ' (' + ding + ') is ' + toon(s, a * per) + (s.eenheidOnder ? '' : ' ' + s.onder) + '. Hoeveel ' + s.boven + ' hoort er bij ' + toon(s, b * per) + (s.eenheidOnder ? '' : ' ' + s.onder) + '?',
+      opdracht: 'Vul eerst in wat bij 1 hoort. Dan het aantal bij ' + toon(s, b * per) + '.',
+      uitleg: 'Bij 1 hoort ' + toon(s, per) + '. ' + toon(s, b * per) + ' ÷ ' + toon(s, per) + ' = ' + b + '. Delen door wat bij 1 hoort geeft het aantal.',
+      antwoordTekst: '1 → ' + toon(s, per) + ', ' + toon(s, b * per) + ' → ' + b + ' ' + s.boven });
+  }
+  /* 4. recept: van een aantal personen naar een ander aantal, twee ingrediënten */
+  var RECEPTEN = [
+    { naam:'pannenkoeken', delen:[['bloem', 125, 'g'], ['melk', 250, 'ml'], ['eieren', 1, '']] },
+    { naam:'pasta', delen:[['pasta', 100, 'g'], ['tomaten', 2, ''], ['kaas', 30, 'g']] },
+    { naam:'limonade', delen:[['siroop', 50, 'ml'], ['water', 300, 'ml'], ['citroen', 0.5, '']] },
+    { naam:'soep', delen:[['bouillon', 250, 'ml'], ['wortel', 1, ''], ['prei', 0.5, '']] }
+  ];
+  function recept(niveau){
+    var r = kies(RECEPTEN), van = kies([2, 4]), naar = niveau === 'bb' ? van * kies([2, 3]) : kies([3, 5, 6, 8, 10]); while (naar === van) naar = kies([3, 5, 6, 8, 10]);
+    var d = H(r.delen).slice(0, 2), f = naar / van;
+    return {
+      onderdeel:'verhoudingstabel: recept', onderdeelNaam:'recept', vorm:'invul', sleutel:'re' + r.naam + van + '-' + naar + d[0][0],
+      vraag: 'Een recept voor ' + r.naam + ' is voor ' + van + ' personen. Je maakt het voor <b>' + naar + ' personen</b>.',
+      opdracht: 'Voor ' + van + ' personen: ' + d.map(function(x){ return net(x[1]) + (x[2] ? ' ' + x[2] : '') + ' ' + x[0]; }).join(' en ') + '. Hoeveel heb je nodig voor ' + naar + '?',
+      beeld: '<table><tr><th>personen</th><td>' + van + '</td><td>1</td><td>' + naar + '</td></tr>' + d.map(function(x){ return '<tr><th>' + S(x[0]) + '</th><td>' + net(x[1]) + (x[2] ? ' ' + x[2] : '') + '</td><td>' + net(x[1] / van) + (x[2] ? ' ' + x[2] : '') + '</td><td>?</td></tr>'; }).join('') + '</table>',
+      velden: d.map(function(x){ return { label: x[0], antwoord: Math.round(x[1] * f * 100) / 100, tol: 0.01, eenheid: x[2] }; }),
+      uitleg: 'Via 1 persoon: ' + d.map(function(x){ return net(x[1]) + ' ÷ ' + van + ' = ' + net(x[1] / van) + ', keer ' + naar + ' = ' + net(x[1] * f) + (x[2] ? ' ' + x[2] : '') + ' ' + x[0]; }).join('; ') + '.',
+      antwoordTekst: d.map(function(x){ return net(x[1] * f) + (x[2] ? ' ' + x[2] : '') + ' ' + x[0]; }).join(', ')
+    };
+  }
+
+  var SOORTEN = { via1: via1, keerdelen: keerDelen, terug: terug, recept: recept };
+  VAKSPEL.maak({
+    id:'verhoudingen', naam:'De verhoudingstabel', vak:'reken', kleur:'#EA9836',
+    hand:'wat je boven doet, doe je onder ook',
+    lead:'Prijzen, recepten, snelheden en zakjes knikkers: in een verhoudingstabel reken je alles om via de 1. Je vult de lege vakjes in en ziet meteen of het klopt, en zo niet, welke stap er misging.',
+    hoe:[
+      { kop:'Via de 1', tekst:'Deel eerst tot je weet wat er bij <b>1</b> hoort. Vanaf daar kun je naar elk aantal: keer het aantal.' },
+      { kop:'Keer en delen', tekst:'Van 3 naar 6 is keer 2, dus onder ook keer 2. Van 10 naar 5 is gedeeld door 2, onder ook. Wat je boven doet, doe je onder ook.' },
+      { kop:'Meteen nagekeken', tekst:'Elk vakje wordt groen of rood, en bij rood staat de stap uitgeschreven. Tien tabellen per ronde.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'Hele getallen en handige stappen: keer 2, keer 3, keer 10.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Ook via 1 met kommagetallen, en terugrekenen van een bedrag naar een aantal.' },
+        { id:'hv', naam:'havo en vwo', uit:'Kommagetallen, lastiger factoren en recepten met halve stappen.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' }, { id:'via1', naam:'via 1' }, { id:'keerdelen', naam:'keer en delen' }, { id:'terug', naam:'terugrekenen' }, { id:'recept', naam:'recepten' } ] }
+    ],
+    aantal:10,
+    maak:function(keuze, nr){
+      var soort = keuze.soort === 'alles' ? kies(['via1', 'keerdelen', 'terug', 'recept']) : keuze.soort;
+      return SOORTEN[soort](keuze.niveau);
+    },
+    uitleg:{ doel:'Verhoudingstabellen invullen via de 1, en met keer en delen.', tijd:'tien tabellen per ronde', bediening:'Typ in de lege vakjes en druk op Nakijken of Enter. Een komma mag.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>
