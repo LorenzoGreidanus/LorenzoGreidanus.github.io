@@ -953,7 +953,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     }
     el.innerHTML = '<h3>Baas Nightmare</h3>' +
       '<p>Alleen jij tegen de baas, met je uitrusting helemaal vol. Hij heeft zoveel leven dat je minutenlang moet raken, ' +
-      'na een klap of twaalf lig je, en hij valt in drie fasen steeds sneller aan. Vanaf fase 2 roept hij fouten te hulp. ' +
+      'na een klap of twaalf lig je. Hij valt aan in salvo\'s, snel achter elkaar; daarna is hij heel even moe en raak je hem harder. ' +
+      'In drie fasen worden de salvo\'s langer en de momenten korter. ' +
       'Versla je hem, dan win je iets voor bij je gezichtje.</p>' +
       '<div class="nmrij">' + BAZEN.filter(function(b){ return gedaan.indexOf(b.id) >= 0; }).map(function(b){
         var it = window.COSMETICA && COSMETICA.vanNachtmerrie ? COSMETICA.vanNachtmerrie(b.id) : null;
@@ -988,7 +989,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
         W.volgendeRonde();
         spiegel();
       }
-      tipTekst(def.naam + ' in de nachtmerrie. Drie fasen: hij wordt elke fase sneller, en vanaf fase 2 komen er fouten bij. Blijf bewegen.');
+      tipTekst(def.naam + ' in de nachtmerrie. Ontwijk zijn salvo, en sla terug als hij moe is: dan staat er een groene ring om hem heen.');
     });
   }
 
@@ -1130,7 +1131,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       if (f && f.def && f.def.id) lijstBij(NMSLEUTEL, f.def.id);
       if (nachtmerrie && f && f.def && f.def.id === nachtmerrie.def.id) nachtmerrieGehaald();
     },
-    nmfase: function(n){ tipTekst(nachtmerrie ? nachtmerrie.def.naam + ' gaat naar fase ' + n + '.' : ''); }
+    nmfase: function(n){ tipTekst(nachtmerrie ? nachtmerrie.def.naam + ' gaat naar fase ' + n + ': langere salvo\'s, en minder tijd om terug te slaan.' : ''); },
+    nmmoe: function(){ tipTekst(nachtmerrie ? nachtmerrie.def.naam + ' is moe. Nu raak je hem harder: sla terug!' : ''); }
   };
 
 
@@ -2238,7 +2240,9 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       var bob = Math.sin(pols * 6 + f.stap) * 1.5;
       s += '<ellipse cx="' + f.x.toFixed(1) + '" cy="' + (f.y + f.r * 0.9).toFixed(1) + '" rx="' + (f.r * 0.8).toFixed(1) + '" ry="' + (f.r * 0.3).toFixed(1) + '" fill="rgba(20,34,76,.18)"/>';
       s += '<g transform="translate(' + f.x.toFixed(1) + ',' + (f.y + bob).toFixed(1) + ')"' + (f.flits > 0 ? ' opacity=".55"' : '') + '>' + foutLijf(f) + '</g>';
-      if (f.schild) s += '<circle cx="' + f.x.toFixed(1) + '" cy="' + (f.y + bob).toFixed(1) + '" r="' + (f.r + 4) + '" fill="none" stroke="#9dc0e5" stroke-width="3" opacity=".9"/>';
+      if (f.schild && !(f.baas && f.moe > 0)) s += '<circle cx="' + f.x.toFixed(1) + '" cy="' + (f.y + bob).toFixed(1) + '" r="' + (f.r + 4) + '" fill="none" stroke="#9dc0e5" stroke-width="3" opacity=".9"/>';
+      /* een moe nachtmerriebaas: een groene ring die krimpt naarmate het moment voorbij gaat */
+      if (f.baas && f.moe > 0) s += '<circle cx="' + f.x.toFixed(1) + '" cy="' + (f.y + bob).toFixed(1) + '" r="' + (f.r + 8 + 10 * Math.min(1, f.moe)).toFixed(1) + '" fill="#2f7d52" fill-opacity=".12" stroke="#2f7d52" stroke-width="4" stroke-dasharray="10 6"/>';
       if (f.soort.heelt) s += '<circle cx="' + f.x.toFixed(1) + '" cy="' + f.y.toFixed(1) + '" r="150" fill="#2f9e8f" fill-opacity=".07" stroke="#2f9e8f" stroke-width="2" stroke-dasharray="8 10" opacity=".7"/>';
       if (f.hp < f.maxHp){
         var b = f.r * 2.2;

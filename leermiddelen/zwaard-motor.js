@@ -361,8 +361,7 @@ function maak(opties){
   }
   function spawn(soort){
     var n = soort.aantal || 1, p = randPlek(), eerste = null;
-    /* hulp van een nachtmerriebaas is zo sterk als in een late ronde */
-    var sterk = W.nachtmerrie ? NACHTMERRIE.hulpRonde : W.ronde;
+    var sterk = W.ronde;
     for (var i = 0; i < n; i++){
       var h = Math.round(foutHp(sterk) * soort.hp);
       var f = { id:++W.nr, soort:soort, x:p.x + (toeval() - .5) * 30, y:p.y + (toeval() - .5) * 30,
@@ -378,10 +377,12 @@ function maak(opties){
      zijn uitrusting op orde had in een halve minuut voorbij, en dan heb je geen
      baasgevecht maar een grote fout. */
   var BAASLEVEN = 1.25;
-  /* De nachtmerrie: drie fasen, en per fase wacht hij korter, doet hij vaker
-     twee dingen tegelijk en roept hij fouten te hulp. De waarschuwing blijft
-     even lang staan, want anders is het niet meer te ontwijken en dan is het
-     geen uitdaging maar pech.
+  /* De nachtmerrie: alleen jij en de baas. Hij valt aan in salvo's: een paar
+     aanvallen vlak achter elkaar, en daarna een kort moment waarin hij moe is.
+     Dan krijgt hij extra schade: dat is je kans om terug te slaan. Per fase
+     wordt het salvo langer, zit er minder tijd tussen en is het moment korter.
+     De waarschuwing op de grond blijft even lang staan, want anders is het
+     niet meer te ontwijken en dan is het geen uitdaging maar pech.
 
      Het leven hing eerst aan de ronde waarin de baas normaal komt. Maar in de
      nachtmerrie heb je alles gekocht, en dan viel De Grote Fout (ronde 5) in
@@ -396,11 +397,12 @@ function maak(opties){
        deel van je leven, naar hoe zwaar die aanval is: een gewone klap (schade 18) 8%,
        zo'n twaalf klappen en je ligt. Blokken helpt nog even veel. */
     deel: 0.08, klapMaat: 18,
-    hulpRonde: 22,       /* de fouten die hij te hulp roept zijn zo sterk als in deze ronde */
+    moeX: 1.6,           /* zoveel harder raak je hem als hij moe is */
     fases: [
-      { vanaf: 1,    pauze: 0.78, dubbel: 0.22, hulp: 0,  hulpAantal: 0 },
-      { vanaf: 0.66, pauze: 0.62, dubbel: 0.38, hulp: 13, hulpAantal: 2 },
-      { vanaf: 0.33, pauze: 0.5,  dubbel: 0.55, hulp: 9,  hulpAantal: 3 }
+      /* salvo: aanvallen achter elkaar; tussen: seconden ertussen; rust: seconden moe; dubbel: kans op twee tegelijk */
+      { vanaf: 1,    salvo: 3, tussen: 0.35, rust: 3.2, dubbel: 0 },
+      { vanaf: 0.66, salvo: 4, tussen: 0.2,  rust: 2.6, dubbel: 0.15 },
+      { vanaf: 0.33, salvo: 5, tussen: 0.1,  rust: 2.0, dubbel: 0.3 }
     ]
   };
   function nmLeven(def){ return Math.round(NACHTMERRIE.leven * (1 - (def.schild || 0)) / 0.65); }
@@ -415,7 +417,7 @@ function maak(opties){
     var def = nm ? nm.def : baasVan(W.ronde);
     var h = nm ? nmLeven(def) : Math.round(foutHp(W.ronde) * def.hp * BAASLEVEN * (samen ? 0.7 + 0.3 * W.spelers.length : 1));
     var b = { id:++W.nr, soort:def, def:def, x:ARENA.b / 2, y:ARENA.h / 2, hp:h, maxHp:h, r:def.r, snel:0, flits:0, stap:0,
-              schild:def.schild, slaKlok:0, baas:true, aanvalKlok:2.2, laatste:-1, eerste:true, nmFase:0, hulpKlok:4 };
+              schild:def.schild, slaKlok:0, baas:true, aanvalKlok:2.2, laatste:-1, eerste:true, nmFase:0, salvoOver:0, moe:0, naSalvo:false };
     W.fouten.push(b);
     /* de spelers beginnen in het midden: even opzij, anders sta je in de baas */
     W.spelers.forEach(function(P, i){ P.sp.x = ARENA.b / 2 + (i === 0 ? -150 : 150); });
@@ -829,6 +831,8 @@ function maak(opties){
          niveau. Zonder winkel blijft het gewoon het dubbele. */
       schade *= (P.stats.critX || CRIT.x) * (1 + (P.stats.critExtra || 0));
     }
+    /* een moe nachtmerriebaas: dit is het moment om terug te slaan */
+    if (f.baas && f.moe > 0) schade *= NACHTMERRIE.moeX;
     var echt = Math.round(schade * (f.schild ? 1 - f.schild : 1));
     f.hp -= echt; f.flits = 0.15;
     W.cijfers.push({ x:f.x, y:f.y - f.r - 8, tekst:(crit ? 'CRIT -' : '-') + echt, leven:crit ? 1.1 : 0.7, kleur:crit ? '#F26749' : '#14224C' });
@@ -904,20 +908,35 @@ function maak(opties){
       if (W.nachtmerrie){
         var f = nmFase(b);
         if (f > b.nmFase){
-          b.nmFase = f; b.hulpKlok = 1.5;
+          b.nmFase = f;
           W.cijfers.push({ x:b.x, y:b.y - b.r - 16, tekst:'Fase ' + (f + 1), leven:2.2, kleur:b.def.kleur });
           zeg('nmfase', f + 1, b);
         }
-        /* vanaf fase 2 roept hij fouten te hulp: dan moet je kiezen tussen hem en hen */
         var fz = NACHTMERRIE.fases[b.nmFase];
-        if (fz.hulp){
-          b.hulpKlok -= dt;
-          if (b.hulpKlok <= 0){
-            b.hulpKlok = fz.hulp;
-            var mag = FOUTEN.filter(function(x){ return x.kans > 0 && x.vanaf <= NACHTMERRIE.hulpRonde; });
-            for (var hi = 0; hi < fz.hulpAantal; hi++) spawn(mag[Math.floor(toeval() * mag.length)]);
-          }
+        var leeg = !W.aanvallen.some(function(a){ return a.soort !== 'plas' && a.soort !== 'schot'; });
+        /* moe: hij doet niets en krijgt harder klappen, tot de volgende ronde aanvallen */
+        if (b.moe > 0){
+          b.moe -= dt;
+          if (b.moe <= 0){ b.moe = 0; b.salvoOver = fz.salvo; b.aanvalKlok = 0.4; }
+          return;
         }
+        /* het salvo is op en het veld is leeg: nu is hij even moe */
+        if (b.naSalvo){
+          if (leeg){
+            b.naSalvo = false; b.moe = fz.rust;
+            W.cijfers.push({ x:b.x, y:b.y - b.r - 18, tekst:'Nu! Sla terug', leven:Math.min(1.6, fz.rust), kleur:'#2f7d52' });
+            zeg('nmmoe', fz.rust, b);
+          }
+          return;
+        }
+        if (b.aanvalKlok <= 0 && leeg && levend.length){
+          if (b.salvoOver <= 0) b.salvoOver = fz.salvo;
+          baasValtAan(b, levend, true);
+          b.salvoOver--;
+          if (b.salvoOver <= 0) b.naSalvo = true;
+          else b.aanvalKlok = fz.tussen;
+        }
+        return;
       }
       /* Ook als hij kwaad is wacht hij tot het veld leeg is. Anders stapelen de
          aanvallen zich op en is er geen plek meer om te staan. */
