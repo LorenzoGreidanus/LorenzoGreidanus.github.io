@@ -1,8 +1,9 @@
 /* Gemaakt door server/maak-filter.js uit server/naamfilter.js. Niet met de hand bewerken. */
 window.NAAMFILTER = (function(){
-/* Het naamfilter: houdt racistische en andere haatdragende termen uit
-   bijnamen, ook als ze verstopt zijn met cijfers, tekens, spaties, accenten
-   of herhaalde letters.
+/* Het naamfilter: houdt racistische en andere haatdragende termen, en
+   scheldwoorden en ziektes als scheldwoord, uit bijnamen en uit tekst die
+   de klas ziet (de gokken in Tekenslag), ook als ze verstopt zijn met
+   cijfers, tekens, spaties, accenten of herhaalde letters.
 
    Werkwijze: de naam wordt eerst genormaliseerd (kleine letters, accenten
    weg, cijfers en tekens die op letters lijken vertaald, alles wat geen
@@ -28,10 +29,16 @@ const LANG = [
   "vuilejood", "teringjood", "jodenhater", "jodenvreter", "untermensch", "whitepower", "heilhitler", "hitler",
   "nazi", "neonazi", "siegheil", "sigheil", "zieghail", "swastika", "hakenkruis", "nsb", "kutneger",
   "mongool", "mongooltje", "spast", "spastisch", "kanker", "kankerlijer", "teringlijer", "tyfuslijer",
-  "hoer", "hoeren", "slet", "kutwijf", "nsbr"
+  "hoer", "hoeren", "slet", "kutwijf", "nsbr",
+  /* schelden met wie iemand is */
+  "homo", "homos", "homofiel", "flikker", "flikkers", "mietje", "faggot", "dyke", "retard", "pedo", "pedofiel",
+  /* ziektes als scheldwoord, en de afkortingen ervan */
+  "kkr", "kankr", "tyfus", "tering", "kolere", "klerelijer", "pleuris", "pokke",
+  /* engels */
+  "fuck", "fucker", "bitch", "cunt", "kutkind", "kutjood"
 ];
 /* korte of gevoelige termen: alleen als de hele naam eruit bestaat */
-const HEEL = [ "spic", "paki", "coon", "coons", "kkk", "jood", "joden", "jew", "jews", "kike", "nsb", "wog", "gyp", "sieg", "heil", "kut", "hoer", "slet" ];
+const HEEL = [ "spic", "paki", "coon", "coons", "kkk", "jood", "joden", "jew", "jews", "kike", "nsb", "wog", "gyp", "sieg", "heil", "kut", "hoer", "slet", "fag", "lul", "kk", "gvd", "tyf" ];
 /* De klankvorm vangt de truc waar de gewone vorm langs loopt: er een letter
    bij zetten die je toch niet hoort. "Niegggaaa" is geen "nigga" zolang je
    letter voor letter vergelijkt, maar wel zodra je klinkers die achter elkaar
@@ -43,7 +50,8 @@ const HARD = [
   "nigger", "nigga", "niggr", "neger", "negerin", "nikkerin",
   "sandnigger", "zandneger", "bosneger", "kutneger", "kankerneger", "roetmop", "zwartjoekel",
   "spleetoog", "spleetogen", "poepchinees", "junglebunny", "porchmonkey", "towelhead",
-  "raghead", "tarbaby", "kaffer", "kaffir"
+  "raghead", "tarbaby", "kaffer", "kaffir",
+  "homo", "tifus", "flikker", "kolere", "pleuris"
 ];
 /* korte klankvormen die alleen als de hele naam tellen: "Nieger" is een truc,
    "Nigeria" is een land en blijft dus gewoon toegestaan. */
@@ -55,7 +63,8 @@ const HARDHEEL = [ "niger", "nigr", "niga", "nigga", "negr" ];
 const TOEGESTAAN = [
   "knikker", "knikkers", "knikkeren", "knikkerkoning", "knikkerkampioen",
   "gokker", "gokkers", "gokken", "gokkast", "goochelaar",
-  "nigeria", "nigeriaan", "nigeriaans", "nigeriaanse"
+  "nigeria", "nigeriaan", "nigeriaans", "nigeriaanse",
+  "catering", "katering", "watering", "mastering", "pokemon"
 ];
 
 /* codes met cijfers, gecontroleerd op de versie waarin cijfers cijfers blijven */
@@ -96,18 +105,33 @@ function verboden(naam){
      de naam zelf herhalingen heeft: "Nigeria" heeft ze niet en blijft gewoon
      een land. */
   const kaal = n.replace(/(.)\1+/g, "$1"), herhaalt = kaal !== n;
-  for (const t of LANG){ if (n.includes(t) || (herhaalt && kaal.includes(t.replace(/(.)\1+/g, "$1")))) return true; }
+  /* de kale vorm alleen bij langere termen: "kkr" zou als "kr" in elke naam zitten */
+  for (const t of LANG){ if (n.includes(t) || (herhaalt && t.length >= 5 && kaal.includes(t.replace(/(.)\1+/g, "$1")))) return true; }
   for (const t of HEEL){ if (n === t || r === t || kaal === t) return true; }
   for (const t of CODES){ if (c.includes(t.replace(/\s/g, ""))) return true; }
   return false;
 }
 
+/* Tekst die de klas te zien krijgt, zoals een gok in Tekenslag: fout als de
+   hele tekst of een van de woorden erin niet door het filter komt. Per woord
+   ook, omdat "jij kut" als geheel langs de termen loopt die alleen als hele
+   naam tellen. */
+function vies(tekst){
+  const s = String(tekst || "");
+  if (verboden(s)) return true;
+  return s.split(/[^a-zA-Z0-9\u00c0-\u024f@$!|€£+(<¢ß]+/).some(w => w && verboden(w));
+}
+
 /* een nette naam: geschoond, en vervangen als hij niet door het filter komt */
 function nette(naam, anders){
-  const s = String(naam || "").replace(/[\u0000-\u001f\u007f]/g, "").replace(/\s+/g, " ").trim().slice(0, 16);
+  /* Punthaken en aanhalingstekens gaan eruit. Een bijnaam heeft ze nergens
+     voor nodig, en ze stonden bij de anderen in beeld op plekken waar de naam
+     als opmaak werd geplakt in plaats van als tekst. De & blijft: die kan in
+     zijn eentje geen element beginnen, en Tom & Jerry mag gewoon. */
+  const s = String(naam || "").replace(/[\u0000-\u001f\u007f<>"'`]/g, "").replace(/\s+/g, " ").trim().slice(0, 16);
   if (!s) return anders || "Leerling";
   return verboden(s) ? (anders || "Leerling") : s;
 }
 
-  return { normaliseer: normaliseer, verboden: verboden, nette: nette };
+  return { normaliseer: normaliseer, verboden: verboden, vies: vies, nette: nette };
 })();

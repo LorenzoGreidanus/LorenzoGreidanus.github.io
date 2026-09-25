@@ -6,7 +6,7 @@ const path = require("path");
 const bron = fs.readFileSync(path.join(__dirname, "naamfilter.js"), "utf8");
 const kern = bron.replace(/^export function /gm, "function ");
 const uit = "/* Gemaakt door server/maak-filter.js uit server/naamfilter.js. Niet met de hand bewerken. */\n" +
-  "window.NAAMFILTER = (function(){\n" + kern + "\n  return { normaliseer: normaliseer, verboden: verboden, nette: nette };\n})();\n";
+  "window.NAAMFILTER = (function(){\n" + kern + "\n  return { normaliseer: normaliseer, verboden: verboden, vies: vies, nette: nette };\n})();\n";
 fs.writeFileSync(path.join(__dirname, "..", "leermiddelen", "naamfilter.js"), uit);
 new Function(uit.replace("window.NAAMFILTER", "var NAAMFILTER"));
 console.log("naamfilter.js geschreven,", uit.length, "tekens");
