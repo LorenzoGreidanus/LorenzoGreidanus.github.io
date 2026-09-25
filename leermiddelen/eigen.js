@@ -11,6 +11,7 @@
      EIGEN.vragenUitLijst(m)     -> een woordenlijst als meerkeuzevragen voor de spellen
      EIGEN.oefeningUitLijst(m,n) -> een woordenlijst als oefening voor oefen.html
      EIGEN.plakken(tekst)        -> paren uit geplakte tekst (tab, =, ;, : of " - ")
+     EIGEN.kiezer(el, opts)      -> een kiezer voor de klasspellen: je eigen lijsten als knoppen, en een vakje voor een code
      EIGEN.volledig/uitslagen/nakijk/instel/wisUitslag(code, ...)  -> met de sleutel, voor de docent
      EIGEN.inlever(code, { sid, naam, klas, a })                   -> de leerling levert in, de server rekent */
 var EIGEN = (function(){
@@ -159,7 +160,50 @@ var EIGEN = (function(){
       return a && b ? { a: a, b: b } : null;
     }).filter(Boolean);
   }
-  return { haal: haal, bewaar: bewaar, weg: weg, mijn: mijn, afstemmen: afstemmen,
+  /* De kiezer voor Tekenslag, de Klasquiz en de Klasstrijd. Je eigen
+     woordenlijsten van dit apparaat staan als knoppen; een lijst van een
+     collega haal je met de code. opts.gekozen(m, code) krijgt de lijst zodra
+     hij binnen is, opts.leeg() als er niets (meer) gekozen is, opts.code is
+     een code om meteen mee te beginnen (uit het adres). */
+  function htmlSchoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+  function kiezer(el, opts){
+    opts = opts || {};
+    var lijsten = mijn().filter(function(m){ return m.soort === 'lijst'; }), gekozen = '', stand = '';
+    function teken(){
+      el.innerHTML = (lijsten.length
+        ? '<div class="chips" style="margin-bottom:8px">' + lijsten.map(function(m){
+            return '<button type="button" data-code="' + htmlSchoon(m.code) + '"' + (m.code === gekozen ? ' class="on" aria-pressed="true"' : ' aria-pressed="false"') + '>' + htmlSchoon(m.naam) + '</button>';
+          }).join('') + '</div>'
+        : '<p class="tip" style="margin:0 0 8px">Op dit apparaat staan nog geen woordenlijsten. Maak er een bij <a href="maken.html?nieuw=lijst">Eigen materiaal</a>, of vul hieronder de code van een lijst in.</p>') +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input class="veld" style="flex:0 1 14em;text-transform:uppercase;letter-spacing:.12em" maxlength="6" placeholder="code" aria-label="Code van een woordenlijst" autocapitalize="characters" autocomplete="off" spellcheck="false">' +
+        '<button type="button" class="knop">Haal op</button>' + (lijsten.length ? '<a class="tip" href="maken.html?nieuw=lijst">nieuwe lijst maken</a>' : '') + '</div>' +
+        '<p class="tip" role="status" style="margin:6px 0 0;min-height:1.2em">' + htmlSchoon(stand) + '</p>';
+      Array.prototype.forEach.call(el.querySelectorAll('button[data-code]'), function(b){ b.addEventListener('click', function(){ laad(b.getAttribute('data-code')); }); });
+      var inv = el.querySelector('input'), knop = el.querySelector('button.knop');
+      knop.addEventListener('click', function(){ laad(inv.value); });
+      inv.addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); laad(inv.value); } });
+    }
+    function zetStand(t){ stand = t; var p = el.querySelector('p[role=status]'); if (p) p.textContent = t; }
+    function laad(code){
+      code = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      zetStand('Even ophalen…');
+      haal(code).then(function(m){
+        if (!m || m.soort !== 'lijst') throw new Error('Deze code is geen woordenlijst.');
+        gekozen = code;
+        if (!lijsten.some(function(x){ return x.code === code; })) lijsten.push({ code: code, naam: m.naam, soort: 'lijst' });
+        stand = m.naam + ': ' + m.paren.length + ' paren' + (m.kopA && m.kopB ? ' (' + m.kopA + ' en ' + m.kopB + ')' : '') + '.';
+        teken();
+        if (opts.gekozen) opts.gekozen(m, code);
+      }).catch(function(e){
+        gekozen = ''; zetStand(e && e.message ? e.message : 'Dat lukte niet.');
+        if (opts.leeg) opts.leeg();
+      });
+    }
+    teken();
+    if (opts.code) laad(opts.code);
+    return { laad: laad, code: function(){ return gekozen; } };
+  }
+  return { haal: haal, bewaar: bewaar, weg: weg, mijn: mijn, afstemmen: afstemmen, kiezer: kiezer,
            volledig: volledig, uitslagen: uitslagen, nakijk: nakijk, instel: instel, wisUitslag: wisUitslag, inlever: inlever,
            afbeelding: afbeelding, afbAdres: afbAdres, verklein: verklein,
            vragenUitLijst: vragenUitLijst, oefeningUitLijst: oefeningUitLijst, plakken: plakken, schud: schud };

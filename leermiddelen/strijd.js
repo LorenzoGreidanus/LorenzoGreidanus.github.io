@@ -618,7 +618,7 @@ window.STRIJD = (function(){
         if (!x.ok){ fout.textContent = x.j.fout || 'Geen kamer met deze code.'; return; }
         if (x.j.spel !== 'strijd'){ location.href = 'klasquiz.html?k=' + c; return; }
         if (x.j.fase === 'einde'){ fout.textContent = 'Dit potje is al afgelopen.'; return; }
-        location.href = x.j.game + '.html?vak=' + encodeURIComponent(x.j.vak) + '&n=' + encodeURIComponent(x.j.niveau) + (x.j.deel ? '&deel=' + encodeURIComponent(x.j.deel) : '') + '&kamer=' + c + '&naam=' + encodeURIComponent(n);
+        location.href = x.j.game + '.html?vak=' + encodeURIComponent(x.j.vak) + '&n=' + encodeURIComponent(x.j.niveau) + (x.j.deel ? (x.j.vak === 'eigen' ? '&lijst=' : '&deel=') + encodeURIComponent(x.j.deel) : '') + '&kamer=' + c + '&naam=' + encodeURIComponent(n);
       })
       .catch(function(){ knop.disabled = false; fout.textContent = 'Geen verbinding met de server.'; });
     });

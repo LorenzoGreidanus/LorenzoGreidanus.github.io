@@ -9,6 +9,7 @@
 <script src="profiel.js"></script>
 <script src="naamfilter.js"></script>
 <script src="bank.js"></script>
+<script src="eigen.js"></script>
 <link rel="apple-touch-icon" href="/icoon-192.png">
 <script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
 <title>Tekenslag &middot; meneer Greidanus</title>
@@ -140,6 +141,7 @@ textarea.veld{min-height:120px;resize:vertical}
 .podium div b{display:block;font-size:2rem}
 .podium div.win{background:var(--sand);color:#14224C}
 .status{color:var(--muted);font-size:.86rem;min-height:1.2em;margin-top:8px}
+.woord small.hint{display:block;font-style:italic;opacity:.95;margin-bottom:4px}
 .lijst{display:grid;gap:6px;margin-top:10px}
 .lijst div{display:flex;justify-content:space-between;gap:10px;background:var(--kaart2);border-radius:12px;padding:7px 12px;font-size:.92rem}
 .lijst div.mis{opacity:.7}
@@ -189,6 +191,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
     <div class="stap" id="vakStap"><b>Vak</b><div class="chips" id="vakChips"></div></div>
     <div class="stap" id="ondStap"><b>Onderdeel</b><div class="chips" id="ondChips"></div><p class="tip" id="woordTel" style="margin-top:6px"></p></div>
     <div class="stap hide" id="eigenStap"><b>Eigen woorden, een per regel</b><textarea class="veld" id="eigenWoorden" placeholder="Feodalisme&#10;Hunebed&#10;Beeldenstorm"></textarea></div>
+    <div class="stap hide" id="lijstStap"><b>Welke woordenlijst?</b><div id="lijstKiezer"></div><p class="tip" style="margin-top:6px">Leerlingen tekenen het woord links in de lijst; de betekenis rechts krijgt de tekenaar erbij als hulp. Een lijst maak je bij <a href="maken.html?nieuw=lijst">Eigen materiaal</a>.</p></div>
     <div class="stap"><b>Hoe spelen jullie?</b><div class="chips" id="modusChips"></div><p class="tip" id="modusUit" style="margin-top:6px"></p></div>
     <div class="stap"><b id="instKop">Teams, tijd en rondes</b>
       <div class="rij">
@@ -375,11 +378,14 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
   }
 
   /* ---------- het startscherm: de opzet van het bord ---------- */
-  var bron = 'bank', vak = 'ges', ond = [];
+  var LIJSTCODE = (function(){ try { var m = /[?&]lijst=([A-Za-z0-9]{6})/.exec(location.search); return m ? m[1].toUpperCase() : ''; } catch (e){ return ''; } })();
+  var bron = LIJSTCODE ? 'lijst' : 'bank', vak = 'ges', ond = [], lijstM = null, lijstKiezer = null;
   function tekenBron(){
-    $('bronChips').innerHTML = [['bank', 'uit de vragenbank'], ['eigen', 'eigen woorden']].map(function(b){ return '<button type="button" data-b="' + b[0] + '"' + (bron === b[0] ? ' class="on"' : '') + '>' + b[1] + '</button>'; }).join('');
+    $('bronChips').innerHTML = [['bank', 'uit de vragenbank'], ['lijst', 'een woordenlijst van mij'], ['eigen', 'losse woorden typen']].map(function(b){ return '<button type="button" data-b="' + b[0] + '"' + (bron === b[0] ? ' class="on"' : '') + '>' + b[1] + '</button>'; }).join('');
     Array.prototype.forEach.call($('bronChips').querySelectorAll('button'), function(b){ b.addEventListener('click', function(){ bron = b.getAttribute('data-b'); tekenBron(); }); });
     $('vakStap').classList.toggle('hide', bron !== 'bank'); $('ondStap').classList.toggle('hide', bron !== 'bank'); $('eigenStap').classList.toggle('hide', bron !== 'eigen');
+    $('lijstStap').classList.toggle('hide', bron !== 'lijst');
+    if (bron === 'lijst' && !lijstKiezer && window.EIGEN) lijstKiezer = EIGEN.kiezer($('lijstKiezer'), { code: LIJSTCODE, gekozen: function(m){ lijstM = m; }, leeg: function(){ lijstM = null; } });
     tekenVak();
   }
   function tekenVak(){
@@ -477,19 +483,23 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
       BANK.zorg(vak).then(function(){ knop.disabled = false; BRONNEN_B = window.BRONNEN || {}; knop.click(); });
       return;
     }
+    if (bron === 'lijst' && !lijstM){ $('openFout').textContent = 'Kies eerst een woordenlijst, of haal er een op met de code.'; return; }
     var woorden = bron === 'eigen'
       ? $('eigenWoorden').value.split(/\n/).map(function(w){ return w.trim(); }).filter(function(w){ return w.length >= 2 && w.length <= 30; })
+      : bron === 'lijst' ? lijstM.paren.map(function(p){ return p.a.trim(); }).filter(function(w){ return w.length >= 2 && w.length <= 30; })
       : woordenUit(vak, ond);
+    /* uit een lijst: de betekenis als hulp voor wie tekent */
+    var hints = {}; if (bron === 'lijst') lijstM.paren.forEach(function(p){ hints[norm(p.a)] = p.b; });
     var uniek = {}; woorden = woorden.filter(function(w){ var k = norm(w); if (!k || uniek[k]) return false; uniek[k] = 1; return true; });
     if (woorden.length < 8){ $('openFout').textContent = 'Te weinig woorden (minstens acht). Kies een ander onderdeel of typ meer woorden.'; return; }
     $('openFout').textContent = ''; $('openBtn').disabled = true;
-    fetch('/api/kamer', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ spel:'rollen', game:'teken', vak:bron === 'eigen' ? 'eigen' : vak, niveau:'' }) })
+    fetch('/api/kamer', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ spel:'rollen', game:'teken', vak:bron === 'bank' ? vak : 'eigen', niveau:'' }) })
       .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
       .then(function(x){
         $('openBtn').disabled = false;
         if (!x.ok){ $('openFout').textContent = x.j.fout || 'Het openen lukte niet.'; return; }
-        host = { code:x.j.code, sleutel:x.j.sleutel, woorden:husselen(woorden.slice()), modus:modus, nTeams:+$('teamsSel').value, tijd:+$('tijdSel').value, rondes:+$('rondesSel').value,
-                 vakNaam: bron === 'eigen' ? 'eigen woorden' : (VAKKEN_B.filter(function(v){ return v.id === vak; })[0] || {}).naam };
+        host = { code:x.j.code, sleutel:x.j.sleutel, woorden:husselen(woorden.slice()), hints:hints, modus:modus, nTeams:+$('teamsSel').value, tijd:+$('tijdSel').value, rondes:+$('rondesSel').value,
+                 vakNaam: bron === 'eigen' ? 'eigen woorden' : bron === 'lijst' ? lijstM.naam : (VAKKEN_B.filter(function(v){ return v.id === vak; })[0] || {}).naam };
         try { localStorage.setItem('lg-teken-host', JSON.stringify(host)); } catch (e){}
         bordOpen();
       })
@@ -647,7 +657,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
     if (!spel) return;
     var lijst = [{ pid:pid, d: isTeams() ? { k:'teams', teams:teamsKort(), stil:1 } : { k:'modus', modus:host.modus, lijst:scoreLijst(), stil:1 } }];
     if (spel.loopt && spel.tekenaar){
-      if (pid === spel.tekenaar.sid) lijst.push({ pid:pid, d:{ k:'teken', woord:spel.woord, tot:spel.tijdEinde } });
+      if (pid === spel.tekenaar.sid) lijst.push({ pid:pid, d:tekenKaart() });
       else lijst.push({ pid:pid, d:raadKaart() });
       /* had hij het woord al, dan weet hij dat weer */
       var plek = spel.geraden.indexOf(pid);
@@ -774,7 +784,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
     spel.tijdEinde = Date.now() + host.tijd * 1000;
     $('bOver').classList.add('hide'); $('bOverslaan').disabled = false;
     if (host.modus === 'docent') bordTekenen(true);
-    else stuur({ t:'naar', pid:spel.tekenaar.sid, d:{ k:'teken', woord:spel.woord, tot:spel.tijdEinde } });
+    else stuur({ t:'naar', pid:spel.tekenaar.sid, d:tekenKaart() });
     stuur({ t:'vlug', d:raadKaart() });
     clearInterval(spel.klok); spel.klok = setInterval(tik, 250);
   }
@@ -784,10 +794,15 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
     if (over <= 0) beurtEinde();
   }
   /* een nieuw woord in dezelfde beurt: na een goed antwoord bij teams, of na overslaan */
+  /* wat de tekenaar krijgt: het woord, en uit een woordenlijst ook de betekenis */
+  function tekenKaart(){
+    var h = host.hints && host.hints[norm(spel.woord)];
+    return { k:'teken', woord:spel.woord, hint: h || undefined, tot:spel.tijdEinde };
+  }
   function nieuwWoordInBeurt(){
     spel.woord = volgendWoord(); bPapier.wis(); spel.strepen = []; spel.geraden = [];
     if (host.modus === 'docent') $('bWoordNu').textContent = '';
-    else stuur({ t:'naar', pid:spel.tekenaar.sid, d:{ k:'teken', woord:spel.woord, tot:spel.tijdEinde } });
+    else stuur({ t:'naar', pid:spel.tekenaar.sid, d:tekenKaart() });
     stuur({ t:'vlug', d:{ k:'wis' } });
     /* ieder voor zich: wie het vorige woord al had, mag nu weer raden */
     if (!isTeams()) stuur({ t:'vlug', d:raadKaart() });
@@ -1076,7 +1091,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
       $('pGereedschap').classList.remove('hide'); $('pRaadRij').classList.add('hide');
       $('pWoord').classList.remove('geraden');
       $('pRol').textContent = 'jij tekent';
-      $('pWoord').innerHTML = '<span>Teken dit woord</span><b>' + schoon(d.woord) + '</b><small>Niet schrijven en niet zeggen: je team moet het aan je tekening raden.</small>';
+      $('pWoord').innerHTML = '<span>Teken dit woord</span><b>' + schoon(d.woord) + '</b>' + (d.hint ? '<small class="hint">' + schoon(d.hint) + '</small>' : '') + '<small>Niet schrijven en niet zeggen: je team moet het aan je tekening raden.</small>';
       $('pWoord').classList.remove('hide');
       if (vorig !== d.woord){
         $('pWoord').setAttribute('data-woord', d.woord);

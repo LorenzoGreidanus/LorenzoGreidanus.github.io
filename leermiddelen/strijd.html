@@ -248,6 +248,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
       <h2>Open een kamer</h2>
       <div class="stap"><b>Spel</b><div class="spelkeuze" id="spellen"></div></div>
       <div class="stap"><b>Vak</b><div class="chips" id="vakken"></div></div>
+      <div class="stap hide" id="lijstStap"><b>Welke woordenlijst?</b><div id="lijstKiezer"></div><p class="tip" style="margin-top:6px">De spelers krijgen de lijst als vak in hun spel: meerkeuze, heen en terug. Een lijst maak je bij <a href="maken.html?nieuw=lijst">Eigen materiaal</a>.</p></div>
       <div class="stap"><b>Niveau</b><div class="chips" id="niveaus"></div></div>
       <div class="stap">
         <button class="knop crab groot" id="openBtn" type="button">Kamer openen</button>
@@ -323,6 +324,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
 <footer>Klasstrijd &middot; meneer Greidanus &middot; <span id="jaar">2026</span></footer>
 
 <script src="naamfilter.js"></script>
+<script src="eigen.js"></script>
 <script>
 (function(){
   'use strict';
@@ -340,8 +342,11 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
   var VAKKEN = [
     { id:'reken', naam:'Rekenen' }, { id:'ned', naam:'Nederlands' }, { id:'eng', naam:'Engels' },
     { id:'ges', naam:'Geschiedenis' }, { id:'aard', naam:'Aardrijkskunde' },
-    { id:'bio', naam:'Biologie' }, { id:'wis', naam:'Wiskunde' }, { id:'burg', naam:'Samenleving' }, { id:'eco', naam:'Economie' }
+    { id:'bio', naam:'Biologie' }, { id:'wis', naam:'Wiskunde' }, { id:'burg', naam:'Samenleving' }, { id:'eco', naam:'Economie' },
+    { id:'eigen', naam:'Een woordenlijst van mij' }
   ];
+  var LIJSTCODE = (function(){ try { var m = /[?&]lijst=([A-Za-z0-9]{6})/.exec(location.search); return m ? m[1].toUpperCase() : ''; } catch (e){ return ''; } })();
+  var lijstM = null, lijstKiezer = null;
   var NIVEAUS = [
     { id:'bb', naam:'vmbo-bb' }, { id:'kgt', naam:'vmbo-kgt en tl' }, { id:'havo', naam:'havo' }, { id:'vwo', naam:'vwo' }
   ];
@@ -404,19 +409,24 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     Array.prototype.forEach.call($('spellen').querySelectorAll('button'), function(b){ b.addEventListener('click', function(){ spel = b.getAttribute('data-id'); tekenKeuze(); }); });
     tekenChips('vakken', VAKKEN, vak, function(id){ vak = id; tekenKeuze(); });
     tekenChips('niveaus', NIVEAUS, niveau, function(id){ niveau = id; tekenKeuze(); });
+    $('lijstStap').classList.toggle('hide', vak !== 'eigen');
+    if (vak === 'eigen' && !lijstKiezer && window.EIGEN) lijstKiezer = EIGEN.kiezer($('lijstKiezer'), { code: LIJSTCODE, gekozen: function(m){ lijstM = m; }, leeg: function(){ lijstM = null; } });
   }
+  if (LIJSTCODE) vak = 'eigen';
   tekenKeuze();
 
   $('openBtn').addEventListener('click', function(){
     $('openFout').textContent = '';
+    if (vak === 'eigen' && !lijstM){ $('openFout').textContent = 'Kies eerst een woordenlijst, of haal er een op met de code.'; return; }
     $('openBtn').disabled = true;
+    /* bij een woordenlijst gaat de code mee als "deel": de spelers laden hem dan zelf */
     fetch('/api/kamer', { method:'POST', headers:{ 'content-type':'application/json' },
-      body: JSON.stringify({ spel:'strijd', game:spel, vak:vak, niveau:niveau }) })
+      body: JSON.stringify({ spel:'strijd', game:spel, vak:vak, niveau:niveau, deel: vak === 'eigen' ? lijstKiezer.code() : '' }) })
     .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
     .then(function(x){
       $('openBtn').disabled = false;
       if (!x.ok){ $('openFout').textContent = x.j.fout || 'Het lukte niet om een kamer te openen.'; return; }
-      var host = { code:x.j.code, sleutel:x.j.sleutel, game:spel, vak:vak, niveau:niveau };
+      var host = { code:x.j.code, sleutel:x.j.sleutel, game:spel, vak:vak, niveau:niveau, lijstNaam: vak === 'eigen' && lijstM ? lijstM.naam : '' };
       try { localStorage.setItem('lg-strijd-host', JSON.stringify(host)); } catch (e){}
       wordHost(host);
     })
@@ -475,7 +485,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
   /* ====================== host ====================== */
   var host = null;
   function hostScherm(id){ ['h-lobby', 'h-bezig', 'h-einde'].forEach(function(x){ $(x).classList.toggle('hide', x !== id); }); }
-  function opzetTekst(h){ return naamVan(SPELLEN, h.game) + ' · ' + naamVan(VAKKEN, h.vak) + ' · ' + naamVan(NIVEAUS, h.niveau); }
+  function opzetTekst(h){ return naamVan(SPELLEN, h.game) + ' · ' + (h.vak === 'eigen' && h.lijstNaam ? h.lijstNaam : naamVan(VAKKEN, h.vak)) + ' · ' + naamVan(NIVEAUS, h.niveau); }
   function wordHost(h){
     host = h;
     toon('s-host'); hostScherm('h-lobby');
@@ -554,6 +564,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
   /* ====================== speler ====================== */
   function spelLink(code, naam, j){
     return j.game + '.html?vak=' + encodeURIComponent(j.vak) + '&n=' + encodeURIComponent(j.niveau) +
+      (j.vak === 'eigen' && /^[A-Z0-9]{6}$/.test(j.deel || '') ? '&lijst=' + j.deel : '') +
       '&kamer=' + code + '&naam=' + encodeURIComponent(naam);
   }
   function wordSpeler(code, naam, j){

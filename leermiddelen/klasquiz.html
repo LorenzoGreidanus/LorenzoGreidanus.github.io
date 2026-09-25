@@ -297,11 +297,14 @@ button.optie:disabled{cursor:default;transform:none}
     <div class="kaart">
       <p class="eyebrow">docent</p>
       <h2>Open een kamer</h2>
-      <div class="stap"><b>Vragen</b><div class="chips" id="bronKeuze"><button type="button" class="on" data-bron="bank">Uit de vragenbank</button><button type="button" data-bron="eigen">Eigen vragen</button></div></div>
+      <div class="stap"><b>Vragen</b><div class="chips" id="bronKeuze"><button type="button" class="on" data-bron="bank">Uit de vragenbank</button><button type="button" data-bron="lijst">Een woordenlijst van mij</button><button type="button" data-bron="eigen">Eigen vragen typen</button></div></div>
       <div id="bankVak">
       <div class="stap"><b>Vak</b><div class="chips" id="vakken"></div></div>
       <div class="stap"><b>Onderdeel</b><div class="chips" id="onderdelen"></div></div>
       <div class="stap"><b>Niveau</b><div class="chips" id="niveaus"></div></div>
+      </div>
+      <div id="lijstVak" class="hide">
+        <div class="stap"><b>Welke woordenlijst?</b><div id="lijstKiezer"></div><p class="tip" style="margin-top:6px">De quiz maakt van elk paar twee meerkeuzevragen, heen en terug, en kiest er zoveel als je hieronder instelt. Een lijst maak je bij <a href="maken.html?nieuw=lijst">Eigen materiaal</a>.</p></div>
       </div>
       <div id="eigenVak" class="hide">
         <div class="stap">
@@ -459,6 +462,7 @@ Frans Hals"></textarea>
 
 <script src="naamfilter.js"></script>
 <script src="bank.js"></script>
+<script src="eigen.js"></script>
 <script src="melding.js"></script>
 <script src="voorlezen.js"></script>
 <script>
@@ -610,7 +614,14 @@ Frans Hals"></textarea>
      Het formaat is bewust simpel: een vraag, daaronder de antwoorden, een
      sterretje voor het goede, een lege regel ertussen. Wat de docent typt
      blijft op dit apparaat staan; met een set-code kan hij het overal ophalen. */
-  var bron = 'bank';
+  var LIJSTCODE = (function(){ try { var m = /[?&]lijst=([A-Za-z0-9]{6})/.exec(location.search); return m ? m[1].toUpperCase() : ''; } catch (e){ return ''; } })();
+  var bron = LIJSTCODE ? 'lijst' : 'bank', lijstM = null, lijstKiezer = null;
+  function toonLijst(){
+    $('bankVak').classList.toggle('hide', bron !== 'bank');
+    $('eigenVak').classList.toggle('hide', bron !== 'eigen');
+    $('lijstVak').classList.toggle('hide', bron !== 'lijst');
+    if (bron === 'lijst' && !lijstKiezer && window.EIGEN) lijstKiezer = EIGEN.kiezer($('lijstKiezer'), { code: LIJSTCODE, gekozen: function(m){ lijstM = m; }, leeg: function(){ lijstM = null; } });
+  }
   function leesEigen(tekst){
     var uit = [], fouten = [];
     String(tekst || '').replace(/\r/g, '').split(/\n\s*\n+/).forEach(function(blok, i){
@@ -645,11 +656,12 @@ Frans Hals"></textarea>
     b.addEventListener('click', function(){
       bron = b.getAttribute('data-bron');
       Array.prototype.forEach.call($('bronKeuze').querySelectorAll('button'), function(x){ x.classList.toggle('on', x === b); });
-      $('bankVak').classList.toggle('hide', bron === 'eigen');
-      $('eigenVak').classList.toggle('hide', bron !== 'eigen');
+      toonLijst();
       if (bron === 'eigen') toonEigen();
     });
   });
+  /* met ?lijst=CODE in het adres (de link uit Eigen materiaal) begint de kamer bij die lijst */
+  if (bron === 'lijst'){ Array.prototype.forEach.call($('bronKeuze').querySelectorAll('button'), function(x){ x.classList.toggle('on', x.getAttribute('data-bron') === 'lijst'); }); toonLijst(); }
   /* Je eigen sets, als je bent ingelogd met Microsoft. Het account bewaart
      alleen code en naam; de tekst blijft in de set zelf. */
   var mijnSets = null;
@@ -725,7 +737,7 @@ Frans Hals"></textarea>
 
   $('openBtn').addEventListener('click', function(){
     /* de vragen van het gekozen vak eerst ophalen */
-    if (window.BANK && bron !== 'eigen' && vak && !BANK.heeft(vak)){
+    if (window.BANK && bron === 'bank' && vak && !BANK.heeft(vak)){
       var knop = this;
       knop.disabled = true;
       BANK.zorg(vak).then(function(){ knop.disabled = false; knop.click(); });
@@ -737,18 +749,24 @@ Frans Hals"></textarea>
       var eigen = toonEigen();
       if (eigen.fouten.length){ $('openFout').textContent = eigen.fouten[0]; return; }
       vragen = eigen.vragen.slice(0, 60).map(shuffleVraag);
+    } else if (bron === 'lijst'){
+      if (!lijstM){ $('openFout').textContent = 'Kies eerst een woordenlijst, of haal er een op met de code.'; return; }
+      /* heen en terug door elkaar, zoveel als gevraagd */
+      vragen = EIGEN.vragenUitLijst(lijstM).sort(function(){ return Math.random() - 0.5; }).slice(0, aantal).map(shuffleVraag);
     } else vragen = maakVragen(aantal);
     $('openFout').textContent = '';
     if (vragen.length < (bron === 'eigen' ? 2 : 3)){ $('openFout').textContent = bron === 'eigen' ? 'Typ minstens twee vragen.' : 'Te weinig vragen voor deze keuze.'; return; }
+    /* wat op het bord staat als opzet: bij een lijst de naam van de lijst */
+    var eigenNaam = bron === 'lijst' ? lijstM.naam : ($('setNaam').value.trim() || 'eigen vragen');
     $('openBtn').disabled = true;
     fetch('/api/kamer', { method:'POST', headers:{ 'content-type':'application/json' },
-      body: JSON.stringify({ vak:bron === 'eigen' ? 'eigen' : vak, niveau:bron === 'eigen' ? '' : niveau, onderdeel:bron === 'eigen' ? ($('setNaam').value.trim() || 'eigen vragen') : onderdeel, tijd:tijd,
+      body: JSON.stringify({ vak:bron === 'bank' ? vak : 'eigen', niveau:bron === 'bank' ? niveau : '', onderdeel:bron === 'bank' ? onderdeel : eigenNaam, tijd:tijd,
         vragen: vragen.map(function(q){ return { v:q.v, o:q.o, g:q.g, u:q.u, t:q.t, vlag:q.vlag, svg:q.svg }; }) }) })
     .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
     .then(function(x){
       $('openBtn').disabled = false;
       if (!x.ok){ $('openFout').textContent = x.j.fout || 'Het lukte niet om een kamer te openen.'; return; }
-      var host = { code:x.j.code, sleutel:x.j.sleutel, vak:bron === 'eigen' ? 'eigen' : vak, niveau:bron === 'eigen' ? '' : niveau, onderdeel:bron === 'eigen' ? ($('setNaam').value.trim() || 'eigen vragen') : onderdeel, aantal:vragen.length, tijd:tijd };
+      var host = { code:x.j.code, sleutel:x.j.sleutel, vak:bron === 'bank' ? vak : 'eigen', niveau:bron === 'bank' ? niveau : '', onderdeel:bron === 'bank' ? onderdeel : eigenNaam, aantal:vragen.length, tijd:tijd };
       try { localStorage.setItem('lg-quiz-host', JSON.stringify(host)); } catch (e){}
       wordHost(host);
     })
@@ -836,7 +854,7 @@ Frans Hals"></textarea>
     $('hCode').textContent = h.code;
     $('hLink').textContent = location.host.replace(/^www\./, '') + '/q';
     $('hOpzet').textContent = h.vak === 'eigen'
-      ? 'Eigen vragen' + (h.onderdeel ? ' · ' + h.onderdeel : '') + ' · ' + h.aantal + ' vragen · ' + h.tijd + ' s'
+      ? (h.onderdeel || 'Eigen vragen') + ' · ' + h.aantal + ' vragen · ' + h.tijd + ' s'
       : naamVan(VAKKEN, h.vak) + ' · ' + (h.onderdeel ? naamVan(ONDERDELEN[h.vak] || [], h.onderdeel) : 'alles door elkaar') +
       ' · ' + naamVan(NIVEAUS, h.niveau) + ' · ' + h.aantal + ' vragen · ' + h.tijd + ' s';
     verbind({ code:h.code, query:'rol=host&sleutel=' + encodeURIComponent(h.sleutel) }, hostBericht);
