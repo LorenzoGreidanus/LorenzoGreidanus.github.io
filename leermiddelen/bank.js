@@ -74,7 +74,7 @@ var TIJDVAKKEN = [
 ];
 
 var ONDERDELEN = {
-  reken: [{id:'tafels',naam:'tafels'},{id:'hoofd',naam:'hoofdrekenen'},{id:'cijferen',naam:'plaatswaarde en cijferen'},{id:'machten',naam:'machten en wortels'},{id:'negatief',naam:'negatieve getallen'},{id:'komma',naam:'kommagetallen'},{id:'gemiddelde',naam:'gemiddelde en schaal'},{id:'breuk',naam:'breuken'},{id:'procent',naam:'procenten'},{id:'verhouding',naam:'verhoudingen'},{id:'tijdgeld',naam:'tijd en geld'},{id:'meten',naam:'meten en meetkunde'}],
+  reken: [{id:'tafels',naam:'tafels'},{id:'hoofd',naam:'hoofdrekenen'},{id:'cijferen',naam:'plaatswaarde en cijferen'},{id:'dhte',naam:'het DHTE-schema'},{id:'machten',naam:'machten en wortels'},{id:'negatief',naam:'negatieve getallen'},{id:'komma',naam:'kommagetallen'},{id:'gemiddelde',naam:'gemiddelde en schaal'},{id:'breuk',naam:'breuken'},{id:'procent',naam:'procenten'},{id:'verhouding',naam:'verhoudingen'},{id:'tijdgeld',naam:'tijd en geld'},{id:'meten',naam:'meten en meetkunde'}],
   /* groep zet de onderdelen onder een kop in de kiezer; zie GROEPEN hieronder */
   ned: [{id:'werkwoordspelling',naam:'werkwoordspelling',groep:'spelling'},{id:'spelling',naam:'los van het werkwoord',groep:'spelling'},{id:'meervoud',naam:'enkel en meervoud',groep:'spelling'},
         {id:'leestekens',naam:'leestekens',groep:'interpunctie'},
@@ -132,7 +132,7 @@ var GROEPEN = {
    lijst daarboven leesbaar blijft. Wat hier niet genoemd wordt valt onder
    "overig" en verdwijnt dus niet. */
 var IN_GROEP = {
-  reken:{ tafels:'getallen', hoofd:'getallen', cijferen:'getallen', machten:'getallen', negatief:'getallen', komma:'getallen',
+  reken:{ tafels:'getallen', hoofd:'getallen', cijferen:'getallen', dhte:'getallen', machten:'getallen', negatief:'getallen', komma:'getallen',
           breuk:'verhoudingen', procent:'verhoudingen', verhouding:'verhoudingen', gemiddelde:'verhoudingen',
           tijdgeld:'meten', meten:'meten',
           /* het DHTE-schema telt per onderdeel van zijn eigen spel */
@@ -157,6 +157,8 @@ TIJDVAKKEN.forEach(function(t){ IN_GROEP.ges[t.id] = 'tijdvakken'; });
    niet los in de lijst hierboven; hun groep volgt uit hoe de naam begint. */
 var IN_PATROON = {
   reken: [[/^DHTE /, 'getallen'], [/./, 'verhoudingen']],
+  /* de figuren uit Vlakken herkennen (vlak: ruit) en de soorten van De balans (vergelijking: ...) */
+  wis: [[/^vlak: /, 'meetkunde'], [/^vergelijking: /, 'algebra']],
   ned:   [[/^(tegenwoordige tijd|verleden tijd|voltooid deelwoord|de d of t val)$/, 'spelling'], [/^(kernzin|schrijfdoel)$/, 'lezen']],
   eng:   [[/^irregular /, 'werkwoorden'], [/./, 'grammatica']],
   aard:  [[/^topografie/, 'landen']],
@@ -378,6 +380,111 @@ function cijferVraag(r){
     'Is het onderste cijfer groter, dan leen je 1 van de kolom ernaast: daar komt er 1 af, hier 10 bij. Nooit de kleine van de grote aftrekken. ' + a + ' − ' + b + ' = ' + som + '.', 'aftrekken onder elkaar');
 }
 
+/* Het DHTE-schema als vraag, zoals in het spel De DHTE-schema: het schema zelf
+   staat erbij, met een oranje vakje en een vraagteken. Welk cijfer hoort daar?
+   Vier soorten, elk met de fout die leerlingen echt maken als afleider:
+     plaatswaarde  een getal in het schema zetten
+     optellen      een kolom optellen, met wat er onthouden is
+     onthouden     wat er naar de kolom ernaast gaat
+     aftrekken     een kolom aftrekken, met lenen
+   De tekening is een gewone svg zonder stijlen of links, zodat hij ook door
+   de Klasquiz en het werkblad heen komt. */
+function dhteVraag(r){
+  var n = r <= 1 ? 2 : r === 2 ? 3 : 4, max = Math.pow(10, n), laag = Math.pow(10, n - 1);
+  var LET = ['E', 'T', 'H', 'D'], NAAM = ['eenheden', 'tientallen', 'honderdtallen', 'duizendtallen'];
+  function cijfersVan(g){ var u = []; for (var i = 0; i < n; i++){ u.push(g % 10); g = Math.floor(g / 10); } return u; }   /* u[0] = eenheden */
+  /* de tekening: rijen van n vakjes, kolom 0 links (de hoogste plaats) */
+  var B = 50, X0 = 58, Y0 = 34;
+  function schema(rijen, tekens, doel){
+    var w = X0 + n * B + 16, h = Y0 + rijen.length * (B + 6) + 8;
+    var s = '<svg xmlns="http://www.w3.org/2000/svg" class="dhteschema" viewBox="0 0 ' + w + ' ' + h + '" width="' + w + '" height="' + h + '" role="img" aria-label="DHTE-schema">';
+    s += '<rect x="0" y="0" width="' + w + '" height="' + h + '" rx="14" fill="#FBF6F1"/>';
+    for (var k = 0; k < n; k++){
+      var p = n - 1 - k;
+      s += '<text x="' + (X0 + k * B + B / 2) + '" y="24" text-anchor="middle" font-family="Poppins,Arial" font-weight="700" font-size="18" fill="#204ECF">' + LET[p] + '</text>';
+    }
+    rijen.forEach(function(rij, i){
+      var y = Y0 + i * (B + 6), klein = rij.klein;
+      if (rij.teken) s += '<text x="' + (X0 - 16) + '" y="' + (y + B / 2 + 8) + '" text-anchor="middle" font-family="Poppins,Arial" font-weight="700" font-size="24" fill="#14224C">' + rij.teken + '</text>';
+      if (rij.label) s += '<text x="' + (X0 - 10) + '" y="' + (y + B / 2 + 5) + '" text-anchor="end" font-family="Poppins,Arial" font-size="11" fill="#5b6480">' + rij.label + '</text>';
+      if (rij.streep) s += '<line x1="' + (X0 - 30) + '" y1="' + (y - 4) + '" x2="' + (X0 + n * B) + '" y2="' + (y - 4) + '" stroke="#14224C" stroke-width="3"/>';
+      for (var k2 = 0; k2 < n; k2++){
+        var p2 = n - 1 - k2, waarde = rij.c[p2], isDoel = doel && doel.rij === i && doel.p === p2;
+        var bx = X0 + k2 * B + (klein ? 12 : 3), by = y + (klein ? 12 : 3), bw = klein ? B - 24 : B - 6;
+        if (klein && !isDoel && (waarde === '' || waarde == null)) { s += '<rect x="' + bx + '" y="' + by + '" width="' + bw + '" height="' + bw + '" rx="6" fill="none" stroke="#c9cfdc" stroke-width="1.5" stroke-dasharray="4 3"/>'; continue; }
+        s += '<rect x="' + bx + '" y="' + by + '" width="' + bw + '" height="' + bw + '" rx="' + (klein ? 6 : 10) + '" fill="' + (isDoel ? '#FCE3C2' : '#fff') + '" stroke="' + (isDoel ? '#EA9836' : '#c9cfdc') + '" stroke-width="' + (isDoel ? 3.5 : 1.5) + '"/>';
+        var tekst = isDoel ? '?' : (waarde == null ? '' : String(waarde));
+        if (tekst) s += '<text x="' + (bx + bw / 2) + '" y="' + (by + bw / 2 + (klein ? 5 : 9)) + '" text-anchor="middle" font-family="Poppins,Arial" font-weight="700" font-size="' + (klein ? 14 : 24) + '" fill="' + (isDoel ? '#B4701A' : '#14224C') + '">' + tekst + '</text>';
+      }
+    });
+    return s + '</svg>';
+  }
+  function leeg(){ var u = []; for (var i = 0; i < n; i++) u.push(''); return u; }
+  var soort = kies(n === 2 ? ['plaats', 'plus', 'onthoud', 'min'] : ['plaats', 'plus', 'plus', 'onthoud', 'min', 'min']);
+  var q, goed, fouten = [];
+  if (soort === 'plaats'){
+    var g; do { g = laag + rnd(max - laag); } while (new Set(cijfersVan(g)).size < Math.min(n, 3));
+    var c = cijfersVan(g), p = rnd(n);
+    goed = c[p];
+    var rij = leeg(); for (var i = 0; i < n; i++) if (i < p) rij[i] = c[i];   /* de kolommen rechts ervan staan er al */
+    fouten = c.filter(function(x, i){ return i !== p; }).concat([c[n - 1 - p], (goed + 1) % 10, (goed + 9) % 10, (goed + 2) % 10]);
+    q = bouw('Zet ' + g + ' in het schema. Welk cijfer hoort in het oranje vakje?', String(goed), function(){ return String(kies(fouten.filter(function(x){ return x !== goed; }))); },
+      'Van rechts naar links: eenheden, tientallen, honderdtallen, duizendtallen. In ' + g + ' staat de ' + goed + ' bij de ' + NAAM[p] + '.', 'DHTE plaatswaarde');
+    q.svg = schema([{ c:rij }], null, { rij:0, p:p });
+    return q;
+  }
+  var a, b, ca, cb;
+  if (soort === 'plus' || soort === 'onthoud'){
+    /* een som waarbij minstens een kolom over de negen gaat */
+    do { a = Math.floor(laag / 2) + rnd(Math.floor(max / 2)); b = Math.floor(laag / 2) + rnd(Math.floor(max / 2)); ca = cijfersVan(a); cb = cijfersVan(b); }
+    while (a + b >= max || !ca.some(function(x, i){ return x + cb[i] > 9 && i < n - 1; }));
+    var draag = [0], uit = [];
+    for (var k = 0; k < n; k++){ var t = ca[k] + cb[k] + draag[k]; uit.push(t % 10); draag.push(t > 9 ? 1 : 0); }
+    if (soort === 'plus'){
+      /* een kolom waar iets onthouden is, als dat kan */
+      var kans = []; for (var j = 1; j < n; j++) if (draag[j]) kans.push(j);
+      var pk = kans.length ? kies(kans) : rnd(n);
+      goed = uit[pk];
+      var ont = leeg(), onder = leeg();
+      for (var j2 = 1; j2 <= pk; j2++) ont[j2] = draag[j2] ? 1 : '';
+      for (var j3 = 0; j3 < pk; j3++) onder[j3] = uit[j3];
+      fouten = [(ca[pk] + cb[pk]) % 10, (goed + 1) % 10, (goed + 9) % 10, (goed + 2) % 10, ca[pk] + cb[pk] + draag[pk]];
+      q = bouw(a + ' + ' + b + ' in het schema. Welk cijfer hoort in het oranje vakje?', String(goed), function(){ return String(kies(fouten.filter(function(x){ return x !== goed; }))); },
+        'Bij de ' + NAAM[pk] + ': ' + ca[pk] + ' + ' + cb[pk] + (draag[pk] ? ' + de 1 die je onthield' : '') + ' = ' + (ca[pk] + cb[pk] + draag[pk]) + '. Je schrijft de ' + goed + ' op' + (ca[pk] + cb[pk] + draag[pk] > 9 ? ' en onthoudt 1 voor de kolom ernaast.' : '.'), 'DHTE optellen');
+      q.svg = schema([{ c:ont, klein:true, label:'onth.' }, { c:ca }, { c:cb, teken:'+' }, { c:onder, streep:true }], null, { rij:3, p:pk });
+      return q;
+    }
+    /* onthouden: wat gaat er naar de kolom ernaast? */
+    var kk = []; for (var j4 = 0; j4 < n - 1; j4++) kk.push(j4);
+    var pk2 = kies(kk);
+    goed = draag[pk2 + 1];
+    var ont2 = leeg(), onder2 = leeg();
+    for (var j5 = 1; j5 <= pk2; j5++) ont2[j5] = draag[j5] ? 1 : '';
+    for (var j6 = 0; j6 <= pk2; j6++) onder2[j6] = uit[j6];
+    fouten = [goed ? 0 : 1, 2, 10, ca[pk2] + cb[pk2] + draag[pk2]];
+    q = bouw(a + ' + ' + b + ' in het schema. Wat onthoud je in het oranje vakje?', String(goed), function(){ return String(kies(fouten.filter(function(x){ return x !== goed; }))); },
+      'Bij de ' + NAAM[pk2] + ' is het ' + ca[pk2] + ' + ' + cb[pk2] + (draag[pk2] ? ' + 1' : '') + ' = ' + (ca[pk2] + cb[pk2] + draag[pk2]) + '. ' + (goed ? 'Dat is meer dan 9: je onthoudt 1 voor de ' + NAAM[pk2 + 1] + '.' : 'Dat is niet meer dan 9: je onthoudt niets, dus 0.'), 'DHTE onthouden');
+    q.svg = schema([{ c:ont2, klein:true, label:'onth.' }, { c:ca }, { c:cb, teken:'+' }, { c:onder2, streep:true }], null, { rij:0, p:pk2 + 1 });
+    return q;
+  }
+  /* aftrekken met lenen */
+  do { a = laag + rnd(max - laag); b = Math.floor(laag / 2) + rnd(a - Math.floor(laag / 2)); ca = cijfersVan(a); cb = cijfersVan(b); }
+  while (b <= 0 || a - b <= 0 || !ca.some(function(x, i){ return x < cb[i]; }));
+  var leen = [0], uit2 = [];
+  for (var m = 0; m < n; m++){ var v = ca[m] - leen[m] - cb[m]; uit2.push(v < 0 ? v + 10 : v); leen.push(v < 0 ? 1 : 0); }
+  var kans2 = []; for (var m2 = 0; m2 < n; m2++) if (ca[m2] - leen[m2] < cb[m2] || leen[m2]) kans2.push(m2);
+  var pm = kans2.length ? kies(kans2) : rnd(n);
+  goed = uit2[pm];
+  var onder3 = leeg(); for (var m3 = 0; m3 < pm; m3++) onder3[m3] = uit2[m3];
+  /* bovenin wat er na het lenen staat, zoals in het spel */
+  var na = leeg(); for (var m4 = 1; m4 <= pm; m4++) if (leen[m4]) na[m4] = ca[m4] - 1 < 0 ? 9 : ca[m4] - 1;
+  fouten = [Math.abs(ca[pm] - cb[pm]), (ca[pm] - cb[pm] + 10) % 10, (goed + 1) % 10, (goed + 9) % 10];
+  q = bouw(a + ' − ' + b + ' in het schema. Welk cijfer hoort in het oranje vakje?', String(goed), function(){ return String(kies(fouten.filter(function(x){ return x !== goed; }))); },
+    'Bij de ' + NAAM[pm] + ': ' + (leen[pm] ? 'er is 1 uitgeleend, dus er staat ' + (ca[pm] - 1) + '. ' : '') + ((ca[pm] - leen[pm]) < cb[pm] ? 'Daar kun je ' + cb[pm] + ' niet van afhalen, dus je leent 10 van links: ' + (ca[pm] - leen[pm] + 10) + ' − ' + cb[pm] + ' = ' + goed + '.' : (ca[pm] - leen[pm]) + ' − ' + cb[pm] + ' = ' + goed + '.') + ' Nooit de kleine van de grote aftrekken.', 'DHTE aftrekken');
+  q.svg = schema([{ c:na, klein:true, label:'na lenen' }, { c:ca }, { c:cb, teken:'−' }, { c:onder3, streep:true }], null, { rij:3, p:pm });
+  return q;
+}
+
 /* Meer soorten sommen binnen hetzelfde onderdeel, zodat een race niet tien
    keer dezelfde vorm geeft: omgekeerde tafels, volgorde van bewerkingen,
    afronden, procent erbij en eraf, een recept omrekenen, tijdsduur, liters en
@@ -550,8 +657,8 @@ function rekenExtra(soort, r) {
 function rekenSom(rang, toegestaan) {
   const r = rang || 2;
   const potten = {
-    1: ['tafels','tafels','hoofd','hoofd','cijferen','breuk','tijdgeld','komma'],
-    2: ['tafels','tafels','hoofd','hoofd','cijferen','breuk','procent','tijdgeld','meten','komma','gemiddelde'],
+    1: ['tafels','tafels','hoofd','hoofd','cijferen','dhte','breuk','tijdgeld','komma'],
+    2: ['tafels','tafels','hoofd','hoofd','cijferen','dhte','breuk','procent','tijdgeld','meten','komma','gemiddelde'],
     3: ['tafels','hoofd','cijferen','breuk','procent','verhouding','tijdgeld','meten','komma','gemiddelde','machten','negatief'],
     4: ['hoofd','breuk','procent','verhouding','verhouding','meten','machten','machten','negatief','gemiddelde']
   };
@@ -563,6 +670,7 @@ function rekenSom(rang, toegestaan) {
   const soort = toegestaan && toegestaan.length ? kies(toegestaan) : kies(potten[r]);
   rekenLaatste = soort;
   if (soort === 'cijferen') return cijferVraag(r);
+  if (soort === 'dhte') return dhteVraag(r);
   /* een op de drie keer een andere vorm binnen hetzelfde onderdeel */
   if (rnd(3) === 0){ const extra = rekenExtra(soort, r); if (extra) return extra; }
   if (soort === 'tafels') {

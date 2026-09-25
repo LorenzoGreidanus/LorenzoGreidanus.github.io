@@ -592,6 +592,9 @@ var NIVEAUS = DHTEOPGAVEN.NIVEAUS,
     if (!bezig || index < 0) return;
     var stap = stappen[index];
     if (!stap || stap.klaar) return;
+    /* Per vakje, bij de eerste poging: zo ziet de docent niet alleen of een som
+       goed ging, maar waar het misgaat. Onthouden, lenen, of het cijfer in de kolom. */
+    if (!stap.pogingen && window.KLAS && KLAS.tel) KLAS.tel(od, vakjeSoort(stap), waarde === stap.waarde);
 
     if (waarde === stap.waarde){
       stap.klaar = true;
@@ -638,7 +641,13 @@ var NIVEAUS = DHTEOPGAVEN.NIVEAUS,
       '<b>' + kop + '</b>' + tekst + '</div>';
   }
 
-  function somKlaar(){ if (window.KLAS && KLAS.tel) KLAS.tel(od, 'DHTE ' + onderdeel.naam.toLowerCase() + ' ' + niveau.naam.toLowerCase(), somSchoon);
+  /* waar een vakje over gaat, voor het klasoverzicht */
+  function vakjeSoort(stap){
+    if (stap.soort === 'onthoud') return 'DHTE onthouden';
+    if (stap.soort === 'leen') return 'DHTE lenen';
+    return onderdeel.id === 'invullen' ? 'DHTE plaatswaarde' : onderdeel.id === 'optellen' ? 'DHTE optellen per kolom' : 'DHTE aftrekken per kolom';
+  }
+  function somKlaar(){
     bezig = false;
     if (somSchoon){
       goed++; reeks++;
