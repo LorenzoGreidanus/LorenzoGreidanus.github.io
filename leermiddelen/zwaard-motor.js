@@ -391,7 +391,11 @@ function maak(opties){
      dikker schild krijgt iets minder leven, zodat ze allemaal even lang duren. */
   var NACHTMERRIE = {
     leven: 90000,        /* voor een baas met een schild van 0,35; zie nmLeven */
-    schadeX: 1.8,        /* zoveel harder dan een gewone baas van die ronde */
+    /* De schade hing ook aan de ronde: tegen De Zwerm (ronde 30) was je in drie klappen
+       weg, tegen De Grote Fout (ronde 5) pas na twintig. Nu kost een aanval een vast
+       deel van je leven, naar hoe zwaar die aanval is: een gewone klap (schade 18) 8%,
+       zo'n twaalf klappen en je ligt. Blokken helpt nog even veel. */
+    deel: 0.08, klapMaat: 18,
     hulpRonde: 22,       /* de fouten die hij te hulp roept zijn zo sterk als in deze ronde */
     fases: [
       { vanaf: 1,    pauze: 0.78, dubbel: 0.22, hulp: 0,  hulpAantal: 0 },
@@ -574,8 +578,9 @@ function maak(opties){
     var groei = 1 + W.ronde * 0.035 + Math.max(0, W.ronde - 12) * 0.03;
     /* in een nachtmerrie slaat hij harder; de waarschuwing blijft even lang
        staan, dus je kunt het nog steeds ontwijken */
-    var nmX = W.nachtmerrie ? NACHTMERRIE.schadeX : 1;
-    var klap = Math.max(1, Math.round((schade * groei + P.maxHp * 0.022 * Math.max(0, W.ronde - 12)) * NERF * nmX * P.stats.pantser * (s2.blok ? BLOK.deel : 1)));
+    var klap = W.nachtmerrie && schade < 1000
+      ? Math.max(1, Math.round(P.maxHp * NACHTMERRIE.deel * schade / NACHTMERRIE.klapMaat * (s2.blok ? BLOK.deel : 1)))
+      : Math.max(1, Math.round((schade * groei + P.maxHp * 0.022 * Math.max(0, W.ronde - 12)) * NERF * P.stats.pantser * (s2.blok ? BLOK.deel : 1)));
     P.hp -= klap; s2.raak = s2.blok ? RAAKPAUZE * 0.5 : RAAKPAUZE; s2.flits = 0.25;
     W.cijfers.push({ x:s2.x, y:s2.y - 26, tekst:(s2.blok ? 'geblokt -' : '-') + klap, leven:0.9, kleur:s2.blok ? '#204ECF' : (kleur || '#c0442c') });
     if (P.hp <= 0){ P.hp = 0; valNeer(P); }
