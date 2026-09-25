@@ -66,7 +66,8 @@ window.TUTORIAL = (function(){
     if (d.getBoundingClientRect){
       if (d.offsetParent === null && getComputedStyle(d).position !== 'fixed') return null;
       var r = d.getBoundingClientRect();
-      return r.width || r.height ? { left:r.left, top:r.top, width:r.width, height:r.height, el:d } : null;
+      /* een leeg of heel dun element (een uitleg die er nog niet staat) is geen doel: dan het midden */
+      return r.width >= 20 && r.height >= 20 ? { left:r.left, top:r.top, width:r.width, height:r.height, el:d } : null;
     }
     return d;
   }
@@ -159,5 +160,30 @@ window.TUTORIAL = (function(){
     window.addEventListener('resize', plaats);
     teken();
   }
-  return { nodig: nodig, start: start, open: function(){ return !!laag; }, onthoud: onthoud };
+  /* wacht tot iets waar is, hoogstens zes seconden */
+  function zodra(voorwaarde, fn, max){ var t = 0; (function kijk(){ if (voorwaarde()) return fn(); if ((t += 100) < (max || 6000)) setTimeout(kijk, 100); })(); }
+  /* Voor de oefenspellen: na de startknop, zodra het spelscherm er is, de
+     tutorial. opts.bewaar geeft wat de klok nu is; opts.herstel(t) zet hem daar
+     weer op, elke zestig milliseconden zolang de tutorial open is, zodat de
+     tijd stilstaat. opts.klaar loopt na afloop. */
+  function naStart(knopId, id, stappen, opts){
+    var knop = document.getElementById(knopId); if (!knop) return;
+    opts = opts || {};
+    knop.addEventListener('click', function(){
+      if (!nodig(id)) return;
+      zodra(function(){ var sp = document.getElementById('scherm-spel'); return !!(sp && !sp.classList.contains('hide') && sp.offsetParent !== null); }, function(){
+        if (!nodig(id) || laag) return;
+        var st = typeof stappen === 'function' ? stappen() : stappen;
+        if (!st || !st.length) return;
+        var bewaard = opts.bewaar ? opts.bewaar() : undefined, klok = null;
+        if (opts.herstel) klok = setInterval(function(){ opts.herstel(bewaard); }, 60);
+        start(id, st, function(){
+          if (klok) clearInterval(klok);
+          if (opts.herstel) opts.herstel(bewaard);
+          if (opts.klaar) opts.klaar();
+        });
+      });
+    });
+  }
+  return { nodig: nodig, start: start, open: function(){ return !!laag; }, onthoud: onthoud, naStart: naStart, zodra: zodra };
 })();
