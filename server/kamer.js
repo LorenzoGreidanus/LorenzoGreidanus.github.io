@@ -88,7 +88,10 @@ const KLAS_SPELLEN = { race: "Vragenrace", eigen: "Eigen oefening", klasquiz: "K
   klimaatgrafiek: "Klimaatgrafieken",
   kaartvaardigheid: "Kaartvaardigheden",
   voedselweb: "Voedselketen en voedselweb",
-  huishoudboekje: "Het huishoudboekje" };
+  huishoudboekje: "Het huishoudboekje",
+  dictee: "Dictee",
+  dictation: "Dictation",
+  coordinaten: "Schatzoeken met coördinaten" };
 /* Hoe lang de kamer wacht voor hij iemand die wegviel ook echt weghaalt. In de
    lobby kort: herladen duurt een paar tellen. In de arena langer: een
    telefoon die even geen bereik heeft, hoort er niet meteen uit te liggen. */

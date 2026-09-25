@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Schatzoeken met coördinaten, versie 1.0: op vakspel.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Schatzoeken met co&ouml;rdinaten &middot; meneer Greidanus</title>
+<meta name="description" content="Coördinaten aflezen en aanwijzen in een assenstelsel, een route volgen en een figuur afmaken. Van het eerste kwadrant tot vier kwadranten en spiegelen.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Schatzoeken met coördinaten">
+<meta property="og:description" content="Coördinaten aflezen en aanwijzen in een assenstelsel, een route volgen en een figuur afmaken.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/coordinaten.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%23F26749'/><g fill='none' stroke='%2314224C' stroke-width='6' stroke-linecap='round'><path d='M24 20v56h56M24 52h56M52 20v56'/><circle cx='66' cy='38' r='7' fill='%2314224C'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+.rooster{width:min(100%,460px);height:auto;display:block;font-family:inherit;touch-action:manipulation}
+.rooster .lijn{stroke:var(--rand2);stroke-width:1}
+.rooster .as{stroke:var(--ink);stroke-width:2}
+.rooster text{fill:var(--muted);font-size:12px;font-weight:600}
+.rooster .punt{fill:var(--nadruk)}
+.rooster .punt.spiegel{fill:var(--amber)}
+.rooster .tik{fill:transparent;cursor:pointer}
+.rooster .tik:hover{fill:var(--nadruk-zacht)}
+.rooster .stip{fill:var(--crab);stroke:var(--kaart);stroke-width:2;pointer-events:none}
+.rooster .stip.goed{fill:var(--goed)}
+.rooster .stip.fout{fill:var(--fout)}
+.rooster .doel{fill:none;stroke:var(--goed);stroke-width:3;stroke-dasharray:4 3;pointer-events:none}
+.rooster .schat{pointer-events:none}
+.rooster .figuur{fill:var(--nadruk-zacht);stroke:var(--nadruk);stroke-width:2;stroke-dasharray:5 4}
+.roosteruit{text-align:center;color:var(--muted);font-size:.86rem;margin-top:6px}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  function tussen(a, b){ return a + Math.floor(Math.random() * (b - a + 1)); }
+  function net(x){ return String(Math.round(x * 100) / 100).replace('.', ','); }
+  function co(p){ return '(' + net(p[0]) + ', ' + net(p[1]) + ')'; }
+
+  /* het rooster: per niveau het bereik. bb alleen het eerste kwadrant. */
+  function bereik(niveau){ return niveau === 'bb' ? { x0:0, x1:10, y0:0, y1:8 } : { x0:-5, x1:5, y0:-5, y1:5 }; }
+  var SCHAT = '<g class="schat" transform="translate(-11 -10) scale(0.46)"><rect x="4" y="16" width="40" height="26" rx="4" fill="#8a5a2b" stroke="#5b3a1a" stroke-width="3"/><path d="M4 22a20 8 0 0 1 40 0" fill="#a0693a" stroke="#5b3a1a" stroke-width="3"/><rect x="20" y="24" width="8" height="8" rx="2" fill="#EA9836"/></g>';
+  /* o: { b (bereik), punten:[{p:[x,y], klas, naam}], schat:[x,y], tikbaar, stippen:[[x,y]], figuur:[[x,y],...], pijlen:[[van,naar]] } */
+  function rooster(o){
+    var b = o.b, stap = 36, L = 30, T = 16, W = (b.x1 - b.x0) * stap + L + 20, Hh = (b.y1 - b.y0) * stap + T + 30;
+    function X(x){ return L + (x - b.x0) * stap; } function Y(y){ return T + (b.y1 - y) * stap; }
+    var s = '<svg class="rooster" viewBox="0 0 ' + W + ' ' + Hh + '" role="img" aria-label="assenstelsel">';
+    for (var x = b.x0; x <= b.x1; x++) s += '<line class="' + (x === 0 ? 'as' : 'lijn') + '" x1="' + X(x) + '" y1="' + Y(b.y1) + '" x2="' + X(x) + '" y2="' + Y(b.y0) + '"/>';
+    for (var y = b.y0; y <= b.y1; y++) s += '<line class="' + (y === 0 ? 'as' : 'lijn') + '" x1="' + X(b.x0) + '" y1="' + Y(y) + '" x2="' + X(b.x1) + '" y2="' + Y(y) + '"/>';
+    for (x = b.x0; x <= b.x1; x++) if (x !== 0 || b.x0 === 0) s += '<text x="' + X(x) + '" y="' + (Y(b.y0) + 16) + '" text-anchor="middle">' + x + '</text>';
+    for (y = b.y0; y <= b.y1; y++) if (y !== 0 || b.y0 === 0) s += '<text x="' + (X(b.x0) - 8) + '" y="' + (Y(y) + 4) + '" text-anchor="end">' + y + '</text>';
+    s += '<text x="' + (X(b.x1) + 10) + '" y="' + (Y(0) + 4) + '">x</text><text x="' + (X(0) + 6) + '" y="' + (Y(b.y1) - 4) + '">y</text>';
+    if (b.x0 < 0) s += '<text x="' + (X(0) - 6) + '" y="' + (Y(0) + 14) + '" text-anchor="end">O</text>';
+    if (o.figuur) s += '<polygon class="figuur" points="' + o.figuur.map(function(p){ return X(p[0]) + ',' + Y(p[1]); }).join(' ') + '"/>';
+    (o.pijlen || []).forEach(function(pl){ s += '<line x1="' + X(pl[0][0]) + '" y1="' + Y(pl[0][1]) + '" x2="' + X(pl[1][0]) + '" y2="' + Y(pl[1][1]) + '" stroke="var(--amber)" stroke-width="3" stroke-linecap="round"/>'; });
+    (o.punten || []).forEach(function(p){ s += '<circle class="punt ' + (p.klas || '') + '" cx="' + X(p.p[0]) + '" cy="' + Y(p.p[1]) + '" r="6"/>' + (p.naam ? '<text x="' + (X(p.p[0]) + 8) + '" y="' + (Y(p.p[1]) - 8) + '" style="fill:var(--ink)">' + S(p.naam) + '</text>' : ''); });
+    if (o.schat) s += '<g transform="translate(' + X(o.schat[0]) + ' ' + Y(o.schat[1]) + ')">' + SCHAT + '</g>';
+    if (o.tikbaar) for (x = b.x0; x <= b.x1; x++) for (y = b.y0; y <= b.y1; y++) s += '<circle class="tik" data-x="' + x + '" data-y="' + y + '" cx="' + X(x) + '" cy="' + Y(y) + '" r="15"/>';
+    s += '<g class="stippen"></g></svg>';
+    return { html: s, X: X, Y: Y };
+  }
+  function willekeurig(b, zonderNul){
+    var p; do { p = [tussen(b.x0, b.x1), tussen(b.y0, b.y1)]; } while (zonderNul && (p[0] === 0 || p[1] === 0));
+    return p;
+  }
+
+  /* 1. aflezen: waar ligt de schat */
+  function aflezen(niveau){
+    var b = bereik(niveau), p = willekeurig(b, true);
+    if (niveau === 'hv' && Math.random() < 0.4){ p = [p[0] + 0.5 * kies([-1, 1]), p[1]]; if (p[0] < b.x0 || p[0] > b.x1) p[0] = Math.round(p[0]); }
+    return { onderdeel:'coördinaten: aflezen', onderdeelNaam:'aflezen', vorm:'invul', sleutel:'af' + p.join(','),
+      vraag:'Waar ligt de <b>schat</b>? Geef de coördinaten.', opdracht:'Eerst x (naar rechts), dan y (omhoog). Een halve mag als 2,5.',
+      beeld: rooster({ b:b, schat:p }).html,
+      velden:[{ label:'x', antwoord:p[0], tol:0.01 }, { label:'y', antwoord:p[1], tol:0.01 }],
+      uitleg:'Vanaf de oorsprong O: ' + net(p[0]) + ' naar ' + (p[0] >= 0 ? 'rechts' : 'links') + ' en ' + net(Math.abs(p[1])) + ' ' + (p[1] >= 0 ? 'omhoog' : 'omlaag') + '. Eerst x, dan y: ' + co(p) + '.', antwoordTekst: co(p) };
+  }
+  /* 2. aanwijzen: tik het punt aan (eigen vorm) */
+  function aanwijs(o){
+    /* o: { b, doel:[x,y], vraag, opdracht, uitleg, onderdeel, onderdeelNaam, sleutel, extra (rooster-opties) } */
+    return { onderdeel:o.onderdeel, onderdeelNaam:o.onderdeelNaam, vorm:'eigen', sleutel:o.sleutel, vraag:o.vraag, opdracht:o.opdracht, uitleg:o.uitleg, antwoordTekst: co(o.doel),
+      teken:function(el, api){
+        var r = rooster(Object.assign({ b:o.b, tikbaar:true }, o.extra || {}));
+        el.innerHTML = r.html + '<p class="roosteruit" id="roosteruit">Tik het roosterpunt aan. Nog eens tikken zet de stip ergens anders.</p>';
+        var svg = el.querySelector('svg'), stippen = svg.querySelector('.stippen'), gekozen = null;
+        svg.addEventListener('click', function(e){
+          var t = e.target.closest('.tik'); if (!t || !api.bezig()) return;
+          gekozen = [parseInt(t.getAttribute('data-x'), 10), parseInt(t.getAttribute('data-y'), 10)];
+          stippen.innerHTML = '<circle class="stip" cx="' + r.X(gekozen[0]) + '" cy="' + r.Y(gekozen[1]) + '" r="8"/>';
+          el.querySelector('#roosteruit').textContent = 'Je stip staat op ' + co(gekozen) + '. Klopt het? Druk op Nakijken.';
+          knop.disabled = false;
+        });
+        var knop = api.knop('Nakijken', function(){
+          if (!gekozen) return;
+          var ok = gekozen[0] === o.doel[0] && gekozen[1] === o.doel[1];
+          stippen.innerHTML = '<circle class="stip ' + (ok ? 'goed' : 'fout') + '" cx="' + r.X(gekozen[0]) + '" cy="' + r.Y(gekozen[1]) + '" r="8"/>' + (ok ? '' : '<circle class="doel" cx="' + r.X(o.doel[0]) + '" cy="' + r.Y(o.doel[1]) + '" r="11"/>');
+          knop.disabled = true;
+          api.klaar(ok, ok ? '' : 'Het goede punt (groen gestippeld) is ' + co(o.doel) + '; jij zat op ' + co(gekozen) + '.');
+        });
+        knop.disabled = true;
+        el.proef = function(){ svg.querySelector('.tik[data-x="' + o.doel[0] + '"][data-y="' + o.doel[1] + '"]').dispatchEvent(new MouseEvent('click', { bubbles:true })); knop.click(); };
+        el.proefFout = function(){ var q = svg.querySelector('.tik[data-x="' + o.b.x0 + '"][data-y="' + o.b.y0 + '"]'); if (o.doel[0] === o.b.x0 && o.doel[1] === o.b.y0) q = svg.querySelector('.tik[data-x="' + o.b.x1 + '"][data-y="' + o.b.y1 + '"]'); q.dispatchEvent(new MouseEvent('click', { bubbles:true })); knop.click(); };
+      } };
+  }
+  function aanwijzen(niveau){
+    var b = bereik(niveau), p = willekeurig(b, niveau !== 'bb');
+    return aanwijs({ b:b, doel:p, onderdeel:'coördinaten: aanwijzen', onderdeelNaam:'aanwijzen', sleutel:'aw' + p.join(','),
+      vraag:'Tik het punt <b>' + co(p) + '</b> aan.', opdracht:'Eerst ' + net(p[0]) + ' langs de x-as, dan ' + net(p[1]) + ' langs de y-as.',
+      uitleg:'Het eerste getal is x: ' + net(Math.abs(p[0])) + ' naar ' + (p[0] >= 0 ? 'rechts' : 'links') + '. Het tweede is y: ' + net(Math.abs(p[1])) + ' ' + (p[1] >= 0 ? 'omhoog' : 'omlaag') + '.' });
+  }
+  /* 3. route: vanaf een punt stappen zetten */
+  function route(niveau){
+    var b = bereik(niveau), start = willekeurig(b, false), dx, dy, eind;
+    do { dx = tussen(-4, 4); dy = tussen(-4, 4); if (niveau === 'bb'){ dx = Math.abs(dx); dy = Math.abs(dy); } eind = [start[0] + dx, start[1] + dy]; }
+    while ((dx === 0 && dy === 0) || eind[0] < b.x0 || eind[0] > b.x1 || eind[1] < b.y0 || eind[1] > b.y1);
+    var stappen = [];
+    if (dx) stappen.push(Math.abs(dx) + ' naar ' + (dx > 0 ? 'rechts' : 'links'));
+    if (dy) stappen.push(Math.abs(dy) + ' ' + (dy > 0 ? 'omhoog' : 'omlaag'));
+    if (Math.random() < 0.5) stappen.reverse();
+    return { onderdeel:'coördinaten: route', onderdeelNaam:'route', vorm:'invul', sleutel:'ro' + start.join(',') + dx + dy,
+      vraag:'Je start op <b>' + co(start) + '</b> en gaat ' + stappen.join(' en ') + '. Waar kom je uit?', opdracht:'x verandert bij links en rechts, y bij omhoog en omlaag.',
+      beeld: rooster({ b:b, punten:[{ p:start, naam:'start' }] }).html,
+      velden:[{ label:'x', antwoord:eind[0] }, { label:'y', antwoord:eind[1] }],
+      uitleg:'x: ' + start[0] + (dx >= 0 ? ' + ' + dx : ' − ' + Math.abs(dx)) + ' = ' + eind[0] + '. y: ' + start[1] + (dy >= 0 ? ' + ' + dy : ' − ' + Math.abs(dy)) + ' = ' + eind[1] + '. Je komt uit op ' + co(eind) + '.', antwoordTekst: co(eind) };
+  }
+  /* 4. figuur: het vierde punt van een rechthoek of vierkant, of het spiegelbeeld (hv) */
+  function figuur(niveau){
+    var b = bereik(niveau);
+    if (niveau === 'hv' && Math.random() < 0.5){
+      var p = willekeurig(b, true), as = kies(['x', 'y']), sp = as === 'x' ? [p[0], -p[1]] : [-p[0], p[1]];
+      return aanwijs({ b:b, doel:sp, onderdeel:'coördinaten: figuur', onderdeelNaam:'figuur en spiegelen', sleutel:'sp' + p.join(',') + as,
+        vraag:'Spiegel het punt <b>' + co(p) + '</b> in de <b>' + as + '-as</b>. Tik het spiegelbeeld aan.', opdracht:'Bij spiegelen in de x-as wisselt y van teken; bij de y-as wisselt x.',
+        uitleg:'Spiegelen in de ' + as + '-as: ' + (as === 'x' ? 'y' : 'x') + ' wordt tegengesteld, de andere blijft. ' + co(p) + ' wordt ' + co(sp) + '.', extra:{ punten:[{ p:p, naam:'P' }] } });
+    }
+    var w = tussen(2, 4), h = niveau === 'bb' ? tussen(2, 4) : tussen(1, 4), vierkant = Math.random() < 0.4; if (vierkant) h = w;
+    var x0 = tussen(b.x0, b.x1 - w), y0 = tussen(b.y0, b.y1 - h);
+    var hoeken = [[x0, y0], [x0 + w, y0], [x0 + w, y0 + h], [x0, y0 + h]], weg = tussen(0, 3), doel = hoeken[weg], rest = hoeken.filter(function(q, i){ return i !== weg; });
+    return aanwijs({ b:b, doel:doel, onderdeel:'coördinaten: figuur', onderdeelNaam:'figuur en spiegelen', sleutel:'fig' + hoeken.join(''),
+      vraag:'Drie hoekpunten van een <b>' + (vierkant ? 'vierkant' : 'rechthoek') + '</b> staan er al: ' + rest.map(co).join(', ') + '. Tik het vierde hoekpunt aan.',
+      opdracht:'De zijden lopen langs de roosterlijnen.',
+      uitleg:'Het vierde hoekpunt heeft de x van het punt erboven of eronder en de y van het punt ernaast: ' + co(doel) + '.',
+      extra:{ punten: rest.map(function(q, i){ return { p:q, naam:['A', 'B', 'C'][i] }; }), figuur: rest } });
+  }
+
+  var SOORTEN = { aflezen: aflezen, aanwijzen: aanwijzen, route: route, figuur: figuur };
+  VAKSPEL.maak({
+    id:'coordinaten', naam:'Schatzoeken met coördinaten', vak:'wis', kleur:'#F26749',
+    hand:'eerst x, dan y',
+    lead:'Een assenstelsel met een schat: lees af waar hij ligt, tik een punt aan bij gegeven coördinaten, volg een route en maak een rechthoek af. Op havo en vwo ook met vier kwadranten, halve coördinaten en spiegelen in een as.',
+    hoe:[
+      { kop:'Eerst x, dan y', tekst:'Coördinaten schrijf je als (x, y): eerst hoeveel je naar <b>rechts</b> gaat, dan hoeveel <b>omhoog</b>. (3, 5) is 3 naar rechts en 5 omhoog.' },
+      { kop:'Negatief', tekst:'Links van de y-as is x negatief, onder de x-as is y negatief. De oorsprong O is (0, 0).' },
+      { kop:'Aanwijzen', tekst:'Bij aanwijzen tik je een roosterpunt aan; de stip verschijnt, en met Nakijken zie je of hij goed staat.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'Alleen het eerste kwadrant: x en y van 0 tot 10.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Vier kwadranten, van -5 tot 5, met negatieve stappen.' },
+        { id:'hv', naam:'havo en vwo', uit:'Ook halve coördinaten en spiegelen in de x-as of de y-as.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' }, { id:'aflezen', naam:'aflezen' }, { id:'aanwijzen', naam:'aanwijzen' }, { id:'route', naam:'route' }, { id:'figuur', naam:'figuur en spiegelen' } ] }
+    ],
+    aantal:10,
+    maak:function(keuze, nr){
+      var soort = keuze.soort === 'alles' ? kies(['aflezen', 'aanwijzen', 'route', 'figuur']) : keuze.soort;
+      return SOORTEN[soort](keuze.niveau);
+    },
+    uitleg:{ doel:'Coördinaten lezen en gebruiken in een assenstelsel.', tijd:'tien opgaven per ronde', bediening:'Typ x en y en druk op Nakijken, of tik een roosterpunt aan en druk dan op Nakijken.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>

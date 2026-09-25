@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Dictee, versie 1.0: op vakspel.js en luisterspel.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Dictee &middot; meneer Greidanus</title>
+<meta name="description" content="Luisteren en typen: werkwoordspelling, lastige woorden, hoofdletters en leestekens, en Engelse leenwoorden. De computer leest voor, jij schrijft.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Dictee">
+<meta property="og:description" content="Luisteren en typen: werkwoordspelling, lastige woorden, hoofdletters en leestekens, en Engelse leenwoorden.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/dictee.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%23F26749'/><g fill='none' stroke='%2314224C' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'><path d='M22 40h12l16-13v46L34 60H22z'/><path d='M62 38a14 14 0 0 1 0 24M72 28a26 26 0 0 1 0 44'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script src="voorlezen.js"></script>
+<script src="luisterspel.js"></script>
+<script src="dictee-opgaven.js"></script>
+<script>
+(function(){
+  'use strict';
+  var S = VAKSPEL.schoon, D = window.DICTEE_OPGAVEN;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  var NIV = { bb:1, kgt:2, hv:3 };
+  /* de items van een onderdeel die bij het niveau passen: het niveau zelf en alles eronder; op bb ook de kgt-woorden als er te weinig zijn */
+  function items(lijst, niveau){
+    var n = NIV[niveau] || 2, uit = lijst.filter(function(x){ return x.n <= n; });
+    if (uit.length < 12) uit = lijst.filter(function(x){ return x.n <= n + 1; });
+    return uit.length ? uit : lijst;
+  }
+  function gatVan(zin, woord){
+    var i = zin.toLowerCase().indexOf(woord.toLowerCase());
+    return i < 0 ? zin : zin.slice(0, i) + '____' + zin.slice(i + woord.length);
+  }
+  function werkwoorden(niveau){
+    var it = kies(items(D.werkwoorden, niveau));
+    return LUISTER.opgave({ onderdeel:'dictee: werkwoorden', onderdeelNaam:'werkwoorden', taal:'nl-NL', sleutel:'ww' + it.woord + it.zin.length,
+      spreek: it.zin, antwoord: it.woord, gat: gatVan(it.zin, it.woord),
+      vraag:'Luister naar de zin en typ het <b>werkwoord</b> dat in het gat hoort.', opdracht:'Let op de spelling: stam, stam + t, of de verleden tijd.',
+      uitleg: it.regel, antwoordTekst: it.woord });
+  }
+  function woorden(niveau){
+    var it = kies(items(D.woorden, niveau));
+    return LUISTER.opgave({ onderdeel:'dictee: lastige woorden', onderdeelNaam:'lastige woorden', taal:'nl-NL', sleutel:'w' + it.w,
+      spreek: it.spreek || (it.w + '. ' + it.zin), antwoord: it.antwoordLijst || it.w,
+      vraag:'Luister en typ het <b>woord</b> dat je eerst hoort.', opdracht:'Je hoort het woord, en dan een zin waarin het staat.',
+      uitleg: (it.antwoordLijst ? it.antwoordLijst[0] : it.w) + ': ' + it.uit + '.', antwoordTekst: it.antwoordLijst ? it.antwoordLijst[0] : it.w });
+  }
+  function leestekens(niveau){
+    var it = kies(items(D.leestekens, niveau));
+    return LUISTER.opgave({ onderdeel:'dictee: hoofdletters en leestekens', onderdeelNaam:'hoofdletters en leestekens', taal:'nl-NL', sleutel:'lt' + it.zin.slice(0, 20), exact:true,
+      spreek: it.zin, antwoord: it.zin,
+      vraag:'Luister en typ de <b>hele zin</b>, met hoofdletters en leestekens.', opdracht:'Hoofdletters, komma’s, punten, vraagtekens en uitroeptekens tellen mee.',
+      uitleg: it.uit, antwoordTekst: it.zin });
+  }
+  function leenwoorden(niveau){
+    var it = kies(D.leenwoorden);
+    return LUISTER.opgave({ onderdeel:'dictee: leenwoorden', onderdeelNaam:'leenwoorden', taal:'nl-NL', sleutel:'lw' + it.w,
+      spreek: it.w + '. ' + it.zin, antwoord: it.w,
+      vraag:'Luister en typ het <b>Engelse leenwoord</b> in Nederlandse spelling.', opdracht:'Je hoort het woord, en dan een zin.',
+      uitleg: it.w + ': ' + it.uit + '.', antwoordTekst: it.w });
+  }
+  var SOORTEN = { werkwoorden: werkwoorden, woorden: woorden, leestekens: leestekens, leenwoorden: leenwoorden };
+  VAKSPEL.maak({
+    id:'dictee', naam:'Dictee', vak:'ned', kleur:'#F26749',
+    hand:'luisteren, en dan goed schrijven',
+    lead:'De computer leest een woord of een zin voor, jij typt hem. Werkwoordspelling in een zin, lastige woorden, hoofdletters en leestekens, en Engelse leenwoorden. Elk antwoord wordt meteen nagekeken, en bij een fout zie je letter voor letter waar het misging.',
+    hoe:[
+      { kop:'Luister goed', tekst:'Je hoort het woord of de zin, hoogstens drie keer. Typ wat je hoort; bij een zin met een gat alleen het woord.' },
+      { kop:'Nakijken met verschil', tekst:'Fout? Dan staat de goede schrijfwijze ernaast: <b>doorgestreept</b> wat te veel was, groen wat er hoort.' },
+      { kop:'De regel erbij', tekst:'Bij elk woord staat na het antwoord de regel: ’t kofschip, stam + t, de tie-woorden, hoofdletters bij namen.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'Korte zinnen, de basisregels van de werkwoordspelling en veelgebruikte woorden.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Ook voltooid deelwoorden als bijvoeglijk naamwoord, komma’s en Franse leenwoorden.' },
+        { id:'hv', naam:'havo en vwo', uit:'Lastige woorden, trema’s, aanhalingstekens en Engelse werkwoorden in Nederlandse spelling.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' }, { id:'werkwoorden', naam:'werkwoorden' }, { id:'woorden', naam:'lastige woorden' }, { id:'leestekens', naam:'hoofdletters en leestekens' }, { id:'leenwoorden', naam:'Engelse leenwoorden' } ] }
+    ],
+    aantal:10,
+    maak:function(keuze, nr){
+      var lijst = keuze.niveau === 'hv' ? ['werkwoorden', 'woorden', 'leestekens', 'leenwoorden'] : ['werkwoorden', 'werkwoorden', 'woorden', 'woorden', 'leestekens'];
+      var soort = keuze.soort === 'alles' ? kies(lijst) : keuze.soort;
+      return SOORTEN[soort](keuze.niveau);
+    },
+    uitleg:{ doel:'Goed schrijven wat je hoort: werkwoorden, lastige woorden, hoofdletters en leestekens.', tijd:'tien woorden of zinnen per ronde', bediening:'Druk op Luister (of hij leest vanzelf voor), typ wat je hoort en druk op Nakijken of Enter. Nog eens luisteren kan twee keer.' },
+    tutorial:[
+      { titel:'Luister', tekst:'De computer leest het woord of de zin voor. Hoor je het niet goed, dan kun je nog twee keer op Nog eens drukken.', doel:'luisterBtn' },
+      { titel:'Typ wat je hoort', tekst:'Typ het in het vak en druk op Enter of Nakijken. Bij een zin met een gat typ je alleen het woord dat in het gat hoort.', doel:'luisterInvoer' },
+      { titel:'Leer van het verschil', tekst:'Bij een fout zie je precies welke letters anders moesten, en de regel erbij. Lees die even, dan gaat het de volgende keer goed.', doel:'balk' }
+    ]
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>
