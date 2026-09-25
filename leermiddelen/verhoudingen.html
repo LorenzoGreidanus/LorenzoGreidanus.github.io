@@ -61,13 +61,14 @@ body.groot .vtabel input{height:62px;font-size:1.4rem}
   var SITUATIES = [
     { boven:'aantal', onder:'prijs', eenheidOnder:'€', dingen:['broodjes', 'pennen', 'appels', 'flesjes water', 'kaartjes', 'stickers'], per:[0.5, 3.5, 0.25], geld:true },
     { boven:'kilo', onder:'prijs', eenheidOnder:'€', dingen:['aardappelen', 'kaas', 'druiven', 'gehakt'], per:[1, 12, 0.5], geld:true },
-    { boven:'uur', onder:'kilometer', dingen:['de fiets', 'de auto', 'de trein', 'de scooter'], per:[15, 120, 5] },
+    { boven:'uur', onder:'kilometer', dingen:['de fiets', 'de auto', 'de trein', 'de scooter'], per:[15, 120, 5], perDing:{ 'de fiets':[12, 24], 'de scooter':[30, 45], 'de auto':[60, 120], 'de trein':[90, 140] } },
     { boven:'personen', onder:'gram', dingen:['pasta', 'rijst', 'bloem', 'suiker'], per:[50, 150, 25] },
     { boven:'minuten', onder:'liter', dingen:['de kraan', 'de tuinslang', 'de douche'], per:[4, 12, 1] },
     { boven:'zakjes', onder:'stuks', dingen:['knikkers', 'schroeven', 'snoepjes'], per:[6, 30, 2] }
   ];
-  function perVan(s, niveau){
-    var min = s.per[0], max = s.per[1], stap = s.per[2];
+  function perVan(s, niveau, ding){
+    /* per ding een eigen bereik als dat er is: een fiets rijdt geen 100 kilometer per uur */
+    var r = s.perDing && s.perDing[ding], min = r ? r[0] : s.per[0], max = r ? r[1] : s.per[1], stap = s.per[2];
     var n = Math.round((min + Math.random() * (max - min)) / stap) * stap;
     if (niveau === 'bb') n = Math.round(n);
     if (niveau === 'hv' && s.geld && Math.random() < 0.5) n = Math.round(n * 100) / 100 + 0.05 * tussen(1, 9);
@@ -129,7 +130,7 @@ body.groot .vtabel input{height:62px;font-size:1.4rem}
 
   /* 1. via 1: van een aantal naar 1, en dan naar een ander aantal */
   function via1(niveau){
-    var s = kies(SITUATIES), per = perVan(s, niveau), ding = kies(s.dingen);
+    var s = kies(SITUATIES), ding = kies(s.dingen), per = perVan(s, niveau, ding);
     var a = niveau === 'bb' ? kies([2, 4, 5, 10]) : tussen(2, 12), b = tussen(2, 15); while (b === a) b = tussen(2, 15);
     var kol = [{ b:a, o:Math.round(a * per * 100) / 100 }, { b:1, o:per, vraagO:true }, { b:b, o:Math.round(b * per * 100) / 100, vraagO:true }];
     return tabelOpgave({ s:s, boven:s.boven, onder:s.onder, kolommen:kol, onderdeel:'verhoudingstabel: via 1', onderdeelNaam:'via 1',
@@ -140,7 +141,7 @@ body.groot .vtabel input{height:62px;font-size:1.4rem}
   }
   /* 2. keer en gedeeld door: een tabel met een handige stap */
   function keerDelen(niveau){
-    var s = kies(SITUATIES), per = perVan(s, niveau), ding = kies(s.dingen);
+    var s = kies(SITUATIES), ding = kies(s.dingen), per = perVan(s, niveau, ding);
     var a = kies([2, 3, 4, 5, 6, 8]), k = niveau === 'bb' ? kies([2, 3, 10]) : kies([2, 3, 4, 5, 10]);
     var b = a * k, c = niveau === 'hv' ? a * k * kies([2, 3]) / kies([2, 4]) : b * kies([2, 3]);
     if (c === b || c !== Math.round(c)) c = b * 2;
@@ -153,7 +154,7 @@ body.groot .vtabel input{height:62px;font-size:1.4rem}
   }
   /* 3. terug: het aantal vinden bij een bedrag */
   function terug(niveau){
-    var s = kies(SITUATIES), per = perVan(s, niveau), ding = kies(s.dingen);
+    var s = kies(SITUATIES), ding = kies(s.dingen), per = perVan(s, niveau, ding);
     var a = tussen(2, 8), b = niveau === 'bb' ? a * kies([2, 3, 5]) : tussen(3, 20); while (b === a) b = tussen(3, 20);
     var kol = [{ b:a, o:Math.round(a * per * 100) / 100 }, { b:1, o:per, vraagO:true }, { b:b, o:Math.round(b * per * 100) / 100, vraagB:true }];
     return tabelOpgave({ s:s, boven:s.boven, onder:s.onder, kolommen:kol, onderdeel:'verhoudingstabel: terugrekenen', onderdeelNaam:'terugrekenen',

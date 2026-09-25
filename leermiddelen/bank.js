@@ -74,22 +74,22 @@ var TIJDVAKKEN = [
 ];
 
 var ONDERDELEN = {
-  reken: [[/^schatten: /, 'getallen'], [/^klok: /, 'meten'], [/^cijferen: /, 'getallen'], [/^metriek: /, 'meten'], [/^verhoudingstabel: /, 'verhoudingen'], {id:'tafels',naam:'tafels'},{id:'hoofd',naam:'hoofdrekenen'},{id:'cijferen',naam:'plaatswaarde en cijferen'},{id:'dhte',naam:'het DHTE-schema'},{id:'machten',naam:'machten en wortels'},{id:'negatief',naam:'negatieve getallen'},{id:'komma',naam:'kommagetallen'},{id:'gemiddelde',naam:'gemiddelde en schaal'},{id:'breuk',naam:'breuken'},{id:'procent',naam:'procenten'},{id:'verhouding',naam:'verhoudingen'},{id:'tijdgeld',naam:'tijd en geld'},{id:'meten',naam:'meten en meetkunde'}],
+  reken: [{id:'tafels',naam:'tafels'},{id:'hoofd',naam:'hoofdrekenen'},{id:'cijferen',naam:'plaatswaarde en cijferen'},{id:'dhte',naam:'het DHTE-schema'},{id:'machten',naam:'machten en wortels'},{id:'negatief',naam:'negatieve getallen'},{id:'komma',naam:'kommagetallen'},{id:'gemiddelde',naam:'gemiddelde en schaal'},{id:'breuk',naam:'breuken'},{id:'procent',naam:'procenten'},{id:'verhouding',naam:'verhoudingen'},{id:'tijdgeld',naam:'tijd en geld'},{id:'meten',naam:'meten en meetkunde'}],
   /* groep zet de onderdelen onder een kop in de kiezer; zie GROEPEN hieronder */
-  ned: [[/^dictee: /, 'spelling'], {id:'werkwoordspelling',naam:'werkwoordspelling',groep:'spelling'},{id:'spelling',naam:'los van het werkwoord',groep:'spelling'},{id:'meervoud',naam:'enkel en meervoud',groep:'spelling'},
+  ned: [{id:'werkwoordspelling',naam:'werkwoordspelling',groep:'spelling'},{id:'spelling',naam:'los van het werkwoord',groep:'spelling'},{id:'meervoud',naam:'enkel en meervoud',groep:'spelling'},
         {id:'leestekens',naam:'leestekens',groep:'interpunctie'},
         {id:'woordsoorten',naam:'welk woord is wat',groep:'woordsoorten'},
         {id:'zinsontleding',naam:'zinsdelen benoemen',groep:'zinsontleding'},
         {id:'verwijswoorden',naam:'verwijswoorden',groep:'grammatica'},
         {id:'betekenis',naam:'betekenis van woorden',groep:'lezen'},{id:'synoniemen',naam:'synoniemen',groep:'lezen'},{id:'uitdrukkingen',naam:'uitdrukkingen',groep:'lezen'},{id:'tekstverbanden',naam:'signaalwoorden',groep:'lezen'}],
-  eng: [[/^reading: /, 'lezen'], [/^dictation: /, 'woordenschat'], [/^translate: /, 'grammatica'], [/^phrasal: /, 'woordenschat'], {id:'woordjes NL naar EN',naam:'woordjes NL naar EN',groep:'woordenschat'},{id:'woordjes EN naar NL',naam:'woordjes EN naar NL',groep:'woordenschat'},{id:'valse vrienden',naam:'valse vrienden',groep:'woordenschat'},
+  eng: [{id:'woordjes NL naar EN',naam:'woordjes NL naar EN',groep:'woordenschat'},{id:'woordjes EN naar NL',naam:'woordjes EN naar NL',groep:'woordenschat'},{id:'valse vrienden',naam:'valse vrienden',groep:'woordenschat'},
         {id:'irregular verbs',naam:'irregular verbs',groep:'werkwoorden'},{id:'voorzetselwerkwoorden',naam:'werkwoord met voorzetsel',groep:'werkwoorden'},
         {id:'grammatica',naam:'grammatica',groep:'grammatica'}],
   ges: TIJDVAKKEN.map(t => ({id: t.id, naam: t.naam})).concat([{id:'staat', naam:'staatsinrichting (examen vmbo)'}, {id:'nl1900', naam:'Nederland en de wereld vanaf 1900 (examen vmbo)'}]),
   aard: [{id:'vlaggen',naam:'vlaggen van landen'},{id:'landvormen',naam:'vormen van landen'},{id:'topografie',naam:'topografie: hoofdsteden'}],
-  bio: [[/^kruisen: /, 'cellen'], [/^voedselweb: /, 'natuur'], {id:'organen',naam:'organen'},{id:'bloed',naam:'bloed en ademhaling'},{id:'vertering',naam:'vertering en voeding'},{id:'planten',naam:'planten'},{id:'cellen',naam:'cellen'},{id:'zintuigen',naam:'zintuigen en zenuwen'},{id:'ordening',naam:'ordening en ecologie'},{id:'erfelijkheid',naam:'erfelijkheid'}],
-  wis: [[/^co\u00f6rdinaten: /, 'meetkunde'], [/^hoeken: /, 'meetkunde'], [/^pythagoras: /, 'meetkunde'], [/^grafieken: /, 'verwerken'], {id:'vergelijking',naam:'vergelijkingen'},{id:'formule',naam:'formules'},{id:'oppervlakte',naam:'oppervlakte en inhoud'},{id:'omtrek',naam:'omtrek'},{id:'hoeken',naam:'hoeken'},{id:'grafiek',naam:'grafieken en assenstelsel'},{id:'statistiek',naam:'statistiek'},{id:'pythagoras',naam:'stelling van Pythagoras'},{id:'vlakken',naam:'vlakken herkennen'}],
-  burg: [[/^verkiezingen: /, 'staat'], {id:'democratie',naam:'democratie en verkiezingen'},{id:'rechtsstaat',naam:'rechtsstaat en grondrechten'},{id:'media',naam:'media en nieuws'},{id:'europa',naam:'Europa en de wereld'},{id:'samenleven',naam:'samenleven'},{id:'geld',naam:'geld en werk'}]
+  bio: [{id:'organen',naam:'organen'},{id:'bloed',naam:'bloed en ademhaling'},{id:'vertering',naam:'vertering en voeding'},{id:'planten',naam:'planten'},{id:'cellen',naam:'cellen'},{id:'zintuigen',naam:'zintuigen en zenuwen'},{id:'ordening',naam:'ordening en ecologie'},{id:'erfelijkheid',naam:'erfelijkheid'}],
+  wis: [{id:'vergelijking',naam:'vergelijkingen'},{id:'formule',naam:'formules'},{id:'oppervlakte',naam:'oppervlakte en inhoud'},{id:'omtrek',naam:'omtrek'},{id:'hoeken',naam:'hoeken'},{id:'grafiek',naam:'grafieken en assenstelsel'},{id:'statistiek',naam:'statistiek'},{id:'pythagoras',naam:'stelling van Pythagoras'},{id:'vlakken',naam:'vlakken herkennen'}],
+  burg: [{id:'democratie',naam:'democratie en verkiezingen'},{id:'rechtsstaat',naam:'rechtsstaat en grondrechten'},{id:'media',naam:'media en nieuws'},{id:'europa',naam:'Europa en de wereld'},{id:'samenleven',naam:'samenleven'},{id:'geld',naam:'geld en werk'}]
 };
 ONDERDELEN.aard.push({id:'examen-ak', naam:'weer, water, bevolking (examen vmbo)'});
 ONDERDELEN.bio.push({id:'examen-bio', naam:'examenstof vmbo'});
@@ -125,7 +125,7 @@ var GROEPEN = {
   bio:  [{id:'lichaam',naam:'Het lichaam'},{id:'cellen',naam:'Cellen en erfelijkheid'},{id:'natuur',naam:'Planten en ecologie'},{id:'examen',naam:'Examenstof'}],
   aard: [{id:'landen',naam:'Landen herkennen'},{id:'examen',naam:'Examenstof'}],
   burg: [{id:'staat',naam:'Democratie en rechtsstaat'},{id:'samen',naam:'Samenleven en media'},{id:'wereld',naam:'Europa en economie'},{id:'examen',naam:'Examenstof'}],
-  ges:  [[/^kaart door de tijd: /, 'vaardig'], [/^wie ben ik: /, 'vaardig'], [/^oorzaak en gevolg: /, 'vaardig'], {id:'tijdvakken',naam:'Tijdvakken'},{id:'vaardig',naam:'Vaardigheden'},{id:'examen',naam:'Examenstof'}]
+  ges:  [{id:'tijdvakken',naam:'Tijdvakken'},{id:'vaardig',naam:'Vaardigheden'},{id:'examen',naam:'Examenstof'}]
 };
 /* De groep van een onderdeel staat bij het onderdeel zelf (zie ONDERDELEN
    hierboven); voor de vakken die er later bij kwamen staat hij hier, zodat de
@@ -156,13 +156,15 @@ TIJDVAKKEN.forEach(function(t){ IN_GROEP.ges[t.id] = 'tijdvakken'; });
    tot 1000", "korting uitrekenen", "topografie: Europa, landen". Die staan
    niet los in de lijst hierboven; hun groep volgt uit hoe de naam begint. */
 var IN_PATROON = {
-  reken: [[/^DHTE /, 'getallen'], [/./, 'verhoudingen']],
+  reken: [[/^schatten: /, 'getallen'], [/^klok: /, 'meten'], [/^cijferen: /, 'getallen'], [/^metriek: /, 'meten'], [/^verhoudingstabel: /, 'verhoudingen'], [/^DHTE /, 'getallen'], [/./, 'verhoudingen']],
   /* de figuren uit Vlakken herkennen (vlak: ruit) en de soorten van De balans (vergelijking: ...) */
-  wis: [[/^vlak: /, 'meetkunde'], [/^vergelijking: /, 'algebra']],
-  ned:   [[/^(tegenwoordige tijd|verleden tijd|voltooid deelwoord|de d of t val)$/, 'spelling'], [/^(kernzin|schrijfdoel|tekstverbanden)$/, 'lezen']],
-  eng:   [[/^irregular /, 'werkwoorden'], [/./, 'grammatica']],
+  wis: [[/^co\u00f6rdinaten: /, 'meetkunde'], [/^hoeken: /, 'meetkunde'], [/^pythagoras: /, 'meetkunde'], [/^grafieken: /, 'verwerken'], [/^vlak: /, 'meetkunde'], [/^vergelijking: /, 'algebra']],
+  ned:   [[/^dictee: /, 'spelling'], [/^(tegenwoordige tijd|verleden tijd|voltooid deelwoord|de d of t val)$/, 'spelling'], [/^(kernzin|schrijfdoel|tekstverbanden)$/, 'lezen']],
+  eng:   [[/^reading: /, 'lezen'], [/^dictation: /, 'woordenschat'], [/^translate: /, 'grammatica'], [/^phrasal: /, 'woordenschat'], [/^irregular /, 'werkwoorden'], [/./, 'grammatica']],
   aard:  [[/^topografie/, 'landen']],
-  ges:   [[/^werken met bronnen$/, 'vaardig']]
+  ges:   [[/^kaart door de tijd: /, 'vaardig'], [/^wie ben ik: /, 'vaardig'], [/^oorzaak en gevolg: /, 'vaardig'], [/^werken met bronnen$/, 'vaardig']],
+  bio: [[/^kruisen: /, 'cellen'], [/^voedselweb: /, 'natuur']],
+  burg: [[/^verkiezingen: /, 'staat']]
 };
 function groepVan(vak, o){
   var g = o.groep || (IN_GROEP[vak] && IN_GROEP[vak][o.id]);
