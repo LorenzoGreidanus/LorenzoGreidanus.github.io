@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Kruisingsschema, versie 1.0: op vakspel.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Kruisingsschema &middot; meneer Greidanus</title>
+<meta name="description" content="Erfelijkheid oefenen: het kruisingsschema invullen, kansen berekenen, het genotype van de ouders afleiden, begrippen en stambomen. Met oogkleur, bloemkleur, erwten en cavia's.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Kruisingsschema">
+<meta property="og:description" content="Erfelijkheid oefenen: het kruisingsschema invullen, kansen berekenen, genotypen afleiden, begrippen en stambomen.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/kruisen.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%2383A5F2'/><g fill='none' stroke='%2314224C' stroke-width='6' stroke-linecap='round'><path d='M30 30h40v40H30zM50 30v40M30 50h40'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+.ouders{display:flex;gap:18px;justify-content:center;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px}
+.ouder{display:grid;justify-items:center;gap:2px;font-size:.82rem;color:var(--muted);font-weight:600}
+.ouder svg{width:76px;height:76px}
+.ouder b{color:var(--ink);font-size:1rem;letter-spacing:.08em}
+.kruis{font-size:1.6rem;color:var(--muted);align-self:center;padding-bottom:22px}
+.punnett{border-collapse:separate;border-spacing:4px;margin:0 auto;font-size:1.05rem}
+.punnett th{background:var(--kaart2);border-radius:10px;padding:6px 12px;font-weight:700;letter-spacing:.1em;min-width:58px}
+.punnett th.hoek{background:transparent}
+.punnett td{padding:0}
+.punnett input,.punnett .vast{width:76px;height:52px;border-radius:12px;border:2px solid var(--rand2);background:var(--kaart);color:var(--ink);font-size:1.15rem;font-weight:700;text-align:center;letter-spacing:.1em;display:grid;place-items:center}
+.punnett input:focus{outline:none;border-color:var(--nadruk);box-shadow:0 0 0 4px var(--nadruk-zacht)}
+.punnett input.goed{background:var(--goed-bg);border-color:var(--goed);color:var(--goed)}
+.punnett input.fout{background:var(--fout-bg);border-color:var(--fout);color:var(--fout)}
+.punnett .vast.dom{background:var(--kaart-aan)}
+.verhouding{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:12px;font-size:.92rem}
+.verhouding input{width:4em;height:46px;border-radius:12px;border:2px solid var(--rand2);background:var(--kaart);color:var(--ink);font-size:1.1rem;font-weight:600;text-align:center}
+.verhouding input.goed{background:var(--goed-bg);border-color:var(--goed);color:var(--goed)}
+.verhouding input.fout{background:var(--fout-bg);border-color:var(--fout);color:var(--fout)}
+.nakomelingen{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:6px 0 0}
+.nakomelingen svg{width:44px;height:44px}
+.stamboom{width:min(100%,420px);height:auto;display:block;font-family:inherit}
+.stamboom text{fill:var(--ink);font-size:11px;font-weight:600}
+.stamboom .lijn{stroke:var(--muted);stroke-width:2;fill:none}
+.stamboom .vorm{stroke:var(--ink);stroke-width:2;fill:var(--kaart)}
+.stamboom .vorm.aan{fill:var(--nadruk)}
+.stamboomuit{text-align:center;color:var(--muted);font-size:.84rem;margin-top:6px}
+@media(max-width:420px){.punnett input,.punnett .vast{width:62px;height:46px;font-size:1rem}.ouder svg{width:60px;height:60px}}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+
+  /* De eigenschappen: een letter, het dominante en het recessieve fenotype,
+     en een tekening per fenotype. Het beeld leest de kleur uit de eigenschap. */
+  var EIG = [
+    { id:'oog', naam:'oogkleur', letter:'B', dom:'bruine ogen', rec:'blauwe ogen', wie:'mens', kleuren:{ dom:'#6b3f1d', rec:'#3b7dd8' },
+      teken:function(k){ return '<svg viewBox="0 0 48 48"><path d="M4 24c6-9 13-13 20-13s14 4 20 13c-6 9-13 13-20 13S10 33 4 24z" fill="#fff" stroke="var(--ink)" stroke-width="2"/><circle cx="24" cy="24" r="8" fill="' + k + '"/><circle cx="24" cy="24" r="3.5" fill="#111"/><circle cx="27" cy="21" r="1.5" fill="#fff"/></svg>'; } },
+    { id:'bloem', naam:'bloemkleur', letter:'R', dom:'rode bloemen', rec:'witte bloemen', wie:'plant', kleuren:{ dom:'#e0402f', rec:'#f7f3ea' },
+      teken:function(k){ var b = ''; for (var i = 0; i < 6; i++) b += '<ellipse cx="24" cy="12" rx="6" ry="10" fill="' + k + '" stroke="var(--ink)" stroke-width="1.2" transform="rotate(' + (i * 60) + ' 24 24)"/>'; return '<svg viewBox="0 0 48 48"><path d="M24 30v16" stroke="#2f7d52" stroke-width="3"/>' + b + '<circle cx="24" cy="24" r="5" fill="#EA9836"/></svg>'; } },
+    { id:'erwt', naam:'erwtvorm', letter:'R', dom:'ronde erwten', rec:'gerimpelde erwten', wie:'plant', kleuren:{ dom:'#5aa64a', rec:'#5aa64a' },
+      teken:function(k, isRec){ return '<svg viewBox="0 0 48 48">' + (isRec ? '<path d="M24 8c9 0 16 7 16 16s-7 16-16 16S8 33 8 24 15 8 24 8z" fill="' + k + '" stroke="var(--ink)" stroke-width="2"/><path d="M14 16q5 4 0 8t0 8M24 12q4 6 0 12t0 12M34 16q-5 4 0 8t0 8" fill="none" stroke="#2f5f28" stroke-width="2"/>' : '<circle cx="24" cy="24" r="16" fill="' + k + '" stroke="var(--ink)" stroke-width="2"/><circle cx="18" cy="18" r="4" fill="#fff" fill-opacity=".5"/>') + '</svg>'; } },
+    { id:'vacht', naam:'vachtkleur bij cavia’s', letter:'Z', dom:'zwarte vacht', rec:'witte vacht', wie:'dier', kleuren:{ dom:'#2b2b2b', rec:'#f2ede4' },
+      teken:function(k){ return '<svg viewBox="0 0 48 48"><ellipse cx="26" cy="28" rx="18" ry="13" fill="' + k + '" stroke="var(--ink)" stroke-width="2"/><circle cx="12" cy="22" r="9" fill="' + k + '" stroke="var(--ink)" stroke-width="2"/><circle cx="9" cy="21" r="1.8" fill="#fff"/><circle cx="9.5" cy="21" r="1" fill="#111"/><path d="M14 13l3-5 3 6" fill="' + k + '" stroke="var(--ink)" stroke-width="1.5"/><circle cx="4" cy="25" r="1.4" fill="#e88"/></svg>'; } }
+  ];
+  function fenotype(e, g){ return g.indexOf(e.letter) >= 0 ? e.dom : e.rec; }
+  function plaatje(e, g){ var rec = g.indexOf(e.letter) < 0; return e.teken(rec ? e.kleuren.rec : e.kleuren.dom, rec); }
+  function netG(e, g){ var a = g.split(''); a.sort(function(x, y){ return x === e.letter ? -1 : y === e.letter ? 1 : 0; }); return a.join(''); }
+  function gameten(g){ return [g[0], g[1]]; }
+  function nakomelingen(e, g1, g2){ var uit = []; gameten(g1).forEach(function(a){ gameten(g2).forEach(function(b){ uit.push(netG(e, a + b)); }); }); return uit; }
+  function ouderHtml(e, g, naam){ return '<div class="ouder">' + plaatje(e, g) + '<b>' + g + '</b><span>' + naam + ': ' + fenotype(e, g) + '</span></div>'; }
+  function oudersHtml(e, g1, g2){ return '<div class="ouders">' + ouderHtml(e, g1, 'ouder 1') + '<span class="kruis">×</span>' + ouderHtml(e, g2, 'ouder 2') + '</div>'; }
+  function genotypen(e){ var A = e.letter, a = A.toLowerCase(); return [A + A, A + a, a + a]; }
+  function willekeurigPaar(e, niveau){
+    var gs = genotypen(e), g1 = kies(gs), g2 = kies(gs);
+    if (niveau === 'bb'){ g1 = e.letter + e.letter.toLowerCase(); g2 = kies([g1, gs[2]]); }
+    return [g1, g2];
+  }
+  function verdeling(e, kids){ var d = 0; kids.forEach(function(k){ if (k.indexOf(e.letter) >= 0) d++; }); return { dom:d, rec:4 - d }; }
+  function uitlegSchema(e, g1, g2, kids){
+    var v = verdeling(e, kids);
+    return 'Ouder 1 geeft ' + g1[0] + ' of ' + g1[1] + ', ouder 2 geeft ' + g2[0] + ' of ' + g2[1] + '. In het schema: ' + kids.join(', ') + '. ' +
+      (v.rec === 0 ? 'Alle nakomelingen hebben ' + e.dom + ', want ' + e.letter + ' is dominant.' : v.dom === 0 ? 'Alle nakomelingen zijn ' + e.letter.toLowerCase() + e.letter.toLowerCase() + ': ' + e.rec + '.' : v.dom + ' van de 4 (' + (v.dom * 25) + '%) hebben ' + e.dom + ', ' + v.rec + ' van de 4 hebben ' + e.rec + '. Verhouding ' + v.dom + ' : ' + v.rec + '.');
+  }
+
+  /* 1. het schema invullen: eigen vorm */
+  function schema(niveau){
+    var e = kies(EIG), p = willekeurigPaar(e, niveau), g1 = p[0], g2 = p[1], kids = nakomelingen(e, g1, g2), v = verdeling(e, kids);
+    var metVerhouding = niveau !== 'bb';
+    return { onderdeel:'kruisen: schema invullen', onderdeelNaam:'schema invullen', vorm:'eigen', sleutel:'s' + e.id + g1 + g2,
+      vraag:'Vul het kruisingsschema in voor <b>' + e.naam + '</b>: ouder 1 is ' + g1 + ', ouder 2 is ' + g2 + '.',
+      opdracht:'Typ in elk vakje het genotype van het kind (twee letters). ' + e.letter + ' = ' + e.dom + ' (dominant), ' + e.letter.toLowerCase() + ' = ' + e.rec + ' (recessief).' + (metVerhouding ? ' Daarna: hoeveel van de vier hebben ' + e.dom + '?' : ''),
+      beeld: oudersHtml(e, g1, g2), uitleg: uitlegSchema(e, g1, g2, kids), antwoordTekst: kids.join(', ') + (metVerhouding ? '; ' + v.dom + ' van de 4' : ''),
+      teken:function(el, api){
+        var gm1 = gameten(g1), gm2 = gameten(g2), i = 0;
+        el.innerHTML = '<table class="punnett" aria-label="kruisingsschema"><tr><th class="hoek"></th><th>' + gm2[0] + '</th><th>' + gm2[1] + '</th></tr>' +
+          gm1.map(function(a){ return '<tr><th>' + a + '</th>' + gm2.map(function(b){ var id = i++; return '<td><input maxlength="2" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="vakje ' + (id + 1) + '" data-a="' + netG(e, a + b) + '"></td>'; }).join('') + '</tr>'; }).join('') + '</table>' +
+          (metVerhouding ? '<div class="verhouding"><span>' + e.dom + ':</span><input inputmode="numeric" maxlength="1" aria-label="aantal met ' + e.dom + '" data-a="' + v.dom + '"><span>van de 4</span></div>' : '');
+        var invoer = el.querySelectorAll('input');
+        Array.prototype.forEach.call(invoer, function(inp, k){ inp.addEventListener('keydown', function(ev){ if (ev.key === 'Enter'){ ev.preventDefault(); if (invoer[k + 1]) invoer[k + 1].focus(); else knop.click(); } }); });
+        setTimeout(function(){ invoer[0].focus(); }, 50);
+        var knop = api.knop('Nakijken', function(){
+          var alles = true;
+          Array.prototype.forEach.call(invoer, function(inp){
+            var a = inp.getAttribute('data-a'), w = inp.value.trim(), ok = /^\d$/.test(a) ? w === a : (w.length === 2 && netG(e, w) === a);
+            inp.disabled = true; inp.classList.add(ok ? 'goed' : 'fout'); if (!ok){ alles = false; inp.value = w ? w + ' → ' + a : a; }
+          });
+          knop.disabled = true; api.klaar(alles, '');
+        });
+        el.proef = function(){ Array.prototype.forEach.call(invoer, function(inp){ inp.value = inp.getAttribute('data-a'); }); knop.click(); };
+        el.proefFout = function(){ Array.prototype.forEach.call(invoer, function(inp){ inp.value = 'xx'; }); knop.click(); };
+      } };
+  }
+  /* 2. kans: hoeveel procent of welk deel */
+  function kans(niveau){
+    var e = kies(EIG), p = willekeurigPaar(e, niveau), g1 = p[0], g2 = p[1], kids = nakomelingen(e, g1, g2), v = verdeling(e, kids);
+    var vraagRec = Math.random() < 0.5, n = vraagRec ? v.rec : v.dom, wat = vraagRec ? e.rec : e.dom, pct = n * 25;
+    var beeld = oudersHtml(e, g1, g2);
+    if (niveau === 'bb'){
+      var opties = ['0%', '25%', '50%', '75%', '100%'], goedI = opties.indexOf(pct + '%');
+      return { onderdeel:'kruisen: kans', onderdeelNaam:'kans', vorm:'meerkeuze', vasteVolgorde:true, sleutel:'k' + e.id + g1 + g2 + wat,
+        vraag:'Ouder 1 is <b>' + g1 + '</b>, ouder 2 is <b>' + g2 + '</b>. Hoeveel procent van de kinderen heeft ' + wat + '?', opdracht:e.letter + ' = ' + e.dom + ' (dominant), ' + e.letter.toLowerCase() + ' = ' + e.rec + '. Maak eerst het schema in je hoofd.',
+        beeld: beeld, opties: opties, goed: goedI, uitleg: uitlegSchema(e, g1, g2, kids), antwoordTekst: pct + '%' };
+    }
+    return { onderdeel:'kruisen: kans', onderdeelNaam:'kans', vorm:'invul', sleutel:'k' + e.id + g1 + g2 + wat,
+      vraag:'Ouder 1 is <b>' + g1 + '</b>, ouder 2 is <b>' + g2 + '</b>. Hoeveel procent van de kinderen heeft ' + wat + '?', opdracht:e.letter + ' = ' + e.dom + ' (dominant), ' + e.letter.toLowerCase() + ' = ' + e.rec + '.',
+      beeld: beeld, velden:[{ label:'kans op ' + wat, antwoord: pct, eenheid:'%' }], uitleg: uitlegSchema(e, g1, g2, kids), antwoordTekst: pct + '%' };
+  }
+  /* 3. genotype van de ouders afleiden uit de nakomelingen */
+  function ouders(niveau){
+    var e = kies(EIG), gs = genotypen(e), A = e.letter, a = A.toLowerCase();
+    var paren = [[A + a, A + a], [A + a, a + a], [A + A, a + a], [A + A, A + a], [a + a, a + a]];
+    if (niveau === 'bb') paren = paren.slice(0, 3);
+    var p = kies(paren), kids = nakomelingen(e, p[0], p[1]), v = verdeling(e, kids);
+    var tekst = v.rec === 0 && p[0] === A + A ? 'alle kinderen hebben ' + e.dom + ', ook al heeft een ouder ' + e.rec : v.rec === 0 ? 'alle kinderen hebben ' + e.dom : v.dom === 0 ? 'alle kinderen hebben ' + e.rec : v.dom === 3 ? 'ongeveer 3 van de 4 kinderen hebben ' + e.dom + ', 1 van de 4 ' + e.rec : 'de helft van de kinderen heeft ' + e.dom + ', de helft ' + e.rec;
+    var goed = p[0] + ' × ' + p[1];
+    var anderen = H(paren.filter(function(q){ return !(q[0] === p[0] && q[1] === p[1]); })).slice(0, 3).map(function(q){ return q[0] + ' × ' + q[1]; });
+    var opties = H([goed].concat(anderen));
+    var beeld = '<div class="nakomelingen">' + kids.map(function(k){ return plaatje(e, k); }).join('') + '</div>';
+    return { onderdeel:'kruisen: genotype van de ouders', onderdeelNaam:'genotype van de ouders', vorm:'meerkeuze', sleutel:'o' + e.id + p.join(''),
+      vraag:'Bij ' + e.naam + ': ' + tekst + '. Wat zijn de <b>genotypen van de ouders</b>?', opdracht:A + ' = ' + e.dom + ' (dominant), ' + a + ' = ' + e.rec + '. Kijk vooral of er kinderen met ' + e.rec + ' zijn: die hebben van allebei de ouders een ' + a + '.',
+      beeld: beeld, opties: opties, goed: opties.indexOf(goed),
+      uitleg: (v.dom && v.rec ? 'Er zijn kinderen met ' + e.rec + ' (' + a + a + '), dus beide ouders hebben minstens een ' + a + '. ' : v.rec === 0 ? 'Geen enkel kind heeft ' + e.rec + ', dus minstens een ouder is ' + A + A + '. ' : 'Alle kinderen zijn ' + a + a + ', dus beide ouders zijn ' + a + a + '. ') + uitlegSchema(e, p[0], p[1], kids), antwoordTekst: goed };
+  }
+  /* 4. begrippen */
+  var BEGRIPPEN = [
+    { b:'dominant', u:'een eigenschap die je al ziet als je er een allel van hebt', vb:function(e){ return e.dom + ' bij ' + e.letter + e.letter.toLowerCase(); } },
+    { b:'recessief', u:'een eigenschap die je alleen ziet als je er twee allelen van hebt', vb:function(e){ return e.rec + ' alleen bij ' + e.letter.toLowerCase() + e.letter.toLowerCase(); } },
+    { b:'homozygoot', u:'twee dezelfde allelen voor een eigenschap', vb:function(e){ return e.letter + e.letter + ' of ' + e.letter.toLowerCase() + e.letter.toLowerCase(); } },
+    { b:'heterozygoot', u:'twee verschillende allelen voor een eigenschap', vb:function(e){ return e.letter + e.letter.toLowerCase(); } },
+    { b:'genotype', u:'de letters: welke allelen iemand heeft', vb:function(e){ return e.letter + e.letter.toLowerCase(); } },
+    { b:'fenotype', u:'wat je van buiten ziet: de eigenschap zelf', vb:function(e){ return e.dom; } },
+    { b:'allel', u:'een van de vormen van een gen', vb:function(e){ return e.letter + ' en ' + e.letter.toLowerCase(); } },
+    { b:'drager', u:'iemand met een recessief allel dat je niet ziet', vb:function(e){ return e.letter + e.letter.toLowerCase() + ': ' + e.dom + ', maar draagt ' + e.letter.toLowerCase(); } }
+  ];
+  function begrippen(niveau){
+    var e = kies(EIG), b = kies(BEGRIPPEN), soort = kies(['uit', 'vb']);
+    var anderen = H(BEGRIPPEN.filter(function(x){ return x !== b; })).slice(0, 3), opties = H([b].concat(anderen)).map(function(x){ return x.b; });
+    var beeld = '<div class="ouders"><div class="ouder">' + plaatje(e, e.letter + e.letter.toLowerCase()) + '<b>' + e.letter + e.letter.toLowerCase() + '</b><span>' + fenotype(e, e.letter + e.letter.toLowerCase()) + '</span></div><div class="ouder">' + plaatje(e, e.letter.toLowerCase() + e.letter.toLowerCase()) + '<b>' + e.letter.toLowerCase() + e.letter.toLowerCase() + '</b><span>' + e.rec + '</span></div></div>';
+    return { onderdeel:'kruisen: begrippen', onderdeelNaam:'begrippen', vorm:'meerkeuze', sleutel:'b' + b.b + soort,
+      vraag: soort === 'uit' ? 'Welk begrip past bij: <b>' + b.u + '</b>?' : 'Welk begrip hoort bij dit voorbeeld: <b>' + b.vb(e) + '</b>?', opdracht: e.letter + ' = ' + e.dom + ', ' + e.letter.toLowerCase() + ' = ' + e.rec + '.',
+      beeld: beeld, opties: opties, goed: opties.indexOf(b.b), uitleg: b.b.charAt(0).toUpperCase() + b.b.slice(1) + ': ' + b.u + '. Voorbeeld: ' + b.vb(e) + '.', antwoordTekst: b.b };
+  }
+  /* 5. stamboom (hv): een klein gezin, ingekleurd wie de eigenschap heeft */
+  function stamboom(niveau){
+    /* een stamboom is van mensen of dieren; bloemen en erwten hebben geen vader en moeder */
+    var e = kies(EIG.filter(function(x){ return x.wie !== 'plant'; })), A = e.letter, a = A.toLowerCase();
+    /* de ouders: beide heterozygoot; kinderen: een aa, twee Aa, een AA (recessieve eigenschap komt bij een kind tevoorschijn) */
+    var recessiefZichtbaar = Math.random() < 0.6;
+    var vader = recessiefZichtbaar ? A + a : a + a, moeder = recessiefZichtbaar ? A + a : A + a;
+    var kinderen = recessiefZichtbaar ? [A + A, A + a, a + a, A + a] : [A + a, A + a, A + a, A + a];
+    var aanKleur = recessiefZichtbaar ? function(g){ return g === a + a; } : function(g){ return g.indexOf(A) >= 0; };
+    var welkeEig = recessiefZichtbaar ? e.rec : e.dom;
+    var W = 420, s = '<svg class="stamboom" viewBox="0 0 ' + W + ' 190" role="img" aria-label="stamboom">';
+    function vorm(x, y, man, aan, naam){ return (man ? '<rect class="vorm' + (aan ? ' aan' : '') + '" x="' + (x - 16) + '" y="' + (y - 16) + '" width="32" height="32" rx="4"/>' : '<circle class="vorm' + (aan ? ' aan' : '') + '" cx="' + x + '" cy="' + y + '" r="16"/>') + '<text x="' + x + '" y="' + (y + 32) + '" text-anchor="middle">' + naam + '</text>'; }
+    s += '<path class="lijn" d="M170 40h80M210 40v40M110 80h200"/>';
+    kinderen.forEach(function(g, i){ s += '<path class="lijn" d="M' + (110 + i * 66) + ' 80v30"/>'; });
+    s += vorm(170, 40, true, aanKleur(vader), '1: vader') + vorm(250, 40, false, aanKleur(moeder), '2: moeder');
+    kinderen.forEach(function(g, i){ s += vorm(110 + i * 66, 126, i % 2 === 0, aanKleur(g), (i + 3) + ''); });
+    s += '<rect class="vorm aan" x="' + (W - 130) + '" y="160" width="14" height="14" rx="3"/><text x="' + (W - 110) + '" y="172">= ' + S(welkeEig) + '</text></svg>';
+    var soort = kies(['domrec', 'genotype']);
+    if (soort === 'domrec'){
+      var opties = ['recessief: twee ouders zonder de eigenschap krijgen een kind mét', 'dominant: elk kind met de eigenschap heeft een ouder met de eigenschap', 'dat kun je hieruit niet zien', 'geslachtsgebonden: alleen de jongens hebben het'];
+      var goedI = recessiefZichtbaar ? 0 : 1;
+      return { onderdeel:'kruisen: stamboom', onderdeelNaam:'stamboom', vorm:'meerkeuze', vasteVolgorde:true, sleutel:'st' + e.id + (recessiefZichtbaar ? 'r' : 'd'),
+        vraag:'De ingekleurde personen hebben <b>' + welkeEig + '</b>. Is die eigenschap dominant of recessief?', opdracht:'Vierkant is een man, rondje een vrouw. Kijk of twee ouders zonder de eigenschap een kind mét de eigenschap hebben.',
+        beeld: s, opties: opties, goed: goedI,
+        uitleg: recessiefZichtbaar ? 'Vader en moeder hebben allebei ' + e.dom + ', maar kind 5 heeft ' + e.rec + '. Dat kan alleen als ' + e.rec + ' recessief is en beide ouders drager zijn (' + A + a + ').' : 'Elk kind met ' + e.dom + ' heeft een ouder met ' + e.dom + ', en de moeder (' + A + a + ') geeft het door. Dat past bij een dominante eigenschap; met alleen deze stamboom is dominant de beste verklaring.', antwoordTekst: opties[goedI] };
+    }
+    var wie = recessiefZichtbaar ? kies([[0, 'vader', vader], [1, 'moeder', moeder], [4, 'kind 5', kinderen[2]]]) : [0, 'vader', vader];
+    var gs = [A + A, A + a, a + a], goedG = wie[2];
+    return { onderdeel:'kruisen: stamboom', onderdeelNaam:'stamboom', vorm:'meerkeuze', vasteVolgorde:true, sleutel:'sg' + e.id + wie[1] + (recessiefZichtbaar ? 'r' : 'd'),
+      vraag:'De ingekleurde personen hebben <b>' + welkeEig + '</b> (' + (recessiefZichtbaar ? 'recessief' : 'dominant') + '). Wat is het genotype van <b>' + wie[1] + '</b>?', opdracht:A + ' = ' + e.dom + ', ' + a + ' = ' + e.rec + '.',
+      beeld: s, opties: gs, goed: gs.indexOf(goedG),
+      uitleg: recessiefZichtbaar ? (wie[0] === 4 ? 'Kind 5 heeft de recessieve eigenschap, dus twee keer ' + a + ': ' + a + a + '.' : wie[1] + ' heeft ' + e.dom + ' maar kreeg een kind met ' + e.rec + ', dus ' + wie[1] + ' is drager: ' + A + a + '.') : 'De vader heeft ' + e.rec + ' (niet ingekleurd) en dat is recessief: ' + a + a + '.', antwoordTekst: goedG };
+  }
+
+  var SOORTEN = { schema: schema, kans: kans, ouders: ouders, begrippen: begrippen, stamboom: stamboom };
+  VAKSPEL.maak({
+    id:'kruisen', naam:'Kruisingsschema', vak:'bio', kleur:'#83A5F2',
+    hand:'wat krijgen de kinderen?',
+    lead:'Erfelijkheid met bruine en blauwe ogen, rode en witte bloemen, ronde en gerimpelde erwten en zwarte en witte cavia’s. Je vult het kruisingsschema in, berekent de kans op een eigenschap, leidt de genotypen van de ouders af en leest op havo en vwo een stamboom.',
+    hoe:[
+      { kop:'Het schema', tekst:'Elke ouder geeft <b>een</b> van zijn twee letters door. Zet de letters van ouder 1 links en die van ouder 2 boven; elk vakje is een mogelijk kind.' },
+      { kop:'Dominant en recessief', tekst:'De hoofdletter wint: Bb heeft bruine ogen. Alleen bb heeft blauwe ogen. Elk vakje is een kans van 1 op 4.' },
+      { kop:'Terugredeneren', tekst:'Heeft een kind de recessieve eigenschap, dan hebben beide ouders minstens een kleine letter. Zo lees je ook een stamboom.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'Schema’s met een heterozygote ouder, kansen als meerkeuze.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Alle combinaties, kans in procenten, genotype van de ouders.' },
+        { id:'hv', naam:'havo en vwo', uit:'Ook stambomen: dominant of recessief, en het genotype van een persoon.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' }, { id:'schema', naam:'schema invullen' }, { id:'kans', naam:'kans' }, { id:'ouders', naam:'genotype van de ouders' }, { id:'begrippen', naam:'begrippen' }, { id:'stamboom', naam:'stamboom' } ] }
+    ],
+    aantal:10,
+    maak:function(keuze, nr){
+      var lijst = ['schema', 'schema', 'kans', 'ouders', 'begrippen']; if (keuze.niveau === 'hv') lijst.push('stamboom', 'stamboom');
+      var soort = keuze.soort === 'alles' ? kies(lijst) : keuze.soort;
+      return SOORTEN[soort](keuze.niveau);
+    },
+    uitleg:{ doel:'Kruisingsschema’s invullen en erfelijkheid begrijpen: dominant, recessief, genotype, fenotype.', tijd:'tien opgaven per ronde', bediening:'Typ in elk vakje twee letters (Bb of bB is allebei goed) en druk op Nakijken. Bij meerkeuze tik je een antwoord aan.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>

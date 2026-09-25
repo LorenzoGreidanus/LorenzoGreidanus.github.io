@@ -91,7 +91,11 @@ const KLAS_SPELLEN = { race: "Vragenrace", eigen: "Eigen oefening", klasquiz: "K
   huishoudboekje: "Het huishoudboekje",
   dictee: "Dictee",
   dictation: "Dictation",
-  coordinaten: "Schatzoeken met coördinaten" };
+  coordinaten: "Schatzoeken met coördinaten",
+  kruisen: "Kruisingsschema",
+  bevolkingspiramide: "Bevolkingspiramides",
+  vraagenaanbod: "Vraag en aanbod",
+  verkiezingen: "Verkiezingen en zetels" };
 /* Hoe lang de kamer wacht voor hij iemand die wegviel ook echt weghaalt. In de
    lobby kort: herladen duurt een paar tellen. In de arena langer: een
    telefoon die even geen bereik heeft, hoort er niet meteen uit te liggen. */

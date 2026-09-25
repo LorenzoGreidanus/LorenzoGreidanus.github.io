@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Verkiezingen en zetels, versie 1.0: op vakspel.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Verkiezingen en zetels &middot; meneer Greidanus</title>
+<meta name="description" content="Zetels berekenen met de kiesdeler, een coalitie met een meerderheid vormen, het halfrond lezen, begrippen van de democratie en wie er mag stemmen.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Verkiezingen en zetels">
+<meta property="og:description" content="Zetels berekenen, een coalitie vormen, het halfrond lezen, begrippen en kiesrecht.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/verkiezingen.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%2383A5F2'/><path d='M20 70a30 30 0 0 1 60 0z' fill='%2314224C'/><path d='M32 70a18 18 0 0 1 36 0z' fill='%2383A5F2'/></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+.halfrond{width:min(100%,420px);height:auto;display:block;font-family:inherit}
+.halfrond text{fill:var(--ink);font-size:12px;font-weight:600}
+.halfrond .zetel{stroke:var(--kaart);stroke-width:1}
+.halfrond .zetel.uit{opacity:.22}
+.uitslag{border-collapse:collapse;margin:0 auto;font-size:.95rem}
+.uitslag th,.uitslag td{padding:6px 12px;text-align:left;border-bottom:1px solid var(--rand2)}
+.uitslag td.g{text-align:right;font-variant-numeric:tabular-nums}
+.uitslag i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:8px;vertical-align:middle}
+.partijen{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:8px}
+.partij{border:2px solid var(--rand2);background:var(--kaart);border-radius:12px;padding:8px 12px;font-weight:600;cursor:pointer;display:flex;gap:8px;align-items:center;min-height:44px}
+.partij i{display:inline-block;width:14px;height:14px;border-radius:4px}
+.partij.aan{border-color:var(--nadruk);background:var(--kaart-aan)}
+.partij:disabled{cursor:default}
+.telling{text-align:center;font-weight:600;margin-top:10px}
+.telling b{color:var(--nadruk)}
+.telling .ja{color:var(--goed)}.telling .nee{color:var(--fout)}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  function tussen(a, b){ return a + Math.floor(Math.random() * (b - a + 1)); }
+  function dz(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+
+  /* verzonnen partijen, met een vaste kleur */
+  var PARTIJEN = [
+    { naam:'Groene Partij', kleur:'#2f7d52' }, { naam:'Partij voor Werk', kleur:'#c0392b' }, { naam:'Vrije Democraten', kleur:'#204ECF' },
+    { naam:'Sociale Unie', kleur:'#EA9836' }, { naam:'Jongerenpartij', kleur:'#8e44ad' }, { naam:'Ouderenbond', kleur:'#7f8c8d' },
+    { naam:'Stadspartij', kleur:'#16a085' }, { naam:'Boeren en Buren', kleur:'#a0693a' }
+  ];
+  /* een uitslag: n partijen, stemmen die optellen tot het totaal, zetels via kiesdeler en restzetels (grootste gemiddelden) */
+  function uitslag(zetels, n, totaal){
+    var p = H(PARTIJEN).slice(0, n), rest = totaal, lijst = [];
+    p.forEach(function(x, i){ var s = i === n - 1 ? rest : Math.round(rest * (0.18 + Math.random() * 0.4) / 100) * 100; if (s > rest - (n - 1 - i) * 1000) s = rest - (n - 1 - i) * 1000; rest -= s; lijst.push({ naam:x.naam, kleur:x.kleur, stemmen:s }); });
+    var deler = totaal / zetels;
+    lijst.forEach(function(x){ x.vol = Math.floor(x.stemmen / deler); x.zetels = x.vol; });
+    var over = zetels - lijst.reduce(function(a, x){ return a + x.zetels; }, 0);
+    for (var k = 0; k < over; k++){ var best = null; lijst.forEach(function(x){ var g = x.stemmen / (x.zetels + 1); if (!best || g > best.g) best = { x:x, g:g }; }); best.x.zetels++; }
+    lijst.sort(function(a, b){ return b.stemmen - a.stemmen; });
+    return { partijen: lijst, totaal: totaal, zetels: zetels, deler: deler };
+  }
+  function halfrond(u, aan){
+    var W = 420, Hh = 240, cx = 210, cy = 215, rijen = u.zetels <= 25 ? 2 : u.zetels <= 45 ? 3 : 5, s = '<svg class="halfrond" viewBox="0 0 ' + W + ' ' + Hh + '" role="img" aria-label="zetelverdeling">';
+    /* de zetels op bogen, van links naar rechts, partij voor partij */
+    var plekken = [], perRij = [], totaalRij = 0;
+    for (var r = 0; r < rijen; r++){ var rad = 90 + r * 28, n = Math.round((u.zetels / rijen) * (0.7 + 0.6 * r / Math.max(1, rijen - 1))); perRij.push({ rad:rad, n:n }); totaalRij += n; }
+    /* het aantal per rij op het totaal brengen */
+    while (totaalRij > u.zetels){ perRij[rijen - 1].n--; totaalRij--; } while (totaalRij < u.zetels){ perRij[rijen - 1].n++; totaalRij++; }
+    perRij.forEach(function(rij){ for (var i = 0; i < rij.n; i++){ var hoek = Math.PI - Math.PI * (i + 0.5) / rij.n; plekken.push({ x: cx + rij.rad * Math.cos(hoek), y: cy - rij.rad * Math.sin(hoek), hoek: hoek }); } });
+    plekken.sort(function(a, b){ return b.hoek - a.hoek; });
+    var i = 0;
+    u.partijen.forEach(function(p){ for (var k = 0; k < p.zetels; k++){ var pl = plekken[i++]; if (!pl) return; s += '<circle class="zetel' + (aan && aan.indexOf(p.naam) < 0 ? ' uit' : '') + '" cx="' + pl.x.toFixed(1) + '" cy="' + pl.y.toFixed(1) + '" r="9" fill="' + p.kleur + '"/>'; } });
+    s += '<text x="' + cx + '" y="' + (cy + 18) + '" text-anchor="middle">' + u.zetels + ' zetels, meerderheid vanaf ' + (Math.floor(u.zetels / 2) + 1) + '</text>';
+    return s + '</svg>';
+  }
+  function tabel(u, metZetels){
+    return '<table class="uitslag"><tr><th>partij</th><th>stemmen</th>' + (metZetels ? '<th>zetels</th>' : '') + '</tr>' + u.partijen.map(function(p){ return '<tr><td><i style="background:' + p.kleur + '"></i>' + S(p.naam) + '</td><td class="g">' + dz(p.stemmen) + '</td>' + (metZetels ? '<td class="g">' + p.zetels + '</td>' : '') + '</tr>'; }).join('') + '<tr><th>totaal (geldig)</th><td class="g"><b>' + dz(u.totaal) + '</b></td>' + (metZetels ? '<td class="g"><b>' + u.zetels + '</b></td>' : '') + '</tr></table>';
+  }
+
+  /* 1. zetels berekenen */
+  function berekenen(niveau){
+    var zetels = niveau === 'bb' ? kies([15, 25]) : niveau === 'kgt' ? kies([25, 39, 45]) : 150;
+    var totaal = niveau === 'bb' ? zetels * kies([1000, 2000]) : niveau === 'kgt' ? zetels * kies([1200, 1500, 2000, 2500]) : kies([9000000, 10500000, 10200000]);
+    var u = uitslag(zetels, niveau === 'bb' ? 4 : 5, totaal), p = kies(u.partijen), deler = totaal / zetels, delerRond = Math.round(deler);
+    var soort = niveau === 'bb' ? 'zetels' : kies(['deler', 'zetels']);
+    if (soort === 'deler') return { onderdeel:'verkiezingen: zetels berekenen', onderdeelNaam:'zetels berekenen', vorm:'invul', sleutel:'d' + totaal + zetels,
+      vraag:'Er zijn <b>' + dz(totaal) + '</b> geldige stemmen uitgebracht voor <b>' + zetels + '</b> zetels. Wat is de kiesdeler?', opdracht:'Kiesdeler = geldige stemmen gedeeld door het aantal zetels. Rond af op een heel getal.', beeld: tabel(u, false),
+      velden:[{ label:'kiesdeler', antwoord: delerRond, tol: 1, eenheid:'stemmen' }],
+      uitleg: dz(totaal) + ' ÷ ' + zetels + ' = ' + dz(delerRond) + '. Zoveel stemmen kost een zetel.', antwoordTekst: dz(delerRond) };
+    return { onderdeel:'verkiezingen: zetels berekenen', onderdeelNaam:'zetels berekenen', vorm:'invul', sleutel:'z' + totaal + zetels + p.naam,
+      vraag:dz(totaal) + ' geldige stemmen, <b>' + zetels + '</b> zetels. Hoeveel <b>volle zetels</b> krijgt <b>' + S(p.naam) + '</b>?', opdracht:'Bereken eerst de kiesdeler (stemmen ÷ zetels), deel dan de stemmen van de partij door de kiesdeler en rond naar beneden af.', beeld: tabel(u, false),
+      velden:[{ label:'volle zetels ' + p.naam, antwoord: p.vol, eenheid:'zetels' }],
+      uitleg:'Kiesdeler: ' + dz(totaal) + ' ÷ ' + zetels + ' = ' + dz(delerRond) + '. ' + dz(p.stemmen) + ' ÷ ' + dz(delerRond) + ' = ' + (p.stemmen / deler).toFixed(2).replace('.', ',') + ', dus ' + p.vol + ' volle zetels.' + (p.zetels > p.vol ? ' Met de restzetels komt de partij op ' + p.zetels + '.' : '') + (niveau === 'hv' ? ' Restzetels gaan in Nederland naar de partijen met het grootste gemiddelde aantal stemmen per zetel.' : ''), antwoordTekst: p.vol + ' zetels' };
+  }
+  /* 2. meerderheid: partijen aantikken tot een coalitie (eigen vorm) */
+  function meerderheid(niveau){
+    var zetels = niveau === 'bb' ? 25 : niveau === 'kgt' ? 45 : 150, u = uitslag(zetels, niveau === 'bb' ? 4 : 6, zetels * 2000), nodig = Math.floor(zetels / 2) + 1;
+    /* de kleinste coalitie: alle deelverzamelingen doorlopen (hoogstens 6 partijen) */
+    var beste = null, n = u.partijen.length;
+    for (var m = 1; m < (1 << n); m++){ var som = 0, aantal = 0; for (var i = 0; i < n; i++) if (m & (1 << i)){ som += u.partijen[i].zetels; aantal++; } if (som >= nodig && (!beste || aantal < beste.aantal || (aantal === beste.aantal && som < beste.som))) beste = { m:m, aantal:aantal, som:som }; }
+    var minst = beste.aantal;
+    return { onderdeel:'verkiezingen: meerderheid', onderdeelNaam:'meerderheid', vorm:'eigen', sleutel:'m' + u.partijen.map(function(p){ return p.zetels; }).join('-'),
+      vraag:'Vorm een <b>coalitie met een meerderheid</b>: minstens ' + nodig + ' van de ' + zetels + ' zetels' + (niveau === 'hv' ? ', met zo min mogelijk partijen' : '') + '.', opdracht:'Tik partijen aan om ze in de coalitie te zetten. Een meerderheid is meer dan de helft.',
+      uitleg:'Meer dan de helft van ' + zetels + ' is minstens ' + nodig + ' zetels. ' + (niveau === 'hv' ? 'Dat kan al met ' + minst + ' partijen.' : 'Elke combinatie met ' + nodig + ' of meer zetels is goed.') + ' In Nederland heeft geen partij ooit alleen een meerderheid: er is altijd een coalitie nodig.', antwoordTekst: 'minstens ' + nodig + ' zetels',
+      teken:function(el, api){
+        var aan = [];
+        function render(){ el.querySelector('#hr').innerHTML = halfrond(u, aan.length ? aan : null); var som = u.partijen.filter(function(p){ return aan.indexOf(p.naam) >= 0; }).reduce(function(a, p){ return a + p.zetels; }, 0); el.querySelector('#telling').innerHTML = 'coalitie: <b>' + som + '</b> van de ' + zetels + ' zetels ' + (som >= nodig ? '<span class="ja">(meerderheid)</span>' : '<span class="nee">(nog ' + (nodig - som) + ' te weinig)</span>'); knop.disabled = !aan.length; }
+        el.innerHTML = '<div id="hr">' + halfrond(u, null) + '</div><div class="partijen">' + u.partijen.map(function(p){ return '<button type="button" class="partij" data-p="' + S(p.naam) + '"><i style="background:' + p.kleur + '"></i>' + S(p.naam) + ' <span>' + p.zetels + '</span></button>'; }).join('') + '</div><p class="telling" id="telling"></p>';
+        Array.prototype.forEach.call(el.querySelectorAll('.partij'), function(b){ b.addEventListener('click', function(){ if (!api.bezig()) return; var nm = b.getAttribute('data-p'), i = aan.indexOf(nm); if (i >= 0) aan.splice(i, 1); else aan.push(nm); b.classList.toggle('aan', i < 0); render(); }); });
+        var knop = api.knop('Nakijken', function(){
+          var som = u.partijen.filter(function(p){ return aan.indexOf(p.naam) >= 0; }).reduce(function(a, p){ return a + p.zetels; }, 0), ok = som >= nodig && (niveau !== 'hv' || aan.length <= minst);
+          Array.prototype.forEach.call(el.querySelectorAll('.partij'), function(b){ b.disabled = true; }); knop.disabled = true;
+          api.klaar(ok, ok ? '' : som < nodig ? 'Je coalitie heeft ' + som + ' zetels, dat is minder dan ' + nodig + '.' : 'Je coalitie heeft wel een meerderheid, maar het kan met ' + minst + ' partijen in plaats van ' + aan.length + '.');
+        });
+        render();
+        el.proef = function(){ aan = []; u.partijen.forEach(function(p, i){ if (beste.m & (1 << i)) aan.push(p.naam); }); Array.prototype.forEach.call(el.querySelectorAll('.partij'), function(b){ b.classList.toggle('aan', aan.indexOf(b.getAttribute('data-p')) >= 0); }); render(); knop.click(); };
+        el.proefFout = function(){ var kleinste = u.partijen[u.partijen.length - 1]; aan = [kleinste.naam]; render(); knop.click(); };
+      } };
+  }
+  /* 3. het halfrond lezen */
+  function lezen(niveau){
+    var zetels = niveau === 'bb' ? 25 : niveau === 'kgt' ? 45 : 150, u = uitslag(zetels, niveau === 'bb' ? 4 : 5, zetels * 2000), nodig = Math.floor(zetels / 2) + 1;
+    var soort = kies(['grootste', 'oppositie', 'coalitie']);
+    if (soort === 'grootste'){
+      var opties = H(u.partijen.map(function(p){ return p.naam; })).slice(0, 4); if (opties.indexOf(u.partijen[0].naam) < 0) opties[0] = u.partijen[0].naam;
+      return { onderdeel:'verkiezingen: halfrond lezen', onderdeelNaam:'halfrond lezen', vorm:'meerkeuze', sleutel:'g' + u.partijen[0].naam + zetels,
+        vraag:'Welke partij is de <b>grootste</b>?', opdracht:'Elke stip is een zetel. De grootste partij levert meestal de premier.', beeld: halfrond(u) + tabel(u, true),
+        opties: opties, goed: opties.indexOf(u.partijen[0].naam), uitleg: u.partijen[0].naam + ' heeft de meeste zetels: ' + u.partijen[0].zetels + ' van de ' + zetels + '.', antwoordTekst: u.partijen[0].naam };
+    }
+    var coalitie = [u.partijen[0].naam], som = u.partijen[0].zetels, k = 1;
+    while (som < nodig && k < u.partijen.length){ coalitie.push(u.partijen[k].naam); som += u.partijen[k].zetels; k++; }
+    if (soort === 'oppositie') return { onderdeel:'verkiezingen: halfrond lezen', onderdeelNaam:'halfrond lezen', vorm:'invul', sleutel:'o' + coalitie.join('') + zetels,
+      vraag:'De coalitie bestaat uit <b>' + coalitie.join(', ') + '</b>. Hoeveel zetels heeft de <b>oppositie</b>?', opdracht:'De oppositie is alles wat niet in de coalitie zit.', beeld: halfrond(u, coalitie) + tabel(u, true),
+      velden:[{ label:'oppositie', antwoord: zetels - som, eenheid:'zetels' }],
+      uitleg:'De coalitie heeft ' + som + ' zetels; ' + zetels + ' − ' + som + ' = ' + (zetels - som) + ' zetels voor de oppositie.', antwoordTekst: (zetels - som) + ' zetels' };
+    var stel = H(u.partijen).slice(0, 2), stelSom = stel[0].zetels + stel[1].zetels, meer = stelSom >= nodig;
+    return { onderdeel:'verkiezingen: halfrond lezen', onderdeelNaam:'halfrond lezen', vorm:'meerkeuze', vasteVolgorde:true, sleutel:'c' + stel.map(function(p){ return p.naam; }).join('') + zetels,
+      vraag:'Hebben <b>' + stel[0].naam + '</b> en <b>' + stel[1].naam + '</b> samen een meerderheid?', opdracht:'Meerderheid: meer dan de helft van ' + zetels + ', dus minstens ' + nodig + '.', beeld: halfrond(u, stel.map(function(p){ return p.naam; })) + tabel(u, true),
+      opties:['ja, samen meer dan de helft', 'nee, samen minder dan de helft'], goed: meer ? 0 : 1,
+      uitleg: stel[0].zetels + ' + ' + stel[1].zetels + ' = ' + stelSom + ' zetels; ' + (meer ? 'dat is minstens ' + nodig + ', dus een meerderheid.' : 'dat is minder dan ' + nodig + ', dus geen meerderheid.'), antwoordTekst: meer ? 'ja' : 'nee' };
+  }
+  /* 4. begrippen */
+  var BEGRIPPEN = [
+    { b:'kiesrecht', u:'het recht om te stemmen (actief) of gekozen te worden (passief)' },
+    { b:'kiesdeler', u:'het aantal stemmen dat nodig is voor een zetel' },
+    { b:'coalitie', u:'de partijen die samen de regering vormen' },
+    { b:'oppositie', u:'de partijen in het parlement die niet in de regering zitten' },
+    { b:'kabinet', u:'de ministers en staatssecretarissen samen' },
+    { b:'regeerakkoord', u:'de afspraken die de coalitiepartijen maken voor de komende jaren' },
+    { b:'evenredige vertegenwoordiging', u:'partijen krijgen zetels naar verhouding van hun stemmen' },
+    { b:'districtenstelsel', u:'per gebied wint een kandidaat, zoals in het Verenigd Koninkrijk', hv:true },
+    { b:'opkomst', u:'het percentage kiesgerechtigden dat is gaan stemmen' },
+    { b:'Tweede Kamer', u:'de 150 gekozen volksvertegenwoordigers die wetten maken en de regering controleren' },
+    { b:'Eerste Kamer', u:'de 75 senatoren die wetten alleen goed- of afkeuren, gekozen door de Provinciale Staten' },
+    { b:'formatie', u:'de onderhandelingen na de verkiezingen om een kabinet te vormen', hv:true },
+    { b:'restzetel', u:'een zetel die overblijft na het delen door de kiesdeler', hv:true },
+    { b:'motie', u:'een uitspraak van de Kamer waarmee ze de regering iets vraagt of afkeurt', hv:true }
+  ];
+  function begrippen(niveau){
+    var lijst = BEGRIPPEN.filter(function(b){ return !b.hv || niveau !== 'bb'; }), b = kies(lijst), u = uitslag(niveau === 'bb' ? 25 : 150, 5, 150 * 2000);
+    var anderen = H(lijst.filter(function(x){ return x !== b; })).slice(0, 3), opties = H([b].concat(anderen)).map(function(x){ return x.b; });
+    return { onderdeel:'verkiezingen: begrippen', onderdeelNaam:'begrippen', vorm:'meerkeuze', sleutel:'b' + b.b,
+      vraag:'Welk begrip hoort bij: <b>' + b.u + '</b>?', beeld: halfrond(u), opties: opties, goed: opties.indexOf(b.b),
+      uitleg: b.b.charAt(0).toUpperCase() + b.b.slice(1) + ': ' + b.u + '.', antwoordTekst: b.b };
+  }
+  /* 5. wie mag stemmen */
+  var KIESRECHT = [
+    { s:'Sanne is 17 en wil stemmen voor de Tweede Kamer.', mag:false, u:'Je mag stemmen vanaf 18 jaar. Op de dag van de verkiezing moet je 18 zijn.' },
+    { s:'Youssef is 18, Nederlander, en woont in Nederland.', mag:true, u:'Nederlander, 18 jaar of ouder: hij mag stemmen voor de Tweede Kamer.' },
+    { s:'Maria heeft de Spaanse nationaliteit en woont vijf jaar in Utrecht. Ze wil stemmen voor de gemeenteraad.', mag:true, u:'Inwoners uit een EU-land mogen stemmen voor de gemeenteraad. Voor de Tweede Kamer mag dat niet.' },
+    { s:'Maria (Spaanse nationaliteit) wil stemmen voor de Tweede Kamer.', mag:false, u:'Voor de Tweede Kamer moet je de Nederlandse nationaliteit hebben.' },
+    { s:'Pieter is Nederlander en woont al tien jaar in Australië. Hij wil stemmen voor de Tweede Kamer.', mag:true, u:'Nederlanders in het buitenland mogen per brief stemmen voor de Tweede Kamer (en het Europees Parlement), als ze zich registreren.' },
+    { s:'Ahmed komt uit Marokko, woont acht jaar in Nederland zonder Nederlands paspoort, en wil stemmen voor de gemeenteraad.', mag:true, u:'Wie van buiten de EU komt, mag na vijf jaar legaal in Nederland wonen stemmen voor de gemeenteraad.' },
+    { s:'Lisa is 18 en zit in de gevangenis.', mag:true, u:'Gevangenen behouden hun kiesrecht; alleen een rechter kan het in zeldzame gevallen afnemen.' },
+    { s:'Tom is 16 en wil zich verkiesbaar stellen voor de gemeenteraad.', mag:false, u:'Ook om gekozen te worden (passief kiesrecht) moet je 18 zijn.' },
+    { s:'Fatima is 18 en heeft een verstandelijke beperking.', mag:true, u:'Iedereen van 18 jaar of ouder met de Nederlandse nationaliteit mag stemmen; een beperking verandert daar niets aan.' },
+    { s:'Daan is 18 en Nederlander, maar heeft zijn stempas niet gekregen.', mag:true, u:'Hij mag stemmen; zonder stempas vraagt hij bij de gemeente een vervangende stempas aan.' }
+  ];
+  function stemmen(niveau){
+    var k = kies(KIESRECHT), u = uitslag(150, 5, 300000);
+    return { onderdeel:'verkiezingen: wie mag stemmen', onderdeelNaam:'wie mag stemmen', vorm:'meerkeuze', vasteVolgorde:true, sleutel:'k' + k.s.slice(0, 30),
+      vraag:S(k.s) + ' Mag dat?', opdracht:'De regels in Nederland: 18 jaar, en de Nederlandse nationaliteit voor de Tweede Kamer.', beeld: halfrond(u),
+      opties:['ja, dat mag', 'nee, dat mag niet'], goed: k.mag ? 0 : 1, uitleg: k.u, antwoordTekst: k.mag ? 'ja' : 'nee' };
+  }
+
+  var SOORTEN = { berekenen: berekenen, meerderheid: meerderheid, lezen: lezen, begrippen: begrippen, stemmen: stemmen };
+  VAKSPEL.maak({
+    id:'verkiezingen', naam:'Verkiezingen en zetels', vak:'burg', kleur:'#83A5F2',
+    hand:'meer dan de helft',
+    lead:'Een verzonnen uitslag met echte regels: bereken de kiesdeler en de zetels, vorm een coalitie met een meerderheid, lees het halfrond, ken de begrippen en weet wie er mag stemmen. Het halfrond kleurt mee met elke partij.',
+    hoe:[
+      { kop:'Kiesdeler', tekst:'Alle geldige stemmen gedeeld door het aantal zetels: zoveel stemmen kost <b>een zetel</b>. Stemmen van een partij gedeeld door de kiesdeler geeft de volle zetels.' },
+      { kop:'Meerderheid', tekst:'Meer dan de helft. Bij 150 zetels is dat 76. Geen partij haalt dat alleen, dus partijen werken samen in een coalitie.' },
+      { kop:'Kiesrecht', tekst:'Vanaf 18 jaar. Voor de Tweede Kamer moet je Nederlander zijn; voor de gemeenteraad mogen ook EU-burgers en mensen die hier vijf jaar wonen stemmen.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'Een kleine gemeenteraad met ronde getallen.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Grotere raden, de kiesdeler zelf berekenen, alle begrippen.' },
+        { id:'hv', naam:'havo en vwo', uit:'De Tweede Kamer met 150 zetels, restzetels, en een coalitie met zo min mogelijk partijen.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' }, { id:'berekenen', naam:'zetels berekenen' }, { id:'meerderheid', naam:'meerderheid' }, { id:'lezen', naam:'halfrond lezen' }, { id:'begrippen', naam:'begrippen' }, { id:'stemmen', naam:'wie mag stemmen' } ] }
+    ],
+    aantal:10,
+    maak:function(keuze, nr){
+      var soort = keuze.soort === 'alles' ? kies(['berekenen', 'meerderheid', 'lezen', 'begrippen', 'stemmen']) : keuze.soort;
+      return SOORTEN[soort](keuze.niveau);
+    },
+    uitleg:{ doel:'Hoe zetels verdeeld worden en hoe een regering aan een meerderheid komt.', tijd:'tien opgaven per ronde', bediening:'Reken uit en typ, kies een antwoord, of tik partijen aan tot je een meerderheid hebt en druk op Nakijken.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>

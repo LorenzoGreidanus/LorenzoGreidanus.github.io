@@ -87,9 +87,9 @@ var ONDERDELEN = {
         {id:'grammatica',naam:'grammatica',groep:'grammatica'}],
   ges: TIJDVAKKEN.map(t => ({id: t.id, naam: t.naam})).concat([{id:'staat', naam:'staatsinrichting (examen vmbo)'}, {id:'nl1900', naam:'Nederland en de wereld vanaf 1900 (examen vmbo)'}]),
   aard: [{id:'vlaggen',naam:'vlaggen van landen'},{id:'landvormen',naam:'vormen van landen'},{id:'topografie',naam:'topografie: hoofdsteden'}],
-  bio: [[/^voedselweb: /, 'natuur'], {id:'organen',naam:'organen'},{id:'bloed',naam:'bloed en ademhaling'},{id:'vertering',naam:'vertering en voeding'},{id:'planten',naam:'planten'},{id:'cellen',naam:'cellen'},{id:'zintuigen',naam:'zintuigen en zenuwen'},{id:'ordening',naam:'ordening en ecologie'},{id:'erfelijkheid',naam:'erfelijkheid'}],
+  bio: [[/^kruisen: /, 'cellen'], [/^voedselweb: /, 'natuur'], {id:'organen',naam:'organen'},{id:'bloed',naam:'bloed en ademhaling'},{id:'vertering',naam:'vertering en voeding'},{id:'planten',naam:'planten'},{id:'cellen',naam:'cellen'},{id:'zintuigen',naam:'zintuigen en zenuwen'},{id:'ordening',naam:'ordening en ecologie'},{id:'erfelijkheid',naam:'erfelijkheid'}],
   wis: [[/^co\u00f6rdinaten: /, 'meetkunde'], [/^hoeken: /, 'meetkunde'], [/^pythagoras: /, 'meetkunde'], [/^grafieken: /, 'verwerken'], {id:'vergelijking',naam:'vergelijkingen'},{id:'formule',naam:'formules'},{id:'oppervlakte',naam:'oppervlakte en inhoud'},{id:'omtrek',naam:'omtrek'},{id:'hoeken',naam:'hoeken'},{id:'grafiek',naam:'grafieken en assenstelsel'},{id:'statistiek',naam:'statistiek'},{id:'pythagoras',naam:'stelling van Pythagoras'},{id:'vlakken',naam:'vlakken herkennen'}],
-  burg: [{id:'democratie',naam:'democratie en verkiezingen'},{id:'rechtsstaat',naam:'rechtsstaat en grondrechten'},{id:'media',naam:'media en nieuws'},{id:'europa',naam:'Europa en de wereld'},{id:'samenleven',naam:'samenleven'},{id:'geld',naam:'geld en werk'}]
+  burg: [[/^verkiezingen: /, 'staat'], {id:'democratie',naam:'democratie en verkiezingen'},{id:'rechtsstaat',naam:'rechtsstaat en grondrechten'},{id:'media',naam:'media en nieuws'},{id:'europa',naam:'Europa en de wereld'},{id:'samenleven',naam:'samenleven'},{id:'geld',naam:'geld en werk'}]
 };
 ONDERDELEN.aard.push({id:'examen-ak', naam:'weer, water, bevolking (examen vmbo)'});
 ONDERDELEN.bio.push({id:'examen-bio', naam:'examenstof vmbo'});

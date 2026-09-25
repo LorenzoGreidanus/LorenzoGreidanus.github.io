@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Vraag en aanbod, versie 1.0: op vakspel.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Vraag en aanbod &middot; meneer Greidanus</title>
+<meta name="description" content="De evenwichtsprijs aflezen, met een schuif zoeken waar vraag en aanbod gelijk zijn, zien hoe een lijn verschuift en tekorten en overschotten berekenen.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Vraag en aanbod">
+<meta property="og:description" content="De evenwichtsprijs aflezen, met een schuif het evenwicht zoeken, verschuivingen en tekorten en overschotten.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/vraagenaanbod.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%23EA9836'/><g fill='none' stroke='%2314224C' stroke-width='6' stroke-linecap='round'><path d='M22 78V22M22 78h56M30 30l44 42M30 72l44-42'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+.va{width:min(100%,460px);height:auto;display:block;font-family:inherit}
+.va text{fill:var(--muted);font-size:11px;font-weight:600}
+.va .as{stroke:var(--ink);stroke-width:2}
+.va .rooster{stroke:var(--rand2);stroke-width:1}
+.va .vraag{stroke:#204ECF;stroke-width:3;fill:none}
+.va .aanbod{stroke:#F26749;stroke-width:3;fill:none}
+.va .vraag.oud,.va .aanbod.oud{stroke-dasharray:6 5;opacity:.45}
+.va .ev{fill:var(--goed);stroke:var(--kaart);stroke-width:2}
+.va .hulp{stroke:var(--muted);stroke-width:1.5;stroke-dasharray:4 4}
+.va .prijslijn{stroke:var(--nadruk);stroke-width:2}
+.va .stipV{fill:#204ECF}.va .stipA{fill:#F26749}
+.va .naam{font-size:12px}
+.schuif{display:grid;gap:6px;justify-items:center;margin-top:10px}
+.schuif input[type=range]{width:min(100%,360px)}
+.schuif .stand{font-weight:600}
+.schuif .stand b{color:var(--nadruk)}
+.schuif .stand .tekort{color:var(--fout)}.schuif .stand .over{color:#b7791f}.schuif .stand .ev{color:var(--goed)}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  function tussen(a, b){ return a + Math.floor(Math.random() * (b - a + 1)); }
+  function geld(x){ return '€ ' + (Math.round(x * 100) / 100).toFixed(2).replace('.', ','); }
+
+  /* Een markt: prijzen van 0 tot 10 euro in stappen, hoeveelheden van 0 tot
+     100. De vraaglijn daalt, de aanbodlijn stijgt; het evenwicht ligt netjes
+     op een roosterpunt. q = a - b*p (vraag), q = c + d*p (aanbod). */
+  var PRODUCTEN = ['ijsjes', 'broodjes', 'concertkaartjes', 'tweedehands fietsen', 'aardbeien', 'flesjes water', 'T-shirts', 'schoolagenda’s'];
+  function markt(niveau){
+    var pe = niveau === 'bb' ? kies([2, 3, 4, 5, 6]) : kies([2, 3, 4, 5, 6, 7, 8]), qe = niveau === 'bb' ? kies([30, 40, 50, 60]) : kies([20, 30, 40, 50, 60, 70]);
+    var b = niveau === 'bb' ? 10 : kies([5, 10, 10, 15]), d = niveau === 'bb' ? 10 : kies([5, 10, 10, 15]);
+    /* door het evenwicht: a = qe + b*pe, c = qe - d*pe; c mag niet onder 0 op de as komen: dan begint het aanbod bij een prijs boven 0 (prima) */
+    var a = qe + b * pe, c = qe - d * pe;
+    if (a > 100) return markt(niveau);
+    return { pe:pe, qe:qe, a:a, b:b, c:c, d:d, product: kies(PRODUCTEN) };
+  }
+  function vraag(m, p){ return Math.max(0, m.a - m.b * p); }
+  function aanbod(m, p){ return Math.max(0, m.c + m.d * p); }
+  /* de grafiek: prijs verticaal (0-10), hoeveelheid horizontaal (0-100) */
+  function grafiek(m, o){
+    o = o || {};
+    var W = 460, Hh = 300, L = 46, R = 440, T = 20, B = 260;
+    function X(q){ return L + (R - L) * q / 100; } function Y(p){ return B - (B - T) * p / 10; }
+    var s = '<svg class="va" viewBox="0 0 ' + W + ' ' + Hh + '" role="img" aria-label="vraag en aanbod">';
+    for (var q = 0; q <= 100; q += 10) s += '<line class="rooster" x1="' + X(q) + '" y1="' + T + '" x2="' + X(q) + '" y2="' + B + '"/><text x="' + X(q) + '" y="' + (B + 14) + '" text-anchor="middle">' + q + '</text>';
+    for (var p = 0; p <= 10; p++) s += '<line class="rooster" x1="' + L + '" y1="' + Y(p) + '" x2="' + R + '" y2="' + Y(p) + '"/><text x="' + (L - 6) + '" y="' + (Y(p) + 4) + '" text-anchor="end">€ ' + p + '</text>';
+    s += '<line class="as" x1="' + L + '" y1="' + T + '" x2="' + L + '" y2="' + B + '"/><line class="as" x1="' + L + '" y1="' + B + '" x2="' + R + '" y2="' + B + '"/>';
+    s += '<text x="' + R + '" y="' + (B + 28) + '" text-anchor="end" style="fill:var(--ink)">hoeveelheid</text><text x="4" y="' + (T - 6) + '" style="fill:var(--ink)">prijs</text>';
+    function lijn(f, klas, naam){
+      var pts = [];
+      for (var pp = 0; pp <= 10; pp += 0.5){ var qq = f(pp); if (qq >= 0 && qq <= 100) pts.push([X(qq), Y(pp)]); }
+      if (pts.length < 2) return '';
+      var laatst = pts[pts.length - 1];
+      return '<polyline class="' + klas + '" points="' + pts.map(function(x){ return x[0].toFixed(1) + ',' + x[1].toFixed(1); }).join(' ') + '"/><text class="naam" x="' + Math.min(R - 30, laatst[0] + 4) + '" y="' + (laatst[1] - 4) + '" style="fill:' + (klas.indexOf('vraag') >= 0 ? '#204ECF' : '#F26749') + '">' + naam + '</text>';
+    }
+    if (o.oud){ s += lijn(function(p){ return vraag(o.oud, p); }, 'vraag oud', '') + lijn(function(p){ return aanbod(o.oud, p); }, 'aanbod oud', ''); }
+    s += lijn(function(p){ return vraag(m, p); }, 'vraag', 'vraag') + lijn(function(p){ return aanbod(m, p); }, 'aanbod', 'aanbod');
+    if (o.evenwicht) s += '<line class="hulp" x1="' + L + '" y1="' + Y(m.pe) + '" x2="' + X(m.qe) + '" y2="' + Y(m.pe) + '"/><line class="hulp" x1="' + X(m.qe) + '" y1="' + Y(m.pe) + '" x2="' + X(m.qe) + '" y2="' + B + '"/><circle class="ev" cx="' + X(m.qe) + '" cy="' + Y(m.pe) + '" r="7"/>';
+    if (o.prijs !== undefined){
+      var qv = vraag(m, o.prijs), qa = aanbod(m, o.prijs);
+      s += '<line class="prijslijn" x1="' + L + '" y1="' + Y(o.prijs) + '" x2="' + R + '" y2="' + Y(o.prijs) + '"/><circle class="stipV" cx="' + X(qv) + '" cy="' + Y(o.prijs) + '" r="6"/><circle class="stipA" cx="' + X(qa) + '" cy="' + Y(o.prijs) + '" r="6"/>';
+    }
+    return s + '</svg>';
+  }
+
+  /* 1. evenwicht aflezen */
+  function evenwicht(niveau){
+    var m = markt(niveau);
+    if (niveau === 'bb'){
+      var opties = H([m.pe].concat(H([1, 2, 3, 4, 5, 6, 7, 8].filter(function(p){ return p !== m.pe; })).slice(0, 3)));
+      return { onderdeel:'vraag en aanbod: evenwicht', onderdeelNaam:'evenwicht', vorm:'meerkeuze', sleutel:'e' + m.pe + m.qe + m.product,
+        vraag:'De markt voor <b>' + m.product + '</b>. Wat is de <b>evenwichtsprijs</b>?', opdracht:'De evenwichtsprijs is de prijs waar de vraaglijn en de aanbodlijn elkaar snijden.', beeld: grafiek(m, {}),
+        opties: opties.map(function(p){ return geld(p); }), goed: opties.indexOf(m.pe),
+        uitleg:'De lijnen snijden elkaar bij ' + geld(m.pe) + ' en ' + m.qe + ' stuks: daar is de gevraagde hoeveelheid gelijk aan de aangeboden hoeveelheid.', antwoordTekst: geld(m.pe) };
+    }
+    return { onderdeel:'vraag en aanbod: evenwicht', onderdeelNaam:'evenwicht', vorm:'invul', sleutel:'e' + m.pe + m.qe + m.product,
+      vraag:'De markt voor <b>' + m.product + '</b>. Lees de <b>evenwichtsprijs</b> en de <b>evenwichtshoeveelheid</b> af.', opdracht:'Het snijpunt van de vraaglijn (blauw) en de aanbodlijn (oranje).', beeld: grafiek(m, {}),
+      velden:[{ label:'evenwichtsprijs', voor:'€', antwoord:m.pe, tol:0.01 }, { label:'evenwichtshoeveelheid', antwoord:m.qe, tol:0.5, eenheid:'stuks' }],
+      uitleg:'Bij ' + geld(m.pe) + ' is de vraag ' + m.qe + ' en het aanbod ' + m.qe + ': gelijk, dus evenwicht. Bij een hogere prijs is het aanbod groter dan de vraag; bij een lagere prijs andersom.', antwoordTekst: geld(m.pe) + ', ' + m.qe + ' stuks' };
+  }
+  /* 2. schuiven: de prijs instellen tot vraag en aanbod gelijk zijn (eigen vorm) */
+  function schuiven(niveau){
+    var m = markt(niveau), stap = 0.5;
+    return { onderdeel:'vraag en aanbod: schuiven', onderdeelNaam:'schuiven', vorm:'eigen', sleutel:'s' + m.pe + m.qe + m.b + m.d,
+      vraag:'Markt voor <b>' + m.product + '</b>. Zet de prijs met de schuif op de <b>evenwichtsprijs</b>.', opdracht:'Bij elke prijs zie je hoeveel er gevraagd (blauw) en aangeboden (oranje) wordt. Zoek de prijs waar dat gelijk is.',
+      uitleg:'Bij ' + geld(m.pe) + ' zijn vraag en aanbod allebei ' + m.qe + '. Daarboven is er een overschot (aanbod groter dan vraag), daaronder een tekort.', antwoordTekst: geld(m.pe),
+      teken:function(el, api){
+        var prijs = m.pe > 5 ? 2 : 8;
+        el.innerHTML = '<div id="grafiekvak">' + grafiek(m, { prijs:prijs }) + '</div><div class="schuif"><input type="range" id="prijsSchuif" min="0" max="10" step="' + stap + '" value="' + prijs + '" aria-label="prijs"><p class="stand" id="stand"></p></div>';
+        var sch = el.querySelector('#prijsSchuif'), stand = el.querySelector('#stand'), gv = el.querySelector('#grafiekvak');
+        function toon(){
+          prijs = parseFloat(sch.value); var qv = vraag(m, prijs), qa = aanbod(m, prijs);
+          gv.innerHTML = grafiek(m, { prijs:prijs });
+          stand.innerHTML = 'prijs <b>' + geld(prijs) + '</b>: vraag ' + Math.round(qv) + ', aanbod ' + Math.round(qa) + ' → ' + (qv > qa ? '<span class="tekort">tekort van ' + Math.round(qv - qa) + '</span>' : qa > qv ? '<span class="over">overschot van ' + Math.round(qa - qv) + '</span>' : '<span class="ev">evenwicht</span>');
+        }
+        sch.addEventListener('input', toon); toon();
+        var knop = api.knop('Nakijken', function(){
+          var ok = Math.abs(prijs - m.pe) < 0.01; sch.disabled = true; knop.disabled = true;
+          api.klaar(ok, ok ? '' : 'Je zette de prijs op ' + geld(prijs) + '; het evenwicht ligt bij ' + geld(m.pe) + '.');
+        });
+        el.proef = function(){ sch.value = m.pe; toon(); knop.click(); };
+        el.proefFout = function(){ sch.value = m.pe > 5 ? 1 : 9; toon(); knop.click(); };
+      } };
+  }
+  /* 3. wat gebeurt er: een gebeurtenis verschuift een lijn */
+  var GEBEURTENISSEN = [
+    { t:'Het wordt een hete zomer en iedereen wil ijs.', product:'ijsjes', lijn:'vraag', kant:'rechts', uit:'Meer mensen willen ijs bij elke prijs: de vraaglijn schuift naar rechts. De evenwichtsprijs stijgt.' },
+    { t:'Een populaire influencer zegt dat dit T-shirt uit de mode is.', product:'T-shirts', lijn:'vraag', kant:'links', uit:'Minder mensen willen het shirt bij elke prijs: de vraaglijn schuift naar links. De prijs daalt.' },
+    { t:'Een grote fabriek van flesjes water sluit.', product:'flesjes water', lijn:'aanbod', kant:'links', uit:'Er wordt bij elke prijs minder aangeboden: de aanbodlijn schuift naar links. De prijs stijgt.' },
+    { t:'Nieuwe machines maken broodjes bakken goedkoper.', product:'broodjes', lijn:'aanbod', kant:'rechts', uit:'Bakkers kunnen bij elke prijs meer aanbieden: de aanbodlijn schuift naar rechts. De prijs daalt.' },
+    { t:'Het inkomen van gezinnen stijgt en concertkaartjes worden populairder.', product:'concertkaartjes', lijn:'vraag', kant:'rechts', uit:'Meer koopkracht en meer belangstelling: de vraaglijn naar rechts, de prijs omhoog.' },
+    { t:'Slecht weer verpest de aardbeienoogst.', product:'aardbeien', lijn:'aanbod', kant:'links', uit:'Er zijn minder aardbeien: de aanbodlijn schuift naar links en de prijs stijgt.' },
+    { t:'Veel mensen kopen een elektrische fiets in plaats van een tweedehands fiets.', product:'tweedehands fietsen', lijn:'vraag', kant:'links', uit:'De vraag naar tweedehands fietsen daalt: vraaglijn naar links, prijs omlaag.' },
+    { t:'De overheid geeft subsidie aan boeren die aardbeien telen.', product:'aardbeien', lijn:'aanbod', kant:'rechts', uit:'Telen wordt goedkoper, dus meer aanbod bij elke prijs: aanbodlijn naar rechts, prijs omlaag.' },
+    { t:'De prijs van katoen (de grondstof) verdubbelt.', product:'T-shirts', lijn:'aanbod', kant:'links', uit:'Produceren wordt duurder: de aanbodlijn schuift naar links, de prijs stijgt.' },
+    { t:'Een school verplicht een agenda voor alle leerlingen.', product:'schoolagenda’s', lijn:'vraag', kant:'rechts', uit:'Meer vraag bij elke prijs: de vraaglijn naar rechts.' }
+  ];
+  function gebeurt(niveau){
+    var g = kies(GEBEURTENISSEN), m = markt(niveau); m.product = g.product;
+    var nieuw = Object.assign({}, m); var schuif = 15;
+    if (g.lijn === 'vraag') nieuw.a = m.a + (g.kant === 'rechts' ? schuif : -schuif); else nieuw.c = m.c + (g.kant === 'rechts' ? schuif : -schuif);
+    var opties = ['de vraaglijn schuift naar rechts', 'de vraaglijn schuift naar links', 'de aanbodlijn schuift naar rechts', 'de aanbodlijn schuift naar links'];
+    var goed = 'de ' + g.lijn + 'lijn schuift naar ' + g.kant;
+    return { onderdeel:'vraag en aanbod: verschuiven', onderdeelNaam:'verschuiven', vorm:'meerkeuze', vasteVolgorde:true, sleutel:'g' + g.t,
+      vraag:S(g.t) + ' Wat gebeurt er op de markt voor <b>' + g.product + '</b>?', opdracht:'Verandert er iets bij de kopers (vraag) of bij de verkopers (aanbod)? En wordt het meer of minder?',
+      beeld: grafiek(m, { evenwicht:true }), opties: opties, goed: opties.indexOf(goed),
+      uitleg: g.uit + ' Gestippeld de oude lijn, doorgetrokken de nieuwe: ' + '<div style="margin-top:8px">' + grafiek(nieuw, { oud:m, evenwicht:false }) + '</div>', antwoordTekst: goed };
+  }
+  /* 4. tekort of overschot bij een prijs */
+  function tekort(niveau){
+    var m = markt(niveau), p = m.pe + kies([-2, -1, 1, 2]); if (p < 1) p = m.pe + 1; if (p > 9) p = m.pe - 1;
+    var qv = vraag(m, p), qa = aanbod(m, p), over = qa > qv, verschil = Math.abs(qa - qv);
+    if (niveau === 'bb'){
+      var opties = ['een tekort: er wordt meer gevraagd dan aangeboden', 'een overschot: er wordt meer aangeboden dan gevraagd', 'evenwicht: vraag en aanbod zijn gelijk'];
+      return { onderdeel:'vraag en aanbod: tekort en overschot', onderdeelNaam:'tekort en overschot', vorm:'meerkeuze', vasteVolgorde:true, sleutel:'t' + m.pe + p + m.product,
+        vraag:'De prijs van <b>' + m.product + '</b> is <b>' + geld(p) + '</b>. Wat is er op de markt?', opdracht:'Kijk bij die prijs: welke lijn ligt verder naar rechts?', beeld: grafiek(m, { prijs:p }),
+        opties: opties, goed: over ? 1 : 0,
+        uitleg:'Bij ' + geld(p) + ' is de vraag ' + Math.round(qv) + ' en het aanbod ' + Math.round(qa) + '. ' + (over ? 'Er is een overschot van ' + Math.round(verschil) + ': de prijs is te hoog en zal dalen.' : 'Er is een tekort van ' + Math.round(verschil) + ': de prijs is te laag en zal stijgen.'), antwoordTekst: opties[over ? 1 : 0] };
+    }
+    return { onderdeel:'vraag en aanbod: tekort en overschot', onderdeelNaam:'tekort en overschot', vorm:'invul', sleutel:'t' + m.pe + p + m.product,
+      vraag:'De prijs van <b>' + m.product + '</b> is <b>' + geld(p) + '</b>. Hoe groot is het ' + (over ? 'overschot' : 'tekort') + '?', opdracht:'Lees bij die prijs de gevraagde en de aangeboden hoeveelheid af en neem het verschil.', beeld: grafiek(m, { prijs:p }),
+      velden:[{ label: over ? 'overschot' : 'tekort', antwoord: verschil, tol:1, eenheid:'stuks' }],
+      uitleg:'Bij ' + geld(p) + ': vraag ' + Math.round(qv) + ', aanbod ' + Math.round(qa) + '. Het verschil is ' + Math.round(verschil) + '. ' + (over ? 'Aanbod groter dan vraag: overschot, de prijs daalt richting ' + geld(m.pe) + '.' : 'Vraag groter dan aanbod: tekort, de prijs stijgt richting ' + geld(m.pe) + '.'), antwoordTekst: Math.round(verschil) + ' stuks' };
+  }
+  /* 5. begrippen */
+  var BEGRIPPEN = [
+    { b:'vraag', u:'de hoeveelheid die kopers bij een bepaalde prijs willen kopen' },
+    { b:'aanbod', u:'de hoeveelheid die verkopers bij een bepaalde prijs willen verkopen' },
+    { b:'evenwichtsprijs', u:'de prijs waarbij de gevraagde en de aangeboden hoeveelheid gelijk zijn' },
+    { b:'schaarste', u:'er is minder van iets dan mensen zouden willen' },
+    { b:'marktmechanisme', u:'de prijs verandert vanzelf tot vraag en aanbod gelijk zijn' },
+    { b:'overschot', u:'bij deze prijs wordt er meer aangeboden dan gevraagd' },
+    { b:'tekort', u:'bij deze prijs wordt er meer gevraagd dan aangeboden' },
+    { b:'prijselasticiteit', u:'hoe sterk de gevraagde hoeveelheid reageert op een prijsverandering', hv:true },
+    { b:'substituut', u:'een product dat een ander product kan vervangen, zoals thee voor koffie', hv:true },
+    { b:'complementair goed', u:'een product dat je samen met een ander gebruikt, zoals een printer en inkt', hv:true }
+  ];
+  function begrippen(niveau){
+    var lijst = BEGRIPPEN.filter(function(b){ return !b.hv || niveau === 'hv'; }), b = kies(lijst), m = markt(niveau);
+    var anderen = H(lijst.filter(function(x){ return x !== b; })).slice(0, 3), opties = H([b].concat(anderen)).map(function(x){ return x.b; });
+    return { onderdeel:'vraag en aanbod: begrippen', onderdeelNaam:'begrippen', vorm:'meerkeuze', sleutel:'b' + b.b,
+      vraag:'Welk begrip hoort bij: <b>' + b.u + '</b>?', beeld: grafiek(m, { evenwicht:true }), opties: opties, goed: opties.indexOf(b.b),
+      uitleg: b.b.charAt(0).toUpperCase() + b.b.slice(1) + ': ' + b.u + '.', antwoordTekst: b.b };
+  }
+
+  var SOORTEN = { evenwicht: evenwicht, schuiven: schuiven, gebeurt: gebeurt, tekort: tekort, begrippen: begrippen };
+  VAKSPEL.maak({
+    id:'vraagenaanbod', naam:'Vraag en aanbod', vak:'eco', kleur:'#EA9836',
+    hand:'waar de lijnen elkaar kruisen',
+    lead:'Een markt in een grafiek: de vraaglijn daalt, de aanbodlijn stijgt, en waar ze elkaar snijden ligt de evenwichtsprijs. Je leest het evenwicht af, zoekt het met een schuif, ziet welke lijn verschuift bij een gebeurtenis en rekent tekorten en overschotten uit.',
+    hoe:[
+      { kop:'De twee lijnen', tekst:'<b>Vraag</b> (blauw): hoe lager de prijs, hoe meer mensen willen kopen. <b>Aanbod</b> (oranje): hoe hoger de prijs, hoe meer verkopers willen verkopen.' },
+      { kop:'Evenwicht', tekst:'Op het snijpunt zijn vraag en aanbod gelijk. Is de prijs hoger, dan blijft er over (overschot); lager, dan komen kopers tekort.' },
+      { kop:'Verschuiven', tekst:'Verandert er iets bij de kopers, dan schuift de vraaglijn; bij de verkopers de aanbodlijn. Naar rechts is meer, naar links is minder.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'Evenwicht en tekort of overschot als meerkeuze, mooie getallen.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Aflezen en uitrekenen, verschuivingen en begrippen.' },
+        { id:'hv', naam:'havo en vwo', uit:'Ook prijselasticiteit, substituten en complementaire goederen.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' }, { id:'evenwicht', naam:'evenwicht aflezen' }, { id:'schuiven', naam:'schuiven' }, { id:'gebeurt', naam:'verschuiven' }, { id:'tekort', naam:'tekort en overschot' }, { id:'begrippen', naam:'begrippen' } ] }
+    ],
+    aantal:10,
+    maak:function(keuze, nr){
+      var soort = keuze.soort === 'alles' ? kies(['evenwicht', 'schuiven', 'gebeurt', 'gebeurt', 'tekort', 'begrippen']) : keuze.soort;
+      return SOORTEN[soort](keuze.niveau);
+    },
+    uitleg:{ doel:'Vraag en aanbod lezen in een grafiek: evenwichtsprijs, tekort, overschot en verschuivingen.', tijd:'tien opgaven per ronde', bediening:'Lees af en typ, kies een antwoord, of schuif de prijs tot vraag en aanbod gelijk zijn en druk op Nakijken.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>
