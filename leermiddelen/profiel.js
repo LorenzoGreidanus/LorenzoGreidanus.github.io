@@ -62,7 +62,8 @@ window.PROFIEL = (function(){
     var vrij = {}; ['tonkla', 'aap', 'eiland', 'archipel', 'vulkaan'].forEach(function(x){ if (ls('lg-toren-' + x) === 'ja') vrij[x] = true; });
     var klas = null; try { klas = JSON.parse(ls('lg-klas') || 'null'); } catch (e){}
     var uit = null; try { uit = JSON.parse(ls('lg-uitrusting') || 'null'); } catch (e){}
-    return { avatar:avatar(), beste:beste, campagne:campagne, vrij:vrij, klas:klas && klas.code ? klas : null, niveau:ls('lg-niveau') || '', muntDelta:wachtend(), vrijspeel:vrijWacht(), uitrusting:uit,
+    var gezien = {}; try { gezien = JSON.parse(ls('lg-gezien') || '{}') || {}; } catch (e){}
+    return { avatar:avatar(), beste:beste, campagne:campagne, vrij:vrij, klas:klas && klas.code ? klas : null, niveau:ls('lg-niveau') || '', muntDelta:wachtend(), vrijspeel:vrijWacht(), uitrusting:uit, gezien:gezien,
              /* de klassleutels gaan niet meer mee in het profiel: die horen bij het
                 account, zie klassenAfstemmen() */
              docentWeg:docentWegWacht(), fouten:foutenKort() };
@@ -197,6 +198,12 @@ window.PROFIEL = (function(){
   /* wat van de server komt, hier neerzetten; het beste record wint */
   function pasToe(pr){
     if (!pr) return;
+    /* wat je al gezien hebt (een tutorial): hier en op de server samen */
+    if (pr.gezien && typeof pr.gezien === 'object'){
+      var gz = {}; try { gz = JSON.parse(ls('lg-gezien') || '{}') || {}; } catch (e){}
+      Object.keys(pr.gezien).forEach(function(k){ if (pr.gezien[k]) gz[k] = true; });
+      lsZet('lg-gezien', JSON.stringify(gz));
+    }
     Object.keys(pr.beste || {}).forEach(function(k){
       var mijn = null; try { mijn = JSON.parse(ls('lg-beste-' + k) || 'null'); } catch (e){}
       var best = beterRecord(mijn, pr.beste[k]);

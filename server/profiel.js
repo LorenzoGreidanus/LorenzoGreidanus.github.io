@@ -39,6 +39,10 @@ function netjes(inz){
               /* welk hoofdwapen en zijwapen je meeneemt de stad in */
               uitrusting: inz.uitrusting && typeof inz.uitrusting === "object"
                             ? { hoofd: schoon(inz.uitrusting.hoofd, 12), zij: schoon(inz.uitrusting.zij, 12) } : null };
+  /* wat je al gezien hebt, zoals een tutorial: alleen namen en waar */
+  p.gezien = {};
+  const gz = inz.gezien && typeof inz.gezien === "object" ? inz.gezien : {};
+  Object.keys(gz).slice(0, 30).forEach(k => { const s = String(k).replace(/[^a-z0-9-]/g, "").slice(0, 30); if (s && gz[k] === true) p.gezien[s] = true; });
   const b = inz.beste && typeof inz.beste === "object" ? inz.beste : {};
   Object.keys(b).slice(0, 300).forEach(k => {
     const s = schoon(k, 60).replace(/[^a-z0-9-]/gi, ""), v = b[k];
@@ -116,6 +120,8 @@ function voegSamen(oud, nieuw, klasWeg, alles){
   });
   Object.keys(nieuw.campagne).forEach(k => { p.campagne[k] = Math.max(p.campagne[k] | 0, nieuw.campagne[k]); });
   Object.keys(nieuw.vrij).forEach(k => { p.vrij[k] = true; });
+  /* gezien is gezien: wat op een apparaat gezien is, telt overal */
+  p.gezien = Object.assign({}, oud.gezien || {}, nieuw.gezien || {});
   return p;
 }
 

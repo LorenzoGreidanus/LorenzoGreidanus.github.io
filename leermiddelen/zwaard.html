@@ -471,6 +471,7 @@ body.groot .meter b{font-size:1.45rem}
 <script src="voorlezen.js"></script>
 <script src="foutenmap.js"></script>
 <script src="bank.js"></script>
+<script src="tutorial.js"></script>
 <script>
 /* ============================================================================
    ZWAARDVECHTER
@@ -647,6 +648,20 @@ const ICONEN = {
      baas die binnenkomt. Een aanval gaat alleen langzaam, want die moet je
      juist zien bewegen. */
   var uitlegPauze = false;
+  /* fouten waarvan de uitleg komt zodra ze in de arena staan */
+  var wachtUitleg = [];
+  function kijkWachtUitleg(){
+    if (!wachtUitleg.length || uitlegPauze || !W) return;
+    wachtUitleg = wachtUitleg.filter(function(w){ return !w.f.dood && W.fouten.indexOf(w.f) >= 0; });
+    for (var i = 0; i < wachtUitleg.length; i++){
+      var f = wachtUitleg[i].f, marge = f.r + 30;
+      if (f.x > marge && f.x < ARENA.b - marge && f.y > marge && f.y < ARENA.h - marge){
+        var w = wachtUitleg.splice(i, 1)[0];
+        stilMoment(w.t, { x:f.x, y:f.y, r:f.r + 24 });
+        return;
+      }
+    }
+  }
   function stilMoment(tekst, doel){
     if (!uitlegstand || co.aan) return;
     uitlegPauze = true; traagKlok = 0;
@@ -931,12 +946,13 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     el.classList.remove('hide');
     if (!gedaan.length){
       el.innerHTML = '<h3>Baas Nightmare</h3><p>Versla eerst een baas in een gewoon potje. Daarna kun je hem hier nog een keer tegenkomen, ' +
-        'maar dan alleen en met alles gekocht, en met ruim vier keer zoveel leven.</p>';
+        'maar dan alleen en met alles gekocht, en hij is een stuk sterker.</p>';
       return;
     }
     el.innerHTML = '<h3>Baas Nightmare</h3>' +
-      '<p>Alleen jij tegen de baas, met je uitrusting helemaal vol. Hij heeft ruim vier keer zoveel leven, slaat harder ' +
-      'en gaat in drie fasen steeds sneller aanvallen. Versla je hem, dan win je iets voor bij je gezichtje.</p>' +
+      '<p>Alleen jij tegen de baas, met je uitrusting helemaal vol. Hij heeft zoveel leven dat je minutenlang moet raken, ' +
+      'slaat bijna twee keer zo hard en valt in drie fasen steeds sneller aan. Vanaf fase 2 roept hij fouten te hulp. ' +
+      'Versla je hem, dan win je iets voor bij je gezichtje.</p>' +
       '<div class="nmrij">' + BAZEN.filter(function(b){ return gedaan.indexOf(b.id) >= 0; }).map(function(b){
         var it = window.COSMETICA && COSMETICA.vanNachtmerrie ? COSMETICA.vanNachtmerrie(b.id) : null;
         var had = gehaald.indexOf(b.id) >= 0;
@@ -970,7 +986,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
         W.volgendeRonde();
         spiegel();
       }
-      tipTekst(def.naam + ' in de nachtmerrie. Drie fasen, en hij wordt elke fase sneller. Blijf bewegen.');
+      tipTekst(def.naam + ' in de nachtmerrie. Drie fasen: hij wordt elke fase sneller, en vanaf fase 2 komen er fouten bij. Blijf bewegen.');
     });
   }
 
@@ -1098,7 +1114,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     spawn: function(soort, f){
       if (uitlegstand && !co.aan && !alGezien[soort.id] && SOORTUITLEG[soort.id]){
         alGezien[soort.id] = 1;
-        stilMoment(SOORTUITLEG[soort.id], { x:f.x, y:f.y, r:f.r + 24 });
+        /* hij komt van buiten de rand: de uitleg wacht tot hij binnen is */
+        wachtUitleg.push({ f:f, t:SOORTUITLEG[soort.id] });
       }
     },
     aanval: function(soort, k, b){ legUit(soort, k, b); },
@@ -1227,7 +1244,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   function begin(){
     /* samen in een arena loopt iedereen op dezelfde snelheid */
     if (co.aan) uitlegstand = false;
-    traagKlok = 0; alGezien = {}; wolk = null; uitlegPauze = false;
+    traagKlok = 0; alGezien = {}; wolk = null; uitlegPauze = false; wachtUitleg = [];
     ronde = 0; munten = 0; level = {}; geveld = 0; reeks = 0; besteReeks = 0; goedAantal = 0; foutAantal = 0; muntWas = 0; geveldWas = 0; perOnderdeel = {};
     co.klaar = false; co.maatKlaar = false; co.neer = false; co.inNr = 0; co.verzonden = {}; co.lag = 80; co.laatsteFase = ''; co.pakketten = 0;
     co.dashVraag = false; co.wapenVraag = false; co.laatsteInvoer = '';
@@ -1259,6 +1276,36 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     }
     scrollTo({ top:0, behavior:'auto' });
     if (!loopt){ loopt = true; laatste = performance.now(); laatsteTik = laatste; if (!rafId) rafId = requestAnimationFrame(tik); }
+    /* de tutorial, een keer: na begin(), want de nachtmerrie zet zich pas daarna */
+    setTimeout(tutorial, 60);
+  }
+  /* De tutorial: het spel staat stil tot je hem doorlopen of overgeslagen hebt.
+     Niet samen (de kamer loopt door), niet in de nachtmerrie (die speel je pas
+     als je een baas versloeg, dus je kent het spel). */
+  function tutorial(){
+    if (co.aan || nachtmerrie || !W || !window.TUTORIAL || !TUTORIAL.nodig('zwaard')) return;
+    var vinger = document.documentElement.classList.contains('raak') || !!(window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches);
+    var stappen = [
+      { titel:'Dit ben jij', doel:function(){ return sp ? schermVan(sp.x, sp.y, 44) : null; },
+        tekst:vinger ? 'Houd je vinger op de arena en sleep: je loopt naar je vinger toe.' : 'Loop met de pijltjes of met W, A, S en D.' },
+      { titel:'De fouten komen van de rand', doel:'arenavak',
+        tekst:'Ze lopen op je af. Je wapen slaat vanzelf naar de dichtstbijzijnde fout die dichtbij komt: jij loopt en ontwijkt, slaan gaat vanzelf.' },
+      { titel:'Ontwijken', doel:'dashBtn',
+        tekst:(vinger ? 'Tik hier' : 'Druk op spatie') + ' voor een sprong waarbij niets je raakt. Handig als je ingesloten raakt of als een baas aanvalt. Daarna moet hij even opladen.' },
+      { titel:'Zwaard of boog', doel:'wapenBtn',
+        tekst:(vinger ? 'Met deze knop' : 'Met Q, E of deze knop') + ' wissel je. Het zwaard slaat hard van dichtbij; de boog raakt van ver, maar doet ongeveer de helft.' },
+      { titel:'Je leven', doel:'hud',
+        tekst:'Raakt een fout je, dan gaat er leven af. Op nul is het voorbij. Hier zie je ook de ronde en je munten.' },
+      { titel:'Na elke ronde: vragen en de winkel', doel:null,
+        tekst:'Na elke ronde beantwoord je vragen. Goed is munten, en daarmee koop je in de winkel een scherper zwaard, een harnas of snellere laarzen. Drie goed op rij en je volgende klap is een critical. Elke vijfde ronde komt er een baas.' }
+    ];
+    if (stijl === 'wacht') stappen.splice(4, 0, { titel:'Blokken', doel:'blokBtn', tekst:'Als schildwacht houd je shift ingedrukt (of deze knop) om te blokken: dan krijg je veel minder schade.' });
+    pauze = true; if (W) W.pauze = true;
+    TUTORIAL.start('zwaard', stappen, function(){
+      pauze = false; if (W) W.pauze = false;
+      laatste = performance.now();
+      document.getElementById('arenatip').textContent = 'Daar gaan ze. ' + bediening();
+    });
   }
   /* Wie met zijn vinger speelt heeft geen WASD en geen rechtermuisknop.
      Eén zin voor de muis, een andere voor de vinger. */
@@ -1352,6 +1399,9 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     }
     var maat = kijkVenster(r);
     var mik = sp && isFinite(sp.x) ? sp : { x:ARENA.b / 2, y:ARENA.h / 2 };
+    /* Staat er uitleg over iets, dan kijkt de camera daarheen: anders praat de
+       wolk over een fout die op een klein scherm buiten beeld staat. */
+    if (wolk && wolk.heeftDoel && uitlegstand) mik = { x:wolk.x, y:wolk.y };
     var wx = Math.max(0, Math.min(ARENA.b - maat.b, mik.x - maat.b / 2));
     var wy = Math.max(0, Math.min(ARENA.h - maat.h, mik.y - maat.h / 2));
     if (!kijk.aan){ kijk.x = wx; kijk.y = wy; kijk.aan = true; }
@@ -1364,6 +1414,14 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     var a = document.getElementById('arena'), g = document.getElementById('arenagrond');
     if (a && a.getAttribute('viewBox') !== vb) a.setAttribute('viewBox', vb);
     if (g && g.getAttribute('viewBox') !== vb) g.setAttribute('viewBox', vb);
+  }
+  /* waar staat een punt uit de arena op het scherm: voor de tutorial */
+  function schermVan(x, y, r){
+    var rv = vak2.getBoundingClientRect(), sx, sy, sch;
+    if (kijk.aan){ sch = rv.width / kijk.b; sx = rv.left + (x - kijk.x) * sch; sy = rv.top + (y - kijk.y) * sch; }
+    else { sch = Math.min(rv.width / ARENA.b, rv.height / ARENA.h); sx = rv.left + (rv.width - ARENA.b * sch) / 2 + x * sch; sy = rv.top + (rv.height - ARENA.h * sch) / 2 + y * sch; }
+    var rr = (r || 30) * sch;
+    return { left:sx - rr, top:sy - rr, width:rr * 2, height:rr * 2 };
   }
   function arenaPunt(e){
     var r = vak2.getBoundingClientRect();
@@ -1497,6 +1555,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     }
     /* in de uitlegstand staat het spel stil bij iets nieuws, tot je verder wilt */
     if (!(fase === 'ronde' && uitlegPauze)) W.stap(STAP);
+    if (fase === 'ronde' && uitlegstand) kijkWachtUitleg();
     spiegel();
     if (fase === 'ronde') tekenHud();
   }
@@ -2207,8 +2266,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     /* deeltjes en getallen */
     pluis.forEach(function(p){ s += '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' + (3 * p.leven / 0.45 + 1).toFixed(1) + '" fill="' + p.kleur + '" opacity="' + (p.leven / 0.45).toFixed(2) + '"/>'; });
     cijfers.forEach(function(c){ s += '<text x="' + c.x.toFixed(1) + '" y="' + c.y.toFixed(1) + '" text-anchor="middle" font-size="15" font-weight="700" fill="' + c.kleur + '" opacity="' + Math.min(1, c.leven).toFixed(2) + '" font-family="Poppins" stroke="#fff" stroke-width="3" paint-order="stroke">' + c.tekst + '</text>'; });
-    /* pauze en tussenfases */
-    if (fase !== 'ronde' || pauze){
+    /* pauze en tussenfases; tijdens de tutorial staat het spel ook stil, maar dan praat de tutorial */
+    if ((fase !== 'ronde' || pauze) && !(fase === 'ronde' && window.TUTORIAL && TUTORIAL.open())){
       s += '<rect x="-400" y="-400" width="' + (ARENA.b + 800) + '" height="' + (ARENA.h + 800) + '" fill="#14224C" opacity=".28"/>';
       var kop = pauze ? 'Gepauzeerd' : fase === 'vragen' ? 'Ronde ' + ronde + ' overleefd' : 'De winkel';
       var onder = pauze ? 'Druk op P of Escape om verder te gaan' : fase === 'vragen' ? 'Beantwoord de vragen rechts' : 'Koop rechts en start de volgende ronde';
@@ -2237,7 +2296,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   function tekenWolk(){
     if (!wolk || !uitlegstand) return '';
     var vak = document.getElementById('arenavak');
-    if (vak && vak.clientWidth && vak.clientWidth < 560) return '';
+    /* smal: alleen de ring om waar het om gaat; de tekst staat onder de arena */
+    var smal = !!(vak && vak.clientWidth && vak.clientWidth < 560);
     var pols = performance.now() / 1000;
     var s = '', kl = '#EA9836';
     var straal = wolk.r + Math.sin(pols * 4) * 3;
@@ -2251,12 +2311,15 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       s += '<circle cx="' + wolk.x.toFixed(1) + '" cy="' + wolk.y.toFixed(1) + '" r="' + straal.toFixed(1) +
         '" fill="none" stroke="' + kl + '" stroke-width="4" stroke-dasharray="12 9" opacity=".95"/>';
     }
-    /* de wolk zelf, aan de kant waar de meeste ruimte is */
-    var regels = regelsVan(wolk.t, 46), breed = 430, hoog = 26 + regels.length * 25 + (wolk.stil ? 24 : 0);
-    var onder = wolk.y < ARENA.h / 2;
-    var bx = Math.max(20, Math.min(ARENA.b - breed - 20, wolk.x - breed / 2));
+    if (smal) return s;
+    /* de wolk zelf, aan de kant waar de meeste ruimte is; binnen wat de camera laat zien */
+    var zicht = kijk.aan ? { x:kijk.x, y:kijk.y, b:kijk.b, h:kijk.h } : { x:0, y:0, b:ARENA.b, h:ARENA.h };
+    var breed = Math.min(430, zicht.b - 24), tekens = Math.max(24, Math.round(breed / 9.4));
+    var regels = regelsVan(wolk.t, tekens), hoog = 26 + regels.length * 25 + (wolk.stil ? 24 : 0);
+    var onder = wolk.y < zicht.y + zicht.h / 2;
+    var bx = Math.max(zicht.x + 12, Math.min(zicht.x + zicht.b - breed - 12, wolk.x - breed / 2));
     var by = onder ? wolk.y + straal + 30 : wolk.y - straal - 30 - hoog;
-    by = Math.max(14, Math.min(ARENA.h - hoog - 14, by));
+    by = Math.max(zicht.y + 10, Math.min(zicht.y + zicht.h - hoog - 10, by));
     /* het puntje naar het ding toe */
     var px = Math.max(bx + 26, Math.min(bx + breed - 26, wolk.x));
     var py = onder ? by : by + hoog;

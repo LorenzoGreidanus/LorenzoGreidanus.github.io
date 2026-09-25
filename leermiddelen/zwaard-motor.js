@@ -361,10 +361,12 @@ function maak(opties){
   }
   function spawn(soort){
     var n = soort.aantal || 1, p = randPlek(), eerste = null;
+    /* hulp van een nachtmerriebaas is zo sterk als in een late ronde */
+    var sterk = W.nachtmerrie ? NACHTMERRIE.hulpRonde : W.ronde;
     for (var i = 0; i < n; i++){
-      var h = Math.round(foutHp(W.ronde) * soort.hp);
+      var h = Math.round(foutHp(sterk) * soort.hp);
       var f = { id:++W.nr, soort:soort, x:p.x + (toeval() - .5) * 30, y:p.y + (toeval() - .5) * 30,
-                hp:h, maxHp:h, r:soort.r, snel:soort.snel * (70 + W.ronde * 1.6), flits:0, stap:toeval() * 6,
+                hp:h, maxHp:h, r:soort.r, snel:soort.snel * (70 + sterk * 1.6), flits:0, stap:toeval() * 6,
                 schild:soort.schild || 0, slaKlok:0,
                 /* een schutter mikt, schuift een kant op en laadt eerst */
                 mikt:0, zij:toeval() < 0.5 ? 1 : -1, laadKlok:soort.laden ? 1.2 + toeval() : 0, stilKlok:0 };
@@ -376,18 +378,28 @@ function maak(opties){
      zijn uitrusting op orde had in een halve minuut voorbij, en dan heb je geen
      baasgevecht maar een grote fout. */
   var BAASLEVEN = 1.25;
-  /* De nachtmerrie: drie fasen, en per fase wacht hij korter en doet hij vaker
-     twee dingen tegelijk. De waarschuwing blijft even lang staan, want anders
-     is het niet meer te ontwijken en dan is het geen uitdaging maar pech. */
+  /* De nachtmerrie: drie fasen, en per fase wacht hij korter, doet hij vaker
+     twee dingen tegelijk en roept hij fouten te hulp. De waarschuwing blijft
+     even lang staan, want anders is het niet meer te ontwijken en dan is het
+     geen uitdaging maar pech.
+
+     Het leven hing eerst aan de ronde waarin de baas normaal komt. Maar in de
+     nachtmerrie heb je alles gekocht, en dan viel De Grote Fout (ronde 5) in
+     acht seconden en De Zwerm (ronde 30) in een minuut. Nu is het leven voor
+     elke baas even groot, gemeten tegen een speler met alles vol: zo'n drie
+     minuten alleen maar raken, en dan moet je nog ontwijken. Een baas met een
+     dikker schild krijgt iets minder leven, zodat ze allemaal even lang duren. */
   var NACHTMERRIE = {
-    hpX: 4.2,            /* zoveel keer zoveel leven als een gewone baas van die ronde */
-    schadeX: 1.35,       /* en zoveel harder */
+    leven: 90000,        /* voor een baas met een schild van 0,35; zie nmLeven */
+    schadeX: 1.8,        /* zoveel harder dan een gewone baas van die ronde */
+    hulpRonde: 22,       /* de fouten die hij te hulp roept zijn zo sterk als in deze ronde */
     fases: [
-      { vanaf: 1,    pauze: 0.86, dubbel: 0.14 },
-      { vanaf: 0.66, pauze: 0.72, dubbel: 0.26 },
-      { vanaf: 0.33, pauze: 0.6,  dubbel: 0.4 }
+      { vanaf: 1,    pauze: 0.78, dubbel: 0.22, hulp: 0,  hulpAantal: 0 },
+      { vanaf: 0.66, pauze: 0.62, dubbel: 0.38, hulp: 13, hulpAantal: 2 },
+      { vanaf: 0.33, pauze: 0.5,  dubbel: 0.55, hulp: 9,  hulpAantal: 3 }
     ]
   };
+  function nmLeven(def){ return Math.round(NACHTMERRIE.leven * (1 - (def.schild || 0)) / 0.65); }
   /* in welke fase zit deze baas, op zijn leven */
   function nmFase(b){
     var deel = b.maxHp ? b.hp / b.maxHp : 1, f = 0;
@@ -397,9 +409,9 @@ function maak(opties){
   function spawnBaas(){
     var nm = W.nachtmerrie;
     var def = nm ? nm.def : baasVan(W.ronde);
-    var h = Math.round(foutHp(W.ronde) * def.hp * BAASLEVEN * (samen ? 0.7 + 0.3 * W.spelers.length : 1) * (nm ? NACHTMERRIE.hpX : 1));
+    var h = nm ? nmLeven(def) : Math.round(foutHp(W.ronde) * def.hp * BAASLEVEN * (samen ? 0.7 + 0.3 * W.spelers.length : 1));
     var b = { id:++W.nr, soort:def, def:def, x:ARENA.b / 2, y:ARENA.h / 2, hp:h, maxHp:h, r:def.r, snel:0, flits:0, stap:0,
-              schild:def.schild, slaKlok:0, baas:true, aanvalKlok:2.2, laatste:-1, eerste:true, nmFase:0 };
+              schild:def.schild, slaKlok:0, baas:true, aanvalKlok:2.2, laatste:-1, eerste:true, nmFase:0, hulpKlok:4 };
     W.fouten.push(b);
     /* de spelers beginnen in het midden: even opzij, anders sta je in de baas */
     W.spelers.forEach(function(P, i){ P.sp.x = ARENA.b / 2 + (i === 0 ? -150 : 150); });
@@ -887,9 +899,19 @@ function maak(opties){
       if (W.nachtmerrie){
         var f = nmFase(b);
         if (f > b.nmFase){
-          b.nmFase = f;
+          b.nmFase = f; b.hulpKlok = 1.5;
           W.cijfers.push({ x:b.x, y:b.y - b.r - 16, tekst:'Fase ' + (f + 1), leven:2.2, kleur:b.def.kleur });
           zeg('nmfase', f + 1, b);
+        }
+        /* vanaf fase 2 roept hij fouten te hulp: dan moet je kiezen tussen hem en hen */
+        var fz = NACHTMERRIE.fases[b.nmFase];
+        if (fz.hulp){
+          b.hulpKlok -= dt;
+          if (b.hulpKlok <= 0){
+            b.hulpKlok = fz.hulp;
+            var mag = FOUTEN.filter(function(x){ return x.kans > 0 && x.vanaf <= NACHTMERRIE.hulpRonde; });
+            for (var hi = 0; hi < fz.hulpAantal; hi++) spawn(mag[Math.floor(toeval() * mag.length)]);
+          }
         }
       }
       /* Ook als hij kwaad is wacht hij tot het veld leeg is. Anders stapelen de

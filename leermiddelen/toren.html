@@ -5469,8 +5469,32 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       kaartMelding(); startKlok();
     }
     tekenVraag(); tekenMeters(); tekenBord();
-    if (uitlegstand && !co.aan) setTimeout(function(){ uitlegTip(0); }, 400);
     scrollTo({ top:0, behavior:'auto' });
+    /* eerst de tutorial (een keer), dan pas de tips van de uitlegstand */
+    var naTut = function(){ if (uitlegstand && !co.aan) setTimeout(function(){ uitlegTip(0); }, 400); };
+    if (!co.aan && window.TUTORIAL && TUTORIAL.nodig('toren')) setTimeout(function(){ tutorial(naTut); }, 80);
+    else naTut();
+  }
+  /* De tutorial: het bord staat stil tot je hem doorlopen of overgeslagen hebt. */
+  function tutorial(daarna){
+    if (!inSpel()){ daarna(); return; }
+    var vinger = document.documentElement.classList.contains('raak') || !!(window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches);
+    var stappen = [
+      { titel:'Het pad', doel:'bordvak',
+        tekst:'Over dit pad lopen fouten naar de klas. Jij houdt ze tegen met torens.' },
+      { titel:'Antwoorden is geld', doel:function(){ return document.querySelector('.vraagvak'); },
+        tekst:'Hier staat een vraag. Een goed antwoord levert munten op, en goed op rij laat je torens harder slaan. Fout? Dan lees je waarom en speel je gewoon door.' },
+      { titel:'Bouwen', doel:'bordvak',
+        tekst:(vinger ? 'Tik' : 'Klik') + ' naast het pad om een toren neer te zetten, en op het pad voor pek, voetangels of een versperring. ' + (vinger ? 'Tik' : 'Klik') + ' op een toren om hem sterker te maken of weg te halen.' },
+      { titel:'Munten en de klas', doel:function(){ return document.querySelector('.balk'); },
+        tekst:'Linksboven je munten. Daarnaast hoeveel de klas nog aankan: elke fout die de klas bereikt kost er een. Op nul is het voorbij.' },
+      { titel:'Haast?', doel:'nuBtn',
+        tekst:'Start de volgende ronde meteen: dat levert extra munten op, maar er komen ook meer fouten tegelijk.' },
+      { titel:'Pauze', doel:'pauzeBtn',
+        tekst:'Pauze zet alles stil' + (vinger ? '.' : ', ook met de P.') + ' Elke tiende ronde komt er een baas. Succes!' }
+    ];
+    zetPauze(true);
+    TUTORIAL.start('toren', stappen, function(){ zetPauze(false); daarna(); });
   }
 
   function kaartMelding(){
@@ -6039,5 +6063,6 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
 <script src="thema.js"></script>
 <script src="spel.js"></script>
 <script>SPEL.uitleg({ doel:"Houd de fouten uit de klas: goed antwoorden geeft munten, en met munten bouw je torens.", tijd:"zolang je het volhoudt", bediening:"Tik naast het pad voor een toren, op het pad voor pek of een versperring. P is pauze." });</script>
+<script src="tutorial.js"></script>
 </body>
 </html>
