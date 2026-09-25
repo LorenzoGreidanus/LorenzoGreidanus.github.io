@@ -159,7 +159,7 @@ var IN_PATROON = {
   reken: [[/^DHTE /, 'getallen'], [/./, 'verhoudingen']],
   /* de figuren uit Vlakken herkennen (vlak: ruit) en de soorten van De balans (vergelijking: ...) */
   wis: [[/^vlak: /, 'meetkunde'], [/^vergelijking: /, 'algebra']],
-  ned:   [[/^(tegenwoordige tijd|verleden tijd|voltooid deelwoord|de d of t val)$/, 'spelling'], [/^(kernzin|schrijfdoel)$/, 'lezen']],
+  ned:   [[/^(tegenwoordige tijd|verleden tijd|voltooid deelwoord|de d of t val)$/, 'spelling'], [/^(kernzin|schrijfdoel|tekstverbanden)$/, 'lezen']],
   eng:   [[/^irregular /, 'werkwoorden'], [/./, 'grammatica']],
   aard:  [[/^topografie/, 'landen']],
   ges:   [[/^werken met bronnen$/, 'vaardig']]

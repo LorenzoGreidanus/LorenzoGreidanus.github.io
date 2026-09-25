@@ -442,6 +442,13 @@ td.getal{font-variant-numeric:tabular-nums;text-align:right}
 .samen .beh span{display:inline-block;border-radius:999px;padding:2px 9px;font-size:.78rem;font-weight:600}
 .samen .beh .b1{background:#d7f1df;color:#155a2d}.samen .beh .b2{background:#fdebc8;color:#7a4a05}.samen .beh .b3{background:#fbd8d2;color:#8a2416}
 .samen .behleeg{display:block;margin-top:6px;color:var(--muted);font-size:.8rem}
+.samen .nivrij{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;margin-top:6px;font-size:.8rem}
+.samen .nivrij.klein{grid-column:1;margin-top:2px;font-size:.76rem;gap:2px 8px}
+.samen .niv,.samen .niv b,.samen .niv small{display:inline;white-space:nowrap}
+.samen .nivkop{font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-size:.68rem}
+.samen .niv b{font-weight:700}
+.samen .niv.g b{color:#2f7d52}.samen .niv.m b{color:#b7791f}.samen .niv.r b{color:#c0392b}
+.samen .niv small,.samen .nivuit{color:var(--muted)}
 .samen .behnog{display:block;margin-top:4px;color:var(--muted);font-size:.76rem}
 :root[data-theme="dark"] .samen .beh .b1{background:#1f4a30;color:#b8ecc8}:root[data-theme="dark"] .samen .beh .b2{background:#4d3a12;color:#ffd98a}:root[data-theme="dark"] .samen .beh .b3{background:#5a2320;color:#ffc4bb}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .samen .beh .b1{background:#1f4a30;color:#b8ecc8}:root:not([data-theme="light"]) .samen .beh .b2{background:#4d3a12;color:#ffd98a}:root:not([data-theme="light"]) .samen .beh .b3{background:#5a2320;color:#ffc4bb}}
@@ -623,13 +630,17 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
         <span class="filternaam">Detail</span>
         <div class="chips" id="odStandChips"></div>
       </div>
+      <div class="filterrij" id="niveauRij" hidden>
+        <span class="filternaam">Niveau</span>
+        <div class="chips" id="niveauChips"></div>
+      </div>
       <div class="legenda" id="legenda"><span><i class="g"></i>80% of meer goed</span><span><i class="m"></i>60 tot 80%: bijna</span><span><i class="r"></i>onder de 60%: nog niet</span><span>gestippeld: minder dan vijf vragen, dus nog weinig zeggend</span><span><b>&#10003;</b> beheerst: 80% of meer goed over minstens tien vragen</span></div>
       <div class="rooster" id="rooster"></div>
       <div id="vakSpellen"></div>
     </div>
 
     <div class="paneel" role="tabpanel" id="paneel-ll" aria-labelledby="tab-ll" hidden>
-      <p class="tip">Per leerling eerst wat hij beheerst: 80% of meer goed over minstens tien vragen in een onderdeel. Bijna is 60 tot 80%, nog niet is minder. Tik op de getallen voor de onderdelen. Daaronder per spel het beste potje, hoeveel potjes en of het de goede kant op gaat.</p>
+      <p class="tip">Per leerling eerst wat hij beheerst: 80% of meer goed over minstens tien vragen in een onderdeel. Bijna is 60 tot 80%, nog niet is minder. Tik op de getallen voor de onderdelen. Dan per niveau het percentage goed, bij spellen die hun niveau melden (Tekstdetective, Zwaardvechter, Vragenrace). Daaronder per spel het beste potje, hoeveel potjes en of het de goede kant op gaat.</p>
       <div class="samen" id="samen"></div>
     </div>
 
@@ -795,10 +806,15 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
   }
   var SPELLEN = { eigen:'Eigen oefening', toren:'Torenverdediging', zwaard:'Zwaardvechter', race:'Vragenrace', klasquiz:'Klasquiz', rekenen:'Rekenrace', balans:'De balans', werkwoorden:'Werkwoordrace', irregular:'Irregular verbs', vlaggen:'Vlaggen', landenvormen:'Landenvormen', topografie:'Topografie', lichaam:'Het lichaam', tijdvakken:'Tijdvakken sorteren', bronnenlab:'Bronnenlab', jagers:'Blijven of doorlopen', feodalisme:'Feodalisme', leenmannen:'Verdeel je rijk', stad:'Bouw je stad', handel:'De handelsroute', vergadering:'De vergadering', zinsbouw:'Zinsbouw', tekstdetective:'De tekstdetective', uitverkoop:'De uitverkoop', breukenbakker:'De breukenbakker',
     dhte:'Het DHTE-schema', vlakken:'Vlakken herkennen', organisme:'Bouw het organisme', dag:'Dagelijkse uitdaging', fouten:'Oefen je fouten', strijd:'Klasstrijd' };
-  var NIVEAUS = { bb:'vmbo-bb', kgt:'vmbo-kgt/tl', havo:'havo', vwo:'vwo' };
+  var NIVEAUS = { bb:'vmbo-bb', kgt:'vmbo-kgt/tl', havo:'havo', vwo:'vwo', hv:'havo/vwo' };
+  var NIVEAUVOLGORDE = ['bb', 'kgt', 'havo', 'hv', 'vwo'];
+  function niveauNaam(n){ return NIVEAUS[n] || n || 'zonder niveau'; }
+  function niveauOrde(n){ var i = NIVEAUVOLGORDE.indexOf(n); return i < 0 ? 99 : i; }
   var VAKKEN = { reken:'Rekenen', ned:'Nederlands', eng:'Engels', ges:'Geschiedenis', aard:'Aardrijkskunde', bio:'Biologie', wis:'Wiskunde', burg:'Samenleving', eco:'Economie', eigen:'Eigen lijst' };
   /* de namen van de onderdelen komen uit de vragenbank, als die geladen is */
+  var LOSSE_NAMEN = { schrijfdoel:'schrijfdoel', kernzin:'hoofdgedachte (kernzin)', tekstverbanden:'signaalwoorden en verbanden' };
   function onderdeelNaam(vak, id){
+    if (LOSSE_NAMEN[id]) return LOSSE_NAMEN[id];
     var lijst = window.ONDERDELEN && ONDERDELEN[vak];
     var o = lijst && lijst.filter(function(x){ return x.id === id; })[0];
     return o ? o.naam : id;
@@ -829,6 +845,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       { spel:'zwaard',    vak:'wis',   delen:['vergelijking', 'oppervlakte', 'hoeken'] },
       { spel:'klasquiz',  vak:'ges',   delen:['tv5', 'tv6'] },
       { spel:'vlakken',   vak:'wis',   delen:['vlakken'] },
+      { spel:'tekstdetective', vak:'ned', delen:['schrijfdoel', 'kernzin', 'tekstverbanden'] },
       { spel:'organisme', vak:'bio',   delen:['de ladder', 'plantcel of diercel', 'taken'] },
       { spel:'toren',     vak:'eng',   delen:['woordjes NL naar EN', 'irregular verbs', 'grammatica'] },
       { spel:'vlaggen',   vak:'aard',  delen:[] },
@@ -853,7 +870,8 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
         });
         var ronde = s.spel === 'race' ? 6 + Math.floor(r() * 14) : s.spel === 'toren' ? 8 + Math.floor(r() * 30) : s.spel === 'zwaard' ? 4 + Math.floor(r() * 16) : samen || 5 + Math.floor(r() * 12);
         if (s.spel === 'eigen'){ ronde = 3 + Math.floor(r() * 8); }
-        uit.push({ naam:n, av:av, spel:s.spel, ronde:ronde, punten: s.spel === 'eigen' ? ronde * 10 : 40 + Math.floor(r() * 400), niveau: ['bb', 'kgt', 'havo'][i % 3], vak:s.vak,
+        /* de Tekstdetective speel je op een gekozen niveau; in de demo wisselt dat, zodat je per niveau iets ziet */
+        uit.push({ naam:n, av:av, spel:s.spel, ronde:ronde, punten: s.spel === 'eigen' ? ronde * 10 : 40 + Math.floor(r() * 400), niveau: s.spel === 'tekstdetective' ? ['bb', 'kgt', 'hv'][(i + p) % 3] : ['bb', 'kgt', 'havo'][i % 3], vak:s.vak,
                    od: Object.keys(od).length ? od : undefined, t:t });
       }
     });
@@ -881,7 +899,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
   /* periodeKeuze: 'alles', 'week', 'maand' of het kenmerk van een eigen periode.
      odStand: 'groep' of 'deel'; leeg betekent: kies zelf (per groep bij alle
      vakken, per onderdeel bij een vak). zichtbaar: wat er na de filters over is. */
-  var periodeKeuze = 'alles', odStand = '', zichtbaar = [];
+  var periodeKeuze = 'alles', odStand = '', zichtbaar = [], niveauFilter = '';
   try { klassen = JSON.parse(localStorage.getItem('lg-klas-docent') || '[]'); } catch (e){}
   if (!Array.isArray(klassen)) klassen = [];
   function bewaar(){
@@ -918,7 +936,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     /* geen uitslagen van de vorige klas laten staan terwijl deze laadt */
     data = null; $('overzicht').classList.remove('zonderdata');
     $('ovCode').classList.remove('groot'); $('codeGroot').setAttribute('aria-pressed', 'false'); $('codeGroot').textContent = 'Groot op het bord';
-    leesPeriode(); spelFilter = ''; vakFilter = ''; odStand = '';
+    leesPeriode(); spelFilter = ''; vakFilter = ''; odStand = ''; niveauFilter = '';
     periodeOpen(false);
     haal();
     klok = setInterval(haal, 20000);
@@ -1053,13 +1071,13 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     var namen = Object.keys(per).sort(function(a, b){ return a.localeCompare(b, 'nl'); });
     var beh = beheersing(lijst);
     $('samen').innerHTML = namen.length ? namen.map(function(n){
-      return '<div><b class="avrij">' + (window.AVATAR ? AVATAR.svg(n, 34, avVan(n)) : '') + '<span>' + wieHtml(n) + '</span></b>' + behRegel(beh[n]) + Object.keys(per[n]).map(function(sp){
+      return '<div><b class="avrij">' + (window.AVATAR ? AVATAR.svg(n, 34, avVan(n)) : '') + '<span>' + wieHtml(n) + '</span></b>' + behRegel(beh[n]) + perNiveau(lijst.filter(function(r){ return r.naam === n; })) + Object.keys(per[n]).map(function(sp){
         var potjes = per[n][sp].slice().sort(function(a, b){ return a.t - b.t; }), m = maat(sp);
         var w = potjes.map(function(r){ return r[m.v] | 0; }), beste = Math.max.apply(null, w), laatste = potjes[potjes.length - 1];
         var trend = w.length >= 2 ? (w[w.length - 1] > w[0] ? ', stijgend' : w[w.length - 1] < w[0] ? ', dalend' : ', gelijk') : '';
         return '<span class="regel"><span class="wat">' + schoon(SPELLEN[sp] || sp) + '</span><em>' + lijntje(w) + '</em>' +
           '<span class="cijfer">beste ' + beste + ' ' + schoon(m.l) + '</span>' +
-          '<small>' + potjes.length + (potjes.length === 1 ? ' potje' : ' potjes') + ', laatst ' + wanneer(laatste.t) + trend + '</small></span>';
+          '<small>' + potjes.length + (potjes.length === 1 ? ' potje' : ' potjes') + ', laatst ' + wanneer(laatste.t) + trend + '</small>' + spelNiveaus(potjes) + '</span>';
       }).join('') + '</div>';
     }).join('') : '<p class="leeg">Nog niets gemeld. Zodra een leerling een potje afmaakt, staat het hier.</p>';
     zichtbaar = lijst;
@@ -1099,12 +1117,14 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     });
     return (indelingen[vak] = uit);
   }
+  /* de onderdelen van de Tekstdetective in de volgorde van het spel, achter de onderdelen uit de bank */
+  var LOSSE_ORDE = { schrijfdoel:8001, kernzin:8002, tekstverbanden:8003 };
   function plaatsVan(vak, id){
     var ind = indeling(vak);
     var gid = (window.BANK && BANK.groepVan) ? BANK.groepVan(vak, id) : '';
     var g = ind.groepen[gid];
     return { groep: gid, groepNaam: g ? g.naam : 'overig', gOrde: g ? g.orde : 99,
-             dOrde: ind.volgorde[id] !== undefined ? ind.volgorde[id] : 9000 };
+             dOrde: ind.volgorde[id] !== undefined ? ind.volgorde[id] : LOSSE_ORDE[id] || 9000 };
   }
   function vakNaam(v){
     /* m:CODE is een eigen oefening; de naam staat in de lijst van wie hem maakte */
@@ -1181,6 +1201,32 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       (b.nog.length ? '<small class="behnog">Nog niet: ' + schoon(b.nog.slice(0, 3).join('; ')) + (b.nog.length > 3 ? ' en nog ' + (b.nog.length - 3) : '') + '</small>' : '');
   }
   function metOd(lijst){ return lijst.filter(function(r){ return r.od && Object.keys(r.od).length; }); }
+  /* Per niveau optellen wat er goed ging: alle getelde vragen van een leerling
+     (of van zijn potjes in een spel) bij elkaar, per niveau dat het spel
+     meldde. Geeft een lijst [niveau, [goed, gesteld]] op volgorde van niveau. */
+  function telNiveaus(potjes){
+    var per = {};
+    metOd(potjes).forEach(function(r){
+      var nv = r.niveau || '';
+      Object.keys(r.od).forEach(function(k){ var w = r.od[k]; if (w && w[1] > 0) erbij(per, nv, w); });
+    });
+    return Object.keys(per).sort(function(a, b){ return niveauOrde(a) - niveauOrde(b); }).map(function(nv){ return [nv, per[nv]]; });
+  }
+  function nivHtml(x){ var p = pct(x[1]); return '<span class="niv ' + kleurVan(p) + '">' + schoon(niveauNaam(x[0])) + ' <b>' + p + '%</b> <small>' + x[1][0] + '/' + x[1][1] + '</small></span>'; }
+  /* onder de kop van een leerling: hoe hij het per niveau doet, over alle spellen die een niveau melden */
+  function perNiveau(potjes){
+    var l = telNiveaus(potjes).filter(function(x){ return x[0]; });
+    if (!l.length) return '';
+    return '<div class="nivrij"><span class="nivkop">Per niveau</span>' + l.map(nivHtml).join('') + '</div>';
+  }
+  /* bij een spel: per niveau het percentage goed, alleen als het spel per onderdeel telt en een niveau meldt */
+  function spelNiveaus(potjes){
+    var l = telNiveaus(potjes).filter(function(x){ return x[0]; });
+    if (!l.length) return '';
+    var delen = {}; metOd(potjes).forEach(function(r){ Object.keys(r.od).forEach(function(k){ delen[k] = true; }); });
+    var nd = Object.keys(delen).length;
+    return '<small class="nivrij klein" title="goed over ' + nd + (nd === 1 ? ' onderdeel' : ' onderdelen') + '; per onderdeel onder Onderdelen">' + l.map(nivHtml).join('') + '</small>';
+  }
 
   function tekenOnderdelen(lijst){
     var alleMet = metOd(lijst);
@@ -1201,6 +1247,18 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     Array.prototype.forEach.call($('odStandChips').querySelectorAll('button'), function(b){ b.addEventListener('click', function(){ odStand = b.getAttribute('data-s'); teken(); }); });
 
     var met = vakFilter ? alleMet.filter(function(r){ return (r.vak || '?') === vakFilter; }) : alleMet;
+    /* Op niveau: een spel dat zijn niveau meldt (de Tekstdetective, Zwaardvechter,
+       de race) telt per niveau apart. Alleen als er meer dan een niveau in zit
+       valt er iets te kiezen. */
+    var nivs = {}; met.forEach(function(r){ if (r.niveau) nivs[r.niveau] = (nivs[r.niveau] || 0) + 1; });
+    var nivIds = Object.keys(nivs).sort(function(a, b){ return niveauOrde(a) - niveauOrde(b); });
+    if (niveauFilter && !nivs[niveauFilter]) niveauFilter = '';
+    $('niveauRij').hidden = nivIds.length < 2;
+    $('niveauChips').innerHTML = [{ id:'', naam:'alle niveaus' }].concat(nivIds.map(function(n){ return { id:n, naam:niveauNaam(n) + ' (' + nivs[n] + ')' }; })).map(function(n){
+      return '<button type="button" data-n="' + schoon(n.id) + '"' + (n.id === niveauFilter ? ' class="on" aria-pressed="true"' : ' aria-pressed="false"') + '>' + schoon(n.naam) + '</button>';
+    }).join('');
+    Array.prototype.forEach.call($('niveauChips').querySelectorAll('button'), function(b){ b.addEventListener('click', function(){ niveauFilter = b.getAttribute('data-n'); teken(); }); });
+    if (niveauFilter) met = met.filter(function(r){ return r.niveau === niveauFilter; });
     if (!met.length){
       $('rooster').innerHTML = '<p class="leeg">' + (lijst.length
         ? (vakFilter ? 'Voor ' + vakNaam(vakFilter) + ' is in deze selectie nog niets per onderdeel geteld. Wat er wel gespeeld is, staat hieronder per spel.' : 'In deze selectie zit geen potje met een telling per onderdeel.') + ' Per onderdeel tellen de Vragenrace, Torenverdediging, Zwaardvechter, de Klasquiz, het DHTE-schema, Vlakken herkennen en Bouw het organisme.'

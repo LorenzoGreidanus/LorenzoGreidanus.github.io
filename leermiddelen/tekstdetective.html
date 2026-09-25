@@ -135,6 +135,16 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;pa
 .cijfers{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:14px 0}
 .cijfers div{background:var(--kaart2);border-radius:14px;padding:12px;text-align:center}
 .cijfers b{display:block;font-size:1.6rem;line-height:1.1}
+/* per onderdeel: deze ronde en over alle rondes op dit niveau */
+.beheersing{margin:14px 0;background:var(--kaart2);border-radius:14px;padding:12px 14px}
+.beheersing .eyebrow{margin:0 0 8px}
+.beheersing table{width:100%;border-collapse:collapse;font-size:.92rem}
+.beheersing th,.beheersing td{text-align:left;padding:5px 6px;border-top:1px solid var(--lijn,rgba(127,127,127,.25))}
+.beheersing thead th{border-top:0;font-size:.74rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.beheersing td.p{font-weight:700;white-space:nowrap}
+.beheersing td.p small{font-weight:400;color:var(--muted);margin-left:4px}
+.beheersing .g{color:#2f7d52}.beheersing .m{color:#b7791f}.beheersing .r{color:#c0392b}
+.beheersing .uitleg{margin:8px 0 0;font-size:.82rem;color:var(--muted)}
 .cijfers span{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .fouten{margin-top:14px}
 .fouten div{border-top:1px solid var(--rand);padding:9px 0;font-size:.92rem}
@@ -321,6 +331,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     <h2 id="eindKop" class="eindtitel">Klaar</h2>
     <p class="lead" id="eindUit"></p>
     <div class="cijfers" id="cijfers"></div>
+    <div class="beheersing" id="beheersing" hidden></div>
     <div class="knoprij"><button class="knop crab groot" id="nogBtn" type="button">Nog een ronde</button> <button class="knop stil" id="andersBtn" type="button">Andere keuze</button></div>
     <div class="fouten" id="fouten"></div>
   </section>
@@ -534,9 +545,41 @@ var PER_RONDE = 6;
     toonStap();
     scrollTo({ top:0, behavior:'auto' });
   }
+  /* Wat je over alle rondes op een niveau goed had, per onderdeel. Blijft op
+     dit apparaat staan, zodat je ziet of het beter gaat. */
+  var ONDERDELEN_TD = [['schrijfdoel', 'Schrijfdoel'], ['kernzin', 'Hoofdgedachte'], ['tekstverbanden', 'Signaalwoord en verband']];
+  function leesStat(){ try { return JSON.parse(localStorage.getItem('lg-tdstat') || '{}') || {}; } catch (e){ return {}; } }
+  function telStat(){
+    var alles = leesStat(), hier = alles[niveau] = alles[niveau] || {};
+    Object.keys(od).forEach(function(k){ var w = od[k], c = hier[k] = hier[k] || [0, 0]; c[0] += w[0] | 0; c[1] += w[1] | 0; });
+    try { localStorage.setItem('lg-tdstat', JSON.stringify(alles)); } catch (e){}
+    return hier;
+  }
+  function pctCel(c){
+    if (!c || !c[1]) return '<td class="p">–</td>';
+    var p = Math.round(c[0] / c[1] * 100);
+    return '<td class="p ' + (p >= 80 ? 'g' : p >= 60 ? 'm' : 'r') + '">' + p + '%<small>' + c[0] + '/' + c[1] + '</small></td>';
+  }
+  function toonBeheersing(nv){
+    var el = $('beheersing'), totaal = telStat();
+    if (!Object.keys(od).length){ el.hidden = true; return; }
+    el.hidden = false;
+    var kop = '<p class="eyebrow">per onderdeel, op ' + schoon(nv ? nv.naam : '') + '</p>';
+    var rijen = ONDERDELEN_TD.filter(function(o){ return od[o[0]] || totaal[o[0]]; }).map(function(o){
+      return '<tr><td>' + o[1] + '</td>' + pctCel(od[o[0]]) + pctCel(totaal[o[0]]) + '</tr>';
+    }).join('');
+    var beheerst = ONDERDELEN_TD.filter(function(o){ var c = totaal[o[0]]; return c && c[1] >= 10 && c[0] / c[1] >= 0.8; }).map(function(o){ return o[1].toLowerCase(); });
+    var nog = ONDERDELEN_TD.filter(function(o){ var c = totaal[o[0]]; return c && c[1] >= 10 && c[0] / c[1] < 0.6; }).map(function(o){ return o[1].toLowerCase(); });
+    function opsom(l){ return l.length < 2 ? l.join('') : l.slice(0, -1).join(', ') + ' en ' + l[l.length - 1]; }
+    el.innerHTML = kop + '<table><thead><tr><th>Onderdeel</th><th>Deze ronde</th><th>Alle rondes</th></tr></thead><tbody>' + rijen + '</tbody></table>' +
+      '<p class="uitleg">' + (beheerst.length ? 'Je beheerst ' + opsom(beheerst) + ' (80% of meer goed over minstens tien vragen). ' : '') +
+      (nog.length ? 'Oefen nog op ' + opsom(nog) + '. ' : '') +
+      (!beheerst.length && !nog.length ? 'Vanaf tien vragen per onderdeel zegt het percentage iets: 80% of meer is beheerst.' : '') + '</p>';
+  }
   function einde(){
     $('scherm-spel').classList.add('hide'); $('scherm-einde').classList.remove('hide'); $('stopBtn').classList.add('hide');
     var gedaan = goed + fout, nv = NIVEAUS.filter(function(x){ return x.id === niveau; })[0];
+    toonBeheersing(nv);
     $('eindKop').textContent = goed + ' van de ' + gedaan + ' goed';
     $('eindUit').textContent = (soort ? SOORTEN.filter(function(s){ return s.id === soort; })[0].naam : 'Alle soorten tekst') + ', ' + (nv ? nv.naam : '') + '. Per alinea zocht je de hoofdgedachte en het signaalwoord.';
     $('cijfers').innerHTML = '<div><b>' + punten + '</b><span>punten</span></div><div><b>' + goed + '</b><span>goed</span></div><div><b>' + fout + '</b><span>fout</span></div>';
