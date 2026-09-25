@@ -82,7 +82,7 @@ var ONDERDELEN = {
         {id:'zinsontleding',naam:'zinsdelen benoemen',groep:'zinsontleding'},
         {id:'verwijswoorden',naam:'verwijswoorden',groep:'grammatica'},
         {id:'betekenis',naam:'betekenis van woorden',groep:'lezen'},{id:'synoniemen',naam:'synoniemen',groep:'lezen'},{id:'uitdrukkingen',naam:'uitdrukkingen',groep:'lezen'},{id:'tekstverbanden',naam:'signaalwoorden',groep:'lezen'}],
-  eng: [[/^dictation: /, 'woordenschat'], [/^translate: /, 'grammatica'], [/^phrasal: /, 'woordenschat'], {id:'woordjes NL naar EN',naam:'woordjes NL naar EN',groep:'woordenschat'},{id:'woordjes EN naar NL',naam:'woordjes EN naar NL',groep:'woordenschat'},{id:'valse vrienden',naam:'valse vrienden',groep:'woordenschat'},
+  eng: [[/^reading: /, 'lezen'], [/^dictation: /, 'woordenschat'], [/^translate: /, 'grammatica'], [/^phrasal: /, 'woordenschat'], {id:'woordjes NL naar EN',naam:'woordjes NL naar EN',groep:'woordenschat'},{id:'woordjes EN naar NL',naam:'woordjes EN naar NL',groep:'woordenschat'},{id:'valse vrienden',naam:'valse vrienden',groep:'woordenschat'},
         {id:'irregular verbs',naam:'irregular verbs',groep:'werkwoorden'},{id:'voorzetselwerkwoorden',naam:'werkwoord met voorzetsel',groep:'werkwoorden'},
         {id:'grammatica',naam:'grammatica',groep:'grammatica'}],
   ges: TIJDVAKKEN.map(t => ({id: t.id, naam: t.naam})).concat([{id:'staat', naam:'staatsinrichting (examen vmbo)'}, {id:'nl1900', naam:'Nederland en de wereld vanaf 1900 (examen vmbo)'}]),
@@ -125,7 +125,7 @@ var GROEPEN = {
   bio:  [{id:'lichaam',naam:'Het lichaam'},{id:'cellen',naam:'Cellen en erfelijkheid'},{id:'natuur',naam:'Planten en ecologie'},{id:'examen',naam:'Examenstof'}],
   aard: [{id:'landen',naam:'Landen herkennen'},{id:'examen',naam:'Examenstof'}],
   burg: [{id:'staat',naam:'Democratie en rechtsstaat'},{id:'samen',naam:'Samenleven en media'},{id:'wereld',naam:'Europa en economie'},{id:'examen',naam:'Examenstof'}],
-  ges:  [{id:'tijdvakken',naam:'Tijdvakken'},{id:'vaardig',naam:'Vaardigheden'},{id:'examen',naam:'Examenstof'}]
+  ges:  [[/^kaart door de tijd: /, 'vaardig'], [/^wie ben ik: /, 'vaardig'], [/^oorzaak en gevolg: /, 'vaardig'], {id:'tijdvakken',naam:'Tijdvakken'},{id:'vaardig',naam:'Vaardigheden'},{id:'examen',naam:'Examenstof'}]
 };
 /* De groep van een onderdeel staat bij het onderdeel zelf (zie ONDERDELEN
    hierboven); voor de vakken die er later bij kwamen staat hij hier, zodat de

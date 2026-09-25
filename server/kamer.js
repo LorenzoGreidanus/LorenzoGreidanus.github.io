@@ -95,7 +95,11 @@ const KLAS_SPELLEN = { race: "Vragenrace", eigen: "Eigen oefening", klasquiz: "K
   kruisen: "Kruisingsschema",
   bevolkingspiramide: "Bevolkingspiramides",
   vraagenaanbod: "Vraag en aanbod",
-  verkiezingen: "Verkiezingen en zetels" };
+  verkiezingen: "Verkiezingen en zetels",
+  oorzaakgevolg: "Oorzaak en gevolg",
+  wiebenik: "Wie ben ik?",
+  reading: "Reading",
+  tijdkaart: "De kaart door de tijd" };
 /* Hoe lang de kamer wacht voor hij iemand die wegviel ook echt weghaalt. In de
    lobby kort: herladen duurt een paar tellen. In de arena langer: een
    telefoon die even geen bereik heeft, hoort er niet meteen uit te liggen. */

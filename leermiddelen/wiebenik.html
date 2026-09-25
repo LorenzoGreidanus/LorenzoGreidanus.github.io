@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Wie ben ik?, versie 1.0: op vakspel.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Wie ben ik? &middot; meneer Greidanus</title>
+<meta name="description" content="Raad de persoon, de uitvinding, de gebeurtenis of de plaats uit de geschiedenis aan vijf aanwijzingen, van vaag naar duidelijk. Hoe eerder je het weet, hoe meer punten.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Wie ben ik?">
+<meta property="og:description" content="Raad de persoon, uitvinding of plaats uit de geschiedenis aan vijf aanwijzingen.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/wiebenik.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%23204ECF'/><circle cx='50' cy='38' r='14' fill='%23FBF6F1'/><path d='M24 80a26 26 0 0 1 52 0z' fill='%23FBF6F1'/><text x='50' y='58' font-size='26' font-weight='700' text-anchor='middle' fill='%23204ECF'>?</text></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+.wie{display:grid;gap:12px;justify-items:center}
+.silhouet{width:110px;height:110px;color:var(--ink)}
+.aanwijzingen{display:grid;gap:8px;width:min(100%,560px)}
+.aanwijzing{background:var(--kaart2);border-radius:14px;padding:10px 14px;display:flex;gap:10px;align-items:flex-start;font-size:.98rem;line-height:1.45}
+.aanwijzing i{flex:none;width:26px;height:26px;border-radius:999px;background:var(--nadruk);color:#fff;display:grid;place-items:center;font-style:normal;font-weight:700;font-size:.82rem}
+.wieknoppen{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
+.wieknoppen .punten{font-weight:600;color:var(--muted);font-size:.9rem}
+.wieknoppen .punten b{color:var(--nadruk);font-size:1.05rem}
+.namen{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;width:min(100%,640px)}
+.namen button{background:var(--kaart);border:2px solid var(--rand2);border-radius:14px;padding:12px 14px;font-weight:600;min-height:48px}
+.namen button:hover:not(:disabled){border-color:var(--vista)}
+.namen button.juist{background:var(--goed-bg);border-color:var(--goed);color:var(--goed)}
+.namen button.mis{background:var(--fout-bg);border-color:var(--fout);color:var(--fout)}
+.tijdbalk{width:min(100%,560px);height:auto;display:block;font-family:inherit}
+.tijdbalk rect{fill:var(--kaart2);stroke:var(--kaart);stroke-width:1}
+.tijdbalk rect.aan{fill:var(--nadruk)}
+.tijdbalk text{fill:var(--muted);font-size:10px;font-weight:600}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script src="wiebenik-opgaven.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon, D = window.WIE_DATA;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  var NIV = { bb:1, kgt:2, hv:3 }, PUNTEN = [10, 8, 6, 4, 2];
+  var TV = ['jagers en boeren', 'Grieken en Romeinen', 'monniken en ridders', 'steden en staten', 'ontdekkers en hervormers', 'regenten en vorsten', 'pruiken en revoluties', 'burgers en stoommachines', 'wereldoorlogen', 'televisie en computer'];
+  var SIL = {
+    persoon: '<svg class="silhouet" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="34" r="18" fill="currentColor" opacity=".85"/><path d="M18 92a32 32 0 0 1 64 0z" fill="currentColor" opacity=".85"/><text x="50" y="42" font-size="24" font-weight="700" text-anchor="middle" fill="var(--kaart)">?</text></svg>',
+    ding: '<svg class="silhouet" viewBox="0 0 100 100" aria-hidden="true"><rect x="18" y="30" width="64" height="48" rx="8" fill="currentColor" opacity=".85"/><path d="M34 30V20h32v10" fill="none" stroke="currentColor" stroke-width="6"/><text x="50" y="64" font-size="30" font-weight="700" text-anchor="middle" fill="var(--kaart)">?</text></svg>',
+    plaats: '<svg class="silhouet" viewBox="0 0 100 100" aria-hidden="true"><path d="M50 8c-16 0-28 12-28 28 0 22 28 56 28 56s28-34 28-56C78 20 66 8 50 8z" fill="currentColor" opacity=".85"/><text x="50" y="46" font-size="28" font-weight="700" text-anchor="middle" fill="var(--kaart)">?</text></svg>'
+  };
+  function tijdbalk(tv){
+    var W = 560, s = '<svg class="tijdbalk" viewBox="0 0 ' + W + ' 34" aria-hidden="true">';
+    for (var i = 0; i < 10; i++) s += '<rect class="' + (i + 1 === tv ? 'aan' : '') + '" x="' + (i * 56) + '" y="0" width="56" height="16" rx="3"/><text x="' + (i * 56 + 28) + '" y="30" text-anchor="middle">tv' + (i + 1) + '</text>';
+    return s + '</svg>';
+  }
+  function items(keuze){
+    var n = NIV[keuze.niveau] || 2, uit = D.filter(function(x){ return x.n <= n && (keuze.soort === 'alles' || x.soort === keuze.soort); });
+    if (uit.length < 6) uit = D.filter(function(x){ return keuze.soort === 'alles' || x.soort === keuze.soort; });
+    return uit;
+  }
+  function opgave(keuze){
+    var lijst = items(keuze), it = kies(lijst);
+    var anderen = H(lijst.filter(function(x){ return x !== it && x.soort === it.soort; })).slice(0, 3);
+    while (anderen.length < 3){ var extra = kies(D.filter(function(x){ return x !== it && anderen.indexOf(x) < 0; })); anderen.push(extra); }
+    var namen = H([it].concat(anderen)).map(function(x){ return x.naam; });
+    var soortNaam = { persoon:'personen', ding:'uitvindingen', plaats:'plaatsen' }[it.soort];
+    return { onderdeel:'wie ben ik: ' + soortNaam, onderdeelNaam: soortNaam, vorm:'eigen', sleutel:'w' + it.naam,
+      vraag: it.soort === 'persoon' ? 'Wie ben ik?' : 'Wat ben ik?', opdracht:'Lees de aanwijzing. Weet je het al? Kies dan een naam. Twijfel je, vraag dan een volgende aanwijzing: dat kost punten.',
+      uitleg: it.uit + ' Tijdvak ' + it.tv + ': ' + TV[it.tv - 1] + '.', antwoordTekst: it.naam, punten: 10,
+      teken:function(el, api){
+        var n = 1, klaar = false;
+        el.innerHTML = '<div class="wie">' + SIL[it.soort] + '<div class="aanwijzingen" id="aanwijzingen"></div>' +
+          '<div class="wieknoppen"><span class="punten">nu waard: <b id="waard">10</b> punten</span><button type="button" class="stil" id="meerBtn" style="background:var(--kaart2);color:var(--ink);border:none;border-radius:999px;padding:10px 18px;font-weight:600;min-height:44px">Volgende aanwijzing (−' + (PUNTEN[0] - PUNTEN[1]) + ')</button></div>' +
+          '<div class="namen" id="namen">' + namen.map(function(nm){ return '<button type="button" data-naam="' + S(nm) + '">' + S(nm) + '</button>'; }).join('') + '</div>' + tijdbalk(0) + '</div>';
+        function toon(){
+          el.querySelector('#aanwijzingen').innerHTML = it.hints.slice(0, n).map(function(h, i){ return '<div class="aanwijzing"><i>' + (i + 1) + '</i><span>' + S(h) + '</span></div>'; }).join('');
+          el.querySelector('#waard').textContent = PUNTEN[n - 1];
+          var mb = el.querySelector('#meerBtn'); mb.disabled = n >= 5; mb.textContent = n >= 5 ? 'Alle aanwijzingen staan er' : 'Volgende aanwijzing (−' + (PUNTEN[n - 1] - PUNTEN[n]) + ')';
+        }
+        el.querySelector('#meerBtn').addEventListener('click', function(){ if (klaar || !api.bezig()) return; if (n < 5){ n++; toon(); } });
+        Array.prototype.forEach.call(el.querySelectorAll('#namen button'), function(b){
+          b.addEventListener('click', function(){
+            if (klaar || !api.bezig()) return; klaar = true;
+            var ok = b.getAttribute('data-naam') === it.naam;
+            Array.prototype.forEach.call(el.querySelectorAll('#namen button'), function(x){ x.disabled = true; if (x.getAttribute('data-naam') === it.naam) x.classList.add('juist'); else if (x === b) x.classList.add('mis'); });
+            el.querySelector('#meerBtn').disabled = true;
+            el.querySelector('#aanwijzingen').innerHTML = it.hints.map(function(h, i){ return '<div class="aanwijzing"><i>' + (i + 1) + '</i><span>' + S(h) + '</span></div>'; }).join('');
+            el.querySelector('.tijdbalk').outerHTML = tijdbalk(it.tv);
+            /* de punten van deze opgave: minder naarmate je meer aanwijzingen nodig had */
+            VAKSPEL._opgave().punten = ok ? PUNTEN[n - 1] : 10;
+            api.klaar(ok, ok ? 'Na ' + n + (n === 1 ? ' aanwijzing' : ' aanwijzingen') + ': ' + PUNTEN[n - 1] + ' punten.' : 'Het was <b>' + S(it.naam) + '</b>.');
+          });
+        });
+        toon();
+        el.proef = function(){ el.querySelector('#namen button[data-naam="' + it.naam.replace(/"/g, '&quot;') + '"]').click(); };
+        el.proefFout = function(){ var b = Array.prototype.filter.call(el.querySelectorAll('#namen button'), function(x){ return x.getAttribute('data-naam') !== it.naam; })[0]; b.click(); };
+      } };
+  }
+  VAKSPEL.maak({
+    id:'wiebenik', naam:'Wie ben ik?', vak:'ges', kleur:'#204ECF',
+    hand:'vijf aanwijzingen, van vaag naar duidelijk',
+    lead:'Een persoon, een uitvinding, een gebeurtenis of een plaats uit de geschiedenis stelt zich voor in vijf aanwijzingen. Hoe eerder je het weet, hoe meer punten: tien bij de eerste aanwijzing, twee bij de laatste. Na het antwoord licht het tijdvak op.',
+    hoe:[
+      { kop:'Aanwijzingen', tekst:'De eerste aanwijzing is vaag, de vijfde geeft het bijna weg. Elke volgende aanwijzing kost <b>punten</b>.' },
+      { kop:'Kies een naam', tekst:'Vier namen, een is goed. Weet je het zeker, kies dan meteen. Een fout antwoord levert niets op.' },
+      { kop:'Waarom het ertoe deed', tekst:'Na elk antwoord staat in twee zinnen wie of wat het was en waarom je het moet kennen, met het tijdvak.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'De bekendste namen: Karel de Grote, Willem van Oranje, Anne Frank, Rome, Amsterdam.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Ook Erasmus, Multatuli, Aletta Jacobs, de Hanze en Versailles.' },
+        { id:'hv', naam:'havo en vwo', uit:'Ook Johan de Witt, Coen, Augustus, Gorbatsjov en Constantinopel.' } ] },
+      { id:'soort', kop:'wat raad je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' }, { id:'persoon', naam:'personen' }, { id:'ding', naam:'uitvindingen en gebeurtenissen' }, { id:'plaats', naam:'plaatsen' } ] }
+    ],
+    aantal:10,
+    maak:function(keuze, nr){ return opgave(keuze); },
+    uitleg:{ doel:'Personen, gebeurtenissen en plaatsen uit de geschiedenis herkennen aan hun kenmerken.', tijd:'tien raadsels per ronde', bediening:'Lees de aanwijzing, vraag er eventueel meer, en tik een naam aan.' },
+    tutorial:[
+      { titel:'De aanwijzing', tekst:'Hier stelt iemand of iets zich voor. De eerste aanwijzing is vaag; met de knop vraag je een duidelijkere, maar dat kost punten.', doel:'aanwijzingen' },
+      { titel:'Kies een naam', tekst:'Weet je het? Tik dan een van de vier namen aan. Weet je het niet, vraag dan eerst nog een aanwijzing.', doel:'namen' },
+      { titel:'Leren van het antwoord', tekst:'Na je keuze staan alle aanwijzingen er, licht het tijdvak op en lees je waarom deze naam belangrijk is.', doel:'balk' }
+    ]
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>

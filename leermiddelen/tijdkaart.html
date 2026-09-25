@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- De kaart door de tijd, versie 1.0: op vakspel.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>De kaart door de tijd &middot; meneer Greidanus</title>
+<meta name="description" content="Waar lag het Romeinse Rijk, de Republiek, het IJzeren Gordijn? Gebieden aanwijzen op de kaart van Europa, een kaartsituatie dateren en gebeurtenissen op hun plek slepen.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="De kaart door de tijd">
+<meta property="og:description" content="Gebieden aanwijzen op de kaart van Europa, kaartsituaties dateren en gebeurtenissen op hun plek slepen.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/tijdkaart.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%23204ECF'/><path d='M22 30l18-8 14 10 24-12v50l-24 12-14-10-18 8z' fill='none' stroke='%23FBF6F1' stroke-width='6' stroke-linejoin='round'/><circle cx='50' cy='50' r='7' fill='%23FBF6F1'/></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+.eukaart{width:min(100%,640px);height:auto;display:block;font-family:inherit}
+.eukaart .zee{fill:var(--nadruk-zacht)}
+.eukaart .achter{fill:var(--kaart2);stroke:none}
+.eukaart .land{fill:var(--kaart);stroke:var(--muted);stroke-width:1;stroke-linejoin:round}
+.eukaart .gebied{cursor:pointer}
+.eukaart .gebied:hover .land{fill:var(--kaart-aan)}
+.eukaart .gebied.gekozen .land{fill:var(--nadruk);fill-opacity:.55;stroke:var(--nadruk)}
+.eukaart .gebied.goed .land{fill:var(--goed);fill-opacity:.6;stroke:var(--goed)}
+.eukaart .gebied.fout .land{fill:var(--fout);fill-opacity:.6;stroke:var(--fout)}
+.eukaart .gebied.aan .land{fill:var(--nadruk);fill-opacity:.5;stroke:var(--nadruk)}
+.eukaart .gebied.licht .land{fill:var(--amber);fill-opacity:.55}
+.eukaart text{fill:var(--ink);font-size:14px;font-weight:600;pointer-events:none;stroke:var(--kaart);stroke-width:4px;paint-order:stroke;stroke-linejoin:round}
+.kaartuit{text-align:center;color:var(--muted);font-size:.86rem;margin-top:6px}
+.legenda{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;font-size:.82rem;color:var(--muted);margin-top:6px}
+.legenda i{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:middle;margin-right:5px}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script src="tijdkaart-kaart.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon, K = window.TIJDKAART_KAART;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  var NIV = { bb:1, kgt:2, hv:3 };
+
+  /* De gebieden: grove streken uit de landen van nu, zoals in een schoolatlas.
+     Het label staat op een vaste plek in de kaart (viewBox 1031 x 700). */
+  var GEBIEDEN = [
+    { id:'iberie', naam:'Iberisch schiereiland', landen:['Spanje', 'Portugal', 'Andorra'], x:180, y:520 },
+    { id:'frankrijk', naam:'Frankrijk', landen:['Frankrijk', 'Monaco'], x:300, y:400 },
+    { id:'brits', naam:'Britse eilanden', landen:['Verenigd Koninkrijk', 'Ierland'], x:225, y:250 },
+    { id:'nederlanden', naam:'de Nederlanden', landen:['Nederland', 'België', 'Luxemburg'], x:335, y:300 },
+    { id:'duits', naam:'Duitse gebieden', landen:['Duitsland', 'Oostenrijk', 'Zwitserland', 'Tsjechië', 'Liechtenstein'], x:430, y:340 },
+    { id:'italie', naam:'Italië', landen:['Italië', 'San Marino', 'Malta'], x:445, y:470 },
+    { id:'scandinavie', naam:'Scandinavië', landen:['Noorwegen', 'Zweden', 'Denemarken', 'Finland', 'IJsland'], x:470, y:130 },
+    { id:'oost', naam:'Oost-Europa', landen:['Polen', 'Slowakije', 'Hongarije', 'Oekraïne', 'Wit-Rusland', 'Litouwen', 'Letland', 'Estland', 'Moldavië', 'Roemenië'], x:600, y:300 },
+    { id:'rusland', naam:'Rusland', landen:['Rusland'], x:820, y:200 },
+    { id:'balkan', naam:'de Balkan', landen:['Griekenland', 'Bulgarije', 'Servië', 'Kroatië', 'Bosnië en Herzegovina', 'Slovenië', 'Montenegro', 'Albanië', 'Kosovo', 'Noord-Macedonië'], x:560, y:470 },
+    { id:'kleinazie', naam:'Klein-Azië', landen:['Turkije', 'Cyprus'], x:800, y:560 }
+  ];
+  var LAND = {}; K.landen.forEach(function(l){ LAND[l.n] = l.d; });
+  function gebiedVan(id){ return GEBIEDEN.filter(function(g){ return g.id === id; })[0]; }
+  /* de kaart: elk gebied een groep met de landen erin; klassen per gebied (aan, licht, goed, fout) */
+  function kaart(o){
+    o = o || {};
+    var s = '<svg class="eukaart" viewBox="0 0 ' + K.breed + ' ' + K.hoog + '" role="img" aria-label="kaart van Europa">';
+    s += '<rect class="zee" x="0" y="0" width="' + K.breed + '" height="' + K.hoog + '" rx="12"/>';
+    if (K.achter) s += '<path class="achter" d="' + K.achter + '"/>';
+    GEBIEDEN.forEach(function(g){
+      var kl = (o.klassen && o.klassen[g.id]) || '';
+      s += '<g class="gebied ' + kl + '" data-g="' + g.id + '">' + g.landen.map(function(n){ return LAND[n] ? '<path class="land" d="' + LAND[n] + '"/>' : ''; }).join('') + '</g>';
+    });
+    /* de niet ingedeelde landjes blijven grijs mee tekenen */
+    if (o.namen !== false) GEBIEDEN.forEach(function(g){ s += '<text x="' + g.x + '" y="' + g.y + '" text-anchor="middle">' + S(g.naam) + '</text>'; });
+    return s + '</svg>';
+  }
+
+  /* ---------- 1. aanwijzen: waar lag ... ---------- */
+  var WAAR = [
+    { n:1, tv:2, v:'het hart van het Romeinse Rijk, rond 100 na Christus', goed:['italie'], uit:'Rome ligt in Italië: vandaar breidde het rijk zich uit rond de hele Middellandse Zee.' },
+    { n:1, tv:2, v:'de Griekse stadstaten, zoals Athene en Sparta, rond 450 voor Christus', goed:['balkan'], uit:'Griekenland ligt op het zuiden van de Balkan.' },
+    { n:1, tv:6, v:'de Republiek der Zeven Verenigde Nederlanden, in 1650', goed:['nederlanden'], uit:'De Republiek besloeg ongeveer het huidige Nederland: de noordelijke Nederlanden.' },
+    { n:1, tv:5, v:'het land van Filips II, de koning die de Nederlanden bestuurde', goed:['iberie'], uit:'Filips II was koning van Spanje, op het Iberisch schiereiland.' },
+    { n:1, tv:7, v:'het land waar in 1789 de revolutie uitbrak', goed:['frankrijk'], uit:'De Franse Revolutie begon in Parijs.' },
+    { n:1, tv:8, v:'het land waar de industriële revolutie begon, rond 1770', goed:['brits'], uit:'De eerste fabrieken en stoommachines stonden in Engeland, op de Britse eilanden.' },
+    { n:1, tv:10, v:'het land dat in 1949 in Oost en West werd gesplitst', goed:['duits'], uit:'Duitsland werd na de oorlog verdeeld in de Bondsrepubliek (west) en de DDR (oost).' },
+    { n:2, tv:5, v:'het gebied waar Luther in 1517 de reformatie begon', goed:['duits'], uit:'Wittenberg ligt in het huidige Duitsland. Het Duitse Rijk bestond toen uit honderden kleine staten.' },
+    { n:2, tv:5, v:'het land van waaruit Columbus in 1492 vertrok', goed:['iberie'], uit:'Columbus voer uit Spanje, betaald door de Spaanse koning en koningin.' },
+    { n:2, tv:3, v:'het land van de Vikingen, rond 900', goed:['scandinavie'], uit:'De Vikingen kwamen uit Noorwegen, Zweden en Denemarken.' },
+    { n:2, tv:4, v:'Constantinopel, de hoofdstad van het Byzantijnse Rijk', goed:['kleinazie'], uit:'Constantinopel (nu Istanbul) ligt op de grens van Europa en Azië, in het huidige Turkije.' },
+    { n:2, tv:9, v:'de stad Sarajevo, waar in 1914 de Oostenrijkse troonopvolger werd vermoord', goed:['balkan'], uit:'Sarajevo ligt in Bosnië, op de Balkan: de kruitvat van Europa.' },
+    { n:2, tv:10, v:'de Sovjet-Unie na 1945', goed:['rusland', 'oost'], uit:'De Sovjet-Unie had Rusland als kern en beheerste na 1945 ook Oost-Europa.' },
+    { n:2, tv:4, v:'de Hanzesteden Hamburg en Lübeck', goed:['duits'], uit:'De belangrijkste Hanzesteden lagen in Noord-Duitsland; Nederlandse steden als Kampen deden ook mee.' },
+    { n:2, tv:5, v:'de Beeldenstorm van 1566', goed:['nederlanden'], uit:'De Beeldenstorm begon in Vlaanderen en trok door de hele Nederlanden.' },
+    { n:3, tv:3, v:'de kern van het rijk van Karel de Grote, rond 800', goed:['frankrijk', 'duits', 'nederlanden'], uit:'Het Frankische Rijk lag in het huidige Frankrijk, de Nederlanden en West-Duitsland, met Aken als hoofdstad.' },
+    { n:3, tv:7, v:'Waterloo, waar Napoleon in 1815 verloor', goed:['nederlanden'], uit:'Waterloo ligt in het huidige België, toen deel van het Verenigd Koninkrijk der Nederlanden.' },
+    { n:3, tv:6, v:'het Ottomaanse Rijk in Europa, rond 1600', goed:['balkan', 'kleinazie'], uit:'De Ottomanen beheersten Klein-Azië en bijna de hele Balkan, tot voor de poorten van Wenen.' },
+    { n:3, tv:8, v:'het land dat in 1871 werd verenigd tot een keizerrijk', goed:['duits'], uit:'Bismarck verenigde de Duitse staten in 1871 tot het Duitse Keizerrijk.' },
+    { n:3, tv:9, v:'het land waar in 1917 de communistische revolutie plaatsvond', goed:['rusland'], uit:'De Russische Revolutie bracht Lenin aan de macht.' },
+    { n:3, tv:10, v:'het IJzeren Gordijn: het gebied dat na 1945 onder Sovjet-invloed stond', goed:['oost'], uit:'Polen, Hongarije, Tsjechoslowakije, Roemenië, Bulgarije en de DDR hoorden bij het Oostblok.' }
+  ];
+  function aanwijzen(keuze){
+    var n = NIV[keuze.niveau] || 2, lijst = WAAR.filter(function(w){ return w.n <= n; }), it = kies(lijst);
+    return { onderdeel:'kaart door de tijd: aanwijzen', onderdeelNaam:'aanwijzen', vorm:'eigen', sleutel:'a' + it.v.slice(0, 24),
+      vraag:'Tik op de kaart het gebied aan van <b>' + S(it.v) + '</b>.', opdracht:'De kaart laat de landen van nu zien, verdeeld in grote gebieden. Tijdvak ' + it.tv + '.',
+      uitleg: it.uit, antwoordTekst: it.goed.map(function(g){ return gebiedVan(g).naam; }).join(' of '),
+      teken:function(el, api){
+        el.innerHTML = kaart({}) + '<p class="kaartuit" id="kaartuit">Tik een gebied aan; nog eens tikken kiest een ander.</p>';
+        var svg = el.querySelector('svg'), gekozen = null;
+        svg.addEventListener('click', function(e){
+          var g = e.target.closest('.gebied'); if (!g || !api.bezig()) return;
+          Array.prototype.forEach.call(svg.querySelectorAll('.gebied'), function(x){ x.classList.remove('gekozen'); });
+          g.classList.add('gekozen'); gekozen = g.getAttribute('data-g');
+          el.querySelector('#kaartuit').textContent = 'Gekozen: ' + gebiedVan(gekozen).naam + '. Klopt het? Druk op Nakijken.';
+          knop.disabled = false;
+        });
+        var knop = api.knop('Nakijken', function(){
+          if (!gekozen) return;
+          var ok = it.goed.indexOf(gekozen) >= 0;
+          Array.prototype.forEach.call(svg.querySelectorAll('.gebied'), function(x){ var id = x.getAttribute('data-g'); x.classList.remove('gekozen'); if (it.goed.indexOf(id) >= 0) x.classList.add('goed'); else if (id === gekozen) x.classList.add('fout'); });
+          knop.disabled = true;
+          api.klaar(ok, ok ? '' : 'Jij koos ' + gebiedVan(gekozen).naam + '; het is ' + it.goed.map(function(g){ return gebiedVan(g).naam; }).join(' of ') + ' (groen).');
+        });
+        knop.disabled = true;
+        el.proef = function(){ svg.querySelector('.gebied[data-g="' + it.goed[0] + '"]').dispatchEvent(new MouseEvent('click', { bubbles:true })); knop.click(); };
+        el.proefFout = function(){ var f = GEBIEDEN.filter(function(g){ return it.goed.indexOf(g.id) < 0; })[0]; svg.querySelector('.gebied[data-g="' + f.id + '"]').dispatchEvent(new MouseEvent('click', { bubbles:true })); knop.click(); };
+      } };
+  }
+
+  /* ---------- 2. welk jaar: een kaartsituatie dateren ---------- */
+  var SITUATIES = [
+    { n:1, naam:'het Romeinse Rijk op zijn grootst', gebieden:['italie', 'iberie', 'frankrijk', 'balkan', 'kleinazie', 'brits'], goed:'rond 100 na Christus', mis:['rond 800', 'rond 1500', 'rond 1950'], uit:'Onder keizer Trajanus (rond 117) was het rijk op zijn grootst: rond de hele Middellandse Zee, tot in Engeland.' },
+    { n:1, naam:'het rijk van Karel de Grote', gebieden:['frankrijk', 'duits', 'nederlanden', 'italie'], goed:'rond 800', mis:['rond 100', 'rond 1600', 'rond 1800'], uit:'Karel de Grote werd in 800 tot keizer gekroond; zijn rijk lag in Frankrijk, de Nederlanden, Duitsland en Noord-Italië.' },
+    { n:1, naam:'de Republiek der Zeven Verenigde Nederlanden', gebieden:['nederlanden'], goed:'rond 1650', mis:['rond 800', 'rond 1200', 'rond 1950'], uit:'De Republiek bestond van 1588 tot 1795; in 1648 werd ze bij de Vrede van Munster erkend.' },
+    { n:1, naam:'het IJzeren Gordijn: Oostblok en Westblok', gebieden:['oost', 'rusland'], goed:'rond 1960', mis:['rond 1800', 'rond 1900', 'rond 2020'], uit:'Van 1945 tot 1989 was Europa verdeeld; de Berlijnse Muur (1961) was het symbool.' },
+    { n:2, naam:'het rijk van Napoleon', gebieden:['frankrijk', 'nederlanden', 'italie', 'duits', 'iberie'], goed:'rond 1810', mis:['rond 1650', 'rond 1750', 'rond 1900'], uit:'Rond 1810 beheerste Napoleon bijna het hele vasteland, van Spanje tot Polen. In 1812 liep het mis in Rusland.' },
+    { n:2, naam:'het Ottomaanse Rijk in Europa', gebieden:['balkan', 'kleinazie'], goed:'rond 1600', mis:['rond 100', 'rond 800', 'rond 1950'], uit:'De Ottomanen veroverden Constantinopel in 1453 en de Balkan; in 1683 stonden ze voor Wenen.' },
+    { n:2, naam:'de zes landen van de EGKS, het begin van de Europese samenwerking', gebieden:['nederlanden', 'frankrijk', 'duits', 'italie'], goed:'rond 1951', mis:['rond 1900', 'rond 1930', 'rond 2004'], uit:'Frankrijk, West-Duitsland, Italië en de Benelux richtten in 1951 de EGKS op.' },
+    { n:2, naam:'de Spaanse Nederlanden onder Filips II', gebieden:['nederlanden', 'iberie'], goed:'rond 1570', mis:['rond 1200', 'rond 1750', 'rond 1850'], uit:'Filips II erfde de Nederlanden in 1555; vanaf 1568 was het oorlog.' },
+    { n:3, naam:'de Vikingtochten', gebieden:['scandinavie', 'brits'], goed:'rond 900', mis:['rond 100', 'rond 1400', 'rond 1700'], uit:'Tussen 800 en 1050 voeren de Vikingen naar Engeland, Ierland, Frankrijk en zelfs IJsland en Groenland.' },
+    { n:3, naam:'het Duitse Keizerrijk van Bismarck', gebieden:['duits'], goed:'rond 1880', mis:['rond 1600', 'rond 1750', 'rond 1950'], uit:'Het Duitse Keizerrijk bestond van 1871 tot 1918.' },
+    { n:3, naam:'de Sovjet-Unie met haar satellietstaten', gebieden:['rusland', 'oost'], goed:'rond 1975', mis:['rond 1900', 'rond 1925', 'rond 2010'], uit:'Van 1945 tot 1989 stond Oost-Europa onder Sovjet-invloed; in 1991 viel de Sovjet-Unie uit elkaar.' }
+  ];
+  function jaar(keuze){
+    var n = NIV[keuze.niveau] || 2, it = kies(SITUATIES.filter(function(x){ return x.n <= n; })), opties = H([it.goed].concat(it.mis));
+    var kl = {}; it.gebieden.forEach(function(g){ kl[g] = 'aan'; });
+    return { onderdeel:'kaart door de tijd: welk jaar', onderdeelNaam:'welk jaar', vorm:'meerkeuze', sleutel:'j' + it.naam,
+      vraag:'De blauwe gebieden: <b>' + S(it.naam) + '</b>. Bij welke tijd hoort deze kaart?', opdracht:'De kaart is schematisch: grote gebieden, geen precieze grenzen.', beeld: kaart({ klassen: kl }),
+      opties: opties, goed: opties.indexOf(it.goed), uitleg: it.uit, antwoordTekst: it.goed };
+  }
+
+  /* ---------- 3. wat hoort waar: gebeurtenissen naar hun gebied slepen ---------- */
+  var HOORT = [
+    { n:1, tv:5, t:'de Beeldenstorm (1566)', g:'nederlanden' }, { n:1, tv:5, t:'Luther spijkert zijn stellingen op (1517)', g:'duits' }, { n:1, tv:5, t:'Columbus vertrekt naar Amerika (1492)', g:'iberie' },
+    { n:1, tv:7, t:'de bestorming van de Bastille (1789)', g:'frankrijk' }, { n:1, tv:2, t:'Julius Caesar wordt vermoord (44 v.C.)', g:'italie' }, { n:1, tv:8, t:'de eerste stoomtrein rijdt (1825)', g:'brits' },
+    { n:1, tv:10, t:'de Berlijnse Muur valt (1989)', g:'duits' }, { n:1, tv:6, t:'de VOC wordt opgericht (1602)', g:'nederlanden' }, { n:1, tv:2, t:'de Olympische Spelen in de oudheid', g:'balkan' },
+    { n:2, tv:9, t:'de moord op Frans Ferdinand in Sarajevo (1914)', g:'balkan' }, { n:2, tv:9, t:'de Russische Revolutie (1917)', g:'rusland' }, { n:2, tv:3, t:'de kroning van Karel de Grote in Rome (800)', g:'italie' },
+    { n:2, tv:6, t:'Lodewijk XIV bouwt Versailles', g:'frankrijk' }, { n:2, tv:4, t:'de val van Constantinopel (1453)', g:'kleinazie' }, { n:2, tv:3, t:'de Vikingen varen uit (rond 900)', g:'scandinavie' },
+    { n:2, tv:7, t:'de Slag bij Waterloo (1815)', g:'nederlanden' }, { n:2, tv:5, t:'de Spaanse Armada vertrekt (1588)', g:'iberie' }, { n:2, tv:8, t:'het Duitse Keizerrijk wordt uitgeroepen (1871)', g:'duits' },
+    { n:3, tv:10, t:'de Hongaarse opstand tegen de Sovjet-Unie (1956)', g:'oost' }, { n:3, tv:4, t:'de pest komt Europa binnen via Italië (1347)', g:'italie' }, { n:3, tv:10, t:'Solidarnosc, de vrije vakbond in Polen (1980)', g:'oost' },
+    { n:3, tv:8, t:'de Conferentie van Berlijn verdeelt Afrika (1884)', g:'duits' }, { n:3, tv:9, t:'de Slag om Stalingrad (1942-1943)', g:'rusland' }, { n:3, tv:7, t:'de Verlichting van Voltaire en Rousseau', g:'frankrijk' }
+  ];
+  function hoort(keuze){
+    var n = NIV[keuze.niveau] || 2, lijst = H(HOORT.filter(function(x){ return x.n <= n; }));
+    /* vier gebeurtenissen uit vier verschillende gebieden */
+    var gekozen = [], gebruikt = {};
+    lijst.forEach(function(x){ if (gekozen.length < 4 && !gebruikt[x.g]){ gekozen.push(x); gebruikt[x.g] = 1; } });
+    var vakken = gekozen.map(function(x){ return gebiedVan(x.g); }), kl = {}; vakken.forEach(function(g){ kl[g.id] = 'licht'; });
+    return { onderdeel:'kaart door de tijd: wat hoort waar', onderdeelNaam:'wat hoort waar', vorm:'sleep', sleutel:'h' + gekozen.map(function(x){ return x.t.slice(0, 8); }).join(''),
+      vraag:'Sleep elke gebeurtenis naar het <b>gebied</b> waar ze plaatsvond.', opdracht:'De vier gebieden staan oranje op de kaart.', beeld: kaart({ klassen: kl }),
+      sleepuit:'Sleep het kaartje naar het vak met het gebied. Op een telefoon: tik het kaartje aan en dan het vak.',
+      kaarten: gekozen.map(function(x, i){ return { id:'e' + i, tekst:S(x.t) }; }),
+      vakken: vakken.map(function(g, i){ return { id:g.id, naam:g.naam, max:1, hoort:['e' + i] }; }),
+      uitleg: gekozen.map(function(x){ return S(x.t) + ': ' + gebiedVan(x.g).naam; }).join('; ') + '.', antwoordTekst: gekozen.map(function(x){ return x.t + ' → ' + gebiedVan(x.g).naam; }).join(', ') };
+  }
+
+  var SOORTEN = { aanwijzen: aanwijzen, jaar: jaar, hoort: hoort };
+  VAKSPEL.maak({
+    id:'tijdkaart', naam:'De kaart door de tijd', vak:'ges', kleur:'#204ECF',
+    hand:'waar gebeurde het?',
+    lead:'Dezelfde kaart van Europa, maar dan door de eeuwen heen. Waar lag het Romeinse Rijk, waar de Republiek, waar het IJzeren Gordijn? Je wijst gebieden aan, dateert een kaartsituatie en sleept gebeurtenissen naar de plek waar ze gebeurden. De kaart is schematisch, zoals in een schoolatlas: grote gebieden, geen precieze grenzen.',
+    hoe:[
+      { kop:'De gebieden', tekst:'Europa in elf grote streken: van het Iberisch schiereiland tot Rusland. De landen van nu vormen de achtergrond.' },
+      { kop:'Aanwijzen en dateren', tekst:'Tik het gebied aan dat bij een gebeurtenis hoort, of kijk naar de <b>blauwe</b> gebieden en kies bij welke tijd de kaart hoort.' },
+      { kop:'Wat hoort waar', tekst:'Sleep vier gebeurtenissen naar de vier <b>oranje</b> gebieden.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'De bekendste gebeurtenissen en rijken.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Ook Constantinopel, de Ottomanen, Napoleon en de Sovjet-Unie.' },
+        { id:'hv', naam:'havo en vwo', uit:'Ook Karel de Grote, de Vikingen, Bismarck en het Oostblok van binnen.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' }, { id:'aanwijzen', naam:'aanwijzen' }, { id:'jaar', naam:'welk jaar' }, { id:'hoort', naam:'wat hoort waar' } ] }
+    ],
+    aantal:10,
+    maak:function(keuze, nr){
+      var soort = keuze.soort === 'alles' ? kies(['aanwijzen', 'aanwijzen', 'jaar', 'hoort']) : keuze.soort;
+      return SOORTEN[soort](keuze);
+    },
+    uitleg:{ doel:'Gebeurtenissen en rijken uit de geschiedenis op de kaart van Europa kunnen plaatsen.', tijd:'tien opgaven per ronde', bediening:'Tik een gebied op de kaart aan en druk op Nakijken, kies een antwoord, of sleep de kaartjes naar de vakken.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>

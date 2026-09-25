@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Oorzaak en gevolg, versie 1.0: op vakspel.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Oorzaak en gevolg &middot; meneer Greidanus</title>
+<meta name="description" content="Oorzaak-gevolgketens in de goede volgorde slepen, het gevolg of de oorzaak van een gebeurtenis kiezen, en aanleiding onderscheiden van diepere oorzaak. Alle tien tijdvakken.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Oorzaak en gevolg">
+<meta property="og:description" content="Oorzaak-gevolgketens slepen, gevolgen en oorzaken kiezen, aanleiding of diepere oorzaak.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/oorzaakgevolg.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%23204ECF'/><g fill='none' stroke='%23FBF6F1' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'><rect x='16' y='36' width='24' height='28' rx='5'/><rect x='60' y='36' width='24' height='28' rx='5'/><path d='M40 50h20M54 44l6 6-6 6'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+.keten{width:min(100%,560px);height:auto;display:block;font-family:inherit}
+.keten .blok{fill:var(--kaart2);stroke:var(--rand2);stroke-width:1.5}
+.keten .blok.aan{fill:var(--kaart-aan);stroke:var(--nadruk)}
+.keten .blok.vraag{stroke-dasharray:6 4}
+.keten text{fill:var(--ink);font-size:12px;font-weight:600}
+.keten .klein{fill:var(--muted);font-size:10.5px;font-weight:500}
+.keten .pijl{stroke:var(--muted);stroke-width:2.5;fill:none}
+.keten .kop{fill:var(--muted);stroke:none}
+.keten .vt{fill:var(--nadruk);font-size:26px;font-weight:700}
+.tijdbalk{width:min(100%,560px);height:auto;display:block;font-family:inherit;margin-top:6px}
+.tijdbalk rect{fill:var(--kaart2);stroke:var(--kaart);stroke-width:1}
+.tijdbalk rect.aan{fill:var(--nadruk)}
+.tijdbalk text{fill:var(--muted);font-size:10px;font-weight:600}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script src="oorzaakgevolg-opgaven.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon, D = window.OG_DATA;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  var NIV = { bb:1, kgt:2, hv:3 };
+  var TV = ['jagers en boeren', 'Grieken en Romeinen', 'monniken en ridders', 'steden en staten', 'ontdekkers en hervormers', 'regenten en vorsten', 'pruiken en revoluties', 'burgers en stoommachines', 'wereldoorlogen', 'televisie en computer'];
+  var GROEP = { alle:[1,2,3,4,5,6,7,8,9,10], oud:[1,2], midd:[3,4], vroeg:[5,6,7], mod:[8,9,10] };
+  function items(lijst, keuze){
+    var n = NIV[keuze.niveau] || 2, tvs = GROEP[keuze.tijdvak] || GROEP.alle;
+    var uit = lijst.filter(function(x){ return (x.n || 1) <= n && tvs.indexOf(x.tv) >= 0; });
+    if (uit.length < 4) uit = lijst.filter(function(x){ return tvs.indexOf(x.tv) >= 0; });
+    return uit.length ? uit : lijst;
+  }
+  function tijdbalk(tv){
+    var W = 560, s = '<svg class="tijdbalk" viewBox="0 0 ' + W + ' 34" aria-hidden="true">';
+    for (var i = 0; i < 10; i++) s += '<rect class="' + (i + 1 === tv ? 'aan' : '') + '" x="' + (i * 56) + '" y="0" width="56" height="16" rx="3"/><text x="' + (i * 56 + 28) + '" y="30" text-anchor="middle">tv' + (i + 1) + '</text>';
+    return s + '</svg>';
+  }
+  /* regels afbreken voor in een blok */
+  function regels(t, max){ var w = t.split(' '), uit = [], r = ''; w.forEach(function(x){ if ((r + ' ' + x).trim().length > max){ uit.push(r.trim()); r = x; } else r += ' ' + x; }); if (r.trim()) uit.push(r.trim()); return uit.slice(0, 3); }
+  /* de keten als blokken met pijlen; leeg: alleen genummerde lege blokken (voor de sleepvorm) */
+  function ketenSvg(stappen, o){
+    o = o || {};
+    var n = stappen.length, W = 560, bw = Math.floor((W - (n - 1) * 26) / n), bh = 64, s = '<svg class="keten" viewBox="0 0 ' + W + ' ' + (bh + 8) + '" role="img" aria-label="keten van oorzaak naar gevolg">';
+    stappen.forEach(function(st, i){
+      var x = i * (bw + 26);
+      s += '<rect class="blok' + (o.aan === i ? ' aan' : '') + (st === null ? ' vraag' : '') + '" x="' + x + '" y="4" width="' + bw + '" height="' + bh + '" rx="10"/>';
+      if (st === null) s += '<text class="vt" x="' + (x + bw / 2) + '" y="' + (bh / 2 + 14) + '" text-anchor="middle">?</text>';
+      else if (o.nummers) s += '<text class="vt" x="' + (x + bw / 2) + '" y="' + (bh / 2 + 14) + '" text-anchor="middle">' + (i + 1) + '</text>';
+      else regels(st, Math.floor(bw / 6.2)).forEach(function(r, k){ s += '<text class="klein" x="' + (x + bw / 2) + '" y="' + (26 + k * 14) + '" text-anchor="middle">' + S(r) + '</text>'; });
+      if (i < n - 1) s += '<path class="pijl" d="M' + (x + bw + 3) + ' ' + (bh / 2 + 4) + 'h16"/><path class="kop" d="M' + (x + bw + 17) + ' ' + (bh / 2 - 1) + 'l7 5-7 5z"/>';
+    });
+    return s + '</svg>';
+  }
+
+  /* 1. keten: sleep de stappen in de goede volgorde */
+  function keten(keuze){
+    var k = kies(items(D.KETENS, keuze)), n = keuze.niveau === 'bb' ? 3 : k.stappen.length, st = k.stappen.slice(0, n);
+    return { onderdeel:'oorzaak en gevolg: keten', onderdeelNaam:'keten', vorm:'sleep', sleutel:'k' + k.naam,
+      vraag:'Zet de stappen van <b>' + S(k.naam) + '</b> in de goede volgorde, van oorzaak naar gevolg.', opdracht:'Vak 1 is de eerste oorzaak; elke volgende stap is een gevolg van de vorige. Tijdvak ' + k.tv + ': ' + TV[k.tv - 1] + '.',
+      beeld: ketenSvg(st.map(function(){ return 'x'; }), { nummers:true }) + tijdbalk(k.tv), sleepuit:'Sleep elk kaartje naar het vak met het goede nummer. Op een telefoon: tik het kaartje aan en dan het vak.',
+      kaarten: st.map(function(x, i){ return { id:'s' + i, tekst:S(x) }; }),
+      vakken: st.map(function(x, i){ return { id:'v' + i, max:1, hoort:['s' + i] }; }),
+      uitleg: k.uit + '<div style="margin-top:8px">' + ketenSvg(st) + '</div>', antwoordTekst: st.join(' → ') };
+  }
+  /* 2 en 3. wat was het gevolg / wat was de oorzaak */
+  function los(keuze, richting){
+    var it = kies(items(D.LOS, keuze)), goed = richting === 'gevolg' ? it.gevolg : it.oorzaak;
+    var mis = richting === 'gevolg' ? it.mis : H(D.LOS.filter(function(x){ return x !== it && x.tv === it.tv; }).concat(D.LOS.filter(function(x){ return x !== it; }))).slice(0, 3).map(function(x){ return x.oorzaak; });
+    var opties = H([goed].concat(mis));
+    return { onderdeel:'oorzaak en gevolg: ' + richting, onderdeelNaam: richting === 'gevolg' ? 'wat was het gevolg' : 'wat was de oorzaak', vorm:'meerkeuze', sleutel: richting + it.oorzaak.slice(0, 20),
+      vraag: richting === 'gevolg' ? '<b>' + S(it.oorzaak.charAt(0).toUpperCase() + it.oorzaak.slice(1)) + '.</b> Wat was daarvan een gevolg?' : '<b>' + S(it.gevolg.charAt(0).toUpperCase() + it.gevolg.slice(1)) + '.</b> Wat was daarvan de oorzaak?',
+      opdracht:'Tijdvak ' + it.tv + ': ' + TV[it.tv - 1] + '.', beeld: ketenSvg(richting === 'gevolg' ? [it.oorzaak, null] : [null, it.gevolg]) + tijdbalk(it.tv),
+      opties: opties, goed: opties.indexOf(goed),
+      uitleg: S(it.oorzaak.charAt(0).toUpperCase() + it.oorzaak.slice(1)) + ' → ' + S(it.gevolg) + '.<div style="margin-top:8px">' + ketenSvg([it.oorzaak, it.gevolg]) + '</div>', antwoordTekst: goed };
+  }
+  /* 4. soort oorzaak (hv) */
+  function soort(keuze){
+    var it = kies(items(D.SOORT, keuze)), aanl = it.soort === 'aanleiding' || it.soort === 'diepere oorzaak';
+    var opties = aanl ? ['aanleiding: de directe gebeurtenis die het in gang zette', 'diepere oorzaak: iets wat al langer speelde'] : ['economisch (geld, handel, werk)', 'politiek (macht, bestuur, staten)', 'religieus (geloof, kerk)', 'sociaal (hoe mensen samenleven)'];
+    var goedI = aanl ? (it.soort === 'aanleiding' ? 0 : 1) : ['economisch', 'politiek', 'religieus', 'sociaal'].indexOf(it.soort);
+    return { onderdeel:'oorzaak en gevolg: soort oorzaak', onderdeelNaam:'soort oorzaak', vorm:'meerkeuze', vasteVolgorde:true, sleutel:'s' + it.oorzaak.slice(0, 24),
+      vraag:'Oorzaak van <b>' + S(it.gebeurtenis) + '</b>: ' + S(it.oorzaak) + '. ' + (aanl ? 'Is dit de aanleiding of een diepere oorzaak?' : 'Wat voor soort oorzaak is dit?'),
+      opdracht: aanl ? 'Een aanleiding is de vonk; een diepere oorzaak is het kruit dat er al lag.' : 'Gaat het om geld, om macht, om geloof of om hoe mensen leven?', beeld: ketenSvg([it.oorzaak, it.gebeurtenis]) + tijdbalk(it.tv),
+      opties: opties, goed: goedI, uitleg: it.uit, antwoordTekst: opties[goedI] };
+  }
+
+  VAKSPEL.maak({
+    id:'oorzaakgevolg', naam:'Oorzaak en gevolg', vak:'ges', kleur:'#204ECF',
+    hand:'omdat ... daarom ...',
+    lead:'Geschiedenis is een ketting: het ene gebeurt omdat het andere gebeurde. Je zet ketens in de goede volgorde, kiest het gevolg of de oorzaak van een gebeurtenis, en op havo en vwo onderscheid je de aanleiding van de diepere oorzaak en het soort oorzaak. Uit alle tien tijdvakken.',
+    hoe:[
+      { kop:'Ketens', tekst:'Elke stap is het gevolg van de vorige en de oorzaak van de volgende. Begin bij wat het eerst gebeurde.' },
+      { kop:'Aanleiding en oorzaak', tekst:'De <b>aanleiding</b> is de vonk (de moord in Sarajevo); de <b>diepere oorzaak</b> lag er al (de bondgenootschappen).' },
+      { kop:'Soorten oorzaken', tekst:'Economisch (geld, handel), politiek (macht), religieus (geloof) of sociaal (hoe mensen leven). Vaak spelen ze samen.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'Korte ketens van drie stappen en bekende gebeurtenissen.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Ketens van vier stappen, oorzaken en gevolgen uit alle tijdvakken.' },
+        { id:'hv', naam:'havo en vwo', uit:'Ook aanleiding tegenover diepere oorzaak, en het soort oorzaak.' } ] },
+      { id:'tijdvak', kop:'welke tijdvakken', std:'alle', items:[
+        { id:'alle', naam:'alle tijdvakken' }, { id:'oud', naam:'prehistorie en oudheid (1-2)' }, { id:'midd', naam:'middeleeuwen (3-4)' }, { id:'vroeg', naam:'vroegmoderne tijd (5-7)' }, { id:'mod', naam:'moderne tijd (8-10)' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' }, { id:'keten', naam:'ketens' }, { id:'gevolg', naam:'wat was het gevolg' }, { id:'oorzaak', naam:'wat was de oorzaak' }, { id:'soort', naam:'soort oorzaak' } ] }
+    ],
+    aantal:10,
+    maak:function(keuze, nr){
+      var lijst = ['keten', 'gevolg', 'oorzaak']; if (keuze.niveau === 'hv') lijst.push('soort', 'soort');
+      var s = keuze.soort === 'alles' ? kies(lijst) : keuze.soort;
+      if (s === 'keten') return keten(keuze);
+      if (s === 'soort') return soort(keuze);
+      return los(keuze, s);
+    },
+    uitleg:{ doel:'Verbanden zien in de geschiedenis: wat was de oorzaak, wat het gevolg.', tijd:'tien opgaven per ronde', bediening:'Sleep de kaartjes in de genummerde vakken en druk op Nakijken, of kies een antwoord.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>
