@@ -215,6 +215,16 @@ tr.site td:first-child b::before{content:'';display:inline-block;width:8px;heigh
       <label class="los">Sorteer op <select id="gSorteer" class="veld klein"><option value="m">30 dagen</option><option value="w">7 dagen</option><option value="v">vandaag</option></select></label></div>
     <div style="overflow-x:auto;margin-top:10px"><table><thead><tr><th>Pagina</th><th style="text-align:right">Vandaag</th><th style="text-align:right">7 dagen</th><th style="text-align:right">30 dagen</th><th>Aandeel</th><th>Trend</th></tr></thead><tbody id="gebruik"><tr><td colspan="6" class="leeg">Nog niet geladen.</td></tr></tbody></table></div>
     <p class="tip">Aandeel: deel van alle bezoeken in dertig dagen. Trend: deze zeven dagen tegenover de zeven ervoor.</p>
+    <details class="los"><summary>Een telling rechtzetten</summary>
+      <p class="tip">Voor als een pagina zichzelf herlaadde en duizenden bezoeken telde. Kies de dag en de pagina, en zet het aantal op wat het hoort te zijn (0 haalt de regel weg).</p>
+      <div class="rij" style="margin-top:8px">
+        <label class="sronly" for="tzDag">Dag</label><input id="tzDag" class="veld" type="date">
+        <label class="sronly" for="tzPad">Pagina</label><select id="tzPad" class="veld"></select>
+        <label class="sronly" for="tzN">Aantal</label><input id="tzN" class="veld" type="number" min="0" max="1000000" step="1" placeholder="aantal" style="width:120px">
+        <button class="knop" id="tzZet" type="button">Zet</button>
+      </div>
+      <p class="tip" id="tzStatus" role="status" aria-live="polite"></p>
+    </details>
   </section>
 
   <section class="kaart hide" id="tab-klassement" role="tabpanel" aria-labelledby="tabknop-klassement">
@@ -380,7 +390,7 @@ tr.site td:first-child b::before{content:'';display:inline-block;width:8px;heigh
   function pct(nu, eerder){ if (!eerder) return nu ? '<span>nieuw</span>' : '<span>–</span>'; var d = Math.round((nu - eerder) / eerder * 100); return d > 0 ? '<span class="op">▲ ' + d + '%</span>' : d < 0 ? '<span class="af">▼ ' + (-d) + '%</span>' : '<span>=</span>'; }
   var gebruikData = null, gebruikFilter = 'alles';
   function tekenGebruik(tellers){
-    gebruikData = tellers; tekenGebruikNu();
+    gebruikData = tellers; tekenGebruikNu(); vulTelZet();
   }
   function tekenGebruikNu(){
     var tellers = gebruikData || {};
@@ -432,6 +442,32 @@ tr.site td:first-child b::before{content:'';display:inline-block;width:8px;heigh
     gebruikFilter = k.getAttribute('data-f'); Array.prototype.forEach.call($('gFilter').querySelectorAll('[data-f]'), function(x){ x.classList.toggle('on', x === k); }); tekenGebruikNu();
   }); });
   $('gSorteer').addEventListener('change', tekenGebruikNu);
+  /* een telling rechtzetten: de dag en de pagina uit de lijst, het aantal met de hand */
+  function vulTelZet(){
+    var tellers = gebruikData || {}, paden = {};
+    Object.keys(tellers).forEach(function(d){ Object.keys(tellers[d]).forEach(function(p){ paden[p] = 1; }); });
+    var lijst = Object.keys(paden).sort(function(a, b){ return naamVan(a).localeCompare(naamVan(b), 'nl'); });
+    $('tzPad').innerHTML = lijst.map(function(p){ return '<option value="' + schoon(p) + '">' + schoon(naamVan(p)) + ' (' + schoon(p) + ')</option>'; }).join('');
+    if (!$('tzDag').value) $('tzDag').value = new Date().toISOString().slice(0, 10);
+  }
+  function tzToon(){
+    var t = (gebruikData || {})[$('tzDag').value] || {}, n = t[$('tzPad').value];
+    $('tzStatus').className = 'tip'; $('tzStatus').textContent = n === undefined ? 'Op die dag staat deze pagina niet in de telling.' : 'Nu geteld: ' + n + '.';
+  }
+  $('tzDag').addEventListener('change', tzToon); $('tzPad').addEventListener('change', tzToon);
+  $('tzZet').addEventListener('click', function(){
+    var d = $('tzDag').value, p = $('tzPad').value, n = Math.max(0, Math.round(Number($('tzN').value)));
+    if (!d || !p || $('tzN').value === ''){ $('tzStatus').className = 'tip fout'; $('tzStatus').textContent = 'Kies een dag en een pagina en vul een aantal in.'; return; }
+    if (!confirm('De telling van ' + naamVan(p) + ' op ' + d + ' op ' + n + ' zetten?')) return;
+    $('tzZet').disabled = true;
+    haal('/api/beheer/tel-zet', { method:'POST', body:JSON.stringify({ d:d, p:p, n:n }) }).then(function(x){
+      $('tzZet').disabled = false;
+      if (!x.ok){ $('tzStatus').className = 'tip fout'; $('tzStatus').textContent = x.j.fout || 'Rechtzetten lukte niet.'; return; }
+      if (gebruikData){ gebruikData[d] = gebruikData[d] || {}; if (n) gebruikData[d][p] = n; else delete gebruikData[d][p]; }
+      tekenGebruikNu();
+      $('tzStatus').className = 'tip'; $('tzStatus').textContent = 'Rechtgezet: ' + naamVan(p) + ' op ' + d + ' was ' + x.j.was + ', is nu ' + x.j.nu + '.';
+    }).catch(function(){ $('tzZet').disabled = false; $('tzStatus').className = 'tip fout'; $('tzStatus').textContent = 'Geen verbinding.'; });
+  });
   function laad(){
     if (!sleutel()){ $('status').textContent = 'Vul de beheersleutel in.'; return; }
     try { localStorage.setItem('lg-beheer', sleutel()); } catch (e){}

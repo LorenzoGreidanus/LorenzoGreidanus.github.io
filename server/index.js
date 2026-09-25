@@ -225,12 +225,12 @@ export default {
       return beheer().fetch("https://beheer/tel", { method: "POST", body: JSON.stringify(inz || {}) });
     }
     /* alleen de beheerder: lezen en opruimen, met de geheime sleutel (wrangler secret put BEHEER) */
-    const bm = p.match(/^\/api\/beheer\/(meldingen|tellers|melding-weg)\/?$/);
+    const bm = p.match(/^\/api\/beheer\/(meldingen|tellers|melding-weg|tel-zet)\/?$/);
     if (bm){
       if (!env.BEHEER || req.headers.get("x-beheer") !== env.BEHEER) return json({ fout: "geen toegang" }, 403);
-      if (bm[1] === "melding-weg"){
+      if (bm[1] === "melding-weg" || bm[1] === "tel-zet"){
         let opdr; try { opdr = await req.json(); } catch (e){ return json({ fout: "geen geldige opdracht" }, 400); }
-        return beheer().fetch("https://beheer/weg", { method: "POST", body: JSON.stringify(opdr || {}) });
+        return beheer().fetch("https://beheer/" + (bm[1] === "tel-zet" ? "tel-zet" : "weg"), { method: "POST", body: JSON.stringify(opdr || {}) });
       }
       return beheer().fetch("https://beheer/" + bm[1]);
     }

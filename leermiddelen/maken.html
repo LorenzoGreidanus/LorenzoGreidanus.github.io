@@ -50,6 +50,10 @@
       <button class="knop stil" id="vergelijkKnop" type="button">Toetsen vergelijken</button>
     </div>
     <p class="tip" id="accTip" style="margin-top:10px"></p>
+    <h2 style="font-size:1.2rem;margin-top:22px" id="voorbeelden">Voorbeelden om mee te beginnen</h2>
+    <p class="tip">Drie toetsen met alle vraagsoorten erin, ook de sleepvragen. Bekijk ze zoals een leerling ze ziet, of zet er een kopie van bij je materiaal: die is dan van jou, om aan te passen, in te korten of als toets te geven.</p>
+    <div class="stukken" id="vbStukken"></div>
+    <p class="melding" id="vbMelding" role="status" aria-live="polite"></p>
     <h2 style="font-size:1.2rem;margin-top:22px">Mijn materiaal</h2>
     <div class="stukken" id="stukken"></div>
     <p class="melding" id="lijstMelding" role="status" aria-live="polite"></p>
@@ -143,6 +147,7 @@
 <script src="bank.js"></script>
 <script src="profiel.js"></script>
 <script src="eigen.js"></script>
+<script src="voorbeeldtoetsen.js"></script>
 <script src="nakijk.js"></script>
 <script src="uitslag.js"></script>
 <script>
@@ -209,6 +214,27 @@
     else if (a && a.mogelijk) $('accTip').innerHTML = 'Je materiaal staat nu in deze browser. <a href="' + PROFIEL.inlogAdres() + '">Log in met Microsoft</a>, dan heb je het op al je apparaten.';
   });
   tekenLijst();
+  /* de drie voorbeelden: bekijken als leerling, of een kopie in je eigen materiaal */
+  function tekenVoorbeelden(){
+    var l = Object.keys(window.VOORBEELDTOETSEN || {}).map(function(k){ return VOORBEELDTOETSEN[k]; });
+    $('vbStukken').innerHTML = l.map(function(m){
+      return '<div class="stuk"><div><b>' + schoon(m.naam) + '</b><small>' + m.items.length + ' vragen: ' + schoon(m.uitleg) + '</small></div>' +
+        '<div class="acties"><a class="knop stil klein" href="oefen.html?code=' + m.code + '">Bekijk als leerling</a>' +
+        '<button class="knop klein" type="button" data-kopie-vb="' + m.code + '">Zet in mijn materiaal</button></div></div>';
+    }).join('');
+  }
+  tekenVoorbeelden();
+  $('vbStukken').addEventListener('click', function(e){
+    var b = e.target.closest('[data-kopie-vb]'); if (!b) return;
+    var vb = VOORBEELDTOETSEN[b.getAttribute('data-kopie-vb')]; if (!vb) return;
+    b.disabled = true; melding($('vbMelding'), 'Kopie maken…');
+    var m = { soort: 'oefening', naam: vb.naam.replace(/^Voorbeeld /, ''), vak: vb.vak, modus: 'oefenen', items: JSON.parse(JSON.stringify(vb.items)) };
+    EIGEN.bewaar(m).then(function(j){
+      b.disabled = false; tekenLijst();
+      melding($('vbMelding'), 'Staat bij je materiaal als "' + m.naam + '" met code ' + j.code + '. Klik op Bewerken om hem aan te passen, of op Resultaten zodra leerlingen hem gemaakt hebben.', 'goed');
+      var el = $('stukken').querySelector('[data-werk="' + j.code + '"]'); if (el) el.closest('.stuk').scrollIntoView({ block: 'center' });
+    }).catch(function(f){ b.disabled = false; melding($('vbMelding'), (f.message || 'Kopiëren lukte niet.') + ' Controleer je internet en probeer het opnieuw.', 'fout'); });
+  });
 
   /* ---------- bewerken: algemeen ---------- */
   function open(soort, code){

@@ -114,6 +114,7 @@
 <script src="profiel.js"></script>
 <script src="klas.js"></script>
 <script src="eigen.js"></script>
+<script src="voorbeeldtoetsen.js"></script>
 <script>
 (function(){
   'use strict';
@@ -134,6 +135,14 @@
   $('andereCode').addEventListener('click', function(){ history.replaceState(null, '', location.pathname); scherm('codeScherm'); $('codeIn').value = ''; $('codeIn').focus(); });
   function laad(c){
     $('codeKnop').disabled = true; melding($('codeMelding'), 'Ophalen…');
+    /* een voorbeeldtoets staat in de browser zelf: niets ophalen, niets inleveren */
+    var vb = window.VOORBEELDTOETSEN && VOORBEELDTOETSEN[String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '')];
+    if (vb){
+      $('codeKnop').disabled = false; melding($('codeMelding'), '');
+      code = vb.code; mat = JSON.parse(JSON.stringify(vb));
+      history.replaceState(null, '', location.pathname + '?code=' + code);
+      toonBegin(); return;
+    }
     EIGEN.haal(c).then(function(m){
       $('codeKnop').disabled = false; melding($('codeMelding'), '');
       code = String(c).toUpperCase(); mat = m;
@@ -159,6 +168,7 @@
       : n + (n === 1 ? ' vraag' : ' vragen') + '. ' + (isToets()
         ? 'Dit is een toets: je levert hem een keer in, en pas daarna zie je je score.'
         : 'Na elke vraag zie je of het goed was.');
+    if (mat.voorbeeld) $('beginUitleg').textContent = mat.uitleg + ' Dit is een voorbeeld: je antwoorden gaan nergens heen. Een docent zet er in Eigen materiaal met een klik een eigen kopie van neer, om aan te passen of als toets te geven.';
     $('woordlijst').classList.toggle('hide', !lijst);
     if (lijst) $('woordlijst').innerHTML = mat.paren.map(function(p){ return '<span><b>' + schoon(p.a) + '</b> – ' + schoon(p.b) + '</span>'; }).join('');
     $('lijstSpellen').classList.toggle('hide', !lijst);
@@ -169,8 +179,8 @@
     }
     /* wie ben je: van de klascode, of je typt je naam */
     var k = klas();
-    $('naamVak').classList.toggle('hide', lijst || !!k);
-    $('alsWie').classList.toggle('hide', lijst || !k);
+    $('naamVak').classList.toggle('hide', lijst || !!k || !!mat.voorbeeld);
+    $('alsWie').classList.toggle('hide', lijst || !k || !!mat.voorbeeld);
     if (k) $('alsWie').textContent = 'Je levert in als ' + k.naam + ', in klas ' + k.code + '.';
     $('naamIn').value = ls('lg-oefen-naam') || '';
     $('naamLabel').textContent = isToets() ? 'Je naam (voor- en achternaam)' : 'Je naam (mag leeg)';
@@ -275,7 +285,7 @@
   function eind(){
     $('eindUit').textContent = ''; melding($('inleverMelding'), ''); $('opnieuwInleveren').classList.add('hide');
     var w = wie();
-    if (mat.soort === 'lijst' || !w){
+    if (mat.soort === 'lijst' || mat.voorbeeld || !w){
       var sc = toonEind(uitslag);
       if (klas()) KLAS.meld({ spel: 'eigen', ronde: sc.heel, punten: sc.pct, vak: mat.soort === 'lijst' ? 'eigen' : 'm:' + code }, 'eindUit');
       return;

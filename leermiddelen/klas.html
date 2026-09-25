@@ -6,6 +6,7 @@
 <link rel="manifest" href="/manifest.json">
 <script src="avatar.js"></script>
 <script src="profiel.js"></script>
+<script src="voorbeeldtoetsen.js"></script>
 <link rel="apple-touch-icon" href="/icoon-192.png">
 <script>
 (function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();
@@ -181,6 +182,13 @@ td.getal{font-variant-numeric:tabular-nums;text-align:right}
   border-radius:12px;padding:9px 14px;font-weight:600;text-decoration:none;color:inherit}
 .msknop svg{width:16px;height:16px}
 .deurtjes{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-top:32px}
+/* de demoklas: drie voorbeeldtoetsen om uit te proberen */
+.voorbeeldvak{margin-top:14px;background:var(--kaart2);border-radius:16px;padding:14px 16px}
+.voorbeeldvak h3{font-size:1rem;margin:0 0 4px}
+.voorbeeldvak .rij{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:6px 0;border-top:1px solid var(--rand)}
+.voorbeeldvak .rij:first-of-type{border-top:none}
+.voorbeeldvak b{flex:1 1 220px;font-size:.95rem}
+.voorbeeldvak a{display:inline-flex;align-items:center;min-height:44px;color:var(--link);font-weight:600;font-size:.9rem}
 .deurtjes a{display:block;background:var(--kaart);border:1px solid var(--rand);border-radius:16px;padding:14px 16px;
   text-decoration:none;color:inherit}
 .deurtjes a:hover{border-color:var(--ocean)}
@@ -536,6 +544,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       </div>
     </div>
     <p class="tip" id="ovUit" style="margin-top:8px"></p>
+    <div class="voorbeeldvak hide" id="voorbeeldvak"></div>
     <div class="printkop" id="printkop" aria-hidden="true"></div>
 
     <!-- Voor de les kijkt naar deze week, los van de filters; daarom staat het
@@ -823,7 +832,11 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       { spel:'organisme', vak:'bio',   delen:['de ladder', 'plantcel of diercel', 'taken'] },
       { spel:'toren',     vak:'eng',   delen:['woordjes NL naar EN', 'irregular verbs', 'grammatica'] },
       { spel:'vlaggen',   vak:'aard',  delen:[] },
-      { spel:'dhte',      vak:'reken', delen:[] }
+      { spel:'dhte',      vak:'reken', delen:[] },
+      /* de drie voorbeeldtoetsen, gemaakt als eigen oefening */
+      { spel:'eigen',     vak:'m:VBNED1', delen:[] },
+      { spel:'eigen',     vak:'m:VBREK1', delen:[] },
+      { spel:'eigen',     vak:'m:VBGES1', delen:[] }
     ];
     namen.forEach(function(n, i){
       var av = 'v' + (i % 8) + 'k' + (i % 9) + 'o' + (i % 5) + 'm' + (i % 4) + 'e' + (i % 6);
@@ -839,7 +852,8 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
           od[d] = [goed, gesteld]; samen += goed;
         });
         var ronde = s.spel === 'race' ? 6 + Math.floor(r() * 14) : s.spel === 'toren' ? 8 + Math.floor(r() * 30) : s.spel === 'zwaard' ? 4 + Math.floor(r() * 16) : samen || 5 + Math.floor(r() * 12);
-        uit.push({ naam:n, av:av, spel:s.spel, ronde:ronde, punten: 40 + Math.floor(r() * 400), niveau: ['bb', 'kgt', 'havo'][i % 3], vak:s.vak,
+        if (s.spel === 'eigen'){ ronde = 3 + Math.floor(r() * 8); }
+        uit.push({ naam:n, av:av, spel:s.spel, ronde:ronde, punten: s.spel === 'eigen' ? ronde * 10 : 40 + Math.floor(r() * 400), niveau: ['bb', 'kgt', 'havo'][i % 3], vak:s.vak,
                    od: Object.keys(od).length ? od : undefined, t:t });
       }
     });
@@ -911,7 +925,16 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
   }
   function haal(){
     if (!huidig) return;
-    if (DEMO){ data = demoData(); $('ovUit').textContent = 'Dit is een demoklas met verzonnen leerlingen: niets hiervan staat op de server. Maak je eigen klascode om het echt te gebruiken.'; teken(); return; }
+    if (DEMO){
+      data = demoData(); $('ovUit').textContent = 'Dit is een demoklas met verzonnen leerlingen: niets hiervan staat op de server. Maak je eigen klascode om het echt te gebruiken.';
+      var vb = window.VOORBEELDTOETSEN ? Object.keys(VOORBEELDTOETSEN).map(function(k){ return VOORBEELDTOETSEN[k]; }) : [];
+      if (vb.length){
+        $('voorbeeldvak').innerHTML = '<h3>Eigen toetsen: drie voorbeelden</h3><p class="tip">Deze klas maakte drie toetsen met sleepvragen. Probeer ze zelf, of zet er een kopie van in je eigen materiaal.</p>' +
+          vb.map(function(m){ return '<div class="rij"><b>' + schoon(m.naam) + '</b><a href="oefen.html?code=' + m.code + '">Bekijk als leerling</a><a href="maken.html#voorbeelden">Zet in mijn materiaal</a></div>'; }).join('');
+        $('voorbeeldvak').classList.remove('hide');
+      }
+      teken(); return;
+    }
     /* alleen de eerste keer "Ophalen…"; het verversen elke twintig seconden gebeurt stil */
     if (!data) $('ovUit').textContent = 'Uitslagen ophalen…';
     var k = huidig;
@@ -1087,6 +1110,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     /* m:CODE is een eigen oefening; de naam staat in de lijst van wie hem maakte */
     var m = /^m:([A-Z0-9]{6})$/.exec(v || '');
     if (m){
+      if (window.VOORBEELDTOETSEN && VOORBEELDTOETSEN[m[1]]) return VOORBEELDTOETSEN[m[1]].naam;
       var eigen = []; try { eigen = JSON.parse(localStorage.getItem('lg-materiaal') || '[]') || []; } catch (e){}
       var x = eigen.filter(function(y){ return y && y.code === m[1]; })[0];
       return x ? x.naam : 'Eigen oefening ' + m[1];
