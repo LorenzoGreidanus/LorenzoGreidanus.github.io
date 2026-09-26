@@ -1953,21 +1953,31 @@ var SPELLEN = [
   function zetUitregel(k){
     var p = document.getElementById('uitregel'); if (!p) return;
     p.textContent = k
-      ? 'Kies een spel. Je zit in klas ' + k.code + ' als ' + k.naam + ', dus je uitslagen gaan naar je docent.'
+      ? 'Kies een spel. Je zit in klas ' + k.code + ' als ' + (msNaam() || k.naam) + ', dus je uitslagen gaan naar je docent.'
       : 'Kies een vak en een spel. Geen account nodig, en zonder klascode blijft alles op dit apparaat.';
   }
   /* Het koppelformulier zelf: code, bijnaam, knop. Staat op twee plekken, dus
      hier één keer geschreven. */
+  /* ingelogd met Microsoft: dan koppel je met die naam, zonder bijnaam */
+  function msNaam(){ return acc && acc.ingelogd && acc.naam ? String(acc.naam).trim() : ''; }
+  /* het formulier staat er soms al voordat we weten of je bent ingelogd; daarom los, en ook na het ophalen van het account */
+  function msToepassen(){
+    var v = document.getElementById('klasNaam'), st = document.getElementById('klasStatus'), m = msNaam();
+    if (!v) return;
+    v.hidden = !!m;
+    if (m){ v.value = m; if (st && !st.classList.contains('fout')) st.textContent = 'Je bent ingelogd met Microsoft, dus je koppelt als ' + m + '. Je docent ziet die naam bij je uitslagen.'; }
+  }
   function koppelVorm(waar, kop){
     waar.innerHTML = (kop || '') +
       '<div class="invulrij"><input id="klasCode" maxlength="6" placeholder="CODE" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Klascode"><input id="klasNaam" class="naam" maxlength="16" placeholder="Je bijnaam" autocomplete="nickname" aria-label="Je bijnaam"><button type="button" id="klasKoppel">Koppelen</button></div>' +
       '<p class="status" id="klasStatus" role="status" aria-live="polite">Alleen als je docent je een code gaf. Dan gaan je uitslagen naar je docent, met je bijnaam erbij. Een code van zes tekens is een oefening: vul hem hier in, of op <a href="oefen.html">oefenen met een code</a>.</p>';
     var knop = waar.querySelector('#klasKoppel'), codeVeld = waar.querySelector('#klasCode'), naamVeld = waar.querySelector('#klasNaam');
+    msToepassen();
     /* Enter in een van de twee velden koppelt ook */
     [codeVeld, naamVeld].forEach(function(v){ v.addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); knop.click(); } }); });
     knop.addEventListener('click', function(){
       if (knop.disabled) return;
-      var code = codeVeld.value.toUpperCase().replace(/[^A-Z]/g, ''), naam = naamVeld.value.trim(), st = waar.querySelector('#klasStatus');
+      var code = codeVeld.value.toUpperCase().replace(/[^A-Z]/g, ''), naam = msNaam() || naamVeld.value.trim(), st = waar.querySelector('#klasStatus');
       /* zes tekens is geen klascode maar een oefening van de docent (maken.html) */
       var ruw = codeVeld.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
       if (ruw.length === 6){ location.href = 'oefen.html?code=' + ruw; return; }
@@ -1989,7 +1999,7 @@ var SPELLEN = [
     PROFIEL.op(teken);
     /* Ook als je niet bent ingelogd opnieuw tekenen: dan weten we pas of
        inloggen hier überhaupt kan, en dus of de knop erbij hoort. */
-    PROFIEL.account().then(function(a){ acc = a || null; ingelogd = !!(a && a.ingelogd); teken(); });
+    PROFIEL.account().then(function(a){ acc = a || null; ingelogd = !!(a && a.ingelogd); teken(); msToepassen(); });
   }
 })();
 </script>

@@ -1347,7 +1347,8 @@ export class Kamer extends DurableObject {
                   periodes: this.stand.periodes || [], echt: this.stand.echt || {},
                   leerlingen: this.gekoppeld(),
                   /* elke uitslag onder de huidige bijnaam van de leerling: wie van naam wisselde of op een tweede apparaat speelde, staat er zo een keer in */
-                  resultaten: this.stand.resultaten.map(x => ({ naam: ((this.stand.leerlingen || {})[x.sid] || {}).naam || x.naam, av: x.av || "", spel: x.spel, ronde: x.ronde, punten: x.punten, niveau: x.niveau, vak: x.vak, od: x.od, t: x.t })) });
+                  /* ingelogd met Microsoft: de docent ziet de accountnaam, niet de bijnaam */
+                  resultaten: this.stand.resultaten.map(x => ({ naam: (l => l.ms || l.naam)((this.stand.leerlingen || {})[x.sid] || {}) || x.naam, av: x.av || "", spel: x.spel, ronde: x.ronde, punten: x.punten, niveau: x.niveau, vak: x.vak, od: x.od, t: x.t })) });
   }
 
   /* Wie is er gekoppeld, en heeft die al iets gespeeld? Het kenmerk zelf gaat
@@ -1356,7 +1357,7 @@ export class Kamer extends DurableObject {
     this.samenvoegen();
     const gespeeld = new Set((this.stand.resultaten || []).map(r => r.sid));
     const l = this.stand.leerlingen || {};
-    return Object.keys(l).map(s => ({ id: s, naam: l[s].naam, av: l[s].av || "", ms: l[s].ms || "", sinds: l[s].sinds, gespeeld: gespeeld.has(s) }))
+    return Object.keys(l).map(s => ({ id: s, naam: l[s].ms || l[s].naam, bijnaam: l[s].ms ? l[s].naam : "", av: l[s].av || "", ms: l[s].ms || "", sinds: l[s].sinds, gespeeld: gespeeld.has(s) }))
       .sort((a, b) => a.naam.localeCompare(b.naam, "nl"));
   }
   aanwezig(sid){ return this.ctx.getWebSockets(sid).length > 0; }
