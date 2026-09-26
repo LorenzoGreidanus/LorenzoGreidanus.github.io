@@ -72,6 +72,15 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);
   padding:15px 34px;font-weight:700;font-size:1.02rem;box-shadow:0 8px 20px rgba(242,103,73,.3)}
 .btn:disabled{background:#d8d3cd;box-shadow:none;cursor:not-allowed}
 .btn:not(:disabled):hover{transform:translateY(-1px)}
+/* Start of oneindig: twee knoppen naast elkaar, de tweede rustiger.
+   Met de id erbij, anders maakt basis.css de letters in het donker navy. */
+.startknoppen{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:26px}
+.startknoppen .btn{margin-top:0}
+#scherm-start .btn.tweede{background:transparent;color:var(--ink);border:2px solid color-mix(in srgb,var(--ink) 22%,transparent);box-shadow:none}
+#scherm-start .btn.tweede:not(:disabled):hover{border-color:var(--ink)}
+#scherm-start .btn.tweede:disabled{opacity:.45}
+.oneindiguit{margin-top:10px;font-size:.84rem;color:var(--muted)}
+.meter.oneindigmeter{color:var(--link)}
 
 /* ---------- het spel ---------- */
 .spel{padding:18px 0 50px}
@@ -123,9 +132,11 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);
 .uitslagregel.goed{background:var(--goed-bg);color:var(--goed)}
 .uitslagregel.fout{background:var(--fout-bg);color:var(--fout)}
 .uitslagregel b{display:block;font-size:1rem;margin-bottom:2px}
-.verder{margin-top:14px;display:flex;justify-content:flex-end}
+.verder{margin-top:14px;display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
 .verder button{background:var(--ink);color:var(--room);border:none;border-radius:999px;
-  padding:11px 24px;font-weight:600}
+  padding:11px 24px;font-weight:600;min-height:44px}
+.verder button.stop{background:transparent;color:var(--ink);border:1.5px solid color-mix(in srgb,var(--ink) 22%,transparent)}
+.verder button.stop:hover{border-color:var(--ink)}
 
 /* ---------- einde ---------- */
 .eind{padding:34px 0 60px}
@@ -273,7 +284,11 @@ body.groot .uitslagregel{font-size:1.05rem}
   <div class="keuze" id="modussen"></div>
   <p class="keuzeuit" id="modusUit"></p>
 
-  <button class="btn" id="startBtn" type="button" disabled>Maak eerst je keuzes</button>
+  <div class="startknoppen">
+    <button class="btn" id="startBtn" type="button" disabled>Maak eerst je keuzes</button>
+    <button class="btn tweede" id="oneindigBtn" type="button" disabled>Oneindig oefenen</button>
+  </div>
+  <p class="oneindiguit" id="oneindigUit"></p>
 </section>
 
 <section class="wrap spel hide" id="scherm-spel">
@@ -284,7 +299,7 @@ body.groot .uitslagregel{font-size:1.05rem}
     <div id="beeld"></div>
     <div class="opties" id="opties"></div>
     <div id="reactie" role="status" aria-live="polite"></div>
-    <div class="verder hide" id="verder"><button type="button" id="verderBtn">Volgende &rarr;</button></div>
+    <div class="verder hide" id="verder"><button type="button" class="stop hide" id="stopBtn">Stoppen</button><button type="button" id="verderBtn">Volgende &rarr;</button></div>
   </div>
 </section>
 
@@ -358,6 +373,8 @@ function engine(){
   var rij = [], nr = 0, huidig = null, bezig = false, opgeslagen = false;
   var goed = 0, punten = 0, reeks = 0, besteReeks = 0, fouten = [], od = {};
   var tijd = 0, loopt = false, laatsteTik = 0, wachter = null;
+  /* oneindig: geen ronde van twintig, doorgaan tot je zelf stopt */
+  var oneindig = false, oneindigUrl = /[?&]oneindig=1\b/.test(location.search);
 
   var elStart  = document.getElementById('scherm-start'),
       elSpel   = document.getElementById('scherm-spel'),
@@ -427,16 +444,25 @@ function engine(){
 
   function klaarCheck(){
     var b = document.getElementById('startBtn');
+    /* oneindig is altijd oefenen, dus daarvoor hoeft de stand nog niet gekozen */
+    document.getElementById('oneindigBtn').disabled = !(niveau && richting);
+    if (oneindigUrl){
+      b.disabled = !(niveau && richting);
+      b.textContent = b.disabled ? 'Maak eerst je keuzes' : 'Start: oneindig oefenen';
+      return;
+    }
     b.disabled = !(niveau && richting && modus);
     b.textContent = b.disabled ? 'Maak eerst je keuzes'
       : (isRace() ? 'Start de tijdrace' : 'Begin met oefenen');
   }
+  document.getElementById('oneindigUit').textContent =
+    'Een ronde is ' + AANTAL + ' vormen. Oneindig: zoveel als je wilt, je stopt zelf.';
 
   /* ---------- de stapel vragen ---------- */
   /* Meegroeiend niveau: wie bijna alles goed heeft krijgt de lastigere erbij,
      wie het moeilijk vindt een stap terug, nooit onder het gekozen niveau. */
   var slim = Adaptief({ ladder:NIVEAUS.map(function(n){ return n.id; }), start:'kgt', naam:function(id){ var n = NIVEAUS.filter(function(x){ return x.id === id; })[0]; return n ? n.naam : id; },
-    wissel:function(){ if (rij && rij.length) rij = rij.slice(0, nr).concat(stapel()); } });
+    wissel:function(){ if (rij && rij.length){ rij = rij.slice(0, nr); erbij(); } } });
   function stapel(){
     var rang = (NIVEAUS.filter(function(x){ return x.id === slim.niveau(); })[0] || niveau).rang;
     var mag = LANDEN.filter(function(x){ return x.n <= rang; });
@@ -445,8 +471,17 @@ function engine(){
     if (mag.length < 16) mag = LANDEN.slice();
     return husselen(mag);
   }
+  /* Een nieuwe stapel achter de oude. Op de naad mag niet twee keer hetzelfde
+     land achter elkaar komen. */
+  function erbij(){
+    var nieuw = stapel(), vorige = rij[rij.length - 1];
+    if (vorige && nieuw.length > 1 && nieuw[0] === vorige){ nieuw[0] = nieuw[1]; nieuw[1] = vorige; }
+    rij = rij.concat(nieuw);
+  }
 
-  function begin(){
+  function begin(zo){
+    oneindig = !!zo;
+    document.querySelector('.voort').classList.toggle('hide', oneindig);
     slim.reset(niveau.id);
     rij = stapel(); nr = 0;
     goed = 0; punten = 0; reeks = 0; besteReeks = 0; fouten = []; opgeslagen = false; od = {};
@@ -467,8 +502,8 @@ function engine(){
   }
 
   function volgende(){
-    if (!isRace() && nr >= AANTAL) return klaar();
-    if (nr >= rij.length) rij = rij.concat(stapel());   /* in de race gaan we door */
+    if (!isRace() && !oneindig && nr >= AANTAL) return klaar();
+    if (nr >= rij.length) erbij();   /* in de race en oneindig gaan we door */
     huidig = rij[nr];
     nr++;
     bezig = false;
@@ -571,22 +606,35 @@ function engine(){
       wachter = setTimeout(function(){ if (loopt) volgende(); }, 1100);
     } else {
       elVerder.classList.remove('hide');
+      document.getElementById('stopBtn').classList.toggle('hide', !oneindig);
       document.getElementById('verderBtn').focus();
     }
   }
 
   document.getElementById('verderBtn').addEventListener('click', volgende);
+  document.getElementById('stopBtn').addEventListener('click', function(){ if (bezig && oneindig) klaar(); });
   /* de tutorial, een keer, zodra het spelscherm er is; de klok staat intussen stil */
   if (window.TUTORIAL && window.TUTORIALS && TUTORIALS['landenvormen']) TUTORIAL.naStart('startBtn', 'landenvormen', TUTORIALS['landenvormen'], { bewaar: function(){ return tijd; }, herstel: function(t){ tijd = t; laatsteTik = Date.now(); } });
+  if (window.TUTORIAL && window.TUTORIALS && TUTORIALS['landenvormen']) TUTORIAL.naStart('oneindigBtn', 'landenvormen', TUTORIALS['landenvormen'], { bewaar: function(){ return tijd; }, herstel: function(t){ tijd = t; laatsteTik = Date.now(); } });
+  /* oneindig is een manier van oefenen: de stand springt op Oefenen */
+  function naarOefenen(){
+    var k = document.querySelector('#modussen [data-id="oefen"]');
+    if (k && (!modus || modus.id !== 'oefen')) k.click();
+  }
   document.getElementById('startBtn').addEventListener('click', function(){
-    if (niveau && richting && modus) begin();
+    if (oneindigUrl){ if (niveau && richting){ naarOefenen(); begin(true); } return; }
+    if (niveau && richting && modus) begin(false);
+  });
+  document.getElementById('oneindigBtn').addEventListener('click', function(){
+    if (niveau && richting){ naarOefenen(); begin(true); }
   });
 
   function tekenBalk(){
     var h = '';
     if (isRace()) h += '<span class="meter klok' + (tijd <= 10 ? ' krap' : '') + '">tijd<b>' +
       tijd.toFixed(1) + '</b></span>';
-    else h += '<span class="meter">vraag<b>' + Math.min(nr, AANTAL) + ' / ' + AANTAL + '</b></span>';
+    else h += '<span class="meter">vraag<b>' + (oneindig ? nr : Math.min(nr, AANTAL) + ' / ' + AANTAL) + '</b></span>' +
+      (oneindig ? '<span class="meter oneindigmeter">oneindig</span>' : '');
     h += '<span class="meter">goed<b>' + goed + '</b></span>';
     h += '<span class="meter">punten<b>' + punten + '</b></span>';
     if (reeks >= 2) h += '<span class="meter reeks">op rij<b>' + reeks + '</b></span>';
@@ -600,13 +648,14 @@ function engine(){
     elSpel.classList.add('hide');
     elEinde.classList.remove('hide');
 
-    var gedaan = isRace() ? goed + fouten.length : AANTAL;
+    var gedaan = isRace() || oneindig ? goed + fouten.length : AANTAL;
     document.getElementById('eindKop').textContent = isRace()
       ? 'De tijd is op'
-      : goed + ' van de ' + AANTAL + ' goed';
+      : goed + ' van de ' + gedaan + ' goed';
+    document.getElementById('nogBtn').textContent = oneindig ? 'Verder oefenen' : 'Nog een keer';
     document.getElementById('eindUit').textContent = isRace()
       ? 'Je haalde ' + goed + ' van de ' + gedaan + ' goed, met ' + punten + ' punten.'
-      : (goed === AANTAL ? 'Alles goed. Probeer eens een niveau hoger.'
+      : (goed === gedaan ? 'Alles goed. Probeer eens een niveau hoger.'
                          : 'Hieronder staat wat er misging, met waar je het aan ziet.');
 
     document.getElementById('cijfers').innerHTML =
@@ -618,7 +667,7 @@ function engine(){
     tekenNaamvak();
     tekenKlassement('klassement', null);
     tekenFouten();
-    SPEL.einde({ spel:'landenvormen', reeks:besteReeks, goed:goed, score: isRace() ? punten : goed, label: isRace() ? 'punten' : 'van ' + AANTAL + ' goed', max: isRace() ? null : AANTAL, ronde:goed, punten: isRace() ? punten : goed, sleutel: isRace() ? 'race' : 'oefen', vak:'aard', od:od });
+    SPEL.einde({ spel:'landenvormen', reeks:besteReeks, goed:goed, score: isRace() ? punten : goed, label: isRace() ? 'punten' : 'van ' + gedaan + ' goed', max: isRace() ? null : gedaan, ronde:goed, punten: isRace() ? punten : goed, sleutel: isRace() ? 'race' : (oneindig ? 'oefen-oneindig' : 'oefen'), vak:'aard', od:od });
   }
 
   function sleutelVoor(){
@@ -692,6 +741,7 @@ function engine(){
   }
 
   document.getElementById('nogBtn').addEventListener('click', function(){
+    if (oneindig){ begin(true); window.scrollTo({ top:0, behavior:'auto' }); return; }
     elEinde.classList.add('hide'); elStart.classList.remove('hide');
     window.scrollTo({ top:0, behavior:'smooth' });
   });
@@ -744,6 +794,17 @@ function engine(){
     vast('niveaus',    NIVEAUS,    param('n'), 'nivKop',    'Niveau');
     vast('richtingen', RICHTINGEN, param('r'), 'richtKop',  'Te zien');
     vast('modussen',   MODUSSEN,   param('m'), 'modusKop',  'Stand');
+    /* ?oneindig=1: Start is meteen oneindig oefenen, de stand kiezen hoeft niet */
+    if (oneindigUrl){
+      ['modusKop', 'modussen', 'modusUit', 'oneindigBtn'].forEach(function(id){ document.getElementById(id).classList.add('hide'); });
+      naarOefenen();
+      klaarCheck();
+      document.getElementById('oneindigUit').textContent = 'Zoveel vormen als je wilt; je stopt zelf.';
+    } else if (param('m') === 'race'){
+      /* de docent koos de tijdrace: dan geen oneindig oefenen ernaast */
+      document.getElementById('oneindigBtn').classList.add('hide');
+      document.getElementById('oneindigUit').classList.add('hide');
+    }
   })();
 
   /* Het logo terug naar de spellenpagina, met je niveau erbij. */

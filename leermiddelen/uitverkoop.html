@@ -133,6 +133,10 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;pa
 .terugkoppeling.fout{background:var(--fout-bg);color:var(--fout);padding:12px 14px;font-weight:600}
 .terugkoppeling .regel{display:block;font-weight:400;color:var(--ink);margin-top:4px;font-size:.9rem}
 .knoprij{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+/* Start of oneindig: twee knoppen naast elkaar, de tweede rustiger */
+.startknoppen{display:flex;flex-wrap:wrap;gap:10px}
+.oneindiguit{margin-top:8px;font-size:.84rem;color:var(--muted)}
+.oneindigmerk{color:var(--link);font-weight:600}
 /* einde */
 .cijfers{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:14px 0}
 .cijfers div{background:var(--kaart2);border-radius:14px;padding:12px;text-align:center}
@@ -298,7 +302,8 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     <div class="kaart">
       <div class="stap"><b>Wat wil je oefenen</b><div class="chips" id="soorten"></div></div>
       <div class="stap"><b>Niveau</b><div class="chips" id="niveaus"></div><p class="tip" id="niveauUit" style="margin-top:6px"></p></div>
-      <div class="stap"><button class="knop crab groot" id="startBtn" type="button">Naar de winkel</button></div>
+      <div class="stap"><div class="startknoppen"><button class="knop crab groot" id="startBtn" type="button">Naar de winkel</button><button class="knop stil groot" id="oneindigBtn" type="button">Oneindig oefenen</button></div>
+        <p class="oneindiguit" id="oneindigUit">Een ronde is 8 sommen. Oneindig: zoveel als je wilt, je stopt zelf.</p></div>
     </div>
   </section>
 
@@ -310,7 +315,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     </div>
     <div class="voortbalk"><i id="voortIn"></i></div>
     <div class="kaart">
-      <p class="opdrachtkop"><span id="teller">som 1</span> &middot; <span id="soortUit"></span></p>
+      <p class="opdrachtkop"><span id="teller">som 1</span><span class="oneindigmerk hide" id="oneindigMerk"> &middot; oneindig</span> &middot; <span id="soortUit"></span></p>
       <div id="kaartvak"></div>
       <p class="vraag" id="vraag"></p>
       <div class="invoerrij" id="invoerrij">
@@ -323,6 +328,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
         <button class="knop" id="kijkBtn" type="button">Nakijken</button>
         <button class="knop stil" id="rekenBtn" type="button">Rekenmachine</button>
         <button class="knop crab hide" id="verderBtn" type="button">Volgende som</button>
+        <button class="knop stil hide" id="stopOneindigBtn" type="button">Stoppen</button>
       </div>
       <div id="meldPlek"></div>
     </div>
@@ -443,6 +449,8 @@ var PER_RONDE = 8;
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
 
   var niveau = 2, soortId = '', nr = 0, goed = 0, fout = 0, reeks = 0, besteReeks = 0, foutLijst = [], huidig = null, beantwoord = false, od = {};
+  /* oneindig: geen ronde van acht, doorrekenen tot je zelf stopt; ?oneindig=1 in het adres maakt Start meteen oneindig */
+  var oneindig = false, oneindigUrl = /[?&]oneindig=1\b/.test(location.search);
 
   function magSoorten(){ return SOORTEN.filter(function(s){ return !s.niv || s.niv <= niveau; }); }
   function chips(id, lijst, nu, zet){
@@ -467,10 +475,10 @@ var PER_RONDE = 8;
     huidig = s.maak(niveau); huidig.soort = s;
     beantwoord = false;
     $('terug').textContent = ''; $('terug').className = 'terugkoppeling';
-    $('verderBtn').classList.add('hide'); $('kijkBtn').classList.remove('hide');
-    $('teller').textContent = 'som ' + (nr + 1) + ' van ' + PER_RONDE;
+    $('verderBtn').classList.add('hide'); $('stopOneindigBtn').classList.add('hide'); $('kijkBtn').classList.remove('hide');
+    $('teller').textContent = 'som ' + (nr + 1) + (oneindig ? '' : ' van ' + PER_RONDE);
     $('soortUit').textContent = s.naam;
-    $('voortIn').style.transform = 'scaleX(' + (nr / PER_RONDE) + ')';
+    if (!oneindig) $('voortIn').style.transform = 'scaleX(' + (nr / PER_RONDE) + ')';
     $('mGoed').textContent = goed; $('mFout').textContent = fout; $('mReeks').textContent = reeks;
     /* het prijskaartje */
     var k = huidig.kaart, h = '';
@@ -532,11 +540,16 @@ var PER_RONDE = 8;
       if (i + 1 === huidig.antwoord) b.classList.add('juist'); else if (huidig.keuze && i + 1 === gaf) b.classList.add('mis');
     });
     $('kijkBtn').classList.add('hide'); $('verderBtn').classList.remove('hide');
-    $('verderBtn').textContent = nr + 1 >= PER_RONDE ? 'Kijk terug op de ronde' : 'Volgende som';
+    $('verderBtn').textContent = !oneindig && nr + 1 >= PER_RONDE ? 'Kijk terug op de ronde' : 'Volgende som';
+    $('stopOneindigBtn').classList.toggle('hide', !oneindig);
     $('mGoed').textContent = goed; $('mFout').textContent = fout; $('mReeks').textContent = reeks;
   }
-  function begin(){
+  function begin(zo){
+    oneindig = zo === true;
     nr = 0; goed = 0; fout = 0; reeks = 0; besteReeks = 0; foutLijst = []; od = {};
+    /* de voortgangsbalk kan in een oneindige sessie nergens naartoe lopen */
+    $('voortIn').parentNode.classList.toggle('hide', oneindig);
+    $('oneindigMerk').classList.toggle('hide', !oneindig);
     $('scherm-start').classList.add('hide'); $('scherm-einde').classList.add('hide');
     $('scherm-spel').classList.remove('hide'); $('stopBtn').classList.remove('hide');
     nieuweOpgave();
@@ -553,25 +566,38 @@ var PER_RONDE = 8;
     $('fouten').innerHTML = foutLijst.length ? '<p class="eyebrow">nog even nakijken</p>' + foutLijst.map(function(f){
       return '<div><b>' + schoon(f.v) + ' ' + schoon(f.j) + '</b><span>' + schoon(f.hoe) + '</span></div>';
     }).join('') : '';
-    SPEL.einde({ spel:'uitverkoop', vak:'reken', od:od, reeks:besteReeks, goed:goed, compact:true, deelTekst:goed + ' van de ' + gedaan + ' goed', score:goed, label:'van de ' + gedaan + ' goed', max:gedaan || 1,
-      ronde:goed, punten:goed * 10, niveau:['', 'bb', 'kgt', 'hv'][niveau], vak:'reken', sleutel:niveau + (soortId || 'alles') });
+    $('nogBtn').textContent = oneindig ? 'Verder oefenen' : 'Nog een ronde';
+    /* een oneindige sessie heeft een eigen beste score: anders wint wie het langst doorgaat */
+    SPEL.einde({ spel:'uitverkoop', vak:'reken', od:od, reeks:besteReeks, goed:goed, compact:true, deelTekst:goed + ' van de ' + gedaan + ' goed' + (oneindig ? ', oneindig geoefend' : ''), score:goed, label:'van de ' + gedaan + ' goed', max:gedaan || 1,
+      ronde:goed, punten:goed * 10, niveau:['', 'bb', 'kgt', 'hv'][niveau], vak:'reken', sleutel:niveau + (soortId || 'alles') + (oneindig ? '-oneindig' : ''),
+      opnieuwTekst:oneindig ? 'Verder oefenen' : undefined });
     scrollTo({ top:0, behavior:'auto' });
   }
 
   tekenKeuze();
   /* de tutorial, een keer, zodra het spelscherm er is; de klok staat intussen stil */
-  if (window.TUTORIAL && window.TUTORIALS && TUTORIALS['uitverkoop']) TUTORIAL.naStart('startBtn', 'uitverkoop', TUTORIALS['uitverkoop'], {});
-  $('startBtn').addEventListener('click', begin);
-  $('nogBtn').addEventListener('click', begin);
+  if (window.TUTORIAL && window.TUTORIALS && TUTORIALS['uitverkoop']){
+    TUTORIAL.naStart('startBtn', 'uitverkoop', TUTORIALS['uitverkoop'], {});
+    TUTORIAL.naStart('oneindigBtn', 'uitverkoop', TUTORIALS['uitverkoop'], {});
+  }
+  $('startBtn').addEventListener('click', function(){ begin(oneindigUrl); });
+  $('oneindigBtn').addEventListener('click', function(){ begin(true); });
+  /* de docent linkt met ?oneindig=1: dan is Start meteen oneindig */
+  if (oneindigUrl){ $('startBtn').textContent = 'Start: oneindig oefenen'; $('oneindigBtn').classList.add('hide'); $('oneindigUit').textContent = 'Zoveel sommen als je wilt; je stopt zelf.'; }
+  else $('oneindigUit').textContent = 'Een ronde is ' + PER_RONDE + ' sommen. Oneindig: zoveel als je wilt, je stopt zelf.';
+  $('nogBtn').addEventListener('click', function(){ begin(oneindig); });
   $('andersBtn').addEventListener('click', function(){ $('scherm-einde').classList.add('hide'); $('scherm-start').classList.remove('hide'); tekenKeuze(); });
   $('stopBtn').addEventListener('click', einde);
+  $('stopOneindigBtn').addEventListener('click', function(){ if (oneindig && beantwoord) einde(); });
   $('kijkBtn').addEventListener('click', function(){ nakijken(); });
   /* Het gaat hier om de manier, niet om het staartdelen. */
   REKENMACHINE.koppel($('rekenBtn'), { naar:$('antwoord') });
-  $('verderBtn').addEventListener('click', function(){ nr++; if (nr >= PER_RONDE) einde(); else nieuweOpgave(); });
+  $('verderBtn').addEventListener('click', function(){ nr++; if (!oneindig && nr >= PER_RONDE) einde(); else nieuweOpgave(); });
   $('antwoord').addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); if (beantwoord) $('verderBtn').click(); else nakijken(); } });
   addEventListener('keydown', function(e){
     if ($('scherm-spel').classList.contains('hide')) return;
+    /* wie met tab op Stoppen staat, wil stoppen en niet verder */
+    if (e.target && e.target.id === 'stopOneindigBtn') return;
     if (e.key === 'Enter' && beantwoord){ e.preventDefault(); $('verderBtn').click(); }
   });
 })();

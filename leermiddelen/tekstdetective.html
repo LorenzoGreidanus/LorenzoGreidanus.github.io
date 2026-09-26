@@ -131,6 +131,10 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;pa
 .terugkoppeling.fout{background:var(--fout-bg);color:var(--fout);padding:12px 14px;font-weight:600}
 .terugkoppeling .regel{display:block;font-weight:400;color:var(--ink);margin-top:4px;font-size:.9rem}
 .knoprij{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+/* oneindig oefenen: een tweede, rustigere startknop en een labeltje bij de teller */
+.startknoppen{display:flex;flex-wrap:wrap;gap:10px}
+.oneindiguit{margin-top:10px;font-size:.84rem;color:var(--muted)}
+.oneindigmerk{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;background:var(--sand);color:var(--ink);font-weight:600;letter-spacing:.08em}
 /* einde */
 .cijfers{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:14px 0}
 .cijfers div{background:var(--kaart2);border-radius:14px;padding:12px;text-align:center}
@@ -302,7 +306,8 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
       <div class="stap"><b>Soort tekst</b><div class="chips" id="soorten"></div></div>
       <div class="stap"><b>Niveau</b><div class="chips" id="niveaus"></div><p class="tip" id="niveauUit" style="margin-top:6px"></p></div>
       <div class="stap"><b>Leerjaar</b><div class="chips" id="leerjaren"></div><p class="tip" id="leerjaarUit" style="margin-top:6px"></p></div>
-      <div class="stap"><button class="knop crab groot" id="startBtn" type="button">Begin met lezen</button></div>
+      <div class="stap startknoppen"><button class="knop crab groot" id="startBtn" type="button">Begin met lezen</button><button class="knop stil groot" id="oneindigBtn" type="button">Oneindig oefenen</button></div>
+      <p class="oneindiguit" id="oneindigUit"></p>
     </div>
   </section>
 
@@ -321,6 +326,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
       <p class="terugkoppeling" id="terug"></p>
       <div class="knoprij">
         <button class="knop crab hide" id="verderBtn" type="button">Verder</button>
+        <button class="knop stil hide" id="stopOneindigBtn" type="button">Stoppen</button>
       </div>
       <div id="meldPlek"></div>
     </div>
@@ -367,6 +373,8 @@ var PER_RONDE = 6;
   function husselaar(a){ a = a.slice(); for (var i = a.length - 1; i > 0; i--){ var j = Math.floor(Math.random() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
 
   var niveau = 2, soort = '', rij = [], nr = 0, goed = 0, fout = 0, stap = 1, foutLijst = [], punten = 0, od = {};
+  /* oneindig: geen ronde van zes, doorgaan tot je zelf stopt; de docent kan het met ?oneindig=1 vastzetten */
+  var oneindig = false, oneindigUrl = /[?&]oneindig=1\b/.test(location.search), zak = [];
   /* het leerjaar: uit de link (?lj=34), anders uit het geheugen van de leeromgeving */
   var leerjaar = '12';
   try { var ljUit = /[?&]lj=(12|34)/.exec(location.search); leerjaar = ljUit ? ljUit[1] : (localStorage.getItem('lg-leerjaar') || '12'); } catch (e){}
@@ -392,7 +400,21 @@ var PER_RONDE = 6;
     var n = NIVEAUS.filter(function(x){ return x.id === niveau; })[0], lj = LEERJAREN.filter(function(x){ return x.id === leerjaar; })[0];
     $('niveauUit').textContent = (n ? n.uit : '') + ' Er zijn ' + passend().length + ' alinea\u2019s die passen.';
     $('leerjaarUit').textContent = lj ? lj.uit : '';
-    $('startBtn').disabled = passend().length < 2;
+    $('startBtn').disabled = $('oneindigBtn').disabled = passend().length < 2;
+    $('oneindigUit').textContent = oneindigUrl ? 'Zoveel alinea’s als je wilt; je stopt zelf.'
+      : 'Een ronde is ' + Math.min(PER_RONDE, passend().length) + ' alinea’s. Oneindig: zoveel als je wilt, je stopt zelf.';
+  }
+  /* De zak raakt leeg en wordt opnieuw geschud, zodat je eerst alle passende
+     alinea's ziet. Na het schudden nooit meteen dezelfde alinea nog een keer. */
+  function trek(){
+    if (!zak.length){
+      zak = husselaar(passend());
+      var vorige = rij[rij.length - 1];
+      if (vorige && zak.length > 1 && zak[0] === vorige){ zak.push(zak.shift()); }
+    }
+    var a = zak.shift();
+    a._volgorde = null; a._doelen = null;
+    return a;
   }
 
   /* de tekst met het signaalwoord als knop */
@@ -423,13 +445,14 @@ var PER_RONDE = 6;
   }
   function toonStap(){
     var a = rij[nr];
-    $('teller').textContent = 'alinea ' + (nr + 1) + ' van ' + rij.length;
+    $('teller').innerHTML = oneindig ? 'alinea ' + (nr + 1) + ' <span class="oneindigmerk">oneindig</span>' : 'alinea ' + (nr + 1) + ' van ' + rij.length;
     $('soortUit').textContent = (SOORTEN.filter(function(s){ return s.id === a.s; })[0] || {}).naam || '';
-    $('voortIn').style.transform = 'scaleX(' + ((nr + (stap - 1) / 3) / rij.length) + ')';
+    $('voortIn').parentNode.classList.toggle('hide', oneindig);
+    if (!oneindig) $('voortIn').style.transform = 'scaleX(' + ((nr + (stap - 1) / 3) / rij.length) + ')';
     setTimeout(function(){ if (window.VOORLEES) VOORLEES.knop($('vraagkop'), leesStuk); }, 0);
     $('mGoed').textContent = goed; $('mFout').textContent = fout; $('mPunt').textContent = punten;
     $('terug').textContent = ''; $('terug').className = 'terugkoppeling';
-    $('verderBtn').classList.add('hide');
+    $('verderBtn').classList.add('hide'); $('stopOneindigBtn').classList.add('hide');
     if (stap === 1){
       $('vraagkop').textContent = 'Wat is de hoofdgedachte van deze alinea?';
       $('alinea').innerHTML = tekenTekst(a, false);
@@ -487,8 +510,13 @@ var PER_RONDE = 6;
       t.innerHTML = 'Het schrijfdoel is: ' + schoon(d.naam) + '. <span class="regel">' + schoon(d.uit.charAt(0).toUpperCase() + d.uit.slice(1)) + '.</span>';
     }
     $('mGoed').textContent = goed; $('mFout').textContent = fout; $('mPunt').textContent = punten;
+    toonVerder(!oneindig && nr + 1 >= rij.length ? 'Kijk terug op de ronde' : 'Volgende alinea');
+  }
+  /* na elk antwoord: door, en bij oneindig oefenen ook stoppen */
+  function toonVerder(tekst){
     $('verderBtn').classList.remove('hide');
-    $('verderBtn').textContent = nr + 1 >= rij.length ? 'Kijk terug op de ronde' : 'Volgende alinea';
+    $('verderBtn').textContent = tekst;
+    $('stopOneindigBtn').classList.toggle('hide', !oneindig);
   }
   function kiesHoofd(i){
     var a = rij[nr];
@@ -510,8 +538,7 @@ var PER_RONDE = 6;
       t.innerHTML = 'De hoofdgedachte is: ' + schoon(a.h[a.g - 1]) + ' <span class="regel">' + schoon(a.u) + '</span>';
     }
     $('mGoed').textContent = goed; $('mFout').textContent = fout; $('mPunt').textContent = punten;
-    $('verderBtn').classList.remove('hide');
-    $('verderBtn').textContent = 'Zoek het signaalwoord';
+    toonVerder('Zoek het signaalwoord');
   }
   function kiesSein(knop){
     var a = rij[nr], klopt = knop.getAttribute('data-sein') === '1';
@@ -533,11 +560,12 @@ var PER_RONDE = 6;
       t.innerHTML = 'Het signaalwoord is groen gemarkeerd. <span class="regel">Het geeft een ' + schoon(vb.naam) + ' aan: ' + schoon(vb.uit) + '.</span>';
     }
     $('mGoed').textContent = goed; $('mFout').textContent = fout; $('mPunt').textContent = punten;
-    $('verderBtn').classList.remove('hide');
-    $('verderBtn').textContent = 'Wat wil de schrijver?';
+    toonVerder('Wat wil de schrijver?');
   }
-  function begin(){
-    rij = husselaar(passend()).slice(0, PER_RONDE);
+  function begin(zo){
+    oneindig = !!zo;
+    if (oneindig){ rij = []; zak = []; rij.push(trek()); }
+    else rij = husselaar(passend()).slice(0, PER_RONDE);
     rij.forEach(function(a){ a._volgorde = null; a._doelen = null; });
     nr = 0; goed = 0; fout = 0; punten = 0; stap = 1; foutLijst = []; od = {};
     $('scherm-start').classList.add('hide'); $('scherm-einde').classList.add('hide');
@@ -571,7 +599,7 @@ var PER_RONDE = 6;
     var beheerst = ONDERDELEN_TD.filter(function(o){ var c = totaal[o[0]]; return c && c[1] >= 10 && c[0] / c[1] >= 0.8; }).map(function(o){ return o[1].toLowerCase(); });
     var nog = ONDERDELEN_TD.filter(function(o){ var c = totaal[o[0]]; return c && c[1] >= 10 && c[0] / c[1] < 0.6; }).map(function(o){ return o[1].toLowerCase(); });
     function opsom(l){ return l.length < 2 ? l.join('') : l.slice(0, -1).join(', ') + ' en ' + l[l.length - 1]; }
-    el.innerHTML = kop + '<table><thead><tr><th>Onderdeel</th><th>Deze ronde</th><th>Alle rondes</th></tr></thead><tbody>' + rijen + '</tbody></table>' +
+    el.innerHTML = kop + '<table><thead><tr><th>Onderdeel</th><th>' + (oneindig ? 'Deze keer' : 'Deze ronde') + '</th><th>Alle rondes</th></tr></thead><tbody>' + rijen + '</tbody></table>' +
       '<p class="uitleg">' + (beheerst.length ? 'Je beheerst ' + opsom(beheerst) + ' (80% of meer goed over minstens tien vragen). ' : '') +
       (nog.length ? 'Oefen nog op ' + opsom(nog) + '. ' : '') +
       (!beheerst.length && !nog.length ? 'Vanaf tien vragen per onderdeel zegt het percentage iets: 80% of meer is beheerst.' : '') + '</p>';
@@ -579,6 +607,7 @@ var PER_RONDE = 6;
   function einde(){
     $('scherm-spel').classList.add('hide'); $('scherm-einde').classList.remove('hide'); $('stopBtn').classList.add('hide');
     var gedaan = goed + fout, nv = NIVEAUS.filter(function(x){ return x.id === niveau; })[0];
+    $('nogBtn').textContent = oneindig ? 'Verder oefenen' : 'Nog een ronde';
     toonBeheersing(nv);
     $('eindKop').textContent = goed + ' van de ' + gedaan + ' goed';
     $('eindUit').textContent = (soort ? SOORTEN.filter(function(s){ return s.id === soort; })[0].naam : 'Alle soorten tekst') + ', ' + (nv ? nv.naam : '') + '. Per alinea zocht je de hoofdgedachte en het signaalwoord.';
@@ -586,22 +615,31 @@ var PER_RONDE = 6;
     $('fouten').innerHTML = foutLijst.length ? '<p class="eyebrow">nog even nakijken</p>' + foutLijst.map(function(f){
       return '<div><b>' + schoon(f.v) + ': ' + schoon(f.j) + '</b><span>' + schoon(f.hoe) + '</span></div>';
     }).join('') : '';
-    SPEL.einde({ spel:'tekstdetective', vak:'ned', od:od, goed:goed, compact:true, waarde:punten, label:'punten', deelTekst:punten + ' punten',
-      max:gedaan * 10 || 1, ronde:goed, punten:punten, niveau:['', 'bb', 'kgt', 'hv'][niveau], vak:'ned', sleutel:niveau + (soort || 'alles') });
+    /* een oneindige sessie heeft een eigen klassement: anders wint wie het langst doorgaat */
+    SPEL.einde({ spel:'tekstdetective', vak:'ned', od:od, goed:goed, compact:true, waarde:punten, label:'punten', deelTekst:punten + ' punten' + (oneindig ? ', oneindig geoefend' : ''),
+      max:gedaan * 10 || 1, ronde:goed, punten:punten, niveau:['', 'bb', 'kgt', 'hv'][niveau], vak:'ned', sleutel:niveau + (soort || 'alles') + (oneindig ? '-oneindig' : '') });
     scrollTo({ top:0, behavior:'auto' });
   }
 
   tekenKeuze();
   /* de tutorial, een keer, zodra het spelscherm er is; de klok staat intussen stil */
-  if (window.TUTORIAL && window.TUTORIALS && TUTORIALS['tekst']) TUTORIAL.naStart('startBtn', 'tekst', TUTORIALS['tekst'], {});
-  $('startBtn').addEventListener('click', begin);
-  $('nogBtn').addEventListener('click', begin);
+  if (window.TUTORIAL && window.TUTORIALS && TUTORIALS['tekst']){
+    TUTORIAL.naStart('startBtn', 'tekst', TUTORIALS['tekst'], {});
+    TUTORIAL.naStart('oneindigBtn', 'tekst', TUTORIALS['tekst'], {});
+  }
+  /* de docent linkt met ?oneindig=1: dan is Start meteen oneindig */
+  if (oneindigUrl){ $('startBtn').textContent = 'Start: oneindig oefenen'; $('oneindigBtn').classList.add('hide'); }
+  $('startBtn').addEventListener('click', function(){ begin(oneindigUrl); });
+  $('oneindigBtn').addEventListener('click', function(){ begin(true); });
+  $('nogBtn').addEventListener('click', function(){ begin(oneindig); });
   $('andersBtn').addEventListener('click', function(){ $('scherm-einde').classList.add('hide'); $('scherm-start').classList.remove('hide'); tekenKeuze(); });
   $('stopBtn').addEventListener('click', einde);
+  $('stopOneindigBtn').addEventListener('click', einde);
   $('verderBtn').addEventListener('click', function(){
     if (stap < 3){ stap++; toonStap(); return; }
     stap = 1; nr++;
-    if (nr >= rij.length) einde(); else toonStap();
+    if (oneindig){ rij.push(trek()); toonStap(); }
+    else if (nr >= rij.length) einde(); else toonStap();
   });
 })();
 </script>

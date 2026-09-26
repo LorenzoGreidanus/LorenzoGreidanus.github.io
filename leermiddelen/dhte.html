@@ -99,6 +99,17 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);
   padding:15px 34px;font-weight:700;font-size:1.02rem;min-height:44px;box-shadow:0 8px 20px rgba(242,103,73,.3)}
 .btn:disabled{opacity:.5;box-shadow:none;cursor:not-allowed}
 .btn:not(:disabled):hover{transform:translateY(-1px)}
+/* Start of oneindig: twee knoppen naast elkaar, de tweede rustiger. Basis.css
+   zet in het donker elke .btn op donkerblauwe letters; die horen op crab, niet
+   op een lege knop, dus de tweede krijgt daar zijn inkt terug. */
+.startknoppen{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:26px}
+.startknoppen .btn{margin-top:0}
+.btn.tweede{background:none;color:var(--ink);border:2px solid var(--rand2);box-shadow:none;padding:13px 32px}
+.btn.tweede:not(:disabled):hover{border-color:var(--ink)}
+:root[data-theme="dark"] .btn.tweede{color:var(--ink)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn.tweede{color:var(--ink)}}
+.oneindiguit{margin-top:10px;font-size:.84rem;color:var(--muted)}
+.meter.oneindigmeter{color:var(--nadruk)}
 
 /* ---------- het spel ---------- */
 .speelvak{padding:18px 0 50px}
@@ -173,9 +184,11 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);
 .uitslagregel.goed{background:var(--goed-bg);color:var(--goed)}
 .uitslagregel.fout{background:var(--fout-bg);color:var(--fout)}
 .uitslagregel b{display:block;font-size:1rem;margin-bottom:2px}
-.verder{margin-top:14px;display:flex;justify-content:flex-end}
+.verder{margin-top:14px;display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
 .verder button{background:var(--ink);color:var(--room);border:none;border-radius:999px;
   padding:11px 24px;font-weight:600;min-height:44px}
+.verder button.stop{background:none;color:var(--ink);border:1.5px solid var(--rand2)}
+.verder button.stop:hover{border-color:var(--ink)}
 
 /* ---------- einde ---------- */
 .eind{padding:34px 0 60px}
@@ -325,7 +338,8 @@ body.groot .uitslagregel{font-size:1.05rem}
   <div class="keuze" id="onderdelen"></div>
   <p class="keuzeuit" id="deelUit"></p>
 
-  <button class="btn" id="startBtn" type="button" disabled>Maak eerst je keuzes</button>
+  <div class="startknoppen"><button class="btn" id="startBtn" type="button" disabled>Maak eerst je keuzes</button><button class="btn tweede" id="oneindigBtn" type="button" disabled>Oneindig oefenen</button></div>
+  <p class="oneindiguit" id="oneindigUit"></p>
 </section>
 
 <section class="wrap speelvak hide" id="scherm-spel">
@@ -337,7 +351,7 @@ body.groot .uitslagregel{font-size:1.05rem}
     <div class="schemaplek"><div class="schema" id="schema"></div></div>
     <p class="plaatsuitleg" id="plaatsuitleg"></p>
     <div id="reactie" role="status" aria-live="polite"></div>
-    <div class="verder hide" id="verder"><button type="button" id="verderBtn">Volgende &rarr;</button></div>
+    <div class="verder hide" id="verder"><button type="button" class="stop hide" id="stopBtn">Stoppen</button><button type="button" id="verderBtn">Volgende &rarr;</button></div>
   </div>
 </section>
 
@@ -391,6 +405,8 @@ var NIVEAUS = DHTEOPGAVEN.NIVEAUS,
   var niveau = null, onderdeel = null;
   var nr = 0, som = null, stappen = [], wijzer = 0, bezig = false, opgeslagen = false;
   var goed = 0, punten = 0, reeks = 0, besteReeks = 0, missers = [], somSchoon = true, od = {};
+  /* oneindig: geen ronde van tien, doorgaan tot je zelf stopt; ?oneindig=1 in het adres maakt Start meteen oneindig */
+  var oneindig = false, oneindigUrl = /[?&]oneindig=1\b/.test(location.search);
 
   var elStart  = document.getElementById('scherm-start'),
       elSpel   = document.getElementById('scherm-spel'),
@@ -429,23 +445,27 @@ var NIVEAUS = DHTEOPGAVEN.NIVEAUS,
   function klaarCheck(){
     var b = document.getElementById('startBtn');
     b.disabled = !(niveau && onderdeel);
-    b.textContent = b.disabled ? 'Maak eerst je keuzes' : 'Begin met ' + onderdeel.naam.toLowerCase();
+    b.textContent = b.disabled ? 'Maak eerst je keuzes' : oneindigUrl ? 'Start: oneindig oefenen' : 'Begin met ' + onderdeel.naam.toLowerCase();
+    document.getElementById('oneindigBtn').disabled = b.disabled;
   }
 
   /* ---------- een ronde ---------- */
-  function begin(){
+  function begin(zo){
+    oneindig = !!zo;
     nr = 0; goed = 0; punten = 0; reeks = 0; besteReeks = 0; missers = []; od = {}; opgeslagen = false;
+    /* de voortgangsbalk kan in een oneindige sessie nergens naartoe lopen */
+    document.getElementById('voortIn').parentNode.classList.toggle('hide', oneindig);
     elStart.classList.add('hide'); elEinde.classList.add('hide'); elSpel.classList.remove('hide');
     volgende();
   }
 
   function volgende(){
-    if (nr >= AANTAL) return klaar();
+    if (!oneindig && nr >= AANTAL) return klaar();
     nr++;
     bezig = true; somSchoon = true; wijzer = 0;
     elReac.innerHTML = '';
     elVerder.classList.add('hide');
-    document.getElementById('voortIn').style.width = (nr / AANTAL * 100) + '%';
+    if (!oneindig) document.getElementById('voortIn').style.width = (nr / AANTAL * 100) + '%';
 
     var n = niveau.kolommen;
     if (onderdeel.id === 'invullen'){
@@ -663,6 +683,7 @@ var NIVEAUS = DHTEOPGAVEN.NIVEAUS,
     }
     tekenBalk();
     elVerder.classList.remove('hide');
+    document.getElementById('stopBtn').classList.toggle('hide', !oneindig);
     document.getElementById('verderBtn').focus();
   }
 
@@ -681,7 +702,8 @@ var NIVEAUS = DHTEOPGAVEN.NIVEAUS,
   }
 
   function tekenBalk(){
-    var h = '<span class="meter">som<b>' + Math.min(nr, AANTAL) + ' / ' + AANTAL + '</b></span>';
+    var h = '<span class="meter">som<b>' + (oneindig ? nr : Math.min(nr, AANTAL) + ' / ' + AANTAL) + '</b></span>';
+    if (oneindig) h += '<span class="meter oneindigmeter">oneindig</span>';
     h += '<span class="meter">goed<b>' + goed + '</b></span>';
     h += '<span class="meter">punten<b>' + punten + '</b></span>';
     if (reeks >= 2) h += '<span class="meter reeks">op rij<b>' + reeks + '</b></span>';
@@ -691,30 +713,55 @@ var NIVEAUS = DHTEOPGAVEN.NIVEAUS,
   document.getElementById('verderBtn').addEventListener('click', volgende);
   /* de tutorial, een keer, zodra het spelscherm er is; de klok staat intussen stil */
   if (window.TUTORIAL && window.TUTORIALS && TUTORIALS['dhte']) TUTORIAL.naStart('startBtn', 'dhte', TUTORIALS['dhte'], {});
+  if (window.TUTORIAL && window.TUTORIALS && TUTORIALS['dhte']) TUTORIAL.naStart('oneindigBtn', 'dhte', TUTORIALS['dhte'], {});
   document.getElementById('startBtn').addEventListener('click', function(){
-    if (niveau && onderdeel) begin();
+    if (niveau && onderdeel) begin(oneindigUrl);
   });
+  document.getElementById('oneindigBtn').addEventListener('click', function(){
+    if (niveau && onderdeel) begin(true);
+  });
+  /* Stoppen staat er alleen in een oneindige sessie, en pas als de som af is */
+  document.getElementById('stopBtn').addEventListener('click', function(){
+    if (!bezig && oneindig) klaar();
+  });
+  document.getElementById('oneindigUit').textContent = oneindigUrl
+    ? 'Zoveel sommen als je wilt; je stopt zelf.'
+    : 'Een ronde is ' + AANTAL + ' sommen. Oneindig: zoveel als je wilt, je stopt zelf.';
+  if (oneindigUrl) document.getElementById('oneindigBtn').classList.add('hide');
 
   /* ---------- einde ---------- */
   function klaar(){
     elSpel.classList.add('hide');
     elEinde.classList.remove('hide');
-    document.getElementById('eindKop').textContent = goed + ' van de ' + AANTAL + ' in één keer goed';
-    document.getElementById('eindUit').textContent = goed === AANTAL
+    /* in een oneindige sessie telt wat je gedaan hebt; elke som is af voor je kunt stoppen */
+    var gedaan = oneindig ? nr : AANTAL;
+    document.getElementById('eindKop').textContent = goed + ' van de ' + gedaan + ' in één keer goed';
+    document.getElementById('eindUit').textContent = goed === gedaan
       ? 'Geen enkele kolom fout. Probeer eens grotere getallen, of het onderdeel ernaast.'
       : 'Hieronder staan de sommen waar een kolom misging, met de uitkomst erbij.';
 
     document.getElementById('cijfers').innerHTML =
       '<div><b>' + goed + '</b><span>in één keer goed</span></div>' +
-      '<div><b>' + (AANTAL - goed) + '</b><span>met een misser</span></div>' +
+      '<div><b>' + (gedaan - goed) + '</b><span>met een misser</span></div>' +
       '<div><b>' + punten + '</b><span>punten</span></div>' +
       '<div><b>' + besteReeks + '</b><span>langste reeks</span></div>';
+    document.getElementById('nogBtn').textContent = oneindig ? 'Verder oefenen' : 'Nog een ronde';
 
-    tekenNaamvak();
-    tekenKlassement('klassement', null);
+    /* Het klassement is voor rondes van tien: wie oneindig doorgaat, haalt
+       vanzelf meer punten. Een oneindige sessie komt er dus niet in. */
+    if (oneindig){
+      document.getElementById('naamvak').innerHTML = '';
+      document.getElementById('klassement').innerHTML = '<p class="leegvak">Oneindig oefenen telt niet mee voor het klassement. Dat is voor rondes van ' + AANTAL + ' sommen.</p>';
+    } else {
+      tekenNaamvak();
+      tekenKlassement('klassement', null);
+    }
     tekenMissers();
+    /* een oneindige sessie heeft een eigen beste score: anders wint wie het langst doorgaat */
     SPEL.einde({ spel:'dhte', reeks:besteReeks, goed:goed, score:punten, label:'punten',
-                 ronde:goed, punten:punten, sleutel:niveau.id + '-' + onderdeel.id, niveau:niveau.id, vak:'reken', od:od });
+                 ronde:goed, punten:punten, sleutel:niveau.id + '-' + onderdeel.id + (oneindig ? '-oneindig' : ''), niveau:niveau.id, vak:'reken', od:od,
+                 opnieuwTekst: oneindig ? 'Verder oefenen' : undefined,
+                 deelTekst: oneindig ? punten + ' punten, ' + goed + ' van de ' + gedaan + ' sommen in één keer goed' : undefined });
   }
 
   function sleutelVoor(){ return [niveau.id, onderdeel.id].join('|'); }
@@ -780,6 +827,7 @@ var NIVEAUS = DHTEOPGAVEN.NIVEAUS,
   }
 
   document.getElementById('nogBtn').addEventListener('click', function(){
+    if (oneindig){ begin(true); window.scrollTo({ top:0, behavior:'auto' }); return; }
     elEinde.classList.add('hide'); elStart.classList.remove('hide');
     window.scrollTo({ top:0, behavior:'smooth' });
   });
@@ -802,6 +850,8 @@ var NIVEAUS = DHTEOPGAVEN.NIVEAUS,
     if (elSpel.classList.contains('hide')) return;
     if (!bezig && (e.key === 'Enter' || e.key === ' ')){
       if (elVerder.classList.contains('hide')) return;
+      /* wie met tab op Stoppen staat, wil stoppen en niet verder */
+      if (e.target && e.target.id === 'stopBtn') return;
       e.preventDefault();
       volgende();
     }

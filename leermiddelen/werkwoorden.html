@@ -55,6 +55,14 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .btn:hover{transform:translateY(-2px)}
 .btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
 .btn.ghost{background:#fff;color:var(--ink);border:1.5px solid rgba(20,34,76,.15);box-shadow:none}
+/* oneindig oefenen: een tweede, rustigere startknop en een labeltje bij de teller */
+.startknoppen{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:24px}
+.startknoppen .btn{margin-top:0}
+/* in het donker blijft de tweede knop een rustige omlijning met lichte letters */
+:root[data-theme="dark"] .startknoppen .btn.ghost{background:transparent;color:var(--ink);border-color:rgba(243,239,233,.24)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .startknoppen .btn.ghost{background:transparent;color:var(--ink);border-color:rgba(243,239,233,.24)}}
+.oneindiguit{margin-top:10px;font-size:.84rem;color:var(--muted)}
+.oneindigmerk{display:inline-block;margin:0 4px;padding:1px 8px;border-radius:999px;background:var(--sand);color:var(--ink);letter-spacing:.08em}
 
 .spelkop{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;padding:16px 0 0}
 .balk{height:6px;background:rgba(20,34,76,.10);border-radius:999px;overflow:hidden;margin-top:10px}
@@ -225,7 +233,11 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
   <p class="eyebrow" id="modusKop" style="margin-top:30px">hoe wil je oefenen</p>
   <div class="kies" id="modussen"></div>
 
-  <button class="btn" id="startBtn" type="button" disabled>Start</button>
+  <div class="startknoppen">
+    <button class="btn" id="startBtn" type="button" disabled>Start</button>
+    <button class="btn ghost hide" id="oneindigBtn" type="button">Oneindig oefenen</button>
+  </div>
+  <p class="oneindiguit hide" id="oneindigUit"></p>
   <p style="margin-top:14px;font-size:.82rem;color:var(--muted)">Geen inloggen. Alleen in de tijdrace wordt je score op dit apparaat bewaard.</p>
   <div id="startLijst" class="lijst"></div>
 </section>
@@ -341,6 +353,8 @@ var RACE = { start:60, erbij:4, eraf:6 };
   var rij = [], nr = 0, goed = 0, totaal = 0, fouten = [], punten = 0, reeks = 0, besteReeks = 0, od = {};
   var tijd = 0, loopt = false, laatsteTik = 0, bezig = false, opgeslagen = false;
   var huidig = null, volgorde = [], wachter = null;
+  /* oneindig oefenen: niet een keer door de zinnen, maar door tot je zelf stopt; de docent kan het met ?oneindig=1 vastzetten */
+  var oneindig = false, oneindigUrl = /[?&]oneindig=1\b/.test(location.search);
 
   var elStart = document.getElementById('scherm-start'),
       elSpel  = document.getElementById('scherm-spel'),
@@ -401,19 +415,33 @@ var RACE = { start:60, erbij:4, eraf:6 };
   }
 
   function klaarCheck(){
+    /* tel met het gekozen niveau, niet met waar het meegroeiende niveau de vorige keer bleef */
+    if (niveau) slim.reset(niveau.id);
     var aantal = selectie().length;
-    elStartBtn.disabled = !(niveau && onderdeel && modus && aantal > 0);
-    if (niveau && onderdeel && modus && aantal){
-      elStartBtn.textContent = (isRace() ? 'Start de tijdrace' : 'Start met oefenen') + ' (' + aantal + ' zinnen)';
+    var klaar = !!(niveau && onderdeel && modus && aantal > 0);
+    elStartBtn.disabled = !klaar;
+    if (klaar){
+      elStartBtn.textContent = !isRace() && oneindigUrl ? 'Start: oneindig oefenen' : (isRace() ? 'Start de tijdrace' : 'Start met oefenen') + ' (' + aantal + ' zinnen)';
     }
+    /* oneindig hoort bij oefenen; de tijdrace stopt vanzelf */
+    var kan = klaar && !isRace();
+    document.getElementById('oneindigBtn').classList.toggle('hide', !kan || oneindigUrl);
+    document.getElementById('oneindigUit').classList.toggle('hide', !kan);
+    document.getElementById('oneindigUit').textContent = oneindigUrl ? 'Zoveel zinnen als je wilt; je stopt zelf.'
+      : 'Een ronde: alle ' + aantal + ' zinnen een keer. Oneindig: zoveel als je wilt, je stopt zelf.';
     toonKlassement('startLijst', null);
   }
 
   /* ---------- spelverloop ---------- */
   /* de tutorial, een keer, zodra het spelscherm er is; de klok staat intussen stil */
-  if (window.TUTORIAL && window.TUTORIALS && TUTORIALS['werkwoorden']) TUTORIAL.naStart('startBtn', 'werkwoorden', TUTORIALS['werkwoorden'], { bewaar: function(){ return tijd; }, herstel: function(t){ tijd = t; laatsteTik = performance.now(); } });
-  elStartBtn.addEventListener('click', start);
-  document.getElementById('nogeensBtn').addEventListener('click', naarStart);
+  if (window.TUTORIAL && window.TUTORIALS && TUTORIALS['werkwoorden']){
+    TUTORIAL.naStart('startBtn', 'werkwoorden', TUTORIALS['werkwoorden'], { bewaar: function(){ return tijd; }, herstel: function(t){ tijd = t; laatsteTik = performance.now(); } });
+    TUTORIAL.naStart('oneindigBtn', 'werkwoorden', TUTORIALS['werkwoorden'], {});
+  }
+  elStartBtn.addEventListener('click', function(){ start(oneindigUrl); });
+  document.getElementById('oneindigBtn').addEventListener('click', function(){ start(true); });
+  /* na oneindig oefenen gaat Verder oefenen meteen door, anders terug naar de keuzes */
+  document.getElementById('nogeensBtn').addEventListener('click', function(){ if (oneindig) start(true); else naarStart(); });
   document.getElementById('opnieuwBtn').addEventListener('click', naarStart);
   document.getElementById('grootBtn').addEventListener('click', function(){
     document.body.classList.toggle('groot');
@@ -430,7 +458,8 @@ var RACE = { start:60, erbij:4, eraf:6 };
     toonEinde();
   });
 
-  function start(){
+  function start(zo){
+    oneindig = !!zo && !isRace();
     slim.reset(niveau.id);
     goed = 0; totaal = 0; fouten = []; punten = 0; reeks = 0; besteReeks = 0; od = {};
     nr = 0; bezig = false; opgeslagen = false; volgorde = [];
@@ -438,10 +467,10 @@ var RACE = { start:60, erbij:4, eraf:6 };
     tijd = RACE.start;
     elStart.classList.add('hide'); elEinde.classList.add('hide'); elSpel.classList.remove('hide');
     document.getElementById('naamvak').classList.add('hide');
-    document.getElementById('balk').classList.toggle('hide', isRace());
+    document.getElementById('balk').classList.toggle('hide', isRace() || oneindig);
     document.getElementById('tijdbalk').classList.toggle('hide', !isRace());
     document.getElementById('spiekBtn').classList.toggle('hide', isRace());
-    document.getElementById('stopBtn').classList.toggle('hide', !isRace());
+    document.getElementById('stopBtn').classList.toggle('hide', !isRace() && !oneindig);
     document.getElementById('spiek').classList.add('hide');
     document.getElementById('spiekBtn').textContent = 'Regels erbij';
     document.getElementById('rondeLabel').textContent = onderdeel.naam.toLowerCase() + ', ' + niveau.naam;
@@ -465,7 +494,11 @@ var RACE = { start:60, erbij:4, eraf:6 };
   /* De zak raakt leeg en wordt opnieuw gevuld, zodat je alle zinnen ziet voordat
      er een terugkomt. In de oefenstand is de zak precies een ronde lang. */
   function trek(){
-    if (!volgorde.length) volgorde = husselen(selectie());
+    if (!volgorde.length){
+      volgorde = husselen(selectie());
+      /* na het schudden niet meteen dezelfde zin als de vorige */
+      for (var i = 0; huidig && i < volgorde.length && volgorde[0].zin === huidig.zin; i++) volgorde.push(volgorde.shift());
+    }
     return volgorde.shift();
   }
 
@@ -475,7 +508,7 @@ var RACE = { start:60, erbij:4, eraf:6 };
     elUit.textContent = '';
     elRegel.innerHTML = '';
 
-    if (isRace()){
+    if (isRace() || oneindig){
       huidig = trek();
     } else {
       if (nr >= rij.length){ toonEinde(); return; }
@@ -507,6 +540,9 @@ var RACE = { start:60, erbij:4, eraf:6 };
       document.getElementById('scoreLabel').innerHTML =
         '<span class="klok">' + Math.ceil(tijd) + ' sec</span> \u00b7 ' + punten + ' punten' +
         (reeks >= 2 ? ' \u00b7 ' + reeks + ' op rij' : '');
+    } else if (oneindig){
+      document.getElementById('scoreLabel').innerHTML =
+        'Zin ' + (nr + 1) + ' <span class="oneindigmerk">oneindig</span> \u00b7 ' + goed + ' goed';
     } else {
       document.getElementById('balkFill').style.width = ((nr / rij.length) * 100) + '%';
       document.getElementById('scoreLabel').textContent =
@@ -612,7 +648,9 @@ var RACE = { start:60, erbij:4, eraf:6 };
       html = '<div class="rij"><span>Alles goed</span><b>geen missers</b></div>';
     }
     document.getElementById('eindOverzicht').innerHTML = html;
-    SPEL.einde({ spel:'werkwoorden', reeks:besteReeks, goed:goed, score: isRace() ? punten : goed, label: isRace() ? 'punten' : 'van ' + totaal + ' goed', max: isRace() ? null : totaal, ronde:goed, punten: isRace() ? punten : goed, sleutel: isRace() ? 'race' : 'oefen', vak:'ned', od:od });
+    /* een oneindige sessie heeft een eigen klassement: anders wint wie het langst doorgaat */
+    SPEL.einde({ spel:'werkwoorden', reeks:besteReeks, goed:goed, score: isRace() ? punten : goed, label: isRace() ? 'punten' : 'van ' + totaal + ' goed', max: isRace() ? null : Math.max(totaal, 1), ronde:goed, punten: isRace() ? punten : goed, sleutel: isRace() ? 'race' : (oneindig ? 'oefen-oneindig' : 'oefen'), vak:'ned', od:od });
+    document.getElementById('nogeensBtn').textContent = oneindig ? 'Verder oefenen' : 'Nog een keer';
 
     document.getElementById('naamvak').classList.toggle('hide', !isRace() || opgeslagen || totaal === 0);
     if (isRace() && !opgeslagen) document.getElementById('naamveld').value = '';

@@ -59,7 +59,9 @@ window.VAKSPEL = (function(){
         (cfg.keuzes || []).map(function(k, i){
           return '<p class="eyebrow' + (i ? ' kop2' : '') + '" id="kop-' + k.id + '">' + schoon(k.kop) + '</p><div class="keuze" id="keuze-' + k.id + '"></div><p class="keuzeuit" id="uit-' + k.id + '"></p>';
         }).join('') +
-        '<button class="btn" id="startBtn" type="button">Start</button>' +
+        '<div class="startknoppen"><button class="btn" id="startBtn" type="button">Start</button>' +
+        '<button class="btn tweede" id="oneindigBtn" type="button">Oneindig oefenen</button></div>' +
+        '<p class="oneindiguit" id="oneindigUit">Een ronde is ' + (cfg.aantal || 10) + ' opgaven. Oneindig: zoveel als je wilt, je stopt zelf.</p>' +
       '</section>' +
       '<section class="wrap speelvak hide" id="scherm-spel">' +
         '<div class="balk" id="balk"></div>' +
@@ -71,7 +73,7 @@ window.VAKSPEL = (function(){
           '<div class="beeld" id="beeld"></div>' +
           '<div class="antwoordvak" id="antwoordvak"></div>' +
           '<div id="reactie" role="status" aria-live="polite"></div>' +
-          '<div class="verder hide" id="verder"><button type="button" id="verderBtn">Volgende &rarr;</button></div>' +
+          '<div class="verder hide" id="verder"><button type="button" class="stop hide" id="stopBtn">Stoppen</button><button type="button" id="verderBtn">Volgende &rarr;</button></div>' +
         '</div>' +
       '</section>' +
       '<section class="wrap eind hide" id="scherm-einde">' +
@@ -125,19 +127,25 @@ window.VAKSPEL = (function(){
   }
 
   /* ---------- een ronde ---------- */
-  function start(){
+  /* oneindig: geen ronde van tien, doorgaan tot je zelf stopt */
+  var oneindig = false, oneindigUrl = /[?&]oneindig=1\b/.test(location.search);
+  function start(zo){
+    oneindig = !!zo;
     nr = 0; goed = 0; fout = 0; punten = 0; reeks = 0; besteReeks = 0; od = {}; missers = []; perDeel = {};
+    $('voortIn').parentNode.classList.toggle('hide', oneindig);
     $('scherm-start').classList.add('hide'); $('scherm-einde').classList.add('hide'); $('scherm-spel').classList.remove('hide');
     window.scrollTo({ top:0, behavior:'auto' });
     volgende();
   }
   function balk(){
-    $('balk').innerHTML = '<span class="meter">opgave<b>' + Math.min(nr, cfg.aantal) + '/' + cfg.aantal + '</b></span><span class="meter">goed<b>' + goed + '</b></span><span class="meter">punten<b>' + punten + '</b></span>' + (reeks >= 2 ? '<span class="meter reeks">reeks<b>' + reeks + '</b></span>' : '');
+    $('balk').innerHTML = '<span class="meter">opgave<b>' + (oneindig ? nr : Math.min(nr, cfg.aantal) + '/' + cfg.aantal) + '</b></span>' + (oneindig ? '<span class="meter oneindigmeter">oneindig</span>' : '') + '<span class="meter">goed<b>' + goed + '</b></span><span class="meter">punten<b>' + punten + '</b></span>' + (reeks >= 2 ? '<span class="meter reeks">reeks<b>' + reeks + '</b></span>' : '');
     $('voortIn').style.width = Math.round((nr - 1) / cfg.aantal * 100) + '%';
   }
   function volgende(){
-    if (nr >= cfg.aantal){ einde(); return; }
+    if (!oneindig && nr >= cfg.aantal){ einde(); return; }
     nr++;
+    /* niet steeds dezelfde, maar in een lange sessie mag er na een tijd weer een terugkomen */
+    if (vorigeSleutels.length > 40) vorigeSleutels.splice(0, vorigeSleutels.length - 40);
     var probeer = 0;
     do { opgave = cfg.maak(Object.assign({}, keuze), nr); probeer++; } while ((!opgave || (opgave.sleutel && vorigeSleutels.indexOf(opgave.sleutel) >= 0)) && probeer < 12);
     if (!opgave){ einde(); return; }
@@ -339,21 +347,24 @@ window.VAKSPEL = (function(){
       (extra ? '<p>' + extra + '</p>' : '') + (opgave.uitleg ? '<div class="waarom">' + opgave.uitleg + '</div>' : '') + '</div>';
     balk();
     $('verder').classList.remove('hide');
-    $('verderBtn').textContent = nr >= cfg.aantal ? 'Naar de uitslag →' : 'Volgende →';
+    $('verderBtn').textContent = !oneindig && nr >= cfg.aantal ? 'Naar de uitslag →' : 'Volgende →';
+    $('stopBtn').classList.toggle('hide', !oneindig);
     setTimeout(function(){ $('verderBtn').focus({ preventScroll:true }); }, 30);
   }
   function einde(){
     $('scherm-spel').classList.add('hide'); $('scherm-einde').classList.remove('hide');
     var gedaan = goed + fout;
     $('eindKop').textContent = goed + ' van de ' + gedaan + ' goed';
+    $('nogBtn').textContent = oneindig ? 'Verder oefenen' : 'Nog een ronde';
     var nk = (cfg.keuzes || []).filter(function(k){ return k.id === 'niveau'; })[0];
     var nv = nk ? nk.items.filter(function(x){ return x.id === keuze.niveau; })[0] : null;
     $('eindUit').textContent = (nv ? nv.naam + '. ' : '') + (cfg.eindTekst || 'Hieronder per onderdeel hoe het ging, en wat er nog even nagekeken mag worden.');
     $('cijfers').innerHTML = '<div><b>' + punten + '</b><span>punten</span></div><div><b>' + goed + '</b><span>goed</span></div><div><b>' + fout + '</b><span>fout</span></div><div><b>' + besteReeks + '</b><span>langste reeks</span></div>';
     $('perdeel').innerHTML = Object.keys(perDeel).map(function(k){ var c = perDeel[k], p = pct(c); return '<span class="' + (p >= 80 ? 'g' : p >= 60 ? 'm' : 'r') + '">' + schoon(c[2]) + '<b>' + p + '%</b> <small>' + c[0] + '/' + c[1] + '</small></span>'; }).join('');
     $('missers').innerHTML = missers.length ? '<p class="eyebrow" style="grid-column:1/-1">nog even nakijken</p>' + missers.map(function(f){ return '<div><b>' + schoon(f.v) + '</b>' + (f.j ? '<span>goed: ' + schoon(f.j) + '</span><br>' : '') + '<span>' + schoon(f.hoe) + '</span></div>'; }).join('') : '';
-    if (window.SPEL && SPEL.einde) SPEL.einde({ spel: cfg.id, vak: cfg.vak, od: od, goed: goed, reeks: besteReeks, score: punten, label: 'punten', waarde: punten, max: cfg.aantal * 10 || 1,
-      ronde: goed, punten: punten, niveau: keuze.niveau || '', sleutel: Object.keys(keuze).map(function(k){ return keuze[k]; }).join('-'), deelTekst: goed + ' van de ' + gedaan + ' goed' });
+    /* een oneindige sessie heeft een eigen klassement: anders wint wie het langst doorgaat */
+    if (window.SPEL && SPEL.einde) SPEL.einde({ spel: cfg.id, vak: cfg.vak, od: od, goed: goed, reeks: besteReeks, score: punten, label: 'punten', waarde: punten, max: (oneindig ? Math.max(gedaan, 1) : cfg.aantal) * 10 || 1,
+      ronde: goed, punten: punten, niveau: keuze.niveau || '', sleutel: Object.keys(keuze).map(function(k){ return keuze[k]; }).join('-') + (oneindig ? '-oneindig' : ''), deelTekst: goed + ' van de ' + gedaan + ' goed' + (oneindig ? ', oneindig geoefend' : '') });
     window.scrollTo({ top:0, behavior:'auto' });
   }
 
@@ -442,9 +453,13 @@ window.VAKSPEL = (function(){
     bouw();
     herinner();
     tekenKeuzes();
-    $('startBtn').addEventListener('click', start);
+    $('startBtn').addEventListener('click', function(){ start(oneindigUrl); });
+    $('oneindigBtn').addEventListener('click', function(){ start(true); });
+    $('stopBtn').addEventListener('click', function(){ if (!bezig) einde(); });
+    /* de docent linkt met ?oneindig=1: dan is Start meteen oneindig */
+    if (oneindigUrl){ $('startBtn').textContent = 'Start: oneindig oefenen'; $('oneindigBtn').classList.add('hide'); $('oneindigUit').textContent = 'Zoveel opgaven als je wilt; je stopt zelf.'; }
     $('verderBtn').addEventListener('click', function(){ if (!bezig) volgende(); });
-    $('nogBtn').addEventListener('click', function(){ $('scherm-einde').classList.add('hide'); $('scherm-start').classList.remove('hide'); window.scrollTo({ top:0, behavior:'auto' }); });
+    $('nogBtn').addEventListener('click', function(){ if (oneindig){ start(true); return; } $('scherm-einde').classList.add('hide'); $('scherm-start').classList.remove('hide'); window.scrollTo({ top:0, behavior:'auto' }); });
     $('opnieuwBtn').addEventListener('click', function(){ bezig = false; $('scherm-spel').classList.add('hide'); $('scherm-einde').classList.add('hide'); $('scherm-start').classList.remove('hide'); window.scrollTo({ top:0, behavior:'auto' }); });
     $('bordBtn').addEventListener('click', function(){ var aan = document.body.classList.toggle('groot'); this.classList.toggle('on', aan); });
     addEventListener('keydown', function(e){
