@@ -72,3 +72,52 @@ window.PIRAMIDES = [
 /* de cijfers zijn geschat per groep; hier worden ze per land geschaald zodat mannen en vrouwen samen precies 100 procent zijn */
 window.PIRAMIDES.forEach(function(l){ var t = 0; l.m.forEach(function(x){ t += x; }); l.v.forEach(function(x){ t += x; }); l.m = l.m.map(function(x){ return Math.round(x * 1000 / t) / 10; }); l.v = l.v.map(function(x){ return Math.round(x * 1000 / t) / 10; }); });
 window.PIRAMIDE_GROEPEN = ['0-9', '10-19', '20-29', '30-39', '40-49', '50-59', '60-69', '70-79', '80-89', '90+'];
+
+/* De begrippen van Bevolkingspiramides: b = het begrip, u = de uitleg, soort =
+   bij welke vorm van piramide het past (dan hoort er een land met die vorm bij).
+   bb krijgt de begrippen tot en met de demografische transitie. */
+window.PIRAMIDE_BEGRIPPEN = [
+  { b:'vergrijzing', u:'het aandeel ouderen in de bevolking neemt toe', soort:'krimp' },
+  { b:'ontgroening', u:'het aandeel jongeren in de bevolking neemt af', soort:'krimp' },
+  { b:'geboortecijfer', u:'het aantal geboorten per 1000 inwoners per jaar' },
+  { b:'sterftecijfer', u:'het aantal sterfgevallen per 1000 inwoners per jaar' },
+  { b:'levensverwachting', u:'hoe oud iemand gemiddeld wordt' },
+  { b:'natuurlijke bevolkingsgroei', u:'geboortecijfer min sterftecijfer' },
+  { b:'bevolkingspiramide', u:'een grafiek met per leeftijdsgroep het aandeel mannen en vrouwen' },
+  { b:'babyboom', u:'een periode met veel geboorten, zoals vlak na 1945' },
+  { b:'bevolkingsgroei', u:'het aantal inwoners van een land neemt toe', soort:'groei' },
+  { b:'bevolkingskrimp', u:'het aantal inwoners van een land neemt af', soort:'krimp' },
+  { b:'immigratie', u:'mensen komen van buiten het land om er te gaan wonen' },
+  { b:'emigratie', u:'mensen vertrekken uit het land om ergens anders te gaan wonen' },
+  { b:'leeftijdsgroep', u:'alle mensen van bijvoorbeeld 10 tot 19 jaar samen: één balk in de piramide' },
+  { b:'zuigelingensterfte', u:'het aantal baby’s dat sterft voor de eerste verjaardag, per 1000 geboorten' },
+  { b:'bevolkingsdichtheid', u:'het gemiddelde aantal inwoners per vierkante kilometer' },
+  { b:'gezinsplanning', u:'ouders bepalen zelf hoeveel kinderen ze krijgen en wanneer' },
+  { b:'vruchtbaarheidscijfer', u:'het gemiddelde aantal kinderen dat een vrouw in haar leven krijgt' },
+  { b:'volkstelling', u:'het tellen van alle inwoners van een land, met hun leeftijd en geslacht' },
+  { b:'vrouwenoverschot', u:'er zijn meer vrouwen dan mannen, zoals in de oudste leeftijdsgroepen', soort:'krimp' },
+  { b:'pensioenleeftijd', u:'de leeftijd waarop mensen stoppen met werken en AOW krijgen' },
+  { b:'eenkindpolitiek', u:'de regel in China waardoor de meeste gezinnen maar één kind mochten krijgen', soort:'krimp' },
+  { b:'asielzoeker', u:'iemand die zijn land is ontvlucht en in een ander land om bescherming vraagt' },
+  { b:'verstedelijking', u:'steeds meer mensen gaan in steden wonen in plaats van op het platteland' },
+  { b:'overbevolking', u:'er wonen meer mensen in een gebied dan er met het voedsel, water en werk kunnen leven' },
+  /* vanaf hier alleen kgt en hv */
+  { b:'demografische transitie', u:'de overgang van hoge naar lage geboorte- en sterftecijfers' },
+  { b:'grijze druk', u:'het aantal 65-plussers ten opzichte van de werkende leeftijdsgroep' },
+  { b:'groene druk', u:'het aantal jongeren onder de 20 ten opzichte van de werkende leeftijdsgroep' },
+  { b:'sociale bevolkingsgroei', u:'immigratie min emigratie: de groei door verhuizen over de grens' },
+  { b:'vestigingsoverschot', u:'er komen meer mensen het land binnen dan er vertrekken' },
+  { b:'beroepsbevolking', u:'alle mensen die werken of werk zoeken' },
+  { b:'geboorteoverschot', u:'er worden meer mensen geboren dan er sterven', soort:'groei' }
+];
+/* de gevolgen van een piramide (havo en vwo): soort, vraag, goed antwoord en afleiders */
+window.PIRAMIDE_GEVOLGEN = [
+  { soort:'krimp', v:'Wat is een gevolg van deze piramide voor de zorg?', goed:'meer vraag naar ouderenzorg en verpleeghuizen', mis:['meer vraag naar kinderopvang en consultatiebureaus', 'minder ziekenhuizen nodig', 'niets: de zorgvraag verandert niet'] },
+  { soort:'krimp', v:'Wat is een gevolg van deze piramide voor de pensioenen?', goed:'minder werkenden betalen voor meer gepensioneerden', mis:['de pensioenen worden automatisch hoger', 'jongeren gaan eerder met pensioen', 'er zijn minder gepensioneerden'] },
+  { soort:'krimp', v:'Wat is een gevolg van deze piramide voor scholen?', goed:'scholen krijgen minder leerlingen en sluiten of fuseren', mis:['er moeten veel nieuwe basisscholen bij', 'klassen worden groter', 'er komen meer leraren tekort door meer kinderen'] },
+  { soort:'groei', v:'Wat is een gevolg van deze piramide voor scholen?', goed:'er zijn veel scholen en leraren nodig voor alle kinderen', mis:['scholen sluiten omdat er weinig kinderen zijn', 'ouderenzorg is het grootste probleem', 'er zijn te veel leraren'] },
+  { soort:'groei', v:'Wat is een gevolg van deze piramide voor de arbeidsmarkt over 15 jaar?', goed:'heel veel jongeren zoeken tegelijk werk', mis:['er zijn te weinig jongeren om de banen te vullen', 'de meeste werkenden gaan met pensioen', 'niets: de bevolking blijft gelijk'] },
+  { soort:'stabiel', v:'Wat past bij deze piramide?', goed:'de bevolking blijft ongeveer even groot', mis:['de bevolking verdubbelt in twintig jaar', 'de helft van de bevolking is jonger dan 15', 'er zijn bijna geen ouderen'] }
+];
+/* de vier fasen van het demografisch transitiemodel, als antwoorden */
+window.PIRAMIDE_FASEN = ['fase 1: hoog geboorte- en sterftecijfer, bevolking groeit niet', 'fase 2: sterftecijfer daalt, geboortecijfer blijft hoog: snelle groei', 'fase 3: geboortecijfer daalt ook, groei neemt af', 'fase 4: allebei laag, bevolking stabiel of krimpend'];

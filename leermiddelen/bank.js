@@ -103,6 +103,13 @@ ONDERDELEN.ges.push({id:'oorzaak en gevolg', naam:'oorzaak en gevolg'}, {id:'wie
 ONDERDELEN.wis.push({id:'co\u00f6rdinaten', naam:'co\u00f6rdinaten aflezen'});
 ONDERDELEN.reken.push({id:'klok', naam:'klokkijken'}, {id:'metriek', naam:'metriek stelsel'}, {id:'schatten', naam:'schatten en afronden'});
 ONDERDELEN.eco = [{id:'examen-eco', naam:'examenstof vmbo'}];
+/* ook uit de vakspellen (bank-spellen.js): Democratie, Welke partij is dit?, Verkiezingen,
+   Bevolkingspiramides, Klimaatgrafieken, Kaartvaardigheden, Kruisingsschema, Voedselweb
+   en Vraag en aanbod. De rest van hun vragen valt onder democratie, rechtsstaat en erfelijkheid. */
+ONDERDELEN.burg.push({id:'partijen', naam:'politieke partijen'}, {id:'bestuurslagen', naam:'wie beslist: gemeente, provincie, Rijk of EU'});
+ONDERDELEN.aard.push({id:'bevolking', naam:'bevolking en bevolkingspiramides'}, {id:'klimaten', naam:'klimaten'}, {id:'kaartlezen', naam:'kaartlezen: tekens, richting en schaal'});
+ONDERDELEN.bio.push({id:'voedselweb', naam:'voedselketens en voedselwebben'});
+ONDERDELEN.eco.push({id:'vraag en aanbod', naam:'vraag en aanbod'});
 
 /* Een woordenlijst van de docent (maken.html): met ?lijst=CODE in het adres
    staat hij als vak "Eigen lijst" tussen de andere, en BANK.zorg('eigen')
@@ -151,10 +158,12 @@ var IN_GROEP = {
           cellen:'cellen', erfelijkheid:'cellen', planten:'natuur', ordening:'natuur', 'examen-bio':'examen',
           /* Bouw het organisme telt per stap van zijn eigen spel; dat hoort allemaal bij de cel */
           'de ladder':'cellen', cel:'cellen', weefsel:'cellen', orgaan:'cellen', orgaanstelsel:'cellen',
-          organisme:'cellen', 'plantcel of diercel':'cellen', taken:'cellen' },
-  aard: { vlaggen:'landen', landvormen:'landen', topografie:'landen', 'examen-ak':'examen' },
+          organisme:'cellen', 'plantcel of diercel':'cellen', taken:'cellen', voedselweb:'natuur' },
+  aard: { vlaggen:'landen', landvormen:'landen', topografie:'landen', 'examen-ak':'examen',
+          bevolking:'klimaat', klimaten:'klimaat', kaartlezen:'kaart' },
   burg: { democratie:'staat', rechtsstaat:'staat', media:'samen', samenleven:'samen',
-          europa:'wereld', geld:'wereld', 'examen-mk':'examen' },
+          europa:'wereld', geld:'wereld', 'examen-mk':'examen', partijen:'staat', bestuurslagen:'staat' },
+  eco:  { 'vraag en aanbod':'markt', 'examen-eco':'examen' },
   ges:  { staat:'examen', nl1900:'examen', 'oorzaak en gevolg':'vaardig', 'wie ben ik':'vaardig' }
 };
 /* de tijdvakken horen allemaal onder een kop, zonder dat ze los genoemd hoeven */
