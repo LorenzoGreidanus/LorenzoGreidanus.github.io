@@ -43,7 +43,7 @@ window.KAART_GEGEVENS = {
   ],
   /* schalen: per niveau de schaalgetallen en de centimeters op de kaart die erbij mogen */
   schalen: {
-    bb:  { schaal:[10000, 50000, 100000], cm:[2, 3, 4, 5, 10] },
+    bb:  { schaal:[10000, 50000, 100000], cm:[2, 3, 4, 5, 6, 8, 10] },
     kgt: { schaal:[10000, 25000, 50000, 100000, 200000, 500000], cm:[2, 3, 4, 5, 6, 8, 10] },
     hv:  { schaal:[25000, 50000, 100000, 250000, 500000, 1000000, 2000000], cm:[1.5, 2, 2.5, 3, 4, 4.5, 6, 7.5, 8, 10] }
   }

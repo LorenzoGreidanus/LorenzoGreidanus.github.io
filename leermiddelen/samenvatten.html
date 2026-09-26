@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Samenvatten, versie 1.0: op vakspel.js, de teksten in samenvatten-opgaven.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Samenvatten &middot; meneer Greidanus</title>
+<meta name="description" content="Hoofdzaken van bijzaken scheiden, een samenvatting op volgorde zetten, de beste samenvatting kiezen en het kopje dat bij een alinea past.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Samenvatten">
+<meta property="og:description" content="Hoofdzaken van bijzaken scheiden, een samenvatting op volgorde zetten, de beste samenvatting kiezen en het kopje dat past.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/samenvatten.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%23F26749'/><g fill='none' stroke='%2314224C' stroke-width='6' stroke-linecap='round'><path d='M24 30h52M24 44h52M24 58h34M24 72h20'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+/* de tekst als krantenkolom: een kop, een smalle kolom, en na het antwoord lichten de kernzinnen op */
+.krant{max-width:62ch;width:100%;text-align:left;background:var(--kaart2);border-left:4px solid var(--spelkleur);border-radius:0 14px 14px 0;padding:12px 16px 12px 14px;font-size:.95rem;line-height:1.6}
+.krant .kk{display:block;font-weight:600;font-size:1.02rem;margin-bottom:6px;letter-spacing:-.01em}
+.krant .kk.vraagteken{color:var(--muted);font-style:italic;font-weight:500}
+.krant .tz{border-radius:4px;padding:1px 2px;-webkit-box-decoration-break:clone;box-decoration-break:clone;transition:background .3s var(--ease)}
+.krant.toon .tz[data-k="1"]{background:var(--nadruk-zacht);box-shadow:inset 0 -2px 0 var(--nadruk)}
+.krant.toon .tz[data-k="0"]{color:var(--muted)}
+.krant .legenda{display:none;margin-top:8px;font-size:.78rem;color:var(--muted)}
+.krant.toon .legenda{display:block}
+.krant .legenda i{display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--nadruk-zacht);box-shadow:inset 0 -2px 0 var(--nadruk);vertical-align:-1px;margin-right:4px}
+.vakken .sleepdoel{min-height:120px}
+.opties button.optie.sv{font-size:.92rem}
+body.groot .krant{font-size:1.15rem;max-width:70ch}
+@media(max-width:560px){.krant{font-size:.9rem;padding:10px 12px}}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script src="samenvatten-opgaven.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon;
+  var T = SAMENVATTEN.teksten;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  var NIV = { bb:1, kgt:2, hv:3 };
+  function tekstBij(niveau){ var n = NIV[niveau] || 2; var lijst = T.filter(function(t){ return t.n === n; }); return kies(lijst.length ? lijst : T); }
+  function ix(t){ return T.indexOf(t); }
+
+  /* de krantenkolom; met kop = false staat er een vraagteken in plaats van het kopje */
+  function krant(t, kop, legenda){
+    return '<div class="krant" id="krant">' + (kop === false ? '<span class="kk vraagteken">welk kopje past hierboven?</span>' : '<span class="kk">' + S(t.kop) + '</span>') +
+      t.z.map(function(z){ return '<span class="tz" data-k="' + z[1] + '">' + S(z[0]) + '</span>'; }).join(' ') +
+      (legenda ? '<span class="legenda"><i></i>' + S(legenda) + '</span>' : '') + '</div>';
+  }
+  /* na het antwoord: zodra de motor de uitslag neerzet, licht de kolom op (of vult het kopje in) */
+  function naAntwoord(fn){
+    return function(){
+      var r = document.getElementById('reactie'); if (!r || !window.MutationObserver) return;
+      var mo = new MutationObserver(function(){ if (r.querySelector('.uitslagregel')){ mo.disconnect(); try { fn(); } catch (e){} } });
+      mo.observe(r, { childList:true });
+    };
+  }
+  function licht(){ var k = document.getElementById('krant'); if (k) k.classList.add('toon'); }
+
+  /* 1. kernzinnen: sleep elke zin naar 'in de samenvatting' of 'kan weg' */
+  function kernzinnen(niveau){
+    var t = tekstBij(niveau), kern = [], weg = [];
+    var kaarten = t.z.map(function(z, i){ var id = 'z' + i; (z[1] ? kern : weg).push(id); return { id:id, tekst:S(z[0]) }; });
+    return {
+      onderdeel:'samenvatten: kernzinnen', onderdeelNaam:'kernzinnen', vorm:'sleep', sleutel:'kern' + ix(t),
+      vraag: 'Welke zinnen horen in de samenvatting, en welke kunnen weg?',
+      opdracht: 'Lees de tekst. Hoofdzaken gaan in de samenvatting; voorbeelden, bijzaken, meningen en herhalingen kunnen weg.',
+      beeld: krant(t, true, 'de zinnen die in de samenvatting horen'),
+      kaarten: kaarten,
+      vakken:[{ id:'in', naam:'in de samenvatting', uit:'de hoofdzaken', hoort:kern }, { id:'weg', naam:'kan weg', uit:'voorbeeld, bijzaak, mening, herhaling', hoort:weg }],
+      sleepuit: 'Sleep elke zin naar een vak. Op een telefoon: tik een zin aan en dan het vak.',
+      uitleg: 'Weg kan: ' + t.z.filter(function(z){ return !z[1]; }).map(function(z){ return '‘' + S(z[0]) + '’ (' + S(z[2]) + ')'; }).join(', ') + '. Wat overblijft, zijn de hoofdzaken.',
+      antwoordTekst: t.z.filter(function(z){ return z[1]; }).map(function(z){ return z[0]; }).join(' '),
+      na: naAntwoord(licht)
+    };
+  }
+  /* 2. volgorde: de zinnen van de samenvatting door elkaar, zet ze op volgorde */
+  function volgorde(niveau){
+    var t = tekstBij(niveau);
+    var kaarten = t.sv.map(function(z, i){ return { id:'s' + i, tekst:S(z) }; });
+    return {
+      onderdeel:'samenvatten: volgorde', onderdeelNaam:'volgorde', vorm:'sleep', sleutel:'volg' + ix(t),
+      vraag: 'Zet de zinnen van de samenvatting in de goede volgorde.',
+      opdracht: 'De volgorde volgt de tekst: eerst waar het over gaat, dan de uitleg, dan het gevolg of de conclusie.',
+      beeld: krant(t, true, ''),
+      kaarten: kaarten,
+      vakken: t.sv.map(function(z, i){ return { id:'p' + i, max:1, hoort:['s' + i] }; }),
+      sleepuit: 'Kaartje 1 is de eerste zin van de samenvatting.',
+      uitleg: 'De goede volgorde: ' + t.sv.map(function(z, i){ return (i + 1) + '. ' + S(z); }).join(' ') + ' De samenvatting volgt de opbouw van de tekst.',
+      antwoordTekst: t.sv.join(' ')
+    };
+  }
+  /* 3. de beste samenvatting: volledig, kort en zonder eigen mening */
+  function beste(niveau){
+    var t = tekstBij(niveau);
+    var opties = [t.beste.g].concat(t.beste.f.map(function(f){ return f[0]; }));
+    return {
+      onderdeel:'samenvatten: beste samenvatting', onderdeelNaam:'beste samenvatting', vorm:'meerkeuze', sleutel:'best' + ix(t),
+      vraag: 'Welke samenvatting is de beste?',
+      opdracht: 'Een goede samenvatting is volledig, kort, en zonder eigen mening of voorbeelden.',
+      beeld: krant(t, true, 'de hoofdzaken die erin horen'),
+      opties: opties.map(function(o){ return '<span class="sv">' + S(o) + '</span>'; }), goed: 0,
+      uitleg: 'De andere drie: ' + t.beste.f.map(function(f){ return S(f[1]); }).join('; ') + '. De beste noemt alle hoofdzaken kort en laat de rest weg.',
+      antwoordTekst: t.beste.g,
+      na: naAntwoord(licht)
+    };
+  }
+  /* 4. kopje: welk kopje past bij de alinea */
+  function kopje(niveau){
+    var t = tekstBij(niveau);
+    var opties = [t.kop].concat(t.kopjes);
+    return {
+      onderdeel:'samenvatten: kopje', onderdeelNaam:'kopje', vorm:'meerkeuze', sleutel:'kop' + ix(t),
+      vraag: 'Welk kopje past bij deze alinea?',
+      opdracht: 'Een goed kopje zegt waar de hele alinea over gaat, niet over een detail.',
+      beeld: krant(t, false, 'de hoofdzaken waar het kopje over gaat'),
+      opties: opties.map(S), goed: 0,
+      uitleg: 'De hele alinea gaat over: ' + S(t.sv[0]) + ' De andere kopjes gaan over iets wat er niet of maar zijdelings in staat.',
+      antwoordTekst: t.kop,
+      na: naAntwoord(function(){ var k = document.getElementById('krant'); if (k){ k.classList.add('toon'); var kk = k.querySelector('.kk'); if (kk){ kk.textContent = t.kop; kk.classList.remove('vraagteken'); } } })
+    };
+  }
+
+  var SOORTEN = { kernzinnen: kernzinnen, volgorde: volgorde, beste: beste, kopje: kopje };
+  VAKSPEL.maak({
+    id:'samenvatten', naam:'Samenvatten', vak:'ned', kleur:'#F26749',
+    hand:'hoofdzaak of bijzaak?',
+    lead:'Een samenvatting is de tekst zonder de franje: alleen de hoofdzaken, in de goede volgorde, zonder jouw mening erbij. Je haalt de bijzaken eruit, zet een samenvatting op volgorde, kiest de beste van vier en het kopje dat bij de alinea past.',
+    hoe:[
+      { kop:'Hoofdzaak of bijzaak', tekst:'Een <b>hoofdzaak</b> is wat de schrijver je wil vertellen. Voorbeelden, details, meningen en herhalingen kunnen weg.' },
+      { kop:'Kort en volledig', tekst:'Een goede samenvatting noemt alle hoofdzaken, in de volgorde van de tekst, en niets meer. Geen eigen mening.' },
+      { kop:'Vier soorten opgaven', tekst:'Kernzinnen slepen, de volgorde herstellen, de beste samenvatting kiezen en het kopje dat past. Tien per ronde, meteen nagekeken.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'Korte teksten over dingen dichtbij, met duidelijke voorbeelden en herhalingen.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Langere teksten met uitleg, zoals in een schoolboek.' },
+        { id:'hv', naam:'havo en vwo', uit:'Teksten met meer uitleg en nuance, en samenvattingen van drie langere zinnen.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' }, { id:'kernzinnen', naam:'kernzinnen' }, { id:'volgorde', naam:'volgorde' }, { id:'beste', naam:'beste samenvatting' }, { id:'kopje', naam:'kopje' } ] }
+    ],
+    aantal:10,
+    maak:function(keuze, nr){
+      var soort = keuze.soort === 'alles' ? kies(['kernzinnen', 'volgorde', 'beste', 'kopje']) : keuze.soort;
+      return SOORTEN[soort](keuze.niveau);
+    },
+    uitleg:{ doel:'Hoofdzaken van bijzaken onderscheiden en een tekst kort en volledig samenvatten.', tijd:'tien opgaven per ronde', bediening:'Lees eerst de tekst in de kolom. Sleep de zinnen naar het vak waar ze horen (op een telefoon: tik het kaartje en dan het vak), of kies het antwoord dat klopt.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>

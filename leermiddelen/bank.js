@@ -96,6 +96,12 @@ ONDERDELEN.bio.push({id:'examen-bio', naam:'examenstof vmbo'});
 ONDERDELEN.wis.push({id:'examen-wis', naam:'examenstof vmbo'});
 ONDERDELEN.burg.push({id:'examen-mk', naam:'maatschappijkunde (examen vmbo)'});
 ONDERDELEN.eng.push({id:'examen-eng', naam:'examenwoorden en signaalwoorden (examen vmbo)', groep:'lezen'});
+/* de vakspellen als vragen (bank-spellen.js): deze onderdelen vullen zich zodra het vak geladen is */
+ONDERDELEN.ned.push({id:'schooltaal', naam:'schooltaal: wat vraagt de opdracht', groep:'lezen'}, {id:'formeel of informeel', naam:'formeel of informeel', groep:'grammatica'});
+ONDERDELEN.eng.push({id:'phrasal verbs', naam:'phrasal verbs', groep:'woordenschat'}, {id:'collocations', naam:'collocations: make of do', groep:'woordenschat'}, {id:'vertalen', naam:'de goede vertaling kiezen', groep:'grammatica'});
+ONDERDELEN.ges.push({id:'oorzaak en gevolg', naam:'oorzaak en gevolg'}, {id:'wie ben ik', naam:'wie ben ik?'});
+ONDERDELEN.wis.push({id:'co\u00f6rdinaten', naam:'co\u00f6rdinaten aflezen'});
+ONDERDELEN.reken.push({id:'klok', naam:'klokkijken'}, {id:'metriek', naam:'metriek stelsel'}, {id:'schatten', naam:'schatten en afronden'});
 ONDERDELEN.eco = [{id:'examen-eco', naam:'examenstof vmbo'}];
 
 /* Een woordenlijst van de docent (maken.html): met ?lijst=CODE in het adres
@@ -123,7 +129,8 @@ var GROEPEN = {
   reken:[{id:'getallen',naam:'Getallen'},{id:'verhoudingen',naam:'Verhoudingen'},{id:'meten',naam:'Meten en tijd'}],
   wis:  [{id:'algebra',naam:'Algebra'},{id:'meetkunde',naam:'Meetkunde'},{id:'verwerken',naam:'Grafieken en statistiek'},{id:'examen',naam:'Examenstof'}],
   bio:  [{id:'lichaam',naam:'Het lichaam'},{id:'cellen',naam:'Cellen en erfelijkheid'},{id:'natuur',naam:'Planten en ecologie'},{id:'examen',naam:'Examenstof'}],
-  aard: [{id:'landen',naam:'Landen herkennen'},{id:'examen',naam:'Examenstof'}],
+  aard: [{id:'landen',naam:'Landen herkennen'},{id:'klimaat',naam:'Klimaat en bevolking'},{id:'kaart',naam:'Kaartvaardigheden'},{id:'examen',naam:'Examenstof'}],
+  eco:  [{id:'geld',naam:'Geld en budget'},{id:'markt',naam:'Markt en prijs'},{id:'examen',naam:'Examenstof'}],
   burg: [{id:'staat',naam:'Democratie en rechtsstaat'},{id:'samen',naam:'Samenleven en media'},{id:'wereld',naam:'Europa en economie'},{id:'examen',naam:'Examenstof'}],
   ges:  [{id:'tijdvakken',naam:'Tijdvakken'},{id:'vaardig',naam:'Vaardigheden'},{id:'examen',naam:'Examenstof'}]
 };
@@ -134,12 +141,12 @@ var GROEPEN = {
 var IN_GROEP = {
   reken:{ tafels:'getallen', hoofd:'getallen', cijferen:'getallen', dhte:'getallen', machten:'getallen', negatief:'getallen', komma:'getallen',
           breuk:'verhoudingen', procent:'verhoudingen', verhouding:'verhoudingen', gemiddelde:'verhoudingen',
-          tijdgeld:'meten', meten:'meten',
+          tijdgeld:'meten', meten:'meten', klok:'meten', metriek:'meten', schatten:'getallen',
           /* het DHTE-schema telt per onderdeel van zijn eigen spel */
           'DHTE invullen':'getallen', 'DHTE optellen':'getallen', 'DHTE aftrekken':'getallen' },
   wis:  { vergelijking:'algebra', formule:'algebra',
           oppervlakte:'meetkunde', omtrek:'meetkunde', hoeken:'meetkunde', pythagoras:'meetkunde', vlakken:'meetkunde',
-          grafiek:'verwerken', statistiek:'verwerken', 'examen-wis':'examen' },
+          grafiek:'verwerken', statistiek:'verwerken', 'co\u00f6rdinaten':'meetkunde', 'examen-wis':'examen' },
   bio:  { organen:'lichaam', bloed:'lichaam', vertering:'lichaam', zintuigen:'lichaam',
           cellen:'cellen', erfelijkheid:'cellen', planten:'natuur', ordening:'natuur', 'examen-bio':'examen',
           /* Bouw het organisme telt per stap van zijn eigen spel; dat hoort allemaal bij de cel */
@@ -148,7 +155,7 @@ var IN_GROEP = {
   aard: { vlaggen:'landen', landvormen:'landen', topografie:'landen', 'examen-ak':'examen' },
   burg: { democratie:'staat', rechtsstaat:'staat', media:'samen', samenleven:'samen',
           europa:'wereld', geld:'wereld', 'examen-mk':'examen' },
-  ges:  { staat:'examen', nl1900:'examen' }
+  ges:  { staat:'examen', nl1900:'examen', 'oorzaak en gevolg':'vaardig', 'wie ben ik':'vaardig' }
 };
 /* de tijdvakken horen allemaal onder een kop, zonder dat ze los genoemd hoeven */
 TIJDVAKKEN.forEach(function(t){ IN_GROEP.ges[t.id] = 'tijdvakken'; });
@@ -159,9 +166,10 @@ var IN_PATROON = {
   reken: [[/^schatten: /, 'getallen'], [/^klok: /, 'meten'], [/^cijferen: /, 'getallen'], [/^metriek: /, 'meten'], [/^verhoudingstabel: /, 'verhoudingen'], [/^DHTE /, 'getallen'], [/./, 'verhoudingen']],
   /* de figuren uit Vlakken herkennen (vlak: ruit) en de soorten van De balans (vergelijking: ...) */
   wis: [[/^co\u00f6rdinaten: /, 'meetkunde'], [/^hoeken: /, 'meetkunde'], [/^pythagoras: /, 'meetkunde'], [/^grafieken: /, 'verwerken'], [/^vlak: /, 'meetkunde'], [/^vergelijking: /, 'algebra']],
-  ned:   [[/^dictee: /, 'spelling'], [/^(tegenwoordige tijd|verleden tijd|voltooid deelwoord|de d of t val)$/, 'spelling'], [/^(kernzin|schrijfdoel|tekstverbanden)$/, 'lezen']],
+  ned:   [[/^register: /, 'grammatica'], [/^signaalwoorden: /, 'lezen'], [/^woordenschat: /, 'lezen'], [/^samenvatten: /, 'lezen'], [/^dictee: /, 'spelling'], [/^(tegenwoordige tijd|verleden tijd|voltooid deelwoord|de d of t val)$/, 'spelling'], [/^(kernzin|schrijfdoel|tekstverbanden)$/, 'lezen']],
   eng:   [[/^reading: /, 'lezen'], [/^dictation: /, 'woordenschat'], [/^translate: /, 'grammatica'], [/^phrasal: /, 'woordenschat'], [/^irregular /, 'werkwoorden'], [/./, 'grammatica']],
-  aard:  [[/^topografie/, 'landen']],
+  aard:  [[/^klimaatgrafiek: /, 'klimaat'], [/^bevolkingspiramide: /, 'klimaat'], [/^kaartvaardigheid: /, 'kaart'], [/^topografie/, 'landen']],
+  eco:   [[/^huishoudboekje: /, 'geld'], [/^vraag en aanbod: /, 'markt']],
   ges:   [[/^kaart door de tijd: /, 'vaardig'], [/^wie ben ik: /, 'vaardig'], [/^oorzaak en gevolg: /, 'vaardig'], [/^werken met bronnen$/, 'vaardig']],
   bio: [[/^kruisen: /, 'cellen'], [/^voedselweb: /, 'natuur']],
   burg: [[/^verkiezingen: /, 'staat']]
@@ -282,6 +290,11 @@ var BANK = (function(){
     return "";
   }
   var BASIS = map();
+  var spellenScript = null;
+  function metSpellen(vak){
+    if (!spellenScript) spellenScript = new Promise(function(res){ var s = document.createElement('script'); s.src = BASIS + 'bank-spellen.js'; s.onload = s.onerror = function(){ res(); }; document.head.appendChild(s); });
+    return spellenScript.then(function(){ return window.BANK_SPELLEN ? BANK_SPELLEN.laad(vak) : null; });
+  }
   function een(vak){
     if (klaar[vak]) return Promise.resolve();
     if (bezig[vak]) return bezig[vak];
@@ -289,9 +302,11 @@ var BANK = (function(){
     bezig[vak] = new Promise(function(res){
       var s = document.createElement("script");
       s.src = BASIS + "bank-" + vak + ".js";
-      s.onload = function(){ klaar[vak] = true; res(); };
+      /* daarna de opgaven van de vakspellen erbij (bank-spellen.js); mislukt dat, dan gewoon zonder */
+      function erbij(){ metSpellen(vak).then(function(){ klaar[vak] = true; res(); }, function(){ klaar[vak] = true; res(); }); }
+      s.onload = erbij;
       /* lukt het niet, dan gaat het spel gewoon door met wat er is */
-      s.onerror = function(){ klaar[vak] = true; res(); };
+      s.onerror = erbij;
       document.head.appendChild(s);
     });
     return bezig[vak];
@@ -656,13 +671,56 @@ function rekenExtra(soort, r) {
   return null;
 }
 
+/* Klokkijken: een getekende klok, en vier tijden om uit te kiezen. De
+   afleiders zijn de klassieke fouten: de wijzers verwisseld, een uur ernaast,
+   half acht gelezen als half negen. */
+function klokVraag(r){
+  var u = 1 + rnd(12), m = r <= 1 ? kies([0, 30, 15, 45]) : r === 2 ? 5 * rnd(12) : rnd(60);
+  function tijd(uu, mm){ uu = ((uu - 1 + 12) % 12) + 1; return uu + ':' + (mm < 10 ? '0' : '') + mm; }
+  var goed = tijd(u, m);
+  var fouten = [tijd(u + 1, m), tijd(u - 1, m), tijd(m / 5 || 12, u * 5 % 60), tijd(u, (m + 30) % 60), tijd(u, (m + 5) % 60)].filter(function(x){ return x !== goed; });
+  var uh = (u % 12 + m / 60) * 30, mh = m * 6, s = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="klok">' +
+    '<circle cx="60" cy="60" r="54" fill="none" stroke="currentColor" stroke-width="3"/>';
+  for (var i = 0; i < 12; i++){ var a = i * 30 * Math.PI / 180, x1 = 60 + 48 * Math.sin(a), y1 = 60 - 48 * Math.cos(a), x2 = 60 + 42 * Math.sin(a), y2 = 60 - 42 * Math.cos(a), tx = 60 + 34 * Math.sin(a), ty = 64 - 34 * Math.cos(a);
+    s += '<line x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '" stroke="currentColor" stroke-width="2.5"/><text x="' + tx.toFixed(1) + '" y="' + ty.toFixed(1) + '" font-size="11" font-weight="700" text-anchor="middle" fill="currentColor">' + (i || 12) + '</text>'; }
+  s += '<line x1="60" y1="60" x2="' + (60 + 24 * Math.sin(uh * Math.PI / 180)).toFixed(1) + '" y2="' + (60 - 24 * Math.cos(uh * Math.PI / 180)).toFixed(1) + '" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>' +
+    '<line x1="60" y1="60" x2="' + (60 + 38 * Math.sin(mh * Math.PI / 180)).toFixed(1) + '" y2="' + (60 - 38 * Math.cos(mh * Math.PI / 180)).toFixed(1) + '" stroke="#204ECF" stroke-width="3.5" stroke-linecap="round"/><circle cx="60" cy="60" r="3" fill="currentColor"/></svg>';
+  var q = bouw('Hoe laat is het?', goed, function(){ return kies(fouten); }, 'De korte wijzer wijst het uur aan (' + u + '), de lange de minuten (' + m + '): ' + goed + '.', 'klokkijken');
+  q.svg = s; return q;
+}
+/* Het metriek stelsel: omrekenen tussen eenheden, elke trede keer tien. */
+function metriekVraag(r){
+  var L = kies([['km', 'hm', 'dam', 'm', 'dm', 'cm', 'mm'], ['kg', 'hg', 'dag', 'g', 'dg', 'cg', 'mg'], ['kl', 'hl', 'dal', 'l', 'dl', 'cl', 'ml']]);
+  var gewoon = r <= 1 ? [0, 3, 5, 6] : [0, 1, 2, 3, 4, 5, 6];
+  var i = kies(gewoon), j = kies(gewoon.filter(function(x){ return x !== i && Math.abs(x - i) <= (r <= 1 ? 3 : 6); }));
+  var f = Math.pow(10, j - i), g = r <= 1 ? kies([1, 2, 5, 10, 25]) : r === 2 ? kies([1.5, 2, 3.5, 7, 12, 0.5, 45]) : kies([0.35, 1.25, 7.5, 0.08, 62.5, 3.75]);
+  var goed = Math.round(g * f * 1e6) / 1e6;
+  function net(x){ return String(x).replace('.', ','); }
+  var fouten = [goed * 10, goed / 10, goed * 100, goed / 100, g].filter(function(x){ return x !== goed; }).map(function(x){ return net(Math.round(x * 1e6) / 1e6) + ' ' + L[j]; });
+  return bouw(net(g) + ' ' + L[i] + ' = hoeveel ' + L[j] + '?', net(goed) + ' ' + L[j], function(){ return kies(fouten); },
+    'Van ' + L[i] + ' naar ' + L[j] + ' is ' + Math.abs(j - i) + ' treden ' + (j > i ? 'omlaag: keer ' + net(f) : 'omhoog: gedeeld door ' + net(1 / f)) + '. ' + net(g) + ' ' + L[i] + ' = ' + net(goed) + ' ' + L[j] + '.', 'metriek');
+}
+/* Schatten en afronden: afronden op tientallen, honderdtallen of duizendtallen, of een som schatten. */
+function schatVraag(r){
+  if (rnd(2) === 0){
+    var op = r <= 1 ? kies([10, 100]) : kies([10, 100, 1000]), n = r <= 1 ? 100 + rnd(900) : 1000 + rnd(90000), goed = Math.round(n / op) * op;
+    var naam = { 10:'tientallen', 100:'honderdtallen', 1000:'duizendtallen' }[op];
+    var fouten = [goed + op, goed - op, Math.floor(n / op) * op === goed ? goed + op : Math.floor(n / op) * op, Math.round(n / (op * 10)) * op * 10].filter(function(x){ return x !== goed; });
+    return bouw('Rond ' + n + ' af op ' + naam + '.', String(goed), function(){ return String(kies(fouten)); }, n + ' ligt tussen ' + Math.floor(n / op) * op + ' en ' + (Math.floor(n / op) * op + op) + '; het dichtstbij is ' + goed + '.', 'afronden');
+  }
+  var a = 100 + rnd(900), b = 100 + rnd(900), teken = r >= 2 && rnd(2) === 0 ? '\u00d7' : '+';
+  if (teken === '\u00d7'){ b = 2 + rnd(48); }
+  var ra = Math.round(a / 100) * 100, rb = teken === '+' ? Math.round(b / 100) * 100 : Math.round(b / 10) * 10, s2 = teken === '+' ? ra + rb : ra * rb;
+  var fouten2 = [s2 * 10, s2 / 10, s2 + (teken === '+' ? 200 : 1000), s2 - (teken === '+' ? 200 : 1000)].filter(function(x){ return x > 0 && x !== s2; });
+  return bouw('Ongeveer hoeveel is ' + a + ' ' + teken + ' ' + b + '?', 'ongeveer ' + s2, function(){ return 'ongeveer ' + kies(fouten2); }, 'Rond af: ' + ra + ' ' + teken + ' ' + rb + ' = ' + s2 + '. Precies is het ' + (teken === '+' ? a + b : a * b) + '.', 'schatten');
+}
 function rekenSom(rang, toegestaan) {
   const r = rang || 2;
   const potten = {
-    1: ['tafels','tafels','hoofd','hoofd','cijferen','dhte','breuk','tijdgeld','komma'],
-    2: ['tafels','tafels','hoofd','hoofd','cijferen','dhte','breuk','procent','tijdgeld','meten','komma','gemiddelde'],
-    3: ['tafels','hoofd','cijferen','breuk','procent','verhouding','tijdgeld','meten','komma','gemiddelde','machten','negatief'],
-    4: ['hoofd','breuk','procent','verhouding','verhouding','meten','machten','machten','negatief','gemiddelde']
+    1: ['tafels','tafels','hoofd','hoofd','cijferen','dhte','breuk','tijdgeld','komma','klok','metriek','schatten'],
+    2: ['tafels','tafels','hoofd','hoofd','cijferen','dhte','breuk','procent','tijdgeld','meten','komma','gemiddelde','klok','metriek','schatten'],
+    3: ['tafels','hoofd','cijferen','breuk','procent','verhouding','tijdgeld','meten','komma','gemiddelde','machten','negatief','klok','metriek','schatten'],
+    4: ['hoofd','breuk','procent','verhouding','verhouding','meten','machten','machten','negatief','gemiddelde','metriek','schatten']
   };
   /* Heb je zelf onderdelen aangewezen, dan zijn dat ze, en bepaalt het niveau
      alleen nog hoe zwaar de som binnen dat onderdeel wordt. Eerst kijken wat
@@ -673,6 +731,9 @@ function rekenSom(rang, toegestaan) {
   rekenLaatste = soort;
   if (soort === 'cijferen') return cijferVraag(r);
   if (soort === 'dhte') return dhteVraag(r);
+  if (soort === 'klok') return klokVraag(r);
+  if (soort === 'metriek') return metriekVraag(r);
+  if (soort === 'schatten') return schatVraag(r);
   /* een op de drie keer een andere vorm binnen hetzelfde onderdeel */
   if (rnd(3) === 0){ const extra = rekenExtra(soort, r); if (extra) return extra; }
   if (soort === 'tafels') {

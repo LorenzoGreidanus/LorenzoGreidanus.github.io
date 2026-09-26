@@ -79,7 +79,7 @@
   }
   function som(l, van, tot){ var t = 0; for (var i = van; i <= tot; i++) t += l.m[i] + l.v[i]; return Math.round(t * 10) / 10; }
   function grootste(l){ var b = 0; for (var i = 1; i < 10; i++) if (l.m[i] + l.v[i] > l.m[b] + l.v[b]) b = i; return b; }
-  function landenVan(niveau){ return niveau === 'bb' ? P.filter(function(l){ return ['Niger', 'Nigeria', 'India', 'Nederland', 'Japan', 'Duitsland', 'Brazilië'].indexOf(l.land) >= 0; }) : P; }
+  function landenVan(niveau){ return niveau === 'bb' ? P.filter(function(l){ return l.bb; }) : P; }
 
   /* 1. de vorm */
   function vorm(niveau){
@@ -126,12 +126,27 @@
     { b:'levensverwachting', u:'hoe oud iemand gemiddeld wordt' },
     { b:'natuurlijke bevolkingsgroei', u:'geboortecijfer min sterftecijfer' },
     { b:'bevolkingspiramide', u:'een grafiek met per leeftijdsgroep het aandeel mannen en vrouwen' },
-    { b:'demografische transitie', u:'de overgang van hoge naar lage geboorte- en sterftecijfers' },
     { b:'babyboom', u:'een periode met veel geboorten, zoals vlak na 1945' },
-    { b:'grijze druk', u:'het aantal 65-plussers ten opzichte van de werkende leeftijdsgroep' }
+    { b:'bevolkingsgroei', u:'het aantal inwoners van een land neemt toe', soort:'groei' },
+    { b:'bevolkingskrimp', u:'het aantal inwoners van een land neemt af', soort:'krimp' },
+    { b:'immigratie', u:'mensen komen van buiten het land om er te gaan wonen' },
+    { b:'emigratie', u:'mensen vertrekken uit het land om ergens anders te gaan wonen' },
+    { b:'leeftijdsgroep', u:'alle mensen van bijvoorbeeld 10 tot 19 jaar samen: één balk in de piramide' },
+    { b:'zuigelingensterfte', u:'het aantal baby’s dat sterft voor de eerste verjaardag, per 1000 geboorten' },
+    { b:'bevolkingsdichtheid', u:'het gemiddelde aantal inwoners per vierkante kilometer' },
+    { b:'gezinsplanning', u:'ouders bepalen zelf hoeveel kinderen ze krijgen en wanneer' },
+    { b:'vruchtbaarheidscijfer', u:'het gemiddelde aantal kinderen dat een vrouw in haar leven krijgt' },
+    /* vanaf hier alleen kgt en hv */
+    { b:'demografische transitie', u:'de overgang van hoge naar lage geboorte- en sterftecijfers' },
+    { b:'grijze druk', u:'het aantal 65-plussers ten opzichte van de werkende leeftijdsgroep' },
+    { b:'groene druk', u:'het aantal jongeren onder de 20 ten opzichte van de werkende leeftijdsgroep' },
+    { b:'sociale bevolkingsgroei', u:'immigratie min emigratie: de groei door verhuizen over de grens' },
+    { b:'vestigingsoverschot', u:'er komen meer mensen het land binnen dan er vertrekken' },
+    { b:'beroepsbevolking', u:'alle mensen die werken of werk zoeken' },
+    { b:'geboorteoverschot', u:'er worden meer mensen geboren dan er sterven', soort:'groei' }
   ];
   function begrippen(niveau){
-    var lijst = niveau === 'bb' ? BEGRIPPEN.slice(0, 7) : BEGRIPPEN, b = kies(lijst), l = kies(landenVan(niveau));
+    var lijst = niveau === 'bb' ? BEGRIPPEN.slice(0, 18) : BEGRIPPEN, b = kies(lijst), l = kies(landenVan(niveau));
     if (b.soort) l = kies(P.filter(function(x){ return x.soort === b.soort; }));
     var anderen = H(lijst.filter(function(x){ return x !== b; })).slice(0, 3), opties = H([b].concat(anderen)).map(function(x){ return x.b; });
     var metCijfers = Math.random() < 0.5 && niveau !== 'bb';
@@ -151,7 +166,8 @@
     return s + '</svg>';
   }
   function transitie(niveau){
-    var l = kies(P), fase = l.soort === 'groei' ? (l.geboorte > 35 ? 2 : 3) : 4;
+    /* fase 2: geboortecijfer nog hoog; fase 3: het daalt, maar de groei is nog flink; fase 4: allebei laag en dicht bij elkaar */
+    var l = kies(P), fase = l.geboorte > 35 ? 2 : l.geboorte - l.sterfte >= 8 ? 3 : 4;
     var opties = ['fase 1: hoog geboorte- en sterftecijfer, bevolking groeit niet', 'fase 2: sterftecijfer daalt, geboortecijfer blijft hoog: snelle groei', 'fase 3: geboortecijfer daalt ook, groei neemt af', 'fase 4: allebei laag, bevolking stabiel of krimpend'];
     return { onderdeel:'bevolkingspiramide: transitie', onderdeelNaam:'transitiemodel', vorm:'meerkeuze', vasteVolgorde:true, sleutel:'t' + l.land,
       vraag:S(l.land) + ' heeft een geboortecijfer van <b>' + l.geboorte + '</b> en een sterftecijfer van <b>' + l.sterfte + '</b> per 1000. In welke fase van het demografisch transitiemodel zit het land?',
@@ -179,7 +195,7 @@
   VAKSPEL.maak({
     id:'bevolkingspiramide', naam:'Bevolkingspiramides', vak:'aard', kleur:'#2f7d52',
     hand:'jong onderaan, oud bovenaan',
-    lead:'Twaalf echte landen, van Niger tot Japan. Je herkent aan de vorm of een bevolking groeit, stabiel is of krimpt, leest percentages af, raadt het land, kent de begrippen en bedenkt op havo en vwo wat de piramide betekent voor scholen, zorg en pensioenen.',
+    lead:'Dertig echte landen, van Niger tot Japan. Je herkent aan de vorm of een bevolking groeit, stabiel is of krimpt, leest percentages af, raadt het land, kent de begrippen en bedenkt op havo en vwo wat de piramide betekent voor scholen, zorg en pensioenen.',
     hoe:[
       { kop:'Lezen', tekst:'Links de mannen, rechts de vrouwen, elke balk een leeftijdsgroep van tien jaar. De getallen zijn <b>procenten</b> van de hele bevolking.' },
       { kop:'De vorm', tekst:'Brede basis: veel kinderen, groei. Rechte zijkanten: stabiel. Smalle basis en brede top: krimp en vergrijzing.' },
@@ -187,8 +203,8 @@
     ],
     keuzes:[
       { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
-        { id:'bb', naam:'vmbo-bb', uit:'Zeven duidelijke landen, de vorm herkennen en de grootste groep aflezen.' },
-        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Twaalf landen, percentages optellen, alle begrippen.' },
+        { id:'bb', naam:'vmbo-bb', uit:'Negentien duidelijke landen, de vorm herkennen en de grootste groep aflezen.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Dertig landen, percentages optellen, alle begrippen.' },
         { id:'hv', naam:'havo en vwo', uit:'Ook het demografisch transitiemodel en de gevolgen voor de samenleving.' } ] },
       { id:'soort', kop:'wat oefen je', std:'alles', items:[
         { id:'alles', naam:'alles door elkaar' }, { id:'vorm', naam:'vorm' }, { id:'aflezen', naam:'aflezen' }, { id:'land', naam:'welk land' }, { id:'begrippen', naam:'begrippen' }, { id:'transitie', naam:'transitiemodel' }, { id:'gevolgen', naam:'gevolgen' } ] }

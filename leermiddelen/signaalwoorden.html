@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Signaalwoorden en verbanden, versie 1.0: op vakspel.js, de zinnen in signaalwoorden-opgaven.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Signaalwoorden en verbanden &middot; meneer Greidanus</title>
+<meta name="description" content="Omdat, maar, dus, bijvoorbeeld: het signaalwoord kiezen dat past, het verband herkennen, signaalwoorden sorteren en een zin logisch afmaken.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Signaalwoorden en verbanden">
+<meta property="og:description" content="Het signaalwoord kiezen dat past, het verband herkennen, signaalwoorden sorteren en een zin logisch afmaken.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/signaalwoorden.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%23F26749'/><g fill='none' stroke='%2314224C' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'><rect x='18' y='36' width='24' height='28' rx='6'/><rect x='58' y='36' width='24' height='28' rx='6'/><path d='M42 50h16M52 44l6 6-6 6'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+/* het tekstvak met de zin; het signaalwoord of het gat licht op na het antwoord */
+.tv{max-width:58ch;width:100%;text-align:left;background:var(--kaart2);border-left:4px solid var(--spelkleur);border-radius:0 14px 14px 0;padding:14px 18px 14px 16px;font-size:1.08rem;line-height:1.65}
+.tv .w{color:var(--nadruk);font-weight:700}
+.tv .gat{display:inline-block;min-width:4.5em;border-bottom:2px solid var(--ink);text-align:center;color:var(--muted);font-weight:600;line-height:1.2;margin:0 2px}
+.tv.toon .gat{color:var(--nadruk);border-bottom-color:var(--nadruk)}
+.tv .rest{color:var(--muted)}
+.tv.toon .rest{color:var(--ink)}
+/* de schema's van de verbanden */
+.schema{display:inline-block;vertical-align:middle;width:200px;max-width:100%;height:auto;font-family:inherit}
+.schema text{font-size:10.5px;font-weight:600;fill:currentColor}
+.schema .blok{fill:var(--kaart);stroke:currentColor;stroke-width:1.5}
+.schema .lijn{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.schema .zacht{stroke-dasharray:3 2.5}
+.uitslagregel .vbvak{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:6px 0 2px}
+.uitslagregel .vbvak .schema{width:170px}
+.uitslagregel .vbvak b{display:inline;font-size:.95rem}
+/* de legenda bij het sorteren: de vier verbanden met hun schema */
+.legenda{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;width:100%;max-width:820px}
+.legenda div{background:var(--kaart2);border-radius:12px;padding:8px 10px;text-align:center;color:var(--nadruk)}
+.legenda .schema{width:100%;max-width:170px}
+.legenda b{display:block;font-size:.8rem;color:var(--ink);margin-top:2px}
+.legenda small{display:block;font-size:.72rem;color:var(--muted)}
+body.groot .tv{font-size:1.3rem}
+@media(max-width:560px){.tv{font-size:1rem;padding:12px 14px}.legenda{grid-template-columns:1fr 1fr;gap:6px}.legenda b{font-size:.74rem}.legenda small{display:none}}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script src="signaalwoorden-opgaven.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon, G = SIGNAALWOORDEN;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  var NIV = { bb:1, kgt:2, hv:3 };
+  function bij(lijst, niveau){ var n = NIV[niveau] || 2, l = lijst.filter(function(x){ return x[0] === n; }); return kies(l.length ? l : lijst); }
+  function verband(id){ return G.VERBANDEN.filter(function(v){ return v.id === id; })[0]; }
+  function verbandenVoor(niveau){ var n = NIV[niveau] || 2; return G.VERBANDEN.filter(function(v){ return v.niv <= n; }); }
+
+  /* de schema's: 200 bij 64, in de kleur van de tekst eromheen (currentColor), zodat de donkere stand klopt */
+  function blok(x, y, w, t, zacht){ return '<rect class="blok' + (zacht ? ' zacht' : '') + '" x="' + x + '" y="' + y + '" width="' + w + '" height="26" rx="7"/><text x="' + (x + w / 2) + '" y="' + (y + 17) + '" text-anchor="middle">' + t + '</text>'; }
+  function pijl(x1, x2, y){ return '<path class="lijn" d="M' + x1 + ' ' + y + 'H' + x2 + 'M' + (x2 - 6) + ' ' + (y - 5) + 'l6 5-6 5"/>'; }
+  var SCHEMA = {
+    oorzaak: function(){ return blok(4, 19, 74, 'oorzaak') + pijl(84, 118, 32) + blok(122, 19, 74, 'gevolg'); },
+    tegenstelling: function(){ return blok(4, 19, 80, 'het een') + '<path class="lijn" d="M100 12v40"/><text x="100" y="9" text-anchor="middle">≠</text>' + blok(116, 19, 80, 'het ander'); },
+    opsomming: function(){ return '<circle cx="14" cy="14" r="3" fill="currentColor"/><path class="lijn" d="M24 14h100"/><circle cx="14" cy="32" r="3" fill="currentColor"/><path class="lijn" d="M24 32h100"/><circle cx="14" cy="50" r="3" fill="currentColor"/><path class="lijn" d="M24 50h100"/><text x="150" y="36" text-anchor="middle" font-size="16">+ nog</text>'; },
+    voorbeeld: function(){ return blok(30, 4, 140, 'iets algemeens') + '<path class="lijn" d="M100 30v8M94 33l6 5 6-5"/>' + blok(60, 40, 80, 'voorbeeld', true); },
+    tijd: function(){ return '<path class="lijn" d="M8 32H180M174 27l6 5-6 5"/>' + [['eerst', 30], ['dan', 92], ['daarna', 154]].map(function(p){ return '<circle cx="' + p[1] + '" cy="32" r="5" fill="currentColor"/><text x="' + p[1] + '" y="54" text-anchor="middle">' + p[0] + '</text>'; }).join(''); },
+    doel: function(){ return blok(4, 19, 74, 'middel') + pijl(84, 130, 32) + '<circle class="lijn" cx="160" cy="32" r="18"/><circle class="lijn" cx="160" cy="32" r="10"/><circle cx="160" cy="32" r="3" fill="currentColor"/><text x="160" y="62" text-anchor="middle">doel</text>'; },
+    voorwaarde: function(){ return blok(4, 19, 62, 'als …') + '<path class="lijn" d="M72 32h26"/><path class="lijn" d="M100 18v28"/><path class="lijn" d="M100 32l14-12"/>' + pijl(114, 130, 32) + blok(134, 19, 62, 'dan …'); },
+    conclusie: function(){ return '<path class="lijn" d="M6 12h60M6 32h60M6 52h60"/><path class="lijn" d="M72 12l30 20-30 20"/>' + pijl(104, 122, 32) + blok(126, 19, 70, 'kortom'); },
+    concessie: function(){ return blok(4, 27, 70, 'hoewel …') + '<path class="lijn" d="M78 40c8 0 10-26 20-26s12 26 20 26"/><path class="lijn" d="M98 40v-9" stroke-width="3"/>' + pijl(120, 126, 40) + blok(126, 27, 70, 'toch …'); }
+  };
+  function schema(id){ return '<svg class="schema" viewBox="0 0 200 64" aria-hidden="true">' + (SCHEMA[id] || SCHEMA.oorzaak)() + '</svg>'; }
+  function schemaUitleg(id, tekst){ var v = verband(id); return '<span class="vbvak">' + schema(id) + '<b>' + S(v.naam) + '</b></span>' + S(tekst); }
+
+  /* na het antwoord: de motor zet de uitslag neer, dan licht het tekstvak op en vult het gat zich */
+  function naAntwoord(fn){
+    return function(){
+      var r = document.getElementById('reactie'); if (!r || !window.MutationObserver) return;
+      var mo = new MutationObserver(function(){ if (r.querySelector('.uitslagregel')){ mo.disconnect(); try { fn(); } catch (e){} } });
+      mo.observe(r, { childList:true });
+    };
+  }
+  function vul(tekst){ return function(){ var t = document.getElementById('tv'); if (t) t.classList.add('toon'); var g = document.getElementById('gatvak'); if (g) g.textContent = tekst; }; }
+  function vet(z){ return S(z).replace(/\*\*([^*]+)\*\*/g, '<b class="w">$1</b>'); }
+
+  /* 1. invullen: welk signaalwoord past in het gat */
+  function invullen(niveau){
+    var x = bij(G.INVUL, niveau);
+    return {
+      onderdeel:'signaalwoorden: invullen', onderdeelNaam:'invullen', vorm:'meerkeuze', sleutel:'in' + G.INVUL.indexOf(x),
+      vraag: 'Welk signaalwoord past in het gat?',
+      opdracht: 'Bedenk eerst wat het verband is tussen de twee delen: oorzaak, tegenstelling, voorbeeld, tijd?',
+      beeld: '<div class="tv" id="tv">' + S(x[1]).replace('___', '<span class="gat" id="gatvak">…</span>') + '</div>',
+      opties: x.slice(2, 6).map(S), goed: 0,
+      uitleg: schemaUitleg(x[6], x[7]),
+      antwoordTekst: x[2],
+      na: naAntwoord(vul(x[2]))
+    };
+  }
+  /* 2. welk verband geeft het vette signaalwoord aan */
+  function welkVerband(niveau){
+    var x = bij(G.WELK, niveau), goed = verband(x[2]);
+    var anderen = H(verbandenVoor(niveau).filter(function(v){ return v.id !== goed.id; })).slice(0, 3);
+    var opties = [goed].concat(anderen);
+    return {
+      onderdeel:'signaalwoorden: welk verband', onderdeelNaam:'welk verband', vorm:'meerkeuze', sleutel:'welk' + G.WELK.indexOf(x),
+      vraag: 'Welk verband geeft het vette signaalwoord aan?',
+      beeld: '<div class="tv" id="tv">' + vet(x[1]) + '</div>',
+      opties: opties.map(function(v){ return S(v.naam); }), goed: 0,
+      uitleg: schemaUitleg(x[2], x[3]),
+      antwoordTekst: goed.naam
+    };
+  }
+  /* 3. sorteren: acht signaalwoorden naar vier verbanden */
+  function sorteren(niveau){
+    var vb = H(verbandenVoor(niveau)).slice(0, 4), kaarten = [], vakken = [];
+    vb.forEach(function(v){
+      var w = H(G.WOORDEN[v.id]).slice(0, 2);
+      vakken.push({ id:v.id, naam:v.naam, uit:v.uit, hoort:w.map(function(t){ return v.id + ':' + t; }) });
+      w.forEach(function(t){ kaarten.push({ id:v.id + ':' + t, tekst:S(t) }); });
+    });
+    return {
+      onderdeel:'signaalwoorden: sorteren', onderdeelNaam:'sorteren', vorm:'sleep', sleutel:'sort' + kaarten.map(function(k){ return k.id; }).sort().join(','),
+      vraag: 'Sleep elk signaalwoord naar het verband waar het bij hoort.',
+      beeld: '<div class="legenda">' + vb.map(function(v){ return '<div>' + schema(v.id) + '<b>' + S(v.naam) + '</b><small>' + S(v.uit) + '</small></div>'; }).join('') + '</div>',
+      kaarten: kaarten, vakken: vakken,
+      sleepuit: 'Twee woorden per verband. Op een telefoon: tik een woord aan en dan het vak.',
+      uitleg: vb.map(function(v){ return S(v.naam) + ': ' + G.WOORDEN[v.id].slice(0, 4).join(', '); }).join('. ') + '.',
+      antwoordTekst: vakken.map(function(v){ return v.naam + ': ' + v.hoort.map(function(h){ return h.split(':')[1]; }).join(', '); }).join('; ')
+    };
+  }
+  /* 4. zin afmaken: welk vervolg klopt logisch */
+  function afmaken(niveau){
+    var x = bij(G.AFMAKEN, niveau);
+    return {
+      onderdeel:'signaalwoorden: zin afmaken', onderdeelNaam:'zin afmaken', vorm:'meerkeuze', sleutel:'af' + G.AFMAKEN.indexOf(x),
+      vraag: 'Welk vervolg klopt logisch?',
+      opdracht: 'Het signaalwoord zegt wat voor vervolg er moet komen.',
+      beeld: '<div class="tv" id="tv">' + vet(x[1]).replace('…', '<span class="gat" id="gatvak">…</span>') + '</div>',
+      opties: x.slice(2, 6).map(S), goed: 0,
+      uitleg: schemaUitleg(x[6], x[7]),
+      antwoordTekst: x[2],
+      na: naAntwoord(vul(x[2]))
+    };
+  }
+
+  var SOORTEN = { invullen: invullen, welk: welkVerband, sorteren: sorteren, afmaken: afmaken };
+  VAKSPEL.maak({
+    id:'signaalwoorden', naam:'Signaalwoorden en verbanden', vak:'ned', kleur:'#F26749',
+    hand:'omdat, maar, dus, bijvoorbeeld',
+    lead:'Signaalwoorden zijn de wegwijzers in een tekst: ze zeggen hoe twee stukken bij elkaar horen. Een oorzaak, een tegenstelling, een voorbeeld, een volgorde in de tijd. Wie ze herkent, leest sneller en snapt beter wat de schrijver bedoelt.',
+    hoe:[
+      { kop:'Het verband', tekst:'Twee zinnen horen bij elkaar. <b>Omdat</b> geeft een oorzaak, <b>maar</b> een tegenstelling, <b>bijvoorbeeld</b> een voorbeeld, <b>daarna</b> een volgorde in de tijd.' },
+      { kop:'Het schema', tekst:'Bij elk antwoord zie je het verband als schema: oorzaak → gevolg, het een ≠ het ander, een lijstje. Zo onthoud je het beter.' },
+      { kop:'Vier soorten opgaven', tekst:'Het signaalwoord invullen, het verband herkennen, signaalwoorden sorteren en een zin logisch afmaken. Tien per ronde.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'De vijf basisverbanden: oorzaak en gevolg, tegenstelling, opsomming, voorbeeld en tijd.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Ook doel en middel, voorwaarde, en samenvatting of conclusie.' },
+        { id:'hv', naam:'havo en vwo', uit:'Ook toegeving (hoewel, ondanks, weliswaar) en verbanden over de zinsgrens heen.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' }, { id:'invullen', naam:'invullen' }, { id:'welk', naam:'welk verband' }, { id:'sorteren', naam:'sorteren' }, { id:'afmaken', naam:'zin afmaken' } ] }
+    ],
+    aantal:10,
+    maak:function(keuze, nr){
+      var soort = keuze.soort === 'alles' ? kies(['invullen', 'welk', 'sorteren', 'afmaken']) : keuze.soort;
+      return SOORTEN[soort](keuze.niveau);
+    },
+    uitleg:{ doel:'Signaalwoorden herkennen en weten welk verband ze aangeven.', tijd:'tien opgaven per ronde', bediening:'Kies het antwoord dat klopt (of druk op 1 tot 4). Bij sorteren sleep je de woorden naar het verband; op een telefoon tik je een woord en dan het vak.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>

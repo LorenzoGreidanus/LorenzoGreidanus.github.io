@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Woordenschat in context, versie 1.0: op vakspel.js, de woorden in woordenschat-opgaven.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Woordenschat in context &middot; meneer Greidanus</title>
+<meta name="description" content="Wat betekent een lastig woord in deze zin? Gatenteksten, schooltaal uit toetsen en boeken, en synoniemen en tegenstellingen.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Woordenschat in context">
+<meta property="og:description" content="Wat betekent een lastig woord in deze zin? Gatenteksten, schooltaal en synoniemen en tegenstellingen.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/woordenschat.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%23F26749'/><g fill='none' stroke='%2314224C' stroke-width='6' stroke-linecap='round'><path d='M24 28h52M24 44h30M24 60h52M24 76h40'/><rect x='58' y='38' width='18' height='12' rx='4'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+/* het tekstvak: de zin met het woord vet; na het antwoord licht het contextsignaal op of vult het gat zich */
+.tv{max-width:58ch;width:100%;text-align:left;background:var(--kaart2);border-left:4px solid var(--spelkleur);border-radius:0 14px 14px 0;padding:14px 18px 14px 16px;font-size:1.08rem;line-height:1.65}
+.tv .w{color:var(--nadruk);font-weight:700}
+.tv .sig{border-radius:4px;padding:1px 2px;-webkit-box-decoration-break:clone;box-decoration-break:clone;transition:background .3s var(--ease)}
+.tv.toon .sig{background:var(--nadruk-zacht);box-shadow:inset 0 -2px 0 var(--nadruk)}
+.tv .gat{display:inline-block;min-width:5em;border-bottom:2px solid var(--ink);text-align:center;color:var(--muted);font-weight:600;line-height:1.2;margin:0 2px}
+.tv.toon .gat{color:var(--nadruk);border-bottom-color:var(--nadruk)}
+.tv .legenda{display:none;margin-top:8px;font-size:.78rem;color:var(--muted)}
+.tv.toon .legenda{display:block}
+.tv .legenda i{display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--nadruk-zacht);box-shadow:inset 0 -2px 0 var(--nadruk);vertical-align:-1px;margin-right:4px}
+/* het pictogram bij een schooltaalwoord */
+.pict{display:flex;align-items:center;gap:16px;background:var(--kaart2);border-radius:16px;padding:12px 20px}
+.pict svg{width:56px;height:56px;flex:none;color:var(--nadruk);fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.pict b{font-size:1.5rem;letter-spacing:-.01em}
+.pict small{display:block;color:var(--muted);font-size:.8rem;font-weight:500}
+/* het woord met de twee kanten */
+.wk{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;max-width:520px;width:100%}
+.wk .kant{background:var(--kaart2);border-radius:12px;padding:8px 10px;text-align:center;font-size:.8rem;color:var(--muted);font-weight:600}
+.wk .kant b{display:block;font-size:1.3rem;color:var(--ink);line-height:1.2}
+.wk .woord{background:var(--kaart-aan);border:2px solid var(--nadruk);color:var(--nadruk);border-radius:14px;padding:10px 18px;font-weight:700;font-size:1.3rem;text-align:center}
+body.groot .tv{font-size:1.3rem}
+body.groot .pict b{font-size:1.9rem}
+@media(max-width:560px){.tv{font-size:1rem;padding:12px 14px}.wk{gap:8px;grid-template-columns:1fr 1fr}.wk .woord{grid-column:1/-1;order:-1;padding:8px 10px;font-size:1.15rem}.wk .kant{overflow-wrap:anywhere}.wk .kant b{font-size:1.1rem}}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script src="woordenschat-opgaven.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon, W = WOORDENSCHAT;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  var NIV = { bb:1, kgt:2, hv:3 };
+  function bij(lijst, niveau){ var n = NIV[niveau] || 2, l = lijst.filter(function(x){ return x[0] === n; }); return kies(l.length ? l : lijst); }
+
+  /* de pictogrammen bij de schooltaalwoorden: 24 bij 24, lijnstijl */
+  var ICO = {
+    lijst:'<path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
+    lamp:'<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.7.6 1 1.3 1 2.1h5c0-.8.3-1.5 1-2.1A6 6 0 0 0 12 3z"/>',
+    oog:'<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+    weegschaal:'<path d="M12 3v18M5 21h14M12 6l-6 2M12 6l6 2"/><path d="M3 13l3-5 3 5a3 3 0 0 1-6 0zM15 13l3-5 3 5a3 3 0 0 1-6 0z"/>',
+    pijl:'<path d="M4 12h14M13 7l5 5-5 5"/><circle cx="4" cy="12" r="1.5"/>',
+    lijn:'<path d="M5 8h14M5 12h10"/><path d="M4 18h16"/>',
+    gat:'<path d="M4 8h5M15 8h5M4 12h16M4 16h11"/><rect x="9.5" y="6" width="5" height="4" rx="1" stroke-dasharray="2 1.5"/>',
+    oorzaak:'<circle cx="6" cy="12" r="3"/><path d="M9 12h6M13 9.5l3 2.5-3 2.5"/><circle cx="19" cy="12" r="2" stroke-dasharray="2 1.5"/>',
+    gevolg:'<circle cx="5" cy="12" r="2" stroke-dasharray="2 1.5"/><path d="M8 12h6M12 9.5l3 2.5-3 2.5"/><circle cx="18" cy="12" r="3"/>',
+    volgorde:'<rect x="3" y="4" width="5" height="5" rx="1"/><rect x="9.5" y="4" width="5" height="5" rx="1"/><rect x="16" y="4" width="5" height="5" rx="1"/><path d="M5.5 13v6h13M16 16.5l2.5 2.5L16 21.5"/>',
+    boek:'<path d="M4 4h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4z"/><path d="M20 4h-6a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h6z"/>',
+    vink:'<rect x="3" y="3" width="18" height="18" rx="4"/><path d="M7.5 12.5l3 3 6-7"/>',
+    reken:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 12h2M14 12h2M8 16h2M14 16h2"/>',
+    kern:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/>',
+    label:'<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>',
+    conclusie:'<path d="M4 4h16l-6 8v7l-4 2v-9z"/>',
+    argument:'<path d="M12 21V9M12 9l-5 5M12 9l5 5"/><path d="M5 4h14"/>',
+    doel:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/>',
+    verband:'<circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M8 8l8 8"/><circle cx="18" cy="6" r="3" stroke-dasharray="2 1.5"/>',
+    pen:'<path d="M4 20l4-1L19 8l-3-3L5 16z"/><path d="M14 7l3 3"/>',
+    tandwiel:'<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>',
+    standpunt:'<path d="M12 21V4"/><path d="M12 4h8l-2.5 3.5L20 11h-8"/>',
+    loep:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/>',
+    ster:'<path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2-5.5-2.9-5.5 2.9 1-6.2L3 9.6l6.2-.9z"/>',
+    kruis:'<circle cx="12" cy="12" r="9"/><path d="M8.5 8.5l7 7M15.5 8.5l-7 7"/>'
+  };
+  function pict(id, woord, onder){ return '<div class="pict"><svg viewBox="0 0 24 24" aria-hidden="true">' + (ICO[id] || ICO.lamp) + '</svg><div><b>' + S(woord) + '</b><small>' + S(onder) + '</small></div></div>'; }
+
+  /* na het antwoord: de motor zet de uitslag neer, dan licht het tekstvak op */
+  function naAntwoord(fn){
+    return function(){
+      var r = document.getElementById('reactie'); if (!r || !window.MutationObserver) return;
+      var mo = new MutationObserver(function(){ if (r.querySelector('.uitslagregel')){ mo.disconnect(); try { fn(); } catch (e){} } });
+      mo.observe(r, { childList:true });
+    };
+  }
+  function licht(){ var t = document.getElementById('tv'); if (t) t.classList.add('toon'); }
+  /* de zin met **woord** en {signaal} naar html */
+  function zinHtml(z){
+    return S(z).replace(/\*\*([^*]+)\*\*/g, '<b class="w">$1</b>').replace(/\{([^}]+)\}/g, '<span class="sig">$1</span>');
+  }
+  function woordUit(z){ var m = /\*\*([^*]+)\*\*/.exec(z); return m ? m[1] : ''; }
+
+  /* 1. uit de zin: wat betekent het vette woord hier */
+  function uitDeZin(niveau){
+    var x = bij(W.UIT, niveau), woord = woordUit(x[1]);
+    return {
+      onderdeel:'woordenschat: uit de zin', onderdeelNaam:'uit de zin', vorm:'meerkeuze', sleutel:'uit' + W.UIT.indexOf(x),
+      vraag: 'Wat betekent <b>' + S(woord) + '</b> in deze zin?',
+      opdracht: 'Kijk naar de rest van de zin: die geeft een aanwijzing.',
+      beeld: '<div class="tv" id="tv">' + zinHtml(x[1]) + '<span class="legenda"><i></i>de aanwijzing in de zin</span></div>',
+      opties: x.slice(2, 6).map(S), goed: 0,
+      uitleg: S(x[6]),
+      antwoordTekst: x[2],
+      na: naAntwoord(licht)
+    };
+  }
+  /* 2. gat: welk woord past in het gat */
+  function gat(niveau){
+    var x = bij(W.GAT, niveau);
+    return {
+      onderdeel:'woordenschat: gat', onderdeelNaam:'gat', vorm:'meerkeuze', sleutel:'gat' + W.GAT.indexOf(x),
+      vraag: 'Welk woord past in het gat?',
+      opdracht: 'Lees de hele zin: het deel na het gat zegt vaak wat er moet staan.',
+      beeld: '<div class="tv" id="tv">' + S(x[1]).replace('___', '<span class="gat" id="gatvak">…</span>') + '</div>',
+      opties: x.slice(2, 6).map(S), goed: 0,
+      uitleg: S(x[6]),
+      antwoordTekst: x[2],
+      na: naAntwoord(function(){ licht(); var g = document.getElementById('gatvak'); if (g) g.textContent = x[2]; })
+    };
+  }
+  /* 3. schooltaal: wat wordt er van je gevraagd */
+  function schooltaal(niveau){
+    var x = bij(W.SCHOOL, niveau);
+    return {
+      onderdeel:'woordenschat: schooltaal', onderdeelNaam:'schooltaal', vorm:'meerkeuze', sleutel:'school' + W.SCHOOL.indexOf(x),
+      vraag: 'In een toets staat: <b>' + S(x[1]) + '</b>. Wat moet je dan doen?',
+      opdracht: 'Schooltaal: de woorden waarmee een opdracht zegt wat voor antwoord er moet komen.',
+      beeld: pict(x[2], x[1], 'zo staat het in de opdracht'),
+      opties: x.slice(3, 7).map(S), goed: 0,
+      uitleg: S(x[7]),
+      antwoordTekst: x[3]
+    };
+  }
+  /* 4. tegenstelling of synoniem: sleep de woorden naar de goede kant */
+  function synAnt(niveau){
+    var x = bij(W.SYN, niveau), n = niveau === 'bb' ? 2 : 3;
+    var syn = H(x[2]).slice(0, n), ant = H(x[3]).slice(0, n);
+    var kaarten = syn.map(function(w, i){ return { id:'s' + i, tekst:S(w) }; }).concat(ant.map(function(w, i){ return { id:'a' + i, tekst:S(w) }; }));
+    return {
+      onderdeel:'woordenschat: tegenstelling of synoniem', onderdeelNaam:'tegenstelling of synoniem', vorm:'sleep', sleutel:'syn' + W.SYN.indexOf(x),
+      vraag: 'Welke woorden betekenen hetzelfde als <b>' + S(x[1]) + '</b>, en welke het tegenovergestelde?',
+      beeld: '<div class="wk"><div class="kant"><b>=</b>hetzelfde</div><div class="woord">' + S(x[1]) + '</div><div class="kant"><b>≠</b>tegenovergestelde</div></div>',
+      kaarten: kaarten,
+      vakken:[{ id:'syn', naam:'betekent hetzelfde', uit:'synoniem', hoort:syn.map(function(w, i){ return 's' + i; }) }, { id:'ant', naam:'betekent het tegenovergestelde', uit:'tegenstelling', hoort:ant.map(function(w, i){ return 'a' + i; }) }],
+      sleepuit: 'Sleep elk woord naar een vak. Op een telefoon: tik een woord aan en dan het vak.',
+      uitleg: S(x[4]),
+      antwoordTekst: 'hetzelfde: ' + syn.join(', ') + '; tegenovergestelde: ' + ant.join(', ')
+    };
+  }
+
+  var SOORTEN = { uit: uitDeZin, gat: gat, school: schooltaal, syn: synAnt };
+  VAKSPEL.maak({
+    id:'woordenschat', naam:'Woordenschat in context', vak:'ned', kleur:'#F26749',
+    hand:'de zin vertelt wat het woord betekent',
+    lead:'Een woord dat je niet kent, staat bijna nooit alleen: de zin eromheen geeft een aanwijzing. Je leest lastige woorden uit de zin, vult gaten, leert wat toetswoorden als verklaren en vergelijken van je vragen, en sorteert synoniemen en tegenstellingen.',
+    hoe:[
+      { kop:'Lees om het woord heen', tekst:'Na een dubbele punt, een <b>want</b> of een <b>dus</b> staat vaak precies wat het woord betekent. Zoek die aanwijzing eerst.' },
+      { kop:'Schooltaal', tekst:'Leg uit, verklaar, vergelijk, noem een kenmerk: elk toetswoord vraagt om een ander soort antwoord. Wie dat weet, scoort beter op elke toets.' },
+      { kop:'Vier soorten opgaven', tekst:'Uit de zin, gat, schooltaal en synoniem of tegenstelling. Tien per ronde, meteen nagekeken, met de aanwijzing oplichtend na je antwoord.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'Alledaagse woorden die net lastig zijn: schuw, uitgeput, behoedzaam.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Schooltaal uit boeken en toetsen: beknopt, sceptisch, stimuleren, verklaren.' },
+        { id:'hv', naam:'havo en vwo', uit:'Abstracte woorden: ambivalent, consequent, impliciet, plausibel.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' }, { id:'uit', naam:'uit de zin' }, { id:'gat', naam:'gat' }, { id:'school', naam:'schooltaal' }, { id:'syn', naam:'tegenstelling of synoniem' } ] }
+    ],
+    aantal:10,
+    maak:function(keuze, nr){
+      var soort = keuze.soort === 'alles' ? kies(['uit', 'gat', 'school', 'syn']) : keuze.soort;
+      return SOORTEN[soort](keuze.niveau);
+    },
+    uitleg:{ doel:'De betekenis van een woord afleiden uit de zin, en schooltaal begrijpen.', tijd:'tien opgaven per ronde', bediening:'Kies het antwoord dat klopt (of druk op 1 tot 4). Bij synoniem of tegenstelling sleep je de woorden; op een telefoon tik je een woord en dan het vak.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>

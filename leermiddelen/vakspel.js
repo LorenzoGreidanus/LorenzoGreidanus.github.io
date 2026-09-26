@@ -369,7 +369,65 @@ window.VAKSPEL = (function(){
   }
 
   function naLaden(fn){ if (document.readyState === 'complete') fn(); else addEventListener('load', fn); }
+
+  /* ---------- de werkbladstand ----------
+     Met ?werkblad=1 in het adres tekent de pagina geen spel, maar wacht hij in
+     een verborgen iframe op werkblad.html. Die vraagt de keuzes op en laat
+     opgaven maken, en krijgt ze terug als html: de vraag met het beeld en de
+     antwoordruimte, en het antwoord voor het antwoordblad. */
+  var LET = ['a', 'b', 'c', 'd', 'e', 'f'];
+  function werkbladItem(o){
+    var vr = '<span class="vr">' + (o.vraag || '') + '</span>' + (o.opdracht ? '<span class="opdr">' + o.opdracht + '</span>' : '') + (o.beeld ? '<div class="beeld">' + o.beeld + '</div>' : ''), antwoord = '';
+    if (o.vorm === 'meerkeuze'){
+      var lijst = o.opties.map(function(t, i){ return { t:t, i:i }; }); if (!o.vasteVolgorde) lijst = husselen(lijst);
+      vr += '<div class="opties">' + lijst.map(function(x, k){ return '<span><b>' + LET[k] + '</b>' + x.t + '</span>'; }).join('') + '</div>';
+      var k2 = 0; lijst.forEach(function(x, k){ if (x.i === o.goed) k2 = k; });
+      antwoord = LET[k2] + '. ' + o.opties[o.goed];
+    } else if (o.vorm === 'invul'){
+      vr += '<div class="velden-wb">' + o.velden.map(function(v){ return '<span class="veldlijn">' + schoon(v.label || '') + (v.voor ? ' ' + schoon(v.voor) : '') + ' <i class="lijn"></i>' + (v.eenheid ? ' ' + schoon(v.eenheid) : '') + '</span>'; }).join('') + '</div>';
+      antwoord = o.velden.map(function(v){ return (v.label ? v.label + ': ' : '') + toonAntwoord(v); }).join('; ');
+    } else if (o.vorm === 'sleep'){
+      var kaarten = o.vasteVolgorde ? o.kaarten.slice() : husselen(o.kaarten), let2 = {};
+      kaarten.forEach(function(k, i){ let2[k.id] = LET[i] || String(i + 1); });
+      vr += '<div class="sleep-wb"><p class="kaartjes-wb">' + kaarten.map(function(k){ return '<span><b>' + let2[k.id] + '</b>' + k.tekst + '</span>'; }).join('') + '</p>' +
+        '<p class="vakken-wb">' + o.vakken.map(function(v, i){ return '<span><b>' + (v.naam ? v.naam : 'vak ' + (i + 1)) + (v.uit ? ' <small>(' + schoon(v.uit) + ')</small>' : '') + '</b> <i class="lijn kort"></i></span>'; }).join('') + '</p>' +
+        '<p class="opdr">Schrijf bij elk vak de letters van de kaartjes die erin horen.</p></div>';
+      antwoord = o.vakken.map(function(v, i){ return (v.naam || 'vak ' + (i + 1)) + ': ' + (v.hoort || []).map(function(id){ return let2[id]; }).join(', '); }).join('; ');
+    } else if (o.vorm === 'eigen' && typeof o.teken === 'function'){
+      var d = document.createElement('div');
+      try { o.teken(d, { klaar:function(){}, knop:function(){ var b = document.createElement('button'); return b; }, uit:function(){}, bezig:function(){ return true; }, husselen:husselen, schoon:schoon, getal:getal }); } catch (e){}
+      Array.prototype.forEach.call(d.querySelectorAll('button, .nakijk, input[type=range]'), function(x){ x.parentNode.removeChild(x); });
+      Array.prototype.forEach.call(d.querySelectorAll('input'), function(x){ x.setAttribute('readonly', ''); x.value = ''; });
+      vr += '<div class="eigen-wb">' + d.innerHTML + '</div>';
+      antwoord = o.antwoordTekst || '';
+    }
+    return { kop: o.onderdeelNaam || o.onderdeel || '', vraag: vr, antwoord: antwoord || o.antwoordTekst || '', uitleg: (o.uitleg || '').replace(/<div[\s\S]*$/, '') };
+  }
+  function werkbladModus(c){
+    cfg = c;
+    document.body.innerHTML = '<p style="font:14px system-ui;padding:12px;color:#666">Dit venster maakt opgaven voor een werkblad. Open <a href="' + location.pathname + '">het spel zelf</a> om te oefenen.</p>';
+    var stijl = Array.prototype.map.call(document.querySelectorAll('style'), function(s){ return s.textContent; }).join('\n');
+    function stuur(b){ if (window.parent && window.parent !== window) window.parent.postMessage(b, '*'); }
+    addEventListener('message', function(e){
+      var b = e.data || {};
+      if (b.t === 'werkblad-keuzes') stuur({ t:'werkblad-keuzes', id:cfg.id, naam:cfg.naam, keuzes:(cfg.keuzes || []).map(function(k){ return { id:k.id, kop:k.kop, std:k.std, items:k.items.map(function(it){ return { id:it.id, naam:it.naam }; }) }; }), stijl:stijl });
+      if (b.t === 'werkblad-maak'){
+        var items = [], gezien = {}, keuze = b.keuze || {};
+        (cfg.keuzes || []).forEach(function(k){ if (keuze[k.id] === undefined) keuze[k.id] = k.std !== undefined ? k.std : k.items[0].id; });
+        for (var i = 0, p = 0; items.length < (b.n || 8) && p < (b.n || 8) * 12; p++){
+          var o = null; try { o = cfg.maak(Object.assign({}, keuze), items.length + 1); } catch (e){ o = null; }
+          if (!o) continue;
+          var sl = o.sleutel || (o.vraag + '|' + (o.antwoordTekst || '')); if (gezien[sl]) continue; gezien[sl] = true;
+          items.push(werkbladItem(o));
+        }
+        stuur({ t:'werkblad-maak', vraagId:b.vraagId, items:items });
+      }
+    });
+    stuur({ t:'werkblad-klaar', id:cfg.id });
+  }
+
   function maak(c){
+    if (/[?&]werkblad=1/.test(location.search)){ werkbladModus(c); return; }
     cfg = c;
     bouw();
     herinner();
