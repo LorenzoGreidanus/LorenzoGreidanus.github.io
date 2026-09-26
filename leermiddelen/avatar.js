@@ -150,7 +150,7 @@ window.AVATAR = (function(){
     cache[sleutel] = s;
     return s;
   }
-  /* opties.stemming: '' (gewoon), 'au' (net geraakt), 'blij' (goed gedaan) of 'sip' (jammer); de spellen kiezen die per moment.
+  /* opties.stemming: '' (gewoon), 'au' (net geraakt), 'blij' (goed gedaan), 'sip' (jammer) of 'oeps' (betrapt: grote ogen, o-mondje); de spellen kiezen die per moment.
      opties.klasse: extra klasse op de svg, zoals 'av-juich' voor een sprongetje. */
   function svg(naam, maat, spec, opties){
     maat = maat || 32;
@@ -166,16 +166,23 @@ window.AVATAR = (function(){
     var s = '<svg class="avatar' + (opties && opties.klasse ? ' ' + opties.klasse : '') + '" viewBox="-50 -50 100 100" overflow="visible" width="' + maat + '" height="' + maat + '" aria-hidden="true" focusable="false">';
     if (sp && sp.a) s += achtergrond(sp.a);
     s += '<g class="av-alles" style="animation-delay:-' + d1 + 's">';
-    s += '<g transform="rotate(' + draai + ')"><path d="' + blob(r, 46) + '" fill="' + kleur + '"/>';
-    /* een lichtere gloed bovenin, zoals het glimmetje op de ridder */
-    s += '<path d="M-40,-6 a40,40 0 0 1 80,0 z" fill="#fff" opacity=".14"/></g>';
+    var vorm = blob(r, 46), knip = 'avk' + hash(vorm).toString(36);
+    s += '<g transform="rotate(' + draai + ')"><path d="' + vorm + '" fill="' + kleur + '"/>';
+    /* een lichtere gloed bovenin, zoals het glimmetje op de ridder; afgeknipt op de vorm,
+       anders steekt hij op een donkere achtergrond als een grijze boog boven het gezicht uit */
+    s += '<clipPath id="' + knip + '"><path d="' + vorm + '"/></clipPath><path d="M-40,-6 a40,40 0 0 1 80,0 z" fill="#fff" opacity=".14" clip-path="url(#' + knip + ')"/></g>';
     /* de ogen: vijf soorten */
     var soort = Math.floor(r() * 5), kijk = (r() - 0.5) * 5, afstand = 15;
     if (sp) soort = sp.o % 5;
     if (stemming === 'blij') soort = 1;
     if (stemming === 'au') soort = 9;
+    if (stemming === 'oeps') soort = 8;
     s += '<g class="av-ogen" style="animation-delay:-' + d2 + 's">';
-    if (soort === 9){                 /* au: dichtgeknepen */
+    if (soort === 8){                 /* oeps: wijd open, kleine pupillen die rondkijken */
+      s += '<circle cx="-' + afstand + '" cy="-5" r="11" fill="' + oog + '"/><circle cx="' + afstand + '" cy="-5" r="11" fill="' + oog + '"/>';
+      s += '<circle cx="-' + afstand + '" cy="-4" r="4.2" class="av-pupil" fill="' + pupil + '"/><circle cx="' + afstand + '" cy="-4" r="4.2" class="av-pupil" fill="' + pupil + '"/>';
+      s += '<circle cx="-' + (afstand - 1.6) + '" cy="-5.6" r="1.3" class="av-pupil" fill="#fff"/><circle cx="' + (afstand + 1.6) + '" cy="-5.6" r="1.3" class="av-pupil" fill="#fff"/>';
+    } else if (soort === 9){                 /* au: dichtgeknepen */
       s += '<path d="M-23,-11 L-12,-4 L-23,3 M23,-11 L12,-4 L23,3" fill="none" stroke="' + oog + '" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>';
     } else if (soort === 1){          /* blij: boogjes */
       s += '<path d="M-22,-4 q7,-9 14,0 M8,-4 q7,-9 14,0" fill="none" stroke="' + oog + '" stroke-width="4.5" stroke-linecap="round"/>';
@@ -195,6 +202,8 @@ window.AVATAR = (function(){
       s += '<circle cx="' + (-afstand + kijk).toFixed(1) + '" cy="-4" r="4" class="av-pupil" fill="' + pupil + '"/><circle cx="' + (afstand + kijk).toFixed(1) + '" cy="-4" r="4" class="av-pupil" fill="' + pupil + '"/>';
     }
     s += '</g>';
+    /* oeps: de wenkbrauwen schieten omhoog, net niet recht */
+    if (stemming === 'oeps') s += '<path d="M-26,-21 q10,-10 21,-4 M6,-25 q10,-5 20,3" fill="none" stroke="' + oog + '" stroke-width="3.6" stroke-linecap="round"/>';
     if (sp && sp.q) s += bril(sp.q);
     /* de mond: lach, klein rondje, of een streepje */
     var m = Math.floor(r() * 4);
@@ -202,7 +211,10 @@ window.AVATAR = (function(){
     if (stemming === 'blij') m = 3;
     if (stemming === 'au') m = 1;
     if (stemming === 'sip') m = 4;
-    if (m === 0) s += '<path d="M-10,12 q10,10 20,0" fill="none" stroke="' + mond + '" stroke-width="4" stroke-linecap="round"/>';
+    if (stemming === 'oeps') m = 5;
+    if (m === 5) s += '<ellipse cx="3" cy="17" rx="5" ry="6.5" fill="' + mond + '"/><circle cx="-27" cy="9" r="5.5" fill="#F26749" opacity=".5"/><circle cx="27" cy="9" r="5.5" fill="#F26749" opacity=".5"/>' +
+      '<path d="M37,-27 q6,9 0,13 q-6,-4 0,-13 z" fill="#83A5F2" stroke="#14224C" stroke-width="1.2" stroke-opacity=".35"/>';
+    else if (m === 0) s += '<path d="M-10,12 q10,10 20,0" fill="none" stroke="' + mond + '" stroke-width="4" stroke-linecap="round"/>';
     else if (m === 1) s += '<circle cx="0" cy="14" r="4.5" fill="' + mond + '"/>';
     else if (m === 2) s += '<path d="M-7,13 h14" fill="none" stroke="' + mond + '" stroke-width="4" stroke-linecap="round"/>';
     else if (m === 4) s += '<path d="M-10,17 q10,-9 20,0" fill="none" stroke="' + mond + '" stroke-width="4" stroke-linecap="round"/>';
