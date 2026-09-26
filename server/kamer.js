@@ -1191,18 +1191,33 @@ export class Kamer extends DurableObject {
   }
   /* De instellingen van een klas: welke spellen de leerlingen zien, en of de lesmodus aanstaat.
      Leeg lijstje betekent: alles mag. In de lesmodus ziet een gekoppelde leerling alleen die spellen. */
+  /* De lesmodus geldt tot het eind van de dag waarop hij aanging: om middernacht,
+     Nederlandse tijd, staat hij vanzelf weer uit. Een docent die vergeet hem uit te
+     zetten, sluit zo de volgende dag zijn klas niet op in de spellen van gisteren.
+     Een klas van voor deze regel (zonder eindtijd) blijft aan tot hij wordt omgezet. */
+  lesmodusAan(){ return !!this.stand.lesmodus && (!this.stand.lesmodusTot || Date.now() < this.stand.lesmodusTot); }
+  static eindVanDeDag(nu){
+    const d = new Date(nu), p = {};
+    new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Amsterdam", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" })
+      .formatToParts(d).forEach(x => { p[x.type] = x.value; });
+    const muur = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
+    return Date.UTC(+p.year, +p.month - 1, +p.day + 1, 0, 0, 0) - (muur - Math.floor(nu / 1000) * 1000);
+  }
   async instelling(inz){
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
     if (!inz || inz.sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
     if (Array.isArray(inz.spellen)) this.stand.spellen = inz.spellen.slice(0, 60).map(x => schoon(x, 30).replace(/[^a-z0-9-]/g, "")).filter(Boolean);
-    if (typeof inz.lesmodus === "boolean") this.stand.lesmodus = inz.lesmodus;
+    if (typeof inz.lesmodus === "boolean"){
+      this.stand.lesmodus = inz.lesmodus;
+      if (inz.lesmodus) this.stand.lesmodusTot = Kamer.eindVanDeDag(Date.now()); else delete this.stand.lesmodusTot;
+    }
     /* het klasdoel: zoveel goede antwoorden deze week, samen; 0 zet het uit */
     if (inz.klasdoel !== undefined){
       const d = getal(inz.klasdoel, 20000);
       if (d > 0) this.stand.klasdoel = d; else delete this.stand.klasdoel;
     }
     await this.bewaar();
-    return json({ ok: true, spellen: this.stand.spellen || [], lesmodus: !!this.stand.lesmodus, klasdoel: this.klasdoelStand() });
+    return json({ ok: true, spellen: this.stand.spellen || [], lesmodus: this.lesmodusAan(), lesmodusTot: this.lesmodusAan() ? (this.stand.lesmodusTot || 0) : 0, klasdoel: this.klasdoelStand() });
   }
   /* De periodes van de docent: zelf ingestelde stukken van het jaar, met een
      naam en een begin- en einddatum. Ze doen niets met wat er bewaard wordt;
@@ -1279,7 +1294,7 @@ export class Kamer extends DurableObject {
     let s = schoon(sid, 40).slice(0, 12);
     /* een tweede apparaat dat al is samengevoegd, ziet de voortgang van de leerling zelf */
     if (this.stand.alias && this.stand.alias[s]) s = this.stand.alias[s];
-    const opzet = { spellen: this.stand.spellen || [], lesmodus: !!this.stand.lesmodus, naam: this.stand.naam,
+    const opzet = { spellen: this.stand.spellen || [], lesmodus: this.lesmodusAan(), naam: this.stand.naam,
       /* zat deze leerling bij de eigenaar van de site in de klas? */
       oudleerling: !!this.stand.vanEigenaar, klasdoel: this.klasdoelStand(s) };
     const mijn = this.stand.resultaten.filter(r => r.sid === s);
@@ -1328,7 +1343,7 @@ export class Kamer extends DurableObject {
     const opdrachten = this.opdrachtLijst();
     return json({ code: this.stand.code, naam: this.stand.naam, gemaakt: this.stand.gemaakt, opdracht: opdrachten[0] || null, opdrachten,
                   klasdoel: this.klasdoelStand(),
-                  spellen: this.stand.spellen || [], lesmodus: !!this.stand.lesmodus,
+                  spellen: this.stand.spellen || [], lesmodus: this.lesmodusAan(), lesmodusTot: this.lesmodusAan() ? (this.stand.lesmodusTot || 0) : 0,
                   periodes: this.stand.periodes || [], echt: this.stand.echt || {},
                   leerlingen: this.gekoppeld(),
                   /* elke uitslag onder de huidige bijnaam van de leerling: wie van naam wisselde of op een tweede apparaat speelde, staat er zo een keer in */

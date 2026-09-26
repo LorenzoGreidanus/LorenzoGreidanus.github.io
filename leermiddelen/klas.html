@@ -232,7 +232,34 @@ td.getal{font-variant-numeric:tabular-nums;text-align:right}
 #ovNaam{font-size:1.75rem}
 .ovcode{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin-top:8px}
 .ovcode .code{font-size:1.25rem;letter-spacing:.16em;padding:4px 10px;border-radius:10px}
-.ovcode .code.groot{font-size:clamp(2.6rem,11vw,5rem);padding:12px 20px;border-radius:16px;flex-basis:100%;text-align:center}
+/* Nu in de les: wat je vlak voor de bel nodig hebt, in een strook direct onder de klasnaam */
+.nuindeles{display:grid;grid-template-columns:auto 1fr auto;gap:12px 22px;align-items:center;margin-top:16px;padding:14px 16px;border-radius:16px;background:var(--kaart2);border:1.5px solid var(--rand)}
+.nuindeles .bordknop{min-height:48px;padding:0 20px;font-size:1rem;white-space:nowrap}
+.nuindeles .lesmodus{margin-top:0;min-height:48px}
+.nuindeles .lesmodus span{color:var(--ink)}
+.nuindeles .lesmodus small{display:block;color:var(--muted);font-size:.84rem;font-weight:500}
+.nuindeles .binnen{text-align:right;font-size:.9rem;line-height:1.35}
+.nuindeles .binnen b{font-size:1.25rem;font-variant-numeric:tabular-nums}
+.nuindeles .binnen button{margin-top:2px}
+@media(max-width:760px){ .nuindeles{grid-template-columns:1fr} .nuindeles .binnen{text-align:left} .nuindeles .bordknop{width:100%} }
+/* het label naast de klasnaam zolang de lesmodus aanstaat */
+.lespil{display:inline-flex;align-items:center;gap:6px;vertical-align:middle;margin-left:10px;padding:3px 11px;border-radius:999px;background:var(--ocean);color:#fff;font-size:.78rem;font-weight:700;letter-spacing:.02em;font-family:inherit}
+.lespil::before{content:"";width:7px;height:7px;border-radius:999px;background:#fff}
+.lespil[hidden]{display:none}
+@media print{ .nuindeles,.lespil{display:none !important} }
+/* het bordscherm: alleen wat de klas moet zien, niets van de uitslagen */
+.bord{border:none;padding:0;margin:0;width:100vw;height:100vh;max-width:none;max-height:none;background:var(--room);color:var(--ink)}
+.bord::backdrop{background:var(--room)}
+.bord .bordbinnen{min-height:100%;display:grid;place-items:center;align-content:center;gap:clamp(10px,2.4vh,28px);padding:clamp(20px,5vw,64px);text-align:center}
+.bord .hand{font-size:clamp(1.4rem,3vw,2.2rem)}
+.bord .bordstap{font-size:clamp(1.1rem,2.6vw,2rem);font-weight:600;max-width:32ch;line-height:1.3}
+.bord .bordadres{font-size:clamp(1.5rem,4.4vw,3.4rem);font-weight:700;letter-spacing:-.01em;color:var(--ocean);overflow-wrap:normal}
+.bord .bordcode{font-size:clamp(4.5rem,19vw,15rem);font-weight:700;letter-spacing:.14em;line-height:1;font-variant-numeric:tabular-nums;background:var(--kaart);border:3px solid var(--ink);border-radius:clamp(18px,3vw,36px);padding:.08em .22em .12em .36em}
+.bord .bordtel{font-size:clamp(1rem,2.2vw,1.6rem);color:var(--muted);font-weight:600}
+.bord .bordtel b{color:var(--ink);font-variant-numeric:tabular-nums}
+.bord .bordklaar{position:fixed;top:clamp(12px,2vw,24px);right:clamp(12px,2vw,24px);min-height:48px;padding:0 24px;font-size:1rem}
+:root[data-theme="dark"] .bord .bordadres{color:var(--vista,#83A5F2)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .bord .bordadres{color:var(--vista,#83A5F2)}}
 .voorles{margin-top:24px;background:var(--kaart2);border-radius:16px;padding:16px}
 .voorles .tip{margin-top:8px}
 .filters{margin-top:24px;background:var(--kaart2);border-radius:16px;padding:12px 14px;display:grid;grid-template-columns:minmax(0,1fr);gap:8px;overflow:hidden}
@@ -539,9 +566,8 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
   <section class="kaart hide" id="overzicht">
     <div class="ovkop">
       <div class="ovnaam">
-        <h2 id="ovNaam">klas</h2>
+        <h2><span id="ovNaam">klas</span><span class="lespil" id="lesPil" hidden>Lesmodus staat aan</span></h2>
         <p class="ovcode"><span class="tip">klascode</span> <span class="code" id="ovCode">····</span>
-          <button class="linkknop" id="codeGroot" type="button" aria-pressed="false">Groot op het bord</button>
           <button class="linkknop" id="naamLink" type="button">Naam wijzigen</button></p>
       </div>
       <div class="rij knopjes">
@@ -549,6 +575,11 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
         <button class="knop stil klein" id="csvBtn" type="button">Download als CSV</button>
         <button class="knop stil klein" id="printBtn" type="button">Print dit overzicht</button>
       </div>
+    </div>
+    <div class="nuindeles" id="nuLes" role="group" aria-label="Nu in de les">
+      <button class="knop bordknop" id="bordOpen" type="button" aria-haspopup="dialog">Code op het bord</button>
+      <label class="lesmodus"><input type="checkbox" role="switch" id="nuLesVink" aria-describedby="nuLesUit"> <span><b>Lesmodus</b><small id="nuLesUit">uit: je klas ziet alle spellen</small></span></label>
+      <div class="binnen" id="nuBinnen"></div>
     </div>
     <p class="tip" id="ovUit" style="margin-top:8px"></p>
     <div class="voorbeeldvak hide" id="voorbeeldvak"></div>
@@ -721,6 +752,17 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     </div>
   </section>
   <p class="tip meldregel" id="meldRegel" role="status" aria-live="polite"></p>
+  <dialog class="bord" id="bordScherm" aria-labelledby="bordKop">
+    <div class="bordbinnen">
+      <p class="hand" aria-hidden="true">doe mee</p>
+      <p class="bordstap" id="bordKop">Ga naar</p>
+      <p class="bordadres">meneergreidanus.nl/<wbr>leermiddelen</p>
+      <p class="bordstap">Tik rechtsboven op het rondje met het gezichtje en vul deze code in:</p>
+      <p class="bordcode" id="bordCode">····</p>
+      <p class="bordtel" id="bordTel" aria-live="polite"></p>
+    </div>
+    <button class="knop stil bordklaar" id="bordKlaar" type="button">Klaar</button>
+  </dialog>
   <dialog class="dialoog" id="ophefDialoog" aria-labelledby="ophefKop">
     <h2 id="ophefKop">Klascode opheffen</h2>
     <p>Hiermee verdwijnen <b id="ophefNaam"></b> en alle uitslagen van de server. Je leerlingen zijn losgekoppeld. Dit is niet terug te draaien.</p>
@@ -968,7 +1010,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     tekenVergeet();
     /* geen uitslagen van de vorige klas laten staan terwijl deze laadt */
     data = null; $('overzicht').classList.remove('zonderdata');
-    $('ovCode').classList.remove('groot'); $('codeGroot').setAttribute('aria-pressed', 'false'); $('codeGroot').textContent = 'Groot op het bord';
+    $('bordCode').textContent = huidig.code;
     leesPeriode(); spelFilter = ''; vakFilter = ''; odStand = ''; niveauFilter = '';
     periodeOpen(false);
     haal();
@@ -1121,7 +1163,9 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     tekenDoel();
     tekenEcht();
     /* alleen bij het openen van een klas overnemen; anders overschrijft een verversing wat je net aanklikte */
-    if (data && huidig && keuzeVoor !== huidig.code){ keuzeVoor = huidig.code; keuzeSpellen = Array.isArray(data.spellen) ? data.spellen.slice() : []; lesmodus = !!data.lesmodus; tekenKeuze(); }
+    if (data && huidig && keuzeVoor !== huidig.code){ keuzeVoor = huidig.code; keuzeSpellen = Array.isArray(data.spellen) ? data.spellen.slice() : []; lesmodus = !!data.lesmodus; lesmodusTot = data.lesmodusTot || 0; tekenKeuze(); }
+    else tekenLesmodus();
+    tekenNuLes();
     $('rijen').innerHTML = lijst.length ? lijst.map(function(r){
       return '<tr><td>' + (window.AVATAR ? AVATAR.svg(r.naam, 24, r.av) : '') + wieHtml(r.naam) + '</td><td>' + schoon(SPELLEN[r.spel] || r.spel) + '</td><td class="getal">' + r.ronde + '</td><td class="getal">' + r.punten + '</td><td>' + schoon(NIVEAUS[r.niveau] || r.niveau || '') + '</td><td>' + schoon(r.vak ? vakNaam(r.vak) : '') + '</td><td>' + new Date(r.t).toLocaleString('nl-NL', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) + '</td></tr>';
     }).join('') : '<tr><td colspan="7" class="leeg">Nog geen potjes.</td></tr>';
@@ -1812,7 +1856,19 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     ['Biologie', ['kruisen', 'voedselweb', 'lichaam', 'organisme']],
     ['Samenleving en economie', ['democratie', 'partijen', 'verkiezingen', 'vraagenaanbod', 'huishoudboekje', ]]
   ];
-  var keuzeSpellen = [], lesmodus = false, keuzeVoor = null;   /* keuzeVoor: van welke klas de keuze in het scherm staat */
+  var keuzeSpellen = [], lesmodus = false, lesmodusTot = 0, keuzeVoor = null;   /* keuzeVoor: van welke klas de keuze in het scherm staat */
+  /* de lesmodus geldt tot het eind van de dag; de server zet hem dan uit, hier telt dezelfde tijd */
+  function eindVanVandaag(){ var d = new Date(); d.setHours(24, 0, 0, 0); return d.getTime(); }
+  function lesmodusNu(){ return lesmodus && (!lesmodusTot || Date.now() < lesmodusTot); }
+  function tekenLesmodus(){
+    var aan = lesmodusNu(), n = keuzeSpellen.length;
+    $('lesVink').checked = aan; $('nuLesVink').checked = aan;
+    $('lesPil').hidden = !aan;
+    $('nuLesUit').textContent = aan
+      ? 'aan tot het eind van de dag · ' + (n ? n + (n === 1 ? ' spel' : ' spellen') : 'alle spellen')
+      : 'uit: je klas ziet ' + (n ? 'je ' + n + ' gekozen ' + (n === 1 ? 'spel' : 'spellen') + ' bovenaan' : 'alle spellen');
+  }
+  function zetLesmodus(aan){ lesmodus = aan; lesmodusTot = aan ? eindVanVandaag() : 0; tekenKeuze(); bewaarInstelling(); }
   function tekenKeuze(){
     var doel = $('spelKeuze'); if (!doel) return;
     var naam = {}; KLASSPELLEN.forEach(function(s){ naam[s[0]] = s[1]; });
@@ -1829,20 +1885,21 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
         tekenKeuze(); bewaarInstelling();
       });
     });
-    $('lesVink').checked = lesmodus;
+    tekenLesmodus();
     $('keuzeStatus').textContent = keuzeSpellen.length
-      ? keuzeSpellen.length + (keuzeSpellen.length === 1 ? ' spel gekozen.' : ' spellen gekozen.') + (lesmodus ? ' De lesmodus staat aan: ze zien alleen deze.' : ' Ze staan bovenaan; de rest kan de leerling uitklappen.')
+      ? keuzeSpellen.length + (keuzeSpellen.length === 1 ? ' spel gekozen.' : ' spellen gekozen.') + (lesmodusNu() ? ' De lesmodus staat aan tot het eind van de dag: ze zien alleen deze.' : ' Ze staan bovenaan; de rest kan de leerling uitklappen.')
       : 'Niets gekozen, dus je klas ziet alle spellen.';
   }
   function bewaarInstelling(){
     if (!huidig || DEMO) return;
     fetch('/api/klas/' + huidig.code + '/instelling', { method:'POST', headers:{ 'content-type':'application/json' },
-      body:JSON.stringify({ sleutel:huidig.sleutel, spellen:keuzeSpellen, lesmodus:lesmodus }) })
+      body:JSON.stringify({ sleutel:huidig.sleutel, spellen:keuzeSpellen, lesmodus:lesmodusNu() }) })
       .then(function(r){ return r.json(); })
-      .then(function(j){ if (j && j.fout) $('keuzeStatus').textContent = j.fout; })
+      .then(function(j){ if (j && j.fout){ $('keuzeStatus').textContent = j.fout; return; } if (j && typeof j.lesmodus === 'boolean'){ lesmodus = j.lesmodus; lesmodusTot = j.lesmodusTot || 0; tekenLesmodus(); } })
       .catch(function(){ $('keuzeStatus').textContent = 'Opslaan lukte niet: geen verbinding. Controleer je internet en probeer het opnieuw.'; });
   }
-  $('lesVink').addEventListener('change', function(){ lesmodus = $('lesVink').checked; tekenKeuze(); bewaarInstelling(); });
+  $('lesVink').addEventListener('change', function(){ zetLesmodus($('lesVink').checked); });
+  $('nuLesVink').addEventListener('change', function(){ zetLesmodus($('nuLesVink').checked); });
 
   /* ---------- de opdracht ---------- */
   var OP_SPEL = { race:'Vragenrace', toren:'Torenverdediging', zwaard:'Zwaardvechter' };
@@ -1940,11 +1997,32 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     $('klasNaam').focus();
     $('beginnen').scrollIntoView({ block:'start' });
   });
-  $('codeGroot').addEventListener('click', function(){
-    var aan = $('ovCode').classList.toggle('groot');
-    this.setAttribute('aria-pressed', aan ? 'true' : 'false');
-    this.textContent = aan ? 'Weer klein' : 'Groot op het bord';
+  /* ---------- Nu in de les ---------- */
+  /* het bordscherm: alleen de code, het adres en hoeveel er binnen zijn; nooit namen of uitslagen */
+  function vandaagBegin(){ var d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); }
+  function binnenTelling(){
+    var l = (data && data.leerlingen) || [], vanaf = vandaagBegin(), actief = {};
+    ((data && data.resultaten) || []).forEach(function(r){ if (r.t >= vanaf) actief[r.naam] = 1; });
+    var vandaag = l.filter(function(x){ return actief[x.naam] || (x.sinds && x.sinds >= vanaf); }).length;
+    return { gekoppeld: l.length, vandaag: vandaag };
+  }
+  function tekenNuLes(){
+    if (!huidig) return;
+    var t = binnenTelling();
+    $('nuBinnen').innerHTML = '<b>' + t.gekoppeld + '</b> gekoppeld' + (t.gekoppeld ? ' · <b>' + t.vandaag + '</b> vandaag actief' : '') +
+      '<br><button class="linkknop" type="button" id="naarKoppel">' + (t.gekoppeld ? 'Wie is er?' : 'Hoe koppelen ze?') + '</button>';
+    $('bordTel').innerHTML = t.gekoppeld ? '<b>' + t.gekoppeld + '</b> ' + (t.gekoppeld === 1 ? 'leerling' : 'leerlingen') + ' in deze klas · <b>' + t.vandaag + '</b> vandaag al bezig' : 'Nog niemand in deze klas. Jij bent de eerste!';
+    $('naarKoppel').addEventListener('click', function(){ zetTab('kort'); var v = $('koppelVak'); if (v) v.scrollIntoView({ block:'start', behavior:'smooth' }); });
+  }
+  $('bordOpen').addEventListener('click', function(){
+    if (!huidig) return;
+    $('bordCode').textContent = huidig.code; tekenNuLes();
+    var d = $('bordScherm');
+    if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+    $('bordKlaar').focus({ preventScroll:true });
   });
+  $('bordKlaar').addEventListener('click', function(){ var d = $('bordScherm'); if (d.close) d.close(); else d.removeAttribute('open'); });
+  $('bordScherm').addEventListener('close', function(){ $('bordOpen').focus({ preventScroll:true }); });
   /* ---------- de naam van de klas ---------- */
   function zetNaamHier(naam){
     if (!huidig) return;
