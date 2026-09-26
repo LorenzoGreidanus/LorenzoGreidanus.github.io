@@ -642,6 +642,10 @@ a:focus-visible,button:focus-visible,input:focus-visible,summary:focus-visible{o
 .leegvakken{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:12px}
 .leegvakken button{display:inline-flex;align-items:center;gap:7px;min-height:44px;padding:6px 12px;border-radius:999px;border:1.5px solid var(--rand2,rgba(20,34,76,.16));background:var(--kaart);color:var(--ink);font:inherit;font-size:.86rem;font-weight:500;cursor:pointer}
 .leegvakken button i{width:10px;height:10px;border-radius:50%}
+/* onder een vak: waar de spellen voor elk vak staan */
+.ookoveral{margin:6px 0 0;font-size:.88rem;color:var(--muted);display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}
+.ookoveral button{min-height:44px;padding:6px 14px;border-radius:999px;border:1.5px solid var(--rand2,rgba(20,34,76,.16));background:var(--kaart);color:var(--ink);font:inherit;font-weight:500;cursor:pointer}
+.ookoveral button:hover{border-color:var(--ink)}
 /* de profiellade: bewaren en de speelcode als andere manier */
 #gezichtlade:focus,#gezichtlade:focus-visible{outline:none}
 .reeksen+.spellen{margin-top:16px}
@@ -1393,7 +1397,7 @@ var SPELLEN = [
   }
 
   /* ---------- de kolom links ---------- */
-  function aantalIn(vakId){ return SPELLEN.filter(function(s){ return s.bestand && hoortBij(s, vakId); }).length; }
+  function aantalIn(vakId){ return SPELLEN.filter(function(s){ return s.bestand && hoortBij(s, vakId) && !isBreed(s); }).length; }
   function rij(opties){
     return '<button type="button" class="rij' + (opties.on ? ' on' : '') + '" aria-pressed="' + (opties.on ? 'true' : 'false') + '" ' + opties.data + (opties.uit ? ' disabled' : '') +
       (opties.titel ? ' title="' + schoon(opties.titel) + '"' : '') + '>' +
@@ -1477,7 +1481,8 @@ var SPELLEN = [
     var woorden = plat(stand.zoek).split(/\s+/).filter(Boolean);
     return SPELLEN.filter(function(sp){
       if (!sp.bestand) return false;
-      if (stand.vak !== 'alle' && !hoortBij(sp, stand.vak)) return false;
+      /* bij een vak alleen wat bij dat vak hoort; de spellen voor elk vak staan een keer, onder Alle vakken */
+      if (stand.vak !== 'alle' && (!hoortBij(sp, stand.vak) || isBreed(sp))) return false;
       if (stand.soort !== 'alles' && soortVan(sp) !== stand.soort && !(stand.soort === 'samen' && OOK_SAMEN[sp.bestand.replace('.html', '')])) return false;
       if (stand.tv && tvLijst(sp).indexOf(stand.tv) < 0) return false;
       if (woorden.length){
@@ -1848,19 +1853,18 @@ var SPELLEN = [
         if (!mijn.length) return;
         kleurNu = v.kleur;
         if (v.id === 'geschiedenis') mijn = opTijd(mijn);
-        /* De zijkolom telt ook de spellen voor elk vak mee (die zie je als je het
-           vak kiest). Hier staan ze niet nog een keer, dus zeggen we hoe het zit. */
-        var breed = lijst.filter(function(sp){ return isBreed(sp) && hoortBij(sp, v.id); }).length;
-        s += sectieKort(v.ico, v.kleur, v.naam, '', mijn, v.id, mijn.length + (mijn.length === 1 ? ' spel' : ' spellen') + (breed ? ' + ' + breed + ' voor elk vak' : ''));
+        s += sectieKort(v.ico, v.kleur, v.naam, '', mijn, v.id, mijn.length + (mijn.length === 1 ? ' spel' : ' spellen'));
       });
     } else {
       var v2 = vakVan(stand.vak);
-      /* de spellen van dit vak eerst; wat voor elk vak is, staat erachter */
-      var eigen = lijst.filter(function(sp){ return !isBreed(sp); }).concat(lijst.filter(isBreed));
-      s += sectie(v2.ico, v2.kleur, v2.naam, stand.soort !== 'alles' ? soortNaam(stand.soort).toLowerCase() : '', lijst.length, eigen);
+      s += sectie(v2.ico, v2.kleur, v2.naam, stand.soort !== 'alles' ? soortNaam(stand.soort).toLowerCase() : '', lijst.length, lijst);
     }
+    /* een regel die zegt waar Torenverdediging en de andere spellen voor elk vak staan */
+    if (stand.vak !== 'alle') s += '<p class="ookoveral">Spellen waarin je zelf het vak kiest, zoals Torenverdediging en Zwaardvechter, staan bij <button type="button" id="naarAlle">Alle vakken</button></p>';
     kleurNu = '';
     $('secties').innerHTML = s;
+    var na = $('naarAlle');
+    if (na) na.addEventListener('click', function(){ stand.vak = 'alle'; stand.tv = 0; alles(); $('secties').scrollIntoView({ block:'start', behavior: magBewegen ? 'smooth' : 'auto' }); });
     var ab = $('alleBeleef');
     if (ab) ab.addEventListener('click', function(){ stand.soort = 'beleven'; alles(); $('secties').scrollIntoView({ block:'start', behavior: magBewegen ? 'smooth' : 'auto' }); });
     Array.prototype.forEach.call($('secties').querySelectorAll('[data-meer]'), function(b){
