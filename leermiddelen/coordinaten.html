@@ -26,14 +26,25 @@
 <link rel="stylesheet" href="basis.css">
 <link rel="stylesheet" href="spel.css">
 <style>
-.rooster{width:min(100%,460px);height:auto;display:block;font-family:inherit;touch-action:manipulation}
+.rooster{width:min(100%,460px);height:auto;display:block;margin-inline:auto;font-family:inherit;touch-action:manipulation}
 .rooster .lijn{stroke:var(--rand2);stroke-width:1}
 .rooster .as{stroke:var(--ink);stroke-width:2}
 .rooster text{fill:var(--muted);font-size:12px;font-weight:600}
 .rooster .punt{fill:var(--nadruk)}
 .rooster .punt.spiegel{fill:var(--amber)}
-.rooster .tik{fill:transparent;cursor:pointer}
-.rooster .tik:hover{fill:var(--nadruk-zacht)}
+.rooster.tikbaar{cursor:pointer}
+/* de cursor: waar de muis zweeft, of waar je met de pijltjes staat */
+.rooster .cursor{fill:var(--nadruk-zacht);stroke:var(--ink);stroke-width:2;pointer-events:none;display:none}
+.rooster.zweeft .cursor,.rooster:focus-visible .cursor{display:inline}
+.rooster:focus{outline:none}
+.rooster:focus-visible{outline:3px solid var(--focusring,#B4701A);outline-offset:3px;border-radius:8px}
+/* op een telefoon: de stip met knoppen een punt verschuiven, want de roosterpunten liggen te dicht bij elkaar voor een vinger */
+.schuif{display:none}
+.schuif button{min-width:52px;min-height:44px;border:1.5px solid var(--rand2);border-radius:12px;background:var(--kaart);color:var(--ink);font-size:1.15rem;font-weight:600}
+.schuif button:disabled{opacity:.5;cursor:default}
+@media screen and (max-width:699px), screen and (pointer:coarse){
+  .schuif{display:flex;justify-content:center;gap:8px;margin-top:10px}
+}
 .rooster .stip{fill:var(--crab);stroke:var(--kaart);stroke-width:2;pointer-events:none}
 .rooster .stip.goed{fill:var(--goed)}
 .rooster .stip.fout{fill:var(--fout)}
@@ -63,7 +74,13 @@
   function rooster(o){
     var b = o.b, stap = 36, L = 30, T = 16, W = (b.x1 - b.x0) * stap + L + 20, Hh = (b.y1 - b.y0) * stap + T + 30;
     function X(x){ return L + (x - b.x0) * stap; } function Y(y){ return T + (b.y1 - y) * stap; }
-    var s = '<svg class="rooster" viewBox="0 0 ' + W + ' ' + Hh + '" role="img" aria-label="assenstelsel">';
+    /* van een plek in de svg naar het dichtstbijzijnde roosterpunt; ver buiten het rooster (bij de getallen) is geen punt */
+    function punt(px, py){
+      var fx = (px - L) / stap, fy = (py - T) / stap;
+      if (fx < -0.7 || fx > b.x1 - b.x0 + 0.7 || fy < -0.7 || fy > b.y1 - b.y0 + 0.7) return null;
+      return [Math.max(b.x0, Math.min(b.x1, b.x0 + Math.round(fx))), Math.max(b.y0, Math.min(b.y1, b.y1 - Math.round(fy)))];
+    }
+    var s = '<svg class="rooster' + (o.tikbaar ? ' tikbaar" tabindex="0" role="application" aria-label="assenstelsel: kies een punt met de pijltjes, Enter zet de stip"' : '" role="img" aria-label="assenstelsel"') + ' viewBox="0 0 ' + W + ' ' + Hh + '">';
     for (var x = b.x0; x <= b.x1; x++) s += '<line class="' + (x === 0 ? 'as' : 'lijn') + '" x1="' + X(x) + '" y1="' + Y(b.y1) + '" x2="' + X(x) + '" y2="' + Y(b.y0) + '"/>';
     for (var y = b.y0; y <= b.y1; y++) s += '<line class="' + (y === 0 ? 'as' : 'lijn') + '" x1="' + X(b.x0) + '" y1="' + Y(y) + '" x2="' + X(b.x1) + '" y2="' + Y(y) + '"/>';
     for (x = b.x0; x <= b.x1; x++) if (x !== 0 || b.x0 === 0) s += '<text x="' + X(x) + '" y="' + (Y(b.y0) + 16) + '" text-anchor="middle">' + x + '</text>';
@@ -74,9 +91,9 @@
     (o.pijlen || []).forEach(function(pl){ s += '<line x1="' + X(pl[0][0]) + '" y1="' + Y(pl[0][1]) + '" x2="' + X(pl[1][0]) + '" y2="' + Y(pl[1][1]) + '" stroke="var(--amber)" stroke-width="3" stroke-linecap="round"/>'; });
     (o.punten || []).forEach(function(p){ s += '<circle class="punt ' + (p.klas || '') + '" cx="' + X(p.p[0]) + '" cy="' + Y(p.p[1]) + '" r="6"/>' + (p.naam ? '<text x="' + (X(p.p[0]) + 8) + '" y="' + (Y(p.p[1]) - 8) + '" style="fill:var(--ink)">' + S(p.naam) + '</text>' : ''); });
     if (o.schat) s += '<g transform="translate(' + X(o.schat[0]) + ' ' + Y(o.schat[1]) + ')">' + SCHAT + '</g>';
-    if (o.tikbaar) for (x = b.x0; x <= b.x1; x++) for (y = b.y0; y <= b.y1; y++) s += '<circle class="tik" data-x="' + x + '" data-y="' + y + '" cx="' + X(x) + '" cy="' + Y(y) + '" r="15"/>';
+    if (o.tikbaar) s += '<circle class="cursor" cx="' + X(0) + '" cy="' + Y(0) + '" r="13"/>';
     s += '<g class="stippen"></g></svg>';
-    return { html: s, X: X, Y: Y };
+    return { html: s, X: X, Y: Y, punt: punt };
   }
   function willekeurig(b, zonderNul){
     var p; do { p = [tussen(b.x0, b.x1), tussen(b.y0, b.y1)]; } while (zonderNul && (p[0] === 0 || p[1] === 0));
@@ -98,26 +115,68 @@
     /* o: { b, doel:[x,y], vraag, opdracht, uitleg, onderdeel, onderdeelNaam, sleutel, extra (rooster-opties) } */
     return { onderdeel:o.onderdeel, onderdeelNaam:o.onderdeelNaam, vorm:'eigen', sleutel:o.sleutel, vraag:o.vraag, opdracht:o.opdracht, uitleg:o.uitleg, antwoordTekst: co(o.doel),
       teken:function(el, api){
-        var r = rooster(Object.assign({ b:o.b, tikbaar:true }, o.extra || {}));
-        el.innerHTML = r.html + '<p class="roosteruit" id="roosteruit">Tik het roosterpunt aan. Nog eens tikken zet de stip ergens anders.</p>';
-        var svg = el.querySelector('svg'), stippen = svg.querySelector('.stippen'), gekozen = null;
-        svg.addEventListener('click', function(e){
-          var t = e.target.closest('.tik'); if (!t || !api.bezig()) return;
-          gekozen = [parseInt(t.getAttribute('data-x'), 10), parseInt(t.getAttribute('data-y'), 10)];
-          stippen.innerHTML = '<circle class="stip" cx="' + r.X(gekozen[0]) + '" cy="' + r.Y(gekozen[1]) + '" r="8"/>';
-          el.querySelector('#roosteruit').textContent = 'Je stip staat op ' + co(gekozen) + '. Klopt het? Druk op Nakijken.';
-          knop.disabled = false;
+        var r = rooster(Object.assign({ b:o.b, tikbaar:true }, o.extra || {})), b = o.b;
+        /* de schuifknoppen alleen in het spel, niet op het werkblad (daar hangt el nog buiten de pagina) */
+        var inSpel = document.body.contains(el), PIJL = [['←', 'links', -1, 0], ['↓', 'omlaag', 0, -1], ['↑', 'omhoog', 0, 1], ['→', 'rechts', 1, 0]];
+        el.innerHTML = r.html + (inSpel ? '<div class="schuif" role="group" aria-label="stip verschuiven">' + PIJL.map(function(p, i){ return '<button type="button" data-i="' + i + '" aria-label="stip naar ' + p[1] + '">' + p[0] + '</button>'; }).join('') + '</div>' : '') +
+          '<p class="roosteruit" id="roosteruit" aria-live="polite">Tik het roosterpunt aan. Nog eens tikken zet de stip ergens anders.' +
+          '<span class="toetsuit">Met het toetsenbord: Tab naar het rooster, loop met de pijltjes en zet de stip met Enter.</span></p>';
+        var svg = el.querySelector('svg'), stippen = svg.querySelector('.stippen'), cursor = svg.querySelector('.cursor'), gekozen = null;
+        function uit(t){ el.querySelector('#roosteruit').textContent = t; }
+        function zelfde(p, q){ return !!p && !!q && p[0] === q[0] && p[1] === q[1]; }
+        /* de cursor (toetsenbord, zwevende muis) begint in de oorsprong en loopt met de stip mee */
+        var hier = [0, 0];
+        function naar(p){ hier = p; cursor.setAttribute('cx', r.X(p[0])); cursor.setAttribute('cy', r.Y(p[1])); }
+        function binnen(p){ return [Math.max(b.x0, Math.min(b.x1, p[0])), Math.max(b.y0, Math.min(b.y1, p[1]))]; }
+        function zet(p){
+          if (!api.bezig()) return;
+          gekozen = p.slice(); naar(p);
+          stippen.innerHTML = '<circle class="stip" cx="' + r.X(p[0]) + '" cy="' + r.Y(p[1]) + '" r="8"/>';
+          uit('Je stip staat op ' + co(p) + '. Klopt het? Druk op Nakijken.');
+        }
+        /* tikken: het dichtstbijzijnde roosterpunt, dus het hele hokje rond een punt is raak */
+        function puntBij(e){
+          var m = svg.getScreenCTM(); if (!m) return null;
+          var q = svg.createSVGPoint(); q.x = e.clientX; q.y = e.clientY; q = q.matrixTransform(m.inverse());
+          return r.punt(q.x, q.y);
+        }
+        svg.addEventListener('click', function(e){ if (!api.bezig()) return; var p = puntBij(e); if (p) zet(p); });
+        svg.addEventListener('pointermove', function(e){ if (e.pointerType !== 'mouse' || !api.bezig()) return; var p = puntBij(e); svg.classList.toggle('zweeft', !!p); if (p) naar(p); });
+        svg.addEventListener('pointerleave', function(){ svg.classList.remove('zweeft'); if (gekozen) naar(gekozen); });
+        /* het toetsenbord: pijltjes verplaatsen de cursor, Enter zet de stip; staat hij er al, dan kijkt Enter na */
+        svg.addEventListener('keydown', function(e){
+          if (!api.bezig()) return;
+          var d = { ArrowLeft:[-1, 0], ArrowRight:[1, 0], ArrowUp:[0, 1], ArrowDown:[0, -1] }[e.key];
+          if (d){
+            e.preventDefault();
+            naar(binnen([hier[0] + d[0], hier[1] + d[1]]));
+            uit('Op ' + co(hier) + (zelfde(hier, gekozen) ? ', daar staat je stip' : '') + '. Enter zet de stip hier.');
+          } else if (e.key === 'Enter' || e.key === ' '){
+            e.preventDefault(); e.stopPropagation();
+            if (zelfde(hier, gekozen)) knop.click();
+            else { zet(hier); uit('Je stip staat op ' + co(hier) + '. Nog een keer Enter kijkt na.'); }
+          }
+        });
+        /* de schuifknoppen (telefoon): de stip een punt verschuiven */
+        el.addEventListener('click', function(e){
+          var k = e.target.closest('.schuif button'); if (!k || !api.bezig()) return;
+          var p = PIJL[parseInt(k.getAttribute('data-i'), 10)];
+          zet(binnen([(gekozen || hier)[0] + p[2], (gekozen || hier)[1] + p[3]]));
         });
         var knop = api.knop('Nakijken', function(){
-          if (!gekozen) return;
-          var ok = gekozen[0] === o.doel[0] && gekozen[1] === o.doel[1];
+          /* nog geen stip: geen fout, eerst een punt kiezen */
+          if (!gekozen){ api.uit('Zet eerst een stip: tik een roosterpunt aan.'); return; }
+          var ok = zelfde(gekozen, o.doel);
           stippen.innerHTML = '<circle class="stip ' + (ok ? 'goed' : 'fout') + '" cx="' + r.X(gekozen[0]) + '" cy="' + r.Y(gekozen[1]) + '" r="8"/>' + (ok ? '' : '<circle class="doel" cx="' + r.X(o.doel[0]) + '" cy="' + r.Y(o.doel[1]) + '" r="11"/>');
+          svg.classList.remove('zweeft', 'tikbaar'); svg.setAttribute('tabindex', '-1');
+          Array.prototype.forEach.call(el.querySelectorAll('.schuif button'), function(k){ k.disabled = true; });
           knop.disabled = true;
           api.klaar(ok, ok ? '' : 'Het goede punt (groen gestippeld) is ' + co(o.doel) + '; jij zat op ' + co(gekozen) + '.');
         });
-        knop.disabled = true;
-        el.proef = function(){ svg.querySelector('.tik[data-x="' + o.doel[0] + '"][data-y="' + o.doel[1] + '"]').dispatchEvent(new MouseEvent('click', { bubbles:true })); knop.click(); };
-        el.proefFout = function(){ var q = svg.querySelector('.tik[data-x="' + o.b.x0 + '"][data-y="' + o.b.y0 + '"]'); if (o.doel[0] === o.b.x0 && o.doel[1] === o.b.y0) q = svg.querySelector('.tik[data-x="' + o.b.x1 + '"][data-y="' + o.b.y1 + '"]'); q.dispatchEvent(new MouseEvent('click', { bubbles:true })); knop.click(); };
+        /* voor de proefscripts: een echte tik op de plek van het punt */
+        function tik(p){ var m = svg.getScreenCTM(), q = svg.createSVGPoint(); q.x = r.X(p[0]); q.y = r.Y(p[1]); q = q.matrixTransform(m); svg.dispatchEvent(new MouseEvent('click', { bubbles:true, clientX:q.x, clientY:q.y })); }
+        el.proef = function(){ tik(o.doel); knop.click(); };
+        el.proefFout = function(){ tik(zelfde(o.doel, [b.x0, b.y0]) ? [b.x1, b.y1] : [b.x0, b.y0]); knop.click(); };
       } };
   }
   function aanwijzen(niveau){

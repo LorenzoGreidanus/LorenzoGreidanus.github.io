@@ -54,7 +54,32 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .btn{display:inline-block;border:none;background:var(--crab);color:#fff;font-weight:600;padding:15px 32px;border-radius:999px;
   box-shadow:0 10px 0 rgba(20,34,76,.10);margin-top:24px;transition:transform .16s var(--ease)}
 .btn:hover{transform:translateY(-2px)}
-.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+/* Uit is echt uit: een lege knop met een stippelrand, in licht en donker leesbaar.
+   Een halfdoorzichtige crab-knop werd in het donker donkerrood met donkere letters. */
+.btn:disabled,.btn:disabled:hover{opacity:1;background:transparent;color:var(--muted);border:1.5px dashed var(--muted);
+  box-shadow:none;cursor:not-allowed;transform:none}
+:root[data-theme="dark"] .btn.btn:disabled{color:var(--muted)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn.btn:disabled{color:var(--muted)}}
+/* goed en fout in het donker: lichte letters op de donkere vlakken */
+:root[data-theme="dark"]{--goed:#8fd8ac;--fout:#f0a090}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--goed:#8fd8ac;--fout:#f0a090}}
+:root[data-theme="dark"] .uitslag.ja,:root[data-theme="dark"] .uitslag.nee{color:var(--ink)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .uitslag.ja,:root:not([data-theme="light"]) .uitslag.nee{color:var(--ink)}}
+/* strakker onder elkaar, zodat Start op een laptop zonder scrollen in beeld staat */
+.start.oefen{padding-top:30px}
+.start .kies{gap:10px;margin-top:12px}
+.start .kies .kaartje{padding:13px 16px}
+.start .stap{margin-top:22px}
+/* op een telefoon passen de keuzes zo twee naast elkaar, zodat Start in beeld blijft;
+   de uitleg van elke keuze staat er op een groter scherm wel bij */
+@media(max-width:560px){
+  .kies{grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+  .kies .kaartje{padding:11px 14px;border-radius:16px}
+  .start .stap{margin-top:16px}
+  .startknoppen{margin-top:16px}
+  .kies .kaartje span{display:none}
+  .kies .kaartje b{font-size:.95rem}
+}
 .btn.ghost{background:#fff;color:var(--ink);border:1.5px solid rgba(20,34,76,.15);box-shadow:none}
 .btn.klein{padding:11px 20px;font-size:.9rem;margin-top:0}
 /* oneindig oefenen: een tweede, rustigere startknop en een labeltje bij de teller */
@@ -108,7 +133,7 @@ body.groot .invulrij input{font-size:1.5rem}
 .uitslag.nee{background:var(--fout-bg);color:#8d3320}
 .onderrij{margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;align-items:center}
 .onderrij button{background:none;border:1.5px solid rgba(20,34,76,.15);border-radius:999px;padding:8px 15px;
-  font-size:.82rem;font-weight:600;min-height:42px}
+  font-size:.82rem;font-weight:600;min-height:44px}
 .onderrij button:hover{border-color:var(--ocean);color:var(--ocean)}
 .letters{margin:0;font-size:1.05rem;letter-spacing:.28em;font-weight:600;color:var(--muted)}
 
@@ -216,20 +241,20 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
   </div>
 </header>
 
-<section class="start wrap" id="scherm-start">
+<section class="start oefen wrap" id="scherm-start">
   <p class="hand" style="font-size:1.6rem">go, went, gone</p>
   <h1>Irregular verbs</h1>
-  <p class="lead">Van elk werkwoord zie je twee vormen, jij typt de derde. De Nederlandse betekenis staat er altijd bij. Spelling telt hier wel mee, want daar gaat het nu juist om.</p>
+  <p class="lead">Van elk werkwoord zie je twee vormen en de betekenis, jij typt de derde, goed gespeld.</p>
 
-  <p class="eyebrow" id="vormKop" style="margin-top:32px">welke vorm oefen je</p>
+  <p class="eyebrow" id="vormKop" style="margin-top:24px">welke vorm oefen je</p>
   <div class="kies" id="vormen"></div>
 
-  <div class="stap hide" id="setRij">
+  <div class="stap" id="setRij">
     <p class="eyebrow" id="setKop">hoeveel werkwoorden</p>
     <div class="kies" id="sets"></div>
   </div>
 
-  <div class="stap hide" id="modusRij">
+  <div class="stap" id="modusRij">
     <p class="eyebrow" id="modusKop">hoe wil je oefenen</p>
     <div class="kies" id="modussen"></div>
   </div>
@@ -261,6 +286,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
         <button id="checkBtn" type="button">Klaar</button>
       </div>
       <div class="uitslag" id="uitslag" role="status" aria-live="polite"></div>
+      <div class="volgenderij" id="volgendeRij" hidden><button type="button" class="volgendeknop" id="volgendeBtn">Volgende &rarr;</button></div>
       <div class="onderrij" id="onderrij">
         <button type="button" id="hintBtn">Geef een letter</button>
         <button type="button" id="overslaanBtn">Ik weet het niet</button>
@@ -286,7 +312,8 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
   </div>
 
   <div class="lijst" id="eindLijst"></div>
-  <button class="btn" id="nogeensBtn" type="button">Nog een keer</button>
+  <!-- de eindkaart heeft de knop voor opnieuw; deze blijft onzichtbaar, want de kaart tikt hem aan -->
+  <button class="btn hide" id="nogeensBtn" type="button">Nog een keer</button>
 </section>
 
 <footer>
@@ -399,11 +426,10 @@ var KOP = { w:'hele werkwoord', vt:'verleden tijd', vd:'voltooid deelwoord' };
     });
   }
 
+  /* Alle drie de keuzes staan meteen in beeld. Een andere vorm laat de set en
+     de stand staan: die hangen er niet van af. */
   knoppen('vormen', VORMEN, function(v){
-    vorm = v; set = null;
-    tekenSets();
-    document.getElementById('setRij').classList.remove('hide');
-    document.getElementById('modusRij').classList.add('hide');
+    vorm = v;
     klaarCheck();
   });
 
@@ -420,13 +446,13 @@ var KOP = { w:'hele werkwoord', vt:'verleden tijd', vd:'voltooid deelwoord' };
         set = s;
         Array.prototype.forEach.call(setVak.children, function(c){ c.classList.remove('on'); });
         b.classList.add('on');
-        document.getElementById('modusRij').classList.remove('hide');
         klaarCheck();
       });
       setVak.appendChild(b);
     });
   }
 
+  tekenSets();
   knoppen('modussen', MODUSSEN, function(m){
     modus = m;
     var p = document.getElementById('pillNiv');
@@ -530,6 +556,7 @@ var KOP = { w:'hele werkwoord', vt:'verleden tijd', vd:'voltooid deelwoord' };
   function volgende(){
     if (wachter){ clearTimeout(wachter); wachter = null; }
     elUit.className = 'uitslag'; elUit.textContent = '';
+    document.getElementById('volgendeRij').hidden = true;
     elIn.value = ''; elIn.readOnly = false;
     document.getElementById('letters').classList.add('hide');
     hintLetters = 0; pogingen = 0;
@@ -644,12 +671,22 @@ var KOP = { w:'hele werkwoord', vt:'verleden tijd', vd:'voltooid deelwoord' };
     elUit.textContent = t;
     tekenTeller();
 
-    wachter = setTimeout(verder, klopt2 ? 900 : 2600);
+    /* Goed gaat vanzelf door. Fout wacht op Volgende: de goede vorm blijft staan
+       tot je hem gelezen hebt. In de tijdrace staat de klok zolang stil (zie tik). */
+    if (klopt2) wachter = setTimeout(verder, 900);
+    else {
+      var rijV = document.getElementById('volgendeRij'), knopV = document.getElementById('volgendeBtn');
+      rijV.hidden = false;
+      try { knopV.focus({ preventScroll:true }); } catch (e){ knopV.focus(); }
+      if (window.SPEL && SPEL.inBeeld) SPEL.inBeeld(rijV);
+    }
   }
 
+  document.getElementById('volgendeBtn').addEventListener('click', verder);
   function verder(){
     if (!bezig) return;
     if (wachter){ clearTimeout(wachter); wachter = null; }
+    document.getElementById('volgendeRij').hidden = true;
     bezig = false;
     if (isRace() && tijd <= 0){ loopt = false; toonEinde(); return; }
     if (!isRace()) nr++;
@@ -703,7 +740,7 @@ var KOP = { w:'hele werkwoord', vt:'verleden tijd', vd:'voltooid deelwoord' };
     }
     document.getElementById('eindOverzicht').innerHTML = html;
     /* een oneindige sessie heeft een eigen klassement: anders wint wie het langst doorgaat */
-    SPEL.einde({ spel:'irregular', reeks:besteReeks, goed:goed, score: isRace() ? punten : goed, label: isRace() ? 'punten' : 'van ' + totaal + ' goed', max: isRace() ? null : Math.max(totaal, 1), ronde:goed, punten: isRace() ? punten : goed, sleutel: isRace() ? 'race' : (oneindig ? 'oefen-oneindig' : 'oefen'), vak:'eng', od:od });
+    SPEL.einde({ spel:'irregular', reeks:besteReeks, goed:goed, score: isRace() ? punten : goed, label: isRace() ? 'punten' : 'van ' + totaal + ' goed', max: isRace() ? null : Math.max(totaal, 1), ronde:goed, punten: isRace() ? punten : goed, sleutel: isRace() ? 'race' : (oneindig ? 'oefen-oneindig' : 'oefen'), vak:'eng', od:od, opnieuwTekst: oneindig ? 'Verder oefenen' : undefined });
     document.getElementById('nogeensBtn').textContent = oneindig ? 'Verder oefenen' : 'Nog een keer';
 
     document.getElementById('naamvak').classList.toggle('hide', !isRace() || opgeslagen || totaal === 0);
@@ -782,6 +819,10 @@ var KOP = { w:'hele werkwoord', vt:'verleden tijd', vd:'voltooid deelwoord' };
       var kop = document.getElementById(kopId);
       if (kop) kop.textContent = woord + ': ' + lijst[i].naam + ', gekozen door je docent';
     }
+    /* alvast gekozen, net als in de leeromgeving: alle drie door elkaar, de bekendste, oefenen */
+    document.getElementById('vormen').children[2].click();
+    document.getElementById('sets').children[0].click();
+    document.getElementById('modussen').children[0].click();
     vast('vormen', VORMEN, param('v'), 'vormKop', 'Vorm');
     vast('sets', SETS, param('s'), 'setKop', 'Aantal');
     vast('modussen', MODUSSEN, param('m'), 'modusKop', 'Stand');
@@ -798,6 +839,6 @@ var KOP = { w:'hele werkwoord', vt:'verleden tijd', vd:'voltooid deelwoord' };
 <script src="klas.js"></script>
 <script src="naamfilter.js"></script>
 <script src="spel.js"></script>
-<script>SPEL.uitleg({ doel:"Ken de onregelmatige werkwoorden: de verleden tijd en het voltooid deelwoord.", tijd:"10 minuten, of tegen de klok", bediening:"Typ beide vormen en druk op Enter. Weet je het niet, sla dan over." });</script>
+<script>SPEL.uitleg({ doel:"Ken de onregelmatige werkwoorden: de verleden tijd en het voltooid deelwoord.", tijd:"de werkwoorden van je set, ongeveer 10 minuten; de tijdrace duurt een minuut", bediening:"Typ de ontbrekende vorm en druk op Enter. Na een fout ga je met Volgende verder.", onder:true, chips:true, zeker:'opnieuwBtn' });</script>
 </body>
 </html>

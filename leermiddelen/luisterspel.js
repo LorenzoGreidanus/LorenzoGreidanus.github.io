@@ -76,8 +76,8 @@ window.LUISTER = (function(){
         var kan = !!(window.VOORLEES && VOORLEES.kan()), keren = 0, MAX = 3;
         el.innerHTML = '<div class="luister" id="luistervak">' + SPREKER +
           (o.gat ? '<p class="gat">' + schoon(o.gat).replace(/_{2,}/, '<b>&nbsp;</b>') + '</p>' : '') +
-          '<div class="knoppen"><button type="button" id="luisterBtn">' + (o.taal && /^en/.test(o.taal) ? 'Listen' : 'Luister') + '</button>' +
-          '<button type="button" class="stil" id="nogeensBtn" disabled>' + (o.taal && /^en/.test(o.taal) ? 'Again' : 'Nog eens') + ' (' + (MAX - 1) + ' over)</button></div>' +
+          '<div class="knoppen"><button type="button" id="luisterBtn">Luister</button>' +
+          '<button type="button" class="stil" id="nogeensBtn" disabled>Nog eens (' + (MAX - 1) + ' over)</button></div>' +
           (kan ? '' : '<p class="geen">Deze browser kan niet voorlezen. Op een telefoon of in een andere browser werkt het meestal wel. Noodoplossing: laat de tekst twee seconden zien.</p><div class="knoppen"><button type="button" class="stil" id="flitsBtn">Laat het 2 seconden zien</button></div>') +
           '<p class="flits" id="flits" aria-live="polite"></p>' +
           '<input id="luisterInvoer" type="text" autocomplete="off" autocapitalize="' + (o.exact ? 'sentences' : 'off') + '" spellcheck="false" aria-label="Typ wat je hoort" placeholder="' + (o.gat ? 'het woord' : 'typ hier') + '">' +
@@ -93,7 +93,7 @@ window.LUISTER = (function(){
             setTimeout(function(){ vak.classList.remove('praat'); }, Math.min(9000, 700 + o.spreek.length * 70));
           }
           lb.disabled = true; nb.disabled = keren >= MAX;
-          nb.textContent = (o.taal && /^en/.test(o.taal) ? 'Again' : 'Nog eens') + (keren >= MAX ? '' : ' (' + (MAX - keren) + ' over)');
+          nb.textContent = 'Nog eens' + (keren >= MAX ? '' : ' (' + (MAX - keren) + ' over)');
           inv.focus();
         }
         lb.addEventListener('click', lees); nb.addEventListener('click', lees);
@@ -103,6 +103,7 @@ window.LUISTER = (function(){
         inv.addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); kijkNa(); } });
         function kijkNa(){
           if (!api.bezig()) return;
+          if (!inv.value.trim()){ api.uit('Typ eerst wat je hoort.'); inv.focus(); return; }
           var w = inv.value, ok = goedLijst.some(function(g){ return norm(g, o.exact) === norm(w, o.exact); });
           inv.disabled = true; inv.classList.add(ok ? 'goed' : 'fout'); knop.disabled = true; lb.disabled = true; nb.disabled = true;
           if (window.VOORLEES) VOORLEES.stop(); vak.classList.remove('praat');

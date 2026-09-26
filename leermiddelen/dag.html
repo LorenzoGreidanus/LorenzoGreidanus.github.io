@@ -107,7 +107,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;pa
 .lead{color:var(--muted);max-width:60ch;margin-top:8px}
 .uitleg{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:18px 0}
 .uitleg div{background:var(--kaart);border:1px solid var(--rand);border-radius:16px;padding:14px}
-.uitleg i{width:26px;height:26px;border-radius:9px;color:#fff;display:grid;place-items:center;font-style:normal;font-weight:600;margin-bottom:6px}
+.uitleg i{width:26px;height:26px;border-radius:9px;color:#14224C;display:grid;place-items:center;font-style:normal;font-weight:600;margin-bottom:6px}
 .uitleg b{display:block;margin-bottom:4px}
 .uitleg span{font-size:.88rem;color:var(--muted)}
 /* de race */
@@ -133,6 +133,13 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;pa
 .optie.mis{background:var(--fout);border-color:var(--fout);color:#fff}
 .optie:disabled{cursor:default}
 .terugkoppeling{margin-top:10px;font-size:.9rem;min-height:1.4em}
+/* het klassement lijnt links uit, net als de kaart erboven (strijd.js zet het in het midden) */
+#siteStartLijst.sitelijst,#siteLijst.sitelijst{margin-left:0;margin-right:0}
+/* het knopje Lees voor staat niet tegen het eerste antwoord aan */
+.kaart .leesvak{margin-bottom:12px}
+/* de meters: een woord onder het getal, het plaatje ervoor, op een regel */
+.meter span .ico{margin-right:4px}
+.meter>span{white-space:nowrap;letter-spacing:.08em}
 .terugkoppeling.goed{color:var(--goed)}
 .terugkoppeling.fout{color:var(--fout)}
 .reeks{margin-top:6px;font-size:.85rem;color:var(--muted)}
@@ -199,14 +206,14 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 </header>
 
 <main class="wrap">
-  <section id="scherm-start">
+  <section id="scherm-start" class="oefen">
     <p class="hand" style="font-size:1.6rem">elke dag tien vragen</p>
     <h1>Dagelijkse uitdaging</h1>
-    <p class="lead">Elke dag dezelfde tien vragen voor iedereen op de site, uit alle vakken. Eén poging per dag. Snel en goed levert punten op, en aan het eind zie je waar je staat in het klassement van vandaag.</p>
+    <p class="lead">Elke dag dezelfde tien vragen voor iedereen, uit alle vakken, en je hebt één poging.</p>
     <div class="uitleg">
       <div><i style="background:var(--crab)">1</i><b>Tien vragen, alle vakken</b><span>Nederlands, Engels, geschiedenis, aardrijkskunde, biologie, wiskunde, samenleving en economie, op een niveau dat iedereen aankan. Morgen tien nieuwe.</span></div>
       <div><i style="background:var(--amber)">2</i><b>Punten voor snel en goed</b><span>Honderd per goed antwoord, plus tot vijftig als je binnen tien seconden antwoordt. Fout is nul, maar je leest wel waarom.</span></div>
-      <div><i style="background:var(--ocean)">3</i><b>Eén poging</b><span>Je speelt de uitdaging één keer per dag op dit apparaat. Daarna zie je je score en het klassement van vandaag. Wie is ingelogd krijgt munten, en twintig extra bij tien goed.</span></div>
+      <div><i style="background:var(--ocean);color:#fff">3</i><b>Eén poging</b><span>Je speelt de uitdaging één keer per dag op dit apparaat. Daarna zie je je score en het klassement van vandaag. Wie is ingelogd krijgt munten, en twintig extra bij tien goed.</span></div>
     </div>
     <div class="kaart">
       <div class="stap"><b id="dagKop">De uitdaging van vandaag</b><p class="tip" id="dagUit" style="margin-top:6px"></p></div>
@@ -218,8 +225,8 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   <section id="scherm-spel" class="hide">
     <div class="balkje">
       <div class="meter"><b id="mNr">1</b><span>van 10</span></div>
-      <div class="meter"><b id="mPunten">0</b><span><span class="ico ico-ster" role="img" aria-label="punten" title="punten"></span></span></div>
-      <div class="meter tijd"><b id="mTijd">10</b><span><span class="ico ico-munt" role="img" aria-label="bonus in munten" title="bonus in munten"></span></span></div>
+      <div class="meter"><b id="mPunten">0</b><span><span class="ico ico-ster" aria-hidden="true"></span>punten</span></div>
+      <div class="meter tijd"><b id="mTijd">10</b><span><span class="ico ico-munt" aria-hidden="true"></span>sec bonus</span></div>
     </div>
     <div class="tijdbalk"><i id="tijdbalk" style="width:100%"></i></div>
     <div class="kaart">
@@ -227,18 +234,19 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
       <div class="beeld hide" id="beeld"></div>
       <p class="vraagtekst" id="vraagTekst"></p>
       <div class="opties" id="opties"></div>
-      <p class="terugkoppeling" id="terug"></p>
+      <p class="terugkoppeling" id="terug" role="status" aria-live="polite"></p>
+      <div class="volgenderij" id="volgendeRij" hidden><button type="button" class="volgendeknop" id="volgendeBtn">Volgende &rarr;</button></div>
       <p class="reeks" id="reeksUit"></p>
       <div id="meldPlek"></div>
     </div>
   </section>
 
   <section id="scherm-einde" class="hide">
-    <p class="hand" style="font-size:1.6rem">tot morgen</p>
-    <h1 id="eindKop">Klaar</h1>
+    <!-- de eindkaart (SPEL.einde) staat bovenaan met de punten en de knop naar de spellen -->
+    <h2 class="hide" id="eindKop">Klaar</h2>
     <p class="lead" id="eindUit"></p>
-    <div class="cijfers" id="cijfers"></div>
-    <div class="stap"><a class="knop stil" href="index.html">Naar de spellen</a> <a class="knop stil" href="fouten.html">Oefen je fouten</a></div>
+    <div class="cijfers hide" id="cijfers"></div>
+    <div class="stap" id="foutenRij"><a class="knop stil" href="fouten.html">Oefen je fouten</a></div>
     <div id="siteLijst"></div>
     <div class="fouten" id="fouten"></div>
   </section>
@@ -293,9 +301,10 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   function gespeeld(){ try { var d = JSON.parse(localStorage.getItem('lg-dag') || 'null'); return d && d.dag === DAG ? d : null; } catch (e){ return null; } }
 
   var rij = kiesVragen(), nr = 0, goed = 0, punten = 0, vraag = null, geklikt = -1, klok = null, tijd = 0, loopt = false, wachtTimer = null, foutLijst = [], perOnderdeel = {}, reeks = 0, besteReeks = 0, t0 = 0;
+  function opsomming(l){ return l.length > 1 ? l.slice(0, -1).join(', ') + ' en ' + l[l.length - 1] : l.join(''); }
   function tekenStart(){
     var g = gespeeld();
-    $('dagUit').textContent = g ? 'Je hebt de uitdaging van vandaag al gespeeld: ' + g.goed + ' van 10 goed, ' + g.punten + ' punten. Morgen staat er een nieuwe klaar.' : 'Tien vragen uit ' + rij.map(function(q){ return vakNaam(q.vak); }).filter(function(x, i, a){ return a.indexOf(x) === i; }).join(', ').toLowerCase() + '. Eén poging.';
+    $('dagUit').textContent = g ? 'Je hebt de uitdaging van vandaag al gespeeld: ' + g.goed + ' van 10 goed, ' + g.punten + ' punten. Morgen staat er een nieuwe klaar.' : 'Tien vragen uit ' + opsomming(rij.map(function(q){ return /^(ned|eng)$/.test(q.vak) ? vakNaam(q.vak) : vakNaam(q.vak).toLowerCase(); }).filter(function(x, i, a){ return a.indexOf(x) === i; })) + '. Eén poging.';
     $('startBtn').disabled = !!g;
     $('startBtn').textContent = g ? 'Al gespeeld vandaag' : 'Start de uitdaging';
     if (window.STRIJD) STRIJD.klassement.toon('siteStartLijst', SPEL_ID);
@@ -323,6 +332,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     if (window.VOORLEES) VOORLEES.knop($('vraagTekst'), function(){ return { v:vraag.v, o:vraag.o, taal:vraag.vak === 'eng' ? 'en-GB' : 'nl-NL' }; });
   }
   function volgende(){
+    $('volgendeRij').hidden = true;
     if (nr >= rij.length){ einde(); return; }
     vraag = rij[nr]; geklikt = -1; t0 = performance.now(); tekenVraag(); tekenMeters();
   }
@@ -343,8 +353,14 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     nr++;
     tekenVraag(); tekenMeters();
     clearTimeout(wachtTimer);
-    wachtTimer = setTimeout(function(){ if (loopt) volgende(); }, isGoed ? 900 : 2800);
+    /* Goed gaat vanzelf door. Fout wacht op Volgende, zodat je de uitleg kunt lezen. */
+    if (isGoed){ wachtTimer = setTimeout(function(){ if (loopt) volgende(); }, 900); return; }
+    var rijV = $('volgendeRij'), knopV = $('volgendeBtn');
+    rijV.hidden = false;
+    try { knopV.focus({ preventScroll:true }); } catch (e){ knopV.focus(); }
+    if (window.SPEL && SPEL.inBeeld) SPEL.inBeeld(rijV);
   }
+  $('volgendeBtn').addEventListener('click', function(){ if (loopt && geklikt >= 0) volgende(); });
   function start(){
     if (gespeeld() || !rij.length) return;
     nr = 0; goed = 0; punten = 0; reeks = 0; besteReeks = 0; foutLijst = []; perOnderdeel = {}; loopt = true;
@@ -364,9 +380,11 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     $('fouten').innerHTML = foutLijst.length ? '<p class="eyebrow">nog even nakijken</p>' + foutLijst.map(function(q){
       return '<div><b>' + schoon(q.v) + '</b><span>Goed was: ' + schoon(q.o[q.g]) + (q.u ? ' · ' + schoon(q.u) : '') + '</span></div>';
     }).join('') : '';
-    SPEL.einde({ spel:'dag', reeks:besteReeks, goed:goed, muntBonus: goed === 10 ? 20 : 0, compact:true, waarde:punten, label:'punten', drempels:[600, 1000, 1300], klas:false, plek:'siteLijst', sleutel:'dag', deelTekst:punten + ' punten in de dagelijkse uitdaging', kop:'de uitdaging van vandaag',
+    SPEL.einde({ spel:'dag', reeks:besteReeks, goed:goed, muntBonus: goed === 10 ? 20 : 0, score:punten, waarde:punten, label:'punten', drempels:[600, 1000, 1300], klas:false, sleutel:'dag', deelTekst:punten + ' punten in de dagelijkse uitdaging', kop:'de uitdaging van vandaag',
       /* je kunt vandaag niet nog een keer: de knop brengt je naar de andere spellen */
       opnieuwTekst:'Naar de spellen', opnieuw:function(){ location.href = 'index.html'; } });
+    /* staat Oefen je fouten al op de eindkaart, dan hoeft hij hier niet nog een keer; zonder fouten ook niet */
+    $('foutenRij').classList.toggle('hide', !foutLijst.length || !!document.querySelector('#scherm-einde .eindkaart a[href="fouten.html"]'));
     if (window.STRIJD) STRIJD.klassement.vorm('siteLijst', SPEL_ID, function(){ return { ronde:goed, punten:punten, waar:'', niveau:'', vak:'alle vakken' }; });
     if (window.KLAS) KLAS.meld({ spel:'dag', ronde:goed, punten:punten, niveau:'', vak:'', od:perOnderdeel }, 'eindUit');
     scrollTo({ top:0, behavior:'auto' });
@@ -380,6 +398,6 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 </script>
 <script src="thema.js"></script>
 <script src="spel.js"></script>
-<script>SPEL.uitleg({ doel:"Tien vragen die vandaag voor iedereen hetzelfde zijn, uit alle vakken. Eén poging per dag.", tijd:"een paar minuten", bediening:"Tik het goede antwoord, of druk op 1 tot 4. Snel antwoorden geeft bonuspunten.", meer:'.uitleg' });</script>
+<script>SPEL.uitleg({ doel:"Tien vragen die vandaag voor iedereen hetzelfde zijn, uit alle vakken. Eén poging per dag.", tijd:"tien vragen, ongeveer 5 minuten", bediening:"Tik het goede antwoord, of druk op 1 tot 4. Snel antwoorden geeft bonuspunten; na een fout ga je met Volgende verder.", meer:'.uitleg', onder:true, links:true, zeker:'stopBtn' });</script>
 </body>
 </html>

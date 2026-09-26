@@ -54,11 +54,27 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .btn{display:inline-block;border:none;background:var(--crab);color:#fff;font-weight:600;padding:15px 32px;border-radius:999px;
   box-shadow:0 10px 0 rgba(20,34,76,.10);margin-top:24px;transition:transform .16s var(--ease)}
 .btn:hover{transform:translateY(-2px)}
-.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+/* Uit is echt uit: een lege knop met een stippelrand, in licht en donker leesbaar */
+.btn:disabled,.btn:disabled:hover{opacity:1;background:transparent;color:var(--muted);border:1.5px dashed var(--muted);
+  box-shadow:none;cursor:not-allowed;transform:none}
+:root[data-theme="dark"] .btn.btn:disabled{color:var(--muted)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn.btn:disabled{color:var(--muted)}}
+/* strakker onder elkaar, zodat Start op een laptop en een telefoon in beeld staat */
+.start .kies{gap:10px;margin-top:12px}
+.start .kies .kaartje{padding:13px 16px}
+.start .stap{margin-top:22px}
+@media(max-width:560px){
+  .start .kies{grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+  .start .kies .kaartje{padding:11px 12px;border-radius:16px}
+  .start .kies .kaartje span{display:none}
+  .start .kies .kaartje b{font-size:.92rem}
+  .start .stap{margin-top:16px}
+  .startknoppen{margin-top:16px}
+}
 .btn.ghost{background:#fff;color:var(--ink);border:1.5px solid rgba(20,34,76,.15);box-shadow:none}
 .btn.klein{padding:11px 20px;font-size:.9rem;margin-top:0}
 /* Start of oneindig: twee knoppen naast elkaar, de tweede rustiger */
-.startknoppen{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:24px}
+.startknoppen{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;margin-top:24px}
 .startknoppen .btn{margin-top:0}
 /* met de id erbij, anders maakt basis.css de letters in het donker navy */
 #scherm-start .btn.ghost{color:var(--ink);border-color:color-mix(in srgb,var(--ink) 22%,transparent)}
@@ -216,15 +232,15 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
   </div>
 </header>
 
-<section class="start wrap" id="scherm-start">
+<section class="start oefen wrap" id="scherm-start">
   <p class="hand" style="font-size:1.6rem">wat je links doet, doe je rechts ook</p>
   <h1>De balans</h1>
-  <p class="lead">Links en rechts wegen even zwaar. Een blauw zakje is x, een oranje blokje is 1, een rood blokje is min 1. Haal aan beide kanten hetzelfde weg tot er nog één zakje over is. Dan weet je hoeveel x is.</p>
+  <p class="lead">Haal aan beide kanten van de balans hetzelfde weg, tot er één zakje x over is.</p>
 
-  <p class="eyebrow" id="nivKop" style="margin-top:32px">welk niveau</p>
+  <p class="eyebrow" id="nivKop" style="margin-top:24px">welk niveau</p>
   <div class="kies" id="niveaus"></div>
 
-  <div class="stap hide" id="modusRij">
+  <div class="stap" id="modusRij">
     <p class="eyebrow" id="modusKop">hoe wil je spelen</p>
     <div class="kies" id="modussen"></div>
   </div>
@@ -263,6 +279,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
         <button type="button" id="aDeel">Delen door</button>
       </div>
       <div class="melding" id="melding" role="status" aria-live="polite"></div>
+      <div class="volgenderij" id="volgendeRij" hidden><button type="button" class="volgendeknop" id="volgendeBtn">Volgende &rarr;</button></div>
       <div class="onderrij">
         <button type="button" id="terugBtn">Stap terug</button>
         <button type="button" id="tipBtn">Geef een tip</button>
@@ -287,7 +304,8 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
   </div>
 
   <div class="lijst" id="eindLijst"></div>
-  <button class="btn" id="nogeensBtn" type="button">Nog een keer</button>
+  <!-- de eindkaart heeft de knop voor opnieuw; deze blijft onzichtbaar, want de kaart tikt hem aan -->
+  <button class="btn hide" id="nogeensBtn" type="button">Nog een keer</button>
 </section>
 
 <footer>
@@ -415,7 +433,6 @@ var AANTAL = 8;
   knoppen('niveaus', NIVEAUS, function(n){
     niveau = n;
     var p = document.getElementById('pillNiv'); p.textContent = n.naam; p.classList.remove('hide');
-    if (!oneindigUrl) document.getElementById('modusRij').classList.remove('hide');
     klaarCheck();
   });
   knoppen('modussen', MODUSSEN, function(m){ modus = m; klaarCheck(); });
@@ -665,7 +682,16 @@ var AANTAL = 8;
       gedaan.push({ som:opgave.som, x:opgave.x, stappen:stappen, minimum:opgave.minimum });
       /* beheerst: opgelost met hoogstens een stap meer dan nodig */
       if (window.KLAS && KLAS.tel) KLAS.tel(od, { een:'vergelijking: x aan een kant', twee:'vergelijking: x aan twee kanten' }[niveau.id] || 'vergelijking: met aftrekken', stappen <= opgave.minimum + 1);
-      wachter = setTimeout(volgende, 2200);
+      /* In het kleinste aantal stappen: dan mag hij vanzelf door. Meer stappen
+         nodig gehad? Dan blijft de melding staan tot je op Volgende tikt, zodat
+         je kunt zien waar het korter kon. */
+      if (stappen <= opgave.minimum) wachter = setTimeout(volgende, 2200);
+      else {
+        var rijV = document.getElementById('volgendeRij'), knopV = document.getElementById('volgendeBtn');
+        rijV.hidden = false;
+        try { knopV.focus({ preventScroll:true }); } catch (e){ knopV.focus(); }
+        if (window.SPEL && SPEL.inBeeld) SPEL.inBeeld(rijV);
+      }
       teken();
       return;
     }
@@ -763,8 +789,13 @@ var AANTAL = 8;
     teken();
   }
 
+  document.getElementById('volgendeBtn').addEventListener('click', function(){
+    if (!document.getElementById('volgendeRij').hidden) volgende();
+  });
   function volgende(){
+    if (wachter){ clearTimeout(wachter); }
     wachter = null;
+    document.getElementById('volgendeRij').hidden = true;
     nr++;
     if (!oneindig && nr >= AANTAL){ toonEinde(); return; }
     nieuweOpgave();
@@ -786,7 +817,7 @@ var AANTAL = 8;
     var schaal = oneindig ? Math.max(1, gedaan.length / AANTAL) : 1;
     document.getElementById('nogeensBtn').textContent = oneindig ? 'Verder oefenen' : 'Nog een keer';
     SPEL.einde({ spel:'balans', goed:gedaan.length, score:totaalStappen, label:'stappen', lagerIsBeter:true, sterren: !gedaan.length ? 0 : extra <= 0 ? 3 : extra <= 2 * schaal ? 2 : extra <= 5 * schaal ? 1 : 0,
-      sleutel: oneindig ? 'oneindig' : undefined, max: oneindig ? Math.max(gedaan.length, 1) : undefined, ronde:gedaan.length, punten:Math.max(0, 100 - extra), niveau:'', vak:'wis', od:od });
+      sleutel: oneindig ? 'oneindig' : undefined, max: oneindig ? Math.max(gedaan.length, 1) : undefined, ronde:gedaan.length, punten:Math.max(0, 100 - extra), niveau:'', vak:'wis', od:od, opnieuwTekst: oneindig ? 'Verder oefenen' : undefined });
 
     var html = '';
     gedaan.forEach(function(g){
@@ -869,6 +900,9 @@ var AANTAL = 8;
       var kop = document.getElementById(kopId);
       if (kop) kop.textContent = woord + ': ' + lijst[i].naam + ', gekozen door je docent';
     }
+    /* alvast gekozen, net als in de leeromgeving: eerste stappen, rustig oefenen */
+    document.getElementById('niveaus').children[0].click();
+    document.getElementById('modussen').children[0].click();
     vast('niveaus', NIVEAUS, param('n'), 'nivKop', 'Niveau');
     vast('modussen', MODUSSEN, param('m'), 'modusKop', 'Stand');
     /* ?oneindig=1: Start is meteen oneindig oefenen, de stand kiezen hoeft niet */
@@ -896,6 +930,6 @@ var AANTAL = 8;
 <script src="klas.js"></script>
 <script src="naamfilter.js"></script>
 <script src="spel.js"></script>
-<script>SPEL.uitleg({ doel:"Los vergelijkingen op door aan beide kanten hetzelfde weg te halen, tot x alleen staat.", tijd:"ongeveer 15 minuten", bediening:"Tik op een zakje of een blokje om het aan beide kanten weg te halen. Een tip kost niets." });</script>
+<script>SPEL.uitleg({ doel:"Los vergelijkingen op door aan beide kanten hetzelfde weg te halen, tot x alleen staat.", tijd:"acht vergelijkingen, ongeveer 15 minuten", bediening:"Kies een getal en tik dan wat je aan beide kanten doet: blokjes of zakjes weghalen, blokjes erbij, of delen. Een tip kost niets.", onder:true, chips:true, zeker:'opnieuwBtn' });</script>
 </body>
 </html>

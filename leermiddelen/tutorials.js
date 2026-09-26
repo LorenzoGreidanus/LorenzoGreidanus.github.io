@@ -97,12 +97,12 @@ window.TUTORIALS = (function(){
     topografie: function(){ return [
       { titel: 'De kaart', doel: 'kaartvak', tekst: 'Op de kaart staat een stip. Welke plaats of welk land is dat? Typ de naam.' },
       { titel: 'Typen', doel: 'antwoord', tekst: 'Hoofdletters en accenten zijn niet belangrijk. ' + tik() + ' op Kijk na, of druk op Enter.' },
-      { titel: 'Hulp', doel: 'hintBtn', tekst: 'Een hint geeft de eerste letters. Overslaan kan ook; de plaats komt dan later terug.' }
+      { titel: 'Hulp', doel: 'hintBtn', tekst: 'Een hint geeft de eerste letters. Weet je het niet, tik dan op Ik weet het niet: je ziet het goede antwoord en gaat verder.' }
     ]; },
     tijdvakken: function(){ return [
       { titel: 'Kaartjes met gebeurtenissen', doel: 'kaartzone', tekst: 'Elk kaartje is een gebeurtenis, een uitvinding of een persoon. Bij welk tijdvak hoort het?' },
       { titel: 'De bakken', doel: 'bakken', tekst: 'Sleep het kaartje naar de goede bak, of ' + tik().toLowerCase() + ' eerst het kaartje en dan de bak. Kijk naar de kenmerken van het tijdvak, niet alleen naar het jaartal.' },
-      { titel: 'Na de ronde', doel: 'melding', tekst: 'Hier lees je wat goed en fout ging. Elke volgende ronde heeft meer bakken, dus preciezer kijken.' }
+      { titel: 'Na de ronde', doel: 'melding', tekst: 'Hier lees je wat goed en fout ging, en waarom. Na elke ronde lees je wat de volgende ronde anders maakt.' }
     ]; },
     organisme: function(){ return [
       { titel: 'De ladder', doel: 'ladder', tekst: 'Van klein naar groot: cel, weefsel, orgaan, orgaanstelsel, organisme. Elke sport is een niveau.' },

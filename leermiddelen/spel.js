@@ -11,6 +11,21 @@
        Heeft het spel een uitleg stap voor stap (uitleg/<spel>.js, zie
        MET_STAPPEN), dan komt er een knop bij die hem opent; met ?uitleg in
        het adres gaat hij meteen open, handig op het digibord.
+       Extra velden, allemaal los te gebruiken:
+         onder:'id' (of true)  het paneel komt na dat blok in plaats van na
+                               de inleiding; true is het blok met de startknop.
+                               Zo staat Start direct onder de keuzes.
+         links:true            het paneel lijnt links uit, voor een startscherm
+                               dat links uitlijnt.
+         chips:true            elke keuzeknop op het startscherm krijgt
+                               aria-pressed, gelijk met de klasse 'on'.
+         zeker:'id'            die knop in de kop (Opnieuw) vraagt tijdens een
+                               lopend spel eerst "Zeker? Tik nog eens";
+                               loopt:function geeft true als er een spel loopt.
+         tegel:[kleur, svg]    het plaatje in het paneel; zonder staat daar de
+                               tegel uit de leeromgeving (TEGEL) of het icoon.
+     SPEL.inBeeld(el)
+       Schuift el in beeld als hij er (half) buiten staat, zacht als dat mag.
      SPEL.einde({ spel:'toren', score:12, label:'rondes', max:20, sterren:2,
                   ronde:12, punten:340, niveau:'havo', vak:'ges', ... })
        Zet bovenaan het eindscherm een kaart met de score, sterren, het beste
@@ -47,6 +62,40 @@ window.SPEL = (function(){
     alle:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>',
     trap:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20h5v-5h5v-5h5V5h3"/></svg>'
   };
+  /* De tegel van een spel: dezelfde kleur en hetzelfde plaatje als op de
+     tegel in de leeromgeving (index.html), zodat een leerling het spel daar
+     en hier herkent. Een spel dat hier niet staat, houdt zijn eigen icoon. */
+  var TEGEL = {
+    rekenen:['#EA9836', '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h2M12 11h2M16 11h.01M8 15h2M12 15h2M16 15h.01M8 19h8"/>'],
+    dag:['#204ECF', '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M9 15l2 2 4-4"/>'],
+    fouten:['#F26749', '<path d="M4 4h12l4 4v12H4z"/><path d="M8 12l3 3 5-6"/>'],
+    race:['#EA9836', '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 3h6"/>'],
+    balans:['#F26749', '<path d="M12 3v18M7 21h10"/><path d="M4 8h16"/><path d="M4 8l-2.5 6a3 3 0 0 0 5 0z"/><path d="M20 8l2.5 6a3 3 0 0 1-5 0z"/>'],
+    vlakken:['#204ECF', '<rect x="3" y="4" width="9" height="9" rx="1"/><path d="M16.5 10.5 21.5 20h-10z"/><circle cx="7" cy="18" r="3.2"/>'],
+    irregular:['#204ECF', '<path d="M4 19.5V6a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 1.5z"/><path d="M9 9h6M9 13h4"/>'],
+    vlaggen:['#204ECF', '<path d="M5 21V4"/><path d="M5 4.5h12l-2.5 4L17 12.5H5z"/>'],
+    landenvormen:['#2f7d52', '<path d="M4 6.5l5.5-2 5 2 5.5-2v13l-5.5 2-5-2-5.5 2z"/><path d="M9.5 4.5v13M14.5 6.5v13"/>'],
+    lichaam:['#2f7d52', '<path d="M12 21c-5-4-8-7.5-8-11a4 4 0 0 1 8-2 4 4 0 0 1 8 2c0 3.5-3 7-8 11z"/>'],
+    organisme:['#83A5F2', '<circle cx="12" cy="12" r="9"/><circle cx="9.5" cy="10" r="2.6"/><ellipse cx="15" cy="14.5" rx="2.6" ry="1.5"/>'],
+    werkwoorden:['#F26749', '<path d="M4 20l1-4L16.4 4.6a2.1 2.1 0 0 1 3 3L8 19z"/><path d="M14.5 6.5l3 3"/><path d="M4 20l4-1"/>'],
+    zinsbouw:['#204ECF', '<rect x="3" y="5" width="6" height="5" rx="1.4"/><rect x="11" y="5" width="10" height="5" rx="1.4"/><rect x="3" y="14" width="9" height="5" rx="1.4"/><rect x="14" y="14" width="7" height="5" rx="1.4"/>'],
+    tekstdetective:['#204ECF', '<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/><path d="M7.5 9h6M7.5 12h4"/>'],
+    uitverkoop:['#EA9836', '<path d="M13 4H6.5A2.5 2.5 0 0 0 4 6.5V13l7.5 7.5 8.5-8.5z"/><circle cx="8.5" cy="8.5" r="1.6"/>'],
+    breukenbakker:['#F26749', '<circle cx="12" cy="12" r="9"/><path d="M12 3v9l6.5 6.5"/><path d="M12 12 5.5 18.5"/>'],
+    dhte:['#204ECF', '<rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M3.5 10h17M9.2 10v9M14.8 10v9"/>']
+  };
+  var zachtMag = true;
+  try { zachtMag = !matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e){}
+  /* Een element in beeld schuiven, alleen als het er (half) buiten staat. Op
+     een telefoon valt de uitleg na een antwoord anders onder de vouw. */
+  function inBeeld(el){
+    el = typeof el === 'string' ? $(el) : el;
+    if (!el || !el.getBoundingClientRect) return;
+    var r = el.getBoundingClientRect(), kop = document.querySelector('header'),
+        boven = kop && getComputedStyle(kop).position === 'sticky' ? kop.getBoundingClientRect().bottom : 0;
+    if (r.top >= boven && r.bottom <= innerHeight) return;
+    try { el.scrollIntoView({ block:'nearest', behavior: zachtMag ? 'smooth' : 'auto' }); } catch (e){ el.scrollIntoView(false); }
+  }
 
   /* ---------- uitleg stap voor stap ----------
      De spellen met een eigen uitleg in uitleg/<spel>.js. De speler zelf
@@ -94,9 +143,11 @@ window.SPEL = (function(){
     paneel.className = 'uitlegpaneel';
     paneel.setAttribute('role', 'region');
     paneel.setAttribute('aria-label', 'Hoe werkt ' + naamVanSpel());
-    var ic = icoon();
+    var ic = icoon(), tg = o.tegel || TEGEL[bestand];
+    if (o.links) paneel.classList.add('links');
     paneel.innerHTML =
-      '<div class="beeld">' + (ic ? '<img src="' + schoon(ic) + '" alt="">' : '') + '</div>' +
+      '<div class="beeld">' + (tg ? '<span class="speltegel" style="background:' + schoon(tg[0]) + '"><svg viewBox="0 0 24 24" aria-hidden="true">' + tg[1] + '</svg></span>'
+        : ic ? '<img src="' + schoon(ic) + '" alt="">' : '') + '</div>' +
       '<div class="regels">' +
         (o.doel ? '<div class="regel">' + IC.doel + '<span><b>Doel</b>' + schoon(o.doel) + '</span></div>' : '') +
         (o.tijd ? '<div class="regel">' + IC.tijd + '<span><b>Tijd</b>' + schoon(o.tijd) + '</span></div>' : '') +
@@ -136,16 +187,78 @@ window.SPEL = (function(){
     }
     paneel.querySelector('.begrepen').addEventListener('click', function(){ zet(sleutel, 1); toon(false); });
     knop.addEventListener('click', function(){ toon(true); });
-    var na = start.querySelector('.lead');
-    if (na && na.parentNode === start){ if (stapKnop) na.insertAdjacentElement('afterend', stapKnop); na.insertAdjacentElement('afterend', knop); na.insertAdjacentElement('afterend', paneel); }
+    /* onder: het paneel na de keuzes en Start, zodat Start niet onder de vouw valt */
+    var na = null;
+    if (o.onder === true){
+      na = start.querySelector('#startBtn') || start.querySelector('.btn');
+      while (na && na.parentNode !== start) na = na.parentNode;
+      /* het regeltje onder Start (een ronde is ..., oneindig: ...) hoort bij Start */
+      while (na && na.nextElementSibling && na.nextElementSibling.classList.contains('oneindiguit')) na = na.nextElementSibling;
+    } else if (o.onder) na = typeof o.onder === 'string' ? $(o.onder) : o.onder;
+    if (!na || !start.contains(na)){ na = start.querySelector('.lead'); if (na && na.parentNode !== start) na = null; }
+    if (na){ if (stapKnop) na.insertAdjacentElement('afterend', stapKnop); na.insertAdjacentElement('afterend', knop); na.insertAdjacentElement('afterend', paneel); }
     else { if (stapKnop) start.insertBefore(stapKnop, start.firstChild); start.insertBefore(knop, start.firstChild); start.insertBefore(paneel, start.firstChild); }
+    if (o.onder){ knop.classList.add('onder'); if (stapKnop) stapKnop.classList.add('onder'); }
     toon(!gezien);
+    if (o.chips) drukknoppen(start);
+    if (o.zeker) zeker(o.zeker, o.loopt);
     /* ?uitleg of ?uitleg=optellen in het adres: meteen open */
     try {
       var q = new URLSearchParams(location.search);
       if (q.has('uitleg') && heeftStappen()) stappen(q.get('uitleg') || null);
     } catch (e){}
     return { open:function(){ toon(true); }, dicht:function(){ toon(false); } };
+  }
+
+  /* ---------- keuzeknoppen met aria-pressed ----------
+     Een keuzeknop is gekozen als hij de klasse 'on' heeft. Een schermlezer
+     ziet dat niet, dus elke knop in dezelfde rij krijgt aria-pressed, en dat
+     loopt mee zodra een spel de klasse verzet. Rijen die een spel later
+     opnieuw tekent, lopen gewoon mee. */
+  function drukknoppen(root){
+    root = typeof root === 'string' ? $(root) : root;
+    if (!root) return;
+    function rij(b){
+      var p = b.parentNode; if (!p) return;
+      Array.prototype.forEach.call(p.children, function(c){
+        if (c.tagName === 'BUTTON' && !c.classList.contains('btn')) c.setAttribute('aria-pressed', c.classList.contains('on') ? 'true' : 'false');
+      });
+    }
+    Array.prototype.forEach.call(root.querySelectorAll('button.on'), rij);
+    if (!window.MutationObserver) return;
+    new MutationObserver(function(lijst){
+      lijst.forEach(function(m){
+        if (m.type === 'attributes'){
+          var t = m.target;
+          if (t.tagName === 'BUTTON' && (t.classList.contains('on') || t.hasAttribute('aria-pressed'))) rij(t);
+        } else Array.prototype.forEach.call(m.addedNodes, function(n){
+          if (n.nodeType !== 1) return;
+          if (n.tagName === 'BUTTON' && n.classList.contains('on')) rij(n);
+          else if (n.querySelectorAll) Array.prototype.forEach.call(n.querySelectorAll('button.on'), rij);
+        });
+      });
+    }).observe(root, { attributes:true, attributeFilter:['class'], childList:true, subtree:true });
+  }
+
+  /* ---------- Opnieuw in de kop: eerst vragen ----------
+     Tijdens een lopend spel gooit Opnieuw een ronde weg. De eerste tik zet er
+     "Zeker? Tik nog eens" op, drie seconden lang; pas de tweede tik gaat door
+     naar de knop van het spel zelf. Op het start- of eindscherm werkt hij
+     meteen. Loopt er een spel? Standaard: #scherm-spel staat in beeld. */
+  function zeker(knop, loopt){
+    var id = typeof knop === 'string' ? knop : knop && knop.id;
+    if (!id) return;
+    loopt = loopt || function(){ var s = $('scherm-spel'); return !!(s && !s.hidden && !s.classList.contains('hide') && s.offsetParent !== null); };
+    var tekst = null, klok = null;
+    function terug(k){ clearTimeout(klok); if (tekst !== null && k){ k.textContent = tekst; k.classList.remove('zeker'); } tekst = null; }
+    document.addEventListener('click', function(e){
+      var k = e.target && e.target.closest ? e.target.closest('#' + id) : null;
+      if (!k) return;
+      if (tekst !== null || !loopt()){ terug(k); return; }
+      e.stopImmediatePropagation(); e.preventDefault();
+      tekst = k.textContent; k.textContent = 'Zeker? Tik nog eens'; k.classList.add('zeker');
+      klok = setTimeout(function(){ terug(k); }, 3000);
+    }, true);
   }
 
   /* ---------- de eindkaart ---------- */
@@ -249,8 +362,8 @@ window.SPEL = (function(){
         knopje('opnieuw', IC.opnieuw, schoon(o.opnieuwTekst || 'Nog een keer')) +
         /* Delen hoort bij een goede uitslag. Ging het mis, dan hoort daar een
            uitweg: de foutenmap serveert precies de vragen die fout gingen. */
-        (sterren === 0 && window.FOUTENMAP && FOUTENMAP.lijst && FOUTENMAP.lijst().length
-          ? knopje('stil', IC.opnieuw, 'Oefen je fouten', 'a', ' href="fouten.html"')
+        (sterren === 0
+          ? (bestand !== 'fouten' && window.FOUTENMAP && FOUTENMAP.lijst && FOUTENMAP.lijst().length ? knopje('stil', IC.opnieuw, 'Oefen je fouten', 'a', ' href="fouten.html"') : '')
           : knopje('stil deel', IC.deel, 'Delen')) +
         knopje('stil', IC.alle, 'Alle spellen', 'a', ' href="index.html"') +
         knopje('stil', IC.alle, 'Mijn voortgang', 'a', ' href="voortgang.html"') +
@@ -331,6 +444,7 @@ window.SPEL = (function(){
 
   return {
     raak: raak, uitleg:uitleg, stappen:stappen, einde:einde, bestand:bestand, naamMag:naamMag, schoonKlassementen:schoonKlassementen,
+    inBeeld:inBeeld, drukknoppen:drukknoppen, zeker:zeker,
     /* een naam of iets anders van de speler als tekst in de opmaak zetten;
        de klassementen van deze computer gebruiken hem */
     schoon: schoon };

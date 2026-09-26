@@ -76,7 +76,29 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .btn{display:inline-block;border:none;background:var(--crab);color:#fff;font-weight:600;padding:14px 30px;border-radius:999px;
   box-shadow:0 10px 0 rgba(20,34,76,.10);margin-top:22px;transition:transform .16s var(--ease)}
 .btn:hover{transform:translateY(-2px)}
-.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+/* Uit is echt uit: een lege knop met een stippelrand, in licht en donker leesbaar.
+   Een halfdoorzichtige crab-knop werd in het donker donkerrood met donkere letters. */
+.btn:disabled,.btn:disabled:hover{opacity:1;background:transparent;color:var(--muted);border:1.5px dashed var(--muted);
+  box-shadow:none;cursor:not-allowed;transform:none}
+:root[data-theme="dark"] .btn.btn:disabled{color:var(--muted)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn.btn:disabled{color:var(--muted)}}
+/* goed en fout blijven hier de volle kleuren: basis.css zet ze in het donker als vlak onder witte letters */
+/* na een fout: de som met het goede antwoord, en Volgende */
+.rekenuitleg{margin-top:14px;border-radius:16px;padding:12px 16px;font-size:.95rem;text-align:center;min-height:0}
+.rekenuitleg:empty{display:none}
+.rekenuitleg.nee{background:var(--fout-bg);color:var(--ink)}
+/* strakker onder elkaar, zodat Start op een laptop en een telefoon in beeld staat */
+.start .kies{gap:10px;margin-top:12px}
+.start .kies .kaartje{padding:13px 16px}
+.start .stap{margin-top:22px}
+@media(max-width:560px){
+  .kies{grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+  .kies .kaartje{padding:11px 12px;border-radius:16px}
+  .kies .kaartje span{display:none}
+  .kies .kaartje b{font-size:.92rem}
+  .start .stap{margin-top:16px}
+  .start>.btn{margin-top:16px}
+}
 .btn.klein{padding:11px 22px;font-size:.9rem;box-shadow:0 7px 0 rgba(20,34,76,.10);margin-top:0}
 .btn.ghost{background:#fff;color:var(--ink);border:1.5px solid rgba(20,34,76,.15);box-shadow:none}
 
@@ -229,12 +251,12 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
   </div>
 </header>
 
-<section class="start wrap" id="scherm-start">
+<section class="start oefen wrap" id="scherm-start">
   <p class="hand" style="font-size:1.6rem">hoe lang hou je het vol</p>
   <h1>Rekenrace</h1>
-  <p class="lead">De klok loopt af. Elk goed antwoord levert je seconden op, elk fout antwoord kost je seconden. Hoe langer je goed blijft rekenen, hoe verder je komt. Bij vijf goede antwoorden op rij ga je in een reeks en tellen je punten dubbel.</p>
+  <p class="lead">De klok loopt af: goed levert seconden op, fout kost ze, en vijf op rij telt dubbel.</p>
 
-  <p class="eyebrow" id="soortKop" style="margin-top:32px">waar wil je mee oefenen</p>
+  <p class="eyebrow" id="soortKop" style="margin-top:24px">waar wil je mee oefenen</p>
   <div class="kies" id="soorten"></div>
 
   <div class="stap hide" id="tafelvak">
@@ -280,6 +302,8 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
       <div class="soort" id="soortLabel"></div>
     </div>
     <div class="opties" id="opties"></div>
+    <p class="rekenuitleg" id="rekenUitleg" role="status" aria-live="polite"></p>
+    <div class="volgenderij" id="volgendeRij" hidden><button type="button" class="volgendeknop" id="volgendeBtn">Volgende &rarr;</button></div>
     <p class="reeks" id="reeksTekst"></p>
   </div>
 </section>
@@ -300,7 +324,8 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 
   <div class="lijst" id="eindLijst"></div>
   <p class="opslaghint" id="opslaghint"></p>
-  <button class="btn" id="nogeensBtn" type="button">Nog een race</button>
+  <!-- de eindkaart heeft de knop voor opnieuw; deze blijft onzichtbaar, want de kaart tikt hem aan -->
+  <button class="btn hide" id="nogeensBtn" type="button">Nog een race</button>
   <button class="btn ghost" id="wisBtn" type="button" style="margin-left:8px">Wis het klassement</button>
 </section>
 
@@ -487,7 +512,7 @@ function maakOpties(goed, decimalen){
 
   var SLEUTEL = 'rekenrace-klassement-v1';
   var bereik = null, tempo = null, soort = null, tijd = 0, punten = 0, goed = 0, fout = 0, reeks = 0, besteReeks = 0, od = {},
-      huidige = null, bezig = false, laatsteTik = 0, opgeslagen = false;
+      huidige = null, bezig = false, laatsteTik = 0, opgeslagen = false, wacht = false;
   var gekozenTafels = [], tafelsGeraakt = false;
 
   /* Alleen bij tafels en delen doet de keuze iets. Bij de andere onderdelen komen
@@ -672,6 +697,8 @@ function maakOpties(goed, decimalen){
 
   function tik(nu){
     if (!bezig) return;
+    /* De klok staat stil zolang het goede antwoord in beeld staat: lezen mag geen tijd kosten. */
+    if (wacht){ laatsteTik = nu; requestAnimationFrame(tik); return; }
     var verstreken = (nu - laatsteTik) / 1000;
     laatsteTik = nu;
     tijd -= verstreken;
@@ -690,6 +717,9 @@ function maakOpties(goed, decimalen){
   }
 
   function volgendeSom(){
+    wacht = false;
+    document.getElementById('volgendeRij').hidden = true;
+    var uit = document.getElementById('rekenUitleg'); uit.textContent = ''; uit.className = 'rekenuitleg';
     huidige = maakSom(bereik.id, soort.id, actieveTafels());
     document.getElementById('vraag').textContent = huidige.vraag + ' =';
     document.getElementById('soortLabel').textContent = huidige.soort;
@@ -745,8 +775,19 @@ function maakOpties(goed, decimalen){
     }
     tekenKlok();
     if (tijd <= 0){ stop(); return; }
-    setTimeout(function(){ if (bezig) volgendeSom(); }, klopt ? 260 : 700);
+    if (klopt){ setTimeout(function(){ if (bezig) volgendeSom(); }, 260); return; }
+    /* Fout: de klok staat stil, het goede antwoord staat erbij, en je gaat
+       zelf verder met Volgende (of Enter). */
+    wacht = true;
+    var uit = document.getElementById('rekenUitleg');
+    uit.className = 'rekenuitleg nee';
+    uit.textContent = 'Het is ' + toon(huidige.antwoord) + ': ' + huidige.vraag + ' = ' + toon(huidige.antwoord) + '.';
+    var rijV = document.getElementById('volgendeRij'), knopV = document.getElementById('volgendeBtn');
+    rijV.hidden = false;
+    try { knopV.focus({ preventScroll:true }); } catch (e){ knopV.focus(); }
+    if (window.SPEL && SPEL.inBeeld) SPEL.inBeeld(rijV);
   }
+  document.getElementById('volgendeBtn').addEventListener('click', function(){ if (bezig && wacht) volgendeSom(); });
 
   function vlieg(tekst, positief){
     var v = document.getElementById('vlieger');
@@ -864,6 +905,10 @@ function maakOpties(goed, decimalen){
       return lijst[i];
     }
     /* ?s=tafels  ?b=kgt  ?tp=snel  ?t=3,6 */
+    /* alvast gekozen, net als in de leeromgeving: alles door elkaar, tot 100, gewoon tempo */
+    soortVak.children[0].click();
+    bereikVak.children[1].click();
+    tempoVak.children[1].click();
     vast('soorten', SOORTEN, param('s'), 'soortKop', 'Onderdeel');
     vast('bereiken', BEREIK, param('b'), 'bereikKop', 'Getallen');
     vast('tempos', TEMPO, param('tp'), 'tempoKop', 'Tempo');
@@ -892,6 +937,6 @@ function maakOpties(goed, decimalen){
 <script src="klas.js"></script>
 <script src="naamfilter.js"></script>
 <script src="spel.js"></script>
-<script>SPEL.uitleg({ doel:"Sneller en zekerder hoofdrekenen.", tijd:"een paar minuten per race", bediening:"Tik het goede antwoord, of druk op 1 tot 4. Goed geeft tijd erbij, fout kost tijd." });</script>
+<script>SPEL.uitleg({ doel:"Sneller en zekerder hoofdrekenen.", tijd:"zoveel sommen als je volhoudt, ongeveer 2 minuten per race", bediening:"Tik het goede antwoord, of druk op 1 tot 4. Goed geeft tijd erbij, fout kost tijd; na een fout staat de klok stil tot je op Volgende tikt.", onder:true, chips:true, zeker:'opnieuwBtn' });</script>
 </body>
 </html>

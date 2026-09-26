@@ -81,11 +81,17 @@ svg.rijk .geb:hover .rand{stroke:#fff;stroke-width:3}
    omhullende vierkant, en dat is op een kaart met schuine grenzen een lelijke
    doos; die gaat uit, maar wie met de tab-toets loopt ziet hetzelfde oplichten. */
 svg.rijk .geb:focus{outline:none}
-svg.rijk .gloed{fill:none;stroke:transparent;stroke-width:9;stroke-linejoin:round;
-  transition:stroke .25s var(--ease)}
-svg.rijk .geb.aan .gloed,svg.rijk .geb:focus-visible .gloed{stroke:rgba(20,34,76,.42)}
-svg.rijk .geb.aan .rand,svg.rijk .geb:focus-visible .rand{stroke:#fff;stroke-width:3.6}
+/* Het oplichten ligt in een eigen laag boven alle gebieden. Zat het in het
+   gebied zelf, dan viel de helft onder de buren, en een gebied naar voren
+   halen gooit de tabvolgorde en de focus overhoop. Geel met een witte lijn
+   is op het koningsblauw en op de zee even goed te zien, licht of donker. */
+svg.rijk .ringen path{fill:none;stroke-linejoin:round;pointer-events:none}
+svg.rijk .kiesgloed{stroke:#FFD166;stroke-width:8}
+svg.rijk .kiesrand{stroke:#fff;stroke-width:2.6}
+svg.rijk .focusbuiten{stroke:#14224C;stroke-width:7}
+svg.rijk .focusbinnen{stroke:#fff;stroke-width:3;stroke-dasharray:7 5}
 svg.rijk text{pointer-events:none}
+svg.rijk .opschrift{pointer-events:none}
 svg.rijk .naam{font-family:'Poppins',sans-serif;font-size:10.5px;font-weight:600;fill:#fff;
   stroke:#14224C;stroke-width:2.8;paint-order:stroke;stroke-linejoin:round}
 svg.rijk .wie{font-family:'Poppins',sans-serif;font-size:8.2px;font-weight:500;fill:#fff;
@@ -116,7 +122,7 @@ svg.rijk .pijl.door path{stroke:#7a1f10;stroke-width:3.4}
 
 .vakken{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:9px;margin-top:14px}
 .vak{background:var(--room);border:1px solid rgba(20,34,76,.08);border-radius:14px;padding:9px 12px}
-.vak i{display:block;font-style:normal;font-size:.64rem;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
+.vak i{display:block;font-style:normal;font-size:.75rem;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
 .vak b{font-size:1.1rem;font-weight:600;font-variant-numeric:tabular-nums}
 .vak.waarschuw b{color:var(--neer)}
 
@@ -128,7 +134,12 @@ svg.rijk .pijl.door path{stroke:#7a1f10;stroke-width:3.4}
   transform-origin:left center;transition:transform .6s var(--ease)}
 .paneelkop{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .paneelkop b{font-size:1.05rem}
-.paneeltekst{color:var(--muted);font-size:.9rem;margin-top:6px}
+.paneeltekst{color:var(--muted);font-size:.9rem;margin-top:6px;max-width:65ch}
+/* Op de telefoon staat het paneel onder de kaart. Na een tik schuift het in
+   beeld, en dan hoort het niet onder de plakkende kop te verdwijnen. */
+#context,#verslag{scroll-margin-top:130px;scroll-margin-bottom:16px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.linkbtn.zeker{color:var(--neer);border-color:var(--neer)}
 .gebiedkop{display:flex;align-items:center;gap:10px;margin-top:4px}
 .gebiedkop i{width:16px;height:16px;border-radius:6px;flex:none}
 .gebiedkop b{font-size:1.15rem}
@@ -137,7 +148,7 @@ svg.rijk .pijl.door path{stroke:#7a1f10;stroke-width:3.4}
 .cijferrij span.slecht{background:#fbe4de;color:#7a1f10}
 .cijferrij span.goed{background:#e2f0e7;color:#1d5a38}
 
-.vanwaar{font-size:.84rem;color:var(--muted);margin-top:8px;padding-left:11px;box-shadow:inset 3px 0 0 var(--amber)}
+.vanwaar{font-size:.84rem;color:var(--muted);margin-top:8px;max-width:65ch}
 .keuze{display:grid;gap:9px;margin-top:14px}
 .keuze button{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;text-align:left;width:100%;
   background:var(--room);border:1.5px solid rgba(20,34,76,.10);border-radius:15px;padding:12px 15px;
@@ -155,7 +166,7 @@ svg.rijk .pijl.door path{stroke:#7a1f10;stroke-width:3.4}
 body.groot .keuze b{font-size:1.1rem}
 body.groot .verslag{font-size:1.04rem}
 
-.verslag{background:var(--room);border-left:3px solid var(--amber);border-radius:0 14px 14px 0;padding:12px 15px;
+.verslag{background:var(--room);border-radius:14px;padding:12px 15px;
   font-size:.9rem;margin-top:14px;max-height:260px;overflow:auto}
 .verslag p{margin-bottom:8px}
 .verslag p:last-child{margin-bottom:0}
@@ -172,11 +183,39 @@ body.groot .verslag{font-size:1.04rem}
 .groot-getal{font-size:clamp(2.6rem,9vw,4.6rem);font-weight:600;letter-spacing:-.04em;color:var(--ocean);line-height:1;margin-top:18px}
 .slot{max-width:760px;margin:24px auto 0;text-align:left;display:grid;gap:12px}
 .slotkaart{background:#fff;border:1px solid rgba(20,34,76,.08);border-radius:20px;padding:18px 20px}
+#eindDenk .denk{margin-top:20px}
+/* basis.css maakt elk .spel in het donker een kaart; hier is .spel alleen het
+   raster om de kaarten, en dan vielen die erin weg. */
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) #scherm-spel .spel{background:transparent}
+}
+:root[data-theme="dark"] #scherm-spel .spel{background:transparent}
+/* basis.css maakt elk .slot in het donker een kaart; hier is .slot alleen de
+   kolom om de kaartjes, en dan vielen die erin weg tot een groot blok. */
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) #scherm-einde .slot{background:transparent}
+}
+:root[data-theme="dark"] #scherm-einde .slot{background:transparent}
 .slotkaart b{display:block;margin-bottom:4px}
-.slotkaart p{font-size:.94rem;color:var(--muted)}
-.denk{background:var(--sand);border-radius:20px;padding:18px 20px}
+.slotkaart p{font-size:.94rem;color:var(--muted);max-width:65ch}
+.denk{background:var(--sand);border-radius:20px;padding:18px 20px;max-width:760px;margin:0 auto 18px;text-align:left}
 .denk b{display:block;margin-bottom:4px}
-.denk p{font-size:.94rem;color:var(--ink)}
+.denk p{font-size:.94rem;color:var(--ink);max-width:65ch}
+
+/* ---------- donker ----------
+   Groen en rood van de gevolgen zijn op een donker vlak te zwaar. In donker
+   worden ze lichter, en de gekleurde cijferchips krijgen een donkere grond.
+   De kaart zelf blijft licht: dat is een tekening, geen vlak. */
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--op:#86D8A6;--neer:#FF9E88}
+  :root:not([data-theme="light"]) .cijferrij span.slecht{background:var(--fout-bg);color:#FFB8A8}
+  :root:not([data-theme="light"]) .cijferrij span.goed{background:var(--goed-bg);color:#A6E4BE}
+  :root:not([data-theme="light"]) .gezagbalk{background:rgba(243,239,233,.16)}
+}
+:root[data-theme="dark"]{--op:#86D8A6;--neer:#FF9E88}
+:root[data-theme="dark"] .cijferrij span.slecht{background:var(--fout-bg);color:#FFB8A8}
+:root[data-theme="dark"] .cijferrij span.goed{background:var(--goed-bg);color:#A6E4BE}
+:root[data-theme="dark"] .gezagbalk{background:rgba(243,239,233,.16)}
 footer{padding:26px 0 40px;font-size:.83rem;color:var(--muted);text-align:center}
 .strip{display:flex;height:7px;width:150px;border-radius:999px;overflow:hidden;margin:0 auto 12px}
 .strip i{flex:1}
@@ -269,15 +308,15 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
   <p style="font-size:.85rem;color:var(--muted);margin-top:6px">De niveaus zijn afgestemd op leerjaar 1 en 2.</p>
   <div class="kies" id="niveaus"></div>
   <button class="btn" id="startBtn" type="button" disabled>Begin te regeren</button>
-  <p style="margin-top:14px;font-size:.82rem;color:var(--muted)">Geen inloggen, niets wordt opgeslagen.</p>
+  <p style="margin-top:14px;font-size:.82rem;color:var(--muted)">Geen inloggen. Wat je speelt blijft op dit apparaat.</p>
 </section>
 
 <section class="wrap hide" id="scherm-spel">
   <div class="spel">
     <div class="kolom">
       <div class="kaart">
-        <svg class="rijk" id="rijkSvg" viewBox="0 0 456 450" role="img"
-             aria-label="Kaart van Frankrijk rond het jaar 1000. Tik een gebied aan om er iets te doen."></svg>
+        <svg class="rijk" id="rijkSvg" viewBox="0 0 456 450" role="group"
+             aria-label="Kaart van Frankrijk rond het jaar 1000. Tik een gebied aan, of kies het met Tab en Enter, om er iets te doen."></svg>
         <div class="body">
           <div class="legenda">
             <span><i style="background:#2B55CE"></i>van jou</span>
@@ -295,11 +334,12 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
       <div class="kaart">
         <div class="body">
           <span class="fase" id="faseLabel">generatie 1</span>
-          <div class="paneelkop"><b>Gezag</b><span id="gezagGetal">70</span></div>
-          <div class="gezagbalk"><i id="gezagBalk" style="transform:scaleX(.7)"></i></div>
+          <div class="paneelkop"><b>Gezag</b><span id="gezagGetal"></span></div>
+          <div class="gezagbalk"><i id="gezagBalk" style="transform:scaleX(0)"></i></div>
           <p class="paneeltekst" id="gezagUitleg">Wat je kunt afdwingen. Elke koninklijke daad kost ervan.</p>
           <div id="context"></div>
           <div class="verslag" id="verslag"></div>
+          <p class="sr" id="melding" role="status" aria-live="polite"></p>
         </div>
       </div>
     </div>
@@ -307,11 +347,12 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
 </section>
 
 <section class="wrap hide einde" id="scherm-einde">
-  <p class="eyebrow">na drie generaties</p>
-  <div class="groot-getal" id="eindGetal"></div>
+  <!-- De eindkaart van SPEL.einde staat bovenaan met het percentage; een
+       tweede groot getal eronder zei hetzelfde. Dan de uitleg van dat getal,
+       de vraag om mee te nemen, en pas daarna de lange kaarten. -->
   <p style="color:var(--muted);margin-top:8px;max-width:56ch;margin-inline:auto" id="eindSub"></p>
+  <div id="eindDenk"></div>
   <div class="slot" id="eindSlot"></div>
-  <button class="btn" id="nogeensBtn" type="button">Nog een keer</button>
 </section>
 
 <footer>
@@ -457,8 +498,8 @@ var HOFDAG = { id:'hofdag', naam:'Roep een hofdag bijeen', kosten:12,
   tekst:'Al je leenmannen komen naar je toe en vernieuwen hun eed in het openbaar.' };
 
 var NIVEAUS = [
-  { id:'bb',  naam:'vmbo-bb',           generaties:2, keuzes:2, splitsing:false, verval:18, gezag:34,
-    uitleg:'Twee generaties, twee kandidaten per gebied.' },
+  { id:'bb',  naam:'vmbo-bb',           generaties:3, keuzes:2, splitsing:false, verval:18, gezag:34,
+    uitleg:'Drie generaties, twee kandidaten per gebied.' },
   { id:'kgt', naam:'vmbo-kgt en gl/tl', generaties:3, keuzes:3, splitsing:false, verval:22, gezag:30,
     uitleg:'Drie generaties, drie kandidaten en meer verval van trouw.' },
   { id:'hv',  naam:'havo en vwo',       generaties:3, keuzes:3, splitsing:true,  verval:26, gezag:26,
@@ -495,8 +536,20 @@ var NIVEAUS = [
   });
 
   document.getElementById('startBtn').addEventListener('click', start);
-  document.getElementById('nogeensBtn').addEventListener('click', naarStart);
-  document.getElementById('opnieuwBtn').addEventListener('click', naarStart);
+  /* Opnieuw in de kop vraagt tijdens een lopend spel twee tikken: de eerste
+     vraagt of je het zeker weet, de tweede binnen drie seconden gaat terug.
+     Een misklik kost anders je hele rijk. Buiten het spel werkt hij meteen. */
+  var elOpnieuw = document.getElementById('opnieuwBtn'), opnieuwZeker = false, opnieuwKlok = null;
+  function opnieuwRust(){
+    opnieuwZeker = false; clearTimeout(opnieuwKlok);
+    elOpnieuw.textContent = 'Opnieuw'; elOpnieuw.classList.remove('zeker');
+  }
+  elOpnieuw.addEventListener('click', function(){
+    if (elSpel.classList.contains('hide') || opnieuwZeker){ opnieuwRust(); naarStart(); return; }
+    opnieuwZeker = true;
+    elOpnieuw.textContent = 'Zeker? Tik nog eens'; elOpnieuw.classList.add('zeker');
+    opnieuwKlok = setTimeout(opnieuwRust, 3000);
+  });
   document.getElementById('grootBtn').addEventListener('click', function(){
     document.body.classList.toggle('groot');
     this.textContent = document.body.classList.contains('groot') ? 'Normaal' : 'Digibord';
@@ -541,7 +594,27 @@ var NIVEAUS = [
     scrollTo({ top:0, behavior:'auto' });
   }
 
-  function noteer(t){ verslag.unshift(t); if (verslag.length > 14) verslag.pop(); }
+  function noteer(t){ verslag.unshift(t); nieuw++; if (verslag.length > 14) verslag.pop(); }
+  var nieuw = 0;
+
+  /* Wat er net gebeurde, voor wie een schermlezer gebruikt: alleen de nieuwe
+     regels, zonder opmaak. */
+  function meld(t){
+    var el = document.getElementById('melding');
+    el.textContent = '';
+    setTimeout(function(){ el.textContent = t; }, 60);
+  }
+  function kaal(h){ var d = document.createElement('div'); d.innerHTML = h; return d.textContent; }
+
+  /* Op de telefoon staat het paneel een heel scherm onder de kaart. Na een tik
+     schuift het gevolg in beeld; op een breed scherm staat het er al naast en
+     beweegt er niets. */
+  function inBeeld(el, ruimte){
+    var r = el.getBoundingClientRect();
+    if (r.top >= 110 && r.top < innerHeight - (ruimte || 140)) return;
+    el.scrollIntoView({ block:'nearest',
+      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  }
 
   /* ---------- de kaart ----------
      De vorm van de gebieden verandert nooit, dus die tekenen we een keer. Daarna
@@ -556,26 +629,69 @@ var NIVEAUS = [
       s += '<path d="' + g.pad + '" fill="#14224C" fill-opacity=".10" transform="translate(0,4)"/>';
     });
     gebieden.forEach(function(g, i){
-      s += '<g class="geb" data-g="' + g.id + '" tabindex="0" role="button" style="--i:' + i + '">' +
-             '<path class="gloed" d="' + g.pad + '"/>' +
+      s += '<g class="geb" data-g="' + g.id + '" tabindex="0" role="button" aria-pressed="false" style="--i:' + i + '">' +
              '<path class="grond" d="' + g.pad + '" fill="#2B55CE" fill-opacity=".95"/>' +
              '<path class="drift" d="' + g.pad + '" fill="#2B55CE" fill-opacity="0"/>' +
              '<path class="rand" d="' + g.pad + '"/>' +
-             '<text class="naam" x="' + g.x + '" y="' + g.y + '" text-anchor="middle"></text>' +
-             '<text class="wie" x="' + g.x + '" y="' + (g.y + 12) + '" text-anchor="middle"></text>' +
-             '<g class="merk"><circle cx="' + g.x + '" cy="' + (g.y - 21) + '" r="11.5" stroke="#FBF6F1" stroke-width="2"/>' +
-             '<text class="merkje" x="' + g.x + '" y="' + (g.y - 17.5) + '" text-anchor="middle"></text></g>' +
            '</g>';
     });
-    s += '</g><g id="pijlen"></g>';
+    /* Boven alle gebieden: eerst het oplichten, dan de opschriften. Zo schuift
+       geen buurgebied over een naam heen. */
+    s += '<g class="ringen" aria-hidden="true"><path class="kiesgloed" d=""/><path class="kiesrand" d=""/>' +
+         '<path class="focusbuiten" d=""/><path class="focusbinnen" d=""/></g>';
+    s += '<g class="opschrift" aria-hidden="true">';
+    gebieden.forEach(function(g){
+      s += '<g data-o="' + g.id + '">' +
+             '<text class="naam" x="' + g.x + '" text-anchor="middle"></text>' +
+             '<text class="wie" x="' + g.x + '" text-anchor="middle"></text>' +
+             '<g class="merk"><circle cx="' + g.x + '" stroke="#FBF6F1" stroke-width="2"/>' +
+             '<text class="merkje" x="' + g.x + '" text-anchor="middle"></text></g>' +
+           '</g>';
+    });
+    s += '</g></g><g id="pijlen"></g>';
     elSvg.innerHTML = s;
     Array.prototype.forEach.call(elSvg.querySelectorAll('.geb'), function(el){
-      el.addEventListener('click', function(){ kiesGebied(el.getAttribute('data-g')); });
+      var id = el.getAttribute('data-g');
+      el.addEventListener('click', function(e){ kiesGebied(id, e.detail === 0); });
       el.addEventListener('keydown', function(e){
-        if (e.key === 'Enter' || e.key === ' '){ kiesGebied(el.getAttribute('data-g')); e.preventDefault(); }
+        if (e.key === 'Enter' || e.key === ' '){ kiesGebied(id, true); e.preventDefault(); }
       });
+      el.addEventListener('focus', function(){ focusRing(el.matches(':focus-visible') ? id : null); });
+      el.addEventListener('blur', function(){ focusRing(null); });
+    });
+    schaalOpschrift();
+  }
+
+  function focusRing(id){
+    var g = id ? vind(id) : null;
+    elSvg.querySelector('.focusbuiten').setAttribute('d', g ? g.pad : '');
+    elSvg.querySelector('.focusbinnen').setAttribute('d', g ? g.pad : '');
+  }
+
+  /* De kaart schaalt mee met het scherm, en op een telefoon werden de namen
+     zo zes of zeven pixels hoog. Daarom rekenen we de letters terug naar wat
+     er echt op het scherm komt: minstens elf pixels, en op een groot scherm
+     gewoon de maat die de kaart al had. */
+  function schaalOpschrift(){
+    var breed = elSvg.getBoundingClientRect().width;
+    if (!breed) return;
+    var f = 1 / (breed / 456 * 1.15);
+    var naam = Math.max(10.5, Math.min(16, 11.5 * f)),
+        wie = Math.max(8.2, Math.min(15, 11 * f)),
+        merk = Math.max(10.8, Math.min(13.5, 10.5 * f)),
+        r = Math.max(11.5, merk * 1.08);
+    gebieden.forEach(function(g){
+      var o = elSvg.querySelector('[data-o="' + g.id + '"]');
+      if (!o) return;
+      var n = o.querySelector('.naam'), w = o.querySelector('.wie'), c = o.querySelector('circle'), m = o.querySelector('.merkje');
+      var cy = g.y - (naam * .75 + r + 1.5);
+      n.setAttribute('y', g.y); n.style.fontSize = naam.toFixed(1) + 'px';
+      w.setAttribute('y', (g.y + naam * 1.12).toFixed(1)); w.style.fontSize = wie.toFixed(1) + 'px';
+      c.setAttribute('cy', cy.toFixed(1)); c.setAttribute('r', r.toFixed(1));
+      m.setAttribute('y', (cy + merk * .34).toFixed(1)); m.style.fontSize = merk.toFixed(1) + 'px';
     });
   }
+  addEventListener('resize', function(){ if (!elSpel.classList.contains('hide')) schaalOpschrift(); });
 
   /* Hoe ver een gebied van je weg gedreven is: nul als de eed nog helemaal
      staat, een als het je niet meer gehoorzaamt. Precies dat getal wordt de
@@ -608,19 +724,28 @@ var NIVEAUS = [
       var drift = el.querySelector('.drift');
       drift.setAttribute('fill', g.opstandig ? 'url(#scheur)' : (g.houder ? g.houder.kleur : '#2B55CE'));
       drift.setAttribute('fill-opacity', afdrijving(g).toFixed(2));
-      el.querySelector('.naam').textContent = g.naam;
+      var o = elSvg.querySelector('[data-o="' + g.id + '"]');
+      o.querySelector('.naam').textContent = g.naam;
       var onder = g.opstandig ? 'afgescheiden' : (g.houder ? g.houder.kort : 'van jou');
       if (g.burcht) onder += ' ♜';
-      el.querySelector('.wie').textContent = onder;
-      el.querySelector('.merk circle').setAttribute('fill', merkKleur(g));
-      el.querySelector('.merkje').textContent = merkTeken(g);
+      o.querySelector('.wie').textContent = onder;
+      o.querySelector('.merk circle').setAttribute('fill', merkKleur(g));
+      o.querySelector('.merkje').textContent = merkTeken(g);
+      /* wat een schermlezer bij dit gebied voorleest */
+      el.setAttribute('aria-label', g.naam + ', ' + (g.opstandig ? 'afgescheiden'
+        : !g.houder ? 'van jou'
+        : g.houder.kerk ? 'bij de kerk'
+        : 'in leen bij ' + g.houder.naam + ', trouw ' + Math.round(g.houder.trouw)) +
+        (g.burcht ? ', met burcht' : '') + (g.dreiging > verdediging(g) ? ', in gevaar' : ''));
+      el.setAttribute('aria-pressed', gekozen === g.id ? 'true' : 'false');
       el.classList.toggle('aan', gekozen === g.id);
-      /* het gekozen gebied vooraan, anders valt zijn gloed onder de buren */
-      if (gekozen === g.id && el.parentNode.lastChild !== el) el.parentNode.appendChild(el);
       el.classList.toggle('vrij', !g.houder && !g.opstandig && !jaarklaar &&
         !gebieden.some(function(x){ return x.houder; }));
       el.classList.toggle('geplunderd', !!g.geplunderd);
     });
+    var kg = gekozen ? vind(gekozen) : null;
+    elSvg.querySelector('.kiesgloed').setAttribute('d', kg ? kg.pad : '');
+    elSvg.querySelector('.kiesrand').setAttribute('d', kg ? kg.pad : '');
     /* de dreiging als pijlen aan de rand: hoe langer de pijl, hoe meer er staat */
     var p = '';
     gebieden.forEach(function(g){
@@ -656,6 +781,7 @@ var NIVEAUS = [
 
   function tekenVerslag(){
     document.getElementById('verslag').innerHTML = verslag.map(function(v){ return '<p>' + v + '</p>'; }).join('');
+    if (nieuw){ meld(verslag.slice(0, nieuw).map(kaal).join(' ')); nieuw = 0; }
   }
   function tekenAlles(){ verversKaart(); tekenVakken(); tekenContext(); tekenVerslag(); }
 
@@ -754,21 +880,35 @@ var NIVEAUS = [
 
   function bindKnoppen(){
     Array.prototype.forEach.call(elContext.querySelectorAll('button[data-doe]'), function(b){
-      b.addEventListener('click', function(){ doe(b.getAttribute('data-doe')); });
+      /* detail 0: met Enter of spatie gegeven, niet getikt */
+      b.addEventListener('click', function(e){ doe(b.getAttribute('data-doe'), e.detail === 0); });
     });
   }
 
-  function doe(wat){
+  /* Na een daad tekent het paneel zich opnieuw en is de knop waar je op stond
+     weg. Wie met het toetsenbord speelt, komt dan terug op het gebied waar hij
+     mee bezig was, of anders op de eerste knop van het nieuwe paneel. */
+  function naDaad(toets, id, schuif){
+    var el = id && gekozen === null ? elSvg.querySelector('[data-g="' + id + '"]') : null;
+    if (toets){
+      var doel = el || elContext.querySelector('button:not(:disabled)');
+      if (doel) doel.focus({ preventScroll:true });
+    }
+    if (schuif) inBeeld(document.getElementById('verslag'), 60);
+  }
+
+  function doe(wat, toets){
     var g = gekozen ? vind(gekozen) : null;
-    if (wat === 'terug'){ gekozen = null; tekenAlles(); return; }
-    if (wat === 'jaar'){ jaar(); return; }
-    if (wat === 'volgende'){ if (gen >= niveau.generaties) toonEinde(); else opvolging(); return; }
+    var id = gekozen;
+    if (wat === 'terug'){ gekozen = null; tekenAlles(); naDaad(toets, id, false); return; }
+    if (wat === 'jaar'){ jaar(); naDaad(toets, null, true); return; }
+    if (wat === 'volgende'){ if (gen >= niveau.generaties) toonEinde(); else { opvolging(); naDaad(toets, null, false); } return; }
     if (wat === 'hofdag'){
       if (gezag < HOFDAG.kosten) return;
       gezagAf(HOFDAG.kosten);
       leenmannen(function(x){ x.houder.trouw = grens(x.houder.trouw + 10); });
       noteer('Je roept een hofdag bijeen. Iedereen zweert opnieuw trouw: <span class="op">overal plus 10</span>.');
-      tekenAlles(); return;
+      tekenAlles(); naDaad(toets, null, true); return;
     }
     if (!g) return;
     if (wat.indexOf('leen') === 0){
@@ -779,7 +919,7 @@ var NIVEAUS = [
       pool = pool.filter(function(x){ return x !== kan; });
       if (!pool.length) pool = husselen(nieuweNamen());
       noteer('Je geeft <b>' + g.naam + '</b> in leen aan ' + kan.naam + '. Hij verdedigt het voortaan voor jou.');
-      gekozen = null; tekenAlles(); return;
+      gekozen = null; tekenAlles(); naDaad(toets, id, true); return;
     }
     var d = DADEN.filter(function(x){ return x.id === wat; })[0];
     if (!d || gezag < d.kosten) return;
@@ -789,6 +929,7 @@ var NIVEAUS = [
     noteer(tekst);
     gekozen = null;
     tekenAlles();
+    naDaad(toets, id, true);
   }
 
   /* Als de tien namen op zijn, komt er nieuw bloed uit de streek. Zo loopt het
@@ -805,9 +946,19 @@ var NIVEAUS = [
     });
   }
 
-  function kiesGebied(id){
+  /* Een gebied aantikken toont wat je er kunt doen. Met het toetsenbord gaat de
+     focus mee naar de eerste keuze; getikt schuift het paneel in beeld. */
+  function kiesGebied(id, toets){
+    if (jaarklaar) return;
     gekozen = (gekozen === id) ? null : id;
     tekenAlles();
+    var g = gekozen ? vind(gekozen) : null;
+    if (g){
+      meld(g.naam + ' gekozen. Dreiging ' + g.dreiging + ' tegen verdediging ' + verdediging(g) +
+           '. De keuzes staan in het paneel.');
+      if (toets){ var b = elContext.querySelector('button:not(:disabled)'); if (b) b.focus({ preventScroll:true }); }
+      inBeeld(elContext);
+    }
   }
 
   /* ---------- het jaar ---------- */
@@ -916,14 +1067,26 @@ var NIVEAUS = [
     var kwijt = gebieden.filter(function(g){ return g.opstandig; }).length;
     var grip = Math.round(((eigen + trouw * 0.6 + wankel * 0.2) / totaal) * 100);
 
-    document.getElementById('eindGetal').textContent = grip + ' procent';
+    var woord = ['nul', 'een', 'twee', 'drie', 'vier', 'vijf'][niveau.generaties] || niveau.generaties;
     document.getElementById('eindSub').textContent =
-      'Zoveel van je rijk heb je na ' + niveau.generaties + ' generaties nog echt in handen. ' +
+      grip + ' procent: zoveel van je rijk heb je na ' + woord + ' generaties nog echt in handen. ' +
       eigen + ' in eigen beheer, ' + trouw + ' bij trouwe leenmannen, ' + wankel + ' bij twijfelgevallen en ' +
       kwijt + ' afgescheiden. Je gezag staat op ' + Math.round(gezag) + '.';
-    SPEL.einde({ spel:'leenmannen', score:grip + '%', waarde:grip, label:'van je rijk in handen',
+    /* de kop volgt het niveau; een knop voor opnieuw, in de eindkaart */
+    SPEL.einde({ spel:'leenmannen', kop:'na ' + woord + ' generaties', score:grip + '%', waarde:grip, label:'van je rijk in handen',
                  sterren: (grip >= 62 && gezag >= 25) ? 3 : grip >= 40 ? 2 : 1,
-                 ronde:niveau.generaties, punten:grip, vak:'ges' });
+                 ronde:niveau.generaties, punten:grip, vak:'ges', opnieuw:naarStart });
+
+    /* De vraag om mee te nemen, voor elk niveau, direct onder de uitslag. */
+    var DENK = {
+      bb:  { kop:'Denk er even over na', v:'De zoon van een leenman had jou nooit trouw beloofd. Waarom zou hij jou dan gehoorzamen?' },
+      kgt: { kop:'Denk er even over na', v:'Wat had jij als koning kunnen doen om de zonen van je leenmannen trouw te houden? En wat had dat gekost?' },
+      hv:  { kop:'Denkvraag, hier is geen goed of fout', v:'Karel de Grote regeerde over half Europa, en binnen drie generaties was zijn rijk verdeeld. ' +
+        'Was dat de schuld van zwakke opvolgers, of zat het probleem in het stelsel zelf? Gebruik wat je net hebt meegemaakt in je antwoord.' }
+    };
+    var dk = DENK[niveau.id] || DENK.kgt;
+    document.getElementById('eindDenk').innerHTML = '<div class="denk"><b>' + dk.kop + '</b><p>' + dk.v + '</p>' +
+      '<p style="margin-top:8px;color:var(--muted)">Speel het nog eens en geef nu meer gebieden aan de kerk, of houd juist meer zelf. Allebei heeft een prijs.</p></div>';
 
     var oordeel = grip >= 62 ? 'Je hebt het rijk bij elkaar gehouden. Dat lukte weinig vorsten.'
                 : grip >= 40 ? 'Je rijk staat nog overeind, maar de randen brokkelen af.'
@@ -940,6 +1103,17 @@ var NIVEAUS = [
     }
 
     var html = '<div class="slotkaart"><b>Hoe het ging</b><p>' + oordeel + '</p></div>';
+    /* Op vmbo-bb twee korte kaarten in plaats van vier lange: na drie beurten
+       stonden daar zo'n 230 woorden om te lezen. */
+    if (niveau.id === 'bb'){
+      html += '<div class="slotkaart"><b>Waarom rijken uiteenvielen</b><p>Een leenman wilde zijn land aan zijn zoon geven. ' +
+        'Zo erfde de zoon het land, maar niet de belofte van zijn vader. Dat zag je op de kaart: bij elke nieuwe generatie werd de trouw minder.</p></div>';
+      html += '<div class="slotkaart"><b>Dit is echt gebeurd</b><p>Rond het jaar 1000 had de koning van Frankrijk alleen nog het land rond Parijs echt in handen. ' +
+        'De rest was van heren die zich als koning gedroegen.</p></div>';
+      document.getElementById('eindSlot').innerHTML = html;
+      scrollTo({ top:0, behavior:'smooth' });
+      return;
+    }
     html += '<div class="slotkaart"><b>Waarom rijken uiteenvielen</b><p>Een leen was in het begin persoonlijk: ' +
       'de leenman zwoer trouw, en bij zijn dood viel het gebied terug aan de koning. Maar leenmannen wilden hun land ' +
       'aan hun zoon nalaten, en koningen die soldaten nodig hadden gaven toe. Zo werd het leen erfelijk, en erfde ' +
@@ -955,14 +1129,6 @@ var NIVEAUS = [
       'Hun gebied kwam terug bij de vorst, die opnieuw mocht benoemen. Daarom gaven veel koningen juist graag land aan ' +
       'bisschoppen en abten. Wie dat in dit spel deed, hield meer grip.</p></div>';
 
-    if (niveau.id === 'hv'){
-      html += '<div class="denk"><b>Denkvraag, hier is geen goed of fout</b><p>Karel de Grote regeerde over half Europa, ' +
-        'en binnen drie generaties was zijn rijk verdeeld. Was dat de schuld van zwakke opvolgers, of zat het probleem ' +
-        'in het stelsel zelf? Gebruik wat je net hebt meegemaakt in je antwoord.</p></div>';
-    } else {
-      html += '<div class="denk"><b>Probeer het anders</b><p>Speel het nog eens en geef nu meer gebieden aan de kerk, ' +
-        'of houd juist meer zelf. Je zult merken dat allebei een prijs heeft.</p></div>';
-    }
     document.getElementById('eindSlot').innerHTML = html;
     scrollTo({ top:0, behavior:'smooth' });
   }

@@ -7,6 +7,7 @@
 <link rel="manifest" href="/manifest.json">
 <script src="avatar.js"></script>
 <script src="profiel.js"></script>
+<script src="verbinding.js"></script>
 <script src="rollen.js"></script>
 <link rel="apple-touch-icon" href="/icoon-192.png">
 <script>
@@ -68,6 +69,16 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .stad.on circle{fill:var(--ocean);stroke-width:4}
 .stad text{font-size:13px;font-weight:600;fill:#14224C;paint-order:stroke;stroke:#fff;stroke-width:4;text-anchor:middle;pointer-events:none}
 .stad .vormpje{font-size:10px;font-weight:600;fill:#5b6480;stroke-width:3.5}
+/* Een stad raak je ook naast de stip: een onzichtbare cirkel eromheen, en
+   het naambordje telt mee. Voor wie het nog te klein is (een telefoon) staan
+   de steden onder de kaart ook als knoppen. */
+.stad circle.raak,.stad:hover circle.raak,.stad.on circle.raak,.stad:focus-visible circle.raak{fill:transparent;stroke:none;r:18px}
+.stad:not(.rust) text{pointer-events:auto}
+.stadknoppen{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px}
+.stadknoppen button{min-height:44px;padding:8px 16px;border-radius:999px;border:1.5px solid var(--rand2,rgba(20,34,76,.18));background:var(--kaart,#fff);color:var(--ink);font-weight:600;font-size:.9rem;cursor:pointer}
+.stadknoppen button[aria-pressed="true"]{background:var(--ocean);border-color:var(--ocean);color:#fff}
+/* Opnieuw tijdens het spel: eerst "Zeker?" */
+.linkbtn.zeker{color:#c0442c;border-color:#c0442c}
 .stad.rust{cursor:default}
 .stad.rust circle{fill:#b7b0a2;stroke-width:1.5}
 .stad.rust text{font-size:10px;font-weight:400;fill:#8a8578;stroke-width:3}
@@ -772,7 +783,8 @@ var KWESTIES = [
       }
       var lab = POLEIS[p.id].label || { dx:0, dy:-15 };
       var lx = p.x + lab.dx, ly = p.y + lab.dy;
-      svg += '<g class="stad" id="stad-' + p.id + '" data-p="' + p.id + '" tabindex="0" role="button">' +
+      svg += '<g class="stad" id="stad-' + p.id + '" data-p="' + p.id + '" tabindex="0" role="button" aria-label="' + p.naam + '">' +
+        '<circle class="raak" cx="' + p.x + '" cy="' + p.y + '" r="18"/>' +
         '<line x1="' + p.x + '" y1="' + p.y + '" x2="' + lx + '" y2="' + (ly + 4) + '" ' +
           'stroke="#8a8578" stroke-width="1" opacity=".5"/>' +
         '<circle class="puls" cx="' + p.x + '" cy="' + p.y + '" r="7" fill="none"/>' +
@@ -789,8 +801,25 @@ var KWESTIES = [
     });
   })();
 
+
+  /* de speelbare steden ook als knoppen onder de kaart */
+  (function(){
+    var rij = document.createElement('div');
+    rij.className = 'stadknoppen';
+    rij.setAttribute('aria-label', 'Kies een stad');
+    rij.innerHTML = GRIEKENLAND.poleis.filter(function(p){ return POLEIS[p.id]; }).map(function(p){ return '<button type="button" data-p="' + p.id + '" aria-pressed="false">' + p.naam + '</button>'; }).join('');
+    document.getElementById('griekenland').parentNode.appendChild(rij);
+    rij.addEventListener('click', function(e){
+      var b = e.target.closest('[data-p]'); if (!b) return;
+      kiesPolis(b.getAttribute('data-p'));
+    });
+  })();
+  function zetStadknoppen(id){
+    Array.prototype.forEach.call(document.querySelectorAll('.stadknoppen button'), function(b){ b.setAttribute('aria-pressed', b.getAttribute('data-p') === id ? 'true' : 'false'); });
+  }
   function kiesPolis(id){
     polisId = id;
+    zetStadknoppen(id);
     var p = POLEIS[id];
     Array.prototype.forEach.call(document.querySelectorAll('.stad'), function(g){ g.classList.remove('on'); });
     document.getElementById('stad-' + id).classList.add('on');
@@ -821,7 +850,27 @@ var KWESTIES = [
   document.getElementById('startBtn').addEventListener('click', naarRollen);
   document.getElementById('naarSpel').addEventListener('click', startSpel);
   document.getElementById('nogeensBtn').addEventListener('click', naarStart);
-  document.getElementById('opnieuwBtn').addEventListener('click', naarStart);
+
+  /* Opnieuw staat alleen in de kop als er iets te verliezen valt, en vraagt
+     dan eerst of je het zeker weet: de eerste tik zegt "Zeker? Tik nog eens"
+     (drie tellen), de tweede begint opnieuw. Op het eindscherm hoeft dat niet. */
+  (function(){
+    var knop = document.getElementById('opnieuwBtn'), klok = null;
+    function zeker(aan){
+      clearTimeout(klok);
+      knop.classList.toggle('zeker', !!aan);
+      knop.textContent = aan ? 'Zeker? Tik nog eens' : 'Opnieuw';
+      if (aan) klok = setTimeout(function(){ zeker(false); }, 3000);
+    }
+    function zichtbaar(){ zeker(false); knop.classList.toggle('hide', !elStart.classList.contains('hide')); }
+    new MutationObserver(zichtbaar).observe(elStart, { attributes:true, attributeFilter:['class'] });
+    zichtbaar();
+    knop.addEventListener('click', function(){
+      if (!elEinde.classList.contains('hide') || knop.classList.contains('zeker')){ zeker(false); naarStart(); return; }
+      zeker(true);
+    });
+  })();
+
   document.getElementById('grootBtn').addEventListener('click', function(){
     document.body.classList.toggle('groot');
     this.textContent = document.body.classList.contains('groot') ? 'Normaal' : 'Digibord';

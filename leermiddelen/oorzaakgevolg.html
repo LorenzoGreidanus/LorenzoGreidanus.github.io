@@ -26,19 +26,28 @@
 <link rel="stylesheet" href="basis.css">
 <link rel="stylesheet" href="spel.css">
 <style>
-.keten{width:min(100%,560px);height:auto;display:block;font-family:inherit}
-.keten .blok{fill:var(--kaart2);stroke:var(--rand2);stroke-width:1.5}
-.keten .blok.aan{fill:var(--kaart-aan);stroke:var(--nadruk)}
-.keten .blok.vraag{stroke-dasharray:6 4}
-.keten text{fill:var(--ink);font-size:12px;font-weight:600}
-.keten .klein{fill:var(--muted);font-size:10.5px;font-weight:500}
-.keten .pijl{stroke:var(--muted);stroke-width:2.5;fill:none}
-.keten .kop{fill:var(--muted);stroke:none}
-.keten .vt{fill:var(--nadruk);font-size:26px;font-weight:700}
-.tijdbalk{width:min(100%,560px);height:auto;display:block;font-family:inherit;margin-top:6px}
-.tijdbalk rect{fill:var(--kaart2);stroke:var(--kaart);stroke-width:1}
-.tijdbalk rect.aan{fill:var(--nadruk)}
-.tijdbalk text{fill:var(--muted);font-size:10px;font-weight:600}
+/* de keten: blokken met een pijl ertussen; op een telefoon onder elkaar, met de pijl omlaag */
+.keten{list-style:none;margin:0 auto;padding:0;display:flex;align-items:stretch;gap:28px;width:min(100%,600px)}
+.keten .blok{position:relative;flex:1 1 0;min-width:0;min-height:64px;background:var(--kaart2);border:1.5px solid var(--rand2);border-radius:12px;padding:10px 12px;
+  display:grid;place-items:center;text-align:center;font-size:.88rem;font-weight:500;line-height:1.35;color:var(--ink);hyphens:auto;-webkit-hyphens:auto}
+.keten .blok.aan{background:var(--kaart-aan);border-color:var(--nadruk)}
+.keten .blok.vraag{border-style:dashed;border-color:var(--nadruk)}
+.keten .vt{font-size:1.6rem;font-weight:700;color:var(--nadruk);line-height:1}
+.keten .blok+.blok::before{content:'\2192';position:absolute;left:-23px;top:50%;transform:translateY(-50%);color:var(--muted);font-weight:700;font-size:1.15rem}
+.keten.nummers .blok{min-height:52px}
+@media(max-width:560px){
+  .keten:not(.nummers){flex-direction:column;gap:24px}
+  .keten:not(.nummers) .blok{min-height:0;flex:0 0 auto}
+  .keten:not(.nummers) .blok+.blok::before{content:'\2193';left:50%;top:-23px;transform:translateX(-50%)}
+  .keten.nummers{gap:20px}
+  .keten.nummers .blok+.blok::before{left:-18px}
+}
+/* de tijdbalk: tien vakjes, het tijdvak van de opgave licht op */
+.tijdbalk{width:min(100%,560px);margin:8px auto 0}
+.tijdbalk ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(10,1fr);gap:3px}
+.tijdbalk li{background:var(--kaart2);border-radius:6px;min-height:28px;display:grid;place-items:center;font-size:.8rem;font-weight:600;color:var(--muted)}
+.tijdbalk li.aan{background:var(--nadruk);color:var(--kaart)}
+.tijdbalk p{text-align:center;font-size:.84rem;color:var(--muted);margin-top:4px;min-height:1.3em}
 </style>
 <script src="/vangnet.js" defer></script>
 </head>
@@ -60,26 +69,18 @@
     if (uit.length < 4) uit = lijst.filter(function(x){ return tvs.indexOf(x.tv) >= 0; });
     return uit.length ? uit : lijst;
   }
-  function tijdbalk(tv){
-    var W = 560, s = '<svg class="tijdbalk" viewBox="0 0 ' + W + ' 34" aria-hidden="true">';
-    for (var i = 0; i < 10; i++) s += '<rect class="' + (i + 1 === tv ? 'aan' : '') + '" x="' + (i * 56) + '" y="0" width="56" height="16" rx="3"/><text x="' + (i * 56 + 28) + '" y="30" text-anchor="middle">tv' + (i + 1) + '</text>';
-    return s + '</svg>';
+  function tijdbalk(tv, leeg){
+    var s = '<div class="tijdbalk"><ol aria-hidden="true">';
+    for (var i = 0; i < 10; i++) s += '<li' + (i + 1 === tv ? ' class="aan"' : '') + '>' + (i + 1) + '</li>';
+    return s + '</ol><p>' + (tv ? 'tijdvak ' + tv + ': ' + TV[tv - 1] : (leeg || '')) + '</p></div>';
   }
-  /* regels afbreken voor in een blok */
-  function regels(t, max){ var w = t.split(' '), uit = [], r = ''; w.forEach(function(x){ if ((r + ' ' + x).trim().length > max){ uit.push(r.trim()); r = x; } else r += ' ' + x; }); if (r.trim()) uit.push(r.trim()); return uit.slice(0, 3); }
   /* de keten als blokken met pijlen; leeg: alleen genummerde lege blokken (voor de sleepvorm) */
   function ketenSvg(stappen, o){
     o = o || {};
-    var n = stappen.length, W = 560, bw = Math.floor((W - (n - 1) * 26) / n), bh = 64, s = '<svg class="keten" viewBox="0 0 ' + W + ' ' + (bh + 8) + '" role="img" aria-label="keten van oorzaak naar gevolg">';
-    stappen.forEach(function(st, i){
-      var x = i * (bw + 26);
-      s += '<rect class="blok' + (o.aan === i ? ' aan' : '') + (st === null ? ' vraag' : '') + '" x="' + x + '" y="4" width="' + bw + '" height="' + bh + '" rx="10"/>';
-      if (st === null) s += '<text class="vt" x="' + (x + bw / 2) + '" y="' + (bh / 2 + 14) + '" text-anchor="middle">?</text>';
-      else if (o.nummers) s += '<text class="vt" x="' + (x + bw / 2) + '" y="' + (bh / 2 + 14) + '" text-anchor="middle">' + (i + 1) + '</text>';
-      else regels(st, Math.floor(bw / 6.2)).forEach(function(r, k){ s += '<text class="klein" x="' + (x + bw / 2) + '" y="' + (26 + k * 14) + '" text-anchor="middle">' + S(r) + '</text>'; });
-      if (i < n - 1) s += '<path class="pijl" d="M' + (x + bw + 3) + ' ' + (bh / 2 + 4) + 'h16"/><path class="kop" d="M' + (x + bw + 17) + ' ' + (bh / 2 - 1) + 'l7 5-7 5z"/>';
-    });
-    return s + '</svg>';
+    return '<ol class="keten' + (o.nummers ? ' nummers' : '') + '" aria-label="keten van oorzaak naar gevolg">' + stappen.map(function(st, i){
+      var inhoud = st === null ? '<b class="vt" aria-label="gezocht">?</b>' : o.nummers ? '<b class="vt">' + (i + 1) + '</b>' : S(st);
+      return '<li class="blok' + (o.aan === i ? ' aan' : '') + (st === null ? ' vraag' : '') + '">' + inhoud + '</li>';
+    }).join('') + '</ol>';
   }
 
   /* 1. keten: sleep de stappen in de goede volgorde */
@@ -128,7 +129,7 @@
         { id:'bb', naam:'vmbo-bb', uit:'Korte ketens van drie stappen en bekende gebeurtenissen.' },
         { id:'kgt', naam:'vmbo-kgt en tl', uit:'Ketens van vier stappen, oorzaken en gevolgen uit alle tijdvakken.' },
         { id:'hv', naam:'havo en vwo', uit:'Ook aanleiding tegenover diepere oorzaak, en het soort oorzaak.' } ] },
-      { id:'tijdvak', kop:'welke tijdvakken', std:'alle', items:[
+      { id:'tijdvak', kop:'welke tijdvakken', std:'alle', inklap:true, items:[
         { id:'alle', naam:'alle tijdvakken' }, { id:'oud', naam:'prehistorie en oudheid (1-2)' }, { id:'midd', naam:'middeleeuwen (3-4)' }, { id:'vroeg', naam:'vroegmoderne tijd (5-7)' }, { id:'mod', naam:'moderne tijd (8-10)' } ] },
       { id:'soort', kop:'wat oefen je', std:'alles', items:[
         { id:'alles', naam:'alles door elkaar' }, { id:'keten', naam:'ketens' }, { id:'gevolg', naam:'wat was het gevolg' }, { id:'oorzaak', naam:'wat was de oorzaak' }, { id:'soort', naam:'soort oorzaak' } ] }

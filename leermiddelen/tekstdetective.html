@@ -258,10 +258,10 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 </header>
 
 <main class="wrap">
-  <section id="scherm-start">
+  <section id="scherm-start" class="oefen">
     <p class="hand" style="font-size:1.6rem">zoek de kern</p>
     <h1>De tekstdetective</h1>
-    <p class="lead">Een alinea heeft altijd een kern, en bijna altijd een woord dat verraadt hoe de zinnen samenhangen. Lees de alinea, kies de hoofdgedachte en tik daarna het woord aan dat het verband aangeeft. Bij elk antwoord staat waarom.</p>
+    <p class="lead">Lees een alinea, kies de hoofdgedachte, tik het signaalwoord aan en zeg wat de schrijver wil.</p>
     <div class="tafereel"><svg viewBox="0 0 800 250" role="img" aria-label="Een vergrootglas boven een alinea">
   <rect width="800" height="250" fill="var(--sc-lucht)"/>
   <!-- het blad papier -->
@@ -303,7 +303,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
       <div><i style="background:var(--vista);color:#14224C">4</i><b>Kies het schrijfdoel</b><span>Informatie geven, overtuigen, een mening geven, tot handelen aanzetten, amuseren of gevoelens oproepen: de zes uit het examen.</span></div>
     </div>
     <div class="kaart">
-      <div class="stap"><b>Soort tekst</b><div class="chips" id="soorten"></div></div>
+      <div class="stap"><b>Soort tekst</b><div class="chips schuif" id="soorten"></div></div>
       <div class="stap"><b>Niveau</b><div class="chips" id="niveaus"></div><p class="tip" id="niveauUit" style="margin-top:6px"></p></div>
       <div class="stap"><b>Leerjaar</b><div class="chips" id="leerjaren"></div><p class="tip" id="leerjaarUit" style="margin-top:6px"></p></div>
       <div class="stap startknoppen"><button class="knop crab groot" id="startBtn" type="button">Begin met lezen</button><button class="knop stil groot" id="oneindigBtn" type="button">Oneindig oefenen</button></div>
@@ -313,9 +313,9 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 
   <section id="scherm-spel" class="hide">
     <div class="balkje">
-      <div class="meter"><b id="mPunt">0</b><span><span class="ico ico-ster" role="img" aria-label="punten" title="punten"></span></span></div>
-      <div class="meter"><b id="mGoed">0</b><span><span class="ico ico-vink" role="img" aria-label="goed" title="goed"></span></span></div>
-      <div class="meter"><b id="mFout">0</b><span><span class="ico ico-kruis" role="img" aria-label="fout" title="fout"></span></span></div>
+      <div class="meter"><b id="mPunt">0</b><span><span class="ico ico-ster" aria-hidden="true"></span>punten</span></div>
+      <div class="meter"><b id="mGoed">0</b><span><span class="ico ico-vink" aria-hidden="true"></span>goed</span></div>
+      <div class="meter"><b id="mFout">0</b><span><span class="ico ico-kruis" aria-hidden="true"></span>fout</span></div>
     </div>
     <div class="voortbalk"><i id="voortIn"></i></div>
     <div class="kaart">
@@ -323,7 +323,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
       <div class="alinea" id="alinea"></div>
       <p class="vraagkop" id="vraagkop"></p>
       <div class="keuzes" id="keuzes"></div>
-      <p class="terugkoppeling" id="terug"></p>
+      <p class="terugkoppeling" id="terug" role="status" aria-live="polite"></p>
       <div class="knoprij">
         <button class="knop crab hide" id="verderBtn" type="button">Verder</button>
         <button class="knop stil hide" id="stopOneindigBtn" type="button">Stoppen</button>
@@ -333,12 +333,12 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   </section>
 
   <section id="scherm-einde" class="hide">
-    <p class="hand" style="font-size:1.6rem">zaak gesloten</p>
-    <h2 id="eindKop" class="eindtitel">Klaar</h2>
+    <!-- de eindkaart (SPEL.einde) staat bovenaan met de punten en de knop voor nog een ronde -->
+    <h2 id="eindKop" class="eindtitel hide">Klaar</h2>
     <p class="lead" id="eindUit"></p>
-    <div class="cijfers" id="cijfers"></div>
+    <div class="cijfers hide" id="cijfers"></div>
     <div class="beheersing" id="beheersing" hidden></div>
-    <div class="knoprij"><button class="knop crab groot" id="nogBtn" type="button">Nog een ronde</button> <button class="knop stil" id="andersBtn" type="button">Andere keuze</button></div>
+    <div class="knoprij"><button class="knop crab groot hide" id="nogBtn" type="button">Nog een ronde</button><button class="knop stil" id="andersBtn" type="button">Andere keuze</button></div>
     <div class="fouten" id="fouten"></div>
   </section>
 </main>
@@ -517,6 +517,9 @@ var PER_RONDE = 6;
     $('verderBtn').classList.remove('hide');
     $('verderBtn').textContent = tekst;
     $('stopOneindigBtn').classList.toggle('hide', !oneindig);
+    /* de uitleg en de knop verder in beeld, ook op een telefoon */
+    try { $('verderBtn').focus({ preventScroll:true }); } catch (e){ $('verderBtn').focus(); }
+    if (window.SPEL && SPEL.inBeeld) SPEL.inBeeld($('verderBtn'));
   }
   function kiesHoofd(i){
     var a = rij[nr];
@@ -616,7 +619,7 @@ var PER_RONDE = 6;
       return '<div><b>' + schoon(f.v) + ': ' + schoon(f.j) + '</b><span>' + schoon(f.hoe) + '</span></div>';
     }).join('') : '';
     /* een oneindige sessie heeft een eigen klassement: anders wint wie het langst doorgaat */
-    SPEL.einde({ spel:'tekstdetective', vak:'ned', od:od, goed:goed, compact:true, waarde:punten, label:'punten', deelTekst:punten + ' punten' + (oneindig ? ', oneindig geoefend' : ''),
+    SPEL.einde({ spel:'tekstdetective', vak:'ned', od:od, goed:goed, score:punten, waarde:punten, label:'punten', opnieuwTekst: oneindig ? 'Verder oefenen' : 'Nog een ronde', deelTekst:punten + ' punten' + (oneindig ? ', oneindig geoefend' : ''),
       max:gedaan * 10 || 1, ronde:goed, punten:punten, niveau:['', 'bb', 'kgt', 'hv'][niveau], vak:'ned', sleutel:niveau + (soort || 'alles') + (oneindig ? '-oneindig' : '') });
     scrollTo({ top:0, behavior:'auto' });
   }
@@ -645,6 +648,6 @@ var PER_RONDE = 6;
 </script>
 <script src="thema.js"></script>
 <script src="spel.js"></script>
-<script>SPEL.uitleg({ doel:"De hoofdgedachte van een alinea vinden en signaalwoorden herkennen.", tijd:"8 minuten per ronde", bediening:"Tik op een antwoord, en daarna op het woord in de tekst dat het verband aangeeft.", meer:'.uitleg' });</script>
+<script>SPEL.uitleg({ doel:"De hoofdgedachte van een alinea vinden en signaalwoorden herkennen.", tijd:"zes alinea's, ongeveer 8 minuten", bediening:"Tik op een antwoord, en daarna op het woord in de tekst dat het verband aangeeft.", meer:'.uitleg', onder:true, links:true, chips:true, zeker:'stopBtn' });</script>
 </body>
 </html>

@@ -26,23 +26,28 @@
 <link rel="stylesheet" href="basis.css">
 <link rel="stylesheet" href="spel.css">
 <style>
-.pir{width:min(100%,520px);height:auto;display:block;font-family:inherit}
-.pir text{fill:var(--muted);font-size:11px;font-weight:600}
-.pir .kop{fill:var(--ink);font-size:13px}
-.pir .man{fill:#204ECF;fill-opacity:.85}
+/* De piramide is smal getekend (380 breed, de leeftijden in het midden), zodat de tekst op een
+   telefoon van 375 breed minstens 11 pixels blijft. Mannen in de nadrukkleur, die in donker lichter
+   wordt; de tekst is inkt of muted, dus leesbaar in licht en donker. */
+.pir{width:min(100%,440px);height:auto;display:block;font-family:inherit}
+.pir text{fill:var(--muted);font-size:13.5px;font-weight:600}
+.pir .kop{fill:var(--ink);font-size:14px}
+.pir .lft,.pir .wie{fill:var(--ink)}
+.pir .man{fill:var(--nadruk);fill-opacity:.85}
 .pir .vrouw{fill:#F26749;fill-opacity:.85}
 .pir .man.licht,.pir .vrouw.licht{fill-opacity:.25}
 .pir .as{stroke:var(--muted);stroke-width:1}
 .pir .mid{stroke:var(--ink);stroke-width:1.5}
-.twee{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
-.twee .pir{width:min(100%,300px)}
-.dtm{width:min(100%,420px);height:auto;display:block;font-family:inherit}
-.dtm text{fill:var(--muted);font-size:11px;font-weight:600}
+.dtm{width:min(100%,400px);height:auto;display:block;font-family:inherit;margin-bottom:10px}
+.dtm text{fill:var(--ink);font-size:13px;font-weight:600}
 .dtm .lijn{fill:none;stroke-width:2.5}
-.dtm .geb{stroke:#204ECF}.dtm .ster{stroke:#F26749}
-.dtm .fase{fill:var(--muted);font-size:12px}
+.dtm .geb{stroke:var(--nadruk)}.dtm .ster{stroke:#F26749}
+.dtm .fase{fill:var(--muted)}
 .dtm .vak{fill:var(--kaart2)}
-.dtm .vak.aan{fill:var(--nadruk-zacht)}
+body.groot .pir{width:min(100%,560px)}
+body.groot .dtm{width:min(100%,520px)}
+/* de cijfers van de grafiek als tabel, alleen voor een schermlezer */
+.sr-tabel{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap;border:0}
 </style>
 <script src="/vangnet.js" defer></script>
 </head>
@@ -58,25 +63,37 @@
   function net(x){ return String(Math.round(x * 10) / 10).replace('.', ','); }
   var SOORTNAAM = { groei:'groeiende bevolking (piramide)', stabiel:'stabiele bevolking (klok)', krimp:'krimpende, vergrijzende bevolking (urn)' };
 
-  /* de piramide: links mannen, rechts vrouwen, per groep van tien jaar; licht: welke groepen oplichten */
+  /* de piramide: links mannen, rechts vrouwen, per groep van tien jaar, de leeftijden in het midden; licht: welke groepen oplichten.
+     Smal getekend (380 breed) zodat de tekst op een telefoon groot genoeg blijft. */
   function piramide(l, o){
     o = o || {};
-    var W = 560, Hh = 250, mid = 270, top = 28, rh = 19, sch = 15; /* 1% = 18 px */
-    var s = '<svg class="pir" viewBox="0 0 ' + W + ' ' + Hh + '" role="img" aria-label="bevolkingspiramide' + (o.naam ? ' van ' + S(l.land) : '') + '">';
+    var W = 380, Hh = 270, mid = 190, gat = 25, top = 46, rh = 20, sch = 8.6; /* 1% = 8,6 px; de grootste groep (Niger, 0-9) is ruim 15% */
+    var lx = mid - gat, rx = mid + gat, onder = top + 10 * rh;
+    var s = '<svg class="pir" viewBox="0 0 ' + W + ' ' + Hh + '" role="img" aria-label="Bevolkingspiramide' + (o.naam ? ' van ' + S(l.land) : '') + ': links de mannen, rechts de vrouwen, per leeftijdsgroep van tien jaar, in procenten van de hele bevolking. De cijfers staan in de tabel hierna.">';
     s += '<text class="kop" x="' + mid + '" y="16" text-anchor="middle">' + (o.naam ? S(l.land) : 'bevolking, in procenten per groep') + '</text>';
-    s += '<text x="' + (mid - 150) + '" y="' + (top - 4) + '" text-anchor="middle" style="fill:#204ECF">mannen</text><text x="' + (mid + 150) + '" y="' + (top - 4) + '" text-anchor="middle" style="fill:#F26749">vrouwen</text>';
+    /* de legenda: een blokje in de kleur, de tekst in inkt */
+    s += '<rect class="man" x="' + (lx - 12) + '" y="' + (top - 17) + '" width="11" height="11" rx="2"/><text class="wie" x="' + (lx - 17) + '" y="' + (top - 7) + '" text-anchor="end">mannen</text>';
+    s += '<rect class="vrouw" x="' + (rx + 1) + '" y="' + (top - 17) + '" width="11" height="11" rx="2"/><text class="wie" x="' + (rx + 17) + '" y="' + (top - 7) + '">vrouwen</text>';
     for (var i = 0; i < 10; i++){
       var y = top + (9 - i) * rh, licht = o.licht && o.licht.indexOf(i) < 0 ? ' licht' : '';
-      s += '<rect class="man' + licht + '" x="' + (mid - l.m[i] * sch) + '" y="' + y + '" width="' + (l.m[i] * sch) + '" height="' + (rh - 2) + '"/>';
-      s += '<rect class="vrouw' + licht + '" x="' + mid + '" y="' + y + '" width="' + (l.v[i] * sch) + '" height="' + (rh - 2) + '"/>';
-      s += '<text x="' + (mid - l.m[i] * sch - 4) + '" y="' + (y + 13) + '" text-anchor="end">' + net(l.m[i]) + '</text><text x="' + (mid + l.v[i] * sch + 4) + '" y="' + (y + 13) + '">' + net(l.v[i]) + '</text>';
-      s += '<text x="' + (W - 6) + '" y="' + (y + 13) + '" text-anchor="end" style="fill:var(--ink)">' + GR[i] + '</text>';
+      s += '<rect class="man' + licht + '" x="' + (lx - l.m[i] * sch).toFixed(1) + '" y="' + y + '" width="' + (l.m[i] * sch).toFixed(1) + '" height="' + (rh - 2) + '"/>';
+      s += '<rect class="vrouw' + licht + '" x="' + rx + '" y="' + y + '" width="' + (l.v[i] * sch).toFixed(1) + '" height="' + (rh - 2) + '"/>';
+      s += '<text x="' + (lx - l.m[i] * sch - 4).toFixed(1) + '" y="' + (y + 14) + '" text-anchor="end">' + net(l.m[i]) + '</text><text x="' + (rx + l.v[i] * sch + 4).toFixed(1) + '" y="' + (y + 14) + '">' + net(l.v[i]) + '</text>';
+      s += '<text class="lft" x="' + mid + '" y="' + (y + 14) + '" text-anchor="middle">' + GR[i] + '</text>';
     }
-    s += '<line class="mid" x1="' + mid + '" y1="' + (top - 2) + '" x2="' + mid + '" y2="' + (top + 10 * rh) + '"/>';
-    s += '<line class="as" x1="' + (mid - 11 * sch) + '" y1="' + (top + 10 * rh) + '" x2="' + (mid + 11 * sch) + '" y2="' + (top + 10 * rh) + '"/>';
-    [10, 5, 0, 5, 10].forEach(function(p, k){ var x = mid + (k - 2) * 5 * sch; s += '<text x="' + x + '" y="' + (top + 10 * rh + 14) + '" text-anchor="middle">' + p + '%</text>'; });
+    s += '<line class="mid" x1="' + lx + '" y1="' + (top - 2) + '" x2="' + lx + '" y2="' + onder + '"/><line class="mid" x1="' + rx + '" y1="' + (top - 2) + '" x2="' + rx + '" y2="' + onder + '"/>';
+    s += '<line class="as" x1="' + (lx - 15 * sch) + '" y1="' + onder + '" x2="' + lx + '" y2="' + onder + '"/><line class="as" x1="' + rx + '" y1="' + onder + '" x2="' + (rx + 15 * sch) + '" y2="' + onder + '"/>';
+    [5, 10, 15].forEach(function(p){ s += '<text x="' + (lx - p * sch) + '" y="' + (onder + 16) + '" text-anchor="middle">' + p + '%</text><text x="' + (rx + p * sch) + '" y="' + (onder + 16) + '" text-anchor="middle">' + p + '%</text>'; });
     return s + '</svg>';
   }
+  /* dezelfde cijfers als tabel, onzichtbaar maar wel voor een schermlezer; na de svg, zodat de lijst met missers alleen de svg meeneemt */
+  function tabel(l, o){
+    o = o || {};
+    return '<div class="sr-tabel"><table><caption>' + (o.naam ? 'Bevolking van ' + S(l.land) : 'De bevolking') + ', in procenten van de hele bevolking</caption>' +
+      '<tr><th scope="col">leeftijd</th><th scope="col">mannen</th><th scope="col">vrouwen</th></tr>' +
+      GR.map(function(g, i){ return '<tr><th scope="row">' + g + ' jaar</th><td>' + net(l.m[i]) + '%</td><td>' + net(l.v[i]) + '%</td></tr>'; }).join('') + '</table></div>';
+  }
+  function pirBeeld(l, o){ return piramide(l, o) + tabel(l, o); }
   function som(l, van, tot){ var t = 0; for (var i = van; i <= tot; i++) t += l.m[i] + l.v[i]; return Math.round(t * 10) / 10; }
   function grootste(l){ var b = 0; for (var i = 1; i < 10; i++) if (l.m[i] + l.v[i] > l.m[b] + l.v[b]) b = i; return b; }
   function landenVan(niveau){ return niveau === 'bb' ? P.filter(function(l){ return l.bb; }) : P; }
@@ -85,7 +102,7 @@
   function vorm(niveau){
     var l = kies(landenVan(niveau)), opties = ['groei', 'stabiel', 'krimp'];
     return { onderdeel:'bevolkingspiramide: vorm', onderdeelNaam:'vorm', vorm:'meerkeuze', vasteVolgorde:true, sleutel:'v' + l.land,
-      vraag:'Wat voor bevolking laat deze piramide zien?', opdracht:'Kijk naar de basis (de jongste groepen) en de top (de oudste).', beeld: piramide(l, {}),
+      vraag:'Wat voor bevolking laat deze piramide zien?', opdracht:'Kijk naar de basis (de jongste groepen) en de top (de oudste).', beeld: pirBeeld(l, {}),
       opties: opties.map(function(k){ return SOORTNAAM[k]; }), goed: opties.indexOf(l.soort),
       uitleg: 'Dit is ' + l.land + ': ' + l.uit + '. ' + (l.soort === 'groei' ? 'Een brede basis betekent veel kinderen: de bevolking groeit.' : l.soort === 'stabiel' ? 'De groepen zijn ongeveer even breed tot de ouderen: de bevolking blijft ongeveer gelijk.' : 'De basis is smaller dan het midden: er worden weinig kinderen geboren en de bevolking vergrijst.'), antwoordTekst: SOORTNAAM[l.soort] };
   }
@@ -95,14 +112,14 @@
     if (soort === 'groep'){
       var g = grootste(l), opties = H([g].concat(H([0, 1, 2, 3, 4, 5, 6, 7, 8].filter(function(i){ return i !== g; })).slice(0, 3)));
       return { onderdeel:'bevolkingspiramide: aflezen', onderdeelNaam:'aflezen', vorm:'meerkeuze', sleutel:'ag' + l.land,
-        vraag:'Welke leeftijdsgroep is in ' + S(l.land) + ' het <b>grootst</b> (mannen en vrouwen samen)?', beeld: piramide(l, { naam:true }),
+        vraag:'Welke leeftijdsgroep is in ' + S(l.land) + ' het <b>grootst</b> (mannen en vrouwen samen)?', beeld: pirBeeld(l, { naam:true }),
         opties: opties.map(function(i){ return GR[i] + ' jaar'; }), goed: opties.indexOf(g),
         uitleg: 'De breedste balk (links en rechts samen) is ' + GR[g] + ' jaar: ' + net(l.m[g]) + '% + ' + net(l.v[g]) + '% = ' + net(l.m[g] + l.v[g]) + '% van de bevolking.', antwoordTekst: GR[g] + ' jaar' };
     }
     var jong = soort === 'jong', van = jong ? 0 : 7, tot = jong ? 1 : 9, p = som(l, van, tot);
     return { onderdeel:'bevolkingspiramide: aflezen', onderdeelNaam:'aflezen', vorm:'invul', sleutel:'a' + soort + l.land,
       vraag:'Hoeveel procent van de bevolking van ' + S(l.land) + ' is <b>' + (jong ? 'jonger dan 20' : '70 jaar of ouder') + '</b>?', opdracht:'Tel de balken van mannen en vrouwen bij elkaar op. Een afwijking van 1 procentpunt mag.',
-      beeld: piramide(l, { naam:true, licht: jong ? [0, 1] : [7, 8, 9] }),
+      beeld: pirBeeld(l, { naam:true, licht: jong ? [0, 1] : [7, 8, 9] }),
       velden:[{ label: jong ? '0 tot 19 jaar' : '70 jaar en ouder', antwoord: p, tol: 1, eenheid:'%' }],
       uitleg: (jong ? 'Twee groepen: ' : 'Drie groepen: ') + GR.slice(van, tot + 1).map(function(g, k){ var i = van + k; return net(l.m[i]) + ' + ' + net(l.v[i]); }).join(' + ') + ' = ' + net(p) + '%.', antwoordTekst: net(p) + '%' };
   }
@@ -113,7 +130,7 @@
     var anders = H(lijst.filter(function(x){ return x.soort !== l.soort; })).slice(0, 2).concat(H(lijst.filter(function(x){ return x !== l && x.soort === l.soort; })).slice(0, 1));
     var opties = H([l].concat(anders));
     return { onderdeel:'bevolkingspiramide: welk land', onderdeelNaam:'welk land', vorm:'meerkeuze', sleutel:'l' + l.land,
-      vraag:'Van welk land is deze piramide?', opdracht:'Kijk naar de vorm: groei, stabiel of krimp. Welk land past daarbij?', beeld: piramide(l, {}),
+      vraag:'Van welk land is deze piramide?', opdracht:'Kijk naar de vorm: groei, stabiel of krimp. Welk land past daarbij?', beeld: pirBeeld(l, {}),
       opties: opties.map(function(x){ return x.land; }), goed: opties.indexOf(l),
       uitleg: l.land + ': ' + l.uit + '. ' + anders.map(function(x){ return x.land + ' heeft een ' + (x.soort === 'groei' ? 'groeiende' : x.soort === 'stabiel' ? 'stabiele' : 'krimpende') + ' bevolking'; }).join('; ') + '.', antwoordTekst: l.land };
   }
@@ -128,17 +145,18 @@
     var metCijfers = Math.random() < 0.5 && niveau !== 'bb';
     return { onderdeel:'bevolkingspiramide: begrippen', onderdeelNaam:'begrippen', vorm:'meerkeuze', sleutel:'b' + b.b,
       vraag: metCijfers ? S(l.land) + ' heeft een geboortecijfer van ' + l.geboorte + ' en een sterftecijfer van ' + l.sterfte + ' per 1000. Welk begrip hoort bij: <b>' + b.u + '</b>?' : 'Welk begrip hoort bij: <b>' + b.u + '</b>?',
-      beeld: piramide(l, { naam:true }), opties: opties, goed: opties.indexOf(b.b),
+      beeld: pirBeeld(l, { naam:true }), opties: opties, goed: opties.indexOf(b.b),
       uitleg: b.b.charAt(0).toUpperCase() + b.b.slice(1) + ': ' + b.u + '.' + (b.b === 'natuurlijke bevolkingsgroei' ? ' Voor ' + l.land + ': ' + l.geboorte + ' − ' + l.sterfte + ' = ' + (l.geboorte - l.sterfte) + ' per 1000.' : b.b === 'levensverwachting' ? ' In ' + l.land + ' is die ongeveer ' + l.levensverwachting + ' jaar.' : ''), antwoordTekst: b.b };
   }
   /* 5. het demografisch transitiemodel (hv): welke fase */
   function dtm(){
-    var W = 420, Hh = 200, s = '<svg class="dtm" viewBox="0 0 ' + W + ' ' + Hh + '" role="img" aria-label="demografisch transitiemodel">';
-    var fasen = [[20, 100], [100, 190], [190, 290], [290, 400]];
-    fasen.forEach(function(f, i){ s += '<rect class="vak" x="' + f[0] + '" y="20" width="' + (f[1] - f[0] - 2) + '" height="150"/><text class="fase" x="' + ((f[0] + f[1]) / 2) + '" y="188" text-anchor="middle">fase ' + (i + 1) + '</text>'; });
-    s += '<path class="lijn geb" d="M20 45 C60 40 90 50 100 46 C140 40 170 52 190 60 C230 80 260 120 290 140 C330 150 370 150 400 150"/>';
-    s += '<path class="lijn ster" d="M20 55 C60 50 90 60 100 60 C130 70 160 100 190 120 C230 135 260 145 290 148 C330 150 370 150 400 150"/>';
-    s += '<text x="24" y="14" style="fill:#204ECF">geboortecijfer</text><text x="130" y="14" style="fill:#F26749">sterftecijfer</text>';
+    /* 340 breed, zodat de tekst op een telefoon groot genoeg blijft; de legenda is een lijntje in de kleur met de tekst in inkt */
+    var W = 340, Hh = 204, s = '<svg class="dtm" viewBox="0 0 ' + W + ' ' + Hh + '" role="img" aria-label="Het demografisch transitiemodel in vier fasen. In fase 1 zijn het geboortecijfer en het sterftecijfer allebei hoog. In fase 2 daalt het sterftecijfer en blijft het geboortecijfer hoog. In fase 3 daalt ook het geboortecijfer. In fase 4 zijn ze allebei laag.">';
+    var fasen = [[10, 78.6], [78.6, 155.9], [155.9, 241.7], [241.7, 336]];
+    fasen.forEach(function(f, i){ s += '<rect class="vak" x="' + f[0] + '" y="26" width="' + (f[1] - f[0] - 2).toFixed(1) + '" height="150"/><text class="fase" x="' + ((f[0] + f[1]) / 2).toFixed(1) + '" y="194" text-anchor="middle">fase ' + (i + 1) + '</text>'; });
+    s += '<path class="lijn geb" d="M10 51 C44.3 46 70.1 56 78.6 52 C113 46 138.7 58 155.9 66 C190.2 86 215.9 126 241.7 146 C276 156 310.3 156 336 156"/>';
+    s += '<path class="lijn ster" d="M10 61 C44.3 56 70.1 66 78.6 66 C104.4 76 130.2 106 155.9 126 C190.2 141 215.9 151 241.7 154 C276 156 310.3 156 336 156"/>';
+    s += '<path class="lijn geb" d="M10 11h18"/><text x="33" y="16">geboortecijfer</text><path class="lijn ster" d="M160 11h18"/><text x="183" y="16">sterftecijfer</text>';
     return s + '</svg>';
   }
   function transitie(niveau){
@@ -147,7 +165,7 @@
     var opties = window.PIRAMIDE_FASEN.slice();
     return { onderdeel:'bevolkingspiramide: transitie', onderdeelNaam:'transitiemodel', vorm:'meerkeuze', vasteVolgorde:true, sleutel:'t' + l.land,
       vraag:S(l.land) + ' heeft een geboortecijfer van <b>' + l.geboorte + '</b> en een sterftecijfer van <b>' + l.sterfte + '</b> per 1000. In welke fase van het demografisch transitiemodel zit het land?',
-      opdracht:'Blauw is het geboortecijfer, oranje het sterftecijfer. De groei is het verschil ertussen.', beeld: dtm() + piramide(l, { naam:true }),
+      opdracht:'Blauw is het geboortecijfer, oranje het sterftecijfer. De groei is het verschil ertussen.', beeld: dtm() + pirBeeld(l, { naam:true }),
       opties: opties, goed: fase - 1,
       uitleg: l.land + ': geboortecijfer ' + l.geboorte + ', sterftecijfer ' + l.sterfte + ', dus een natuurlijke groei van ' + (l.geboorte - l.sterfte) + ' per 1000. ' + (fase === 2 ? 'Het sterftecijfer is al laag maar het geboortecijfer nog hoog: fase 2, snelle groei.' : fase === 3 ? 'Het geboortecijfer daalt maar is nog hoger dan het sterftecijfer: fase 3.' : 'Allebei laag en dicht bij elkaar: fase 4, met vergrijzing.'), antwoordTekst: opties[fase - 1] };
   }
@@ -156,7 +174,7 @@
   function gevolgen(niveau){
     var g = kies(GEVOLGEN), l = kies(P.filter(function(x){ return x.soort === g.soort; })), opties = H([g.goed].concat(g.mis));
     return { onderdeel:'bevolkingspiramide: gevolgen', onderdeelNaam:'gevolgen', vorm:'meerkeuze', sleutel:'g' + g.v + l.land,
-      vraag:S(l.land) + ': ' + g.v, beeld: piramide(l, { naam:true }), opties: opties, goed: opties.indexOf(g.goed),
+      vraag:S(l.land) + ': ' + g.v, beeld: pirBeeld(l, { naam:true }), opties: opties, goed: opties.indexOf(g.goed),
       uitleg: l.land + ' heeft een ' + (g.soort === 'groei' ? 'groeiende bevolking met veel kinderen' : g.soort === 'krimp' ? 'vergrijzende bevolking met weinig kinderen en veel ouderen' : 'stabiele bevolking') + ': ' + g.goed + '.', antwoordTekst: g.goed };
   }
 
@@ -176,7 +194,10 @@
         { id:'kgt', naam:'vmbo-kgt en tl', uit:'Dertig landen, percentages optellen, alle begrippen.' },
         { id:'hv', naam:'havo en vwo', uit:'Ook het demografisch transitiemodel en de gevolgen voor de samenleving.' } ] },
       { id:'soort', kop:'wat oefen je', std:'alles', items:[
-        { id:'alles', naam:'alles door elkaar' }, { id:'vorm', naam:'vorm' }, { id:'aflezen', naam:'aflezen' }, { id:'land', naam:'welk land' }, { id:'begrippen', naam:'begrippen' }, { id:'transitie', naam:'transitiemodel' }, { id:'gevolgen', naam:'gevolgen' } ] }
+        { id:'alles', naam:'alles door elkaar' }, { id:'vorm', naam:'vorm', uit:'Groeit de bevolking, blijft ze gelijk of krimpt ze? Dat zie je aan de vorm.' }, { id:'aflezen', naam:'aflezen', uit:'Percentages uit de piramide halen en optellen.' },
+        { id:'land', naam:'welk land', uit:'Bij welk land past deze piramide?' }, { id:'begrippen', naam:'begrippen' },
+        { id:'transitie', naam:'transitiemodel', uit:'Het model dat laat zien hoe een land van veel geboorten en sterfgevallen naar weinig gaat, in vier fasen.' },
+        { id:'gevolgen', naam:'gevolgen', uit:'Wat betekent de piramide voor scholen, zorg, werk en pensioenen?' } ] }
     ],
     aantal:10,
     maak:function(keuze, nr){

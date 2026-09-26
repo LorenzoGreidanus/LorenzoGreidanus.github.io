@@ -93,8 +93,21 @@ body.speelt .spelkop,body.speelt .balk,body.speelt .tijdbalk{flex:none}
 /* De omlijsting zit om de kaart zelf, niet om de ruimte eromheen. Anders loopt
    de blauwe zee door tot buiten de kaart en lijkt het land afgesneden. */
 .kaartvak{flex:1;min-height:0;display:flex;justify-content:center;align-items:center}
-.kaartvak svg{display:block;height:100%;width:auto;max-width:100%;
-  background:var(--zee);border:1px solid rgba(20,34,76,.10);border-radius:22px}
+/* De kaartdoos krijgt precies de maat van de kaart (pasKaart in het script):
+   geen lege zee meer boven en onder een brede wereldkaart. */
+.kaartdoos{position:relative;max-width:100%;max-height:100%}
+.kaartdoos>svg{display:block;height:100%;width:auto;max-width:100%;touch-action:none;
+  background:var(--zee);border:1px solid var(--kaartrand);border-radius:22px}
+.kaartdoos>svg{width:100%;height:100%}
+.kaartvak.wijs .kaartdoos>svg{cursor:crosshair}
+/* Grenzen blijven dun als je inzoomt. */
+.achter,.doel,.basis,.stad,.stip{vector-effect:non-scaling-stroke}
+@media(max-width:600px){.kies.kaarten{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.zoom{position:absolute;right:8px;bottom:8px;display:flex;gap:6px}
+.zoom button{width:44px;height:44px;border-radius:12px;border:1px solid rgba(20,34,76,.18);background:rgba(255,255,255,.92);
+  color:#14224C;font-size:1.3rem;font-weight:600;line-height:1;display:grid;place-items:center;padding:0}
+.zoom button:disabled{display:none}
+.zoom button svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 /* Landen uit de vragenlijst krijgen bewust dezelfde kleur als de rest.
    Een ander kleurtje zou verraden welke landen er kunnen komen. */
 .achter,.doel{fill:var(--land);stroke:var(--grens);stroke-width:.5;stroke-linejoin:round}
@@ -102,15 +115,15 @@ body.speelt .spelkop,body.speelt .balk,body.speelt .tijdbalk{flex:none}
    hoe ver je bent, en welke hoek je nog moet leren. */
 .doel.af.goed{fill:#a9d3ba}
 .doel.af.mis{fill:#f0bcb1}
-.op{fill:var(--amber);stroke:#14224C;stroke-width:1.2}
+.op{fill:var(--amber);stroke:var(--ring);stroke-width:1.2}
 .op.mis{fill:var(--fout)}
 .op.raak{fill:var(--goed)}
 /* stippen voor steden en lijnen voor rivieren */
-.basis{fill:var(--land);stroke:#a89f90;stroke-width:.7;stroke-linejoin:round}
+.basis{fill:var(--land);stroke:var(--grens2);stroke-width:.7;stroke-linejoin:round}
 .stad{fill:#fff;stroke:#5b6480;stroke-width:1.8}
 .stad.af.goed{fill:var(--goed);stroke:#1c5136}
 .stad.af.mis{fill:var(--fout);stroke:#7d2c1c}
-.stad.op{fill:var(--amber);stroke:#14224C;stroke-width:2.6}
+.stad.op{fill:var(--amber);stroke:var(--ring);stroke-width:2.6}
 .stad.op.raak{fill:var(--goed)}
 .stad.op.mis{fill:var(--fout)}
 /* Een rivier is een open lijn, geen vlak. De regels .op.raak en .op.mis zijn
@@ -124,9 +137,17 @@ body.speelt .spelkop,body.speelt .balk,body.speelt .tijdbalk{flex:none}
 .rivier.op{stroke:var(--amber);stroke-width:6}
 .rivier.op.raak{stroke:var(--goed)}
 .rivier.op.mis{stroke:var(--fout)}
-.stip{fill:none;stroke:#14224C;stroke-width:2.2;opacity:0}
+/* De ring krijgt zijn kleur van de klasse: raak groen, mis rood. Een vaste
+   stroke hier overschreef vroeger de kleur die het script zette. */
+.stip{fill:none;stroke:var(--ring);stroke-width:2.2;opacity:0}
+.stip.raak{stroke:var(--goed)}
+.stip.mis{stroke:var(--fout)}
 .stip.aan{opacity:1}
-.wijzer{stroke:#14224C;stroke-width:1.6;opacity:0}
+/* aanwijzen: wat je aantikte terwijl het iets anders was */
+.naast{fill:#f0bcb1;stroke:var(--fout)}
+.stad.naast{fill:var(--fout);stroke:#7d2c1c}
+.rivier.naast{fill:none;stroke:var(--fout);stroke-width:4}
+.wijzer{stroke:var(--ring);stroke-width:1.6;opacity:0}
 .wijzer.aan{opacity:1}
 @media(prefers-reduced-motion:no-preference){
   .op{transition:fill .25s var(--ease)}
@@ -145,13 +166,16 @@ body.speelt .spelkop,body.speelt .balk,body.speelt .tijdbalk{flex:none}
   min-height:44px;display:flex;align-items:center;gap:9px;background:transparent;color:var(--muted);
   justify-content:center}
 .uitslag b{display:inline;font-size:.98rem}
-.uitslag.ja{background:var(--goed-bg);color:var(--goed)}
-.uitslag.nee{background:var(--fout-bg);color:var(--fout)}
+.uitslag.ja{background:var(--goed-bg);color:var(--ja-tekst)}
+.uitslag.nee{background:var(--fout-bg);color:var(--nee-tekst)}
+.uitslag .volgende{margin-left:auto;flex:none;border:none;border-radius:999px;background:var(--crab);color:#14224C;font-weight:600;
+  min-height:44px;padding:0 18px}
+.wijsnaam{margin:4px 0 0;font-size:clamp(1.4rem,4.6vw,2rem);font-weight:600;line-height:1.2}
 .uitslag.bijna{background:#fff6e6;color:#8a5a12}
 .uitslag b{display:block;font-size:1.05rem}
 .hulp{margin-top:7px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;align-items:center}
-.hulp button{background:none;border:1.5px solid rgba(20,34,76,.15);border-radius:999px;padding:8px 15px;
-  font-size:.82rem;font-weight:600;min-height:42px}
+.hulp button{background:none;border:1.5px solid var(--knoprand);border-radius:999px;padding:8px 15px;color:var(--ink);
+  font-size:.82rem;font-weight:600;min-height:44px}
 .hulp button:hover{border-color:var(--ocean);color:var(--ocean)}
 .letters{margin:0;font-size:1.15rem;letter-spacing:.3em;font-weight:600;color:var(--muted)}
 @media (max-height:620px){
@@ -250,6 +274,25 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 @media(max-width:900px){.lghoi{display:none}}
 @media(prefers-reduced-motion:reduce){.lghoi{transition:none !important}}
 
+/* ---------- critique september 2026: kleuren die meekantelen ----------
+   De kaart krijgt in de donkere stand een donkere zee en donker land, anders
+   staat er een fel wit vlak midden in een donker scherm. Groen, rood en
+   amber blijven, die lezen op allebei. */
+:root{--ring:#14224C;--grens2:#a89f90;--kaartrand:rgba(20,34,76,.10);--knoprand:rgba(20,34,76,.28);
+  --ja-tekst:#1f5c3c;--nee-tekst:#9a3520}
+:root[data-theme="dark"]{--zee:#1c2b5a;--land:#3a4670;--grens:#56628c;--grens2:#6a7598;--ring:#FBF6F1;
+  --kaartrand:rgba(243,239,233,.14);--knoprand:rgba(243,239,233,.4);--ja-tekst:#a8e6c1;--nee-tekst:#ffb8a8}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--zee:#1c2b5a;--land:#3a4670;--grens:#56628c;--grens2:#6a7598;--ring:#FBF6F1;
+  --kaartrand:rgba(243,239,233,.14);--knoprand:rgba(243,239,233,.4);--ja-tekst:#a8e6c1;--nee-tekst:#ffb8a8}}
+/* basis.css geeft .kaartvak in donker een kaartvlak; hier is dat een navy
+   rechthoek achter de kaart. De kaart heeft zelf al een vlak. */
+:root[data-theme="dark"] body .kaartvak{background:transparent}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) body .kaartvak{background:transparent}}
+.btn.ghost{background:var(--kaart,#fff)}
+.anders{margin-left:6px}
+/* De pil in de kop noemt de kaart; op een telefoon wordt hij afgekapt. */
+#pillNiv{max-width:44vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
 </style>
 <link rel="stylesheet" href="basis.css">
 <link rel="stylesheet" href="spel.css">
@@ -264,9 +307,9 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
         <svg class="maan" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
         <svg class="zon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>
       </button>
-      <span class="pill hide" id="pillNiv">niveau</span>
+      <span class="pill hide" id="pillNiv"></span>
       <button class="linkbtn" id="grootBtn" type="button">Digibord</button>
-      <button class="linkbtn" id="opnieuwBtn" type="button">Opnieuw</button>
+      <button class="linkbtn hide" id="opnieuwBtn" type="button">Stoppen</button>
     </div>
   </div>
 </header>
@@ -274,19 +317,25 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 <section class="start wrap" id="scherm-start">
   <p class="hand" style="font-size:1.6rem">hoe heet dit land</p>
   <h1>Topografie</h1>
-  <p class="lead">Er licht iets op de kaart op. Jij typt hoe het heet en drukt op enter, dan komt het volgende vanzelf. Kies eerst een gebied, dan een kaart. Spelfouten mogen: als je er bijna bent, telt het gewoon. Wat je goed hebt, blijft groen op de kaart staan.</p>
+  <p class="lead">Er licht iets op de kaart op en jij typt hoe het heet. Of andersom: je krijgt een naam en wijst de plek aan.</p>
+  <p class="uitleg">Kies eerst een gebied, dan een kaart. Bij typen mogen spelfouten: als je er bijna bent, telt het gewoon. Wat je goed hebt, blijft groen op de kaart staan. Met de knoppen + en &minus; bij de kaart zoom je in, en met twee vingers ook.</p>
 
   <p class="eyebrow" id="gebiedKop" style="margin-top:32px">welk gebied</p>
-  <div class="kies" id="gebieden"></div>
+  <div class="kies kaarten" id="gebieden"></div>
 
   <div class="stap hide" id="kaartRij">
     <p class="eyebrow" id="kaartKop">welke kaart</p>
     <div class="kies kaarten" id="kaarten"></div>
   </div>
 
+  <div class="stap hide" id="deelRij">
+    <p class="eyebrow" id="deelKop">welk deel van de wereld</p>
+    <div class="kies kaarten" id="delen"></div>
+  </div>
+
   <div class="stap hide" id="nivRij">
     <p class="eyebrow" id="nivKop">hoeveel</p>
-    <div class="kies" id="niveaus"></div>
+    <div class="kies kaarten" id="niveaus"></div>
   </div>
 
   <div class="stap hide" id="modusRij">
@@ -295,7 +344,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
   </div>
 
   <button class="btn" id="startBtn" type="button" disabled>Start</button>
-  <p style="margin-top:14px;font-size:.82rem;color:var(--muted)">Geen inloggen. Alleen in de tijdrace wordt je score op dit apparaat bewaard.</p>
+  <p style="margin-top:14px;font-size:.82rem;color:var(--muted)">Geen inloggen. Je scores blijven op dit apparaat.</p>
   <div id="startLijst" class="lijst"></div>
 </section>
 
@@ -312,16 +361,16 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 
     <div class="invul">
       <label class="eyebrow" for="antwoord" id="vraagLabel">welk land licht op</label>
-      <div class="invulrij">
+      <p class="wijsnaam hide" id="wijsNaam" aria-live="polite"></p>
+      <div class="invulrij" id="invulRij">
         <input id="antwoord" type="text" autocomplete="off" autocapitalize="words" spellcheck="false"
-               enterkeyhint="go" placeholder="Typ de naam van het land">
-        <button id="checkBtn" type="button">Klaar</button>
+               enterkeyhint="go" placeholder="Typ de naam">
+        <button id="checkBtn" type="button">Kijk na</button>
       </div>
       <div class="uitslag" id="uitslag" role="status" aria-live="polite"></div>
       <div class="hulp" id="hulp">
         <button type="button" id="hintBtn">Geef een letter</button>
         <button type="button" id="overslaanBtn">Ik weet het niet</button>
-        <button type="button" id="stopBtn" class="hide">Stoppen</button>
         <span class="letters hide" id="letters"></span>
       </div>
     </div>
@@ -329,8 +378,6 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 </section>
 
 <section class="wrap hide einde" id="scherm-einde">
-  <p class="eyebrow">klaar</p>
-  <div class="score" id="eindScore">0 / 0</div>
   <p style="color:var(--muted);margin-top:6px" id="eindTekst"></p>
   <div class="overzicht" id="eindOverzicht"></div>
 
@@ -343,7 +390,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
   </div>
 
   <div class="lijst" id="eindLijst"></div>
-  <button class="btn" id="nogeensBtn" type="button">Nog een keer</button>
+  <button class="btn ghost" id="anderBtn" type="button">Andere keuze</button>
 </section>
 
 <footer>
@@ -382,12 +429,29 @@ var NIVEAUS = [
   { id:'alles', naam:'Alles',      tot:3, kort:'de hele kaart' }
 ];
 
+/* Dezelfde namen als in Bronnenlab en Tijdvakken: Oefenen is de rustige stand. */
 var MODUSSEN = [
-  { id:'oefen', naam:'Oefenen',  uitleg:'Alle landen een keer, zonder klok. Je krijgt hulp als je vastloopt.' },
-  { id:'race',  naam:'Tijdrace', uitleg:'De klok loopt. Goed levert seconden op, fout kost ze. Met klassement.' }
+  { id:'oefen', naam:'Oefenen',   uitleg:'Er licht iets op, jij typt de naam. Zonder klok, met hulp als je vastloopt.' },
+  { id:'wijs',  naam:'Aanwijzen', uitleg:'Je krijgt een naam en tikt de plek aan op de kaart. Zonder klok. Met muis of vinger.' },
+  { id:'race',  naam:'Tijdrace',  uitleg:'Typen tegen de klok. Goed levert seconden op, fout kost ze. Met klassement.' }
 ];
 
 var RACE = { start:60, erbij:5, eraf:6 };
+
+/* Delen van de wereldkaart, voor een topotoets over een werelddeel. De
+   hoofdsteden horen bij het deel van het land dat er het dichtst bij ligt. */
+var DELEN = [
+  { id:'alles',   naam:'Hele wereld', landen:null },
+  { id:'afrika',  naam:'Afrika', landen:['Marokko','Algerije','Tunesië','Libië','Egypte','Soedan','Ethiopië','Kenia','Somalië',
+    'Tanzania','Nigeria','Ghana','Senegal','Mali','Niger','Tsjaad','Congo','Angola','Zuid-Afrika','Madagaskar','Zimbabwe',
+    'Mozambique','Namibië','Oeganda'] },
+  { id:'azie',    naam:'Azië', landen:['China','India','Japan','Indonesië','Pakistan','Bangladesh','Vietnam','Thailand','Filipijnen',
+    'Maleisië','Myanmar','Zuid-Korea','Noord-Korea','Mongolië','Kazachstan','Afghanistan','Iran','Irak','Saoedi-Arabië',
+    'Israël','Syrië','Nepal','Sri Lanka','Oezbekistan','Jemen'] },
+  { id:'noordam', naam:'Noord- en Midden-Amerika', landen:['Verenigde Staten','Canada','Mexico','Cuba','Guatemala','Panama'] },
+  { id:'zuidam',  naam:'Zuid-Amerika', landen:['Brazilië','Argentinië','Chili','Peru','Colombia','Venezuela','Bolivia',
+    'Suriname','Ecuador','Uruguay','Paraguay'] }
+];
 
 /* ============================================================================
    ENGINE
@@ -397,7 +461,7 @@ var RACE = { start:60, erbij:5, eraf:6 };
   document.getElementById('jaar').textContent = new Date().getFullYear();
 
   var SLEUTEL = 'topo-klassement-v1';
-  var kaartId = null, niveau = null, modus = null;
+  var kaartId = null, niveau = null, modus = null, deel = DELEN[0];
   var rij = [], nr = 0, goed = 0, totaal = 0, fouten = [], punten = 0, reeks = 0, besteReeks = 0, od = {};
   var tijd = 0, loopt = false, laatsteTik = 0, bezig = false, opgeslagen = false;
   var hintLetters = 0, pogingen = 0, huidig = null, wachter = null;
@@ -408,11 +472,16 @@ var RACE = { start:60, erbij:5, eraf:6 };
       elVak   = document.getElementById('kaartvak'),
       elIn    = document.getElementById('antwoord'),
       elUit   = document.getElementById('uitslag'),
-      elStartBtn = document.getElementById('startBtn');
+      elStartBtn = document.getElementById('startBtn'),
+      elStop  = document.getElementById('opnieuwBtn'),
+      elPill  = document.getElementById('pillNiv');
 
   function isRace(){ return modus && modus.id === 'race'; }
+  function isWijs(){ return modus && modus.id === 'wijs'; }
   function lees(){ try { return JSON.parse(localStorage.getItem(SLEUTEL) || '{}'); } catch (e){ return {}; } }
   function schrijf(d){ try { localStorage.setItem(SLEUTEL, JSON.stringify(d)); return true; } catch (e){ return false; } }
+  function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+  var raakScherm = document.documentElement.classList.contains('raak') || (function(){ try { return matchMedia('(pointer:coarse)').matches; } catch (e){ return false; } })();
 
   function husselen(a){
     a = a.slice();
@@ -426,7 +495,7 @@ var RACE = { start:60, erbij:5, eraf:6 };
      opmerking over de juiste spelling erbij. */
   function plat(s){
     return (s || '').toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
       /* Bij rivieren typen leerlingen het lidwoord mee: de Waal, het IJsselmeer.
          Dat eraf halen moet voor de spaties weg zijn, anders sneuvelt Den Haag. */
       .replace(/^\s*(de|het|'t)\s+/, '')
@@ -467,17 +536,17 @@ var RACE = { start:60, erbij:5, eraf:6 };
   }
 
   /* ---------- keuzeknoppen ---------- */
+  function druk(vak, knop){
+    Array.prototype.forEach.call(vak.querySelectorAll('.kaartje'), function(c){ c.classList.remove('on'); c.setAttribute('aria-pressed', 'false'); });
+    if (knop){ knop.classList.add('on'); knop.setAttribute('aria-pressed', 'true'); }
+  }
   function knoppen(vakId, lijst, kies){
     var vak = document.getElementById(vakId);
     lijst.forEach(function(item){
       var b = document.createElement('button');
-      b.className = 'kaartje'; b.type = 'button';
+      b.className = 'kaartje'; b.type = 'button'; b.dataset.id = item.id; b.setAttribute('aria-pressed', 'false');
       b.innerHTML = '<b>' + item.naam + '</b><span>' + item.uitleg + '</span>';
-      b.addEventListener('click', function(){
-        Array.prototype.forEach.call(vak.children, function(c){ c.classList.remove('on'); });
-        b.classList.add('on');
-        kies(item);
-      });
+      b.addEventListener('click', function(){ druk(vak, b); kies(item); });
       vak.appendChild(b);
     });
   }
@@ -495,14 +564,16 @@ var RACE = { start:60, erbij:5, eraf:6 };
   var gebied = null;
 
   var elGebieden = document.getElementById('gebieden'),
-      elKaarten  = document.getElementById('kaarten');
+      elKaarten  = document.getElementById('kaarten'),
+      elDelen    = document.getElementById('delen');
 
+  function gebiedVan(k){ return KAARTEN[k].naam.split(', ')[0]; }
   function kaartenVan(g){
-    return Object.keys(KAARTEN).filter(function(k){ return KAARTEN[k].naam.split(', ')[0] === g; });
+    return Object.keys(KAARTEN).filter(function(k){ return gebiedVan(k) === g; });
   }
   function kortNaam(k){
-    var deel = KAARTEN[k].naam.split(', ');
-    var kort = deel[1] || deel[0];
+    var d = KAARTEN[k].naam.split(', ');
+    var kort = d[1] || d[0];
     return kort.charAt(0).toUpperCase() + kort.slice(1);
   }
   function woordVan(k){
@@ -510,26 +581,37 @@ var RACE = { start:60, erbij:5, eraf:6 };
     return { land:'landen', provincie:'provincies', stad:'steden', hoofdstad:'hoofdsteden',
              rivier:'rivieren', eiland:'eilanden', onderdeel:'onderdelen' }[m.wat] || 'onderdelen';
   }
-  function aantalBij(k, tot){
-    return KAARTEN[k].landen.filter(function(l){ return l.v <= tot; }).length;
+
+  /* ---------- delen van de wereld ---------- */
+  function heeftDelen(k){ return !!k && gebiedVan(k) === 'Wereld' && !!KAARTEN.wl; }
+  var landVanStad = {};
+  function deelLand(k, l){
+    if (KAARTEN[k].soort !== 'punt') return l.n;
+    if (landVanStad[l.n] !== undefined) return landVanStad[l.n];
+    var beste = null, bd = Infinity;
+    KAARTEN.wl.landen.forEach(function(w){ var d = Math.hypot(w.x - l.x, w.y - l.y); if (d < bd){ bd = d; beste = w.n; } });
+    return (landVanStad[l.n] = beste);
   }
+  function inDeel(k, l){ return !deel.landen || !heeftDelen(k) || deel.landen.indexOf(deelLand(k, l)) >= 0; }
+  function landenNu(k){ return KAARTEN[k].landen.filter(function(l){ return inDeel(k, l); }); }
+  function aantalBij(k, tot){ return landenNu(k).filter(function(l){ return l.v <= tot; }).length; }
   /* Maakt de niveaukeuze verschil op deze kaart? Zo nee, dan tonen we hem niet. */
   function niveauZinvol(k){ return aantalBij(k, 1) !== aantalBij(k, 3); }
 
   GEBIEDEN.forEach(function(g){
     var kaarten = kaartenVan(g);
     var b = document.createElement('button');
-    b.className = 'kaartje'; b.type = 'button';
+    b.className = 'kaartje'; b.type = 'button'; b.dataset.g = g; b.setAttribute('aria-pressed', 'false');
     b.innerHTML = '<b>' + g + '</b><span>' + kaarten.length + ' kaart' +
       (kaarten.length === 1 ? '' : 'en') + ' om te oefenen</span>';
     b.addEventListener('click', function(){
       gebied = g;
-      Array.prototype.forEach.call(elGebieden.children, function(c){ c.classList.remove('on'); });
-      b.classList.add('on');
-      kaartId = null; niveau = null;
-      document.getElementById('pillNiv').classList.add('hide');
+      druk(elGebieden, b);
+      kaartId = null; niveau = null; deel = DELEN[0];
+      zetPil();
       tekenKaarten();
       document.getElementById('kaartRij').classList.remove('hide');
+      document.getElementById('deelRij').classList.add('hide');
       document.getElementById('nivRij').classList.add('hide');
       document.getElementById('modusRij').classList.add('hide');
       klaarCheck();
@@ -541,51 +623,77 @@ var RACE = { start:60, erbij:5, eraf:6 };
     elKaarten.innerHTML = '';
     kaartenVan(gebied).forEach(function(k){
       var b = document.createElement('button');
-      b.className = 'kaartje'; b.type = 'button';
+      b.className = 'kaartje'; b.type = 'button'; b.dataset.k = k; b.setAttribute('aria-pressed', 'false');
       b.innerHTML = '<b>' + kortNaam(k) + '</b><span>' + KAARTEN[k].landen.length + ' ' + woordVan(k) + '</span>';
       b.addEventListener('click', function(){ kiesKaart(k, b); });
       elKaarten.appendChild(b);
     });
   }
 
+  function tekenDelen(){
+    elDelen.innerHTML = '';
+    DELEN.forEach(function(d){
+      var b = document.createElement('button');
+      b.className = 'kaartje' + (d === deel ? ' on' : ''); b.type = 'button'; b.dataset.id = d.id;
+      b.setAttribute('aria-pressed', d === deel ? 'true' : 'false');
+      var bewaar = deel; deel = d; var n = landenNu(kaartId).length; deel = bewaar;
+      b.innerHTML = '<b>' + d.naam + '</b><span>' + n + ' ' + woordVan(kaartId) + '</span>';
+      b.addEventListener('click', function(){ druk(elDelen, b); deel = d; naKaartOfDeel(); });
+      elDelen.appendChild(b);
+    });
+  }
+
   function kiesKaart(k, knop){
     kaartId = k;
-    Array.prototype.forEach.call(elKaarten.children, function(c){ c.classList.remove('on'); });
-    if (knop) knop.classList.add('on');
+    druk(elKaarten, knop);
+    if (!heeftDelen(k)) deel = DELEN[0];
+    document.getElementById('deelRij').classList.toggle('hide', !heeftDelen(k));
+    if (heeftDelen(k)) tekenDelen();
+    naKaartOfDeel();
+  }
 
+  function naKaartOfDeel(){
     var nivRij = document.getElementById('nivRij');
-    if (niveauZinvol(k)){
+    if (niveauZinvol(kaartId)){
       nivRij.classList.remove('hide');
       tekenNiveaus();
       /* De vorige keuze kan bij deze kaart niet meer kloppen, dus opnieuw kiezen. */
       niveau = null;
-      document.getElementById('pillNiv').classList.add('hide');
     } else {
       nivRij.classList.add('hide');
       niveau = NIVEAUS[NIVEAUS.length - 1];        /* alles, want er is maar een set */
-      document.getElementById('pillNiv').classList.add('hide');
     }
-    document.getElementById('modusRij').classList.toggle('hide', niveauZinvol(k) && !niveau);
+    zetPil();
+    document.getElementById('modusRij').classList.toggle('hide', niveauZinvol(kaartId) && !niveau);
     klaarCheck();
   }
+
+  /* De pil in de kop zegt welke kaart het is, niet alleen "Uitgebreid". */
+  function pilTekst(){
+    if (!kaartId) return '';
+    var t = KAARTEN[kaartId].naam;
+    if (deel.landen && heeftDelen(kaartId)) t = deel.naam + ', ' + woordVan(kaartId);
+    if (niveau && niveauZinvol(kaartId)) t += ', ' + niveau.naam.toLowerCase();
+    return t;
+  }
+  function zetPil(){ var t = pilTekst(); elPill.textContent = t; elPill.title = t; elPill.classList.toggle('hide', !t); }
 
   var elNiveaus = document.getElementById('niveaus');
   function tekenNiveaus(){
     elNiveaus.innerHTML = '';
     NIVEAUS.forEach(function(n){
       var b = document.createElement('button');
-      b.className = 'kaartje'; b.type = 'button';
+      b.className = 'kaartje'; b.type = 'button'; b.dataset.id = n.id; b.setAttribute('aria-pressed', 'false');
       /* Het echte aantal erbij, want Uitgebreid zegt op zichzelf niets. */
-      var n1 = aantalBij(kaartId, n.tot), totaal = KAARTEN[kaartId].landen.length;
+      var n1 = aantalBij(kaartId, n.tot), alle = landenNu(kaartId).length;
       b.innerHTML = '<b>' + n.naam + '</b><span>' +
-        (n1 === totaal ? 'alle ' + totaal + ' ' + woordVan(kaartId)
-                       : n1 + ' van de ' + totaal + ' ' + woordVan(kaartId)) +
+        (n1 === alle ? 'alle ' + alle + ' ' + woordVan(kaartId)
+                     : n1 + ' van de ' + alle + ' ' + woordVan(kaartId)) +
         ', ' + n.kort + '</span>';
       b.addEventListener('click', function(){
         niveau = n;
-        Array.prototype.forEach.call(elNiveaus.children, function(c){ c.classList.remove('on'); });
-        b.classList.add('on');
-        var p = document.getElementById('pillNiv'); p.textContent = n.naam; p.classList.remove('hide');
+        druk(elNiveaus, b);
+        zetPil();
         document.getElementById('modusRij').classList.remove('hide');
         klaarCheck();
       });
@@ -595,13 +703,12 @@ var RACE = { start:60, erbij:5, eraf:6 };
 
   knoppen('modussen', MODUSSEN, function(m){
     modus = m;
-    elStartBtn.textContent = isRace() ? 'Start de tijdrace' : 'Start met oefenen';
     klaarCheck();
   });
 
   function selectie(){
     if (!kaartId || !niveau) return [];
-    return KAARTEN[kaartId].landen.filter(function(l){ return l.v <= niveau.tot; });
+    return landenNu(kaartId).filter(function(l){ return l.v <= niveau.tot; });
   }
 
   function meervoud(){
@@ -610,13 +717,11 @@ var RACE = { start:60, erbij:5, eraf:6 };
              rivier:'rivieren', eiland:'eilanden', onderdeel:'onderdelen' }[w] || w + 'en';
   }
 
+  function startTekst(){ return isRace() ? 'Start de tijdrace' : isWijs() ? 'Start met aanwijzen' : 'Start met oefenen'; }
   function klaarCheck(){
     var aantal = selectie().length;
     elStartBtn.disabled = !(kaartId && niveau && modus && aantal > 0);
-    if (kaartId && niveau && aantal){
-      elStartBtn.textContent = (isRace() ? 'Start de tijdrace' : 'Start met oefenen') +
-        ' (' + aantal + ' ' + meervoud() + ')';
-    }
+    elStartBtn.textContent = startTekst() + (kaartId && niveau && aantal ? ' (' + aantal + ' ' + meervoud() + ')' : '');
     toonKlassement('startLijst', null);
   }
 
@@ -628,18 +733,21 @@ var RACE = { start:60, erbij:5, eraf:6 };
   function soortVan(l){ return (l && l.s) || soort(); }
   function watVan(l){ return (l && l.w) || KAARTEN[kaartId].wat || 'land'; }
 
+  var elSvg = null, basis = null, zoom = 1, midden = { x:0, y:0 };
+  var ZOOM_MAX = 8;
+
   function tekenKaart(){
-    gehad = {};
+    gehad = {}; lijnPunten = {};
     var m = KAARTEN[kaartId];
     var svg = '<svg viewBox="0 0 ' + m.breed + ' ' + m.hoog + '" role="img" ' +
-      'aria-labelledby="kaartTitel"><title id="kaartTitel">Kaart van ' + m.naam + '</title>';
+      'aria-labelledby="kaartTitel"><title id="kaartTitel">Kaart van ' + m.naam + '</title><g id="inhoud">';
     if (m.achter) svg += '<path class="achter" d="' + m.achter + '"/>';
 
     /* Bij steden en rivieren komt de ondergrond van een andere kaart: de
        provincies of de landen. Zo staat die vorm maar een keer in dit bestand. */
     if (m.basisVan && KAARTEN[m.basisVan]){
       KAARTEN[m.basisVan].landen.forEach(function(l){
-        if (l.d) svg += '<path class="basis" d="' + l.d + '"/>';
+        if (l.d) svg += '<path class="basis" data-n="' + schoon(l.n) + '" d="' + l.d + '"/>';
       });
     }
 
@@ -659,9 +767,148 @@ var RACE = { start:60, erbij:5, eraf:6 };
         }
       });
     });
-    svg += '<circle class="stip" id="stip" r="13"/>';
+    svg += '</g><circle class="stip" id="stip" r="13"/>';
     svg += '</svg>';
-    elVak.innerHTML = svg;
+    elVak.innerHTML = '<div class="kaartdoos" id="kaartdoos">' + svg +
+      '<div class="zoom" role="group" aria-label="Zoomen">' +
+        '<button type="button" id="zoomIn" aria-label="Inzoomen">+</button>' +
+        '<button type="button" id="zoomUit" aria-label="Uitzoomen">&minus;</button>' +
+        '<button type="button" id="zoomHeel" aria-label="Hele kaart"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>' +
+      '</div></div>';
+    elVak.classList.toggle('wijs', isWijs());
+    elSvg = elVak.querySelector('svg');
+    basis = snijKaart();
+    zoom = 1; midden = { x: basis.x + basis.w / 2, y: basis.y + basis.h / 2 };
+    zetView();
+    pasKaart();
+    koppelZoom();
+  }
+
+  /* Alleen het stuk van de kaart waar de vragen over gaan: bij de wereld geen
+     Antarctica, bij een werelddeel alleen dat deel. Plus een randje zee. */
+  function snijKaart(){
+    var m = KAARTEN[kaartId], sel;
+    if (deel.landen && heeftDelen(kaartId)){
+      var namen = {};
+      landenNu(kaartId).forEach(function(l){ namen[deelLand(kaartId, l)] = 1; namen[l.n] = 1; });
+      sel = Array.prototype.filter.call(elSvg.querySelectorAll('.doel,.basis,.stad'), function(el){
+        var n = el.getAttribute('data-n') || (el.id && m.landen[+el.id.slice(1)] ? (soort() === 'punt' ? deelLand(kaartId, m.landen[+el.id.slice(1)]) : m.landen[+el.id.slice(1)].n) : '');
+        return namen[n];
+      });
+    } else if (m.achter){
+      sel = elSvg.querySelectorAll('.doel,.basis,.rivier,.stad');
+    } else {
+      sel = [elSvg.querySelector('#inhoud')];
+    }
+    var x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+    Array.prototype.forEach.call(sel, function(el){
+      try { var b = el.getBBox(); if (!b.width && !b.height && el.tagName !== 'circle') return;
+        x1 = Math.min(x1, b.x); y1 = Math.min(y1, b.y); x2 = Math.max(x2, b.x + b.width); y2 = Math.max(y2, b.y + b.height); } catch (e){}
+    });
+    if (!isFinite(x1)) return { x:0, y:0, w:m.breed, h:m.hoog };
+    var rand = Math.max(x2 - x1, y2 - y1) * .04 + 6;
+    return { x:x1 - rand, y:y1 - rand, w:(x2 - x1) + 2 * rand, h:(y2 - y1) + 2 * rand };
+  }
+
+  /* De doos krijgt de maat van de kaart binnen de ruimte die er is. */
+  function pasKaart(){
+    if (!elSvg || !basis) return;
+    var doos = document.getElementById('kaartdoos');
+    doos.style.width = '0px'; doos.style.height = '0px'; elVak.style.flex = '';
+    var r = elVak.getBoundingClientRect();
+    var br = r.width, ho = r.height, verh = basis.w / basis.h;
+    if (!ho || ho < 60) ho = Math.min(innerHeight * .55, br / verh);
+    var w = Math.min(br, ho * verh);
+    doos.style.width = Math.floor(w) + 'px'; doos.style.height = Math.floor(w / verh) + 'px';
+    zetStralen();
+    /* Het vak krimpt mee, zodat het invulvak direct onder de kaart staat en
+       niet onder een strook lege ruimte. */
+    elVak.style.flex = '0 0 ' + Math.floor(w / verh) + 'px';
+  }
+  addEventListener('resize', function(){ if (!elSpel.classList.contains('hide')) pasKaart(); });
+
+  function zetView(){
+    if (!elSvg) return;
+    zoom = Math.max(1, Math.min(ZOOM_MAX, zoom));
+    var w = basis.w / zoom, h = basis.h / zoom;
+    midden.x = Math.max(basis.x + w / 2, Math.min(basis.x + basis.w - w / 2, midden.x));
+    midden.y = Math.max(basis.y + h / 2, Math.min(basis.y + basis.h - h / 2, midden.y));
+    elSvg.setAttribute('viewBox', (midden.x - w / 2).toFixed(2) + ' ' + (midden.y - h / 2).toFixed(2) + ' ' + w.toFixed(2) + ' ' + h.toFixed(2));
+    zetStralen();
+    var zi = document.getElementById('zoomIn'), zu = document.getElementById('zoomUit'), zh = document.getElementById('zoomHeel');
+    if (zi){ zi.disabled = zoom >= ZOOM_MAX; zu.disabled = zoom <= 1; zh.disabled = zoom <= 1; }
+  }
+  /* Steden en de ring hebben een vaste maat op het scherm: 5 en 8 pixels voor
+     een stad, 13 en 17 voor de ring. Anders worden ze reuzen op een uitsnede
+     van een werelddeel en puntjes op de hele wereld. */
+  function straal(px){ return (px / schaal()).toFixed(2); }
+  function zetStralen(){
+    if (!elSvg || !elSvg.getScreenCTM()) return;
+    Array.prototype.forEach.call(elSvg.querySelectorAll('.stad'), function(c){ c.setAttribute('r', straal(/\bop\b/.test(c.getAttribute('class')) ? 8 : 5)); });
+    var st = document.getElementById('stip');
+    if (st && huidig) st.setAttribute('r', straal(soortVan(huidig) === 'punt' ? 15 : 13));
+  }
+  function naarSvg(cx, cy){
+    var p = elSvg.createSVGPoint(); p.x = cx; p.y = cy;
+    return p.matrixTransform(elSvg.getScreenCTM().inverse());
+  }
+  function schaal(){ return elSvg.getScreenCTM().a || 1; }
+  /* zoomen rond een punt op het scherm: dat punt blijft onder je vinger */
+  function zoomRond(factor, cx, cy){
+    var voor = naarSvg(cx, cy);
+    zoom *= factor; zetView();
+    var na = naarSvg(cx, cy);
+    midden.x += voor.x - na.x; midden.y += voor.y - na.y; zetView();
+  }
+
+  /* Knoppen, wiel, slepen en knijpen. Een tik zonder schuiven is in de
+     aanwijsstand een antwoord. */
+  function koppelZoom(){
+    var doos = document.getElementById('kaartdoos');
+    function knopZoom(f){ var r = elSvg.getBoundingClientRect(); zoomRond(f, r.left + r.width / 2, r.top + r.height / 2); }
+    document.getElementById('zoomIn').addEventListener('click', function(){ knopZoom(1.6); });
+    document.getElementById('zoomUit').addEventListener('click', function(){ knopZoom(1 / 1.6); });
+    document.getElementById('zoomHeel').addEventListener('click', function(){ zoom = 1; midden = { x: basis.x + basis.w / 2, y: basis.y + basis.h / 2 }; zetView(); });
+    elSvg.addEventListener('wheel', function(e){ e.preventDefault(); zoomRond(e.deltaY < 0 ? 1.25 : 1 / 1.25, e.clientX, e.clientY); }, { passive:false });
+
+    var wijzers = {}, begin = null, knijp = null, geschoven = false;
+    function aantal(){ return Object.keys(wijzers).length; }
+    function tweePunten(){ var k = Object.keys(wijzers); return [wijzers[k[0]], wijzers[k[1]]]; }
+    elSvg.addEventListener('pointerdown', function(e){
+      try { elSvg.setPointerCapture(e.pointerId); } catch (x){}
+      wijzers[e.pointerId] = { x:e.clientX, y:e.clientY };
+      if (aantal() === 1){ begin = { x:e.clientX, y:e.clientY, mx:midden.x, my:midden.y }; geschoven = false; knijp = null; }
+      else if (aantal() === 2){
+        var t = tweePunten();
+        knijp = { d:Math.hypot(t[0].x - t[1].x, t[0].y - t[1].y) || 1, z:zoom }; geschoven = true;
+      }
+    });
+    elSvg.addEventListener('pointermove', function(e){
+      if (!wijzers[e.pointerId]) return;
+      wijzers[e.pointerId] = { x:e.clientX, y:e.clientY };
+      if (knijp && aantal() >= 2){
+        var t = tweePunten(), d = Math.hypot(t[0].x - t[1].x, t[0].y - t[1].y);
+        var mx = (t[0].x + t[1].x) / 2, my = (t[0].y + t[1].y) / 2;
+        zoomRond((knijp.z * d / knijp.d) / zoom, mx, my);
+      } else if (begin && aantal() === 1){
+        var dx = e.clientX - begin.x, dy = e.clientY - begin.y;
+        if (Math.abs(dx) + Math.abs(dy) > 8) geschoven = true;
+        if (geschoven && zoom > 1){
+          var s = schaal();
+          midden.x = begin.mx - dx / s; midden.y = begin.my - dy / s; zetView();
+        }
+      }
+    });
+    function los(e){
+      var was = wijzers[e.pointerId]; delete wijzers[e.pointerId];
+      if (!was) return;
+      if (aantal() === 0){
+        if (!geschoven && !knijp && e.type === 'pointerup' && isWijs()) tik(e.clientX, e.clientY);
+        begin = null; knijp = null;
+      }
+    }
+    elSvg.addEventListener('pointerup', los);
+    elSvg.addEventListener('pointercancel', los);
   }
 
   /* Wat je al gehad hebt houdt zijn kleur: 1 is goed, 2 is mis. Zo groeit de
@@ -684,7 +931,7 @@ var RACE = { start:60, erbij:5, eraf:6 };
       /* Alleen op en de uitslagkleur, geen af-klasse erbij: anders wint de
          blijvende kleur het van het oplichten. */
       p.setAttribute('class', grondKlasse(land) + ' op' + (klasse ? ' ' + klasse : ' puls'));
-      if (soortVan(land) === 'punt') p.setAttribute('r', '9');
+      if (soortVan(land) === 'punt') p.setAttribute('r', straal(8));
       /* Naar voren halen, anders valt het weg achter een buur. Onthouden waar
          het stond, want anders blijft een beantwoorde provincie boven op de
          rivieren en steden liggen die eroverheen hoorden te lopen. */
@@ -692,19 +939,24 @@ var RACE = { start:60, erbij:5, eraf:6 };
       p.parentNode.appendChild(p);
     }
     /* Een land als Luxemburg is op deze schaal een paar pixels groot, en een
-       stad is altijd klein. Dan wijst een ring aan waar het zit. */
+       stad is altijd klein. Dan wijst een ring aan waar het zit. De kleur
+       komt uit de klasse: groen bij raak, rood bij mis. */
     var stip = document.getElementById('stip');
     stip.setAttribute('cx', land.x); stip.setAttribute('cy', land.y);
-    stip.setAttribute('class', 'stip' + ((land.k || soortVan(land) === 'punt') ? ' aan' : ''));
-    stip.setAttribute('r', soortVan(land) === 'punt' ? 17 : 13);
-    stip.setAttribute('stroke', klasse === 'mis' ? 'var(--fout)' : (klasse === 'raak' ? 'var(--goed)' : 'var(--ink)'));
+    stip.setAttribute('class', 'stip' + ((land.k || soortVan(land) === 'punt') ? ' aan' : '') + (klasse ? ' ' + klasse : ''));
+    stip.setAttribute('r', straal(soortVan(land) === 'punt' ? 15 : 13));
+    /* Ingezoomd en het oplichtende ligt buiten beeld? Dan schuift de kaart ernaartoe. */
+    if (zoom > 1){
+      var w = basis.w / zoom, h = basis.h / zoom;
+      if (Math.abs(land.x - midden.x) > w * .42 || Math.abs(land.y - midden.y) > h * .42){ midden = { x:land.x, y:land.y }; zetView(); }
+    }
   }
 
   function dooffKaart(){
-    Array.prototype.forEach.call(elVak.querySelectorAll('.op'), function(p){
+    Array.prototype.forEach.call(elVak.querySelectorAll('.op,.naast'), function(p){
       var i = parseInt(p.id.slice(1), 10);
       p.setAttribute('class', rustKlasse(i));
-      if (soortVan(KAARTEN[kaartId].landen[i]) === 'punt') p.setAttribute('r', '5');
+      if (soortVan(KAARTEN[kaartId].landen[i]) === 'punt') p.setAttribute('r', straal(5));
       /* Terug naar de oorspronkelijke plek in de tekenvolgorde. */
       if (p.plekTerug !== undefined){
         p.parentNode.insertBefore(p, p.plekTerug);
@@ -720,15 +972,87 @@ var RACE = { start:60, erbij:5, eraf:6 };
     if (klopt || !gehad[i]) gehad[i] = klopt ? 1 : 2;
   }
 
+  /* ---------- aanwijzen: wat tikte je aan? ---------- */
+  var TIK = 22;   /* hoe ver je ernaast mag tikken, in schermpixels */
+  var lijnPunten = {};
+  function puntenVan(i){
+    if (lijnPunten[i]) return lijnPunten[i];
+    var p = document.getElementById('l' + i), uit = [];
+    try { var len = p.getTotalLength(); for (var t = 0; t <= 80; t++){ var q = p.getPointAtLength(len * t / 80); uit.push({ x:q.x, y:q.y }); } } catch (e){}
+    return (lijnPunten[i] = uit);
+  }
+  function afstandTot(l, i, pt){
+    var so = soortVan(l);
+    if (so === 'punt') return Math.hypot(pt.x - l.x, pt.y - l.y);
+    if (so === 'lijn') return puntenVan(i).reduce(function(m, q){ return Math.min(m, Math.hypot(pt.x - q.x, pt.y - q.y)); }, Infinity);
+    return Infinity;
+  }
+  function binnen(l, i, pt){
+    var p = document.getElementById('l' + i);
+    if (!p || soortVan(l) !== 'vlak') return false;
+    try { var d = new DOMPoint(pt.x, pt.y); return p.isPointInFill(d); } catch (e){ return false; }
+  }
+  function isRaak(l, pt){
+    var i = KAARTEN[kaartId].landen.indexOf(l), tol = TIK / schaal();
+    if (soortVan(l) === 'vlak') return binnen(l, i, pt) || (l.k && Math.hypot(pt.x - l.x, pt.y - l.y) <= tol * 1.2);
+    return afstandTot(l, i, pt) <= tol;
+  }
+  function watIsHier(pt){
+    var ls = KAARTEN[kaartId].landen, tol = TIK / schaal(), beste = null, bd = Infinity;
+    ls.forEach(function(l, i){ var d = afstandTot(l, i, pt); if (d <= tol && d < bd){ bd = d; beste = l; } });
+    if (beste) return beste;
+    for (var i = ls.length - 1; i >= 0; i--) if (binnen(ls[i], i, pt)) return ls[i];
+    ls.forEach(function(l){ if (l.k && soortVan(l) === 'vlak'){ var d = Math.hypot(pt.x - l.x, pt.y - l.y); if (d <= tol && d < bd){ bd = d; beste = l; } } });
+    return beste;
+  }
+  function naamMet(l){ return l.n + (KAARTEN[kaartId].soort === 'gemengd' ? ' (' + watVan(l) + ')' : ''); }
+  var naastKlok = null;
+  function tik(cx, cy){
+    if (bezig || !huidig) return;
+    var pt = naarSvg(cx, cy);
+    if (isRaak(huidig, pt)){ afronden(true, { soort:'goed' }); return; }
+    var hier = watIsHier(pt);
+    pogingen++;
+    /* Eerste misser: nog een keer proberen, en zien wat je aanwees. */
+    if (pogingen === 1){
+      elUit.className = 'uitslag nee';
+      elUit.innerHTML = '<b>Nog niet.</b> ' + (hier ? 'Dat is ' + naamMet(hier) + '. ' : 'Daar ligt het niet. ') + 'Probeer het nog een keer.';
+      toonNaast(hier);
+      return;
+    }
+    afronden(false, { soort:'fout', aangewezen: hier });
+  }
+  function toonNaast(l){
+    if (naastKlok){ clearTimeout(naastKlok); naastKlok = null; }
+    Array.prototype.forEach.call(elVak.querySelectorAll('.naast'), function(p){ p.setAttribute('class', rustKlasse(+p.id.slice(1))); });
+    if (!l) return;
+    var i = KAARTEN[kaartId].landen.indexOf(l), p = document.getElementById('l' + i);
+    if (!p || l === huidig) return;
+    p.setAttribute('class', grondKlasse(l) + ' naast');
+    naastKlok = setTimeout(function(){ if (p.getAttribute('class').indexOf('naast') >= 0) p.setAttribute('class', rustKlasse(i)); }, 1600);
+  }
+
   /* ---------- spelverloop ---------- */
   /* de tutorial, een keer, zodra het spelscherm er is; de klok staat intussen stil */
   if (window.TUTORIAL && window.TUTORIALS && TUTORIALS['topografie']) TUTORIAL.naStart('startBtn', 'topografie', TUTORIALS['topografie'], { bewaar: function(){ return tijd; }, herstel: function(t){ tijd = t; laatsteTik = performance.now(); } });
   elStartBtn.addEventListener('click', start);
-  document.getElementById('nogeensBtn').addEventListener('click', naarStart);
-  document.getElementById('opnieuwBtn').addEventListener('click', naarStart);
+  document.getElementById('anderBtn').addEventListener('click', naarStart);
   document.getElementById('grootBtn').addEventListener('click', function(){
     document.body.classList.toggle('groot');
     this.textContent = document.body.classList.contains('groot') ? 'Normaal' : 'Digibord';
+    pasKaart();
+  });
+
+  /* Stoppen in de kop: twee tikken (zie handel.html). */
+  var stopZeker = false, stopKlok = null;
+  function stopTerug(){ stopZeker = false; if (stopKlok){ clearTimeout(stopKlok); stopKlok = null; } elStop.textContent = 'Stoppen'; }
+  elStop.addEventListener('click', function(){
+    if (elSpel.classList.contains('hide')) return;
+    if (!stopZeker){ stopZeker = true; elStop.textContent = 'Zeker? Tik nog eens'; stopKlok = setTimeout(stopTerug, 3000); return; }
+    stopTerug();
+    loopt = false;
+    if (wachter){ clearTimeout(wachter); wachter = null; }
+    if (totaal > 0) toonEinde(); else naarStart();
   });
 
   function start(){
@@ -737,23 +1061,27 @@ var RACE = { start:60, erbij:5, eraf:6 };
     rij = husselen(selectie());
     tijd = RACE.start;
     elStart.classList.add('hide'); elEinde.classList.add('hide'); elSpel.classList.remove('hide');
+    elStop.classList.remove('hide'); stopTerug();
     document.getElementById('naamvak').classList.add('hide');
     document.getElementById('balk').classList.toggle('hide', isRace());
     document.getElementById('tijdbalk').classList.toggle('hide', !isRace());
-    document.getElementById('hintBtn').classList.toggle('hide', isRace());
+    document.getElementById('hintBtn').classList.toggle('hide', isRace() || isWijs());
     document.getElementById('overslaanBtn').classList.toggle('hide', isRace());
-    document.getElementById('stopBtn').classList.toggle('hide', !isRace());
+    document.getElementById('invulRij').classList.toggle('hide', isWijs());
+    document.getElementById('wijsNaam').classList.toggle('hide', !isWijs());
+    document.getElementById('vraagLabel').setAttribute('for', isWijs() ? '' : 'antwoord');
     document.body.classList.add('speelt');
-    document.getElementById('rondeLabel').textContent =
-      KAARTEN[kaartId].naam + ', ' + niveau.naam.toLowerCase();
+    zetPil();
+    document.getElementById('rondeLabel').textContent = pilTekst() + (isWijs() ? ', aanwijzen' : '');
 
     tekenKaart();
+    requestAnimationFrame(pasKaart);
     volgende();
-    if (isRace()){ loopt = true; laatsteTik = performance.now(); requestAnimationFrame(tik); }
+    if (isRace()){ loopt = true; laatsteTik = performance.now(); requestAnimationFrame(tik2); }
     scrollTo({top:0, behavior:'auto'});
   }
 
-  function tik(nu){
+  function tik2(nu){
     if (!loopt) return;
     /* De klok staat stil zolang de uitslag in beeld staat: lezen mag geen tijd kosten. */
     if (!bezig){
@@ -762,7 +1090,7 @@ var RACE = { start:60, erbij:5, eraf:6 };
     }
     laatsteTik = nu;
     tekenTeller();
-    requestAnimationFrame(tik);
+    requestAnimationFrame(tik2);
   }
 
   function volgende(){
@@ -788,17 +1116,17 @@ var RACE = { start:60, erbij:5, eraf:6 };
        is dat noodzakelijk: Groningen is er zowel provincie als stad. */
     var w = watVan(huidig);
     var lid = (w === 'eiland' || w === 'land') ? 'welk ' : 'welke ';
-    document.getElementById('vraagLabel').textContent = lid + w + ' licht op';
-    elIn.placeholder = 'Typ de naam van ' + (w === 'eiland' || w === 'land' ? 'het ' : 'de ') + w;
-
-    licht(huidig, null);
     tekenTeller();
+    if (isWijs()){
+      document.getElementById('vraagLabel').textContent = 'wijs aan op de kaart: ' + (lid === 'welk ' ? 'het ' : 'de ') + w;
+      document.getElementById('wijsNaam').textContent = huidig.n;
+      document.getElementById('stip').setAttribute('class', 'stip');
+      return;
+    }
+    document.getElementById('vraagLabel').textContent = lid + w + ' licht op';
+    licht(huidig, null);
     elIn.focus({ preventScroll:true });
   }
-
-  /* Hoe lang de uitslag blijft staan. Goed mag kort, want je weet het al.
-     Bij een misser krijg je langer, want daar staat de juiste naam. */
-  function wachttijd(klopt){ return klopt ? 750 : 2100; }
 
   /* Land, provincie, stad of rivier: de teller en de knop noemen het juiste woord. */
   function woordHoofd(){
@@ -808,16 +1136,16 @@ var RACE = { start:60, erbij:5, eraf:6 };
 
   function tekenTeller(){
     if (isRace()){
-      var deel = Math.max(0, Math.min(1, tijd / RACE.start));
-      document.getElementById('tijdFill').style.width = (deel * 100) + '%';
+      var d = Math.max(0, Math.min(1, tijd / RACE.start));
+      document.getElementById('tijdFill').style.width = (d * 100) + '%';
       document.getElementById('tijdbalk').classList.toggle('krap', tijd <= 10);
       document.getElementById('scoreLabel').innerHTML =
-        '<span class="klok">' + Math.ceil(tijd) + ' sec</span> \u00b7 ' + punten + ' punten' +
-        (reeks >= 2 ? ' \u00b7 ' + reeks + ' op rij' : '');
+        '<span class="klok">' + Math.ceil(tijd) + ' sec</span> · ' + punten + ' punten' +
+        (reeks >= 2 ? ' · ' + reeks + ' op rij' : '');
     } else {
       document.getElementById('balkFill').style.width = ((nr / rij.length) * 100) + '%';
       document.getElementById('scoreLabel').textContent =
-        woordHoofd() + ' ' + Math.min(nr + 1, rij.length) + ' van ' + rij.length + ' \u00b7 ' + goed + ' goed';
+        woordHoofd() + ' ' + Math.min(nr + 1, rij.length) + ' van ' + rij.length + ' · ' + goed + ' goed';
     }
   }
 
@@ -865,33 +1193,48 @@ var RACE = { start:60, erbij:5, eraf:6 };
       }
     } else {
       reeks = 0;
-      fouten.push({ land:huidig.n, getypt:elIn.value.trim(),
+      fouten.push({ land:huidig.n, getypt:isWijs() ? '' : elIn.value.trim(),
+                    wees:isWijs() && oordeel.aangewezen ? naamMet(oordeel.aangewezen) : '',
                     wat:KAARTEN[kaartId].soort === 'gemengd' ? watVan(huidig) : '' });
       if (isRace()) tijd -= RACE.eraf;
     }
 
     onthoud(huidig, klopt);
+    toonNaast(null);
+    if (!klopt && isWijs() && oordeel.aangewezen) toonNaast(oordeel.aangewezen);
     licht(huidig, klopt ? 'raak' : 'mis');
 
-    var kop, tekst, soort;
+    var kop, tekst, soortU;
     if (klopt && oordeel.soort === 'bijna'){
-      kop = 'Goed gerekend.'; soort = 'bijna';
+      kop = 'Goed gerekend.'; soortU = 'bijna';
       tekst = 'Het schrijf je als ' + huidig.n + '.';
     } else if (klopt){
-      kop = 'Goed.'; soort = 'ja';
+      kop = 'Goed.'; soortU = 'ja';
       tekst = huidig.n + '.';
+    } else if (isWijs()){
+      kop = 'Hier ligt ' + naamMet(huidig) + '.'; soortU = 'nee';
+      tekst = oordeel.aangewezen ? 'Jij wees ' + naamMet(oordeel.aangewezen) + ' aan.' : '';
     } else {
-      kop = 'Dit is ' + huidig.n + '.'; soort = 'nee';
-      tekst = elIn.value.trim() ? 'Jij schreef ' + elIn.value.trim() + '.' : '';
+      kop = 'Dit is ' + huidig.n + '.'; soortU = 'nee';
+      tekst = elIn.value.trim() ? 'Jij schreef ' + schoon(elIn.value.trim()) + '.' : '';
     }
     if (isRace()) tekst += klopt ? ' Plus ' + RACE.erbij + ' sec.' : ' Min ' + RACE.eraf + ' sec.';
 
-    elUit.className = 'uitslag ' + soort;
-    elUit.innerHTML = '<b>' + kop + '</b> ' + tekst;
+    elUit.className = 'uitslag ' + soortU;
+    elUit.innerHTML = '<span><b>' + kop + '</b> ' + tekst + '</span>';
     tekenTeller();
 
-    /* Vanzelf door naar het volgende land. Geen knop: dat onderbreekt het ritme. */
-    wachter = setTimeout(verder, wachttijd(klopt));
+    /* Goed: vanzelf door, dat houdt het ritme. Fout: de juiste plek en naam
+       blijven staan tot je zelf verder gaat, want daar leer je van. */
+    if (klopt){ wachter = setTimeout(verder, oordeel.soort === 'bijna' ? 1400 : 750); return; }
+    var knop = document.createElement('button');
+    knop.type = 'button'; knop.className = 'volgende'; knop.textContent = 'Volgende →';
+    knop.addEventListener('click', verder);
+    elUit.appendChild(knop);
+    /* Op een telefoon blijft het toetsenbord staan (Enter of Ga gaat door);
+       verder krijgt de knop de focus, zodat Enter werkt. */
+    if (!raakScherm || isWijs()) knop.focus({ preventScroll:true });
+    else elIn.focus({ preventScroll:true });
   }
 
   function verder(){
@@ -922,55 +1265,53 @@ var RACE = { start:60, erbij:5, eraf:6 };
     afronden(false, { soort:'fout' });
   });
 
-  document.getElementById('stopBtn').addEventListener('click', function(){
-    loopt = false;
-    if (wachter){ clearTimeout(wachter); wachter = null; }
-    toonEinde();
-  });
-
   /* ---------- einde ---------- */
   function naarStart(){
     loopt = false; bezig = false;
     if (wachter){ clearTimeout(wachter); wachter = null; }
     document.body.classList.remove('speelt');
+    elStop.classList.add('hide'); stopTerug();
     elSpel.classList.add('hide'); elEinde.classList.add('hide'); elStart.classList.remove('hide');
     toonKlassement('startLijst', null);
     scrollTo({top:0, behavior:'auto'});
   }
 
+  function deelSleutel(){ return deel.landen && heeftDelen(kaartId) ? '-' + deel.id : ''; }
+
   function toonEinde(){
     loopt = false; bezig = false;
     if (wachter){ clearTimeout(wachter); wachter = null; }
     document.body.classList.remove('speelt');
+    elStop.classList.add('hide'); stopTerug();
     elSpel.classList.add('hide'); elEinde.classList.remove('hide');
-    var deel = totaal ? goed / totaal : 0;
+    var d = totaal ? goed / totaal : 0;
 
-    document.getElementById('eindScore').textContent = isRace() ? punten + ' punten' : goed + ' / ' + totaal;
     document.getElementById('eindTekst').textContent = isRace()
-      ? 'Je had ' + goed + ' van de ' + totaal + ' goed (' + Math.round(deel*100) +
+      ? 'Je had ' + goed + ' van de ' + totaal + ' goed (' + Math.round(d*100) +
         ' procent). Je langste reeks was ' + besteReeks + '.'
-      : (deel >= .9 ? 'Sterk. Deze kaart ken je.' :
-         deel >= .65 ? 'Goed op weg. Oefen wat hieronder staat nog even apart.' :
-                       'Nog even doorgaan. Begin bij de makkelijkste, de rest komt vanzelf.');
+      : (d >= .9 ? 'Sterk. Deze kaart ken je.' :
+         d >= .65 ? 'Goed op weg. Oefen wat hieronder staat nog even apart.' :
+                    'Nog even doorgaan. Begin bij de makkelijkste, de rest komt vanzelf.');
 
     var html = '';
     if (fouten.length){
       var toon = fouten.slice(-12);
       toon.forEach(function(f){
-        html += '<div class="rij"><span>' + (f.getypt ? 'jij schreef ' + f.getypt : 'overgeslagen') +
+        html += '<div class="rij"><span>' + (f.wees ? 'jij wees ' + schoon(f.wees) + ' aan' : f.getypt ? 'jij schreef ' + schoon(f.getypt) : 'overgeslagen') +
                 '</span><b>' + f.land + (f.wat ? ' <small style="color:var(--muted);font-weight:400">(' + f.wat + ')</small>' : '') + '</b></div>';
       });
       if (fouten.length > toon.length) html += '<div class="rij"><span>en nog ' + (fouten.length - toon.length) + ' eerder</span><b></b></div>';
-    } else {
+    } else if (totaal) {
       html = '<div class="rij"><span>Alles goed</span><b>geen missers</b></div>';
     }
     document.getElementById('eindOverzicht').innerHTML = html;
-    SPEL.einde({ spel:'topografie', reeks:besteReeks, goed:goed, score: isRace() ? punten : goed, label: isRace() ? 'punten' : 'van ' + totaal + ' goed', max: isRace() ? null : totaal, ronde:goed, punten: isRace() ? punten : goed, sleutel: isRace() ? 'race' : 'oefen', vak:'aard', od:od });
+    SPEL.einde({ spel:'topografie', opnieuw:start, reeks:besteReeks, goed:goed, score: isRace() ? punten : goed, label: isRace() ? 'punten' : 'van ' + totaal + ' goed', max: isRace() ? null : totaal, ronde:goed, punten: isRace() ? punten : goed,
+      sleutel: modus.id + '-' + kaartId + deelSleutel(), vak:'aard', od:od });
 
     document.getElementById('naamvak').classList.toggle('hide', !isRace() || opgeslagen || totaal === 0);
     if (isRace() && !opgeslagen) document.getElementById('naamveld').value = '';
     toonKlassement('eindLijst', null);
-    scrollTo({top:0, behavior:'smooth'});
+    scrollTo({top:0, behavior:'auto'});
   }
 
   /* ---------- klassement, alleen voor de tijdrace ---------- */
@@ -979,9 +1320,9 @@ var RACE = { start:60, erbij:5, eraf:6 };
     if (e.key === 'Enter') bewaarScore();
   });
 
-  /* Elke kaart en elk niveau een eigen lijst: de wereld op alles is nu eenmaal
-     iets anders dan Europa met alleen de grote landen. */
-  function klassementSleutel(){ return kaartId + '-' + niveau.id; }
+  /* Elke kaart, elk deel en elk niveau een eigen lijst: de wereld op alles is
+     nu eenmaal iets anders dan Europa met alleen de grote landen. */
+  function klassementSleutel(){ return kaartId + deelSleutel() + '-' + niveau.id; }
 
   function bewaarScore(){
     if (opgeslagen || !isRace()) return;
@@ -1008,7 +1349,7 @@ var RACE = { start:60, erbij:5, eraf:6 };
     if (!doel) return;
     if (!kaartId || !niveau || !isRace()){ doel.innerHTML = ''; return; }
     var lijst = lees()[klassementSleutel()] || [];
-    var titel = 'Klassement tijdrace, ' + KAARTEN[kaartId].naam.toLowerCase() + ', ' + niveau.naam.toLowerCase();
+    var titel = 'Klassement tijdrace, ' + pilTekst().toLowerCase();
     if (!lijst.length){
       doel.innerHTML = '<h3>' + titel + '</h3><div class="leegvak">Nog geen scores. Wie het eerst speelt, staat bovenaan.</div>';
       return;
@@ -1017,43 +1358,68 @@ var RACE = { start:60, erbij:5, eraf:6 };
     lijst.forEach(function(r, i){
       var ik = markeer && r.naam === markeer.naam && r.punten === markeer.punten;
       h += '<div class="plek' + (ik ? ' jij' : '') + '"><span class="nr">' + (i+1) + '</span>' +
-        '<span class="avrij">' + (window.AVATAR ? AVATAR.svg(r.naam, 34) : '') + '<span><b>' + SPEL.schoon(r.naam) + '</b><small>' + r.goed + ' van ' + r.totaal +
-        ' goed \u00b7 reeks ' + r.reeks + ' \u00b7 ' + r.datum + '</small></span></span>' +
+        '<span class="avrij">' + (window.AVATAR ? AVATAR.svg(r.naam, 34) : '') + '<span><b>' + schoon(r.naam) + '</b><small>' + r.goed + ' van ' + r.totaal +
+        ' goed · reeks ' + r.reeks + ' · ' + r.datum + '</small></span></span>' +
         '<span class="pt">' + r.punten + '</span></div>';
     });
     doel.innerHTML = h;
   }
 
   /* ------------------------------------------------------------------
-     Deelbare link vanuit de leerlingomgeving:
-       ?k=eu of ?k=wl        welke kaart
-       ?n=kern, ruim, alles  hoeveel landen
-       ?m=oefen of ?m=race   welke stand
+     Deelbare link, voor de docent en vanuit de leerlingomgeving:
+       ?k=nlp, eu, wl ...        welke kaart (de sleutels uit topo-kaarten.js)
+       ?d=afrika, azie, noordam, zuidam   een deel van de wereldkaart
+       ?n=kern, ruim, alles      hoeveel
+       ?m=oefen, wijs of race    welke stand
+     De kaartknoppen bestaan pas als het gebied gekozen is. Daarom eerst het
+     gebied van die kaart, dan de kaart zelf (op data-k, niet op volgorde).
+     Of de docent dit koos of de leerling in de leeromgeving is aan het adres
+     niet te zien. Daarom staat er "vooraf gekozen", met een knop om het
+     toch anders te kiezen.
      ------------------------------------------------------------------ */
   (function(){
     function param(naam){
       var m = new RegExp('[?&]' + naam + '=([^&]+)').exec(location.search);
       return m ? decodeURIComponent(m[1]) : null;
     }
-    function kiesUit(vakId, ids, waarde, kopId, woord, namen){
-      if (!waarde) return;
-      var vak = document.getElementById(vakId);
-      /* Alleen de knoppen tellen. Tussen de kaartkeuzes staan ook groepskoppen,
-         en die zouden de nummering verschuiven. */
-      var knop = vak.querySelectorAll('.kaartje');
-      var i = ids.indexOf(waarde);
-      if (i === -1 || !knop[i]) return;
-      knop[i].click();
-      vak.style.display = 'none';
-      var kop = document.getElementById(kopId);
-      if (kop) kop.textContent = woord + ': ' + namen[i] + ', gekozen door je docent';
+    /* Alles wat vooraf gekozen is, staat samen op een regel. Vier losse regels
+       duwden de startknop onder de vouw. */
+    var gekozen = [], weg = [];
+    function vooraf(vakken, kop, tekst){
+      gekozen.push(tekst);
+      vakken.concat(kop.closest('.stap') ? [kop.closest('.stap')] : [kop]).forEach(function(v){ weg.push(v); v.style.display = 'none'; });
     }
-    var kIds = Object.keys(KAARTEN);
-    kiesUit('kaarten', kIds, param('k'), 'kaartKop', 'Kaart', kIds.map(function(k){ return KAARTEN[k].naam; }));
-    kiesUit('niveaus', NIVEAUS.map(function(n){ return n.id; }), param('n'), 'nivKop', 'Hoeveel',
-      NIVEAUS.map(function(n){ return n.naam; }));
-    kiesUit('modussen', MODUSSEN.map(function(m){ return m.id; }), param('m'), 'modusKop', 'Stand',
-      MODUSSEN.map(function(m){ return m.naam; }));
+    function toonVooraf(){
+      if (!gekozen.length) return;
+      var p = document.createElement('p');
+      p.className = 'eyebrow'; p.style.marginTop = '32px';
+      p.textContent = 'Vooraf gekozen: ' + gekozen.join(' \u00b7 ') + ' ';
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'linkbtn anders'; b.textContent = 'anders kiezen';
+      b.addEventListener('click', function(){ weg.forEach(function(v){ v.style.display = ''; }); p.parentNode.removeChild(p); });
+      p.appendChild(b);
+      var voor = document.getElementById('gebiedKop');
+      voor.parentNode.insertBefore(p, voor);
+    }
+    var k = param('k');
+    if (k && KAARTEN[k]){
+      var gKnop = elGebieden.querySelector('[data-g="' + gebiedVan(k) + '"]');
+      if (gKnop){
+        gKnop.click();
+        var kKnop = elKaarten.querySelector('[data-k="' + k + '"]');
+        if (kKnop){
+          kKnop.click();
+          vooraf([elGebieden, document.getElementById('gebiedKop')], document.getElementById('kaartKop'), KAARTEN[k].naam);
+          var d = param('d'), dKnop = d && heeftDelen(k) ? elDelen.querySelector('[data-id="' + d + '"]') : null;
+          if (dKnop){ dKnop.click(); vooraf([], document.getElementById('deelKop'), deel.naam); }
+          var n = param('n'), nKnop = n ? elNiveaus.querySelector('[data-id="' + n + '"]') : null;
+          if (nKnop && !document.getElementById('nivRij').classList.contains('hide')){ nKnop.click(); vooraf([], document.getElementById('nivKop'), niveau.naam.toLowerCase()); }
+        }
+      }
+    }
+    var m = param('m'), mKnop = m ? document.querySelector('#modussen [data-id="' + m + '"]') : null;
+    if (mKnop){ mKnop.click(); vooraf([], document.getElementById('modusKop'), modus.naam.toLowerCase()); }
+    toonVooraf();
   })();
 
 })();
@@ -1068,6 +1434,6 @@ var RACE = { start:60, erbij:5, eraf:6 };
 <script src="klas.js"></script>
 <script src="naamfilter.js"></script>
 <script src="spel.js"></script>
-<script>SPEL.uitleg({ doel:"Ken de landen en plaatsen op de kaart.", tijd:"10 minuten, of zo lang je wilt", bediening:"Een land licht op, jij typt hoe het heet. Weet je het niet, sla dan over." });</script>
+<script>SPEL.uitleg({ doel:"Ken de landen en plaatsen op de kaart.", tijd:"10 minuten, of zo lang je wilt", bediening:"Een plek licht op en jij typt de naam, of je krijgt een naam en tikt de plek aan. Zoomen kan met + en −." });</script>
 </body>
 </html>

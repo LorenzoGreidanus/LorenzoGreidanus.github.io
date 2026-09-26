@@ -241,10 +241,10 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 </header>
 
 <main class="wrap">
-  <section id="scherm-start">
+  <section id="scherm-start" class="oefen">
     <p class="hand" style="font-size:1.6rem">alles moet weg</p>
     <h1>De uitverkoop</h1>
-    <p class="lead">In de etalage hangen de kortingen, op de kassabon staat de btw en in de schappen liggen twee maten naast elkaar. Reken uit wat je echt betaalt. Bij elk antwoord staat erbij hoe je het uitrekent, want dat is het stukje dat je onthoudt.</p>
+    <p class="lead">Reken uit wat je echt betaalt met korting, btw en twee maten naast elkaar, en lees hoe de som gaat.</p>
     <div class="tafereel"><svg viewBox="0 0 800 250" role="img" aria-label="Een etalage vol kortingen">
   <rect width="800" height="250" fill="var(--sc-lucht)"/>
   <rect y="212" width="800" height="38" fill="var(--sc-grond)"/>
@@ -300,7 +300,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
       <div><i style="background:var(--ocean);color:#fff">3</i><b>Lees hoe het moet</b><span>Na elk antwoord staat de som uitgeschreven, ook als je hem goed had.</span></div>
     </div>
     <div class="kaart">
-      <div class="stap"><b>Wat wil je oefenen</b><div class="chips" id="soorten"></div></div>
+      <div class="stap"><b>Wat wil je oefenen</b><div class="chips schuif" id="soorten"></div></div>
       <div class="stap"><b>Niveau</b><div class="chips" id="niveaus"></div><p class="tip" id="niveauUit" style="margin-top:6px"></p></div>
       <div class="stap"><div class="startknoppen"><button class="knop crab groot" id="startBtn" type="button">Naar de winkel</button><button class="knop stil groot" id="oneindigBtn" type="button">Oneindig oefenen</button></div>
         <p class="oneindiguit" id="oneindigUit">Een ronde is 8 sommen. Oneindig: zoveel als je wilt, je stopt zelf.</p></div>
@@ -309,9 +309,9 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 
   <section id="scherm-spel" class="hide">
     <div class="balkje">
-      <div class="meter"><b id="mGoed">0</b><span><span class="ico ico-vink" role="img" aria-label="goed" title="goed"></span></span></div>
-      <div class="meter"><b id="mFout">0</b><span><span class="ico ico-kruis" role="img" aria-label="fout" title="fout"></span></span></div>
-      <div class="meter"><b id="mReeks">0</b><span><span class="ico ico-vlam" role="img" aria-label="goed op rij" title="goed op rij"></span></span></div>
+      <div class="meter"><b id="mGoed">0</b><span><span class="ico ico-vink" aria-hidden="true"></span>goed</span></div>
+      <div class="meter"><b id="mFout">0</b><span><span class="ico ico-kruis" aria-hidden="true"></span>fout</span></div>
+      <div class="meter"><b id="mReeks">0</b><span><span class="ico ico-vlam" aria-hidden="true"></span>op rij</span></div>
     </div>
     <div class="voortbalk"><i id="voortIn"></i></div>
     <div class="kaart">
@@ -323,7 +323,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
         <input id="antwoord" type="text" inputmode="decimal" autocomplete="off" aria-label="Jouw antwoord" placeholder="0,00">
       </div>
       <div class="keuzerij hide" id="keuzerij"></div>
-      <p class="terugkoppeling" id="terug"></p>
+      <p class="terugkoppeling" id="terug" role="status" aria-live="polite"></p>
       <div class="knoprij">
         <button class="knop" id="kijkBtn" type="button">Nakijken</button>
         <button class="knop stil" id="rekenBtn" type="button">Rekenmachine</button>
@@ -335,11 +335,11 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   </section>
 
   <section id="scherm-einde" class="hide">
-    <p class="hand" style="font-size:1.6rem">kassa</p>
-    <h2 id="eindKop" class="eindtitel">Klaar</h2>
+    <!-- de eindkaart (SPEL.einde) staat bovenaan met de score en de knop voor nog een ronde -->
+    <h2 id="eindKop" class="eindtitel hide">Klaar</h2>
     <p class="lead" id="eindUit"></p>
-    <div class="cijfers" id="cijfers"></div>
-    <div class="knoprij"><button class="knop crab groot" id="nogBtn" type="button">Nog een ronde</button> <button class="knop stil" id="andersBtn" type="button">Andere keuze</button></div>
+    <div class="cijfers hide" id="cijfers"></div>
+    <div class="knoprij"><button class="knop crab groot hide" id="nogBtn" type="button">Nog een ronde</button><button class="knop stil" id="andersBtn" type="button">Andere keuze</button></div>
     <div class="fouten" id="fouten"></div>
   </section>
 </main>
@@ -543,6 +543,9 @@ var PER_RONDE = 8;
     $('verderBtn').textContent = !oneindig && nr + 1 >= PER_RONDE ? 'Kijk terug op de ronde' : 'Volgende som';
     $('stopOneindigBtn').classList.toggle('hide', !oneindig);
     $('mGoed').textContent = goed; $('mFout').textContent = fout; $('mReeks').textContent = reeks;
+    /* de uitgeschreven som en Volgende in beeld, ook op een telefoon */
+    try { $('verderBtn').focus({ preventScroll:true }); } catch (e){ $('verderBtn').focus(); }
+    if (window.SPEL && SPEL.inBeeld) SPEL.inBeeld($('verderBtn'));
   }
   function begin(zo){
     oneindig = zo === true;
@@ -568,9 +571,9 @@ var PER_RONDE = 8;
     }).join('') : '';
     $('nogBtn').textContent = oneindig ? 'Verder oefenen' : 'Nog een ronde';
     /* een oneindige sessie heeft een eigen beste score: anders wint wie het langst doorgaat */
-    SPEL.einde({ spel:'uitverkoop', vak:'reken', od:od, reeks:besteReeks, goed:goed, compact:true, deelTekst:goed + ' van de ' + gedaan + ' goed' + (oneindig ? ', oneindig geoefend' : ''), score:goed, label:'van de ' + gedaan + ' goed', max:gedaan || 1,
+    SPEL.einde({ spel:'uitverkoop', vak:'reken', od:od, reeks:besteReeks, goed:goed, deelTekst:goed + ' van de ' + gedaan + ' goed' + (oneindig ? ', oneindig geoefend' : ''), score:goed, label:'van de ' + gedaan + ' goed', max:gedaan || 1,
       ronde:goed, punten:goed * 10, niveau:['', 'bb', 'kgt', 'hv'][niveau], vak:'reken', sleutel:niveau + (soortId || 'alles') + (oneindig ? '-oneindig' : ''),
-      opnieuwTekst:oneindig ? 'Verder oefenen' : undefined });
+      opnieuwTekst:oneindig ? 'Verder oefenen' : 'Nog een ronde' });
     scrollTo({ top:0, behavior:'auto' });
   }
 
@@ -604,6 +607,6 @@ var PER_RONDE = 8;
 </script>
 <script src="thema.js"></script>
 <script src="spel.js"></script>
-<script>SPEL.uitleg({ doel:"Rekenen met korting, btw, prijs per kilo en rente, zoals het in een winkel op je afkomt.", tijd:"10 minuten per ronde", bediening:"Tik het bedrag in met een komma en druk op Enter, of kies welke verpakking voordeliger is. De knop Rekenmachine staat naast Nakijken.", meer:'.uitleg' });</script>
+<script>SPEL.uitleg({ doel:"Rekenen met korting, btw, prijs per kilo en rente, zoals het in een winkel op je afkomt.", tijd:"acht sommen, ongeveer 10 minuten", bediening:"Tik het bedrag in met een komma en druk op Enter, of kies welke verpakking voordeliger is. De knop Rekenmachine staat naast Nakijken.", meer:'.uitleg', onder:true, links:true, chips:true, zeker:'stopBtn' });</script>
 </body>
 </html>

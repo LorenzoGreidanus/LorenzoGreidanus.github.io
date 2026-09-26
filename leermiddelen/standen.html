@@ -211,6 +211,31 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 @keyframes themadraai{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 @keyframes themaplaatje{0%{transform:scale(1);opacity:1}42%{transform:scale(.2);opacity:.15}100%{transform:scale(1);opacity:1}}
 @keyframes themaring{from{transform:scale(.85);opacity:1}to{transform:scale(2.4);opacity:0}}
+/* ---------- kop: de code en de knop voor het digibord ---------- */
+.kopcode{display:inline-flex;align-items:baseline;gap:8px;font-size:.72rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.kopcode b{font-size:1.2rem;letter-spacing:.2em;color:var(--ink)}
+@media(max-width:700px){.bordknop{display:none}}
+/* Stoppen, eerste tik: de knop vraagt of je het zeker weet */
+.linkbtn.zeker{border-color:var(--fout);color:var(--fout)}
+/* ---------- de bordstand (verbinding.js) ----------
+   Vanzelf op een breed scherm, beeldvullend met de knop Digibord: breder,
+   en letters die je achter in het lokaal kunt lezen. */
+body.bord .wrap{width:min(100% - 48px,1500px)}
+body.bord .lead{font-size:clamp(1.05rem,1.4vw,1.5rem);max-width:none}
+body.bord .opdrachtkop{font-size:clamp(.85rem,1vw,1.1rem)}
+body.bord h2{font-size:clamp(1.8rem,2.6vw,3rem)}
+body.bord .tip{font-size:clamp(.95rem,1.2vw,1.3rem)}
+body.bord .knop{font-size:clamp(1rem,1.2vw,1.35rem)}
+body.bord .logvak{font-size:clamp(.95rem,1.1vw,1.2rem)}
+body.bord .standvak b{font-size:clamp(1.2rem,1.6vw,1.8rem)}
+body.bord .standvak .zetels,body.bord .standvak .wie,body.bord .standvak .cijfer{font-size:clamp(.95rem,1.15vw,1.25rem)}
+body.bord .stoelen i{width:clamp(11px,1vw,18px);height:clamp(11px,1vw,18px)}
+body.bord .stempel{font-size:clamp(.8rem,1vw,1.1rem)}
+body.bord .regelbalk{font-size:clamp(1rem,1.3vw,1.4rem)}
+body.bord .uitslag b{font-size:clamp(1.2rem,1.7vw,1.9rem)}
+body.bord .uitslag span,body.bord .uitslag p{font-size:clamp(1rem,1.2vw,1.35rem)}
+body.bord .meterblok b{font-size:clamp(1rem,1.2vw,1.35rem)}
+body.bord .meterblok span{font-size:clamp(.9rem,1.05vw,1.15rem)}
 :root.themawisselt body{transition:background-color .34s ease,color .34s ease}
 @media(prefers-reduced-motion:reduce){
   .themaknop.draait,.themaknop.draait svg,.themaknop.draait::after{animation:none}
@@ -224,7 +249,9 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 <header class="wrap">
   <a class="mark" href="index.html"><span class="lgmark"><i><span>L</span><span>G</span></i><b class="lgdot"></b></span><span class="lgnaam"><span>Stem per stand</span><span class="lgstreep"></span></span><span class="lghoi">alle spellen</span></a>
   <span class="hd-right">
+    <span class="kopcode hide" id="kopCode">code <b id="kopCodeB"></b></span>
     <a class="linkbtn" href="index.html">Leeromgeving</a>
+    <button class="linkbtn bordknop hide" type="button" aria-pressed="false">Digibord</button>
     <button class="linkbtn hide" id="stopBtn" type="button">Stoppen</button>
     <button class="themaknop" id="themaknop" type="button" aria-label="Schakel naar donker" title="Donker of licht">
       <svg class="maan" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
@@ -292,7 +319,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   </g>
 </svg></div>
     <div class="uitleg">
-      <div><i style="background:var(--crab);color:#14224C">1</i><b>Open de vergadering</b><span>Op het digibord. Leerlingen doen mee met een code, op telefoon of laptop. Zonder apparaten kan ook: tel de handen.</span></div>
+      <div><i style="background:var(--crab);color:#14224C">1</i><b>Maak een code</b><span>Op het digibord. Leerlingen doen mee met een code, op telefoon of laptop. Zonder apparaten kan ook: tel de handen.</span></div>
       <div><i style="background:var(--amber);color:#14224C">2</i><b>Iedereen krijgt een rol</b><span>Dorpspastoor, markies, advocaat of boer. De verdeling klopt met 1789: een handvol geestelijken en edelen tegenover een grote Derde Stand.</span></div>
       <div><i style="background:var(--ocean);color:#fff">3</i><b>Stem voorstel voor voorstel</b><span>Het bord telt per stand, laat zien wie het tegenhield, en houdt broodprijs, gezag en onrust bij.</span></div>
     </div>
@@ -302,7 +329,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
         <button type="button" data-m="handen">Handen tellen in de klas</button>
       </div></div>
       <div class="stap" id="telefoonvak">
-        <button class="knop" id="openBtn" type="button">Open de vergadering</button>
+        <button class="knop" id="openBtn" type="button">Maak een code voor de klas</button>
         <p class="tip" id="kamerFout" style="color:var(--fout);margin-top:6px"></p>
         <div id="lobbyvak" class="hide"></div>
       </div>
@@ -334,7 +361,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     <h2 id="eindKop" class="eindtitel">Klaar</h2>
     <p class="lead" id="eindUit"></p>
     <div class="cijfers" id="cijfers"></div>
-    <div class="knoprij"><button class="knop crab groot" id="nogBtn" type="button">Nog een ronde</button> <button class="knop stil" id="andersBtn" type="button">Andere keuze</button></div>
+    <div class="knoprij"><button class="knop crab groot" id="nogBtn" type="button">Nog een vergadering</button></div>
     <div class="fouten" id="fouten"></div>
   </section>
 </main>
@@ -342,6 +369,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 
 <script src="klas.js"></script>
 <script src="melding.js"></script>
+<script src="verbinding.js"></script>
 <script src="rollen.js"></script>
 <script>
 /* ============================================================================
@@ -434,7 +462,7 @@ var NATIONALE = { id:'nationale', titel:'De Derde Stand noemt zich Nationale Ver
   var kamer = null, kamerInfo = null, spelers = [], rollen = {}, persoon = {};
   var hoofdelijk = false, nationaal = false, klaar = false;
   var brood = 78, gezag = 62, onrust = 34;
-  var rij = [], nr = 0, stemmen = {}, handen = {}, lopend = null, log = [];
+  var rij = [], nr = 0, stemmen = {}, handen = {}, lopend = null, log = [], geteld = 0;
 
   /* ---------- het bord ---------- */
   function meters(){
@@ -571,6 +599,7 @@ var NATIONALE = { id:'nationale', titel:'De Derde Stand noemt zich Nationale Ver
   function tellen(){
     if (!lopend) return;
     var v = lopend, uit = tel(v), aangenomen = beslis(v, uit);
+    geteld++;
     zaal(uit);
     var ef = aangenomen ? v.aan : v.af;
     brood = klem(brood + (ef.brood || 0)); gezag = klem(gezag + (ef.gezag || 0)); onrust = klem(onrust + (ef.onrust || 0));
@@ -626,7 +655,7 @@ var NATIONALE = { id:'nationale', titel:'De Derde Stand noemt zich Nationale Ver
     });
   }
   function start(){
-    rij = VOORSTELLEN.slice(); nr = 0; log = [];
+    rij = VOORSTELLEN.slice(); nr = 0; log = []; geteld = 0;
     brood = 78; gezag = 62; onrust = 34; hoofdelijk = false; nationaal = false; klaar = false;
     $('scherm-start').classList.add('hide'); $('scherm-einde').classList.add('hide');
     $('scherm-spel').classList.remove('hide'); $('stopBtn').classList.remove('hide');
@@ -635,6 +664,7 @@ var NATIONALE = { id:'nationale', titel:'De Derde Stand noemt zich Nationale Ver
     schrijf('5 mei 1789. De Staten-Generaal komen voor het eerst sinds 1614 bijeen in Versailles.', true);
     if (modus === 'telefoon' && kamer){ kamer.start(); deelRollen(); }
     volgende();
+    bordAan(); kopCode();
     scrollTo({ top:0, behavior:'auto' });
   }
   function einde(){
@@ -644,11 +674,12 @@ var NATIONALE = { id:'nationale', titel:'De Derde Stand noemt zich Nationale Ver
     var slot, kop;
     if (onrust >= 85){ kop = 'De straat beslist'; slot = 'De vergadering praat nog, maar buiten is het al voorbij. Op 14 juli loopt een menigte de Bastille binnen. Wat in de zaal niet lukte, gebeurt op straat.'; }
     else if (nationaal || hoofdelijk){ kop = 'De zaal kantelt'; slot = 'Door hoofdelijk te stemmen verdween het voorrecht van twee standen. Dat is precies wat er in juni 1789 gebeurde: de Derde Stand riep zich uit tot Nationale Vergadering en de lagere geestelijkheid liep over.'; }
-    else if (gezag >= 55){ kop = 'Alles blijft zoals het was'; slot = 'Twee standen hielden de derde tegen, voorstel na voorstel. In het echt hield dat het maar zes weken vol: op 17 juni 1789 stapte de Derde Stand uit het systeem in plaats van erin te verliezen.'; }
+    else if (!geteld){ kop = 'De vergadering is gestopt'; slot = 'Er is nog niet gestemd. In het echt duurde de ruzie over de manier van stemmen weken: op 17 juni 1789 stapte de Derde Stand uit het systeem in plaats van erin te verliezen.'; }
+    else if (gezag >= 55){ kop = 'Alles blijft zoals het was'; slot = 'Twee standen hielden de derde tegen' + (geteld > 1 ? ', voorstel na voorstel' : '') + '. In het echt hield dat het maar zes weken vol: op 17 juni 1789 stapte de Derde Stand uit het systeem in plaats van erin te verliezen.'; }
     else { kop = 'Een vergadering zonder uitweg'; slot = 'De koning heeft geen gezag meer, de zaal geen meerderheid. In het echt volgde daarop de Eed op de Kaatsbaan: niet uiteengaan voor Frankrijk een grondwet heeft.'; }
     $('eindKop').textContent = kop;
     $('eindUit').textContent = slot;
-    $('cijfers').innerHTML = '<div><b>' + rij.filter(function(v, i){ return i < nr + 1; }).length + '</b><span>voorstellen</span></div>' +
+    $('cijfers').innerHTML = '<div><b>' + geteld + '</b><span>' + (geteld === 1 ? 'voorstel' : 'voorstellen') + ' gestemd</span></div>' +
       '<div><b>' + brood + '</b><span>broodprijs</span></div><div><b>' + gezag + '</b><span>gezag</span></div><div><b>' + onrust + '</b><span>onrust</span></div>';
     $('fouten').innerHTML = '<p class="eyebrow">wat je hieruit kunt halen</p>' +
       '<div><b>Stem per stand of hoofdelijk?</b><span>Bij stemmen per stand hebben drie procent van de Fransen twee van de drie stemmen. Dat is geen detail, dat is de hele ruzie van mei en juni 1789.</span></div>' +
@@ -658,7 +689,9 @@ var NATIONALE = { id:'nationale', titel:'De Derde Stand noemt zich Nationale Ver
       kamer.alle({ soort:'uitslag', kop:'de vergadering is gesloten', titel:kop, tekst:slot, regels:[] });
       kamer.stop();
     }
-    SPEL.einde({ spel:'standen', compact:true, kop:'gesloten', klas:false, waarde:null, opnieuwTekst:'Nog een vergadering' });
+    /* Een klassenspel: geen eindkaart met Mijn voortgang en Delen (die horen bij
+       een leerling die alleen speelt), en een knop voor opnieuw in plaats van drie. */
+    stopZeker(false); $('kopCode').classList.add('hide');
     scrollTo({ top:0, behavior:'auto' });
   }
 
@@ -666,7 +699,7 @@ var NATIONALE = { id:'nationale', titel:'De Derde Stand noemt zich Nationale Ver
   function tekenLobby(){
     if (!kamerInfo) return;
     ROLSPEL.lobby($('lobbyvak'), kamerInfo.code, spelers,
-      spelers.length < 3 ? 'Vanaf drie apparaten zijn alle drie de standen bezet. Met minder vult het bord de rest aan.' : 'Iedereen erbij? Open de vergadering.');
+      spelers.length < 3 ? 'Vanaf drie apparaten zijn alle drie de standen bezet. Met minder vult het bord de rest aan.' : 'Iedereen erbij? Begin de vergadering.');
   }
   function actie(pid, d){
     if (!lopend || !d || d.vraag !== lopend.id) return;
@@ -689,6 +722,10 @@ var NATIONALE = { id:'nationale', titel:'De Derde Stand noemt zich Nationale Ver
       $('lobbyvak').classList.remove('hide');
       $('startBtn').classList.remove('hide');
       tekenLobby();
+      /* de lobby met de code staat onder de uitleg: haal hem in beeld */
+      var rustig = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+      setTimeout(function(){ $('telefoonvak').scrollIntoView({ block:'start', behavior: rustig ? 'auto' : 'smooth' }); }, 60);
+      bordAan();
     }).catch(function(e){
       $('openBtn').disabled = false;
       $('kamerFout').textContent = e.message || 'De kamer kon niet gemaakt worden.';
@@ -710,8 +747,37 @@ var NATIONALE = { id:'nationale', titel:'De Derde Stand noemt zich Nationale Ver
   $('openBtn').addEventListener('click', openKamer);
   $('startBtn').addEventListener('click', start);
   $('nogBtn').addEventListener('click', function(){ location.reload(); });
-  $('andersBtn').addEventListener('click', function(){ location.reload(); });
-  $('stopBtn').addEventListener('click', einde);
+  /* Stoppen tijdens het spel: twee tikken. De eerste vraagt of je het zeker weet
+     (drie tellen), de tweede stopt echt en sluit de kamer. */
+  var zekerKlok = null;
+  function stopZeker(aan){
+    clearTimeout(zekerKlok);
+    $('stopBtn').classList.toggle('zeker', !!aan);
+    $('stopBtn').textContent = aan ? 'Zeker? Tik nog eens' : 'Stoppen';
+    if (aan) zekerKlok = setTimeout(function(){ stopZeker(false); }, 3000);
+  }
+  $('stopBtn').addEventListener('click', function(){
+    if ($('stopBtn').classList.contains('zeker')){ stopZeker(false); einde(); return; }
+    stopZeker(true);
+  });
+  /* de bordstand: vanzelf op een breed scherm, beeldvullend met de knop Digibord */
+  var bord = VERBINDING.bord({ knoppen:'.bordknop' });
+  function bordAan(){
+    Array.prototype.forEach.call(document.querySelectorAll('.bordknop'), function(b){ b.classList.remove('hide'); });
+    bord.aan();
+  }
+  /* de code klein in de kop zolang het spel loopt: wie later binnenkomt kan nog mee */
+  function kopCode(){
+    var aan = !!(kamerInfo && modus === 'telefoon' && !$('scherm-spel').classList.contains('hide'));
+    if (aan) $('kopCodeB').textContent = kamerInfo.code;
+    $('kopCode').classList.toggle('hide', !aan);
+  }
+  /* de afstandsbediening (spatie, pijl naar rechts, PageDown): de volgende stap op het bord */
+  VERBINDING.toetsen(function(){
+    if (!$('scherm-start').classList.contains('hide')) return kamer ? VERBINDING.drukOp($('startBtn')) : false;
+    if (!$('scherm-spel').classList.contains('hide')) return VERBINDING.drukOp($('verderBtn')) || VERBINDING.drukOp($('telBtn'));
+    return false;
+  });
   $('telBtn').addEventListener('click', tellen);
   $('verderBtn').addEventListener('click', function(){ nr++; volgende(); });
 
@@ -721,7 +787,7 @@ var NATIONALE = { id:'nationale', titel:'De Derde Stand noemt zich Nationale Ver
   function bewaarNu(){
     ROLSPEL.bewaar('standen', modus === 'telefoon' ? kamerInfo : null,
       { modus:modus, rollen:rollen, persoon:persoon, hoofdelijk:hoofdelijk, nationaal:nationaal, brood:brood, gezag:gezag, onrust:onrust,
-        rij:rij.map(function(v){ return v.id; }), nr:nr, log:log });
+        rij:rij.map(function(v){ return v.id; }), nr:nr, log:log, geteld:geteld });
   }
   ROLSPEL.hervat('standen', $('scherm-start'), function(b){
     var st = b.stand, alle = VOORSTELLEN.concat([NATIONALE]);
@@ -736,6 +802,8 @@ var NATIONALE = { id:'nationale', titel:'De Derde Stand noemt zich Nationale Ver
     $('log').innerHTML = log.slice(0, 8).map(function(r){ return '<p' + (r.s ? ' class="sterk"' : '') + '>' + schoon(r.t) + '</p>'; }).join('');
     if (b.kamer && modus === 'telefoon'){ naSpelers = volgende; koppel(b.kamer); }
     else volgende();
+    geteld = st.geteld | 0;
+    bordAan(); kopCode();
     scrollTo({ top:0, behavior:'auto' });
   });
 })();

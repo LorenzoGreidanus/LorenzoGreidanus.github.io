@@ -107,7 +107,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;pa
 .lead{color:var(--muted);max-width:60ch;margin-top:8px}
 .uitleg{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:18px 0}
 .uitleg div{background:var(--kaart);border:1px solid var(--rand);border-radius:16px;padding:14px}
-.uitleg i{width:26px;height:26px;border-radius:9px;color:#fff;display:grid;place-items:center;font-style:normal;font-weight:600;margin-bottom:6px}
+.uitleg i{width:26px;height:26px;border-radius:9px;color:#14224C;display:grid;place-items:center;font-style:normal;font-weight:600;margin-bottom:6px}
 .uitleg b{display:block;margin-bottom:4px}
 .uitleg span{font-size:.88rem;color:var(--muted)}
 /* de race */
@@ -133,6 +133,17 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;pa
 .optie.mis{background:var(--fout);border-color:var(--fout);color:#fff}
 .optie:disabled{cursor:default}
 .terugkoppeling{margin-top:10px;font-size:.9rem;min-height:1.4em}
+/* een knop die uit staat, ziet er ook uit als uit: leeg, met een stippelrand */
+.knop:disabled,.knop:disabled:active{background:transparent;color:var(--muted);border:1.5px dashed var(--muted);box-shadow:none;cursor:not-allowed;transform:none}
+/* de lege map: waar komen fouten vandaan */
+.leegmap{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.leegmap a{display:inline-flex;align-items:center;min-height:44px;padding:8px 14px;border-radius:999px;border:1.5px solid var(--rand2);background:var(--kaart);color:var(--ink);text-decoration:none;font-weight:600;font-size:.88rem}
+.leegmap a:hover{border-color:var(--ocean)}
+/* het knopje Lees voor staat niet tegen het eerste antwoord aan */
+.kaart .leesvak{margin-bottom:12px}
+/* de meters: een woord onder het getal, het plaatje ervoor, op een regel */
+.meter span .ico{margin-right:4px}
+.meter>span{white-space:nowrap;letter-spacing:.08em}
 .terugkoppeling.goed{color:var(--goed)}
 .terugkoppeling.fout{color:var(--fout)}
 .reeks{margin-top:6px;font-size:.85rem;color:var(--muted)}
@@ -199,14 +210,14 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 </header>
 
 <main class="wrap">
-  <section id="scherm-start">
+  <section id="scherm-start" class="oefen">
     <p class="hand" style="font-size:1.6rem">nog een keer, tot het zit</p>
     <h1>Oefen je fouten</h1>
-    <p class="lead">Elke vraag die je fout had in de Vragenrace, Torenverdediging of Zwaardvechter komt hier terug. Goed beantwoord? Dan is hij weg. Fout? Dan komt hij nog een keer.</p>
+    <p class="lead">Wat je fout had in de Vragenrace, Torenverdediging, Zwaardvechter of de dagelijkse uitdaging komt hier terug, tot je het goed hebt.</p>
     <div class="uitleg">
-      <div><i style="background:var(--crab)">1</i><b>Speel gewoon</b><span>Je hoeft niets aan te zetten: elke fout uit die drie spellen belandt vanzelf in je map. Ook op een ander apparaat, als je een speelcode hebt.</span></div>
+      <div><i style="background:var(--crab)">1</i><b>Speel gewoon</b><span>Je hoeft niets aan te zetten: elke fout uit die vier spellen belandt vanzelf in je map. Ook op een ander apparaat, als je een speelcode hebt.</span></div>
       <div><i style="background:var(--amber)">2</i><b>Vijf minuten</b><span>Je krijgt hoogstens vijftien vragen, de oudste eerst. Bij een fout lees je meteen waarom en gaat de vraag terug in de map.</span></div>
-      <div><i style="background:var(--ocean)">3</i><b>Lege map</b><span>Dat is het doel. Een lege map is een goed teken; speel dan een spel en kijk wat er nieuw in komt.</span></div>
+      <div><i style="background:var(--ocean);color:#fff">3</i><b>Lege map</b><span>Dat is het doel. Een lege map is een goed teken; speel dan een spel en kijk wat er nieuw in komt.</span></div>
     </div>
     <div class="kaart">
       <div class="stap"><b id="mapKop">Je map</b><p class="tip" id="mapUit" style="margin-top:6px"></p><div class="mapvakken" id="mapVakken"></div></div>
@@ -217,30 +228,31 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   <section id="scherm-spel" class="hide">
     <div class="balkje">
       <div class="meter"><b id="mNr">1</b><span>van <span id="mVan">10</span></span></div>
-      <div class="meter"><b id="mGoed">0</b><span><span class="ico ico-vink" role="img" aria-label="goed" title="goed"></span></span></div>
-      <div class="meter"><b id="mOver">0</b><span><span class="ico ico-map" role="img" aria-label="nog in je map" title="nog in je map"></span></span></div>
+      <div class="meter"><b id="mGoed">0</b><span><span class="ico ico-vink" aria-hidden="true"></span>goed</span></div>
+      <div class="meter"><b id="mOver">0</b><span><span class="ico ico-map" aria-hidden="true"></span>in je map</span></div>
     </div>
     <div class="kaart">
       <p class="vraagkop" id="vraagKop">vraag</p>
       <div class="beeld hide" id="beeld"></div>
       <p class="vraagtekst" id="vraagTekst"></p>
       <div class="opties" id="opties"></div>
-      <p class="terugkoppeling" id="terug"></p>
+      <p class="terugkoppeling" id="terug" role="status" aria-live="polite"></p>
+      <div class="volgenderij" id="volgendeRij" hidden><button type="button" class="volgendeknop" id="volgendeBtn">Volgende &rarr;</button></div>
       <p class="reeks" id="reeksUit"></p>
       <div id="meldPlek"></div>
     </div>
   </section>
 
   <section id="scherm-einde" class="hide">
-    <p class="hand" style="font-size:1.6rem">dat was de ronde</p>
-    <h1 id="eindKop">Klaar</h1>
+    <!-- de eindkaart (SPEL.einde) staat bovenaan met de score en de knop voor nog een ronde -->
+    <h2 class="hide" id="eindKop">Klaar</h2>
     <p class="lead" id="eindUit"></p>
-    <div class="cijfers" id="cijfers"></div>
-    <div class="stap"><button class="knop crab groot" id="nogBtn" type="button">Nog een ronde</button> <a class="knop stil" href="index.html">Naar de spellen</a></div>
+    <div class="cijfers hide" id="cijfers"></div>
+    <button class="knop crab groot hide" id="nogBtn" type="button">Nog een ronde</button>
     <div class="fouten" id="fouten"></div>
   </section>
 </main>
-<footer class="wrap">Oefen je fouten hoort bij de leeromgeving van meneer Greidanus. De vragen zijn jouw eigen fouten uit de Vragenrace, Torenverdediging en Zwaardvechter.</footer>
+<footer class="wrap">Oefen je fouten hoort bij de leeromgeving van meneer Greidanus. De vragen zijn jouw eigen fouten uit de Vragenrace, Torenverdediging, Zwaardvechter en de dagelijkse uitdaging.</footer>
 
 <script src="bank.js"></script>
 <!-- deze pagina kijkt in alle vakken tegelijk, dus die komen hier meteen mee -->
@@ -274,15 +286,20 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     var l = FOUTENMAP.lijst(), per = {};
     l.forEach(function(x){ per[x.vak] = (per[x.vak] || 0) + 1; });
     $('mapKop').textContent = l.length ? l.length + (l.length === 1 ? ' vraag in je map' : ' vragen in je map') : 'Je map is leeg';
-    $('mapUit').textContent = l.length ? 'De oudste komen eerst. ' + (l.length > MAX_VRAGEN ? 'Je krijgt er nu ' + MAX_VRAGEN + '.' : '') : 'Speel de Vragenrace, Torenverdediging of Zwaardvechter; wat je fout hebt komt hier terecht.';
-    $('mapVakken').innerHTML = Object.keys(per).map(function(v){ return '<span class="chip">' + schoon(vakNaam(v)) + ' <b>' + per[v] + '</b></span>'; }).join('');
+    $('mapUit').textContent = l.length ? 'De oudste komen eerst. ' + (l.length > MAX_VRAGEN ? 'Je krijgt er nu ' + MAX_VRAGEN + '.' : '') : 'Speel een van deze spellen; wat je daar fout hebt, komt hier terecht.';
+    /* een lege map: geen knop die er actief uitziet, wel de weg naar waar fouten vandaan komen */
+    $('mapVakken').innerHTML = l.length ? Object.keys(per).map(function(v){ return '<span class="chip">' + schoon(vakNaam(v)) + ' <b>' + per[v] + '</b></span>'; }).join('')
+      : '<span class="leegmap"><a href="race.html">Vragenrace</a><a href="toren.html">Torenverdediging</a><a href="zwaard.html">Zwaardvechter</a><a href="dag.html">Dagelijkse uitdaging</a></span>';
     $('startBtn').disabled = !l.length;
+    $('startBtn').textContent = l.length ? 'Oefen je fouten' : 'Niets te oefenen';
     $('leegBtn').classList.toggle('hide', !l.length);
   }
   tekenMap();
   $('leegBtn').addEventListener('click', function(){ if (!confirm('Je hele foutenmap leegmaken?')) return; FOUTENMAP.lijst().forEach(function(x){ FOUTENMAP.goed(x.h); }); tekenMap(); });
 
   var rij = [], nr = 0, goed = 0, fout = 0, vraag = null, geklikt = -1, klok = null, tijd = 0, loopt = false, wachtTimer = null, foutLijst = [], perOnderdeel = {}, reeks = 0, besteReeks = 0;
+  /* wacht: de uitleg na een fout staat in beeld; de vijf minuten lopen dan niet door */
+  var wacht = false;
   function husssel(q){
     var volg = q.o.map(function(x, i){ return i; }).sort(function(){ return Math.random() - 0.5; });
     return { h:q.h, vak:q.vak, v:q.v, o:volg.map(function(i){ return q.o[i]; }), g:volg.indexOf(q.g), u:q.u, t:q.t, vlag:q.vlag };
@@ -304,6 +321,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     if (window.VOORLEES) VOORLEES.knop($('vraagTekst'), function(){ return { v:vraag.v, o:vraag.o, taal:vraag.vak === 'eng' ? 'en-GB' : 'nl-NL' }; });
   }
   function volgende(){
+    wacht = false; $('volgendeRij').hidden = true;
     if (nr >= rij.length){ einde(); return; }
     vraag = husssel(rij[nr]); geklikt = -1; tekenVraag(); tekenMeters();
   }
@@ -324,14 +342,21 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     nr++;
     tekenVraag(); tekenMeters();
     clearTimeout(wachtTimer);
-    wachtTimer = setTimeout(function(){ if (loopt) volgende(); }, isGoed ? 800 : 2600);
+    /* Goed gaat vanzelf door. Fout wacht op Volgende, zodat je de uitleg kunt lezen. */
+    if (isGoed){ wachtTimer = setTimeout(function(){ if (loopt) volgende(); }, 800); return; }
+    wacht = true;
+    var rijV = $('volgendeRij'), knopV = $('volgendeBtn');
+    rijV.hidden = false;
+    try { knopV.focus({ preventScroll:true }); } catch (e){ knopV.focus(); }
+    if (window.SPEL && SPEL.inBeeld) SPEL.inBeeld(rijV);
   }
-  function tik(){ tijd -= 1; if (tijd <= 0) einde(); }
+  $('volgendeBtn').addEventListener('click', function(){ if (loopt && geklikt >= 0) volgende(); });
+  function tik(){ if (wacht) return; tijd -= 1; if (tijd <= 0) einde(); }
   function start(){
     haalOver();
     rij = FOUTENMAP.lijst().slice(0, MAX_VRAGEN);
     if (!rij.length){ tekenMap(); return; }
-    nr = 0; goed = 0; fout = 0; reeks = 0; besteReeks = 0; foutLijst = []; perOnderdeel = {}; tijd = DUUR; loopt = true;
+    nr = 0; goed = 0; fout = 0; reeks = 0; besteReeks = 0; foutLijst = []; perOnderdeel = {}; tijd = DUUR; loopt = true; wacht = false;
     $('scherm-start').classList.add('hide'); $('scherm-einde').classList.add('hide'); $('scherm-spel').classList.remove('hide'); $('stopBtn').classList.remove('hide');
     volgende();
     clearInterval(klok); klok = setInterval(tik, 1000);
@@ -348,7 +373,9 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     $('fouten').innerHTML = foutLijst.length ? '<p class="eyebrow">nog even nakijken</p>' + foutLijst.map(function(q){
       return '<div><b>' + schoon(q.v) + '</b><span>Goed was: ' + schoon(q.o[q.g]) + (q.u ? ' · ' + schoon(q.u) : '') + '</span></div>';
     }).join('') : '';
-    SPEL.einde({ spel:'fouten', reeks:besteReeks, goed:goed, compact:true, waarde:goed, label:'goed', max:goed + fout, sterren: fout === 0 ? 3 : goed >= fout * 2 ? 2 : goed ? 1 : 0, klas:false, sleutel:'fouten', deelTekst:goed + ' fouten weggewerkt', opnieuwTekst:'Nog een ronde', opnieuw:function(){ $('nogBtn').click(); } });
+    /* is de map leeg, dan valt er geen ronde meer te spelen: de knop gaat dan naar de spellen */
+    SPEL.einde({ spel:'fouten', reeks:besteReeks, goed:goed, score:goed, waarde:goed, label:'van ' + (goed + fout) + ' goed', max:goed + fout, sterren: fout === 0 ? 3 : goed >= fout * 2 ? 2 : goed ? 1 : 0, klas:false, sleutel:'fouten', deelTekst:goed + ' fouten weggewerkt',
+      opnieuwTekst: over ? 'Nog een ronde' : 'Naar de spellen', opnieuw:function(){ if (over) start(); else location.href = 'index.html'; } });
     if (window.KLAS) KLAS.meld({ spel:'fouten', ronde:goed, punten:goed * 10, niveau:'', vak:'', od:perOnderdeel }, 'eindUit');
     $('nogBtn').disabled = !over;
     scrollTo({ top:0, behavior:'auto' });
@@ -363,6 +390,6 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 </script>
 <script src="thema.js"></script>
 <script src="spel.js"></script>
-<script>SPEL.uitleg({ doel:"Je eigen fouten uit de Vragenrace, Torenverdediging en Zwaardvechter nog een keer, tot ze goed gaan.", tijd:"hoogstens vijf minuten per ronde", bediening:"Tik het goede antwoord, of druk op 1 tot 4. Goed is weg uit je map, fout komt terug.", meer:'.uitleg' });</script>
+<script>SPEL.uitleg({ doel:"Je eigen fouten uit de Vragenrace, Torenverdediging, Zwaardvechter en de dagelijkse uitdaging nog een keer, tot ze goed gaan.", tijd:"hoogstens vijftien vragen, ongeveer 5 minuten", bediening:"Tik het goede antwoord, of druk op 1 tot 4. Goed is weg uit je map, fout komt terug; na een fout ga je met Volgende verder.", meer:'.uitleg', onder:true, links:true, zeker:'stopBtn' });</script>
 </body>
 </html>

@@ -40,6 +40,30 @@
 .opties button.optie.sv{font-size:.92rem}
 body.groot .krant{font-size:1.15rem;max-width:70ch}
 @media(max-width:560px){.krant{font-size:.9rem;padding:10px 12px}}
+/* De tekst en de vraag samen in beeld. De kolom heeft een vaste hoogte en je scrolt erin; een schaduw aan de
+   boven- of onderrand laat zien dat er nog tekst is, en eronder staat dat de tekst verdergaat. Op een breed
+   scherm staat de tekst links en de vraag met de antwoorden rechts, en de tekst blijft staan als je verder scrolt.
+   Alleen in het spel: op een werkblad staat de hele tekst gewoon op papier. */
+:root{--randschaduw:rgba(20,34,76,.32)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--randschaduw:rgba(0,0,0,.7)}}
+:root[data-theme="dark"]{--randschaduw:rgba(0,0,0,.7)}
+#scherm-spel .krant{position:relative;overflow-y:auto;max-height:min(36vh,28rem);scrollbar-width:thin;scrollbar-color:var(--muted) transparent;
+  background:linear-gradient(var(--kaart2) 30%, transparent) center top / 100% 36px no-repeat local,
+    linear-gradient(transparent, var(--kaart2) 70%) center bottom / 100% 36px no-repeat local,
+    radial-gradient(farthest-side at 50% 0, var(--randschaduw), transparent) center top / 100% 14px no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, var(--randschaduw), transparent) center bottom / 100% 14px no-repeat scroll,
+    var(--kaart2)}
+#scherm-spel .krant:focus-visible{outline:3px solid var(--nadruk);outline-offset:2px}
+.meertekst{margin-top:6px;font-size:.8rem;color:var(--muted);text-align:center}
+@media (min-width:900px){
+  #scherm-spel .kaart{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);grid-template-rows:repeat(6,auto) 1fr;column-gap:28px;align-items:start}
+  #scherm-spel .kaart>*{grid-column:2;min-width:0}
+  #scherm-spel .kaart>#beeld{grid-column:1;grid-row:1 / -1;position:sticky;top:78px;margin:0;display:block}
+  #scherm-spel .kaart>.onderdeel,#scherm-spel .kaart>.vraag,#scherm-spel .kaart>.opdracht{text-align:left}
+  #scherm-spel .krant{max-width:none;max-height:calc(100vh - 190px)}
+  /* de vakken voor de volgorde twee aan twee: in de smallere kolom passen er geen drie of vier naast elkaar */
+  #scherm-spel .vakken.rij{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 </style>
 <script src="/vangnet.js" defer></script>
 </head>
@@ -59,7 +83,8 @@ body.groot .krant{font-size:1.15rem;max-width:70ch}
 
   /* de krantenkolom; met kop = false staat er een vraagteken in plaats van het kopje */
   function krant(t, kop, legenda){
-    return '<div class="krant" id="krant">' + (kop === false ? '<span class="kk vraagteken">welk kopje past hierboven?</span>' : '<span class="kk">' + S(t.kop) + '</span>') +
+    /* tabindex en een naam: met het toetsenbord kun je in de kolom scrollen (pijltjes), een schermlezer noemt hem "de tekst" */
+    return '<div class="krant" id="krant" tabindex="0" role="region" aria-label="De tekst">' + (kop === false ? '<span class="kk vraagteken">welk kopje past hierboven?</span>' : '<span class="kk">' + S(t.kop) + '</span>') +
       t.z.map(function(z){ return '<span class="tz" data-k="' + z[1] + '">' + S(z[0]) + '</span>'; }).join(' ') +
       (legenda ? '<span class="legenda"><i></i>' + S(legenda) + '</span>' : '') + '</div>';
   }
@@ -72,6 +97,16 @@ body.groot .krant{font-size:1.15rem;max-width:70ch}
     };
   }
   function licht(){ var k = document.getElementById('krant'); if (k) k.classList.add('toon'); }
+  /* na het tekenen: past de tekst niet in de kolom, dan staat eronder dat hij verdergaat (tot je onderaan bent) */
+  function meerTekst(){
+    var k = document.getElementById('krant'); if (!k || k.scrollHeight <= k.clientHeight + 4) return;
+    var meer = document.createElement('p'); meer.className = 'meertekst'; meer.setAttribute('aria-hidden', 'true');
+    meer.textContent = 'De tekst gaat verder: scroll in de kolom.';
+    k.parentNode.insertBefore(meer, k.nextSibling);
+    function kijk(){ meer.style.visibility = k.scrollTop + k.clientHeight >= k.scrollHeight - 6 ? 'hidden' : ''; }
+    k.addEventListener('scroll', kijk, { passive:true }); kijk();
+  }
+  function beide(a, b){ return function(vak){ a(vak); b(vak); }; }
 
   /* 1. kernzinnen: sleep elke zin naar 'in de samenvatting' of 'kan weg' */
   function kernzinnen(niveau){
@@ -87,7 +122,7 @@ body.groot .krant{font-size:1.15rem;max-width:70ch}
       sleepuit: 'Sleep elke zin naar een vak. Op een telefoon: tik een zin aan en dan het vak.',
       uitleg: 'Weg kan: ' + t.z.filter(function(z){ return !z[1]; }).map(function(z){ return '‘' + S(z[0]) + '’ (' + S(z[2]) + ')'; }).join(', ') + '. Wat overblijft, zijn de hoofdzaken.',
       antwoordTekst: t.z.filter(function(z){ return z[1]; }).map(function(z){ return z[0]; }).join(' '),
-      na: naAntwoord(licht)
+      na: beide(meerTekst, naAntwoord(licht))
     };
   }
   /* 2. volgorde: de zinnen van de samenvatting door elkaar, zet ze op volgorde */
@@ -103,7 +138,8 @@ body.groot .krant{font-size:1.15rem;max-width:70ch}
       vakken: t.sv.map(function(z, i){ return { id:'p' + i, max:1, hoort:['s' + i] }; }),
       sleepuit: 'Kaartje 1 is de eerste zin van de samenvatting.',
       uitleg: 'De goede volgorde: ' + t.sv.map(function(z, i){ return (i + 1) + '. ' + S(z); }).join(' ') + ' De samenvatting volgt de opbouw van de tekst.',
-      antwoordTekst: t.sv.join(' ')
+      antwoordTekst: t.sv.join(' '),
+      na: meerTekst
     };
   }
   /* 3. de beste samenvatting: volledig, kort en zonder eigen mening */
@@ -118,7 +154,7 @@ body.groot .krant{font-size:1.15rem;max-width:70ch}
       opties: opties.map(function(o){ return '<span class="sv">' + S(o) + '</span>'; }), goed: 0,
       uitleg: 'De andere drie: ' + t.beste.f.map(function(f){ return S(f[1]); }).join('; ') + '. De beste noemt alle hoofdzaken kort en laat de rest weg.',
       antwoordTekst: t.beste.g,
-      na: naAntwoord(licht)
+      na: beide(meerTekst, naAntwoord(licht))
     };
   }
   /* 4. kopje: welk kopje past bij de alinea */
@@ -133,7 +169,7 @@ body.groot .krant{font-size:1.15rem;max-width:70ch}
       opties: opties.map(S), goed: 0,
       uitleg: 'De hele alinea gaat over: ' + S(t.sv[0]) + ' De andere kopjes gaan over iets wat er niet of maar zijdelings in staat.',
       antwoordTekst: t.kop,
-      na: naAntwoord(function(){ var k = document.getElementById('krant'); if (k){ k.classList.add('toon'); var kk = k.querySelector('.kk'); if (kk){ kk.textContent = t.kop; kk.classList.remove('vraagteken'); } } })
+      na: beide(meerTekst, naAntwoord(function(){ var k = document.getElementById('krant'); if (k){ k.classList.add('toon'); var kk = k.querySelector('.kk'); if (kk){ kk.textContent = t.kop; kk.classList.remove('vraagteken'); } } }))
     };
   }
 
@@ -153,9 +189,12 @@ body.groot .krant{font-size:1.15rem;max-width:70ch}
         { id:'kgt', naam:'vmbo-kgt en tl', uit:'Langere teksten met uitleg, zoals in een schoolboek.' },
         { id:'hv', naam:'havo en vwo', uit:'Teksten met meer uitleg en nuance, en samenvattingen van drie langere zinnen.' } ] },
       { id:'soort', kop:'wat oefen je', std:'alles', items:[
-        { id:'alles', naam:'alles door elkaar' }, { id:'kernzinnen', naam:'kernzinnen' }, { id:'volgorde', naam:'volgorde' }, { id:'beste', naam:'beste samenvatting' }, { id:'kopje', naam:'kopje' } ] }
+        { id:'alles', naam:'alles door elkaar' }, { id:'kernzinnen', naam:'kernzinnen', uit:'Kernzinnen zijn de zinnen met de hoofdzaak. Jij kiest welke zinnen in de samenvatting horen en welke weg kunnen.' },
+        { id:'volgorde', naam:'volgorde', uit:'De zinnen van een samenvatting staan door elkaar. Zet ze in de volgorde van de tekst.' },
+        { id:'beste', naam:'beste samenvatting', uit:'Vier samenvattingen van dezelfde tekst: welke is volledig, kort en zonder mening?' },
+        { id:'kopje', naam:'kopje', uit:'Welk kopje (de titel boven een alinea) zegt waar de hele alinea over gaat?' } ] }
     ],
-    aantal:10,
+    aantal:10, minuten:10,
     maak:function(keuze, nr){
       var soort = keuze.soort === 'alles' ? kies(['kernzinnen', 'volgorde', 'beste', 'kopje']) : keuze.soort;
       return SOORTEN[soort](keuze.niveau);

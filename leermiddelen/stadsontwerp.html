@@ -28,7 +28,8 @@
 <style>
 :root{--crab:#F26749;--amber:#EA9836;--ocean:#204ECF;--vista:#83A5F2;--sand:#FCDED6;--room:#FBF6F1;
   --ink:#14224C;--muted:#5b6480;--goed:#2f7d52;--goed-bg:#e7f3ec;--fout:#c0442c;--fout-bg:#fdecea;
-  --papier:#f6f1e6;--inkt:#3b3730;--max:1680px;--ease:cubic-bezier(.22,.61,.36,1)}
+  --papier:#f6f1e6;--inkt:#3b3730;--max:1680px;--ease:cubic-bezier(.22,.61,.36,1);
+  --fout-tekst:#b53d26;--rand-zacht:rgba(20,34,76,.16)}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--room);color:var(--ink);line-height:1.55;
@@ -81,12 +82,8 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 /* Op een telefoon stonden de onderdelen boven het vel: je scrolde een halve
    lijst door voordat je zag waar je bouwde. Het vel gaat voorop, de lijst
    eronder krijgt een eigen schuifje zodat de stadsraad niet wegzakt. */
-@media (max-width:760px){
-  .bank > div:not(.paneel){order:-1}
-  .legenda{max-height:46vh;overflow-y:auto}
-}
 .paneel{background:#fff;border:1px solid rgba(20,34,76,.10);border-radius:20px;padding:14px}
-.paneel h3{font-size:.95rem;margin-bottom:9px}
+.paneel h2{font-size:.95rem;margin-bottom:9px}
 .legenda{display:grid;gap:3px;max-height:calc(78vh - 90px);overflow:auto;overscroll-behavior:contain}
 .groepkop{font-size:.66rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
   color:var(--muted);margin:12px 0 3px;padding-left:2px}
@@ -131,7 +128,9 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
   padding:4px 8px 5px;display:grid;justify-items:center;gap:1px;width:104px}
 .varknop:hover{border-color:var(--vista)}
 .varknop.on{border-color:var(--ocean);background:#f4f7ff}
-.varknop svg{width:100%;height:52px;display:block}
+/* De tekening zelf staat op papier, ook in het donker: potlood op een donker
+   vlak zie je niet. */
+.varknop svg{width:100%;height:52px;display:block;background:var(--papier);border-radius:8px}
 .varknop span{font-size:.68rem;color:var(--muted);line-height:1.15;text-align:center;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:96px}
 .velvak{background:var(--papier);border:1px solid rgba(20,34,76,.12);border-radius:20px;overflow:hidden;position:relative}
@@ -145,7 +144,7 @@ body.groot .legenda{grid-template-columns:repeat(auto-fit,minmax(160px,1fr));max
 body.groot .raad{grid-template-columns:repeat(auto-fit,minmax(280px,1fr));max-height:none}
 body.groot .velvak svg{max-height:none}
 body.groot .stukknop{font-size:1rem;padding:11px 13px}
-body.groot .paneel h3{font-size:1.15rem}
+body.groot .paneel h2{font-size:1.15rem}
 body.groot .hint{font-size:1rem}
 body.groot .gereed button{font-size:.95rem;padding:11px 17px}
 body.groot .raadscore b{font-size:2.6rem}
@@ -161,28 +160,90 @@ body.groot .raadscore b{font-size:2.6rem}
 .stukgereed b{font-size:.86rem;margin-right:4px}
 .stukgereed .tip{font-size:.76rem;color:var(--muted);margin-right:6px}
 .stukgereed button{border:1.5px solid rgba(32,78,207,.3);background:#fff;border-radius:11px;padding:7px 12px;
-  font-size:.81rem;font-weight:600}
+  font-size:.81rem;font-weight:600;min-height:44px}
 .stukgereed button:hover{border-color:var(--ocean);color:var(--ocean)}
 .gekozenstuk{opacity:1}
 .gereed{display:flex;gap:7px;flex-wrap:wrap;padding:11px 13px;border-top:1px solid rgba(20,34,76,.08);background:var(--kaart,#fff)}
-.gereed button{border:1.5px solid rgba(20,34,76,.14);background:var(--room);border-radius:11px;padding:8px 13px;font-size:.82rem;font-weight:600}
+.gereed button{border:1.5px solid rgba(20,34,76,.14);background:var(--room);border-radius:11px;padding:8px 13px;font-size:.82rem;font-weight:600;min-height:44px}
 .gereed button:hover{border-color:var(--ocean);color:var(--ocean)}
 .gereed button:disabled{opacity:.4;cursor:default}
 .gereed button:disabled:hover{border-color:rgba(20,34,76,.14);color:inherit}
+/* De knoppen staan in groepjes: bouwen, kijken, bewaren. Alles wissen staat
+   er los van, helemaal rechts, zodat je hem niet raakt als je Bewaren bedoelt. */
+.gereed .groep{display:flex;gap:7px;flex-wrap:wrap}
+.gereed .groep ~ .groep{padding-left:9px;border-left:1px solid rgba(20,34,76,.10)}
+.gereed .kort{display:none}
+.gereed .meerknop{display:none}
+.gereed .meerlijst{display:flex}
+.gereed #leeg{margin-left:auto}
+/* Een knop die om bevestiging vraagt: rood omlijnd, drie seconden lang. */
+.zeker,.gereed button.zeker,.linkbtn.zeker{border-color:var(--fout-tekst) !important;color:var(--fout-tekst) !important}
 .hint{font-size:.83rem;color:var(--muted);padding:9px 13px;background:var(--kaart,#fff);border-top:1px solid rgba(20,34,76,.08);border-radius:0 0 16px 16px}
 .hint b{color:var(--ink)}
+/* alleen voor een schermlezer */
+.sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 
-.raad{display:grid;gap:7px;max-height:64vh;overflow:auto}
+.raad{display:grid;gap:7px;max-height:64vh;overflow:auto;border-radius:12px}
 .regel{display:grid;grid-template-columns:22px 1fr;gap:9px;align-items:start;background:var(--room);border-radius:12px;padding:9px 11px;font-size:.83rem}
 .regel i{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;font-style:normal;font-size:.72rem;
-  background:#e3ded4;color:var(--muted)}
-.regel.ja i{background:var(--goed);color:#fff}
-.regel.nee i{background:var(--fout);color:#fff}
+  background:transparent;border:1.5px dashed var(--muted);color:var(--muted)}
+.regel.ja i{background:var(--goed);border:none;color:#fff}
+.regel.nee i{background:var(--fout);border:none;color:#fff}
 .regel b{display:block;font-weight:600}
 .regel span{color:var(--muted)}
+/* Nog niet gezet: de raad heeft niets om naar te kijken. Grijs en gestippeld,
+   zodat het niet op een fout lijkt en ook niet op een vinkje. */
+.regel.wacht{background:transparent;border:1.5px dashed rgba(20,34,76,.16)}
+.regel.wacht b{color:var(--muted)}
+#raad:focus-visible,.velvak:focus-visible{outline:3px solid var(--focusring,#B4701A);outline-offset:3px}
 .raadscore{text-align:center;margin-bottom:10px}
 .raadscore b{font-size:2rem;font-variant-numeric:tabular-nums}
 .raadscore span{display:block;font-size:.8rem;color:var(--muted)}
+
+/* ---------- op een telefoon ----------
+   Het vel is daar maar zo'n 220 pixels hoog. Stond de lijst met onderdelen
+   eronder, dan scrolde je voor elk gebouw heen en weer. Nu komt de lijst als
+   een strook die opzij schuift direct onder het vel, en het gereedschap
+   daaronder. De tussenlaag van het vel doet niet mee in het raster
+   (display:contents), zodat alles los op volgorde gezet kan worden. */
+@media (max-width:760px){
+  /* minmax(0,...) en min-width 0: anders rekt de schuivende strook de hele
+     kolom op tot de breedte van alle zeventien knoppen naast elkaar */
+  .bank{gap:0;grid-template-columns:minmax(0,1fr)}
+  .bank > *,.bank > .werkvlak > *{min-width:0}
+  .bank > .werkvlak{display:contents}
+  #varianten{order:1}
+  .velvak{order:2}
+  #stukgereed{order:3}
+  .paneel.onderdelen{order:4;margin:8px 0;padding:9px 10px 6px;border-radius:16px}
+  .hint{order:5;border-radius:16px 16px 0 0;border-top:none}
+  .gereed{order:6;border-radius:0 0 16px 16px}
+  .paneel.raadpaneel{order:7;margin-top:14px}
+  .paneel.onderdelen h2{font-size:.8rem;margin-bottom:4px;display:inline}
+  /* van de drie stappen alleen de stap waar je nu bent */
+  .stappen{display:inline;margin:0 0 0 6px}
+  .stappen span{display:none}
+  .stappen span.nu{display:inline;font-weight:600}
+  .stappen span.nu i{display:none}
+  .legenda{display:flex;gap:6px;overflow-x:auto;overflow-y:hidden;max-height:none;margin-top:6px;
+    padding-bottom:6px;scroll-snap-type:x proximity;overscroll-behavior-x:contain}
+  .groepkop{display:none}
+  .stukknop{flex:none;grid-template-columns:auto 42px max-content;min-height:48px;scroll-snap-align:start}
+  .stukknop .tel{display:none}
+  .stukknop .wat{white-space:nowrap}
+  .stukknop:hover{transform:none}
+  /* Zoomen: knijpen werkt op het vel niet, dus de knoppen blijven, maar klein:
+     een plus, een min en een knop voor het hele vel. */
+  .gereed .lang{display:none}
+  .gereed .kort{display:inline}
+  .gereed .groep.zoom button{min-width:44px;padding:8px 10px}
+  /* Potlood, Bewaren en Afbeelding zitten achter Meer. */
+  .gereed .meerknop{display:inline-block}
+  .gereed .meerlijst{display:none;order:9;flex-basis:100%;padding-top:7px;border-top:1px solid rgba(20,34,76,.08)}
+  .gereed .meerlijst.open{display:flex}
+  .gereed .groep ~ .groep{padding-left:0;border-left:none}
+  .gereed .groep.zoom{padding-left:0}
+}
 
 footer{padding:24px 0 40px;font-size:.83rem;color:var(--muted);text-align:center}
 .strip{display:flex;height:7px;width:150px;border-radius:999px;overflow:hidden;margin:0 auto 12px}
@@ -249,14 +310,22 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 
 /* ---------- donkere stand van Ontwerp je stad ----------
    Dezelfde schakelaar als de rest van de site. Het tekenpapier blijft papier. */
-:root[data-theme="dark"]{--room:#0F1A3D;--ink:#F3EFE9;--muted:#B3BBD0;--goed-bg:#1f3a2c;--fout-bg:#3a1f1b;--kaart:#182652;--rand:rgba(243,239,233,.12)}
+:root[data-theme="dark"]{--room:#0F1A3D;--ink:#F3EFE9;--muted:#B3BBD0;--goed-bg:#1f3a2c;--fout-bg:#3a1f1b;--kaart:#182652;--rand:rgba(243,239,233,.12);
+  --fout-tekst:#FF9C87;--rand-zacht:rgba(243,239,233,.22)}
+:root[data-theme="dark"] .gereed button:not(:hover):not(.zeker),:root[data-theme="dark"] .stukknop:not(.on):not(:hover),:root[data-theme="dark"] .varknop:not(.on):not(:hover){border-color:var(--rand-zacht)}
+:root[data-theme="dark"] .regel.wacht{border-color:var(--rand-zacht)}
+:root[data-theme="dark"] .gereed .groep ~ .groep{border-left-color:var(--rand)}
 :root[data-theme="dark"]{color-scheme:dark}
 :root[data-theme="dark"] header{background:rgba(15,26,61,.94);border-bottom-color:var(--rand)}
 :root[data-theme="dark"] .hoe div,:root[data-theme="dark"] .btn.ghost,:root[data-theme="dark"] .paneel,:root[data-theme="dark"] #varianten,
 :root[data-theme="dark"] .stukgereed button,:root[data-theme="dark"] .gereed,:root[data-theme="dark"] .hint,:root[data-theme="dark"] .bewaard,
 :root[data-theme="dark"] .stukknop .nr,:root[data-theme="dark"] #stadnaam{background:var(--kaart);border-color:var(--rand);color:var(--ink)}
 @media(prefers-color-scheme:dark){
-  :root:not([data-theme="light"]){--room:#0F1A3D;--ink:#F3EFE9;--muted:#B3BBD0;--goed-bg:#1f3a2c;--fout-bg:#3a1f1b;--kaart:#182652;--rand:rgba(243,239,233,.12)}
+  :root:not([data-theme="light"]){--room:#0F1A3D;--ink:#F3EFE9;--muted:#B3BBD0;--goed-bg:#1f3a2c;--fout-bg:#3a1f1b;--kaart:#182652;--rand:rgba(243,239,233,.12);
+    --fout-tekst:#FF9C87;--rand-zacht:rgba(243,239,233,.22)}
+  :root:not([data-theme="light"]) .gereed button:not(:hover):not(.zeker),:root:not([data-theme="light"]) .stukknop:not(.on):not(:hover),:root:not([data-theme="light"]) .varknop:not(.on):not(:hover){border-color:var(--rand-zacht)}
+  :root:not([data-theme="light"]) .regel.wacht{border-color:var(--rand-zacht)}
+  :root:not([data-theme="light"]) .gereed .groep ~ .groep{border-left-color:var(--rand)}
   :root:not([data-theme="light"]) header{background:rgba(15,26,61,.94);border-bottom-color:var(--rand)}
   :root:not([data-theme="light"]) .hoe div,:root:not([data-theme="light"]) .btn.ghost,:root:not([data-theme="light"]) .paneel,:root:not([data-theme="light"]) #varianten,
   :root:not([data-theme="light"]) .stukgereed button,:root:not([data-theme="light"]) .gereed,:root:not([data-theme="light"]) .hint,:root:not([data-theme="light"]) .bewaard,
@@ -313,34 +382,46 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 
 <section class="wrap hide" id="scherm-bank">
   <div class="bank">
-    <div class="paneel">
-      <h3>Onderdelen</h3>
+    <div class="paneel onderdelen">
+      <h2>Onderdelen</h2>
       <div id="stappen"></div>
       <div class="legenda" id="legenda"></div>
     </div>
 
-    <div>
+    <div class="werkvlak">
       <div id="varianten"></div>
-      <div class="velvak" id="velvak"><div id="vel"></div></div>
+      <!-- Het vel kan ook met het toetsenbord: Tab erheen, pijltjes verplaatsen
+           het kruisje, Enter zet het gekozen onderdeel neer. -->
+      <div class="velvak" id="velvak" tabindex="0" role="application" aria-roledescription="tekenvel"
+           aria-label="Het vel. Kies eerst een onderdeel. Pijltjes verplaatsen het kruisje, met shift in grote stappen. Enter zet het onderdeel neer, of kiest het gebouw onder het kruisje. Escape stopt."><div id="vel"></div></div>
       <div class="stukgereed hide" id="stukgereed"></div>
-      <p class="hint" id="hint"></p>
+      <p class="hint" id="hint" aria-live="polite"></p>
+      <!-- Het gereedschap in groepjes. Alles wissen staat los, helemaal rechts,
+           ver van Bewaren, en vraagt om een tweede tik. -->
       <div class="gereed">
-        <button type="button" id="inzoomBtn" aria-label="Inzoomen">Inzoomen</button>
-        <button type="button" id="uitzoomBtn" aria-label="Uitzoomen">Uitzoomen</button>
-        <button type="button" id="heelBtn">Hele vel</button>
-        <button type="button" id="muurRondom">Muur rondom</button>
-        <button type="button" id="potloodBtn">Potlood: schetsig</button>
-        <button type="button" id="terug">Laatste weg</button>
+        <div class="groep bouw">
+          <button type="button" id="muurRondom">Muur rondom</button>
+          <button type="button" id="terug">Laatste weg</button>
+        </div>
+        <button type="button" class="meerknop" id="meerBtn" aria-expanded="false" aria-controls="meerlijst">Meer</button>
+        <div class="groep meerlijst" id="meerlijst">
+          <button type="button" id="potloodBtn">Potlood: schetsig</button>
+          <button type="button" id="bewaarStadBtn">Bewaren</button>
+          <button type="button" id="bewaar">Afbeelding</button>
+        </div>
+        <div class="groep zoom">
+          <button type="button" id="inzoomBtn" aria-label="Inzoomen"><span class="lang">Inzoomen</span><span class="kort" aria-hidden="true">+</span></button>
+          <button type="button" id="uitzoomBtn" aria-label="Uitzoomen"><span class="lang">Uitzoomen</span><span class="kort" aria-hidden="true">&minus;</span></button>
+          <button type="button" id="heelBtn" aria-label="Hele vel"><span class="lang">Hele vel</span><span class="kort" aria-hidden="true">Heel</span></button>
+        </div>
         <button type="button" id="leeg">Alles wissen</button>
-        <button type="button" id="bewaarStadBtn">Bewaren</button>
-        <button type="button" id="bewaar">Afbeelding</button>
       </div>
     </div>
 
-    <div class="paneel">
-      <h3>De stadsraad</h3>
-      <div class="raadscore"><b id="raadGetal">0 / 10</b><span>punten van de raad</span></div>
-      <div class="raad" id="raad"></div>
+    <div class="paneel raadpaneel">
+      <h2>De stadsraad</h2>
+      <div class="raadscore"><b id="raadGetal">0 / 9</b><span>punten van de raad</span></div>
+      <div class="raad" id="raad" role="region" aria-label="Wat de stadsraad vindt"></div>
     </div>
   </div>
 </section>
@@ -401,36 +482,40 @@ var ONDERDELEN = [
 /* De stadsraad kijkt mee. Elke regel is iets wat een middeleeuwse stad echt
    moest oplossen, geen willekeurige punten. */
 var REGELS = [
-  { id:'kerkmarkt', wat:'De kerk en het marktplein liggen bij elkaar',
+  /* nodig: wat er moet staan voordat de raad hier iets over kan zeggen. Tot
+     dan is een regel "nog niet gezet", in grijs, en geen fout: op een vel met
+     alleen een muur meldde de raad eerst negen fouten, zoals "Je haven ligt op
+     het droge" terwijl er nog geen haven was. 'muur' betekent drie muurstukken. */
+  { id:'kerkmarkt', nodig:['kerk','markt'], wat:'De kerk en het marktplein liggen bij elkaar',
     check:function(st){ return st.dichtbij('kerk','markt', 190); },
     ja:'Kerk en markt vormen samen het hart. Zo lag het in vrijwel elke stad.',
     nee:'Zet je kerk dichter bij de markt. Het middelpunt van een stad was de plek waar geloof en handel elkaar raakten.' },
-  { id:'raadmarkt', wat:'Het raadhuis staat aan het marktplein',
+  { id:'raadmarkt', nodig:['raadhuis','markt'], wat:'Het raadhuis staat aan het marktplein',
     check:function(st){ return st.dichtbij('raadhuis','markt', 165); },
     ja:'Het bestuur zit boven op de handel, en dat is precies waar het geld vandaan kwam.',
     nee:'Het raadhuis hoort aan de markt. Het stadsbestuur bestond uit kooplieden, en die wilden zien wat er verhandeld werd.' },
-  { id:'havenwater', wat:'De haven ligt aan het water',
+  { id:'havenwater', nodig:['haven'], wat:'De haven ligt aan het water',
     check:function(st){ return st.aanWater('haven'); },
     ja:'Goed. Vervoer over water was vele malen goedkoper dan over land.',
     nee:'Je haven ligt op het droge. Zet hem aan de rivier, anders komt er geen schip.' },
-  { id:'molenruimte', wat:'De molen staat buiten de muur of op de rand',
+  { id:'molenruimte', nodig:['molen','muur'], wat:'De molen staat buiten de muur of op de rand',
     check:function(st){ return st.buitenMuur('molen'); },
     ja:'Wind heeft ruimte nodig. Buiten de muur vangt hij die.',
     nee:'Je molen staat ingebouwd tussen de huizen. Daar vangt hij geen wind. Zet hem buiten de muur of op de rand.' },
-  { id:'poortenmuur', wat:'De poorten staan in de muur',
+  { id:'poortenmuur', nodig:['poort','muur'], wat:'De poorten staan in de muur',
     check:function(st){ return st.poortenOpMuur(); },
     ja:'De poorten zitten waar de wegen de muur kruisen. Daar werd tol geheven.',
     nee:'Een poort midden in de stad heeft geen zin. Zet ze op de muur zelf.' },
-  { id:'bronslager', wat:'De drinkwaterbron staat niet naast de slager',
+  { id:'bronslager', nodig:['bron','slager'], wat:'De drinkwaterbron staat niet naast de slager',
     /* Allebei moeten er staan, anders zou een leeg vel hier al een punt krijgen. */
     check:function(st){ return st.tel('bron') > 0 && st.tel('slager') > 0 && !st.dichtbij('bron','slager', 114); },
     ja:'Verstandig. Slagersafval ging de gracht in, en daar wil je je drinkwater niet naast hebben.',
     nee:'Je drinkwaterbron staat pal naast de slager. Steden hadden hier regels voor, en niet voor niets.' },
-  { id:'smidrand', wat:'De smid staat niet midden tussen de huizen',
+  { id:'smidrand', nodig:['smid'], wat:'De smid staat niet midden tussen de huizen',
     check:function(st){ return st.aanDeRand('smid'); },
     ja:'Vuur in een houten stad is levensgevaarlijk. Aan de rand is verstandiger.',
     nee:'Je smid staat midden in de stad. Een vonk en de halve straat brandt af. Zet hem meer naar de rand.' },
-  { id:'wolbijelkaar', wat:'De wolspinners en de wolwevers staan bij elkaar',
+  { id:'wolbijelkaar', nodig:['spinners','wevers'], wat:'De wolspinners en de wolwevers staan bij elkaar',
     check:function(st){ return st.dichtbij('spinners','wevers', 178); },
     ja:'Een echte lakenbuurt. De draad hoefde niet ver.',
     nee:'Zet je spinners en wevers dichter bij elkaar. Ambachten van hetzelfde gilde klonterden samen in een buurt.' },
@@ -930,6 +1015,11 @@ function tekenOnderdeel(o, item, geselecteerd){
 
     s += '<text class="stadsnaam" x="' + (VEL.breed - 40) + '" y="' + (VEL.hoog - 34) + '" text-anchor="end">' +
          sschoon(stadnaam) + '</text>';
+    if (kruis && document.getElementById('velvak').matches(':focus-visible') && gekozenStuk === null){
+      s += '<g pointer-events="none" stroke="#B4701A" stroke-width="5" fill="none">' +
+        '<circle cx="' + kruis.x + '" cy="' + kruis.y + '" r="26"/>' +
+        '<path d="M' + (kruis.x - 44) + ',' + kruis.y + ' h88 M' + kruis.x + ',' + (kruis.y - 44) + ' v88"/></g>';
+    }
     s += '</svg>';
     elVel.innerHTML = s;
 
@@ -1060,7 +1150,10 @@ function tekenOnderdeel(o, item, geselecteerd){
   function klikOpVel(e){
     if (netGesleept) return;
     if (!gekozen){ if (gekozenStuk !== null){ gekozenStuk = null; tekenVel(); tekenGereedschap(); } return; }
-    var p = velPunt(e), x = p.x, y = p.y;
+    var p = velPunt(e);
+    plaatsOp(p.x, p.y);
+  }
+  function plaatsOp(x, y){
     var o = onderdeel(gekozen);
     /* Binnen het vel houden, anders staat je molen half buiten beeld. */
     x = Math.max(50, Math.min(VEL.breed - 50, x));
@@ -1073,7 +1166,47 @@ function tekenOnderdeel(o, item, geselecteerd){
     stukken.push({ i:teller++, id:o.id, x:x, y:y, v:variant, r:0, m:false, s:1 });
     gekozenStuk = null;
     tekenVel(); tekenLegenda(); tekenRaad();
+    melding('<b>' + o.naam + '</b> staat. Tik nog eens voor er een bij, of kies een ander onderdeel.');
   }
+
+  /* Het toetsenbord op het vel: een kruisje dat je met de pijltjes verschuift.
+     Enter zet het gekozen onderdeel neer; zonder gekozen onderdeel pakt Enter
+     het gebouw onder het kruisje, zodat je het kunt draaien of weghalen. */
+  var kruis = null;
+  var elVelvak = document.getElementById('velvak');
+  elVelvak.addEventListener('focus', function(){
+    if (!kruis){ var m = midden(); kruis = { x:Math.round(m.x), y:Math.round(m.y) }; }
+    tekenVel();
+  });
+  elVelvak.addEventListener('blur', function(){ tekenVel(); });
+  elVelvak.addEventListener('keydown', function(e){
+    if (gekozenStuk !== null) return;        /* dan verschuiven de pijltjes het gekozen gebouw */
+    if (!kruis) return;
+    var stap = e.shiftKey ? 120 : 30, dx = 0, dy = 0;
+    if (e.key === 'ArrowLeft') dx = -stap; else if (e.key === 'ArrowRight') dx = stap;
+    else if (e.key === 'ArrowUp') dy = -stap; else if (e.key === 'ArrowDown') dy = stap;
+    else if (e.key === 'Enter' || e.key === ' '){
+      e.preventDefault();
+      if (gekozen){ plaatsOp(kruis.x, kruis.y); return; }
+      var dichtst = null, best = 90;
+      stukken.forEach(function(s){ var d = Math.hypot(s.x - kruis.x, s.y - kruis.y); if (d < best){ best = d; dichtst = s; } });
+      if (dichtst){ gekozenStuk = dichtst.i; tekenVel(); tekenGereedschap();
+        melding('<b>' + onderdeel(dichtst.id).naam + '</b> gekozen. Pijltjes verplaatsen hem, Delete haalt hem weg, Escape laat los.'); }
+      else melding('Hier staat niets. Kies eerst een onderdeel in de lijst.');
+      return;
+    } else if (e.key === 'Escape'){
+      if (gekozen){ gekozen = null; elVelvak.classList.remove('plaatsen'); tekenLegenda(); melding('Gestopt met plaatsen.'); }
+      return;
+    } else return;
+    e.preventDefault();
+    kruis.x = Math.max(50, Math.min(VEL.breed - 50, kruis.x + dx));
+    kruis.y = Math.max(70, Math.min(VEL.hoog - 50, kruis.y + dy));
+    /* het kruisje uit beeld? dan schuift het beeld mee */
+    if (kruis.x < kijk.x || kruis.x > kijk.x + kijk.b || kruis.y < kijk.y || kruis.y > kijk.y + kijkHoog()){
+      kijk.x = kruis.x - kijk.b / 2; kijk.y = kruis.y - kijkHoog() / 2; binnenBeeld();
+    }
+    tekenVel();
+  });
 
   /* De stadsnaam komt van wie er achter deze computer zat en gaat de opmaak
      in, dus hij wordt eerst tekst. */
@@ -1098,7 +1231,7 @@ function tekenOnderdeel(o, item, geselecteerd){
     var alles = leesAlles();
     alles[naam] = { op:Date.now(), potlood:potloodNu, stukken:stukken, teller:teller };
     if (schrijfAlles(alles)){
-      melding('<b>' + sschoon(naam) + '</b> is bewaard op deze computer. Met <b>Openen</b> haal je hem terug.');
+      melding('<b>' + sschoon(naam) + '</b> is bewaard op dit apparaat. Met <b>Openen</b> haal je hem terug.');
     } else {
       melding('Bewaren lukt niet in deze browser. Sla je stad op als afbeelding.');
     }
@@ -1408,12 +1541,22 @@ function tekenOnderdeel(o, item, geselecteerd){
     return m;
   }
 
+  /* wat er van een regel nog ontbreekt op het vel, in woorden */
+  function ontbreekt(r){
+    return (r.nodig || []).filter(function(id){ return id === 'muur' ? !stand.heeftMuur() : !tel(id); })
+      .map(function(id){ return id === 'muur' ? 'een muur' : onderdeel(id).naam.toLowerCase(); });
+  }
   function tekenRaad(){
     var punten = 0;
     var h = REGELS.map(function(r){
+      var mist = ontbreekt(r);
+      if (mist.length){
+        return '<div class="regel wacht"><i aria-hidden="true"></i>' +
+          '<span><b>' + r.wat + '</b><span>Nog niet gezet: ' + mist.join(' en ') + '.</span></span></div>';
+      }
       var af = !!r.check(stand);
       if (af) punten++;
-      return '<div class="regel ' + (af ? 'ja' : 'nee') + '"><i>' + (af ? '\u2713' : '!') + '</i>' +
+      return '<div class="regel ' + (af ? 'ja' : 'nee') + '"><i aria-hidden="true">' + (af ? '\u2713' : '!') + '</i>' +
         '<span><b>' + r.wat + '</b><span>' + (af ? r.ja : r.nee) + '</span></span></div>';
     }).join('');
     document.getElementById('raad').innerHTML = h;
@@ -1475,10 +1618,30 @@ function tekenOnderdeel(o, item, geselecteerd){
     stukken.pop();
     tekenVel(); tekenLegenda(); tekenRaad();
   });
-  document.getElementById('leeg').addEventListener('click', function(){
+  /* Een knop die om een tweede tik vraagt: de eerste tik maakt er "Zeker?
+     Tik nog eens" van, rood, drie seconden lang. Alles wissen gooide eerst
+     meteen het hele vel weg, en stond pal naast Bewaren. */
+  function zeker(knop, doe, mag){
+    var tekst = null, klok = null;
+    function terug(){ clearTimeout(klok); if (tekst !== null){ knop.textContent = tekst; knop.classList.remove('zeker'); } tekst = null; }
+    knop.addEventListener('click', function(){
+      if (mag && !mag()){ terug(); doe(); return; }
+      if (tekst !== null){ terug(); doe(); return; }
+      tekst = knop.textContent; knop.textContent = 'Zeker? Tik nog eens'; knop.classList.add('zeker');
+      klok = setTimeout(terug, 3000);
+    });
+    return terug;
+  }
+  zeker(document.getElementById('leeg'), function(){
     stukken = []; gekozen = null; gekozenStuk = null;
     tekenVel(); tekenLegenda(); tekenRaad(); tekenGereedschap();
     melding('Leeg vel. Begin bij de muur, dat werkt het makkelijkst.');
+  }, function(){ return stukken.length > 0; });
+
+  /* Meer: op de telefoon staan Potlood, Bewaren en Afbeelding daarachter. */
+  document.getElementById('meerBtn').addEventListener('click', function(){
+    var open = document.getElementById('meerlijst').classList.toggle('open');
+    this.setAttribute('aria-expanded', open ? 'true' : 'false');
   });
 
   /* Opslaan als afbeelding: de svg naar een canvas en dan downloaden. Zo werkt
@@ -1518,11 +1681,12 @@ function tekenOnderdeel(o, item, geselecteerd){
     document.body.classList.toggle('groot');
     this.textContent = document.body.classList.contains('groot') ? 'Normaal' : 'Digibord';
   });
-  document.getElementById('opnieuwBtn').addEventListener('click', function(){
+  /* Opnieuw in de kop: twee tikken zodra er iets op het vel staat. */
+  zeker(document.getElementById('opnieuwBtn'), function(){
     elBank.classList.add('hide'); elStart.classList.remove('hide');
     tekenBewaarlijst();
     scrollTo({top:0, behavior:'auto'});
-  });
+  }, function(){ return !elBank.classList.contains('hide') && stukken.length > 0; });
 
   tekenBewaarlijst();
 

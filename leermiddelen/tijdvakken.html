@@ -212,6 +212,39 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
 @media(max-width:900px){.lghoi{display:none}}
 @media(prefers-reduced-motion:reduce){.lghoi{transition:none !important}}
 
+/* ---------- critique september 2026 ---------- */
+/* Het jaartal was koraal op wit (3,1 op 1). Nu een donkerder rood, en in de
+   donkere stand een lichter, want de kaart wordt daar zelf donker. */
+:root{--jaar:#b23c20}
+:root[data-theme="dark"]{--jaar:#ffab94}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--jaar:#ffab94}}
+.kaart .jaar{color:var(--jaar)}
+.btn.ghost{background:var(--kaart,#fff)}
+/* Het rondelabel is een gewone zin, geen kapitalen: hij is daar te lang voor. */
+.rondelabel{font-size:.92rem;font-weight:600;color:var(--ink)}
+.kaartzone,.melding{scroll-margin-top:calc(var(--kop,60px) + 12px);scroll-margin-bottom:12px}
+/* Een getikte kaart wacht op een vak. */
+.kaart.gekozen .mikker.aan{display:block}
+.kaart.gekozen{box-shadow:0 0 0 3px var(--ocean),0 16px 40px rgba(20,34,76,.10)}
+.tvkies{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;margin:18px auto 0;font-size:.9rem;color:var(--muted)}
+.tvkies select{font:inherit;color:var(--ink);background:var(--kaart,#fff);border:1.5px solid rgba(20,34,76,.15);border-radius:12px;padding:0 12px;min-height:44px}
+:root[data-theme="dark"] .tvkies select{border-color:rgba(243,239,233,.2)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .tvkies select{border-color:rgba(243,239,233,.2)}}
+.anders{margin-left:6px}
+/* De eigen ronde bij een keuze van tijdvakken heeft drie tot vijf vakken. */
+.bakken.b3,.bakken.b5{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+/* Op een telefoon passen tien vakken alleen compact in beeld. */
+@media(max-width:600px){
+  .kaartzone{min-height:0}
+  .kaart{padding:14px 16px;border-radius:18px}
+  .kaart .sleep{margin-top:6px}
+  .bakken{margin-top:14px;gap:7px}
+  .bakken.b4,.bakken.b6,.bakken.b10,.bakken.b3,.bakken.b5{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .bakken.b10 .bak,.bakken.b6 .bak{padding:8px 10px;border-radius:14px}
+  .bakken.b10 .bak b,.bakken.b6 .bak b{font-size:.84rem}
+  .bakken.b10 .bak span,.bakken.b6 .bak span{font-size:.72rem;margin-top:1px}
+  .melding{margin-top:12px;padding:13px 15px}
+}
 </style>
 <link rel="stylesheet" href="basis.css">
 <link rel="stylesheet" href="spel.css">
@@ -228,7 +261,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
       </button>
       <span class="pill hide" id="pillNiv">niveau</span>
       <button class="linkbtn" id="grootBtn" type="button">Digibord</button>
-      <button class="linkbtn" id="opnieuwBtn" type="button">Opnieuw</button>
+      <button class="linkbtn hide" id="opnieuwBtn" type="button">Stoppen</button>
     </div>
   </div>
 </header>
@@ -236,22 +269,26 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
 <section class="start wrap" id="scherm-start">
   <p class="hand" style="font-size:1.6rem">waar hoort het thuis</p>
   <h1>Tijdvakken sorteren</h1>
-  <p class="lead">Je krijgt een gebeurtenis. Sleep hem naar het tijdvak waar hij thuishoort, of tik gewoon op het juiste vak. Elke ronde worden er meer vakken, en dus wordt het lastiger.</p>
+  <p class="lead">Je krijgt een gebeurtenis. Sleep hem naar het tijdvak waar hij thuishoort, of tik op het juiste vak.</p>
   <p class="eyebrow" id="nivKop" style="margin-top:32px">kies je niveau</p>
-  <p style="font-size:.85rem;color:var(--muted);margin-top:6px">De niveaus zijn afgestemd op leerjaar 1 en 2.</p>
+  <p style="font-size:.85rem;color:var(--muted);margin-top:6px">Voor leerjaar 1 en 2, van vmbo-bb tot vwo.</p>
   <div class="kies" id="niveaus"></div>
 
   <p class="eyebrow" id="modusKop" style="margin-top:30px">hoe wil je oefenen</p>
   <div class="kies" id="modussen"></div>
+  <div class="tvkies" id="tvRij">
+    <label for="tvKeuze">Welke tijdvakken</label>
+    <select id="tvKeuze"></select>
+  </div>
 
-  <button class="btn" id="startBtn" type="button" disabled>Start</button>
-  <p style="margin-top:14px;font-size:.82rem;color:var(--muted)">Geen inloggen. Alleen in de tijdrace wordt je score op dit apparaat bewaard.</p>
+  <button class="btn" id="startBtn" type="button" disabled>Start met oefenen</button>
+  <p style="margin-top:14px;font-size:.82rem;color:var(--muted)">Geen inloggen. Je scores blijven op dit apparaat.</p>
   <div id="startLijst" class="lijst"></div>
 </section>
 
 <section class="wrap hide" id="scherm-spel">
   <div class="spelkop">
-    <span class="eyebrow" id="rondeLabel">ronde 1</span>
+    <span class="rondelabel" id="rondeLabel">Ronde 1</span>
     <span class="eyebrow" id="scoreLabel">0 goed</span>
   </div>
   <div class="balk" id="balk"><i id="balkFill"></i></div>
@@ -265,8 +302,6 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
 </section>
 
 <section class="wrap hide einde" id="scherm-einde">
-  <p class="eyebrow">klaar</p>
-  <div class="score" id="eindScore">0 / 0</div>
   <p style="color:var(--muted);margin-top:6px" id="eindTekst"></p>
   <div class="overzicht" id="eindOverzicht"></div>
 
@@ -279,7 +314,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
   </div>
 
   <div class="lijst" id="eindLijst"></div>
-  <button class="btn" id="nogeensBtn" type="button">Nog een keer</button>
+  <button class="btn ghost" id="anderBtn" type="button">Andere keuze</button>
 </section>
 
 <div class="vlieger" id="vlieger"></div>
@@ -334,6 +369,11 @@ var RONDES = [
     ] },
   { titel:'Alle tien de tijdvakken', bakken:TIJDVAKKEN.map(function(t){
       return { naam:t.naam, periode:t.periode, tv:[t.n] };
+    }) },
+  /* Dezelfde tien vakken, maar met kenmerken van een tijdvak in plaats van
+     gebeurtenissen. Zo is de laatste havo/vwo-ronde echt iets anders. */
+  { titel:'Tien tijdvakken, nu met kenmerken', kenmerken:true, bakken:TIJDVAKKEN.map(function(t){
+      return { naam:t.naam, periode:t.periode, tv:[t.n] };
     }) }
 ];
 
@@ -342,8 +382,8 @@ var NIVEAUS = [
     uitleg:'Twee rondes, het jaartal staat op de kaart.' },
   { id:'kgt', naam:'vmbo-kgt en gl/tl', rondes:[0,1,2], perRonde:5, jaar:true,
     uitleg:'Drie rondes tot alle tien de tijdvakken, met jaartal.' },
-  { id:'hv',  naam:'havo en vwo',       rondes:[1,2,2], perRonde:6, jaar:false,
-    uitleg:'Zonder jaartal, je redeneert vanuit de gebeurtenis zelf.' }
+  { id:'hv',  naam:'havo en vwo',       rondes:[1,2,3], perRonde:6, jaar:false,
+    uitleg:'Zonder jaartal. De laatste ronde gaat over kenmerken van een tijdvak.' }
 ];
 
 /* Instellingen voor de tijdrace. raceRonde verwijst naar RONDES: hoe hoger,
@@ -354,8 +394,9 @@ var RACE = {
   hv:  { raceRonde:2, start:45, erbij:3, eraf:7, kenmerken:true }
 };
 
+/* Dezelfde namen als in Bronnenlab en Topografie. */
 var MODUSSEN = [
-  { id:'rondes', naam:'Sorteerrondes', uitleg:'Rustig oefenen met uitleg bij elke kaart. Steeds meer vakken.' },
+  { id:'rondes', naam:'Oefenen', uitleg:'In rondes, zonder klok, met uitleg bij elke kaart.' },
   { id:'race',   naam:'Tijdrace',      uitleg:'De klok loopt. Goed levert seconden op, fout kost ze. Met punten en klassement.' }
 ];
 
@@ -421,7 +462,9 @@ var KENMERKEN = [
   document.getElementById('jaar').textContent = new Date().getFullYear();
 
   var niveau = null, modus = null, rondeNr = 0, kaarten = [], kaartNr = 0, goed = 0, od = {}, totaal = 0,
-      fouten = [], bezig = false, huidige = null;
+      fouten = [], bezig = false, huidige = null, rondesNu = [], perRonde = 5;
+  /* tv: null voor alle tijdvakken, anders [van, tot] (docent: ?tv=5-7) */
+  var tv = null;
 
   /* ---------- tijdrace ---------- */
   var SLEUTEL = 'tijdvakken-klassement-v1';
@@ -431,16 +474,25 @@ var KENMERKEN = [
   function isRace(){ return modus && modus.id === 'race'; }
   function lees(){ try { return JSON.parse(localStorage.getItem(SLEUTEL) || '{}'); } catch (e){ return {}; } }
   function schrijf(d){ try { localStorage.setItem(SLEUTEL, JSON.stringify(d)); return true; } catch (e){ return false; } }
+  function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+  function zacht(){ try { return matchMedia('(prefers-reduced-motion: no-preference)').matches ? 'smooth' : 'auto'; } catch (e){ return 'auto'; } }
+  function inTv(x){ return !tv || (x.tv >= tv[0] && x.tv <= tv[1]); }
+  function tvTekst(){ return !tv ? '' : tv[0] === tv[1] ? 'tijdvak ' + tv[0] : 'tijdvak ' + tv[0] + ' tot ' + tv[1]; }
+
+  /* De kop is op een telefoon hoger; scrollen houdt daar rekening mee. */
+  function meetKop(){
+    var h = document.querySelector('header');
+    if (h) document.documentElement.style.setProperty('--kop', h.offsetHeight + 'px');
+  }
+  meetKop(); addEventListener('resize', meetKop);
+
+  function alsKaart(g, soort){ return { soort:soort, tv:g.tv, jaar:soort === 'kenmerk' ? '' : g.jaar, tekst:g.tekst, waarom:g.waarom }; }
 
   /* De kaartenzak raakt leeg en wordt opnieuw gevuld, zodat je alles ziet
      voordat er iets terugkomt. Nooit twee keer dezelfde kaart achter elkaar. */
   function vulZak(){
-    var alles = GEBEURTENISSEN.map(function(g){
-      return { soort:'gebeurtenis', tv:g.tv, jaar:g.jaar, tekst:g.tekst, waarom:g.waarom };
-    });
-    if (race.kenmerken) alles = alles.concat(KENMERKEN.map(function(k){
-      return { soort:'kenmerk', tv:k.tv, jaar:'', tekst:k.tekst, waarom:k.waarom };
-    }));
+    var alles = GEBEURTENISSEN.filter(inTv).map(function(g){ return alsKaart(g, 'gebeurtenis'); });
+    if (race.kenmerken) alles = alles.concat(KENMERKEN.filter(inTv).map(function(k){ return alsKaart(k, 'kenmerk'); }));
     zak = husselen(alles);
     if (vorige && zak[0] && zak[0].tekst === vorige.tekst) zak.push(zak.shift());
   }
@@ -452,18 +504,18 @@ var KENMERKEN = [
   var elStart = document.getElementById('scherm-start'), elSpel = document.getElementById('scherm-spel'),
       elEinde = document.getElementById('scherm-einde'), elZone = document.getElementById('kaartzone'),
       elBakken = document.getElementById('bakken'), elMelding = document.getElementById('melding'),
-      elNa = document.getElementById('naRonde');
+      elNa = document.getElementById('naRonde'), elStop = document.getElementById('opnieuwBtn');
 
   /* ---------- niveau ---------- */
   var kiezer = document.getElementById('niveaus');
   NIVEAUS.forEach(function(n){
     var b = document.createElement('button');
-    b.className = 'kaartje'; b.type = 'button';
+    b.className = 'kaartje'; b.type = 'button'; b.setAttribute('aria-pressed', 'false');
     b.innerHTML = '<b>' + n.naam + '</b><span>' + n.uitleg + '</span>';
     b.addEventListener('click', function(){
       niveau = n;
-      Array.prototype.forEach.call(kiezer.children, function(c){ c.classList.remove('on'); });
-      b.classList.add('on');
+      Array.prototype.forEach.call(kiezer.children, function(c){ c.classList.remove('on'); c.setAttribute('aria-pressed', 'false'); });
+      b.classList.add('on'); b.setAttribute('aria-pressed', 'true');
       var p = document.getElementById('pillNiv'); p.textContent = n.naam; p.classList.remove('hide');
       klaarCheck();
     });
@@ -473,17 +525,43 @@ var KENMERKEN = [
   var modusVak = document.getElementById('modussen');
   MODUSSEN.forEach(function(m){
     var b = document.createElement('button');
-    b.className = 'kaartje'; b.type = 'button';
+    b.className = 'kaartje'; b.type = 'button'; b.setAttribute('aria-pressed', 'false');
     b.innerHTML = '<b>' + m.naam + '</b><span>' + m.uitleg + '</span>';
     b.addEventListener('click', function(){
       modus = m;
-      Array.prototype.forEach.call(modusVak.children, function(c){ c.classList.remove('on'); });
-      b.classList.add('on');
-      document.getElementById('startBtn').textContent = isRace() ? 'Start de tijdrace' : 'Start ronde 1';
+      Array.prototype.forEach.call(modusVak.children, function(c){ c.classList.remove('on'); c.setAttribute('aria-pressed', 'false'); });
+      b.classList.add('on'); b.setAttribute('aria-pressed', 'true');
+      document.getElementById('startBtn').textContent = isRace() ? 'Start de tijdrace' : 'Start met oefenen';
       klaarCheck();
     });
     modusVak.appendChild(b);
   });
+
+  /* ---------- welke tijdvakken: voor een les over een paar tijdvakken ---------- */
+  var elTv = document.getElementById('tvKeuze');
+  elTv.innerHTML = '<option value="">Alle tien</option>' + TIJDVAKKEN.map(function(t){
+    return '<option value="' + t.n + '">' + t.n + '. ' + t.naam + '</option>';
+  }).join('') + '<option value="1-4">1 tot 4: tot 1500</option><option value="5-7">5 tot 7: 1500 tot 1800</option><option value="8-10">8 tot 10: na 1800</option>';
+  elTv.addEventListener('change', function(){
+    var v = elTv.value;
+    tv = !v ? null : v.indexOf('-') > 0 ? v.split('-').map(Number) : [Number(v), Number(v)];
+    klaarCheck();
+  });
+
+  /* Met een keuze voor een paar tijdvakken is er een ronde: die tijdvakken
+     elk als eigen vak, met het tijdvak ervoor en erna als buren, zodat je
+     echt moet kiezen. */
+  function eigenRonde(){
+    var van = tv[0] - 1, tot = tv[1] + 1;
+    /* aan de rand van de tijdlijn twee buren aan een kant, zodat er altijd drie vakken zijn */
+    if (van < 1){ tot = Math.min(10, tot + 1 - van); van = 1; }
+    if (tot > 10){ van = Math.max(1, van - (tot - 10)); tot = 10; }
+    return { titel:(tv[0] === tv[1] ? 'Tijdvak ' + tv[0] : 'Tijdvak ' + tv[0] + ' tot ' + tv[1]) + ', met de buren erbij',
+      kenmerken: niveau && niveau.id === 'hv',
+      bakken: TIJDVAKKEN.filter(function(t){ return t.n >= van && t.n <= tot; }).map(function(t){
+        return { naam:t.naam, periode:t.periode, tv:[t.n] };
+      }) };
+  }
 
   function klaarCheck(){
     document.getElementById('startBtn').disabled = !(niveau && modus);
@@ -493,23 +571,37 @@ var KENMERKEN = [
   /* de tutorial, een keer, zodra het spelscherm er is; de klok staat intussen stil */
   if (window.TUTORIAL && window.TUTORIALS && TUTORIALS['tijdvakken']) TUTORIAL.naStart('startBtn', 'tijdvakken', TUTORIALS['tijdvakken'], { bewaar: function(){ return tijd; }, herstel: function(t){ tijd = t; laatsteTik = performance.now(); } });
   document.getElementById('startBtn').addEventListener('click', start);
-  document.getElementById('nogeensBtn').addEventListener('click', naarStart);
-  document.getElementById('opnieuwBtn').addEventListener('click', naarStart);
+  document.getElementById('anderBtn').addEventListener('click', naarStart);
   document.getElementById('grootBtn').addEventListener('click', function(){
     document.body.classList.toggle('groot');
     this.textContent = document.body.classList.contains('groot') ? 'Normaal' : 'Digibord';
   });
 
+  /* Stoppen in de kop: twee tikken (zie handel.html). Wie al iets sorteerde,
+     ziet zijn uitslag; wie nog niets deed, gaat terug naar de keuze. */
+  var stopZeker = false, stopKlok = null;
+  function stopTerug(){ stopZeker = false; if (stopKlok){ clearTimeout(stopKlok); stopKlok = null; } elStop.textContent = 'Stoppen'; }
+  elStop.addEventListener('click', function(){
+    if (elSpel.classList.contains('hide')) return;
+    if (!stopZeker){ stopZeker = true; elStop.textContent = 'Zeker? Tik nog eens'; stopKlok = setTimeout(stopTerug, 3000); return; }
+    stopTerug();
+    if (totaal > 0) toonEinde(); else naarStart();
+  });
+
   function naarStart(){
     loopt = false; bezig = false;
     elSpel.classList.add('hide'); elEinde.classList.add('hide'); elStart.classList.remove('hide');
+    elStop.classList.add('hide'); stopTerug();
     toonKlassement('startLijst', null);
     scrollTo({top:0,behavior:'auto'});
   }
 
   function start(){
     rondeNr = 0; goed = 0; totaal = 0; fouten = []; bezig = false; od = {};
+    if (tv){ rondesNu = [eigenRonde()]; perRonde = niveau.perRonde * niveau.rondes.length; }
+    else { rondesNu = niveau.rondes.map(function(i){ return RONDES[i]; }); perRonde = niveau.perRonde; }
     elStart.classList.add('hide'); elEinde.classList.add('hide'); elSpel.classList.remove('hide');
+    elStop.classList.remove('hide'); stopTerug(); meetKop();
     document.getElementById('naamvak').classList.add('hide');
     document.getElementById('balk').classList.toggle('hide', isRace());
     document.getElementById('tijdbalk').classList.toggle('hide', !isRace());
@@ -517,14 +609,16 @@ var KENMERKEN = [
     scrollTo({top:0,behavior:'auto'});
   }
 
+  function rondeNu(){ return isRace() ? race.ronde : rondesNu[rondeNr]; }
+
   /* ---------- de tijdrace ---------- */
   function startRace(){
-    race = RACE[niveau.id];
+    var r = RACE[niveau.id];
+    race = { start:r.start, erbij:r.erbij, eraf:r.eraf, kenmerken:r.kenmerken, ronde: tv ? eigenRonde() : RONDES[r.raceRonde] };
     tijd = race.start; punten = 0; reeks = 0; besteReeks = 0; opgeslagen = false;
     zak = []; vorige = null;
-    var ronde = RONDES[race.raceRonde];
-    document.getElementById('rondeLabel').textContent = ronde.titel;
-    tekenBakken(ronde);
+    document.getElementById('rondeLabel').textContent = 'Tijdrace: ' + race.ronde.titel.toLowerCase();
+    tekenBakken(race.ronde);
     volgendeKaart();
     loopt = true;
     laatsteTik = performance.now();
@@ -549,8 +643,8 @@ var KENMERKEN = [
     document.getElementById('tijdFill').style.width = (deel * 100) + '%';
     document.getElementById('tijdbalk').classList.toggle('krap', tijd <= 10);
     document.getElementById('scoreLabel').innerHTML =
-      '<span class="klok">' + Math.ceil(tijd) + ' sec</span> \u00b7 ' + punten + ' punten' +
-      (reeks >= 2 ? ' \u00b7 ' + reeks + ' op rij' : '');
+      '<span class="klok">' + Math.ceil(tijd) + ' sec</span> · ' + punten + ' punten' +
+      (reeks >= 2 ? ' · ' + reeks + ' op rij' : '');
   }
 
   function vlieg(tekst, positief){
@@ -568,11 +662,19 @@ var KENMERKEN = [
   }
 
   function startRonde(){
-    var ronde = RONDES[niveau.rondes[rondeNr]];
-    kaarten = husselen(GEBEURTENISSEN).slice(0, niveau.perRonde);
+    var ronde = rondesNu[rondeNr];
+    /* De kenmerkenronde (havo en vwo) trekt uit de kenmerken, de andere uit
+       de gebeurtenissen. */
+    var bron = ronde.kenmerken && !tv
+      ? KENMERKEN.filter(inTv).map(function(k){ return alsKaart(k, 'kenmerk'); })
+      : GEBEURTENISSEN.filter(inTv).map(function(g){ return alsKaart(g, 'gebeurtenis'); })
+          .concat(ronde.kenmerken ? KENMERKEN.filter(inTv).map(function(k){ return alsKaart(k, 'kenmerk'); }) : []);
+    kaarten = husselen(bron).slice(0, perRonde);
     kaartNr = 0;
     elNa.innerHTML = '';
-    document.getElementById('rondeLabel').textContent = 'Ronde ' + (rondeNr+1) + ' van ' + niveau.rondes.length + ': ' + ronde.titel;
+    document.getElementById('rondeLabel').textContent = rondesNu.length > 1
+      ? 'Ronde ' + (rondeNr+1) + ' van ' + rondesNu.length + ': ' + ronde.titel.charAt(0).toLowerCase() + ronde.titel.slice(1)
+      : ronde.titel;
     tekenBakken(ronde);
     volgendeKaart();
   }
@@ -597,21 +699,19 @@ var KENMERKEN = [
     elMelding.className = 'melding';
     Array.prototype.forEach.call(elBakken.children, function(c){ c.classList.remove('goed','fout','hover'); });
 
-    var g;
     if (isRace()){
-      g = trekKaart();
-      huidige = g;
+      huidige = trekKaart();
     } else {
       if (kaartNr >= kaarten.length){ rondeKlaar(); return; }
-      g = kaarten[kaartNr];
-      huidige = { soort:'gebeurtenis', tv:g.tv, jaar:g.jaar, tekst:g.tekst, waarom:g.waarom };
+      huidige = kaarten[kaartNr];
     }
 
     var kenmerk = huidige.soort === 'kenmerk';
     var toonJaar = niveau.jaar && !kenmerk && huidige.jaar;
+    var toonSoort = isRace() || (rondeNu() && rondeNu().kenmerken);
     var k = document.createElement('div');
     k.className = 'kaart';
-    k.innerHTML = (isRace() ? '<span class="soortlabel' + (kenmerk ? ' kenmerk' : '') + '">' +
+    k.innerHTML = (toonSoort ? '<span class="soortlabel' + (kenmerk ? ' kenmerk' : '') + '">' +
         (kenmerk ? 'Kenmerk van een tijdvak' : 'Gebeurtenis') + '</span>' : '') +
       (toonJaar ? '<div class="jaar">' + huidige.jaar + '</div>' : '') +
       '<div class="geb">' + huidige.tekst + '</div>' +
@@ -621,11 +721,14 @@ var KENMERKEN = [
     elZone.appendChild(k);
     maakSleepbaar(k);
     werkBalkBij();
+    /* Na Volgende staat de nieuwe kaart soms boven de rand: terug in beeld. */
+    var r = elZone.getBoundingClientRect(), kop = document.querySelector('header').offsetHeight;
+    if (r.top < kop || r.top > innerHeight * .5) elZone.scrollIntoView({ block:'start', behavior:zacht() });
   }
 
   /* ---------- slepen met muis, vinger of pen ---------- */
   function maakSleepbaar(kaart){
-    var actief = false, startX = 0, startY = 0, dx = 0, dy = 0;
+    var actief = false, startX = 0, startY = 0, startScroll = 0, dx = 0, dy = 0, lx = 0, ly = 0, rol = null;
     var mikker = kaart.querySelector('.mikker');
 
     function wijsAan(bak){
@@ -645,11 +748,35 @@ var KENMERKEN = [
       Array.prototype.forEach.call(elBakken.children, function(c){ c.classList.remove('hover'); });
       elBakken.classList.remove('sleept');
       if (mikker){ mikker.classList.remove('aan'); mikker.textContent = ''; }
+      if (rol){ cancelAnimationFrame(rol); rol = null; }
+    }
+
+    function zet(){
+      dx = lx - startX; dy = ly - startY + (scrollY - startScroll);
+      kaart.style.transform = 'translate(' + dx + 'px,' + dy + 'px) rotate(' + (dx*0.02) + 'deg)';
+      wijsAan(bakOnder(lx, ly));
+    }
+
+    /* Scrollen tijdens het slepen: staat je vinger bij de onder- of bovenrand,
+       dan schuift de pagina mee. Zo haal je ook een vak onder de vouw. */
+    function rollen(){
+      rol = null;
+      if (!actief) return;
+      var kop = document.querySelector('header').offsetHeight, marge = 70, stap = 0;
+      /* niet verder dan het laatste vak, en niet hoger dan de bovenkant van het spel */
+      if (ly > innerHeight - marge && elBakken.getBoundingClientRect().bottom > innerHeight - 16) stap = Math.min(18, (ly - (innerHeight - marge)) / 3 + 4);
+      else if (ly < kop + marge && scrollY > 0 && elZone.getBoundingClientRect().top < kop + 8) stap = -Math.min(18, ((kop + marge) - ly) / 3 + 4);
+      if (stap){
+        var voor = scrollY;
+        scrollBy(0, stap);
+        if (scrollY !== voor) zet();
+        rol = requestAnimationFrame(rollen);
+      }
     }
 
     kaart.addEventListener('pointerdown', function(e){
       if (bezig) return;
-      actief = true; startX = e.clientX; startY = e.clientY;
+      actief = true; startX = lx = e.clientX; startY = ly = e.clientY; startScroll = scrollY; dx = dy = 0;
       kaart.setPointerCapture(e.pointerId);
       kaart.classList.add('pak');
       elBakken.classList.add('sleept');
@@ -658,19 +785,26 @@ var KENMERKEN = [
 
     kaart.addEventListener('pointermove', function(e){
       if (!actief) return;
-      dx = e.clientX - startX; dy = e.clientY - startY;
-      kaart.style.transform = 'translate(' + dx + 'px,' + dy + 'px) rotate(' + (dx*0.02) + 'deg)';
-      wijsAan(bakOnder(e.clientX, e.clientY));
+      lx = e.clientX; ly = e.clientY;
+      zet();
+      if (!rol) rol = requestAnimationFrame(rollen);
     });
 
     kaart.addEventListener('pointerup', function(e){
       if (!actief) return;
       actief = false;
       kaart.classList.remove('pak');
-      var bak = bakOnder(e.clientX, e.clientY);
+      var bewogen = Math.abs(dx) + Math.abs(dy) > 10;
+      var bak = bewogen ? bakOnder(e.clientX, e.clientY) : null;
       opruimen();
-      if (bak){ antwoord(parseInt(bak.dataset.i,10)); }
-      else { kaart.style.transform = ''; }
+      if (bak){ antwoord(parseInt(bak.dataset.i,10)); return; }
+      kaart.style.transform = '';
+      /* Een tik op de kaart zonder slepen: de kaart is gekozen, nu een vak
+         tikken. Dat werkte al met alleen het vak; zo klopt de uitleg ook. */
+      if (!bewogen){
+        kaart.classList.add('gekozen');
+        if (mikker){ mikker.textContent = 'Tik nu op een vak'; mikker.classList.remove('leeg'); mikker.classList.add('aan'); }
+      }
     });
 
     kaart.addEventListener('pointercancel', function(){
@@ -702,7 +836,7 @@ var KENMERKEN = [
   function antwoord(bakIndex){
     if (bezig) return;
     bezig = true;
-    var ronde = isRace() ? RONDES[race.raceRonde] : RONDES[niveau.rondes[rondeNr]];
+    var ronde = rondeNu();
     var g = huidige;
     var bak = ronde.bakken[bakIndex];
     var klopt = bak.tv.indexOf(g.tv) !== -1;
@@ -728,7 +862,7 @@ var KENMERKEN = [
       } else {
         reeks = 0;
         tijd -= race.eraf;
-        vlieg('\u2212' + race.eraf + ' seconden', false);
+        vlieg('−' + race.eraf + ' seconden', false);
       }
     }
 
@@ -738,7 +872,7 @@ var KENMERKEN = [
     var kaart = elZone.querySelector('.kaart');
     if (kaart){
       kaart.style.transform = '';
-      kaart.classList.remove('pak');
+      kaart.classList.remove('pak', 'gekozen');
       var mk = kaart.querySelector('.mikker');
       if (mk) mk.classList.remove('aan');
       if (!klopt) kaart.classList.add('mis');
@@ -748,11 +882,12 @@ var KENMERKEN = [
 
     elMelding.className = 'melding on ' + (klopt ? 'ja' : 'nee');
     elMelding.innerHTML = '<b>' + (klopt ? 'Goed' : 'Net niet, het hoort bij ' + TIJDVAKKEN[g.tv-1].naam) + '</b>' +
-      g.waarom + ((niveau.jaar || !g.jaar) ? '' : ' Het gebeurde in ' + g.jaar + '.') +
-      '<br><button class="btn" id="verderBtn" type="button">Volgende</button>' +
+      g.waarom + ((niveau.jaar || !g.jaar) ? '' : ' Het gebeurde in ' + g.jaar + (/\.$/.test(g.jaar) ? '' : '.')) +
+      '<br><button class="btn" id="verderBtn" type="button">Volgende →</button>' +
       (isRace() ? '<button class="btn ghost" id="stopBtn" type="button" style="margin-left:8px">Stoppen</button>' : '');
 
-    document.getElementById('verderBtn').addEventListener('click', function(){
+    var verder = document.getElementById('verderBtn');
+    verder.addEventListener('click', function(){
       if (isRace() && tijd <= 0){ loopt = false; toonEinde(); return; }
       bezig = false; kaartNr++; volgendeKaart();
     });
@@ -761,38 +896,48 @@ var KENMERKEN = [
 
     werkBalkBij();
     if (isRace()) tekenKlok();
+    /* Op een telefoon staat de uitleg onder de vakken: in beeld halen, en de
+       knop krijgt de focus zodat Enter doorgaat. */
+    elMelding.scrollIntoView({ block:'nearest', behavior:zacht() });
+    verder.focus({ preventScroll:true });
   }
 
   function werkBalkBij(){
     if (isRace()){ tekenKlok(); return; }
-    var per = niveau.perRonde * niveau.rondes.length;
-    document.getElementById('balkFill').style.width = ((totaal/per)*100) + '%';
+    var per = tv ? Math.max(1, kaarten.length) : rondesNu.length * perRonde;
+    document.getElementById('balkFill').style.width = Math.min(100, (totaal/per)*100) + '%';
     document.getElementById('scoreLabel').textContent = goed + ' van ' + totaal + ' goed';
   }
 
   function rondeKlaar(){
     elZone.innerHTML = '';
     elMelding.className = 'melding';
-    if (rondeNr + 1 < niveau.rondes.length){
-      var volgende = RONDES[niveau.rondes[rondeNr+1]];
+    if (rondeNr + 1 < rondesNu.length){
+      var volgende = rondesNu[rondeNr+1], nu = rondesNu[rondeNr];
+      var zin = volgende.kenmerken && volgende.bakken.length === nu.bakken.length
+        ? 'De laatste ronde heeft dezelfde ' + volgende.bakken.length + ' vakken, maar nu met kenmerken van een tijdvak in plaats van gebeurtenissen.'
+        : 'De volgende ronde heeft ' + volgende.bakken.length + ' vakken: ' + volgende.titel.toLowerCase() + '. Dus preciezer kijken.';
       elNa.innerHTML = '<div class="rondeklaar"><h3>Ronde ' + (rondeNr+1) + ' afgerond</h3>' +
-        '<p>De volgende ronde heeft ' + volgende.bakken.length + ' vakken: ' + volgende.titel.toLowerCase() + '. Dus preciezer kijken.</p>' +
+        '<p>' + zin + '</p>' +
         '<button class="btn" id="naarVolgende" type="button">Start ronde ' + (rondeNr+2) + '</button></div>';
-      document.getElementById('naarVolgende').addEventListener('click', function(){
-        rondeNr++; startRonde(); scrollTo({top:0,behavior:'smooth'});
+      var knop = document.getElementById('naarVolgende');
+      knop.addEventListener('click', function(){
+        rondeNr++; startRonde(); scrollTo({top:0,behavior:zacht()});
       });
+      elNa.scrollIntoView({ block:'nearest', behavior:zacht() });
+      knop.focus({ preventScroll:true });
     } else {
       toonEinde();
     }
   }
 
+  function tvDeel(){ return tv ? '-tv' + tv[0] + (tv[1] !== tv[0] ? '-' + tv[1] : '') : ''; }
+
   function toonEinde(){
     loopt = false; bezig = false;
+    elStop.classList.add('hide'); stopTerug();
     elSpel.classList.add('hide'); elEinde.classList.remove('hide');
     var deel = totaal ? goed/totaal : 0;
-
-    document.getElementById('eindScore').textContent = isRace()
-      ? punten + ' punten' : goed + ' / ' + totaal;
 
     document.getElementById('eindTekst').textContent = isRace()
       ? 'Je sorteerde ' + totaal + ' kaarten, waarvan ' + goed + ' goed (' +
@@ -808,20 +953,22 @@ var KENMERKEN = [
         html += '<div class="rij"><span>' + f.tekst + '</span><b>' + f.hoort + '</b></div>';
       });
       if (fouten.length > 10) html += '<div class="rij"><span>en nog ' + (fouten.length - 10) + ' eerder</span><b></b></div>';
-    } else {
+    } else if (totaal) {
       html = '<div class="rij"><span>Alles goed gesorteerd</span><b>geen missers</b></div>';
     }
     document.getElementById('eindOverzicht').innerHTML = html;
-    SPEL.einde({ spel:'tijdvakken', reeks:besteReeks, goed:goed, score: isRace() ? punten : goed, label: isRace() ? 'punten' : 'van ' + totaal + ' goed', max: isRace() ? null : totaal, ronde:goed, punten: isRace() ? punten : goed, sleutel: isRace() ? 'race' : 'oefen', vak:'ges', od:od });
+    SPEL.einde({ spel:'tijdvakken', opnieuw:start, reeks:besteReeks, goed:goed, score: isRace() ? punten : goed, label: isRace() ? 'punten' : 'van ' + totaal + ' goed', max: isRace() ? null : totaal, ronde:goed, punten: isRace() ? punten : goed, sleutel: (isRace() ? 'race' : 'oefen') + tvDeel(), vak:'ges', od:od });
 
     var vak = document.getElementById('naamvak');
     vak.classList.toggle('hide', !isRace() || opgeslagen || totaal === 0);
     if (isRace() && !opgeslagen) document.getElementById('naamveld').value = '';
     toonKlassement('eindLijst', null);
-    scrollTo({top:0,behavior:'smooth'});
+    scrollTo({top:0,behavior:zacht()});
   }
 
   /* ---------- klassement, alleen voor de tijdrace ---------- */
+  /* Per niveau (dat bepaalt de ronde van de race) en per keuze van tijdvakken. */
+  function klassementSleutel(){ return niveau.id + tvDeel(); }
   document.getElementById('bewaarBtn').addEventListener('click', bewaarScore);
   document.getElementById('naamveld').addEventListener('keydown', function(e){
     if (e.key === 'Enter') bewaarScore();
@@ -833,12 +980,12 @@ var KENMERKEN = [
     var naam = veld.value.trim().slice(0, 14);
     if (!naam){ veld.focus(); return; }
     var data = lees();
-    var lijst = data[niveau.id] || [];
+    var lijst = data[klassementSleutel()] || [];
     var nieuwe = { naam:naam, punten:punten, goed:goed, totaal:totaal, reeks:besteReeks,
                    datum:new Date().toLocaleDateString('nl-NL') };
     lijst.push(nieuwe);
     lijst.sort(function(a, b){ return b.punten - a.punten; });
-    data[niveau.id] = lijst.slice(0, 10);
+    data[klassementSleutel()] = lijst.slice(0, 10);
     var gelukt = schrijf(data);
     opgeslagen = true;
     document.getElementById('naamvak').classList.add('hide');
@@ -851,8 +998,8 @@ var KENMERKEN = [
     var doel = document.getElementById(doelId);
     if (!doel) return;
     if (!niveau || !isRace()){ doel.innerHTML = ''; return; }
-    var lijst = lees()[niveau.id] || [];
-    var titel = 'Klassement tijdrace, ' + niveau.naam;
+    var lijst = lees()[klassementSleutel()] || [];
+    var titel = 'Klassement tijdrace, ' + niveau.naam + (tv ? ', ' + tvTekst() : '');
     if (!lijst.length){
       doel.innerHTML = '<h3>' + titel + '</h3><div class="leeg">Nog geen scores. Wie het eerst speelt, staat bovenaan.</div>';
       return;
@@ -861,23 +1008,35 @@ var KENMERKEN = [
     lijst.forEach(function(r, i){
       var ik = markeer && r.naam === markeer.naam && r.punten === markeer.punten;
       h += '<div class="plek' + (ik ? ' jij' : '') + '"><span class="nr">' + (i+1) + '</span>' +
-        '<span class="avrij">' + (window.AVATAR ? AVATAR.svg(r.naam, 34) : '') + '<span><b>' + SPEL.schoon(r.naam) + '</b><small>' + r.goed + ' van ' + r.totaal +
-        ' goed \u00b7 reeks ' + r.reeks + ' \u00b7 ' + r.datum + '</small></span></span>' +
+        '<span class="avrij">' + (window.AVATAR ? AVATAR.svg(r.naam, 34) : '') + '<span><b>' + schoon(r.naam) + '</b><small>' + r.goed + ' van ' + r.totaal +
+        ' goed · reeks ' + r.reeks + ' · ' + r.datum + '</small></span></span>' +
         '<span class="pt">' + r.punten + '</span></div>';
     });
     doel.innerHTML = h;
   }
 
   /* ------------------------------------------------------------------
-     Deelbare link vanuit de leerlingomgeving.
-     Met ?n=bb, ?n=kgt of ?n=hv staat het niveau al goed en hoeft de
-     leerling alleen nog op start te drukken. Bij feodalisme kan ook
-     ?rol=heer en bij de handelsroute ?r=voc of ?r=hanze.
+     Deelbare link, voor de docent en vanuit de leerlingomgeving:
+       ?n=bb, kgt of hv          niveau
+       ?m=rondes (of oefen) of race
+       ?tv=7 of ?tv=5-7          alleen kaarten uit die tijdvakken
+     Of de docent dit koos of de leerling zelf in de leeromgeving, is aan het
+     adres niet te zien. Daarom staat er "vooraf gekozen", met een knop om
+     het toch anders te kiezen.
      ------------------------------------------------------------------ */
   (function(){
     function param(naam){
       var m = new RegExp('[?&]' + naam + '=([^&]+)').exec(location.search);
       return m ? decodeURIComponent(m[1]) : null;
+    }
+    function vooraf(vak, kop, tekst){
+      var oud = kop.textContent;
+      vak.style.display = 'none';
+      kop.textContent = tekst + ', vooraf gekozen ';
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'linkbtn anders'; b.textContent = 'anders kiezen';
+      b.addEventListener('click', function(){ vak.style.display = ''; kop.textContent = oud; });
+      kop.appendChild(b);
     }
     function kiesUit(vakId, lijst, waarde, kopId, woord){
       if (!waarde) return;
@@ -886,19 +1045,25 @@ var KENMERKEN = [
       for (var i = 0; i < lijst.length; i++){
         if (lijst[i] && lijst[i].id === waarde && vak.children[i]){
           vak.children[i].click();
-          vak.style.display = 'none';
           var kop = document.getElementById(kopId);
-          if (kop) kop.textContent = woord + ': ' + lijst[i].naam + ', gekozen door je docent';
+          if (kop) vooraf(vak, kop, woord + ': ' + lijst[i].naam);
           return;
         }
       }
     }
     kiesUit('niveaus', NIVEAUS, param('n'), 'nivKop', 'Niveau');
-    kiesUit('modussen', MODUSSEN, param('m'), 'modusKop', 'Stand');
-    if (typeof ROLLEN !== 'undefined') kiesUit('rollen', ROLLEN, param('rol'), 'rolKop', 'Rol');
-    if (typeof ROUTES !== 'undefined'){
-      var lijst = Object.keys(ROUTES).map(function(k){ var r = ROUTES[k]; r.id = k; return r; });
-      kiesUit('routes', lijst, param('r'), 'routeKop', 'Route');
+    var m = param('m'); if (m === 'oefen') m = 'rondes';
+    kiesUit('modussen', MODUSSEN, m, 'modusKop', 'Stand');
+    var t = /^(\d{1,2})(?:-(\d{1,2}))?$/.exec(param('tv') || '');
+    if (t){
+      var van = Math.max(1, Math.min(10, +t[1])), tot = Math.max(van, Math.min(10, +(t[2] || t[1])));
+      tv = [van, tot];
+      var w = van === tot ? String(van) : van + '-' + tot;
+      if (!elTv.querySelector('option[value="' + w + '"]')){
+        var o = document.createElement('option'); o.value = w; o.textContent = van + ' tot ' + tot; elTv.appendChild(o);
+      }
+      elTv.value = w;
+      klaarCheck();
     }
   })();
 
@@ -915,6 +1080,6 @@ var KENMERKEN = [
 <script src="klas.js"></script>
 <script src="naamfilter.js"></script>
 <script src="spel.js"></script>
-<script>SPEL.uitleg({ doel:"Zet gebeurtenissen in het juiste tijdvak.", tijd:"ongeveer 10 minuten", bediening:"Sleep de kaart naar het tijdvak, of tik eerst de kaart en dan het tijdvak." });</script>
+<script>SPEL.uitleg({ doel:"Zet gebeurtenissen en kenmerken in het juiste tijdvak.", tijd:"ongeveer 10 minuten", bediening:"Sleep de kaart naar het tijdvak, of tik op het tijdvak. Met Tab en Enter kan het ook." });</script>
 </body>
 </html>

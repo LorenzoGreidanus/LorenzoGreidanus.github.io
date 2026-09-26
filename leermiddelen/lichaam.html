@@ -28,7 +28,7 @@
 <style>
 :root{--crab:#F26749;--amber:#EA9836;--ocean:#204ECF;--vista:#83A5F2;--sand:#FCDED6;--room:#FBF6F1;
   --ink:#14224C;--muted:#5b6480;--goed:#2f7d52;--goed-bg:#e7f3ec;--fout:#c0442c;--fout-bg:#fdecea;
-  --huid:#f6e3d8;--huidlijn:#c9a892;--max:1300px;--ease:cubic-bezier(.22,.61,.36,1)}
+  --huid:#f6e3d8;--huidlijn:#c9a892;--max:1180px;--ease:cubic-bezier(.22,.61,.36,1)}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--room);color:var(--ink);line-height:1.55;
@@ -70,7 +70,45 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .btn{display:inline-block;border:none;background:var(--crab);color:#fff;font-weight:600;padding:14px 32px;
   border-radius:999px;box-shadow:0 9px 0 rgba(20,34,76,.10);margin-top:24px;transition:transform .16s var(--ease)}
 .btn:hover{transform:translateY(-2px)}
-.btn:disabled{opacity:.45;box-shadow:none;transform:none;cursor:default}
+/* Uit is echt uit: een lege knop met een stippelrand, in licht en donker leesbaar.
+   Een halfdoorzichtige crab-knop werd in het donker donkerrood met donkere letters. */
+.btn:disabled,.btn:disabled:hover{opacity:1;background:transparent;color:var(--muted);border:1.5px dashed var(--muted);
+  box-shadow:none;cursor:not-allowed;transform:none}
+:root[data-theme="dark"] .btn.btn:disabled{color:var(--muted)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn.btn:disabled{color:var(--muted)}}
+/* goed en fout in het donker: lichte letters op de donkere vlakken */
+:root[data-theme="dark"]{--goed:#8fd8ac;--fout:#f0a090}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--goed:#8fd8ac;--fout:#f0a090}}
+/* Oneindig oefenen: een tweede, rustigere startknop naast Start */
+.startknoppen{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:24px}
+.startknoppen .btn{margin-top:0}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid rgba(20,34,76,.2);box-shadow:none}
+:root[data-theme="dark"] .btn.ghost{border-color:rgba(243,239,233,.3)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn.ghost{border-color:rgba(243,239,233,.3)}}
+.oneindiguit{margin-top:10px;font-size:.84rem;color:var(--muted)}
+/* een stelsel dat op dit niveau niets heeft, is uit */
+.set:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.set:disabled em{color:var(--muted)}
+/* strakker onder elkaar, zodat Start op een laptop en een telefoon in beeld staat */
+.start.oefen .kop2{margin:20px 0 10px}
+.start .sets .set{padding:13px 15px}
+@media(max-width:560px){
+  .sets{grid-template-columns:1fr 1fr;gap:8px}
+  .sets .set{padding:11px 12px;border-radius:16px}
+  .sets .set span{display:none}
+  .sets .set b{font-size:.92rem}
+  .sets .set em{margin-top:3px}
+  .start.oefen .kop2{margin:16px 0 8px}
+  .rij{gap:6px}
+  .rij button{padding:8px 12px;font-size:.86rem}
+  #nivUit{display:none}
+  .start .uitleg{margin-top:6px;font-size:.84rem}
+  .startknoppen{margin-top:16px}
+}
+/* Volgende in het vraagvak, na een fout */
+.vraagvak .volgenderij{margin-top:12px}
+.vraagvak .stopknop{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.6);border-radius:999px;padding:9px 18px;font-weight:600;min-height:44px}
+
 
 /* ---------- het spel ---------- */
 .baan{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;padding:12px 0 40px;align-items:start}
@@ -221,10 +259,10 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
   </div>
 </header>
 
-<section class="start wrap" id="scherm-start">
+<section class="start oefen wrap" id="scherm-start">
   <p class="hand" style="font-size:1.5rem">wat zit waar</p>
   <h1>Het lichaam</h1>
-  <p class="lead">Je krijgt de naam van een orgaan en je wijst het aan op het lichaam. Of andersom: er licht iets op en jij zegt hoe het heet. Bij elk antwoord krijg je te horen wat dat orgaan doet. Kies een stelsel, of neem alles door elkaar.</p>
+  <p class="lead">Wijs een orgaan aan op het lichaam, of zeg hoe het heet, en lees wat het doet.</p>
 
   <p class="eyebrow">hoe wil je oefenen</p>
   <div class="rij" id="modus"></div>
@@ -237,7 +275,11 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
   <p class="eyebrow kop2">welk stelsel</p>
   <div class="sets" id="sets"></div>
 
-  <button class="btn" id="startBtn" type="button" disabled>Kies eerst een stelsel</button>
+  <div class="startknoppen">
+    <button class="btn" id="startBtn" type="button" disabled>Kies eerst een stelsel</button>
+    <button class="btn ghost" id="oneindigBtn" type="button">Oneindig oefenen</button>
+  </div>
+  <p class="oneindiguit" id="oneindigUit"></p>
 </section>
 
 <section class="wrap hide" id="scherm-spel">
@@ -254,19 +296,20 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
         <h2 id="vraagTekst">...</h2>
         <p class="sub" id="vraagSub"></p>
         <div class="opties" id="opties"></div>
-        <div id="terugvak"></div>
+        <div id="terugvak" role="status" aria-live="polite"></div>
+        <div class="volgenderij" id="volgendeRij" hidden><button type="button" class="stopknop hide" id="stopBtn">Stoppen</button><button type="button" class="volgendeknop" id="volgendeBtn">Volgende &rarr;</button></div>
       </div>
     </div>
   </div>
 </section>
 
 <section class="einde wrap hide" id="scherm-einde">
-  <p class="hand" style="font-size:1.5rem">klaar</p>
-  <h1 id="eindeKop">Alles gehad</h1>
+  <!-- de eindkaart (SPEL.einde) staat bovenaan met de score; kop en cijfertegels zeiden hetzelfde nog een keer -->
+  <h2 class="hide" id="eindeKop">Alles gehad</h2>
   <p class="lead" id="eindeUit" style="margin-inline:auto"></p>
-  <div class="cijfers" id="cijfers"></div>
+  <div class="cijfers hide" id="cijfers"></div>
   <div class="lijstje" id="lijstje"></div>
-  <button class="btn" id="nogBtn" type="button">Nog een keer</button>
+  <button class="btn hide" id="nogBtn" type="button">Nog een keer</button>
 </section>
 
 <footer>
@@ -290,7 +333,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
    ----------------------------------------------------------------------------
    De tekening is 'Human anatomy organs' van DBCLS, van Wikimedia Commons,
    onder de licentie Creative Commons Naamsvermelding 4.0. De klikvlakken zijn
-   er zelf overheen gelegd, in de coordinaten van de afbeelding: 960 bij 1600.
+   er zelf overheen gelegd, in de coördinaten van de afbeelding: 960 bij 1600.
    Ze staan van klein naar groot, want de eerste die past wint. Anders zou een
    klik midden op de dunne darm bij de dikke darm eromheen belanden.
    ============================================================================ */
@@ -311,7 +354,7 @@ var ORGANEN = [
     uit:'Zit voor je luchtpijp en maakt hormonen die je stofwisseling regelen: hoe snel je lichaam energie verbruikt.' },
   { id:'luchtpijp', naam:'de luchtpijp', stelsel:'ademhaling', n:1,
     vlak:[[[442,254],[472,254],[474,332],[442,332]]],
-    uit:'Brengt lucht van je keel naar je longen. Onderin splitst hij in twee bronchien, een naar elke long.' },
+    uit:'Brengt lucht van je keel naar je longen. Onderin splitst hij in twee bronchiën, een naar elke long.' },
   { id:'blaas', naam:'de blaas', stelsel:'uitscheiding', n:1,
     vlak:[[[432,762],[470,754],[500,766],[502,792],[478,806],[448,804],[428,788]]],
     uit:'Bewaart de urine tot je naar de wc gaat. Kan ongeveer een halve liter aan.' },
@@ -320,7 +363,7 @@ var ORGANEN = [
     uit:'Pompt bloed rond, ongeveer honderdduizend keer per dag. Hij ligt iets links, dus rechts op deze tekening.' },
   { id:'maag', naam:'de maag', stelsel:'spijsvertering', n:1,
     vlak:[[[474,478],[516,472],[552,492],[560,528],[542,558],[506,566],[478,552],[470,516]]],
-    uit:'Kneedt het eten en mengt het met maagzuur, dat bacterien doodt. Ligt links, dus rechts op deze tekening.' },
+    uit:'Kneedt het eten en mengt het met maagzuur, dat bacteriën doodt. Ligt links, dus rechts op deze tekening.' },
   { id:'hersenen', naam:'de hersenen', stelsel:'zenuwstelsel', n:1,
     vlak:[[[388,72],[452,62],[508,76],[518,104],[494,128],[452,136],[410,128],[382,104]]],
     uit:'Sturen alles aan: bewegen, denken, voelen en ademen. De twee helften werken elk voor een kant van je lichaam.' },
@@ -372,7 +415,9 @@ var MODUSSEN = [
   /* elk stelsel hoort bij een onderdeel van biologie, zodat het klasoverzicht het bij elkaar zet */
   var STELSELDEEL = { spijsvertering:'vertering', ademhaling:'bloed', bloedsomloop:'bloed', zenuwstelsel:'zintuigen', zintuigen:'zintuigen' };
   function stelselDeel(s){ return STELSELDEEL[s] || 'organen'; }
-  var beurt = 'wijs';
+  var beurt = 'wijs', wachter = null, gedaan = 0;
+  /* oneindig oefenen: steeds weer een nieuwe ronde door je organen, tot je zelf stopt; ?oneindig=1 zet het vast */
+  var oneindig = false, oneindigUrl = /[?&]oneindig=1\b/.test(location.search);
 
   function rang(){ var n = NIVEAUS.filter(function(x){ return x.id === niveau; })[0]; return n ? n.rang : 2; }
   function mee(){
@@ -406,14 +451,21 @@ var MODUSSEN = [
   }
   function tekenSets(){
     var el = document.getElementById('sets');
+    /* Een stelsel zonder organen op dit niveau gaat uit, met de reden erbij; een stelsel
+       met een orgaan kan alleen samen met een ander, dus dat staat er ook bij. */
+    function aantalVan(id){ return ORGANEN.filter(function(o){ return o.stelsel === id && o.n <= rang(); }).length; }
+    gekozen = gekozen.filter(function(id){ return aantalVan(id) > 0; });
+    function telwoord(n){ return n + (n === 1 ? ' onderdeel' : ' onderdelen'); }
     el.innerHTML = STELSELS.map(function(s){
-      var aantal = ORGANEN.filter(function(o){ return o.stelsel === s.id && o.n <= rang(); }).length;
-      return '<button class="set' + (gekozen.indexOf(s.id) >= 0 ? ' on' : '') + '" type="button" data-s="' + s.id + '">' +
-        '<b>' + s.naam + '</b><span>' + s.uit + '</span><em>' + aantal + ' onderdelen</em></button>';
+      var aantal = aantalVan(s.id);
+      var em = aantal === 0 ? 'Nog niets op dit niveau'
+             : aantal === 1 ? telwoord(1) + ', kies er een bij' : telwoord(aantal);
+      return '<button class="set' + (gekozen.indexOf(s.id) >= 0 ? ' on' : '') + '" type="button" data-s="' + s.id + '"' + (aantal ? '' : ' disabled') + '>' +
+        '<b>' + s.naam + '</b><span>' + s.uit + '</span><em>' + em + '</em></button>';
     }).join('') +
     '<button class="set' + (gekozen.length ? '' : ' on') + '" type="button" data-s="alles">' +
       '<b>Alles door elkaar</b><span>Alle stelsels tegelijk, in willekeurige volgorde.</span>' +
-      '<em>' + mee().length + ' onderdelen</em></button>';
+      '<em>' + telwoord(mee().length) + '</em></button>';
     Array.prototype.forEach.call(el.querySelectorAll('.set'), function(b){
       b.addEventListener('click', function(){
         var s = b.getAttribute('data-s');
@@ -430,7 +482,12 @@ var MODUSSEN = [
     var b = document.getElementById('startBtn');
     var n = mee().length;
     b.disabled = n < 2;
-    b.textContent = n < 2 ? 'Kies minstens twee onderdelen' : 'Begin met ' + n + ' onderdelen';
+    b.textContent = n < 2 ? 'Kies er nog een stelsel bij' : oneindigUrl ? 'Start: oneindig oefenen' : 'Begin met ' + n + ' onderdelen';
+    document.getElementById('oneindigBtn').disabled = n < 2;
+    document.getElementById('oneindigBtn').classList.toggle('hide', oneindigUrl);
+    document.getElementById('oneindigUit').textContent = n < 2 ? 'Met een orgaan valt er niets te kiezen: er moeten er minstens twee in.'
+      : oneindigUrl ? 'Zoveel organen als je wilt; je stopt zelf.'
+      : 'Een ronde: alle ' + n + ' onderdelen een keer. Oneindig: zoveel als je wilt, je stopt zelf.';
   }
 
   /* ---------- de tekening ---------- */
@@ -551,13 +608,20 @@ var MODUSSEN = [
 
   /* ---------- de vraag ---------- */
   function volgende(){
+    if (wachter){ clearTimeout(wachter); wachter = null; }
+    document.getElementById('volgendeRij').hidden = true;
+    /* oneindig: is de ronde op, dan komt er een nieuwe, niet meteen met hetzelfde orgaan */
+    if (!rij.length && oneindig){
+      rij = husl(mee().map(function(o){ return o.id; }));
+      if (nu && rij.length > 1 && rij[0] === nu.id) rij.push(rij.shift());
+    }
     if (!rij.length){ einde(); return; }
     nu = { id: rij[0], af:false, mis:null };
     beurt = modus === 'gemengd' ? ((goed + fout) % 2 ? 'noem' : 'wijs') : modus;
     alGefaald = false;
     var o = ORGANEN.filter(function(x){ return x.id === nu.id; })[0];
     document.getElementById('terugvak').innerHTML = '';
-    document.getElementById('mRest').textContent = rij.length;
+    document.getElementById('mRest').textContent = oneindig ? '\u221e' : rij.length;
 
     if (beurt === 'wijs'){
       document.getElementById('vraagKop').textContent = 'wijs aan';
@@ -592,15 +656,34 @@ var MODUSSEN = [
       (juist ? '' : '<b>Dit is ' + o.naam + '.</b> ') + o.uit + '</div>';
   }
 
-  function verder(){
-    rij.shift();
+  /* Goed in een keer gaat vanzelf door. Na een fout wacht het spel op Volgende,
+     zodat je rustig leest wat het orgaan doet. */
+  function verder(vanzelf){
+    rij.shift(); gedaan++;
     document.getElementById('mGoed').textContent = goed;
     document.getElementById('mFout').textContent = fout;
-    setTimeout(function(){
-      if (document.getElementById('scherm-spel').classList.contains('hide')) return;
-      volgende();
-    }, 1500);
+    if (vanzelf){
+      wachter = setTimeout(function(){
+        if (document.getElementById('scherm-spel').classList.contains('hide')) return;
+        volgende();
+      }, 1500);
+      /* oneindig: Stoppen staat er ook na een goed antwoord even bij */
+      if (!oneindig) return;
+    }
+    var rijV = document.getElementById('volgendeRij'), knop = document.getElementById('volgendeBtn');
+    document.getElementById('stopBtn').classList.toggle('hide', !oneindig);
+    rijV.hidden = false;
+    if (!vanzelf){ try { knop.focus({ preventScroll:true }); } catch (e){ knop.focus(); } }
+    if (window.SPEL && SPEL.inBeeld) SPEL.inBeeld(rijV);
   }
+  document.getElementById('volgendeBtn').addEventListener('click', function(){
+    if (document.getElementById('scherm-spel').classList.contains('hide')) return;
+    volgende();
+  });
+  document.getElementById('stopBtn').addEventListener('click', function(){
+    if (wachter){ clearTimeout(wachter); wachter = null; }
+    einde();
+  });
 
   function klikOpOrgaan(id){
     if (!nu || nu.af) return;
@@ -611,7 +694,7 @@ var MODUSSEN = [
       nu.af = true;
       toonUitleg(o, true);
       tekenLijf();
-      verder();
+      verder(!alGefaald);
     } else {
       if (!alGefaald){ fout++; gemist.push(o.naam); alGefaald = true; }
       var mis = ORGANEN.filter(function(x){ return x.id === id; })[0];
@@ -636,11 +719,14 @@ var MODUSSEN = [
       else if (b.getAttribute('data-o') === id) b.classList.add('mis');
     });
     toonUitleg(o, juist);
-    verder();
+    verder(juist);
   }
 
   /* ---------- beginnen en eindigen ---------- */
-  function begin(){
+  function begin(zo){
+    oneindig = !!zo;
+    if (wachter){ clearTimeout(wachter); wachter = null; }
+    nu = null; gedaan = 0;
     var lijst = mee();
     lootLetters();
     rij = husl(lijst.map(function(o){ return o.id; }));
@@ -655,6 +741,7 @@ var MODUSSEN = [
   }
 
   function einde(){
+    if (wachter){ clearTimeout(wachter); wachter = null; }
     document.getElementById('scherm-spel').classList.add('hide');
     document.getElementById('scherm-einde').classList.remove('hide');
     var totaal = goed + fout;
@@ -680,7 +767,9 @@ var MODUSSEN = [
         }).join('')
       : '';
     bewaar(deel);
-    SPEL.einde({ spel:'lichaam', vak:'bio', od:od, goed:goed, score:deel + '%', waarde:deel, label:'in een keer goed', max:100, ronde:goed, punten:deel, sleutel:niveau });
+    /* een oneindige sessie heeft een eigen beste score: anders telt een half afgemaakte ronde mee */
+    SPEL.einde({ spel:'lichaam', vak:'bio', od:od, goed:goed, score:deel + '%', waarde:deel, label:'in een keer goed', max:100, ronde:goed, punten:deel, sleutel:niveau + (oneindig ? '-oneindig' : ''),
+      opnieuwTekst: oneindig ? 'Verder oefenen' : undefined });
     scrollTo({ top:0, behavior:'auto' });
   }
 
@@ -701,9 +790,12 @@ var MODUSSEN = [
   /* ---------- knoppen ---------- */
   /* de tutorial, een keer, zodra het spelscherm er is; de klok staat intussen stil */
   if (window.TUTORIAL && window.TUTORIALS && TUTORIALS['lichaam']) TUTORIAL.naStart('startBtn', 'lichaam', TUTORIALS['lichaam'], {});
-  document.getElementById('startBtn').addEventListener('click', function(){ if (mee().length >= 2) begin(); });
-  document.getElementById('nogBtn').addEventListener('click', begin);
+  if (window.TUTORIAL && window.TUTORIALS && TUTORIALS['lichaam']) TUTORIAL.naStart('oneindigBtn', 'lichaam', TUTORIALS['lichaam'], {});
+  document.getElementById('startBtn').addEventListener('click', function(){ if (mee().length >= 2) begin(oneindigUrl); });
+  document.getElementById('oneindigBtn').addEventListener('click', function(){ if (mee().length >= 2) begin(true); });
+  document.getElementById('nogBtn').addEventListener('click', function(){ begin(oneindig); });
   document.getElementById('opnieuwBtn').addEventListener('click', function(){
+    if (wachter){ clearTimeout(wachter); wachter = null; }
     document.getElementById('scherm-spel').classList.add('hide');
     document.getElementById('scherm-einde').classList.add('hide');
     document.getElementById('scherm-start').classList.remove('hide');
@@ -720,6 +812,6 @@ var MODUSSEN = [
 <script src="thema.js"></script>
 <script src="klas.js"></script>
 <script src="spel.js"></script>
-<script>SPEL.uitleg({ doel:"Weet waar de organen zitten en wat ze doen.", tijd:"tien minuten per stelsel", bediening:"Tik op het lichaam op de plek van het orgaan dat gevraagd wordt, of kies de naam.", meer:false });</script>
+<script>SPEL.uitleg({ doel:"Weet waar de organen zitten en wat ze doen.", tijd:"alle organen van je keuze, ongeveer 5 minuten per stelsel", bediening:"Tik de letter die naar het gevraagde orgaan wijst, of kies de naam. Na een fout ga je met Volgende verder.", meer:false, onder:true, chips:true, zeker:'opnieuwBtn' });</script>
 </body>
 </html>

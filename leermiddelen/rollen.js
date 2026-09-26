@@ -34,71 +34,37 @@ window.ROLSPEL = (function(){
     return fetch('/api/kamer', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ spel:'rollen', game:game }) })
       .then(function(r){ return r.json().then(function(j){ if (!r.ok) throw new Error(j && j.fout ? j.fout : 'De kamer kon niet gemaakt worden.'); return j; }); });
   }
+  /* De verbinding zelf, met de strook onderaan en de wachtrij, staat in
+     verbinding.js; die delen alle klassenspellen. Een pagina die hem nog niet
+     laadt, krijgt hem hier alsnog. */
+  var HIER = (document.currentScript && document.currentScript.src || '').replace(/rollen\.js[^\/]*$/, '');
+  function metVerbinding(f){
+    if (window.VERBINDING) return f();
+    var s = document.querySelector('script[data-verbinding]');
+    if (!s){ s = document.createElement('script'); s.src = HIER + 'verbinding.js'; s.setAttribute('data-verbinding', ''); document.head.appendChild(s); }
+    s.addEventListener('load', function(){ if (window.VERBINDING) f(); });
+  }
+  if (!window.VERBINDING) metVerbinding(function(){});
   function host(o){
-    var ws = null, dicht = false, pogingen = 0, lijst = [], n = 0, wachtrij = [];
-    /* de verbinding levend houden, en merken als hij na slaap of wifi-uitval stil dood is (wakker.js) */
-    (function(){ function aan(){ if (window.WAKKER) WAKKER({ ws:function(){ return ws; }, dicht:function(){ return dicht; } }); }
-      if (document.readyState === 'complete') aan(); else addEventListener('load', aan); })();
-    var MAX_POGINGEN = 8, balk = null;
-    /* Een strook onderaan het bord: eerst dat we opnieuw proberen, daarna dat
-       het niet meer lukt. Leeg haalt hem weer weg. */
-    function balkje(wat){
-      if (!wat){ if (balk && balk.parentNode) balk.parentNode.removeChild(balk); balk = null; return; }
-      if (!document.body) return;
-      if (!balk){
-        balk = document.createElement('div');
-        balk.setAttribute('role', 'status');
-        balk.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;z-index:9998;max-width:560px;margin-inline:auto;' +
-          'border-radius:16px;padding:12px 14px;font:500 .95rem Poppins,system-ui,sans-serif;line-height:1.4;' +
-          'box-shadow:0 14px 34px rgba(0,0,0,.3);display:flex;gap:10px;align-items:center';
-        document.body.appendChild(balk);
-      }
-      if (wat === 'wacht'){
-        balk.style.background = '#EA9836'; balk.style.color = '#14224C';
-        balk.textContent = 'De verbinding met de kamer hapert. Ik probeer het opnieuw\u2026';
-      } else {
-        balk.style.background = '#14224C'; balk.style.color = '#F3EFE9';
-        balk.textContent = 'De verbinding met de kamer is weg. Open de kamer opnieuw; je leerlingen krijgen dan een nieuwe code.';
-        var knop = document.createElement('button');
-        knop.type = 'button'; knop.textContent = 'Opnieuw openen';
-        knop.style.cssText = 'margin-left:auto;flex:none;border:none;border-radius:999px;padding:8px 14px;' +
-          'font:600 .85rem Poppins,system-ui,sans-serif;background:#F3EFE9;color:#14224C;cursor:pointer;min-height:38px';
-        knop.addEventListener('click', function(){ location.reload(); });
-        balk.appendChild(knop);
-      }
-    }
-    function open(){
-      if (dicht) return;
-      var proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
-      var s = new WebSocket(proto + location.host + '/ws/' + o.code + '?rol=host&sleutel=' + encodeURIComponent(o.sleutel));
-      ws = s;
-      s.onopen = function(){ if (pogingen){ balkje(''); if (o.onWacht) o.onWacht(0); } pogingen = 0; wachtrij.splice(0).forEach(function(m){ stuur(m); }); if (o.onOpen) o.onOpen(); };
-      s.onmessage = function(e){
-        var m; try { m = JSON.parse(e.data); } catch (x){ return; }
-        if (m.t === 'welkom' || m.t === 'spelers'){ lijst = m.spelers || []; if (o.onSpelers) o.onSpelers(lijst); return; }
-        if (m.t === 'actie'){ if (o.onActie) o.onActie(m.van, m.d, m.naam); return; }
-      };
-      s.onclose = function(e){
-        if (ws !== s) return;
-        ws = null;
-        if (dicht) return;
-        if (e.code === 1000 && /gesloten|afgelopen/.test(e.reason || '')){ dicht = true; if (o.onDicht) o.onDicht(e.reason); return; }
-        pogingen++;
-        /* Het bord bleef vroeger eindeloos opnieuw verbinden: op het scherm
-           stond dan nog gewoon de lobby met de code, terwijl er niets meer
-           luisterde. Na acht pogingen (ruim een minuut) geven we het op en
-           zeggen we dat, zodat de docent de kamer opnieuw kan openen. */
-        balkje(pogingen > MAX_POGINGEN ? 'weg' : 'wacht');
-        if (o.onWacht) o.onWacht(pogingen);
-        if (pogingen > MAX_POGINGEN){ dicht = true; if (o.onDicht) o.onDicht('de verbinding met de kamer is weg'); return; }
-        setTimeout(open, Math.min(8000, 800 * pogingen));
-      };
-    }
-    function stuur(m){
-      if (ws && ws.readyState === 1){ try { ws.send(JSON.stringify(m)); } catch (e){} }
-      else if (wachtrij.length < 200) wachtrij.push(m);
-    }
-    open();
+    var v = null, lijst = [], n = 0, voorlopig = [], weg = false;
+    function stuur(m){ if (v) return v.stuur(m); if (voorlopig.length < 200) voorlopig.push(m); return false; }
+    metVerbinding(function(){
+      if (weg) return;
+      /* Het bord bleef vroeger eindeloos opnieuw verbinden: op het scherm
+         stond dan nog gewoon de lobby met de code, terwijl er niets meer
+         luisterde. Na acht pogingen (ruim een minuut) geven we het op en
+         zeggen we dat, zodat de docent de kamer opnieuw kan openen. */
+      v = VERBINDING.maak({ pad:o.code + '?rol=host&sleutel=' + encodeURIComponent(o.sleutel), rol:'host', max:8,
+        wegTekst:'Open de kamer opnieuw; je leerlingen krijgen dan een nieuwe code.', wegKnop:'Opnieuw openen',
+        onBericht:function(m){
+          if (m.t === 'welkom' || m.t === 'spelers'){ lijst = m.spelers || []; if (o.onSpelers) o.onSpelers(lijst); return; }
+          if (m.t === 'actie'){ if (o.onActie) o.onActie(m.van, m.d, m.naam); return; }
+        },
+        onOpen:function(){ if (o.onOpen) o.onOpen(); },
+        onWacht:function(p){ if (o.onWacht) o.onWacht(p); },
+        onDicht:function(r){ if (o.onDicht) o.onDicht(r); } });
+      voorlopig.splice(0).forEach(function(m){ v.stuur(m); });
+    });
     /* De lobby krijgt alleen een lijst spelers mee en weet dus niet bij welke
        kamer hij hoort. Hier wordt de laatst geopende onthouden, zodat het
        kruisje achter een naam weet waar hij heen moet. Een pagina heeft er
@@ -111,7 +77,7 @@ window.ROLSPEL = (function(){
       stop: function(){ stuur({ t:'stop' }); },
       weg: function(pid){ stuur({ t:'weg', sid:pid }); },
       spelers: function(){ return lijst; },
-      sluit: function(){ dicht = true; if (ws){ try { ws.close(1000, 'klaar'); } catch (e){} } ws = null; }
+      sluit: function(){ weg = true; voorlopig = []; if (v) v.sluit(); }
     };
     laatsteKamer = kamer;
     return kamer;
@@ -194,7 +160,7 @@ window.ROLSPEL = (function(){
       '<div class="rollen-chips">' + spelers.map(function(s){
         return '<span class="rollen-chip' + (s.aan ? '' : ' uit') + '">' + (window.AVATAR ? AVATAR.svg(s.naam, 22, s.av) : '') + schoon(s.naam) +
           (s.rol ? '<small>' + schoon(s.rol) + '</small>' : '') +
-          '<button type="button" class="rollen-weg" title="' + schoon(s.naam) + ' verwijderen" aria-label="' + schoon(s.naam) + ' verwijderen" data-weg="' + schoon(s.sid) + '">\u00d7</button></span>';
+          '<button type="button" class="rollen-weg" title="Haal ' + schoon(s.naam) + ' uit het spel" aria-label="Haal ' + schoon(s.naam) + ' uit het spel" data-naam="' + schoon(s.naam) + '" data-weg="' + schoon(s.sid) + '">\u00d7</button></span>';
       }).join('') + '</div>' + (tekst ? '<p class="rollen-tel">' + schoon(tekst) + '</p>' : '') + '</div></div>';
     /* De lobby wordt bij elke verandering opnieuw getekend, dus de luisteraar
        hangt aan de houder en niet aan de knopjes zelf. */
@@ -203,8 +169,8 @@ window.ROLSPEL = (function(){
     el.addEventListener('click', function(e){
       var b = e.target && e.target.closest ? e.target.closest('[data-weg]') : null;
       if (!b || !laatsteKamer) return;
-      var wie = b.getAttribute('title') || 'deze leerling';
-      if (!confirm(wie.replace(' verwijderen', '') + ' uit de kamer halen? Hij kan daarna opnieuw meedoen met de code.')) return;
+      var wie = b.getAttribute('data-naam') || 'deze leerling';
+      if (!confirm(wie + ' uit het spel halen? Hij kan daarna opnieuw meedoen met de code.')) return;
       laatsteKamer.weg(b.getAttribute('data-weg'));
     });
   }
@@ -213,9 +179,18 @@ window.ROLSPEL = (function(){
     var st = document.createElement('style');
     st.textContent = '.rollen-lobby{display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr);gap:18px;align-items:start;margin:14px auto;width:min(760px,100%)}' +
       '.rollen-code{background:#14224C;color:#FBF6F1;border-radius:22px;padding:14px 20px;text-align:center;max-width:100%;min-width:0;overflow-wrap:anywhere}' +
-      '.rollen-code small{display:block;opacity:.75;font-size:.82rem;line-height:1.3}' +
-      '.rollen-code i{display:block;font-style:normal;font-weight:600;font-size:clamp(1rem,3.4vw,1.4rem);margin:2px 0 8px;overflow-wrap:anywhere}' +
+      '.rollen-code small{display:block;opacity:.8;font-size:.9rem;line-height:1.3}' +
+      /* het adres is net zo belangrijk als de code: zonder adres heb je niets aan de code */
+      '.rollen-code i{display:block;font-style:normal;font-weight:700;font-size:clamp(1.35rem,5vw,2.2rem);line-height:1.2;margin:4px 0 10px;overflow-wrap:anywhere}' +
       '.rollen-code b{display:block;font-size:clamp(2.2rem,11vw,3.6rem);letter-spacing:.18em;line-height:1.15;font-weight:700;margin:4px 0 0 .18em}' +
+      /* op het digibord (bordstand of Digibord-knop): alles groter en breder */
+      'body.bord .rollen-lobby,body.groot .rollen-lobby{width:min(1240px,100%);gap:28px}' +
+      'body.bord .rollen-code,body.groot .rollen-code{padding:22px 34px}' +
+      'body.bord .rollen-code small,body.groot .rollen-code small{font-size:clamp(1rem,1.3vw,1.4rem)}' +
+      'body.bord .rollen-code i,body.groot .rollen-code i{font-size:clamp(2rem,3.2vw,3.6rem)}' +
+      'body.bord .rollen-code b,body.groot .rollen-code b{font-size:clamp(3.6rem,7.5vw,7.5rem)}' +
+      'body.bord .rollen-tel,body.groot .rollen-tel{font-size:clamp(1rem,1.3vw,1.35rem)}' +
+      'body.bord .rollen-chip,body.groot .rollen-chip{font-size:clamp(.95rem,1.2vw,1.25rem);padding:6px 8px}' +
       '.rollen-tel{color:var(--muted);font-size:.9rem;margin:0 0 8px}.rollen-chips{display:flex;flex-wrap:wrap;gap:6px}' +
       '.rollen-chip{display:inline-flex;align-items:center;gap:6px;background:var(--kaart,#fff);border:1px solid rgba(20,34,76,.12);border-radius:999px;padding:5px 6px 5px 6px;font-weight:600;font-size:.88rem}.rollen-chip.uit{opacity:.45}.rollen-chip small{font-weight:500;color:var(--muted);font-size:.76rem}' +
       /* het kruisje om iemand eruit te halen; ruim genoeg om met een vinger te raken */

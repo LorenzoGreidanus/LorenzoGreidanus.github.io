@@ -26,19 +26,45 @@
 <link rel="stylesheet" href="basis.css">
 <link rel="stylesheet" href="spel.css">
 <style>
-.eukaart{width:min(100%,640px);height:auto;display:block;font-family:inherit}
+.eukaart{width:min(100%,640px);height:auto;display:block;margin-inline:auto;font-family:inherit;border-radius:1.164%/1.714%;overflow:hidden}
 .eukaart .zee{fill:var(--nadruk-zacht)}
 .eukaart .achter{fill:var(--kaart2);stroke:none}
 .eukaart .land{fill:var(--kaart);stroke:var(--muted);stroke-width:1;stroke-linejoin:round}
 .eukaart .gebied{cursor:pointer}
 .eukaart .gebied:hover .land{fill:var(--kaart-aan)}
-.eukaart .gebied.gekozen .land{fill:var(--nadruk);fill-opacity:.55;stroke:var(--nadruk)}
-.eukaart .gebied.goed .land{fill:var(--goed);fill-opacity:.6;stroke:var(--goed)}
-.eukaart .gebied.fout .land{fill:var(--fout);fill-opacity:.6;stroke:var(--fout)}
-.eukaart .gebied.aan .land{fill:var(--nadruk);fill-opacity:.5;stroke:var(--nadruk)}
-.eukaart .gebied.licht .land{fill:var(--amber);fill-opacity:.55}
-.eukaart text{fill:var(--ink);font-size:14px;font-weight:600;pointer-events:none;stroke:var(--kaart);stroke-width:4px;paint-order:stroke;stroke-linejoin:round}
+/* de kleuren vol gemengd, niet doorschijnend: het vasteland van Rusland ligt onder de buren en mag er niet doorheen schemeren */
+.eukaart .gebied.gekozen .land{fill:color-mix(in srgb,var(--nadruk) 55%,var(--kaart));stroke:var(--nadruk)}
+.eukaart .gebied.goed .land{fill:color-mix(in srgb,var(--goed) 60%,var(--kaart));stroke:var(--goed)}
+.eukaart .gebied.fout .land{fill:color-mix(in srgb,var(--fout) 60%,var(--kaart));stroke:var(--fout)}
+.eukaart .gebied.aan .land{fill:color-mix(in srgb,var(--nadruk) 50%,var(--kaart));stroke:var(--nadruk)}
+.eukaart .gebied.licht .land{fill:color-mix(in srgb,var(--amber) 55%,var(--kaart))}
+.eukaart text{fill:var(--ink);font-size:17px;font-weight:600;pointer-events:none;stroke:var(--kaart);stroke-width:4px;paint-order:stroke;stroke-linejoin:round}
+/* met het toetsenbord: een dikke rand om het gebied, bovenop de buren getekend */
+.eukaart .gebied:focus{outline:none}
+.eukaart .gebied:focus-visible .land{stroke:var(--ink);stroke-width:3}
+.eukaart .focusrand .land{fill:none;stroke:var(--ink);stroke-width:4;pointer-events:none}
+/* de nummers: alleen op een smal scherm, waar de namen te klein worden; ze horen bij de knoppen onder de kaart */
+.eukaart .nr{display:none;cursor:pointer}
+.eukaart .nr circle{fill:var(--ink);stroke:var(--kaart);stroke-width:3}
+.eukaart .nr.gekozen circle{fill:var(--nadruk)}
+.eukaart .nr.goed circle{fill:var(--goed)}
+.eukaart .nr.fout circle{fill:var(--fout)}
+.eukaart .nr text{fill:var(--kaart);stroke:none;font-size:32px;font-weight:700}
+.gebiedknoppen{display:none}
+.gebiedknoppen button{min-height:44px;min-width:44px;border:1.5px solid var(--rand2);border-radius:12px;background:var(--kaart);color:var(--ink);font-weight:600;font-size:1rem}
+.gebiedknoppen button[aria-pressed="true"]{border-color:var(--nadruk);background:var(--kaart-aan);box-shadow:0 0 0 3px var(--nadruk-zacht)}
+.gebiedknoppen button.goed{border-color:var(--goed);background:var(--goed-bg)}
+.gebiedknoppen button.fout{border-color:var(--fout);background:var(--fout-bg)}
+.gebiedknoppen button:disabled{cursor:default}
+.kaartuit .optel{display:none}
+@media screen and (max-width:699px){
+  .eukaart.nrs .naam{display:none}
+  .eukaart.nrs .nr{display:inline}
+  .gebiedknoppen{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;max-width:420px;margin:10px auto 0}
+  .kaartuit .optel{display:inline}
+}
 .kaartuit{text-align:center;color:var(--muted);font-size:.86rem;margin-top:6px}
+.kaartuit .toetsuit{display:block;margin-top:2px}
 .legenda{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;font-size:.82rem;color:var(--muted);margin-top:6px}
 .legenda i{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:middle;margin-right:5px}
 </style>
@@ -56,34 +82,49 @@
   var NIV = { bb:1, kgt:2, hv:3 };
 
   /* De gebieden: grove streken uit de landen van nu, zoals in een schoolatlas.
-     Het label staat op een vaste plek in de kaart (viewBox 1031 x 700). */
+     Het label staat op een vaste plek in de kaart (viewBox 1031 x 700), midden op
+     het gebied. Vast en niet uit getBBox: dan klopt het ook op het werkblad, waar de
+     kaart buiten de pagina getekend wordt. nx en ny: het nummer (telefoon) als het
+     gebied te klein is om het erop te zetten. */
   var GEBIEDEN = [
-    { id:'iberie', naam:'Iberisch schiereiland', landen:['Spanje', 'Portugal', 'Andorra'], x:180, y:520 },
-    { id:'frankrijk', naam:'Frankrijk', landen:['Frankrijk', 'Monaco'], x:300, y:400 },
-    { id:'brits', naam:'Britse eilanden', landen:['Verenigd Koninkrijk', 'Ierland'], x:225, y:250 },
-    { id:'nederlanden', naam:'de Nederlanden', landen:['Nederland', 'België', 'Luxemburg'], x:335, y:300 },
-    { id:'duits', naam:'Duitse gebieden', landen:['Duitsland', 'Oostenrijk', 'Zwitserland', 'Tsjechië', 'Liechtenstein'], x:430, y:340 },
-    { id:'italie', naam:'Italië', landen:['Italië', 'San Marino', 'Malta'], x:445, y:470 },
-    { id:'scandinavie', naam:'Scandinavië', landen:['Noorwegen', 'Zweden', 'Denemarken', 'Finland', 'IJsland'], x:470, y:130 },
-    { id:'oost', naam:'Oost-Europa', landen:['Polen', 'Slowakije', 'Hongarije', 'Oekraïne', 'Wit-Rusland', 'Litouwen', 'Letland', 'Estland', 'Moldavië', 'Roemenië'], x:600, y:300 },
-    { id:'rusland', naam:'Rusland', landen:['Rusland'], x:820, y:200 },
-    { id:'balkan', naam:'de Balkan', landen:['Griekenland', 'Bulgarije', 'Servië', 'Kroatië', 'Bosnië en Herzegovina', 'Slovenië', 'Montenegro', 'Albanië', 'Kosovo', 'Noord-Macedonië'], x:560, y:470 },
-    { id:'kleinazie', naam:'Klein-Azië', landen:['Turkije', 'Cyprus'], x:800, y:560 }
+    { id:'iberie', naam:'Iberisch schiereiland', landen:['Spanje', 'Portugal', 'Andorra'], x:335, y:580 },
+    { id:'frankrijk', naam:'Frankrijk', landen:['Frankrijk', 'Monaco'], x:422, y:478 },
+    { id:'brits', naam:'Britse eilanden', landen:['Verenigd Koninkrijk', 'Ierland'], x:382, y:332 },
+    { id:'nederlanden', naam:'de Nederlanden', landen:['Nederland', 'België', 'Luxemburg'], x:462, y:382, nx:444, ny:346 },
+    { id:'duits', naam:'Duitse gebieden', landen:['Duitsland', 'Oostenrijk', 'Zwitserland', 'Tsjechië', 'Liechtenstein'], x:540, y:420 },
+    { id:'italie', naam:'Italië', landen:['Italië', 'San Marino', 'Malta'], x:548, y:538 },
+    { id:'scandinavie', naam:'Scandinavië', landen:['Noorwegen', 'Zweden', 'Denemarken', 'Finland', 'IJsland'], x:572, y:200 },
+    { id:'oost', naam:'Oost-Europa', landen:['Polen', 'Slowakije', 'Hongarije', 'Oekraïne', 'Wit-Rusland', 'Litouwen', 'Letland', 'Estland', 'Moldavië', 'Roemenië'], x:705, y:402 },
+    { id:'rusland', naam:'Rusland', landen:['Rusland'], x:870, y:240 },
+    { id:'balkan', naam:'de Balkan', landen:['Griekenland', 'Bulgarije', 'Servië', 'Kroatië', 'Bosnië en Herzegovina', 'Slovenië', 'Montenegro', 'Albanië', 'Kosovo', 'Noord-Macedonië'], x:655, y:545 },
+    { id:'kleinazie', naam:'Klein-Azië', landen:['Turkije', 'Cyprus'], x:870, y:550 }
   ];
+  /* In de kaartgegevens zit van Rusland alleen Kaliningrad en de Krim. Het vasteland
+     tot de rand van de kaart tekenen we hier grof bij; de westkant ligt onder de buren,
+     die er daarna overheen komen, zodat de grens van hen is. */
+  var RUSLAND_VAST = 'M647,39L680,32L720,34L755,45L770,62L748,72L742,90L760,112L785,108L800,85L790,66L812,50L850,40L900,30L960,20L1040,6L1040,-10' +
+    'L1040,446L905,446L885,452L866,444L852,432L841,422L853,408L866,386L858,364L828,359L794,356L776,339L748,339L755,321L731,292L698,289' +
+    'L683,262L686,240L699,228L680,207L689,183L691,162L672,129L653,101Z';
   var LAND = {}; K.landen.forEach(function(l){ LAND[l.n] = l.d; });
   function gebiedVan(id){ return GEBIEDEN.filter(function(g){ return g.id === id; })[0]; }
-  /* de kaart: elk gebied een groep met de landen erin; klassen per gebied (aan, licht, goed, fout) */
+  /* de kaart: elk gebied een groep met de landen erin; klassen per gebied (aan, licht, goed, fout).
+     o.wijs: de kaart om aan te wijzen, met gebieden als knoppen (pijltjes en Enter) en o.nrs de nummers erbij */
   function kaart(o){
     o = o || {};
-    var s = '<svg class="eukaart" viewBox="0 0 ' + K.breed + ' ' + K.hoog + '" role="img" aria-label="kaart van Europa">';
+    var s = '<svg class="eukaart' + (o.wijs ? ' wijs' : '') + (o.nrs ? ' nrs' : '') + '" viewBox="0 0 ' + K.breed + ' ' + K.hoog + '" role="' + (o.wijs ? 'group' : 'img') + '" aria-label="kaart van Europa">';
     s += '<rect class="zee" x="0" y="0" width="' + K.breed + '" height="' + K.hoog + '" rx="12"/>';
     if (K.achter) s += '<path class="achter" d="' + K.achter + '"/>';
-    GEBIEDEN.forEach(function(g){
+    /* Rusland eerst, want zijn vasteland ligt onder de buren */
+    [gebiedVan('rusland')].concat(GEBIEDEN.filter(function(g){ return g.id !== 'rusland'; })).forEach(function(g){
       var kl = (o.klassen && o.klassen[g.id]) || '';
-      s += '<g class="gebied ' + kl + '" data-g="' + g.id + '">' + g.landen.map(function(n){ return LAND[n] ? '<path class="land" d="' + LAND[n] + '"/>' : ''; }).join('') + '</g>';
+      s += '<g class="gebied ' + kl + '" data-g="' + g.id + '"' + (o.wijs ? ' role="button" tabindex="' + (g === GEBIEDEN[0] ? 0 : -1) + '" aria-pressed="false" aria-label="' + S(g.naam) + '"' : '') + '>' +
+        (g.id === 'rusland' ? '<path class="land" d="' + RUSLAND_VAST + '"/>' : '') +
+        g.landen.map(function(n){ return LAND[n] ? '<path class="land" d="' + LAND[n] + '"/>' : ''; }).join('') + '</g>';
     });
     /* de niet ingedeelde landjes blijven grijs mee tekenen */
-    if (o.namen !== false) GEBIEDEN.forEach(function(g){ s += '<text x="' + g.x + '" y="' + g.y + '" text-anchor="middle">' + S(g.naam) + '</text>'; });
+    if (o.namen !== false) GEBIEDEN.forEach(function(g){ s += '<text class="naam" x="' + g.x + '" y="' + g.y + '" text-anchor="middle" aria-hidden="true">' + S(g.naam) + '</text>'; });
+    if (o.nrs) GEBIEDEN.forEach(function(g, i){ var x = g.nx || g.x, y = g.ny || (g.y - 6); s += '<g class="nr" data-g="' + g.id + '" aria-hidden="true"><circle cx="' + x + '" cy="' + y + '" r="25"/><text x="' + x + '" y="' + (y + 11) + '" text-anchor="middle">' + (i + 1) + '</text></g>'; });
+    if (o.wijs) s += '<g class="focusrand" aria-hidden="true"></g>';
     return s + '</svg>';
   }
 
@@ -135,23 +176,55 @@
       vraag:'Tik op de kaart het gebied aan van <b>' + S(it.v) + '</b>.', opdracht:'De kaart laat de landen van nu zien, verdeeld in grote gebieden. Tijdvak ' + it.tv + '.',
       uitleg: it.uit, antwoordTekst: it.goed.map(function(g){ return gebiedVan(g).naam; }).join(' of '),
       teken:function(el, api){
-        el.innerHTML = kaart({}) + '<p class="kaartuit" id="kaartuit">Tik een gebied aan; nog eens tikken kiest een ander.</p>';
-        var svg = el.querySelector('svg'), gekozen = null;
-        svg.addEventListener('click', function(e){
-          var g = e.target.closest('.gebied'); if (!g || !api.bezig()) return;
-          Array.prototype.forEach.call(svg.querySelectorAll('.gebied'), function(x){ x.classList.remove('gekozen'); });
-          g.classList.add('gekozen'); gekozen = g.getAttribute('data-g');
-          el.querySelector('#kaartuit').textContent = 'Gekozen: ' + gebiedVan(gekozen).naam + '. Klopt het? Druk op Nakijken.';
-          knop.disabled = false;
+        /* in het spel (niet op het werkblad, waar el nog buiten de pagina hangt): nummers op de kaart en knoppen eronder voor een smal scherm */
+        var inSpel = document.body.contains(el);
+        el.innerHTML = kaart({ wijs:true, nrs:inSpel }) +
+          (inSpel ? '<div class="gebiedknoppen" role="group" aria-label="gebieden op nummer">' + GEBIEDEN.map(function(g, i){ return '<button type="button" data-g="' + g.id + '" aria-pressed="false" aria-label="gebied ' + (i + 1) + '">' + (i + 1) + '</button>'; }).join('') + '</div>' : '') +
+          '<p class="kaartuit" id="kaartuit" aria-live="polite">Tik een gebied aan<span class="optel">, op de kaart of bij de nummers</span>; nog eens tikken kiest een ander.' +
+          '<span class="toetsuit">Met het toetsenbord: Tab naar de kaart, kies met de pijltjes en Enter.</span></p>';
+        var svg = el.querySelector('svg'), gekozen = null, ring = svg.querySelector('.focusrand');
+        function alle(sel, f){ Array.prototype.forEach.call(el.querySelectorAll(sel), f); }
+        function nummer(id){ return GEBIEDEN.indexOf(gebiedVan(id)) + 1; }
+        /* een gebied kiezen: met de muis, een vinger, een nummerknop of Enter; overal hetzelfde */
+        function pak(id){
+          if (!api.bezig()) return;
+          gekozen = id;
+          alle('[data-g]', function(x){ var aan = x.getAttribute('data-g') === id; x.classList.toggle('gekozen', aan); if (x.hasAttribute('aria-pressed')) x.setAttribute('aria-pressed', aan ? 'true' : 'false'); });
+          el.querySelector('#kaartuit').innerHTML = 'Gekozen: <span class="optel">' + nummer(id) + ', </span>' + S(gebiedVan(id).naam) + '. Klopt het? Druk op Nakijken.';
+        }
+        el.addEventListener('click', function(e){
+          var g = e.target.closest('[data-g]'); if (!g || !api.bezig()) return;
+          pak(g.getAttribute('data-g'));
         });
+        /* het toetsenbord: de kaart is één tabstop, de pijltjes lopen de gebieden langs (in de volgorde van de nummers) */
+        function gebiedEl(i){ return svg.querySelector('.gebied[data-g="' + GEBIEDEN[i].id + '"]'); }
+        svg.addEventListener('keydown', function(e){
+          var g = e.target.closest && e.target.closest('.gebied'); if (!g) return;
+          var i = nummer(g.getAttribute('data-g')) - 1, n = GEBIEDEN.length, j = -1;
+          if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); e.stopPropagation(); pak(g.getAttribute('data-g')); return; }
+          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') j = (i + 1) % n;
+          else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') j = (i + n - 1) % n;
+          else if (e.key === 'Home') j = 0;
+          else if (e.key === 'End') j = n - 1;
+          if (j < 0) return;
+          e.preventDefault();
+          g.setAttribute('tabindex', '-1'); var nw = gebiedEl(j); nw.setAttribute('tabindex', '0'); nw.focus();
+        });
+        /* de focusrand bovenop de buren; het vasteland van Rusland niet, dat ligt deels onder hen */
+        svg.addEventListener('focusin', function(e){
+          var g = e.target.closest && e.target.closest('.gebied'); ring.innerHTML = '';
+          if (g && g.matches(':focus-visible')) ring.innerHTML = Array.prototype.map.call(g.querySelectorAll('.land'), function(p){ return p.getAttribute('d') === RUSLAND_VAST ? '' : '<path class="land" d="' + p.getAttribute('d') + '"/>'; }).join('');
+        });
+        svg.addEventListener('focusout', function(){ ring.innerHTML = ''; });
         var knop = api.knop('Nakijken', function(){
-          if (!gekozen) return;
+          /* nog niets gekozen: geen fout, eerst kiezen */
+          if (!gekozen){ api.uit('Kies eerst een gebied op de kaart.'); return; }
           var ok = it.goed.indexOf(gekozen) >= 0;
-          Array.prototype.forEach.call(svg.querySelectorAll('.gebied'), function(x){ var id = x.getAttribute('data-g'); x.classList.remove('gekozen'); if (it.goed.indexOf(id) >= 0) x.classList.add('goed'); else if (id === gekozen) x.classList.add('fout'); });
+          alle('[data-g]', function(x){ var id = x.getAttribute('data-g'); x.classList.remove('gekozen'); if (it.goed.indexOf(id) >= 0) x.classList.add('goed'); else if (id === gekozen) x.classList.add('fout'); });
+          alle('.gebiedknoppen button', function(b){ b.disabled = true; });
           knop.disabled = true;
           api.klaar(ok, ok ? '' : 'Jij koos ' + gebiedVan(gekozen).naam + '; het is ' + it.goed.map(function(g){ return gebiedVan(g).naam; }).join(' of ') + ' (groen).');
         });
-        knop.disabled = true;
         el.proef = function(){ svg.querySelector('.gebied[data-g="' + it.goed[0] + '"]').dispatchEvent(new MouseEvent('click', { bubbles:true })); knop.click(); };
         el.proefFout = function(){ var f = GEBIEDEN.filter(function(g){ return it.goed.indexOf(g.id) < 0; })[0]; svg.querySelector('.gebied[data-g="' + f.id + '"]').dispatchEvent(new MouseEvent('click', { bubbles:true })); knop.click(); };
       } };

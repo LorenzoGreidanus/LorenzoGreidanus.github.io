@@ -57,10 +57,17 @@ button{cursor:pointer;touch-action:manipulation}
 .opties{display:grid;gap:8px;margin-top:14px}
 .optie{border:2px solid var(--rand2);background:var(--kaart2);border-radius:16px;padding:14px 16px;text-align:left;font-weight:600;font-size:1.02rem;display:flex;gap:10px;align-items:center;min-height:52px}
 .optie i{width:12px;height:12px;border-radius:50%;flex:none;background:var(--ocean)}
-.optie.aan{border-color:var(--ocean);background:var(--ocean);color:#fff}
-.optie.aan i{background:#fff}
+/* De gekozen optie krijgt de kleur van die optie (groen voor, rood tegen),
+   niet voor alles hetzelfde blauw: anders zie je niet meer wat je koos.
+   --ok en --okt (de letterkleur erop) zet het script per optie. */
+.optie.aan{border-color:var(--ok,var(--ocean));background:var(--ok,var(--ocean));color:var(--okt,#fff)}
+.optie.aan i{background:var(--okt,#fff) !important}
+.optie.aan::after{content:"\2713";margin-left:auto;font-weight:700;font-size:1.2rem}
 .optie small{display:block;font-weight:400;font-size:.82rem;color:var(--muted);margin-top:2px}
-.optie.aan small{color:rgba(255,255,255,.85)}
+.optie.aan small{color:inherit;opacity:.88}
+.gestuurd.nog{color:#8a4b00}
+:root[data-theme="dark"] .gestuurd.nog{color:#ffd08a}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .gestuurd.nog{color:#ffd08a}}
 .optie:disabled{opacity:.55;cursor:default}
 .gestuurd{margin-top:10px;font-size:.9rem;color:var(--goed);font-weight:600;min-height:1.3em}
 .lat{margin-top:14px}
@@ -73,11 +80,12 @@ button{cursor:pointer;touch-action:manipulation}
 @keyframes stip{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}
 .uitslag ul{margin:10px 0 0;padding-left:1.2rem;font-size:.92rem}
 .mag-niet{background:var(--fout-bg);color:var(--fout);border-radius:14px;padding:12px 14px;font-weight:600;margin-top:12px}
-footer{text-align:center;font-size:.8rem;color:var(--muted);padding:20px 0}
+footer{text-align:center;font-size:.8rem;color:var(--muted);padding:20px 16px}
 :focus-visible{outline:3px solid var(--focusring,#B4701A);outline-offset:3px}
 </style>
 <script src="/vangnet.js" defer></script>
 <script src="wakker.js"></script>
+<script src="verbinding.js"></script>
 </head>
 <body>
 <main class="wrap">
@@ -111,10 +119,7 @@ footer{text-align:center;font-size:.8rem;color:var(--muted);padding:20px 0}
     if (!s){ var r = new Uint8Array(12); crypto.getRandomValues(r); s = Array.prototype.map.call(r, function(b){ return ('0' + b.toString(16)).slice(-2); }).join(''); try { localStorage.setItem('lg-quiz-sid', s); } catch (e){} }
     return s;
   }
-  var ws = null, dicht = false, pogingen = 0, code = '', naam = '', rol = null, nu = null, gekozen = {}, klaar = false;
-  /* de verbinding levend houden, en merken als hij na slaap of wifi-uitval stil dood is (wakker.js) */
-  (function(){ function aan(){ if (window.WAKKER) WAKKER({ ws:function(){ return ws; }, dicht:function(){ return dicht; } }); }
-    if (document.readyState === 'complete') aan(); else addEventListener('load', aan); })();
+  var verb = null, code = '', naam = '', rol = null, nu = null, gekozen = {}, klaar = false;
 
   /* ---------- meedoen ---------- */
   var param = /[?&]k=([A-Za-z]{4})/.exec(location.search);
@@ -150,31 +155,37 @@ footer{text-align:center;font-size:.8rem;color:var(--muted);padding:20px 0}
 
   /* ---------- de verbinding ---------- */
   function status(t){ $('status').textContent = t || ''; }
+  /* Via verbinding.js: zolang de verbinding hapert staat er een strook
+     onderaan, en een keuze die niet weg kon gaat mee zodra hij terug is.
+     stuur() zegt of het echt weg is; pas dan staat er "Verstuurd". */
   function verbind(){
-    if (dicht) return;
-    var proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
-    var s = new WebSocket(proto + location.host + '/ws/' + code + '?rol=speler&sid=' + encodeURIComponent(sid()) + '&naam=' + encodeURIComponent(naam) + '&av=' + encodeURIComponent(window.PROFIEL ? PROFIEL.avatar() : ''));
-    ws = s;
-    s.onopen = function(){ pogingen = 0; status(''); };
-    s.onmessage = function(e){ var m; try { m = JSON.parse(e.data); } catch (x){ return; } bericht(m); };
-    s.onclose = function(e){
-      if (ws !== s) return;
-      ws = null;
-      if (dicht) return;
-      if (e.code === 1000 && /verwijderd/.test(e.reason || '')){ dicht = true; bericht({ t:'eruit' }); return; }
-      if (e.code === 1000 && /gesloten|afgelopen/.test(e.reason || '')){ status(e.reason); dicht = true; toon({ soort:'wacht', titel:'Klaar', tekst:e.reason }); return; }
-      pogingen++; status('Opnieuw verbinden…');
-      setTimeout(verbind, Math.min(8000, 800 * pogingen));
-    };
+    verb = VERBINDING.maak({ rol:'speler',
+      pad:code + '?rol=speler&sid=' + encodeURIComponent(sid()) + '&naam=' + encodeURIComponent(naam) + '&av=' + encodeURIComponent(window.PROFIEL ? PROFIEL.avatar() : ''),
+      onBericht:bericht,
+      onOpen:function(){ status(''); },
+      onEruit:function(){ bericht({ t:'eruit' }); },
+      onDicht:function(reden){ status(reden); toon({ soort:'wacht', titel:'Klaar', tekst:reden }); } });
   }
-  function stuur(m){ if (ws && ws.readyState === 1){ try { ws.send(JSON.stringify(m)); } catch (e){} } }
+  function stuur(m, x){ return verb ? verb.stuur(m, x) : false; }
+  /* de regel onder de knoppen: verstuurd, of nog niet */
+  function zegGestuurd(weg, tekst){
+    var g = $('gestuurd'); if (!g) return;
+    g.classList.toggle('nog', !weg);
+    g.textContent = weg ? tekst : 'Nog niet verstuurd, we proberen het opnieuw. Zodra de verbinding terug is, gaat je keuze vanzelf naar het bord.';
+  }
+  /* donkere optiekleur: witte letter; lichte: donkerblauwe */
+  function letterOp(kleur){
+    var m = /^#([0-9a-f]{6})$/i.exec(kleur || ''); if (!m) return '#fff';
+    var n = parseInt(m[1], 16), r = n >> 16 & 255, g = n >> 8 & 255, b = n & 255;
+    return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? '#14224C' : '#fff';
+  }
 
   /* Een kaart van het bord: de rolkaart blijft staan, de rest vervangt wat er
      nu staat. Elke kaart heeft een volgnummer, zodat een oude nooit een nieuwe
      overschrijft (het bord voor iedereen en de kaart voor jou lopen door elkaar). */
   var laatsteN = 0;
   function bericht(m){
-    if (m.t === 'eruit'){ dicht = true; klaar = true; try { if (ws) ws.close(1000, 'eruit'); } catch (x){} ws = null; status(''); toon({ soort:'wacht', titel:'Je bent uit het spel gehaald', tekst:'Je docent heeft je uit deze kamer gehaald. Was dat een vergissing? Laad deze pagina opnieuw, dan doe je weer mee.' }); return; }
+    if (m.t === 'eruit'){ klaar = true; if (verb) verb.sluit(); status(''); toon({ soort:'wacht', titel:'Je bent uit het spel gehaald', tekst:'Je docent heeft je uit deze kamer gehaald. Was dat een vergissing? Laad deze pagina opnieuw, dan doe je weer mee.' }); return; }
     if (m.t === 'kaart' || m.t === 'bord'){
       var d = m.d; if (!d || typeof d !== 'object') return;
       if (d.soort === 'rol'){ rol = d; tekenRol(); return; }
@@ -203,14 +214,16 @@ footer{text-align:center;font-size:.8rem;color:var(--muted);padding:20px 0}
       var keus = gekozen[d.id], items = d.soort === 'vraag' ? (d.opties || []) : (d.items || []);
       h = '<p class="eyebrow">' + schoon(d.kop || (d.soort === 'vraag' ? 'jij mag stemmen' : 'jouw keuze')) + '</p><h2>' + schoon(d.titel || '') + '</h2>' + (d.tekst ? '<p class="tekst">' + schoon(d.tekst) + '</p>' : '') +
         '<div class="opties">' + items.map(function(o){
-          return '<button type="button" class="optie' + (keus === o.id ? ' aan' : '') + '" data-id="' + schoon(o.id) + '"' + (d.dicht ? ' disabled' : '') + '><i' + (o.kleur ? ' style="background:' + schoon(o.kleur) + '"' : '') + '></i><span>' + schoon(o.tekst) + (o.onder ? '<small>' + schoon(o.onder) + '</small>' : '') + '</span></button>';
-        }).join('') + '</div><p class="gestuurd" id="gestuurd">' + (keus ? 'Verstuurd. Je mag nog wisselen tot het bord de stemming sluit.' : '') + '</p>' +
+          var kl = /^#[0-9a-f]{6}$/i.test(o.kleur || '') ? o.kleur : '';
+          return '<button type="button" class="optie' + (keus === o.id ? ' aan' : '') + '" data-id="' + schoon(o.id) + '"' + (keus === o.id ? ' aria-pressed="true"' : ' aria-pressed="false"') +
+            (kl ? ' style="--ok:' + kl + ';--okt:' + letterOp(kl) + '"' : '') + (d.dicht ? ' disabled' : '') + '><i' + (kl ? ' style="background:' + kl + '"' : '') + '></i><span>' + schoon(o.tekst) + (o.onder ? '<small>' + schoon(o.onder) + '</small>' : '') + '</span></button>';
+        }).join('') + '</div><p class="gestuurd" id="gestuurd" role="status">' + (keus ? 'Verstuurd. Je mag nog wisselen tot het bord de stemming sluit.' : '') + '</p>' +
         (d.meer ? '<p class="meer">' + schoon(d.meer) + '</p>' : '');
     } else if (d.soort === 'lat'){
       var w = gekozen[d.id] !== undefined ? gekozen[d.id] : (d.waarde !== undefined ? d.waarde : 50);
       h = '<p class="eyebrow">' + schoon(d.kop || 'jouw oordeel') + '</p><h2>' + schoon(d.titel || '') + '</h2>' + (d.tekst ? '<p class="tekst">' + schoon(d.tekst) + '</p>' : '') +
         '<div class="lat"><div class="waarde" id="latWaarde">' + w + '</div><input type="range" min="0" max="100" value="' + w + '" id="latIn" aria-label="Schuif"><div class="einden"><span>' + schoon(d.links || '') + '</span><span>' + schoon(d.rechts || '') + '</span></div></div>' +
-        '<button class="knop" id="latZend" type="button"' + (d.dicht ? ' disabled' : '') + '>Zet mijn merkteken</button><p class="gestuurd" id="gestuurd">' + (gekozen[d.id] !== undefined ? 'Verstuurd. Schuif en druk nog eens als je wilt wisselen.' : '') + '</p>';
+        '<button class="knop" id="latZend" type="button"' + (d.dicht ? ' disabled' : '') + '>Zet mijn merkteken</button><p class="gestuurd" id="gestuurd" role="status">' + (gekozen[d.id] !== undefined ? 'Verstuurd. Schuif en druk nog eens als je wilt wisselen.' : '') + '</p>';
     } else if (d.soort === 'uitslag'){
       h = '<div class="uitslag"><p class="eyebrow">' + schoon(d.kop || 'uitslag') + '</p><h2>' + schoon(d.titel || '') + '</h2>' + (d.tekst ? '<p class="tekst">' + schoon(d.tekst) + '</p>' : '') +
         (d.regels && d.regels.length ? '<ul>' + d.regels.map(function(r){ return '<li>' + schoon(r) + '</li>'; }).join('') + '</ul>' : '') + '</div>';
@@ -224,9 +237,10 @@ footer{text-align:center;font-size:.8rem;color:var(--muted);padding:20px 0}
       b.addEventListener('click', function(){
         if (d.dicht) return;
         gekozen[d.id] = b.getAttribute('data-id');
-        Array.prototype.forEach.call(el.querySelectorAll('.optie'), function(x){ x.classList.toggle('aan', x === b); });
-        stuur({ t:'actie', d:{ vraag:d.id, keuze:gekozen[d.id] } });
-        $('gestuurd').textContent = 'Verstuurd. Je mag nog wisselen tot het bord de stemming sluit.';
+        Array.prototype.forEach.call(el.querySelectorAll('.optie'), function(x){ x.classList.toggle('aan', x === b); x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+        var tekst = 'Verstuurd. Je mag nog wisselen tot het bord de stemming sluit.';
+        var weg = stuur({ t:'actie', d:{ vraag:d.id, keuze:gekozen[d.id] } }, { daarna:function(){ if (nu === d) zegGestuurd(true, tekst); } });
+        zegGestuurd(weg, tekst);
         if (navigator.vibrate) navigator.vibrate(30);
       });
     });
@@ -235,8 +249,9 @@ footer{text-align:center;font-size:.8rem;color:var(--muted);padding:20px 0}
       li.addEventListener('input', function(){ $('latWaarde').textContent = li.value; });
       $('latZend').addEventListener('click', function(){
         gekozen[d.id] = parseInt(li.value, 10);
-        stuur({ t:'actie', d:{ vraag:d.id, waarde:gekozen[d.id] } });
-        $('gestuurd').textContent = 'Verstuurd: ' + li.value + '. Schuif en druk nog eens als je wilt wisselen.';
+        var tekst = 'Verstuurd: ' + li.value + '. Schuif en druk nog eens als je wilt wisselen.';
+        var weg = stuur({ t:'actie', d:{ vraag:d.id, waarde:gekozen[d.id] } }, { daarna:function(){ if (nu === d) zegGestuurd(true, tekst); } });
+        zegGestuurd(weg, tekst);
         if (navigator.vibrate) navigator.vibrate(30);
       });
     }

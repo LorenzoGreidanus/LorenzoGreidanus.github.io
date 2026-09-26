@@ -36,6 +36,30 @@
 @media (max-width:560px){.leestekst{padding:14px 14px 16px}.leestekst p{font-size:.94rem}}
 body.groot .leestekst{max-width:820px}
 body.groot .leestekst p{font-size:1.2rem}
+/* De tekst en de vraag samen in beeld. Het tekstvak heeft een vaste hoogte en je scrolt erin; een schaduw aan
+   de boven- of onderrand laat zien dat er nog tekst is, en eronder staat dat de tekst verdergaat. Op een breed
+   scherm staat de tekst links en de vraag met de antwoorden rechts, en de tekst blijft staan als je verder scrolt.
+   Alleen in het spel: op een werkblad staat de hele tekst gewoon op papier. */
+:root{--randschaduw:rgba(20,34,76,.32)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--randschaduw:rgba(0,0,0,.7)}}
+:root[data-theme="dark"]{--randschaduw:rgba(0,0,0,.7)}
+#scherm-spel .leestekst{position:relative;overflow-y:auto;max-height:min(46vh,30rem);scrollbar-width:thin;scrollbar-color:var(--muted) transparent;
+  background:linear-gradient(var(--kaart2) 30%, transparent) center top / 100% 36px no-repeat local,
+    linear-gradient(transparent, var(--kaart2) 70%) center bottom / 100% 36px no-repeat local,
+    radial-gradient(farthest-side at 50% 0, var(--randschaduw), transparent) center top / 100% 14px no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, var(--randschaduw), transparent) center bottom / 100% 14px no-repeat scroll,
+    var(--kaart2)}
+#scherm-spel .leestekst:focus-visible{outline:3px solid var(--nadruk);outline-offset:2px}
+.meertekst{margin-top:6px;font-size:.8rem;color:var(--muted);text-align:center}
+@media (min-width:900px){
+  #scherm-spel .kaart{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);grid-template-rows:repeat(6,auto) 1fr;column-gap:28px;align-items:start}
+  #scherm-spel .kaart>*{grid-column:2;min-width:0}
+  #scherm-spel .kaart>#beeld{grid-column:1;grid-row:1 / -1;position:sticky;top:78px;margin:0;display:block}
+  #scherm-spel .kaart>.onderdeel,#scherm-spel .kaart>.vraag,#scherm-spel .kaart>.opdracht{text-align:left}
+  #scherm-spel .leestekst{max-width:none;max-height:calc(100vh - 190px)}
+  /* de vier vakken voor de volgorde twee aan twee: in de smallere kolom passen er geen vier naast elkaar */
+  #scherm-spel .vakken.rij{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 </style>
 <script src="/vangnet.js" defer></script>
 </head>
@@ -55,7 +79,21 @@ body.groot .leestekst p{font-size:1.2rem}
   function tekstvak(t, woord){
     var html = S(t.tekst);
     if (woord) html = html.replace(new RegExp('\\b(' + woord + ')\\b'), '<b class="ws">$1</b>');
-    return '<article class="leestekst"><h3>' + S(t.kop) + '</h3>' + html.split(/\n\n/).map(function(p){ return '<p>' + p + '</p>'; }).join('') + '</article>';
+    /* tabindex en een naam: met het toetsenbord kun je in het vak scrollen (pijltjes), een schermlezer noemt het "de tekst" */
+    return '<article class="leestekst" tabindex="0" role="region" aria-label="De tekst: ' + S(t.kop) + '"><h3>' + S(t.kop) + '</h3>' + html.split(/\n\n/).map(function(p){ return '<p>' + p + '</p>'; }).join('') + '</article>';
+  }
+  /* na het tekenen: past de tekst niet in het vak, dan staat eronder dat hij verdergaat (tot je onderaan bent),
+     en bij een woordvraag schuift het vak naar de zin met het vette woord */
+  function tekstInBeeld(){
+    var t = document.querySelector('#beeld .leestekst'); if (!t) return;
+    var ws = t.querySelector('.ws');
+    if (ws && ws.offsetTop + ws.offsetHeight > t.clientHeight - 10) t.scrollTop = Math.max(0, ws.offsetTop - t.clientHeight / 3);
+    if (t.scrollHeight <= t.clientHeight + 4) return;
+    var meer = document.createElement('p'); meer.className = 'meertekst'; meer.setAttribute('aria-hidden', 'true');
+    meer.textContent = 'De tekst gaat verder: scroll in het tekstvak.';
+    t.parentNode.insertBefore(meer, t.nextSibling);
+    function kijk(){ meer.style.visibility = t.scrollTop + t.clientHeight >= t.scrollHeight - 6 ? 'hidden' : ''; }
+    t.addEventListener('scroll', kijk, { passive:true }); kijk();
   }
 
   /* alle vragen als losse eenheden, met een sleutel per vraag */
@@ -84,7 +122,7 @@ body.groot .leestekst p{font-size:1.2rem}
     if (e.soort === 'volgorde'){
       var items = q.items.map(function(x, i){ return { id:'g' + i, tekst:S(x) }; });
       return Object.assign(basis, {
-        vorm:'sleep', vraag:'Put the events in the right order.', opdracht:'Lees de tekst en zet de vier gebeurtenissen op volgorde: kaartje 1 gebeurt het eerst.',
+        vorm:'sleep', vraag:'Zet de gebeurtenissen in de goede volgorde.', opdracht:'Lees de tekst: in vak 1 komt wat het eerst gebeurt.', na: tekstInBeeld,
         beeld: tekstvak(t), kaarten: items,
         vakken: items.map(function(x, i){ return { id:'p' + i, max:1, hoort:[x.id] }; }),
         sleepuit:'Sleep elk kaartje naar een vak. Op een telefoon: tik een kaartje aan en dan het vak.',
@@ -98,7 +136,7 @@ body.groot .leestekst p{font-size:1.2rem}
     return Object.assign(basis, {
       vorm:'meerkeuze', vraag: vraag, opdracht: opdracht, beeld: tekstvak(t, e.soort === 'woord' ? q.w : null),
       opties: q.o.map(S), goed: q.g, vasteVolgorde: e.soort === 'detail' && q.o.length <= 3,
-      uitleg: q.uit, antwoordTekst: '(' + t.kop + ') ' + q.o[q.g]
+      uitleg: q.uit, antwoordTekst: '(' + t.kop + ') ' + q.o[q.g], na: tekstInBeeld
     });
   }
 
@@ -107,7 +145,7 @@ body.groot .leestekst p{font-size:1.2rem}
     hand:'lees eerst, antwoord dan',
     lead:'Vierentwintig korte Engelse teksten over school, sport, dieren, reizen, eten en het nieuws. Bij elke tekst vragen zoals op een leestoets: wat is de hoofdgedachte, klopt dit detail, wat betekent dit woord hier, en in welke volgorde gebeurde het? De tekst blijft in beeld.',
     hoe:[
-      { kop:'De tekst staat erbij', tekst:'Je hoeft niets te onthouden: de tekst blijft boven de vraag staan. Lees de vraag, zoek de zin in de tekst en kies dan pas.' },
+      { kop:'De tekst staat erbij', tekst:'Je hoeft niets te onthouden: de tekst blijft bij de vraag staan. Past hij niet helemaal, dan scroll je in het tekstvak. Lees de vraag, zoek de zin in de tekst en kies dan pas.' },
       { kop:'Vier soorten vragen', tekst:'<b>Hoofdgedachte</b>: waar gaat de hele tekst over. <b>Detail</b>: klopt dit, of staat het er niet. <b>Woord</b>: wat betekent het hier. <b>Volgorde</b>: sleep de gebeurtenissen op een rij.' },
       { kop:'Met uitleg', tekst:'Bij elk antwoord staat de zin uit de tekst waar het aan te zien was. Tien vragen per ronde, elke tekst komt voorbij.' }
     ],
@@ -119,7 +157,7 @@ body.groot .leestekst p{font-size:1.2rem}
       { id:'soort', kop:'wat oefen je', std:'alles', items:[
         { id:'alles', naam:'alles door elkaar' }, { id:'hoofd', naam:'hoofdgedachte' }, { id:'detail', naam:'detail' }, { id:'woord', naam:'woord uit de context' }, { id:'volgorde', naam:'volgorde' } ] }
     ],
-    aantal:10,
+    aantal:10, minuten:10,
     maak:function(keuze, nr){
       if (nr === 1) gebruikt = {};
       return maakOpgave(pak(keuze.niveau, keuze.soort));

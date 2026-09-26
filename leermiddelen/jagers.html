@@ -24,7 +24,7 @@
 <meta name="twitter:card" content="summary">
 <meta name="theme-color" content="#FBF6F1">
 <link rel="stylesheet" href="../fonts.css?v=2">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%232f7d52'/><text x='50' y='68' font-family='Poppins,Arial' font-size='46' font-weight='600' fill='%23FBF6F1' text-anchor='middle'>LG</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%232f7d52'/><circle cx='72' cy='30' r='9' fill='%23EA9836'/><path d='M18 78 L46 30 L74 78 Z' fill='%23FBF6F1'/><path d='M46 30 L46 78 M40 78 L46 58 L52 78' stroke='%232f7d52' stroke-width='5' stroke-linejoin='round' fill='none'/><path d='M12 80 H88' stroke='%23FBF6F1' stroke-width='5' stroke-linecap='round'/></svg>">
 <style>
 :root{--crab:#F26749;--amber:#EA9836;--ocean:#204ECF;--vista:#83A5F2;--sand:#FCDED6;--room:#FBF6F1;
   --ink:#14224C;--muted:#5b6480;--goed:#2f7d52;--goed-bg:#e7f3ec;--fout:#c0442c;--fout-bg:#fdecea;
@@ -72,7 +72,9 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
   margin-bottom:10px;box-shadow:0 10px 26px rgba(20,34,76,.08)}
 .landvak svg{display:block;width:100%;height:auto;touch-action:manipulation}
 .landsvg .plek:hover rect{opacity:.08 !important;stroke:var(--ocean) !important}
-.landtip{font-size:.84rem;color:var(--muted);margin-bottom:18px}
+.landtip{font-size:.84rem;color:var(--muted);margin-bottom:18px;max-width:65ch}
+/* alleen voor een schermlezer: wat er gebeurde, zonder dat het beeld verandert */
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;margin:-1px;padding:0;border:0}
 .klussen{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:18px}
 .klus{background:#fff;border:2px solid rgba(20,34,76,.10);border-radius:20px;padding:16px;text-align:center}
 .klus.uit{opacity:.5}
@@ -95,7 +97,7 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .plan .schat.ruim{color:var(--goed)}
 
 .verslag{background:#fff;border:1px solid rgba(20,34,76,.10);border-radius:22px;padding:22px;margin-top:16px}
-.verslag h3{font-size:1.1rem}
+.verslag h2{font-size:1.1rem}
 .verslag .jaartekst{margin-top:10px;font-size:.95rem}
 .gebeurtenis{margin-top:12px;background:var(--sand);border-radius:14px;padding:11px 14px;font-size:.9rem}
 .gebeurtenis.slecht{background:var(--fout-bg);color:#8d3320}
@@ -108,7 +110,24 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .legenda{display:flex;gap:16px;justify-content:center;margin-top:10px;font-size:.8rem;color:var(--muted)}
 .legenda i{display:inline-block;width:12px;height:3px;border-radius:2px;vertical-align:3px;margin-right:5px}
 .slot{margin-top:22px;background:#fff;border:1px solid rgba(20,34,76,.10);border-radius:22px;padding:24px}
-.slot h3{font-size:1.08rem;margin-bottom:8px}
+.slot h2{font-size:1.08rem;margin-bottom:8px}
+/* Het eindscherm staat in het midden, maar lange alinea's lees je niet
+   gecentreerd: die staan links in een smalle kolom. */
+.einde #eindTekst{max-width:62ch;margin:8px auto 0;text-align:left}
+.einde .slot{text-align:left}
+/* de grafiek kantelt mee: in het donker lichtere tinten van dezelfde kleuren */
+.grafiek .as-x{fill:var(--muted)}
+:root[data-theme="dark"] .grafiek .as-m{fill:#8fd9ae}
+:root[data-theme="dark"] .grafiek .as-g{fill:#9FB8FF}
+:root[data-theme="dark"] .grafiek .lijn-g{stroke:#83A5F2}
+:root[data-theme="dark"] .grafiek .lijn-m{stroke:#5fbf88}
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .grafiek .as-m{fill:#8fd9ae}
+  :root:not([data-theme="light"]) .grafiek .as-g{fill:#9FB8FF}
+  :root:not([data-theme="light"]) .grafiek .lijn-g{stroke:#83A5F2}
+  :root:not([data-theme="light"]) .grafiek .lijn-m{stroke:#5fbf88}
+}
+.einde .slot p{max-width:68ch}
 .slot p{font-size:.93rem;color:var(--muted);margin-bottom:14px}
 .slot p:last-child{margin-bottom:0}
 .slot b{color:var(--ink)}
@@ -197,7 +216,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
       </button>
       <span class="pill hide" id="pillNiv">niveau</span>
       <button class="linkbtn" id="grootBtn" type="button">Digibord</button>
-      <button class="linkbtn" id="opnieuwBtn" type="button">Opnieuw</button>
+      <button class="linkbtn hide" id="opnieuwBtn" type="button">Opnieuw</button>
     </div>
   </div>
 </header>
@@ -211,10 +230,12 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
   <div class="kies" id="niveaus"></div>
 
   <button class="btn" id="startBtn" type="button" disabled>Begin het eerste jaar</button>
-  <p style="margin-top:14px;font-size:.82rem;color:var(--muted)">Geen inloggen, niets wordt opgeslagen.</p>
+  <p style="margin-top:14px;font-size:.82rem;color:var(--muted)">Geen inloggen nodig. Je beste uitslag blijft op dit apparaat.</p>
 </section>
 
 <section class="wrap hide" id="scherm-spel">
+  <h1 class="sr">Blijven of doorlopen</h1>
+  <p class="sr" id="jagersLive" role="status" aria-live="polite"></p>
   <div class="spelkop">
     <span class="eyebrow" id="jaarLabel">jaar 1 van 12</span>
     <span class="eyebrow" id="plekLabel">rondtrekkend</span>
@@ -224,12 +245,12 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
   <div class="meters" id="meters"></div>
 
   <div id="keuzedeel">
-    <p class="eyebrow" style="margin-top:22px">stuur je ploegen het land in</p>
+    <h2 class="eyebrow" style="margin-top:22px">stuur je ploegen het land in</h2>
     <div class="landvak" id="landvak"></div>
-    <p class="landtip" id="landtip">Tik op een plek om er een ploeg heen te sturen, tik op een poppetje om hem terug te roepen. Op elk bordje staat wat die plek oplevert. Na het jaar zie je per plek hoeveel het werd.</p>
+    <p class="landtip" id="landtip" role="status" aria-live="polite">Tik op een plek om er een ploeg heen te sturen, tik op een poppetje om hem terug te roepen, of gebruik de knoppen min en plus hieronder. Op elk bordje staat wat die plek oplevert. Na het jaar zie je per plek hoeveel het werd.</p>
     <div class="klussen" id="klussen"></div>
     <div class="plan">
-      <span class="schat" id="schat"></span>
+      <span class="schat" id="schat" aria-live="polite"></span>
       <span>
         <button class="btn ghost klein" id="trekBtn" type="button" style="display:none">Verder trekken</button>
         <button class="btn klein" id="jaarBtn" type="button">Het jaar door</button>
@@ -242,11 +263,11 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
 
 <section class="wrap hide einde" id="scherm-einde">
   <p class="eyebrow">twaalf jaar later</p>
-  <h2 style="font-size:clamp(1.8rem,5vw,2.6rem);margin-top:8px" id="eindKop">Hoe het afliep</h2>
+  <h1 style="font-size:clamp(1.8rem,5vw,2.6rem);margin-top:8px" id="eindKop">Hoe het afliep</h1>
   <p style="color:var(--muted);margin-top:8px" id="eindTekst"></p>
   <div class="grafiek" id="grafiek"></div>
   <div class="slot" id="slot"></div>
-  <div style="text-align:center"><button class="btn" id="nogeensBtn" type="button">Nog een keer</button></div>
+  <div style="text-align:center"><button class="btn hide" id="nogeensBtn" type="button">Nog een keer</button></div>
 </section>
 
 <footer>
@@ -554,14 +575,22 @@ function tekenLand(st, verd, seizoen, actief, labels, oogst){
       (gez >= 70 ? '#2f7d52' : gez >= 50 ? '#EA9836' : '#c0442c') + '"/>' +
     '</g>';
 
-  /* de ploegen, op een rij vooraan in hun eigen plek */
+  /* De ploegen, op een rij vooraan in hun eigen plek. Ze worden pas na de
+     klikvlakken op het bord gezet: stonden ze eronder, dan ving het vlak van
+     de plek de tik en stuurde je er een ploeg bij in plaats van er een terug
+     te roepen. Elk poppetje krijgt een onzichtbaar vlak zo breed als zijn plek
+     in de rij, want het poppetje zelf is op een telefoon vijf pixels breed. */
+  var ploegS = '';
   PLEKKEN.forEach(function(p){
     var n = verd[p.id] || 0;
     var mid = (p.x1 + p.x2) / 2;
+    var stap = Math.min(36, (p.x2 - p.x1 - 16) / Math.max(1, n));
     for (var i2 = 0; i2 < n; i2++){
-      var px = mid + (i2 - (n - 1) / 2) * 26;
-      s += '<g class="ploeg" data-p="' + p.id + '" data-i="' + i2 + '" style="cursor:pointer">' +
-        poppetje(px, grondY(px), '#204ECF', 1.05) + '</g>';
+      var px = mid + (i2 - (n - 1) / 2) * stap, py = grondY(px);
+      ploegS += '<g class="ploeg" data-p="' + p.id + '" data-i="' + i2 + '" style="cursor:pointer">' +
+        '<rect x="' + (px - stap / 2).toFixed(1) + '" y="' + (py - 80).toFixed(1) + '" width="' + stap.toFixed(1) +
+        '" height="100" rx="8" fill="#fff" opacity="0"/>' +
+        poppetje(px, py, '#204ECF', 1.05) + '</g>';
     }
   });
 
@@ -598,6 +627,7 @@ function tekenLand(st, verd, seizoen, actief, labels, oogst){
            'text-anchor="middle">' + n + '</text></g>' : '') +
       '</g></g>';
   });
+  s += ploegS;
   /* wat elke plek het afgelopen jaar opleverde, als een bordje dat blijft staan
      terwijl je het verslag leest */
   if (oogst){
@@ -724,8 +754,23 @@ function jaarDoen(s, v, geluk){
   });
 
   document.getElementById('startBtn').addEventListener('click', start);
-  document.getElementById('nogeensBtn').addEventListener('click', naarStart);
-  document.getElementById('opnieuwBtn').addEventListener('click', naarStart);
+  /* Nog een keer (op de eindkaart): meteen opnieuw op hetzelfde niveau, net als in de andere actiespellen */
+  document.getElementById('nogeensBtn').addEventListener('click', function(){ if (niveau) start(); else naarStart(); });
+  /* Opnieuw in de kop: tijdens het spel twee tikken, want twaalf jaar plannen
+     gooi je niet per ongeluk weg. Op het eindscherm is er niets te verliezen. */
+  var opnieuwZeker = false, opnieuwKlok = null;
+  function opnieuwTerug(){
+    opnieuwZeker = false; if (opnieuwKlok){ clearTimeout(opnieuwKlok); opnieuwKlok = null; }
+    var k = document.getElementById('opnieuwBtn'); k.textContent = 'Opnieuw'; k.classList.remove('zeker');
+  }
+  document.getElementById('opnieuwBtn').addEventListener('click', function(){
+    if (!elSpel.classList.contains('hide') && !opnieuwZeker){
+      opnieuwZeker = true; this.textContent = 'Zeker? Tik nog eens'; this.classList.add('zeker');
+      opnieuwKlok = setTimeout(opnieuwTerug, 3000);
+      return;
+    }
+    opnieuwTerug(); naarStart();
+  });
   document.getElementById('grootBtn').addEventListener('click', function(){
     document.body.classList.toggle('groot');
     this.textContent = document.body.classList.contains('groot') ? 'Normaal' : 'Digibord';
@@ -733,6 +778,7 @@ function jaarDoen(s, v, geluk){
 
   function naarStart(){
     elSpel.classList.add('hide'); elEinde.classList.add('hide'); elStart.classList.remove('hide');
+    document.getElementById('opnieuwBtn').classList.add('hide');
     scrollTo({top:0,behavior:'auto'});
   }
 
@@ -741,6 +787,7 @@ function jaarDoen(s, v, geluk){
     verd = { jacht:3, verz:2, akker:0, bouw:1 };
     bezig = false;
     elStart.classList.add('hide'); elEinde.classList.add('hide'); elSpel.classList.remove('hide');
+    document.getElementById('opnieuwBtn').classList.remove('hide');
     bouwKlussen();
     tekenAlles();
     scrollTo({top:0,behavior:'auto'});
@@ -886,7 +933,7 @@ function jaarDoen(s, v, geluk){
     s.vaste = 0; s.bouwp = 0; s.vastJaren = 0;
     verd.akker = 0; verd.bouw = 0;
     if (totaalPloegen() < PLOEGEN) verd.jacht += PLOEGEN - totaalPloegen();
-    toonVerslag('<h3>Jullie breken op</h3>' +
+    toonVerslag('<h2>Jullie breken op</h2>' +
       '<p class="jaartekst">Wat je niet kunt dragen blijft achter: <b>' + kwijt + ' eten</b> gaat verloren, ' +
       'en de hutten en de schuur laat je staan. Het wild in de nieuwe streek is weer op sterkte.</p>' +
       '<div class="gebeurtenis">Wat je geleerd hebt over graan raak je niet kwijt. Ga je later weer ergens wonen, ' +
@@ -912,7 +959,7 @@ function jaarDoen(s, v, geluk){
   });
 
   function verslagTekst(u, voor){
-    var h = '<h3>Jaar ' + (s.jaar - 1) + '</h3>';
+    var h = '<h2>Jaar ' + (s.jaar - 1) + '</h2>';
     var delen = [];
     if (u.jacht > 0) delen.push('de jacht en de visserij brachten ongeveer ' + Math.round(u.jacht) + ' op');
     if (u.verz  > 0) delen.push('het verzamelen ongeveer ' + Math.round(u.verz));
@@ -966,6 +1013,8 @@ function jaarDoen(s, v, geluk){
       '</button></div>';
     elVerslag.classList.remove('hide');
     document.getElementById('keuzedeel').classList.add('hide');
+    /* de knop krijgt de focus; wat er in het jaar gebeurde gaat naar de statusregel */
+    document.getElementById('jagersLive').textContent = elVerslag.innerText.replace(/\s+/g, ' ').trim();
     document.getElementById('verderBtn').addEventListener('click', function(){
       elVerslag.classList.add('hide');
       laatsteOogst = null;
@@ -996,13 +1045,13 @@ function jaarDoen(s, v, geluk){
 
     document.getElementById('eindTekst').textContent =
       'Na twaalf jaar zijn jullie met ' + s.mensen + ' mensen, begonnen met ' + begin + '. ' +
-      'De gezondheid staat op ' + gez + ' van de 100. Jullie wonen ' + PLEKNAAM[s.vaste] + '.';
+      'De gezondheid staat op ' + gez + ' van de 100. ' + (s.vaste ? 'Jullie wonen in ' + PLEKNAAM[s.vaste] + '.' : 'Jullie trekken nog altijd rond.');
     SPEL.einde({ spel:'jagers', score:s.mensen, label:'mensen na twaalf jaar', sterren:(s.mensen > begin ? 1 : 0) + (gez >= 50 ? 1 : 0) + (gez >= 70 ? 1 : 0), ronde:12, punten:s.mensen, vak:'ges' });
 
     /* grafiek van mensen en gezondheid naast elkaar */
     if (niveau.grafiek) tekenGrafiek(); else document.getElementById('grafiek').classList.add('hide');
 
-    var h = '<h3>Wat de bodem laat zien</h3>';
+    var h = '<h2>Wat de bodem laat zien</h2>';
     h += '<p>Archeologen graven skeletten op van jagers en van de eerste boeren, en vergelijken ze. ' +
       'De boeren waren met veel meer, maar ze waren gemiddeld <b>kleiner</b>, hadden <b>slechtere tanden</b> ' +
       'en meer sporen van ziekte. Meer mensen, maar niet gezondere mensen.</p>';
@@ -1021,13 +1070,13 @@ function jaarDoen(s, v, geluk){
         'de landbouw was hier geen omslag van het ene op het andere jaar, maar een langzame verschuiving.</p>';
     }
 
-    h += '<h3>Waarom deden ze het dan toch</h3>' +
+    h += '<h2>Waarom deden ze het dan toch</h2>' +
       '<p>Niemand koos ooit bewust voor boeren. Elk jaar apart was het een kleine, redelijke stap: nog een akkertje erbij, ' +
       'nog een schuur. Maar zodra je een voorraad hebt en meer monden, kun je niet meer terug naar rondtrekken. ' +
       'De groep is dan te groot geworden voor het land om je heen. Dat merkte je als je op verder trekken drukte: ' +
       'je voorraad bleef achter.</p>';
 
-    h += '<h3>Doorpraten</h3>' +
+    h += '<h2>Doorpraten</h2>' +
       '<div class="vraag">Was de landbouw vooruitgang? Onderbouw je antwoord met twee cijfers uit jouw spel.</div>' +
       '<div class="vraag">Wie had het in jouw groep het zwaarst: iemand in jaar 1 of iemand in jaar 12?</div>';
     if (niveau.id === 'hv'){
@@ -1039,7 +1088,7 @@ function jaarDoen(s, v, geluk){
   }
 
   function tekenGrafiek(){
-    var B = 640, H = 260, L = 44, R = 16, T = 16, O = 34;
+    var B = 640, H = 260, L = 48, R = 48, T = 22, O = 34;
     var n = s.gesch.length;
     var maxM = Math.max(24, Math.max.apply(null, s.gesch.map(function(g){ return g.mensen; })));
     function x(i){ return L + (i / Math.max(1, n - 1)) * (B - L - R); }
@@ -1054,20 +1103,29 @@ function jaarDoen(s, v, geluk){
            '" stroke="#14224C" stroke-opacity=".2"/>';
     s.gesch.forEach(function(g, i){
       if (i % 2 === 0) svg += '<text x="' + x(i) + '" y="' + (H - O + 18) +
-        '" font-size="12" fill="#5b6480" text-anchor="middle">' + g.jaar + '</text>';
+        '" font-size="12" fill="#5b6480" class="as-x" text-anchor="middle">' + g.jaar + '</text>';
     });
-    svg += '<polyline points="' + lijnG + '" fill="none" stroke="#204ECF" stroke-width="2.5" stroke-linejoin="round"/>';
-    svg += '<polyline points="' + lijnM + '" fill="none" stroke="#2f7d52" stroke-width="2.5" stroke-linejoin="round"/>';
+    svg += '<polyline class="lijn-g" points="' + lijnG + '" fill="none" stroke="#204ECF" stroke-width="2.5" stroke-linejoin="round"/>';
+    svg += '<polyline class="lijn-m" points="' + lijnM + '" fill="none" stroke="#2f7d52" stroke-width="2.5" stroke-linejoin="round"/>';
     s.gesch.forEach(function(g, i){
       svg += '<circle cx="' + x(i) + '" cy="' + yM(g.mensen) + '" r="3" fill="#2f7d52"/>';
       svg += '<circle cx="' + x(i) + '" cy="' + yG(g.gezondheid) + '" r="3" fill="#204ECF"/>';
     });
-    svg += '<text x="6" y="' + (T + 10) + '" font-size="12" fill="#5b6480">hoog</text>';
-    svg += '<text x="6" y="' + (H - O - 2) + '" font-size="12" fill="#5b6480">laag</text>';
+    /* Twee lijnen op een eigen schaal. Met alleen 'hoog' en 'laag' leek het
+       alsof ze op dezelfde as stonden. Nu heeft elke lijn zijn eigen as in zijn
+       eigen kleur: links het aantal mensen, rechts de gezondheid. */
+    [0, 0.5, 1].forEach(function(d){
+      var y = T + (1 - d) * (H - T - O);
+      svg += '<line x1="' + L + '" y1="' + y + '" x2="' + (B - R) + '" y2="' + y + '" stroke="#14224C" stroke-opacity=".07"/>';
+      svg += '<text x="' + (L - 8) + '" y="' + (y + 4) + '" font-size="12" font-weight="600" fill="#2f7d52" class="as-m" text-anchor="end">' + Math.round(maxM * d) + '</text>';
+      svg += '<text x="' + (B - R + 8) + '" y="' + (y + 4) + '" font-size="12" font-weight="600" fill="#204ECF" class="as-g">' + Math.round(100 * d) + '</text>';
+    });
+    svg += '<text x="4" y="12" font-size="11" fill="#2f7d52" class="as-m">mensen</text>';
+    svg += '<text x="' + (B - 4) + '" y="12" font-size="11" fill="#204ECF" class="as-g" text-anchor="end">gezondheid</text>';
     svg += '</svg>';
     document.getElementById('grafiek').innerHTML = svg +
-      '<div class="legenda"><span><i style="background:#2f7d52"></i>aantal mensen</span>' +
-      '<span><i style="background:#204ECF"></i>gezondheid</span></div>';
+      '<div class="legenda"><span><i style="background:#2f7d52"></i>aantal mensen (as links)</span>' +
+      '<span><i style="background:#204ECF"></i>gezondheid van 0 tot 100 (as rechts)</span></div>';
   }
 
   /* Deelbare link: ?n=bb, kgt of hv */

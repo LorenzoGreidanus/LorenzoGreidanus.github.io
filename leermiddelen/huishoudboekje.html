@@ -53,7 +53,19 @@
 .beeld .grafiek .rente{fill:var(--amber)}
 .beeld .grafiek text.licht{fill:#fff;font-weight:600}
 .beeld .grafiek text.mut{fill:var(--muted)}
-@media(max-width:480px){.beeld .kasboek{font-size:.86rem}.beeld .kasboek td,.beeld .kasboek th{padding:5px 6px}.beeld .kasboek td.balk{width:70px}}
+/* drie maanden naast elkaar: op een telefoon korte maandnamen en bedragen zonder euroteken (dat staat in de kop), zodat de tabel past */
+.beeld .maanden .mkort,.beeld .maanden .ineur{display:none}
+@media(max-width:480px){.beeld .kasboek{font-size:.86rem}.beeld .kasboek td,.beeld .kasboek th{padding:5px 6px}.beeld .kasboek td.balk{width:56px}
+  /* lange woorden als telefoonabonnementen mogen afbreken, anders duwen ze de tabel breder dan het scherm */
+  .beeld .kasboek td:first-child{hyphens:auto;-webkit-hyphens:auto;overflow-wrap:anywhere}
+  .beeld .maanden{font-size:.82rem;width:100%}
+  .beeld .maanden td,.beeld .maanden th{padding:5px 4px}
+  .beeld .maanden td:first-child,.beeld .maanden th:first-child{padding-left:8px}
+  .beeld .maanden .eur{display:none}
+  .beeld .maanden .mkort{display:inline}
+  .beeld .maanden .mlang{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+  .beeld .maanden th small.ineur{display:block;margin-left:0;font-size:.72rem}}
+@media(max-width:360px){.beeld .kasboek td.balk{width:34px}}
 body.groot .beeld .kasboek{font-size:1.15rem}
 </style>
 <script src="/vangnet.js" defer></script>
@@ -90,6 +102,9 @@ body.groot .beeld .kasboek{font-size:1.15rem}
       }).join('') + '</div>';
       var invoer = el.querySelectorAll('input');
       var knop = api.knop('Nakijken', function(){
+        /* een leeg vakje is geen fout antwoord: eerst invullen, dan pas nakijken */
+        var leeg = Array.prototype.filter.call(invoer, function(inp){ return !inp.value.trim(); });
+        if (leeg.length){ api.uit(invoer.length > 1 ? 'Vul eerst elk vakje in.' : 'Vul eerst iets in.'); leeg[0].focus(); return; }
         var alles = true;
         velden.forEach(function(v, i){
           var inp = invoer[i], g = bedrag(inp.value), ok = g !== null && Math.abs(g - v.antwoord) <= (v.tol || 0.005);
@@ -138,7 +153,8 @@ body.groot .beeld .kasboek{font-size:1.15rem}
   function kasboekHtml(inn, uit, opties){
     opties = opties || {};
     var max = Math.max.apply(null, inn.concat(uit).map(function(p){ return p.bedrag; }));
-    function rij(p, klas){ return '<tr class="' + klas + '"><td>' + S(p.naam) + '</td><td class="balk"><i style="width:' + Math.max(4, Math.round(p.bedrag / max * 140)) + 'px"></i></td><td class="bedrag">' + geld(p.bedrag) + '</td></tr>'; }
+    /* het balkje in procenten van zijn kolom: zo krimpt het mee op een telefoon in plaats van de tabel breder te maken */
+    function rij(p, klas){ return '<tr class="' + klas + '"><td>' + S(p.naam) + '</td><td class="balk"><i style="width:' + Math.max(3, Math.round(p.bedrag / max * 93)) + '%"></i></td><td class="bedrag">' + geld(p.bedrag) + '</td></tr>'; }
     var h = '<table class="kasboek"><tr><th colspan="3">Inkomsten' + (opties.kop ? '<small>' + S(opties.kop) + '</small>' : '') + '</th></tr>' + inn.map(function(p){ return rij(p, 'in'); }).join('');
     if (opties.sommen) h += '<tr class="som"><td>inkomsten samen</td><td></td><td class="bedrag">' + geld(som(inn)) + '</td></tr>';
     h += '<tr><th colspan="3">Uitgaven</th></tr>' + uit.map(function(p){ return rij(p, 'uit'); }).join('');
@@ -188,8 +204,10 @@ body.groot .beeld .kasboek{font-size:1.15rem}
       { id:'vast', naam:'vaste lasten', uit:'elke maand hetzelfde bedrag' },
       { id:'var', naam:'variabele uitgaven', uit:'elke maand anders, je kiest het zelf' }
     ].map(function(v){ v.hoort = posten.filter(function(x){ return x.soort === v.id; }).map(function(x){ return x.id; }); return v; });
-    var beeld = '<table class="kasboek maanden"><tr><th>post</th>' + mnd.map(function(m){ return '<th class="mnd">' + m + '</th>'; }).join('') + '</tr>' +
-      H(posten).map(function(x){ return '<tr><td>' + S(x.p[0]) + '</td>' + x.per.map(function(b){ return '<td class="bedrag">' + geld(b) + '</td>'; }).join('') + '</tr>'; }).join('') + '</table>';
+    /* de maand voluit en kort; op een telefoon staat de korte naam er (een schermlezer leest de lange) */
+    var KORT = { januari:'jan', februari:'feb', maart:'mrt', april:'apr', mei:'mei', juni:'jun', september:'sep', oktober:'okt', november:'nov' };
+    var beeld = '<table class="kasboek maanden"><tr><th>post<small class="ineur">in euro</small></th>' + mnd.map(function(m){ return '<th class="mnd"><span class="mlang">' + m + '</span><span class="mkort" aria-hidden="true">' + KORT[m] + '</span></th>'; }).join('') + '</tr>' +
+      H(posten).map(function(x){ return '<tr><td>' + S(x.p[0]) + '</td>' + x.per.map(function(b){ return '<td class="bedrag">' + geld(b).replace('€ ', '<span class="eur">€ </span>') + '</td>'; }).join('') + '</tr>'; }).join('') + '</table>';
     return {
       onderdeel:'huishoudboekje: vast of variabel', onderdeelNaam:'vast of variabel', vorm:'sleep', sleutel:'vv' + posten.map(function(x){ return x.p[0]; }).join(''),
       vraag: 'Uit het kasboek van <b>' + S(jong ? kies(NAMEN) : kies(GEZINNEN)) + '</b>: welke post hoort waar?',
@@ -418,7 +436,9 @@ body.groot .beeld .kasboek{font-size:1.15rem}
         { id:'kgt', naam:'vmbo-kgt en tl', uit:'Ook het huishoudboekje van een gezin, tekorten, en rekenen met sparen en rente.' },
         { id:'hv', naam:'havo en vwo', uit:'Bedragen met centen, reserveringsuitgaven, lenen over twee jaar en spaarrente.' } ] },
       { id:'soort', kop:'wat oefen je', std:'alles', items:[
-        { id:'alles', naam:'alles door elkaar' }, { id:'optellen', naam:'optellen' }, { id:'vastvariabel', naam:'vast of variabel' }, { id:'keuze', naam:'keuze maken' }, { id:'sparen', naam:'sparen en lenen' }, { id:'begrippen', naam:'begrippen' } ] }
+        { id:'alles', naam:'alles door elkaar' }, { id:'optellen', naam:'optellen', uit:'Wat komt erin, wat gaat eruit, en wat blijft er over?' },
+        { id:'vastvariabel', naam:'vast of variabel', uit:'Vaste lasten zijn elke maand even hoog, zoals huur of een abonnement. Variabele uitgaven wisselen per maand, zoals kleding.' },
+        { id:'keuze', naam:'keuze maken', uit:'Er is te weinig geld. Wat moet je betalen, en waar kun je op besparen?' }, { id:'sparen', naam:'sparen en lenen', uit:'Hoe lang spaar je voor iets, en hoeveel rente betaal of krijg je?' }, { id:'begrippen', naam:'begrippen' } ] }
     ],
     aantal:10,
     maak:function(keuze, nr){

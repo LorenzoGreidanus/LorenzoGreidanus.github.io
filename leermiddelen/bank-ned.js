@@ -154,7 +154,7 @@ var NED2 = [
 {v:'Waar verwijst hij naar in: De koning riep de raad bijeen. Hij was boos.?',o:['de koning','de raad','de vergadering','onduidelijk, allebei kan'],g:0,u:'Hij is enkelvoud en mannelijk, dus het verwijst naar de koning.',t:'verwijswoorden'},
 {v:'Welk verwijswoord hoort hier: De steden kregen rechten. ___ mochten zelf besturen.',o:['Zij','Hij','Het','Die van hen'],g:0,u:'Steden is meervoud, dus zij.',t:'verwijswoorden'},
 {v:'Wat betekent het woord neutraal?',o:['geen partij kiezen','tegen iets zijn','ergens veel van weten','iets nieuws'],g:0,u:'Neutraal is aan geen van beide kanten staan.',t:'betekenis'},
-{v:'Wat betekent het woord bevooroordeeld?',o:['met een mening vooraf','goed geinformeerd','zonder mening','streng'],g:0,u:'Je oordeelt al voordat je de feiten kent.',t:'betekenis'},
+{v:'Wat betekent het woord bevooroordeeld?',o:['met een mening vooraf','goed geïnformeerd','zonder mening','streng'],g:0,u:'Je oordeelt al voordat je de feiten kent.',t:'betekenis'},
 {v:'Wat betekent het woord aannemelijk?',o:['waarschijnlijk waar','zeker bewezen','onmogelijk','aangenomen personeel'],g:0,u:'Aannemelijk is niet hetzelfde als bewezen: het is goed mogelijk.',t:'betekenis'},
 {v:'Wat betekent het woord ingrijpend?',o:['met grote gevolgen','snel gebeurd','moeilijk te begrijpen','door de politie gedaan'],g:0,u:'Een ingrijpende verandering verandert veel.',t:'betekenis'},
 {v:'Wat betekent het woord toenemen?',o:['groter worden','kleiner worden','gelijk blijven','erbij nemen'],g:0,u:'Toenemen is stijgen, afnemen is dalen.',t:'betekenis'},

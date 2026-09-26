@@ -106,12 +106,16 @@ body.groot .vtabel input{height:62px;font-size:1.4rem}
         el.innerHTML = '<div style="overflow-x:auto;max-width:100%"><table class="vtabel"><tr><th>' + S(o.boven) + '</th>' + o.kolommen.map(function(k, i){
           return '<td class="' + (k.vraagB ? '' : 'vast' + (k.b === 1 ? ' een' : '')) + '">' + (k.vraagB ? '<input inputmode="decimal" autocomplete="off" aria-label="' + S(o.boven) + ' ' + (i + 1) + '" data-a="' + k.b + '"><span class="vantwoord"></span>' : S(toon({ geld:false }, k.b))) + '</td>';
         }).join('') + '</tr><tr><th>' + S(o.onder) + '</th>' + o.kolommen.map(function(k, i){
-          return '<td class="' + (k.vraagO ? '' : 'vast') + '">' + (k.vraagO ? '<input inputmode="decimal" autocomplete="off" aria-label="' + S(o.onder) + ' ' + (i + 1) + '" data-a="' + k.o + '"><span class="vantwoord"></span>' : S(toon(o.s, k.o))) + '</td>';
+          return '<td class="' + (k.vraagO ? '' : 'vast') + '">' + (k.vraagO ? '<input inputmode="decimal" autocomplete="off" aria-label="' + S(o.onder) + ' ' + (i + 1) + '" data-a="' + k.o + '"' + (k.b === 1 ? ' data-een="1"' : '') + '><span class="vantwoord"></span>' : S(toon(o.s, k.o))) + '</td>';
         }).join('') + '</tr></table></div>';
         var invoer = el.querySelectorAll('input');
-        Array.prototype.forEach.call(invoer, function(inp, i){ inp.addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); if (invoer[i + 1]) invoer[i + 1].focus(); else knop.click(); } }); });
-        setTimeout(function(){ if (invoer[0]) invoer[0].focus(); }, 50);
+        /* de opdracht zegt: eerst wat bij 1 hoort. Dus daar begint de cursor, en Enter gaat daarna langs de rest */
+        var volgorde = Array.prototype.slice.call(invoer).sort(function(a, b){ return (b.hasAttribute('data-een') ? 1 : 0) - (a.hasAttribute('data-een') ? 1 : 0); });
+        volgorde.forEach(function(inp, i){ inp.addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); if (volgorde[i + 1]) volgorde[i + 1].focus(); else knop.click(); } }); });
+        setTimeout(function(){ if (volgorde[0]) volgorde[0].focus(); }, 50);
         var knop = api.knop('Nakijken', function(){
+          var leeg = volgorde.filter(function(inp){ return !inp.value.trim(); });
+          if (leeg.length){ api.uit(invoer.length > 1 ? 'Vul eerst elk vakje in.' : 'Vul eerst iets in.'); leeg[0].focus(); return; }
           var alles = true;
           Array.prototype.forEach.call(invoer, function(inp){
             var a = parseFloat(inp.getAttribute('data-a')), g = api.getal(inp.value), ok = g !== null && Math.abs(g - a) < 0.006;
@@ -201,7 +205,7 @@ body.groot .vtabel input{height:62px;font-size:1.4rem}
         { id:'kgt', naam:'vmbo-kgt en tl', uit:'Ook via 1 met kommagetallen, en terugrekenen van een bedrag naar een aantal.' },
         { id:'hv', naam:'havo en vwo', uit:'Kommagetallen, lastiger factoren en recepten met halve stappen.' } ] },
       { id:'soort', kop:'wat oefen je', std:'alles', items:[
-        { id:'alles', naam:'alles door elkaar' }, { id:'via1', naam:'via 1' }, { id:'keerdelen', naam:'keer en delen' }, { id:'terug', naam:'terugrekenen' }, { id:'recept', naam:'recepten' } ] }
+        { id:'alles', naam:'alles door elkaar' }, { id:'via1', naam:'via 1', uit:'Eerst uitrekenen wat er bij 1 hoort, dan pas bij het andere aantal.' }, { id:'keerdelen', naam:'keer en delen' }, { id:'terug', naam:'terugrekenen', uit:'Je weet het bedrag, en zoekt hoeveel het er waren.' }, { id:'recept', naam:'recepten' } ] }
     ],
     aantal:10,
     maak:function(keuze, nr){
