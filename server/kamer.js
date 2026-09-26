@@ -187,6 +187,7 @@ export class Kamer extends DurableObject {
       if (url.pathname === "/stand") return this.stand ? json(this.overzicht()) : json({ fout: "geen kamer met deze code" }, 404);
       if (url.pathname === "/meld" && req.method === "POST") return await this.meld(await req.json());
       if (url.pathname === "/melden" && req.method === "POST") return await this.melden(await req.json());
+      if (url.pathname === "/quizkenmerken" && req.method === "POST") return await this.quizKenmerken(await req.json());
       if (url.pathname === "/opheffen" && req.method === "POST") return await this.opheffen(await req.json());
       if (url.pathname === "/resultaten") return await this.resultaten(url.searchParams.get("sleutel"));
       if (url.pathname === "/opdracht" && req.method === "POST") return await this.opdracht(await req.json());
@@ -1067,7 +1068,7 @@ export class Kamer extends DurableObject {
       });
     });
     /* quizuitslagen die de docent eerder invoerde onder een eigen kenmerk, bij de leerling met die bijnaam zetten */
-    const perNaam = {}; Object.keys(l).forEach(k => { perNaam[normNaam(l[k].naam)] = k; });
+    const perNaam = {}; Object.keys(l).forEach(k => { perNaam[normNaam(l[k].naam)] = k; if (l[k].ms && !perNaam[normNaam(l[k].ms)]) perNaam[normNaam(l[k].ms)] = k; });
     st.resultaten.forEach(r => { if (/^kq-/.test(r.sid) && perNaam[normNaam(r.naam)]) r.sid = perNaam[normNaam(r.naam)]; });
   }
   async meld(inz){
@@ -1140,11 +1141,28 @@ export class Kamer extends DurableObject {
     if (!lijst.length) return json({ fout: "geen uitslag" }, 400);
     const t = Date.now();
     let n = 0;
+    /* Kwam de uitslag uit een Klasquiz-kamer, dan weet die kamer per speler het
+       kenmerk van zijn apparaat: hetzelfde kenmerk waarmee de leerling aan deze
+       klas gekoppeld is. We vragen het daar op, binnen de server; het kenmerk
+       zelf gaat nooit naar de browser van de docent. */
+    let perPid = {};
+    const quiz = String(inz.quiz || "").toUpperCase();
+    if (/^[A-Z]{4}$/.test(quiz) && typeof inz.quizSleutel === "string" && this.env && this.env.KAMERS){
+      try {
+        const r = await this.env.KAMERS.get(this.env.KAMERS.idFromName(quiz)).fetch("https://kamer/quizkenmerken", { method: "POST", body: JSON.stringify({ sleutel: inz.quizSleutel }) });
+        if (r.ok){ const j = await r.json(); if (j && j.kenmerken && typeof j.kenmerken === "object") perPid = j.kenmerken; }
+      } catch (e){ /* geen antwoord van de quiz: dan op naam, zoals eerder */ }
+    }
+    const st = this.stand, l0 = st.leerlingen || {}, alias = st.alias || {};
     for (const r of lijst){
       const naam = nette(r && r.naam, "");
       if (!naam) continue;
-      /* staat deze bijnaam al in de klas, dan hoort de quizuitslag bij die leerling en niet bij een tweede regel */
-      const l0 = this.stand.leerlingen || {}, bekend = Object.keys(l0).find(k => normNaam(l0[k].naam) === normNaam(naam));
+      /* 1. op kenmerk: dezelfde leerling, welke naam hij in de quiz ook koos */
+      let bekend = null;
+      const kenmerk = perPid[String(r && r.pid || "")];
+      if (kenmerk){ const k = alias[kenmerk] || kenmerk; if (l0[k] || st.resultaten.some(x => x.sid === k)) bekend = k; }
+      /* 2. op naam: de bijnaam of de Microsoft-naam van een leerling in de klas */
+      if (!bekend) bekend = Object.keys(l0).find(k => normNaam(l0[k].naam) === normNaam(naam) || (l0[k].ms && normNaam(l0[k].ms) === normNaam(naam))) || null;
       const sid = bekend || ("kq-" + naam.toLowerCase().replace(/[^a-z0-9]/g, "") + "xxxxxxxx").slice(0, 12);
       this.voegToe({ sid, naam, av: schoonAv(r.av), spel, ronde: getal(r.ronde, 250), punten: getal(r.punten, 5000), niveau: schoon(inz.niveau, 10), vak: schoon(inz.vak, 10), od: schoonOd(r.od), t });
       n++;
@@ -1152,6 +1170,16 @@ export class Kamer extends DurableObject {
     await this.zetAlarm({ wat: "opruimen" }, KLAS_SLAAPT);
     await this.bewaar();
     return json({ ok: true, n });
+  }
+  /* Voor melden(): welk klaskenmerk hoort bij welke speler van deze quiz. Alleen
+     bereikbaar vanuit een andere kamer (index.js stuurt dit pad niet door) en
+     alleen met de sleutel van de quiz, die de docent heeft. */
+  async quizKenmerken(inz){
+    if (!this.stand || !this.stand.spelers || this.stand.spel === "klas") return json({ fout: "geen quiz" }, 404);
+    if (!inz || inz.sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw kamer" }, 403);
+    const kenmerken = {};
+    Object.keys(this.stand.spelers).forEach(sid => { const p = this.stand.spelers[sid].pid; if (p) kenmerken[p] = sid.slice(0, 12); });
+    return json({ kenmerken });
   }
   /* De opdracht van de docent: een spel, een vak, eventueel een onderdeel, een minimum en een einddatum.
      Leerlingen zien hem in de leeromgeving; wie hem haalt staat in het klasoverzicht aangevinkt. */

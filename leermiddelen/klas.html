@@ -1469,7 +1469,15 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     return Object.keys(n).sort(function(a, b){ return wieTekst(a).localeCompare(wieTekst(b), 'nl'); });
   }
   /* de echte naam bij een bijnaam, als de docent die gezet heeft */
-  function echtVan(n){ return (data && data.echt && data.echt[n]) || ''; }
+  /* De echte naam die de docent invulde. Staat een leerling nu met zijn Microsoft-naam in
+     beeld, dan geldt wat de docent eerder bij zijn bijnaam invulde; en is de echte naam
+     dezelfde als wat er al staat, dan hoeft hij er niet nog eens achter. */
+  function echtVan(n){
+    if (!data || !data.echt) return '';
+    var e = data.echt[n];
+    if (!e){ var l = ((data && data.leerlingen) || []).filter(function(x){ return x.naam === n && x.bijnaam; })[0]; if (l) e = data.echt[l.bijnaam]; }
+    return e && e !== n ? e : '';
+  }
   /* voor op het scherm: de echte naam met de bijnaam erachter, al schoongemaakt */
   function wieHtml(n){ var e = echtVan(n); return e ? schoon(e) + ' <small class="naamecht">(' + schoon(n) + ')</small>' : schoon(n); }
   /* voor in tekst (mail, CSV, lijstjes met komma's) */

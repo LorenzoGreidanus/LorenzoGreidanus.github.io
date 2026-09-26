@@ -974,9 +974,10 @@ Frans Hals"></textarea>
       var k = klassen.filter(function(x){ return x.code === $('hMeldKeuze').value; })[0];
       if (!k) return;
       knop.disabled = true; $('hMeldUit').textContent = 'Bezig met melden...';
-      var lijst = stand.map(function(sp){ return { naam:sp.naam, av:sp.av || '', punten:sp.score | 0, ronde:sp.aantalGoed | 0, od:sp.od || undefined }; });
+      /* pid: het openbare spelernummer; de klas vraagt de quizkamer welke leerling dat is, dus ook wie een andere naam koos komt goed terecht */
+      var lijst = stand.map(function(sp){ return { naam:sp.naam, pid:sp.sid || '', av:sp.av || '', punten:sp.score | 0, ronde:sp.aantalGoed | 0, od:sp.od || undefined }; });
       fetch('/api/klas/' + k.code + '/melden', { method:'POST', headers:{ 'content-type':'application/json' },
-        body:JSON.stringify({ sleutel:k.sleutel, spel:'klasquiz', niveau:host && host.niveau || '', vak:host && host.vak || '', lijst:lijst }) })
+        body:JSON.stringify({ sleutel:k.sleutel, spel:'klasquiz', niveau:host && host.niveau || '', vak:host && host.vak || '', lijst:lijst, quiz:host && host.code || '', quizSleutel:host && host.sleutel || '' }) })
         .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
         .then(function(x){ $('hMeldUit').textContent = x.ok ? 'Gemeld: ' + x.j.n + ' leerlingen staan nu in het klasoverzicht van ' + (k.naam || k.code) + '.' : 'Melden lukte niet' + (x.j && x.j.fout ? ': ' + x.j.fout : '.'); if (!x.ok) knop.disabled = false; })
         .catch(function(){ $('hMeldUit').textContent = 'Melden lukte niet: geen verbinding.'; knop.disabled = false; });
