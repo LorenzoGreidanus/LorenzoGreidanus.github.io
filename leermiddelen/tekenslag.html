@@ -6,6 +6,7 @@
 <link rel="manifest" href="/manifest.json">
 <script src="cosmetica.js"></script>
 <script src="avatar.js"></script>
+<script src="podium.js"></script>
 <script src="profiel.js"></script>
 <script src="naamfilter.js"></script>
 <script src="bank.js"></script>
@@ -243,7 +244,8 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
     <div class="kaart" style="text-align:center">
       <p class="eyebrow">afgelopen</p>
       <h2 id="bWinnaar"></h2>
-      <div class="podium" id="bPodium"></div>
+      <div id="bPodium"></div>
+      <p class="tip hide" id="bRest" style="margin-top:12px"></p>
       <div class="lijst" id="bWoorden"></div>
       <div class="rij" style="justify-content:center;margin-top:16px"><button class="knop crab" id="bNogeens" type="button">Nog een keer, zelfde klas</button><a class="knop stil" href="tekenslag.html">Terug naar het begin</a></div>
     </div>
@@ -916,6 +918,13 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
       stuur({ t:'vlug', d:{ k:'gok', naam:wie.naam, tekst:tekst } });
     }
   }
+  /* plaats met gedeelde plekken: wie evenveel punten heeft, staat even hoog */
+  function rangIn(lijst, punten){ for (var i = 0; i < lijst.length; i++) if (lijst[i].punten === punten) return i + 1; return lijst.length; }
+  /* donkere teamkleur: witte letter; lichte: donkerblauwe */
+  function tekstOp(kleur){
+    var n = parseInt(kleur.slice(1), 16), r = n >> 16 & 255, g = n >> 8 & 255, b = n & 255;
+    return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? '#14224C' : '#fff';
+  }
   function bordEinde(){
     clearInterval(spel.klok); clearTimeout(spel.startKlok); bordTekenen(false);
     vergeetBord();
@@ -923,17 +932,34 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(-
     if (isTeams()){
       var volg = teams.slice().sort(function(a, b){ return b.punten - a.punten; });
       var top = volg[0].punten, winnaars = volg.filter(function(t){ return t.punten === top; });
-      $('bWinnaar').textContent = winnaars.length > 1 ? 'Gelijkspel tussen ' + winnaars.map(function(t){ return t.naam; }).join(' en ') : 'Team ' + volg[0].naam + ' wint';
-      $('bPodium').innerHTML = volg.map(function(t){ return '<div style="--tk:' + t.kleur + '"' + (t.punten === top ? ' class="win"' : '') + '><b>' + t.punten + '</b>' + t.naam + '<br><small>' + t.leden.map(function(l){ return schoon(l.naam); }).join(', ') + '</small></div>'; }).join('');
+      var winTeams = winnaars.length > 1 ? 'Gelijkspel tussen ' + winnaars.map(function(t){ return t.naam; }).join(' en ') : 'Team ' + volg[0].naam + ' wint';
+      /* plek 3, plek 2, dan met zoeklichten het winnende team; wie in welk team zat staat eronder */
+      $('bWinnaar').textContent = '';
+      PODIUM.onthul($('bPodium'), volg.slice(0, 3).map(function(t){
+        return { rang:rangIn(volg, t.punten), naam:'Team ' + t.naam, regel:t.punten + ' punten', beeld:'<span class="pd-team" style="background:' + t.kleur + ';color:' + tekstOp(t.kleur) + '">' + schoon(t.naam.charAt(0)) + '</span>' };
+      }), { winnaar: winTeams + '!', klaar:function(){
+        $('bWinnaar').textContent = winTeams;
+        $('bRest').innerHTML = volg.map(function(t){ return '<b>' + schoon(t.naam) + '</b> (' + t.punten + '): ' + t.leden.map(function(l){ return schoon(l.naam); }).join(', '); }).join('<br>');
+        $('bRest').classList.remove('hide');
+      } });
       $('bWoorden').innerHTML = spel.gedaan.map(function(g){ return '<div' + (g.goed ? '' : ' class="mis"') + '><span>' + schoon(g.woord) + ' <small>(' + schoon(g.tekenaar) + ', ' + g.team + ')</small></span><span>' + (g.goed ? 'geraden door ' + schoon(g.door) : g.over ? 'overgeslagen' : 'niet geraden') + '</span></div>'; }).join('');
       stuur({ t:'alle', d:{ k:'einde', teams:teams.map(function(t){ return { naam:t.naam, kleur:t.kleur, punten:t.punten }; }) } });
     } else {
       var lijst = scoreLijst(), hoogst = lijst.length ? lijst[0].punten : 0;
       var eersten = lijst.filter(function(r){ return r.punten === hoogst && hoogst > 0; });
-      $('bWinnaar').textContent = eersten.length > 1 ? 'Gelijkspel tussen ' + eersten.map(function(r){ return r.naam; }).join(' en ') : eersten.length ? eersten[0].naam + ' wint' : 'Afgelopen';
-      var PODIUM = ['#EA9836', '#83A5F2', '#F26749', '#2f7d52', '#204ECF'];
-      $('bPodium').innerHTML = lijst.slice(0, 5).map(function(r, i){ return '<div style="--tk:' + PODIUM[i] + '"' + (r.punten === hoogst && hoogst > 0 ? ' class="win"' : '') + '><b>' + r.punten + '</b>' + (i + 1) + '. ' + schoon(r.naam) + '</div>'; }).join('') +
-        (lijst.length > 5 ? '<div class="rest" style="--tk:var(--rand2)"><small>' + lijst.slice(5).map(function(r, i){ return (i + 6) + '. ' + schoon(r.naam) + ' ' + r.punten; }).join(' · ') + '</small></div>' : '');
+      var winTekst = eersten.length > 1 ? 'Gelijkspel tussen ' + eersten.map(function(r){ return r.naam; }).join(' en ') : eersten.length ? eersten[0].naam + ' wint' : 'Afgelopen';
+      /* plek 3, plek 2, dan met zoeklichten de winnaar; de rest van de stand komt daarna */
+      $('bWinnaar').textContent = '';
+      PODIUM.onthul($('bPodium'), lijst.slice(0, 3).map(function(r){
+        var av = (spelersLijst.filter(function(s){ return s.sid === r.sid; })[0] || {}).av || '';
+        return { rang:rangIn(lijst, r.punten), naam:r.naam, regel:r.punten + ' punten', beeld: window.AVATAR ? AVATAR.svg(r.naam, 120, av, { stemming:'blij' }) : '' };
+      }), { winnaar: eersten.length ? winTekst + '!' : 'Afgelopen', klaar:function(){
+        $('bWinnaar').textContent = winTekst;
+        if (lijst.length > 3){
+          $('bRest').innerHTML = lijst.slice(3).map(function(r){ return rangIn(lijst, r.punten) + '. ' + schoon(r.naam) + ' ' + r.punten; }).join(' · ');
+          $('bRest').classList.remove('hide');
+        }
+      } });
       $('bWoorden').innerHTML = spel.gedaan.map(function(g){ return '<div' + (g.goed ? '' : ' class="mis"') + '><span>' + schoon(g.woord) + ' <small>(' + schoon(g.tekenaar) + ')</small></span><span>' + (g.over ? 'overgeslagen' : g.goed ? 'geraden door ' + schoon(g.door) : 'niemand had het') + '</span></div>'; }).join('');
       stuur({ t:'alle', d:{ k:'einde', modus:host.modus, lijst:lijst } });
     }

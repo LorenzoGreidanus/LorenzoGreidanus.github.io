@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="manifest" href="/manifest.json">
 <script src="avatar.js"></script>
+<script src="podium.js"></script>
 <script src="profiel.js"></script>
 <link rel="apple-touch-icon" href="/icoon-192.png">
 <script>
@@ -405,7 +406,7 @@ Frans Hals"></textarea>
   <div id="h-einde" class="hide">
     <p class="eyebrow">eindstand</p>
     <h1>Dat was de quiz</h1>
-    <div class="podium" id="hPodium"></div>
+    <div id="hPodium"></div>
     <div class="stand" id="hEindStand"></div>
     <div class="meldklas hide" id="hMeldKlas">
       <b>Zet deze uitslag in het klasoverzicht</b>
@@ -946,12 +947,11 @@ Frans Hals"></textarea>
   function hostEinde(m){
     stopKlok();
     hostScherm('h-einde');
-    var top = m.stand.slice(0, 3);
-    var volgorde = [top[1], top[0], top[2]], klassen = ['p2', 'p1', 'p3'];
-    $('hPodium').innerHTML = volgorde.map(function(s, i){
-      if (!s) return '<div class="' + klassen[i] + '" style="visibility:hidden"></div>';
-      return '<div class="' + klassen[i] + '"><span class="nr">' + s.rang + '</span>' + (window.AVATAR ? AVATAR.svg(s.naam, 56, s.av, { stemming:'blij', klasse: s.rang === 1 ? 'av-juich' : '' }) : '') + '<b>' + schoonHtml(s.naam) + '</b><small>' + s.score + ' punten</small></div>';
-    }).join('');
+    /* plek 3, plek 2, dan met zoeklichten de winnaar; de rest van de stand komt daarna */
+    $('hEindStand').classList.add('hide');
+    PODIUM.onthul($('hPodium'), m.stand.slice(0, 3).map(function(s){
+      return { rang:s.rang, naam:s.naam, regel:s.score + ' punten', beeld: window.AVATAR ? AVATAR.svg(s.naam, 120, s.av, { stemming:'blij' }) : '' };
+    }), { klaar:function(){ $('hEindStand').classList.remove('hide'); } });
     $('hEindStand').innerHTML = m.stand.slice(3).map(function(s){
       return '<div><b>' + s.rang + '.</b><span>' + (window.AVATAR ? AVATAR.svg(s.naam, 26, s.av) : '') + schoonHtml(s.naam) + '</span><span></span><b>' + s.score + '</b></div>';
     }).join('');
