@@ -30,7 +30,15 @@
 .db .vlak{fill:var(--kaart2);stroke:var(--muted);stroke-opacity:.5;stroke-width:1.5}
 .db .vlak2{fill:var(--kaart);stroke:var(--muted);stroke-opacity:.5;stroke-width:1.5}
 .db .water{fill:var(--nadruk-zacht);stroke:var(--nadruk);stroke-width:1.5;stroke-dasharray:5 4}
-.db .aan{stroke:var(--nadruk);stroke-opacity:1;stroke-width:3}
+/* het antwoord in de tekening: gevuld in koraal, de rest gedimd */
+.db .aan{fill:rgba(242,103,73,.24);stroke:var(--hand);stroke-opacity:1;stroke-width:3.5;stroke-dasharray:none}
+.db:has(.aan) .vlak:not(.aan),.db:has(.aan) .vlak2:not(.aan),.db:has(.aan) .water:not(.aan){opacity:.5}
+.db .midden{fill:var(--kaart);stroke:var(--nadruk);stroke-width:2.5}
+.db .art{fill:var(--kaart);stroke:var(--muted);stroke-opacity:.6;stroke-width:1.2}
+.db .art.aan{fill:rgba(242,103,73,.32);stroke:var(--hand);stroke-width:2.5;stroke-opacity:1}
+.db .artnr{font-size:13px;font-weight:700;fill:var(--ink)}
+.db .weg{stroke:var(--muted);stroke-width:4;stroke-linecap:round;fill:none;stroke-dasharray:1 10}
+.db .paal{fill:var(--kaart);stroke:var(--ink);stroke-width:2}
 .db .lijn{stroke:var(--ink);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
 .db .zacht{stroke:var(--muted);stroke-width:1.5;fill:none;stroke-linecap:round}
 .db .inkt{fill:var(--ink)}
@@ -42,7 +50,7 @@
 .flow li{position:relative;background:var(--kaart2);border:2px solid var(--rand2);border-radius:12px;padding:8px 5px 6px;width:112px;min-height:78px;overflow-wrap:anywhere;
   display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-size:.8rem;font-weight:600;line-height:1.2;color:var(--ink)}
 .flow li i{font-style:normal;font-size:1.3rem;line-height:1.25}
-.flow li.aan{border-color:var(--nadruk);background:var(--kaart-aan)}
+.flow li.aan{border-color:var(--hand);background:rgba(242,103,73,.16);box-shadow:0 0 0 2px var(--hand) inset}
 .flow li.vraag{border-style:dashed;border-color:var(--nadruk)}
 .flow li.vraag b{font-size:1.7rem;color:var(--nadruk);line-height:1}
 .flow li.leeg{border-style:dashed;background:transparent;color:var(--muted)}
@@ -85,7 +93,7 @@
   /* de trias politica: een dak met drie pilaren */
   function triasSvg(o){
     o = o || {};
-    var s = '<svg class="db" viewBox="0 0 420 192" role="img" aria-label="de trias politica: drie machten als drie pilaren onder één dak">';
+    var s = '<svg class="db" viewBox="0 0 420 192" role="img" aria-label="de trias politica: drie machten als drie pilaren onder één dak' + (o.aan ? '; het goede antwoord is de ' + D.MACHT[o.aan].naam : '') + '">';
     s += '<path class="vlak" d="M20 58L210 8L400 58Z"/><text class="klein" x="210" y="46" text-anchor="middle">de staatsmacht, verdeeld in drie</text>';
     s += '<rect class="vlak" x="14" y="58" width="392" height="10" rx="3"/>';
     ['w', 'u', 'r'].forEach(function(m, i){
@@ -101,12 +109,12 @@
   function lagenSvg(o){
     o = o || {};
     function a(id){ return o.aan === id ? ' aan' : ''; }
-    var s = '<svg class="db" viewBox="0 0 420 200" role="img" aria-label="de bestuurslagen: gemeente, waterschap, provincie, het Rijk en de Europese Unie">';
+    var s = '<svg class="db" viewBox="0 0 420 200" role="img" aria-label="de bestuurslagen: gemeente, waterschap, provincie, het Rijk en de Europese Unie' + (o.aan ? '; het goede antwoord is ' + (o.aan === 'eu' ? 'de Europese Unie' : LAAGKORT[o.aan]) : '') + '">';
     s += '<rect class="vlak' + a('eu') + '" x="2" y="2" width="272" height="196" rx="18"/><text x="16" y="22"><tspan class="nad">&#9733;</tspan> Europese Unie</text>';
     s += '<rect class="vlak2' + a('rijk') + '" x="14" y="32" width="248" height="158" rx="14"/><text x="28" y="52">🏛️ het Rijk</text>';
     s += '<rect class="vlak' + a('prov') + '" x="26" y="62" width="224" height="120" rx="12"/><text x="40" y="82">🗺️ provincie</text>';
     s += '<rect class="vlak2' + a('gem') + '" x="38" y="92" width="130" height="82" rx="10"/><text x="50" y="111">gemeente</text>' + emo(96, 158, '🏘️', 26);
-    s += '<rect class="water' + a('ws') + '" x="146" y="100" width="96" height="70" rx="28"/><text x="194" y="130" text-anchor="middle">waterschap</text>' + emo(194, 158, '💧', 17);
+    s += '<rect class="water' + a('ws') + '" x="150" y="100" width="92" height="70" rx="28"/><text x="196" y="130" text-anchor="middle" style="font-size:12px">waterschap</text>' + emo(194, 158, '💧', 17);
     s += '<rect class="vlak2" x="286" y="20" width="130" height="160" rx="16"/>' + emo(351, 104, o.e || '❓', 46);
     s += '<text class="klein" x="351" y="152" text-anchor="middle">' + S(o.onder || 'wie beslist?') + '</text>';
     return s + '</svg>';
@@ -157,6 +165,19 @@
     return s + '<circle class="vlak2" cx="340" cy="75" r="58"/>' + emo(340, 94, e || '❓', 50) + '</svg>';
   }
   /* een situatie tegenover de Grondwet en de weegschaal */
+  var ARTIKELEN = ['1', '4', '6', '7', '8', '9', '10', '11', '12', '13', '17', '23'];
+  function grondwetSvg(e, aan){
+    var nr = aan ? ((/artikel (\d+)/.exec(aan) || [])[1] || (/EVRM/.test(aan) ? 'EVRM' : '')) : '';
+    var s = '<svg class="db" viewBox="0 0 420 150" role="img" aria-label="een situatie en de grondrechten in de Grondwet' + (nr ? '; het goede antwoord staat in ' + (nr === 'EVRM' ? 'het EVRM' : 'artikel ' + nr) : '') + '">';
+    s += '<path class="vlak2" d="M24 10h120a18 18 0 0 1 18 18v74a18 18 0 0 1-18 18H70l-22 22v-22H24a18 18 0 0 1-18-18V28a18 18 0 0 1 18-18Z"/>' + emo(84, 84, e || '❓', 50);
+    s += '<path class="zacht" d="M170 70h22"/><path class="kop" d="M190 64l9 6-9 6z"/>';
+    s += '<rect class="vlak" x="208" y="6" width="208" height="138" rx="10"/><text x="222" y="26">Grondwet</text><text class="klein" x="300" y="26">hoofdstuk 1</text>';
+    ARTIKELEN.forEach(function(a, i){
+      var x = 220 + (i % 4) * 48, y = 36 + Math.floor(i / 4) * 32;
+      s += '<rect class="art' + (a === nr ? ' aan' : '') + '" x="' + x + '" y="' + y + '" width="40" height="26" rx="6"/><text class="artnr" x="' + (x + 20) + '" y="' + (y + 18) + '" text-anchor="middle">' + a + '</text>';
+    });
+    return s + '</svg>';
+  }
   function rechtSvg(e){
     var s = '<svg class="db" viewBox="0 0 420 150" role="img" aria-label="een situatie en de Grondwet">';
     s += '<path class="vlak2" d="M24 10h140a18 18 0 0 1 18 18v74a18 18 0 0 1-18 18H70l-22 22v-22H24a18 18 0 0 1-18-18V28a18 18 0 0 1 18-18Z"/>' + emo(94, 84, e || '❓', 50);
@@ -170,7 +191,7 @@
     var s = '<svg class="db" viewBox="0 0 420 150" role="img" aria-label="democratie of dictatuur">';
     s += '<rect class="vlak" x="4" y="14" width="150" height="122" rx="14"/>' + emo(79, 72, '🗳️', 36) + '<text x="79" y="112" text-anchor="middle">democratie</text>';
     s += '<rect class="vlak" x="266" y="14" width="150" height="122" rx="14"/>' + emo(341, 72, '🔒', 36) + '<text x="341" y="112" text-anchor="middle">dictatuur</text>';
-    s += '<circle class="vlak2 aan" cx="210" cy="75" r="52"/>' + emo(210, 92, e || '❓', 46);
+    s += '<circle class="midden" cx="210" cy="75" r="52"/>' + emo(210, 92, e || '❓', 46);
     return s + '</svg>';
   }
   /* de weg van een wet als rij stappen; stand per stap: 'aan', 'vraag', 'leeg' of '' */
@@ -272,11 +293,19 @@
       opties: opties, goed: opties.indexOf(goed.l),
       uitleg: (vooruit ? 'Daarna: ' : 'Daarvoor: ') + S(goed.l) + extra(flow(set, function(i){ return i === gi ? 'aan' : ''; })), antwoordTekst: goed.l });
   }
+  /* een weg van een idee (lamp) naar een wet (boek) met een genummerde paal per stap */
+  function wegSvg(k){
+    var s = '<svg class="db" viewBox="0 0 420 96" role="img" aria-label="de weg van een wet in ' + k + ' stappen">';
+    s += '<path class="weg" d="M52 58H368"/>' + emo(26, 68, '💡', 30) + emo(394, 68, '📗', 30);
+    for (var i = 0; i < k; i++){ var x = 70 + i * (280 / Math.max(1, k - 1)); s += '<circle class="paal" cx="' + x + '" cy="58" r="15"/><text x="' + x + '" y="63" text-anchor="middle">' + (i + 1) + '</text>'; }
+    s += '<text class="klein" x="26" y="92" text-anchor="middle">idee</text><text class="klein" x="394" y="92" text-anchor="middle">wet</text>';
+    return s + '</svg>';
+  }
   function wetSleep(keuze){
     var n = niv(keuze), set = wetSet(keuze), k = n + 3, ids = H(set).slice(0, k).sort(function(a, b){ return a - b; });
     return mk('wet', { vorm:'sleep', sleutel:'wo' + ids.join(''),
       vraag:'Zet deze stappen van een nieuwe wet in de goede volgorde.', opdracht:'Vak 1 is de eerste stap. Niet elke stap staat erbij; zet ze wel in de goede volgorde.',
-      beeld: plaatje('hof', '📜', 'het Binnenhof met een wet'), sleepuit:'Sleep elk kaartje naar het vak met het goede nummer. Op een telefoon: tik het kaartje aan en dan het vak.',
+      beeld: wegSvg(ids.length), sleepuit:'Sleep elk kaartje naar het vak met het goede nummer. Op een telefoon: tik het kaartje aan en dan het vak.',
       kaarten: ids.map(function(i){ return { id:'s' + i, tekst: D.WET_STAP[i].e + ' ' + S(D.WET_STAP[i].k) }; }),
       vakken: ids.map(function(i, j){ return { id:'v' + j, max:1, hoort:['s' + i] }; }),
       uitleg:'Eerst het voorstel en het advies, dan de Tweede Kamer, dan de Eerste Kamer, en pas daarna de handtekeningen en de bekendmaking.' + extra(flow(ids)),
@@ -295,9 +324,9 @@
     var kand = Object.keys(R).filter(function(id){ return id !== it.r && R[id].n <= n && goed.niet.indexOf(id) < 0 && R[id].niet.indexOf(it.r) < 0; });
     var ids = H([it.r].concat(H(kand).slice(0, n === 1 ? 2 : 3)));
     return mk('rechten', { vorm:'meerkeuze', sleutel:'rk' + k.i,
-      vraag:'<b>' + S(it.s) + '</b> Welk recht beschermt dit?', beeld: rechtSvg(it.e),
+      vraag:'<b>' + S(it.s) + '</b> Welk recht beschermt dit?', beeld: grondwetSvg(it.e),
       opties: ids.map(function(id){ return R[id].naam; }), goed: ids.indexOf(it.r),
-      uitleg: (it.u ? it.u + ' ' : '') + hoofd(goed.naam) + ' (' + goed.art + '): ' + goed.uit, antwoordTekst: goed.naam });
+      uitleg: (it.u ? it.u + ' ' : '') + hoofd(goed.naam) + ' (' + goed.art + '): ' + goed.uit + (/artikel \d+/.test(goed.art) ? extra(grondwetSvg(it.e, goed.art)) : ''), antwoordTekst: goed.naam });
   }
   function rechten(keuze){
     var n = niv(keuze);

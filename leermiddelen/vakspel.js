@@ -307,32 +307,36 @@ window.VAKSPEL = (function(){
     vak.addEventListener('click', function(e){ var k = e.target.closest('.sleepkaart'); if (k && k.dataSleepte && Date.now() - k.dataSleepte < 400){ e.stopImmediatePropagation(); } }, true);
     $('nakijkBtn').addEventListener('click', function(){
       if (!bezig) return;
-      var alles = true, uitleg = [];
+      var alles = true, uitleg = [], aantalGoed = 0, aantal = 0;
       opgave.vakken.forEach(function(v){
         var doel = vak.querySelector('.sleepdoel[data-id="' + v.id + '"]');
         Array.prototype.forEach.call(doel.querySelectorAll('.sleepkaart'), function(k){
           var id = k.getAttribute('data-id'), ok = (v.hoort || []).indexOf(id) >= 0;
-          k.classList.add(ok ? 'goed' : 'fout');
+          k.classList.add(ok ? 'goed' : 'fout'); aantal++; if (ok) aantalGoed++;
           if (!ok){ alles = false; var hoortIn = opgave.vakken.filter(function(x){ return (x.hoort || []).indexOf(id) >= 0; })[0]; if (hoortIn) k.insertAdjacentHTML('beforeend', '<small>hoort bij ' + schoon(hoortIn.naam || ('vak ' + (opgave.vakken.indexOf(hoortIn) + 1))) + '</small>'); }
         });
       });
       $('nakijkBtn').disabled = true;
-      klaar(alles, '');
+      klaar(alles, '', { goed: aantalGoed, van: aantal });
     });
   }
 
   /* ---------- nakijken, verder, einde ---------- */
-  function klaar(isGoed, extra){
+  /* tekst zonder html; een plaatje dat achter de uitleg hangt gaat er helemaal af, anders staat de tekst uit de svg erin */
+  function kaleTekst(t){ return String(t || '').replace(/<(div|svg|ol|table)\b[\s\S]*$/i, '').replace(/<[^>]+>/g, '').trim(); }
+  function klaar(isGoed, extra, deels){
     if (!bezig) return;
     bezig = false;
     var w = opgave.punten || 10;
+    /* bij een sleepvraag: ligt meer dan de helft goed, dan is het bijna, met punten naar rato */
+    var bijna = !isGoed && deels && deels.van > 1 && deels.goed * 2 >= deels.van;
     if (isGoed){ goed++; reeks++; if (reeks > besteReeks) besteReeks = reeks; punten += w + (reeks >= 3 ? Math.min(5, reeks) : 0); }
-    else { fout++; reeks = 0; missers.push({ v: (opgave.vraag || '').replace(/<[^>]+>/g, ''), j: opgave.antwoordTekst || '', hoe: (opgave.uitleg || '').replace(/<[^>]+>/g, '') }); }
+    else { fout++; reeks = 0; if (bijna) punten += Math.round(w * deels.goed / deels.van); missers.push({ v: kaleTekst(opgave.vraag), j: opgave.antwoordTekst || '', hoe: kaleTekst(opgave.uitleg) }); }
     var deel = opgave.onderdeel || 'overig';
     if (window.KLAS && KLAS.tel) KLAS.tel(od, deel, isGoed);
     var c = perDeel[deel] = perDeel[deel] || [0, 0, opgave.onderdeelNaam || deel]; c[1]++; if (isGoed) c[0]++;
-    $('reactie').innerHTML = '<div class="uitslagregel ' + (isGoed ? 'goed' : 'fout') + '"><b>' + (isGoed ? (reeks >= 3 ? 'Goed, ' + reeks + ' op rij!' : 'Goed!') : 'Niet goed.') + '</b>' +
-      (extra ? '<p>' + extra + '</p>' : '') + (opgave.uitleg ? '<p class="waarom">' + opgave.uitleg + '</p>' : '') + '</div>';
+    $('reactie').innerHTML = '<div class="uitslagregel ' + (isGoed ? 'goed' : bijna ? 'bijna' : 'fout') + '"><b>' + (isGoed ? (reeks >= 3 ? 'Goed, ' + reeks + ' op rij!' : 'Goed!') : bijna ? 'Bijna: ' + deels.goed + ' van de ' + deels.van + ' goed.' : 'Niet goed.') + '</b>' +
+      (extra ? '<p>' + extra + '</p>' : '') + (opgave.uitleg ? '<div class="waarom">' + opgave.uitleg + '</div>' : '') + '</div>';
     balk();
     $('verder').classList.remove('hide');
     $('verderBtn').textContent = nr >= cfg.aantal ? 'Naar de uitslag →' : 'Volgende →';
