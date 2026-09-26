@@ -24,6 +24,10 @@ var HERKENNEN = [
   [1, 'Geachte heer Pieters, graag wil ik mij afmelden voor de sportdag.', 'formeel', 'Geachte heer, graag wil ik en een hele zin: formeel.'],
   [1, 'Oké top, ik neem de bal mee!', 'informeel', 'Oké top en een uitroepteken: spreektaal.'],
   [1, 'Kunt u mij vertellen in welk lokaal de les is?', 'formeel', 'Kunt u en een volledige vraag: beleefd en formeel.'],
+  [1, 'Geachte heer Smit, graag wil ik een nieuw rooster ontvangen.', 'formeel', 'Geachte heer en graag wil ik: formeel.'],
+  [1, 'Haha top! Zie je morgen 😄', 'informeel', 'Haha, top en een emoji: een appje aan een vriend.'],
+  [1, 'Kunt u mij zeggen hoe laat de winkel opengaat?', 'formeel', 'Kunt u en een volledige vraag: beleefd en formeel.'],
+  [1, 'Ff wachten, ben er zo!', 'informeel', 'Ff en een zin zonder onderwerp: informeel.'],
   [2, 'Hé, kun je me die foto’s van gister nog sturen? Thnx!', 'informeel', 'Hé, gister en thnx: afkortingen en spreektaal voor een vriend.'],
   [2, 'Naar aanleiding van uw e-mail stuur ik u hierbij de gevraagde gegevens.', 'formeel', 'Naar aanleiding van, uw en hierbij: typische formele woorden.'],
   [2, 'Ik was echt sooo moe vandaag, jij ook?', 'informeel', 'Sooo met extra letters: dat schrijf je alleen aan een vriend.'],
@@ -42,6 +46,10 @@ var HERKENNEN = [
   [2, 'Heb je nog zin om vanavond te gamen? Ben vanaf 8 uur online.', 'informeel', 'Zin om te gamen, een zin zonder onderwerp en een losse toon: informeel.'],
   [2, 'Mag ik u vragen of de les van morgen doorgaat?', 'formeel', 'Mag ik u vragen: een beleefde, formele vraag.'],
   [2, 'Omg, heb je die nieuwe video gezien?? Echt te grappig', 'informeel', 'Omg, dubbele vraagtekens en echt te grappig: informeel.'],
+  [2, 'Graag wil ik mij aanmelden voor de open dag van 18 januari.', 'formeel', 'Graag wil ik mij aanmelden en een datum: formeel.'],
+  [2, 'Heb je de uitslag al? Ik durf niet te kijken 🙈', 'informeel', 'Een losse vraag aan een vriend en een emoji: informeel.'],
+  [2, 'Wij verzoeken u de fiets voortaan in het rek te plaatsen.', 'formeel', 'Wij verzoeken u en voortaan: formele taal.'],
+  [2, 'Lekker bezig man, echt goed gedaan!', 'informeel', 'Lekker bezig en man: spreektaal voor een vriend.'],
   [3, 'Hierbij solliciteer ik naar de functie van vakkenvuller in uw filiaal.', 'formeel', 'Hierbij solliciteer ik en uw filiaal: een sollicitatiebrief.'],
   [3, 'Nee man, die docent snapt er echt niks van 😂', 'informeel', 'Nee man, niks en een emoji: alleen voor vrienden.'],
   [3, 'Ik hoop u hiermee voldoende te hebben geïnformeerd.', 'formeel', 'Een vaste formele slotzin uit brieven en e-mails.'],
@@ -59,7 +67,11 @@ var HERKENNEN = [
   [3, 'Gaarne ontvang ik uiterlijk vrijdag uw reactie.', 'formeel', 'Gaarne en uiterlijk: ouderwets formele woorden uit zakelijke brieven.'],
   [3, 'Bro, die presentatie ging echt top, respect 💪', 'informeel', 'Bro, echt top en een emoji: informeel.'],
   [3, 'Ik dank u bij voorbaat voor uw medewerking.', 'formeel', 'Bij voorbaat en uw medewerking: een vaste formele slotzin.'],
-  [3, 'Kun je me ff helpen met dat verslag? Ik kom er echt niet uit 😩', 'informeel', 'Ff, echt niet uit en een emoji: informeel.']
+  [3, 'Kun je me ff helpen met dat verslag? Ik kom er echt niet uit 😩', 'informeel', 'Ff, echt niet uit en een emoji: informeel.'],
+  [3, 'Gelet op het bovenstaande verzoek ik u het besluit te heroverwegen.', 'formeel', 'Gelet op het bovenstaande en heroverwegen: zakelijk en formeel.'],
+  [3, 'Ik ben echt kapot, ga pitten. Spreek je morgen!', 'informeel', 'Kapot, pitten en een zin zonder onderwerp: spreektaal.'],
+  [3, 'Mocht u verhinderd zijn, dan verzoeken wij u dit tijdig te melden.', 'formeel', 'Mocht u, verhinderd en tijdig: formele woorden.'],
+  [3, 'Wie heeft dat verslag gemaakt? Echt next level 🔥', 'informeel', 'Next level, echt en een emoji: informeel.']
 ];
 var KIES = [
   [1, 'Je bent ziek en kunt niet naar school.', 'Geachte mevrouw De Groot, ik ben ziek en kan vandaag niet naar school komen.', 'Hoi, ben ziek, kom niet.', 'Yo mevrouw, ik ben ziek dus ik kom niet 🤒', 'Geachte, een hele zin en geen emoji: dat past in een bericht aan school.'],
@@ -80,6 +92,10 @@ var KIES = [
   [1, 'Je bedankt je mentor voor een goed gesprek.', 'Beste mevrouw Smits, bedankt voor het fijne gesprek van vandaag.', 'Thnx voor het praten!', 'Was chill om te praten, top!', 'Beste mevrouw en een hele zin: netjes bedankt.'],
   [1, 'Je vraagt of het zwembad op zondag open is.', 'Geachte heer of mevrouw, is het zwembad op zondag geopend?', 'Is het zwembad zondag open?', 'Yo, kan ik zondag komen zwemmen?', 'Geachte heer of mevrouw schrijf je als je niet weet wie de mail leest.'],
   [1, 'Je meldt je docent dat je je huiswerk vergeten bent.', 'Beste meneer Jansen, helaas ben ik mijn huiswerk vergeten. Ik neem het morgen mee.', 'Huiswerk vergeten, sorry!', 'Oeps, ben me huiswerk vergeten 🙈', 'Helaas en hele zinnen: formeel.'],
+  [1, 'Je vraagt of de gymles morgen doorgaat.', 'Beste meneer Wouters, kunt u mij laten weten of de gymles morgen doorgaat?', 'Gaat gym morgen door?', 'Hé, hebben we morgen nou gym of niet?', 'Beste meneer en kunt u mij laten weten: formeel.'],
+  [1, 'Je meldt dat je jas in het lokaal is blijven liggen.', 'Beste mevrouw Dijkstra, ik heb mijn jas in lokaal 8 laten liggen. Heeft u hem misschien gevonden?', 'Mijn jas ligt nog in lokaal 8.', 'Jas vergeten 🙈 heb jij m?', 'Beste mevrouw, heeft u en hele zinnen: formeel.'],
+  [1, 'Je bedankt de conciërge voor het repareren van je kluisje.', 'Beste meneer Van Loon, hartelijk dank voor het repareren van mijn kluisje.', 'Thnx voor mijn kluisje!', 'Top dat je m gemaakt hebt!', 'Hartelijk dank en een hele zin: netjes bedankt.'],
+  [1, 'Je vraagt of je een boek uit de klas mag lenen.', 'Beste mevrouw Veenstra, mag ik het boek over dinosaurussen een week lenen?', 'Mag ik dat boek lenen?', 'Kan ik dat dinoboek ff meenemen?', 'Beste mevrouw en mag ik: een beleefde vraag.'],
   [2, 'Je zegt dat je een afspraak wilt verzetten.', 'Geachte mevrouw Roos, zou het mogelijk zijn onze afspraak van dinsdag te verzetten naar woensdag?', 'Kan dinsdag niet, woensdag?', 'Hoi, kunnen we dinsdag verzetten naar woensdag?', 'Zou het mogelijk zijn: heel beleefd, past in een e-mail aan school.'],
   [2, 'Je bent het niet eens met een regel op school.', 'Beste directie, ik wil graag mijn bezwaar uiten tegen de nieuwe regel over telefoons.', 'Die telefoonregel slaat nergens op.', 'Wie heeft die regel bedacht?!', 'Mijn bezwaar uiten: formeel en zakelijk, ook al ben je het oneens.'],
   [2, 'Je vraagt een bedrijf of je stage mag lopen.', 'Geachte heer Van Dam, ik zou graag stage lopen bij uw bedrijf. Is daar een mogelijkheid voor?', 'Kan ik bij jullie stage lopen?', 'Hoi, hebben jullie nog een stageplek?', 'Ik zou graag en uw bedrijf: formeel.'],
@@ -98,6 +114,10 @@ var KIES = [
   [2, 'Je meldt je docent dat je verslag niet wil uploaden.', 'Beste meneer Hoek, het lukt mij niet om mijn verslag te uploaden. Mag ik het per e-mail sturen?', 'Uploaden lukt niet, wat nu?', 'Die site doet het weer niet 🙄', 'Het lukt mij niet en mag ik: formeel.'],
   [2, 'Je vraagt of je een boek langer mag lenen.', 'Geachte heer of mevrouw, zou ik de uitleentermijn van mijn boek met twee weken mogen verlengen?', 'Mag ik mijn boek langer houden?', 'Kan ik dat boek nog ff houden?', 'Zou ik mogen en de uitleentermijn verlengen: formeel.'],
   [2, 'Je nodigt de directeur uit voor de musical van je klas.', 'Geachte mevrouw Van Dijk, graag nodigen wij u uit voor de musical van klas 2B op vrijdag 8 maart.', 'Kom je naar onze musical?', 'Hé, vrijdag is onze musical, kom je ook?', 'Graag nodigen wij u uit: formeel.'],
+  [2, 'Je vraagt de gemeente wanneer het grofvuil wordt opgehaald.', 'Geachte heer of mevrouw, kunt u mij laten weten wanneer het grofvuil in onze straat wordt opgehaald?', 'Wanneer halen jullie het grofvuil op?', 'Hoi, wanneer komt de vuilniswagen voor die oude bank?', 'Geachte heer of mevrouw en kunt u mij laten weten: formeel aan een instantie.'],
+  [2, 'Je meldt je af voor een bijlesuur.', 'Beste meneer Timmer, helaas kan ik donderdag niet naar de bijles komen, omdat ik naar het ziekenhuis moet.', 'Kan donderdag niet, ziekenhuis.', 'Ik skip donderdag ff, moet naar het ziekenhuis.', 'Helaas en een reden in een hele zin: formeel.'],
+  [2, 'Je vraagt een winkel wanneer een product weer op voorraad is.', 'Geachte heer of mevrouw, kunt u mij laten weten wanneer deze schoenen weer op voorraad zijn?', 'Wanneer zijn die schoenen er weer?', 'Hebben jullie die sneakers nou nog of niet?', 'Kunt u mij laten weten: formeel aan een winkel.'],
+  [2, 'Je vraagt je mentor om een gesprek over je profielkeuze.', 'Beste mevrouw Hoekstra, ik wil graag met u praten over mijn profielkeuze. Wanneer zou het u schikken?', 'Kunnen we praten over mijn profiel?', 'Hé, heb je ff tijd voor mijn profielkeuze?', 'Wanneer zou het u schikken: heel beleefd.'],
   [3, 'Je solliciteert naar een bijbaan.', 'Geachte heer Van Leeuwen, met veel belangstelling heb ik uw vacature voor een weekendhulp gelezen. Graag solliciteer ik naar deze functie.', 'Ik wil graag bij jullie werken in het weekend.', 'Hoi, ik zag dat jullie iemand zoeken voor het weekend, kan ik dat doen?', 'Met veel belangstelling en graag solliciteer ik: de vaste formules van een sollicitatiebrief.'],
   [3, 'Je dient een klacht in bij een bedrijf.', 'Geachte heer of mevrouw, hierbij dien ik een klacht in over de levering van mijn bestelling.', 'Dit is echt slecht geregeld.', 'Ik heb een klacht: mijn pakket is kapot.', 'Hierbij dien ik een klacht in: formeel, zonder boze woorden.'],
   [3, 'Je vraagt om uitstel voor een deadline.', 'Beste mevrouw Ter Horst, in verband met ziekte verzoek ik u vriendelijk om uitstel van de deadline tot 20 mei.', 'Kan de deadline naar 20 mei? Was ziek.', 'Ik red 15 mei niet, mag het 20 mei worden?', 'In verband met en verzoek ik u vriendelijk: formeel.'],
@@ -115,7 +135,11 @@ var KIES = [
   [3, 'Je vraagt een bedrijf om informatie voor je profielwerkstuk.', 'Geachte heer of mevrouw, voor mijn profielwerkstuk onderzoek ik duurzame verpakkingen. Zou ik u enkele vragen mogen stellen?', 'Mag ik jullie wat vragen voor school?', 'Hoi! Ik doe een werkstuk over verpakkingen, kunnen jullie helpen?', 'Zou ik u enkele vragen mogen stellen: formeel.'],
   [3, 'Je meldt de gemeente een kapotte lantaarnpaal.', 'Geachte heer of mevrouw, graag meld ik dat de lantaarnpaal bij Dorpsstraat 14 al een week niet brandt.', 'Die lantaarnpaal is kapot.', 'Kunnen jullie die lamp in de Dorpsstraat eens fixen?', 'Graag meld ik: formeel en zakelijk.'],
   [3, 'Je trekt je sollicitatie in.', 'Geachte heer Verbeek, hierbij trek ik mijn sollicitatie in, omdat ik elders een baan heb aangenomen.', 'Ik hoef de baan niet meer.', 'Laat maar zitten, ik heb al iets anders.', 'Hierbij trek ik in en een reden: formeel.'],
-  [3, 'Je vraagt een oud-docent om een referentie.', 'Geachte heer Mulder, zou u bereid zijn als referentie op te treden voor mijn sollicitatie?', 'Mag ik jou opgeven als referentie?', 'Kun je iets goeds over me zeggen als ze bellen?', 'Zou u bereid zijn: een beleefd, formeel verzoek.']
+  [3, 'Je vraagt een oud-docent om een referentie.', 'Geachte heer Mulder, zou u bereid zijn als referentie op te treden voor mijn sollicitatie?', 'Mag ik jou opgeven als referentie?', 'Kun je iets goeds over me zeggen als ze bellen?', 'Zou u bereid zijn: een beleefd, formeel verzoek.'],
+  [3, 'Je vraagt een bedrijf om een rondleiding voor je klas.', 'Geachte heer of mevrouw, namens klas 4H wil ik graag informeren of wij een rondleiding door uw bedrijf mogen krijgen.', 'Kunnen wij een rondleiding krijgen?', 'Hoi! Doen jullie ook rondleidingen voor klassen?', 'Namens klas 4H en informeren of: formeel.'],
+  [3, 'Je laat een bedrijf weten dat je de aangeboden bijbaan aanneemt.', 'Geachte mevrouw Visser, hartelijk dank voor uw aanbod. Graag neem ik de functie van kassamedewerker aan.', 'Ik neem de baan aan!', 'Yes, ik doe het! Wanneer kan ik beginnen?', 'Hartelijk dank voor uw aanbod en graag neem ik aan: formeel.'],
+  [3, 'Je vraagt de school om vrijstelling voor een vak.', 'Geachte heer Brouwer, graag verzoek ik u om vrijstelling voor het vak Frans, omdat ik dit vak op mijn vorige school al heb afgerond.', 'Moet ik Frans nog doen? Heb het al gehad.', 'Frans heb ik al gehaald hoor, kan ik stoppen?', 'Graag verzoek ik u en een reden: formeel.'],
+  [3, 'Je vraagt een webwinkel of je een jas uit je bestelling mag ruilen.', 'Geachte heer of mevrouw, graag zou ik de jas uit mijn bestelling van 2 maart willen ruilen voor een kleinere maat.', 'Kan ik die jas ruilen?', 'Die jas is te groot, mag ik een andere?', 'Graag zou ik willen ruilen en een datum: formeel.']
 ];
 var HERSCHRIJVEN = [
   [1, 'Hoi meneer Jansen, kun je me ff helpen?', 'Beste meneer Jansen, kunt u mij ___ helpen?', ['even'], 'Ff is een afkorting van even. In een net bericht schrijf je het woord voluit.'],
@@ -136,6 +160,10 @@ var HERSCHRIJVEN = [
   [1, 'Mag ik je pen lenen?', 'Mag ik ___ pen lenen?', ['uw'], 'Je wordt uw: de beleefde vorm.'],
   [1, 'Ik vind het echt stom dat de les uitvalt.', 'Ik vind het ___ dat de les uitvalt.', ['jammer', 'vervelend', 'spijtig'], 'Stom is spreektaal; jammer of vervelend is netter.'],
   [1, 'Kun je dat nog een keer zeggen?', 'Kunt u dat ___ herhalen?', ['nog eens', 'nogmaals', 'alstublieft'], 'Nog een keer zeggen wordt: nog eens of nogmaals herhalen.'],
+  [1, 'Ik ben super blij met de uitslag.', 'Ik ben ___ blij met de uitslag.', ['erg', 'heel', 'zeer'], 'Super is spreektaal. Formeel schrijf je erg blij of heel blij.'],
+  [1, 'Ik ben m kwijt.', 'Ik ben ___ kwijt.', ['hem'], 'M is een afkorting van hem. In een net bericht schrijf je het woord voluit.'],
+  [1, 'Ik heb een vraagje over de toets.', 'Ik heb een ___ over de toets.', ['vraag'], 'Vraagje klinkt als praten met een vriend. In een net bericht schrijf je vraag.'],
+  [1, 'Hoi, ik ben Sam uit klas 1B.', 'Beste meneer, ___ naam is Sam en ik zit in klas 1B.', ['mijn'], 'Hoi, ik ben Sam is spreektaal. Formeel stel je jezelf voor met mijn naam is.'],
   [2, 'Kun je ff kijken naar mijn verslag?', 'Zou u ___ naar mijn verslag willen kijken?', ['even'], 'Ff wordt even, en kun je wordt zou u willen.'],
   [2, 'Ik heb mijn werkstuk niet af, sorry.', 'Helaas heb ik mijn werkstuk niet af. Mijn ___.', ['excuses', 'excuus', 'verontschuldigingen'], 'Sorry wordt mijn excuses.'],
   [2, 'Ik wil graag een andere dag voor de toets.', 'Ik ___ u om een andere datum voor de toets.', ['verzoek', 'vraag'], 'Ik verzoek u: de formele manier om iets te vragen.'],
@@ -154,6 +182,10 @@ var HERSCHRIJVEN = [
   [2, 'Ik stuur het zo.', 'Ik stuur het ___ op.', ['zo spoedig mogelijk', 'spoedig', 'zo snel mogelijk', 'binnenkort'], 'Zo is spreektaal; formeel schrijf je zo spoedig mogelijk.'],
   [2, 'Kan dat?', 'Is dat ___?', ['mogelijk'], 'Kan dat wordt in een net bericht: is dat mogelijk.'],
   [2, 'Ik snap de opdracht niet.', 'De opdracht is mij niet ___.', ['duidelijk', 'helder'], 'Snappen is spreektaal. Formeel: de opdracht is mij niet duidelijk.'],
+  [2, 'Ik heb het gecheckt.', 'Ik heb het ___.', ['gecontroleerd', 'nagekeken', 'nagegaan'], 'Checken is Engelse spreektaal; formeel schrijf je controleren of nakijken.'],
+  [2, 'Ik moet nog wat dingen regelen.', 'Ik moet nog enkele ___ regelen.', ['zaken'], 'Dingen is spreektaal; in een net bericht schrijf je zaken.'],
+  [2, 'Ik laat het je nog weten.', 'Ik ___ u hier later over.', ['bericht', 'informeer'], 'Het je laten weten wordt formeel: ik bericht u of ik informeer u.'],
+  [2, 'Ik heb een fout gemaakt, my bad.', 'Ik heb een fout gemaakt. Dat ___ mij.', ['spijt'], 'My bad is Engelse spreektaal; formeel schrijf je: dat spijt mij.'],
   [3, 'Ik heb je vacature gezien en het lijkt me wel wat.', 'Met veel ___ heb ik uw vacature gelezen.', ['belangstelling', 'interesse'], 'Het lijkt me wel wat wordt: met veel belangstelling heb ik uw vacature gelezen.'],
   [3, 'Ik kan niet komen omdat ik ziek ben.', 'In ___ met ziekte ben ik verhinderd.', ['verband'], 'In verband met is de formele versie van omdat.'],
   [3, 'Laat je nog wat weten?', 'Ik zie uw reactie met ___ tegemoet.', ['belangstelling', 'interesse'], 'Een vaste formele slotzin: ik zie uw reactie met belangstelling tegemoet.'],
@@ -171,7 +203,11 @@ var HERSCHRIJVEN = [
   [3, 'Ik hoef die baan niet meer.', 'Hierbij ___ ik mijn sollicitatie in.', ['trek'], 'Een sollicitatie intrekken: formeel voor er niet meer mee doorgaan.'],
   [3, 'Wat moet ik nu doen?', 'Kunt u mij ___ over de vervolgstappen?', ['informeren', 'inlichten', 'adviseren'], 'Wat moet ik doen wordt: kunt u mij informeren over de vervolgstappen.'],
   [3, 'Ik kan dat heel goed.', 'Ik ben daar zeer ___ in.', ['bedreven', 'ervaren', 'vaardig', 'goed'], 'Heel goed kunnen wordt: zeer bedreven of ervaren zijn.'],
-  [3, 'Laat maar weten als je vragen hebt.', 'Mocht u vragen ___, dan hoor ik dat graag.', ['hebben'], 'Mocht u vragen hebben: een vaste formele zin.']
+  [3, 'Laat maar weten als je vragen hebt.', 'Mocht u vragen ___, dan hoor ik dat graag.', ['hebben'], 'Mocht u vragen hebben: een vaste formele zin.'],
+  [3, 'Ik wil even zeggen dat ik het er niet mee eens ben.', 'Graag ___ ik mijn bezwaar kenbaar.', ['maak'], 'Kenbaar maken is een formele manier om iets te laten weten.'],
+  [3, 'Hierbij de spullen die je vroeg.', 'Hierbij stuur ik u de ___ documenten.', ['gevraagde', 'opgevraagde', 'verzochte'], 'De spullen die je vroeg wordt formeel: de gevraagde documenten.'],
+  [3, 'Ik heb er veel zin in.', 'Ik kijk er met veel ___ naar uit.', ['plezier', 'genoegen', 'enthousiasme'], 'Zin hebben is spreektaal; formeel: ik kijk er met veel plezier naar uit.'],
+  [3, 'Ik ben er vanaf maandag weer.', 'Vanaf maandag ben ik weer ___.', ['beschikbaar', 'aanwezig', 'bereikbaar'], 'Er weer zijn is spreektaal; formeel: weer beschikbaar of aanwezig.']
 ];
 var ZINNEN = [
   [1, 'Yo, ben je er al?', 'app'], [1, 'Ff kijken of ik kan, laat ik je weten 👍', 'app'], [1, 'Haha nee joh, dat was een grapje', 'app'], [1, 'Kom je nog? Sta al 10 min te wachten', 'app'],

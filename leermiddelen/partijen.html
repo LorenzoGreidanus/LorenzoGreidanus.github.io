@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Politieke partijen herkennen, versie 1.0: op vakspel.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Welke partij is dit? &middot; meneer Greidanus</title>
+<meta name="description" content="De politieke partijen in de Tweede Kamer herkennen aan hun logo, weten waar de afkorting voor staat, oude logo's herkennen en weten wanneer en hoe een partij ontstond.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Welke partij is dit?">
+<meta property="og:description" content="Partijen herkennen aan hun logo, afkortingen voluit en hoe partijen ontstonden.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/partijen.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%2383A5F2'/><rect x='22' y='30' width='56' height='40' rx='8' fill='%23FBF6F1'/><path d='M34 50h32M34 60h20' stroke='%2314224C' stroke-width='6' stroke-linecap='round'/><circle cx='70' cy='26' r='10' fill='%23F26749'/></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+/* een logo staat altijd op wit, ook in de donkere stand: zo zien de kleuren eruit zoals de partij ze bedoelt */
+.logokaart{background:#fff;border:1px solid var(--rand2);border-radius:18px;width:min(100%,280px);height:170px;display:grid;place-items:center;padding:18px;margin:0 auto;box-shadow:0 6px 18px rgba(20,34,76,.08)}
+.logokaart img{max-width:100%;max-height:130px;width:auto;height:auto;display:block}
+.logokaart.oud{position:relative}
+.logokaart.oud::after{content:'oud logo';position:absolute;top:8px;right:10px;font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6a7290}
+.logoknop{display:grid;place-items:center;background:#fff;border-radius:10px;height:74px;padding:8px}
+.logoknop img{max-width:100%;max-height:58px;width:auto;height:auto;display:block}
+.opties button.optie .logoknop{margin:-4px}
+/* vier logo's als keuze: twee naast elkaar, anders wordt het een lange toren */
+.opties:has(.logoknop){grid-template-columns:1fr 1fr}
+.opties:has(.logoknop) button.optie{padding:8px}
+.naamkaart{display:grid;place-items:center;gap:4px;min-height:84px;width:min(100%,320px);margin:0 auto;border-radius:18px;background:var(--kaart2);border:1px solid var(--rand2);padding:16px;text-align:center}
+.naamkaart b{font-size:1.15rem;letter-spacing:.02em;color:var(--ink)}
+.naamkaart span{font-size:.85rem;color:var(--muted)}
+.tijdas{width:min(100%,460px);height:auto;display:block;margin:0 auto;font-family:inherit}
+.tijdas text{fill:var(--muted);font-size:11px;font-weight:600}
+.tijdas .lijn{stroke:var(--muted);stroke-width:2}
+.tijdas .stip{fill:var(--kaart2);stroke:var(--muted);stroke-width:1.5}
+.tijdas .vraag{fill:var(--nadruk);font-size:22px;font-weight:700}
+.bron{font-size:.72rem;line-height:1.5;color:var(--muted);text-align:center;max-width:720px;margin:0 auto;padding:0 16px 28px}
+.bron a{color:var(--link)}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+
+  /* De partijen. nu: in de Tweede Kamer (fracties september 2026); anders
+     eerder in de Kamer (alleen op havo en vwo). Logo's: Wikimedia Commons,
+     publiek domein (te eenvoudig voor auteursrecht), staan in partijlogos/.
+     w = de goede antwoorden bij typen; jaar = opgericht. */
+  var P = [
+    { id:'d66', afk:'D66', naam:'Democraten 66', w:['D66', 'Democraten 66', 'Democraten 1966'], jaar:1966, nu:true },
+    { id:'vvd', afk:'VVD', naam:'Volkspartij voor Vrijheid en Democratie', w:['VVD', 'Volkspartij voor Vrijheid en Democratie'], jaar:1948, nu:true },
+    { id:'pro', afk:'PRO', naam:'Progressief Nederland', w:['Progressief Nederland', 'PRO'], jaar:2026, nu:true },
+    { id:'pvv', afk:'PVV', naam:'Partij voor de Vrijheid', w:['PVV', 'Partij voor de Vrijheid'], jaar:2006, nu:true },
+    { id:'cda', afk:'CDA', naam:'Christen-Democratisch Appèl', w:['CDA', 'Christen-Democratisch Appèl', 'Christen Democratisch Appel'], jaar:1980, nu:true },
+    { id:'ja21', afk:'JA21', naam:'JA21', w:['JA21', 'JA 21', 'Juiste Antwoord 2021'], jaar:2020, nu:true },
+    { id:'fvd', afk:'FVD', naam:'Forum voor Democratie', w:['FVD', 'FvD', 'Forum voor Democratie', 'Forum'], jaar:2016, nu:true },
+    { id:'bbb', afk:'BBB', naam:'BoerBurgerBeweging', w:['BBB', 'BoerBurgerBeweging', 'Boer Burger Beweging'], jaar:2019, nu:true },
+    { id:'denk', afk:'DENK', naam:'DENK', w:['DENK'], jaar:2015, nu:true },
+    { id:'sgp', afk:'SGP', naam:'Staatkundig Gereformeerde Partij', w:['SGP', 'Staatkundig Gereformeerde Partij'], jaar:1918, nu:true },
+    { id:'pvdd', afk:'PvdD', naam:'Partij voor de Dieren', w:['PvdD', 'Partij voor de Dieren'], jaar:2002, nu:true },
+    { id:'cu', afk:'CU', naam:'ChristenUnie', w:['CU', 'ChristenUnie', 'Christen Unie'], jaar:2000, nu:true },
+    { id:'sp', afk:'SP', naam:'Socialistische Partij', w:['SP', 'Socialistische Partij'], jaar:1972, nu:true },
+    { id:'50plus', afk:'50PLUS', naam:'50PLUS', w:['50PLUS', '50 PLUS', '50+'], jaar:2009, nu:true },
+    { id:'volt', afk:'Volt', naam:'Volt Nederland', w:['Volt', 'Volt Nederland'], jaar:2018, nu:true },
+    { id:'nsc', afk:'NSC', naam:'Nieuw Sociaal Contract', w:['NSC', 'Nieuw Sociaal Contract'], jaar:2023, nu:false },
+    { id:'gl', afk:'GL', naam:'GroenLinks', w:['GroenLinks', 'Groen Links', 'GL'], jaar:1990, nu:false },
+    { id:'pvda', afk:'PvdA', naam:'Partij van de Arbeid', w:['PvdA', 'Partij van de Arbeid'], jaar:1946, nu:false }
+  ];
+  var PID = {}; P.forEach(function(p){ PID[p.id] = p; });
+  var ICOON = { fvd:'fvd-icoon', pro:'pro-icoon', pvdd:'pvdd-icoon' };
+  /* oude logo's: van, bestand, van-tot, en of bb hem ook krijgt (de laatste voor het huidige) */
+  var OUD = [
+    { p:'vvd', f:'vvd-2009', tijd:'van 2009 tot 2020', bb:true }, { p:'vvd', f:'vvd-2005', tijd:'van 2005 tot 2009', bb:true },
+    { p:'vvd', f:'vvd-1992', tijd:'van 1992 tot 2005' }, { p:'vvd', f:'vvd-1966', tijd:'van 1966 tot 1992' }, { p:'vvd', f:'vvd-1948', tijd:'van 1948 tot 1966' },
+    { p:'d66', f:'d66-2006', tijd:'van 2006 tot 2008', bb:true }, { p:'d66', f:'d66-2002', tijd:'van 2002 tot 2006', bb:true },
+    { p:'d66', f:'d66-1985', tijd:'van 1985 tot 2001' }, { p:'d66', f:'d66-1966', tijd:'van 1966 tot 1985' },
+    { p:'sgp', f:'sgp-2000', tijd:'van 2000 tot 2016', bb:true }, { p:'sgp', f:'sgp-1979', tijd:'van 1979 tot 2000' },
+    { p:'pvda', f:'pvda-1966', tijd:'van 1966 tot 1970' }, { p:'pvda', f:'pvda-1950', tijd:'van 1950 tot 1966' },
+    { p:'sp', f:'sp-1989', tijd:'rond 1989, toen de partij nog Socialistiese Partij heette', bb:true }, { p:'sp', f:'sp-1981', tijd:'rond 1981, toen de partij nog Socialistiese Partij heette' }
+  ].filter(function(o){ return window.LOGO_ER ? LOGO_ER[o.f] : true; });
+
+  function logoSrc(f){ return 'partijlogos/' + f + '.svg'; }
+  function logoKaart(f, oud){ return '<div class="logokaart' + (oud ? ' oud' : '') + '"><img src="' + logoSrc(f) + '" alt="logo van een partij"></div>'; }
+  function logoKnop(f){ return '<span class="logoknop"><img src="' + logoSrc(f) + '" alt="logo"></span>'; }
+  function naamKaart(boven, onder){ return '<div class="naamkaart"><b>' + S(boven) + '</b>' + (onder ? '<span>' + S(onder) + '</span>' : '') + '</div>'; }
+  function magP(niveau){ return P.filter(function(p){ return p.nu || niveau === 'hv'; }); }
+  function anderen(p, niveau, n){ return H(magP(niveau).filter(function(x){ return x !== p; })).slice(0, n || 3); }
+
+  /* ---------- 1. welke partij is dit: het logo, zeg de partij ---------- */
+  function logo(niveau){
+    var lijst = magP(niveau).map(function(p){ return { p:p, f:p.id, oud:null }; })
+      .concat(niveau === 'bb' ? [] : Object.keys(ICOON).map(function(id){ return { p:PID[id], f:ICOON[id], oud:null, icoon:true }; }))
+      .concat(OUD.filter(function(o){ return niveau !== 'bb' || o.bb; }).map(function(o){ return { p:PID[o.p], f:o.f, oud:o }; }));
+    var it = kies(lijst), p = it.p;
+    var basis = { onderdeel:'partijen: welke partij', onderdeelNaam:'welke partij is dit', sleutel:'lo' + it.f,
+      beeld: logoKaart(it.f, !!it.oud),
+      uitleg: it.oud ? 'Dit logo gebruikte de ' + p.afk + ' ' + it.oud.tijd + '. Nu heeft de partij een ander logo.' : 'Dit is het logo van ' + (p.afk !== p.naam ? 'de ' + p.afk + ' (' + p.naam + ')' : p.naam) + ', opgericht in ' + p.jaar + '.',
+      antwoordTekst: p.naam + (p.afk !== p.naam ? ' (' + p.afk + ')' : '') };
+    if (niveau === 'bb') return Object.assign(basis, { vorm:'meerkeuze',
+      vraag: it.oud ? 'Dit is een <b>oud logo</b>. Van welke partij?' : 'Van welke partij is dit logo?',
+      opdracht: 'Kijk goed naar de letters en de kleuren.',
+      opties: [p.afk].concat(anderen(p, niveau).map(function(x){ return x.afk; })), goed: 0 });
+    var voluit = niveau === 'hv' && p.afk !== p.naam && !it.oud;
+    return Object.assign(basis, { vorm:'invul',
+      vraag: it.oud ? 'Dit is een <b>oud logo</b>. Van welke partij?' : it.icoon ? 'Dit is het <b>beeldmerk</b> van een partij, zonder de naam. Welke partij?' : voluit ? 'Van welke partij is dit logo? Typ de <b>volledige naam</b>.' : 'Van welke partij is dit logo?',
+      opdracht: voluit ? 'Niet de afkorting, maar waar die voor staat. Hoofdletters tellen niet.' : 'Typ de naam of de afkorting. Hoofdletters tellen niet.',
+      velden: [{ label:'partij', type:'tekst', breed:true, antwoord: voluit ? p.w.filter(function(w){ return w.length > 5 || w === p.naam; }) : p.w }] });
+  }
+
+  /* ---------- 2. welk logo hoort erbij: de naam, kies het logo ---------- */
+  function welkLogo(niveau){
+    var oudKans = OUD.filter(function(o){ return niveau !== 'bb' || o.bb; });
+    if (oudKans.length && Math.random() < 0.35){
+      var o = kies(oudKans), p = PID[o.p];
+      /* een oud logo van deze partij tussen de huidige logo's van drie andere */
+      var mis = anderen(p, niveau).map(function(x){ return x.id; });
+      return { onderdeel:'partijen: welk logo', onderdeelNaam:'welk logo hoort erbij', vorm:'meerkeuze', sleutel:'wo' + o.f,
+        vraag: 'Welk logo gebruikte de <b>' + S(p.afk) + '</b> ' + o.tijd + '?', opdracht: 'Drie logo’s zijn van andere partijen, nu. Eén is een oud logo van deze partij.',
+        beeld: naamKaart(p.afk, p.afk !== p.naam ? p.naam : 'opgericht in ' + p.jaar),
+        opties: [logoKnop(o.f)].concat(mis.map(logoKnop)), goed: 0,
+        uitleg: 'Dit logo gebruikte de ' + p.afk + ' ' + o.tijd + '.', antwoordTekst: 'het oude logo van de ' + p.afk };
+    }
+    var q = kies(magP(niveau));
+    return { onderdeel:'partijen: welk logo', onderdeelNaam:'welk logo hoort erbij', vorm:'meerkeuze', sleutel:'wl' + q.id,
+      vraag: 'Welk logo hoort bij <b>' + S(q.naam) + '</b>?', opdracht: 'Tik het logo aan.',
+      beeld: naamKaart(q.naam, q.afk !== q.naam ? 'afgekort: ' + q.afk : 'opgericht in ' + q.jaar),
+      opties: [logoKnop(q.id)].concat(anderen(q, niveau).map(function(x){ return logoKnop(x.id); })), goed: 0,
+      uitleg: 'Dit is het logo van ' + q.naam + (q.afk !== q.naam ? ' (' + q.afk + ')' : '') + '.', antwoordTekst: 'het logo van ' + q.afk };
+  }
+
+  /* ---------- 3. voluit: afkorting en naam ---------- */
+  function voluit(niveau){
+    var lijst = magP(niveau).filter(function(p){ return p.afk !== p.naam && p.id !== 'ja21'; });
+    var p = kies(lijst), omgekeerd = Math.random() < 0.5;
+    if (omgekeerd){
+      var basisO = { onderdeel:'partijen: voluit', onderdeelNaam:'afkorting en naam', sleutel:'va' + p.id, beeld: naamKaart(p.naam, 'hoe kort je dit af?'),
+        uitleg: p.naam + ' kort je af als ' + p.afk + '.', antwoordTekst: p.afk };
+      if (niveau === 'bb') return Object.assign(basisO, { vorm:'meerkeuze', vraag:'Wat is de afkorting van <b>' + S(p.naam) + '</b>?', opdracht:'Kies de goede afkorting.',
+        opties: [p.afk].concat(anderen(p, niveau).map(function(x){ return x.afk; })), goed:0 });
+      return Object.assign(basisO, { vorm:'invul', vraag:'Wat is de afkorting van <b>' + S(p.naam) + '</b>?', opdracht:'Typ de afkorting. Hoofdletters tellen niet.',
+        velden:[{ label:'afkorting', type:'tekst', antwoord: p.w.filter(function(w){ return w.length <= 6; }) }] });
+    }
+    var basis = { onderdeel:'partijen: voluit', onderdeelNaam:'afkorting en naam', sleutel:'vo' + p.id, beeld: logoKaart(p.id),
+      uitleg: p.afk + ' staat voor ' + p.naam + '.', antwoordTekst: p.naam };
+    if (niveau === 'hv') return Object.assign(basis, { vorm:'invul', vraag:'Waar staat <b>' + S(p.afk) + '</b> voor?', opdracht:'Typ de volledige naam. Hoofdletters tellen niet.',
+      velden:[{ label:'voluit', type:'tekst', breed:true, antwoord: p.w.filter(function(w){ return w.length > 6; }) }] });
+    return Object.assign(basis, { vorm:'meerkeuze', vraag:'Waar staat <b>' + S(p.afk) + '</b> voor?', opdracht:'Kies de volledige naam.',
+      opties: [p.naam].concat(H(lijst.filter(function(x){ return x !== p; })).slice(0, 3).map(function(x){ return x.naam; })), goed:0 });
+  }
+
+  /* ---------- 4. hoe en wanneer ontstaan: alleen feiten ---------- */
+  var FEIT = [
+    ['sgp', 'Welke partij is de <b>oudste</b> partij in de Tweede Kamer? Ze bestaat sinds 1918.'],
+    ['d66', 'Welke partij heeft het jaar waarin ze begon in haar naam?'],
+    ['cda', 'Welke partij ontstond in 1980 uit drie christelijke partijen: de KVP, de ARP en de CHU?'],
+    ['cu', 'Welke partij ontstond in 2000 uit twee christelijke partijen, het GPV en de RPF?'],
+    ['pro', 'Welke partij ontstond uit het samengaan van GroenLinks en de PvdA?'],
+    ['pvdd', 'Welke partij was in 2006 de eerste dierenpartij ter wereld met zetels in een landelijk parlement?'],
+    ['volt', 'Welke partij doet in veel landen van Europa mee aan verkiezingen, met hetzelfde programma?'],
+    ['50plus', 'Welke partij zegt in haar naam voor welke leeftijdsgroep ze vooral opkomt?'],
+    ['bbb', 'Welke partij werd opgericht in 2019, in de tijd van de protesten van boeren?'],
+    ['sp', 'Welke partij heeft een <b>tomaat</b> als teken?'],
+    ['denk', 'De naam van welke partij betekent in het Turks <b>gelijkwaardig</b>, en in het Nederlands iets met nadenken?'],
+    ['pvv', 'Welke partij werd in 2006 opgericht door Geert Wilders?'],
+    ['ja21', 'Welke partij heette bij de oprichting in 2020 voluit <b>Juiste Antwoord 2021</b>?'],
+    ['fvd', 'Welke partij begon als denktank en werd in 2016 een politieke partij?'],
+    ['vvd', 'Welke liberale partij werd opgericht in 1948 en heeft oranje en blauw in het logo?'],
+    ['pvda', 'Welke partij werd opgericht in 1946, vlak na de Tweede Wereldoorlog?', true],
+    ['gl', 'Welke partij ontstond in 1990 uit vier kleine linkse partijen, waaronder de CPN en de PSP?', true],
+    ['nsc', 'Welke partij werd in 2023 opgericht door Pieter Omtzigt?', true]
+  ];
+  /* christelijke partijen: de afleiders zijn dan partijen die dat niet zijn */
+  var CHRISTELIJK = ['cda', 'cu', 'sgp'], NIET_CHR = ['d66', 'vvd', 'sp', 'pvdd', 'volt', 'pvv', 'bbb', 'ja21', '50plus'];
+  function feiten(niveau){
+    var n = FEIT.filter(function(f){ return !f[2] || niveau === 'hv'; }).length, wie = Math.random();
+    /* een derde: in welk jaar; een beetje: welke is christelijk; de rest: welke partij */
+    if (wie < 0.33){
+      var p = kies(magP(niveau)), jaren = [p.jaar], poging = 0;
+      while (jaren.length < 4 && poging++ < 50){ var j = p.jaar + (Math.random() < 0.5 ? -1 : 1) * (4 + Math.floor(Math.random() * 30)); if (j < 1900 || j > 2026) continue; if (jaren.every(function(x){ return Math.abs(x - j) >= 4; })) jaren.push(j); }
+      return { onderdeel:'partijen: ontstaan', onderdeelNaam:'hoe en wanneer ontstaan', vorm:'meerkeuze', sleutel:'ja' + p.id,
+        vraag:'In welk jaar werd <b>' + S(p.naam) + '</b> opgericht?', opdracht:'Kijk op de tijdlijn: waar staat het vraagteken ongeveer?',
+        beeld: tijdas(p.jaar), opties: jaren.map(String), goed:0,
+        uitleg: p.naam + ' bestaat sinds ' + p.jaar + '.', antwoordTekst: String(p.jaar) };
+    }
+    if (wie < 0.45){
+      var c = kies(CHRISTELIJK), cp = PID[c];
+      return { onderdeel:'partijen: ontstaan', onderdeelNaam:'hoe en wanneer ontstaan', vorm:'meerkeuze', sleutel:'ch' + c,
+        vraag:'Welke van deze partijen is een <b>christelijke</b> partij?', opdracht:'Drie van de vier zijn het niet.', beeld: logoKaart(c),
+        opties: [cp.afk].concat(H(NIET_CHR).slice(0, 3).map(function(x){ return PID[x].afk; })), goed:0,
+        uitleg: 'Het CDA, de ChristenUnie en de SGP baseren hun ideeën op de Bijbel. De ' + cp.afk + ' is er een van.', antwoordTekst: cp.afk };
+    }
+    var f = kies(FEIT.filter(function(x){ return !x[2] || niveau === 'hv'; })), fp = PID[f[0]];
+    return { onderdeel:'partijen: ontstaan', onderdeelNaam:'hoe en wanneer ontstaan', vorm: niveau === 'bb' ? 'meerkeuze' : 'meerkeuze', sleutel:'fe' + f[0],
+      vraag: f[1], opdracht:'Kies de partij.', beeld: tijdas(fp.jaar, true),
+      opties: [fp.afk === fp.naam || fp.afk.length > 4 ? fp.naam : fp.afk].concat(anderen(fp, niveau).map(function(x){ return x.afk === x.naam || x.afk.length > 4 ? x.naam : x.afk; })), goed:0,
+      uitleg: fp.naam + (fp.afk !== fp.naam ? ' (' + fp.afk + ')' : '') + ' bestaat sinds ' + fp.jaar + '.', antwoordTekst: fp.naam };
+  }
+  /* een tijdlijn van 1900 tot nu met een vraagteken (of een stip) bij het jaar */
+  function tijdas(jaar, stip){
+    var W = 460, L = 24, R = 24, x = function(j){ return L + (j - 1900) / 130 * (W - L - R); };
+    var s = '<svg class="tijdas" viewBox="0 0 ' + W + ' 70" aria-hidden="true"><line class="lijn" x1="' + L + '" y1="40" x2="' + (W - R) + '" y2="40"/>';
+    [1900, 1925, 1950, 1975, 2000, 2025].forEach(function(j){ s += '<line class="lijn" x1="' + x(j) + '" y1="35" x2="' + x(j) + '" y2="45"/><text x="' + x(j) + '" y="62" text-anchor="middle">' + j + '</text>'; });
+    s += stip ? '<circle class="stip" cx="' + x(jaar) + '" cy="40" r="7" style="fill:var(--nadruk);stroke:var(--nadruk)"/>' : '<text class="vraag" x="' + x(jaar) + '" y="28" text-anchor="middle">?</text><circle class="stip" cx="' + x(jaar) + '" cy="40" r="6"/>';
+    return s + '</svg>';
+  }
+
+  var SOORTEN = { logo: logo, kies: welkLogo, voluit: voluit, ontstaan: feiten };
+  VAKSPEL.maak({
+    id:'partijen', naam:'Welke partij is dit?', vak:'burg', kleur:'#83A5F2',
+    hand:'ken je partijen',
+    lead:'De partijen in de Tweede Kamer: herken ze aan hun logo, ook aan een oud logo, weet waar de afkorting voor staat, en wanneer en hoe een partij ontstond. Zonder standpunten: alleen wie wie is.',
+    hoe:[
+      { kop:'Het logo', tekst:'Je ziet een logo en zegt welke partij het is. Op vmbo-bb kies je uit vier, daarna typ je de naam of de afkorting.' },
+      { kop:'Voluit', tekst:'VVD, CDA, SGP: waar staan die letters voor? En andersom: hoe kort je een partij af?' },
+      { kop:'Ontstaan', tekst:'De oudste partij is van 1918, de nieuwste van 2026. Een tijdlijn helpt je schatten.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'Kiezen uit vier, alleen partijen die nu in de Kamer zitten.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'De naam zelf typen, en meer oude logo’s.' },
+        { id:'hv', naam:'havo en vwo', uit:'De volledige naam typen, ook partijen die eerder in de Kamer zaten.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' }, { id:'logo', naam:'welke partij is dit' }, { id:'kies', naam:'welk logo hoort erbij' }, { id:'voluit', naam:'afkorting en naam' }, { id:'ontstaan', naam:'hoe en wanneer ontstaan' } ] }
+    ],
+    aantal:10,
+    maak:function(keuze){
+      var soort = keuze.soort === 'alles' ? kies(['logo', 'logo', 'kies', 'voluit', 'ontstaan']) : keuze.soort;
+      return SOORTEN[soort](keuze.niveau);
+    },
+    uitleg:{ doel:'De politieke partijen in Nederland herkennen en uit elkaar houden.', tijd:'tien opgaven per ronde', bediening:'Kies een antwoord of typ de naam en druk op Nakijken. Spelfouten in een naam tellen als fout, hoofdletters niet.' }
+  });
+})();
+</script>
+<p class="bron">Logo’s: <a href="https://commons.wikimedia.org/">Wikimedia Commons</a>. SP-logo: SP (naamsvermelding). PvdA-logo: PvdA, <a href="https://creativecommons.org/licenses/by/2.0/">CC BY 2.0</a>. Volt-logo: Ivan Ch RU, <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>. De andere logo’s zijn publiek domein. Alle bronnen staan in partijlogos/BRONNEN.txt.</p>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>

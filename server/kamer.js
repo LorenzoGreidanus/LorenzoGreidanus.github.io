@@ -103,7 +103,9 @@ const KLAS_SPELLEN = { race: "Vragenrace", eigen: "Eigen oefening", klasquiz: "K
   samenvatten: "Samenvatten",
   woordenschat: "Woordenschat in context",
   signaalwoorden: "Signaalwoorden en verbanden",
-  register: "Formeel of informeel" };
+  register: "Formeel of informeel",
+  partijen: "Welke partij is dit?",
+  democratie: "Democratie" };
 /* Hoe lang de kamer wacht voor hij iemand die wegviel ook echt weghaalt. In de
    lobby kort: herladen duurt een paar tellen. In de arena langer: een
    telefoon die even geen bereik heeft, hoort er niet meteen uit te liggen. */

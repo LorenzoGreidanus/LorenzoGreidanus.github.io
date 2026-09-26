@@ -172,7 +172,7 @@ var IN_PATROON = {
   eco:   [[/^huishoudboekje: /, 'geld'], [/^vraag en aanbod: /, 'markt']],
   ges:   [[/^kaart door de tijd: /, 'vaardig'], [/^wie ben ik: /, 'vaardig'], [/^oorzaak en gevolg: /, 'vaardig'], [/^werken met bronnen$/, 'vaardig']],
   bio: [[/^kruisen: /, 'cellen'], [/^voedselweb: /, 'natuur']],
-  burg: [[/^verkiezingen: /, 'staat']]
+  burg: [[/^democratie: /, 'staat'], [/^partijen: /, 'staat'], [/^verkiezingen: /, 'staat']]
 };
 function groepVan(vak, o){
   var g = o.groep || (IN_GROEP[vak] && IN_GROEP[vak][o.id]);

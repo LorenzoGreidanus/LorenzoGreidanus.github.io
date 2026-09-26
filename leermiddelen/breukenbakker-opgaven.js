@@ -37,15 +37,15 @@ var NAMEN = ['appeltaart', 'pizza', 'chocoladetaart', 'quiche', 'pannenkoek', 'k
 
 var SOORTEN = [
   { id:'lezen', naam:'welke breuk zie je', icoon:plaatje(miniTaart(8, 3, 20, 17, 13) + tekenteken('?', 50, 23)), maak:function(niv){
-      var n = kies(niv === 1 ? [2, 3, 4, 6, 8] : niv === 2 ? [3, 4, 5, 6, 8, 10] : [5, 6, 7, 8, 9, 10, 12]);
+      var n = kies(niv === 1 ? [2, 3, 4, 5, 6, 8] : niv === 2 ? [3, 4, 5, 6, 8, 10] : [5, 6, 7, 8, 9, 10, 12]);
       var t = 1 + Math.floor(Math.random() * (n - 1));
       return { taart:{ n:n, vol:t }, eenheid:'breuk',
         vraag:'Welk deel van de ' + kies(NAMEN) + ' is er nog?', antwoord:{ t:t, n:n },
         hoe:'De taart is in ' + n + ' stukken verdeeld en er liggen er ' + t + ', dus ' + t + '/' + n + '.' + (kort(t, n).n !== n ? ' Korter mag ook: ' + br(kort(t, n)) + '.' : ''), ook:[kort(t, n)] };
     } },
   { id:'gelijk', naam:'gelijke breuken', icoon:plaatje(miniTaart(2, 1, 15, 17, 13) + tekenteken('=', 36, 23) + miniTaart(6, 3, 57, 17, 13)), maak:function(niv){
-      var kleine = kies(niv === 1 ? [[1, 2], [1, 4], [1, 3]] : [[1, 2], [1, 3], [1, 4], [2, 3], [3, 4], [2, 5]]);
-      var maal = kies(niv === 1 ? [2, 3] : niv === 2 ? [2, 3, 4] : [3, 4, 5, 6]);
+      var kleine = kies(niv === 1 ? [[1, 2], [1, 4], [1, 3], [1, 5], [2, 3], [3, 4], [1, 6]] : [[1, 2], [1, 3], [1, 4], [2, 3], [3, 4], [2, 5], [3, 5], [1, 6]]);
+      var maal = kies(niv === 1 ? [2, 3, 4] : niv === 2 ? [2, 3, 4] : [3, 4, 5, 6]);
       var n = kleine[1] * maal, t = kleine[0] * maal;
       return { taart:{ n:n, vol:t }, eenheid:'breuk', kort:true,
         vraag:'De bakker snijdt ' + t + '/' + n + '. Hoe heet dat stuk zo kort mogelijk?', antwoord:{ t:kleine[0], n:kleine[1] },
@@ -87,7 +87,8 @@ var SOORTEN = [
         hoe:a[0] + '/' + a[1] + ' is ' + Math.round(a[0] / a[1] * 100) + ' procent van de taart, ' + b[0] + '/' + b[1] + ' is ' + Math.round(b[0] / b[1] * 100) + ' procent. Reken breuken om naar dezelfde noemer of naar procenten, dan zie je het meteen.' };
     } },
   { id:'procent', naam:'breuk naar procent', niv:2, icoon:plaatje(miniTaart(4, 1, 18, 17, 13) + tekenteken('→', 38, 23) + tekenteken('%', 58, 24)), maak:function(niv){
-      var p = kies(niv === 2 ? [[1, 2], [1, 4], [3, 4], [1, 5], [2, 5], [1, 10], [3, 10]] : [[3, 8], [5, 8], [1, 8], [7, 10], [2, 5], [5, 6], [1, 3]]);
+      var p = kies(niv === 2 ? [[1, 2], [1, 4], [3, 4], [1, 5], [2, 5], [3, 5], [4, 5], [1, 10], [3, 10], [7, 10], [9, 10], [1, 20], [3, 20], [7, 20], [9, 20], [1, 25], [2, 25], [1, 50], [3, 50], [1, 100], [2, 4], [6, 10]]
+        : [[3, 8], [5, 8], [1, 8], [7, 8], [7, 10], [2, 5], [5, 6], [1, 6], [1, 3], [2, 3], [1, 12], [5, 12], [7, 12], [3, 16], [5, 16], [1, 40], [3, 40], [7, 25], [11, 20], [13, 20], [3, 15], [4, 15]]);
       var waarde = p[0] / p[1] * 100, afgerond = Math.round(waarde * 10) / 10;
       return { taart:{ n:p[1], vol:p[0] }, eenheid:'procent',
         vraag:'Hoeveel procent van de taart is ' + p[0] + '/' + p[1] + '?', antwoord:{ t:afgerond, n:1 }, marge:0.15,

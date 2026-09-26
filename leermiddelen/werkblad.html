@@ -217,7 +217,7 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
         <label id="bladVeld" class="hide">Werkblad<select id="blad" class="veld"></select></label>
         <label id="niveauVeld">Niveau<select id="niveau" class="veld"></select></label>
         <label><span id="aantalNaam">Aantal vragen</span><select id="aantal" class="veld"><option>10</option><option selected>20</option><option>30</option><option>40</option></select></label>
-        <label id="vormVeld">Soort vragen<select id="vorm" class="veld"><option value="mk">meerkeuze (a, b, c, d)</option><option value="open">open, met een lijn</option></select></label>
+        <label id="vormVeld">Soort vragen<select id="vorm" class="veld"><option value="mk">meerkeuze (a, b, c, d)</option><option value="open">open, met een lijn</option><option value="mix">meerkeuze en open door elkaar</option></select></label>
       </div>
       <label class="vink"><input type="checkbox" id="metUitleg" checked> Uitleg bij elk antwoord op het antwoordblad</label>
     </div>
@@ -291,14 +291,14 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
   }
   function tekenDelen(aan){
     var vak = $('vak').value, S = spel();
-    $('vormVeld').classList.toggle('hide', !!S);
+    $('vormVeld').classList.toggle('hide', !!(S && !S.vormen));
     $('niveauVeld').classList.toggle('hide', !!(S && S.eigenNiveau));
     $('delenKnoppen').classList.toggle('hide', !!S);
     $('delenKop').textContent = S ? S.delenKop : 'Onderdelen';
     $('delenTip').textContent = S ? S.delenTip : 'Kies je niets, dan komt het hele vak aan bod. De vragen worden eerlijk over de gekozen onderdelen verdeeld.';
     $('aantalNaam').textContent = S ? S.aantalNaam : 'Aantal vragen';
     zetAantallen(S ? S.aantallen : AANTAL_BANK, S ? S.standaard : 20);
-    if (S){ $('delen').innerHTML = S.delen(aan || []); return; }
+    if (S){ $('delen').innerHTML = S.delen(aan || []); if (S.vormen) $('vorm').value = 'mk'; return; }
     $('delen').innerHTML = BANK.deelItems(vak).map(function(it){
       if (it.soort === 'kop') return '<p class="kop">' + schoon(it.naam) + '</p>';
       return '<label><input type="checkbox" value="' + schoon(it.id) + '"' + (aan && aan.indexOf(it.id) >= 0 ? ' checked' : '') + '> ' + schoon(it.naam) + '</label>';
@@ -314,7 +314,9 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
   $('geenDelen').addEventListener('click', function(){ [].forEach.call($('delen').querySelectorAll('input'), function(x){ x.checked = false; }); });
   tekenDelen(gevraagd);
   if ([].some.call($('aantal').options, function(o){ return o.value === zoek.get('aantal'); })) $('aantal').value = zoek.get('aantal');
-  if (zoek.get('vorm') === 'open' || zoek.get('vorm') === 'mk') $('vorm').value = zoek.get('vorm');
+  if (/^(open|mk|mix)$/.test(zoek.get('vorm') || '')) $('vorm').value = zoek.get('vorm');
+  /* bij door elkaar is om de andere vraag open; zo kloppen werkblad en antwoordblad altijd */
+  function isOpen(vorm, i){ return vorm === 'open' || (vorm === 'mix' && i % 2 === 1); }
 
   function rang(){ var n = NIVEAUS.filter(function(x){ return x.id === $('niveau').value; })[0]; return n ? n.rang : 2; }
   function deelNaam(vak, id){ var o = (ONDERDELEN[vak] || []).filter(function(x){ return x.id === id; })[0]; return o ? o.naam : ''; }
@@ -326,7 +328,7 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
      gaan om de beurt per onderdeel, zodat een groot onderdeel de kleine niet
      wegdrukt. */
   /* twee vragen zijn dezelfde als tekst, plaatje en goede antwoord gelijk zijn; alle vlagvragen hebben dezelfde tekst */
-  function sleutel(q){ return q ? q.v + '|' + (q.vlag || '') + '|' + (q.svg ? q.svg.length : '') + '|' + q.o[q.g] : ''; }
+  function sleutel(q){ return q ? q.v + '|' + (q.vlag || '') + '|' + (q.svg || '') + '|' + q.o[q.g] : ''; }
   function trek(vak, delen, n, r){
     var uit = [], gezien = {};
     if (vak === 'reken'){
@@ -393,11 +395,11 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
   function klaarSpel(S, vak, n, keuze, items){
     if (!Array.isArray(items)){ $('melding').textContent = items.fout; return; }
     if (!items.length){ $('melding').textContent = 'Hier zijn geen opgaven voor. Kies iets anders of een ander niveau.'; return; }
-    laatste = { vak:vak, spel:S, keuze:keuze, items:items, niveauNaam:niveauNaam(), uitleg:$('metUitleg').checked };
+    laatste = { vak:vak, spel:S, keuze:keuze, items:items, niveauNaam:niveauNaam(), uitleg:$('metUitleg').checked, vorm:$('vorm').value, isOpen:isOpen };
     teken();
     $('melding').textContent = items.length < n ? 'Er waren er ' + items.length + ' die passen; meer zijn er niet voor deze keuze.' : '';
     $('opnieuw').disabled = false; $('print').disabled = false;
-    adres(vak, n, gekozen());
+    adres(vak, n, gekozen(), S.vormen ? $('vorm').value : '');
   }
   function maak(){
     if (spel()) return maakSpel(spel());
@@ -407,12 +409,12 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
       var ruw = trek(vak, delen, n, r);
       if (!ruw.length){ $('melding').textContent = 'Hier zijn geen vragen voor. Kies een ander onderdeel of niveau.'; return; }
       var vragen = ruw.map(function(q){ return klaarzetten(vak, q); });
-      laatste = { vak:vak, delen:delen, niveau:$('niveau').value, vragen:vragen, open:$('vorm').value === 'open', uitleg:$('metUitleg').checked };
+      laatste = { vak:vak, delen:delen, niveau:$('niveau').value, vragen:vragen, vorm:$('vorm').value, uitleg:$('metUitleg').checked };
       teken();
       $('melding').textContent = vragen.length < n ? 'Er waren er ' + vragen.length + ' die passen; meer staan er niet in de vragenbank voor deze keuze.' : '';
       $('opnieuw').disabled = false; $('print').disabled = false;
       /* de keuze in het adres, zodat je hem kunt bewaren of delen */
-      adres(vak, n, delen, laatste.open ? 'open' : 'mk');
+      adres(vak, n, delen, laatste.vorm);
     });
   }
   function papier(titel, sub, klasse, vragen, antwoorden, intro, boven){
@@ -434,15 +436,15 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
     var sub = (w.delen.length > 1 ? w.delen.map(function(d){ return deelNaam(w.vak, d); }).join(', ') + ' · ' : '') + niv + ' · ' + w.vragen.length + ' vragen';
     /* het kopje boven een vraag alleen als er meer onderdelen door elkaar staan */
     var kopjes = w.delen.length !== 1;
-    var vragen = w.vragen.map(function(q){
-      var open = w.open && !keuzesNodig(q.v);
+    var vragen = w.vragen.map(function(q, i){
+      var open = isOpen(w.vorm, i) && !keuzesNodig(q.v);
       return '<li>' + (kopjes && q.kop ? '<span class="odkop">' + schoon(q.kop) + '</span>' : '') +
         '<span class="vr">' + schoon(q.v) + '</span>' + beeld(q) +
         (open ? '<span class="lijn" aria-hidden="true"></span>'
                 : '<div class="opties">' + q.o.map(function(o, i){ return '<span><b>' + LETTERS[i] + '</b>' + schoon(o) + '</span>'; }).join('') + '</div>') + '</li>';
     }).join('');
-    var antwoorden = w.vragen.map(function(q){
-      return '<li><span class="goed">' + (w.open && !keuzesNodig(q.v) ? '' : LETTERS[q.g] + '. ') + schoon(q.o[q.g]) + '</span>' + (w.uitleg && q.u ? '<small>' + schoon(q.u) + '</small>' : '') + '</li>';
+    var antwoorden = w.vragen.map(function(q, i){
+      return '<li><span class="goed">' + (isOpen(w.vorm, i) && !keuzesNodig(q.v) ? '' : LETTERS[q.g] + '. ') + schoon(q.o[q.g]) + '</span>' + (w.uitleg && q.u ? '<small>' + schoon(q.u) + '</small>' : '') + '</li>';
     }).join('');
     papier(titel, sub, '', vragen, antwoorden);
   }
@@ -451,7 +453,7 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
   $('print').addEventListener('click', function(){ window.print(); });
   /* uitleg of de soort vragen omzetten hoeft geen nieuwe trekking */
   $('metUitleg').addEventListener('change', function(){ if (laatste){ laatste.uitleg = $('metUitleg').checked; teken(); } });
-  $('vorm').addEventListener('change', function(){ if (laatste && !laatste.spel && laatste.vak === $('vak').value){ laatste.open = $('vorm').value === 'open'; teken(); } });
+  $('vorm').addEventListener('change', function(){ if (laatste && laatste.vak === $('vak').value && (!laatste.spel || laatste.spel.vormen)){ laatste.vorm = $('vorm').value; teken(); } });
   /* kwam je met een vak in het adres, dan staat het werkblad er meteen */
   if (zoek.get('vak')) maak();
 })();

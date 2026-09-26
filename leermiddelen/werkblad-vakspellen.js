@@ -14,7 +14,7 @@
     ['oorzaakgevolg', 'Oorzaak en gevolg', 'ges'], ['wiebenik', 'Wie ben ik?', 'ges'], ['tijdkaart', 'De kaart door de tijd', 'ges'],
     ['klimaatgrafiek', 'Klimaatgrafieken', 'aard'], ['kaartvaardigheid', 'Kaartvaardigheden', 'aard'], ['bevolkingspiramide', 'Bevolkingspiramides', 'aard'],
     ['voedselweb', 'Voedselketen en voedselweb', 'bio'], ['kruisen', 'Kruisingsschema', 'bio'],
-    ['huishoudboekje', 'Het huishoudboekje', 'eco'], ['vraagenaanbod', 'Vraag en aanbod', 'eco'], ['verkiezingen', 'Verkiezingen en zetels', 'burg']
+    ['huishoudboekje', 'Het huishoudboekje', 'eco'], ['vraagenaanbod', 'Vraag en aanbod', 'eco'], ['verkiezingen', 'Verkiezingen en zetels', 'burg'], ['partijen', 'Welke partij is dit?', 'burg'], ['democratie', 'Democratie', 'burg']
   ];
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
   var stijlGezet = {};
@@ -52,9 +52,9 @@
     var spel = rij[0], naam = rij[1], vak = rij[2], keuzes = null;
     window.SPELBLAD[spel] = {
       naam: naam, vak: vak,
-      aantallen: [6, 8, 10, 12, 16], standaard: 8, aantalNaam: 'Aantal opgaven',
+      aantallen: [6, 8, 10, 12, 16, 20], standaard: 10, aantalNaam: 'Aantal opgaven', vormen: true,
       delenKop: 'Keuzes van het spel',
-      delenTip: 'Dezelfde keuzes als in het spel. Het niveau komt van de keuze hierboven.',
+      delenTip: 'Dezelfde keuzes als in het spel. Het niveau komt van de keuze hierboven. Bij open vragen worden meerkeuzevragen met korte antwoorden open; invul- en sleepopgaven blijven zoals ze zijn.',
       delen: function(aan){
         var doel = document.getElementById('delen');
         function teken(){
@@ -83,8 +83,8 @@
         var koppen = {}; w.items.forEach(function(it){ if (it.kop) koppen[it.kop] = 1; });
         return {
           titel: naam, sub: niv + ' · ' + w.items.length + ' opgaven', klasse: 'vakspel',
-          vragen: w.items.map(function(it){ return '<li>' + (Object.keys(koppen).length > 1 && it.kop ? '<span class="odkop">' + schoon(it.kop) + '</span>' : '') + it.vraag + '</li>'; }).join(''),
-          antwoorden: w.items.map(function(it){ return '<li><span class="goed">' + schoon(it.antwoord) + '</span>' + (w.uitleg && it.uitleg ? '<small>' + it.uitleg + '</small>' : '') + '</li>'; }).join('')
+          vragen: w.items.map(function(it, i){ var open = it.opties && it.kanOpen && w.isOpen && w.isOpen(w.vorm, i); return '<li>' + (Object.keys(koppen).length > 1 && it.kop ? '<span class="odkop">' + schoon(it.kop) + '</span>' : '') + it.vraag + (it.opties ? (open ? '<span class="lijn" aria-hidden="true"></span>' : it.opties) : '') + '</li>'; }).join(''),
+          antwoorden: w.items.map(function(it, i){ var open = it.opties && it.kanOpen && w.isOpen && w.isOpen(w.vorm, i); return '<li><span class="goed">' + schoon(open ? it.antwoordOpen : it.antwoord) + '</span>' + (w.uitleg && it.uitleg ? '<small>' + it.uitleg + '</small>' : '') + '</li>'; }).join('')
         };
       }
     };

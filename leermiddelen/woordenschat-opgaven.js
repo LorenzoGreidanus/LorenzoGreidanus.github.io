@@ -26,6 +26,9 @@ var UIT = [
   [1, 'Het water in het meer was **ijskoud**: {na een minuut kon ik mijn tenen niet meer voelen}.', 'heel erg koud', 'heel diep', 'vies', 'lekker warm', 'Je tenen niet meer voelen gebeurt als het water heel koud is.'],
   [1, 'Lisa was **jaloers** op haar zus: {die kreeg een nieuwe telefoon en zij niet}.', 'wilde ook hebben wat een ander had', 'blij voor iemand', 'bang voor iemand', 'boos op zichzelf', 'Haar zus kreeg iets en zij niet, en dat wilde Lisa ook: dat is jaloers.'],
   [1, 'De film was **saai**: {halverwege viel de helft van de klas in slaap}.', 'niet leuk of spannend', 'heel eng', 'te kort', 'grappig', 'In slaap vallen bij een film doe je als er niets spannends gebeurt.'],
+  [1, 'Mijn broertje was **ongeduldig**: {hij vroeg elke minuut of we er al bijna waren}.', 'kon niet goed wachten', 'was heel stil', 'was misselijk', 'was erg vrolijk', 'Elke minuut vragen of je er al bent, doe je als je niet kunt wachten.'],
+  [1, 'Ze was **opgelucht**: {de toets bleek veel makkelijker dan ze had gedacht}.', 'blij dat het meeviel', 'boos', 'bang', 'verdrietig', 'Het viel mee terwijl ze zich zorgen maakte: dan ben je opgelucht.'],
+  [1, 'De buurman is **gierig**: {hij geeft nooit iets weg, zelfs geen snoepje}.', 'geeft niet graag iets weg', 'heel arm', 'erg vriendelijk', 'altijd druk', 'Nooit iets weggeven, zelfs geen snoepje: dat is gierig.'],
   [2, 'De sporthal wordt **gerenoveerd**: {er komt een nieuwe vloer en nieuwe verlichting}.', 'opgeknapt', 'afgebroken', 'verkocht', 'verhuurd', 'Een nieuwe vloer en verlichting: de hal wordt opgeknapt, niet afgebroken.'],
   [2, 'De uitslag was **verbijsterend**: {de kampioen verloor met 6-0}.', 'heel verrassend', 'zoals verwacht', 'oneerlijk', 'saai', 'Een kampioen die met 6-0 verliest, is een grote verrassing.'],
   [2, 'De game is **compatibel** met oudere telefoons, {dus je hoeft geen nieuwe te kopen}.', 'werkt erop', 'is gratis', 'is te zwaar', 'is beveiligd', 'Geen nieuwe telefoon nodig: de game werkt ook op oude toestellen.'],
@@ -45,6 +48,9 @@ var UIT = [
   [2, 'Het plan is **haalbaar**: {we hebben genoeg tijd, geld en mensen om het uit te voeren}.', 'het kan echt lukken', 'het is te duur', 'het is geheim', 'het is al klaar', 'Genoeg tijd, geld en mensen: het plan kan lukken.'],
   [2, 'De kapitein was **besluiteloos**: {hij kon maar niet kiezen welke kant het schip op moest}.', 'kon geen keuze maken', 'heel dapper', 'erg boos', 'zeeziek', 'Niet kunnen kiezen is besluiteloos zijn.'],
   [2, 'De zwemster was **teleurgesteld**: {na maanden trainen werd ze maar vierde}.', 'baalde omdat het tegenviel', 'trots', 'opgelucht', 'verbaasd en blij', 'Maanden trainen en toch maar vierde: het viel tegen.'],
+  [2, 'Het oude fabrieksterrein ligt er **verwaarloosd** bij: {het onkruid staat meters hoog en de ramen zijn kapot}.', 'niemand zorgt er meer voor', 'het wordt net opgeknapt', 'het is er heel druk', 'het is verboden terrein', 'Hoog onkruid en kapotte ramen: niemand zorgt er meer voor.'],
+  [2, 'De spits was erg **zelfverzekerd**: {voor de wedstrijd zei hij al dat hij twee keer zou scoren}.', 'zeker van zichzelf', 'zenuwachtig', 'geblesseerd', 'bescheiden', 'Vooraf al zeggen dat je gaat scoren: hij twijfelde niet aan zichzelf.'],
+  [2, 'De regels van het zwembad zijn **overzichtelijk**: {ze staan met vijf plaatjes op één bord bij de ingang}.', 'in één keer goed te begrijpen', 'heel streng', 'verouderd', 'ingewikkeld', 'Vijf plaatjes op één bord: je ziet alles in één keer.'],
   [3, 'Haar houding tegenover de nieuwe regels was **ambivalent**: {ze zag de voordelen, maar had ook grote bezwaren}.', 'met tegenstrijdige gevoelens', 'heel negatief', 'onverschillig', 'enthousiast', 'Voordelen zien en bezwaren hebben tegelijk: tegenstrijdige gevoelens.'],
   [3, 'De trainer is **consequent**: {wie te laat komt, zit op de bank, wie het ook is}.', 'doet altijd hetzelfde', 'streng maar eerlijk in wisselende mate', 'onvoorspelbaar', 'zachtaardig', 'Altijd dezelfde regel, voor iedereen: consequent.'],
   [3, 'De kritiek was **impliciet**: {hij zei niet dat het slecht was, maar iedereen begreep het}.', 'niet letterlijk gezegd', 'heel hard', 'openlijk uitgesproken', 'onterecht', 'Niet gezegd, wel begrepen: dat is impliciet.'],
@@ -63,7 +69,10 @@ var UIT = [
   [3, 'De minister gaf een **cryptisch** antwoord: {niemand begreep wat ze nu eigenlijk bedoelde}.', 'raadselachtig, moeilijk te begrijpen', 'kort en duidelijk', 'onbeleefd', 'grappig', 'Niemand begreep wat ze bedoelde: het antwoord was raadselachtig.'],
   [3, 'Zijn optimisme bleek **ongegrond**: {er was geen enkele reden om te denken dat het goed zou gaan}.', 'zonder goede reden', 'terecht', 'besmettelijk', 'tijdelijk', 'Geen enkele reden: het optimisme had geen grond, geen basis.'],
   [3, 'Het succes van de band was **kortstondig**: {na één hit hoorde niemand meer iets van ze}.', 'duurde maar kort', 'enorm groot', 'onverdiend', 'wereldwijd', 'Na één hit was het voorbij: het succes duurde kort.'],
-  [3, 'De leerling was **nonchalant**: {hij leverde zijn werkstuk te laat in en haalde zijn schouders op}.', 'onverschillig en slordig', 'zenuwachtig', 'overdreven netjes', 'woedend', 'Te laat inleveren en je schouders ophalen: het kan hem niet schelen.']
+  [3, 'De leerling was **nonchalant**: {hij leverde zijn werkstuk te laat in en haalde zijn schouders op}.', 'onverschillig en slordig', 'zenuwachtig', 'overdreven netjes', 'woedend', 'Te laat inleveren en je schouders ophalen: het kan hem niet schelen.'],
+  [3, 'De reactie van de minister was **omzichtig**: {ze woog elk woord en vermeed iedere harde uitspraak}.', 'voorzichtig en bedachtzaam', 'fel en boos', 'onverschillig', 'overhaast', 'Elk woord wegen en harde uitspraken vermijden: heel voorzichtig.'],
+  [3, 'Het verslag was **summier**: {het besloeg nog geen halve pagina, terwijl er vier gevraagd waren}.', 'erg kort en beperkt', 'heel grondig', 'vol fouten', 'te laat ingeleverd', 'Een halve pagina in plaats van vier: veel te kort.'],
+  [3, 'Het smelten van de gletsjers is **onomkeerbaar**: {wat nu verdwijnt, komt binnen een mensenleven niet meer terug}.', 'niet meer terug te draaien', 'heel langzaam', 'nog onzeker', 'tijdelijk', 'Niet meer terugkomen: het is niet terug te draaien.']
 ];
 var GAT = [
   [1, 'De trein had een uur ___, dus we misten de aansluiting.', 'vertraging', 'voorsprong', 'pauze', 'haast', 'Als je een aansluiting mist, was de trein te laat: vertraging.'],
@@ -85,6 +94,9 @@ var GAT = [
   [1, 'De soep is nog te ___: wacht even tot hij is afgekoeld.', 'heet', 'koud', 'zout', 'dik', 'Afkoelen doet iets wat heet is.'],
   [1, 'Na het sporten had ik veel ___, dus ik dronk twee flessen water.', 'dorst', 'honger', 'pijn', 'haast', 'Water drink je als je dorst hebt.'],
   [1, 'De bibliotheek is een ___ plek: je mag er niet praten.', 'stille', 'drukke', 'natte', 'donkere', 'Als je niet mag praten, is het er stil.'],
+  [1, 'Mijn fietsband is ___, dus ik moet naar school lopen.', 'lek', 'nieuw', 'blauw', 'hard', 'Als je moet lopen, kun je niet fietsen: de band is lek.'],
+  [1, 'De kraan staat nog ___: het water loopt over de rand van de wasbak.', 'open', 'dicht', 'schoon', 'stil', 'Water dat blijft lopen: de kraan staat open.'],
+  [1, 'Het klaslokaal was ___: alle leerlingen waren al naar huis.', 'leeg', 'vol', 'warm', 'nieuw', 'Als iedereen naar huis is, is het lokaal leeg.'],
   [2, 'De fabriek ___ het afval in de rivier, waardoor de vissen doodgingen.', 'loosde', 'kocht', 'verzamelde', 'filterde', 'Afval in de rivier laten lopen heet lozen; de dode vissen zijn het gevolg.'],
   [2, 'Het is nog ___ of het schoolfeest doorgaat; morgen horen we meer.', 'onzeker', 'verplicht', 'duidelijk', 'verboden', 'Morgen horen we meer, dus nu is het nog onzeker.'],
   [2, 'De brandweer kon het vuur snel ___, zodat de schade beperkt bleef.', 'blussen', 'aansteken', 'ontdekken', 'melden', 'Beperkte schade komt doordat het vuur snel geblust is.'],
@@ -104,6 +116,9 @@ var GAT = [
   [2, 'De dokter stelde een ___: je hebt griep.', 'diagnose', 'recept', 'afspraak', 'operatie', 'Zeggen wat iemand mankeert, heet een diagnose stellen.'],
   [2, 'Door de ___ in de winkel moesten we een halfuur in de rij staan.', 'drukte', 'stilte', 'verlichting', 'kou', 'Lang in de rij staan komt door de drukte.'],
   [2, 'De wedstrijd eindigde in een ___: het werd 2-2.', 'gelijkspel', 'overwinning', 'nederlaag', 'strafschop', 'Bij 2-2 wint niemand: een gelijkspel.'],
+  [2, 'De ___ voor het schoolkamp is vrijdag: wie zich later aanmeldt, kan niet meer mee.', 'deadline', 'uitnodiging', 'vakantie', 'excursie', 'Na een bepaald moment kan het niet meer: dat moment is de deadline.'],
+  [2, 'De politie zoekt ___: mensen die het ongeluk hebben zien gebeuren.', 'getuigen', 'verdachten', 'slachtoffers', 'agenten', 'Mensen die iets hebben zien gebeuren, heten getuigen.'],
+  [2, 'Door de hevige regen is de wedstrijd ___ naar volgende week.', 'uitgesteld', 'gewonnen', 'afgelopen', 'begonnen', 'Naar volgende week verplaatst: de wedstrijd is uitgesteld.'],
   [3, 'De schrijver ___ in zijn boek dat iedereen zich gelukkig veinst op sociale media.', 'suggereert', 'ontkent', 'meet', 'negeert', 'Een idee naar voren brengen zonder het hard te stellen: suggereren.'],
   [3, 'De maatregel had een ___ effect: minder files en schonere lucht tegelijk.', 'gunstig', 'onbedoeld', 'tijdelijk', 'vreemd', 'Twee voordelen tegelijk: een gunstig effect.'],
   [3, 'Het bewijs was zo ___ dat de rechter geen andere keuze had.', 'overtuigend', 'onduidelijk', 'omvangrijk', 'oud', 'Geen andere keuze hebben: het bewijs was overtuigend.'],
@@ -122,7 +137,10 @@ var GAT = [
   [3, 'De cijfers zijn ___: ze zijn opgesteld door een onafhankelijk bureau en twee keer gecontroleerd.', 'betrouwbaar', 'verouderd', 'vertrouwelijk', 'omstreden', 'Onafhankelijk en dubbel gecontroleerd: je kunt erop vertrouwen.'],
   [3, 'Het plan stuitte op veel ___: bewoners, ondernemers en de oppositie waren allemaal tegen.', 'weerstand', 'steun', 'begrip', 'belangstelling', 'Als iedereen tegen is, stuit een plan op weerstand.'],
   [3, 'De schrijver ___ zijn standpunt met cijfers uit drie onderzoeken.', 'onderbouwt', 'verzwijgt', 'herroept', 'relativeert', 'Cijfers als steun voor een standpunt: onderbouwen.'],
-  [3, 'De verandering ging zo ___ dat bijna niemand het merkte.', 'geleidelijk', 'abrupt', 'drastisch', 'luidruchtig', 'Als bijna niemand het merkt, ging het stap voor stap: geleidelijk.']
+  [3, 'De verandering ging zo ___ dat bijna niemand het merkte.', 'geleidelijk', 'abrupt', 'drastisch', 'luidruchtig', 'Als bijna niemand het merkt, ging het stap voor stap: geleidelijk.'],
+  [3, 'De uitkomst van het onderzoek is nog niet ___: andere onderzoekers moeten de proef eerst herhalen.', 'bevestigd', 'vervalst', 'bedacht', 'begonnen', 'Pas als anderen de proef herhalen en hetzelfde vinden, is een uitkomst bevestigd.'],
+  [3, 'Na jaren van ruzie sloten de twee landen eindelijk een ___ over de grens.', 'akkoord', 'conflict', 'geschil', 'oorlog', 'Een einde aan ruzie maak je met een afspraak: een akkoord.'],
+  [3, 'De wethouder ___ zijn harde uitspraak: het ging volgens hem niet om alle jongeren, maar om een klein groepje.', 'nuanceerde', 'herhaalde', 'overdreef', 'bevestigde', 'Een uitspraak minder zwart-wit maken heet nuanceren.']
 ];
 var SCHOOL = [
   [1, 'Noem', 'lijst', 'Schrijf op wat gevraagd wordt, zonder uitleg.', 'Leg uit waarom het zo is.', 'Geef je mening.', 'Vergelijk twee dingen.', 'Bij noem hoef je alleen op te schrijven wat het is, bijvoorbeeld drie namen. Geen uitleg.'],
@@ -144,6 +162,9 @@ var SCHOOL = [
   [1, 'Kruis aan', 'vink', 'Zet een kruisje in het hokje bij het goede antwoord.', 'Streep het foute antwoord door.', 'Schrijf het antwoord op.', 'Omcirkel het goede woord.', 'Bij aankruisen zet je een kruisje in een hokje.'],
   [1, 'Verbind', 'verband', 'Trek een lijn tussen wat bij elkaar hoort.', 'Zet ze op volgorde.', 'Kies er één uit.', 'Schrijf ze onder elkaar.', 'Verbinden is een lijn trekken tussen twee dingen die bij elkaar horen.'],
   [1, 'Schat', 'reken', 'Geef ongeveer het antwoord, zonder precies te rekenen.', 'Reken het precies uit.', 'Meet het op met een liniaal.', 'Zoek het op.', 'Schatten is ongeveer bepalen hoeveel het is, zonder precies uit te rekenen.'],
+  [1, 'Teken', 'pen', 'Maak een tekening of schets van wat gevraagd wordt.', 'Schrijf het in een zin op.', 'Reken het uit.', 'Leg uit waarom.', 'Bij teken laat je het antwoord zien met een tekening, niet met woorden.'],
+  [1, 'Meet', 'lijn', 'Zoek met een liniaal precies uit hoe lang iets is.', 'Schat hoe lang het ongeveer is.', 'Teken het na.', 'Kies de langste.', 'Meten doe je met een liniaal of meetlint: je schat niet, maar kijkt precies.'],
+  [1, 'Zoek op', 'loep', 'Vind het antwoord in een boek, woordenboek of op internet.', 'Bedenk zelf een antwoord.', 'Leer het uit je hoofd.', 'Schrijf je mening op.', 'Opzoeken is het antwoord vinden in een bron, zoals een woordenboek of je lesboek.'],
   [2, 'Verklaar', 'lamp', 'Leg uit waardoor of waarom het zo is.', 'Beschrijf hoe het eruitziet.', 'Geef je oordeel.', 'Noem het antwoord.', 'Verklaren is de oorzaak of de reden geven, niet alleen beschrijven.'],
   [2, 'Noem een kenmerk', 'label', 'Noem iets waaraan je het herkent.', 'Noem een gevolg.', 'Noem een voorbeeld van iets anders.', 'Noem een oorzaak.', 'Een kenmerk is een eigenschap waaraan je iets herkent, bijvoorbeeld: een zoogdier heeft haar.'],
   [2, 'Trek een conclusie', 'conclusie', 'Zeg wat uit de gegevens volgt.', 'Zeg wat je verwacht.', 'Herhaal de gegevens.', 'Noem een oorzaak.', 'Een conclusie is wat je uit de gegevens kunt afleiden: de gegevens zijn de argumenten, de conclusie is de uitkomst.'],
@@ -163,6 +184,9 @@ var SCHOOL = [
   [2, 'Wat is het onderwerp', 'label', 'Waar gaat de tekst over, in een paar woorden?', 'Wat vindt de schrijver ervan?', 'Wat wil de schrijver bereiken?', 'Wie heeft de tekst geschreven?', 'Het onderwerp is waar de tekst over gaat, meestal in een paar woorden.'],
   [2, 'Leid af', 'conclusie', 'Haal uit de gegevens iets wat er niet letterlijk staat.', 'Schrijf de gegevens over.', 'Zoek het op in een ander boek.', 'Geef je eigen mening.', 'Afleiden is uit gegevens iets opmaken wat er niet letterlijk staat.'],
   [2, 'Wat is het verschil', 'weegschaal', 'Waarin zijn de twee dingen anders?', 'Waarin zijn ze hetzelfde?', 'Welke vind je beter?', 'Hoe hangen ze samen?', 'Bij het verschil noem je waarin twee dingen van elkaar afwijken.'],
+  [2, 'Rangschik', 'volgorde', 'Zet de dingen op volgorde, bijvoorbeeld van klein naar groot.', 'Kies het belangrijkste.', 'Deel ze in twee groepen.', 'Leg elk ding uit.', 'Rangschikken is op volgorde zetten volgens een regel, zoals grootte of belang.'],
+  [2, 'Voorspel', 'pijl', 'Zeg wat er waarschijnlijk gaat gebeuren.', 'Vertel wat er al gebeurd is.', 'Geef je mening.', 'Vat samen wat er gebeurde.', 'Voorspellen is op basis van wat je weet zeggen wat er straks gebeurt.'],
+  [2, 'Wat is de tekstsoort', 'label', 'Wat voor tekst is het, bijvoorbeeld een nieuwsbericht, reclame of verhaal?', 'Waar gaat de tekst over?', 'Wat vindt de schrijver?', 'Hoe lang is de tekst?', 'De tekstsoort is het soort tekst, zoals een nieuwsbericht, een betoog of een recept.'],
   [3, 'Analyseer', 'loep', 'Haal het uit elkaar en bekijk de delen en hun samenhang.', 'Vat het kort samen.', 'Geef je mening.', 'Schrijf het over.', 'Analyseren is iets in delen splitsen en kijken hoe die samenhangen.'],
   [3, 'Interpreteer', 'lamp', 'Zeg wat het betekent of hoe je het kunt opvatten.', 'Meet het precies op.', 'Vertaal het letterlijk.', 'Noem de feiten.', 'Interpreteren is betekenis geven aan iets dat niet letterlijk zo gezegd is.'],
   [3, 'Nuanceer', 'weegschaal', 'Laat zien dat het niet zo zwart-wit is.', 'Maak het stelliger.', 'Vat het samen.', 'Herhaal het.', 'Nuanceren is een uitspraak minder absoluut maken: het klopt, maar niet altijd.'],
@@ -180,7 +204,11 @@ var SCHOOL = [
   [3, 'Reflecteer', 'oog', 'Kijk kritisch terug op je eigen werk of aanpak.', 'Beoordeel het werk van een ander.', 'Geef een samenvatting van de stof.', 'Zoek bronnen op.', 'Reflecteren is nadenken over je eigen aanpak: wat deed je, waarom, en wat leer je ervan.'],
   [3, 'Specificeer', 'loep', 'Maak het preciezer en noem de details.', 'Maak het algemener.', 'Vat het kort samen.', 'Geef er een oordeel over.', 'Specificeren is iets precies en in detail aangeven.'],
   [3, 'Wat is de aanname', 'argument', 'Wat neemt de schrijver als vanzelfsprekend aan zonder het te bewijzen?', 'Wat is de conclusie van de tekst?', 'Welke bronnen worden genoemd?', 'Wat is het onderwerp?', 'Een aanname is iets wat als waar wordt beschouwd zonder dat het bewezen wordt.'],
-  [3, 'Concretiseer', 'pijl', 'Maak het tastbaar met een voorbeeld of een precieze maatregel.', 'Maak het abstracter.', 'Weerleg het.', 'Zet het in een schema.', 'Concretiseren is iets algemeens concreet en tastbaar maken.']
+  [3, 'Concretiseer', 'pijl', 'Maak het tastbaar met een voorbeeld of een precieze maatregel.', 'Maak het abstracter.', 'Weerleg het.', 'Zet het in een schema.', 'Concretiseren is iets algemeens concreet en tastbaar maken.'],
+  [3, 'Formuleer een hypothese', 'lamp', 'Schrijf een verwachting op die je met onderzoek kunt toetsen.', 'Schrijf de uitkomst van je onderzoek op.', 'Beschrijf hoe je het onderzoek hebt gedaan.', 'Geef je mening over het onderwerp.', 'Een hypothese is een verwachte uitkomst die je daarna met onderzoek test.'],
+  [3, 'Wat is de argumentatiestructuur', 'verband', 'Hoe hangen het standpunt en de argumenten met elkaar samen?', 'Welk argument vind je het sterkst?', 'Wat is het onderwerp van de tekst?', 'Hoeveel alinea’s heeft de tekst?', 'De argumentatiestructuur laat zien welke argumenten het standpunt steunen en hoe ze samenhangen.'],
+  [3, 'Contrasteer', 'weegschaal', 'Zet de verschillen tussen twee dingen scherp tegenover elkaar.', 'Noem alleen de overeenkomsten.', 'Kies wat beter is.', 'Beschrijf één van de twee.', 'Contrasteren is de verschillen extra duidelijk maken door twee dingen tegenover elkaar te zetten.'],
+  [3, 'Illustreer', 'pijl', 'Maak het duidelijk met een passend voorbeeld.', 'Vat het in één zin samen.', 'Laat zien dat het niet klopt.', 'Geef er je oordeel over.', 'Illustreren is iets verduidelijken met een voorbeeld.']
 ];
 var SYN = [
   [1, 'groot', ['enorm', 'reusachtig', 'fors'], ['klein', 'piepklein', 'nietig'], 'Enorm, reusachtig en fors zeggen allemaal dat iets groot is; klein, piepklein en nietig het tegenovergestelde.'],
@@ -202,6 +230,9 @@ var SYN = [
   [1, 'warm', ['heet', 'zomers', 'broeierig'], ['koud', 'kil', 'ijzig'], 'Heet en broeierig betekenen (heel) warm; koud en ijzig het tegenovergestelde.'],
   [1, 'boos', ['kwaad', 'woedend', 'nijdig'], ['tevreden', 'vrolijk', 'goedgehumeurd'], 'Kwaad en woedend betekenen boos; tevreden en goedgehumeurd het tegenovergestelde.'],
   [1, 'dun', ['mager', 'slank', 'tenger'], ['dik', 'gezet', 'mollig'], 'Mager en slank betekenen dun; dik en mollig het tegenovergestelde.'],
+  [1, 'makkelijk', ['eenvoudig', 'simpel', 'gemakkelijk'], ['moeilijk', 'lastig', 'zwaar'], 'Eenvoudig en simpel betekenen makkelijk; moeilijk en lastig het tegenovergestelde.'],
+  [1, 'vol', ['propvol', 'afgeladen', 'boordevol'], ['leeg', 'verlaten', 'uitgestorven'], 'Propvol en afgeladen betekenen heel vol; leeg en verlaten het tegenovergestelde.'],
+  [1, 'verdrietig', ['bedroefd', 'treurig', 'droevig'], ['blij', 'vrolijk', 'opgewekt'], 'Bedroefd en treurig betekenen verdrietig; blij en vrolijk het tegenovergestelde.'],
   [2, 'toenemen', ['stijgen', 'groeien', 'oplopen'], ['afnemen', 'dalen', 'slinken'], 'Stijgen en groeien betekenen toenemen; afnemen, dalen en slinken het tegenovergestelde.'],
   [2, 'verplicht', ['noodzakelijk', 'vereist', 'gedwongen'], ['vrijwillig', 'facultatief', 'optioneel'], 'Vereist en gedwongen lijken op verplicht; vrijwillig en optioneel zijn het tegenovergestelde.'],
   [2, 'tijdelijk', ['voorlopig', 'provisorisch', 'kortstondig'], ['blijvend', 'permanent', 'definitief'], 'Voorlopig en kortstondig betekenen tijdelijk; blijvend en permanent het tegenovergestelde.'],
@@ -221,6 +252,9 @@ var SYN = [
   [2, 'openbaar', ['publiek', 'toegankelijk', 'openlijk'], ['geheim', 'besloten', 'vertrouwelijk'], 'Publiek en toegankelijk betekenen openbaar; geheim en besloten het tegenovergestelde.'],
   [2, 'bescheiden', ['nederig', 'ingetogen', 'terughoudend'], ['opschepperig', 'arrogant', 'verwaand'], 'Nederig en ingetogen betekenen bescheiden; opschepperig en verwaand het tegenovergestelde.'],
   [2, 'bekend', ['beroemd', 'vermaard', 'befaamd'], ['onbekend', 'anoniem', 'obscuur'], 'Beroemd en befaamd betekenen (heel) bekend; onbekend en anoniem het tegenovergestelde.'],
+  [2, 'afwijzen', ['weigeren', 'afslaan', 'verwerpen'], ['aannemen', 'accepteren', 'goedkeuren'], 'Weigeren en afslaan betekenen afwijzen; aannemen en accepteren het tegenovergestelde.'],
+  [2, 'ouderwets', ['verouderd', 'achterhaald', 'gedateerd'], ['modern', 'eigentijds', 'nieuwerwets'], 'Verouderd en achterhaald betekenen ouderwets; modern en eigentijds het tegenovergestelde.'],
+  [2, 'vijandig', ['onvriendelijk', 'agressief', 'dreigend'], ['vriendelijk', 'hartelijk', 'gastvrij'], 'Onvriendelijk en dreigend liggen dicht bij vijandig; vriendelijk en gastvrij zijn het tegenovergestelde.'],
   [3, 'impliciet', ['onuitgesproken', 'verborgen', 'tussen de regels'], ['expliciet', 'uitdrukkelijk', 'letterlijk gezegd'], 'Impliciet is niet letterlijk gezegd; expliciet en uitdrukkelijk zijn het tegenovergestelde.'],
   [3, 'consequent', ['consistent', 'standvastig', 'principieel'], ['inconsequent', 'wispelturig', 'grillig'], 'Consistent en standvastig betekenen consequent; wispelturig en grillig het tegenovergestelde.'],
   [3, 'objectief', ['neutraal', 'onpartijdig', 'zakelijk'], ['subjectief', 'partijdig', 'gekleurd'], 'Neutraal en onpartijdig betekenen objectief; subjectief en gekleurd het tegenovergestelde.'],
@@ -239,7 +273,10 @@ var SYN = [
   [3, 'transparant', ['doorzichtig', 'open', 'inzichtelijk'], ['ondoorzichtig', 'geheimzinnig', 'schimmig'], 'Open en inzichtelijk betekenen transparant; ondoorzichtig en schimmig het tegenovergestelde.'],
   [3, 'pragmatisch', ['praktisch', 'realistisch', 'doelgericht'], ['idealistisch', 'theoretisch', 'dogmatisch'], 'Praktisch en realistisch betekenen pragmatisch; idealistisch en dogmatisch staan er tegenover.'],
   [3, 'arbitrair', ['willekeurig', 'toevallig', 'eigenmachtig'], ['weloverwogen', 'gegrond', 'beredeneerd'], 'Willekeurig en toevallig betekenen arbitrair; weloverwogen en gegrond het tegenovergestelde.'],
-  [3, 'tolerant', ['verdraagzaam', 'ruimdenkend', 'open'], ['intolerant', 'onverdraagzaam', 'bekrompen'], 'Verdraagzaam en ruimdenkend betekenen tolerant; onverdraagzaam en bekrompen het tegenovergestelde.']
+  [3, 'tolerant', ['verdraagzaam', 'ruimdenkend', 'open'], ['intolerant', 'onverdraagzaam', 'bekrompen'], 'Verdraagzaam en ruimdenkend betekenen tolerant; onverdraagzaam en bekrompen het tegenovergestelde.'],
+  [3, 'marginaal', ['miniem', 'verwaarloosbaar', 'gering'], ['aanzienlijk', 'substantieel', 'fors'], 'Miniem en verwaarloosbaar betekenen marginaal; aanzienlijk en substantieel het tegenovergestelde.'],
+  [3, 'legitiem', ['rechtmatig', 'wettig', 'gerechtvaardigd'], ['onrechtmatig', 'illegaal', 'ongeoorloofd'], 'Rechtmatig en wettig betekenen legitiem; onrechtmatig en illegaal het tegenovergestelde.'],
+  [3, 'gematigd', ['beheerst', 'mild', 'evenwichtig'], ['extreem', 'radicaal', 'fanatiek'], 'Beheerst en evenwichtig liggen dicht bij gematigd; extreem en radicaal zijn het tegenovergestelde.']
 ];
 return { UIT: UIT, GAT: GAT, SCHOOL: SCHOOL, SYN: SYN };
 })();

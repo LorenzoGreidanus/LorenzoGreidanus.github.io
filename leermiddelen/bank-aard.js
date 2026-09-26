@@ -658,4 +658,7 @@ var AARD_PLUS2 = [
 ];
 BRONNEN.aard = BRONNEN.aard.concat(AARD_PLUS2);
 NIVOS.aard = NIVOS.aard.concat(AARD_PLUS2.map(function(q){ return q.n; }));
+/* De vormen van de bekende landen (de VS, Frankrijk, Nederland...) zijn ook
+   iets voor vmbo-bb; anders heeft dat onderdeel daar maar vier vragen. */
+BRONNEN.aard.forEach(function(q, i){ if (q.t === 'landvormen' && NIVOS.aard[i] === 2) NIVOS.aard[i] = 1; });
 })();

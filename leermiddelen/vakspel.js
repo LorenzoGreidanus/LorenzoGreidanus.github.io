@@ -380,9 +380,15 @@ window.VAKSPEL = (function(){
     var vr = '<span class="vr">' + (o.vraag || '') + '</span>' + (o.opdracht ? '<span class="opdr">' + o.opdracht + '</span>' : '') + (o.beeld ? '<div class="beeld">' + o.beeld + '</div>' : ''), antwoord = '';
     if (o.vorm === 'meerkeuze'){
       var lijst = o.opties.map(function(t, i){ return { t:t, i:i }; }); if (!o.vasteVolgorde) lijst = husselen(lijst);
-      vr += '<div class="opties">' + lijst.map(function(x, k){ return '<span><b>' + LET[k] + '</b>' + x.t + '</span>'; }).join('') + '</div>';
+      var opties = '<div class="opties">' + lijst.map(function(x, k){ return '<span><b>' + LET[k] + '</b>' + x.t + '</span>'; }).join('') + '</div>';
       var k2 = 0; lijst.forEach(function(x, k){ if (x.i === o.goed) k2 = k; });
-      antwoord = LET[k2] + '. ' + o.opties[o.goed];
+      var goedTekst = String(o.opties[o.goed]).replace(/<[^>]+>/g, '').trim() || o.antwoordTekst || '';
+      antwoord = LET[k2] + '. ' + goedTekst;
+      /* open kan alleen als de keuzes kort zijn en de vraag niet over de keuzes zelf gaat ("welke versie past") */
+      var tekst = String(o.vraag || '').replace(/<[^>]+>/g, '');
+      var kanOpen = o.opties.every(function(t){ var k = String(t).replace(/<[^>]+>/g, '').trim(); return k && k.length <= 40; }) &&
+        !/\bwelke?\b[^.?]*\b(goed|juist|fout|onjuist|klopt|past|hoort)\b/i.test(tekst) && !/\bvan deze\b|hoort er niet bij|past niet/i.test(tekst);
+      return { kop: o.onderdeelNaam || o.onderdeel || '', vraag: vr, opties: opties, kanOpen: kanOpen, antwoord: antwoord, antwoordOpen: goedTekst, uitleg: (o.uitleg || '').replace(/<div[\s\S]*$/, '') };
     } else if (o.vorm === 'invul'){
       vr += '<div class="velden-wb">' + o.velden.map(function(v){ return '<span class="veldlijn">' + schoon(v.label || '') + (v.voor ? ' ' + schoon(v.voor) : '') + ' <i class="lijn"></i>' + (v.eenheid ? ' ' + schoon(v.eenheid) : '') + '</span>'; }).join('') + '</div>';
       antwoord = o.velden.map(function(v){ return (v.label ? v.label + ': ' : '') + toonAntwoord(v); }).join('; ');

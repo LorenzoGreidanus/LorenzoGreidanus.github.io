@@ -129,23 +129,33 @@ window.BANK_SPELLEN = (function(){
   }
   function wis(){
     var uit = [], i;
-    var DRIE = [[3, 4, 5], [6, 8, 10], [5, 12, 13], [8, 15, 17], [9, 12, 15], [7, 24, 25], [12, 16, 20], [15, 20, 25]];
-    for (i = 0; i < 24; i++){
-      var soort = ['scherp', 'recht', 'stomp', 'gestrekt'][i % 4], gr = soort === 'scherp' ? tussen(15, 80) : soort === 'recht' ? 90 : soort === 'stomp' ? tussen(100, 170) : 180;
+    var DRIE = [[3, 4, 5], [6, 8, 10], [5, 12, 13], [8, 15, 17], [9, 12, 15], [7, 24, 25], [12, 16, 20], [15, 20, 25], [10, 24, 26], [20, 21, 29], [18, 24, 30], [21, 28, 35], [12, 35, 37], [9, 40, 41]];
+    /* de soort hoek: elke hoek per 5 graden een keer, plus de rechte en de gestrekte */
+    var HOEKEN = [90, 180];
+    for (i = 20; i <= 175; i += 5) if (i !== 90) HOEKEN.push(i);
+    HOEKEN.forEach(function(gr){
+      var soort = gr < 90 ? 'scherp' : gr === 90 ? 'recht' : gr < 180 ? 'stomp' : 'gestrekt';
       uit.push(vraag('Wat voor hoek is dit?', soort + 'e hoek' + (soort === 'recht' ? ' (90°)' : ''), ['scherpe hoek', 'rechte hoek (90°)', 'stompe hoek', 'gestrekte hoek'].filter(function(x){ return x.indexOf(soort) < 0; }), 'Scherp is kleiner dan 90°, recht is precies 90°, stomp zit tussen 90° en 180°, gestrekt is 180°. Deze hoek is ' + gr + '°.', 'hoeken', 1, hoekSvg(gr)));
-    }
-    for (i = 0; i < 24; i++){
-      var g2 = tussen(2, 17) * 10, mis2 = [g2 + 30, g2 - 30, g2 + 60, 180 - g2, g2 + 15].filter(function(x){ return x > 0 && x < 180 && x !== g2; });
+    });
+    for (i = 2; i <= 17; i++){
+      var g2 = i * 10, mis2 = [g2 + 30, g2 - 30, g2 + 60, 180 - g2, g2 + 15].filter(function(x){ return x > 0 && x < 180 && x !== g2; });
       uit.push(vraag('Hoe groot is deze hoek ongeveer?', g2 + '°', schud(mis2).slice(0, 3).map(function(x){ return x + '°'; }), 'Vergelijk met 90° (een rechte hoek) en 45° (de helft daarvan): deze hoek is ' + g2 + '°.', 'hoeken', 2, hoekSvg(g2)));
     }
-    DRIE.forEach(function(d){
-      uit.push(vraag('Bereken de schuine zijde.', String(d[2]), [String(d[0] + d[1]), String(d[2] + 1), String(d[2] - 2)], d[0] + '² + ' + d[1] + '² = ' + (d[0] * d[0]) + ' + ' + (d[1] * d[1]) + ' = ' + (d[2] * d[2]) + ', en √' + (d[2] * d[2]) + ' = ' + d[2] + '.', 'pythagoras', 2, driehoekSvg(d[0], d[1])));
+    DRIE.forEach(function(d, k){
+      /* de schuine zijde met hele getallen is ook iets voor bb: beide kanten op */
+      [[d[0], d[1]], [d[1], d[0]]].forEach(function(p){
+        uit.push(vraag('De rechthoekszijden zijn ' + p[0] + ' en ' + p[1] + '. Bereken de schuine zijde.', String(d[2]), [String(p[0] + p[1]), String(d[2] + 1), String(d[2] - 2)], p[0] + '² + ' + p[1] + '² = ' + (p[0] * p[0]) + ' + ' + (p[1] * p[1]) + ' = ' + (d[2] * d[2]) + ', en √' + (d[2] * d[2]) + ' = ' + d[2] + '.', 'pythagoras', k < 11 ? 1 : 2, driehoekSvg(p[0], p[1])));
+      });
       uit.push(vraag('De schuine zijde is ' + d[2] + ' en een rechthoekszijde is ' + d[0] + '. Hoe lang is de andere rechthoekszijde?', String(d[1]), [String(d[2] - d[0]), String(d[1] + 1), String(d[0] + d[2])], d[2] + '² − ' + d[0] + '² = ' + (d[2] * d[2]) + ' − ' + (d[0] * d[0]) + ' = ' + (d[1] * d[1]) + ', en √' + (d[1] * d[1]) + ' = ' + d[1] + '.', 'pythagoras', 3));
     });
-    for (i = 0; i < 24; i++){
-      var px = tussen(-5, 5), py = tussen(-5, 5); if (!px && !py) px = 3;
+    /* eerst elk punt in het eerste kwadrant (bb), daarna punten met negatieve coördinaten */
+    var PUNTEN = [];
+    for (var ax = 0; ax <= 5; ax++) for (var ay = 0; ay <= 5; ay++) if (ax || ay) PUNTEN.push([ax, ay]);
+    for (i = 0; i < 60; i++){ var qx = tussen(-5, 5), qy = tussen(-5, 5); if (qx < 0 || qy < 0) PUNTEN.push([qx, qy]); }
+    PUNTEN.forEach(function(pt){
+      var px = pt[0], py = pt[1];
       uit.push(vraag('Welke coördinaten heeft de stip?', '(' + px + ', ' + py + ')', ['(' + py + ', ' + px + ')', '(' + (-px) + ', ' + py + ')', '(' + px + ', ' + (-py) + ')'], 'Eerst x (naar rechts is positief), dan y (omhoog is positief): (' + px + ', ' + py + ').', 'coördinaten', px < 0 || py < 0 ? 2 : 1, roosterSvg(px, py)));
-    }
+    });
     return uit.filter(Boolean);
   }
 

@@ -60,7 +60,8 @@
     maak: function(keuze, n){
       var m = KAARTEN[keuze.kaart];
       if (!m) return { fout: 'Deze kaart bestaat niet.' };
-      var lijst = hussel(m.landen.filter(function(l){ return (l.v || 1) <= keuze.tot; })).slice(0, n);
+      /* eerst wat bij het niveau hoort; zijn dat er te weinig, dan aanvullen met de volgende */
+      var lijst = hussel(m.landen.filter(function(l){ return (l.v || 1) <= keuze.tot; })).concat(hussel(m.landen.filter(function(l){ return (l.v || 1) > keuze.tot; }))).slice(0, n);
       return lijst.map(function(l, i){ return { land: l, nr: i + 1, wat: watVan(m, l) }; });
     },
     teken: function(w){

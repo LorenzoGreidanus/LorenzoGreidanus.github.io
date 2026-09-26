@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Democratie, versie 1.0: op vakspel.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Democratie &middot; meneer Greidanus</title>
+<meta name="description" content="De trias politica, wie waarover beslist (gemeente, provincie, waterschap, Rijk of EU), hoe een wet tot stand komt, grondrechten en de rechtsstaat, en het verschil tussen democratie en dictatuur.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Democratie">
+<meta property="og:description" content="Trias politica, bestuurslagen, de weg van een wet, grondrechten en rechtsstaat, democratie of dictatuur.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/democratie.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%2383A5F2'/><path d='M50 16L84 34H16z' fill='%2314224C'/><g fill='%2314224C'><rect x='22' y='40' width='12' height='34' rx='2'/><rect x='44' y='40' width='12' height='34' rx='2'/><rect x='66' y='40' width='12' height='34' rx='2'/><rect x='14' y='78' width='72' height='8' rx='2'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+.db{width:min(100%,460px);height:auto;display:block;font-family:inherit}
+.db .vlak{fill:var(--kaart2);stroke:var(--muted);stroke-opacity:.5;stroke-width:1.5}
+.db .vlak2{fill:var(--kaart);stroke:var(--muted);stroke-opacity:.5;stroke-width:1.5}
+.db .water{fill:var(--nadruk-zacht);stroke:var(--nadruk);stroke-width:1.5;stroke-dasharray:5 4}
+.db .aan{stroke:var(--nadruk);stroke-opacity:1;stroke-width:3}
+.db .lijn{stroke:var(--ink);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.db .zacht{stroke:var(--muted);stroke-width:1.5;fill:none;stroke-linecap:round}
+.db .inkt{fill:var(--ink)}
+.db text{fill:var(--ink);font-size:13px;font-weight:600}
+.db .klein{fill:var(--muted);font-size:11px;font-weight:500}
+.db .nad{fill:var(--nadruk);font-weight:700}
+.db .kop{fill:var(--muted)}
+.flow{list-style:none;margin:0;padding:12px 0 0 10px;display:flex;flex-wrap:wrap;gap:14px 12px;justify-content:center;max-width:600px}
+.flow li{position:relative;background:var(--kaart2);border:2px solid var(--rand2);border-radius:12px;padding:8px 5px 6px;width:112px;min-height:78px;overflow-wrap:anywhere;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-size:.8rem;font-weight:600;line-height:1.2;color:var(--ink)}
+.flow li i{font-style:normal;font-size:1.3rem;line-height:1.25}
+.flow li.aan{border-color:var(--nadruk);background:var(--kaart-aan)}
+.flow li.vraag{border-style:dashed;border-color:var(--nadruk)}
+.flow li.vraag b{font-size:1.7rem;color:var(--nadruk);line-height:1}
+.flow li.leeg{border-style:dashed;background:transparent;color:var(--muted)}
+.flow li .nr{position:absolute;top:-9px;left:-9px;width:22px;height:22px;border-radius:999px;background:var(--ink);color:var(--kaart);font-size:.72rem;font-weight:700;display:grid;place-items:center}
+@media(max-width:420px){ .flow{gap:14px 10px} .flow li{width:104px;font-size:.74rem} }
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script src="democratie-opgaven.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon, D = window.DEM_DATA;
+  var NIV = { bb:1, kgt:2, hv:3 };
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  function niv(keuze){ return NIV[keuze.niveau] || 2; }
+  function hoofd(t){ return t.charAt(0).toUpperCase() + t.slice(1); }
+  /* een item op dit niveau (en de niveaus eronder); op kgt en hv vaak eentje van het eigen niveau */
+  function kiesIdx(lijst, n){
+    var alle = lijst.filter(function(x){ return (x.n || 1) <= n; });
+    if (n > 1 && Math.random() < 0.45){ var eigen = alle.filter(function(x){ return x.n === n; }); if (eigen.length) alle = eigen; }
+    var it = kies(alle); return { it: it, i: lijst.indexOf(it) };
+  }
+  function emo(x, y, e, px){ return '<text x="' + x + '" y="' + y + '" text-anchor="middle" style="font-size:' + px + 'px">' + e + '</text>'; }
+  function extra(html){ return '<div style="margin-top:8px">' + html + '</div>'; }
+
+  var DEEL = {
+    trias: ['democratie: trias politica', 'trias politica'],
+    wie: ['democratie: wie beslist', 'wie beslist erover'],
+    wet: ['democratie: een wet maken', 'hoe een wet ontstaat'],
+    rechten: ['democratie: grondrechten en rechtsstaat', 'grondrechten en rechtsstaat'],
+    staat: ['democratie: democratie of dictatuur', 'democratie of dictatuur']
+  };
+  function mk(deel, o){ o.onderdeel = DEEL[deel][0]; o.onderdeelNaam = DEEL[deel][1]; return o; }
+
+  /* ---------- de plaatjes ---------- */
+  /* de trias politica: een dak met drie pilaren */
+  function triasSvg(o){
+    o = o || {};
+    var s = '<svg class="db" viewBox="0 0 420 192" role="img" aria-label="de trias politica: drie machten als drie pilaren onder één dak">';
+    s += '<path class="vlak" d="M20 58L210 8L400 58Z"/><text class="klein" x="210" y="46" text-anchor="middle">de staatsmacht, verdeeld in drie</text>';
+    s += '<rect class="vlak" x="14" y="58" width="392" height="10" rx="3"/>';
+    ['w', 'u', 'r'].forEach(function(m, i){
+      var x = 22 + i * 130, M = D.MACHT[m], w = M.naam.split(' ');
+      s += '<rect class="vlak2' + (o.aan === m ? ' aan' : '') + '" x="' + x + '" y="74" width="116" height="94" rx="6"/>' + emo(x + 58, 104, M.e, 24);
+      s += '<text x="' + (x + 58) + '" y="127" text-anchor="middle">' + w[0] + '</text><text x="' + (x + 58) + '" y="143" text-anchor="middle">' + w[1] + '</text>';
+      if (o.sub) s += '<text class="klein" x="' + (x + 58) + '" y="160" text-anchor="middle">' + M.kort + '</text>';
+    });
+    return s + '<rect class="vlak" x="10" y="172" width="400" height="14" rx="3"/></svg>';
+  }
+  /* de bestuurslagen als landkaart: de gemeente binnen de provincie binnen het Rijk binnen de EU; het waterschap volgt het water */
+  var LAAGKORT = { gem:'de gemeente', prov:'de provincie', ws:'het waterschap', rijk:'het Rijk', eu:'de EU' };
+  function lagenSvg(o){
+    o = o || {};
+    function a(id){ return o.aan === id ? ' aan' : ''; }
+    var s = '<svg class="db" viewBox="0 0 420 200" role="img" aria-label="de bestuurslagen: gemeente, waterschap, provincie, het Rijk en de Europese Unie">';
+    s += '<rect class="vlak' + a('eu') + '" x="2" y="2" width="272" height="196" rx="18"/><text x="16" y="22"><tspan class="nad">&#9733;</tspan> Europese Unie</text>';
+    s += '<rect class="vlak2' + a('rijk') + '" x="14" y="32" width="248" height="158" rx="14"/><text x="28" y="52">🏛️ het Rijk</text>';
+    s += '<rect class="vlak' + a('prov') + '" x="26" y="62" width="224" height="120" rx="12"/><text x="40" y="82">🗺️ provincie</text>';
+    s += '<rect class="vlak2' + a('gem') + '" x="38" y="92" width="130" height="82" rx="10"/><text x="50" y="111">gemeente</text>' + emo(96, 158, '🏘️', 26);
+    s += '<rect class="water' + a('ws') + '" x="146" y="100" width="96" height="70" rx="28"/><text x="194" y="130" text-anchor="middle">waterschap</text>' + emo(194, 158, '💧', 17);
+    s += '<rect class="vlak2" x="286" y="20" width="130" height="160" rx="16"/>' + emo(351, 104, o.e || '❓', 46);
+    s += '<text class="klein" x="351" y="152" text-anchor="middle">' + S(o.onder || 'wie beslist?') + '</text>';
+    return s + '</svg>';
+  }
+  /* de gemeente van binnen */
+  function gemSvg(){
+    var b = [['🪑', ['gemeenteraad'], ['gekozen door', 'de inwoners']], ['👥', ['college', 'van B en W'], ['burgemeester', 'en wethouders']], ['🎖️', ['burgemeester'], ['benoemd door', 'de Kroon']]];
+    var s = '<svg class="db" viewBox="0 0 420 164" role="img" aria-label="de gemeente: gemeenteraad, college van B en W en burgemeester">';
+    s += '<rect class="vlak" x="2" y="2" width="416" height="160" rx="16"/><text class="klein" x="16" y="20">het gemeentehuis</text>';
+    b.forEach(function(x, i){
+      var bx = 12 + i * 134, cx = bx + 62;
+      s += '<rect class="vlak2" x="' + bx + '" y="28" width="124" height="126" rx="12"/>' + emo(cx, 62, x[0], 26);
+      x[1].forEach(function(r, k){ s += '<text x="' + cx + '" y="' + (88 + k * 15) + '" text-anchor="middle">' + r + '</text>'; });
+      x[2].forEach(function(r, k){ s += '<text class="klein" x="' + cx + '" y="' + (126 + k * 13) + '" text-anchor="middle">' + r + '</text>'; });
+    });
+    return s + '</svg>';
+  }
+  /* een tekening links en een emoji in een rondje rechts */
+  var TEKEN = {
+    hof: function(){ /* het Binnenhof: de Ridderzaal met twee torens */
+      return '<path class="vlak" d="M60 60L130 16L200 60Z"/><rect class="vlak2" x="60" y="60" width="140" height="80"/>' +
+        '<rect class="vlak2" x="38" y="44" width="28" height="96"/><path class="vlak" d="M34 44L52 12L70 44Z"/>' +
+        '<rect class="vlak2" x="194" y="44" width="28" height="96"/><path class="vlak" d="M190 44L208 12L226 44Z"/>' +
+        '<circle class="zacht" cx="130" cy="44" r="9"/><path class="lijn" d="M116 140v-24a14 14 0 0 1 28 0v24"/>' +
+        '<rect class="zacht" x="78" y="76" width="16" height="24" rx="8"/><rect class="zacht" x="166" y="76" width="16" height="24" rx="8"/><path class="lijn" d="M10 140h240"/>';
+    },
+    boek: function(){ /* een wetboek met een paragraafteken */
+      return '<rect class="vlak" x="94" y="22" width="112" height="118" rx="6" transform="rotate(-6 150 80)"/>' +
+        '<rect class="vlak2" x="76" y="16" width="112" height="122" rx="6"/><rect class="vlak" x="76" y="16" width="16" height="122" rx="4"/>' +
+        '<text class="nad" x="140" y="96" text-anchor="middle" style="font-size:54px">&#167;</text><path class="zacht" d="M108 116h60M108 126h44"/>';
+    },
+    weeg: function(){ /* de weegschaal van het recht */
+      return '<path class="lijn" d="M130 30v96M60 42h140M60 42l-16 44M60 42l16 44M200 42l-16 44M200 42l16 44"/><circle class="inkt" cx="130" cy="28" r="5"/>' +
+        '<rect class="vlak" x="96" y="126" width="68" height="12" rx="3"/><path class="vlak2" d="M40 86h40a20 11 0 0 1-40 0Z"/><path class="vlak2" d="M180 86h40a20 11 0 0 1-40 0Z"/>';
+    },
+    bol: function(){ /* een wereldbol */
+      return '<circle class="vlak2" cx="130" cy="76" r="60"/><ellipse class="zacht" cx="130" cy="76" rx="26" ry="60"/><ellipse class="zacht" cx="130" cy="76" rx="50" ry="60"/>' +
+        '<path class="zacht" d="M70 76h120M78 46h104M78 106h104"/><path class="lijn" d="M130 136v6M104 146h52"/>';
+    },
+    stem: function(){ /* een stemhokje met een stembus */
+      return '<rect class="vlak" x="60" y="14" width="136" height="12" rx="3"/><rect class="vlak2" x="66" y="26" width="124" height="112"/>' +
+        '<path class="zacht" d="M84 26v74M102 26v74M120 26v74M138 26v74M156 26v74M174 26v74"/>' +
+        '<rect class="vlak2" x="172" y="70" width="22" height="28" rx="2" transform="rotate(-8 183 84)"/><rect class="vlak" x="150" y="96" width="76" height="42" rx="4"/><path class="lijn" d="M170 106h36"/>';
+    }
+  };
+  function plaatje(soort, e, label){
+    var s = '<svg class="db" viewBox="0 0 420 150" role="img" aria-label="' + S(label || 'plaatje') + '">' + (TEKEN[soort] || TEKEN.hof)();
+    return s + '<circle class="vlak2" cx="340" cy="75" r="58"/>' + emo(340, 94, e || '❓', 50) + '</svg>';
+  }
+  /* een situatie tegenover de Grondwet en de weegschaal */
+  function rechtSvg(e){
+    var s = '<svg class="db" viewBox="0 0 420 150" role="img" aria-label="een situatie en de Grondwet">';
+    s += '<path class="vlak2" d="M24 10h140a18 18 0 0 1 18 18v74a18 18 0 0 1-18 18H70l-22 22v-22H24a18 18 0 0 1-18-18V28a18 18 0 0 1 18-18Z"/>' + emo(94, 84, e || '❓', 50);
+    s += '<path class="zacht" d="M192 70h26"/><path class="kop" d="M216 64l9 6-9 6z"/>';
+    s += '<rect class="vlak2" x="236" y="16" width="86" height="118" rx="6"/><rect class="vlak" x="236" y="16" width="14" height="118" rx="4"/><text class="nad" x="288" y="92" text-anchor="middle" style="font-size:44px">&#167;</text>';
+    s += '<path class="lijn" d="M370 36v86M340 46h60M340 46l-10 34M340 46l10 34M400 46l-10 34M400 46l10 34"/><path class="vlak2" d="M326 80h28a14 8 0 0 1-28 0Z"/><path class="vlak2" d="M386 80h28a14 8 0 0 1-28 0Z"/><rect class="vlak" x="352" y="122" width="36" height="10" rx="3"/>';
+    return s + '</svg>';
+  }
+  /* democratie en dictatuur, met de situatie ertussen */
+  function tweeSvg(e){
+    var s = '<svg class="db" viewBox="0 0 420 150" role="img" aria-label="democratie of dictatuur">';
+    s += '<rect class="vlak" x="4" y="14" width="150" height="122" rx="14"/>' + emo(79, 72, '🗳️', 36) + '<text x="79" y="112" text-anchor="middle">democratie</text>';
+    s += '<rect class="vlak" x="266" y="14" width="150" height="122" rx="14"/>' + emo(341, 72, '🔒', 36) + '<text x="341" y="112" text-anchor="middle">dictatuur</text>';
+    s += '<circle class="vlak2 aan" cx="210" cy="75" r="52"/>' + emo(210, 92, e || '❓', 46);
+    return s + '</svg>';
+  }
+  /* de weg van een wet als rij stappen; stand per stap: 'aan', 'vraag', 'leeg' of '' */
+  function flow(ids, stand){
+    return '<ol class="flow" aria-label="de weg van een wet">' + ids.map(function(id, i){
+      var st = D.WET_STAP[id], k = stand ? stand(i) : '';
+      if (k === 'vraag') return '<li class="vraag"><span class="nr">' + (i + 1) + '</span><b>?</b></li>';
+      if (k === 'leeg') return '<li class="leeg"><span class="nr">' + (i + 1) + '</span>&hellip;</li>';
+      return '<li class="' + k + '"><span class="nr">' + (i + 1) + '</span><i>' + st.e + '</i>' + S(st.k) + '</li>';
+    }).join('') + '</ol>';
+  }
+
+  /* ---------- algemene meerkeuze- en invulvraag uit een lijst ---------- */
+  function vraagUit(deel, it, idx, n, beeld, pref){
+    if (it.i) return mk(deel, { vorm:'invul', sleutel: pref + idx, vraag: it.v, opdracht:'Typ je antwoord en druk op Nakijken.', beeld: beeld,
+      velden:[{ id:'a', label:'antwoord', antwoord: it.i, type:'tekst', breed:true, toon: it.i[0] }], uitleg: it.u, antwoordTekst: it.i[0] });
+    var fout = H(it.o.slice(1)).slice(0, n === 1 ? 2 : 3), opties = H([it.o[0]].concat(fout));
+    return mk(deel, { vorm:'meerkeuze', sleutel: pref + idx, vraag: it.v, beeld: beeld, opties: opties, goed: opties.indexOf(it.o[0]), uitleg: it.u, antwoordTekst: it.o[0] });
+  }
+  function kaartjesKiezen(lijst, n, aantal, groepen, veld){
+    var p = lijst.filter(function(x){ return (x.n || 1) <= n; }), g, probeer = 0;
+    do { g = H(p).slice(0, aantal); probeer++; } while (probeer < 60 && groepen.some(function(m){ return !g.some(function(x){ return x[veld] === m; }); }));
+    return g.sort(function(a, b){ return lijst.indexOf(a) - lijst.indexOf(b); });
+  }
+
+  /* ---------- 1. trias politica ---------- */
+  var MACHTEN = ['w', 'u', 'r'];
+  function triasKlas(keuze){
+    var n = niv(keuze), k = kiesIdx(D.TRIAS, n), it = k.it, M = D.MACHT[it.m];
+    return mk('trias', { vorm:'meerkeuze', vasteVolgorde:true, sleutel:'tk' + k.i,
+      vraag:'<b>' + S(it.t) + '</b> Bij welke macht hoort dit?', opdracht: n < 3 ? 'Wetten maken, wetten uitvoeren of rechtspreken?' : '', beeld: triasSvg({ sub: n < 3 }),
+      opties: MACHTEN.map(function(m){ return D.MACHT[m].naam; }), goed: MACHTEN.indexOf(it.m),
+      uitleg: (it.u || M.uit) + extra(triasSvg({ aan: it.m, sub: true })), antwoordTekst: M.naam });
+  }
+  function triasSleep(keuze){
+    var n = niv(keuze), g = kaartjesKiezen(D.TRIAS_KAART, n, n + 3, MACHTEN, 'm');
+    function id(x){ return 'k' + D.TRIAS_KAART.indexOf(x); }
+    var vakken = MACHTEN.map(function(m){ return { id: m, naam: D.MACHT[m].naam, uit: n < 3 ? D.MACHT[m].kort : '', hoort: g.filter(function(x){ return x.m === m; }).map(id) }; });
+    return mk('trias', { vorm:'sleep', sleutel:'ts' + g.map(id).join(''),
+      vraag:'Bij welke macht hoort elk kaartje?', opdracht:'Sleep ze naar de wetgevende, de uitvoerende of de rechterlijke macht.', beeld: triasSvg({ sub: n < 3 }),
+      kaarten: g.map(function(x){ return { id: id(x), tekst: S(x.k) }; }), vakken: vakken,
+      uitleg:'Wetgevend: wetten maken (regering en parlement). Uitvoerend: wetten uitvoeren (regering, ministeries, politie en diensten). Rechterlijk: rechtspreken (rechters).',
+      antwoordTekst: vakken.map(function(v){ return v.naam + ': ' + g.filter(function(x){ return x.m === v.id; }).map(function(x){ return x.k; }).join(', '); }).join('; ') });
+  }
+  function trias(keuze){
+    var r = Math.random(), n = niv(keuze);
+    if (r < 0.45) return triasKlas(keuze);
+    if (r < 0.8){ var k = kiesIdx(D.TRIAS_MC, n); return vraagUit('trias', k.it, k.i, n, triasSvg(), 'tm'); }
+    return triasSleep(keuze);
+  }
+
+  /* ---------- 2. wie beslist erover ---------- */
+  var LAGEN = ['gem', 'ws', 'prov', 'rijk', 'eu'];
+  function wieKlas(keuze){
+    var n = niv(keuze), k = kiesIdx(D.WIE, n), it = k.it, L = D.LAAG;
+    var andere = H(LAGEN.filter(function(x){ return x !== it.l; })).slice(0, n + 1);
+    var lijst = LAGEN.filter(function(x){ return x === it.l || andere.indexOf(x) >= 0; });
+    return mk('wie', { vorm:'meerkeuze', vasteVolgorde:true, sleutel:'wk' + k.i,
+      vraag:'<b>' + S(it.s) + '</b> Wie beslist of regelt dit?', opdracht: n === 1 ? 'Dicht bij huis, voor een regio, voor het water, voor heel Nederland of voor heel Europa?' : '', beeld: lagenSvg({ e: it.e }),
+      opties: lijst.map(function(x){ return L[x].naam; }), goed: lijst.indexOf(it.l),
+      uitleg: (it.u || L[it.l].uit) + extra(lagenSvg({ aan: it.l, e: it.e, onder: LAAGKORT[it.l] })), antwoordTekst: L[it.l].naam });
+  }
+  function wieSleep(keuze){
+    var n = niv(keuze), lagen = H(LAGEN).slice(0, n < 3 ? 3 : 4), pool = D.WIE.filter(function(x){ return lagen.indexOf(x.l) >= 0; });
+    var g = kaartjesKiezen(pool, n, n + 3, lagen, 'l');
+    function id(x){ return 'w' + D.WIE.indexOf(x); }
+    var vakken = LAGEN.filter(function(l){ return lagen.indexOf(l) >= 0; }).map(function(l){ return { id: l, naam: LAAGKORT[l], hoort: g.filter(function(x){ return x.l === l; }).map(id) }; });
+    return mk('wie', { vorm:'sleep', sleutel:'ws' + g.map(id).join(''),
+      vraag:'Wie beslist of regelt dit? Sleep elk onderwerp naar de goede bestuurslaag.', opdracht:'Dicht bij huis is de gemeente; voor heel Nederland het Rijk; voor alle EU-landen de EU.', beeld: lagenSvg({ e:'🧩', onder:'wie doet wat?' }),
+      kaarten: g.map(function(x){ return { id: id(x), tekst: x.e + ' ' + S(x.k) }; }), vakken: vakken,
+      uitleg:'Elke bestuurslaag heeft eigen taken: wat dicht bij huis speelt, regelt de gemeente; wat voor heel Nederland geldt, het Rijk; wat over grenzen gaat, vaak de EU.',
+      antwoordTekst: vakken.map(function(v){ return v.naam + ': ' + g.filter(function(x){ return x.l === v.id; }).map(function(x){ return x.k; }).join(', '); }).join('; ') });
+  }
+  function wieGem(keuze){
+    var n = niv(keuze), k = kiesIdx(D.WIE_GEM, n), it = k.it, org = ['raad', 'college', 'burg'];
+    return mk('wie', { vorm:'meerkeuze', vasteVolgorde:true, sleutel:'wg' + k.i,
+      vraag:'Wie in de gemeente doet dit: <b>' + S(it.s) + '</b>?', beeld: gemSvg(),
+      opties: org.map(function(o){ return D.ORGAAN[o]; }), goed: org.indexOf(it.w), uitleg: it.u, antwoordTekst: D.ORGAAN[it.w] });
+  }
+  function wie(keuze){
+    var r = Math.random(), n = niv(keuze);
+    if (n > 1 && r < 0.15) return wieGem(keuze);
+    if (r < 0.6) return wieKlas(keuze);
+    if (r < 0.85){ var k = kiesIdx(D.WIE_MC, n); return vraagUit('wie', k.it, k.i, n, lagenSvg({ aan: k.it.h, e: D.LAAG[k.it.h].e, onder: LAAGKORT[k.it.h] }), 'wm'); }
+    return wieSleep(keuze);
+  }
+
+  /* ---------- 3. hoe een wet ontstaat ---------- */
+  function wetSet(keuze){ return D.WET_SET[keuze.niveau] || D.WET_SET.kgt; }
+  function wetVolgorde(keuze){
+    var n = niv(keuze), set = wetSet(keuze), vooruit = Math.random() < 0.6, pos = vooruit ? Math.floor(Math.random() * (set.length - 1)) : 1 + Math.floor(Math.random() * (set.length - 1));
+    var gi = vooruit ? pos + 1 : pos - 1, nu = D.WET_STAP[set[pos]], goed = D.WET_STAP[set[gi]];
+    var fout = H(set.filter(function(x, i){ return i !== pos && i !== gi; })).slice(0, n === 1 ? 2 : 3).map(function(x){ return D.WET_STAP[x].l; });
+    var opties = H([goed.l].concat(fout));
+    return mk('wet', { vorm:'meerkeuze', sleutel:'wv' + (vooruit ? 'n' : 'v') + set[pos],
+      vraag: vooruit ? 'Deze stap is net gezet: <b>' + S(nu.l) + '</b> Wat gebeurt er daarna?' : 'Wat gebeurt er vlak vóór deze stap: <b>' + S(nu.l) + '</b>',
+      opdracht:'Het vraagteken in de rij is de stap die je zoekt.',
+      beeld: flow(set, function(i){ return i === pos ? 'aan' : i === gi ? 'vraag' : (vooruit ? i > gi : i < gi) ? 'leeg' : ''; }),
+      opties: opties, goed: opties.indexOf(goed.l),
+      uitleg: (vooruit ? 'Daarna: ' : 'Daarvoor: ') + S(goed.l) + extra(flow(set, function(i){ return i === gi ? 'aan' : ''; })), antwoordTekst: goed.l });
+  }
+  function wetSleep(keuze){
+    var n = niv(keuze), set = wetSet(keuze), k = n + 3, ids = H(set).slice(0, k).sort(function(a, b){ return a - b; });
+    return mk('wet', { vorm:'sleep', sleutel:'wo' + ids.join(''),
+      vraag:'Zet deze stappen van een nieuwe wet in de goede volgorde.', opdracht:'Vak 1 is de eerste stap. Niet elke stap staat erbij; zet ze wel in de goede volgorde.',
+      beeld: plaatje('hof', '📜', 'het Binnenhof met een wet'), sleepuit:'Sleep elk kaartje naar het vak met het goede nummer. Op een telefoon: tik het kaartje aan en dan het vak.',
+      kaarten: ids.map(function(i){ return { id:'s' + i, tekst: D.WET_STAP[i].e + ' ' + S(D.WET_STAP[i].k) }; }),
+      vakken: ids.map(function(i, j){ return { id:'v' + j, max:1, hoort:['s' + i] }; }),
+      uitleg:'Eerst het voorstel en het advies, dan de Tweede Kamer, dan de Eerste Kamer, en pas daarna de handtekeningen en de bekendmaking.' + extra(flow(ids)),
+      antwoordTekst: ids.map(function(i){ return D.WET_STAP[i].k; }).join(' → ') });
+  }
+  function wet(keuze){
+    var r = Math.random(), n = niv(keuze);
+    if (r < 0.3) return wetVolgorde(keuze);
+    if (r < 0.75){ var k = kiesIdx(D.WET_MC, n); return vraagUit('wet', k.it, k.i, n, plaatje(k.it.b, k.it.e, 'hoe een wet ontstaat'), 'wm'); }
+    return wetSleep(keuze);
+  }
+
+  /* ---------- 4. grondrechten en rechtsstaat ---------- */
+  function rechtKlas(keuze){
+    var n = niv(keuze), k = kiesIdx(D.RECHT_SIT, n), it = k.it, R = D.RECHT, goed = R[it.r];
+    var kand = Object.keys(R).filter(function(id){ return id !== it.r && R[id].n <= n && goed.niet.indexOf(id) < 0 && R[id].niet.indexOf(it.r) < 0; });
+    var ids = H([it.r].concat(H(kand).slice(0, n === 1 ? 2 : 3)));
+    return mk('rechten', { vorm:'meerkeuze', sleutel:'rk' + k.i,
+      vraag:'<b>' + S(it.s) + '</b> Welk recht beschermt dit?', beeld: rechtSvg(it.e),
+      opties: ids.map(function(id){ return R[id].naam; }), goed: ids.indexOf(it.r),
+      uitleg: (it.u ? it.u + ' ' : '') + hoofd(goed.naam) + ' (' + goed.art + '): ' + goed.uit, antwoordTekst: goed.naam });
+  }
+  function rechten(keuze){
+    var n = niv(keuze);
+    if (Math.random() < 0.55) return rechtKlas(keuze);
+    var k = kiesIdx(D.RECHT_MC, n);
+    return vraagUit('rechten', k.it, k.i, n, plaatje(k.it.b, k.it.e, 'grondrechten en rechtsstaat'), 'rm');
+  }
+
+  /* ---------- 5. democratie of dictatuur ---------- */
+  function staatSit(keuze){
+    var n = niv(keuze), k = kiesIdx(D.STAAT_SIT, n), it = k.it;
+    return mk('staat', { vorm:'meerkeuze', vasteVolgorde:true, sleutel:'ss' + k.i,
+      vraag:'In een land geldt: <b>' + S(it.s) + '</b> Past dit bij een democratie of bij een dictatuur?', beeld: tweeSvg(it.e),
+      opties:['democratie', 'dictatuur'], goed: it.d ? 0 : 1,
+      uitleg: it.d ? 'Dit past bij een democratie: burgers hebben vrijheden, en de macht wordt gecontroleerd door parlement, rechters en pers.' : 'Dit past bij een dictatuur: één persoon of groep heeft alle macht, zonder vrije verkiezingen, vrije pers of onafhankelijke rechters.',
+      antwoordTekst: it.d ? 'democratie' : 'dictatuur' });
+  }
+  function staatSleep(keuze){
+    var n = niv(keuze), g = kaartjesKiezen(D.STAAT_KAART, n, n + 3, [true, false], 'd');
+    function id(x){ return 'd' + D.STAAT_KAART.indexOf(x); }
+    var vakken = [{ id:'dem', naam:'democratie', hoort: g.filter(function(x){ return x.d; }).map(id) }, { id:'dic', naam:'dictatuur', hoort: g.filter(function(x){ return !x.d; }).map(id) }];
+    return mk('staat', { vorm:'sleep', sleutel:'sd' + g.map(id).join(''),
+      vraag:'Hoort elk kenmerk bij een democratie of bij een dictatuur?', opdracht:'Sleep de kaartjes naar het goede vak.', beeld: tweeSvg('⚖️'),
+      kaarten: g.map(function(x){ return { id: id(x), tekst: S(x.k) }; }), vakken: vakken,
+      uitleg:'In een democratie kiezen burgers vrij, is er machtenscheiding en mag je kritiek geven. In een dictatuur heeft één persoon of groep alle macht.',
+      antwoordTekst:'democratie: ' + g.filter(function(x){ return x.d; }).map(function(x){ return x.k; }).join(', ') + '; dictatuur: ' + g.filter(function(x){ return !x.d; }).map(function(x){ return x.k; }).join(', ') });
+  }
+  function staat(keuze){
+    var r = Math.random(), n = niv(keuze);
+    if (r < 0.5){ var k = kiesIdx(D.STAAT_MC, n); return vraagUit('staat', k.it, k.i, n, plaatje(k.it.b, k.it.e, 'democratie en staatsvormen'), 'sm'); }
+    if (r < 0.8) return staatSit(keuze);
+    return staatSleep(keuze);
+  }
+
+  var SOORTEN = { trias: trias, wie: wie, wet: wet, rechten: rechten, staat: staat };
+  VAKSPEL.maak({
+    id:'democratie', naam:'Democratie', vak:'burg', kleur:'#83A5F2',
+    hand:'wie maakt de regels?',
+    lead:'Hoe werkt de democratie in Nederland? Je verdeelt de macht over de drie pilaren van de trias politica, zoekt uit wie waarover beslist, volgt een wet van voorstel tot Staatsblad, koppelt situaties aan grondrechten en ziet het verschil tussen een democratie en een dictatuur.',
+    hoe:[
+      { kop:'Drie machten', tekst:'De <b>wetgevende</b> macht maakt de wetten, de <b>uitvoerende</b> voert ze uit, de <b>rechterlijke</b> spreekt recht. Zo heeft niemand alle macht.' },
+      { kop:'Wie beslist', tekst:'Dicht bij huis de <b>gemeente</b>, voor de regio de <b>provincie</b>, voor het water het <b>waterschap</b>, voor heel Nederland het <b>Rijk</b> en voor alle lidstaten de <b>EU</b>.' },
+      { kop:'Een wet maken', tekst:'Voorstel, advies van de Raad van State, Tweede Kamer (die mag veranderen), Eerste Kamer (die alleen ja of nee zegt), handtekeningen en het Staatsblad.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'Eenvoudige situaties, drie keuzes per vraag en korte rijtjes om te slepen.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Meer instellingen en grondrechten, vier keuzes per vraag en de Raad van State.' },
+        { id:'hv', naam:'havo en vwo', uit:'Ook ministeriële verantwoordelijkheid, enquête en interpellatie, de novelle en de Grondwetswijziging in twee lezingen.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' }, { id:'trias', naam:'trias politica' }, { id:'wie', naam:'wie beslist erover' }, { id:'wet', naam:'hoe een wet ontstaat' }, { id:'rechten', naam:'grondrechten en rechtsstaat' }, { id:'staat', naam:'democratie of dictatuur' } ] }
+    ],
+    aantal:10,
+    maak:function(keuze, nr){
+      var s = keuze.soort === 'alles' || !SOORTEN[keuze.soort] ? kies(Object.keys(SOORTEN)) : keuze.soort;
+      return SOORTEN[s](keuze);
+    },
+    uitleg:{ doel:'Begrijpen hoe de democratie en de rechtsstaat in Nederland werken: wie de macht heeft, wie waarover beslist en hoe een wet ontstaat.', tijd:'tien opgaven per ronde', bediening:'Kies een antwoord, typ een woord, of sleep de kaartjes naar het goede vak en druk op Nakijken.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>

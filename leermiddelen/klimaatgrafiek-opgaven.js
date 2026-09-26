@@ -5,7 +5,8 @@
    Nederlandse onderwijs heet; groep is de hoofdletter van Köppen.
    zee: ligt het station aan zee (true) of in het binnenland (false).
    klimaatVraag en halfrondVraag: false als het station daar niet eenduidig
-   genoeg voor is (Nairobi ligt op 1800 meter, Tromsø aan de warme Golfstroom). */
+   genoeg voor is (Nairobi ligt op 1800 meter, Tromsø aan de warme Golfstroom,
+   Ushuaia zit op de grens van zee- en toendraklimaat). */
 window.KLIMAAT_GEGEVENS = {
   soorten: {
     regenwoud: { naam:'tropisch regenwoudklimaat', groep:'A', groepNaam:'tropisch', kenmerk:'elke maand boven de 18 graden en elke maand veel regen, ruim 1500 mm per jaar' },
@@ -84,6 +85,33 @@ window.KLIMAAT_GEGEVENS = {
       neerslag:[139, 127, 140, 119, 92, 59, 61, 64, 72, 119, 113, 119] },
     { id:'tokio', naam:'Tokio', land:'Japan', lat:35.7, lon:139.7, klimaat:'zee', zee:true,
       temp:[5.4, 6.1, 9.4, 14.3, 18.8, 21.9, 25.7, 26.9, 23.3, 18.0, 12.5, 7.7],
-      neerslag:[60, 57, 116, 134, 140, 168, 156, 155, 225, 234, 96, 58] }
+      neerslag:[60, 57, 116, 134, 140, 168, 156, 155, 225, 234, 96, 58] },
+    { id:'perth', naam:'Perth', land:'Australië', lat:-32.0, lon:115.9, klimaat:'middellandse', zee:true,
+      temp:[24.6, 25.0, 23.2, 20.1, 16.6, 14.3, 13.3, 13.6, 14.9, 17.2, 20.3, 22.7],
+      neerslag:[17, 12, 20, 38, 99, 133, 147, 124, 79, 42, 22, 9] },
+    { id:'auckland', naam:'Auckland', land:'Nieuw-Zeeland', lat:-36.8, lon:174.8, klimaat:'zee', zee:true,
+      temp:[19.6, 20.1, 18.8, 16.6, 14.1, 11.8, 11.0, 11.5, 12.9, 14.4, 16.2, 18.3],
+      neerslag:[73, 66, 87, 99, 113, 127, 145, 118, 105, 100, 86, 93] },
+    { id:'rio', naam:'Rio de Janeiro', land:'Brazilië', lat:-22.9, lon:-43.2, klimaat:'savanne', zee:true,
+      temp:[26.2, 26.5, 26.0, 24.5, 23.0, 21.5, 21.3, 21.8, 22.2, 22.9, 24.0, 25.3],
+      neerslag:[137, 130, 136, 95, 70, 42, 42, 45, 54, 87, 98, 134] },
+    { id:'kinshasa', naam:'Kinshasa', land:'Congo (DRC)', lat:-4.3, lon:15.3, klimaat:'savanne', zee:false, halfrondVraag:false,
+      temp:[26.4, 26.8, 27.1, 27.1, 26.6, 24.6, 23.3, 24.1, 25.4, 26.3, 26.3, 26.1],
+      neerslag:[135, 145, 196, 196, 159, 8, 3, 3, 30, 119, 222, 142] },
+    { id:'nuuk', naam:'Nuuk', land:'Groenland', lat:64.2, lon:-51.7, klimaat:'toendra', zee:true,
+      temp:[-7.4, -7.8, -7.9, -3.6, 0.8, 4.1, 6.6, 6.2, 3.4, -1.0, -3.9, -6.3],
+      neerslag:[48, 43, 45, 42, 50, 58, 79, 84, 86, 72, 67, 55] },
+    { id:'riyad', naam:'Riyad', land:'Saoedi-Arabië', lat:24.7, lon:46.7, klimaat:'woestijn', zee:false,
+      temp:[14.5, 17.3, 21.6, 26.8, 32.4, 34.9, 36.4, 36.2, 33.1, 28.0, 20.9, 16.1],
+      neerslag:[15, 8, 23, 26, 6, 0, 0, 0, 0, 2, 7, 15] },
+    { id:'montreal', naam:'Montreal', land:'Canada', lat:45.5, lon:-73.6, klimaat:'land', zee:false,
+      temp:[-9.7, -8.0, -2.4, 5.9, 13.1, 18.4, 21.2, 20.2, 15.7, 8.8, 2.4, -5.1],
+      neerslag:[77, 62, 70, 82, 82, 88, 90, 94, 83, 91, 97, 86] },
+    { id:'harbin', naam:'Harbin', land:'China', lat:45.8, lon:126.6, klimaat:'land', zee:false,
+      temp:[-17.6, -12.4, -3.4, 7.4, 15.1, 21.0, 23.4, 21.8, 15.5, 6.6, -4.3, -14.4],
+      neerslag:[5, 5, 11, 22, 49, 93, 145, 110, 57, 27, 12, 8] },
+    { id:'ushuaia', naam:'Ushuaia', land:'Argentinië', lat:-54.8, lon:-68.3, klimaat:'zee', zee:true, klimaatVraag:false,
+      temp:[9.6, 9.3, 7.7, 5.7, 3.2, 1.7, 1.3, 2.2, 4.1, 6.2, 7.8, 9.0],
+      neerslag:[50, 43, 51, 52, 50, 50, 32, 35, 33, 33, 37, 44] }
   ]
 };

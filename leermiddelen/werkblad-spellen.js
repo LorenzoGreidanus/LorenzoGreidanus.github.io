@@ -141,8 +141,10 @@ var SPELBLAD = (function(){
       var uit = [], gezien = {};
       for (var p = 0; uit.length < n && p < n * 40; p++){
         var s = mag[p % mag.length], q = s.maak(o.niv);
-        if (gezien[q.vraag]) continue;
-        gezien[q.vraag] = true; q.soortNaam = s.naam; uit.push(q);
+        /* de vraag is vaak dezelfde zin ("Welk stuk is groter?"): het plaatje en het antwoord maken het verschil */
+        var sl = q.vraag.replace(/van de \S+ /, '') + '|' + JSON.stringify(q.taart || q.twee || '') + '|' + JSON.stringify(q.antwoord);
+        if (gezien[sl]) continue;
+        gezien[sl] = true; q.soortNaam = s.naam; uit.push(q);
       }
       return schud(uit);
     },
@@ -182,7 +184,7 @@ var SPELBLAD = (function(){
   var dhte = D && {
     naam:'DHTE-schema: optellen en aftrekken', vak:'reken',
     eigenNiveau:true,
-    aantallen:[6, 9, 12, 15], standaard:9, aantalNaam:'Aantal sommen',
+    aantallen:[6, 9, 12, 15, 20], standaard:9, aantalNaam:'Aantal sommen',
     delenKop:'Getallen en sommen',
     delenTip:'Kies je meer soorten sommen, dan wisselen ze elkaar af. In de gestippelde vakjes zet de leerling wat hij onthoudt of leent.',
     delen:function(aan){

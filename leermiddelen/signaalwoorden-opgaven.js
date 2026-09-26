@@ -50,6 +50,9 @@ var INVUL = [
   [1, 'In de dierentuin zagen we veel dieren, ___ olifanten en giraffen.', 'zoals', 'want', 'maar', 'daarna', 'voorbeeld', 'Olifanten en giraffen zijn voorbeelden van dieren: zoals.'],
   [1, 'Ik poets eerst mijn tanden, ___ ga ik naar bed.', 'daarna', 'want', 'maar', 'zoals', 'tijd', 'Eerst tanden poetsen, daarna naar bed: een volgorde in de tijd.'],
   [1, 'Voor het kamp neem je een slaapzak mee. ___ heb je een zaklamp nodig.', 'Ook', 'Maar', 'Want', 'Zoals', 'opsomming', 'Er komt nog iets bij op de lijst: ook.'],
+  [1, 'Ik maak eerst mijn huiswerk. ___ ga ik buiten spelen.', 'Daarna', 'Want', 'Maar', 'Zoals', 'tijd', 'Eerst huiswerk, daarna buiten spelen: een volgorde in de tijd.'],
+  [1, 'Op het schoolfeest is er muziek. Er is ___ een fotohoek.', 'ook', 'want', 'maar', 'dus', 'opsomming', 'Er komt nog iets bij op het feest: ook.'],
+  [1, 'Mijn opa is al tachtig, ___ hij fietst nog elke dag naar de markt.', 'maar', 'want', 'dus', 'zoals', 'tegenstelling', 'Tachtig jaar en toch elke dag fietsen: maar zet het tegenover elkaar.'],
   [2, 'Je mag mee naar het concert, ___ je je huiswerk af hebt.', 'mits', 'want', 'hoewel', 'bijvoorbeeld', 'voorwaarde', 'Mits betekent: alleen als. Het meegaan hangt af van het huiswerk: een voorwaarde.'],
   [2, 'De school plant bomen ___ het plein koeler te maken.', 'om', 'omdat', 'zodat', 'toen', 'doel', 'Om ... te geeft het doel aan: waarvoor de bomen geplant worden.'],
   [2, 'Het team traint hard, eet gezond en slaapt veel. ___ doet het alles om te winnen.', 'Kortom', 'Bijvoorbeeld', 'Toch', 'Daarna', 'conclusie', 'Kortom vat de drie dingen samen in één zin: een samenvatting.'],
@@ -69,6 +72,9 @@ var INVUL = [
   [2, 'Het was warm, de zon scheen en het strand was leeg. ___, een perfecte dag.', 'Kortom', 'Daarentegen', 'Tenzij', 'Bijvoorbeeld', 'conclusie', 'Kortom vat de drie dingen samen in één oordeel.'],
   [2, 'Veel jongeren lezen weinig boeken. ___ lezen ze wel veel berichten op hun telefoon.', 'Daarentegen', 'Daardoor', 'Kortom', 'Mits', 'tegenstelling', 'Weinig boeken tegenover veel berichten: daarentegen.'],
   [2, 'Neem een regenjas mee, ___ je nat wilt worden.', 'tenzij', 'omdat', 'zodat', 'nadat', 'voorwaarde', 'Tenzij betekent: behalve als. Alleen wie nat wil worden, laat de jas thuis.'],
+  [2, 'Veel vogels eten insecten, ___ de mees en de zwaluw.', 'zoals', 'mits', 'doordat', 'kortom', 'voorbeeld', 'De mees en de zwaluw zijn voorbeelden van vogels die insecten eten: zoals.'],
+  [2, '___ je de oefentoets hebt gemaakt, bespreek je de antwoorden met je buurman.', 'Nadat', 'Hoewel', 'Tenzij', 'Kortom', 'tijd', 'Eerst de oefentoets, dan bespreken: nadat geeft de volgorde in de tijd.'],
+  [2, 'De spelers waren fit, de tactiek klopte en het publiek juichte. ___ was de wedstrijd een groot succes.', 'Al met al', 'Daarentegen', 'Tenzij', 'Bijvoorbeeld', 'conclusie', 'Al met al trekt de conclusie uit alles wat ervoor staat.'],
   [3, '___ het hard regende, ging de wedstrijd gewoon door.', 'Hoewel', 'Omdat', 'Zodat', 'Zodra', 'concessie', 'Hoewel geeft een toegeving: je verwacht afgelasting door de regen, maar het gaat toch door.'],
   [3, 'De onderzoekers vonden geen verband. ___ blijven ze de metingen herhalen.', 'Desondanks', 'Daardoor', 'Bijvoorbeeld', 'Kortom', 'concessie', 'Geen verband gevonden en toch doorgaan: desondanks is een toegeving.'],
   [3, 'Het bedrijf verlaagde de prijzen ___ meer klanten te trekken.', 'teneinde', 'doordat', 'terwijl', 'mits', 'doel', 'Teneinde is een formeel woord voor om ... te: het doel van de verlaging.'],
@@ -87,7 +93,10 @@ var INVUL = [
   [3, 'Het onderzoek toont aan dat bewegen helpt tegen stress. ___ blijkt dat wandelen al genoeg is.', 'Bovendien', 'Desondanks', 'Daarentegen', 'Tenzij', 'opsomming', 'Bovendien voegt een tweede uitkomst toe: een opsomming over de zinsgrens heen.'],
   [3, 'De gemeente sluit de binnenstad voor auto’s, ___ de luchtkwaliteit te verbeteren.', 'teneinde', 'ondanks', 'hoewel', 'doordat', 'doel', 'Teneinde is formeel voor om ... te: het doel van de afsluiting.'],
   [3, 'De schade aan de dijk ontstond ___ de aanhoudende regen van de afgelopen weken.', 'als gevolg van', 'ondanks', 'met als doel', 'in plaats van', 'oorzaak', 'De regen is de oorzaak van de schade: als gevolg van.'],
-  [3, 'De cijfers stijgen al drie jaar en de klachten nemen af. ___ werkt de aanpak.', 'Kortom', 'Niettemin', 'Tenzij', 'Daarentegen', 'conclusie', 'Kortom trekt de conclusie uit de twee gegevens ervoor.']
+  [3, 'De cijfers stijgen al drie jaar en de klachten nemen af. ___ werkt de aanpak.', 'Kortom', 'Niettemin', 'Tenzij', 'Daarentegen', 'conclusie', 'Kortom trekt de conclusie uit de twee gegevens ervoor.'],
+  [3, '___ hij de beste van de klas was, voelde hij zich onzeker voor het examen.', 'Ofschoon', 'Doordat', 'Zodat', 'Mits', 'concessie', 'Ofschoon is een formeel woord voor hoewel: je verwacht zelfvertrouwen, en toch is hij onzeker.'],
+  [3, 'Leerlingen die voldoende slapen, halen hogere cijfers. ___ onthouden zij de lesstof beter.', 'Tevens', 'Desondanks', 'Tenzij', 'Daarentegen', 'opsomming', 'Tevens is een formeel woord voor ook: er komt een tweede uitkomst bij.'],
+  [3, '___ zijn broer houdt Daan helemaal niet van sport.', 'In tegenstelling tot', 'Als gevolg van', 'Met als doel', 'Op voorwaarde dat', 'tegenstelling', 'Daan en zijn broer staan tegenover elkaar: in tegenstelling tot.']
 ];
 var WELK = [
   [1, 'Ik kan niet komen, **want** ik ben ziek.', 'oorzaak', 'Want geeft de reden of oorzaak: ziek zijn is waarom ik niet kan komen.'],
@@ -109,6 +118,9 @@ var WELK = [
   [1, 'In de zomer kun je veel doen, **bijvoorbeeld** zwemmen of kamperen.', 'voorbeeld', 'Zwemmen en kamperen zijn voorbeelden van wat je in de zomer kunt doen.'],
   [1, 'We kochten eerst kaartjes. **Daarna** gingen we de bioscoop in.', 'tijd', 'Daarna vertelt wat er later gebeurde: een volgorde in de tijd.'],
   [1, 'Mijn oma kan goed koken. **Ook** bakt ze heerlijke taarten.', 'opsomming', 'Ook voegt nog iets toe: een opsomming.'],
+  [1, 'Ik neem mijn zwemspullen mee, **want** we gaan naar het zwembad.', 'oorzaak', 'Want geeft de reden: we gaan zwemmen, daarom neem ik zwemspullen mee.'],
+  [1, 'Op de markt koop je van alles, **zoals** kaas, vis en bloemen.', 'voorbeeld', 'Zoals kondigt voorbeelden aan van wat je op de markt koopt.'],
+  [1, 'We keken eerst de film. **Later** praatten we er in de klas over.', 'tijd', 'Later zegt wat er na de film gebeurde: een volgorde in de tijd.'],
   [2, 'De school begint later **om** leerlingen uitgeslapen in de les te krijgen.', 'doel', 'Om ... te geeft het doel: waarvoor de school later begint.'],
   [2, 'Je krijgt de korting **als** je je schoolpas laat zien.', 'voorwaarde', 'Als geeft de voorwaarde: alleen met de pas is er korting.'],
   [2, 'Het regende, het waaide en het was koud. **Kortom**, het was rotweer.', 'conclusie', 'Kortom vat de drie dingen samen: een samenvatting.'],
@@ -128,6 +140,9 @@ var WELK = [
   [2, 'De bus was te laat, mijn telefoon was leeg en het regende. **Kortom**, een rotochtend.', 'conclusie', 'Kortom vat alles samen in één zin.'],
   [2, 'De wedstrijd werd stilgelegd **vanwege** vuurwerk op het veld.', 'oorzaak', 'Vanwege geeft de reden voor het stilleggen: het vuurwerk.'],
   [2, 'Veel vogels trekken in de winter naar het zuiden, **zoals** de zwaluw en de ooievaar.', 'voorbeeld', 'Zoals kondigt voorbeelden van trekvogels aan.'],
+  [2, '**Als** je te laat bent, moet je je melden bij de conciërge.', 'voorwaarde', 'Als geeft de voorwaarde: alleen wie te laat is, meldt zich.'],
+  [2, 'De sportschool geeft korting **om** meer jongeren te laten sporten.', 'doel', 'Om ... te geeft het doel van de korting.'],
+  [2, 'De les begon laat, de beamer deed het niet en de helft van de klas was ziek. **Samengevat**: een mislukte les.', 'conclusie', 'Samengevat kondigt een samenvatting aan van wat ervoor staat.'],
   [3, '**Hoewel** het onderzoek klein was, zijn de resultaten duidelijk.', 'concessie', 'Hoewel geeft een toegeving: het onderzoek was klein, en toch zijn de resultaten duidelijk.'],
   [3, 'De prijzen zijn gestegen. **Desondanks** is de zaal elke avond vol.', 'concessie', 'Desondanks: ondanks de hogere prijzen toch vol. Een toegeving over de zinsgrens heen.'],
   [3, 'De app is **weliswaar** gratis, maar hij verkoopt je gegevens.', 'concessie', 'Weliswaar ... maar: de schrijver geeft iets toe en zet er een bezwaar tegenover.'],
@@ -146,7 +161,10 @@ var WELK = [
   [3, 'De stad investeert in fietspaden **teneinde** het autoverkeer te verminderen.', 'doel', 'Teneinde is formeel voor om ... te: het doel van de investering.'],
   [3, '**Indien** u vragen heeft, kunt u contact opnemen met de administratie.', 'voorwaarde', 'Indien is formeel voor als: alleen bij vragen neem je contact op.'],
   [3, 'De ene helft van de klas wil een excursie. De andere helft wil **daarentegen** een filmmiddag.', 'tegenstelling', 'Daarentegen zet de twee wensen tegenover elkaar.'],
-  [3, 'Het onderzoek was klein en duurde kort. **Al met al** zijn de resultaten voorzichtig op te vatten.', 'conclusie', 'Al met al trekt de conclusie uit wat ervoor staat.']
+  [3, 'Het onderzoek was klein en duurde kort. **Al met al** zijn de resultaten voorzichtig op te vatten.', 'conclusie', 'Al met al trekt de conclusie uit wat ervoor staat.'],
+  [3, '**Ofschoon** de voorspellingen somber waren, groeide de economie.', 'concessie', 'Ofschoon is een formeel woord voor hoewel: een toegeving.'],
+  [3, 'Het museum is gerenoveerd. **Tevens** is er een nieuw restaurant geopend.', 'opsomming', 'Tevens is formeel voor ook: er komt iets bij, over de zinsgrens heen.'],
+  [3, 'Vroeger reisde men per koets. **Vervolgens** kwamen de trein en de auto.', 'tijd', 'Vervolgens geeft aan wat daarna kwam: een volgorde in de tijd.']
 ];
 var AFMAKEN = [
   [1, 'Het regende hard, **dus** …', 'de wedstrijd ging niet door.', 'we gingen lekker buiten spelen.', 'de zon scheen fel.', 'ik had geen jas nodig.', 'oorzaak', 'Dus kondigt een gevolg aan. Van harde regen is een afgelaste wedstrijd het logische gevolg.'],
@@ -168,6 +186,9 @@ var AFMAKEN = [
   [1, 'Er zijn veel soorten fruit, **zoals** …', 'appels en bananen.', 'want fruit is gezond.', 'maar ik eet geen fruit.', 'daarna eten we een toetje.', 'voorbeeld', 'Zoals kondigt voorbeelden aan: appels en bananen.'],
   [1, 'Eerst doen we de afwas, **daarna** …', 'kijken we televisie.', 'omdat het vies is.', 'bijvoorbeeld de borden.', 'maar we hebben geen zin.', 'tijd', 'Eerst ... daarna: een volgorde in de tijd.'],
   [1, 'Mijn zus kan goed zwemmen. **Bovendien** …', 'kan ze heel hard rennen.', 'zwemt ze heel goed.', 'daarom zwemt ze.', 'is zwemmen een sport.', 'opsomming', 'Bovendien voegt nog iets toe: iets anders waar ze goed in is.'],
+  [1, 'Het was heel warm, **daarom** …', 'gingen we naar het strand.', 'trokken we een dikke jas aan.', 'was het heel warm.', 'bleven we in bed met een kruik.', 'oorzaak', 'Daarom kondigt een gevolg aan: bij warmte ga je naar het strand.'],
+  [1, 'Ik lees graag boeken, **zoals** …', 'strips en spannende verhalen.', 'want lezen is leuk.', 'maar niet op school.', 'daarna ga ik slapen.', 'voorbeeld', 'Zoals kondigt voorbeelden aan van boeken.'],
+  [1, 'Eerst smeer je de boterham, **daarna** …', 'leg je er kaas op.', 'pak je het brood.', 'omdat je honger hebt.', 'bijvoorbeeld met jam.', 'tijd', 'Daarna zegt wat je doet na het smeren; het brood pak je juist eerder.'],
   [2, 'De school plant bomen **om** …', 'het plein koeler te maken.', 'want het is warm.', 'daardoor is het koeler.', 'het plein is warm.', 'doel', 'Om ... te geeft het doel: waarvoor de bomen zijn.'],
   [2, 'Je krijgt korting, **mits** …', 'je je schoolpas laat zien.', 'de korting is groot.', 'daarom ga je naar de winkel.', 'de winkel is dicht.', 'voorwaarde', 'Mits betekent alleen als: de pas is de voorwaarde.'],
   [2, 'Het regende, het waaide en het was koud. **Kortom**, …', 'het was rotweer.', 'de zon scheen.', 'daarna werd het warm.', 'bijvoorbeeld in de herfst.', 'conclusie', 'Kortom vat alles samen in één zin.'],
@@ -187,6 +208,9 @@ var AFMAKEN = [
   [2, 'De zaal was vol, het publiek zong mee en de band speelde twee uur. **Kortom**, …', 'het was een geweldig concert.', 'de zaal was leeg.', 'bijvoorbeeld de zanger.', 'daarna gingen we naar huis.', 'conclusie', 'Kortom vat alles samen in één oordeel.'],
   [2, 'De voetballer raakte geblesseerd **doordat** …', 'hij verkeerd op zijn enkel landde.', 'hij drie weken niet kon spelen.', 'de trainer hem wisselde.', 'hij toch doorspeelde.', 'oorzaak', 'Doordat kondigt de oorzaak aan: de verkeerde landing.'],
   [2, 'Je kunt de film vanavond zien, **tenzij** …', 'hij is uitverkocht.', 'je een kaartje hebt.', 'de bioscoop open is.', 'daarom ga je.', 'voorwaarde', 'Tenzij betekent behalve als: als hij uitverkocht is, lukt het niet.'],
+  [2, 'Je mag op het plein voetballen, **tenzij** …', 'de bel al is gegaan.', 'je een bal hebt.', 'het pauze is.', 'daarom speel je buiten.', 'voorwaarde', 'Tenzij betekent behalve als: na de bel mag het niet meer.'],
+  [2, 'De bibliotheek is langer open **om** …', 'scholieren rustig te laten studeren.', 'want er zijn veel scholieren.', 'daardoor is het druk.', 'de boeken zijn nieuw.', 'doel', 'Om ... te geeft het doel van de langere openingstijden.'],
+  [2, 'Mijn broer houdt van drukte en feesten. Mijn zus is **daarentegen** …', 'liever alleen thuis met een boek.', 'ook dol op feesten.', 'daarom vaak op feestjes.', 'bijvoorbeeld op een verjaardag.', 'tegenstelling', 'Daarentegen zet de zus tegenover de broer: rust tegenover drukte.'],
   [3, '**Hoewel** het onderzoek klein was, …', 'zijn de resultaten duidelijk.', 'is het niet betrouwbaar.', 'deden er weinig mensen mee.', 'daarom klopt het niet.', 'concessie', 'Hoewel is een toegeving: ondanks het kleine onderzoek zijn de resultaten toch duidelijk.'],
   [3, 'De prijzen zijn gestegen. **Desondanks** …', 'is de zaal elke avond vol.', 'komen er minder mensen.', 'zijn de kaartjes duurder.', 'daarom blijft de zaal leeg.', 'concessie', 'Desondanks: ondanks de hogere prijzen toch vol.'],
   [3, 'De app is **weliswaar** gratis, **maar** …', 'hij verkoopt je gegevens.', 'je hoeft niets te betalen.', 'daarom downloadt iedereen hem.', 'hij kost niets.', 'concessie', 'Weliswaar ... maar: de schrijver geeft iets toe en noemt dan het bezwaar.'],
@@ -205,7 +229,10 @@ var AFMAKEN = [
   [3, 'De gemeente plaatste extra afvalbakken **teneinde** …', 'het zwerfafval te verminderen.', 'want er lag veel afval.', 'daardoor was het schoon.', 'ondanks het vele afval.', 'doel', 'Teneinde is formeel voor om ... te: het doel van de afvalbakken.'],
   [3, 'Het museum trekt veel bezoekers. **Desondanks** …', 'maakt het elk jaar verlies.', 'is het erg populair.', 'komen er veel mensen.', 'daarom is het druk.', 'concessie', 'Desondanks: veel bezoekers, en toch verlies. Een toegeving over de zinsgrens heen.'],
   [3, 'Het rapport bevat fouten, verouderde cijfers en geen bronnen. **Concluderend** …', 'is het onbruikbaar voor ons onderzoek.', 'is het een betrouwbaar rapport.', 'bijvoorbeeld de cijfers uit 2010.', 'ondanks de fouten.', 'conclusie', 'Concluderend trekt de conclusie uit de opgesomde gebreken.'],
-  [3, 'De schade aan de oogst ontstond **als gevolg van** …', 'de lange periode van droogte.', 'de boeren minder verdienden.', 'ondanks de regen.', 'de prijzen stegen.', 'oorzaak', 'Als gevolg van wijst de oorzaak aan: de droogte.']
+  [3, 'De schade aan de oogst ontstond **als gevolg van** …', 'de lange periode van droogte.', 'de boeren minder verdienden.', 'ondanks de regen.', 'de prijzen stegen.', 'oorzaak', 'Als gevolg van wijst de oorzaak aan: de droogte.'],
+  [3, '**Ofschoon** de trainer tevreden was over het spel, …', 'was hij teleurgesteld over de uitslag.', 'was hij blij met het spel.', 'speelde het team goed.', 'daarom won het team.', 'concessie', 'Ofschoon is een toegeving: tevreden over het spel, en toch teleurgesteld over de uitslag.'],
+  [3, 'Veel dieren houden een winterslaap, **onder andere** …', 'egels en vleermuizen.', 'omdat het koud is.', 'hoewel het winter is.', 'daardoor overleven ze.', 'voorbeeld', 'Onder andere kondigt voorbeelden aan van dieren met een winterslaap.'],
+  [3, 'De leerlingen verzamelden eerst gegevens. **Vervolgens** …', 'verwerkten ze die in een grafiek.', 'omdat ze gegevens nodig hadden.', 'hadden ze nog geen gegevens.', 'ondanks de gegevens.', 'tijd', 'Vervolgens geeft de volgende stap: eerst verzamelen, dan verwerken.']
 ];
 return { VERBANDEN: VERBANDEN, WOORDEN: WOORDEN, INVUL: INVUL, WELK: WELK, AFMAKEN: AFMAKEN };
 })();

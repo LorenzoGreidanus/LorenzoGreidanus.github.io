@@ -1136,4 +1136,46 @@ var ENG_PLUS2 = [
 ];
 BRONNEN.eng = BRONNEN.eng.concat(ENG_PLUS2);
 NIVOS.eng = NIVOS.eng.concat(ENG_PLUS2.map(function(q){ return q.n; }));
+/* Extra vragen op vmbo-bb-niveau (n:1), zodat elk onderdeel op bb een werkblad van 20 verschillende vragen haalt. */
+var ENG_BB = [
+/* valse vrienden */
+{v:'Valse vriend: wat betekent a door?',o:['door, via','een deur','een doos','een dooi'],g:1,u:'A door is een deur. Het Nederlandse woord door is through of by.',t:'valse vrienden',n:1},
+{v:'Valse vriend: wat betekent a wall?',o:['een wal langs het water','een walvis','een muur','wol'],g:2,u:'A wall is een muur, bijvoorbeeld in je kamer.',t:'valse vrienden',n:1},
+{v:'Valse vriend: wat betekent a meal?',o:['meel om mee te bakken','een maaltijd','een mail','een medaille'],g:1,u:'A meal is een maaltijd; meel is flour.',t:'valse vrienden',n:1},
+{v:'Valse vriend: wat betekent a cook?',o:['een kok','een koek','een koekenpan','een koker'],g:0,u:'A cook is een kok; een koek is a cake of a biscuit.',t:'valse vrienden',n:1},
+{v:'Valse vriend: wat betekent a stool?',o:['een stoel met een leuning','een kruk','een stal','een stok'],g:1,u:'A stool is een kruk zonder leuning; een stoel is a chair.',t:'valse vrienden',n:1},
+{v:'Valse vriend: wat betekent a room?',o:['room voor op de taart','een rok','een roos','een kamer'],g:3,u:'A room is een kamer; room om te kloppen is cream.',t:'valse vrienden',n:1},
+{v:'Valse vriend: wat betekent a boot?',o:['een boot','een laars','een bot','een brood'],g:1,u:'A boot is een laars; een boot is a boat.',t:'valse vrienden',n:1},
+{v:'Valse vriend: wat betekent a pet?',o:['een pet op je hoofd','een pot','een huisdier','een pen'],g:2,u:'A pet is een huisdier; een pet op je hoofd is a cap.',t:'valse vrienden',n:1},
+{v:'Valse vriend: wat betekent beer?',o:['een beer','bier','een bes','een peer'],g:1,u:'Beer is bier; een beer is a bear.',t:'valse vrienden',n:1},
+{v:'Valse vriend: wat betekent pink in "a pink shirt"?',o:['roze','je pink','paars','prikkend'],g:0,u:'Pink is de kleur roze; je pink is your little finger.',t:'valse vrienden',n:1},
+{v:'Valse vriend: wat betekent a rooster?',o:['een lesrooster','een roos','een haan','een rooster op de barbecue'],g:2,u:'A rooster is een haan; een lesrooster is a timetable.',t:'valse vrienden',n:1},
+{v:'Valse vriend: wat betekent a note in "I wrote a note"?',o:['een nootje om te eten','een briefje','een neus','een nacht'],g:1,u:'A note is een briefje of een aantekening; een nootje is a nut.',t:'valse vrienden',n:1},
+{v:'Valse vriend: wat betekent bad in "a bad idea"?',o:['een bad','bang','boos','slecht'],g:3,u:'Bad betekent slecht; een bad is a bath.',t:'valse vrienden',n:1},
+{v:'Valse vriend: wat betekent big?',o:['groot','een big, een jong varken','dik','zwaar'],g:0,u:'Big betekent groot; een big is a piglet.',t:'valse vrienden',n:1},
+{v:'Valse vriend: wat betekent a rug?',o:['je rug','een kleedje op de vloer','een brug','een rugzak'],g:1,u:'A rug is een klein vloerkleed; je rug is your back.',t:'valse vrienden',n:1},
+{v:'Valse vriend: wat betekent a store?',o:['een winkel','een storing','een stoel','een stoep'],g:0,u:'A store is een winkel, vooral in Amerikaans Engels.',t:'valse vrienden',n:1},
+{v:'Valse vriend: wat betekent wet in "my shoes are wet"?',o:['een wet','nat','wit','warm'],g:1,u:'Wet betekent nat; een wet is a law.',t:'valse vrienden',n:1},
+{v:'Valse vriend: wat betekent a slap?',o:['een klap met je vlakke hand','een slappe lach','een slaapkamer','een slak'],g:0,u:'A slap is een klap; slap (niet stevig) is weak of loose.',t:'valse vrienden',n:1},
+/* voorzetselwerkwoorden */
+{v:'Wat betekent to turn off?',o:['aanzetten','uitzetten','omdraaien','weggaan'],g:1,u:'Turn off the light: doe het licht uit.',t:'voorzetselwerkwoorden',n:1},
+{v:'Wat betekent to stand up?',o:['gaan staan','gaan zitten','stilstaan','opgeven'],g:0,u:'Stand up, please: ga maar staan.',t:'voorzetselwerkwoorden',n:1},
+{v:'Wat betekent to come in?',o:['weggaan','binnenkomen','terugkomen','uitkomen'],g:1,u:'Come in! Kom binnen!',t:'voorzetselwerkwoorden',n:1},
+{v:'Wat betekent to go out?',o:['naar binnen gaan','doorgaan','uitgaan, naar buiten gaan','teruggaan'],g:2,u:'Let\'s go out tonight: laten we vanavond uitgaan.',t:'voorzetselwerkwoorden',n:1},
+{v:'Wat betekent to look at?',o:['kijken naar','zoeken naar','zorgen voor','opzoeken'],g:0,u:'Look at me: kijk naar mij. Zoeken naar is look for.',t:'voorzetselwerkwoorden',n:1},
+{v:'Wat betekent to listen to?',o:['praten met','luisteren naar','wachten op','zingen voor'],g:1,u:'Listen to the teacher: luister naar de docent.',t:'voorzetselwerkwoorden',n:1},
+{v:'Wat betekent to wait for?',o:['zoeken naar','vragen om','lopen naar','wachten op'],g:3,u:'I am waiting for the bus: ik wacht op de bus.',t:'voorzetselwerkwoorden',n:1},
+{v:'Wat betekent to come back?',o:['terugkomen','binnenkomen','opkomen','meekomen'],g:0,u:'Come back soon! Kom snel terug!',t:'voorzetselwerkwoorden',n:1},
+{v:'Wat betekent to put down?',o:['oppakken','neerzetten, neerleggen','aantrekken','opzetten'],g:1,u:'Put down your pen: leg je pen neer.',t:'voorzetselwerkwoorden',n:1},
+{v:'Wat betekent to throw away?',o:['opvangen','teruggooien','weggooien','opbergen'],g:2,u:'Throw away your rubbish: gooi je afval weg.',t:'voorzetselwerkwoorden',n:1},
+{v:'Sit ___, please. The lesson is starting.',o:['up','down','in','off'],g:1,u:'To sit down is gaan zitten.',t:'voorzetselwerkwoorden',n:1},
+{v:'Can you turn ___ the TV? I want to watch the news.',o:['off','on','in','at'],g:1,u:'Je wilt kijken, dus de tv moet aan: to turn on.',t:'voorzetselwerkwoorden',n:1},
+{v:'I am waiting ___ the bus.',o:['of','at','for','to'],g:2,u:'Wachten op is in het Engels to wait for.',t:'voorzetselwerkwoorden',n:1},
+{v:'Listen ___ me!',o:['to','at','for','on'],g:0,u:'Luisteren naar is in het Engels to listen to.',t:'voorzetselwerkwoorden',n:1},
+{v:'Look ___ this picture, it is so funny!',o:['for','after','up','at'],g:3,u:'Kijken naar is to look at; look for is zoeken naar.',t:'voorzetselwerkwoorden',n:1},
+{v:'Please come ___, the door is open.',o:['in','out','off','down'],g:0,u:'To come in is binnenkomen.',t:'voorzetselwerkwoorden',n:1},
+{v:'Take ___ your shoes before you go inside.',o:['on','off','up','in'],g:1,u:'To take off is uittrekken, bijvoorbeeld je schoenen of je jas.',t:'voorzetselwerkwoorden',n:1},
+];
+BRONNEN.eng = BRONNEN.eng.concat(ENG_BB);
+NIVOS.eng = NIVOS.eng.concat(ENG_BB.map(function(q){ return q.n; }));
 })();
