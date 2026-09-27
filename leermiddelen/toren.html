@@ -98,6 +98,9 @@ body.groot .uitleg b{font-size:1.1rem}
 .meerkeuzes summary .samenvatting{color:var(--muted);font-size:.9rem;flex:1}
 .meerkeuzes summary::after{content:'aanpassen';font-size:.82rem;font-weight:600;color:var(--ocean)}
 .meerkeuzes[open] summary::after{content:'inklappen'}
+/* blauw op een donker vlak haalt het contrast niet: in het donker het lichtere blauw */
+:root[data-theme="dark"] .meerkeuzes summary::after{color:var(--vista)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .meerkeuzes summary::after{color:var(--vista)}}
 .meerkeuzes .kop2:first-of-type{margin-top:6px}
 .meerkeuzes>:last-child{margin-bottom:18px}
 #startBtn{margin-top:22px}
@@ -125,17 +128,50 @@ body.groot .uitleg b{font-size:1.1rem}
 :root[data-theme="dark"] .campagne button.on{background:#1f3270;border-color:var(--vista)}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .campagne button{background:#182652;border-color:rgba(243,239,233,.12)}:root:not([data-theme="light"]) .campagne button.on{background:#1f3270;border-color:var(--vista)}}
 .nivuit{font-size:.9rem;color:var(--muted);margin-top:10px}
-.vakken{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
-/* inhoud bovenaan: een knop centreert zijn inhoud, en dan sprong het icoon op en neer met de lengte van de tekst */
-.vak{background:#fff;border:2px solid transparent;border-radius:22px;padding:18px;text-align:left;
-  box-shadow:0 10px 26px rgba(20,34,76,.06);transition:transform .18s var(--ease),border-color .15s ease;
-  display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start}
-.vak:hover{transform:translateY(-3px)}
+/* De vakken waren negen grote kaarten met een regel uitleg: op een telefoon
+   stond Start daardoor op 2500 beeldpunten. Nu kleine tegels met alleen de
+   naam, en de uitleg van het gekozen vak staat eronder, net als bij het niveau. */
+.vakken{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.vak{background:#fff;border:2px solid transparent;border-radius:18px;padding:10px 14px;text-align:left;min-height:56px;
+  box-shadow:0 8px 20px rgba(20,34,76,.06);transition:transform .18s var(--ease),border-color .15s ease;
+  display:flex;align-items:center;gap:12px}
+.vak:hover{transform:translateY(-2px)}
 .vak.on{border-color:var(--ocean)}
-.vak i{width:42px;height:42px;border-radius:14px 14px 14px 5px;display:grid;place-items:center;
-  font-style:normal;font-weight:600;color:#fff;margin-bottom:12px}
-.vak b{display:block;font-size:1.05rem;margin-bottom:4px}
-.vak span{font-size:.86rem;color:var(--muted);line-height:1.45}
+.vak i{flex:none;width:34px;height:34px;border-radius:12px 12px 12px 4px;display:grid;place-items:center;
+  font-style:normal;font-weight:600;color:#fff}
+.vak b{display:block;font-size:.98rem;line-height:1.2}
+.vak span{display:none}
+#vakUit:empty{display:none}
+/* Start direct onder de keuzes; wat je oefent en de rest ingeklapt eronder */
+.kiezen #startBtn{margin-top:18px}
+.kiezen .meerkeuzes{margin-top:12px}
+.kiezen #deelKeuze{margin-top:22px}
+/* uit een link staat het vak vast en valt de onderdelenregel weg */
+.kiezen #deelKeuze.hide + #meerKeuzes{margin-top:22px}
+#anders{margin-top:24px}
+#deelKeuze .deelvak{margin-top:4px}
+@media (max-width:620px){
+  #scherm-start{padding-top:12px}
+  #anders{margin-top:16px}
+  #scherm-start > .hand{font-size:1.25rem !important}
+  #scherm-start h1{margin:2px 0 8px}
+  #scherm-start .lead{font-size:.94rem;line-height:1.5}
+  .kiezen > .stapkop:first-child{margin:14px 0 10px}
+  .kiezen .kop2{margin:18px 0 10px}
+  .niv{gap:6px}
+  .niv button{padding:9px 13px;min-height:44px}
+  /* de vier niveaus op een regel */
+  #niveaus button{font-size:.82rem;padding:8px 10px;flex:1 1 auto}
+  .vakken{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .vak{flex-direction:column;justify-content:center;gap:5px;padding:8px 4px;text-align:center;border-radius:16px;min-height:66px}
+  .vak i{width:28px;height:28px;border-radius:10px 10px 10px 4px;font-size:.82rem}
+  .vak b{font-size:.76rem;overflow-wrap:anywhere;hyphens:auto}
+  .nivuit{font-size:.84rem;margin-top:8px}
+  /* ingeklapt: de kop met aanpassen op een regel, de samenvatting eronder */
+  .meerkeuzes summary{gap:4px 12px}
+  .meerkeuzes summary .eyebrow{flex:1}
+  .meerkeuzes summary .samenvatting{order:3;flex-basis:100%}
+}
 /* de torenkeuze: kaartjes per toren, aan of uit, of op slot */
 /* breed genoeg voor Bommenwerper op een regel; een nog langere naam breekt netjes */
 .torens{display:grid;grid-template-columns:repeat(auto-fill,minmax(212px,1fr));gap:10px}
@@ -747,9 +783,8 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
 <section class="start wrap" id="scherm-start">
   <p class="hand" style="font-size:1.5rem">hoi, klaar om te verdedigen?</p>
   <h1>Torenverdediging</h1>
-  <p class="lead">Er lopen fouten over het pad naar de klas. Elk goed antwoord levert munten op,
-    en met die munten bouw je torens die de fouten tegenhouden. Fout geantwoord? Dan lees je waarom,
-    en je speelt gewoon door.</p>
+  <p class="lead">Fouten lopen over het pad naar de klas. Goed antwoorden levert munten op, en met munten
+    bouw je torens die ze tegenhouden. Fout? Dan lees je waarom en speel je door.</p>
 
   <div class="uitleg">
     <div>
@@ -797,18 +832,22 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
   <h2 class="eyebrow stapkop"><i>1</i>kies je niveau</h2>
   <div class="niv" id="niveaus"></div>
   <p class="nivuit" id="nivUit"></p>
-  <label class="uitlegkeuze"><input type="checkbox" id="uitlegVink"> <b>Uitlegstand</b> <span>tips bij je eerste toren, je eerste antwoord en de eerste rondes; telt niet mee voor records en het klassement</span></label>
 
   <h2 class="eyebrow kop2 stapkop" id="vakKop"><i>2</i>kies je vak</h2>
   <div class="vakken" id="vakken"></div>
+  <p class="nivuit" id="vakUit"></p>
   <p class="nivuit hide" id="vastUit"></p>
-
-  <div id="deelvakken"></div>
 
   <button class="btn" id="startBtn" type="button" disabled>Kies eerst een vak</button>
 
+  <details class="meerkeuzes" id="deelKeuze">
+    <summary><span class="eyebrow">wat wil je oefenen</span><span class="samenvatting" id="deelSamen"></span></summary>
+  <div id="deelvakken"></div>
+  </details>
+
   <details class="meerkeuzes" id="meerKeuzes">
-    <summary><span class="eyebrow"><i>3</i>meer keuzes</span><span class="samenvatting" id="meerSamen"></span></summary>
+    <summary><span class="eyebrow">meer keuzes</span><span class="samenvatting" id="meerSamen"></span></summary>
+  <label class="uitlegkeuze"><input type="checkbox" id="uitlegVink"> <b>Uitlegstand</b> <span>tips bij je eerste toren, je eerste antwoord en de eerste rondes; telt niet mee voor records en het klassement</span></label>
   <p class="eyebrow kop2" id="themaKop">kies je omgeving</p>
   <div class="niv" id="themas"></div>
   <p class="nivuit" id="themaUit"></p>
@@ -1719,7 +1758,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (typeof toonKlassement === 'function') toonKlassement('startLijst', null);
     var vak2 = document.getElementById('niveaus');
     vak2.innerHTML = NIVEAUS.map(function(n){
-      return '<button type="button" data-n="' + n.id + '"' + (niveau === n.id ? ' class="on"' : '') + '>' + n.naam + '</button>';
+      return '<button type="button" data-n="' + n.id + '"' + (niveau === n.id ? ' class="on"' : '') + ' aria-pressed="' + (niveau === n.id) + '">' + n.naam + '</button>';
     }).join('');
     Array.prototype.forEach.call(vak2.querySelectorAll('button'), function(b){
       b.addEventListener('click', function(){ niveau = b.getAttribute('data-n'); onthoudNiveau(niveau); tekenNiveaus(); });
@@ -1731,10 +1770,13 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   function tekenVakken(){
     var vak2 = document.getElementById('vakken');
     vak2.innerHTML = VAKKEN.map(function(v){
-      return '<button class="vak' + (vak === v.id ? ' on' : '') + '" type="button" data-v="' + v.id + '">' +
-        '<i style="background:' + kleurVan(v.kleur) + ';color:' + inktOp(v.kleur) + '">' + v.mark + '</i>' +
+      return '<button class="vak' + (vak === v.id ? ' on' : '') + '" type="button" data-v="' + v.id + '" aria-pressed="' + (vak === v.id) + '" title="' + v.onder + '">' +
+        '<i style="background:' + kleurVan(v.kleur) + ';color:' + inktOp(v.kleur) + '" aria-hidden="true">' + v.mark + '</i>' +
         '<b>' + v.naam + '</b><span>' + v.onder + '</span></button>';
     }).join('');
+    /* de uitleg van het gekozen vak staat onder de tegels, net als bij het niveau */
+    var gv = VAKKEN.filter(function(v){ return v.id === vak; })[0];
+    document.getElementById('vakUit').textContent = gv ? gv.onder : '';
     Array.prototype.forEach.call(vak2.querySelectorAll('.vak'), function(b){
       b.addEventListener('click', function(){
         vak = b.getAttribute('data-v');
@@ -1787,8 +1829,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (!vak){ doel.innerHTML = ''; return; }
     var items = (window.BANK && BANK.deelItems) ? BANK.deelItems(vak)
              : (ONDERDELEN[vak] || []).map(function(o){ return { soort:'deel', id:o.id, naam:o.naam }; });
-    doel.innerHTML = '<p class="eyebrow kop2">wat wil je oefenen</p>' +
-      '<div class="deelvak"><button type="button" data-d="alles"' +
+    doel.innerHTML = '<div class="deelvak"><button type="button" data-d="alles"' +
         (keuze[vak].length ? '' : ' class="on"') + '>alles door elkaar</button>' +
       items.map(function(o){
         if (o.soort === 'kop'){
@@ -1816,6 +1857,10 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
         tekenDeelvakken();
       });
     });
+    /* ingeklapt: in een regel wat je oefent */
+    var namen = items.filter(function(o){ return o.soort !== 'kop' && keuze[vak].indexOf(o.id) >= 0; }).map(function(o){ return o.naam; });
+    document.getElementById('deelSamen').textContent = !namen.length ? 'alles door elkaar'
+      : namen.length <= 3 ? namen.join(', ') : namen.slice(0, 2).join(', ') + ' en ' + (namen.length - 2) + ' meer';
   }
 
   /* De omgevingen op het startscherm. Het eiland staat er ook als je het nog
@@ -1891,7 +1936,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   function tekenMeerSamen(){
     var el = document.getElementById('meerSamen'); if (!el) return;
     var n = gekozen().length;
-    el.textContent = (thema && thema.naam ? thema.naam : 'omgeving') + ' · ' + (campagne !== null ? 'campagne, kaart ' + (campagne + 1) : 'los potje') + ' · ' + n + (n === 1 ? ' toren' : ' torens') + ' gekozen';
+    el.textContent = (thema && thema.naam ? thema.naam : 'omgeving') + ' · ' + (campagne !== null ? 'campagne, kaart ' + (campagne + 1) : 'los potje') + ' · ' + n + (n === 1 ? ' toren' : ' torens') + ' gekozen' + (uitlegstand ? ' · uitlegstand aan' : '');
   }
   document.getElementById('scherm-start').addEventListener('click', function(){ setTimeout(tekenMeerSamen, 0); });
   function tekenStartknop(){
@@ -6494,6 +6539,9 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     var d = document.getElementById('anders'); d.classList.remove('zonder'); d.open = false;
     document.getElementById('verderStart').addEventListener('click', function(){ metVragen(begin, this); });
   })();
+  /* Een eerste bezoek: rekenen staat al klaar (dat heeft geen vragenbestand
+     nodig), zodat Start meteen kan. Een ander vak is een tik. */
+  if (!vak && !(window.STRIJD && STRIJD.actief)){ vak = 'reken'; if (!keuze[vak]) keuze[vak] = []; }
   tekenNiveaus(); tekenVakken(); tekenDeelvakken(); tekenThemas(); tekenTorenkeuze(); tekenStartknop();
   /* De echte hoogte van de kopbalk voor de hoogte van de baan, en de hoogte
      van het vaste vraagpaneel op een telefoon. */
@@ -6512,6 +6560,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       document.getElementById('vakKop').textContent = 'je oefent';
       document.getElementById('vakken').classList.add('hide');
       document.getElementById('deelvakken').classList.add('hide');
+      document.getElementById('deelKeuze').classList.add('hide');
+      document.getElementById('vakUit').classList.add('hide');
       var uit = document.getElementById('vastUit');
       uit.textContent = v.naam + ', ' + wat + '. De rest van het spel is hetzelfde.';
       uit.classList.remove('hide');
@@ -6565,7 +6615,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
 <script src="spel.js"></script>
 <script>
 /* op een aanraakscherm geen toetsen in de uitleg */
-SPEL.uitleg({ doel:"Houd de fouten uit de klas: goed antwoorden geeft munten, en met munten bouw je torens.", tijd:"zolang je het volhoudt",
+SPEL.uitleg({ onder:true, doel:"Houd de fouten uit de klas: goed antwoorden geeft munten, en met munten bouw je torens.", tijd:"zolang je het volhoudt",
   bediening: document.documentElement.classList.contains('raak')
     ? "Tik naast het pad voor een toren, op het pad voor pek of een versperring. Tik op een toren om hem te versterken."
     : "Klik naast het pad voor een toren, op het pad voor pek of een versperring. Zonder muis: Tab naar het bord, pijltjes en Enter. Toets 1 tot 4 kiest een antwoord, P is pauze." });

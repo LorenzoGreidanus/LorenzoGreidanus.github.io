@@ -317,6 +317,35 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
 </style>
 <link rel="stylesheet" href="basis.css">
 <link rel="stylesheet" href="spel.css">
+<style>
+/* ---------- startscherm: Start in beeld ----------
+   Bij een eerste bezoek stond Start op een telefoon een tot anderhalf scherm
+   onder de vouw, achter een stapel grote keuzekaarten. Daar staan de keuzes nu
+   als knoppen naast elkaar met alleen de naam; wat de gekozen keuze inhoudt,
+   staat in een regel eronder (.kiesuit). Er staat al een keuze klaar, dus Start
+   kan meteen. Op een groot scherm blijven het kaarten met hun uitleg. */
+#scherm-start>.hand{font-size:1.6rem}
+#scherm-start>.eyebrow{margin-top:28px}
+.kiesuit{display:none}
+@media (max-width:600px){
+  #scherm-start.start{padding-top:18px}
+  #scherm-start>.hand{font-size:1.3rem}
+  #scherm-start h1{margin:4px 0 10px}
+  #scherm-start>.eyebrow{margin-top:18px}
+  .kies.kort{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:6px;margin-top:10px}
+  .kies.kort .kaartje{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:48px;padding:8px 6px;border-radius:14px;text-align:center}
+  .kies.kort .kaartje b{font-size:.86rem;line-height:1.25}
+  /* de uitleg op de kaart blijft voor een schermlezer; zichtbaar staat hij in .kiesuit */
+  .kies.kort .kaartje span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;margin:0}
+  .kies.kort[style*=none]+.kiesuit{display:none}
+  .kiesuit{display:block;max-width:46ch;min-height:2.9em;margin:8px auto 0;font-size:.84rem;line-height:1.45;color:var(--muted)}
+  #scherm-start>.btn{margin-top:14px}
+  /* na Begrepen: Hoe werkt het? en Uitleg stap voor stap samen op een regel */
+  #scherm-start>.uitlegknop:not(.eerst){margin:12px 2px 14px;padding:8px 12px;gap:6px;font-size:.8rem}
+  #scherm-start>.uitlegknop:not(.eerst) svg{width:16px;height:16px}
+}
+</style>
 <script src="/vangnet.js" defer></script>
 </head>
 <body>
@@ -337,14 +366,14 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
 </header>
 
 <section class="start wrap" id="scherm-start">
-  <p class="hand" style="font-size:1.6rem">koop laag, verkoop hoog</p>
+  <p class="hand">koop laag, verkoop hoog</p>
   <h1>De handelsroute</h1>
   <p class="lead">Je vaart met een schip tussen havens en handelt in schaarse waar. Verdien meer dan je reizen kosten, anders vaar je je arm.</p>
   <p class="uitleg">De prijzen liggen niet vast: ze bewegen mee met vraag en aanbod. Koop je veel op, dan stijgt de prijs terwijl je koopt. Verkoop je alles tegelijk, dan zakt hij onder je handen weg. Je kent alleen de prijzen van havens waar je zelf geweest bent, dus varen is ook informatie halen. Elke reis kost geld en dat wordt steeds meer.</p>
-  <p class="eyebrow" id="routeKop" style="margin-top:30px">kies je route</p>
+  <p class="eyebrow" id="routeKop">kies je route</p>
   <div class="kies" id="routes"></div>
-  <p class="eyebrow" id="nivKop" style="margin-top:28px">kies je niveau</p>
-  <p style="font-size:.85rem;color:var(--muted);margin-top:6px">De niveaus zijn afgestemd op leerjaar 1 en 2. Je vaart net zo lang als je geld het toelaat: het spel stopt als je failliet bent, of eerder als je zelf de reis afsluit.</p>
+  <p class="eyebrow" id="nivKop">kies je niveau</p>
+  <p class="uitleg">De niveaus zijn afgestemd op leerjaar 1 en 2. Je vaart net zo lang als je geld het toelaat: het spel stopt als je failliet bent, of eerder als je zelf de reis afsluit.</p>
   <div class="kies" id="niveaus"></div>
   <button class="btn" id="startBtn" type="button" disabled>Uitvaren</button>
   <p style="margin-top:14px;font-size:.82rem;color:var(--muted)">Geen inloggen. Wat je speelt blijft op dit apparaat.</p>
@@ -553,6 +582,22 @@ var GEBEURTENISSEN = [
   bouwKiezer(Object.keys(ROUTES).map(function(k){ var r = ROUTES[k]; r.id = k; return r; }), 'routes',
              function(r){ route = r; }, 'pillRoute');
   bouwKiezer(NIVEAUS, 'niveaus', function(n){ niveau = n; }, 'pillNiv');
+  /* Start in beeld: er staat al een route en een niveau klaar, zodat Uitvaren
+     meteen kan. Op een telefoon staan de keuzes als knoppen naast elkaar. */
+  function keuzeRegel(id){
+    var vak = document.getElementById(id); if (!vak) return;
+    var p = document.createElement('p'); p.className = 'kiesuit'; p.setAttribute('aria-hidden', 'true');
+    vak.classList.add('kort'); vak.parentNode.insertBefore(p, vak.nextSibling);
+    function zet(){
+      var on = vak.querySelector('.on span'); p.textContent = on ? on.textContent : '';
+      Array.prototype.forEach.call(vak.children, function(c){ c.setAttribute('aria-pressed', c.classList.contains('on') ? 'true' : 'false'); });
+    }
+    zet();
+    if (window.MutationObserver) new MutationObserver(zet).observe(vak, { attributes:true, attributeFilter:['class'], childList:true, subtree:true });
+  }
+  keuzeRegel('routes'); keuzeRegel('niveaus');
+  document.getElementById('routes').children[0].click();
+  document.getElementById('niveaus').children[1].click();
 
   document.getElementById('startBtn').addEventListener('click', start);
   /* Opnieuw in de kop vraagt tijdens een reis twee tikken, net als Reis

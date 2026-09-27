@@ -60,6 +60,31 @@ header.hd{position:sticky;top:0;z-index:40;background:rgba(251,246,241,.92);back
   padding:0 15px;min-height:44px;font:600 .88rem Poppins,system-ui,sans-serif;cursor:pointer}
 .niv button.on{border-color:var(--ocean);background:#eaf0ff;color:var(--ocean)}
 .startrij{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+/* Start stond op een telefoon op 3360 beeldpunten: eerst een lange inleiding,
+   vier kaartjes, de hele winkel en de kluis. Nu staat het niveau en dan meteen
+   Zoek een potje; de kaartjes staan achter "Alle regels" en de uitrusting en
+   de kluis zijn ingeklapte regels eronder, met in een regel wat erin zit. */
+#scherm-start .niv,#scherm-start .startrij{justify-content:center}
+#scherm-start #hoeveelNu{margin-inline:auto}
+.startrij .knop{min-height:48px;padding:0 20px;font-size:.95rem}
+.inklap{max-width:44rem;margin:12px auto 0;text-align:left;background:var(--kaart);border:1px solid var(--rand);border-radius:18px;padding:0 18px}
+.inklap:first-of-type{margin-top:28px}
+.inklap summary{list-style:none;cursor:pointer;padding:12px 0;min-height:44px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px}
+.inklap summary::-webkit-details-marker{display:none}
+.inklap summary .eyebrow{margin:0}
+.inklap summary .samenvatting{color:var(--muted);font-size:.9rem;flex:1}
+.inklap summary::after{content:'bekijken';font-size:.82rem;font-weight:600;color:var(--ocean)}
+.inklap[open] summary::after{content:'inklappen'}
+.inklap .uitrusting,.inklap .kluis{border:none;background:none;padding:0 0 16px;margin:0;max-width:none}
+:root[data-theme="dark"] .inklap summary::after{color:var(--vista)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .inklap summary::after{color:var(--vista)}}
+@media (max-width:620px){
+  #scherm-start .lead{font-size:.94rem;line-height:1.5}
+  #scherm-start > .eyebrow{margin-top:20px}
+  .inklap summary{gap:4px 12px}
+  .inklap summary .eyebrow{flex:1}
+  .inklap summary .samenvatting{order:3;flex-basis:100%}
+}
 
 /* de uitrusting: welk wapen je meeneemt, en de winkel ernaast */
 .uitrusting{background:var(--kaart);border:1px solid var(--rand);border-radius:18px;padding:16px 18px;margin-top:14px;max-width:44rem}
@@ -221,11 +246,13 @@ section.wrap{padding-left:20px;padding-right:20px}
 <section class="wrap start" id="scherm-start">
   <p class="hand">je komt terug met niks of met alles</p>
   <h1>De stad</h1>
-  <p class="lead">Straten, huizenblokken, parken en bouwputten, en ergens in diezelfde stad lopen de
-    andere spelers rond die precies hetzelfde zoeken als jij. In de portieken en de stegen staan kisten.
-    Ze gaan alleen open als je drie vragen goed hebt, en wat erin zit is pas van jou als je de stad uit
-    komt bij een van de drie metro-ingangen. Ga je neer, dan blijft alles wat je gevonden had op straat
-    liggen voor wie het ophaalt. Je eigen wapens krijg je wel terug.</p>
+  <p class="lead">Een stad vol kisten, en andere spelers die precies hetzelfde zoeken als jij. Een kist
+    gaat open met drie goede antwoorden, en wat erin zit is pas van jou als je de stad uit komt bij een
+    van de drie metro-ingangen.</p>
+  <!-- de rest van de inleiding staat met de kaartjes achter "Alle regels" -->
+  <p class="lead regelsmeer">Straten, huizenblokken, parken en bouwputten; de kisten staan in de portieken en
+    de stegen. Ga je neer, dan blijft alles wat je gevonden had op straat liggen voor wie het ophaalt. Je
+    eigen wapens krijg je wel terug.</p>
 
   <div class="kaartjes">
     <div class="kaartje"><b>Je kiest zelf je uitrusting</b><span>Een hoofdwapen en een zijwapen. Wie niets gekocht heeft gaat met het roestige pistool op pad: dat mikt scheef en doet weinig pijn.</span></div><div class="kaartje"><b>Kisten gaan op vragen open</b><span>Drie vragen, alle drie goed. Het vak wisselt per kist, dus je weet nooit wat je krijgt.</span></div>
@@ -236,19 +263,23 @@ section.wrap{padding-left:20px;padding-right:20px}
   <p class="eyebrow">welk niveau hebben de vragen</p>
   <div class="niv" id="niveaus"></div>
 
-  <p class="eyebrow">je uitrusting</p>
-  <div class="uitrusting" id="uitrusting"></div>
-
-  <p class="eyebrow">je kluis</p>
-  <div class="kluis" id="kluis"></div>
-
-  <p class="lead" id="hoeveelNu" style="margin-top:6px"></p>
+  <p class="lead" id="hoeveelNu" style="margin-top:12px"></p>
 
   <div class="startrij">
     <button class="knop vol" id="zoekBtn" type="button">Zoek een potje</button>
     <button class="knop" id="soloBtn" type="button">Alleen oefenen</button>
   </div>
-  <p class="lead" id="zoekUit" style="margin-top:10px"></p>
+  <p class="lead" id="zoekUit" style="margin-top:10px;margin-inline:auto" role="status"></p>
+
+  <details class="inklap" id="uitrustingVak">
+    <summary><span class="eyebrow">je uitrusting</span><span class="samenvatting" id="uitrustingSamen"></span></summary>
+  <div class="uitrusting" id="uitrusting"></div>
+  </details>
+
+  <details class="inklap" id="kluisVak">
+    <summary><span class="eyebrow">je kluis</span><span class="samenvatting" id="kluisSamen"></span></summary>
+  <div class="kluis" id="kluis"></div>
+  </details>
 </section>
 
 <!-- ---------------- het veld ---------------- -->
@@ -309,7 +340,7 @@ try { var bn = localStorage.getItem('lg-niveau'); if (bn) niveau = bn; } catch (
 function tekenNiveaus(){
   var el = $('niveaus');
   el.innerHTML = NIVEAUS.map(function(n){
-    return '<button type="button" data-n="' + n.id + '"' + (niveau === n.id ? ' class="on"' : '') + '>' + n.naam + '</button>';
+    return '<button type="button" data-n="' + n.id + '"' + (niveau === n.id ? ' class="on"' : '') + ' aria-pressed="' + (niveau === n.id) + '">' + n.naam + '</button>';
   }).join('');
   Array.prototype.forEach.call(el.querySelectorAll('button'), function(b){
     b.addEventListener('click', function(){
@@ -361,6 +392,12 @@ function tekenUitrusting(){
   }
 
   var h = '<h4>hoofdwapen</h4>' + rek('hoofd', nu.hoofd) + '<h4>zijwapen</h4>' + rek('zij', nu.zij);
+  /* ingeklapt: in een regel wat je meeneemt */
+  var samen = $('uitrustingSamen');
+  if (samen){
+    var naamVan = function(id){ var w = WAPENS.LIJST.filter(function(x){ return x.id === id; })[0]; return w ? w.naam : id; };
+    samen.textContent = naamVan(nu.hoofd) + ' en ' + String(naamVan(nu.zij)).toLowerCase();
+  }
 
   h += '<h4>te koop</h4>';
   if (!ingelogd){
@@ -427,6 +464,7 @@ function tekenKluis(){
   var lijst = Object.keys(tel).map(function(id){
     return '<i><b>' + schoon(buitNaam(id)) + '</b>' + (tel[id] > 1 ? ' &times;' + tel[id] : '') + '</i>';
   }).join('');
+  var ks = $('kluisSamen'); if (ks) ks.textContent = k.waarde + ' punten binnengehaald';
   el.innerHTML = '<div class="som"><b>' + k.waarde + '</b><span>punten binnengehaald &middot; ' +
     k.eruit + ' van de ' + k.potjes + ' keer kwam je eruit</span></div>' +
     (lijst ? '<div class="spullen">' + lijst + '</div>'
@@ -1659,6 +1697,6 @@ tekenKluis();
 </script>
 <script src="thema.js"></script>
 <script src="spel.js"></script>
-<script>SPEL.uitleg({ doel:"Haal buit uit de kisten en kom de stad uit bij een metro-ingang voordat de andere spelers je te pakken krijgen.", tijd:"een potje duurt zo lang als je het volhoudt", bediening:"Lopen met WASD of de pijltjes, mikken met de muis, schieten met de linkermuisknop, oprapen en kisten proberen met E. Op een telefoon: links slepen om te lopen, rechts tikken om te schieten." });</script>
+<script>SPEL.uitleg({ meer:'.kaartjes, .regelsmeer', doel:"Haal buit uit de kisten en kom de stad uit bij een metro-ingang voordat de andere spelers je te pakken krijgen.", tijd:"een potje duurt zo lang als je het volhoudt", bediening:"Lopen met WASD of de pijltjes, mikken met de muis, schieten met de linkermuisknop, oprapen en kisten proberen met E. Op een telefoon: links slepen om te lopen, rechts tikken om te schieten." });</script>
 </body>
 </html>

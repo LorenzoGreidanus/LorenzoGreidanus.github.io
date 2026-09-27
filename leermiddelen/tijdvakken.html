@@ -245,6 +245,27 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
   .bakken.b10 .bak span,.bakken.b6 .bak span{font-size:.72rem;margin-top:1px}
   .melding{margin-top:12px;padding:13px 15px}
 }
+/* Startscherm: niveau en manier van oefenen staan al klaar, dus Start kan
+   meteen. Op een telefoon worden de keuzekaartjes een compacte rij met alleen
+   de naam; wat de gekozen kaart inhoudt, staat er in een regel onder. Zo staat
+   Start in het eerste scherm. */
+.keuzekop{margin-top:30px}
+.nivnoot{font-size:.85rem;color:var(--muted);margin-top:6px}
+.keuzeuit{display:none}
+@media(max-width:600px){
+  #scherm-start{padding-top:18px}
+  #scherm-start h1{margin:4px 0 10px}
+  .keuzekop{margin-top:20px}
+  .nivnoot{margin-top:2px}
+  .start .kies{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+  .start #modussen{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .start .kies .kaartje{display:grid;place-items:center;min-height:48px;padding:8px 6px;border-radius:14px;text-align:center}
+  .start .kies .kaartje b{font-size:.86rem;line-height:1.25}
+  .start .kies .kaartje span{display:none}
+  .keuzeuit{display:block;font-size:.84rem;color:var(--muted);margin-top:6px;min-height:1.4em}
+  .start .tvkies{margin-top:12px}
+  .start #startBtn{margin-top:16px}
+}
 </style>
 <link rel="stylesheet" href="basis.css">
 <link rel="stylesheet" href="spel.css">
@@ -270,12 +291,14 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
   <p class="hand" style="font-size:1.6rem">waar hoort het thuis</p>
   <h1>Tijdvakken sorteren</h1>
   <p class="lead">Je krijgt een gebeurtenis. Sleep hem naar het tijdvak waar hij thuishoort, of tik op het juiste vak.</p>
-  <p class="eyebrow" id="nivKop" style="margin-top:32px">kies je niveau</p>
-  <p style="font-size:.85rem;color:var(--muted);margin-top:6px">Voor leerjaar 1 en 2, van vmbo-bb tot vwo.</p>
+  <p class="eyebrow keuzekop" id="nivKop">kies je niveau</p>
+  <p class="nivnoot">Voor leerjaar 1 en 2, van vmbo-bb tot vwo.</p>
   <div class="kies" id="niveaus"></div>
+  <p class="keuzeuit" id="nivUit"></p>
 
-  <p class="eyebrow" id="modusKop" style="margin-top:30px">hoe wil je oefenen</p>
+  <p class="eyebrow keuzekop" id="modusKop">hoe wil je oefenen</p>
   <div class="kies" id="modussen"></div>
+  <p class="keuzeuit" id="modusUit"></p>
   <div class="tvkies" id="tvRij">
     <label for="tvKeuze">Welke tijdvakken</label>
     <select id="tvKeuze"></select>
@@ -512,11 +535,15 @@ var KENMERKEN = [
     var b = document.createElement('button');
     b.className = 'kaartje'; b.type = 'button'; b.setAttribute('aria-pressed', 'false');
     b.innerHTML = '<b>' + n.naam + '</b><span>' + n.uitleg + '</span>';
-    b.addEventListener('click', function(){
+    b.addEventListener('click', function(e){
       niveau = n;
       Array.prototype.forEach.call(kiezer.children, function(c){ c.classList.remove('on'); c.setAttribute('aria-pressed', 'false'); });
       b.classList.add('on'); b.setAttribute('aria-pressed', 'true');
       var p = document.getElementById('pillNiv'); p.textContent = n.naam; p.classList.remove('hide');
+      document.getElementById('nivUit').textContent = n.uitleg;
+      /* een echte tik van de leerling onthoudt het niveau voor alle spellen;
+         de standaardkeuze en een link van de docent doen dat niet */
+      if (e && e.isTrusted){ try { localStorage.setItem('lg-niveau', n.id); } catch (x){} }
       klaarCheck();
     });
     kiezer.appendChild(b);
@@ -532,10 +559,22 @@ var KENMERKEN = [
       Array.prototype.forEach.call(modusVak.children, function(c){ c.classList.remove('on'); c.setAttribute('aria-pressed', 'false'); });
       b.classList.add('on'); b.setAttribute('aria-pressed', 'true');
       document.getElementById('startBtn').textContent = isRace() ? 'Start de tijdrace' : 'Start met oefenen';
+      document.getElementById('modusUit').textContent = m.uitleg;
       klaarCheck();
     });
     modusVak.appendChild(b);
   });
+
+  /* Een verstandige keuze staat al klaar, zodat Start meteen kan: het niveau
+     uit de leeromgeving of een eerder spel, anders vmbo-kgt, en Oefenen. Een
+     link van de docent (?n=, ?m=) kiest hieronder daarna gewoon iets anders. */
+  (function(){
+    var eerder = null;
+    try { eerder = localStorage.getItem('lg-niveau'); } catch (e){}
+    var i = NIVEAUS.map(function(n){ return n.id; }).indexOf(eerder);
+    kiezer.children[i < 0 ? 1 : i].click();
+    modusVak.children[0].click();
+  })();
 
   /* ---------- welke tijdvakken: voor een les over een paar tijdvakken ---------- */
   var elTv = document.getElementById('tvKeuze');
@@ -1082,6 +1121,6 @@ var KENMERKEN = [
 <script src="klas.js"></script>
 <script src="naamfilter.js"></script>
 <script src="spel.js"></script>
-<script>SPEL.uitleg({ doel:"Zet gebeurtenissen en kenmerken in het juiste tijdvak.", tijd:"ongeveer 10 minuten", bediening:"Sleep de kaart naar het tijdvak, of tik op het tijdvak. Met Tab en Enter kan het ook." });</script>
+<script>SPEL.uitleg({ onder:true, doel:"Zet gebeurtenissen en kenmerken in het juiste tijdvak.", tijd:"ongeveer 10 minuten", bediening:"Sleep de kaart naar het tijdvak, of tik op het tijdvak. Met Tab en Enter kan het ook." });</script>
 </body>
 </html>

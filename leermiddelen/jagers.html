@@ -50,6 +50,21 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .linkbtn:hover{color:var(--ink)}
 
 .kies{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:22px auto 0;max-width:900px}
+/* Op een telefoon stond Begin net onder de vouw: de drie niveaukaartjes
+   namen elk bijna honderd beeldpunten. Nu kleiner, en er staat al een niveau
+   klaar, zodat je meteen kunt beginnen. */
+@media (max-width:620px){
+  #scherm-start{padding-top:16px}
+  #scherm-start > .hand{font-size:1.3rem !important}
+  #scherm-start h1{margin:4px 0 10px}
+  #scherm-start .lead{font-size:.94rem;line-height:1.5}
+  #nivKop{margin-top:20px !important}
+  .kies{gap:8px;margin-top:12px}
+  .kies .kaartje{padding:10px 16px;border-radius:16px;min-height:44px}
+  .kies .kaartje b{font-size:.98rem}
+  .kies .kaartje span{margin-top:1px;font-size:.82rem}
+  #startBtn{margin-top:18px}
+}
 .btn{display:inline-block;border:none;background:var(--crab);color:#fff;font-weight:600;padding:15px 32px;border-radius:999px;
   box-shadow:0 10px 0 rgba(20,34,76,.10);margin-top:24px;transition:transform .16s var(--ease)}
 .btn:hover{transform:translateY(-2px)}
@@ -751,18 +766,24 @@ function jaarDoen(s, v, geluk){
 
   /* ---------- niveaukeuze ---------- */
   var nivVak = document.getElementById('niveaus');
+  function kiesNiveau(n, b){
+    niveau = n;
+    Array.prototype.forEach.call(nivVak.children, function(c){ c.classList.remove('on'); c.setAttribute('aria-pressed', 'false'); });
+    b.classList.add('on'); b.setAttribute('aria-pressed', 'true');
+    var p = document.getElementById('pillNiv'); p.textContent = n.naam; p.classList.remove('hide');
+    document.getElementById('startBtn').disabled = false;
+  }
+  /* Er staat al een niveau klaar, zodat je meteen kunt beginnen: het niveau
+     dat je in een ander spel koos (op dit apparaat), anders vmbo-kgt. */
+  var vooraf = 'kgt';
+  try { var ln = localStorage.getItem('lg-niveau'); if (ln === 'bb' || ln === 'kgt') vooraf = ln; else if (ln === 'havo' || ln === 'vwo' || ln === 'hv') vooraf = 'hv'; } catch (e){}
   NIVEAUS.forEach(function(n){
     var b = document.createElement('button');
-    b.className = 'kaartje'; b.type = 'button';
+    b.className = 'kaartje'; b.type = 'button'; b.setAttribute('aria-pressed', 'false');
     b.innerHTML = '<b>' + n.naam + '</b><span>' + n.uitleg + '</span>';
-    b.addEventListener('click', function(){
-      niveau = n;
-      Array.prototype.forEach.call(nivVak.children, function(c){ c.classList.remove('on'); });
-      b.classList.add('on');
-      var p = document.getElementById('pillNiv'); p.textContent = n.naam; p.classList.remove('hide');
-      document.getElementById('startBtn').disabled = false;
-    });
+    b.addEventListener('click', function(){ kiesNiveau(n, b); });
     nivVak.appendChild(b);
+    if (n.id === vooraf) kiesNiveau(n, b);
   });
 
   document.getElementById('startBtn').addEventListener('click', start);

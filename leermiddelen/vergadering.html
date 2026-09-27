@@ -298,6 +298,35 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
 </style>
 <link rel="stylesheet" href="basis.css">
 <link rel="stylesheet" href="spel.css">
+<style>
+/* ---------- startscherm: Start in beeld ----------
+   Bij een eerste bezoek stond Start op een telefoon een tot anderhalf scherm
+   onder de vouw, achter een stapel grote keuzekaarten. Daar staan de keuzes nu
+   als knoppen naast elkaar met alleen de naam; wat de gekozen keuze inhoudt,
+   staat in een regel eronder (.kiesuit). Er staat al een keuze klaar, dus Start
+   kan meteen. Op een groot scherm blijven het kaarten met hun uitleg. */
+#scherm-start>.hand{font-size:1.6rem}
+#scherm-start>.eyebrow{margin-top:28px}
+.kiesuit{display:none}
+@media (max-width:600px){
+  #scherm-start.start{padding-top:18px}
+  #scherm-start>.hand{font-size:1.3rem}
+  #scherm-start h1{margin:4px 0 10px}
+  #scherm-start>.eyebrow{margin-top:18px}
+  .kies.kort{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:6px;margin-top:10px}
+  .kies.kort .kaartje{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:48px;padding:8px 6px;border-radius:14px;text-align:center}
+  .kies.kort .kaartje b{font-size:.86rem;line-height:1.25}
+  /* de uitleg op de kaart blijft voor een schermlezer; zichtbaar staat hij in .kiesuit */
+  .kies.kort .kaartje span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;margin:0}
+  .kies.kort[style*=none]+.kiesuit{display:none}
+  .kiesuit{display:block;max-width:46ch;min-height:2.9em;margin:8px auto 0;font-size:.84rem;line-height:1.45;color:var(--muted)}
+  #scherm-start>.btn{margin-top:14px}
+  /* na Begrepen: Hoe werkt het? en Uitleg stap voor stap samen op een regel */
+  #scherm-start>.uitlegknop:not(.eerst){margin:12px 2px 14px;padding:8px 12px;gap:6px;font-size:.8rem}
+  #scherm-start>.uitlegknop:not(.eerst) svg{width:16px;height:16px}
+}
+</style>
 <script src="/vangnet.js" defer></script>
 <script src="wakker.js"></script>
 </head>
@@ -318,13 +347,15 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
 </header>
 
 <section class="start wrap" id="scherm-start">
-  <p class="hand" style="font-size:1.6rem">iedereen moet ja zeggen</p>
+  <p class="hand">iedereen moet ja zeggen</p>
   <h1>De vergadering</h1>
-  <p class="lead">Het is 1672 en Frankrijk valt binnen. In Den Haag moeten de zeven gewesten samen een oorlogsbelasting goedkeuren. Jij bent Holland en betaalt in je eentje bijna zestig procent. Toch heeft Overijssel, dat nog geen vier procent betaalt, precies evenveel stem als jij: een enkel nee blokkeert alles.</p>
-  <p class="eyebrow" id="nivKop" style="margin-top:30px">kies je niveau</p>
-  <p style="font-size:.85rem;color:var(--muted);margin-top:6px">De niveaus zijn afgestemd op leerjaar 1 en 2.</p>
+  <p class="lead">Het is 1672 en Frankrijk valt binnen. In Den Haag moeten de zeven gewesten samen een oorlogsbelasting goedkeuren.</p>
+  <!-- De rest van de inleiding staat achter "Alle regels", zodat Start in beeld blijft. -->
+  <p class="lead uitleg">Jij bent Holland en betaalt in je eentje bijna zestig procent. Toch heeft Overijssel, dat nog geen vier procent betaalt, precies evenveel stem als jij: een enkel nee blokkeert alles.</p>
+  <p class="eyebrow" id="nivKop">kies je niveau</p>
+  <p class="uitleg">De niveaus zijn afgestemd op leerjaar 1 en 2.</p>
   <div class="kies" id="niveaus"></div>
-  <p class="eyebrow" style="margin-top:24px">wie zijn de gewesten</p>
+  <p class="eyebrow">wie zijn de gewesten</p>
   <div class="kies" id="wijzen"></div>
   <div id="lobbyvak" class="hide"></div>
   <button class="btn" id="startBtn" type="button" disabled>Open de vergadering</button>
@@ -749,6 +780,22 @@ var NIVEAUS = [
     });
     kiezer.appendChild(b);
   });
+  /* Start in beeld: er staat al een niveau klaar (en Alleen op het bord), zodat
+     Open de vergadering meteen kan. Op een telefoon staan de keuzes als knoppen
+     naast elkaar. */
+  function keuzeRegel(id){
+    var vak = document.getElementById(id); if (!vak) return;
+    var p = document.createElement('p'); p.className = 'kiesuit'; p.setAttribute('aria-hidden', 'true');
+    vak.classList.add('kort'); vak.parentNode.insertBefore(p, vak.nextSibling);
+    function zet(){
+      var on = vak.querySelector('.on span'); p.textContent = on ? on.textContent : '';
+      Array.prototype.forEach.call(vak.children, function(c){ c.setAttribute('aria-pressed', c.classList.contains('on') ? 'true' : 'false'); });
+    }
+    zet();
+    if (window.MutationObserver) new MutationObserver(zet).observe(vak, { attributes:true, attributeFilter:['class'], childList:true, subtree:true });
+  }
+  keuzeRegel('niveaus'); keuzeRegel('wijzen');
+  kiezer.children[1].click();
 
   document.getElementById('startBtn').addEventListener('click', start);
   /* Opnieuw in de kop vraagt tijdens een lopende vergadering twee tikken: de
