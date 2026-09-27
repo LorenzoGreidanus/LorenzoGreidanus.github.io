@@ -17,7 +17,7 @@ var NED = [
   {v:'Waar hoort de komma?', o:['Omdat het regende, bleven we binnen.','Omdat het regende bleven, we binnen.','Omdat, het regende bleven we binnen.','Er hoort geen komma in.'], g:0, u:'Na een bijzin vooraan de zin zet je een komma.', t:'leestekens'},
   {v:'Wat is het meervoud van kanon?', o:['kanons','kanonnen','kanonen','kanonne'], g:1, u:'De klinker blijft kort, dus verdubbelt de n: kanonnen.', t:'meervoud'},
   {v:'Wat is het meervoud van museum?', o:['museums','musea','museumen','museae'], g:1, u:'Museum komt uit het Latijn en krijgt musea, net als gymnasium en gymnasia.', t:'meervoud'},
-  {v:'Wat is het meervoud van pagina?', o:['paginas','pagina&#39;s','paginaas','paginae'], g:1, u:'Bij een woord dat eindigt op een losse a zet je een apostrof voor de s.', t:'meervoud'},
+  {v:'Wat is het meervoud van pagina?', o:['paginas','pagina\'s','paginaas','paginae'], g:1, u:'Bij een woord dat eindigt op een losse a zet je een apostrof voor de s.', t:'meervoud'},
   {v:'Hij ___ zijn jas op.', o:['hangt','hangd','hant','hangdt'], g:0, u:'Stam hang plus t. Je hoort de t niet altijd, maar hij staat er wel.', t:'werkwoordspelling'},
   {v:'Zij heeft de deur ___.', o:['geverft','geverfd','geverfde','verfde'], g:1, u:'Let op: kijk naar het hele werkwoord verven, met een v. De v zit niet in t kofschip, dus een d. Je schrijft verf met een f omdat een woord niet op een v mag eindigen, maar dat verandert de regel niet.', t:'spelling'},
   {v:'Wat is een synoniem van moeilijk?', o:['lastig','vervelend','laag','lang'], g:0, u:'Lastig en moeilijk betekenen hetzelfde.', t:'synoniemen'},

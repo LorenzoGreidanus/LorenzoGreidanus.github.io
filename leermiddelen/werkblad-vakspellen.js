@@ -3,7 +3,9 @@
    (niveau, soort) en maakt opgaven als html, met het beeld erbij en het
    antwoord voor het antwoordblad. Dit bestand zet ze in SPELBLAD, zodat
    werkblad.html ze net zo behandelt als de Tekstdetective en de Breukenbakker.
-   Het dictee en de dictation staan er niet in: die hebben geluid nodig. */
+   Wat het spel op het scherm vraagt (sleep, tik, typ, de schuif) wordt hier
+   een opdracht voor papier; zie naarPapier. Het dictee en de dictation staan
+   in werkblad-dictee.js: daar leest de docent voor. */
 (function(){
   'use strict';
   var LIJST = [
@@ -19,23 +21,72 @@
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
   var stijlGezet = {};
 
+  /* ---------- van scherm naar papier ----------
+     De spellen schrijven hun opdrachten voor het scherm: sleep, tik aan, typ,
+     zet de schuif. Op papier kan dat niet. Elke regel hieronder zet zo'n
+     opdracht om in iets wat met een pen kan: schrijven, een stip, een kruisje,
+     omcirkelen, of de letters van de kaartjes bij een vak zetten (dat laatste
+     tekent vakspel.js al onder elke sleepopgave). lijn: de opgave krijgt een
+     lijn om het antwoord op te schrijven, want op het scherm was dat de schuif. */
+  var PAPIER = [
+    [/Typ je antwoord en druk op Nakijken\.?/g, 'Schrijf je antwoord op de lijn.'],
+    [/\b(druk|klik) (dan )?op Nakijken\.?/gi, ''],
+    [/\bTyp in elk vakje\b/g, 'Schrijf in elk vakje'],
+    [/\bTyp\b/g, 'Schrijf'], [/\btyp\b/g, 'schrijf'], [/\btypt\b/g, 'schrijft'], [/\bintypen\b/g, 'opschrijven'], [/\btypen\b/g, 'schrijven'],
+    /* sleepopgaven: onder de opgave staat al "Schrijf bij elk vak de letters van de kaartjes die erin horen" */
+    [/\b[Ss]leep (elk|elke|de|ze|het|alle)((?: [^.<]*?)?) naar ([^.]*?)\./g, 'Zet $1$2 bij $3.'],
+    [/\bTik op de kaart het gebied aan van\b/g, 'Zet op de kaart een kruisje in het gebied van'],
+    [/\bTik het punt (.*?) aan\./g, 'Zet een stip op het punt $1.'],
+    [/\bTik het logo aan\./g, 'Omcirkel de letter bij het goede logo.'],
+    [/\bTik minstens drie roosterpunten aan die op de lijn liggen\./g, 'Zet minstens drie stippen op roosterpunten die op de lijn liggen, en trek de lijn erdoor.'],
+    [/\s*Nog eens tikken haalt een stip weer weg\.?/g, ''],
+    [/\bTik partijen aan om ze in de coalitie te zetten\./g, 'Omcirkel de partijen die samen jouw coalitie vormen, en tel hun zetels op.'],
+    [/\bTik (het|de) (.*?) aan\./g, 'Zet een stip op $1 $2.'],
+    [/\bZet de prijs met de schuif op de (.*?)\./g, 'Wat is de $1? Schrijf hem op de lijn.', 'lijn'],
+    [/ met de schuif\b/g, ''],
+    /* Wie ben ik: op papier staan alle aanwijzingen er meteen, en punten zijn er niet */
+    [/Lees de aanwijzing\. Weet je het al\? Kies dan een naam\. Twijfel je, vraag dan een volgende aanwijzing: dat kost punten\./g, 'Lees de aanwijzingen een voor een. Omcirkel de letter bij de goede naam.']
+  ];
+  function naarPapier(html, vlag){
+    return PAPIER.reduce(function(h, r){
+      if (!r[0].test(h)){ r[0].lastIndex = 0; return h; }
+      r[0].lastIndex = 0;
+      if (r[2] && vlag) vlag[r[2]] = true;
+      return h.replace(r[0], r[1]);
+    }, String(html == null ? '' : html));
+  }
+  /* is er op papier ergens plek voor het antwoord? */
+  function heeftPlek(h){ return /<input|class="[^"]*\b(lijn|opties|sleep-wb|velden-wb|wb-keus)\b|stip|kruisje|[Oo]mcirkel/.test(h); }
+  function papierItem(it){
+    var vlag = {};
+    it.vraag = naarPapier(it.vraag, vlag);
+    if (it.opties) it.opties = naarPapier(it.opties);
+    ['kop', 'antwoord', 'antwoordOpen', 'uitleg'].forEach(function(k){ if (it[k]) it[k] = naarPapier(it[k]); });
+    if (vlag.lijn || (!it.opties && !heeftPlek(it.vraag))) it.vraag += '<span class="lijn" aria-hidden="true"></span>';
+    return it;
+  }
+
   /* het verborgen venster: een per spel, en een berichtenlijn met een nummer per vraag */
-  var kader = null, kaderSpel = '', klaarBelofte = null, wachtend = {}, nr = 0;
+  var kader = null, kaderSpel = '', klaarBelofte = null, klaar = null, wachtend = {}, nr = 0;
   addEventListener('message', function(e){
     var b = e.data || {};
     if (b.t === 'werkblad-klaar' && klaarBelofte){ klaarBelofte.res(); klaarBelofte = null; }
     if ((b.t === 'werkblad-keuzes' || b.t === 'werkblad-maak') && wachtend[b.vraagId || 'keuzes']){ wachtend[b.vraagId || 'keuzes'](b); delete wachtend[b.vraagId || 'keuzes']; }
   });
+  /* Hetzelfde spel: wacht op hetzelfde laden. Klikt de docent op Maak werkblad
+     terwijl de keuzes nog komen, dan ging de vraag anders naar een venster dat
+     nog niet luisterde, en kwam er nooit antwoord. */
   function open(spel){
-    if (kader && kaderSpel === spel) return Promise.resolve();
+    if (kader && kaderSpel === spel && klaar) return klaar;
     if (!kader){ kader = document.createElement('iframe'); kader.setAttribute('aria-hidden', 'true'); kader.style.cssText = 'position:absolute;width:0;height:0;border:0;opacity:0;pointer-events:none'; document.body.appendChild(kader); }
     kaderSpel = spel;
-    return new Promise(function(res, rej){
+    klaar = new Promise(function(res, rej){
       klaarBelofte = { res:res };
-      var klok = setTimeout(function(){ klaarBelofte = null; rej(new Error('geen antwoord')); }, 15000);
+      var klok = setTimeout(function(){ klaarBelofte = null; klaar = null; rej(new Error('geen antwoord')); }, 15000);
       klaarBelofte.res = function(){ clearTimeout(klok); res(); };
       kader.src = spel + '.html?werkblad=1';
     });
+    return klaar;
   }
   function vraag(spel, bericht){
     return open(spel).then(function(){
@@ -54,7 +105,7 @@
       naam: naam, vak: vak,
       aantallen: [6, 8, 10, 12, 16, 20], standaard: 10, aantalNaam: 'Aantal opgaven', vormen: true,
       delenKop: 'Keuzes van het spel',
-      delenTip: 'Dezelfde keuzes als in het spel. Het niveau komt van de keuze hierboven. Bij open vragen worden meerkeuzevragen met korte antwoorden open; invul- en sleepopgaven blijven zoals ze zijn.',
+      delenTip: 'Dezelfde keuzes als in het spel. Het niveau komt van de keuze hierboven. Bij open vragen worden meerkeuzevragen met korte antwoorden open. Een sleepopgave wordt op papier: schrijf de letters van de kaartjes bij het goede vak.',
       delen: function(aan){
         var doel = document.getElementById('delen');
         function teken(){
@@ -76,7 +127,7 @@
         return keuze;
       },
       maak: function(keuze, n){
-        return vraag(spel, { t:'werkblad-maak', keuze:keuze, n:n }).then(function(b){ return b.items || []; });
+        return vraag(spel, { t:'werkblad-maak', keuze:keuze, n:n }).then(function(b){ return (b.items || []).map(papierItem); });
       },
       teken: function(w){
         var niv = w.niveauNaam || '';

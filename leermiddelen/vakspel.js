@@ -552,7 +552,8 @@ window.VAKSPEL = (function(){
      een verborgen iframe op werkblad.html. Die vraagt de keuzes op en laat
      opgaven maken, en krijgt ze terug als html: de vraag met het beeld en de
      antwoordruimte, en het antwoord voor het antwoordblad. */
-  var LET = ['a', 'b', 'c', 'd', 'e', 'f'];
+  /* genoeg letters: een windroos heeft acht keuzes, een zin om het foute woord in aan te wijzen soms meer */
+  var LET = 'abcdefghijklmnopqrstuvwxyz'.split('');
   function werkbladItem(o){
     var vr = '<span class="vr">' + (o.vraag || '') + '</span>' + (o.opdracht ? '<span class="opdr">' + o.opdracht + '</span>' : '') + (o.beeld ? '<div class="beeld">' + o.beeld + '</div>' : ''), antwoord = '';
     if (o.vorm === 'meerkeuze'){
@@ -578,8 +579,15 @@ window.VAKSPEL = (function(){
       antwoord = o.vakken.map(function(v, i){ return (v.naam || 'vak ' + (i + 1)) + ': ' + (v.hoort || []).map(function(id){ return let2[id]; }).join(', '); }).join('; ');
     } else if (o.vorm === 'eigen' && typeof o.teken === 'function'){
       var d = document.createElement('div');
-      try { o.teken(d, { klaar:function(){}, knop:function(){ var b = document.createElement('button'); return b; }, uit:function(){}, bezig:function(){ return true; }, husselen:husselen, schoon:schoon, getal:getal }); } catch (e){}
-      Array.prototype.forEach.call(d.querySelectorAll('button, .nakijk, input[type=range]'), function(x){ x.parentNode.removeChild(x); });
+      /* papier: true zegt het spel dat het op een werkblad staat; het kan dan tekenen wat op papier kan */
+      try { o.teken(d, { klaar:function(){}, knop:function(){ var b = document.createElement('button'); return b; }, uit:function(){}, bezig:function(){ return true; }, husselen:husselen, schoon:schoon, getal:getal, papier:true }); } catch (e){}
+      Array.prototype.forEach.call(d.querySelectorAll('.nakijk, input[type=range]'), function(x){ x.parentNode.removeChild(x); });
+      /* Een knop met een partij of een naam erop is de opgave zelf: die wordt een
+         vakje om te omcirkelen. Een knop om verder te gaan kan op papier niet. */
+      Array.prototype.forEach.call(d.querySelectorAll('button'), function(x){
+        if (/^(volgende|nakijken|opnieuw|wis|stop|terug|klaar|controleer)/i.test(x.textContent.trim()) || /Btn$/.test(x.id)){ x.parentNode.removeChild(x); return; }
+        var s = document.createElement('span'); s.className = 'wb-keus ' + x.className; s.innerHTML = x.innerHTML; x.parentNode.replaceChild(s, x);
+      });
       Array.prototype.forEach.call(d.querySelectorAll('input'), function(x){ x.setAttribute('readonly', ''); x.value = ''; });
       vr += '<div class="eigen-wb">' + d.innerHTML + '</div>';
       antwoord = o.antwoordTekst || '';
