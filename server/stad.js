@@ -32,6 +32,7 @@
 import { DurableObject } from "cloudflare:workers";
 import { nette } from "./naamfilter.js";
 import { kenmerkVan } from "./account.js";
+import { laadVragen, VRAAGVAKKEN } from "./stadvragen.js";
 /* de motor eerst: de kamer leest hem van globalThis, en modules worden
    uitgevoerd in de volgorde waarin ze hier staan */
 import "../leermiddelen/stad-motor.js";
@@ -44,7 +45,7 @@ const ZONDER_SPELERS = 45 * 1000;           /* een leeg potje stopt na drie kwar
 const POTJE_LEEFT = 2 * 60 * 60 * 1000;     /* en hoogstens twee uur */
 const WEG_NA_STIL = 35 * 1000;              /* wie zo lang niets stuurt is weg */
 const RANG = { bb: 1, kgt: 2, havo: 3, vwo: 4 };
-const VAKKEN = ["reken", "ned", "eng", "ges", "aard", "bio", "wis", "burg", "eco"];
+const VAKKEN = VRAAGVAKKEN;
 
 function json(o, s){ return new Response(JSON.stringify(o), { status: s || 200, headers: { "content-type": "application/json" } }); }
 function schoon(t, n){ return String(t == null ? "" : t).replace(/[\u0000-\u001f<>]/g, "").trim().slice(0, n || 40); }
@@ -106,7 +107,7 @@ export class Zombiekamer extends DurableObject {
         const r = await K.erbij({
           key, sid, vak, delen,
           naam: nette(schoon(url.searchParams.get("naam"), 16)) || "Speler",
-          av: schoon(url.searchParams.get("av"), 24),
+          av: schoon(url.searchParams.get("av"), 40),
           klasse: schoon(url.searchParams.get("k"), 10),
           rang: RANG[url.searchParams.get("niveau")] || 2
         });
@@ -162,27 +163,8 @@ export class Zombiekamer extends DurableObject {
   }
 
   /* Waar de kamer zijn vragen vandaan haalt: de bestanden die
-     server/maak-stadvragen.js maakt, uit de map van de site. Eerst via de
-     binding met de bestanden, anders via het eigen adres. Lukt geen van
-     beide, dan een lege lijst; de kamer valt dan terug op rekensommen. */
-  async vragen(vak){
-    if (VAKKEN.indexOf(vak) < 0) vak = "reken";
-    const pad = "/leermiddelen/stad-vragen/" + vak + ".json";
-    const basis = this.origin || "https://meneergreidanus.nl";
-    let r = null;
-    try { if (this.env.ASSETS) r = await this.env.ASSETS.fetch(new Request(basis + pad)); } catch (e){ r = null; }
-    if (!r || !r.ok){ try { r = await fetch(basis + pad); } catch (e){ r = null; } }
-    if (!r || !r.ok){ console.warn("stad: vragen van " + vak + " niet te laden"); return []; }
-    const j = await r.json();
-    const lijst = (j.rijen || []).map(x => {
-      const q = { v: x[0], o: x[1], g: x[2], u: x[3], t: x[4], n: x[5], k: x[6] };
-      if (x[7] && x[7].svg) q.svg = x[7].svg;
-      if (x[7] && x[7].vlag) q.vlag = x[7].vlag;
-      return q;
-    });
-    lijst.delen = j.delen || {};
-    return lijst;
-  }
+     server/maak-stadvragen.js maakt, uit de map van de site (stadvragen.js). */
+  vragen(vak){ return laadVragen(this.env, this.origin, vak); }
 
   /* ---------- de kamer ---------- */
   start(){
@@ -295,7 +277,9 @@ export class Zombiekamer extends DurableObject {
     }
     this.K.bericht(bij.nr, m);
   }
-  webSocketClose(ws){
+  webSocketClose(ws, code){
+    /* het sluiten beantwoorden, anders blijft de socket van de browser op CLOSING hangen */
+    try { ws.close(code === 1005 || code === 1006 || !code ? 1000 : code, "dicht"); } catch (e){}
     /* niet meteen uit de wereld halen: wie zijn verbinding even kwijt is moet
        terug kunnen komen op dezelfde plek. opruimen() doet het na een halve
        minuut stilte alsnog. */

@@ -500,6 +500,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 <script src="voorlezen.js"></script>
 <script src="foutenmap.js"></script>
 <script src="bank.js"></script>
+<script src="poortrace-regels.js"></script>
 <script src="poortrace-motor.js"></script>
 <script>
 /* ============================================================================
@@ -520,7 +521,6 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   function $(id){ return document.getElementById(id); }
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
   function param(naam){ var m = new RegExp('[?&]' + naam + '=([^&#]+)').exec(location.search); return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : null; }
-  function schud(a){ for (var i = a.length - 1; i > 0; i--){ var j = Math.floor(Math.random() * (i + 1)), h = a[i]; a[i] = a[j]; a[j] = h; } return a; }
   var MOTOR = window.POORTMOTOR;
   var zachtMag = true;
   try { zachtMag = !matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e){}
@@ -547,40 +547,15 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   function bewaar(){ try { localStorage.setItem(OPSLAG, JSON.stringify(opslag)); } catch (e){} }
 
   /* ---------- welke vragen op een poort passen ----------
-     Een poort draagt een kort antwoord. Daarom doen alleen de onderdelen mee
-     waar dat werkt: woordjes, topografie, jaartallen, begrippen, tafels en
-     rekenen. Van een vraag moeten het goede antwoord en minstens een fout
-     antwoord hoogstens 24 tekens zijn, de vraag zelf hoogstens 150, en er mag
-     geen plaatje bij dat een antwoord is (een klok, het DHTE-schema).
-     Gemeten in september 2026, korte vragen per onderdeel: Engels woordjes
-     136 en 243, irregular verbs 287; topografie 160, vlaggen 166; betekenis
-     144, synoniemen 55; per tijdvak 15 tot 31; bij rekenen alles behalve de
-     klok en het DHTE-schema. Een onderdeel met minder dan MINIMUM korte vragen
-     op jouw niveau staat niet in de kiezer. */
-  var MAXANTW = 24, MAXVRAAG = 150, MINIMUM = 12, POORTEN = 15;
-  var PAST = {
-    reken: ['tafels', 'hoofd', 'cijferen', 'machten', 'negatief', 'komma', 'gemiddelde', 'breuk', 'procent', 'verhouding', 'tijdgeld', 'meten', 'metriek', 'schatten'],
-    ned:   ['betekenis', 'synoniemen', 'meervoud', 'werkwoordspelling', 'spelling'],
-    eng:   ['woordjes NL naar EN', 'woordjes EN naar NL', 'irregular verbs', 'valse vrienden', 'phrasal verbs', 'examen-eng'],
-    ges:   ['jaartallen', 'tv1', 'tv2', 'tv3', 'tv4', 'tv5', 'tv6', 'tv7', 'tv8', 'tv9', 'tv10', 'staat', 'nl1900'],
-    aard:  ['topografie', 'vlaggen', 'examen-ak'],
-    bio:   ['organen', 'bloed', 'vertering', 'planten', 'cellen', 'zintuigen', 'ordening', 'erfelijkheid'],
-    wis:   ['vergelijking', 'formule', 'oppervlakte', 'omtrek', 'statistiek'],
-    burg:  ['democratie', 'rechtsstaat', 'bestuurslagen'],
-    eco:   ['examen-eco', 'vraag en aanbod'],
-    eigen: ['heen', 'terug']
-  };
+     De regels (welke vragen passen, de antwoorden op de banen, de tijd tot de
+     poort, de punten) staan in poortrace-regels.js: in een race gebruikt de
+     spelkamer op de server dezelfde. */
+  var R = window.POORTREGELS;
+  var MINIMUM = R.MINIMUM, POORTEN = R.POORTEN, PAST = R.PAST;
   /* jaartallen staan niet in de vragenbank als onderdeel: ze komen uit Tijdvakken sorteren */
   var JAARDEEL = { id:'jaartallen', naam:'jaartallen' };
   var GEB = window.GEBEURTENISSEN_TIJDVAKKEN || [];
-  function kortOk(t){ t = String(t == null ? '' : t); return t.length > 0 && t.length <= MAXANTW && t.indexOf('<') < 0; }
-  function norm(t){ return String(t).trim().toLowerCase(); }
-  function geschikt(q){
-    if (!q || !q.v || !Array.isArray(q.o) || q.svg || q.beeld) return false;
-    if (String(q.v).length > MAXVRAAG) return false;
-    var g = q.o[q.g]; if (!kortOk(g)) return false;
-    return q.o.some(function(o, j){ return j !== q.g && kortOk(o) && norm(o) !== norm(g); });
-  }
+  var norm = R.norm, geschikt = R.geschikt;
   var VAK_RACE = VAKKEN.filter(function(v){ return PAST[v.id]; });
   function vakVan(id){ return VAK_RACE.filter(function(v){ return v.id === id; })[0] || null; }
   function rangVan(id){ var n = NIVEAUS.filter(function(x){ return x.id === id; })[0]; return n ? n.rang : 2; }
@@ -700,31 +675,12 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     return delenVan(vak, rangVan(niveau)).map(function(o){ return o.id; });
   }
   function vulPot(){
-    var r = rangVan(niveau), mag = toegestaan(), bron = BRONNEN[vak] || [], nivo = NIVOS[vak] || [];
-    var alles = [];
-    for (var i = 0; i < bron.length; i++) if (mag.indexOf(bron[i].t) >= 0 && geschikt(bron[i])) alles.push(i);
-    /* eerst de vragen die bij het niveau passen, dan ruimer; nooit buiten de gekozen onderdelen */
-    var onder = r >= 4 ? r - 2 : r - 1;
-    var ids = alles.filter(function(i){ return (nivo[i] || 2) <= r && (nivo[i] || 2) >= onder; });
-    if (ids.length < 20) ids = alles.filter(function(i){ return (nivo[i] || 2) <= r; });
-    if (ids.length < MINIMUM) ids = alles.filter(function(i){ return (nivo[i] || 2) <= r + 1; });
-    if (!ids.length) ids = alles;
-    pot = ids.map(function(i){ return { s:'b', i:i }; });
-    if (vak === 'ges' && mag.indexOf('jaartallen') >= 0) GEB.forEach(function(e, i){ pot.push({ s:'j', i:i }); });
-    schud(pot);
+    pot = R.stapel(BRONNEN[vak] || [], NIVOS[vak] || [], toegestaan(), rangVan(niveau), vak === 'ges' ? GEB.length : 0);
   }
-  /* Een jaartal uit Tijdvakken sorteren. De foute jaartallen komen van andere
-     gebeurtenissen: op vmbo-bb ver weg in de tijd, op havo en vwo juist dichtbij. */
+  var tvNamen = null;
   function jaarVraag(i){
-    var e = GEB[i], r = rangVan(niveau), tv = TIJDVAKKEN[e.tv - 1] || { naam:'' };
-    var ander = GEB.filter(function(x){ return x.jaar !== e.jaar; });
-    if (r <= 1) ander = ander.filter(function(x){ return Math.abs(x.tv - e.tv) >= 2; });
-    else if (r === 2) ander = ander.filter(function(x){ return x.tv !== e.tv; });
-    else ander.sort(function(a, b){ return Math.abs(a.tv - e.tv) - Math.abs(b.tv - e.tv) || Math.random() - .5; }), ander = ander.slice(0, 8);
-    schud(ander);
-    var fout = [];
-    ander.forEach(function(x){ if (fout.length < 3 && fout.indexOf(x.jaar) < 0) fout.push(x.jaar); });
-    return { v:'Wanneer was dit? ' + e.tekst + '.', o:[e.jaar].concat(fout), g:0, u:e.waarom + ' Tijdvak ' + e.tv + ': ' + tv.naam.replace(/^\d+ /, '') + '.', t:'jaartallen' };
+    if (!tvNamen) tvNamen = TIJDVAKKEN.map(function(x){ return x.naam.replace(/^\d+ /, ''); });
+    return R.jaarVraag(GEB, i, rangVan(niveau), tvNamen);
   }
   function trek(){
     var r = rangVan(niveau), q = null;
@@ -751,23 +707,14 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     var tv = TIJDVAKKEN.filter(function(x){ return x.id === t; })[0]; if (tv) return 'tijdvak ' + tv.naam.replace(/^\d+ /, '');
     var o = (ONDERDELEN[vak] || []).filter(function(x){ return x.id === t; })[0]; return o ? o.naam : (t || vakNaamVan(vak));
   }
-  /* Van de vier antwoorden gaan het goede en een of twee foute op de poort.
-     Twee banen open in de rustige stand en op vmbo-bb: minder te lezen. */
+  /* Het goede antwoord en een of twee foute op de poort. Twee banen open in de
+     rustige stand en op vmbo-bb: minder te lezen. */
   function maakPoortVraag(){
     var q = trek(), v = q.v;
     if (vak === 'eng' && /^woordjes /.test(q.t) && !/\?$/.test(q.v)) v = (q.t === 'woordjes NL naar EN' ? 'Hoe zeg je: ' : 'Wat betekent: ') + q.v + '?';
-    var goed = String(q.o[q.g]).trim(), gezien = [norm(goed)], fout = [];
-    schud(q.o.map(function(o, j){ return j; })).forEach(function(j){
-      var t = String(q.o[j]).trim();
-      if (j === q.g || !kortOk(t) || gezien.indexOf(norm(t)) >= 0) return;
-      gezien.push(norm(t)); fout.push(t);
-    });
-    var n = (modus === 'rustig' || niveau === 'bb' || fout.length < 2) ? 2 : 3;
-    var antw = [goed].concat(fout.slice(0, n - 1));
-    var plek = schud([0, 1, 2]).slice(0, n), banen = [null, null, null];
-    plek.forEach(function(b, i){ banen[b] = { tekst:antw[i] }; });
+    var p = R.poort(q, modus === 'rustig' || niveau === 'bb');
     recent.push(q.v); if (recent.length > 12) recent.shift();
-    return { q:q, v:v, banen:banen, goed:plek[0], kop:kopVoorVraag({ t:deelNaam(q.t), o:antw }, vakNaamVan(vak)) };
+    return { q:q, v:v, banen:p.banen, goed:p.goed, kop:kopVoorVraag({ t:deelNaam(q.t), o:p.antw }, vakNaamVan(vak)) };
   }
 
   /* ---------- de race ---------- */
@@ -828,6 +775,13 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     mo.maat();
     mo.zetTempo(bot.aan ? bot.tempo : 1);
     mo.rit({ poorten:nPoorten, afstand:AFSTAND, voertuig:opslag.voertuig, kleur:opslag.kleur, spoor:opslag.spoor, spook:sp });
+    /* terug in een race die al liep (herladen): verder na de poort waar de kamer je heeft */
+    var h = RACE && RACE.rit;
+    if (h && h.ronde > 0){
+      k = Math.min(nPoorten, h.ronde | 0); mo.vanaf(k);
+      uitslagen = (h.uit || []).slice(0, k); goedN = h.gehaald | 0; punten = h.punten | 0; reeks = h.reeks | 0; besteReeks = h.beste | 0; snelNiv = h.snel | 0;
+      $('vraagKop').textContent = 'verder bij poort ' + Math.min(nPoorten, k + 1) + ' van ' + nPoorten;
+    }
     tekenVoortgang(); hudPunten();
     fase = 'aftellen';
     aftellen(sec);
@@ -840,27 +794,24 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     ['3', '2', '1', 'Rijden!'].forEach(function(t, i){
       aftelKlok.push(setTimeout(function(){ el.innerHTML = '<span>' + t + '</span>'; }, i * stap));
     });
-    aftelKlok.push(setTimeout(function(){ el.classList.add('hide'); el.innerHTML = ''; fase = 'rijden'; m.start(); activeer(0); }, 3 * stap + stap * .6));
+    aftelKlok.push(setTimeout(function(){ el.classList.add('hide'); el.innerHTML = ''; fase = 'rijden'; m.start(); if (k >= nPoorten) naarFinish(); else activeer(k); }, 3 * stap + stap * .6));
   }
-  /* hoe lang je hebt tussen de vraag en de poort: een vaste tijd die korter
-     wordt naarmate het beter gaat, en nooit korter dan het lezen duurt */
-  function leesTijd(vr){
-    var n = vr.v.length; vr.banen.forEach(function(b){ if (b) n += b.tekst.length; });
-    return 1.6 + n * .045;
-  }
-  function doelTijd(vr){
-    /* rustig: laag tempo, en de poort wacht toch tot je doorrijdt */
-    if (modus === 'rustig') return 10;
-    var f = Math.min(1, snelNiv / 10);
-    var traag = niveau === 'bb' ? 8 : niveau === 'kgt' ? 7 : 6.5, snel = niveau === 'bb' ? 5.6 : niveau === 'kgt' ? 4.8 : 4.2;
-    return Math.max(traag + (snel - traag) * f, leesTijd(vr));
-  }
+  /* hoe lang je hebt tussen de vraag en de poort (poortrace-regels.js) */
+  function doelTijd(vr){ return R.doelTijd(niveau, snelNiv, vr.v, vr.banen, modus === 'rustig'); }
   function activeer(kk){
     k = kk;
-    vraag = maakPoortVraag();
+    if (RACE){
+      /* in een race komt de vraag van de kamer, met de tijd tot de poort erbij */
+      var rv = RACE.vragen[kk];
+      if (!rv){ raceVraagWacht(); return; }
+      delete RACE.vragen[kk];
+      vraag = { q:{ v:rv.v, o:rv.banen.filter(Boolean), g:-1, t:rv.deel || '', vlag:rv.vlag }, v:rv.v, goed:-1, kop:rv.kop || 'vraag', s:+rv.s || 6,
+                banen:rv.banen.map(function(t){ return t ? { tekst:String(t) } : null; }) };
+      m.rijdDoor();
+    } else vraag = maakPoortVraag();
     m.poort(k, vraag.banen);
     var afstand = m.afstandTot(k);
-    m.snelheid(afstand / (doelTijd(vraag) + (boostNet ? .36 : 0)));
+    m.snelheid(afstand / ((RACE ? vraag.s : doelTijd(vraag)) + (boostNet ? .36 : 0)));
     boostNet = false;
     if (modus === 'rustig') m.wachtBij(k);
     tekenVraag(); tekenBanen(); tekenVoortgang();
@@ -941,6 +892,8 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   }
   function magSturen(){ return m && (fase === 'rijden' || fase === 'wacht') && !m.gepauzeerd(); }
   function wachtBijPoort(){
+    /* in een race: het voertuig wacht op de kamer, niet op jou */
+    if (fase === 'vraagwacht' || fase === 'oordeel') return;
     fase = 'wacht';
     var w = $('wachtBtn'); w.classList.remove('hide');
     $('srLive').textContent = 'De poort wacht. Kies je baan en rijd door.';
@@ -1000,7 +953,16 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   /* ---------- door een poort ---------- */
   function antwoord(kk, baan){
     if (!vraag || kk !== k) return;
-    var goed = baan === vraag.goed, q = vraag.q;
+    /* in een race kijkt de kamer na: de keuze gaat erheen, het oordeel komt terug (raceOordeel) */
+    if (RACE){ raceAntwoord(baan); return; }
+    var goed = baan === vraag.goed, s = { goed:goedN, reeks:reeks, beste:besteReeks, snelNiv:snelNiv, punten:punten };
+    var erbij = R.na(s, goed, modus === 'rustig');
+    goedN = s.goed; reeks = s.reeks; besteReeks = s.beste; snelNiv = s.snelNiv; punten = s.punten;
+    oordeel(baan, goed, erbij);
+  }
+  /* het oordeel over een poort: het paneel kleurt, en dan de boost of de slip */
+  function oordeel(baan, goed, erbij){
+    var q = vraag.q;
     m.uitslag(k, baan, vraag.goed);
     uitslagen[k] = goed;
     if (window.KLAS) KLAS.tel(perOnderdeel, q.t, goed);
@@ -1008,10 +970,6 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     tekenBanen({ gekozen:baan });
     botLog('poort', { k:k, goed:goed, baan:baan });
     if (goed){
-      goedN++; reeks++; besteReeks = Math.max(besteReeks, reeks);
-      var erbij = 100 + Math.min(50, (reeks - 1) * 10) + (modus === 'rustig' ? 0 : snelNiv * 5);
-      punten += erbij;
-      if (modus !== 'rustig') snelNiv = Math.min(12, snelNiv + 1);
       var munt = 4 + (reeks >= 6 ? 2 : reeks >= 3 ? 1 : 0);
       verdiend += munt; opslag.munten += munt; bewaar();
       boostNet = true;
@@ -1021,8 +979,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
       fase = 'goed';
       setTimeout(function(){ if (fase !== 'goed') return; verderNaPoort(); }, bot.aan ? 200 / bot.tempo : 450);
     } else {
-      foutN++; reeks = 0;
-      if (modus !== 'rustig') snelNiv = Math.max(0, snelNiv - 2);
+      foutN++;
       if (window.FOUTENMAP && vak !== 'reken') FOUTENMAP.noteer(q, vak);
       gemist.push({ v:vraag.v, a:q.o[q.g] });
       hudPunten(); tekenVoortgang();
@@ -1328,15 +1285,23 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
      Met vrienden of met de hele klas hangt de race aan een kamer op de server
      (server/kamer.js), dezelfde soort kamer als de Klasstrijd, met ?race=CODE in
      het adres. Iedereen rijdt hetzelfde vak en niveau in de gewone stand, vijftien
-     poorten, en meldt elke seconde hoe ver hij is. De anderen rijden als
-     doorzichtige karretjes mee en staan in de strook boven de weg. De kamer klokt
-     de finish zelf en zet de volgorde; wie binnen is ziet de rest nog binnenkomen,
-     en aan het eind komt het podium. Met vrienden start de maker van de race; met
-     de klas start de docent op het bord (strijd.html, Klasstrijd). Pauze is er in
-     een race niet: de klok van de kamer loopt door. */
+     poorten. De kamer is de baas over de race: hij stuurt de vraag van je volgende
+     poort (zonder het antwoord), jij stuurt de baan waarmee je door de poort reed,
+     en hij zegt of dat goed was. Alleen de kamer zet je een poort verder, telt je
+     goede antwoorden en punten en klokt de finish; hoe snel je van poort naar poort
+     kunt, rekent hij na met dezelfde regels (poortrace-regels.js). Komt een vraag
+     of een oordeel laat, dan wacht je voertuig voor de volgende poort. Je meldt
+     alleen nog waar je karretje tussen twee poorten rijdt, voor het beeld van de
+     anderen. De anderen rijden als doorzichtige karretjes mee en staan in de strook
+     boven de weg; wie binnen is ziet de rest nog binnenkomen, en aan het eind komt
+     het podium. Met vrienden start de maker van de race; met de klas start de
+     docent op het bord (strijd.html, Klasstrijd). Pauze is er in een race niet: de
+     klok van de kamer loopt door. Herlaad je de pagina, dan rijd je verder na de
+     laatste poort die de kamer van je heeft. */
   var RACE = (function(){
     var c = (param('race') || '').toUpperCase().replace(/[^A-Z]/g, '');
-    return c.length === 4 ? { code:c, naam:'', duel:false, gastheer:null, mij:null, rijders:[], jouw:null, gestart:false, binnen:false, uit:null, v:null, laatst:'' } : null;
+    return c.length === 4 ? { code:c, naam:'', duel:false, gastheer:null, mij:null, rijders:[], jouw:null, gestart:false, binnen:false, uit:null, v:null, laatst:'',
+                             vragen:{}, rit:null, wacht:null } : null;
   })();
   function kenmerk(){
     /* hetzelfde kenmerk als de Klasstrijd en de Klasquiz: wie in de wachtkamer van het bord zat, is hier dezelfde speler */
@@ -1483,6 +1448,14 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     var av = window.PROFIEL && PROFIEL.avatar ? PROFIEL.avatar() : '';
     RACE.v = VERBINDING.maak({ pad: RACE.code + '?rol=speler&sid=' + encodeURIComponent(kenmerk()) + '&naam=' + encodeURIComponent(RACE.naam) + '&av=' + encodeURIComponent(av), rol:'speler',
       onBericht: raceBericht,
+      /* weer verbonden: een keuze of finish waar nog geen oordeel op kwam, gaat nog een keer (dubbel telt de kamer niet) */
+      onOpen: function(opnieuw){
+        if (!opnieuw || !RACE.gestart || RACE.uit) return;
+        if (RACE.wacht) RACE.v.stuur({ t:'antwoord', k:RACE.wacht.k, b:RACE.wacht.baan }, { rij:false });
+        else if (RACE.binnen && fase !== 'start') RACE.v.stuur({ t:'finish' }, { rij:false });
+      },
+      /* de verbinding hapert: de strook onderaan zegt het, en boven de weg staat waarom je stilstaat */
+      onWacht: function(n){ if (n && RACE.gestart && !RACE.binnen && (fase === 'oordeel' || fase === 'vraagwacht')) $('vraagTekst').textContent = 'Geen verbinding met de race. Je poort blijft bewaard.'; },
       onEruit: function(){ raceDicht('Je bent uit deze race gehaald', 'Was dat een vergissing? Vul de code opnieuw in.'); },
       onDicht: function(){ if (!RACE.uit) raceDicht('De race is gesloten', 'Maak een nieuwe race, of vraag de nieuwe code.'); } });
   }
@@ -1510,6 +1483,15 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
       if (!RACE.gestart) tekenLobby(); else raceStand();
       return;
     }
+    /* de kamer zegt waar je bent, stuurt de vraag van je volgende poort, en het oordeel over de vorige */
+    if (b.t === 'rit'){ RACE.rit = b; raceBegin(); return; }
+    if (b.t === 'poort'){
+      if (!(b.k >= 0) || !Array.isArray(b.banen)) return;
+      RACE.vragen[b.k] = b;
+      if (fase === 'vraagwacht' && k === b.k) activeer(b.k);
+      return;
+    }
+    if (b.t === 'uitslag'){ raceOordeel(b); return; }
     if (b.t === 'aftellen'){ raceStart(b.s || 3); return; }
     if (b.t === 'start'){ raceStart(0); return; }
     if (b.t === 'einde'){ raceEinde(b); return; }
@@ -1524,16 +1506,70 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     if (RACE.gestart) return;
     RACE.gestart = true;
     modus = 'normaal'; nPoorten = POORTEN;
-    laadVak(function(){ start(sec); });
+    laadVak(function(){ RACE.geladen = sec || 0; raceBegin(); });
   }
-  /* elke seconde: hoe ver ben ik (alleen als het veranderde) */
+  /* Rijden zodra de kamer zei waar je bent: na een herlaad sta je niet bij de
+     start maar na je laatste poort. Bij het aftellen is het altijd de start. */
+  function raceBegin(){
+    if (RACE.geladen === undefined || RACE.begonnen) return;
+    if (!RACE.geladen && !RACE.rit){
+      if (!RACE.ritKlok) RACE.ritKlok = setTimeout(function(){ RACE.rit = RACE.rit || { ronde:0 }; raceBegin(); }, 2500);
+      return;
+    }
+    RACE.begonnen = true; clearTimeout(RACE.ritKlok);
+    if (RACE.rit && RACE.rit.af){ raceAlBinnen(); return; }
+    start(RACE.geladen);
+  }
+  /* elke seconde: waar mijn karretje tussen twee poorten rijdt, voor het beeld van de anderen (alleen als het veranderde) */
   setInterval(function(){
     if (!RACE || !RACE.v || !RACE.gestart || RACE.binnen || RACE.uit || !m || fase === 'aftellen' || fase === 'start') return;
-    var st = { t:'stand', ronde:uitslagen.length, gehaald:goedN, punten:punten, voort:Math.round(m.voort() * 1000) };
+    var st = { t:'stand', voort:Math.round(m.voort() * 1000) };
     var sl = JSON.stringify(st); if (sl === RACE.laatst) return;
     RACE.laatst = sl;
     RACE.v.stuur(st, { rij:false });
   }, 1000);
+  /* De vraag van deze poort is er nog niet: het voertuig rijdt door tot vlak
+     voor de poort en wacht daar. Hij komt vanzelf (raceBericht). */
+  function raceVraagWacht(){
+    vraag = null; fase = 'vraagwacht';
+    m.wachtBij(k);
+    $('vraagKop').textContent = 'poort ' + (k + 1) + ' van ' + nPoorten;
+    $('vraagTekst').textContent = 'De vraag komt eraan…';
+    $('vraagBeeld').classList.add('hide');
+    $('banen').classList.add('leeg');
+    tekenVoortgang();
+  }
+  /* door de poort: de baan gaat naar de kamer. Tot het oordeel er is rijdt het
+     voertuig door, en komt het laat, dan wacht het voor de volgende poort. */
+  function raceAntwoord(baan){
+    RACE.wacht = { k:k, baan:baan };
+    fase = 'oordeel';
+    $('wachtBtn').classList.add('hide');
+    Array.prototype.forEach.call($('banen').children, function(el){ el.disabled = true; });
+    if (k + 1 < nPoorten) m.wachtBij(k + 1);
+    RACE.v.stuur({ t:'antwoord', k:k, b:baan });
+    clearTimeout(RACE.traag);
+    RACE.traag = setTimeout(function(){ if (fase === 'oordeel' && $('vraagTekst').textContent.indexOf('Geen verbinding') < 0) $('vraagTekst').textContent = 'Even wachten op de race…'; }, 2500);
+  }
+  /* het oordeel van de kamer: goed of niet, de goede baan, en de stand zoals de kamer hem telt */
+  function raceOordeel(b){
+    var w = RACE.wacht;
+    if (!w || b.k !== w.k || b.k !== k || !vraag) return;
+    RACE.wacht = null; clearTimeout(RACE.traag);
+    var goed = !!b.goed;
+    vraag.goed = b.g | 0;
+    if (b.q && Array.isArray(b.q.o)) vraag.q = { v:b.q.v, o:b.q.o, g:b.q.g | 0, u:b.q.u || '', t:b.q.t || '', vlag:vraag.q.vlag };
+    goedN = b.gehaald | 0; punten = b.punten | 0; reeks = b.reeks | 0; besteReeks = b.beste | 0; snelNiv = b.snel | 0;
+    /* al over de finish (een heel laat oordeel): alleen nog tellen */
+    if (fase === 'binnen' || fase === 'einde'){
+      uitslagen[k] = goed;
+      if (window.KLAS) KLAS.tel(perOnderdeel, vraag.q.t, goed);
+      if (!goed){ foutN++; gemist.push({ v:vraag.v, a:vraag.q.o[vraag.q.g] }); }
+      return;
+    }
+    fase = 'rijden';
+    oordeel(w.baan, goed, b.erbij | 0);
+  }
   function raceStand(){
     var j = RACE.jouw, pl = $('hudPlek');
     if (j && j.van > 1 && !RACE.binnen){ pl.classList.remove('hide'); pl.innerHTML = j.rang + 'e <small>van ' + j.van + '</small>'; pl.classList.toggle('voor', j.rang === 1); }
@@ -1550,10 +1586,18 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     }).join('');
   }
   function mijnRijder(){ var el = $('rijdersBalk').querySelector('.rijder.ik'); if (el && m && !RACE.binnen) el.style.left = (m.voort() * 100).toFixed(1) + '%'; }
+  /* over de finish: de kamer klokt de tijd; de poorten en de punten heeft hij al */
   function raceBinnen(){
     RACE.binnen = true;
     $('hudPlek').classList.add('hide');
-    if (RACE.v) RACE.v.stuur({ t:'af', ronde:uitslagen.length, gehaald:goedN, punten:punten });
+    if (RACE.v) RACE.v.stuur({ t:'finish' });
+  }
+  /* herladen terwijl je al binnen was: dan meteen de stand, geen tweede race */
+  function raceAlBinnen(){
+    RACE.binnen = true;
+    toonScherm('scherm-einde');
+    $('eindUit').textContent = '';
+    tekenRaceUit();
   }
   function raceEinde(b){
     RACE.uit = b; RACE.rijders = b.stand || RACE.rijders;
@@ -1595,9 +1639,9 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     el.innerHTML = '<p class="hand" style="font-size:1.4rem">de race is klaar</p><h1 id="raceKop">' + schoon(kop) + '</h1>' + (uit ? '<p class="lead">' + uit + '</p>' : '') +
       (RACE.duel ? '<div id="racePodium"></div>' : '') + '<div id="raceRest"' + (RACE.duel && lijst.length > 3 ? ' class="hide"' : '') + '>' + raceLijst(RACE.duel ? lijst.slice(3) : lijst.slice(0, 10).concat(mij && mij.rang > 10 ? [mij] : [])) + '</div>';
     if (RACE.duel && window.PODIUM){
-      var rang = PODIUM.rangen(lijst, function(a, c){ return a.af && c.af ? a.tijd === c.tijd : !a.af && !c.af && a.voort === c.voort; });
+      var rang = PODIUM.rangen(lijst, function(a, c){ return a.af && c.af ? a.tijd === c.tijd : !a.af && !c.af && a.ronde === c.ronde && a.bij === c.bij; });
       PODIUM.onthul($('racePodium'), lijst.slice(0, 3).map(function(r, i){
-        return { rang:rang[i], naam:r.naam, regel:tijdRij(r), punten:(r.af ? 1000 : 0) + (r.voort || 0),
+        return { rang:rang[i], naam:r.naam, regel:tijdRij(r), punten:(r.af ? 1000 : 0) + (r.ronde | 0) * 60,
                  beeld: window.AVATAR ? AVATAR.svg(r.naam, 120, r.av || '', { stemming:'blij' }) : '' };
       }), { klaar:function(){
         $('raceRest').classList.remove('hide');
@@ -1619,8 +1663,9 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
      patroon: [true, false, ...] per poort gaat voor goed. tempo: sneller dan
      echt (de motor rekent dan met grotere stappen). volgende: false laat de
      uitleg na een fout staan, om te zien dat hij blijft; doorrijden: false laat
-     hem in de rustige stand voor de poort wachten. */
-  var bot = { aan:false, goed:.8, patroon:null, leesTijd:.6, volgende:true, volgendeNa:.8, doorrijden:true, tempo:1, log:[] };
+     hem in de rustige stand voor de poort wachten. kies(vraag): in een race weet
+     de pagina het goede antwoord niet; een proef kan dan zelf een baan kiezen. */
+  var bot = { aan:false, goed:.8, patroon:null, leesTijd:.6, volgende:true, volgendeNa:.8, doorrijden:true, tempo:1, log:[], kies:null };
   window.poortBot = bot;
   function botLog(soort, extra){ if (!bot.aan) return; var r = { t:soort, k:k, fase:fase }; if (extra) for (var x in extra) r[x] = extra[x]; bot.log.push(r); }
   function botVraag(){
@@ -1630,7 +1675,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
       if (!vraag || k !== mijnK || (fase !== 'rijden' && fase !== 'wacht')) return;
       var wilGoed = Array.isArray(bot.patroon) && bot.patroon[k] !== undefined ? !!bot.patroon[k] : Math.random() < bot.goed;
       var open = [0, 1, 2].filter(function(b){ return vraag.banen[b]; });
-      var b = wilGoed ? vraag.goed : open.filter(function(x){ return x !== vraag.goed; })[0];
+      var b = bot.kies ? bot.kies(vraag, wilGoed) : wilGoed ? vraag.goed : open.filter(function(x){ return x !== vraag.goed; })[0];
       /* de ene keer met het toetsenbord, de andere keer met sturen */
       if (k % 2 || modus === 'rustig') kiesBaan(b);
       else { var nu = m.baanNu(), stap = b > nu ? 1 : -1; while (m.baanNu() !== b && magSturen()){ var voor = m.baanNu(); stuur(stap); if (m.baanNu() === voor) break; } }

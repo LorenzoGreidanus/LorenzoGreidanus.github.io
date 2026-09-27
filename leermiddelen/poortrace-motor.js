@@ -16,6 +16,7 @@
      m.poort(k, banen)  de antwoorden van poort k: [{tekst}, null, {tekst}] (null is dicht)
      m.uitslag(k, gekozen, goed)   het paneel kleurt, en het effect erbij
      m.snelheid(v), m.baan(i), m.stuur(-1|1), m.slip(), m.pauze(b), m.rijdDoor(), m.gas(b)
+     m.vanaf(k)         verder na een herlaad: het voertuig staat net voorbij poort k-1
      m.voort()          hoe ver je bent, van 0 (de start) tot 1 (de finish)
      m.rivalen(lijst)   in een race de anderen: [{ id, naam, voort }], voort van 0 tot 1.
                         Ze rijden als doorzichtige karretjes met hun naam erboven mee;
@@ -892,6 +893,12 @@ window.POORTMOTOR = (function(){
       wachtBij: function(k){ wachtK = k; wachtGemeld = false; },
       rijdDoor: function(){ wachtK = -1; wachtGemeld = false; },
       wacht: function(){ return wachtK >= 0 && wachtGemeld; },
+      /* verder na een herlaad midden in een race: het voertuig staat net voorbij poort k-1, de poorten ervoor zijn gehad */
+      vanaf: function(k){
+        var p = poorten[k - 1]; if (!p) return;
+        zCam = p.z + 400 - D; v = 0;
+        for (var i = 0; i < k && i < poorten.length; i++){ poorten[i].actief = false; poorten[i].gekozen = 0; }
+      },
       gas: function(b){ gasAan = !!b; },
       stop: function(){ loopt = false; racen = false; if (raf){ cancelAnimationFrame(raf); raf = 0; } },
       klok: function(){ return klok; },

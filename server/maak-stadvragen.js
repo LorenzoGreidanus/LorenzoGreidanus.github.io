@@ -10,8 +10,17 @@
 // per vak een bestand leermiddelen/stad-vragen/<vak>.json. De kamer haalt
 // dat op als hij het vak nodig heeft.
 //
-// Na een wijziging in de vragenbank: dit script opnieuw draaien, anders krijgt
-// De stad de nieuwe vragen niet. Het controleert ook of elke vraag compleet is.
+// Poortrace racet met dezelfde bestanden: in een race met vrienden of de klas
+// kiest en kijkt de spelkamer (server/kamer.js) de vragen na. Poortrace heeft
+// bij geschiedenis ook de jaartallen uit Tijdvakken sorteren; dat zijn geen
+// vragen maar gebeurtenissen, waar het spel zelf een vraag van maakt (de foute
+// jaartallen hangen af van het niveau). Die staan daarom los in ges.json, onder
+// lijsten: de gebeurtenissen en de namen van de tijdvakken. Arena leest alleen
+// de rijen en merkt er niets van.
+//
+// Na een wijziging in de vragenbank: dit script opnieuw draaien, anders krijgen
+// De stad en Poortrace de nieuwe vragen niet. Het controleert ook of elke vraag
+// compleet is.
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
@@ -72,10 +81,16 @@ function schoon(t){ return String(t == null ? "" : t); }
     (ctx.ONDERDELEN[vak] || []).forEach(o => { uit[o.id] = /^tv\d+$/.test(o.id) ? "tijdvak " + o.naam : o.naam; });
     return uit;
   }
+  /* losse lijsten waar een spel zelf vragen van maakt; zie boven */
+  function lijsten(vak){
+    if (vak !== "ges" || !Array.isArray(ctx.GEBEURTENISSEN_TIJDVAKKEN)) return undefined;
+    return { gebeurtenissen: ctx.GEBEURTENISSEN_TIJDVAKKEN.map(e => ({ tv: e.tv | 0, jaar: schoon(e.jaar), tekst: schoon(e.tekst), waarom: schoon(e.waarom) })),
+             tijdvakken: ctx.TIJDVAKKEN.map(x => schoon(x.naam).replace(/^\d+ /, "")) };
+  }
   function schrijf(vak, rijen){
     const bestand = path.join(UIT, vak + ".json");
     const inhoud = JSON.stringify({ vak, n: rijen.length, gemaakt: new Date().toISOString().slice(0, 10), delen: namen(vak),
-      kolommen: ["v", "o", "g", "u", "t", "n", "k", "extra"], rijen });
+      kolommen: ["v", "o", "g", "u", "t", "n", "k", "extra"], rijen, lijsten: lijsten(vak) });
     fs.writeFileSync(bestand, inhoud);
     totaal += rijen.length;
     console.log(vak + ": " + rijen.length + " vragen, " + Math.round(inhoud.length / 1024) + " kB");

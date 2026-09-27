@@ -20,13 +20,13 @@
 
    Wat hij niet aanraakt: de spelkamers en het klassement (/api/, /ws/, /q),
    want die moeten altijd live zijn. */
-var VERSIE = "v235";
+var VERSIE = "v236";
 var KERN = "kern-" + VERSIE, VOORRAAD = "voorraad-" + VERSIE;
 /* hoe lang er op het net gewacht wordt voor de voorraad het overneemt */
 var NETGEDULD = 3000;
 var STARTSET = [
   "/leermiddelen/", "/leermiddelen/index.html", "/leermiddelen/mee.html", "/leermiddelen/basis.css", "/leermiddelen/thema.js",
-  "/leermiddelen/strijd.js", "/leermiddelen/naamfilter.js", "/leermiddelen/adaptief.js", "/leermiddelen/klas.js", "/leermiddelen/spel.js", "/leermiddelen/spel.css", "/leermiddelen/voorlezen.js", "/leermiddelen/iconen.css", "/leermiddelen/cosmetica.js", "/leermiddelen/wapens.js", "/leermiddelen/avatar.js", "/leermiddelen/podium.js", "/leermiddelen/mijnwerker.html", "/leermiddelen/mijnwerker-motor.js", "/leermiddelen/poortrace.html", "/leermiddelen/poortrace-motor.js", "/leermiddelen/kaarttoren.html", "/leermiddelen/kaarttoren.css", "/leermiddelen/kaarttoren-motor.js", "/leermiddelen/kaarttoren-vakkaarten.js", "/leermiddelen/kaarttoren-figuren.js", "/leermiddelen/kaarttoren-scherm.js", "/leermiddelen/verbinding.js", "/leermiddelen/profiel.js", "/leermiddelen/bank.js", "/fonts.css", "/manifest.json", "/vangnet.js"
+  "/leermiddelen/strijd.js", "/leermiddelen/naamfilter.js", "/leermiddelen/adaptief.js", "/leermiddelen/klas.js", "/leermiddelen/spel.js", "/leermiddelen/spel.css", "/leermiddelen/voorlezen.js", "/leermiddelen/iconen.css", "/leermiddelen/cosmetica.js", "/leermiddelen/wapens.js", "/leermiddelen/avatar.js", "/leermiddelen/podium.js", "/leermiddelen/mijnwerker.html", "/leermiddelen/mijnwerker-motor.js", "/leermiddelen/poortrace.html", "/leermiddelen/poortrace-motor.js", "/leermiddelen/poortrace-regels.js", "/leermiddelen/kaarttoren.html", "/leermiddelen/kaarttoren.css", "/leermiddelen/kaarttoren-motor.js", "/leermiddelen/kaarttoren-vakkaarten.js", "/leermiddelen/kaarttoren-figuren.js", "/leermiddelen/kaarttoren-scherm.js", "/leermiddelen/verbinding.js", "/leermiddelen/profiel.js", "/leermiddelen/bank.js", "/fonts.css", "/manifest.json", "/vangnet.js"
 ];
 
 self.addEventListener("install", function(e){
