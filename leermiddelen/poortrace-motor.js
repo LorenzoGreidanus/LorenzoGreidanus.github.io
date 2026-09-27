@@ -16,6 +16,10 @@
      m.poort(k, banen)  de antwoorden van poort k: [{tekst}, null, {tekst}] (null is dicht)
      m.uitslag(k, gekozen, goed)   het paneel kleurt, en het effect erbij
      m.snelheid(v), m.baan(i), m.stuur(-1|1), m.slip(), m.pauze(b), m.rijdDoor(), m.gas(b)
+     m.voort()          hoe ver je bent, van 0 (de start) tot 1 (de finish)
+     m.rivalen(lijst)   in een race de anderen: [{ id, naam, voort }], voort van 0 tot 1.
+                        Ze rijden als doorzichtige karretjes met hun naam erboven mee;
+                        tussen twee meldingen schuiven ze in hun eigen tempo door.
 
    Tekenlessen uit het Zombieveld: niets opbouwen in de lus (vaste arrays, een
    poel voor de deeltjes), geen getBoundingClientRect in de lus (alleen bij een
@@ -195,6 +199,8 @@ window.POORTMOTOR = (function(){
     for (var di = 0; di < DEEL; di++) dl.push({ aan:false, x:0, y:0, vx:0, vy:0, t:0, max:1, soort:0, kleur:'#fff', r:3, a:0 });
     var spoorX = new Float32Array(24), spoorN = 0, spoorTik = 0;
     var remSporen = [];
+    /* de anderen in een race: waar ze volgens de laatste melding zijn (doel), hoe snel ze gaan (v) en waar ze nu getekend staan (z) */
+    var rivalen = [], RIVAALKLEUR = ['#F26749', '#EA9836', '#2f7d52', '#6b3fa0', '#83A5F2', '#D9A21B', '#2f9e8f', '#14224C'];
 
     function nu(){ return performance.now(); }
     function hash(i){ var h = (i * 2654435761 + seed * 97) >>> 0; h ^= h >>> 15; h = Math.imul(h, 2246822507) >>> 0; h ^= h >>> 13; return h >>> 0; }
@@ -454,6 +460,12 @@ window.POORTMOTOR = (function(){
         if (opnameKlok >= .2 && !gefinisht){ opnameKlok -= .2; opname.z.push(Math.round((zAuto() - zStart) / 10)); opname.x.push(Math.round(x * 100)); }
       }
       zCam += v * dt;
+      /* de anderen schuiven door: naar hun laatste plek plus wat ze sindsdien gereden kunnen hebben, nooit meer dan anderhalve melding vooruit */
+      for (var ri = 0; ri < rivalen.length; ri++){
+        var rv = rivalen[ri]; rv.sinds += dt;
+        var naar = rv.doel + rv.v * Math.min(rv.sinds, 1.5);
+        rv.z += (naar - rv.z) * Math.min(1, dt * 2.5);
+      }
       /* sturen: naar het midden van de gekozen baan */
       var doelX = LAAN[baanDoel], dx = doelX - x, stap = 3.4 * dt;
       var oudX = x;
@@ -640,11 +652,29 @@ window.POORTMOTOR = (function(){
           var s = PS[n]; if (s > 0){ ctx.globalAlpha = .55; tekenVoertuig(ctx, spook.voertuig || 'kart', '#83A5F2', PX[n] + spookX() * HALF * s, PY[n], (voertuig === 'fiets' || voertuig === 'step' ? 700 : 1100) * s, fase, false); ctx.globalAlpha = 1; }
         }
       }
+      /* de anderen in een race */
+      for (var ri = 0; ri < rivalen.length; ri++){
+        var rv = rivalen[ri];
+        if (rv.z >= z && rv.z < z + SEG && rv.z - zCam > D * .7) tekenRivaal(rv, n);
+      }
       /* de poorten */
       for (var k = 0; k < poorten.length; k++){
         var p = poorten[k];
         if (p && p.actief && p.z >= z && p.z < z + SEG) tekenPoort(p, n);
       }
+    }
+    function tekenRivaal(rv, n){
+      var s = PS[n]; if (s <= 0) return;
+      var bw = 1100 * s, cx = PX[n] + LAAN[rv.baan] * HALF * s, by = PY[n];
+      if (bw < 3) return;
+      ctx.globalAlpha = .6; tekenVoertuig(ctx, 'kart', rv.kleur, cx, by, bw, fase, false); ctx.globalAlpha = 1;
+      /* de naam erboven, zodra hij te lezen is */
+      if (bw < 26) return;
+      var gr = Math.max(10, Math.min(15, bw * .16)), ty = by - bw * .92;
+      ctx.font = '700 ' + gr + 'px Poppins, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      var tw = ctx.measureText(rv.naam).width + gr;
+      ctx.fillStyle = 'rgba(15,26,61,.78)'; rrect(ctx, cx - tw / 2, ty - gr * .8, tw, gr * 1.6, gr * .8); ctx.fill();
+      ctx.fillStyle = '#FFFFFF'; ctx.fillText(rv.naam, cx, ty + 1);
     }
     function molenWieken(n, wx){
       var s = PS[n]; if (s <= 0) return;
@@ -819,7 +849,7 @@ window.POORTMOTOR = (function(){
         if (r.voertuig) voertuig = r.voertuig; if (r.kleur) kleur = kleurVan(r.kleur); if (r.spoor) spoor = r.spoor;
         spook = r.spook && r.spook.z && r.spook.z.length ? r.spook : null;
         for (var i = 0; i < DEEL; i++) dl[i].aan = false;
-        spoorN = 0; paneelVan = -1;
+        spoorN = 0; paneelVan = -1; rivalen = [];
         loopt = true; wek();
       },
       start: function(){ racen = true; pauze = false; wek(); },
@@ -867,6 +897,25 @@ window.POORTMOTOR = (function(){
       klok: function(){ return klok; },
       opname: function(){ return { z:opname.z.slice(), x:opname.x.slice(), t:klok, voertuig:voertuig }; },
       spookVerschil: spookVerschil,
+      voort: function(){ return finishZ < 1e8 ? Math.max(0, Math.min(1, (zAuto() - zStart) / (finishZ - zStart))) : 0; },
+      rivalen: function(lijst){
+        var span = finishZ < 1e8 ? finishZ - zStart : 0, nieuw = [];
+        (lijst || []).forEach(function(r){
+          var z = zStart + Math.max(0, Math.min(1, r.voort || 0)) * span, oud = null;
+          for (var i = 0; i < rivalen.length; i++) if (rivalen[i].id === r.id) oud = rivalen[i];
+          if (!oud){
+            var h = 0, t = String(r.id); for (var j = 0; j < t.length; j++) h = (h * 31 + t.charCodeAt(j)) >>> 0;
+            oud = { id:r.id, baan:h % 3, kleur:RIVAALKLEUR[(h >>> 3) % RIVAALKLEUR.length], z:z, doel:z, v:0, sinds:0 };
+          } else {
+            /* hoe snel hij ging sinds de vorige melding: daarmee rijdt hij tot de volgende door */
+            oud.v = z > oud.doel ? (z - oud.doel) / Math.max(.4, oud.sinds) : 0;
+            oud.doel = z; oud.sinds = 0;
+          }
+          oud.naam = String(r.naam || '').slice(0, 16);
+          nieuw.push(oud);
+        });
+        rivalen = nieuw;
+      },
       uiterlijk: function(vt, kl, sp){ if (vt) voertuig = vt; if (kl) kleur = kleurVan(kl); if (sp) spoor = sp; teken(); },
       zetTempo: function(t){ tempo = t || 1; },
       /* voor de proeven: wat de motor nu doet */

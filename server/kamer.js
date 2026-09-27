@@ -35,7 +35,14 @@ const AFTELLEN = 3000;                       /* een duel begint drie seconden na
 const SAMEN_MAX = 4;                         /* Zwaardvechter samen: tot vier in een arena; de maker start, of het begint vanzelf als hij vol is */
 const OPRUIMEN_NA = 3 * 60 * 60 * 1000;     /* een kamer leeft hoogstens drie uur */
 const NA_EINDE = 30 * 60 * 1000;             /* na de eindstand nog een half uur te bekijken */
-const SPELLEN_STRIJD = { toren: "Torenverdediging", zwaard: "Zwaardvechter" };
+const SPELLEN_STRIJD = { toren: "Torenverdediging", zwaard: "Zwaardvechter", poortrace: "Poortrace" };
+/* Poortrace als race: met vrienden tot acht in een kamer, of met de hele klas.
+   Wie het eerst over de finish komt wint. De kamer klokt zelf, van de start tot
+   de melding: de klok van een browser is te makkelijk te verzetten. Op het
+   hoogste tempo kost een poort ruim vier seconden; wie meldt dat hij sneller
+   ging dan RACE_POORT_MS per poort, telt niet. Met vrienden is de race drie
+   minuten na de eerste finish vanzelf klaar, ook als er een is afgehaakt. */
+const RACE_MAX = 8, RACE_POORTEN = 15, RACE_POORT_MS = 3500, RACE_UITLOOP = 3 * 60 * 1000;
 /* spellen met rollen op telefoons: het bord draait het spel, de kamer deelt kaarten uit en geeft acties door */
 const SPELLEN_ROLLEN = { polis: "De vergadering van de klas", meetlat: "Langs de meetlat", staten: "De vergadering", berlijn: "De Conferentie van Berlijn", standen: "Stem per stand", crisis: "De crisis", teken: "Tekenslag" };
 const KAART_MAX = 12000, BORD_MAX = 40000, ACTIE_MAX = 4000;
@@ -297,6 +304,7 @@ export class Kamer extends DurableObject {
   async bewaar(){ this.stand.laatst = Date.now(); await this.ctx.storage.put("stand", this.stand); }
   get strijd(){ return !!this.stand && this.stand.spel === "strijd"; }
   get rollen(){ return !!this.stand && this.stand.spel === "rollen"; }
+  get race(){ return this.strijd && this.stand.game === "poortrace"; }
 
   /* ---------- binnenkomend ---------- */
   async fetch(req){
@@ -384,7 +392,7 @@ export class Kamer extends DurableObject {
       if (!/^[A-Za-z0-9_-]{8,40}$/.test(sid)) return json({ fout: "geen geldig kenmerk" }, 400);
       if (this.stand.fase === "einde") return json({ fout: "dit potje is al afgelopen" }, 410);
       const vol = this.stand.duel ? this.samenMax() : MAX_SPELERS;
-      if (!this.stand.spelers[sid] && Object.keys(this.stand.spelers).length >= vol) return json({ fout: this.stand.duel ? (vol === 2 ? "dit duel heeft al twee spelers" : "deze kamer zit vol: vier spelers") : "de kamer zit vol" }, 409);
+      if (!this.stand.spelers[sid] && Object.keys(this.stand.spelers).length >= vol) return json({ fout: this.stand.duel ? (vol === 2 ? "dit duel heeft al twee spelers" : "deze kamer zit vol: " + (vol === 4 ? "vier" : vol) + " spelers") : "de kamer zit vol" }, 409);
       /* wie te laat is voor een potje samen, kan er niet meer in */
       if (this.stand.duel && !this.stand.spelers[sid] && this.stand.fase !== "lobby" && this.stand.fase !== "aftellen") return json({ fout: "dit potje is al begonnen" }, 410);
     }
@@ -405,6 +413,8 @@ export class Kamer extends DurableObject {
         : { naam, av, pid: sleutelMaken(4), score: 0, antw: {}, sinds: Date.now() };
       /* terug binnen de wachttijd: dan hoeft hij niet meer weg */
       if (this.wegKlok && this.wegKlok[sid]){ clearTimeout(this.wegKlok[sid]); delete this.wegKlok[sid]; }
+      /* wie pas instapt als de race al loopt, krijgt zijn eigen startschot */
+      if (!bestaand && this.race && this.stand.fase === "bezig") this.stand.spelers[sid].raceStart = Date.now();
       /* terug in een arena die al loopt: zijn held staat de volgende ronde weer op */
       if (bestaand && this.motor && this.motorSpel === "zwaard" && this.motor.terug){
         const mi = this.motorSids.indexOf(sid);
@@ -537,7 +547,9 @@ export class Kamer extends DurableObject {
     if (!st || st.spel === "klas" || !st.spelers[sid]) return;
     const inLobby = st.fase === "lobby" || st.fase === "aftellen";
     const inArena = this.strijd && st.fase === "bezig" && this.motor && this.motorSpel === "zwaard" && this.motorSids.indexOf(sid) >= 0;
-    if (!inLobby && !inArena) return;
+    /* in een race: wie onderweg wegvalt en niet terugkomt, houdt de finish niet op */
+    const inRace = this.race && st.fase === "bezig" && !st.spelers[sid].af;
+    if (!inLobby && !inArena && !inRace) return;
     this.wegKlok = this.wegKlok || {};
     clearTimeout(this.wegKlok[sid]);
     this.wegKlok[sid] = setTimeout(() => {
@@ -580,6 +592,7 @@ export class Kamer extends DurableObject {
     await this.bewaar();
     this.zegSpelers();
     if (this.strijd) this.planStand();
+    if (this.race) await this.raceKlaar(false);
   }
 
 
@@ -672,6 +685,7 @@ export class Kamer extends DurableObject {
     const a = this.stand.alarm || {};
     if (a.wat === "sluit" && !this.strijd && this.stand.fase === "vraag" && a.i === this.stand.i) return this.sluitVraag();
     if (a.wat === "duelstart" && this.strijd && this.stand.fase === "aftellen") return this.strijdStart();
+    if (a.wat === "raceslot" && this.race && this.stand.fase === "bezig") return this.strijdKlaar();
     if (a.wat === "opruimen"){
       this.motorStop();
       this.ctx.getWebSockets().forEach(ws => { try { ws.close(1000, "de kamer is gesloten"); } catch (e){} });
@@ -683,8 +697,8 @@ export class Kamer extends DurableObject {
   /* ======================================================================
      De Klasstrijd
      ====================================================================== */
-  /* hoeveel er in een potje samen passen: Zwaardvechter vier, Torenverdediging twee */
-  samenMax(){ return this.stand && this.stand.duel && this.stand.game === "zwaard" ? SAMEN_MAX : 2; }
+  /* hoeveel er in een potje samen passen: Zwaardvechter vier, een race acht, Torenverdediging twee */
+  samenMax(){ return this.stand && this.stand.duel && this.stand.game === "zwaard" ? SAMEN_MAX : this.stand && this.stand.duel && this.stand.game === "poortrace" ? RACE_MAX : 2; }
   /* Zwaardvechter samen begint pas als iedereen in de lobby klaar is; andere spellen hebben geen lobbykeuze */
   lobbyKlaar(){
     const st = this.stand; if (!st || st.game !== "zwaard") return true;
@@ -943,6 +957,7 @@ export class Kamer extends DurableObject {
       return;
     }
     if (st.fase !== "bezig") return;
+    if (this.race) return this.raceBericht(sp, m);
     if (m.t === "stand"){
       const nu0 = Date.now();
       if (sp.standLaatst && nu0 - sp.standLaatst < 400) return;   /* vaker dan dit hoeft niet */
@@ -1004,6 +1019,56 @@ export class Kamer extends DurableObject {
       if (alle.length && alle.every(id => st.spelers[id].af)) return this.strijdKlaar();
     }
   }
+  /* ---------- Poortrace: de race ----------
+     Een speler meldt hoe ver hij is: ronde is het aantal poorten dat hij had,
+     gehaald hoeveel daarvan goed, voort de plek op de baan in promille. Alles
+     loopt alleen op en blijft binnen wat de klok toelaat. Over de finish telt
+     de tijd van de kamer, niet die van de speler. */
+  async raceBericht(sp, m){
+    const st = this.stand, nu = Date.now(), sinds = nu - (sp.raceStart || st.gestart || nu);
+    if (sp.af) return;
+    const dak = Math.min(RACE_POORTEN, 1 + Math.floor(sinds / RACE_POORT_MS));
+    if (m.t === "stand"){
+      if (sp.standLaatst && nu - sp.standLaatst < 400) return;
+      sp.standLaatst = nu;
+      sp.ronde = Math.max(sp.ronde, Math.min(getal(m.ronde, RACE_POORTEN), dak));
+      sp.gehaald = Math.max(sp.gehaald, Math.min(getal(m.gehaald, RACE_POORTEN), sp.ronde));
+      sp.punten = Math.max(sp.punten, Math.min(getal(m.punten, 99999), sp.ronde * 400));
+      /* nooit verder op de baan dan de volgende poort */
+      sp.voort = Math.max(sp.voort || 0, Math.min(getal(m.voort, 1000), Math.round(1000 * (sp.ronde + 1) / (RACE_POORTEN + .4))));
+      sp.laatst = nu;
+      await this.bewaar();
+      this.planStand();
+      return;
+    }
+    if (m.t === "af"){
+      /* alle poorten gehad, en niet sneller dan kan */
+      if (getal(m.ronde, 99) < RACE_POORTEN || sinds < RACE_POORTEN * RACE_POORT_MS) return;
+      sp.af = true; sp.afTijd = nu; sp.tijd = sinds; sp.ronde = RACE_POORTEN; sp.voort = 1000;
+      sp.gehaald = Math.max(sp.gehaald, Math.min(getal(m.gehaald, RACE_POORTEN), RACE_POORTEN));
+      sp.punten = Math.max(sp.punten, Math.min(getal(m.punten, 99999), RACE_POORTEN * 400));
+      await this.bewaar();
+      this.planStand();
+      return this.raceKlaar(true);
+    }
+  }
+  /* Klaar als iedereen binnen is (wie wegging telt niet mee). Met vrienden
+     loopt na de eerste finish de klok van de uitloop. */
+  async raceKlaar(finish){
+    const st = this.stand;
+    if (!st || st.fase !== "bezig") return;
+    const ids = Object.keys(st.spelers), binnen = ids.filter(s => st.spelers[s].af).length;
+    if (!binnen) return;
+    if (ids.every(s => st.spelers[s].af || st.spelers[s].weg)) return this.strijdKlaar();
+    if (finish && st.duel && binnen === 1) await this.zetAlarm({ wat: "raceslot" }, RACE_UITLOOP);
+  }
+  /* de volgorde in een race: wie binnen is op tijd, dan wie het verst kwam; wie wegging achteraan */
+  raceVolgorde(a, b){
+    if (a.af !== b.af) return a.af ? -1 : 1;
+    if (a.af) return a.tijd - b.tijd || a.naam.localeCompare(b.naam);
+    if (a.weg !== b.weg) return a.weg ? 1 : -1;
+    return b.voort - a.voort || b.gehaald - a.gehaald || b.punten - a.punten || a.naam.localeCompare(b.naam);
+  }
   /* Hoeveel rondes er op zijn hoogst gespeeld kunnen zijn. Een speler meldt
      zelf hoe ver hij is en dat bord hangt vooraan in de klas, dus het loont om
      er een groot getal in te zetten. Narekenen kan de kamer niet, maar de klok
@@ -1025,8 +1090,10 @@ export class Kamer extends DurableObject {
     return Object.keys(st.spelers).map(sid => {
       const sp = st.spelers[sid];
       return { sid: sp.pid, naam: sp.naam, av: sp.av || "", ronde: sp.ronde, gehaald: sp.gehaald, leven: sp.leven, punten: sp.punten,
-               af: !!sp.af, aanvallen: sp.aanvallen || 0, aan: this.aanwezig(sid), stijl: sp.stijl || "", klaar: !!sp.klaar, weg: !!sp.weg };
-    }).sort((a, b) => (this.stand.duel && a.af !== b.af) ? (a.af ? 1 : -1)   /* in een duel wint wie overeind blijft */
+               af: !!sp.af, aanvallen: sp.aanvallen || 0, aan: this.aanwezig(sid), stijl: sp.stijl || "", klaar: !!sp.klaar, weg: !!sp.weg,
+               voort: sp.voort || 0, tijd: sp.tijd || 0 };
+    }).sort((a, b) => this.race ? this.raceVolgorde(a, b)
+        : (this.stand.duel && a.af !== b.af) ? (a.af ? 1 : -1)   /* in een duel wint wie overeind blijft */
         : (b.gehaald - a.gehaald || b.punten - a.punten || (a.af === b.af ? 0 : a.af ? 1 : -1) || a.naam.localeCompare(b.naam)))
       .map((r, i) => Object.assign(r, { rang: i + 1 }));
   }
@@ -1045,7 +1112,9 @@ export class Kamer extends DurableObject {
     /* aan telt mee: wie zijn tabblad dicht deed staat nog in de lijst maar
        merkt niets van je fouten, en dan gooi je een goed antwoord weg */
     const doelen = (mij && mij.af) ? lijst.filter(r => !r.af && r.aan && r.sid !== pid).map(r => ({ sid: r.sid, naam: r.naam, av: r.av || "", ronde: r.ronde })) : undefined;
-    return { t: "stand", jouw: mij ? { rang: mij.rang, van: lijst.length, af: !!mij.af } : null, bezig, koploper: kop, fase: this.stand.fase, maten, doelen, max: this.stand.duel ? this.samenMax() : undefined,
+    /* in een race ziet iedereen iedereen: waar ze op de baan zijn, en wie er al binnen is */
+    const rijders = this.race ? lijst.map(r => ({ sid: r.sid, naam: r.naam, av: r.av || "", voort: r.voort, ronde: r.ronde, af: r.af, tijd: r.tijd, rang: r.rang, weg: r.weg, aan: r.aan })) : undefined;
+    return { t: "stand", jouw: mij ? { rang: mij.rang, van: lijst.length, af: !!mij.af } : null, bezig, koploper: kop, fase: this.stand.fase, maten, doelen, rijders, max: this.stand.duel ? this.samenMax() : undefined,
              tegen: tegen ? { naam: tegen.naam, av: tegen.av || "", ronde: tegen.ronde, leven: tegen.leven, punten: tegen.punten, af: tegen.af, aan: tegen.aan } : null };
   }
   stuurStand(){

@@ -185,6 +185,11 @@ table.stand .lev{font-weight:600}
 :root[data-theme="dark"] .badge{color:#8fd3a8}:root[data-theme="dark"] .badge.af{color:#f2a08f}:root[data-theme="dark"] .badge.weg{color:var(--muted)}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .badge{color:#8fd3a8}:root:not([data-theme="light"]) .badge.af{color:#f2a08f}:root:not([data-theme="light"]) .badge.weg{color:var(--muted)}}
 table.stand td.naam .avatar{margin-right:10px}
+/* Poortrace: een balkje per leerling van start tot finish */
+.baanbalk{position:relative;display:block;min-width:120px;height:12px;border-radius:999px;background:var(--kaart2);overflow:hidden}
+.baanbalk i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:var(--ocean);transition:width .9s linear}
+tr.binnen .baanbalk i{background:var(--goed)}
+body.bord .baanbalk{height:18px;min-width:220px}
 
 /* ---------- speler ---------- */
 .wacht{text-align:center;padding:40px 10px}
@@ -239,7 +244,8 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
   <h1>Klasstrijd</h1>
   <p style="margin-top:8px;max-width:62ch">Iedereen speelt Torenverdediging of Zwaardvechter op zijn eigen scherm. De docent start
     iedereen tegelijk, de stand staat live op het digibord, en wie vijf vragen op rij goed heeft stuurt
-    extra fouten naar de anderen. Wie het langst overleeft wint.</p>
+    extra fouten naar de anderen. Wie het langst overleeft wint. Of kies Poortrace: een race over vijftien
+    poorten, en wie het eerst over de finish komt wint.</p>
   <div class="twee">
     <div class="kaart">
       <p class="eyebrow">meedoen</p>
@@ -297,8 +303,8 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     <div class="hostkop">
       <div>
         <p class="eyebrow" id="hOpzet2"></p>
-        <h1>De strijd loopt</h1>
-        <div class="statusrij"><div><b id="hBezig">0</b> <span>nog in het spel</span></div><div><b id="hAf">0</b> <span>af</span></div><div><b id="hKop">–</b> <span>koploper</span></div></div>
+        <h1 id="hLoopt">De strijd loopt</h1>
+        <div class="statusrij"><div><b id="hBezig">0</b> <span id="hBezigW">nog in het spel</span></div><div><b id="hAf">0</b> <span id="hAfW">af</span></div><div><b id="hKop">–</b> <span>koploper</span></div></div>
       </div>
       <div class="codevak"><small>code, nog mee te doen</small><b id="hCode2">····</b></div>
     </div>
@@ -311,7 +317,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
 
   <div id="h-einde" class="hide">
     <p class="eyebrow">eindstand</p>
-    <h1>Dat was de Klasstrijd</h1>
+    <h1 id="hEindKop">Dat was de Klasstrijd</h1>
     <div id="hPodium"></div>
     <table class="stand" id="hEindTabel"><thead><tr><th>#</th><th>naam</th><th>ronde</th><th>punten</th><th>aanvallen</th></tr></thead><tbody></tbody></table>
     <div class="hostknoppen">
@@ -348,8 +354,13 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     { id:'toren', naam:'Torenverdediging', uit:'bouw torens, houd de fouten uit de klas', kleur:'#F26749',
       ico:'<path d="M5 21V8h14v13z"/><path d="M5 8V4h2.5v2h3V4h3v2h3V4H19v4"/><path d="M9.5 21v-5a2.5 2.5 0 0 1 5 0v5"/>' },
     { id:'zwaard', naam:'Zwaardvechter', uit:'loop, sla en overleef in de arena', kleur:'#14224C',
-      ico:'<path d="M5 19 15 9M15 9l3-3-2-2-3 3M5 19l-2 2 2 0 0-2zM12 13 7 8M7 8 5 10"/>' }
+      ico:'<path d="M5 19 15 9M15 9l3-3-2-2-3 3M5 19l-2 2 2 0 0-2zM12 13 7 8M7 8 5 10"/>' },
+    { id:'poortrace', naam:'Poortrace', uit:'een race: wie is het eerst over de finish', kleur:'#204ECF',
+      ico:'<path d="M5 21 9 6M19 21 15 6"/><rect x="7" y="3" width="10" height="4" rx="1"/><path d="M12 11v2M12 16v3"/>' }
   ];
+  /* Poortrace is een race: de stand is wie het verst is, en wie binnen is staat op tijd */
+  function isRace(h){ return !!h && h.game === 'poortrace'; }
+  function tijdTekst(ms){ var s = (ms || 0) / 1000, m = Math.floor(s / 60), r = s - m * 60; return m + ':' + (r < 10 ? '0' : '') + r.toFixed(1).replace('.', ','); }
   var VAKKEN = [
     { id:'reken', naam:'Rekenen' }, { id:'ned', naam:'Nederlands' }, { id:'eng', naam:'Engels' },
     { id:'ges', naam:'Geschiedenis' }, { id:'aard', naam:'Aardrijkskunde' },
@@ -409,6 +420,14 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     if (vak === 'eigen' && !lijstKiezer && window.EIGEN) lijstKiezer = EIGEN.kiezer($('lijstKiezer'), { code: LIJSTCODE, gekozen: function(m){ lijstM = m; }, leeg: function(){ lijstM = null; } });
   }
   if (LIJSTCODE) vak = 'eigen';
+  /* vanuit een spel: ?spel=poortrace&vak=ges&n=havo zet de keuze alvast klaar */
+  (function(){
+    var q = new URLSearchParams(location.search), sp = q.get('spel'), vk = q.get('vak'), nv = q.get('n');
+    if (SPELLEN.some(function(x){ return x.id === sp; })) spel = sp;
+    if (!LIJSTCODE && VAKKEN.some(function(x){ return x.id === vk && x.id !== 'eigen'; })) vak = vk;
+    if (nv === 'hv') nv = 'havo';
+    if (NIVEAUS.some(function(x){ return x.id === nv; })) niveau = nv;
+  })();
   tekenKeuze();
 
   $('openBtn').addEventListener('click', function(){
@@ -494,6 +513,15 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     $('hCode').textContent = h.code; $('hCode2').textContent = h.code;
     $('hLink').textContent = location.host.replace(/^www\./, '') + '/q';
     $('hOpzet').textContent = opzetTekst(h); $('hOpzet2').textContent = opzetTekst(h);
+    var race = isRace(h);
+    $('hLoopt').textContent = race ? 'De race loopt' : 'De strijd loopt';
+    $('hBezigW').textContent = race ? 'nog onderweg' : 'nog in het spel';
+    $('hAfW').textContent = race ? 'binnen' : 'af';
+    $('hEindKop').textContent = race ? 'Dat was de race' : 'Dat was de Klasstrijd';
+    $('hTabel').querySelector('thead').innerHTML = race ? '<tr><th>#</th><th>naam</th><th>baan</th><th>poort</th><th>goed</th><th></th></tr>'
+      : '<tr><th>#</th><th>naam</th><th>ronde</th><th>levens</th><th>punten</th><th>aanvallen</th><th></th></tr>';
+    $('hEindTabel').querySelector('thead').innerHTML = race ? '<tr><th>#</th><th>naam</th><th>tijd</th><th>goed</th></tr>'
+      : '<tr><th>#</th><th>naam</th><th>ronde</th><th>punten</th><th>aanvallen</th></tr>';
     verbind({ code:h.code, query:'rol=host&sleutel=' + encodeURIComponent(h.sleutel), rol:'host' }, hostBericht);
   }
   function hostBericht(m){
@@ -521,7 +549,17 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     $('hAantal').textContent = lijst.length ? lijst.length + (lijst.length === 1 ? ' leerling' : ' leerlingen') : 'Nog niemand. Zodra iemand meedoet staat zijn bijnaam hier.';
     $('hStart').disabled = !lijst.length;
   }
+  function raceRijen(lijst, metStatus, rang){
+    return lijst.map(function(s, i){
+      var r = rang ? rang[i] : s.rang, poort = s.af ? 15 : Math.min(15, (s.ronde | 0) + 1);
+      return '<tr class="' + (r === 1 ? 'top' : '') + (s.af ? ' binnen' : '') + '"><td>' + r + '</td><td class="naam">' + (window.AVATAR ? AVATAR.svg(s.naam, 30, s.av) : '') + schoonHtml(s.naam) + '</td>' +
+        (metStatus ? '<td><span class="baanbalk"><i style="width:' + ((s.af ? 1000 : s.voort || 0) / 10).toFixed(1) + '%"></i></span></td><td>' + (s.af ? '15' : poort + ' van 15') + '</td><td>' + (s.gehaald | 0) + '</td>' +
+          '<td>' + (s.af ? '<span class="badge">binnen in ' + tijdTekst(s.tijd) + '</span>' : s.weg ? '<span class="badge weg">gestopt</span>' : s.aan ? '<span class="badge weg">rijdt</span>' : '<span class="badge weg">even weg</span>') + '</td>'
+        : '<td>' + (s.af ? tijdTekst(s.tijd) : 'poort ' + poort) + '</td><td>' + (s.gehaald | 0) + ' van 15</td>') + '</tr>';
+    }).join('');
+  }
   function rijen(lijst, metStatus, rang){
+    if (isRace(host)) return raceRijen(lijst, metStatus, rang);
     return lijst.map(function(s, i){
       var r = rang ? rang[i] : s.rang;
       return '<tr class="' + (r === 1 ? 'top' : '') + (s.af ? ' af' : '') + '"><td>' + r + '</td><td class="naam">' + (window.AVATAR ? AVATAR.svg(s.naam, 30, s.av) : '') + schoonHtml(s.naam) + '</td>' +
@@ -533,7 +571,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     var lijst = m.spelers || [];
     $('hBezig').textContent = m.bezig;
     $('hAf').textContent = lijst.filter(function(s){ return s.af; }).length;
-    $('hKop').textContent = lijst[0] ? lijst[0].naam + ' (ronde ' + lijst[0].ronde + ')' : '–';
+    $('hKop').textContent = !lijst[0] ? '–' : isRace(host) ? lijst[0].naam : lijst[0].naam + ' (ronde ' + lijst[0].ronde + ')';
     $('hTabel').querySelector('tbody').innerHTML = rijen(lijst, true);
   }
   function hostEinde(m){
@@ -542,11 +580,14 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     /* Wie even ver kwam (evenveel gehaald, evenveel punten) deelt de plek. Onder
        het podium de rest vanaf plek 4, net als bij de Klasquiz. */
     var stand = m.stand || [];
-    var rang = PODIUM.rangen(stand, function(a, b){ return a.gehaald === b.gehaald && a.punten === b.punten && !!a.af === !!b.af; });
+    var race = isRace(host);
+    var rang = PODIUM.rangen(stand, race ? function(a, b){ return a.af && b.af ? a.tijd === b.tijd : !a.af && !b.af && a.voort === b.voort; }
+      : function(a, b){ return a.gehaald === b.gehaald && a.punten === b.punten && !!a.af === !!b.af; });
     $('hEindTabel').querySelector('tbody').innerHTML = rijen(stand.slice(3), false, rang.slice(3));
     $('hEindTabel').classList.add('hide');
     PODIUM.onthul($('hPodium'), stand.slice(0, 3).map(function(s, i){
-      return { rang:rang[i], naam:s.naam, regel:'ronde ' + s.ronde + ' · ' + s.punten + ' punten', punten:(s.gehaald || 0) + (s.punten || 0),
+      return { rang:rang[i], naam:s.naam, regel: race ? (s.af ? tijdTekst(s.tijd) + ' · ' + (s.gehaald | 0) + ' goed' : 'poort ' + Math.min(15, (s.ronde | 0) + 1)) : 'ronde ' + s.ronde + ' · ' + s.punten + ' punten',
+               punten: race ? (s.af ? 1000 : 0) + (s.voort || 0) : (s.gehaald || 0) + (s.punten || 0),
                beeld: window.AVATAR ? AVATAR.svg(s.naam, 120, s.av, { stemming:'blij' }) : '' };
     }), { klaar:function(){ $('hEindTabel').classList.toggle('hide', stand.length <= 3); } });
     try { localStorage.removeItem('lg-strijd-host'); } catch (e){}
@@ -594,8 +635,8 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     toon('s-speler');
     $('pWachtTekst').textContent = 'Wacht tot de docent start';
     $('pUit').textContent = 'Je doet mee als ' + naam + ' aan ' + naamVan(SPELLEN, j.game) + ', ' + naamVan(VAKKEN, j.vak) + ' op ' + naamVan(NIVEAUS, j.niveau) + '.';
-    /* al begonnen: meteen het spel in */
-    if (j.fase === 'bezig'){ location.href = spelLink(code, naam, j); return; }
+    /* al begonnen: meteen het spel in. Een race met vrienden heeft zijn wachtkamer in het spel zelf: daar start de maker. */
+    if (j.fase === 'bezig' || (j.duel && j.game === 'poortrace')){ location.href = spelLink(code, naam, j); return; }
     verbind({ code:code, rol:'speler', query:'rol=speler&sid=' + encodeURIComponent(sid()) + '&naam=' + encodeURIComponent(naam) + '&av=' + encodeURIComponent(window.PROFIEL ? PROFIEL.avatar() : '') }, function(m){
       if (m.t === 'start' || (m.t === 'welkom' && m.fase === 'bezig')){ sluitVerbinding(); location.href = spelLink(code, naam, j); }
       if (m.t === 'einde'){ $('pWachtTekst').textContent = 'Dit potje is al afgelopen.'; if (verb) verb.zetDicht(); }
