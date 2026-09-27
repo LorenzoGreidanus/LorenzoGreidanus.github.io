@@ -562,11 +562,27 @@ a:focus-visible,button:focus-visible,input:focus-visible,summary:focus-visible{o
 .winkel2 .waren button.aan{border-color:var(--ocean);box-shadow:0 0 0 3px rgba(32,78,207,.15)}.winkel2 .waren button.heb small{color:var(--ocean);font-weight:600}
 .winkel2 .waren button:disabled{opacity:.55;cursor:default}.winkel2 .waren button.slot .avatar{filter:grayscale(1);opacity:.5}.winkel2 .zwaardje{width:36px;height:36px}
 .winkel2 p{font-size:.8rem;color:var(--muted);margin:0}
+/* de kiezer: een groot gezicht bovenaan, tabjes per onderdeel, en de keuzes in een raster van
+   knoppen van minstens 44 bij 44, zodat je ze op een telefoon ook met je duim raakt */
 .kiezer{margin-top:10px;display:grid;gap:8px}
-.kiezer .rijtje{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
-.kiezer .rijtje span{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;width:52px}
-.kiezer button{border:2px solid transparent;background:transparent;border-radius:12px;padding:2px;cursor:pointer;line-height:0}
-.kiezer button.aan{border-color:var(--ocean);background:var(--kaart-aan,#eef2ff)}
+.kiezer .groot{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:14px;background:var(--kaart-aan,#eef2ff)}
+.kiezer .groot .avatar{margin:0;flex:none}
+.kiezer .groot button.klein{margin-left:auto}
+.kiezer .tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.kiezer .tabs::-webkit-scrollbar{display:none}
+.kiezer .tabs button{flex:1 0 auto;border:1.5px solid var(--rand2,rgba(20,34,76,.16));background:var(--kaart,#fff);color:var(--ink);border-radius:999px;
+  padding:6px 10px;min-height:44px;font:inherit;font-size:.78rem;font-weight:600;cursor:pointer;line-height:1.2}
+.kiezer .tabs button.aan{background:var(--ocean);border-color:var(--ocean);color:#fff}
+.kiezer .rijtje{display:grid;gap:4px}
+.kiezer .rijtje>span{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.kiezer .raster{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:4px}
+.kiezer .raster button{border:2px solid transparent;background:transparent;border-radius:12px;padding:3px;cursor:pointer;line-height:0;
+  min-width:44px;min-height:44px;display:grid;place-items:center}
+.kiezer .raster button:hover{background:var(--kaart-aan,#eef2ff)}
+.kiezer .raster button.aan{border-color:var(--ocean);background:var(--kaart-aan,#eef2ff)}
+.kiezer .raster .avatar{margin:0}
+.kiezer .raster .stip{width:30px;height:30px;border-radius:50%;display:block;box-shadow:inset 0 -3px 0 rgba(20,34,76,.18),0 0 0 1.5px rgba(255,255,255,.5)}
+.kiezer .uitleg{font-size:.78rem;color:var(--muted);margin:0}
 .kiezer .kleur{width:22px;height:22px;border-radius:50%;display:block}
 .codevak2{margin-top:10px}
 .codevak2 .code{font-size:1.5rem;font-weight:700;letter-spacing:.22em;font-variant-numeric:tabular-nums;background:var(--ink);color:var(--room);border-radius:12px;padding:8px 14px;display:inline-block;margin-right:8px}
@@ -2269,7 +2285,7 @@ var SPELLEN = [
   var MSLOGO = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="0" y="0" width="7.5" height="7.5" fill="#F25022"/><rect x="8.5" y="0" width="7.5" height="7.5" fill="#7FBA00"/><rect x="0" y="8.5" width="7.5" height="7.5" fill="#00A4EF"/><rect x="8.5" y="8.5" width="7.5" height="7.5" fill="#FFB900"/></svg>';
   function naam(){ var k = window.KLAS && KLAS.lees(); return k ? k.naam : 'jij'; }
   function spec(){ return PROFIEL.avatar(); }
-  function huidig(){ return AVATAR.ontleed(spec()) || { v:0, k:2, o:0, m:0, e:5 }; }
+  function huidig(){ return AVATAR.ontleed(spec()) || { v:0, k:2, o:0, m:0, e:5, c:0, x:0, w:0 }; }
   /* de winkel: per soort de waren, met wat je hebt en wat je draagt */
   /* alleenOud: niet de hele winkel, maar alleen wat je van je docent kreeg.
      Dat blokje is er ook voor wie niet is ingelogd; de winkel zelf niet, want
@@ -2292,14 +2308,14 @@ var SPELLEN = [
           beeld = '<svg class="zwaardje" viewBox="-18 -18 36 36" aria-hidden="true"><g transform="rotate(-45)"><path d="M-2,14 h4 v-6 h-4z" fill="#5f4830"/><path d="M-7,8 h14" stroke="#c9971f" stroke-width="3" stroke-linecap="round"/><path d="M0,8 v-24" stroke="' + kl + '" stroke-width="5" stroke-linecap="round"/></g></svg>';
         } else { var o2 = { basis:o.basis, h:0, r:0, z:0, b:0, a:0, q:0 }; o2[soort] = it.n; beeld = AVATAR.svg('', 36, COSMETICA.bouw(o2)); }
         var slot = (it.baas || it.oud) && !heb;
-        return '<button type="button" data-waar="' + it.id + '" class="' + (aan ? 'aan ' : '') + (heb ? 'heb' : '') + (slot ? ' slot' : '') + '"' + (slot ? ' disabled' : '') + ' title="' + schoon(it.uit) + '">' + beeld + '<b>' + schoon(it.naam) + '</b><small>' + (aan ? 'op' : heb ? 'van jou' : it.baas ? 'versla de baas' : it.oud ? 'van je docent' : it.prijs + ' munten') + '</small></button>';
+        return '<button type="button" data-waar="' + it.id + '" class="' + (aan ? 'aan ' : '') + (heb ? 'heb' : '') + (slot ? ' slot' : '') + '"' + (slot ? ' disabled' : '') + ' title="' + schoon(it.uit) + '">' + beeld + '<b>' + schoon(it.naam) + '</b><small>' + (aan ? 'op' : heb ? 'van jou' : it.baas ? (it.verdien || 'versla de baas') : it.oud ? 'van je docent' : it.prijs + ' munten') + '</small></button>';
       }).join('') + '</div>';
     });
     if (alleenOud){
       return s + '<p>Dit kreeg je omdat je bij meneer Greidanus in de klas zat. Tik erop om het op of af te zetten. ' +
         'Log je in met Microsoft, dan gaat het mee naar elk apparaat.</p></div>';
     }
-    s += '<p>' + (winkelMelding ? '<b>' + schoon(winkelMelding) + '</b> ' : '') + 'Munten verdien je met elk goed antwoord in de oefenspellen; een lang spel als Torenverdediging of Zwaardvechter geeft er meer per antwoord en een bonus per ronde, en een lange reeks goed op rij (5, 10, 20, 30) vermenigvuldigt ze. De trofeeën speel je vrij door in Zwaardvechter een baas te verslaan; de baret, de krijtcirkel en het krijtje krijg je van je docent. Tik op wat van jou is om het op of af te zetten.</p></div>';
+    s += '<p>' + (winkelMelding ? '<b>' + schoon(winkelMelding) + '</b> ' : '') + 'Munten verdien je met elk goed antwoord in de oefenspellen; een lang spel als Torenverdediging of Zwaardvechter geeft er meer per antwoord en een bonus per ronde, en een lange reeks goed op rij (5, 10, 20, 30) vermenigvuldigt ze. De trofeeën speel je vrij door in Zwaardvechter een baas te verslaan, of door dagen op rij te oefenen (het vlammetje na vijf, de lauwerkrans na veertien); de baret, de krijtcirkel en het krijtje krijg je van je docent. Tik op wat van jou is om het op of af te zetten.</p></div>';
     return s;
   }
   /* Licht, donker of de stand van je apparaat. Zonder keuze volgt de site je
@@ -2320,6 +2336,33 @@ var SPELLEN = [
     }
     tekenKeuze();
   }
+  /* De kiezer. Per tab een paar rijen; elke knop laat je eigen gezicht zien met net die ene
+     keuze anders, zodat je ziet wat je kiest. Kleuren en haarkleuren zijn stippen, dat leest sneller.
+     De volgorde in een rij is niet altijd die van de nummers: 'niets' en 'geen haar' komen eerst. */
+  var kiesTab = 'gezicht';
+  function kiezerHtml(h){
+    var K = AVATAR.KEUZES, N = AVATAR.NAMEN;
+    function reeks(n, van){ var l = []; for (var i = van || 0; i < n; i++) l.push(i); return l; }
+    function knop(w, i, aan, beeld, naam){ return '<button type="button" data-w="' + w + '" data-i="' + i + '"' + (aan ? ' class="aan" aria-pressed="true"' : ' aria-pressed="false"') + ' aria-label="' + schoon(naam) + '" title="' + schoon(naam) + '">' + beeld + '</button>'; }
+    function gezicht(w, i){ var o2 = { v:h.v, k:h.k, o:h.o, m:h.m, e:h.e, c:h.c, x:h.x, w:h.w }; o2[w] = i; if (w === 'k') o2.c = 0; return AVATAR.svg('', 36, AVATAR.maak(o2)); }
+    function rij(titel, w, lijst, stip){
+      return '<div class="rijtje"><span>' + titel + '</span><div class="raster">' + lijst.map(function(i){
+        if (w === 'k') return knop('k', i, !h.c && h.k === i, '<i class="stip" style="background:' + AVATAR.KLEUREN[i] + '"></i>', N.k[i]);
+        if (w === 'c') return knop('c', i, h.c === i, '<i class="stip" style="background:' + AVATAR.KLEUREN2[i - 1] + '"></i>', N.c[i - 1]);
+        if (w === 'w') return knop('w', i, h.w === i, '<i class="stip" style="background:' + AVATAR.HAAR[i] + '"></i>', N.w[i]);
+        return knop(w, i, h[w] === i, gezicht(w, i), (N[w] ? N[w][i] : titel + ' ' + (i + 1)));
+      }).join('') + '</div></div>';
+    }
+    var tabs = [['gezicht', 'Gezicht'], ['ogen', 'Ogen'], ['mond', 'Mond'], ['haar', 'Haar'], ['extra', 'Extra']], s = '<div class="kiezer">';
+    s += '<div class="groot">' + AVATAR.svg(naam(), 76, spec()) + '<button type="button" class="klein" id="pfVerras">Verras me</button></div>';
+    s += '<div class="tabs" role="tablist">' + tabs.map(function(t){ return '<button type="button" role="tab" data-tab="' + t[0] + '" aria-selected="' + (kiesTab === t[0]) + '"' + (kiesTab === t[0] ? ' class="aan"' : '') + '>' + t[1] + '</button>'; }).join('') + '</div>';
+    if (kiesTab === 'gezicht') s += rij('vorm', 'v', reeks(K.vormen)) + rij('kleur', 'k', reeks(K.kleuren)) + rij('meer kleuren', 'c', reeks(K.kleuren2 + 1, 1));
+    else if (kiesTab === 'ogen') s += rij('ogen', 'o', reeks(K.ogen));
+    else if (kiesTab === 'mond') s += rij('mond', 'm', reeks(K.monden));
+    else if (kiesTab === 'haar') s += rij('kapsel', 'x', reeks(K.kapsels)) + (h.x ? rij('haarkleur', 'w', reeks(K.haarkleuren)) : '<p class="uitleg">Kies een kapsel, dan kun je ook de kleur kiezen. Een hoed uit de winkel gaat eroverheen.</p>');
+    else s += rij('extra', 'e', [5, 0, 1, 2, 3, 4, 6, 7, 8, 9]);
+    return s + '</div>';
+  }
   function teken(){
     var sp = spec(), code = PROFIEL.code(), h = huidig();
     var html = '<div class="profielkop">' + AVATAR.svg(naam(), 44, sp) + '<div><b>' + (sp ? 'Jouw gezichtje' : 'Je gezichtje') + '</b><small>' +
@@ -2339,17 +2382,7 @@ var SPELLEN = [
     } else if (acc && acc.mogelijk && !acc.ingelogd && sp){
       html += '<div class="muntrij"><span class="saldo"><span class="ico ico-munt" role="img" aria-label="munten" title="munten"></span>Log in en spaar munten voor hoeden, randen en zwaarden.</span></div>';
     }
-    if (open){
-      var K = AVATAR.KEUZES, rijen = [['vorm', 'v', K.vormen], ['kleur', 'k', K.kleuren], ['ogen', 'o', K.ogen], ['mond', 'm', K.monden], ['extra', 'e', K.extras]];
-      html += '<div class="kiezer">' + rijen.map(function(r){
-        var uit = '<div class="rijtje"><span>' + r[0] + '</span>';
-        for (var i = 0; i < r[2]; i++){
-          var o2 = { v:h.v, k:h.k, o:h.o, m:h.m, e:h.e }; o2[r[1]] = i;
-          uit += '<button type="button" data-w="' + r[1] + '" data-i="' + i + '"' + (h[r[1]] === i ? ' class="aan"' : '') + ' aria-label="' + r[0] + ' ' + (i + 1) + '">' + AVATAR.svg('', 30, AVATAR.maak(o2)) + '</button>';
-        }
-        return uit + '</div>';
-      }).join('') + '</div>';
-    }
+    if (open) html += kiezerHtml(h);
     if (codeOpen){
       html += '<div class="codevak2">';
       if (code){
@@ -2399,12 +2432,26 @@ var SPELLEN = [
     document.getElementById('pfKies').addEventListener('click', function(){ open = !open; if (open) codeOpen = false; teken(); });
     knop('pfCode', function(){ codeOpen = !codeOpen; if (codeOpen) open = false; melding = ''; teken(); });
     knop('pfSpeelcode', function(){ codeOpen = !codeOpen; if (codeOpen) open = false; melding = ''; teken(); });
-    Array.prototype.forEach.call(vak0.querySelectorAll('.kiezer button'), function(b){
+    Array.prototype.forEach.call(vak0.querySelectorAll('.kiezer [data-w]'), function(b){
       b.addEventListener('click', function(){
-        var h2 = huidig(); h2[b.getAttribute('data-w')] = parseInt(b.getAttribute('data-i'), 10);
-        PROFIEL.zetAvatar(AVATAR.maak(h2)); teken();
+        var h2 = huidig(), w = b.getAttribute('data-w'); h2[w] = parseInt(b.getAttribute('data-i'), 10);
+        /* een kleur uit de eerste rij zet de tweede rij uit */
+        if (w === 'k') h2.c = 0;
+        PROFIEL.zetAvatar(AVATAR.maak(h2)); teken(); focusTerug(w, h2[w]);
       });
     });
+    Array.prototype.forEach.call(vak0.querySelectorAll('.kiezer [data-tab]'), function(b){
+      b.addEventListener('click', function(){ kiesTab = b.getAttribute('data-tab'); teken(); var t = vak0.querySelector('[data-tab="' + kiesTab + '"]'); if (t) t.focus(); });
+    });
+    /* verras me: alles wat gratis is door elkaar, de winkelspullen blijven op */
+    knop('pfVerras', function(){
+      var K = AVATAR.KEUZES, h2 = huidig(), r = function(n){ return Math.floor(Math.random() * n); };
+      h2.v = r(K.vormen); h2.o = r(K.ogen); h2.m = r(K.monden); h2.e = r(K.extras); h2.x = r(K.kapsels); h2.w = r(K.haarkleuren);
+      if (Math.random() < 0.5){ h2.k = r(K.kleuren); h2.c = 0; } else h2.c = 1 + r(K.kleuren2);
+      PROFIEL.zetAvatar(AVATAR.maak(h2)); teken(); var v = document.getElementById('pfVerras'); if (v) v.focus();
+    });
+    /* teken() bouwt alles opnieuw; de focus hoort terug op de knop die je net koos */
+    function focusTerug(w, i){ var el = vak0.querySelector('.kiezer [data-w="' + w + '"][data-i="' + i + '"]'); if (el) el.focus(); }
     function knop(id, fn){ var el = document.getElementById(id); if (el) el.addEventListener('click', function(){ fn(el); }); }
     var wb = wachtOp && document.getElementById(wachtOp);
     if (wb){ wb.disabled = true; wb.setAttribute('aria-busy', 'true'); }

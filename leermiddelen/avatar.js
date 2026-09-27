@@ -5,18 +5,27 @@
 
    Wie een eigen avatar heeft gekozen (profiel.js), geeft een spec mee:
    'v3k2o1m0e4' = vorm, kleur, ogen, mond, extra. Dan telt de naam niet meer.
+   Daarachter mag (in deze volgorde) c (een kleur uit de tweede rij), x (een
+   kapsel) en w (de haarkleur), en dan de dingen uit de winkel: h r z b a q
+   (zie cosmetica.js). Oude specs zonder c, x en w tekenen zoals altijd.
 
    Gebruik:
      AVATAR.svg('Noor', 32)         een <svg> als tekst, 32 pixels
      AVATAR.svg('Noor', 32, spec)   met eigen keuzes
      AVATAR.inhoud('Noor', spec)    alleen de binnenkant, voor in een eigen svg (viewBox -50..50)
-     AVATAR.ontleed(spec) / AVATAR.maak({v,k,o,m,e})
+     AVATAR.ontleed(spec) / AVATAR.maak({v,k,o,m,e,c,x,w})
      AVATAR.KEUZES                  hoeveel er van elk zijn
+     AVATAR.NAMEN                   hoe elke keuze heet, voor de kiezer
      AVATAR.vul(root)               vult elementen met data-avatar="naam" */
 window.AVATAR = (function(){
   'use strict';
   var KLEUREN = ['#F26749', '#EA9836', '#204ECF', '#83A5F2', '#2f7d52', '#6b3fa0', '#14224C', '#d95c3b', '#1f7a6d'];
   var DONKER = { '#204ECF':1, '#14224C':1, '#6b3fa0':1, '#2f7d52':1, '#1f7a6d':1, '#d95c3b':1, '#F26749':1 };
+  /* de tweede rij kleuren (c1 tot c11): huidtinten van licht tot donker, en een paar vrolijke */
+  var KLEUREN2 = ['#F7CFB0', '#E9AE82', '#C98A57', '#94603A', '#5E3B25', '#F4A6BF', '#F6C945', '#6CCBAE', '#A98BE0', '#E2466F', '#8C97AB'];
+  /* haarkleuren (w0 tot w9); w0 is de gewone, donkerbruin */
+  var HAAR = ['#3a2519', '#17161d', '#7a4526', '#E7B85E', '#B9532B', '#DCD7D0', '#3B74E6', '#F28DB2', '#8A5CD6', '#2FA37A'];
+  var INKT = '#14224C';
   function hash(s){
     var h = 2166136261;
     s = String(s || '').toLowerCase().trim();
@@ -32,9 +41,17 @@ window.AVATAR = (function(){
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
   }
+  /* twee kleuren mengen (t = 0 is a, 1 is b), en hoe licht een kleur is (0 zwart, 1 wit) */
+  function meng(a, b, t){
+    var x = parseInt(a.slice(1), 16), y = parseInt(b.slice(1), 16), u = '#';
+    for (var s = 16; s >= 0; s -= 8){ var c = Math.round(((x >> s) & 255) * (1 - t) + ((y >> s) & 255) * t); u += (c < 16 ? '0' : '') + c.toString(16); }
+    return u;
+  }
+  function licht(k){ var x = parseInt(k.slice(1), 16); return (((x >> 16) & 255) * 0.299 + ((x >> 8) & 255) * 0.587 + (x & 255) * 0.114) / 255; }
+  function f1(n){ return (+n).toFixed(1).replace('.0', ''); }
   /* de blob: acht punten rond een cirkel, elk iets naar binnen of buiten, met
-     zachte bochten ertussen (Catmull-Rom naar Bezier) */
-  var laatstePunten = [];   /* de bochtpunten van de laatst getekende blob, voor de hoed */
+     zachte bochten ertussen (Catmull-Rom naar Bezier). Ook de rand zelf komt
+     terug, in stapjes: daarmee passen haar en hoed precies op dit hoofd. */
   function blob(r, straal){
     var n = 8, p = [], pts = [];
     for (var i = 0; i < n; i++){
@@ -47,83 +64,155 @@ window.AVATAR = (function(){
       var c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
       var c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
       d += ' C' + c1[0].toFixed(1) + ',' + c1[1].toFixed(1) + ' ' + c2[0].toFixed(1) + ',' + c2[1].toFixed(1) + ' ' + p2[0].toFixed(1) + ',' + p2[1].toFixed(1);
-      /* de bocht zelf, in tien stapjes: zo weten we waar de rand van het hoofd echt loopt */
-      for (var t = 0; t < 1; t += 0.1){ var u = 1 - t, a0 = u*u*u, a1 = 3*u*u*t, a2 = 3*u*t*t, a3 = t*t*t;
+      for (var t = 0; t < 0.999; t += 1 / 12){ var u = 1 - t, a0 = u*u*u, a1 = 3*u*u*t, a2 = 3*u*t*t, a3 = t*t*t;
         pts.push([a0*p1[0] + a1*c1[0] + a2*c2[0] + a3*p2[0], a0*p1[1] + a1*c1[1] + a2*c2[1] + a3*p2[1]]); }
     }
-    laatstePunten = pts;
-    return d + ' Z';
+    return { d:d + ' Z', pts:pts };
   }
-  /* waar de hoed moet zitten: de bovenkant van het (gedraaide) hoofd in het midden, en hoe breed het daar is.
-     De hoeden zijn getekend op een hoofd met de top op -46 en een halve breedte van 33 op de hoedrand (y -32). */
-  function hoedPlek(draai){
-    var a = draai * Math.PI / 180, top = 0, breed = 0;
-    laatstePunten.forEach(function(q){
-      var x = q[0] * Math.cos(a) - q[1] * Math.sin(a), y = q[0] * Math.sin(a) + q[1] * Math.cos(a);
-      if (Math.abs(x) < 8 && y < top) top = y;
-    });
-    laatstePunten.forEach(function(q){
-      var x = q[0] * Math.cos(a) - q[1] * Math.sin(a), y = q[0] * Math.sin(a) + q[1] * Math.cos(a);
-      if (y < top + 18 && Math.abs(x) > breed) breed = Math.abs(x);
-    });
-    var s = Math.max(0.85, Math.min(1.12, breed / 33));
-    return 'translate(0,' + (top + 46 - 30).toFixed(1) + ') scale(' + s.toFixed(3) + ') translate(0,30)';
+  /* de rand van het hoofd rechtop gezet (de blob staat een paar graden scheef) */
+  function draaiPunten(pts, draai){
+    var a = draai * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
+    return pts.map(function(q){ return [q[0] * c - q[1] * s, q[0] * s + q[1] * c]; });
   }
-  var KEUZES = { vormen:8, kleuren:KLEUREN.length, ogen:5, monden:4, extras:6 };
+  /* de maten van het rechte hoofd: de top in het midden en de halve breedte op ooghoogte */
+  function maten(P){
+    var top = 0, breed = 0, bovenBreed = 0;
+    P.forEach(function(q){ if (Math.abs(q[0]) < 8 && q[1] < top) top = q[1]; });
+    P.forEach(function(q){ if (Math.abs(q[1] + 8) < 7 && Math.abs(q[0]) > breed) breed = Math.abs(q[0]); if (q[1] < top + 18 && Math.abs(q[0]) > bovenBreed) bovenBreed = Math.abs(q[0]); });
+    return { top:top, breed:breed || 42, bovenBreed:bovenBreed };
+  }
+  /* waar de hoed moet zitten: de bovenkant van het hoofd in het midden, en hoe breed het daar is.
+     De hoeden zijn getekend op een hoofd met de top op -46 en een halve breedte van 33 op de hoedrand (y -32).
+     op en groter: voor een kapsel met volume (een afro) komt de hoed hoger en iets groter te staan. */
+  function hoedPlek(M, op, groter){
+    var s = Math.max(0.85, Math.min(1.12, M.bovenBreed / 33)) * (groter || 1);
+    return 'translate(0,' + (M.top - (op || 0) + 46 - 30).toFixed(1) + ') scale(' + s.toFixed(3) + ') translate(0,30)';
+  }
+  var KEUZES = { vormen:8, kleuren:KLEUREN.length, kleuren2:KLEUREN2.length, ogen:10, monden:10, extras:10, kapsels:15, haarkleuren:HAAR.length };
+  var NAMEN = {
+    o:['stipjes', 'blij', 'knipoog', 'bril', 'grote ogen', 'cool', 'verbaasd', 'sterren', 'tevreden', 'vastberaden'],
+    m:['lach', 'rondje', 'streepje', 'schaterlach', 'tong uit', 'tanden', 'scheve grijns', 'o', 'kattensnoetje', 'beugel'],
+    e:['blosjes', 'sproetjes', 'krul', 'pleister', 'ster', 'niets', 'zweetdruppel', 'snor', 'glinsters', 'moedervlekje'],
+    x:['geen haar', 'kuif', 'stekels', 'krullen', 'afro', 'vlechten', 'paardenstaart', 'knot', 'kort', 'bob met pony', 'lang', 'zijscheiding', 'hoofddoek', 'twee knotjes', 'hanenkam'],
+    w:['donkerbruin', 'zwart', 'bruin', 'blond', 'rood', 'zilver', 'blauw', 'roze', 'paars', 'groen'],
+    k:['koraal', 'oranje', 'blauw', 'lichtblauw', 'groen', 'paars', 'nachtblauw', 'steenrood', 'zeegroen'],
+    c:['licht perzik', 'perzik', 'karamel', 'bruin', 'donkerbruin', 'roze', 'zonnegeel', 'mint', 'lila', 'framboos', 'grijs']
+  };
+  var PATROON = /^v(\d)k(\d)o(\d)m(\d)e(\d)(?:c(\d{1,2}))?(?:x(\d{1,2}))?(?:w(\d))?(?:h(\d{1,2}))?(?:r(\d{1,2}))?(?:z(\d{1,2}))?(?:b(\d{1,2}))?(?:a(\d{1,2}))?(?:q(\d{1,2}))?$/;
   /* achter het gezichtje kan cosmetica staan: h (hoed), r (rand), z (zwaard), uit de winkel */
-  function ontleed(spec){ var m = /^v(\d)k(\d)o(\d)m(\d)e(\d)(?:h(\d{1,2}))?(?:r(\d{1,2}))?(?:z(\d{1,2}))?(?:b(\d{1,2}))?(?:a(\d{1,2}))?(?:q(\d{1,2}))?$/.exec(String(spec || '')); return m ? { v:+m[1], k:+m[2], o:+m[3], m:+m[4], e:+m[5], h:+(m[6] || 0), r:+(m[7] || 0), z:+(m[8] || 0), b:+(m[9] || 0), a:+(m[10] || 0), q:+(m[11] || 0) } : null; }
-  function maak(o){ return 'v' + (o.v % KEUZES.vormen) + 'k' + (o.k % KEUZES.kleuren) + 'o' + (o.o % KEUZES.ogen) + 'm' + (o.m % KEUZES.monden) + 'e' + (o.e % KEUZES.extras) + (o.h ? 'h' + o.h : '') + (o.r ? 'r' + o.r : '') + (o.z ? 'z' + o.z : '') + (o.b ? 'b' + o.b : '') + (o.a ? 'a' + o.a : '') + (o.q ? 'q' + o.q : ''); }
+  function ontleed(spec){
+    spec = String(spec || '');
+    var m = PATROON.exec(spec);
+    /* Een spec die ergens onderweg is afgekapt (een oude server die er 24 tekens van bewaarde):
+       haal er van achteren af tot hij weer klopt, dan blijft het gezicht en valt hooguit een bril weg. */
+    for (var i = 0; !m && i < 16 && spec.length > 10 && /^v\dk\do\dm\de\d/.test(spec); i++){ spec = spec.replace(/[a-z]\d*$/, ''); m = PATROON.exec(spec); }
+    return m ? { v:+m[1], k:+m[2], o:+m[3], m:+m[4], e:+m[5], c:+(m[6] || 0), x:+(m[7] || 0), w:+(m[8] || 0), h:+(m[9] || 0), r:+(m[10] || 0), z:+(m[11] || 0), b:+(m[12] || 0), a:+(m[13] || 0), q:+(m[14] || 0) } : null; }
+  function maak(o){
+    var c = (o.c | 0) % (KLEUREN2.length + 1), x = (o.x | 0) % KEUZES.kapsels, w = x ? (o.w | 0) % HAAR.length : 0;
+    return 'v' + (o.v % KEUZES.vormen) + 'k' + (o.k % KEUZES.kleuren) + 'o' + (o.o % KEUZES.ogen) + 'm' + (o.m % KEUZES.monden) + 'e' + (o.e % KEUZES.extras) +
+      (c ? 'c' + c : '') + (x ? 'x' + x : '') + (w ? 'w' + w : '') +
+      (o.h ? 'h' + o.h : '') + (o.r ? 'r' + o.r : '') + (o.z ? 'z' + o.z : '') + (o.b ? 'b' + o.b : '') + (o.a ? 'a' + o.a : '') + (o.q ? 'q' + o.q : '');
+  }
+  /* Een lichte rand om een los stuk (hoed, haar, trofee), zodat het ook op een donkere achtergrond
+     te zien is. Het is dezelfde tekening nog een keer, maar dan als dikke witte omtrek eronder; wat
+     binnen de vorm valt verdwijnt onder het stuk zelf, alleen de buitenkant blijft over. */
+  var HALO = ' fill="none" stroke="#fff" stroke-linejoin="round" stroke-linecap="round" opacity=".42"';
+  function halo(tekening, dik){
+    return '<g' + HALO + ' stroke-width="' + f1(dik) + '">' + tekening.replace(/ (fill|stroke|stroke-width|opacity|stroke-opacity|fill-opacity|stroke-dasharray|stroke-dashoffset|fill-rule)="[^"]*"/g, '') + '</g>';
+  }
   /* de hoeden en randen uit de winkel, in de maten van het gezichtje (viewBox -50..50) */
-  function hoed(n, kleur){
-    if (n === 1) return '<path d="M-24,-30 L-28,-48 L-14,-38 L0,-52 L14,-38 L28,-48 L24,-30 Z" fill="#FFD166" stroke="#c9971f" stroke-width="2" stroke-linejoin="round"/><circle cx="0" cy="-42" r="3" fill="#F26749"/><circle cx="-16" cy="-38" r="2.2" fill="#204ECF"/><circle cx="16" cy="-38" r="2.2" fill="#204ECF"/>';
-    if (n === 2) return '<path d="M-30,-30 L0,-50 L30,-30 Z" fill="#6b3fa0"/><path d="M-34,-29 h68" stroke="#6b3fa0" stroke-width="6" stroke-linecap="round"/><path d="M-4,-40 l1.5,3 3.5,.5 -2.5,2.5 .5,3.5 -3,-1.8 -3,1.8 .5,-3.5 -2.5,-2.5 3.5,-.5z" fill="#FFD166"/><circle cx="10" cy="-34" r="1.6" fill="#FFD166"/>';
-    if (n === 3) return '<path d="M-37,-24 q37,-11 74,0" fill="none" stroke="#F3EFE9" stroke-width="10" stroke-linecap="round"/><path d="M-37,-24 q37,-11 74,0" fill="none" stroke="#F26749" stroke-width="2.6" stroke-linecap="round" transform="translate(0,-2.4)"/><path d="M-37,-24 q37,-11 74,0" fill="none" stroke="#204ECF" stroke-width="2.6" stroke-linecap="round" transform="translate(0,2.4)"/>';
-    if (n === 4) return '<path d="M-36,-30 q36,-14 72,0 q-10,-28 -36,-28 q-26,0 -36,28 z" fill="#14224C"/><path d="M-36,-30 q36,8 72,0" fill="none" stroke="#14224C" stroke-width="5" stroke-linecap="round"/><circle cx="0" cy="-42" r="4.5" fill="#fff"/><circle cx="-1.6" cy="-43" r="1.1" fill="#14224C"/><circle cx="1.6" cy="-43" r="1.1" fill="#14224C"/>';
+  function hoed(n){
+    if (n === 1) return '<path d="M-24,-30 L-28,-48 L-14,-38 L0,-52 L14,-38 L28,-48 L24,-30 Z" fill="#FFD166" stroke="#c9971f" stroke-width="2" stroke-linejoin="round"/><path d="M-24,-33 h48" stroke="#c9971f" stroke-width="1.6" opacity=".6"/><circle cx="0" cy="-42" r="3" fill="#F26749"/><circle cx="-16" cy="-38" r="2.2" fill="#204ECF"/><circle cx="16" cy="-38" r="2.2" fill="#204ECF"/>';
+    /* tovenaarshoed: een hoge punt die een beetje omknikt, met een brede rand */
+    if (n === 2) return '<path d="M-24,-31 Q-12,-40 -6,-56 Q-2,-66 8,-70 Q2,-62 6,-50 Q10,-40 24,-31 Z" fill="#6b3fa0"/><path d="M-36,-30 q36,-9 72,0" fill="none" stroke="#6b3fa0" stroke-width="6" stroke-linecap="round"/><path d="M-22,-34 q22,-6 44,0" fill="none" stroke="#FFD166" stroke-width="3"/><path d="M-2,-50 l1.5,3 3.5,.5 -2.5,2.5 .5,3.5 -3,-1.8 -3,1.8 .5,-3.5 -2.5,-2.5 3.5,-.5z" fill="#FFD166"/><circle cx="10" cy="-42" r="1.6" fill="#FFD166"/><circle cx="-10" cy="-40" r="1.2" fill="#FFD166"/>';
+    if (n === 3) return '<path d="M-37,-26 q37,-11 74,0" fill="none" stroke="#F3EFE9" stroke-width="10" stroke-linecap="round"/><path d="M-37,-26 q37,-11 74,0" fill="none" stroke="#F26749" stroke-width="2.6" stroke-linecap="round" transform="translate(0,-2.4)"/><path d="M-37,-26 q37,-11 74,0" fill="none" stroke="#204ECF" stroke-width="2.6" stroke-linecap="round" transform="translate(0,2.4)"/>';
+    if (n === 4) return '<path d="M-36,-30 q36,-14 72,0 q-10,-28 -36,-28 q-26,0 -36,28 z" fill="#14224C"/><path d="M-36,-30 q36,8 72,0" fill="none" stroke="#14224C" stroke-width="5" stroke-linecap="round"/><path d="M-28,-36 q28,-8 56,0" fill="none" stroke="#c9971f" stroke-width="1.8"/><circle cx="0" cy="-44" r="4.5" fill="#fff"/><circle cx="-1.6" cy="-45" r="1.1" fill="#14224C"/><circle cx="1.6" cy="-45" r="1.1" fill="#14224C"/>';
     if (n === 5) return '<path d="M-22,-30 q-4,-14 4,-22 q2,12 8,16 z M22,-30 q4,-14 -4,-22 q-2,12 -8,16 z" fill="#c0442c" stroke="#8a2416" stroke-width="1.5" stroke-linejoin="round"/>';
     if (n === 6) return '<ellipse cx="0" cy="-53" rx="20" ry="5" fill="none" stroke="#FFD166" stroke-width="4"/><ellipse cx="0" cy="-53" rx="20" ry="5" fill="none" stroke="#fff" stroke-width="1.5" opacity=".7"/>';
-    if (n === 7) return '<g><circle cx="-22" cy="-30" r="5" fill="#F26749"/><circle cx="-11" cy="-36" r="5" fill="#FFD166"/><circle cx="0" cy="-38" r="5" fill="#F26749"/><circle cx="11" cy="-36" r="5" fill="#FFD166"/><circle cx="22" cy="-30" r="5" fill="#F26749"/><g fill="#fff"><circle cx="-22" cy="-30" r="1.6"/><circle cx="-11" cy="-36" r="1.6"/><circle cx="0" cy="-38" r="1.6"/><circle cx="11" cy="-36" r="1.6"/><circle cx="22" cy="-30" r="1.6"/></g><path d="M-26,-28 q26,-8 52,0" fill="none" stroke="#2f7d52" stroke-width="3"/></g>';
-    if (n === 8) return '<path d="M-16,-28 L0,-52 L16,-28 Z" fill="#204ECF"/><path d="M-11,-36 h22 M-6,-44 h12" stroke="#FFD166" stroke-width="3"/><circle cx="0" cy="-52" r="4" fill="#F26749"/>';
+    if (n === 7) return '<g><path d="M-26,-28 q26,-8 52,0" fill="none" stroke="#2f7d52" stroke-width="3"/><circle cx="-22" cy="-30" r="5" fill="#F26749"/><circle cx="-11" cy="-36" r="5" fill="#FFD166"/><circle cx="0" cy="-38" r="5" fill="#F26749"/><circle cx="11" cy="-36" r="5" fill="#FFD166"/><circle cx="22" cy="-30" r="5" fill="#F26749"/><g fill="#fff"><circle cx="-22" cy="-30" r="1.6"/><circle cx="-11" cy="-36" r="1.6"/><circle cx="0" cy="-38" r="1.6"/><circle cx="11" cy="-36" r="1.6"/><circle cx="22" cy="-30" r="1.6"/></g></g>';
+    /* feestmuts: iets hoger dan vroeger, met strepen en een pompon */
+    if (n === 8) return '<path d="M-17,-29 L2,-62 L17,-29 Z" fill="#204ECF" stroke="#16389a" stroke-width="1.5" stroke-linejoin="round"/><path d="M-11,-37 L13,-37 M-5,-48 L8,-48" stroke="#FFD166" stroke-width="3.4" stroke-linecap="round"/><circle cx="2" cy="-62" r="4.5" fill="#F26749"/>';
     /* kerstmuts: rood met een witte rand en een pompon die naar rechts hangt */
-    if (n === 9) return '<path d="M-28,-30 q6,-30 26,-30 q10,0 20,10 q-14,0 -18,20 z" fill="#c0442c"/><path d="M-31,-30 h56" stroke="#F3EFE9" stroke-width="8" stroke-linecap="round"/><circle cx="22" cy="-50" r="6" fill="#F3EFE9"/>';
+    if (n === 9) return '<path d="M-28,-30 q6,-30 26,-30 q10,0 20,10 q-14,0 -18,20 z" fill="#c0442c"/><path d="M-31,-30 h56" stroke="#F3EFE9" stroke-width="8" stroke-linecap="round"/><path d="M-31,-30 h56" stroke="#d9cfc4" stroke-width="8" stroke-linecap="round" stroke-dasharray="0 7" opacity=".7"/><circle cx="22" cy="-50" r="6" fill="#F3EFE9" stroke="#d9cfc4" stroke-width="1.2"/>';
     /* pompoenhoed: oranje met ribbels en een steeltje */
     if (n === 10) return '<path d="M-30,-30 q0,-26 30,-26 q30,0 30,26 z" fill="#EA9836"/><path d="M-12,-30 q0,-22 12,-24 M12,-30 q0,-22 -12,-24" fill="none" stroke="#c0442c" stroke-width="2" opacity=".55"/><path d="M-33,-30 h66" stroke="#c96a1c" stroke-width="5" stroke-linecap="round"/><path d="M0,-56 q6,-6 4,-12" fill="none" stroke="#2f7d52" stroke-width="5" stroke-linecap="round"/>';
     /* hazenoren: twee lange oren met roze binnenkant */
-    if (n === 11) return '<g fill="#F3EFE9" stroke="#d9cfc4" stroke-width="1.5"><path d="M-16,-30 q-14,-30 -4,-46 q10,10 12,46 z"/><path d="M16,-30 q14,-30 4,-46 q-10,10 -12,46 z"/></g><g fill="#F6B8C6"><path d="M-14,-32 q-8,-22 -4,-36 q6,10 8,36 z"/><path d="M14,-32 q8,-22 4,-36 q-6,10 -8,36 z"/></g>';
+    if (n === 11) return '<g fill="#F3EFE9" stroke="#b9ab9c" stroke-width="1.5"><path d="M-16,-30 q-14,-30 -4,-46 q10,10 12,46 z"/><path d="M16,-30 q14,-30 4,-46 q-10,10 -12,46 z"/></g><g fill="#F6B8C6"><path d="M-14,-32 q-8,-22 -4,-36 q6,10 8,36 z"/><path d="M14,-32 q8,-22 4,-36 q-6,10 -8,36 z"/></g>';
     /* baret: het platte bord met een kwastje, voor wie bij hem in de klas zat */
+    if (n === 12) return '<g><path d="M-20,-38 h40 v10 q-20,9 -40,0 z" fill="#22315f"/><path d="M0,-52 L33,-41 L0,-30 L-33,-41 Z" fill="#14224C"/><path d="M0,-50 L28,-41 L0,-32 L-28,-41 Z" fill="none" stroke="#3b4d82" stroke-width="1"/><circle cx="0" cy="-41" r="2.4" fill="#F26749"/><path d="M0,-41 q22,1 26,4" fill="none" stroke="#F26749" stroke-width="2.2" stroke-linecap="round"/><path d="M26,-37 v8" stroke="#F26749" stroke-width="2.2" stroke-linecap="round"/><path d="M23,-29 h6 l-1,5 h-4 z" fill="#EA9836"/></g>';
     /* nachtmerriekroon van De Grote Fout: donker met een rode gloed eronder */
     if (n === 13) return '<path d="M-26,-30 L-30,-52 L-15,-40 L0,-56 L15,-40 L30,-52 L26,-30 Z" fill="#2b0d1c" stroke="#c0442c" stroke-width="2.4" stroke-linejoin="round"/><circle cx="0" cy="-44" r="3.4" fill="#F26749"/><circle cx="-17" cy="-39" r="2.4" fill="#c0442c"/><circle cx="17" cy="-39" r="2.4" fill="#c0442c"/><path d="M-26,-29 h52" stroke="#F26749" stroke-width="2" opacity=".7"/>';
     /* propkroon van De Prop: verfrommeld papier met scherpe punten */
     if (n === 14) return '<path d="M-28,-29 L-22,-44 L-12,-36 L-2,-50 L8,-36 L20,-46 L28,-29 Z" fill="#e8dcc0" stroke="#8a7350" stroke-width="2.2" stroke-linejoin="round"/><path d="M-16,-33 l6,-6 M2,-34 l5,-7 M16,-33 l4,-6" stroke="#8a7350" stroke-width="1.4" opacity=".7"/>';
-    if (n === 12) return '<g><path d="M-20,-38 h40 v10 q-20,9 -40,0 z" fill="#22315f"/><path d="M0,-52 L33,-41 L0,-30 L-33,-41 Z" fill="#14224C"/><path d="M0,-50 L28,-41 L0,-32 L-28,-41 Z" fill="none" stroke="#3b4d82" stroke-width="1"/><circle cx="0" cy="-41" r="2.4" fill="#F26749"/><path d="M0,-41 q22,1 26,4" fill="none" stroke="#F26749" stroke-width="2.2" stroke-linecap="round"/><path d="M26,-37 v8" stroke="#F26749" stroke-width="2.2" stroke-linecap="round"/><path d="M23,-29 h6 l-1,5 h-4 z" fill="#EA9836"/></g>';
+    /* pet achterstevoren: de klep wijst naar achteren, voorop zie je het gaatje met het bandje */
+    if (n === 15) return '<path d="M6,-50 q18,-12 34,-5 l-3,5 q-14,-4 -27,4 z" fill="#c0442c"/><path d="M-34,-29 q-2,-27 34,-27 q36,0 34,27 z" fill="#F26749"/><path d="M0,-56 v24" stroke="#c0442c" stroke-width="1.6" opacity=".6"/><path d="M-8,-29 q8,-12 16,0 z" fill="#c0442c"/><path d="M-8,-32 h16" stroke="#F3EFE9" stroke-width="2" stroke-linecap="round"/><path d="M-35,-29 h70" stroke="#c0442c" stroke-width="4" stroke-linecap="round"/><circle cx="0" cy="-56" r="2.4" fill="#c0442c"/>';
+    /* beanie: een gebreide muts met een omgeslagen rand en een pompon */
+    if (n === 16) return '<circle cx="0" cy="-60" r="7" fill="#FFD166" stroke="#c9971f" stroke-width="1.4"/><path d="M-33,-30 q-2,-26 33,-28 q35,2 33,28 z" fill="#2f9e8f"/><path d="M-12,-54 v16 M0,-57 v19 M12,-54 v16" stroke="#1f7a6d" stroke-width="1.8" stroke-linecap="round" opacity=".7"/><path d="M-35,-35 q35,-7 70,0 v9 q-35,-6 -70,0 z" fill="#1f7a6d"/><path d="M-26,-35 v8 M-13,-37 v8 M0,-38 v8 M13,-37 v8 M26,-35 v8" stroke="#2f9e8f" stroke-width="2" stroke-linecap="round" opacity=".8"/>';
+    /* koptelefoon: een beugel over je hoofd en twee dikke dopjes */
+    if (n === 17) return '<path d="M-38,-4 q-4,-50 38,-50 q42,0 38,50" fill="none" stroke="#14224C" stroke-width="6" stroke-linecap="round"/><path d="M-30,-24 q6,-24 30,-26" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".35"/><rect x="-47" y="-16" width="13" height="24" rx="6" fill="#F26749" stroke="#14224C" stroke-width="2.4"/><rect x="34" y="-16" width="13" height="24" rx="6" fill="#F26749" stroke="#14224C" stroke-width="2.4"/><path d="M-43,-10 v12 M43,-10 v12" stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity=".5"/>';
+    /* vissershoedje: een zachte bol met een schuin aflopende rand */
+    if (n === 18) return '<path d="M-24,-32 q0,-22 24,-22 q24,0 24,22 z" fill="#8fbf9a"/><path d="M-24,-36 q24,-5 48,0" fill="none" stroke="#5e8f6a" stroke-width="3"/><path d="M-38,-24 q38,-16 76,0 l-8,-9 q-30,-8 -60,0 z" fill="#8fbf9a" stroke="#5e8f6a" stroke-width="1.6" stroke-linejoin="round"/>';
+    /* cowboyhoed: een bol met een deuk, een band, en een rand die aan de zijkant omhoog krult */
+    if (n === 19) return '<path d="M-20,-32 q-2,-22 8,-24 q6,4 12,0 q6,4 12,0 q10,2 8,24 z" fill="#a5773f"/><path d="M-20,-36 q20,-5 40,0" fill="none" stroke="#5f4830" stroke-width="4"/><path d="M-44,-40 q8,14 44,12 q36,2 44,-12 q-4,16 -44,18 q-40,-2 -44,-18 z" fill="#a5773f" stroke="#7d5a2e" stroke-width="1.6" stroke-linejoin="round"/>';
+    /* oranje kroon voor Koningsdag: van karton, met een zigzag */
+    if (n === 20) return '<path d="M-27,-29 L-30,-50 L-20,-40 L-10,-54 L0,-42 L10,-54 L20,-40 L30,-50 L27,-29 Z" fill="#F7931E" stroke="#c96a1c" stroke-width="2" stroke-linejoin="round"/><path d="M-27,-34 h54" stroke="#fff" stroke-width="2.4" opacity=".75"/><circle cx="-10" cy="-47" r="2.2" fill="#fff"/><circle cx="10" cy="-47" r="2.2" fill="#fff"/><circle cx="0" cy="-38" r="2.4" fill="#204ECF"/>';
+    /* strohoed voor de zomer: een brede rand met een rood lint */
+    if (n === 21) return '<path d="M-46,-27 q46,-14 92,0 q-10,6 -46,6 q-36,0 -46,-6 z" fill="#e8c877" stroke="#b8924a" stroke-width="1.6" stroke-linejoin="round"/><path d="M-22,-31 q0,-22 22,-22 q22,0 22,22 z" fill="#e8c877" stroke="#b8924a" stroke-width="1.6"/><path d="M-22,-34 q22,-5 44,0" fill="none" stroke="#c0442c" stroke-width="4"/><path d="M-36,-26 q36,-9 72,0 M-14,-46 q14,-4 28,0" fill="none" stroke="#b8924a" stroke-width="1" opacity=".6"/>';
     return '';
   }
-  /* de trofeeën van de bazen uit Zwaardvechter, rechtsonder bij het gezicht */
+  /* de trofeeën, rechtsonder bij het gezicht */
   function trofee(n){
-    var g = '<g transform="translate(30,26)">';
-    if (n === 1) g += '<path d="M0,-13 l3.5,7.5 8,1 -6,5.5 1.5,8 -7,-4 -7,4 1.5,-8 -6,-5.5 8,-1z" fill="#4a1230" stroke="#FFD166" stroke-width="1.5" stroke-linejoin="round"/><circle r="2.5" fill="#FFD166"/>';
-    else if (n === 2) g += '<path d="M-11,-4 q4,-11 12,-8 q9,-2 10,7 q5,8 -4,11 q-8,5 -13,-1 q-9,-1 -5,-9z" fill="#22315f"/><circle cx="12" cy="-9" r="2.2" fill="#22315f"/><circle cx="-12" cy="8" r="1.6" fill="#22315f"/><circle cx="-3" cy="-2" r="2" fill="#fff" opacity=".6"/>';
-    else if (n === 3) g += '<g transform="rotate(-40)"><rect x="-3" y="-13" width="6" height="20" rx="1.5" fill="#c0442c"/><path d="M-3,7 L0,13 L3,7 Z" fill="#F3EFE9" stroke="#c0442c" stroke-width="1"/><rect x="-3" y="-13" width="6" height="4" fill="#8a2416"/></g>';
-    else if (n === 4) g += '<path d="M-10,-3 l4,-8 8,-1 7,5 1,8 -5,7 -9,1 -6,-5z" fill="#F3EFE9" stroke="#8f9db0" stroke-width="1.5" stroke-linejoin="round"/><path d="M-5,-4 l4,5 -3,5 M3,-7 l3,6 -2,6" fill="none" stroke="#8f9db0" stroke-width="1"/>';
-    else if (n === 5) g += '<circle r="11" fill="#5b6480" stroke="#14224C" stroke-width="1.5"/><circle r="9" fill="none" stroke="#fff" stroke-width=".8" opacity=".6"/><path d="M0,0 L0,-6 M0,0 L4,2" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle r="1.2" fill="#F26749"/>';
-    else if (n === 6) g += '<circle r="6" fill="#3b4759"/>' + [0, 60, 120, 180, 240, 300].map(function(a){ return '<circle transform="rotate(' + a + ') translate(0,-11)" r="3" fill="#3b4759"/>'; }).join('') + '<circle cx="-2" cy="-1.5" r="1" fill="#fff"/><circle cx="2" cy="-1.5" r="1" fill="#fff"/>';
-    return g + '</g>';
+    var g = '';
+    if (n === 1) g = '<path d="M0,-13 l3.5,7.5 8,1 -6,5.5 1.5,8 -7,-4 -7,4 1.5,-8 -6,-5.5 8,-1z" fill="#4a1230" stroke="#FFD166" stroke-width="1.5" stroke-linejoin="round"/><circle r="2.5" fill="#FFD166"/>';
+    else if (n === 2) g = '<path d="M-11,-4 q4,-11 12,-8 q9,-2 10,7 q5,8 -4,11 q-8,5 -13,-1 q-9,-1 -5,-9z" fill="#22315f"/><circle cx="12" cy="-9" r="2.2" fill="#22315f"/><circle cx="-12" cy="8" r="1.6" fill="#22315f"/><circle cx="-3" cy="-2" r="2" fill="#fff" opacity=".6"/>';
+    else if (n === 3) g = '<g transform="rotate(-40)"><rect x="-3" y="-13" width="6" height="20" rx="1.5" fill="#c0442c"/><path d="M-3,7 L0,13 L3,7 Z" fill="#F3EFE9" stroke="#c0442c" stroke-width="1"/><rect x="-3" y="-13" width="6" height="4" fill="#8a2416"/></g>';
+    else if (n === 4) g = '<path d="M-10,-3 l4,-8 8,-1 7,5 1,8 -5,7 -9,1 -6,-5z" fill="#F3EFE9" stroke="#8f9db0" stroke-width="1.5" stroke-linejoin="round"/><path d="M-5,-4 l4,5 -3,5 M3,-7 l3,6 -2,6" fill="none" stroke="#8f9db0" stroke-width="1"/>';
+    else if (n === 5) g = '<circle r="11" fill="#5b6480" stroke="#14224C" stroke-width="1.5"/><circle r="9" fill="none" stroke="#fff" stroke-width=".8" opacity=".6"/><path d="M0,0 L0,-6 M0,0 L4,2" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle r="1.2" fill="#F26749"/>';
+    else if (n === 6) g = '<circle r="6" fill="#3b4759"/>' + [0, 60, 120, 180, 240, 300].map(function(a){ return '<circle transform="rotate(' + a + ') translate(0,-11)" r="3" fill="#3b4759"/>'; }).join('') + '<circle cx="-2" cy="-1.5" r="1" fill="#fff"/><circle cx="2" cy="-1.5" r="1" fill="#fff"/>';
+    /* vlammetje: vijf dagen op rij geoefend */
+    else if (n === 7) g = '<path d="M0,13 q-12,0 -11,-11 q1,-8 7,-13 q0,6 4,8 q1,-8 7,-12 q-1,8 5,13 q4,5 -1,11 q-4,4 -11,4z" fill="#F26749" stroke="#c0442c" stroke-width="1.4" stroke-linejoin="round"/><path d="M0,11 q-5,0 -5,-5 q0,-4 4,-7 q0,4 3,5 q3,2 3,4 q0,3 -5,3z" fill="#FFD166"/>';
+    if (!g) return '';
+    return '<g transform="translate(30,26)">' + halo(g, 5) + g + '</g>';
   }
-  /* de achtergrond uit de winkel: een schijf achter het gezichtje */
+  /* De achtergrond uit de winkel: een schijf achter het gezichtje. Vroeger met een verloop, maar
+     een verloop heeft een id nodig, en met een klas vol gezichtjes op een pagina botsen die. Nu vlak,
+     met een lichte rand zodat een donkere schijf op een donkere pagina niet wegvalt. */
+  var SCHIJFRAND = '<circle r="49" fill="none" stroke="#fff" stroke-width="1.6" opacity=".3"/>';
   function achtergrond(n){
-    if (n === 1) return '<defs><radialGradient id="avA1" cx="50%" cy="70%" r="70%"><stop offset="0" stop-color="#FFD166"/><stop offset="1" stop-color="#F26749"/></radialGradient></defs><circle r="49" fill="url(#avA1)"/>';
-    if (n === 2) return '<defs><linearGradient id="avA2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#83A5F2"/><stop offset="1" stop-color="#204ECF"/></linearGradient></defs><circle r="49" fill="url(#avA2)"/><path d="M-34,22 q8,-6 16,0 t16,0 t16,0" fill="none" stroke="#fff" stroke-width="2.5" opacity=".5"/>';
+    if (n === 1) return '<circle r="49" fill="#F47A45"/><path d="M-49,0 a49,49 0 0 0 98,0 z" fill="#FFC35C" opacity=".8"/><circle cy="30" r="19" fill="#FFD166" opacity=".6"/>';
+    if (n === 2) return '<circle r="49" fill="#2d5bd6"/><path d="M-49,0 a49,49 0 0 1 98,0 z" fill="#83A5F2" opacity=".75"/><path d="M-34,22 q8,-6 16,0 t16,0 t16,0" fill="none" stroke="#fff" stroke-width="2.5" opacity=".5"/>';
     /* middernacht van De Klok: een wijzerplaat achter je gezichtje */
-    if (n === 4) return '<defs><radialGradient id="avA4" cx="50%" cy="40%" r="80%"><stop offset="0" stop-color="#5b468a"/><stop offset="1" stop-color="#241d47"/></radialGradient></defs><circle r="49" fill="url(#avA4)"/><g stroke="#FFD166" stroke-width="2" opacity=".75">' + [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map(function(a){ return '<path transform="rotate(' + a + ')" d="M0,-45 v-4"/>'; }).join('') + '</g><path d="M0,0 L0,-30" stroke="#F26749" stroke-width="2.6" stroke-linecap="round" opacity=".8"/><path d="M0,0 L20,10" stroke="#FFD166" stroke-width="2.6" stroke-linecap="round" opacity=".8"/>';
-    if (n === 3) return '<defs><radialGradient id="avA3" cx="50%" cy="30%" r="80%"><stop offset="0" stop-color="#6b3fa0"/><stop offset="1" stop-color="#14224C"/></radialGradient></defs><circle r="49" fill="url(#avA3)"/><g fill="#FFD166"><circle cx="-34" cy="-22" r="2"/><circle cx="30" cy="-30" r="1.6"/><circle cx="38" cy="8" r="1.4"/><circle cx="-38" cy="14" r="1.3"/><circle cx="8" cy="-44" r="1.8"/><circle cx="-12" cy="42" r="1.5"/></g>';
+    if (n === 4) return '<circle r="49" fill="#2e2558"/><circle cy="-8" r="38" fill="#4a3a80" opacity=".6"/><g stroke="#FFD166" stroke-width="2" opacity=".75">' + [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map(function(a){ return '<path transform="rotate(' + a + ')" d="M0,-45 v-4"/>'; }).join('') + '</g><path d="M0,0 L0,-30" stroke="#F26749" stroke-width="2.6" stroke-linecap="round" opacity=".8"/><path d="M0,0 L20,10" stroke="#FFD166" stroke-width="2.6" stroke-linecap="round" opacity=".8"/>' + SCHIJFRAND;
+    if (n === 3) return '<circle r="49" fill="#2a2466"/><circle cy="-14" r="36" fill="#5a3796" opacity=".7"/><g fill="#FFD166"><circle cx="-34" cy="-22" r="2"/><circle cx="30" cy="-30" r="1.6"/><circle cx="38" cy="8" r="1.4"/><circle cx="-38" cy="14" r="1.3"/><circle cx="8" cy="-44" r="1.8"/><circle cx="-12" cy="42" r="1.5"/></g>' + SCHIJFRAND;
+    /* ruitjespapier, zoals in je wiskundeschrift, met de rode kantlijn */
+    if (n === 5){
+      var l = '';
+      for (var i = -40; i <= 40; i += 10){ var h = Math.sqrt(49 * 49 - i * i).toFixed(1); l += 'M' + i + ',-' + h + 'V' + h + 'M-' + h + ',' + i + 'H' + h; }
+      var kl = Math.sqrt(49 * 49 - 33 * 33).toFixed(1);
+      return '<circle r="49" fill="#FDFBF4" stroke="#b9c7e6" stroke-width="1.4"/><path d="' + l + '" stroke="#9db4ea" stroke-width="1" opacity=".8"/><path d="M-33,-' + kl + 'V' + kl + '" stroke="#F26749" stroke-width="1.6"/>';
+    }
+    /* confetti: snippers in alle merkkleuren */
+    if (n === 6) return '<circle r="49" fill="#FFF1CC" stroke="#EA9836" stroke-width="1.4" opacity=".95"/>' + [[-40, -24, 20, '#F26749'], [-30, -40, -30, '#204ECF'], [-6, -47, 60, '#2f9e8f'], [22, -42, 10, '#6b3fa0'], [40, -22, -40, '#F26749'], [45, 4, 30, '#FFD166'], [38, 28, -20, '#204ECF'], [18, 43, 50, '#2f9e8f'], [-14, 45, -10, '#F26749'], [-36, 32, 40, '#6b3fa0'], [-46, 6, -60, '#EA9836']].map(function(c){
+      return '<rect x="-2.6" y="-1.5" width="5.2" height="3" rx=".8" fill="' + c[3] + '" transform="translate(' + c[0] + ',' + c[1] + ') rotate(' + c[2] + ')"/>'; }).join('');
+    /* sneeuw: een winterlucht met vlokjes en een witte heuvel onderaan */
+    if (n === 7) return '<circle r="49" fill="#5f86d9"/><path d="M-46,18 q22,-12 46,-4 q24,-8 46,4 a49,49 0 0 1 -92,0 z" fill="#F3F6FB"/><g fill="#fff">' + [[-34, -28, 2.2], [-20, -42, 1.6], [4, -46, 2], [26, -38, 1.8], [40, -18, 2.2], [-44, -6, 1.6], [44, 4, 1.4], [-38, 10, 1.3], [16, -44, 1.2]].map(function(c){ return '<circle cx="' + c[0] + '" cy="' + c[1] + '" r="' + c[2] + '"/>'; }).join('') + '</g>' + SCHIJFRAND;
     return '';
   }
   /* de bril uit de winkel, over de ogen heen */
   function bril(n){
     if (n === 1) return '<g><rect x="-27" y="-13" width="22" height="16" rx="6" fill="#14224C"/><rect x="5" y="-13" width="22" height="16" rx="6" fill="#14224C"/><path d="M-5,-8 h10 M-27,-8 h-6 M27,-8 h6" stroke="#14224C" stroke-width="3" stroke-linecap="round"/><path d="M-22,-9 h8 M10,-9 h8" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".35"/></g>';
     if (n === 2) return '<g fill="none" stroke="#c9971f" stroke-width="2.5"><circle cx="15" cy="-4" r="12"/><path d="M25,4 q6,10 2,22" stroke-width="1.5" stroke-dasharray="2 2"/></g>';
-    if (n === 3) return '<g fill="none" stroke="#14224C" stroke-width="2.2"><circle cx="-15" cy="-4" r="12"/><circle cx="15" cy="-4" r="12"/><path d="M-3,-5 h6 M-27,-6 h-6 M27,-6 h6" stroke-linecap="round"/></g>';
+    if (n === 3) return '<g fill="none" stroke="#14224C" stroke-width="2.4"><circle cx="-15" cy="-4" r="12"/><circle cx="15" cy="-4" r="12"/><path d="M-3,-5 h6 M-27,-6 h-6 M27,-6 h6" stroke-linecap="round"/></g>';
     /* inktbril van De Inktvlek: donkere glazen met een spat eroverheen */
     if (n === 4) return '<g><rect x="-28" y="-14" width="24" height="18" rx="7" fill="#101c3f"/><rect x="4" y="-14" width="24" height="18" rx="7" fill="#101c3f"/><path d="M-4,-8 h8 M-28,-9 h-5 M28,-9 h5" stroke="#101c3f" stroke-width="3" stroke-linecap="round"/><path d="M-20,-11 q5,7 12,3 q-3,8 -11,5 q-6,-3 -1,-8z" fill="#1b3a8f" opacity=".85"/><circle cx="14" cy="-6" r="3.4" fill="#1b3a8f" opacity=".85"/><circle cx="21" cy="-11" r="1.8" fill="#1b3a8f" opacity=".7"/></g>';
+    /* vierkante bril: een dik montuur, het glas een beetje wit */
+    if (n === 5) return '<g stroke="#14224C" stroke-width="3" stroke-linejoin="round"><rect x="-28" y="-15" width="24" height="19" rx="3" fill="#fff" fill-opacity=".18"/><rect x="4" y="-15" width="24" height="19" rx="3" fill="#fff" fill-opacity=".18"/><path d="M-4,-8 h8 M-28,-9 h-5 M28,-9 h5" fill="none" stroke-linecap="round"/></g>';
+    /* hartjesbril: roze hartjes als glazen */
+    if (n === 6) return '<g fill="#F26D8F" stroke="#b8365a" stroke-width="2" stroke-linejoin="round"><path d="M-15,6 l-11,-11 a5.8,5.8 0 0 1 11,-6 a5.8,5.8 0 0 1 11,6 z"/><path d="M15,6 l-11,-11 a5.8,5.8 0 0 1 11,-6 a5.8,5.8 0 0 1 11,6 z"/><path d="M-4,-7 h8 M-26,-6 h-6 M26,-6 h6" fill="none" stroke-linecap="round"/></g><path d="M-21,-9 l3,-2 M9,-9 l3,-2" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".55"/>';
+    /* sterrenbril: voor een feestje, geel met donkere glazen */
+    if (n === 7) return '<g stroke="#c9971f" stroke-width="1.6" stroke-linejoin="round"><path d="M-15,-19 l4.1,8.4 9.2,1.3 -6.6,6.5 1.6,9.2 -8.3,-4.4 -8.3,4.4 1.6,-9.2 -6.6,-6.5 9.2,-1.3z" fill="#FFD166"/><path d="M15,-19 l4.1,8.4 9.2,1.3 -6.6,6.5 1.6,9.2 -8.3,-4.4 -8.3,4.4 1.6,-9.2 -6.6,-6.5 9.2,-1.3z" fill="#FFD166"/></g><circle cx="-15" cy="-5" r="5.2" fill="#14224C"/><circle cx="15" cy="-5" r="5.2" fill="#14224C"/><path d="M-4,-7 h8" stroke="#c9971f" stroke-width="2.4" stroke-linecap="round"/><circle cx="-13" cy="-7" r="1.4" fill="#fff" opacity=".7"/><circle cx="17" cy="-7" r="1.4" fill="#fff" opacity=".7"/>';
+    /* skibril: een band om je hoofd en een groot oranje glas */
+    if (n === 8) return '<path d="M-46,-6 h92" stroke="#14224C" stroke-width="6" stroke-linecap="round"/><rect x="-31" y="-17" width="62" height="23" rx="11" fill="#EA9836" stroke="#14224C" stroke-width="3"/><path d="M-31,-6 q31,-8 62,0 v1 q-31,10 -62,0 z" fill="#F26749" opacity=".55"/><path d="M-22,-12 l8,-2 M16,-13 l6,-1" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".7"/>';
     return '';
   }
   function rand(n){
@@ -131,14 +220,115 @@ window.AVATAR = (function(){
     if (n === 2) return '<circle r="46" fill="none" stroke="#F26749" stroke-width="5" stroke-dasharray="9 5"/><circle r="46" fill="none" stroke="#EA9836" stroke-width="5" stroke-dasharray="5 9" stroke-dashoffset="9"/>';
     if (n === 3) return '<circle r="47" fill="none" stroke="#F26749" stroke-width="2.2"/><circle r="44.5" fill="none" stroke="#EA9836" stroke-width="2.2"/><circle r="42" fill="none" stroke="#FFD166" stroke-width="2.2"/><circle r="39.5" fill="none" stroke="#2f9e8f" stroke-width="2.2"/><circle r="37" fill="none" stroke="#204ECF" stroke-width="2.2"/>';
     if (n === 4) return '<circle r="46" fill="none" stroke="#83A5F2" stroke-width="5"/><circle r="46" fill="none" stroke="#fff" stroke-width="2" stroke-dasharray="3 11"/>';
-    if (n === 5) return '<circle r="46" fill="none" stroke="#204ECF" stroke-width="3" opacity=".6"/>' + [0, 60, 120, 180, 240, 300].map(function(a){ return '<path transform="rotate(' + a + ') translate(0,-46)" d="M0,-5 l1.5,3.5 3.5,.5 -2.5,2.5 .5,3.5 -3,-1.8 -3,1.8 .5,-3.5 -2.5,-2.5 3.5,-.5z" fill="#FFD166"/>'; }).join('');
-    /* krijtcirkel: een streep krijt op een schoolbord, met een hand getrokken */
+    if (n === 5) return '<circle r="46" fill="none" stroke="#204ECF" stroke-width="3" opacity=".6"/>' + [0, 60, 120, 180, 240, 300].map(function(a){ return '<path transform="rotate(' + a + ') translate(0,-46)" d="M0,-5 l1.5,3.5 3.5,.5 -2.5,2.5 .5,3.5 -3,-1.8 -3,1.8 .5,-3.5 -2.5,-2.5 3.5,-.5z" fill="#FFD166" stroke="#c9971f" stroke-width=".8" stroke-linejoin="round"/>'; }).join('');
     /* rode streep van De Rode Pen: een halo met een doorgehaalde streep */
     if (n === 7) return '<circle r="46" fill="none" stroke="#c0442c" stroke-width="5"/><circle r="46" fill="none" stroke="#8a2416" stroke-width="1.6"/><path d="M-40,4 q40,14 80,0" fill="none" stroke="#c0442c" stroke-width="3" stroke-linecap="round" opacity=".5"/>';
     /* zwermring van De Zwerm: losse propjes rond je gezicht */
-    if (n === 8) return '<circle r="46" fill="none" stroke="#7d1f12" stroke-width="2" opacity=".5"/>' + [0, 45, 90, 135, 180, 225, 270, 315].map(function(a){ return '<circle transform="rotate(' + a + ') translate(0,-46)" r="4" fill="#7d1f12"/>'; }).join('');
+    if (n === 8) return '<circle r="46" fill="none" stroke="#7d1f12" stroke-width="2" opacity=".5"/>' + [0, 45, 90, 135, 180, 225, 270, 315].map(function(a){ return '<circle transform="rotate(' + a + ') translate(0,-46)" r="4" fill="#9b2a18" stroke="#F26749" stroke-width="1"/>'; }).join('');
+    /* krijtcirkel: een streep krijt op een schoolbord, met een hand getrokken */
     if (n === 6) return '<circle r="46" fill="none" stroke="#2b4a3a" stroke-width="7"/><circle r="46" fill="none" stroke="#F3EFE9" stroke-width="3.6" stroke-dasharray="34 6" stroke-linecap="round" opacity=".95"/><circle r="46" fill="none" stroke="#F3EFE9" stroke-width="1.2" stroke-dasharray="18 22" opacity=".45" transform="rotate(9)"/>';
+    /* neonring: roze met een lichtblauwe gloed erbuiten */
+    if (n === 9) return '<circle r="49" fill="none" stroke="#3fe0d0" stroke-width="2" opacity=".85"/><circle r="45.5" fill="none" stroke="#ff4fa3" stroke-width="5"/><circle r="45.5" fill="none" stroke="#fff" stroke-width="1.4" opacity=".75"/>';
+    /* pixelrand: blokjes, zoals in een oud spelletje */
+    if (n === 10){ var kl = ['#FFD166', '#F26749', '#2f9e8f', '#204ECF']; var s = '';
+      for (var i = 0; i < 24; i++) s += '<rect x="-3.2" y="-49.2" width="6.4" height="6.4" fill="' + kl[i % 4] + '" transform="rotate(' + (i * 15) + ')"/>';
+      return s; }
+    /* lauwerkrans: gouden blaadjes aan twee kanten, voor wie twee weken op rij oefende */
+    if (n === 11){ var b = '';
+      [-1, 1].forEach(function(z){ for (var j = 0; j < 7; j++){ var a = 76 - j * 19; b += '<ellipse cx="4" rx="7" ry="3.2" fill="' + (j % 2 ? '#FFD166' : '#EAB53F') + '" stroke="#b8862a" stroke-width="1" transform="scale(' + z + ',1) rotate(' + a + ') translate(46,0) rotate(' + (j % 2 ? -125 : -55) + ')"/>'; } });
+      return '<path d="M-8,45.3 A46,46 0 0 1 -35,-29.6 M8,45.3 A46,46 0 0 0 35,-29.6" fill="none" stroke="#b8862a" stroke-width="2.2" stroke-linecap="round"/>' + b + '<path d="M-7,48 l7,-5 7,5" fill="none" stroke="#c0442c" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>'; }
     return '';
+  }
+  /* ---------- het haar ----------
+     Een kapsel past precies op het hoofd, want het volgt de echte rand van de blob. Een kap is het
+     deel van de rand boven een lijn (de pony, f), iets opgeblazen zodat het haar op het hoofd ligt.
+     Alles rechtop, dus de scheiding blijft in het midden ook als het hoofd scheef staat. */
+  function kap(P, f, groei){
+    groei = groei || 1.05;
+    var sel = P.map(function(q){ return [q[0] * groei, q[1] * groei - (groei - 1) * 6]; }).filter(function(q){ return q[1] < f(q[0]); });
+    if (sel.length < 3) return '';
+    sel.sort(function(a, b){ return Math.atan2(a[1], a[0]) - Math.atan2(b[1], b[0]); });
+    var d = 'M' + sel.map(function(q){ return f1(q[0]) + ',' + f1(q[1]); }).join('L');
+    var x1 = sel[sel.length - 1][0], x0 = sel[0][0];
+    for (var i = 0; i <= 12; i++){ var x = x1 + (x0 - x1) * i / 12; d += 'L' + f1(x) + ',' + f1(f(x)); }
+    return d + 'Z';
+  }
+  /* een punt op de rand van het hoofd, in een richting (graden, 0 is rechts, -90 is boven) */
+  function randPunt(P, graden, maal){
+    var a = graden * Math.PI / 180, best = null, bestV = 9;
+    P.forEach(function(q){ var v = Math.abs(Math.atan2(q[1], q[0]) - a); if (v > Math.PI) v = 2 * Math.PI - v; if (v < bestV){ bestV = v; best = q; } });
+    return [best[0] * (maal || 1), best[1] * (maal || 1)];
+  }
+  /* geeft { achter, voor, op, groter }: achter het hoofd, over het hoofd, en hoeveel hoger een hoed moet */
+  function haar(x, P, M, kl, hoedOp){
+    var T = M.top, B = M.breed, rand = meng(kl, INKT, 0.35), licht2 = meng(kl, '#ffffff', 0.35);
+    var achter = '', voor = '', op = 0, groter = 1, i, j, q;
+    function vul(d){ return '<path d="' + d + '" fill="' + kl + '" stroke="' + rand + '" stroke-width="1.6" stroke-linejoin="round"/>'; }
+    function bol(cx, cy, r){ return '<circle cx="' + f1(cx) + '" cy="' + f1(cy) + '" r="' + f1(r) + '" fill="' + kl + '" stroke="' + rand + '" stroke-width="1.6"/>'; }
+    /* haar valt aan de zijkant iets verder naar beneden, als bakkebaardjes */
+    function zij(x, n){ return n * Math.pow(Math.min(1, Math.abs(x) / B), 3); }
+    function glans(d){ return '<path d="' + d + '" fill="none" stroke="' + licht2 + '" stroke-width="2.2" stroke-linecap="round" opacity=".7"/>'; }
+    if (x === 1){        /* kuif: kort aan de zijkant, een golf voorop */
+      voor = vul(kap(P, function(x){ return -24 - 3 * Math.cos(x / 20) + zij(x, 14); }));
+      if (!hoedOp) voor += vul('M-18,' + f1(T + 6) + ' q-2,-14 16,-16 q18,-2 22,12 q-8,-6 -16,-3 q-10,3 -22,7z') + glans('M-6,' + f1(T - 5) + ' q8,-4 16,0');
+    } else if (x === 2){ /* stekels */
+      voor = vul(kap(P, function(x){ return -24 + Math.abs(Math.sin(x / 5)) * 3 + zij(x, 14); }));
+      if (!hoedOp) for (i = -150; i <= -30; i += 20){
+        var a = randPunt(P, i - 8, 1.03), b = randPunt(P, i + 8, 1.03), t = randPunt(P, i + 4, 1.3);
+        voor += vul('M' + f1(a[0]) + ',' + f1(a[1]) + 'L' + f1(t[0]) + ',' + f1(t[1]) + 'L' + f1(b[0]) + ',' + f1(b[1]) + 'Z');
+      }
+    } else if (x === 3 || x === 4){ /* krullen, en de afro: veel volume */
+      if (x === 4){
+        achter = bol(0, T + 26, B * 1.18);
+        for (i = -210; i <= 30; i += 24){ q = randPunt(P, i, 1.2); achter += bol(q[0], q[1] - 6, 13); }
+        op = 12; groter = 1.18;
+      }
+      var krul = function(x){ return -20 - 2.5 * Math.cos(x / 3.2) + zij(x, 10); };
+      voor = vul(kap(P, krul, 1.06));
+      if (!hoedOp || x === 4) for (i = -170; i <= -10; i += 20){ q = randPunt(P, i, 1.04); voor += bol(q[0], q[1], 7.5); }
+      for (i = -24; i <= 24; i += 12) voor += bol(i, krul(i) - 1, 5.5);
+      if (x === 3) op = 3;
+    } else if (x === 5){ /* twee vlechten met een elastiekje */
+      voor = vul(kap(P, function(x){ return -22 - 10 * Math.max(0, 1 - Math.abs(x) / 16) + zij(x, 12); })) + '<path d="M0,' + f1(T - 1) + ' V-31" stroke="' + rand + '" stroke-width="1.8" stroke-linecap="round"/>';
+      [-1, 1].forEach(function(z){
+        for (var j = 0; j < 6; j++) achter += '<ellipse cx="' + f1(z * (B + 2 - j * 0.6)) + '" cy="' + (-12 + j * 10) + '" rx="7.5" ry="6.5" fill="' + kl + '" stroke="' + rand + '" stroke-width="1.6"/>';
+        achter += '<rect x="' + f1(z * (B - 1.6) - 4) + '" y="46" width="8" height="4" rx="2" fill="#F26749"/><path d="M' + f1(z * (B - 1.6) - 3) + ',50 l-1,6 M' + f1(z * (B - 1.6)) + ',50 v7 M' + f1(z * (B - 1.6) + 3) + ',50 l1,6" stroke="' + kl + '" stroke-width="2.4" stroke-linecap="round"/>';
+      });
+    } else if (x === 6){ /* paardenstaart die naar rechts zwiept */
+      voor = vul(kap(P, function(x){ return -22 - 4 * Math.cos(x / 25) + zij(x, 12); }));
+      q = randPunt(P, -40, 1);
+      achter = vul('M' + f1(q[0] - 6) + ',' + f1(q[1]) + ' q24,-10 28,14 q4,22 -8,36 q6,-16 -6,-26 q-8,-6 -14,-14z') + '<circle cx="' + f1(q[0] + 2) + '" cy="' + f1(q[1] + 1) + '" r="4" fill="#F26749"/>';
+    } else if (x === 7){ /* knot bovenop */
+      voor = vul(kap(P, function(x){ return -25 - 2 * Math.cos(x / 12) + zij(x, 13); }));
+      if (!hoedOp) voor += bol(0, T - 8, 12) + glans('M-6,' + f1(T - 12) + ' q6,-5 12,0') + '<path d="M-9,' + f1(T + 1) + ' q9,4 18,0" fill="none" stroke="#F26749" stroke-width="3" stroke-linecap="round"/>';
+    } else if (x === 8){ /* kort, bijna kaal geschoren */
+      voor = '<path d="' + kap(P, function(x){ return -27 - 2 * Math.cos(x / 14) + zij(x, 14); }, 1.015) + '" fill="' + kl + '" opacity=".85"/>';
+    } else if (x === 9){ /* bob met een rechte pony */
+      achter = vul('M0,' + f1(T - 4) + ' C' + f1(-B - 4) + ',' + f1(T - 4) + ' ' + f1(-B - 9) + ',' + f1(T + 8) + ' ' + f1(-B - 8) + ',10 Q' + f1(-B - 8) + ',24 ' + f1(-B + 3) + ',22 L' + f1(B - 3) + ',22 Q' + f1(B + 8) + ',24 ' + f1(B + 8) + ',10 C' + f1(B + 9) + ',' + f1(T + 8) + ' ' + f1(B + 4) + ',' + f1(T - 4) + ' 0,' + f1(T - 4) + 'Z');
+      voor = vul(kap(P, function(x){ return -18 + Math.pow(Math.abs(x) / B, 3) * 12; }, 1.06)) + glans('M-18,' + f1(T + 8) + ' q14,-6 28,-4');
+    } else if (x === 10){ /* lang, met een scheiding in het midden */
+      achter = vul('M0,' + f1(T - 4) + ' C' + f1(-B - 2) + ',' + f1(T - 4) + ' ' + f1(-B - 8) + ',' + f1(T + 10) + ' ' + f1(-B - 8) + ',20 C' + f1(-B - 8) + ',36 ' + f1(-B - 4) + ',46 ' + f1(-B + 6) + ',48 Q0,38 ' + f1(B - 6) + ',48 C' + f1(B + 4) + ',46 ' + f1(B + 8) + ',36 ' + f1(B + 8) + ',20 C' + f1(B + 8) + ',' + f1(T + 10) + ' ' + f1(B + 2) + ',' + f1(T - 4) + ' 0,' + f1(T - 4) + 'Z');
+      voor = vul(kap(P, function(x){ return -34 + 28 * Math.pow(Math.min(1, Math.abs(x) / B), 0.7); }, 1.05)) + glans('M-22,' + f1(T + 12) + ' q6,-8 14,-10');
+    } else if (x === 11){ /* zijscheiding, de pony valt naar rechts */
+      voor = vul(kap(P, function(x){ var t = Math.max(0, Math.min(1, (x + B) / (2 * B))); return -33 + 17 * Math.pow(t, 1.4) + zij(x, 8); }, 1.05)) + glans('M-12,' + f1(T + 5) + ' q12,-3 22,4');
+    } else if (x === 12){ /* hoofddoek: stof om het gezicht heen, en een plooi eronder */
+      var st = meng(kl, '#ffffff', 0.08), cy = 5, ry = 36, rx = Math.min(34, B - 8);
+      achter = '<path d="M0,' + f1(T - 6) + ' C' + f1(-B - 6) + ',' + f1(T - 6) + ' ' + f1(-B - 10) + ',' + f1(T + 14) + ' ' + f1(-B - 9) + ',24 C' + f1(-B - 8) + ',42 ' + f1(-B + 4) + ',55 0,56 C' + f1(B - 4) + ',55 ' + f1(B + 8) + ',42 ' + f1(B + 9) + ',24 C' + f1(B + 10) + ',' + f1(T + 14) + ' ' + f1(B + 6) + ',' + f1(T - 6) + ' 0,' + f1(T - 6) + 'Z" fill="' + st + '" stroke="' + rand + '" stroke-width="1.6" stroke-linejoin="round"/>' +
+        '<path d="M-14,48 q14,5 28,0" fill="none" stroke="' + rand + '" stroke-width="1.4" opacity=".6"/>';
+      var omtrek = P.slice().sort(function(a, b){ return Math.atan2(a[1], a[0]) - Math.atan2(b[1], b[0]); }).map(function(q){ return f1(q[0] * 1.06) + ',' + f1(q[1] * 1.06); });
+      voor = '<path d="M' + omtrek.join('L') + 'Z M' + f1(-rx) + ',' + cy + ' a' + rx + ',' + ry + ' 0 1 0 ' + f1(2 * rx) + ',0 a' + rx + ',' + ry + ' 0 1 0 ' + f1(-2 * rx) + ',0Z" fill="' + st + '" fill-rule="evenodd"/>' +
+        '<ellipse cx="0" cy="' + cy + '" rx="' + f1(rx) + '" ry="' + ry + '" fill="none" stroke="' + rand + '" stroke-width="1.8"/>' + glans('M' + f1(-B + 4) + ',' + f1(T + 20) + ' q6,-12 18,-17');
+    } else if (x === 13){ /* twee knotjes */
+      voor = vul(kap(P, function(x){ return -24 - 8 * Math.max(0, 1 - Math.abs(x) / 12) + zij(x, 12); })) + '<path d="M0,' + f1(T - 1) + ' V-31" stroke="' + rand + '" stroke-width="1.8" stroke-linecap="round"/>';
+      if (!hoedOp){ q = randPunt(P, -135, 1.02); var q2 = randPunt(P, -45, 1.02); voor = bol(q[0], q[1], 11) + bol(q2[0], q2[1], 11) + voor; }
+    } else if (x === 14){ /* hanenkam: een kam in het midden, de zijkanten kort */
+      voor = '<path d="' + kap(P, function(x){ return -27; }, 1.015) + '" fill="' + kl + '" opacity=".35"/>';
+      if (!hoedOp){ var d = '';
+        for (i = -124, j = 0; i <= -56; i += 8, j++){ q = randPunt(P, i, j % 2 ? 1.34 : 1.02); d += (d ? 'L' : 'M') + f1(q[0]) + ',' + f1(q[1]); }
+        q = randPunt(P, -56, 0.9); d += 'L' + f1(q[0]) + ',' + f1(q[1]); q = randPunt(P, -124, 0.9); d += 'L' + f1(q[0]) + ',' + f1(q[1]) + 'Z';
+        voor += vul(d); }
+    }
+    return { achter:achter, voor:voor, op:op, groter:groter };
   }
   var cache = {};
   /* de binnenkant (viewBox -50..50), voor wie hem in een eigen svg tekent, zoals de arena van Zwaardvechter */
@@ -150,6 +340,11 @@ window.AVATAR = (function(){
     cache[sleutel] = s;
     return s;
   }
+  function ster(cx, cy, r, kleur, lijn){
+    var d = '';
+    for (var i = 0; i < 10; i++){ var a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; d += (i ? 'L' : 'M') + f1(cx + Math.cos(a) * rr) + ',' + f1(cy + Math.sin(a) * rr); }
+    return '<path d="' + d + 'Z" fill="' + kleur + '"' + (lijn ? ' stroke="' + lijn + '" stroke-width="1.6" stroke-linejoin="round"' : '') + '/>';
+  }
   /* opties.stemming: '' (gewoon), 'au' (net geraakt), 'blij' (goed gedaan), 'sip' (jammer) of 'oeps' (betrapt: grote ogen, o-mondje); de spellen kiezen die per moment.
      opties.klasse: extra klasse op de svg, zoals 'av-juich' voor een sprongetje. */
   function svg(naam, maat, spec, opties){
@@ -157,38 +352,60 @@ window.AVATAR = (function(){
     var sp = ontleed(spec), stemming = opties && opties.stemming || '';
     /* elk gezichtje ademt en knippert op zijn eigen moment, anders doet een hele klas het tegelijk */
     var zaadje = hash((spec || '') + '|' + (naam || '')), d1 = (zaadje % 340) / 100, d2 = ((zaadje >>> 8) % 460) / 100;
-    /* met een spec hangt niets meer van de naam af: dezelfde keuzes geven overal dezelfde blob */
+    /* met een spec hangt niets meer van de naam af: dezelfde keuzes geven overal dezelfde blob.
+       Let op: de volgorde van de trekkingen hieronder is heilig, anders krijgt iedereen zonder
+       eigen keuze ineens een ander gezichtje. Nieuwe dingen trekken niets uit r(). */
     var r = toeval(sp ? 7919 * (sp.v + 1) + 17 : hash(naam));
     var kleur = KLEUREN[Math.floor(r() * KLEUREN.length)];
-    if (sp) kleur = KLEUREN[sp.k % KLEUREN.length];
-    var donker = !!DONKER[kleur], oog = donker ? '#fff' : '#14224C', pupil = '#14224C', mond = donker ? '#14224C' : '#14224C';
+    if (sp) kleur = sp.c ? KLEUREN2[(sp.c - 1) % KLEUREN2.length] : KLEUREN[sp.k % KLEUREN.length];
+    var helder = licht(kleur);
+    var donker = sp && sp.c ? helder < 0.5 : !!DONKER[kleur], oog = donker ? '#fff' : INKT, pupil = INKT;
+    /* de mond is donker, behalve op een heel donker gezicht: daar zag je hem niet */
+    var mond = helder < 0.22 ? '#F3EFE9' : INKT;
     var draai = (r() * 16 - 8).toFixed(1);
+    var vorm = blob(r, 46);
+    var P = draaiPunten(vorm.pts, +draai), M = maten(P);
+    var soort = Math.floor(r() * 5), kijk = (r() - 0.5) * 5, afstand = 15;
+    var m = Math.floor(r() * 4);
+    var e = Math.floor(r() * 6);
+    /* hoe dik de lichte rand om het hoofd is: klein getekend iets dikker, anders zie je hem niet */
+    var rim = Math.max(1.6, Math.min(6, 120 / maat));
+
     var s = '<svg class="avatar' + (opties && opties.klasse ? ' ' + opties.klasse : '') + '" viewBox="-50 -50 100 100" overflow="visible" width="' + maat + '" height="' + maat + '" aria-hidden="true" focusable="false">';
     if (sp && sp.a) s += achtergrond(sp.a);
     s += '<g class="av-alles" style="animation-delay:-' + d1 + 's">';
-    var vorm = blob(r, 46), knip = 'avk' + hash(vorm).toString(36);
-    s += '<g transform="rotate(' + draai + ')"><path d="' + vorm + '" fill="' + kleur + '"/>';
-    /* een lichtere gloed bovenin, zoals het glimmetje op de ridder; afgeknipt op de vorm,
-       anders steekt hij op een donkere achtergrond als een grijze boog boven het gezicht uit */
-    s += '<clipPath id="' + knip + '"><path d="' + vorm + '"/></clipPath><path d="M-40,-6 a40,40 0 0 1 80,0 z" fill="#fff" opacity=".14" clip-path="url(#' + knip + ')"/></g>';
-    /* de ogen: vijf soorten */
-    var soort = Math.floor(r() * 5), kijk = (r() - 0.5) * 5, afstand = 15;
-    if (sp) soort = sp.o % 5;
+    /* het haar: wat achter het hoofd hangt komt eerst */
+    var hoedOp = !!(sp && sp.h && [3, 5, 6, 7, 11, 17].indexOf(sp.h) < 0);
+    var hr = sp && sp.x ? haar(sp.x % KEUZES.kapsels, P, M, HAAR[sp.w % HAAR.length], hoedOp) : null;
+    if (hr && (hr.achter || hr.voor)) s += halo(hr.achter + hr.voor, rim * 2) + hr.achter;
+    /* Het hoofd: eerst een lichte rand (op een donkere pagina zie je anders een donker gezicht niet),
+       dan een iets donkerder onderkant en de kleur zelf er net boven, en een glimmetje linksboven.
+       Zo heeft het wat vorm zonder verloop of clipPath, en dus zonder id's die kunnen botsen. */
+    s += '<g transform="rotate(' + draai + ')"><path d="' + vorm.d + '" fill="none" stroke="#fff" stroke-opacity=".42" stroke-width="' + f1(rim * 2) + '" stroke-linejoin="round"/>';
+    s += '<path d="' + vorm.d + '" fill="' + meng(kleur, INKT, helder < 0.2 ? 0.35 : 0.2) + '"/>';
+    s += '<path d="' + vorm.d + '" fill="' + kleur + '" transform="translate(0,-2.6) scale(.93)"/></g>';
+    s += '<ellipse cx="-17" cy="-25" rx="11" ry="6" transform="rotate(-28 -17 -25)" fill="#fff" opacity="' + (helder > 0.7 ? '.35' : '.2') + '"/>';
+    if (hr) s += hr.voor;
+    /* de ogen: tien soorten */
+    if (sp) soort = sp.o % 10;
+    /* een bril uit de winkel over de getekende bril heen is er een te veel: dan gewone ogen */
+    if (sp && sp.q && soort === 3) soort = 0;
     if (stemming === 'blij') soort = 1;
-    if (stemming === 'au') soort = 9;
-    if (stemming === 'oeps') soort = 8;
+    if (stemming === 'au') soort = 'au';
+    if (stemming === 'oeps') soort = 'oeps';
+    var lijn = '" fill="none" stroke="' + oog + '" stroke-width="4.5" stroke-linecap="round"/>';
     s += '<g class="av-ogen" style="animation-delay:-' + d2 + 's">';
-    if (soort === 8){                 /* oeps: wijd open, kleine pupillen die rondkijken */
+    if (soort === 'oeps' || soort === 6){  /* oeps en verbaasd: wijd open, kleine pupillen */
       s += '<circle cx="-' + afstand + '" cy="-5" r="11" fill="' + oog + '"/><circle cx="' + afstand + '" cy="-5" r="11" fill="' + oog + '"/>';
       s += '<circle cx="-' + afstand + '" cy="-4" r="4.2" class="av-pupil" fill="' + pupil + '"/><circle cx="' + afstand + '" cy="-4" r="4.2" class="av-pupil" fill="' + pupil + '"/>';
       s += '<circle cx="-' + (afstand - 1.6) + '" cy="-5.6" r="1.3" class="av-pupil" fill="#fff"/><circle cx="' + (afstand + 1.6) + '" cy="-5.6" r="1.3" class="av-pupil" fill="#fff"/>';
-    } else if (soort === 9){                 /* au: dichtgeknepen */
+    } else if (soort === 'au'){        /* au: dichtgeknepen */
       s += '<path d="M-23,-11 L-12,-4 L-23,3 M23,-11 L12,-4 L23,3" fill="none" stroke="' + oog + '" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>';
     } else if (soort === 1){          /* blij: boogjes */
-      s += '<path d="M-22,-4 q7,-9 14,0 M8,-4 q7,-9 14,0" fill="none" stroke="' + oog + '" stroke-width="4.5" stroke-linecap="round"/>';
+      s += '<path d="M-22,-4 q7,-9 14,0 M8,-4 q7,-9 14,0' + lijn;
     } else if (soort === 2){          /* knipoog */
       s += '<circle cx="-' + afstand + '" cy="-5" r="8" fill="' + oog + '"/><circle cx="' + (-afstand + kijk).toFixed(1) + '" cy="-4" r="4" class="av-pupil" fill="' + pupil + '"/>';
-      s += '<path d="M8,-5 q7,-7 14,0" fill="none" stroke="' + oog + '" stroke-width="4.5" stroke-linecap="round"/>';
+      s += '<path d="M8,-5 q7,-7 14,0' + lijn;
     } else if (soort === 3){          /* bril */
       s += '<circle cx="-' + afstand + '" cy="-4" r="11" fill="' + oog + '" opacity=".95"/><circle cx="' + afstand + '" cy="-4" r="11" fill="' + oog + '" opacity=".95"/>';
       s += '<circle cx="-' + afstand + '" cy="-4" r="11" fill="none" stroke="' + pupil + '" stroke-width="3"/><circle cx="' + afstand + '" cy="-4" r="11" fill="none" stroke="' + pupil + '" stroke-width="3"/><path d="M-4,-4 h8" stroke="' + pupil + '" stroke-width="3"/>';
@@ -197,44 +414,69 @@ window.AVATAR = (function(){
       s += '<circle cx="-' + afstand + '" cy="-4" r="10" fill="' + oog + '"/><circle cx="' + afstand + '" cy="-4" r="10" fill="' + oog + '"/>';
       s += '<circle cx="' + (-afstand + kijk).toFixed(1) + '" cy="-3" r="5" class="av-pupil" fill="' + pupil + '"/><circle cx="' + (afstand + kijk).toFixed(1) + '" cy="-3" r="5" class="av-pupil" fill="' + pupil + '"/>';
       s += '<circle cx="' + (-afstand + kijk + 2).toFixed(1) + '" cy="-5" r="1.6" class="av-pupil" fill="#fff"/><circle cx="' + (afstand + kijk + 2).toFixed(1) + '" cy="-5" r="1.6" class="av-pupil" fill="#fff"/>';
+    } else if (soort === 5){          /* cool: halfdichte oogleden, alsof niets je verbaast */
+      s += '<circle cx="-' + afstand + '" cy="-4" r="8" fill="' + oog + '"/><circle cx="' + afstand + '" cy="-4" r="8" fill="' + oog + '"/>';
+      s += '<circle cx="' + (-afstand + kijk * 0.6).toFixed(1) + '" cy="-1.5" r="4" class="av-pupil" fill="' + pupil + '"/><circle cx="' + (afstand + kijk * 0.6).toFixed(1) + '" cy="-1.5" r="4" class="av-pupil" fill="' + pupil + '"/>';
+      s += '<path d="M-24.5,-4 a9.5,9.5 0 0 1 19,0 z M5.5,-4 a9.5,9.5 0 0 1 19,0 z" fill="' + kleur + '"/><path d="M-24,-4 h18 M6,-4 h18" stroke="' + (donker ? '#fff' : INKT) + '" stroke-width="3.2" stroke-linecap="round"/>';
+    } else if (soort === 7){          /* sterren in je ogen */
+      s += ster(-afstand, -4, 11, '#FFD166', INKT) + ster(afstand, -4, 11, '#FFD166', INKT);
+    } else if (soort === 8){          /* tevreden: dicht, een boogje naar beneden */
+      s += '<path d="M-22,-6 q7,7 14,0 M8,-6 q7,7 14,0' + lijn;
+    } else if (soort === 9){          /* vastberaden: stipjes met schuine wenkbrauwen */
+      s += '<circle cx="-' + afstand + '" cy="-3" r="7.5" fill="' + oog + '"/><circle cx="' + afstand + '" cy="-3" r="7.5" fill="' + oog + '"/>';
+      s += '<circle cx="' + (-afstand + kijk * 0.6).toFixed(1) + '" cy="-2" r="4" class="av-pupil" fill="' + pupil + '"/><circle cx="' + (afstand + kijk * 0.6).toFixed(1) + '" cy="-2" r="4" class="av-pupil" fill="' + pupil + '"/>';
+      s += '<path d="M-25,-17 l14,5 M25,-17 l-14,5" fill="none" stroke="' + (donker ? '#fff' : INKT) + '" stroke-width="4" stroke-linecap="round"/>';
     } else {                          /* gewone stipjes, zoals de ridder */
       s += '<circle cx="-' + afstand + '" cy="-5" r="8" fill="' + oog + '"/><circle cx="' + afstand + '" cy="-5" r="8" fill="' + oog + '"/>';
       s += '<circle cx="' + (-afstand + kijk).toFixed(1) + '" cy="-4" r="4" class="av-pupil" fill="' + pupil + '"/><circle cx="' + (afstand + kijk).toFixed(1) + '" cy="-4" r="4" class="av-pupil" fill="' + pupil + '"/>';
     }
     s += '</g>';
-    /* oeps: de wenkbrauwen schieten omhoog, net niet recht */
-    if (stemming === 'oeps') s += '<path d="M-26,-21 q10,-10 21,-4 M6,-25 q10,-5 20,3" fill="none" stroke="' + oog + '" stroke-width="3.6" stroke-linecap="round"/>';
+    /* oeps en verbaasd: de wenkbrauwen schieten omhoog, net niet recht */
+    if (soort === 'oeps' || soort === 6) s += '<path d="M-26,-21 q10,-10 21,-4 M6,-25 q10,-5 20,3" fill="none" stroke="' + (donker ? '#fff' : INKT) + '" stroke-width="3.6" stroke-linecap="round"/>';
     if (sp && sp.q) s += bril(sp.q);
-    /* de mond: lach, klein rondje, of een streepje */
-    var m = Math.floor(r() * 4);
-    if (sp) m = sp.m % 4;
+    /* de mond: tien soorten */
+    if (sp) m = sp.m % 10;
     if (stemming === 'blij') m = 3;
     if (stemming === 'au') m = 1;
-    if (stemming === 'sip') m = 4;
-    if (stemming === 'oeps') m = 5;
-    if (m === 5) s += '<ellipse cx="3" cy="17" rx="5" ry="6.5" fill="' + mond + '"/><circle cx="-27" cy="9" r="5.5" fill="#F26749" opacity=".5"/><circle cx="27" cy="9" r="5.5" fill="#F26749" opacity=".5"/>' +
+    if (stemming === 'sip') m = 'sip';
+    if (stemming === 'oeps') m = 'oeps';
+    var mlijn = '" fill="none" stroke="' + mond + '" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>';
+    var tong = '#F26749', tanden = '#fff';
+    if (m === 'oeps') s += '<ellipse cx="3" cy="17" rx="5" ry="6.5" fill="' + mond + '"/><circle cx="-27" cy="9" r="5.5" fill="#F26749" opacity=".5"/><circle cx="27" cy="9" r="5.5" fill="#F26749" opacity=".5"/>' +
       '<path d="M37,-27 q6,9 0,13 q-6,-4 0,-13 z" fill="#83A5F2" stroke="#14224C" stroke-width="1.2" stroke-opacity=".35"/>';
-    else if (m === 0) s += '<path d="M-10,12 q10,10 20,0" fill="none" stroke="' + mond + '" stroke-width="4" stroke-linecap="round"/>';
+    else if (m === 0) s += '<path d="M-10,12 q10,10 20,0' + mlijn;
     else if (m === 1) s += '<circle cx="0" cy="14" r="4.5" fill="' + mond + '"/>';
-    else if (m === 2) s += '<path d="M-7,13 h14" fill="none" stroke="' + mond + '" stroke-width="4" stroke-linecap="round"/>';
-    else if (m === 4) s += '<path d="M-10,17 q10,-9 20,0" fill="none" stroke="' + mond + '" stroke-width="4" stroke-linecap="round"/>';
-    else s += '<path d="M-12,10 q12,14 24,0 q-12,4 -24,0 z" fill="' + mond + '"/><path d="M-5,14 q5,6 10,0 z" fill="#F26749" opacity=".9"/>';
-    /* iets extra's: blosjes, sproetjes, een krul, een petje of een sticker */
-    var e = Math.floor(r() * 6);
-    if (sp) e = sp.e % 6;
-    if (e === 0) s += '<circle cx="-26" cy="8" r="5" fill="#F26749" opacity=".45"/><circle cx="26" cy="8" r="5" fill="#F26749" opacity=".45"/>';
+    else if (m === 2) s += '<path d="M-7,13 h14' + mlijn;
+    else if (m === 'sip') s += '<path d="M-10,17 q10,-9 20,0' + mlijn;
+    else if (m === 4) s += '<path d="M-11,11 q11,10 22,0' + mlijn + '<path d="M1,15.5 h9 v4 a4.5,4.5 0 0 1 -9,0 z" fill="#F47A8A" stroke="' + mond + '" stroke-width="2" stroke-linejoin="round"/><path d="M5.5,16 v4" stroke="#c0442c" stroke-width="1.2" stroke-linecap="round"/>';
+    else if (m === 5) s += '<path d="M-13,9 h26 q0,14 -13,14 q-13,0 -13,-14 z" fill="' + mond + '"/><path d="M-11,10.5 h22 q0,3 -1,4.5 h-20 q-1,-1.5 -1,-4.5 z" fill="' + tanden + '"/>';
+    else if (m === 6) s += '<path d="M-10,15 q10,5 18,-5' + mlijn + '<path d="M8,10 l3,-1" stroke="' + mond + '" stroke-width="3" stroke-linecap="round"/>';
+    else if (m === 7) s += '<ellipse cx="0" cy="15" rx="5.5" ry="7" fill="' + mond + '"/><ellipse cx="0" cy="18" rx="3" ry="2.4" fill="' + tong + '" opacity=".9"/>';
+    else if (m === 8) s += '<path d="M-10,12 q5,6 10,0 q5,6 10,0' + mlijn;
+    else if (m === 9) s += '<path d="M-13,9 h26 q0,14 -13,14 q-13,0 -13,-14 z" fill="' + mond + '"/><path d="M-11,10.5 h22 q0,3.5 -1,5 h-20 q-1,-1.5 -1,-5 z" fill="' + tanden + '"/><path d="M-10.5,13 h21" stroke="#8f9db0" stroke-width="1.4"/><g fill="#8f9db0"><rect x="-8" y="11.5" width="3" height="3" rx=".6"/><rect x="-1.5" y="11.5" width="3" height="3" rx=".6"/><rect x="5" y="11.5" width="3" height="3" rx=".6"/></g>';
+    else s += '<path d="M-12,10 h24 q0,13 -12,13 q-12,0 -12,-13 z" fill="' + mond + '"/><path d="M-6,19.5 q6,-5 12,0 q-2,3.2 -6,3.2 q-4,0 -6,-3.2 z" fill="' + tong + '"/>';
+    /* iets extra's: blosjes, sproetjes, een krul, een pleister, een sticker, en de nieuwe */
+    if (sp) e = sp.e % 10;
+    var blos = helder > 0.55 ? '#F26749' : '#FF8FA3';
+    if (e === 0) s += '<circle cx="-26" cy="8" r="5" fill="' + blos + '" opacity=".5"/><circle cx="26" cy="8" r="5" fill="' + blos + '" opacity=".5"/>';
     else if (e === 1) s += '<g fill="' + oog + '" opacity=".7"><circle cx="-27" cy="6" r="1.6"/><circle cx="-22" cy="10" r="1.6"/><circle cx="-30" cy="12" r="1.6"/><circle cx="27" cy="6" r="1.6"/><circle cx="22" cy="10" r="1.6"/><circle cx="30" cy="12" r="1.6"/></g>';
-    if (sp && sp.h && e === 2) e = -1;   /* een krul past niet onder een hoed */
-    else if (e === 2) s += '<path d="M2,-44 q4,-12 14,-6 q-8,-2 -10,6" fill="none" stroke="' + kleur + '" stroke-width="5" stroke-linecap="round"/>';
+    if (sp && (sp.h || sp.x) && e === 2) e = -1;   /* een krul past niet onder een hoed of in een kapsel */
+    else if (e === 2) s += '<path d="M2,' + f1(M.top + 3) + ' q4,-12 14,-6 q-8,-2 -10,6" fill="none" stroke="' + meng(kleur, INKT, 0.25) + '" stroke-width="5" stroke-linecap="round"/>';
     /* Hier zat een gratis petje. Nu er echte hoeden in de winkel liggen, is dat er een te veel; de plek blijft
        bestaan (anders verandert het gezichtje van iedereen die deze extra koos) en er ligt nu een pleister. */
-    else if (e === 3) s += '<g transform="rotate(-16)"><rect x="13" y="-21" width="23" height="10" rx="3" fill="#F6D9B0" stroke="#d9b184" stroke-width="1.2"/><g fill="#d9b184"><circle cx="19" cy="-18" r="1"/><circle cx="19" cy="-14" r="1"/><circle cx="30" cy="-18" r="1"/><circle cx="30" cy="-14" r="1"/></g></g>';
-    else if (e === 4) s += '<path d="M30,-30 l3,7 7,1 -5,5 1,7 -6,-4 -6,4 1,-7 -5,-5 7,-1z" fill="#FFD166"/>';
-    /* uit de winkel: eerst de rand (achter niets, want hij ligt om het gezicht), dan de hoed erop */
+    else if (e === 3) s += '<g transform="rotate(-16)"><rect x="13" y="-21" width="23" height="10" rx="3" fill="#F6D9B0" stroke="#c99f6e" stroke-width="1.2"/><g fill="#c99f6e"><circle cx="19" cy="-18" r="1"/><circle cx="19" cy="-14" r="1"/><circle cx="30" cy="-18" r="1"/><circle cx="30" cy="-14" r="1"/></g></g>';
+    else if (e === 4) s += '<path d="M30,-30 l3,7 7,1 -5,5 1,7 -6,-4 -6,4 1,-7 -5,-5 7,-1z" fill="#FFD166" stroke="#c9971f" stroke-width="1" stroke-linejoin="round"/>';
+    else if (e === 6) s += '<path d="M30,-27 q9,12 0,19 q-9,-7 0,-19 z" fill="#9EC3FF" stroke="#14224C" stroke-width="1.4" stroke-opacity=".5"/><path d="M27.5,-14 q-1,-3 .5,-5.5" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity=".85"/>';
+    else if (e === 7){ var snor = sp && sp.x ? HAAR[sp.w % HAAR.length] : '#3a2519';
+      s += '<path d="M0,7 q-5,-4 -11,-1.5 q-4,1.5 -7,-1 q3,7 11,5 q4,-1 7,-3 q3,2 7,3 q8,2 11,-5 q-3,2.5 -7,1 q-6,-2.5 -11,1.5 z" fill="' + snor + '" stroke="' + (helder < 0.3 ? 'rgba(255,255,255,.5)' : 'none') + '" stroke-width="1"/>'; }
+    else if (e === 8) s += '<g fill="#FFD166" stroke="#c9971f" stroke-width=".8" stroke-linejoin="round"><path d="M-34,-30 q1.5,5 6,6 q-4.5,1 -6,6 q-1.5,-5 -6,-6 q4.5,-1 6,-6z"/><path d="M36,14 q1,3.5 4,4 q-3,1 -4,4 q-1,-3 -4,-4 q3,-.5 4,-4z"/><path d="M-38,14 q.8,2.6 3,3 q-2.2,.6 -3,3 q-.8,-2.4 -3,-3 q2.2,-.4 3,-3z"/></g>';
+    else if (e === 9) s += '<circle cx="20" cy="11" r="2.5" fill="' + (helder < 0.3 ? '#F3EFE9' : INKT) + '" opacity=".85"/>';
     s += '</g>';
+    /* uit de winkel: eerst de rand (achter niets, want hij ligt om het gezicht), dan de hoed erop */
     if (sp && sp.r) s += rand(sp.r);
     /* de hoed ademt mee (zelfde maat en zelfde moment) en wiebelt als je eroverheen gaat */
-    if (sp && sp.h) s += '<g class="av-alles" style="animation-delay:-' + d1 + 's"><g class="av-hoed" transform="' + hoedPlek(+draai) + '">' + hoed(sp.h, kleur) + '</g></g>';
+    if (sp && sp.h){ var hd = hoed(sp.h);
+      if (hd) s += '<g class="av-alles" style="animation-delay:-' + d1 + 's"><g class="av-hoed" transform="' + hoedPlek(M, hr && hoedOp ? hr.op : 0, hr && hoedOp ? hr.groter : 1) + '">' + halo(hd, rim * 2) + hd + '</g></g>'; }
     if (sp && sp.b) s += trofee(sp.b);
     return s + '</svg>';
   }
@@ -284,5 +526,5 @@ window.AVATAR = (function(){
       '@media(prefers-reduced-motion:reduce){.av-alles,.av-ogen,.av-hoed,.av-juich{animation:none !important}}';
     document.head.appendChild(st);
   } catch (e){}
-  return { svg:svg, inhoud:inhoud, vul:vul, ontleed:ontleed, maak:maak, KEUZES:KEUZES };
+  return { svg:svg, inhoud:inhoud, vul:vul, ontleed:ontleed, maak:maak, KEUZES:KEUZES, NAMEN:NAMEN, KLEUREN:KLEUREN, KLEUREN2:KLEUREN2, HAAR:HAAR };
 })();

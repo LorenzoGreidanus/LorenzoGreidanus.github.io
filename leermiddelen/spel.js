@@ -368,6 +368,11 @@ window.SPEL = (function(){
         var bonus = st.bonusDag !== dagK && window.PROFIEL && PROFIEL.ingelogd() ? Math.min(25, 5 * st.reeks) : 0;
         if (bonus){ PROFIEL.muntenErbij(bonus); st.bonusDag = dagK; zet('lg-dagen', st); }
         streakHtml = '<p class="munten stil"><b>' + st.reeks + ' dagen op rij</b> geoefend' + (bonus ? ': +' + bonus + ' munten' : '') + '</p>';
+        /* Wie lang volhoudt krijgt iets voor bij zijn gezichtje (zie cosmetica.js): het vlammetje
+           na vijf dagen, de lauwerkrans na veertien. Eén per keer, want de server laat er per bericht
+           maar één door; wat nog mist komt bij het volgende potje. */
+        var verdiend = st.reeks >= 5 && window.PROFIEL && PROFIEL.vrijspeel && PROFIEL.ingelogd() ? [[5, 'b7', 'het vlammetje'], [14, 'r11', 'de lauwerkrans']].filter(function(x){ return st.reeks >= x[0] && !PROFIEL.bezit()[x[1]]; })[0] : null;
+        if (verdiend && PROFIEL.vrijspeel(verdiend[1])) streakHtml += '<p class="munten"><b>Nieuw voor je gezichtje: ' + verdiend[2] + '.</b> <a href="index.html?winkel=1">Zet het op</a></p>';
       }
     } catch (e){}
     var kaart = document.createElement('div');

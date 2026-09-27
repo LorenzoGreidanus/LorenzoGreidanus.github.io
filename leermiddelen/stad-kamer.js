@@ -97,7 +97,7 @@ function maak(opzet){
     }).then(function(r){
       r = r || {};
       var helden = r.helden || {};
-      var nr = W.erbij({ naam: schoon(o.naam, 16) || 'Speler', av: schoon(o.av, 24), klasse: klasse, held: helden[klasse] || null, wacht: r.wacht || {}, delen: delen });
+      var nr = W.erbij({ naam: schoon(o.naam, 16) || 'Speler', av: schoon(o.av, 40), klasse: klasse, held: helden[klasse] || null, wacht: r.wacht || {}, delen: delen });
       sp[nr] = { key: key, klasse: klasse, v: r.v || 0, vak: vak, rang: rang, delen: delen, vraag: null, pot: null, potSleutel: '',
                  tel: 0, telSec: 0, weg: false };
       return { nr: nr, held: W.held(nr), klasse: klasse };

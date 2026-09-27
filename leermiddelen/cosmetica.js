@@ -28,14 +28,29 @@
     { id:'h11', soort:'h', n:11, naam:'Hazenoren',    prijs:400, uit:'alleen rond Pasen te koop (half maart tot eind april)', seizoen:[3, 15, 4, 30] },
     /* alleen voor wie bij de eigenaar van de site in de klas zat: niet te koop */
     { id:'h12', soort:'h', n:12, naam:'Baret',          prijs:0, oud:true, uit:'omdat je bij meneer Greidanus in de klas zat' },
+    /* nieuwe hoeden: h15 tot h19 altijd te koop, h20 en h21 in hun seizoen */
+    { id:'h15', soort:'h', n:15, naam:'Pet achterstevoren', prijs:350, uit:'de klep naar achteren, natuurlijk' },
+    { id:'h16', soort:'h', n:16, naam:'Beanie',         prijs:300, uit:'gebreid, met een pompon' },
+    { id:'h17', soort:'h', n:17, naam:'Koptelefoon',    prijs:550, uit:'muziek aan, wereld uit' },
+    { id:'h18', soort:'h', n:18, naam:'Vissershoedje',  prijs:400, uit:'zacht en een beetje sloom' },
+    { id:'h19', soort:'h', n:19, naam:'Cowboyhoed',     prijs:500, uit:'yeehaw' },
+    { id:'h20', soort:'h', n:20, naam:'Oranje kroon',   prijs:300, uit:'alleen rond Koningsdag te koop (20 tot en met 30 april)', seizoen:[4, 20, 4, 30] },
+    { id:'h21', soort:'h', n:21, naam:'Strohoed',       prijs:400, uit:'alleen in de zomer te koop (half juni tot eind augustus)', seizoen:[6, 15, 8, 31] },
     /* achtergronden: a1 tot a3, een schijf achter het gezichtje */
     { id:'a1', soort:'a', n:1, naam:'Zonsopgang',     prijs:800,  uit:'oranje en geel achter je' },
     { id:'a2', soort:'a', n:2, naam:'Oceaan',         prijs:800,  uit:'diep blauw achter je' },
     { id:'a3', soort:'a', n:3, naam:'Sterrennacht',   prijs:1400, uit:'paars met sterren' },
+    { id:'a5', soort:'a', n:5, naam:'Ruitjespapier',  prijs:600,  uit:'zoals in je wiskundeschrift' },
+    { id:'a6', soort:'a', n:6, naam:'Confetti',       prijs:900,  uit:'altijd feest' },
+    { id:'a7', soort:'a', n:7, naam:'Sneeuw',         prijs:700,  uit:'alleen in de winter te koop (december tot en met februari)', seizoen:[12, 1, 2, 29] },
     /* brillen: q1 tot q3 */
     { id:'q1', soort:'q', n:1, naam:'Zonnebril',      prijs:450,  uit:'cool, altijd' },
     { id:'q2', soort:'q', n:2, naam:'Monocle',        prijs:900,  uit:'deftig, met kettinkje' },
     { id:'q3', soort:'q', n:3, naam:'Ronde bril',     prijs:500,  uit:'voor wie veel leest' },
+    { id:'q5', soort:'q', n:5, naam:'Vierkante bril', prijs:400,  uit:'een dik zwart montuur' },
+    { id:'q6', soort:'q', n:6, naam:'Hartjesbril',    prijs:450,  uit:'alles ziet er lief uit' },
+    { id:'q7', soort:'q', n:7, naam:'Sterrenbril',    prijs:500,  uit:'voor een feestje' },
+    { id:'q8', soort:'q', n:8, naam:'Skibril',        prijs:600,  uit:'klaar voor de piste' },
     /* randen: r1 tot r5 */
     { id:'r1', soort:'r', n:1, naam:'Gouden ring',    prijs:700, uit:'een rand van goud' },
     { id:'r2', soort:'r', n:2, naam:'Vuurring',       prijs:900, uit:'oranje vlammen' },
@@ -43,6 +58,8 @@
     { id:'r4', soort:'r', n:4, naam:'IJsring',        prijs:900, uit:'koud blauw' },
     { id:'r5', soort:'r', n:5, naam:'Sterrenkrans',   prijs:1200, uit:'sterren eromheen' },
     { id:'r6', soort:'r', n:6, naam:'Krijtcirkel',    prijs:0, oud:true, uit:'omdat je bij meneer Greidanus in de klas zat' },
+    { id:'r9',  soort:'r', n:9,  naam:'Neonring',     prijs:1000, uit:'roze en lichtblauw, als een lichtreclame' },
+    { id:'r10', soort:'r', n:10, naam:'Pixelrand',    prijs:1100, uit:'blokjes, zoals in een oud spelletje' },
     /* zwaarden voor Zwaardvechter: z1 tot z5 */
     { id:'z1', soort:'z', n:1, naam:'Vlammend zwaard', prijs:1000, uit:'een oranje kling die gloeit' },
     { id:'z2', soort:'z', n:2, naam:'IJszwaard',       prijs:1000, uit:'lichtblauw en koud' },
@@ -67,9 +84,15 @@
     { id:'r7',  soort:'r', n:7,  naam:'Rode streep',        prijs:0, baas:'nm-pen',   uit:'versla De Rode Pen in de nachtmerrie' },
     { id:'h14', soort:'h', n:14, naam:'Propkroon',          prijs:0, baas:'nm-prop',  uit:'versla De Prop in de nachtmerrie' },
     { id:'a4',  soort:'a', n:4,  naam:'Middernacht',        prijs:0, baas:'nm-klok',  uit:'versla De Klok in de nachtmerrie' },
-    { id:'r8',  soort:'r', n:8,  naam:'Zwermring',          prijs:0, baas:'nm-zwerm', uit:'versla De Zwerm in de nachtmerrie' }
+    { id:'r8',  soort:'r', n:8,  naam:'Zwermring',          prijs:0, baas:'nm-zwerm', uit:'versla De Zwerm in de nachtmerrie' },
+    /* Te verdienen door dagen op rij te oefenen (spel.js kijkt na elk potje).
+       Ze lopen via hetzelfde spoor als de trofeeën van een baas (baas:'reeks-..'),
+       zodat de server ze doorlaat als vrijgespeeld en weigert in de winkel;
+       verdien is wat de winkel eronder zet. */
+    { id:'b7',  soort:'b', n:7,  naam:'Vlammetje',          prijs:0, baas:'reeks-5',  verdien:'5 dagen op rij', uit:'oefen vijf dagen op rij' },
+    { id:'r11', soort:'r', n:11, naam:'Lauwerkrans',        prijs:0, baas:'reeks-14', verdien:'14 dagen op rij', uit:'oefen veertien dagen op rij' }
   ];
-  var SOORTEN = { h:'Hoeden', q:'Brillen', a:'Achtergronden', r:'Randen', z:'Zwaarden', b:'Trofeeën van de bazen' };
+  var SOORTEN = { h:'Hoeden', q:'Brillen', a:'Achtergronden', r:'Randen', z:'Zwaarden', b:'Trofeeën' };
   /* is dit item nu te koop? Zonder seizoen altijd; met seizoen alleen tussen die dagen (jaar loopt gewoon door) */
   function inSeizoen(it, nu){
     if (!it || !it.seizoen) return true;
@@ -81,9 +104,11 @@
   /* wat je wint als je deze baas in de nachtmerrie verslaat */
   function vanNachtmerrie(baasId){ return vanBaas('nm-' + baasId); }
   function vind(id){ for (var i = 0; i < ITEMS.length; i++) if (ITEMS[i].id === id) return ITEMS[i]; return null; }
-  /* de spec uit elkaar: het gezichtje en wat erop en eromheen zit */
+  /* de spec uit elkaar: het gezichtje en wat erop en eromheen zit. Het gezichtje (basis) is wat
+     iedereen gratis kiest: vorm, kleur, ogen, mond, extra, en sinds kort ook c (tweede rij kleuren),
+     x (kapsel) en w (haarkleur). Oude specs zonder die drie blijven gewoon geldig. */
   function ontleed(spec){
-    var m = /^(v\dk\do\dm\de\d)(?:h(\d{1,2}))?(?:r(\d{1,2}))?(?:z(\d{1,2}))?(?:b(\d{1,2}))?(?:a(\d{1,2}))?(?:q(\d{1,2}))?$/.exec(String(spec || ''));
+    var m = /^(v\dk\do\dm\de\d(?:c\d{1,2})?(?:x\d{1,2})?(?:w\d)?)(?:h(\d{1,2}))?(?:r(\d{1,2}))?(?:z(\d{1,2}))?(?:b(\d{1,2}))?(?:a(\d{1,2}))?(?:q(\d{1,2}))?$/.exec(String(spec || ''));
     return m ? { basis:m[1], h:+(m[2] || 0), r:+(m[3] || 0), z:+(m[4] || 0), b:+(m[5] || 0), a:+(m[6] || 0), q:+(m[7] || 0) } : null;
   }
   function bouw(o){ return o.basis + (o.h ? 'h' + o.h : '') + (o.r ? 'r' + o.r : '') + (o.z ? 'z' + o.z : '') + (o.b ? 'b' + o.b : '') + (o.a ? 'a' + o.a : '') + (o.q ? 'q' + o.q : ''); }
