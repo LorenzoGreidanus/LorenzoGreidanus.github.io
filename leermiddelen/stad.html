@@ -34,11 +34,20 @@ h2{font-size:1.15rem;margin:0}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;margin:-1px;padding:0;border:0}
 
 /* ---------- kopbalk ---------- */
+/* De balk loopt over de hele breedte, de inhoud staat in de breedte van de
+   pagina. De binnenkant heette eerst .rij, net als de rijen in het paneel; dan
+   kreeg hij hun ronde vlakje, en in het donker maakte basis.css er een los
+   kaartje van dat midden boven de pagina zweefde. */
 header.hd{position:sticky;top:0;z-index:40;background:rgba(251,246,241,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--rand)}
-.hd .rij{display:flex;align-items:center;gap:12px;padding:10px 20px;max-width:1180px;margin:0 auto}
-.hd a.merk{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;font-weight:600;min-height:44px}
-/* het vierkantje met LG houdt zijn eigen kleuren, ook in het donker */
-.hd a.merk i{width:30px;height:30px;border-radius:9px;background:#14224C;color:#fff;display:grid;place-items:center;font-style:normal;font-size:.8rem;font-weight:700;flex:none}
+.hd .kopin{display:flex;align-items:center;gap:12px;padding:10px 20px;max-width:1180px;margin:0 auto}
+/* het logo zoals bij de andere spellen: een vakje met LG en de naam, met een streep bij aanwijzen */
+.hd a.mark{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;font-weight:600;min-height:44px}
+.hd .mark i{width:32px;height:32px;border-radius:10px;background:var(--ink);color:var(--room);display:flex;align-items:center;justify-content:center;gap:1px;font-style:normal;font-size:.78rem;font-weight:700}
+.lgmark{position:relative;display:inline-flex;flex:none}
+.lgdot,.lghoi{display:none}
+.lgnaam{display:inline-flex;flex-direction:column;gap:2px}
+.lgstreep{display:block;height:3px;width:0;border-radius:999px;background:var(--crab);transition:width .4s var(--ease)}
+.mark:hover .lgstreep,.mark:focus-visible .lgstreep{width:100%}
 .hd .rechts{margin-left:auto;display:flex;gap:8px;align-items:center}
 .knop{border:1.5px solid var(--rand);background:var(--kaart);color:var(--ink);border-radius:999px;padding:0 16px;min-height:44px;
   font:600 .9rem Poppins,system-ui,sans-serif;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
@@ -110,7 +119,16 @@ header.hd{position:sticky;top:0;z-index:40;background:rgba(251,246,241,.92);back
 /* De kopbalk staat erboven in de stroom, dus zijn hoogte gaat eraf; anders
    loopt het vak onder het venster door en staat de minikaart buiten beeld. */
 .spel{position:relative;height:calc(100svh - var(--kophoogte, 65px));overflow:hidden;background:var(--g-rood)}
+/* Twee lagen. De bodem (grond, grenzen, bomen, huizen, figuren) staat stil en
+   is een groot vlak op een eigen laag: de camera schuift hem met een transform,
+   dus de browser tekent hem niet elk beeld opnieuw. Daarboven het veld met
+   alleen wat beweegt. */
+.bodemlaag{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform;pointer-events:none;contain:strict}
+#bodem{display:block}
 #veld{position:absolute;inset:0;display:block;width:100%;height:100%;touch-action:none;user-select:none;-webkit-user-select:none}
+/* Het ademen en knipperen van de gezichtjes is op de kaart te klein om te zien,
+   maar kost elk beeld werk voor elke speler (met een clipPath erin). Stil dus. */
+#veld .av-alles,#veld .av-ogen{animation:none}
 .g-stad{fill:var(--g-stad)} .g-velden{fill:var(--g-velden)} .g-bos{fill:var(--g-bos)} .g-moeras{fill:var(--g-moeras)} .g-heuvels{fill:var(--g-heuvels)} .g-rood{fill:var(--g-rood)}
 .g-pad{stroke:var(--g-pad)} .g-naam{fill:var(--g-naam)}
 .naamtekst{fill:var(--naam);stroke:var(--naamrand);stroke-width:3.5px;paint-order:stroke;font-family:Poppins,sans-serif;font-weight:700}
@@ -138,8 +156,6 @@ header.hd{position:sticky;top:0;z-index:40;background:rgba(251,246,241,.92);back
   box-shadow:0 6px 18px rgba(20,34,76,.25);pointer-events:auto;cursor:pointer;padding:0;display:block}
 .minikaart.groot{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(92vw,78vh);height:min(92vw,78vh);z-index:70}
 .minikaart svg{display:block;width:100%;height:100%}
-.minikaart .pols{animation:pols 1.2s ease-in-out infinite}
-@keyframes pols{50%{opacity:.45}}
 .gebiedlabel{background:var(--kaart);color:var(--ink);border:1px solid var(--rand);border-radius:999px;padding:3px 11px;font-size:.78rem;font-weight:600;white-space:nowrap}
 .gebiedlabel.rood{background:var(--crab);border-color:var(--crab);color:#14224C}
 .gebiedlabel.veilig{background:var(--goed);border-color:var(--goed);color:#fff}
@@ -286,8 +302,8 @@ section.wrap{padding-left:20px;padding-right:20px}
 <body>
 
 <header class="hd">
-  <div class="rij">
-    <a class="merk" href="index.html"><i>LG</i>Arena</a>
+  <div class="kopin">
+    <a class="mark" href="index.html"><span class="lgmark"><i><span>L</span><span>G</span></i><b class="lgdot"></b></span><span class="lgnaam"><span>Arena</span><span class="lgstreep"></span></span><span class="lghoi">alle spellen</span></a>
     <div class="rechts">
       <button class="themaknop" id="themaknop" type="button" aria-label="Schakel naar donker" title="Donker of licht">
         <svg class="maan" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
@@ -339,6 +355,7 @@ section.wrap{padding-left:20px;padding-right:20px}
 
 <!-- ---------------- het veld ---------------- -->
 <section class="spel hide" id="scherm-spel">
+  <div class="bodemlaag" id="bodemlaag"><svg id="bodem" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"></svg></div>
   <svg id="veld" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="De kaart van de Arena"></svg>
   <div class="hud">
     <div class="hudlinks">
@@ -536,7 +553,7 @@ function tekenHoeveelNu(){
    dezelfde kamer hier in de browser. Voor de rest van de pagina is er geen
    verschil: berichten gaan erin en komen eruit.
    ============================================================================ */
-var co = { aan:false, solo:false, ws:null, code:'', ik:-1, wereld:null, standen:[], voorspel:null, mk:null, mkTijd:0,
+var co = { aan:false, solo:false, ws:null, code:'', ik:-1, wereld:null, standen:[], voorspel:null, spoor:[], spoorT:0, vertraging:60, gemeten:false, meet:null, liep:false, mk:null, mkTijd:0,
            bekend:{ namen:{}, av:{}, ki:[], kv:-1, ex:{}, ev:-1 }, klasse:'ridder', gered:null, gestopt:false };
 var mijnNaam = 'Speler', mijnAv = '';
 try { mijnNaam = (localStorage.getItem('lg-naam') || '').slice(0, 16) || 'Speler'; } catch (e){}
@@ -752,10 +769,12 @@ function gebeurtenissen(lijst){
    en daarna hergebruikt, en een attribuut wordt alleen gezet als het anders is.
    ============================================================================ */
 var SVGNS = 'http://www.w3.org/2000/svg';
-var veld = $('veld');
+var veld = $('veld'), bodem = $('bodem'), bodemLaag = $('bodemlaag');
 function maakEl(soort, opzet){ var el = document.createElementNS(SVGNS, soort); if (opzet) for (var k in opzet) el.setAttribute(k, opzet[k]); return el; }
 function zet(el, naam, waarde){ waarde = String(waarde); if (el.getAttribute(naam) !== waarde) el.setAttribute(naam, waarde); }
 function tekst(el, t){ t = String(t); if (el.textContent !== t) el.textContent = t; }
+/* een klasse aan of uit, en de pagina alleen aanraken als er iets verandert */
+function zetKlasse(el, k, aan){ if (el.classList.contains(k) !== !!aan) el.classList.toggle(k, !!aan); }
 var poel = (function(){
   var vakken = {};
   function vak(naam){ return vakken[naam] || (vakken[naam] = { laag:null, lijst:[], n:0 }); }
@@ -826,11 +845,10 @@ function baasVorm(def){
 }
 
 /* ---------- de wereld een keer opbouwen ---------- */
-var decor = [], decorOm = { x:-1e9, y:-1e9 }, rasterC = null;
+var decor = [], rasterC = null;
 var VAKC = 150;
 function bouwWereld(w){
   var h = '<defs>' +
-    '<radialGradient id="uitgloed"><stop offset="55%" stop-color="rgba(234,152,54,0)"/><stop offset="100%" stop-color="rgba(234,152,54,.4)"/></radialGradient>' +
     '<g id="kist-dicht"><ellipse cy="15" rx="22" ry="7" fill="rgba(0,0,0,.22)"/><rect x="-20" y="-6" width="40" height="20" rx="3" fill="#8a5a2b" stroke="#2e1c0c" stroke-width="2.6"/>' +
       '<path d="M-20-6 a20 9 0 0 1 40 0z" fill="#a06c36" stroke="#2e1c0c" stroke-width="2.6"/><rect x="-20" y="-3" width="40" height="5" fill="#d9a441" stroke="#2e1c0c" stroke-width="1.6"/>' +
       '<rect x="-5" y="-2" width="10" height="11" rx="2" fill="#d9a441" stroke="#2e1c0c" stroke-width="2"/><text y="7" text-anchor="middle" font-size="9" font-weight="700" fill="#2e1c0c" font-family="Poppins">?</text></g>' +
@@ -838,7 +856,12 @@ function bouwWereld(w){
       '<rect x="-20" y="-6" width="40" height="20" rx="3" fill="#5d4a36" stroke="#2e1c0c" stroke-width="2.6"/><rect x="-16" y="-3" width="32" height="13" rx="2" fill="#3a2e22"/></g>' +
     '<g id="zakje"><ellipse cy="12" rx="14" ry="5" fill="rgba(0,0,0,.22)"/><path d="M-12 10 C-15 -2 -8 -8 0 -8 C8 -8 15 -2 12 10 Z" fill="#b8864a" stroke="#4a2f14" stroke-width="2.4"/><path d="M-6 -8 L0 -14 L6 -8" fill="none" stroke="#4a2f14" stroke-width="2.4"/><circle cy="2" r="4" fill="#FFE168" stroke="#8a6a18" stroke-width="1.5"/></g>' +
     '</defs>';
+  h += '<g id="kamera"><g id="lHeet"></g><g id="lGrond"></g><g id="lAanval"></g><g id="lZak"></g><g id="lKist"></g><g id="lFout"></g><g id="lBaas"></g>' +
+       '<g id="lAnder"></g><g id="lIk"></g><g id="lPijl"></g><g id="lEffect"></g><g id="lRand"></g></g>';
+  veld.innerHTML = h;
+  /* de bodem: wat nooit beweegt */
   var mid = { x:w.mid[0], y:w.mid[1] }, rv = w.zone[0], rr = w.zone[1];
+  h = '<defs><radialGradient id="uitgloed"><stop offset="55%" stop-color="rgba(234,152,54,0)"/><stop offset="100%" stop-color="rgba(234,152,54,.4)"/></radialGradient></defs>';
   h += '<g id="grond">';
   h += '<rect class="g-rood" x="0" y="0" width="' + w.b + '" height="' + w.h + '"/>';
   /* de vier rustige gebieden als taartpunten tussen de twee ringen */
@@ -868,10 +891,8 @@ function bouwWereld(w){
     h += '<circle cx="' + ho[2] + '" cy="' + ho[3] + '" r="' + ho[4] + '" fill="' + def.kleur + '" fill-opacity=".07" stroke="' + def.kleur + '" stroke-width="5" stroke-dasharray="14 12" opacity=".8"/>' +
       '<text class="naamtekst" x="' + ho[2] + '" y="' + (ho[3] - ho[4] - 14) + '" text-anchor="middle" font-size="22">Hol van ' + schoon(def.naam) + ' · level ' + ho[5] + '</text>';
   });
-  h += '</g>';
-  h += '<g id="vast"></g><g id="lHeet"></g><g id="lGrond"></g><g id="lAanval"></g><g id="lZak"></g><g id="lKist"></g><g id="lFout"></g><g id="lBaas"></g>' +
-       '<g id="lAnder"></g><g id="lIk"></g><g id="lPijl"></g><g id="lEffect"></g><g id="lRand"></g>';
-  veld.innerHTML = h;
+  h += '</g><g id="vast"></g>';
+  bodem.innerHTML = h;
   poel.leeg(); perNr = {};
 
   /* het raster om zelf te botsen, net als de motor: zo loop je niet door een boom terwijl de kamer je tegenhoudt */
@@ -890,7 +911,8 @@ function bouwWereld(w){
   w.st.forEach(function(s){ decor.push({ s:'steen', id:s[0], x:s[1], y:s[2], r:26, soort:s[3] }); });
   w.ex.forEach(function(e){ decor.push({ s:'uit', id:e[0], x:e[1], y:e[2], r:e[3], rood:e[4] }); });
   w.npc.forEach(function(n){ decor.push({ s:'npc', id:n[0], x:n[1], y:n[2], r:30, naam:n[3] }); });
-  decorOm = { x:-1e9, y:-1e9 };
+  tekenDecor();
+  bodemSchaal = 0; bodemSchuif = '';
   tekenMiniVast(w);
 }
 function raaktC(x, y, r){
@@ -910,14 +932,11 @@ function raaktC(x, y, r){
 var STEENKLEUR = { snel:'#2f7d52', kracht:'#c0442c', taai:'#204ECF' };
 var STEENTEKEN = { snel:'»', kracht:'!', taai:'◐' };
 var NPCKLEUR = { jager:'#2f7d52', geleerde:'#6b3fa0', verkenner:'#EA9836', trainer:'#c0442c', handelaar:'#B4701A', lees:'#5b6480' };
-var DECOR_MARGE = 700, DECOR_STAP = 260;
-function tekenDecor(cx, cy){
-  if (Math.abs(cx - decorOm.x) < DECOR_STAP && Math.abs(cy - decorOm.y) < DECOR_STAP) return;
-  decorOm = { x:cx, y:cy };
-  var h = '', bx = 560 + DECOR_MARGE, by = 520 + DECOR_MARGE;
+/* het decor staat stil: een keer tekenen, de browser laat weg wat buiten beeld is */
+function tekenDecor(){
+  var h = '';
   for (var i = 0; i < decor.length; i++){
-    var d = decor[i], w2 = d.b || d.r || 0, h2 = d.h || d.r || 0;
-    if (Math.abs(d.x - cx) > bx + w2 || Math.abs(d.y - cy) > by + h2) continue;
+    var d = decor[i];
     if (d.s === 'boom'){
       h += '<circle cx="' + (d.x + 5) + '" cy="' + (d.y + 7) + '" r="' + d.r + '" fill="rgba(0,0,0,.18)"/><circle cx="' + d.x + '" cy="' + d.y + '" r="' + d.r + '" fill="#3f7a3a" stroke="#244a22" stroke-width="3"/>' +
            '<circle cx="' + (d.x - d.r * 0.3) + '" cy="' + (d.y - d.r * 0.3) + '" r="' + (d.r * 0.55).toFixed(1) + '" fill="#5a9a4c"/>';
@@ -982,7 +1001,8 @@ var miniKlok = 0;
 function tekenMiniLos(d, ik){
   var g = document.getElementById('miniLos'); if (!g || !co.wereld) return;
   var h = '';
-  if (d.h) h += '<circle cx="' + d.h[0].toFixed(0) + '" cy="' + d.h[1].toFixed(0) + '" r="' + d.h[2] + '" fill="rgba(192,68,44,.35)" stroke="#8f1f12" stroke-width="60" stroke-dasharray="120 60"' + (rustig ? '' : ' class="pols"') + '/>';
+  /* de hotzone knippert mee met het tekenen, vier keer per tel; een css-animatie zou de minikaart elk beeld opnieuw laten tekenen */
+  if (d.h) h += '<circle cx="' + d.h[0].toFixed(0) + '" cy="' + d.h[1].toFixed(0) + '" r="' + d.h[2] + '" fill="rgba(192,68,44,.35)" stroke="#8f1f12" stroke-width="60" stroke-dasharray="120 60"' + (rustig ? '' : ' opacity="' + (0.72 + 0.28 * Math.cos(klokNu * Math.PI / 0.6)).toFixed(2) + '"') + '/>';
   co.wereld.ex.forEach(function(e){ if (co.bekend.ex[e[0]]) h += '<circle cx="' + e[1] + '" cy="' + e[2] + '" r="170" fill="rgba(242,103,73,.55)"/>'; });
   d.s.forEach(function(q){ h += '<circle cx="' + q[1] + '" cy="' + q[2] + '" r="60" fill="' + (q[5] & 64 ? '#c0442c' : '#FBF6F1') + '" stroke="#14224C" stroke-width="18"/>'; });
   if (ik) h += '<circle cx="' + ik.x.toFixed(0) + '" cy="' + ik.y.toFixed(0) + '" r="80" fill="#2f7d52" stroke="#fff" stroke-width="26"/>';
@@ -1025,7 +1045,7 @@ function standNu(){
   if (A.h && d.h){ u.h = d.h.slice(); u.h[0] = lerp(A.h[0], d.h[0], deel); u.h[1] = lerp(A.h[1], d.h[1], deel); }
   return u;
 }
-var VOORUIT_TERUG = 0.12, VOORUIT_SPRONG = 140;
+var VOORUIT_SPRONG = 140, BIJSTUREN = 8;
 function mijnPositie(){ return co.voorspel ? { x:co.voorspel.x, y:co.voorspel.y } : null; }
 function vooruit(inv, dt, m){
   var v = co.voorspel; if (!v) return;
@@ -1045,11 +1065,48 @@ function vooruit(inv, dt, m){
     if (!raaktC(v.x, dy2, R)) v.y = dy2;
   }
 }
-function vooruitTerug(wx, wy){
+/* Bijsturen naar wat de kamer zegt. Wat de kamer stuurt, is waar je was toen
+   je stap daar aankwam: een ping en een tik geleden. Vroeger trok de pagina je
+   naar die oude plek, en dan liep je poppetje na het loslaten nog een halve
+   tel door en kwam het traag op gang. Nu onthouden we waar we zelf waren (het
+   spoor), meten we hoe lang die vertraging is, en vergelijken we de kamer
+   met onze eigen plek van toen. Alleen wat daarna nog verschilt, sturen we
+   bij, rustig en even snel bij elk aantal beelden per tel. */
+function vooruitTerug(nu, dt, inv){
+  var n = co.standen.length; if (!n) return;
+  var laatst = co.standen[n - 1], sx = laatst.d.m[0], sy = laatst.d.m[1];
   var v = co.voorspel;
-  if (!v){ co.voorspel = { x:wx, y:wy, dash:0, ddx:1, ddy:0 }; return; }
-  if (Math.hypot(v.x - wx, v.y - wy) > VOORUIT_SPRONG){ v.x = wx; v.y = wy; return; }
-  v.x += (wx - v.x) * VOORUIT_TERUG; v.y += (wy - v.y) * VOORUIT_TERUG;
+  if (!v){ co.voorspel = { x:sx, y:sy, dash:0, ddx:1, ddy:0 }; co.spoor = []; return; }
+  var sp = co.spoor || (co.spoor = []);
+  sp.push({ t:nu, x:v.x, y:v.y });
+  while (sp.length > 2 && sp[0].t < nu - 1000) sp.shift();
+  if (laatst.t !== co.spoorT){ co.spoorT = laatst.t; meetVertraging(laatst, sx, sy); }
+  /* ga je lopen terwijl de kamer je stil ziet staan, dan begint de meting */
+  var loopt2 = !!(inv.dx || inv.dy);
+  if (loopt2 && !co.liep && n > 1 && Math.hypot(sx - co.standen[n - 2].d.m[0], sy - co.standen[n - 2].d.m[1]) < 0.5) co.meet = { t:nu, x:sx, y:sy };
+  co.liep = loopt2;
+  var toen = spoorOp(laatst.t - co.vertraging), ex = sx - toen.x, ey = sy - toen.y;
+  if (Math.hypot(ex, ey) > VOORUIT_SPRONG){ v.x += ex; v.y += ey; co.spoor = []; return; }
+  var deel = 1 - Math.exp(-dt * BIJSTUREN);
+  ex *= deel; ey *= deel;
+  v.x += ex; v.y += ey;
+  for (var i = 0; i < sp.length; i++){ sp[i].x += ex; sp[i].y += ey; }
+}
+function spoorOp(t){
+  var sp = co.spoor, b = sp[0];
+  for (var i = 0; i < sp.length && sp[i].t <= t; i++) b = sp[i];
+  return b || co.voorspel;
+}
+/* de vertraging: hoe lang na je eerste stap was je in de kamer onderweg? Rustig
+   bijgesteld, en nooit meer dan een halve tel. */
+function meetVertraging(laatst, sx, sy){
+  var m = co.meet; if (!m) return;
+  if (laatst.t - m.t > 1000){ co.meet = null; return; }
+  if (Math.hypot(sx - m.x, sy - m.y) < 2) return;
+  /* het pakket liet al een stukje lopen zien; die tijd hoort er niet bij */
+  var gelopen = Math.hypot(sx - m.x, sy - m.y) / ((co.mk && co.mk.sn) || 200) * 1000;
+  co.vertraging += (Math.max(0, Math.min(500, laatst.t - m.t - gelopen)) - co.vertraging) * (co.gemeten ? 0.3 : 1);
+  co.meet = null; co.gemeten = true;
 }
 function buffNog(i){ var mk = co.mk; if (!mk || !mk.bf) return 0; return mk.bf[i] - (performance.now() - co.mkTijd) / 1000; }
 
@@ -1085,7 +1142,7 @@ function lus(nu){
   var d = standNu();
   if (d){
     vooruit(inv, dt, d.m);
-    vooruitTerug(d.m[0], d.m[1]);
+    vooruitTerug(nu, dt, inv);
     if (co.voorspel && !(d.m[5] & 1)){ d.m[0] = co.voorspel.x; d.m[1] = co.voorspel.y; }
     teken(d, dt);
   }
@@ -1093,7 +1150,7 @@ function lus(nu){
 }
 
 /* ---------- invoer ---------- */
-var toetsen = {}, wijs = null, blokVast = false, laatsteIn = '', laatsteInT = 0;
+var toetsen = {}, wijs = null, blokVast = false, laatsteIn = '', laatsteInT = 0, laatsteStil = null, laatsteBlok = false;
 function invoer(){
   var dx = 0, dy = 0;
   if (toetsen.arrowleft || toetsen.a) dx -= 1;
@@ -1109,14 +1166,17 @@ function invoer(){
   if (vr || paneelSoort === 'verslagen') return { dx:0, dy:0 };
   return l ? { dx:dx / l, dy:dy / l } : { dx:0, dy:0 };
 }
+/* Een richting die net iets draait (een vinger of de muis) hoeft niet elk beeld
+   naar de kamer; twintig keer per tel is genoeg. Beginnen en stoppen gaan meteen. */
 function stuurInvoer(inv, nu){
   var sleutel = inv.dx.toFixed(2) + ',' + inv.dy.toFixed(2) + ',' + (blokVast ? 1 : 0);
-  if (sleutel !== laatsteIn || nu - laatsteInT > 250){
-    laatsteIn = sleutel; laatsteInT = nu;
+  var stil = !inv.dx && !inv.dy, wissel = stil !== laatsteStil || blokVast !== laatsteBlok;
+  if ((sleutel !== laatsteIn && (wissel || nu - laatsteInT > 50)) || nu - laatsteInT > 250){
+    laatsteIn = sleutel; laatsteInT = nu; laatsteStil = stil; laatsteBlok = blokVast;
     zend({ t:'in', dx:+inv.dx.toFixed(2), dy:+inv.dy.toFixed(2), b:blokVast ? 1 : 0 });
   }
 }
-var vb = { x:0, y:0, b:1000, h:600 }, veldRect = null;
+var vb = { x:0, y:0, b:1000, h:600 }, veldRect = null, bodemSchaal = 0, bodemSchuif = '';
 function veldMaat(){ if (!veldRect) veldRect = veld.getBoundingClientRect(); return veldRect; }
 addEventListener('resize', function(){ veldRect = null; });
 function schermNaarWereld(sx, sy){ var r = veldMaat(); return { x:vb.x + (sx - r.left) / r.width * vb.b, y:vb.y + (sy - r.top) / r.height * vb.h }; }
@@ -1176,6 +1236,24 @@ $('blokBtn').addEventListener('pointerdown', function(e){ e.preventDefault(); bl
 var effecten = [], vorigeHp = {}, vorigMijnHp = null, schudTot = 0;
 function effect(soort, x, y, o){ o = o || {}; effecten.push({ soort:soort, x:x, y:y, t:0, duur:o.duur || 0.5, tekst:o.tekst, kleur:o.kleur, groot:o.groot }); if (effecten.length > 60) effecten.shift(); }
 var KIJK_BREED = 1100;
+/* De camera. De bodem is de hele kaart op schermmaat; zijn maat verandert
+   alleen met het venster, en de camera schuift hem op hele beeldpunten. Het
+   veld erboven schuift precies even ver, zodat alles op de grond blijft staan. */
+function zetCamera(w, sch, b, h){
+  if (sch !== bodemSchaal){
+    bodemSchaal = sch;
+    zet(bodem, 'viewBox', '0 0 ' + w.b + ' ' + w.h); zet(bodem, 'preserveAspectRatio', 'none');
+    zet(bodem, 'width', (w.b * sch).toFixed(2)); zet(bodem, 'height', (w.h * sch).toFixed(2));
+    bodemLaag.style.width = (w.b * sch).toFixed(2) + 'px'; bodemLaag.style.height = (w.h * sch).toFixed(2) + 'px';
+  }
+  zet(veld, 'viewBox', '0 0 ' + b.toFixed(1) + ' ' + h.toFixed(1));
+  var dpr = window.devicePixelRatio || 1, px = Math.round(vb.x * sch * dpr) / dpr, py = Math.round(vb.y * sch * dpr) / dpr;
+  var schuif = 'translate3d(' + (-px) + 'px,' + (-py) + 'px,0)';
+  if (schuif !== bodemSchuif){
+    bodemLaag.style.transform = schuif; bodemSchuif = schuif;
+    zet($('kamera'), 'transform', 'translate(' + (-px / sch).toFixed(2) + ' ' + (-py / sch).toFixed(2) + ')');
+  }
+}
 function teken(d, dt){
   var w = co.wereld, r = veldMaat();
   if (!r.width || !r.height) return;
@@ -1187,8 +1265,8 @@ function teken(d, dt){
   var nu = performance.now();
   if (nu < schudTot && !rustig){ cx += (Math.random() - 0.5) * 6; cy += (Math.random() - 0.5) * 6; }
   vb = { x:cx - b / 2, y:cy - h / 2, b:b, h:h };
-  zet(veld, 'viewBox', vb.x.toFixed(1) + ' ' + vb.y.toFixed(1) + ' ' + b.toFixed(1) + ' ' + h.toFixed(1));
-  tekenDecor(cx, cy);
+  /* de camera schuift, de viewBox blijft staan: dan hoeft de browser niet alles opnieuw op te meten */
+  zetCamera(w, r.width / b, b, h);
   effecten.forEach(function(e){ e.t += dt; }); effecten = effecten.filter(function(e){ return e.t < e.duur; });
 
   /* de hotzone: een pulserende rode cirkel */
@@ -1284,8 +1362,13 @@ function teken(d, dt){
   });
   nrAf('baas');
   var bb2 = $('baasbalk');
-  if (baasBij){ bb2.classList.remove('hide'); tekst($('baasNaam'), baasBij.def.naam + (baasBij.boos ? ' is kwaad' : '')); $('baasLeven').style.width = (100 * baasBij.hp / baasBij.max).toFixed(1) + '%'; $('baasLeven').style.background = baasBij.def.kleur; }
-  else bb2.classList.add('hide');
+  zetKlasse(bb2, 'hide', !baasBij);
+  if (baasBij){
+    tekst($('baasNaam'), baasBij.def.naam + (baasBij.boos ? ' is kwaad' : ''));
+    var bw = (100 * baasBij.hp / baasBij.max).toFixed(1) + '%', bl = $('baasLeven');
+    if (bl.style.width !== bw) bl.style.width = bw;
+    if (bl.__kleur !== baasBij.def.kleur){ bl.style.background = baasBij.def.kleur; bl.__kleur = baasBij.def.kleur; }
+  }
 
   /* de andere spelers */
   d.s.forEach(function(q){
@@ -1575,17 +1658,18 @@ function hud(d, bijIets){
   var gb = $('gebruikBtn'), gt = bijIets ? bijIets.tekst : 'Niets in de buurt';
   var gh = gt + '<small><span class="alsmuis">E</span></small>';
   if (hudWas.gebruik !== gh){ gb.innerHTML = gh; hudWas.gebruik = gh; }
-  gb.disabled = !bijIets || !!(m[5] & 1);
+  var gbUit = !bijIets || !!(m[5] & 1); if (gb.disabled !== gbUit) gb.disabled = gbUit;
   /* de buffs */
   var bf = ['snel', 'kracht', 'taai'].map(function(k, i){ var n = buffNog(i); return n > 0 ? '<span>' + BUFFNAAM[k] + ' ' + Math.ceil(n) + ' s</span>' : ''; }).join('');
   if (hudWas.bf !== bf){ $('hBuffs').innerHTML = bf; hudWas.bf = bf; }
   /* eruit stappen */
   var ev = $('extractVak');
+  zetKlasse(ev, 'hide', !m[10]);
   if (m[10]){
-    ev.classList.remove('hide');
-    $('extractBalk').style.width = Math.min(100, m[9] / 10 / M.EXTRACT.tijd * 100).toFixed(1) + '%';
+    var ew = Math.min(100, m[9] / 10 / M.EXTRACT.tijd * 100).toFixed(1) + '%', eb = $('extractBalk');
+    if (eb.style.width !== ew) eb.style.width = ew;
     tekst($('extractKop'), 'Blijf in de kring staan… nog ' + Math.max(0, Math.ceil(M.EXTRACT.tijd - m[9] / 10)) + ' tellen');
-  } else ev.classList.add('hide');
+  }
   /* het leesschild in het paneel */
   if (vr && vr.schildWas !== Math.ceil(m[8] / 10)){ vr.schildWas = Math.ceil(m[8] / 10); vr.schildNu = m[8] / 10; tekenSchildregel(); }
   /* weg van een figuur: zijn paneel dicht */
