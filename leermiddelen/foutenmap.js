@@ -1,5 +1,6 @@
-/* De foutenmap: vragen die je fout had in de Vragenrace, Torenverdediging of
-   Zwaardvechter komen hier terecht, en in "Oefen je fouten" (fouten.html)
+/* De foutenmap: vragen die je fout had in de Vragenrace, Torenverdediging,
+   Zwaardvechter, Mijnwerker, Poortrace of Kaarttoren komen hier terecht, en in
+   "Oefen je fouten" (fouten.html)
    krijg je ze terug tot je ze goed hebt. Alles staat in deze browser; met een
    speelcode reizen de vragen mee (alleen het kenmerk en het vak, de tekst
    komt weer uit de vragenbank).

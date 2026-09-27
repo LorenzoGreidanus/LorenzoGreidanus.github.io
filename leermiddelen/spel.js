@@ -85,7 +85,10 @@ window.SPEL = (function(){
     tekstdetective:['#204ECF', '<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/><path d="M7.5 9h6M7.5 12h4"/>'],
     uitverkoop:['#EA9836', '<path d="M13 4H6.5A2.5 2.5 0 0 0 4 6.5V13l7.5 7.5 8.5-8.5z"/><circle cx="8.5" cy="8.5" r="1.6"/>'],
     breukenbakker:['#F26749', '<circle cx="12" cy="12" r="9"/><path d="M12 3v9l6.5 6.5"/><path d="M12 12 5.5 18.5"/>'],
-    dhte:['#204ECF', '<rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M3.5 10h17M9.2 10v9M14.8 10v9"/>']
+    dhte:['#204ECF', '<rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M3.5 10h17M9.2 10v9M14.8 10v9"/>'],
+    mijnwerker:['#A3630F', '<path d="M5 19l9.5-9.5"/><path d="M8.5 6.5c3-2.4 7.2-2.6 10.5-.5 2.1 3.3 1.9 7.5-.5 10.5"/>'],
+    poortrace:['#204ECF', '<path d="M5 21 9 6M19 21 15 6"/><rect x="7" y="3" width="10" height="4" rx="1"/><path d="M12 11v2M12 16v3"/>'],
+    kaarttoren:['#6b3fa0', '<rect x="4" y="6" width="10" height="14" rx="2" transform="rotate(-10 9 13)"/><rect x="10" y="4" width="10" height="14" rx="2" transform="rotate(8 15 11)"/>']
   };
   var zachtMag = true;
   try { zachtMag = !matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e){}

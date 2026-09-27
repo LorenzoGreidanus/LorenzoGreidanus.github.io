@@ -23,8 +23,10 @@ export { Account } from "./account.js";
 /* De klassen heten nog Zombiekamer omdat een Durable Object hernoemen om een
    migratie vraagt; het spel zelf heet De stad. */
 export { Zombiekamer, Veld } from "./stad.js";
+/* De personages van De stad: een object per speler, alleen voor de potjes (geen route) */
+export { Stadheld } from "./stad.js";
 import { behandel as accountBehandel, ingelogd as accountIngelogd, mogelijk as accountMogelijk, isEigenaar, naamVan as accountNaam, kenmerkVan as accountKenmerk } from "./account.js";
-const KLASSEMENTEN = { toren: true, zwaard: true, dag: true };   /* dag: per datum een lijst, dag-2026-09-19 */
+const KLASSEMENTEN = { toren: true, zwaard: true, dag: true, mijnwerker: true, poortrace: true, kaarttoren: true };   /* dag: per datum een lijst, dag-2026-09-19 */
 
 /* Een browser stuurt bij elk POST en bij elke WebSocket mee vanaf welke site
    het komt. Alleen de site zelf (en lokaal testen) mag kamers maken, scores

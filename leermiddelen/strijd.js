@@ -12,7 +12,9 @@
       waar keuze() het gekozen vak en niveau teruggeeft. Maakt een kamer voor
       twee, of doet mee met een code.
    3. Het klassement van de hele site: STRIJD.klassement.toon(doelId, spel, id)
-      en STRIJD.klassement.zet(spel, gegevens). */
+      en STRIJD.klassement.zet(spel, gegevens). Is de ronde in een spel iets
+      anders, zeg dat vooraf met STRIJD.klassement.maat(spel, 'verdiepingen'),
+      of met een functie die de tekst maakt uit de rij (ronde, punten, waar). */
 window.STRIJD = (function(){
   'use strict';
   function param(naam){ var m = new RegExp('[?&]' + naam + '=([^&#]+)').exec(location.search); return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : null; }
@@ -699,6 +701,13 @@ window.STRIJD = (function(){
       .catch(function(){});
   }
   var laatsteDoel = {}, laatsteId = {}, laatsteVorm = {};
+  /* Hoe het getal in de lijst heet: rondes, tenzij het spel iets anders zei. */
+  var maten = {};
+  function maatTekst(spel, r){
+    var m = maten[spel];
+    if (typeof m === 'function'){ try { var t = m(r); if (t !== undefined && t !== null && t !== '') return String(t); } catch (e){} }
+    return (r.ronde | 0) + ' ' + (typeof m === 'string' && m ? m : 'rondes');
+  }
   var klassement = {
     /* de top tien tekenen; id markeert je eigen rij; metVorm voegt het invulvak toe */
     toon: function(doelId, spel, id, vorm){
@@ -718,7 +727,7 @@ window.STRIJD = (function(){
         lijst.forEach(function(r){
           html += '<div class="rij' + (id && r.id === id ? ' jij' : '') + '"><span class="nr">' + r.plek + '</span>' +
             '<span class="avrij">' + (window.AVATAR ? AVATAR.svg(r.naam, 34, r.av) : '') + '<span><b>' + schoon(r.naam) + '</b><small>' + [r.waar, r.niveau, r.vak].filter(Boolean).map(schoon).join(' · ') + (r.t ? ' · ' + new Date(r.t).toLocaleDateString('nl-NL') : '') + '</small></span></span>' +
-            '<span class="pt">' + r.ronde + ' rondes</span></div>';
+            '<span class="pt">' + schoon(maatTekst(spel, r)) + '</span></div>';
         });
         doel.innerHTML = html;
       }).catch(function(){ doel.innerHTML = '<h3>Klassement van de hele site</h3><div class="leeg">Nu even niet bereikbaar.</div>'; });
@@ -765,6 +774,8 @@ window.STRIJD = (function(){
         });
       });
     },
+    /* het getal in de lijst een andere naam geven: een woord, of een functie van de rij */
+    maat: function(spel, m){ maten[spel] = m; },
     naamOk: naamOk
   };
 

@@ -44,8 +44,9 @@ const KLAS_MAX = 3000;
 /* hoeveel verschillende leerlingen er in een klas passen: ruim boven alle klassen
    van een docent bij elkaar, maar wel een grens tegen volduwen */
 const KLAS_LEERLINGEN = 400;
-/* spellen die een opdracht kunnen zijn: bij een onderdeel telt het aantal goed in dat onderdeel, anders de ronde (of het aantal goed bij de Vragenrace) */
-const OPDRACHT_SPELLEN = { race: true, toren: true, zwaard: true, dictee: true };
+/* spellen die een opdracht kunnen zijn: bij een onderdeel telt het aantal goed in dat onderdeel, anders de ronde (of het aantal goed bij de Vragenrace).
+   Bij Mijnwerker is de ronde het diepste punt in meters, bij Poortrace het aantal goede poorten en bij Kaarttoren het aantal verdiepingen. */
+const OPDRACHT_SPELLEN = { race: true, toren: true, zwaard: true, dictee: true, mijnwerker: true, poortrace: true, kaarttoren: true };
 /* Het dictee als opdracht. Drie bronnen: de tekst van deze week (per niveau,
    uit de tekstbank van dictee.html), een vaste tekst uit die bank (dt: t-bb-01),
    of een eigen dictee van de docent (dt: eigen-K7M2QX, uit materiaal.js).
@@ -188,7 +189,7 @@ function goedVan(r){
   return Math.min(r.ronde | 0, 250);
 }
 /* spellen zonder kamer die wel bij een klas melden */
-const KLAS_SPELLEN = { race: "Vragenrace", eigen: "Eigen oefening", klasquiz: "Klasquiz", dag: "Dagelijkse uitdaging", fouten: "Oefen je fouten", rekenen: "Rekenrace", balans: "De balans", werkwoorden: "Werkwoordrace", irregular: "Irregular verbs", vlaggen: "Vlaggen", landenvormen: "Landenvormen", topografie: "Topografie", lichaam: "Het lichaam", tijdvakken: "Tijdvakken sorteren", bronnenlab: "Bronnenlab", jagers: "Blijven of doorlopen", feodalisme: "Feodalisme", leenmannen: "Verdeel je rijk", stad: "Bouw je stad", handel: "De handelsroute", vergadering: "De vergadering", zinsbouw: "Zinsbouw", tekstdetective: "De tekstdetective", uitverkoop: "De uitverkoop", breukenbakker: "De breukenbakker",
+const KLAS_SPELLEN = { race: "Vragenrace", metriek: "Het metriek stelsel", eigen: "Eigen oefening", klasquiz: "Klasquiz", dag: "Dagelijkse uitdaging", fouten: "Oefen je fouten", rekenen: "Rekenrace", balans: "De balans", werkwoorden: "Werkwoordrace", irregular: "Irregular verbs", vlaggen: "Vlaggen", landenvormen: "Landenvormen", topografie: "Topografie", lichaam: "Het lichaam", tijdvakken: "Tijdvakken sorteren", bronnenlab: "Bronnenlab", jagers: "Blijven of doorlopen", feodalisme: "Feodalisme", leenmannen: "Verdeel je rijk", stad: "Arena", handel: "De handelsroute", vergadering: "De vergadering", zinsbouw: "Zinsbouw", tekstdetective: "De tekstdetective", uitverkoop: "De uitverkoop", breukenbakker: "De breukenbakker",
   /* Deze meldden hun uitslag wel, maar stonden hier niet, dus de klas kreeg ze
      nooit te zien: de melding werd geweigerd met "onbekend spel". */
   dhte: "Het DHTE-schema", vlakken: "Vlakken herkennen", organisme: "Bouw het organisme",
@@ -221,7 +222,9 @@ const KLAS_SPELLEN = { race: "Vragenrace", eigen: "Eigen oefening", klasquiz: "K
   signaalwoorden: "Signaalwoorden en verbanden",
   register: "Formeel of informeel",
   partijen: "Welke partij is dit?",
-  democratie: "Democratie" };
+  democratie: "Democratie",
+  /* spellen voor elk vak op de vragenbank van Torenverdediging */
+  mijnwerker: "Mijnwerker", poortrace: "Poortrace", kaarttoren: "Kaarttoren" };
 /* Hoe lang de kamer wacht voor hij iemand die wegviel ook echt weghaalt. In de
    lobby kort: herladen duurt een paar tellen. In de arena langer: een
    telefoon die even geen bereik heeft, hoort er niet meteen uit te liggen. */

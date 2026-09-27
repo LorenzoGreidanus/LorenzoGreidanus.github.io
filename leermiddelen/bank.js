@@ -164,7 +164,9 @@ var IN_GROEP = {
   burg: { democratie:'staat', rechtsstaat:'staat', media:'samen', samenleven:'samen',
           europa:'wereld', geld:'wereld', 'examen-mk':'examen', partijen:'staat', bestuurslagen:'staat' },
   eco:  { 'vraag en aanbod':'markt', 'examen-eco':'examen' },
-  ges:  { staat:'examen', nl1900:'examen', 'oorzaak en gevolg':'vaardig', 'wie ben ik':'vaardig' }
+  ges:  { staat:'examen', nl1900:'examen', 'oorzaak en gevolg':'vaardig', 'wie ben ik':'vaardig',
+          /* Poortrace vraagt jaartallen uit Tijdvakken sorteren */
+          jaartallen:'tijdvakken' }
 };
 /* de tijdvakken horen allemaal onder een kop, zonder dat ze los genoemd hoeven */
 TIJDVAKKEN.forEach(function(t){ IN_GROEP.ges[t.id] = 'tijdvakken'; });
