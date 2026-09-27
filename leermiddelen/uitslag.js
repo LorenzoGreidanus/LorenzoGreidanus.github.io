@@ -42,17 +42,28 @@ var UITSLAG = (function(){
     code = c; u = null; paneel = null; klasFilter = '';
     toon('uitslagvak');
     $('uitslagKop').textContent = 'Resultaten';
-    $('uitslagInhoud').innerHTML = '';
+    /* terwijl het komt: vlakken in de vorm van de samenvatting, de twee kaarten en de tabel (fonts.css) */
+    var vlak = function(h){ return '<i class="skelet skelet-kaart" style="--h:' + h + 'px"></i>'; };
+    $('uitslagInhoud').setAttribute('aria-busy', 'true');
+    $('uitslagInhoud').innerHTML = '<div class="skelet-vak" role="status"><span class="skelet-sr">Resultaten laden…</span>' +
+      '<div class="samenvatting" style="margin-bottom:16px">' + vlak(78) + vlak(78) + vlak(78) + vlak(78) + '</div>' +
+      '<div class="uitslaggrid" style="margin-bottom:16px">' + vlak(190) + vlak(190) + '</div>' + vlak(260) + '</div>';
     melding($('uitslagMelding'), 'Ophalen…');
     EIGEN.uitslagen(code).then(function(j){
       u = j; melding($('uitslagMelding'), '');
+      $('uitslagInhoud').removeAttribute('aria-busy'); $('uitslagInhoud').innerHTML = '';
       $('uitslagKop').textContent = u.naam;
       if (!u.rijen.length){
         $('uitslagInhoud').innerHTML = '<p class="leeg">Nog niemand heeft ingeleverd. Deel de code <b>' + schoon(code) + '</b> met je klas; de antwoorden komen hier binnen zodra een leerling klaar is.</p>';
         return;
       }
       opbouw(); teken();
-    }).catch(function(f){ melding($('uitslagMelding'), f.message, 'fout'); });
+    }).catch(function(f){
+      melding($('uitslagMelding'), f.message, 'fout');
+      $('uitslagInhoud').removeAttribute('aria-busy');
+      $('uitslagInhoud').innerHTML = '<p class="leeg"><button class="knop stil klein" type="button" id="uitslagOpnieuw">Probeer opnieuw</button></p>';
+      $('uitslagOpnieuw').addEventListener('click', function(){ open(c); });
+    });
   }
   function opbouw(){
     var n = u.norm, klassen = {};

@@ -39,7 +39,7 @@ window.STRIJD = (function(){
   /* Wat er in het donker anders moet. Een lijst, twee keer gebruikt: een keer
      voor wie de donkere stand zelf koos en een keer voor wie hem van zijn
      computer krijgt. Stond hier twee keer woordelijk hetzelfde. */
-  var DONKERREGELS = '.sitelijst .hint,.sitelijst .leeg{background:none}.duelvak,.sitelijst .rij,.duelvak input,.sitelijst .naamrij input,.duelvak button.los{background:#182652;color:#F3EFE9;border-color:rgba(243,239,233,.14)}.sitelijst .rij.jij{background:#3a3220;border-color:#EFC64A}.duelvak p,.sitelijst .rij small,.sitelijst .leeg,.sitelijst .hint,.sitelijst .rij .nr{color:#B3BBD0}.duelvak h3,.sitelijst h3{color:#F3EFE9}#strijdSluier>div{background:#182652;color:#F3EFE9}#strijdSluier p{color:#B3BBD0}#strijdSluier button{background:#182652;color:#F3EFE9;border-color:rgba(243,239,233,.2)}#strijdSluier .stijlen button{background:#1f2f5e;color:#F3EFE9}#strijdSluier .stijlen button b{color:#F3EFE9}#strijdSluier .stijlen button.aan{background:#204ECF;color:#fff;border-color:#204ECF}#strijdSluier .stijlen button.aan b{color:#fff}#strijdSluier .lobbykaart{background:#1f2f5e;color:#F3EFE9}#strijdSluier .lobbykaart .klas{color:#B3BBD0}#strijdSluier .lobbykaart.klaar{background:#1f3a2c;border-color:#5fbf88}#strijdSluier .lobbykaart.klaar .vlag{color:#8fd9ae}#strijdSluier .lobbykaart.jij{border-color:#83A5F2}#strijdSluier .lobbykaart.jij.klaar{border-color:#5fbf88}#strijdSluier .lobbykaart.leeg{background:transparent;border-color:rgba(243,239,233,.2);color:#B3BBD0}#strijdSluier .lobbykaart .vlag{color:#F4A28C}#strijdSluier button.crab{background:#F26749;color:#fff;border-color:#F26749}#strijdSluier p.kop{color:#B3BBD0}#strijdSluier .afopties button.goed{background:#1f3a2c;border-color:#5fbf88;color:#c9ecd8}#strijdSluier .afopties button.fout{background:#3b201a;border-color:#e0806b;color:#f4c8bd}#strijdSluier .afdoelen button small{color:#B3BBD0}#strijdSluier .afbalk{color:#B3BBD0}';
+  var DONKERREGELS = '.sitelijst .hint,.sitelijst .leeg{background:none}.duelvak,.sitelijst .rij,.duelvak input,.sitelijst .naamrij input,.duelvak button.los,.sitelijst .sl-opnieuw{background:#182652;color:#F3EFE9;border-color:rgba(243,239,233,.14)}.sitelijst .rij.jij{background:#3a3220;border-color:#EFC64A}.duelvak p,.sitelijst .rij small,.sitelijst .leeg,.sitelijst .hint,.sitelijst .rij .nr{color:#B3BBD0}.duelvak h3,.sitelijst h3{color:#F3EFE9}#strijdSluier>div{background:#182652;color:#F3EFE9}#strijdSluier p{color:#B3BBD0}#strijdSluier button{background:#182652;color:#F3EFE9;border-color:rgba(243,239,233,.2)}#strijdSluier .stijlen button{background:#1f2f5e;color:#F3EFE9}#strijdSluier .stijlen button b{color:#F3EFE9}#strijdSluier .stijlen button.aan{background:#204ECF;color:#fff;border-color:#204ECF}#strijdSluier .stijlen button.aan b{color:#fff}#strijdSluier .lobbykaart{background:#1f2f5e;color:#F3EFE9}#strijdSluier .lobbykaart .klas{color:#B3BBD0}#strijdSluier .lobbykaart.klaar{background:#1f3a2c;border-color:#5fbf88}#strijdSluier .lobbykaart.klaar .vlag{color:#8fd9ae}#strijdSluier .lobbykaart.jij{border-color:#83A5F2}#strijdSluier .lobbykaart.jij.klaar{border-color:#5fbf88}#strijdSluier .lobbykaart.leeg{background:transparent;border-color:rgba(243,239,233,.2);color:#B3BBD0}#strijdSluier .lobbykaart .vlag{color:#F4A28C}#strijdSluier button.crab{background:#F26749;color:#fff;border-color:#F26749}#strijdSluier p.kop{color:#B3BBD0}#strijdSluier .afopties button.goed{background:#1f3a2c;border-color:#5fbf88;color:#c9ecd8}#strijdSluier .afopties button.fout{background:#3b201a;border-color:#e0806b;color:#f4c8bd}#strijdSluier .afdoelen button small{color:#B3BBD0}#strijdSluier .afbalk{color:#B3BBD0}';
   var css = '#strijdHud{position:fixed;left:12px;bottom:12px;z-index:90;background:#14224C;color:#fff;border-radius:14px;padding:9px 13px;' +
     'font:600 .82rem/1.3 Poppins,system-ui,sans-serif;box-shadow:0 10px 24px rgba(20,34,76,.25);max-width:min(92vw,340px)}' +
     '#strijdHud small{display:block;font-weight:500;opacity:.8}' +
@@ -143,6 +143,11 @@ window.STRIJD = (function(){
     '.sitelijst .naamrij input{flex:1;min-width:0;border:1.5px solid rgba(20,34,76,.14);border-radius:12px;padding:10px 12px;font:inherit;background:#FBF6F1;color:inherit}' +
     '.sitelijst .naamrij button{border:none;border-radius:12px;padding:10px 14px;font:600 .9rem Poppins,system-ui,sans-serif;background:#F26749;color:#fff;cursor:pointer}' +
     '.sitelijst .hint{font-size:.85rem;color:#5b6480;margin:0 0 8px}' +
+    /* een lege rij terwijl de lijst laadt: even hoog als een echte */
+    '.sitelijst .rij.sl-skelet{min-height:54px;box-sizing:border-box}' +
+    /* op een telefoon loopt de regel onder de naam meestal over twee regels */
+    '@media(max-width:480px){.sitelijst .rij.sl-skelet{min-height:76px}}' +
+    '.sitelijst .sl-opnieuw{display:inline-flex;align-items:center;min-height:44px;margin:6px 0 0;border:1.5px solid rgba(20,34,76,.14);border-radius:12px;padding:8px 14px;font:600 .85rem Poppins,system-ui,sans-serif;background:#fff;color:#14224C;cursor:pointer}' +
     /* donker: bij een eigen keuze en bij een apparaat dat donker vraagt */
     donkerRegels(':root[data-theme="dark"] ', DONKERREGELS) +
     '@media(prefers-color-scheme:dark){' + donkerRegels(':root:not([data-theme="light"]) ', DONKERREGELS) + '}';
@@ -715,22 +720,34 @@ window.STRIJD = (function(){
       if (!doel) return;
       laatsteDoel[spel] = doelId; laatsteId[spel] = id || null; laatsteVorm[spel] = vorm || null;
       doel.className = 'sitelijst';
-      doel.innerHTML = '<h3>Klassement van de hele site</h3>' + (vorm ? vorm : '') + '<div class="leeg">Laden…</div>';
+      /* Terwijl de lijst komt: tien lege rijen in de vorm van de echte, zodat
+         het startscherm niet verspringt. Alleen de lijst wordt straks vervangen;
+         het invulvak erboven blijft staan, met wat je er al in typte. */
+      var leeg = '<div class="rij sl-skelet" aria-hidden="true"><i class="skelet skelet-regel" style="--b:1.1em"></i>' +
+        '<span class="avrij"><i class="skelet skelet-rond"></i><span style="flex:1"><i class="skelet skelet-regel" style="--b:45%"></i><i class="skelet skelet-regel" style="--b:70%;height:.7em"></i></span></span>' +
+        '<i class="skelet skelet-regel" style="--b:3.5em"></i></div>';
+      doel.innerHTML = '<h3>Klassement van de hele site</h3>' + (vorm ? vorm : '') +
+        '<div class="sl-rijen" aria-busy="true"><div class="skelet-vak" role="status"><span class="skelet-sr">Klassement laden…</span>' + new Array(11).join(leeg) + '</div></div>';
+      var rijen = doel.querySelector('.sl-rijen');
       /* het klassement staat in beeld, dus er wordt zo gespeeld: alvast een bon */
       zorgBon(spel);
-      fetch('/api/klassement/' + spel).then(function(r){ return r.json(); }).then(function(j){
+      fetch('/api/klassement/' + spel).then(function(r){ if (!r.ok) throw new Error('status ' + r.status); return r.json(); }).then(function(j){
         /* is het gezichtje veranderd sinds je laatste inzending, werk je oude rijen dan bij */
         gezichtBijwerken(spel);
         var lijst = (j.lijst || []).slice(0, 10);
-        var html = '<h3>Klassement van de hele site</h3>' + (vorm ? vorm : '');
+        var html = '';
         if (!lijst.length) html += '<div class="leeg">Nog niemand. Wie het eerst speelt, staat bovenaan.</div>';
         lijst.forEach(function(r){
           html += '<div class="rij' + (id && r.id === id ? ' jij' : '') + '"><span class="nr">' + r.plek + '</span>' +
             '<span class="avrij">' + (window.AVATAR ? AVATAR.svg(r.naam, 34, r.av) : '') + '<span><b>' + schoon(r.naam) + '</b><small>' + [r.waar, r.niveau, r.vak].filter(Boolean).map(schoon).join(' · ') + (r.t ? ' · ' + new Date(r.t).toLocaleDateString('nl-NL') : '') + '</small></span></span>' +
             '<span class="pt">' + schoon(maatTekst(spel, r)) + '</span></div>';
         });
-        doel.innerHTML = html;
-      }).catch(function(){ doel.innerHTML = '<h3>Klassement van de hele site</h3><div class="leeg">Nu even niet bereikbaar.</div>'; });
+        rijen.innerHTML = html; rijen.removeAttribute('aria-busy');
+      }).catch(function(){
+        rijen.removeAttribute('aria-busy');
+        rijen.innerHTML = '<div class="leeg">Het klassement is nu even niet bereikbaar. <button type="button" class="sl-opnieuw">Probeer opnieuw</button></div>';
+        rijen.querySelector('.sl-opnieuw').addEventListener('click', function(){ klassement.toon(doelId, spel, id, vorm); });
+      });
     },
     /* een score insturen; geeft een belofte met { plek, id } of { fout } */
     zet: function(spel, g){

@@ -666,8 +666,9 @@
   /* ---------- beginnen en verdergaan ---------- */
   function metVragen(daarna, knop){
     if (!vak || !window.BANK || BANK.heeft(vak) || vak === 'reken') return daarna();
-    if (knop) knop.disabled = true;
-    BANK.zorg(vak).then(function(){ if (knop) knop.disabled = false; daarna(); });
+    /* de knop draait tot de vragen er zijn (fonts.css) */
+    if (knop){ knop.disabled = true; knop.setAttribute('aria-busy', 'true'); }
+    BANK.zorg(vak).then(function(){ if (knop){ knop.disabled = false; knop.removeAttribute('aria-busy'); } daarna(); });
   }
   function begin(code){
     weg(RUN);

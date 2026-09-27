@@ -190,6 +190,9 @@ var EIGEN = (function(){
     function laad(code){
       code = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
       zetStand('Even ophalen…');
+      /* de knop draait tot de lijst er is (fonts.css); teken() zet daarna een verse neer */
+      var kn = el.querySelector('button.knop');
+      if (kn){ kn.disabled = true; kn.setAttribute('aria-busy', 'true'); }
       haal(code).then(function(m){
         if (!m || m.soort !== soort) throw new Error(dictee ? 'Deze code is geen dictee.' : 'Deze code is geen woordenlijst.');
         gekozen = code;
@@ -199,6 +202,7 @@ var EIGEN = (function(){
         teken();
         if (opts.gekozen) opts.gekozen(m, code);
       }).catch(function(e){
+        if (kn){ kn.disabled = false; kn.removeAttribute('aria-busy'); }
         gekozen = ''; zetStand(e && e.message ? e.message : 'Dat lukte niet.');
         if (opts.leeg) opts.leeg();
       });

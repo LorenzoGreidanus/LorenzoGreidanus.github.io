@@ -574,6 +574,12 @@ a:focus-visible,button:focus-visible,input:focus-visible,summary:focus-visible{o
 .codevak2 p{font-size:.84rem;color:var(--muted);margin-top:6px}
 .opdrachtkaart{margin:0 0 12px;background:linear-gradient(135deg,#204ECF,#3a5fd6);color:#fff;border-radius:18px;padding:14px 18px;display:grid;gap:4px;box-shadow:0 10px 26px rgba(32,78,207,.22)}
 .opdrachtkaart .eyebrow{color:rgba(255,255,255,.86)}
+/* het skelet op de blauwe kaart: lichte vlakken in plaats van donkere */
+.opdrachtkaart{--skelet:rgba(255,255,255,.2);--skelet-glans:rgba(255,255,255,.28)}
+.opdrachtkaart .skelet-vak{display:grid;gap:6px}
+/* op een telefoon loopt de titel van de opdracht over twee regels */
+.opdrachtkaart .skelet-regel.smal{display:none}
+@media(max-width:640px){.opdrachtkaart .skelet-regel.smal{display:block}}
 .opdrachtkaart b{font-size:1.05rem}
 .opdrachtkaart span{font-size:.9rem;color:rgba(255,255,255,.95)}
 .opdrachtkaart .klaar{color:#d7f1df;font-weight:600}
@@ -1971,9 +1977,14 @@ var SPELLEN = [
   /* Welke spellen deze klas ziet, of de lesmodus aanstaat en de opdracht van
      de week komen alle drie uit hetzelfde antwoord. Dus een verzoek, niet twee. */
   function leesKlas(k){
+    /* Had deze klas de vorige keer een opdracht, dan staat er meteen een lege
+       kaart op zijn plek. Anders schuift de hele pagina omlaag als hij binnenkomt. */
+    if (!klasGelezen && hadOpdracht()) wachtKaart(true);
+    klasGelezen = true;
     fetch('/api/klas/' + k.code + '/mijn?sid=' + encodeURIComponent(KLAS.sid()), { cache:'no-store' })
       .then(function(r){ return r.json(); })
       .then(function(j){
+        wachtKaart(false);
         /* de docent haalde deze leerling uit de klas: dan hier ook loskoppelen */
         if (j && j.weg){ var nu = KLAS.lees(); if (nu && nu.code === k.code){ KLAS.wis(); teken(); } return; }
         if (!j || j.fout) return;
@@ -1981,7 +1992,23 @@ var SPELLEN = [
         if (j.oudleerling) oudLeerling();
         toonOpdracht(j);
       })
-      .catch(function(){});
+      .catch(function(){ wachtKaart(false); });
+  }
+  var klasGelezen = false;
+  function hadOpdracht(){ try { return localStorage.getItem('lg-had-opdracht') === '1'; } catch (e){ return false; } }
+  function wachtKaart(aan){
+    var vak = document.getElementById('opdrachtKaart');
+    if (!vak) return;
+    if (aan){
+      vak.classList.add('wacht'); vak.classList.remove('hide'); vak.setAttribute('aria-busy', 'true');
+      vak.innerHTML = '<div class="skelet-vak" role="status"><span class="skelet-sr">Opdracht van je docent laden…</span>' +
+        '<i class="skelet skelet-regel" style="--b:9em;height:.7em"></i><i class="skelet skelet-regel" style="--b:70%;height:1.05em"></i>' +
+        '<i class="skelet skelet-regel" style="--b:52%"></i><i class="skelet skelet-regel smal" style="--b:7em"></i><i class="skelet skelet-rij" style="--h:44px;width:9em;margin:2px 0 0;border-radius:999px"></i></div>';
+    } else if (vak.classList.contains('wacht')){
+      vak.classList.remove('wacht'); vak.removeAttribute('aria-busy');
+      vak.classList.add('hide'); vak.innerHTML = '';
+    }
+    if (window.LESVAKBIJ) LESVAKBIJ();
   }
   /* Deze klas is van de eigenaar van de site, dus deze leerling krijgt de
      baret, de krijtcirkel en het krijtje. Het bericht komt een keer; daarna
@@ -2016,6 +2043,7 @@ var SPELLEN = [
     function rang(o){ return o.gehaald ? 1 : o.tot < nu ? 2 : 0; }
     lijst.sort(function(a, b){ return rang(a) - rang(b) || a.tot - b.tot; });
     var doel = j && j.klasdoel;
+    try { localStorage.setItem('lg-had-opdracht', lijst.length || doel ? '1' : '0'); } catch (e){}
     if (!lijst.length && !doel){ vak.classList.add('hide'); vak.innerHTML = ''; klaar(); return; }
     var html = '';
     if (lijst.length) html += '<p class="eyebrow">' + (lijst.length > 1 ? lijst.length + ' opdrachten' : 'opdracht') + ' van je docent</p>';
@@ -2184,13 +2212,13 @@ var SPELLEN = [
       if (naam.length < 2){ st.textContent = 'Vul een bijnaam in, zodat je docent ziet wie je bent.'; st.classList.add('fout'); naamVeld.focus(); return; }
       codeVeld.value = code;
       /* de knop even uit, anders koppel je bij twee keer tikken twee keer */
-      knop.disabled = true;
+      knop.disabled = true; knop.setAttribute('aria-busy', 'true');
       st.classList.remove('fout'); st.textContent = 'Even kijken\u2026';
       fetch('/api/kamer/' + code).then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); }).then(function(x){
-        knop.disabled = false;
+        knop.disabled = false; knop.removeAttribute('aria-busy');
         if (!x.ok || x.j.spel !== 'klas'){ st.textContent = 'Er is geen klas met code ' + code + '. Kijk of je hem goed overnam.'; st.classList.add('fout'); codeVeld.focus(); return; }
         KLAS.zet(code, naam); netGekoppeld = true; teken();
-      }).catch(function(){ knop.disabled = false; st.textContent = 'Geen verbinding. Kijk of je internet hebt en tik dan nog een keer op Koppelen.'; st.classList.add('fout'); });
+      }).catch(function(){ knop.disabled = false; knop.removeAttribute('aria-busy'); st.textContent = 'Geen verbinding. Kijk of je internet hebt en tik dan nog een keer op Koppelen.'; st.classList.add('fout'); });
     });
   }
   teken();
@@ -2235,6 +2263,8 @@ var SPELLEN = [
   var vak0 = document.getElementById('profielvak'); if (!vak0 || !window.PROFIEL || !window.AVATAR) return;
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
   var open = false, codeOpen = false, koppelOpen = false, melding = '', acc = null, accMelding = '', accVraag = '', winkelOpen = false, winkelMelding = '';
+  /* de knop die nu op de server wacht; teken() bouwt de lade opnieuw, dus hij wordt daar weer bezig gezet */
+  var wachtOp = '';
   if (PROFIEL.winkelVlag && PROFIEL.winkelVlag()) winkelOpen = true;
   var MSLOGO = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="0" y="0" width="7.5" height="7.5" fill="#F25022"/><rect x="8.5" y="0" width="7.5" height="7.5" fill="#7FBA00"/><rect x="0" y="8.5" width="7.5" height="7.5" fill="#00A4EF"/><rect x="8.5" y="8.5" width="7.5" height="7.5" fill="#FFB900"/></svg>';
   function naam(){ var k = window.KLAS && KLAS.lees(); return k ? k.naam : 'jij'; }
@@ -2376,15 +2406,18 @@ var SPELLEN = [
       });
     });
     function knop(id, fn){ var el = document.getElementById(id); if (el) el.addEventListener('click', function(){ fn(el); }); }
+    var wb = wachtOp && document.getElementById(wachtOp);
+    if (wb){ wb.disabled = true; wb.setAttribute('aria-busy', 'true'); }
     knop('pfMaak', function(el){
-      el.disabled = true; melding = 'Even wachten\u2026'; teken();
-      PROFIEL.maak().then(function(){ melding = 'Gelukt. Schrijf de code op.'; teken(); }).catch(function(e){ melding = e.message; teken(); });
+      wachtOp = 'pfMaak'; melding = 'Even wachten\u2026'; teken();
+      PROFIEL.maak().then(function(){ wachtOp = ''; melding = 'Gelukt. Schrijf de code op.'; teken(); }).catch(function(e){ wachtOp = ''; melding = e.message; teken(); });
     });
     knop('pfHebAl', function(){ koppelOpen = true; melding = ''; teken(); });
     knop('pfTerug', function(){ koppelOpen = false; melding = ''; teken(); });
     knop('pfKoppel', function(){
-      var c = document.getElementById('pfInvoer').value; melding = 'Even kijken\u2026'; teken();
-      PROFIEL.koppel(c).then(function(){ koppelOpen = false; melding = 'Gekoppeld: je voortgang staat nu ook hier.'; teken(); location.reload(); }).catch(function(e){ melding = e.message; koppelOpen = true; teken(); document.getElementById('pfInvoer').value = c; });
+      var c = document.getElementById('pfInvoer').value; wachtOp = 'pfKoppel'; melding = 'Even kijken\u2026'; teken();
+      var inv = document.getElementById('pfInvoer'); if (inv) inv.value = c;
+      PROFIEL.koppel(c).then(function(){ wachtOp = ''; koppelOpen = false; melding = 'Gekoppeld: je voortgang staat nu ook hier.'; teken(); location.reload(); }).catch(function(e){ wachtOp = ''; melding = e.message; koppelOpen = true; teken(); document.getElementById('pfInvoer').value = c; });
     });
     knop('pfKopieer', function(){
       var c = PROFIEL.code();

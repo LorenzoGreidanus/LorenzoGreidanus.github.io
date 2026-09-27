@@ -165,27 +165,27 @@ footer{text-align:center;font-size:.8rem;color:var(--muted);padding:22px 0}
       $('fout').textContent = 'Die bijnaam kan niet. Kies een andere.'; $('naam').focus(); return;
     }
     try { localStorage.setItem('lg-quiz-naam', naam); } catch (e){}
-    $('doe').disabled = true;
+    $('doe').disabled = true; $('doe').setAttribute('aria-busy', 'true');
     $('doe').textContent = 'Even kijken…';
     fetch('/api/kamer/' + code)
       .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
       .then(function(x){
         if (!x.ok){
-          $('doe').disabled = false; $('doe').textContent = 'Meedoen';
+          $('doe').disabled = false; $('doe').removeAttribute('aria-busy'); $('doe').textContent = 'Meedoen';
           $('fout').textContent = (x.j && x.j.fout) || 'Geen kamer met deze code.';
           return;
         }
         /* ga=1 zegt tegen het spel: deze leerling heeft al op Meedoen gedrukt */
         var doel = paginaVoorSpel(x.j.spel, x.j.game);
         if (!doel){
-          $('doe').disabled = false; $('doe').textContent = 'Meedoen';
+          $('doe').disabled = false; $('doe').removeAttribute('aria-busy'); $('doe').textContent = 'Meedoen';
           $('fout').textContent = x.j.spel === 'klas' ? 'Dit is een klascode van een docent, geen spelcode. Die vul je in de leeromgeving in, bij "Code van je docent".' : 'Deze code hoort bij een ander spel. Vraag je docent welke pagina je moet openen.';
           return;
         }
         location.href = doel + '?k=' + code + '&ga=1';
       })
       .catch(function(){
-        $('doe').disabled = false; $('doe').textContent = 'Meedoen';
+        $('doe').disabled = false; $('doe').removeAttribute('aria-busy'); $('doe').textContent = 'Meedoen';
         $('fout').textContent = 'Geen verbinding met de server.';
       });
   }

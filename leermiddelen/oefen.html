@@ -134,11 +134,11 @@
   $('codeIn').addEventListener('input', function(){ this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); });
   $('andereCode').addEventListener('click', function(){ history.replaceState(null, '', location.pathname); scherm('codeScherm'); $('codeIn').value = ''; $('codeIn').focus(); });
   function laad(c){
-    $('codeKnop').disabled = true; melding($('codeMelding'), 'Ophalen…');
+    $('codeKnop').disabled = true; $('codeKnop').setAttribute('aria-busy', 'true'); melding($('codeMelding'), 'Ophalen…');
     /* een voorbeeldtoets staat in de browser zelf: niets ophalen, niets inleveren */
     var vb = window.VOORBEELDTOETSEN && VOORBEELDTOETSEN[String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '')];
     if (vb){
-      $('codeKnop').disabled = false; melding($('codeMelding'), '');
+      $('codeKnop').disabled = false; $('codeKnop').removeAttribute('aria-busy'); melding($('codeMelding'), '');
       code = vb.code; mat = JSON.parse(JSON.stringify(vb));
       history.replaceState(null, '', location.pathname + '?code=' + code);
       toonBegin(); return;
@@ -146,12 +146,12 @@
     EIGEN.haal(c).then(function(m){
       /* een eigen dictee maak je in het dictee, waar de computer het voorleest */
       if (m && m.soort === 'dictee'){ location.replace('dictee.html?eigen=' + encodeURIComponent(String(c).toUpperCase())); return; }
-      $('codeKnop').disabled = false; melding($('codeMelding'), '');
+      $('codeKnop').disabled = false; $('codeKnop').removeAttribute('aria-busy'); melding($('codeMelding'), '');
       code = String(c).toUpperCase(); mat = m;
       history.replaceState(null, '', location.pathname + '?code=' + code);
       toonBegin();
     }).catch(function(f){
-      $('codeKnop').disabled = false;
+      $('codeKnop').disabled = false; $('codeKnop').removeAttribute('aria-busy');
       scherm('codeScherm'); $('codeIn').value = String(c || '').toUpperCase();
       melding($('codeMelding'), f.status === 404 ? 'Deze code bestaat niet (meer). Kijk of je hem goed hebt overgenomen.' : f.message, 'fout');
     });

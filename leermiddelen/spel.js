@@ -139,6 +139,13 @@ window.SPEL = (function(){
       .catch(function(){ return false; });
   }
 
+  /* De uitleg komt de eerste keer nog over het net: de knop draait zolang (fonts.css). */
+  function stappenMet(knop){
+    if (knop.getAttribute('aria-busy') === 'true') return;
+    knop.setAttribute('aria-busy', 'true');
+    stappen().then(function(){ knop.removeAttribute('aria-busy'); });
+  }
+
   /* ---------- het uitlegpaneel ---------- */
   function uitleg(o){
     o = o || {};
@@ -198,8 +205,8 @@ window.SPEL = (function(){
       stapKnop = document.createElement('button');
       stapKnop.type = 'button'; stapKnop.className = 'uitlegknop stapknop';
       stapKnop.innerHTML = IC.trap + 'Uitleg stap voor stap';
-      stapKnop.addEventListener('click', function(){ stappen(); });
-      paneel.querySelector('.stappen-knop').addEventListener('click', function(){ stappen(); });
+      stapKnop.addEventListener('click', function(){ stappenMet(stapKnop); });
+      paneel.querySelector('.stappen-knop').addEventListener('click', function(){ stappenMet(this); });
     }
     function toon(open){
       paneel.hidden = !open; knop.hidden = open;

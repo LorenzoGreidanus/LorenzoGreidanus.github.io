@@ -770,11 +770,11 @@ Frans Hals"></textarea>
   $('setBewaar').addEventListener('click', function(){
     var r = toonEigen();
     if (!r.vragen.length){ $('setUit').textContent = 'Eerst een paar vragen typen.'; return; }
-    $('setBewaar').disabled = true;
+    $('setBewaar').disabled = true; $('setBewaar').setAttribute('aria-busy', 'true');
     fetch('/api/set', { method:'POST', headers:{ 'content-type':'application/json' }, body: JSON.stringify({ naam:$('setNaam').value, tekst:$('eigenTekst').value }) })
       .then(function(x){ return x.json().then(function(j){ return { ok:x.ok, j:j }; }); })
       .then(function(x){
-        $('setBewaar').disabled = false;
+        $('setBewaar').disabled = false; $('setBewaar').removeAttribute('aria-busy');
         if (!x.ok){ $('setUit').textContent = x.j.fout || 'Bewaren lukte niet.'; return; }
         $('setCode').value = x.j.code;
         $('setUit').innerHTML = 'Bewaard. De code is <b>' + schoonHtml(x.j.code) + '</b>: daarmee haal je deze set op elk apparaat op, een half jaar lang.';
@@ -790,27 +790,30 @@ Frans Hals"></textarea>
           })
           .catch(function(){});
       })
-      .catch(function(){ $('setBewaar').disabled = false; $('setUit').textContent = 'Geen verbinding met de server.'; });
+      .catch(function(){ $('setBewaar').disabled = false; $('setBewaar').removeAttribute('aria-busy'); $('setUit').textContent = 'Geen verbinding met de server.'; });
   });
   $('setLaad').addEventListener('click', function(){
     var c = $('setCode').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (c.length !== 6){ $('setUit').textContent = 'Een set-code heeft zes tekens.'; return; }
+    var knop = $('setLaad');
+    knop.disabled = true; knop.setAttribute('aria-busy', 'true');
     fetch('/api/set/' + c).then(function(x){ return x.json().then(function(j){ return { ok:x.ok, j:j }; }); })
       .then(function(x){
+        knop.disabled = false; knop.removeAttribute('aria-busy');
         if (!x.ok){ $('setUit').textContent = x.j.fout || 'Geen set gevonden.'; return; }
         $('eigenTekst').value = x.j.tekst; if (x.j.naam) $('setNaam').value = x.j.naam;
         toonEigen();
         $('setUit').textContent = 'Set ' + c + (x.j.naam ? ' (' + x.j.naam + ')' : '') + ' geladen.';
       })
-      .catch(function(){ $('setUit').textContent = 'Geen verbinding met de server.'; });
+      .catch(function(){ knop.disabled = false; knop.removeAttribute('aria-busy'); $('setUit').textContent = 'Geen verbinding met de server.'; });
   });
 
   $('openBtn').addEventListener('click', function(){
     /* de vragen van het gekozen vak eerst ophalen */
     if (window.BANK && bron === 'bank' && vak && !BANK.heeft(vak)){
       var knop = this;
-      knop.disabled = true;
-      BANK.zorg(vak).then(function(){ knop.disabled = false; knop.click(); });
+      knop.disabled = true; knop.setAttribute('aria-busy', 'true');
+      BANK.zorg(vak).then(function(){ knop.disabled = false; knop.removeAttribute('aria-busy'); knop.click(); });
       return;
     }
     var aantal = parseInt($('aantal').value, 10), tijd = parseInt($('tijd').value, 10);
@@ -828,20 +831,20 @@ Frans Hals"></textarea>
     if (vragen.length < (bron === 'eigen' ? 2 : 3)){ $('openFout').textContent = bron === 'eigen' ? 'Typ minstens twee vragen.' : 'Te weinig vragen voor deze keuze.'; return; }
     /* wat op het bord staat als opzet: bij een lijst de naam van de lijst */
     var eigenNaam = bron === 'lijst' ? lijstM.naam : ($('setNaam').value.trim() || 'eigen vragen');
-    $('openBtn').disabled = true;
+    $('openBtn').disabled = true; $('openBtn').setAttribute('aria-busy', 'true');
     fetch('/api/kamer', { method:'POST', headers:{ 'content-type':'application/json' },
       body: JSON.stringify({ vak:bron === 'bank' ? vak : 'eigen', niveau:bron === 'bank' ? niveau : '', onderdeel:bron === 'bank' ? onderdeel : eigenNaam, tijd:tijd,
         vragen: vragen.map(function(q){ return { v:q.v, o:q.o, g:q.g, u:q.u, t:q.t, vlag:q.vlag, svg:q.svg }; }) }) })
     .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
     .then(function(x){
-      $('openBtn').disabled = false;
+      $('openBtn').disabled = false; $('openBtn').removeAttribute('aria-busy');
       if (!x.ok){ $('openFout').textContent = x.j.fout || 'Het lukte niet om een kamer te openen.'; return; }
       var host = { code:x.j.code, sleutel:x.j.sleutel, vak:bron === 'bank' ? vak : 'eigen', niveau:bron === 'bank' ? niveau : '', onderdeel:bron === 'bank' ? onderdeel : eigenNaam, aantal:vragen.length, tijd:tijd };
       try { localStorage.setItem('lg-quiz-host', JSON.stringify(host)); } catch (e){}
       verhuis(host.code);
       wordHost(host);
     })
-    .catch(function(){ $('openBtn').disabled = false; $('openFout').textContent = 'Geen verbinding met de server.'; });
+    .catch(function(){ $('openBtn').disabled = false; $('openBtn').removeAttribute('aria-busy'); $('openFout').textContent = 'Geen verbinding met de server.'; });
   });
 
   /* een docent die het digibord ververst kan terug naar zijn kamer */
@@ -896,10 +899,10 @@ Frans Hals"></textarea>
     if (!naam){ $('joinFout').textContent = 'Vul een bijnaam in.'; $('joinNaam').focus(); return; }
     if (window.NAAMFILTER && NAAMFILTER.verboden(naam)){ $('joinFout').textContent = 'Die bijnaam kan niet. Kies een andere.'; $('joinNaam').focus(); return; }
     try { localStorage.setItem('lg-quiz-naam', naam); } catch (e){}
-    $('joinBtn').disabled = true;
+    $('joinBtn').disabled = true; $('joinBtn').setAttribute('aria-busy', 'true');
     fetch('/api/kamer/' + code).then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
     .then(function(x){
-      $('joinBtn').disabled = false;
+      $('joinBtn').disabled = false; $('joinBtn').removeAttribute('aria-busy');
       if (!x.ok){ $('joinFout').textContent = x.j.fout || 'Geen kamer met deze code.'; return; }
       /* de docent is met de klas naar een nieuwe kamer gegaan: daar doe je mee */
       if (x.j.fase === 'einde' && /^[A-Z]{4}$/.test(x.j.verhuis || '') && sprong < 3){ $('joinCode').value = x.j.verhuis; doeMee(sprong + 1); return; }
@@ -911,7 +914,7 @@ Frans Hals"></textarea>
       if (x.j.fase === 'einde'){ $('joinFout').textContent = 'Deze quiz is al afgelopen.'; return; }
       wordSpeler(code, naam);
     })
-    .catch(function(){ $('joinBtn').disabled = false; $('joinFout').textContent = 'Geen verbinding met de server.'; });
+    .catch(function(){ $('joinBtn').disabled = false; $('joinBtn').removeAttribute('aria-busy'); $('joinFout').textContent = 'Geen verbinding met de server.'; });
   }
   $('joinBtn').addEventListener('click', function(){ doeMee(); });
   $('joinNaam').addEventListener('keydown', function(e){ if (e.key === 'Enter') doeMee(); });
@@ -939,6 +942,8 @@ Frans Hals"></textarea>
       ? (h.onderdeel || 'Eigen vragen') + ' · ' + h.aantal + ' vragen · ' + h.tijd + ' s'
       : naamVan(VAKKEN, h.vak) + ' · ' + (h.onderdeel ? naamVan(ONDERDELEN[h.vak] || [], h.onderdeel) : 'alles door elkaar') +
       ' · ' + naamVan(NIVEAUS, h.niveau) + ' · ' + h.aantal + ' vragen · ' + h.tijd + ' s';
+    /* tot de kamer de eerste stand stuurt: zeggen dat we verbinden, niet dat er niemand is */
+    $('hSpelers').innerHTML = ''; $('hAantal').textContent = 'Verbinden met de kamer…'; $('hStart').disabled = true;
     verbind({ code:h.code, query:'rol=host&sleutel=' + encodeURIComponent(h.sleutel), rol:'host' }, hostBericht);
   }
   /* De afstandsbediening (spatie, pijl naar rechts, PageDown) doet op het bord
@@ -1068,18 +1073,18 @@ Frans Hals"></textarea>
     vak0.classList.remove('hide');
     $('hMeldKeuze').innerHTML = klassen.map(function(k){ return '<option value="' + schoonHtml(k.code) + '">' + schoonHtml(k.naam || k.code) + ' (' + schoonHtml(k.code) + ')</option>'; }).join('');
     $('hMeldUit').textContent = stand.length + (stand.length === 1 ? ' leerling' : ' leerlingen') + ', met bijnaam en punten.';
-    var knop = $('hMeldBtn'); knop.disabled = false;
+    var knop = $('hMeldBtn'); knop.disabled = false; knop.removeAttribute('aria-busy');
     knop.onclick = function(){
       var k = klassen.filter(function(x){ return x.code === $('hMeldKeuze').value; })[0];
       if (!k) return;
-      knop.disabled = true; $('hMeldUit').textContent = 'Bezig met melden...';
+      knop.disabled = true; knop.setAttribute('aria-busy', 'true'); $('hMeldUit').textContent = 'Bezig met melden...';
       /* pid: het openbare spelernummer; de klas vraagt de quizkamer welke leerling dat is, dus ook wie een andere naam koos komt goed terecht */
       var lijst = stand.map(function(sp){ return { naam:sp.naam, pid:sp.sid || '', av:sp.av || '', punten:sp.score | 0, ronde:sp.aantalGoed | 0, od:sp.od || undefined }; });
       fetch('/api/klas/' + k.code + '/melden', { method:'POST', headers:{ 'content-type':'application/json' },
         body:JSON.stringify({ sleutel:k.sleutel, spel:'klasquiz', niveau:host && host.niveau || '', vak:host && host.vak || '', lijst:lijst, quiz:host && host.code || '', quizSleutel:host && host.sleutel || '' }) })
         .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
-        .then(function(x){ $('hMeldUit').textContent = x.ok ? 'Gemeld: ' + x.j.n + ' leerlingen staan nu in het klasoverzicht van ' + (k.naam || k.code) + '.' : 'Melden lukte niet' + (x.j && x.j.fout ? ': ' + x.j.fout : '.'); if (!x.ok) knop.disabled = false; })
-        .catch(function(){ $('hMeldUit').textContent = 'Melden lukte niet: geen verbinding.'; knop.disabled = false; });
+        .then(function(x){ $('hMeldUit').textContent = x.ok ? 'Gemeld: ' + x.j.n + ' leerlingen staan nu in het klasoverzicht van ' + (k.naam || k.code) + '.' : 'Melden lukte niet' + (x.j && x.j.fout ? ': ' + x.j.fout : '.'); knop.removeAttribute('aria-busy'); if (!x.ok) knop.disabled = false; })
+        .catch(function(){ $('hMeldUit').textContent = 'Melden lukte niet: geen verbinding.'; knop.disabled = false; knop.removeAttribute('aria-busy'); });
     };
   }
   $('hTerug').addEventListener('click', function(){ sluitVerbinding(); location.href = location.pathname; });
@@ -1135,7 +1140,7 @@ Frans Hals"></textarea>
     /* de lesbrief is voor de docent; op de telefoon hoort hij niet in de kop */
     $('kopLesbrief').classList.add('hide');
     zetPNaam('');
-    $('pWachtTekst').textContent = 'Wacht tot de docent start';
+    $('pWachtTekst').textContent = 'Verbinden…';
     verbind({ code:code, query:'rol=speler&sid=' + encodeURIComponent(sid()) + '&naam=' + encodeURIComponent(naam) + '&av=' + encodeURIComponent(window.PROFIEL ? PROFIEL.avatar() : ''), rol:'speler' }, spelerBericht);
   }
   function spelerBericht(m){
@@ -1153,6 +1158,7 @@ Frans Hals"></textarea>
       if (m.jij) mijnPid = m.jij;
       if (m.naam && m.naam !== speler.naam){ speler.naam = m.naam; $('pNaam').textContent = m.naam; }
       if (m.fase === 'lobby') spelerScherm('p-wacht');
+      if ($('pWachtTekst').textContent === 'Verbinden…') $('pWachtTekst').textContent = 'Wacht tot de docent start';
       return;
     }
     if (m.t === 'jouw'){ zetJouw(m.jouw); return; }

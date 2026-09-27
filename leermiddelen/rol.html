@@ -132,6 +132,8 @@ footer{text-align:center;font-size:.8rem;color:var(--muted);padding:20px 16px}
   /* via de instappagina is er al op Meedoen gedrukt, met code en bijnaam */
   if (param && /[?&]ga=1/.test(location.search) && $('joinNaam').value.trim().length >= 2) setTimeout(doeMee, 0);
   function doeMee(){
+    /* een tik tegelijk: de knop wacht op de server */
+    if ($('joinBtn').disabled) return;
     code = $('joinCode').value.toUpperCase().replace(/[^A-Z]/g, '');
     naam = $('joinNaam').value.trim().slice(0, 16);
     if (code.length !== 4){ $('joinFout').textContent = 'De code heeft vier letters.'; return; }
@@ -139,7 +141,10 @@ footer{text-align:center;font-size:.8rem;color:var(--muted);padding:20px 16px}
     if (window.NAAMFILTER && NAAMFILTER.verboden(naam)){ $('joinFout').textContent = 'Die bijnaam kan niet. Kies een andere.'; return; }
     try { localStorage.setItem('lg-quiz-naam', naam); } catch (e){}
     $('joinFout').textContent = 'Even kijken…';
+    var knop = $('joinBtn'); knop.disabled = true; knop.setAttribute('aria-busy', 'true');
+    function vrij(){ knop.disabled = false; knop.removeAttribute('aria-busy'); }
     fetch('/api/kamer/' + code).then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); }).then(function(x){
+      vrij();
       if (x.ok && x.j.spel === 'rollen' && x.j.game === 'teken'){ location.href = 'tekenslag.html?k=' + code + '&ga=1'; return; }
       if (x.ok && x.j.spel && x.j.spel !== 'rollen'){
         /* deze code hoort bij een ander spel van de docent; alleen soorten die we kennen krijgen een doorverwijzing */
@@ -152,7 +157,7 @@ footer{text-align:center;font-size:.8rem;color:var(--muted);padding:20px 16px}
       $('kopNaam').innerHTML = (window.AVATAR ? AVATAR.svg(naam, 28, window.PROFIEL ? PROFIEL.avatar() : '') : '') + schoon(naam);
       toon({ soort:'wacht', titel:'Je doet mee', tekst:'Wacht tot het bord begint. Je rol komt hier vanzelf.' });
       verbind();
-    }).catch(function(){ $('joinFout').textContent = 'Geen verbinding.'; });
+    }).catch(function(){ vrij(); $('joinFout').textContent = 'Geen verbinding. Kijk of je internet hebt en probeer het opnieuw.'; });
   }
 
   /* ---------- de verbinding ---------- */

@@ -359,6 +359,10 @@ td.getal{font-variant-numeric:tabular-nums;text-align:right}
 .meldregel{margin-top:16px}
 /* lukt het ophalen niet en is er nog niets, dan geen lege koppen en filters */
 #overzicht.zonderdata .voorles,#overzicht.zonderdata .filters,#overzicht.zonderdata .paneel:not(#paneel-inst){display:none}
+/* de eerste keer ophalen: een skelet in de vorm van het overzicht, zodat er niets verspringt */
+#overzicht.laadt .voorles,#overzicht.laadt .filters,#overzicht.laadt .tabs,#overzicht.laadt .paneel{display:none}
+.ovskelet .kern{margin-top:16px}
+.ovskelet .balkjes{margin-top:24px;max-width:640px}
 #ovUit .linkknop{min-height:32px}
 #naamLink{display:inline-flex;align-items:center;margin-left:10px;vertical-align:middle}
 :root[data-theme="dark"] .knop.gevaar{color:#ffb3a6;border-color:rgba(255,179,166,.4)}
@@ -598,6 +602,13 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     <p class="tip" id="ovUit" style="margin-top:8px"></p>
     <div class="voorbeeldvak hide" id="voorbeeldvak"></div>
     <div class="printkop" id="printkop" aria-hidden="true"></div>
+    <div class="ovskelet skelet-vak" id="ovSkelet" role="status" hidden><span class="skelet-sr">Uitslagen laden…</span>
+      <i class="skelet skelet-kaart" style="--h:250px;margin-top:24px"></i>
+      <i class="skelet skelet-kaart" style="--h:148px;margin-top:24px"></i>
+      <i class="skelet skelet-rij" style="--h:44px;margin-top:16px;max-width:620px"></i>
+      <div class="kern"><i class="skelet skelet-kaart" style="--h:78px"></i><i class="skelet skelet-kaart" style="--h:78px"></i><i class="skelet skelet-kaart" style="--h:78px"></i><i class="skelet skelet-kaart" style="--h:78px"></i></div>
+      <div class="balkjes"><i class="skelet skelet-regel" style="--b:30%"></i><i class="skelet skelet-rij" style="--h:26px"></i><i class="skelet skelet-rij" style="--h:26px"></i><i class="skelet skelet-rij" style="--h:26px"></i></div>
+    </div>
 
     <!-- Voor de les kijkt naar deze week, los van de filters; daarom staat het
          erboven, en alleen bij het tabblad Overzicht. -->
@@ -1069,8 +1080,10 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     haal();
     klok = setInterval(haal, 20000);
   }
-  function haal(){
+  /* klaar: optioneel, voor de knop Vernieuwen die even meedraait */
+  function haal(klaar){
     if (!huidig) return;
+    if (typeof klaar !== 'function') klaar = function(){};
     if (DEMO){
       data = demoData(); $('ovUit').textContent = 'Dit is een demoklas met verzonnen leerlingen: niets hiervan staat op de server. Maak je eigen klascode om het echt te gebruiken.';
       var vb = window.VOORBEELDTOETSEN ? Object.keys(VOORBEELDTOETSEN).map(function(k){ return VOORBEELDTOETSEN[k]; }) : [];
@@ -1081,13 +1094,15 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       }
       teken(); return;
     }
-    /* alleen de eerste keer "Ophalen…"; het verversen elke twintig seconden gebeurt stil */
-    if (!data) $('ovUit').textContent = 'Uitslagen ophalen…';
+    /* alleen de eerste keer "Ophalen…" met het skelet; het verversen elke twintig seconden gebeurt stil */
+    if (!data){ $('ovUit').textContent = 'Uitslagen ophalen…'; laadt(true); }
     var k = huidig;
     fetch('/api/klas/' + k.code, { headers:{ 'x-sleutel':k.sleutel } })
       .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
       .then(function(x){
+        klaar();
         if (k !== huidig) return;
+        laadt(false);
         if (!x.ok){
           data = null; teken(); zonderData();
           if (x.j.fout === 'dit is geen klascode') ophaalFout('Deze klascode bestaat niet meer. Misschien is hij op een ander apparaat opgeheven.', 'Van dit apparaat halen', function(){ $('vergeet').click(); });
@@ -1102,7 +1117,9 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
         teken();
       })
       .catch(function(){
+        klaar();
         if (k !== huidig) return;
+        laadt(false);
         zonderData();
         ophaalFout(data ? 'Geen verbinding. Je ziet de stand van de laatste keer; over 20 seconden probeert de pagina het opnieuw.' : 'Geen verbinding, dus nog geen uitslagen. Over 20 seconden probeert de pagina het opnieuw.', 'Nu opnieuw proberen', haal);
       });
@@ -1117,6 +1134,17 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     el.appendChild(b);
   }
   function zonderData(){ $('overzicht').classList.toggle('zonderdata', !data && !DEMO); }
+  /* een knop die op de server wacht: uit, met een draaiend rondje (fonts.css) */
+  function bezig(knop, aan){
+    if (!knop) return;
+    knop.disabled = aan;
+    if (aan) knop.setAttribute('aria-busy', 'true'); else knop.removeAttribute('aria-busy');
+  }
+  function laadt(aan){
+    $('overzicht').classList.toggle('laadt', aan);
+    $('overzicht').setAttribute('aria-busy', aan ? 'true' : 'false');
+    $('ovSkelet').hidden = !aan;
+  }
   /* de gekoppelde leerlingen, met hun gezichtje; wie nog niets speelde staat
      er gestippeld bij */
   function tekenGekoppeld(){
@@ -1630,12 +1658,12 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
   $('doelZet').addEventListener('click', function(){
     if (!huidig) return;
     if (DEMO){ nietInDemo(document.activeElement); return; }
-    var n = parseInt($('doelGetal').value, 10) || 0;
-    $('doelStand').textContent = 'Opslaan…';
+    var n = parseInt($('doelGetal').value, 10) || 0, knop = $('doelZet');
+    $('doelStand').textContent = 'Opslaan…'; bezig(knop, true);
     fetch('/api/klas/' + huidig.code + '/instelling', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ sleutel:huidig.sleutel, klasdoel:n }) })
       .then(function(r){ return r.json(); })
-      .then(function(j){ if (j && j.fout){ $('doelStand').textContent = j.fout; return; } if (data) data.klasdoel = j.klasdoel; tekenDoel(); tekenVoorLes(); })
-      .catch(function(){ $('doelStand').textContent = 'Opslaan lukte niet: geen verbinding. Controleer je internet en probeer het opnieuw.'; });
+      .then(function(j){ bezig(knop, false); if (j && j.fout){ $('doelStand').textContent = j.fout; return; } if (data) data.klasdoel = j.klasdoel; tekenDoel(); tekenVoorLes(); })
+      .catch(function(){ bezig(knop, false); $('doelStand').textContent = 'Opslaan lukte niet: geen verbinding. Controleer je internet en probeer het opnieuw.'; });
   });
 
   /* ---------- echte namen ----------
@@ -1667,17 +1695,19 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     if (DEMO){ nietInDemo(document.activeElement); return; }
     var namen = {};
     [].forEach.call($('echtLijst').querySelectorAll('[data-bij]'), function(v){ var e = v.value.trim(); if (e) namen[v.getAttribute('data-bij')] = e; });
-    $('echtStatus').textContent = 'Opslaan…';
+    var knop = $('echtZet');
+    $('echtStatus').textContent = 'Opslaan…'; bezig(knop, true);
     fetch('/api/klas/' + huidig.code + '/echt', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ sleutel:huidig.sleutel, namen:namen }) })
       .then(function(r){ return r.json(); })
       .then(function(j){
+        bezig(knop, false);
         if (j && j.fout){ $('echtStatus').textContent = j.fout; return; }
         if (data) data.echt = j.echt || {};
         echtVies = false; echtVoor = '';
         $('echtStatus').textContent = 'Opgeslagen.';
         teken();
       })
-      .catch(function(){ $('echtStatus').textContent = 'Opslaan lukte niet: geen verbinding. Controleer je internet en probeer het opnieuw.'; });
+      .catch(function(){ bezig(knop, false); $('echtStatus').textContent = 'Opslaan lukte niet: geen verbinding. Controleer je internet en probeer het opnieuw.'; });
   });
 
   /* ---------- de klas delen met een collega ----------
@@ -1802,19 +1832,19 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     var lijst = bewerk.map(function(p){ return { id:p.id, naam:String(p.naam).trim(), van:p.van, tot:p.tot }; });
     if (DEMO){ demoPeriodes = lijst.map(function(p, i){ return Object.assign({}, p, { id: p.id || 'd' + i + Date.now().toString(36) }); }); data.periodes = demoPeriodes.slice(); periodeOpen(false); teken(); return; }
     if (!huidig) return;
-    $('periodeBewaar').disabled = true;
+    bezig($('periodeBewaar'), true);
     $('periodeFout').textContent = 'Bewaren…';
     fetch('/api/klas/' + huidig.code + '/periodes', { method:'POST', headers:{ 'content-type':'application/json' },
       body: JSON.stringify({ sleutel: huidig.sleutel, periodes: lijst }) })
       .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
       .then(function(x){
-        $('periodeBewaar').disabled = false;
+        bezig($('periodeBewaar'), false);
         if (!x.ok){ $('periodeFout').textContent = x.j.fout || 'Bewaren lukte niet.'; return; }
         if (data) data.periodes = x.j.periodes || [];
         periodeOpen(false);
         teken();
       })
-      .catch(function(){ $('periodeBewaar').disabled = false; $('periodeFout').textContent = 'Geen verbinding. Controleer je internet en probeer het opnieuw.'; });
+      .catch(function(){ bezig($('periodeBewaar'), false); $('periodeFout').textContent = 'Geen verbinding. Controleer je internet en probeer het opnieuw.'; });
   });
 
   /* ---------- tabbladen ----------
@@ -2282,11 +2312,11 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       $('klasNaam').focus();
       return;
     }
-    $('maakBtn').disabled = true;
+    bezig($('maakBtn'), true);
     fetch('/api/kamer', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ spel:'klas', naam:naam }) })
       .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
       .then(function(x){
-        $('maakBtn').disabled = false;
+        bezig($('maakBtn'), false);
         if (!x.ok){ $('maakFout').textContent = x.j.fout || 'Het lukte niet om een klascode te maken.'; return; }
         var k = { code:x.j.code, sleutel:x.j.sleutel, naam:naam || 'Klas', gemaakt:Date.now() };
         klassen.unshift(k); bewaar();
@@ -2295,9 +2325,14 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
         $('beginnen').open = false;
         $('overzicht').scrollIntoView({ block:'start' });
       })
-      .catch(function(){ $('maakBtn').disabled = false; $('maakFout').textContent = 'Geen verbinding. Controleer je internet en probeer het opnieuw.'; });
+      .catch(function(){ bezig($('maakBtn'), false); $('maakFout').textContent = 'Geen verbinding. Controleer je internet en probeer het opnieuw.'; });
   });
-  $('ververs').addEventListener('click', haal);
+  $('ververs').addEventListener('click', function(){
+    var b = this;
+    if (DEMO){ haal(); return; }
+    bezig(b, true);
+    haal(function(){ bezig(b, false); });
+  });
   $('klasKeus').addEventListener('change', function(){
     var c = this.value; kies(klassen.filter(function(k){ return k.code === c; })[0]);
   });
@@ -2350,17 +2385,17 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     if (naam.length < 2){ $('naamFout').textContent = 'Geef je klas een naam van minstens twee tekens, bijvoorbeeld B3.'; return; }
     if (naam === huidig.naam){ $('naamFout').textContent = 'Zo heet de klas al.'; return; }
     if (DEMO){ $('naamFout').textContent = 'Niet in de demo.'; return; }
-    var knop = $('naamZet'); knop.disabled = true; $('naamFout').textContent = 'Opslaan…';
+    var knop = $('naamZet'); bezig(knop, true); $('naamFout').textContent = 'Opslaan…';
     fetch('/api/klas/' + huidig.code + '/naam', { method:'POST', headers:{ 'content-type':'application/json' },
       body: JSON.stringify({ sleutel: huidig.sleutel, naam: naam }) })
       .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
       .then(function(x){
-        knop.disabled = false;
+        bezig(knop, false);
         if (!x.ok){ $('naamFout').textContent = x.j.fout || 'Opslaan lukte niet.'; return; }
         zetNaamHier(x.j.naam || naam);
         $('naamFout').textContent = 'Opgeslagen: de klas heet nu ' + (x.j.naam || naam) + '.';
       })
-      .catch(function(){ knop.disabled = false; $('naamFout').textContent = 'Geen verbinding. Controleer je internet en probeer het opnieuw.'; });
+      .catch(function(){ bezig(knop, false); $('naamFout').textContent = 'Geen verbinding. Controleer je internet en probeer het opnieuw.'; });
   });
   $('vergeet').addEventListener('click', function(){
     if (!huidig) return;

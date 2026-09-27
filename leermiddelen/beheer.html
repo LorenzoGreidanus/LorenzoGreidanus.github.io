@@ -469,17 +469,36 @@ tr.site td:first-child b::before{content:'';display:inline-block;width:8px;heigh
       $('tzStatus').className = 'tip'; $('tzStatus').textContent = 'Rechtgezet: ' + naamVan(p) + ' op ' + d + ' was ' + x.j.was + ', is nu ' + x.j.nu + '.';
     }).catch(function(){ $('tzZet').disabled = false; $('tzStatus').className = 'tip fout'; $('tzStatus').textContent = 'Geen verbinding.'; });
   });
+  /* Terwijl het laadt: grijze vlakken in de vorm van wat er komt (fonts.css). */
+  function skelet(wat, inhoud){ return '<div class="skelet-vak" role="status"><span class="skelet-sr">' + wat + ' laden…</span>' + inhoud + '</div>'; }
+  function blokken(n, soort, h){ return new Array(n + 1).join('<i class="skelet ' + soort + '" style="--h:' + h + 'px"></i>'); }
+  var geladen = false;
   function laad(){
     if (!sleutel()){ $('status').textContent = 'Vul de beheersleutel in.'; return; }
     try { localStorage.setItem('lg-beheer', sleutel()); } catch (e){}
-    $('status').textContent = 'Laden…';
+    $('status').className = 'tip'; $('status').textContent = 'Laden…';
+    var knop = $('laad'); knop.disabled = true; knop.setAttribute('aria-busy', 'true');
+    /* de eerste keer staat er nog niets: dan het skelet; bij opnieuw laden blijft het oude staan tot het nieuwe er is */
+    if (!geladen){
+      $('meldingen').innerHTML = skelet('Meldingen', blokken(3, 'skelet-kaart', 104).replace(/--h:104px/g, '--h:104px;margin-bottom:10px'));
+      $('gTegels').innerHTML = skelet('Tellingen', '<div class="tegels" style="margin-top:0">' + blokken(4, 'skelet-kaart', 74) + '</div>').replace('class="skelet-vak"', 'class="skelet-vak" style="grid-column:1/-1"');
+      $('gebruik').innerHTML = new Array(7).join('<tr aria-hidden="true"><td colspan="6"><i class="skelet skelet-regel" style="--b:92%"></i></td></tr>');
+    }
+    function klaar(){ knop.disabled = false; knop.removeAttribute('aria-busy'); }
+    function mislukt(){
+      if (geladen) return;
+      $('meldingen').innerHTML = '<p class="leeg">Nog niet geladen.</p>'; $('gTegels').innerHTML = '';
+      $('gebruik').innerHTML = '<tr><td colspan="6" class="leeg">Nog niet geladen.</td></tr>';
+    }
     Promise.all([haal('/api/beheer/meldingen'), haal('/api/beheer/tellers')]).then(function(x){
-      if (!x[0].ok){ $('status').className = 'tip fout'; $('status').textContent = x[0].status === 403 ? 'De sleutel klopt niet, of hij is nog niet gezet op de server.' : (x[0].j.fout || 'Laden lukte niet.'); return; }
+      klaar();
+      if (!x[0].ok){ mislukt(); $('status').className = 'tip fout'; $('status').textContent = x[0].status === 403 ? 'De sleutel klopt niet, of hij is nog niet gezet op de server.' : (x[0].j.fout || 'Laden lukte niet.'); return; }
+      geladen = true;
       $('status').className = 'tip'; $('status').textContent = 'Geladen om ' + new Date().toLocaleTimeString('nl-NL');
       $('sleutelkaart').classList.add('klaar');
       tekenMeldingen(x[0].j.meldingen || []);
       tekenGebruik(x[1].ok ? (x[1].j.tellers || {}) : {});
-    }).catch(function(){ $('status').className = 'tip fout'; $('status').textContent = 'Geen verbinding met de server. Controleer je internet en klik opnieuw op Laden.'; });
+    }).catch(function(){ klaar(); mislukt(); $('status').className = 'tip fout'; $('status').textContent = 'Geen verbinding met de server. Controleer je internet en klik opnieuw op Laden.'; });
     tekenKlassement();
   }
   var klasData = [];
@@ -492,12 +511,18 @@ tr.site td:first-child b::before{content:'';display:inline-block;width:8px;heigh
   var gezienNu = gezien(), gezienVoor = null;
   function tekenKlassement(){
     if (gezienVoor === null || gezienVoor.naam !== klasNaam()) gezienVoor = { naam: klasNaam(), t: gezienNu[klasNaam()] || 0 };
-    $('kLijst').innerHTML = '<p class="leeg">Laden…</p>';
+    $('kTegels').innerHTML = ''; $('kLijst').setAttribute('aria-busy', 'true');
+    $('kLijst').innerHTML = skelet('Klassement', blokken(8, 'skelet-rij', 50));
     fetch('/api/klassement/' + klasNaam()).then(function(r){ return r.json(); }).then(function(j){
+      $('kLijst').removeAttribute('aria-busy');
       klasData = j.lijst || []; tekenKlassementNu();
       var laatst = klasData.reduce(function(a, r){ return r.t > a ? r.t : a; }, 0);
       if (laatst){ gezienNu[klasNaam()] = laatst; try { localStorage.setItem('lg-beheer-gezien', JSON.stringify(gezienNu)); } catch (e){} }
-    }).catch(function(){ $('kLijst').innerHTML = '<p class="leeg">Het klassement is nu niet bereikbaar.</p>'; });
+    }).catch(function(){
+      $('kLijst').removeAttribute('aria-busy');
+      $('kLijst').innerHTML = '<p class="leeg">Het klassement is nu niet bereikbaar. <button type="button" class="knop stil klein" id="kOpnieuw">Probeer opnieuw</button></p>';
+      $('kOpnieuw').addEventListener('click', tekenKlassement);
+    });
   }
   function verdacht(naam){ try { return window.NAAMFILTER && NAAMFILTER.verboden(naam); } catch (e){ return false; } }
   /* wat het getal in een klassement is, als het geen rondes zijn (Mijnwerker: de diepte in stappen van vijf meter) */

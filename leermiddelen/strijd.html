@@ -433,20 +433,20 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
   $('openBtn').addEventListener('click', function(){
     $('openFout').textContent = '';
     if (vak === 'eigen' && !lijstM){ $('openFout').textContent = 'Kies eerst een woordenlijst, of haal er een op met de code.'; return; }
-    $('openBtn').disabled = true;
+    $('openBtn').disabled = true; $('openBtn').setAttribute('aria-busy', 'true');
     /* bij een woordenlijst gaat de code mee als "deel": de spelers laden hem dan zelf */
     fetch('/api/kamer', { method:'POST', headers:{ 'content-type':'application/json' },
       body: JSON.stringify({ spel:'strijd', game:spel, vak:vak, niveau:niveau, deel: vak === 'eigen' ? lijstKiezer.code() : '' }) })
     .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
     .then(function(x){
-      $('openBtn').disabled = false;
+      $('openBtn').disabled = false; $('openBtn').removeAttribute('aria-busy');
       if (!x.ok){ $('openFout').textContent = x.j.fout || 'Het lukte niet om een kamer te openen.'; return; }
       var host = { code:x.j.code, sleutel:x.j.sleutel, game:spel, vak:vak, niveau:niveau, lijstNaam: vak === 'eigen' && lijstM ? lijstM.naam : '' };
       try { localStorage.setItem('lg-strijd-host', JSON.stringify(host)); } catch (e){}
       verhuis(host.code);
       wordHost(host);
     })
-    .catch(function(){ $('openBtn').disabled = false; $('openFout').textContent = 'Geen verbinding met de server.'; });
+    .catch(function(){ $('openBtn').disabled = false; $('openBtn').removeAttribute('aria-busy'); $('openFout').textContent = 'Geen verbinding met de server.'; });
   });
 
   /* een docent die het digibord ververst kan terug naar zijn kamer */
@@ -481,10 +481,10 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     if (!naam){ $('joinFout').textContent = 'Vul een bijnaam in.'; $('joinNaam').focus(); return; }
     if (window.NAAMFILTER && NAAMFILTER.verboden(naam)){ $('joinFout').textContent = 'Die bijnaam kan niet. Kies een andere.'; $('joinNaam').focus(); return; }
     try { localStorage.setItem('lg-quiz-naam', naam); } catch (e){}
-    $('joinBtn').disabled = true;
+    $('joinBtn').disabled = true; $('joinBtn').setAttribute('aria-busy', 'true');
     fetch('/api/kamer/' + code).then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
     .then(function(x){
-      $('joinBtn').disabled = false;
+      $('joinBtn').disabled = false; $('joinBtn').removeAttribute('aria-busy');
       if (!x.ok){ $('joinFout').textContent = x.j.fout || 'Geen kamer met deze code.'; return; }
       /* de docent is met de klas naar een nieuwe kamer gegaan: daar doe je mee */
       if (x.j.fase === 'einde' && /^[A-Z]{4}$/.test(x.j.verhuis || '') && sprong < 3){ $('joinCode').value = x.j.verhuis; doeMee(sprong + 1); return; }
@@ -495,7 +495,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
       if (x.j.fase === 'einde'){ $('joinFout').textContent = 'Dit potje is al afgelopen.'; return; }
       wordSpeler(code, naam, x.j);
     })
-    .catch(function(){ $('joinBtn').disabled = false; $('joinFout').textContent = 'Geen verbinding met de server.'; });
+    .catch(function(){ $('joinBtn').disabled = false; $('joinBtn').removeAttribute('aria-busy'); $('joinFout').textContent = 'Geen verbinding met de server.'; });
   }
   $('joinBtn').addEventListener('click', function(){ doeMee(); });
   $('joinNaam').addEventListener('keydown', function(e){ if (e.key === 'Enter') doeMee(); });

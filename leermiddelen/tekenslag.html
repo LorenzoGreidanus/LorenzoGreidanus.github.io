@@ -761,8 +761,8 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
     /* de woorden komen uit de vragenbank van dit vak; die halen we er eerst bij */
     if (window.BANK && bron !== 'eigen' && vak && !BANK.heeft(vak)){
       var knop = this;
-      knop.disabled = true;
-      BANK.zorg(vak).then(function(){ knop.disabled = false; BRONNEN_B = window.BRONNEN || {}; knop.click(); });
+      knop.disabled = true; knop.setAttribute('aria-busy', 'true');
+      BANK.zorg(vak).then(function(){ knop.disabled = false; knop.removeAttribute('aria-busy'); BRONNEN_B = window.BRONNEN || {}; knop.click(); });
       return;
     }
     if (bron === 'lijst' && !lijstM){ $('openFout').textContent = 'Kies eerst een woordenlijst, of haal er een op met de code.'; return; }
@@ -774,18 +774,18 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
     var hints = {}; if (bron === 'lijst') lijstM.paren.forEach(function(p){ hints[norm(p.a)] = p.b; });
     var uniek = {}; woorden = woorden.filter(function(w){ var k = norm(w); if (!k || uniek[k]) return false; uniek[k] = 1; return true; });
     if (woorden.length < 8){ $('openFout').textContent = 'Te weinig woorden (minstens acht). Kies een ander onderdeel of typ meer woorden.'; return; }
-    $('openFout').textContent = ''; $('openBtn').disabled = true;
+    $('openFout').textContent = ''; $('openBtn').disabled = true; $('openBtn').setAttribute('aria-busy', 'true');
     fetch('/api/kamer', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ spel:'rollen', game:'teken', vak:bron === 'bank' ? vak : 'eigen', niveau:'' }) })
       .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
       .then(function(x){
-        $('openBtn').disabled = false;
+        $('openBtn').disabled = false; $('openBtn').removeAttribute('aria-busy');
         if (!x.ok){ $('openFout').textContent = x.j.fout || 'Het openen lukte niet.'; return; }
         host = { code:x.j.code, sleutel:x.j.sleutel, vak:bron === 'bank' ? vak : 'eigen', woorden:husselen(woorden.slice()), hints:hints, modus:modus, nTeams:+$('teamsSel').value, tijd:+$('tijdSel').value, rondes:+$('rondesSel').value,
                  vakNaam: bron === 'eigen' ? 'eigen woorden' : bron === 'lijst' ? lijstM.naam : (VAKKEN_B.filter(function(v){ return v.id === vak; })[0] || {}).naam };
         try { localStorage.setItem('lg-teken-host', JSON.stringify(host)); } catch (e){}
         bordOpen();
       })
-      .catch(function(){ $('openBtn').disabled = false; $('openFout').textContent = 'Geen verbinding met de server.'; });
+      .catch(function(){ $('openBtn').disabled = false; $('openBtn').removeAttribute('aria-busy'); $('openFout').textContent = 'Geen verbinding met de server.'; });
   });
   function bordOpen(){
     $('s-start').classList.add('hide'); $('s-bord').classList.remove('hide');
@@ -1315,18 +1315,18 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
   $('bNogeens').addEventListener('click', function(){
     if (!host){ location.href = location.pathname; return; }
     var knop = this;
-    knop.disabled = true; $('bNogFout').textContent = '';
+    knop.disabled = true; knop.setAttribute('aria-busy', 'true'); $('bNogFout').textContent = '';
     fetch('/api/kamer', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ spel:'rollen', game:'teken', vak:host.vak || 'eigen', niveau:'' }) })
       .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
       .then(function(x){
-        if (!x.ok){ knop.disabled = false; $('bNogFout').textContent = x.j.fout || 'Het openen lukte niet.'; return; }
+        if (!x.ok){ knop.disabled = false; knop.removeAttribute('aria-busy'); $('bNogFout').textContent = x.j.fout || 'Het openen lukte niet.'; return; }
         var nieuw = Object.assign({}, host, { code:x.j.code, sleutel:x.j.sleutel, woorden:husselen(host.woorden.slice()) });
         try { localStorage.setItem('lg-teken-host', JSON.stringify(nieuw)); sessionStorage.setItem(VERDER, JSON.stringify(nieuw)); } catch (e){}
         var weg = function(){ if (verb) verb.sluit(); location.href = location.pathname; };
         /* eerst de telefoons de nieuwe code geven, dan pas ophangen */
         if (stuur({ t:'verhuis', code:x.j.code })) setTimeout(weg, 400); else setTimeout(weg, 1500);
       })
-      .catch(function(){ knop.disabled = false; $('bNogFout').textContent = 'Geen verbinding met de server.'; });
+      .catch(function(){ knop.disabled = false; knop.removeAttribute('aria-busy'); $('bNogFout').textContent = 'Geen verbinding met de server.'; });
   });
   /* de bordstand, en de afstandsbediening: starten, de volgende beurt, het podium overslaan */
   var bord = VERBINDING.bord({ knoppen:'.bordknop' });

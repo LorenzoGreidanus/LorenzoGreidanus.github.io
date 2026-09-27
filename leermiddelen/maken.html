@@ -234,7 +234,7 @@
     var b = e.target.closest('button'); if (!b) return;
     var werk = b.getAttribute('data-werk'), kopie = b.getAttribute('data-kopie'), weg = b.getAttribute('data-weg'), uit = b.getAttribute('data-uitslag');
     if (uit) UITSLAG.open(uit, { terug: naarLijst });
-    if (werk) laadVoorBewerken(werk);
+    if (werk) laadVoorBewerken(werk, b);
     if (kopie) kopieer(adres(kopie), $('lijstMelding'));
     if (weg){
       if (!confirm('"' + b.getAttribute('data-naam') + '" weghalen? Leerlingen kunnen het daarna niet meer openen, en alle inleveringen en je nakijkwerk zijn ook weg. Dit kan niet terug.')) return;
@@ -268,13 +268,13 @@
   $('vbStukken').addEventListener('click', function(e){
     var b = e.target.closest('[data-kopie-vb]'); if (!b) return;
     var vb = VOORBEELDTOETSEN[b.getAttribute('data-kopie-vb')]; if (!vb) return;
-    b.disabled = true; melding($('vbMelding'), 'Kopie maken…');
+    b.disabled = true; b.setAttribute('aria-busy', 'true'); melding($('vbMelding'), 'Kopie maken…');
     var m = { soort: 'oefening', naam: vb.naam.replace(/^Voorbeeld /, ''), vak: vb.vak, modus: 'oefenen', items: JSON.parse(JSON.stringify(vb.items)) };
     EIGEN.bewaar(m).then(function(j){
-      b.disabled = false; tekenLijst();
+      b.disabled = false; b.removeAttribute('aria-busy'); tekenLijst();
       melding($('vbMelding'), 'Staat bij je materiaal als "' + m.naam + '" met code ' + j.code + '. Klik op Bewerken om hem aan te passen, of op Resultaten zodra leerlingen hem gemaakt hebben.', 'goed');
       var el = $('stukken').querySelector('[data-werk="' + j.code + '"]'); if (el) el.closest('.stuk').scrollIntoView({ block: 'center' });
-    }).catch(function(f){ b.disabled = false; melding($('vbMelding'), (f.message || 'Kopiëren lukte niet.') + ' Controleer je internet en probeer het opnieuw.', 'fout'); });
+    }).catch(function(f){ b.disabled = false; b.removeAttribute('aria-busy'); melding($('vbMelding'), (f.message || 'Kopiëren lukte niet.') + ' Controleer je internet en probeer het opnieuw.', 'fout'); });
   });
 
   /* ---------- bewerken: algemeen ---------- */
@@ -322,18 +322,21 @@
   $('nieuwLijst').addEventListener('click', function(){ vulLijst({ naam:'', vak:'', kopA:'', kopB:'', paren:[] }); open('lijst'); });
   $('nieuwOef').addEventListener('click', function(){ plaatjesCode = ''; vulOef({ naam:'', vak:'', modus:'oefenen', items:[] }); open('oefening'); });
   $('nieuwDictee').addEventListener('click', function(){ vulDictee({ naam:'', vak:'ned', niveau:'', zinnen:[], uitleg:'' }); open('dictee'); });
-  function laadVoorBewerken(code){
+  /* knop: de knop Bewerken, die even draait terwijl het stuk komt (fonts.css) */
+  function laadVoorBewerken(code, knop){
     melding($('lijstMelding'), 'Ophalen…');
+    function klaar(){ if (knop){ knop.disabled = false; knop.removeAttribute('aria-busy'); } }
+    if (knop){ knop.disabled = true; knop.setAttribute('aria-busy', 'true'); }
     /* met de sleutel: een toets komt anders zonder antwoorden */
     EIGEN.volledig(code).then(function(m){
-      melding($('lijstMelding'), ''); plaatjesCode = code;
+      klaar(); melding($('lijstMelding'), ''); plaatjesCode = code;
       if (m.soort === 'lijst') vulLijst(m); else if (m.soort === 'dictee') vulDictee(m); else vulOef(m);
       open(m.soort, code);
       if (m.n){
         $('inleverWaarschuw').textContent = 'Er ' + (m.n === 1 ? 'is al een leerling die heeft' : 'zijn al ' + m.n + ' leerlingen die hebben') + ' ingeleverd. Verander je een antwoord, dan wordt hun werk opnieuw nagekeken. Haal je een vraag weg of zet je de vragen in een andere volgorde, dan kloppen hun antwoorden niet meer; maak dan liever een nieuwe toets.';
         $('inleverWaarschuw').classList.remove('hide');
       }
-    }).catch(function(f){ melding($('lijstMelding'), f.message, 'fout'); });
+    }).catch(function(f){ klaar(); melding($('lijstMelding'), f.message + ' Probeer het opnieuw.', 'fout'); });
   }
 
   /* ---------- woordenlijst ---------- */
@@ -769,16 +772,16 @@
         return;
       }
     }
-    var knop = $('bewaar'); knop.disabled = true; melding($('bewaarMelding'), 'Bewaren…');
+    var knop = $('bewaar'); knop.disabled = true; knop.setAttribute('aria-busy', 'true'); melding($('bewaarMelding'), 'Bewaren…');
     bewaarMetPlaatjes(m, bezig.code).then(function(j){
-      knop.disabled = false; bezig.code = j.code; plaatjesCode = j.code; $('probeer').disabled = false; zetVies(false);
+      knop.disabled = false; knop.removeAttribute('aria-busy'); bezig.code = j.code; plaatjesCode = j.code; $('probeer').disabled = false; zetVies(false);
       /* de nieuwe plaatjes hebben nu een nummer: dat komt in de editor te staan, en het plaatje laadt voortaan van de server */
       (m.items || []).forEach(function(it, i){ var el = $('items').children[i], img = el && el.querySelector('.afbvoor'); if (img && it.afb && !img.getAttribute('data-afb')){ img.setAttribute('data-afb', it.afb); img.src = afbAdres(it.afb); } });
       $('bewerkKop').textContent = 'Bewerken: ' + m.naam;
       melding($('bewaarMelding'), '');
       toonDelen(j.code, m);
     }).catch(function(f){
-      knop.disabled = false;
+      knop.disabled = false; knop.removeAttribute('aria-busy');
       if (f.deels){ bezig.code = f.deels.code; plaatjesCode = f.deels.code; $('probeer').disabled = false; }
       /* weigert de server wat erin staat (400), dan zegt hij wat; alleen zonder antwoord ligt het aan de verbinding */
       var zin = String(f.message || 'Bewaren lukte niet.'); zin = zin.charAt(0).toUpperCase() + zin.slice(1) + (/[.!?]$/.test(zin) ? '' : '.');
