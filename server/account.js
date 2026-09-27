@@ -436,7 +436,7 @@ export class Account extends DurableObject {
         const code = String(m.code || "").toUpperCase();
         if (!/^[A-Z0-9]{6}$/.test(code) || !/^[A-Z0-9]{20}$/.test(String(m.sleutel || ""))) return;
         heb[code] = { code, sleutel: String(m.sleutel), naam: String(m.naam || "Eigen materiaal").slice(0, 80),
-                      soort: m.soort === "lijst" ? "lijst" : "oefening", gemaakt: Number(m.gemaakt) || Date.now() };
+                      soort: ({ lijst: 1, oefening: 1, dictee: 1 })[m.soort] ? m.soort : "oefening", gemaakt: Number(m.gemaakt) || Date.now() };
       });
       weg.forEach(c => { delete heb[c]; });
       this.stand.materiaal = Object.keys(heb).map(c => heb[c]).sort((x, y) => y.gemaakt - x.gemaakt).slice(0, 200);

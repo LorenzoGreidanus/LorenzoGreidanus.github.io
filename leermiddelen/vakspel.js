@@ -224,7 +224,7 @@ window.VAKSPEL = (function(){
   var vorigeSleutels = [];
   function api(){
     return {
-      klaar: function(isGoed, uitlegHtml){ klaar(!!isGoed, uitlegHtml); },
+      klaar: function(isGoed, uitlegHtml, deels){ klaar(!!isGoed, uitlegHtml, deels); },
       knop: function(tekst, fn, stil){ var d = $('antwoordvak').querySelector('.nakijk') || (function(){ var x = document.createElement('div'); x.className = 'nakijk'; $('antwoordvak').appendChild(x); return x; })();
         var b = document.createElement('button'); b.type = 'button'; b.textContent = tekst; if (stil) b.className = 'stil'; b.addEventListener('click', function(){ if (bezig) fn(b); }); d.appendChild(b); return b; },
       uit: function(tekst){ $('reactie').innerHTML = tekst ? '<p class="sleepuit">' + tekst + '</p>' : ''; },

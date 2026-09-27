@@ -20,7 +20,7 @@
    daarna weer bij de constructor. De WebSockets overleven dat slapen wel (de
    hibernation API); wie erbij hoort staat in de bijlage van elke socket. */
 import { DurableObject } from "cloudflare:workers";
-import { nette } from "./naamfilter.js";
+import { nette, verboden } from "./naamfilter.js";
 /* de motor van Zwaardvechter: hetzelfde bestand dat de browser laadt */
 import ZWAARDMOTOR from "../leermiddelen/zwaard-motor.js";
 import TORENMOTOR from "../leermiddelen/toren-motor.js";
@@ -45,13 +45,129 @@ const KLAS_MAX = 3000;
    van een docent bij elkaar, maar wel een grens tegen volduwen */
 const KLAS_LEERLINGEN = 400;
 /* spellen die een opdracht kunnen zijn: bij een onderdeel telt het aantal goed in dat onderdeel, anders de ronde (of het aantal goed bij de Vragenrace) */
-const OPDRACHT_SPELLEN = { race: true, toren: true, zwaard: true };
+const OPDRACHT_SPELLEN = { race: true, toren: true, zwaard: true, dictee: true };
+/* Het dictee als opdracht. Drie bronnen: de tekst van deze week (per niveau,
+   uit de tekstbank van dictee.html), een vaste tekst uit die bank (dt: t-bb-01),
+   of een eigen dictee van de docent (dt: eigen-K7M2QX, uit materiaal.js).
+   "Elke week automatisch" bewaart niets per week: bij elk lezen rekent de kamer
+   uit welke week het is (opdrachtNu), en de opdracht loopt van maandag 0:00 tot
+   zondag 23:59, Nederlandse tijd. De uitslagen blijven per week bewaard, want
+   elke melding draagt de week waarin hij gemaakt is.
+   Gedaan is een melding van spel dictee met dezelfde tekst (dt), of bij de
+   tekst van de week met dezelfde week (wk). */
+const DICTEE_BRONNEN = { week: 1, tekst: 1, eigen: 1 };
+const DICTEE_NIVEAUS = { bb: 1, kgt: 1, hv: 1 };
+const DAG_MS = 86400000;
+/* hoe laat het in Nederland is: de datum, en hoeveel de klok daar voorloopt op UTC */
+function amsKlok(nu){
+  const p = {};
+  new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Amsterdam", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" })
+    .formatToParts(new Date(nu)).forEach(x => { p[x.type] = x.value; });
+  return { y: +p.year, m: +p.month, d: +p.day, voor: Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second) - Math.floor(nu / 1000) * 1000 };
+}
+/* een Nederlandse kloktijd als tijdstip; met de voorsprong van dat moment zelf, want de zomertijd wisselt op een zondag */
+function amsTijd(y, m, d, u, min){
+  const muur = Date.UTC(y, m - 1, d, u || 0, min || 0);
+  return muur - amsKlok(muur - amsKlok(muur).voor).voor;
+}
+/* De week zoals op de kalender (ISO: week 1 heeft de eerste donderdag van het
+   jaar), in Nederlandse tijd: de sleutel 2026-W39, maandag 0:00 en zondag 23:59. */
+export function dicteeWeek(nu){
+  const a = amsKlok(nu);
+  const dag = Date.UTC(a.y, a.m - 1, a.d), wd = (new Date(dag).getUTCDay() + 6) % 7;
+  const don = new Date(dag + (3 - wd) * DAG_MS), jaar = don.getUTCFullYear();
+  const nr = 1 + Math.floor((don.getTime() - Date.UTC(jaar, 0, 1)) / (7 * DAG_MS));
+  const ma = new Date(dag - wd * DAG_MS), zo = new Date(dag + (6 - wd) * DAG_MS);
+  return { sleutel: jaar + "-W" + String(nr).padStart(2, "0"), nr,
+    van: amsTijd(ma.getUTCFullYear(), ma.getUTCMonth() + 1, ma.getUTCDate(), 0, 0),
+    tot: amsTijd(zo.getUTCFullYear(), zo.getUTCMonth() + 1, zo.getUTCDate(), 23, 59) };
+}
+/* een tekst uit de bank (t-bb-01) of een eigen dictee (eigen-K7M2QX); een voorvoegsel dictee- mag */
+function dicteeTekst(x){
+  let s = String(x || "").trim().replace(/^dictee-/i, "");
+  if (/^eigen-[A-Za-z0-9]{6}$/i.test(s)) return "eigen-" + s.slice(6).toUpperCase();
+  s = s.toLowerCase();
+  return /^[a-z0-9][a-z0-9-]{1,30}$/.test(s) && !/^eigen-/.test(s) ? s : "";
+}
+/* een week als 2026-W39 (ook 2026-39 of 2026W39) */
+function dicteeWeekSleutel(x){
+  const m = /^(\d{4})-?W?(\d{1,2})$/i.exec(String(x || "").trim());
+  if (!m || +m[2] < 1 || +m[2] > 53) return "";
+  return m[1] + "-W" + m[2].padStart(2, "0");
+}
+/* de woorden die fout gingen: hoogstens veertig, alleen woorden, en door het naamfilter */
+function dicteeFout(x){
+  if (!Array.isArray(x)) return undefined;
+  const uit = [];
+  for (const w0 of x.slice(0, 80)){
+    const w = schoon(w0, 30);
+    if (!w || !/^[\p{L}\p{M}0-9'’.-]+$/u.test(w) || verboden(w)) continue;
+    uit.push(w);
+    if (uit.length >= 40) break;
+  }
+  return uit.length ? uit : undefined;
+}
+/* wat een melding van het dictee extra meeneemt: welke tekst, welke week, hoeveel woorden goed van hoeveel, en welke fout */
+/* dictee.html meldt via SPEL.einde, en dat geeft alleen od door: per tekst "dictee: t-bb-01" = [goed, woorden] */
+function dicteeUitOd(od){
+  /* alleen sleutels met een tekst erin; "dictee: werkwoorden" is een onderdeel, geen tekst */
+  const k = Object.keys(od && typeof od === "object" ? od : {}).filter(x => /^dictee: (t-[a-z]+-[0-9]+|eigen-[A-Za-z0-9]{6})$/.test(x));
+  if (k.length !== 1) return null;
+  const w = od[k[0]], dt = dicteeTekst(k[0].slice(8));
+  return dt && Array.isArray(w) ? { dt, g: getal(w[0], 2000), n: getal(w[1], 2000) } : null;
+}
+function dicteeVelden(inz){
+  const uit = {}, uitOd = dicteeUitOd(inz.od);
+  const dt = dicteeTekst(inz.tekst || (inz.eigen ? "eigen-" + inz.eigen : "")) || (uitOd ? uitOd.dt : "");
+  if (dt) uit.dt = dt;
+  if (inz.goed === undefined && uitOd && uitOd.dt === dt && uitOd.n > 0 && uitOd.g <= uitOd.n){ uit.gw = uitOd.g; uit.tw = uitOd.n; }
+  const wk = dicteeWeekSleutel(inz.week);
+  if (wk) uit.wk = wk;
+  const tw = getal(inz.woorden !== undefined ? inz.woorden : inz.totaal, 2000), gw = getal(inz.goed, 2000);
+  if (tw > 0 && gw <= tw && inz.goed !== undefined){ uit.gw = gw; uit.tw = tw; }
+  const fw = dicteeFout(inz.fout);
+  if (fw) uit.fw = fw;
+  return uit;
+}
+/* [goed, van de] woorden; zonder die velden uit de telling per onderdeel */
+function dicteeScore(r){
+  if (r.tw) return [r.gw | 0, r.tw];
+  const eigen = r.dt && r.od && r.od["dictee: " + r.dt];
+  if (Array.isArray(eigen) && eigen[1] > 0) return [eigen[0] | 0, eigen[1]];
+  if (r.od && typeof r.od === "object"){
+    let g = 0, n = 0;
+    for (const k of Object.keys(r.od)){ const w = r.od[k]; if (Array.isArray(w)){ g += w[0] | 0; n += w[1] | 0; } }
+    if (n) return [g, n];
+  }
+  return null;
+}
+/* hoort deze melding bij deze dictee-opdracht (zoals opdrachtNu hem geeft)? */
+function dicteePast(r, o){
+  if (r.spel !== "dictee") return false;
+  if (o.bron === "week"){
+    if (o.niveau && DICTEE_NIVEAUS[r.niveau] && r.niveau !== o.niveau) return false;
+    if (r.wk) return !!o.week && r.wk === o.week;
+    /* Zonder week in de melding (zo meldt dictee.html nu): een tekst uit de bank
+       van dit niveau, gemaakt in deze week. Welke tekst van de week is, weet
+       alleen de tekstbank in de browser; de knop opent precies die. */
+    return !!r.dt && r.dt.indexOf("t-" + (o.niveau ? o.niveau + "-" : "")) === 0 && r.t >= o.sinds && r.t < o.sinds + 7 * DAG_MS + 3600000;
+  }
+  return !!r.dt && r.dt === o.dt && r.t >= o.sinds;
+}
+/* de opdracht zoals hij nu is: een dictee dat elke week vanzelf vernieuwt krijgt de week van vandaag */
+function opdrachtNu(o, nu){
+  if (!o || o.spel !== "dictee" || !o.auto) return o;
+  const w = dicteeWeek(nu);
+  return Object.assign({}, o, { week: w.sleutel, weekNr: w.nr, sinds: w.van, tot: w.tot });
+}
 function maatVoor(r, o){
+  /* bij het dictee: het deel van de woorden dat goed was, in procenten */
+  if (o.spel === "dictee"){ if (!dicteePast(r, o)) return 0; const s = dicteeScore(r); return s ? Math.round(100 * s[0] / s[1]) : 0; }
   if (r.spel !== o.spel || (r.vak || "") !== o.vak || r.t < o.sinds) return 0;
   if (o.deel) return r.od && r.od[o.deel] ? (r.od[o.deel][0] | 0) : 0;
   return r.ronde | 0;
 }
-function haaltOpdracht(r, o){ return maatVoor(r, o) >= o.min; }                        /* hoogstens zoveel gemelde potjes per klas */
+function haaltOpdracht(r, o){ return o.spel === "dictee" ? dicteePast(r, o) : maatVoor(r, o) >= o.min; }                        /* hoogstens zoveel gemelde potjes per klas */
 /* hoogstens zoveel opdrachten tegelijk */
 const OPDRACHTEN_MAX = 5;
 /* Het begin van deze week: maandag 0:00, Nederlandse tijd bij benadering
@@ -1118,8 +1234,8 @@ export class Kamer extends DurableObject {
     const msM = schoon(inz.ms, 40);
     if (msM) this.stand.leerlingen[kort].ms = msM;
     if (acc) this.stand.leerlingen[kort].acc = acc;
-    this.voegToe({ sid: kort, naam: nette(inz.naam, "Leerling"), av: schoonAv(inz.av), spel, ronde: getal(inz.ronde, 250), punten: getal(inz.punten, 5000),
-                   niveau: schoon(inz.niveau, 10), vak: schoon(inz.vak, 10), od: schoonOd(inz.od), t: Date.now() });
+    this.voegToe(Object.assign({ sid: kort, naam: nette(inz.naam, "Leerling"), av: schoonAv(inz.av), spel, ronde: getal(inz.ronde, 250), punten: getal(inz.punten, 5000),
+                   niveau: schoon(inz.niveau, 10), vak: schoon(inz.vak, 10), od: schoonOd(inz.od), t: Date.now() }, spel === "dictee" ? dicteeVelden(inz) : {}));
     await this.zetAlarm({ wat: "opruimen" }, KLAS_SLAAPT);
     await this.bewaar();
     return json({ ok: true, n: this.stand.resultaten.length });
@@ -1232,6 +1348,13 @@ export class Kamer extends DurableObject {
     if (lijst.length >= OPDRACHTEN_MAX) return json({ fout: "er staan al " + OPDRACHTEN_MAX + " opdrachten; haal er eerst een weg" }, 400);
     const spel = String(o.spel || ""), vak = String(o.vak || "").replace(/[^a-z]/g, "").slice(0, 8), deel = schoon(o.deel, 40);
     if (!OPDRACHT_SPELLEN[spel]) return json({ fout: "dit spel kan geen opdracht zijn" }, 400);
+    if (spel === "dictee"){
+      const d = this.dicteeOpdracht(o);
+      if (d.fout) return json({ fout: d.fout }, 400);
+      lijst.push(d);
+      await this.bewaar();
+      return json({ ok: true, opdracht: opdrachtNu(d, Date.now()), opdrachten: lijst.map(x => opdrachtNu(x, Date.now())) });
+    }
     if (!vak) return json({ fout: "kies een vak" }, 400);
     const min = getal(o.min, 250), tot = getal(o.tot, 4e12);
     if (min < 1) return json({ fout: "het minimum is minstens 1" }, 400);
@@ -1239,7 +1362,38 @@ export class Kamer extends DurableObject {
     const nieuw = { id: sleutelMaken(3), spel, vak, deel, deelNaam: schoon(o.deelNaam, 60), min, tot, tekst: schoon(o.tekst, 140), sinds: Date.now() };
     lijst.push(nieuw);
     await this.bewaar();
-    return json({ ok: true, opdracht: nieuw, opdrachten: lijst });
+    return json({ ok: true, opdracht: nieuw, opdrachten: lijst.map(x => opdrachtNu(x, Date.now())) });
+  }
+  /* Een dictee als opdracht, schoon en gecontroleerd. De titel komt van de pagina
+     van de docent (uit de tekstbank of de naam van zijn eigen dictee) en is
+     alleen om te tonen; wat telt is de bron met de tekst of de week. */
+  dicteeOpdracht(o){
+    const nu = Date.now();
+    const bron = DICTEE_BRONNEN[o.bron] ? String(o.bron) : "";
+    if (!bron) return { fout: "kies waar het dictee vandaan komt: de tekst van de week, een tekst uit de lijst of een eigen dictee" };
+    const niveau = DICTEE_NIVEAUS[o.niveau] ? String(o.niveau) : "";
+    const w = dicteeWeek(nu);
+    const d = { id: sleutelMaken(3), spel: "dictee", vak: "ned", deel: "", deelNaam: "", min: 1, bron, niveau,
+                titel: schoon(o.titel, 80), tekst: schoon(o.tekst, 140), sinds: nu };
+    /* de einddatum: gekozen, of anders zondag 23:59 van deze week */
+    let tot = o.tot === undefined || o.tot === null || o.tot === "" ? w.tot : getal(o.tot, 4e12);
+    if (bron === "week"){
+      if (!niveau) return { fout: "kies het niveau: bij elk niveau hoort een andere tekst van de week" };
+      if (o.auto === true) return Object.assign(d, { auto: true, week: w.sleutel, weekNr: w.nr, sinds: w.van, tot: w.tot });
+      /* een keer: deze week, en wat de leerling sinds maandag al deed telt mee */
+      Object.assign(d, { week: w.sleutel, weekNr: w.nr, sinds: w.van });
+    } else if (bron === "tekst"){
+      const dt = dicteeTekst(o.dt);
+      if (!dt || dt.indexOf("eigen-") === 0) return { fout: "kies een tekst uit de lijst" };
+      d.dt = dt;
+    } else {
+      const code = String(o.code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (!/^[A-Z0-9]{6}$/.test(code)) return { fout: "een eigen dictee heeft een code van zes tekens" };
+      d.dt = "eigen-" + code; d.code = code;
+    }
+    if (tot < nu - 3600000 || tot > nu + 120 * 86400000) return { fout: "kies een datum binnen vier maanden" };
+    d.tot = tot;
+    return d;
   }
   /* De instellingen van een klas: welke spellen de leerlingen zien, en of de lesmodus aanstaat.
      Leeg lijstje betekent: alles mag. In de lesmodus ziet een gekoppelde leerling alleen die spellen. */
@@ -1350,8 +1504,17 @@ export class Kamer extends DurableObject {
       /* zat deze leerling bij de eigenaar van de site in de klas? */
       oudleerling: !!this.stand.vanEigenaar, klasdoel: this.klasdoelStand(s) };
     const mijn = this.stand.resultaten.filter(r => r.sid === s);
-    const lijst = this.opdrachtLijst().map(o => Object.assign({}, o, {
-      gehaald: mijn.some(r => haaltOpdracht(r, o)), beste: mijn.reduce((a, r) => Math.max(a, maatVoor(r, o)), 0) }));
+    const nu = Date.now();
+    const lijst = this.opdrachtLijst().map(o0 => {
+      const o = opdrachtNu(o0, nu);
+      const x = Object.assign({}, o, { gehaald: mijn.some(r => haaltOpdracht(r, o)), beste: mijn.reduce((a, r) => Math.max(a, maatVoor(r, o)), 0) });
+      /* bij het dictee ook hoeveel woorden goed, van de beste keer */
+      if (o.spel === "dictee"){
+        const s = mijn.filter(r => dicteePast(r, o)).map(dicteeScore).filter(Boolean).sort((a, b) => b[0] / b[1] - a[0] / a[1])[0];
+        if (s) x.score = s;
+      }
+      return x;
+    });
     /* de eerste ook los, voor een pagina van voor de lijst */
     const eerste = lijst[0] || null;
     return json(Object.assign({ opdrachten: lijst, opdracht: eerste, gehaald: eerste ? eerste.gehaald : false, beste: eerste ? eerste.beste : 0 }, opzet));
@@ -1392,7 +1555,7 @@ export class Kamer extends DurableObject {
     if (!this.stand.samengevoegd){ this.samenvoegen(); await this.bewaar(); }
     /* kijken telt ook als gebruik, hoogstens een keer per uur bijgeschreven */
     if (Date.now() - this.stand.laatst > 3600000){ await this.zetAlarm({ wat: "opruimen" }, KLAS_SLAAPT); await this.bewaar(); }
-    const opdrachten = this.opdrachtLijst();
+    const opdrachten = this.opdrachtLijst().map(o => opdrachtNu(o, Date.now()));
     return json({ code: this.stand.code, naam: this.stand.naam, gemaakt: this.stand.gemaakt, opdracht: opdrachten[0] || null, opdrachten,
                   klasdoel: this.klasdoelStand(),
                   spellen: this.stand.spellen || [], lesmodus: this.lesmodusAan(), lesmodusTot: this.lesmodusAan() ? (this.stand.lesmodusTot || 0) : 0,
@@ -1400,7 +1563,9 @@ export class Kamer extends DurableObject {
                   leerlingen: this.gekoppeld(),
                   /* elke uitslag onder de huidige bijnaam van de leerling: wie van naam wisselde of op een tweede apparaat speelde, staat er zo een keer in */
                   /* ingelogd met Microsoft: de docent ziet de accountnaam, niet de bijnaam */
-                  resultaten: this.stand.resultaten.map(x => ({ naam: (l => l.ms || l.naam)((this.stand.leerlingen || {})[x.sid] || {}) || x.naam, av: x.av || "", spel: x.spel, ronde: x.ronde, punten: x.punten, niveau: x.niveau, vak: x.vak, od: x.od, t: x.t })) });
+                  /* bij het dictee ook de tekst, de week, de woorden goed en welke fout gingen */
+                  resultaten: this.stand.resultaten.map(x => Object.assign({ naam: (l => l.ms || l.naam)((this.stand.leerlingen || {})[x.sid] || {}) || x.naam, av: x.av || "", spel: x.spel, ronde: x.ronde, punten: x.punten, niveau: x.niveau, vak: x.vak, od: x.od, t: x.t },
+                    x.spel === "dictee" ? { dt: x.dt, wk: x.wk, gw: x.gw, tw: x.tw, fw: x.fw } : {})) });
   }
 
   /* Wie is er gekoppeld, en heeft die al iets gespeeld? Het kenmerk zelf gaat
@@ -1417,7 +1582,7 @@ export class Kamer extends DurableObject {
     const st = this.stand, basis = { code: st.code, spel: st.spel, vak: st.vak, niveau: st.niveau, deel: st.deel || "", fase: st.fase };
     /* verhuisd naar een nieuwe kamer: wie de oude code nog intypt, kan door naar de nieuwe */
     if (st.verhuis) basis.verhuis = st.verhuis;
-    if (st.spel === "klas") return Object.assign(basis, { naam: st.naam, n: st.resultaten.length, gemaakt: st.gemaakt, opdracht: (this.opdrachtLijst()[0]) || null });
+    if (st.spel === "klas") return Object.assign(basis, { naam: st.naam, n: st.resultaten.length, gemaakt: st.gemaakt, opdracht: opdrachtNu(this.opdrachtLijst()[0], Date.now()) || null });
     if (this.strijd){
       const lijst = this.strijdLijst();
       return Object.assign(basis, { game: st.game, duel: !!st.duel, max: st.duel ? this.samenMax() : undefined, gastheer: st.gastheer ? this.pid(st.gastheer) : null, gestart: st.gestart, bezig: lijst.filter(r => !r.af).length, spelers: lijst });

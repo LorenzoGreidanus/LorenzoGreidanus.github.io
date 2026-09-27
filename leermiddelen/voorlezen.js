@@ -18,6 +18,10 @@
      VOORLEES.knop(doel, function(){ return { v:'de vraag', o:['a','b'], taal:'nl-NL' }; })
      VOORLEES.volg('zij', kiesDoel, geef)     voor een paneel dat opnieuw getekend wordt
      VOORLEES.keuze(doel)                     de drie standen als knoppenrij
+     VOORLEES.spreek({ v:'tekst', taal:'nl-NL', tempo:0.7, klaar:function(reden){} })
+                                              zelf iets voorlezen; klaar komt als de stem echt stopt
+     VOORLEES.stemmenVoor('nl-NL'), stemVoor, kiesStem(taal, naam), opStemmen(fn)
+                                              welke stemmen er zijn en welke gekozen is
    Roep knop() gerust bij elke vraag opnieuw aan: hij zet zichzelf maar een keer
    neer, en leest bij 'auto' alleen voor als de vraag echt veranderd is. */
 window.VOORLEES = (function(){
@@ -39,35 +43,82 @@ window.VOORLEES = (function(){
   }
 
   /* ---------- de stem ---------- */
-  var stemmen = [];
-  function stemmenLaden(){ try { stemmen = window.speechSynthesis.getVoices() || []; } catch (e){ stemmen = []; } }
+  /* De lijst met stemmen komt in Chrome pas na een tijdje (voiceschanged).
+     Wie wil weten welke stemmen er zijn, meldt zich met opStemmen(fn): fn
+     draait meteen, bij elke nieuwe lijst, en na anderhalve seconde nog een
+     keer, want dan weten we ook dat er echt geen stemmen zijn. */
+  var stemmen = [], luisteraars = [], begin = Date.now(), NA = 1500;
+  function stemmenLaden(){
+    try { stemmen = window.speechSynthesis.getVoices() || []; } catch (e){ stemmen = []; }
+    luisteraars.slice().forEach(function(f){ try { f(); } catch (e){} });
+  }
   if (kan){
     stemmenLaden();
     try { window.speechSynthesis.addEventListener('voiceschanged', stemmenLaden); } catch (e){}
+    setTimeout(stemmenLaden, NA + 50);
   }
-  /* De eerste stem die bij de taal past. Een stem van het apparaat zelf klinkt
-     beter dan een die over het netwerk komt, maar kiezen kunnen we niet: we
-     nemen wat er is en beginnen bij een exacte treffer op nl-NL of en-GB. */
+  /* geeft een functie terug om weer af te melden */
+  function opStemmen(fn){
+    if (typeof fn !== 'function') return function(){};
+    luisteraars.push(fn);
+    var weg = function(){ var i = luisteraars.indexOf(fn); if (i >= 0) luisteraars.splice(i, 1); };
+    try { fn(); } catch (e){}
+    return weg;
+  }
+  /* bekend: de lijst is er, of we hebben lang genoeg gewacht om te weten dat hij leeg blijft */
+  function stemmenBekend(){ return !kan || stemmen.length > 0 || Date.now() - begin > NA; }
+
+  /* Hoe goed past een stem? Eerst de taal: nl-NL gaat voor nl-BE (en en-GB
+     voor en-US). Dan de klank: de nieuwe stemmen (Natural, Neural, Online,
+     Premium) klinken veel beter dan de oude, en die van Google en Microsoft
+     zijn meestal beter dan wat er verder op een apparaat staat. -1: past niet. */
+  function taalVan(s){ return String(s && s.lang || '').toLowerCase().replace('_', '-'); }
+  function stemScore(s, taal){
+    var t = String(taal || 'nl-NL').toLowerCase(), l = taalVan(s), sc;
+    if (l === t) sc = 100; else if (l.split('-')[0] === t.split('-')[0]) sc = 50; else return -1;
+    var naam = String(s.name || '');
+    if (/natural|neural|online|premium|enhanced/i.test(naam)) sc += 20;
+    if (/google|microsoft/i.test(naam)) sc += 10;
+    if (s['default']) sc += 1;
+    return sc;
+  }
+  /* alle stemmen voor een taal, de beste eerst */
+  function stemmenVoor(taal){
+    if (!stemmen.length && kan) try { stemmen = window.speechSynthesis.getVoices() || []; } catch (e){}
+    return stemmen.map(function(s){ return { s:s, sc:stemScore(s, taal) }; })
+      .filter(function(x){ return x.sc >= 0; })
+      .sort(function(a, b){ return b.sc - a.sc; })
+      .map(function(x){ return x.s; });
+  }
+  /* de gekozen stem blijft op dit apparaat, per taal (nl, en) */
+  function stemSleutel(taal){ return 'lg-stem-' + String(taal || 'nl-NL').toLowerCase().split('-')[0]; }
+  function gekozenStem(taal){ try { return localStorage.getItem(stemSleutel(taal)) || ''; } catch (e){ return ''; } }
+  function kiesStem(taal, naam){ try { if (naam) localStorage.setItem(stemSleutel(taal), naam); else localStorage.removeItem(stemSleutel(taal)); } catch (e){} }
+  /* De stem voor een taal: de gekozen stem als die er nog is, anders de beste. */
   function stemVoor(taal){
-    if (!stemmen.length) stemmenLaden();
-    var t = String(taal || 'nl-NL').toLowerCase(), kort = t.split('-')[0];
-    var raak = null;
-    stemmen.forEach(function(s){
-      var l = String(s.lang || '').toLowerCase().replace('_', '-');
-      if (!raak && l === t) raak = s;
-    });
-    if (raak) return raak;
-    stemmen.forEach(function(s){
-      var l = String(s.lang || '').toLowerCase();
-      if (!raak && l.indexOf(kort) === 0) raak = s;
-    });
-    return raak;
+    var lijst = stemmenVoor(taal), wil = gekozenStem(taal);
+    if (wil){ var raak = lijst.filter(function(s){ return s.name === wil || s.voiceURI === wil; })[0]; if (raak) return raak; }
+    return lijst[0] || null;
   }
 
   var bezig = null;          /* de knop die nu aan het lezen is */
+  /* Wie voorlezen aanvraagt met een klaar-functie, hoort precies wanneer de
+     stem stopt: klaar('klaar') na de laatste zin, klaar('stop') als iemand
+     het afbreekt, en anders de fout van de browser ('not-allowed',
+     'synthesis-failed', ...). Elke beurt heeft een nummer; een late melding
+     van een afgebroken beurt telt niet meer. */
+  var beurt = 0, lopend = null, vast = [];
+  function afronden(reden){
+    var l = lopend; lopend = null;
+    if (!l) return;
+    clearTimeout(l.wacht);
+    if (l.klaar) try { l.klaar(reden); } catch (e){}
+  }
   function stop(){
+    beurt++;
     try { window.speechSynthesis.cancel(); } catch (e){}
     if (bezig){ bezigAf(bezig); bezig = null; }
+    afronden('stop');
   }
   function bezigAan(knopje){
     bezig = knopje;
@@ -90,20 +141,37 @@ window.VOORLEES = (function(){
     if (g && g.o && g.o.length) g.o.forEach(function(t, i){ uit.push('Antwoord ' + (i + 1) + '. ' + String(t)); });
     return uit.filter(function(t){ return t.replace(/\s/g, ''); });
   }
+  /* g: { v, o, taal, tempo (standaard 0.95), stem (een stem uit stemmenVoor), klaar(reden) } */
   function spreek(g, knopje){
-    if (!kan) return;
+    var klaar = g && typeof g.klaar === 'function' ? g.klaar : null;
+    if (!kan){ if (klaar) setTimeout(function(){ klaar('geen'); }, 0); return; }
     stop();
     var delen = stukken(g);
-    if (!delen.length) return;
-    var taal = (g && g.taal) || 'nl-NL', stem = stemVoor(taal);
+    if (!delen.length){ if (klaar) setTimeout(function(){ klaar('leeg'); }, 0); return; }
+    var taal = (g && g.taal) || 'nl-NL', stem = (g && g.stem) || stemVoor(taal);
+    var tempo = g && g.tempo > 0 ? g.tempo : 0.95;       /* een tikje rustiger dan de standaard */
+    var mijn = beurt, tekens = delen.join(' ').length;
     if (knopje) bezigAan(knopje);
+    function af(reden){
+      if (mijn !== beurt) return;
+      if (knopje && bezig === knopje){ bezigAf(knopje); bezig = null; }
+      afronden(reden);
+    }
+    /* Een vangnet: sommige browsers melden het einde nooit (een stem die
+       vastloopt, een tabblad op de achtergrond). Ruim na de te verwachten duur
+       is de beurt dan toch voorbij. */
+    lopend = { klaar: klaar, wacht: setTimeout(function(){ af('te lang'); }, Math.max(6000, tekens * 160 / tempo)) };
+    /* de uitspraken vasthouden: Chrome ruimt ze anders soms op voordat onend komt */
+    vast = [];
     delen.forEach(function(tekst, i){
       var u = new SpeechSynthesisUtterance(tekst);
       u.lang = taal;
       if (stem) u.voice = stem;
-      u.rate = 0.95;                     /* een tikje rustiger dan de standaard */
-      if (i === delen.length - 1) u.onend = function(){ if (knopje && bezig === knopje){ bezigAf(knopje); bezig = null; } };
-      try { window.speechSynthesis.speak(u); } catch (e){}
+      u.rate = tempo;
+      if (i === delen.length - 1) u.onend = function(){ af('klaar'); };
+      u.onerror = function(e){ af((e && e.error) || 'fout'); };
+      vast.push(u);
+      try { window.speechSynthesis.speak(u); } catch (e){ af('fout'); }
     });
   }
 
@@ -192,5 +260,7 @@ window.VOORLEES = (function(){
   window.addEventListener('pagehide', stop);
 
   return { kan: function(){ return kan; }, knop: knop, volg: volg, spreek: spreek, stop: stop,
-           stand: stand, zet: zet, keuze: keuze };
+           stand: stand, zet: zet, keuze: keuze,
+           stemVoor: stemVoor, stemmenVoor: stemmenVoor, kiesStem: kiesStem, gekozenStem: gekozenStem,
+           opStemmen: opStemmen, stemmenBekend: stemmenBekend };
 })();

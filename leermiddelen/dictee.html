@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-<!-- Dictee, versie 1.0: op vakspel.js en luisterspel.js -->
+<!-- Dictee, versie 2.0: op vakspel.js en luisterspel.js, met het doorlopende dictee en de soorten fouten -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="manifest" href="/manifest.json">
@@ -10,12 +10,12 @@
 <link rel="apple-touch-icon" href="/icoon-192.png">
 <script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
 <title>Dictee &middot; meneer Greidanus</title>
-<meta name="description" content="Luisteren en typen: werkwoordspelling, lastige woorden, hoofdletters en leestekens, en Engelse leenwoorden. De computer leest voor, jij schrijft.">
+<meta name="description" content="Luisteren en typen: werkwoordspelling, lastige woorden, hoofdletters en leestekens, leenwoorden en een doorlopend dictee. De computer leest voor, jij schrijft, en je ziet wat voor fout je maakte.">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="nl_NL">
 <meta property="og:site_name" content="meneer Greidanus">
 <meta property="og:title" content="Dictee">
-<meta property="og:description" content="Luisteren en typen: werkwoordspelling, lastige woorden, hoofdletters en leestekens, en Engelse leenwoorden.">
+<meta property="og:description" content="Luisteren en typen: werkwoordspelling, lastige woorden, hoofdletters en leestekens, leenwoorden en een doorlopend dictee.">
 <meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/dictee.html">
 <meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
 <meta name="twitter:card" content="summary">
@@ -25,6 +25,27 @@
 <link rel="stylesheet" href="vakspel.css">
 <link rel="stylesheet" href="basis.css">
 <link rel="stylesheet" href="spel.css">
+<style>
+/* wat alleen het dictee heeft: het blok van de docent, de stem, en de hele tekst met de fouten erin */
+.klaarblok{background:var(--kaart);border:1px solid var(--rand);border-radius:16px;padding:14px 18px;margin:18px auto 0;max-width:36em}
+.klaarblok h2{font-size:1.3rem;margin:4px 0 2px}
+.klaarblok p.klaarmeta{font-size:.9rem;color:var(--muted)}
+.klaarblok p.klaarfout{font-size:.95rem;color:var(--fout);margin-top:6px}
+.klaarblok a{color:var(--link)}
+/* niet .stemvak: die naam heeft basis.css al voor iets anders */
+.dicteestem{margin-top:22px}
+.dicteestem.stemkeuze{justify-items:center}
+.dicteestem .stemrij{justify-content:center}
+.dicteetekst{background:var(--kaart);border:1px solid var(--rand);border-radius:16px;padding:14px 18px;line-height:1.9;font-size:1.05rem;text-align:left;overflow-wrap:anywhere}
+.dicteetekst.klein{max-width:40em;margin:0 auto;padding:10px 14px;line-height:1.7;font-size:.95rem;color:var(--ink)}
+.dicteetekst .eyebrow{margin-bottom:2px}
+.dicteeuitslag{margin:0 0 20px}
+.dicteeuitslag h2{font-size:1.2rem;margin:2px 0 8px}
+.dicteeuitslag .dt-score{font-size:.95rem;margin:0 0 8px}
+.dicteeuitslag .dt-leg{font-size:.8rem;color:var(--muted);margin-top:6px}
+.dicteeuitslag .dt-uitleg{font-size:.92rem;margin-top:8px}
+.dicteeuitslag+.dicteeuitslag{margin-top:-4px}
+</style>
 <script src="/vangnet.js" defer></script>
 </head>
 <body>
@@ -33,81 +54,373 @@
 <script src="voorlezen.js"></script>
 <script src="luisterspel.js"></script>
 <script src="dictee-opgaven.js"></script>
+<script src="eigen.js"></script>
 <script>
 (function(){
   'use strict';
-  var S = VAKSPEL.schoon, D = window.DICTEE_OPGAVEN;
+  var S = VAKSPEL.schoon, D = window.DICTEE_OPGAVEN, L = window.LUISTER;
+  function $(id){ return document.getElementById(id); }
   function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
-  var NIV = { bb:1, kgt:2, hv:3 };
-  /* de items van een onderdeel die bij het niveau passen: het niveau zelf en alles eronder; op bb ook de kgt-woorden als er te weinig zijn */
+  var NIV = { bb:1, kgt:2, hv:3 }, NIVID = { 1:'bb', 2:'kgt', 3:'hv' }, NIVNAAM = { bb:'vmbo-bb', kgt:'vmbo-kgt en tl', hv:'havo en vwo' };
+  var DEELNAAM = { werkwoorden:'werkwoorden', woorden:'lastige woorden', leestekens:'hoofdletters en leestekens' };
+  function zoek(naam){ var m = new RegExp('[?&]' + naam + '=([^&#]*)').exec(location.search); return m ? decodeURIComponent(m[1]) : ''; }
+
+  /* ---------- welk item: vooral van het eigen niveau, soms een van lager ---------- */
   function items(lijst, niveau){
-    var n = NIV[niveau] || 2, uit = lijst.filter(function(x){ return x.n <= n; });
-    if (uit.length < 12) uit = lijst.filter(function(x){ return x.n <= n + 1; });
-    return uit.length ? uit : lijst;
+    var n = NIV[niveau] || 2;
+    var eigen = lijst.filter(function(x){ return x.n === n; }), lager = lijst.filter(function(x){ return x.n < n; });
+    /* een onderdeel dat op dit niveau niet bestaat (leenwoorden op bb): het niveau erboven */
+    for (var k = n + 1; !eigen.length && k <= 3; k++) eigen = lijst.filter(function(x){ return x.n === k; });
+    return lager.length && Math.random() < .25 ? lager : eigen.length ? eigen : lijst;
   }
+  var LETTER = 'A-Za-zÀ-ÿ';
   function gatVan(zin, woord){
-    var i = zin.toLowerCase().indexOf(woord.toLowerCase());
-    return i < 0 ? zin : zin.slice(0, i) + '____' + zin.slice(i + woord.length);
+    var m = new RegExp('(^|[^' + LETTER + '])(' + woord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')(?=$|[^' + LETTER + '])', 'i').exec(zin);
+    if (!m) return zin;
+    var i = m.index + m[1].length;
+    return zin.slice(0, i) + '____' + zin.slice(i + woord.length);
   }
+  /* het stukje rond het gat: twee woorden ervoor en twee erna */
+  function stukjeVan(zin, woord){
+    var w = zin.split(' '), i = -1;
+    w.forEach(function(x, k){ if (i < 0 && x.replace(/[.,?!]/g, '').toLowerCase() === woord.toLowerCase()) i = k; });
+    return i < 0 ? '' : w.slice(Math.max(0, i - 2), i + 3).join(' ').replace(/[.,?!]+$/, '');
+  }
+  /* een zin in stukjes voor het doorlopende dictee: bij de komma’s, en een lang stuk in tweeën */
+  function stukkenVan(zin){
+    var uit = [];
+    zin.replace(/,\s+/g, ',\u0001').split('\u0001').forEach(function(d){
+      var w = d.split(' ');
+      if (w.length <= 6){ uit.push(d); return; }
+      var per = Math.ceil(w.length / Math.ceil(w.length / 5));
+      for (var i = 0; i < w.length; i += per) uit.push(w.slice(i, i + per).join(' '));
+    });
+    return uit.length > 1 ? uit : [];
+  }
+
+  /* ---------- de ronde: welke soorten fouten, en de teksten van het doorlopende dictee ---------- */
+  var ronde = null;
+  function nieuweRonde(soort){ ronde = { soort: soort, typen: {}, teksten: [] }; }
+  function registreer(res){
+    if (!ronde || !res) return;
+    (res.typen || []).forEach(function(t){ ronde.typen[t.soort] = (ronde.typen[t.soort] || 0) + 1; });
+  }
+  function telWoorden(lijst){
+    var g = 0, v = 0;
+    lijst.forEach(function(t){ t.uitslag.forEach(function(r){ if (r){ g += r.woorden.goed; v += r.woorden.van; } }); });
+    return { goed: g, van: v };
+  }
+  /* in de balk: woorden goed in plaats van punten (punten zijn er alleen voor een zin zonder fouten) */
+  function woordMeter(){
+    if (!ronde || ronde.soort !== 'doorlopend') return;
+    var w = telWoorden(ronde.teksten);
+    Array.prototype.forEach.call(document.querySelectorAll('#balk .meter'), function(m){
+      if (/^punten/.test(m.textContent) || /^woorden/.test(m.textContent)) m.innerHTML = 'woorden goed<b>' + (w.van ? w.goed + '/' + w.van : '0') + '</b>';
+    });
+  }
+
+  /* ---------- de onderdelen ---------- */
   function werkwoorden(niveau){
     var it = kies(items(D.werkwoorden, niveau));
-    return LUISTER.opgave({ onderdeel:'dictee: werkwoorden', onderdeelNaam:'werkwoorden', taal:'nl-NL', sleutel:'ww' + it.woord + it.zin.length,
-      spreek: it.zin, antwoord: it.woord, gat: gatVan(it.zin, it.woord),
+    return L.opgave({ onderdeel:'dictee: werkwoorden', onderdeelNaam:'werkwoorden', taal:'nl-NL', sleutel:'ww' + it.zin,
+      spreek: it.zin, antwoord: it.woord, gat: gatVan(it.zin, it.woord), stukje: stukjeVan(it.zin, it.woord),
       vraag:'Luister naar de zin en typ het <b>werkwoord</b> dat in het gat hoort.', opdracht:'Let op de spelling: stam, stam + t, of de verleden tijd.',
-      uitleg: it.regel, antwoordTekst: it.woord });
+      uitleg: it.regel, antwoordTekst: it.woord, naKijk: registreer });
   }
   function woorden(niveau){
     var it = kies(items(D.woorden, niveau));
-    return LUISTER.opgave({ onderdeel:'dictee: lastige woorden', onderdeelNaam:'lastige woorden', taal:'nl-NL', sleutel:'w' + it.w,
+    return L.opgave({ onderdeel:'dictee: lastige woorden', onderdeelNaam:'lastige woorden', taal:'nl-NL', sleutel:'w' + it.w,
       spreek: it.spreek || (it.w + '. ' + it.zin), antwoord: it.antwoordLijst || it.w,
       vraag:'Luister en typ het <b>woord</b> dat je eerst hoort.', opdracht:'Je hoort het woord, en dan een zin waarin het staat.',
-      uitleg: (it.antwoordLijst ? it.antwoordLijst[0] : it.w) + ': ' + it.uit + '.', antwoordTekst: it.antwoordLijst ? it.antwoordLijst[0] : it.w });
+      uitleg: it.w + ': ' + it.uit + '.', antwoordTekst: it.w, naKijk: registreer });
   }
   function leestekens(niveau){
     var it = kies(items(D.leestekens, niveau));
-    return LUISTER.opgave({ onderdeel:'dictee: hoofdletters en leestekens', onderdeelNaam:'hoofdletters en leestekens', taal:'nl-NL', sleutel:'lt' + it.zin.slice(0, 20), exact:true,
-      spreek: it.zin, antwoord: it.zin,
-      vraag:'Luister en typ de <b>hele zin</b>, met hoofdletters en leestekens.', opdracht:'Hoofdletters, komma’s, punten, vraagtekens en uitroeptekens tellen mee.',
-      uitleg: it.uit, antwoordTekst: it.zin });
+    return L.opgave({ onderdeel:'dictee: hoofdletters en leestekens', onderdeelNaam:'hoofdletters en leestekens', taal:'nl-NL', sleutel:'lt' + it.zin, exact:true, zin:true,
+      spreek: it.zin, antwoord: it.antwoordLijst || it.zin, stukken: stukkenVan(it.zin),
+      vraag:'Luister en typ de <b>hele zin</b>, met hoofdletters en leestekens.', opdracht:'Hoofdletters, komma’s, punten, vraagtekens en aanhalingstekens tellen mee.',
+      uitleg: it.uit, antwoordTekst: it.zin, naKijk: registreer });
   }
   function leenwoorden(niveau){
-    var it = kies(D.leenwoorden);
-    return LUISTER.opgave({ onderdeel:'dictee: leenwoorden', onderdeelNaam:'leenwoorden', taal:'nl-NL', sleutel:'lw' + it.w,
-      spreek: it.w + '. ' + it.zin, antwoord: it.w,
-      vraag:'Luister en typ het <b>Engelse leenwoord</b> in Nederlandse spelling.', opdracht:'Je hoort het woord, en dan een zin.',
-      uitleg: it.w + ': ' + it.uit + '.', antwoordTekst: it.w });
+    var it = kies(items(D.leenwoorden, niveau));
+    return L.opgave({ onderdeel:'dictee: leenwoorden', onderdeelNaam:'leenwoorden', taal:'nl-NL', sleutel:'lw' + it.w,
+      spreek: it.w + '. ' + it.zin, antwoord: it.antwoordLijst || it.w,
+      vraag:'Luister en typ het <b>leenwoord</b> in de Nederlandse spelling.', opdracht:'Een woord uit het Engels of het Frans. Je hoort het woord, en dan een zin.',
+      uitleg: it.w + ': ' + it.uit + '.', antwoordTekst: it.w, naKijk: registreer });
   }
   var SOORTEN = { werkwoorden: werkwoorden, woorden: woorden, leestekens: leestekens, leenwoorden: leenwoorden };
-  VAKSPEL.maak({
+  var MIX = { bb:['werkwoorden', 'werkwoorden', 'woorden', 'woorden', 'leestekens'],
+              kgt:['werkwoorden', 'werkwoorden', 'woorden', 'woorden', 'leestekens', 'leenwoorden'],
+              hv:['werkwoorden', 'werkwoorden', 'woorden', 'leestekens', 'leenwoorden'] };
+
+  /* ---------- het doorlopende dictee ----------
+     Elke zin is een opgave van vakspel.js; een ronde is een hele tekst (het
+     aantal opgaven is het aantal zinnen). Elk woord telt apart; het eindscherm
+     laat de hele tekst zien met de fouten erin. */
+  var gedaan = [], lopend = null, volgnr = 0;
+  function kiesTekst(niveau){
+    var n = NIV[niveau] || 2, lijst = D.teksten.filter(function(t){ return t.n === n; });
+    var vrij = lijst.filter(function(t){ return gedaan.indexOf(t.id) < 0; });
+    if (!vrij.length){ gedaan = gedaan.filter(function(id){ return !lijst.some(function(t){ return t.id === id; }); }); vrij = lijst; }
+    var t = kies(vrij); gedaan.push(t.id); return t;
+  }
+  function zinVan(z){ return typeof z === 'string' ? z : z.z; }
+  /* wat je al getypt hebt, met de fouten gemarkeerd: zo blijft het een tekst en geen losse zinnen */
+  function tekstTotNu(l, i){
+    /* de titel staat al bovenaan de kaart (onderdeel); bij de eerste zin is er nog niets */
+    return i ? '<div class="dicteetekst klein">' + l.uitslag.slice(0, i).map(function(r){ return r ? r.html : ''; }).join(' ') + '</div>' : '';
+  }
+  function doorlopend(keuze, nr){
+    if (nr === 1 || !lopend || lopend.i >= lopend.tekst.zinnen.length){
+      var tekst = docentTekst(keuze) || kiesTekst(keuze.niveau);
+      lopend = { tekst: tekst, i: 0, uitslag: [], nr: ++volgnr };
+      if (ronde) ronde.teksten.push(lopend);
+    }
+    var l = lopend, t = l.tekst, i = l.i++, z = t.zinnen[i], zin = zinVan(z), laatst = i === t.zinnen.length - 1;
+    var uitleg = typeof z === 'string' ? '' : (z.u || '');
+    if (laatst && t.uitleg) uitleg = (uitleg ? uitleg + ' ' : '') + 'Van je docent: ' + t.uitleg;
+    var o = L.opgave({ onderdeel:'dictee: ' + t.id, onderdeelNaam: t.titel, taal:'nl-NL', sleutel:'dl' + l.nr + '-' + t.id + '-' + i,
+      spreek: zin, antwoord: zin, zin:true, exact:true, woordScore:true, stukken: stukkenVan(zin),
+      vraag:'Zin ' + (i + 1) + ' van ' + t.zinnen.length + ': luister en typ de <b>hele zin</b>.',
+      opdracht: i === 0 ? 'Elk woord telt apart. Hoofdletters, trema’s en de punt of het vraagteken aan het eind tellen mee, komma’s niet.' : '',
+      beeldExtra: tekstTotNu(l, i), uitleg: uitleg ? S(uitleg) : '', antwoordTekst: zin,
+      naKijk: function(res){ l.uitslag[i] = res; registreer(res); woordMeter(); } });
+    o.na = woordMeter;
+    return o;
+  }
+
+  /* ---------- klaargezet door de docent ----------
+     ?tekst=t-bb-01   die tekst, meteen als doorlopend dictee
+     ?week=1          het dictee van deze week, op het gekozen niveau (of ?n=)
+     ?eigen=CODE      een eigen dictee van de docent, via eigen.js van de server */
+  var docent = null, vasteTekst = null, docentFout = '', opdracht = /[?&]van=opdracht(&|#|$)/.test(location.search);
+  (function(){
+    var pt = zoek('tekst'), pw = zoek('week'), pe = zoek('eigen');
+    if (pt){ vasteTekst = D.tekst(pt); if (vasteTekst) docent = { wat:'tekst' }; else docentFout = 'Deze tekst bestaat niet (meer). Je oefent nu het gewone dictee.'; }
+    else if (pw === '1') docent = { wat:'week' };
+    else if (pe) docent = { wat:'eigen', code: pe.toUpperCase().replace(/[^A-Z0-9]/g, '') };
+  })();
+  function docentTekst(keuze){
+    if (!docent) return null;
+    if (docent.wat === 'week') return D.weektekst((keuze && keuze.niveau) || 'kgt');
+    return vasteTekst;
+  }
+  var NIVEAU = { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+    { id:'bb', naam:'vmbo-bb', uit:'Korte zinnen, de basisregels van de werkwoordspelling, namen en plaatsnamen, en veelgebruikte woorden.' },
+    { id:'kgt', naam:'vmbo-kgt en tl', uit:'Ook voltooide deelwoorden als bijvoeglijk naamwoord, komma’s, en leenwoorden uit het Engels en het Frans.' },
+    { id:'hv', naam:'havo en vwo', uit:'Engelse werkwoorden in Nederlandse spelling, trema’s en accenten, aanhalingstekens en lastige hoofdletters.' } ] };
+  var SOORT = { id:'soort', kop:'wat oefen je', std:'alles', items:[
+    { id:'alles', naam:'alles door elkaar' }, { id:'werkwoorden', naam:'werkwoorden' }, { id:'woorden', naam:'lastige woorden' },
+    { id:'leestekens', naam:'hoofdletters en leestekens' },
+    { id:'leenwoorden', naam:'leenwoorden', uit:'Engelse en Franse woorden in Nederlandse spelling. Op vmbo-bb krijg je die van kgt.' },
+    { id:'doorlopend', naam:'doorlopend dictee', uit:'Een korte tekst, zin voor zin voorgelezen. Elk woord telt, en aan het eind zie je de hele tekst met je fouten.' } ] };
+
+  var CFG = {
     id:'dictee', naam:'Dictee', vak:'ned', kleur:'#F26749',
     hand:'luisteren, en dan goed schrijven',
-    lead:'De computer leest een woord of een zin voor, jij typt hem. Werkwoordspelling in een zin, lastige woorden, hoofdletters en leestekens, en Engelse leenwoorden. Elk antwoord wordt meteen nagekeken, en bij een fout zie je letter voor letter waar het misging.',
+    lead: docent ? 'Je docent heeft een dictee voor je klaargezet. De computer leest de tekst zin voor zin voor, jij typt elke zin. Elk woord telt, en aan het eind zie je de hele tekst met je fouten erin.'
+      : 'De computer leest voor, jij schrijft. Werkwoordspelling in een zin, lastige woorden, hoofdletters en leestekens, leenwoorden, of een doorlopend dictee: een korte tekst, zin voor zin. Bij een fout zie je letter voor letter waar het misging, wat voor fout het was en de regel erbij.',
     hoe:[
-      { kop:'Luister goed', tekst:'Je hoort het woord of de zin, hoogstens drie keer, net als bij een dictee in de klas. Zo oefen je echt luisteren in plaats van raden. Typ wat je hoort; bij een zin met een gat alleen het woord.' },
-      { kop:'Nakijken met verschil', tekst:'Fout? Dan staat de goede schrijfwijze ernaast: <b>doorgestreept</b> wat te veel was, groen wat er hoort.' },
-      { kop:'De regel erbij', tekst:'Bij elk woord staat na het antwoord de regel: ’t kofschip, stam + t, de tie-woorden, hoofdletters bij namen.' }
+      { kop:'Luister goed', tekst:'Je hoort het woord of de zin, hoogstens drie keer, net als bij een dictee in de klas. Gaat het te snel, druk dan op <b>Langzaam</b>; dat telt ook als een keer.' },
+      { kop:'Leer van je fout', tekst:'Fout? Dan zie je letter voor letter wat er anders moest: <b>doorgestreept</b> wat te veel was, groen wat er hoort. En je ziet wat voor fout het was, zoals d/t, ei of ij of een hoofdletter, met de regel erbij.' },
+      { kop:'Doorlopend dictee', tekst:'Een korte tekst, zin voor zin. Elk woord telt apart, en aan het eind zie je de hele tekst met je fouten erin, en welke fouten je het vaakst maakte.' }
     ],
-    keuzes:[
-      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
-        { id:'bb', naam:'vmbo-bb', uit:'Korte zinnen, de basisregels van de werkwoordspelling en veelgebruikte woorden.' },
-        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Ook voltooid deelwoorden als bijvoeglijk naamwoord, komma’s en Franse leenwoorden.' },
-        { id:'hv', naam:'havo en vwo', uit:'Lastige woorden, trema’s, aanhalingstekens en Engelse werkwoorden in Nederlandse spelling.' } ] },
-      { id:'soort', kop:'wat oefen je', std:'alles', items:[
-        { id:'alles', naam:'alles door elkaar' }, { id:'werkwoorden', naam:'werkwoorden' }, { id:'woorden', naam:'lastige woorden' }, { id:'leestekens', naam:'hoofdletters en leestekens' }, { id:'leenwoorden', naam:'Engelse leenwoorden' } ] }
-    ],
+    keuzes: !docent ? [NIVEAU, SOORT] : docent.wat === 'week' ? [NIVEAU] : [],
     aantal:10,
     maak:function(keuze, nr){
-      var lijst = keuze.niveau === 'hv' ? ['werkwoorden', 'woorden', 'leestekens', 'leenwoorden'] : ['werkwoorden', 'werkwoorden', 'woorden', 'woorden', 'leestekens'];
-      var soort = keuze.soort === 'alles' ? kies(lijst) : keuze.soort;
-      return SOORTEN[soort](keuze.niveau);
+      var soort = docent ? 'doorlopend' : keuze.soort === 'alles' ? kies(MIX[keuze.niveau] || MIX.kgt) : keuze.soort;
+      if (nr === 1) nieuweRonde(docent ? 'doorlopend' : keuze.soort);
+      if (soort === 'doorlopend'){
+        if (docent && !docentTekst(keuze)) return null;
+        var o = doorlopend(keuze, nr);
+        if (nr === 1) CFG.aantal = lopend.tekst.zinnen.length;
+        return o;
+      }
+      if (nr === 1) CFG.aantal = 10;
+      return SOORTEN[soort] ? SOORTEN[soort](keuze.niveau) : werkwoorden(keuze.niveau);
     },
-    uitleg:{ doel:'Goed schrijven wat je hoort: werkwoorden, lastige woorden, hoofdletters en leestekens.', tijd:'tien woorden of zinnen per ronde', bediening:'Druk op Luister (of hij leest vanzelf voor), typ wat je hoort en druk op Nakijken of Enter. Nog eens luisteren kan twee keer.' },
+    uitleg:{ doel:'Goed schrijven wat je hoort: werkwoorden, lastige woorden, hoofdletters en leestekens, leenwoorden en hele teksten.',
+      tijd:'tien woorden of zinnen per ronde; een doorlopend dictee is een tekst van vier tot zes zinnen',
+      bediening:'Hij leest vanzelf voor. Nog eens luisteren kan met Nog eens of Langzaam, samen drie keer. Typ wat je hoort en druk op Enter om na te kijken; nog een keer Enter gaat naar de volgende.' },
     tutorial:[
-      { titel:'Luister', tekst:'De computer leest het woord of de zin voor. Hoor je het niet goed, dan kun je nog twee keer op Nog eens drukken.', doel:'luisterBtn' },
-      { titel:'Typ wat je hoort', tekst:'Typ het in het vak en druk op Enter of Nakijken. Bij een zin met een gat typ je alleen het woord dat in het gat hoort.', doel:'luisterInvoer' },
-      { titel:'Leer van het verschil', tekst:'Bij een fout zie je precies welke letters anders moesten, en de regel erbij. Lees die even, dan gaat het de volgende keer goed.', doel:'balk' }
+      { titel:'Luister', tekst:'De computer leest het woord of de zin voor. Je kunt drie keer luisteren: met Nog eens, of met Langzaam als het te snel gaat.', doel:'luisterBtn' },
+      { titel:'Typ wat je hoort', tekst:'Typ het in het vak en druk op Enter. Bij een zin met een gat typ je alleen het werkwoord. Nog een keer Enter, en je gaat door.', doel:'luisterInvoer' },
+      { titel:'Leer van je fouten', tekst:'Bij een fout zie je welke letters anders moesten, wat voor fout het was (d/t, ei of ij, een hoofdletter) en de regel erbij. Aan het eind staat welke fouten je het vaakst maakte.', doel:'balk' }
     ]
-  });
+  };
+  VAKSPEL.maak(CFG);
+
+  /* ---------- het startscherm: de stem, en het blok van de docent ---------- */
+  var start = $('scherm-start'), knoppen = start ? start.querySelector('.startknoppen') : null;
+  if (knoppen){
+    var stem = document.createElement('div'); stem.className = 'dicteestem'; stem.id = 'stemVak';
+    knoppen.parentNode.insertBefore(stem, knoppen);
+    L.stemKeuze(stem, 'nl-NL');
+  }
+  function huidigNiveau(){ var b = document.querySelector('#keuze-niveau button.on'); return b ? b.getAttribute('data-id') : (zoek('n') || 'kgt'); }
+  function woordenIn(t){ return t.zinnen.reduce(function(s, z){ return s + zinVan(z).split(' ').length; }, 0); }
+  function toonKlaar(){
+    var blok = $('klaarblok');
+    if (!blok){
+      if (!knoppen) return;
+      blok = document.createElement('div'); blok.className = 'klaarblok'; blok.id = 'klaarblok';
+      blok.setAttribute('aria-live', 'polite');
+      knoppen.parentNode.insertBefore(blok, knoppen);
+    }
+    if (docentFout){ blok.innerHTML = '<p class="klaarfout">' + S(docentFout) + '</p>'; return; }
+    var t = docent.wat === 'week' ? D.weektekst(huidigNiveau()) : vasteTekst;
+    /* van=opdracht: de leerling kwam via de knop van een opdracht van de docent */
+    var kop = docent.wat === 'week' ? (opdracht ? 'Klaargezet door je docent &middot; dictee van week ' : 'Dictee van deze week &middot; week ') + D.isoWeek().week : 'Klaargezet door je docent';
+    if (!t){ blok.innerHTML = '<p class="eyebrow">' + kop + '</p><h2>Even ophalen&hellip;</h2>'; return; }
+    var nv = docent.wat === 'week' ? huidigNiveau() : NIVID[t.n];
+    blok.innerHTML = '<p class="eyebrow">' + kop + '</p><h2>' + S(t.titel) + '</h2><p class="klaarmeta">' +
+      (nv ? NIVNAAM[nv] + ' &middot; ' : '') + t.zinnen.length + ' zinnen &middot; ' + woordenIn(t) + ' woorden</p>';
+  }
+  if (docent || docentFout){
+    toonKlaar();
+    if (docent){
+      var ob = $('oneindigBtn'); if (ob) ob.classList.add('hide');
+      var sb = $('startBtn'); if (sb) sb.textContent = 'Start het dictee';
+      var kn = $('keuze-niveau'); if (kn) kn.addEventListener('click', function(){ setTimeout(toonKlaar, 0); });
+    }
+    if (docent && docent.wat === 'eigen') laadEigen();
+  }
+  function laadEigen(){
+    var sb = $('startBtn'); if (sb) sb.disabled = true;
+    var belofte = window.EIGEN && EIGEN.haal ? EIGEN.haal(docent.code) : Promise.reject(new Error('Het dictee kon niet worden opgehaald.'));
+    belofte.then(function(m){
+      /* het materiaal zelf, of (als de server het ooit inpakt) in m.inhoud */
+      var x = m && m.inhoud && Array.isArray(m.inhoud.zinnen) ? m.inhoud : m;
+      if (!x || (x.soort && x.soort !== 'dictee') || !Array.isArray(x.zinnen)) throw new Error('Deze code hoort niet bij een dictee.');
+      var zinnen = x.zinnen.map(function(z){ return String(typeof z === 'string' ? z : (z && z.z) || '').replace(/\s+/g, ' ').trim(); }).filter(Boolean).slice(0, 40);
+      if (!zinnen.length) throw new Error('In dit dictee staan nog geen zinnen.');
+      vasteTekst = { id:'eigen-' + docent.code, titel: String(x.naam || (m && m.naam) || 'Dictee').slice(0, 80), n: NIV[x.niveau] || 0,
+        zinnen: zinnen, uitleg: x.uitleg ? String(x.uitleg).slice(0, 600) : '' };
+      toonKlaar();
+      if (sb) sb.disabled = false;
+    }).catch(function(f){
+      docentFout = (f && f.status === 404) ? 'Deze code bestaat niet (meer). Vraag je docent om de goede link.' : ((f && f.message) || 'Het dictee kon niet worden opgehaald.');
+      toonKlaar();
+      var blok = $('klaarblok'); if (blok) blok.insertAdjacentHTML('beforeend', '<p class="klaarmeta"><a href="dictee.html">Naar het gewone dictee</a></p>');
+      if (sb) sb.classList.add('hide');
+    });
+  }
+
+  /* ---------- het eindscherm ----------
+     vakspel.js tekent het eindscherm; daarna zet deze pagina er bij: welke
+     soorten fouten het vaakst voorkwamen (met een knop om dat onderdeel te
+     oefenen), en bij het doorlopende dictee de hele tekst met de fouten erin. */
+  function oefenKnop(deel){
+    if (!deel) return '';
+    var rij = $('keuze-soort');
+    if (!docent && (!rij || rij.classList.contains('hide'))) return '';   /* het onderdeel is gekozen door de docent */
+    if (!docent && ronde && ronde.soort === deel) return '';                /* dat oefen je al: Nog een ronde staat erboven */
+    return '<button type="button" class="btn tweede" id="oefenSoortBtn" data-deel="' + deel + '">Oefen ' + S(DEELNAAM[deel]) + '</button>';
+  }
+  function naEinde(){
+    var sc = $('scherm-einde');
+    if (!sc || sc.classList.contains('hide') || !ronde) return;
+    var oud = document.querySelectorAll('.dicteeuitslag'); Array.prototype.forEach.call(oud, function(x){ x.parentNode.removeChild(x); });
+    /* welke fouten het vaakst */
+    var soorten = Object.keys(ronde.typen).sort(function(a, b){ return ronde.typen[b] - ronde.typen[a]; });
+    var zw = $('zwakst');
+    if (soorten.length && zw){
+      var deel = soorten.map(function(s){ return L.SOORTEN[s] && L.SOORTEN[s].deel; }).filter(Boolean)[0] || '';
+      zw.innerHTML = '<p>Je fouten waren vooral: <b>' + soorten.slice(0, 3).map(function(s){ return S(L.SOORTEN[s].naam) + ' (' + ronde.typen[s] + '&times;)'; }).join(', ') + '</b>.' +
+        (L.SOORTEN[soorten[0]] ? ' ' + L.SOORTEN[soorten[0]].regel : '') + '</p>' + oefenKnop(deel);
+      zw.classList.remove('hide');
+      var ok = $('oefenSoortBtn');
+      if (ok) ok.addEventListener('click', function(){
+        var d = ok.getAttribute('data-deel');
+        if (docent){
+          /* weg uit het klaargezette dictee: het gewone dictee, met dit onderdeel gekozen */
+          try { var k = JSON.parse(localStorage.getItem('lg-keuze-dictee') || '{}') || {}; k.soort = d; localStorage.setItem('lg-keuze-dictee', JSON.stringify(k)); } catch (e){}
+          location.href = 'dictee.html';
+          return;
+        }
+        var b = document.querySelector('#keuze-soort button[data-id="' + d + '"]'); if (b) b.click();
+        $('nogBtn').click();
+      });
+    }
+    if (ronde.soort !== 'doorlopend') return;
+    /* het doorlopende dictee: de hele tekst met de fouten erin */
+    var teksten = ronde.teksten.filter(function(t){ return t.uitslag.some(Boolean); });
+    if (!teksten.length) return;
+    var een = teksten.length === 1, zinnenGoed = 0, zinnen = 0;
+    teksten.forEach(function(t){ t.uitslag.forEach(function(r){ if (r){ zinnen++; if (r.ok) zinnenGoed++; } }); });
+    var html = teksten.map(function(t){
+      var w = telWoorden([t]);
+      return '<div class="dicteeuitslag"><p class="eyebrow">de hele tekst</p><h2>' + S(t.tekst.titel) + '</h2>' +
+        (een ? '' : '<p class="dt-score"><b>' + w.goed + ' van de ' + w.van + '</b> woorden goed</p>') +
+        '<div class="dicteetekst">' + t.uitslag.map(function(r, i){ return r ? r.html : '<span class="erbij">' + S(zinVan(t.tekst.zinnen[i])) + '</span>'; }).join(' ') + '</div>' +
+        '<p class="dt-leg">onderstreept: een woord met een fout; doorgestreept: te veel of anders; groen: zo hoort het</p>' +
+        (t.tekst.uitleg ? '<p class="dt-uitleg"><b>Van je docent:</b> ' + S(t.tekst.uitleg) + '</p>' : '') + '</div>';
+    }).join('');
+    $('eindUit').insertAdjacentHTML('afterend', html);
+    $('eindKop').textContent = zinnenGoed + ' van de ' + zinnen + ' zinnen zonder fouten.';
+    /* de zin van vakspel.js wijst naar de missers; die staan hier in de tekst zelf */
+    var alle = telWoorden(teksten), deelGoed = alle.van ? alle.goed / alle.van : 0, nvKnop = document.querySelector('#keuze-niveau button.on');
+    $('eindBand').textContent = (nvKnop ? nvKnop.textContent + '. ' : '') + (deelGoed === 1 ? 'Foutloos! Probeer een moeilijker niveau.'
+      : deelGoed >= .9 ? 'Bijna foutloos. Kijk nog even naar de gemarkeerde woorden hieronder.'
+      : deelGoed >= .7 ? 'Een flink deel zit er al. Kijk bij elk gemarkeerd woord welke regel erbij hoort.'
+      : 'Lees de tekst hieronder rustig door en kijk bij elke fout welke regel erbij hoort. Oefen daarna het onderdeel waar de meeste fouten in zaten.');
+    /* per onderdeel en de missers zeggen hier hetzelfde als de tekst hierboven */
+    var pd = $('perdeel'); if (pd){ pd.classList.add('hide'); if (pd.previousElementSibling) pd.previousElementSibling.classList.add('hide'); }
+    var mi = $('missers'); if (mi) mi.classList.add('hide');
+  }
+  function nieuwBegin(){
+    /* bij een nieuwe ronde staan per onderdeel en de missers er weer gewoon */
+    var pd = $('perdeel'); if (pd){ pd.classList.remove('hide'); if (pd.previousElementSibling) pd.previousElementSibling.classList.remove('hide'); }
+    var mi = $('missers'); if (mi) mi.classList.remove('hide');
+  }
+  var se = $('scherm-einde');
+  if (se && window.MutationObserver) new MutationObserver(function(){ if (se.classList.contains('hide')) nieuwBegin(); else naEinde(); }).observe(se, { attributes:true, attributeFilter:['class'] });
+
+  /* De uitslag van het doorlopende dictee gaat in woorden: de score op de
+     eindkaart, de sterren, het beste op dit apparaat (per tekst) en wat de klas
+     ziet (od per tekst = [woorden goed, woorden]). vakspel.js telt per opgave,
+     dus per zin; hier wordt dat omgezet voordat spel.js het krijgt. */
+  function eindInWoorden(){
+    if (!window.SPEL || !SPEL.einde || SPEL.einde.dictee) return;
+    var eigenlijk = SPEL.einde;
+    SPEL.einde = function(o){
+      klasExtra = null;
+      if (o && o.spel === 'dictee' && ronde && ronde.soort === 'doorlopend' && ronde.teksten.some(function(t){ return t.uitslag.some(Boolean); })){
+        var w = telWoorden(ronde.teksten), od = Object.assign({}, o.od || {}), per = {};
+        ronde.teksten.forEach(function(t){ var x = telWoorden([t]); if (!x.van) return; var k = 'dictee: ' + t.tekst.id; per[k] = per[k] || [0, 0]; per[k][0] += x.goed; per[k][1] += x.van; });
+        Object.keys(per).forEach(function(k){ od[k] = per[k]; });
+        var een = ronde.teksten.length === 1 ? ronde.teksten[0].tekst : null, r = w.van ? w.goed / w.van : 0, oneindig = o.waarde === undefined;
+        o = Object.assign({}, o, { od: od, ronde: w.goed, punten: w.goed, goed: Math.round(10 * r),
+          score: oneindig ? w.goed + '/' + w.van : w.goed, label: 'woorden goed', waarde: oneindig ? undefined : w.goed, max: w.van,
+          sterren: r >= .9 ? 3 : r >= .7 ? 2 : r >= .4 ? 1 : 0,
+          deelTekst: w.goed + ' van de ' + w.van + ' woorden goed' + (een ? ' in het dictee ' + een.titel : ''),
+          sleutel: een ? een.id : o.sleutel, niveau: o.niveau || (een && NIVID[een.n]) || '' });
+        /* voor de klas: welke tekst, welke week, en de woorden die fout gingen (goed gespeld) */
+        var fout = [];
+        ronde.teksten.forEach(function(t){ t.uitslag.forEach(function(r){ (r && r.paren || []).forEach(function(p){
+          if (p.ok || !p.g) return;
+          p.g.split(' ').forEach(function(x){ x = x.replace(/^["'‘“(]+|["'’”),.?!;:]+$/g, ''); if (x && fout.indexOf(x) < 0 && fout.length < 40) fout.push(x); });
+        }); }); });
+        var wk = D.isoWeek();
+        klasExtra = { goed: w.goed, woorden: w.van, fout: fout };
+        if (een) klasExtra.tekst = een.id;
+        if (docent && docent.wat === 'week') klasExtra.week = wk.jaar + '-W' + (wk.week < 10 ? '0' : '') + wk.week;
+      }
+      return eigenlijk.call(this, o);
+    };
+    SPEL.einde.dictee = true;
+    /* spel.js geeft KLAS.meld alleen de vaste velden; de velden van het dictee komen er hier bij (server/kamer.js: tekst, week, fout, goed, woorden) */
+    if (window.KLAS && KLAS.meld && !KLAS.meld.dictee){
+      var meld = KLAS.meld;
+      KLAS.meld = function(g, naId){
+        if (g && g.spel === 'dictee' && klasExtra){ g = Object.assign({}, g, klasExtra); klasExtra = null; }
+        return meld.call(this, g, naId);
+      };
+      KLAS.meld.dictee = true;
+    }
+  }
+  var klasExtra = null;
+  if (document.readyState === 'complete') eindInWoorden(); else addEventListener('load', eindInWoorden);
 })();
 </script>
 <script src="thema.js"></script>

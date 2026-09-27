@@ -7,6 +7,7 @@
 <script src="avatar.js"></script>
 <script src="profiel.js"></script>
 <script src="voorbeeldtoetsen.js"></script>
+<script src="eigen.js"></script>
 <link rel="apple-touch-icon" href="/icoon-192.png">
 <script>
 (function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();
@@ -425,6 +426,8 @@ td.getal{font-variant-numeric:tabular-nums;text-align:right}
 /* zestien pixels op een telefoon: Safari zoomt anders in bij het aantikken */
 @media(max-width:640px){.opdrachtvorm .veld{font-size:16px}}
 .minlabel{display:inline-flex;align-items:center;gap:6px;font-size:.92rem;white-space:nowrap}
+/* op een smalle telefoon mag het klasdoel (samen ... goede antwoorden per week) over twee regels */
+@media(max-width:480px){.opdrachtvorm .minlabel{white-space:normal;flex-wrap:wrap}}
 .opdrachtstand{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:8px}
 .opdrachtstuk{padding:12px 0;border-bottom:1px solid var(--rand)}
 .opdrachtstuk:first-child{padding-top:4px}
@@ -436,6 +439,17 @@ td.getal{font-variant-numeric:tabular-nums;text-align:right}
 .gehaald span.ja{background:#d7f1df;border-color:#b9e3c7;color:#14224C}
 .gehaald span.ja i{font-style:normal;font-weight:700;color:#1f6b41}
 .gehaald span.nee i{font-style:normal;color:var(--muted)}
+/* het dictee als opdracht: waar de tekst vandaan komt, het niveau, en welke tekst het is */
+.dicteevorm{flex:1 1 100%;display:grid;gap:10px;background:var(--kaart);border:1px solid var(--rand);border-radius:14px;padding:12px 14px;min-width:0}
+.dicteevorm .chips button[aria-pressed="true"]{background:var(--ocean);color:#fff;border-color:var(--ocean)}
+.dicteevorm .rij{align-items:center}
+.dicteevorm select.veld{flex:1 1 220px;max-width:100%}
+.dicteevorm .weektekst{color:var(--ink);font-size:.92rem}
+.dicteevorm .vink{display:flex;gap:10px;align-items:flex-start;min-height:44px;font-size:.92rem;cursor:pointer;padding-top:10px}
+.dicteevorm .vink input{width:20px;height:20px;accent-color:var(--ocean);flex:none;margin:2px 0 0}
+.dicteevorm a.werkbladlink,.opdrachtstand a.werkbladlink{display:inline-flex;align-items:center;min-height:44px;font-size:.9rem;font-weight:600;color:var(--link)}
+.dicteefout{margin-top:8px}
+.dicteefout b{color:var(--ink);font-weight:600}
 .samen div{background:var(--kaart2);border-radius:14px;padding:12px 14px}
 .samen b{display:block;font-size:1.05rem}
 .samen .regel{display:grid;grid-template-columns:minmax(0,1fr) 104px;gap:1px 10px;margin-top:9px;font-size:.86rem;align-items:center}
@@ -682,10 +696,31 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     <div class="paneel" role="tabpanel" id="paneel-inst" aria-labelledby="tab-inst" hidden>
       <div class="stap opdrachtvak" id="opdrachtVak">
         <b>Opdrachten voor de klas</b>
-        <p class="tip">Tot vijf opdrachten tegelijk, bijvoorbeeld: Vragenrace, geschiedenis, tijd van ontdekkers, minstens 15 goed, vóór vrijdag. Leerlingen zien ze bovenaan in de leeromgeving met een knop naar het spel; hier zie je per opdracht wie hem gehaald heeft.</p>
+        <p class="tip">Tot vijf opdrachten tegelijk, bijvoorbeeld: Vragenrace, geschiedenis, tijd van ontdekkers, minstens 15 goed, vóór vrijdag. Of een dictee: de tekst van de week, elke maandag vanzelf een nieuwe. Leerlingen zien ze bovenaan in de leeromgeving met een knop naar het spel; hier zie je per opdracht wie hem gehaald heeft.</p>
         <div id="opdrachtStand"></div>
         <div class="rij opdrachtvorm" id="opdrachtVorm">
-          <select id="opSpel" class="veld" aria-label="Spel"><option value="race">Vragenrace</option><option value="toren">Torenverdediging</option><option value="zwaard">Zwaardvechter</option></select>
+          <select id="opSpel" class="veld" aria-label="Spel"><option value="race">Vragenrace</option><option value="toren">Torenverdediging</option><option value="zwaard">Zwaardvechter</option><option value="dictee">Dictee</option></select>
+          <div class="dicteevorm hide" id="opDictee">
+            <div class="chips" id="opDBron" role="group" aria-label="Welk dictee">
+              <button type="button" data-bron="week" aria-pressed="true">Dictee van deze week</button>
+              <button type="button" data-bron="tekst" aria-pressed="false">Tekst uit de lijst</button>
+              <button type="button" data-bron="eigen" aria-pressed="false">Eigen dictee</button>
+            </div>
+            <div class="rij"><label class="minlabel" for="opDNiveau">niveau</label><select id="opDNiveau" class="veld"><option value="bb">vmbo-bb</option><option value="kgt" selected>vmbo-kgt en tl</option><option value="hv">havo en vwo</option></select></div>
+            <div id="opDWeek">
+              <p class="weektekst" id="opDWeekTekst" aria-live="polite"></p>
+              <label class="vink"><input type="checkbox" id="opDAuto"> <span><b>Elke week automatisch</b>: elke maandag staat de nieuwe tekst van de week klaar, tot zondag 23:59. Je zet hem een keer aan.</span></label>
+            </div>
+            <div id="opDTekst" class="hide">
+              <select id="opDTekstKeus" class="veld" aria-label="Tekst uit de lijst"></select>
+              <div id="opDTekstVrij" class="hide">
+                <input id="opDTekstId" class="veld" maxlength="32" placeholder="bijv. t-bb-01" aria-label="Code van de tekst" autocomplete="off" spellcheck="false">
+                <p class="tip" style="margin-top:6px">De lijst met teksten is hier nog niet te zien. Vul de code van een tekst in; je vindt hem in het dictee zelf.</p>
+              </div>
+            </div>
+            <div id="opDEigen" class="hide"></div>
+            <a class="werkbladlink hide" id="opDWerkblad" href="dictee-werkblad.html">Werkblad om voor te lezen</a>
+          </div>
           <select id="opVak" class="veld" aria-label="Vak"></select>
           <select id="opDeel" class="veld" aria-label="Onderdeel"><option value="">alle onderdelen</option></select>
           <label class="minlabel">minstens <input id="opMin" class="veld" type="number" min="1" max="250" value="15" style="width:74px"> <span id="opMaat">goed</span></label>
@@ -950,6 +985,17 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
                    od: Object.keys(od).length ? od : undefined, t:t });
       }
     });
+    /* het dictee van de week: de meeste leerlingen deden het al, met de woorden die fout gingen */
+    var wkNu = isoWeek(nu), wkVorig = isoWeek(nu - 7 * DAG), DFOUT = ['vindt', 'wordt', 'gebeurd', 'fietste', 'antwoordt', 'verhuisde', 'bijzonder', 'eigenlijk'];
+    namen.forEach(function(n, i){
+      var av = 'v' + (i % 8) + 'k' + (i % 9) + 'o' + (i % 5) + 'm' + (i % 4) + 'e' + (i % 6);
+      [wkVorig, wkNu].forEach(function(w, k){
+        if (k === 1 && i % 4 === 3) return;
+        var gw = 12 + ((i * 3 + k * 5) % 9), fw = DFOUT.filter(function(x, j){ return (i + j + k) % 3 === 0 || j === 0; }).slice(0, 20 - gw);
+        uit.push({ naam:n, av:av, spel:'dictee', ronde:gw, punten:gw * 10, niveau:'bb', vak:'ned', dt:'t-bb-0' + (k + 1), wk:w.sleutel, gw:gw, tw:20, fw:fw,
+                   t: k ? Math.max(weekBeginLokaal(nu) + 60000, nu - (i + 1) * 3600000) : nu - 7 * DAG });
+      });
+    });
     var wie = {};
     uit.forEach(function(x){ wie[x.naam] = x.av || ''; });
     /* ms is de naam van het Microsoft-account; de helft van de demoklas speelt als gast */
@@ -973,7 +1019,8 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
              echt: { Noor:'Noor Bakker', Sem:'Sem de Jong', Fenna:'Fenna Visser' },
              klasdoel: { doel:400, stand: uit.filter(function(x){ return x.t >= weekBeginLokaal(nu); }).reduce(function(a, x){ var n = 0; if (x.od) Object.keys(x.od).forEach(function(k){ n += x.od[k][0]; }); return a + (n || Math.min(x.ronde, 250)); }, 0) },
              opdrachten: [{ id:'d1', spel:'race', vak:'ges', deel:'tv5', deelNaam:'5 ontdekkers en hervormers', min:4, tot: nu + 4 * DAG, tekst:'Voor de toets van vrijdag', sinds: nu - 5 * DAG },
-                          { id:'d2', spel:'toren', vak:'aard', deel:'', deelNaam:'', min:6, tot: nu + 6 * DAG, tekst:'', sinds: nu - 3 * DAG }] };
+                          { id:'d2', spel:'toren', vak:'aard', deel:'', deelNaam:'', min:6, tot: nu + 6 * DAG, tekst:'', sinds: nu - 3 * DAG },
+                          { id:'d3', spel:'dictee', vak:'ned', deel:'', deelNaam:'', min:1, bron:'week', niveau:'bb', auto:true, week:wkNu.sleutel, weekNr:wkNu.nr, sinds: weekBeginLokaal(nu), tot: zondag(nu).getTime(), titel:'', tekst:'' }] };
   }
   var klassen = [], huidig = null, spelFilter = '', vakFilter = '', data = null, klok = null;
   /* periodeKeuze: 'alles', 'week', 'maand' of het kenmerk van een eigen periode.
@@ -1503,6 +1550,13 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       regels: niet.length ? [niet.map(wieTekst).join(', ')] : [klas.length ? 'Alle ' + klas.length + ' leerlingen speelden deze week minstens een potje.' : 'Zodra leerlingen de code invullen, staan ze hier.'] });
     /* 2. elke opdracht: hoeveel gehaald, wie nog niet */
     opdrachtenVan(data).forEach(function(o){
+      if (o.spel === 'dictee'){
+        var per = dicteePer(o, alle), dja = klas.filter(function(n){ return per[n]; }), dnee = klas.filter(function(n){ return !per[n]; });
+        stukken.push({ kop: 'Opdracht: ' + dicteeKop(o),
+          regels: [dja.length + ' van de ' + klas.length + ' gedaan, ' + (o.tot < nu ? 'verlopen op ' : 'tot ') + new Date(o.tot).toLocaleDateString('nl-NL', { weekday:'long', day:'numeric', month:'long' }) + '.']
+            .concat(dnee.length && dja.length ? ['Nog niet: ' + dnee.map(wieTekst).join(', ') + '.'] : []) });
+        return;
+      }
       var beste = {}; alle.forEach(function(r){ beste[r.naam] = Math.max(beste[r.naam] || 0, haaltOp(r, o)); });
       var ja = klas.filter(function(n){ return (beste[n] || 0) >= o.min; }), nee = klas.filter(function(n){ return (beste[n] || 0) < o.min; });
       var verlopen = o.tot < nu;
@@ -1915,7 +1969,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
   $('nuLesVink').addEventListener('change', function(){ zetLesmodus($('nuLesVink').checked); });
 
   /* ---------- de opdracht ---------- */
-  var OP_SPEL = { race:'Vragenrace', toren:'Torenverdediging', zwaard:'Zwaardvechter' };
+  var OP_SPEL = { race:'Vragenrace', toren:'Torenverdediging', zwaard:'Zwaardvechter', dictee:'Dictee' };
   function opMaat(spel, deel){ return deel ? 'goed in dat onderdeel' : spel === 'race' ? 'goed' : 'rondes'; }
   function opVul(){
     var spel = $('opSpel').value, vakken = Object.keys(VAKKEN).filter(function(){ return true; });
@@ -1924,6 +1978,221 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     var vak = $('opVak').value, lijst = (window.ONDERDELEN && ONDERDELEN[vak]) || [], deelNu = $('opDeel').value;
     $('opDeel').innerHTML = '<option value="">alle onderdelen</option>' + lijst.map(function(o){ return '<option value="' + schoon(o.id) + '"' + (o.id === deelNu ? ' selected' : '') + '>' + schoon(o.naam) + '</option>'; }).join('');
     $('opMaat').textContent = opMaat(spel, $('opDeel').value);
+    dVorm();
+  }
+
+  /* ---------- het dictee als opdracht ----------
+     Drie bronnen: de tekst van deze week (per niveau, uit de tekstbank van het
+     dictee), een vaste tekst uit die bank, of een eigen dictee (een code uit
+     Eigen materiaal). Elke week automatisch: de server geeft de opdracht elke
+     maandag de week van dat moment, dus de docent zet hem een keer aan en de
+     uitslagen blijven per week bewaard. */
+  var DNIV = { bb:'vmbo-bb', kgt:'vmbo-kgt en tl', hv:'havo en vwo' };
+  var dBron = 'week', dEigen = null, dKiezer = null, dBankBezig = false;
+  /* de week zoals op de kalender: week 1 heeft de eerste donderdag van het jaar */
+  function isoWeek(t){
+    var d = new Date(t), u = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()), wd = (new Date(u).getUTCDay() + 6) % 7;
+    var don = new Date(u + (3 - wd) * DAG), jaar = don.getUTCFullYear(), nr = 1 + Math.floor((don.getTime() - Date.UTC(jaar, 0, 1)) / (7 * DAG));
+    return { jaar: jaar, nr: nr, sleutel: jaar + '-W' + (nr < 10 ? '0' : '') + nr };
+  }
+  /* zondag 23:59 van deze week */
+  function zondag(t){ var d = new Date(t); d.setHours(23, 59, 0, 0); d.setDate(d.getDate() + (7 - d.getDay()) % 7); return d; }
+  function datumVeld(d){ return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  /* De tekstbank van dictee.html (dictee-opgaven.js), zo ruim mogelijk gelezen:
+     een lijst teksten, of per niveau een lijst, met een id en een titel. */
+  function dNiv(x){ var n = x && (x.niveau !== undefined ? x.niveau : x.n); return n === 1 || n === 'bb' ? 'bb' : n === 2 || n === 'kgt' ? 'kgt' : n === 3 || n === 'hv' || n === 'havo' || n === 'vwo' ? 'hv' : ''; }
+  function dTeksten(){
+    var D = window.DICTEE_OPGAVEN, t = D && (D.teksten || D.tekstbank || D.dictees), uit = [];
+    if (Array.isArray(t)) uit = t.slice();
+    else if (t && typeof t === 'object') Object.keys(t).forEach(function(k){
+      var v = t[k];
+      if (Array.isArray(v)) v.forEach(function(x){ if (x && typeof x === 'object') uit.push(Object.assign({ niveau: k }, x)); });
+      else if (v && typeof v === 'object') uit.push(Object.assign({ id: k }, v));
+    });
+    return uit.filter(function(x){ return x && x.id; }).map(function(x){ return { id: String(x.id), titel: String(x.titel || x.naam || x.id), niveau: dNiv(x) }; });
+  }
+  function dWeekTekst(niv, t){
+    var D = window.DICTEE_OPGAVEN;
+    if (!D || typeof D.weektekst !== 'function') return null;
+    try {
+      var x = D.weektekst(niv, new Date(t || Date.now()));
+      if (typeof x === 'string') return dTeksten().filter(function(y){ return y.id === x; })[0] || { id: x, titel: x };
+      return x && x.id ? { id: String(x.id), titel: String(x.titel || x.naam || x.id) } : null;
+    } catch (e){ return null; }
+  }
+  function dTitelVan(id){ var x = dTeksten().filter(function(y){ return y.id === id; })[0]; return x ? x.titel : ''; }
+  /* de tekstbank komt pas binnen als er een dictee in beeld is */
+  function dLaadBank(klaar){
+    if (window.DICTEE_OPGAVEN || dBankBezig){ klaar(); return; }
+    dBankBezig = true;
+    var s = document.createElement('script'); s.src = 'dictee-opgaven.js';
+    s.onload = s.onerror = function(){ klaar(); };
+    document.head.appendChild(s);
+  }
+  /* waar de leerling het dictee opent, of het werkblad om voor te lezen */
+  function dAdres(o, pagina){
+    var p = (pagina || 'dictee') + '.html?';
+    if (o.bron === 'week') return p + 'week=1&n=' + encodeURIComponent(o.niveau || 'kgt');
+    if (o.bron === 'eigen') return p + 'eigen=' + encodeURIComponent(o.code || String(o.dt || '').replace(/^eigen-/, ''));
+    return p + 'tekst=' + encodeURIComponent(o.dt || '');
+  }
+  /* de opdracht zoals hij uit het formulier komt, of { fout } */
+  function dOpdracht(){
+    var niv = $('opDNiveau').value, o = { spel:'dictee', bron:dBron, niveau:niv, tekst:$('opTekst').value.trim() };
+    if (dBron === 'week'){
+      o.auto = $('opDAuto').checked;
+      var wt = dWeekTekst(niv); o.titel = o.auto || !wt ? '' : wt.titel;
+    } else if (dBron === 'tekst'){
+      var lijst = dTeksten().length, id = lijst ? $('opDTekstKeus').value : $('opDTekstId').value.trim().toLowerCase();
+      if (!/^[a-z0-9][a-z0-9-]{1,30}$/.test(id || '') || /^eigen-/.test(id)) return { fout: lijst ? 'Kies een tekst uit de lijst.' : 'Vul de code van een tekst in, bijvoorbeeld t-bb-01.' };
+      o.dt = id; o.titel = dTitelVan(id);
+    } else {
+      var inv = $('opDEigen').querySelector('input');
+      /* wat er in het vakje getypt staat gaat voor; anders het gekozen dictee */
+      var getypt = String(inv ? inv.value : '').toUpperCase().replace(/[^A-Z0-9]/g, ''), code = getypt || (dKiezer && dKiezer.code()) || '';
+      if (!/^[A-Z0-9]{6}$/.test(code)) return { fout: 'Kies een eigen dictee, of vul de code van zes tekens in.' };
+      o.code = code; o.titel = dEigen && dEigen.code === code ? dEigen.naam : '';
+    }
+    return o;
+  }
+  function dTekstLijst(){
+    var l = dTeksten(), sel = $('opDTekstKeus'), nu = sel.value;
+    $('opDTekstVrij').classList.toggle('hide', !!l.length);
+    sel.classList.toggle('hide', !l.length);
+    if (!l.length) return;
+    var niv = $('opDNiveau').value, volg = [niv].concat(['bb', 'kgt', 'hv', ''].filter(function(x){ return x !== niv; }));
+    var html = volg.map(function(n){
+      var g = l.filter(function(x){ return x.niveau === n; });
+      return g.length ? '<optgroup label="' + schoon(DNIV[n] || 'zonder niveau') + '">' + g.map(function(x){ return '<option value="' + schoon(x.id) + '">' + schoon(x.titel) + '</option>'; }).join('') + '</optgroup>' : '';
+    }).join('');
+    if (sel._html !== html){ sel.innerHTML = html; sel._html = html; if (nu) sel.value = nu; }
+  }
+  /* het formulier bijwerken: welke bron, welke tekst deze week, en de link naar het werkblad */
+  function dVorm(){
+    var dictee = $('opSpel').value === 'dictee';
+    $('opDictee').classList.toggle('hide', !dictee);
+    [$('opVak'), $('opDeel'), $('opMin').closest('label')].forEach(function(el){ el.classList.toggle('hide', dictee); });
+    var auto = dictee && dBron === 'week' && $('opDAuto').checked;
+    $('opTot').closest('label').classList.toggle('hide', auto);
+    if (!dictee) return;
+    [].forEach.call($('opDBron').querySelectorAll('[data-bron]'), function(b){ var aan = b.getAttribute('data-bron') === dBron; b.classList.toggle('on', aan); b.setAttribute('aria-pressed', aan ? 'true' : 'false'); });
+    $('opDWeek').classList.toggle('hide', dBron !== 'week');
+    $('opDTekst').classList.toggle('hide', dBron !== 'tekst');
+    $('opDEigen').classList.toggle('hide', dBron !== 'eigen');
+    if (dBron === 'week'){
+      var niv = $('opDNiveau').value, wt = dWeekTekst(niv), w = isoWeek(Date.now());
+      $('opDWeekTekst').innerHTML = 'Deze week (week ' + w.nr + '), ' + schoon(DNIV[niv]) + ': ' + (wt ? '<b>' + schoon(wt.titel) + '</b>.' : 'de tekst die het dictee voor deze week kiest.') +
+        (auto ? ' Volgende week staat er vanzelf de nieuwe tekst.' : ' Leerlingen hebben tot de datum die je hieronder kiest.');
+    }
+    if (dBron === 'tekst') dTekstLijst();
+    var o = dOpdracht(), wb = $('opDWerkblad');
+    if (!o.fout){ wb.href = dAdres(o, 'dictee-werkblad'); wb.classList.remove('hide'); } else wb.classList.add('hide');
+  }
+  function dEigenKiezer(code){
+    if (!window.EIGEN) return;
+    if (!dKiezer) dKiezer = EIGEN.kiezer($('opDEigen'), { soort:'dictee', code: code,
+      gekozen: function(m, c){ dEigen = { code: c, naam: m.naam, niveau: m.niveau }; if (DNIV[m.niveau]) $('opDNiveau').value = m.niveau; dVorm(); },
+      leeg: function(){ dEigen = null; dVorm(); } });
+    else if (code) dKiezer.laad(code);
+  }
+  function dInit(){
+    if (dInit.klaar) return;
+    dInit.klaar = true;
+    $('opDBron').addEventListener('click', function(e){
+      var b = e.target.closest('[data-bron]'); if (!b) return;
+      dBron = b.getAttribute('data-bron');
+      if (dBron === 'eigen') dEigenKiezer();
+      dVorm();
+    });
+    $('opDNiveau').addEventListener('change', function(){
+      dVorm();
+      /* een tekst uit de lijst: de eerste van het gekozen niveau */
+      var eerste = dTeksten().filter(function(x){ return x.niveau === $('opDNiveau').value; })[0];
+      if (dBron === 'tekst' && eerste){ $('opDTekstKeus').value = eerste.id; dVorm(); }
+    });
+    ['opDAuto', 'opDTekstKeus'].forEach(function(id){ $(id).addEventListener('change', dVorm); });
+    $('opDTekstId').addEventListener('input', dVorm);
+    $('opDEigen').addEventListener('input', dVorm);
+    dLaadBank(dVorm);
+  }
+  $('opSpel').addEventListener('change', function(){
+    if ($('opSpel').value !== 'dictee') return;
+    dInit();
+    /* een dictee loopt standaard tot en met zondag */
+    $('opTot').value = datumVeld(zondag(Date.now()));
+    dVorm();
+  });
+
+  /* ---------- het dictee in de lijst van opdrachten ---------- */
+  /* dezelfde regel als de server: dezelfde tekst, of bij de tekst van de week dezelfde week */
+  function dicteePast(r, o){
+    if (r.spel !== 'dictee') return false;
+    if (o.bron === 'week'){
+      if (o.niveau && DNIV[r.niveau] && r.niveau !== o.niveau) return false;
+      if (r.wk) return !!o.week && r.wk === o.week;
+      /* zonder week in de melding: een tekst uit de bank van dit niveau, in deze week */
+      return !!r.dt && r.dt.indexOf('t-' + (o.niveau ? o.niveau + '-' : '')) === 0 && r.t >= o.sinds && r.t < o.sinds + 7 * DAG + 3600000;
+    }
+    return !!r.dt && r.dt === o.dt && r.t >= o.sinds;
+  }
+  function dicteeScore(r){
+    if (r.tw) return [r.gw | 0, r.tw];
+    var eigen = r.dt && r.od && r.od['dictee: ' + r.dt];
+    if (eigen && eigen[1] > 0) return [eigen[0] | 0, eigen[1]];
+    var g = 0, n = 0;
+    if (r.od) Object.keys(r.od).forEach(function(k){ var w = r.od[k]; if (w && w.length){ g += w[0] | 0; n += w[1] | 0; } });
+    return n ? [g, n] : null;
+  }
+  function pctVan(s){ return s ? Math.round(100 * s[0] / s[1]) : 0; }
+  /* per leerling: de beste score, en de woorden die de eerste keer fout gingen */
+  function dicteePer(o, alle){
+    var per = {};
+    (alle || []).filter(function(r){ return dicteePast(r, o); }).sort(function(a, b){ return a.t - b.t; }).forEach(function(r){
+      var s = dicteeScore(r), x = per[r.naam];
+      if (!x){ per[r.naam] = { s: s, fw: r.fw || [] }; return; }
+      if (s && (!x.s || s[0] / s[1] > x.s[0] / x.s[1])) x.s = s;
+    });
+    return per;
+  }
+  function dicteeKop(o){
+    var niv = DNIV[o.niveau] ? ', ' + DNIV[o.niveau] : '';
+    if (o.bron === 'week'){
+      var wt = dWeekTekst(o.niveau, o.sinds), titel = o.titel || (wt ? wt.titel : '');
+      return 'Dictee van week ' + (o.weekNr || isoWeek(o.sinds).nr) + niv + (titel ? ': ' + titel : '');
+    }
+    return 'Dictee' + niv + ': ' + (o.titel || (o.bron === 'eigen' ? 'eigen dictee ' + (o.code || '') : dTitelVan(o.dt) || o.dt));
+  }
+  /* bij elke week automatisch: hoe de weken hiervoor gingen */
+  function dicteeWeken(o){
+    var weken = {};
+    (data.resultaten || []).forEach(function(r){
+      if (r.spel !== 'dictee' || !r.wk || r.wk === o.week || (o.niveau && DNIV[r.niveau] && r.niveau !== o.niveau)) return;
+      var w = weken[r.wk] = weken[r.wk] || {}, s = dicteeScore(r);
+      if (!(r.naam in w) || (s && (!w[r.naam] || pctVan(s) > pctVan(w[r.naam])))) w[r.naam] = s;
+    });
+    return Object.keys(weken).sort().reverse().slice(0, 4).map(function(k){
+      var w = weken[k], namen = Object.keys(w), met = namen.filter(function(n){ return w[n]; });
+      var gem = met.length ? Math.round(met.reduce(function(a, n){ return a + pctVan(w[n]); }, 0) / met.length) : 0;
+      return 'week ' + Number(k.slice(-2)) + ': ' + namen.length + ' gedaan' + (met.length ? ', ' + gem + '% goed' : '');
+    });
+  }
+  function dicteeStuk(o){
+    var per = dicteePer(o, data.resultaten), lijst = klasNamen(), n = lijst.filter(function(x){ return per[x]; }).length, verlopen = o.tot < Date.now();
+    var met = Object.keys(per).filter(function(k){ return per[k].s; });
+    var gem = met.length ? Math.round(met.reduce(function(a, k){ return a + pctVan(per[k].s); }, 0) / met.length) : 0;
+    /* welke woorden het vaakst fout gingen, de eerste keer */
+    var tel = {};
+    Object.keys(per).forEach(function(k){ (per[k].fw || []).forEach(function(w){ var kw = String(w).toLowerCase(); tel[kw] = tel[kw] || { w: w, n: 0 }; tel[kw].n++; }); });
+    var vaak = Object.keys(tel).map(function(k){ return tel[k]; }).sort(function(a, b){ return b.n - a.n || a.w.localeCompare(b.w, 'nl'); }).slice(0, 10);
+    var weken = o.bron === 'week' && o.auto ? dicteeWeken(o) : [];
+    return '<div class="opdrachtstand"><div class="nu"><b>' + schoon(dicteeKop(o)) + '</b>' +
+      '<small>' + (o.auto ? 'Elke week automatisch; deze week ' : '') + (verlopen ? 'verlopen op ' : 'tot ') + new Date(o.tot).toLocaleDateString('nl-NL', { weekday:'long', day:'numeric', month:'long' }) + (o.tekst ? ' · ' + schoon(o.tekst) : '') + (o.auto ? '' : ' · gezet ' + wanneer(o.sinds)) + '</small></div>' +
+      '<a class="werkbladlink" href="' + schoon(dAdres(o, 'dictee-werkblad')) + '">Werkblad om voor te lezen</a>' +
+      '<button type="button" class="knop stil klein" data-opweg="' + schoon(o.id || '') + '">Weghalen</button></div>' +
+      '<p class="tip" style="margin-top:8px">' + (lijst.length ? n + ' van de ' + lijst.length + ' leerlingen gedaan' + (met.length ? ', gemiddeld ' + gem + '% van de woorden goed' : '') + '.' : 'Er zijn nog geen leerlingen gekoppeld.') + '</p>' +
+      '<div class="gehaald">' + lijst.map(function(x){ var p = per[x]; return '<span class="' + (p ? 'ja' : 'nee') + '">' + (window.AVATAR ? AVATAR.svg(x, 20, avVan(x)) : '') + wieHtml(x) + ' <i>' + (p ? '✓' + (p.s ? ' ' + p.s[0] + '/' + p.s[1] : '') : 'nog niet') + '</i></span>'; }).join('') + '</div>' +
+      (vaak.length ? '<p class="tip dicteefout">Vaak fout, de eerste keer: ' + vaak.map(function(v){ return '<b>' + schoon(v.w) + '</b> (' + v.n + ')'; }).join(', ') + '</p>' : '') +
+      (weken.length ? '<p class="tip" style="margin-top:6px">Eerdere weken: ' + schoon(weken.join(' · ')) + '</p>' : '');
   }
   function haaltOp(r, o){
     if (r.spel !== o.spel || (r.vak || '') !== o.vak || r.t < o.sinds) return 0;
@@ -1936,6 +2205,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     var lijst = opdrachtenVan(data), doel = $('opdrachtStand');
     $('opdrachtVorm').classList.toggle('hide', lijst.length >= OPDRACHTEN_MAX);
     opVul();
+    dBankVoorLijst();
     doel.innerHTML = lijst.map(function(o, i){ return '<div class="opdrachtstuk">' + opdrachtStuk(o, i) + '</div>'; }).join('') +
       (lijst.length >= OPDRACHTEN_MAX ? '<p class="tip">Er staan er vijf. Haal er een weg om een nieuwe te zetten.</p>' : '');
     [].forEach.call(doel.querySelectorAll('[data-opweg]'), function(k){
@@ -1947,6 +2217,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     });
   }
   function opdrachtStuk(o, i){
+    if (o.spel === 'dictee') return dicteeStuk(o);
     var namen = {}; klasNamen().forEach(function(x){ namen[x] = 0; });
     (data.resultaten || []).forEach(function(r){ namen[r.naam] = Math.max(namen[r.naam] || 0, haaltOp(r, o)); });
     var lijst = klasNamen(), n = lijst.filter(function(x){ return namen[x] >= o.min; }).length;
@@ -1971,10 +2242,27 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
   (function(){ var d = new Date(); d.setDate(d.getDate() + 7); $('opTot').value = d.toISOString().slice(0, 10); })();
   $('opZet').addEventListener('click', function(){
     var tot = new Date($('opTot').value + 'T23:59:00');
+    if ($('opSpel').value === 'dictee'){
+      var d = dOpdracht();
+      if (d.fout){ $('opFout').textContent = d.fout; return; }
+      if (!d.auto){ if (isNaN(tot.getTime())){ $('opFout').textContent = 'Kies een datum.'; return; } d.tot = tot.getTime(); }
+      zetOpdracht(d);
+      return;
+    }
     if (isNaN(tot.getTime())){ $('opFout').textContent = 'Kies een datum.'; return; }
     zetOpdracht({ spel:$('opSpel').value, vak:$('opVak').value, deel:$('opDeel').value, deelNaam:$('opDeel').value ? $('opDeel').options[$('opDeel').selectedIndex].textContent : '', min:parseInt($('opMin').value, 10) || 1, tot:tot.getTime(), tekst:$('opTekst').value.trim() });
   });
   opVul();
+  /* ?dictee=CODE (na het bewaren van een eigen dictee): meteen klaar om als opdracht te zetten */
+  (function(){
+    var c = (/[?&]dictee=([A-Za-z0-9]{6})/.exec(location.search) || [])[1];
+    if (!c) return;
+    $('opSpel').value = 'dictee'; dInit(); dBron = 'eigen';
+    $('opTot').value = datumVeld(zondag(Date.now()));
+    dEigenKiezer(c.toUpperCase()); dVorm(); zetTab('inst');
+  })();
+  /* in de lijst staat een dictee met de titel uit de tekstbank: die laden zodra er een is */
+  function dBankVoorLijst(){ if (opdrachtenVan(data).some(function(o){ return o.spel === 'dictee'; }) && !window.DICTEE_OPGAVEN && !dBankBezig) dLaadBank(function(){ if (data) tekenOpdracht(); }); }
 
   $('maakBtn').addEventListener('click', function(){
     var naam = $('klasNaam').value.trim();

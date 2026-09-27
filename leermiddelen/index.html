@@ -1987,7 +1987,7 @@ var SPELLEN = [
     function klaar(){ if (window.LESVAKBIJ) LESVAKBIJ(); }
     /* een oudere server stuurt nog een losse opdracht, met gehaald en beste ernaast */
     var lijst = (j && j.opdrachten) || (j && j.opdracht ? [Object.assign({ gehaald: j.gehaald, beste: j.beste }, j.opdracht)] : []);
-    lijst = lijst.filter(function(o){ return OP_SPEL[o.spel]; });
+    lijst = lijst.filter(function(o){ return OP_SPEL[o.spel] || o.spel === 'dictee'; });
     /* eerst wat nog moet, dan wat gehaald is, en verlopen achteraan */
     var nu = Date.now();
     function rang(o){ return o.gehaald ? 1 : o.tot < nu ? 2 : 0; }
@@ -1997,6 +1997,7 @@ var SPELLEN = [
     var html = '';
     if (lijst.length) html += '<p class="eyebrow">' + (lijst.length > 1 ? lijst.length + ' opdrachten' : 'opdracht') + ' van je docent</p>';
     html += lijst.map(function(o){
+      if (o.spel === 'dictee') return dicteeStuk(o, nu);
       var sp = OP_SPEL[o.spel], verlopen = o.tot < nu, maat = o.deel ? 'goed' : o.spel === 'race' ? 'goed' : 'rondes';
       var link = sp[1] + '?vak=' + encodeURIComponent(o.vak) + (o.deel ? '&deel=' + encodeURIComponent(o.deel) : '');
       return '<div class="opstuk' + (o.gehaald || verlopen ? ' af' : '') + '">' +
@@ -2017,6 +2018,35 @@ var SPELLEN = [
     vak.innerHTML = html;
     vak.classList.remove('hide');
     klaar();
+  }
+  /* Een dictee als opdracht: de tekst van de week (elke week een nieuwe), een
+     tekst uit de lijst of een eigen dictee van de docent. De knop opent precies
+     die tekst; gedaan komt van de server, met hoeveel woorden goed waren. */
+  function dicteeLink(o){
+    var q = o.bron === 'week' ? 'week=1&n=' + encodeURIComponent(o.niveau || 'kgt')
+          : o.bron === 'eigen' ? 'eigen=' + encodeURIComponent(o.code || String(o.dt || '').replace(/^eigen-/, ''))
+          : 'tekst=' + encodeURIComponent(o.dt || '');
+    return 'dictee.html?' + q + '&van=opdracht';
+  }
+  /* Nog niet gemeld, maar wel gemaakt op dit apparaat (de melding wacht nog op
+     verbinding): het dictee bewaart zijn beste score onder de tekst. */
+  function dicteeHier(o){
+    if (o.bron === 'week' || !o.dt) return false;
+    /* spel.js bewaart het beste onder lg-beste-dictee-<sleutel>; de sleutel is de tekst, met of zonder dictee- ervoor */
+    var id = String(o.dt).replace(/[^a-z0-9-]/gi, '');
+    try { return ['lg-beste-dictee-' + id, 'lg-beste-dictee-dictee-' + id].some(function(k){ var b = JSON.parse(localStorage.getItem(k) || 'null'); return !!(b && b.t >= o.sinds); }); } catch (e){ return false; }
+  }
+  function dicteeStuk(o, nu){
+    var verlopen = o.tot < nu, hier = !o.gehaald && dicteeHier(o);
+    var titel = o.bron === 'week' ? 'Dictee van week ' + (o.weekNr || '') + (o.titel ? ': ' + o.titel : '')
+              : 'Dictee: ' + (o.titel || (o.bron === 'eigen' ? 'van je docent' : 'een tekst uit de lijst'));
+    return '<div class="opstuk' + (o.gehaald || verlopen ? ' af' : '') + '">' +
+      '<b>' + schoon(titel) + '</b>' +
+      '<span>' + (verlopen ? 'De tijd was tot ' : 'Tot ') + new Date(o.tot).toLocaleDateString('nl-NL', { weekday:'long', day:'numeric', month:'long' }) + '.' + (o.auto ? ' Elke week een nieuwe tekst.' : '') + (o.tekst ? ' ' + schoon(o.tekst) : '') + '</span>' +
+      (o.gehaald ? '<span class="klaar">Gedaan ✓' + (o.score ? ' ' + o.score[0] + ' van de ' + o.score[1] + ' woorden goed.' : '') + '</span>'
+        : hier ? '<span class="klaar">Gedaan op dit apparaat ✓ Je docent ziet het zodra het gemeld is.</span>'
+        : '<span class="nog">' + (verlopen ? 'Verlopen.' : 'Nog te doen.') + '</span>') +
+      '<a class="knop" href="' + schoon(dicteeLink(o)) + '">' + (o.gehaald || hier ? 'Nog een keer' : 'Naar het dictee') + '</a></div>';
   }
   function teken(){
     var k = KLAS.lees();

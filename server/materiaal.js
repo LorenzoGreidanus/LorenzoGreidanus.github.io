@@ -1,6 +1,7 @@
-/* Eigen materiaal van docenten: woordenlijsten en oefeningen (ook als toets).
+/* Eigen materiaal van docenten: woordenlijsten, oefeningen (ook als toets) en dictees.
    Een docent maakt het in leermiddelen/maken.html; leerlingen openen het met
-   een code van zes tekens in oefen.html, en een woordenlijst ook in de spellen.
+   een code van zes tekens in oefen.html, een woordenlijst ook in de spellen, en
+   een dictee in dictee.html?eigen=CODE (de uitslag gaat naar de klas, niet hierheen).
 
    Elk stuk staat onder een eigen opslagsleutel, zodat er geen grens is voor
    alles samen. Wie het maakte krijgt een sleutel; alleen met die sleutel kan
@@ -29,6 +30,7 @@
    a:CODE:ID:m als beschrijving; het stuk zelf houdt in afbs bij welke er zijn.
    Gaat de toets weg, of verwijst geen vraag er meer naar, dan gaan ze mee. */
 import { DurableObject } from "cloudflare:workers";
+import { verboden } from "./naamfilter.js";
 
 const LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const DAG = 24 * 3600 * 1000;
@@ -36,7 +38,7 @@ const BEWAAR = 400 * DAG;                          /* ruim een jaar na het laats
 const MAX_JSON = 80000;                           /* een stuk hoogstens zoveel tekens */
 const MAX_ITEMS = 200;
 const MAX_UITSLAGEN = 400;                        /* inleveringen per stuk */
-const SOORTEN = { lijst: 1, oefening: 1 };
+const SOORTEN = { lijst: 1, oefening: 1, dictee: 1 };
 const VORMEN = { mk: 1, open: 1, koppel: 1, volgorde: 1, groepen: 1, gaten: 1, aanwijzen: 1 };
 const MAX_AFB = 12, AFB_BYTES = 400 * 1024, STUK = 96000;
 const AFB_ID = /^[A-Z0-9]{8}$/;
@@ -54,11 +56,44 @@ function schud(a){ a = a.slice(); for (let i = a.length - 1; i > 0; i--){ const 
 function gelijk(a, b){ const n = x => String(x || "").toLowerCase().replace(/\s+/g, " ").replace(/[.!?,;:]+$/, "").trim(); return n(a) === n(b); }
 function gatenVan(tekst){ return (String(tekst || "").match(/\[([^\]]+)\]/g) || []).map(x => x.slice(1, -1).trim()); }
 
+/* Een eigen dictee: twee tot twaalf zinnen gewone tekst, die de computer aan
+   de leerling voorleest. Er mag geen opmaak in, en niets wat de klas niet hoort
+   te horen: het naamfilter gaat over elk woord, net als over een bijnaam. */
+const DICTEE_NIVEAUS = { bb: 1, kgt: 1, hv: 1 };
+const ZINNEN_MIN = 2, ZINNEN_MAX = 12, ZIN_MAX = 200, DICTEE_TEKENS = 1500;
+/* Het naamfilter is gemaakt voor bijnamen en kijkt ook binnen een woord. In een
+   dictee staan gewone woorden waar zo'n stukje in zit (spijsvertering, homogeen)
+   en woorden uit de geschiedenis- en biologieles; die mogen. */
+const DICTEE_MAG = /vertering|^homo(geen|gene|niem|nie|fo[no]|sapiens)|^(neo)?nazis?$|^hitlers?$|^kanker(cel|cellen|onderzoek|patient|patienten)?$/;
+function ongepast(tekst){
+  return String(tekst || "").split(/[\s.,;:?!"“”‘’()[\]\/…–—-]+/u).filter(Boolean).some(w => {
+    if (!verboden(w)) return false;
+    return !DICTEE_MAG.test(w.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z]/g, ""));
+  });
+}
+function dictee(inz){
+  const ruw = Array.isArray(inz.zinnen) ? inz.zinnen : [];
+  const zinnen = ruw.slice(0, 100).map(z => String(z == null ? "" : z).replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim()).filter(Boolean);
+  if (zinnen.length < ZINNEN_MIN) return { fout: "een dictee heeft minstens " + ZINNEN_MIN + " zinnen nodig" };
+  if (zinnen.length > ZINNEN_MAX) return { fout: "een dictee heeft hoogstens " + ZINNEN_MAX + " zinnen; maak er twee van" };
+  const lang = zinnen.findIndex(z => z.length > ZIN_MAX);
+  if (lang >= 0) return { fout: "zin " + (lang + 1) + " is te lang: hoogstens " + ZIN_MAX + " tekens" };
+  if (zinnen.join(" ").length > DICTEE_TEKENS) return { fout: "het dictee is te lang: hoogstens " + DICTEE_TEKENS + " tekens" };
+  const naam = t(inz.naam, 80) || "Dictee", uitleg = t(inz.uitleg, 600);
+  if ([naam, uitleg].concat(zinnen).some(x => /[<>]/.test(x))) return { fout: "alleen gewone tekst: haal de tekens < en > weg" };
+  if (ongepast(naam)) return { fout: "in de naam staat een woord dat hier niet kan" };
+  const vies = zinnen.findIndex(ongepast);
+  if (vies >= 0) return { fout: "in zin " + (vies + 1) + " staat een woord dat hier niet kan" };
+  if (ongepast(uitleg)) return { fout: "in de uitleg staat een woord dat hier niet kan" };
+  return { soort: "dictee", naam, vak: t(inz.vak, 12), niveau: DICTEE_NIVEAUS[inz.niveau] ? inz.niveau : "", zinnen, uitleg };
+}
+
 /* Wat er binnenkomt, schoon en in vorm. Geeft null als het niet deugt. */
 function netjes(inz){
   if (!inz || typeof inz !== "object") return null;
   const soort = SOORTEN[inz.soort] ? inz.soort : null;
   if (!soort) return null;
+  if (soort === "dictee") return dictee(inz);
   const uit = { soort, naam: t(inz.naam, 80) || (soort === "lijst" ? "Woordenlijst" : "Oefening"), vak: t(inz.vak, 12) };
   if (soort === "lijst"){
     uit.kopA = t(inz.kopA, 30); uit.kopB = t(inz.kopB, 30);
@@ -312,6 +347,7 @@ export class Materiaal extends DurableObject {
     if (Date.now() - (m.gebruikt || 0) > DAG){ m.gebruikt = Date.now(); await this.ctx.storage.put("m:" + code, m); }
     const uit = { code, soort: m.soort, naam: m.naam, vak: m.vak };
     if (m.soort === "lijst") Object.assign(uit, { kopA: m.kopA, kopB: m.kopB, paren: m.paren });
+    else if (m.soort === "dictee") Object.assign(uit, { niveau: m.niveau || "", zinnen: m.zinnen, uitleg: m.uitleg || "" });
     else if (m.modus === "toets") Object.assign(uit, { modus: "toets", verborgen: true, items: m.items.map(verborgen) });
     else Object.assign(uit, { modus: m.modus, items: m.items });
     return json(uit);

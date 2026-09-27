@@ -9,7 +9,7 @@
 (function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();
 </script>
 <title>Eigen materiaal maken · meneer Greidanus</title>
-<meta name="description" content="Maak je eigen woordenlijsten voor de spellen, en oefeningen of toetsen met meerkeuze, open vragen, koppelen, volgorde, groepen en gatenteksten. Bewaren met een code, delen met je klas.">
+<meta name="description" content="Maak je eigen woordenlijsten voor de spellen, oefeningen of toetsen met meerkeuze, open vragen, koppelen, volgorde, groepen en gatenteksten, en je eigen dictee. Bewaren met een code, delen met je klas.">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="nl_NL">
 <meta property="og:site_name" content="meneer Greidanus">
@@ -20,6 +20,25 @@
 <link rel="icon" href="/icoon-donker-192.png" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%23204ECF'/><path d='M30 70l6-18 26-26 12 12-26 26zM56 32l12 12' fill='none' stroke='%23fff' stroke-width='7' stroke-linejoin='round' stroke-linecap='round'/></svg>">
 <link rel="stylesheet" href="eigen.css">
+<style>
+/* het eigen dictee: een regel per zin, met luisteren en weghalen ernaast */
+.zinnen{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:6px}
+.zinrij{display:grid;grid-template-columns:30px minmax(0,1fr) 44px 44px;gap:6px;align-items:center}
+.zinrij .nr{font-weight:700;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.zinrij .veld[aria-invalid="true"]{border-color:var(--fout)}
+.zinrij textarea.veld{resize:none;overflow:hidden;min-height:44px;line-height:1.4;display:block}
+.zinrij{align-items:start}
+.zinrij .nr{padding-top:11px}
+.zinrij .weg,.zinrij .zinluister{border:none;background:none;color:var(--muted);min-width:44px;min-height:44px;border-radius:10px;display:inline-grid;place-items:center;padding:0}
+.zinrij .weg{font-size:1.3rem}
+.zinrij .weg:hover{color:var(--fout)}
+.zinrij .zinluister:hover,.zinrij .zinluister.aan{color:var(--link)}
+.zinrij .zinluister svg,.luisterknop svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.luisterknop{display:inline-flex;align-items:center;gap:6px}
+.zinfout{color:var(--fout);font-size:.85rem;grid-column:2 / -1;margin:-2px 0 2px}
+.dicteeniveau{max-width:320px}
+@media(max-width:420px){.zinrij{grid-template-columns:22px minmax(0,1fr) 44px 44px;gap:4px}}
+</style>
 <script src="/vangnet.js" defer></script>
 </head>
 <body>
@@ -39,7 +58,7 @@
   <div id="paginakop">
   <p class="hand">voor de docent</p>
   <h1>Eigen materiaal</h1>
-  <p class="intro">Een <b>woordenlijst of begrippenlijst</b> kies je in Tekenslag, de Klasquiz en de Klasstrijd, speel je in de Vragenrace, Torenverdediging en Zwaardvechter, of je print hem als werkblad. Een <b>oefening</b> maak je met meerkeuze, open vragen en sleepvragen: koppelen, op volgorde zetten, in groepen verdelen en gatenteksten. Zet hem op toets, dan zien leerlingen pas aan het eind wat goed was. Alles krijgt een code; leerlingen openen het met die code.</p>
+  <p class="intro">Een <b>woordenlijst of begrippenlijst</b> kies je in Tekenslag, de Klasquiz en de Klasstrijd, speel je in de Vragenrace, Torenverdediging en Zwaardvechter, of je print hem als werkblad. Een <b>oefening</b> maak je met meerkeuze, open vragen en sleepvragen: koppelen, op volgorde zetten, in groepen verdelen en gatenteksten. Zet hem op toets, dan zien leerlingen pas aan het eind wat goed was. Een <b>dictee</b> plak je als tekst: de computer leest het zin voor zin voor, en je zet het als opdracht bij je klas of print het als voorleesblad. Alles krijgt een code; leerlingen openen het met die code.</p>
   </div>
 
   <!-- de lijst: wat deze docent al maakte -->
@@ -47,6 +66,7 @@
     <div class="rij">
       <button class="knop" id="nieuwLijst" type="button">Nieuwe woordenlijst</button>
       <button class="knop" id="nieuwOef" type="button">Nieuwe oefening of toets</button>
+      <button class="knop" id="nieuwDictee" type="button">Nieuw dictee</button>
       <button class="knop stil" id="vergelijkKnop" type="button">Toetsen vergelijken</button>
     </div>
     <p class="tip" id="accTip" style="margin-top:10px"></p>
@@ -108,6 +128,22 @@
         <div class="soortknoppen" id="soortknoppen" style="margin-top:6px"></div>
       </div>
 
+      <!-- dictee: de tekst plakken, de pagina verdeelt hem in zinnen -->
+      <div class="kaart hide" id="dicteeEditor">
+        <label class="veldnaam dicteeniveau">Niveau (mag leeg)<select class="veld" id="dNiveau"><option value="">geen niveau</option><option value="bb">vmbo-bb</option><option value="kgt">vmbo-kgt en tl</option><option value="hv">havo en vwo</option></select></label>
+        <label class="veldnaam" style="margin-top:14px">De tekst<textarea class="veld" id="dTekst" rows="5" placeholder="Plak of typ hier de hele tekst. De pagina verdeelt hem in zinnen."></textarea></label>
+        <div class="rij" style="margin-top:8px"><button class="knop stil klein" id="dVerdeel" type="button">Verdeel in zinnen</button><span class="tip" id="dVerdeelUit" role="status" aria-live="polite"></span></div>
+        <div class="rij" style="margin-top:18px;justify-content:space-between"><h3 style="font-size:1.05rem">Zinnen</h3><span class="teller" id="dTeller" aria-live="polite"></span></div>
+        <p class="tip">De computer leest het dictee zin voor zin voor. Klopt een zin niet, pas hem hier aan. Twee tot twaalf zinnen, elk hoogstens 200 tekens.</p>
+        <ol class="zinnen" id="dZinnen"></ol>
+        <div class="rij" style="margin-top:10px">
+          <button class="knop stil klein" id="dZinErbij" type="button">Zin erbij</button>
+          <button class="knop stil klein luisterknop" id="dLuisterAlles" type="button" aria-pressed="false"></button>
+        </div>
+        <p class="tip hide" id="dKanNiet">Deze browser kan niet voorlezen, dus luisteren kan hier niet. Op de meeste laptops en telefoons kan het wel.</p>
+        <label class="veldnaam" style="margin-top:16px">Uitleg na het dictee (mag leeg)<textarea class="veld" id="dUitleg" rows="3" maxlength="600" placeholder="bijv. Let op de werkwoorden in de verleden tijd: 't kofschip."></textarea></label>
+      </div>
+
       <!-- blijft onderaan in beeld: bewaren kan altijd, en je ziet of er nog iets niet bewaard is -->
       <div class="bewaarbalk" id="bewaarbalk">
         <div class="rij">
@@ -146,6 +182,7 @@
 <script src="thema.js"></script>
 <script src="bank.js"></script>
 <script src="profiel.js"></script>
+<script src="voorlezen.js"></script>
 <script src="eigen.js"></script>
 <script src="voorbeeldtoetsen.js"></script>
 <script src="nakijk.js"></script>
@@ -177,24 +214,28 @@
   /* ---------- de lijst ---------- */
   $('vak').innerHTML = '<option value="">geen vak</option>' + VAKKEN.map(function(v){ return '<option value="' + v.id + '">' + schoon(v.naam) + '</option>'; }).join('');
   function adres(pad){ return location.origin + '/leermiddelen/' + pad; }
+  /* waar een leerling het opent: een dictee in het dictee, de rest in oefen.html */
+  function linkVan(m){ return m.soort === 'dictee' ? 'dictee.html?eigen=' + m.code : 'oefen.html?code=' + m.code; }
+  var SOORTNAAM = { lijst:'Woordenlijst', oefening:'Oefening', dictee:'Dictee' };
   function tekenLijst(){
     var l = EIGEN.mijn();
     $('stukken').innerHTML = l.length ? l.map(function(m){
       return '<div class="stuk"><div><b>' + schoon(m.naam) + '<span class="code">' + schoon(m.code) + '</span></b>' +
-        '<small>' + (m.soort === 'lijst' ? 'Woordenlijst' : 'Oefening') + ' · gemaakt ' + new Date(m.gemaakt).toLocaleDateString('nl-NL', { day:'numeric', month:'short', year:'numeric' }) + '</small></div>' +
-        '<div class="acties">' + (m.soort === 'lijst' ? '' : '<button class="knop klein" type="button" data-uitslag="' + m.code + '">Resultaten</button>') +
+        '<small>' + (SOORTNAAM[m.soort] || 'Oefening') + ' · gemaakt ' + new Date(m.gemaakt).toLocaleDateString('nl-NL', { day:'numeric', month:'short', year:'numeric' }) + '</small></div>' +
+        '<div class="acties">' + (m.soort === 'lijst' || m.soort === 'dictee' ? '' : '<button class="knop klein" type="button" data-uitslag="' + m.code + '">Resultaten</button>') +
         '<button class="knop stil klein" type="button" data-werk="' + m.code + '">Bewerken</button>' +
-        '<a class="knop stil klein" href="oefen.html?code=' + m.code + '">Openen</a>' +
-        '<button class="knop stil klein" type="button" data-kopie="' + m.code + '">Link kopiëren</button>' +
+        '<a class="knop stil klein" href="' + linkVan(m) + '">Openen</a>' +
+        (m.soort === 'dictee' ? '<a class="knop stil klein" href="dictee-werkblad.html?eigen=' + m.code + '">Voorleesblad</a>' : '') +
+        '<button class="knop stil klein" type="button" data-kopie="' + schoon(linkVan(m)) + '">Link kopiëren</button>' +
         '<button class="knop gevaar klein" type="button" data-weg="' + m.code + '" data-naam="' + schoon(m.naam) + '">Weghalen</button></div></div>';
-    }).join('') : '<p class="leeg">Nog niets gemaakt. Begin met een woordenlijst of een oefening.</p>';
+    }).join('') : '<p class="leeg">Nog niets gemaakt. Begin met een woordenlijst, een oefening of een dictee.</p>';
   }
   $('stukken').addEventListener('click', function(e){
     var b = e.target.closest('button'); if (!b) return;
     var werk = b.getAttribute('data-werk'), kopie = b.getAttribute('data-kopie'), weg = b.getAttribute('data-weg'), uit = b.getAttribute('data-uitslag');
     if (uit) UITSLAG.open(uit, { terug: naarLijst });
     if (werk) laadVoorBewerken(werk);
-    if (kopie) kopieer(adres('oefen.html?code=' + kopie), $('lijstMelding'));
+    if (kopie) kopieer(adres(kopie), $('lijstMelding'));
     if (weg){
       if (!confirm('"' + b.getAttribute('data-naam') + '" weghalen? Leerlingen kunnen het daarna niet meer openen, en alle inleveringen en je nakijkwerk zijn ook weg. Dit kan niet terug.')) return;
       b.disabled = true;
@@ -241,8 +282,9 @@
     bezig = { soort: soort, code: code || null };
     $('lijstvak').classList.add('hide'); $('bewerkvak').classList.remove('hide');
     $('lijstEditor').classList.toggle('hide', soort !== 'lijst');
-    $('oefEditor').classList.toggle('hide', soort === 'lijst');
-    $('bewerkKop').textContent = (code ? 'Bewerken: ' : 'Nieuwe ') + (soort === 'lijst' ? 'woordenlijst' : 'oefening of toets');
+    $('oefEditor').classList.toggle('hide', soort !== 'oefening');
+    $('dicteeEditor').classList.toggle('hide', soort !== 'dictee');
+    $('bewerkKop').textContent = soort === 'dictee' ? (code ? 'Bewerken: dictee' : 'Nieuw dictee') : (code ? 'Bewerken: ' : 'Nieuwe ') + (soort === 'lijst' ? 'woordenlijst' : 'oefening of toets');
     $('deelvak').classList.add('hide'); $('probeer').disabled = !code;
     $('inleverWaarschuw').classList.add('hide');
     melding($('bewaarMelding'), '');
@@ -253,7 +295,7 @@
   }
   function sluit(){
     if (vies && !confirm('Je hebt wijzigingen die nog niet bewaard zijn. Toch terug? Dan ben je ze kwijt.')) return;
-    zetVies(false);
+    zetVies(false); dStop();
     $('bewerkvak').classList.add('hide'); $('lijstvak').classList.remove('hide'); tekenLijst(); bezig = null;
   }
   /* niet per ongeluk de pagina dicht met werk dat nog niet bewaard is */
@@ -279,12 +321,13 @@
   $('terugNaarLijst').addEventListener('click', sluit);
   $('nieuwLijst').addEventListener('click', function(){ vulLijst({ naam:'', vak:'', kopA:'', kopB:'', paren:[] }); open('lijst'); });
   $('nieuwOef').addEventListener('click', function(){ plaatjesCode = ''; vulOef({ naam:'', vak:'', modus:'oefenen', items:[] }); open('oefening'); });
+  $('nieuwDictee').addEventListener('click', function(){ vulDictee({ naam:'', vak:'ned', niveau:'', zinnen:[], uitleg:'' }); open('dictee'); });
   function laadVoorBewerken(code){
     melding($('lijstMelding'), 'Ophalen…');
     /* met de sleutel: een toets komt anders zonder antwoorden */
     EIGEN.volledig(code).then(function(m){
       melding($('lijstMelding'), ''); plaatjesCode = code;
-      if (m.soort === 'lijst') vulLijst(m); else vulOef(m);
+      if (m.soort === 'lijst') vulLijst(m); else if (m.soort === 'dictee') vulDictee(m); else vulOef(m);
       open(m.soort, code);
       if (m.n){
         $('inleverWaarschuw').textContent = 'Er ' + (m.n === 1 ? 'is al een leerling die heeft' : 'zijn al ' + m.n + ' leerlingen die hebben') + ' ingeleverd. Verander je een antwoord, dan wordt hun werk opnieuw nagekeken. Haal je een vraag weg of zet je de vragen in een andere volgorde, dan kloppen hun antwoorden niet meer; maak dan liever een nieuwe toets.';
@@ -540,12 +583,170 @@
     return '';
   }
 
+  /* ---------- dictee ---------- */
+  var ZINNEN_MIN = 2, ZINNEN_MAX = 12, ZIN_MAX = 200, DICTEE_TEKENS = 1500;
+  var LUIDSPREKER = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 9.5h3.2L12 5.4v13.2L7.2 14.5H4z"/><path d="M15.8 9.2a4 4 0 0 1 0 5.6"/><path d="M18.4 6.6a7.6 7.6 0 0 1 0 10.8"/></svg>';
+  var STOPTEKEN = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="6.5" y="6.5" width="11" height="11" rx="2.5"/></svg>';
+  var kanLezen = !!(window.VOORLEES && VOORLEES.kan());
+  /* Afkortingen met een punt die geen einde van een zin zijn */
+  var AFK = /(^|\s)(bijv|bv|b\.v|o\.a|d\.w\.z|m\.a\.w|i\.p\.v|t\.o\.v|n\.a\.v|a\.s|z\.g\.a\.n|enz|etc|blz|nr|ca|mr|dr|drs|ir|ing|mevr|dhr|st|jl|vs|resp|evt|incl|excl|max|min)\.$/i;
+  /* Een geplakte tekst in zinnen: een punt, uitroepteken of vraagteken met een
+     spatie erachter en een hoofdletter (of een cijfer of aanhalingsteken) erna.
+     Een nieuwe regel is ook een nieuwe zin. Afkortingen en voorletters niet. */
+  function verdeel(tekst){
+    var uit = [];
+    String(tekst || '').replace(/\r/g, '').split(/\n+/).forEach(function(regel){
+      regel = regel.replace(/\s+/g, ' ').trim();
+      if (!regel) return;
+      var begin = 0;
+      for (var i = 0; i < regel.length; i++){
+        var c = regel.charAt(i);
+        if ('.!?…'.indexOf(c) < 0) continue;
+        var j = i;
+        while (j + 1 < regel.length && '.!?…"\'”’»)'.indexOf(regel.charAt(j + 1)) >= 0) j++;
+        if (j + 1 < regel.length && regel.charAt(j + 1) !== ' '){ i = j; continue; }
+        var stuk = regel.slice(begin, j + 1).trim(), na = regel.charAt(j + 2);
+        if (c === '.' && (AFK.test(stuk) || /(^|\s)[A-Z]\.$/.test(stuk))){ i = j; continue; }
+        if (na && na.toLowerCase() === na && na.toUpperCase() !== na){ i = j; continue; }
+        if (stuk) uit.push(stuk);
+        begin = j + 1; i = j;
+      }
+      var rest = regel.slice(begin).trim();
+      if (rest) uit.push(rest);
+    });
+    return uit;
+  }
+  function zinHtml(z){
+    return '<li class="zinrij"><span class="nr"></span><textarea class="veld" rows="1" maxlength="' + ZIN_MAX + '" placeholder="bijv. Gisteren fietste ik naar school.">' + schoon(z) + '</textarea>' +
+      (kanLezen ? '<button class="zinluister" type="button" aria-pressed="false">' + LUIDSPREKER + '</button>' : '') +
+      '<button class="weg" type="button">&times;</button></li>';
+  }
+  /* een zin is een tekstvak dat meegroeit: op een telefoon zie je zo de hele zin */
+  function dGroei(){ [].forEach.call($('dZinnen').querySelectorAll('.veld'), function(t){ t.style.height = 'auto'; t.style.height = (t.scrollHeight + 4) + 'px'; }); }
+  function zinnenNu(){ return [].map.call($('dZinnen').querySelectorAll('.veld'), function(v){ return v.value.replace(/\s+/g, ' ').trim(); }).filter(Boolean); }
+  /* nummers, namen van de knoppen, de teller, en wat er mis is per zin */
+  function dTel(){
+    [].forEach.call($('dZinnen').children, function(li, i){
+      li.querySelector('.nr').textContent = (i + 1) + '.';
+      li.querySelector('.veld').setAttribute('aria-label', 'Zin ' + (i + 1));
+      var l = li.querySelector('.zinluister'); if (l) l.setAttribute('aria-label', 'Luister naar zin ' + (i + 1));
+      li.querySelector('.weg').setAttribute('aria-label', 'Zin ' + (i + 1) + ' weghalen');
+      var v = li.querySelector('.veld'), oud = li.querySelector('.zinfout'), te = v.value.trim().length > ZIN_MAX, html = /[<>]/.test(v.value);
+      if (oud) oud.remove();
+      if (te || html){
+        v.setAttribute('aria-invalid', 'true');
+        li.insertAdjacentHTML('beforeend', '<span class="zinfout" id="zinfout' + i + '">' + (te ? 'Te lang: ' + v.value.trim().length + ' tekens, hoogstens ' + ZIN_MAX + '. Splits hem in twee.' : 'Haal de tekens &lt; en &gt; weg.') + '</span>');
+        v.setAttribute('aria-describedby', 'zinfout' + i);
+      } else if (v.getAttribute('aria-invalid')){ v.removeAttribute('aria-invalid'); v.removeAttribute('aria-describedby'); }
+    });
+    var n = zinnenNu().length, tekens = zinnenNu().join(' ').length;
+    $('dTeller').textContent = n + (n === 1 ? ' zin' : ' zinnen') + (n < ZINNEN_MIN ? ', minstens ' + ZINNEN_MIN : n > ZINNEN_MAX ? ', hoogstens ' + ZINNEN_MAX : '') + (tekens > DICTEE_TEKENS ? ' · ' + tekens + ' tekens, hoogstens ' + DICTEE_TEKENS : '');
+    $('dTeller').style.color = n > ZINNEN_MAX || tekens > DICTEE_TEKENS ? 'var(--fout)' : '';
+  }
+  function zetZinnen(l){
+    var z = l.slice(); while (z.length < 2) z.push('');
+    $('dZinnen').innerHTML = z.map(zinHtml).join(''); dTel(); setTimeout(dGroei, 0);
+  }
+  function vulDictee(m){
+    $('naam').value = m.naam || ''; $('vak').value = m.vak || 'ned';
+    $('dNiveau').value = m.niveau || ''; $('dUitleg').value = m.uitleg || ''; $('dTekst').value = '';
+    $('dVerdeelUit').textContent = '';
+    zetZinnen(m.zinnen || []);
+  }
+  function verdeelNu(){
+    var l = verdeel($('dTekst').value);
+    if (!l.length){ $('dVerdeelUit').textContent = 'Er staat nog geen tekst in het vak hierboven.'; $('dTekst').focus(); return; }
+    var al = zinnenNu();
+    if (al.length && !confirm('De zinnen die er al staan vervangen door de ' + l.length + ' zinnen uit de tekst?')) return;
+    zetZinnen(l); zetVies(true);
+    $('dVerdeelUit').textContent = l.length + (l.length === 1 ? ' zin' : ' zinnen') + ' gevonden.' + (l.length > ZINNEN_MAX ? ' Dat zijn er te veel: haal er ' + (l.length - ZINNEN_MAX) + ' weg, of maak er twee dictees van.' : ' Kijk ze even na.');
+  }
+  $('dVerdeel').addEventListener('click', verdeelNu);
+  /* plakken in een leeg dictee: meteen verdelen */
+  $('dTekst').addEventListener('paste', function(){ setTimeout(function(){ if (!zinnenNu().length) verdeelNu(); }, 0); });
+  $('dZinErbij').addEventListener('click', function(){
+    $('dZinnen').insertAdjacentHTML('beforeend', zinHtml('')); dTel(); zetVies(true);
+    $('dZinnen').lastElementChild.querySelector('.veld').focus();
+  });
+  $('dZinnen').addEventListener('input', function(){ dTel(); dGroei(); if (/fout/.test($('bewaarMelding').className)) melding($('bewaarMelding'), ''); });
+  $('dZinnen').addEventListener('keydown', function(e){
+    /* Enter in een zin: naar de volgende, of een nieuwe regel aan het eind */
+    if (e.key !== 'Enter' || e.target.tagName !== 'TEXTAREA') return;
+    e.preventDefault();
+    var li = e.target.closest('.zinrij');
+    if (!li.nextElementSibling){ $('dZinnen').insertAdjacentHTML('beforeend', zinHtml('')); dTel(); }
+    li.nextElementSibling.querySelector('.veld').focus();
+  });
+  $('dZinnen').addEventListener('click', function(e){
+    var weg = e.target.closest('.weg'), luister = e.target.closest('.zinluister');
+    if (weg){
+      var li = weg.closest('.zinrij'), volgende = li.nextElementSibling || li.previousElementSibling;
+      li.remove(); dTel(); zetVies(true);
+      if (volgende) volgende.querySelector('.veld').focus(); else $('dZinErbij').focus();
+    }
+    if (luister){
+      if (luister.classList.contains('aan')){ dStop(); return; }
+      var z = luister.closest('.zinrij').querySelector('.veld').value.trim();
+      if (z) dSpreek(z, luister);
+    }
+  });
+  /* Voorlezen met dezelfde stem als in het dictee (voorlezen.js). De knop
+     wordt een stopknop zolang de stem praat. */
+  var dBezig = null, dKlok = null;
+  function dKnopAf(b){
+    if (!b) return;
+    b.classList.remove('aan'); b.setAttribute('aria-pressed', 'false');
+    if (b.id === 'dLuisterAlles') b.innerHTML = LUIDSPREKER + '<span>Luister naar alles</span>'; else b.innerHTML = LUIDSPREKER;
+  }
+  function dStop(){
+    clearInterval(dKlok);
+    if (dBezig){ dKnopAf(dBezig); dBezig = null; if (window.VOORLEES) VOORLEES.stop(); }
+  }
+  function dSpreek(tekst, knop){
+    if (!kanLezen) return;
+    dStop();
+    VOORLEES.spreek({ v: tekst, taal: 'nl-NL' });
+    dBezig = knop; knop.classList.add('aan'); knop.setAttribute('aria-pressed', 'true');
+    knop.innerHTML = STOPTEKEN + (knop.id === 'dLuisterAlles' ? '<span>Stop</span>' : '');
+    var begon = Date.now();
+    clearInterval(dKlok);
+    dKlok = setInterval(function(){
+      var praat = false; try { praat = window.speechSynthesis.speaking || window.speechSynthesis.pending; } catch (e){}
+      if (!praat && Date.now() - begon > 600){ clearInterval(dKlok); if (dBezig === knop){ dKnopAf(knop); dBezig = null; } }
+    }, 300);
+  }
+  dKnopAf($('dLuisterAlles'));
+  if (!kanLezen){ $('dLuisterAlles').classList.add('hide'); $('dKanNiet').classList.remove('hide'); }
+  $('dLuisterAlles').addEventListener('click', function(){
+    if (this.classList.contains('aan')){ dStop(); return; }
+    var z = zinnenNu();
+    if (!z.length){ $('dVerdeelUit').textContent = 'Er zijn nog geen zinnen om te beluisteren.'; return; }
+    dSpreek(z.join(' '), this);
+  });
+  /* Wat er mis is, in gewone taal, en de focus op de plek waar het zit. */
+  function dicteeProbleem(m){
+    var velden = [].slice.call($('dZinnen').querySelectorAll('.veld'));
+    var eerst = function(test){ return velden.filter(function(v){ return test(v.value.trim()); })[0] || null; };
+    if (m.zinnen.length < ZINNEN_MIN) return { tekst: 'Een dictee heeft minstens ' + ZINNEN_MIN + ' zinnen nodig. Plak een tekst en klik op Verdeel in zinnen, of typ ze in de regels.', veld: eerst(function(x){ return !x; }) || $('dTekst') };
+    if (m.zinnen.length > ZINNEN_MAX) return { tekst: 'Dit zijn ' + m.zinnen.length + ' zinnen; hoogstens ' + ZINNEN_MAX + '. Haal er ' + (m.zinnen.length - ZINNEN_MAX) + ' weg, of maak er twee dictees van.', veld: velden[ZINNEN_MAX] };
+    var lang = eerst(function(x){ return x.length > ZIN_MAX; });
+    if (lang) return { tekst: 'Zin ' + (velden.indexOf(lang) + 1) + ' is te lang: hoogstens ' + ZIN_MAX + ' tekens. Splits hem in twee.', veld: lang };
+    var html = eerst(function(x){ return /[<>]/.test(x); });
+    if (html || /[<>]/.test(m.naam + m.uitleg)) return { tekst: 'Een dictee is gewone tekst: haal de tekens < en > weg.', veld: html || $('dUitleg') };
+    if (m.zinnen.join(' ').length > DICTEE_TEKENS) return { tekst: 'Het dictee is te lang: ' + m.zinnen.join(' ').length + ' tekens, hoogstens ' + DICTEE_TEKENS + '. Maak er twee van.', veld: velden[velden.length - 1] };
+    return null;
+  }
+
   /* ---------- bewaren ---------- */
   $('bewaar').addEventListener('click', function(){
     if (!bezig) return;
     var m = { soort: bezig.soort, naam: $('naam').value.trim(), vak: $('vak').value };
     if (!m.naam){ melding($('bewaarMelding'), 'Geef het een naam, zodat je het terugvindt.', 'fout'); $('naam').setAttribute('aria-invalid', 'true'); $('naam').focus(); return; }
-    if (bezig.soort === 'lijst'){
+    if (bezig.soort === 'dictee'){
+      m.niveau = $('dNiveau').value; m.zinnen = zinnenNu(); m.uitleg = $('dUitleg').value.trim();
+      var pd = dicteeProbleem(m);
+      if (pd){ melding($('bewaarMelding'), pd.tekst, 'fout'); if (pd.veld){ pd.veld.focus(); pd.veld.scrollIntoView({ block: 'center' }); } return; }
+    } else if (bezig.soort === 'lijst'){
       m.kopA = $('kopA').value.trim(); m.kopB = $('kopB').value.trim(); m.paren = paren();
       if (m.paren.length < 4){
         melding($('bewaarMelding'), 'Een woordenlijst heeft minstens vier paren nodig; de spellen maken er meerkeuzevragen van.', 'fout');
@@ -579,7 +780,9 @@
     }).catch(function(f){
       knop.disabled = false;
       if (f.deels){ bezig.code = f.deels.code; plaatjesCode = f.deels.code; $('probeer').disabled = false; }
-      melding($('bewaarMelding'), (f.message || 'Bewaren lukte niet.') + (f.deels ? '' : ' Controleer je internet en probeer het opnieuw.'), 'fout');
+      /* weigert de server wat erin staat (400), dan zegt hij wat; alleen zonder antwoord ligt het aan de verbinding */
+      var zin = String(f.message || 'Bewaren lukte niet.'); zin = zin.charAt(0).toUpperCase() + zin.slice(1) + (/[.!?]$/.test(zin) ? '' : '.');
+      melding($('bewaarMelding'), zin + (f.deels || (f.status >= 400 && f.status < 500) ? '' : ' Controleer je internet en probeer het opnieuw.'), 'fout');
     });
   });
   /* Plaatjes gaan apart: eerst het stuk (dan is er een code), dan elk nieuw
@@ -599,10 +802,23 @@
   $('probeer').addEventListener('click', function(){
     if (!bezig || !bezig.code) return;
     if (vies) melding($('bewaarMelding'), 'Je probeert de laatst bewaarde versie; je wijzigingen van daarna zitten er nog niet in.', '');
-    window.open('oefen.html?code=' + bezig.code, '_blank');
+    window.open((bezig.soort === 'dictee' ? 'dictee.html?eigen=' : 'oefen.html?code=') + bezig.code, '_blank');
   });
   /* Na het bewaren: de code en waar leerlingen hem openen. Een woordenlijst ook in de spellen. */
   function toonDelen(code, m){
+    if (m.soort === 'dictee'){
+      $('deelvak').innerHTML = '<p class="tip">Bewaard. Pas je later nog iets aan, dan blijft de code hetzelfde.</p><p class="tip">Leerlingen maken het dictee met de link; de computer leest het zin voor zin voor. Met een klascode gaat hun uitslag naar het klasoverzicht.</p>' +
+        '<div class="codegroot">' + code + '</div>' +
+        '<div class="rij"><input class="veld" id="deelLink" readonly aria-label="Link naar het dictee" value="' + schoon(adres('dictee.html?eigen=' + code)) + '" style="flex:1 1 260px"><button class="knop klein" type="button" id="deelKopie">Kopieer</button></div>' +
+        '<div class="spellinks">' +
+          '<a href="klas.html?dictee=' + code + '#tab-inst"><b>Als opdracht voor je klas</b><small>in het klasoverzicht, bij Opdrachten</small></a>' +
+          '<a href="dictee-werkblad.html?eigen=' + code + '"><b>Werkblad om voor te lezen</b><small>voorleesblad, schrijfblad en nakijkblad</small></a>' +
+          '<a href="dictee.html?eigen=' + code + '" target="_blank" rel="noopener"><b>Zelf proberen</b><small>zoals een leerling het ziet</small></a>' +
+        '</div>';
+      $('deelvak').classList.remove('hide');
+      $('deelKopie').addEventListener('click', function(){ kopieer($('deelLink').value, $('bewaarMelding')); });
+      return;
+    }
     var spel = function(bestand, naam, uit){ return '<a href="' + bestand + (bestand.indexOf('?') < 0 ? '?' : '&') + 'vak=eigen&lijst=' + code + '"><b>' + naam + '</b><small>' + uit + '</small></a>'; };
     $('deelvak').innerHTML = '<p class="tip">Bewaard. Pas je later nog iets aan, dan blijft de code hetzelfde.</p><p class="tip">Leerlingen openen het met deze code op <b>meneergreidanus.nl/leermiddelen/oefen.html</b>, of met de link:</p>' +
       '<div class="codegroot">' + code + '</div>' +
@@ -618,6 +834,7 @@
 
   /* ?nieuw=lijst in het adres (de kaart in het klasoverzicht): meteen een nieuwe lijst */
   if (/[?&]nieuw=lijst/.test(location.search)) $('nieuwLijst').click();
+  if (/[?&]nieuw=dictee/.test(location.search)) $('nieuwDictee').click();
   /* ?code=X in het adres: meteen bewerken, als het van jou is */
   var c = (/[?&]code=([A-Za-z0-9]{6})/.exec(location.search) || [])[1];
   if (c && EIGEN.mijn().some(function(m){ return m.code === c.toUpperCase(); })) laadVoorBewerken(c.toUpperCase());
