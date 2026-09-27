@@ -260,6 +260,8 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 @media(max-width:999px){ .paneelvoet{bottom:-14px;margin:0 -16px -14px;padding:10px 16px 14px} }
 .paneelvoet .sub{flex:1 1 160px}
 .paneelkaart .btn{margin-top:0;color:#14224C}
+.paneelvoet .btn{padding:12px 20px}
+.paneelvoet .stilknop{padding:0 12px}
 .paneelkaart .btn.wit{background:var(--room);color:#14224C;box-shadow:none}
 :root[data-theme="dark"] .paneelkaart .btn.wit{background:#FBF6F1}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .paneelkaart .btn.wit{background:#FBF6F1}}
@@ -921,8 +923,21 @@ footer{border-top:1px solid rgba(20,34,76,.08);padding:22px 0 30px;text-align:ce
     if (rand){ g.lineWidth = Math.max(1.5, s * 0.045); g.strokeStyle = rand; g.lineJoin = 'round'; g.stroke(); }
   }
   function maakSprites(){
-    var sp = { dpr:dpr, aarde:[], steen:[], erts:{} };
+    var sp = { dpr:dpr, aarde:[], gang:[], steen:[], erts:{} };
+    STREEP[0] = S * 0.06; STREEP[1] = S * 0.05;
     MM.LAGEN.forEach(function(L, li){
+      /* een gang: de achterwand, met wat donkere plekken zodat hij niet plat is */
+      sp.gang[li] = [];
+      for (var v3 = 0; v3 < 2; v3++){
+        sp.gang[li][v3] = doek(function(g, s){
+          g.fillStyle = L.gang; g.fillRect(0, 0, s, s);
+          var r = MM.dobbel(li * 17 + v3 * 5 + 11);
+          g.fillStyle = 'rgba(0,0,0,.13)';
+          for (var k = 0; k < 4; k++){ g.beginPath(); g.ellipse(r() * s, r() * s, s * (0.06 + r() * 0.08), s * (0.03 + r() * 0.04), r() * 3, 0, Math.PI * 2); g.fill(); }
+          g.fillStyle = 'rgba(255,255,255,.05)';
+          for (var k2 = 0; k2 < 2; k2++){ g.beginPath(); g.arc(r() * s, r() * s, s * 0.03, 0, Math.PI * 2); g.fill(); }
+        });
+      }
       sp.aarde[li] = [];
       for (var v = 0; v < 3; v++){
         sp.aarde[li][v] = doek(function(g, s){
@@ -1064,7 +1079,7 @@ footer{border-top:1px solid rgba(20,34,76,.08);padding:22px 0 30px;text-align:ce
       for (var x = laag.x0; x <= x1; x++){
         var i = y * w + x, s = t[i], px = x * S - ox;
         if (s === T.LUCHT){
-          g.fillStyle = L.gang; g.fillRect(px, py, S, S);
+          g.drawImage(sprites.gang[li][hash(x, y) & 1], px, py, S, S);
           /* een plafond en een vloer: zo zie je de gangen */
           if (y > 1 && t[i - w] !== T.LUCHT){ g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(px, py, S, S * 0.12); }
           if (y < h - 1 && t[i + w] !== T.LUCHT){ g.fillStyle = 'rgba(255,255,255,.07)'; g.fillRect(px, py + S * 0.9, S, S * 0.1); }
@@ -1079,7 +1094,17 @@ footer{border-top:1px solid rgba(20,34,76,.08);padding:22px 0 30px;text-align:ce
         else if (s === T.VONDST){ if (gezien) g.drawImage(sprites.vondst, px, py, S, S); }
         else if (s >= T.KOPER && s <= T.DIAMANT){ if (gezien) g.drawImage(sprites.erts[MM.SOORT[s].id], px, py, S, S); }
         /* gras op de bovenste rij */
-        if (y === 1){ g.fillStyle = '#4E9A45'; g.fillRect(px, py, S, S * 0.14); g.fillStyle = '#3C7F36'; g.fillRect(px, py + S * 0.14, S, S * 0.04); }
+        if (y === 1){
+          g.fillStyle = '#4E9A45'; g.fillRect(px, py, S, S * 0.14); g.fillStyle = '#3C7F36'; g.fillRect(px, py + S * 0.14, S, S * 0.04);
+          /* een paar sprietjes boven het gras */
+          var hs = hash(x, 5);
+          g.fillStyle = '#4E9A45'; g.beginPath();
+          for (var gs = 0; gs < 3; gs++){
+            var gx = px + S * (0.12 + gs * 0.3 + ((hs >>> (gs * 4)) & 7) / 60), gh = S * (0.07 + ((hs >>> (gs * 3 + 12)) & 3) * 0.02);
+            g.moveTo(gx - S * 0.04, py + 1); g.lineTo(gx, py - gh); g.lineTo(gx + S * 0.04, py + 1);
+          }
+          g.fill();
+        }
       }
     }
     laag.versie = laagVersie();
@@ -1096,11 +1121,26 @@ footer{border-top:1px solid rgba(20,34,76,.08);padding:22px 0 30px;text-align:ce
     var tx0 = Math.floor(cam.x), tx1 = Math.floor(cam.x + VW / S), ty0 = Math.floor(cam.y), ty1 = Math.floor(cam.y + VH / S);
     if (laag.versie !== laagVersie() || Math.max(0, tx0) < laag.x0 || Math.min(m.w - 1, tx1) > laag.x0 + laag.bw - 1 ||
         Math.max(-6, ty0) < laag.y0 || Math.min(m.h - 1, ty1) > laag.y0 + laag.bh - 1) maakLaag(tx0, ty0, tx1, ty1);
-    ctx.fillStyle = '#2B2129'; ctx.fillRect(0, 0, VW, VH);
+    /* naast de mijn (als een paneel het beeld opzij schuift): lucht boven en bodem eronder */
+    var grondY = S - oy;
+    ctx.fillStyle = '#1C1822'; ctx.fillRect(0, Math.max(0, grondY), VW, VH);
+    if (grondY > 0){
+      var kl = donkerThema ? LUCHT_DONKER : LUCHT_LICHT, lu = ctx.createLinearGradient(0, grondY - 5 * S, 0, grondY);
+      lu.addColorStop(0, kl[0]); lu.addColorStop(1, kl[1]);
+      ctx.fillStyle = lu; ctx.fillRect(0, 0, VW, grondY);
+      ctx.fillStyle = '#4E9A45'; ctx.fillRect(0, grondY, VW, S * 0.14);
+    }
     ctx.drawImage(laag.c, laag.x0 * S - ox, laag.y0 * S - oy, laag.bw * S, laag.bh * S);
+    /* voorbij de rand van de kaart: vaste rotsbodem, net als onderin */
+    if (tx0 < 0 || tx1 >= m.w){
+      for (var by = Math.max(1, ty0); by <= ty1; by++) for (var bx = tx0; bx <= tx1; bx++){
+        if (bx >= 0 && bx < m.w) continue;
+        ctx.drawImage(sprites.bodem, bx * S - ox, by * S - oy, S, S);
+      }
+    }
     /* Het donker: hoe dieper, hoe minder licht van boven. Een verloop over het
        hele beeld, en daarna tekent de lamp het verlichte stuk van de laag er
-       weer overheen: een schijf in het midden en vier ringen eromheen, elke
+       weer overheen: een schijf in het midden en zes ringen eromheen, elke
        ring wat doorzichtiger, zodat de rand zacht is. Elke plek wordt maar
        een keer overgetekend, en alleen waar het donker is. Een doek ertussen
        dat opgeschaald wordt kostte in een meting drie keer zoveel. */
@@ -1113,15 +1153,15 @@ footer{border-top:1px solid rgba(20,34,76,.08);padding:22px 0 30px;text-align:ce
       ctx.fillStyle = lg; ctx.fillRect(0, bovenkant, VW, VH - bovenkant);
       if (cy + r1 > bovenkant){
         var lx = laag.x0 * S - ox, ly = laag.y0 * S - oy, lw = laag.bw * S, lh = laag.bh * S;
-        for (var k = 0; k < 5; k++){
+        for (var k = 0; k < 7; k++){
           /* k = 0 is de schijf in het midden, daarna de ringen naar buiten */
-          var rBinnen = k ? r0 + (r1 - r0) * (k - 1) / 4 : 0, rBuiten = k ? r0 + (r1 - r0) * k / 4 : r0;
+          var rBinnen = k ? r0 + (r1 - r0) * (k - 1) / 6 : 0, rBuiten = k ? r0 + (r1 - r0) * k / 6 : r0;
           ctx.save();
           ctx.beginPath(); ctx.rect(0, bovenkant, VW, VH - bovenkant); ctx.clip();
           ctx.beginPath(); ctx.arc(cx, cy, rBuiten, 0, Math.PI * 2);
           if (rBinnen) ctx.arc(cx, cy, rBinnen, 0, Math.PI * 2, true);
           ctx.clip();
-          ctx.globalAlpha = k ? 1 - k * 0.2 : 1;
+          ctx.globalAlpha = k ? 1 - k / 7 : 1;
           ctx.drawImage(laag.c, lx, ly, lw, lh);
           ctx.restore();
         }
@@ -1148,6 +1188,15 @@ footer{border-top:1px solid rgba(20,34,76,.08);padding:22px 0 30px;text-align:ce
       ctx.fillStyle = LUCHT_DONKER[0]; ctx.beginPath(); ctx.arc((mid + 7.7) * S - ox, grond - 3.35 * S, S * 0.4, 0, Math.PI * 2); ctx.fill();
     } else {
       ctx.fillStyle = '#FFE168'; ctx.beginPath(); ctx.arc((mid + 7.5) * S - ox, grond - 3.2 * S, S * 0.5, 0, Math.PI * 2); ctx.fill();
+      /* een paar wolkjes, elke mijn op dezelfde plek */
+      ctx.fillStyle = 'rgba(255,255,255,.85)';
+      for (var w = 0; w < Math.ceil(m.w / 8); w++){
+        var wx = (w * 8 + 1 + hash(w, 21) % 5) * S - ox, wy = grond - (2.3 + (hash(w, 22) % 100) / 90) * S, wr = S * (0.22 + (hash(w, 23) % 10) / 90);
+        ctx.beginPath(); ctx.arc(wx, wy, wr, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(wx + wr * 1.15, wy - wr * 0.45, wr * 1.25, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(wx + wr * 2.35, wy, wr * 0.95, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(wx + wr * 1.2, wy + wr * 0.1, wr * 0.9, 0, Math.PI * 2); ctx.fill();
+      }
     }
     gebouw(ctx, (mid - 4) * S - ox, grond, 'winkel');
     gebouw(ctx, (mid + 2) * S - ox, grond, 'museum');
@@ -1172,7 +1221,8 @@ footer{border-top:1px solid rgba(20,34,76,.08);padding:22px 0 30px;text-align:ce
       ctx.fillStyle = '#EDE3D3';
       for (var k = 0; k < 4; k++){ var zx = px + S * 0.42 + k * (b - S * 0.84) / 3 - S * 0.09; ctx.fillRect(zx, top + S * 0.3, S * 0.18, hoog - S * 0.3); ctx.strokeRect(zx, top + S * 0.3, S * 0.18, hoog - S * 0.3); }
     }
-    ctx.fillStyle = '#14224C'; ctx.font = '700 ' + Math.round(S * 0.24) + 'px Poppins, system-ui, sans-serif'; ctx.textAlign = 'center';
+    /* het bordje: donkere letters op de lichte lucht, lichte op de nachtlucht */
+    ctx.fillStyle = donkerThema ? '#F3EFE9' : '#14224C'; ctx.font = '700 ' + Math.round(S * 0.24) + 'px Poppins, system-ui, sans-serif'; ctx.textAlign = 'center';
     ctx.fillText(soort === 'winkel' ? 'WINKEL' : 'MUSEUM', px + b / 2, top - S * (soort === 'winkel' ? 0.62 : 0.72));
   }
   function tekenBarst(px, py, deel){
@@ -1183,40 +1233,87 @@ footer{border-top:1px solid rgba(20,34,76,.08);padding:22px 0 30px;text-align:ce
     for (var k = 0; k < n; k++){ var l = lijnen[k]; ctx.moveTo(px + l[0] * S, py + l[1] * S); ctx.lineTo(px + l[2] * S, py + l[3] * S); }
     ctx.stroke();
   }
-  /* de boor: een wagentje met rupsbanden, een cabine met jou erin en een boorkop */
+  /* De boor: een wagentje op rupsbanden, een cabine met jou erin, een lamp
+     voorop en een boorkop. De boorkop wijst naar het blok dat hij graaft of
+     waar de vraag over gaat; tijdens het graven draaien de groeven en rijden
+     de rupsbanden mee met de boor. Alles in delen van een vakje (s). */
+  var BOOR = { romp:'#F26749', rompDonker:'#CF4E33', inkt:'#14224C', band:'#2A3358', wiel:'#5B6480', staal:'#DDE1EA', staalDonker:'#9AA2B5', ruit:'#BFD0F7' };
+  var STREEP = [3, 3], GEEN_STREEP = [];
   function tekenBoor(px, py){
-    var sp = m.sp, a = sp.actie, kant = sp.kijk, omlaag = a && a.soort === 'graaf' && a.y1 > a.y0;
-    var tril = sp.graaft > 0 && !rustig ? (Math.random() - 0.5) * S * 0.05 : 0;
+    var sp = m.sp, a = sp.actie, s = S, lw = Math.max(1.6, s * 0.045);
+    var dy = a && a.soort === 'graaf' ? a.y1 - a.y0 : (m.wacht ? m.wacht.y - sp.y : 0), omlaag = dy > 0;
+    var graaft = sp.graaft > 0 && !rustig, nu = performance.now();
+    var tril = graaft ? Math.sin(nu / 23) * s * 0.02 : 0;
     ctx.save();
-    ctx.translate(px + S / 2 + tril, py + S / 2);
-    if (kant < 0 && !omlaag) ctx.scale(-1, 1);
-    var s = S, lw = Math.max(1.6, s * 0.045);
-    ctx.lineWidth = lw; ctx.strokeStyle = '#14224C'; ctx.lineJoin = 'round';
-    /* rupsband */
-    rond(-s * 0.4, s * 0.16, s * 0.72, s * 0.24, s * 0.12); ctx.fillStyle = '#14224C'; ctx.fill();
-    ctx.fillStyle = '#5B6480';
-    for (var k = 0; k < 3; k++){ ctx.beginPath(); ctx.arc(-s * 0.27 + k * s * 0.23, s * 0.28, s * 0.065, 0, Math.PI * 2); ctx.fill(); }
-    /* romp */
-    rond(-s * 0.42, -s * 0.2, s * 0.66, s * 0.38, s * 0.1); ctx.fillStyle = '#F26749'; ctx.fill(); ctx.stroke();
-    /* cabine */
-    rond(-s * 0.34, -s * 0.44, s * 0.4, s * 0.3, s * 0.1); ctx.fillStyle = '#83A5F2'; ctx.fill(); ctx.stroke();
-    if (gezicht){ ctx.save(); ctx.beginPath(); ctx.rect(-s * 0.32, -s * 0.42, s * 0.36, s * 0.26); ctx.clip(); ctx.drawImage(gezicht, -s * 0.28, -s * 0.44, s * 0.3, s * 0.3); ctx.restore(); }
-    /* lamp */
-    ctx.fillStyle = '#FFE168'; ctx.beginPath(); ctx.arc(s * 0.08, -s * 0.36, s * 0.06, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    /* boorkop: opzij of omlaag */
-    ctx.fillStyle = '#C9CED8';
-    ctx.beginPath();
-    if (omlaag){ ctx.moveTo(-s * 0.22, s * 0.36); ctx.lineTo(s * 0.12, s * 0.36); ctx.lineTo(-s * 0.05, s * 0.52); }
-    else { ctx.moveTo(s * 0.24, -s * 0.14); ctx.lineTo(s * 0.24, s * 0.14); ctx.lineTo(s * 0.5, 0); }
-    ctx.closePath(); ctx.fill(); ctx.stroke();
-    if (sp.graaft > 0 && !rustig){
-      var fase2 = (performance.now() / 60) % 2 < 1;
-      ctx.strokeStyle = '#5B6480'; ctx.lineWidth = lw * 0.8; ctx.beginPath();
-      if (omlaag){ ctx.moveTo(-s * 0.15, s * (fase2 ? 0.41 : 0.45)); ctx.lineTo(s * 0.05, s * (fase2 ? 0.45 : 0.41)); }
-      else { ctx.moveTo(s * (fase2 ? 0.3 : 0.36), -s * 0.09); ctx.lineTo(s * (fase2 ? 0.36 : 0.3), s * 0.09); }
-      ctx.stroke();
+    ctx.translate(px + s / 2 + tril, py + s / 2 + (graaft ? Math.cos(nu / 31) * s * 0.012 : 0));
+    if (sp.kijk < 0) ctx.scale(-1, 1);
+    ctx.lineWidth = lw; ctx.strokeStyle = BOOR.inkt; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    /* een zachte schaduw op de vloer */
+    ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(-s * 0.08, s * 0.43, s * 0.4, s * 0.05, 0, 0, Math.PI * 2); ctx.fill();
+    /* onder de grond schijnt de lamp een bundel vooruit */
+    if (sp.fy > 1.5){
+      ctx.fillStyle = 'rgba(255,225,104,.12)'; ctx.beginPath();
+      ctx.moveTo(s * 0.1, -s * 0.34); ctx.lineTo(s * 0.72, -s * 0.56); ctx.lineTo(s * 0.72, -s * 0.06); ctx.closePath(); ctx.fill();
+    }
+    var fase = graaft ? (nu / 90) % 1 : 0.35;
+    /* omlaag komt de boorkop onder de rupsbanden vandaan, dus eerst tekenen */
+    if (omlaag){ ctx.save(); ctx.translate(-s * 0.08, s * 0.33); ctx.rotate(Math.PI / 2); boorkop(s, lw, s * 0.3, s * 0.14, fase); ctx.restore(); }
+    /* cabine, met een ruit en jouw gezicht erachter */
+    rond(-s * 0.36, -s * 0.47, s * 0.4, s * 0.4, s * 0.1); ctx.fillStyle = BOOR.romp; ctx.fill(); ctx.stroke();
+    rond(-s * 0.3, -s * 0.41, s * 0.28, s * 0.24, s * 0.06); ctx.fillStyle = BOOR.ruit; ctx.fill();
+    if (gezicht){ ctx.save(); ctx.clip(); ctx.drawImage(gezicht, -s * 0.31, -s * 0.43, s * 0.3, s * 0.3); ctx.restore(); }
+    ctx.lineWidth = lw * 0.8; ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.beginPath(); ctx.moveTo(-s * 0.07, -s * 0.37); ctx.lineTo(-s * 0.04, -s * 0.32); ctx.stroke();
+    ctx.strokeStyle = BOOR.inkt; ctx.lineWidth = lw;
+    /* de lamp voorop de cabine */
+    ctx.beginPath(); ctx.moveTo(s * 0.04, -s * 0.33); ctx.lineTo(s * 0.08, -s * 0.33); ctx.stroke();
+    ctx.fillStyle = '#FFE168'; ctx.beginPath(); ctx.arc(s * 0.1, -s * 0.33, s * 0.055, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    /* de romp: licht van boven, wat donkerder aan de onderkant */
+    rond(-s * 0.46, -s * 0.15, s * 0.68, s * 0.36, s * 0.09); ctx.fillStyle = BOOR.romp; ctx.fill();
+    ctx.save(); ctx.clip(); ctx.fillStyle = BOOR.rompDonker; ctx.fillRect(-s * 0.46, s * 0.08, s * 0.68, s * 0.14); ctx.restore();
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.45)'; ctx.lineWidth = lw * 0.85;
+    ctx.beginPath(); ctx.moveTo(-s * 0.36, -s * 0.08); ctx.lineTo(s * 0.1, -s * 0.08); ctx.stroke();
+    ctx.fillStyle = 'rgba(20,34,76,.35)';
+    ctx.beginPath(); ctx.arc(-s * 0.37, s * 0.02, s * 0.025, 0, Math.PI * 2); ctx.arc(s * 0.13, s * 0.02, s * 0.025, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = BOOR.inkt; ctx.lineWidth = lw;
+    /* de boorkop opzij */
+    if (!omlaag){ ctx.save(); ctx.translate(s * 0.21, s * 0.02); boorkop(s, lw, s * 0.32, s * 0.15, fase); ctx.restore(); }
+    /* rupsband: de noppen schuiven mee met hoe ver je reed */
+    rond(-s * 0.43, s * 0.17, s * 0.7, s * 0.25, s * 0.125); ctx.fillStyle = BOOR.band; ctx.fill(); ctx.stroke();
+    rond(-s * 0.395, s * 0.205, s * 0.63, s * 0.18, s * 0.09);
+    ctx.setLineDash(STREEP); ctx.lineDashOffset = rustig ? 0 : -(sp.fx * 2.4 + (graaft ? nu / 400 : 0)) * s;
+    ctx.strokeStyle = BOOR.wiel; ctx.lineWidth = lw * 0.9; ctx.stroke();
+    ctx.setLineDash(GEEN_STREEP); ctx.lineDashOffset = 0;
+    for (var k = 0; k < 3; k++){
+      var wx = -s * 0.28 + k * s * 0.2;
+      ctx.fillStyle = BOOR.wiel; ctx.beginPath(); ctx.arc(wx, s * 0.295, s * 0.065, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = BOOR.staal; ctx.beginPath(); ctx.arc(wx, s * 0.295, s * 0.025, 0, Math.PI * 2); ctx.fill();
     }
     ctx.restore();
+  }
+  /* een boorkop die naar rechts wijst: een kraag en een kegel met groeven;
+     len is de lengte van de kegel, h de halve hoogte, fase schuift de groeven */
+  function boorkop(s, lw, len, h, fase){
+    var k0 = s * 0.07, punt = k0 + len;
+    rond(0, -h * 0.8, k0 + s * 0.01, h * 1.6, s * 0.025); ctx.fillStyle = BOOR.staalDonker; ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(k0, -h); ctx.lineTo(punt - s * 0.035, -s * 0.022);
+    ctx.quadraticCurveTo(punt, 0, punt - s * 0.035, s * 0.022); ctx.lineTo(k0, h); ctx.closePath();
+    ctx.fillStyle = BOOR.staal; ctx.fill();
+    ctx.save(); ctx.clip();
+    ctx.fillStyle = BOOR.staalDonker; ctx.fillRect(k0, h * 0.2, len, h);
+    /* drie schuine groeven: schuiven ze op, dan lijkt de kop te draaien */
+    ctx.strokeStyle = 'rgba(20,34,76,.55)'; ctx.lineWidth = lw * 0.75; ctx.beginPath();
+    for (var k = 0; k < 3; k++){
+      var gx = k0 + ((k + fase) / 3) * len * 0.92;
+      ctx.moveTo(gx - s * 0.05, -h); ctx.lineTo(gx + s * 0.05, h);
+    }
+    ctx.stroke(); ctx.restore();
+    ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = lw * 0.7;
+    ctx.beginPath(); ctx.moveTo(k0 + s * 0.03, -h * 0.55); ctx.lineTo(k0 + len * 0.62, -h * 0.2); ctx.stroke();
+    ctx.strokeStyle = BOOR.inkt; ctx.lineWidth = lw;
+    ctx.beginPath(); ctx.moveTo(k0, -h); ctx.lineTo(punt - s * 0.035, -s * 0.022);
+    ctx.quadraticCurveTo(punt, 0, punt - s * 0.035, s * 0.022); ctx.lineTo(k0, h); ctx.closePath(); ctx.stroke();
   }
   function rond(x, y, b, h, r){
     ctx.beginPath(); ctx.moveTo(x + r, y); ctx.lineTo(x + b - r, y); ctx.quadraticCurveTo(x + b, y, x + b, y + r); ctx.lineTo(x + b, y + h - r);
@@ -1239,15 +1336,19 @@ footer{border-top:1px solid rgba(20,34,76,.08);padding:22px 0 30px;text-align:ce
     ctx.fillStyle = '#FBF6F1'; ctx.strokeStyle = '#14224C'; ctx.lineWidth = Math.max(1.6, s * 0.045);
     rond(dx - s * 0.3, dy - s * 0.12, s * 0.6, s * 0.24, s * 0.1); ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#2f7d52'; ctx.fillRect(dx - s * 0.06, dy - s * 0.08, s * 0.12, s * 0.16);
-    var draai = rustig ? 0.5 : (performance.now() / 40) % 1;
+    /* twee armen met een draaiende propeller: smaller en breder lijkt draaien */
+    var draai = rustig ? 1 : Math.abs(Math.cos(performance.now() / 25));
+    ctx.beginPath(); ctx.moveTo(dx - s * 0.26, dy - s * 0.08); ctx.lineTo(dx - s * 0.42, dy - s * 0.2); ctx.moveTo(dx + s * 0.26, dy - s * 0.08); ctx.lineTo(dx + s * 0.42, dy - s * 0.2); ctx.stroke();
     ctx.fillStyle = '#14224C';
-    [-0.42, 0.42].forEach(function(r){ ctx.fillRect(dx + r * s - s * 0.2 * (1 - draai), dy - s * 0.2, s * 0.4 * (1 - draai) + 2, s * 0.05); });
+    for (var k = -1; k <= 1; k += 2){ ctx.beginPath(); ctx.ellipse(dx + k * s * 0.42, dy - s * 0.21, s * 0.22 * draai + 1, s * 0.035, 0, 0, Math.PI * 2); ctx.fill(); }
   }
   function tekenDeeltjes(ox, oy){
     for (var k = 0; k < deeltjes.length; k++){
       var d = deeltjes[k];
       ctx.globalAlpha = Math.max(0, Math.min(1, d.l / 0.4));
-      ctx.fillStyle = d.k; ctx.fillRect(d.x * S - ox - d.s / 2, d.y * S - oy - d.s / 2, d.s, d.s);
+      var dx = d.x * S - ox, dy = d.y * S - oy, h = d.s * 0.6;
+      ctx.fillStyle = d.k; ctx.beginPath();
+      ctx.moveTo(dx, dy - h); ctx.lineTo(dx + h, dy - h * 0.2); ctx.lineTo(dx + h * 0.5, dy + h); ctx.lineTo(dx - h * 0.8, dy + h * 0.5); ctx.closePath(); ctx.fill();
     }
     ctx.globalAlpha = 1;
   }
@@ -1284,6 +1385,7 @@ footer{border-top:1px solid rgba(20,34,76,.08);padding:22px 0 30px;text-align:ce
     if (verborgen){ if (raf){ cancelAnimationFrame(raf); raf = 0; } losLaten(); }
     else start();
   });
+  var laatsteActie = null;
   function werk(dt){
     if (!m) return;
     var sp = m.sp, rest = dt, fxWas = sp.fx, fyWas = sp.fy;
@@ -1303,6 +1405,11 @@ footer{border-top:1px solid rgba(20,34,76,.08);padding:22px 0 30px;text-align:ce
       if (stil && wil) eenmaal = null;
       rest -= stap;
       verwerk();
+    }
+    /* zachte aarde graven geeft een wolkje gruis, in de kleur van de laag */
+    if (sp.actie !== laatsteActie){
+      laatsteActie = sp.actie;
+      if (sp.actie && sp.actie.soort === 'graaf' && !sp.actie.extra) spat(sp.actie.x1, sp.actie.y1, MM.LAGEN[MM.laagVan(sp.actie.y1)].vlek, 5, 1.6);
     }
     if (sp.fx !== fxWas || sp.fy !== fyWas || sp.graaft > 0) vuil = true;
     /* camera */
@@ -1515,7 +1622,7 @@ footer{border-top:1px solid rgba(20,34,76,.08);padding:22px 0 30px;text-align:ce
   }
   function ICO(id){
     return {
-      boor:'<path d="M4 12h9"/><path d="M13 7l7 5-7 5z"/><path d="M6 8v8"/>',
+      boor:'<rect x="3" y="8.5" width="5" height="7" rx="1.5"/><path d="M8 7l13 5-13 5z"/><path d="M11.5 8.5l1.6 7M15.5 10l.8 4"/>',
       tank:'<path d="M12 3c3.6 4.3 5.6 7.2 5.6 10a5.6 5.6 0 0 1-11.2 0C6.4 10.2 8.4 7.3 12 3z"/>',
       lamp:'<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.3 1 2.1h5c0-.8.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
       ruim:'<path d="M5 8h14l-1.5 12h-11z"/><path d="M9 8a3 3 0 0 1 6 0"/>',
