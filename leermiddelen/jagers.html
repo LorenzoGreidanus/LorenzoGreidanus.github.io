@@ -73,6 +73,17 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .landvak svg{display:block;width:100%;height:auto;touch-action:manipulation}
 .landsvg .plek:hover rect{opacity:.08 !important;stroke:var(--ocean) !important}
 .landtip{font-size:.84rem;color:var(--muted);margin-bottom:18px;max-width:65ch}
+/* Het blad onder het landschap: op een telefoon is een poppetje te klein om
+   raak te tikken, dus een tik op een plek opent hier twee grote knoppen. */
+.plekblad{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 10px;padding:8px 8px 8px 14px;
+  background:var(--kaart,#fff);border:2px solid var(--ocean);border-radius:16px}
+.plekblad[hidden]{display:none}
+.plekblad b{flex:1 1 100%;font-size:.92rem}
+.plekblad button{flex:1 1 auto;min-height:44px;min-width:44px;padding:0 12px;border-radius:12px;border:1.5px solid rgba(20,34,76,.14);
+  background:var(--room);color:var(--ink);font-weight:600;font-size:.88rem}
+.plekblad button.dicht{flex:0 0 44px}
+.plekblad button.dicht{font-size:1.2rem;padding:0}
+@media(min-width:560px){.plekblad b{flex:1 1 9em}.plekblad button{flex:0 0 auto}}
 /* alleen voor een schermlezer: wat er gebeurde, zonder dat het beeld verandert */
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;margin:-1px;padding:0;border:0}
 .klussen{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:18px}
@@ -247,6 +258,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
   <div id="keuzedeel">
     <h2 class="eyebrow" style="margin-top:22px">stuur je ploegen het land in</h2>
     <div class="landvak" id="landvak"></div>
+    <div class="plekblad" id="plekblad" role="group" aria-label="Ploegen op deze plek" hidden></div>
     <p class="landtip" id="landtip" role="status" aria-live="polite">Tik op een plek om er een ploeg heen te sturen, tik op een poppetje om hem terug te roepen, of gebruik de knoppen min en plus hieronder. Op elk bordje staat wat die plek oplevert. Na het jaar zie je per plek hoeveel het werd.</p>
     <div class="klussen" id="klussen"></div>
     <div class="plan">
@@ -785,11 +797,15 @@ function jaarDoen(s, v, geluk){
   function start(){
     s = Object.assign({}, START); s.jaar = 1; s.gesch = [];
     verd = { jacht:3, verz:2, akker:0, bouw:1 };
-    bezig = false;
+    bezig = false; bladPlek = null;
     elStart.classList.add('hide'); elEinde.classList.add('hide'); elSpel.classList.remove('hide');
     document.getElementById('opnieuwBtn').classList.remove('hide');
     bouwKlussen();
     tekenAlles();
+    /* de tip past bij het scherm: pas nu het landschap in beeld is, weet je hoe breed het is */
+    document.getElementById('landtip').textContent = smalLand()
+      ? 'Tik op een plek of een poppetje. Onder het landschap komen dan knoppen om een ploeg erheen te sturen of terug te roepen. Op elk bordje staat wat die plek oplevert.'
+      : 'Tik op een plek om er een ploeg heen te sturen, tik op een poppetje om hem terug te roepen, of gebruik de knoppen min en plus hieronder. Op elk bordje staat wat die plek oplevert. Na het jaar zie je per plek hoeveel het werd.';
     scrollTo({top:0,behavior:'auto'});
   }
 
@@ -833,6 +849,54 @@ function jaarDoen(s, v, geluk){
 
   var laatsteOogst = null;   /* wat elke plek vorig jaar opleverde */
 
+  /* Een ploeg sturen of terugroepen, vanaf het landschap of het blad. */
+  function stuurNaar(id){
+    if (!magHier2(id)){
+      document.getElementById('landtip').textContent = id === 'akker'
+        ? 'Zaaien heeft geen zin zolang je rondtrekt: bij de oogst ben je hier niet meer.'
+        : 'Het dorp is af. Er valt hier niets meer te bouwen.';
+      return;
+    }
+    if (totaalPloegen() >= PLOEGEN){
+      document.getElementById('landtip').textContent =
+        'Al je zes ploegen zijn ingedeeld. Roep er eerst een terug.';
+      return;
+    }
+    verd[id]++;
+    tekenAlles();
+  }
+  function roepTerug(id){ if (verd[id] > 0){ verd[id]--; tekenAlles(); } }
+
+  /* Op een telefoon is het landschap zo smal dat een poppetje een tikvlak van
+     veertien bij veertig pixels krijgt. Dan opent een tik op een plek of een
+     poppetje het blad onder het landschap, met knoppen van 44 pixels. Op een
+     breed scherm werkt een tik meteen, behalve op een poppetje in een volle
+     rij dat toch smaller is dan 44 pixels. */
+  var bladPlek = null;
+  function smalLand(){
+    var w = document.getElementById('landvak').getBoundingClientRect().width;
+    return w > 0 && w * 36 / LAND.breed < 44;
+  }
+  function openBlad(id){ bladPlek = id; tekenAlles(); }
+  function tekenBlad(){
+    var blad = document.getElementById('plekblad');
+    var p = PLEKKEN.filter(function(x){ return x.id === bladPlek; })[0];
+    if (!p || bezig){ blad.hidden = true; blad.innerHTML = ''; return; }
+    var n = verd[p.id];
+    blad.innerHTML = '<b>' + p.naam.charAt(0).toUpperCase() + p.naam.slice(1) + ': ' + n + (n === 1 ? ' ploeg' : ' ploegen') + '</b>' +
+      '<button type="button" data-blad="min" aria-label="Roep een ploeg terug van ' + p.naam + '"' + (n ? '' : ' disabled') + '>\u2212 Ploeg terug</button>' +
+      '<button type="button" data-blad="plus" aria-label="Stuur een ploeg naar ' + p.naam + '">+ Ploeg erbij</button>' +
+      '<button type="button" class="dicht" data-blad="dicht" aria-label="Sluiten">\u00d7</button>';
+    blad.hidden = false;
+  }
+  document.getElementById('plekblad').addEventListener('click', function(e){
+    var k = e.target.closest('[data-blad]');
+    if (!k || !bladPlek || bezig) return;
+    var w = k.getAttribute('data-blad');
+    if (w === 'dicht'){ bladPlek = null; tekenAlles(); return; }
+    if (w === 'min') roepTerug(bladPlek); else stuurNaar(bladPlek);
+  });
+
   function tekenLandschap(){
     var vak = document.getElementById('landvak');
     /* op elk bordje kort wat die plek oplevert, zodat je niet hoeft te rekenen */
@@ -844,37 +908,29 @@ function jaarDoen(s, v, geluk){
     };
     vak.innerHTML = tekenLand({ vaste:s.vaste, akkerp:s.akkerp, schaars:wildRem(s),
                                 mensen:s.mensen, gezondheid:s.gezondheid },
-                              verd, seizoenNu(), null, labels, laatsteOogst);
+                              verd, seizoenNu(), bezig ? null : bladPlek, labels, laatsteOogst);
     if (bezig) return;
     Array.prototype.forEach.call(vak.querySelectorAll('.plek'), function(g){
       g.addEventListener('click', function(){
         var id = g.getAttribute('data-p');
-        if (!magHier2(id)){
-          document.getElementById('landtip').textContent = id === 'akker'
-            ? 'Zaaien heeft geen zin zolang je rondtrekt: bij de oogst ben je hier niet meer.'
-            : 'Het dorp is af. Er valt hier niets meer te bouwen.';
-          return;
-        }
-        if (totaalPloegen() >= PLOEGEN){
-          document.getElementById('landtip').textContent =
-            'Al je zes ploegen zijn ingedeeld. Tik eerst een poppetje aan om er een terug te roepen.';
-          return;
-        }
-        verd[id]++;
-        tekenAlles();
+        if (smalLand()){ openBlad(id); return; }
+        stuurNaar(id);
       });
     });
     Array.prototype.forEach.call(vak.querySelectorAll('.ploeg'), function(g){
       g.addEventListener('click', function(e){
         e.stopPropagation();
         var id = g.getAttribute('data-p');
-        if (verd[id] > 0){ verd[id]--; tekenAlles(); }
+        var vlak = g.querySelector('rect');
+        if (smalLand() || (vlak && vlak.getBoundingClientRect().width < 44)){ openBlad(id); return; }
+        roepTerug(id);
       });
     });
   }
 
   function tekenAlles(){
     tekenLandschap();
+    tekenBlad();
     document.getElementById('jaarLabel').textContent = 'jaar ' + s.jaar + ' van ' + JAREN;
     document.getElementById('plekLabel').textContent = PLEKNAAM[s.vaste] +
       (s.kennis ? ', boerenkennis ' + s.kennis + ' van 3' : '');
@@ -944,7 +1000,7 @@ function jaarDoen(s, v, geluk){
   /* ---------- het jaar door ---------- */
   document.getElementById('jaarBtn').addEventListener('click', function(){
     if (bezig || totaalPloegen() !== PLOEGEN) return;
-    bezig = true;
+    bezig = true; bladPlek = null; tekenBlad();
     var voor = { mensen:s.mensen, gezondheid:s.gezondheid, vaste:s.vaste, kennis:s.kennis };
     var u = jaarDoen(s, verd, { jacht:Math.random(), verz:Math.random(), akker:Math.random() });
     /* Wat elke plek opbracht komt als een groen bordje op het landschap te
@@ -1136,7 +1192,7 @@ function jaarDoen(s, v, geluk){
     if (i === -1 || !nivVak.children[i]) return;
     nivVak.children[i].click();
     nivVak.style.display = 'none';
-    document.getElementById('nivKop').textContent = 'Niveau: ' + NIVEAUS[i].naam + ', gekozen door je docent';
+    document.getElementById('nivKop').textContent = 'Niveau: ' + NIVEAUS[i].naam + (/[?&]van=lo\b/.test(location.search) ? ', gekozen in de leeromgeving' : ', gekozen door je docent');
   })();
 })();
 

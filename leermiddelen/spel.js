@@ -6,8 +6,10 @@
      SPEL.uitleg({ doel:'...', tijd:'...', bediening:'...' })
        Zet onder de inleiding een paneel met drie regels en het plaatje van
        het spel. Lange uitleg die al op het startscherm stond (.uitleg en
-       .tip) verhuist naar "Alle regels" in het paneel. Wie op "Begrepen"
-       tikt ziet het paneel de volgende keer ingeklapt (localStorage).
+       .tip) verhuist naar "Alle regels" in het paneel. Het paneel staat
+       dicht achter de knop "Hoe werkt het?", zodat Start in beeld blijft;
+       bij een eerste bezoek staat het doel in een zin in die knop. Wie op
+       "Begrepen" tikt ziet daarna alleen de knop (localStorage).
        Heeft het spel een uitleg stap voor stap (uitleg/<spel>.js, zie
        MET_STAPPEN), dan komt er een knop bij die hem opent; met ?uitleg in
        het adres gaat hij meteen open, handig op het digibord.
@@ -60,6 +62,7 @@ window.SPEL = (function(){
     deel:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M12 15V3M8 7l4-4 4 4"/></svg>',
     opnieuw:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3L20 8M20 4v4h-4M20 12a8 8 0 0 1-14 5.3L4 16M4 20v-4h4"/></svg>',
     alle:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>',
+    pijl:'<svg class="pijl" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>',
     trap:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20h5v-5h5v-5h5V5h3"/></svg>'
   };
   /* De tegel van een spel: dezelfde kleur en hetzelfde plaatje als op de
@@ -169,9 +172,23 @@ window.SPEL = (function(){
       var open = paneel.classList.toggle('open');
       regelsKnop.textContent = open ? 'Regels dicht' : 'Alle regels';
     });
+    /* De knop "Hoe werkt het?" opent het paneel. Bij een eerste bezoek staat
+       het doel er in een zin onder, zodat je weet waar het over gaat zonder
+       dat het hele paneel Start onder de vouw duwt. Na "Begrepen" is het
+       alleen nog de knop. */
     var knop = document.createElement('button');
-    knop.type = 'button'; knop.className = 'uitlegknop';
-    knop.innerHTML = IC.vraag + 'Hoe werkt het?';
+    knop.type = 'button'; knop.className = 'uitlegknop' + (o.links ? ' links' : '');
+    knop.setAttribute('aria-expanded', 'false');
+    knop.innerHTML = IC.vraag + '<span class="uk-tekst"><b>Hoe werkt het?</b>' +
+      (o.doel ? '<span class="uk-doel">' + schoon(o.doel) + '</span>' : '') + '</span>' + IC.pijl;
+    /* verandert een spel het doel in het paneel (feodalisme: per rol), dan loopt de knop mee */
+    var doelSpan = paneel.querySelector('.regel span'), ukDoel = knop.querySelector('.uk-doel');
+    if (o.doel && doelSpan && ukDoel && window.MutationObserver){
+      new MutationObserver(function(){
+        var c = doelSpan.cloneNode(true), b = c.querySelector('b'); if (b) b.parentNode.removeChild(b);
+        ukDoel.textContent = c.textContent.trim();
+      }).observe(doelSpan, { childList:true, characterData:true, subtree:true });
+    }
     /* ingeklapt staat de stap-voor-stapknop naast "Hoe werkt het?" */
     var stapKnop = null;
     if (heeftStappen()){
@@ -183,10 +200,20 @@ window.SPEL = (function(){
     }
     function toon(open){
       paneel.hidden = !open; knop.hidden = open;
-      if (stapKnop) stapKnop.hidden = open;
+      knop.classList.toggle('eerst', !gezien);
+      /* bij een eerste bezoek staat de stap-voor-stapknop in het paneel, niet naast de knop */
+      if (stapKnop) stapKnop.hidden = open || !gezien;
     }
-    paneel.querySelector('.begrepen').addEventListener('click', function(){ zet(sleutel, 1); toon(false); });
-    knop.addEventListener('click', function(){ toon(true); });
+    paneel.querySelector('.begrepen').addEventListener('click', function(){
+      gezien = true; zet(sleutel, 1); toon(false);
+      try { knop.focus({ preventScroll:true }); } catch (e){}
+    });
+    knop.addEventListener('click', function(){
+      toon(true);
+      var eerste = paneel.querySelector('.begrepen');
+      try { eerste.focus({ preventScroll:true }); } catch (e){}
+      inBeeld(paneel);
+    });
     /* onder: het paneel na de keuzes en Start, zodat Start niet onder de vouw valt */
     var na = null;
     if (o.onder === true){
@@ -196,10 +223,13 @@ window.SPEL = (function(){
       while (na && na.nextElementSibling && na.nextElementSibling.classList.contains('oneindiguit')) na = na.nextElementSibling;
     } else if (o.onder) na = typeof o.onder === 'string' ? $(o.onder) : o.onder;
     if (!na || !start.contains(na)){ na = start.querySelector('.lead'); if (na && na.parentNode !== start) na = null; }
+    /* "Lees verder" onder een ingekorte inleiding (vakspel.js) hoort bij de inleiding */
+    if (na && na.nextElementSibling && na.nextElementSibling.classList.contains('leadmeer')) na = na.nextElementSibling;
     if (na){ if (stapKnop) na.insertAdjacentElement('afterend', stapKnop); na.insertAdjacentElement('afterend', knop); na.insertAdjacentElement('afterend', paneel); }
     else { if (stapKnop) start.insertBefore(stapKnop, start.firstChild); start.insertBefore(knop, start.firstChild); start.insertBefore(paneel, start.firstChild); }
     if (o.onder){ knop.classList.add('onder'); if (stapKnop) stapKnop.classList.add('onder'); }
-    toon(!gezien);
+    /* ook bij een eerste bezoek dicht: dan staat het doel in de knop */
+    toon(false);
     if (o.chips) drukknoppen(start);
     if (o.zeker) zeker(o.zeker, o.loopt);
     /* ?uitleg of ?uitleg=optellen in het adres: meteen open */
@@ -276,7 +306,8 @@ window.SPEL = (function(){
      lagerIsBeter, sleutel (apart beste per niveau of modus), max, drempels,
      sterren, kop, compact (zonder groot getal), plek (id: kaart komt vóór
      dat element), klas (false: niet melden), ronde, punten, niveau, vak,
-     opnieuw (functie), opnieuwTekst, deelTekst, kleur ([van, naar]). */
+     opnieuw (functie; false: geen knop voor nog een keer, dan is Alle spellen
+     de hoofdknop), opnieuwTekst, deelTekst, kleur ([van, naar]). */
   /* 5 op rij: 1,1 keer; 10: 1,25; 20: 1,5; 30 en meer: 1,75 */
   function reeksFactor(r){ r = r | 0; return r >= 30 ? 1.75 : r >= 20 ? 1.5 : r >= 10 ? 1.25 : r >= 5 ? 1.1 : 1; }
   function einde(o){
@@ -332,10 +363,21 @@ window.SPEL = (function(){
     var kaart = document.createElement('div');
     kaart.className = 'eindkaart' + (o.compact ? ' compact' : '');
     if (o.kleur){ kaart.style.setProperty('--ek1', o.kleur[0]); kaart.style.setProperty('--ek2', o.kleur[1] || o.kleur[0]); }
+    /* De eerste score onder deze sleutel is niet altijd de eerste keer: wie dit
+       spel al met andere keuzes (niveau, onderdeel, oneindig) speelde, heeft
+       daar al een beste score van. Dan zegt de kaart "met deze keuzes". */
+    var eerderAnders = false;
+    if (eerste) try {
+      var basis = 'lg-beste-' + bestand;
+      for (var i = 0; i < localStorage.length && !eerderAnders; i++){
+        var k = localStorage.key(i);
+        if (k && k !== sleutel && (k === basis || k.indexOf(basis + '-') === 0)) eerderAnders = true;
+      }
+    } catch (e){}
     var besteTekst = '';
     if (beste && typeof beste.w === 'number'){
       besteTekst = record ? 'Nieuw record op dit apparaat<span class="record">record</span>'
-                 : eerste ? 'Je eerste keer op dit apparaat'
+                 : eerste ? (eerderAnders ? 'Je eerste keer met deze keuzes' : 'Je eerste keer op dit apparaat')
                  : 'Beste ooit op dit apparaat: <b>' + schoon(beste.w) + (o.label ? ' ' + schoon(o.label) : '') + '</b>';
     }
     /* het gezichtje van de leerling: met de bijnaam van de klascode, of alleen het eigen gezichtje uit het profiel.
@@ -359,13 +401,14 @@ window.SPEL = (function(){
       (!o.compact && o.score !== undefined && o.score !== null ? '<div class="getal">' + schoon(o.score) + (o.label ? '<small>' + schoon(o.label) + '</small>' : '') + '</div>' : '') +
       '<div class="rechts">' + sterrenHtml + (besteTekst ? '<p class="beste">' + besteTekst + '</p>' : '') + wieHtml + muntHtml + streakHtml + bewaarHtml + '</div>' +
       '<div class="knoppen">' +
-        knopje('opnieuw', IC.opnieuw, schoon(o.opnieuwTekst || 'Nog een keer')) +
+        /* kan het niet nog een keer (de uitdaging van vandaag), dan is Alle spellen de hoofdknop, vooraan */
+        (o.opnieuw === false ? knopje('hoofd', IC.alle, 'Alle spellen', 'a', ' href="index.html"') : knopje('opnieuw', IC.opnieuw, schoon(o.opnieuwTekst || 'Nog een keer'))) +
         /* Delen hoort bij een goede uitslag. Ging het mis, dan hoort daar een
            uitweg: de foutenmap serveert precies de vragen die fout gingen. */
         (sterren === 0
           ? (bestand !== 'fouten' && window.FOUTENMAP && FOUTENMAP.lijst && FOUTENMAP.lijst().length ? knopje('stil', IC.opnieuw, 'Oefen je fouten', 'a', ' href="fouten.html"') : '')
           : knopje('stil deel', IC.deel, 'Delen')) +
-        knopje('stil', IC.alle, 'Alle spellen', 'a', ' href="index.html"') +
+        (o.opnieuw === false ? '' : knopje('stil', IC.alle, 'Alle spellen', 'a', ' href="index.html"')) +
         knopje('stil', IC.alle, 'Mijn voortgang', 'a', ' href="voortgang.html"') +
       '</div>' +
       '<p class="meta" id="eindMeta"></p>';
@@ -373,7 +416,8 @@ window.SPEL = (function(){
     if (voor && voor.parentNode === sectie) sectie.insertBefore(kaart, voor);
     else sectie.insertBefore(kaart, sectie.firstChild);
     var meta = kaart.querySelector('.meta');
-    kaart.querySelector('.opnieuw').addEventListener('click', function(){
+    var opnieuwKnop = kaart.querySelector('.opnieuw');
+    if (opnieuwKnop) opnieuwKnop.addEventListener('click', function(){
       if (o.opnieuw){ o.opnieuw(); return; }
       var k = ['nogBtn', 'nogeensBtn', 'opnieuwBtn'].map($).filter(Boolean)[0];
       if (k) k.click(); else location.reload();

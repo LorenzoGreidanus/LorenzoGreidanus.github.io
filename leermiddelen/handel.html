@@ -45,6 +45,10 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .mark i{width:32px;height:32px;border-radius:10px;background:var(--ocean);color:#fff;display:grid;place-items:center;font-style:normal;font-size:.78rem}
 .hd-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .pill{background:var(--sand);font-weight:600;padding:6px 13px;border-radius:999px;font-size:.78rem}
+/* Op een telefoon duwden de twee pillen de kop naar twee regels. Daar staan
+   route en niveau als een regeltje boven de kaart. */
+.spelpil{display:none;margin:16px 0 -8px}
+@media(max-width:640px){.hd-right .pill{display:none}.spelpil{display:block}}
 .linkbtn{background:none;border:none;color:var(--muted);text-decoration:underline;text-underline-offset:4px;font-size:.85rem;padding:6px}
 .linkbtn:hover{color:var(--ink)}
 
@@ -347,6 +351,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
 </section>
 
 <section class="wrap hide" id="scherm-spel">
+  <p class="eyebrow spelpil" id="spelPil"></p>
   <div class="speelveld">
     <div class="kolom">
       <div class="kaart k-zee">
@@ -540,6 +545,7 @@ var GEBEURTENISSEN = [
         document.getElementById('startBtn').disabled = !(route && niveau);
         var p = document.getElementById(label);
         p.textContent = item.naam; p.classList.remove('hide');
+        document.getElementById('spelPil').textContent = [route, niveau].filter(Boolean).map(function(x){ return x.naam; }).join(' \u00b7 ');
       });
       vak.appendChild(b);
     });
@@ -931,16 +937,47 @@ var GEBEURTENISSEN = [
       s += '<path d="' + wegPad(zeeweg(r[0], r[1]).pad) + '" fill="none" stroke="#14224C" stroke-opacity=".28" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>';
     });
     /* de reizen die je nu kunt maken: gestippeld over zee, met de kosten halverwege */
+    var kk = kf.kost, bordjes = [];
     route.havens.forEach(function(h, i){
       if (i === hier) return;
       var weg = zeeweg(hier, i), kost = reiskosten(hier, i), kan = geld >= kost;
       s += '<path d="' + wegPad(weg.pad) + '" fill="none" stroke="' + (kan ? '#204ECF' : '#5b6480') +
         '" stroke-opacity="' + (kan ? '.55' : '.3') + '" stroke-width="1.6" stroke-dasharray="4 5" stroke-linecap="round" stroke-linejoin="round"/>';
-      var mid = halverwege(weg), mx = mid[0], my = mid[1];
-      var kk = kf.kost;
+      var mid = halverwege(weg);
+      bordjes.push({ x:mid[0], y:mid[1], kost:kost, kan:kan });
+    });
+    /* Twee wegen die vlak bij elkaar lopen, zoals naar Lübeck en Danzig, gaven
+       prijsbordjes die over elkaar lagen. Raken twee bordjes elkaar, dan
+       schuiven ze uit elkaar, langs de kortste kant, tot er ruimte tussen zit.
+       Een naambordje van een haven schuift niet: daar gaat het prijsbordje
+       omheen. Alles rekent met het midden en de halve maat. */
+    var kn = kf.naam, ruim = 8;
+    var vast = route.havens.map(function(h){
+      var links = h.x > 340, breed = h.naam.length * 6.6 * kn + 14, x0 = links ? h.x - 14 - breed : h.x + 14;
+      return { x:x0 + breed / 2, y:h.y, hw:breed / 2 + ruim / 2, hh:9 * kn + ruim / 2 };
+    });
+    bordjes.forEach(function(bd){ bd.hw = 15 * kk + ruim / 2; bd.hh = 7.5 * kk + ruim / 2; });
+    function uitElkaar(A, B, beide){
+      var ox = A.hw + B.hw - Math.abs(A.x - B.x), oy = A.hh + B.hh - Math.abs(A.y - B.y);
+      if (ox <= 0 || oy <= 0) return false;
+      var deel = beide ? .5 : 1;
+      if (oy <= ox){ var ry = (A.y <= B.y ? -1 : 1) * (oy * deel + .3); A.y += ry; if (beide) B.y -= ry; }
+      else { var rx = (A.x <= B.x ? -1 : 1) * (ox * deel + .3); A.x += rx; if (beide) B.x -= rx; }
+      return true;
+    }
+    for (var ronde = 0; ronde < 40; ronde++){
+      var geschoven = false;
+      for (var a = 0; a < bordjes.length; a++){
+        for (var b = a + 1; b < bordjes.length; b++) if (uitElkaar(bordjes[a], bordjes[b], true)) geschoven = true;
+        for (var v = 0; v < vast.length; v++) if (uitElkaar(bordjes[a], vast[v], false)) geschoven = true;
+      }
+      if (!geschoven) break;
+    }
+    bordjes.forEach(function(bd){
+      var mx = bd.x, my = bd.y;
       s += '<rect x="' + (mx - 15 * kk).toFixed(1) + '" y="' + (my - 8 * kk).toFixed(1) + '" width="' + (30 * kk).toFixed(1) + '" height="' + (15 * kk).toFixed(1) + '" rx="' + (7.5 * kk).toFixed(1) + '" fill="#fff" fill-opacity=".9"/>';
-      s += '<text x="' + mx + '" y="' + (my + 3.5 * kk).toFixed(1) + '" text-anchor="middle" font-family="Poppins" font-size="' + (8.5 * kk).toFixed(1) + '" font-weight="600" fill="' +
-        (kan ? '#204ECF' : '#5b6480') + '">' + kost + '</text>';
+      s += '<text x="' + mx.toFixed(1) + '" y="' + (my + 3.5 * kk).toFixed(1) + '" text-anchor="middle" font-family="Poppins" font-size="' + (8.5 * kk).toFixed(1) + '" font-weight="600" fill="' +
+        (bd.kan ? '#204ECF' : '#5b6480') + '">' + bd.kost + '</text>';
     });
     /* de havens: knoppen, met een naambordje */
     route.havens.forEach(function(h, i){
@@ -1248,6 +1285,9 @@ var GEBEURTENISSEN = [
       var m = new RegExp('[?&]' + naam + '=([^&]+)').exec(location.search);
       return m ? decodeURIComponent(m[1]) : null;
     }
+    /* Vulde de leeromgeving de keuze in (van=lo in de link), dan koos de
+       leerling zelf. Zonder van=lo komt de link van de docent. */
+    var gekozenDoor = /[?&]van=lo\b/.test(location.search) ? ', gekozen in de leeromgeving' : ', gekozen door je docent';
     function kiesUit(vakId, lijst, waarde, kopId, woord){
       if (!waarde) return;
       var vak = document.getElementById(vakId);
@@ -1257,7 +1297,7 @@ var GEBEURTENISSEN = [
           vak.children[i].click();
           vak.style.display = 'none';
           var kop = document.getElementById(kopId);
-          if (kop) kop.textContent = woord + ': ' + lijst[i].naam + ', gekozen door je docent';
+          if (kop) kop.textContent = woord + ': ' + lijst[i].naam + gekozenDoor;
           return;
         }
       }

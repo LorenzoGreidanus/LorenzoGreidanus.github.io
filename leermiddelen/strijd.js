@@ -37,7 +37,7 @@ window.STRIJD = (function(){
   /* Wat er in het donker anders moet. Een lijst, twee keer gebruikt: een keer
      voor wie de donkere stand zelf koos en een keer voor wie hem van zijn
      computer krijgt. Stond hier twee keer woordelijk hetzelfde. */
-  var DONKERREGELS = '.duelvak,.sitelijst .rij,.duelvak input,.sitelijst .naamrij input,.duelvak button.los{background:#182652;color:#F3EFE9;border-color:rgba(243,239,233,.14)}.sitelijst .rij.jij{background:#3a3220;border-color:#EFC64A}.duelvak p,.sitelijst .rij small,.sitelijst .leeg,.sitelijst .hint,.sitelijst .rij .nr{color:#B3BBD0}.duelvak h3,.sitelijst h3{color:#F3EFE9}#strijdSluier>div{background:#182652;color:#F3EFE9}#strijdSluier p{color:#B3BBD0}#strijdSluier button{background:#182652;color:#F3EFE9;border-color:rgba(243,239,233,.2)}#strijdSluier .stijlen button{background:#1f2f5e;color:#F3EFE9}#strijdSluier .stijlen button b{color:#F3EFE9}#strijdSluier .stijlen button.aan{background:#204ECF;color:#fff;border-color:#204ECF}#strijdSluier .stijlen button.aan b{color:#fff}#strijdSluier .lobbykaart{background:#1f2f5e;color:#F3EFE9}#strijdSluier .lobbykaart .klas{color:#B3BBD0}#strijdSluier .lobbykaart.klaar{background:#1f3a2c;border-color:#5fbf88}#strijdSluier .lobbykaart.klaar .vlag{color:#8fd9ae}#strijdSluier .lobbykaart.jij{border-color:#83A5F2}#strijdSluier .lobbykaart.jij.klaar{border-color:#5fbf88}#strijdSluier .lobbykaart.leeg{background:transparent;border-color:rgba(243,239,233,.2);color:#B3BBD0}#strijdSluier .lobbykaart .vlag{color:#F4A28C}#strijdSluier button.crab{background:#F26749;color:#fff;border-color:#F26749}#strijdSluier p.kop{color:#B3BBD0}#strijdSluier .afopties button.goed{background:#1f3a2c;border-color:#5fbf88;color:#c9ecd8}#strijdSluier .afopties button.fout{background:#3b201a;border-color:#e0806b;color:#f4c8bd}#strijdSluier .afdoelen button small{color:#B3BBD0}#strijdSluier .afbalk{color:#B3BBD0}';
+  var DONKERREGELS = '.sitelijst .hint,.sitelijst .leeg{background:none}.duelvak,.sitelijst .rij,.duelvak input,.sitelijst .naamrij input,.duelvak button.los{background:#182652;color:#F3EFE9;border-color:rgba(243,239,233,.14)}.sitelijst .rij.jij{background:#3a3220;border-color:#EFC64A}.duelvak p,.sitelijst .rij small,.sitelijst .leeg,.sitelijst .hint,.sitelijst .rij .nr{color:#B3BBD0}.duelvak h3,.sitelijst h3{color:#F3EFE9}#strijdSluier>div{background:#182652;color:#F3EFE9}#strijdSluier p{color:#B3BBD0}#strijdSluier button{background:#182652;color:#F3EFE9;border-color:rgba(243,239,233,.2)}#strijdSluier .stijlen button{background:#1f2f5e;color:#F3EFE9}#strijdSluier .stijlen button b{color:#F3EFE9}#strijdSluier .stijlen button.aan{background:#204ECF;color:#fff;border-color:#204ECF}#strijdSluier .stijlen button.aan b{color:#fff}#strijdSluier .lobbykaart{background:#1f2f5e;color:#F3EFE9}#strijdSluier .lobbykaart .klas{color:#B3BBD0}#strijdSluier .lobbykaart.klaar{background:#1f3a2c;border-color:#5fbf88}#strijdSluier .lobbykaart.klaar .vlag{color:#8fd9ae}#strijdSluier .lobbykaart.jij{border-color:#83A5F2}#strijdSluier .lobbykaart.jij.klaar{border-color:#5fbf88}#strijdSluier .lobbykaart.leeg{background:transparent;border-color:rgba(243,239,233,.2);color:#B3BBD0}#strijdSluier .lobbykaart .vlag{color:#F4A28C}#strijdSluier button.crab{background:#F26749;color:#fff;border-color:#F26749}#strijdSluier p.kop{color:#B3BBD0}#strijdSluier .afopties button.goed{background:#1f3a2c;border-color:#5fbf88;color:#c9ecd8}#strijdSluier .afopties button.fout{background:#3b201a;border-color:#e0806b;color:#f4c8bd}#strijdSluier .afdoelen button small{color:#B3BBD0}#strijdSluier .afbalk{color:#B3BBD0}';
   var css = '#strijdHud{position:fixed;left:12px;bottom:12px;z-index:90;background:#14224C;color:#fff;border-radius:14px;padding:9px 13px;' +
     'font:600 .82rem/1.3 Poppins,system-ui,sans-serif;box-shadow:0 10px 24px rgba(20,34,76,.25);max-width:min(92vw,340px)}' +
     '#strijdHud small{display:block;font-weight:500;opacity:.8}' +
@@ -443,6 +443,19 @@ window.STRIJD = (function(){
       sluierTekst('<b>Je docent heeft je uit kamer ' + code + ' gehaald.</b><p>Was dat een vergissing? Dan kun je gewoon opnieuw meedoen.</p><button type="button" data-opnieuw="1">Opnieuw meedoen</button> <button type="button">Terug</button>');
       return;
     }
+    /* Nog een strijd met dezelfde klas: de docent opende een nieuwe kamer en
+       de oude geeft de code door. Deze pagina gaat er vanzelf heen, met
+       dezelfde bijnaam, en wacht daar op de start. Alleen in een klasstrijd:
+       een duel heeft geen docent. */
+    if (m.t === 'verhuis'){
+      var naar = String(m.code || '').toUpperCase();
+      if (duel || !/^[A-Z]{4}$/.test(naar) || naar === code) return;
+      dicht = true;
+      try { if (ws) ws.close(1000, 'verhuis'); } catch (x){} ws = null;
+      var zonder = zonderKamer();
+      location.href = zonder + (zonder.indexOf('?') >= 0 ? '&' : '?') + 'kamer=' + naar;
+      return;
+    }
     if (m.t === 'welkom'){
       if (m.spel === 'strijd') onthoudKamer();
       if (m.spel !== 'strijd'){ hudTekst('Samen spelen', 'deze code hoort bij een ander spel', true); sluierTekst('<b>Deze code hoort bij een ander spel.</b><button type="button">Terug</button>'); return; }
@@ -505,7 +518,10 @@ window.STRIJD = (function(){
       }
       afStop();
       sluierWeg();
-      if (ws){ try { ws.close(1000, 'klaar'); } catch (e){} }
+      /* Een duel is hiermee klaar. In een klasstrijd blijft de verbinding open
+         (niet opnieuw verbinden, dicht is al gezet): begint de docent nog een
+         strijd met dezelfde klas, dan komt de nieuwe code hierlangs. */
+      if (ws && duel){ try { ws.close(1000, 'klaar'); } catch (e){} }
       return;
     }
   }

@@ -267,7 +267,8 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
       <div id="bPodium"></div>
       <p class="tip hide" id="bRest" style="margin-top:12px"></p>
       <div class="lijst" id="bWoorden"></div>
-      <div class="rij" style="justify-content:center;margin-top:16px"><button class="knop crab" id="bNogeens" type="button">Nieuw spel (nieuwe code)</button><a class="knop stil" href="tekenslag.html">Terug naar het begin</a></div>
+      <div class="rij" style="justify-content:center;margin-top:16px"><button class="knop crab" id="bNogeens" type="button">Nog een spel met dezelfde klas</button><a class="knop stil" href="tekenslag.html">Terug naar het begin</a></div>
+      <p class="fout" id="bNogFout" role="status" style="text-align:center"></p>
     </div>
   </div>
 </section>
@@ -510,7 +511,7 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
       .then(function(x){
         $('openBtn').disabled = false;
         if (!x.ok){ $('openFout').textContent = x.j.fout || 'Het openen lukte niet.'; return; }
-        host = { code:x.j.code, sleutel:x.j.sleutel, woorden:husselen(woorden.slice()), hints:hints, modus:modus, nTeams:+$('teamsSel').value, tijd:+$('tijdSel').value, rondes:+$('rondesSel').value,
+        host = { code:x.j.code, sleutel:x.j.sleutel, vak:bron === 'bank' ? vak : 'eigen', woorden:husselen(woorden.slice()), hints:hints, modus:modus, nTeams:+$('teamsSel').value, tijd:+$('tijdSel').value, rondes:+$('rondesSel').value,
                  vakNaam: bron === 'eigen' ? 'eigen woorden' : bron === 'lijst' ? lijstM.naam : (VAKKEN_B.filter(function(v){ return v.id === vak; })[0] || {}).naam };
         try { localStorage.setItem('lg-teken-host', JSON.stringify(host)); } catch (e){}
         bordOpen();
@@ -951,7 +952,7 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
       /* plek 3, plek 2, dan met zoeklichten het winnende team; wie in welk team zat staat eronder */
       PODIUM.onthul($('bPodium'), volg.slice(0, 3).map(function(t){
         return { rang:rangIn(volg, t.punten), naam:'Team ' + t.naam, regel:t.punten + (t.punten === 1 ? ' punt' : ' punten'), punten:t.punten, beeld:'<span class="pd-team" style="background:' + t.kleur + ';color:' + tekstOp(t.kleur) + '">' + schoon(t.naam.charAt(0)) + '</span>' };
-      }), { klaar:function(){
+      }), { onthuld:podiumGezien, klaar:function(){
         $('bRest').innerHTML = volg.map(function(t){ return '<b>' + schoon(t.naam) + '</b> (' + t.punten + '): ' + t.leden.map(function(l){ return schoon(l.naam); }).join(', '); }).join('<br>');
         $('bRest').classList.remove('hide');
       } });
@@ -963,7 +964,7 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
       PODIUM.onthul($('bPodium'), lijst.slice(0, 3).map(function(r){
         var av = (spelersLijst.filter(function(s){ return s.sid === r.sid; })[0] || {}).av || '';
         return { rang:rangIn(lijst, r.punten), naam:r.naam, regel:r.punten + (r.punten === 1 ? ' punt' : ' punten'), punten:r.punten, beeld: window.AVATAR ? AVATAR.svg(r.naam, 120, av, { stemming:'blij' }) : '' };
-      }), { klaar:function(){
+      }), { onthuld:podiumGezien, klaar:function(){
         if (lijst.length > 3){
           $('bRest').innerHTML = lijst.slice(3).map(function(r){ return rangIn(lijst, r.punten) + '. ' + schoon(r.naam) + ' ' + r.punten; }).join(' · ');
           $('bRest').classList.remove('hide');
@@ -974,8 +975,30 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
     }
     stuur({ t:'stop' });
   }
-  /* een nieuwe kamer met een nieuwe code; de telefoons kan de oude kamer niet meenemen, dus dat belooft de knop ook niet */
-  $('bNogeens').addEventListener('click', function(){ location.href = location.pathname; });
+  /* De winnaar staat op het bord (of de docent sloeg over): de telefoons mogen
+     de uitslag laten zien. Pas na de rest van bordEinde, zodat het na het
+     einde aankomt, ook als het podium meteen klaar is (minder beweging). */
+  function podiumGezien(){ setTimeout(function(){ stuur({ t:'podium' }); }, 0); }
+  /* Nog een spel met dezelfde klas: een nieuwe kamer met dezelfde woorden en
+     instellingen. De oude kamer krijgt de nieuwe code en de telefoons gaan
+     vanzelf mee; daarna laadt het bord opnieuw, meteen met de nieuwe kamer. */
+  var VERDER = 'lg-teken-verder';
+  $('bNogeens').addEventListener('click', function(){
+    if (!host){ location.href = location.pathname; return; }
+    var knop = this;
+    knop.disabled = true; $('bNogFout').textContent = '';
+    fetch('/api/kamer', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ spel:'rollen', game:'teken', vak:host.vak || 'eigen', niveau:'' }) })
+      .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+      .then(function(x){
+        if (!x.ok){ knop.disabled = false; $('bNogFout').textContent = x.j.fout || 'Het openen lukte niet.'; return; }
+        var nieuw = Object.assign({}, host, { code:x.j.code, sleutel:x.j.sleutel, woorden:husselen(host.woorden.slice()) });
+        try { localStorage.setItem('lg-teken-host', JSON.stringify(nieuw)); sessionStorage.setItem(VERDER, JSON.stringify(nieuw)); } catch (e){}
+        var weg = function(){ if (verb) verb.sluit(); location.href = location.pathname; };
+        /* eerst de telefoons de nieuwe code geven, dan pas ophangen */
+        if (stuur({ t:'verhuis', code:x.j.code })) setTimeout(weg, 400); else setTimeout(weg, 1500);
+      })
+      .catch(function(){ knop.disabled = false; $('bNogFout').textContent = 'Geen verbinding met de server.'; });
+  });
   /* de bordstand, en de afstandsbediening: starten, de volgende beurt, het podium overslaan */
   var bord = VERBINDING.bord({ knoppen:'.bordknop' });
   VERBINDING.toetsen(function(){
@@ -996,10 +1019,11 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
   var param = /[?&]k=([A-Za-z]{4})/.exec(location.search);
   if (param) $('joinCode').value = param[1].toUpperCase();
   try { $('joinNaam').value = localStorage.getItem('lg-quiz-naam') || (window.KLAS && KLAS.lees() ? KLAS.lees().naam : '') || ''; } catch (e){}
-  $('joinBtn').addEventListener('click', doeMee);
+  $('joinBtn').addEventListener('click', function(){ doeMee(); });
   $('joinNaam').addEventListener('keydown', function(e){ if (e.key === 'Enter') doeMee(); });
   if (param && /[?&]ga=1/.test(location.search) && $('joinNaam').value.trim().length >= 2) setTimeout(doeMee, 0);
-  function doeMee(){
+  function doeMee(sprong){
+    sprong = typeof sprong === 'number' ? sprong : 0;
     code = $('joinCode').value.toUpperCase().replace(/[^A-Z]/g, '');
     naam = $('joinNaam').value.trim().slice(0, 16);
     if (code.length !== 4){ $('joinFout').textContent = 'De code heeft vier letters.'; return; }
@@ -1014,6 +1038,8 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
         location.href = doel + '?k=' + code + '&ga=1'; return;
       }
       if (!x.ok){ $('joinFout').textContent = 'Geen spel met deze code. Kijk of je hem goed hebt overgenomen.'; return; }
+      /* de docent is met de klas naar een nieuwe kamer gegaan: daar doe je mee */
+      if (x.j.fase === 'einde' && /^[A-Z]{4}$/.test(x.j.verhuis || '') && sprong < 3){ $('joinCode').value = x.j.verhuis; doeMee(sprong + 1); return; }
       $('s-start').classList.add('hide'); $('s-speler').classList.remove('hide');
       $('pWie').innerHTML = (window.AVATAR ? AVATAR.svg(naam, 28, window.PROFIEL ? PROFIEL.avatar() : '') : '') + '<b>' + schoon(naam) + '</b>';
       pPapier = Papier($('pCanvas'));
@@ -1069,6 +1095,20 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
       $('pOver').classList.remove('hide');
       $('pOver').innerHTML = '<div><b>Je bent uit het spel gehaald</b><p>Je docent heeft je uit deze kamer gehaald. Was dat een vergissing? Dan kun je gewoon opnieuw meedoen.</p><p><a href="' + location.href.replace(/"/g, '') + '">Opnieuw meedoen</a> &middot; <a href="tekenslag.html">Terug</a></p></div>';
       pTekenaar.zet(false); $('pGereedschap').classList.add('hide'); $('pRaadRij').classList.add('hide');
+      return;
+    }
+    /* Nog een spel met dezelfde klas: naar de nieuwe code, met dezelfde bijnaam.
+       De pagina laadt opnieuw, dan begint alles schoon; Meedoen gaat vanzelf. */
+    if (m.t === 'verhuis'){
+      var naar = String(m.code || '').toUpperCase();
+      if (!/^[A-Z]{4}$/.test(naar) || naar === code) return;
+      if (verb) verb.sluit();
+      location.href = location.pathname + '?k=' + naar + '&ga=1';
+      return;
+    }
+    /* het bord laat de winnaar zien: nu ook hier de uitslag */
+    if (m.t === 'podium'){
+      if (spelerBericht.eindeKlok && spelerBericht.eindeNu){ clearTimeout(spelerBericht.eindeKlok); spelerBericht.eindeKlok = null; var f = spelerBericht.eindeNu; spelerBericht.eindeNu = null; f(); }
       return;
     }
     /* bij elke (nieuwe) verbinding het bord om de stand vragen: team, beurt en tekening */
@@ -1194,7 +1234,9 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
       function toonEinde(){ $('pOver').innerHTML = '<div><b>' + schoon(kop) + '</b><p>' + schoon(onder) + '</p></div>'; }
       if (wacht > 0){
         $('pOver').innerHTML = '<div><b>Kijk naar het bord…</b><p>Daar komt nu de uitslag.</p></div>';
-        clearTimeout(spelerBericht.eindeKlok); spelerBericht.eindeKlok = setTimeout(toonEinde, wacht + 600);
+        /* het bord meldt wanneer de winnaar in beeld is (podium); komt dat niet, dan na de wachttijd */
+        clearTimeout(spelerBericht.eindeKlok); spelerBericht.eindeNu = toonEinde;
+        spelerBericht.eindeKlok = setTimeout(function(){ spelerBericht.eindeKlok = null; spelerBericht.eindeNu = null; toonEinde(); }, wacht + 600);
       } else toonEinde();
       return;
     }
@@ -1208,6 +1250,12 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
   $('pRaad').addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); raad(); } });
 
   /* een bord dat opnieuw laadt terwijl het spel loopt, kan verder: zie "verder na herladen" bij het bord */
+  /* terug na "Nog een spel met dezelfde klas": meteen de nieuwe kamer op het bord */
+  (function(){
+    var v = null; try { v = JSON.parse(sessionStorage.getItem(VERDER) || 'null'); sessionStorage.removeItem(VERDER); } catch (e){}
+    if (!v || !/^[A-Z]{4}$/.test(v.code || '') || !v.sleutel || !Array.isArray(v.woorden)) return;
+    host = v; bordOpen();
+  })();
 })();
 </script>
 </body>

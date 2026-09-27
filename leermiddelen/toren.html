@@ -452,6 +452,15 @@ body.groot #vraagBeeld .vormvak{height:min(300px,32vh)}
   /* het bord zo hoog als zijn tekening, niet hoger: elke pixel is voor de vraag */
   .bordvak{min-height:0}
   .zijkolom .vraagvak{max-height:52vh}
+  /* Na een fout loopt het bord door, dus je moet het blijven zien. De uitleg
+     staat eerst op drie regels met een knop voor de rest, en het paneel wordt
+     nooit hoger dan de ruimte onder het bord (--vraagmax, zie het script).
+     Past het dan nog niet, dan scrolt het paneel zelf. */
+  .zijkolom .vraagvak.metuitleg{max-height:var(--vraagmax,52vh)}
+  /* de onderrand is een doorzichtige rand in plaats van binnenruimte: anders
+     piept de vierde regel eronder uit */
+  .antwuitleg.kort{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;line-clamp:3;overflow:hidden;
+    padding-bottom:0;border-bottom:8px solid transparent}
 }
 /* De kopbalk blijft een regel, ook als Pauze "Verder spelen" wordt: op een
    telefoon zegt de snelknop alleen 2x, en de knoppen staan dichter op elkaar. */
@@ -498,6 +507,10 @@ body.groot .beeld{max-height:220px}
   box-shadow:0 5px 0 rgba(15,26,61,.25)}
 .volgknop:hover{transform:translateY(-1px)}
 .volgrij small{color:rgba(255,255,255,.85);font-size:.8rem}
+/* de knop voor de rest van een lange uitleg, alleen op een telefoon (zie het script) */
+.meerknop{border:1.5px solid rgba(255,255,255,.6);border-radius:999px;background:none;color:#fff;font-weight:600;
+  font-size:.84rem;padding:0 16px;min-height:44px}
+.meerknop:hover{background:rgba(255,255,255,.12)}
 .optie:disabled:not(.juist):not(.mis){opacity:.55}
 .optie:disabled{cursor:default}
 /* de uitleg na een antwoord; niet .uitleg, want zo heten de kaartjes op het startscherm */
@@ -2063,8 +2076,10 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       ? '<div class="antwuitleg goed"><b>Goed.</b> ' + winst + ' munten erbij.</div>'
       : '<div class="antwuitleg"><b>Niet goed.</b> Het goede antwoord is: <b>' + goedTekst + '</b>. ' + (vraag.u || '') + '</div>' +
         '<div class="volgrij"><button type="button" class="volgknop" id="volgBtn">Volgende vraag \u2192</button>' +
+        '<button type="button" class="meerknop hide" id="meerBtn" aria-expanded="false">Hele uitleg</button>' +
         (document.documentElement.classList.contains('raak') ? '' : '<small>of druk op Enter</small>') + '</div>';
     tekenVraag(); tekenMeters(); tekenBord();
+    if (!goed) kortUitleg();
     if (goed){
       /* Bij het doorspoelen van het testpaneel moet ook het tempo van de vragen
          mee. Anders loopt het bord acht keer zo snel terwijl er evenveel vragen
@@ -2086,12 +2101,35 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       }
     }
   }
+  /* Op een telefoon ligt het vragenpaneel vast onderaan, over de pagina heen.
+     Na een fout loopt het bord door, dus dan mag het paneel niet hoger worden
+     dan de ruimte onder het bord, en staat de uitleg eerst op drie regels.
+     De rest staat achter "Hele uitleg" en scrolt dan binnen het paneel. */
+  function kortUitleg(){
+    var q = document.querySelector('.vraagvak'), a = document.querySelector('#uitlegVak .antwuitleg'), m = document.getElementById('meerBtn');
+    if (!q || !a || !m) return;
+    var tel = window.matchMedia && matchMedia('(max-width:620px)').matches;
+    q.classList.toggle('metuitleg', tel);
+    if (!tel) return;
+    var b = document.getElementById('bordvak').getBoundingClientRect();
+    var vrij = innerHeight - b.bottom - 6;
+    document.documentElement.style.setProperty('--vraagmax', Math.round(Math.max(200, Math.min(innerHeight * .56, vrij))) + 'px');
+    a.classList.add('kort');
+    if (a.scrollHeight <= a.clientHeight + 2){ a.classList.remove('kort'); return; }
+    m.classList.remove('hide');
+    m.addEventListener('click', function(){
+      var open = a.classList.toggle('kort') === false;
+      m.textContent = open ? 'Minder' : 'Hele uitleg';
+      m.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  }
   /* Door naar de volgende vraag. Stond het bord stil voor de uitleg, dan loopt
      het weer. Wie met het toetsenbord verder ging, staat meteen op het eerste
      antwoord. */
   function volgendeVraag(){
     if (gekliktIndex < 0) return;
     var hadFocus = document.activeElement && document.activeElement.id === 'volgBtn';
+    var vq = document.querySelector('.vraagvak'); if (vq) vq.classList.remove('metuitleg');
     if (uitlegPauze){ uitlegPauze = false; if (pauze) zetPauze(false); }
     vraag = nieuweVraag(); gekliktIndex = -1;
     document.getElementById('uitlegVak').innerHTML = '';
@@ -5157,7 +5195,10 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     /* Staat de tutorial open, dan praat die: twee kaarten met elk hun eigen
        aanwijzing tegelijk was er een te veel. */
     if (pauze && !(window.TUTORIAL && TUTORIAL.open && TUTORIAL.open())){
-      s += '<rect width="' + BREED + '" height="' + HOOG + '" fill="#14224C" opacity=".55"/>';
+      /* Het bordvak is vaak hoger of breder dan de tekening; de svg laat de
+         rest zien (overflow visible). Het donkere vlak loopt daarom ver over
+         de rand, zodat ook de grasstroken eromheen donker worden. */
+      s += '<rect x="' + (-BREED) + '" y="' + (-HOOG) + '" width="' + (BREED * 3) + '" height="' + (HOOG * 3) + '" fill="#14224C" opacity=".55"/>';
       var pk = Math.min(TS, 1.75);
       s += '<g transform="translate(' + (BREED / 2 * (1 - pk)).toFixed(1) + ',' + (HOOG / 2 * (1 - pk)).toFixed(1) + ') scale(' + pk + ')">';
       /* Het teken staat boven de tekst en niet ernaast: SVG meet geen letters,

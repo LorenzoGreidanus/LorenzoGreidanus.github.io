@@ -8,10 +8,15 @@
               punten (optioneel) een getal: heeft iedereen 0, dan is het een gelijkspel
               zonder winnaar, zonder kroon en zonder confetti.
      opties.klaar:    functie die draait zodra het podium staat (ook na Sla over).
+     opties.onthuld:  functie die een keer draait zodra de winnaar in beeld is: bij de
+                      onthulling, na Sla over, of meteen als er geen spanning is. Het
+                      bord meldt het dan aan de telefoons, die hun plek laten zien.
      opties.winnaar:  eigen tekst voor de winnaar, bv. "Team Rood wint!".
    PODIUM.onthulTijd(plekken)
      na hoeveel milliseconden de winnaar bekend wordt; de telefoons wachten zo
-     lang met "je hebt gewonnen", anders verklappen ze het bord.
+     lang met "je hebt gewonnen", anders verklappen ze het bord. Het bericht van
+     opties.onthuld is sneller (Sla over); deze tijd is wat ze doen als dat
+     bericht niet komt.
    PODIUM.rangen(lijst, gelijk)
      zet in een gesorteerde lijst de gedeelde plekken: gelijk(a, b) zegt of twee
      rijen evenveel hebben. Geeft een lijst rangen terug (1, 1, 3, ...).
@@ -158,7 +163,7 @@
     opties = opties || {};
     plekken = schoonLijst(plekken);
     if (!doel) return;
-    if (!plekken.length){ doel.innerHTML = ''; if (opties.klaar) opties.klaar(); return; }
+    if (!plekken.length){ doel.innerHTML = ''; if (opties.onthuld) opties.onthuld(); if (opties.klaar) opties.klaar(); return; }
     stijl();
     var o = opzet(plekken), stil = rustig();
     var gedeeld = o.winnaars.length > 1;
@@ -178,7 +183,9 @@
       }).join('') + '</div>' +
       '<div class="pd-confetti" aria-hidden="true"></div>' +
       '<button type="button" class="pd-sla">Sla over</button></div>';
-    var el = doel.firstChild, kop = el.querySelector('.pd-kop'), wekkers = [], af = false;
+    var el = doel.firstChild, kop = el.querySelector('.pd-kop'), wekkers = [], af = false, gemeld = false;
+    /* de winnaar staat in beeld: een keer zeggen */
+    function meld(){ if (gemeld) return; gemeld = true; if (opties.onthuld) try { opties.onthuld(); } catch (e){} }
     function na(ms, f){ wekkers.push(setTimeout(f, ms)); }
     function plek(i){ return el.querySelector('.pd-plek[data-i="' + i + '"]'); }
     function op(lijst, klasse){ lijst.forEach(function(i){ var p = plek(i); if (p) p.classList.add(klasse); }); }
@@ -224,6 +231,7 @@
       [0, 1, 2].forEach(function(i){ var p = plek(i); if (p) p.classList.add('pd-op'); });
       richt();
       if (overgeslagen){ zeg(winTekst()); konfetti(); juich(); }
+      meld();
       var sla = el.querySelector('.pd-sla'); if (sla) sla.parentNode.removeChild(sla);
       if (opties.klaar) opties.klaar();
     }
@@ -233,7 +241,7 @@
     /* gelijkspel zonder punten: geen tromgeroffel, iedereen tegelijk */
     if (o.nul){
       zeg('Gelijkspel');
-      na(BEGIN, function(){ op([0, 1, 2], 'pd-op'); });
+      na(BEGIN, function(){ op([0, 1, 2], 'pd-op'); meld(); });
       na(BEGIN + NA_WINNAAR, function(){ klaar(false); });
       return { klaar:function(){ klaar(true); } };
     }
@@ -249,7 +257,7 @@
     t += ROFFEL_VOOR;
     na(t, function(){ zeg(gedeeld ? 'En de winnaars zijn…' : 'En de winnaar is…'); el.classList.add('pd-spanning'); op(o.winnaars, 'pd-blokop'); });
     t += ROFFEL;
-    na(t, function(){ richt(); el.classList.remove('pd-spanning'); el.classList.add('pd-onthuld'); op(o.winnaars, 'pd-op'); zeg(winTekst()); konfetti(); juich(); });
+    na(t, function(){ richt(); el.classList.remove('pd-spanning'); el.classList.add('pd-onthuld'); op(o.winnaars, 'pd-op'); zeg(winTekst()); konfetti(); juich(); meld(); });
     t += NA_WINNAAR;
     na(t, function(){ klaar(false); });
     return { klaar:function(){ klaar(true); } };

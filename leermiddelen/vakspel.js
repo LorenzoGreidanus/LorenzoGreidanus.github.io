@@ -62,7 +62,7 @@ window.VAKSPEL = (function(){
       '<section class="wrap start oefen" id="scherm-start">' +
         '<p class="hand" style="font-size:1.6rem">' + schoon(cfg.hand || '') + '</p>' +
         '<h1>' + schoon(cfg.naam) + '</h1>' +
-        '<p class="lead">' + schoon(cfg.lead || '') + '</p>' +
+        '<p class="lead" id="leadTekst">' + schoon(cfg.lead || '') + '</p>' +
         /* de kaartjes met uitleg gaan achter "Alle regels" in het paneel van spel.js, zodat Start in beeld staat */
         '<div class="hoe uitleg">' + (cfg.hoe || []).map(function(h, i){ return '<div><i>' + (i + 1) + '</i><b>' + schoon(h.kop) + '</b><span>' + h.tekst + '</span></div>'; }).join('') + '</div>' +
         (cfg.keuzes || []).map(function(k, i){
@@ -106,6 +106,13 @@ window.VAKSPEL = (function(){
       if (keuze[k.id] === undefined) keuze[k.id] = k.std !== undefined ? k.std : (k.items[0] && k.items[0].id);
       vak.innerHTML = k.items.map(function(it){ return '<button type="button" data-id="' + schoon(it.id) + '"' + (it.id === keuze[k.id] ? ' class="on" aria-pressed="true"' : ' aria-pressed="false"') + '>' + schoon(it.naam) + '</button>'; }).join('');
       Array.prototype.forEach.call(vak.querySelectorAll('button'), function(b){ b.addEventListener('click', function(){ keuze[k.id] = b.getAttribute('data-id'); onthoud(k.id); tekenKeuzes(); }); });
+      /* een lange rij schuift op een telefoon opzij (vakspel.css); de gekozen knop blijft in beeld */
+      vak.classList.toggle('schuifrij', k.items.length >= 4);
+      var aan = vak.querySelector('.on');
+      if (aan && vak.scrollWidth > vak.clientWidth){
+        var dx = aan.getBoundingClientRect().left - vak.getBoundingClientRect().left;
+        if (dx < 0 || dx + aan.offsetWidth > vak.clientWidth - 24) vak.scrollLeft += dx - 12;
+      }
       var it = k.items.filter(function(x){ return x.id === keuze[k.id]; })[0];
       $('uit-' + k.id).textContent = it && it.uit ? it.uit : '';
       if ($('nu-' + k.id)) $('nu-' + k.id).textContent = it ? it.naam : '';
@@ -126,7 +133,9 @@ window.VAKSPEL = (function(){
       var nk = (cfg.keuzes || []).filter(function(x){ return x.id === 'niveau'; })[0];
       if (n && nk && (!k || k.niveau === undefined) && nk.items.some(function(it){ return it.id === n; })) keuze.niveau = n;
     } catch (e){}
-    /* ?n=… en andere keuzes in het adres: gekozen door de docent, en dan uit beeld */
+    /* ?n=… en andere keuzes in het adres: gekozen door de docent, en dan uit beeld.
+       Met van=lo komt de keuze van de leerling zelf, uit de leeromgeving. */
+    var wie = /[?&]van=lo\b/.test(location.search) ? 'gekozen in de leeromgeving' : 'gekozen door je docent';
     (cfg.keuzes || []).forEach(function(k){
       var m = new RegExp('[?&]' + (k.id === 'niveau' ? 'n' : k.id) + '=([^&#]+)').exec(location.search);
       if (!m) return;
@@ -134,8 +143,22 @@ window.VAKSPEL = (function(){
       if (!k.items.some(function(it){ return it.id === w; })) return;
       keuze[k.id] = w;
       var vak = $('keuze-' + k.id); if (vak) vak.classList.add('hide');
-      var kop = $('kop-' + k.id); if (kop) kop.textContent = k.kop + ': ' + k.items.filter(function(it){ return it.id === w; })[0].naam + ', gekozen door je docent';
+      var kop = $('kop-' + k.id); if (kop) kop.textContent = k.kop + ': ' + k.items.filter(function(it){ return it.id === w; })[0].naam + ', ' + wie;
     });
+  }
+
+  /* Op een telefoon is de inleiding soms acht regels: dan staan er drie, met
+     "Lees verder" eronder. Het doel staat in een zin in de knop "Hoe werkt het?". */
+  function leadKort(){
+    var p = $('leadTekst');
+    if (!p || !window.matchMedia || !matchMedia('(max-width:560px)').matches) return;
+    p.classList.add('kort');
+    if (p.scrollHeight <= p.clientHeight + 2){ p.classList.remove('kort'); return; }
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'leadmeer'; b.textContent = 'Lees verder';
+    b.setAttribute('aria-expanded', 'false'); b.setAttribute('aria-controls', 'leadTekst');
+    b.addEventListener('click', function(){ p.classList.remove('kort'); b.parentNode.removeChild(b); });
+    p.insertAdjacentElement('afterend', b);
   }
 
   /* ---------- een ronde ---------- */
@@ -592,6 +615,7 @@ window.VAKSPEL = (function(){
     bouw();
     herinner();
     tekenKeuzes();
+    leadKort();
     $('startBtn').addEventListener('click', function(){ start(oneindigUrl); });
     $('oneindigBtn').addEventListener('click', function(){ start(true); });
     $('stopBtn').addEventListener('click', function(){ if (!bezig) einde(); });

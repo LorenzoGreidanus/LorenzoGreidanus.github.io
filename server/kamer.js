@@ -356,6 +356,30 @@ export class Kamer extends DurableObject {
       return;
     }
     if (wie.rol === "speler" && m.t === "vertrek") return this.vertrek(wie.sid);
+    /* Nog een ronde met dezelfde klas: het bord opende een nieuwe kamer en
+       stuurt de code hierheen, en de telefoons gaan er vanzelf naartoe, met
+       dezelfde bijnaam en hetzelfde gezichtje. Alleen het bord kan dat: de
+       rol host krijgt alleen wie met de sleutel verbond. Een oudere telefoon
+       kent het bericht niet en laat gewoon zijn eindscherm staan. */
+    if (m.t === "verhuis"){
+      if (wie.rol !== "host") return;
+      const naar = String(m.code || "").toUpperCase();
+      if (!/^[A-Z]{4}$/.test(naar) || naar === this.stand.code) return;
+      this.stand.verhuis = naar;
+      await this.bewaar();
+      const s = JSON.stringify({ t: "verhuis", code: naar });
+      this.ctx.getWebSockets("speler").forEach(w => { try { w.send(s); } catch (e){} });
+      return;
+    }
+    /* Het podium op het bord staat: de winnaar is in beeld, of de docent
+       drukte op Sla over. Dan mogen de telefoons hun eigen plek laten zien;
+       zonder dit bericht wachten ze de hele onthulling af. */
+    if (m.t === "podium"){
+      if (wie.rol !== "host") return;
+      const s = JSON.stringify({ t: "podium" });
+      this.ctx.getWebSockets("speler").forEach(w => { try { w.send(s); } catch (e){} });
+      return;
+    }
     if (this.strijd) return this.strijdBericht(ws, wie, m);
     if (this.rollen) return this.rollenBericht(ws, wie, m);
     if (wie.rol === "host"){
@@ -1391,6 +1415,8 @@ export class Kamer extends DurableObject {
   aanwezig(sid){ return this.ctx.getWebSockets(sid).length > 0; }
   overzicht(){
     const st = this.stand, basis = { code: st.code, spel: st.spel, vak: st.vak, niveau: st.niveau, deel: st.deel || "", fase: st.fase };
+    /* verhuisd naar een nieuwe kamer: wie de oude code nog intypt, kan door naar de nieuwe */
+    if (st.verhuis) basis.verhuis = st.verhuis;
     if (st.spel === "klas") return Object.assign(basis, { naam: st.naam, n: st.resultaten.length, gemaakt: st.gemaakt, opdracht: (this.opdrachtLijst()[0]) || null });
     if (this.strijd){
       const lijst = this.strijdLijst();

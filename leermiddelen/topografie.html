@@ -149,6 +149,14 @@ body.speelt .spelkop,body.speelt .balk,body.speelt .tijdbalk{flex:none}
 .rivier.naast{fill:none;stroke:var(--fout);stroke-width:4}
 .wijzer{stroke:var(--ring);stroke-width:1.6;opacity:0}
 .wijzer.aan{opacity:1}
+/* Aanwijzen met het toetsenbord: een gestippelde ring op de plek die je met
+   de pijltjes kiest. Alleen te zien zolang de kaart de focus heeft. */
+.kruis{fill:none;stroke:var(--ink);stroke-width:3;stroke-dasharray:6 4;opacity:0;vector-effect:non-scaling-stroke;pointer-events:none}
+.kruis.aan{opacity:1}
+.kaartvak.wijs .kaartdoos>svg:focus{outline:none}
+.kaartvak.wijs .kaartdoos>svg:focus-visible{outline:3px solid var(--focusring,#B4701A);outline-offset:3px}
+/* alleen voor een schermlezer */
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;margin:-1px;padding:0;border:0}
 @media(prefers-reduced-motion:no-preference){
   .op{transition:fill .25s var(--ease)}
   .puls{animation:puls 1.6s ease-in-out infinite}
@@ -362,6 +370,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
     <div class="invul">
       <label class="eyebrow" for="antwoord" id="vraagLabel">welk land licht op</label>
       <p class="wijsnaam hide" id="wijsNaam" aria-live="polite"></p>
+      <p class="sr" id="kaartLive" aria-live="polite"></p>
       <div class="invulrij" id="invulRij">
         <input id="antwoord" type="text" autocomplete="off" autocapitalize="words" spellcheck="false"
                enterkeyhint="go" placeholder="Typ de naam">
@@ -432,7 +441,7 @@ var NIVEAUS = [
 /* Dezelfde namen als in Bronnenlab en Tijdvakken: Oefenen is de rustige stand. */
 var MODUSSEN = [
   { id:'oefen', naam:'Oefenen',   uitleg:'Er licht iets op, jij typt de naam. Zonder klok, met hulp als je vastloopt.' },
-  { id:'wijs',  naam:'Aanwijzen', uitleg:'Je krijgt een naam en tikt de plek aan op de kaart. Zonder klok. Met muis of vinger.' },
+  { id:'wijs',  naam:'Aanwijzen', uitleg:'Je krijgt een naam en wijst de plek aan op de kaart. Zonder klok. Met muis, vinger of toetsenbord (pijltjes en Enter).' },
   { id:'race',  naam:'Tijdrace',  uitleg:'Typen tegen de klok. Goed levert seconden op, fout kost ze. Met klassement.' }
 ];
 
@@ -767,7 +776,7 @@ var DELEN = [
         }
       });
     });
-    svg += '</g><circle class="stip" id="stip" r="13"/>';
+    svg += '</g><circle class="stip" id="stip" r="13"/><circle class="kruis" id="kruis" r="16"/>';
     svg += '</svg>';
     elVak.innerHTML = '<div class="kaartdoos" id="kaartdoos">' + svg +
       '<div class="zoom" role="group" aria-label="Zoomen">' +
@@ -777,6 +786,12 @@ var DELEN = [
       '</div></div>';
     elVak.classList.toggle('wijs', isWijs());
     elSvg = elVak.querySelector('svg');
+    kruisLand = null;
+    if (isWijs()){
+      elSvg.setAttribute('tabindex', '0');
+      elSvg.setAttribute('role', 'application');
+      elSvg.setAttribute('aria-label', 'Kaart. Kies een plek met de pijltjes en wijs hem aan met Enter.');
+    }
     basis = snijKaart();
     zoom = 1; midden = { x: basis.x + basis.w / 2, y: basis.y + basis.h / 2 };
     zetView();
@@ -847,6 +862,8 @@ var DELEN = [
     Array.prototype.forEach.call(elSvg.querySelectorAll('.stad'), function(c){ c.setAttribute('r', straal(/\bop\b/.test(c.getAttribute('class')) ? 8 : 5)); });
     var st = document.getElementById('stip');
     if (st && huidig) st.setAttribute('r', straal(soortVan(huidig) === 'punt' ? 15 : 13));
+    var kr = document.getElementById('kruis');
+    if (kr) kr.setAttribute('r', straal(18));
   }
   function naarSvg(cx, cy){
     var p = elSvg.createSVGPoint(); p.x = cx; p.y = cy;
@@ -909,6 +926,67 @@ var DELEN = [
     }
     elSvg.addEventListener('pointerup', los);
     elSvg.addEventListener('pointercancel', los);
+    if (!isWijs()) return;
+    elSvg.addEventListener('keydown', kruisToets);
+    /* Een klik met de muis geeft de kaart ook de focus; de ring komt alleen bij het toetsenbord. */
+    elSvg.addEventListener('focus', function(){
+      var toets = true; try { toets = elSvg.matches(':focus-visible'); } catch (e){}
+      if (!toets) return;
+      if (kruisLand) zetKruis(kruisLand); else kruisStap(0, 0);
+    });
+    elSvg.addEventListener('blur', function(){ var k = document.getElementById('kruis'); if (k) k.setAttribute('class', 'kruis'); });
+  }
+
+  /* ---------- aanwijzen met het toetsenbord ----------
+     De pijltjes springen naar de dichtstbijzijnde plek in die richting, Enter
+     of spatie wijst hem aan. Bij elke stap hoort een schermlezer de naam. */
+  var kruisLand = null;
+  function plekkenNu(){
+    var ls = KAARTEN[kaartId].landen;
+    return landenNu(kaartId).filter(function(l){ return document.getElementById('l' + ls.indexOf(l)); });
+  }
+  function zetKruis(l){
+    kruisLand = l;
+    var k = document.getElementById('kruis');
+    if (!k || !l) return;
+    k.setAttribute('cx', l.x); k.setAttribute('cy', l.y); k.setAttribute('r', straal(18));
+    k.setAttribute('class', 'kruis aan');
+    /* ingezoomd en de plek ligt buiten beeld? dan schuift de kaart mee */
+    if (zoom > 1){
+      var w = basis.w / zoom, h = basis.h / zoom;
+      if (Math.abs(l.x - midden.x) > w * .42 || Math.abs(l.y - midden.y) > h * .42){ midden = { x:l.x, y:l.y }; zetView(); }
+    }
+    document.getElementById('kaartLive').textContent = naamMet(l);
+  }
+  /* dx, dy is de richting; 0, 0 zoekt de plek het dichtst bij het midden */
+  function kruisStap(dx, dy){
+    var ps = plekkenNu(), beste = null, score = Infinity;
+    if (!ps.length) return;
+    if (!kruisLand || (!dx && !dy)){
+      var m = kruisLand || midden;
+      ps.forEach(function(l){ var d = Math.hypot(l.x - m.x, l.y - m.y); if (d < score){ score = d; beste = l; } });
+    } else {
+      ps.forEach(function(l){
+        if (l === kruisLand) return;
+        var vx = l.x - kruisLand.x, vy = l.y - kruisLand.y;
+        var voor = vx * dx + vy * dy;
+        if (voor <= 0) return;
+        /* wat recht in de richting ligt telt zwaarder dan wat schuin ernaast ligt */
+        var sc = voor + 2.5 * Math.abs(vx * dy - vy * dx);
+        if (sc < score){ score = sc; beste = l; }
+      });
+      if (!beste){ document.getElementById('kaartLive').textContent = 'Verder die kant op ligt niets. ' + naamMet(kruisLand) + '.'; return; }
+    }
+    zetKruis(beste);
+  }
+  function kruisToets(e){
+    var r = { ArrowLeft:[-1, 0], ArrowRight:[1, 0], ArrowUp:[0, -1], ArrowDown:[0, 1] }[e.key];
+    if (r){ e.preventDefault(); kruisStap(r[0], r[1]); return; }
+    if (e.key === 'Enter' || e.key === ' '){
+      e.preventDefault();
+      if (bezig){ verder(); return; }
+      if (kruisLand) kiesPlek(kruisLand);
+    }
   }
 
   /* Wat je al gehad hebt houdt zijn kleur: 1 is goed, 2 is mis. Zo groeit de
@@ -1011,7 +1089,15 @@ var DELEN = [
     if (bezig || !huidig) return;
     var pt = naarSvg(cx, cy);
     if (isRaak(huidig, pt)){ afronden(true, { soort:'goed' }); return; }
-    var hier = watIsHier(pt);
+    misWezen(watIsHier(pt));
+  }
+  /* met het toetsenbord gekozen: precies die plek, geen afstand nodig */
+  function kiesPlek(l){
+    if (bezig || !huidig) return;
+    if (l === huidig){ afronden(true, { soort:'goed' }); return; }
+    misWezen(l);
+  }
+  function misWezen(hier){
     pogingen++;
     /* Eerste misser: nog een keer proberen, en zien wat je aanwees. */
     if (pogingen === 1){
@@ -1243,7 +1329,9 @@ var DELEN = [
     bezig = false;
     if (isRace() && tijd <= 0){ loopt = false; toonEinde(); return; }
     if (!isRace()) nr++;
+    var opKnop = document.activeElement && document.activeElement.classList.contains('volgende');
     volgende();
+    if (opKnop && isWijs() && elSvg && !elSpel.classList.contains('hide')) elSvg.focus({ preventScroll:true });
   }
 
   /* ---------- hulp in de oefenstand ---------- */
@@ -1373,9 +1461,9 @@ var DELEN = [
        ?m=oefen, wijs of race    welke stand
      De kaartknoppen bestaan pas als het gebied gekozen is. Daarom eerst het
      gebied van die kaart, dan de kaart zelf (op data-k, niet op volgorde).
-     Of de docent dit koos of de leerling in de leeromgeving is aan het adres
-     niet te zien. Daarom staat er "vooraf gekozen", met een knop om het
-     toch anders te kiezen.
+     Vulde de leeromgeving de keuzes in, dan staat er van=lo in het adres: dan
+     koos de leerling zelf, en er komt een knop om het toch anders te kiezen.
+     Zonder van=lo komt de link van de docent en blijven de keuzes staan.
      ------------------------------------------------------------------ */
   (function(){
     function param(naam){
@@ -1393,12 +1481,14 @@ var DELEN = [
       if (!gekozen.length) return;
       var p = document.createElement('p');
       p.className = 'eyebrow'; p.style.marginTop = '32px';
-      p.textContent = 'Vooraf gekozen: ' + gekozen.join(' \u00b7 ') + ' ';
+      var vanLo = /[?&]van=lo\b/.test(location.search);
+      p.textContent = (vanLo ? 'Gekozen in de leeromgeving: ' : 'Gekozen door je docent: ') + gekozen.join(' \u00b7 ') + ' ';
+      var voor = document.getElementById('gebiedKop');
+      if (!vanLo){ voor.parentNode.insertBefore(p, voor); return; }
       var b = document.createElement('button');
       b.type = 'button'; b.className = 'linkbtn anders'; b.textContent = 'anders kiezen';
       b.addEventListener('click', function(){ weg.forEach(function(v){ v.style.display = ''; }); p.parentNode.removeChild(p); });
       p.appendChild(b);
-      var voor = document.getElementById('gebiedKop');
       voor.parentNode.insertBefore(p, voor);
     }
     var k = param('k');
@@ -1434,6 +1524,6 @@ var DELEN = [
 <script src="klas.js"></script>
 <script src="naamfilter.js"></script>
 <script src="spel.js"></script>
-<script>SPEL.uitleg({ doel:"Ken de landen en plaatsen op de kaart.", tijd:"10 minuten, of zo lang je wilt", bediening:"Een plek licht op en jij typt de naam, of je krijgt een naam en tikt de plek aan. Zoomen kan met + en −." });</script>
+<script>SPEL.uitleg({ doel:"Ken de landen en plaatsen op de kaart.", tijd:"10 minuten, of zo lang je wilt", bediening:"Een plek licht op en jij typt de naam, of je krijgt een naam en tikt de plek aan. Aanwijzen kan ook met de pijltjes en Enter. Zoomen kan met + en −." });</script>
 </body>
 </html>

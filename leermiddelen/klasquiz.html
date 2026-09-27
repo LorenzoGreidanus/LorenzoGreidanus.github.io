@@ -495,7 +495,7 @@ Frans Hals"></textarea>
     </div>
     <div class="hostknoppen">
       <button class="knop stil" id="hTerug" type="button">Terug naar het begin</button>
-      <button class="knop crab" id="hNogeens" type="button">Nieuwe quiz (nieuwe code)</button>
+      <button class="knop crab" id="hNogeens" type="button">Nog een quiz met dezelfde klas</button>
     </div>
   </div>
 </section>
@@ -578,11 +578,15 @@ Frans Hals"></textarea>
   var verb = null;
   function verbind(doel, opBericht){
     if (verb) verb.sluit();
-    verb = VERBINDING.maak({ pad:doel.code + '?' + doel.query, rol:doel.rol,
-      onBericht:opBericht,
-      onOpen:function(){ zegStatus(''); },
-      onEruit:function(){ opBericht({ t:'eruit' }); },
-      onDicht:function(reden){ zegStatus(reden); } });
+    /* Wat een oude verbinding nog zegt, telt niet meer: bij nog een quiz met
+       dezelfde klas blijft de vorige kamer even open om de telefoons mee te
+       nemen, en zijn lijst met spelers hoort niet op het nieuwe bord. */
+    var v = VERBINDING.maak({ pad:doel.code + '?' + doel.query, rol:doel.rol,
+      onBericht:function(m){ if (verb === v) opBericht(m); },
+      onOpen:function(){ if (verb === v) zegStatus(''); },
+      onEruit:function(){ if (verb === v) opBericht({ t:'eruit' }); },
+      onDicht:function(reden){ if (verb === v) zegStatus(reden); } });
+    verb = v;
   }
   function stuur(obj, x){ return verb ? verb.stuur(obj, x) : false; }
   function sluitVerbinding(){ if (verb) verb.sluit(); }
@@ -834,6 +838,7 @@ Frans Hals"></textarea>
       if (!x.ok){ $('openFout').textContent = x.j.fout || 'Het lukte niet om een kamer te openen.'; return; }
       var host = { code:x.j.code, sleutel:x.j.sleutel, vak:bron === 'bank' ? vak : 'eigen', niveau:bron === 'bank' ? niveau : '', onderdeel:bron === 'bank' ? onderdeel : eigenNaam, aantal:vragen.length, tijd:tijd };
       try { localStorage.setItem('lg-quiz-host', JSON.stringify(host)); } catch (e){}
+      verhuis(host.code);
       wordHost(host);
     })
     .catch(function(){ $('openBtn').disabled = false; $('openFout').textContent = 'Geen verbinding met de server.'; });
@@ -883,7 +888,8 @@ Frans Hals"></textarea>
       setTimeout(doeMee, 0);
     }
   })();
-  function doeMee(){
+  function doeMee(sprong){
+    sprong = typeof sprong === 'number' ? sprong : 0;
     var code = $('joinCode').value.toUpperCase().replace(/[^A-Z]/g, ''), naam = $('joinNaam').value.trim();
     $('joinFout').textContent = '';
     if (code.length !== 4){ $('joinFout').textContent = 'De code is vier letters.'; return; }
@@ -895,6 +901,8 @@ Frans Hals"></textarea>
     .then(function(x){
       $('joinBtn').disabled = false;
       if (!x.ok){ $('joinFout').textContent = x.j.fout || 'Geen kamer met deze code.'; return; }
+      /* de docent is met de klas naar een nieuwe kamer gegaan: daar doe je mee */
+      if (x.j.fase === 'einde' && /^[A-Z]{4}$/.test(x.j.verhuis || '') && sprong < 3){ $('joinCode').value = x.j.verhuis; doeMee(sprong + 1); return; }
       if (x.j.spel && x.j.spel !== 'quiz'){
         var doel = paginaVoorSpel(x.j.spel);
         if (!doel || doel === location.pathname.split('/').pop()){ $('joinFout').textContent = uitlegBijSoort(x.j.spel); return; }
@@ -905,7 +913,7 @@ Frans Hals"></textarea>
     })
     .catch(function(){ $('joinBtn').disabled = false; $('joinFout').textContent = 'Geen verbinding met de server.'; });
   }
-  $('joinBtn').addEventListener('click', doeMee);
+  $('joinBtn').addEventListener('click', function(){ doeMee(); });
   $('joinNaam').addEventListener('keydown', function(e){ if (e.key === 'Enter') doeMee(); });
   $('joinCode').addEventListener('keydown', function(e){ if (e.key === 'Enter') $('joinNaam').focus(); });
 
@@ -1039,7 +1047,9 @@ Frans Hals"></textarea>
     var rang = PODIUM.rangen(m.stand, function(a, b){ return a.score === b.score; });
     PODIUM.onthul($('hPodium'), m.stand.slice(0, 3).map(function(s, i){
       return { rang:rang[i], naam:s.naam, regel:s.score + ' punten', punten:s.score, beeld: window.AVATAR ? AVATAR.svg(s.naam, 120, s.av, { stemming:'blij' }) : '' };
-    }), { klaar:function(){ $('hEindStand').classList.remove('hide'); } });
+    }), { klaar:function(){ $('hEindStand').classList.remove('hide'); },
+      /* de winnaar staat op het bord (of de docent sloeg over): de telefoons mogen hun plek laten zien */
+      onthuld:function(){ stuur({ t:'podium' }); } });
     /* onder het podium de rest, vanaf plek 4 */
     $('hEindStand').innerHTML = m.stand.slice(3).map(function(s, i){
       return '<div><b>' + rang[i + 3] + '.</b><span>' + (window.AVATAR ? AVATAR.svg(s.naam, 26, s.av) : '') + schoonHtml(s.naam) + '</span><span></span><b>' + s.score + '</b></div>';
@@ -1073,11 +1083,23 @@ Frans Hals"></textarea>
     };
   }
   $('hTerug').addEventListener('click', function(){ sluitVerbinding(); location.href = location.pathname; });
+  /* Nog een quiz met dezelfde klas: dezelfde instellingen, een nieuwe kamer.
+     De verbinding met de oude kamer blijft open tot de nieuwe er is; dan
+     krijgt de oude kamer de nieuwe code en gaan de telefoons vanzelf mee.
+     Een telefoon met een oudere pagina houdt zijn eindscherm en vult de
+     nieuwe code zelf in (de oude code verwijst er ook naar). */
+  var verhuisVan = null;
+  function verhuis(code){
+    var oud = verhuisVan; verhuisVan = null;
+    if (!oud || oud === verb) return;
+    var weg = function(){ oud.sluit(); };
+    /* weg: even later ophangen; wacht hij nog op de verbinding: niet eindeloos */
+    if (oud.stuur({ t:'verhuis', code:code }, { daarna:weg })) setTimeout(weg, 400);
+    else setTimeout(weg, 10000);
+  }
   $('hNogeens').addEventListener('click', function(){
-    /* Dezelfde instellingen, een nieuwe kamer; de leerlingen vullen de nieuwe
-       code in. De telefoons gaan niet vanzelf mee: de oude kamer kan ze niet
-       naar een nieuwe sturen, dus de knop belooft dat ook niet. */
-    sluitVerbinding(); bord.uit();
+    if (verhuisVan && verhuisVan !== verb) verhuisVan.sluit();
+    verhuisVan = verb; verb = null; bord.uit();
     vak = host.vak; niveau = host.niveau; onderdeel = host.onderdeel;
     $('aantal').value = host.aantal; $('tijd').value = host.tijd;
     tekenKeuze();
@@ -1134,10 +1156,26 @@ Frans Hals"></textarea>
       return;
     }
     if (m.t === 'jouw'){ zetJouw(m.jouw); return; }
+    if (m.t === 'verhuis'){ verhuisNaar(m.code); return; }
+    if (m.t === 'podium'){ podiumNu(); return; }
     if (m.t === 'vraag'){ spelerVraag(m); return; }
     if (m.t === 'ok'){ if (antw && antw.i === m.i){ antw.weg = true; antw.ok = true; } toonAntwoord(); return; }
     if (m.t === 'uitslag'){ antw = null; spelerUitslag(m); return; }
     if (m.t === 'einde'){ antw = null; spelerEinde(m); return; }
+  }
+  /* Nog een quiz met dezelfde klas: het bord opende een nieuwe kamer en de
+     oude stuurt de code door. Deze telefoon gaat vanzelf mee, met dezelfde
+     bijnaam en hetzelfde gezichtje, en staat in de nieuwe lobby. */
+  function verhuisNaar(nieuw){
+    nieuw = String(nieuw || '').toUpperCase();
+    if (!speler || !/^[A-Z]{4}$/.test(nieuw) || nieuw === speler.code) return;
+    stopKlok(); clearTimeout(eindeKlok); eindeKlok = null; eindeNu = null;
+    antw = null; beantwoord = -1; mijnPid = null;
+    /* herladen komt dan ook bij de nieuwe code uit */
+    try { history.replaceState(null, '', location.pathname + '?k=' + nieuw); } catch (e){}
+    $('pScoreKop').textContent = '0'; $('pRangKop').textContent = '-';
+    wordSpeler(nieuw, speler.naam);
+    $('pWachtTekst').textContent = 'Nog een quiz! Wacht tot de docent start';
   }
   /* wat er onder de knoppen staat: niets, "nog niet verstuurd" of "verstuurd" */
   function toonAntwoord(){
@@ -1194,11 +1232,17 @@ Frans Hals"></textarea>
   }
   /* Het einde: het bord bouwt eerst ruim tien tellen spanning op met het
      podium. De telefoon zegt dus eerst "kijk naar het bord", en pas als het
-     bord de winnaar laat zien je eigen plek. De wachttijd komt uit podium.js,
-     met dezelfde plekken als op het bord. */
-  var eindeKlok = null;
+     bord de winnaar laat zien je eigen plek. Het bord meldt dat moment (ook
+     na Sla over); komt die melding niet, dan de wachttijd uit podium.js, met
+     dezelfde plekken als op het bord. */
+  var eindeKlok = null, eindeNu = null;
+  function podiumNu(){
+    if (!eindeKlok || !eindeNu) return;
+    clearTimeout(eindeKlok); eindeKlok = null;
+    var f = eindeNu; eindeNu = null; f();
+  }
   function spelerEinde(m){
-    stopKlok(); clearTimeout(eindeKlok);
+    stopKlok(); clearTimeout(eindeKlok); eindeKlok = null; eindeNu = null;
     if (verb) verb.zetDicht();
     spelerScherm('p-einde');
     var stand = m.stand || [], j = m.jouw;
@@ -1225,7 +1269,8 @@ Frans Hals"></textarea>
       $('pEindeWacht').classList.remove('hide'); $('pEindeStand').classList.add('hide');
       /* ook de plek in de kop verklapt het, dus die even weg */
       $('pRangKop').textContent = '-';
-      eindeKlok = setTimeout(onthul, wacht + 600);
+      eindeNu = onthul;
+      eindeKlok = setTimeout(function(){ eindeKlok = null; eindeNu = null; onthul(); }, wacht + 600);
     } else onthul();
   }
   $('pTerug').addEventListener('click', function(){ sluitVerbinding(); location.href = location.pathname; });

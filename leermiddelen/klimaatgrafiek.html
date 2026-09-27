@@ -39,6 +39,14 @@
 .kg .titel{font-weight:600;font-size:13px}
 .kg .maand.licht{font-weight:700;fill:var(--nadruk)}
 .kg .klein{font-size:10.5px;fill:var(--muted)}
+/* Op een telefoon wordt de grafiek smaller getekend (vakspel.js schaalt hem niet meer zo ver
+   terug), met grotere letters: zo is alle tekst op een scherm van 375 breed minstens 11,5 px. */
+.kg.smal text{font-size:12.5px}
+.kg.smal .titel{font-size:13.5px}
+.kg.smal .titel.lang{font-size:12.5px}
+.kg.smal .klein{font-size:12px}
+.wk.smal .lijnnaam{font-size:17px}
+.wk.smal .nr{font-size:17px}
 /* het wereldkaartje: de namen van de breedtelijnen staan rechts naast de ellips, los van de lijnen en de rand */
 .wk{color:var(--ink)}
 .wk text{fill:currentColor;font-size:11px}
@@ -77,10 +85,13 @@
   function halfrond(st){ return st.lat < 0 ? 'zuidelijk' : 'noordelijk'; }
   function ligging(st){ return net(Math.abs(st.lat), 0) + '° ' + (st.lat < 0 ? 'ZB' : 'NB'); }
 
+  /* een smal scherm (telefoon): de grafieken worden smaller getekend met grotere letters */
+  function smal(){ return !!(window.matchMedia && matchMedia('(max-width:560px)').matches); }
+
   /* ---------- de klimaatgrafiek: staven neerslag (rechteras), lijn temperatuur (linkeras) ---------- */
   function grafiek(st, o){
     o = o || {};
-    var W = 400, Hh = 284, L = 46, R = 50, T = 40, B = 48, pw = W - L - R, ph = Hh - T - B;
+    var W = smal() ? 330 : 400, Hh = 284, L = smal() ? 40 : 46, R = smal() ? 44 : 50, T = 40, B = 48, pw = W - L - R, ph = Hh - T - B;
     var tLaag = Math.min(0, Math.floor(min(st.temp) / 10) * 10), tHoog = Math.ceil((max(st.temp) + 1) / 10) * 10;
     if (tHoog - tLaag < 30) tHoog = tLaag + 30;
     var stapT = tHoog - tLaag > 40 ? 20 : 10;
@@ -90,12 +101,16 @@
     function x(i){ return L + (i + 0.5) * pw / 12; }
     function yT(t){ return T + (tHoog - t) / (tHoog - tLaag) * ph; }
     function yN(n){ return T + ph - n / nHoog * ph; }
-    var s = '<svg class="kg" viewBox="0 0 ' + W + ' ' + Hh + '" width="' + W + '" height="' + Hh + '" role="img" aria-label="' + S((o.titel || 'klimaatgrafiek') + ': de temperatuur loopt van ' + net(min(st.temp)) + ' tot ' + net(max(st.temp)) + ' graden, de neerslag van ' + min(st.neerslag) + ' tot ' + max(st.neerslag) + ' millimeter per maand. De waarden per maand staan in de tabel hierna.') + '">';
-    s += '<text class="titel" x="' + L + '" y="16">' + S(o.titel || 'klimaatgrafiek') + '</text>';
+    var s = '<svg class="kg' + (smal() ? ' smal' : '') + '" viewBox="0 0 ' + W + ' ' + Hh + '" width="' + W + '" height="' + Hh + '" role="img" aria-label="' + S((o.titel || 'klimaatgrafiek') + ': de temperatuur loopt van ' + net(min(st.temp)) + ' tot ' + net(max(st.temp)) + ' graden, de neerslag van ' + min(st.neerslag) + ' tot ' + max(st.neerslag) + ' millimeter per maand. De waarden per maand staan in de tabel hierna.') + '">';
+    /* smal: de titel begint links van de as, en een lange stadsnaam krijgt iets kleinere letters */
+    var titel = o.titel || 'klimaatgrafiek';
+    s += '<text class="titel' + (smal() && titel.length > 34 ? ' lang' : '') + '" x="' + (smal() ? 2 : L) + '" y="16">' + S(titel) + '</text>';
     /* legenda onder de maandletters */
     var ly = Hh - (o.onder ? 20 : 8);
-    s += '<rect class="staaf" x="' + (W / 2 - 92) + '" y="' + (ly - 9) + '" width="10" height="10"/><text class="klein" x="' + (W / 2 - 78) + '" y="' + ly + '">neerslag (mm)</text>';
-    s += '<path class="lijn" d="M' + (W / 2 + 14) + ' ' + (ly - 4) + 'h14"/><text class="klein" x="' + (W / 2 + 32) + '" y="' + ly + '">temperatuur (°C)</text>';
+    /* smal: grotere letters, dus de twee helften van de legenda iets verder uit elkaar */
+    var lx = smal() ? 20 : 0;
+    s += '<rect class="staaf" x="' + (W / 2 - 92 - lx) + '" y="' + (ly - 9) + '" width="10" height="10"/><text class="klein" x="' + (W / 2 - 78 - lx) + '" y="' + ly + '">neerslag (mm)</text>';
+    s += '<path class="lijn" d="M' + (W / 2 + 14 - lx / 2) + ' ' + (ly - 4) + 'h14"/><text class="klein" x="' + (W / 2 + 32 - lx / 2) + '" y="' + ly + '">temperatuur (°C)</text>';
     /* rasterlijnen en linkeras */
     for (var t = tLaag; t <= tHoog; t += stapT){
       s += '<path class="' + (t === 0 ? 'as' : 'raster') + '" d="M' + L + ' ' + yT(t) + 'H' + (W - R) + '"/>';
@@ -126,7 +141,8 @@
   /* De ellips staat links; de naam van elke breedtelijn staat rechts naast de rand, op de hoogte van de lijn.
      Zo loopt geen naam door een lijn of door de rand, en een stip kan er niet op vallen. */
   function wereld(punten){
-    var W = 470, Hh = 190, cx = 158, cy = 95, rx = 148, ry = 78;
+    /* smal: de ellips iets smaller, dan passen de namen er in grotere letters naast */
+    var W = 470, Hh = 190, cx = smal() ? 132 : 158, cy = 95, rx = smal() ? 122 : 148, ry = 78, r = smal() ? 14 : 11;
     function xy(lat, lon){ var f = Math.sqrt(Math.max(0, 1 - Math.pow(lat / 90, 2))); return [cx + lon / 180 * rx * f, cy - lat / 90 * ry]; }
     function breedtelijn(lat, klasse, naam){
       var y = cy - lat / 90 * ry, hx = rx * Math.sqrt(1 - Math.pow(lat / 90, 2));
@@ -134,16 +150,16 @@
       var ty = lat > 0 ? y - 4 : lat < 0 ? y + 14 : y + 5;
       return '<path class="lijn" stroke-dasharray="' + klasse + '" d="M' + (cx - hx).toFixed(1) + ' ' + y.toFixed(1) + 'H' + (cx + hx).toFixed(1) + '"/>' + (naam ? '<text class="lijnnaam" x="' + (cx + hx + 8).toFixed(1) + '" y="' + ty.toFixed(1) + '">' + naam + '</text>' : '');
     }
-    var s = '<svg class="wk" viewBox="0 0 ' + W + ' ' + Hh + '" width="' + W + '" height="' + Hh + '" role="img" aria-label="Wereldkaartje met de evenaar, de keerkringen en de poolcirkels, en vier genummerde steden. Waar elk nummer ligt, staat in de tabel hierna.">';
+    var s = '<svg class="wk' + (smal() ? ' smal' : '') + '" viewBox="0 0 ' + W + ' ' + Hh + '" width="' + W + '" height="' + Hh + '" role="img" aria-label="Wereldkaartje met de evenaar, de keerkringen en de poolcirkels, en vier genummerde steden. Waar elk nummer ligt, staat in de tabel hierna.">';
     s += '<ellipse class="rand" cx="' + cx + '" cy="' + cy + '" rx="' + rx + '" ry="' + ry + '"/>';
     s += breedtelijn(66.5, '2 3', 'noordpoolcirkel') + breedtelijn(23.5, '5 4', 'Kreeftskeerkring') + breedtelijn(0, '0', 'evenaar') + breedtelijn(-23.5, '5 4', 'Steenbokskeerkring') + breedtelijn(-66.5, '2 3', 'zuidpoolcirkel');
     /* stippen die op elkaar zitten een beetje uit elkaar duwen */
     var p = punten.map(function(q){ var c = xy(q.lat, q.lon); return { x:c[0], y:c[1], nr:q.nr }; });
     for (var k = 0; k < 6; k++) for (var i = 0; i < p.length; i++) for (var j = i + 1; j < p.length; j++){
       var dx = p[j].x - p[i].x, dy = p[j].y - p[i].y, d = Math.hypot(dx, dy);
-      if (d < 26){ var px = d ? dx / d : 1, py = d ? dy / d : 0, w = (26 - d) / 2; p[i].x -= px * w; p[i].y -= py * w; p[j].x += px * w; p[j].y += py * w; }
+      if (d < 2 * r + 4){ var px = d ? dx / d : 1, py = d ? dy / d : 0, w = (2 * r + 4 - d) / 2; p[i].x -= px * w; p[i].y -= py * w; p[j].x += px * w; p[j].y += py * w; }
     }
-    p.forEach(function(q){ s += '<circle class="stip" cx="' + q.x.toFixed(1) + '" cy="' + q.y.toFixed(1) + '" r="11"/><text class="nr" x="' + q.x.toFixed(1) + '" y="' + (q.y + 4.5).toFixed(1) + '" text-anchor="middle">' + q.nr + '</text>'; });
+    p.forEach(function(q){ s += '<circle class="stip" cx="' + q.x.toFixed(1) + '" cy="' + q.y.toFixed(1) + '" r="' + r + '"/><text class="nr" x="' + q.x.toFixed(1) + '" y="' + (q.y + (smal() ? 6 : 4.5)).toFixed(1) + '" text-anchor="middle">' + q.nr + '</text>'; });
     s += '</svg>';
     return s;
   }

@@ -1174,11 +1174,67 @@ function tekenOnderdeel(o, item, geselecteerd){
      het gebouw onder het kruisje, zodat je het kunt draaien of weghalen. */
   var kruis = null;
   var elVelvak = document.getElementById('velvak');
+  /* Het kruisje is er alleen voor het toetsenbord. Een tik geeft het vak ook
+     de focus; tekende het vel dan opnieuw, dan verdween het vel onder je
+     vinger en zette de eerste tik niets neer. */
   elVelvak.addEventListener('focus', function(){
     if (!kruis){ var m = midden(); kruis = { x:Math.round(m.x), y:Math.round(m.y) }; }
-    tekenVel();
+    if (elVelvak.matches(':focus-visible')) tekenVel();
   });
   elVelvak.addEventListener('blur', function(){ tekenVel(); });
+
+  /* ---------- knijpen en schuiven met twee vingers ----------
+     Op een aanraakscherm zoom je met twee vingers in en uit, en schuif je met
+     twee vingers het beeld op, naast de knoppen Inzoomen en Uitzoomen. De
+     luisteraars zitten op het vak om het vel heen en vangen de aanraking
+     eerst op: het vel zelf wordt steeds opnieuw getekend, en een gebouw onder
+     je eerste vinger houdt de aanraking anders voor zich. Tijdens het knijpen
+     verandert alleen de viewBox; pas als je loslaat wordt het vel opnieuw
+     getekend, anders hapert het. */
+  var vingers = {}, knijp = null, naKnijp = false;
+  function aantalVingers(){ return Object.keys(vingers).length; }
+  function tweeVingers(){ var k = Object.keys(vingers); return [vingers[k[0]], vingers[k[1]]]; }
+  elVelvak.addEventListener('pointerdown', function(e){
+    if (e.pointerType !== 'touch') return;
+    vingers[e.pointerId] = { x:e.clientX, y:e.clientY };
+    if (aantalVingers() !== 2 || !document.getElementById('stadsvg')) return;
+    /* was de eerste vinger een gebouw aan het slepen, dan gaat dat terug */
+    if (sleep){ sleep.stuk.x = sleep.ox; sleep.stuk.y = sleep.oy; sleep.el.setAttribute('transform', transformVoor(sleep.stuk)); sleep = null; }
+    schuif = null;
+    var t = tweeVingers(), mx = (t[0].x + t[1].x) / 2, my = (t[0].y + t[1].y) / 2;
+    knijp = { d:Math.hypot(t[0].x - t[1].x, t[0].y - t[1].y) || 1, b:kijk.b, punt:velPunt({ clientX:mx, clientY:my }) };
+    naKnijp = true;
+  }, true);
+  elVelvak.addEventListener('pointermove', function(e){
+    if (!vingers[e.pointerId]) return;
+    vingers[e.pointerId] = { x:e.clientX, y:e.clientY };
+    if (naKnijp) e.stopPropagation();          /* geen slepen of schuiven met een losse vinger */
+    if (!knijp || aantalVingers() < 2) return;
+    var t = tweeVingers(), d = Math.hypot(t[0].x - t[1].x, t[0].y - t[1].y) || 1;
+    var mx = (t[0].x + t[1].x) / 2, my = (t[0].y + t[1].y) / 2;
+    kijk.b = Math.max(MINBREED, Math.min(VEL.breed, knijp.b * knijp.d / d));
+    /* het punt onder het midden van je vingers blijft onder je vingers */
+    var svg = document.getElementById('stadsvg'), r = svg.getBoundingClientRect();
+    var schaal = Math.min(r.width / kijk.b, r.height / kijkHoog());
+    var links = r.left + (r.width - kijk.b * schaal) / 2, boven = r.top + (r.height - kijkHoog() * schaal) / 2;
+    kijk.x = knijp.punt.x - (mx - links) / schaal;
+    kijk.y = knijp.punt.y - (my - boven) / schaal;
+    binnenBeeld();
+    svg.setAttribute('viewBox', kijk.x + ' ' + kijk.y + ' ' + kijk.b + ' ' + kijkHoog());
+  }, true);
+  function vingerLos(e){
+    if (!vingers[e.pointerId]) return;
+    delete vingers[e.pointerId];
+    if (knijp && aantalVingers() < 2){ knijp = null; tekenVel(); zoomKnoppen(); }
+    /* Pas als alle vingers los zijn, is het knijpen voorbij. Wat daarna als
+       tik binnenkomt, is het einde van het knijpen en zet niets neer. */
+    if (naKnijp && aantalVingers() === 0){
+      naKnijp = false; netGesleept = true;
+      setTimeout(function(){ netGesleept = false; }, 300);
+    }
+  }
+  elVelvak.addEventListener('pointerup', vingerLos, true);
+  elVelvak.addEventListener('pointercancel', vingerLos, true);
   elVelvak.addEventListener('keydown', function(e){
     if (gekozenStuk !== null) return;        /* dan verschuiven de pijltjes het gekozen gebouw */
     if (!kruis) return;
@@ -1594,7 +1650,7 @@ function tekenOnderdeel(o, item, geselecteerd){
   function midden(){ return { x: kijk.x + kijk.b / 2, y: kijk.y + kijkHoog() / 2 }; }
   document.getElementById('inzoomBtn').addEventListener('click', function(){
     zoom(0.75, midden()); zoomKnoppen();
-    melding('Ingezoomd. Sleep op een lege plek om het beeld te verschuiven.');
+    melding('Ingezoomd. Sleep op een lege plek om het beeld te verschuiven. Op een aanraakscherm kan knijpen met twee vingers ook.');
   });
   document.getElementById('uitzoomBtn').addEventListener('click', function(){
     zoom(1 / 0.75, midden()); zoomKnoppen();
@@ -1703,6 +1759,6 @@ function tekenOnderdeel(o, item, geselecteerd){
 <script src="thema.js"></script>
 <script src="klas.js"></script>
 <script src="spel.js"></script>
-<script>SPEL.uitleg({ doel:"Ontwerp een middeleeuwse stad met muur, markt, kerk en straten, en leg uit waarom alles staat waar het staat.", tijd:"een half uur, of een hele les", bediening:"Kies een onderdeel in de gereedschapsbalk en zet het op het vel. Slepen, draaien en spiegelen mag." });</script>
+<script>SPEL.uitleg({ doel:"Ontwerp een middeleeuwse stad met muur, markt, kerk en straten, en leg uit waarom alles staat waar het staat.", tijd:"een half uur, of een hele les", bediening:"Kies een onderdeel in de gereedschapsbalk en zet het op het vel. Slepen, draaien en spiegelen mag. Zoomen kan met de knoppen, het muiswiel of twee vingers." });</script>
 </body>
 </html>

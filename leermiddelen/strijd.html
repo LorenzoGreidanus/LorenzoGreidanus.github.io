@@ -316,7 +316,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     <table class="stand" id="hEindTabel"><thead><tr><th>#</th><th>naam</th><th>ronde</th><th>punten</th><th>aanvallen</th></tr></thead><tbody></tbody></table>
     <div class="hostknoppen">
       <button class="knop stil" id="hTerug" type="button">Terug naar het begin</button>
-      <button class="knop crab" id="hNogeens" type="button">Nieuwe strijd (nieuwe code)</button>
+      <button class="knop crab" id="hNogeens" type="button">Nog een strijd met dezelfde klas</button>
     </div>
   </div>
 </section>
@@ -369,10 +369,12 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
   var verb = null;
   function verbind(doel, opBericht){
     if (verb) verb.sluit();
-    verb = VERBINDING.maak({ pad:doel.code + '?' + doel.query, rol:doel.rol, onBericht:opBericht,
-      onOpen:function(){ zegStatus(''); },
-      onEruit:function(){ $('pWachtTekst').textContent = 'Je docent heeft je uit dit potje gehaald. Vul de code opnieuw in om weer mee te doen.'; },
-      onDicht:function(reden){ zegStatus(reden); } });
+    /* wat een oude verbinding nog zegt, telt niet meer (zie verhuis hieronder) */
+    var v = VERBINDING.maak({ pad:doel.code + '?' + doel.query, rol:doel.rol, onBericht:function(m){ if (verb === v) opBericht(m); },
+      onOpen:function(){ if (verb === v) zegStatus(''); },
+      onEruit:function(){ if (verb === v) $('pWachtTekst').textContent = 'Je docent heeft je uit dit potje gehaald. Vul de code opnieuw in om weer mee te doen.'; },
+      onDicht:function(reden){ if (verb === v) zegStatus(reden); } });
+    verb = v;
   }
   function stuur(obj){ return verb ? verb.stuur(obj) : false; }
   function sluitVerbinding(){ if (verb) verb.sluit(); }
@@ -422,6 +424,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
       if (!x.ok){ $('openFout').textContent = x.j.fout || 'Het lukte niet om een kamer te openen.'; return; }
       var host = { code:x.j.code, sleutel:x.j.sleutel, game:spel, vak:vak, niveau:niveau, lijstNaam: vak === 'eigen' && lijstM ? lijstM.naam : '' };
       try { localStorage.setItem('lg-strijd-host', JSON.stringify(host)); } catch (e){}
+      verhuis(host.code);
       wordHost(host);
     })
     .catch(function(){ $('openBtn').disabled = false; $('openFout').textContent = 'Geen verbinding met de server.'; });
@@ -451,7 +454,8 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     /* via de instappagina is er al op Meedoen gedrukt */
     if (k && new URLSearchParams(location.search).get('ga') && $('joinNaam').value.trim()) setTimeout(doeMee, 0);
   })();
-  function doeMee(){
+  function doeMee(sprong){
+    sprong = typeof sprong === 'number' ? sprong : 0;
     var code = $('joinCode').value.toUpperCase().replace(/[^A-Z]/g, ''), naam = $('joinNaam').value.trim();
     $('joinFout').textContent = '';
     if (code.length !== 4){ $('joinFout').textContent = 'De code is vier letters.'; return; }
@@ -463,6 +467,8 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     .then(function(x){
       $('joinBtn').disabled = false;
       if (!x.ok){ $('joinFout').textContent = x.j.fout || 'Geen kamer met deze code.'; return; }
+      /* de docent is met de klas naar een nieuwe kamer gegaan: daar doe je mee */
+      if (x.j.fase === 'einde' && /^[A-Z]{4}$/.test(x.j.verhuis || '') && sprong < 3){ $('joinCode').value = x.j.verhuis; doeMee(sprong + 1); return; }
       if (x.j.spel !== 'strijd'){
         /* de kamer blijkt een ander spel: stuur door naar de goede pagina */
         location.href = (x.j.spel === 'rollen' ? 'rol.html' : 'klasquiz.html') + '?k=' + code + '&ga=1'; return;
@@ -472,7 +478,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     })
     .catch(function(){ $('joinBtn').disabled = false; $('joinFout').textContent = 'Geen verbinding met de server.'; });
   }
-  $('joinBtn').addEventListener('click', doeMee);
+  $('joinBtn').addEventListener('click', function(){ doeMee(); });
   $('joinNaam').addEventListener('keydown', function(e){ if (e.key === 'Enter') doeMee(); });
   $('joinCode').addEventListener('keydown', function(e){ if (e.key === 'Enter') $('joinNaam').focus(); });
 
@@ -559,8 +565,21 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
   $('hStop').addEventListener('click', function(){ if (confirm('De strijd nu stoppen? De stand van dit moment wordt de eindstand.')) stuur({ t:'stop' }); });
   $('hStop0').addEventListener('click', function(){ if (confirm('De kamer sluiten?')) stuur({ t:'stop' }); });
   $('hTerug').addEventListener('click', function(){ sluitVerbinding(); location.href = location.pathname; });
+  /* Nog een strijd met dezelfde klas: dezelfde instellingen, een nieuwe kamer.
+     De oude verbinding blijft open tot de nieuwe kamer er is; dan krijgt de
+     oude kamer de nieuwe code en gaan de telefoons vanzelf mee (strijd.js in
+     het spel, of de wachtkamer hieronder). */
+  var verhuisVan = null;
+  function verhuis(code){
+    var oud = verhuisVan; verhuisVan = null;
+    if (!oud || oud === verb) return;
+    var weg = function(){ oud.sluit(); };
+    if (oud.stuur({ t:'verhuis', code:code }, { daarna:weg })) setTimeout(weg, 400);
+    else setTimeout(weg, 10000);
+  }
   $('hNogeens').addEventListener('click', function(){
-    sluitVerbinding(); bord.uit();
+    if (verhuisVan && verhuisVan !== verb) verhuisVan.sluit();
+    verhuisVan = verb; verb = null; bord.uit();
     spel = host.game; vak = host.vak; niveau = host.niveau; tekenKeuze();
     toon('s-start'); $('openBtn').click();
   });
@@ -573,12 +592,15 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
   }
   function wordSpeler(code, naam, j){
     toon('s-speler');
+    $('pWachtTekst').textContent = 'Wacht tot de docent start';
     $('pUit').textContent = 'Je doet mee als ' + naam + ' aan ' + naamVan(SPELLEN, j.game) + ', ' + naamVan(VAKKEN, j.vak) + ' op ' + naamVan(NIVEAUS, j.niveau) + '.';
     /* al begonnen: meteen het spel in */
     if (j.fase === 'bezig'){ location.href = spelLink(code, naam, j); return; }
     verbind({ code:code, rol:'speler', query:'rol=speler&sid=' + encodeURIComponent(sid()) + '&naam=' + encodeURIComponent(naam) + '&av=' + encodeURIComponent(window.PROFIEL ? PROFIEL.avatar() : '') }, function(m){
       if (m.t === 'start' || (m.t === 'welkom' && m.fase === 'bezig')){ sluitVerbinding(); location.href = spelLink(code, naam, j); }
       if (m.t === 'einde'){ $('pWachtTekst').textContent = 'Dit potje is al afgelopen.'; if (verb) verb.zetDicht(); }
+      /* de docent begint nog een strijd met dezelfde klas: meteen mee */
+      if (m.t === 'verhuis' && /^[A-Z]{4}$/.test(m.code || '') && m.code !== code){ sluitVerbinding(); $('joinCode').value = m.code; doeMee(); }
     });
   }
 })();

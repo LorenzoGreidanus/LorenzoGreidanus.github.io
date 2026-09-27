@@ -52,6 +52,10 @@ header{position:sticky;top:0;z-index:20;background:rgba(251,246,241,.94);
   display:grid;place-items:center;font-style:normal;font-size:.78rem}
 .hd-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .pill{background:var(--sand);font-weight:600;padding:6px 13px;border-radius:999px;font-size:.78rem}
+/* Op een telefoon duwden de twee pillen de kop naar twee regels. Daar staan
+   rol en niveau als een regeltje boven het spel. */
+.spelpil{display:none;margin:16px 0 -8px}
+@media(max-width:640px){.hd-right .pill{display:none}.spelpil{display:block}}
 .linkbtn{background:none;border:none;color:var(--muted);text-decoration:underline;text-underline-offset:4px;font-size:.85rem;padding:6px}
 .linkbtn:hover{color:var(--ink)}
 
@@ -400,6 +404,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
 
 <!-- ============================ SPEL ============================ -->
 <section class="wrap hide" id="scherm-spel">
+  <p class="eyebrow spelpil" id="spelPil"></p>
   <div class="spel">
     <aside class="paneel" id="paneel"></aside>
     <div class="beurt" id="beurt"></div>
@@ -935,6 +940,7 @@ var GEBEURTENISSEN = {
     var pr = document.getElementById('pillRol'), pn = document.getElementById('pillNiv');
     pr.textContent = rol.naam; pr.classList.remove('hide');
     pn.textContent = niveau.naam; pn.classList.remove('hide');
+    document.getElementById('spelPil').textContent = rol.naam + ' \u00b7 ' + niveau.naam;
     tekenPaneel(); tekenBeurt();
     scrollTo({top:0, behavior:'auto'});
   }
@@ -1437,6 +1443,9 @@ var GEBEURTENISSEN = {
       var m = new RegExp('[?&]' + naam + '=([^&]+)').exec(location.search);
       return m ? decodeURIComponent(m[1]) : null;
     }
+    /* Vulde de leeromgeving de keuze in (van=lo in de link), dan koos de
+       leerling zelf. Zonder van=lo komt de link van de docent. */
+    var gekozenDoor = /[?&]van=lo\b/.test(location.search) ? ', gekozen in de leeromgeving' : ', gekozen door je docent';
     function kiesUit(vakId, lijst, waarde, kopId, woord){
       if (!waarde) return;
       var vak = document.getElementById(vakId);
@@ -1446,7 +1455,7 @@ var GEBEURTENISSEN = {
           vak.children[i].click();
           vak.style.display = 'none';
           var kop = document.getElementById(kopId);
-          if (kop) kop.textContent = woord + ': ' + lijst[i].naam + ', gekozen door je docent';
+          if (kop) kop.textContent = woord + ': ' + lijst[i].naam + gekozenDoor;
           return;
         }
       }

@@ -46,7 +46,9 @@ button{cursor:pointer;touch-action:manipulation}
 /* de rolkaart: in de kleur van de rol */
 .rol{border-radius:22px;padding:18px 20px;color:#fff;margin-top:12px;position:relative;overflow:hidden}
 .rol::before{content:'';position:absolute;right:-50px;top:-60px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.12)}
-.rol .eyebrow{color:rgba(255,255,255,.8)}
+.rol .eyebrow{color:inherit;opacity:.82}
+/* op een lichte rolkleur (koraal, amber) donkerblauwe letters, en dan niet doorschijnend: anders zakt het contrast weer */
+.rol.licht .eyebrow,.rol.licht .onder{opacity:1}
 .rol h2{font-size:1.5rem;line-height:1.15;margin-top:2px}
 .rol .onder{font-size:.92rem;opacity:.92;margin-top:2px}
 .rol p.tekst{font-size:.92rem;margin-top:10px;line-height:1.45}
@@ -173,6 +175,15 @@ footer{text-align:center;font-size:.8rem;color:var(--muted);padding:20px 16px}
     g.classList.toggle('nog', !weg);
     g.textContent = weg ? tekst : 'Nog niet verstuurd, we proberen het opnieuw. Zodra de verbinding terug is, gaat je keuze vanzelf naar het bord.';
   }
+  /* De letter op de rolkaart: wit of donkerblauw, wat het meeste contrast
+     geeft op de kleur van de rol (zoals --spelinkt in vakspel.js). Wit op
+     koraal haalt maar 3:1, donkerblauw 5:1. */
+  function lum(hex){
+    var m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '')); if (!m) return 0;
+    return [0, 2, 4].map(function(i){ var c = parseInt(m[1].substr(i, 2), 16) / 255; return c <= .03928 ? c / 12.92 : Math.pow((c + .055) / 1.055, 2.4); })
+      .reduce(function(s, c, i){ return s + c * [.2126, .7152, .0722][i]; }, 0);
+  }
+  function inktOp(hex){ var l = lum(hex), wit = 1.05 / (l + .05), navy = (l + .05) / (lum('#14224C') + .05); return navy > wit ? '#14224C' : '#fff'; }
   /* donkere optiekleur: witte letter; lichte: donkerblauwe */
   function letterOp(kleur){
     var m = /^#([0-9a-f]{6})$/i.exec(kleur || ''); if (!m) return '#fff';
@@ -202,7 +213,8 @@ footer{text-align:center;font-size:.8rem;color:var(--muted);padding:20px 16px}
   function tekenRol(){
     var el = $('rolkaart');
     if (!rol){ el.innerHTML = ''; return; }
-    el.innerHTML = '<div class="rol" style="background:' + schoon(rol.kleur || '#204ECF') + '"><p class="eyebrow">jouw rol</p><h2>' + schoon(rol.titel) + '</h2>' +
+    var kl = /^#[0-9a-f]{6}$/i.test(rol.kleur || '') ? rol.kleur : '#204ECF', inkt = inktOp(kl);
+    el.innerHTML = '<div class="rol' + (inkt === '#fff' ? '' : ' licht') + '" style="background:' + kl + ';color:' + inkt + '"><p class="eyebrow">jouw rol</p><h2>' + schoon(rol.titel) + '</h2>' +
       (rol.onder ? '<p class="onder">' + schoon(rol.onder) + '</p>' : '') + (rol.tekst ? '<p class="tekst">' + schoon(rol.tekst) + '</p>' : '') + '</div>';
   }
   function toon(d){

@@ -32,7 +32,7 @@
 .eukaart .land{fill:var(--kaart);stroke:var(--muted);stroke-width:1;stroke-linejoin:round}
 .eukaart .gebied{cursor:pointer}
 .eukaart .gebied:hover .land{fill:var(--kaart-aan)}
-/* de kleuren vol gemengd, niet doorschijnend: het vasteland van Rusland ligt onder de buren en mag er niet doorheen schemeren */
+/* de kleuren vol gemengd, niet doorschijnend */
 .eukaart .gebied.gekozen .land{fill:color-mix(in srgb,var(--nadruk) 55%,var(--kaart));stroke:var(--nadruk)}
 .eukaart .gebied.goed .land{fill:color-mix(in srgb,var(--goed) 60%,var(--kaart));stroke:var(--goed)}
 .eukaart .gebied.fout .land{fill:color-mix(in srgb,var(--fout) 60%,var(--kaart));stroke:var(--fout)}
@@ -99,12 +99,6 @@
     { id:'balkan', naam:'de Balkan', landen:['Griekenland', 'Bulgarije', 'Servië', 'Kroatië', 'Bosnië en Herzegovina', 'Slovenië', 'Montenegro', 'Albanië', 'Kosovo', 'Noord-Macedonië'], x:655, y:545 },
     { id:'kleinazie', naam:'Klein-Azië', landen:['Turkije', 'Cyprus'], x:870, y:550 }
   ];
-  /* In de kaartgegevens zit van Rusland alleen Kaliningrad en de Krim. Het vasteland
-     tot de rand van de kaart tekenen we hier grof bij; de westkant ligt onder de buren,
-     die er daarna overheen komen, zodat de grens van hen is. */
-  var RUSLAND_VAST = 'M647,39L680,32L720,34L755,45L770,62L748,72L742,90L760,112L785,108L800,85L790,66L812,50L850,40L900,30L960,20L1040,6L1040,-10' +
-    'L1040,446L905,446L885,452L866,444L852,432L841,422L853,408L866,386L858,364L828,359L794,356L776,339L748,339L755,321L731,292L698,289' +
-    'L683,262L686,240L699,228L680,207L689,183L691,162L672,129L653,101Z';
   var LAND = {}; K.landen.forEach(function(l){ LAND[l.n] = l.d; });
   function gebiedVan(id){ return GEBIEDEN.filter(function(g){ return g.id === id; })[0]; }
   /* de kaart: elk gebied een groep met de landen erin; klassen per gebied (aan, licht, goed, fout).
@@ -114,11 +108,9 @@
     var s = '<svg class="eukaart' + (o.wijs ? ' wijs' : '') + (o.nrs ? ' nrs' : '') + '" viewBox="0 0 ' + K.breed + ' ' + K.hoog + '" role="' + (o.wijs ? 'group' : 'img') + '" aria-label="kaart van Europa">';
     s += '<rect class="zee" x="0" y="0" width="' + K.breed + '" height="' + K.hoog + '" rx="12"/>';
     if (K.achter) s += '<path class="achter" d="' + K.achter + '"/>';
-    /* Rusland eerst, want zijn vasteland ligt onder de buren */
-    [gebiedVan('rusland')].concat(GEBIEDEN.filter(function(g){ return g.id !== 'rusland'; })).forEach(function(g){
+    GEBIEDEN.forEach(function(g){
       var kl = (o.klassen && o.klassen[g.id]) || '';
       s += '<g class="gebied ' + kl + '" data-g="' + g.id + '"' + (o.wijs ? ' role="button" tabindex="' + (g === GEBIEDEN[0] ? 0 : -1) + '" aria-pressed="false" aria-label="' + S(g.naam) + '"' : '') + '>' +
-        (g.id === 'rusland' ? '<path class="land" d="' + RUSLAND_VAST + '"/>' : '') +
         g.landen.map(function(n){ return LAND[n] ? '<path class="land" d="' + LAND[n] + '"/>' : ''; }).join('') + '</g>';
     });
     /* de niet ingedeelde landjes blijven grijs mee tekenen */
@@ -210,10 +202,10 @@
           e.preventDefault();
           g.setAttribute('tabindex', '-1'); var nw = gebiedEl(j); nw.setAttribute('tabindex', '0'); nw.focus();
         });
-        /* de focusrand bovenop de buren; het vasteland van Rusland niet, dat ligt deels onder hen */
+        /* de focusrand bovenop de buren */
         svg.addEventListener('focusin', function(e){
           var g = e.target.closest && e.target.closest('.gebied'); ring.innerHTML = '';
-          if (g && g.matches(':focus-visible')) ring.innerHTML = Array.prototype.map.call(g.querySelectorAll('.land'), function(p){ return p.getAttribute('d') === RUSLAND_VAST ? '' : '<path class="land" d="' + p.getAttribute('d') + '"/>'; }).join('');
+          if (g && g.matches(':focus-visible')) ring.innerHTML = Array.prototype.map.call(g.querySelectorAll('.land'), function(p){ return '<path class="land" d="' + p.getAttribute('d') + '"/>'; }).join('');
         });
         svg.addEventListener('focusout', function(){ ring.innerHTML = ''; });
         var knop = api.knop('Nakijken', function(){
