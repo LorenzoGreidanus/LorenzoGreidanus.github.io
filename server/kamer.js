@@ -35,6 +35,8 @@ const AFTELLEN = 3000;                       /* een duel begint drie seconden na
 const SAMEN_MAX = 4;                         /* Zwaardvechter samen: tot vier in een arena; de maker start, of het begint vanzelf als hij vol is */
 const OPRUIMEN_NA = 3 * 60 * 60 * 1000;     /* een kamer leeft hoogstens drie uur */
 const NA_EINDE = 30 * 60 * 1000;             /* na de eindstand nog een half uur te bekijken */
+/* wat een leerling hoort die de docent uit de klas haalde; klas.js herkent "uit de klas gehaald" */
+const WEG_FOUT = "je docent heeft je uit deze klas gehaald";
 const SPELLEN_STRIJD = { toren: "Torenverdediging", zwaard: "Zwaardvechter", poortrace: "Poortrace" };
 /* Poortrace als race: met vrienden tot acht in een kamer, of met de hele klas.
    Wie het eerst over de finish komt wint. De kamer klokt zelf, van de start tot
@@ -1236,6 +1238,19 @@ export class Kamer extends DurableObject {
      afgeleid) is dezelfde leerling, en zonder account is dezelfde bijnaam
      dezelfde leerling, zolang er geen twee verschillende accounts achter
      zitten. Het nieuwe kenmerk wordt dan een verwijzing naar het oude. */
+  /* door de docent uit de klas gehaald (leerlingWeg): op dit kenmerk, een oud kenmerk ervan, of het account */
+  isWeg(sid, acc){
+    const w = this.stand.weg;
+    if (!w) return false;
+    const kort = String(sid || "").slice(0, 12);
+    return !!(w[kort] || (acc && w["acc:" + acc]));
+  }
+  nietMeerWeg(sid, acc){
+    const w = this.stand.weg;
+    if (!w) return;
+    delete w[String(sid || "").slice(0, 12)];
+    if (acc) delete w["acc:" + acc];
+  }
   klasLeerling(kort, naam, acc){
     const st = this.stand;
     st.leerlingen = st.leerlingen || {}; st.alias = st.alias || {}; st.accounts = st.accounts || {};
@@ -1291,6 +1306,7 @@ export class Kamer extends DurableObject {
     const spel = String(inz.spel || "");
     if (!SPELLEN_STRIJD[spel] && !KLAS_SPELLEN[spel]) return json({ fout: "onbekend spel" }, 400);
     const acc = /^[0-9a-f]{24}$/.test(String(inz.acc || "")) ? inz.acc : "";
+    if (this.isWeg(sid, acc)) return json({ fout: WEG_FOUT, weg: true }, 410);
     const kort = this.klasLeerling(sid.slice(0, 12), inz.naam, acc);
     /* wie er al in zit mag altijd blijven melden; alleen een nieuwe erbij kan geweigerd worden */
     const bekend = (this.stand.leerlingen && this.stand.leerlingen[kort]) || this.stand.resultaten.some(r => r.sid === kort);
@@ -1320,6 +1336,11 @@ export class Kamer extends DurableObject {
     const sid = schoon(inz && inz.sid, 40);
     if (!/^[A-Za-z0-9_-]{8,40}$/.test(sid)) return json({ fout: "geen geldig kenmerk" }, 400);
     const acc = /^[0-9a-f]{24}$/.test(String(inz.acc || "")) ? inz.acc : "";
+    /* door de docent weggehaald: alleen wie de code zelf opnieuw invult (nieuw) komt terug */
+    if (this.isWeg(sid, acc)){
+      if (!inz.nieuw) return json({ fout: WEG_FOUT, weg: true }, 410);
+      this.nietMeerWeg(sid, acc);
+    }
     const kort = this.klasLeerling(sid.slice(0, 12), inz.naam, acc);
     if (!this.stand.leerlingen[kort] && Object.keys(this.stand.leerlingen).length >= KLAS_LEERLINGEN) return json({ fout: "deze klas zit vol" }, 429);
     const was = this.stand.leerlingen[kort];
@@ -1570,6 +1591,7 @@ export class Kamer extends DurableObject {
   mijn(sid){
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
     let s = schoon(sid, 40).slice(0, 12);
+    if (this.isWeg(s)) return json({ fout: WEG_FOUT, weg: true }, 410);
     /* een tweede apparaat dat al is samengevoegd, ziet de voortgang van de leerling zelf */
     if (this.stand.alias && this.stand.alias[s]) s = this.stand.alias[s];
     const opzet = { spellen: this.stand.spellen || [], lesmodus: this.lesmodusAan(), naam: this.stand.naam,
@@ -1601,11 +1623,21 @@ export class Kamer extends DurableObject {
     if (!id) return json({ fout: "geen leerling" }, 400);
     const l = this.stand.leerlingen || {};
     const had = !!l[id];
+    const acc = had ? l[id].acc || "" : "";
     delete l[id];
     /* ook de verwijzingen van andere apparaten en het account, anders komt hij via die weg terug */
     const st = this.stand;
-    Object.keys(st.alias || {}).forEach(k => { if (st.alias[k] === id) delete st.alias[k]; });
-    Object.keys(st.accounts || {}).forEach(a => { if (st.accounts[a] === id) delete st.accounts[a]; });
+    /* En onthouden dat hij weg is. Anders zwaait zijn leeromgeving bij het
+       volgende bezoek weer (hoi) of meldt een potje uit de wachtrij, en staat
+       hij er meteen weer in. Opnieuw koppelen met de code kan wel. */
+    st.weg = st.weg || {};
+    const nu = Date.now();
+    st.weg[id] = nu;
+    Object.keys(st.alias || {}).forEach(k => { if (st.alias[k] === id){ st.weg[k] = nu; delete st.alias[k]; } });
+    Object.keys(st.accounts || {}).forEach(a => { if (st.accounts[a] === id){ st.weg["acc:" + a] = nu; delete st.accounts[a]; } });
+    if (acc) st.weg["acc:" + acc] = nu;
+    const wegLijst = Object.keys(st.weg);
+    if (wegLijst.length > 400) wegLijst.sort((a, b) => st.weg[a] - st.weg[b]).slice(0, wegLijst.length - 400).forEach(k => { delete st.weg[k]; });
     const voor = this.stand.resultaten.length;
     this.stand.resultaten = this.stand.resultaten.filter(r => r.sid !== id);
     if (!had && voor === this.stand.resultaten.length) return json({ fout: "die leerling zit niet in deze klas" }, 404);

@@ -21,16 +21,22 @@ window.KLAS = (function(){
     if (window.PROFIEL) PROFIEL.sync();
     /* meteen even zwaaien, zodat de docent aan het begin van de les ziet dat
        je binnen bent, ook al heb je nog niets gespeeld */
-    zwaai(k);
+    zwaai(k, true);
     return k;
   }
   /* zeggen dat je er bent; lukt het niet, dan geeft het niet: bij het eerste
-     potje dat je meldt komt je naam er alsnog bij */
-  function zwaai(k){
+     potje dat je meldt komt je naam er alsnog bij. nieuw: de leerling vulde
+     de code net zelf in, dus ook wie de docent eerder weghaalde mag weer
+     meedoen. Een gewoon bezoek haalt zo iemand niet terug: dan valt de
+     koppeling hier weg. */
+  function zwaai(k, nieuw){
     if (!k || !k.code || typeof fetch !== 'function') return;
     try {
       fetch('/api/klas/' + k.code + '/hoi', { method:'POST', headers:{ 'content-type':'application/json' },
-        body:JSON.stringify({ sid:sid(), naam:k.naam, av: window.PROFIEL ? PROFIEL.avatar() : '' }) }).catch(function(){});
+        body:JSON.stringify({ sid:sid(), naam:k.naam, av: window.PROFIEL ? PROFIEL.avatar() : '', nieuw: !!nieuw }) })
+        .then(function(r){ return r.json(); })
+        .then(function(j){ if (j && j.weg && !nieuw){ var nu = lees(); if (nu && nu.code === k.code) wis(); } })
+        .catch(function(){});
     } catch (e){}
   }
   function wis(){ try { localStorage.removeItem(SLEUTEL); } catch (e){} if (window.PROFIEL && PROFIEL.klasWeg) PROFIEL.klasWeg(); }
@@ -88,7 +94,7 @@ window.KLAS = (function(){
     wachtZet([]);
     l.forEach(function(w){
       stuur(w.code, w.body).then(function(x){
-        var weg = x.ok || /geen kamer|geen klascode|opgeheven|verlopen|zit vol/.test(x.j && x.j.fout || '');
+        var weg = x.ok || /geen kamer|geen klascode|opgeheven|verlopen|zit vol|uit deze klas gehaald/.test(x.j && x.j.fout || '');
         if (!weg) wachtErbij(w.code, w.body);
       }).catch(function(){ wachtErbij(w.code, w.body); });
     });
@@ -102,6 +108,8 @@ window.KLAS = (function(){
       .then(function(x){
         if (x.ok) wachtLegen();
         /* de docent heeft de code opgeheven: de koppeling valt weg */
+        /* de docent haalde je uit de klas: ook dan valt de koppeling weg, en de uitslag gaat niet de wachtrij in */
+        if (!x.ok && x.j && x.j.weg){ wis(); toon(naId, 'Je docent heeft je uit klas ' + k.code + ' gehaald; je bent losgekoppeld. Hoort dat niet zo, vul de code dan opnieuw in.'); return x; }
         if (!x.ok && /geen kamer|geen klascode|opgeheven|verlopen/.test(x.j && x.j.fout || '')){ wis(); toon(naId, 'De klascode ' + k.code + ' is opgeheven door je docent; je bent losgekoppeld.'); return x; }
         if (!x.ok) wachtErbij(k.code, body);
         toon(naId, x.ok ? 'Gemeld bij klas ' + k.code + ' als ' + k.naam + '.' : 'Melden bij de klas lukte niet' + (x.j && x.j.fout ? ': ' + x.j.fout : '.'));
