@@ -154,7 +154,7 @@
     naam:'Dictee: een hele tekst voorlezen', vak:'ned',
     aantallen:[1], standaard:1, aantalNaam:'Aantal', geenAantal:true,
     delenKop:'Een hele tekst',
-    delenTip:'Een doorlopende tekst van vier tot zes zinnen: het dictee van de week, een tekst uit de lijst of je eigen dictee. Je krijgt een voorleesblad met de zinnen in grote letters, een schrijfblad voor de leerlingen en een nakijkblad met de lastige woorden.',
+    delenTip:'Een doorlopende tekst van tien zinnen: het dictee van de week, een tekst uit de lijst of je eigen dictee. Je krijgt een voorleesblad met de zinnen in grote letters, een schrijfblad voor de leerlingen en een nakijkblad met de lastige woorden.',
     delen:function(){ return '<p class="tip" style="grid-column:1/-1">Dit werkblad heeft een eigen pagina. Met <b>Maak werkblad</b> ga je erheen, op het niveau dat je hierboven koos.</p>'; },
     lees:function(el, rang){ return { niv:niv3(rang) }; },
     /* geen opgaven hier: werkblad.html opent de pagina van het voorleesdictee */

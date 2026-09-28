@@ -12,8 +12,10 @@
    leenwoorden: Engelse en Franse leenwoorden in Nederlandse spelling (kgt, hv).
    antwoordLijst: als er echt twee goede schrijfwijzen zijn, staan ze er allebei.
 
-   teksten: het doorlopende dictee. Een tekst van vier tot zes zinnen met een
-   vast id (t-bb-01), zodat een docent hem kan klaarzetten (?tekst=t-bb-01).
+   teksten: het doorlopende dictee. Een tekst van tien zinnen met een vast id
+   (t-bb-01), zodat een docent hem kan klaarzetten (?tekst=t-bb-01). Tot en met
+   week 40 van 2026 waren het er vijf of zes; oud is hoeveel, zodat het dictee
+   van die weken hetzelfde blijft (zie weektekst).
    Elke zin heeft een korte uitleg bij het lastigste woord. Geen cijfers, geen
    aanhalingstekens en geen uitroeptekens: alles wat je typt moet je kunnen
    horen.
@@ -426,167 +428,272 @@ window.DICTEE_OPGAVEN = {
   ],
   /* ---------- het doorlopende dictee: acht teksten per niveau ---------- */
   teksten: [
-    { id:'t-bb-01', n:1, titel:'De eerste schooldag', zinnen:[
+    { id:'t-bb-01', oud:5, n:1, titel:'De eerste schooldag', zinnen:[
       { z:'Vandaag begint het nieuwe schooljaar.', u:'begint: het schooljaar is een het, dus stam + t.' },
       { z:'Ik fiets samen met Daan naar school.', u:'fiets: bij ik alleen de stam. Daan is een naam: hoofdletter.' },
       { z:'Bij de ingang wacht onze mentor.', u:'wacht: de stam eindigt al op een t, dus er komt geen t bij.' },
       { z:'Zij geeft iedereen een hand.', u:'geeft: zij, dus stam + t. De stam is geef, met een f.' },
-      { z:'Wordt dit een leuk jaar?', u:'Wordt: het onderwerp is dit, niet jij. Dus stam + t. Een vraag: vraagteken.' } ] },
-    { id:'t-bb-02', n:1, titel:'Op de voetbalclub', zinnen:[
+      { z:'Wordt dit een leuk jaar?', u:'Wordt: het onderwerp is dit, niet jij. Dus stam + t. Een vraag: vraagteken.' },
+      { z:'Ik denk van wel, want onze mentor is heel aardig.', u:'Een komma voor want. aardig: ig aan het eind.' },
+      { z:'In de pauze eet ik mijn brood op het plein.', u:'eet: bij ik alleen de stam. brood met een d, want het meervoud is broden.' },
+      { z:'Daar ontmoet ik een jongen uit Utrecht.', u:'ontmoet: de stam eindigt al op een t. Utrecht is een plaatsnaam: hoofdletter.' },
+      { z:'Hij heet Yusuf en zit ook in mijn klas.', u:'heet en zit: de stam eindigt al op een t. Yusuf is een naam: hoofdletter.' },
+      { z:'Na school fietsen we samen naar huis.', u:'fietsen: bij we het hele werkwoord.' } ] },
+    { id:'t-bb-02', oud:5, n:1, titel:'Op de voetbalclub', zinnen:[
       { z:'Mijn broer voetbalt bij een club in Almere.', u:'voetbalt: hij, dus stam + t. Almere is een plaatsnaam: hoofdletter.' },
       { z:'Elke zaterdag speelt hij een wedstrijd.', u:'zaterdag met een kleine letter; wedstrijd met ij en een d.' },
       { z:'Vorige week scoorde hij twee keer.', u:'scoorde: de r zit niet in ’t kofschip, dus scoor + de.' },
       { z:'Mijn vader stond langs de lijn en juichte hard.', u:'juichte: de ch zit in ’t kofschip, dus juich + te.' },
-      { z:'Vind jij voetbal ook zo leuk?', u:'Vind: jij staat achter het werkwoord, dus geen t.' } ] },
-    { id:'t-bb-03', n:1, titel:'Een dag naar het strand', zinnen:[
+      { z:'Vind jij voetbal ook zo leuk?', u:'Vind: jij staat achter het werkwoord, dus geen t.' },
+      { z:'Ik vind het eigenlijk nog leuker om te kijken.', u:'vind: bij ik alleen de stam. eigenlijk met ei en lijk.' },
+      { z:'Na de wedstrijd drinken we limonade in de kantine.', u:'limonade: li-mo-na-de. kantine met ine aan het eind.' },
+      { z:'De trainer geeft elke speler een compliment.', u:'geeft: de trainer is een hij, dus stam + t. compliment met een c.' },
+      { z:'Volgend jaar word ik misschien zelf lid.', u:'word: bij ik alleen de stam. lid met een d, want het meervoud is leden.' },
+      { z:'Dan krijg ik een shirt met mijn eigen nummer.', u:'shirt: een Engels woord. krijg: bij ik alleen de stam.' } ] },
+    { id:'t-bb-03', oud:5, n:1, titel:'Een dag naar het strand', zinnen:[
       { z:'Gisteren was het heel warm en zonnig.', u:'zonnig: dubbele n na de korte o, en ig aan het eind.' },
       { z:'Wij gingen met de trein naar Zandvoort.', u:'Zandvoort is een plaatsnaam: hoofdletter. Zand schrijf je met een d.' },
       { z:'Mijn zusje bouwde een groot zandkasteel.', u:'bouwde: de w zit niet in ’t kofschip, dus bouw + de.' },
       { z:'Ik zwom in de zee en at een ijsje.', u:'ijsje: met ij, en het verkleinwoord van ijs.' },
-      { z:'Om zes uur reden we met de trein terug naar huis.', u:'reden: de verleden tijd van rijden is onregelmatig. Wij reden.' } ] },
-    { id:'t-bb-04', n:1, titel:'Mijn hond Bobby', zinnen:[
+      { z:'Om zes uur reden we met de trein terug naar huis.', u:'reden: de verleden tijd van rijden is onregelmatig. Wij reden.' },
+      { z:'In de trein viel mijn zusje in slaap.', u:'viel: de verleden tijd van vallen.' },
+      { z:'Thuis zat er nog overal zand in mijn tas.', u:'zat: de verleden tijd van zitten. zand met een d.' },
+      { z:'Mijn moeder schudde alles uit in de tuin.', u:'schudde: de stam schud eindigt op een d, en daar komt de achter: schudde.' },
+      { z:'Daarna aten we patat met appelmoes.', u:'patat met een t aan het eind. appelmoes: dubbele p.' },
+      { z:'Volgend weekend willen we weer naar zee.', u:'weekend: een Engels woord met ee. zee met ee.' } ] },
+    { id:'t-bb-04', oud:5, n:1, titel:'Mijn hond Bobby', zinnen:[
       { z:'Wij hebben een hond die Bobby heet.', u:'heet: de stam van heten eindigt al op een t, dus geen extra t. Bobby is een naam.' },
       { z:'Hij is bruin met een witte vlek op zijn kop.', u:'witte: dubbele t, want wit heeft een korte i: wit-te.' },
       { z:'Elke ochtend loopt mijn moeder een rondje met hem.', u:'loopt: mijn moeder is een zij, dus stam + t.' },
       { z:'Als het regent, wordt Bobby helemaal vies.', u:'regent en wordt: het en Bobby zijn allebei enkelvoud, dus stam + t.' },
-      { z:'Daarna moet hij in bad.', u:'bad: je hoort een t, maar je schrijft een d, want het meervoud is baden.' } ] },
-    { id:'t-bb-05', n:1, titel:'De verjaardag van oma', zinnen:[
+      { z:'Daarna moet hij in bad.', u:'bad: je hoort een t, maar je schrijft een d, want het meervoud is baden.' },
+      { z:'Dat vindt hij helemaal niet leuk.', u:'vindt: hij, dus stam vind + t.' },
+      { z:'Hij rent dan snel weg en verstopt zich onder de tafel.', u:'rent en verstopt: hij, dus stam + t.' },
+      { z:'Mijn broer lokt hem met een koekje.', u:'lokt: stam lok + t. koekje met oe.' },
+      { z:'Na het bad schudt Bobby zich helemaal uit.', u:'schudt: Bobby is een hij, dus stam schud + t.' },
+      { z:'Dan is iedereen in de badkamer nat.', u:'badkamer: bad + kamer, aan elkaar. nat met één t.' } ] },
+    { id:'t-bb-05', oud:5, n:1, titel:'De verjaardag van oma', zinnen:[
       { z:'Mijn oma werd gisteren zeventig jaar.', u:'werd: de verleden tijd van worden, altijd met een d.' },
       { z:'We vierden het feest in een restaurant in Deventer.', u:'vierden: vier + den, want de r zit niet in ’t kofschip. Deventer is een plaatsnaam.' },
       { z:'Mijn neefje Sem zong een liedje voor haar.', u:'Sem is een naam: hoofdletter. Liedje met ie en een d.' },
       { z:'Oma kreeg een mooie bos bloemen en een cadeau.', u:'cadeau: een Frans woord, eau klinkt als oo.' },
-      { z:'Ze vond het een heel gezellige dag.', u:'gezellige: dubbele l, en ig + e.' } ] },
-    { id:'t-bb-06', n:1, titel:'Ziek thuis', zinnen:[
+      { z:'Ze vond het een heel gezellige dag.', u:'gezellige: dubbele l, en ig + e.' },
+      { z:'Na het eten hield opa een korte toespraak.', u:'hield: de verleden tijd van houden, met een d.' },
+      { z:'Hij vertelde hoe hij oma had leren kennen.', u:'vertelde: vertel + de, want de l zit niet in ’t kofschip.' },
+      { z:'Dat was op een dansfeest in Zwolle.', u:'Zwolle is een plaatsnaam: hoofdletter.' },
+      { z:'Iedereen klapte hard en oma moest een beetje huilen.', u:'klapte: klap + te, want de p zit in ’t kofschip.' },
+      { z:'Om tien uur brachten we haar naar huis.', u:'brachten: de verleden tijd van brengen is onregelmatig.' } ] },
+    { id:'t-bb-06', oud:5, n:1, titel:'Ziek thuis', zinnen:[
       { z:'Vanochtend voelde ik me helemaal niet lekker.', u:'voelde: de l zit niet in ’t kofschip, dus voel + de.' },
       { z:'Mijn moeder belde naar school.', u:'belde: de l zit niet in ’t kofschip, dus bel + de.' },
       { z:'Ik bleef de hele dag in bed liggen.', u:'bed: met een d, want het meervoud is bedden.' },
       { z:'Mijn vriendin Lotte bracht me een tijdschrift.', u:'Lotte is een naam: hoofdletter. Tijdschrift met ij en een d.' },
-      { z:'Morgen word ik hopelijk weer beter.', u:'word: bij ik alleen de stam, ook als ik achter het werkwoord staat.' } ] },
-    { id:'t-bb-07', n:1, titel:'Naar de dierentuin', zinnen:[
+      { z:'Morgen word ik hopelijk weer beter.', u:'word: bij ik alleen de stam, ook als ik achter het werkwoord staat.' },
+      { z:'Vanavond kookt mijn vader soep voor me.', u:'kookt: mijn vader is een hij, dus stam + t. soep met een p.' },
+      { z:'Ik drink ook veel thee met honing.', u:'drink: bij ik alleen de stam. thee met th.' },
+      { z:'De dokter zei dat ik griep heb.', u:'zei: de verleden tijd van zeggen. griep met ie.' },
+      { z:'Ik moet vooral veel slapen en rusten.', u:'slapen met één a, want sla-pen: de a staat aan het eind van de lettergreep.' },
+      { z:'Hopelijk kan ik vrijdag weer naar school.', u:'vrijdag met een kleine letter en ij.' } ] },
+    { id:'t-bb-07', oud:5, n:1, titel:'Naar de dierentuin', zinnen:[
       { z:'Onze klas ging vorige week naar de dierentuin in Emmen.', u:'Emmen is een plaatsnaam: hoofdletter.' },
       { z:'We zagen olifanten, apen en een ijsbeer.', u:'ijsbeer: ijs met ij. Komma’s tussen wat je opnoemt, niet voor en.' },
       { z:'De leeuw lag lui in de zon.', u:'leeuw: eeuw aan het eind.' },
       { z:'Bij de apen moesten we heel hard lachen.', u:'lachen: met ch.' },
-      { z:'Wanneer gaan we weer?', u:'Een vraag: vraagteken aan het eind.' } ] },
-    { id:'t-bb-08', n:1, titel:'Koken met papa', zinnen:[
+      { z:'Wanneer gaan we weer?', u:'Een vraag: vraagteken aan het eind.' },
+      { z:'De juf zei dat we volgend jaar misschien weer gaan.', u:'misschien: mis + schien.' },
+      { z:'In de bus terug zongen we liedjes.', u:'zongen: de verleden tijd van zingen. liedjes met ie.' },
+      { z:'Mijn vriend Ravi viel onderweg in slaap.', u:'Ravi is een naam: hoofdletter. viel: de verleden tijd van vallen.' },
+      { z:'Thuis vertelde ik alles over de leeuw.', u:'vertelde: vertel + de. leeuw met eeuw.' },
+      { z:'Ik wil later dierenverzorger worden.', u:'wil: bij ik alleen de stam. dierenverzorger aan elkaar.' } ] },
+    { id:'t-bb-08', oud:5, n:1, titel:'Koken met papa', zinnen:[
       { z:'Op woensdag kookt mijn vader altijd.', u:'woensdag met een kleine letter; kookt: stam + t.' },
       { z:'Vandaag maakt hij pannenkoeken met spek.', u:'pannenkoeken: pannen + koeken.' },
       { z:'Ik help hem met het beslag.', u:'help: bij ik alleen de stam.' },
       { z:'De eerste pannenkoek mislukte helemaal.', u:'mislukte: de k zit in ’t kofschip, dus misluk + te.' },
-      { z:'Gelukkig smaakte de rest heerlijk.', u:'gelukkig: dubbele k. smaakte: smaak + te. heerlijk: lijk met ij.' } ] },
+      { z:'Gelukkig smaakte de rest heerlijk.', u:'gelukkig: dubbele k. smaakte: smaak + te. heerlijk: lijk met ij.' },
+      { z:'Mijn zus doet er altijd stroop op.', u:'doet: mijn zus is een zij, dus stam + t.' },
+      { z:'Ik eet ze het liefst met poedersuiker.', u:'poedersuiker: poeder + suiker, aan elkaar.' },
+      { z:'Na het eten ruimen we samen de keuken op.', u:'ruimen: bij we het hele werkwoord.' },
+      { z:'Mijn vader wast af en ik droog de pannen.', u:'wast: stam was + t. droog: bij ik alleen de stam.' },
+      { z:'Volgende week wil ik zelf pannenkoeken bakken.', u:'bakken: dubbele k, want de a is kort.' } ] },
 
-    { id:'t-kgt-01', n:2, titel:'Het schoolkamp', zinnen:[
+    { id:'t-kgt-01', oud:6, n:2, titel:'Het schoolkamp', zinnen:[
       { z:'In september gingen we met de hele klas op kamp naar Texel.', u:'september met een kleine letter, Texel met een hoofdletter.' },
       { z:'Toen we aankwamen, regende het ontzettend hard.', u:'regende: regen + de. ontzettend: dubbele t.' },
       { z:'Gelukkig had onze mentor extra regenjassen geregeld.', u:'geregeld: ge + regel + d, want de l zit niet in ’t kofschip.' },
       { z:'De volgende dag scheen de zon en fietsten we over het eiland.', u:'fietsten: verleden tijd meervoud, fiets + ten. eiland met ei.' },
       { z:'’s Avonds vertelde iemand een spannend verhaal bij het kampvuur.', u:'Begint de zin met ’s, dan krijgt het woord erna de hoofdletter: ’s Avonds. vertelde: vertel + de.' },
-      { z:'Wordt het volgend jaar weer Texel?', u:'Wordt: het onderwerp is het, niet jij. Dus stam + t.' } ] },
-    { id:'t-kgt-02', n:2, titel:'Een bijbaantje', zinnen:[
+      { z:'Wordt het volgend jaar weer Texel?', u:'Wordt: het onderwerp is het, niet jij. Dus stam + t.' },
+      { z:'Onze mentor weet het nog niet, maar ik hoop het wel.', u:'weet: de stam eindigt al op een t. Een komma voor maar.' },
+      { z:'Op de laatste avond organiseerden we een bonte avond.', u:'organiseerden: organiseer + den, want de r zit niet in ’t kofschip.' },
+      { z:'Twee jongens uit mijn klas deden onze leraar na.', u:'deden: de verleden tijd van doen.' },
+      { z:'Iedereen lag dubbel van het lachen, ook de leraar zelf.', u:'dubbel met dubbele b. Een komma voor wat er nog bij komt: ook de leraar zelf.' } ] },
+    { id:'t-kgt-02', oud:6, n:2, titel:'Een bijbaantje', zinnen:[
       { z:'Sinds de zomer werk ik op zaterdag in een supermarkt.', u:'werk: bij ik alleen de stam. zaterdag met een kleine letter.' },
       { z:'Ik vul de schappen en help klanten die iets zoeken.', u:'vul en help: bij ik alleen de stam.' },
       { z:'Vorige week vroeg een oudere meneer waar de koffie stond.', u:'koffie: dubbele f en ie.' },
       { z:'Ik liep met hem mee en wees het pak koffie aan.', u:'wees: de verleden tijd van aanwijzen is onregelmatig: ik wees aan.' },
       { z:'Hij bedankte me en zei dat ik erg behulpzaam was.', u:'bedankte: de k zit in ’t kofschip, dus bedank + te.' },
-      { z:'Het verdiende geld spaar ik voor een scooter.', u:'verdiende: het voltooid deelwoord verdiend met een e. spaar: bij ik alleen de stam.' } ] },
-    { id:'t-kgt-03', n:2, titel:'De zoekgeraakte sleutel', zinnen:[
+      { z:'Het verdiende geld spaar ik voor een scooter.', u:'verdiende: het voltooid deelwoord verdiend met een e. spaar: bij ik alleen de stam.' },
+      { z:'Ik heb al bijna genoeg gespaard.', u:'gespaard: ge + spaar + d, want de r zit niet in ’t kofschip.' },
+      { z:'Mijn ouders betalen de helft van de verzekering.', u:'betalen: meervoud, het hele werkwoord. verzekering met een z.' },
+      { z:'Wel moet ik eerst mijn rijbewijs halen.', u:'rijbewijs: rij en wijs, allebei met ij.' },
+      { z:'Het examen doe ik in de kerstvakantie.', u:'examen met een x. kerstvakantie aan elkaar en met een kleine letter.' } ] },
+    { id:'t-kgt-03', oud:5, n:2, titel:'De zoekgeraakte sleutel', zinnen:[
       { z:'Toen Mila gisteren thuiskwam, kon ze haar sleutel niet vinden.', u:'Mila is een naam: hoofdletter. thuiskwam: aan elkaar.' },
       { z:'Ze zocht in haar tas, in haar jaszak en zelfs in haar schoenen.', u:'zocht: de verleden tijd van zoeken is onregelmatig. Komma’s in de opsomming.' },
       { z:'Haar ouders werkten nog tot zes uur.', u:'werkten: werk + ten, want de k zit in ’t kofschip.' },
       { z:'Daarom belde ze haar buurvrouw, die een reservesleutel had.', u:'belde: bel + de. buurvrouw met ouw.' },
-      { z:'De gezochte sleutel lag de volgende ochtend gewoon op haar bureau.', u:'gezochte: gezocht + e. bureau: een Frans woord met eau.' } ] },
-    { id:'t-kgt-04', n:2, titel:'Een uitstapje naar Brussel', zinnen:[
+      { z:'De gezochte sleutel lag de volgende ochtend gewoon op haar bureau.', u:'gezochte: gezocht + e. bureau: een Frans woord met eau.' },
+      { z:'Ze had hem daar zelf neergelegd en was het vergeten.', u:'neergelegd: neer + ge + leg + d, want de g zit niet in ’t kofschip.' },
+      { z:'Haar broer vond het heel grappig.', u:'vond: de verleden tijd van vinden. grappig: dubbele p.' },
+      { z:'Nu hangt er een haakje naast de voordeur.', u:'hangt: stam hang + t. voordeur aan elkaar.' },
+      { z:'Daar hangt Mila haar sleutel elke dag aan.', u:'hangt: Mila is een zij, dus stam + t.' },
+      { z:'Zo raakt ze hem hopelijk nooit meer kwijt.', u:'raakt: stam raak + t. kwijt met ij.' } ] },
+    { id:'t-kgt-04', oud:6, n:2, titel:'Een uitstapje naar Brussel', zinnen:[
       { z:'Vorig jaar reisden we met de trein naar Brussel.', u:'reisden: het hele werkwoord is reizen, met een z. Die zit niet in ’t kofschip, dus reis + den.' },
       { z:'Mijn vader had de reis maanden van tevoren gepland.', u:'gepland: ge + plan + d. van tevoren: twee woorden.' },
       { z:'In het centrum bezochten we een museum over stripverhalen.', u:'centrum: de c klinkt hier als s. museum: mu-se-um.' },
       { z:'Daarna aten we echte Belgische wafels op een terras.', u:'Belgische komt van België: hoofdletter.' },
       { z:'Mijn zusje kocht een doos bonbons voor oma.', u:'bonbons: Frans woord, bon + bons.' },
-      { z:'Wanneer gaan we weer naar België?', u:'België: hoofdletter en een trema op de e.' } ] },
-    { id:'t-kgt-05', n:2, titel:'Een spreekbeurt', zinnen:[
+      { z:'Wanneer gaan we weer naar België?', u:'België: hoofdletter en een trema op de e.' },
+      { z:'Mijn moeder wil volgend jaar naar Antwerpen.', u:'wil: willen krijgt bij hij of zij geen t. Antwerpen is een plaatsnaam: hoofdletter.' },
+      { z:'Daar schijnt een prachtig station te zijn.', u:'schijnt: stam schijn + t. prachtig met ig.' },
+      { z:'Mijn broertje wil vooral naar de dierentuin daar.', u:'broertje: broer + tje. dierentuin aan elkaar.' },
+      { z:'Ik hoop dat we er met de trein naartoe gaan.', u:'naartoe: aan elkaar. hoop: bij ik alleen de stam.' } ] },
+    { id:'t-kgt-05', oud:6, n:2, titel:'Een spreekbeurt', zinnen:[
       { z:'Vorige week hield ik een spreekbeurt over haaien.', u:'hield: de verleden tijd van houden, met een d.' },
       { z:'Ik had me goed voorbereid, maar toch was ik zenuwachtig.', u:'voorbereid: de stam bereid eindigt al op een d, dus geen extra d.' },
       { z:'Mijn stem trilde een beetje toen ik begon.', u:'trilde: de l zit niet in ’t kofschip, dus tril + de.' },
       { z:'Gelukkig luisterde de klas heel aandachtig.', u:'luisterde: luister + de. aandachtig: aan + dacht + ig.' },
       { z:'Na afloop stelden mijn klasgenoten veel vragen.', u:'stelden: stel + den, want de l zit niet in ’t kofschip.' },
-      { z:'De juf vond het een geslaagde presentatie.', u:'geslaagde: geslaagd + e.' } ] },
-    { id:'t-kgt-06', n:2, titel:'De verhuizing', zinnen:[
+      { z:'De juf vond het een geslaagde presentatie.', u:'geslaagde: geslaagd + e.' },
+      { z:'Ik kreeg een acht en was daar erg blij mee.', u:'kreeg: de verleden tijd van krijgen.' },
+      { z:'Thuis vertelde ik mijn ouders hoe het was gegaan.', u:'vertelde: vertel + de, want de l zit niet in ’t kofschip.' },
+      { z:'Mijn vader had vroeger ook een spreekbeurt over haaien gehouden.', u:'gehouden: het voltooid deelwoord van houden.' },
+      { z:'Volgend jaar kies ik een onderwerp over walvissen.', u:'walvissen: dubbele s, want de i is kort. kies: bij ik alleen de stam.' } ] },
+    { id:'t-kgt-06', oud:6, n:2, titel:'De verhuizing', zinnen:[
       { z:'Vorige maand verhuisden wij naar een huis in Amersfoort.', u:'verhuisden: verhuizen heeft een z, die niet in ’t kofschip zit: verhuis + den.' },
       { z:'Mijn oom had een grote bus gehuurd.', u:'gehuurd: ge + huur + d, want de r zit niet in ’t kofschip.' },
       { z:'Alle dozen waren binnen een ochtend ingeladen.', u:'ingeladen: het voltooid deelwoord van laden is geladen.' },
       { z:'Mijn nieuwe kamer is groter dan de oude.', u:'groter: gro-ter, één o want de lettergreep eindigt op de o.' },
       { z:'Ik heb de muren zelf lichtblauw geverfd.', u:'geverfd: het hele werkwoord is verven, met een v. Die zit niet in ’t kofschip: ge + verf + d.' },
-      { z:'De buren lijken heel aardig.', u:'lijken: met ij.' } ] },
-    { id:'t-kgt-07', n:2, titel:'De sportdag', zinnen:[
+      { z:'De buren lijken heel aardig.', u:'lijken: met ij.' },
+      { z:'Ze brachten ons de eerste dag een taart.', u:'brachten: de verleden tijd van brengen is onregelmatig.' },
+      { z:'Hun dochter zit bij mij op school.', u:'zit: de stam eindigt al op een t, dus er komt geen t bij.' },
+      { z:'We fietsen nu elke ochtend samen.', u:'fietsen: bij we het hele werkwoord.' },
+      { z:'Ik mis mijn oude buurt, maar ik voel me hier al thuis.', u:'mis en voel: bij ik alleen de stam. Een komma voor maar.' } ] },
+    { id:'t-kgt-07', oud:6, n:2, titel:'De sportdag', zinnen:[
       { z:'Op de laatste vrijdag voor de vakantie hadden we een sportdag.', u:'vrijdag met een kleine letter. vakantie met tie.' },
       { z:'Er werden allerlei wedstrijden gehouden op het veld achter de school.', u:'wedstrijden: wed + strijden, met ij.' },
       { z:'Mijn team won het touwtrekken met gemak.', u:'touwtrekken: touw met ouw, en dubbele k.' },
       { z:'Bij de estafette struikelde Jesse vlak voor de finish.', u:'estafette: dubbele t. struikelde: struikel + de. Jesse is een naam.' },
       { z:'Hij krabbelde snel op en rende toch nog als eerste over de streep.', u:'rende: ren + de, want de n zit niet in ’t kofschip.' },
-      { z:'De behaalde medaille hangt nu boven zijn bed.', u:'behaalde: behaald + e. medaille: dubbele l.' } ] },
-    { id:'t-kgt-08', n:2, titel:'Een lekke band', zinnen:[
+      { z:'De behaalde medaille hangt nu boven zijn bed.', u:'behaalde: behaald + e. medaille: dubbele l.' },
+      { z:'Zijn ouders waren ontzettend trots op hem.', u:'ontzettend: dubbele t. trots met ts.' },
+      { z:'Aan het eind van de dag kregen we allemaal een ijsje.', u:'kregen: de verleden tijd van krijgen. ijsje met ij.' },
+      { z:'Onze gymleraar bedankte iedereen voor de inzet.', u:'bedankte: bedank + te, want de k zit in ’t kofschip.' },
+      { z:'Volgend jaar doe ik zeker weer mee.', u:'doe: bij ik alleen de stam.' } ] },
+    { id:'t-kgt-08', oud:6, n:2, titel:'Een lekke band', zinnen:[
       { z:'Op weg naar school kreeg ik een lekke band.', u:'lekke: dubbele k, want lek heeft een korte e.' },
       { z:'Ik belde meteen mijn vader, want ik wilde niet te laat komen.', u:'belde: bel + de. Een komma voor want.' },
       { z:'Hij bracht me met de auto en nam mijn fiets mee.', u:'bracht: de verleden tijd van brengen is onregelmatig.' },
       { z:'’s Middags plakte hij de band in de schuur.', u:'Begint de zin met ’s, dan krijgt het woord erna de hoofdletter: ’s Middags. plakte: plak + te.' },
       { z:'Nu rijdt mijn fiets weer als nieuw.', u:'rijdt: mijn fiets is een hij, dus stam rijd + t.' },
-      { z:'Heb jij al eens een band geplakt?', u:'geplakt: ge + plak + t, want de k zit in ’t kofschip.' } ] },
+      { z:'Heb jij al eens een band geplakt?', u:'geplakt: ge + plak + t, want de k zit in ’t kofschip.' },
+      { z:'Het is makkelijker dan je denkt.', u:'makkelijker: dubbele k. denkt: je staat vóór het werkwoord, dus stam + t.' },
+      { z:'Je zoekt eerst het gaatje met een emmer water.', u:'zoekt: je staat vóór het werkwoord, dus stam + t. emmer met dubbele m.' },
+      { z:'Daarna maak je de band droog en plak je er een pleister op.', u:'maak je en plak je: je staat achter het werkwoord, dus geen t.' },
+      { z:'Mijn vader heeft beloofd dat hij het me leert.', u:'beloofd: het hele werkwoord is beloven, met een v. Die zit niet in ’t kofschip: be + loof + d.' } ] },
 
-    { id:'t-hv-01', n:3, titel:'De Gouden Eeuw', zinnen:[
+    { id:'t-hv-01', oud:6, n:3, titel:'De Gouden Eeuw', zinnen:[
       { z:'In de zeventiende eeuw behoorde de Republiek tot de rijkste landen van Europa.', u:'zeventiende eeuw met kleine letters; de Republiek is de naam van het land toen: hoofdletter.' },
       { z:'Schepen van de VOC voeren naar Azië om specerijen te halen.', u:'voeren: de verleden tijd meervoud van varen. Azië met een trema. specerijen met ij.' },
       { z:'Rijke families in Amsterdam verdienden er enorm veel geld mee.', u:'verdienden: verdien + den, want de n zit niet in ’t kofschip.' },
       { z:'Tegelijkertijd leefden veel mensen in armoede.', u:'leefden: het hele werkwoord is leven, met een v. Die zit niet in ’t kofschip: leef + den.' },
       { z:'Schilders als Rembrandt en Vermeer werden wereldberoemd.', u:'wereldberoemd: wereld met een d, en beroemd met een d.' },
-      { z:'Wordt die periode terecht de Gouden Eeuw genoemd?', u:'Wordt: het onderwerp is die periode, dus stam + t. De Gouden Eeuw krijgt hoofdletters.' } ] },
-    { id:'t-hv-02', n:3, titel:'Een debat in de klas', zinnen:[
+      { z:'Wordt die periode terecht de Gouden Eeuw genoemd?', u:'Wordt: het onderwerp is die periode, dus stam + t. De Gouden Eeuw krijgt hoofdletters.' },
+      { z:'Veel historici vinden die naam tegenwoordig te rooskleurig.', u:'historici: het meervoud van historicus. rooskleurig: roos + kleurig.' },
+      { z:'De rijkdom was namelijk deels gebaseerd op slavenhandel.', u:'gebaseerd: ge + baseer + d, want de r zit niet in ’t kofschip.' },
+      { z:'Daarom spreken musea nu liever over de zeventiende eeuw.', u:'musea: het meervoud van museum.' },
+      { z:'Zo wordt ook de schaduwkant van die tijd zichtbaar.', u:'wordt: het onderwerp is de schaduwkant, dus stam + t. zichtbaar: zicht + baar.' } ] },
+    { id:'t-hv-02', oud:6, n:3, titel:'Een debat in de klas', zinnen:[
       { z:'Tijdens de les maatschappijleer hielden we een debat over mobiele telefoons.', u:'maatschappijleer met ij. hielden: de verleden tijd van houden.' },
       { z:'De ene groep vond dat telefoons op school verboden moesten worden.', u:'verboden: het voltooid deelwoord van verbieden.' },
       { z:'De andere groep beweerde dat je ze juist goed kunt gebruiken bij het leren.', u:'beweerde: beweer + de, want de r zit niet in ’t kofschip.' },
       { z:'Iedereen bereidde zijn argumenten zorgvuldig voor.', u:'bereidde: de stam bereid eindigt al op een d; in de verleden tijd komt daar de achter: bereidde.' },
       { z:'Uiteindelijk stemde de klas over het beste betoog.', u:'uiteindelijk: ui, ei en lijk. stemde: stem + de.' },
-      { z:'Het verschil bleek maar twee stemmen te zijn.', u:'verschil: één l aan het eind, stemmen met dubbele m.' } ] },
-    { id:'t-hv-03', n:3, titel:'De watersnood', zinnen:[
+      { z:'Het verschil bleek maar twee stemmen te zijn.', u:'verschil: één l aan het eind, stemmen met dubbele m.' },
+      { z:'De verliezende groep accepteerde de uitslag sportief.', u:'accepteerde: accepteer + de. sportief met een f.' },
+      { z:'Onze docent prees vooral de goed onderbouwde argumenten.', u:'prees: de verleden tijd van prijzen. onderbouwde: onderbouwd + e.' },
+      { z:'Volgens haar hadden beide groepen serieus onderzoek gedaan.', u:'serieus met eu. onderzoek aan elkaar.' },
+      { z:'Volgende maand debatteren we over het klimaatbeleid.', u:'debatteren: dubbele t. klimaatbeleid aan elkaar.' } ] },
+    { id:'t-hv-03', oud:6, n:3, titel:'De watersnood', zinnen:[
       { z:'Tijdens de watersnood stroomden grote delen van Zeeland onder.', u:'stroomden: stroom + den. Zeeland is een naam: hoofdletter.' },
       { z:'De dijken waren niet sterk genoeg en braken op tientallen plaatsen door.', u:'dijken met ij.' },
       { z:'Veel mensen vluchtten naar de zolder of het dak van hun huis.', u:'vluchtten: de stam vlucht eindigt op een t, en in de verleden tijd komt daar ten achter: vluchtten.' },
       { z:'Hulpverleners uit het hele land schoten te hulp.', u:'hulpverleners: aan elkaar.' },
       { z:'Daarna besloot de regering om de kust beter te beschermen.', u:'besloot: de verleden tijd van besluiten is onregelmatig.' },
-      { z:'Zo ontstonden de Deltawerken.', u:'De Deltawerken is een naam: hoofdletter.' } ] },
-    { id:'t-hv-04', n:3, titel:'Een stage in het ziekenhuis', zinnen:[
+      { z:'Zo ontstonden de Deltawerken.', u:'De Deltawerken is een naam: hoofdletter.' },
+      { z:'Het duurde tientallen jaren voordat alles klaar was.', u:'duurde: duur + de. tientallen: dubbele l.' },
+      { z:'De Oosterscheldekering is misschien wel het bekendste onderdeel.', u:'Oosterscheldekering is een naam: hoofdletter, en aan elkaar.' },
+      { z:'Bij zware storm kunnen de schuiven daar worden gesloten.', u:'gesloten: het voltooid deelwoord van sluiten.' },
+      { z:'Ingenieurs uit de hele wereld komen het bouwwerk bestuderen.', u:'ingenieurs: in-ge-nieurs, met ie en eu.' } ] },
+    { id:'t-hv-04', oud:6, n:3, titel:'Een stage in het ziekenhuis', zinnen:[
       { z:'Tijdens mijn maatschappelijke stage werkte ik twee weken in een ziekenhuis.', u:'maatschappelijke: ij in maatschappij en in lijk.' },
       { z:'Ik bracht patiënten koffie en praatte met hen als ze zich verveelden.', u:'patiënten met een trema. praatte: praat + te. verveelden: verveel + den.' },
       { z:'Een oudere mevrouw vertelde me over haar jeugd in Indonesië.', u:'vertelde: vertel + de. Indonesië met een hoofdletter en een trema.' },
       { z:'Ze was als kind met de boot naar Nederland gekomen.', u:'Nederland met een hoofdletter.' },
       { z:'Haar verhaal heeft me erg aan het denken gezet.', u:'gezet: de stam zet eindigt al op een t, dus geen extra t.' },
-      { z:'Wordt dit misschien later mijn beroep?', u:'Wordt: het onderwerp is dit, dus stam + t. misschien: mis + schien.' } ] },
-    { id:'t-hv-05', n:3, titel:'De boekdrukkunst', zinnen:[
+      { z:'Wordt dit misschien later mijn beroep?', u:'Wordt: het onderwerp is dit, dus stam + t. misschien: mis + schien.' },
+      { z:'Ik twijfel nog tussen verpleegkundige en fysiotherapeut.', u:'twijfel: bij ik alleen de stam. fysiotherapeut met y en th.' },
+      { z:'Mijn mentor raadde me aan om een open dag te bezoeken.', u:'raadde: de stam raad eindigt op een d, en daar komt de achter: raadde.' },
+      { z:'Die heb ik inmiddels voor volgende maand gepland.', u:'gepland: ge + plan + d. inmiddels: dubbele d.' },
+      { z:'Ik ben benieuwd wat ik daar allemaal zal ontdekken.', u:'benieuwd: be + nieuw + d. ontdekken: dubbele k.' } ] },
+    { id:'t-hv-05', oud:6, n:3, titel:'De boekdrukkunst', zinnen:[
       { z:'In de vijftiende eeuw ontwikkelde Johannes Gutenberg een drukpers met losse letters.', u:'ontwikkelde: ontwikkel + de. vijftiende eeuw met kleine letters.' },
       { z:'Daarvoor werden boeken met de hand overgeschreven.', u:'overgeschreven: het voltooid deelwoord van overschrijven.' },
       { z:'Dat kostte veel tijd, dus boeken waren erg duur.', u:'kostte: de stam kost eindigt op een t, dus kost + te.' },
       { z:'Dankzij de drukpers verspreidden nieuwe ideeën zich snel door Europa.', u:'verspreidden: verspreid + den. ideeën met een trema.' },
       { z:'Sommige machthebbers vonden dat gevaarlijk.', u:'gevaarlijk: lijk met ij.' },
-      { z:'Toch was de ontwikkeling niet meer tegen te houden.', u:'ontwikkeling: dubbele k.' } ] },
-    { id:'t-hv-06', n:3, titel:'Vrijwilligerswerk', zinnen:[
+      { z:'Toch was de ontwikkeling niet meer tegen te houden.', u:'ontwikkeling: dubbele k.' },
+      { z:'Binnen enkele decennia stonden er drukkerijen in honderden steden.', u:'decennia: het meervoud van decennium, met dubbele n. drukkerijen met ij.' },
+      { z:'Ook Maarten Luther maakte handig gebruik van de nieuwe techniek.', u:'Maarten Luther is een naam: hoofdletters. techniek met ch en iek.' },
+      { z:'Zijn pamfletten werden overal in Duitsland gelezen.', u:'pamfletten: dubbele t. Duitsland met een hoofdletter.' },
+      { z:'Zo veranderde een uitvinding de hele geschiedenis van Europa.', u:'veranderde: verander + de, want de r zit niet in ’t kofschip.' } ] },
+    { id:'t-hv-06', oud:6, n:3, titel:'Vrijwilligerswerk', zinnen:[
       { z:'Elke woensdagmiddag help ik bij een huiswerkklas in de bibliotheek.', u:'help: bij ik alleen de stam. woensdagmiddag met een kleine letter.' },
       { z:'De kinderen die daar komen, zitten meestal in groep zes of zeven.', u:'Een komma tussen komen en zitten: twee werkwoorden naast elkaar.' },
       { z:'Laatst worstelde een meisje met een ingewikkelde rekensom.', u:'worstelde: worstel + de. ingewikkelde: dubbele k.' },
       { z:'Ik legde haar uit hoe je breuken vereenvoudigt.', u:'vereenvoudigt: je staat hier vóór het werkwoord, dus stam + t.' },
       { z:'Toen ze het antwoord vond, straalde ze helemaal.', u:'straalde: straal + de, want de l zit niet in ’t kofschip.' },
-      { z:'Zulke momenten maken het werk de moeite waard.', u:'waard: met een d, want het komt van waarde.' } ] },
-    { id:'t-hv-07', n:3, titel:'Een reis door Scandinavië', zinnen:[
+      { z:'Zulke momenten maken het werk de moeite waard.', u:'waard: met een d, want het komt van waarde.' },
+      { z:'Soms is het ook best vermoeiend.', u:'vermoeiend: oei in het midden, en een d aan het eind.' },
+      { z:'Sommige kinderen zijn na een lange schooldag onrustig.', u:'onrustig: on + rustig. schooldag aan elkaar.' },
+      { z:'Dan bedenk ik een spelletje zodat ze weer kunnen opletten.', u:'bedenk: bij ik alleen de stam. spelletje: dubbele l.' },
+      { z:'Volgend jaar wil ik er zeker mee doorgaan.', u:'doorgaan: aan elkaar.' } ] },
+    { id:'t-hv-07', oud:6, n:3, titel:'Een reis door Scandinavië', zinnen:[
       { z:'Afgelopen zomer maakten we een rondreis door Noorwegen en Zweden.', u:'maakten: maak + ten. Landen met een hoofdletter.' },
       { z:'We sliepen in een tent en kookten op een klein gasstel.', u:'kookten: kook + ten, want de k zit in ’t kofschip.' },
       { z:'De fjorden waren indrukwekkender dan ik had verwacht.', u:'indrukwekkender: dubbele k. verwacht: de stam eindigt al op een t.' },
       { z:'Op een avond zagen we het noorderlicht boven het water.', u:'noorderlicht met een kleine letter, net als de windstreken.' },
       { z:'Mijn vader fotografeerde het urenlang.', u:'fotografeerde: fotografeer + de.' },
-      { z:'De foto’s die hij toen maakte, hangen nu in onze woonkamer.', u:'foto’s: apostrof + s, want foto eindigt op een o.' } ] },
-    { id:'t-hv-08', n:3, titel:'De eerste mensen op de maan', zinnen:[
+      { z:'De foto’s die hij toen maakte, hangen nu in onze woonkamer.', u:'foto’s: apostrof + s, want foto eindigt op een o.' },
+      { z:'In Stockholm bezochten we een museum over een oud oorlogsschip.', u:'bezochten: de verleden tijd van bezoeken. Stockholm met ck.' },
+      { z:'Het schip was vlak na de bouw al gezonken.', u:'gezonken: het voltooid deelwoord van zinken.' },
+      { z:'Pas eeuwen later werd het van de zeebodem gehaald.', u:'werd: altijd met een d. eeuwen met eeuw.' },
+      { z:'Ik vond het de interessantste dag van de hele vakantie.', u:'interessantste: interessant + ste. vakantie met tie.' } ] },
+    { id:'t-hv-08', oud:6, n:3, titel:'De eerste mensen op de maan', zinnen:[
       { z:'Ruim vijftig jaar geleden landde er voor het eerst een ruimteschip met mensen op de maan.', u:'landde: land + de, dus dd. maan met een kleine letter.' },
       { z:'Miljoenen mensen over de hele wereld keken ademloos naar de beelden.', u:'miljoenen: lj, net als miljoen.' },
       { z:'Neil Armstrong zette als eerste een voet op het stoffige oppervlak.', u:'zette: zet + te. stoffige: dubbele f.' },
       { z:'Zijn collega volgde hem even later.', u:'volgde: volg + de, want de g zit niet in ’t kofschip.' },
       { z:'Ze verzamelden stenen en plaatsten een Amerikaanse vlag.', u:'plaatsten: plaats + ten. Amerikaanse met een hoofdletter.' },
-      { z:'Het ruimtevaartuig keerde daarna veilig terug naar de aarde.', u:'keerde: keer + de. aarde met een kleine letter.' } ] }
+      { z:'Het ruimtevaartuig keerde daarna veilig terug naar de aarde.', u:'keerde: keer + de. aarde met een kleine letter.' },
+      { z:'Sommige mensen geloven nog steeds dat de landing nep was.', u:'geloven: meervoud, het hele werkwoord. nep met één p.' },
+      { z:'Wetenschappers hebben die theorie echter vaak weerlegd.', u:'wetenschappers: dubbele p. weerlegd: weer + leg + d.' },
+      { z:'Op de maan liggen bijvoorbeeld nog steeds spiegels van de missie.', u:'bijvoorbeeld: bij + voor + beeld. missie met dubbele s.' },
+      { z:'Daarmee meten onderzoekers tot op de centimeter hoe ver de maan weg is.', u:'meten: meervoud, het hele werkwoord. centimeter: de c klinkt als s.' } ] }
   ]
 };
 
@@ -609,7 +716,9 @@ window.DICTEE_OPGAVEN = {
     var n = NIV[niveau] || (typeof niveau === 'number' ? niveau : 2);
     var lijst = D.teksten.filter(function(t){ return t.n === n; }).sort(function(a, b){ return a.id < b.id ? -1 : 1; });
     if (!lijst.length) return null;
-    var w = D.isoWeek(datum);
-    return lijst[(w.jaar * 53 + w.week) % lijst.length];
+    var w = D.isoWeek(datum), t = lijst[(w.jaar * 53 + w.week) % lijst.length];
+    /* tien zinnen vanaf week 41 van 2026; de weken ervoor houden hun korte tekst, anders klopt een oude uitslag niet meer */
+    if (t.oud && (w.jaar < 2026 || (w.jaar === 2026 && w.week < 41))) t = Object.assign({}, t, { zinnen: t.zinnen.slice(0, t.oud) });
+    return t;
   };
 })(window.DICTEE_OPGAVEN);
