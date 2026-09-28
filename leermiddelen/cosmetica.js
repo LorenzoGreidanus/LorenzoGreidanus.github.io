@@ -5,7 +5,7 @@
    een spel makkelijker.
 
    Een gekocht ding zit in je avatar-spec: v1k2o3m4e5 krijgt er h2 (hoed 2),
-   r1 (rand 1) of z3 (zwaard 3) achter. avatar.js tekent hoed en rand,
+   r1 (rand 1), z3 (zwaard 3) of f2 (figuur 2) achter. avatar.js tekent hoed en rand,
    zwaard.html tekent het zwaard. De server (server/profiel.js) kent deze
    lijst ook: hij rekent de prijs af en haalt uit je spec wat je niet bezit.
 
@@ -36,6 +36,13 @@
     { id:'h19', soort:'h', n:19, naam:'Cowboyhoed',     prijs:500, uit:'yeehaw' },
     { id:'h20', soort:'h', n:20, naam:'Oranje kroon',   prijs:300, uit:'alleen rond Koningsdag te koop (20 tot en met 30 april)', seizoen:[4, 20, 4, 30] },
     { id:'h21', soort:'h', n:21, naam:'Strohoed',       prijs:400, uit:'alleen in de zomer te koop (half juni tot eind augustus)', seizoen:[6, 15, 8, 31] },
+    /* figuren: f1 tot f6, vast aan je hoofd; ze draaien mee als je gezichtje een kant op kijkt */
+    { id:'f1', soort:'f', n:1, naam:'Oortjes',        prijs:500,  uit:'twee ronde oortjes, als een beertje' },
+    { id:'f2', soort:'f', n:2, naam:'Bloem',          prijs:700,  uit:'een krans van blaadjes om je hoofd' },
+    { id:'f3', soort:'f', n:3, naam:'Wolkje',         prijs:700,  uit:'zacht en bol, als een wolk' },
+    { id:'f4', soort:'f', n:4, naam:'Voelsprieten',   prijs:600,  uit:'twee sprieten met een bolletje' },
+    { id:'f5', soort:'f', n:5, naam:'Knotje',         prijs:400,  uit:'een knot boven op je hoofd' },
+    { id:'f6', soort:'f', n:6, naam:'Kattenoren',     prijs:600,  uit:'spits, met roze binnenkant' },
     /* achtergronden: a1 tot a3, een schijf achter het gezichtje */
     { id:'a1', soort:'a', n:1, naam:'Zonsopgang',     prijs:800,  uit:'oranje en geel achter je' },
     { id:'a2', soort:'a', n:2, naam:'Oceaan',         prijs:800,  uit:'diep blauw achter je' },
@@ -92,7 +99,7 @@
     { id:'b7',  soort:'b', n:7,  naam:'Vlammetje',          prijs:0, baas:'reeks-5',  verdien:'5 dagen op rij', uit:'oefen vijf dagen op rij' },
     { id:'r11', soort:'r', n:11, naam:'Lauwerkrans',        prijs:0, baas:'reeks-14', verdien:'14 dagen op rij', uit:'oefen veertien dagen op rij' }
   ];
-  var SOORTEN = { h:'Hoeden', q:'Brillen', a:'Achtergronden', r:'Randen', z:'Zwaarden', b:'Trofeeën' };
+  var SOORTEN = { h:'Hoeden', f:'Figuren', q:'Brillen', a:'Achtergronden', r:'Randen', z:'Zwaarden', b:'Trofeeën' };
   /* is dit item nu te koop? Zonder seizoen altijd; met seizoen alleen tussen die dagen (jaar loopt gewoon door) */
   function inSeizoen(it, nu){
     if (!it || !it.seizoen) return true;
@@ -108,10 +115,10 @@
      iedereen gratis kiest: vorm, kleur, ogen, mond, extra, en sinds kort ook c (tweede rij kleuren),
      x en w (haar, niet meer in gebruik maar nog geldig). Oude specs zonder die drie blijven gewoon geldig. */
   function ontleed(spec){
-    var m = /^(v\dk\do\dm\de\d(?:c\d{1,2})?(?:x\d{1,2})?(?:w\d)?)(?:h(\d{1,2}))?(?:r(\d{1,2}))?(?:z(\d{1,2}))?(?:b(\d{1,2}))?(?:a(\d{1,2}))?(?:q(\d{1,2}))?$/.exec(String(spec || ''));
-    return m ? { basis:m[1], h:+(m[2] || 0), r:+(m[3] || 0), z:+(m[4] || 0), b:+(m[5] || 0), a:+(m[6] || 0), q:+(m[7] || 0) } : null;
+    var m = /^(v\d{1,2}k\do\d{1,2}m\de\d(?:c\d{1,2})?(?:x\d{1,2})?(?:w\d)?)(?:h(\d{1,2}))?(?:r(\d{1,2}))?(?:z(\d{1,2}))?(?:b(\d{1,2}))?(?:a(\d{1,2}))?(?:q(\d{1,2}))?(?:f(\d))?$/.exec(String(spec || ''));
+    return m ? { basis:m[1], h:+(m[2] || 0), r:+(m[3] || 0), z:+(m[4] || 0), b:+(m[5] || 0), a:+(m[6] || 0), q:+(m[7] || 0), f:+(m[8] || 0) } : null;
   }
-  function bouw(o){ return o.basis + (o.h ? 'h' + o.h : '') + (o.r ? 'r' + o.r : '') + (o.z ? 'z' + o.z : '') + (o.b ? 'b' + o.b : '') + (o.a ? 'a' + o.a : '') + (o.q ? 'q' + o.q : ''); }
+  function bouw(o){ return o.basis + (o.h ? 'h' + o.h : '') + (o.r ? 'r' + o.r : '') + (o.z ? 'z' + o.z : '') + (o.b ? 'b' + o.b : '') + (o.a ? 'a' + o.a : '') + (o.q ? 'q' + o.q : '') + (o.f ? 'f' + o.f : ''); }
   /* haal uit een spec wat niet in het bezit zit */
   function toegestaan(spec, bezit){
     var o = ontleed(spec); if (!o) return '';
@@ -122,6 +129,7 @@
     if (o.b && !bezit['b' + o.b]) o.b = 0;
     if (o.a && !bezit['a' + o.a]) o.a = 0;
     if (o.q && !bezit['q' + o.q]) o.q = 0;
+    if (o.f && !bezit['f' + o.f]) o.f = 0;
     return bouw(o);
   }
   g.COSMETICA = { ITEMS:ITEMS, SOORTEN:SOORTEN, vind:vind, vanBaas:vanBaas, vanNachtmerrie:vanNachtmerrie, ontleed:ontleed, bouw:bouw, toegestaan:toegestaan, inSeizoen:inSeizoen };

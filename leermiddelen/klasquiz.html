@@ -1120,20 +1120,26 @@ Frans Hals"></textarea>
   var antw = null;   /* { i, k, weg, ok } */
   function spelerScherm(id){
     ['p-wacht', 'p-vraag', 'p-uitslag', 'p-einde'].forEach(function(x){ $(x).classList.toggle('hide', x !== id); });
+    /* de stemming als er niets gebeurt: denken tijdens een vraag, en na een tijdje wachten op de docent in slaap vallen */
+    clearTimeout(slaapKlok);
+    if (id === 'p-vraag') rustPNaam('denkt');
+    else { rustPNaam(''); if (id === 'p-wacht') slaapKlok = setTimeout(function(){ rustPNaam('slaapt'); }, 9000); }
   }
   function zetJouw(j){
     if (!j) return;
     $('pScore').textContent = j.score; $('pRang').textContent = j.rang + ' / ' + j.van;
     $('pScoreKop').textContent = j.score; $('pRangKop').textContent = j.rang + ' / ' + j.van;
   }
-  /* het gezichtje bovenaan het spelerscherm, met een stemming: blij of sip na een vraag, juichend bij winst */
-  var pNaamKlok = null;
+  /* het gezichtje bovenaan het spelerscherm, met een stemming: blij of sip na een vraag, juichend bij winst.
+     Het leeft (avatar.js): met de sleutel kq-ik gaat het na elke keer opnieuw zetten gewoon door, en veert het naar de nieuwe stemming. */
+  var pNaamKlok = null, pNaamRust = '', pNaamNu = null, slaapKlok = null;
   function zetPNaam(stemming, juich){
     if (!speler) return;
-    clearTimeout(pNaamKlok);
-    $('pNaam').innerHTML = (window.AVATAR ? AVATAR.svg(speler.naam, 28, window.PROFIEL ? PROFIEL.avatar() : '', { stemming:stemming, klasse: juich ? 'av-juich' : '' }) : '') + schoonHtml(speler.naam);
-    if (stemming && !juich) pNaamKlok = setTimeout(function(){ zetPNaam(''); }, 3000);
+    clearTimeout(pNaamKlok); pNaamKlok = null; pNaamNu = stemming || '';
+    $('pNaam').innerHTML = (window.AVATAR ? AVATAR.svg(speler.naam, 28, window.PROFIEL ? PROFIEL.avatar() : '', { stemming:stemming, klasse: juich ? 'av-juich' : '', leef:'kq-ik', volg:.3 }) : '') + schoonHtml(speler.naam);
+    if (stemming && !juich && stemming !== pNaamRust) pNaamKlok = setTimeout(function(){ pNaamKlok = null; zetPNaam(pNaamRust); }, 3000);
   }
+  function rustPNaam(r){ pNaamRust = r; if (!pNaamKlok && pNaamNu !== null && pNaamNu !== r) zetPNaam(r); }
   function wordSpeler(code, naam){
     speler = { code:code, naam:naam };
     toon('s-speler'); spelerScherm('p-wacht');

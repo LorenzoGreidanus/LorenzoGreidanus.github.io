@@ -3,17 +3,30 @@
    een gezichtje. Dezelfde bijnaam geeft altijd dezelfde blob, op elk
    apparaat, want alles komt uit een hash van de naam. Geen plaatjes nodig.
 
+   Het gezicht ligt op een bol: kijkt een gezichtje opzij, dan schuiven ogen,
+   mond en blosjes mee en worden ze smaller aan de rand. Een zacht licht
+   linksboven en schaduw aan de rand geven het lijf diepte. (Het idee komt uit
+   de Bible Strong Avatar Lab; de code hier is eigen werk, niet van daar.)
+
    Wie een eigen avatar heeft gekozen (profiel.js), geeft een spec mee:
    'v3k2o1m0e4' = vorm, kleur, ogen, mond, extra. Dan telt de naam niet meer.
-   Daarachter mag (in deze volgorde) c (een kleur uit de tweede rij), en dan
-   de dingen uit de winkel: h r z b a q (zie cosmetica.js). x en w (haar) mogen
-   er nog in staan van een eerdere versie, maar tekenen niets: het blobje is
-   een blobje, geen mensje.
+   Vorm 0-7 zijn blobs, 8 een blok, 9 een boon, 10 een druppel; ogen 10 zijn
+   pil-ogen. Daarachter mag (in deze volgorde) c (een kleur uit de tweede rij),
+   en dan de dingen uit de winkel: h r z b a q f (zie cosmetica.js); f is een
+   figuur die aan het hoofd vastzit en meedraait. x en w (haar) mogen er nog in
+   staan van een eerdere versie, maar tekenen niets: het blobje is een
+   blobje, geen mensje.
 
    Gebruik:
-     AVATAR.svg('Noor', 32)         een <svg> als tekst, 32 pixels
-     AVATAR.svg('Noor', 32, spec)   met eigen keuzes
-     AVATAR.inhoud('Noor', spec)    alleen de binnenkant, voor in een eigen svg (viewBox -50..50)
+     AVATAR.svg('Noor', 32)         een <svg> als tekst, 32 pixels, stil
+     AVATAR.svg('Noor', 32, spec, { stemming:'blij', kijk:[x, y], leef:true })
+                                    stemming: '' gewoon, blij, trots, denkt, sip, oeps, au, slaapt
+                                    kijk: de kant die het hoofd op kijkt, x en y van -1 tot 1
+                                    leef: het gezichtje gaat leven zodra het in de pagina staat;
+                                          een tekst in plaats van true is een sleutel: een nieuw
+                                          gezichtje met dezelfde sleutel gaat verder waar het oude was
+     AVATAR.leef(el, opties)        een svg uit AVATAR.svg laten leven; geeft { zet, juich, juichElke, kijk, volg }
+     AVATAR.inhoud('Noor', spec, stemming, kijk)  alleen de binnenkant, voor in een eigen svg (viewBox -50..50)
      AVATAR.ontleed(spec) / AVATAR.maak({v,k,o,m,e,c,...})
      AVATAR.KEUZES                  hoeveel er van elk zijn
      AVATAR.NAMEN                   hoe elke keuze heet, voor de kiezer
@@ -90,29 +103,50 @@ window.AVATAR = (function(){
     var s = Math.max(0.85, Math.min(1.12, M.bovenBreed / 33)) * (groter || 1);
     return 'translate(0,' + (M.top - (op || 0) + 46 - 30).toFixed(1) + ') scale(' + s.toFixed(3) + ') translate(0,30)';
   }
-  var KEUZES = { vormen:8, kleuren:KLEUREN.length, kleuren2:KLEUREN2.length, ogen:10, monden:10, extras:10 };
+  /* de lijven die geen blob zijn: een blok, een boon en een druppel (vorm 8, 9 en 10) */
+  var VORMEN = {
+    8: function(){ var p = []; for (var i = 0; i < 16; i++){ var a = i / 16 * Math.PI * 2, c = Math.cos(a), s = Math.sin(a); p.push([(c < 0 ? -1 : 1) * Math.pow(Math.abs(c), .42) * 41, (s < 0 ? -1 : 1) * Math.pow(Math.abs(s), .42) * 39]); } return p; },
+    9: function(){ var p = []; for (var i = 0; i < 10; i++){ var a = i / 10 * Math.PI * 2; p.push([Math.cos(a) * 36 * (1 + .07 * Math.sin(a * 2)), Math.sin(a) * 47]); } return p; },
+    10: function(){ var p = []; for (var i = 0; i < 12; i++){ var a = i / 12 * Math.PI * 2 - Math.PI / 2, s = i === 0 ? 62 : (i === 1 || i === 11) ? 45 : 43; p.push([Math.cos(a) * s, Math.sin(a) * s + 5]); } return p; }
+  };
+  /* dezelfde zachte bochten als blob(), maar door punten die al vastliggen */
+  function glad(p){
+    var n = p.length, d = 'M' + p[0][0].toFixed(1) + ',' + p[0][1].toFixed(1), pts = [];
+    for (var i = 0; i < n; i++){
+      var p0 = p[(i - 1 + n) % n], p1 = p[i], p2 = p[(i + 1) % n], p3 = p[(i + 2) % n];
+      var c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+      var c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+      d += ' C' + c1[0].toFixed(1) + ',' + c1[1].toFixed(1) + ' ' + c2[0].toFixed(1) + ',' + c2[1].toFixed(1) + ' ' + p2[0].toFixed(1) + ',' + p2[1].toFixed(1);
+      for (var t = 0; t < 0.999; t += 1 / 12){ var u = 1 - t, a0 = u*u*u, a1 = 3*u*u*t, a2 = 3*u*t*t, a3 = t*t*t;
+        pts.push([a0*p1[0] + a1*c1[0] + a2*c2[0] + a3*p2[0], a0*p1[1] + a1*c1[1] + a2*c2[1] + a3*p2[1]]); }
+    }
+    return { d:d + ' Z', pts:pts };
+  }
+  var KEUZES = { vormen:11, kleuren:KLEUREN.length, kleuren2:KLEUREN2.length, ogen:11, monden:10, extras:10, figuren:7 };
   var NAMEN = {
-    o:['stipjes', 'blij', 'knipoog', 'bril', 'grote ogen', 'cool', 'verbaasd', 'sterren', 'tevreden', 'vastberaden'],
+    v:['vorm 1', 'vorm 2', 'vorm 3', 'vorm 4', 'vorm 5', 'vorm 6', 'vorm 7', 'vorm 8', 'blok', 'boon', 'druppel'],
+    o:['stipjes', 'blij', 'knipoog', 'bril', 'grote ogen', 'cool', 'verbaasd', 'sterren', 'tevreden', 'vastberaden', 'pil-ogen'],
     m:['lach', 'rondje', 'streepje', 'schaterlach', 'tong uit', 'tanden', 'scheve grijns', 'o', 'kattensnoetje', 'beugel'],
     e:['blosjes', 'sproetjes', 'krul', 'pleister', 'ster', 'niets', 'zweetdruppel', 'snor', 'glinsters', 'moedervlekje'],
     k:['koraal', 'oranje', 'blauw', 'lichtblauw', 'groen', 'paars', 'nachtblauw', 'steenrood', 'zeegroen'],
-    c:['licht perzik', 'perzik', 'karamel', 'bruin', 'donkerbruin', 'roze', 'zonnegeel', 'mint', 'lila', 'framboos', 'grijs']
+    c:['licht perzik', 'perzik', 'karamel', 'bruin', 'donkerbruin', 'roze', 'zonnegeel', 'mint', 'lila', 'framboos', 'grijs'],
+    f:['geen', 'oortjes', 'bloem', 'wolkje', 'voelsprieten', 'knotje', 'kattenoren']
   };
-  var PATROON = /^v(\d)k(\d)o(\d)m(\d)e(\d)(?:c(\d{1,2}))?(?:x(\d{1,2}))?(?:w(\d))?(?:h(\d{1,2}))?(?:r(\d{1,2}))?(?:z(\d{1,2}))?(?:b(\d{1,2}))?(?:a(\d{1,2}))?(?:q(\d{1,2}))?$/;
-  /* achter het gezichtje kan cosmetica staan: h (hoed), r (rand), z (zwaard), uit de winkel */
+  var PATROON = /^v(\d{1,2})k(\d)o(\d{1,2})m(\d)e(\d)(?:c(\d{1,2}))?(?:x(\d{1,2}))?(?:w(\d))?(?:h(\d{1,2}))?(?:r(\d{1,2}))?(?:z(\d{1,2}))?(?:b(\d{1,2}))?(?:a(\d{1,2}))?(?:q(\d{1,2}))?(?:f(\d))?$/;
+  /* achter het gezichtje kan cosmetica staan: h (hoed), r (rand), z (zwaard), b, a, q en f, uit de winkel */
   function ontleed(spec){
     spec = String(spec || '');
     var m = PATROON.exec(spec);
     /* Een spec die ergens onderweg is afgekapt (een oude server die er 24 tekens van bewaarde):
        haal er van achteren af tot hij weer klopt, dan blijft het gezicht en valt hooguit een bril weg. */
-    for (var i = 0; !m && i < 16 && spec.length > 10 && /^v\dk\do\dm\de\d/.test(spec); i++){ spec = spec.replace(/[a-z]\d*$/, ''); m = PATROON.exec(spec); }
-    return m ? { v:+m[1], k:+m[2], o:+m[3], m:+m[4], e:+m[5], c:+(m[6] || 0), x:+(m[7] || 0), w:+(m[8] || 0), h:+(m[9] || 0), r:+(m[10] || 0), z:+(m[11] || 0), b:+(m[12] || 0), a:+(m[13] || 0), q:+(m[14] || 0) } : null; }
+    for (var i = 0; !m && i < 16 && spec.length > 10 && /^v\d{1,2}k\do\d{1,2}m\de\d/.test(spec); i++){ spec = spec.replace(/[a-z]\d*$/, ''); m = PATROON.exec(spec); }
+    return m ? { v:+m[1], k:+m[2], o:+m[3], m:+m[4], e:+m[5], c:+(m[6] || 0), x:+(m[7] || 0), w:+(m[8] || 0), h:+(m[9] || 0), r:+(m[10] || 0), z:+(m[11] || 0), b:+(m[12] || 0), a:+(m[13] || 0), q:+(m[14] || 0), f:+(m[15] || 0) } : null; }
   function maak(o){
     /* x en w (haar) bestaan nog in het patroon, voor codes van even, maar worden niet meer gemaakt of getekend */
     var c = (o.c | 0) % (KLEUREN2.length + 1);
     return 'v' + (o.v % KEUZES.vormen) + 'k' + (o.k % KEUZES.kleuren) + 'o' + (o.o % KEUZES.ogen) + 'm' + (o.m % KEUZES.monden) + 'e' + (o.e % KEUZES.extras) +
       (c ? 'c' + c : '') +
-      (o.h ? 'h' + o.h : '') + (o.r ? 'r' + o.r : '') + (o.z ? 'z' + o.z : '') + (o.b ? 'b' + o.b : '') + (o.a ? 'a' + o.a : '') + (o.q ? 'q' + o.q : '');
+      (o.h ? 'h' + o.h : '') + (o.r ? 'r' + o.r : '') + (o.z ? 'z' + o.z : '') + (o.b ? 'b' + o.b : '') + (o.a ? 'a' + o.a : '') + (o.q ? 'q' + o.q : '') + (o.f ? 'f' + (o.f % KEUZES.figuren) : '');
   }
   /* Een lichte rand om een los stuk (hoed, trofee), zodat het ook op een donkere achtergrond
      te zien is. Het is dezelfde tekening nog een keer, maar dan als dikke witte omtrek eronder; wat
@@ -133,8 +167,14 @@ window.AVATAR = (function(){
     if (n === 7) return '<g><path d="M-26,-28 q26,-8 52,0" fill="none" stroke="#2f7d52" stroke-width="3"/><circle cx="-22" cy="-30" r="5" fill="#F26749"/><circle cx="-11" cy="-36" r="5" fill="#FFD166"/><circle cx="0" cy="-38" r="5" fill="#F26749"/><circle cx="11" cy="-36" r="5" fill="#FFD166"/><circle cx="22" cy="-30" r="5" fill="#F26749"/><g fill="#fff"><circle cx="-22" cy="-30" r="1.6"/><circle cx="-11" cy="-36" r="1.6"/><circle cx="0" cy="-38" r="1.6"/><circle cx="11" cy="-36" r="1.6"/><circle cx="22" cy="-30" r="1.6"/></g></g>';
     /* feestmuts: iets hoger dan vroeger, met strepen en een pompon */
     if (n === 8) return '<path d="M-17,-29 L2,-62 L17,-29 Z" fill="#204ECF" stroke="#16389a" stroke-width="1.5" stroke-linejoin="round"/><path d="M-11,-37 L13,-37 M-5,-48 L8,-48" stroke="#FFD166" stroke-width="3.4" stroke-linecap="round"/><circle cx="2" cy="-62" r="4.5" fill="#F26749"/>';
-    /* kerstmuts: rood met een witte rand en een pompon die naar rechts hangt */
-    if (n === 9) return '<path d="M-28,-30 q6,-30 26,-30 q10,0 20,10 q-14,0 -18,20 z" fill="#c0442c"/><path d="M-31,-30 h56" stroke="#F3EFE9" stroke-width="8" stroke-linecap="round"/><path d="M-31,-30 h56" stroke="#d9cfc4" stroke-width="8" stroke-linecap="round" stroke-dasharray="0 7" opacity=".7"/><circle cx="22" cy="-50" r="6" fill="#F3EFE9" stroke="#d9cfc4" stroke-width="1.2"/>';
+    /* kerstmuts: een brede witte bontrand over het hele hoofd, de rode muts valt naar rechts om,
+       met de pompon aan de punt. Een plooi en een glimlicht geven hem een beetje vorm. */
+    if (n === 9) return '<path d="M-31,-31 Q-27,-58 0,-63 Q24,-67 38,-46 Q30,-49 23,-47 Q27,-40 31,-31 Z" fill="#D23A2E" stroke="#9f2519" stroke-width="1.4" stroke-linejoin="round"/>' +
+      '<path d="M23,-47 Q16,-57 1,-60" fill="none" stroke="#9f2519" stroke-width="2" stroke-linecap="round" opacity=".55"/>' +
+      '<path d="M-21,-37 Q-17,-53 -3,-57" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".28"/>' +
+      '<rect x="-37" y="-37" width="74" height="12" rx="6" fill="#F7F3EC" stroke="#cfc4b6" stroke-width="1.3"/>' +
+      '<g fill="#e4dbcf"><circle cx="-26" cy="-31" r="1.6"/><circle cx="-12" cy="-29.5" r="1.4"/><circle cx="3" cy="-32" r="1.6"/><circle cx="17" cy="-29.5" r="1.4"/><circle cx="29" cy="-31.5" r="1.5"/></g>' +
+      '<circle cx="38" cy="-45" r="7.5" fill="#F7F3EC" stroke="#cfc4b6" stroke-width="1.3"/><circle cx="36" cy="-47.5" r="2.4" fill="#fff"/>';
     /* pompoenhoed: oranje met ribbels en een steeltje */
     if (n === 10) return '<path d="M-30,-30 q0,-26 30,-26 q30,0 30,26 z" fill="#EA9836"/><path d="M-12,-30 q0,-22 12,-24 M12,-30 q0,-22 -12,-24" fill="none" stroke="#c0442c" stroke-width="2" opacity=".55"/><path d="M-33,-30 h66" stroke="#c96a1c" stroke-width="5" stroke-linecap="round"/><path d="M0,-56 q6,-6 4,-12" fill="none" stroke="#2f7d52" stroke-width="5" stroke-linecap="round"/>';
     /* hazenoren: twee lange oren met roze binnenkant */
@@ -240,158 +280,390 @@ window.AVATAR = (function(){
       return '<path d="M-8,45.3 A46,46 0 0 1 -35,-29.6 M8,45.3 A46,46 0 0 0 35,-29.6" fill="none" stroke="#b8862a" stroke-width="2.2" stroke-linecap="round"/>' + b + '<path d="M-7,48 l7,-5 7,5" fill="none" stroke="#c0442c" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>'; }
     return '';
   }
-  var cache = {};
-  /* de binnenkant (viewBox -50..50), voor wie hem in een eigen svg tekent, zoals de arena van Zwaardvechter */
-  function inhoud(naam, spec, stemming){
-    var sleutel = (spec || '') + '|' + String(naam || '').toLowerCase().trim() + '|' + (stemming || '');
-    if (cache[sleutel]) return cache[sleutel];
-    var s = svg(naam, 100, spec, { stemming:stemming }).replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
-    if (Object.keys(cache).length > 200) cache = {};
-    cache[sleutel] = s;
-    return s;
-  }
+  function f(v){ return String(Math.round(v * 100) / 100); }
+  function klem(v, a, b){ return v < a ? a : v > b ? b : v; }
+  function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
   function ster(cx, cy, r, kleur, lijn){
     var d = '';
     for (var i = 0; i < 10; i++){ var a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; d += (i ? 'L' : 'M') + f1(cx + Math.cos(a) * rr) + ',' + f1(cy + Math.sin(a) * rr); }
     return '<path d="' + d + 'Z" fill="' + kleur + '"' + (lijn ? ' stroke="' + lijn + '" stroke-width="1.6" stroke-linejoin="round"' : '') + '/>';
   }
-  /* opties.stemming: '' (gewoon), 'au' (net geraakt), 'blij' (goed gedaan), 'sip' (jammer) of 'oeps' (betrapt: grote ogen, o-mondje); de spellen kiezen die per moment.
-     opties.klasse: extra klasse op de svg, zoals 'av-juich' voor een sprongetje. */
-  function svg(naam, maat, spec, opties){
-    maat = maat || 32;
-    var sp = ontleed(spec), stemming = opties && opties.stemming || '';
-    /* elk gezichtje ademt en knippert op zijn eigen moment, anders doet een hele klas het tegelijk */
-    var zaadje = hash((spec || '') + '|' + (naam || '')), d1 = (zaadje % 340) / 100, d2 = ((zaadje >>> 8) % 460) / 100;
-    /* met een spec hangt niets meer van de naam af: dezelfde keuzes geven overal dezelfde blob.
-       Let op: de volgorde van de trekkingen hieronder is heilig, anders krijgt iedereen zonder
-       eigen keuze ineens een ander gezichtje. Nieuwe dingen trekken niets uit r(). */
+
+  /* Alles wat vastligt voor een naam en spec: kleur, vorm, ogen, mond, extra.
+     Let op: de volgorde van de trekkingen hieronder is heilig, anders krijgt iedereen zonder
+     eigen keuze ineens een ander gezichtje. Nieuwe dingen trekken niets uit r(). */
+  var modellen = {}, aantalModellen = 0;
+  var LEEG = { v:0, k:0, o:0, m:0, e:0, c:0, x:0, w:0, h:0, r:0, z:0, b:0, a:0, q:0, f:0 };
+  function model(naam, spec){
+    var sleutel = (spec || '') + '|' + String(naam || '').toLowerCase().trim();
+    if (modellen[sleutel]) return modellen[sleutel];
+    var sp = ontleed(spec);
     var r = toeval(sp ? 7919 * (sp.v + 1) + 17 : hash(naam));
     var kleur = KLEUREN[Math.floor(r() * KLEUREN.length)];
     if (sp) kleur = sp.c ? KLEUREN2[(sp.c - 1) % KLEUREN2.length] : KLEUREN[sp.k % KLEUREN.length];
-    var helder = licht(kleur);
-    var donker = sp && sp.c ? helder < 0.5 : !!DONKER[kleur], oog = donker ? '#fff' : INKT, pupil = INKT;
-    /* de mond is donker, behalve op een heel donker gezicht: daar zag je hem niet */
-    var mond = helder < 0.22 ? '#F3EFE9' : INKT;
-    var draai = (r() * 16 - 8).toFixed(1);
+    var helder = licht(kleur), donker = sp && sp.c ? helder < 0.5 : !!DONKER[kleur];
+    var draai = +(r() * 16 - 8).toFixed(1);
     var vorm = blob(r, 46);
-    var P = draaiPunten(vorm.pts, +draai), M = maten(P);
-    var soort = Math.floor(r() * 5), kijk = (r() - 0.5) * 5, afstand = 15;
-    var m = Math.floor(r() * 4);
-    var e = Math.floor(r() * 6);
-    /* hoe dik de lichte rand om het hoofd is: klein getekend iets dikker, anders zie je hem niet */
-    var rim = Math.max(1.6, Math.min(6, 120 / maat));
-
-    var s = '<svg class="avatar' + (opties && opties.klasse ? ' ' + opties.klasse : '') + '" viewBox="-50 -50 100 100" overflow="visible" width="' + maat + '" height="' + maat + '" aria-hidden="true" focusable="false">';
-    if (sp && sp.a) s += achtergrond(sp.a);
-    s += '<g class="av-alles" style="animation-delay:-' + d1 + 's">';
-    /* Het hoofd zoals het altijd was: een platte kleur met een lichtere gloed bovenin, afgeknipt op de
-       vorm. Het knipsel krijgt per tekening een eigen id, dan botsen er geen twee op een pagina vol namen.
-       Alleen een heel donker gezicht krijgt een lichte rand, anders valt het weg op een donkere pagina. */
-    var knip = 'avk' + (++teller).toString(36) + (zaadje % 1296).toString(36);
-    s += '<g transform="rotate(' + draai + ')">';
-    if (helder < 0.3) s += '<path d="' + vorm.d + '" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="' + f1(rim * 2) + '" stroke-linejoin="round"/>';
-    s += '<path d="' + vorm.d + '" fill="' + kleur + '"/>';
-    s += '<clipPath id="' + knip + '"><path d="' + vorm.d + '"/></clipPath><path d="M-40,-6 a40,40 0 0 1 80,0 z" fill="#fff" opacity=".14" clip-path="url(#' + knip + ')"/></g>';
-    /* de ogen: tien soorten */
-    if (sp) soort = sp.o % 10;
+    var soort = Math.floor(r() * 5), kijk = (r() - 0.5) * 5, mond = Math.floor(r() * 4), extra = Math.floor(r() * 6);
+    if (sp){ soort = sp.o % KEUZES.ogen; mond = sp.m % 10; extra = sp.e % 10; }
     /* een bril uit de winkel over de getekende bril heen is er een te veel: dan gewone ogen */
     if (sp && sp.q && soort === 3) soort = 0;
-    if (stemming === 'blij') soort = 1;
-    if (stemming === 'au') soort = 'au';
-    if (stemming === 'oeps') soort = 'oeps';
-    var lijn = '" fill="none" stroke="' + oog + '" stroke-width="4.5" stroke-linecap="round"/>';
-    s += '<g class="av-ogen" style="animation-delay:-' + d2 + 's">';
-    if (soort === 'oeps' || soort === 6){  /* oeps en verbaasd: wijd open, kleine pupillen */
-      s += '<circle cx="-' + afstand + '" cy="-5" r="11" fill="' + oog + '"/><circle cx="' + afstand + '" cy="-5" r="11" fill="' + oog + '"/>';
-      s += '<circle cx="-' + afstand + '" cy="-4" r="4.2" class="av-pupil" fill="' + pupil + '"/><circle cx="' + afstand + '" cy="-4" r="4.2" class="av-pupil" fill="' + pupil + '"/>';
-      s += '<circle cx="-' + (afstand - 1.6) + '" cy="-5.6" r="1.3" class="av-pupil" fill="#fff"/><circle cx="' + (afstand + 1.6) + '" cy="-5.6" r="1.3" class="av-pupil" fill="#fff"/>';
-    } else if (soort === 'au'){        /* au: dichtgeknepen */
-      s += '<path d="M-23,-11 L-12,-4 L-23,3 M23,-11 L12,-4 L23,3" fill="none" stroke="' + oog + '" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>';
-    } else if (soort === 1){          /* blij: boogjes */
-      s += '<path d="M-22,-4 q7,-9 14,0 M8,-4 q7,-9 14,0' + lijn;
-    } else if (soort === 2){          /* knipoog */
-      s += '<circle cx="-' + afstand + '" cy="-5" r="8" fill="' + oog + '"/><circle cx="' + (-afstand + kijk).toFixed(1) + '" cy="-4" r="4" class="av-pupil" fill="' + pupil + '"/>';
-      s += '<path d="M8,-5 q7,-7 14,0' + lijn;
-    } else if (soort === 3){          /* bril */
-      s += '<circle cx="-' + afstand + '" cy="-4" r="11" fill="' + oog + '" opacity=".95"/><circle cx="' + afstand + '" cy="-4" r="11" fill="' + oog + '" opacity=".95"/>';
-      s += '<circle cx="-' + afstand + '" cy="-4" r="11" fill="none" stroke="' + pupil + '" stroke-width="3"/><circle cx="' + afstand + '" cy="-4" r="11" fill="none" stroke="' + pupil + '" stroke-width="3"/><path d="M-4,-4 h8" stroke="' + pupil + '" stroke-width="3"/>';
-      s += '<circle cx="' + (-afstand + kijk).toFixed(1) + '" cy="-3" r="4" class="av-pupil" fill="' + pupil + '"/><circle cx="' + (afstand + kijk).toFixed(1) + '" cy="-3" r="4" class="av-pupil" fill="' + pupil + '"/>';
-    } else if (soort === 4){          /* grote ogen */
-      s += '<circle cx="-' + afstand + '" cy="-4" r="10" fill="' + oog + '"/><circle cx="' + afstand + '" cy="-4" r="10" fill="' + oog + '"/>';
-      s += '<circle cx="' + (-afstand + kijk).toFixed(1) + '" cy="-3" r="5" class="av-pupil" fill="' + pupil + '"/><circle cx="' + (afstand + kijk).toFixed(1) + '" cy="-3" r="5" class="av-pupil" fill="' + pupil + '"/>';
-      s += '<circle cx="' + (-afstand + kijk + 2).toFixed(1) + '" cy="-5" r="1.6" class="av-pupil" fill="#fff"/><circle cx="' + (afstand + kijk + 2).toFixed(1) + '" cy="-5" r="1.6" class="av-pupil" fill="#fff"/>';
-    } else if (soort === 5){          /* cool: halfdichte oogleden, alsof niets je verbaast */
-      s += '<circle cx="-' + afstand + '" cy="-4" r="8" fill="' + oog + '"/><circle cx="' + afstand + '" cy="-4" r="8" fill="' + oog + '"/>';
-      s += '<circle cx="' + (-afstand + kijk * 0.6).toFixed(1) + '" cy="-1.5" r="4" class="av-pupil" fill="' + pupil + '"/><circle cx="' + (afstand + kijk * 0.6).toFixed(1) + '" cy="-1.5" r="4" class="av-pupil" fill="' + pupil + '"/>';
-      s += '<path d="M-24.5,-4 a9.5,9.5 0 0 1 19,0 z M5.5,-4 a9.5,9.5 0 0 1 19,0 z" fill="' + kleur + '"/><path d="M-24,-4 h18 M6,-4 h18" stroke="' + (donker ? '#fff' : INKT) + '" stroke-width="3.2" stroke-linecap="round"/>';
-    } else if (soort === 7){          /* sterren in je ogen */
-      s += ster(-afstand, -4, 11, '#FFD166', INKT) + ster(afstand, -4, 11, '#FFD166', INKT);
-    } else if (soort === 8){          /* tevreden: dicht, een boogje naar beneden */
-      s += '<path d="M-22,-6 q7,7 14,0 M8,-6 q7,7 14,0' + lijn;
-    } else if (soort === 9){          /* vastberaden: stipjes met schuine wenkbrauwen */
-      s += '<circle cx="-' + afstand + '" cy="-3" r="7.5" fill="' + oog + '"/><circle cx="' + afstand + '" cy="-3" r="7.5" fill="' + oog + '"/>';
-      s += '<circle cx="' + (-afstand + kijk * 0.6).toFixed(1) + '" cy="-2" r="4" class="av-pupil" fill="' + pupil + '"/><circle cx="' + (afstand + kijk * 0.6).toFixed(1) + '" cy="-2" r="4" class="av-pupil" fill="' + pupil + '"/>';
-      s += '<path d="M-25,-17 l14,5 M25,-17 l-14,5" fill="none" stroke="' + (donker ? '#fff' : INKT) + '" stroke-width="4" stroke-linecap="round"/>';
-    } else {                          /* gewone stipjes, zoals de ridder */
-      s += '<circle cx="-' + afstand + '" cy="-5" r="8" fill="' + oog + '"/><circle cx="' + afstand + '" cy="-5" r="8" fill="' + oog + '"/>';
-      s += '<circle cx="' + (-afstand + kijk).toFixed(1) + '" cy="-4" r="4" class="av-pupil" fill="' + pupil + '"/><circle cx="' + (afstand + kijk).toFixed(1) + '" cy="-4" r="4" class="av-pupil" fill="' + pupil + '"/>';
+    var v = sp ? sp.v % KEUZES.vormen : 0;
+    if (VORMEN[v]){ vorm = glad(VORMEN[v]()); draai = +(draai * (v === 10 ? 1.6 : .5)).toFixed(1); }
+    var P = draaiPunten(vorm.pts, draai), M = maten(P), breed = 0;
+    P.forEach(function(q){ if (Math.abs(q[0]) > breed) breed = Math.abs(q[0]); });
+    if (sp && sp.h && extra === 2) extra = -1;   /* een krul past niet onder een hoed */
+    var zaad = hash((spec || '') + '|' + (naam || ''));
+    if (aantalModellen > 300){ modellen = {}; aantalModellen = 0; }
+    aantalModellen++;
+    return (modellen[sleutel] = { kleur:kleur, helder:helder, donker:donker, draai:draai, d:vorm.d, M:M, bol:50 * klem(breed / 45, .8, 1.05),
+      ogen:soort, kijk:kijk, mond:mond, extra:extra, sp:sp || LEEG, zaad:zaad, d1:(zaad % 340) / 100, d2:((zaad >>> 8) % 460) / 100 });
+  }
+
+  /* De stand van een gezichtje: waar het hoofd heen kijkt (yaw en pitch in graden), de ogen (gx, gy),
+     hoe open ze zijn, het ooglid (trots), en een sprongetje (hop, sq). */
+  function nulStaat(){ return { yaw:0, pitch:0, roll:0, gx:0, gy:0, open:1, lid:0, hop:0, sq:0 }; }
+  /* wat een stemming met het hoofd doet */
+  function stemDoel(s, d, t){
+    if (s === 'sip'){ d.pitch += 12; d.gy = .8; d.open = Math.min(d.open, .85); d.yaw *= .5; }
+    else if (s === 'trots'){ d.pitch -= 9; d.lid = .42; d.gy = -.3; }
+    else if (s === 'denkt'){ d.yaw = 15; d.pitch = -9; d.gx = .9; d.gy = -.9; }
+    else if (s === 'slaapt'){ d.pitch = 10; d.yaw *= .3; d.roll = 6 + (t ? 2 * Math.sin(t * .8) : 0); }
+    else if (s === 'oeps') d.pitch -= 3;
+    return d;
+  }
+  /* stil: elk gezichtje kijkt een eigen kant op, uit de naam; kijk:[x,y] kiest zelf */
+  function rustStaat(m, stemming, kijk){
+    var st = nulStaat();
+    if (kijk){ st.yaw = klem(+kijk[0] || 0, -1, 1) * 22; st.pitch = klem(+kijk[1] || 0, -1, 1) * 14; st.gx = klem(+kijk[0] || 0, -1, 1); st.gy = klem(+kijk[1] || 0, -1, 1); }
+    else { st.yaw = ((m.zaad % 19) - 9) * 1.5; st.pitch = (((m.zaad >>> 5) % 9) - 4) * 1.2; st.gx = st.yaw / 16; st.gy = st.pitch / 12; }
+    stemDoel(stemming || '', st, 0);
+    st.stemming = stemming || '';
+    return st;
+  }
+
+  /* De tekening. leeft: zonder de css-beweging (dan doet avatar.js het zelf, per beeldje).
+     maat: hoe groot hij op het scherm komt, voor de dikte van de lichte rand. */
+  function teken(m, st, id, leeft, schaduw, maat){
+    var sp = m.sp, stm = st.stemming || '', M = m.M;
+    var Rf = m.bol, ya = st.yaw * Math.PI / 180, pa = st.pitch * Math.PI / 180, cy = Math.cos(ya), sy = Math.sin(ya), cp = Math.cos(pa), sn = Math.sin(pa);
+    function rot(x, y, z){ var x1 = x * cy + z * sy, z1 = -x * sy + z * cy; return [x1, y * cp + z1 * sn, -y * sn + z1 * cp]; }
+    function nrm(x, y, z){ var l = Math.sqrt(x * x + y * y + z * z) || 1; return rot(x / l, y / l, z / l); }
+    /* een stukje gezicht op (x,y) ligt op de bol: het schuift mee en wordt smaller aan de rand */
+    function stuk(x, y, inner){
+      if (!inner) return '';
+      var z = Math.sqrt(Math.max(Rf * Rf - x * x - y * y, 4)), P = rot(x, y, z), TX = nrm(1, 0, -x / z), TY = nrm(0, 1, -y / z);
+      var o = klem((rot(x / Rf, y / Rf, z / Rf)[2] - .15) / .3, 0, 1);
+      if (o <= 0) return '';
+      return '<g transform="matrix(' + [TX[0], TX[1], TY[0], TY[1], P[0], P[1]].map(f).join(',') + ')"' + (o < 1 ? ' opacity="' + f(o) + '"' : '') + '>' + inner + '</g>';
     }
-    s += '</g>';
-    /* oeps en verbaasd: de wenkbrauwen schieten omhoog, net niet recht */
-    if (soort === 'oeps' || soort === 6) s += '<path d="M-26,-21 q10,-10 21,-4 M6,-25 q10,-5 20,3" fill="none" stroke="' + (donker ? '#fff' : INKT) + '" stroke-width="3.6" stroke-linecap="round"/>';
-    if (sp && sp.q) s += bril(sp.q);
-    /* de mond: tien soorten */
-    if (sp) m = sp.m % 10;
-    if (stemming === 'blij') m = 3;
-    if (stemming === 'au') m = 1;
-    if (stemming === 'sip') m = 'sip';
-    if (stemming === 'oeps') m = 'oeps';
-    var mlijn = '" fill="none" stroke="' + mond + '" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>';
-    var tong = '#F26749', tanden = '#fff';
-    if (m === 'oeps') s += '<ellipse cx="3" cy="17" rx="5" ry="6.5" fill="' + mond + '"/><circle cx="-27" cy="9" r="5.5" fill="#F26749" opacity=".5"/><circle cx="27" cy="9" r="5.5" fill="#F26749" opacity=".5"/>' +
-      '<path d="M37,-27 q6,9 0,13 q-6,-4 0,-13 z" fill="#83A5F2" stroke="#14224C" stroke-width="1.2" stroke-opacity=".35"/>';
-    else if (m === 0) s += '<path d="M-10,12 q10,10 20,0' + mlijn;
-    else if (m === 1) s += '<circle cx="0" cy="14" r="4.5" fill="' + mond + '"/>';
-    else if (m === 2) s += '<path d="M-7,13 h14' + mlijn;
-    else if (m === 'sip') s += '<path d="M-10,17 q10,-9 20,0' + mlijn;
-    else if (m === 4) s += '<path d="M-11,11 q11,10 22,0' + mlijn + '<path d="M1,15.5 h9 v4 a4.5,4.5 0 0 1 -9,0 z" fill="#F47A8A" stroke="' + mond + '" stroke-width="2" stroke-linejoin="round"/><path d="M5.5,16 v4" stroke="#c0442c" stroke-width="1.2" stroke-linecap="round"/>';
-    else if (m === 5) s += '<path d="M-13,9 h26 q0,14 -13,14 q-13,0 -13,-14 z" fill="' + mond + '"/><path d="M-11,10.5 h22 q0,3 -1,4.5 h-20 q-1,-1.5 -1,-4.5 z" fill="' + tanden + '"/>';
-    else if (m === 6) s += '<path d="M-10,15 q10,5 18,-5' + mlijn + '<path d="M8,10 l3,-1" stroke="' + mond + '" stroke-width="3" stroke-linecap="round"/>';
-    else if (m === 7) s += '<ellipse cx="0" cy="15" rx="5.5" ry="7" fill="' + mond + '"/><ellipse cx="0" cy="18" rx="3" ry="2.4" fill="' + tong + '" opacity=".9"/>';
-    else if (m === 8) s += '<path d="M-10,12 q5,6 10,0 q5,6 10,0' + mlijn;
-    else if (m === 9) s += '<path d="M-13,9 h26 q0,14 -13,14 q-13,0 -13,-14 z" fill="' + mond + '"/><path d="M-11,10.5 h22 q0,3.5 -1,5 h-20 q-1,-1.5 -1,-5 z" fill="' + tanden + '"/><path d="M-10.5,13 h21" stroke="#8f9db0" stroke-width="1.4"/><g fill="#8f9db0"><rect x="-8" y="11.5" width="3" height="3" rx=".6"/><rect x="-1.5" y="11.5" width="3" height="3" rx=".6"/><rect x="5" y="11.5" width="3" height="3" rx=".6"/></g>';
-    else s += '<path d="M-12,10 h24 q0,13 -12,13 q-12,0 -12,-13 z" fill="' + mond + '"/><path d="M-6,19.5 q6,-5 12,0 q-2,3.2 -6,3.2 q-4,0 -6,-3.2 z" fill="' + tong + '"/>';
-    /* iets extra's: blosjes, sproetjes, een krul, een pleister, een sticker, en de nieuwe */
-    if (sp) e = sp.e % 10;
-    var blos = helder > 0.55 ? '#F26749' : '#FF8FA3';
-    if (e === 0) s += '<circle cx="-26" cy="8" r="5" fill="' + blos + '" opacity=".5"/><circle cx="26" cy="8" r="5" fill="' + blos + '" opacity=".5"/>';
-    else if (e === 1) s += '<g fill="' + oog + '" opacity=".7"><circle cx="-27" cy="6" r="1.6"/><circle cx="-22" cy="10" r="1.6"/><circle cx="-30" cy="12" r="1.6"/><circle cx="27" cy="6" r="1.6"/><circle cx="22" cy="10" r="1.6"/><circle cx="30" cy="12" r="1.6"/></g>';
-    if (sp && sp.h && e === 2) e = -1;   /* een krul past niet onder een hoed */
-    else if (e === 2) s += '<path d="M2,' + f1(M.top + 3) + ' q4,-12 14,-6 q-8,-2 -10,6" fill="none" stroke="' + meng(kleur, INKT, 0.25) + '" stroke-width="5" stroke-linecap="round"/>';
-    /* Hier zat een gratis petje. Nu er echte hoeden in de winkel liggen, is dat er een te veel; de plek blijft
+    var kleur = m.kleur, oog = m.donker ? '#fff' : INKT, pupil = INKT, lidK = m.donker ? '#fff' : INKT;
+    /* de mond is donker, behalve op een heel donker gezicht: daar zag je hem niet */
+    var mondK = m.helder < 0.22 ? '#F3EFE9' : INKT, blos = m.helder > 0.55 ? '#F26749' : '#FF8FA3';
+    var rim = Math.max(1.6, Math.min(6, 120 / (maat || 100)));
+    var pk = leeft ? '' : ' class="av-pupil"';
+    var soort = m.ogen;
+    if (stm === 'blij') soort = 1; else if (stm === 'au') soort = 'au'; else if (stm === 'oeps') soort = 'oeps'; else if (stm === 'slaapt') soort = 8;
+    var px = klem(st.gx * 2.6 + m.kijk * .8, -4, 4), py = klem(st.gy * 2.4, -3, 3);
+    function lijn(d, kl, w){ return '<path d="' + d + '" fill="none" stroke="' + kl + '" stroke-width="' + (w || 4.5) + '" stroke-linecap="round" stroke-linejoin="round"/>'; }
+    /* het ooglid: trots doet hem half dicht, cool heeft hem altijd half dicht */
+    var lid = Math.max(st.lid, soort === 5 ? .667 : 0), lidId = id + 'l' + Math.round(lid * 20);
+    function eenOog(k){
+      if (soort === 1) return lijn('M-7,1 q7,-9 14,0', oog);
+      if (soort === 'au') return lijn(k < 0 ? 'M-8,-7 L3,0 L-8,7' : 'M8,-7 L-3,0 L8,7', oog);
+      if (soort === 8) return lijn('M-7,-1 q7,7 14,0', oog);
+      if (soort === 2 && k > 0) return lijn('M-7,0 q7,-7 14,0', oog);
+      if (soort === 7) return '<g transform="translate(' + f(px * .4) + ',' + f(py * .4) + ')">' + ster(0, 0, 11, '#FFD166', INKT) + '</g>';
+      var s, ring = '', r0 = 8;
+      if (soort === 10){ r0 = 9.5; s = '<rect' + pk + ' x="' + f(-4.6 + px * .7) + '" y="' + f(-9.5 + py * .7) + '" width="9.2" height="19" rx="4.6" fill="' + mondK + '"/><ellipse' + pk + ' cx="' + f(-1.6 + px * .7) + '" cy="' + f(-4.4 + py * .7) + '" rx="1.5" ry="2.6" fill="#fff" opacity=".55"/>'; }
+      else if (soort === 4){ r0 = 10; s = '<circle r="10" fill="' + oog + '"/><circle' + pk + ' cx="' + f(px) + '" cy="' + f(py + 1) + '" r="5" fill="' + pupil + '"/><circle' + pk + ' cx="' + f(px + 2) + '" cy="' + f(py - 1) + '" r="1.6" fill="#fff"/>'; }
+      else if (soort === 3){ r0 = 11; s = '<circle r="11" fill="' + oog + '" opacity=".95"/><circle' + pk + ' cx="' + f(px) + '" cy="' + f(py + 1) + '" r="4" fill="' + pupil + '"/>'; ring = '<circle r="11" fill="none" stroke="' + pupil + '" stroke-width="3"/>'; }
+      else if (soort === 'oeps' || soort === 6){ r0 = 11; s = '<circle r="11" fill="' + oog + '"/><circle' + pk + ' cx="' + f(px * .8) + '" cy="' + f(py * .8 + 1) + '" r="4.2" fill="' + pupil + '"/><circle' + pk + ' cx="' + f(px * .8 + 1.6) + '" cy="' + f(py * .8 - .6) + '" r="1.3" fill="#fff"/>'; }
+      else if (soort === 5) s = '<circle r="8" fill="' + oog + '"/><circle' + pk + ' cx="' + f(px * .6) + '" cy="' + f(py + 2.5) + '" r="4" fill="' + pupil + '"/>';
+      else if (soort === 9){ r0 = 7.5; s = '<circle r="7.5" fill="' + oog + '"/><circle' + pk + ' cx="' + f(px * .6) + '" cy="' + f(py + 1) + '" r="4" fill="' + pupil + '"/>'; }
+      else s = '<circle r="8" fill="' + oog + '"/><circle' + pk + ' cx="' + f(px) + '" cy="' + f(py + 1) + '" r="4" fill="' + pupil + '"/>';
+      var g = st.open < .99 ? '<g transform="scale(1,' + f(klem(st.open, .06, 1)) + ')">' + s + '</g>' : s;
+      if (lid > .03){
+        var cut = -12 + lid * 18;
+        g = '<g clip-path="url(#' + lidId + ')">' + g + '</g>';
+        if (soort !== 10) g += lijn('M' + f(-r0 - 1) + ',' + f(cut) + ' h' + f(2 * r0 + 2), lidK, soort === 5 ? 3.2 : 2.4);
+      }
+      return g + ring;
+    }
+    function wenkbrauw(k){
+      var d = '', w = 3.4;
+      if (stm === 'sip') d = k < 0 ? 'M-9,-12 L7,-16' : 'M9,-12 L-7,-16';
+      else if (stm === 'denkt') d = k < 0 ? 'M-8,-14 q8,-3 15,0' : 'M-8,-19 q8,-6 15,-1';
+      else if (stm === 'au') d = k < 0 ? 'M-9,-15 L7,-11' : 'M9,-15 L-7,-11';
+      else if (soort === 'oeps' || soort === 6){ d = k < 0 ? 'M-11,-16 q10,-10 21,-4' : 'M-9,-20 q10,-5 20,3'; w = 3.6; }
+      else if (soort === 9){ d = k < 0 ? 'M-10,-14 l14,5' : 'M10,-14 l-14,5'; w = 4; }
+      return d ? lijn(d, lidK, w) : '';
+    }
+    var mnd = m.mond;
+    if (stm === 'blij') mnd = 3; else if (stm === 'au') mnd = 1; else if (stm === 'sip') mnd = 'sip'; else if (stm === 'oeps') mnd = 'oeps';
+    else if (stm === 'trots') mnd = 'trots'; else if (stm === 'denkt') mnd = 'denkt'; else if (stm === 'slaapt') mnd = 'slaapt';
+    var mlijn = '" fill="none" stroke="' + mondK + '" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>';
+    var mondSvg;
+    if (mnd === 'oeps') mondSvg = '<ellipse cx="3" cy="17" rx="5" ry="6.5" fill="' + mondK + '"/>';
+    else if (mnd === 0) mondSvg = '<path d="M-10,12 q10,10 20,0' + mlijn;
+    else if (mnd === 1) mondSvg = '<circle cx="0" cy="14" r="4.5" fill="' + mondK + '"/>';
+    else if (mnd === 2) mondSvg = '<path d="M-7,13 h14' + mlijn;
+    else if (mnd === 'sip') mondSvg = '<path d="M-10,17 q10,-9 20,0' + mlijn;
+    else if (mnd === 'trots') mondSvg = '<path d="M-9,13 q9,7 18,-3' + mlijn;
+    else if (mnd === 'denkt') mondSvg = '<path d="M-3,15 q5,-2 10,1' + mlijn;
+    else if (mnd === 'slaapt') mondSvg = '<ellipse cx="2" cy="15" rx="3" ry="3.6" fill="' + mondK + '"/>';
+    else if (mnd === 4) mondSvg = '<path d="M-11,11 q11,10 22,0' + mlijn + '<path d="M1,15.5 h9 v4 a4.5,4.5 0 0 1 -9,0 z" fill="#F47A8A" stroke="' + mondK + '" stroke-width="2" stroke-linejoin="round"/><path d="M5.5,16 v4" stroke="#c0442c" stroke-width="1.2" stroke-linecap="round"/>';
+    else if (mnd === 5) mondSvg = '<path d="M-13,9 h26 q0,14 -13,14 q-13,0 -13,-14 z" fill="' + mondK + '"/><path d="M-11,10.5 h22 q0,3 -1,4.5 h-20 q-1,-1.5 -1,-4.5 z" fill="#fff"/>';
+    else if (mnd === 6) mondSvg = '<path d="M-10,15 q10,5 18,-5' + mlijn + '<path d="M8,10 l3,-1" stroke="' + mondK + '" stroke-width="3" stroke-linecap="round"/>';
+    else if (mnd === 7) mondSvg = '<ellipse cx="0" cy="15" rx="5.5" ry="7" fill="' + mondK + '"/><ellipse cx="0" cy="18" rx="3" ry="2.4" fill="#F26749" opacity=".9"/>';
+    else if (mnd === 8) mondSvg = '<path d="M-10,12 q5,6 10,0 q5,6 10,0' + mlijn;
+    else if (mnd === 9) mondSvg = '<path d="M-13,9 h26 q0,14 -13,14 q-13,0 -13,-14 z" fill="' + mondK + '"/><path d="M-11,10.5 h22 q0,3.5 -1,5 h-20 q-1,-1.5 -1,-5 z" fill="#fff"/><path d="M-10.5,13 h21" stroke="#8f9db0" stroke-width="1.4"/><g fill="#8f9db0"><rect x="-8" y="11.5" width="3" height="3" rx=".6"/><rect x="-1.5" y="11.5" width="3" height="3" rx=".6"/><rect x="5" y="11.5" width="3" height="3" rx=".6"/></g>';
+    else mondSvg = '<path d="M-12,10 h24 q0,13 -12,13 q-12,0 -12,-13 z" fill="' + mondK + '"/><path d="M-6,19.5 q6,-5 12,0 q-2,3.2 -6,3.2 q-4,0 -6,-3.2 z" fill="#F26749"/>';
+
+    /* figuren achter het hoofd: ze zitten vast aan het lijf en draaien mee */
+    var achter = '', lichter = meng(kleur, '#ffffff', .3), donkerder = meng(kleur, '#000000', .2);
+    function bol(x, y, z, r, kl, plat){ var P = rot(x, y, z), c = '<circle cx="' + f(P[0]) + '" cy="' + f(P[1]) + '" r="' + r + '" fill="'; return c + kl + '"/>' + (plat ? '' : c + 'url(#' + id + 's)"/>'); }
+    function vlakje(pts, kl, w){ return '<path d="M' + pts.map(function(q){ var P = rot(q[0], q[1], q[2]); return f(P[0]) + ',' + f(P[1]); }).join(' L') + 'Z" fill="' + kl + '" stroke="' + kl + '" stroke-width="' + w + '" stroke-linejoin="round"/>'; }
+    var fig = sp.f;
+    if (fig === 1) [-1, 1].forEach(function(k){ achter += bol(k * 31, -33, -4, 14, kleur) + bol(k * 32, -34, 2, 7.5, lichter, 1); });
+    else if (fig === 2) for (var i = 0; i < 10; i++){ var an = i / 10 * Math.PI * 2 + .3; achter += bol(Math.cos(an) * 51, Math.sin(an) * 51, -14, 11, lichter); }
+    else if (fig === 3) [[-40, 8, -6, 17], [40, 4, -6, 16], [-26, -32, -8, 17], [8, -44, -10, 16], [32, -26, -8, 13]].forEach(function(q){ achter += bol(q[0], q[1], q[2], q[3], kleur); });
+    else if (fig === 4) [-1, 1].forEach(function(k){ var A = rot(k * 10, -38, 10), B = rot(k * 24, -66, -2); achter += '<path d="M' + f(A[0]) + ',' + f(A[1]) + ' Q' + f((A[0] + B[0]) / 2 + k * 6) + ',' + f((A[1] + B[1]) / 2) + ' ' + f(B[0]) + ',' + f(B[1]) + '" fill="none" stroke="' + donkerder + '" stroke-width="3.4" stroke-linecap="round"/>' + bol(k * 24, -66, -2, 6, '#FFD166', 1); });
+    else if (fig === 5) achter += bol(0, -47, -10, 15, donkerder) + bol(0, -37, -4, 7, donkerder, 1);
+    else if (fig === 6) [-1, 1].forEach(function(k){ achter += vlakje([[k * 38, -16, -6], [k * 32, -60, -10], [k * 6, -40, -4]], kleur, 7) + vlakje([[k * 31, -26, -3], [k * 29, -50, -7], [k * 14, -38, -2]], '#F6B8C6', 3); });
+
+    /* het gezicht */
+    var ogen = '', rest = '';
+    var ey = (soort === 3 || soort === 4 || soort === 5 || soort === 7 || soort === 'au') ? -4 : soort === 9 ? -3 : -5;
+    [-1, 1].forEach(function(k){ ogen += stuk(k * 15, ey, eenOog(k)); rest += stuk(k * 15, ey, wenkbrauw(k)); });
+    if (soort === 3) rest += stuk(0, -4, lijn('M-4,0 h8', pupil, 3));
+    if (sp.q) rest += stuk(0, -4, '<g transform="translate(0,4)">' + bril(sp.q) + '</g>');
+    rest += stuk(0, 13, '<g transform="translate(0,-13)">' + mondSvg + '</g>');
+    var e = m.extra;
+    if (e === 0 || stm === 'oeps' || stm === 'blij') [-1, 1].forEach(function(k){ rest += stuk(k * 26, 8, '<circle r="5" fill="' + (e === 0 ? blos : '#F26749') + '" opacity=".5"/>'); });
+    if (e === 1) [-1, 1].forEach(function(k){ rest += stuk(k * 26, 9, '<g fill="' + oog + '" opacity=".7"><circle cx="' + k + '" cy="-3" r="1.6"/><circle cx="' + (-4 * k) + '" cy="1" r="1.6"/><circle cx="' + (4 * k) + '" cy="3" r="1.6"/></g>'); });
+    /* Hier zat ooit een gratis petje. Nu er echte hoeden in de winkel liggen, is dat er een te veel; de plek blijft
        bestaan (anders verandert het gezichtje van iedereen die deze extra koos) en er ligt nu een pleister. */
-    else if (e === 3) s += '<g transform="rotate(-16)"><rect x="13" y="-21" width="23" height="10" rx="3" fill="#F6D9B0" stroke="#c99f6e" stroke-width="1.2"/><g fill="#c99f6e"><circle cx="19" cy="-18" r="1"/><circle cx="19" cy="-14" r="1"/><circle cx="30" cy="-18" r="1"/><circle cx="30" cy="-14" r="1"/></g></g>';
-    else if (e === 4) s += '<path d="M30,-30 l3,7 7,1 -5,5 1,7 -6,-4 -6,4 1,-7 -5,-5 7,-1z" fill="#FFD166" stroke="#c9971f" stroke-width="1" stroke-linejoin="round"/>';
-    else if (e === 6) s += '<path d="M30,-27 q9,12 0,19 q-9,-7 0,-19 z" fill="#9EC3FF" stroke="#14224C" stroke-width="1.4" stroke-opacity=".5"/><path d="M27.5,-14 q-1,-3 .5,-5.5" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity=".85"/>';
-    else if (e === 7){ var snor = '#3a2519';
-      s += '<path d="M0,7 q-5,-4 -11,-1.5 q-4,1.5 -7,-1 q3,7 11,5 q4,-1 7,-3 q3,2 7,3 q8,2 11,-5 q-3,2.5 -7,1 q-6,-2.5 -11,1.5 z" fill="' + snor + '" stroke="' + (helder < 0.3 ? 'rgba(255,255,255,.5)' : 'none') + '" stroke-width="1"/>'; }
-    else if (e === 8) s += '<g fill="#FFD166" stroke="#c9971f" stroke-width=".8" stroke-linejoin="round"><path d="M-34,-30 q1.5,5 6,6 q-4.5,1 -6,6 q-1.5,-5 -6,-6 q4.5,-1 6,-6z"/><path d="M36,14 q1,3.5 4,4 q-3,1 -4,4 q-1,-3 -4,-4 q3,-.5 4,-4z"/><path d="M-38,14 q.8,2.6 3,3 q-2.2,.6 -3,3 q-.8,-2.4 -3,-3 q2.2,-.4 3,-3z"/></g>';
-    else if (e === 9) s += '<circle cx="20" cy="11" r="2.5" fill="' + (helder < 0.3 ? '#F3EFE9' : INKT) + '" opacity=".85"/>';
-    s += '</g>';
-    /* uit de winkel: eerst de rand (achter niets, want hij ligt om het gezicht), dan de hoed erop */
-    if (sp && sp.r) s += rand(sp.r);
-    /* de hoed ademt mee (zelfde maat en zelfde moment) en wiebelt als je eroverheen gaat */
-    if (sp && sp.h){ var hd = hoed(sp.h);
-      if (hd) s += '<g class="av-alles" style="animation-delay:-' + d1 + 's"><g class="av-hoed" transform="' + hoedPlek(M, 0, 1) + '">' + halo(hd, rim * 2) + hd + '</g></g>'; }
-    if (sp && sp.b) s += trofee(sp.b);
-    return s + '</svg>';
+    else if (e === 3) rest += stuk(19, -22, '<g transform="rotate(-16)"><rect x="-11.5" y="-5" width="23" height="10" rx="3" fill="#F6D9B0" stroke="#c99f6e" stroke-width="1.2"/><g fill="#c99f6e"><circle cx="-5.5" cy="-2" r="1"/><circle cx="-5.5" cy="2" r="1"/><circle cx="5.5" cy="-2" r="1"/><circle cx="5.5" cy="2" r="1"/></g></g>');
+    else if (e === 4) rest += stuk(30, -22, '<path transform="translate(-30,-22)" d="M30,-30 l3,7 7,1 -5,5 1,7 -6,-4 -6,4 1,-7 -5,-5 7,-1z" fill="#FFD166" stroke="#c9971f" stroke-width="1" stroke-linejoin="round"/>');
+    else if (e === 6) rest += stuk(30, -18, '<g transform="translate(-30,-18)"><path d="M30,-27 q9,12 0,19 q-9,-7 0,-19 z" fill="#9EC3FF" stroke="#14224C" stroke-width="1.4" stroke-opacity=".5"/><path d="M27.5,-14 q-1,-3 .5,-5.5" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity=".85"/></g>');
+    else if (e === 7) rest += stuk(0, 7, '<path transform="translate(0,-7)" d="M0,7 q-5,-4 -11,-1.5 q-4,1.5 -7,-1 q3,7 11,5 q4,-1 7,-3 q3,2 7,3 q8,2 11,-5 q-3,2.5 -7,1 q-6,-2.5 -11,1.5 z" fill="#3a2519" stroke="' + (m.helder < 0.3 ? 'rgba(255,255,255,.5)' : 'none') + '" stroke-width="1"/>');
+    else if (e === 9) rest += stuk(20, 11, '<circle r="2.5" fill="' + (m.helder < 0.3 ? '#F3EFE9' : INKT) + '" opacity=".85"/>');
+
+    /* los in beeld, niet op de bol: glinsters, het zweetdruppeltje van oeps, zzz en een denkwolkje */
+    var los = '';
+    if (e === 8) los += '<g fill="#FFD166" stroke="#c9971f" stroke-width=".8" stroke-linejoin="round"><path d="M-34,-30 q1.5,5 6,6 q-4.5,1 -6,6 q-1.5,-5 -6,-6 q4.5,-1 6,-6z"/><path d="M36,14 q1,3.5 4,4 q-3,1 -4,4 q-1,-3 -4,-4 q3,-.5 4,-4z"/><path d="M-38,14 q.8,2.6 3,3 q-2.2,.6 -3,3 q-.8,-2.4 -3,-3 q2.2,-.4 3,-3z"/></g>';
+    if (stm === 'oeps') los += '<path d="M37,-27 q6,9 0,13 q-6,-4 0,-13 z" fill="#83A5F2" stroke="#14224C" stroke-width="1.2" stroke-opacity=".35"/>';
+    if (stm === 'slaapt') los += '<g fill="currentColor" font-family="Poppins,system-ui,sans-serif" font-weight="700"><text x="34" y="-34" font-size="13" opacity=".7">z</text><text x="44" y="-46" font-size="9" opacity=".45">z</text></g>';
+    if (stm === 'denkt') los += '<g fill="currentColor" opacity=".45"><circle cx="36" cy="-38" r="2.6"/><circle cx="43" cy="-46" r="3.4"/><circle cx="52" cy="-55" r="4.4"/></g>';
+
+    /* het licht glijdt een klein beetje mee als het hoofd draait */
+    var lx = .34 - st.yaw / 320, ly = .28 - st.pitch / 320;
+    var s = '<defs><clipPath id="' + id + 'k"><path transform="rotate(' + m.draai + ')" d="' + m.d + '"/></clipPath>' +
+      (lid > .03 ? '<clipPath id="' + lidId + '"><rect x="-16" y="' + f(-12 + lid * 18) + '" width="32" height="40"/></clipPath>' : '') +
+      '<radialGradient id="' + id + 'g" cx="' + f(lx) + '" cy="' + f(ly) + '" r=".62"><stop offset="0" stop-color="#fff" stop-opacity=".3"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>' +
+      '<radialGradient id="' + id + 's" cx=".42" cy=".36" r=".8"><stop offset=".52" stop-color="#0b1433" stop-opacity="0"/><stop offset="1" stop-color="#0b1433" stop-opacity=".22"/></radialGradient></defs>';
+    if (sp.a) s += achtergrond(sp.a);
+    if (schaduw) s += '<ellipse cx="0" cy="52" rx="' + f(30 * (1 + st.hop / 60)) + '" ry="4.5" fill="currentColor" opacity="' + f(.13 * (1 + st.hop / 40)) + '"/>';
+    var beweeg = (st.hop || st.roll || st.sq) ? ' transform="translate(0,' + f(st.hop) + ') rotate(' + f(st.roll) + ') translate(0,46) scale(' + f(1 - st.sq) + ',' + f(1 + st.sq) + ') translate(0,-46)"' : '';
+    var adem = leeft ? '' : ' class="av-alles" style="animation-delay:-' + m.d1 + 's"';
+    s += '<g' + adem + '><g' + beweeg + '><g transform="rotate(' + m.draai + ')">' + achter;
+    /* alleen een heel donker gezicht krijgt een lichte rand, anders valt het weg op een donkere pagina */
+    if (m.helder < 0.3) s += '<path d="' + m.d + '" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="' + f1(rim * 2) + '" stroke-linejoin="round"/>';
+    s += '<path d="' + m.d + '" fill="' + kleur + '"/><path d="' + m.d + '" fill="url(#' + id + 's)"/><path d="' + m.d + '" fill="url(#' + id + 'g)"/></g>';
+    s += '<g clip-path="url(#' + id + 'k)">' + (leeft ? ogen : '<g class="av-ogen" style="animation-delay:-' + m.d2 + 's">' + ogen + '</g>') + rest + '</g>' + los + '</g></g>';
+    /* uit de winkel: eerst de rand (hij ligt om het gezicht), dan de hoed of de krul op de kruin */
+    if (sp.r) s += rand(sp.r);
+    var hd = sp.h ? hoed(sp.h) : '';
+    if (hd || e === 2){
+      var T = rot(0, -44, 14), plek = 'translate(' + f(T[0]) + ',' + f(T[1] + 44) + ') rotate(' + f(st.yaw * .3) + ',0,' + f(M.top) + ')';
+      var op = hd ? '<g transform="' + hoedPlek(M, 0, 1) + '"><g class="av-hoed">' + halo(hd, rim * 2) + hd + '</g></g>'
+                  : '<path d="M2,' + f1(M.top + 3) + ' q4,-12 14,-6 q-8,-2 -10,6" fill="none" stroke="' + meng(kleur, INKT, 0.25) + '" stroke-width="5" stroke-linecap="round"/>';
+      s += '<g' + adem + '><g' + beweeg + '><g transform="' + plek + '">' + op + '</g></g></g>';
+    }
+    if (sp.b) s += trofee(sp.b);
+    return s;
+  }
+
+  function nieuwId(){ teller = (teller + 1) % 1e9; return 'av' + teller.toString(36) + '_'; }
+  function kop(naam, spec, maat, klasse, extra){
+    return '<svg class="avatar' + (klasse ? ' ' + klasse : '') + '" viewBox="-50 -50 100 100" overflow="visible" width="' + maat + '" height="' + maat + '" aria-hidden="true" focusable="false" data-an="' + esc(naam) + '" data-as="' + esc(spec) + '"' + (extra || '') + '>';
+  }
+  /* opties.stemming: '' (gewoon), 'au' (net geraakt), 'blij' (goed gedaan), 'sip' (jammer), 'oeps' (betrapt: grote ogen, o-mondje),
+     'trots' (gewonnen), 'denkt' (een vraag loopt) of 'slaapt' (wachten); de spellen kiezen die per moment.
+     opties.klasse: extra klasse op de svg, zoals 'av-juich' voor een sprongetje.
+     opties.kijk: [x, y] van -1 tot 1, de kant die het hoofd op kijkt.
+     opties.leef: true of een sleutel; opties.volg: hoe sterk het hoofd de muis of vinger volgt (0 tot 1). */
+  function svg(naam, maat, spec, opties){
+    maat = maat || 32; opties = opties || {};
+    var m = model(naam, spec), stemming = opties.stemming || '', extra = stemming ? ' data-st="' + esc(stemming) + '"' : '';
+    if (opties.leef){
+      extra += ' data-leef="' + esc(opties.leef === true ? '1' : opties.leef) + '"' +
+        (opties.volg != null ? ' data-volg="' + (+opties.volg) + '"' : '') + (opties.kijk ? ' data-kijk="' + (+opties.kijk[0] || 0) + ',' + (+opties.kijk[1] || 0) + '"' : '');
+      wacht();
+    }
+    return kop(naam, spec, maat, opties.klasse, extra) + teken(m, rustStaat(m, stemming, opties.kijk), nieuwId(), false, false, maat) + '</svg>';
+  }
+  var cache = {}, aantalCache = 0;
+  /* de binnenkant (viewBox -50..50), voor wie hem in een eigen svg tekent, zoals de arena van Zwaardvechter;
+     kijk: [x, y], de kant die het hoofd op kijkt (daar mikt de speler) */
+  function inhoud(naam, spec, stemming, kijk){
+    var sleutel = (spec || '') + '|' + String(naam || '').toLowerCase().trim() + '|' + (stemming || '') + '|' + (kijk ? kijk.join(',') : '');
+    if (cache[sleutel]) return cache[sleutel];
+    if (aantalCache > 300){ cache = {}; aantalCache = 0; }
+    aantalCache++;
+    var m = model(naam, spec);
+    return (cache[sleutel] = teken(m, rustStaat(m, stemming, kijk), nieuwId(), false, false, 100));
   }
   function vul(root){
     Array.prototype.forEach.call((root || document).querySelectorAll('[data-avatar]'), function(el){
       el.innerHTML = svg(el.getAttribute('data-avatar'), +el.getAttribute('data-maat') || 32, el.getAttribute('data-spec') || '');
     });
   }
-  /* de ogen volgen de muis: per gezichtje op de pagina schuiven de pupillen een stukje richting de muis.
+  /* ---------- leven ----------
+     Een levend gezichtje wordt elk beeldje opnieuw getekend: het hoofd drijft een
+     beetje, volgt de muis of vinger, de ogen knipperen en kijken rond, en een
+     stemming veert erin. Eén lus voor de hele pagina, alleen voor wat in beeld is.
+     Wie minder beweging wil, krijgt een stil gezichtje dat wel van stemming wisselt. */
+  var rustig = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var LEVEND = [], BEWAARD = {}, loopt = false, vorige = 0, muis = { x:0, y:0, aan:false, t:0 }, muisAan = false;
+  var io = typeof IntersectionObserver === 'function' ? new IntersectionObserver(function(es){
+    es.forEach(function(e){ for (var i = 0; i < LEVEND.length; i++) if (LEVEND[i].el === e.target) LEVEND[i].zicht = e.isIntersecting; });
+  }) : null;
+  function leef(el, opties){
+    if (!el || typeof document === 'undefined') return null;
+    opties = opties || {};
+    var sv = el.tagName && el.tagName.toLowerCase() === 'svg' ? el : null;
+    if (!sv){
+      el.innerHTML = svg(opties.naam || '', opties.maat || 120, opties.spec || '', { stemming:opties.stemming, kijk:opties.kijk });
+      sv = el.querySelector('svg');
+    }
+    for (var i = 0; i < LEVEND.length; i++) if (LEVEND[i].el === sv){ stel(LEVEND[i], opties); return LEVEND[i].api; }
+    var naam = opties.naam != null ? opties.naam : sv.getAttribute('data-an') || '', spec = opties.spec != null ? opties.spec : sv.getAttribute('data-as') || '';
+    var m = model(naam, spec), nu = performance.now() / 1000, stemming = opties.stemming != null ? opties.stemming : sv.getAttribute('data-st') || '';
+    if (opties.kijk === undefined && sv.getAttribute('data-kijk')) opties.kijk = sv.getAttribute('data-kijk').split(',').map(Number);
+    var a = { el:sv, m:m, st:rustStaat(m, stemming, opties.kijk), v:nulStaat(), stemming:stemming, volg:opties.volg == null ? .5 : +opties.volg,
+      kijk:opties.kijk || null, sleutel:opties.sleutel || '', fase:(m.zaad % 1000) / 10, knip:nu + .6 + Math.random() * 3, dichtTot:0,
+      sac:nu + Math.random() * 2, sacDoel:[0, 0], juichElke:0, volgendJuich:0, sinds:nu, laatst:0, zicht:true, schaduw:!!opties.schaduw, id:nieuwId(), klein:0, sig:'' };
+    /* hetzelfde gezichtje, net opnieuw in de pagina gezet: gewoon doorgaan */
+    var oud = null;
+    if (a.sleutel){
+      for (var j = 0; j < LEVEND.length; j++) if (LEVEND[j].sleutel === a.sleutel){ oud = LEVEND[j]; LEVEND.splice(j, 1); break; }
+      if (!oud && BEWAARD[a.sleutel] && nu - BEWAARD[a.sleutel].t < 30) oud = BEWAARD[a.sleutel];
+    }
+    if (oud && oud.m === m){
+      a.st = oud.st; a.v = oud.v; a.knip = oud.knip; a.sac = oud.sac; a.sacDoel = oud.sacDoel; a.juichElke = oud.juichElke; a.volgendJuich = oud.volgendJuich;
+      a.sinds = oud.stemming === stemming ? oud.sinds : nu;
+      if (oud.stemming !== stemming) opwinding(a, stemming);
+    } else opwinding(a, stemming);
+    sv.setAttribute('data-lv', '1');
+    a.api = {
+      zet:function(s){ s = s || ''; if (s !== a.stemming){ a.stemming = s; a.sinds = performance.now() / 1000; opwinding(a, s); } return a.api; },
+      juich:function(kracht){ a.v.hop = -(kracht || 150); return a.api; },
+      juichElke:function(sec){ a.juichElke = sec || 0; a.volgendJuich = 0; return a.api; },
+      kijk:function(xy){ a.kijk = xy || null; return a.api; },
+      volg:function(w){ a.volg = +w || 0; return a.api; }
+    };
+    stel(a, opties);
+    LEVEND.push(a);
+    if (io) io.observe(sv);
+    if (!muisAan && typeof addEventListener === 'function'){
+      muisAan = true;
+      addEventListener('pointermove', function(e){ muis.x = e.clientX; muis.y = e.clientY; muis.aan = true; muis.t = performance.now() / 1000; }, { passive:true });
+      addEventListener('pointerdown', function(e){ muis.x = e.clientX; muis.y = e.clientY; muis.aan = true; muis.t = performance.now() / 1000; }, { passive:true });
+    }
+    if (!loopt){ loopt = true; requestAnimationFrame(stap); }
+    return a.api;
+  }
+  function stel(a, o){
+    if (o.volg != null) a.volg = +o.volg;
+    if (o.kijk !== undefined) a.kijk = o.kijk;
+    if (o.juichElke) a.juichElke = o.juichElke;
+    if (o.stemming != null && o.stemming !== a.stemming){ a.stemming = o.stemming; a.sinds = performance.now() / 1000; opwinding(a, o.stemming); }
+  }
+  /* een nieuwe stemming krijgt een duwtje: een sprongetje bij blij, een schrikje bij oeps */
+  function opwinding(a, s){ if (s === 'blij' || s === 'trots') a.v.hop = -130; else if (s === 'oeps') a.v.hop = -70; }
+  function veer(a, p, doel, k, c, dt){ a.v[p] += ((doel - a.st[p]) * k - a.v[p] * c) * dt; a.st[p] += a.v[p] * dt; }
+  function stap(nu){
+    var t = nu / 1000, dt = Math.min(.05, t - (vorige || t)); vorige = t;
+    if (muis.aan && t - muis.t > 3) muis.aan = false;
+    for (var i = LEVEND.length - 1; i >= 0; i--){
+      var a = LEVEND[i];
+      if (!a.el.isConnected){
+        LEVEND.splice(i, 1); if (io) io.unobserve(a.el);
+        if (a.sleutel){ a.t = t; BEWAARD[a.sleutel] = a; }
+        continue;
+      }
+      if (!a.zicht) continue;
+      var d = { yaw:0, pitch:0, roll:0, gx:a.sacDoel[0], gy:a.sacDoel[1], open:1, lid:0 };
+      if (!rustig){
+        d.yaw = 7 * Math.sin(t * .35 + a.fase) + 3 * Math.sin(t * .9 + a.fase * 2); d.pitch = 4 * Math.sin(t * .27 + a.fase * 3); d.roll = 1.6 * Math.sin(t * .41 + a.fase);
+        if (t > a.sac){ a.sac = t + .7 + Math.random() * 2.6; a.sacDoel = [(Math.random() - .5) * 1.2, (Math.random() - .5) * .8]; }
+      } else { d.gx = d.gy = 0; }
+      if (a.kijk){
+        var kx = klem(+a.kijk[0] || 0, -1, 1), ky = klem(+a.kijk[1] || 0, -1, 1);
+        d.yaw = kx * 22 + d.yaw * .3; d.pitch = ky * 14 + d.pitch * .3; d.gx = kx; d.gy = ky;
+      } else if (muis.aan && a.volg > 0){
+        var r = a.el.getBoundingClientRect(), dx = muis.x - (r.left + r.width / 2), dy = muis.y - (r.top + r.height / 2), dist = Math.sqrt(dx * dx + dy * dy) || 1, w = a.volg;
+        d.yaw = d.yaw * (1 - w) + klem(dx / (r.width * 1.4 + 220) * 30, -22, 22) * w;
+        d.pitch = d.pitch * (1 - w) + klem(dy / (r.height * 1.4 + 220) * 22, -16, 16) * w;
+        var bereik = Math.min(1, dist / Math.max(60, r.width));
+        d.gx = dx / dist * bereik; d.gy = dy / dist * bereik;
+      }
+      stemDoel(a.stemming, d, t);
+      if (a.stemming === 'au' && !rustig) d.roll += Math.sin(t * 38) * 4 * Math.max(0, 1 - (t - a.sinds) / .6);
+      if (!rustig){
+        if (t > a.knip){ a.knip = t + 2.2 + Math.random() * 4; a.dichtTot = t + .13; if (Math.random() < .18) a.knip = t + .32; }
+        if (t < a.dichtTot) d.open = .05;
+        if (a.juichElke && t > a.volgendJuich){ a.volgendJuich = t + a.juichElke; a.v.hop = -150; }
+        var n = Math.ceil(dt / .008), h = dt / n;
+        for (var q = 0; q < n; q++){
+          veer(a, 'yaw', d.yaw, 90, 13, h); veer(a, 'pitch', d.pitch, 90, 13, h); veer(a, 'roll', d.roll, 120, 14, h);
+          veer(a, 'gx', d.gx, 500, 40, h); veer(a, 'gy', d.gy, 500, 40, h);
+          veer(a, 'open', d.open, 1400, 70, h); veer(a, 'lid', d.lid, 200, 24, h);
+          veer(a, 'hop', 0, 260, 9, h);
+        }
+        a.st.sq = klem(-a.v.hop / 1500, -.08, .08);
+      } else {
+        ['yaw', 'pitch', 'roll', 'gx', 'gy', 'open', 'lid'].forEach(function(p){ a.st[p] = d[p]; });
+        a.st.hop = 0; a.st.sq = 0;
+      }
+      a.st.stemming = a.stemming;
+      /* kleine gezichtjes hoeven niet elk beeldje: dertig keer per seconde is genoeg */
+      if (!a.klein || t - a.klein > 1){ a.klein = t; a.maat = a.el.getBoundingClientRect().width || 40; }
+      if (a.maat < 64 && t - a.laatst < 1 / 30) continue;
+      var sig = rustig ? a.stemming + a.st.yaw + ',' + a.st.pitch : '';
+      if (rustig && sig === a.sig) continue;
+      a.sig = sig; a.laatst = t;
+      a.el.innerHTML = teken(a.m, a.st, a.id, true, a.schaduw, a.maat);
+    }
+    if (LEVEND.length) requestAnimationFrame(stap); else loopt = false;
+  }
+  /* gezichtjes die met leef:true als tekst in de pagina komen, gaan vanzelf leven */
+  var wachter = null;
+  function wacht(){
+    if (wachter || typeof MutationObserver !== 'function' || typeof document === 'undefined') return;
+    if (!document.body){ document.addEventListener('DOMContentLoaded', wacht, { once:true }); return; }
+    wachter = new MutationObserver(function(lijst){
+      for (var i = 0; i < lijst.length; i++){
+        var t = lijst[i].target;
+        /* de gezichtjes die al leven, tekenen zichzelf elk beeldje opnieuw: die overslaan */
+        if (t.nodeType === 1 && t.closest && t.closest('svg[data-lv]')) continue;
+        for (var j = 0; j < lijst[i].addedNodes.length; j++) if (lijst[i].addedNodes[j].nodeType === 1){ zoek(); return; }
+      }
+    });
+    wachter.observe(document.body, { childList:true, subtree:true });
+    zoek();
+  }
+  function zoek(){
+    Array.prototype.forEach.call(document.querySelectorAll('svg.avatar[data-leef]:not([data-lv])'), function(el){
+      var s = el.getAttribute('data-leef'), k = el.getAttribute('data-kijk');
+      leef(el, { sleutel:s !== '1' ? s : '', stemming:el.getAttribute('data-st') || '', volg:el.hasAttribute('data-volg') ? +el.getAttribute('data-volg') : undefined,
+        kijk:k ? k.split(',').map(Number) : undefined });
+    });
+  }
+
+  /* de ogen van de stille gezichtjes volgen de muis: per gezichtje op de pagina schuiven de pupillen een stukje richting de muis.
      Niet in de arena van Zwaardvechter (daar staan ze in een use) en niet als iemand liever geen beweging heeft. */
   (function(){
     if (typeof document === 'undefined' || typeof matchMedia !== 'function') return;
@@ -400,7 +672,7 @@ window.AVATAR = (function(){
     function kijk(){
       bezig = false;
       var vh = innerHeight, vw = innerWidth;
-      Array.prototype.forEach.call(document.querySelectorAll('svg.avatar'), function(el){
+      Array.prototype.forEach.call(document.querySelectorAll('svg.avatar:not([data-lv])'), function(el){
         var r = el.getBoundingClientRect();
         if (!r.width || r.bottom < 0 || r.top > vh || r.right < 0 || r.left > vw) return;
         var cx = r.left + r.width / 2, cy = r.top + r.height / 2 - r.height * 0.04;
@@ -432,5 +704,5 @@ window.AVATAR = (function(){
       '@media(prefers-reduced-motion:reduce){.av-alles,.av-ogen,.av-hoed,.av-juich{animation:none !important}}';
     document.head.appendChild(st);
   } catch (e){}
-  return { svg:svg, inhoud:inhoud, vul:vul, ontleed:ontleed, maak:maak, KEUZES:KEUZES, NAMEN:NAMEN, KLEUREN:KLEUREN, KLEUREN2:KLEUREN2 };
+  return { svg:svg, inhoud:inhoud, vul:vul, leef:leef, ontleed:ontleed, maak:maak, KEUZES:KEUZES, NAMEN:NAMEN, KLEUREN:KLEUREN, KLEUREN2:KLEUREN2 };
 })();

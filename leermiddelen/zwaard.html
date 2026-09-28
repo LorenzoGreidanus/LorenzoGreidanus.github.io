@@ -2236,7 +2236,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     var wie = naam ? { naam:naam, av:av || '' } : { naam:eigenNaam(), av:(window.PROFIEL ? PROFIEL.avatar() : '') };
     /* de stemming: au als je net geraakt bent, blij even na een goed antwoord (alleen jijzelf) */
     var stemming = neer ? 'au' : sp2.flits > 0 ? 'au' : (!naam && blijTot > performance.now()) ? 'blij' : '';
-    s += '<g transform="scale(' + (R / 46).toFixed(3) + ')"' + (sp2.flits > 0 ? ' opacity=".5"' : '') + '><use href="#' + gezichtId(wie.naam, wie.av, stemming) + '"/></g>';
+    s += '<g transform="scale(' + (R / 46).toFixed(3) + ')"' + (sp2.flits > 0 ? ' opacity=".5"' : '') + '><use href="#' + gezichtId(wie.naam, wie.av, stemming, kijkVan(mikt * Math.PI / 180)) + '"/></g>';
     if (ring) s += '<circle r="' + (R + 2) + '" fill="none" stroke="' + ring + '" stroke-width="3" opacity=".9"/>';
     if (sp2.crit && !neer) s += '<circle r="' + (R + 9) + '" fill="none" stroke="#F26749" stroke-width="3" opacity="' + (0.55 + Math.sin(pols * 10) * 0.35).toFixed(2) + '"/>';
     if (sp2.blok && !neer) s += '<g transform="rotate(' + mikt.toFixed(1) + ')"><path d="M' + (R + 4) + ',-' + (R + 6) + ' A' + (R + 10) + ',' + (R + 10) + ' 0 0 1 ' + (R + 4) + ',' + (R + 6) + '" fill="none" stroke="#204ECF" stroke-width="7" stroke-linecap="round" opacity=".9"/></g>';
@@ -2565,14 +2565,19 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   /* Een gezichtje hoort bij de vormen die blijven staan: het wordt een keer in
      het vaste vakje gezet en daarna alleen nog aangewezen. */
   var gezichten = {}, gezichtNr = 0;
-  function gezichtId(naam, av, stemming){
-    var sleutel = naam + '|' + av + '|' + (stemming || '');
+  /* het hoofd kijkt de kant op waar je mikt: negen kanten (links, rechts, boven, onder, schuin en recht vooruit) */
+  function kijkVan(hoek){
+    var x = Math.cos(hoek), y = Math.sin(hoek);
+    return [Math.abs(x) < .38 ? 0 : x > 0 ? .8 : -.8, Math.abs(y) < .38 ? 0 : y > 0 ? .7 : -.7];
+  }
+  function gezichtId(naam, av, stemming, kijk){
+    var sleutel = naam + '|' + av + '|' + (stemming || '') + '|' + (kijk ? kijk.join(',') : '');
     if (gezichten[sleutel]) return gezichten[sleutel];
     var id = 'gez' + (++gezichtNr);
     gezichten[sleutel] = id;
     var vast = document.getElementById('arenavast');
     if (vast) vast.insertAdjacentHTML('beforeend',
-      '<g id="' + id + '">' + (window.AVATAR ? AVATAR.inhoud(naam, av, stemming) : '<circle r="46" fill="#204ECF"/>') + '</g>');
+      '<g id="' + id + '">' + (window.AVATAR ? AVATAR.inhoud(naam, av, stemming, kijk) : '<circle r="46" fill="#204ECF"/>') + '</g>');
     return id;
   }
 
