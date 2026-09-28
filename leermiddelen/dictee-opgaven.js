@@ -424,7 +424,7 @@ window.DICTEE_OPGAVEN = {
     { n:3, w:'carrière', zin:'Ze maakte carrière als journalist.', uit:'Frans: dubbele r, en è' },
     { n:3, w:'tête-à-tête', zin:'Ze hadden een tête-à-tête in het café.', uit:'Frans: een dakje op elke ê, à in het midden, streepjes ertussen' },
     { n:3, w:'reçu', zin:'Bewaar het reçu van de garderobe.', uit:'Frans: een c met een haakje (ç), zodat hij klinkt als s' },
-    { n:3, w:'café’s', zin:'In de binnenstad zijn veel café’s.', uit:'Meervoud van café: het eindigt op een klinker met een accent, dus apostrof + s' },
+    { n:3, w:'cafés', zin:'In de binnenstad zijn veel cafés.', uit:'Meervoud van café: na een é komt alleen een s, zonder apostrof, want het accent laat al zien dat de klank lang is' },
     { n:3, w:'jus d’orange', zin:'Bij het ontbijt drink ik jus d’orange.', uit:'Frans: jus, en dan d’orange met een apostrof' }
   ],
   /* ---------- het doorlopende dictee: acht teksten per niveau ---------- */

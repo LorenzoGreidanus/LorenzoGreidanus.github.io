@@ -54,6 +54,7 @@
 <script src="voorlezen.js"></script>
 <script src="luisterspel.js"></script>
 <script src="dictee-opgaven.js"></script>
+<script src="dictee-maker.js"></script>
 <script src="eigen.js"></script>
 <script>
 (function(){
@@ -72,6 +73,34 @@
     /* een onderdeel dat op dit niveau niet bestaat (leenwoorden op bb): het niveau erboven */
     for (var k = n + 1; !eigen.length && k <= 3; k++) eigen = lijst.filter(function(x){ return x.n === k; });
     return lager.length && Math.random() < .25 ? lager : eigen.length ? eigen : lijst;
+  }
+  /* ---------- nooit twee keer hetzelfde ----------
+     Dit apparaat onthoudt per onderdeel wat je al kreeg (een korte code per opgave). Eerst komt wat je
+     nog niet had: uit de vaste lijst en uit de zinnenmaker (dictee-maker.js) door elkaar. De zinnenmaker
+     heeft tienduizenden werkwoord- en leestekenzinnen, dus die raakt niet op. Is de vaste lijst op, dan
+     begint alleen die opnieuw. */
+  var M = window.DICTEE_MAKER, GEZIEN = {};
+  try { GEZIEN = JSON.parse(localStorage.getItem('lg-dictee-gezien') || '{}') || {}; } catch (e){ GEZIEN = {}; }
+  function kort(s){ var h = 2166136261; s = String(s); for (var i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); }
+  function al(deel, sl){ return (GEZIEN[deel] || []).indexOf(kort(sl)) >= 0; }
+  function zag(deel, sl){
+    var l = GEZIEN[deel] = GEZIEN[deel] || [], k = kort(sl);
+    if (l.indexOf(k) < 0) l.push(k);
+    if (l.length > 4000) l.splice(0, l.length - 4000);
+    try { localStorage.setItem('lg-dictee-gezien', JSON.stringify(GEZIEN)); } catch (e){}
+  }
+  function vers(deel, bank, sleutel, maak){
+    var vrij = bank.filter(function(x){ return !al(deel, sleutel(x)); }), it = null;
+    if (vrij.length && (!maak || Math.random() < .5)) it = kies(vrij);
+    for (var p = 0; !it && maak && p < 40; p++){ var g = maak(); if (g && !al(deel, sleutel(g))) it = g; }
+    if (!it){
+      /* alles gehad: de vaste lijst begint opnieuw */
+      var weg = bank.map(function(x){ return kort(sleutel(x)); });
+      GEZIEN[deel] = (GEZIEN[deel] || []).filter(function(k){ return weg.indexOf(k) < 0; });
+      it = kies(bank);
+    }
+    zag(deel, sleutel(it));
+    return it;
   }
   var LETTER = 'A-Za-zÀ-ÿ';
   function gatVan(zin, woord){
@@ -121,28 +150,28 @@
 
   /* ---------- de onderdelen ---------- */
   function werkwoorden(niveau){
-    var it = kies(items(D.werkwoorden, niveau));
+    var it = vers('ww', items(D.werkwoorden, niveau), function(x){ return x.zin; }, M && function(){ return M.werkwoord(niveau); });
     return L.opgave({ onderdeel:'dictee: werkwoorden', onderdeelNaam:'werkwoorden', taal:'nl-NL', sleutel:'ww' + it.zin,
       spreek: it.zin, antwoord: it.woord, gat: gatVan(it.zin, it.woord), stukje: stukjeVan(it.zin, it.woord),
       vraag:'Luister naar de zin en typ het <b>werkwoord</b> dat in het gat hoort.', opdracht:'Let op de spelling: stam, stam + t, of de verleden tijd.',
       uitleg: it.regel, antwoordTekst: it.woord, naKijk: registreer });
   }
   function woorden(niveau){
-    var it = kies(items(D.woorden, niveau));
+    var it = vers('w', items(D.woorden, niveau), function(x){ return x.w; }, M && function(){ return M.woord(niveau); });
     return L.opgave({ onderdeel:'dictee: lastige woorden', onderdeelNaam:'lastige woorden', taal:'nl-NL', sleutel:'w' + it.w,
       spreek: it.spreek || (it.w + '. ' + it.zin), antwoord: it.antwoordLijst || it.w,
       vraag:'Luister en typ het <b>woord</b> dat je eerst hoort.', opdracht:'Je hoort het woord, en dan een zin waarin het staat.',
       uitleg: it.w + ': ' + it.uit + '.', antwoordTekst: it.w, naKijk: registreer });
   }
   function leestekens(niveau){
-    var it = kies(items(D.leestekens, niveau));
+    var it = vers('lt', items(D.leestekens, niveau), function(x){ return x.zin; }, M && function(){ return M.leesteken(niveau); });
     return L.opgave({ onderdeel:'dictee: hoofdletters en leestekens', onderdeelNaam:'hoofdletters en leestekens', taal:'nl-NL', sleutel:'lt' + it.zin, exact:true, zin:true,
       spreek: it.zin, antwoord: it.antwoordLijst || it.zin, stukken: stukkenVan(it.zin),
       vraag:'Luister en typ de <b>hele zin</b>, met hoofdletters en leestekens.', opdracht:'Hoofdletters, komma’s, punten, vraagtekens en aanhalingstekens tellen mee.',
       uitleg: it.uit, antwoordTekst: it.zin, naKijk: registreer });
   }
   function leenwoorden(niveau){
-    var it = kies(items(D.leenwoorden, niveau));
+    var it = vers('lw', items(D.leenwoorden, niveau), function(x){ return x.w; }, null);
     return L.opgave({ onderdeel:'dictee: leenwoorden', onderdeelNaam:'leenwoorden', taal:'nl-NL', sleutel:'lw' + it.w,
       spreek: it.w + '. ' + it.zin, antwoord: it.antwoordLijst || it.w,
       vraag:'Luister en typ het <b>leenwoord</b> in de Nederlandse spelling.', opdracht:'Een woord uit het Engels of het Frans. Je hoort het woord, en dan een zin.',
@@ -157,12 +186,10 @@
      Elke zin is een opgave van vakspel.js; een ronde is een hele tekst (het
      aantal opgaven is het aantal zinnen). Elk woord telt apart; het eindscherm
      laat de hele tekst zien met de fouten erin. */
-  var gedaan = [], lopend = null, volgnr = 0;
+  var lopend = null, volgnr = 0;
   function kiesTekst(niveau){
-    var n = NIV[niveau] || 2, lijst = D.teksten.filter(function(t){ return t.n === n; });
-    var vrij = lijst.filter(function(t){ return gedaan.indexOf(t.id) < 0; });
-    if (!vrij.length){ gedaan = gedaan.filter(function(id){ return !lijst.some(function(t){ return t.id === id; }); }); vrij = lijst; }
-    var t = kies(vrij); gedaan.push(t.id); return t;
+    var n = NIV[niveau] || 2;
+    return vers('dl', D.teksten.filter(function(t){ return t.n === n; }), function(t){ return t.id; }, null);
   }
   function zinVan(z){ return typeof z === 'string' ? z : z.z; }
   /* wat je al getypt hebt, met de fouten gemarkeerd: zo blijft het een tekst en geen losse zinnen */
@@ -219,7 +246,7 @@
     id:'dictee', naam:'Dictee', vak:'ned', kleur:'#F26749',
     hand:'luisteren, en dan goed schrijven',
     lead: docent ? 'Je docent heeft een dictee voor je klaargezet. De computer leest de tekst zin voor zin voor, jij typt elke zin. Elk woord telt, en aan het eind zie je de hele tekst met je fouten erin.'
-      : 'De computer leest voor, jij schrijft. Werkwoordspelling in een zin, lastige woorden, hoofdletters en leestekens, leenwoorden, of een doorlopend dictee: een korte tekst, zin voor zin. Bij een fout zie je letter voor letter waar het misging, wat voor fout het was en de regel erbij.',
+      : 'De computer leest voor, jij schrijft. Werkwoordspelling in een zin, lastige woorden, hoofdletters en leestekens, leenwoorden, of een doorlopend dictee: een korte tekst, zin voor zin. Bij een fout zie je letter voor letter waar het misging, wat voor fout het was en de regel erbij. Oefen zo lang je wilt: er komen steeds nieuwe zinnen, en wat je al had, komt niet terug.',
     hoe:[
       { kop:'Luister goed', tekst:'Je hoort het woord of de zin, hoogstens drie keer, net als bij een dictee in de klas. Gaat het te snel, druk dan op <b>Langzaam</b>; dat telt ook als een keer.' },
       { kop:'Leer van je fout', tekst:'Fout? Dan zie je letter voor letter wat er anders moest: <b>doorgestreept</b> wat te veel was, groen wat er hoort. En je ziet wat voor fout het was, zoals d/t, ei of ij of een hoofdletter, met de regel erbij.' },
@@ -240,7 +267,7 @@
       return SOORTEN[soort] ? SOORTEN[soort](keuze.niveau) : werkwoorden(keuze.niveau);
     },
     uitleg:{ doel:'Goed schrijven wat je hoort: werkwoorden, lastige woorden, hoofdletters en leestekens, leenwoorden en hele teksten.',
-      tijd:'tien woorden of zinnen per ronde; een doorlopend dictee is een tekst van tien zinnen, het dictee van de week zeven',
+      tijd:'tien woorden of zinnen per ronde, of met Oneindig oefenen zo lang je wilt, steeds met nieuwe zinnen; een doorlopend dictee is een tekst van tien zinnen, het dictee van de week zeven',
       bediening:'Hij leest vanzelf voor. Nog eens luisteren kan met Nog eens of Langzaam, samen drie keer. Typ wat je hoort en druk op Enter om na te kijken; nog een keer Enter gaat naar de volgende.' },
     tutorial:[
       { titel:'Luister', tekst:'De computer leest het woord of de zin voor. Je kunt drie keer luisteren: met Nog eens, of met Langzaam als het te snel gaat.', doel:'luisterBtn' },
