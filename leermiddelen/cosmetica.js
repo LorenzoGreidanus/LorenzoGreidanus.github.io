@@ -106,7 +106,7 @@
   function vind(id){ for (var i = 0; i < ITEMS.length; i++) if (ITEMS[i].id === id) return ITEMS[i]; return null; }
   /* de spec uit elkaar: het gezichtje en wat erop en eromheen zit. Het gezichtje (basis) is wat
      iedereen gratis kiest: vorm, kleur, ogen, mond, extra, en sinds kort ook c (tweede rij kleuren),
-     x (kapsel) en w (haarkleur). Oude specs zonder die drie blijven gewoon geldig. */
+     x en w (haar, niet meer in gebruik maar nog geldig). Oude specs zonder die drie blijven gewoon geldig. */
   function ontleed(spec){
     var m = /^(v\dk\do\dm\de\d(?:c\d{1,2})?(?:x\d{1,2})?(?:w\d)?)(?:h(\d{1,2}))?(?:r(\d{1,2}))?(?:z(\d{1,2}))?(?:b(\d{1,2}))?(?:a(\d{1,2}))?(?:q(\d{1,2}))?$/.exec(String(spec || ''));
     return m ? { basis:m[1], h:+(m[2] || 0), r:+(m[3] || 0), z:+(m[4] || 0), b:+(m[5] || 0), a:+(m[6] || 0), q:+(m[7] || 0) } : null;

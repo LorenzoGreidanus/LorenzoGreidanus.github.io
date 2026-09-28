@@ -5,15 +5,16 @@
 
    Wie een eigen avatar heeft gekozen (profiel.js), geeft een spec mee:
    'v3k2o1m0e4' = vorm, kleur, ogen, mond, extra. Dan telt de naam niet meer.
-   Daarachter mag (in deze volgorde) c (een kleur uit de tweede rij), x (een
-   kapsel) en w (de haarkleur), en dan de dingen uit de winkel: h r z b a q
-   (zie cosmetica.js). Oude specs zonder c, x en w tekenen zoals altijd.
+   Daarachter mag (in deze volgorde) c (een kleur uit de tweede rij), en dan
+   de dingen uit de winkel: h r z b a q (zie cosmetica.js). x en w (haar) mogen
+   er nog in staan van een eerdere versie, maar tekenen niets: het blobje is
+   een blobje, geen mensje.
 
    Gebruik:
      AVATAR.svg('Noor', 32)         een <svg> als tekst, 32 pixels
      AVATAR.svg('Noor', 32, spec)   met eigen keuzes
      AVATAR.inhoud('Noor', spec)    alleen de binnenkant, voor in een eigen svg (viewBox -50..50)
-     AVATAR.ontleed(spec) / AVATAR.maak({v,k,o,m,e,c,x,w})
+     AVATAR.ontleed(spec) / AVATAR.maak({v,k,o,m,e,c,...})
      AVATAR.KEUZES                  hoeveel er van elk zijn
      AVATAR.NAMEN                   hoe elke keuze heet, voor de kiezer
      AVATAR.vul(root)               vult elementen met data-avatar="naam" */
@@ -21,10 +22,11 @@ window.AVATAR = (function(){
   'use strict';
   var KLEUREN = ['#F26749', '#EA9836', '#204ECF', '#83A5F2', '#2f7d52', '#6b3fa0', '#14224C', '#d95c3b', '#1f7a6d'];
   var DONKER = { '#204ECF':1, '#14224C':1, '#6b3fa0':1, '#2f7d52':1, '#1f7a6d':1, '#d95c3b':1, '#F26749':1 };
-  /* de tweede rij kleuren (c1 tot c11): huidtinten van licht tot donker, en een paar vrolijke */
+  /* de tweede rij kleuren (c1 tot c11). De eerste vijf (huidtinten) staan niet meer in de kiezer,
+     want zonder haar lijkt een blob in huidskleur op een kaal hoofdje; ze tekenen nog wel. */
   var KLEUREN2 = ['#F7CFB0', '#E9AE82', '#C98A57', '#94603A', '#5E3B25', '#F4A6BF', '#F6C945', '#6CCBAE', '#A98BE0', '#E2466F', '#8C97AB'];
-  /* haarkleuren (w0 tot w9); w0 is de gewone, donkerbruin */
-  var HAAR = ['#3a2519', '#17161d', '#7a4526', '#E7B85E', '#B9532B', '#DCD7D0', '#3B74E6', '#F28DB2', '#8A5CD6', '#2FA37A'];
+  /* telt de getekende gezichtjes, voor een eigen id per knipsel */
+  var teller = 0;
   var INKT = '#14224C';
   function hash(s){
     var h = 2166136261;
@@ -51,7 +53,7 @@ window.AVATAR = (function(){
   function f1(n){ return (+n).toFixed(1).replace('.0', ''); }
   /* de blob: acht punten rond een cirkel, elk iets naar binnen of buiten, met
      zachte bochten ertussen (Catmull-Rom naar Bezier). Ook de rand zelf komt
-     terug, in stapjes: daarmee passen haar en hoed precies op dit hoofd. */
+     terug, in stapjes: daarmee past een hoed precies op dit hoofd. */
   function blob(r, straal){
     var n = 8, p = [], pts = [];
     for (var i = 0; i < n; i++){
@@ -88,13 +90,11 @@ window.AVATAR = (function(){
     var s = Math.max(0.85, Math.min(1.12, M.bovenBreed / 33)) * (groter || 1);
     return 'translate(0,' + (M.top - (op || 0) + 46 - 30).toFixed(1) + ') scale(' + s.toFixed(3) + ') translate(0,30)';
   }
-  var KEUZES = { vormen:8, kleuren:KLEUREN.length, kleuren2:KLEUREN2.length, ogen:10, monden:10, extras:10, kapsels:15, haarkleuren:HAAR.length };
+  var KEUZES = { vormen:8, kleuren:KLEUREN.length, kleuren2:KLEUREN2.length, ogen:10, monden:10, extras:10 };
   var NAMEN = {
     o:['stipjes', 'blij', 'knipoog', 'bril', 'grote ogen', 'cool', 'verbaasd', 'sterren', 'tevreden', 'vastberaden'],
     m:['lach', 'rondje', 'streepje', 'schaterlach', 'tong uit', 'tanden', 'scheve grijns', 'o', 'kattensnoetje', 'beugel'],
     e:['blosjes', 'sproetjes', 'krul', 'pleister', 'ster', 'niets', 'zweetdruppel', 'snor', 'glinsters', 'moedervlekje'],
-    x:['geen haar', 'kuif', 'stekels', 'krullen', 'afro', 'vlechten', 'paardenstaart', 'knot', 'kort', 'bob met pony', 'lang', 'zijscheiding', 'hoofddoek', 'twee knotjes', 'hanenkam'],
-    w:['donkerbruin', 'zwart', 'bruin', 'blond', 'rood', 'zilver', 'blauw', 'roze', 'paars', 'groen'],
     k:['koraal', 'oranje', 'blauw', 'lichtblauw', 'groen', 'paars', 'nachtblauw', 'steenrood', 'zeegroen'],
     c:['licht perzik', 'perzik', 'karamel', 'bruin', 'donkerbruin', 'roze', 'zonnegeel', 'mint', 'lila', 'framboos', 'grijs']
   };
@@ -108,12 +108,13 @@ window.AVATAR = (function(){
     for (var i = 0; !m && i < 16 && spec.length > 10 && /^v\dk\do\dm\de\d/.test(spec); i++){ spec = spec.replace(/[a-z]\d*$/, ''); m = PATROON.exec(spec); }
     return m ? { v:+m[1], k:+m[2], o:+m[3], m:+m[4], e:+m[5], c:+(m[6] || 0), x:+(m[7] || 0), w:+(m[8] || 0), h:+(m[9] || 0), r:+(m[10] || 0), z:+(m[11] || 0), b:+(m[12] || 0), a:+(m[13] || 0), q:+(m[14] || 0) } : null; }
   function maak(o){
-    var c = (o.c | 0) % (KLEUREN2.length + 1), x = (o.x | 0) % KEUZES.kapsels, w = x ? (o.w | 0) % HAAR.length : 0;
+    /* x en w (haar) bestaan nog in het patroon, voor codes van even, maar worden niet meer gemaakt of getekend */
+    var c = (o.c | 0) % (KLEUREN2.length + 1);
     return 'v' + (o.v % KEUZES.vormen) + 'k' + (o.k % KEUZES.kleuren) + 'o' + (o.o % KEUZES.ogen) + 'm' + (o.m % KEUZES.monden) + 'e' + (o.e % KEUZES.extras) +
-      (c ? 'c' + c : '') + (x ? 'x' + x : '') + (w ? 'w' + w : '') +
+      (c ? 'c' + c : '') +
       (o.h ? 'h' + o.h : '') + (o.r ? 'r' + o.r : '') + (o.z ? 'z' + o.z : '') + (o.b ? 'b' + o.b : '') + (o.a ? 'a' + o.a : '') + (o.q ? 'q' + o.q : '');
   }
-  /* Een lichte rand om een los stuk (hoed, haar, trofee), zodat het ook op een donkere achtergrond
+  /* Een lichte rand om een los stuk (hoed, trofee), zodat het ook op een donkere achtergrond
      te zien is. Het is dezelfde tekening nog een keer, maar dan als dikke witte omtrek eronder; wat
      binnen de vorm valt verdwijnt onder het stuk zelf, alleen de buitenkant blijft over. */
   var HALO = ' fill="none" stroke="#fff" stroke-linejoin="round" stroke-linecap="round" opacity=".42"';
@@ -239,99 +240,6 @@ window.AVATAR = (function(){
       return '<path d="M-8,45.3 A46,46 0 0 1 -35,-29.6 M8,45.3 A46,46 0 0 0 35,-29.6" fill="none" stroke="#b8862a" stroke-width="2.2" stroke-linecap="round"/>' + b + '<path d="M-7,48 l7,-5 7,5" fill="none" stroke="#c0442c" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>'; }
     return '';
   }
-  /* ---------- het haar ----------
-     Een kapsel past precies op het hoofd, want het volgt de echte rand van de blob. Een kap is het
-     deel van de rand boven een lijn (de pony, f), iets opgeblazen zodat het haar op het hoofd ligt.
-     Alles rechtop, dus de scheiding blijft in het midden ook als het hoofd scheef staat. */
-  function kap(P, f, groei){
-    groei = groei || 1.05;
-    var sel = P.map(function(q){ return [q[0] * groei, q[1] * groei - (groei - 1) * 6]; }).filter(function(q){ return q[1] < f(q[0]); });
-    if (sel.length < 3) return '';
-    sel.sort(function(a, b){ return Math.atan2(a[1], a[0]) - Math.atan2(b[1], b[0]); });
-    var d = 'M' + sel.map(function(q){ return f1(q[0]) + ',' + f1(q[1]); }).join('L');
-    var x1 = sel[sel.length - 1][0], x0 = sel[0][0];
-    for (var i = 0; i <= 12; i++){ var x = x1 + (x0 - x1) * i / 12; d += 'L' + f1(x) + ',' + f1(f(x)); }
-    return d + 'Z';
-  }
-  /* een punt op de rand van het hoofd, in een richting (graden, 0 is rechts, -90 is boven) */
-  function randPunt(P, graden, maal){
-    var a = graden * Math.PI / 180, best = null, bestV = 9;
-    P.forEach(function(q){ var v = Math.abs(Math.atan2(q[1], q[0]) - a); if (v > Math.PI) v = 2 * Math.PI - v; if (v < bestV){ bestV = v; best = q; } });
-    return [best[0] * (maal || 1), best[1] * (maal || 1)];
-  }
-  /* geeft { achter, voor, op, groter }: achter het hoofd, over het hoofd, en hoeveel hoger een hoed moet */
-  function haar(x, P, M, kl, hoedOp){
-    var T = M.top, B = M.breed, rand = meng(kl, INKT, 0.35), licht2 = meng(kl, '#ffffff', 0.35);
-    var achter = '', voor = '', op = 0, groter = 1, i, j, q;
-    function vul(d){ return '<path d="' + d + '" fill="' + kl + '" stroke="' + rand + '" stroke-width="1.6" stroke-linejoin="round"/>'; }
-    function bol(cx, cy, r){ return '<circle cx="' + f1(cx) + '" cy="' + f1(cy) + '" r="' + f1(r) + '" fill="' + kl + '" stroke="' + rand + '" stroke-width="1.6"/>'; }
-    /* haar valt aan de zijkant iets verder naar beneden, als bakkebaardjes */
-    function zij(x, n){ return n * Math.pow(Math.min(1, Math.abs(x) / B), 3); }
-    function glans(d){ return '<path d="' + d + '" fill="none" stroke="' + licht2 + '" stroke-width="2.2" stroke-linecap="round" opacity=".7"/>'; }
-    if (x === 1){        /* kuif: kort aan de zijkant, een golf voorop */
-      voor = vul(kap(P, function(x){ return -24 - 3 * Math.cos(x / 20) + zij(x, 14); }));
-      if (!hoedOp) voor += vul('M-18,' + f1(T + 6) + ' q-2,-14 16,-16 q18,-2 22,12 q-8,-6 -16,-3 q-10,3 -22,7z') + glans('M-6,' + f1(T - 5) + ' q8,-4 16,0');
-    } else if (x === 2){ /* stekels */
-      voor = vul(kap(P, function(x){ return -24 + Math.abs(Math.sin(x / 5)) * 3 + zij(x, 14); }));
-      if (!hoedOp) for (i = -150; i <= -30; i += 20){
-        var a = randPunt(P, i - 8, 1.03), b = randPunt(P, i + 8, 1.03), t = randPunt(P, i + 4, 1.3);
-        voor += vul('M' + f1(a[0]) + ',' + f1(a[1]) + 'L' + f1(t[0]) + ',' + f1(t[1]) + 'L' + f1(b[0]) + ',' + f1(b[1]) + 'Z');
-      }
-    } else if (x === 3 || x === 4){ /* krullen, en de afro: veel volume */
-      if (x === 4){
-        achter = bol(0, T + 26, B * 1.18);
-        for (i = -210; i <= 30; i += 24){ q = randPunt(P, i, 1.2); achter += bol(q[0], q[1] - 6, 13); }
-        op = 12; groter = 1.18;
-      }
-      var krul = function(x){ return -20 - 2.5 * Math.cos(x / 3.2) + zij(x, 10); };
-      voor = vul(kap(P, krul, 1.06));
-      if (!hoedOp || x === 4) for (i = -170; i <= -10; i += 20){ q = randPunt(P, i, 1.04); voor += bol(q[0], q[1], 7.5); }
-      for (i = -24; i <= 24; i += 12) voor += bol(i, krul(i) - 1, 5.5);
-      if (x === 3) op = 3;
-    } else if (x === 5){ /* twee vlechten met een elastiekje */
-      voor = vul(kap(P, function(x){ return -22 - 10 * Math.max(0, 1 - Math.abs(x) / 16) + zij(x, 12); })) + '<path d="M0,' + f1(T - 1) + ' V-31" stroke="' + rand + '" stroke-width="1.8" stroke-linecap="round"/>';
-      [-1, 1].forEach(function(z){
-        for (var j = 0; j < 6; j++) achter += '<ellipse cx="' + f1(z * (B + 2 - j * 0.6)) + '" cy="' + (-12 + j * 10) + '" rx="7.5" ry="6.5" fill="' + kl + '" stroke="' + rand + '" stroke-width="1.6"/>';
-        achter += '<rect x="' + f1(z * (B - 1.6) - 4) + '" y="46" width="8" height="4" rx="2" fill="#F26749"/><path d="M' + f1(z * (B - 1.6) - 3) + ',50 l-1,6 M' + f1(z * (B - 1.6)) + ',50 v7 M' + f1(z * (B - 1.6) + 3) + ',50 l1,6" stroke="' + kl + '" stroke-width="2.4" stroke-linecap="round"/>';
-      });
-    } else if (x === 6){ /* paardenstaart die naar rechts zwiept */
-      voor = vul(kap(P, function(x){ return -22 - 4 * Math.cos(x / 25) + zij(x, 12); }));
-      q = randPunt(P, -40, 1);
-      achter = vul('M' + f1(q[0] - 6) + ',' + f1(q[1]) + ' q24,-10 28,14 q4,22 -8,36 q6,-16 -6,-26 q-8,-6 -14,-14z') + '<circle cx="' + f1(q[0] + 2) + '" cy="' + f1(q[1] + 1) + '" r="4" fill="#F26749"/>';
-    } else if (x === 7){ /* knot bovenop */
-      voor = vul(kap(P, function(x){ return -25 - 2 * Math.cos(x / 12) + zij(x, 13); }));
-      if (!hoedOp) voor += bol(0, T - 8, 12) + glans('M-6,' + f1(T - 12) + ' q6,-5 12,0') + '<path d="M-9,' + f1(T + 1) + ' q9,4 18,0" fill="none" stroke="#F26749" stroke-width="3" stroke-linecap="round"/>';
-    } else if (x === 8){ /* kort, bijna kaal geschoren */
-      voor = '<path d="' + kap(P, function(x){ return -27 - 2 * Math.cos(x / 14) + zij(x, 14); }, 1.015) + '" fill="' + kl + '" opacity=".85"/>';
-    } else if (x === 9){ /* bob met een rechte pony */
-      achter = vul('M0,' + f1(T - 4) + ' C' + f1(-B - 4) + ',' + f1(T - 4) + ' ' + f1(-B - 9) + ',' + f1(T + 8) + ' ' + f1(-B - 8) + ',10 Q' + f1(-B - 8) + ',24 ' + f1(-B + 3) + ',22 L' + f1(B - 3) + ',22 Q' + f1(B + 8) + ',24 ' + f1(B + 8) + ',10 C' + f1(B + 9) + ',' + f1(T + 8) + ' ' + f1(B + 4) + ',' + f1(T - 4) + ' 0,' + f1(T - 4) + 'Z');
-      voor = vul(kap(P, function(x){ return -18 + Math.pow(Math.abs(x) / B, 3) * 12; }, 1.06)) + glans('M-18,' + f1(T + 8) + ' q14,-6 28,-4');
-    } else if (x === 10){ /* lang, met een scheiding in het midden */
-      achter = vul('M0,' + f1(T - 4) + ' C' + f1(-B - 2) + ',' + f1(T - 4) + ' ' + f1(-B - 8) + ',' + f1(T + 10) + ' ' + f1(-B - 8) + ',20 C' + f1(-B - 8) + ',36 ' + f1(-B - 4) + ',46 ' + f1(-B + 6) + ',48 Q0,38 ' + f1(B - 6) + ',48 C' + f1(B + 4) + ',46 ' + f1(B + 8) + ',36 ' + f1(B + 8) + ',20 C' + f1(B + 8) + ',' + f1(T + 10) + ' ' + f1(B + 2) + ',' + f1(T - 4) + ' 0,' + f1(T - 4) + 'Z');
-      voor = vul(kap(P, function(x){ return -34 + 28 * Math.pow(Math.min(1, Math.abs(x) / B), 0.7); }, 1.05)) + glans('M-22,' + f1(T + 12) + ' q6,-8 14,-10');
-    } else if (x === 11){ /* zijscheiding, de pony valt naar rechts */
-      voor = vul(kap(P, function(x){ var t = Math.max(0, Math.min(1, (x + B) / (2 * B))); return -33 + 17 * Math.pow(t, 1.4) + zij(x, 8); }, 1.05)) + glans('M-12,' + f1(T + 5) + ' q12,-3 22,4');
-    } else if (x === 12){ /* hoofddoek: stof om het gezicht heen, en een plooi eronder */
-      var st = meng(kl, '#ffffff', 0.08), cy = 5, ry = 36, rx = Math.min(34, B - 8);
-      achter = '<path d="M0,' + f1(T - 6) + ' C' + f1(-B - 6) + ',' + f1(T - 6) + ' ' + f1(-B - 10) + ',' + f1(T + 14) + ' ' + f1(-B - 9) + ',24 C' + f1(-B - 8) + ',42 ' + f1(-B + 4) + ',55 0,56 C' + f1(B - 4) + ',55 ' + f1(B + 8) + ',42 ' + f1(B + 9) + ',24 C' + f1(B + 10) + ',' + f1(T + 14) + ' ' + f1(B + 6) + ',' + f1(T - 6) + ' 0,' + f1(T - 6) + 'Z" fill="' + st + '" stroke="' + rand + '" stroke-width="1.6" stroke-linejoin="round"/>' +
-        '<path d="M-14,48 q14,5 28,0" fill="none" stroke="' + rand + '" stroke-width="1.4" opacity=".6"/>';
-      var omtrek = P.slice().sort(function(a, b){ return Math.atan2(a[1], a[0]) - Math.atan2(b[1], b[0]); }).map(function(q){ return f1(q[0] * 1.06) + ',' + f1(q[1] * 1.06); });
-      voor = '<path d="M' + omtrek.join('L') + 'Z M' + f1(-rx) + ',' + cy + ' a' + rx + ',' + ry + ' 0 1 0 ' + f1(2 * rx) + ',0 a' + rx + ',' + ry + ' 0 1 0 ' + f1(-2 * rx) + ',0Z" fill="' + st + '" fill-rule="evenodd"/>' +
-        '<ellipse cx="0" cy="' + cy + '" rx="' + f1(rx) + '" ry="' + ry + '" fill="none" stroke="' + rand + '" stroke-width="1.8"/>' + glans('M' + f1(-B + 4) + ',' + f1(T + 20) + ' q6,-12 18,-17');
-    } else if (x === 13){ /* twee knotjes */
-      voor = vul(kap(P, function(x){ return -24 - 8 * Math.max(0, 1 - Math.abs(x) / 12) + zij(x, 12); })) + '<path d="M0,' + f1(T - 1) + ' V-31" stroke="' + rand + '" stroke-width="1.8" stroke-linecap="round"/>';
-      if (!hoedOp){ q = randPunt(P, -135, 1.02); var q2 = randPunt(P, -45, 1.02); voor = bol(q[0], q[1], 11) + bol(q2[0], q2[1], 11) + voor; }
-    } else if (x === 14){ /* hanenkam: een kam in het midden, de zijkanten kort */
-      voor = '<path d="' + kap(P, function(x){ return -27; }, 1.015) + '" fill="' + kl + '" opacity=".35"/>';
-      if (!hoedOp){ var d = '';
-        for (i = -124, j = 0; i <= -56; i += 8, j++){ q = randPunt(P, i, j % 2 ? 1.34 : 1.02); d += (d ? 'L' : 'M') + f1(q[0]) + ',' + f1(q[1]); }
-        q = randPunt(P, -56, 0.9); d += 'L' + f1(q[0]) + ',' + f1(q[1]); q = randPunt(P, -124, 0.9); d += 'L' + f1(q[0]) + ',' + f1(q[1]) + 'Z';
-        voor += vul(d); }
-    }
-    return { achter:achter, voor:voor, op:op, groter:groter };
-  }
-  var cache = {};
-  /* de binnenkant (viewBox -50..50), voor wie hem in een eigen svg tekent, zoals de arena van Zwaardvechter */
   function inhoud(naam, spec, stemming){
     var sleutel = (spec || '') + '|' + String(naam || '').toLowerCase().trim() + '|' + (stemming || '');
     if (cache[sleutel]) return cache[sleutel];
@@ -374,18 +282,14 @@ window.AVATAR = (function(){
     var s = '<svg class="avatar' + (opties && opties.klasse ? ' ' + opties.klasse : '') + '" viewBox="-50 -50 100 100" overflow="visible" width="' + maat + '" height="' + maat + '" aria-hidden="true" focusable="false">';
     if (sp && sp.a) s += achtergrond(sp.a);
     s += '<g class="av-alles" style="animation-delay:-' + d1 + 's">';
-    /* het haar: wat achter het hoofd hangt komt eerst */
-    var hoedOp = !!(sp && sp.h && [3, 5, 6, 7, 11, 17].indexOf(sp.h) < 0);
-    var hr = sp && sp.x ? haar(sp.x % KEUZES.kapsels, P, M, HAAR[sp.w % HAAR.length], hoedOp) : null;
-    if (hr && (hr.achter || hr.voor)) s += halo(hr.achter + hr.voor, rim * 2) + hr.achter;
-    /* Het hoofd: eerst een lichte rand (op een donkere pagina zie je anders een donker gezicht niet),
-       dan een iets donkerder onderkant en de kleur zelf er net boven, en een glimmetje linksboven.
-       Zo heeft het wat vorm zonder verloop of clipPath, en dus zonder id's die kunnen botsen. */
-    s += '<g transform="rotate(' + draai + ')"><path d="' + vorm.d + '" fill="none" stroke="#fff" stroke-opacity=".42" stroke-width="' + f1(rim * 2) + '" stroke-linejoin="round"/>';
-    s += '<path d="' + vorm.d + '" fill="' + meng(kleur, INKT, helder < 0.2 ? 0.35 : 0.2) + '"/>';
-    s += '<path d="' + vorm.d + '" fill="' + kleur + '" transform="translate(0,-2.6) scale(.93)"/></g>';
-    s += '<ellipse cx="-17" cy="-25" rx="11" ry="6" transform="rotate(-28 -17 -25)" fill="#fff" opacity="' + (helder > 0.7 ? '.35' : '.2') + '"/>';
-    if (hr) s += hr.voor;
+    /* Het hoofd zoals het altijd was: een platte kleur met een lichtere gloed bovenin, afgeknipt op de
+       vorm. Het knipsel krijgt per tekening een eigen id, dan botsen er geen twee op een pagina vol namen.
+       Alleen een heel donker gezicht krijgt een lichte rand, anders valt het weg op een donkere pagina. */
+    var knip = 'avk' + (++teller).toString(36) + (zaadje % 1296).toString(36);
+    s += '<g transform="rotate(' + draai + ')">';
+    if (helder < 0.3) s += '<path d="' + vorm.d + '" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="' + f1(rim * 2) + '" stroke-linejoin="round"/>';
+    s += '<path d="' + vorm.d + '" fill="' + kleur + '"/>';
+    s += '<clipPath id="' + knip + '"><path d="' + vorm.d + '"/></clipPath><path d="M-40,-6 a40,40 0 0 1 80,0 z" fill="#fff" opacity=".14" clip-path="url(#' + knip + ')"/></g>';
     /* de ogen: tien soorten */
     if (sp) soort = sp.o % 10;
     /* een bril uit de winkel over de getekende bril heen is er een te veel: dan gewone ogen */
@@ -460,14 +364,14 @@ window.AVATAR = (function(){
     var blos = helder > 0.55 ? '#F26749' : '#FF8FA3';
     if (e === 0) s += '<circle cx="-26" cy="8" r="5" fill="' + blos + '" opacity=".5"/><circle cx="26" cy="8" r="5" fill="' + blos + '" opacity=".5"/>';
     else if (e === 1) s += '<g fill="' + oog + '" opacity=".7"><circle cx="-27" cy="6" r="1.6"/><circle cx="-22" cy="10" r="1.6"/><circle cx="-30" cy="12" r="1.6"/><circle cx="27" cy="6" r="1.6"/><circle cx="22" cy="10" r="1.6"/><circle cx="30" cy="12" r="1.6"/></g>';
-    if (sp && (sp.h || sp.x) && e === 2) e = -1;   /* een krul past niet onder een hoed of in een kapsel */
+    if (sp && sp.h && e === 2) e = -1;   /* een krul past niet onder een hoed */
     else if (e === 2) s += '<path d="M2,' + f1(M.top + 3) + ' q4,-12 14,-6 q-8,-2 -10,6" fill="none" stroke="' + meng(kleur, INKT, 0.25) + '" stroke-width="5" stroke-linecap="round"/>';
     /* Hier zat een gratis petje. Nu er echte hoeden in de winkel liggen, is dat er een te veel; de plek blijft
        bestaan (anders verandert het gezichtje van iedereen die deze extra koos) en er ligt nu een pleister. */
     else if (e === 3) s += '<g transform="rotate(-16)"><rect x="13" y="-21" width="23" height="10" rx="3" fill="#F6D9B0" stroke="#c99f6e" stroke-width="1.2"/><g fill="#c99f6e"><circle cx="19" cy="-18" r="1"/><circle cx="19" cy="-14" r="1"/><circle cx="30" cy="-18" r="1"/><circle cx="30" cy="-14" r="1"/></g></g>';
     else if (e === 4) s += '<path d="M30,-30 l3,7 7,1 -5,5 1,7 -6,-4 -6,4 1,-7 -5,-5 7,-1z" fill="#FFD166" stroke="#c9971f" stroke-width="1" stroke-linejoin="round"/>';
     else if (e === 6) s += '<path d="M30,-27 q9,12 0,19 q-9,-7 0,-19 z" fill="#9EC3FF" stroke="#14224C" stroke-width="1.4" stroke-opacity=".5"/><path d="M27.5,-14 q-1,-3 .5,-5.5" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity=".85"/>';
-    else if (e === 7){ var snor = sp && sp.x ? HAAR[sp.w % HAAR.length] : '#3a2519';
+    else if (e === 7){ var snor = '#3a2519';
       s += '<path d="M0,7 q-5,-4 -11,-1.5 q-4,1.5 -7,-1 q3,7 11,5 q4,-1 7,-3 q3,2 7,3 q8,2 11,-5 q-3,2.5 -7,1 q-6,-2.5 -11,1.5 z" fill="' + snor + '" stroke="' + (helder < 0.3 ? 'rgba(255,255,255,.5)' : 'none') + '" stroke-width="1"/>'; }
     else if (e === 8) s += '<g fill="#FFD166" stroke="#c9971f" stroke-width=".8" stroke-linejoin="round"><path d="M-34,-30 q1.5,5 6,6 q-4.5,1 -6,6 q-1.5,-5 -6,-6 q4.5,-1 6,-6z"/><path d="M36,14 q1,3.5 4,4 q-3,1 -4,4 q-1,-3 -4,-4 q3,-.5 4,-4z"/><path d="M-38,14 q.8,2.6 3,3 q-2.2,.6 -3,3 q-.8,-2.4 -3,-3 q2.2,-.4 3,-3z"/></g>';
     else if (e === 9) s += '<circle cx="20" cy="11" r="2.5" fill="' + (helder < 0.3 ? '#F3EFE9' : INKT) + '" opacity=".85"/>';
@@ -476,7 +380,7 @@ window.AVATAR = (function(){
     if (sp && sp.r) s += rand(sp.r);
     /* de hoed ademt mee (zelfde maat en zelfde moment) en wiebelt als je eroverheen gaat */
     if (sp && sp.h){ var hd = hoed(sp.h);
-      if (hd) s += '<g class="av-alles" style="animation-delay:-' + d1 + 's"><g class="av-hoed" transform="' + hoedPlek(M, hr && hoedOp ? hr.op : 0, hr && hoedOp ? hr.groter : 1) + '">' + halo(hd, rim * 2) + hd + '</g></g>'; }
+      if (hd) s += '<g class="av-alles" style="animation-delay:-' + d1 + 's"><g class="av-hoed" transform="' + hoedPlek(M, 0, 1) + '">' + halo(hd, rim * 2) + hd + '</g></g>'; }
     if (sp && sp.b) s += trofee(sp.b);
     return s + '</svg>';
   }
@@ -526,5 +430,5 @@ window.AVATAR = (function(){
       '@media(prefers-reduced-motion:reduce){.av-alles,.av-ogen,.av-hoed,.av-juich{animation:none !important}}';
     document.head.appendChild(st);
   } catch (e){}
-  return { svg:svg, inhoud:inhoud, vul:vul, ontleed:ontleed, maak:maak, KEUZES:KEUZES, NAMEN:NAMEN, KLEUREN:KLEUREN, KLEUREN2:KLEUREN2, HAAR:HAAR };
+  return { svg:svg, inhoud:inhoud, vul:vul, ontleed:ontleed, maak:maak, KEUZES:KEUZES, NAMEN:NAMEN, KLEUREN:KLEUREN, KLEUREN2:KLEUREN2 };
 })();

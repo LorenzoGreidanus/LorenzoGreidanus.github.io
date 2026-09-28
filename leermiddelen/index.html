@@ -2337,29 +2337,27 @@ var SPELLEN = [
     tekenKeuze();
   }
   /* De kiezer. Per tab een paar rijen; elke knop laat je eigen gezicht zien met net die ene
-     keuze anders, zodat je ziet wat je kiest. Kleuren en haarkleuren zijn stippen, dat leest sneller.
-     De volgorde in een rij is niet altijd die van de nummers: 'niets' en 'geen haar' komen eerst. */
+     keuze anders, zodat je ziet wat je kiest. Kleuren zijn stippen, dat leest sneller.
+     De volgorde in een rij is niet altijd die van de nummers: 'niets' komt eerst. */
   var kiesTab = 'gezicht';
   function kiezerHtml(h){
     var K = AVATAR.KEUZES, N = AVATAR.NAMEN;
     function reeks(n, van){ var l = []; for (var i = van || 0; i < n; i++) l.push(i); return l; }
     function knop(w, i, aan, beeld, naam){ return '<button type="button" data-w="' + w + '" data-i="' + i + '"' + (aan ? ' class="aan" aria-pressed="true"' : ' aria-pressed="false"') + ' aria-label="' + schoon(naam) + '" title="' + schoon(naam) + '">' + beeld + '</button>'; }
-    function gezicht(w, i){ var o2 = { v:h.v, k:h.k, o:h.o, m:h.m, e:h.e, c:h.c, x:h.x, w:h.w }; o2[w] = i; if (w === 'k') o2.c = 0; return AVATAR.svg('', 36, AVATAR.maak(o2)); }
+    function gezicht(w, i){ var o2 = { v:h.v, k:h.k, o:h.o, m:h.m, e:h.e, c:h.c }; o2[w] = i; if (w === 'k') o2.c = 0; return AVATAR.svg('', 36, AVATAR.maak(o2)); }
     function rij(titel, w, lijst, stip){
       return '<div class="rijtje"><span>' + titel + '</span><div class="raster">' + lijst.map(function(i){
         if (w === 'k') return knop('k', i, !h.c && h.k === i, '<i class="stip" style="background:' + AVATAR.KLEUREN[i] + '"></i>', N.k[i]);
         if (w === 'c') return knop('c', i, h.c === i, '<i class="stip" style="background:' + AVATAR.KLEUREN2[i - 1] + '"></i>', N.c[i - 1]);
-        if (w === 'w') return knop('w', i, h.w === i, '<i class="stip" style="background:' + AVATAR.HAAR[i] + '"></i>', N.w[i]);
         return knop(w, i, h[w] === i, gezicht(w, i), (N[w] ? N[w][i] : titel + ' ' + (i + 1)));
       }).join('') + '</div></div>';
     }
-    var tabs = [['gezicht', 'Gezicht'], ['ogen', 'Ogen'], ['mond', 'Mond'], ['haar', 'Haar'], ['extra', 'Extra']], s = '<div class="kiezer">';
+    var tabs = [['gezicht', 'Gezicht'], ['ogen', 'Ogen'], ['mond', 'Mond'], ['extra', 'Extra']], s = '<div class="kiezer">';
     s += '<div class="groot">' + AVATAR.svg(naam(), 76, spec()) + '<button type="button" class="klein" id="pfVerras">Verras me</button></div>';
     s += '<div class="tabs" role="tablist">' + tabs.map(function(t){ return '<button type="button" role="tab" data-tab="' + t[0] + '" aria-selected="' + (kiesTab === t[0]) + '"' + (kiesTab === t[0] ? ' class="aan"' : '') + '>' + t[1] + '</button>'; }).join('') + '</div>';
-    if (kiesTab === 'gezicht') s += rij('vorm', 'v', reeks(K.vormen)) + rij('kleur', 'k', reeks(K.kleuren)) + rij('meer kleuren', 'c', reeks(K.kleuren2 + 1, 1));
+    if (kiesTab === 'gezicht') s += rij('vorm', 'v', reeks(K.vormen)) + rij('kleur', 'k', reeks(K.kleuren)) + rij('meer kleuren', 'c', reeks(K.kleuren2 + 1, 6));
     else if (kiesTab === 'ogen') s += rij('ogen', 'o', reeks(K.ogen));
     else if (kiesTab === 'mond') s += rij('mond', 'm', reeks(K.monden));
-    else if (kiesTab === 'haar') s += rij('kapsel', 'x', reeks(K.kapsels)) + (h.x ? rij('haarkleur', 'w', reeks(K.haarkleuren)) : '<p class="uitleg">Kies een kapsel, dan kun je ook de kleur kiezen. Een hoed uit de winkel gaat eroverheen.</p>');
     else s += rij('extra', 'e', [5, 0, 1, 2, 3, 4, 6, 7, 8, 9]);
     return s + '</div>';
   }
@@ -2446,8 +2444,8 @@ var SPELLEN = [
     /* verras me: alles wat gratis is door elkaar, de winkelspullen blijven op */
     knop('pfVerras', function(){
       var K = AVATAR.KEUZES, h2 = huidig(), r = function(n){ return Math.floor(Math.random() * n); };
-      h2.v = r(K.vormen); h2.o = r(K.ogen); h2.m = r(K.monden); h2.e = r(K.extras); h2.x = r(K.kapsels); h2.w = r(K.haarkleuren);
-      if (Math.random() < 0.5){ h2.k = r(K.kleuren); h2.c = 0; } else h2.c = 1 + r(K.kleuren2);
+      h2.v = r(K.vormen); h2.o = r(K.ogen); h2.m = r(K.monden); h2.e = r(K.extras); h2.x = 0; h2.w = 0;
+      if (Math.random() < 0.5){ h2.k = r(K.kleuren); h2.c = 0; } else h2.c = 6 + r(K.kleuren2 - 5);   /* de huidtinten (c1 tot c5) staan niet meer in de kiezer */
       PROFIEL.zetAvatar(AVATAR.maak(h2)); teken(); var v = document.getElementById('pfVerras'); if (v) v.focus();
     });
     /* teken() bouwt alles opnieuw; de focus hoort terug op de knop die je net koos */
