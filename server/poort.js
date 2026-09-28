@@ -15,7 +15,8 @@ export class Poort extends DurableObject {
     const k = String(o.wat || "?") + "|" + String(o.ip || "?");
     const lijst = (this.tel[k] || []).filter(t => nu - t < venster);
     const ok = lijst.length < per;
-    if (ok) lijst.push(nu);
+    /* kijk: alleen vragen of er nog ruimte is, zonder zelf mee te tellen */
+    if (ok && !o.kijk) lijst.push(nu);
     this.tel[k] = lijst;
     /* af en toe de oude sleutels opruimen */
     if (Object.keys(this.tel).length > 5000){

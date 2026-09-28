@@ -69,7 +69,9 @@ const RACE_RIJ = 0.95, RACE_EERSTE = 1.05, RACE_NA_POORT = 450, RACE_NA_FOUT = 1
 const SPELLEN_ROLLEN = { polis: "De vergadering van de klas", meetlat: "Langs de meetlat", staten: "De vergadering", berlijn: "De Conferentie van Berlijn", standen: "Stem per stand", crisis: "De crisis", teken: "Tekenslag" };
 const KAART_MAX = 12000, BORD_MAX = 40000, ACTIE_MAX = 4000;
 const KLAS_SLAAPT = 400 * 24 * 60 * 60 * 1000; /* een klascode blijft tot de docent hem opheft, of tot hij ruim een jaar niet gebruikt is */
-const KLAS_MAX = 3000;
+const KLAS_MAX = 3000, KLAS_BYTES = 700000;   /* uitslagen: hoogstens zoveel, en samen hoogstens zoveel tekens */
+/* hoeveel tweede apparaten (verwijzingen op bijnaam) een klas onthoudt */
+const KLAS_ALIAS = 2000;
 /* hoeveel verschillende leerlingen er in een klas passen: ruim boven alle klassen
    van een docent bij elkaar, maar wel een grens tegen volduwen */
 const KLAS_LEERLINGEN = 400;
@@ -321,11 +323,29 @@ function sleutelMaken(n){
 /* Het plaatje bij een vraag is een stukje SVG dat op ieders scherm in de
    pagina komt. Alleen eenvoudige vormen mogen erin: geen scripts, geen
    verwijzingen naar buiten, geen gebeurtenissen. */
+/* Welke elementen er mogen staan: alleen tekenen, geen gedrag. Een lijst van
+   wat niet mocht liet dingen door: <discard onbegin>, een gebeurtenis zonder
+   spatie ervoor (<circle/onload=, r="1"onmouseover=), of een HTML-element als
+   <p> of <img> dat midden in een SVG weer gewone HTML van de pagina maakt. */
+const SVG_MAG = new Set(["svg", "g", "path", "rect", "circle", "ellipse", "line", "polyline", "polygon", "text", "tspan", "textpath",
+  "title", "desc", "defs", "lineargradient", "radialgradient", "stop", "clippath", "mask", "pattern", "marker", "symbol", "filter"]);
 export function veiligSvg(s){
   if (typeof s !== "string" || s.length > 20000) return false;
   if (!/^<svg[\s>][\s\S]*<\/svg>\s*$/i.test(s.trim())) return false;
   if (/<\s*(script|foreignobject|iframe|object|embed|image|use|animate|animatemotion|animatetransform|set|link|meta|style|a)\b/i.test(s)) return false;
   if (/\son[a-z]+\s*=|javascript:|href|xlink|<!|<\?|url\(/i.test(s)) return false;
+  /* elk element moet op de lijst staan (filters: alles wat met fe begint) */
+  for (const m of s.matchAll(/<\s*\/?\s*([a-z][a-z0-9:._-]*)/gi)){
+    const naam = m[1].toLowerCase();
+    if (!SVG_MAG.has(naam) && !/^fe[a-z]+$/.test(naam)) return false;
+  }
+  /* een gebeurtenis, ook direct na een aanhalingsteken of een schuine streep */
+  if (/(^|[^a-z0-9_-])on[a-z]+\s*=/i.test(s)) return false;
+  /* en niets wat pas na het vertalen van &#...; een adres of script wordt */
+  let d;
+  try { d = s.replace(/&#x([0-9a-f]{1,6});?/gi, (x, h) => String.fromCodePoint(parseInt(h, 16))).replace(/&#(\d{1,7});?/g, (x, g) => String.fromCodePoint(+g)).replace(/&(colon|lpar|rpar|tab|newline);/gi, x => ({ "&colon;": ":", "&lpar;": "(", "&rpar;": ")" })[x.toLowerCase()] || " "); }
+  catch (e){ return false; }
+  if (/javascript:|url\s*\(|expression\s*\(|href/i.test(d)) return false;
   return true;
 }
 /* Hoeveel berichten een speler per tien seconden mag sturen. Samen spelen
@@ -335,6 +355,7 @@ export function veiligSvg(s){
    overheen gaat wordt afgesloten. De bytes per venster houden een echte
    overstroming tegen. */
 const VENSTER = 10000, NEGEREN_BIJ = 1200, BYTES_PER_VENSTER = 2500000, AFSLUITEN_BIJ = 3000;
+const SOCKETS_PER_SID = 6;
 
 export class Kamer extends DurableObject {
   constructor(ctx, env){
@@ -450,6 +471,12 @@ export class Kamer extends DurableObject {
       /* wie te laat is voor een potje samen, kan er niet meer in */
       if (this.stand.duel && !this.stand.spelers[sid] && this.stand.fase !== "lobby" && this.stand.fase !== "aftellen") return json({ fout: "dit potje is al begonnen" }, 410);
     }
+    /* Hoogstens een paar verbindingen per kenmerk: een tweede tabblad of een
+       herverbinding terwijl de oude nog openstaat is gewoon, honderd keer
+       hetzelfde kenmerk niet (elke verbinding krijgt alles wat de kamer zendt).
+       De oudste gaan dicht. */
+    const al = this.ctx.getWebSockets(sid);
+    if (al.length >= SOCKETS_PER_SID) al.slice(0, al.length - SOCKETS_PER_SID + 1).forEach(w => { try { w.close(1000, "nieuwe verbinding"); } catch (e){} });
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
     this.ctx.acceptWebSocket(server, [rol, sid]);
@@ -1008,7 +1035,9 @@ export class Kamer extends DurableObject {
         return;
       }
       if (this.motor){ this.motorBericht(wie, m.d); return; }
-      const s = JSON.stringify({ t: "net", van: wie.sid, d: m.d });
+      /* van is het openbare nummer, niet het kenmerk: met het kenmerk kon de
+         ander zich voor deze speler uitgeven, ook in de klas (hetzelfde lg-quiz-sid) */
+      const s = JSON.stringify({ t: "net", van: this.pid(wie.sid), d: m.d });
       if (s.length > 60000) return;
       this.ctx.getWebSockets("speler").forEach(ws2 => {
         const w = ws2.deserializeAttachment() || {};
@@ -1477,6 +1506,10 @@ export class Kamer extends DurableObject {
       const n = normNaam(naam);
       doel = Object.keys(l).find(k => normNaam(l[k].naam) === n && !(acc && l[k].acc && l[k].acc !== acc)) || null;
     }
+    /* Elk nieuw kenmerk met een bekende bijnaam wordt een verwijzing; zonder
+       plafond kon iemand met de klascode er eindeloos veel aanmaken. Vol: dan
+       wordt het een eigen leerling, en daarvoor geldt KLAS_LEERLINGEN. */
+    if (doel && doel !== kort && !st.alias[kort] && Object.keys(st.alias).length >= KLAS_ALIAS) doel = null;
     if (doel && doel !== kort){
       st.alias[kort] = doel;
       /* uitslagen die al onder het nieuwe kenmerk stonden gaan mee */
@@ -1538,6 +1571,7 @@ export class Kamer extends DurableObject {
     if (acc) this.stand.leerlingen[kort].acc = acc;
     this.voegToe(Object.assign({ sid: kort, naam: nette(inz.naam, "Leerling"), av: schoonAv(inz.av), spel, ronde: getal(inz.ronde, 250), punten: getal(inz.punten, 5000),
                    niveau: schoon(inz.niveau, 10), vak: schoon(inz.vak, 10), od: schoonOd(inz.od), t: Date.now() }, spel === "dictee" ? dicteeVelden(inz) : {}));
+    this.snoei();
     await this.zetAlarm({ wat: "opruimen" }, KLAS_SLAAPT);
     await this.bewaar();
     return json({ ok: true, n: this.stand.resultaten.length });
@@ -1574,6 +1608,17 @@ export class Kamer extends DurableObject {
     if (mijn.length >= 30) this.stand.resultaten.splice(this.stand.resultaten.indexOf(mijn[0]), 1);
     this.stand.resultaten.push(r);
     if (this.stand.resultaten.length > KLAS_MAX) this.stand.resultaten.splice(0, this.stand.resultaten.length - KLAS_MAX);
+  }
+  /* De hele klas staat in een opslagwaarde, en die mag hoogstens twee
+     megabyte zijn; daarboven mislukt elk bewaren en is de klas stuk. Drieduizend
+     uitslagen met lange onderdelen en foutenlijsten kwamen op negen megabyte.
+     Dus ook een plafond in tekens (een teken kan twee bytes zijn, en de
+     leerlingenlijst komt er nog bij): de oudste uitslagen gaan er eerst uit.
+     Een keer na elke melding, niet per uitslag. */
+  snoei(){
+    let n = JSON.stringify(this.stand.resultaten).length, weg = 0;
+    while (n > KLAS_BYTES && weg < this.stand.resultaten.length - 1) n -= JSON.stringify(this.stand.resultaten[weg++]).length + 1;
+    if (weg) this.stand.resultaten.splice(0, weg);
   }
   /* De docent meldt een hele uitslag ineens, bijvoorbeeld van een Klasquiz:
      alleen met de sleutel van de klas. Het kenmerk per leerling komt uit de
@@ -1614,6 +1659,7 @@ export class Kamer extends DurableObject {
       this.voegToe({ sid, naam, av: schoonAv(r.av), spel, ronde: getal(r.ronde, 250), punten: getal(r.punten, 5000), niveau: schoon(inz.niveau, 10), vak: schoon(inz.vak, 10), od: schoonOd(r.od), t });
       n++;
     }
+    this.snoei();
     await this.zetAlarm({ wat: "opruimen" }, KLAS_SLAAPT);
     await this.bewaar();
     return json({ ok: true, n });

@@ -43,12 +43,13 @@ function eigenSite(req, url){
 }
 /* De poortwachter telt per adres hoe vaak er iets gemaakt of ingestuurd wordt.
    Een hele school zit achter één adres, dus de grenzen zijn ruim: het gaat om
-   het afremmen van een stroom, niet om een enkele klas. */
-async function magDoor(env, req, wat, per, seconden){
+   het afremmen van een stroom, niet om een enkele klas. Met kijk telt het
+   verzoek zelf niet mee: dan vragen we alleen of er nog ruimte is. */
+async function magDoor(env, req, wat, per, seconden, kijk){
   try {
     const ip = req.headers.get("CF-Connecting-IP") || "?";
     const r = await env.POORT.get(env.POORT.idFromName("poort")).fetch("https://poort/tel", { method: "POST",
-      body: JSON.stringify({ wat, ip, per, seconden }) });
+      body: JSON.stringify({ wat, ip, per, seconden, kijk: !!kijk }) });
     const j = await r.json();
     return !!j.ok;
   } catch (e){ return true; }
@@ -69,10 +70,99 @@ function json(obj, status){
 }
 const CODE = /^[A-Z]{4}$/;
 
+/* Wat de site instuurt is klein: een quiz met plaatjes of een foto bij een
+   toets blijft ruim onder de vier megabyte. Iets groters lezen we niet eens
+   helemaal in; zonder grens hield een enkel verzoek van honderd megabyte de
+   Worker bezig. Werkt als req.json(): gooit een fout bij iets dat niet deugt. */
+const MAX_BODY = 4 * 1024 * 1024;
+async function leesJson(req){
+  if (Number(req.headers.get("content-length") || 0) > MAX_BODY) throw new Error("te groot");
+  if (!req.body) return JSON.parse("");
+  const lezer = req.body.getReader(), delen = [];
+  let n = 0;
+  for (;;){
+    const { done, value } = await lezer.read();
+    if (done) break;
+    n += value.byteLength;
+    if (n > MAX_BODY){ try { await lezer.cancel(); } catch (e){} throw new Error("te groot"); }
+    delen.push(value);
+  }
+  const alles = new Uint8Array(n);
+  let i = 0; for (const d of delen){ alles.set(d, i); i += d.byteLength; }
+  return JSON.parse(new TextDecoder().decode(alles));
+}
+
+/* De beheersleutel nakijken zonder dat de rekentijd verraadt hoeveel tekens
+   er goed waren: beide kanten eerst door sha-256, dan alle bytes langs. Na
+   dertig foute pogingen in tien minuten zegt een adres even niets meer. */
+async function beheerKlopt(env, req){
+  const geheim = env.BEHEER, gegeven = req.headers.get("x-beheer");
+  if (!geheim || typeof geheim !== "string" || !gegeven) return false;
+  const enc = new TextEncoder();
+  const [a, b] = await Promise.all([crypto.subtle.digest("SHA-256", enc.encode(geheim)), crypto.subtle.digest("SHA-256", enc.encode(gegeven))]);
+  const x = new Uint8Array(a), y = new Uint8Array(b);
+  let verschil = 0;
+  for (let i = 0; i < x.length; i++) verschil |= x[i] ^ y[i];
+  return verschil === 0;
+}
+async function beheerToegang(env, req){
+  if (!await magDoor(env, req, "beheer-fout", 30, 600, true)) return json({ fout: "even wachten" }, 429);
+  if (await beheerKlopt(env, req)) return null;
+  await magDoor(env, req, "beheer-fout", 30, 600);
+  return json({ fout: "geen toegang" }, 403);
+}
+
+/* De daglijst heeft een datum in zijn naam, en elke naam is een eigen
+   opslagobject. Zonder grens maakte elk verzonnen jaartal er een bij. Lezen
+   mag vanaf 2025 tot morgen; schrijven alleen rond vandaag (de datum komt uit
+   de klok van de browser, dus een paar dagen speling). */
+const DAG_MS = 86400000;
+function dagMag(naam, schrijven){
+  const m = /^dag-(\d{4})-(\d{2})-(\d{2})$/.exec(naam);
+  if (!m) return true;
+  const t = Date.UTC(+m[1], +m[2] - 1, +m[3]);
+  if (!Number.isFinite(t) || new Date(t).toISOString().slice(0, 10) !== naam.slice(4)) return false;
+  const nu = Date.now();
+  return schrijven ? Math.abs(t - nu) < 3 * DAG_MS : t >= Date.UTC(2025, 0, 1) && t < nu + 2 * DAG_MS;
+}
+
+/* Koppen voor alles wat de Worker zelf antwoordt onder /api/ en /ws/. De
+   bestanden van de site krijgen die van _headers; een antwoord van de Worker
+   niet vanzelf. Een WebSocket (101) blijft zoals hij is. */
+const API_KOPPEN = {
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "DENY",
+  "referrer-policy": "strict-origin-when-cross-origin",
+  "strict-transport-security": "max-age=31536000",
+  "content-security-policy": "default-src 'none'; frame-ancestors 'none'"
+};
+function metKoppen(r){
+  if (!r || r.status === 101 || r.webSocket) return r;
+  const h = new Headers(r.headers);
+  for (const k of Object.keys(API_KOPPEN)) if (!h.has(k)) h.set(k, API_KOPPEN[k]);
+  return new Response(r.body, { status: r.status, statusText: r.statusText, headers: h });
+}
+
 export default {
   async fetch(req, env, ctx){
+    const p = new URL(req.url).pathname;
+    const api = p.startsWith("/api/") || p.startsWith("/ws/");
+    try {
+      const r = await verdeel(req, env, ctx);
+      return api ? metKoppen(r) : r;
+    } catch (e){
+      /* wat er misging staat in het logboek, niet in het antwoord */
+      console.error("worker", e && e.stack || e);
+      if (api) return metKoppen(json({ fout: "de server gaf een fout" }, 500));
+      throw e;
+    }
+  }
+};
+
+async function verdeel(req, env, ctx){
     const url = new URL(req.url);
     const p = url.pathname;
+    if (p.startsWith("/api/") && Number(req.headers.get("content-length") || 0) > MAX_BODY) return json({ fout: "dit is te groot" }, 413);
     /* Een adres, zonder www: anders klopt bij het inloggen met Microsoft het terugadres niet
        (AADSTS50011) en staat het sessiekoekje op de verkeerde host. */
     if (url.hostname.startsWith("www.")){
@@ -106,11 +196,12 @@ export default {
     const km = p.match(/^\/api\/klassement\/([a-z]+(?:-\d{4}-\d{2}-\d{2})?)(\/gezicht|\/bon)?\/?$/);
     if (km){
       if (!KLASSEMENTEN[km[1].split("-")[0]] || (km[1].indexOf("-") > 0) !== (km[1].split("-")[0] === "dag")) return json({ fout: "onbekend spel" }, 404);
+      if (req.method !== "DELETE" && !dagMag(km[1], req.method === "POST")) return json({ fout: "onbekende dag" }, 404);
       const stub = env.KLASSEMENT.get(env.KLASSEMENT.idFromName(km[1]));
       /* de beheerder haalt een rij weg: DELETE met de geheime sleutel (wrangler secret put BEHEER) */
       if (req.method === "DELETE"){
-        if (!env.BEHEER || req.headers.get("x-beheer") !== env.BEHEER) return json({ fout: "geen toegang" }, 403);
-        let opdr; try { opdr = await req.json(); } catch (e){ return json({ fout: "geen geldige opdracht" }, 400); }
+        const nee = await beheerToegang(env, req); if (nee) return nee;
+        let opdr; try { opdr = await leesJson(req); } catch (e){ return json({ fout: "geen geldige opdracht" }, 400); }
         return stub.fetch("https://klassement/weg", { method: "POST", body: JSON.stringify(opdr) });
       }
       if (req.method === "POST"){
@@ -121,7 +212,7 @@ export default {
         const deel = km[2] === "/gezicht" ? "gezicht" : km[2] === "/bon" ? "bon" : "zet";
         const ruimte = { gezicht: 300, bon: 240, zet: 90 }[deel];
         if (!await magDoor(env, req, "klassement-" + deel, ruimte, 120)) return json({ fout: "even wachten" }, 429);
-        let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldige inzending" }, 400); }
+        let inz; try { inz = await leesJson(req); } catch (e){ return json({ fout: "geen geldige inzending" }, 400); }
         return stub.fetch("https://klassement/" + deel, { method: "POST", body: JSON.stringify(inz || {}) });
       }
       return stub.fetch("https://klassement/lijst");
@@ -131,7 +222,7 @@ export default {
     if (p === "/api/set" && req.method === "POST"){
       if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
       if (!await magDoor(env, req, "set", 40, 600)) return json({ fout: "even wachten met nieuwe sets" }, 429);
-      let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldige set" }, 400); }
+      let inz; try { inz = await leesJson(req); } catch (e){ return json({ fout: "geen geldige set" }, 400); }
       return env.SETS.get(env.SETS.idFromName("sets")).fetch("https://sets/zet", { method: "POST", body: JSON.stringify(inz || {}) });
     }
     const sm = p.match(/^\/api\/set\/([A-Za-z0-9]{6})\/?$/);
@@ -149,7 +240,7 @@ export default {
     if (p === "/api/materiaal" && req.method === "POST"){
       if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
       if (!await magDoor(env, req, "materiaal", 60, 600)) return json({ fout: "even wachten met nieuw materiaal" }, 429);
-      let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldig materiaal" }, 400); }
+      let inz; try { inz = await leesJson(req); } catch (e){ return json({ fout: "geen geldig materiaal" }, 400); }
       return env.MATERIAAL.get(env.MATERIAAL.idFromName("materiaal")).fetch("https://materiaal/zet", { method: "POST", body: JSON.stringify(inz || {}) });
     }
     /* een plaatje bij een toets: openbaar, en een jaar in de cache (het adres verandert als het plaatje verandert) */
@@ -174,7 +265,7 @@ export default {
         /* inleveren: een hele klas achter een schooladres tegelijk; nakijken: veel kleine klikjes */
         const emmer = mm[2] === "/inlever" ? ["materiaal-inlever", 900] : /^\/(nakijk|uitslagen|instel|volledig)$/.test(mm[2]) ? ["materiaal-nakijk", 1500] : mm[2] === "/afb" ? ["materiaal-afb", 60] : ["materiaal-werk", 120];
         if (!await magDoor(env, req, emmer[0], emmer[1], 600)) return json({ fout: "even wachten" }, 429);
-        let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldig materiaal" }, 400); }
+        let inz; try { inz = await leesJson(req); } catch (e){ return json({ fout: "geen geldig materiaal" }, 400); }
         return stub.fetch("https://materiaal" + mm[2] + "?code=" + mm[1].toUpperCase(), { method: "POST", body: JSON.stringify(inz || {}) });
       }
       return json({ fout: "onbekend" }, 404);
@@ -190,7 +281,7 @@ export default {
     if (p === "/api/profiel" && req.method === "POST"){
       if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
       if (!await magDoor(env, req, "profiel-maak", 90, 600)) return json({ fout: "even wachten met een nieuwe speelcode" }, 429);
-      let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldig profiel" }, 400); }
+      let inz; try { inz = await leesJson(req); } catch (e){ return json({ fout: "geen geldig profiel" }, 400); }
       for (let poging = 0; poging < 4; poging++){
         const code = nieuweCode(8);
         const r = await env.PROFIEL.get(env.PROFIEL.idFromName(code)).fetch("https://profiel/maak", { method: "POST", body: JSON.stringify({ code, profiel: inz && inz.profiel }) });
@@ -209,7 +300,7 @@ export default {
       if (req.method === "PUT"){
         if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
         if (!await magDoor(env, req, "profiel-sync", 900, 60)) return json({ fout: "even wachten" }, 429);
-        let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldig profiel" }, 400); }
+        let inz; try { inz = await leesJson(req); } catch (e){ return json({ fout: "geen geldig profiel" }, 400); }
         return stub.fetch("https://profiel/sync", { method: "POST", body: JSON.stringify(inz || {}) });
       }
       return json({ fout: "onbekend" }, 404);
@@ -217,21 +308,21 @@ export default {
     if (p === "/api/melding" && req.method === "POST"){
       if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
       if (!await magDoor(env, req, "melding", 40, 600)) return json({ fout: "even wachten met een volgende melding" }, 429);
-      let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldige melding" }, 400); }
+      let inz; try { inz = await leesJson(req); } catch (e){ return json({ fout: "geen geldige melding" }, 400); }
       return beheer().fetch("https://beheer/melding", { method: "POST", body: JSON.stringify(inz || {}) });
     }
     if (p === "/api/tel" && req.method === "POST"){
       if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
       if (!await magDoor(env, req, "tel", 900, 60)) return json({ ok: false }, 429);
-      let inz; try { inz = JSON.parse(await req.text()); } catch (e){ return json({ fout: "geen pad" }, 400); }
+      let inz; try { inz = await leesJson(req); } catch (e){ return json({ fout: "geen pad" }, 400); }
       return beheer().fetch("https://beheer/tel", { method: "POST", body: JSON.stringify(inz || {}) });
     }
     /* alleen de beheerder: lezen en opruimen, met de geheime sleutel (wrangler secret put BEHEER) */
     const bm = p.match(/^\/api\/beheer\/(meldingen|tellers|melding-weg|tel-zet)\/?$/);
     if (bm){
-      if (!env.BEHEER || req.headers.get("x-beheer") !== env.BEHEER) return json({ fout: "geen toegang" }, 403);
+      const nee = await beheerToegang(env, req); if (nee) return nee;
       if (bm[1] === "melding-weg" || bm[1] === "tel-zet"){
-        let opdr; try { opdr = await req.json(); } catch (e){ return json({ fout: "geen geldige opdracht" }, 400); }
+        let opdr; try { opdr = await leesJson(req); } catch (e){ return json({ fout: "geen geldige opdracht" }, 400); }
         return beheer().fetch("https://beheer/" + (bm[1] === "tel-zet" ? "tel-zet" : "weg"), { method: "POST", body: JSON.stringify(opdr || {}) });
       }
       return beheer().fetch("https://beheer/" + bm[1]);
@@ -241,7 +332,7 @@ export default {
       if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
       if (!await magDoor(env, req, "kamer", 90, 600)) return json({ fout: "even wachten met nieuwe kamers" }, 429);
       let opzet;
-      try { opzet = await req.json(); } catch (e){ return json({ fout: "geen geldige opzet" }, 400); }
+      try { opzet = await leesJson(req); } catch (e){ return json({ fout: "geen geldige opzet" }, 400); }
       if (!opzet || typeof opzet !== "object") return json({ fout: "geen geldige opzet" }, 400);
       /* Een klascode hoort bij een docent. Kan er ingelogd worden op deze site, dan kan dat alleen ingelogd:
          zo blijft een klas van jou, raak je hem niet kwijt met je browsergegevens, en maakt niet elke leerling
@@ -274,8 +365,9 @@ export default {
         if (req.method !== "POST") return json({ fout: "onbekend" }, 404);
         if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
         const wat = kl[2].slice(1);
-        if (!await magDoor(env, req, wat, wat === "meld" ? 400 : 40, 60)) return json({ fout: "even wachten" }, 429);
-        let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldige melding" }, 400); }
+        /* hoi stuurt elke leerling bij elk bezoek aan de leeromgeving: met een hele school achter een adres zijn dat er veel */
+        if (!await magDoor(env, req, wat, wat === "meld" ? 400 : wat === "hoi" ? 600 : 40, 60)) return json({ fout: "even wachten" }, 429);
+        let inz; try { inz = await leesJson(req); } catch (e){ return json({ fout: "geen geldige melding" }, 400); }
         /* De naam van het Microsoft-account komt hier uit het sessiekoekje en
            niet uit het bericht: anders typt een leerling er zelf een naam in.
            Dezelfde weg als vanEigenaar bij het maken van een klascode. */
@@ -342,7 +434,14 @@ export default {
         if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
         return stub.fetch(req);
       }
-      return stub.fetch("https://kamer/stand");
+      /* Een code die niet bestaat telt mee: wie alle codes afloopt om klassen te
+         vinden, stuit daar snel op. Een bestaande code telt nooit, dus een
+         school die de hele dag kamers opent merkt hier niets van. Het
+         antwoord bij te veel noemt geen "geen kamer": klas.js ontkoppelt dan. */
+      if (!await magDoor(env, req, "kamer-mis", 300, 600, true)) return json({ fout: "even wachten" }, 429);
+      const r = await stub.fetch("https://kamer/stand");
+      if (r.status === 404) await magDoor(env, req, "kamer-mis", 300, 600);
+      return r;
     }
 
     if (p.startsWith("/api/") || p.startsWith("/ws/")) return json({ fout: "onbekend" }, 404);
@@ -350,5 +449,4 @@ export default {
     if (p.endsWith("/")) return env.ASSETS.fetch(new Request(url.origin + p + "index.html" + url.search, req));
     if (p === "/leermiddelen") return Response.redirect(url.origin + "/leermiddelen/" + url.search, 301);
     return env.ASSETS.fetch(req);
-  }
-};
+}

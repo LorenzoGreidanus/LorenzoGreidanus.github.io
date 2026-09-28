@@ -44,6 +44,7 @@ const STAND_OM = 3;                         /* om de drie tikken een pakket: twi
 const ZONDER_SPELERS = 45 * 1000;           /* een leeg potje stopt na drie kwartier minuut */
 const POTJE_LEEFT = 2 * 60 * 60 * 1000;     /* en hoogstens twee uur */
 const WEG_NA_STIL = 35 * 1000;              /* wie zo lang niets stuurt is weg */
+const SOCKETS_PER_SID = 4;
 const RANG = { bb: 1, kgt: 2, havo: 3, vwo: 4 };
 const VAKKEN = VRAAGVAKKEN;
 
@@ -93,6 +94,9 @@ export class Zombiekamer extends DurableObject {
       if (req.headers.get("Upgrade") !== "websocket") return json({ fout: "hier hoort een WebSocket" }, 426);
       const sid = schoon(url.searchParams.get("sid"), 32);
       if (!sid) return json({ fout: "geen sid" }, 400);
+      /* Alleen een potje dat de portier opende (nieuw). Anders zette elke
+         verzonnen code een eigen wereld aan, die zestig keer per seconde tikt. */
+      if (!this.gemaakt) return json({ fout: "geen potje met deze code" }, 404);
       if (!this.origin && /^https?:$/.test(url.protocol)) this.origin = url.origin;
       if (!this.K) this.start();
       if (!this.wie.has(sid) && this.wie.size >= ZOMBIE_MAX) return json({ fout: "dit potje zit vol" }, 409);
@@ -118,6 +122,9 @@ export class Zombiekamer extends DurableObject {
       }
       if (!nieuw) K.terug(plek.nr);
       plek.laatst = Date.now();
+      /* hoogstens een paar verbindingen per speler: elke verbinding krijgt twintig keer per seconde een pakket */
+      const al = this.ctx.getWebSockets("speler").filter(w => { try { return (w.deserializeAttachment() || {}).sid === sid; } catch (e){ return false; } });
+      if (al.length >= SOCKETS_PER_SID) al.slice(0, al.length - SOCKETS_PER_SID + 1).forEach(w => { try { w.close(1000, "nieuwe verbinding"); } catch (e){} });
       const paar = new WebSocketPair();
       const [client, server] = Object.values(paar);
       this.ctx.acceptWebSocket(server, ["speler"]);
