@@ -559,17 +559,62 @@ Frans Hals"></textarea>
   }
   /* Het plaatje komt via de kamer van de docent. De kamer laat alleen eenvoudige
      vormen door, en hier kijken we nog een keer: geen scripts, geen verwijzingen
-     naar buiten, geen gebeurtenissen. */
+     naar buiten, geen gebeurtenissen. Dezelfde toets als veiligSvg in
+     server/kamer.js: elk element op de lijst, een gebeurtenis ook zonder spatie
+     ervoor (<circle r="1"onmouseover=...>), en niets wat pas na het vertalen
+     van &#...; een adres of script wordt. */
+  var SVG_MAG = { svg:1, g:1, path:1, rect:1, circle:1, ellipse:1, line:1, polyline:1, polygon:1, text:1, tspan:1, textpath:1,
+    title:1, desc:1, defs:1, lineargradient:1, radialgradient:1, stop:1, clippath:1, mask:1, pattern:1, marker:1, symbol:1, filter:1 };
   function veiligSvg(s){
     if (typeof s !== 'string' || s.length > 20000) return false;
     if (!/^<svg[\s>][\s\S]*<\/svg>\s*$/i.test(s.trim())) return false;
     if (/<\s*(script|foreignobject|iframe|object|embed|image|use|animate|animatemotion|animatetransform|set|link|meta|style|a)\b/i.test(s)) return false;
     if (/\son[a-z]+\s*=|javascript:|href|xlink|<!|<\?|url\(/i.test(s)) return false;
+    var re = /<\s*\/?\s*([a-z][a-z0-9:._-]*)/gi, m;
+    while ((m = re.exec(s))){ var naam = m[1].toLowerCase(); if (!SVG_MAG[naam] && !/^fe[a-z]+$/.test(naam)) return false; }
+    if (/(^|[^a-z0-9_-])on[a-z]+\s*=/i.test(s)) return false;
+    var d;
+    try {
+      d = s.replace(/&#x([0-9a-f]{1,6});?/gi, function(x, h){ return String.fromCodePoint(parseInt(h, 16)); })
+           .replace(/&#(\d{1,7});?/g, function(x, g){ return String.fromCodePoint(+g); })
+           .replace(/&(colon|lpar|rpar|tab|newline);/gi, function(x){ return ({ '&colon;':':', '&lpar;':'(', '&rpar;':')' })[x.toLowerCase()] || ' '; });
+    } catch (e){ return false; }
+    if (/javascript:|url\s*\(|expression\s*\(|href/i.test(d)) return false;
     return true;
+  }
+  /* Een toets op de tekst blijft een toets op de tekst: de oude liet een
+     <img/src/onerror=...> door (de browser haalt een img uit de svg en tekent
+     hem als gewone html). Daarom daarna nog een witte lijst op wat de browser
+     er echt van maakt: de svg in een los document zonder venster inlezen (daar
+     draait niets en laadt niets), en alleen tekenvormen met tekenkenmerken
+     overhouden. Wat overblijft gaat de pagina in. In een <img> zetten kan niet:
+     dan doen currentColor en de klassen van de pagina (donker thema) niet meer mee. */
+  var SVG_NS = 'http://www.w3.org/2000/svg';
+  var SVG_VORMEN = { svg:1, g:1, path:1, rect:1, circle:1, ellipse:1, line:1, polyline:1, polygon:1, text:1, tspan:1 };
+  var SVG_KENMERK = /^(viewbox|xmlns|width|height|x|y|x1|x2|y1|y2|cx|cy|r|rx|ry|dx|dy|d|points|transform|class|role|aria-[a-z-]+|opacity|fill|fill-opacity|fill-rule|stroke|stroke-[a-z-]+|vector-effect|font-size|font-family|font-weight|font-style|text-anchor|dominant-baseline|letter-spacing|paint-order|preserveaspectratio)$/i;
+  function schoneSvg(s){
+    if (!veiligSvg(s)) return '';
+    try {
+      var doc = document.implementation.createHTMLDocument('');
+      doc.body.innerHTML = s.trim();
+      var el = doc.body.firstElementChild;
+      if (!el || doc.body.children.length !== 1 || el.namespaceURI !== SVG_NS || el.localName !== 'svg') return '';
+      (function poets(n){
+        Array.prototype.slice.call(n.childNodes).forEach(function(c){
+          if (c.nodeType === 3) return;
+          if (c.nodeType !== 1 || c.namespaceURI !== SVG_NS || !SVG_VORMEN[c.localName.toLowerCase()]){ n.removeChild(c); return; }
+          poets(c);
+        });
+        Array.prototype.slice.call(n.attributes).forEach(function(a){
+          if (!SVG_KENMERK.test(a.name) || /url\s*\(|script\s*:/i.test(a.value)) n.removeAttribute(a.name);
+        });
+      })(el);
+      return el.outerHTML;
+    } catch (e){ return ''; }
   }
   function beeldVoor(q){
     if (q.vlag && /^[a-z-]{2,8}$/.test(q.vlag)) return '<img class="vlagvak" src="vlaggen/' + q.vlag + '.svg" alt="Een vlag">';
-    return veiligSvg(q.svg) ? q.svg : '';
+    return schoneSvg(q.svg);
   }
   /* ---------- verbinding ----------
      Via verbinding.js: die laat een strook zien zolang de verbinding hapert

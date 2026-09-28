@@ -19,6 +19,21 @@ window.STRIJD = (function(){
   'use strict';
   function param(naam){ var m = new RegExp('[?&]' + naam + '=([^&#]+)').exec(location.search); return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : null; }
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+  /* Een net-bericht komt van de kamer (de motor) of, zolang die er niet is,
+     rechtstreeks van een andere speler: de kamer geeft het dan ongezien door.
+     Toren en Zwaardvechter zetten wat erin staat in hun bord en panelen, deels
+     als html. Daarom gaan punthaken en aanhalingstekens uit elke tekst eruit,
+     net als het naamfilter van de server doet; getallen blijven wat ze zijn. */
+  function netSchoon(x, diep){
+    if (typeof x === 'string') return x.replace(/[<>"'`]/g, '');
+    if (!x || typeof x !== 'object') return x;
+    if ((diep | 0) > 12) return null;
+    Object.keys(x).forEach(function(k){
+      if (k === '__proto__' || k === 'constructor' || k === 'prototype'){ delete x[k]; return; }
+      x[k] = netSchoon(x[k], (diep | 0) + 1);
+    });
+    return x;
+  }
   function sid(){
     var s = null;
     try { s = localStorage.getItem('lg-quiz-sid'); } catch (e){}
@@ -492,7 +507,7 @@ window.STRIJD = (function(){
     }
     if (m.t === 'aftellen'){ aftellen(m.s || 3); return; }
     if (m.t === 'start'){ start(m); return; }
-    if (m.t === 'net'){ if (hooks && hooks.net) hooks.net(m.d); return; }
+    if (m.t === 'net'){ if (hooks && hooks.net) hooks.net(netSchoon(m.d)); return; }
     if (m.t === 'stand'){
       if (m.max) maxSamen = m.max;
       if (m.maten) maten = m.maten;
@@ -641,6 +656,8 @@ window.STRIJD = (function(){
         if (!x.ok){ fout.textContent = x.j.fout || 'Geen kamer met deze code.'; return; }
         if (x.j.spel !== 'strijd'){ location.href = 'klasquiz.html?k=' + c; return; }
         if (x.j.fase === 'einde'){ fout.textContent = 'Dit potje is al afgelopen.'; return; }
+        /* de naam van het spel wordt een adres: alleen letters, dus nooit javascript: of een andere site */
+        if (!/^[a-z]+$/.test(x.j.game || '')){ fout.textContent = 'Deze code hoort bij een ander spel.'; return; }
         location.href = x.j.game + '.html?vak=' + encodeURIComponent(x.j.vak) + '&n=' + encodeURIComponent(x.j.niveau) + (x.j.deel ? (x.j.vak === 'eigen' ? '&lijst=' : '&deel=') + encodeURIComponent(x.j.deel) : '') + '&kamer=' + c + '&naam=' + encodeURIComponent(n);
       })
       .catch(function(){ knop.disabled = false; fout.textContent = 'Geen verbinding met de server.'; });

@@ -330,6 +330,8 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
   'use strict';
   function $(id){ return document.getElementById(id); }
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+  /* een kleur die van het bord komt, alleen als nette hex-kleur in een style (anders een neutrale) */
+  function kleurOk(k){ return /^#[0-9a-f]{6}$/i.test(k || '') ? k : '#204ECF'; }
   function husselen(a){ for (var i = a.length - 1; i > 0; i--){ var j = Math.floor(Math.random() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
   var TEAMS = [{ naam:'Rood', kleur:'#F26749' }, { naam:'Blauw', kleur:'#204ECF' }, { naam:'Groen', kleur:'#2f7d52' }, { naam:'Geel', kleur:'#EA9836' }, { naam:'Paars', kleur:'#6b3fa0' }, { naam:'Zee', kleur:'#0d7b8a' }];
   /* de kleuren: de oude zes, en wat een tekening nodig heeft (wit is ook een dunne gum op een vlak) */
@@ -1507,11 +1509,11 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
     if (pModus !== 'teams'){
       /* ieder voor zich: mijn punten en mijn plek */
       var ik = -1; pScores.forEach(function(r, i){ if (r.sid === mijnPid) ik = i; });
-      $('pTeam').innerHTML = ik >= 0 ? 'jij: ' + pScores[ik].punten + ' punten · ' + (ik + 1) + 'e van ' + pScores.length : '';
+      $('pTeam').innerHTML = ik >= 0 ? 'jij: ' + schoon(pScores[ik].punten) + ' punten · ' + (ik + 1) + 'e van ' + pScores.length : '';
       return;
     }
     var t = mijnTeam >= 0 ? pTeams[mijnTeam] : null;
-    $('pTeam').innerHTML = t ? '<span style="color:' + t.kleur + '">team ' + t.naam + '</span>' + (pTeams.length ? ' · ' + pTeams.map(function(x){ return x.naam + ' ' + (x.punten || 0); }).join(', ') : '') : '';
+    $('pTeam').innerHTML = t ? '<span style="color:' + kleurOk(t.kleur) + '">team ' + schoon(t.naam) + '</span>' + (pTeams.length ? ' · ' + schoon(pTeams.map(function(x){ return x.naam + ' ' + (x.punten || 0); }).join(', ')) : '') : '';
   }
   function spelerBericht(m){
     if (m.t === 'eruit'){
@@ -1563,13 +1565,13 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
       clearTimeout(pWoordKlok); pWoordNu = '';
       /* groot dat het goed is; het woord zelf klein, want de rest raadt nog */
       $('pWoord').className = 'woordklein geraden';
-      $('pWoord').innerHTML = '<b class="goedgroot">Goed! +' + d.punten + ' punten</b><small>Het woord was <b>' + schoon(d.woord) + '</b>. Je had het als ' + d.plek + 'e. Kijk mee hoe de rest het raadt.</small>';
+      $('pWoord').innerHTML = '<b class="goedgroot">Goed! +' + schoon(d.punten) + ' punten</b><small>Het woord was <b>' + schoon(d.woord) + '</b>. Je had het als ' + schoon(d.plek) + 'e. Kijk mee hoe de rest het raadt.</small>';
       $('pRol').textContent = 'je hebt het';
       return;
     }
     if (d.k === 'bijnajij'){ pFeed('<b>Bijna!</b>&nbsp;Kijk nog eens hoe je het schrijft.', 'bijna'); return; }
     if (d.k === 'geraden'){
-      pFeed('<b>' + schoon(d.naam) + '</b>&nbsp;heeft het! (' + d.plek + 'e)', 'goed');
+      pFeed('<b>' + schoon(d.naam) + '</b>&nbsp;heeft het! (' + schoon(d.plek) + 'e)', 'goed');
       if (pModus === 'solo' && d.tekenaar === mijnPid) pFeed('+3 voor jou: ' + schoon(d.naam) + ' raadde jouw tekening', 'goed');
       stand();
       return;
@@ -1580,7 +1582,7 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
       mijnTeam = -1; pTeams.forEach(function(t, i){ if (t.leden.indexOf(mijnPid) >= 0) mijnTeam = i; });
       stand();
       /* stil: dit hoort bij het bijpraten na een nieuwe verbinding, de beurt komt zo */
-      if (!d.stil) $('pOver').innerHTML = '<div><b>Je zit in team ' + (mijnTeam >= 0 ? pTeams[mijnTeam].naam : '?') + '</b><p>Wacht op de eerste beurt.</p></div>';
+      if (!d.stil) $('pOver').innerHTML = '<div><b>Je zit in team ' + (mijnTeam >= 0 ? schoon(pTeams[mijnTeam].naam) : '?') + '</b><p>Wacht op de eerste beurt.</p></div>';
       return;
     }
     if (d.k === 'klaar'){
@@ -1594,7 +1596,7 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
       $('pOver').innerHTML = '<div><b>' + (ik ? 'Jij tekent zo!' : pModus === 'docent' ? 'De docent gaat tekenen' : schoon(d.naam) + ' gaat tekenen') + '</b><p>' +
         (ik ? (pModus === 'solo' ? 'Je woord komt over een paar tellen. Teken groot en duidelijk: je krijgt punten voor iedereen die het raadt.' : 'Je woord komt over een paar tellen. Teken groot en duidelijk; je team typt wat het is.')
          : pModus !== 'teams' ? 'Typ wat je denkt dat het is zodra de tekening begint. Wie het eerst goed heeft, krijgt de meeste punten.'
-         : mijn ? 'Typ wat je denkt dat het is zodra de tekening begint.' : 'Team ' + (pTeams[d.team] || {}).naam + ' is aan de beurt; jouw team kijkt mee.') + '</p></div>';
+         : mijn ? 'Typ wat je denkt dat het is zodra de tekening begint.' : 'Team ' + schoon((pTeams[d.team] || {}).naam) + ' is aan de beurt; jouw team kijkt mee.') + '</p></div>';
       return;
     }
     if (d.k === 'teken'){

@@ -15,7 +15,7 @@ var UITSLAG = (function(){
   var VORMNAAM = { mk: 'Meerkeuze', open: 'Open', koppel: 'Koppelen', volgorde: 'Volgorde', groepen: 'Groepen', gaten: 'Gatentekst', aanwijzen: 'Aanwijzen' };
   function afbHtml(it){
     if (!it.afb) return '';
-    return '<div class="paneelafb"><div class="beeld"><img alt="" src="' + EIGEN.afbAdres(code, it.afb) + '">' +
+    return '<div class="paneelafb"><div class="beeld"><img alt="" src="' + schoon(EIGEN.afbAdres(code, it.afb)) + '">' +
       (it.vorm === 'aanwijzen' ? it.plekken.map(function(p, i){ return '<span class="stip" style="left:' + Number(p.x) + '%;top:' + Number(p.y) + '%">' + (i + 1) + '</span>'; }).join('') : '') + '</div></div>';
   }
   var terug = function(){};
@@ -160,7 +160,7 @@ var UITSLAG = (function(){
           '<td class="getal" data-l="Punten">' + komma(r.score, r.score % 1 ? 1 : 0) + ' / ' + b.max + '</td><td class="getal" data-l="Procent">' + r.pct + '</td>' +
           '<td class="getal' + (r.cijfer < 5.5 ? ' onv' : '') + '" data-l="Cijfer"><b>' + komma(r.cijfer) + '</b>' + (r.open ? '<small>voorlopig</small>' : '') + '</td>' +
           '<td data-l="Nakijken">' + (r.open ? '<span class="pil let">' + r.open + ' open</span>' : '<span class="tip">klaar</span>') + '</td>' +
-          '<td class="actie"><button class="knop stil klein" type="button" data-leerling="' + r.sid + '" aria-label="Bekijk ' + schoon(r.naam) + '">Bekijk</button></td></tr>';
+          '<td class="actie"><button class="knop stil klein" type="button" data-leerling="' + schoon(r.sid) + '" aria-label="Bekijk ' + schoon(r.naam) + '">Bekijk</button></td></tr>';
       }).join('') + '</tbody>';
     /* per vraag */
     $('vraagTabel').innerHTML = '<thead><tr><th>#</th><th>Vraag</th><th class="getal">Punten</th><th class="getal">p</th><th class="getal">rit</th><th>Telt mee</th><th></th></tr></thead><tbody>' +
@@ -304,17 +304,17 @@ var UITSLAG = (function(){
     var aandacht = v.leerlingen.filter(function(w){ return (w.gem != null && w.gem < 5.5) || (w.trend != null && w.trend <= -1.5); });
     $('vergelijkInhoud').innerHTML =
       '<div class="kaart"><h3>Welke toetsen</h3><div class="toetskeus">' + alle.map(function(x){
-        return '<label class="vink"><input type="checkbox" data-toets="' + x.code + '"' + (gekozen[x.code] ? ' checked' : '') + '> ' + schoon(x.naam) +
+        return '<label class="vink"><input type="checkbox" data-toets="' + schoon(x.code) + '"' + (gekozen[x.code] ? ' checked' : '') + '> ' + schoon(x.naam) +
           ' <small class="tip">' + new Date(x.t).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }) + '</small></label>';
       }).join('') + '</div>' +
-      '<div class="rij" style="margin-top:10px">' + (Object.keys(klassen).length > 1 ? '<label class="tip">Klas <select class="veld mini" id="vKlas"><option value="">alle</option>' + Object.keys(klassen).sort().map(function(k){ return '<option' + (k === vKlas ? ' selected' : '') + '>' + k + '</option>'; }).join('') + '</select></label>' : '') +
+      '<div class="rij" style="margin-top:10px">' + (Object.keys(klassen).length > 1 ? '<label class="tip">Klas <select class="veld mini" id="vKlas"><option value="">alle</option>' + Object.keys(klassen).sort().map(function(k){ return '<option' + (k === vKlas ? ' selected' : '') + '>' + schoon(k) + '</option>'; }).join('') + '</select></label>' : '') +
         '<label class="tip">Volgorde <select class="veld mini" id="vSorteer"><option value="naam">op naam</option><option value="laag"' + (vSorteer === 'laag' ? ' selected' : '') + '>laagste gemiddelde eerst</option><option value="lijn"' + (vSorteer === 'lijn' ? ' selected' : '') + '>grootste daling eerst</option></select></label></div></div>' +
       '<div class="kaart"><h3>Per toets</h3><div class="schuif"><table class="tabel"><thead><tr><th>Toets</th><th class="getal">Ingeleverd</th><th class="getal">Gemiddeld</th><th class="getal">Voldoende</th><th>Norm</th><th></th></tr></thead><tbody>' +
         toetsen.map(function(t){
           var n = t.b.norm;
           return '<tr><td>' + schoon(t.naam) + '</td><td class="getal">' + t.b.rijen.length + '</td><td class="getal' + (t.b.gem < 5.5 ? ' onv' : '') + '"><b>' + komma(t.b.gem) + '</b></td><td class="getal">' + (t.b.voldoende == null ? '–' : t.b.voldoende + '%') + '</td>' +
             '<td class="tip">' + (n.methode === 'nterm' ? 'N-term ' + komma(n.n) : n.methode === 'auto' ? 'automatisch, ' + komma(t.b.cesuur) + '%' : 'cesuur ' + komma(n.cesuur, 0) + '%') + '</td>' +
-            '<td><button class="knop stil klein" type="button" data-naaropen="' + t.code + '">Resultaten</button></td></tr>';
+            '<td><button class="knop stil klein" type="button" data-naaropen="' + schoon(t.code) + '">Resultaten</button></td></tr>';
         }).join('') + '</tbody></table></div></div>' +
       (aandacht.length ? '<div class="kaart aandacht"><h3>Aandacht</h3><p class="tip">Gemiddeld onder de 5,5, of het laatste cijfer anderhalve punt of meer lager dan het vorige.</p><ul>' +
         aandacht.map(function(w){ return '<li><b>' + schoon(w.naam) + '</b>' + (w.klas ? ' (' + schoon(w.klas) + ')' : '') + ': gemiddeld ' + komma(w.gem) + (w.trend != null && w.trend <= -1.5 ? ', laatste keer ' + komma(-w.trend) + ' lager' : '') + '</li>'; }).join('') + '</ul></div>' : '') +

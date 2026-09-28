@@ -69,6 +69,8 @@
   /* het verborgen venster: een per spel, en een berichtenlijn met een nummer per vraag */
   var kader = null, kaderSpel = '', klaarBelofte = null, klaar = null, wachtend = {}, nr = 0;
   addEventListener('message', function(e){
+    /* alleen antwoorden uit ons eigen verborgen venster: wat erin staat gaat als html het werkblad in */
+    if (e.origin !== location.origin || !kader || e.source !== kader.contentWindow) return;
     var b = e.data || {};
     if (b.t === 'werkblad-klaar' && klaarBelofte){ klaarBelofte.res(); klaarBelofte = null; }
     if ((b.t === 'werkblad-keuzes' || b.t === 'werkblad-maak') && wachtend[b.vraagId || 'keuzes']){ wachtend[b.vraagId || 'keuzes'](b); delete wachtend[b.vraagId || 'keuzes']; }
@@ -94,7 +96,7 @@
         var id = bericht.t === 'werkblad-keuzes' ? 'keuzes' : 'v' + (++nr);
         bericht.vraagId = id; wachtend[id] = res;
         setTimeout(function(){ if (wachtend[id]){ delete wachtend[id]; rej(new Error('geen antwoord')); } }, 20000);
-        kader.contentWindow.postMessage(bericht, '*');
+        kader.contentWindow.postMessage(bericht, location.origin);
       });
     });
   }

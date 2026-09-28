@@ -598,8 +598,10 @@ window.VAKSPEL = (function(){
     cfg = c;
     document.body.innerHTML = '<p style="font:14px system-ui;padding:12px;color:#666">Dit venster maakt opgaven voor een werkblad. Open <a href="' + location.pathname + '">het spel zelf</a> om te oefenen.</p>';
     var stijl = Array.prototype.map.call(document.querySelectorAll('style'), function(s){ return s.textContent; }).join('\n');
-    function stuur(b){ if (window.parent && window.parent !== window) window.parent.postMessage(b, '*'); }
+    /* alleen met een werkblad van deze site praten, niet met een pagina die ons in een frame zet */
+    function stuur(b){ if (window.parent && window.parent !== window) window.parent.postMessage(b, location.origin); }
     addEventListener('message', function(e){
+      if (e.origin !== location.origin || e.source !== window.parent) return;
       var b = e.data || {};
       if (b.t === 'werkblad-keuzes') stuur({ t:'werkblad-keuzes', id:cfg.id, naam:cfg.naam, keuzes:(cfg.keuzes || []).map(function(k){ return { id:k.id, kop:k.kop, std:k.std, items:k.items.map(function(it){ return { id:it.id, naam:it.naam }; }) }; }), stijl:stijl });
       if (b.t === 'werkblad-maak'){

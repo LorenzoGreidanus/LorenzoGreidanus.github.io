@@ -222,12 +222,12 @@
     $('stukken').innerHTML = l.length ? l.map(function(m){
       return '<div class="stuk"><div><b>' + schoon(m.naam) + '<span class="code">' + schoon(m.code) + '</span></b>' +
         '<small>' + (SOORTNAAM[m.soort] || 'Oefening') + ' · gemaakt ' + new Date(m.gemaakt).toLocaleDateString('nl-NL', { day:'numeric', month:'short', year:'numeric' }) + '</small></div>' +
-        '<div class="acties">' + (m.soort === 'lijst' || m.soort === 'dictee' ? '' : '<button class="knop klein" type="button" data-uitslag="' + m.code + '">Resultaten</button>') +
-        '<button class="knop stil klein" type="button" data-werk="' + m.code + '">Bewerken</button>' +
-        '<a class="knop stil klein" href="' + linkVan(m) + '">Openen</a>' +
-        (m.soort === 'dictee' ? '<a class="knop stil klein" href="dictee-werkblad.html?eigen=' + m.code + '">Voorleesblad</a>' : '') +
+        '<div class="acties">' + (m.soort === 'lijst' || m.soort === 'dictee' ? '' : '<button class="knop klein" type="button" data-uitslag="' + schoon(m.code) + '">Resultaten</button>') +
+        '<button class="knop stil klein" type="button" data-werk="' + schoon(m.code) + '">Bewerken</button>' +
+        '<a class="knop stil klein" href="' + schoon(linkVan(m)) + '">Openen</a>' +
+        (m.soort === 'dictee' ? '<a class="knop stil klein" href="dictee-werkblad.html?eigen=' + schoon(m.code) + '">Voorleesblad</a>' : '') +
         '<button class="knop stil klein" type="button" data-kopie="' + schoon(linkVan(m)) + '">Link kopiëren</button>' +
-        '<button class="knop gevaar klein" type="button" data-weg="' + m.code + '" data-naam="' + schoon(m.naam) + '">Weghalen</button></div></div>';
+        '<button class="knop gevaar klein" type="button" data-weg="' + schoon(m.code) + '" data-naam="' + schoon(m.naam) + '">Weghalen</button></div></div>';
     }).join('') : '<p class="leeg">Nog niets gemaakt. Begin met een woordenlijst, een oefening of een dictee.</p>';
   }
   $('stukken').addEventListener('click', function(e){
@@ -385,9 +385,12 @@
     nummer(); zetVies(true); groeiAlles();
     var laatste = $('items').lastElementChild; laatste.scrollIntoView({ block:'nearest' }); var eerste = laatste.querySelector('input,textarea'); if (eerste) eerste.focus();
   });
+  /* zo lang als de server bewaart (server/materiaal.js): langer typen verdwijnt anders stil bij het opslaan */
+  var MAX_VELD = { vraag:300, uitleg:300, goed:150, tekst:1200 };
   function veld(naam, waarde, plek, lang){
-    return lang ? '<textarea class="veld" data-v="' + naam + '" rows="3" placeholder="' + schoon(plek || '') + '">' + schoon(waarde || '') + '</textarea>'
-                : '<input class="veld" data-v="' + naam + '" value="' + schoon(waarde || '') + '" placeholder="' + schoon(plek || '') + '">';
+    var max = MAX_VELD[naam] ? ' maxlength="' + MAX_VELD[naam] + '"' : '';
+    return lang ? '<textarea class="veld" data-v="' + naam + '" rows="3"' + max + ' placeholder="' + schoon(plek || '') + '">' + schoon(waarde || '') + '</textarea>'
+                : '<input class="veld" data-v="' + naam + '"' + max + ' value="' + schoon(waarde || '') + '" placeholder="' + schoon(plek || '') + '">';
   }
   function label(tekst, binnen){ return '<label class="veldnaam">' + tekst + binnen + '</label>'; }
   function itemHtml(x){
