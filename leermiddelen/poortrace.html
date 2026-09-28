@@ -248,8 +248,20 @@ body.inspel .wrap{width:min(100% - 24px,1500px)}
 .voortgang i.goed{background:#5fbf88}
 .voortgang i.fout{background:#F26749}
 .voortgang i.nu{background:#FFE168;box-shadow:0 0 0 2px rgba(255,225,104,.35)}
+/* oneindig: de tank en de teller van de poorten in plaats van de vijftien stippen */
+.pil.tank{gap:6px}
+.pil svg.ic{flex:none;width:1.05em;height:1.05em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tankbalk{position:relative;display:block;width:64px;height:8px;border-radius:999px;background:rgba(255,255,255,.22);overflow:hidden}
+.tankbalk i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:#5fbf88;transition:width .25s linear}
+.pil.tank.laag .tankbalk i{background:#FFE168}
+.pil.tank.laag{background:rgba(120,78,10,.85)}
+.pil.tank.bijna .tankbalk i{background:#F26749}
+.pil.tank.bijna{background:rgba(168,55,31,.92);animation:tankpuls .8s ease-in-out infinite alternate}
+@keyframes tankpuls{from{box-shadow:0 0 0 0 rgba(242,103,73,.0)}to{box-shadow:0 0 0 5px rgba(242,103,73,.45)}}
+.aftel.tankleeg span{font-size:clamp(2.6rem,11vw,5.5rem);color:#FFE168}
 @media(max-width:560px){.voortgang{padding:5px 8px;gap:2px}.voortgang i{width:5px;height:5px}.pil{font-size:.78rem;padding:3px 9px}.pil .woord{display:none}.hud .kant{flex-wrap:nowrap;gap:4px}}
 @media(max-width:360px){#hudSnel{display:none}}
+@media(max-width:560px){.tankbalk{width:46px}body.oneindig #hudSnel{display:none}}
 /* de drie baanknoppen onderaan: dezelfde kleur en hetzelfde nummer als de poort */
 .banen{position:absolute;left:8px;right:8px;bottom:8px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;z-index:2}
 .baan{position:relative;display:flex;align-items:center;gap:8px;height:54px;overflow:hidden;border:none;border-radius:14px;padding:6px 10px;text-align:left;font-weight:700;font-size:.98rem;line-height:1.2;
@@ -414,8 +426,8 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     <div class="uitleg">
       <div><i style="background:var(--amber)">1</i><b>Stuur naar het goede antwoord</b><span>Bovenaan staat de vraag. Op de poort staan de antwoorden, een per baan. Stuur met de pijltjes of A en D, of veeg over de weg. Met 1, 2 en 3, of een tik op een baanknop onderaan, ga je meteen naar die baan.</span></div>
       <div><i style="background:#83A5F2">2</i><b>Goed is een boost</b><span>Door de goede poort krijg je een boost, punten en munten. Hoe langer je reeks, hoe meer punten. In de gewone stand ga je steeds sneller.</span></div>
-      <div><i style="background:var(--crab)">3</i><b>Fout is afremmen</b><span>Door de verkeerde poort slip je en rem je af. De weg staat stil en de uitleg blijft staan tot je op Volgende tikt of Enter drukt. Je rijdt altijd door tot de finish: vijftien poorten.</span></div>
-      <div><i style="background:#FCDED6">4</i><b>Drie manieren om te rijden</b><span>Normaal: de snelheid loopt op. Rustig: geen haast, de poort wacht tot je een baan kiest. Blijf je in je baan, tik dan op Rijd door of druk op W. Tijdrit: tegen de klok en tegen je eigen spook, het doorzichtige voertuig van je beste rit. Houd pijltje omhoog of de knop Gas ingedrukt om harder te gaan.</span></div>
+      <div><i style="background:var(--crab)">3</i><b>Fout is afremmen</b><span>Door de verkeerde poort slip je en rem je af. De weg staat stil en de uitleg blijft staan tot je op Volgende tikt of Enter drukt. Je rijdt altijd door tot de finish: vijftien poorten, behalve in Oneindig.</span></div>
+      <div><i style="background:#FCDED6">4</i><b>Vier manieren om te rijden</b><span>Normaal: de snelheid loopt op. Rustig: geen haast, de poort wacht tot je een baan kiest. Blijf je in je baan, tik dan op Rijd door of druk op W. Tijdrit: tegen de klok en tegen je eigen spook, het doorzichtige voertuig van je beste rit. Houd pijltje omhoog of de knop Gas ingedrukt om harder te gaan. Oneindig: geen finish, je rijdt tot je tank leeg is. Elke poort geeft brandstof: een goed antwoord vult je tank flink bij, een fout geeft een beetje. Hoe verder je komt, hoe sneller de tank leegloopt.</span></div>
       <div><i style="background:#2f9e8f">5</i><b>De garage</b><span>Met je munten koop je andere voertuigen, kleuren en een spoor erachter. Je munten en je records blijven op dit apparaat.</span></div>
     </div>
     <div id="siteStartLijst"></div>
@@ -455,7 +467,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     <div class="podium" id="podium">
       <canvas id="weg" role="img" aria-label="De weg met drie banen en de poorten met de antwoorden"></canvas>
       <div class="hud" aria-hidden="true">
-        <div class="kant"><span class="voortgang" id="voortgang"></span><span class="pil" id="hudSnel">0 <small>km/u</small></span></div>
+        <div class="kant"><span class="voortgang" id="voortgang"></span><span class="pil tank hide" id="hudTank"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M4 21h12M7 8h6M15 10h2a2 2 0 0 1 2 2v4a1.5 1.5 0 0 0 3 0V9l-3-3"/></svg><span class="tankbalk"><i id="hudTankBalk" style="width:100%"></i></span><span id="hudTankGetal">100%</span></span><span class="pil hide" id="hudPoort"></span><span class="pil" id="hudSnel">0 <small>km/u</small></span></div>
         <div class="kant r"><span class="pil hide" id="hudPlek"></span><span class="pil hide" id="hudTijd">0:00,0</span><span class="pil hide" id="hudSpook"></span><span class="pil" id="hudPunten">0</span><span class="pil" id="hudMunten"><span class="ico ico-munt"></span><span id="hudMuntGetal">0</span></span></div>
       </div>
       <!-- de vraag hangt in de lucht boven de weg, waar je toch al kijkt -->
@@ -590,7 +602,8 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   var MODI = [
     { id:'normaal', naam:'Normaal', ico:'<path d="M4 17l6-6 4 4 6-8"/><path d="M15 7h5v5"/>', uit:'De snelheid loopt op zolang het goed gaat.' },
     { id:'rustig',  naam:'Rustig',  ico:'<circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2"/>', uit:'Geen haast: de poort wacht tot je een baan kiest of op Rijd door tikt.' },
-    { id:'tijdrit', naam:'Tijdrit', ico:'<path d="M9 3h6M12 7a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM12 11v3"/>', uit:'Tegen de klok en tegen je eigen spook. Houd Gas ingedrukt om harder te gaan.' }
+    { id:'tijdrit', naam:'Tijdrit', ico:'<path d="M9 3h6M12 7a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM12 11v3"/>', uit:'Tegen de klok en tegen je eigen spook. Houd Gas ingedrukt om harder te gaan.' },
+    { id:'oneindig', naam:'Oneindig', ico:'<path d="M12 12c-2-2.7-3.5-4-5.3-4a4 4 0 0 0 0 8c1.8 0 3.3-1.3 5.3-4zm0 0c2 2.7 3.5 4 5.3 4a4 4 0 0 0 0-8c-1.8 0-3.3 1.3-5.3 4z"/>', uit:'Rijd door tot je tank leeg is. Elke poort geeft brandstof, een goed antwoord veel en een fout een beetje.' }
   ];
   var uitLink = false, vanLo = /[?&]van=lo\b/.test(location.search);
   (function(){
@@ -671,6 +684,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   function tekenRecord(){
     var r = opslag.records[recordSleutel()];
     $('recordUit').textContent = !r ? '' : modus === 'tijdrit' ? 'Je snelste tijd met deze keuze: ' + tijdTekst(r.t) + '. Je spook rijdt mee.'
+      : modus === 'oneindig' ? 'Je record met deze keuze: ' + (r.m | 0) + ' poorten, ' + r.g + ' goed.'
       : 'Je record met deze keuze: ' + r.p + ' punten, ' + r.g + ' van ' + (r.n || POORTEN) + ' goed.';
   }
 
@@ -727,6 +741,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   /* ---------- de race ---------- */
   var m = null, fase = 'start', k = 0, vraag = null, punten = 0, goedN = 0, foutN = 0, reeks = 0, besteReeks = 0, snelNiv = 0, verdiend = 0;
   var perOnderdeel = {}, gemist = [], uitslagen = [], nPoorten = POORTEN, AFSTAND = 44000, boostNet = false, pauzeVoor = '', aftelKlok = [];
+  var tank = 100, tankT = 0, vBasis = 0, hapert = false, tankMelding = 0, tankErbij = 0;
   (function(){ var p = parseInt(param('poorten') || '', 10); if (p >= 3 && p <= 30) nPoorten = p; })();
   function motor(){
     if (m) return m;
@@ -737,7 +752,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
       geremd: function(){ toonUitleg(); },
       wacht: function(){ wachtBijPoort(); },
       finish: function(){ binnen(); },
-      tik: function(){ hudTik(); }
+      tik: function(t){ if (modus === 'oneindig') tankTik(t); hudTik(); }
     });
     return m;
   }
@@ -768,12 +783,16 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     verbergOverlays();
     $('hudTijd').classList.toggle('hide', modus !== 'tijdrit');
     $('gasBtn').classList.toggle('hide', modus !== 'tijdrit');
+    var eindeloos = modus === 'oneindig';
+    document.body.classList.toggle('oneindig', eindeloos);
+    $('voortgang').classList.toggle('hide', eindeloos); $('hudTank').classList.toggle('hide', !eindeloos); $('hudPoort').classList.toggle('hide', !eindeloos);
+    tank = 100; tankT = 0; vBasis = 0; hapert = false; tankMelding = 0; tekenTank();
     var sp = modus === 'tijdrit' ? opslag.spook[recordSleutel()] : null;
     $('hudSpook').classList.toggle('hide', !sp);
     $('hudPlek').classList.add('hide');
     $('rijdersBalk').classList.toggle('hide', !RACE);
-    $('vraagKop').textContent = 'poort 1 van ' + nPoorten;
-    $('vraagTekst').textContent = 'Klaar voor de start?';
+    $('vraagKop').textContent = eindeloos ? 'poort 1' : 'poort 1 van ' + nPoorten;
+    $('vraagTekst').textContent = eindeloos ? 'Een volle tank. Hoe ver kom je?' : 'Klaar voor de start?';
     $('vraagBeeld').classList.add('hide');
     $('banen').innerHTML = [0, 1, 2].map(function(b){ return '<button type="button" class="baan b' + b + '" data-b="' + b + '"><b>' + (b + 1) + '</b><span></span></button>'; }).join('');
     $('banen').classList.add('leeg');
@@ -781,7 +800,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     var mo = motor();
     mo.maat();
     mo.zetTempo(bot.aan ? bot.tempo : 1);
-    mo.rit({ poorten:nPoorten, afstand:AFSTAND, voertuig:opslag.voertuig, kleur:opslag.kleur, spoor:opslag.spoor, spook:sp });
+    mo.rit({ poorten: eindeloos ? 3 : nPoorten, oneindig:eindeloos, afstand:AFSTAND, voertuig:opslag.voertuig, kleur:opslag.kleur, spoor:opslag.spoor, spook:sp });
     /* terug in een race die al liep (herladen): verder na de poort waar de kamer je heeft */
     var h = RACE && RACE.rit;
     if (h && h.ronde > 0){
@@ -798,6 +817,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     aftelKlok.forEach(clearTimeout); aftelKlok = [];
     var el = $('aftel'), stap = sec ? sec * 1000 / 3.6 : bot.aan ? 250 / bot.tempo : 700;
     el.classList.remove('hide');
+    el.classList.remove('tankleeg');
     ['3', '2', '1', 'Rijden!'].forEach(function(t, i){
       aftelKlok.push(setTimeout(function(){ el.innerHTML = '<span>' + t + '</span>'; }, i * stap));
     });
@@ -818,7 +838,8 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     } else vraag = maakPoortVraag();
     m.poort(k, vraag.banen);
     var afstand = m.afstandTot(k);
-    m.snelheid(afstand / ((RACE ? vraag.s : doelTijd(vraag)) + (boostNet ? .36 : 0)));
+    vBasis = afstand / ((RACE ? vraag.s : doelTijd(vraag)) + (boostNet ? .36 : 0)); hapert = false;
+    m.snelheid(vBasis);
     boostNet = false;
     if (modus === 'rustig') m.wachtBij(k);
     tekenVraag(); tekenBanen(); tekenVoortgang();
@@ -826,7 +847,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     botVraag();
   }
   function tekenVraag(){
-    $('vraagKop').textContent = 'poort ' + (k + 1) + ' van ' + nPoorten + ' · ' + vraag.kop;
+    $('vraagKop').textContent = 'poort ' + (k + 1) + (modus === 'oneindig' ? '' : ' van ' + nPoorten) + ' · ' + vraag.kop;
     $('vraagTekst').textContent = vraag.v;
     var bd = $('vraagBeeld');
     if (vraag.q.vlag && /^[a-z-]{2,8}$/.test(vraag.q.vlag)){ bd.innerHTML = '<img src="vlaggen/' + vraag.q.vlag + '.svg" alt="Een vlag">'; bd.classList.remove('hide'); }
@@ -854,7 +875,9 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     var hier = m.baanNu();
     Array.prototype.forEach.call($('banen').children, function(el, b){ var aan = b === hier && !!vraag.banen[b]; el.classList.toggle('hier', aan); el.setAttribute('aria-pressed', aan ? 'true' : 'false'); });
   }
+  var POORTICO = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21 9 6M19 21 15 6"/><rect x="7" y="3" width="10" height="4" rx="1"/></svg>';
   function tekenVoortgang(){
+    if (modus === 'oneindig'){ var n = goedN + foutN; $('hudPoort').innerHTML = POORTICO + n + '<small class="woord"> ' + (n === 1 ? 'poort' : 'poorten') + '</small>'; return; }
     var h = '';
     for (var i = 0; i < nPoorten; i++) h += '<i class="' + (uitslagen[i] === true ? 'goed' : uitslagen[i] === false ? 'fout' : i === k && fase !== 'aftellen' ? 'nu' : '') + '"></i>';
     $('voortgang').innerHTML = h;
@@ -866,6 +889,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   var hudLaatst = 0, snelTekst = '', tijdT = '', spookT = '';
   function hudTik(){
     var t = performance.now(); if (t - hudLaatst < 100) return; hudLaatst = t;
+    if (modus === 'oneindig') tekenTank();
     var st = m.stand(), s = Math.round(st.v / 55) + ' <small>km/u</small>';
     if (s !== snelTekst){ snelTekst = s; $('hudSnel').innerHTML = s; }
     if (RACE) mijnRijder();
@@ -877,6 +901,66 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
         if (sp !== spookT){ spookT = sp; var el = $('hudSpook'); el.textContent = sp; el.classList.toggle('voor', vs <= 0); el.classList.toggle('achter', vs > 0); }
       }
     }
+  }
+
+  /* ---------- oneindig: de tank ----------
+     Geen finish: je rijdt door tot de tank leeg is. Hij loopt leeg terwijl je
+     rijdt, niet tijdens de uitleg of de pauze (dan staat de klok van de motor
+     stil). Elke poort geeft brandstof: een goed antwoord veel, met een beetje
+     extra voor een reeks, een fout een beetje. Het verbruik groeit met elke
+     poort, dus ook wie alles goed heeft, staat een keer stil. Met een bot
+     nagerekend (kgt, rekenen): alles goed ongeveer acht minuten (90 poorten),
+     80% goed vier tot zes, 70% ongeveer drie, 60% ongeveer twee. Op vmbo-bb rijd je trager,
+     dus per seconde iets zuiniger; op havo en vwo sneller, dus iets gulziger. */
+  var TANK = { goed:24, reeks:1, reeksMax:4, fout:5, verbruik:2.5, groei:.045, laag:30, bijna:15, hapert:12 };
+  var TANK_NIV = { bb:.85, kgt:1, havo:1.12, vwo:1.12 };
+  /* de sterren in oneindig: zoveel poorten op één tank */
+  var STER_ONEINDIG = [15, 35, 60];
+  /* procent per seconde, na k poorten */
+  function verbruik(){ return (TANK.verbruik + TANK.groei * k) * (TANK_NIV[niveau] || 1); }
+  function tankTik(t){
+    var dt = Math.max(0, t - tankT); tankT = t;
+    if (fase !== 'rijden' && fase !== 'goed' && fase !== 'slip') return;
+    tank = Math.max(0, tank - dt * verbruik());
+    if (tank <= 0){ tankLeeg(); return; }
+    /* bijna leeg: de motor hapert even, om de zoveel tijd */
+    var h = fase === 'rijden' && tank < TANK.hapert && t % .9 < .16;
+    if (h !== hapert){ hapert = h; m.snelheid(vBasis * (h ? .72 : 1)); }
+    if (tankMelding < 2 && tank < (tankMelding ? TANK.bijna : TANK.laag)){
+      tankMelding++;
+      $('srLive').textContent = tankMelding === 1 ? 'Je tank raakt leeg.' : 'Je tank is bijna leeg. Een goed antwoord vult hem bij.';
+    }
+  }
+  function tekenTank(){
+    var p = Math.ceil(tank), el = $('hudTank');
+    $('hudTankBalk').style.width = Math.max(0, Math.min(100, tank)).toFixed(1) + '%';
+    $('hudTankGetal').textContent = p + '%';
+    el.classList.toggle('laag', p < TANK.laag && p >= TANK.bijna);
+    el.classList.toggle('bijna', p < TANK.bijna);
+  }
+  /* door een poort: brandstof erbij; geeft hoeveel */
+  function tanken(goed){
+    var erbij = goed ? TANK.goed + Math.min(TANK.reeksMax, (reeks - 1) * TANK.reeks) : TANK.fout;
+    erbij = Math.min(erbij, Math.ceil(100 - tank));
+    tank = Math.min(100, tank + erbij);
+    if (tank >= TANK.laag) tankMelding = 0; else if (tank >= TANK.bijna) tankMelding = Math.min(tankMelding, 1);
+    tekenTank();
+    return erbij;
+  }
+  /* De tank is leeg: het voertuig rolt uit, en dan het einde. */
+  function tankLeeg(){
+    fase = 'leeg'; tank = 0; tekenTank();
+    m.snelheid(0); m.gas(false);
+    $('wachtBtn').classList.add('hide');
+    $('banen').classList.add('leeg');
+    var lv = $('scherm-spel').querySelector('.leesvak'); if (lv) lv.remove();
+    $('vraagBeeld').classList.add('hide');
+    $('vraagKop').textContent = (goedN + foutN) + ' poorten gehaald';
+    $('vraagTekst').textContent = 'Tank leeg!';
+    $('srLive').textContent = 'Tank leeg. Je haalde ' + (goedN + foutN) + ' poorten.';
+    var el = $('aftel'); el.classList.add('tankleeg'); el.innerHTML = '<span>Tank leeg!</span>'; el.classList.remove('hide');
+    botLog('leeg', { poorten:goedN + foutN });
+    setTimeout(function(){ if (fase !== 'leeg') return; el.classList.add('hide'); el.classList.remove('tankleeg'); el.innerHTML = ''; fase = 'binnen'; einde(); }, bot.aan ? 400 / bot.tempo : 2200);
   }
 
   /* ---------- sturen ---------- */
@@ -959,7 +1043,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 
   /* ---------- door een poort ---------- */
   function antwoord(kk, baan){
-    if (!vraag || kk !== k) return;
+    if (!vraag || kk !== k || fase === 'leeg') return;
     /* in een race kijkt de kamer na: de keuze gaat erheen, het oordeel komt terug (raceOordeel) */
     if (RACE){ raceAntwoord(baan); return; }
     var goed = baan === vraag.goed, s = { goed:goedN, reeks:reeks, beste:besteReeks, snelNiv:snelNiv, punten:punten };
@@ -976,12 +1060,13 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     $('wachtBtn').classList.add('hide');
     tekenBanen({ gekozen:baan });
     botLog('poort', { k:k, goed:goed, baan:baan });
+    var brand = tankErbij = modus === 'oneindig' ? tanken(goed) : 0;
     if (goed){
       var munt = 4 + (reeks >= 6 ? 2 : reeks >= 3 ? 1 : 0);
       verdiend += munt; opslag.munten += munt; bewaar();
       boostNet = true;
-      toonGoedPil(modus === 'tijdrit' ? 'Goed! Boost' : 'Goed! +' + erbij);
-      $('srLive').textContent = 'Goed. ' + (modus === 'tijdrit' ? '' : erbij + ' punten erbij.');
+      toonGoedPil(modus === 'tijdrit' ? 'Goed! Boost' : modus === 'oneindig' ? 'Goed! Tank +' + brand + '%' : 'Goed! +' + erbij);
+      $('srLive').textContent = 'Goed. ' + (modus === 'tijdrit' ? '' : modus === 'oneindig' ? 'Je tank krijgt ' + brand + ' procent erbij.' : erbij + ' punten erbij.');
       hudPunten(); tekenVoortgang();
       fase = 'goed';
       setTimeout(function(){ if (fase !== 'goed') return; verderNaPoort(); }, bot.aan ? 200 / bot.tempo : 450);
@@ -1000,7 +1085,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     clearTimeout(toonGoedPil.klok); toonGoedPil.klok = setTimeout(function(){ p.classList.add('hide'); }, 1000);
   }
   function verderNaPoort(){
-    if (k + 1 < nPoorten) activeer(k + 1);
+    if (modus === 'oneindig' || k + 1 < nPoorten) activeer(k + 1);
     else naarFinish();
   }
   function naarFinish(){
@@ -1021,7 +1106,8 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     var q = vraag.q, goedT = String(q.o[q.g]), gekozen = null;
     for (var b = 0; b < 3; b++) if (vraag.banen[b] && b !== vraag.goed && $('banen').children[b].classList.contains('mis')) gekozen = vraag.banen[b].tekst;
     $('uitlegTekst').innerHTML = '<h2>Niet goed, even uitslippen</h2><p>' + (gekozen ? 'Jij koos: ' + schoon(gekozen) + '. ' : '') +
-      'Het goede antwoord is: <span class="antw">' + schoon(goedT) + '</span>.</p>' + (q.u ? '<p style="margin-top:6px">' + schoon(q.u) + '</p>' : '');
+      'Het goede antwoord is: <span class="antw">' + schoon(goedT) + '</span>.</p>' + (q.u ? '<p style="margin-top:6px">' + schoon(q.u) + '</p>' : '') +
+      (modus === 'oneindig' ? '<p class="noot" style="margin-top:6px">Toch ' + tankErbij + '% brandstof erbij, je tank staat op ' + Math.ceil(tank) + '%. Tijdens het lezen verbruik je niets.</p>' : '');
     var uv = $('uitlegVak'); uv.classList.remove('hide'); uv.scrollTop = 0;
     if (window.MELDING) MELDING.knop($('meldPlek'), function(){ return { spel:'poortrace', vraag:vraag ? vraag.v : '', q:vraag ? vraag.q : null, vak:vak, niveau:niveau }; });
     var vb = $('volgendeBtn');
@@ -1081,10 +1167,10 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   function einde(){
     if (fase !== 'binnen') return;
     fase = 'einde';
-    var tijd = m.klok(), sleutel = recordSleutel();
-    if (goedN === nPoorten){ var extra = 12; verdiend += extra; opslag.munten += extra; }
+    var tijd = m.klok(), sleutel = recordSleutel(), eindeloos = modus === 'oneindig', gehad = goedN + foutN;
+    if (goedN === nPoorten && !eindeloos){ var extra = 12; verdiend += extra; opslag.munten += extra; }
     verdiend += 8; opslag.munten += 8;
-    if (goedN === nPoorten && modus !== 'tijdrit') punten += 200;
+    if (goedN === nPoorten && modus !== 'tijdrit' && !eindeloos) punten += 200;
     /* het record op dit apparaat, en het spook van de snelste tijdrit */
     var oud = opslag.records[sleutel], nieuwSpook = false, oudSpook = opslag.spook[sleutel];
     if (modus === 'tijdrit'){
@@ -1096,14 +1182,17 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
         var sl = Object.keys(opslag.spook);
         if (sl.length > 6){ sl.sort(function(a, b){ return (opslag.spook[a].d || 0) - (opslag.spook[b].d || 0); }); delete opslag.spook[sl[0]]; }
       }
-    } else if (!oud || punten > oud.p) opslag.records[sleutel] = { p:punten, g:goedN, n:nPoorten, d:Date.now() };
+    } else if (eindeloos){ if (!oud || gehad > (oud.m | 0)) opslag.records[sleutel] = { m:gehad, g:goedN, p:punten, d:Date.now() }; }
+    else if (!oud || punten > oud.p) opslag.records[sleutel] = { p:punten, g:goedN, n:nPoorten, d:Date.now() };
     bewaar();
     m.stop();
     toonScherm('scherm-einde');
     var vk = vakVan(vak), nv = NIVEAUS.filter(function(x){ return x.id === niveau; })[0];
     var namen = (keuze[vak] || []).map(deelNaam);
     var wat = (vk ? vk.naam : '') + (namen.length ? ', ' + namen.join(', ') : '') + (nv ? ', op ' + nv.naam : '');
-    var tekst = wat + '. Je had ' + goedN + ' van de ' + nPoorten + ' poorten goed' + (besteReeks >= 3 ? ', met een reeks van ' + besteReeks + ' op rij' : '') + '.';
+    var tekst = eindeloos
+      ? wat + '. Je tank was leeg na ' + gehad + (gehad === 1 ? ' poort' : ' poorten') + ' en ' + tijdTekst(tijd).replace(/,\d$/, '') + ' rijden. Je had er ' + goedN + ' goed' + (besteReeks >= 3 ? ', met een reeks van ' + besteReeks + ' op rij' : '') + ', samen ' + punten + ' punten.'
+      : wat + '. Je had ' + goedN + ' van de ' + nPoorten + ' poorten goed' + (besteReeks >= 3 ? ', met een reeks van ' + besteReeks + ' op rij' : '') + '.';
     if (modus === 'tijdrit'){
       tekst += ' Je tijd: ' + tijdTekst(tijd) + '.';
       if (oudSpook) tekst += tijd < oudSpook.t ? ' Je spook reed ' + tijdTekst(oudSpook.t) + ': je was ' + (oudSpook.t - tijd).toFixed(1).replace('.', ',') + ' seconden sneller. Dit is je nieuwe spook.'
@@ -1111,17 +1200,23 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
       else if (nieuwSpook) tekst += ' Volgende keer rijdt deze rit mee als spook.';
     }
     $('eindUit').textContent = tekst;
-    var sterren = goedN >= nPoorten * .93 ? 3 : goedN >= nPoorten * .7 ? 2 : goedN >= nPoorten * .4 ? 1 : 0;
+    /* oneindig: de sterren gaan over hoe ver je kwam */
+    var sterren = eindeloos ? (gehad >= STER_ONEINDIG[2] ? 3 : gehad >= STER_ONEINDIG[1] ? 2 : gehad >= STER_ONEINDIG[0] ? 1 : 0)
+      : goedN >= nPoorten * .93 ? 3 : goedN >= nPoorten * .7 ? 2 : goedN >= nPoorten * .4 ? 1 : 0;
+    /* Bij de klas telt een opdracht de goede poorten van een race van vijftien.
+       Oneindig meldt daarom de goede poorten van de eerste vijftien; de
+       onderdelen (od) tellen wel alles wat je beantwoordde. */
+    var klasRonde = eindeloos ? uitslagen.slice(0, POORTEN).filter(function(x){ return x === true; }).length : goedN;
     var kaartE = SPEL.einde({ spel:'poortrace', goed:goedN, reeks:besteReeks, sterren:sterren,
-      score: modus === 'tijdrit' ? Math.round(tijd) : punten, label: modus === 'tijdrit' ? 'seconden' : 'punten',
-      waarde: modus === 'tijdrit' ? Math.round(tijd) : punten, lagerIsBeter: modus === 'tijdrit', sleutel: sleutel,
-      kop: modus === 'rustig' ? 'jouw rustige rit' : modus === 'tijdrit' ? 'jouw tijdrit, ' + goedN + ' van ' + nPoorten + ' goed' : 'jouw race, ' + goedN + ' van ' + nPoorten + ' goed',
-      ronde:goedN, punten:punten, niveau:niveau, vak:vak, od:perOnderdeel,
-      deelTekst: modus === 'tijdrit' ? tijdTekst(tijd) + ' in de tijdrit' : punten + ' punten',
+      score: modus === 'tijdrit' ? Math.round(tijd) : eindeloos ? gehad : punten, label: modus === 'tijdrit' ? 'seconden' : eindeloos ? 'poorten' : 'punten',
+      waarde: modus === 'tijdrit' ? Math.round(tijd) : eindeloos ? gehad : punten, lagerIsBeter: modus === 'tijdrit', sleutel: sleutel,
+      kop: modus === 'rustig' ? 'jouw rustige rit' : modus === 'tijdrit' ? 'jouw tijdrit, ' + goedN + ' van ' + nPoorten + ' goed' : eindeloos ? 'tank leeg, ' + goedN + ' goed' : 'jouw race, ' + goedN + ' van ' + nPoorten + ' goed',
+      ronde:klasRonde, punten:punten, niveau:niveau, vak:vak, od:perOnderdeel,
+      deelTekst: modus === 'tijdrit' ? tijdTekst(tijd) + ' in de tijdrit' : eindeloos ? gehad + ' poorten op één tank' : punten + ' punten',
       opnieuw: RACE ? raceWeg : begin, opnieuwTekst: RACE ? 'Nog een race, alleen' : 'Nog een race' });
     if (kaartE && sterren === 0){
       var warm = document.createElement('p'); warm.className = 'warm';
-      warm.textContent = 'Nog geen ster: die komt bij ' + Math.ceil(nPoorten * .4) + ' goede poorten. Hieronder staan de vragen die misgingen; daar zit je volgende race in.';
+      warm.textContent = (eindeloos ? 'Nog geen ster: die komt bij ' + STER_ONEINDIG[0] + ' poorten op één tank.' : 'Nog geen ster: die komt bij ' + Math.ceil(nPoorten * .4) + ' goede poorten.') + ' Hieronder staan de vragen die misgingen; daar zit je volgende race in.';
       var re = kaartE.querySelector('.rechts'); if (re) re.appendChild(warm);
     }
     oefenKnop(kaartE);
@@ -1137,7 +1232,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
         return { ronde:goedN, punten:punten, waar:'', niveau:nv ? nv.naam : '', vak:vk ? vk.naam : '' };
       });
     } else $('siteLijst').innerHTML = '';
-    botLog('einde', { punten:punten, goed:goedN, fout:foutN, tijd:Math.round(tijd * 10) / 10, munten:verdiend });
+    botLog('einde', { punten:punten, goed:goedN, fout:foutN, tijd:Math.round(tijd * 10) / 10, munten:verdiend, sterren:sterren, klasRonde:klasRonde });
     if (RACE) tekenRaceUit(); else $('raceUit').classList.add('hide');
     scrollTo({ top:0, behavior:'auto' });
   }
@@ -1691,7 +1786,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   function botRijdDoor(){ setTimeout(function(){ if (fase === 'wacht') rijdDoor(); }, 400 / bot.tempo); }
   /* voor de proeven: de stand van het spel */
   window.__poortMotor = function(){ return m; };
-  window.__poort = function(){ return { fase:fase, k:k, punten:punten, goed:goedN, fout:foutN, munten:opslag.munten, modus:modus, vak:vak, niveau:niveau, vraag:vraag ? { v:vraag.v, banen:vraag.banen, goed:vraag.goed } : null, motor:m ? m.stand() : null }; };
+  window.__poort = function(){ return { fase:fase, k:k, punten:punten, goed:goedN, fout:foutN, tank:tank, verbruik: modus === 'oneindig' ? verbruik() : 0, munten:opslag.munten, modus:modus, vak:vak, niveau:niveau, vraag:vraag ? { v:vraag.v, banen:vraag.banen, goed:vraag.goed } : null, motor:m ? m.stand() : null }; };
 
   /* ---------- klaarzetten ---------- */
   tekenKeuzes(); tekenVerder(); tekenGarageKnop(); tekenSamen(); meetKop();
@@ -1704,7 +1799,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 <script>
 SPEL.uitleg({ onder:true, chips:true, zeker:'stopBtn',
   tegel:['#204ECF', '<path d="M5 21 9 6M19 21 15 6"/><rect x="7" y="3" width="10" height="4" rx="1"/><path d="M12 11v2M12 16v3"/>'],
-  doel:"Rijd door de poort met het goede antwoord.", tijd:"vijftien poorten, ongeveer twee minuten",
+  doel:"Rijd door de poort met het goede antwoord.", tijd:"vijftien poorten, ongeveer twee minuten; in Oneindig tot je tank leeg is",
   bediening: document.documentElement.classList.contains('raak')
     ? "Veeg over de weg of tik op een baanknop. Na een fout tik je op Volgende."
     : "Pijltjes of A en D om te sturen, 1 tot 3 voor een baan, Enter voor Volgende, P voor pauze." });

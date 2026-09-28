@@ -12,7 +12,8 @@
        geremd()         de slip na een fout is uitgeslipt
        wacht(k)         rustige stand: je staat stil voor poort k
        finish()         over de finishlijn
-     m.rit({ poorten, afstand, voertuig, kleur, spoor, spook, rustig })  een nieuwe rit
+     m.rit({ poorten, afstand, voertuig, kleur, spoor, spook, rustig, oneindig })  een nieuwe rit
+                        oneindig: geen finish; een poort komt erbij zodra m.poort hem vraagt
      m.poort(k, banen)  de antwoorden van poort k: [{tekst}, null, {tekst}] (null is dicht)
      m.uitslag(k, gekozen, goed)   het paneel kleurt, en het effect erbij
      m.snelheid(v), m.baan(i), m.stuur(-1|1), m.slip(), m.pauze(b), m.rijdDoor(), m.gas(b)
@@ -187,6 +188,8 @@ window.POORTMOTOR = (function(){
     var slipT = 0, slipDraai = 0, slipKlaar = false, kantel = 0;
     var pauze = true, loopt = false, racen = false, klok = 0, fase = 0, tempo = 1;
     var poorten = [], nPoorten = 15, afstand = 44000, zStart = 0, finishZ = 1e9, gefinisht = false;
+    /* oneindig: de lussen over de poorten beginnen bij eerste, want wat ver achter je ligt doet niet meer mee */
+    var oneindig = false, eerste = 0;
     var wachtK = -1, wachtGemeld = false, HOUD = 1800;
     var voertuig = 'kart', kleur = '#204ECF', spoor = 'geen', spook = null, opname = { z:[], x:[] }, opnameKlok = 0;
     var seed = 1, laatst = 0, raf = 0, luchtX = 0;
@@ -204,6 +207,7 @@ window.POORTMOTOR = (function(){
     var rivalen = [], RIVAALKLEUR = ['#F26749', '#EA9836', '#2f7d52', '#6b3fa0', '#83A5F2', '#D9A21B', '#2f9e8f', '#14224C'];
 
     function nu(){ return performance.now(); }
+    function nieuwePoort(k){ return { k:k, z:zStart + (k + 1) * afstand, banen:[null, null, null], actief:false, gekozen:-1, goed:-1, tex:null }; }
     function hash(i){ var h = (i * 2654435761 + seed * 97) >>> 0; h ^= h >>> 15; h = Math.imul(h, 2246822507) >>> 0; h ^= h >>> 13; return h >>> 0; }
     function bocht(i){
       if (i < 40) return 0;
@@ -427,7 +431,7 @@ window.POORTMOTOR = (function(){
     /* ---------- bijwerken ---------- */
     function zAuto(){ return zCam + D; }
     function openBanen(){ var p = poorten[huidigeK()]; return p ? p.banen : [1, 1, 1]; }
-    function huidigeK(){ for (var i = 0; i < poorten.length; i++) if (poorten[i] && poorten[i].gekozen < 0 && poorten[i].actief) return i; return -1; }
+    function huidigeK(){ for (var i = eerste; i < poorten.length; i++) if (poorten[i] && poorten[i].gekozen < 0 && poorten[i].actief) return i; return -1; }
     function dichtsteOpen(b){
       var ob = openBanen(); if (ob[b]) return b;
       var beste = -1; for (var i = 0; i < 3; i++) if (ob[i] && (beste < 0 || Math.abs(i - b) < Math.abs(beste - b))) beste = i;
@@ -476,7 +480,7 @@ window.POORTMOTOR = (function(){
       luchtX += bocht(Math.floor(zCam / SEG)) * v * dt * .0009;
       /* door een poort */
       var za = zAuto();
-      for (var k = 0; k < poorten.length; k++){
+      for (var k = eerste; k < poorten.length; k++){
         var p = poorten[k];
         if (!p || !p.actief || p.gekozen >= 0 || za < p.z) continue;
         var baan = 0, best = 9;
@@ -601,7 +605,7 @@ window.POORTMOTOR = (function(){
       var z = i * SEG;
       if (z <= finishZ && finishZ < z + SEG * 2 && finishZ < 1e8) return 2;
       if (z <= zStart + 2 * SEG && zStart + 2 * SEG < z + SEG) return 2;
-      for (var k = 0; k < poorten.length; k++){ var p = poorten[k]; if (p && p.actief && z <= p.z && p.z < z + SEG) return p; }
+      for (var k = eerste; k < poorten.length; k++){ var p = poorten[k]; if (p && p.actief && z <= p.z && p.z < z + SEG) return p; }
       return 0;
     }
     function poortStrepen(p, x1, y1, w1, x2, y2, w2){
@@ -659,7 +663,7 @@ window.POORTMOTOR = (function(){
         if (rv.z >= z && rv.z < z + SEG && rv.z - zCam > D * .7) tekenRivaal(rv, n);
       }
       /* de poorten */
-      for (var k = 0; k < poorten.length; k++){
+      for (var k = eerste; k < poorten.length; k++){
         var p = poorten[k];
         if (p && p.actief && p.z >= z && p.z < z + SEG) tekenPoort(p, n);
       }
@@ -844,8 +848,9 @@ window.POORTMOTOR = (function(){
         zCam = 0; zStart = D; v = 0; vDoel = 0; x = 0; baanDoel = 1; camX = 0; boost = 0; gasAan = false;
         slipT = 0; slipDraai = 0; slipKlaar = false; kantel = 0; klok = 0; opnameKlok = 0; opname = { z:[], x:[] };
         racen = false; pauze = false; gefinisht = false; wachtK = -1; wachtGemeld = false;
-        poorten = []; for (var k = 0; k < nPoorten; k++) poorten.push({ k:k, z:zStart + (k + 1) * afstand, banen:[null, null, null], actief:false, gekozen:-1, goed:-1, tex:null });
-        finishZ = zStart + nPoorten * afstand + afstand * .4;
+        oneindig = !!r.oneindig; eerste = 0;
+        poorten = []; for (var k = 0; k < nPoorten; k++) poorten.push(nieuwePoort(k));
+        finishZ = oneindig ? 1e9 : zStart + nPoorten * afstand + afstand * .4;
         HOUD = Math.max(1400, D * .7);
         if (r.voertuig) voertuig = r.voertuig; if (r.kleur) kleur = kleurVan(r.kleur); if (r.spoor) spoor = r.spoor;
         spook = r.spook && r.spook.z && r.spook.z.length ? r.spook : null;
@@ -855,6 +860,7 @@ window.POORTMOTOR = (function(){
       },
       start: function(){ racen = true; pauze = false; wek(); },
       poort: function(k, banen){
+        if (oneindig){ while (poorten.length <= k) poorten.push(nieuwePoort(poorten.length)); eerste = Math.max(eerste, k - 2); }
         var p = poorten[k]; if (!p) return;
         p.banen = banen.slice(0, 3); p.actief = true; p.gekozen = -1; p.goed = -1; paneelVan = k;
         paneelTex(p);
