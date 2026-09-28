@@ -20,103 +20,122 @@ window.DICTEE_MAKER = (function(){
   function niv(n){ return NIV[n] || 2; }
 
   /* ---------- werkwoorden ----------
-     inf | ik | hij | verleden tijd | verleden tijd meervoud | voltooid deelwoord | heb of ben | niveau | aanvullingen (met ;)
-     Een aanvulling past in elke vorm: "Ik fiets naar school", "Morgen fiets jij naar school", "Fiets jij naar school?",
-     "Gisteren fietste ik naar school" en "Ik ben naar school gefietst". Geen tijdwoorden in de aanvulling: die komen uit de zin. */
+     inf | ik | hij | verleden tijd | verleden tijd meervoud | voltooid deelwoord | heb of ben | niveau | aanvullingen (met ;) | klank
+     Elke aanvulling heeft na de # een paar letters die zeggen in welke zinnen hij logisch is:
+       r  iets wat je vaker doet: past bij vaak, na school, vandaag
+       a  een gewoonte (hard lachen, op mooi weer hopen): vaak, meestal, soms; niet morgen
+       e  iets wat één keer gebeurt: vandaag, morgen, volgende week; niet elke week
+       s  iets wat een tijd zo is (wonen, verzamelen): nu, tegenwoordig, vroeger; niet gisteren
+       k  iets wat je zo meteen even doet (op de deur kloppen): straks, zo meteen; niet volgende week
+       c  in de tegenwoordige tijd niet met een tijd vooraan maar met natuurlijk of toch ("Toch vergeet hij de sleutels")
+       n  in de tegenwoordige tijd nooit met iets vooraan
+       x  geen vraag van maken ("Vind jij een munt op straat?" is geen logische vraag)
+       p  geen voltooide tijd ("Ik heb zin in een ijsje gehad")
+       *  alleen bij een kind: een voldoende halen, de juf mailen, aan de nieuwe school wennen
+       v  alleen bij een volwassene: naar Utrecht rijden
+       f  alleen in de familie: naar oma bellen doe je niet als trainer
+       h  met hebben in plaats van zijn: ik heb op een pony gereden (maar ik ben naar Utrecht gereden)
+     Het onderwerp komt nooit ook in de aanvulling voor: niet "De juf zegt sorry tegen de juf". */
   var WW = [
-    'fietsen|fiets|fietst|fietste|fietsten|gefietst|ben|1|naar school;naar het strand;naar de stad',
-    'werken|werk|werkt|werkte|werkten|gewerkt|heb|1|in de tuin;bij de supermarkt;aan een werkstuk',
-    'spelen|speel|speelt|speelde|speelden|gespeeld|heb|1|buiten;een potje voetbal;op het plein',
-    'wachten|wacht|wacht|wachtte|wachtten|gewacht|heb|1|op de bus;bij het station;op de trein',
-    'praten|praat|praat|praatte|praatten|gepraat|heb|1|met de buurvrouw;over de vakantie;met de trainer',
-    'worden|word|wordt|werd|werden|geworden|ben|1|erg moe;boos;heel verdrietig',
-    'vinden|vind|vindt|vond|vonden|gevonden|heb|1|een munt op straat;de sleutel onder de bank;het antwoord',
-    'rijden|rijd|rijdt|reed|reden|gereden|ben|1|naar Utrecht;naar huis;naar het zwembad',
-    'leggen|leg|legt|legde|legden|gelegd|heb|1|het boek op de plank;de sleutels in de la',
-    'zeggen|zeg|zegt|zei|zeiden|gezegd|heb|1|niets;de waarheid;sorry tegen de juf',
-    'vragen|vraag|vraagt|vroeg|vroegen|gevraagd|heb|1|de weg;om hulp;naar de tijd',
-    'maken|maak|maakt|maakte|maakten|gemaakt|heb|1|een tekening;pannenkoeken;een werkstuk over Rome',
-    'bellen|bel|belt|belde|belden|gebeld|heb|1|naar oma;de dokter',
-    'koken|kook|kookt|kookte|kookten|gekookt|heb|1|soep;een lekkere maaltijd;macaroni',
-    'wonen|woon|woont|woonde|woonden|gewoond|heb|1|in Amsterdam;bij de zee;in een klein huis',
-    'leren|leer|leert|leerde|leerden|geleerd|heb|1|voor de toets;Frans;de woordjes',
-    'dansen|dans|danst|danste|dansten|gedanst|heb|1|op het feest;in de woonkamer',
-    'poetsen|poets|poetst|poetste|poetsten|gepoetst|heb|1|de ramen;de schoenen',
-    'halen|haal|haalt|haalde|haalden|gehaald|heb|1|brood bij de bakker;een voldoende',
-    'hopen|hoop|hoopt|hoopte|hoopten|gehoopt|heb|1|op mooi weer;op een goed cijfer',
-    'missen|mis|mist|miste|misten|gemist|heb|1|de bus;de trein;een penalty',
-    'zoeken|zoek|zoekt|zocht|zochten|gezocht|heb|1|de sleutels;een nieuwe fiets',
-    'denken|denk|denkt|dacht|dachten|gedacht|heb|1|aan de vakantie;aan de toets',
-    'kopen|koop|koopt|kocht|kochten|gekocht|heb|1|een ijsje;nieuwe schoenen;brood',
-    'schrijven|schrijf|schrijft|schreef|schreven|geschreven|heb|1|een brief aan oma;een verhaal;een gedicht',
-    'lezen|lees|leest|las|lazen|gelezen|heb|1|een spannend boek;de krant;een strip',
-    'eten|eet|eet|at|aten|gegeten|heb|1|een appel;patat;pannenkoeken',
-    'zwemmen|zwem|zwemt|zwom|zwommen|gezwommen|heb|1|in de zee;in het meer',
-    'lopen|loop|loopt|liep|liepen|gelopen|ben|1|naar de winkel;naar huis',
-    'gaan|ga|gaat|ging|gingen|gegaan|ben|1|naar de bioscoop;naar de markt',
-    'komen|kom|komt|kwam|kwamen|gekomen|ben|1|te laat;naar het feest',
-    'luisteren|luister|luistert|luisterde|luisterden|geluisterd|heb|1|naar muziek;naar de juf',
-    'hebben|heb|heeft|had|hadden|gehad|heb|1|een hond;veel huiswerk;zin in een ijsje',
-    'zetten|zet|zet|zette|zetten|gezet|heb|2|thee;de tassen in de gang',
-    'antwoorden|antwoord|antwoordt|antwoordde|antwoordden|geantwoord|heb|2|op de vraag;heel snel',
-    'houden|houd|houdt|hield|hielden|gehouden|heb|2|een spreekbeurt over haaien;een klein feestje',
-    'landen|land|landt|landde|landden|geland|ben|2|op Schiphol;veilig in Spanje',
-    'lachen|lach|lacht|lachte|lachten|gelachen|heb|2|om de grap;heel hard',
-    'gebruiken|gebruik|gebruikt|gebruikte|gebruikten|gebruikt|heb|2|een woordenboek;de computer',
-    'verhuizen|verhuis|verhuist|verhuisde|verhuisden|verhuisd|ben|2|naar Groningen;naar een groter huis',
-    'geloven|geloof|gelooft|geloofde|geloofden|geloofd|heb|2|dat verhaal;niets van die smoes',
-    'reizen|reis|reist|reisde|reisden|gereisd|heb|2|door Frankrijk;met de trein',
-    'kloppen|klop|klopt|klopte|klopten|geklopt|heb|2|op de deur;op het raam',
-    'stoppen|stop|stopt|stopte|stopten|gestopt|ben|2|met voetbal;met snoepen',
-    'zitten|zit|zit|zat|zaten|gezeten|heb|2|op de bank;in de trein',
-    'staan|sta|staat|stond|stonden|gestaan|heb|2|bij de deur;in de rij',
-    'vergeten|vergeet|vergeet|vergat|vergaten|vergeten|heb|2|de sleutels;het huiswerk',
-    'ontmoeten|ontmoet|ontmoet|ontmoette|ontmoetten|ontmoet|heb|2|een oude vriend;de nieuwe buren',
-    'bestellen|bestel|bestelt|bestelde|bestelden|besteld|heb|2|een pizza;nieuwe schoenen',
-    'betalen|betaal|betaalt|betaalde|betaalden|betaald|heb|2|de rekening;met een pinpas',
-    'herhalen|herhaal|herhaalt|herhaalde|herhaalden|herhaald|heb|2|de woordjes;de vraag',
-    'vertellen|vertel|vertelt|vertelde|vertelden|verteld|heb|2|een grappig verhaal;de waarheid',
-    'verzamelen|verzamel|verzamelt|verzamelde|verzamelden|verzameld|heb|2|postzegels;oude munten',
-    'trainen|train|traint|trainde|trainden|getraind|heb|2|voor de marathon;op het veld',
-    'beloven|beloof|belooft|beloofde|beloofden|beloofd|heb|3|beterschap;het aan de juf',
-    'leven|leef|leeft|leefde|leefden|geleefd|heb|3|gezond;heel zuinig',
-    'verven|verf|verft|verfde|verfden|geverfd|heb|3|de schutting;de muur blauw',
-    'verbranden|verbrand|verbrandt|verbrandde|verbrandden|verbrand|ben|3|in de zon',
-    'wedden|wed|wedt|wedde|wedden|gewed|heb|3|om een euro;om een zak snoep',
-    'redden|red|redt|redde|redden|gered|heb|3|een kat uit de sloot;de situatie',
-    'raden|raad|raadt|raadde|raadden|geraden|heb|3|het antwoord;het goede woord',
-    'wennen|wen|went|wende|wenden|gewend|ben|3|aan de nieuwe school;aan het koude water',
-    'verwachten|verwacht|verwacht|verwachtte|verwachtten|verwacht|heb|3|een pakketje;veel van de wedstrijd',
-    'beantwoorden|beantwoord|beantwoordt|beantwoordde|beantwoordden|beantwoord|heb|3|alle vragen;de brief',
-    'fotograferen|fotografeer|fotografeert|fotografeerde|fotografeerden|gefotografeerd|heb|3|vogels;de zonsondergang',
-    /* Engelse werkwoorden: de laatste klank van de stam telt (na de |), niet de letter */
-    'appen|app|appt|appte|appten|geappt|heb|3|met een vriendin;naar de groepsapp|p',
-    'gamen|game|gamet|gamede|gameden|gegamed|heb|3|met mijn neef;op de computer|m',
-    'chatten|chat|chat|chatte|chatten|gechat|heb|3|met de klas;met een vriend|t',
-    'mailen|mail|mailt|mailde|mailden|gemaild|heb|3|de docent;een foto naar oma|l',
-    'skaten|skate|skatet|skatete|skateten|geskatet|heb|3|in het park;op het plein|t',
-    'printen|print|print|printte|printten|geprint|heb|3|het werkstuk;de foto’s|t',
-    'downloaden|download|downloadt|downloadde|downloadden|gedownload|heb|3|een nieuwe app;de film|d',
-    'crashen|crash|crasht|crashte|crashten|gecrasht|ben|3|met de skelter;op de ijsbaan|sj',
-    'liken|like|liket|likete|liketen|geliket|heb|3|de foto;elk filmpje|k',
-    'racen|race|racet|racete|raceten|geracet|heb|3|door de straat;over de baan|s',
-    'saven|save|savet|savede|saveden|gesaved|heb|3|het spel;de tekst|v',
-    'updaten|update|updatet|updatete|updateten|geüpdatet|heb|3|de app;de computer|t'
+    'fietsen|fiets|fietst|fietste|fietsten|gefietst|ben|1|naar school#r*;naar het strand#e;naar de stad#r',
+    'werken|werk|werkt|werkte|werkten|gewerkt|heb|1|in de tuin#r;bij de supermarkt#r;aan een werkstuk#r*',
+    'spelen|speel|speelt|speelde|speelden|gespeeld|heb|1|buiten#r*;een potje voetbal#r;op het plein#r*',
+    'wachten|wacht|wacht|wachtte|wachtten|gewacht|heb|1|op de bus#r;op de trein#r;bij het station#e',
+    'praten|praat|praat|praatte|praatten|gepraat|heb|1|met de buurvrouw#r;over de vakantie#r;met de trainer#r',
+    'worden|word|wordt|werd|werden|geworden|ben|1|erg moe#a;boos#ec;heel verdrietig#ec',
+    'vinden|vind|vindt|vond|vonden|gevonden|heb|1|een munt op straat#enx;de sleutel onder de bank#ec;het antwoord#ec',
+    'rijden|rijd|rijdt|reed|reden|gereden|ben|1|naar Utrecht#ev;op een pony#r*h;in de achtbaan#eh',
+    'leggen|leg|legt|legde|legden|gelegd|heb|1|het boek op de plank#k;de sleutels in de la#r',
+    'zeggen|zeg|zegt|zei|zeiden|gezegd|heb|1|niets#ec;de waarheid#ec;sorry tegen de juf#e*',
+    'vragen|vraag|vraagt|vroeg|vroegen|gevraagd|heb|1|de weg#k;om hulp#e',
+    'maken|maak|maakt|maakte|maakten|gemaakt|heb|1|een tekening#r;pannenkoeken#r;een werkstuk over Rome#e*',
+    'bellen|bel|belt|belde|belden|gebeld|heb|1|naar oma#rf;de dokter#e',
+    'koken|kook|kookt|kookte|kookten|gekookt|heb|1|soep#r;macaroni#r',
+    'wonen|woon|woont|woonde|woonden|gewoond|heb|1|in Amsterdam#s;in een klein huis#s;bij de zee#s',
+    'leren|leer|leert|leerde|leerden|geleerd|heb|1|voor de toets#r*;Frans#s*;de woordjes#r*',
+    'dansen|dans|danst|danste|dansten|gedanst|heb|1|op het feest#e;in de woonkamer#r',
+    'poetsen|poets|poetst|poetste|poetsten|gepoetst|heb|1|de ramen#r;de schoenen#r',
+    'halen|haal|haalt|haalde|haalden|gehaald|heb|1|brood bij de bakker#r;een voldoende#ec*',
+    'hopen|hoop|hoopt|hoopte|hoopten|gehoopt|heb|1|op mooi weer#a;op een goed cijfer#e*',
+    'missen|mis|mist|miste|misten|gemist|heb|1|de bus#ec;de trein#ec;een penalty#ecx',
+    'zoeken|zoek|zoekt|zocht|zochten|gezocht|heb|1|de sleutels#k;een nieuwe fiets#e',
+    'denken|denk|denkt|dacht|dachten|gedacht|heb|1|aan de vakantie#r;aan de toets#c*',
+    'kopen|koop|koopt|kocht|kochten|gekocht|heb|1|een ijsje#r;nieuwe schoenen#e;brood#r',
+    'schrijven|schrijf|schrijft|schreef|schreven|geschreven|heb|1|een brief aan oma#ef;een verhaal#r;een gedicht#e',
+    'lezen|lees|leest|las|lazen|gelezen|heb|1|een spannend boek#r;de krant#r;een strip#r',
+    'eten|eet|eet|at|aten|gegeten|heb|1|een appel#r;patat#r;pannenkoeken#r',
+    'zwemmen|zwem|zwemt|zwom|zwommen|gezwommen|heb|1|in de zee#r;in het meer#r',
+    'lopen|loop|loopt|liep|liepen|gelopen|ben|1|naar de winkel#r;naar huis#r',
+    'gaan|ga|gaat|ging|gingen|gegaan|ben|1|naar de bioscoop#r;naar de markt#r',
+    'komen|kom|komt|kwam|kwamen|gekomen|ben|1|te laat#ec;naar het feest#e',
+    'luisteren|luister|luistert|luisterde|luisterden|geluisterd|heb|1|naar muziek#a;naar de juf#a*',
+    'hebben|heb|heeft|had|hadden|gehad|heb|1|een hond#s;veel huiswerk#r*;zin in een ijsje#cp',
+    'zetten|zet|zet|zette|zetten|gezet|heb|2|thee#r;de tassen in de gang#k',
+    'antwoorden|antwoord|antwoordt|antwoordde|antwoordden|geantwoord|heb|2|op de vraag#k;heel snel#a',
+    'houden|houd|houdt|hield|hielden|gehouden|heb|2|een spreekbeurt over haaien#e*;een klein feestje#e',
+    'landen|land|landt|landde|landden|geland|ben|2|op Schiphol#e;veilig in Spanje#e',
+    'lachen|lach|lacht|lachte|lachten|gelachen|heb|2|om de grap#ec;heel hard#a',
+    'gebruiken|gebruik|gebruikt|gebruikte|gebruikten|gebruikt|heb|2|een woordenboek#a;de computer#a',
+    'verhuizen|verhuis|verhuist|verhuisde|verhuisden|verhuisd|ben|2|naar Groningen#e;naar een groter huis#e',
+    'geloven|geloof|gelooft|geloofde|geloofden|geloofd|heb|2|dat verhaal#ec;niets van die smoes#ec',
+    'reizen|reis|reist|reisde|reisden|gereisd|heb|2|door Frankrijk#e;met de trein#r',
+    'kloppen|klop|klopt|klopte|klopten|geklopt|heb|2|op de deur#k;op het raam#k',
+    'stoppen|stop|stopt|stopte|stopten|gestopt|ben|2|met voetbal#e;met snoepen#e',
+    'zitten|zit|zit|zat|zaten|gezeten|heb|2|op de bank#r;in de trein#r',
+    'staan|sta|staat|stond|stonden|gestaan|heb|2|bij de deur#k;in de rij#r',
+    'vergeten|vergeet|vergeet|vergat|vergaten|vergeten|heb|2|de sleutels#ec;het huiswerk#ec*',
+    'ontmoeten|ontmoet|ontmoet|ontmoette|ontmoetten|ontmoet|heb|2|een oude vriend#e;de nieuwe buren#e',
+    'bestellen|bestel|bestelt|bestelde|bestelden|besteld|heb|2|een pizza#e;nieuwe schoenen#e',
+    'betalen|betaal|betaalt|betaalde|betaalden|betaald|heb|2|de rekening#e;met een pinpas#a',
+    'herhalen|herhaal|herhaalt|herhaalde|herhaalden|herhaald|heb|2|de woordjes#r*;de vraag#k',
+    'vertellen|vertel|vertelt|vertelde|vertelden|verteld|heb|2|een grappig verhaal#e;de waarheid#ec',
+    'verzamelen|verzamel|verzamelt|verzamelde|verzamelden|verzameld|heb|2|postzegels#s;oude munten#s',
+    'trainen|train|traint|trainde|trainden|getraind|heb|2|voor de marathon#s;op het veld#r',
+    'beloven|beloof|belooft|beloofde|beloofden|beloofd|heb|3|beterschap#ec;het aan de juf#ec*',
+    'leven|leef|leeft|leefde|leefden|geleefd|heb|3|gezond#s;heel zuinig#s',
+    'verven|verf|verft|verfde|verfden|geverfd|heb|3|de schutting#e;de muur blauw#e',
+    'wedden|wed|wedt|wedde|wedden|gewed|heb|3|om een euro#en;om een zak snoep#en',
+    'redden|red|redt|redde|redden|gered|heb|3|een kat uit de sloot#enx;de situatie#ec',
+    'raden|raad|raadt|raadde|raadden|geraden|heb|3|het antwoord#ec;het goede woord#ec',
+    'wennen|wen|went|wende|wenden|gewend|ben|3|aan de nieuwe school#s*;aan het koude water#ec',
+    'verwachten|verwacht|verwacht|verwachtte|verwachtten|verwacht|heb|3|een pakketje#e;veel van de wedstrijd#ec',
+    'beantwoorden|beantwoord|beantwoordt|beantwoordde|beantwoordden|beantwoord|heb|3|alle vragen#e;de brief#e',
+    'fotograferen|fotografeer|fotografeert|fotografeerde|fotografeerden|gefotografeerd|heb|3|vogels#r;de zonsondergang#e',
+    /* Engelse werkwoorden: de laatste klank van de stam telt (na de laatste |), niet de letter */
+    'appen|app|appt|appte|appten|geappt|heb|3|met een vriendin#r;in de groepsapp#a|p',
+    'gamen|game|gamet|gamede|gameden|gegamed|heb|3|met de buurjongen#r*;op de computer#r|m',
+    'chatten|chat|chat|chatte|chatten|gechat|heb|3|met de klas#r*;met een vriend#r|t',
+    'mailen|mail|mailt|mailde|mailden|gemaild|heb|3|de docent#e*;een foto naar oma#ef|l',
+    'skaten|skate|skatet|skatete|skateten|geskatet|heb|3|in het park#r;op het plein#r|t',
+    'printen|print|print|printte|printten|geprint|heb|3|het werkstuk#e*;de foto’s#e|t',
+    'downloaden|download|downloadt|downloadde|downloadden|gedownload|heb|3|een nieuwe app#e;de film#e|d',
+    'crashen|crash|crasht|crashte|crashten|gecrasht|ben|3|met de skelter#enx;op de ijsbaan#enx|sj',
+    'liken|like|liket|likete|liketen|geliket|heb|3|de foto#k;veel filmpjes#a|k',
+    'racen|race|racet|racete|raceten|geracet|heb|3|door de straat#r*;over de baan#r*|s',
+    'saven|save|savet|savede|saveden|gesaved|heb|3|het spel#k*;de tekst#k|v',
+    'updaten|update|updatet|updatete|updateten|geüpdatet|heb|3|de app#e;de computer#e|t'
   ].map(function(r){
     var p = r.split('|');
-    return { inf:p[0], ik:p[1], hij:p[2], vt:p[3], vtm:p[4], vd:p[5], hulp:p[6], n:+p[7], aan:p[8].split(';'), klank:p[9] || '', jij:p[0] === 'hebben' ? 'hebt' : '' };
+    return { inf:p[0], ik:p[1], hij:p[2], vt:p[3], vtm:p[4], vd:p[5], hulp:p[6], n:+p[7], klank:p[9] || '', jij:p[0] === 'hebben' ? 'hebt' : '',
+      aan:p[8].split(';').map(function(a){ var q = a.split('#'); return { t:q[0], m:q[1] || 'r' }; }) };
   });
-  /* de onderwerpen: p is 1 (ik), 2 (jij), 3 (hij of zij) of 'mv' */
+  /* de onderwerpen: p is 1 (ik), 2 (jij), 3 (hij of zij) of 'mv'. k: kan een kind zijn, v: kan een volwassene zijn,
+     f: hoort bij de familie (dan klopt naar oma bellen). Hij en zij kunnen allebei. */
   var OND = [
-    { w:'ik', p:1 }, { w:'jij', p:2 }, { w:'hij', p:3 }, { w:'zij', p:3 },
-    { w:'Noor', p:3 }, { w:'Daan', p:3 }, { w:'Emma', p:3 }, { w:'Bram', p:3 }, { w:'Lotte', p:3 }, { w:'Ruben', p:3 },
-    { w:'mijn moeder', p:3 }, { w:'de juf', p:3 }, { w:'mijn broer', p:3 }, { w:'onze buurman', p:3 }, { w:'de trainer', p:3 },
-    { w:'wij', p:'mv' }, { w:'jullie', p:'mv' }, { w:'mijn ouders', p:'mv' }, { w:'de kinderen', p:'mv' }
+    { w:'ik', p:1, k:1, f:1 }, { w:'jij', p:2, k:1, f:1 }, { w:'hij', p:3, k:1, v:1, f:1 }, { w:'zij', p:3, k:1, v:1, f:1 },
+    { w:'Noor', p:3, k:1, f:1 }, { w:'Daan', p:3, k:1, f:1 }, { w:'Emma', p:3, k:1, f:1 }, { w:'Bram', p:3, k:1, f:1 }, { w:'Lotte', p:3, k:1, f:1 }, { w:'Ruben', p:3, k:1, f:1 },
+    { w:'mijn moeder', p:3, v:1, f:1 }, { w:'de juf', p:3, v:1 }, { w:'mijn broer', p:3, k:1, f:1 }, { w:'onze buurman', p:3, v:1 }, { w:'de trainer', p:3, v:1 },
+    { w:'wij', p:'mv', k:1, f:1 }, { w:'jullie', p:'mv', k:1, f:1 }, { w:'mijn ouders', p:'mv', v:1, f:1 }, { w:'de kinderen', p:'mv', k:1, f:1 }
   ];
-  var NU = ['Vandaag', 'Morgen', 'Elke week', 'Na school', 'Vanavond', 'Op woensdag', 'Straks'];
-  var TOEN = ['Gisteren', 'Vorige week', 'Vanochtend', 'Vorig jaar', 'Afgelopen zaterdag', 'Gisteravond'];
-  /* iets wat lang duurt (wonen, een hond hebben) past niet bij gisteren */
-  var LANG = { wonen:1, leven:1, hebben:1, verzamelen:1, wennen:1, geloven:1 }, TOEN_LANG = ['Vorig jaar', 'Vroeger', 'In de zomer'];
+  /* wat er vooraan mag, per soort aanvulling */
+  var NU = { r:['Vandaag', 'Morgen', 'Vaak', 'Na school', 'Vanavond', 'Op woensdag'], a:['Vaak', 'Meestal', 'Soms'], e:['Vandaag', 'Morgen', 'Volgende week', 'Zaterdag', 'Straks'],
+             k:['Straks', 'Zo meteen'], s:['Nu', 'Tegenwoordig', 'Dit jaar'], c:['Natuurlijk', 'Toch'] };
+  var TOEN = { r:['Gisteren', 'Vorige week', 'Vanochtend', 'Afgelopen zaterdag', 'Gisteravond'], e:['Gisteren', 'Vorige week', 'Vanochtend', 'Afgelopen zaterdag', 'Gisteravond'],
+               s:['Vroeger', 'Vorig jaar'] };
+  TOEN.k = TOEN.e; TOEN.a = TOEN.r;
+  var TOEN_NA = { r:['gisteren', 'vorige week', 'vanochtend'], e:['gisteren', 'vorige week', 'vanochtend'], s:['vroeger', 'vorig jaar'] };
+  TOEN_NA.k = TOEN_NA.e; TOEN_NA.a = TOEN_NA.r;
+  function tijd(m){ return m.indexOf('s') >= 0 ? 's' : m.indexOf('k') >= 0 ? 'k' : m.indexOf('e') >= 0 ? 'e' : m.indexOf('a') >= 0 ? 'a' : 'r'; }
   var KOF = /(t|k|f|s|ch|p|x|sh)$/;
   var HULP = { heb:{ 1:'heb', 2:'hebt', 3:'heeft', mv:'hebben', inv:'heb' }, ben:{ 1:'ben', 2:'bent', 3:'is', mv:'zijn', inv:'ben' } };
   function kofTekst(letter, erin){ return 'de ' + letter + (erin ? ' zit' : ' zit niet') + ' in ’t kofschip'; }
@@ -175,19 +194,27 @@ window.DICTEE_MAKER = (function(){
   function werkwoord(niveau){
     var n = niv(niveau), lijst = WW.filter(function(v){ return v.n <= n; });
     if (n === 3 && Math.random() < .45) lijst = WW.filter(function(v){ return v.n === 3; });
-    var v = kies(lijst), c = kies(v.aan), o;
-    /* niet "De juf zegt sorry tegen de juf" */
-    do { o = kies(OND); } while (c.indexOf(o.w.replace(/^(de|mijn|onze) /, '')) >= 0);
+    var v = kies(lijst), a = kies(v.aan), c = a.t, m = a.m, t = tijd(m), o;
+    /* een onderwerp dat past: een kind als het moet, en nooit ook in de aanvulling ("De juf zegt sorry tegen de juf") */
+    do { o = kies(OND); } while ((m.indexOf('*') >= 0 && !o.k) || (m.indexOf('v') >= 0 && !o.v) || (m.indexOf('f') >= 0 && !o.f) || c.indexOf(o.w.replace(/^(de|mijn|onze) /, '')) >= 0);
+    var hulp = HULP[m.indexOf('h') >= 0 ? 'heb' : v.hulp];
+    /* na school: alleen bij een kind */
+    var nu = (m.indexOf('c') >= 0 ? NU.c : NU[t]).filter(function(x){ return x !== 'Na school' || (o.k && !o.v); });
     var vormen = n === 1 ? ['nu', 'nuInv', 'toen', 'vd', 'vd', 'nu'] : ['nu', 'nuInv', 'vraag', 'toen', 'toenS', 'vd', 'vdInv'];
-    var soort = kies(vormen), zin, woord, regel;
-    var S = o.w;
+    vormen = vormen.filter(function(f){
+      if (f === 'nuInv' && m.indexOf('n') >= 0) return false;
+      if (f === 'vraag' && m.indexOf('x') >= 0) return false;
+      if ((f === 'vd' || f === 'vdInv') && m.indexOf('p') >= 0) return false;
+      return true;
+    });
+    var soort = kies(vormen), zin, woord, regel, S = o.w;
     if (soort === 'nu'){ woord = nuVorm(v, o); zin = hoofd(S) + ' ' + woord + ' ' + c + '.'; regel = uitlegNu(v, o, false); }
-    else if (soort === 'nuInv'){ woord = nuVorm(v, o, true); zin = kies(NU) + ' ' + woord + ' ' + S + ' ' + c + '.'; regel = uitlegNu(v, o, true); }
+    else if (soort === 'nuInv'){ woord = nuVorm(v, o, true); zin = kies(nu) + ' ' + woord + ' ' + S + ' ' + c + '.'; regel = uitlegNu(v, o, true); }
     else if (soort === 'vraag'){ woord = nuVorm(v, o, true); zin = hoofd(woord) + ' ' + S + ' ' + c + '?'; regel = uitlegNu(v, o, true); }
-    else if (soort === 'toen'){ var mv = o.p === 'mv'; woord = mv ? v.vtm : v.vt; zin = kies(LANG[v.inf] ? TOEN_LANG : TOEN) + ' ' + woord + ' ' + S + ' ' + c + '.'; regel = uitlegToen(v, mv); }
-    else if (soort === 'toenS'){ var mv2 = o.p === 'mv'; woord = mv2 ? v.vtm : v.vt; zin = hoofd(S) + ' ' + woord + ' ' + kies(LANG[v.inf] ? ['vroeger', 'vorig jaar'] : ['gisteren', 'vorige week', 'vanochtend']) + ' ' + c + '.'; regel = uitlegToen(v, mv2); }
-    else if (soort === 'vdInv'){ woord = v.vd; zin = kies(LANG[v.inf] ? TOEN_LANG : TOEN) + ' ' + hulpVorm(HULP[v.hulp], o, true) + ' ' + S + ' ' + c + ' ' + woord + '.'; regel = uitlegVd(v); }
-    else { woord = v.vd; zin = hoofd(S) + ' ' + hulpVorm(HULP[v.hulp], o) + ' ' + c + ' ' + woord + '.'; regel = uitlegVd(v); }
+    else if (soort === 'toen'){ var mv = o.p === 'mv'; woord = mv ? v.vtm : v.vt; zin = kies(TOEN[t]) + ' ' + woord + ' ' + S + ' ' + c + '.'; regel = uitlegToen(v, mv); }
+    else if (soort === 'toenS'){ var mv2 = o.p === 'mv'; woord = mv2 ? v.vtm : v.vt; zin = hoofd(S) + ' ' + woord + ' ' + kies(TOEN_NA[t]) + ' ' + c + '.'; regel = uitlegToen(v, mv2); }
+    else if (soort === 'vdInv'){ woord = v.vd; zin = kies(TOEN[t]) + ' ' + hulpVorm(hulp, o, true) + ' ' + S + ' ' + c + ' ' + woord + '.'; regel = uitlegVd(v); }
+    else { woord = v.vd; zin = hoofd(S) + ' ' + hulpVorm(hulp, o) + ' ' + c + ' ' + woord + '.'; regel = uitlegVd(v); }
     return { zin: zin, woord: woord, regel: regel, sleutel: 'gw' + zin };
   }
 
@@ -216,7 +243,7 @@ window.DICTEE_MAKER = (function(){
     'museum|musea|museumpje|la|pje|het|3', 'politicus|politici|-|la||de|3', 'radio|radio’s|radiootje|apo|klinker|de|3',
     'studio|studio’s|studiootje|apo|klinker|de|3', 'mama|mama’s|mamaatje|apo|klinker|de|3', 'kanaal|kanalen|kanaaltje|open|tje|het|3',
     'euro|euro’s|-|apo||de|3', 'hobby|hobby’s|-|apo||de|3', 'ski|ski’s|-|apo||de|3', 'porie|poriën|-|trema2||de|3',
-    'drug|drugs|-|s||de|3', 'aquarium|aquaria|aquariumpje|la|pje|het|3',
+    'aquarium|aquaria|aquariumpje|la|pje|het|3',
     'kast|kasten|kastje|en|je|de|1', 'lamp|lampen|lampje|en|je|de|1', 'jas|jassen|jasje|dubbel|je|de|1', 'pop|poppen|popje|dubbel|je|de|1',
     'bus|bussen|busje|dubbel|je|de|1', 'hek|hekken|hekje|dubbel|je|het|1', 'pet|petten|petje|dubbel|je|de|1', 'kop|koppen|kopje|dubbel|je|de|1',
     'pak|pakken|pakje|dubbel|je|het|1', 'neus|neuzen|neusje|sz|je|de|1', 'broek|broeken|broekje|en|je|de|1', 'plant|planten|plantje|en|je|de|1',
@@ -228,7 +255,7 @@ window.DICTEE_MAKER = (function(){
     'wolf|wolven|wolfje|fv|je|de|2', 'kaart|kaarten|kaartje|en|je|de|2', 'doos|dozen|doosje|sz|je|de|2', 'kerk|kerken|kerkje|en|je|de|2',
     'reis|reizen|reisje|sz|je|de|2', 'fles|flessen|flesje|dubbel|je|de|2', 'mes|messen|mesje|dubbel|je|het|2', 'bril|brillen|brilletje|dubbel|etje|de|2',
     'agenda|agenda’s|agendaatje|apo|klinker|de|3', 'pyjama|pyjama’s|-|apo||de|3', 'collega|collega’s|-|apo||de|3', 'party|party’s|-|apo||de|3',
-    'theorie|theorieën|-|trema||de|3', 'industrie|industrieën|-|trema||de|3', 'olie|oliën|-|trema2||de|3', 'bioscoop|bioscopen|bioscoopje|open|je|de|3',
+    'theorie|theorieën|-|trema||de|3', 'industrie|industrieën|-|trema||de|3', 'bioscoop|bioscopen|bioscoopje|open|je|de|3',
     'musicus|musici|-|la||de|3'
   ].map(function(r){ var p = r.split('|'); return { ev:p[0], mv:p[1], kl:p[2] === '-' ? '' : p[2], rm:p[3], rk:p[4], de:p[5] === 'de', n:+p[6] }; });
   function uitlegMv(z){
@@ -262,20 +289,25 @@ window.DICTEE_MAKER = (function(){
     if (!lijst.length) lijst = ZN.filter(function(z){ return z.n <= n; });
     var z = kies(lijst);
     if (z.kl && Math.random() < .5){
-      return { w: z.kl, zin: 'Een ' + (z.de ? 'kleine ' : 'klein ') + z.ev + ' is een ' + z.kl + '.', uit: 'verkleinwoord van ' + z.ev + '. ' + uitlegKl(z).replace(/\.$/, ''), sleutel: 'gk' + z.kl };
+      return { w: z.kl, zin: 'Het verkleinwoord van ' + z.ev + ' is ' + z.kl + '.', uit: 'verkleinwoord van ' + z.ev + '. ' + uitlegKl(z).replace(/\.$/, ''), sleutel: 'gk' + z.kl };
     }
     return { w: z.mv, zin: 'Eén ' + z.ev + ', twee ' + z.mv + '.', uit: 'meervoud van ' + z.ev + '. ' + uitlegMv(z).replace(/\.$/, ''), sleutel: 'gm' + z.mv };
   }
 
   /* ---------- hoofdletters en leestekens ---------- */
-  var NAMEN = ['Noor', 'Daan', 'Sem', 'Emma', 'Tim', 'Lotte', 'Bram', 'Anna', 'Tom', 'Eva', 'Julia', 'Ruben', 'Femke', 'Lars', 'Iris', 'Jasper', 'Floor', 'Joris'];
+  var MEISJES = ['Noor', 'Emma', 'Lotte', 'Anna', 'Eva', 'Julia', 'Femke', 'Iris', 'Floor'], JONGENS = ['Daan', 'Sem', 'Tim', 'Bram', 'Tom', 'Ruben', 'Lars', 'Jasper', 'Joris'];
+  var NAMEN = MEISJES.concat(JONGENS);
   var PLAATS = ['Amsterdam', 'Utrecht', 'Groningen', 'Zwolle', 'Arnhem', 'Leiden', 'Delft', 'Haarlem', 'Rotterdam', 'Maastricht', 'Nijmegen', 'Breda'];
-  var LAND = [['Frankrijk', 'Franse', 'kaas'], ['Spanje', 'Spaanse', 'tortilla'], ['Duitsland', 'Duitse', 'worst'], ['België', 'Belgische', 'friet'],
-              ['Italië', 'Italiaanse', 'pizza'], ['Griekenland', 'Griekse', 'yoghurt'], ['Engeland', 'Engelse', 'thee'], ['Zweden', 'Zweedse', 'gehaktballetjes']];
+  var LAND = [['Frankrijk', 'Franse', 'kaas', 'eet'], ['Spanje', 'Spaanse', 'tortilla', 'eet'], ['Duitsland', 'Duitse', 'worst', 'eet'], ['België', 'Belgische', 'friet', 'eet'],
+              ['Italië', 'Italiaanse', 'pizza', 'eet'], ['Griekenland', 'Griekse', 'yoghurt', 'eet'], ['Engeland', 'Engelse', 'thee', 'drinkt'], ['Zweden', 'Zweedse', 'gehaktballetjes', 'eet']];
   var DAGEN = ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag'];
   var MAAND = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
-  var SPUL = ['een appel', 'een boek', 'een fles water', 'een handdoek', 'een pen', 'een jas', 'een paraplu', 'een banaan', 'een schrift', 'een zonnebril'];
-  var FAM = [['zus', 'haar'], ['broer', 'zijn'], ['buurman', 'de'], ['nicht', 'haar'], ['neef', 'zijn'], ['trainer', 'de']];
+  /* spullen die bij elkaar horen: waar je ze voor meeneemt, en wat je dan meeneemt */
+  var SPUL = [['Naar het strand', ['een handdoek', 'een zonnebril', 'een fles water', 'een bal', 'zonnebrand']],
+              ['Naar school', ['een pen', 'een schrift', 'een appel', 'een boek', 'een liniaal']],
+              ['Voor het schoolreisje', ['een jas', 'een fles water', 'een banaan', 'een rugzak', 'een paraplu']],
+              ['Naar de sportles', ['een handdoek', 'sportschoenen', 'een fles water', 'een shirt', 'een korte broek']]];
+  var FAM = { m:['zus', 'nicht', 'buurvrouw', 'beste vriendin'], j:['broer', 'neef', 'buurjongen', 'beste vriend'] };
   var BIJZIN = [['het regende', 'bleef ', ' thuis'], ['de bus te laat was', 'kwam ', ' te laat op school'], ['de winkel dicht was', 'fietste ', ' weer naar huis'],
                 ['het zo warm was', 'ging ', ' zwemmen'], ['de film spannend was', 'keek ', ' tot het eind']];
   function twee(a){ var x = kies(a), y; do { y = kies(a); } while (y === x); return [x, y]; }
@@ -283,13 +315,13 @@ window.DICTEE_MAKER = (function(){
     var n = niv(niveau), soorten = n === 1 ? ['namen', 'dag', 'lijst', 'vraag', 'vraag2'] : n === 2 ? ['namen', 'dag', 'lijst', 'vraag', 'bijstelling', 'bijzin', 'land'] : ['lijst', 'vraag', 'bijstelling', 'bijzin', 'land', 'feest', 'maandLand'];
     var s = kies(soorten), nm = twee(NAMEN), zin, uit;
     if (s === 'namen'){ var p = kies(PLAATS); zin = nm[0] + ' en ' + nm[1] + ' gaan op ' + kies(DAGEN) + ' naar ' + p + '.'; uit = 'Namen en plaatsnamen krijgen een hoofdletter: ' + nm[0] + ', ' + nm[1] + ', ' + p + '. Dagen van de week niet.'; }
-    else if (s === 'dag'){ var m = kies(MAAND), p2 = kies(PLAATS); zin = 'In ' + m + ' fietst ' + nm[0] + ' elke ' + kies(DAGEN) + ' naar ' + p2 + '.'; uit = 'Maanden en dagen schrijf je met een kleine letter; de naam ' + nm[0] + ' en de plaatsnaam ' + p2 + ' krijgen een hoofdletter.'; }
-    else if (s === 'lijst'){ var sp = SPUL.slice().sort(function(){ return Math.random() - .5; }).slice(0, n === 3 ? 4 : 3); zin = nm[0] + ' neemt ' + sp.slice(0, -1).join(', ') + ' en ' + sp[sp.length - 1] + ' mee.'; uit = 'In een opsomming komen komma’s tussen de dingen, maar niet voor en.'; }
+    else if (s === 'dag'){ var m = kies(MAAND), p2 = kies(PLAATS); zin = 'In ' + m + ' gaat ' + nm[0] + ' op een ' + kies(DAGEN) + ' naar ' + p2 + '.'; uit = 'Maanden en dagen schrijf je met een kleine letter; de naam ' + nm[0] + ' en de plaatsnaam ' + p2 + ' krijgen een hoofdletter.'; }
+    else if (s === 'lijst'){ var sl = kies(SPUL), sp = sl[1].slice().sort(function(){ return Math.random() - .5; }).slice(0, n === 3 ? 4 : 3); zin = sl[0] + ' neemt ' + nm[0] + ' ' + sp.slice(0, -1).join(', ') + ' en ' + sp[sp.length - 1] + ' mee.'; uit = 'In een opsomming komen komma’s tussen de dingen, maar niet voor en.'; }
     else if (s === 'vraag'){ var p3 = kies(PLAATS); zin = 'Gaat ' + nm[0] + ' op ' + kies(DAGEN) + ' met ' + nm[1] + ' naar ' + p3 + '?'; uit = 'Een vraag eindigt op een vraagteken. Namen en plaatsnamen met een hoofdletter, de dag niet.'; }
     else if (s === 'vraag2'){ zin = 'Waarom komt ' + nm[0] + ' niet naar het feest van ' + nm[1] + '?'; uit = 'Een vraag met waarom: een vraagteken aan het eind. Namen krijgen een hoofdletter.'; }
-    else if (s === 'bijstelling'){ var f = kies(FAM), p4 = kies(PLAATS); zin = nm[0] + ', de ' + f[0] + ' van ' + nm[1] + ', woont in ' + p4 + '.'; uit = 'De uitleg over ' + nm[0] + ' (de ' + f[0] + ' van ' + nm[1] + ') staat tussen twee komma’s.'; }
+    else if (s === 'bijstelling'){ var f = kies(FAM[MEISJES.indexOf(nm[0]) >= 0 ? 'm' : 'j']), p4 = kies(PLAATS); zin = nm[0] + ', de ' + f + ' van ' + nm[1] + ', woont in ' + p4 + '.'; uit = 'De uitleg over ' + nm[0] + ' (de ' + f + ' van ' + nm[1] + ') staat tussen twee komma’s.'; }
     else if (s === 'bijzin'){ var b = kies(BIJZIN); zin = 'Omdat ' + b[0] + ', ' + b[1] + nm[0] + b[2] + '.'; uit = 'Na een bijzin aan het begin (omdat ' + b[0] + ') komt een komma, tussen de twee werkwoorden.'; }
-    else if (s === 'land'){ var l = kies(LAND); zin = nm[0] + ' eet in ' + l[0] + ' graag ' + l[1] + ' ' + l[2] + '.'; uit = 'Een land krijgt een hoofdletter, en een woord dat van een land komt ook: ' + l[1] + ' ' + l[2] + '.' + (/ë/.test(l[0]) ? ' ' + l[0] + ' met een trema.' : ''); }
+    else if (s === 'land'){ var l = kies(LAND); zin = nm[0] + ' ' + l[3] + ' in ' + l[0] + ' graag ' + l[1] + ' ' + l[2] + '.'; uit = 'Een land krijgt een hoofdletter, en een woord dat van een land komt ook: ' + l[1] + ' ' + l[2] + '.' + (/ë/.test(l[0]) ? ' ' + l[0] + ' met een trema.' : ''); }
     else if (s === 'feest'){ var fe = kies([['Met Pasen', 'Pasen is een feestdag: hoofdletter.'], ['Op Koningsdag', 'Koningsdag is een feestdag: hoofdletter.'], ['In de kerstvakantie', 'kerstvakantie is een gewoon woord: kleine letter, ook al is Kerstmis een feestdag.'], ['Met oud en nieuw', 'oud en nieuw schrijf je met kleine letters.']]), p5 = kies(PLAATS);
       zin = fe[0] + ' gaat ' + nm[0] + ' naar ' + p5 + '.'; uit = fe[1] + ' De naam en de plaatsnaam met een hoofdletter.'; }
     else { var l2 = kies(LAND), m2 = kies(MAAND); zin = 'Gaan ' + nm[0] + ' en ' + nm[1] + ' in ' + m2 + ' naar ' + l2[0] + '?'; uit = 'Een land krijgt een hoofdletter, een maand niet. Een vraag eindigt op een vraagteken.' + (/ë/.test(l2[0]) ? ' ' + l2[0] + ' met een trema.' : ''); }
