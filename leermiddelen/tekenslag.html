@@ -1090,7 +1090,8 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
   }
   function beurtStart(){
     if (!spel || spel.loopt) return;
-    spel.loopt = true; spel.raak = 0; spel.geraden = [];
+    /* een nieuwe beurt: wat iemand vorige beurt als laatste gokte, mag nu weer */
+    spel.loopt = true; spel.raak = 0; spel.geraden = []; spel.gok = {};
     spel.tijdEinde = Date.now() + host.tijd * 1000;
     neemWoord();
     $('bOver').classList.add('hide'); $('bOverslaan').disabled = false;
@@ -1132,7 +1133,7 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
   /* wat de tekenaar krijgt: het woord, en uit een woordenlijst ook de betekenis */
   function tekenKaart(){
     var h = host.hints && host.hints[norm(spel.woord)];
-    return { k:'teken', woord:spel.woord, hint: h || undefined, tot:spel.tijdEinde, v:spel.vel.id, w:spel.wnr };
+    return { k:'teken', woord:spel.woord, hint: h || undefined, tot:spel.tijdEinde, v:spel.vel.id, w:spel.wnr, over: !(spel.geraden && spel.geraden.length) };
   }
   function nieuwWoordInBeurt(){
     neemWoord(); nieuwVel(); spel.geraden = []; spel.gok = {};
@@ -1621,7 +1622,9 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
     }
     if (d.k === 'teken'){
       /* ik ben de tekenaar: het woord klein boven het vel; een nieuw woord (w) krijgt een schoon vel */
-      if (d.w === undefined || d.w !== pWnr){ pWnr = d.w; pNieuwVel(d.v); magOverslaan(true); }
+      if (d.w === undefined || d.w !== pWnr){ pWnr = d.w; pNieuwVel(d.v); }
+      /* ook na herladen: had iemand het al, dan blijft overslaan uit */
+      magOverslaan(d.over !== false);
       $('pOver').classList.add('hide'); pTekenaar.zet(true);
       $('pGereedschap').classList.remove('hide'); $('pRaadRij').classList.add('hide'); $('pHint').classList.add('hide');
       if (pGereedschap) pGereedschap.toon();
