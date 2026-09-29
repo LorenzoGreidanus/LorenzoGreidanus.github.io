@@ -1440,7 +1440,7 @@ function maakSpeler(naam, av, ik){
   var werv = maakEl('circle', { r:R * 3, fill:'rgba(255,255,255,.35)', stroke:'#fff', 'stroke-width':3, display:'none' });
   [schaduw, zwaai, werv, pvp, schild, ex, lijf, naamEl, lvl, hpBak, hpBal].forEach(function(x){ g.appendChild(x); });
   g.__d = { zwaai:zwaai, pvp:pvp, ex:ex, lijf:lijf, wapen:wapen, zw:wapen.querySelector('.zw'), bg:wapen.querySelector('.bg'), pees:wapen.querySelector('.pees'),
-            ring:ring, blok:blok, crit:crit, schild:schild, kruis:kruis, naam:naamEl, lvl:lvl, hpBal:hpBal, werv:werv, gezicht:gezicht };
+            ring:ring, blok:blok, crit:crit, schild:schild, kruis:kruis, naam:naamEl, lvl:lvl, hpBal:hpBal, werv:werv, gezicht:gezicht, gzNaam:naam, gzAv:av || '', gzKijk:'' };
   return g;
 }
 function zetSpeler(g, o){
@@ -1471,6 +1471,12 @@ function zetSpeler(g, o){
     var omtrek = 2 * Math.PI * (R + 16);
     zet(d.ex, 'display', 'inline'); zet(d.ex, 'stroke-dasharray', (omtrek * Math.min(1, o.extractDeel)).toFixed(1) + ' ' + omtrek.toFixed(1));
   } else zet(d.ex, 'display', o.extract ? 'inline' : 'none');
+  /* het hoofd kijkt de kant op waar hij mikt (negen kanten, elk een keer getekend) en trekt een gezicht als hij neer is */
+  if (window.AVATAR && isFinite(o.mikt)){
+    var kx = Math.cos(o.mikt), ky = Math.sin(o.mikt), qx = Math.abs(kx) < .38 ? 0 : kx > 0 ? .8 : -.8, qy = Math.abs(ky) < .38 ? 0 : ky > 0 ? .7 : -.7;
+    var kk = qx + ',' + qy + (o.neer ? ',n' : '');
+    if (kk !== d.gzKijk){ d.gzKijk = kk; d.gezicht.innerHTML = AVATAR.inhoud(d.gzNaam, d.gzAv, o.neer ? 'au' : '', [qx, qy]); }
+  }
   if (!o.ik && o.naam !== undefined) tekst(d.naam, o.naam);
   tekst(d.lvl, (o.beschermd ? '⛨ ' : '') + 'lvl ' + o.level);
   if (o.hp !== undefined) zet(d.hpBal, 'width', (40 * o.hp / 100).toFixed(1));

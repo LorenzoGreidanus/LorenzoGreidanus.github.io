@@ -15,7 +15,8 @@
    teksten: het doorlopende dictee. Een tekst van tien zinnen met een vast id
    (t-bb-01), zodat een docent hem kan klaarzetten (?tekst=t-bb-01). Tot en met
    week 40 van 2026 waren het er vijf of zes; oud is hoeveel, zodat het dictee
-   van die weken hetzelfde blijft (zie weektekst).
+   van die weken hetzelfde blijft (zie weektekst). Het dictee van de week neemt
+   vanaf week 41 de eerste zeven zinnen; een tekst die een docent zelf kiest, heeft ze alle tien.
    Elke zin heeft een korte uitleg bij het lastigste woord. Geen cijfers, geen
    aanhalingstekens en geen uitroeptekens: alles wat je typt moet je kunnen
    horen.
@@ -423,7 +424,7 @@ window.DICTEE_OPGAVEN = {
     { n:3, w:'carrière', zin:'Ze maakte carrière als journalist.', uit:'Frans: dubbele r, en è' },
     { n:3, w:'tête-à-tête', zin:'Ze hadden een tête-à-tête in het café.', uit:'Frans: een dakje op elke ê, à in het midden, streepjes ertussen' },
     { n:3, w:'reçu', zin:'Bewaar het reçu van de garderobe.', uit:'Frans: een c met een haakje (ç), zodat hij klinkt als s' },
-    { n:3, w:'café’s', zin:'In de binnenstad zijn veel café’s.', uit:'Meervoud van café: het eindigt op een klinker met een accent, dus apostrof + s' },
+    { n:3, w:'cafés', zin:'In de binnenstad zijn veel cafés.', uit:'Meervoud van café: na een é komt alleen een s, zonder apostrof, want het accent laat al zien dat de klank lang is' },
     { n:3, w:'jus d’orange', zin:'Bij het ontbijt drink ik jus d’orange.', uit:'Frans: jus, en dan d’orange met een apostrof' }
   ],
   /* ---------- het doorlopende dictee: acht teksten per niveau ---------- */
@@ -703,6 +704,7 @@ window.DICTEE_OPGAVEN = {
 (function(D){
   'use strict';
   var NIV = { bb:1, kgt:2, hv:3 };
+  D.WEEKZINNEN = 7;   /* zo lang is het dictee van de week */
   D.tekst = function(id){ return D.teksten.filter(function(t){ return t.id === id; })[0] || null; };
   D.isoWeek = function(datum){
     var d0 = datum instanceof Date ? datum : (datum ? new Date(datum) : new Date());
@@ -717,8 +719,10 @@ window.DICTEE_OPGAVEN = {
     var lijst = D.teksten.filter(function(t){ return t.n === n; }).sort(function(a, b){ return a.id < b.id ? -1 : 1; });
     if (!lijst.length) return null;
     var w = D.isoWeek(datum), t = lijst[(w.jaar * 53 + w.week) % lijst.length];
-    /* tien zinnen vanaf week 41 van 2026; de weken ervoor houden hun korte tekst, anders klopt een oude uitslag niet meer */
-    if (t.oud && (w.jaar < 2026 || (w.jaar === 2026 && w.week < 41))) t = Object.assign({}, t, { zinnen: t.zinnen.slice(0, t.oud) });
+    /* vanaf week 41 van 2026 de eerste zeven zinnen (tien was te lang voor een les); de weken ervoor houden hun
+       korte tekst, anders klopt een oude uitslag niet meer */
+    var oud = t.oud && (w.jaar < 2026 || (w.jaar === 2026 && w.week < 41)), aantal = oud ? t.oud : D.WEEKZINNEN;
+    if (t.zinnen.length > aantal) t = Object.assign({}, t, { zinnen: t.zinnen.slice(0, aantal) });
     return t;
   };
 })(window.DICTEE_OPGAVEN);

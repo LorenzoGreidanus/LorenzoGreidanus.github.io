@@ -408,7 +408,7 @@ window.SPEL = (function(){
        voordat hij nog een uur doorspeelt. */
     var bewaarHtml = window.PROFIEL && PROFIEL.bewaart && !PROFIEL.bewaart()
       ? '<p class="bewaarniet">Dit apparaat bewaart niets. Zodra je dit tabblad sluit is je score weg. Dat komt meestal door een priv\u00e9venster of doordat site-gegevens uitstaan.</p>' : '';
-    var wieHtml = window.AVATAR && (wie || avSpec) ? '<p class="wie">' + AVATAR.svg(wie ? wie.naam : 'jij', 34, avSpec, { stemming:stemming, klasse: stemming === 'blij' ? 'av-juich' : '' }) + wieTekst + '</p>' : '';
+    var wieHtml = window.AVATAR && (wie || avSpec) ? '<p class="wie">' + AVATAR.svg(wie ? wie.naam : 'jij', 34, avSpec, { stemming:stemming, klasse: stemming === 'blij' ? 'av-juich' : '', leef:'einde', volg:.6 }) + wieTekst + '</p>' : '';
     var sterrenHtml = sterren === null ? '' : '<div class="sterren" aria-label="' + sterren + ' van 3 sterren">' +
       [0, 1, 2].map(function(i){ return IC.ster.replace('<svg ', '<svg class="ster' + (i < sterren ? ' vol' : '') + '" '); }).join('') + '</div>';
     kaart.innerHTML =

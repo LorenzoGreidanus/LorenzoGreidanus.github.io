@@ -315,7 +315,7 @@ function noodSom(r){
   return { v: "Hoeveel is " + a + " × " + b + "?", o: [String(goed), String(goed + a), String(goed - b)], g: 0, u: a + " × " + b + " = " + goed + ".", t: "tafels" };
 }
 /* een gekozen avatar: v3k2o1m0e4, anders leeg (dan komt hij uit de bijnaam) */
-function schoonAv(a){ a = String(a || "").replace(/[^a-z0-9]/g, "").slice(0, 40); return /^v\dk\do\dm\de\d(c\d{1,2})?(x\d{1,2})?(w\d)?(h\d{1,2})?(r\d{1,2})?(z\d{1,2})?(b\d{1,2})?(a\d{1,2})?(q\d{1,2})?$/.test(a) ? a : ""; }
+function schoonAv(a){ a = String(a || "").replace(/[^a-z0-9]/g, "").slice(0, 40); return /^v\d{1,2}k\do\d{1,2}m\de\d(c\d{1,2})?(x\d{1,2})?(w\d)?(h\d{1,2})?(r\d{1,2})?(z\d{1,2})?(b\d{1,2})?(a\d{1,2})?(q\d{1,2})?(f\d)?$/.test(a) ? a : ""; }
 function sleutelMaken(n){
   const r = crypto.getRandomValues(new Uint8Array(n || 12));
   return Array.from(r, b => b.toString(16).padStart(2, "0")).join("");

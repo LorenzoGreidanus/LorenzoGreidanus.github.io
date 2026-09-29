@@ -184,6 +184,13 @@
       '<div class="pd-confetti" aria-hidden="true"></div>' +
       '<button type="button" class="pd-sla">Sla over</button></div>';
     var el = doel.firstChild, kop = el.querySelector('.pd-kop'), wekkers = [], af = false, gemeld = false;
+    /* de gezichtjes leven (avatar.js): de nummers 2 en 3 kijken opzij naar de winnaar, de winnaar kijkt de zaal in */
+    var levend = {};
+    if (window.AVATAR && AVATAR.leef) [0, 1, 2].forEach(function(i){
+      var sv = el.querySelector('.pd-plek[data-i="' + i + '"] .pd-beeld svg.avatar'); if (!sv) return;
+      var wint = o.winnaars.indexOf(i) >= 0 && !o.nul, kant = i === 1 ? 1 : i === 2 ? -1 : 0;
+      levend[i] = AVATAR.leef(sv, { volg:0, kijk: wint || o.nul || gedeeld ? [0, -.15] : [kant * .85, -.25] });
+    });
     /* de winnaar staat in beeld: een keer zeggen */
     function meld(){ if (gemeld) return; gemeld = true; if (opties.onthuld) try { opties.onthuld(); } catch (e){} }
     function na(ms, f){ wekkers.push(setTimeout(f, ms)); }
@@ -219,7 +226,10 @@
     /* het gezichtje van de winnaar springt van blijdschap (avatar.js kent av-juich) */
     function juich(){
       if (o.nul) return;
-      o.winnaars.forEach(function(i){ var sv = plek(i) && plek(i).querySelector('.pd-beeld svg'); if (sv) sv.classList.add('av-juich'); });
+      o.winnaars.forEach(function(i){
+        if (levend[i]){ levend[i].zet('trots').juich(190).juichElke(2.8); return; }
+        var sv = plek(i) && plek(i).querySelector('.pd-beeld svg'); if (sv) sv.classList.add('av-juich');
+      });
     }
     function klaar(overgeslagen){
       if (af) return;
