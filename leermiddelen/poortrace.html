@@ -399,7 +399,9 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     </details>
     <div class="samenvak" id="vriendenVak">
       <h2>Race tegen je vrienden</h2>
-      <p class="noot">Tot acht spelers, ieder op zijn eigen scherm, met het vak en niveau hierboven. Jullie zien elkaar rijden. Wie het eerst over de finish komt, wint.</p>
+      <p class="noot">Tot acht spelers, ieder op zijn eigen scherm, met het vak en niveau hierboven. Jullie zien elkaar rijden.</p>
+      <div class="chips" id="vrSoort" role="group" aria-label="Soort race"><button type="button" data-r="finish" class="on" aria-pressed="true">Tot de finish</button><button type="button" data-r="oneindig" aria-pressed="false">Oneindig</button></div>
+      <p class="noot" id="vrSoortUit"></p>
       <div class="samenrij"><input type="text" id="vrNaam" maxlength="16" placeholder="Je bijnaam" aria-label="Je bijnaam" autocomplete="nickname"><button class="knop crab" id="vrMaak" type="button">Maak een race</button></div>
       <p class="noot">Of doe mee met de code van een vriend:</p>
       <div class="samenrij"><input type="text" class="codeveld" id="vrCode" maxlength="4" placeholder="CODE" aria-label="Code van je vriend" autocapitalize="characters" autocomplete="off" spellcheck="false"><button class="knop stil" id="vrDoe" type="button">Doe mee</button></div>
@@ -427,7 +429,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
       <div><i style="background:var(--amber)">1</i><b>Stuur naar het goede antwoord</b><span>Bovenaan staat de vraag. Op de poort staan de antwoorden, een per baan. Stuur met de pijltjes of A en D, of veeg over de weg. Met 1, 2 en 3, of een tik op een baanknop onderaan, ga je meteen naar die baan.</span></div>
       <div><i style="background:#83A5F2">2</i><b>Goed is een boost</b><span>Door de goede poort krijg je een boost, punten en munten. Hoe langer je reeks, hoe meer punten. In de gewone stand ga je steeds sneller.</span></div>
       <div><i style="background:var(--crab)">3</i><b>Fout is afremmen</b><span>Door de verkeerde poort slip je en rem je af. De weg staat stil en de uitleg blijft staan tot je op Volgende tikt of Enter drukt. Je rijdt altijd door tot de finish: vijftien poorten, behalve in Oneindig.</span></div>
-      <div><i style="background:#FCDED6">4</i><b>Vier manieren om te rijden</b><span>Normaal: de snelheid loopt op. Rustig: geen haast, de poort wacht tot je een baan kiest. Blijf je in je baan, tik dan op Rijd door of druk op W. Tijdrit: tegen de klok en tegen je eigen spook, het doorzichtige voertuig van je beste rit. Houd pijltje omhoog of de knop Gas ingedrukt om harder te gaan. Oneindig: geen finish, je rijdt tot je tank leeg is. Elke poort geeft brandstof: een goed antwoord vult je tank flink bij, een fout geeft een beetje. Hoe verder je komt, hoe sneller de tank leegloopt.</span></div>
+      <div><i style="background:#FCDED6">4</i><b>Vier manieren om te rijden</b><span>Normaal: de snelheid loopt op. Rustig: geen haast, de poort wacht tot je een baan kiest. Blijf je in je baan, tik dan op Rijd door of druk op W. Tijdrit: tegen de klok en tegen je eigen spook, het doorzichtige voertuig van je beste rit. Houd pijltje omhoog of de knop Gas ingedrukt om harder te gaan. Oneindig: geen finish, je rijdt tot je tank leeg is. Elke poort geeft brandstof: een goed antwoord vult je tank flink bij, een fout geeft een beetje. Hoe verder je komt, hoe sneller de tank leegloopt. Oneindig kan ook met vrienden of de hele klas: wie de meeste poorten haalt, wint.</span></div>
       <div><i style="background:#2f9e8f">5</i><b>De garage</b><span>Met je munten koop je andere voertuigen, kleuren en een spoor erachter. Je munten en je records blijven op dit apparaat.</span></div>
     </div>
     <div id="siteStartLijst"></div>
@@ -728,12 +730,13 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     var tv = TIJDVAKKEN.filter(function(x){ return x.id === t; })[0]; if (tv) return 'tijdvak ' + tv.naam.replace(/^\d+ /, '');
     var o = (ONDERDELEN[vak] || []).filter(function(x){ return x.id === t; })[0]; return o ? o.naam : (t || vakNaamVan(vak));
   }
-  /* Het goede antwoord en een of twee foute op de poort. Twee banen open in de
-     rustige stand en op vmbo-bb: minder te lezen. */
+  /* Het goede antwoord en twee foute op de poort, alle drie de banen open, ook
+     op vmbo-bb en in de rustige stand. Heeft de vraag te weinig korte foute
+     antwoorden, dan komt er een uit de andere vragen van dat onderdeel. */
   function maakPoortVraag(){
     var q = trek(), v = q.v;
     if (vak === 'eng' && /^woordjes /.test(q.t) && !/\?$/.test(q.v)) v = (q.t === 'woordjes NL naar EN' ? 'Hoe zeg je: ' : 'Wat betekent: ') + q.v + '?';
-    var p = R.poort(q, modus === 'rustig' || niveau === 'bb');
+    var p = R.poort(q, function(){ return R.reserve(BRONNEN[vak] || [], q); });
     recent.push(q.v); if (recent.length > 12) recent.shift();
     return { q:q, v:v, banen:p.banen, goed:p.goed, kop:kopVoorVraag({ t:deelNaam(q.t), o:p.antw }, vakNaamVan(vak)) };
   }
@@ -804,10 +807,12 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     /* terug in een race die al liep (herladen): verder na de poort waar de kamer je heeft */
     var h = RACE && RACE.rit;
     if (h && h.ronde > 0){
-      k = Math.min(nPoorten, h.ronde | 0); mo.vanaf(k);
+      k = eindeloos ? h.ronde | 0 : Math.min(nPoorten, h.ronde | 0); mo.vanaf(k);
       uitslagen = (h.uit || []).slice(0, k); goedN = h.gehaald | 0; punten = h.punten | 0; reeks = h.reeks | 0; besteReeks = h.beste | 0; snelNiv = h.snel | 0;
-      $('vraagKop').textContent = 'verder bij poort ' + Math.min(nPoorten, k + 1) + ' van ' + nPoorten;
+      foutN = uitslagen.filter(function(x){ return x === false; }).length;
+      $('vraagKop').textContent = eindeloos ? 'verder bij poort ' + (k + 1) : 'verder bij poort ' + Math.min(nPoorten, k + 1) + ' van ' + nPoorten;
     }
+    if (RACE && RACE.tank) tank = Math.max(0, raceTankNu()), tekenTank();
     tekenVoortgang(); hudPunten();
     fase = 'aftellen';
     aftellen(sec);
@@ -821,7 +826,12 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     ['3', '2', '1', 'Rijden!'].forEach(function(t, i){
       aftelKlok.push(setTimeout(function(){ el.innerHTML = '<span>' + t + '</span>'; }, i * stap));
     });
-    aftelKlok.push(setTimeout(function(){ el.classList.add('hide'); el.innerHTML = ''; fase = 'rijden'; m.start(); if (k >= nPoorten) naarFinish(); else activeer(k); }, 3 * stap + stap * .6));
+    aftelKlok.push(setTimeout(function(){
+      el.classList.add('hide'); el.innerHTML = ''; fase = 'rijden'; m.start();
+      /* een race met Oneindig: vanaf nu loopt de tank (na een herlaad staat hij al zoals de kamer hem heeft) */
+      if (RACE && modus === 'oneindig' && !RACE.tank) RACE.tank = { waarde:100, t:performance.now(), ronde:0, vrijVan:0, vrijTot:0 };
+      if (k >= nPoorten && modus !== 'oneindig') naarFinish(); else activeer(k);
+    }, 3 * stap + stap * .6));
   }
   /* hoe lang je hebt tussen de vraag en de poort (poortrace-regels.js) */
   function doelTijd(vr){ return R.doelTijd(niveau, snelNiv, vr.v, vr.banen, modus === 'rustig'); }
@@ -911,18 +921,25 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
      poort, dus ook wie alles goed heeft, staat een keer stil. Met een bot
      nagerekend (kgt, rekenen): alles goed ongeveer acht minuten (90 poorten),
      80% goed vier tot zes, 70% ongeveer drie, 60% ongeveer twee. Op vmbo-bb rijd je trager,
-     dus per seconde iets zuiniger; op havo en vwo sneller, dus iets gulziger. */
-  var TANK = { goed:24, reeks:1, reeksMax:4, fout:5, verbruik:2.5, groei:.045, laag:30, bijna:15, hapert:12 };
-  var TANK_NIV = { bb:.85, kgt:1, havo:1.12, vwo:1.12 };
+     dus per seconde iets zuiniger; op havo en vwo sneller, dus iets gulziger.
+     De getallen staan in poortrace-regels.js: in een race met Oneindig houdt de
+     kamer ieders tank bij (zie raceTankNu). */
+  var TANK = R.TANK;
   /* de sterren in oneindig: zoveel poorten op één tank */
   var STER_ONEINDIG = [15, 35, 60];
   /* procent per seconde, na k poorten */
-  function verbruik(){ return (TANK.verbruik + TANK.groei * k) * (TANK_NIV[niveau] || 1); }
+  function verbruik(){ return R.verbruik(k, niveau); }
   function tankTik(t){
     var dt = Math.max(0, t - tankT); tankT = t;
-    if (fase !== 'rijden' && fase !== 'goed' && fase !== 'slip') return;
-    tank = Math.max(0, tank - dt * verbruik());
-    if (tank <= 0){ tankLeeg(); return; }
+    if (RACE){
+      /* in een race: de tank zoals de kamer hem rekent; leeg is hij pas als de kamer het zegt */
+      if (!RACE.tank || fase === 'aftellen' || fase === 'leeg' || fase === 'binnen' || fase === 'einde' || fase === 'start') return;
+      tank = Math.max(0, raceTankNu());
+    } else {
+      if (fase !== 'rijden' && fase !== 'goed' && fase !== 'slip') return;
+      tank = Math.max(0, tank - dt * verbruik());
+      if (tank <= 0){ tankLeeg(); return; }
+    }
     /* bijna leeg: de motor hapert even, om de zoveel tijd */
     var h = fase === 'rijden' && tank < TANK.hapert && t % .9 < .16;
     if (h !== hapert){ hapert = h; m.snelheid(vBasis * (h ? .72 : 1)); }
@@ -940,9 +957,10 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   }
   /* door een poort: brandstof erbij; geeft hoeveel */
   function tanken(goed){
-    var erbij = goed ? TANK.goed + Math.min(TANK.reeksMax, (reeks - 1) * TANK.reeks) : TANK.fout;
-    erbij = Math.min(erbij, Math.ceil(100 - tank));
-    tank = Math.min(100, tank + erbij);
+    var erbij = R.tanken(tank, goed, reeks);
+    /* in een race zegt de kamer hoeveel erbij kwam en hoe vol de tank nu is */
+    if (RACE && RACE.tank){ erbij = RACE.brand | 0; tank = RACE.tank.waarde; }
+    else tank = Math.min(100, tank + erbij);
     if (tank >= TANK.laag) tankMelding = 0; else if (tank >= TANK.bijna) tankMelding = Math.min(tankMelding, 1);
     tekenTank();
     return erbij;
@@ -1107,7 +1125,8 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     for (var b = 0; b < 3; b++) if (vraag.banen[b] && b !== vraag.goed && $('banen').children[b].classList.contains('mis')) gekozen = vraag.banen[b].tekst;
     $('uitlegTekst').innerHTML = '<h2>Niet goed, even uitslippen</h2><p>' + (gekozen ? 'Jij koos: ' + schoon(gekozen) + '. ' : '') +
       'Het goede antwoord is: <span class="antw">' + schoon(goedT) + '</span>.</p>' + (q.u ? '<p style="margin-top:6px">' + schoon(q.u) + '</p>' : '') +
-      (modus === 'oneindig' ? '<p class="noot" style="margin-top:6px">Toch ' + tankErbij + '% brandstof erbij, je tank staat op ' + Math.ceil(tank) + '%. Tijdens het lezen verbruik je niets.</p>' : '');
+      (modus === 'oneindig' ? '<p class="noot" style="margin-top:6px">Toch ' + tankErbij + '% brandstof erbij, je tank staat op ' + Math.ceil(tank) + '%. ' +
+        (RACE ? 'De eerste ' + TANK.vrij + ' seconden lezen kosten niets, daarna loopt je tank weer leeg.' : 'Tijdens het lezen verbruik je niets.') + '</p>' : '');
     var uv = $('uitlegVak'); uv.classList.remove('hide'); uv.scrollTop = 0;
     if (window.MELDING) MELDING.knop($('meldPlek'), function(){ return { spel:'poortrace', vraag:vraag ? vraag.v : '', q:vraag ? vraag.q : null, vak:vak, niveau:niveau }; });
     var vb = $('volgendeBtn');
@@ -1118,6 +1137,11 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   }
   function volgende(){
     if (fase !== 'uitleg') return;
+    /* in een race met Oneindig: klaar met lezen, dus de tank loopt weer (de kamer rekent dat ook zo) */
+    if (RACE && RACE.tank && modus === 'oneindig'){
+      var nuT = performance.now(); if (RACE.tank.vrijTot > nuT) RACE.tank.vrijTot = Math.max(nuT, RACE.tank.vrijVan);
+      if (RACE.v) RACE.v.stuur({ t:'verder', k:k }, { rij:false });
+    }
     $('uitlegVak').classList.add('hide');
     var mf = $('meldPlek').querySelector('.meldform'); if (mf) mf.classList.add('hide');
     m.herstel(); m.pauze(false);
@@ -1441,13 +1465,21 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     ['vrNaam', 'klNaam'].forEach(function(id){ if (!$(id).value) $(id).value = bijnaam(); });
   }
   $('samenKeuze').addEventListener('click', function(e){ var b = e.target.closest('button'); if (!b) return; samen = b.getAttribute('data-s'); tekenSamen(); });
+  /* met vrienden: tot de finish, of Oneindig (tot ieders tank leeg is) */
+  var vrSoort = 'finish';
+  function tekenVrSoort(){
+    Array.prototype.forEach.call($('vrSoort').children, function(b){ var aan = b.getAttribute('data-r') === vrSoort; b.classList.toggle('on', aan); b.setAttribute('aria-pressed', aan ? 'true' : 'false'); });
+    $('vrSoortUit').textContent = vrSoort === 'oneindig' ? 'Iedereen rijdt tot zijn tank leeg is. Wie de meeste poorten haalt, wint.' : 'Vijftien poorten. Wie het eerst over de finish komt, wint.';
+  }
+  $('vrSoort').addEventListener('click', function(e){ var b = e.target.closest('button'); if (!b) return; vrSoort = b.getAttribute('data-r'); tekenVrSoort(); });
+  tekenVrSoort();
   $('vrMaak').addEventListener('click', function(){
     var fout = $('vrFout'), n = naamGoed($('vrNaam').value, fout); if (!n) return;
     if (!vakVan(vak)){ fout.textContent = 'Kies eerst een vak.'; return; }
     var knop = this; knop.disabled = true;
     var j = { vak:vak, niveau:niveau, deel: vak === 'eigen' ? (window.EIGEN_LIJST || '') : (keuze[vak] || []).join(',') };
     fetch('/api/kamer', { method:'POST', headers:{ 'content-type':'application/json' },
-      body: JSON.stringify({ spel:'strijd', duel:true, game:'poortrace', vak:j.vak, niveau:j.niveau, deel:j.deel }) })
+      body: JSON.stringify({ spel:'strijd', duel:true, game:'poortrace', vak:j.vak, niveau:j.niveau, deel:j.deel, modus: vrSoort === 'oneindig' ? 'oneindig' : '' }) })
     .then(function(r){ return r.json().then(function(x){ return { ok:r.ok, j:x }; }); })
     .then(function(x){
       knop.disabled = false;
@@ -1495,13 +1527,13 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     var lijst = RACE.rijders || [], ikMaak = RACE.duel && !!RACE.mij && RACE.gastheer === RACE.mij;
     var maker = lijst.filter(function(r){ return r.sid === RACE.gastheer; })[0];
     var vk = vakVan(vak), nv = NIVEAUS.filter(function(x){ return x.id === niveau; })[0];
-    var wat = (vk ? vk.naam : '') + (nv ? ' · ' + nv.naam : '');
+    var wat = (vk ? vk.naam : '') + (nv ? ' · ' + nv.naam : ''), soort = RACE.oneindig ? 'Oneindig: rijden tot je tank leeg is' : 'vijftien poorten';
     $('lobbyCodeVak').classList.remove('hide'); $('lobbyCode').textContent = RACE.code;
     $('lobbyHand').textContent = RACE.duel ? 'samen racen' : 'de hele klas';
     if (RACE.duel) lobbyTekst(lijst.length < 2 ? 'Wacht op je vrienden' : lijst.length + ' aan de start',
-      'Je vrienden gaan naar <b>' + schoon(location.host.replace(/^www\./, '')) + '/q</b> en vullen deze code in. ' + schoon(wat) + ', vijftien poorten.',
+      'Je vrienden gaan naar <b>' + schoon(location.host.replace(/^www\./, '')) + '/q</b> en vullen deze code in. ' + schoon(wat) + ', ' + soort + '.',
       lijst.length < 2 ? 'Zodra er iemand bij is, kan de race beginnen. Tot acht spelers.' : ikMaak ? 'Iedereen erin? Start de race.' : 'Wacht tot ' + (maker ? maker.naam : 'de maker') + ' start.');
-    else lobbyTekst('Wacht tot je docent start', 'Je doet mee als <b>' + schoon(RACE.naam) + '</b>. ' + schoon(wat) + ', vijftien poorten. Zodra het bord op start drukt, begint de race bij iedereen tegelijk.',
+    else lobbyTekst('Wacht tot je docent start', 'Je doet mee als <b>' + schoon(RACE.naam) + '</b>. ' + schoon(wat) + ', ' + soort + '. Zodra het bord op start drukt, begint de race bij iedereen tegelijk.',
       lijst.length ? lijst.length + (lijst.length === 1 ? ' speler' : ' spelers') + ' in de kamer.' : '');
     $('lobbyLijst').innerHTML = lijst.map(function(r){
       return '<span class="' + (r.sid === RACE.mij ? 'ik' : '') + '">' + gezicht(r, 30) + schoon(r.naam) +
@@ -1529,6 +1561,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
       if (!x.ok){ lobbyTekst('Deze race bestaat niet', 'Er is geen race met de code <b>' + RACE.code + '</b>. Kijk of je hem goed hebt overgenomen.', ''); return; }
       if (j.spel !== 'strijd' || j.game !== 'poortrace'){ location.href = '/q/' + RACE.code; return; }
       if (j.fase === 'einde'){ lobbyTekst('Deze race is al afgelopen', 'Maak een nieuwe race, of vraag de nieuwe code.', ''); return; }
+      RACE.oneindig = j.modus === 'oneindig';
       /* vak en niveau van de race, ook als ze niet in het adres stonden */
       if (vakVan(j.vak) && vak !== j.vak){ vak = j.vak; keuze[vak] = []; }
       if (NIVEAUS.some(function(n){ return n.id === j.niveau; })) niveau = j.niveau;
@@ -1571,6 +1604,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     if (b.t === 'welkom'){
       if (b.spel !== 'strijd' || b.game !== 'poortrace'){ location.href = '/q/' + RACE.code; return; }
       RACE.duel = !!b.duel; RACE.gastheer = b.gastheer || null; if (b.jij) RACE.mij = b.jij;
+      RACE.oneindig = b.modus === 'oneindig';
       if (b.spelers) RACE.rijders = b.spelers;
       if (b.fase === 'bezig') raceStart(0);
       else if (b.fase === 'aftellen') raceStart(3);
@@ -1586,7 +1620,14 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
       return;
     }
     /* de kamer zegt waar je bent, stuurt de vraag van je volgende poort, en het oordeel over de vorige */
-    if (b.t === 'rit'){ RACE.rit = b; raceBegin(); return; }
+    if (b.t === 'rit'){
+      RACE.rit = b;
+      /* Oneindig: de tank zoals de kamer hem nu heeft, en of je nog gratis leest na een fout */
+      if (typeof b.tank === 'number' && b.ronde > 0 && !b.af){ var nuR = performance.now(); RACE.tank = { waarde:b.tank, t:nuR, ronde:b.ronde | 0, vrijVan:nuR + (b.vrijIn | 0), vrijTot:nuR + (b.vrijUit | 0) }; }
+      raceBegin(); return;
+    }
+    /* Oneindig: de kamer zegt dat je tank leeg is */
+    if (b.t === 'leeg'){ raceLeeg(b); return; }
     if (b.t === 'poort'){
       if (!(b.k >= 0) || !Array.isArray(b.banen)) return;
       RACE.vragen[b.k] = b;
@@ -1607,7 +1648,8 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   function raceStart(sec){
     if (RACE.gestart) return;
     RACE.gestart = true;
-    modus = 'normaal'; nPoorten = POORTEN;
+    /* een race is de gewone stand, of Oneindig als de maker of de docent dat koos */
+    modus = RACE.oneindig ? 'oneindig' : 'normaal'; nPoorten = POORTEN;
     laadVak(function(){ RACE.geladen = sec || 0; raceBegin(); });
   }
   /* Rijden zodra de kamer zei waar je bent: na een herlaad sta je niet bij de
@@ -1622,20 +1664,51 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     if (RACE.rit && RACE.rit.af){ raceAlBinnen(); return; }
     start(RACE.geladen);
   }
-  /* elke seconde: waar mijn karretje tussen twee poorten rijdt, voor het beeld van de anderen (alleen als het veranderde) */
+  /* Waar mijn karretje rijdt en hoe snel, voor het beeld van de anderen: elke
+     seconde, en eerder (na een halve seconde) als de snelheid flink verandert,
+     zoals bij een slip of stilstaan voor de uitleg. plek is in poorten vanaf de
+     start (poort k staat op k+1), vs in duizendsten van een poort per seconde;
+     voort is voor het bord (promille van start tot finish). */
   setInterval(function(){
     if (!RACE || !RACE.v || !RACE.gestart || RACE.binnen || RACE.uit || !m || fase === 'aftellen' || fase === 'start') return;
-    var st = { t:'stand', voort:Math.round(m.voort() * 1000) };
-    var sl = JSON.stringify(st); if (sl === RACE.laatst) return;
-    RACE.laatst = sl;
+    var nu = Date.now(), vs = m.gepauzeerd() ? 0 : Math.round(m.v() / AFSTAND * 1000);
+    var st = { t:'stand', plek:Math.round(m.plek() * 10000) / 10, vs:vs, voort:Math.round(m.voort() * 1000) };
+    var vorig = RACE.vsLaatst == null ? -1 : RACE.vsLaatst, sprong = Math.abs(vs - vorig) > Math.max(60, vorig * .3);
+    if (nu - (RACE.standT || 0) < (sprong ? 450 : 1000)) return;
+    var sl = st.plek + '|' + vs; if (sl === RACE.laatst) return;
+    RACE.laatst = sl; RACE.standT = nu; RACE.vsLaatst = vs;
     RACE.v.stuur(st, { rij:false });
-  }, 1000);
+  }, 150);
+  /* Oneindig in een race: tijdens de uitleg staat de motor stil, maar de tank
+     kan na de leestijd weer leeglopen; de meter loopt dan mee */
+  setInterval(function(){ if (RACE && RACE.tank && modus === 'oneindig' && fase === 'uitleg'){ tankTik(0); tekenTank(); } }, 250);
+  /* De tank in een race met Oneindig, zoals de kamer hem rekent: wat hij bij je
+     laatste poort had, min het verbruik sindsdien (poortrace-regels.js), niet
+     in de leestijd na een fout. Bij elke poort zet de kamer hem weer gelijk. */
+  function raceTankNu(){
+    var rt = RACE.tank, nu = performance.now(), ms = Math.max(0, nu - rt.t);
+    if (rt.vrijTot > rt.t){ var van = Math.max(rt.t, rt.vrijVan), tot = Math.min(nu, rt.vrijTot); if (tot > van) ms -= tot - van; }
+    return rt.waarde - R.verbruik(rt.ronde, niveau) * ms / 1000;
+  }
+  /* de kamer zegt dat je tank leeg is: uitrollen en het einde */
+  function raceLeeg(b){
+    if (RACE.binnen) return;
+    RACE.binnen = true;
+    goedN = b.gehaald | 0; punten = b.punten | 0;
+    $('hudPlek').classList.add('hide');
+    RACE.wacht = null; clearTimeout(RACE.traag);
+    $('uitlegVak').classList.add('hide');
+    if (m && m.gepauzeerd()){ m.herstel(); m.pauze(false); }
+    if (fase === 'einde' || fase === 'leeg' || fase === 'binnen') return;
+    if (!m || fase === 'aftellen' || fase === 'start'){ aftelKlok.forEach(clearTimeout); aftelKlok = []; if (m){ fase = 'binnen'; verbergOverlays(); einde(); } return; }
+    tankLeeg();
+  }
   /* De vraag van deze poort is er nog niet: het voertuig rijdt door tot vlak
      voor de poort en wacht daar. Hij komt vanzelf (raceBericht). */
   function raceVraagWacht(){
     vraag = null; fase = 'vraagwacht';
     m.wachtBij(k);
-    $('vraagKop').textContent = 'poort ' + (k + 1) + ' van ' + nPoorten;
+    $('vraagKop').textContent = 'poort ' + (k + 1) + (modus === 'oneindig' ? '' : ' van ' + nPoorten);
     $('vraagTekst').textContent = 'De vraag komt eraan…';
     $('vraagBeeld').classList.add('hide');
     $('banen').classList.add('leeg');
@@ -1648,7 +1721,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     fase = 'oordeel';
     $('wachtBtn').classList.add('hide');
     Array.prototype.forEach.call($('banen').children, function(el){ el.disabled = true; });
-    if (k + 1 < nPoorten) m.wachtBij(k + 1);
+    if (modus === 'oneindig' || k + 1 < nPoorten) m.wachtBij(k + 1);
     RACE.v.stuur({ t:'antwoord', k:k, b:baan });
     clearTimeout(RACE.traag);
     RACE.traag = setTimeout(function(){ if (fase === 'oordeel' && $('vraagTekst').textContent.indexOf('Geen verbinding') < 0) $('vraagTekst').textContent = 'Even wachten op de race…'; }, 2500);
@@ -1662,6 +1735,12 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     vraag.goed = b.g | 0;
     if (b.q && Array.isArray(b.q.o)) vraag.q = { v:b.q.v, o:b.q.o, g:b.q.g | 0, u:b.q.u || '', t:b.q.t || '', vlag:vraag.q.vlag };
     goedN = b.gehaald | 0; punten = b.punten | 0; reeks = b.reeks | 0; besteReeks = b.beste | 0; snelNiv = b.snel | 0;
+    /* Oneindig: de tank na deze poort, zoals de kamer hem telt; na een fout eerst de slip en de leestijd gratis */
+    if (typeof b.tank === 'number'){
+      var nuT = performance.now();
+      RACE.tank = { waarde:b.tank, t:nuT, ronde:b.k + 1, vrijVan: goed ? 0 : nuT + TANK.slip * 1000, vrijTot: goed ? 0 : nuT + (TANK.slip + TANK.vrij) * 1000 };
+      RACE.brand = b.brand | 0;
+    }
     /* al over de finish (een heel laat oordeel): alleen nog tellen */
     if (fase === 'binnen' || fase === 'einde'){
       uitslagen[k] = goed;
@@ -1672,22 +1751,36 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     fase = 'rijden';
     oordeel(w.baan, goed, b.erbij | 0);
   }
+  /* waar een rijder is, in poorten vanaf de start (poort k staat op k+1); een oudere kamer kent alleen voort */
+  function plekVan(r){ return typeof r.plek === 'number' ? r.plek / 1000 : (r.voort || 0) / 1000 * (POORTEN + .4); }
   function raceStand(){
     var j = RACE.jouw, pl = $('hudPlek');
     if (j && j.van > 1 && !RACE.binnen){ pl.classList.remove('hide'); pl.innerHTML = j.rang + 'e <small>van ' + j.van + '</small>'; pl.classList.toggle('voor', j.rang === 1); }
-    if (m) m.rivalen((RACE.rijders || []).filter(function(r){ return r.sid !== RACE.mij && !r.weg && !r.af; }).map(function(r){ return { id:r.sid, naam:r.naam, voort:(r.voort || 0) / 1000 }; }));
+    /* de anderen op de weg: waar ze waren, hoe snel ze gingen en hoe oud dat is; de motor rijdt ze daarmee soepel door */
+    if (m) m.rivalen((RACE.rijders || []).filter(function(r){ return r.sid !== RACE.mij && !r.weg && !r.af; }).map(function(r){
+      return { id:r.sid, naam:r.naam, plek:plekVan(r), vs: typeof r.vs === 'number' ? r.vs / 1000 : null, oud:(r.oud || 0) / 1000, ronde:r.ronde | 0 };
+    }));
     tekenRijders();
     if (RACE.binnen) tekenRaceUit();
   }
-  /* de strook boven de weg: iedereen op zijn plek tussen start en finish */
+  /* De strook boven de weg: iedereen op zijn plek tussen start en finish. In
+     Oneindig is er geen finish: dan loopt de strook tot net voorbij de koploper. */
+  function strookLengte(){
+    if (modus !== 'oneindig') return POORTEN + .4;
+    var max = m ? m.plek() : 0;
+    (RACE.rijders || []).forEach(function(r){ if (!r.weg) max = Math.max(max, plekVan(r)); });
+    return Math.max(POORTEN, Math.ceil(max + 3));
+  }
+  function mijnPlekNu(){ return m ? (modus === 'oneindig' ? m.plek() : m.voort() * (POORTEN + .4)) : 0; }
   function tekenRijders(){
-    var mijnV = m ? m.voort() : 0;
-    $('rijdersBalk').innerHTML = '<i class="lijn"></i><i class="vlag"></i>' + (RACE.rijders || []).filter(function(r){ return !r.weg; }).map(function(r){
-      var ik = r.sid === RACE.mij, v = r.af ? 1 : ik ? mijnV : (r.voort || 0) / 1000;
-      return '<span class="rijder' + (ik ? ' ik' : '') + (r.af ? ' binnen' : '') + '" style="left:' + (v * 100).toFixed(1) + '%" title="' + schoon(r.naam) + '">' + gezicht(r, 24) + '</span>';
+    var lang = strookLengte(), mijnP = mijnPlekNu();
+    RACE.strook = lang;
+    $('rijdersBalk').innerHTML = '<i class="lijn"></i>' + (modus === 'oneindig' ? '' : '<i class="vlag"></i>') + (RACE.rijders || []).filter(function(r){ return !r.weg; }).map(function(r){
+      var ik = r.sid === RACE.mij, p = r.af && modus !== 'oneindig' ? lang : ik ? mijnP : plekVan(r);
+      return '<span class="rijder' + (ik ? ' ik' : '') + (r.af ? ' binnen' : '') + '" style="left:' + (Math.min(1, p / lang) * 100).toFixed(1) + '%" title="' + schoon(r.naam) + '">' + gezicht(r, 24) + '</span>';
     }).join('');
   }
-  function mijnRijder(){ var el = $('rijdersBalk').querySelector('.rijder.ik'); if (el && m && !RACE.binnen) el.style.left = (m.voort() * 100).toFixed(1) + '%'; }
+  function mijnRijder(){ var el = $('rijdersBalk').querySelector('.rijder.ik'); if (el && m && !RACE.binnen) el.style.left = (Math.min(1, mijnPlekNu() / (RACE.strook || POORTEN + .4)) * 100).toFixed(1) + '%'; }
   /* over de finish: de kamer klokt de tijd; de poorten en de punten heeft hij al */
   function raceBinnen(){
     RACE.binnen = true;
@@ -1714,7 +1807,13 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     }
     tekenRaceUit();
   }
-  function tijdRij(r){ return r.af ? 'binnen in ' + tijdTekst((r.tijd || 0) / 1000) : r.weg ? 'gestopt' : 'poort ' + Math.min(POORTEN, (r.ronde | 0) + 1) + ' van ' + POORTEN; }
+  function tijdRij(r){
+    if (modus === 'oneindig'){
+      var n = r.ronde | 0, pt = n + (n === 1 ? ' poort' : ' poorten');
+      return r.af ? 'tank leeg, ' + pt : r.weg ? 'gestopt, ' + pt : pt + (typeof r.tank === 'number' ? ', tank ' + r.tank + '%' : '');
+    }
+    return r.af ? 'binnen in ' + tijdTekst((r.tijd || 0) / 1000) : r.weg ? 'gestopt' : 'poort ' + Math.min(POORTEN, (r.ronde | 0) + 1) + ' van ' + POORTEN;
+  }
   function raceLijst(lijst){
     return '<ol class="racelijst">' + lijst.map(function(r){
       return '<li class="' + (r.sid === RACE.mij ? 'ik' : '') + '"><span class="nr">' + r.rang + '</span>' + gezicht(r, 32) + '<b>' + schoon(r.naam) + (r.sid === RACE.mij ? ' (jij)' : '') + '</b><small>' + tijdRij(r) + '</small></li>';
@@ -1729,25 +1828,31 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     var lijst = (RACE.uit ? RACE.uit.stand : RACE.rijders) || [], mij = lijst.filter(function(r){ return r.sid === RACE.mij; })[0];
     if (!RACE.uit){
       var onderweg = lijst.filter(function(r){ return !r.af && !r.weg; }).length;
-      el.innerHTML = '<p class="hand" style="font-size:1.4rem">over de finish</p><h1>' + (mij && mij.af ? 'Binnen als ' + mij.rang + 'e, in ' + tijdTekst((mij.tijd || 0) / 1000) : 'Je bent binnen!') + '</h1>' +
+      if (modus === 'oneindig') el.innerHTML = '<p class="hand" style="font-size:1.4rem">tank leeg</p><h1>' + (mij ? 'Nu ' + mij.rang + 'e, met ' + (mij.ronde | 0) + ((mij.ronde | 0) === 1 ? ' poort' : ' poorten') : 'Je tank is leeg') + '</h1>' +
+        '<p class="lead">' + (onderweg ? (onderweg === 1 ? 'Nog één' : 'Nog ' + onderweg) + ' onderweg. De uitslag komt zodra iedereen leeg staat.' : 'De uitslag komt eraan.') + '</p>' + raceLijst(lijst);
+      else el.innerHTML = '<p class="hand" style="font-size:1.4rem">over de finish</p><h1>' + (mij && mij.af ? 'Binnen als ' + mij.rang + 'e, in ' + tijdTekst((mij.tijd || 0) / 1000) : 'Je bent binnen!') + '</h1>' +
         '<p class="lead">' + (onderweg ? (onderweg === 1 ? 'Nog één' : 'Nog ' + onderweg) + ' onderweg. De uitslag komt zodra iedereen binnen is.' : 'De uitslag komt eraan.') + '</p>' + raceLijst(lijst);
       return;
     }
     if (el.getAttribute('data-uit') === '1') return;
     el.setAttribute('data-uit', '1');
-    var eerste = lijst[0], winnaar = !!(eerste && eerste.sid === RACE.mij && eerste.af);
+    var eindeloos = modus === 'oneindig';
+    var eerste = lijst[0], winnaar = !!(eerste && eerste.sid === RACE.mij && (eerste.af || eindeloos));
     var kop = RACE.duel ? 'De uitslag' : mij ? 'Je werd ' + mij.rang + 'e van ' + lijst.length : 'De race is voorbij';
     var uit = RACE.gestopt ? (RACE.duel ? 'De race stopte voordat je binnen was.' : 'Je docent stopte de race voordat je binnen was.') : RACE.duel ? '' : 'Het podium staat op het bord.';
+    if (eindeloos && RACE.gestopt) uit = RACE.duel ? 'De race stopte voordat je tank leeg was.' : 'Je docent stopte de race voordat je tank leeg was.';
     el.innerHTML = '<p class="hand" style="font-size:1.4rem">de race is klaar</p><h1 id="raceKop">' + schoon(kop) + '</h1>' + (uit ? '<p class="lead">' + uit + '</p>' : '') +
       (RACE.duel ? '<div id="racePodium"></div>' : '') + '<div id="raceRest"' + (RACE.duel && lijst.length > 3 ? ' class="hide"' : '') + '>' + raceLijst(RACE.duel ? lijst.slice(3) : lijst.slice(0, 10).concat(mij && mij.rang > 10 ? [mij] : [])) + '</div>';
     if (RACE.duel && window.PODIUM){
-      var rang = PODIUM.rangen(lijst, function(a, c){ return a.af && c.af ? a.tijd === c.tijd : !a.af && !c.af && a.ronde === c.ronde && a.bij === c.bij; });
+      /* wie even ver kwam deelt de plek; in Oneindig: evenveel poorten, even vroeg */
+      var rang = PODIUM.rangen(lijst, eindeloos ? function(a, c){ return a.ronde === c.ronde && a.bij === c.bij; }
+        : function(a, c){ return a.af && c.af ? a.tijd === c.tijd : !a.af && !c.af && a.ronde === c.ronde && a.bij === c.bij; });
       PODIUM.onthul($('racePodium'), lijst.slice(0, 3).map(function(r, i){
-        return { rang:rang[i], naam:r.naam, regel:tijdRij(r), punten:(r.af ? 1000 : 0) + (r.ronde | 0) * 60,
+        return { rang:rang[i], naam:r.naam, regel:tijdRij(r), punten: eindeloos ? (r.ronde | 0) * 60 : (r.af ? 1000 : 0) + (r.ronde | 0) * 60,
                  beeld: window.AVATAR ? AVATAR.svg(r.naam, 120, r.av || '', { stemming:'blij' }) : '' };
       }), { klaar:function(){
         $('raceRest').classList.remove('hide');
-        $('raceKop').textContent = winnaar ? 'Jij wint de race!' : eerste && eerste.af ? eerste.naam + ' wint de race' : 'De race is voorbij';
+        $('raceKop').textContent = winnaar ? 'Jij wint de race!' : eerste && (eerste.af || eindeloos) ? eerste.naam + ' wint de race' : 'De race is voorbij';
       } });
     }
   }

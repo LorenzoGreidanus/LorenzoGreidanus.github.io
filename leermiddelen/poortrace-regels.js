@@ -78,27 +78,50 @@ function jaarVraag(geb, i, r, tvNamen){
   return { v:'Wanneer was dit? ' + e.tekst + '.', o:[e.jaar].concat(fout), g:0, u:e.waarom + ' Tijdvak ' + e.tv + ': ' + (tvNamen[e.tv - 1] || '') + '.', t:'jaartallen' };
 }
 
-/* Van de vier antwoorden gaan het goede en een of twee foute op de poort.
-   twee: twee banen open (de rustige stand en vmbo-bb), minder te lezen.
-   Geeft de banen ([{tekst}, null, {tekst}], null is dicht), welke baan goed is
-   en de antwoorden die erop staan (het goede eerst). */
-function poort(q, twee){
+/* Van de vier antwoorden gaan het goede en twee foute op de poort: alle drie
+   de banen zijn open, ook op vmbo-bb en in de rustige stand (tot september
+   2026 was daar een baan dicht). Heeft een vraag zelf te weinig korte foute
+   antwoorden (een paar procent, vooral bij begrippen), dan komt de derde uit
+   reserve: de goede antwoorden van andere vragen van hetzelfde onderdeel (zie
+   reserve hieronder), een lijst of een functie die er een geeft. Alleen als
+   ook dat niets oplevert blijft een baan dicht.
+   Geeft de banen ([{tekst}, {tekst}, {tekst}], null is dicht), welke baan goed
+   is en de antwoorden die erop staan (het goede eerst). */
+function poort(q, reserve){
   var goed = String(q.o[q.g]).trim(), gezien = [norm(goed)], fout = [];
-  schud(q.o.map(function(o, j){ return j; })).forEach(function(j){
-    var t = String(q.o[j]).trim();
-    if (j === q.g || !kortOk(t) || gezien.indexOf(norm(t)) >= 0) return;
+  function erbij(t){
+    t = String(t == null ? '' : t).trim();
+    if (!kortOk(t) || gezien.indexOf(norm(t)) >= 0) return;
     gezien.push(norm(t)); fout.push(t);
-  });
-  var n = (twee || fout.length < 2) ? 2 : 3;
+  }
+  schud(q.o.map(function(o, j){ return j; })).forEach(function(j){ if (j !== q.g) erbij(q.o[j]); });
+  if (fout.length < 2 && reserve){
+    var extra = typeof reserve === 'function' ? reserve() : reserve;
+    if (Array.isArray(extra)) for (var i = 0; i < extra.length && fout.length < 2; i++) erbij(extra[i]);
+  }
+  var n = fout.length < 2 ? 2 : 3;
   var antw = [goed].concat(fout.slice(0, n - 1));
   var plek = schud([0, 1, 2]).slice(0, n), banen = [null, null, null];
   plek.forEach(function(b, i){ banen[b] = { tekst:antw[i] }; });
   return { banen:banen, goed:plek[0], antw:antw };
 }
+/* Reserve voor de foute antwoorden: de korte goede antwoorden van andere
+   vragen uit de bron met hetzelfde onderdeel (q.t), geschud. */
+function reserve(bron, q){
+  var uit = [];
+  for (var i = 0; i < (bron || []).length; i++){
+    var x = bron[i];
+    if (!x || x === q || x.t !== q.t || !Array.isArray(x.o) || x.v === q.v) continue;
+    var t = String(x.o[x.g] == null ? '' : x.o[x.g]).trim();
+    if (kortOk(t)) uit.push(t);
+  }
+  return schud(uit).slice(0, 12);
+}
 
 /* Hoe lang je hebt tussen de vraag en de poort: een vaste tijd die korter
    wordt naarmate het beter gaat (snelNiv), en nooit korter dan het lezen duurt.
-   In de rustige stand een laag tempo; daar wacht de poort toch. */
+   In de rustige stand een laag tempo; daar wacht de poort toch. Een dichte
+   baan (null) telt niet mee. */
 function leesTijd(v, banen){
   var n = String(v).length; banen.forEach(function(b){ if (b) n += b.tekst.length; });
   return 1.6 + n * .045;
@@ -127,8 +150,28 @@ function na(s, goed, rustig){
 /* alles goed: tweehonderd punten extra (niet in de tijdrit) */
 var ALLES_GOED = 200;
 
+/* Oneindig: geen finish, je rijdt tot de tank leeg is. Hij loopt leeg terwijl
+   je rijdt (verbruik procent per seconde, plus groei per poort die je had,
+   maal de factor van je niveau: op vmbo-bb rijd je trager, dus iets zuiniger).
+   Elke poort geeft brandstof: goed veel, met een beetje extra voor een reeks,
+   fout een beetje. laag, bijna en hapert zijn de grenzen voor de meter.
+   Alleen rijden: tijdens de uitleg en de pauze verbruik je niets.
+   In een race houdt de kamer de tank bij, met dezelfde getallen en de klok van
+   de kamer. Pauze is er daar niet; na een fout zijn de slip (slip seconden)
+   en daarna de uitleg gratis, de uitleg hoogstens vrij seconden. */
+var TANK = { goed:24, reeks:1, reeksMax:4, fout:5, verbruik:2.5, groei:.045, laag:30, bijna:15, hapert:12, slip:.9, vrij:8 };
+var TANK_NIV = { bb:.85, kgt:1, havo:1.12, vwo:1.12 };
+/* procent per seconde, na k poorten */
+function verbruik(k, niveau){ return (TANK.verbruik + TANK.groei * k) * (TANK_NIV[niveau] || 1); }
+/* hoeveel brandstof een poort geeft; reeks is de reeks na deze poort. Nooit boven de volle tank. */
+function tanken(tank, goed, reeks){
+  var erbij = goed ? TANK.goed + Math.min(TANK.reeksMax, (reeks - 1) * TANK.reeks) : TANK.fout;
+  return Math.max(0, Math.min(erbij, Math.ceil(100 - tank)));
+}
+
 g.POORTREGELS = { MAXANTW:MAXANTW, MAXVRAAG:MAXVRAAG, MINIMUM:MINIMUM, POORTEN:POORTEN, PAST:PAST, ALLES_GOED:ALLES_GOED,
-                  schud:schud, kortOk:kortOk, norm:norm, geschikt:geschikt, stapel:stapel, jaarVraag:jaarVraag, poort:poort,
-                  leesTijd:leesTijd, doelTijd:doelTijd, na:na };
+                  TANK:TANK, TANK_NIV:TANK_NIV,
+                  schud:schud, kortOk:kortOk, norm:norm, geschikt:geschikt, stapel:stapel, jaarVraag:jaarVraag, poort:poort, reserve:reserve,
+                  leesTijd:leesTijd, doelTijd:doelTijd, na:na, verbruik:verbruik, tanken:tanken };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 if (typeof module !== 'undefined' && module.exports) module.exports = globalThis.POORTREGELS;
