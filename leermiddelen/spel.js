@@ -159,7 +159,8 @@ window.SPEL = (function(){
     var ic = icoon(), tg = o.tegel || TEGEL[bestand];
     if (o.links) paneel.classList.add('links');
     paneel.innerHTML =
-      '<div class="beeld">' + (tg ? '<span class="speltegel" style="background:' + schoon(tg[0]) + '"><svg viewBox="0 0 24 24" aria-hidden="true">' + tg[1] + '</svg></span>'
+      /* het spellogo (de favicon van de pagina: het pictogram in een blobje) gaat voor de oude tegel */
+      '<div class="beeld">' + (ic && /^data:image\/svg/.test(ic) ? '<img src="' + schoon(ic) + '" alt="">' : tg ? '<span class="speltegel" style="background:' + schoon(tg[0]) + '"><svg viewBox="0 0 24 24" aria-hidden="true">' + tg[1] + '</svg></span>'
         : ic ? '<img src="' + schoon(ic) + '" alt="">' : '') + '</div>' +
       '<div class="regels">' +
         (o.doel ? '<div class="regel">' + IC.doel + '<span><b>Doel</b>' + schoon(o.doel) + '</span></div>' : '') +

@@ -28,7 +28,7 @@
 <!-- op een donker scherm een icoon dat niet wegvalt, en een icoon voor op het beginscherm -->
 <link rel="icon" href="/icoon-donker-192.png" media="(prefers-color-scheme: dark)">
 <link rel="apple-touch-icon" href="/icoon-192.png">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='26' fill='%23204ECF'/><text x='50' y='68' font-family='Poppins,Arial' font-size='46' font-weight='600' fill='%23FBF6F1' text-anchor='middle'>LG</text></svg>">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <style>
 :root{--crab:#F26749;--amber:#EA9836;--ocean:#204ECF;--vista:#83A5F2;--sand:#FCDED6;--room:#FBF6F1;
   --ink:#14224C;--muted:#5b6480;--kaart:#fff;--kaart-aan:#eef2ff;--rand:rgba(20,34,76,.10);--rand2:rgba(20,34,76,.16);--max:1240px;--ease:cubic-bezier(.22,.61,.36,1)}
@@ -123,6 +123,18 @@ header{padding:12px 0;border-bottom:1px solid var(--rand);background:#fff;positi
    in donker de blauwe en groene niet: een rand in een diepere of lichtere tint
    van hun eigen kleur maakt de vorm zichtbaar zonder de merkkleur te veranderen. */
 .tegel{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--tk,transparent) 50%,#14224C)}
+/* Elk spel is een blobje, net als het logo van de site en de spellogo's (logo/spel): een van zes vormen,
+   vast per spel. Het masker knipt de kaart uit; een rand of hoek is dan niet meer nodig. */
+.tegel[class*=" b"]{-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;border-radius:0 !important;box-shadow:none !important}
+/* een donkerblauwe kaart valt weg op de donkere pagina: dan een tint lichter */
+:root[data-theme="dark"] .tegel.inkt{background:#2c3f7e !important}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .tegel.inkt{background:#2c3f7e !important}}
+.tegel.b1{-webkit-mask-image:url(/logo/spelblob-1.svg);mask-image:url(/logo/spelblob-1.svg)}
+.tegel.b2{-webkit-mask-image:url(/logo/spelblob-2.svg);mask-image:url(/logo/spelblob-2.svg)}
+.tegel.b3{-webkit-mask-image:url(/logo/spelblob-3.svg);mask-image:url(/logo/spelblob-3.svg)}
+.tegel.b4{-webkit-mask-image:url(/logo/spelblob-4.svg);mask-image:url(/logo/spelblob-4.svg)}
+.tegel.b5{-webkit-mask-image:url(/logo/spelblob-5.svg);mask-image:url(/logo/spelblob-5.svg)}
+.tegel.b6{-webkit-mask-image:url(/logo/spelblob-6.svg);mask-image:url(/logo/spelblob-6.svg)}
 :root[data-theme="dark"] .tegel{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--tk,transparent) 45%,#F3EFE9)}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .tegel{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--tk,transparent) 45%,#F3EFE9)}}
 /* de stip voor een vak: in donker een lichte rand, anders valt het blauw weg tegen de kolom */
@@ -728,7 +740,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,summary:focus-visible{o
 <a class="skip" href="#spellen">Naar de spellen</a>
 <header>
   <div class="wrap hd">
-    <span class="mark" id="merk"><span class="lgmark"><i><span>L</span><span>G</span></i><b class="lgdot"></b></span><span class="lgnaam"><span>meneer Greidanus</span><span class="lgstreep"></span></span><span class="lghoi" id="grapje"></span></span>
+    <span class="mark" id="merk"><span class="lgmark"><i class="lgblob" style="background:none;box-shadow:none;border:0;border-radius:0;padding:0"><svg viewBox="0 0 256 256" width="34" height="34" aria-hidden="true" focusable="false" style="width:100%;height:100%;overflow:visible;transform:scale(1.16)"><style>.lgb{fill:#204ECF}:root[data-theme="dark"] .lgb{fill:#83A5F2}@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .lgb{fill:#83A5F2}}</style><path class="lgb" d="M122 28 C182 24 228 62 230 118 C232 178 196 228 138 230 C78 232 26 202 28 142 C30 82 64 32 122 28 Z"/><ellipse cx="96" cy="114" rx="21" ry="25" fill="#FBF6F1"/><ellipse cx="158" cy="108" rx="21" ry="25" fill="#FBF6F1"/><circle cx="103" cy="105" r="12" fill="#14224C"/><circle cx="165" cy="99" r="12" fill="#14224C"/><path fill="#14224C" d="M98 158 Q128 194 160 152 Q128 180 98 158 Z"/></svg></i></span><span class="lgnaam"><span>meneer Greidanus</span><span class="lgstreep"></span></span><span class="lghoi" id="grapje"></span></span>
     <span class="hd-right"><span class="gezicht">
         <button class="gezichtknop" id="gezichtknop" type="button" aria-expanded="false" aria-controls="gezichtlade"
           aria-label="Je gezichtje, je voortgang en je klascode" title="Je gezichtje, je voortgang en je klascode"><span id="gezichtbeeld"></span></button>
@@ -1412,7 +1424,9 @@ var SPELLEN = [
     if (kleurNu && vakkenVan(sp).some(function(id){ var v = vakVan(id); return v && v.kleur === kleurNu; })) return kleurNu;
     var v = vakVan(vakkenVan(sp)[0]); return v ? v.kleur : sp.kleur;
   }
-  function tegel(sp){ var k = kleurVoor(sp); return '<span class="tegel' + inkt(k) + '" style="--tk:' + k + ';background:' + k + '" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true">' + sp.ico + '</svg></span>'; }
+  /* welk blobje: vast per spel, uit de naam van het bestand */
+  function blobVan(b){ var h = 2166136261; b = String(b || ''); for (var i = 0; i < b.length; i++){ h ^= b.charCodeAt(i); h = Math.imul(h, 16777619); } return ' b' + ((h >>> 0) % 6 + 1); }
+  function tegel(sp){ var k = kleurVoor(sp); return '<span class="tegel' + inkt(k) + blobVan(sp.bestand) + '" style="--tk:' + k + ';background:' + k + '" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true">' + sp.ico + '</svg></span>'; }
 
   /* ---------- snel starten ---------- */
   function tekenSnel(){
