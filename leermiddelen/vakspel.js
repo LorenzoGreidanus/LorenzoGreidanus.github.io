@@ -25,6 +25,8 @@
                   en api.uit(tekst); het spel roept klaar() als het antwoord er is.
    onderdeel is waar KLAS.tel op telt (per onderdeel goed/gesteld, voor het
    klasoverzicht). niveau voor de klas komt uit keuze.niveau. */
+/* de nagekeken g bij een goed antwoord (zie nagekeken.js) */
+if (!window.NAGEKEKEN && !document.querySelector('script[src="nagekeken.js"]')) { var ngScript = document.createElement('script'); ngScript.src = 'nagekeken.js'; document.head.appendChild(ngScript); }
 window.VAKSPEL = (function(){
   'use strict';
   function $(id){ return document.getElementById(id); }
@@ -427,7 +429,7 @@ window.VAKSPEL = (function(){
     var deel = opgave.onderdeel || 'overig';
     if (window.KLAS && KLAS.tel) KLAS.tel(od, deel, isGoed);
     var c = perDeel[deel] = perDeel[deel] || [0, 0, opgave.onderdeelNaam || deel]; c[1]++; if (isGoed) c[0]++;
-    $('reactie').innerHTML = '<div class="uitslagregel ' + (isGoed ? 'goed' : bijna ? 'bijna' : 'fout') + '"><b>' + (isGoed ? (reeks >= 3 ? 'Goed, ' + reeks + ' op rij!' : 'Goed!') : bijna ? 'Bijna: ' + deels.goed + ' van de ' + deels.van + ' goed.' : 'Niet goed.') + '</b>' +
+    $('reactie').innerHTML = '<div class="uitslagregel ' + (isGoed ? 'goed' : bijna ? 'bijna' : 'fout') + '"><b>' + (isGoed && window.NAGEKEKEN ? NAGEKEKEN.svg({ maat: 24, teken: true }) : '') + (isGoed ? (reeks >= 3 ? 'Goed, ' + reeks + ' op rij!' : 'Goed!') : bijna ? 'Bijna: ' + deels.goed + ' van de ' + deels.van + ' goed.' : 'Niet goed.') + '</b>' +
       (extra ? '<p>' + extra + '</p>' : '') + (opgave.uitleg ? '<div class="waarom">' + opgave.uitleg + '</div>' : '') + '</div>';
     balk();
     $('verder').classList.remove('hide');
