@@ -106,6 +106,23 @@ h1{font-size:clamp(1.8rem,5vw,2.6rem);line-height:1.1;margin:24px 0 6px}
 .leesuit{color:var(--muted);font-size:.9rem;margin-top:8px}
 footer{border-top:1px solid var(--rand);margin-top:26px;padding:18px 0 40px;color:var(--muted);font-size:.88rem}
 @media(max-width:640px){ .vak{grid-template-columns:1fr auto;} .vak .balk{grid-column:1/-1} }
+/* per vak de categorieën: een pil per categorie, uitgeklapt de onderdelen */
+.pvak{border-top:1px solid var(--rand);padding:4px 0}
+.pvak:first-child{border-top:none}
+.pvak summary{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;list-style:none;cursor:pointer;min-height:44px;padding:4px 0}
+.pvak summary::-webkit-details-marker{display:none}
+.pvak summary::after{content:"";width:7px;height:7px;border:solid var(--muted);border-width:0 2px 2px 0;transform:rotate(45deg);margin:0 4px 3px auto}
+.pvak[open] summary::after{transform:rotate(225deg);margin-bottom:-3px}
+.pvaknaam{font-weight:600;width:100%}
+.pvaknaam em{font-style:normal;font-weight:400;color:var(--muted);font-size:.84rem;margin-left:4px}
+.pcats{display:flex;flex-wrap:wrap;gap:6px;flex:1}
+.pvak ul{margin:4px 0 8px;padding-left:20px;font-size:.86rem;color:var(--muted)}
+.pvak li b{color:var(--ink)}
+.catpil{display:inline-flex;align-items:baseline;gap:4px;border-radius:999px;padding:3px 10px;font-size:.82rem;font-weight:600;white-space:nowrap}
+.catpil.g{background:#d7f1df;color:#155a2d}.catpil.m{background:#fdebc8;color:#7a4a05}.catpil.r{background:#fbd8d2;color:#8a2416}
+.catpil.weinig{outline:1.5px dashed rgba(20,34,76,.3);outline-offset:-1.5px}
+:root[data-theme="dark"] .catpil.g{background:#1f4a30;color:#b8ecc8}:root[data-theme="dark"] .catpil.m{background:#4d3a12;color:#ffd98a}:root[data-theme="dark"] .catpil.r{background:#5a2320;color:#ffc4bb}:root[data-theme="dark"] .catpil.weinig{outline-color:rgba(243,239,233,.35)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .catpil.g{background:#1f4a30;color:#b8ecc8}:root:not([data-theme="light"]) .catpil.m{background:#4d3a12;color:#ffd98a}:root:not([data-theme="light"]) .catpil.r{background:#5a2320;color:#ffc4bb}:root:not([data-theme="light"]) .catpil.weinig{outline-color:rgba(243,239,233,.35)}}
 /* het skelet van de inlogkaart: op een smal scherm lopen de zinnen over meer regels */
 #inlogvak .skelet-regel.smal{display:none}
 @media(max-width:600px){#inlogvak .skelet-regel.smal{display:block}}
@@ -147,6 +164,11 @@ footer{border-top:1px solid var(--rand);margin-top:26px;padding:18px 0 40px;colo
   </div>
 
   <div class="kaart">
+    <h2>Per vak</h2>
+    <p class="tip">Hoeveel je goed had, over alle vragen van al je spellen op dit apparaat, per categorie. Tik een vak aan voor de onderdelen.</p>
+    <div id="perVak"></div>
+  </div>
+  <div class="kaart">
     <h2>Voorlezen</h2>
     <p class="tip">Bij een vraag staat een knopje waarmee je de vraag en de antwoorden laat voorlezen. Dat doet je eigen apparaat; er gaat niets de deur uit. Wil je dat het meteen gebeurt zodra er een nieuwe vraag komt, kies dan "meteen voorlezen".</p>
     <div class="leeskeuze" id="leeskeuze"></div>
@@ -174,6 +196,7 @@ footer{border-top:1px solid var(--rand);margin-top:26px;padding:18px 0 40px;colo
 <script src="cosmetica.js"></script>
 <script src="profiel.js"></script>
 <script src="bank.js"></script>
+<script src="categorie.js"></script>
 <script>
 (function(){
   'use strict';
@@ -266,6 +289,41 @@ footer{border-top:1px solid var(--rand);margin-top:26px;padding:18px 0 40px;colo
     }).join('');
   }
 
+  /* ---------- per vak en categorie ----------
+     Elk spel onthoudt bij het einde wat er per onderdeel goed ging (klas.js,
+     lg-per-onderdeel). Hier staat dat per vak in categorieën (categorie.js):
+     groen vanaf 80%, oranje vanaf 60%, rood daaronder, gestippeld zolang het
+     minder dan vijf vragen zijn. */
+  var VAKVOLGORDE = ['reken', 'ned', 'eng', 'ges', 'aard', 'bio', 'wis', 'burg', 'eco'];
+  function pct(c){ return c && c[1] ? Math.round(c[0] / c[1] * 100) : 0; }
+  function kleur(p){ return p >= 80 ? 'g' : p >= 60 ? 'm' : 'r'; }
+  function deelNaam(vak, id){
+    if (/^dictee: t-/.test(id)) return 'dictee';
+    var o = ((window.ONDERDELEN && ONDERDELEN[vak]) || []).filter(function(x){ return x.id === id; })[0];
+    return o ? o.naam : id;
+  }
+  function pil(naam, c){
+    var p = pct(c);
+    return '<span class="catpil ' + kleur(p) + (c[1] < 5 ? ' weinig' : '') + '" title="' + c[0] + ' van ' + c[1] + ' goed">' + schoon(naam) + ' <b>' + p + '%</b></span>';
+  }
+  function perVak(){
+    var doel = $('perVak'); if (!doel) return;
+    var bron = jsn('lg-per-onderdeel', {}), t = {};
+    if (window.CATEGORIE) Object.keys(bron || {}).forEach(function(v){ CATEGORIE.tel(bron[v], v, t); });
+    var vakken = Object.keys(t).filter(function(v){ return VAKVOLGORDE.indexOf(v) >= 0; }).sort(function(a, b){ return VAKVOLGORDE.indexOf(a) - VAKVOLGORDE.indexOf(b); });
+    if (!vakken.length){ doel.innerHTML = '<p class="leeg">Nog niets geteld. Speel een spel met vragen, zoals Poortrace, de Vragenrace of Torenverdediging, en hier zie je waar je goed in bent.</p>'; return; }
+    doel.innerHTML = vakken.map(function(v){
+      var per = t[v], cats = Object.keys(per).filter(function(c){ return c !== '_d'; }).sort(function(a, b){ return CATEGORIE.orde(v, a) - CATEGORIE.orde(v, b); });
+      var som = [0, 0]; cats.forEach(function(c){ som[0] += per[c][0]; som[1] += per[c][1]; });
+      var delen = Object.keys(per._d);
+      return '<details class="pvak"><summary><span class="pvaknaam">' + schoon(VAKNAMEN[v] || v) + ' <em>' + pct(som) + '% goed, ' + som[1] + (som[1] === 1 ? ' vraag' : ' vragen') + '</em></span>' +
+        '<span class="pcats">' + cats.map(function(c){ return pil(CATEGORIE.naam(v, c), per[c]); }).join('') + '</span></summary><ul>' +
+        cats.map(function(c){
+          var hier = delen.filter(function(id){ return CATEGORIE.van(v, id) === c; }).sort(function(a, b){ return pct(per._d[a]) - pct(per._d[b]); });
+          return '<li><b>' + schoon(CATEGORIE.naam(v, c)) + ':</b> ' + hier.map(function(id){ var w = per._d[id]; return schoon(deelNaam(v, id)) + ' ' + pct(w) + '% (' + w[0] + '/' + w[1] + ')'; }).join('; ') + '</li>';
+        }).join('') + '</ul></details>';
+    }).join('');
+  }
   /* ---------- inloggen: de duidelijke uitnodiging ---------- */
   /* stil: de tweede poging na haperend wifi, zonder skelet (dat zou verspringen) */
   function inlogvak(stil){
@@ -351,7 +409,7 @@ footer{border-top:1px solid var(--rand);margin-top:26px;padding:18px 0 40px;colo
     $('bewaarvak').innerHTML = '<div class="bewaarniet"><b>Dit apparaat bewaart niets.</b>' +
       '<p>Alles wat hieronder staat verdwijnt zodra je dit tabblad sluit. Dat komt meestal door een priv\u00e9venster, of doordat deze browser site-gegevens weigert. Speel je in een gewoon venster, dan blijft het staan.</p></div>';
   }
-  cijfers(); scores(); vakken(); inlogvak(); gezicht(); torentje(); kleurkeuze($('kleurkeuze'));
+  cijfers(); scores(); perVak(); vakken(); inlogvak(); gezicht(); torentje(); kleurkeuze($('kleurkeuze'));
   if (window.VOORLEES) VOORLEES.keuze($('leeskeuze'));
   /* Wist de site nog niet of je was ingelogd (wifi die even hapert), dan kijken
      we het even later nog een keer na; anders mist de leerling de uitnodiging. */

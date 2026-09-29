@@ -448,8 +448,9 @@ window.SPEL = (function(){
         navigator.clipboard.writeText(tekst + ' ' + url).then(function(){ meta.textContent = 'Gekopieerd, plak het in een berichtje.'; }, function(){ meta.textContent = tekst + ' ' + url; });
       } else meta.textContent = tekst + ' ' + url;
     });
-    /* bij de klas melden, als deze leerling een klascode heeft */
-    if (o.klas !== false && o.spel && window.KLAS && KLAS.lees()){
+    /* bij de klas melden, als deze leerling een klascode heeft; zonder code
+       onthoudt KLAS.meld alleen wat er per onderdeel goed ging, voor Mijn voortgang */
+    if (o.klas !== false && o.spel && window.KLAS){
       KLAS.meld({ spel:o.spel, ronde:o.ronde | 0, punten:o.punten | 0, niveau:o.niveau || '', vak:o.vak || '', od:o.od || undefined }, 'eindMeta');
     }
     return kaart;

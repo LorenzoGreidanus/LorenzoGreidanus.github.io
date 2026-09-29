@@ -99,8 +99,32 @@ window.KLAS = (function(){
       }).catch(function(){ wachtErbij(w.code, w.body); });
     });
   }
-  /* de einduitslag melden; geeft een belofte, en zet een regeltje onder het element met dit id */
+  /* ---------- per onderdeel, op dit apparaat ----------
+     Wat een leerling per onderdeel goed had, opgeteld over al zijn potjes,
+     ook zonder klascode. Mijn voortgang (voortgang.html) zet het per vak in
+     categorieën (categorie.js). Een uitslag zonder vak (de Dagelijkse
+     uitdaging) staat onder '' en krijgt daar zijn vak bij het onderdeel. */
+  var PER_DEEL = 'lg-per-onderdeel';
+  function onthoud(vak, od){
+    if (!od || typeof od !== 'object') return;
+    try {
+      var x = JSON.parse(localStorage.getItem(PER_DEEL) || '{}') || {};
+      var v = /^[a-z]{2,8}$/.test(String(vak || '')) ? vak : '', per = x[v] = x[v] || {}, n = 0;
+      Object.keys(x).forEach(function(k){ n += Object.keys(x[k] || {}).length; });
+      Object.keys(od).forEach(function(id){
+        var w = od[id]; if (!Array.isArray(w) || !(w[1] > 0)) return;
+        id = String(id).slice(0, 40);
+        if (!per[id]){ if (n >= 600) return; per[id] = [0, 0]; n++; }
+        per[id][0] += w[0] | 0; per[id][1] += w[1] | 0;
+      });
+      localStorage.setItem(PER_DEEL, JSON.stringify(x));
+    } catch (e){}
+  }
+  function perOnderdeel(){ try { return JSON.parse(localStorage.getItem(PER_DEEL) || '{}') || {}; } catch (e){ return {}; } }
+  /* de einduitslag melden; geeft een belofte, en zet een regeltje onder het element met dit id.
+     Ook zonder klascode komt hier elk einde langs: dan alleen onthouden op dit apparaat. */
   function meld(gegevens, naId){
+    if (gegevens && gegevens.od) onthoud(gegevens.vak, gegevens.od);
     var k = lees();
     if (!k) return Promise.resolve(null);
     var body = Object.assign({ sid:sid(), naam:k.naam, av: window.PROFIEL ? PROFIEL.avatar() : '' }, gegevens || {});
@@ -130,5 +154,5 @@ window.KLAS = (function(){
   }
   /* bij het openen van een pagina eerst kijken of er nog iets klaarstaat */
   if (typeof fetch === 'function') setTimeout(wachtLegen, 2000);
-  return { lees:lees, zet:zet, wis:wis, wisLokaal:wisLokaal, meld:meld, sid:sid, controleer:controleer, tel:tel, wachtLegen:wachtLegen, zwaai:zwaai };
+  return { lees:lees, zet:zet, wis:wis, wisLokaal:wisLokaal, meld:meld, sid:sid, controleer:controleer, tel:tel, wachtLegen:wachtLegen, zwaai:zwaai, perOnderdeel:perOnderdeel };
 })();
