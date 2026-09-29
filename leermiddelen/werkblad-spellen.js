@@ -11,6 +11,137 @@
      maak(keuze, n)                           een lijst opgaven, of { fout }
      teken(w)                                 { titel, sub, klasse, vragen, antwoorden } als html
    werkblad.html doet de rest: het papier, printen en het adres. */
+
+/* ---------- Open vragen op papier ----------
+   Een meerkeuzevraag die open wordt, verliest zijn keuzes. Bij veel vragen
+   weet een leerling dan niet meer wat hij moet opschrijven: "Welke zin is
+   goed?" zonder zinnen, "Ik ___ het antwoord al." zonder het werkwoord, of
+   "Welk woord is een bijvoeglijk naamwoord?" zonder woorden. OPENVRAAG.vorm
+   kijkt per vraag wat er op papier moet staan:
+     open      een lijn, soms met een korte opdracht (opdr) of een
+               duidelijker vraag (v)
+     kies      een lijn met "Kies uit:" en de korte keuzes erboven; de
+               leerling schrijft het goede woord op (een gat in een zin)
+     omcirkel  de keuzes blijven staan met hun letters (lange keuzes, zoals
+               hele zinnen); de leerling omcirkelt de goede
+   werkblad.html gebruikt dit voor de vragenbank, werkblad-vakspellen.js voor
+   de meerkeuzevragen van de vakspellen. */
+var OPENVRAAG = (function(){
+  'use strict';
+  function kaal(t){ return String(t == null ? '' : t).replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/\s+/g, ' ').trim(); }
+  function klein(t){ return kaal(t).toLowerCase().replace(/[’‘'"“”.,!?;:()\/]/g, ' ').replace(/\s+/g, ' ').trim(); }
+  /* het woord zelf, zonder lidwoord of voorzetsel ervoor */
+  function kern(t){ return klein(t).replace(/^(in |op |met |naar |bij )?(de|het|een|to|the|a|an) /, ''); }
+  function afstand(a, b){
+    var m = a.length, n = b.length, p = [], c, i, j;
+    if (!m || !n) return m || n;
+    for (j = 0; j <= n; j++) p[j] = j;
+    for (i = 1; i <= m; i++){ c = [i]; for (j = 1; j <= n; j++) c[j] = Math.min(p[j] + 1, c[j - 1] + 1, p[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); p = c; }
+    return p[n];
+  }
+  function lijkt(a, b){ return 1 - afstand(a, b) / Math.max(a.length, b.length, 1); }
+  function staatIn(tekst, woord){ var w = klein(woord); return !!w && (' ' + klein(tekst) + ' ').indexOf(' ' + w + ' ') >= 0; }
+  var KLEINTJES = /^(de|het|een|en|of|in|op|aan|van|met|voor|naar|bij|dat|die|wat|wie|hoe|is|zijn|je|jij|hij|zij|ze|wij|we|ik|the|and|to|on|at|are|you|he|she|it|they|welk|welke|niet|geen|als|dan|ook|nog|al|er|om|te|zo)$/;
+  /* staat het woord, of een vorm ervan, al in de vraag? hond bij honden, ontwikkelen bij ontwikkeling */
+  function lijktIn(tekst, antw){
+    var a = kern(antw);
+    if (!a) return false;
+    return klein(tekst).split(' ').some(function(x){
+      if (x.length < 3 || KLEINTJES.test(x)) return false;
+      return lijkt(x, a) >= 0.6 || (x.length >= 4 && a.indexOf(x) >= 0) || a.indexOf(x) === 0 || (a.length >= 4 && x.indexOf(a) >= 0) ||
+        (x.length >= 4 && a.length >= 4 && x.slice(0, 4) === a.slice(0, 4)) || (x.slice(0, 2) === a.slice(0, 2) && lijkt(x, a) >= 0.4);
+    });
+  }
+  /* Een woord tussen haakjes dat zegt welk woord in het gat hoort: (lopen),
+     (leggen, verleden tijd). "(verleden tijd)" alleen zegt dat niet. */
+  var GRAMMATICA = /^(verleden|tijd|tegenwoordige|toekomende|voltooid|voltooide|deelwoord|meervoud|enkelvoud|persoonsvorm|infinitief|hele|werkwoord|vorm|zin|met|en|of|de|het|een|past|present|simple|continuous|perfect|tense|form)$/i;
+  function haakjesWoord(v){
+    return (String(v).match(/\(([^)]*)\)/g) || []).some(function(h){
+      return klein(h).split(' ').some(function(w){ return w.length >= 3 && !GRAMMATICA.test(w); });
+    });
+  }
+  var GAT = /_{2,}|…(?=\s*\S)|\.\.\.(?=\s*\S)/;
+  var EINDGAT = /(…|\.\.\.)\s*$/;
+  /* go, ___, gone: de andere vormen staan erbij */
+  var RIJTJE = /^[\w' -]+, (_{2,}|[\w' -]+), (_{2,}|[\w' -]+)\.?$/;
+  var OPDRACHT = /(^|[.!?:]\s+)(vul|schrijf|geef|noem|bereken|vertaal|zet|maak|kies|reken|los|herschrijf|verbeter|omcirkel|leg uit|beschrijf|verklaar|lees|tel|teken|rond|vereenvoudig|werk|splits|ontbind|bepaal|zoek|onderstreep|fill|write|give|choose|complete|translate|rewrite|put|correct)\b/i;
+  var VAN_WOORD = /\b(meervoud|enkelvoud|verkleinwoord|verleden tijd|voltooid deelwoord|vergrotende trap|overtreffende trap|tegenovergestelde|synoniem|zelfstandig naamwoord|werkwoord|bijvoeglijk naamwoord) (van|bij)\s+\S/i;
+  var VERTALEN = /^(hoe zeg je|wat betekent|vertaal|valse vriend|what does|what is .* in (dutch|english))\b/i;
+
+  /* gaat de vraag over de keuzes zelf? dan kan hij zonder keuzes niet */
+  function overKeuzes(v, vraag){
+    return /\b(van deze|van de volgende|hieronder|onderstaande|of these|of the following)\b|hoort (er )?niet bij|\bdeze (dingen|woorden|begrippen|gebeurtenissen|personen|getallen|dieren|landen|steden|stoffen|mogelijkheden|antwoorden|zinnen)\b/i.test(v) ||
+      (/\b(welke?|which)\b[^?]*\b(niet|geen|not|except)\b(?!-)/i.test(vraag) && !/\b(waarom|wat betekent|why)\b/i.test(vraag)) ||
+      /\bwat (is|zijn|was|waren) geen\b/i.test(vraag) ||
+      /* "Welk woord is een lidwoord?" zonder zin erbij: welk woord dan? */
+      (/\bwelke? (twee )?(woord|woorden) (is|zijn) (een|de|het)\b/i.test(v) && !/:\s*\S/.test(v)) ||
+      /\b(welke?|in welke|which|what)\b[^?]*(\b(is|zijn|staat|staan|wordt|worden|geschreven|gespeld)\s+(goed|juist|fout|onjuist|correct|waar)\b|\b(goede|juiste|foute|correcte|klopt|kloppen|right|wrong|incorrect|correct|true|false)\b|\b(goed|juist|fout)\s*$)/i.test(vraag) ||
+      /\bwelke? bewering(en)? (is|zijn) waar\b/i.test(vraag) ||
+      /\b(welke?|which) (getal|getallen|breuk|breuken|verhouding|kaart|schaal|number|fraction)\b[^?]*\b(grootst|kleinst|hoogst|laagst|meeste|minste|biggest|smallest|largest|highest|lowest)\b/i.test(vraag) ||
+      /\b(welke?|in welke|which) (zin|zinnen|versie|vraag|uitroep|schrijfwijze|spelling|vervolg|reeks|rij|combinatie|bewering|beweringen|uitspraak|reactie|samenvatting|conclusie|sentence|sentences|version|option|answer|translation|reply|response|question)\b/i.test(vraag) ||
+      /^(wat is (goed|beter|juist|fout|correct)(?! aan)|kies|choose|pick)\b/i.test(v) || /\b(kies|choose) (de|het|the) (goede|juiste|correct|right)\b/i.test(v) ||
+      /^waar (hoort|staat|moet) (de|het|een) (komma|punt|dubbele punt|vraagteken|uitroepteken|puntkomma|aanhalingstekens?|apostrof|hoofdletter|streepje|trema|koppelteken)\b[^:]*\?\s*$/i.test(v);
+  }
+  /* zijn de keuzes spellingen of vormen van hetzelfde woord? loopt, lopen, lopend */
+  function varianten(o, g){
+    var a = kern(o[g]), rest = o.filter(function(x, i){ return i !== g; }).map(kern);
+    /* een woord, geen omschrijving: "in Normandië" en "die daalt" zijn geen spellingen van elkaar */
+    if (!rest.length || a.length < 3 || /\d/.test(a) || a.indexOf(' ') >= 0) return false;
+    return rest.filter(function(x){ return lijkt(a, x) >= 0.7 || (a.length >= 4 && x.slice(0, 4) === a.slice(0, 4)); }).length >= Math.max(1, rest.length - 1);
+  }
+  /* kort genoeg om als rijtje achter "Kies uit:" te zetten? */
+  function kort(o){ return o.every(function(x){ var t = kaal(x); return t.length <= 28 && t.split(' ').length <= 3 && !/[.?!;:]/.test(t); }); }
+
+  /* "Kies de goede afkorting." zonder keuzes wordt "Schrijf de goede afkorting op."
+     Werkt ook op html (werkblad-vakspellen.js): het stukje staat nooit over een tag heen. */
+  function schrijfOp(t){
+    return String(t).replace(/\b([Kk])ies (de|het|een) ((?:goede |juiste |volledige )?[a-zà-ÿ]+)\./g, function(m, k, lw, rest){ return (k === 'K' ? 'S' : 's') + 'chrijf ' + lw + ' ' + rest + ' op.'; });
+  }
+  /* q: { v, o, g }. Geeft { soort, v, opdr }. */
+  function vorm(q){
+    var v = schrijfOp(kaal(q.v)), o = (q.o || []).map(kaal), g = q.g, a = o[g] || '';
+    var uit = { soort:'open', v:v, opdr:'' };
+    if (o.length < 2) return uit;
+    /* True, False, Not stated: zeg welke woorden er mogen */
+    if (o.every(function(x){ return /^(true|false|not stated|waar|niet waar|juist|onjuist|ja|nee)$/i.test(x); })) return { soort:'kies', v:v, opdr:'' };
+    /* de vraag zegt zelf "kies": dan moet er ook iets te kiezen zijn (True, False, Not stated) */
+    if (/(^|[.!?:,]\s+)(kies|choose)\b/i.test(v) && !/^(kies|choose) (de|het|the) (goede|juiste|correct|right) (vorm|form)\b/i.test(v) && !/staat:\s*"?kies\b/i.test(v)){ uit.soort = kort(o) ? 'kies' : 'omcirkel'; if (uit.soort === 'omcirkel') uit.opdr = 'Omcirkel de letter van het goede antwoord.'; return uit; }
+    var vraag = v.split(/:\s+(?=\S)/)[0];
+    var alleInVraag = o.every(function(x){ return staatIn(v, x); });
+    var keuzes = false;
+    /* "Which translation is correct?" wordt open: vertaal de zin zelf */
+    var vert = v.match(/^which translation is correct\?\s*(.+)$/i);
+    if (vert){ uit.v = 'Vertaal naar het Engels: ' + vert[1]; return uit; }
+    if (alleInVraag) keuzes = false;
+    else if (/^(kies|choose) (de|het|the) (goede|juiste|correct|right) (vorm|form)\b/i.test(v) && GAT.test(v) && haakjesWoord(v)){
+      /* "Kies de goede vorm: Hij heeft haar foto ___. (liken)": het werkwoord staat erbij */
+      uit.v = v.replace(/^(kies|choose) (de|het|the) (goede|juiste|correct|right) (vorm|form):?\s*/i, 'Vul de goede vorm in: ');
+    }
+    else if (overKeuzes(v, vraag) && !staatIn(v, a)) keuzes = true;
+    else if (GAT.test(v) && !RIJTJE.test(v) && !haakjesWoord(v)) keuzes = true;
+    /* het meervoud van hond: het woord staat in de vraag, dus open */
+    else if (!VERTALEN.test(v) && !VAN_WOORD.test(v) && varianten(o, g) && !lijktIn(v, a)) keuzes = true;
+    if (keuzes){ uit.soort = kort(o) ? 'kies' : 'omcirkel'; if (uit.soort === 'omcirkel') uit.opdr = 'Omcirkel de letter van het goede antwoord.'; return uit; }
+    /* open: zegt de vraag wat je moet doen? anders een korte opdracht erbij */
+    var heeftOpdracht = OPDRACHT.test(uit.v);
+    if (RIJTJE.test(v) && GAT.test(v)) uit.opdr = 'Vul de ontbrekende vorm in.';
+    else if (GAT.test(v) && !heeftOpdracht && !/\?/.test(v)) uit.opdr = haakjesWoord(v) ? 'Vul de goede vorm in.' : 'Vul het ontbrekende woord in.';
+    else if (EINDGAT.test(v) && !/\?/.test(v) && !heeftOpdracht) uit.opdr = 'Maak de zin af.';
+    else if (!/\?/.test(v) && !/:\s*\S/.test(v) && !heeftOpdracht && !/\d/.test(v)) uit.opdr = 'Schrijf het antwoord op de lijn.';
+    return uit;
+  }
+  function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+  /* de korte keuzes als rijtje boven de lijn: de leerling schrijft het goede woord op */
+  function kiesUit(o){ return '<span class="kiesuit"><i>Kies uit:</i>' + o.map(function(x){ return '<span>' + schoon(x) + '</span>'; }).join('') + '</span>'; }
+  /* bovenaan een blad met open vragen: hoe je antwoordt, alleen wat op dit blad voorkomt */
+  function uitleg(vormen){
+    var soorten = {}; vormen.forEach(function(p){ soorten[p.soort] = true; });
+    if (!soorten.open && !soorten.kies && !soorten.omcirkel) return '';
+    return 'Schrijf je antwoord op de lijn.' + (soorten.kies ? ' Staat er Kies uit, kies dan een woord uit dat rijtje en schrijf het op de lijn.' : '') + (soorten.omcirkel ? ' Staan er keuzes met letters, omcirkel dan de letter van het goede antwoord.' : '');
+  }
+  return { vorm:vorm, schrijfOp:schrijfOp, kiesUit:kiesUit, uitleg:uitleg };
+})();
+
 var SPELBLAD = (function(){
   'use strict';
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }

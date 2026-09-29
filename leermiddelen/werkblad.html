@@ -104,6 +104,11 @@ main h1{font-size:clamp(1.7rem,4vw,2.4rem);margin-top:4px}
 .blad .opties{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 18px;margin-top:6px;font-size:.93rem}
 .blad .opties span b{display:inline-block;width:22px}
 .blad .lijn{display:block;border-bottom:1px solid #14224C;height:30px;max-width:420px}
+/* een open vraag: de opdracht eronder, en bij een gat de woorden om uit te kiezen */
+.blad .opdr{display:block;font-size:.82rem;color:#6a7290;margin:2px 0 4px}
+.blad .kiesuit{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;margin-top:6px;font-size:.93rem}
+.blad .kiesuit i{font-style:normal;font-size:.82rem;color:#6a7290}
+.blad .kiesuit span{border:1px solid #9aa3bd;border-radius:6px;padding:0 8px}
 .blad .beeld{margin:6px 0}
 .blad .beeld img,.blad .beeld svg{max-width:180px;max-height:120px;height:auto;display:block}
 /* het DHTE-schema bij een rekenvraag: hoger dan een vlag, anders zijn de cijfers niet te lezen */
@@ -117,7 +122,6 @@ main h1{font-size:clamp(1.7rem,4vw,2.4rem);margin-top:4px}
 .blad .vakspel .beeld svg,.blad .vakspel .beeld table,.blad .vakspel .eigen-wb svg{max-width:100%;max-height:none}
 /* alleen het beeld zelf breder; kleine pictogrammen in het beeld (een konijn, een logo) houden hun maat */
 .blad .vakspel .beeld>svg{width:min(100%,380px)}
-.blad .vakspel .opdr{display:block;font-size:.82rem;color:#6a7290;margin:2px 0 4px}
 .blad .vakspel .velden-wb{display:flex;gap:18px;flex-wrap:wrap;margin-top:6px}
 .blad .vakspel .veldlijn{display:inline-flex;gap:6px;align-items:flex-end;font-size:.9rem}
 .blad .vakspel .veldlijn .lijn{display:inline-block;width:120px;height:22px;border-bottom:1px solid #14224C}
@@ -384,7 +388,8 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
   /* de vraag zoals een leerling hem leest, met de antwoorden geschud */
   function klaarzetten(vak, q){
     var v = q.v;
-    if (vak === 'eng' && /^woordjes /.test(q.t) && !/\?$/.test(q.v)) v = (q.t === 'woordjes NL naar EN' ? 'Hoe zeg je: ' : 'Wat betekent: ') + v + '?';
+    /* een kaal woord (huis, moreover): zeg erbij welke kant je op vertaalt */
+    if (vak === 'eng' && !/[?:_…]/.test(v) && v.replace(/\([^)]*\)/g, '').trim().split(' ').length <= 4 && !/\d/.test(v)) v = (q.t === 'woordjes NL naar EN' ? 'Vertaal naar het Engels: ' : 'Vertaal naar het Nederlands: ') + v;
     var volg = schud(q.o.map(function(x, i){ return i; }));
     var kop = vak === 'reken' ? deelNaam('reken', q.t) : deelNaam(vak, q.t);
     return { v:v, o:volg.map(function(i){ return q.o[i]; }), g:volg.indexOf(q.g), u:q.u, kop:(function(k){ return k === '-' ? '' : k; })(kopVoorVraag({ t:kop, o:q.o }, '-')), vlag:q.vlag, svg:q.svg };
@@ -396,13 +401,14 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
     return q.svg ? '<div class="beeld">' + q.svg + '</div>' : '';
   }
   var laatste = null;
-  /* Welke zin heeft de komma goed? Zonder de zinnen is dat geen vraag. Zulke
-     vragen houden hun keuzes, ook als je open vragen kiest. */
-  function keuzesNodig(v){
-    v = String(v || '');
-    return /\bwelke?\b[^.?]*\b(goed|juist|fout|onjuist|klopt)\b[^.?]*\?\s*$/i.test(v) ||
-      /^(wat is goed|hoe schrijf je (dit|het) (goed|juist))/i.test(v) ||
-      /\bvan deze\b|hoort er niet bij|past niet in|\bhet (eerst|laatst)\b/i.test(v);
+  /* Een open vraag op papier: zonder de keuzes weet een leerling bij "Welke
+     zin is goed?" of "Ik ___ het antwoord al." niet wat hij moet opschrijven.
+     OPENVRAAG (werkblad-spellen.js) zegt per vraag: open met een lijn, een
+     lijn met "Kies uit:" en de korte keuzes, of de keuzes om te omcirkelen.
+     Bij meerkeuze blijft alles zoals het was. */
+  function papierVorm(q, i){
+    if (!isOpen(laatste.vorm, i)) return { soort:'mk', v:q.v, opdr:'' };
+    return OPENVRAAG.vorm({ v:q.v, o:q.o, g:q.g });
   }
   function adres(vak, n, delen, vorm){
     var q = new URLSearchParams({ vak:vak, n:$('niveau').value, aantal:String(n) });
@@ -483,17 +489,21 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
     var sub = (w.delen.length > 1 ? w.delen.map(function(d){ return deelNaam(w.vak, d); }).join(', ') + ' · ' : '') + niv + ' · ' + w.vragen.length + ' vragen';
     /* het kopje boven een vraag alleen als er meer onderdelen door elkaar staan */
     var kopjes = w.delen.length !== 1;
+    var vormen = w.vragen.map(papierVorm);
     var vragen = w.vragen.map(function(q, i){
-      var open = isOpen(w.vorm, i) && !keuzesNodig(q.v);
+      var p = vormen[i];
       return '<li>' + (kopjes && q.kop ? '<span class="odkop">' + schoon(q.kop) + '</span>' : '') +
-        '<span class="vr">' + schoon(q.v) + '</span>' + beeld(q) +
-        (open ? '<span class="lijn" aria-hidden="true"></span>'
-                : '<div class="opties">' + q.o.map(function(o, i){ return '<span><b>' + LETTERS[i] + '</b>' + schoon(o) + '</span>'; }).join('') + '</div>') + '</li>';
+        '<span class="vr">' + schoon(p.v) + '</span>' + (p.opdr ? '<span class="opdr">' + schoon(p.opdr) + '</span>' : '') + beeld(q) +
+        (p.soort === 'open' ? '<span class="lijn" aria-hidden="true"></span>'
+          : p.soort === 'kies' ? OPENVRAAG.kiesUit(q.o) + '<span class="lijn" aria-hidden="true"></span>'
+          : '<div class="opties">' + q.o.map(function(o, i){ return '<span><b>' + LETTERS[i] + '</b>' + schoon(o) + '</span>'; }).join('') + '</div>') + '</li>';
     }).join('');
+    /* open en kies uit: het woord; omcirkelen en meerkeuze: de letter erbij */
     var antwoorden = w.vragen.map(function(q, i){
-      return '<li><span class="goed">' + (isOpen(w.vorm, i) && !keuzesNodig(q.v) ? '' : LETTERS[q.g] + '. ') + schoon(q.o[q.g]) + '</span>' + (w.uitleg && q.u ? '<small>' + schoon(q.u) + '</small>' : '') + '</li>';
+      var letter = vormen[i].soort === 'mk' || vormen[i].soort === 'omcirkel';
+      return '<li><span class="goed">' + (letter ? LETTERS[q.g] + '. ' : '') + schoon(q.o[q.g]) + '</span>' + (w.uitleg && q.u ? '<small>' + schoon(q.u) + '</small>' : '') + '</li>';
     }).join('');
-    papier(titel, sub, '', vragen, antwoorden);
+    papier(titel, sub, '', vragen, antwoorden, OPENVRAAG.uitleg(vormen));
   }
   $('maak').addEventListener('click', maak);
   $('opnieuw').addEventListener('click', maak);

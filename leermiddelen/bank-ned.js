@@ -133,8 +133,8 @@ var NED2 = [
 {v:'Word of wordt? ___ jij morgen zestien?',o:['Word','Wordt','Wordd','Worde'],g:0,u:'Staat jij achter het werkwoord, dan valt de t weg.',t:'werkwoordspelling'},
 {v:'Hoe schrijf je een samenstelling van twee woorden?',o:['de gemeentesecretaris','de gemeente secretaris','de gemeentensecretaris','de gemeente-secretaris'],g:0,u:'Samenstellingen schrijf je in het Nederlands aan elkaar.',t:'spelling'},
 {v:'Welk woord heeft de tussen-n goed?',o:['pannenkoek','pannekoek','pannen koek','panne-koek'],g:0,u:'Sinds 1995 met een tussen-n: pannenkoek.',t:'spelling'},
-{v:'Waarom staat hier geen tussen-n?',o:['zonnestraal','zonnenstraal','zonne straal','zonstraal'],g:0,u:'Geen tussen-n, want er is maar een zon.',t:'spelling'},
-{v:'Welke hoofdletters horen hier?',o:['de Tweede Wereldoorlog','de tweede wereldoorlog','de Tweede wereldoorlog','de tweede Wereldoorlog'],g:0,u:'Namen van historische gebeurtenissen krijgen hoofdletters.',t:'spelling'},
+{v:'Hoe schrijf je het woord voor een straal van de zon?',o:['zonnestraal','zonnenstraal','zonne straal','zonstraal'],g:0,u:'Geen tussen-n, want er is maar een zon.',t:'spelling'},
+{v:'Hoe schrijf je de oorlog van 1939 tot 1945, met de goede hoofdletters?',o:['de Tweede Wereldoorlog','de tweede wereldoorlog','de Tweede wereldoorlog','de tweede Wereldoorlog'],g:0,u:'Namen van historische gebeurtenissen krijgen hoofdletters.',t:'spelling'},
 {v:'Krijgt Nederlandse een hoofdletter?',o:['een Nederlandse stad','een nederlandse stad','een Nederlandsestad','een neder-landse stad'],g:0,u:'Bijvoeglijke naamwoorden van een land krijgen een hoofdletter.',t:'spelling'},
 {v:'Wat is goed als je als laatste bedoelt?',o:['ten slotte','tenslotte betekent iets anders','ten-slotte','tenslote'],g:0,u:'Ten slotte betekent als laatste. Tenslotte betekent immers.',t:'spelling'},
 {v:'Wat is het onderwerp in: De koning opende de vergadering?',o:['de koning','de vergadering','opende','de koning opende'],g:0,u:'Vraag: wie opende? De koning. Dat is het onderwerp.',t:'zinsontleding'},
@@ -214,10 +214,10 @@ var NED2 = [
 {v:'Wat betekent het woord onafhankelijk?',o:['niet onder een ander','alleenstaand','zonder geld','niet te vertrouwen'],g:0,u:'Een onafhankelijk land bepaalt zelf wat het doet.',t:'betekenis'},
 {v:'Wat betekent het woord verdrag?',o:['een afspraak tussen landen','een vertraging','een verdrietig bericht','een wet'],g:0,u:'Een verdrag sluiten landen met elkaar.',t:'betekenis'},
 {v:'Hoe schrijf je het zelfstandig naamwoord van gebeuren?',o:['gebeurtenis','gebeurdtenis','gebeurtenies','gebeurtnis'],g:0,u:'Van gebeuren: gebeurtenis, met t.',t:'spelling'},
-{v:'Hoeveel keer een k in dit woord?',o:['ontwikkeling','ontwikeling','ontwikkelling','onwikkeling'],g:0,u:'Twee keer een k, van ontwikkelen.',t:'spelling'},
+{v:'Hoe schrijf je het zelfstandig naamwoord bij ontwikkelen?',o:['ontwikkeling','ontwikeling','ontwikkelling','onwikkeling'],g:0,u:'Twee keer een k, van ontwikkelen.',t:'spelling'},
 {v:'Wat is het meervoud van gebeurtenis?',o:['gebeurtenissen','gebeurtenisen','gebeurtenissn','gebeurtenises'],g:0,u:'Korte klank, dus dubbele s in het meervoud.',t:'spelling'},
 {v:'Wat schrijf je als je althans bedoelt?',o:['tenminste','ten minste betekent iets anders','ten-minste','tenminst'],g:0,u:'Tenminste betekent althans, ten minste betekent minimaal.',t:'spelling'},
-{v:'Hoe schrijf je dit uit het Duits geleende woord?',o:['sowieso','souwieso','zowiezo','so wie so'],g:0,u:'Het komt uit het Duits en blijft sowieso.',t:'spelling'},
+{v:'Hoe schrijf je het woord uit het Duits dat "in elk geval" betekent?',o:['sowieso','souwieso','zowiezo','so wie so'],g:0,u:'Het komt uit het Duits en blijft sowieso.',t:'spelling'},
 {v:'Welke schrijfwijze van dit tijdwoord klopt?',o:['sinds','sints','sinds dat','sindt'],g:0,u:'Sinds, altijd met ds.',t:'spelling'},
   {v:'Wat is het meervoud van ei?',o:['eieren','eien','eis','eiers'],g:0,u:'Ook eren: ei wordt eieren.',t:'meervoud'},
 {v:'Wat is het meervoud van lid?',o:['leden','lidden','lids','liden'],g:0,u:'Lid wordt leden, net als schip en schepen.',t:'meervoud'},
@@ -410,7 +410,7 @@ var NED4 = [
 {v:'Welk woord is een voegwoord in: Ik wacht totdat de bus komt?',o:['totdat','wacht','bus','komt'],g:0,u:'Een voegwoord plakt twee zinnen aan elkaar: en, maar, omdat, totdat.',t:'woordsoorten'},
 {v:'Welk woord is een voorzetsel in: De kat zit onder de tafel?',o:['onder','kat','zit','tafel'],g:0,u:'Een voorzetsel zegt waar of wanneer iets is. Truc: het past in "de kat zit ... de doos".',t:'woordsoorten'},
 {v:'In welke zin is loop een werkwoord?',o:['Ik loop naar school.','De loop van de rivier is lang.','Hij nam een loop van tien kilometer.','De loop van het geweer is koud.'],g:0,u:'In de eerste zin doet iemand iets: ik loop. In de andere is de loop een ding, dus een zelfstandig naamwoord.',t:'woordsoorten'},
-{v:'Welke woordsoort is het dikgedrukte woord in: Zij is de SNELSTE van de klas?',o:['bijvoeglijk naamwoord','bijwoord','zelfstandig naamwoord','telwoord'],g:0,u:'Snelste zegt iets over zij, en daarmee over een persoon. Dat is een bijvoeglijk naamwoord, ook in de overtreffende trap.',t:'woordsoorten'}
+{v:'Welke woordsoort is snelste in: Zij is de snelste van de klas?',o:['bijvoeglijk naamwoord','bijwoord','zelfstandig naamwoord','telwoord'],g:0,u:'Snelste zegt iets over zij, en daarmee over een persoon. Dat is een bijvoeglijk naamwoord, ook in de overtreffende trap.',t:'woordsoorten'}
 ];
 BRONNEN.ned = NED.concat(NED2, NED3, NED4);
 NIVOS.ned = [1,1,2,2,3,1,1,1,3,3,2,4,3,2,4,2,1,3,1,1,4,1,1,1,1,1,1,1,2,2,2,2,2,2,2,3,3,2,2,2,2,2,2,2,3,3,3,3,3,3,1,1,1,1,2,1,1,2,2,2,2,3,3,3,3,1,1,1,1,1,1,2,2,2,2,3,3,3,3,3,3,1,1,1,1,1,2,2,2,2,3,2,1,1,1,1,2,3,2,3,2,1,1,1,2,1,2,2,2,2,2,2,1,3,2,1,1,2,2,2,3,2,3,1,2,3,3,3,4,3,2,4,2,3,2,2,2,3,3,3,2,3,2,3,4,4,3,2,3,4,4,3,2,3,3,3,2,3,4,4,2,4,3,2,2,4,3,3,4,2,3,2,2,4,4,3,3,4,2,3,4,2,4,4,4,3,3,4,4,4,4,2,4,2,4,4,2,3,3,2,2,2,4,3,4,3,2,2,2,2,2,4,3,2,1,3,2,2,2,2,1,3,2,4,2,2,2,3,2,2,3,4,3,3,2,3,4,2,3,4,3,2,3,2,2,3,4,2,4,4,1,1,1,1,2,2,2,2,3,3,3,4,4,1,3,2,3,3,1,2,2,3,3,4,1,2,3,4,1,2,2,3,4,1,2,2,3,4,2,3,4,1,2,3,4,1,1,1,1,2,2,2,3,3,2,4,1,1,1,2,2,3,4,1,1,2,2,3,3,4,4,1,1,2,3,1,1,2,2,3,3,4,1,1,2,2,3,3,4,4,1,2,2,3,3,4,1,2,2,3,3,4,1,2,2,3,3,4,1,1,1,1,1,1,1,1,1,1,1,1,1,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,3,1,1,1,2,2,2,3,3];   /* een niveau per vraag, op volgorde; server/audit-bank.js bewaakt dat ze gelijk blijven lopen */   /* een niveau per vraag, op volgorde; server/audit-bank.js bewaakt dat ze gelijk blijven lopen */

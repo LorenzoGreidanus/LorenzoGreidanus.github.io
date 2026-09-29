@@ -22,6 +22,8 @@ window.BANK_SPELLEN = (function(){
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
   function kaal(t){ return String(t == null ? '' : t).replace(/<[^>]+>/g, '').replace(/\*\*/g, '').replace(/[{}]/g, ''); }
   function schud(a){ a = a.slice(); for (var i = a.length - 1; i > 0; i--){ var j = Math.floor(Math.random() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  /* het woord tussen **sterretjes**: kaal() haalt de sterretjes weg, dus noemt de vraag het woord zelf */
+  function vet(t){ var m = String(t || '').match(/\*\*([^*]+)\*\*/); return m ? m[1] : ''; }
   function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
   function tussen(a, b){ return a + Math.floor(Math.random() * (b - a + 1)); }
   var RANG = { bb:1, kgt:2, hv:3, vwo:4, 1:1, 2:2, 3:3, 4:4 };
@@ -47,7 +49,8 @@ window.BANK_SPELLEN = (function(){
     var uit = [];
     var W = window.WOORDENSCHAT;
     if (W){
-      W.UIT.forEach(function(r){ uit.push(vraag('Wat betekent ' + r[1].replace(/\*\*([^*]+)\*\*/, '"$1"') + '', r[2], [r[3], r[4], r[5]], r[6], 'betekenis', r[0])); });
+      /* het woord tussen **sterretjes** komt vooraan in de vraag; vet kan hier niet */
+      W.UIT.forEach(function(r){ var w = vet(r[1]); uit.push(vraag(w ? 'Wat betekent "' + w + '" in deze zin? ' + r[1] : 'Wat betekent ' + r[1], r[2], [r[3], r[4], r[5]], r[6], 'betekenis', r[0])); });
       W.GAT.forEach(function(r){ uit.push(vraag('Welk woord past in het gat? ' + r[1], r[2], [r[3], r[4], r[5]], r[6], 'betekenis', r[0])); });
       W.SCHOOL.forEach(function(r){ uit.push(vraag('Wat moet je doen als er in een opdracht "' + r[1] + '" staat?', r[3], [r[4], r[5], r[6]], r[7], 'schooltaal', r[0])); });
     }
@@ -57,7 +60,8 @@ window.BANK_SPELLEN = (function(){
       S.INVUL.forEach(function(r){ uit.push(vraag('Welk signaalwoord past? ' + r[1], r[2], [r[3], r[4], r[5]], r[7], 'tekstverbanden', r[0])); });
       S.WELK.forEach(function(r){
         var anderen = schud(S.VERBANDEN.filter(function(v){ return v.id !== r[2] && v.niv <= Math.max(2, r[0]); })).slice(0, 3).map(function(v){ return v.naam; });
-        uit.push(vraag('Welk verband legt het vetgedrukte woord? ' + r[1], naam[r[2]], anderen, r[3], 'tekstverbanden', r[0]));
+        var w = vet(r[1]);
+        uit.push(vraag((w ? 'Welk verband legt het signaalwoord "' + w + '"? ' : 'Welk verband legt het vetgedrukte woord? ') + r[1], naam[r[2]], anderen, r[3], 'tekstverbanden', r[0]));
       });
       S.AFMAKEN.forEach(function(r){ uit.push(vraag('Welk vervolg klopt? ' + r[1], r[2], [r[3], r[4], r[5]], r[7], 'tekstverbanden', r[0])); });
     }

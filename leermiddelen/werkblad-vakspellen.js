@@ -66,6 +66,26 @@
     return it;
   }
 
+  /* ---------- open vragen ----------
+     Bij open vragen wordt een meerkeuzevraag met korte keuzes (kanOpen, zie
+     vakspel.js) een lijn. OPENVRAAG (werkblad-spellen.js) kijkt of de vraag
+     zonder keuzes nog te snappen is; zo niet, dan komen de keuzes erbij als
+     "Kies uit:" of om te omcirkelen. soort: mk, open, kies of omcirkel. */
+  function papierVorm(it, open){
+    if (!it.opties || !open) return { soort:'mk', opdr:'' };
+    if (!it.kanOpen) return { soort:'omcirkel', opdr:'Omcirkel de letter van het goede antwoord.' };
+    var d = document.createElement('div'); d.innerHTML = it.opties;
+    /* de keuzes zijn plaatjes (klokken): die kun je niet opschrijven */
+    if (d.querySelector('svg, img')) return { soort:'omcirkel', opdr:'Omcirkel de letter van het goede antwoord.' };
+    var keuzes = [].map.call(d.querySelectorAll('.opties > span'), function(s){ var c = s.cloneNode(true), b = c.querySelector('b'); if (b) b.parentNode.removeChild(b); return c.textContent.trim(); });
+    d.innerHTML = it.vraag;
+    /* de vraag en de opdracht eronder: "Staat het er niet in, kies dan Not stated." staat in de opdracht */
+    var vr = d.querySelector('.vr'), opdr = d.querySelector('.opdr'), eigenOpdr = !!opdr;
+    var g = 'abcdefghijklmnopqrstuvwxyz'.indexOf(String(it.antwoord || '').charAt(0));
+    var p = OPENVRAAG.vorm({ v:(vr ? vr.textContent : d.textContent) + (opdr ? ' ' + opdr.textContent : ''), o:keuzes, g:g });
+    return { soort:p.soort, keuzes:keuzes, opdr:(p.soort === 'omcirkel' || !eigenOpdr) ? p.opdr : '', vraag:p.soort === 'open' ? OPENVRAAG.schrijfOp(it.vraag) : it.vraag };
+  }
+
   /* het verborgen venster: een per spel, en een berichtenlijn met een nummer per vraag */
   var kader = null, kaderSpel = '', klaarBelofte = null, klaar = null, wachtend = {}, nr = 0;
   addEventListener('message', function(e){
@@ -134,10 +154,17 @@
       teken: function(w){
         var niv = w.niveauNaam || '';
         var koppen = {}; w.items.forEach(function(it){ if (it.kop) koppen[it.kop] = 1; });
+        var vormen = w.items.map(function(it, i){ return papierVorm(it, w.isOpen && w.isOpen(w.vorm, i)); });
         return {
           titel: naam, sub: niv + ' · ' + w.items.length + ' opgaven', klasse: 'vakspel',
-          vragen: w.items.map(function(it, i){ var open = it.opties && it.kanOpen && w.isOpen && w.isOpen(w.vorm, i); return '<li>' + (Object.keys(koppen).length > 1 && it.kop ? '<span class="odkop">' + schoon(it.kop) + '</span>' : '') + it.vraag + (it.opties ? (open ? '<span class="lijn" aria-hidden="true"></span>' : it.opties) : '') + '</li>'; }).join(''),
-          antwoorden: w.items.map(function(it, i){ var open = it.opties && it.kanOpen && w.isOpen && w.isOpen(w.vorm, i); return '<li><span class="goed">' + schoon(open ? it.antwoordOpen : it.antwoord) + '</span>' + (w.uitleg && it.uitleg ? '<small>' + it.uitleg + '</small>' : '') + '</li>'; }).join('')
+          intro: OPENVRAAG.uitleg(vormen),
+          vragen: w.items.map(function(it, i){
+            var p = vormen[i];
+            return '<li>' + (Object.keys(koppen).length > 1 && it.kop ? '<span class="odkop">' + schoon(it.kop) + '</span>' : '') + (p.vraag || it.vraag) +
+              (p.opdr ? '<span class="opdr">' + schoon(p.opdr) + '</span>' : '') +
+              (!it.opties ? '' : p.soort === 'open' ? '<span class="lijn" aria-hidden="true"></span>' : p.soort === 'kies' ? OPENVRAAG.kiesUit(p.keuzes) + '<span class="lijn" aria-hidden="true"></span>' : it.opties) + '</li>';
+          }).join(''),
+          antwoorden: w.items.map(function(it, i){ var woord = vormen[i].soort === 'open' || vormen[i].soort === 'kies'; return '<li><span class="goed">' + schoon(woord ? it.antwoordOpen : it.antwoord) + '</span>' + (w.uitleg && it.uitleg ? '<small>' + it.uitleg + '</small>' : '') + '</li>'; }).join('')
         };
       }
     };
