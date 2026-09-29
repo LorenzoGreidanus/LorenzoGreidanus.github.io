@@ -1135,7 +1135,7 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
     return { k:'teken', woord:spel.woord, hint: h || undefined, tot:spel.tijdEinde, v:spel.vel.id, w:spel.wnr };
   }
   function nieuwWoordInBeurt(){
-    neemWoord(); nieuwVel(); spel.geraden = [];
+    neemWoord(); nieuwVel(); spel.geraden = []; spel.gok = {};
     if (host.modus === 'docent') $('bWoordNu').textContent = '';
     else stuur({ t:'naar', pid:spel.tekenaar.sid, d:tekenKaart() });
     stuur({ t:'vlug', d:{ k:'wis', v:spel.vel.id } });
@@ -1180,10 +1180,15 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
   $('bVolgende').addEventListener('click', function(){ if (spel && !spel.loopt) volgendeBeurt(); });
   $('bOverslaan').addEventListener('click', function(){
     if (!spel || !spel.loopt) return;
+    /* Heeft iemand het al geraden, dan is het woord niet te moeilijk: overslaan zou de rest
+       alleen een nieuwe kans geven en wie het had zijn voorsprong afnemen. */
+    if (spel.geraden && spel.geraden.length){ $('bOverslaan').disabled = true; return; }
     spel.gedaan.push({ team: isTeams() ? teams[spel.team].naam : '', woord:spel.woord, goed:false, over:true, tekenaar:spel.tekenaar.naam });
     feed('<i>overgeslagen: ' + schoon(spel.woord) + '</i>');
     nieuwWoordInBeurt();
   });
+  /* hoeveel tijd er tussen twee gokken van dezelfde speler moet zitten */
+  var GOK_PAUZE = 1500;
   function feed(html, klasse){ var d = document.createElement('div'); if (klasse) d.className = klasse; d.innerHTML = html; $('bFeed').insertBefore(d, $('bFeed').firstChild); while ($('bFeed').children.length > 30) $('bFeed').removeChild($('bFeed').lastChild); }
   function gezicht(naam, pid){ var av = (spelersLijst.filter(function(s){ return s.sid === pid; })[0] || {}).av || ''; return window.AVATAR ? AVATAR.svg(naam, 22, av) : ''; }
   /* wat de leerlingen doen: strepen van de tekenaar, gokken van wie mag raden */
@@ -1211,6 +1216,16 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
     if (d.k === 'skip'){ if (spel.loopt && spel.tekenaar && m.van === spel.tekenaar.sid) $('bOverslaan').click(); return; }
     if (d.k !== 'raad' || !spel.loopt) return;
     var tekst = String(d.tekst || '').slice(0, 40), oordeel;
+    /* Tegen spammen: een losse letter telt niet als gok, hoogstens een gok per anderhalve
+       tel, en dezelfde gok nog een keer ook niet. Anders typt iemand de hele tijd a, b, c
+       en staat het bord vol. Wie te snel is hoort dat op zijn eigen telefoon. */
+    var kern = tekst.toLowerCase().replace(/[^\p{L}\p{N}]/gu, ''), nu = Date.now();
+    if (kern.length < 2 && norm(spel.woord).length >= 2){ stuur({ t:'naar', pid:m.van, d:{ k:'tekort' } }); return; }
+    spel.gok = spel.gok || {};
+    var mijnGok = spel.gok[m.van] || (spel.gok[m.van] = { t:0, laatst:'' });
+    if (nu - mijnGok.t < GOK_PAUZE){ stuur({ t:'naar', pid:m.van, d:{ k:'rustig' } }); return; }
+    if (kern === mijnGok.laatst) return;
+    mijnGok.t = nu; mijnGok.laatst = kern;
     /* een gok staat op het bord en op elke telefoon: scheldwoorden komen er niet op */
     if (window.NAAMFILTER && NAAMFILTER.vies(tekst)) tekst = '***';
     if (isTeams()){
@@ -1247,6 +1262,7 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
       feed(gezicht(wie.naam, m.van) + '<span><b>' + schoon(wie.naam) + '</b> heeft het! ' + plek + 'e, +' + pt + '</span>', 'goed');
       stuur({ t:'naar', pid:m.van, d:{ k:'goedjij', woord:spel.woord, plek:plek, punten:pt, totaal:wie.punten } });
       stuur({ t:'vlug', d:{ k:'geraden', naam:wie.naam, plek:plek, tekenaar:spel.tekenaar.sid, lijst:scoreLijst() } });
+      $('bOverslaan').disabled = true;
       tekenStand();
       bewaarBord();
       /* heeft iedereen die er is het, dan hoeft niemand op de klok te wachten */
@@ -1569,10 +1585,14 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
       $('pRol').textContent = 'je hebt het';
       return;
     }
+    if (d.k === 'tekort'){ pFeed('Typ een heel woord, geen losse letter.', 'bijna'); return; }
+    if (d.k === 'rustig'){ pFeed('Rustig aan: een gok per anderhalve tel.', 'bijna'); return; }
     if (d.k === 'bijnajij'){ pFeed('<b>Bijna!</b>&nbsp;Kijk nog eens hoe je het schrijft.', 'bijna'); return; }
     if (d.k === 'geraden'){
       pFeed('<b>' + schoon(d.naam) + '</b>&nbsp;heeft het! (' + schoon(d.plek) + 'e)', 'goed');
       if (pModus === 'solo' && d.tekenaar === mijnPid) pFeed('+3 voor jou: ' + schoon(d.naam) + ' raadde jouw tekening', 'goed');
+      /* iemand heeft het: overslaan kan nu niet meer */
+      if (d.tekenaar === mijnPid) magOverslaan(false);
       stand();
       return;
     }
@@ -1601,7 +1621,7 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
     }
     if (d.k === 'teken'){
       /* ik ben de tekenaar: het woord klein boven het vel; een nieuw woord (w) krijgt een schoon vel */
-      if (d.w === undefined || d.w !== pWnr){ pWnr = d.w; pNieuwVel(d.v); }
+      if (d.w === undefined || d.w !== pWnr){ pWnr = d.w; pNieuwVel(d.v); magOverslaan(true); }
       $('pOver').classList.add('hide'); pTekenaar.zet(true);
       $('pGereedschap').classList.remove('hide'); $('pRaadRij').classList.add('hide'); $('pHint').classList.add('hide');
       if (pGereedschap) pGereedschap.toon();
@@ -1664,8 +1684,19 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
       return;
     }
   }
+  function magOverslaan(aan){
+    var b = $('pGereedschap') && $('pGereedschap').querySelector('[data-skip]');
+    if (!b) return;
+    b.disabled = !aan; b.title = aan ? '' : 'Iemand heeft het al geraden';
+  }
+  /* niet sneller gokken dan het bord toestaat; wat je typte blijft dan staan */
+  var raadTot = 0;
   function raad(){
     var t = $('pRaad').value.trim(); if (!t) return;
+    if (t.replace(/[^\p{L}\p{N}]/gu, '').length < 2){ pFeed('Typ een heel woord, geen losse letter.', 'bijna'); return; }
+    if (Date.now() < raadTot) return;
+    raadTot = Date.now() + 1500;
+    $('pRaadBtn').disabled = true; setTimeout(function(){ $('pRaadBtn').disabled = false; }, 1500);
     $('pRaad').value = '';
     stuur({ t:'actie', d:{ k:'raad', tekst:t } });
   }
