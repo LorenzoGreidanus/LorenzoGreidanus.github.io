@@ -51,7 +51,8 @@ const SPELLEN_STRIJD = { toren: "Torenverdediging", zwaard: "Zwaardvechter", poo
    twee poorten rijdt, voor het beeld van de anderen.
    Sneller dan kan: de pagina rijdt in doelTijd seconden naar de poort (die
    stuurt de kamer mee) en na een goede poort gaat de volgende vraag er na een
-   kleine halve seconde op; na een fout eerst de slip en de uitleg. Gemeten met
+   kleine halve seconde op; na een fout na de slip (POORTREGELS.SLIP; tot
+   september 2026 ook nog de uitleg, tot de speler op Volgende tikte). Gemeten met
    de speelbot in de race op vwo, alles goed, drie browsers (september 2026):
    van vraag tot poort 0,95 tot 0,99 maal doelTijd na die halve seconde, de
    eerste poort 1,11 maal doelTijd na de start, de finish 1,6 tot 2,3 seconden
@@ -64,18 +65,32 @@ const SPELLEN_STRIJD = { toren: "Torenverdediging", zwaard: "Zwaardvechter", poo
    langere vragen). Met vrienden is de race drie minuten na de eerste finish
    vanzelf klaar, ook als er een is afgehaakt. */
 const RACE_MAX = 8, RACE_POORTEN = POORTREGELS.POORTEN, RACE_UITLOOP = 3 * 60 * 1000;
-const RACE_RIJ = 0.95, RACE_EERSTE = 1.05, RACE_NA_POORT = 450, RACE_NA_FOUT = 1100, RACE_FINISH_MS = 1450;
+const RACE_RIJ = 0.95, RACE_EERSTE = 1.05, RACE_NA_POORT = 450, RACE_FINISH_MS = 1450;
+/* Na een fout komt de volgende vraag er pas op als de slip voorbij is, en dan
+   trekt het voertuig op vanaf een kwart van zijn snelheid. RACE_NA_FOUT: de
+   slip plus het grootste deel van dat optrekken. Nagemeten (september 2026,
+   vwo rekenen, 9 van 15 goed): de speelbot in de pagina had na een fout 8,2
+   tot 8,3 seconden tot de volgende poort, een bot met een kale verbinding die
+   meteen antwoordt 8,07; na een goede poort 6,6 tegen 6,4. Tot september 2026
+   (slip 0,9 s en de uitleg wegtikken, RACE_NA_FOUT 1100) was dat 8,3 tegen
+   7,3. RACE_FINISH_FOUT: zoveel later mag de finish na een foute laatste poort
+   (de slip en weer optrekken op het laatste stuk, eerlijk ruim 2,3 s later). */
+const RACE_NA_FOUT = POORTREGELS.SLIP * 1000 + 700, RACE_FINISH_FOUT = POORTREGELS.SLIP * 1000 + 800;
 /* Oneindig als race (september 2026): geen finish, iedereen rijdt tot zijn tank
-   leeg is, wie de meeste poorten haalt wint (bij evenveel: wie er het eerst
-   was). De tank houdt de kamer bij, niet de browser: hij rekent hem uit met de
+   leeg is, wie de meeste kilometers reed wint (bij evenveel: wie er het eerst
+   was). De kilometers komen uit sp.plek, zoals de kamer die bijhoudt: de
+   poorten die hij had en daarbinnen wat de pagina meldt, nooit voorbij zijn
+   volgende poort (POORTREGELS.km, een poort is 0,1 km). De tank houdt de kamer bij, niet de browser: hij rekent hem uit met de
    regels uit poortrace-regels.js (verbruik, tanken) en zijn eigen klok. Het
    verbruik loopt vanaf het startschot (met de klas plus het aftellen op de
-   telefoon, RACE_AFTEL_MS) en staat stil in de slip en de uitleg na een fout,
-   die laatste hoogstens TANK.vrij seconden (de pagina meldt verder als je
-   eerder klaar bent met lezen). Een pauze is er in een race niet. Leeg is leeg
+   telefoon, RACE_AFTEL_MS) en loopt gewoon door, ook in de slip na een fout
+   (tot september 2026 was de uitleg na een fout gratis, hoogstens acht
+   seconden, tot de pagina verder meldde). Een pauze is er in een race niet. Leeg is leeg
    op de klok van de kamer; een antwoord dat binnen RACE_LEEG_MARGE daarna nog
    binnenkomt telt nog (het was onderweg). */
 const RACE_AFTEL_MS = 2520, RACE_LEEG_MARGE = 800;
+/* de plekken tussen twee standen door (stuurPos): om de zoveel ms, voor wie binnen zoveel duizendsten van een poort rijdt */
+const RACE_POS_MS = 500, RACE_POS_BUURT = 3000;
 /* spellen met rollen op telefoons: het bord draait het spel, de kamer deelt kaarten uit en geeft acties door */
 const SPELLEN_ROLLEN = { polis: "De vergadering van de klas", meetlat: "Langs de meetlat", staten: "De vergadering", berlijn: "De Conferentie van Berlijn", standen: "Stem per stand", crisis: "De crisis", teken: "Tekenslag" };
 const KAART_MAX = 12000, BORD_MAX = 40000, ACTIE_MAX = 4000;
@@ -1131,7 +1146,8 @@ export class Kamer extends DurableObject {
      sp.punten zijn punten; alleen de kamer schrijft ze. Wat een speler stuurt:
        antwoord { k, b }   door poort k, in baan b
        finish              over de finish
-       verder { k }        Oneindig: klaar met de uitleg na de fout op poort k
+       verder { k }        (oud) klaar met de uitleg na een fout; een oudere
+                           pagina stuurt het nog, de kamer doet er niets meer mee
        stand { plek, vs }  waar zijn karretje rijdt en hoe snel; alleen voor het
                            beeld, en nooit buiten zijn stuk tussen twee poorten.
                            plek in duizendsten van een poort vanaf de start (poort
@@ -1145,10 +1161,11 @@ export class Kamer extends DurableObject {
     if (this.oneindig && this.raceLeegNu(sid)) return;
     if (m.t === "antwoord") return this.raceAntwoord(sid, m);
     if (m.t === "finish") return this.oneindig ? undefined : this.raceFinish(sid);
-    if (m.t === "verder") return this.raceVerder(sid, m);
+    /* sinds september 2026 is er geen uitleg meer om weg te tikken; een oudere pagina stuurt het nog */
+    if (m.t === "verder") return;
     if (m.t === "stand"){
       const nu = Date.now();
-      if (sp.standLaatst && nu - sp.standLaatst < 400) return;
+      if (sp.standLaatst && nu - sp.standLaatst < 200) return;
       sp.standLaatst = nu; sp.laatst = nu;
       const r = sp.ronde | 0, span = RACE_POORTEN + .4;
       const ruw = m.plek !== undefined ? Number(m.plek) : Number(m.voort) * span;
@@ -1157,6 +1174,7 @@ export class Kamer extends DurableObject {
       const vs = Number(m.vs);
       sp.vs = Number.isFinite(vs) ? Math.max(0, Math.min(600, Math.round(vs))) : undefined;
       this.planStand();
+      this.planPos();
     }
   }
   /* de plek van een speler (in duizendsten van een poort), en voort voor het bord */
@@ -1253,7 +1271,7 @@ export class Kamer extends DurableObject {
     if (!sp.rit){
       sp.rit = { reeks: 0, beste: 0, snel: 0, uit: [], gehad: [], vraag: null, laatste: null, bij: 0, poortTijd: 0 }; sp.ronde = 0; sp.gehaald = 0; sp.punten = 0; sp.voort = 0; sp.plek = 0;
       /* Oneindig: een volle tank, die loopt vanaf het startschot (met de klas na het aftellen op de telefoon) */
-      if (this.oneindig){ Object.assign(sp.rit, { tank: 100, tankT: (sp.raceStart || st.gestart || Date.now()) + (st.duel && !sp.raceStart ? 0 : RACE_AFTEL_MS), vrijVan: 0, vrijTot: 0 }); this.raceTankPlan(); }
+      if (this.oneindig){ Object.assign(sp.rit, { tank: 100, tankT: (sp.raceStart || st.gestart || Date.now()) + (st.duel && !sp.raceStart ? 0 : RACE_AFTEL_MS) }); this.raceTankPlan(); }
     }
     const rit = sp.rit;
     if (this.oneindig) this.raceTankPlan();
@@ -1264,13 +1282,13 @@ export class Kamer extends DurableObject {
     const nu = Date.now();
     this.naarSpeler(sid, Object.assign({ t: "rit", ronde: sp.ronde | 0, gehaald: sp.gehaald | 0, punten: sp.punten | 0, reeks: rit.reeks, beste: rit.beste, snel: rit.snel,
                            uit: rit.uit, af: !!sp.af, tijd: sp.tijd || 0 },
-                           /* Oneindig: hoe vol de tank nu is, en hoe lang de gratis leestijd na een fout nog duurt */
-                           this.oneindig && rit.tank !== undefined ? { tank: Math.round(Math.max(0, this.raceTank(sp, nu)) * 10) / 10, vrijIn: Math.max(0, rit.vrijVan - nu), vrijUit: Math.max(0, rit.vrijTot - nu) } : {}));
+                           /* Oneindig: hoe vol de tank nu is */
+                           this.oneindig && rit.tank !== undefined ? { tank: Math.round(Math.max(0, this.raceTank(sp, nu)) * 10) / 10 } : {}));
     if (rit.laatste) this.naarSpeler(sid, rit.laatste);
     this.raceZendVraag(sid);
   }
   /* hoe vroeg een antwoord op zijn vroegst kan komen, in ms na de vraag: na een
-     fout eerst de slip en de uitleg wegtikken, na een goede poort het korte
+     fout eerst de slip en weer optrekken, na een goede poort het korte
      stukje tot de volgende vraag, en bij de eerste poort optrekken vanaf de start */
   raceMinMs(v, rit){
     if (!v.k) return RACE_EERSTE * v.s * 1000;
@@ -1310,11 +1328,10 @@ export class Kamer extends DurableObject {
     this.raceZetPlek(sp, Math.max(sp.plek || 0, sp.ronde * 1000), nu);
     rit.laatste = { t: "uitslag", k: v.k, goed, g: v.g, erbij, gehaald: sp.gehaald, punten: sp.punten, reeks: rit.reeks, beste: rit.beste, snel: rit.snel, q: v.q };
     if (this.oneindig){
-      /* brandstof erbij; na een fout zijn de slip en de uitleg gratis */
+      /* brandstof erbij; de tank loopt meteen weer, ook in de slip na een fout */
       const t0 = Math.max(0, tankVoor), brand = POORTREGELS.tanken(t0, goed, rit.reeks);
       rit.tank = Math.min(100, t0 + brand); rit.tankT = nu;
-      rit.vrijVan = goed ? 0 : nu + POORTREGELS.TANK.slip * 1000;
-      rit.vrijTot = goed ? 0 : rit.vrijVan + POORTREGELS.TANK.vrij * 1000;
+      delete rit.vrijVan; delete rit.vrijTot;
       rit.laatste.tank = Math.round(rit.tank * 10) / 10; rit.laatste.brand = brand;
     }
     rit.vraag = null;
@@ -1337,7 +1354,7 @@ export class Kamer extends DurableObject {
       return;
     }
     if (this.raceWacht[sid]) return;
-    const nu = Date.now(), vroeg = (rit.poortTijd || 0) + RACE_FINISH_MS + (rit.uit[RACE_POORTEN - 1] === false ? RACE_NA_FOUT : 0) - nu;
+    const nu = Date.now(), vroeg = (rit.poortTijd || 0) + RACE_FINISH_MS + (rit.uit[RACE_POORTEN - 1] === false ? RACE_FINISH_FOUT : 0) - nu;
     if (vroeg > 0){
       this.raceWacht[sid] = setTimeout(() => {
         delete this.raceWacht[sid];
@@ -1363,7 +1380,9 @@ export class Kamer extends DurableObject {
   }
   /* ---------- Oneindig: de tank ---------- */
   /* De tank van een speler op tijdstip nu: wat hij had bij zijn laatste poort
-     (of de start), min het verbruik sindsdien, zonder de leestijd na een fout. */
+     (of de start), min het verbruik sindsdien. Een rit van voor september 2026
+     kan nog een gratis leestijd na een fout hebben (vrijVan tot vrijTot); die
+     telt nog, tot zijn volgende poort. */
   raceTank(sp, nu){
     const rit = sp.rit;
     if (!rit || rit.tank === undefined) return 100;
@@ -1392,24 +1411,21 @@ export class Kamer extends DurableObject {
     const st = this.stand, sp = st && st.spelers[sid];
     if (!sp || sp.af || !sp.rit || st.fase !== "bezig") return;
     const t = Math.min(Date.now(), this.raceLeegOp(sp));
+    /* waar hij stilviel: zijn laatste plek plus wat hij daarna met zijn snelheid
+       nog reed tot de tank leeg was, nooit voorbij zijn volgende poort */
+    if (sp.plekT && sp.vs > 0 && t > sp.plekT){
+      const r = sp.ronde | 0, verder = (sp.plek || 0) + sp.vs * Math.min(3000, t - sp.plekT) / 1000;
+      this.raceZetPlek(sp, Math.round(Math.max(r * 1000, Math.min(verder, (r + 1) * 1000 - 1)) * 10) / 10, t);
+    }
+    sp.vs = 0;
     sp.af = true; sp.afTijd = t; sp.tijd = t - (sp.raceStart || st.gestart || t);
     sp.rit.tank = 0; sp.rit.tankT = t; sp.rit.vraag = null;
     if (this.raceWacht && this.raceWacht[sid]){ clearTimeout(this.raceWacht[sid]); delete this.raceWacht[sid]; }
     await this.bewaar();
-    this.naarSpeler(sid, { t: "leeg", ronde: sp.ronde | 0, gehaald: sp.gehaald | 0, punten: sp.punten | 0, tijd: sp.tijd });
+    this.naarSpeler(sid, { t: "leeg", ronde: sp.ronde | 0, gehaald: sp.gehaald | 0, punten: sp.punten | 0, tijd: sp.tijd, km: Math.round(POORTREGELS.km((sp.plek || 0) / 1000) * 1000) / 1000 });
     this.planStand();
     this.raceTankPlan();
     return this.raceKlaar(false);
-  }
-  /* klaar met de uitleg na een fout: vanaf nu loopt de tank weer */
-  async raceVerder(sid, m){
-    const sp = this.stand.spelers[sid], rit = sp && sp.rit;
-    if (!this.oneindig || !rit || Number(m.k) !== (sp.ronde | 0) - 1 || rit.uit[sp.ronde - 1] !== false) return;
-    const nu = Date.now();
-    if (!(rit.vrijTot > nu)) return;
-    rit.vrijTot = Math.max(rit.vrijVan, nu);
-    await this.bewaar();
-    this.raceTankPlan();
   }
   /* een wekker voor de eerste die leeg raakt: de kamer wacht niet tot hij nog iets stuurt */
   raceTankPlan(){
@@ -1428,8 +1444,8 @@ export class Kamer extends DurableObject {
   }
   /* de volgorde in een race: wie binnen is op tijd, dan wie het verst kwam; wie wegging achteraan */
   raceVolgorde(a, b){
-    /* Oneindig: wie de meeste poorten had, en bij evenveel wie er het eerst was; leeg of niet doet er niet toe */
-    if (this.oneindig) return b.ronde - a.ronde || a.bij - b.bij || a.naam.localeCompare(b.naam);
+    /* Oneindig: wie het verst reed (de kilometers uit de plek), en bij evenveel wie er het eerst was; leeg of niet doet er niet toe */
+    if (this.oneindig) return (b.plek || 0) - (a.plek || 0) || b.ronde - a.ronde || a.bij - b.bij || a.naam.localeCompare(b.naam);
     if (a.af !== b.af) return a.af ? -1 : 1;
     if (a.af) return a.tijd - b.tijd || a.naam.localeCompare(b.naam);
     if (a.weg !== b.weg) return a.weg ? 1 : -1;
@@ -1452,6 +1468,33 @@ export class Kamer extends DurableObject {
     if (this.standTimer) return;
     this.standTimer = setTimeout(() => { this.standTimer = null; this.stuurStand(); }, 1200);
   }
+  /* Tussen twee standen door, om de halve seconde: alleen de plekken, zodat de
+     karretjes van de anderen soepel rijden. Elke speler krijgt wie binnen
+     RACE_POS_BUURT duizendsten van een poort van hem rijdt (verder weg zie je
+     ze toch niet), het bord iedereen. Kort: [pid, plek, vs, oud, ronde]. Met
+     dertig leerlingen hoogstens een paar honderd tekens per bericht. */
+  planPos(){
+    if (this.posTimer || !this.race) return;
+    this.posTimer = setTimeout(() => { this.posTimer = null; this.stuurPos(); }, RACE_POS_MS);
+  }
+  stuurPos(){
+    const st = this.stand;
+    if (!this.race || !st || st.fase !== "bezig") return;
+    const nu = Date.now(), alle = [];
+    Object.keys(st.spelers).forEach(s => {
+      const sp = st.spelers[s];
+      if (sp.weg || sp.af) return;
+      alle.push({ sid: s, rij: [sp.pid, sp.plek || 0, typeof sp.vs === "number" ? sp.vs : -1, sp.plekT ? Math.min(5000, nu - sp.plekT) : 0, sp.ronde | 0] });
+    });
+    if (!alle.length) return;
+    this.naarHost({ t: "pos", r: alle.map(x => x.rij) });
+    this.ctx.getWebSockets("speler").forEach(ws => {
+      const wie = ws.deserializeAttachment() || {}, mij = st.spelers[wie.sid];
+      if (!mij) return;
+      const p = mij.plek || 0, r = alle.filter(x => x.sid !== wie.sid && Math.abs(x.rij[1] - p) <= RACE_POS_BUURT).map(x => x.rij);
+      if (r.length) this.stuur(ws, { t: "pos", r });
+    });
+  }
   strijdLijst(){
     const st = this.stand, nu = Date.now();
     return Object.keys(st.spelers).map(sid => {
@@ -1461,7 +1504,9 @@ export class Kamer extends DurableObject {
                voort: sp.voort || 0, tijd: sp.tijd || 0, bij: sp.rit ? sp.rit.bij || 0 : 0,
                /* in een race: de plek in duizendsten van een poort, de snelheid en hoe oud die melding is */
                plek: this.race ? sp.plek || 0 : undefined, vs: this.race ? sp.vs : undefined, oud: this.race && sp.plekT ? Math.min(5000, nu - sp.plekT) : undefined,
-               tank: this.oneindig && sp.rit ? (sp.af ? 0 : Math.max(0, Math.round(this.raceTank(sp, nu)))) : undefined };
+               tank: this.oneindig && sp.rit ? (sp.af ? 0 : Math.max(0, Math.round(this.raceTank(sp, nu)))) : undefined,
+               /* Oneindig: de kilometers, op drie decimalen */
+               km: this.oneindig ? Math.round(POORTREGELS.km((sp.plek || 0) / 1000) * 1000) / 1000 : undefined };
     }).sort((a, b) => this.race ? this.raceVolgorde(a, b)
         : (this.stand.duel && a.af !== b.af) ? (a.af ? 1 : -1)   /* in een duel wint wie overeind blijft */
         : (b.gehaald - a.gehaald || b.punten - a.punten || (a.af === b.af ? 0 : a.af ? 1 : -1) || a.naam.localeCompare(b.naam)))
@@ -1484,7 +1529,7 @@ export class Kamer extends DurableObject {
        merkt niets van je fouten, en dan gooi je een goed antwoord weg */
     const doelen = (mij && mij.af) ? lijst.filter(r => !r.af && r.aan && r.sid !== pid).map(r => ({ sid: r.sid, naam: r.naam, av: r.av || "", ronde: r.ronde })) : undefined;
     /* in een race ziet iedereen iedereen: waar ze op de baan zijn, en wie er al binnen is */
-    const rijders = this.race ? lijst.map(r => ({ sid: r.sid, naam: r.naam, av: r.av || "", voort: r.voort, plek: r.plek, vs: r.vs, oud: r.oud, tank: r.tank, ronde: r.ronde, af: r.af, tijd: r.tijd, rang: r.rang, weg: r.weg, aan: r.aan, bij: r.bij })) : undefined;
+    const rijders = this.race ? lijst.map(r => ({ sid: r.sid, naam: r.naam, av: r.av || "", voort: r.voort, plek: r.plek, vs: r.vs, oud: r.oud, tank: r.tank, km: r.km, ronde: r.ronde, af: r.af, tijd: r.tijd, rang: r.rang, weg: r.weg, aan: r.aan, bij: r.bij })) : undefined;
     return { t: "stand", modus: this.stand.modus || undefined, jouw: mij ? { rang: mij.rang, van: lijst.length, af: !!mij.af } : null, bezig, koploper: kop, fase: this.stand.fase, maten, doelen, rijders, max: this.stand.duel ? this.samenMax() : undefined,
              tegen: tegen ? { naam: tegen.naam, av: tegen.av || "", ronde: tegen.ronde, leven: tegen.leven, punten: tegen.punten, af: tegen.af, aan: tegen.aan } : null };
   }

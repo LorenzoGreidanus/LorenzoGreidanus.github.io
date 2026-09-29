@@ -9,14 +9,14 @@
      var m = POORTMOTOR.maak(canvas, { onder, poort, geremd, wacht, finish, tik });
        onder()          hoeveel beeldpunten onderaan vrij moeten blijven (de baanknoppen)
        poort(k, baan)   je reed door poort k, in baan 0, 1 of 2
-       geremd()         de slip na een fout is uitgeslipt
+       geremd()         de slip na een fout is uitgeslipt (het voertuig rijdt zelf door)
        wacht(k)         rustige stand: je staat stil voor poort k
        finish()         over de finishlijn
      m.rit({ poorten, afstand, voertuig, kleur, spoor, spook, rustig, oneindig })  een nieuwe rit
                         oneindig: geen finish; een poort komt erbij zodra m.poort hem vraagt
      m.poort(k, banen)  de antwoorden van poort k: [{tekst}, {tekst}, {tekst}] (null is dicht)
      m.uitslag(k, gekozen, goed)   het paneel kleurt, en het effect erbij
-     m.snelheid(v), m.baan(i), m.stuur(-1|1), m.slip(), m.pauze(b), m.rijdDoor(), m.gas(b)
+     m.snelheid(v), m.baan(i), m.stuur(-1|1), m.slip(sec), m.pauze(b), m.rijdDoor(), m.gas(b)
      m.vanaf(k)         verder na een herlaad: het voertuig staat net voorbij poort k-1
      m.voort()          hoe ver je bent, van 0 (de start) tot 1 (de finish)
      m.plek()           hoe ver je bent in poorten: poort k staat op k+1 (ook in Oneindig)
@@ -188,7 +188,7 @@ window.POORTMOTOR = (function(){
     var luchtTex = null, heuvelTex = null, sprites = {};
     /* de rit */
     var zCam = 0, v = 0, vDoel = 0, x = 0, baanDoel = 1, camX = 0, boost = 0, gasAan = false;
-    var slipT = 0, slipDraai = 0, slipKlaar = false, kantel = 0;
+    var slipT = 0, slipDuur = 1.2, slipDraai = 0, slipKlaar = false, kantel = 0;
     var pauze = true, loopt = false, racen = false, klok = 0, fase = 0, tempo = 1;
     var poorten = [], nPoorten = 15, afstand = 44000, zStart = 0, finishZ = 1e9, gefinisht = false;
     /* oneindig: de lussen over de poorten beginnen bij eerste, want wat ver achter je ligt doet niet meer mee */
@@ -209,13 +209,19 @@ window.POORTMOTOR = (function(){
     /* De anderen in een race. Per rivaal: waar hij volgens de laatste melding was
        (zB, op tijdstip tB, met snelheid vB), tussen welke plekken hij kan zijn
        (zMin: net voorbij zijn laatste poort, zMax: net voorbij zijn volgende), en
-       waar hij nu getekend staat (z) met welke snelheid (vz). */
+       waar hij nu getekend staat (z) met welke snelheid (vz). vS is zijn
+       gemelde snelheid, glad gemaakt: daarmee rijdt hij, en het verschil met
+       waar hij hoort stuurt hij bij, met een grens aan optrekken en afremmen. */
     var rivalen = [], RIVAALKLEUR = ['#F26749', '#EA9836', '#2f7d52', '#6b3fa0', '#83A5F2', '#D9A21B', '#2f9e8f', '#14224C'];
 
     function nu(){ return performance.now(); }
     /* waar een rivaal nu hoort: zijn laatste plek plus wat hij sindsdien met zijn
        snelheid reed (hoogstens RIVAAL_VOORUIT seconden), tussen zMin en zMax */
     var RIVAAL_VOORUIT = 2.5;
+    /* hoe snel een rivaal van snelheid mag veranderen, per seconde: optrekken
+       zoals een echt karretje na een poort, afremmen zoals in de slip na een
+       fout (die zie je dus); RIVAAL_GLAD: hoe snel (s) vS de melding volgt */
+    var RIVAAL_OP = 12000, RIVAAL_AF = 22000, RIVAAL_GLAD = .3;
     /* staat plek z op het scherm (voor de auto, niet voorbij de horizon)? Wie
        buiten beeld is en achterloopt, mag meteen naar zijn plek: dat ziet niemand */
     function inBeeld(z){ return z - zCam > D * .5 && z < zCam + ZICHT * SEG; }
@@ -466,7 +472,7 @@ window.POORTMOTOR = (function(){
         if (slipT > 0){
           slipT = Math.max(0, slipT - dt);
           doel = vDoel * .22;
-          slipDraai = 1 - slipT / .9;
+          slipDraai = 1 - slipT / slipDuur;
           if (slipT === 0 && !slipKlaar){ slipKlaar = true; if (o.geremd) o.geremd(); }
         }
         if (gefinisht){ doel = 0; }
@@ -487,15 +493,21 @@ window.POORTMOTOR = (function(){
          snelheid, op de klok van de muur, en sturen ze het verschil met waar ze
          horen rustig bij: nooit achteruit, nooit harder dan een ruime boost. Is
          het verschil groter dan anderhalve poort (na een herlaad), of lopen ze
-         achter terwijl ze buiten beeld zijn (na je eigen uitleg), dan staan ze
-         meteen op hun plek. */
+         achter terwijl ze buiten beeld zijn, dan staan ze
+         meteen op hun plek. Sinds eind september 2026 komen de meldingen om de
+         halve seconde (de kamer stuurt de plekken van wie in de buurt rijdt
+         apart, 'pos'), rijden ze met hun gladde snelheid vS in plaats van de
+         laatste melding, en is hun optrekken en afremmen begrensd: geen
+         schokjes meer bij elke melding, wel een zichtbare rem bij een fout. */
       var echtDt = dt / (tempo || 1), tNu = nu();
       for (var ri = 0; ri < rivalen.length; ri++){
         var rv = rivalen[ri], rd = rivaalDoel(rv, tNu), verschil = rd - rv.z;
-        if (Math.abs(verschil) > afstand * 1.5 || (verschil > 0 && !inBeeld(rv.z) && !inBeeld(rd))){ rv.z = rd; rv.vz = rv.vB; continue; }
-        var wil = rv.vB + verschil * 1.5, max = Math.min(26000, Math.max(rv.vB, 4000) * 1.4 + 3000);
+        rv.vS += (rv.vB - rv.vS) * Math.min(1, echtDt / RIVAAL_GLAD);
+        if (Math.abs(verschil) > afstand * 1.5 || (verschil > 0 && !inBeeld(rv.z) && !inBeeld(rd))){ rv.z = rd; rv.vz = rv.vS = rv.vB; continue; }
+        var wil = rv.vS + verschil * 1.2, max = Math.min(26000, Math.max(rv.vB, 4000) * 1.4 + 3000);
         wil = Math.max(0, Math.min(max, wil));
-        rv.vz += (wil - rv.vz) * Math.min(1, echtDt * 5);
+        var dv = (wil - rv.vz) * Math.min(1, echtDt * 4);
+        rv.vz += Math.max(-RIVAAL_AF * echtDt, Math.min(RIVAAL_OP * echtDt, dv));
         rv.z += Math.max(0, rv.vz) * echtDt;
       }
       /* sturen: naar het midden van de gekozen baan */
@@ -915,8 +927,9 @@ window.POORTMOTOR = (function(){
       baan: function(b){ if (b < 0 || b > 2) return false; var ob = openBanen(); if (!ob[b]) return false; baanDoel = b; return true; },
       stuur: function(r){ var b = baanDoel + r, ob = openBanen(); while (b >= 0 && b <= 2 && !ob[b]) b += r; if (b < 0 || b > 2) return false; baanDoel = b; return true; },
       baanNu: function(){ return baanDoel; },
-      slip: function(){
-        slipT = .9; slipDraai = 0; slipKlaar = false;
+      /* na een fout: sec seconden slippen op een kwart van de snelheid (POORTREGELS.SLIP), daarna trekt hij zelf weer op */
+      slip: function(sec){
+        slipDuur = sec > 0 ? sec : 1.2; slipT = slipDuur; slipDraai = 0; slipKlaar = false;
         if (!weinigBeweging) for (var i = 0; i < 10; i++) deel(8, autoSchermX() + (Math.random() - .5) * autoBreed(), yAuto - 4, (Math.random() - .5) * 90, -20 - Math.random() * 40, .8, pal.nacht ? 'rgba(200,210,235,.35)' : 'rgba(120,110,95,.35)', 6 + Math.random() * 8);
         wek();
       },
@@ -952,7 +965,7 @@ window.POORTMOTOR = (function(){
           z += vB * Math.min(2, Math.max(0, +r.oud || 0));
           if (!oud){
             var h = 0, tk = String(r.id); for (var j = 0; j < tk.length; j++) h = (h * 31 + tk.charCodeAt(j)) >>> 0;
-            oud = { id:r.id, baan:h % 3, kleur:RIVAALKLEUR[(h >>> 3) % RIVAALKLEUR.length], z:z, vz:vB };
+            oud = { id:r.id, baan:h % 3, kleur:RIVAALKLEUR[(h >>> 3) % RIVAALKLEUR.length], z:z, vz:vB, vS:vB };
           }
           oud.zB = z; oud.tB = t; oud.vB = Math.min(30000, vB);
           /* net voorbij de laatste poort die hij had, en niet ver voorbij zijn volgende */
@@ -964,7 +977,7 @@ window.POORTMOTOR = (function(){
         rivalen = nieuw;
       },
       /* voor de proeven: waar de anderen getekend staan (vanaf de start) en waar ze horen */
-      rivalenStand: function(){ var t = nu(); return rivalen.map(function(rv){ return { id:rv.id, z:rv.z - zStart, doel:rivaalDoel(rv, t) - zStart, v:rv.vz, zicht:inBeeld(rv.z) }; }); },
+      rivalenStand: function(){ var t = nu(); return rivalen.map(function(rv){ return { id:rv.id, naam:rv.naam, t:laatst, z:rv.z - zStart, doel:rivaalDoel(rv, t) - zStart, v:rv.vz, zicht:inBeeld(rv.z) }; }); },
       uiterlijk: function(vt, kl, sp){ if (vt) voertuig = vt; if (kl) kleur = kleurVan(kl); if (sp) spoor = sp; teken(); },
       zetTempo: function(t){ tempo = t || 1; },
       /* voor de proeven: wat de motor nu doet */

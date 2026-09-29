@@ -150,17 +150,34 @@ function na(s, goed, rustig){
 /* alles goed: tweehonderd punten extra (niet in de tijdrit) */
 var ALLES_GOED = 200;
 
+/* Een foute poort: het voertuig slipt SLIP seconden en rijdt dan vanzelf
+   door; pas daarna komt de volgende vraag. Geen uitleg die blijft staan (tot
+   september 2026 stond de weg stil tot je op Volgende tikte): het goede
+   antwoord staat even in een balk boven de weg, en de gemiste vragen staan
+   met hun uitleg op het eindscherm. Met de motor nagemeten: een fout kost
+   zo ongeveer anderhalve seconde ten opzichte van een goede poort (de slip
+   zelf, en daarna optrekken vanaf een kwart van de snelheid), en het tempo
+   van de volgende poorten zakt. De kamer rekent met hetzelfde getal (raceMinMs). */
+var SLIP = 1.2;
+
 /* Oneindig: geen finish, je rijdt tot de tank leeg is. Hij loopt leeg terwijl
    je rijdt (verbruik procent per seconde, plus groei per poort die je had,
    maal de factor van je niveau: op vmbo-bb rijd je trager, dus iets zuiniger).
    Elke poort geeft brandstof: goed veel, met een beetje extra voor een reeks,
    fout een beetje. laag, bijna en hapert zijn de grenzen voor de meter.
-   Alleen rijden: tijdens de uitleg en de pauze verbruik je niets.
-   In een race houdt de kamer de tank bij, met dezelfde getallen en de klok van
-   de kamer. Pauze is er daar niet; na een fout zijn de slip (slip seconden)
-   en daarna de uitleg gratis, de uitleg hoogstens vrij seconden. */
-var TANK = { goed:24, reeks:1, reeksMax:4, fout:5, verbruik:2.5, groei:.045, laag:30, bijna:15, hapert:12, slip:.9, vrij:8 };
+   Hij loopt ook leeg in de slip na een fout: gratis tijd is er niet meer,
+   want er is geen uitleg meer om te lezen. Alleen rijden: tijdens de pauze
+   verbruik je niets. In een race houdt de kamer de tank bij, met dezelfde
+   getallen en de klok van de kamer; pauze is er daar niet. */
+var TANK = { goed:24, reeks:1, reeksMax:4, fout:5, verbruik:2.5, groei:.045, laag:30, bijna:15, hapert:12 };
 var TANK_NIV = { bb:.85, kgt:1, havo:1.12, vwo:1.12 };
+/* Oneindig telt in kilometers: wie het verst reed, wint. Van poort tot poort
+   is KM_POORT km (de motor: afstand 44000 per poort), dus een tank van vijftig
+   poorten is vijf kilometer. plek is in poorten vanaf de start (poort k staat
+   op k+1, zoals m.plek() en de kamer, die hem in duizendsten bijhoudt). */
+var KM_POORT = .1;
+function km(plek){ return Math.max(0, +plek || 0) * KM_POORT; }
+function kmTekst(k){ return (Math.floor(Math.max(0, +k || 0) * 10) / 10).toFixed(1).replace('.', ',') + ' km'; }
 /* procent per seconde, na k poorten */
 function verbruik(k, niveau){ return (TANK.verbruik + TANK.groei * k) * (TANK_NIV[niveau] || 1); }
 /* hoeveel brandstof een poort geeft; reeks is de reeks na deze poort. Nooit boven de volle tank. */
@@ -169,8 +186,8 @@ function tanken(tank, goed, reeks){
   return Math.max(0, Math.min(erbij, Math.ceil(100 - tank)));
 }
 
-g.POORTREGELS = { MAXANTW:MAXANTW, MAXVRAAG:MAXVRAAG, MINIMUM:MINIMUM, POORTEN:POORTEN, PAST:PAST, ALLES_GOED:ALLES_GOED,
-                  TANK:TANK, TANK_NIV:TANK_NIV,
+g.POORTREGELS = { MAXANTW:MAXANTW, SLIP:SLIP, MAXVRAAG:MAXVRAAG, MINIMUM:MINIMUM, POORTEN:POORTEN, PAST:PAST, ALLES_GOED:ALLES_GOED,
+                  TANK:TANK, TANK_NIV:TANK_NIV, KM_POORT:KM_POORT, km:km, kmTekst:kmTekst,
                   schud:schud, kortOk:kortOk, norm:norm, geschikt:geschikt, stapel:stapel, jaarVraag:jaarVraag, poort:poort, reserve:reserve,
                   leesTijd:leesTijd, doelTijd:doelTijd, na:na, verbruik:verbruik, tanken:tanken };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
