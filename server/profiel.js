@@ -21,7 +21,7 @@ function json(obj, status){
 }
 import COSMETICA from "../leermiddelen/cosmetica.js";
 import WAPENKAST from "../leermiddelen/wapens.js";
-function schoonAvatar(a){ a = String(a || "").replace(/[^a-z0-9]/g, "").slice(0, 40); return COSMETICA.ontleed(a) ? a : ""; }
+function schoonAvatar(a){ a = String(a || "").replace(/[^a-z0-9]/g, "").slice(0, 48); return COSMETICA.ontleed(a) ? a : ""; }
 function schoon(t, n){ return String(t == null ? "" : t).replace(/[<>]/g, "").slice(0, n); }
 function getal(x, max){ x = Number(x); return isFinite(x) ? Math.max(0, Math.min(max, Math.round(x))) : 0; }
 

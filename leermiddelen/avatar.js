@@ -132,21 +132,21 @@ window.AVATAR = (function(){
     c:['licht perzik', 'perzik', 'karamel', 'bruin', 'donkerbruin', 'roze', 'zonnegeel', 'mint', 'lila', 'framboos', 'grijs'],
     f:['geen', 'oortjes', 'bloem', 'wolkje', 'voelsprieten', 'knotje', 'kattenoren']
   };
-  var PATROON = /^v(\d{1,2})k(\d)o(\d{1,2})m(\d)e(\d)(?:c(\d{1,2}))?(?:x(\d{1,2}))?(?:w(\d))?(?:h(\d{1,2}))?(?:r(\d{1,2}))?(?:z(\d{1,2}))?(?:b(\d{1,2}))?(?:a(\d{1,2}))?(?:q(\d{1,2}))?(?:f(\d))?$/;
-  /* achter het gezichtje kan cosmetica staan: h (hoed), r (rand), z (zwaard), b, a, q en f, uit de winkel */
+  var PATROON = /^v(\d{1,2})k(\d)o(\d{1,2})m(\d)e(\d)(?:c(\d{1,2}))?(?:x(\d{1,2}))?(?:w(\d))?(?:h(\d{1,2}))?(?:r(\d{1,2}))?(?:z(\d{1,2}))?(?:b(\d{1,2}))?(?:a(\d{1,2}))?(?:q(\d{1,2}))?(?:f(\d))?(?:p(\d{1,2}))?$/;
+  /* achter het gezichtje kan cosmetica staan: h (hoed), r (rand), z (zwaard), b, a, q, f en p (pijlboog), uit de winkel */
   function ontleed(spec){
     spec = String(spec || '');
     var m = PATROON.exec(spec);
     /* Een spec die ergens onderweg is afgekapt (een oude server die er 24 tekens van bewaarde):
        haal er van achteren af tot hij weer klopt, dan blijft het gezicht en valt hooguit een bril weg. */
     for (var i = 0; !m && i < 16 && spec.length > 10 && /^v\d{1,2}k\do\d{1,2}m\de\d/.test(spec); i++){ spec = spec.replace(/[a-z]\d*$/, ''); m = PATROON.exec(spec); }
-    return m ? { v:+m[1], k:+m[2], o:+m[3], m:+m[4], e:+m[5], c:+(m[6] || 0), x:+(m[7] || 0), w:+(m[8] || 0), h:+(m[9] || 0), r:+(m[10] || 0), z:+(m[11] || 0), b:+(m[12] || 0), a:+(m[13] || 0), q:+(m[14] || 0), f:+(m[15] || 0) } : null; }
+    return m ? { v:+m[1], k:+m[2], o:+m[3], m:+m[4], e:+m[5], c:+(m[6] || 0), x:+(m[7] || 0), w:+(m[8] || 0), h:+(m[9] || 0), r:+(m[10] || 0), z:+(m[11] || 0), b:+(m[12] || 0), a:+(m[13] || 0), q:+(m[14] || 0), f:+(m[15] || 0), p:+(m[16] || 0) } : null; }
   function maak(o){
     /* x en w (haar) bestaan nog in het patroon, voor codes van even, maar worden niet meer gemaakt of getekend */
     var c = (o.c | 0) % (KLEUREN2.length + 1);
     return 'v' + (o.v % KEUZES.vormen) + 'k' + (o.k % KEUZES.kleuren) + 'o' + (o.o % KEUZES.ogen) + 'm' + (o.m % KEUZES.monden) + 'e' + (o.e % KEUZES.extras) +
       (c ? 'c' + c : '') +
-      (o.h ? 'h' + o.h : '') + (o.r ? 'r' + o.r : '') + (o.z ? 'z' + o.z : '') + (o.b ? 'b' + o.b : '') + (o.a ? 'a' + o.a : '') + (o.q ? 'q' + o.q : '') + (o.f ? 'f' + (o.f % KEUZES.figuren) : '');
+      (o.h ? 'h' + o.h : '') + (o.r ? 'r' + o.r : '') + (o.z ? 'z' + o.z : '') + (o.b ? 'b' + o.b : '') + (o.a ? 'a' + o.a : '') + (o.q ? 'q' + o.q : '') + (o.f ? 'f' + (o.f % KEUZES.figuren) : '') + (o.p ? 'p' + o.p : '');
   }
   /* Een lichte rand om een los stuk (hoed, trofee), zodat het ook op een donkere achtergrond
      te zien is. Het is dezelfde tekening nog een keer, maar dan als dikke witte omtrek eronder; wat

@@ -389,7 +389,11 @@ async function verdeel(req, env, ctx){
          logboeken en in de geschiedenis van de browser. Het adres blijft werken
          voor een pagina die nog uit de cache komt. */
       const sleutel = req.headers.get("x-sleutel") || url.searchParams.get("sleutel") || "";
-      return stub.fetch("https://kamer/resultaten?sleutel=" + encodeURIComponent(sleutel));
+      /* Opent de eigenaar van de site zijn eigen klas (ingelogd, met de sleutel), dan wordt het alsnog een klas
+         van de eigenaar: klassen van voor 20 september misten die vlag, en hun leerlingen dus de baret en het krijtje.
+         Net als bij het maken van een klascode bepaalt de server dit zelf, uit het sessiekoekje. */
+      const eigenaar = sleutel && await isEigenaar(req, env);
+      return stub.fetch("https://kamer/resultaten?sleutel=" + encodeURIComponent(sleutel) + (eigenaar ? "&eigenaar=1" : ""));
     }
 
     /* De stad. De portier zoekt een potje met plek; is er geen, dan

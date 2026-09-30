@@ -1839,8 +1839,10 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     return { schade:zwaardSchade() * (d.schade || 1), bereik:zwaardBereik(), tempo:zwaardTempo() * (d.tempo || 1), snel:loopSnel(), pantser:pantser(),
              mesTempo:mesTempo(), mesSchade:mesSchade(), harnas:stat('harnas'), maxHp:maxHp,
              boogSchade:boogSchade() * (d.boogSchade || 1), boogBereik:boogBereik() * (d.boogBereik || 1), boogTempo:boogTempo() * (d.boogTempo || 1),
-             dashX:1 + 0.35 * v('dash'), pijlDoor:v('pijl'), critX:2 + v('crit'), critExtra:critExtra(), magneet:1 + v('magneet'), blokMax:3 + 2 * v('blok'), stijl:stijl };
+             dashX:1 + 0.35 * v('dash'), pijlDoor:v('pijl'), critX:2 + v('crit'), critExtra:critExtra(), magneet:1 + v('magneet'), blokMax:3 + 2 * v('blok'), stijl:stijl, boogStijl:mijnBoog() };
   }
+  /* de boog uit de winkel (p in je gezichtje), 0 is de gewone */
+  function mijnBoog(){ var o = window.AVATAR && window.PROFIEL ? AVATAR.ontleed(PROFIEL.avatar() || '') : null; return o && o.p && window.COSMETICA && COSMETICA.BOGEN[o.p] ? o.p : 0; }
   function eigenInvoer(){
     var dx = 0, dy = 0;
     if (toetsen['arrowleft'] || toetsen['a']) dx -= 1;
@@ -2421,17 +2423,21 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     /* Het wapen, aan de kant waar je heen mikt. Het zwaard staat bij een zwaai
        in de boog; de pijl en boog staat stil en de pees springt bij een schot. */
     var g0 = R * 0.75;
-    if (sp2.wapen === 'boog'){
-      var pees = sp2.zwaai > 0 ? (sp2.zwaai / 0.12) * 9 : 0;
-      s += '<g transform="rotate(' + mikt.toFixed(1) + ')">' +
-        '<path d="M' + (g0 + 6) + ',-15 A17,17 0 0 1 ' + (g0 + 6) + ',15" fill="none" stroke="#8a6a3f" stroke-width="4" stroke-linecap="round"/>' +
-        '<path d="M' + (g0 + 6) + ',-15 L' + (g0 + 6 - pees).toFixed(1) + ',0 L' + (g0 + 6) + ',15" fill="none" stroke="#dfe6ee" stroke-width="1.8"/>' +
-        (sp2.zwaai > 0 ? '<path d="M' + (g0 + 2) + ',0 L' + (g0 + 26) + ',0" stroke="#dfe6ee" stroke-width="2.6" stroke-linecap="round"/>' : '') +
-        '</g>';
+    /* wat je uit de winkel hebt: je eigen gezichtje, of dat van je maat */
+    var zsp = window.AVATAR ? AVATAR.ontleed(naam ? (av || '') : (window.PROFIEL ? PROFIEL.avatar() : '')) : null;
+    if (sp2.wapen === 'boog' && window.COSMETICA && COSMETICA.boog){
+      /* De boog met een pijl erop. Bij een schot slaat de pees naar voren en trilt hij na; daarna
+         komt er een nieuwe pijl op en trek je hem weer naar achteren. */
+      var bn = zsp && zsp.p && COSMETICA.BOGEN[zsp.p] ? zsp.p : 0, t = sp2.zwaai > 0 ? sp2.zwaai / 0.12 : 0, trek, opgelegd;
+      if (t > 0.35){ var na = (1 - t) / 0.65; trek = -Math.sin(na * Math.PI * 3) * 2.6 * (1 - na); opgelegd = false; }
+      else { trek = 6 * (1 - t / 0.35); opgelegd = true; }
+      s += '<g transform="rotate(' + mikt.toFixed(1) + ')">' + COSMETICA.boog(bn, g0 + 3, trek, opgelegd) + '</g>';
+    } else if (sp2.wapen === 'boog'){
+      s += '<g transform="rotate(' + mikt.toFixed(1) + ')"><path d="M' + (g0 + 6) + ',-15 A17,17 0 0 1 ' + (g0 + 6) + ',15" fill="none" stroke="#8a6a3f" stroke-width="4" stroke-linecap="round"/></g>';
     } else {
       var zw = sp2.zwaai > 0 ? mikt + (sp2.zwaai / 0.18 - 0.5) * SPELER.boog : mikt - 30;
       /* het zwaard uit de winkel: de kling in een andere kleur, soms met een gloed */
-      var zsp = window.AVATAR ? AVATAR.ontleed(naam ? (av || '') : (window.PROFIEL ? PROFIEL.avatar() : '')) : null, zn = zsp ? zsp.z : 0;
+      var zn = zsp ? zsp.z : 0;
       var kling = [null, '#F26749', '#9fd3ff', '#FFD166', '#7CFC9A', '#a5773f', '#F3EFE9'][zn] || '#dfe6ee', gloed = [null, '#EA9836', '#83A5F2', null, '#2fbf71', null, null][zn];
       s += '<g transform="rotate(' + zw.toFixed(1) + ')">' +
         (gloed ? '<path d="M' + g0 + ',0 L' + (g0 + ber * 0.6).toFixed(0) + ',0" stroke="' + gloed + '" stroke-width="11" stroke-linecap="round" opacity=".45"/>' : '') +
@@ -2677,9 +2683,10 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     messen.forEach(function(m){
       s += '<g transform="translate(' + m.x.toFixed(1) + ',' + m.y.toFixed(1) + ') rotate(' + (m.hoek * 180 / Math.PI).toFixed(1) + ')">' +
         (m.pijl
-          ? '<path d="M-13,0 L9,0" stroke="#8a6a3f" stroke-width="2.6" stroke-linecap="round"/>' +
-            '<path d="M13,0 L4,-4.5 L4,4.5 Z" fill="#dfe6ee" stroke="#5b6480" stroke-width="1.1" stroke-linejoin="round"/>' +
-            '<path d="M-13,0 l6,-4.5 M-13,0 l6,4.5" stroke="#F26749" stroke-width="2" stroke-linecap="round" fill="none"/>'
+          ? (window.COSMETICA && COSMETICA.pijl
+            /* m.pijl is 1 + de boog van wie hem schoot */
+            ? COSMETICA.spoor(Math.max(0, m.pijl - 1), -15, 18) + COSMETICA.pijl(Math.max(0, m.pijl - 1), -15, 30)
+            : '<path d="M-13,0 L9,0" stroke="#8a6a3f" stroke-width="2.6" stroke-linecap="round"/><path d="M13,0 L4,-4.5 L4,4.5 Z" fill="#dfe6ee"/>')
           : '<path d="M-8,0 L6,0 L10,-2.5 L6,-5 L-2,-5 Z" fill="#dfe6ee" stroke="#5b6480" stroke-width="1.2"/><rect x="-10" y="-2" width="5" height="4" fill="#5f4830"/>') +
         '</g>';
     });

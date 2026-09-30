@@ -487,7 +487,7 @@ function maak(opzet){
     var h = schoonHeld(o.held, klasse);
     var plek = spawnPlek();
     var p = {
-      nr: W.spelers.length, naam: String(o.naam || 'Speler').slice(0, 16), av: String(o.av || '').slice(0, 40), klasse: klasse,
+      nr: W.spelers.length, naam: String(o.naam || 'Speler').slice(0, 16), av: String(o.av || '').slice(0, 48), klasse: klasse,
       x: plek.x, y: plek.y, dx: 0, dy: 0, mikt: 0, kijkX: 1, kijkY: 0, wapen: klasse === 'schutter' ? 'boog' : 'zwaard', klok: 0, zwaai: 0, werv: 0,
       dash: 0, dashKlok: 0, ddx: 1, ddy: 0, raak: 1, flits: 0, blokVraag: false, blok: false, blokTijd: BLOK.max,
       krKlok: 0, crit: false, reeks: 0,

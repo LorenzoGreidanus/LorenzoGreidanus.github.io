@@ -341,7 +341,7 @@ function noodSom(r){
   return { v: "Hoeveel is " + a + " × " + b + "?", o: [String(goed), String(goed + a), String(goed - b)], g: 0, u: a + " × " + b + " = " + goed + ".", t: "tafels" };
 }
 /* een gekozen avatar: v3k2o1m0e4, anders leeg (dan komt hij uit de bijnaam) */
-function schoonAv(a){ a = String(a || "").replace(/[^a-z0-9]/g, "").slice(0, 40); return /^v\d{1,2}k\do\d{1,2}m\de\d(c\d{1,2})?(x\d{1,2})?(w\d)?(h\d{1,2})?(r\d{1,2})?(z\d{1,2})?(b\d{1,2})?(a\d{1,2})?(q\d{1,2})?(f\d)?$/.test(a) ? a : ""; }
+function schoonAv(a){ a = String(a || "").replace(/[^a-z0-9]/g, "").slice(0, 48); return /^v\d{1,2}k\do\d{1,2}m\de\d(c\d{1,2})?(x\d{1,2})?(w\d)?(h\d{1,2})?(r\d{1,2})?(z\d{1,2})?(b\d{1,2})?(a\d{1,2})?(q\d{1,2})?(f\d)?(p\d{1,2})?$/.test(a) ? a : ""; }
 function sleutelMaken(n){
   const r = crypto.getRandomValues(new Uint8Array(n || 12));
   return Array.from(r, b => b.toString(16).padStart(2, "0")).join("");
@@ -414,7 +414,7 @@ export class Kamer extends DurableObject {
       if (url.pathname === "/melden" && req.method === "POST") return await this.melden(await req.json());
       if (url.pathname === "/quizkenmerken" && req.method === "POST") return await this.quizKenmerken(await req.json());
       if (url.pathname === "/opheffen" && req.method === "POST") return await this.opheffen(await req.json());
-      if (url.pathname === "/resultaten") return await this.resultaten(url.searchParams.get("sleutel"));
+      if (url.pathname === "/resultaten") return await this.resultaten(url.searchParams.get("sleutel"), url.searchParams.get("eigenaar") === "1");
       if (url.pathname === "/opdracht" && req.method === "POST") return await this.opdracht(await req.json());
       if (url.pathname === "/instelling" && req.method === "POST") return await this.instelling(await req.json());
       if (url.pathname === "/periodes" && req.method === "POST") return await this.periodes(await req.json());
@@ -2087,9 +2087,11 @@ export class Kamer extends DurableObject {
     await this.ctx.storage.deleteAll();
     return json({ ok: true });
   }
-  async resultaten(sleutel){
+  async resultaten(sleutel, eigenaar){
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
     if (!sleutel || sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
+    /* de eigenaar van de site opent zijn eigen klas: dan krijgen de leerlingen alsnog wat erbij hoort (zie index.js) */
+    if (eigenaar && !this.stand.vanEigenaar){ this.stand.vanEigenaar = true; await this.bewaar(); }
     /* oude dubbelingen eerst samenvoegen, zodat de uitslagen hieronder al goed staan */
     if (!this.stand.samengevoegd){ this.samenvoegen(); await this.bewaar(); }
     /* kijken telt ook als gebruik, hoogstens een keer per uur bijgeschreven */

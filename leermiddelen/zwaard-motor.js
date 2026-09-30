@@ -249,7 +249,7 @@ function maak(opties){
      van. Pantser deelt de schade die je krijgt, dus daar is juist een bodem
      nodig; de rest van de lijst begint op nul en heeft een eigen plafond. */
   var STATS_KEER = 12;
-  var STATS_DAK = { mesTempo:20, mesSchade:200, harnas:100, dashX:6, pijlDoor:10, critX:8, critExtra:0.5, magneet:1000, blokMax:60 };
+  var STATS_DAK = { mesTempo:20, mesSchade:200, harnas:100, dashX:6, pijlDoor:10, critX:8, critExtra:0.5, magneet:1000, blokMax:60, boogStijl:9 };
   function statBinnen(k, v){
     if (k === 'pantser') return Math.max(0.05, Math.min(1, v));
     if (STATS_DAK[k] !== undefined) return Math.max(0, Math.min(STATS_DAK[k], v));
@@ -260,7 +260,7 @@ function maak(opties){
   W.zetStats = function(i, st, hpNu){
     var P = W.spelers[i]; if (!P || !st) return;
     ['schade', 'bereik', 'tempo', 'snel', 'pantser', 'mesTempo', 'mesSchade', 'harnas', 'maxHp', 'boogSchade', 'boogBereik', 'boogTempo',
-     'dashX', 'pijlDoor', 'critX', 'critExtra', 'magneet', 'blokMax'].forEach(function(k){
+     'dashX', 'pijlDoor', 'critX', 'critExtra', 'magneet', 'blokMax', 'boogStijl'].forEach(function(k){
       if (typeof st[k] === 'number' && isFinite(st[k])) P.stats[k] = statBinnen(k, st[k]);
     });
     if (STIJLEN[st.stijl]) P.stijl = st.stijl;
@@ -826,7 +826,7 @@ function maak(opties){
         var hp2 = Math.atan2(dichtst.y - s.y, dichtst.x - s.x);
         W.messen.push({ id:++W.nr, x:s.x, y:s.y, vx:Math.cos(hp2) * SPELER.pijlboog.snel, vy:Math.sin(hp2) * SPELER.pijlboog.snel,
                         leven:1.1, hoek:hp2, schade:P.stats.boogSchade || (P.stats.schade * SPELER.pijlboog.deel),
-                        draai:0, van:P, pijl:1, door:P.stats.pijlDoor || 0, geraakt:{} });
+                        draai:0, van:P, pijl:1 + Math.round(P.stats.boogStijl || 0), door:P.stats.pijlDoor || 0, geraakt:{} });   /* pijl: 1 + de boog uit de winkel */
       }
     } else if (dichtst && da <= P.stats.bereik + dichtst.r && s.klok <= 0){
       s.klok = P.stats.tempo; s.zwaai = 0.18;
@@ -1133,7 +1133,7 @@ function maak(opties){
       fo:W.fouten.map(function(f){ var o = [r1(f.x), r1(f.y), Math.round(f.hp), f.maxHp, f.baas ? 'b:' + f.def.id : f.soort.id, f.r, f.flits > 0 ? 0.1 : 0, r2(f.stap), f.schild || 0, r2(f.mikt || 0), f.id];
         if (f.soort.laden) o.push(r2(f.laadKlok || 0), r2(f.stilKlok || 0));
         return o; }),
-      me:W.messen.map(function(m){ return [r1(m.x), r1(m.y), r2(m.hoek), m.pijl ? 1 : 0, m.id]; }),
+      me:W.messen.map(function(m){ return [r1(m.x), r1(m.y), r2(m.hoek), m.pijl || 0, m.id]; }),
       mu:W.munt.map(function(m){ return [r1(m.x), r1(m.y), m.waarde, m.id]; }),
       ci:W.cijfers.map(function(c){ return [r1(c.x), r1(c.y), c.tekst, c.kleur, r2(c.leven)]; }),
       aa:W.aanvallen.map(function(a){ return [a.soort, r1(a.x), r1(a.y), r2(a.t), r2(a.hoek || 0), a.richting || 1, r2(a.nu || 0), r1(a.straal || 0), a.geknald ? 1 : 0, r2(a.k || 1), r2(a.gat || 0), a.breed || 0, r2(a.boog || 0), r2(a.duur || 0), a.r0 || 0, a.kl || '', a.id].concat(a.ox !== undefined ? [r1(a.ox), r1(a.oy)] : []); }) };
