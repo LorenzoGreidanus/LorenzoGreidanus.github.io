@@ -34,7 +34,7 @@
 const ARENA = { b:1100, h:620, rand:26 };
 /* 'boog' is de wijdte van de zwaai in graden; 'pijlboog' is het tweede wapen:
    minder schade en trager, maar het raakt van ver. */
-const SPELER = { r:22, hp:100, snelheid:200, zwaard:{ schade:16, bereik:82, tempo:0.55 }, boog:130,
+const SPELER = { r:22, hp:125, snelheid:200, zwaard:{ schade:16, bereik:82, tempo:0.55 }, boog:130,
                  pijlboog:{ deel:0.55, bereik:330, tempo:1.2, snel:620 } };
 /* Ontwijken: een korte sprong in je looprichting, even onkwetsbaar, en dan
    een paar seconden wachten. */
