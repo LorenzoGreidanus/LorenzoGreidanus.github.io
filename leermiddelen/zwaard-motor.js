@@ -111,8 +111,8 @@ const BAZEN = [
     aanvallen:['vloer', 'lichten', 'golf', 'veeg', 'raster', 'cirkel'],
     wat:'Een dansvloer die op de maat oplicht, lichtbundels die rondgaan en strepen die over de vloer vegen. Blijf bewegen.' },
   { id:'metronoom', naam:'De Metronoom', kleur:'#1f6b5c', vorm:'metronoom', hp:20, r:46, schade:25, schild:0.35, tempo:0.65,
-    aanvallen:['slinger', 'vloer', 'veeg', 'raster', 'krimp', 'tik'],
-    wat:'Een slinger die van links naar rechts over de arena zwaait, een vloer die op de tik oplicht en strepen in de maat. Blijf in beweging.' }
+    aanvallen:['slinger', 'baan', 'kruis', 'veeg', 'raster', 'tik'],
+    wat:'Een slinger die van links naar rechts over de arena zwaait, rechte halen en kruisen zoals De Rode Pen, strepen die over de vloer vegen en een raster in de maat. Blijf in beweging.' }
 ];
 /* De aanvallen. Elke aanval heeft eerst een waarschuwing die je op de grond
    ziet, en dan het moment dat het raakt. Alle maten zijn in arenapunten. */
