@@ -80,6 +80,10 @@ const GEVAAR = { vanaf:4, vuur:{ r:72, schade:5, tik:0.5 }, ijs:{ r:100, grip:1.
 const STIJLEN = { ridder:{ maxHp:1.3, schade:1.15, tempo:1.15, boogSchade:0.8 }, schutter:{ boogSchade:1.4, boogTempo:0.8, boogBereik:1.15, maxHp:0.8, schade:0.85 }, wacht:{ maxHp:1.1, blok:true } };
 const BLOK = { max:3, laad:0.5, deel:0.2, traag:0.4 };
 const CRIT = { x:2, straal:90, deel:0.5 };
+/* Het late spel: vanaf ronde 15 is alles duur en taai, dus levert elke munt een kwart meer op
+   (de munten in de arena en het geld voor een goed antwoord). */
+const LAAT = { vanaf:15, munten:1.25 };
+function laatExtra(ronde){ return ronde >= LAAT.vanaf ? LAAT.munten : 1; }
 /* De zes bazen. Om de vijf rondes komt de volgende aan de beurt, en na de
    zesde begint de rij opnieuw op een hogere ronde en dus taaier. */
 const BAZEN = [
@@ -244,11 +248,11 @@ function maak(opties){
   /* Wat een waarde hoogstens mag zijn. De winkel draait in de browser, dus de
      motor krijgt de uitrusting aangereikt en kan hem niet narekenen. Zonder
      plafond was {schade:99999, maxHp:99999} genoeg om in een gedeelde arena
-     alles in een klap te vellen. Twaalf keer de uitgangswaarde ligt ruim boven
+     alles in een klap te vellen. Veertien keer de uitgangswaarde ligt boven
      alles wat de winkel ooit uitdeelt, dus wie gewoon speelt merkt er niets
      van. Pantser deelt de schade die je krijgt, dus daar is juist een bodem
      nodig; de rest van de lijst begint op nul en heeft een eigen plafond. */
-  var STATS_KEER = 12;
+  var STATS_KEER = 14;   /* was 12; met het achtste niveau van het zwaard komt de ridder op 12,7 */
   var STATS_DAK = { mesTempo:20, mesSchade:200, harnas:100, dashX:6, pijlDoor:10, critX:8, critExtra:0.5, magneet:1000, blokMax:60, boogStijl:9 };
   function statBinnen(k, v){
     if (k === 'pantser') return Math.max(0.05, Math.min(1, v));
@@ -911,7 +915,7 @@ function maak(opties){
         W.pluis.push({ x:f.x, y:f.y, vx:Math.cos(hk) * sn, vy:Math.sin(hk) * sn, leven:0.45, kleur:f.soort.kleur });
       }
       if (f.baas || toeval() < MUNT_VAL){
-        W.munt.push({ id:++W.nr, x:f.x, y:f.y, waarde:f.baas ? 25 + W.ronde * 3 : 2 + Math.floor(W.ronde / 3), leven:12 });
+        W.munt.push({ id:++W.nr, x:f.x, y:f.y, waarde:Math.round((f.baas ? 25 + W.ronde * 3 : 2 + Math.floor(W.ronde / 3)) * laatExtra(W.ronde)), leven:12 });
       }
     }
   }
@@ -1143,7 +1147,7 @@ function maak(opties){
   return W;
 }
 
-g.ZWAARDMOTOR = { maak:maak, ARENA:ARENA, SPELER:SPELER, DASH:DASH, FOUTEN:FOUTEN, BAZEN:BAZEN, AANVAL:AANVAL, BAASRONDE:BAASRONDE, muurStand:muurStand, STIJLEN:STIJLEN, BLOK:BLOK, GEVAAR:GEVAAR, CRIT:CRIT,
+g.ZWAARDMOTOR = { maak:maak, ARENA:ARENA, SPELER:SPELER, DASH:DASH, FOUTEN:FOUTEN, BAZEN:BAZEN, AANVAL:AANVAL, BAASRONDE:BAASRONDE, muurStand:muurStand, STIJLEN:STIJLEN, BLOK:BLOK, LAAT:LAAT, laatExtra:laatExtra, GEVAAR:GEVAAR, CRIT:CRIT,
                   MUNT_VAL:MUNT_VAL, RAAKPAUZE:RAAKPAUZE, RAAPTIJD:RAAPTIJD, aantalInRonde:aantalInRonde, foutHp:foutHp, baasVan:baasVan, basisStats:basisStats, nieuweSp:nieuweSp };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 if (typeof module !== 'undefined' && module.exports) module.exports = globalThis.ZWAARDMOTOR;
