@@ -11,8 +11,8 @@ STAPPEN.les('zwaard', function(){
           tekst: '<p>Je wapen slaat vanzelf naar de dichtstbijzijnde fout binnen bereik. Met Q wissel je tussen zwaard en boog. Jij zorgt dat je op de goede plek staat.</p>' },
         { kop: 'Na elke ronde: vragen', beeld: S.formule('goed antwoord → <span class="st-na">geld</span> → beter zwaard, harnas, laarzen'),
           tekst: '<p>Na elke ronde beantwoord je een paar vragen. Elk goed antwoord is geld, en daarmee koop je een scherper zwaard, een harnas, snellere laarzen of een werpmes.</p>' },
-        { kop: 'Bazen en schutters', beeld: S.formule('licht de grond op? stap eruit'),
-          tekst: '<p>Een baas of een schutter laat eerst zien waar hij gaat raken: de grond licht op. Stap daar op tijd uit.</p>' +
+        { kop: 'Bazen, schutters en mortiers', beeld: S.formule('licht de grond op? stap eruit'),
+          tekst: '<p>Een baas, een schutter of een mortier laat eerst zien waar hij gaat raken: de grond licht op. De schutter trekt een streep, de mortier (vanaf ronde 7) zet een kleine cirkel waar zijn granaat neerkomt. Stap daar op tijd uit.</p>' +
             S.bak('Samen spelen kan ook: dan beantwoordt de hele klas dezelfde vragen tussen de rondes.', 'goed') }
       ]
     }

@@ -65,7 +65,14 @@ const FOUTEN = [
   { id:'pantser',  naam:'gepantserde fout', vanaf:5, kans:2, mark:'▣', kleur:'#3b4759', hp:1.6, snel:0.75, r:22, schade:14, pijlDeel:0.25 },
   { id:'splitser', naam:'splitser',         vanaf:4, kans:2, mark:'÷', kleur:'#a0455f', hp:1.1, snel:0.9,  r:21, schade:10, splijt:3 },
   { id:'stukje',   naam:'stukje',           vanaf:99, kans:0, mark:'·', kleur:'#a0455f', hp:0.28, snel:1.45, r:11, schade:5 },
-  { id:'genezer',  naam:'genezer',          vanaf:6, kans:2, mark:'+', kleur:'#2f9e8f', hp:0.9, snel:0.8,  r:18, schade:6, afstand:210, heelt:0.05 }
+  { id:'genezer',  naam:'genezer',          vanaf:6, kans:2, mark:'+', kleur:'#2f9e8f', hp:0.9, snel:0.8,  r:18, schade:6, afstand:210, heelt:0.05 },
+  /* De mortier houdt nog meer afstand dan de schutter en schiet met een boog:
+     de granaat vliegt over alles heen en komt neer waar jij stond. Die plek
+     licht op de grond op, net als bij een baas maar kleiner (AANVAL.granaat).
+     Hij schiet alleen als hij binnen de lijn staat, en staat even stil bij
+     het mikken en na het schot. */
+  { id:'mortier',  naam:'mortier',          vanaf:7, kans:1.5, mark:'◎', kleur:'#9a6a2f', hp:0.9, snel:0.7, r:19, schade:8,
+    afstand:300, laden:3.4, mik:0.55, granaat:true }
 ];
 /* De gevaren in de arena, vanaf ronde 4: een vuurpoel, een ijsvlak en een muur die heen en weer schuift. */
 const GEVAAR = { vanaf:4, vuur:{ r:72, schade:5, tik:0.5 }, ijs:{ r:100, grip:1.6 }, muur:{ w:26, h:190, snel:95 } };
@@ -129,7 +136,14 @@ const AANVAL = {
   wijzers:{ wacht:1, duur:3.4, breed:24, schade:16 },
   tik:{ wacht:0.8, knal:0.3, r:62, schade:16, ring:210, na:0.16, aantal:12 },
   krimp:{ wacht:1.1, duur:2.2, van:660, band:30, gat:Math.PI * 0.3, schade:20 },
-  schot:{ wacht:0.8, snel:430, r:11, schade:14, breed:26, leven:3 }
+  schot:{ wacht:0.8, snel:430, r:11, schade:14, breed:26, leven:3 },
+  /* De granaat van de mortier: een cirkel zoals bij een baas, maar kleiner.
+     'vlucht' is hoe lang hij in de lucht hangt, en dus hoe lang de cirkel op
+     de grond staat voor hij ploft: in ronde 7 anderhalve seconde, elke ronde
+     een fractie korter, nooit onder de 1,05. Om 44 punten uit te lopen heb je
+     een kwart seconde nodig; er blijft dus ruim tijd over om te zien en te
+     stappen. 'na' is hoe lang hij na de klap nog stilstaat. */
+  granaat:{ r:44, knal:0.3, schade:13, na:0.35, vlucht:function(n){ return Math.max(1.05, 1.5 - Math.max(0, n - 7) * 0.02); } }
 };
 /* De muur: een band die van de ene kant van de arena naar de andere veegt,
    met een gat erin. hoek 0 = van links naar rechts, halve pi = van boven naar
@@ -186,13 +200,13 @@ function maak(opties){
     seed:toevalZaad, ronde:0, fase:'ronde', pauze:false,
     fouten:[], messen:[], munt:[], pluis:[], cijfers:[], aanvallen:[],
     teSpawnen:0, spawnKlok:0, tijdInRonde:0, rondeUit:0, raapTeller:-1, extra:0, geveld:0, nr:0,
-    zones:[], baasGeveld:0,
+    zones:[], baasGeveld:0, tik:0,
     spelers:[]
   };
   (opties.spelers && opties.spelers.length ? opties.spelers : [{ naam:'jij' }]).forEach(function(o, i){
     W.spelers.push({ i:i, naam:o.naam || 'speler ' + (i + 1), sp:nieuweSp(ARENA.b / 2, ARENA.h / 2), stats:basisStats(),
                      inv:{ dx:0, dy:0 }, hp:SPELER.hp, maxHp:SPELER.hp, neer:false, munten:0, geveld:0, klaar:false,
-                     dashVraag:false, wapenVraag:false, inNr:0, stijl:'', blokVraag:false });
+                     dashVraag:false, wapenVraag:0, inNr:0, inTik:0, stijl:'', blokVraag:false });
   });
   var samen = W.spelers.length > 1;
   /* met meer spelers meer fouten en een taaiere baas: twee anderhalf keer, drie twee keer, vier tweeënhalf keer */
@@ -203,8 +217,26 @@ function maak(opties){
     var P = W.spelers[i]; if (!P) return;
     P.inv = { dx:Math.max(-1, Math.min(1, +dx || 0)), dy:Math.max(-1, Math.min(1, +dy || 0)) };
     if (nr) P.inNr = nr;
+    /* sinds welke tik deze toetsen gelden: de browser rekent daarmee terug
+       waar hij volgens de kamer nu moet staan (zie inpak) */
+    P.inTik = W.tik;
     P.blokVraag = !!blok && P.stijl === 'wacht';
   };
+  /* Wisselen van wapen, zo vaak als er gedrukt is. Een vlag ging verloren als
+     twee drukken in dezelfde tik binnenkwamen: twee keer wisselen werd een keer.
+     Nu telt het mee, een wissel per tik, hoogstens vier op de wachtrij. */
+  /* Springen, samen: de browser zegt welke kant hij in beeld al opsprong, en
+     die kant geldt. Anders sprong de kamer de andere kant op als je vlak na de
+     sprong een andere toets indrukte, of als je stilstond en de kamer een
+     andere fout het dichtst zag dan jouw scherm. Een richting is geen
+     voordeel: lopend kies je hem ook zelf. */
+  W.wilSpringen = function(i, sx, sy){
+    var P = W.spelers[i]; if (!P) return;
+    P.dashVraag = true;
+    var l = Math.hypot(+sx || 0, +sy || 0);
+    P.dashRichting = isFinite(l) && l > 0.01 ? { dx:(+sx) / l, dy:(+sy) / l } : null;
+  };
+  W.wilWapen = function(i, n){ var P = W.spelers[i]; if (P) P.wapenVraag = Math.min(4, (P.wapenVraag | 0) + Math.max(1, n | 0)); };
   /* drie goed op rij: de volgende klap is een critical */
   W.crit = function(i){ var P = W.spelers[i]; if (P) P.sp.crit = true; };
   W.ontwijk = function(i){ var P = W.spelers[i]; if (P && W.fase === 'ronde' && !W.pauze) ontwijkMet(P.sp); };
@@ -243,9 +275,10 @@ function maak(opties){
     if (W.fase === 'ronde'){ for (var i = 0; i < n; i++) spawn(kiesFout()); }
     else W.extra += n;
   };
-  function ontwijkMet(s){
+  function ontwijkMet(s, richting){
     if (s.dashKlok > 0 || s.dash > 0) return;
-    if (!s.loopt){
+    if (richting){ s.dx = richting.dx; s.dy = richting.dy; }
+    else if (!s.loopt){
       var d = null, da = 1e9;
       W.fouten.forEach(function(f){ var a = Math.hypot(f.x - s.x, f.y - s.y); if (a < da){ da = a; d = f; } });
       if (d){ var wx = s.x - d.x, wy = s.y - d.y, wl = Math.hypot(wx, wy) || 1; s.dx = wx / wl; s.dy = wy / wl; }
@@ -275,7 +308,7 @@ function maak(opties){
       s.x = ARENA.b / 2 + (samen ? (i - (W.spelers.length - 1) / 2) * 70 : 0); s.y = ARENA.h / 2;
       s.raak = 0; s.klok = 0; s.mesKlok = 0; s.dash = 0; s.dashKlok = 0;
       if (P.neer && !P.weg){ P.neer = false; P.hp = Math.max(1, Math.round(P.maxHp / 2)); }
-      P.klaar = false; P.inv = { dx:0, dy:0 };
+      P.klaar = false; P.inv = { dx:0, dy:0 }; P.dashVraag = false; P.wapenVraag = 0;
     });
     /* in een baasronde komen er minder gewone fouten bij: de baas is het werk */
     /* in een nachtmerrie is er alleen de baas: geen gewone fouten ertussen */
@@ -328,7 +361,7 @@ function maak(opties){
      blijven wachten. Waren de anderen al klaar, dan begint de ronde meteen. */
   W.vertrek = function(i){
     var P = W.spelers[i]; if (!P || P.weg) return;
-    P.weg = true; P.neer = true; P.klaar = true; P.inv = { dx:0, dy:0 };
+    P.weg = true; P.neer = true; P.klaar = true; P.inv = { dx:0, dy:0 }; P.wapenVraag = 0;
     if (W.fase === 'einde') return;
     W.cijfers.push({ x:P.sp.x, y:P.sp.y - 40, tekst:P.naam + ' is weg', leven:1.6, kleur:'#14224C' });
     if (W.spelers.every(function(Q){ return Q.neer; })){ einde(); return; }
@@ -368,7 +401,7 @@ function maak(opties){
                 hp:h, maxHp:h, r:soort.r, snel:soort.snel * (70 + sterk * 1.6), flits:0, stap:toeval() * 6,
                 schild:soort.schild || 0, slaKlok:0,
                 /* een schutter mikt, schuift een kant op en laadt eerst */
-                mikt:0, zij:toeval() < 0.5 ? 1 : -1, laadKlok:soort.laden ? 1.2 + toeval() : 0, stilKlok:0 };
+                mikt:0, zij:toeval() < 0.5 ? 1 : -1, laadKlok:soort.laden ? 1.2 + toeval() : 0, stilKlok:-1 };
       W.fouten.push(f); if (!eerste) eerste = f;
     }
     zeg('spawn', soort, eerste);
@@ -671,6 +704,15 @@ function maak(opties){
           levend.forEach(function(P){ if (Math.hypot(P.sp.x - a.x, P.sp.y - a.y) < ko.r + SPELER.r * 0.8) { tref(P, ko.schade, a.kl || '#8a7350'); a.klaar = true; } });
           if (a.t > ko.leven || a.x < -40 || a.x > ARENA.b + 40 || a.y < -40 || a.y > ARENA.h + 40) a.klaar = true;
         }
+      } else if (a.soort === 'granaat'){
+        /* de granaat van een mortier: eerst in de lucht (de cirkel staat op de grond), dan de klap */
+        var gn = AANVAL.granaat, gnW = a.duur || gn.vlucht(W.ronde), gnR = a.straal || gn.r;
+        if (a.t >= gnW && !a.geknald){
+          a.geknald = true;
+          levend.forEach(function(P){ if (Math.hypot(P.sp.x - a.x, P.sp.y - a.y) < gnR + SPELER.r * 0.5) tref(P, gn.schade, a.kl || '#9a6a2f'); });
+          for (var gi = 0; gi < 9; gi++){ var gh = toeval() * Math.PI * 2, gs = 50 + toeval() * 110; W.pluis.push({ x:a.x, y:a.y, vx:Math.cos(gh) * gs, vy:Math.sin(gh) * gs, leven:0.4, kleur:gi % 2 ? '#EA9836' : (a.kl || '#9a6a2f') }); }
+        }
+        if (a.t >= gnW + gn.knal) a.klaar = true;
       } else if (a.soort === 'schot'){
         var sc = AANVAL.schot, scW = wachtVan(a, sc.wacht);
         if (a.t >= scW){
@@ -738,8 +780,8 @@ function maak(opties){
     s.x += s.gx * dt; s.y += s.gy * dt;
     if (dx || dy){ s.loopt = true; s.dx = dx; s.dy = dy; }            /* de laatste looprichting, voor het ontwijken */
     else s.loopt = !!s.opIjs && Math.hypot(s.gx, s.gy) > 20;
-    if (P.dashVraag){ P.dashVraag = false; ontwijkMet(s); }
-    if (P.wapenVraag){ P.wapenVraag = false; wisselWapenVan(s); }
+    if (P.dashVraag){ P.dashVraag = false; ontwijkMet(s, P.dashRichting); P.dashRichting = null; }
+    if (P.wapenVraag){ P.wapenVraag = Math.max(0, (P.wapenVraag | 0) - 1); wisselWapenVan(s); }
     if (s.dashKlok > 0) s.dashKlok -= dt;
     if (s.dash > 0){
       s.dash -= dt;
@@ -882,6 +924,7 @@ function maak(opties){
     W.cijfers = W.cijfers.filter(function(c){ return c.leven > 0; });
   }
   W.stap = function(dt){
+    W.tik++;
     if (W.fase !== 'ronde' || W.pauze){ deeltjes(dt); return; }
     var ronde = W.ronde;
     W.tijdInRonde += dt;
@@ -913,7 +956,7 @@ function maak(opties){
           zeg('nmfase', f + 1, b);
         }
         var fz = NACHTMERRIE.fases[b.nmFase];
-        var leeg = !W.aanvallen.some(function(a){ return a.soort !== 'plas' && a.soort !== 'schot'; });
+        var leeg = !W.aanvallen.some(function(a){ return a.soort !== 'plas' && a.soort !== 'schot' && a.soort !== 'granaat'; });
         /* moe: hij doet niets en krijgt harder klappen, tot de volgende ronde aanvallen */
         if (b.moe > 0){
           b.moe -= dt;
@@ -940,7 +983,7 @@ function maak(opties){
       }
       /* Ook als hij kwaad is wacht hij tot het veld leeg is. Anders stapelen de
          aanvallen zich op en is er geen plek meer om te staan. */
-      var vrij = !W.aanvallen.some(function(a){ return a.soort !== 'plas' && a.soort !== 'schot'; });
+      var vrij = !W.aanvallen.some(function(a){ return a.soort !== 'plas' && a.soort !== 'schot' && a.soort !== 'granaat'; });
       if (b.aanvalKlok <= 0 && vrij && levend.length){
         if (boos && !b.boosGeweest){
           b.boosGeweest = true;
@@ -975,7 +1018,8 @@ function maak(opties){
         var wil = 1;
         /* Een schutter die mikt, en een schutter wiens streep nog op de grond
            ligt, staat stil. Dan is de streep ook echt waar het schot vandaan komt. */
-        if (f.stilKlok > 0) f.stilKlok -= dt;
+        /* de stilKlok loopt door tot -1: net onder nul is het moment na het schot (de terugslag in beeld) */
+        if (f.stilKlok > -1) f.stilKlok = Math.max(-1, f.stilKlok - dt);
         var stil = !!f.soort.laden && (f.laadKlok <= f.soort.mik || f.stilKlok > 0);
         if (f.soort.afstand){
           wil = stil ? 0 : al > f.soort.afstand + 40 ? 1 : al < f.soort.afstand - 40 ? -0.9 : 0;
@@ -983,13 +1027,25 @@ function maak(opties){
         }
         vx += ax / al * f.snel * wil; vy += ay / al * f.snel * wil;
         if (f.soort.laden){
+          /* Hij draait zijn loop naar je toe. Staat zijn schot al op de grond,
+             dan blijft de loop langs die streep wijzen: daar komt het vandaan. */
           var wilHoek = Math.atan2(ay, ax);
-          f.mikt += Math.atan2(Math.sin(wilHoek - f.mikt), Math.cos(wilHoek - f.mikt)) * Math.min(1, dt * 4);
-          f.laadKlok -= dt;
+          if (!(f.stilKlok > 0 && !f.soort.granaat)) f.mikt += Math.atan2(Math.sin(wilHoek - f.mikt), Math.cos(wilHoek - f.mikt)) * Math.min(1, dt * 4);
+          /* een mortier buiten de lijn laadt niet: hij schiet pas als je hem kunt zien */
+          if (!f.soort.granaat || f.binnen) f.laadKlok -= dt;
           if (f.laadKlok <= 0){
             f.laadKlok = f.soort.laden;
-            f.stilKlok = AANVAL.schot.wacht;
-            W.aanvallen.push({ id:++W.nr, soort:'schot', x:f.x, y:f.y, hoek:f.mikt, t:0, k:1, kl:f.soort.kleur });
+            if (f.soort.granaat){
+              /* de granaat komt neer waar je nu staat, binnen de lijn */
+              var gr = AANVAL.granaat, vl = gr.vlucht(W.ronde);
+              f.stilKlok = gr.na;
+              W.aanvallen.push({ id:++W.nr, soort:'granaat', x:Math.max(ARENA.rand, Math.min(ARENA.b - ARENA.rand, doel.sp.x)), y:Math.max(ARENA.rand, Math.min(ARENA.h - ARENA.rand, doel.sp.y)),
+                                 ox:f.x, oy:f.y - f.r * 0.6, t:0, k:1, duur:vl, straal:gr.r, kl:f.soort.kleur });
+              zeg('granaat', W.aanvallen[W.aanvallen.length - 1], f);
+            } else {
+              f.stilKlok = AANVAL.schot.wacht;
+              W.aanvallen.push({ id:++W.nr, soort:'schot', x:f.x, y:f.y, hoek:f.mikt, t:0, k:1, kl:f.soort.kleur });
+            }
           }
         }
       }
@@ -1064,17 +1120,23 @@ function maak(opties){
     var s2 = P.sp;
     return [r1(s2.x), r1(s2.y), r2(s2.mikt), r2(s2.zwaai), r2(s2.raak), r2(s2.dash), r2(s2.dx), r2(s2.dy), s2.loopt ? 1 : 0, r2(s2.flits),
             Math.round(P.hp), Math.round(P.maxHp), P.stats.harnas, P.weg ? 2 : P.neer ? 1 : 0, Math.round(P.stats.bereik), r2(s2.dashKlok), s2.wapen === 'boog' ? 1 : 0,
-            P.munten, P.geveld, P.inNr, P.klaar ? 1 : 0, s2.blok ? 1 : 0, r1(s2.blokTijd), s2.crit ? 1 : 0, P.stijl || ''];
+            P.munten, P.geveld, P.inNr, P.klaar ? 1 : 0, s2.blok ? 1 : 0, r1(s2.blokTijd), s2.crit ? 1 : 0, P.stijl || '',
+            /* hoeveel tikken zijn laatste toetsen al gelden, en of hij op het ijs staat */
+            W.tik - (P.inTik || 0), s2.opIjs ? 1 : 0];
   }
   W.pakket = function(){
-    return { k:'st', f:W.fase, r:W.ronde, ts:W.teSpawnen, t:r2(W.tijdInRonde), p:W.pauze ? 1 : 0, bg:W.baasGeveld,
+    /* tk: de tik van de kamer, zodat de browser de standen op de klok van de kamer kan zetten */
+    return { k:'st', f:W.fase, r:W.ronde, ts:W.teSpawnen, t:r2(W.tijdInRonde), p:W.pauze ? 1 : 0, bg:W.baasGeveld, tk:W.tik,
       zo:W.zones.map(function(z){ return [z.soort, r1(z.x), r1(z.y), z.r || 0, z.w || 0, z.h || 0, z.id]; }),
       sp:W.spelers.map(inpak),
-      fo:W.fouten.map(function(f){ return [r1(f.x), r1(f.y), Math.round(f.hp), f.maxHp, f.baas ? 'b:' + f.def.id : f.soort.id, f.r, f.flits > 0 ? 0.1 : 0, r2(f.stap), f.schild || 0, r2(f.mikt || 0), f.id]; }),
+      /* bij wie schiet ook de klokken van het laden en het stilstaan, voor de loop die mikt en terugslaat */
+      fo:W.fouten.map(function(f){ var o = [r1(f.x), r1(f.y), Math.round(f.hp), f.maxHp, f.baas ? 'b:' + f.def.id : f.soort.id, f.r, f.flits > 0 ? 0.1 : 0, r2(f.stap), f.schild || 0, r2(f.mikt || 0), f.id];
+        if (f.soort.laden) o.push(r2(f.laadKlok || 0), r2(f.stilKlok || 0));
+        return o; }),
       me:W.messen.map(function(m){ return [r1(m.x), r1(m.y), r2(m.hoek), m.pijl ? 1 : 0, m.id]; }),
       mu:W.munt.map(function(m){ return [r1(m.x), r1(m.y), m.waarde, m.id]; }),
       ci:W.cijfers.map(function(c){ return [r1(c.x), r1(c.y), c.tekst, c.kleur, r2(c.leven)]; }),
-      aa:W.aanvallen.map(function(a){ return [a.soort, r1(a.x), r1(a.y), r2(a.t), r2(a.hoek || 0), a.richting || 1, r2(a.nu || 0), r1(a.straal || 0), a.geknald ? 1 : 0, r2(a.k || 1), r2(a.gat || 0), a.breed || 0, r2(a.boog || 0), r2(a.duur || 0), a.r0 || 0, a.kl || '', a.id]; }) };
+      aa:W.aanvallen.map(function(a){ return [a.soort, r1(a.x), r1(a.y), r2(a.t), r2(a.hoek || 0), a.richting || 1, r2(a.nu || 0), r1(a.straal || 0), a.geknald ? 1 : 0, r2(a.k || 1), r2(a.gat || 0), a.breed || 0, r2(a.boog || 0), r2(a.duur || 0), a.r0 || 0, a.kl || '', a.id].concat(a.ox !== undefined ? [r1(a.ox), r1(a.oy)] : []); }) };
   };
 
   W.FOUTEN = FOUTEN; W.BAZEN = BAZEN;

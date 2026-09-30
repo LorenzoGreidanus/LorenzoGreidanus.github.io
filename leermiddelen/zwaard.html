@@ -192,7 +192,11 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 /* --kop is de echte hoogte van de kopbalk (zie meetKop); met een vaste 62
    viel de onderkant van de arena net onder het scherm */
 .spel{display:block;padding:10px 0 16px;height:calc(100vh - var(--kop,66px));height:calc(100dvh - var(--kop,66px));min-height:560px}
-@media(max-width:1000px){.spel{height:auto}.arenavak{height:auto;min-height:0;flex:none;width:100%}}
+/* Het spel mag breder dan de rest van de site (1240): op een breed scherm of
+   een digibord bepaalt de hoogte hoe groot de arena wordt, en dan bleef er
+   links en rechts een lege band over. */
+.spel{--max:1720px}
+@media(max-width:1000px){.spel{height:auto}}
 .arenakolom{position:relative;display:flex;flex-direction:column;min-height:0;gap:8px;height:100%}
 .hudrij{display:flex;gap:8px;align-items:stretch}
 .hud{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch;flex:1}
@@ -260,7 +264,14 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 /* Het vak heeft dezelfde verhouding als het speelveld zelf. Anders blijft er
    links en rechts een rand over waar niets gebeurt, en is het veld kleiner
    dan het scherm toelaat. */
-.arenavak{flex:1 1 auto;min-height:0;aspect-ratio:1100 / 620;width:auto;max-width:100%;margin-inline:auto;
+.arenaruimte{flex:1 1 auto;min-height:0;container-type:size;display:flex;align-items:center;justify-content:center}
+/* De arena zo groot als de ruimte eronder toelaat, in de verhouding van het
+   speelveld: de breedte of de hoogte is de grens, nooit allebei half. Eerst
+   deed aspect-ratio dat in een flexkolom, maar dan won op een breed scherm de
+   hoogte van het vak het van de verhouding en viel het veld er als een
+   strook in, met lege banden erboven en eronder. */
+.arenadoos{position:relative;width:min(100cqw, 100cqh * 1100 / 620)}
+.arenavak{width:100%;aspect-ratio:1100 / 620;
   background:#e9dfc9;border-radius:20px;border:1px solid rgba(20,34,76,.12);overflow:hidden;
   position:relative;touch-action:none;user-select:none;-webkit-user-select:none;box-shadow:0 10px 26px rgba(20,34,76,.08)}
 /* twee lagen over elkaar: de vloer eronder, alles wat beweegt erboven */
@@ -268,7 +279,38 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 /* Op een smal scherm vult de arena de breedte en haalt hij zijn hoogte uit de
    verhouding van het speelveld. Deze regel moet na de regel hierboven staan,
    anders wint die met zijn width:auto. */
-@media(max-width:1000px){.arenavak{flex:none;width:100%;height:auto;min-height:0}}
+@media(max-width:1000px){
+  .arenaruimte{display:block;container-type:normal;flex:none}
+  .arenadoos{width:100%;display:flex;flex-direction:column;gap:8px}
+  .arenavak{width:100%;height:auto;min-height:0}
+}
+/* Op een laptop of groter zweeft de regel met uitleg in de hoek van het veld
+   in plaats van eronder: die twee regels hoogte gaan naar de arena. Rechts,
+   want linksonder staat bij samen spelen het balkje van de kamer. */
+@media(min-width:1001px){
+  .arenadoos .arenatip{position:absolute;right:10px;bottom:10px;z-index:4;height:auto;max-height:calc(2 * 1.4em + 12px);max-width:min(62%,680px);padding:5px 11px;font-size:.82rem;
+    background:rgba(255,255,255,.92);box-shadow:0 4px 14px rgba(20,34,76,.16);pointer-events:none}
+  .arenadoos .arenatip.uitleg{max-height:calc(4 * 1.4em + 12px);max-width:min(76%,780px)}
+  .arenadoos .arenatip:empty{display:none}
+  .arenadoos .arenatip.metwolk{clip-path:inset(50%);width:1px;height:1px;overflow:hidden;padding:0;border:0;box-shadow:none}
+  /* de kopbalk even breed als het spel eronder */
+  body:has(#scherm-spel:not(.hide)) header .wrap{--max:1720px}
+}
+@media(min-width:1001px) and (prefers-color-scheme:dark){:root:not([data-theme="light"]) .arenadoos .arenatip:not(.uitleg){background:rgba(24,38,82,.92)}}
+@media(min-width:1001px){:root[data-theme="dark"] .arenadoos .arenatip:not(.uitleg){background:rgba(24,38,82,.92)}}
+/* Een laptop is breed maar laag. De meters mogen dan kleiner (het getal naast
+   het tekentje, zoals op een telefoon), zodat de arena de hoogte krijgt. */
+@media(min-width:1001px) and (max-height:940px){
+  .spel{padding:8px 0 10px}
+  .meter{display:flex;align-items:center;gap:7px;padding:4px 11px;min-width:0}
+  .meter b{font-size:1.02rem}
+  .meter.leven{display:block;padding:4px 11px}
+  .meter.leven i{font-size:.74rem}
+  .levenbalk{height:8px;margin-top:2px}
+  .dashknop{height:42px}
+  .baasbalk{padding:4px 12px}
+  .baasbalk i{height:10px}
+}
 /* Op een telefoon houdt het vak zijn eigen hoogte aan in plaats van de
    verhouding van de arena: het scherm beweegt daar toch mee, dus het venster
    mag vierkanter staan en zoveel hoogte pakken als er is. */
@@ -400,7 +442,7 @@ body.groot .optie{font-size:1.15rem;padding:14px 17px}
 body.groot .spel{grid-template-columns:minmax(0,1fr) 420px}
 body.groot .meter b{font-size:1.45rem}
 /* Samen spelen op een laptop of computer: de arena zo groot als het scherm toelaat. De kopbalk gaat weg,
-   de kolom mag de hele breedte, de meters worden compacter en de tip zweeft in de hoek van het veld. */
+   de kolom mag de hele breedte en de meters worden compacter. (De tip zweeft nu altijd in de hoek van het veld.) */
 @media(min-width:1001px){
   body.samen header{display:none}
   body.samen .spel{width:calc(100% - 20px);max-width:none;height:calc(100vh - 16px);padding:8px 0 8px;min-height:0}
@@ -413,12 +455,7 @@ body.groot .meter b{font-size:1.45rem}
   body.samen .dashknop small{display:none}
   body.samen .baasbalk{padding:4px 12px}
   body.samen .baasbalk i{height:10px}
-  body.samen .arenatip{position:absolute;left:10px;bottom:10px;z-index:4;height:auto;max-height:calc(2 * 1.4em + 12px);max-width:min(62%,680px);padding:5px 11px;font-size:.8rem;
-    background:rgba(255,255,255,.9);box-shadow:0 4px 14px rgba(20,34,76,.16);pointer-events:none}
-  body.samen .arenatip:empty{display:none}
 }
-@media(min-width:1001px) and (prefers-color-scheme:dark){:root:not([data-theme="light"]) body.samen .arenatip{background:rgba(24,38,82,.92)}}
-@media(min-width:1001px){:root[data-theme="dark"] body.samen .arenatip{background:rgba(24,38,82,.92)}}
 @media(prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
 /* Basis.css geeft .hint en .leeg in het donker een kaartvlak. In het
    klassement onder de eindkaart werd dat een losse band achter een regel
@@ -577,9 +614,10 @@ body.groot .meter b{font-size:1.45rem}
     </div>
     <div class="hudrij"><div class="hud" id="hud"></div><button class="dashknop" type="button" id="wapenBtn">Zwaard<small>dichtbij, hard<span class="alsmuis"> · Q, E of rechtsklik</span></small></button><button class="dashknop" type="button" id="dashBtn">Ontwijk<small><span class="alsmuis">spatie of shift</span><span class="alsvinger">tik hier</span></small></button><button class="dashknop hide" type="button" id="blokBtn">Blok<small><span class="alsmuis">houd shift vast</span><span class="alsvinger">houd hem vast</span></small></button></div>
     <div class="baasbalk leeg" id="baasbalk"><b>Baas in ronde 5</b><i><span style="width:0"></span></i></div>
+    <div class="arenaruimte"><div class="arenadoos">
     <div class="arenavak" id="arenavak"><svg id="arenagrond" viewBox="0 0 1100 620" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"></svg><svg id="arena" viewBox="0 0 1100 620" xmlns="http://www.w3.org/2000/svg"><defs id="arenavast"></defs><g id="arenalaag"></g></svg></div>
+    <p class="arenatip" id="arenatip" aria-live="polite"><span class="alsmuis">Pijltjes of WASD om te lopen. Je wapen slaat vanzelf; Q, E of de rechtermuisknop wisselt tussen zwaard en boog.</span><span class="alsvinger">Houd je vinger op de arena en sleep waarheen je wilt lopen. Je wapen slaat vanzelf; met de knop Zwaard of Boog wissel je.</span></p></div></div>
     <p class="sr" id="zwaardLive" role="status" aria-live="polite"></p>
-    <p class="arenatip" id="arenatip" aria-live="polite"><span class="alsmuis">Pijltjes of WASD om te lopen. Je wapen slaat vanzelf; Q, E of de rechtermuisknop wisselt tussen zwaard en boog.</span><span class="alsvinger">Houd je vinger op de arena en sleep waarheen je wilt lopen. Je wapen slaat vanzelf; met de knop Zwaard of Boog wissel je.</span></p>
     <aside class="zij hide" id="zij"></aside>
   </div>
 </section>
@@ -723,7 +761,8 @@ const SOORTUITLEG = {
   schild:   'Een fout met een schild. Die slikt de helft van elke klap, dus blijf erop slaan of laat je werpmes het werk doen.',
   zwerm:    'Een zwerm: drie kleine fouten tegelijk. Elk gaat zo neer, maar samen duwen ze je klem tegen de rand.',
   dik:      'Een dikke fout. Veel leven en traag: loop eromheen en sla hem in de rug, of laat hem tot het laatst.',
-  schutter: 'Een schutter. Hij komt niet op je af maar houdt afstand en schiet. De streep op de grond laat zien waar hij op mikt, dus stap opzij.'
+  schutter: 'Een schutter. Hij komt niet op je af maar houdt afstand en schiet. Als hij stilstaat draait zijn loop naar je toe; de streep op de grond laat zien waar het schot heen gaat, dus stap opzij.',
+  mortier:  'Een mortier. Hij blijft ver weg en schiet met een boog over alles heen. Waar de granaat neerkomt licht een cirkel op de grond op, net als bij een baas maar kleiner: stap eruit voor hij ploft.'
 };
 
 /* Wat er bij elke aanval gebeurt, in gewone taal. Alleen te lezen in de
@@ -743,7 +782,8 @@ const AANVALUITLEG = {
   regen:   'Kleine cirkels die een voor een neerkomen, overal, de laatste onder jou. Blijf lopen, nooit stilstaan.',
   muur:    'Een streep die van de ene kant naar de andere over de vloer veegt, met een gat erin. Ga in het gat staan en laat hem langs.',
   spiraal: 'Propjes die een voor een uit de baas komen en zo een draaiende spiraal maken. Loop met de draai mee, tussen twee propjes door.',
-  bom:     'Een bom die langzaam naar je toe rolt en dan in scherven uiteenspat. Loop van hem weg, en stap opzij als hij knalt.'
+  bom:     'Een bom die langzaam naar je toe rolt en dan in scherven uiteenspat. Loop van hem weg, en stap opzij als hij knalt.',
+  granaat: 'Een granaat van de mortier. Hij komt neer waar je stond: de cirkel op de grond. Een paar stappen opzij is genoeg.'
 };
 
 
@@ -1181,7 +1221,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
      de winkel met hun uitrusting; de kamer voert dat uit en stuurt de stand
      terug. Beide spelers zijn zo gelijk: niemand is de gastheer. 'mij' is
      mijn plek in de lijst van de kamer (0 of 1). */
-  var co = { aan:false, mij:0, neer:false, klaar:false, maatKlaar:false, dashVraag:false, wapenVraag:false,
+  var co = { aan:false, mij:0, neer:false, klaar:false, maatKlaar:false, dashVraag:false, wapenVraag:0, laatsteSprong:-1e9, laatsteStil:true, laatsteBlok:false,
              zendKlok:0, laatsteInvoer:'', laatsteZendTijd:0, inNr:0, verzonden:{}, lag:80, laatsteFase:'', pakketten:0, laatstePakket:0,
              maatNaam:'', maatAv:'' };
   var maat = null;   /* de ander: { naam, av, sp, stats:{ bereik, harnas }, hp, maxHp, neer } (de eerste maat, voor teksten) */
@@ -1195,58 +1235,111 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
 
   /* De maat ziet zichzelf zonder wachten. Zijn toetsen gaan naar de kamer en
      komen een reis later in de stand terug; tot die tijd tekent hij zijn eigen
-     poppetje alvast waar het straks komt: de laatste bevestigde plek plus wat
-     zijn toetsen van de laatste 'lag' milliseconden nog gaan doen, en een
-     sprong die onderweg is. Hoe lang die reis duurt meet hij zelf: elke toets
-     krijgt een nummer mee, en de stand zegt welk nummer de kamer het laatst
-     verwerkte. Alleen tekenen; klappen en munten gaan op de bevestigde plek. */
-  /* x, y: waar ik mezelf teken. ex, ey: het verschil met wat de kamer zegt,
-     dat elk beeld een stuk kleiner wordt. hist: wat ik per beeld gelopen heb,
-     om bij een stand uit te rekenen wat de kamer nog niet had. */
-  var voorspel = { aan:false, x:0, y:0, ex:0, ey:0, hist:[], dashRest:0, ddx:0, ddy:0 };
+     poppetje alvast waar het straks komt, en de kamer blijft de baas.
+
+     Hoe het bijsturen gaat. Elke keer dat de toetsen naar de kamer gaan,
+     krijgen ze een nummer, en onthoudt de pagina waar hij toen stond en hoe
+     hard hij met deze toetsen loopt (het anker). De kamer zegt in elke stand
+     welk nummer hij als laatste kreeg en hoeveel tikken dat nu al geldt. Dan
+     weten we precies wat de kamer gerekend heeft: het anker plus die tikken
+     lopen. Wat de kamer daarna nog anders heeft, is echt verschil, en alleen
+     dat verschil sturen we bij: zacht, en even snel bij elk aantal beelden
+     per tel.
+
+     Vroeger raadde de pagina hoe oud een stand was (een halve reis) en
+     rekende hij vanaf daar zijn eigen stappen terug. Die gok zat er bij snel
+     omdraaien een paar tikken naast, en dan trok het poppetje even de
+     verkeerde kant op: het elastiek. Met het nummer en de tikken van de kamer
+     hoeft er niets meer geraden te worden. */
+  /* x, y: waar ik mezelf teken. gx, gy: mijn snelheid (op het ijs glijd je).
+     ankers: per verstuurd nummer waar ik toen stond en wat ik deed. st: de
+     laatste stand van mezelf, om elk beeld tegen bij te sturen. */
+  var voorspel = { aan:false, x:0, y:0, gx:0, gy:0, dashRest:0, ddx:0, ddy:0, ankers:{}, st:null, hist:[] };
+  var BIJSTUREN = 10, BIJSTUREN_MAX = 160, SPRONG = 120;
   function mijnPlek(){ return voorspel.aan ? voorspel : sp; }
-  /* elk beeld: mijn eigen toetsen meteen, en de correctie zachtjes */
+  /* zo hard loop ik nu, volgens dezelfde regels als de motor: blokkeren remt */
+  function mijnSnelheid(){ return loopSnel() * (stijl === 'wacht' && blokToets && sp.blokTijd > 0 ? ZWAARDMOTOR.BLOK.traag : 1); }
+  function binnen(v, as){ return Math.max(ARENA.rand, Math.min((as === 'x' ? ARENA.b : ARENA.h) - ARENA.rand, v)); }
+  /* beginnen (ook bij elke nieuwe ronde) vanaf de plek die de kamer zegt; voor het eerste anker */
+  function voorspelBegin(){
+    if (!co.aan){ voorspel.aan = false; return false; }
+    if (!voorspel.aan){ voorspel.x = sp.x; voorspel.y = sp.y; voorspel.gx = 0; voorspel.gy = 0; voorspel.ankers = {}; voorspel.st = null; voorspel.hist = []; voorspel.dashRest = 0; voorspel.aan = true; }
+    return true;
+  }
+  /* elk beeld: mijn eigen toetsen meteen, en het verschil met de kamer zachtjes weg */
   function voorspelStap(inv, dt, nu){
-    if (!co.aan){ voorspel.aan = false; return; }
-    if (!voorspel.aan){ voorspel.x = sp.x; voorspel.y = sp.y; voorspel.ex = 0; voorspel.ey = 0; voorspel.hist = []; voorspel.dashRest = 0; voorspel.aan = true; }
+    if (!voorspelBegin()) return;
     var mx = 0, my = 0;
     if (!co.neer && fase === 'ronde' && !pauze){
-      /* dezelfde regels als de motor: blokkeren remt, op het ijs glijd je door */
-      var snel = loopSnel() * (stijl === 'wacht' && blokToets && sp.blokTijd > 0 ? ZWAARDMOTOR.BLOK.traag : 1);
-      var vx = inv.dx * snel, vy = inv.dy * snel;
+      var snel = mijnSnelheid(), vx = inv.dx * snel, vy = inv.dy * snel;
       var opIjs = zones.some(function(zn){ return zn.soort === 'ijs' && Math.hypot(voorspel.x - zn.x, voorspel.y - zn.y) < zn.r; });
-      if (opIjs){ var grip = Math.min(1, dt * ZWAARDMOTOR.GEVAAR.ijs.grip); voorspel.gx = (voorspel.gx || 0) + (vx - (voorspel.gx || 0)) * grip; voorspel.gy = (voorspel.gy || 0) + (vy - (voorspel.gy || 0)) * grip; }
+      if (opIjs){ var grip = Math.min(1, dt * ZWAARDMOTOR.GEVAAR.ijs.grip); voorspel.gx += (vx - voorspel.gx) * grip; voorspel.gy += (vy - voorspel.gy) * grip; }
       else { voorspel.gx = vx; voorspel.gy = vy; }
       mx = voorspel.gx * dt; my = voorspel.gy * dt;
       if (voorspel.dashRest > 0){
+        /* net als in de motor: loop je tijdens de sprong, dan gaat de sprong mee met je looprichting */
+        if (inv.dx || inv.dy){ voorspel.ddx = inv.dx; voorspel.ddy = inv.dy; }
         var d = Math.min(dt, voorspel.dashRest); voorspel.dashRest -= d;
         mx += voorspel.ddx * DASH.snel * d; my += voorspel.ddy * DASH.snel * d;
       }
     }
     voorspel.hist.push({ t:nu, mx:mx, my:my });
     while (voorspel.hist.length && voorspel.hist[0].t < nu - 2000) voorspel.hist.shift();
-    voorspel.x += mx; voorspel.y += my;
-    /* het verschil met de kamer glijdt weg in ongeveer een tiende seconde */
-    var k = Math.min(1, dt * 10);
-    var corr = Math.hypot(voorspel.ex * k, voorspel.ey * k);
-    voorspel.corrSom = (voorspel.corrSom || 0) + corr; voorspel.corrN = (voorspel.corrN || 0) + 1; voorspel.corrMax = Math.max(voorspel.corrMax || 0, corr);
-    voorspel.x += voorspel.ex * k; voorspel.y += voorspel.ey * k;
-    voorspel.ex *= (1 - k); voorspel.ey *= (1 - k);
-    voorspel.x = Math.max(ARENA.rand, Math.min(ARENA.b - ARENA.rand, voorspel.x));
-    voorspel.y = Math.max(ARENA.rand, Math.min(ARENA.h - ARENA.rand, voorspel.y));
+    voorspel.x = binnen(voorspel.x + mx, 'x'); voorspel.y = binnen(voorspel.y + my, 'y');
+    voorspelBijsturen(dt, nu);
   }
-  /* een stand van de kamer: waar ik daar sta, plus wat ik daarna nog gelopen
-     heb (dat was nog onderweg); het verschil met wat ik teken glijdt weg, of
-     springt als het groot is */
-  function voorspelBevestig(nu){
+  /* Waar sta ik volgens de kamer, gerekend zoals de kamer rekent: vanaf het
+     anker van het laatste nummer dat hij had, zoveel tikken verder. Op het ijs
+     glijd je en dat rekenen we niet na; dan (en zonder anker) vergelijken we
+     met mijn eigen stappen van een hele reis geleden, zoals vroeger. */
+  function kamerSchatting(nu){
+    var st = voorspel.st; if (!st) return null;
+    var a = voorspel.ankers[st.nr];
+    if (a && !st.ijs && !a.ijs && st.tikken >= 0){
+      var tijd = st.tikken * STAP, x = a.x + a.vx * tijd, y = a.y + a.vy * tijd;
+      if (a.dash){ var dd = Math.min(tijd, a.dash.duur); x += a.dash.dx * DASH.snel * dd; y += a.dash.dy * DASH.snel * dd; }
+      return { x:binnen(x, 'x'), y:binnen(y, 'y') };
+    }
+    /* geen anker en geen ijs: de kamer heeft nog niets van mij gehad (het begin
+       van een ronde); dan valt er niets bij te sturen, behalve een grote sprong */
+    if (!st.ijs && !(a && a.ijs) && st.tikken >= 0) return Math.hypot(st.x - voorspel.x, st.y - voorspel.y) > SPRONG ? { x:voorspel.x, y:voorspel.y } : null;
+    var tx = voorspel.x, ty = voorspel.y, van = st.t - co.lag;
+    voorspel.hist.forEach(function(h){ if (h.t > van){ tx -= h.mx; ty -= h.my; } });
+    return { x:tx, y:ty };
+  }
+  function voorspelBijsturen(dt, nu){
+    var st = voorspel.st; if (!st) return;
+    var sch = kamerSchatting(nu); if (!sch) return;
+    var ex = st.x - sch.x, ey = st.y - sch.y;
+    if (Math.hypot(ex, ey) > SPRONG){ voorspel.x = binnen(voorspel.x + ex, 'x'); voorspel.y = binnen(voorspel.y + ey, 'y'); schuifAnkers(ex, ey); return; }
+    var deel = 1 - Math.exp(-dt * BIJSTUREN);
+    ex *= deel; ey *= deel;
+    /* nooit harder bijsturen dan 160 punten per tel (lopen is 200): dan gaat
+       het poppetje hoogstens even trager, nooit een stukje terug */
+    var corr = Math.hypot(ex, ey), mag = Math.max(0.5, BIJSTUREN_MAX * dt);
+    if (corr > mag){ ex *= mag / corr; ey *= mag / corr; corr = mag; }
+    voorspel.corrSom = (voorspel.corrSom || 0) + corr; voorspel.corrN = (voorspel.corrN || 0) + 1; voorspel.corrMax = Math.max(voorspel.corrMax || 0, corr);
+    voorspel.x = binnen(voorspel.x + ex, 'x'); voorspel.y = binnen(voorspel.y + ey, 'y');
+    schuifAnkers(ex, ey);
+  }
+  /* wat bijgestuurd is, schuift ook de ankers op: anders stuurt het volgende beeld hetzelfde verschil nog eens bij */
+  function schuifAnkers(ex, ey){ for (var k in voorspel.ankers){ voorspel.ankers[k].x += ex; voorspel.ankers[k].y += ey; } }
+  /* een nieuw nummer gaat naar de kamer: hier stond ik, zo loop ik */
+  function zetAnker(nr, inv, nu){
+    var snel = mijnSnelheid();
+    var opIjs = zones.some(function(zn){ return zn.soort === 'ijs' && Math.hypot(voorspel.x - zn.x, voorspel.y - zn.y) < zn.r + SPELER.r; });
+    /* een sprong die nog loopt telt ook mee, in de richting van deze toetsen (of de sprongrichting als ik stilsta) */
+    var sprong = voorspel.dashRest > 0;
+    voorspel.ankers[nr] = { t:nu, x:voorspel.x, y:voorspel.y, vx:inv.dx * snel, vy:inv.dy * snel, ijs:opIjs,
+                            dash:sprong ? { dx:(inv.dx || inv.dy) ? inv.dx : voorspel.ddx, dy:(inv.dx || inv.dy) ? inv.dy : voorspel.ddy, duur:voorspel.dashRest } : null };
+  }
+  /* een stand van de kamer over mezelf */
+  function voorspelBevestig(nu, nr, tikken, ijs){
     if (!voorspel.aan) return;
-    /* de stand is van een halve reis geleden: wat ik daarna liep had de kamer nog niet */
-    var tx = sp.x, ty = sp.y, van = nu - co.lag / 2;
-    voorspel.hist.forEach(function(h){ if (h.t > van){ tx += h.mx; ty += h.my; } });
-    tx = Math.max(ARENA.rand, Math.min(ARENA.b - ARENA.rand, tx)); ty = Math.max(ARENA.rand, Math.min(ARENA.h - ARENA.rand, ty));
-    var ex = tx - voorspel.x, ey = ty - voorspel.y;
-    if (Math.hypot(ex, ey) > 120 || fase !== 'ronde' || co.neer){ voorspel.x = tx; voorspel.y = ty; voorspel.ex = 0; voorspel.ey = 0; }
-    else { voorspel.ex = ex; voorspel.ey = ey; }
+    if (fase !== 'ronde' || co.neer){ voorspel.x = sp.x; voorspel.y = sp.y; voorspel.dashRest = 0; voorspel.st = null; return; }
+    voorspel.st = { x:sp.x, y:sp.y, nr:nr, tikken:typeof tikken === 'number' ? tikken : -1, ijs:!!ijs, t:nu };
+    /* ankers ouder dan het laatste verwerkte nummer zijn niet meer nodig */
+    for (var k in voorspel.ankers) if (+k < nr) delete voorspel.ankers[k];
   }
 
   /* de spiegels bijwerken uit de motor, na elke stap */
@@ -1271,6 +1364,12 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       }
     },
     aanval: function(soort, k, b){ legUit(soort, k, b); },
+    /* de eerste granaat van een mortier: even langzaam, met de wolk bij de cirkel */
+    granaat: function(a){
+      if (!uitlegstand || co.aan || alGezien['aanval:granaat'] || !a) return;
+      alGezien['aanval:granaat'] = 1;
+      traagMoment((a.duur || 1.2) / TRAAGHEID + 0.4, AANVALUITLEG.granaat, { x:a.x, y:a.y, r:(a.straal || 44) + 20 });
+    },
     vragen: function(){ spiegel(); naarVragen(); },
     rapen: function(nog){ document.getElementById('arenatip').textContent = 'De ronde is gehaald. Nog ' + nog + ' seconde' + (nog === 1 ? '' : 'n') + ' om de munten op te rapen.'; },
     einde: function(){ spiegel(); einde(); },
@@ -1399,12 +1498,12 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (co.aan) uitlegstand = false;
     traagKlok = 0; alGezien = {}; wolk = null; uitlegPauze = false; wachtUitleg = [];
     ronde = 0; munten = 0; level = {}; geveld = 0; reeks = 0; besteReeks = 0; goedAantal = 0; foutAantal = 0; muntWas = 0; geveldWas = 0; perOnderdeel = {};
-    co.klaar = false; co.maatKlaar = false; co.neer = false; co.inNr = 0; co.verzonden = {}; co.lag = 80; co.laatsteFase = ''; co.pakketten = 0;
-    co.dashVraag = false; co.wapenVraag = false; co.laatsteInvoer = '';
+    co.klaar = false; co.maatKlaar = false; co.neer = false; co.inNr = 0; co.lag = 80; co.laatsteSprong = -1e9; klok.af = null; co.laatsteFase = ''; co.pakketten = 0;
+    co.dashVraag = false; co.wapenVraag = 0; co.laatsteInvoer = '';
     vaardig = {}; keuzeOpen = null; tweedeKansOver = 0; zones = []; baasWeg = 0; blokToets = false; cheat = false; god = false; trofeeLater = [];
     bewaarLaatst();
     nachtmerrie = null;
-    voorspel.aan = false; voorspel.hist = []; voorspel.dashRest = 0;
+    voorspel.aan = false; voorspel.hist = []; voorspel.ankers = {}; voorspel.st = null; voorspel.dashRest = 0;
     fouten = []; messen = []; munt = []; pluis = []; cijfers = []; aanvallen = []; teSpawnen = 0; tijdInRonde = 0;
     slim.reset(niveau); pot = null;
     maxHp = maxLeven(); hp = maxHp; pauze = false;
@@ -1498,10 +1597,11 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       soorten:fouten.map(function(f){ return f.baas ? 'baas:' + f.def.id : f.soort.id; }),
       baasHp:(fouten.filter(function(f){ return f.baas; })[0] || {}).maxHp || 0,
       aanvallen:aanvallen.map(function(a){ return a.soort; }),
-      maten:alleMaten().map(function(m){ return { naam:m.naam, x:Math.round(m.sp.x), y:Math.round(m.sp.y), hp:m.hp, klaar:m.klaar }; }), mij:co.mij, aan:co.aan,
+      maten:alleMaten().map(function(m){ return { naam:m.naam, x:+m.sp.x.toFixed(1), y:+m.sp.y.toFixed(1), mikt:+(m.sp.mikt || 0).toFixed(3), hp:m.hp, klaar:m.klaar }; }), mij:co.mij, aan:co.aan,
       aanvalTijd:aanvallen.reduce(function(o, a){ o[a.soort] = Math.max(o[a.soort] || -9, a.t); return o; }, {}),
       uitlegPauze:uitlegPauze,
-      schutters:fouten.filter(function(f){ return f.soort.id === 'schutter'; }).map(function(f){ return { x:Math.round(f.x), y:Math.round(f.y), laad:+(f.laadKlok || 0).toFixed(2), stil:+(f.stilKlok || 0).toFixed(2) }; }),
+      schutters:fouten.filter(function(f){ return f.soort.id === 'schutter' || f.soort.id === 'mortier'; }).map(function(f){ return { id:f.id, soort:f.soort.id, x:+f.x.toFixed(1), y:+f.y.toFixed(1), mikt:+(f.mikt || 0).toFixed(3), laad:+(f.laadKlok || 0).toFixed(2), stil:+(f.stilKlok || 0).toFixed(2), stand:schietStand(f) }; }),
+      vertraag:Math.round(VERTRAAG),
       messen:messen.map(function(m){ return m.pijl ? 'pijl' : 'mes'; }) };
   };
 
@@ -1608,8 +1708,12 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (uitlegVerder()) return;
     if (fase !== 'ronde' || pauze) return;
     if (co.aan){
-      /* samen: de sprong gaat naar de kamer, en alvast in beeld */
-      if (sp.dashKlok <= 0 && sp.dash <= 0){
+      /* Samen: de sprong gaat naar de kamer, en alvast in beeld. Wat de kamer
+         over het opladen zegt is een reis oud; daarom telt de pagina ook zelf
+         hoe lang de vorige sprong geleden is, anders sprong je na een dubbele
+         tik twee keer in beeld en maar een keer in de kamer. */
+      var nuT = performance.now();
+      if (sp.dashKlok <= co.lag / 1000 + 0.05 && nuT - co.laatsteSprong >= DASH.pauze * 1000 + 40 && voorspel.dashRest <= 0){
         var inv = eigenInvoer(), ddx = inv.dx, ddy = inv.dy, p = mijnPlek();
         if (!ddx && !ddy){
           var d0 = null, da0 = 1e9;
@@ -1618,7 +1722,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
           else { ddx = sp.dx; ddy = sp.dy; }
         }
         voorspel.dashRest = DASH.duur * (1 + 0.35 * v('dash')); voorspel.ddx = ddx; voorspel.ddy = ddy;
-        co.dashVraag = true;
+        co.dashVraag = true; co.laatsteSprong = nuT;
+        zendMeteen();
       }
       return;
     }
@@ -1627,7 +1732,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   /* Wisselen tussen zwaard en boog. Samen gaat dat via de kamer. */
   function wisselWapen(){
     if (fase !== 'ronde' || pauze) return;
-    if (co.aan){ co.wapenVraag = true; return; }
+    /* samen: elke druk telt, ook twee in hetzelfde beeld */
+    if (co.aan){ co.wapenVraag = Math.min(4, co.wapenVraag + 1); zendMeteen(); return; }
     if (W){ W.wapen(0); tekenWapen(); }
   }
   var wapenVak = null, wapenWas = '';
@@ -1648,6 +1754,9 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (tip){
       var wil = uitlegstand && (traagKlok > 0 || uitlegPauze);
       if (tip.classList.contains('uitleg') !== wil) tip.classList.toggle('uitleg', wil);
+      /* staat dezelfde tekst al in de wolk in het veld, dan niet nog eens in de hoek (wel voor wie voorleest) */
+      var inWolk = !!(wolk && wolk.t && uitlegstand && vak2.clientWidth >= 560);
+      if (tip.classList.contains('metwolk') !== inWolk) tip.classList.toggle('metwolk', inWolk);
     }
     var bk = document.getElementById('blokBtn');
     if (bk){ var wilBlok = stijl === 'wacht'; if (bk.classList.contains('hide') === wilBlok) bk.classList.toggle('hide', !wilBlok); bk.disabled = fase !== 'ronde'; }
@@ -1738,12 +1847,15 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (toetsen['arrowright'] || toetsen['d']) dx += 1;
     if (toetsen['arrowup'] || toetsen['w']) dy -= 1;
     if (toetsen['arrowdown'] || toetsen['s']) dy += 1;
+    /* bron: toetsen veranderen in stappen, een vinger of de muis (of de bot) glijdt */
+    var bron = 'toets';
     if (!dx && !dy && wijs){
+      bron = 'wijs';
       var pl = mijnPlek(), wx = wijs.x - pl.x, wy = wijs.y - pl.y, wl = Math.hypot(wx, wy);
       if (wl > 8){ dx = wx / wl; dy = wy / wl; }
     }
     var l = Math.hypot(dx, dy);
-    return l ? { dx:dx / l, dy:dy / l } : { dx:0, dy:0 };
+    return l ? { dx:dx / l, dy:dy / l, bron:bron } : { dx:0, dy:0, bron:bron };
   }
 
   /* ---------- samen: de kamer rekent, wij sturen toetsen en tekenen ---------- */
@@ -1752,23 +1864,46 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     s2.loopt = !!a[8]; s2.flits = a[9]; s2.dashKlok = a[15]; s2.wapen = a[16] ? 'boog' : 'zwaard';
     s2.blok = !!a[21]; s2.blokTijd = a[22] || 0; s2.crit = !!a[23]; s2.stijl = a[24] || '';
   }
-  /* mijn toetsen naar de kamer: bij elke verandering, en anders om de halve seconde */
+  /* Mijn toetsen naar de kamer. Een toets die verandert gaat meteen: indrukken,
+     loslaten, omdraaien, springen, wisselen, blokken. Werd dat eerst hoogstens
+     om de 45 ms verstuurd, dan liep de kamer bij snel omdraaien tot drie
+     tikken de oude kant op terwijl mijn scherm al de nieuwe op ging, en dat
+     verschil kwam daarna als een ruk terug. Alleen sturen met de muis of een
+     vinger verandert elk beeld een beetje; die stroom gaat hoogstens twintig
+     keer per tel. Staat er niets nieuws, dan gaat de stand van de toetsen om
+     de kwart seconde nog eens, zodat de kamer een vers anker heeft. */
+  function zendInvoer(inv, nu){
+    co.laatsteInvoer = inv.dx.toFixed(3) + ',' + inv.dy.toFixed(3) + (blokToets ? 'B' : ''); co.laatsteStil = !inv.dx && !inv.dy; co.laatsteBlok = blokToets;
+    co.zendKlok = 0.25; co.laatsteZendTijd = nu;
+    var nr = ++co.inNr;
+    /* het anker gaat voor de stap van dit beeld: de kamer begint ook pas bij ontvangst te lopen */
+    zetAnker(nr, inv, nu);
+    /* bij een sprong ook de richting die ik in beeld spring, zodat de kamer
+       dezelfde kant op springt, ook als ik net een andere toets indruk */
+    var inBericht = { k:'in', dx:inv.dx, dy:inv.dy, dash:co.dashVraag ? 1 : 0, wapen:co.wapenVraag, blok:blokToets ? 1 : 0, nr:nr };
+    if (co.dashVraag){ inBericht.sx = +voorspel.ddx.toFixed(3); inBericht.sy = +voorspel.ddy.toFixed(3); }
+    zendNet(inBericht);
+    co.dashVraag = false; co.wapenVraag = 0;
+  }
+  /* springen en wisselen gaan meteen bij het indrukken, niet pas bij het volgende beeld:
+     anders kon een toets die daartussen veranderde de sprong een andere kant op sturen */
+  function zendMeteen(){
+    if (!co.aan || fase !== 'ronde' || pauze || !voorspelBegin()) return;
+    zendInvoer(eigenInvoer(), performance.now());
+  }
   function gastTik(dt, nu){
     botTik(dt);
     if (fase === 'ronde' && !pauze){
       if (bot.aan) botStuur();
+      voorspelBegin();
       var inv = eigenInvoer();
-      voorspelStap(inv, dt, nu);
       co.zendKlok -= dt;
-      var sleutel = inv.dx.toFixed(2) + ',' + inv.dy.toFixed(2) + (blokToets ? 'B' : '');
-      var anders = sleutel !== co.laatsteInvoer, meteen = co.dashVraag || co.wapenVraag || co.zendKlok <= 0;
-      /* bij sturen met de muis of een vinger verandert de richting elk beeld een beetje; die stroom wordt ingehouden */
-      if (meteen || (anders && nu - co.laatsteZendTijd > 45)){
-        co.laatsteInvoer = sleutel; co.zendKlok = 0.5; co.laatsteZendTijd = nu;
-        var nr = ++co.inNr; co.verzonden[nr] = nu;
-        zendNet({ k:'in', dx:inv.dx, dy:inv.dy, dash:co.dashVraag ? 1 : 0, wapen:co.wapenVraag ? 1 : 0, blok:blokToets ? 1 : 0, nr:nr });
-        co.dashVraag = false; co.wapenVraag = false;
-      }
+      var sleutel = inv.dx.toFixed(3) + ',' + inv.dy.toFixed(3) + (blokToets ? 'B' : '');
+      var stil = !inv.dx && !inv.dy, anders = sleutel !== co.laatsteInvoer;
+      var sprong = anders && (inv.bron !== 'wijs' || stil !== co.laatsteStil || blokToets !== co.laatsteBlok);
+      var meteen = co.dashVraag || co.wapenVraag > 0 || sprong || co.zendKlok <= 0;
+      if (meteen || (anders && nu - co.laatsteZendTijd > 50)) zendInvoer(inv, nu);
+      voorspelStap(inv, dt, nu);
     } else {
       voorspelStap({ dx:0, dy:0 }, dt, nu);
       /* de deeltjes lopen nog even uit */
@@ -1778,42 +1913,63 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       cijfers = cijfers.filter(function(c){ return c.leven > 0; });
     }
   }
-  /* Een stand komt twintig keer per seconde. Alles wat beweegt krijgt een
-     'van' en een 'naar', en schuift daar in de vijftig milliseconden tot de
-     volgende stand tussenin; zo beweegt het zestig keer per seconde vloeiend
-     in plaats van twintig keer te springen. */
-  /* Een stand komt ongeveer twintig keer per seconde, maar niet op de klok. Alles schuift
-     van waar het getekend stond naar de nieuwe plek in de tijd die er echt tussen twee
-     standen zat, en als de volgende stand op zich laat wachten loopt het nog even door in
-     dezelfde richting (hoogstens 120 ms) in plaats van stil te staan en dan te springen. */
-  /* Elke stand gaat in een rijtje; getekend wordt wat er VERTRAAG milliseconden geleden
-     was, tussen de twee standen die daaromheen liggen. Zo is er altijd een volgende stand
-     om naartoe te schuiven en stoort een late stand niet. Alleen als de standen langer
-     uitblijven loopt het nog even door in dezelfde richting. */
-  var VERTRAAG = 70;
-  function zetDoel(o, x, y, nu){
-    if (!o.buf || Math.hypot(x - o.x, y - o.y) > 160){ o.buf = [{ t:nu, x:x, y:y }]; o.x = x; o.y = y; return; }
-    o.buf.push({ t:nu, x:x, y:y }); if (o.buf.length > 10) o.buf.shift();
+  /* De anderen, de fouten en wat er vliegt: elke stand gaat in een rijtje, en
+     getekend wordt wat er een kleine tel geleden was, tussen de twee standen
+     die daaromheen liggen. Zo is er altijd een volgende stand om naartoe te
+     schuiven.
+
+     De tijd van een stand is niet het moment dat hij hier binnenkwam, maar de
+     tik van de kamer (tk), omgerekend naar de klok van deze pagina. Een stand
+     die op het net wat bleef hangen heeft dan toch zijn eigen plek in de tijd,
+     en het schuiven gaat even hard door in plaats van te haperen en in te
+     halen. De omrekening volgt de snelste standen (die kwamen het minst
+     vertraagd binnen), en hoe ver de rest daarachter zit bepaalt hoeveel
+     buffer er nodig is: een rustige lijn 60 ms, een haperende meer. */
+  var klok = { af:null, schommel:0 }, VERTRAAG = 60;
+  function standTijd(tk, nu){
+    if (typeof tk !== 'number') return nu;
+    var kt = tk * 1000 * STAP, o = nu - kt;
+    if (klok.af === null || Math.abs(o - klok.af) > 1500){ klok.af = o; klok.schommel = 0; }
+    else if (o < klok.af) klok.af = o;
+    else klok.af += (o - klok.af) * 0.01;
+    klok.schommel += (Math.max(0, o - klok.af) - klok.schommel) * 0.1;
+    VERTRAAG = Math.max(60, Math.min(170, 45 + klok.schommel * 2.2));
+    return kt + klok.af;
+  }
+  function hoekTussen(a, b, k){ var d = Math.atan2(Math.sin(b - a), Math.cos(b - a)); return a + d * k; }
+  function zetDoel(o, x, y, t, h){
+    if (!o.buf || Math.hypot(x - o.x, y - o.y) > 160){ o.buf = [{ t:t, x:x, y:y, h:h }]; o.x = x; o.y = y; if (h !== undefined) o.mikt = h; return; }
+    if (o.buf.length && t <= o.buf[o.buf.length - 1].t) t = o.buf[o.buf.length - 1].t + 1;
+    o.buf.push({ t:t, x:x, y:y, h:h }); if (o.buf.length > 12) o.buf.shift();
   }
   function schuifEen(o, nu){
     var b = o.buf; if (!b || !b.length) return;
-    var t = nu - VERTRAAG, n = b.length;
-    if (t <= b[0].t){ o.x = b[0].x; o.y = b[0].y; return; }
-    var laatst = b[n - 1];
-    if (t >= laatst.t){
-      var vorig = b[n - 2];
-      if (!vorig){ o.x = laatst.x; o.y = laatst.y; return; }
-      var dt = Math.max(1, laatst.t - vorig.t), ex = Math.min(t - laatst.t, 120);
-      o.x = laatst.x + (laatst.x - vorig.x) / dt * ex; o.y = laatst.y + (laatst.y - vorig.y) / dt * ex; return;
+    var t = nu - VERTRAAG, n = b.length, a, c, kk;
+    if (t <= b[0].t){ a = c = b[0]; kk = 0; }
+    else if (t >= b[n - 1].t){
+      /* de volgende stand is er nog niet: nog even door in dezelfde richting, hoogstens 100 ms */
+      var laatst = b[n - 1], vorig = b[n - 2];
+      if (!vorig){ o.x = laatst.x; o.y = laatst.y; if (laatst.h !== undefined) o.mikt = laatst.h; return; }
+      a = vorig; c = laatst; kk = 1 + Math.min(t - laatst.t, 100) / Math.max(1, laatst.t - vorig.t);
+    } else {
+      for (var i = n - 2; i >= 0; i--) if (b[i].t <= t){ a = b[i]; c = b[i + 1]; break; }
+      kk = (t - a.t) / Math.max(1, c.t - a.t);
     }
-    for (var i = n - 2; i >= 0; i--){
-      if (b[i].t <= t){ var a = b[i], c = b[i + 1], kk = (t - a.t) / Math.max(1, c.t - a.t); o.x = a.x + (c.x - a.x) * kk; o.y = a.y + (c.y - a.y) * kk; return; }
-    }
+    o.x = a.x + (c.x - a.x) * kk; o.y = a.y + (c.y - a.y) * kk;
+    if (a.h !== undefined && c.h !== undefined) o.mikt = hoekTussen(a.h, c.h, Math.min(1, kk));
   }
   function schuif(nu){
-    fouten.forEach(function(f){ schuifEen(f, nu); });
+    fouten.forEach(function(f){
+      schuifEen(f, nu);
+      /* de klokken van wie schiet lopen hier door tot de volgende stand, voor de loop die mikt en terugslaat */
+      if (f.lkS !== undefined){ var el = Math.min(0.12, (nu - f.kT) / 1000); f.laadKlok = f.lkS - el; f.stilKlok = Math.max(-1, f.skS - el); if (f.laadKlok < 0) f.laadKlok += f.soort.laden || 0; }
+    });
     messen.forEach(function(m){ schuifEen(m, nu); });
-    aanvallen.forEach(function(a){ if (a.soort === 'kogel' || a.soort === 'schot' || a.soort === 'bom') schuifEen(a, nu); });
+    aanvallen.forEach(function(a){
+      if (a.soort === 'kogel' || a.soort === 'schot' || a.soort === 'bom') schuifEen(a, nu);
+      /* de tijd van een aanval loopt hier ook door, zodat een cirkel vloeiend volloopt en een granaat vloeiend vliegt */
+      if (a.tS !== undefined) a.t = a.tS + Math.min(0.12, (nu - a.tT) / 1000);
+    });
     alleMaten().forEach(function(m){ schuifEen(m.sp, nu); });
   }
   function netOntvang(d){
@@ -1823,6 +1979,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   function pasStandToe(d, nu){
     co.pakketten++; co.laatstePakket = nu;
     var mijA = d.sp[co.mij];
+    /* de tijd van deze stand op de klok van de kamer (zie standTijd) */
+    var st = standTijd(d.tk, nu);
     /* de fase: een nieuwe ronde, de vragen, of het einde */
     if (d.f !== co.laatsteFase){
       co.laatsteFase = d.f;
@@ -1856,14 +2014,15 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       co.neer = !!mijA[13];
       munten += mijA[17] - muntWas; muntWas = mijA[17];
       geveld += mijA[18] - geveldWas; geveldWas = mijA[18];
-      /* hoe lang mijn toets onderweg was: het nummer dat de kamer het laatst verwerkte */
-      var nr = mijA[19];
-      if (nr && co.verzonden[nr] !== undefined){
-        var reis = nu - co.verzonden[nr]; delete co.verzonden[nr];
+      /* hoe lang mijn toets onderweg was: van versturen tot de eerste stand
+         waarin de kamer hem had, min de tikken dat hij daar al gold */
+      var nr = mijA[19], tikken = mijA[25], anker = voorspel.ankers[nr];
+      if (nr && anker && !anker.gemeten){
+        anker.gemeten = true;
+        var reis = nu - anker.t - (typeof tikken === 'number' ? tikken * STAP * 1000 : 0);
         co.lag += (Math.max(20, Math.min(1500, reis)) - co.lag) * 0.25;
-        Object.keys(co.verzonden).forEach(function(k){ if (+k < nr) delete co.verzonden[k]; });
       }
-      voorspelBevestig(nu);
+      voorspelBevestig(nu, nr, tikken, mijA[26]);
     }
     /* de anderen, op hun nummer */
     for (var mi = 0; mi < d.sp.length; mi++){
@@ -1874,7 +2033,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
         m2 = maten[mi] = { naam:wieM.naam || (mi === 1 - co.mij && co.maatNaam) || 'maat ' + (mi + 1), av:wieM.av || (mi === 1 - co.mij ? co.maatAv : '') || '', sp:ZWAARDMOTOR.nieuweSp(hijA[0], hijA[1]), stats:{ bereik:hijA[14], harnas:hijA[12] }, hp:hijA[10], maxHp:hijA[11], neer:false, klaar:false };
         if (!maat) maat = m2;
       }
-      zetDoel(m2.sp, hijA[0], hijA[1], nu); uitpak(m2.sp, hijA);
+      uitpak(m2.sp, hijA); zetDoel(m2.sp, hijA[0], hijA[1], st, hijA[2]);
       m2.hp = hijA[10]; m2.maxHp = hijA[11]; m2.stats.harnas = hijA[12]; m2.neer = !!hijA[13]; m2.weg = hijA[13] === 2; m2.stats.bereik = hijA[14]; m2.klaar = !!hijA[20];
     }
     co.maatKlaar = alleMaten().length > 0 && wieNietKlaar().length === 0;
@@ -1889,20 +2048,24 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
         var soort = def || (FOUTEN.filter(function(x){ return x.id === a[4]; })[0] || FOUTEN[0]);
         f = { id:a[10], x:a[0], y:a[1], soort:soort, def:def, r:a[5], baas:isBaas, snel:0, slaKlok:0 };
       }
-      zetDoel(f, a[0], a[1], nu);
-      f.hp = a[2]; f.maxHp = a[3]; f.flits = a[6]; f.stap = a[7]; f.schild = a[8]; f.mikt = a[9] || 0;
+      f.hp = a[2]; f.maxHp = a[3]; f.flits = a[6]; f.stap = a[7]; f.schild = a[8];
+      zetDoel(f, a[0], a[1], st, a[9] || 0);
+      /* wie schiet: zijn klokken van laden en stilstaan, die hier doorlopen tot de volgende stand */
+      if (a.length > 12){ f.lkS = a[11]; f.skS = a[12]; f.kT = nu; if (f.laadKlok === undefined){ f.laadKlok = a[11]; f.stilKlok = a[12]; } }
       return f;
     });
     var wasM = {}; messen.forEach(function(m){ wasM[m.id] = m; });
-    messen = (d.me || []).map(function(a){ var m = wasM[a[4]] || { id:a[4], x:a[0], y:a[1] }; zetDoel(m, a[0], a[1], nu); m.hoek = a[2]; m.pijl = a[3]; return m; });
+    messen = (d.me || []).map(function(a){ var m = wasM[a[4]] || { id:a[4], x:a[0], y:a[1] }; zetDoel(m, a[0], a[1], st); m.hoek = a[2]; m.pijl = a[3]; return m; });
     munt = (d.mu || []).map(function(a){ return { id:a[3], x:a[0], y:a[1], waarde:a[2], leven:1 }; });
     cijfers = (d.ci || []).map(function(a){ return { x:a[0], y:a[1], tekst:a[2], kleur:a[3], leven:a[4] }; });
     var wasA = {}; aanvallen.forEach(function(a){ wasA[a.id] = a; });
     aanvallen = (d.aa || []).map(function(a){
       var o = wasA[a[16]] || { id:a[16], soort:a[0], x:a[1], y:a[2] };
-      if (o.soort === 'kogel' || o.soort === 'schot' || o.soort === 'bom') zetDoel(o, a[1], a[2], nu); else { o.x = a[1]; o.y = a[2]; }
+      if (o.soort === 'kogel' || o.soort === 'schot' || o.soort === 'bom') zetDoel(o, a[1], a[2], st); else { o.x = a[1]; o.y = a[2]; }
+      if (o.tS === undefined || a[3] !== o.tS){ o.tS = a[3]; o.tT = nu; }
       o.t = a[3]; o.hoek = a[4]; o.richting = a[5]; o.nu = a[6]; o.straal = a[7]; o.geknald = !!a[8]; o.k = a[9] || 1; o.gat = a[10] || 0;
       o.breed = a[11] || 0; o.boog = a[12] || 0; o.duur = a[13] || 0; o.r0 = a[14] || 0; o.kl = a[15] || ''; o.neer = a[3] > 0;
+      if (a.length > 18){ o.ox = a[17]; o.oy = a[18]; }
       return o;
     });
     tekenHud();
@@ -2132,6 +2295,27 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     VLOER = s; return s;
   }
 
+  /* Hoe ver een fout die schiet is met zijn schot: 'laad' loopt van 0 naar 1
+     zolang hij stilstaat en mikt (en bij de schutter ook zolang zijn streep op
+     de grond ligt), 'terug' is de terugslag vlak na het schot. Alles volgt uit
+     de klokken van de motor (laadKlok, stilKlok), die samen ook in de stand staan. */
+  function schietStand(f){
+    var so = f.soort, uit = { laad:0, terug:0 };
+    if (!so || !so.laden || f.laadKlok === undefined) return uit;
+    var lk = f.laadKlok, sk = f.stilKlok || 0;
+    if (so.granaat){
+      var na = AANVAL.granaat.na;
+      if (sk > 0){ uit.terug = Math.min(1, sk / na); return uit; }
+      if (lk <= so.mik) uit.laad = Math.max(0, Math.min(1, 1 - lk / so.mik));
+      return uit;
+    }
+    var wacht = AANVAL.schot.wacht;
+    if (sk > 0){ uit.laad = 0.6 + 0.4 * Math.max(0, Math.min(1, 1 - sk / wacht)); return uit; }
+    /* het schot vertrok toen de stilKlok op nul kwam; hij telt nog even door onder nul */
+    if (sk > -0.28 && sk <= 0 && f.stilKlok !== undefined && lk < so.laden - wacht + 0.05){ uit.terug = 1 + sk / 0.28; return uit; }
+    if (lk <= so.mik) uit.laad = 0.6 * Math.max(0, Math.min(1, 1 - lk / so.mik));
+    return uit;
+  }
   function foutLijf(f){
     var r = f.r, vul = f.soort.kleur, lijn = tint(vul, 0.42), n = function(v){ return (r * v).toFixed(1); };
     var g = '';
@@ -2139,10 +2323,35 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     else if (f.soort.id === 'schild') g = '<path d="M0,' + n(-1.05) + ' L' + n(0.95) + ',' + n(-0.55) + ' L' + n(0.95) + ',' + n(0.55) + ' L0,' + n(1.05) + ' L' + n(-0.95) + ',' + n(0.55) + ' L' + n(-0.95) + ',' + n(-0.55) + ' Z" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.14) + '" stroke-linejoin="round"/>';
     else if (f.soort.id === 'dik') g = '<rect x="' + n(-1) + '" y="' + n(-1) + '" width="' + n(2) + '" height="' + n(2) + '" rx="' + n(0.35) + '" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.14) + '"/>';
     else if (f.soort.id === 'schutter'){
-      /* een loop die meedraait met waar hij op mikt, zodat je hem ziet richten */
-      g = '<g transform="rotate(' + ((f.mikt || 0) * 180 / Math.PI).toFixed(0) + ')">' +
-          '<rect x="' + n(0.25) + '" y="' + n(-0.26) + '" width="' + n(1.15) + '" height="' + n(0.52) + '" rx="' + n(0.18) + '" fill="' + lijn + '"/></g>' +
+      /* Een loop die meedraait met waar hij op mikt. Staat hij stil om te
+         schieten, dan zie je het kanon werken: de loop schuift naar voren en
+         aan de mond groeit een gloed, en als het schot vertrekt slaat hij terug
+         met een flits. Ligt zijn streep al op de grond, dan draait de loop niet
+         meer mee maar wijst hij langs de streep (zie de motor); zonder schot
+         staat hij dus stil en wiebelt er niets. Vroeger bleef de loop bij het
+         stilstaan gewoon liggen en zag je niet dat er een schot aankwam. */
+      var ss = schietStand(f), schuif2 = ss.laad * 0.18 - ss.terug * 0.42;
+      g = '<g transform="rotate(' + ((f.mikt || 0) * 180 / Math.PI).toFixed(1) + ') translate(' + n(schuif2) + ',0)">' +
+          '<rect x="' + n(0.25) + '" y="' + n(-0.26 - ss.laad * 0.06) + '" width="' + n(1.15) + '" height="' + n(0.52 + ss.laad * 0.12) + '" rx="' + n(0.18) + '" fill="' + lijn + '"/>' +
+          (ss.laad > 0 ? '<circle cx="' + n(1.42) + '" r="' + n(0.1 + 0.2 * ss.laad) + '" fill="#FFE168" opacity="' + (0.35 + 0.6 * ss.laad).toFixed(2) + '"/>' : '') +
+          (ss.terug > 0 ? '<circle cx="' + n(1.6) + '" r="' + n(0.3 + 0.35 * ss.terug) + '" fill="#FFE168" opacity="' + (0.85 * ss.terug).toFixed(2) + '"/>' : '') +
+          '</g>' +
           '<circle r="' + n(1) + '" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.14) + '"/>';
+    }
+    else if (f.soort.id === 'mortier'){
+      /* De mortier: een lage ronde pot met een dikke buis die naar je toe
+         wijst. Bij het mikken komt de buis omhoog (hij wordt langer en gloeit),
+         bij het schot slaat hij terug en komt er een wolkje uit. */
+      var ms2 = schietStand(f), buis = 1.5 + 0.35 * ms2.laad - 0.4 * ms2.terug;
+      g = '<path d="M' + n(-1) + ',' + n(-0.35) + ' Q' + n(-1) + ',' + n(-1) + ' 0,' + n(-1) + ' Q' + n(1) + ',' + n(-1) + ' ' + n(1) + ',' + n(-0.35) + ' L' + n(0.92) + ',' + n(0.62) + ' Q' + n(0.9) + ',' + n(0.95) + ' 0,' + n(0.95) + ' Q' + n(-0.9) + ',' + n(0.95) + ' ' + n(-0.92) + ',' + n(0.62) + ' Z" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.14) + '" stroke-linejoin="round"/>' +
+          '<path d="M' + n(-0.95) + ',' + n(-0.1) + ' H' + n(0.95) + '" stroke="' + lijn + '" stroke-width="' + n(0.1) + '" opacity=".6"/>' +
+          /* de buis over het lijf heen, vanaf de rand van het teken in het midden */
+          '<g transform="rotate(' + ((f.mikt || 0) * 180 / Math.PI).toFixed(1) + ')">' +
+          '<rect x="' + n(0.42) + '" y="' + n(-0.34) + '" width="' + n(buis - 0.42) + '" height="' + n(0.68) + '" rx="' + n(0.12) + '" fill="' + lijn + '" stroke="#14224C" stroke-opacity=".35" stroke-width="' + n(0.06) + '"/>' +
+          '<ellipse cx="' + n(buis) + '" rx="' + n(0.13) + '" ry="' + n(0.34) + '" fill="#14224C" opacity=".8"/>' +
+          (ms2.laad > 0.5 ? '<circle cx="' + n(buis) + '" r="' + n(0.12 * ms2.laad) + '" fill="#FFE168" opacity="' + ms2.laad.toFixed(2) + '"/>' : '') +
+          (ms2.terug > 0 ? '<circle cx="' + n(buis + 0.45) + '" r="' + n(0.35 + 0.55 * (1 - ms2.terug)) + '" fill="#dfe6ee" opacity="' + (0.8 * ms2.terug).toFixed(2) + '"/>' : '') +
+          '</g>';
     }
     else if (f.soort.id === 'pantser') g = '<rect x="' + n(-1) + '" y="' + n(-0.95) + '" width="' + n(2) + '" height="' + n(1.9) + '" rx="' + n(0.2) + '" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.16) + '"/>' +
       '<g fill="#dfe6ee"><circle cx="' + n(-0.65) + '" cy="' + n(-0.6) + '" r="' + n(0.12) + '"/><circle cx="' + n(0.65) + '" cy="' + n(-0.6) + '" r="' + n(0.12) + '"/><circle cx="' + n(-0.65) + '" cy="' + n(0.6) + '" r="' + n(0.12) + '"/><circle cx="' + n(0.65) + '" cy="' + n(0.6) + '" r="' + n(0.12) + '"/></g>';
@@ -2279,6 +2488,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
            '<circle cx="' + (m.x - 2).toFixed(1) + '" cy="' + (m.y + wip - 2).toFixed(1) + '" r="2" fill="#fff" opacity=".6"/>';
     });
     /* de aanvallen van de baas: eerst de waarschuwing op de grond, dan de klap */
+    var lucht = '';
     aanvallen.forEach(function(a){
       if (a.soort === 'cirkel'){
         var c = AANVAL.cirkel, cW = c.wacht * (a.k || 1), deel = Math.min(1, Math.max(0, a.t) / cW), cr = a.straal || c.r;
@@ -2356,6 +2566,26 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
         s += '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + (ko.r + 3) + '" fill="rgba(20,34,76,.14)"/>' +
              '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + ko.r + '" fill="' + (a.kl || '#8a7350') + '" stroke="#14224C" stroke-width="2" stroke-opacity=".5"/>' +
              '<circle cx="' + (a.x - 3).toFixed(1) + '" cy="' + (a.y - 3).toFixed(1) + '" r="3" fill="#fff" opacity=".5"/>';
+      } else if (a.soort === 'granaat'){
+        /* De granaat van een mortier: dezelfde cirkel als bij een baas, maar
+           kleiner, die volloopt tot hij neerkomt. De granaat zelf vliegt in een
+           boog van de mortier naar het midden, met zijn schaduw op de grond. */
+        var gn = AANVAL.granaat, gW = a.duur || gn.vlucht(ronde), gR = a.straal || gn.r;
+        if (!a.geknald && a.t < gW){
+          var gd = Math.min(1, Math.max(0, a.t) / gW);
+          s += '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + gR + '" fill="rgba(242,103,73,.16)" stroke="#F26749" stroke-width="3" stroke-dasharray="7 5"/>' +
+               '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + (gR * gd).toFixed(1) + '" fill="rgba(242,103,73,.35)"/>';
+          if (a.ox !== undefined){
+            var gx = a.ox + (a.x - a.ox) * gd, gy = a.oy + (a.y - a.oy) * gd, hoog = Math.sin(Math.PI * gd) * (70 + Math.hypot(a.x - a.ox, a.y - a.oy) * 0.22);
+            s += '<ellipse cx="' + gx.toFixed(1) + '" cy="' + gy.toFixed(1) + '" rx="' + (5 + 5 * gd).toFixed(1) + '" ry="' + (2 + 2 * gd).toFixed(1) + '" fill="rgba(20,34,76,.22)"/>';
+            /* de granaat hangt in de lucht: die komt boven alles, na de spelers */
+            lucht += '<circle cx="' + gx.toFixed(1) + '" cy="' + (gy - hoog).toFixed(1) + '" r="8" fill="#3b4759" stroke="#14224C" stroke-width="2" stroke-opacity=".5"/>' +
+                 '<circle cx="' + (gx - 2.5).toFixed(1) + '" cy="' + (gy - hoog - 2.5).toFixed(1) + '" r="2.4" fill="#fff" opacity=".55"/>';
+          }
+        } else if (a.geknald){
+          var gk = Math.min(1, Math.max(0, a.t - gW) / gn.knal);
+          s += '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + (gR * (1 + gk * 0.3)).toFixed(1) + '" fill="#EA9836" opacity="' + (0.85 * (1 - gk)).toFixed(2) + '"/>';
+        }
       } else if (a.soort === 'schot'){
         var sc = AANVAL.schot, scW = sc.wacht * (a.k || 1), skl = a.kl || '#2f7d52';
         if (a.t < scW){
@@ -2458,6 +2688,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     var lijstSp = [{ s:mijnSp, ber:zwaardBereik(), harnas:stat('harnas'), neer:co.neer, naam:null }];
     if (co.aan) alleMaten().forEach(function(m){ lijstSp.push({ s:m.sp, ber:m.stats.bereik, harnas:m.stats.harnas, neer:m.neer, naam:m.naam, av:m.av }); });
     lijstSp.forEach(function(Q){ s += tekenSpeler(Q.s, Q.ber, Q.harnas, Q.neer, Q.naam, pols, Q.av); });
+    s += lucht;
     /* de balk van de baas staat boven de arena, buiten het speelveld */
     var baasNu = null;
     fouten.forEach(function(f){ if (f.baas) baasNu = f; });
@@ -2784,8 +3015,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
 /* Op een aanraakscherm geen toetsen in de uitleg: daar heb je geen WASD en geen shift. */
 SPEL.uitleg({ onder:true, doel:"Vel de fouten in de arena. Goede antwoorden maken je zwaard sterker.", tijd:"zolang je het volhoudt",
   bediening: document.documentElement.classList.contains('raak')
-    ? "Houd je vinger op de arena en sleep waarheen je wilt lopen. Tik op Ontwijk om weg te springen en op Zwaard of Boog om te wisselen; bij een baas en bij een schutter stap je uit wat er op de grond oplicht."
-    : "Pijltjes of WASD om te lopen, spatie of Shift om te ontwijken, Q, E of de rechtermuisknop om tussen zwaard en boog te wisselen; bij een baas en bij een schutter stap je uit wat er op de grond oplicht. Na een ronde werken de toetsen 1 tot 4 bij de vragen." });
+    ? "Houd je vinger op de arena en sleep waarheen je wilt lopen. Tik op Ontwijk om weg te springen en op Zwaard of Boog om te wisselen; bij een baas, een schutter en een mortier stap je uit wat er op de grond oplicht."
+    : "Pijltjes of WASD om te lopen, spatie of Shift om te ontwijken, Q, E of de rechtermuisknop om tussen zwaard en boog te wisselen; bij een baas, een schutter en een mortier stap je uit wat er op de grond oplicht. Na een ronde werken de toetsen 1 tot 4 bij de vragen." });
 </script>
 </body>
 </html>

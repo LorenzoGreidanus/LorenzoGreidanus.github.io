@@ -1006,8 +1006,9 @@ export class Kamer extends DurableObject {
     }
     if (d.k === "in"){
       W.zetInvoer(i, d.dx, d.dy, Math.max(0, d.nr | 0), !!d.blok);
-      if (d.dash) W.spelers[i].dashVraag = true;
-      if (d.wapen) W.spelers[i].wapenVraag = true;
+      if (d.dash) W.wilSpringen(i, d.sx, d.sy);
+      /* wapen is het aantal keer wisselen sinds het vorige bericht (een oudere pagina stuurt 1) */
+      if (d.wapen) W.wilWapen(i, Math.min(4, d.wapen | 0));
     } else if (d.k === "stats"){ W.zetStats(i, d.s, d.hp); }
     else if (d.k === "crit"){ W.crit(i); }
     else if (d.k === "klaar"){ W.zetStats(i, d.s, d.hp); if (W.klaar(i)) this.motorZend(); else this.motorZend(); }
