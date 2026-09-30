@@ -84,8 +84,8 @@ const CRIT = { x:2, straal:90, deel:0.5 };
    (de munten in de arena en het geld voor een goed antwoord). */
 const LAAT = { vanaf:15, munten:1.25 };
 function laatExtra(ronde){ return ronde >= LAAT.vanaf ? LAAT.munten : 1; }
-/* De acht bazen. Om de vijf rondes komt de volgende aan de beurt, en na de
-   achtste begint de rij opnieuw op een hogere ronde en dus taaier. De laatste
+/* De negen bazen. Om de vijf rondes komt de volgende aan de beurt, en na de
+   negende begint de rij opnieuw op een hogere ronde en dus taaier. De laatste
    twee (ronde 35 en 40) schieten niets: alles gebeurt op de vloer, op de maat,
    en wie stilstaat wordt geraakt. 'tempo' maakt de pauze tussen twee aanvallen korter. */
 const BAZEN = [
@@ -112,7 +112,12 @@ const BAZEN = [
     wat:'Een dansvloer die op de maat oplicht, lichtbundels die rondgaan en strepen die over de vloer vegen. Blijf bewegen.' },
   { id:'metronoom', naam:'De Metronoom', kleur:'#1f6b5c', vorm:'metronoom', hp:20, r:46, schade:25, schild:0.35, tempo:0.65,
     aanvallen:['slinger', 'baan', 'kruis', 'veeg', 'raster', 'tik'],
-    wat:'Een slinger die van links naar rechts over de arena zwaait, rechte halen en kruisen zoals De Rode Pen, strepen die over de vloer vegen en een raster in de maat. Blijf in beweging.' }
+    wat:'Een slinger die van links naar rechts over de arena zwaait, rechte halen en kruisen zoals De Rode Pen, strepen die over de vloer vegen en een raster in de maat. Blijf in beweging.' },
+  /* De Blauwe Pen: de aanvallen van De Rode Pen, maar heftiger (zie 'heftig' in zetAanval): meer
+     strepen, dubbele kruisen, drie muren, drie stralen, drie waaiers, meer cirkels, en vaker twee tegelijk. */
+  { id:'blauwepen', naam:'De Blauwe Pen', kleur:'#2458d6', vorm:'pen', hp:22, r:44, schade:28, schild:0.4, tempo:0.8, heftig:true, dubbel:0.3,
+    aanvallen:['baan', 'kruis', 'laser', 'muur', 'cirkel', 'kegel'],
+    wat:'De grote broer van De Rode Pen. Dezelfde halen, kruisen, stralen en muren, maar meer tegelijk en sneller achter elkaar.' }
 ];
 /* De aanvallen. Elke aanval heeft eerst een waarschuwing die je op de grond
    ziet, en dan het moment dat het raakt. Alle maten zijn in arenapunten. */
@@ -527,7 +532,7 @@ function maak(opties){
     b.laatste = i;
     zetAanval(rij[i], b, levend, k);
     /* kwaad: soms twee aanvallen tegelijk; in een nachtmerrie vaker */
-    var kansDubbel = W.nachtmerrie ? NACHTMERRIE.fases[b.nmFase || 0].dubbel : (boos ? AANVAL.boosDubbel : 0);
+    var kansDubbel = W.nachtmerrie ? NACHTMERRIE.fases[b.nmFase || 0].dubbel : Math.max(boos ? AANVAL.boosDubbel : 0, b.def.dubbel || 0);
     if (toeval() < kansDubbel){
       var j = (i + 1 + Math.floor(toeval() * (rij.length - 1))) % rij.length;
       zetAanval(rij[j], b, levend, k);
@@ -540,18 +545,18 @@ function maak(opties){
   }
   function eenSpeler(levend){ return levend[Math.floor(toeval() * levend.length)] || W.spelers[0]; }
   function zetAanval(soort, b, levend, k){
-    var i, n, p, hoek, doel, A = W.aanvallen, ronde = W.ronde;
+    var i, n, p, hoek, doel, A = W.aanvallen, ronde = W.ronde, heftig = !!(b.def && b.def.heftig);
     zeg('aanval', soort, k, b);
     if (soort === 'cirkel'){
       levend.forEach(function(P){ A.push({ id:++W.nr, soort:'cirkel', x:P.sp.x, y:P.sp.y, t:0, k:k }); });
-      n = AANVAL.cirkel.extra(ronde);
-      for (i = 0; i < n; i++){ p = vrijPunt(); A.push({ id:++W.nr, soort:'cirkel', x:p.x, y:p.y, t:0, k:k }); }
+      n = AANVAL.cirkel.extra(ronde) + (heftig ? 3 : 0);
+      for (i = 0; i < n; i++){ p = vrijPunt(); A.push({ id:++W.nr, soort:'cirkel', x:p.x, y:p.y, t:heftig ? -i * 0.12 : 0, k:k }); }
     } else if (soort === 'laser' || soort === 'wijzers'){
       var w = soort === 'wijzers' ? AANVAL.wijzers : AANVAL.laser;
       doel = eenSpeler(levend);
       hoek = Math.atan2(doel.sp.y - b.y, doel.sp.x - b.x) - (soort === 'wijzers' ? 0 : AANVAL.laser.boog * 0.35);
       var richting = toeval() < 0.5 ? 1 : -1;
-      n = soort === 'wijzers' ? 2 : AANVAL.laser.stralen(ronde);
+      n = soort === 'wijzers' ? 2 : AANVAL.laser.stralen(ronde) + (heftig ? 1 : 0);
       for (i = 0; i < n; i++){
         A.push({ id:++W.nr, soort:'laser', x:b.x, y:b.y, r0:b.r, t:0, k:k, richting:richting,
           hoek:hoek + i * Math.PI * 2 / n,
@@ -571,10 +576,12 @@ function maak(opties){
       hoek = Math.atan2(doel.sp.y - b.y, doel.sp.x - b.x);
       A.push({ id:++W.nr, soort:'kegel', x:b.x, y:b.y, hoek:hoek, t:0, k:k });
       if (ronde >= 18) A.push({ id:++W.nr, soort:'kegel', x:b.x, y:b.y, hoek:hoek + Math.PI, t:-0.4, k:k });
+      /* heftig: nog twee waaiers schuin ernaast, even later */
+      if (heftig){ A.push({ id:++W.nr, soort:'kegel', x:b.x, y:b.y, hoek:hoek + Math.PI / 2, t:-0.7, k:k }); A.push({ id:++W.nr, soort:'kegel', x:b.x, y:b.y, hoek:hoek - Math.PI / 2, t:-0.7, k:k }); }
     } else if (soort === 'baan'){
       hoek = toeval() * Math.PI;
-      n = AANVAL.baan.aantal(ronde);
-      var mid = vrijPunt(0), stap2 = 200;
+      n = AANVAL.baan.aantal(ronde) + (heftig ? 2 : 0);
+      var mid = vrijPunt(0), stap2 = heftig ? 175 : 200;
       for (i = 0; i < n; i++){
         var af = (i - (n - 1) / 2) * stap2;
         A.push({ id:++W.nr, soort:'baan', hoek:hoek, t:-i * 0.1, k:k, kl:b.def.kleur,
@@ -584,6 +591,10 @@ function maak(opties){
       p = eenSpeler(levend).sp; hoek = toeval() * Math.PI;
       A.push({ id:++W.nr, soort:'baan', x:p.x, y:p.y, hoek:hoek, t:0, k:k, breed:AANVAL.kruis.breed, kl:b.def.kleur });
       A.push({ id:++W.nr, soort:'baan', x:p.x, y:p.y, hoek:hoek + Math.PI / 2, t:0, k:k, breed:AANVAL.kruis.breed, kl:b.def.kleur });
+      /* heftig: meteen daarna een tweede kruis, een kwartslag gedraaid, waar je naartoe stapte */
+      if (heftig){ var p2 = eenSpeler(levend).sp;
+        A.push({ id:++W.nr, soort:'baan', x:p2.x, y:p2.y, hoek:hoek + Math.PI / 4, t:-0.6, k:k, breed:AANVAL.kruis.breed, kl:b.def.kleur });
+        A.push({ id:++W.nr, soort:'baan', x:p2.x, y:p2.y, hoek:hoek + Math.PI * 3 / 4, t:-0.6, k:k, breed:AANVAL.kruis.breed, kl:b.def.kleur }); }
     } else if (soort === 'kogel'){
       n = AANVAL.kogel.aantal(ronde);
       var draai = toeval() * Math.PI * 2;
@@ -608,6 +619,8 @@ function maak(opties){
       var kant = Math.floor(toeval() * 4);
       A.push({ id:++W.nr, soort:'muur', x:b.x, y:b.y, hoek:kant * Math.PI / 2, gat:0.15 + toeval() * 0.7, t:0, k:k, kl:b.def.kleur });
       if (ronde >= 15) A.push({ id:++W.nr, soort:'muur', x:b.x, y:b.y, hoek:((kant + 2) % 4) * Math.PI / 2, gat:0.15 + toeval() * 0.7, t:-0.6, k:k, kl:b.def.kleur });
+      /* heftig: een derde muur dwars erop */
+      if (heftig) A.push({ id:++W.nr, soort:'muur', x:b.x, y:b.y, hoek:((kant + 1) % 4) * Math.PI / 2, gat:0.15 + toeval() * 0.7, t:-1.3, k:k, kl:b.def.kleur });
     } else if (soort === 'spiraal'){
       var spi = AANVAL.spiraal, start2 = toeval() * Math.PI * 2, om2 = toeval() < 0.5 ? 1 : -1;
       n = spi.aantal(ronde);
@@ -645,8 +658,12 @@ function maak(opties){
   }
   function wachtVan(a, basis){ return basis * (a.k || 1); }
   /* hoe lang een aanval in totaal loopt, zodat de volgende er niet doorheen valt */
-  function duurVan(soort){
+  function duurVan(soort, heftig){
     var A = AANVAL;
+    if (heftig && soort === 'muur') return A.muur.wacht + A.muur.duur + 1.3;
+    if (heftig && soort === 'kruis') return A.kruis.wacht + A.kruis.knal + 0.9;
+    if (heftig && soort === 'kegel') return A.kegel.wacht + A.kegel.knal + 1.1;
+    if (heftig && soort === 'baan') return A.baan.wacht + A.baan.knal + 0.7;
     if (soort === 'laser') return A.laser.wacht + A.laser.duur;
     if (soort === 'wijzers') return A.wijzers.wacht + A.wijzers.duur;
     if (soort === 'golf') return A.golf.wacht + A.golf.duur + (A.golf.ringen(W.ronde) - 1) * 0.55;
@@ -1082,7 +1099,7 @@ function maak(opties){
         }
         baasValtAan(b, levend, boos);
         b.aanvalKlok = AANVAL.pauze(ronde) * (boos ? AANVAL.boosPauze : 1) * (W.nachtmerrie ? NACHTMERRIE.fases[b.nmFase].pauze : 1) * (b.def.tempo || 1)
-                     + duurVan(b.def.aanvallen[b.laatste]) * (boos ? AANVAL.boosOverlap : 1);
+                     + duurVan(b.def.aanvallen[b.laatste], b.def.heftig) * (boos ? AANVAL.boosOverlap : 1);
       }
     });
     stapAanvallen(dt, levend);
