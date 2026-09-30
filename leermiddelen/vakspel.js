@@ -593,6 +593,13 @@ window.VAKSPEL = (function(){
       Array.prototype.forEach.call(d.querySelectorAll('input'), function(x){ x.setAttribute('readonly', ''); x.value = ''; });
       vr += '<div class="eigen-wb">' + d.innerHTML + '</div>';
       antwoord = o.antwoordTekst || '';
+      /* Tekent het spel op papier keuzes met een letter (Wie ben ik?), dan komt
+         die letter ook op het antwoordblad: "b. Willem van Oranje", net als bij meerkeuze. */
+      Array.prototype.forEach.call(d.querySelectorAll('.opties > span'), function(x){
+        var b = x.querySelector('b'); if (!b || !antwoord) return;
+        var tekst = x.textContent.slice(b.textContent.length).trim();
+        if (tekst && tekst === String(o.antwoordTekst).replace(/<[^>]+>/g, '').trim()) antwoord = b.textContent.trim() + '. ' + tekst;
+      });
     }
     return { kop: o.onderdeelNaam || o.onderdeel || '', vraag: vr, antwoord: antwoord || o.antwoordTekst || '', uitleg: (o.uitleg || '').replace(/<div[\s\S]*$/, '') };
   }
@@ -667,5 +674,5 @@ window.VAKSPEL = (function(){
 
   return { maak: maak, husselen: husselen, schoon: schoon, getal: getal,
            /* voor de proefscripts */
-           _opgave: function(){ return opgave; }, _cfg: function(){ return cfg; }, _keuze: function(){ return keuze; }, _stand: function(){ return { nr:nr, goed:goed, fout:fout, punten:punten, bezig:bezig, od:od }; } };
+           _werkbladItem: function(o){ return werkbladItem(o); }, _opgave: function(){ return opgave; }, _cfg: function(){ return cfg; }, _keuze: function(){ return keuze; }, _stand: function(){ return { nr:nr, goed:goed, fout:fout, punten:punten, bezig:bezig, od:od }; } };
 })();

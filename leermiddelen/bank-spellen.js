@@ -9,7 +9,8 @@
    leestekst is te lang voor een toren, en slepen is geen meerkeuze. Wat wel
    kan: betekenis, gaten, signaalwoorden, formeel of informeel, phrasal verbs,
    collocations, vertalingen kiezen, oorzaak en gevolg, wie ben ik, en voor
-   wiskunde getekende hoeken, driehoeken en coördinaten.
+   wiskunde getekende hoeken, driehoeken, coördinaten en grafieken (een lijn
+   in een assenstelsel: formule, startgetal, helling, aflezen).
 
    Samenleving, aardrijkskunde, biologie en economie krijgen de tekstvragen
    uit Democratie, Welke partij is dit?, Verkiezingen, Bevolkingspiramides,
@@ -131,12 +132,91 @@ window.BANK_SPELLEN = (function(){
       '<text x="' + (48 + A / 2).toFixed(1) + '" y="' + (125 - B / 2).toFixed(1) + '" font-size="15" font-weight="700" fill="#204ECF">?</text></svg>';
   }
   function roosterSvg(px, py){
-    var s = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 230 230" width="230" height="230" role="img" aria-label="assenstelsel">';
+    var s = '<svg xmlns="http://www.w3.org/2000/svg" class="rooster" viewBox="0 0 230 230" width="230" height="230" role="img" aria-label="assenstelsel">';
     for (var i = 0; i <= 10; i++){ var p = 20 + i * 19; s += '<line x1="' + p + '" y1="20" x2="' + p + '" y2="210" stroke="currentColor" stroke-opacity=".18"/><line x1="20" y1="' + p + '" x2="210" y2="' + p + '" stroke="currentColor" stroke-opacity=".18"/>'; }
     s += '<line x1="115" y1="20" x2="115" y2="210" stroke="currentColor" stroke-width="2"/><line x1="20" y1="115" x2="210" y2="115" stroke="currentColor" stroke-width="2"/>';
     [-5, 5].forEach(function(v){ s += '<text x="' + (115 + v * 19) + '" y="226" font-size="11" text-anchor="middle" fill="currentColor">' + v + '</text><text x="8" y="' + (119 - v * 19) + '" font-size="11" text-anchor="middle" fill="currentColor">' + v + '</text>'; });
     s += '<text x="122" y="126" font-size="10" fill="currentColor">O</text><circle cx="' + (115 + px * 19) + '" cy="' + (115 - py * 19) + '" r="6" fill="#F26749" stroke="#fff" stroke-width="1.5"/></svg>';
     return s;
+  }
+  /* ---------- grafieken: een lijn in een assenstelsel ----------
+     Zonder clipPath (de Klasquiz laat geen url() toe): de lijn wordt hier zelf
+     tot de rand van het rooster ingekort. Lijnen, tekst en assen in currentColor,
+     de grafiek zelf blauw en dik: zo blijft hij ook in zwart-wit te zien.
+     o: { xmin, xmax, ymin, ymax, xstap, ystap, xnaam, ynaam }; lijn: [a, b] voor y = ax + b. */
+  function getal(x){ return String(Math.round(x * 100) / 100).replace('.', ','); }
+  function grafiekSvg(o, a, b){
+    var W = 280, H = 260, L = 36, R = 22, T = 22, B = 34;
+    var sx = (W - L - R) / (o.xmax - o.xmin), sy = (H - T - B) / (o.ymax - o.ymin);
+    function X(x){ return (L + (x - o.xmin) * sx).toFixed(1); }
+    function Y(y){ return (T + (o.ymax - y) * sy).toFixed(1); }
+    var s = '<svg xmlns="http://www.w3.org/2000/svg" class="grafiek" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="grafiek">', x, y, i;
+    var nX = Math.round((o.xmax - o.xmin) / o.xstap), nY = Math.round((o.ymax - o.ymin) / o.ystap);
+    for (i = 0; i <= nX; i++){ x = o.xmin + i * o.xstap; s += '<line x1="' + X(x) + '" y1="' + T + '" x2="' + X(x) + '" y2="' + (H - B) + '" stroke="currentColor" stroke-opacity=".2"/>'; }
+    for (i = 0; i <= nY; i++){ y = o.ymin + i * o.ystap; s += '<line x1="' + L + '" y1="' + Y(y) + '" x2="' + (W - R) + '" y2="' + Y(y) + '" stroke="currentColor" stroke-opacity=".2"/>'; }
+    /* de assen door de oorsprong, of langs de rand als die er niet in zit */
+    var ax = Y(o.ymin <= 0 && o.ymax >= 0 ? 0 : o.ymin), ay = X(o.xmin <= 0 && o.xmax >= 0 ? 0 : o.xmin);
+    s += '<line x1="' + L + '" y1="' + ax + '" x2="' + (W - R + 8) + '" y2="' + ax + '" stroke="currentColor" stroke-width="2"/><line x1="' + ay + '" y1="' + (T - 8) + '" x2="' + ay + '" y2="' + (H - B) + '" stroke="currentColor" stroke-width="2"/>';
+    /* getallen langs de assen: om de andere als het er veel zijn */
+    var elkeX = nX > 10 ? 2 : 1, elkeY = nY > 10 ? 2 : 1;
+    for (i = 0; i <= nX; i += elkeX){ x = o.xmin + i * o.xstap; if (x) s += '<text x="' + X(x) + '" y="' + (+ax + 14) + '" font-size="11" text-anchor="middle" fill="currentColor">' + getal(x) + '</text>'; }
+    for (i = 0; i <= nY; i += elkeY){ y = o.ymin + i * o.ystap; if (y) s += '<text x="' + (+ay - 5) + '" y="' + (+Y(y) + 4) + '" font-size="11" text-anchor="end" fill="currentColor">' + getal(y) + '</text>'; }
+    s += '<text x="' + (+ay - 5) + '" y="' + (+ax + 14) + '" font-size="11" text-anchor="end" fill="currentColor">0</text>';
+    s += '<text x="' + (W - 4) + '" y="' + (+ax - 6) + '" font-size="12" font-weight="700" text-anchor="end" fill="currentColor">' + (o.xnaam || 'x') + '</text>';
+    s += '<text x="' + (+ay + 6) + '" y="' + (T - 10) + '" font-size="12" font-weight="700" fill="currentColor">' + (o.ynaam || 'y') + '</text>';
+    /* de lijn, ingekort tot het rooster */
+    var p = [];
+    [o.xmin, o.xmax].forEach(function(xr){ var yr = a * xr + b; if (yr >= o.ymin - 1e-9 && yr <= o.ymax + 1e-9) p.push([xr, yr]); });
+    if (a) [o.ymin, o.ymax].forEach(function(yr){ var xr = (yr - b) / a; if (xr > o.xmin + 1e-9 && xr < o.xmax - 1e-9) p.push([xr, yr]); });
+    if (p.length >= 2){ p.sort(function(u, v){ return u[0] - v[0]; }); s += '<line x1="' + X(p[0][0]) + '" y1="' + Y(p[0][1]) + '" x2="' + X(p[p.length - 1][0]) + '" y2="' + Y(p[p.length - 1][1]) + '" stroke="#204ECF" stroke-width="3" stroke-linecap="round"/>'; }
+    return s + '</svg>';
+  }
+  function formuleTekst(a, b){
+    var ax = a === 1 ? 'x' : a === -1 ? '-x' : getal(a) + 'x';
+    return 'y = ' + (a ? ax : '') + (b > 0 ? (a ? ' + ' : '') + getal(b) : b < 0 ? (a ? ' - ' + getal(-b) : getal(b)) : a ? '' : '0');
+  }
+  /* Een lijn in het rooster van -5 tot 5: de formule, het startgetal of de helling. Elke keer opnieuw geloot. */
+  function grafiekVragen(uit){
+    var ROOSTER = { xmin:-5, xmax:5, ymin:-6, ymax:6, xstap:1, ystap:1 };
+    var HELE = [-3, -2, -1, 1, 2, 3], HALVE = [-0.5, 0.5];
+    var gehad = {};
+    for (var i = 0; i < 60; i++){
+      var half = i % 4 === 3, a = half ? HALVE[tussen(0, 1)] : HELE[tussen(0, 5)], b = tussen(-4, 4), soort = ['formule', 'formule', 'start', 'helling'][i % 4];
+      if (half && b % 1) continue;
+      var sl = soort + a + '|' + b; if (gehad[sl]) continue; gehad[sl] = 1;
+      var svg = grafiekSvg(ROOSTER, a, b), n = half ? 3 : 2;
+      var stap = 'Het startgetal is waar de lijn de y-as snijdt: ' + getal(b) + '. De helling is hoeveel de lijn per stap naar rechts stijgt of daalt: ' + getal(a) + '.';
+      if (soort === 'formule'){
+        var goed = formuleTekst(a, b);
+        uit.push(vr('Welke formule hoort bij deze lijn?', goed, [formuleTekst(b || 1, a), formuleTekst(-a, b), formuleTekst(a, -b), formuleTekst(a + (a > 0 ? 1 : -1), b), formuleTekst(a, b + 1)], stap + ' Dus ' + goed + '.', 'grafiek', n, svg));
+      } else if (soort === 'start'){
+        uit.push(vr('Wat is het startgetal van deze lijn?', getal(b), [getal(b + 1), getal(b - 1), getal(-b), getal(a), getal(b + 2)], 'Het startgetal is de y waar de lijn de y-as snijdt (bij x = 0). Hier is dat ' + getal(b) + '.', 'grafiek', n, svg));
+      } else {
+        uit.push(vr('Wat is de helling van deze lijn?', getal(a), [getal(-a), getal(a + 1), getal(a - 1), getal(b), half ? getal(1 / a) : getal(a * 2)], 'Ga vanaf een punt op de lijn een stap naar rechts: de lijn gaat dan ' + getal(Math.abs(a)) + (a > 0 ? ' omhoog' : ' omlaag') + '. De helling is ' + getal(a) + '.', 'grafiek', n, svg));
+      }
+    }
+    /* Aflezen: een grafiek bij een verhaal. De stap op de y-as is de helling,
+       dus elk punt op de lijn bij een heel getal ligt op een roosterlijn. */
+    var VERHALEN = [
+      { ov:'de kosten van een taxirit', xnaam:'km', ynaam:'euro', a:[2], b:[2, 4, 6], xmax:8, v:'Wat kost een rit van #x km?', t:'Bij hoeveel km kost de rit #y euro?', e:'euro', ex:'km', n:1 },
+      { ov:'het water in een bad', xnaam:'minuten', ynaam:'liter', a:[10], b:[0, 20, 30], xmax:8, v:'Hoeveel liter water zit er na #x minuten in het bad?', t:'Na hoeveel minuten zit er #y liter in het bad?', e:'liter', ex:'minuten', n:1 },
+      { ov:'een fietser onderweg', xnaam:'uur', ynaam:'km', a:[15, 20], b:[0], xmax:6, v:'Hoeveel km heeft de fietser na #x uur gefietst?', t:'Na hoeveel uur heeft de fietser #y km gefietst?', e:'km', ex:'uur', n:2 },
+      { ov:'een kaars die opbrandt', xnaam:'uur', ynaam:'cm', a:[-2, -3], b:[24], xmax:8, v:'Hoe lang is de kaars na #x uur?', t:'Na hoeveel uur is de kaars nog #y cm?', e:'cm', ex:'uur', n:2 },
+      { ov:'een abonnement op de sportschool', xnaam:'maand', ynaam:'euro', a:[25], b:[0, 25, 50], xmax:8, v:'Hoeveel heb je na #x maanden in totaal betaald?', t:'Na hoeveel maanden heb je in totaal #y euro betaald?', e:'euro', ex:'maanden', n:2 }
+    ];
+    VERHALEN.forEach(function(c){
+      c.a.forEach(function(a){ c.b.forEach(function(b){
+        var xmax = a < 0 ? Math.min(c.xmax, -b / a) : c.xmax, top = Math.max(b, a * xmax + b), stap = Math.abs(a);
+        var o = { xmin:0, xmax:xmax, ymin:0, ymax:Math.ceil(top / stap) * stap, xstap:1, ystap:stap, xnaam:c.xnaam, ynaam:c.ynaam };
+        var svg = grafiekSvg(o, a, b), x = tussen(2, xmax - 1), y = a * x + b;
+        var inleiding = 'De grafiek laat ' + c.ov + ' zien. ';
+        uit.push(vr(inleiding + c.v.replace('#x', x), y + ' ' + c.e, [(y + stap) + ' ' + c.e, (y - stap) + ' ' + c.e, (a * (x + 1) + b) + ' ' + c.e, (a * x) + ' ' + c.e, (y + 2 * stap) + ' ' + c.e].filter(function(t){ return parseFloat(t) >= 0; }),
+          'Zoek ' + x + ' op de horizontale as, ga recht omhoog naar de lijn en dan opzij naar de verticale as: ' + y + ' ' + c.e + '.', 'grafiek', c.n, svg));
+        var x2 = tussen(1, xmax - 1), y2 = a * x2 + b;
+        uit.push(vr(inleiding + c.t.replace('#y', y2), x2 + ' ' + c.ex, [(x2 + 1) + ' ' + c.ex, (x2 - 1) + ' ' + c.ex, (x2 + 2) + ' ' + c.ex, (x2 - 2) + ' ' + c.ex].filter(function(t){ return parseFloat(t) > 0; }),
+          'Zoek ' + y2 + ' op de verticale as, ga opzij naar de lijn en dan recht omlaag naar de horizontale as: ' + x2 + ' ' + c.ex + '.', 'grafiek', c.n + 1, svg));
+      }); });
+    });
   }
   function wis(){
     var uit = [], i;
@@ -167,6 +247,7 @@ window.BANK_SPELLEN = (function(){
       var px = pt[0], py = pt[1];
       uit.push(vraag('Welke coördinaten heeft de stip?', '(' + px + ', ' + py + ')', ['(' + py + ', ' + px + ')', '(' + (-px) + ', ' + py + ')', '(' + px + ', ' + (-py) + ')'], 'Eerst x (naar rechts is positief), dan y (omhoog is positief): (' + px + ', ' + py + ').', 'coördinaten', px < 0 || py < 0 ? 2 : 1, roosterSvg(px, py)));
     });
+    grafiekVragen(uit);
     return uit.filter(Boolean);
   }
 

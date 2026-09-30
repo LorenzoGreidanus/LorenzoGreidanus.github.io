@@ -66,7 +66,25 @@
      Commons, staan in partijlogos/. w = de goede antwoorden bij typen; jaar = opgericht. */
   var D = window.PARTIJEN_DATA, P = D.P;
   var PID = {}; P.forEach(function(p){ PID[p.id] = p; });
-  var ICOON = { fvd:'fvd-icoon', pro:'pro-icoon', pvdd:'pvdd-icoon' };
+  /* het beeldmerk zonder de naam: voor FvD, PRO en PvdD een eigen bestand, voor
+     NSC en PvdA een uitsnede van het logo (alleen de kaart, alleen de roos) */
+  var ICOON = { fvd:'fvd-icoon', pro:'pro-icoon', pvdd:'pvdd-icoon', nsc:'nsc-icoon', pvda:'pvda-icoon' };
+  /* Wat er in een logo te lezen staat. Bijna elk logo heeft letters, en dan
+     verklapt het logo het antwoord op "welke partij is dit?".
+     naam: de naam staat er voluit in (ChristenUnie, Partij voor de Dieren), of
+       de naam is de afkorting (DENK, JA21): dit logo komt niet bij een vraag naar
+       de naam of de afkorting; het beeldmerk (ICOON) wel, als dat er is.
+     afk: alleen de afkorting (CDA, VVD): dan vraagt de opgave waar die voor staat.
+     Wat hier niet staat, heeft geen letters (de beeldmerken, de oude PvdA-logo's). */
+  var TEKST = {
+    '50plus':'naam', cu:'naam', denk:'naam', fvd:'naam', gl:'naam', ja21:'naam', nsc:'naam', pro:'naam', pvdd:'naam', volt:'naam', 'sgp-1979':'naam', 'd66-1985':'naam', 'd66-2002':'naam',
+    bbb:'afk', cda:'afk', d66:'afk', 'd66-1966':'afk', 'd66-2006':'afk', pvda:'afk', pvv:'afk', sgp:'afk', 'sgp-2000':'afk', sp:'afk', 'sp-1981':'afk', 'sp-1989':'afk',
+    vvd:'afk', 'vvd-1948':'afk', 'vvd-1966':'afk', 'vvd-1992':'afk', 'vvd-2005':'afk', 'vvd-2009':'afk'
+  };
+  /* het logo dat bij een vraag naar de naam niets verklapt: het gewone logo, anders het beeldmerk, anders geen */
+  function logoZonderNaam(p){ return TEKST[p.id] !== 'naam' ? p.id : ICOON[p.id] || ''; }
+  /* de volledige naam als antwoord: de lange vormen uit w (voor de oude SP-logo's ook de oude spelling) */
+  function voluitW(p, oud){ return p.w.filter(function(w){ return w.length > 6 || w === p.naam; }).concat(oud && p.id === 'sp' ? ['Socialistiese Partij'] : []); }
   /* oude logo's: van, bestand, van-tot, en of bb hem ook krijgt (de laatste voor het huidige) */
   var OUD = [
     { p:'vvd', f:'vvd-2009', tijd:'van 2009 tot 2020', bb:true }, { p:'vvd', f:'vvd-2005', tijd:'van 2005 tot 2009', bb:true },
@@ -85,46 +103,60 @@
   function magP(niveau){ return P.filter(function(p){ return p.nu || niveau === 'hv'; }); }
   function anderen(p, niveau, n){ return H(magP(niveau).filter(function(x){ return x !== p; })).slice(0, n || 3); }
 
-  /* ---------- 1. welke partij is dit: het logo, zeg de partij ---------- */
+  /* ---------- 1. welke partij is dit: het logo, zeg de partij ----------
+     Een logo met de naam erin komt hier niet (zie TEKST); een logo met alleen de
+     afkorting wel, maar dan is de vraag waar die afkorting voor staat. */
   function logo(niveau){
-    var lijst = magP(niveau).map(function(p){ return { p:p, f:p.id, oud:null }; })
-      .concat(niveau === 'bb' ? [] : Object.keys(ICOON).map(function(id){ return { p:PID[id], f:ICOON[id], oud:null, icoon:true }; }))
-      .concat(OUD.filter(function(o){ return niveau !== 'bb' || o.bb; }).map(function(o){ return { p:PID[o.p], f:o.f, oud:o }; }));
-    var it = kies(lijst), p = it.p;
+    var lijst = magP(niveau).filter(function(p){ return TEKST[p.id] !== 'naam'; }).map(function(p){ return { p:p, f:p.id, oud:null }; })
+      .concat(Object.keys(ICOON).filter(function(id){ return magP(niveau).indexOf(PID[id]) >= 0; }).map(function(id){ return { p:PID[id], f:ICOON[id], oud:null, icoon:true }; }))
+      .concat(OUD.filter(function(o){ return (niveau !== 'bb' || o.bb) && TEKST[o.f] !== 'naam'; }).map(function(o){ return { p:PID[o.p], f:o.f, oud:o }; }));
+    var it = kies(lijst), p = it.p, letters = TEKST[it.f] === 'afk';
     var basis = { onderdeel:'partijen: welke partij', onderdeelNaam:'welke partij is dit', sleutel:'lo' + it.f,
       beeld: logoKaart(it.f, !!it.oud),
-      uitleg: it.oud ? 'Dit logo gebruikte de ' + p.afk + ' ' + it.oud.tijd + '. Nu heeft de partij een ander logo.' : 'Dit is het logo van ' + (p.afk !== p.naam ? 'de ' + p.afk + ' (' + p.naam + ')' : p.naam) + ', opgericht in ' + p.jaar + '.',
-      antwoordTekst: p.naam + (p.afk !== p.naam ? ' (' + p.afk + ')' : '') };
+      uitleg: it.oud ? 'Dit logo gebruikte de ' + p.afk + ' ' + it.oud.tijd + '. Nu heeft de partij een ander logo.' : (it.icoon ? 'Dit is het beeldmerk' : 'Dit is het logo') + ' van ' + (p.afk !== p.naam ? 'de ' + p.afk + ' (' + p.naam + ')' : p.naam) + ', opgericht in ' + p.jaar + '.',
+      antwoordTekst: letters ? p.naam : p.naam + (p.afk !== p.naam ? ' (' + p.afk + ')' : '') };
+    /* de letters staan in het logo: waar staan ze voor? */
+    if (letters){
+      var vraagL = it.oud ? 'Dit is een <b>oud logo</b>. Er staat een afkorting in. Waar staat die voor?' : 'In dit logo staat de afkorting van de partij. Waar staat die voor?';
+      if (niveau === 'bb') return Object.assign(basis, { vorm:'meerkeuze', vraag: vraagL, opdracht: 'Kies de volledige naam.',
+        opties: [p.naam].concat(anderen(p, niveau, 20).filter(function(x){ return x.naam !== x.afk; }).slice(0, 3).map(function(x){ return x.naam; })), goed: 0 });
+      return Object.assign(basis, { vorm:'invul', vraag: vraagL, opdracht: 'Typ de volledige naam, niet de afkorting. Hoofdletters tellen niet.',
+        velden: [{ label:'voluit', type:'tekst', breed:true, antwoord: voluitW(p, !!it.oud) }] });
+    }
     if (niveau === 'bb') return Object.assign(basis, { vorm:'meerkeuze',
-      vraag: it.oud ? 'Dit is een <b>oud logo</b>. Van welke partij?' : 'Van welke partij is dit logo?',
-      opdracht: 'Kijk goed naar de letters en de kleuren.',
+      vraag: it.oud ? 'Dit is een <b>oud logo</b>. Van welke partij?' : it.icoon ? 'Dit is het <b>beeldmerk</b> van een partij, zonder de naam. Welke partij?' : 'Van welke partij is dit logo?',
+      opdracht: 'Kijk goed naar het teken en de kleuren.',
       opties: [p.afk].concat(anderen(p, niveau).map(function(x){ return x.afk; })), goed: 0 });
     var voluit = niveau === 'hv' && p.afk !== p.naam && !it.oud;
     return Object.assign(basis, { vorm:'invul',
-      vraag: it.oud ? 'Dit is een <b>oud logo</b>. Van welke partij?' : it.icoon ? 'Dit is het <b>beeldmerk</b> van een partij, zonder de naam. Welke partij?' : voluit ? 'Van welke partij is dit logo? Typ de <b>volledige naam</b>.' : 'Van welke partij is dit logo?',
+      vraag: it.oud ? 'Dit is een <b>oud logo</b>. Van welke partij?' : it.icoon ? 'Dit is het <b>beeldmerk</b> van een partij, zonder de naam. Welke partij?' + (voluit ? ' Typ de <b>volledige naam</b>.' : '') : voluit ? 'Van welke partij is dit logo? Typ de <b>volledige naam</b>.' : 'Van welke partij is dit logo?',
       opdracht: voluit ? 'Niet de afkorting, maar waar die voor staat. Hoofdletters tellen niet.' : 'Typ de naam of de afkorting. Hoofdletters tellen niet.',
-      velden: [{ label:'partij', type:'tekst', breed:true, antwoord: voluit ? p.w.filter(function(w){ return w.length > 5 || w === p.naam; }) : p.w }] });
+      velden: [{ label:'partij', type:'tekst', breed:true, antwoord: voluit ? voluitW(p) : p.w }] });
   }
 
-  /* ---------- 2. welk logo hoort erbij: de naam, kies het logo ---------- */
+  /* ---------- 2. welk logo hoort erbij: de naam, kies het logo ----------
+     De naamkaart noemt de afkorting niet (die staat in bijna elk logo), en een
+     partij waarvan de naam zelf in het logo staat, komt met haar beeldmerk of niet. */
   function welkLogo(niveau){
     var oudKans = OUD.filter(function(o){ return niveau !== 'bb' || o.bb; });
     if (oudKans.length && Math.random() < 0.35){
       var o = kies(oudKans), p = PID[o.p];
-      /* een oud logo van deze partij tussen de huidige logo's van drie andere */
-      var mis = anderen(p, niveau).map(function(x){ return x.id; });
+      /* Een oud logo tussen andere logo's van dezelfde partij: met logo's van
+         andere partijen verklapten de letters het antwoord. */
+      var zelfde = [p.id].concat(OUD.filter(function(x){ return x.p === p.id && x.f !== o.f; }).map(function(x){ return x.f; }));
+      var mis = H(zelfde).slice(0, 3);
       return { onderdeel:'partijen: welk logo', onderdeelNaam:'welk logo hoort erbij', vorm:'meerkeuze', sleutel:'wo' + o.f,
-        vraag: 'Welk logo gebruikte de <b>' + S(p.afk) + '</b> ' + o.tijd + '?', opdracht: 'Drie logo’s zijn van andere partijen, nu. Eén is een oud logo van deze partij.',
+        vraag: 'Welk logo gebruikte de <b>' + S(p.afk) + '</b> ' + o.tijd + '?', opdracht: 'Alle logo’s zijn van de ' + S(p.afk) + ', uit verschillende jaren. Welk logo is van toen?',
         beeld: naamKaart(p.afk, p.afk !== p.naam ? p.naam : 'opgericht in ' + p.jaar),
         opties: [logoKnop(o.f)].concat(mis.map(logoKnop)), goed: 0,
-        uitleg: 'Dit logo gebruikte de ' + p.afk + ' ' + o.tijd + '.', antwoordTekst: 'het oude logo van de ' + p.afk };
+        uitleg: 'Dit logo gebruikte de ' + p.afk + ' ' + o.tijd + '.', antwoordTekst: 'het logo van de ' + p.afk + ' ' + o.tijd };
     }
-    var q = kies(magP(niveau));
+    var q = kies(magP(niveau).filter(function(p){ return logoZonderNaam(p) && p.afk !== p.naam; })), f = logoZonderNaam(q);
     return { onderdeel:'partijen: welk logo', onderdeelNaam:'welk logo hoort erbij', vorm:'meerkeuze', sleutel:'wl' + q.id,
       vraag: 'Welk logo hoort bij <b>' + S(q.naam) + '</b>?', opdracht: 'Tik het logo aan.',
-      beeld: naamKaart(q.naam, q.afk !== q.naam ? 'afgekort: ' + q.afk : 'opgericht in ' + q.jaar),
-      opties: [logoKnop(q.id)].concat(anderen(q, niveau).map(function(x){ return logoKnop(x.id); })), goed: 0,
-      uitleg: 'Dit is het logo van ' + q.naam + (q.afk !== q.naam ? ' (' + q.afk + ')' : '') + '.', antwoordTekst: 'het logo van ' + q.afk };
+      beeld: naamKaart(q.naam, 'opgericht in ' + q.jaar),
+      opties: [logoKnop(f)].concat(anderen(q, niveau).map(function(x){ return logoKnop(logoZonderNaam(x) || x.id); })), goed: 0,
+      uitleg: (f === q.id ? 'Dit is het logo' : 'Dit is het beeldmerk') + ' van ' + q.naam + ' (' + q.afk + ').', antwoordTekst: 'het logo van ' + q.afk };
   }
 
   /* ---------- 3. voluit: afkorting en naam ---------- */
@@ -139,10 +171,12 @@
       return Object.assign(basisO, { vorm:'invul', vraag:'Wat is de afkorting van <b>' + S(p.naam) + '</b>?', opdracht:'Typ de afkorting. Hoofdletters tellen niet.',
         velden:[{ label:'afkorting', type:'tekst', antwoord: p.w.filter(function(w){ return w.length <= 6; }) }] });
     }
-    var basis = { onderdeel:'partijen: voluit', onderdeelNaam:'afkorting en naam', sleutel:'vo' + p.id, beeld: logoKaart(p.id),
+    /* een logo met de volledige naam erin zou het antwoord laten zien: dan het beeldmerk, of alleen de afkorting */
+    var lz = logoZonderNaam(p);
+    var basis = { onderdeel:'partijen: voluit', onderdeelNaam:'afkorting en naam', sleutel:'vo' + p.id, beeld: lz ? logoKaart(lz) : naamKaart(p.afk, 'waar staat dit voor?'),
       uitleg: p.afk + ' staat voor ' + p.naam + '.', antwoordTekst: p.naam };
     if (niveau === 'hv') return Object.assign(basis, { vorm:'invul', vraag:'Waar staat <b>' + S(p.afk) + '</b> voor?', opdracht:'Typ de volledige naam. Hoofdletters tellen niet.',
-      velden:[{ label:'voluit', type:'tekst', breed:true, antwoord: p.w.filter(function(w){ return w.length > 6; }) }] });
+      velden:[{ label:'voluit', type:'tekst', breed:true, antwoord: voluitW(p) }] });
     return Object.assign(basis, { vorm:'meerkeuze', vraag:'Waar staat <b>' + S(p.afk) + '</b> voor?', opdracht:'Kies de volledige naam.',
       opties: [p.naam].concat(H(lijst.filter(function(x){ return x !== p; })).slice(0, 3).map(function(x){ return x.naam; })), goed:0 });
   }
@@ -165,7 +199,8 @@
     if (wie < 0.45){
       var c = kies(CHRISTELIJK), cp = PID[c];
       return { onderdeel:'partijen: ontstaan', onderdeelNaam:'hoe en wanneer ontstaan', vorm:'meerkeuze', sleutel:'ch' + c,
-        vraag:'Welke van deze partijen is een <b>christelijke</b> partij?', opdracht:'Drie van de vier zijn het niet.', beeld: logoKaart(c),
+        /* geen logo erbij: dat was het logo van het goede antwoord */
+        vraag:'Welke van deze partijen is een <b>christelijke</b> partij?', opdracht:'Drie van de vier zijn het niet.',
         opties: [cp.afk].concat(H(NIET_CHR).slice(0, 3).map(function(x){ return PID[x].afk; })), goed:0,
         uitleg: 'Het CDA, de ChristenUnie en de SGP baseren hun ideeën op de Bijbel. De ' + cp.afk + ' is er een van.', antwoordTekst: cp.afk };
     }
@@ -190,7 +225,7 @@
     hand:'ken je partijen',
     lead:'De partijen in de Tweede Kamer: herken ze aan hun logo, ook aan een oud logo, weet waar de afkorting voor staat, en wanneer en hoe een partij ontstond. Zonder standpunten: alleen wie wie is.',
     hoe:[
-      { kop:'Het logo', tekst:'Je ziet een logo en zegt welke partij het is. Op vmbo-bb kies je uit vier, daarna typ je de naam of de afkorting.' },
+      { kop:'Het logo', tekst:'Je ziet een logo of een beeldmerk en zegt welke partij het is. Staat de afkorting in het logo, dan zeg je waar die voor staat. Op vmbo-bb kies je uit vier, daarna typ je het.' },
       { kop:'Voluit', tekst:'VVD, CDA, SGP: waar staan die letters voor? En andersom: hoe kort je een partij af?' },
       { kop:'Ontstaan', tekst:'De oudste partij is van 1918, de nieuwste van 2026. Een tijdlijn helpt je schatten.' }
     ],

@@ -115,6 +115,8 @@ main h1{font-size:clamp(1.7rem,4vw,2.4rem);margin-top:4px}
 .blad .beeld img,.blad .beeld svg{max-width:180px;max-height:120px;height:auto;display:block}
 /* het DHTE-schema bij een rekenvraag: hoger dan een vlag, anders zijn de cijfers niet te lezen */
 .blad .beeld svg.dhteschema{max-width:230px;max-height:200px}
+/* een grafiek of een coördinatenrooster: groot genoeg om de getallen langs de assen te lezen */
+.blad .beeld svg.grafiek,.blad .beeld svg.rooster{width:260px;max-width:100%;max-height:none}
 /* werkbladen uit de vakspellen: het beeld is er de opgave, dus groter; invulvakjes als lege hokjes */
 /* het papier is altijd wit, ook in de donkere stand: de kleurtokens van de spellen kantelen hier mee naar licht */
 .blad{--room:#fff;--ink:#14224C;--navy:#14224C;--muted:#5b6480;--kaart:#fff;--kaart2:#f4efe8;--kaart-aan:#f4f7ff;--rand:rgba(20,34,76,.18);--rand2:rgba(20,34,76,.28);--goed:#1f6b41;--goed-bg:#e7f3ec;--fout:#a8371f;--fout-bg:#fdecea;--nadruk:#204ECF;--nadruk-zacht:rgba(32,78,207,.18);--sand:#FCDED6;--vista:#83A5F2;--link:#204ECF;--schaduw:none;color-scheme:light}
@@ -136,6 +138,8 @@ main h1{font-size:clamp(1.7rem,4vw,2.4rem);margin-top:4px}
 .blad .vakspel .eigen-wb .luister{display:none}
 /* wat op het scherm meetelt (hoeveel stippen, de stand) staat niet op papier; een invulvak past altijd op de breedte */
 .blad .vakspel .eigen-wb .tekenuit{display:none}
+/* het tekenrooster van Grafieken: niet de hele breedte, anders past er maar een opgave op een blad */
+.blad .vakspel .eigen-wb .tekenraster svg{max-width:420px}
 .blad .vakspel .eigen-wb input{max-width:100%}
 /* een knop met een partij of naam erop wordt een vakje om te omcirkelen */
 .blad .vakspel .wb-keus{display:inline-flex;align-items:center;gap:6px;border:1.5px solid #14224C;border-radius:8px;padding:4px 10px;margin:3px 6px 3px 0;background:#fff;color:#14224C;font-size:.9rem;box-shadow:none}
@@ -379,8 +383,19 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
     if (ids.length < n) ids = pot(function(i){ return nivo[i] <= r; });
     /* niet boven het gekozen niveau; zijn er te weinig, dan zegt de melding hoeveel er zijn */
     if (!ids.length) ids = pot(function(i){ return nivo[i] <= r + 1; });
-    /* per onderdeel een stapel, en dan om de beurt eentje */
-    var stapels = {}; schud(ids).forEach(function(i){ (stapels[bron[i].t] = stapels[bron[i].t] || []).push(i); });
+    /* Per onderdeel een stapel, en dan om de beurt eentje. In een stapel wisselen
+       vragen met en zonder plaatje elkaar af: anders stonden er op een blad over
+       grafieken vooral vragen zonder grafiek, omdat die in de meerderheid zijn. */
+    var metBeeld = {}, zonder = {}, stapels = {};
+    schud(ids).forEach(function(i){ var d = bron[i].svg || bron[i].vlag ? metBeeld : zonder; (d[bron[i].t] = d[bron[i].t] || []).push(i); });
+    Object.keys(metBeeld).concat(Object.keys(zonder)).forEach(function(t){
+      if (stapels[t]) return;
+      var a = metBeeld[t] || [], b = zonder[t] || [], m = Math.min(a.length, b.length);
+      /* pop() neemt van achteren: vooraan wat er van de grootste over is, achteraan om en om */
+      var st = (a.length > b.length ? a : b).slice(m);
+      for (var k = 0; k < m; k++) st.push(b[k], a[k]);
+      stapels[t] = st;
+    });
     var sleutels = schud(Object.keys(stapels));
     while (uit.length < n && sleutels.some(function(k){ return stapels[k].length; })){
       /* ook dezelfde vraagtekst maar een keer: als open vraag zou hij er anders twee keer precies hetzelfde staan */
