@@ -2371,66 +2371,157 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   }
 
   /* Elke baas heeft zijn eigen gedaante. Alles in maten van zijn straal, zodat
-     hij op elk scherm klopt; n(v) is v keer de straal. */
+     hij op elk scherm klopt; n(v) is v keer de straal. Het licht valt van
+     linksboven: een verloop over het lijf en een glans. De ogen knipperen af en
+     toe, en als hij kwaad wordt (onder de helft van zijn leven) gaan de
+     wenkbrauwen omlaag, trekt de mond scheef en gloeit hij na. */
   function baasVorm(f, r, vul, lijn, n){
-    var vorm = (f.def && f.def.vorm) || 'ster', k, a, g = '';
-    /* de ring eromheen: het teken dat dit de baas is */
-    g += '<circle r="' + n(1.4) + '" fill="none" stroke="' + vul + '" stroke-width="' + n(0.08) + '" stroke-dasharray="' + n(0.3) + ' ' + n(0.2) + '" opacity=".5"/>';
+    var vorm = (f.def && f.def.vorm) || 'ster', id = 'bz-' + ((f.def && f.def.id) || vorm), k, a, g = '', nu = performance.now() / 1000;
+    var boos = !!(f.maxHp && f.hp <= f.maxHp / 2), licht = tint(vul, -0.38), donker = tint(vul, 0.32);
+    var VUL = 'url(#' + id + ')', rand = ' stroke="' + lijn + '" stroke-width="' + n(0.09) + '" stroke-linejoin="round"';
+    var p = function(x, y){ return n(x) + ',' + n(y); };
+    /* een gladde gesloten vorm door punten (Catmull-Rom als bezier) */
+    var glad = function(pt){
+      var d = 'M' + p(pt[0][0], pt[0][1]);
+      for (var i = 0; i < pt.length; i++){
+        var p0 = pt[(i - 1 + pt.length) % pt.length], p1 = pt[i], p2 = pt[(i + 1) % pt.length], p3 = pt[(i + 2) % pt.length];
+        d += ' C' + p(p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6) + ' ' + p(p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6) + ' ' + p(p2[0], p2[1]);
+      }
+      return d + 'Z';
+    };
+    var glans = function(x, y, rx, ry, o){ return '<ellipse cx="' + n(x) + '" cy="' + n(y) + '" rx="' + n(rx) + '" ry="' + n(ry) + '" transform="rotate(-28 ' + p(x, y) + ')" fill="#fff" opacity="' + (o || 0.35) + '"/>'; };
+    /* de ogen en de mond: ex is de halve afstand, ey de hoogte, er de maat */
+    var gezicht = function(ex, ey, er, mond){
+      var s = '', dicht = (nu + (id.length * 0.37)) % 4.2 < 0.13;
+      [-1, 1].forEach(function(z){
+        var cx = z * ex;
+        if (dicht) s += '<path d="M' + p(cx - er, ey) + ' Q' + p(cx, ey + er * 0.5) + ' ' + p(cx + er, ey) + '" fill="none" stroke="#14224C" stroke-width="' + n(0.06) + '" stroke-linecap="round"/>';
+        else s += '<ellipse cx="' + n(cx) + '" cy="' + n(ey) + '" rx="' + n(er) + '" ry="' + n(er * 1.12) + '" fill="#fff" stroke="#14224C" stroke-width="' + n(0.04) + '"/>' +
+          '<circle cx="' + n(cx + z * er * 0.1) + '" cy="' + n(ey + er * 0.15) + '" r="' + n(er * 0.55) + '" fill="#14224C"/>' +
+          '<circle cx="' + n(cx + z * er * 0.1 - er * 0.2) + '" cy="' + n(ey - er * 0.08) + '" r="' + n(er * 0.2) + '" fill="#fff"/>';
+        /* de wenkbrauw: kwaad schuin naar binnen omlaag */
+        var bi = boos ? er * 0.95 : er * 1.5, bu = boos ? er * 1.65 : er * 1.45;
+        s += '<path d="M' + p(cx + z * er * 1.05, ey - bu) + ' L' + p(cx - z * er * 0.85, ey - bi) + '" stroke="#14224C" stroke-width="' + n(0.08) + '" stroke-linecap="round"/>';
+      });
+      if (mond){
+        var mw = mond, my = ey + er * 2.1;
+        s += boos
+          ? '<path d="M' + p(-mw, my + 0.04) + ' L' + p(-mw * 0.5, my - 0.03) + ' L0,' + n(my + 0.04) + ' L' + p(mw * 0.5, my - 0.03) + ' L' + p(mw, my + 0.04) + '" fill="none" stroke="#14224C" stroke-width="' + n(0.06) + '" stroke-linecap="round" stroke-linejoin="round"/>'
+          : '<path d="M' + p(-mw, my) + ' Q0,' + n(my + mw * 0.7) + ' ' + p(mw, my) + '" fill="none" stroke="#14224C" stroke-width="' + n(0.06) + '" stroke-linecap="round"/>';
+      }
+      return s;
+    };
+    g += '<defs><radialGradient id="' + id + '" cx="32%" cy="28%" r="80%"><stop offset="0" stop-color="' + licht + '"/><stop offset=".5" stop-color="' + vul + '"/><stop offset="1" stop-color="' + donker + '"/></radialGradient></defs>';
+    /* de ring eromheen draait langzaam; kwaad gloeit hij erbij */
+    if (boos) g += '<circle r="' + n(1.3 + 0.06 * Math.sin(nu * 7)) + '" fill="' + vul + '" opacity=".16"/>';
+    g += '<g transform="rotate(' + ((nu * 18) % 360).toFixed(1) + ')"><circle r="' + n(1.45) + '" fill="none" stroke="' + vul + '" stroke-width="' + n(0.07) + '" stroke-dasharray="' + n(0.3) + ' ' + n(0.22) + '" stroke-linecap="round" opacity=".5"/></g>';
+
     if (vorm === 'ster'){
-      var d = ''; for (k = 0; k < 14; k++){ a = k / 14 * Math.PI * 2; var st = k % 2 ? 1 : 1.16; d += (k ? 'L' : 'M') + (Math.cos(a) * r * st).toFixed(1) + ',' + (Math.sin(a) * r * st).toFixed(1) + ' '; }
-      g += '<path d="' + d + 'Z" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.12) + '" stroke-linejoin="round"/>';
+      /* De Grote Fout: een ster met afgeronde punten die langzaam wiebelt */
+      var pts = [];
+      for (k = 0; k < 16; k++){ a = k / 16 * Math.PI * 2 - Math.PI / 2; var st = k % 2 ? 0.84 : 1.2; pts.push((k ? 'L' : 'M') + p(Math.cos(a) * st, Math.sin(a) * st)); }
+      g += '<g transform="rotate(' + (Math.sin(nu * 1.6) * 7).toFixed(1) + ')">' +
+        '<path d="' + pts.join(' ') + 'Z" fill="' + VUL + '"' + rand + ' stroke-width="' + n(0.14) + '"/>' +
+        '<path d="' + pts.join(' ') + 'Z" fill="none" stroke="#fff" stroke-width="' + n(0.05) + '" opacity=".18" transform="scale(.78)"/></g>' +
+        glans(-0.38, -0.5, 0.3, 0.14) + gezicht(0.32, -0.14, 0.2, 0.3);
     } else if (vorm === 'vlek'){
-      /* een inktvlek: een rond lijf met spatten eromheen */
-      var v = ''; for (k = 0; k < 11; k++){ a = k / 11 * Math.PI * 2; var sv = 1 + (k % 3 === 0 ? 0.14 : k % 3 === 1 ? -0.07 : 0.03); v += (k ? 'L' : 'M') + (Math.cos(a) * r * sv).toFixed(1) + ',' + (Math.sin(a) * r * sv).toFixed(1) + ' '; }
-      g += '<path d="' + v + 'Z" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.1) + '" stroke-linejoin="round"/>';
-      g += '<circle cx="' + n(1.15) + '" cy="' + n(-0.55) + '" r="' + n(0.18) + '" fill="' + vul + '"/>' +
-           '<circle cx="' + n(-1.05) + '" cy="' + n(0.75) + '" r="' + n(0.13) + '" fill="' + vul + '"/>' +
-           '<circle cx="' + n(0.3) + '" cy="' + n(1.15) + '" r="' + n(0.1) + '" fill="' + vul + '"/>';
+      /* De Inktvlek: een glimmende klodder inkt met druppels die naar beneden lopen */
+      var vp = [];
+      for (k = 0; k < 10; k++){ a = k / 10 * Math.PI * 2; var sv = 1 + [0.1, -0.05, 0.14, -0.02, 0.06, -0.08, 0.12, -0.03, 0.05, -0.06][k] + Math.sin(nu * 2 + k) * 0.025; vp.push([Math.cos(a) * sv, Math.sin(a) * sv]); }
+      var drup = function(x, y0, lang, dik){ var l = lang * (0.85 + 0.15 * Math.sin(nu * 1.7 + x * 9)); return '<path d="M' + p(x, y0) + ' V' + n(y0 + l) + '" stroke="' + vul + '" stroke-width="' + n(dik) + '" stroke-linecap="round"/><circle cx="' + n(x) + '" cy="' + n(y0 + l + dik * 0.3) + '" r="' + n(dik * 0.75) + '" fill="' + vul + '"/>'; };
+      g += drup(-0.45, 0.7, 0.45, 0.16) + drup(0.18, 0.85, 0.55, 0.13) + drup(0.62, 0.6, 0.3, 0.11) +
+        '<path d="' + glad(vp) + '" fill="' + VUL + '"' + rand + '/>' +
+        '<circle cx="' + n(1.22) + '" cy="' + n(-0.5) + '" r="' + n(0.14) + '" fill="' + vul + '"/><circle cx="' + n(-1.18) + '" cy="' + n(-0.2) + '" r="' + n(0.1) + '" fill="' + vul + '"/><circle cx="' + n(-0.9) + '" cy="' + n(-0.95) + '" r="' + n(0.07) + '" fill="' + vul + '"/>' +
+        glans(-0.4, -0.48, 0.34, 0.15, 0.45) + '<circle cx="' + n(-0.02) + '" cy="' + n(-0.72) + '" r="' + n(0.06) + '" fill="#fff" opacity=".5"/>' +
+        gezicht(0.32, -0.12, 0.2, 0.28);
     } else if (vorm === 'pen'){
-      /* een pen met de punt naar beneden */
-      g += '<path d="M0,' + n(1.25) + ' L' + n(-0.42) + ',' + n(0.25) + ' L' + n(-0.42) + ',' + n(-1.15) + ' L' + n(0.42) + ',' + n(-1.15) + ' L' + n(0.42) + ',' + n(0.25) + ' Z" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.1) + '" stroke-linejoin="round"/>';
-      g += '<path d="M' + n(-0.42) + ',' + n(-0.55) + ' h' + n(0.84) + '" stroke="' + lijn + '" stroke-width="' + n(0.1) + '"/>';
-      g += '<path d="M0,' + n(1.25) + ' L0,' + n(0.5) + '" stroke="#fff" stroke-width="' + n(0.09) + '" stroke-linecap="round"/>';
+      /* De Rode Pen: dop met clip, een greep met ribbels en een metalen punt met een druppel inkt */
+      var hoekPen = Math.sin(nu * 1.3) * 5;
+      g += '<g transform="rotate(' + hoekPen.toFixed(1) + ')">' +
+        '<path d="M' + p(-0.42, 0.35) + ' L0,' + n(1.32) + ' L' + p(0.42, 0.35) + ' Z" fill="#dfe3ea" stroke="#5b6480" stroke-width="' + n(0.06) + '" stroke-linejoin="round"/>' +
+        '<path d="M' + p(-0.2, 0.35) + ' L0,' + n(1.32) + '" stroke="#fff" stroke-width="' + n(0.05) + '" opacity=".7"/>' +
+        '<path d="M0,' + n(1.3) + ' V' + n(0.78) + '" stroke="#5b6480" stroke-width="' + n(0.04) + '"/><circle cy="' + n(0.74) + '" r="' + n(0.06) + '" fill="#5b6480"/>' +
+        '<rect x="' + n(-0.46) + '" y="' + n(-1.28) + '" width="' + n(0.92) + '" height="' + n(1.66) + '" rx="' + n(0.2) + '" fill="' + VUL + '"' + rand + '/>' +
+        '<rect x="' + n(-0.49) + '" y="' + n(-1.32) + '" width="' + n(0.98) + '" height="' + n(0.62) + '" rx="' + n(0.22) + '" fill="' + donker + '"' + rand + '/>' +
+        '<path d="M' + p(0.49, -1.1) + ' h' + n(0.12) + ' v' + n(0.95) + ' q0,' + n(0.12) + ' ' + n(-0.1) + ',' + n(0.12) + '" fill="none" stroke="#c9cfd9" stroke-width="' + n(0.08) + '" stroke-linecap="round"/>' +
+        [0.14, 0.22, 0.3].map(function(y){ return '<path d="M' + p(-0.46, y) + ' H' + n(0.46) + '" stroke="' + lijn + '" stroke-width="' + n(0.035) + '" opacity=".5"/>'; }).join('') +
+        glans(-0.26, -0.95, 0.09, 0.2, 0.4) +
+        '<circle cy="' + n(1.42 + 0.06 * Math.abs(Math.sin(nu * 2))) + '" r="' + n(0.1) + '" fill="' + vul + '"/>' +
+        gezicht(0.19, -0.3, 0.14, 0.16) + '</g>';
+      return g;
     } else if (vorm === 'prop'){
-      /* een verfrommeld propje papier */
-      var p = ''; for (k = 0; k < 12; k++){ a = k / 12 * Math.PI * 2; var sp2 = k % 2 ? 0.84 : 1.08; p += (k ? 'L' : 'M') + (Math.cos(a) * r * sp2).toFixed(1) + ',' + (Math.sin(a) * r * sp2).toFixed(1) + ' '; }
-      g += '<path d="' + p + 'Z" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.11) + '" stroke-linejoin="round"/>';
-      g += '<path d="M' + n(-0.5) + ',' + n(-0.4) + ' L' + n(-0.05) + ',' + n(0.1) + ' L' + n(-0.45) + ',' + n(0.5) + ' M' + n(0.15) + ',' + n(-0.6) + ' L' + n(0.55) + ',' + n(-0.1) + ' L' + n(0.2) + ',' + n(0.55) + '" fill="none" stroke="' + lijn + '" stroke-width="' + n(0.07) + '" opacity=".8"/>';
+      /* De Prop: een verfrommeld propje, met vlakjes die het licht verschillend vangen */
+      var pp = [];
+      for (k = 0; k < 13; k++){ a = k / 13 * Math.PI * 2; var s2 = [1.08, 0.86, 1.02, 0.9, 1.1, 0.84, 0.98, 0.88, 1.06, 0.83, 1.04, 0.9, 0.97][k]; pp.push([Math.cos(a) * s2, Math.sin(a) * s2]); }
+      var pd = 'M' + pp.map(function(q){ return p(q[0], q[1]); }).join(' L') + 'Z';
+      g += '<path d="' + pd + '" fill="' + VUL + '"' + rand + ' stroke-width="' + n(0.1) + '"/>';
+      var mid = [0.08, 0.04];
+      for (k = 0; k < pp.length; k++){
+        var q1 = pp[k], q2 = pp[(k + 1) % pp.length];
+        g += '<path d="M' + p(mid[0], mid[1]) + ' L' + p(q1[0], q1[1]) + ' L' + p(q2[0], q2[1]) + 'Z" fill="' + (k % 3 === 0 ? '#fff' : '#000') + '" opacity="' + (k % 3 === 0 ? 0.13 : k % 3 === 1 ? 0.07 : 0) + '"/>';
+      }
+      g += '<path d="M' + p(-0.7, -0.35) + ' L' + p(-0.15, 0.05) + ' L' + p(-0.55, 0.6) + ' M' + p(0.2, -0.75) + ' L' + p(0.5, -0.15) + ' L' + p(0.15, 0.6) + ' M' + p(-0.15, 0.05) + ' L' + p(0.5, -0.15) + '" fill="none" stroke="' + lijn + '" stroke-width="' + n(0.05) + '" stroke-linejoin="round" opacity=".55"/>' +
+        '<path d="M' + p(-0.55, -0.62) + ' h' + n(0.5) + ' M' + p(-0.6, -0.5) + ' h' + n(0.35) + '" stroke="' + lijn + '" stroke-width="' + n(0.035) + '" opacity=".35"/>' +
+        gezicht(0.32, -0.12, 0.2, 0.28);
     } else if (vorm === 'klok'){
-      var uur = (performance.now() / 1000) % 60;
-      g += '<circle r="' + n(1.02) + '" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.12) + '"/>';
-      g += '<circle r="' + n(0.84) + '" fill="none" stroke="#fff" stroke-width="' + n(0.05) + '" opacity=".5"/>';
-      for (k = 0; k < 12; k++){ a = k / 12 * Math.PI * 2; g += '<circle cx="' + (Math.cos(a) * r * 0.84).toFixed(1) + '" cy="' + (Math.sin(a) * r * 0.84).toFixed(1) + '" r="' + n(0.06) + '" fill="#fff" opacity=".8"/>'; }
-      g += '<path d="M0,0 L' + (Math.cos(uur / 60 * Math.PI * 2 - Math.PI / 2) * r * 0.62).toFixed(1) + ',' + (Math.sin(uur / 60 * Math.PI * 2 - Math.PI / 2) * r * 0.62).toFixed(1) + '" stroke="#fff" stroke-width="' + n(0.09) + '" stroke-linecap="round"/>';
-      g += '<path d="M0,0 L' + (Math.cos(uur / 12 * Math.PI * 2 - Math.PI / 2) * r * 0.4).toFixed(1) + ',' + (Math.sin(uur / 12 * Math.PI * 2 - Math.PI / 2) * r * 0.4).toFixed(1) + '" stroke="#fff" stroke-width="' + n(0.12) + '" stroke-linecap="round"/>';
+      /* De Klok: een wekker met twee bellen, pootjes en een wijzerplaat; hij rammelt als hij kwaad is */
+      var tril = boos ? Math.sin(nu * 60) * 3 : 0, uur = nu % 60;
+      g += '<g transform="rotate(' + tril.toFixed(1) + ')">' +
+        '<path d="M' + p(-0.6, 0.82) + ' L' + p(-0.78, 1.12) + ' M' + p(0.6, 0.82) + ' L' + p(0.78, 1.12) + '" stroke="' + lijn + '" stroke-width="' + n(0.14) + '" stroke-linecap="round"/>' +
+        [-1, 1].map(function(z){ return '<path d="M' + p(z * 0.35, -0.95) + ' A' + n(0.36) + ',' + n(0.36) + ' 0 0 ' + (z > 0 ? 1 : 0) + ' ' + p(z * 0.95, -0.55) + ' Z" fill="' + VUL + '"' + rand + '/>'; }).join('') +
+        '<path d="M0,' + n(-1.02) + ' V' + n(-1.22) + '" stroke="' + lijn + '" stroke-width="' + n(0.08) + '"/><circle cy="' + n(-1.26) + '" r="' + n(0.08) + '" fill="' + lijn + '"/>' +
+        '<circle r="' + n(1.02) + '" fill="' + VUL + '"' + rand + ' stroke-width="' + n(0.12) + '"/>' +
+        '<circle r="' + n(0.8) + '" fill="#fbf6f1" stroke="' + lijn + '" stroke-width="' + n(0.05) + '"/>';
+      for (k = 0; k < 12; k++){ a = k / 12 * Math.PI * 2; g += '<path d="M' + p(Math.cos(a) * 0.66, Math.sin(a) * 0.66) + ' L' + p(Math.cos(a) * (k % 3 ? 0.72 : 0.76), Math.sin(a) * (k % 3 ? 0.72 : 0.76)) + '" stroke="#14224C" stroke-width="' + n(k % 3 ? 0.035 : 0.06) + '" stroke-linecap="round"/>'; }
+      g += '<path d="M0,0 L' + p(Math.cos(uur / 60 * Math.PI * 2 - Math.PI / 2) * 0.6, Math.sin(uur / 60 * Math.PI * 2 - Math.PI / 2) * 0.6) + '" stroke="#c0442c" stroke-width="' + n(0.04) + '" stroke-linecap="round"/>' +
+        '<path d="M0,0 L' + p(Math.cos(uur / 12 * Math.PI * 2 - Math.PI / 2) * 0.42, Math.sin(uur / 12 * Math.PI * 2 - Math.PI / 2) * 0.42) + '" stroke="#14224C" stroke-width="' + n(0.08) + '" stroke-linecap="round"/>' +
+        '<circle r="' + n(0.06) + '" fill="#14224C"/>' + glans(-0.5, -0.62, 0.16, 0.07, 0.5) +
+        gezicht(0.3, -0.25, 0.17, 0) + '</g>';
+      return g;
+    } else if (vorm === 'zwerm'){
+      /* De Zwerm: een kluit bolletjes die om het lijf heen draaien */
+      var draai = nu * 0.7;
+      var bol = function(x, y, rr){ return '<circle cx="' + n(x) + '" cy="' + n(y) + '" r="' + n(rr) + '" fill="' + VUL + '"' + rand + ' stroke-width="' + n(0.06) + '"/><circle cx="' + n(x - rr * 0.35) + '" cy="' + n(y - rr * 0.4) + '" r="' + n(rr * 0.25) + '" fill="#fff" opacity=".35"/>'; };
+      var achter = '', voor = '';
+      for (k = 0; k < 8; k++){ a = k / 8 * Math.PI * 2 + draai; var bx = Math.cos(a) * 0.9, by = Math.sin(a) * 0.9 * 0.85, rb = 0.26 + (k % 3) * 0.04; if (Math.sin(a) < 0) achter += bol(bx, by, rb); else voor += bol(bx, by, rb); }
+      g += achter + bol(0, 0, 0.82) + voor + gezicht(0.28, -0.14, 0.18, 0.24);
       return g;
     } else if (vorm === 'bal'){
-      /* een discobal: vakjes die om de beurt oplichten, en een draadje naar boven */
-      var tik = Math.floor(performance.now() / 180), DISCO = ['#F26749', '#FFD166', '#2fbf71', '#83A5F2', '#c489c0', '#ffffff'];
-      g += '<path d="M0,' + n(-1) + ' V' + n(-1.6) + '" stroke="' + lijn + '" stroke-width="' + n(0.06) + '"/>';
-      g += '<circle r="' + n(1) + '" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.1) + '"/>';
-      for (var bi = -3; bi <= 3; bi++) for (var bj = -3; bj <= 3; bj++){
-        var bx = bi * 0.27, by = bj * 0.27;
-        if (bx * bx + by * by > 0.72) continue;
-        var aan = (bi * 3 + bj * 5 + tik) % 4 === 0;
-        g += '<rect x="' + n(bx - 0.11) + '" y="' + n(by - 0.11) + '" width="' + n(0.22) + '" height="' + n(0.22) + '" rx="' + n(0.03) + '" fill="' + (aan ? DISCO[(bi + bj + 9 + tik) % DISCO.length] : '#fff') + '" opacity="' + (aan ? 0.95 : 0.22) + '"/>';
+      /* De Discobal: een bol van spiegeltjes die om de beurt oplichten, aan een draadje, met fonkels */
+      var tik = Math.floor(nu / 0.18), DISCO = ['#F26749', '#FFD166', '#2fbf71', '#83A5F2', '#c489c0', '#ffffff'];
+      g += '<path d="M0,' + n(-0.98) + ' V' + n(-1.7) + '" stroke="' + lijn + '" stroke-width="' + n(0.05) + '"/><rect x="' + n(-0.14) + '" y="' + n(-1.08) + '" width="' + n(0.28) + '" height="' + n(0.14) + '" rx="' + n(0.04) + '" fill="#c9cfd9"/>' +
+        '<defs><clipPath id="' + id + 'k"><circle r="' + n(0.99) + '"/></clipPath></defs>' +
+        '<circle r="' + n(1) + '" fill="' + VUL + '"' + rand + '/><g clip-path="url(#' + id + 'k)">';
+      var rij = 0;
+      for (var fi = -0.9; fi <= 0.91; fi += 0.2){
+        var cy = Math.sin(fi * Math.PI / 2), breedte = Math.cos(fi * Math.PI / 2), hoog = 0.17 * breedte + 0.03, vakken = Math.max(3, Math.round(9 * breedte)), draai2 = (nu * 0.25) % (1 / vakken);
+        for (var vi = -1; vi <= vakken; vi++){
+          var u = (vi / vakken + draai2) * 2 - 1; if (u < -1 || u > 1) continue;
+          var bx2 = Math.sin(u * Math.PI / 2) * breedte, bw = 0.2 * breedte * Math.cos(u * Math.PI / 2) + 0.02;
+          var aan = (vi * 3 + rij * 5 + tik) % 3 === 0;
+          g += '<rect x="' + n(bx2 - bw / 2) + '" y="' + n(cy - hoog / 2) + '" width="' + n(bw) + '" height="' + n(hoog) + '" rx="' + n(0.02) + '" fill="' + (aan ? DISCO[(vi + rij + tik) % DISCO.length] : '#fff') + '" opacity="' + (aan ? 0.95 : 0.14 + 0.12 * (1 - Math.abs(u))) + '"/>';
+        }
+        rij++;
       }
-      g += '<circle cx="' + n(-0.45) + '" cy="' + n(-0.5) + '" r="' + n(0.14) + '" fill="#fff" opacity=".8"/>';
+      g += '</g>' + glans(-0.42, -0.5, 0.26, 0.12, 0.55);
+      /* fonkels: vierpuntige sterretjes die aan en uit gaan */
+      for (k = 0; k < 3; k++){ var fa = k * 2.1 + Math.floor(nu * 1.5) * 1.3, fr = 1.15 + 0.12 * k, fs = 0.14 * Math.max(0, Math.sin(nu * 3 + k * 2)); if (fs > 0.02){ var fx = Math.cos(fa) * fr, fy = Math.sin(fa) * fr;
+        g += '<path d="M' + p(fx, fy - fs * 1.6) + ' Q' + p(fx, fy) + ' ' + p(fx + fs * 1.6, fy) + ' Q' + p(fx, fy) + ' ' + p(fx, fy + fs * 1.6) + ' Q' + p(fx, fy) + ' ' + p(fx - fs * 1.6, fy) + ' Q' + p(fx, fy) + ' ' + p(fx, fy - fs * 1.6) + 'Z" fill="#FFD166"/>'; } }
+      g += gezicht(0.3, -0.12, 0.19, 0.26);
+      return g;
     } else if (vorm === 'metronoom'){
-      /* een metronoom: de arm tikt heen en weer boven een piramide */
-      var arm = Math.sin(performance.now() / 1000 * Math.PI * 2) * 0.45, ax = Math.sin(arm), ay = -Math.cos(arm);
-      g += '<path d="M0,' + n(0.75) + ' L' + n(ax * 2.35) + ',' + n(0.75 + ay * 2.35) + '" stroke="' + lijn + '" stroke-width="' + n(0.1) + '" stroke-linecap="round"/>' +
-           '<rect x="' + n(ax * 1.9 - 0.16) + '" y="' + n(0.75 + ay * 1.9 - 0.12) + '" width="' + n(0.32) + '" height="' + n(0.24) + '" rx="' + n(0.05) + '" fill="#FFD166" stroke="' + lijn + '" stroke-width="' + n(0.06) + '"/>';
-      g += '<path d="M' + n(-0.35) + ',' + n(-1.15) + ' L' + n(0.35) + ',' + n(-1.15) + ' L' + n(0.95) + ',' + n(1) + ' L' + n(-0.95) + ',' + n(1) + ' Z" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.11) + '" stroke-linejoin="round"/>' +
-           '<path d="M' + n(-0.62) + ',' + n(0.55) + ' H' + n(0.62) + '" stroke="#fff" stroke-width="' + n(0.06) + '" opacity=".5"/>';
-    } else if (vorm === 'zwerm'){
-      /* een kluit propjes die samen een lijf vormen */
-      g += '<circle r="' + n(0.9) + '" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.1) + '"/>';
-      for (k = 0; k < 7; k++){ a = k / 7 * Math.PI * 2; g += '<circle cx="' + (Math.cos(a) * r * 0.82).toFixed(1) + '" cy="' + (Math.sin(a) * r * 0.82).toFixed(1) + '" r="' + n(0.3) + '" fill="' + vul + '" stroke="' + lijn + '" stroke-width="' + n(0.07) + '"/>'; }
+      /* De Metronoom: een houten piramide met een voorpaneel, een schaalverdeling en een arm die tikt */
+      var arm = Math.sin(nu * Math.PI * 2) * 0.42, ax = Math.sin(arm), ay = -Math.cos(arm);
+      g += '<rect x="' + n(-1.08) + '" y="' + n(0.86) + '" width="' + n(2.16) + '" height="' + n(0.26) + '" rx="' + n(0.08) + '" fill="' + donker + '"' + rand + '/>' +
+        '<path d="M' + p(-0.36, -1.18) + ' L' + p(0.36, -1.18) + ' L' + p(0.98, 0.9) + ' L' + p(-0.98, 0.9) + ' Z" fill="' + VUL + '"' + rand + ' stroke-width="' + n(0.11) + '"/>' +
+        '<path d="M' + p(-0.22, -0.98) + ' L' + p(0.22, -0.98) + ' L' + p(0.62, 0.72) + ' L' + p(-0.62, 0.72) + ' Z" fill="' + licht + '" opacity=".35"/>';
+      for (k = -3; k <= 3; k++){ var sa = k * 0.14; g += '<path d="M' + p(Math.sin(sa) * 1.2, 0.72 - Math.cos(sa) * 1.2) + ' L' + p(Math.sin(sa) * 1.32, 0.72 - Math.cos(sa) * 1.32) + '" stroke="' + lijn + '" stroke-width="' + n(0.04) + '" opacity=".7"/>'; }
+      g += '<path d="M0,' + n(0.72) + ' L' + p(ax * 2.3, 0.72 + ay * 2.3) + '" stroke="#c9cfd9" stroke-width="' + n(0.09) + '" stroke-linecap="round"/>' +
+        '<rect x="' + n(ax * 1.85 - 0.17) + '" y="' + n(0.72 + ay * 1.85 - 0.13) + '" width="' + n(0.34) + '" height="' + n(0.26) + '" rx="' + n(0.06) + '" fill="#FFD166" stroke="' + lijn + '" stroke-width="' + n(0.05) + '" transform="rotate(' + (arm * 180 / Math.PI).toFixed(1) + ' ' + p(ax * 1.85, 0.72 + ay * 1.85) + ')"/>' +
+        '<circle cy="' + n(0.72) + '" r="' + n(0.09) + '" fill="#c9cfd9" stroke="' + lijn + '" stroke-width="' + n(0.04) + '"/>' +
+        glans(-0.45, -0.2, 0.08, 0.36, 0.3) + gezicht(0.25, -0.35, 0.16, 0.2);
+      return g;
     }
-    /* twee ogen, bij elke baas op dezelfde plek, zodat je ziet dat het leeft */
-    g += '<circle cx="' + n(-0.3) + '" cy="' + n(-0.2) + '" r="' + n(0.17) + '" fill="#fff"/><circle cx="' + n(0.3) + '" cy="' + n(-0.2) + '" r="' + n(0.17) + '" fill="#fff"/>' +
-         '<circle cx="' + n(-0.28) + '" cy="' + n(-0.18) + '" r="' + n(0.08) + '" fill="#14224C"/><circle cx="' + n(0.32) + '" cy="' + n(-0.18) + '" r="' + n(0.08) + '" fill="#14224C"/>';
     return g;
   }
   function eigenNaam(){ var k = window.KLAS && KLAS.lees(); return k && k.naam ? k.naam : 'jij'; }
