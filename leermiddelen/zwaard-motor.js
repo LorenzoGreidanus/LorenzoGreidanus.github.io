@@ -83,6 +83,10 @@ const CRIT = { x:2, straal:90, deel:0.5 };
 /* Het late spel: vanaf ronde 15 is alles duur en taai, dus levert elke munt een kwart meer op
    (de munten in de arena en het geld voor een goed antwoord). */
 const LAAT = { vanaf:15, munten:1.25 };
+/* Twee aanvallen achter elkaar: met deze kans doet een baas meteen nog een aanval ('tussen' seconden
+   nadat de eerste over is). Daarna is hij 'rust' seconden moe: hij doet niets, er staat een groene
+   ring om hem heen en je raakt hem harder (NACHTMERRIE.moeX). */
+const REEKS = { kans:0.4, tussen:0.3, rust:2.4 };
 /* Vanaf deze ronde komen de halen en de muur van een baas in twee fasen. */
 const TWEEFASEN = 10;
 function laatExtra(ronde){ return ronde >= LAAT.vanaf ? LAAT.munten : 1; }
@@ -1124,6 +1128,14 @@ function maak(opties){
       /* Ook als hij kwaad is wacht hij tot het veld leeg is. Anders stapelen de
          aanvallen zich op en is er geen plek meer om te staan. */
       var vrij = !W.aanvallen.some(function(a){ return a.soort !== 'plas' && a.soort !== 'schot' && a.soort !== 'granaat'; });
+      /* na twee aanvallen achter elkaar: zodra het veld leeg is, is hij even moe */
+      if (b.moe > 0){ b.moe = Math.max(0, b.moe - dt); if (b.moe > 0) return; }
+      if (b.naReeks && vrij){
+        b.naReeks = false; b.moe = REEKS.rust; b.aanvalKlok = Math.max(b.aanvalKlok, REEKS.rust + 0.4);
+        W.cijfers.push({ x:b.x, y:b.y - b.r - 18, tekst:'Nu! Sla terug', leven:Math.min(1.6, REEKS.rust), kleur:'#2f7d52' });
+        zeg('moe', REEKS.rust, b);
+        return;
+      }
       if (b.aanvalKlok <= 0 && vrij && levend.length){
         if (boos && !b.boosGeweest){
           b.boosGeweest = true;
@@ -1132,6 +1144,9 @@ function maak(opties){
         baasValtAan(b, levend, boos);
         b.aanvalKlok = AANVAL.pauze(ronde) * (boos ? AANVAL.boosPauze : 1) * (W.nachtmerrie ? NACHTMERRIE.fases[b.nmFase].pauze : 1) * (b.def.tempo || 1)
                      + duurVan(b.def.aanvallen[b.laatste], b.def.heftig) * (boos ? AANVAL.boosOverlap : 1);
+        /* Twee achter elkaar: de tweede komt zodra de eerste over is, en daarna volgt het rustmoment. */
+        if (b.tweede){ b.tweede = false; b.naReeks = true; }
+        else if (toeval() < REEKS.kans){ b.tweede = true; b.aanvalKlok = REEKS.tussen; }
       }
     });
     stapAanvallen(dt, levend);
@@ -1272,6 +1287,7 @@ function maak(opties){
       /* bij wie schiet ook de klokken van het laden en het stilstaan, voor de loop die mikt en terugslaat */
       fo:W.fouten.map(function(f){ var o = [r1(f.x), r1(f.y), Math.round(f.hp), f.maxHp, f.baas ? 'b:' + f.def.id : f.soort.id, f.r, f.flits > 0 ? 0.1 : 0, r2(f.stap), f.schild || 0, r2(f.mikt || 0), f.id];
         if (f.soort.laden) o.push(r2(f.laadKlok || 0), r2(f.stilKlok || 0));
+        else if (f.baas) o.push(r2(f.moe || 0));
         return o; }),
       me:W.messen.map(function(m){ return [r1(m.x), r1(m.y), r2(m.hoek), m.pijl || 0, m.id]; }),
       mu:W.munt.map(function(m){ return [r1(m.x), r1(m.y), m.waarde, m.id]; }),
@@ -1283,7 +1299,7 @@ function maak(opties){
   return W;
 }
 
-g.ZWAARDMOTOR = { maak:maak, ARENA:ARENA, SPELER:SPELER, DASH:DASH, FOUTEN:FOUTEN, BAZEN:BAZEN, AANVAL:AANVAL, BAASRONDE:BAASRONDE, muurStand:muurStand, STIJLEN:STIJLEN, BLOK:BLOK, LAAT:LAAT, laatExtra:laatExtra, golfGat:golfGat, vloerAan:vloerAan, vloerTel:vloerTel, slingerStand:slingerStand, GEVAAR:GEVAAR, CRIT:CRIT,
+g.ZWAARDMOTOR = { maak:maak, ARENA:ARENA, SPELER:SPELER, DASH:DASH, FOUTEN:FOUTEN, BAZEN:BAZEN, AANVAL:AANVAL, BAASRONDE:BAASRONDE, muurStand:muurStand, STIJLEN:STIJLEN, BLOK:BLOK, LAAT:LAAT, REEKS:REEKS, laatExtra:laatExtra, golfGat:golfGat, vloerAan:vloerAan, vloerTel:vloerTel, slingerStand:slingerStand, GEVAAR:GEVAAR, CRIT:CRIT,
                   MUNT_VAL:MUNT_VAL, RAAKPAUZE:RAAKPAUZE, RAAPTIJD:RAAPTIJD, aantalInRonde:aantalInRonde, foutHp:foutHp, baasVan:baasVan, basisStats:basisStats, nieuweSp:nieuweSp };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 if (typeof module !== 'undefined' && module.exports) module.exports = globalThis.ZWAARDMOTOR;
