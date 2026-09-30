@@ -582,22 +582,27 @@ function maak(opties){
       if (ronde >= 18) A.push({ id:++W.nr, soort:'kegel', x:b.x, y:b.y, hoek:hoek + Math.PI, t:-0.4, k:k });
       /* heftig: nog twee waaiers schuin ernaast, even later */
       if (heftig){ A.push({ id:++W.nr, soort:'kegel', x:b.x, y:b.y, hoek:hoek + Math.PI / 2, t:-0.7, k:k }); A.push({ id:++W.nr, soort:'kegel', x:b.x, y:b.y, hoek:hoek - Math.PI / 2, t:-0.7, k:k }); }
-    } else if (soort === 'baan' && heftig){
-      /* twee fasen: eerst staande strepen over de hele breedte, en als die geweest zijn liggende over de hele hoogte */
-      var ba2 = AANVAL.baan, fase2 = -(ba2.wacht * k + ba2.knal + 0.1), sx2 = ARENA.b / 5, sy2 = ARENA.h / 3, sch = (toeval() - 0.5) * 0.5;
-      for (i = 0; i < 5; i++) A.push({ id:++W.nr, soort:'baan', hoek:Math.PI / 2, t:-i * 0.06, k:k, kl:b.def.kleur, x:(i + 0.5 + sch) * sx2, y:ARENA.h / 2 });
-      for (i = 0; i < 3; i++) A.push({ id:++W.nr, soort:'baan', hoek:0, t:fase2 - i * 0.06, k:k, kl:b.def.kleur, x:ARENA.b / 2, y:(i + 0.5 - sch) * sy2 });
     } else if (soort === 'baan' && tweeFasen){
-      /* eerst staand of liggend (om de beurt willekeurig), daarna dwars erop */
-      var eerstStaand = toeval() < 0.5, fz2 = -(AANVAL.baan.wacht * k + AANVAL.baan.knal + 0.1);
-      n = AANVAL.baan.aantal(ronde);
-      [0, 1].forEach(function(fz){
-        var staand = fz === 0 ? eerstStaand : !eerstStaand, lang2 = staand ? ARENA.b : ARENA.h, m = fz === 0 ? n : Math.max(1, n - 1);
-        var st2 = Math.min(210, (lang2 - 140) / Math.max(1, m - 1)), mid2 = lang2 / 2 + (toeval() - 0.5) * Math.max(0, lang2 - 140 - st2 * (m - 1));
+      /* De halen in fasen: steeds een rij evenwijdige strepen over het hele bord, en als die geweest
+         zijn de volgende rij in een andere richting. Staand, liggend of schuin (/ of \).
+         Gewoon: twee fasen, staand en liggend (in willekeurige volgorde) of twee keer schuin, de ene
+         kant en dan de andere. De Blauwe Pen: drie fasen, staand, liggend en dan schuin. */
+      var ST = Math.PI / 2, LI = 0, S1 = Math.PI / 4, S2 = Math.PI * 3 / 4, ba3 = AANVAL.baan, fase = ba3.wacht * k + ba3.knal + 0.1;
+      var fasen, aantalN = ba3.aantal(ronde);
+      if (heftig) fasen = [[ST, 5], [LI, 3], [toeval() < 0.5 ? S1 : S2, 4]];
+      else {
+        var keus = Math.floor(toeval() * 3);
+        fasen = keus === 0 ? [[ST, aantalN], [LI, Math.max(1, aantalN - 1)]] : keus === 1 ? [[LI, Math.max(1, aantalN - 1)], [ST, aantalN]] :
+                (toeval() < 0.5 ? [[S1, aantalN], [S2, aantalN]] : [[S2, aantalN], [S1, aantalN]]);
+      }
+      fasen.forEach(function(fz, fi){
+        var h = fz[0], m = fz[1], nx = Math.cos(h + Math.PI / 2), ny = Math.sin(h + Math.PI / 2);
+        /* hoe breed het bord is dwars op deze strepen, vanuit het midden */
+        var E = Math.abs(ARENA.b / 2 * nx) + Math.abs(ARENA.h / 2 * ny);
+        var st3 = Math.min(210, (2 * E - 140) / Math.max(1, m - 1)), speel = Math.max(0, 2 * E - 140 - st3 * (m - 1)), mid3 = (toeval() - 0.5) * speel;
         for (var j = 0; j < m; j++){
-          var at = mid2 + (j - (m - 1) / 2) * st2;
-          A.push({ id:++W.nr, soort:'baan', hoek:staand ? Math.PI / 2 : 0, t:(fz ? fz2 : 0) - j * 0.08, k:k, kl:b.def.kleur,
-            x:staand ? at : ARENA.b / 2, y:staand ? ARENA.h / 2 : at });
+          var o = mid3 + (j - (m - 1) / 2) * st3;
+          A.push({ id:++W.nr, soort:'baan', hoek:h, t:-fi * fase - j * 0.07, k:k, kl:b.def.kleur, x:ARENA.b / 2 + nx * o, y:ARENA.h / 2 + ny * o });
         }
       });
     } else if (soort === 'baan'){
@@ -690,7 +695,7 @@ function maak(opties){
     if (heftig && soort === 'muur') return A.muur.wacht * 2 + A.muur.duur * 1.75 + 0.2;
     if (heftig && soort === 'kruis') return A.kruis.wacht + A.kruis.knal + 0.9;
     if (heftig && soort === 'kegel') return A.kegel.wacht + A.kegel.knal + 1.1;
-    if (heftig && soort === 'baan') return A.baan.wacht * 2 + A.baan.knal * 2 + 0.4;
+    if (heftig && soort === 'baan') return A.baan.wacht * 3 + A.baan.knal * 3 + 0.6;
     if (soort === 'laser') return A.laser.wacht + A.laser.duur;
     if (soort === 'wijzers') return A.wijzers.wacht + A.wijzers.duur;
     if (soort === 'golf') return A.golf.wacht + A.golf.duur + (A.golf.ringen(W.ronde) - 1) * 0.55;
