@@ -2,8 +2,8 @@
    Een g in één lijn: de ring (blauw) loopt in het raakpunt over in de steel, en die eindigt in een vinkje
    (oranje) dat over de O ligt en daar met een halve ronde begint. Zie logo/g/.
 
-   Waar hij staat: in de kop van de docentpagina's, bij een goed antwoord, en als stempel op het
-   antwoordblad van een werkblad. Het blobje blijft het teken voor leerlingen en de spellen.
+   Hij is het logo van de site: in de kop van elke pagina (merk.js tekent hem opnieuw bij de muis), bij een
+   goed antwoord, en als stempel op het antwoordblad van een werkblad. De spellogo's blijven blobjes met een pictogram.
 
    NAGEKEKEN.svg({ maat, teken, mono, label })
      maat   breedte en hoogte in pixels (standaard 24)

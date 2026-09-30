@@ -1,20 +1,21 @@
 # Het logo van meneer Greidanus
 
-Het blobje: hetzelfde gezichtje dat elke leerling op de site ook krijgt, en het kijkt nieuwsgierig omhoog. Leren begint met willen weten.
+De nagekeken g: de g van Greidanus in één lijn. De ring (blauw) loopt in het raakpunt over in de steel, en die eindigt in een vinkje (oranje) dat over de O ligt en daar met een halve ronde begint. Nagekeken, en goed is goed. Twee harde kleuren, geen verloop.
 
 ## De bestanden
 
 | Bestand | Waarvoor |
 |---|---|
-| `blobje.svg` | het logo in kleur, op een lichte achtergrond |
-| `blobje-donker.svg` | op een donkere achtergrond (het lijf in lichtblauw) |
-| `blobje-klein.svg` | voor 16 tot 32 pixels: grotere ogen, geen mond (dit is ook `/favicon.svg`) |
-| `blobje-navy.svg`, `blobje-wit.svg`, `blobje-mono.svg` | in één kleur (mono volgt `currentColor`); ogen en mond zijn gaten |
-| `meneer-greidanus.svg` en `-donker.svg` | het blobje met de naam, liggend |
-| `meneer-greidanus-staand.svg` en `-donker.svg` | het blobje met de naam, staand |
-| `icoon*.svg`, `/icoon-*.png`, `/apple-touch-icon.png`, `/favicon.ico` | app-iconen en favicons |
+| `g/nagekeken-g.svg` | het teken in kleur, op licht |
+| `g/nagekeken-g-donker.svg` | op donker (de ring in lichtblauw) |
+| `g/nagekeken-g-navy.svg`, `-wit.svg`, `-mono.svg` | in één kleur (mono volgt `currentColor`) |
+| `meneer-greidanus.svg` en `-donker.svg` | de g met de naam, liggend |
+| `meneer-greidanus-staand.svg` en `-donker.svg` | de g met de naam, staand |
+| `/favicon.svg` | het tabbladicoon; volgt licht en donker van het apparaat |
+| `icoon*.svg`, `/icoon-*.png`, `/apple-touch-icon.png`, `/favicon.ico` | app-iconen: de g in crème en oranje op een blauw vlak |
 | `spel/*.svg`, `spel-pictogrammen.json` | de spellogo's, een per pagina, en hun pictogrammen |
 | `spelblob-1.svg` t/m `spelblob-6.svg` | maskers voor de spelkaarten op de startpagina |
+| `blobje*.svg` | het vorige logo; het blobje is nu alleen nog het gezichtje van een leerling |
 
 De naam is uitgetekend: "meneer" in Caveat 600 (handschrift), "Greidanus" in Poppins 700. Beide lettertypen hebben de Open Font License, dus ze mogen in een logo.
 
@@ -22,24 +23,23 @@ De naam is uitgetekend: "meneer" in Caveat 600 (handschrift), "Greidanus" in Pop
 
 | | HEX |
 |---|---|
-| Lijf (oceaan) | `#204ECF` |
-| Lijf op donker (vista) | `#83A5F2` |
-| Ogen (crème) | `#FBF6F1` |
-| Pupillen en mond (navy) | `#14224C` |
+| Ring (oceaan) | `#204ECF` |
+| Ring op donker (vista) | `#83A5F2` |
+| Vinkje | `#F26749` |
+| Crème (op een blauw vlak) | `#FBF6F1` |
 | "meneer" | `#D9522F`, op donker `#F58A6E` |
 | "Greidanus" | `#14224C`, op donker `#FBF6F1` |
 
 ## Zo gebruik je het
 
-- **Vrije ruimte:** houd rondom minstens de hoogte van één oog vrij.
-- **Kleinste maat:**
-  - het blobje met mond vanaf 32 pixels;
-  - daaronder `blobje-klein.svg`;
-  - het blobje met de naam vanaf 120 pixels breed.
-- **Achtergrond:** op licht het gewone blobje, op donker de donkere versie, op een foto of drukke achtergrond de witte.
+- **Vrije ruimte:** houd rondom minstens de dikte van de lijn vrij.
+- **Kleinste maat:** de g vanaf 16 pixels; de g met de naam vanaf 120 pixels breed.
+- **Achtergrond:** op licht de gewone g, op donker de donkere versie, op een foto of drukke achtergrond de witte.
+- **Beweging:** eerst tekent de ring zich, dan flickt het vinkje erachteraan. In de kop gebeurt dat bij het openen van de pagina en opnieuw als je er met de muis overheen gaat (`leermiddelen/merk.js`). Wie minder beweging wil (prefers-reduced-motion), ziet hem meteen staan.
+- **Waar nog meer:** bij een goed antwoord (alle vakspellen, Oefenen, de klasquiz) en als stempel "nagekeken" op het antwoordblad van een werkblad en het nakijkblad van het dictee. In code: `leermiddelen/nagekeken.js` geeft `NAGEKEKEN.svg({ maat, teken, mono, label })` en `NAGEKEKEN.stempel({ maat })`.
 - **Niet doen:**
-  - uitrekken;
-  - het blobje anders laten kijken of een andere mond geven (die zijn voor de gezichtjes van leerlingen, niet voor het merk);
+  - uitrekken of draaien;
+  - het vinkje onder de O leggen, of een verloop tussen de twee kleuren;
   - een schaduw of rand eromheen;
   - een andere kleur dan hierboven.
 
@@ -64,21 +64,3 @@ node logo/maak-spellogos.js
 ```
 
 Het script controleert de stijl, zet het logo als favicon in de pagina en schrijft ook `logo/spel/<pagina>.svg`. Het noemt pagina's die nog een favicon in de oude vorm hebben (een vierkant) en nog geen pictogram.
-
-## De nagekeken g
-
-Het tweede teken, voor het nakijkwerk. De g van Greidanus in één lijn: de ring loopt in het raakpunt over in de steel, en die eindigt in een vinkje. Het vinkje (oranje) ligt over de O (blauw) en begint daar met een halve ronde. Twee harde kleuren, geen verloop.
-
-| Bestand | Waarvoor |
-|---|---|
-| `g/nagekeken-g.svg` | in kleur, op licht |
-| `g/nagekeken-g-donker.svg` | op donker (de ring in lichtblauw) |
-| `g/nagekeken-g-navy.svg`, `-wit.svg`, `-mono.svg` | in één kleur (mono volgt `currentColor`) |
-
-- **Waar:**
-  - in de kop van de docentpagina's (klasoverzicht, beheer, maken, werkbladen, lesbrieven, handleiding);
-  - bij een goed antwoord (alle vakspellen, Oefenen, de klasquiz);
-  - als stempel "nagekeken" op het antwoordblad van een werkblad en het nakijkblad van het dictee.
-- **Het blobje blijft het teken voor leerlingen en de spellen.**
-- **Beweging:** eerst tekent de ring zich, dan flickt het vinkje erachteraan. Wie minder beweging wil (prefers-reduced-motion), ziet hem meteen staan.
-- **In code:** `leermiddelen/nagekeken.js` geeft `NAGEKEKEN.svg({ maat, teken, mono, label })` en `NAGEKEKEN.stempel({ maat })`.

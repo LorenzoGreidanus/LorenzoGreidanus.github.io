@@ -25,6 +25,9 @@
                   en api.uit(tekst); het spel roept klaar() als het antwoord er is.
    onderdeel is waar KLAS.tel op telt (per onderdeel goed/gesteld, voor het
    klasoverzicht). niveau voor de klas komt uit keuze.niveau. */
+/* de nagekeken g in de kop, net als op de andere pagina's; merk.js tekent hem opnieuw als je er met de muis overheen gaat */
+var MERK = "<svg class=\"ng teken\" viewBox=\"0 0 256 256\" width=\"34\" height=\"34\" aria-hidden=\"true\" focusable=\"false\" style=\"width:100%;height:100%;overflow:visible;transform:scale(1.3)\"><style>.ng .ngr{stroke:#204ECF}.ng .ngv{stroke:#F26749}:root[data-theme=\"dark\"] .ng .ngr{stroke:#83A5F2}@media(prefers-color-scheme:dark){:root:not([data-theme=\"light\"]) .ng .ngr{stroke:#83A5F2}}.ng.teken .ngr{stroke-dasharray:100;animation:ng-ring .6s cubic-bezier(.6,0,.3,1) .15s both}.ng.teken .ngv{stroke-dasharray:100;animation:ng-vink .34s cubic-bezier(.3,0,.2,1) .67s both}@keyframes ng-ring{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}@keyframes ng-vink{from{stroke-dashoffset:100;opacity:0}1%{opacity:1}to{stroke-dashoffset:0;opacity:1}}@media(prefers-reduced-motion:reduce){.ng.teken .ngr,.ng.teken .ngv{animation:none}}</style><g transform=\"translate(8 0)\" fill=\"none\" stroke-width=\"32\"><path class=\"ngr\" pathLength=\"100\" d=\"M163.3 123A50 50 0 1 0 76.7 73A50 50 0 1 0 163.3 123Z\"/><path class=\"ngv\" pathLength=\"100\" d=\"M163.3 123L114.2 208L82.2 176\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></g></svg>";
+if (!document.querySelector('script[src$="merk.js"]')) { var merkScript = document.createElement('script'); merkScript.src = '/leermiddelen/merk.js'; document.head.appendChild(merkScript); }
 /* de nagekeken g bij een goed antwoord (zie nagekeken.js) */
 if (!window.NAGEKEKEN && !document.querySelector('script[src="nagekeken.js"]')) { var ngScript = document.createElement('script'); ngScript.src = 'nagekeken.js'; document.head.appendChild(ngScript); }
 window.VAKSPEL = (function(){
@@ -52,7 +55,7 @@ window.VAKSPEL = (function(){
     var wortel = $('vakspel') || document.body;
     wortel.innerHTML =
       '<header><div class="wrap hd">' +
-        '<a class="mark" href="./"><span class="lgmark"><i><span>L</span><span>G</span></i><b class="lgdot"></b></span><span class="lgnaam"><span>' + schoon(cfg.naam) + '</span><span class="lgstreep"></span></span><span class="lghoi">alle spellen</span></a>' +
+        '<a class="mark" href="./"><span class="lgmark"><i class="lgblob" style="background:none;box-shadow:none;border:0;border-radius:0;padding:0">' + MERK + '</i></span><span class="lgnaam"><span>' + schoon(cfg.naam) + '</span><span class="lgstreep"></span></span><span class="lghoi">alle spellen</span></a>' +
         '<div class="hd-right">' +
           '<button class="themaknop" id="themaknop" type="button" aria-label="Schakel naar donker" title="Donker of licht">' +
             '<svg class="maan" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>' +
