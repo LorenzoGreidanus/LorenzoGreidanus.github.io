@@ -83,6 +83,8 @@ const CRIT = { x:2, straal:90, deel:0.5 };
 /* Het late spel: vanaf ronde 15 is alles duur en taai, dus levert elke munt een kwart meer op
    (de munten in de arena en het geld voor een goed antwoord). */
 const LAAT = { vanaf:15, munten:1.25 };
+/* Vanaf deze ronde komen de halen en de muur van een baas in twee fasen. */
+const TWEEFASEN = 10;
 function laatExtra(ronde){ return ronde >= LAAT.vanaf ? LAAT.munten : 1; }
 /* De negen bazen. Om de vijf rondes komt de volgende aan de beurt, en na de
    negende begint de rij opnieuw op een hogere ronde en dus taaier. De laatste
@@ -546,6 +548,8 @@ function maak(opties){
   function eenSpeler(levend){ return levend[Math.floor(toeval() * levend.length)] || W.spelers[0]; }
   function zetAanval(soort, b, levend, k){
     var i, n, p, hoek, doel, A = W.aanvallen, ronde = W.ronde, heftig = !!(b.def && b.def.heftig);
+    /* vanaf ronde 10 komen de halen en de muur in twee fasen: eerst de ene kant op, dan dwars erop */
+    var tweeFasen = heftig || ronde >= TWEEFASEN;
     zeg('aanval', soort, k, b);
     if (soort === 'cirkel'){
       levend.forEach(function(P){ A.push({ id:++W.nr, soort:'cirkel', x:P.sp.x, y:P.sp.y, t:0, k:k }); });
@@ -578,6 +582,24 @@ function maak(opties){
       if (ronde >= 18) A.push({ id:++W.nr, soort:'kegel', x:b.x, y:b.y, hoek:hoek + Math.PI, t:-0.4, k:k });
       /* heftig: nog twee waaiers schuin ernaast, even later */
       if (heftig){ A.push({ id:++W.nr, soort:'kegel', x:b.x, y:b.y, hoek:hoek + Math.PI / 2, t:-0.7, k:k }); A.push({ id:++W.nr, soort:'kegel', x:b.x, y:b.y, hoek:hoek - Math.PI / 2, t:-0.7, k:k }); }
+    } else if (soort === 'baan' && heftig){
+      /* twee fasen: eerst staande strepen over de hele breedte, en als die geweest zijn liggende over de hele hoogte */
+      var ba2 = AANVAL.baan, fase2 = -(ba2.wacht * k + ba2.knal + 0.1), sx2 = ARENA.b / 5, sy2 = ARENA.h / 3, sch = (toeval() - 0.5) * 0.5;
+      for (i = 0; i < 5; i++) A.push({ id:++W.nr, soort:'baan', hoek:Math.PI / 2, t:-i * 0.06, k:k, kl:b.def.kleur, x:(i + 0.5 + sch) * sx2, y:ARENA.h / 2 });
+      for (i = 0; i < 3; i++) A.push({ id:++W.nr, soort:'baan', hoek:0, t:fase2 - i * 0.06, k:k, kl:b.def.kleur, x:ARENA.b / 2, y:(i + 0.5 - sch) * sy2 });
+    } else if (soort === 'baan' && tweeFasen){
+      /* eerst staand of liggend (om de beurt willekeurig), daarna dwars erop */
+      var eerstStaand = toeval() < 0.5, fz2 = -(AANVAL.baan.wacht * k + AANVAL.baan.knal + 0.1);
+      n = AANVAL.baan.aantal(ronde);
+      [0, 1].forEach(function(fz){
+        var staand = fz === 0 ? eerstStaand : !eerstStaand, lang2 = staand ? ARENA.b : ARENA.h, m = fz === 0 ? n : Math.max(1, n - 1);
+        var st2 = Math.min(210, (lang2 - 140) / Math.max(1, m - 1)), mid2 = lang2 / 2 + (toeval() - 0.5) * Math.max(0, lang2 - 140 - st2 * (m - 1));
+        for (var j = 0; j < m; j++){
+          var at = mid2 + (j - (m - 1) / 2) * st2;
+          A.push({ id:++W.nr, soort:'baan', hoek:staand ? Math.PI / 2 : 0, t:(fz ? fz2 : 0) - j * 0.08, k:k, kl:b.def.kleur,
+            x:staand ? at : ARENA.b / 2, y:staand ? ARENA.h / 2 : at });
+        }
+      });
     } else if (soort === 'baan'){
       hoek = toeval() * Math.PI;
       n = AANVAL.baan.aantal(ronde) + (heftig ? 2 : 0);
@@ -619,8 +641,8 @@ function maak(opties){
       var kant = Math.floor(toeval() * 4);
       A.push({ id:++W.nr, soort:'muur', x:b.x, y:b.y, hoek:kant * Math.PI / 2, gat:0.15 + toeval() * 0.7, t:0, k:k, kl:b.def.kleur });
       if (ronde >= 15) A.push({ id:++W.nr, soort:'muur', x:b.x, y:b.y, hoek:((kant + 2) % 4) * Math.PI / 2, gat:0.15 + toeval() * 0.7, t:-0.6, k:k, kl:b.def.kleur });
-      /* heftig: een derde muur dwars erop */
-      if (heftig) A.push({ id:++W.nr, soort:'muur', x:b.x, y:b.y, hoek:((kant + 1) % 4) * Math.PI / 2, gat:0.15 + toeval() * 0.7, t:-1.3, k:k, kl:b.def.kleur });
+      /* heftig, de tweede fase: zodra de eerste bijna over is komt er een dwars erop, van boven of van onder */
+      if (tweeFasen) A.push({ id:++W.nr, soort:'muur', x:b.x, y:b.y, hoek:((kant + 1) % 4) * Math.PI / 2, gat:0.15 + toeval() * 0.7, t:-(AANVAL.muur.wacht * k + AANVAL.muur.duur * 0.75), k:k, kl:b.def.kleur });
     } else if (soort === 'spiraal'){
       var spi = AANVAL.spiraal, start2 = toeval() * Math.PI * 2, om2 = toeval() < 0.5 ? 1 : -1;
       n = spi.aantal(ronde);
@@ -641,7 +663,10 @@ function maak(opties){
       A.push({ id:++W.nr, soort:'slinger', x:ARENA.b / 2, y:-40, t:0, k:k, richting:toeval() < 0.5 ? 1 : -1, gat:0.1 + toeval() * 0.8, kl:b.def.kleur });
     } else if (soort === 'veeg'){
       var kant2 = Math.floor(toeval() * 4); n = AANVAL.veeg.aantal(ronde);
-      for (i = 0; i < n; i++) A.push({ id:++W.nr, soort:'muur', x:b.x, y:b.y, hoek:kant2 * Math.PI / 2, gat:0.12 + toeval() * 0.76, t:-i * AANVAL.veeg.na, k:k, kl:b.def.kleur });
+      /* twee fasen: de eerste helft van de strepen de ene kant op, de tweede helft dwars erop */
+      var helft = Math.ceil(n / 2);
+      for (i = 0; i < n; i++) A.push({ id:++W.nr, soort:'muur', x:b.x, y:b.y, hoek:((kant2 + (i < helft ? 0 : 1)) % 4) * Math.PI / 2, gat:0.12 + toeval() * 0.76,
+        t:-(i < helft ? i * AANVAL.veeg.na : (helft - 1) * AANVAL.veeg.na + AANVAL.muur.duur * 0.8 + (i - helft) * AANVAL.veeg.na), k:k, kl:b.def.kleur });
     } else if (soort === 'raster'){
       /* twee roosters: eerst strepen op een kwart, de helft en driekwart, een tel later ertussenin */
       var rb = AANVAL.raster.breed;
@@ -660,10 +685,12 @@ function maak(opties){
   /* hoe lang een aanval in totaal loopt, zodat de volgende er niet doorheen valt */
   function duurVan(soort, heftig){
     var A = AANVAL;
-    if (heftig && soort === 'muur') return A.muur.wacht + A.muur.duur + 1.3;
+    if (!heftig && W.ronde >= TWEEFASEN && soort === 'muur') return A.muur.wacht * 2 + A.muur.duur * 1.75 + 0.2;
+    if (!heftig && W.ronde >= TWEEFASEN && soort === 'baan') return A.baan.wacht * 2 + A.baan.knal * 2 + 0.4;
+    if (heftig && soort === 'muur') return A.muur.wacht * 2 + A.muur.duur * 1.75 + 0.2;
     if (heftig && soort === 'kruis') return A.kruis.wacht + A.kruis.knal + 0.9;
     if (heftig && soort === 'kegel') return A.kegel.wacht + A.kegel.knal + 1.1;
-    if (heftig && soort === 'baan') return A.baan.wacht + A.baan.knal + 0.7;
+    if (heftig && soort === 'baan') return A.baan.wacht * 2 + A.baan.knal * 2 + 0.4;
     if (soort === 'laser') return A.laser.wacht + A.laser.duur;
     if (soort === 'wijzers') return A.wijzers.wacht + A.wijzers.duur;
     if (soort === 'golf') return A.golf.wacht + A.golf.duur + (A.golf.ringen(W.ronde) - 1) * 0.55;
@@ -680,7 +707,7 @@ function maak(opties){
     if (soort === 'bom') return 0.5 * (A.bom.aantal(W.ronde) - 1) + A.bom.duur + 1.2;
     if (soort === 'vloer') return A.vloer.wacht + A.vloer.slag * (A.vloer.slagen(W.ronde) - 1) + A.vloer.knal + 0.2;
     if (soort === 'slinger') return A.slinger.wacht + A.slinger.duur;
-    if (soort === 'veeg') return A.muur.wacht + A.muur.duur + A.veeg.na * (A.veeg.aantal(W.ronde) - 1);
+    if (soort === 'veeg') return A.muur.wacht + A.muur.duur * 1.8 + A.veeg.na * (A.veeg.aantal(W.ronde) - 2);
     if (soort === 'raster') return A.baan.wacht + A.raster.tussen + A.baan.knal + 0.3;
     if (soort === 'lichten') return A.laser.wacht + A.lichten.duur;
     return A.cirkel.wacht + A.cirkel.knal;
