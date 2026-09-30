@@ -84,8 +84,10 @@ const CRIT = { x:2, straal:90, deel:0.5 };
    (de munten in de arena en het geld voor een goed antwoord). */
 const LAAT = { vanaf:15, munten:1.25 };
 function laatExtra(ronde){ return ronde >= LAAT.vanaf ? LAAT.munten : 1; }
-/* De zes bazen. Om de vijf rondes komt de volgende aan de beurt, en na de
-   zesde begint de rij opnieuw op een hogere ronde en dus taaier. */
+/* De acht bazen. Om de vijf rondes komt de volgende aan de beurt, en na de
+   achtste begint de rij opnieuw op een hogere ronde en dus taaier. De laatste
+   twee (ronde 35 en 40) schieten niets: alles gebeurt op de vloer, op de maat,
+   en wie stilstaat wordt geraakt. 'tempo' maakt de pauze tussen twee aanvallen korter. */
 const BAZEN = [
   { id:'fout',    naam:'De Grote Fout', kleur:'#4a1230', vorm:'ster',  hp:16, r:46, schade:26, schild:0.35,
     aanvallen:['cirkel', 'laser', 'kegel', 'spiraal', 'baan', 'tik'],
@@ -104,7 +106,13 @@ const BAZEN = [
     wat:'Twee wijzers draaien rond, de uren tikken een voor een af, de ring loopt naar binnen en de seconden spiralen naar buiten.' },
   { id:'zwerm',   naam:'De Zwerm',      kleur:'#7d1f12', vorm:'zwerm', hp:16, r:48, schade:22, schild:0.3,
     aanvallen:['kogel', 'krimp', 'cirkel', 'bom', 'regen', 'spiraal'],
-    wat:'Barst uit elkaar in propjes, sluit je in met een ring en gooit bommen. Het minste leven, het meeste in de lucht.' }
+    wat:'Barst uit elkaar in propjes, sluit je in met een ring en gooit bommen. Het minste leven, het meeste in de lucht.' },
+  { id:'disco',   naam:'De Discobal',   kleur:'#9A55B8', vorm:'bal',   hp:19, r:48, schade:24, schild:0.35, tempo:0.7,
+    aanvallen:['vloer', 'lichten', 'golf', 'veeg', 'raster', 'cirkel'],
+    wat:'Een dansvloer die op de maat oplicht, lichtbundels die rondgaan en strepen die over de vloer vegen. Blijf bewegen.' },
+  { id:'metronoom', naam:'De Metronoom', kleur:'#1f6b5c', vorm:'metronoom', hp:20, r:46, schade:25, schild:0.35, tempo:0.65,
+    aanvallen:['slinger', 'vloer', 'veeg', 'raster', 'krimp', 'tik'],
+    wat:'Een slinger die van links naar rechts over de arena zwaait, een vloer die op de tik oplicht en strepen in de maat. Blijf in beweging.' }
 ];
 /* De aanvallen. Elke aanval heeft eerst een waarschuwing die je op de grond
    ziet, en dan het moment dat het raakt. Alle maten zijn in arenapunten. */
@@ -127,8 +135,20 @@ const AANVAL = {
     extra:function(n){ return 1 + Math.floor(n / 10); } },
   laser:{ wacht:0.9, duur:1.7, boog:Math.PI * 0.55, breed:26, schade:16,
     stralen:function(n){ return n >= 15 ? 2 : 1; } },
-  golf:{ wacht:0.75, duur:1.5, tot:620, band:24, schade:20,
+  /* de golf heeft drie openingen van 150 punten breed (langs de ring gemeten): loop erdoorheen */
+  golf:{ wacht:0.75, duur:1.5, tot:620, band:24, schade:20, gaten:3, gat:150,
     ringen:function(n){ return n >= 20 ? 2 : 1; } },
+  /* De dansvloer: de arena in vakken, en op elke tel licht de helft op (om en om, of per kolom of rij).
+     Wat oplicht bij de volgende tel zie je al een tel van tevoren; wat nu raakt, is bij de volgende tel veilig. */
+  vloer:{ wacht:1, slag:0.85, knal:0.25, kol:8, rij:5, schade:18, slagen:function(n){ return n >= 40 ? 6 : 5; } },
+  /* De slinger: een balk die aan de bovenkant vastzit en heen en weer zwaait, met een gat erin dat per zwaai verschuift. */
+  slinger:{ wacht:1.1, duur:3.4, zwaai:Math.PI * 0.32, lang:700, breed:44, gat:150, schade:20, zwaaien:2 },
+  /* Vegen: drie of vier muren achter elkaar dezelfde kant op, elk met een gat op een andere hoogte. */
+  veeg:{ na:0.8, aantal:function(n){ return n >= 40 ? 4 : 3; } },
+  /* Het raster: strepen over de hele vloer in een rooster, en een tel later een tweede rooster ertussen. */
+  raster:{ tussen:0.95, breed:66 },
+  /* De lichtbundels van de discobal: vier stralen die een stuk ronddraaien, met ruimte ertussen. */
+  lichten:{ stralen:4, boog:Math.PI * 0.35, duur:2.4, breed:26, schade:16 },
   plas:{ wacht:0.9, duur:6.5, r:66, schade:9,
     aantal:function(n){ return 3 + Math.floor(n / 12); } },
   kegel:{ wacht:1, knal:0.45, wijd:Math.PI * 0.17, ver:640, schade:20 },
@@ -159,6 +179,21 @@ function muurStand(a){
   var van = -mu.breed / 2, tot = lengte + mu.breed / 2;
   return { langsX:langsX, vooruit:kant < 2, pos:kant < 2 ? van + p * (tot - van) : tot - p * (tot - van),
            gatMidden:ARENA.rand + (a.gat || 0.5) * (dwars - 2 * ARENA.rand), gatBreed:mu.gat, deel:p, wacht:W0 };
+}
+/* De openingen in de golf: de halve hoek van een opening bij deze straal (de breedte langs de ring blijft gelijk). */
+function golfGat(straal){ return Math.min(0.9, AANVAL.golf.gat / 2 / Math.max(1, straal)); }
+/* De dansvloer: licht vak (c, r) op bij tel i? a.breed is het patroon, a.gat het zaadje. */
+function vloerAan(a, i, c, r){
+  var m = (a.breed | 0) % 3;
+  return m === 0 ? (c + r + i) % 2 === 0 : m === 1 ? (c + i) % 2 === 0 : (r + i) % 2 === 0;
+}
+function vloerTel(a, i){ var v = AANVAL.vloer; return v.wacht * (a.k || 1) + i * v.slag; }
+/* De slinger: waar staat hij nu (hoek vanaf recht naar beneden), en waar zit het gat (afstand vanaf het draaipunt)? */
+function slingerStand(a){
+  var sl = AANVAL.slinger, W0 = sl.wacht * (a.k || 1), p = Math.min(1, Math.max(0, (a.t - W0) / sl.duur));
+  var hoek = -(a.richting || 1) * sl.zwaai * Math.cos(Math.PI * sl.zwaaien * p), zwaai = Math.min(sl.zwaaien - 1, Math.floor(p * sl.zwaaien));
+  var gatDeel = ((a.gat || 0.5) + zwaai * 0.37) % 1;
+  return { x:ARENA.b / 2, y:-40, hoek:hoek, gat:150 + gatDeel * 450, deel:p, wacht:W0 };
 }
 /* Hoeveel fouten in een ronde, en hoe taai ze zijn. */
 function aantalInRonde(n){ return 6 + Math.round(Math.min(n, 25) * 1.9 + Math.max(0, n - 25) * 0.9); }
@@ -464,8 +499,8 @@ function maak(opties){
   /* ---------- de bazen en hun aanvallen ---------- */
   /* Welke aanvallen reiken over de hele arena, en welke zijn bedoeld om je
      van hem af te duwen. De rest staat in allebei de lijsten en past altijd. */
-  var VERAANVAL = { laser:1, baan:1, kruis:1, golf:1, regen:1, muur:1, wijzers:1, krimp:1, kogel:1 };
-  var DICHTBIJAANVAL = { cirkel:1, kegel:1, tik:1, spiraal:1, bom:1, plas:1, krimp:1, kogel:1 };
+  var VERAANVAL = { laser:1, baan:1, kruis:1, golf:1, regen:1, muur:1, wijzers:1, krimp:1, kogel:1, vloer:1, slinger:1, veeg:1, raster:1, lichten:1 };
+  var DICHTBIJAANVAL = { cirkel:1, kegel:1, tik:1, spiraal:1, bom:1, plas:1, krimp:1, kogel:1, vloer:1, slinger:1, raster:1, golf:1 };
   /* Hoe ver is de dichtstbijzijnde speler? Daaronder heet dichtbij. */
   var DICHTBIJ = 210;
   function dichtsteAf(b, levend){
@@ -525,7 +560,7 @@ function maak(opties){
       }
     } else if (soort === 'golf'){
       n = AANVAL.golf.ringen(ronde);
-      for (i = 0; i < n; i++) A.push({ id:++W.nr, soort:'golf', x:b.x, y:b.y, r0:b.r, t:-i * 0.55, k:k });
+      for (i = 0; i < n; i++) A.push({ id:++W.nr, soort:'golf', x:b.x, y:b.y, r0:b.r, t:-i * 0.55, k:k, gat:toeval() * Math.PI * 2 });
     } else if (soort === 'plas'){
       doel = eenSpeler(levend);
       A.push({ id:++W.nr, soort:'plas', x:doel.sp.x, y:doel.sp.y, t:0, k:k });
@@ -586,6 +621,26 @@ function maak(opties){
       }
     } else if (soort === 'krimp'){
       A.push({ id:++W.nr, soort:'krimp', x:b.x, y:b.y, r0:b.r, t:0, k:k, gat:toeval() * Math.PI * 2 });
+    } else if (soort === 'vloer'){
+      /* breed is het patroon (om en om, kolommen of rijen), duur het aantal tellen */
+      A.push({ id:++W.nr, soort:'vloer', x:0, y:0, t:0, k:k, breed:Math.floor(toeval() * 3), duur:AANVAL.vloer.slagen(ronde), kl:b.def.kleur });
+    } else if (soort === 'slinger'){
+      A.push({ id:++W.nr, soort:'slinger', x:ARENA.b / 2, y:-40, t:0, k:k, richting:toeval() < 0.5 ? 1 : -1, gat:0.1 + toeval() * 0.8, kl:b.def.kleur });
+    } else if (soort === 'veeg'){
+      var kant2 = Math.floor(toeval() * 4); n = AANVAL.veeg.aantal(ronde);
+      for (i = 0; i < n; i++) A.push({ id:++W.nr, soort:'muur', x:b.x, y:b.y, hoek:kant2 * Math.PI / 2, gat:0.12 + toeval() * 0.76, t:-i * AANVAL.veeg.na, k:k, kl:b.def.kleur });
+    } else if (soort === 'raster'){
+      /* twee roosters: eerst strepen op een kwart, de helft en driekwart, een tel later ertussenin */
+      var rb = AANVAL.raster.breed;
+      [[0.25, 0.5, 0.75], [0.125, 0.375, 0.625, 0.875]].forEach(function(xs, golf2){
+        var t0 = -golf2 * AANVAL.raster.tussen;
+        xs.forEach(function(f){ A.push({ id:++W.nr, soort:'baan', x:ARENA.b * f, y:ARENA.h / 2, hoek:Math.PI / 2, t:t0, k:k, breed:rb, kl:b.def.kleur }); });
+        (golf2 ? [0.25, 0.75] : [0.5]).forEach(function(f){ A.push({ id:++W.nr, soort:'baan', x:ARENA.b / 2, y:ARENA.h * f, hoek:0, t:t0, k:k, breed:rb, kl:b.def.kleur }); });
+      });
+    } else if (soort === 'lichten'){
+      var li = AANVAL.lichten, lh = toeval() * Math.PI * 2, lr = toeval() < 0.5 ? 1 : -1;
+      for (i = 0; i < li.stralen; i++) A.push({ id:++W.nr, soort:'laser', x:b.x, y:b.y, r0:b.r, t:0, k:k, richting:lr, hoek:lh + i * Math.PI * 2 / li.stralen,
+        boog:li.boog, duur:li.duur, breed:li.breed, schade:li.schade });
     }
   }
   function wachtVan(a, basis){ return basis * (a.k || 1); }
@@ -606,6 +661,11 @@ function maak(opties){
     if (soort === 'muur') return A.muur.wacht + A.muur.duur + (W.ronde >= 15 ? 0.6 : 0);
     if (soort === 'spiraal') return A.spiraal.na * A.spiraal.aantal(W.ronde) + 1;
     if (soort === 'bom') return 0.5 * (A.bom.aantal(W.ronde) - 1) + A.bom.duur + 1.2;
+    if (soort === 'vloer') return A.vloer.wacht + A.vloer.slag * (A.vloer.slagen(W.ronde) - 1) + A.vloer.knal + 0.2;
+    if (soort === 'slinger') return A.slinger.wacht + A.slinger.duur;
+    if (soort === 'veeg') return A.muur.wacht + A.muur.duur + A.veeg.na * (A.veeg.aantal(W.ronde) - 1);
+    if (soort === 'raster') return A.baan.wacht + A.raster.tussen + A.baan.knal + 0.3;
+    if (soort === 'lichten') return A.laser.wacht + A.lichten.duur;
     return A.cirkel.wacht + A.cirkel.knal;
   }
   /* een speler wordt getroffen door een aanval */
@@ -657,7 +717,11 @@ function maak(opties){
           a.straal = r0 + deel2 * (g.tot - r0);
           levend.forEach(function(P){
             var d = Math.hypot(P.sp.x - a.x, P.sp.y - a.y);
-            if (Math.abs(d - a.straal) < g.band / 2 + SPELER.r * 0.7) tref(P, g.schade, '#6b3fa0');
+            if (Math.abs(d - a.straal) >= g.band / 2 + SPELER.r * 0.7) return;
+            /* in een opening? dan loop je erdoorheen */
+            var ph = Math.atan2(P.sp.y - a.y, P.sp.x - a.x), half = golfGat(a.straal) - SPELER.r * 0.5 / Math.max(1, a.straal);
+            for (var gi2 = 0; gi2 < g.gaten; gi2++){ var gc = (a.gat || 0) + gi2 * Math.PI * 2 / g.gaten; if (Math.abs(Math.atan2(Math.sin(ph - gc), Math.cos(ph - gc))) < half) return; }
+            tref(P, g.schade, '#6b3fa0');
           });
           if (deel2 >= 1) a.klaar = true;
         }
@@ -748,6 +812,29 @@ function maak(opties){
             for (var si = 0; si < bo.scherven; si++) W.aanvallen.push({ id:++W.nr, soort:'kogel', x:a.x, y:a.y, hoek:h0 + si * Math.PI * 2 / bo.scherven, t:0, k:a.k, kl:a.kl });
             for (var pi2 = 0; pi2 < 12; pi2++){ var hk2 = toeval() * Math.PI * 2, sn2 = 80 + toeval() * 140; W.pluis.push({ x:a.x, y:a.y, vx:Math.cos(hk2) * sn2, vy:Math.sin(hk2) * sn2, leven:0.45, kleur:a.kl || '#8a7350' }); }
           }
+        }
+      } else if (a.soort === 'vloer'){
+        var vl = AANVAL.vloer, tel = a.tel || 0;
+        if (tel < a.duur && a.t >= vloerTel(a, tel)){
+          a.tel = tel + 1;
+          var vb = ARENA.b / vl.kol, vh = ARENA.h / vl.rij;
+          levend.forEach(function(P){
+            var c = Math.max(0, Math.min(vl.kol - 1, Math.floor(P.sp.x / vb))), r = Math.max(0, Math.min(vl.rij - 1, Math.floor(P.sp.y / vh)));
+            if (vloerAan(a, tel, c, r)) tref(P, vl.schade, a.kl || '#9A55B8');
+          });
+        }
+        if (a.t >= vloerTel(a, a.duur - 1) + vl.knal) a.klaar = true;
+      } else if (a.soort === 'slinger'){
+        var sl = AANVAL.slinger, ss = slingerStand(a);
+        if (a.t >= ss.wacht){
+          var sx = Math.sin(ss.hoek), sy = Math.cos(ss.hoek);
+          levend.forEach(function(P){
+            var px4 = P.sp.x - ss.x, py4 = P.sp.y - ss.y, langs4 = px4 * sx + py4 * sy, dwars4 = Math.abs(-px4 * sy + py4 * sx);
+            if (langs4 < 0 || langs4 > sl.lang || dwars4 >= sl.breed / 2 + SPELER.r * 0.6) return;
+            if (Math.abs(langs4 - ss.gat) < sl.gat / 2 - SPELER.r * 0.3) return;   /* in het gat */
+            tref(P, sl.schade, a.kl || '#1f6b5c');
+          });
+          if (ss.deel >= 1) a.klaar = true;
         }
       } else if (a.soort === 'krimp'){
         var kr = AANVAL.krimp, krW = wachtVan(a, kr.wacht), rEind = (a.r0 || 46) + 18;
@@ -994,7 +1081,7 @@ function maak(opties){
           W.cijfers.push({ x:b.x, y:b.y - b.r - 16, tekst:b.def.naam + ' wordt kwaad', leven:2, kleur:b.def.kleur });
         }
         baasValtAan(b, levend, boos);
-        b.aanvalKlok = AANVAL.pauze(ronde) * (boos ? AANVAL.boosPauze : 1) * (W.nachtmerrie ? NACHTMERRIE.fases[b.nmFase].pauze : 1)
+        b.aanvalKlok = AANVAL.pauze(ronde) * (boos ? AANVAL.boosPauze : 1) * (W.nachtmerrie ? NACHTMERRIE.fases[b.nmFase].pauze : 1) * (b.def.tempo || 1)
                      + duurVan(b.def.aanvallen[b.laatste]) * (boos ? AANVAL.boosOverlap : 1);
       }
     });
@@ -1147,7 +1234,7 @@ function maak(opties){
   return W;
 }
 
-g.ZWAARDMOTOR = { maak:maak, ARENA:ARENA, SPELER:SPELER, DASH:DASH, FOUTEN:FOUTEN, BAZEN:BAZEN, AANVAL:AANVAL, BAASRONDE:BAASRONDE, muurStand:muurStand, STIJLEN:STIJLEN, BLOK:BLOK, LAAT:LAAT, laatExtra:laatExtra, GEVAAR:GEVAAR, CRIT:CRIT,
+g.ZWAARDMOTOR = { maak:maak, ARENA:ARENA, SPELER:SPELER, DASH:DASH, FOUTEN:FOUTEN, BAZEN:BAZEN, AANVAL:AANVAL, BAASRONDE:BAASRONDE, muurStand:muurStand, STIJLEN:STIJLEN, BLOK:BLOK, LAAT:LAAT, laatExtra:laatExtra, golfGat:golfGat, vloerAan:vloerAan, vloerTel:vloerTel, slingerStand:slingerStand, GEVAAR:GEVAAR, CRIT:CRIT,
                   MUNT_VAL:MUNT_VAL, RAAKPAUZE:RAAKPAUZE, RAAPTIJD:RAAPTIJD, aantalInRonde:aantalInRonde, foutHp:foutHp, baasVan:baasVan, basisStats:basisStats, nieuweSp:nieuweSp };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 if (typeof module !== 'undefined' && module.exports) module.exports = globalThis.ZWAARDMOTOR;
