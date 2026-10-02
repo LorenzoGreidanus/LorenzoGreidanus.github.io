@@ -281,7 +281,13 @@ const KLAS_SPELLEN = { race: "Vragenrace", metriek: "Het metriek stelsel", eigen
   partijen: "Welke partij is dit?",
   democratie: "Democratie",
   /* spellen voor elk vak op de vragenbank van Torenverdediging */
-  mijnwerker: "Mijnwerker", poortrace: "Poortrace", kaarttoren: "Kaarttoren" };
+  mijnwerker: "Mijnwerker", poortrace: "Poortrace", kaarttoren: "Kaarttoren",
+  afwegen: "Twee kanten",
+  alinea: "Bouw een alinea",
+  onderzoek: "Het eerlijke experiment",
+  redeneren: "Denk als een historicus",
+  situaties: "English in real life",
+  voordoen: "Eerst kijken, dan zelf" };
 /* Hoe lang de kamer wacht voor hij iemand die wegviel ook echt weghaalt. In de
    lobby kort: herladen duurt een paar tellen. In de arena langer: een
    telefoon die even geen bereik heeft, hoort er niet meteen uit te liggen. */

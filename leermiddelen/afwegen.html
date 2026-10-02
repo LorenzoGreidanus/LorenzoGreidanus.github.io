@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Twee kanten, versie 1.0: op vakspel.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Twee kanten &middot; meneer Greidanus</title>
+<meta name="description" content="Afwegen bij maatschappelijke dilemma’s: argumenten voor en tegen, de waarde erachter, wie er belang bij heeft, feit of mening en welk argument sterker is.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Twee kanten">
+<meta property="og:description" content="Oefen met afwegen: argumenten voor en tegen, waarden, belangen, feit of mening en sterke argumenten.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/afwegen.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M48.9 8 C72.8 6.9 88 23.7 88.4 46 C88.7 70 75.3 92.8 52.2 93.2 C28.3 93.5 7.2 76.7 8.4 52.8 C9.7 28.9 25.8 9.2 48.9 8Z' fill='%23a0455f'/><g transform='translate(50 51) scale(2.2) translate(-12 -12)' fill='none' stroke='%23ffffff' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'><path d='M12 4v16M7 20h10M5 8h14'/><path d='M5 8l-3 7a3 3 0 0 0 6 0z'/><path d='M19 8l-3 7a3 3 0 0 0 6 0z'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+/* het dilemma: titel, situatie en stelling in een vak met een streep in de spelkleur */
+.stel,.cit{box-sizing:border-box}
+.stel{width:100%;max-width:62ch;text-align:left;background:var(--kaart2);border-left:4px solid var(--spelkleur);border-radius:0 14px 14px 0;padding:12px 16px}
+.stel .kop{display:block;font-size:.76rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.stel .sit{margin:4px 0 8px;font-size:.9rem;line-height:1.45;color:var(--muted)}
+.stel .st{margin:0;font-size:1.05rem;line-height:1.45;font-weight:600}
+.stel .st b{color:var(--nadruk)}
+/* een argument, een zin of een uitspraak onder het dilemma */
+.cit{width:100%;max-width:62ch;margin-top:10px;text-align:left;background:var(--kaart);border:2px solid var(--rand2);border-radius:14px;padding:12px 16px;font-size:1.05rem;line-height:1.5}
+.cit .wie{display:block;font-size:.76rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+/* twee argumenten naast elkaar (sterk, botsende waarden) */
+.paar{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:780px;margin-top:10px}
+.paar .cit{margin-top:0;max-width:none}
+.paar .l{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:999px;background:var(--spelkleur);color:var(--spelinkt,#fff);font-size:.8rem;font-weight:700;margin-right:6px;letter-spacing:0;text-transform:none}
+.kaartjes .sleepkaart{font-weight:500;text-align:left}
+body.groot .stel .st,body.groot .cit{font-size:1.25rem}
+@media(max-width:560px){.paar{grid-template-columns:1fr}.stel{padding:10px 12px}.cit{padding:10px 12px;font-size:1rem}}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+
+  /* ---------- de dilemma's ----------
+     Elk dilemma heeft de stelling (s) en de omgedraaide stelling (o), een korte situatie (sit),
+     zes argumenten voor (v) en zes tegen (t): [niveau, waarde, tekst, ook]. Niveau 1 is voor
+     vmbo-bb, 2 erbij voor kgt en tl, 3 voor havo en vwo; waarde is null als er geen duidelijke
+     waarde achter zit; ook is een tweede waarde die ook past (komt dan niet als fout antwoord).
+     zv en zt: zwakke argumenten voor en tegen, [niveau, soort, tekst]. stem: vier uitspraken van
+     groepen, [niveau, wie, tekst, belang]. f: feiten en meningen, [niveau, 'f' of 'm', tekst,
+     [hoe je het controleert, drie keer fout], uitleg]. Aan beide kanten even sterk en even veel. */
+  var DIL = [
+    { id:'camera', titel:'Camera’s op school',
+      s:'Op onze school komen camera’s in de gangen en op het plein.',
+      o:'Op onze school komen geen camera’s in de gangen en op het plein.',
+      sit:'Er is de laatste tijd vaker iets gestolen en er waren ruzies op het plein. De school overweegt camera’s op te hangen in de gangen en op het plein.',
+      v:[
+        [1,'veiligheid','Na een diefstal of vechtpartij kun je op de beelden terugzien wie het deed.'],
+        [1,'veiligheid','Leerlingen die gepest of bedreigd worden, voelen zich veiliger op het plein.'],
+        [1,'veiligheid','Wie weet dat er camera’s hangen, denkt twee keer na voordat hij iets steelt of kapotmaakt.'],
+        [2,'solidariteit','Een leerling die niet durft te vertellen dat hij gepest wordt, wordt toch geholpen, omdat de beelden het laten zien.','veiligheid'],
+        [3,'gezondheid','Minder angst voor pesten betekent minder stress en een prettiger gevoel op school.','veiligheid'],
+        [3,'gelijkheid','Wie iets fout doet, wordt gezien, ook als hij populair is. Zo gelden de regels voor iedereen gelijk.']
+      ],
+      t:[
+        [1,'privacy','Je wordt de hele dag gefilmd, ook als je helemaal niets doet.'],
+        [1,'privacy','Beelden kunnen in verkeerde handen komen, bijvoorbeeld als iemand ze deelt op social media.'],
+        [1,'vrijheid','Je voelt je bekeken en durft minder jezelf te zijn.','privacy'],
+        [2,'gelijkheid','Wie de beelden bekijkt, let vaak extra op leerlingen die al bekendstaan als lastig. Zo worden leerlingen niet gelijk behandeld.'],
+        [3,'solidariteit','Het geld voor camera’s kan niet naar extra begeleiding voor leerlingen die het moeilijk hebben.'],
+        [3,'gezondheid','Voortdurend in de gaten gehouden worden kan stress geven.','privacy']
+      ],
+      zv:[
+        [1,'bewering','Camera’s moeten er gewoon komen, punt uit.'],
+        [1,'overdrijving','Met camera’s gebeurt er nooit meer iets op school.'],
+        [2,'iedereen','Bijna alle andere scholen hebben camera’s, dus wij moeten ze ook ophangen.'],
+        [3,'aanval','Wie tegen camera’s is, heeft vast iets te verbergen.']
+      ],
+      zt:[
+        [1,'bewering','Camera’s zijn gewoon stom.'],
+        [1,'overdrijving','Door camera’s durft niemand ooit nog zichzelf te zijn.'],
+        [2,'iedereen','De meeste scholen in de buurt hebben geen camera’s, dus wij hoeven ze ook niet.'],
+        [3,'glijdend','Eerst camera’s op het plein, dan in de klas en dan in de wc’s: straks wordt alles gefilmd.']
+      ],
+      stem:[
+        [1,'leerling','Ik wil niet dat mijn hele schooldag wordt gefilmd.','een eigen ruimte die niet gefilmd wordt'],
+        [1,'ouders','Als ouder wil ik dat mijn kind veilig is op school en dat pesters gepakt worden.','dat hun kind veilig is'],
+        [2,'school','Als directie willen we kunnen uitzoeken wie er iets gestolen of kapotgemaakt heeft.','de orde bewaren en incidenten kunnen oplossen'],
+        [3,'buurt','Het schoolplein grenst aan mijn tuin. Ik wil niet dat die camera’s ook mijn huis filmen.','privacy in en rond het eigen huis']
+      ],
+      f:[
+        [1,'f','Op de school van Noor hangen sinds vorig jaar twaalf camera’s.',['Vraag het na bij de school of lees het cameraprotocol.','Vraag aan klasgenoten wat zij van de camera’s vinden.','Bedenk of twaalf een logisch aantal is voor een school.','Zoek op sociale media wat mensen over de school zeggen.']],
+        [1,'f','Volgens de privacywet is een school verplicht om te melden dat er gefilmd wordt.',['Zoek de regels op bij de Autoriteit Persoonsgegevens, de toezichthouder op de privacywet.','Vraag aan vijf leerlingen of zij het eerlijk vinden.','Kijk op een forum wat mensen erover zeggen.','Vraag een vriend die er verstand van lijkt te hebben.']],
+        [1,'m','Camera’s op school zijn gewoon eng.'],
+        [1,'m','Een school met camera’s is een betere school.'],
+        [2,'f','De beelden van de camera’s op het schoolplein worden na vier weken gewist.',['Lees het cameraprotocol van de school of vraag het aan de directie.','Vraag aan leerlingen of zij denken dat het klopt.','Kijk of het logisch klinkt dat beelden zo kort bewaard worden.','Zoek op hoe lang beelden gemiddeld bewaard worden.']],
+        [2,'m','Als je niets fout doet, hoef je ook niet bang te zijn voor camera’s.'],
+        [3,'f','Sinds de camera’s hangen, staan er volgens de schoolregistratie minder diefstallen op de lijst dan in het jaar ervoor.',['Vergelijk de meldingen uit de schoolregistratie van beide jaren.','Vraag leerlingen of zij het gevoel hebben dat het veiliger is.','Luister naar wat de directeur ervan vindt.','Tel zelf hoeveel camera’s er hangen.']],
+        [3,'m','Cameratoezicht is de beste manier om pesten tegen te gaan.']
+      ] },
+
+    { id:'telefoon', titel:'Een telefoonverbod',
+      s:'Op school geldt een telefoonverbod: tijdens schooltijd, dus ook in de pauzes, blijft je telefoon in je kluisje.',
+      o:'Op school geldt geen telefoonverbod: in de pauzes mag je je telefoon gebruiken.',
+      sit:'Tijdens de les kijken veel leerlingen op hun telefoon. De school overweegt een telefoonverbod: tijdens schooltijd, ook in de pauzes, gaat de telefoon in het kluisje.',
+      v:[
+        [1,'gezondheid','In de pauze praten leerlingen weer met elkaar in plaats van naar een scherm te kijken.','solidariteit'],
+        [1,'veiligheid','Er wordt minder gepest via appgroepen en filmpjes tijdens schooltijd.'],
+        [1,'privacy','Niemand kan stiekem filmpjes van klasgenoten of docenten maken.'],
+        [2,'gelijkheid','Niet iedereen heeft een dure telefoon. Zonder telefoons valt dat verschil op school weg.'],
+        [3,'gezondheid','Een paar uur per dag zonder scherm geeft je hoofd rust.'],
+        [3,'vrijheid','Zonder telefoon ben je even vrij van de druk om meteen op elk bericht te reageren.']
+      ],
+      t:[
+        [1,'vrijheid','Het is jouw telefoon, dus jij bepaalt zelf wanneer je hem gebruikt.'],
+        [1,'veiligheid','Bij een ongeluk of een noodgeval kun je met je telefoon meteen hulp bellen.'],
+        [1,'gezondheid','Even je telefoon pakken in de pauze helpt veel leerlingen om te ontspannen.','vrijheid'],
+        [2,'gelijkheid','Leerlingen die thuis geen computer hebben, kunnen op hun telefoon huiswerk opzoeken.'],
+        [3,'vrijheid','Je leert pas omgaan met je telefoon als je er zelf mee mag oefenen, niet als anderen het voor je beslissen.','gezondheid'],
+        [3,'privacy','Als de school telefoons inneemt, bewaart zij toestellen met persoonlijke berichten en foto’s die haar niets aangaan.']
+      ],
+      zv:[
+        [1,'bewering','Telefoons horen niet op school, klaar.'],
+        [1,'overdrijving','Met een telefoonverbod halen alle leerlingen ineens hogere cijfers.'],
+        [2,'iedereen','Veel scholen verbieden telefoons al, dus wij kunnen niet achterblijven.'],
+        [3,'tweekeuze','Of we verbieden telefoons, of de les verandert in een chaos.']
+      ],
+      zt:[
+        [1,'bewering','Een telefoonverbod is flauwekul.'],
+        [1,'overdrijving','Zonder telefoon kan niemand meer iets op school.'],
+        [2,'iedereen','Iedereen heeft een telefoon, dus verbieden heeft geen zin.'],
+        [3,'aanval','De directeur zit zelf de hele dag op zijn telefoon, dus zijn regel is onzin.']
+      ],
+      stem:[
+        [1,'leerling','In de pauze wil ik gewoon even met mijn vrienden appen.','zelf kunnen kiezen wat je in de pauze doet'],
+        [1,'ouders','Als mijn zoon te laat is of er iets misgaat, wil ik hem kunnen bereiken.','hun kind kunnen bereiken'],
+        [2,'school','Onze docenten merken dat leerlingen in de les minder opletten door hun telefoon.','rustige lessen waarin leerlingen leren'],
+        [3,'ondernemer','Ik verkoop hoesjes en opladers in een winkeltje bij de school. Zonder telefoons in de pauze komen er minder klanten.','omzet in het winkeltje']
+      ],
+      f:[
+        [1,'f','Op onze school staan kluisjes voor alle leerlingen.',['Kijk zelf in de gang of vraag het aan de conciërge.','Vraag aan klasgenoten of zij kluisjes mooi vinden.','Zoek op wat andere scholen doen.','Bedenk of het logisch is dat scholen kluisjes hebben.']],
+        [1,'f','In de klas van Daan hebben 24 van de 28 leerlingen een eigen smartphone.',['Doe een anonieme enquête in de klas.','Vraag aan Daan wat hij denkt dat de meeste leerlingen hebben.','Vraag aan de leraar wat hij van smartphones vindt.','Zoek op wat jongeren gemiddeld bezitten.']],
+        [1,'m','Een telefoonverbod is oneerlijk.'],
+        [1,'m','Zonder telefoon is school veel saaier.'],
+        [2,'f','Volgens het schoolreglement mogen telefoons in de les alleen aan als de docent dat zegt.',['Lees het schoolreglement.','Vraag aan klasgenoten of zij het reglement kennen.','Kijk of andere scholen dezelfde regel hebben.','Bedenk of de regel logisch klinkt.']],
+        [2,'m','Leerlingen horen hun telefoon in de les nooit te gebruiken.'],
+        [3,'f','Het kabinet wil dat telefoons in de klas niet worden gebruikt, tenzij de les erom vraagt.',['Zoek het op bij de Rijksoverheid of in een betrouwbaar nieuwsbericht.','Vraag aan een leraar of hij het zo onthouden heeft.','Kijk op een forum wat ouders erover zeggen.','Vraag een medeleerling wat hij ervan vindt.']],
+        [3,'m','Een telefoonverbod is de enige redelijke oplossing.']
+      ] },
+
+    { id:'avondklok', titel:'Een avondklok voor jongeren',
+      s:'In onze gemeente komt een avondklok voor jongeren onder de 16: na 22.00 uur moeten zij binnen zijn.',
+      o:'In onze gemeente komt geen avondklok voor jongeren onder de 16.',
+      sit:'In een gemeente is het ’s avonds vaak onrustig door groepen jongeren op straat. Het gemeentebestuur denkt aan een avondklok voor jongeren onder de 16.',
+      v:[
+        [1,'veiligheid','Jonge kinderen lopen ’s avonds laat minder risico op straat als ze binnen zijn.'],
+        [1,'veiligheid','Er is minder vandalisme en overlast in de buurt.'],
+        [1,'gezondheid','Kinderen gaan op tijd naar bed en slapen genoeg.'],
+        [2,'solidariteit','Ouders die hun kind moeilijk thuis kunnen houden, krijgen steun van een regel die voor iedereen geldt.','veiligheid'],
+        [3,'gelijkheid','Een regel voor alle jongeren onder de 16 is voor iedereen gelijk, dus er worden geen groepen uitgekozen.'],
+        [3,'vrijheid','Jongeren die niet mee willen doen met groepsdruk, kunnen verwijzen naar de regel en zijn zo vrijer om nee te zeggen.']
+      ],
+      t:[
+        [1,'vrijheid','Jongeren moeten zelf kunnen kiezen of ze ’s avonds nog naar vrienden of sport gaan.'],
+        [1,'gelijkheid','Jongeren worden anders behandeld dan volwassenen, terwijl volwassenen ook overlast geven.'],
+        [1,'privacy','De politie mag jongeren staande houden en vragen naar hun naam en leeftijd.','vrijheid'],
+        [2,'solidariteit','Jongeren die thuis geen rustige plek hebben, mogen ’s avonds nergens meer heen.','gezondheid'],
+        [3,'gezondheid','Sport en frisse lucht in de avond zijn goed voor lichaam en hoofd, en een avondklok beperkt dat.','vrijheid'],
+        [3,'veiligheid','Jongeren die zich verstoppen om de regel te omzeilen, kunnen juist in gevaarlijke situaties komen.']
+      ],
+      zv:[
+        [1,'bewering','Jongeren horen ’s avonds gewoon binnen te zijn.'],
+        [1,'overdrijving','Elke jongere die na tien uur buiten is, veroorzaakt overlast.'],
+        [2,'iedereen','De buurgemeente heeft het ook, dus wij moeten het ook doen.'],
+        [3,'glijdend','Zonder avondklok loopt het straks helemaal uit de hand: eerst overlast, dan geweld, dan een onveilige stad.']
+      ],
+      zt:[
+        [1,'bewering','Een avondklok is gewoon onzin.'],
+        [1,'overdrijving','Met een avondklok mogen jongeren nooit meer plezier hebben.'],
+        [2,'iedereen','Alle jongeren die ik ken zijn tegen, dus het moet niet.'],
+        [3,'tweekeuze','Of jongeren zijn vrij, of we leven in een politiestaat.']
+      ],
+      stem:[
+        [1,'ouders','Ik maak me zorgen als mijn dochter van veertien om middernacht nog buiten is.','dat hun kind veilig thuis is'],
+        [1,'leerling','Ik train tot kwart voor negen en loop daarna nog even naar mijn vriend.','vrij zijn om na school of sport af te spreken'],
+        [2,'buurt','Wij wonen aan het pleintje en om elf uur staan er nog groepen te schreeuwen.','rust en minder overlast in de straat'],
+        [3,'ondernemer','Ik run een bioscoop. Onze late voorstelling is populair bij jongeren.','klanten en omzet in de avond']
+      ],
+      f:[
+        [1,'f','In Nederland is in 2021 tijdelijk een avondklok ingevoerd vanwege corona.',['Zoek het op bij de Rijksoverheid of in een nieuwsarchief.','Vraag aan je opa of oma of ze het nog weten.','Kijk wat mensen erover zeggen in een groepsapp.','Vraag je af of het logisch klinkt dat dit gebeurde.']],
+        [1,'f','In de gemeente van Bram zijn vorig jaar 40 meldingen van overlast door jongeren na 22.00 uur gedaan.',['Vraag de cijfers op bij de gemeente of de politie.','Vraag aan buurtbewoners of het veel lijkt.','Tel zelf een avond hoeveel jongeren er buiten zijn.','Kijk wat een columnist erover schrijft.']],
+        [1,'m','Een avondklok voor jongeren is oneerlijk.'],
+        [1,'m','Jongeren horen na tien uur gewoon thuis te zijn.'],
+        [2,'f','In het dorp van Sara wonen 1200 jongeren onder de 16.',['Zoek de bevolkingscijfers van de gemeente op, bijvoorbeeld bij het CBS.','Vraag aan Sara hoeveel jongeren zij kent.','Tel de jongeren die je op straat ziet.','Vraag aan een buurtbewoner wat hij schat.']],
+        [2,'m','Met een avondklok wordt de buurt veel prettiger.'],
+        [3,'f','Van de 28 leerlingen in klas 3B zijn er 19 tegen de avondklok.',['Houd in de klas een stemming of een anonieme enquête.','Vraag aan een paar leerlingen of ze het vaak horen.','Luister of de meeste leerlingen in de gang hetzelfde zeggen.','Vraag aan de mentor wat hij denkt.']],
+        [3,'m','Het kan niemand kwaad doen om jongeren ’s avonds binnen te houden.']
+      ] },
+
+    { id:'vlees', titel:'Een belasting op vlees',
+      s:'Er komt een extra belasting op vlees, zodat vlees duurder wordt.',
+      o:'Er komt geen extra belasting op vlees.',
+      sit:'Om de uitstoot van broeikasgassen te verminderen, overweegt de overheid een extra belasting op vlees. Vlees wordt dan duurder; groente en fruit niet.',
+      v:[
+        [1,'gezondheid','Als vlees duurder is, eten mensen minder vlees, en dat is gezonder.'],
+        [1,'solidariteit','Minder vlees eten helpt het klimaat, en dat is ook goed voor mensen die na ons komen.'],
+        [1,'veiligheid','Minder uitstoot betekent minder kans op extreem weer, zoals overstromingen.','solidariteit'],
+        [2,'gelijkheid','Met het geld van de belasting kan groente en fruit goedkoper worden, zodat gezond eten voor iedereen betaalbaar is.','gezondheid'],
+        [3,'vrijheid','Je mag nog steeds vlees kopen: de belasting verbiedt niets, je betaalt alleen meer.'],
+        [3,'gezondheid','Veel bewerkt vlees, zoals worst en spek, verhoogt de kans op darmkanker.']
+      ],
+      t:[
+        [1,'vrijheid','Jij bepaalt zelf wat je eet. De overheid moet zich niet met je bord bemoeien.'],
+        [1,'gelijkheid','Het is oneerlijk om alleen vlees duurder te maken en andere vervuilende producten niet.'],
+        [1,'solidariteit','Boeren en slagers worden zwaar getroffen. Een samenleving moet voor hen zorgen en hun werk niet zomaar wegnemen.'],
+        [2,'gezondheid','Vlees bevat veel ijzer en eiwit. Voor sommige mensen is het moeilijk om dat uit andere voeding te halen.'],
+        [3,'vrijheid','Vlees eten hoort bij de tradities van veel gezinnen. Een belasting maakt het moeilijker om die te volgen.','gelijkheid'],
+        [3,'solidariteit','Gezinnen met een laag inkomen merken een hogere vleesprijs veel sterker dan gezinnen met een hoog inkomen.','gelijkheid']
+      ],
+      zv:[
+        [1,'bewering','Vlees moet gewoon duurder, dat is logisch.'],
+        [1,'overdrijving','Met een vleesbelasting lossen we alle klimaatproblemen op.'],
+        [2,'iedereen','Bijna iedereen die ik ken eet al minder vlees, dus een belasting kan geen kwaad.'],
+        [3,'tweekeuze','Je bent voor de aarde, of je bent voor vlees.']
+      ],
+      zt:[
+        [1,'bewering','Een vleesbelasting is onzin.'],
+        [1,'overdrijving','Door een vleesbelasting kan niemand meer vlees betalen.'],
+        [2,'iedereen','Mijn hele familie eet gewoon vlees, dus een belasting is onzin.'],
+        [3,'glijdend','Eerst belasting op vlees, dan op kaas, dan op snoep: straks mogen we niets meer eten wat we lekker vinden.']
+      ],
+      stem:[
+        [1,'ouders','Wij hebben vier kinderen en weinig geld. Als vlees duurder wordt, moeten we bezuinigen op eten.','betaalbaar eten voor hun gezin'],
+        [1,'ondernemer','Ik ben slager. Als vlees duurder wordt, kopen mensen minder bij mij.','inkomen en klanten'],
+        [2,'overheid','Als overheid moeten wij de uitstoot verminderen. We willen dat de prijs laat zien wat vlees het milieu kost.','minder uitstoot en klimaatdoelen halen'],
+        [3,'leerling','Ik ben vijftien en wil later nog op een leefbare aarde wonen.','een leefbare aarde in de toekomst']
+      ],
+      f:[
+        [1,'f','In het gezin van Kim kost de vleesinkoop per week € 35.',['Kijk op de kassabonnen van het gezin.','Vraag aan Kim of zij het duur vindt.','Zoek op wat vlees gemiddeld kost.','Vraag aan de buren wat zij uitgeven.']],
+        [1,'f','Op de menukaart van de schoolkantine staan drie vegetarische broodjes.',['Kijk op de menukaart of vraag het aan de kantine.','Vraag aan klasgenoten of zij die broodjes lekker vinden.','Bedenk of drie een logisch aantal is.','Kijk wat andere scholen verkopen.']],
+        [1,'m','Vlees is veel te lekker om duurder te maken.'],
+        [1,'m','Iedereen zou minder vlees moeten eten.'],
+        [2,'f','Bewerkt vlees, zoals worst en spek, is door de Wereldgezondheidsorganisatie (WHO) als kankerverwekkend ingedeeld.',['Zoek het op bij de WHO of het Voedingscentrum.','Vraag aan een slager wat hij ervan vindt.','Kijk of je ouders het geloven.','Zoek een filmpje waarin iemand het zegt.']],
+        [2,'m','Het is eerlijk om mensen die veel vlees eten meer te laten betalen.'],
+        [3,'f','Over vlees betaal je in Nederland geen btw.',['Kijk op een kassabon of zoek het op bij de Belastingdienst.','Vraag aan klasgenoten of zij het ook denken.','Vraag aan een slager wat hij verkoopt.','Kijk of het logisch klinkt.'],'Dit is een feit, want je kunt het controleren. Het klopt alleen niet: over vlees betaal je gewoon btw. Een feit hoeft dus niet waar te zijn, het moet alleen te controleren zijn.'],
+        [3,'m','Een vleesbelasting is een slimme maatregel.']
+      ] },
+
+    { id:'stemrecht', titel:'Stemrecht vanaf 16',
+      s:'Jongeren mogen vanaf 16 jaar stemmen bij de landelijke verkiezingen.',
+      o:'Jongeren mogen pas vanaf 18 jaar stemmen bij de landelijke verkiezingen.',
+      sit:'In Nederland mag je vanaf 18 jaar stemmen voor de Tweede Kamer. Er is een voorstel om die leeftijd te verlagen naar 16 jaar.',
+      v:[
+        [1,'vrijheid','Besluiten van de overheid gaan over jouw toekomst, dus je moet kunnen meebeslissen.','gelijkheid'],
+        [1,'gelijkheid','Veel zestienjarigen werken al in de supermarkt. Dan moeten ze ook mogen meepraten over regels voor werk en geld.'],
+        [1,'solidariteit','Als jongeren meestemmen, houden politici meer rekening met mensen die de gevolgen van besluiten het langst voelen.','gelijkheid'],
+        [2,null,'In Oostenrijk mogen zestienjarigen al sinds 2007 stemmen bij landelijke verkiezingen. Het kan dus.'],
+        [3,null,'Als je al op je zestiende leert stemmen, wordt het eerder een gewoonte voor de rest van je leven.'],
+        [3,null,'Op school leer je in burgerschap over politiek. Met stemrecht kun je dat meteen in de praktijk brengen.']
+      ],
+      t:[
+        [1,null,'Veel zestienjarigen weten nog weinig van politiek en laten zich makkelijk beïnvloeden.'],
+        [1,'gelijkheid','Op je 18e word je volwassen en krijg je alle rechten en plichten tegelijk. Dat is duidelijk en voor iedereen gelijk.'],
+        [1,null,'Als je 16 bent, woon je meestal nog thuis en stem je vooral wat je ouders stemmen.'],
+        [2,null,'De meeste zestienjarigen zijn nog niet financieel zelfstandig, dus zij dragen de gevolgen van veel besluiten nog niet zelf.'],
+        [3,'vrijheid','Als de stemleeftijd daalt, voelen jongeren sneller druk om een partij te kiezen, terwijl ze zich nog willen oriënteren.'],
+        [3,'gelijkheid','Een zestienjarige mag dan wel stemmen, maar nog geen contract tekenen of een huis huren. Dat is niet consequent.','vrijheid']
+      ],
+      zv:[
+        [1,'bewering','Zestienjarigen horen gewoon te mogen stemmen.'],
+        [1,'overdrijving','Alle zestienjarigen weten precies waarop ze moeten stemmen.'],
+        [2,'iedereen','Bijna iedereen in mijn klas wil stemmen, dus het moet kunnen.'],
+        [3,'aanval','Wie tegen stemrecht op 16 is, is bang voor jongeren.']
+      ],
+      zt:[
+        [1,'bewering','Zestienjarigen zijn gewoon te jong.'],
+        [1,'overdrijving','Zestienjarigen hebben nooit een eigen mening.'],
+        [2,'iedereen','In bijna alle landen mag je pas op 18 stemmen, dus zo hoort het.'],
+        [3,'glijdend','Mogen ze nu op 16 stemmen, dan straks op 14, dan op 12, en dan bepalen kinderen alles.']
+      ],
+      stem:[
+        [1,'leerling','Ik ben 16 en volg het nieuws. Waarom mag ik niet meebeslissen over mijn eigen toekomst?','zeggenschap over beslissingen die hen raken'],
+        [1,'ouders','Mijn zoon is 16 en praat vooral zijn vrienden na. Ik vind dat hij eerst wat ouder moet worden.','dat hun kind niet te vroeg zware keuzes hoeft te maken'],
+        [2,'school','In burgerschap leren onze leerlingen over de democratie. Met stemrecht kunnen ze dat echt toepassen.','burgerschapsonderwijs dat aansluit op de praktijk'],
+        [3,'overheid','Als overheid moeten wij de verkiezingen eerlijk en duidelijk houden. Een lagere stemleeftijd vraagt een wetswijziging en veel voorlichting.','duidelijke en eerlijke verkiezingen']
+      ],
+      f:[
+        [1,'f','In Nederland mag je vanaf 18 jaar stemmen voor de Tweede Kamer.',['Zoek het op bij de Kiesraad of de Rijksoverheid.','Vraag aan je ouders of het eerlijk is.','Vraag aan klasgenoten wat zij vinden.','Kijk wat de meeste mensen op sociale media zeggen.']],
+        [1,'f','In de klas van Mo zijn 7 van de 28 leerlingen al 16.',['Vraag de geboortedata van de leerlingen na.','Vraag aan Mo hoeveel hij denkt.','Kijk wie er het oudst uitziet.','Zoek op hoe oud leerlingen meestal zijn.']],
+        [1,'m','Zestienjarigen zijn te jong om te stemmen.'],
+        [1,'m','Jongeren horen een stem te hebben in de politiek.'],
+        [2,'f','In Oostenrijk mogen zestienjarigen stemmen bij landelijke verkiezingen.',['Zoek het op bij de overheid van Oostenrijk of in een betrouwbare nieuwsbron.','Vraag aan een klasgenoot die er op vakantie was.','Kijk op een reisblog.','Vraag je af of het logisch klinkt.']],
+        [2,'m','Stemrecht vanaf 16 maakt de verkiezingen eerlijker.'],
+        [3,'f','Zestienjarigen mogen in Nederland stemmen voor de Tweede Kamer.',['Zoek het op bij de Kiesraad of de Rijksoverheid.','Vraag aan klasgenoten wat zij denken.','Kijk wat de meeste mensen op sociale media zeggen.','Vraag aan je ouders of het eerlijk is.'],'Dit is een feit, want je kunt het controleren. Het klopt alleen niet: in Nederland mag je pas vanaf 18 jaar stemmen voor de Tweede Kamer. Een feit hoeft dus niet waar te zijn, het moet alleen te controleren zijn.'],
+        [3,'m','Als je al werkt, ben je volwassen genoeg om te stemmen.']
+      ] },
+
+    { id:'snackbar', titel:'Een snackbar naast school',
+      s:'De gemeente staat een nieuwe snackbar naast de school toe.',
+      o:'De gemeente staat geen nieuwe snackbar naast de school toe.',
+      sit:'Naast een school wil een ondernemer een snackbar openen. De gemeente moet beslissen of dat mag.',
+      v:[
+        [1,'vrijheid','Leerlingen kiezen zelf wat ze eten. Een snackbar is gewoon een van de keuzes.'],
+        [1,'gelijkheid','Er zitten al andere winkels naast scholen. De gemeente moet alle ondernemers gelijk behandelen.'],
+        [1,null,'De snackbar geeft werk aan mensen uit de buurt, ook aan jongeren met een bijbaantje.'],
+        [2,'veiligheid','Als de snackbar er is, hoeven leerlingen niet naar de drukke weg te lopen om iets te eten.'],
+        [3,'solidariteit','Goedkoop eten dicht bij school is handig voor leerlingen die thuis geen lunch meekrijgen.'],
+        [3,'vrijheid','Gezond eten leer je niet door verboden, maar door zelf te kiezen en door goede voorlichting.']
+      ],
+      t:[
+        [1,'gezondheid','Leerlingen eten dan nog meer patat en snacks, en dat is ongezond.'],
+        [1,'veiligheid','Groepen leerlingen voor de snackbar zorgen voor drukte en gevaarlijke situaties op de weg.'],
+        [1,null,'De buurt krijgt meer afval en lawaai.'],
+        [2,'gelijkheid','Leerlingen met weinig zakgeld kiezen eerder voor goedkoop, ongezond eten. Zo ontstaan verschillen in gezondheid tussen arm en rijk.','gezondheid'],
+        [3,'solidariteit','Een gemeente die zorgt voor de gezondheid van jonge inwoners, zorgt voor iedereen. Dat is zorg voor elkaar.','gezondheid'],
+        [3,'vrijheid','Zonder snackbar naast de deur kun je makkelijker kiezen wat goed voor je is.','gezondheid']
+      ],
+      zv:[
+        [1,'bewering','Een snackbar is gewoon leuk.'],
+        [1,'overdrijving','Elke leerling wordt blij van een snackbar en niemand heeft er last van.'],
+        [2,'iedereen','Naast veel scholen zit een snackbar, dus dit is normaal.'],
+        [3,'aanval','Wie tegen een snackbar is, is een zeurpiet die niemand iets gunt.']
+      ],
+      zt:[
+        [1,'bewering','Een snackbar naast school is een slecht plan.'],
+        [1,'overdrijving','Elke leerling die daar komt, eet er elke dag patat en wordt ongezond.'],
+        [2,'iedereen','Alle ouders die ik ken zijn tegen, dus het mag niet.'],
+        [3,'glijdend','Eerst een snackbar, dan een kroeg, dan een casino naast de school.']
+      ],
+      stem:[
+        [1,'ondernemer','Ik wil een snackbar openen. Mijn inkomen hangt eraan.','een eigen bedrijf en inkomen'],
+        [1,'buurt','Ik woon tegenover de school en ik krijg al zoveel afval voor mijn deur.','een schone en rustige straat'],
+        [2,'leerling','Als ik honger heb na school, is dit het dichtstbij en het goedkoopst.','goedkoop en dichtbij eten'],
+        [3,'ouders','Ik wil dat mijn kind gezond leert eten, maar ik kan niet meekijken tijdens de pauze.','dat hun kind gezond opgroeit']
+      ],
+      f:[
+        [1,'f','Een frietzak met mayonaise bevat meer vet dan een appel.',['Kijk op de website van het Voedingscentrum.','Vraag aan klasgenoten wat zij lekkerder vinden.','Bedenk of het logisch klinkt.','Vraag aan de eigenaar van de snackbar.']],
+        [1,'f','Op loopafstand van de school zitten twee supermarkten.',['Kijk op een kaart of loop er zelf heen.','Vraag aan klasgenoten welke winkel zij het leukst vinden.','Zoek op wat supermarkten verkopen.','Vraag aan een buurtbewoner wat hij ervan vindt.']],
+        [1,'m','Een snackbar bij school is gezellig.'],
+        [1,'m','Frieten zijn het lekkerste wat er is.'],
+        [2,'f','De gemeente bepaalt in haar plannen welke soorten bedrijven op een plek mogen komen.',['Zoek het op bij de gemeente, bijvoorbeeld op de website of bij het loket.','Vraag aan een ondernemer wat hij wil.','Vraag aan klasgenoten wat zij denken.','Kijk wat de meeste mensen vinden.']],
+        [2,'m','De gemeente hoort leerlingen te beschermen tegen ongezond eten.'],
+        [3,'f','Volgens een enquête van de school halen 18 van de 30 leerlingen minstens één keer per week iets bij een snackbar.',['Vraag de uitkomsten van de enquête op bij de school.','Vraag aan vijf klasgenoten of dat klopt.','Kijk of het logisch klinkt.','Vraag aan de mentor wat hij denkt.']],
+        [3,'m','Een gemeente moet ondernemers zoveel mogelijk vrij laten.']
+      ] },
+
+    { id:'meningsuiting', titel:'Vrijheid van meningsuiting',
+      s:'Je moet alles mogen zeggen, ook als iemand zich beledigd voelt.',
+      o:'Je mag niet alles zeggen: als iets mensen beledigt, moet de wet het kunnen verbieden.',
+      sit:'In Nederland staat vrijheid van meningsuiting in de Grondwet. Tegelijk mag je mensen niet discrimineren. Waar ligt de grens?',
+      v:[
+        [1,'vrijheid','Iedereen moet kunnen zeggen wat hij denkt, ook als anderen dat niet leuk vinden.'],
+        [1,'vrijheid','Als de overheid bepaalt welke meningen mogen, kan zij ook kritiek op zichzelf verbieden.'],
+        [1,'gelijkheid','Ook mensen met een ongewone of minderheidsmening moeten kunnen meepraten.'],
+        [2,null,'Als je een mening openlijk mag zeggen, kun je er ook op reageren. Zo leren we met verschillen omgaan.'],
+        [3,null,'Wat voor de een beledigend is, is voor de ander een grap. Het is lastig om te bepalen waar de grens ligt.'],
+        [3,'privacy','Wat je in een privégesprek of appgroep zegt, hoort niet gecontroleerd en gestraft te worden.']
+      ],
+      t:[
+        [1,'veiligheid','Woorden die haat zaaien, kunnen leiden tot geweld tegen groepen mensen.'],
+        [1,'gelijkheid','Iedereen moet gelijk behandeld worden. Discriminatie is verboden, ook in woorden.'],
+        [1,'gezondheid','Wie steeds beledigd of uitgescholden wordt, krijgt stress en voelt zich somber.'],
+        [2,'solidariteit','Een samenleving beschermt de groepen die er het meest onder lijden, zoals minderheden.','veiligheid'],
+        [3,'vrijheid','Wie beledigd of bedreigd wordt, durft zijn mening misschien niet meer te zeggen. Zo beperken beledigingen juist de vrijheid van anderen.'],
+        [3,'privacy','Een belediging of een verspreid geheim kan je eer en goede naam aantasten. Je persoonlijke leven moet beschermd worden.','veiligheid']
+      ],
+      zv:[
+        [1,'bewering','Je moet alles gewoon mogen zeggen.'],
+        [1,'overdrijving','Elke persoon die zich beledigd voelt, stelt zich aan.'],
+        [2,'iedereen','Op internet zegt iedereen wat hij wil, dus het hoort zo.'],
+        [3,'aanval','Wie grenzen wil aan meningsuiting, is een bange betweter die anderen de mond wil snoeren.']
+      ],
+      zt:[
+        [1,'bewering','Beledigen moet gewoon verboden zijn.'],
+        [1,'overdrijving','Elke grap over een groep is een misdrijf.'],
+        [2,'iedereen','Bijna iedereen vindt dat je niet mag schelden, dus het moet verboden worden.'],
+        [3,'tweekeuze','Of we verbieden alle beledigingen, of er komt oorlog tussen groepen.']
+      ],
+      stem:[
+        [1,'leerling','Op mijn school wordt gescholden op mensen om hun afkomst. Ik wil dat dat stopt.','beschermd worden tegen uitschelden en discriminatie'],
+        [1,'ouders','Mijn kinderen moeten leren dat ze hun mening mogen zeggen, ook als die afwijkt van de rest.','dat hun kinderen vrij mogen denken en praten'],
+        [2,'school','Wij willen een school waar gediscussieerd wordt, maar waar niemand wordt uitgescholden.','een open schoolklimaat waar gediscussieerd wordt'],
+        [3,'overheid','Als overheid beschermen wij de vrijheid van meningsuiting, maar we moeten ook zorgen dat groepen niet worden bedreigd of gediscrimineerd.','dat artikel 7 en artikel 1 van de Grondwet naast elkaar bestaan']
+      ],
+      f:[
+        [1,'f','Vrijheid van meningsuiting staat in artikel 7 van de Grondwet.',['Lees de Grondwet op wetten.overheid.nl.','Vraag aan klasgenoten wat zij denken dat er staat.','Zoek op een forum wat mensen erover zeggen.','Vraag aan een vriend die goed is in geschiedenis.']],
+        [1,'f','Op onze school staat in het pestprotocol dat uitschelden niet mag.',['Lees het pestprotocol van de school.','Vraag aan klasgenoten of zij vaak worden uitgescholden.','Kijk of de leraren het goed vinden.','Bedenk of zo’n regel logisch is.']],
+        [1,'m','Uitschelden hoort er gewoon bij op school.'],
+        [1,'m','Je moet gewoon alles kunnen zeggen.'],
+        [2,'f','Groepsbelediging is in Nederland strafbaar.',['Zoek het op in het Wetboek van Strafrecht of bij de Rijksoverheid.','Vraag aan klasgenoten of zij het zo hebben gehoord.','Kijk wat de meeste mensen op sociale media vinden.','Vraag je af of het eerlijk klinkt.']],
+        [2,'m','Een grap mag nooit te ver gaan.'],
+        [3,'f','Of iemand met een uitspraak de wet heeft overtreden, wordt in Nederland uiteindelijk door een onafhankelijke rechter beoordeeld.',['Zoek het op bij de Rijksoverheid of Rechtspraak.nl.','Vraag aan een politieagent wat hij vindt.','Kijk wat een krant erover schrijft in een column.','Vraag aan een klasgenoot wat hij denkt.']],
+        [3,'m','Een beledigende mening is minder waard dan een nette mening.']
+      ] },
+
+    { id:'social', titel:'Social media pas vanaf 15',
+      s:'Kinderen onder de 15 mogen geen eigen account op social media hebben.',
+      o:'Kinderen onder de 15 mogen wel een eigen account op social media hebben.',
+      sit:'Veel kinderen hebben op hun twaalfde al een account op social media. Een voorstel is om social media pas toe te staan vanaf 15 jaar, met een leeftijdscontrole.',
+      v:[
+        [1,'gezondheid','Minder tijd op social media geeft minder slaapproblemen en minder stress.'],
+        [1,'veiligheid','Jonge kinderen kunnen online in contact komen met vreemden die niet goed bedoelen.'],
+        [1,'gelijkheid','Als geen enkel kind onder de 15 een account mag, voelt niemand zich buitengesloten omdat hij er niet op zit.'],
+        [2,'privacy','Social media verzamelen veel gegevens over wat kinderen doen. Die gegevens horen privé te blijven.'],
+        [3,'vrijheid','Zonder groepsdruk om online te zijn, kunnen kinderen vrijer kiezen wat ze doen.'],
+        [3,'solidariteit','Een regel voor iedereen beschermt ook kinderen van wie de ouders er niet op letten.','veiligheid']
+      ],
+      t:[
+        [1,'vrijheid','Kinderen en hun ouders moeten zelf kunnen kiezen of ze social media gebruiken.'],
+        [1,'gezondheid','Voor een kind dat zich eenzaam voelt, zijn online vrienden soms een steun.','solidariteit'],
+        [1,'privacy','Voor een leeftijdscontrole moet je persoonlijke gegevens afgeven, zoals een identiteitsbewijs.'],
+        [2,'veiligheid','Kinderen zoeken een manier om er toch op te komen. Dan doen ze het stiekem, zonder dat ouders meekijken.'],
+        [3,'vrijheid','Jongeren kunnen via social media hun mening zeggen en meepraten over de samenleving. Dat recht wordt hun afgenomen.'],
+        [3,'solidariteit','Kinderen met een zeldzame hobby of een andere achtergrond vinden online soms de enige groep waar ze bij horen.','gezondheid']
+      ],
+      zv:[
+        [1,'bewering','Social media zijn gewoon niets voor kinderen.'],
+        [1,'overdrijving','Elk kind dat op social media zit, wordt ongelukkig.'],
+        [2,'iedereen','Bijna alle ouders in de ouderraad zijn voor een verbod, dus het is goed.'],
+        [3,'glijdend','Eerst een account op je twaalfde, dan de hele dag online, en straks zit niemand meer buiten.']
+      ],
+      zt:[
+        [1,'bewering','Een leeftijdsgrens is flauwekul.'],
+        [1,'overdrijving','Zonder social media heeft een kind niemand meer om mee te praten.'],
+        [2,'iedereen','Alle kinderen in mijn klas zitten erop, dus het mag niet verboden worden.'],
+        [3,'aanval','Politici die social media willen verbieden, snappen er niets van, want ze zijn zelf te oud.']
+      ],
+      stem:[
+        [1,'ouders','Ik wil niet dat mijn dochter van twaalf elke avond tot laat op haar telefoon zit.','dat hun kind gezond en veilig opgroeit'],
+        [1,'leerling','Al mijn vrienden zitten in de groepsapp. Als ik niet meedoe, mis ik alles.','erbij horen en contact houden met vrienden'],
+        [2,'school','Wij zien leerlingen met slaapgebrek en ruzies die online zijn begonnen.','rust op school en minder ruzies en pesten'],
+        [3,'ondernemer','Ik run een kledingwinkel en bereik mijn jonge klanten vooral via social media.','jonge klanten bereiken']
+      ],
+      f:[
+        [1,'f','Voor veel populaire apps staat in de gebruiksvoorwaarden een minimumleeftijd.',['Lees de gebruiksvoorwaarden van de app.','Vraag aan klasgenoten of zij die regels kennen.','Kijk wat de meeste gebruikers erover zeggen.','Vraag aan je ouders wat zij denken.']],
+        [1,'f','Op het profiel van Lars staan 350 volgers.',['Kijk op het profiel van Lars zelf.','Vraag aan Lars of hij tevreden is met zijn aantal volgers.','Bedenk of 350 een normaal aantal is.','Kijk wie Lars volgt.']],
+        [1,'m','Social media is gewoon heel leuk.'],
+        [1,'m','Kinderen horen niet de hele dag op hun telefoon te zitten.'],
+        [2,'f','Social media-bedrijven verdienen vooral geld met advertenties.',['Lees de jaarverslagen van de bedrijven of een betrouwbare nieuwsbron.','Vraag aan vrienden wat zij denken.','Kijk hoeveel advertenties jij zelf ziet.','Vraag aan een influencer.']],
+        [2,'m','Ouders horen te bepalen wat hun kind online doet.'],
+        [3,'f','Volgens een enquête van de school gaven 15 van de 30 leerlingen aan dat zij na 22.00 uur nog op social media zitten.',['Vraag de uitkomsten van de enquête op bij de school.','Vraag aan vijf klasgenoten of dat klopt.','Kijk of het logisch klinkt.','Vraag aan de mentor wat hij denkt.']],
+        [3,'m','Zonder social media mis je niets belangrijks.']
+      ] }
+  ];
+
+  /* de ruwe rijen worden objecten, met een vaste sleutel per rij */
+  DIL.forEach(function(d){
+    d.v = d.v.map(function(r, i){ return { k:'v', n:r[0], w:r[1], t:r[2], ook:r[3], id:d.id + ':v' + i }; });
+    d.t = d.t.map(function(r, i){ return { k:'t', n:r[0], w:r[1], t:r[2], ook:r[3], id:d.id + ':t' + i }; });
+    d.zv = d.zv.map(function(r, i){ return { k:'v', n:r[0], s:r[1], t:r[2], id:d.id + ':zv' + i }; });
+    d.zt = d.zt.map(function(r, i){ return { k:'t', n:r[0], s:r[1], t:r[2], id:d.id + ':zt' + i }; });
+    d.stem = d.stem.map(function(r, i){ return { n:r[0], wie:r[1], t:r[2], b:r[3], id:d.id + ':w' + i }; });
+    d.f = d.f.map(function(r, i){ return { n:r[0], soort:r[1], t:r[2], c:r[1] === 'f' ? r[3] : null, u:r[1] === 'f' ? r[4] : r[3], id:d.id + ':f' + i }; });
+    d.args = d.v.concat(d.t);
+  });
+
+  var WAARDEN = ['vrijheid', 'veiligheid', 'gelijkheid', 'gezondheid', 'privacy', 'solidariteit'];
+  var DEF = {
+    vrijheid:'zelf kunnen kiezen en bepalen wat je doet',
+    veiligheid:'beschermd zijn tegen gevaar, geweld en schade',
+    gelijkheid:'iedereen gelijk behandelen en gelijke kansen geven',
+    gezondheid:'lichamelijk en geestelijk gezond blijven',
+    privacy:'een eigen deel van je leven houden dat anderen niets aangaat',
+    solidariteit:'voor elkaar zorgen en samen de lasten dragen, vooral voor wie het moeilijk heeft'
+  };
+  var GROEP = { leerling:'de leerling', ouders:'de ouders', school:'de school', ondernemer:'de ondernemer', buurt:'de buurt', overheid:'de overheid' };
+  var GROEPEN = Object.keys(GROEP);
+  var FLIP = { bb:0, kgt:0.25, hv:0.5 };
+
+  function pasN(n, niv){ return niv === 'bb' ? n === 1 : niv === 'kgt' ? n <= 2 : n >= 2; }
+  function hoofdletter(t){ return t.charAt(0).toUpperCase() + t.slice(1); }
+  function kaal(t){ return String(t).replace(/<[^>]+>/g, ''); }
+  function zonderPunt(t){ return String(t).replace(/[.!?]+$/, ''); }
+  function dil(){ return kies(DIL); }
+  /* k argumenten kiezen; op havo en vwo altijd twee lastige (niveau 2 of 3) en de rest uit alles */
+  function trek(lijst, k, niv){
+    if (niv === 'hv'){
+      var hard = H(lijst.filter(function(x){ return x.n >= 2; })), uit = hard.slice(0, 2), rest = lijst.filter(function(x){ return uit.indexOf(x) < 0; });
+      return uit.concat(H(rest).slice(0, k - 2));
+    }
+    return H(lijst.filter(function(x){ return pasN(x.n, niv); })).slice(0, k);
+  }
+  function overig(niv, x){ return pasN(x.n, niv); }
+
+  /* het dilemma als vak: titel, situatie en de stelling (eventueel omgedraaid) */
+  function stelBox(d, flip, zonderSit){
+    return '<div class="stel"><span class="kop">' + S(d.titel) + '</span>' + (zonderSit ? '' : '<p class="sit">' + S(d.sit) + '</p>') +
+      '<p class="st"><b>Stelling:</b> ' + S(flip ? d.o : d.s) + '</p></div>';
+  }
+  function cit(tekst, kop){ return '<div class="cit">' + (kop ? '<span class="wie">' + kop + '</span>' : '') + S(tekst) + '</div>'; }
+
+  /* 1. argument: voor of tegen de stelling */
+  function argumentSleep(niv){
+    var d = dil(), flip = Math.random() < FLIP[niv], k = niv === 'bb' ? 2 : 3;
+    var vv = trek(d.v, k, niv), tt = trek(d.t, k, niv);
+    var kaarten = H(vv.concat(tt)).map(function(a){ return { id:a.id, tekst:S(a.t) }; });
+    var voorHoort = (flip ? tt : vv).map(function(a){ return a.id; }), tegenHoort = (flip ? vv : tt).map(function(a){ return a.id; });
+    var voorTxt = (flip ? tt : vv).map(function(a){ return '“' + S(zonderPunt(a.t)) + '”'; }).join('; '), tegenTxt = (flip ? vv : tt).map(function(a){ return '“' + S(zonderPunt(a.t)) + '”'; }).join('; ');
+    return { onderdeel:'afwegen: argument', onderdeelNaam:'argumenten voor en tegen', vorm:'sleep', sleutel:'as' + d.id + (flip ? 'o' : 's') + voorHoort.concat(tegenHoort).sort().join(','),
+      vraag:'Sleep elk argument naar <b>voor</b> of <b>tegen</b> de stelling.',
+      beeld:stelBox(d, flip),
+      kaarten:kaarten, vakken:[{ id:'voor', naam:'Voor de stelling', hoort:voorHoort }, { id:'tegen', naam:'Tegen de stelling', hoort:tegenHoort }],
+      sleepuit:'Een argument is een reden. Hoort die reden bij de stelling, of juist niet? Op een telefoon: tik een argument aan en dan het vak.',
+      uitleg:'<b>Voor</b> de stelling zijn: ' + voorTxt + '. <b>Tegen</b> de stelling zijn: ' + tegenTxt + '.' +
+        (flip ? ' Let op: de stelling was hier omgedraaid. Wat bij de gewone stelling een argument voor zou zijn, is hier een argument tegen, en andersom.' : '') +
+        ' Test het zo: zeg “Ik ben voor de stelling, want …” en kijk of de zin klopt.',
+      antwoordTekst:'Voor: ' + (flip ? tt : vv).map(function(a){ return zonderPunt(a.t); }).join('; ') + '. Tegen: ' + (flip ? vv : tt).map(function(a){ return zonderPunt(a.t); }).join('; ') + '.' };
+  }
+  function argumentKeuze(niv){
+    var d = dil(), flip = Math.random() < FLIP[niv];
+    var a = kies(d.args.filter(function(x){ return pasN(x.n, niv); }));
+    var voor = flip ? a.k === 't' : a.k === 'v';
+    var tekst = voor ? 'voor de stelling' : 'tegen de stelling';
+    return { onderdeel:'afwegen: argument', onderdeelNaam:'argumenten voor en tegen', vorm:'meerkeuze', vasteVolgorde:true, sleutel:'ak' + a.id + (flip ? 'o' : 's'),
+      vraag:'Is dit een argument <b>voor</b> of <b>tegen</b> de stelling?',
+      opdracht:'Een argument is een reden. Helpt deze reden om de stelling waar te maken, of juist niet?',
+      beeld:stelBox(d, flip) + cit(a.t, 'Argument'),
+      opties:['voor de stelling', 'tegen de stelling'], goed:voor ? 0 : 1,
+      uitleg:'Dit argument is <b>' + tekst + '</b>' + (flip ? '. Let op: de stelling was omgedraaid, dus je moet kijken naar de stelling zoals die er nu staat' : '') + '. Test het zo: zeg “Ik ben ' + (voor ? 'voor' : 'tegen') + ' de stelling, want …” en vul dit argument in. Klopt de zin? Een argument dat over iets vervelends gaat, zoals pesten, kan toch een argument voor een maatregel zijn, als die maatregel het probeert te voorkomen.',
+      antwoordTekst:tekst };
+  }
+  function argument(niv){ return Math.random() < 0.6 ? argumentSleep(niv) : argumentKeuze(niv); }
+
+  /* 2. waarde achter een argument */
+  function defRegels(lijst){ return lijst.map(function(w){ return '<b>' + w + '</b>: ' + DEF[w]; }).join('. ') + '.'; }
+  function waardeAchter(niv){
+    var d = dil(), a = kies(d.args.filter(function(x){ return x.w && pasN(x.n, niv); }));
+    var vrij = WAARDEN.filter(function(w){ return w !== a.w && w !== a.ook; });
+    var fout = H(vrij).slice(0, niv === 'bb' ? 2 : 3), opties = H([a.w].concat(fout));
+    return { onderdeel:'afwegen: waarde', onderdeelNaam:'welke waarde', vorm:'meerkeuze', vasteVolgorde:true, sleutel:'wa' + a.id,
+      vraag:'Welke <b>waarde</b> zit vooral achter dit argument?',
+      opdracht:niv === 'bb' ? 'Een waarde is iets wat je belangrijk vindt. ' + defRegels(opties) : (niv === 'hv' ? 'Soms past er nog een tweede waarde bij. Kies de waarde waar het argument vooral om draait.' : 'Een waarde is iets wat je belangrijk vindt, zoals vrijheid of veiligheid.'),
+      beeld:stelBox(d, false, true) + cit(a.t, a.k === 'v' ? 'Een argument voor' : 'Een argument tegen'),
+      opties:opties, goed:opties.indexOf(a.w),
+      uitleg:'Het argument draait om <b>' + a.w + '</b>: ' + DEF[a.w] + '.' + (a.ook ? ' Er speelt ook ' + a.ook + ' mee, maar de kern is ' + a.w + '.' : '') +
+        ' Bij ' + fout[0] + ' (' + DEF[fout[0]] + ') gaat het om iets anders.',
+      antwoordTekst:a.w };
+  }
+  /* welk van deze argumenten hoort bij waarde X */
+  function waardeWelk(niv){
+    var d = dil(), goed = kies(d.args.filter(function(x){ return x.w && pasN(x.n, niv); })), w = goed.w;
+    var anderen = H(d.args.filter(function(x){ return x.w && x.w !== w && x.ook !== w && x !== goed; }));
+    var gekozen = []; /* drie met verschillende waarden, zodat geen twee dezelfde kant op wijzen */
+    anderen.forEach(function(x){ if (gekozen.length < 3 && !gekozen.some(function(y){ return y.w === x.w; })) gekozen.push(x); });
+    if (gekozen.length < 3) return waardeAchter(niv);
+    var lijst = H([goed].concat(gekozen));
+    return { onderdeel:'afwegen: waarde', onderdeelNaam:'welke waarde', vorm:'meerkeuze', vasteVolgorde:true, sleutel:'ww' + goed.id,
+      vraag:'Welk argument hoort bij de waarde <b>' + w + '</b>?',
+      opdracht:'Waarde ' + w + ': ' + DEF[w] + '.',
+      beeld:stelBox(d, false, true),
+      opties:lijst.map(function(x){ return S(x.t); }), goed:lijst.indexOf(goed),
+      uitleg:'Bij <b>' + w + '</b> past: “' + S(zonderPunt(goed.t)) + '”. De andere argumenten gaan over ' + gekozen.map(function(x){ return x.w; }).join(', ') + '.',
+      antwoordTekst:kaal(goed.t) };
+  }
+  /* botsende waarden: een argument voor en een argument tegen */
+  function waardeBotst(niv){
+    var d = dil(), paren = [];
+    d.v.forEach(function(a){ d.t.forEach(function(b){
+      if (!a.w || !b.w || a.n < 2 || b.n < 2 || a.w === b.w || a.w === b.ook || b.w === a.ook) return;
+      var vrij = WAARDEN.filter(function(w){ return [a.w, a.ook, b.w, b.ook].indexOf(w) < 0; });
+      if (vrij.length) paren.push({ a:a, b:b, vrij:vrij });
+    }); });
+    if (!paren.length) return waardeAchter(niv);
+    var p = kies(paren), a = p.a, b = p.b, x = kies(p.vrij), y = kies(p.vrij);
+    function par(v, t){ return v + ' (voor) tegenover ' + t + ' (tegen)'; }
+    var opties = H([par(a.w, b.w), par(a.w, x), par(y, b.w), par(b.w, a.w)]);
+    return { onderdeel:'afwegen: waarde', onderdeelNaam:'welke waarde', vorm:'meerkeuze', vasteVolgorde:true, sleutel:'wb' + a.id + b.id,
+      vraag:'Welke twee <b>waarden</b> botsen hier?',
+      opdracht:'Een dilemma is vaak een botsing tussen twee waarden. Kijk welke waarde bij het argument voor hoort en welke bij het argument tegen.',
+      beeld:stelBox(d, false, true) + '<div class="paar">' + cit(a.t, 'Een argument voor') + cit(b.t, 'Een argument tegen') + '</div>',
+      opties:opties, goed:opties.indexOf(par(a.w, b.w)),
+      uitleg:'Het argument voor draait om <b>' + a.w + '</b> (' + DEF[a.w] + '), het argument tegen om <b>' + b.w + '</b> (' + DEF[b.w] + '). Die twee botsen: je kunt niet allebei helemaal krijgen. Dat maakt er een dilemma van, en er is geen goed of fout standpunt: je weegt welke waarde jij hier zwaarder vindt.',
+      antwoordTekst:par(a.w, b.w) };
+  }
+  function waarde(niv){
+    if (niv === 'bb') return waardeAchter(niv);
+    var r = Math.random();
+    if (niv === 'kgt') return r < 0.55 ? waardeAchter(niv) : waardeWelk(niv);
+    return r < 0.35 ? waardeAchter(niv) : r < 0.65 ? waardeWelk(niv) : waardeBotst(niv);
+  }
+
+  /* 3. belang: wie zegt dit, en welk belang zit erachter */
+  var BELANGHINT = 'Met de school bedoelen we de directie en de docenten, met de overheid de gemeente of het Rijk.';
+  function belangWie(niv){
+    var d = dil(), s = kies(d.stem.filter(function(x){ return pasN(x.n, niv); }));
+    var anderen = H(d.stem.filter(function(x){ return x !== s; }).map(function(x){ return x.wie; })), extra = H(GROEPEN.filter(function(g){ return g !== s.wie && anderen.indexOf(g) < 0; }));
+    var fout = anderen.concat(extra).slice(0, niv === 'bb' ? 2 : 3), opties = H([s.wie].concat(fout));
+    return { onderdeel:'afwegen: belang', onderdeelNaam:'wie heeft belang', vorm:'meerkeuze', vasteVolgorde:true, sleutel:'bw' + s.id,
+      vraag:'Wie zegt dit waarschijnlijk?',
+      opdracht:BELANGHINT,
+      beeld:stelBox(d, false, true) + cit('“' + s.t + '”', 'Iemand zegt'),
+      opties:opties.map(function(g){ return GROEP[g]; }), goed:opties.indexOf(s.wie),
+      uitleg:'Dit zegt <b>' + GROEP[s.wie] + '</b>. Wat zij belangrijk vinden: <b>' + S(s.b) + '</b>. Een belang is wat een groep te winnen of te verliezen heeft. Andere groepen kijken er anders tegenaan, en toch kan ieder een goed argument hebben.',
+      antwoordTekst:GROEP[s.wie] };
+  }
+  function belangWelk(niv){
+    var d = dil(), s = kies(d.stem.filter(function(x){ return pasN(x.n, niv); }));
+    var anderen = H(d.stem.filter(function(x){ return x !== s; })).slice(0, niv === 'bb' ? 2 : 3), opties = H([s].concat(anderen));
+    return { onderdeel:'afwegen: belang', onderdeelNaam:'wie heeft belang', vorm:'meerkeuze', vasteVolgorde:true, sleutel:'bb' + s.id,
+      vraag:'Welk <b>belang</b> zit vooral achter wat ' + GROEP[s.wie] + ' zegt?',
+      opdracht:'Een belang is wat iemand te winnen of te verliezen heeft.',
+      beeld:stelBox(d, false, true) + cit('“' + s.t + '”', hoofdletter(GROEP[s.wie]) + ' zegt'),
+      opties:opties.map(function(x){ return S(x.b); }), goed:opties.indexOf(s),
+      uitleg:'Het belang van ' + GROEP[s.wie] + ' is: <b>' + S(s.b) + '</b>. De andere antwoorden zijn belangen van andere groepen: ' + anderen.map(function(x){ return GROEP[x.wie] + ' (' + S(x.b) + ')'; }).join('; ') + '.',
+      antwoordTekst:s.b };
+  }
+  function belang(niv){ return Math.random() < 0.5 ? belangWie(niv) : belangWelk(niv); }
+
+  /* 4. feit of mening */
+  var LASTIG = ['Vraag aan degene die er zelf belang bij heeft.', 'Kijk of veel mensen het online delen.', 'Zoek een stuk waarin iemand het stellig zegt.'];
+  function feitMening(niv){
+    var d = dil(), x = kies(d.f.filter(function(y){ return pasN(y.n, niv); })), isFeit = x.soort === 'f';
+    var uit = isFeit ? (x.u || 'Dit is een <b>feit</b>: je kunt controleren of het klopt. Controleren kan zo: ' + S(x.c[0].charAt(0).toLowerCase() + x.c[0].slice(1))) : (x.u || 'Dit is een <b>mening</b>: het zegt wat iemand vindt of vindt dat moet. Je kunt er het mee eens of oneens over zijn, maar je kunt niet controleren of het “klopt”. Woorden als “moet”, “horen”, “beter”, “eerlijk” en “gezellig” wijzen vaak op een mening.');
+    if (isFeit && x.u) uit += ' Controleren kan zo: ' + S(x.c[0].charAt(0).toLowerCase() + x.c[0].slice(1));
+    return { onderdeel:'afwegen: feit', onderdeelNaam:'feit of mening', vorm:'meerkeuze', vasteVolgorde:true, sleutel:'fm' + x.id,
+      vraag:'Is dit een <b>feit</b> of een <b>mening</b>?',
+      opdracht:niv === 'hv' ? 'Een feit kun je controleren, ook als het niet klopt. Een mening is wat iemand vindt of voelt.' : 'Een feit kun je controleren. Een mening is wat iemand vindt of voelt.',
+      beeld:stelBox(d, false, true) + cit(x.t, 'Zin'),
+      opties:['een feit', 'een mening'], goed:isFeit ? 0 : 1, uitleg:uit, antwoordTekst:isFeit ? 'een feit' : 'een mening' };
+  }
+  function feitControle(niv){
+    var d = dil(), x = kies(d.f.filter(function(y){ return y.soort === 'f' && pasN(y.n, niv); }));
+    var fout = H(x.c.slice(1)).slice(0, niv === 'bb' ? 2 : niv === 'kgt' ? 3 : 2);
+    if (niv === 'hv') fout.push(kies(LASTIG));
+    var opties = H([x.c[0]].concat(fout));
+    return { onderdeel:'afwegen: feit', onderdeelNaam:'feit of mening', vorm:'meerkeuze', vasteVolgorde:true, sleutel:'fc' + x.id,
+      vraag:'Dit is een feit. Hoe kun je het het beste <b>controleren</b>?',
+      opdracht:'Een goede controle gaat naar de bron zelf, niet naar wat mensen vinden of denken.',
+      beeld:stelBox(d, false, true) + cit(x.t, 'Feit'),
+      opties:opties.map(S), goed:opties.indexOf(x.c[0]),
+      uitleg:'Je controleert dit zo: <b>' + S(x.c[0].charAt(0).toLowerCase() + x.c[0].slice(1)) + '</b> Wat mensen vinden, een gok of een bron die er zelf belang bij heeft, laat niet zien of een feit klopt.',
+      antwoordTekst:x.c[0] };
+  }
+  function feitWelke(niv){
+    var d = dil(), feiten = d.f.filter(function(y){ return y.soort === 'f'; }), mening = d.f.filter(function(y){ return y.soort === 'm'; });
+    var f = kies(feiten.filter(function(y){ return pasN(y.n, niv); })), m = niv === 'hv' ? H(mening) : H(mening.filter(function(y){ return pasN(y.n, niv); }));
+    var nm = niv === 'bb' ? 2 : 3;
+    if (m.length < nm) return feitMening(niv);
+    var lijst = H([f].concat(m.slice(0, nm)));
+    return { onderdeel:'afwegen: feit', onderdeelNaam:'feit of mening', vorm:'meerkeuze', vasteVolgorde:true, sleutel:'fw' + f.id,
+      vraag:'Welke zin is een <b>feit</b>?',
+      opdracht:'Een feit kun je controleren. Een mening is wat iemand vindt of voelt.',
+      beeld:stelBox(d, false, true),
+      opties:lijst.map(function(y){ return S(y.t); }), goed:lijst.indexOf(f),
+      uitleg:'De enige zin die je kunt controleren is: “' + S(zonderPunt(f.t)) + '”. Controleren kan zo: ' + S(f.c[0].charAt(0).toLowerCase() + f.c[0].slice(1)) + ' De andere zinnen zijn meningen: ze zeggen wat iemand vindt of vindt dat moet.',
+      antwoordTekst:kaal(f.t) };
+  }
+  function feitMeningWelke(niv){
+    var d = dil(), feiten = H(d.f.filter(function(y){ return y.soort === 'f'; })), m = kies(d.f.filter(function(y){ return y.soort === 'm' && pasN(y.n, niv); }));
+    var lijst = H([m].concat(feiten.slice(0, 3)));
+    return { onderdeel:'afwegen: feit', onderdeelNaam:'feit of mening', vorm:'meerkeuze', vasteVolgorde:true, sleutel:'fo' + m.id,
+      vraag:'Welke zin is een <b>mening</b>?',
+      opdracht:'Een feit kun je controleren. Een mening is wat iemand vindt of voelt.',
+      beeld:stelBox(d, false, true),
+      opties:lijst.map(function(y){ return S(y.t); }), goed:lijst.indexOf(m),
+      uitleg:'De mening is: “' + S(zonderPunt(m.t)) + '”. Dat is wat iemand vindt of vindt dat moet, en daar kun je het mee eens of oneens zijn. De andere zinnen kun je allemaal controleren, ook als ze niet kloppen.',
+      antwoordTekst:kaal(m.t) };
+  }
+  function feit(niv){
+    var r = Math.random();
+    if (niv === 'bb') return r < 0.45 ? feitMening(niv) : r < 0.75 ? feitControle(niv) : feitWelke(niv);
+    return r < 0.3 ? feitMening(niv) : r < 0.55 ? feitControle(niv) : r < 0.8 ? feitWelke(niv) : feitMeningWelke(niv);
+  }
+
+  /* 5. sterk: welk argument is sterker, en waarom; of wat is er mis met een argument */
+  var SOORT = {
+    bewering:{ naam:'een kale bewering', uit:'er staat alleen dat het zo is, zonder reden', opt:'Er staat geen reden bij, alleen een bewering' },
+    overdrijving:{ naam:'een overdrijving', uit:'het overdrijft met grote woorden zoals “nooit”, “alle”, “elke” en “niemand”, en dat klopt bijna nooit', opt:'Het overdrijft met woorden als “nooit”, “alle” of “niemand”' },
+    iedereen:{ naam:'de drogreden “iedereen doet het”', uit:'dat veel mensen iets doen of vinden, is zelf geen reden', opt:'Het gebruikt “iedereen doet het” als reden' },
+    glijdend:{ naam:'de drogreden van de glijdende helling', uit:'het doet alsof één stap vanzelf tot het ergste leidt, zonder uit te leggen waarom', opt:'Het doet alsof één stap vanzelf tot het ergste leidt' },
+    aanval:{ naam:'de drogreden van de persoonlijke aanval', uit:'het gaat over de mensen die iets vinden en niet over de reden zelf', opt:'Het valt de persoon aan en niet het argument' },
+    tweekeuze:{ naam:'de drogreden van de valse keuze', uit:'het doet alsof er maar twee mogelijkheden zijn, terwijl er veel tussenin zit', opt:'Het doet alsof er maar twee keuzes zijn' }
+  };
+  var REDEN = { /* waarom het sterke argument wint: s = letter van het sterke, z = letter van het zwakke */
+    bewering:function(s, z){ return s + ' geeft een echte reden, terwijl ' + z + ' alleen zegt dat het zo is'; },
+    overdrijving:function(s, z){ return s + ' blijft bij wat je kunt weten, terwijl ' + z + ' overdrijft'; },
+    iedereen:function(s, z){ return z + ' is een drogreden: wat anderen doen of vinden is zelf geen reden'; },
+    glijdend:function(s, z){ return z + ' is een drogreden: het doet alsof één stap vanzelf tot het ergste leidt'; },
+    aanval:function(s, z){ return z + ' is een drogreden: het gaat over mensen en niet over de zaak'; },
+    tweekeuze:function(s, z){ return z + ' is een drogreden: er zijn meer keuzes dan alleen die twee'; }
+  };
+  var SCHIJN_Z = ['het klinkt zekerder en stelliger', 'er staan meer mensen achter', 'het raakt je meer in je gevoel'];
+  var SCHIJN_S = ['het klinkt netter en vriendelijker', 'het is korter en makkelijker te onthouden', 'het past beter bij wat je zelf vindt'];
+  function sterkPaar(niv){
+    var d = dil(), kant = kies(['v', 't']), z = kies(d['z' + kant].filter(function(x){ return pasN(x.n, niv); }));
+    var s = kies(d[kant].filter(function(x){ return pasN(x.n, niv); }));
+    var sterkIsA = Math.random() < 0.5, A = sterkIsA ? s : z, B = sterkIsA ? z : s, ls = sterkIsA ? 'A' : 'B', lz = sterkIsA ? 'B' : 'A';
+    function opt(l, r){ return '<b>' + l + '</b> is sterker, want ' + r; }
+    var goed = opt(ls, REDEN[z.s](ls, lz));
+    var lijst = [goed, opt(lz, kies(SCHIJN_Z)), opt(ls, kies(SCHIJN_S))];
+    if (niv !== 'bb') lijst.push(opt(lz, SCHIJN_Z.filter(function(r){ return lijst.join('').indexOf(r) < 0; })[0]));
+    lijst = H(lijst);
+    var zijde = kant === 'v' ? 'voor' : 'tegen';
+    return { onderdeel:'afwegen: sterk', onderdeelNaam:'wat is sterker', vorm:'meerkeuze', vasteVolgorde:true, sleutel:'sp' + s.id + z.id,
+      vraag:'Beide argumenten zijn <b>' + zijde + '</b> de stelling. Welk is <b>sterker</b>, en waarom?',
+      opdracht:'Een sterk argument heeft een reden die klopt, overdrijft niet en is geen drogreden.',
+      beeld:stelBox(d, false, true) + '<div class="paar"><div class="cit"><span class="wie"><span class="l">A</span>Argument ' + zijde + '</span>' + S(A.t) + '</div><div class="cit"><span class="wie"><span class="l">B</span>Argument ' + zijde + '</span>' + S(B.t) + '</div></div>',
+      opties:lijst, goed:lijst.indexOf(goed),
+      uitleg:'Argument ' + ls + ' (“' + S(zonderPunt(s.t)) + '”) geeft een concrete reden. Argument ' + lz + ' (“' + S(zonderPunt(z.t)) + '”) is zwakker: het is ' + SOORT[z.s].naam + ', want ' + SOORT[z.s].uit + '. Dat een argument stellig of gevoelig klinkt, maakt het niet sterker. Het gaat erom of er een reden onder zit die klopt.',
+      antwoordTekst:kaal(goed) };
+  }
+  function sterkMis(niv){
+    var d = dil(), kant = kies(['v', 't']), zijde = kant === 'v' ? 'voor' : 'tegen', sterk = niv === 'hv' && Math.random() < 0.25, a, soort;
+    if (sterk){ a = kies(d[kant].filter(function(x){ return pasN(x.n, niv); })); soort = 'goed'; }
+    else { a = kies(d['z' + kant].filter(function(x){ return pasN(x.n, niv); })); soort = a.s; }
+    var NIETS = 'Er is niets mis mee: het geeft een echte reden';
+    var UIT = { bewering:['overdrijving'], overdrijving:['bewering', 'iedereen'], iedereen:['overdrijving'], glijdend:['overdrijving'], aanval:['overdrijving', 'bewering'], tweekeuze:['overdrijving'], goed:['overdrijving'] };
+    var kandidaten = Object.keys(SOORT).filter(function(t){ return t !== soort && (UIT[soort] || []).indexOf(t) < 0; });
+    var goed = soort === 'goed' ? NIETS : SOORT[soort].opt;
+    var fout = H(kandidaten).slice(0, niv === 'hv' && soort !== 'goed' ? 2 : 3).map(function(t){ return SOORT[t].opt; });
+    if (niv === 'hv' && soort !== 'goed') fout.push(NIETS);
+    var lijst = H([goed].concat(fout));
+    return { onderdeel:'afwegen: sterk', onderdeelNaam:'wat is sterker', vorm:'meerkeuze', vasteVolgorde:true, sleutel:'sm' + a.id,
+      vraag:'Wat is er mis met dit argument ' + zijde + ' de stelling?',
+      opdracht:niv === 'hv' ? 'Soms is er niets mis mee. Kijk of er een reden staat, of die klopt en of het niet overdrijft.' : 'Kijk of er een reden staat, of er grote woorden in zitten en of het alleen volgt wat anderen doen.',
+      beeld:stelBox(d, false, true) + cit(a.t, 'Argument ' + zijde),
+      opties:lijst, goed:lijst.indexOf(goed),
+      uitleg:soort === 'goed' ? 'Dit is een sterk argument: het geeft een echte reden, blijft bij wat je kunt weten en is geen drogreden. Sterk betekent niet dat je het ermee eens bent: je kunt zelf een sterker argument voor de andere kant hebben.' : 'Dit argument is ' + SOORT[soort].naam + ', want ' + SOORT[soort].uit + '.',
+      antwoordTekst:goed };
+  }
+  function sterk(niv){
+    if (niv === 'bb') return sterkPaar(niv);
+    return Math.random() < (niv === 'kgt' ? 0.6 : 0.5) ? sterkPaar(niv) : sterkMis(niv);
+  }
+
+  var SOORTEN = { argument:argument, waarde:waarde, belang:belang, feit:feit, sterk:sterk };
+  var MIX = ['argument', 'argument', 'argument', 'waarde', 'waarde', 'belang', 'belang', 'feit', 'feit', 'sterk', 'sterk'];
+  window.AFWEGEN_DATA = { DIL:DIL, SOORTEN:SOORTEN, pasN:pasN };
+  VAKSPEL.maak({
+    id:'afwegen', naam:'Twee kanten', vak:'burg', kleur:'#a0455f',
+    hand:'er is altijd een andere kant',
+    lead:'Bij een dilemma ben je niet meteen voor of tegen. Je weegt: welke argumenten zijn er voor en tegen, welke waarde zit erachter, wie heeft er belang bij, wat is feit en wat is mening, en welk argument is het sterkst? Er is geen goed standpunt. Wat je oefent is het redeneren.',
+    hoe:[
+      { kop:'Beide kanten', tekst:'Bij elk dilemma zijn er argumenten <b>voor</b> en <b>tegen</b>. Een argument is een reden, niet alleen een mening. Je zoekt bij een stelling steeds beide kanten.' },
+      { kop:'Waarden en belangen', tekst:'Achter een argument zit een <b>waarde</b> (vrijheid, veiligheid, gelijkheid, gezondheid, privacy of solidariteit) en iemand die er <b>belang</b> bij heeft, zoals de leerling, de ouders, de school, de ondernemer of de buurt.' },
+      { kop:'Sterk of zwak', tekst:'Een <b>feit</b> kun je controleren, een <b>mening</b> niet. Een sterk argument heeft een reden die klopt, overdrijft niet en is geen drogreden zoals “iedereen doet het”.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'Duidelijke argumenten, drie antwoorden per vraag, en bij “sterk” een argument met een reden tegenover een kale bewering.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Meer argumenten per opgave, af en toe een omgedraaide stelling, en ook overdrijvingen en “iedereen doet het”.' },
+        { id:'hv', naam:'havo en vwo', uit:'Lastige argumenten, botsende waarden, feiten die niet kloppen en drogredenen zoals de glijdende helling en de persoonlijke aanval.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' },
+        { id:'argument', naam:'voor of tegen', uit:'Sleep argumenten naar voor en tegen de stelling. Soms is de stelling omgedraaid.' },
+        { id:'waarde', naam:'welke waarde', uit:'Vrijheid, veiligheid, gelijkheid, gezondheid, privacy of solidariteit: welke waarde zit achter een argument?' },
+        { id:'belang', naam:'wie heeft belang', uit:'Wie zegt dit, en welk belang zit erachter? De leerling, de ouders, de school, de ondernemer, de buurt of de overheid.' },
+        { id:'feit', naam:'feit of mening', uit:'Kun je het controleren? En hoe controleer je een feit?' },
+        { id:'sterk', naam:'wat is sterker', uit:'Welk van twee argumenten is sterker, en waarom? Onderbouwd, niet overdreven en geen drogreden.' } ] }
+    ],
+    aantal:10,
+    maak:function(keuze, nr){
+      var s = keuze.soort;
+      if (!SOORTEN[s]){ var mix = keuze.niveau === 'bb' ? MIX.slice(0, MIX.length - 1) : MIX; s = kies(mix); }
+      return SOORTEN[s](keuze.niveau);
+    },
+    uitleg:{ doel:'Leren afwegen bij maatschappelijke dilemma’s: argumenten voor en tegen, waarden en belangen, feit en mening, en sterke argumenten.', tijd:'tien opgaven per ronde', bediening:'Kies een antwoord, of sleep de argumenten naar voor of tegen en druk op Nakijken. Op een telefoon tik je een argument aan en dan het vak.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>

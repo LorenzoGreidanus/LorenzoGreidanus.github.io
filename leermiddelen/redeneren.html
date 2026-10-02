@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Denk als een historicus, versie 1.0: op vakspel.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Denk als een historicus &middot; meneer Greidanus</title>
+<meta name="description" content="Historisch redeneren oefenen: wat veranderde en wat bleef gelijk, wat klopt er niet in een beschrijving van een tijd, waarom zegt iemand dit, en wat is een overeenkomst of verschil.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Denk als een historicus">
+<meta property="og:description" content="Verandering en continuïteit, anachronismen, standplaats en vergelijken: historisch redeneren met de tien tijdvakken.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/redeneren.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M44.8 12.2 C68.6 9.7 91.5 23.4 93.2 45.7 C94.9 69.5 77.9 89.8 54.9 91.6 C31 93.3 12.8 78.8 12.7 54.9 C12.5 30.9 21.8 14.7 44.8 12.2Z' fill='%23204ECF'/><g transform='translate(50 51) scale(2.2) translate(-12 -12)' fill='none' stroke='%23FBF6F1' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'><circle cx='10.5' cy='10.5' r='6.5'/><path d='M15.5 15.5L21 21'/><path d='M10.5 7.5v3l2 1.5'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+/* het tekstvak met de uitspraak of de zin; de rand heeft de spelkleur */
+.cit{max-width:58ch;width:100%;text-align:left;background:var(--kaart2);border-left:4px solid var(--spelkleur);border-radius:0 14px 14px 0;padding:14px 18px 14px 16px;font-size:1.08rem;line-height:1.6}
+.cit p{margin:0}
+.cit .wie{margin-top:8px;font-size:.88rem;color:var(--muted);font-weight:600}
+/* twee situaties naast elkaar */
+.vgl{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:stretch;width:100%;max-width:520px}
+.vgl>div{background:var(--kaart2);border-radius:14px;padding:10px 12px;text-align:center;border-top:3px solid var(--spelkleur)}
+.vgl b{display:block;font-size:1.05rem;line-height:1.25}
+.vgl small{display:block;color:var(--muted);font-size:.8rem;margin-top:2px}
+.vgl .vs{align-self:center;color:var(--muted);font-weight:700;font-size:.8rem;background:none;border:0;padding:0}
+body.groot .cit{font-size:1.3rem}
+@media(max-width:560px){.cit{font-size:1rem;padding:12px 14px}.vgl{gap:6px}.vgl>div{padding:8px 8px}.vgl b{font-size:.95rem}.vgl small{font-size:.72rem}}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  function nr(n){ return Math.floor(Math.random() * n); }
+  function kaal(t){ return String(t).replace(/<[^>]+>/g, ''); }
+  function hoofd(t){ t = String(t); return t.charAt(0).toUpperCase() + t.slice(1); }
+  function zp(t){ t = String(t); return t.charAt(t.length - 1) === '.' ? t.slice(0, -1) : t; }
+  function klein(t){ t = String(t); return t.charAt(0).toLowerCase() + t.slice(1); }
+  function deel(d){ return { onderdeel: 'redeneren: ' + d, onderdeelNaam: d }; }
+  /* een meerkeuzevraag: het goede antwoord staat vooraan, de motor husselt */
+  function mk(o){
+    return Object.assign(deel(o.deel), { vorm: 'meerkeuze', sleutel: o.sleutel, vraag: o.vraag, opdracht: o.opdracht, beeld: o.beeld,
+      opties: [o.goed].concat(o.fout), goed: 0, uitleg: o.uitleg, antwoordTekst: kaal(o.goed) });
+  }
+  function sl(o){
+    return Object.assign(deel(o.deel), { vorm: 'sleep', sleutel: o.sleutel, vraag: o.vraag, opdracht: o.opdracht, beeld: o.beeld, kaarten: o.kaarten, vakken: o.vakken,
+      sleepuit: o.sleepuit, uitleg: o.uitleg, antwoordTekst: o.antwoordTekst });
+  }
+  function ids(p, n){ return H(p.map(function(x, i){ return i; })).slice(0, n).sort(); }
+  function citaat(z, wie){ return '<div class="cit"><p>“' + S(z) + '”</p>' + (wie ? '<p class="wie">' + S(wie) + '</p>' : '') + '</div>'; }
+
+
+  /* ---------- verandering: wat veranderde, wat bleef ---------- */
+  /* meerkeuze: [vraag, goed, [drie foute], uitleg] */
+  var VER = {
+    bb: [
+      ['Een boer in het jaar 1300 en een boer in 1900. Wat is voor allebei <b>hetzelfde</b> gebleven?',
+        'Ze verbouwen voedsel en houden dieren, en het weer bepaalt of het een goed jaar wordt.',
+        ['Ze gebruiken allebei kunstmest uit de fabriek.', 'Ze werken allebei met een tractor met dieselmotor.', 'Ze verkopen allebei hun melk aan een supermarkt.'],
+        'Een boer is in 1900 nog steeds afhankelijk van zon en regen, en hij verbouwt en fokt nog steeds. Kunstmest bestond in 1900 wel, maar in 1300 nog niet: dat is dus een verandering. Dieseltractoren en supermarkten zijn van veel later.'],
+      ['Kinderen in 1850 en kinderen nu. Wat is er <b>veranderd</b>?',
+        'Nu moeten alle kinderen naar school; toen werkten veel kinderen op het land of in de fabriek.',
+        ['Nu werken kinderen meer dan toen.', 'Toen gingen alle kinderen al naar de middelbare school.', 'Er is niets veranderd: kinderen deden altijd hetzelfde.'],
+        'Rond 1900 kwam de leerplicht, en het Kinderwetje van 1874 verbood al werk in fabrieken voor kinderen onder de twaalf. Wie zegt dat er niets veranderde, vergeet dat het gewone leven van kinderen echt anders werd.'],
+      ['In 1800 reisde je naar een andere stad met paard en wagen of met een trekschuit. In de negentiende eeuw kwam er iets nieuws. Wat <b>veranderde</b>?',
+        'De trein kwam: reizen werd sneller en goedkoper.',
+        ['De auto verving overal het paard.', 'Er kwamen vliegtuigen voor gewone reizigers.', 'Mensen gingen minder reizen, omdat het gevaarlijk werd.'],
+        'De eerste trein in Nederland reed in 1839 van Amsterdam naar Haarlem. De auto werd pas na 1900 gewoon, en gewone reizigers in een vliegtuig kwamen nog veel later.'],
+      ['Mensen gingen in de tijd van jagers en boeren van rondtrekken naar op één plek wonen. Wat <b>veranderde</b> daardoor?',
+        'Ze bouwden dorpen en verbouwden zelf graan.',
+        ['Ze gingen vooral jagen en wilde planten verzamelen.', 'Ze gingen in grote steden met een stadsmuur wonen.', 'Ze gebruikten voor het eerst vuur.'],
+        'Met landbouw kon je op één plek blijven: je zaaide en je oogstte. Vuur kenden de jagers al lang voor de boeren. Steden met muren komen pas veel later.'],
+      ['Voor 1450 schreven monniken boeken met de hand over. Wat <b>veranderde</b> na de uitvinding van de boekdrukkunst?',
+        'Boeken werden sneller en goedkoper gemaakt, dus meer mensen konden lezen.',
+        ['Er kwamen minder boeken, omdat drukken moeilijker was.', 'Alleen monniken mochten nog boeken lezen.', 'Boeken werden nu gemaakt door machines op stoom.'],
+        'Gutenberg ontwikkelde rond 1450 het drukken met losse letters. Een boek hoefde niet meer maanden te kosten. Drukken met stoom kwam pas in de negentiende eeuw.'],
+      ['In 1919 veranderde er iets voor Nederlandse vrouwen. Wat?',
+        'Ze kregen kiesrecht: ze mochten stemmen.',
+        ['Ze mochten voor het eerst werken.', 'Ze mochten voor het eerst naar school.', 'Nederland kreeg zijn eerste koningin.'],
+        'Vrouwen werkten al eeuwen, en Nederland had al sinds 1890 een koningin (Wilhelmina). Wat in 1919 veranderde was het stemrecht van vrouwen. Verkiesbaar waren ze al sinds 1917.'],
+      ['Nederland in 1900 en nu. Wat is <b>hetzelfde</b> gebleven?',
+        'Een koning of koningin is het staatshoofd.',
+        ['Vrouwen mogen niet stemmen.', 'Er is geen elektriciteit in de meeste huizen.', 'Mensen betalen met euro’s.'],
+        'In 1900 regeerde koningin Wilhelmina, nu koning Willem-Alexander: de monarchie bleef, de persoon wisselde. Vrouwenkiesrecht, elektriciteit in elk huis en de euro zijn nieuw.'],
+      ['Een schoenmaker in 1700 maakte schoenen in zijn eigen werkplaats. In 1900 werden schoenen vaak in fabrieken gemaakt. Wat <b>veranderde</b>?',
+        'Machines en veel arbeiders maakten veel schoenen tegelijk.',
+        ['Er werden minder schoenen gemaakt.', 'Schoenen werden niet meer gedragen.', 'De schoenmaker werd veel rijker dan de fabrikant.'],
+        'De industriële revolutie bracht machines en fabrieken. Daardoor werden er veel meer en goedkopere schoenen gemaakt. Veel vakmensen werden arbeider bij een fabrikant.'],
+      ['Een ridder rond 1100 en een soldaat in 1916. Wat <b>veranderde</b> er aan het vechten?',
+        'Soldaten vochten met machinegeweren en granaten vanuit loopgraven, niet meer te paard met een zwaard.',
+        ['Soldaten vochten niet meer voor een land.', 'Alleen de adel ging nog vechten.', 'Er werd niet meer om land en macht gevochten.'],
+        'In de Eerste Wereldoorlog (1914 tot 1918) zaten soldaten in loopgraven. De ridder met zijn paard en zwaard hoort bij de middeleeuwen. Hetzelfde bleef wel dat er nog steeds om macht en land werd gevochten.'],
+      ['In 1300 kocht je op de markt of bij de ambachtsman. Nu kun je ook in een supermarkt of op internet kopen. Wat is <b>hetzelfde</b> gebleven?',
+        'Er zijn kopers en verkopers, en je betaalt voor wat je krijgt.',
+        ['Je betaalt met een pinpas.', 'Je bestelt het op je telefoon.', 'Alles komt uit een fabriek.'],
+        'De manier veranderde, het idee niet: iemand verkoopt, iemand betaalt. De pinpas, de telefoon en de fabriek zijn nieuw.'],
+      ['Rond 1800 gebruikten mensen in huis kaarsen en olielampen. Wat <b>veranderde</b> er in de negentiende en twintigste eeuw?',
+        'Er kwamen gaslicht en later elektrisch licht, eerst in steden en later overal.',
+        ['Mensen gingen weer terug naar kaarsen.', 'Mensen gingen ineens led-lampen gebruiken.', 'Alleen kerken kregen nog licht.'],
+        'Gaslicht kwam in de negentiende eeuw, elektriciteit rond 1900 in de steden en later in elk dorp. Led-lampen zijn van de eenentwintigste eeuw.'],
+      ['Op 1 juli 1863 veranderde er iets in Suriname en op de Antillen. Wat?',
+        'De slavernij werd wettelijk afgeschaft.',
+        ['De belasting op suiker werd afgeschaft.', 'Suriname werd een zelfstandig land.', 'Er kwam een einde aan het werken op plantages.'],
+        'In 1863 werd de slavernij afgeschaft. De plantages bleven bestaan, en de mensen moesten nog tot 1873 onder staatstoezicht werken. Zelfstandig werd Suriname pas in 1975.']
+    ],
+    kgt: [
+      ['Rond het jaar 1000 bestuurden lokale heren hun eigen gebied. Rond 1600 was de macht van vorsten in veel landen groter. Wat <b>veranderde</b>?',
+        'Vorsten kregen een groter gebied onder hun gezag, met eigen ambtenaren, belasting en soldaten.',
+        ['De lokale heren kregen steeds meer macht en de vorsten verdwenen.', 'Vorsten werden overal door het volk gekozen.', 'Er werd geen belasting meer betaald.'],
+        'Koninkrijken en staten groeiden: vorsten brachten gebieden onder eigen bestuur, met ambtenaren, belastingen en legers. Dat gebeurde in veel landen, maar niet overal: de Republiek was een uitzondering zonder koning.'],
+      ['Na 1517 brak de eenheid van de kerk in West-Europa. Wat bleef <b>hetzelfde</b>?',
+        'De meeste Europeanen bleven christen.',
+        ['Iedereen bleef katholiek.', 'De paus bleef het hoofd van alle christenen.', 'Mensen stopten met het geloof in God.'],
+        'De Reformatie verdeelde de christenen in katholieken en protestanten, maar bijna iedereen bleef christen. De paus was na de breuk niet meer het hoofd van de protestanten.'],
+      ['In 1600 voeren VOC-schepen op de wind. Rond 1850 kwamen er stoomschepen. Wat <b>veranderde</b>?',
+        'Schepen waren minder afhankelijk van de wind en konden vaste vaartijden halen.',
+        ['Schepen kregen voor het eerst kanonnen.', 'Er werd niet meer over zee gehandeld.', 'Schepen werden alleen nog door roeiers voortbewogen.'],
+        'Een stoomschip vaart ook zonder wind. Daardoor kon je vaste dienstregelingen maken. Kanonnen hadden schepen al in de zeventiende eeuw.'],
+      ['Rond 1850 gingen steeds meer mensen in fabrieken werken in plaats van thuis. Wat <b>veranderde</b> voor die arbeiders?',
+        'Ze werkten vaste uren voor loon, onder leiding van een fabrikant, in plaats van voor zichzelf thuis.',
+        ['Ze werkten korter en verdienden meer.', 'Ze werkten voor een leenheer.', 'Ze kregen automatisch een pensioen.'],
+        'Huisnijverheid werd fabrieksarbeid, met lange dagen en laag loon. Kortere werkdagen kwamen pas later (de achturendag in 1919) en de AOW pas in 1957. Een leenheer hoort bij de middeleeuwen.'],
+      ['In 1848 kreeg Nederland, onder koning Willem II, een nieuwe grondwet. Welke <b>verandering</b> volgde?',
+        'De koning kon niet meer alleen regeren: de ministers werden verantwoordelijk tegenover de Tweede Kamer.',
+        ['Nederland werd een republiek.', 'Alle Nederlanders kregen stemrecht.', 'De koning kreeg meer macht dan daarvoor.'],
+        'Thorbecke schreef de grondwet van 1848: de koning bleef, maar de ministers waren verantwoordelijk. Nederland bleef dus een monarchie. Het stemrecht bleef beperkt tot mannen met genoeg inkomen, algemeen kiesrecht kwam in 1917 en 1919.'],
+      ['Tussen 1000 en 1400 veranderde de plaats waar veel Hollanders woonden. Wat <b>veranderde</b>?',
+        'Steeds meer mensen woonden in steden, die door handel en ambacht groeiden en stadsrechten kregen.',
+        ['Steden verdwenen omdat de pest alle mensen doodde.', 'Steden werden door koningen bestuurd.', 'Handel in steden werd verboden.'],
+        'Vanaf ongeveer 1000 groeide de handel, en steden als Dordrecht (stadsrechten in 1220) kregen een eigen bestuur. De pest (1349) maakte veel slachtoffers, maar de steden bleven bestaan.'],
+      ['Nederland was in 1939 neutraal. Wat <b>veranderde</b> er na de Tweede Wereldoorlog in de buitenlandse politiek?',
+        'Nederland was niet langer neutraal en werd in 1949 lid van de NAVO.',
+        ['Nederland werd lid van de Sovjet-Unie.', 'Nederland bleef net zo neutraal als voor 1940.', 'Nederland werd een Duitse deelstaat.'],
+        'De ervaring van de bezetting (1940 tot 1945) maakte duidelijk dat neutraliteit niet beschermde. In 1949 was Nederland een van de oprichters van de NAVO.'],
+      ['Wat <b>veranderde</b> er in 1949 met Indonesië?',
+        'Nederland droeg de macht over aan Indonesië, dat zelfstandig werd.',
+        ['Indonesië werd een Nederlandse provincie.', 'Nederland veroverde Indonesië.', 'Indonesië werd voor het eerst een Nederlandse kolonie.'],
+        'Indonesië riep zichzelf in 1945 onafhankelijk uit. Na een oorlog en onderhandelingen erkende Nederland op 27 december 1949 de soevereiniteit.'],
+      ['Na 476 verdween het West-Romeinse Rijk. Wat bleef in veel streken <b>hetzelfde</b>?',
+        'Het christendom en het Latijn (in de kerk en bij geleerden) bleven bestaan.',
+        ['Het Romeinse leger bewaakte de grenzen.', 'De keizer in Rome bleef regeren.', 'De Romeinse steden bleven even groot.'],
+        'De keizer en het leger verdwenen in het westen, en steden slonken. De kerk en het Latijn bleven, en daarom is het Latijn de basis voor talen als Frans en Spaans.'],
+      ['Wat <b>veranderde</b> er na 1960 voor vrouwen in Nederland?',
+        'Veel meer vrouwen bleven na hun huwelijk werken en gingen studeren.',
+        ['Vrouwen kregen kiesrecht.', 'Vrouwen mochten niet meer werken.', 'Er veranderde niets voor vrouwen.'],
+        'Kiesrecht kwam al in 1919. Voor de jaren zestig stopten veel gehuwde vrouwen met werken. Met de anticonceptiepil (1962) en de tweede feministische golf kozen steeds meer vrouwen voor studie en werk.'],
+      ['Rond 1500 kende Europa Amerika niet. Wat <b>veranderde</b> in de zestiende eeuw?',
+        'Europeanen kregen contact met Amerika, en de handel verschoof naar de Atlantische Oceaan.',
+        ['De handel stopte omdat er geen schepen meer bestonden.', 'Europa werd een deel van het Chinese rijk.', 'De handel verplaatste zich naar het Oosten.'],
+        'Na Columbus (1492) kwamen Spanjaarden en later Nederlanders en Engelsen in Amerika. De handel over de Atlantische Oceaan werd belangrijk, onder andere door de slavenhandel en de handel in suiker en zilver.'],
+      ['Wat <b>veranderde</b> er tussen 1950 en 1970 in de huiskamers in Nederland?',
+        'De televisie kwam in bijna elk huis, naast de radio.',
+        ['De radio werd uitgevonden.', 'Mensen kregen voor het eerst elektrisch licht.', 'De computer kwam bij bijna iedereen thuis.'],
+        'De Nederlandse televisie begon in 1951 en groeide snel. De radio bestond al sinds de jaren twintig, elektrisch licht kwam eerder, en de computer thuis pas na 1980.']
+    ],
+    hv: [
+      ['Historici spreken van een “keerpunt” in de geschiedenis. Wat is dat?',
+        'Een moment of korte periode waarna de ontwikkeling een andere richting kreeg.',
+        ['Het moment waarop alles in één dag veranderde.', 'Een gebeurtenis die altijd een oorlog is.', 'Een jaartal dat alle historici kiezen om een tijdvak te beginnen.'],
+        'Een keerpunt is een moment waarna dingen duidelijk anders gaan, zoals 1789 of 1945. Het hoeft niet in één dag te gebeuren, en het hoeft geen oorlog te zijn.'],
+      ['De overgang van jagen en verzamelen naar landbouw wordt soms de “neolithische revolutie” genoemd. Waarom is het woord revolutie misleidend?',
+        'Omdat de overgang duizenden jaren duurde en op elke plek op een ander moment gebeurde.',
+        ['Omdat de landbouw in één jaar over de hele wereld begon.', 'Omdat jagers al landbouw kenden.', 'Omdat er geen verandering plaatsvond.'],
+        'Een revolutie klinkt als snel en plotseling, maar de landbouw verspreidde zich geleidelijk. In het Midden-Oosten begon ze rond 9000 v.Chr., in Nederland pas rond 5000 v.Chr.'],
+      ['De industrialisatie van de negentiende eeuw wordt vaak vooruitgang genoemd. Voor wie was het in de eerste decennia <b>niet</b> vooruitgang?',
+        'Voor veel arbeiders, die lange dagen werkten voor laag loon in slechte woonomstandigheden.',
+        ['Voor de fabrikanten, die hun productie zagen stijgen.', 'Voor de consumenten, die goedkopere spullen kregen.', 'Voor niemand, want iedereen ging erop vooruit.'],
+        'Verandering is niet hetzelfde als vooruitgang: dat hangt af van voor wie. De productie steeg, maar veel arbeiders hadden het in de eerste jaren zwaar. Pas later kwamen arbeidswetten en hogere lonen.'],
+      ['Wat bleef tijdens de Gouden Eeuw in de Republiek <b>hetzelfde</b> als in de middeleeuwen?',
+        'Wind, water en spierkracht waren nog de belangrijkste energiebronnen.',
+        ['De macht van een erfelijke koning over het hele land.', 'Het leenstelsel bepaalde de verhoudingen op het platteland.', 'Alle mensen waren katholiek.'],
+        'Windmolens, waterkracht en spierkracht van mensen en dieren bleven de belangrijkste energiebronnen tot de stoommachine. De Republiek had geen koning, het leenstelsel was verdwenen en na de Reformatie waren de Nederlanden verdeeld.'],
+      ['De Fransen voerden vanaf 1795 en onder Napoleon veel nieuwe dingen in. Welke <b>verandering</b> bleef na het vertrek van Napoleon in Nederland bestaan?',
+        'Gelijkheid voor de wet en een wetboek (de Code Civil, later het Nederlands Burgerlijk Wetboek) bleven.',
+        ['De standen van adel, geestelijkheid en burgers werden weer hersteld.', 'Nederland bleef een deel van Frankrijk.', 'Het koningschap werd afgeschaft.'],
+        'Na 1813 kwam Willem I als koning van een onafhankelijk land, maar de gelijkheid voor de wet en de burgerlijke registratie bleven. Zo kwam in 1838 het Burgerlijk Wetboek, dat op de Franse wetten was gebaseerd.'],
+      ['Welke <b>verandering</b> verliep geleidelijk, in plaats van abrupt?',
+        'Het verdwijnen van het Romeinse gezag in West-Europa, in de vierde en vijfde eeuw.',
+        ['De bestorming van de Bastille in 1789.', 'De val van de Berlijnse Muur in 1989.', 'De Duitse inval in Nederland in mei 1940.'],
+        'In 476 zette Odoaker de laatste West-Romeinse keizer af, maar het gezag brokkelde al eeuwen af. De Bastille, de Muur en de inval waren gebeurtenissen van één dag en betekenden direct een breuk.'],
+      ['Waarom nemen historici 1500 vaak als grens tussen de middeleeuwen en de nieuwe tijd?',
+        'Omdat veel ontwikkelingen daar samenkomen, zoals ontdekkingsreizen en boekdrukkunst, maar het blijft een keuze van historici.',
+        ['Omdat mensen in 1500 merkten dat de middeleeuwen voorbij waren.', 'Omdat in 1500 alle oorlogen ophielden.', 'Omdat er in 1500 een nieuwe kalender kwam.'],
+        'Tijdvakken zijn een hulpmiddel van historici om het verleden te ordenen. Mensen in 1500 leefden niet in een “nieuwe tijd”. De grens is een keuze, omdat veel veranderingen rond die tijd samenkomen.'],
+      ['De industrialisatie kwam in Nederland later op gang dan in Engeland. Wat is een goede verklaring?',
+        'Nederland had weinig steenkool en ijzer, en de economie draaide al goed op handel en scheepvaart.',
+        ['Nederlanders wilden geen machines.', 'Nederland deed niet mee aan internationale handel.', 'Er waren in Nederland geen rivieren.'],
+        'Engeland had steenkool en ijzer dichtbij. Nederland leefde lang van handel en landbouw, en de industriële doorbraak kwam pas na 1850. De Nederlandse economie deed wel mee aan de handel, en rivieren waren er juist veel.'],
+      ['Een historicus zegt: “De boekdrukkunst veroorzaakte de Reformatie.” Welke <b>nuance</b> is terecht?',
+        'De drukpers hielp bij de verspreiding van de ideeën, maar ontevredenheid over de kerk en politieke belangen speelden ook een rol.',
+        ['De drukpers had er niets mee te maken.', 'De Reformatie begon pas na de uitvinding van het papier.', 'De Reformatie werd alleen door vorsten veroorzaakt.'],
+        'Historische veranderingen hebben meestal meer dan één oorzaak. De drukpers (sinds 1450) zorgde ervoor dat Luthers teksten snel bij veel mensen kwamen, maar het ging ook om kritiek op de kerk en om de macht van vorsten.'],
+      ['In de twintigste eeuw leefden Nederlanders in zuilen. Wat <b>veranderde</b> met de ontzuiling na ongeveer 1960?',
+        'Mensen leefden minder in hun eigen katholieke, protestantse of socialistische wereld, en het ledental van kerken en zuilorganisaties nam af.',
+        ['De zuilen werden verplicht door de overheid.', 'Nederland werd in één klap een land met één godsdienst.', 'Alle politieke partijen werden afgeschaft.'],
+        'De verzuiling was kenmerkend voor Nederland van ongeveer 1900 tot 1960. Door welvaart, televisie en verandering van de normen werden mensen zelfstandiger, en de zuilen verloren hun greep.'],
+      ['In 1863 werd de slavernij wettelijk afgeschaft in Suriname. Wat laat zien dat het leven voor de tot slaaf gemaakten niet meteen helemaal veranderde?',
+        'De eigenaren kregen een vergoeding en de tot slaaf gemaakten moesten nog tien jaar onder staatstoezicht werken.',
+        ['De tot slaaf gemaakten kregen een vergoeding van de staat.', 'Alle plantages werden gesloten.', 'Suriname werd direct een zelfstandig land.'],
+        'Een verandering op papier is nog geen verandering in de praktijk. Tot 1873 bleef er “staatstoezicht”. De eigenaren kregen een vergoeding (300 gulden per persoon), de tot slaaf gemaakten niet.'],
+      ['Welke <b>verandering</b> in het eten van Europeanen hangt samen met de ontdekking van Amerika?',
+        'Aardappel, maïs en tomaat werden in Europa bekend, en later onmisbaar.',
+        ['Brood werd voor het eerst gebakken.', 'Rijst werd het hoofdvoedsel in Nederland.', 'Er werd voor het eerst vlees gegeten.'],
+        'De Columbiaanse uitwisseling bracht gewassen uit Amerika naar Europa: aardappel, maïs, tomaat en tabak. Vooral de aardappel werd in de achttiende eeuw een belangrijk voedsel voor gewone mensen.']
+    ]
+  };
+
+  /* slepen: v = wat veranderde, g = wat hetzelfde bleef (vier elk, er komen er drie van elk), t = het titelzinnetje, u = de uitleg */
+  var VERSLEEP = {
+    bb: [
+      { t: 'Een boer in 1300 en een boer in 1900',
+        v: ['Kunstmest en nieuwe machines helpen bij de oogst', 'Melk en groente gaan met de trein naar de stad', 'De boer is geen horige meer die voor een heer moet werken', 'De boer kan vaak lezen en schrijven'],
+        g: ['De boer verbouwt graan of houdt dieren', 'Het weer bepaalt of de oogst slaagt', 'Het hele gezin werkt mee op de boerderij', 'Het werk volgt de seizoenen: zaaien in het voorjaar, oogsten in de zomer'],
+        u: 'De boer deed in 1900 nog steeds hetzelfde werk, maar met meer techniek en met meer vrijheid.' },
+      { t: 'Een kind van twaalf in 1850 en nu',
+        v: ['Het kind gaat verplicht naar school', 'Het kind werkt niet meer in een fabriek', 'Het kind heeft een telefoon of tablet', 'Het kind wordt tegen veel ziektes ingeënt'],
+        g: ['Het kind speelt graag met vriendjes', 'Het kind groeit op in een gezin', 'Het kind helpt soms thuis mee', 'Het kind wil bij de groep horen'],
+        u: 'De leerplicht kwam rond 1900 en vaccinaties in de twintigste eeuw. Spelen en een gezin hebben bleven gelijk.' },
+      { t: 'Reizen van Amsterdam naar Haarlem in 1800 en in 1900',
+        v: ['Je gaat met de trein in plaats van met de trekschuit', 'De reis duurt veel korter', 'Er is een dienstregeling met vaste tijden', 'Er rijden fietsen op de weg'],
+        g: ['Je moet betalen voor de reis', 'Mensen reizen voor werk of familiebezoek', 'Er is een weg, vaart of spoor nodig', 'Slecht weer kan de reis lastiger maken'],
+        u: 'De eerste trein tussen Amsterdam en Haarlem reed in 1839. Waarom mensen reisden en dat het betaald moest worden bleef hetzelfde.' },
+      { t: 'Het huis van een gezin in 1300 en in 1950',
+        v: ['Elektrisch licht in plaats van kaarsen', 'Een kraan en toilet in huis', 'Een radio in de kamer', 'Een gasfornuis in plaats van een open vuur'],
+        g: ['Mensen koken en eten samen', 'Er is een plek om te slapen', 'Het huis beschermt tegen regen en kou', 'Het gezin is de kern van het huishouden'],
+        u: 'Wat je in huis gebruikt veranderde, wat een huis doet bleef gelijk.' }
+    ],
+    kgt: [
+      { t: 'Het bestuur van Nederland in 1650 en in 1850',
+        v: ['Er is een koning als staatshoofd', 'Een grondwet legt de macht vast', 'De Tweede Kamer wordt rechtstreeks gekozen door mannen met genoeg inkomen', 'De ministers zijn verantwoordelijk voor hun beleid'],
+        g: ['Het bestuur zetelt in Den Haag', 'Er is een vergadering van afgevaardigden', 'Handel is belangrijk voor het land', 'Dijken en waterbeheer bepalen het landschap'],
+        u: 'In 1650 was Nederland een Republiek, in 1850 een constitutionele monarchie (grondwet van 1848). De plaats van het bestuur en de rol van water en handel bleven.' },
+      { t: 'Een stad in 1300 en in 1900',
+        v: ['Straten met gaslicht of elektrisch licht', 'Trams en treinen', 'Riolering en waterleiding', 'Fabrieken met schoorstenen'],
+        g: ['Er is een markt waar gehandeld wordt', 'De stad heeft een eigen bestuur', 'Er staan kerken met hoge torens', 'Rijk en arm leven naast elkaar'],
+        u: 'De techniek veranderde sterk door de industriële revolutie. Een markt, een stadsbestuur, kerken en het verschil tussen rijk en arm bleven.' },
+      { t: 'De kerk in de Nederlanden in 1400 en in 1700',
+        v: ['Er is een nieuwe publieke kerk, de Gereformeerde', 'Katholieke diensten zijn in het openbaar verboden', 'De beelden zijn uit de kerken verdwenen', 'De kerken zijn kaal en sober'],
+        g: ['Het christelijk geloof is belangrijk', 'De kerk is een centrale plek in de stad', 'Mensen vinden houvast in het geloof bij ziekte en dood', 'Kerkklokken luiden over de stad'],
+        u: 'De Reformatie en de Opstand veranderden de kerk in de Republiek: katholieke diensten werden verboden. Het geloof zelf bleef belangrijk.' },
+      { t: 'Het nieuws in 1400 en in 1600',
+        v: ['Gedrukte pamfletten en boeken', 'Meer mensen in steden kunnen lezen', 'De eerste kranten verschijnen (rond 1618)', 'Nieuws uit verre landen komt sneller aan'],
+        g: ['Nieuws gaat ook van mond tot mond', 'Een stadsomroeper leest bekendmakingen voor', 'Kerken en markten zijn plekken waar je nieuws hoort', 'Handelaren brengen nieuws mee uit andere steden'],
+        u: 'De boekdrukkunst (rond 1450) veranderde de verspreiding van nieuws. Maar mondeling nieuws op de markt en in de kerk bleef belangrijk.' }
+    ],
+    hv: [
+      { t: 'De Republiek in 1650 en het Koninkrijk Holland in 1810',
+        v: ['Het bestuur wordt vanuit één centrum geleid', 'Mensen zijn voor de wet gelijk', 'De overheid registreert geboorte en huwelijk (burgerlijke stand)', 'De gewesten verliezen hun eigen bestuur'],
+        g: ['De economie draait om handel en scheepvaart', 'De rijke regentenfamilies blijven machtig', 'Dijken en waterbeheer blijven noodzakelijk', 'Mensen praten in het dagelijks leven Nederlands'],
+        u: 'Onder Franse invloed werd Nederland een eenheidsstaat. De economische en sociale top bleef grotendeels dezelfde.' },
+      { t: 'Slavernij in Suriname in 1750 en in 1880',
+        v: ['Slavernij is niet meer wettelijk toegestaan', 'Contractarbeiders uit Brits-Indië en Java komen naar Suriname', 'Eigenaren hebben een vergoeding gekregen', 'Mensen mogen zelf kiezen voor wie ze werken'],
+        g: ['De plantages bestaan nog', 'Suriname wordt vanuit Nederland bestuurd', 'Veel oud-tot slaaf gemaakten blijven arm', 'Suiker en koffie zijn belangrijk voor de economie'],
+        u: 'Na 1863 en de overgangsperiode tot 1873 kwamen contractarbeiders. De machtsverhoudingen bleven grotendeels gelijk.' },
+      { t: 'De macht van de kerk in 1100 en in 1500',
+        v: ['Steden en vorsten worden belangrijker naast de kerk', 'Het lezen van boeken breidt zich uit door de drukpers', 'Er komt kritiek op aflaten en de rijkdom van de kerk', 'Universiteiten zijn niet alleen meer kloosterscholen'],
+        g: ['De kerk bezit veel land', 'Het christelijk geloof bepaalt het dagelijks leven', 'De paus is het hoofd van de kerk in West-Europa', 'Kerkelijke feestdagen bepalen de kalender'],
+        u: 'De kerk bleef in 1500 machtig, maar kritiek en nieuwe machten (steden, vorsten, drukpers) veranderden de verhoudingen.' },
+      { t: 'De Eerste en de Tweede Wereldoorlog in de bevolking van Europa',
+        v: ['Burgers worden doelwit van bombardementen op grote schaal', 'Er is een systematische vervolging van Joden', 'Een groot deel van West-Europa wordt door één land bezet', 'Vliegtuigen en tanks bepalen de strijd'],
+        g: ['Er komen miljoenen doden', 'Er is honger en gebrek aan eten', 'Er worden mensen op de vlucht gejaagd', 'Duitsland speelt een hoofdrol'],
+        u: 'De Tweede Wereldoorlog was in veel opzichten een voortzetting van de Eerste, maar de aanpak richting burgers en de Holocaust vormden een breuk.' }
+    ]
+  };
+
+  /* ---------- anachronisme: wat klopt er niet in deze tijd ---------- */
+  /* p = plaats en jaar, tv = het tijdvak, ok = vijf zinnen die kloppen, lastig = [zin die klopt maar modern lijkt, waarom hij klopt],
+     a = drie zinnen die niet kloppen, van heel duidelijk (bb) via lastiger (kgt) naar subtiel (hv): [zin, waarom niet] */
+  var SCENES = [
+    { p: 'een dorp in Drenthe, ongeveer 3000 v.Chr.', tv: 'tijdvak 1, de tijd van jagers en boeren (tot 3000 v.Chr.)',
+      ok: ['Een boerin maalt graan tussen twee stenen.', 'Een jongen drijft koeien en schapen naar de weide.', 'Een man maakt een pot van klei.', 'Het gereedschap is van steen, hout en bot.', 'De huizen zijn van hout, takken en leem.'],
+      lastig: ['Een groep mensen sleept enorme keien naar een plek voor een grafmonument.', 'Dat klopt: de hunebedden werden juist in deze tijd gebouwd, zonder metalen gereedschap, met veel mensen, hout en touw.'],
+      a: [['Een boer rijdt met zijn tractor over de akker.', 'De tractor is pas rond 1900 uitgevonden. Rond 3000 v.Chr. werkte men met spierkracht en eenvoudig gereedschap.'],
+          ['Een man hakt een boom om met een ijzeren bijl.', 'IJzer werd in onze streken pas rond 800 v.Chr. gebruikt. In 3000 v.Chr. maakte men bijlen van vuursteen.'],
+          ['Een boer betaalt zijn buurman met een muntstuk.', 'Munten bestaan pas sinds ongeveer 600 v.Chr., en dan nog in het huidige Turkije. In Drenthe ruilde men spullen.']] },
+    { p: 'een Romeins fort aan de Rijn, ongeveer 50 na Chr.', tv: 'tijdvak 2, de tijd van Grieken en Romeinen (3000 v.Chr. tot 500)',
+      ok: ['Soldaten oefenen met zwaard en schild op het exercitieterrein.', 'De bevelhebber geeft zijn bevelen in het Latijn.', 'De soldaten krijgen betaald met munten met het hoofd van de keizer.', 'Soldaten werken aan een weg langs de Rijn.', 'De muur van het fort is van hout en aarde.'],
+      lastig: ['In het fort staat een badhuis met een verwarmde vloer.', 'Dat klopt: de Romeinen kenden vloerverwarming en badhuizen, ook in forten aan de rand van het rijk.'],
+      a: [['Een soldaat belt met zijn mobiele telefoon naar huis.', 'De mobiele telefoon bestaat pas sinds de jaren tachtig van de twintigste eeuw.'],
+          ['De soldaten praten met elkaar in het Frans.', 'Frans is pas in de vroege middeleeuwen ontstaan, uit het Latijn. De soldaten spraken Latijn.'],
+          ['Het christendom is de officiële godsdienst van het hele rijk.', 'Dat werd het pas in 380, onder keizer Theodosius. In het jaar 50 waren er maar weinig christenen en vereerde men de Romeinse goden.']] },
+    { p: 'Athene, ongeveer 440 v.Chr.', tv: 'tijdvak 2, de tijd van Grieken en Romeinen (3000 v.Chr. tot 500)',
+      ok: ['Mannen met burgerrecht stemmen in de volksvergadering.', 'Op de Akropolis wordt gebouwd aan tempels.', 'In de haven liggen oorlogsschepen met drie rijen roeiers.', 'Slaven doen veel werk in huis, op het land en in de zilvermijnen.', 'Vrouwen mogen niet meestemmen.'],
+      lastig: ['Duizenden Atheners kijken naar een toneelstuk in een openluchttheater.', 'Dat klopt: in Athene werden tragedies en komedies voor een groot publiek opgevoerd, door schrijvers als Sophocles.'],
+      a: [['Een Atheense burger stuurt een e-mail naar zijn broer.', 'E-mail bestaat pas sinds 1971.'],
+          ['Een jongen leest een gedrukt boek.', 'Boeken werden in Europa pas vanaf ongeveer 1450 gedrukt. In Athene schreef men op rollen van papyrus.'],
+          ['De burgers schrijven hun stem op een papieren stembiljet.', 'Papier kwam pas in de twaalfde eeuw naar Europa, uit China. Atheners stemden met steentjes, metalen schijfjes of scherven.']] },
+    { p: 'een klooster, ongeveer het jaar 600', tv: 'tijdvak 3, de tijd van monniken en ridders (500 tot 1000)',
+      ok: ['Een monnik schrijft een boek over met een ganzenveer op perkament.', 'De monniken bidden samen op vaste tijden van de dag.', 'Een monnik werkt in de moestuin.', 'De bijbel en andere belangrijke teksten zijn in het Latijn.', 'Bij het schrijven brandt een kaars of olielamp.'],
+      lastig: ['De monniken leven volgens een geschreven regel van de heilige Benedictus.', 'Dat klopt: Benedictus schreef rond 530 zijn regel, die in veel kloosters werd gevolgd.'],
+      a: [['Een monnik zoekt iets op zijn smartphone.', 'Smartphones bestaan pas sinds ongeveer 2007.'],
+          ['Een monnik leest zijn boek met een bril.', 'De bril werd rond 1300 in Italië uitgevonden. In 600 kon je slecht zicht niet corrigeren.'],
+          ['Een mechanische klok slaat de uren voor het gebed.', 'Mechanische klokken kwamen pas rond 1300 in Europa. In 600 hield men de tijd bij met zonnewijzers, waterklokken en kaarsen.']] },
+    { p: 'een kasteel in Frankrijk, ongeveer het jaar 1100', tv: 'tijdvak 4, de tijd van steden en staten (1000 tot 1500)',
+      ok: ['Een ridder in maliënkolder rijdt op een strijdros.', 'Een heer geeft een stuk land in leen aan een ridder.', 'Horige boeren leveren een deel van hun oogst af aan de heer.', 'Het kasteel heeft een gracht en een ophaalbrug.', 'De priester leest de mis in het Latijn.'],
+      lastig: ['Een ridder vertelt dat hij net terug is van de kruistocht naar Jeruzalem.', 'Dat klopt: de eerste kruistocht begon in 1096 en Jeruzalem werd in 1099 veroverd.'],
+      a: [['De ridder rijdt in een auto het kasteel binnen.', 'De auto werd pas rond 1885 uitgevonden.'],
+          ['De ridder schiet met een buskruitgeweer op de vijand.', 'Buskruit kwam pas rond 1300 in Europa en geweren kwamen daarna. In 1100 vocht een ridder met zwaard, lans en boog.'],
+          ['De boeren verbouwen aardappelen op het land van de heer.', 'De aardappel komt uit Zuid-Amerika en kwam pas na 1500 naar Europa.']] },
+    { p: 'een stad in Holland, ongeveer 1350', tv: 'tijdvak 4, de tijd van steden en staten (1000 tot 1500)',
+      ok: ['De stad heeft een muur, poorten en een eigen bestuur.', 'Een bakker bakt brood voor de markt.', 'Ambachtslieden zijn lid van een gilde.', 'Mensen zijn bang voor de pest.', 'Op de markt worden laken, bier en vis verhandeld.'],
+      lastig: ['De stad heeft stadsrechten en een eigen rechtbank.', 'Dat klopt: Hollandse steden kregen al in de dertiende eeuw stadsrechten, bijvoorbeeld Dordrecht in 1220.'],
+      a: [['Een kind speelt een spelletje op een tablet.', 'Tablets bestaan pas sinds ongeveer 2010.'],
+          ['Een drukker drukt een bijbel met losse metalen letters.', 'Gutenberg ontwikkelde de boekdrukkunst pas rond 1450.'],
+          ['Een koopman verkoopt tomaten en maïs uit Amerika.', 'Europeanen kwamen pas na 1492, met Columbus, in contact met Amerika. Tomaten en maïs bestonden daarom nog niet in Europa.']] },
+    { p: 'een kerk in de Nederlanden, augustus 1566', tv: 'tijdvak 5, de tijd van ontdekkers en hervormers (1500 tot 1600)',
+      ok: ['Mensen slaan heiligenbeelden kapot en dragen ze naar buiten.', 'Een predikant vertelt buiten de stad over het geloof van Calvijn.', 'Landvoogdes Margaretha van Parma regeert namens koning Filips II.', 'Pamfletten tegen de kerk en de koning gaan van hand tot hand.', 'De Nederlanden horen bij het rijk van de Spaanse koning.'],
+      lastig: ['Een drukker maakt in korte tijd honderden pamfletten.', 'Dat klopt: sinds 1450 kon je met de drukpers snel veel exemplaren maken, en pamfletten speelden in de Opstand een grote rol.'],
+      a: [['Een jongen filmt het kapotslaan van de beelden met zijn telefoon.', 'Een telefoon met camera bestaat pas sinds ongeveer 2000.'],
+          ['Een stoommachine drijft een weefgetouw aan in de buurt.', 'De bruikbare stoommachine kwam pas in de achttiende eeuw.'],
+          ['De Nederlanden zijn al een zelfstandige Republiek.', 'De Nederlanden verklaarden zich pas in 1581 onafhankelijk, in het Plakkaat van Verlatinge. In 1566 regeerde nog de Spaanse koning.']] },
+    { p: 'Amsterdam, ongeveer 1650', tv: 'tijdvak 6, de tijd van regenten en vorsten (1600 tot 1700)',
+      ok: ['Regenten besturen de stad en de Republiek.', 'Schepen van de VOC varen naar Azië.', 'Rembrandt schildert een groepsportret.', 'Aan de grachten bouwen kooplieden grote huizen.', 'De Republiek heeft geen koning.'],
+      lastig: ['Op de beurs worden aandelen van de VOC verhandeld.', 'Dat klopt: de VOC (1602) was het eerste bedrijf met aandelen, en de Amsterdamse beurs verhandelde ze.'],
+      a: [['Een koopman belt een klant in Antwerpen.', 'De telefoon werd pas in 1876 uitgevonden.'],
+          ['Een koopman reist met de trein naar Haarlem.', 'De eerste trein in Nederland reed pas in 1839. In 1650 ging je met de trekschuit.'],
+          ['Een kapitein bepaalt zijn plaats op zee met een scheepschronometer.', 'De scheepschronometer, waarmee je de lengtegraad kon bepalen, werd pas rond 1760 bruikbaar.']] },
+    { p: 'Parijs, juli 1789', tv: 'tijdvak 7, de tijd van pruiken en revoluties (1700 tot 1800)',
+      ok: ['Een menigte bestormt de Bastille.', 'Lodewijk XVI is koning van Frankrijk.', 'De Derde Stand eist meer invloed op het bestuur.', 'De adel en de geestelijkheid hebben voorrechten.', 'Mensen praten over vrijheid en gelijkheid.'],
+      lastig: ['Vertegenwoordigers van het volk vergaderen in Versailles.', 'Dat klopt: in mei 1789 kwamen de Staten-Generaal voor het eerst sinds 1614 bijeen, en daaruit ontstond de Nationale Vergadering.'],
+      a: [['Een journalist twittert over de bestorming.', 'Twitter bestaat pas sinds 2006.'],
+          ['Napoleon is keizer van Frankrijk.', 'Napoleon werd pas in 1804 keizer. In 1789 was hij een jonge officier.'],
+          ['Op het plein staat al een guillotine.', 'De guillotine werd pas in 1792 voor het eerst gebruikt.']] },
+    { p: 'een textielfabriek in Twente, ongeveer 1880', tv: 'tijdvak 8, de tijd van burgers en stoommachines (1800 tot 1900)',
+      ok: ['Een stoommachine drijft de weefgetouwen aan.', 'Arbeiders werken lange dagen voor een laag loon.', 'Kinderen onder de twaalf mogen niet meer in de fabriek werken (het Kinderwetje van 1874).', 'De arbeiders wonen in kleine huisjes vlak bij de fabriek.', 'De fabrikant bepaalt hoe lang er gewerkt wordt.'],
+      lastig: ['De goederen gaan met de trein naar de haven.', 'Dat klopt: de spoorlijn liep sinds 1865 door Twente, dus fabrieken konden per trein vervoeren.'],
+      a: [['Een arbeider vliegt voor zijn vakantie naar Spanje.', 'Vliegvakanties voor gewone mensen kwamen pas na 1950.'],
+          ['De fabriek heeft een lopende band.', 'De lopende band werd pas in 1913 door Henry Ford ingevoerd.'],
+          ['De oude arbeiders krijgen AOW.', 'De AOW kwam in Nederland pas in 1957.']] },
+    { p: 'Nederland, 1943, tijdens de Duitse bezetting', tv: 'tijdvak 9, de tijd van wereldoorlogen (1900 tot 1950)',
+      ok: ['Mensen krijgen eten met distributiebonnen.', 'Joodse Nederlanders moeten een gele ster dragen of zijn al weggevoerd.', 'Mensen duiken onder voor de Duitsers.', 'De koningin zit in Londen.', 'Vliegtuigen van de geallieerden vliegen over.'],
+      lastig: ['Mensen luisteren stiekem naar Radio Oranje uit Londen.', 'Dat klopt: radio’s moesten in 1943 worden ingeleverd, maar veel mensen luisterden toch stiekem naar de BBC en Radio Oranje.'],
+      a: [['Een jongen speelt een spel op zijn spelcomputer.', 'Spelcomputers bestaan pas sinds de jaren zeventig.'],
+          ['Een gezin kijkt thuis naar het nieuws op de televisie.', 'De televisie kwam in Nederland pas in de jaren vijftig in de huiskamer.'],
+          ['Nederland is al lid van de NAVO.', 'De NAVO werd pas in 1949 opgericht.']] },
+    { p: 'Nederland, ongeveer 1965', tv: 'tijdvak 10, de tijd van televisie en computer (1950 tot nu)',
+      ok: ['Een gezin kijkt naar zwart-witte televisie.', 'Provo’s protesteren in Amsterdam.', 'Gastarbeiders uit Spanje en Italië werken in de fabrieken.', 'Op de radio klinkt muziek van de Beatles.', 'Bij de Deltawerken wordt gewerkt aan de afsluiting van de zeearmen.'],
+      lastig: ['Een bedrijf heeft een computer die een hele kamer vult.', 'Dat klopt: computers uit de jaren zestig waren enorme machines die hele ruimtes vulden.'],
+      a: [['Een puber kijkt naar filmpjes op YouTube.', 'YouTube bestaat pas sinds 2005.'],
+          ['Een student zoekt iets op in Google op zijn laptop.', 'Google bestaat sinds 1998, en laptops werden pas in de jaren tachtig gewoon.'],
+          ['Een Nederlandse minister praat in Brussel namens de Europese Unie.', 'De Europese Unie bestaat sinds 1993. In 1965 was er alleen de EEG, de Europese Economische Gemeenschap (sinds 1958).']] }
+  ];
+
+  /* ---------- standplaats: wie zegt dit, en waarom ---------- */
+  /* g = onderwerp (voor de afleiders), w = wie, j = wanneer, z = wat hij zegt, why = waarom hij dat zegt,
+     f = twee foute redenen, nu = hoe iemand van nu het anders ziet, u = de uitleg */
+  var STA = {
+    bb: [
+      { g: 'slavernij', w: 'een planter in Suriname', j: '1800', z: 'Slavernij is nodig, want zonder tot slaaf gemaakte arbeiders gaat mijn plantage failliet.',
+        why: 'Hij verdiende aan hun werk en wilde zijn inkomen houden.',
+        f: ['Hij was zelf als tot slaaf gemaakte geboren en wist niet beter.', 'Hij had gelezen dat slavernij al lang verboden was.'],
+        nu: 'Nu vinden we slavernij een misdaad: geen mens mag het eigendom van een ander zijn.',
+        u: 'Zijn plaats in de samenleving bepaalde wat hij zei: hij verdiende eraan. Dat maakt het niet goed. Ook in zijn tijd waren er mensen die slavernij afwezen, zoals de tot slaaf gemaakten zelf en de abolitionisten.' },
+      { g: 'kinderarbeid', w: 'een fabrikant', j: '1870', z: 'Kinderen van tien jaar kunnen best in mijn fabriek werken, dat is goed voor hun opvoeding.',
+        why: 'Kinderen waren goedkope arbeidskrachten, dus hij verdiende eraan.',
+        f: ['Hij wilde dat alle kinderen naar school gingen.', 'Hij had zelf nooit een fabriek gezien.'],
+        nu: 'Nu is kinderarbeid verboden: kinderen horen naar school en niet de hele dag in een fabriek.',
+        u: 'Kinderen kosten minder loon dan volwassenen. In 1874 verbood het Kinderwetje werk in fabrieken voor kinderen onder de twaalf. Dat een fabrikant dit zegt, zegt dus veel over zijn belang.' },
+      { g: 'arbeid', w: 'een textielarbeider', j: '1885', z: 'Een werkdag van twaalf uur is veel te lang. Wij moeten meer loon en kortere dagen krijgen.',
+        why: 'Hij werkte zelf lange dagen voor weinig geld en wilde dat dat veranderde.',
+        f: ['Hij was eigenaar van de fabriek en wilde meer winst.', 'Hij werkte maar twee uur per dag.'],
+        nu: 'Nu is een werkweek van ongeveer veertig uur gewoon, met vakantie, en vakbonden komen op voor werknemers.',
+        u: 'Wat je zegt hangt vaak samen met wat jij zelf meemaakt. De arbeider voelde de lange dagen aan den lijve. De fabrikant betaalde ze.' },
+      { g: 'veldheer', w: 'Julius Caesar, een Romeinse veldheer', j: 'ongeveer 50 v.Chr.', z: 'De Galliërs zijn woest en gevaarlijk. Daarom moest ik ze wel onderwerpen.',
+        why: 'Hij schreef over zijn eigen oorlog en wilde dat de Romeinen hem een held vonden.',
+        f: ['Hij was zelf een Galliër en vertelde hoe zijn volk leefde.', 'Hij schreef pas honderd jaar later op wat hij gehoord had.'],
+        nu: 'Nu lezen we zo’n verhaal als één kant: de Galliërs schreven zelf niets op, dus we horen vooral de Romeinse versie.',
+        u: 'Caesar schreef zijn boek over de oorlog in Gallië zelf, en hij wilde bewonderd worden in Rome. Zo’n bron laat zien hoe de schrijver het wilde laten overkomen.' },
+      { g: 'voc', w: 'een bestuurder van de VOC', j: '1621', z: 'Wij moeten de nootmuskaat van de Banda-eilanden in handen krijgen. Dat levert de VOC veel winst op.',
+        why: 'De VOC wilde de handel in specerijen helemaal beheersen om winst te maken.',
+        f: ['Hij wilde de mensen op de Banda-eilanden helpen met hun landbouw.', 'Hij kwam zelf van de Banda-eilanden.'],
+        nu: 'Nu zien we dat de verovering van de Banda-eilanden in 1621 gepaard ging met veel geweld: veel bewoners werden gedood of weggevoerd. Dat vinden veel mensen onaanvaardbaar.',
+        u: 'Jan Pieterszoon Coen veroverde de eilanden in 1621. Voor de VOC telde de winst. Wat een bestuurder zegt hangt dus samen met zijn bedrijf.' },
+      { g: 'leenstelsel', w: 'een horige boer', j: '1100', z: 'Ik werk voor de heer en geef een deel van mijn oogst af, maar hij beschermt ons dorp.',
+        why: 'Zo hoorde het in zijn tijd: de heer gaf bescherming, de boer gaf werk en oogst.',
+        f: ['Hij wilde de heer afzetten en zelf regeren.', 'Hij betaalde belasting aan de koning in geld.'],
+        nu: 'Nu zijn we vrij: niemand is nog het eigendom van een heer, en we betalen belasting aan de overheid.',
+        u: 'Een horige had weinig keuze. De hele samenleving was zo ingericht: bescherming in ruil voor werk. Wat hij zegt, past bij zijn plek in dat stelsel.' },
+      { g: 'indie', w: 'een jonge Indonesiër', j: '1945', z: 'Wij willen niet meer onder Nederland vallen. Indonesië moet vrij zijn.',
+        why: 'Hij leefde in een kolonie waar de Nederlanders de macht hadden, en wilde zelf over zijn land beslissen.',
+        f: ['Hij werkte voor de Nederlandse regering en wilde dat alles bleef zoals het was.', 'Hij had nog nooit van Nederland gehoord.'],
+        nu: 'Nu vinden veel mensen dat een volk recht heeft op zelfbestuur. In 1949 erkende Nederland de onafhankelijkheid.',
+        u: 'Indonesië riep zichzelf op 17 augustus 1945 onafhankelijk uit. Voor veel Indonesiërs betekende een kolonie dat anderen over hen beslisten.' },
+      { g: 'kiesrecht', w: 'een vrouw die kiesrecht eist, zoals Aletta Jacobs', j: '1900', z: 'Vrouwen moeten mogen stemmen. De wetten gelden ook voor ons.',
+        why: 'Vrouwen mochten niet stemmen en wilden invloed op de wetten die ook hen troffen.',
+        f: ['Ze was minister en wilde haar eigen macht houden.', 'Ze vond dat mannen niet meer mochten stemmen.'],
+        nu: 'Nu stemmen vrouwen en mannen allebei. Gelijk kiesrecht is vanzelfsprekend, vrouwen mogen sinds 1919 stemmen.',
+        u: 'Wie niet mag stemmen, heeft er belang bij dat dat verandert. Veel mannen vonden toen dat vrouwen thuishoorden, maar niet iedereen dacht zo.' },
+      { g: 'reformatie', w: 'een katholieke priester', j: '1560', z: 'Protestanten zijn ketters. De kerk moet één blijven.',
+        why: 'Hij had een plaats in de katholieke kerk en wilde dat de kerk de macht en de eenheid behield.',
+        f: ['Hij was zelf protestant geworden en schold op zijn oude kerk.', 'Hij had de bijbel nooit gelezen.'],
+        nu: 'Nu hebben we vrijheid van godsdienst: je mag zelf kiezen wat je gelooft.',
+        u: 'De priester sprak vanuit zijn geloof en zijn plaats in de kerk. In de zestiende eeuw dachten veel mensen dat één geloof nodig was voor een rustig land. Niet iedereen dacht dat.' },
+      { g: 'beeldenstorm', w: 'een calvinist', j: '1566', z: 'Beelden in de kerk zijn afgoderij. Ze moeten weg.',
+        why: 'Calvinisten geloofden dat je God niet via beelden mocht eren, dus voor hem was dit een kwestie van geloof.',
+        f: ['Hij wilde de kerk beroven om rijk te worden.', 'Hij haatte elke vorm van kunst.'],
+        nu: 'Nu vinden veel mensen dat je kunst in kerken niet mag vernielen, ook niet als je het geloof anders opvat: het is ons erfgoed.',
+        u: 'Voor een calvinist was het weghalen van beelden een geloofsdaad. Wat hij zegt komt uit zijn geloof, en dat verklaart zijn zin.' },
+      { g: 'germanen', w: 'een Romeinse burger', j: 'ongeveer 50 na Chr.', z: 'De Germanen zijn barbaren. Ze kennen onze wetten en onze steden niet.',
+        why: 'Voor hem was zijn eigen manier van leven de maatstaf, en hij keek vanuit Rome naar anderen.',
+        f: ['Hij was zelf een Germaan en schold op zijn buren.', 'Hij kende de Germanen goed en had er lang gewoond.'],
+        nu: 'Nu weten we dat de Germanen een eigen cultuur hadden. “Barbaren” was een Romeins woord voor mensen die niet bij Rome hoorden.',
+        u: 'Het woord barbaar komt uit het Grieks en betekende zoiets als vreemdeling die onze taal niet spreekt. Hij beoordeelt de Germanen met zijn eigen maatstaf.' },
+      { g: 'vrouwenrol', w: 'een vader', j: '1950', z: 'Mijn dochter hoeft niet te studeren. Ze gaat toch trouwen.',
+        why: 'In zijn tijd werd van meisjes verwacht dat ze huisvrouw werden, en hij dacht vanuit dat beeld.',
+        f: ['Hij wilde dat zijn dochter zo snel mogelijk in een fabriek ging werken.', 'Hij wist niet dat meisjes naar school mochten.'],
+        nu: 'Nu studeren meisjes net zo vaak als jongens, en veel vrouwen werken ook als ze kinderen hebben.',
+        u: 'Dat beeld was in zijn omgeving gewoon, maar ook toen wilden niet alle meisjes of ouders het zo. Wat iemand zegt hangt samen met wat hij als normaal ziet.' }
+    ],
+    kgt: [
+      { g: 'pest', w: 'een bange stedeling', j: '1349', z: 'De pest is gekomen doordat de joden de bronnen hebben vergiftigd.',
+        why: 'Mensen begrepen de ziekte niet en zochten bang naar iemand die de schuld kon krijgen.',
+        f: ['Hij was arts en wist precies hoe de ziekte werkte.', 'Hij had bewijs gezien dat de bronnen vergiftigd waren.'],
+        nu: 'Nu weten we dat de pest door een bacterie kwam, verspreid door vlooien. Niemand had er schuld aan, en de vervolging van joden was onrecht.',
+        u: 'In de pestjaren (rond 1349) werden op veel plaatsen joden vermoord als zondebok. Zo’n uitspraak zegt meer over de angst en onwetendheid van de spreker dan over de feiten.' },
+      { g: 'amerika', w: 'Christoffel Columbus', j: '1493', z: 'Ik heb eilanden bereikt die dicht bij Indië liggen. Ze zijn rijk aan goud, en de bewoners kunnen christen worden.',
+        why: 'Hij had van het Spaanse koningspaar geld gekregen en moest laten zien dat de reis de moeite waard was.',
+        f: ['Hij schreef alleen op wat hij zeker wist, zonder iets mooier voor te stellen.', 'Hij schreef zijn brief voor de bewoners van de eilanden.'],
+        nu: 'Nu zien we dat de komst van Europeanen voor de bewoners van Amerika rampzalig was: ziekte, geweld en slavernij. “Ontdekken” is ook een Europese manier van kijken.',
+        u: 'Columbus schreef voor zijn geldschieters, de Spaanse koning en koningin. Hij benadrukte daarom wat zij graag wilden horen: goud en bekering.' },
+      { g: 'opstand', w: 'Willem van Oranje', j: '1580', z: 'Koning Filips onderdrukt ons. Wij mogen ons tegen hem verzetten.',
+        why: 'Hij leidde de Opstand en moest anderen overtuigen dat verzet tegen de koning terecht was.',
+        f: ['Hij schreef om de Spaanse koning te vleien.', 'Hij was het eens met alles wat Filips II deed.'],
+        nu: 'Nu zien historici zo’n tekst als propaganda: Willem beschrijft Filips zoals hem uitkomt. Voor Filips waren de opstandelingen rebellen.',
+        u: 'In zijn Apologie (1580) verdedigde Willem zijn verzet. Zo’n tekst is bedoeld om te overtuigen, niet om neutraal te informeren.' },
+      { g: 'republiek', w: 'een Amsterdamse regent', j: '1650', z: 'Een stadhouder is niet nodig. De steden en gewesten kunnen de Republiek zelf besturen.',
+        why: 'Regenten wilden zelf de macht houden en waren bang dat een stadhouder te machtig zou worden.',
+        f: ['Hij wilde een koning voor de Republiek.', 'Hij was een boer die geen belasting wilde betalen.'],
+        nu: 'Nu kennen we democratie: de macht ligt bij gekozen volksvertegenwoordigers, en niet bij een kleine groep rijke regenten.',
+        u: 'Regenten waren rijke bestuurders. Als de stadhouder (de Oranjes) sterk werd, verloren zij macht. Hun standpunt hing dus samen met hun belang.' },
+      { g: 'kinderarbeid2', w: 'Samuel van Houten, Kamerlid', j: '1874', z: 'Werk door kinderen in fabrieken moet worden verboden. Ze horen te leren en te spelen.',
+        why: 'Hij vond dat de overheid kinderen moest beschermen, ook al ging dat tegen de wens van veel fabrikanten in.',
+        f: ['Hij was fabrikant en wilde meer arbeiders.', 'Hij vond dat kinderen meer moesten werken.'],
+        nu: 'Nu zijn er leerplicht en een verbod op kinderarbeid. Dat is zo vanzelfsprekend dat we het bijna niet meer opmerken.',
+        u: 'Het Kinderwetje van 1874 was een eerste stap. Veel fabrikanten, en zelfs arbeidersgezinnen die het loon nodig hadden, waren tegen.' },
+      { g: 'indie2', w: 'een Nederlandse legerofficier', j: '1947', z: 'Wij herstellen in Indië de rust en de orde. Dit is een politionele actie.',
+        why: 'Hij diende de Nederlandse regering, die de actie zo noemde om het niet als oorlog tegen een ander land te laten klinken.',
+        f: ['Hij was Indonesiër en vond de onafhankelijkheid belangrijk.', 'Hij wilde dat de Verenigde Naties de oorlog begonnen.'],
+        nu: 'Nu noemen veel historici het een koloniale oorlog. In 2022 zei de Nederlandse regering dat er structureel extreem geweld was gebruikt.',
+        u: 'De woorden die iemand kiest, laten zien welke kant hij kiest. “Politionele actie” klinkt als orde herstellen, “koloniale oorlog” zegt iets anders.' },
+      { g: 'cultuurstelsel', w: 'een Nederlandse bestuurder', j: '1840', z: 'Javaanse boeren moeten een deel van hun land gebruiken voor koffie en suiker voor de Nederlandse staat. Nederland heeft het geld nodig.',
+        why: 'Nederland zat financieel in de problemen, en de opbrengsten uit Java hielden de staatskas op peil.',
+        f: ['Hij wilde dat Javaanse boeren vrij konden kiezen wat ze verbouwden.', 'Hij werkte voor de Javaanse vorsten.'],
+        nu: 'Nu zien we het cultuurstelsel als uitbuiting: in sommige streken kregen boeren honger terwijl Nederland rijker werd.',
+        u: 'Het cultuurstelsel (1830 tot 1870) bracht Nederland veel geld op. Een bestuurder die dat zegt, kijkt naar de belangen van Nederland, niet van de Javanen.' },
+      { g: 'oorlog', w: 'de Britse premier Winston Churchill', j: '1940', z: 'Wij zullen ons nooit overgeven. Wij vechten door tot het einde.',
+        why: 'Hij was premier en wilde zijn volk moed geven en de oorlog voortzetten.',
+        f: ['Hij wilde vrede sluiten met Hitler.', 'Hij was soldaat en schreef een persoonlijk dagboek.'],
+        nu: 'Nu weten we hoe de oorlog afliep, en klinkt het als de woorden van een held. In 1940 wist niemand of Groot-Brittannië zou winnen.',
+        u: 'Een toespraak is bedoeld om te overtuigen. Hij is dus een bron over wat de premier wilde, niet over wat iedereen dacht.' },
+      { g: 'marron', w: 'een gevluchte tot slaaf gemaakte in Suriname', j: '1750', z: 'Wij leven vrij in het binnenland en laten ons nooit meer vangen.',
+        why: 'Hij was ontsnapt van een plantage en wilde zijn vrijheid verdedigen.',
+        f: ['Hij wilde terug naar de plantage.', 'Hij werkte voor de gouverneur.'],
+        nu: 'Nu worden marrons gezien als vrijheidsstrijders. Hun nazaten (de Marrons) vormen eigen gemeenschappen in Suriname.',
+        u: 'Voor de planters waren zij weggelopen eigendom, voor henzelf waren ze vrije mensen. Dezelfde gebeurtenis, twee standpunten.' },
+      { g: 'televisie', w: 'een dominee', j: '1955', z: 'De televisie bederft de jeugd. Mensen kijken naar dingen die niet goed voor ze zijn.',
+        why: 'Hij zag de televisie als bedreiging voor de invloed van de kerk en het gezin.',
+        f: ['Hij had zelf een fabriek met televisies.', 'Hij had de programma’s zelf geproduceerd.'],
+        nu: 'Nu is de televisie gewoon, en gaan de zorgen over schermen vooral over smartphones en sociale media.',
+        u: 'Nieuwe uitvindingen krijgen vaak kritiek van mensen die er iets bij verliezen. Dat zegt veel over de spreker, ook als je niet vindt dat hij gelijk heeft.' },
+      { g: 'neutraal', w: 'een Nederlandse minister', j: '1939', z: 'Nederland blijft neutraal. Ons land zal niet bij de oorlog betrokken raken.',
+        why: 'Nederland was in de Eerste Wereldoorlog ook neutraal gebleven, en hoopte dat dat weer zou werken.',
+        f: ['Hij wist dat Duitsland binnen een jaar zou aanvallen.', 'Hij wilde de oorlog verklaren.'],
+        nu: 'Nu weten we dat Duitsland op 10 mei 1940 aanviel. Achteraf lijkt neutraliteit naïef, maar toen leek het een logische keuze.',
+        u: 'Achteraf is het makkelijk oordelen. Een historicus probeert eerst te begrijpen wat iemand toen kon weten.' },
+      { g: 'gastarbeid', w: 'een gastarbeider uit Turkije', j: '1970', z: 'Ik werk een paar jaar in Nederland, spaar geld en ga dan terug naar huis.',
+        why: 'Hij kwam voor werk en dacht tijdelijk te blijven, en dat dachten ook de bedrijven en de regering.',
+        f: ['Hij wilde zich meteen voorgoed vestigen.', 'Hij kwam als toerist.'],
+        nu: 'Nu weten we dat veel gastarbeiders bleven en hun gezin lieten overkomen. Zo werd Nederland een land met meer culturen.',
+        u: 'Het plan om terug te gaan was oprecht. Pas later bleek dat veel mensen bleven. Dat verklaart waarom hij het zo zegt.' }
+    ],
+    hv: [
+      { g: 'tacitus', w: 'de Romeinse schrijver Tacitus', j: '98 na Chr.', z: 'De Germanen zijn eenvoudig, eerlijk en trouw. Zij zijn vrij van de bedorvenheid van Rome.',
+        why: 'Hij gebruikte de Germanen als spiegel om de Romeinse zeden te bekritiseren, en schreef vooral voor Romeinse lezers.',
+        f: ['Hij had jarenlang bij de Germanen gewoond.', 'Hij werd door Germaanse stamhoofden betaald.'],
+        nu: 'Nu lezen historici Germania kritisch: het is een bron met een bedoeling, geen neutrale beschrijving. Archeologie vult het aan.',
+        u: 'Tacitus was waarschijnlijk zelf nooit in Germanië. Zijn beeld van “edele wilden” is deels een boodschap aan zijn Romeinse lezers.' },
+      { g: 'lascasas', w: 'de priester Bartolomé de las Casas', j: '1542', z: 'De Spanjaarden behandelen de inwoners van Amerika wreed en laten ze sterven door dwangarbeid.',
+        why: 'Hij had als kolonist en priester gezien wat er gebeurde en wilde de koning overtuigen het te stoppen. Daarbij kan hij hebben overdreven.',
+        f: ['Hij schreef in opdracht van de conquistadores om hun daden te verdedigen.', 'Hij had Amerika nooit bezocht.'],
+        nu: 'Nu zien historici zijn getuigenis als een belangrijke bron, maar met nuances: hij overdreef soms de aantallen, en anderen gebruikten zijn boek later in anti-Spaanse propaganda (de zwarte legende).',
+        u: 'Een getuige die wil overtuigen is waardevol en tegelijk partijdig. De waarde van zo’n bron hangt af van wat je ermee wilt weten.' },
+      { g: 'marx', w: 'Karl Marx en Friedrich Engels', j: '1848', z: 'De geschiedenis van alle samenlevingen is tot nu toe de geschiedenis van klassenstrijd.',
+        why: 'Ze wilden de arbeiders overtuigen en de industriële samenleving verklaren vanuit de tegenstelling tussen arbeiders en kapitalisten. Het Communistisch Manifest was ook een politiek pamflet.',
+        f: ['Ze waren regeringsleiders die de arbeiders wilden kalmeren.', 'Ze beschreven zonder politieke bedoeling alleen de feiten.'],
+        nu: 'Nu zien historici het als een invloedrijk maar eenzijdig perspectief: klassenstrijd verklaart veel, maar niet alles.',
+        u: 'Een verklaring en een politiek doel kunnen samengaan. Zo’n tekst zegt iets over de industriële tijd van Marx en iets over wat hij wilde bereiken.' },
+      { g: 'munich', w: 'Neville Chamberlain, Brits premier', j: '1938', z: 'Het akkoord met Hitler brengt vrede voor onze tijd.',
+        why: 'Hij wilde een nieuwe oorlog voorkomen en hoopte dat toegeven (appeasement) de vrede kon bewaren. Ook het Britse volk wilde geen oorlog.',
+        f: ['Hij wist dat Hitler het akkoord zou breken en loog bewust.', 'Hij wilde dat Duitsland heel Tsjecho-Slowakije kreeg.'],
+        nu: 'Nu weten we dat Hitler in 1939 de rest van Tsjecho-Slowakije bezette en Polen aanviel. Achteraf lijkt Chamberlain naïef, maar dat is hindsight: hij wist niet hoe het zou aflopen.',
+        u: 'Beoordeel iemand niet alleen met wat je achteraf weet. Wat kon hij toen weten, en welke keuzes had hij?' },
+      { g: 'multatuli', w: 'Multatuli (Eduard Douwes Dekker)', j: '1860', z: 'Het systeem in Indië is oneerlijk: de Javaanse boer wordt uitgebuit door zijn eigen hoofden en door Nederland.',
+        why: 'Hij was een ambtenaar die na een conflict was opgestapt en een aanklacht schreef (Max Havelaar), deels uit eigen ervaring. Hij wilde Nederlanders wakker schudden.',
+        f: ['Hij was een Javaanse hoofdman die zijn eigen macht verdedigde.', 'Hij schreef in opdracht van de koning om Java beter te besturen.'],
+        nu: 'Nu wordt Max Havelaar gezien als een belangrijk kritisch boek, maar ook als een boek vanuit Nederlands perspectief: de Javanen zelf komen er weinig in aan het woord.',
+        u: 'Multatuli sprak voor de Javanen zonder dat ze zelf aan het woord kwamen. Zijn boek is dus kritiek, maar ook een tekst van een Nederlander voor Nederlanders.' },
+      { g: 'degroot', w: 'Hugo de Groot', j: '1609', z: 'De zee is van iedereen. Geen land mag de vrije vaart verbieden.',
+        why: 'Hij schreef in opdracht van de VOC, die wilde varen en handelen in gebieden die de Portugezen als hun eigen gebied zagen.',
+        f: ['Hij schreef voor de Portugezen, die de vrije zee wilden.', 'Hij was een admiraal die de zee wilde veroveren.'],
+        nu: 'Nu is vrije vaart een regel in het zeerecht, al hebben landen wel eigen kustwateren. De Republiek vond vrije zee vooral handig toen zij zelf niet de baas was.',
+        u: 'Het principe klinkt neutraal, maar paste bij het belang van de opdrachtgever. Later verdedigde de VOC zelf juist een monopolie op de specerijenhandel.' },
+      { g: 'luther', w: 'Maarten Luther', j: '1517', z: 'Een aflaat helpt niet. Alleen door geloof word je gered.',
+        why: 'Hij was monnik en hoogleraar die twijfelde aan de leer van de kerk, en hij wilde de kerk hervormen. Ook zijn kritiek op de geldzucht van de kerk telde mee.',
+        f: ['Hij was de paus en wilde de aflaathandel verdedigen.', 'Hij wilde het geloof helemaal afschaffen.'],
+        nu: 'Nu zien historici dat de Reformatie niet alleen over geloof ging: de drukpers en vorsten die zich van Rome wilden losmaken speelden ook mee.',
+        u: 'Luther sprak vanuit zijn geloofsovertuiging, maar zijn boodschap kreeg kracht door wat er om hem heen gebeurde.' },
+      { g: 'vs', w: 'een Amerikaanse kolonist', j: '1776', z: 'Wij betalen belasting aan Engeland, maar hebben geen stem in het parlement. Dat is onrecht.',
+        why: 'De kolonisten wilden politieke invloed en waren het zat dat het Britse parlement hen belastte zonder dat ze er een stem in hadden.',
+        f: ['Ze waren boos omdat Engeland hun godsdienst verbood.', 'Ze waren allemaal tegen elke belasting.'],
+        nu: 'Nu zien we dat de revolutie voor veel mensen geen vrijheid bracht: slavernij bleef bestaan, en vrouwen en inheemse Amerikanen mochten niet meedoen.',
+        u: 'Vrijheid voor wie? De kolonisten spraken over vrijheid, maar bedoelden vooral de vrijheid van witte mannen met bezit.' },
+      { g: 'ethisch', w: 'een Nederlandse onderwijzer in Indië', j: '1920', z: 'Wij hebben de plicht om de Indonesiërs te ontwikkelen. Dat is de Ethische Politiek.',
+        why: 'Hij zag Nederland als beschermer en dacht dat Nederland een morele plicht had, waarmee ook de koloniale macht werd gerechtvaardigd.',
+        f: ['Hij was een Indonesische nationalist die onafhankelijkheid wilde.', 'Hij verzette zich tegen alle koloniale bemoeienis.'],
+        nu: 'Nu zien veel mensen dit als betutteling: de Nederlandse beschaving was het voorbeeld, en de Indonesiërs kregen weinig zeggenschap.',
+        u: 'Goed bedoelde plannen kunnen toch machtsverhoudingen in stand houden. De Ethische Politiek (1901) bracht onderwijs en zorg, maar de macht bleef bij Nederland.' },
+      { g: 'revolutie', w: 'een Franse edelman', j: '1789', z: 'De oude rangen en voorrechten horen bij Frankrijk. De standen moeten blijven zoals ze zijn.',
+        why: 'Als lid van de adel had hij voorrechten, zoals vrijstelling van belasting, die hij zou verliezen.',
+        f: ['Hij was een boer die zijn vorst trouw bleef.', 'Hij wilde dat de koning meer macht kreeg dan de adel.'],
+        nu: 'Nu vinden we gelijkheid voor de wet vanzelfsprekend: voorrechten door geboorte horen niet bij een democratie.',
+        u: 'Wie iets te verliezen heeft bij verandering, verdedigt vaak het oude. Dat maakt zijn uitspraak begrijpelijk, ook als je hem niet deelt.' },
+      { g: 'marcopolo', w: 'de reiziger Marco Polo', j: 'ongeveer 1300', z: 'Aan het hof van de Khan is meer rijkdom dan je je kunt voorstellen.',
+        why: 'Hij vertelde over verre landen aan Europeanen, die graag spectaculaire verhalen hoorden. Zijn verhaal is opgeschreven door een ander (Rustichello) en kan zijn verfraaid.',
+        f: ['Hij schreef alles zelf op en had er geen enkel belang bij.', 'Hij schreef voor Chinese lezers.'],
+        nu: 'Nu twijfelen sommige historici of alles klopt. Zijn verhaal is een bron met een bedoeling en moet worden vergeleken met Chinese bronnen.',
+        u: 'Een reisverhaal is zowel een getuigenis als een product voor een publiek. Wie het leest, vraagt zich af voor wie het is bedoeld.' },
+      { g: 'herodotos', w: 'de Griekse schrijver Herodotos', j: 'ongeveer 430 v.Chr.', z: 'De Grieken versloegen de Perzen omdat zij vrij waren en de Perzen slaven van hun koning.',
+        why: 'Hij was Griek en schreef voor Grieken. De tegenstelling vrij tegenover onvrij paste bij het zelfbeeld van de Grieken.',
+        f: ['Hij was een Perzische hofschrijver.', 'Hij had de oorlog zelf als soldaat meegemaakt.'],
+        nu: 'Nu lezen we Herodotos als belangrijke bron over de Perzische oorlogen, maar ook als bron voor de Griekse blik: de Perzen vertelden het anders, maar hun verhaal is nauwelijks bewaard.',
+        u: 'We kennen deze oorlog vooral uit Griekse bronnen. Wie het verhaal van de winnaars leest, leest ook hun versie.' }
+    ]
+  };
+
+  /* een gesprek met vier standpunten: wie zegt wat? Elke persoon zegt één zin; er komen er drie van de vier. */
+  var STASLEEP = {
+    bb: [
+      { t: 'Kinderarbeid in 1870', p: [
+        ['De fabrikant', 'Als kinderen niet meer bij mij mogen werken, worden mijn kosten hoger.', 'verdient aan goedkope arbeid'],
+        ['De moeder van een arbeidersgezin', 'Zonder het loon van onze zoon hebben wij te weinig geld voor brood.', 'heeft het loon nodig'],
+        ['Een Kamerlid (Van Houten)', 'Kinderen horen niet de hele dag in een fabriek: dat is slecht voor hun gezondheid.', 'wil de overheid kinderen laten beschermen'],
+        ['De onderwijzer', 'Kinderen die moe van het werk komen, leren niets in mijn klas.', 'ziet het in zijn lokaal'] ] },
+      { t: 'Slavernij rond 1800', p: [
+        ['De planter', 'Zonder de mensen die voor mij werken, is mijn plantage niets waard.', 'verdient aan hun werk'],
+        ['De tot slaaf gemaakte', 'Ik ben geen bezit. Ik wil vrij zijn en zelf over mijn leven beslissen.', 'is zelf het slachtoffer'],
+        ['Een predikant die tegen slavernij is', 'Geen mens mag eigendom van een ander zijn. Het past niet bij ons geloof.', 'spreekt vanuit zijn geloof'],
+        ['De belegger in Amsterdam', 'Mijn geld zit in de plantages. Ik wil mijn rente blijven krijgen.', 'wil winst op zijn geld'] ] },
+      { t: 'De Beeldenstorm in 1566', p: [
+        ['De calvinist', 'Beelden zijn afgoderij. Ze horen niet in de kerk.', 'spreekt vanuit zijn geloof'],
+        ['De katholieke priester', 'De beelden zijn heilig. Wie ze vernielt, pleegt heiligschennis.', 'wil zijn kerk beschermen'],
+        ['Koning Filips II', 'Ketters moeten gestraft worden. Ik ben de beschermer van het katholieke geloof.', 'is de koning en katholiek'],
+        ['De handelaar in de stad', 'Er komt onrust. Ik hoop dat mijn handel niet in gevaar komt.', 'let op zijn zaken'] ] }
+    ],
+    kgt: [
+      { t: 'Werken in een fabriek in Twente, rond 1880', p: [
+        ['De fabrikant', 'Een lange werkdag houdt mijn fabriek concurrerend.', 'wil lage kosten'],
+        ['De arbeider', 'Na twaalf uur werken heb ik geen kracht meer voor mijn gezin.', 'voelt de lange dagen zelf'],
+        ['De vakbondsleider', 'Alleen als arbeiders samen staan, krijgen ze betere lonen.', 'organiseert de arbeiders'],
+        ['Een liberaal Kamerlid', 'De overheid moet zich zo min mogelijk met de economie bemoeien.', 'gelooft in vrije markt'] ] },
+      { t: 'Indonesië rond 1947', p: [
+        ['De Nederlandse legerofficier', 'Wij brengen rust en orde terug.', 'dient de Nederlandse regering'],
+        ['De Indonesische vrijheidsstrijder', 'Wij hebben onze onafhankelijkheid al uitgeroepen. Nederland heeft hier niets meer te zoeken.', 'strijdt voor eigen land'],
+        ['De Nederlandse dienstplichtige', 'Ik ben hierheen gestuurd en weet niet precies waarom we hier vechten.', 'moet het bevel uitvoeren'],
+        ['De Nederlandse planter in Indië', 'Mijn plantage is mijn leven. Als Nederland vertrekt, verlies ik alles.', 'heeft zijn bezit te verliezen'] ] },
+      { t: 'De komst van Columbus in 1492', p: [
+        ['Columbus', 'Ik heb een weg naar Indië gevonden: dit brengt goud en roem.', 'wil roem en rijkdom'],
+        ['Koningin Isabella', 'Nieuwe landen betekenen macht en rijkdom voor Spanje, en we kunnen het geloof verbreiden.', 'regeert Spanje'],
+        ['Een Taíno-dorpshoofd', 'Deze vreemdelingen nemen ons goud en ons land.', 'ziet zijn gebied bedreigd'],
+        ['Een zeeman op het schip', 'Ik hoop op rijkdom, maar de reis is gevaarlijk.', 'riskeert zijn leven'] ] }
+    ],
+    hv: [
+      { t: 'De aflaat in 1517', p: [
+        ['De aflaathandelaar', 'Met een aflaat koop je jezelf of een overledene vrij van straf in het vagevuur.', 'verdient aan de aflaat'],
+        ['Maarten Luther', 'Alleen geloof en de bijbel tellen. Een betaalde aflaat helpt niet.', 'wil de kerk hervormen'],
+        ['Paus Leo X', 'De kerk heeft geld nodig voor de bouw van de Sint-Pieter. De aflaat levert dat op.', 'moet de kerk betalen'],
+        ['Een Duitse vorst', 'Het geld uit mijn gebied gaat naar Rome. Ik zie liever dat het hier blijft.', 'wil zijn eigen macht'] ] },
+      { t: 'Frankrijk in 1789', p: [
+        ['De edelman', 'Onze voorrechten zijn eeuwenoud. Ze horen bij onze rang.', 'wil zijn privileges houden'],
+        ['De boer van de Derde Stand', 'Wij betalen de meeste belasting en hebben het minst te zeggen.', 'draagt de last'],
+        ['De advocaat uit Parijs', 'De Derde Stand is het volk, en moet de wet kunnen maken in de Nationale Vergadering.', 'wil politieke macht'],
+        ['Koning Lodewijk XVI', 'De staat is bijna failliet. Ik hoop dat de Staten-Generaal een oplossing vinden zonder dat ik mijn gezag kwijtraak.', 'wil zijn gezag houden'] ] },
+      { t: 'De Cubacrisis in 1962', p: [
+        ['De Amerikaanse president Kennedy', 'Sovjetraketten op Cuba bedreigen onze veiligheid. Wij blokkeren het eiland.', 'beschermt de VS'],
+        ['De Sovjetleider Chroesjtsjov', 'Wij plaatsen raketten om Cuba te beschermen, net zoals de VS raketten in Turkije heeft.', 'wil een evenwicht'],
+        ['De Cubaanse leider Castro', 'Wij hebben het recht ons land met bondgenoten te verdedigen tegen een Amerikaanse invasie.', 'vreest een aanval'],
+        ['Een Nederlandse burger', 'Ik ben bang dat er een atoomoorlog komt.', 'is bang voor de gevolgen'] ] }
+    ]
+  };
+
+  /* ---------- vergelijken: overeenkomst en verschil ---------- */
+  /* a en b = de twee situaties (ta en tb = een korte aanduiding), k = wat voor allebei geldt,
+     x = wat alleen voor a geldt, y = wat alleen voor b geldt, u = een zin erbij */
+  var VGL = {
+    bb: [
+      { a: 'Athene', ta: 'stadstaat, ongeveer 450 v.Chr.', b: 'Sparta', tb: 'stadstaat, ongeveer 450 v.Chr.',
+        k: ['Het was een stadstaat in Griekenland.', 'De inwoners spraken Grieks.', 'Vrouwen mochten niet stemmen.'],
+        x: ['Burgers konden zelf stemmen in een volksvergadering.', 'Het was een grote handelsstad met een belangrijke haven.', 'Er werden toneelstukken opgevoerd en filosofen gaven les.'],
+        y: ['Jongens werden vanaf hun zevende jaar militair getraind.', 'Er waren twee koningen tegelijk.', 'Het land werd bewerkt door helots, een groep onvrije landarbeiders.'],
+        u: 'Athene en Sparta streden in de Peloponnesische oorlog (431 tot 404 v.Chr.) tegen elkaar, maar vochten eerder samen tegen de Perzen.' },
+      { a: 'de Romeinen', ta: 'in het jaar 50', b: 'de Germanen', tb: 'in het jaar 50',
+        k: ['Ze geloofden in meer goden.', 'Landbouw was belangrijk voor hun voedsel.', 'Ze voerden oorlog om land, buit of macht.'],
+        x: ['Ze bouwden steden met stenen gebouwen en bestrate wegen.', 'Ze hadden een groot, betaald leger.', 'Ze werden bestuurd door een keizer in Rome.'],
+        y: ['Ze leefden in stammen onder een stamhoofd.', 'Ze woonden in boerderijen van hout en leem, zonder grote steden.', 'Hun krijgers vochten in groepen onder een aanvoerder, niet in een vast leger met soldij.'],
+        u: 'De Romeinen schreven over de Germanen, maar de Germanen lieten zelf weinig geschreven bronnen na. Wat we weten komt deels uit opgravingen.' },
+      { a: 'de jagers-verzamelaars', ta: 'voor ongeveer 5000 v.Chr.', b: 'de boeren', tb: 'na ongeveer 5000 v.Chr.',
+        k: ['Ze maakten werktuigen van steen.', 'Ze leefden in groepen van verwante mensen.', 'Ze gebruikten vuur.'],
+        x: ['Ze trokken rond en volgden de dieren en de seizoenen.', 'Ze leefden in tijdelijke hutten of tenten.', 'Ze leefden vooral van wat ze in de natuur vonden.'],
+        y: ['Ze verbouwden graan en hielden vee.', 'Ze bleven op één plek wonen in dorpen.', 'Ze bouwden hunebedden en grote grafmonumenten.'],
+        u: 'De overgang naar landbouw gebeurde in Nederland rond 5000 v.Chr., ver na de ijstijd. Hunebedden (ongeveer 3000 v.Chr.) zijn van latere boeren.' },
+      { a: 'een kasteel', ta: 'middeleeuwen', b: 'een klooster', tb: 'middeleeuwen',
+        k: ['Het bezat land waarop boeren werkten.', 'Het was een machtig onderdeel van de samenleving.', 'Mensen vonden er bescherming en onderdak.'],
+        x: ['Er woonde een heer met zijn ridders.', 'Het was gebouwd om zich te kunnen verdedigen.', 'De bewoners vochten voor hun heer.'],
+        y: ['Monniken baden op vaste tijden volgens een regel.', 'Er werden boeken met de hand overgeschreven.', 'De bewoners beloofden dat ze niet zouden trouwen.'],
+        u: 'Heren en abten hadden allebei land en gezag. Het ene gebouw was voor de verdediging, het andere voor het gebed.' },
+      { a: 'een stad', ta: 'Holland, ongeveer 1400', b: 'een dorp', tb: 'Holland, ongeveer 1400',
+        k: ['Mensen waren bang voor de pest.', 'De kerk was een belangrijk gebouw.', 'Het leven werd bepaald door de oogst en het weer.'],
+        x: ['Er waren stadsrechten, een stadsmuur en een stadsbestuur.', 'Veel mensen leefden van handel en ambacht.', 'Ambachtslieden waren lid van een gilde.'],
+        y: ['De meeste mensen werkten als boer op het land.', 'Een heer bepaalde wat er gebeurde, zonder eigen stadsbestuur.', 'Er was geen stadsmuur om de hele plaats.'],
+        u: 'Steden kregen vanaf de dertiende eeuw stadsrechten. Dorpen bleven vooral agrarisch en afhankelijk van een landheer.' },
+      { a: 'een Romeinse soldaat', ta: 'ongeveer het jaar 50', b: 'een ridder', tb: 'ongeveer het jaar 1100',
+        k: ['Hij droeg een zwaard.', 'Hij droeg een helm en bescherming voor zijn lichaam.', 'Hij vocht voor een machthebber.'],
+        x: ['Hij kreeg soldij van de staat.', 'Hij vocht meestal te voet in een legioen.', 'Hij hoorde bij een leger met vaste regels en training.'],
+        y: ['Hij vocht te paard.', 'Hij kreeg land in leen van een heer.', 'Hij woonde vaak in of bij een kasteel.'],
+        u: 'De ridder kreeg zijn inkomen uit het land dat hij in leen kreeg, de soldaat uit zijn soldij.' },
+      { a: 'een kind in 1850', ta: 'in Nederland', b: 'een kind van nu', tb: 'in Nederland',
+        k: ['Het speelt met anderen.', 'Het woont meestal bij zijn ouders.', 'Het helpt soms thuis mee.'],
+        x: ['Het werkt vaak mee op het land of in een fabriek.', 'Het gaat meestal niet naar school of maar kort.', 'Het kan niet tegen veel ziektes ingeënt worden.'],
+        y: ['Het gaat verplicht naar school.', 'Het heeft vaak een telefoon of tablet.', 'Het wordt ingeënt tegen veel ziektes.'],
+        u: 'De leerplicht kwam rond 1900, kinderarbeid in fabrieken werd in 1874 aan banden gelegd, en vaccinaties werden in de twintigste eeuw gewoon.' }
+    ],
+    kgt: [
+      { a: 'de Republiek', ta: 'ongeveer 1650', b: 'het Koninkrijk', tb: 'ongeveer 1850',
+        k: ['Handel was belangrijk voor de economie.', 'Nederland had kolonies buiten Europa.', 'Water en dijken moesten gezamenlijk worden beheerd.'],
+        x: ['Er was geen koning, de macht lag bij de gewesten en de regenten.', 'Een stadhouder voerde het leger aan.', 'De VOC en de WIC handelden namens de Republiek in verre landen.'],
+        y: ['Er was een koning als staatshoofd.', 'Een grondwet (van 1848) legde de macht vast.', 'Er kwamen treinen en de eerste fabrieken.'],
+        u: 'De Republiek eindigde in 1795, de Fransen en Napoleon volgden, en in 1815 werd Nederland een koninkrijk.' },
+      { a: 'de Eerste Wereldoorlog', ta: '1914 tot 1918', b: 'de Tweede Wereldoorlog', tb: '1939 tot 1945',
+        k: ['Duitsland vocht tegen onder meer Groot-Brittannië en Frankrijk.', 'Er vielen miljoenen doden.', 'Er werden nieuwe wapens gebruikt, zoals vliegtuigen.'],
+        x: ['Nederland bleef neutraal en werd niet bezet.', 'Soldaten zaten jarenlang in loopgraven aan het westelijk front.', 'De oorlog begon na een moord in Sarajevo.'],
+        y: ['Nederland werd door Duitsland bezet.', 'Joden werden systematisch vervolgd en vermoord, de Holocaust.', 'Steden werden op grote schaal gebombardeerd, zoals Rotterdam in 1940.'],
+        u: 'Veel van de verschillen komen door nieuwe technieken, nieuwe ideeën (de nazi-ideologie) en wat er na de eerste oorlog was gebeurd.' },
+      { a: 'Athene', ta: 'ongeveer 450 v.Chr.', b: 'Rome', tb: 'ongeveer 100 v.Chr.',
+        k: ['Er werd veel werk door slaven gedaan.', 'Vrouwen hadden geen politieke rechten.', 'Er stonden grote tempels voor de goden.'],
+        x: ['Burgers stemden zelf in een volksvergadering, een directe democratie.', 'Het was een stadstaat van beperkte omvang.', 'Veel bestuurders werden door loting gekozen.'],
+        y: ['Er was een senaat en twee consuls.', 'Het breidde zich uit tot een groot rijk rond de Middellandse Zee.', 'Er was een bestraat netwerk van wegen en aquaducten.'],
+        u: 'Beide hebben de latere Europese politiek beïnvloed: het woord democratie komt uit Athene, de republiek met senaat uit Rome.' },
+      { a: 'de VOC', ta: 'opgericht in 1602', b: 'de WIC', tb: 'opgericht in 1621',
+        k: ['Het was een handelsbedrijf met toestemming van de Staten-Generaal.', 'Het had eigen schepen en soldaten.', 'Het werd bestuurd door bewindhebbers van verschillende kamers.'],
+        x: ['Het handelde vooral in Azië, met Batavia als hoofdplaats.', 'Het handelde vooral in specerijen, thee, textiel en porselein.', 'Het bestond sinds 1602.'],
+        y: ['Het handelde vooral in het Atlantische gebied, zoals Suriname en West-Afrika.', 'Het speelde een grote rol in de slavenhandel over de Atlantische Oceaan.', 'Het bestond sinds 1621.'],
+        u: 'Beide bedrijven hadden een octrooi (monopolie) van de Staten-Generaal in hun werkgebied.' },
+      { a: 'Luther', ta: 'Duitsland, 1517', b: 'Calvijn', tb: 'Genève, 1540 en later',
+        k: ['Hij vond de bijbel belangrijker dan de paus.', 'Hij was tegen de verkoop van aflaten.', 'Hij wilde de kerk hervormen.'],
+        x: ['Hij leefde en werkte vooral in Duitsland, in Wittenberg.', 'Hij vertaalde de bijbel in het Duits.', 'In zijn kerken mochten beelden en versieringen blijven.'],
+        y: ['Hij werkte vooral in Genève.', 'Hij liet de kerk besturen door een kerkenraad met gekozen ouderlingen.', 'Zijn volgers haalden de beelden uit de kerken, zoals in de Beeldenstorm.'],
+        u: 'De Nederlandse protestanten volgden vooral Calvijn. De Lutherse kerk bleef kleiner in de Nederlanden.' },
+      { a: 'de Franse Revolutie', ta: 'vanaf 1789', b: 'de Bataafse Revolutie', tb: 'vanaf 1795',
+        k: ['Het ging om vrijheid en gelijkheid.', 'Voorrechten van de adel verdwenen of verminderden.', 'Er kwam een nieuwe grondwet of staatsregeling.'],
+        x: ['De koning werd in 1793 geëxecuteerd.', 'De revolutie begon met de bestorming van de Bastille.', 'Er was een Schrikbewind met de guillotine.'],
+        y: ['Franse legers hielpen mee, en de stadhouder vluchtte naar Engeland.', 'Nederland werd de Bataafse Republiek.', 'De macht werd bijna zonder geweld overgenomen, met Franse steun.'],
+        u: 'De Bataafse Revolutie was een kopie van de Franse ideeën, maar ze verliep met veel minder geweld.' }
+    ],
+    hv: [
+      { a: 'het Westen', ta: 'in de Koude Oorlog (1947 tot 1991)', b: 'het Oostblok', tb: 'in de Koude Oorlog (1947 tot 1991)',
+        k: ['Beide partijen hadden kernwapens.', 'Ze streden om invloed in andere werelddelen, zoals Korea en Vietnam.', 'Ze kwamen niet rechtstreeks in een grote oorlog tegen elkaar.'],
+        x: ['Er was een markteconomie en er waren meerdere politieke partijen.', 'De bondgenoten zaten in de NAVO (1949).', 'Het Marshallplan hielp bij de wederopbouw.'],
+        y: ['Eén partij, de communistische, regeerde.', 'De bondgenoten zaten in het Warschaupact (1955).', 'De overheid stuurde de economie met plannen (planeconomie).'],
+        u: 'De Koude Oorlog was een oorlog zonder directe botsing tussen de grootmachten: ze streden via bondgenoten en wapenwedloop.' },
+      { a: 'Indonesië', ta: 'onafhankelijk in 1945 en 1949', b: 'Suriname', tb: 'onafhankelijk in 1975',
+        k: ['Het was een kolonie van Nederland.', 'Nederland benutte het gebied economisch, met plantages en handel.', 'Na de onafhankelijkheid kwamen veel mensen naar Nederland.'],
+        x: ['De onafhankelijkheid kwam na een gewapende strijd (1945 tot 1949).', 'Het bestond uit duizenden eilanden en veel verschillende volken.', 'Nederland voerde er oorlogen, zoals de Atjeh-oorlog.'],
+        y: ['De onafhankelijkheid kwam zonder oorlog, in 1975.', 'Tot 1863 werkten er tot slaaf gemaakten uit Afrika op plantages.', 'De bevolking stamt grotendeels af van tot slaaf gemaakte Afrikanen en van contractarbeiders uit Brits-Indië en Java.'],
+        u: 'De dekolonisatie verliep heel verschillend: in Indonesië na een oorlog, in Suriname afgesproken, maar later volgde in Suriname nog een staatsgreep (1980).' },
+      { a: 'het Romeinse Rijk', ta: 'rond 100 na Chr.', b: 'het rijk van Karel de Grote', tb: 'rond 800',
+        k: ['Een keizer stond aan het hoofd.', 'Het rijk viel uiteindelijk uit elkaar.', 'Het Latijn werd voor bestuur en kerk gebruikt.'],
+        x: ['Er was een geldeconomie met veel munten en grote steden.', 'Het had een betaald beroepsleger.', 'De hoofdstad Rome was een miljoenenstad.'],
+        y: ['De macht berustte op het leenstelsel: graven kregen land voor hun trouw.', 'De belangrijkste residentie was Aken.', 'De keizer werd in het jaar 800 door de paus gekroond.'],
+        u: 'Karel de Grote wilde een nieuw Romeins Rijk herstellen, maar zijn rijk steunde op landbezit en trouw, niet op steden en geld.' },
+      { a: 'Engeland', ta: 'industrialisatie vanaf ongeveer 1760', b: 'Nederland', tb: 'industrialisatie vanaf ongeveer 1850',
+        k: ['Er kwamen fabrieken met stoommachines.', 'Arbeiders werkten lange dagen voor een laag loon.', 'Er kwamen vakbonden en later wetten voor arbeidersbescherming.'],
+        x: ['De industrialisatie begon al rond 1760 tot 1780.', 'Steenkool en ijzererts waren er in grote hoeveelheden dichtbij.', 'Het was rond 1830 de “werkplaats van de wereld”.'],
+        y: ['De doorbraak van de industrie kwam pas na 1850 tot 1870.', 'De economie draaide lang op handel, scheepvaart en landbouw.', 'Er was weinig steenkool en ijzer in de buurt.'],
+        u: 'Nederland was in de zeventiende eeuw rijk geworden met handel, waardoor er minder haast was om te industrialiseren.' },
+      { a: 'slavernij in de oudheid', ta: 'Griekenland en Rome', b: 'slavernij in de Atlantische wereld', tb: 'zestiende tot negentiende eeuw',
+        k: ['Tot slaaf gemaakten werden als bezit gezien en konden verkocht worden.', 'Er kwam verzet, zoals vluchten en opstanden.', 'De slavernij was belangrijk voor de economie.'],
+        x: ['Iemand kon slaaf worden door krijgsgevangenschap of schulden, ongeacht huidskleur.', 'Vrijlating kwam geregeld voor, en vrijgelatenen konden in Rome burger worden.', 'Tot slaaf gemaakten werkten in huis, in mijnen en op landgoederen.'],
+        y: ['Mensen werden over de oceaan vervoerd, vooral uit Afrika.', 'De slavernij werd verbonden met huidskleur en racistische ideeën.', 'De slavernij draaide om plantages met suiker, koffie en katoen voor de Europese markt.'],
+        u: 'Slavernij komt in vele samenlevingen voor, maar de Atlantische slavernij was grootschalig, gebaseerd op huidskleur en gericht op de wereldmarkt.' },
+      { a: 'de Nederlandse Opstand', ta: 'vanaf 1568', b: 'de Amerikaanse Revolutie', tb: 'vanaf 1775',
+        k: ['Ze verzetten zich tegen een verre koning.', 'Ze verklaarden zich onafhankelijk.', 'Ze schreven een document om hun verzet te rechtvaardigen.'],
+        x: ['Godsdienstvervolging van protestanten was een belangrijke oorzaak.', 'De koning was Filips II.', 'De strijd duurde tachtig jaar, tot 1648.'],
+        y: ['Belasting zonder vertegenwoordiging in het parlement was een kernprobleem.', 'De koning was George III.', 'De oorlog liep van 1775 tot 1783.'],
+        u: 'In beide gevallen was onafhankelijkheid niet het eerste doel. Pas laat verklaarden de opstandelingen zich los van de vorst (Plakkaat van Verlatinge in 1581, Declaration of Independence in 1776).' }
+    ]
+  };
+
+
+  /* ---------- 1. verandering ---------- */
+  function verandering(niv){
+    if (Math.random() < .3){
+      var si = nr(VERSLEEP[niv].length), x = VERSLEEP[niv][si], vi = ids(x.v, 3), gi = ids(x.g, 3), kaarten = [];
+      vi.forEach(function(i){ kaarten.push({ id: 'v' + i, tekst: S(x.v[i]) }); });
+      gi.forEach(function(i){ kaarten.push({ id: 'g' + i, tekst: S(x.g[i]) }); });
+      return sl({ deel: 'verandering', sleutel: 'vs' + niv + si + '-' + vi.join('') + gi.join(''),
+        vraag: 'Het gaat over: <b>' + S(klein(x.t)) + '</b>. Wat veranderde, en wat bleef <b>hetzelfde</b>?',
+        opdracht: 'Sleep elke zin naar veranderd of naar hetzelfde gebleven.',
+        kaarten: kaarten,
+        vakken: [{ id: 'ver', naam: 'veranderd', uit: 'dit werd anders', hoort: vi.map(function(i){ return 'v' + i; }) }, { id: 'geb', naam: 'hetzelfde gebleven', uit: 'dit bleef gelijk', hoort: gi.map(function(i){ return 'g' + i; }) }],
+        uitleg: S(x.u) + ' Veranderd: ' + vi.map(function(i){ return klein(S(x.v[i])); }).join('; ') + '. Hetzelfde gebleven: ' + gi.map(function(i){ return klein(S(x.g[i])); }).join('; ') + '.',
+        antwoordTekst: 'veranderd: ' + vi.map(function(i){ return x.v[i]; }).join('; ') + '. Gebleven: ' + gi.map(function(i){ return x.g[i]; }).join('; ') });
+    }
+    var i = nr(VER[niv].length), v = VER[niv][i];
+    return mk({ deel: 'verandering', sleutel: 'ver' + niv + i, vraag: v[0], goed: v[1], fout: v[2], uitleg: v[3],
+      opdracht: niv === 'bb' ? 'Denk aan wat er toen was en wat er nu is.' : niv === 'kgt' ? 'Let op: wat verandert er, en wat blijft?' : 'Verandering heeft oorzaken, een tempo en winnaars en verliezers.' });
+  }
+
+  /* ---------- 2. anachronisme ---------- */
+  var T = { bb: 0, kgt: 1, hv: 2 };
+  function lastigUit(sc){ return 'De zin “' + S(sc.lastig[0]) + '” lijkt misschien niet te kloppen, maar dat doet hij wel: ' + S(sc.lastig[1].replace(/^Dat klopt: /, '')); }
+  function anachronisme(niv){
+    var t = T[niv], si = nr(SCENES.length), sc = SCENES[si], a = sc.a[t], r = Math.random();
+    var beeld = '<div class="cit"><p class="wie" style="margin:0">' + S(hoofd(sc.p)) + '</p></div>';
+    if (r < .27){
+      /* sorteren: klopt of klopt niet */
+      var kw = niv === 'bb' ? [0, 1] : [1, 2], goedeZinnen = H(sc.ok).slice(0, 3), metLastig = niv === 'hv' || (niv === 'kgt' && Math.random() < .5);
+      if (metLastig) goedeZinnen = goedeZinnen.slice(0, 2).concat([sc.lastig[0]]);
+      var kaarten = [], klopt = [], mis = [];
+      goedeZinnen.forEach(function(z, i){ kaarten.push({ id: 'k' + i, tekst: S(z) }); klopt.push('k' + i); });
+      kw.forEach(function(k, i){ kaarten.push({ id: 'n' + i, tekst: S(sc.a[k][0]) }); mis.push('n' + i); });
+      return sl({ deel: 'anachronisme', sleutel: 'asl' + niv + si + '-' + goedeZinnen.map(function(z){ return sc.ok.indexOf(z); }).join(''),
+        vraag: 'Een leerling schrijft over <b>' + S(sc.p) + '</b>. Welke zinnen kloppen, en welke niet?',
+        opdracht: 'Kon dit toen al bestaan? Sleep elke zin naar klopt of klopt niet.',
+        kaarten: kaarten,
+        vakken: [{ id: 'ja', naam: 'klopt', uit: 'past bij die tijd', hoort: klopt }, { id: 'nee', naam: 'klopt niet', uit: 'anachronisme', hoort: mis }],
+        uitleg: kw.map(function(k){ return '“' + S(sc.a[k][0]) + '” klopt niet. ' + S(sc.a[k][1]); }).join(' ') + (metLastig ? ' ' + lastigUit(sc) : ' De andere zinnen passen bij die tijd.') + ' Dit is ' + S(sc.tv) + '.',
+        antwoordTekst: 'klopt niet: ' + kw.map(function(k){ return sc.a[k][0]; }).join(' ') });
+    }
+    if (r < .55){
+      /* waarom klopt het niet */
+      var anderen = H(SCENES.filter(function(x, i){ return i !== si; })).slice(0, 2).map(function(x){ return x.a[t][1]; });
+      var algemeen = kies(['Dit bestond al, maar alleen voor mensen met veel geld.', 'Dit bestond al, maar de kerk had het verboden.', 'Dit bestond al, maar niemand durfde het te gebruiken.', 'Dit bestond al, maar niet in dit deel van de wereld.']);
+      return mk({ deel: 'anachronisme', sleutel: 'aw' + niv + si, vraag: 'Waarom klopt deze zin <b>niet</b> bij ' + S(sc.p) + '?',
+        opdracht: 'Wat is de reden? Kies de uitleg die bij deze zin hoort.',
+        beeld: citaat(a[0], hoofd(sc.p)), goed: S(a[1]), fout: anderen.map(S).concat([algemeen]),
+        uitleg: S(a[1]) + ' Dit is ' + S(sc.tv) + '. Het antwoord “' + algemeen + '” klopt niet: het gaat er niet om of iemand het mocht of durfde, maar of het toen al bestond. Dat noem je een anachronisme: iets dat niet bij die tijd hoort.' });
+    }
+    /* welke zin klopt niet */
+    var normaal = H(sc.ok), kiezen = niv === 'hv' ? normaal.slice(0, 2).concat([sc.lastig[0]]) : (niv === 'kgt' && Math.random() < .5 ? normaal.slice(0, 2).concat([sc.lastig[0]]) : normaal.slice(0, 3));
+    var lastigErin = kiezen.indexOf(sc.lastig[0]) >= 0;
+    return mk({ deel: 'anachronisme', sleutel: 'ad' + niv + si, vraag: 'Een leerling beschrijft <b>' + S(sc.p) + '</b>. Welke zin klopt <b>niet</b> bij die tijd?',
+      opdracht: niv === 'bb' ? 'Denk na: kon dit toen al bestaan?' : niv === 'kgt' ? 'Welke uitvinding of gebeurtenis komt pas later?' : 'Let op: wat modern lijkt, kan toch kloppen, en andersom.',
+      goed: S(a[0]), fout: kiezen.map(S),
+      uitleg: S(a[1]) + ' Dit is ' + S(sc.tv) + '. ' + (lastigErin ? lastigUit(sc) : 'De andere zinnen passen wel bij die tijd.') });
+  }
+
+  /* ---------- 3. standplaats ---------- */
+  var GEN = [
+    ['Omdat iedereen in die tijd er hetzelfde over dacht.', 'ook toen verschilden mensen van mening, en wat iemand zegt hangt samen met zijn plaats en zijn belang.'],
+    ['Omdat hij gewoon de neutrale waarheid vertelt.', 'niemand kijkt van buitenaf: wie iets zegt, spreekt vanuit zijn eigen positie.'],
+    ['Omdat mensen vroeger minder slim waren dan wij.', 'mensen waren niet dommer: ze wisten andere dingen en hadden andere belangen en waarden.'],
+    ['Omdat hij het eigenlijk helemaal niet meent.', 'er is geen reden om te denken dat hij liegt. Wat hij zegt past bij zijn positie.']
+  ];
+  function standplaats(niv){
+    var r = Math.random();
+    if (r < .22){
+      var si = nr(STASLEEP[niv].length), x = STASLEEP[niv][si], pi = ids(x.p, 3), kaarten = [], vakken = [];
+      pi.forEach(function(i){ kaarten.push({ id: 'z' + i, tekst: '“' + S(x.p[i][1]) + '”' }); vakken.push({ id: 'p' + i, naam: S(x.p[i][0]), hoort: ['z' + i] }); });
+      return sl({ deel: 'standplaats', sleutel: 'ss' + niv + si + '-' + pi.join(''),
+        vraag: 'Een gesprek over <b>' + S(x.t) + '</b>. Wie zegt wat?',
+        opdracht: 'Denk aan wie iedereen is en wat hij wil of verliest. Sleep elke uitspraak naar de persoon die dit het waarschijnlijkst zegt.',
+        kaarten: kaarten, vakken: vakken,
+        uitleg: pi.map(function(i){ return S(x.p[i][0]) + ' ' + S(x.p[i][2]) + '.'; }).join(' ') + ' Wat iemand zegt hangt samen met zijn positie, zijn belang en zijn tijd. Dat is zijn standplaats.',
+        antwoordTekst: pi.map(function(i){ return x.p[i][0] + ': ' + x.p[i][1]; }).join(' / ') });
+    }
+    var L = STA[niv], i = nr(L.length), x = L[i], wie = hoofd(x.w) + ', ' + x.j;
+    if (r < .58){
+      var gen = kies(GEN);
+      return mk({ deel: 'standplaats', sleutel: 'sw' + niv + i, vraag: 'Waarom zegt deze persoon dit?',
+        opdracht: niv === 'bb' ? 'Denk aan wie hij is, wat hij wil en wanneer hij leeft.' : niv === 'kgt' ? 'Denk aan zijn plaats in de samenleving, zijn belang en zijn tijd.' : 'Wat verklaart zijn standpunt: zijn positie, zijn doel of zijn publiek?',
+        beeld: citaat(x.z, wie), goed: S(x.why), fout: x.f.map(S).concat([gen[0]]),
+        uitleg: S(x.u) + ' Het antwoord “' + gen[0] + '” klopt niet: ' + gen[1] });
+    }
+    if (r < .8){
+      var anderen = H(L.filter(function(y){ return y.g !== x.g; })).slice(0, 3).map(function(y){ return S(y.nu); });
+      return mk({ deel: 'standplaats', sleutel: 'sn' + niv + i, vraag: 'Hoe kijkt iemand van nu hier <b>anders</b> tegenaan?',
+        opdracht: 'Let op: het gaat om dít onderwerp, niet om een ander.',
+        beeld: citaat(x.z, wie), goed: S(x.nu), fout: anderen,
+        uitleg: S(x.nu) + ' Wat hij toen zei, past bij zijn plaats en tijd. Wie nu kijkt, weet meer en heeft andere waarden. De andere antwoorden gaan over andere onderwerpen.' });
+    }
+    var afleiders = H(L.filter(function(y){ return y.g !== x.g; })).slice(0, 3).map(function(y){ return S(hoofd(y.w) + ' (' + y.j + ')'); });
+    return mk({ deel: 'standplaats', sleutel: 'sv' + niv + i, vraag: 'Wie zegt dit waarschijnlijk?',
+      opdracht: 'Denk aan wie dit zou zeggen gezien zijn belang en zijn tijd.',
+      beeld: citaat(x.z, ''), goed: S(hoofd(x.w) + ' (' + x.j + ')'), fout: afleiders,
+      uitleg: 'Dit past bij ' + S(x.w) + ' (' + S(x.j) + '). ' + S(x.why) + ' ' + S(x.u) });
+  }
+
+  /* ---------- 4. vergelijken ---------- */
+  function vergelijken(niv){
+    var P = VGL[niv], i = nr(P.length), p = P[i], r = Math.random();
+    var beeld = '<div class="vgl"><div><b>' + S(hoofd(p.a)) + '</b><small>' + S(p.ta) + '</small></div><span class="vs">naast</span><div><b>' + S(hoofd(p.b)) + '</b><small>' + S(p.tb) + '</small></div></div>';
+    function alleen(zin, wie){ return '“' + S(zin) + '” geldt alleen voor ' + S(wie) + '.'; }
+    if (r < .24){
+      var n = niv === 'bb' ? [2, 1, 2] : niv === 'kgt' ? [2, 2, 2] : [3, 2, 3], xi = ids(p.x, n[0]), ki = ids(p.k, n[1]), yi = ids(p.y, n[2]), kaarten = [];
+      xi.forEach(function(j){ kaarten.push({ id: 'x' + j, tekst: S(p.x[j]) }); });
+      ki.forEach(function(j){ kaarten.push({ id: 'k' + j, tekst: S(p.k[j]) }); });
+      yi.forEach(function(j){ kaarten.push({ id: 'y' + j, tekst: S(p.y[j]) }); });
+      return sl({ deel: 'vergelijken', sleutel: 'vs' + niv + i + '-' + xi.join('') + ki.join('') + yi.join(''),
+        vraag: 'Wat hoort bij <b>' + S(p.a) + '</b>, wat bij <b>' + S(p.b) + '</b> en wat bij allebei?',
+        opdracht: 'Sleep elke zin naar het vak waar hij bij hoort.', beeld: beeld, kaarten: kaarten,
+        vakken: [{ id: 'a', naam: S(hoofd(p.a)), uit: 'alleen hier', hoort: xi.map(function(j){ return 'x' + j; }) }, { id: 'k', naam: 'allebei', uit: 'een overeenkomst', hoort: ki.map(function(j){ return 'k' + j; }) }, { id: 'b', naam: S(hoofd(p.b)), uit: 'alleen hier', hoort: yi.map(function(j){ return 'y' + j; }) }],
+        uitleg: 'Alleen ' + S(p.a) + ': ' + xi.map(function(j){ return S(p.x[j]); }).join(' ') + ' Alleen ' + S(p.b) + ': ' + yi.map(function(j){ return S(p.y[j]); }).join(' ') + ' Allebei: ' + ki.map(function(j){ return S(p.k[j]); }).join(' ') + ' ' + S(p.u),
+        antwoordTekst: 'alleen ' + p.a + ': ' + xi.map(function(j){ return p.x[j]; }).join(' ') + ' / allebei: ' + ki.map(function(j){ return p.k[j]; }).join(' ') + ' / alleen ' + p.b + ': ' + yi.map(function(j){ return p.y[j]; }).join(' ') });
+    }
+    if (r < .5){
+      var goed = kies(p.k), a1 = kies(p.x), b1 = kies(p.y), rest = p.x.concat(p.y).filter(function(z){ return z !== a1 && z !== b1; }), c1 = kies(rest);
+      var eig = p.x.indexOf(a1) >= 0 ? p.a : p.b;
+      return mk({ deel: 'vergelijken', sleutel: 'vk' + niv + i + '-' + p.k.indexOf(goed), vraag: 'Welke zin is een <b>overeenkomst</b> tussen ' + S(p.a) + ' en ' + S(p.b) + '?',
+        opdracht: 'Een overeenkomst geldt voor allebei.', beeld: beeld, goed: S(goed), fout: [a1, b1, c1].map(S),
+        uitleg: 'Dit geldt voor allebei: “' + S(goed) + '” ' + 'Verleidelijk is “' + zp(S(a1)) + '”, maar die zin geldt alleen voor ' + S(p.a) + '. ' + S(p.u) });
+    }
+    var metA = r < .75, goedL = metA ? p.x : p.y, ander = metA ? p.y : p.x, wie = metA ? p.a : p.b, anderNaam = metA ? p.b : p.a;
+    var g = kies(goedL), kk = kies(p.k), o1 = kies(ander), o2 = kies(ander.filter(function(z){ return z !== o1; }));
+    return mk({ deel: 'vergelijken', sleutel: 'vv' + niv + i + (metA ? 'a' : 'b') + '-' + goedL.indexOf(g), vraag: 'Wat geldt voor <b>' + S(wie) + '</b>, maar <b>niet</b> voor ' + S(anderNaam) + '?',
+      opdracht: 'Een verschil geldt voor één van de twee, niet voor allebei.', beeld: beeld, goed: S(g), fout: [kk, o1, o2].map(S),
+      uitleg: 'Alleen ' + S(wie) + ': “' + S(g) + '” Verleidelijk is “' + zp(S(kk)) + '”, maar dat geldt voor allebei, dus dat is een overeenkomst en geen verschil. ' + S(p.u) });
+  }
+
+  var SOORTEN = { verandering: verandering, anachronisme: anachronisme, standplaats: standplaats, vergelijken: vergelijken };
+
+  VAKSPEL.maak({
+    id:'redeneren', naam:'Denk als een historicus', vak:'ges', kleur:'#204ECF',
+    hand:'wat veranderde, wat bleef, wie zegt dit?',
+    lead:'Historici weten niet alleen jaartallen, ze redeneren ook. Wat veranderde er tussen twee momenten, en wat bleef gelijk? Wat klopt er niet in een beschrijving van een tijd? Waarom zegt iemand dit, gezien wie hij is en wanneer hij leefde? En wat is een overeenkomst of een verschil tussen twee situaties? Dat oefen je hier, met de tien tijdvakken als stof.',
+    hoe:[
+      { kop:'Verandering en anachronisme', tekst:'Bij <b>verandering</b> bepaal je wat anders werd en wat hetzelfde bleef. Bij <b>anachronisme</b> zoek je wat niet bij de tijd past: een monnik met een bril in het jaar 600.' },
+      { kop:'Standplaats', tekst:'Iemand zegt iets gezien zijn <b>positie</b>, zijn belang en zijn tijd. Een slavenhouder praat anders over slavernij dan een tot slaaf gemaakte, en iemand van nu weer anders.' },
+      { kop:'Vergelijken', tekst:'Je legt twee situaties naast elkaar, zoals Athene en Sparta, en zoekt wat <b>hetzelfde</b> en wat <b>anders</b> is. Meestal kies je het antwoord, soms sleep je de zinnen naar het goede vak.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'Concrete situaties uit het dagelijks leven, en duidelijke anachronismen zoals een mobiele telefoon bij de Romeinen.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Ook kenmerkende aspecten en gebeurtenissen: de Reformatie, de VOC, de Industriële Revolutie. Anachronismen die je moet dateren.' },
+        { id:'hv', naam:'havo en vwo', uit:'Ook begrippen als keerpunt, hindsight, bronnen met een bedoeling en meerdere oorzaken. Subtiele anachronismen.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' },
+        { id:'verandering', naam:'verandering', uit:'Wat veranderde er tussen twee momenten, en wat bleef hetzelfde?' },
+        { id:'anachronisme', naam:'anachronisme', uit:'Wat klopt er niet in deze beschrijving van een tijd, en waarom?' },
+        { id:'standplaats', naam:'standplaats', uit:'Waarom zegt deze persoon dit, en hoe kijkt iemand van nu er anders tegenaan?' },
+        { id:'vergelijken', naam:'vergelijken', uit:'Twee situaties naast elkaar: wat is een overeenkomst en wat een verschil?' } ] }
+    ],
+    aantal:10,
+    maak:function(keuze, nr){
+      var soort = keuze.soort === 'alles' ? kies(['verandering', 'anachronisme', 'standplaats', 'vergelijken']) : keuze.soort;
+      return SOORTEN[soort](keuze.niveau);
+    },
+    uitleg:{ doel:'Historisch redeneren: verandering en continuïteit, anachronismen herkennen, de standplaats van een bron begrijpen en twee situaties vergelijken.', tijd:'tien opgaven per ronde', bediening:'Kies het antwoord dat klopt (of druk op 1 tot 4). Bij sorteren sleep je de zinnen naar het goede vak; op een telefoon tik je een zin en dan het vak.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>

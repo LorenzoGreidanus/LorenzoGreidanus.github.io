@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Eerst kijken, dan zelf, versie 1.0: op vakspel.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Eerst kijken, dan zelf &middot; meneer Greidanus</title>
+<meta name="description" content="Wiskunde leren met voorgedane sommen: eerst zie je een som helemaal uitgewerkt, daarna valt bij elke opgave een stap weg, tot je het zelf kunt. Vergelijkingen, procenten, formules en oppervlakte.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Eerst kijken, dan zelf">
+<meta property="og:description" content="Een som eerst helemaal voorgedaan, daarna steeds een stap minder, tot je alles zelf doet.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/voordoen.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M54.7 9 C78.5 11.8 93.5 29.6 90.3 51.7 C86.7 75.3 72.7 92.1 49.8 88.7 C26.1 85.1 3.9 71.7 9 48.3 C14.1 24.9 31.7 6.4 54.7 9Z' fill='%236b3fa0'/><g transform='translate(50 51) scale(2.2) translate(-12 -12)' fill='none' stroke='%23ffffff' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'><path d='M5 18l5-12 5 12'/><path d='M7 14h6'/><path d='M17 9h3M17 14h3'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+/* de voorgedane stappen: een lijstje met wat er gebeurt en waarom, de open stappen stippellijn */
+.vd{width:100%;max-width:560px;margin:0 auto;text-align:left}
+.vd-kop{margin:0 0 8px;text-align:center;font-size:.78rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.vd-fig{display:grid;place-items:center;margin:0 auto 12px}
+.vd-fig svg{max-width:100%;height:auto;display:block;font-family:inherit}
+.vd-tabel{overflow-x:auto;margin:0 auto 12px;display:grid;place-items:center}
+.vd-st{list-style:none;margin:0;padding:0;display:grid;gap:8px;counter-reset:vd}
+.vd-st li{counter-increment:vd;display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start;padding:10px 12px;border-radius:14px;background:var(--kaart2);border:1px solid var(--rand);font-size:.95rem;line-height:1.4}
+.vd-st li::before{content:counter(vd);display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--spelkleur);color:var(--spelinkt);font-size:.85rem;font-weight:700}
+.vd-st li.open{background:transparent;border:2px dashed var(--rand2)}
+.vd-st li.open::before{background:transparent;border:2px dashed var(--rand2);color:var(--muted);width:22px;height:22px}
+.vd-rek{display:block;margin-top:3px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--nadruk)}
+.vd-st li.open .vd-rek{color:var(--muted);font-weight:600}
+.vd-br{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;line-height:1.15;margin:0 .15em;font-size:.9em}
+.vd-br>span:first-child{border-bottom:2px solid currentColor;padding:0 .25em}
+.vd-br>span:last-child{padding:0 .25em}
+.vd-vraagblok{display:block;margin-top:6px;font-size:1.5rem;font-weight:700;color:var(--nadruk)}
+.vd-formule{display:inline-block;margin-top:6px;padding:6px 14px;border-radius:12px;background:var(--kaart2);border:1px solid var(--rand);font-weight:700;color:var(--nadruk)}
+@media(max-width:480px){.vd-st li{font-size:.9rem;padding:9px 10px;gap:8px}.vd-vraagblok{font-size:1.3rem}}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script>
+(function(){
+  'use strict';
+  var S = VAKSPEL.schoon;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  function tussen(a, b){ return a + Math.floor(Math.random() * (b - a + 1)); }
+  function r2(x){ return Math.round(x * 100) / 100; }
+  function net(x){ return String(r2(x)).replace('.', ','); }
+  function eur(x){ var t = r2(x); return '€ ' + (t === Math.round(t) ? String(t) : t.toFixed(2).replace('.', ',')); }
+  function term(a){ return (a === 1 ? '' : a) + 'x'; }
+  function sg(p){ return p > 0 ? '+ ' + p : '− ' + (-p); }
+  function frac(n, d){ return '<span class="vd-br"><span>' + n + '</span><span>' + d + '</span></span>'; }
+  function oplos(l, r){ for (var x = -100; x <= 400; x++) if (Math.abs(l(x) - r(x)) < 1e-9) return x; return null; }
+  function tweeDec(x){ return Math.abs(x * 100 - Math.round(x * 100)) < 1e-7; }
+
+  /* een stap: wat je doet en waarom (wat), hoe het uitkomt (uit), wat je invult als je hem zelf doet (naam) */
+  function stap(wat, uit, naam, antwoord, extra){
+    var s = { wat:wat, uit:uit, naam:naam, antwoord:r2(antwoord) };
+    if (extra) for (var k in extra) s[k] = extra[k];
+    return s;
+  }
+  var EUR = { voor:'€' };
+
+  /* ---------- van een som met stappen naar een opgave, met stappen die wegvallen ----------
+     Positie 1 in een ronde: alles voorgedaan, je typt alleen het antwoord.
+     Positie 2: de laatste stap is open, 3: de laatste twee, 4: de laatste drie,
+     vanaf 5 vul je elke stap zelf in. */
+  function uitvoer(o, pos){
+    var n = o.stappen.length;
+    var open = pos === 1 ? 0 : pos >= 5 ? n : Math.min(n, pos - 1);
+    var gegeven = n - open, hint = pos >= 2 && pos <= 4;
+    var kop = pos === 1 ? 'Eerst kijken: zo gaat het' : pos >= 5 ? 'Nu doe je alles zelf' : open >= n ? 'Jij doet alle stappen' : 'Jij doet de laatste ' + (open === 1 ? 'stap' : open + ' stappen');
+    var opdracht = pos === 1 ? 'Lees elke stap: wat er gebeurt en waarom. Typ dan zelf het antwoord in het vakje.'
+      : pos >= 5 ? 'Nu doe je alles zelf. Typ de uitkomst van elke stap, van boven naar beneden.'
+      : open >= n ? 'Er staat geen stap meer voor je klaar, maar de stappen hieronder laten zien wat je moet doen. Vul de uitkomst van elke stap in.'
+      : 'De stappen die er staan laten zien hoe het gaat. ' + (open === 1 ? 'De laatste stap vul je hieronder zelf in.' : 'De laatste ' + open + ' stappen vul je hieronder zelf in.');
+    var lijst = '';
+    if (pos < 5){
+      lijst = '<ol class="vd-st">' + o.stappen.map(function(s, i){
+        if (i < gegeven) return '<li><div><b>' + s.wat + '</b><span class="vd-rek">' + s.uit + '</span></div></li>';
+        return hint ? '<li class="open"><div><b>' + s.wat + '</b><span class="vd-rek">hieronder invullen</span></div></li>' : '';
+      }).join('') + '</ol>';
+    }
+    var beeld = (typeof o.beeld === 'function' ? o.beeld(gegeven) : (o.beeld || ''));
+    var velden = pos === 1
+      ? [{ label:'Antwoord: ' + o.antwoordLabel, antwoord:o.antwoord, tol:0.006, eenheid:o.eenheid, voor:o.voor }]
+      : o.stappen.slice(gegeven).map(function(s, i){ return { label:'Stap ' + (gegeven + i + 1) + ': ' + s.naam, antwoord:s.antwoord, tol:0.006, eenheid:s.eenheid, voor:s.voor }; });
+    var uitleg = 'Zo gaat het: <br>' + o.stappen.map(function(s, i){ return 'Stap ' + (i + 1) + ': ' + s.wat + ' ' + s.uit + '.'; }).join(' <br>') + (o.fout ? ' <br>Let op: ' + o.fout : '');
+    return {
+      onderdeel:'voordoen: ' + o.deel, onderdeelNaam:o.deel, vorm:'invul', sleutel:o.sleutel,
+      vraag:o.vraag, opdracht:opdracht,
+      beeld:'<div class="vd"><p class="vd-kop">' + kop + '</p>' + beeld + lijst + '</div>',
+      velden:velden, uitleg:uitleg,
+      antwoordTekst:o.antwoordTekst || (o.antwoordLabel.replace(/\s*=$/, '') + ': ' + (o.voor ? o.voor + ' ' : '') + net(o.antwoord) + (o.eenheid ? ' ' + o.eenheid : ''))
+    };
+  }
+  /* de rest van de zin: wat het antwoord van de hele som is, voor de eerste opgave en de uitslag */
+  function klaarMaken(o){
+    var l = o.stappen[o.stappen.length - 1];
+    if (o.antwoordLabel === undefined){ o.antwoordLabel = l.naam; o.antwoord = l.antwoord; o.eenheid = l.eenheid; o.voor = l.voor; }
+    return o;
+  }
+
+  /* ================= vergelijking ================= */
+  var STUKS = [['broodjes', 'broodje'], ['pennen', 'pen'], ['stickervellen', 'stickervel'], ['kaartjes', 'kaartje'], ['bananen', 'banaan'], ['schriften', 'schrift']];
+  var EXTRA = ['tas', 'pot pindakaas', 'drankje', 'map', 'pak sap'];
+  function bbSom(s){ return function(){
+    var a = tussen(2, 12), x = s > 0 ? tussen(2, 15) : tussen(a + 1, a + 12), b = s > 0 ? x + a : x - a;
+    var eq = 'x ' + (s > 0 ? '+' : '−') + ' ' + a + ' = ' + b;
+    return klaarMaken({ deel:'vergelijking', sleutel:'vgl-bbsom' + s + '-' + a + '-' + x,
+      vraag:'Los op met de balansmethode: <span class="vd-vraagblok">' + eq + '</span>',
+      stappen:[
+        stap(s > 0 ? 'Haal aan beide kanten ' + a + ' weg. Dan blijft links alleen x over.' : 'Tel aan beide kanten ' + a + ' erbij op. Dan blijft links alleen x over.',
+          s > 0 ? b + ' − ' + a + ' = ' + x : b + ' + ' + a + ' = ' + x, s > 0 ? 'Rechterkant na het wegen =' : 'Rechterkant na het optellen =', x),
+        stap('Links staat nu alleen x. Dat is je antwoord.', 'x = ' + x, 'x =', x),
+        stap('Controleer: vul je x in. Links moet hetzelfde uitkomen als rechts.', x + (s > 0 ? ' + ' : ' − ') + a + ' = ' + b, 'Controle: links met jouw x =', b)
+      ], antwoordLabel:'x =', antwoord:x,
+      fout: s > 0 ? 'bij x + ' + a + ' = ' + b + ' doe je het tegenovergestelde van wat er staat. Er staat plus, dus je haalt eraf: ' + b + ' − ' + a + ', niet ' + b + ' + ' + a + '.'
+        : 'bij x − ' + a + ' = ' + b + ' doe je het tegenovergestelde van wat er staat. Er staat min, dus je telt erbij op: ' + b + ' + ' + a + ', niet ' + b + ' − ' + a + '.',
+      _ok: oplos(function(v){ return s > 0 ? v + a : v - a; }, function(){ return b; }) === x });
+  }; }
+  function bbKeer(){
+    var a = tussen(2, 9), x = tussen(2, 12), c = a * x, ding = kies(STUKS), verhaal = Math.random() < .5;
+    return klaarMaken({ deel:'vergelijking', sleutel:'vgl-bbkeer' + a + '-' + x + (verhaal ? 'v' : ''),
+      vraag: verhaal ? a + ' ' + ding[0] + ' kosten samen € ' + c + '. Noem de prijs van één ' + ding[1] + ' x (in euro). Dan geldt <span class="vd-vraagblok">' + a + 'x = ' + c + '</span>Los op: wat kost één ' + ding[1] + '?'
+        : 'Los op met de balansmethode: <span class="vd-vraagblok">' + a + 'x = ' + c + '</span>',
+      stappen:[
+        stap('Deel beide kanten door ' + a + '. Links staat ' + a + ' keer x, dus dan houd je x over.', c + ' ÷ ' + a + ' = ' + x, 'Rechterkant na het delen =', x),
+        stap('Links staat nu alleen x. Dat is je antwoord.', 'x = ' + x, 'x =', x),
+        stap('Controleer: vul je x in. Links moet hetzelfde uitkomen als rechts.', a + ' × ' + x + ' = ' + c, 'Controle: links met jouw x =', c)
+      ], antwoordLabel:'x =', antwoord:x,
+      fout:a + 'x betekent ' + a + ' keer x. Je deelt dus door ' + a + '. Je haalt er niet ' + a + ' af: ' + c + ' − ' + a + ' = ' + (c - a) + ' is niet x.',
+      _ok: oplos(function(v){ return a * v; }, function(){ return c; }) === x });
+  }
+  function kgtTweestap(s){ return function(){
+    var a = tussen(2, 9), x = tussen(2, 12), b = tussen(1, 15), c = a * x + s * b;
+    while (c < 1){ x += 2; c = a * x + s * b; }
+    var verhaal = s > 0 && Math.random() < .5, ding = kies(STUKS), extra = kies(EXTRA);
+    var eq = a + 'x ' + (s > 0 ? '+' : '−') + ' ' + b + ' = ' + c;
+    return klaarMaken({ deel:'vergelijking', sleutel:'vgl-kgt2' + s + '-' + a + '-' + x + '-' + b + (verhaal ? 'v' : ''),
+      vraag: verhaal ? 'Je koopt ' + a + ' ' + ding[0] + ' en een ' + extra + ' van € ' + b + '. Samen betaal je € ' + c + '. Noem de prijs van één ' + ding[1] + ' x (in euro). Dan geldt <span class="vd-vraagblok">' + eq + '</span>Los op: wat kost één ' + ding[1] + '?'
+        : 'Los op met de balansmethode: <span class="vd-vraagblok">' + eq + '</span>',
+      stappen:[
+        stap(s > 0 ? 'Haal aan beide kanten ' + b + ' weg, zodat links alleen ' + a + 'x overblijft.' : 'Tel aan beide kanten ' + b + ' erbij op, zodat links alleen ' + a + 'x overblijft.',
+          s > 0 ? c + ' − ' + b + ' = ' + a * x : c + ' + ' + b + ' = ' + a * x, 'Rechterkant na stap 1 =', a * x),
+        stap('Deel beide kanten door ' + a + '. Links houd je x over.', a * x + ' ÷ ' + a + ' = ' + x, 'x =', x),
+        stap('Controleer: vul je x in. Links moet hetzelfde uitkomen als rechts.', a + ' × ' + x + (s > 0 ? ' + ' : ' − ') + b + ' = ' + c, 'Controle: links met jouw x =', c)
+      ], antwoordLabel:'x =', antwoord:x,
+      fout:'let op de volgorde: eerst het losse getal ' + b + ' wegwerken, dan pas delen door ' + a + '. Deel je ' + c + ' meteen door ' + a + ', dan vergeet je dat ' + b + ' er ook nog bij hoort.',
+      _ok: oplos(function(v){ return a * v + s * b; }, function(){ return c; }) === x });
+  }; }
+  function kgtBeide(){
+    var d, c, a, x, p, q, t = 0;
+    do { c = tussen(1, 5); d = tussen(2, 5); a = c + d; x = tussen(2, 10); p = (Math.random() < .5 ? -1 : 1) * tussen(1, 12); q = d * x + p; } while (q < 1 && t++ < 50);
+    var eq = term(a) + ' ' + sg(p) + ' = ' + term(c) + ' + ' + q;
+    return klaarMaken({ deel:'vergelijking', sleutel:'vgl-kgtb' + a + '-' + c + '-' + p + '-' + x,
+      vraag:'Los op met de balansmethode: <span class="vd-vraagblok">' + eq + '</span>',
+      stappen:[
+        stap('Haal aan beide kanten ' + term(c) + ' weg, zodat de x-en maar aan één kant staan.', term(a) + ' − ' + term(c) + ' = ' + term(d) + '. Nu staat er ' + term(d) + ' ' + sg(p) + ' = ' + q, 'Aantal x-en links na stap 1 =', d, { eenheid:'x' }),
+        stap(p > 0 ? 'Haal aan beide kanten ' + p + ' weg, zodat links alleen ' + term(d) + ' overblijft.' : 'Tel aan beide kanten ' + (-p) + ' erbij op, zodat links alleen ' + term(d) + ' overblijft.',
+          p > 0 ? q + ' − ' + p + ' = ' + (q - p) : q + ' + ' + (-p) + ' = ' + (q - p), 'Rechterkant na stap 2 =', q - p),
+        stap('Deel beide kanten door ' + d + '. Links houd je x over.', (q - p) + ' ÷ ' + d + ' = ' + x, 'x =', x),
+        stap('Controleer met allebei de kanten van de oorspronkelijke vergelijking. Ze moeten gelijk zijn.', 'links: ' + a + ' × ' + x + ' ' + sg(p) + ' = ' + (a * x + p) + ' en rechts: ' + c + ' × ' + x + ' + ' + q + ' = ' + (c * x + q), 'Controle: de rechterkant met jouw x =', c * x + q)
+      ], antwoordLabel:'x =', antwoord:x,
+      fout:'haal de x-en naar één kant door ' + term(c) + ' weg te halen, niet alleen ' + c + '. Dus ' + term(a) + ' − ' + term(c) + ' = ' + term(d) + ', en niet ' + term(a) + ' − ' + c + '.',
+      _ok: oplos(function(v){ return a * v + p; }, function(v){ return c * v + q; }) === x });
+  }
+  function hvHaak(s){ return function(){
+    var a = tussen(2, 6), b = tussen(1, 8), x = tussen(s > 0 ? 2 : b + 1, 12), c = a * (x + s * b), ab = a * b, o = s > 0 ? '+' : '−';
+    return klaarMaken({ deel:'vergelijking', sleutel:'vgl-hvh' + s + '-' + a + '-' + b + '-' + x,
+      vraag:'Los op met de balansmethode: <span class="vd-vraagblok">' + a + '(x ' + o + ' ' + b + ') = ' + c + '</span>',
+      stappen:[
+        stap('Werk eerst de haakjes weg: ' + a + ' keer x én ' + a + ' keer ' + b + '. Dan staat er ' + a + 'x ' + o + ' ' + ab + ' = ' + c + '.', a + ' × ' + b + ' = ' + ab, 'Haakjes weg: het losse getal wordt =', ab),
+        stap(s > 0 ? 'Haal aan beide kanten ' + ab + ' weg, zodat links alleen ' + a + 'x overblijft.' : 'Tel aan beide kanten ' + ab + ' erbij op, zodat links alleen ' + a + 'x overblijft.',
+          s > 0 ? c + ' − ' + ab + ' = ' + a * x : c + ' + ' + ab + ' = ' + a * x, 'Rechterkant na stap 2 =', a * x),
+        stap('Deel beide kanten door ' + a + '. Links houd je x over.', a * x + ' ÷ ' + a + ' = ' + x, 'x =', x),
+        stap('Controleer in de oorspronkelijke vergelijking, met haakjes.', a + ' × (' + x + ' ' + o + ' ' + b + ') = ' + a + ' × ' + (x + s * b) + ' = ' + c, 'Controle: links met jouw x =', c)
+      ], antwoordLabel:'x =', antwoord:x,
+      fout:'bij ' + a + '(x ' + o + ' ' + b + ') vermenigvuldig je ' + a + ' met alles tussen de haakjes: ' + a + 'x ' + o + ' ' + ab + '. Niet ' + a + 'x ' + o + ' ' + b + '.',
+      _ok: oplos(function(v){ return a * (v + s * b); }, function(){ return c; }) === x });
+  }; }
+  function hvBreuk(s){ return function(){
+    var k = tussen(2, 6), m = tussen(2, 9), b = tussen(1, 9), x = m * k, c = m + s * b, o = s > 0 ? '+' : '−';
+    if (c < 1){ m += b; x = m * k; c = m + s * b; }
+    return klaarMaken({ deel:'vergelijking', sleutel:'vgl-hvb' + s + '-' + k + '-' + m + '-' + b,
+      vraag:'Los op met de balansmethode: <span class="vd-vraagblok">' + frac('x', k) + ' ' + o + ' ' + b + ' = ' + c + '</span>',
+      stappen:[
+        stap(s > 0 ? 'Haal aan beide kanten ' + b + ' weg, zodat links alleen x gedeeld door ' + k + ' overblijft.' : 'Tel aan beide kanten ' + b + ' erbij op, zodat links alleen x gedeeld door ' + k + ' overblijft.',
+          s > 0 ? c + ' − ' + b + ' = ' + m : c + ' + ' + b + ' = ' + m, 'Rechterkant na stap 1 =', m),
+        stap('Vermenigvuldig beide kanten met ' + k + '. Dat maakt "gedeeld door ' + k + '" ongedaan.', m + ' × ' + k + ' = ' + x, 'x =', x),
+        stap('Controleer: vul je x in. Links moet hetzelfde uitkomen als rechts.', x + ' ÷ ' + k + ' ' + o + ' ' + b + ' = ' + m + ' ' + o + ' ' + b + ' = ' + c, 'Controle: links met jouw x =', c)
+      ], antwoordLabel:'x =', antwoord:x,
+      fout:'x gedeeld door ' + k + ' maak je ongedaan door met ' + k + ' te vermenigvuldigen, niet door nog een keer te delen.',
+      _ok: oplos(function(v){ return v / k + s * b; }, function(){ return c; }) === x });
+  }; }
+  function hvBreuk2(){
+    var k = tussen(2, 6), c = tussen(2, 9), b = tussen(1, 9), x = c * k - b;
+    return klaarMaken({ deel:'vergelijking', sleutel:'vgl-hvb2' + k + '-' + c + '-' + b,
+      vraag:'Los op met de balansmethode: <span class="vd-vraagblok">' + frac('x + ' + b, k) + ' = ' + c + '</span>',
+      stappen:[
+        stap('Vermenigvuldig beide kanten met ' + k + '. Dan verdwijnt de breuk en blijft x + ' + b + ' over.', c + ' × ' + k + ' = ' + c * k, 'Rechterkant na vermenigvuldigen =', c * k),
+        stap('Haal aan beide kanten ' + b + ' weg, zodat links alleen x overblijft.', c * k + ' − ' + b + ' = ' + x, 'x =', x),
+        stap('Controleer: vul je x in. Links moet hetzelfde uitkomen als rechts.', '(' + x + ' + ' + b + ') ÷ ' + k + ' = ' + (x + b) + ' ÷ ' + k + ' = ' + c, 'Controle: links met jouw x =', c)
+      ], antwoordLabel:'x =', antwoord:x,
+      fout:'je deelt x + ' + b + ' samen door ' + k + '. Je maakt dat ongedaan door beide kanten met ' + k + ' te vermenigvuldigen, dus x + ' + b + ' = ' + c * k + '. Het getal ' + b + ' blijft zoals het is.',
+      _ok: oplos(function(v){ return (v + b) / k; }, function(){ return c; }) === x });
+  }
+  function hvHaakBeide(){
+    var c = tussen(1, 4), e = tussen(1, 4), a = c + e, b = tussen(1, 6), x = tussen(2, 10), d = e * x + a * b, ab = a * b;
+    return klaarMaken({ deel:'vergelijking', sleutel:'vgl-hvhb' + a + '-' + b + '-' + c + '-' + x,
+      vraag:'Los op met de balansmethode: <span class="vd-vraagblok">' + a + '(x + ' + b + ') = ' + term(c) + ' + ' + d + '</span>',
+      stappen:[
+        stap('Werk eerst de haakjes weg: ' + a + ' keer x én ' + a + ' keer ' + b + '. Dan staat er ' + a + 'x + ' + ab + ' = ' + term(c) + ' + ' + d + '.', a + ' × ' + b + ' = ' + ab, 'Haakjes weg: het losse getal wordt =', ab),
+        stap('Haal aan beide kanten ' + term(c) + ' weg, zodat de x-en maar aan één kant staan.', term(a) + ' − ' + term(c) + ' = ' + term(e), 'Aantal x-en links na stap 2 =', e, { eenheid:'x' }),
+        stap('Haal aan beide kanten ' + ab + ' weg, zodat links alleen ' + term(e) + ' overblijft.', d + ' − ' + ab + ' = ' + (d - ab), 'Rechterkant na stap 3 =', d - ab),
+        stap('Deel beide kanten door ' + e + '. Links houd je x over.', (d - ab) + ' ÷ ' + e + ' = ' + x, 'x =', x)
+      ], antwoordLabel:'x =', antwoord:x,
+      fout:'bij ' + a + '(x + ' + b + ') vermenigvuldig je ' + a + ' met alles tussen de haakjes: ' + a + 'x + ' + ab + '. Pas daarna haal je de x-en naar één kant.',
+      _ok: oplos(function(v){ return a * (v + b); }, function(v){ return c * v + d; }) === x });
+  }
+
+  /* ================= procent ================= */
+  var WAAR = [
+    { n:'een jas', a:[100, 200, 300], b:[60, 80, 100, 120, 140, 160, 180] },
+    { n:'een paar sneakers', a:[100, 200], b:[60, 80, 100, 120, 140] },
+    { n:'een hoodie', a:[100], b:[40, 60, 80, 100] },
+    { n:'een tablet', a:[200, 300, 400], b:[180, 200, 240, 260, 300] },
+    { n:'een fiets', a:[200, 300, 400, 500], b:[200, 240, 260, 300, 320, 360] },
+    { n:'een koptelefoon', a:[100, 200], b:[60, 80, 100, 120, 140, 160] },
+    { n:'een gameconsole', a:[200, 300, 400], b:[220, 260, 300, 340, 380] },
+    { n:'een rugzak', a:[100], b:[40, 60, 80, 100] },
+    { n:'een skateboard', a:[100, 200], b:[40, 60, 80, 120] }
+  ];
+  function bbKorting(){
+    var w = kies(WAAR), P = kies(w.a), p = kies([10, 20, 25, 30, 40, 50]), u = P / 100, k = u * p, N = P - k;
+    return klaarMaken({ deel:'procent', sleutel:'pct-bbk' + w.n + P + '-' + p,
+      vraag:'Een ' + w.n.replace(/^een /, '') + ' kost ' + eur(P) + '. Er is <b>' + p + '% korting</b>. Wat betaal je?',
+      stappen:[
+        stap('Zoek eerst 1%: deel de prijs door 100.', eur(P) + ' ÷ 100 = ' + eur(u), '1% van de prijs =', u, EUR),
+        stap(p + '% is ' + p + ' keer 1%. Dat is de korting.', p + ' × ' + eur(u) + ' = ' + eur(k), 'Korting =', k, EUR),
+        stap('Je betaalt de prijs min de korting.', eur(P) + ' − ' + eur(k) + ' = ' + eur(N), 'Je betaalt =', N, EUR)
+      ], fout:p + '% korting is niet ' + eur(p) + ' eraf. Het is ' + p + ' keer 1% van de prijs, en dat is hier ' + eur(k) + '.',
+      _ok: Math.abs(P * (100 - p) / 100 - N) < 1e-9 });
+  }
+  function bbBtw(){
+    var w = kies(WAAR), E = kies(w.a), p = kies([9, 21]), u = E / 100, bt = u * p, I = E + bt;
+    return klaarMaken({ deel:'procent', sleutel:'pct-bbb' + w.n + E + '-' + p,
+      vraag:'Een ' + w.n.replace(/^een /, '') + ' kost ' + eur(E) + ' zonder btw. Het btw-tarief is <b>' + p + '%</b>. Wat kost het met btw?',
+      stappen:[
+        stap('Zoek eerst 1%: deel de prijs door 100.', eur(E) + ' ÷ 100 = ' + eur(u), '1% van de prijs =', u, EUR),
+        stap(p + '% is ' + p + ' keer 1%. Dat is de btw.', p + ' × ' + eur(u) + ' = ' + eur(bt), 'Btw-bedrag =', bt, EUR),
+        stap('De btw komt bovenop de prijs: tel hem erbij op.', eur(E) + ' + ' + eur(bt) + ' = ' + eur(I), 'Prijs met btw =', I, EUR)
+      ], fout:'de btw komt bovenop de prijs. Het antwoord is niet alleen het btw-bedrag (' + eur(bt) + '), maar de prijs plus de btw.',
+      _ok: Math.abs(E * (100 + p) / 100 - I) < 1e-9 });
+  }
+  function kgtKorting(){
+    var w = kies(WAAR), P = kies(w.b), p = kies([5, 10, 15, 20, 25, 30, 35, 40, 45]), f = (100 - p) / 100, N = P * f;
+    return klaarMaken({ deel:'procent', sleutel:'pct-kgk' + w.n + P + '-' + p,
+      vraag:'Een ' + w.n.replace(/^een /, '') + ' kost ' + eur(P) + '. Er is <b>' + p + '% korting</b>. Wat betaal je? Reken met een factor.',
+      stappen:[
+        stap('Met ' + p + '% korting betaal je nog ' + (100 - p) + '% van de prijs.', '100 − ' + p + ' = ' + (100 - p) + '%', 'Je betaalt nog =', 100 - p, { eenheid:'%' }),
+        stap('Maak er een factor van: deel door 100.', (100 - p) + ' ÷ 100 = ' + net(f), 'Factor =', f),
+        stap('Nieuwe prijs = oude prijs keer de factor.', eur(P) + ' × ' + net(f) + ' = ' + eur(N), 'Nieuwe prijs =', N, EUR)
+      ], fout:'de factor bij ' + p + '% korting is ' + net(f) + ', niet ' + net(p / 100) + '. Met ' + net(p / 100) + ' reken je de korting uit, niet wat je betaalt.',
+      _ok: Math.abs(P - P * p / 100 - N) < 1e-9 && tweeDec(N) });
+  }
+  function kgtBtw(){
+    var w = kies(WAAR), E = kies([50, 100, 150, 200, 250, 300, 350, 400, 450]), p = kies([9, 21]), f = (100 + p) / 100, I = E * f, bt = I - E;
+    return klaarMaken({ deel:'procent', sleutel:'pct-kgb' + w.n + E + '-' + p,
+      vraag:'Een ' + w.n.replace(/^een /, '') + ' kost ' + eur(E) + ' zonder btw. Het btw-tarief is <b>' + p + '%</b>. Hoeveel btw betaal je? Reken met een factor.',
+      stappen:[
+        stap('Je betaalt de prijs plus ' + p + '%, dus ' + (100 + p) + '% van de prijs. Als factor: ' + (100 + p) + ' ÷ 100.', (100 + p) + ' ÷ 100 = ' + net(f), 'Factor =', f),
+        stap('Prijs met btw = prijs keer de factor.', eur(E) + ' × ' + net(f) + ' = ' + eur(I), 'Prijs met btw =', I, EUR),
+        stap('Het btw-bedrag is wat er bij de prijs bijkwam.', eur(I) + ' − ' + eur(E) + ' = ' + eur(bt), 'Btw-bedrag =', bt, EUR)
+      ], fout:'de factor bij ' + p + '% btw is ' + net(f) + ', niet ' + net(p / 100) + '. Met ' + net(p / 100) + ' krijg je meteen het btw-bedrag, maar dan sla je de stap met de prijs over.',
+      _ok: Math.abs(E * p / 100 - bt) < 1e-9 && tweeDec(bt) });
+  }
+  var TOENAME = [
+    function(A, B){ return 'De voetbalclub had vorig jaar ' + A + ' leden. Nu zijn het er ' + B + '.'; },
+    function(A, B){ return 'Een game kostte vorige maand ' + eur(A) + '. Nu kost hij ' + eur(B) + '.'; },
+    function(A, B){ return 'Mila had ' + A + ' volgers. Nu heeft ze er ' + B + '.'; },
+    function(A, B){ return 'Een streamingdienst kostte ' + eur(A) + ' per maand. Nu is dat ' + eur(B) + '.'; },
+    function(A, B){ return 'Op school zaten ' + A + ' leerlingen. Nu zijn het er ' + B + '.'; },
+    function(A, B){ return 'Een bos telde ' + A + ' bomen. Nu staan er ' + B + '.'; }
+  ];
+  function kgtToename(){
+    var A = tussen(2, 20) * 20, p = kies([5, 10, 15, 20, 25, 30, 40, 50]), B = A + A * p / 100, v = B - A, fr = v / A;
+    return klaarMaken({ deel:'procent', sleutel:'pct-kgt' + A + '-' + p,
+      vraag:kies(TOENAME)(A, B) + ' <b>Met hoeveel procent is het gegroeid?</b>',
+      stappen:[
+        stap('Reken eerst uit hoeveel erbij is gekomen: het nieuwe getal min het oude.', B + ' − ' + A + ' = ' + v, 'Verschil =', v),
+        stap('Vergelijk het verschil met waar je mee begon: deel door het oude getal (' + A + ').', v + ' ÷ ' + A + ' = ' + net(fr), 'Verschil gedeeld door het begin =', fr),
+        stap('Maak er procenten van: keer 100.', net(fr) + ' × 100 = ' + p + '%', 'Toename =', p, { eenheid:'%' })
+      ], fout:'je deelt het verschil door het begin (' + A + '), niet door het nieuwe getal (' + B + '). Het gaat om groei ten opzichte van waar je mee begon.',
+      _ok: Math.abs((B - A) / A * 100 - p) < 1e-9 });
+  }
+  function hvTerug(){
+    var w = kies(WAAR), O = kies(w.b), p = kies([10, 15, 20, 25, 30, 40]), N = O * (100 - p) / 100, u = O / 100;
+    return klaarMaken({ deel:'procent', sleutel:'pct-hvt' + w.n + O + '-' + p,
+      vraag:'Een ' + w.n.replace(/^een /, '') + ' is in de aanbieding met ' + p + '% korting. Je betaalt ' + eur(N) + '. <b>Wat kostte hij zonder korting?</b>',
+      stappen:[
+        stap('Met ' + p + '% korting betaal je ' + (100 - p) + '% van de oude prijs. Dus ' + eur(N) + ' is ' + (100 - p) + '%.', '100 − ' + p + ' = ' + (100 - p) + '%', 'Je betaalde =', 100 - p, { eenheid:'%' }),
+        stap('Zoek 1%: deel het bedrag dat je betaalde door ' + (100 - p) + '.', eur(N) + ' ÷ ' + (100 - p) + ' = ' + eur(u), '1% van de oude prijs =', u, EUR),
+        stap('De oude prijs is 100%: keer 100.', eur(u) + ' × 100 = ' + eur(O), 'Oude prijs =', O, EUR)
+      ], fout:'de ' + p + '% korting is ' + p + '% van de oude prijs, niet van wat je betaalde. Tel je ' + p + '% bij ' + eur(N) + ' op, dan kom je niet op de oude prijs.',
+      _ok: Math.abs(O * (100 - p) / 100 - N) < 1e-9 && tweeDec(u) && tweeDec(N) });
+  }
+  function hvBtwTerug(){
+    var w = kies(WAAR), E = kies([50, 100, 150, 200, 250, 300, 350, 400]), p = kies([9, 21]), I = E * (100 + p) / 100, u = E / 100;
+    return klaarMaken({ deel:'procent', sleutel:'pct-hvb' + w.n + E + '-' + p,
+      vraag:'Een ' + w.n.replace(/^een /, '') + ' kost ' + eur(I) + ' met ' + p + '% btw. <b>Wat kost hij zonder btw?</b>',
+      stappen:[
+        stap('Met ' + p + '% btw erbij is ' + eur(I) + ' gelijk aan ' + (100 + p) + '% van de prijs zonder btw.', '100 + ' + p + ' = ' + (100 + p) + '%', 'Prijs met btw is =', 100 + p, { eenheid:'%' }),
+        stap('Zoek 1%: deel ' + eur(I) + ' door ' + (100 + p) + '.', eur(I) + ' ÷ ' + (100 + p) + ' = ' + eur(u), '1% van de prijs zonder btw =', u, EUR),
+        stap('De prijs zonder btw is 100%: keer 100.', eur(u) + ' × 100 = ' + eur(E), 'Prijs zonder btw =', E, EUR)
+      ], fout:'haal je ' + p + '% van ' + eur(I) + ' eraf, dan kom je te laag uit. De btw is ' + p + '% van de prijs zonder btw, en dat is een kleiner bedrag dan ' + p + '% van ' + eur(I) + '.',
+      _ok: Math.abs(E * (100 + p) / 100 - I) < 1e-9 && tweeDec(I) });
+  }
+  var TWEE = [[20, -25], [25, -20], [10, -10], [20, -10], [30, -20], [50, -20], [50, -40], [-20, 25], [-10, 20], [10, 10], [20, 20], [-10, -10]];
+  function hvTwee(){
+    var w = kies(WAAR), S0 = kies([100, 200, 300, 400]), t = kies(TWEE), f1 = (100 + t[0]) / 100, f2 = (100 + t[1]) / 100, m = S0 * f1, e = m * f2, pc = e / S0 * 100;
+    function zeg(q){ return q > 0 ? 'omhoog met ' + q + '%' : 'omlaag met ' + (-q) + '%'; }
+    return klaarMaken({ deel:'procent', sleutel:'pct-hv2' + w.n + S0 + '-' + t[0] + '-' + t[1],
+      vraag:'Een ' + w.n.replace(/^een /, '') + ' kost ' + eur(S0) + '. De prijs gaat eerst ' + zeg(t[0]) + ' en daarna ' + zeg(t[1]) + '. <b>Hoeveel procent van de beginprijs is de eindprijs?</b>',
+      stappen:[
+        stap('Eerste verandering: ' + zeg(t[0]) + ', dus de factor is ' + net(f1) + '.', eur(S0) + ' × ' + net(f1) + ' = ' + eur(m), 'Prijs na de eerste verandering =', m, EUR),
+        stap('De tweede verandering gaat over het nieuwe bedrag, ' + eur(m) + '. Factor ' + net(f2) + '.', eur(m) + ' × ' + net(f2) + ' = ' + eur(e), 'Prijs na de tweede verandering =', e, EUR),
+        stap('Eindprijs gedeeld door beginprijs, keer 100.', eur(e) + ' ÷ ' + eur(S0) + ' = ' + net(e / S0) + ', dus ' + net(pc) + '%', 'De eindprijs is zoveel procent van de beginprijs =', pc, { eenheid:'%' })
+      ], fout:'je mag de twee percentages niet zomaar optellen (' + t[0] + ' en ' + t[1] + ' is niet ' + (t[0] + t[1]) + '%). De tweede verandering gaat over een ander bedrag dan de eerste.',
+      _ok: Math.abs(S0 * f1 * f2 / S0 * 100 - pc) < 1e-9 && tweeDec(m) && tweeDec(e) });
+  }
+
+  /* ================= formule ================= */
+  var SIT = [
+    { wat:'Een fietsverhuur', vast:'borg', per:'per uur', n:'uren', een:'uur' },
+    { wat:'Een skatepark', vast:'entree', per:'per uur', n:'uren', een:'uur' },
+    { wat:'Een taxibedrijf', vast:'starttarief', per:'per kilometer', n:'kilometers', een:'kilometer' },
+    { wat:'Een kartbaan', vast:'voor de helm', per:'per ronde', n:'rondes', een:'ronde' },
+    { wat:'Een klusjesman', vast:'voorrijkosten', per:'per uur', n:'uren', een:'uur' },
+    { wat:'Een telefoonabonnement', vast:'vast per maand', per:'per GB extra', n:'GB extra', een:'GB' },
+    { wat:'Een drukker', vast:'opstartkosten', per:'per poster', n:'posters', een:'poster' }
+  ];
+  function formuleTxt(s, v, p){ return 'kosten = ' + net(v) + ' + ' + net(p) + ' × ' + s.n; }
+  function intro(s, v, p){ return s.wat + ' rekent ' + eur(v) + ' ' + s.vast + ' en ' + eur(p) + ' ' + s.per + '. '; }
+  function formuleBeeld(s, v, p){ return '<p style="text-align:center;margin:0 0 12px"><span class="vd-formule">' + S(formuleTxt(s, v, p)) + '</span></p>'; }
+  function briefje(K){ return [10, 20, 50, 100, 200].filter(function(b){ return b > K; })[0]; }
+  function pv(niv){
+    if (niv === 'bb') return [kies([2, 3, 4, 5, 6, 8, 10]), kies([1, 2, 3, 4, 5])];
+    return [kies([2.5, 4, 5, 7.5, 12.5, 15]), kies([0.5, 1.5, 2.5, 0.75, 1.25, 2.25, 3.5])];
+  }
+  function tabelVraag(niv){ return function(){
+    var s = kies(SIT), vp = pv(niv), v = vp[0], p = vp[1], ns = kies([[1, 2, 3, 4], [1, 2, 5, 10], [2, 4, 6, 10], [3, 5, 8, 10], [1, 3, 5, 7], [2, 5, 10, 20]]);
+    var Ks = ns.map(function(n){ return r2(v + p * n); });
+    return klaarMaken({ deel:'formule', sleutel:'frm-tab' + niv + s.wat + v + '-' + p + '-' + ns.join(','),
+      vraag:intro(s, v, p) + 'Vul de tabel in met de formule.',
+      beeld:function(g){
+        return formuleBeeld(s, v, p) + '<div class="vd-tabel"><table><tr><th>' + S(s.n) + '</th>' + ns.map(function(n){ return '<td>' + n + '</td>'; }).join('') + '</tr><tr><th>kosten</th>' +
+          Ks.map(function(K, i){ return '<td>' + (i < g ? eur(K) : '?') + '</td>'; }).join('') + '</tr></table></div>';
+      },
+      stappen:ns.map(function(n, i){
+        return stap(n + ' ' + s.n + ': eerst het deel dat meegroeit (' + net(p) + ' × ' + n + '), dan het vaste bedrag erbij.', net(v) + ' + ' + net(p) + ' × ' + n + ' = ' + net(v) + ' + ' + net(p * n) + ' = ' + eur(Ks[i]), 'Kosten bij ' + n + ' ' + s.n + ' =', Ks[i], EUR);
+      }),
+      fout:'het vaste bedrag betaal je maar één keer. Je rekent ' + net(v) + ' + ' + net(p) + ' × ' + ns[ns.length - 1] + ', niet (' + net(v) + ' + ' + net(p) + ') × ' + ns[ns.length - 1] + '.',
+      _ok: ns.every(function(n, i){ return Math.abs(Ks[i] - (v + p * n)) < 1e-9 && tweeDec(Ks[i]); }) });
+  }; }
+  function invulVraag(niv){ return function(){
+    var s = kies(SIT), vp = pv(niv), v = vp[0], p = vp[1], n = tussen(3, 12), pn = p * n, K = v + pn, X = briefje(K);
+    return klaarMaken({ deel:'formule', sleutel:'frm-inv' + niv + s.wat + v + '-' + p + '-' + n,
+      vraag:intro(s, v, p) + 'Je neemt ' + n + ' ' + s.n + ' en betaalt met ' + eur(X) + '. <b>Hoeveel geld krijg je terug?</b>',
+      beeld:formuleBeeld(s, v, p),
+      stappen:[
+        stap('Reken eerst het deel uit dat meegroeit: de prijs ' + s.per + ' keer het aantal.', net(p) + ' × ' + n + ' = ' + eur(pn), 'Het deel dat meegroeit =', pn, EUR),
+        stap('Tel het vaste bedrag erbij. Dat betaal je maar één keer.', eur(v) + ' + ' + eur(pn) + ' = ' + eur(K), 'Totale kosten =', K, EUR),
+        stap('Terug krijg je wat je betaalt min de kosten.', eur(X) + ' − ' + eur(K) + ' = ' + eur(X - K), 'Je krijgt terug =', X - K, EUR)
+      ],
+      fout:'het vaste bedrag betaal je maar één keer. Je rekent ' + net(v) + ' + ' + net(p) + ' × ' + n + ', niet (' + net(v) + ' + ' + net(p) + ') × ' + n + '.',
+      _ok: Math.abs(X - (v + p * n) - (X - K)) < 1e-9 && tweeDec(K) });
+  }; }
+  function terugVraag(niv){ return function(){
+    var s = kies(SIT), vp = pv(niv), v = vp[0], p = vp[1], n = tussen(2, 12), K = v + p * n, rest = K - v;
+    return klaarMaken({ deel:'formule', sleutel:'frm-ter' + niv + s.wat + v + '-' + p + '-' + n,
+      vraag:intro(s, v, p) + 'Je betaalt ' + eur(K) + '. <b>Hoeveel ' + s.n + ' was dat?</b>',
+      beeld:formuleBeeld(s, v, p),
+      stappen:[
+        stap('Haal eerst het vaste bedrag eraf: dat zit er één keer in.', eur(K) + ' − ' + eur(v) + ' = ' + eur(rest), 'Wat overblijft voor de ' + s.n + ' =', rest, EUR),
+        stap('Deel wat overblijft door de prijs ' + s.per + '.', eur(rest) + ' ÷ ' + eur(p) + ' = ' + n, 'Aantal ' + s.n + ' =', n),
+        stap('Controleer met de formule: het aantal moet precies op ' + eur(K) + ' uitkomen.', net(v) + ' + ' + net(p) + ' × ' + n + ' = ' + eur(K), 'Controle: de kosten met jouw aantal =', K, EUR)
+      ],
+      fout:'deel niet meteen ' + eur(K) + ' door ' + eur(p) + '. Het vaste bedrag zit er ook in, dus eerst ' + eur(v) + ' eraf.',
+      _ok: Math.abs(v + p * n - K) < 1e-9 && n === Math.round(n) && tweeDec(K) });
+  }; }
+  function gemVraag(){
+    var s = kies(SIT), v = kies([5, 6, 8, 10, 12, 15, 20]), p = kies([0.5, 1.5, 2.5, 0.75, 1.25, 3.5]), n = kies([2, 4, 5, 10]), pn = p * n, K = v + pn, g = K / n;
+    return klaarMaken({ deel:'formule', sleutel:'frm-gem' + s.wat + v + '-' + p + '-' + n,
+      vraag:intro(s, v, p) + 'Je neemt ' + n + ' ' + s.n + '. <b>Wat kost dat gemiddeld per ' + s.een + '?</b>',
+      beeld:formuleBeeld(s, v, p),
+      stappen:[
+        stap('Reken eerst het deel uit dat meegroeit: de prijs ' + s.per + ' keer het aantal.', net(p) + ' × ' + n + ' = ' + eur(pn), 'Het deel dat meegroeit =', pn, EUR),
+        stap('Tel het vaste bedrag erbij.', eur(v) + ' + ' + eur(pn) + ' = ' + eur(K), 'Totale kosten =', K, EUR),
+        stap('Gemiddeld per ' + s.een + ': deel de totale kosten door het aantal.', eur(K) + ' ÷ ' + n + ' = ' + eur(g), 'Gemiddeld per ' + s.een + ' =', g, EUR)
+      ],
+      fout:'gemiddeld per ' + s.een + ' is meer dan ' + eur(p) + ', want het vaste bedrag wordt over de ' + s.n + ' verdeeld. Je deelt de totale kosten door het aantal, niet alleen het meegroeiende deel.',
+      _ok: Math.abs(g - (v + p * n) / n) < 1e-9 && tweeDec(g) && tweeDec(K) });
+  }
+  var DUBBEL = [
+    { x:'Sportschool Fit', y:'Sportschool Flex', vast:'per maand', per:'per les', n:'lessen', een:'les' },
+    { x:'Abonnement Plus', y:'Abonnement Basis', vast:'per maand', per:'per GB extra', n:'GB', een:'GB' },
+    { x:'Kartbaan Snel', y:'Kartbaan Fun', vast:'entree', per:'per ronde', n:'rondes', een:'ronde' }
+  ];
+  function hvGelijk(){
+    var t, s, p1, dp, n, v2, v1, p2, ok = false;
+    do { s = kies(DUBBEL); p1 = kies([0.5, 1, 1.5, 2]); dp = kies([0.5, 1, 1.5, 2, 2.5]); n = tussen(4, 12); v2 = tussen(3, 8); p2 = p1 + dp; v1 = v2 + dp * n; ok = tweeDec(v1); t = (t || 0) + 1; } while (!ok && t < 50);
+    var dv = v1 - v2, K = v1 + p1 * n;
+    return klaarMaken({ deel:'formule', sleutel:'frm-gel' + s.x + v1 + '-' + p1 + '-' + v2 + '-' + p2,
+      vraag:s.x + ' rekent ' + eur(v1) + ' ' + s.vast + ' en ' + eur(p1) + ' ' + s.per + '. ' + s.y + ' rekent ' + eur(v2) + ' ' + s.vast + ' en ' + eur(p2) + ' ' + s.per + '. <b>Bij hoeveel ' + s.n + ' zijn ze even duur, en wat kost dat dan?</b>',
+      stappen:[
+        stap(s.x + ' begint ' + eur(dv) + ' duurder dan ' + s.y + '. Dat verschil moet je goedmaken.', eur(v1) + ' − ' + eur(v2) + ' = ' + eur(dv), 'Verschil in vast bedrag =', dv, EUR),
+        stap(s.y + ' is ' + eur(dp) + ' duurder ' + s.per + '. Daarmee haal je het vaste verschil in.', eur(p2) + ' − ' + eur(p1) + ' = ' + eur(dp), 'Verschil ' + s.per + ' =', dp, EUR),
+        stap('Even duur bij: het vaste verschil gedeeld door het verschil ' + s.per + '.', eur(dv) + ' ÷ ' + eur(dp) + ' = ' + n, 'Aantal ' + s.n + ' =', n),
+        stap('Reken uit wat het dan kost, bij ' + s.x + ' (bij ' + s.y + ' komt hetzelfde uit).', eur(v1) + ' + ' + eur(p1) + ' × ' + n + ' = ' + eur(K), 'Kosten dan =', K, EUR)
+      ],
+      fout:'het aantal ' + s.n + ' is niet het verschil in vast bedrag. Je deelt dat verschil door het verschil ' + s.per + '.',
+      _ok: Math.abs(v1 + p1 * n - (v2 + p2 * n)) < 1e-9 && tweeDec(v1) && tweeDec(K) });
+  }
+  var REIS = [
+    { wat:'Een taxi', vast:'starttarief', per:'per kilometer', plek:'naar het concert' },
+    { wat:'Een touringcar', vast:'voorrijkosten', per:'per kilometer', plek:'op schoolreisje' },
+    { wat:'Een bestelbus', vast:'opstartkosten', per:'per kilometer', plek:'naar het festival' }
+  ];
+  function hvMeer(){
+    var s = kies(REIS), v, p, d, pers, K, g, t = 0;
+    do { v = kies([3, 4, 5, 6, 8, 10, 12]); p = kies([0.5, 1, 1.5, 2, 2.5]); d = tussen(5, 30); pers = kies([2, 4, 5]); K = v + p * 2 * d; g = K / pers; t++; } while (!tweeDec(g) && t < 50);
+    return klaarMaken({ deel:'formule', sleutel:'frm-mee' + s.wat + v + '-' + p + '-' + d + '-' + pers,
+      vraag:s.wat + ' rekent ' + eur(v) + ' ' + s.vast + ' en ' + eur(p) + ' ' + s.per + '. Jullie gaan ' + s.plek + ': ' + d + ' kilometer heen en dezelfde afstand terug, met ' + pers + ' personen. <b>Hoeveel betaalt ieder?</b>',
+      stappen:[
+        stap('Heen en terug: de afstand telt twee keer.', '2 × ' + d + ' = ' + 2 * d + ' kilometer', 'Totaal aantal kilometers =', 2 * d, { eenheid:'km' }),
+        stap('Reken het deel uit dat meegroeit: de prijs ' + s.per + ' keer het aantal kilometers.', net(p) + ' × ' + 2 * d + ' = ' + eur(p * 2 * d), 'Het deel dat meegroeit =', p * 2 * d, EUR),
+        stap('Tel het vaste bedrag erbij. Dat betaal je één keer, voor de hele groep.', eur(v) + ' + ' + eur(p * 2 * d) + ' = ' + eur(K), 'Totale kosten =', K, EUR),
+        stap('Verdeel over de ' + pers + ' personen.', eur(K) + ' ÷ ' + pers + ' = ' + eur(g), 'Per persoon =', g, EUR)
+      ],
+      fout:'reken niet met ' + d + ' kilometer, want jullie moeten ook terug: het zijn er ' + 2 * d + '. En het vaste bedrag betaal je één keer voor de groep, niet per persoon.',
+      _ok: Math.abs(g - (v + p * 2 * d) / pers) < 1e-9 && tweeDec(g) });
+  }
+  function hvKortingTerug(){
+    var s = kies(SIT), v = kies([5, 10, 12, 15, 20]), p = kies([1, 1.5, 2, 2.5, 3]), n = tussen(4, 14), kp = kies([10, 20, 25]), Kv = v + p * n, K = Kv * (100 - kp) / 100;
+    var ok = tweeDec(K), t = 0;
+    while (!ok && t++ < 40){ n = tussen(4, 14); Kv = v + p * n; K = Kv * (100 - kp) / 100; ok = tweeDec(K); }
+    return klaarMaken({ deel:'formule', sleutel:'frm-kt' + s.wat + v + '-' + p + '-' + n + '-' + kp,
+      vraag:intro(s, v, p) + 'Op het totaal krijg je ' + kp + '% korting. Je betaalt ' + eur(K) + '. <b>Hoeveel ' + s.n + ' was dat?</b>',
+      beeld:formuleBeeld(s, v, p),
+      stappen:[
+        stap('De korting zit al in wat je betaalde: ' + eur(K) + ' is ' + (100 - kp) + '% van de kosten zonder korting. Reken terug.', eur(K) + ' ÷ ' + net((100 - kp) / 100) + ' = ' + eur(Kv), 'Kosten zonder korting =', Kv, EUR),
+        stap('Haal het vaste bedrag eraf.', eur(Kv) + ' − ' + eur(v) + ' = ' + eur(Kv - v), 'Wat overblijft voor de ' + s.n + ' =', Kv - v, EUR),
+        stap('Deel door de prijs ' + s.per + '.', eur(Kv - v) + ' ÷ ' + eur(p) + ' = ' + n, 'Aantal ' + s.n + ' =', n),
+        stap('Controleer met de formule, zonder korting.', net(v) + ' + ' + net(p) + ' × ' + n + ' = ' + eur(Kv), 'Controle: kosten zonder korting met jouw aantal =', Kv, EUR)
+      ],
+      fout:'de formule geldt voor de kosten zonder korting. Reken dus eerst terug naar het bedrag zonder korting; ' + eur(K) + ' invullen in de formule geeft een te klein aantal.',
+      _ok: Math.abs(Kv * (100 - kp) / 100 - K) < 1e-9 && n === Math.round(n) && tweeDec(Kv) && tweeDec(K) });
+  }
+
+  /* ================= oppervlakte ================= */
+  var CTX = [
+    { t:'De plattegrond van een woonkamer', e:'m' }, { t:'Een schoolplein', e:'m' }, { t:'Een tuin met een terras', e:'m' },
+    { t:'Een zwembad met een kinderbad', e:'m' }, { t:'Een stuk vloer in de gymzaal', e:'m' }, { t:'Een stuk karton voor een poster', e:'cm' },
+    { t:'Een stuk stof voor een kussen', e:'cm' }, { t:'Een speelveld bij de sporthal', e:'m' }
+  ];
+  function rect(x, y, w, h){ return [[x, y], [x + w, y], [x + w, y + h], [x, y + h]]; }
+  function shoelace(P){ var s = 0; for (var i = 0; i < P.length; i++){ var j = (i + 1) % P.length; s += P[i][0] * P[j][1] - P[j][0] * P[i][1]; } return Math.abs(s) / 2; }
+  function inPoly(p, P){ var c = false; for (var i = 0, j = P.length - 1; i < P.length; j = i++){ if (((P[i][1] > p[1]) !== (P[j][1] > p[1])) && (p[0] < (P[j][0] - P[i][0]) * (p[1] - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0])) c = !c; } return c; }
+  /* spiegel de hele figuur in zijn omhullende: zo krijg je dezelfde vorm in vier standen */
+  function spiegel(f, mx, my){
+    var maxX = Math.max.apply(null, f.punten.map(function(p){ return p[0]; })), maxY = Math.max.apply(null, f.punten.map(function(p){ return p[1]; }));
+    function T(p){ return [mx ? maxX - p[0] : p[0], my ? maxY - p[1] : p[1]]; }
+    function TL(l){ return l.map(T); }
+    f.punten = TL(f.punten);
+    if (f.weg) f.weg = TL(f.weg);
+    f.delen = (f.delen || []).map(function(d){ return { punten:TL(d.punten), naam:d.naam, kl:d.kl, dx:d.dx || 0 }; });
+    f.lijnen = (f.lijnen || []).map(TL);
+    f.labels = (f.labels || []).map(function(l){ return l.a ? { a:T(l.a), b:T(l.b), t:l.t, vraag:l.vraag } : { x:T([l.x, l.y])[0], y:T([l.x, l.y])[1], t:l.t, binnen:true, anker:l.anker }; });
+    return f;
+  }
+  function figuur(f){
+    var P = f.punten, maxX = Math.max.apply(null, P.map(function(p){ return p[0]; })), maxY = Math.max.apply(null, P.map(function(p){ return p[1]; }));
+    var sc = Math.min(240 / maxX, 200 / maxY), pad = 54, B = Math.round(maxX * sc + pad * 2), H = Math.round(maxY * sc + pad * 2);
+    function X(x){ return Math.round((pad + x * sc) * 10) / 10; }
+    function Y(y){ return Math.round((pad + y * sc) * 10) / 10; }
+    function poly(Q){ return Q.map(function(p){ return X(p[0]) + ',' + Y(p[1]); }).join(' '); }
+    var s = '<svg viewBox="0 0 ' + B + ' ' + H + '" width="' + B + '" role="img" aria-label="Een figuur met de maten erbij">';
+    if (!f.delen.length) s += '<polygon points="' + poly(P) + '" fill="var(--nadruk-zacht)" stroke="none"/>';
+    f.delen.forEach(function(d){ s += '<polygon points="' + poly(d.punten) + '" fill="' + d.kl + '" stroke="none"/>'; });
+    if (f.weg) s += '<polygon points="' + poly(f.weg) + '" fill="none" stroke="var(--muted)" stroke-width="2" stroke-dasharray="6 5"/>';
+    s += '<polygon points="' + poly(P) + '" fill="none" stroke="var(--ink)" stroke-width="2.5" stroke-linejoin="round"/>';
+    f.lijnen.forEach(function(l){ s += '<line x1="' + X(l[0][0]) + '" y1="' + Y(l[0][1]) + '" x2="' + X(l[1][0]) + '" y2="' + Y(l[1][1]) + '" stroke="var(--ink)" stroke-width="2" stroke-dasharray="6 5"/>'; });
+    f.delen.forEach(function(d){
+      var cx = d.punten.reduce(function(a, p){ return a + p[0]; }, 0) / d.punten.length, cy = d.punten.reduce(function(a, p){ return a + p[1]; }, 0) / d.punten.length;
+      s += '<text x="' + X(cx + (d.dx || 0)) + '" y="' + (Y(cy) + 8) + '" font-size="24" font-weight="700" text-anchor="middle" fill="var(--ink)" opacity=".5">' + d.naam + '</text>';
+    });
+    f.labels.forEach(function(l){
+      var kl = l.vraag ? 'var(--hand)' : 'var(--ink)', tx;
+      if (l.binnen){ s += '<text x="' + X(l.x) + '" y="' + (Y(l.y) + 5) + '" font-size="14" font-weight="700" text-anchor="' + (l.anker || 'middle') + '" fill="' + kl + '" ' + HALO + '>' + S(l.t) + '</text>'; return; }
+      var mx = (l.a[0] + l.b[0]) / 2, my = (l.a[1] + l.b[1]) / 2, dx = l.b[0] - l.a[0], dy = l.b[1] - l.a[1], len = Math.hypot(dx, dy), nx = -dy / len, ny = dx / len;
+      if (inPoly([mx + nx * 0.02, my + ny * 0.02], P)){ nx = -nx; ny = -ny; }
+      var px = X(mx), py = Y(my);
+      if (Math.abs(nx) > 0.5){ s += '<text x="' + (px + nx * 9) + '" y="' + (py + 5) + '" font-size="14" font-weight="700" text-anchor="' + (nx > 0 ? 'start' : 'end') + '" fill="' + kl + '" ' + HALO + '>' + S(l.t) + '</text>'; }
+      else { s += '<text x="' + px + '" y="' + (ny > 0 ? py + 20 : py - 9) + '" font-size="14" font-weight="700" text-anchor="middle" fill="' + kl + '" ' + HALO + '>' + S(l.t) + '</text>'; }
+    });
+    return s + '</svg>';
+  }
+  var HALO = 'stroke="var(--kaart)" stroke-width="4" paint-order="stroke" stroke-linejoin="round"';
+  var KA = 'var(--nadruk-zacht)', KB = 'var(--sand)';
+  function lab(a, b, w, e, vraag){ return { a:a, b:b, t:vraag ? '?' : w + ' ' + e, vraag:!!vraag }; }
+  function oppOpgave(c, f, stappen, fout, uitkomst, sleutel, vraagTxt){
+    spiegel(f, Math.random() < .5, f.nietKantelen ? false : Math.random() < .5);
+    return klaarMaken({ deel:'oppervlakte', sleutel:sleutel,
+      vraag:vraagTxt || (c.t + '. De maten staan in ' + (c.e === 'm' ? 'meter' : 'centimeter') + '. <b>Hoe groot is de oppervlakte?</b>'),
+      beeld:'<div class="vd-fig">' + figuur(f) + '</div>',
+      stappen:stappen, fout:fout, _ok: Math.abs(shoelace(f.punten) - uitkomst) < 1e-9 });
+  }
+  var M2 = function(e){ return e + '²'; };
+  /* L-vorm, alle zijden bekend (bb) of een zijde met een vraagteken (kgt) */
+  function lVorm(alles){ return function(){
+    var W = tussen(7, 14), H = tussen(6, 12), cw = tussen(2, W - 3), ch = tussen(2, H - 3), cut = kies(['h', 'v']), c = kies(CTX), e = c.e, u = M2(e);
+    var out = [[0, 0], [W - cw, 0], [W - cw, ch], [W, ch], [W, H], [0, H]], A, B, lijn, a, b, e0 = W - cw, e3 = H - ch;
+    if (cut === 'h'){ A = rect(0, 0, W - cw, ch); B = rect(0, ch, W, H - ch); lijn = [[0, ch], [W - cw, ch]]; a = [W - cw, ch]; b = [W, H - ch]; }
+    else { A = rect(0, 0, W - cw, H); B = rect(W - cw, ch, cw, H - ch); lijn = [[W - cw, ch], [W - cw, H]]; a = [W - cw, H]; b = [cw, H - ch]; }
+    var f = { punten:out, delen:[{ punten:A, naam:'A', kl:KA }, { punten:B, naam:'B', kl:KB }], lijnen:[lijn], labels:[
+      lab(out[0], out[1], e0, e), lab(out[1], out[2], ch, e), lab(out[2], out[3], cw, e), lab(out[3], out[4], e3, e, !alles), lab(out[4], out[5], W, e), lab(out[5], out[0], H, e)] };
+    var AA = a[0] * a[1], BB = b[0] * b[1], T = AA + BB, st = [];
+    if (!alles) st.push(stap('Eerst de zijde met het vraagteken: de hele hoogte min het stukje dat al een maat heeft.', H + ' − ' + ch + ' = ' + e3, 'Lengte van de zijde met ? =', e3, { eenheid:e }));
+    st.push(stap('De stippellijn deelt de figuur in twee rechthoeken. Reken A uit: lengte keer breedte.', a[0] + ' × ' + a[1] + ' = ' + AA + ' ' + u, 'Oppervlakte van A =', AA, { eenheid:u }));
+    st.push(stap('Reken B op dezelfde manier uit.', b[0] + ' × ' + b[1] + ' = ' + BB + ' ' + u, 'Oppervlakte van B =', BB, { eenheid:u }));
+    st.push(stap('Tel A en B bij elkaar op: samen zijn ze de hele figuur.', AA + ' + ' + BB + ' = ' + T + ' ' + u, 'Totale oppervlakte =', T, { eenheid:u }));
+    return oppOpgave(c, f, st, 'tel je alleen de zijden op, dan reken je de omtrek uit. Oppervlakte is lengte keer breedte, per rechthoek, en dan optellen. Let ook op dat je geen stuk twee keer meetelt.', T, 'opp-l' + (alles ? 'b' : 'k') + W + '-' + H + '-' + cw + '-' + ch + cut + c.t);
+  }; }
+  /* aftrekken: de hele rechthoek min het stuk dat ontbreekt */
+  function aftrek(){
+    var W = tussen(7, 14), H = tussen(6, 12), cw = tussen(2, W - 4), ch = tussen(2, H - 3), soort = kies(['hoek', 'midden']), c = kies(CTX), e = c.e, u = M2(e), f;
+    if (soort === 'hoek'){
+      f = { punten:[[0, 0], [W - cw, 0], [W - cw, ch], [W, ch], [W, H], [0, H]], weg:rect(W - cw, 0, cw, ch), delen:[], lijnen:[], labels:[] };
+      f.labels = [lab(f.punten[4], f.punten[5], W, e), lab(f.punten[5], f.punten[0], H, e), lab(f.punten[2], f.punten[3], cw, e), lab(f.punten[1], f.punten[2], ch, e)];
+    } else {
+      var x0 = tussen(2, W - cw - 2);
+      f = { punten:[[0, 0], [x0, 0], [x0, ch], [x0 + cw, ch], [x0 + cw, 0], [W, 0], [W, H], [0, H]], weg:rect(x0, 0, cw, ch), delen:[], lijnen:[], labels:[] };
+      f.labels = [lab(f.punten[6], f.punten[7], W, e), lab(f.punten[7], f.punten[0], H, e), lab(f.punten[2], f.punten[3], cw, e), lab(f.punten[1], f.punten[2], ch, e)];
+    }
+    var G = W * H, Wg = cw * ch, T = G - Wg;
+    return oppOpgave(c, f, [
+      stap('Doe alsof het stuk met de stippellijn er nog bij zit. Dan heb je één grote rechthoek.', W + ' × ' + H + ' = ' + G + ' ' + u, 'Hele rechthoek =', G, { eenheid:u }),
+      stap('Reken het stuk uit dat ontbreekt.', cw + ' × ' + ch + ' = ' + Wg + ' ' + u, 'Het stuk dat ontbreekt =', Wg, { eenheid:u }),
+      stap('Haal dat stuk van de hele rechthoek af.', G + ' − ' + Wg + ' = ' + T + ' ' + u, 'Oppervlakte van de figuur =', T, { eenheid:u })
+    ], 'je trekt het stuk dat ontbreekt af, je telt het er niet bij op. De figuur is kleiner dan de hele rechthoek.', T, 'opp-af' + soort + W + '-' + H + '-' + cw + '-' + ch + c.t);
+  }
+  /* U-vorm met een uitsparing waarvan je de breedte eerst moet uitrekenen (hv) */
+  function uVorm(){
+    var a = tussen(2, 4), b = tussen(2, 4), W = tussen(a + b + 3, 16), cw = W - a - b, H = tussen(6, 10), ch = tussen(2, H - 3), c = kies(CTX), e = c.e, u = M2(e);
+    var f = { punten:[[0, 0], [a, 0], [a, ch], [a + cw, ch], [a + cw, 0], [W, 0], [W, H], [0, H]], weg:rect(a, 0, cw, ch), delen:[], lijnen:[], labels:[] };
+    var Pn = f.punten;
+    f.labels = [lab(Pn[6], Pn[7], W, e), lab(Pn[7], Pn[0], H, e), lab(Pn[0], Pn[1], a, e), lab(Pn[4], Pn[5], b, e), lab(Pn[1], Pn[2], ch, e)];
+    var G = W * H, Wg = cw * ch, T = G - Wg;
+    return oppOpgave(c, f, [
+      stap('Hoe breed is de uitsparing? De hele breedte min de twee poten.', W + ' − ' + a + ' − ' + b + ' = ' + cw, 'Breedte van de uitsparing =', cw, { eenheid:e }),
+      stap('Doe alsof de uitsparing (stippellijn) er nog bij zit. Dan heb je één grote rechthoek.', W + ' × ' + H + ' = ' + G + ' ' + u, 'Hele rechthoek =', G, { eenheid:u }),
+      stap('Reken de uitsparing uit: breedte keer diepte.', cw + ' × ' + ch + ' = ' + Wg + ' ' + u, 'De uitsparing =', Wg, { eenheid:u }),
+      stap('Haal de uitsparing van de hele rechthoek af.', G + ' − ' + Wg + ' = ' + T + ' ' + u, 'Oppervlakte van de figuur =', T, { eenheid:u })
+    ], 'de breedte van de uitsparing staat er niet bij: dat is ' + W + ' − ' + a + ' − ' + b + ' = ' + cw + ', niet ' + (W - a) + '. En je trekt de uitsparing af, je telt hem niet mee.', T, 'opp-u' + W + '-' + a + '-' + b + '-' + H + '-' + ch + c.t);
+  }
+  /* een rechthoek met een driehoek erbovenop */
+  var HUIS = [{ t:'De voorkant van een schuur met een puntdak', e:'m' }, { t:'Een bord in de vorm van een huisje', e:'cm' }, { t:'De zijkant van een tent', e:'m' }, { t:'Een vlag in de vorm van een huisje', e:'cm' }];
+  function huis(){
+    var b = kies([6, 8, 10, 12, 14]), h = tussen(3, 7), t = tussen(3, 5), c = kies(HUIS), e = c.e, u = M2(e);
+    var f = { punten:[[0, t], [b / 2, 0], [b, t], [b, t + h], [0, t + h]], delen:[{ punten:rect(0, t, b, h), naam:'A', kl:KA }, { punten:[[0, t], [b / 2, 0], [b, t]], naam:'B', kl:KB, dx:-b * 0.16 }],
+      lijnen:[[[0, t], [b, t]], [[b / 2, 0], [b / 2, t]]], labels:[], nietKantelen:true };
+    f.labels = [lab(f.punten[3], f.punten[4], b, e), lab(f.punten[2], f.punten[3], h, e), { x:b / 2 + 0.15, y:t * 0.62, t:t + ' ' + e, anker:'start' }];
+    var R = b * h, D = b * t / 2, T = R + D;
+    return oppOpgave(c, f, [
+      stap('De stippellijn deelt de figuur in een rechthoek (A) en een driehoek (B). Reken A uit: lengte keer breedte.', b + ' × ' + h + ' = ' + R + ' ' + u, 'Oppervlakte van A =', R, { eenheid:u }),
+      stap('B is een driehoek: de helft van een rechthoek van ' + b + ' bij ' + t + '. Dus halve basis keer hoogte.', '½ × ' + b + ' × ' + t + ' = ' + D + ' ' + u, 'Oppervlakte van B =', D, { eenheid:u }),
+      stap('Tel A en B bij elkaar op.', R + ' + ' + D + ' = ' + T + ' ' + u, 'Totale oppervlakte =', T, { eenheid:u })
+    ], 'een driehoek is de helft van een rechthoek. Vergeet je het halve (' + b + ' × ' + t + ' = ' + b * t + ' is te veel), dan komt de oppervlakte te groot uit.', T, 'opp-h' + b + '-' + h + '-' + t + c.t);
+  }
+  /* een trapezium als rechthoek plus driehoek */
+  var TRAP = [{ t:'Een stuk tuin langs een schuin pad', e:'m' }, { t:'De zijkant van een skatebaan', e:'m' }, { t:'Een lap stof', e:'cm' }, { t:'Een perk langs een schuine schutting', e:'m' }];
+  function trapezium(){
+    var h = tussen(3, 8), c0 = tussen(4, 9), dd, c = kies(TRAP), e = c.e, u = M2(e), t = 0;
+    do { dd = tussen(2, 6); t++; } while ((dd * h) % 2 && t < 50);
+    var B = c0 + dd, f = { punten:[[0, 0], [c0, 0], [B, h], [0, h]], delen:[{ punten:rect(0, 0, c0, h), naam:'A', kl:KA }, { punten:[[c0, 0], [B, h], [c0, h]], naam:'B', kl:KB }], lijnen:[[[c0, 0], [c0, h]]], labels:[] };
+    f.labels = [lab(f.punten[0], f.punten[1], c0, e), lab(f.punten[2], f.punten[3], B, e), lab(f.punten[3], f.punten[0], h, e)];
+    var R = c0 * h, D = dd * h / 2, T = R + D;
+    return oppOpgave(c, f, [
+      stap('De onderkant is langer dan de bovenkant. Het verschil is de basis van de driehoek (B).', B + ' − ' + c0 + ' = ' + dd, 'Basis van de driehoek =', dd, { eenheid:e }),
+      stap('Reken de rechthoek (A) uit: lengte keer breedte.', c0 + ' × ' + h + ' = ' + R + ' ' + u, 'Oppervlakte van A =', R, { eenheid:u }),
+      stap('B is een driehoek: de helft van een rechthoek van ' + dd + ' bij ' + h + '. Dus halve basis keer hoogte.', '½ × ' + dd + ' × ' + h + ' = ' + D + ' ' + u, 'Oppervlakte van B =', D, { eenheid:u }),
+      stap('Tel A en B bij elkaar op.', R + ' + ' + D + ' = ' + T + ' ' + u, 'Totale oppervlakte =', T, { eenheid:u })
+    ], 'de basis van de driehoek is niet de hele onderkant (' + B + '), maar alleen het stuk dat langer is dan de bovenkant: ' + dd + '. En de driehoek is de helft van een rechthoek.', T, 'opp-t' + c0 + '-' + dd + '-' + h + c.t);
+  }
+
+  /* ---------- welke varianten bij welk niveau ---------- */
+  var SOORTEN = {
+    vergelijking:{ bb:[bbSom(1), bbSom(-1), bbKeer], kgt:[kgtTweestap(1), kgtTweestap(-1), kgtBeide], hv:[hvHaak(1), hvHaak(-1), hvBreuk(1), hvBreuk(-1), hvBreuk2, hvHaakBeide] },
+    procent:{ bb:[bbKorting, bbBtw], kgt:[kgtKorting, kgtBtw, kgtToename], hv:[hvTerug, hvBtwTerug, hvTwee] },
+    formule:{ bb:[tabelVraag('bb'), invulVraag('bb'), terugVraag('bb')], kgt:[tabelVraag('kgt'), invulVraag('kgt'), terugVraag('kgt'), gemVraag], hv:[hvGelijk, hvMeer, hvKortingTerug] },
+    oppervlakte:{ bb:[lVorm(true)], kgt:[lVorm(false), aftrek], hv:[uVorm, huis, trapezium] }
+  };
+  var LIJST = ['vergelijking', 'procent', 'formule', 'oppervlakte'];
+  /* in een ronde blijft de soort som (en de variant) gelijk: de stappen die wegvallen moeten dezelfde zijn */
+  var ronde = { alles:null, var:{}, begin:0, niv:null }, laatste = {}, laatsteAlles = null;
+  function maakOpgave(keuze, nr){
+    var niv = keuze.niveau || 'kgt';
+    if (nr === 1 || !ronde.begin) ronde = { alles:null, var:{}, begin:nr, niv:niv };
+    /* het niveau groeit mee (of zakt): dan begint de som opnieuw met een voorbeeld, want het is een nieuwe soort */
+    else if (ronde.niv !== niv){ ronde.niv = niv; ronde.begin = nr; ronde.var = {}; }
+    var pos = ((nr - ronde.begin) % 10) + 1;
+    if (pos === 1 && nr > ronde.begin) ronde = { alles:null, var:{}, begin:ronde.begin, niv:niv };
+    var soort = keuze.soort;
+    if (soort === 'alles'){
+      if (!ronde.alles){ ronde.alles = kies(LIJST.filter(function(s){ return s !== laatsteAlles; })); laatsteAlles = ronde.alles; }
+      soort = ronde.alles;
+    }
+    var lijst = SOORTEN[soort][niv], sl = soort + '|' + niv;
+    if (ronde.var[sl] === undefined){
+      var kand = lijst.map(function(f, i){ return i; }).filter(function(i){ return lijst.length < 2 || i !== laatste[sl]; });
+      ronde.var[sl] = kies(kand); laatste[sl] = ronde.var[sl];
+    }
+    var gen = lijst[ronde.var[sl]], o, t = 0;
+    do { o = gen(); } while (!o._ok && ++t < 30);
+    var u = uitvoer(o, pos);
+    u._ok = o._ok;
+    return u;
+  }
+
+  VAKSPEL.maak({
+    id:'voordoen', naam:'Eerst kijken, dan zelf', vak:'wis', kleur:'#6b3fa0',
+    hand:'eerst zie je hoe het gaat, dan doe je het zelf',
+    lead:'Je krijgt een soort som eerst helemaal voorgedaan, stap voor stap, met erbij waarom elke stap kan. Bij de volgende opgave valt de laatste stap weg, dan de laatste twee, en vanaf de vijfde doe je alles zelf. Zo leer je eerst het patroon van een soort som kennen en daarna pas het zelf te doen.',
+    leerdoel:'Een soort som in stappen kunnen oplossen: eerst kijk je hoe het gaat, daarna doe je steeds meer zelf, tot je alle stappen zelf kunt.',
+    hoe:[
+      { kop:'Eerst kijken', tekst:'Opgave 1 is helemaal voorgedaan. Lees elke stap: wat er gebeurt en waarom. Jij typt alleen het antwoord.' },
+      { kop:'Elke keer een stap minder', tekst:'Bij opgave 2 doe je de laatste stap zelf, bij 3 de laatste twee, bij 4 de laatste drie. De stappen die er nog staan blijven je voorbeeld.' },
+      { kop:'Dan zelf', tekst:'Vanaf opgave 5 vul je elke stap zelf in. Een ronde gaat steeds over één soort som, en je ziet bij elk antwoord het hele uitgewerkte rijtje.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'Eén balansstap, procenten via 1% met ronde bedragen, formules met hele getallen en figuren in twee rechthoeken.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Twee stappen en x aan beide kanten, procenten met een factor, kommagetallen in formules en figuren met een stuk eraf.' },
+        { id:'hv', naam:'havo en vwo', uit:'Haakjes en breuken, terugrekenen met procenten, formules vergelijken en figuren met een driehoek.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar', uit:'Elke ronde een andere soort som. Binnen een ronde blijft het dezelfde soort, zodat de stappen die wegvallen kloppen.' },
+        { id:'vergelijking', naam:'vergelijking', uit:'Vergelijkingen oplossen met de balansmethode.' },
+        { id:'procent', naam:'procent', uit:'Korting, btw en groei: via 1% of met een factor.' },
+        { id:'formule', naam:'formule', uit:'Een formule invullen, een tabel maken en terugrekenen.' },
+        { id:'oppervlakte', naam:'oppervlakte', uit:'Een figuur opdelen, de delen apart uitrekenen en optellen.' } ] }
+    ],
+    aantal:10,
+    maak:maakOpgave,
+    tutorial:[
+      { titel:'De stappen', tekst:'Boven het vakje staan de stappen die al gedaan zijn: wat er gebeurt, waarom, en hoe het uitkomt. Bij de eerste opgave is alles voorgedaan.', doel:'beeld' },
+      { titel:'Jouw stap', tekst:'Vul in wat er nog open staat en druk op Nakijken (of Enter). Elke volgende opgave heeft een stap minder voorgedaan.', doel:'antwoordvak' },
+      { titel:'Daarna alles zelf', tekst:'Vanaf opgave 5 doe je zelf alle stappen. Bij elk antwoord zie je het hele uitgewerkte rijtje, ook als je het goed had.', doel:'vraag' }
+    ],
+    uitleg:{ doel:'Een soort som leren: eerst voorgedaan, dan steeds meer zelf.', tijd:'tien opgaven per ronde', bediening:'Typ de uitkomst van elke open stap en druk op Nakijken of Enter. Een komma mag.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>

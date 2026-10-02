@@ -71,19 +71,19 @@ window.CATEGORIE = (function(){
   };
   /* 2. de onderdelen van de vakspellen en de losse spellen, op hoe hun naam begint */
   var PATROON = {
-    ned:  [[/^dictee: /, 'spelling'], [/^(tegenwoordige tijd|verleden tijd|voltooid deelwoord|de d of t val)$/, 'spelling'],
+    ned:  [[/^alinea: /, 'schrijven'], [/^dictee: /, 'spelling'], [/^(tegenwoordige tijd|verleden tijd|voltooid deelwoord|de d of t val)$/, 'spelling'],
            [/^register: /, 'schrijven'], [/^samenvatten: /, 'schrijven'],
            [/^signaalwoorden: /, 'lezen'], [/^woordenschat: /, 'woordenschat']],
-    eng:  [[/^reading: /, 'lezen'], [/^dictation: /, 'luisteren'], [/^translate: /, 'schrijven'],
+    eng:  [[/^situaties: /, 'luisteren'], [/^reading: /, 'lezen'], [/^dictation: /, 'luisteren'], [/^translate: /, 'schrijven'],
            [/^phrasal: /, 'woordenschat'], [/^irregular /, 'grammatica']],
     reken:[[/^(schatten|cijferen): /, 'getallen'], [/^DHTE /, 'getallen'], [/^(klok|metriek): /, 'meten'],
            [/^verhoudingstabel: /, 'verhoudingen']],
-    wis:  [[/^vergelijking: /, 'algebra'], [/^grafieken: /, 'verbanden'], [/^coördinaten: /, 'verbanden'],
+    wis:  [[/^voordoen: /, 'algebra'], [/^vergelijking: /, 'algebra'], [/^grafieken: /, 'verbanden'], [/^coördinaten: /, 'verbanden'],
            [/^(hoeken|pythagoras|vlak): /, 'meetkunde']],
-    ges:  [[/^tv\d+$/, 'tijdvakken'], [/^wie ben ik: /, 'tijdvakken'], [/^(oorzaak en gevolg|kaart door de tijd): /, 'vaardig']],
+    ges:  [[/^redeneren: /, 'vaardig'], [/^tv\d+$/, 'tijdvakken'], [/^wie ben ik: /, 'tijdvakken'], [/^(oorzaak en gevolg|kaart door de tijd): /, 'vaardig']],
     aard: [[/^topografie/, 'topo'], [/^kaartvaardigheid: /, 'kaart'], [/^klimaatgrafiek: /, 'klimaat'], [/^bevolkingspiramide: /, 'bevolking']],
-    bio:  [[/^kruisen: /, 'cellen'], [/^voedselweb: /, 'natuur']],
-    burg: [[/^(democratie|partijen|verkiezingen): /, 'staat']],
+    bio:  [[/^onderzoek: /, 'natuur'], [/^kruisen: /, 'cellen'], [/^voedselweb: /, 'natuur']],
+    burg: [[/^afwegen: /, 'samen'], [/^(democratie|partijen|verkiezingen): /, 'staat']],
     eco:  [[/^huishoudboekje: /, 'geld'], [/^vraag en aanbod: /, 'markt']]
   };
   /* 3. de groep uit de vragenbank; een groep met dezelfde naam als een categorie hoeft hier niet */

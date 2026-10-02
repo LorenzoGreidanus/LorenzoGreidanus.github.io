@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Bouw een alinea, versie 1.0: op vakspel.js, de alinea's en zinnen staan in dit bestand -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Bouw een alinea &middot; meneer Greidanus</title>
+<meta name="description" content="Zelf schrijven oefenen in kleine stappen: zinnen van een alinea op volgorde zetten, de kernzin kiezen, de zin vinden die afdwaalt, het verbindingswoord kiezen en zinnen beter laten lopen.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Bouw een alinea">
+<meta property="og:description" content="Kernzin, toelichting, voorbeeld en slotzin: een alinea opbouwen, verbindingswoorden kiezen en zinnen beter laten lopen.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/alinea.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M47.5 12.6 C71.4 10.9 89.6 21.7 90.5 44 C91.4 67.9 79.1 88.5 55.9 89.5 C32 90.4 12.1 80.8 12.8 56.9 C13.5 33 24.4 14.3 47.5 12.6Z' fill='%23F26749'/><g transform='translate(50 51) scale(2.2) translate(-12 -12)' fill='none' stroke='%2314224C' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'><rect x='4.5' y='12.5' width='5.5' height='7' rx='1.5'/><rect x='14' y='12.5' width='5.5' height='7' rx='1.5'/><path d='M7.25 9.5C8 4 16 4 16.75 9.5'/><path d='M14.75 7.75l2 1.75 1.75-2'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+/* het tekstvak met de alinea of de twee zinnen; het gat licht op na het antwoord */
+.tv{max-width:62ch;width:100%;text-align:left;background:var(--kaart2);border-left:4px solid var(--spelkleur);border-radius:0 14px 14px 0;padding:14px 18px 14px 16px;font-size:1.08rem;line-height:1.65}
+.tv .over{display:block;font-size:.76rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.tv .gat{display:inline-block;min-width:4.5em;border-bottom:2px solid var(--ink);text-align:center;color:var(--muted);font-weight:600;line-height:1.2;margin:0 2px}
+.tv.toon .gat{color:var(--nadruk);border-bottom-color:var(--nadruk);font-weight:700}
+.tv .kz{display:block;margin:0 0 8px;padding-bottom:4px;border-bottom:2px dashed var(--muted);color:var(--muted);font-weight:600}
+.tv.toon .kz{color:var(--nadruk);border-bottom:2px solid var(--nadruk);font-weight:700}
+.waarom .regel{display:block;margin:.35rem 0}
+.waarom .regel b{font-weight:700}
+/* lange antwoorden: een zin per knop, onder elkaar */
+.opties.zinnen{grid-template-columns:1fr}
+.opties.zinnen button.optie.sv{font-size:.97rem;line-height:1.45}
+.opties.nummer{counter-reset:zin}
+.opties.nummer button.optie{counter-increment:zin}
+.opties.nummer button.optie::before{content:counter(zin);display:inline-block;min-width:1.5em;margin-right:.3em;font-weight:700;color:var(--muted)}
+/* de vakken voor de volgorde: onder elkaar, want een zin is breed */
+#scherm-spel .vakken.rij{grid-template-columns:1fr}
+#scherm-spel .vakken .sleepdoel{min-height:72px}
+#scherm-spel .vakken .sleepdoel .inhoud{justify-content:flex-start}
+#scherm-spel .vakken .sleepdoel .sleepkaart{text-align:left;font-weight:500}
+body.groot .tv{font-size:1.3rem}
+@media(max-width:560px){.tv{font-size:1rem;padding:12px 14px}.opties.zinnen button.optie.sv{font-size:.93rem}}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script>
+/* de alinea's: per niveau de alinea's, de kernzinnen, de verbindingen en de zinnen om te herschrijven */
+var D = {};
+/* vmbo-bb: korte zinnen, drie zinnen per alinea (kernzin, toelichting, voorbeeld) */
+D.bb = {
+  /* [onderwerp, kernzin, toelichting, voorbeeld, slotzin, een zin die afdwaalt, waarom die afdwaalt] */
+  alin: [
+    ["telefoons in de klas", "Telefoons horen niet in de klas.", "Ze leiden je af van de les.", "Bijvoorbeeld: bij elk appje kijk je even op je scherm en mis je wat de docent zegt.", "", "Mijn telefoon is ook best duur geweest.", "gaat over de prijs van een telefoon, niet over afleiding in de les"],
+    ["een bijbaan", "Een bijbaan leert je veel.", "Je werkt samen met anderen en je moet op tijd komen.", "Bijvoorbeeld: in de supermarkt vul je schappen en praat je met klanten.", "", "Mijn oom werkt al twintig jaar bij een bank.", "gaat over het werk van je oom, niet over wat een bijbaan je leert"],
+    ["sport", "Sporten is goed voor je.", "Je wordt er fitter van en je voelt je beter.", "Bijvoorbeeld: na een uur voetbal slaap je beter.", "", "De voetbalschoenen in de winkel waren heel duur.", "gaat over de prijs van schoenen, niet over waarom sporten goed voor je is"],
+    ["een hond", "Een hond is een goede vriend.", "Hij is blij als je thuiskomt en hij luistert naar je.", "Bijvoorbeeld: als ik verdrietig ben, komt mijn hond naast me zitten.", "", "Mijn buurvrouw heeft een papegaai.", "gaat over de papegaai van je buurvrouw, niet over wat een hond voor je betekent"],
+    ["de schoolreis", "De schoolreis is de leukste dag van het jaar.", "Je bent een hele dag met je klas en er is geen les.", "Vorig jaar gingen we bijvoorbeeld naar een pretpark en lachten we de hele dag.", "", "Mijn zus moet volgend jaar naar de middelbare school.", "gaat over je zus, niet over waarom de schoolreis zo leuk is"],
+    ["gamen", "Gamen kan ook goed zijn.", "Je leert er samen te werken en snel te denken.", "In een teamgame moet je bijvoorbeeld afspreken wie wat doet.", "", "Voor een nieuwe spelcomputer moet je soms maanden sparen.", "gaat over sparen voor een spelcomputer, niet over wat je van gamen leert"],
+    ["huiswerk maken", "Huiswerk maken lukt beter op een vaste tijd.", "Dan weet je wat je moet doen en stel je het niet uit.", "Ik begin bijvoorbeeld elke dag om vier uur, direct na een boterham.", "", "Mijn agenda heeft een blauwe kaft.", "gaat over de kleur van je agenda, niet over een vaste tijd voor huiswerk"],
+    ["met de fiets naar school", "Met de fiets naar school gaan is slim.", "Het is goedkoop en je bent buiten in de frisse lucht.", "Je hoeft bijvoorbeeld geen kaartje voor de bus te kopen.", "", "Mijn fiets is blauw en heeft drie versnellingen.", "gaat over jouw fiets, niet over waarom fietsen slim is"],
+    ["eten in de pauze", "Gezond eten in de pauze helpt je in de les.", "Je krijgt er energie van en je blijft langer scherp.", "Na een appel en een broodje kan ik bijvoorbeeld beter opletten.", "", "De pauze duurt twintig minuten.", "gaat over hoe lang de pauze duurt, niet over gezond eten"],
+    ["slapen", "Genoeg slapen is belangrijk voor een goede dag.", "Als je moe bent, kun je minder goed opletten.", "Na een korte nacht val ik bijvoorbeeld bijna in slaap bij Nederlands.", "", "Mijn bed is nieuw en erg groot.", "gaat over jouw bed, niet over waarom slapen belangrijk is"],
+    ["zakgeld", "Zakgeld leert je met geld omgaan.", "Je moet kiezen waar je het aan uitgeeft.", "Wil je bijvoorbeeld nieuwe sneakers, dan moet je er eerst een tijdje voor sparen.", "", "Mijn oma stuurt me elke verjaardag een kaart.", "gaat over kaarten van je oma, niet over leren omgaan met geld"],
+    ["muziek maken", "Muziek maken is goed voor je.", "Je moet oefenen en daar word je trots van.", "Toen ik mijn eerste liedje op gitaar kon spelen, was ik bijvoorbeeld de hele dag blij.", "", "Een gitaar koop je in een muziekwinkel.", "gaat over waar je een gitaar koopt, niet over waarom muziek maken goed voor je is"],
+    ["pesten", "Pesten moet stoppen.", "Wie gepest wordt, voelt zich alleen en durft soms niet naar school.", "Een meisje uit mijn klas bleef bijvoorbeeld een week thuis.", "", "De gymles is op donderdag.", "gaat over het rooster, niet over pesten"],
+    ["vakantie", "Een vakantie is fijn om bij te komen.", "Je hoeft niet naar school en je kunt doen wat je leuk vindt.", "In de zomer fiets ik bijvoorbeeld elke dag naar het meer.", "", "Mijn tante woont in Spanje.", "gaat over je tante, niet over waarom een vakantie fijn is"]
+  ],
+  /* [onderwerp, toelichting, voorbeeld, slotzin, de goede kernzin, te smal, te breed, past niet] */
+  kern: [
+    ["een vrije dag", "Op een vrije dag hoef je niet vroeg op te staan.", "Ik slaap bijvoorbeeld uit en maak daarna pannenkoeken met mijn zus.", "", "Een vrije dag is heerlijk.", "Pannenkoeken zijn lekker.", "Vrije tijd is belangrijk voor iedereen.", "Een vrije dag is saai."],
+    ["een hond uitlaten", "Een hond moet elke dag naar buiten.", "Mijn buurman loopt bijvoorbeeld drie keer per dag met zijn hond door het park.", "", "Een hond vraagt veel tijd.", "Mijn buurman houdt van wandelen in het park.", "Alle huisdieren zijn leuk.", "Een hond is makkelijk te houden."],
+    ["de kantine", "In de kantine kun je iets lekkers kopen.", "Ik haal er bijvoorbeeld elke dag een broodje kaas.", "", "De kantine is handig.", "Een broodje kaas is een gezonde lunch.", "Op school is veel te doen.", "De kantine is te duur."],
+    ["gym", "Je beweegt en je leert samenwerken in een team.", "Bij hockey moet je bijvoorbeeld de bal aan een ander geven.", "", "Gym is een nuttig vak.", "Hockey is een leuke sport.", "Alle vakken zijn belangrijk.", "Gym is zonde van de tijd."],
+    ["leren koken", "Je leert hoe je een maaltijd maakt en je kunt later voor jezelf zorgen.", "Mijn broer maakt bijvoorbeeld nu al elke woensdag pasta voor het hele gezin.", "", "Leren koken is handig.", "Pasta is mijn lievelingseten.", "Eten is belangrijk.", "Koken is moeilijk en niet nodig."],
+    ["de bioscoop", "Op het grote scherm zie je alles beter en het geluid is luid.", "Bij een spannende film schrik ik in de bioscoop bijvoorbeeld veel harder dan thuis.", "", "Een film kijk je het best in de bioscoop.", "Ik ben bang voor enge films.", "Films zijn leuk.", "Thuis kijk je het fijnst een film."],
+    ["een opgeruimde kamer", "Als alles op zijn plek ligt, vind je je spullen sneller.", "Ik zocht gisteren bijvoorbeeld tien minuten naar mijn oplader, omdat mijn bureau een puinhoop was.", "", "Een opgeruimde kamer scheelt tijd.", "Mijn oplader was zoek.", "Een kamer hoort groot te zijn.", "Rommel is gezellig."],
+    ["de reistijd naar school", "Je kunt onderweg muziek luisteren of je huiswerk doen.", "Ik leer in de bus bijvoorbeeld mijn Engelse woordjes.", "", "De reistijd naar school kun je goed gebruiken.", "Engelse woordjes leer je het best in de bus.", "Reizen is leuk.", "Een busreis is altijd saai."],
+    ["sparen", "Je legt elke week een paar euro opzij.", "Mila heeft bijvoorbeeld in een half jaar genoeg voor een nieuwe fiets.", "", "Sparen helpt je om iets groots te kopen.", "Een nieuwe fiets is duur.", "Geld maakt niet gelukkig.", "Sparen heeft geen zin."],
+    ["het ontbijt", "Zonder ontbijt heb je na twee uur honger.", "Bij mij begint mijn buik bijvoorbeeld al om tien uur te rommelen in de les.", "", "Ontbijten is belangrijk.", "Een rommelende buik is vervelend in de klas.", "Eten is leuk.", "Je kunt het ontbijt beter overslaan."],
+    ["de klassenapp", "Je kunt snel iets vragen of iets doorgeven.", "Ik vroeg gisteren bijvoorbeeld in de klassenapp wat het huiswerk was.", "", "Een klassenapp is handig.", "Het huiswerk voor morgen is lastig.", "Apps zijn overal.", "Een klassenapp zorgt voor ruzie."],
+    ["lezen", "Je leert nieuwe woorden en je bent even in een andere wereld.", "Na een spannend boek wil ik bijvoorbeeld meteen het volgende lezen.", "", "Lezen is leuk en leerzaam.", "Spannende boeken zijn het beste.", "Alles wat je leert is nuttig.", "Lezen is tijdverspilling."]
+  ],
+  /* [zin voor het gat, zin na het gat, leesteken voor het gat (, of .), het goede woord, drie foute woorden, waarom] */
+  verb: [
+    ["Lisa blijft thuis", "ze heeft koorts", ",", "want", ["maar", "dus", "of"], "Het tweede deel is de reden dat Lisa thuisblijft. Met <b>dus</b> draai je het om: ze heeft koorts, dus ze blijft thuis."],
+    ["Het is mijn verjaardag", "ik trakteer de klas", ",", "dus", ["want", "maar", "of"], "Het tweede deel is het gevolg van het eerste: ik ben jarig, dus ik trakteer. <b>Want</b> is verleidelijk, maar de reden staat hier juist vóór het gat."],
+    ["Ik wil graag naar de film", "ik heb geen geld", ",", "maar", ["want", "dus", "of"], "Ik wil, maar het kan niet: de twee delen botsen. Met <b>want</b> zou 'geen geld' de reden zijn dat ik wil, en dat klopt niet."],
+    ["Ik pak mijn trui", "het is koud buiten", ",", "want", ["maar", "dus", "of"], "'Het is koud buiten' is de reden dat ik mijn trui pak. Met <b>dus</b> zou het andersom zijn: het is koud, dus ik pak mijn trui."],
+    ["Het regent", "ik blijf binnen", ",", "dus", ["want", "maar", "of"], "De regen is de oorzaak, binnenblijven het gevolg. Met <b>want</b> zou binnenblijven de reden van de regen zijn, en dat is onzin."],
+    ["Mijn zus is jonger dan ik", "ze is langer", ",", "maar", ["want", "dus", "of"], "Je verwacht dat een jongere zus kleiner is. Hier is het anders, dus is het een tegenstelling. Met <b>dus</b> zou langer zijn het gevolg van jonger zijn zijn."],
+    ["Mijn wekker deed het niet", "kwam ik te laat op school", ".", "daardoor", ["toch", "bijvoorbeeld", "gelukkig"], "Dat de wekker het niet deed, is de oorzaak, te laat komen het gevolg. <b>Toch</b> zou een tegenstelling zijn, en die zit er niet in."],
+    ["Het proefwerk was erg moeilijk", "haalde ik een goed cijfer", ".", "toch", ["daardoor", "bijvoorbeeld", "helaas"], "Na een moeilijk proefwerk verwacht je een laag cijfer, maar het werd een goed cijfer. <b>Daardoor</b> is verleidelijk, maar een moeilijk proefwerk is geen reden voor een goed cijfer."],
+    ["In de pauze kun je van alles doen", "kun je voetballen of kaarten", ".", "bijvoorbeeld", ["toch", "daardoor", "helaas"], "Voetballen en kaarten zijn twee dingen uit 'van alles'. Met <b>daardoor</b> zou voetballen het gevolg van 'van alles doen' zijn, en dat is het niet."],
+    ["Eerst eten we een broodje", "gaan we naar buiten", ".", "daarna", ["toch", "bijvoorbeeld", "daardoor"], "Door 'eerst' weet je dat er een volgorde is: eerst eten, dan naar buiten. <b>Daardoor</b> zou zeggen dat het broodje de reden is om naar buiten te gaan."],
+    ["Ik maak eerst mijn huiswerk", "ga ik gamen", ".", "daarna", ["toch", "bijvoorbeeld", "helaas"], "Eerst het huiswerk, dan gamen: twee dingen na elkaar. Er zit geen tegenstelling in, dus <b>toch</b> past niet."],
+    ["Ik ben erg moe", "ga ik naar de training", ".", "toch", ["daardoor", "bijvoorbeeld", "gelukkig"], "Moe zijn is normaal een reden om thuis te blijven, maar ik ga wel. <b>Daardoor</b> zou zeggen dat moe zijn de reden is om te gaan, en dat klopt niet."],
+    ["Het sneeuwde de hele nacht", "was er geen school", ".", "daardoor", ["toch", "bijvoorbeeld", "eerst"], "De sneeuw is de oorzaak, geen school het gevolg. <b>Toch</b> zou een tegenstelling aangeven, <b>bijvoorbeeld</b> een voorbeeld."],
+    ["Je kunt iets goeds doen voor je klas", "kun je de prullenbak legen", ".", "bijvoorbeeld", ["toch", "daardoor", "helaas"], "De prullenbak legen is één voorbeeld van 'iets goeds doen'. Met <b>daardoor</b> zou het legen het gevolg zijn van iets goeds doen."]
+  ]
+};
+
+/* vmbo-kgt en tl: vier zinnen per alinea (kernzin, toelichting, voorbeeld, slotzin) */
+D.kgt = {
+  alin: [
+    ["telefoons op school", "Een telefoonvrije school geeft meer rust in de pauze.", "Als niemand op een scherm kijkt, praten leerlingen weer met elkaar.", "Op een school waar telefoons in de kluisjes moeten, hoor je bijvoorbeeld weer gelach op het schoolplein.", "Kortom: zonder telefoons wordt de pauze weer een echte pauze.", "Veel telefoons hebben tegenwoordig meer dan één camera.", "gaat over de camera's van een telefoon, niet over rust in de pauze"],
+    ["een bijbaan", "Een bijbaan naast school kost tijd, maar levert meer op dan geld.", "Je leert op tijd te komen, samen te werken en met klanten om te gaan.", "Wie op zaterdag in de supermarkt werkt, leert bijvoorbeeld rustig te blijven als het druk is.", "Een bijbaan is dus meer dan zakgeld: het is ook een training voor later.", "De supermarkt in mijn straat is net verbouwd.", "gaat over de verbouwing van een winkel, niet over wat een bijbaan oplevert"],
+    ["teamsport", "Teamsporten leren je meer dan alleen winnen.", "Je merkt dat je samen verder komt dan alleen, en dat verliezen erbij hoort.", "Een keeper die een bal laat glippen, krijgt bijvoorbeeld meteen een schouderklopje van zijn team.", "Wie in een team sport, leert dus vooral omgaan met anderen.", "De kantine van de club verkoopt lekkere frikandellen.", "gaat over eten in de clubkantine, niet over wat je van teamsport leert"],
+    ["een huisdier", "Een huisdier brengt verantwoordelijkheid met zich mee.", "Het dier moet elke dag eten en aandacht krijgen, ook als jij geen zin hebt.", "Een hond moet bijvoorbeeld ook uit als het regent of als je net een film kijkt.", "Wie een huisdier neemt, moet dat dus eerst goed overwegen.", "In de dierenwinkel hangt een poster van een papegaai.", "gaat over een poster in een winkel, niet over de zorg voor een huisdier"],
+    ["de schoolreis", "Een schoolreis is goed voor de sfeer in de klas.", "Tijdens de reis praat je met klasgenoten met wie je anders weinig te maken hebt.", "In de bus naar het pretpark zat ik bijvoorbeeld naast iemand die ik nog nooit gesproken had.", "Na afloop kende ik de klas dus een stuk beter.", "De bus naar het pretpark had grote ramen en zachte stoelen.", "gaat over hoe de bus eruitzag, niet over de sfeer in de klas"],
+    ["gamen", "Gamen is meer dan tijdverdrijf.", "Veel spellen vragen om plannen maken, samenwerken en snel beslissen.", "In een teamspel moet je bijvoorbeeld in een paar seconden kiezen wie aanvalt en wie verdedigt.", "Wie gamet, oefent dus ook vaardigheden die je op school nodig hebt.", "Een gamestoel kan meer dan driehonderd euro kosten.", "gaat over de prijs van een gamestoel, niet over wat je van gamen leert"],
+    ["de klassenapp", "Een klassenapp is handig voor school.", "Je kunt er snel iets in vragen of laten weten dat je ziek bent.", "Heb je een les gemist, dan vraag je bijvoorbeeld in één bericht wat het huiswerk is.", "Voor praktische dingen werkt zo'n app dus uitstekend.", "Sommige mensen schrijven liever een brief dan een bericht.", "gaat over brieven schrijven, niet over de klassenapp"],
+    ["huiswerk plannen", "Huiswerk plannen voorkomt stress.", "Als je weet wat wanneer af moet, hoef je niet alles op het laatste moment te doen.", "Wie pas op zondagavond ziet dat er maandag een toets is, moet bijvoorbeeld in één avond drie hoofdstukken leren.", "Een planning geeft je dus rust.", "Mijn agenda heeft een kaft met sterren.", "gaat over de kaft van een agenda, niet over huiswerk plannen"],
+    ["de starttijd van school", "School zou later mogen beginnen.", "Pubers worden 's avonds later moe en hebben 's ochtends meer slaap nodig.", "Wie om half negen moet beginnen, staat bijvoorbeeld vaak al om zeven uur op.", "Een latere starttijd past dus beter bij hoe pubers slapen.", "De school heeft een nieuwe fietsenstalling gekregen.", "gaat over een fietsenstalling, niet over de starttijd van school"],
+    ["zakgeld", "Zakgeld is een goede manier om met geld te leren omgaan.", "Je moet zelf kiezen waar je het aan uitgeeft en wat je opspaart.", "Wie in de eerste week alles aan snoep uitgeeft, kan bijvoorbeeld in de derde week geen bioscoopkaartje kopen.", "Zo leer je dus dat geld op kan.", "Mijn opa betaalde vroeger nog met guldens.", "gaat over geld van vroeger, niet over leren omgaan met zakgeld"],
+    ["fietsen naar school", "Fietsen naar school is beter dan met de auto gebracht worden.", "Je beweegt, je bent zelfstandig en het kost niets.", "Je komt bijvoorbeeld al wakker aan op school.", "Fietsen is dus beter voor je lijf en je portemonnee.", "Mijn fiets heeft een mand voorop.", "gaat over de mand op jouw fiets, niet over waarom fietsen beter is"],
+    ["een instrument leren", "Een instrument leren spelen vraagt geduld.", "Je moet vaak oefenen voordat een liedje goed klinkt.", "Wie gitaar speelt, doet er bijvoorbeeld weken over om soepel van akkoord te wisselen.", "Wie volhoudt, wordt er dus vanzelf beter in.", "Gitaren zijn er in allerlei kleuren.", "gaat over de kleur van gitaren, niet over geduld bij het leren spelen"],
+    ["thuis meehelpen", "Thuis meehelpen hoort erbij.", "In een gezin heeft iedereen er baat bij dat de taken worden verdeeld.", "Ruim jij bijvoorbeeld de vaatwasser uit, dan kan je moeder alvast koken.", "Door samen te werken help je elkaar dus.", "De keuken heeft vorig jaar een nieuwe kookplaat gekregen.", "gaat over een kookplaat, niet over taken verdelen"],
+    ["de brugklas", "De eerste weken in de brugklas zijn spannend.", "Je moet nieuwe gezichten leren kennen en de weg in een groot gebouw vinden.", "Veel brugklassers lopen bijvoorbeeld de eerste dag nog te zoeken naar het lokaal van aardrijkskunde.", "Gelukkig voelt de school na een paar weken meestal vertrouwd.", "Mijn broer zit nu in de vijfde klas.", "gaat over je broer in een hogere klas, niet over de eerste weken in de brugklas"]
+  ],
+  kern: [
+    ["een schooluniform", "Als iedereen hetzelfde draagt, zie je niet meteen wie veel geld heeft.", "Op een school met uniform vraagt niemand bijvoorbeeld welk merk je trui is.", "Een uniform kan dus zorgen voor meer gelijkheid.", "Een schooluniform maakt leerlingen gelijker.", "Op sommige scholen kun je geen merktrui dragen.", "Kleding zegt veel over wie je bent.", "Een uniform is vooral duur."],
+    ["een pauze buiten", "Na een uur stilzitten heeft je hoofd even rust nodig.", "Wie in de pauze buiten voetbalt, zit bijvoorbeeld in de volgende les weer scherper.", "Een goede pauze helpt je dus bij het leren.", "Een pauze buiten helpt je concentratie.", "Voetballen in de pauze is leuk.", "Beweging is belangrijk voor iedereen.", "Pauzes zijn eigenlijk te lang."],
+    ["afval op het schoolplein", "Plastic flesjes liggen na de pauze overal op het schoolplein.", "Op onze school staan bijvoorbeeld drie vuilnisbakken, maar na een dag liggen er toch tientallen flesjes naast.", "De school moet dus beter opletten dat afval in de bak komt.", "Het schoolplein heeft last van zwerfafval.", "Er staan drie vuilnisbakken op het plein.", "Afval is een groot probleem voor de hele wereld.", "Flesjes zijn handig voor onderweg."],
+    ["de proefwerkweek", "Je moet veel leerstof in korte tijd onthouden en je slaapt vaak slecht.", "Een klasgenoot van me leerde bijvoorbeeld tot middernacht voor drie toetsen op één dag.", "De toetsweek is dus vooral een week vol spanning.", "De proefwerkweek geeft veel stress.", "Veel leerlingen leren tot middernacht.", "School is vooral stressvol.", "De proefwerkweek is eigenlijk heel ontspannen."],
+    ["vrijwilligerswerk", "Je helpt de club en je ontmoet mensen die je anders nooit zou spreken.", "Wie op zaterdag het veld mee klaarzet, praat bijvoorbeeld met trainers, ouders en spelers van alle leeftijden.", "Vrijwilligerswerk levert je dus meer op dan je denkt.", "Vrijwilligerswerk is leerzaam en gezellig.", "Op zaterdag staan er veel mensen op het veld.", "Mensen moeten elkaar meer helpen.", "Vrijwilligerswerk kost je alleen maar tijd."],
+    ["het openbaar vervoer", "Met je OV-kaart kom je zonder ouders bijna overal.", "Op zaterdag kun je bijvoorbeeld in een uurtje naar de stad om met vrienden te winkelen.", "Het openbaar vervoer geeft jou dus een stuk meer vrijheid.", "Met het openbaar vervoer word je zelfstandiger.", "In de stad kun je goed winkelen.", "Reizen is een leuke hobby.", "Het openbaar vervoer is meestal te laat."],
+    ["de bibliotheek", "Je kunt er gratis boeken lenen en rustig werken.", "Voor mijn spreekbeurt over ruimtevaart vond ik er bijvoorbeeld in een middag vijf boeken.", "Een bieb is dus nuttiger dan veel mensen denken.", "De bibliotheek is een fijne plek om te leren.", "Over ruimtevaart zijn veel boeken geschreven.", "Boeken zijn belangrijk.", "De bibliotheek is overbodig geworden door internet."],
+    ["toetsen op de computer", "Je kunt je antwoorden sneller typen en bij meerkeuzevragen rekent de computer het cijfer meteen uit.", "Na een digitale toets zie je bijvoorbeeld direct welke vragen je fout had.", "Digitaal toetsen scheelt dus tijd, voor leerling en docent.", "Toetsen op de computer hebben voordelen.", "Sommige toetsen laten je meteen je fouten zien.", "Computers zijn niet meer weg te denken.", "Toetsen op papier zijn eerlijker."],
+    ["water drinken", "Je lichaam heeft vocht nodig en met water krijg je geen suiker binnen.", "Een glas water in de pauze scheelt bijvoorbeeld een blikje cola.", "Water is dus beter voor je lijf en je portemonnee.", "Water drinken is slimmer dan fris drinken.", "Een blikje cola kost meer dan een glas water.", "Drinken is belangrijk.", "Fris is gezonder dan water."],
+    ["een dier uit het asiel", "Veel dieren in een asiel zoeken een thuis, en door er een te nemen geef je zo'n dier een tweede kans.", "Een hond uit het asiel is bijvoorbeeld meestal al gechipt en gevaccineerd.", "Een dier uit het asiel nemen is dus een goed idee.", "Een huisdier uit het asiel is een goede keuze.", "Honden uit het asiel zijn meestal al gevaccineerd.", "Dieren verdienen een goed leven.", "Een asiel is een droevige plek."],
+    ["even zonder telefoon", "Zonder scherm let je beter op wat er om je heen gebeurt.", "Tijdens een wandeling zonder telefoon zie je bijvoorbeeld wel de vogels en de wolken.", "Even offline zijn is dus goed voor je aandacht.", "Even zonder telefoon is goed voor je.", "Tijdens een wandeling zie je vogels.", "Technologie maakt het leven moeilijker.", "Zonder telefoon verveel je je alleen maar."],
+    ["tweedehands kleding", "Een tweedehands trui kost minder en er hoeft geen nieuwe voor gemaakt te worden.", "Op de kledingmarkt kocht ik bijvoorbeeld een jas voor tien euro.", "Tweedehands kopen is dus goed voor je portemonnee en voor het milieu.", "Tweedehands kleding kopen heeft voordelen.", "Op de markt kun je een jas kopen.", "Kleding is een belangrijk onderwerp.", "Duurzame kleding is altijd duur."]
+  ],
+  verb: [
+    ["Ik mag vanavond niet gamen", "mijn huiswerk is nog niet af", ",", "want", ["maar", "dus", "of"], "Het tweede deel is de reden voor het eerste. Met <b>dus</b> draai je het om: mijn huiswerk is niet af, dus ik mag niet gamen."],
+    ["De kantine is uitverkocht", "ik haal iets bij de supermarkt", ",", "dus", ["want", "maar", "of"], "Uitverkocht is de oorzaak, iets halen bij de supermarkt het gevolg. <b>Want</b> zou de oorzaak achter het gat zetten, maar die staat ervoor."],
+    ["Sanne traint elke dag", "ze verliest nog vaak", ",", "maar", ["want", "dus", "of"], "Wie veel traint, verwacht te winnen. Dat gebeurt hier niet: een tegenstelling. Met <b>dus</b> zou verliezen het gevolg van trainen zijn."],
+    ["De winkel is dicht", "het is zondag", ",", "want", ["maar", "dus", "of"], "Het is zondag is de reden dat de winkel dicht is. Met <b>dus</b> zou de winkel dicht zijn en daardoor zondag worden, en dat is onzin."],
+    ["We nemen paraplu's mee", "de weerman verwacht regen", ",", "want", ["maar", "dus", "of"], "De verwachte regen is de reden voor de paraplu's. Met <b>dus</b> zou het andersom zijn, en dat klopt niet: de regen komt niet door de paraplu's."],
+    ["De bus nam een andere route", "kwam de hele klas te laat", ".", "daardoor", ["toch", "bijvoorbeeld", "anders"], "De andere route is de oorzaak van het te laat komen. <b>Toch</b> geeft een tegenstelling aan en <b>anders</b> een voorwaarde, en die zitten er niet in."],
+    ["Het was al laat", "bleef Noor nog een uur doorleren", ".", "toch", ["daardoor", "bijvoorbeeld", "anders"], "Het is laat, dus je verwacht dat Noor stopt. Ze leert door: een tegenstelling. <b>Daardoor</b> is verleidelijk, maar laat zijn is geen reden om door te leren."],
+    ["Op onze school kun je veel zelf kiezen", "mag je bij keuzewerktijd bepalen aan welk vak je werkt", ".", "bijvoorbeeld", ["toch", "anders", "helaas"], "Zelf bepalen aan welk vak je werkt is één voorbeeld van 'veel zelf kiezen'. Er zit geen tegenstelling in, dus <b>toch</b> past niet."],
+    ["Eerst warmen we ons op in de gymzaal", "gaan we een partijtje spelen", ".", "daarna", ["toch", "bijvoorbeeld", "anders"], "Het woord 'eerst' kondigt een volgorde aan: eerst opwarmen, dan spelen. Het partijtje is geen voorbeeld van opwarmen, dus <b>bijvoorbeeld</b> past niet."],
+    ["Fietsen is goedkoop", "is het goed voor je conditie", ".", "bovendien", ["daardoor", "toch", "daarna"], "Het tweede deel voegt nog een voordeel toe. Met <b>daardoor</b> zou goedkoop zijn de oorzaak zijn van een goede conditie, en dat klopt niet."],
+    ["Je moet nu vertrekken", "kom je te laat voor de training", ".", "anders", ["daardoor", "toch", "bovendien"], "Het tweede deel zegt wat er gebeurt als je het eerste niet doet. Met <b>daardoor</b> zou vertrekken de oorzaak van te laat komen zijn, en dat is andersom."],
+    ["De leraar legde het twee keer uit", "snapte iedereen het", ".", "daardoor", ["toch", "bijvoorbeeld", "anders"], "Twee keer uitleggen is de oorzaak, dat iedereen het snapte het gevolg. <b>Toch</b> zou betekenen dat het ondanks de uitleg lukte, en daar wijst niets op."],
+    ["Er zijn dieren die 's nachts actief zijn", "slaapt een uil overdag en jaagt hij in het donker", ".", "bijvoorbeeld", ["daardoor", "toch", "anders"], "De uil is een voorbeeld van een dier dat 's nachts actief is. Met <b>daardoor</b> zou het zijn dat andere dieren de oorzaak zijn van het slapen van de uil."],
+    ["Jasper heeft niet geleerd", "haalde hij een voldoende", ".", "toch", ["daardoor", "bovendien", "anders"], "Wie niet leert, haalt meestal geen voldoende. Dat het toch lukt, is een tegenstelling. <b>Daardoor</b> is verleidelijk, maar niet leren is geen reden voor een voldoende."]
+  ],
+  /* [wat je al weet, de goede zin, [fout 1, soort], [fout 2, soort], uitleg]; soort: h = herhaling, l = te lang, v = onduidelijke verwijzing */
+  her: [
+    ["", "Mijn hond moet elke dag uit, ook als het regent.", ["Mijn hond moet elke dag uit en mijn hond moet ook uit als het regent, want mijn hond moet altijd uit.", "h"], ["Mijn hond moet elke dag uit en dat vind ik best leuk maar soms is het koud en dan regent het ook nog en dan heb ik eigenlijk geen zin maar ik doe het toch omdat hij anders niet kan plassen.", "l"], "In de eerste foute versie staat 'mijn hond moet' drie keer. De tweede hangt steeds met 'en', 'maar' en 'omdat' nieuwe delen aan elkaar."],
+    ["", "Ik werk op zaterdag in een supermarkt, zodat ik geld heb voor een nieuwe fiets.", ["Ik werk op zaterdag in een supermarkt. In de supermarkt werk ik om geld te verdienen. Met het geld uit de supermarkt koop ik een fiets.", "h"], ["Ik werk op zaterdag in een supermarkt waar ik schappen vul en soms ook achter de kassa zit als het druk is en ik verdien daar geld mee dat ik spaar voor een nieuwe fiets omdat mijn oude fiets kapot is gegaan toen ik vorige maand naar school fietste.", "l"], "In de eerste foute versie komt 'supermarkt' en 'geld' steeds terug. De tweede is één zin met meer dan vijf delen, waardoor je de draad kwijtraakt."],
+    ["", "Op schoolreis gingen we naar een pretpark, waar we in bijna alle attracties zijn geweest.", ["Op schoolreis gingen we naar een pretpark. In het pretpark gingen we in de attracties. In de attracties van het pretpark hadden we veel lol.", "h"], ["Op schoolreis gingen we met de bus naar een pretpark dat bijna twee uur rijden was en toen gingen we in de achtbaan en in de draaimolen en in de botsauto's en we aten friet en we hadden de hele dag veel lol.", "l"], "In de eerste foute versie keert 'pretpark' en 'attracties' steeds terug. De tweede is één lange keten van 'en'."],
+    ["", "Gamen is leuk en gezellig, daarom is het voor veel jongeren een goede hobby.", ["Gamen is leuk en gamen is gezellig en gamen is fijn, daarom is gamen echt een goede hobby voor veel gamers.", "h"], ["Gamen is leuk en gezellig en je kunt het met vrienden doen die je ook op school ziet en dat is fijn omdat je dan niet alleen zit maar ook samen iets doet en daarom is het een goede hobby voor veel jongeren die thuis niet altijd iets te doen hebben.", "l"], "In de eerste foute versie staat 'gamen' vier keer. De tweede zin is zo lang dat je het begin al vergeten bent als je bij het eind komt."],
+    ["Noor vroeg haar moeder of ze de fiets van haar zus mocht lenen. Je wilt zeggen dat de moeder ja zei.", "Haar moeder zei dat het goed was.", ["Zij zei dat het goed was.", "v"], ["Haar moeder zei dat het goed was en dat Noor de fiets van haar zus mocht lenen zolang ze hem maar heel zou houden en voor het donker weer terug zou brengen en dat ze de sleutel niet moest kwijtraken.", "l"], "'Zij' kan de moeder, de zus of Noor zijn, dus je weet niet wie het goed vond. De lange versie stopt te veel regels in één zin."],
+    ["Lars liet zijn broer Tim zijn nieuwe telefoon zien. Je wilt zeggen dat Tim de telefoon mooi vond.", "Tim vond de telefoon mooi.", ["Hij vond hem mooi.", "v"], ["Tim vond de telefoon mooi, want de telefoon was mooi en Tim hield van mooie telefoons.", "h"], "'Hij vond hem mooi' kan ook betekenen dat Lars Tim mooi vond. In de herhaalde versie komen 'telefoon', 'mooi' en 'Tim' steeds terug."],
+    ["Anna belde Sofie om te vragen of ze mee naar de bioscoop ging. Je wilt zeggen dat Sofie geen tijd had.", "Sofie had geen tijd.", ["Ze had geen tijd.", "v"], ["Sofie zei dat ze dat heel leuk vond maar dat ze helaas geen tijd had omdat ze nog een spreekbeurt moest maken en haar moeder had gezegd dat ze eerst moest opruimen en daarna pas mocht gaan.", "l"], "'Ze' kan Anna of Sofie zijn. De lange versie hangt vier redenen aan één zin."],
+    ["", "In de kantine verkopen ze broodjes en fruit, maar de meeste leerlingen kiezen friet.", ["In de kantine verkopen ze broodjes, in de kantine verkopen ze fruit, en in de kantine verkopen ze ook friet, maar de meeste leerlingen kiezen friet.", "h"], ["In de kantine verkopen ze broodjes en fruit en friet en drinken en snoep en koeken en de meeste leerlingen kiezen friet omdat dat lekker is en omdat het warm is en omdat ze er in de pauze altijd zin in hebben.", "l"], "In de eerste foute versie staat 'in de kantine verkopen ze' drie keer. De tweede heeft zoveel keer 'en' dat je de hoofdzaak niet meer ziet."],
+    ["Mila en haar vriendin Eva fietsen samen naar school. Je wilt zeggen dat Eva soms te laat is.", "Eva is soms te laat.", ["Zij is soms te laat.", "v"], ["Eva is soms te laat en dan komt Eva te laat op school, omdat Eva te laat vertrekt.", "h"], "'Zij' kan Mila of Eva zijn. In de herhaalde versie staan 'Eva' en 'te laat' drie keer."],
+    ["Mijn oma en mijn tante komen morgen op bezoek. Je wilt zeggen dat je oma een taart meeneemt.", "Mijn oma neemt een zelfgebakken appeltaart mee.", ["Zij neemt een zelfgebakken appeltaart mee.", "v"], ["Mijn oma neemt een zelfgebakken appeltaart mee die ze gisteren heeft gebakken met appels uit haar tuin die ze afgelopen herfst heeft geplukt toen het nog mooi weer was en ze haar nieuwe handschoenen droeg.", "l"], "'Zij' kan je oma of je tante zijn. De lange versie voegt steeds een nieuw deel toe over dingen die er niet toe doen."],
+    ["", "Ik maak mijn huiswerk meestal direct na school, zodat ik de avond vrij heb.", ["Ik maak mijn huiswerk meestal na school en na school maak ik mijn huiswerk, want mijn huiswerk wil ik na school maken.", "h"], ["Ik maak mijn huiswerk meestal direct na school omdat ik dan nog energie heb en omdat mijn broer dan nog niet thuis is en ik dus rust heb en omdat ik daarna de hele avond vrij heb om te gamen of naar vrienden te gaan.", "l"], "In de eerste foute versie staan 'huiswerk' en 'na school' steeds weer. De tweede is één zin vol 'omdat' en 'en'."],
+    ["De docent gaf het werkstuk terug aan Yara en vertelde haar dat het groepje goed had gewerkt. Je wilt zeggen dat Yara blij was met het cijfer.", "Yara was blij met het cijfer.", ["Ze was er blij mee.", "v"], ["Yara was blij met het cijfer, want Yara had een goed cijfer en Yara was blij.", "h"], "'Ze' kan de docent of Yara zijn, en 'er' kan het werkstuk of het cijfer zijn. In de herhaalde versie staat 'Yara' drie keer."]
+  ]
+};
+
+/* havo en vwo: langere zinnen, vier per alinea, geen namen bij de vakken, lastiger verbanden */
+D.hv = {
+  alin: [
+    ["telefoons op school", "Een telefoonverbod op school is een kleine ingreep met een verrassend groot effect.", "Zonder scherm in de hand kijken leerlingen elkaar weer aan, en dat zorgt voor meer gesprekken in de pauze en minder gedoe in de klas.", "Docenten melden bijvoorbeeld dat het schoolplein in de pauze weer vol gesprekken zit, waar eerst iedereen stil over zijn scherm gebogen stond.", "Een telefoonverbod lijkt dus vooral de sfeer op school te verbeteren.", "Sommige telefoons hebben tegenwoordig een scherm dat je kunt opvouwen.", "gaat over een uitvoering van de telefoon, niet over het effect van een verbod op school"],
+    ["een bijbaan", "Een bijbaan naast school is een goede leerschool, zolang het aantal uren beperkt blijft.", "Wie veel uren werkt, levert er energie en tijd voor huiswerk voor in, maar een paar uur per week leert je vooral zelfstandig te zijn en afspraken na te komen.", "Een scholier die op zaterdag twee dagdelen in een kringloopwinkel werkt, leert bijvoorbeeld om klanten te woord te staan en op tijd te komen, zonder dat zijn cijfers eronder lijden.", "Bij een bijbaan gaat het er dus niet om of je werkt, maar hoeveel uur je werkt.", "Kringloopwinkels verkopen ook veel oude boeken en platen.", "gaat over wat een kringloopwinkel verkoopt, niet over wat een bijbaan oplevert"],
+    ["teamsport", "Wie in een team sport, leert vaak meer over samenwerken dan wie dat in de klas oefent.", "In een wedstrijd kun je niet wachten tot een ander het oplost: je moet direct afstemmen, elkaar vertrouwen en je eigen fouten durven laten zien.", "Een verdediger die een bal verkeerd inspeelt, hoort van zijn teamgenoten bijvoorbeeld meteen wat er beter kan, en overlegt bij de volgende aanval beter.", "Voor het leren samenwerken is teamsport dus een bijzonder goede oefenplek.", "De contributie van de club is dit jaar verhoogd.", "gaat over geld, niet over wat je in een team leert"],
+    ["een huisdier", "Een huisdier nemen is een beslissing voor de lange termijn.", "Veel dieren worden jaren oud en hebben elke dag aandacht, eten en verzorging nodig, ook als er thuis andere dingen spelen.", "Een hond kan bijvoorbeeld wel vijftien jaar worden, en in die tijd gaat zijn baasje van de basisschool naar een studie, een baan en een eigen huis.", "Wie een dier wil, moet er dus rekening mee houden dat het niet alleen om de eerste maanden gaat.", "Een dierenwinkel heeft meestal een ruim aanbod aan speeltjes.", "gaat over het aanbod van een winkel, niet over de zorg voor een dier"],
+    ["de schoolreis", "Een gezamenlijk uitje is voor de sfeer in een klas vaak waardevoller dan een extra les.", "Buiten het lokaal spreken leerlingen elkaar op een andere manier, omdat de rollen van de les even wegvallen en iedereen in het pretpark gelijk is.", "Een leerling die in de klas nauwelijks wat zegt, kan bijvoorbeeld in de rij voor de achtbaan opeens het gesprek aan de gang houden.", "Een schoolreis is daarom een investering in de klas, en geen vrije dag zonder doel.", "Het pretpark heeft een nieuwe achtbaan met een looping.", "gaat over een attractie, niet over de sfeer in de klas"],
+    ["gamen", "Gamen heeft een slechter imago dan het verdient.", "Veel spellen vragen om plannen maken, overleggen en snel schakelen, vaardigheden die op school en later op het werk net zo goed nodig zijn.", "In een teamspel waarin vijf spelers één doel moeten halen, beslist bijvoorbeeld elke speler binnen enkele seconden wat hij doet, en past hij zich aan als iemand anders uitvalt.", "Dat maakt gamen niet per se gezond, maar het laat wel zien dat het meer is dan tijdverspilling.", "Veel gamers kijken ook graag naar filmpjes van andere spelers.", "gaat over filmpjes kijken, niet over wat je van gamen leert"],
+    ["sociale media", "Sociale media veroorzaken geen eenzaamheid, maar kunnen die wel versterken.", "Wie zich al alleen voelt, ziet op een scherm vooral de gezelligheid van anderen en gaat zichzelf daarmee vergelijken.", "Een leerling die niet op een feestje is uitgenodigd, ziet bijvoorbeeld de foto's de volgende ochtend alsnog voorbijkomen.", "Het scherm veroorzaakt het gevoel dus niet, maar maakt het wel groter.", "Veel mensen kijken tijdens het eten even op hun scherm.", "gaat over kijken tijdens het eten, niet over eenzaamheid"],
+    ["huiswerk", "Veel huiswerk levert minder op dan docenten vaak denken.", "Na een lange schooldag neemt de concentratie af, waardoor de laatste opdrachten sneller en slordiger worden gemaakt dan de eerste.", "Een leerling die een uur aan een hoofdstuk werkt, onthoudt bijvoorbeeld in dat uur meer dan in de twee uur daarna, waarin hij steeds vaker op zijn telefoon kijkt.", "Korter en gerichter huiswerk zou dus waarschijnlijk meer opleveren.", "Op sommige scholen mogen leerlingen hun huiswerk in de mediatheek maken.", "gaat over waar je huiswerk maakt, niet over hoeveel het oplevert"],
+    ["de starttijd van school", "Een latere starttijd van de school past beter bij de slaap van pubers.", "Het lichaam van pubers wordt 's avonds later moe en heeft 's ochtends langer slaap nodig, terwijl de eerste les vaak al om half negen begint.", "Een leerling die om kwart over elf in slaap valt, slaapt bijvoorbeeld minder dan acht uur als de wekker om zeven uur gaat.", "Een latere start zou het dagritme dus beter laten aansluiten bij wat pubers nodig hebben.", "De meeste scholen hebben ook een website met het rooster.", "gaat over de website van de school, niet over de starttijd"],
+    ["de schoolkantine", "Een gezonde kantine werkt alleen als het gezonde aanbod ook echt lekker is.", "Leerlingen kiezen niet op gezondheid maar op smaak en prijs, en als het gezonde aanbod saai of duur is, kopen ze het simpelweg niet.", "Als een school bijvoorbeeld alleen fruit en salades verkoopt, lopen leerlingen in de pauze waarschijnlijk naar de supermarkt aan de overkant.", "Gezond eten stimuleren lukt dus alleen met een aanbod dat leerlingen zelf willen kopen.", "De kantine sluit op de meeste scholen rond half drie.", "gaat over de sluitingstijd van de kantine, niet over wat een gezonde kantine nodig heeft"],
+    ["vrijwilligerswerk", "Vrijwilligerswerk levert een scholier meer op dan een vrije zaterdag.", "Je ontmoet mensen van andere leeftijden en achtergronden en krijgt verantwoordelijkheid, terwijl je er geen cijfer voor krijgt maar wel waardering.", "Wie op zaterdag helpt in een buurthuis, praat bijvoorbeeld met mensen van tachtig en met kinderen van zes, en leert daardoor zijn toon aan te passen.", "Dat levert een soort ervaring op die je in een lokaal niet kunt opdoen.", "Het buurthuis heeft nieuwe stoelen gekregen.", "gaat over meubels, niet over wat vrijwilligerswerk oplevert"],
+    ["fietsen naar school", "De fiets is voor de meeste scholieren het slimste vervoermiddel.", "Fietsen kost vrijwel niets, het levert beweging op en je bent niet afhankelijk van een bus die te laat kan zijn of een ouder die je moet brengen.", "Een leerling die vier kilometer fietst, is bijvoorbeeld in een kwartier op school, vaak sneller dan met een bus die onderweg nog drie keer stopt.", "Voor korte afstanden is fietsen dus moeilijk te verslaan.", "Mijn buurman heeft een elektrische fiets met een mand voorop.", "gaat over de fiets van je buurman, niet over waarom fietsen slim is"],
+    ["een spreekbeurt", "Een spreekbeurt houden is eng, maar het levert wel iets op.", "Je leert jezelf te presenteren, je verhaal te ordenen en rustig te blijven onder de blik van de klas, vaardigheden die je later bij elke sollicitatie weer nodig hebt.", "Wie zijn eerste spreekbeurt in de brugklas nog trillend uitsprak, houdt in de vierde klas bijvoorbeeld zonder moeite een presentatie voor een hele zaal.", "De zenuwen zijn dus een prijs die je betaalt voor iets wat je blijft houden.", "Een spreekbeurt over dieren is vaak populairder dan een spreekbeurt over vulkanen.", "gaat over welke onderwerpen populair zijn, niet over wat een spreekbeurt oplevert"],
+    ["de zomervakantie", "Een zomervakantie van zes weken is voor veel leerlingen te lang.", "Na een paar weken zonder structuur raken leerlingen uit hun ritme, en ze zijn na de vakantie een deel van de lesstof weer vergeten.", "Een leerling die zes weken niet rekent of leest, moet in september bijvoorbeeld eerst weken herhalen voordat de nieuwe stof kan beginnen.", "Kortere, vaker terugkerende vakanties zouden daarom meer rust en minder verlies opleveren.", "Veel gezinnen boeken hun vakantie al in januari.", "gaat over wanneer gezinnen boeken, niet over de lengte van de zomervakantie"]
+  ],
+  kern: [
+    ["zelfstandig werken", "Leerlingen mogen zelf kiezen aan welk vak ze werken, maar wie niet gewend is zijn tijd te plannen, stelt het lastigste vak vaak uit.", "In de keuzewerktijd begint een leerling bijvoorbeeld met een kleurplaat voor handvaardigheid, terwijl de wiskundetoets al over twee dagen is.", "Vrijheid werkt dus pas als je ook geleerd hebt hoe je die vrijheid gebruikt.", "Zelfstandig werken vraagt om vaardigheden die leerlingen eerst moeten leren.", "Sommige leerlingen beginnen bij keuzewerktijd met het makkelijkste vak.", "Op school is vrijheid belangrijker dan structuur.", "Leerlingen werken het best als docenten alles voorschrijven."],
+    ["cijfers", "Een cijfer geeft aan hoe een toets is gemaakt, maar zegt niets over wat een leerling heeft geleerd of waar hij nog moeite mee heeft.", "Een leerling met een zeven voor een toets over de Tweede Wereldoorlog kan bijvoorbeeld de data uit zijn hoofd hebben geleerd zonder te begrijpen waarom de oorlog begon.", "Een cijfer alleen is dus een slechte maat voor begrip.", "Een cijfer vertelt maar een deel van het verhaal.", "Een zeven voor geschiedenis kun je halen door data te stampen.", "Toetsen zijn overbodig.", "Een cijfer is de beste maat voor wat een leerling kan."],
+    ["streamen", "Series en films staan altijd klaar, waardoor je niet meer hoeft te wachten tot zondagavond en je ook niet meer samen kijkt.", "Waar vroeger de hele klas op maandag over dezelfde aflevering praatte, heeft nu iedereen een andere serie gezien.", "Wat we winnen aan gemak, verliezen we aan gedeelde gesprekken.", "Streamen maakt kijken makkelijker, maar verkleint wat we met elkaar delen.", "Vroeger praatte de klas op maandag over één serie.", "Technologie verandert hoe wij met elkaar omgaan.", "Streamen is vooral goed voor het contact tussen klasgenoten."],
+    ["taalmodellen", "Een tekst die een taalmodel schrijft, klinkt vaak goed, maar zegt niets over wat de leerling zelf begrijpt.", "Een leerling die zijn werkstuk laat schrijven, kan bijvoorbeeld bij een mondelinge vraag niet uitleggen wat er in zijn eigen tekst staat.", "Zo leer je dus niets bij, ook al levert het een nette tekst op.", "Een werkstuk laten schrijven door een taalmodel leert je niets.", "Mondelinge vragen zijn lastiger dan een werkstuk.", "Technologie moet uit het onderwijs worden geweerd.", "Taalmodellen schrijven vaak betere teksten dan leerlingen."],
+    ["de pauze", "Na twee uur stilzitten heeft het hoofd even iets anders nodig, en wie in de pauze buiten is geweest, zit zichtbaar scherper in de les.", "Docenten merken bijvoorbeeld dat het eerste kwartier na de grote pauze rustiger is dan het laatste kwartier ervoor.", "De pauze is dus geen verloren tijd, maar onderdeel van het leren.", "Een goede pauze helpt bij het leren.", "Het eerste kwartier na de pauze is rustiger dan het laatste kwartier ervoor.", "Leerlingen hebben altijd te weinig vrije tijd.", "Door pauzes gaat er veel lestijd verloren."],
+    ["tweedehands kleding", "Een product dat een tweede leven krijgt, hoeft niet opnieuw te worden gemaakt, en dat scheelt grondstoffen, energie en geld.", "Een tweedehands trui van een marktkraam kost bijvoorbeeld een paar euro en heeft geen nieuwe katoenteelt of verzending nodig gehad.", "Hergebruik is dus goedkoper voor jezelf en lichter voor de aarde.", "Tweedehands kopen is slim voor je portemonnee en voor het milieu.", "Op een kledingmarkt vind je goedkope truien.", "Kleding kopen is leuk.", "Duurzame kleding is altijd duur."],
+    ["groepswerk", "Een groepje werkt alleen goed als alle leden een eigen taak hebben, anders doen een of twee leerlingen het werk en liften de anderen mee.", "Bij een werkstuk over de Romeinen schreef bijvoorbeeld één leerling alle tekst, terwijl de anderen alleen hun naam eronder zetten.", "Groepswerk vraagt dus om duidelijke taken.", "Groepswerk gaat alleen goed als de taken verdeeld zijn.", "Bij werkstukken over de Romeinen schrijft één leerling vaak alles.", "Leerlingen werken liever alleen dan samen.", "Een groepje werkt het best zonder afspraken."],
+    ["slaap", "Wie te weinig slaapt, onthoudt minder, reageert langzamer en is sneller prikkelbaar.", "Een leerling die na een nacht van vijf uur slaap naar school gaat, merkt bijvoorbeeld dat hij na de eerste les al niet meer weet wat de docent heeft uitgelegd.", "Slaap is dus geen luxe, maar een voorwaarde om goed te kunnen leren.", "Genoeg slaap is een voorwaarde om goed te leren.", "Na vijf uur slaap weet je na één les niets meer.", "Gezond leven is belangrijk voor iedereen.", "Een leerling kan het gemis aan slaap altijd inhalen op school."],
+    ["online pesten", "Achter een scherm zie je het gezicht van de ander niet, waardoor je minder snel merkt dat iets pijn doet.", "Een opmerking die je in de klas nooit hardop zou zeggen, tik je bijvoorbeeld in een groepsapp in drie seconden.", "Het ontbreken van een gezicht maakt het dus makkelijker om te ver te gaan.", "Online pesten gaat makkelijker, omdat je de reactie van de ander niet ziet.", "Een groepsapp is snel.", "Pesten komt overal voor.", "Wie online pest, doet dat meestal voor de grap."],
+    ["lezen", "Wie veel leest, komt vaker nieuwe woorden en zinsconstructies tegen, waardoor je eigen taalgebruik rijker wordt zonder dat je het merkt.", "Een leerling die elke week een boek leest, gebruikt in een opstel bijvoorbeeld woorden als 'bovendien' en 'daarentegen', waar anderen bij 'en' en 'maar' blijven.", "Lezen helpt je dus vooral om beter te schrijven.", "Wie veel leest, schrijft vaak ook beter.", "In een opstel kun je woorden als 'bovendien' gebruiken.", "Taal is het belangrijkste vak op school.", "Boeken zijn minder belangrijk dan schrijven."],
+    ["te laat komen", "Als je elke dag een paar minuten te laat komt, mis je net de uitleg waarop de rest van de les voortbouwt.", "Wie bij wiskunde steeds na de uitleg binnenloopt, moet de opgaven bijvoorbeeld maken zonder te weten hoe de docent de eerste som aanpakte.", "Op tijd komen is dus ook een manier om zelf meer te leren.", "Te laat komen kost je meer dan alleen een berisping.", "Bij wiskunde begint de uitleg meestal aan het begin.", "Docenten zijn vaak streng.", "Een paar minuten te laat komen maakt niets uit."],
+    ["muziek tijdens het leren", "Muziek met tekst kost je hersenen werk, want je leest en luistert tegelijk, en wie lastige stof leert, merkt dat zijn aandacht verdeeld raakt.", "Een leerling die woordjes leert met een liedje op de achtergrond, zingt bijvoorbeeld in zijn hoofd mee en vergeet de vertaling.", "Muziek met tekst past dus slecht bij werk dat je aandacht vraagt.", "Muziek met zang leidt af bij het leren.", "Een liedje kan woordjes verdringen.", "Muziek is belangrijk in het leven van pubers.", "Muziek helpt je altijd om beter te leren."]
+  ],
+  verb: [
+    ["Noor traint elke dag extra", "ze de finale haalt", ",", "zodat", ["doordat", "hoewel", "terwijl"], "Het halen van de finale is haar doel. Met <b>doordat</b> zou de finale de oorzaak van het trainen zijn, en dat is omgekeerd."],
+    ["Tom heeft het proefwerk gehaald", "hij nauwelijks heeft geleerd", ",", "hoewel", ["doordat", "zodat", "tenzij"], "Je verwacht niet dat je haalt als je nauwelijks leert, en toch gebeurt het. Met <b>doordat</b> zou nauwelijks leren de oorzaak zijn van het halen."],
+    ["Mijn zus houdt van drukte", "ik juist rust nodig heb", ",", "terwijl", ["zodat", "doordat", "nadat"], "De twee worden tegenover elkaar gezet: zij drukte, ik rust. Met <b>doordat</b> zou rust nodig hebben de reden zijn dat zij van drukte houdt."],
+    ["We gaan zaterdag wandelen", "de weerman storm voorspelt", ",", "tenzij", ["doordat", "zodat", "nadat"], "De wandeling gaat door, behalve in één geval. Met <b>doordat</b> zou de voorspelde storm de reden zijn om te gaan wandelen."],
+    ["Kim ging naar de training", "ze haar huiswerk had gemaakt", ",", "nadat", ["terwijl", "zodat", "hoewel"], "Eerst het huiswerk, daarna de training. Met <b>terwijl</b> zou het gelijktijdig gebeuren, en dat past niet bij 'had gemaakt'."],
+    ["De trein had vertraging", "er een wissel was vastgelopen", ",", "doordat", ["zodat", "hoewel", "tenzij"], "De vastgelopen wissel is de oorzaak van de vertraging. Met <b>zodat</b> zou de wissel zijn vastgelopen om de trein te vertragen, en dat is geen doel."],
+    ["De organisatie had gewaarschuwd voor files", "kwamen bijna alle bezoekers met de auto", ".", "desondanks", ["daardoor", "bijvoorbeeld", "kortom"], "Ondanks de waarschuwing kwamen ze toch met de auto. Met <b>daardoor</b> zou de waarschuwing de reden zijn om met de auto te komen."],
+    ["Gamen maakt je niet automatisch asociaal", "leer je in veel teamspellen samenwerken", ".", "integendeel", ["daardoor", "kortom", "vervolgens"], "De eerste zin ontkent iets en de tweede zegt het tegenovergestelde. Met <b>daardoor</b> zou niet asociaal zijn de oorzaak van samenwerken leren zijn."],
+    ["Op school leer je rekenen, schrijven en samenwerken, en je maakt er vrienden", "is school veel meer dan een plek waar je lessen volgt", ".", "kortom", ["bijvoorbeeld", "daarna", "integendeel"], "De eerste zin somt op en de tweede trekt daar de conclusie uit. Met <b>bijvoorbeeld</b> zou 'meer dan lessen' één van de opgesomde dingen zijn."],
+    ["In het basisonderwijs heb je meestal één juf of meester", "heb je op de middelbare school bij elk vak een andere docent", ".", "daarentegen", ["daardoor", "vervolgens", "kortom"], "De twee situaties worden naast elkaar gezet om het verschil te laten zien. Met <b>vervolgens</b> zou het een volgorde in de tijd zijn, en dat staat er niet."],
+    ["Eerst schrijf je een kernzin op", "werk je die uit met een toelichting", ".", "vervolgens", ["daarentegen", "desondanks", "bijvoorbeeld"], "Dit is een volgorde in een proces: eerst de kernzin, dan de uitwerking. Met <b>daarentegen</b> zou er een tegenstelling staan, en die is er niet."],
+    ["Een bijbaan levert je zakgeld op", "doe je er werkervaring mee op", ".", "bovendien", ["desondanks", "daarentegen", "kortom"], "Het tweede deel voegt nog een voordeel toe. Met <b>desondanks</b> of <b>daarentegen</b> zou het een nadeel zijn, en werkervaring is geen nadeel."],
+    ["De school heeft de pauze met tien minuten verlengd", "zijn de gangen minder druk", ".", "daardoor", ["integendeel", "kortom", "bijvoorbeeld"], "De langere pauze is de oorzaak van de rustigere gangen. Met <b>integendeel</b> zou de eerste zin eerst moeten worden tegengesproken, en dat gebeurt niet."],
+    ["Je moet je telefoon in de les uitzetten", "krijg je hem van de docent niet snel terug", ".", "anders", ["daardoor", "bovendien", "desondanks"], "Het tweede deel zegt wat er gebeurt als je het eerste niet doet. Met <b>daardoor</b> zou je telefoon uitzetten de oorzaak zijn van hem niet terugkrijgen, en dat is andersom."],
+    ["Veel leerlingen hebben een bijbaan", "hun cijfers zakken niet", ",", "maar", ["want", "dus", "of"], "Je verwacht dat cijfers zakken door een bijbaan, maar dat gebeurt niet: een tegenstelling. Met <b>dus</b> zou een bijbaan het gevolg zijn van niet zakken."],
+    ["Leerlingen moeten de regels kennen", "wie ze niet kent, kan ze niet volgen", ",", "want", ["maar", "dus", "of"], "Het tweede deel is de reden voor het eerste. Met <b>dus</b> zou 'wie ze niet kent kan ze niet volgen' een gevolg zijn van 'leerlingen moeten de regels kennen', en dat is andersom."]
+  ],
+  her: [
+    ["", "Een telefoonverbod kan de concentratie verbeteren, maar het lost niet op waarom leerlingen zo snel afgeleid raken.", ["Een telefoonverbod kan de concentratie van leerlingen verbeteren, maar een telefoonverbod lost niet op waarom leerlingen zo snel afgeleid raken, want een telefoonverbod pakt alleen het symptoom aan.", "h"], ["Een telefoonverbod kan de concentratie verbeteren, maar omdat leerlingen ook thuis hun telefoon gebruiken, en omdat veel docenten het verbod verschillend handhaven, terwijl sommige leerlingen hun toestel toch verstoppen, is het de vraag of het verbod het werkelijke probleem oplost.", "l"], "In de eerste foute versie staat 'een telefoonverbod' drie keer. In de tweede zijn vier bijzinnen in elkaar geschoven, waardoor je het eigenlijke punt pas na het lezen van de hele zin vindt."],
+    ["Sinds de school de pauze heeft ingekort, koopt de kantine minder en zijn leerlingen onrustiger in de les. Je wilt zeggen dat de kortere pauze de oorzaak van de onrust is.", "De kortere pauze is waarschijnlijk de oorzaak van de onrust.", ["Dit is waarschijnlijk de oorzaak van de onrust.", "v"], ["De kortere pauze is waarschijnlijk de oorzaak van de onrust, want leerlingen kunnen zich minder goed concentreren als ze geen tijd hebben gehad om te eten en te bewegen, terwijl docenten ook merken dat de les er rommeliger door verloopt en dat leerlingen eerder vertrekken.", "l"], "'Dit' kan de kortere pauze zijn, maar ook de omzet van de kantine of de onrust zelf. De lange versie mengt de oorzaak met drie andere gedachten."],
+    ["De ouderraad en het schoolbestuur zijn het oneens over het nieuwe rooster. Je wilt zeggen dat het schoolbestuur het rooster verdedigt.", "Het schoolbestuur verdedigt het rooster.", ["Zij verdedigt het.", "v"], ["Het schoolbestuur verdedigt het rooster, want het schoolbestuur vindt dat het rooster goed is en het schoolbestuur wil het rooster niet veranderen.", "h"], "'Zij' kan de ouderraad of het schoolbestuur zijn, en 'het' is niet duidelijk. In de herhaalde versie staan 'schoolbestuur' en 'rooster' drie keer."],
+    ["", "Scholieren met een bijbaan leren verantwoordelijkheid te dragen, al gaat dat soms ten koste van hun cijfers.", ["Een bijbaan leert scholieren verantwoordelijkheid, en die verantwoordelijkheid is waardevol, want verantwoordelijkheid is iets wat scholieren op een bijbaan leren, ook al kost die bijbaan soms cijfers.", "h"], ["Scholieren met een bijbaan leren verantwoordelijkheid te dragen en dat zijn vaardigheden die ze later nodig hebben bij een opleiding of een eerste echte baan, waarbij het wel zo is dat de tijd die ze aan het werk besteden niet meer beschikbaar is voor huiswerk, waardoor hun cijfers soms dalen.", "l"], "In de eerste foute versie komen 'verantwoordelijkheid' en 'bijbaan' steeds terug. De tweede zin heeft een lange staart van 'waarbij' en 'waardoor'."],
+    ["Mijn broer en mijn neef gamen elke avond samen. Je wilt zeggen dat het cijfer van je broer daardoor daalt.", "Het cijfer van mijn broer daalt daardoor.", ["Zijn cijfer daalt daardoor.", "v"], ["Het cijfer van mijn broer daalt daardoor, want als hij elke avond gamet heeft hij geen tijd meer om zijn huiswerk te maken, terwijl mijn neef gelukkig minder gamet en dus beter op school presteert, al weet ik niet zeker of dat komt doordat hij meer slaapt of doordat hij minder afleiding heeft.", "l"], "'Zijn' kan je broer of je neef zijn. De lange versie schuift het verhaal van je neef erin, terwijl je dat niet wilde zeggen."],
+    ["De klas stemde over de bestemming van de schoolreis. Een pretpark kreeg de meeste stemmen, een museum de minste. Je wilt zeggen dat het museum verloor omdat veel leerlingen het saai vonden.", "Het museum verloor omdat veel leerlingen het saai vonden.", ["Dat verloor omdat veel leerlingen het saai vonden.", "v"], ["Het museum verloor omdat het museum saai werd gevonden en omdat leerlingen het museum minder leuk vonden dan een pretpark waar leerlingen het leuker vonden.", "h"], "'Dat' kan het pretpark of het museum zijn, dus je weet niet wie verloor. In de herhaalde versie staan 'museum' en 'leerlingen' steeds weer."],
+    ["", "Sociale media maken het makkelijk om contact te houden, maar ze kunnen ook het gevoel geven dat je iets mist.", ["Sociale media maken het makkelijk om contact te houden en sociale media geven soms het gevoel dat je iets mist, omdat je op sociale media altijd ziet wat anderen doen op sociale media.", "h"], ["Sociale media maken het makkelijk om contact te houden met vrienden, familie en klasgenoten, ook als die ver weg wonen, maar omdat je er ook de hele dag ziet wat anderen allemaal doen, krijg je makkelijk het idee dat je iets mist, wat er weer toe kan leiden dat je nog vaker gaat kijken.", "l"], "In de eerste foute versie staat 'sociale media' vier keer. De tweede zin heeft zes delen en eindigt met een gevolg dat niemand vroeg."],
+    ["Joris stuurde Bram een bericht over de training, maar die las het pas de volgende dag. Je wilt zeggen dat Bram te laat reageerde.", "Bram reageerde pas de volgende dag.", ["Hij reageerde pas de volgende dag.", "v"], ["Bram reageerde pas de volgende dag omdat hij zijn telefoon had laten liggen in de kleedkamer en daar pas weer langskwam toen hij zijn gymtas ging ophalen, waarna hij het bericht las en meteen terugschreef dat hij het niet meer zou halen.", "l"], "'Hij' kan Joris of Bram zijn. De lange versie vertelt de hele middag van Bram, terwijl je alleen wilde zeggen dat hij te laat was."],
+    ["", "Topsport vraagt veel van jongeren, omdat training, school en vrije tijd moeilijk te combineren zijn.", ["Topsport vraagt veel, want topsport kost tijd, en omdat topsport zoveel tijd kost, is topsport moeilijk te combineren met school.", "h"], ["Topsport vraagt veel van jongeren, omdat ze meerdere keren per week moeten trainen, vaak ook nog op zaterdag een wedstrijd hebben, daarnaast gewoon naar school moeten, huiswerk hebben en ook nog tijd willen hebben voor vrienden, wat in de praktijk bijna niet te combineren is.", "l"], "In de eerste foute versie staat 'topsport' drie keer en 'tijd' twee keer. De tweede zin somt zes dingen op voordat je bij de conclusie bent."],
+    ["De hond van Sara en de kat van Jim spelen vaak samen in de tuin. Je wilt zeggen dat de kat soms te wild is voor de hond.", "De kat van Jim is soms te wild voor de hond.", ["Die is soms te wild voor hem.", "v"], ["De kat van Jim is soms te wild voor de hond van Sara, omdat de kat van Jim te wild speelt en de hond van Sara dat niet leuk vindt aan de kat van Jim.", "h"], "'Die' en 'hem' kunnen allebei naar de hond of de kat wijzen. In de herhaalde versie staan 'de kat van Jim' en 'de hond van Sara' steeds weer."],
+    ["", "Een huisdier kan eenzaamheid verminderen, maar het vraagt wel dagelijkse zorg.", ["Een huisdier kan eenzaamheid verminderen en een huisdier is fijn gezelschap, maar een huisdier vraagt ook zorg, en die zorg voor een huisdier is dagelijks.", "h"], ["Een huisdier kan eenzaamheid verminderen doordat je iets hebt om voor te zorgen, dat altijd blij is als je thuiskomt, ook als je een slechte dag hebt gehad, maar wie een huisdier neemt moet wel bedenken dat een dier elke dag eten, aandacht en beweging nodig heeft, ook in de vakantie.", "l"], "In de eerste foute versie staat 'een huisdier' vier keer. De tweede zin bevat twee gedachten die elk een eigen zin verdienen."],
+    ["De docent en de conrector spraken over de te drukke gangen. Je wilt zeggen dat de conrector een oplossing bedacht.", "De conrector bedacht een oplossing.", ["Hij bedacht een oplossing.", "v"], ["De conrector bedacht een oplossing waarbij de leerlingen in drie groepen op verschillende tijden pauze krijgen, zodat de gangen niet meer vol zijn, al betekent dat wel dat sommige vrienden elkaar niet meer in de pauze zien.", "l"], "'Hij' kan de docent of de conrector zijn. De lange versie beschrijft ook de oplossing en het nadeel, terwijl de zin alleen moest zeggen wie hem bedacht."]
+  ]
+};
+</script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  function hoofd(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+  function el(id){ return document.getElementById(id); }
+
+  /* nooit twee keer achter elkaar dezelfde alinea (of hetzelfde onderwerp in een lijst) */
+  var laatste = {};
+  function pak(lijst, sleutel){
+    var i, n = 0;
+    do { i = Math.floor(Math.random() * lijst.length); n++; } while (lijst.length > 1 && laatste[sleutel] === i && n < 30);
+    laatste[sleutel] = i; return i;
+  }
+
+  var ROL = ['kernzin', 'toelichting', 'voorbeeld', 'slotzin'];
+  /* een alinea: kernzin, toelichting, voorbeeld en (vanaf kgt) een slotzin */
+  function zinnenVan(r){ var z = [r[1], r[2], r[3]]; if (r[4]) z.push(r[4]); return z; }
+
+  /* na het antwoord: wacht tot de motor de uitslag neerzet, doe dan iets met het beeld */
+  function naAntwoord(fn){
+    return function(){
+      var r = el('reactie'); if (!r || !window.MutationObserver) return;
+      var mo = new MutationObserver(function(){ if (r.querySelector('.uitslagregel')){ mo.disconnect(); try { fn(); } catch (e){} } });
+      mo.observe(r, { childList:true });
+    };
+  }
+  function beide(a, b){ return function(vak){ a(vak); b(vak); }; }
+  /* lange antwoorden: een kolom, kleiner lettertype */
+  function langeOpties(nummer){
+    return function(vak){
+      var o = vak.querySelector('.opties'); if (!o) return;
+      o.classList.add('zinnen'); if (nummer) o.classList.add('nummer');
+      Array.prototype.forEach.call(o.querySelectorAll('.optie'), function(b){ b.classList.add('sv'); });
+    };
+  }
+  function onderwerp(t){ return '<div class="tv"><span class="over">alinea over</span><b>' + S(t) + '</b></div>'; }
+
+  /* 1. volgorde: kernzin, toelichting, voorbeeld, slotzin */
+  function volgorde(niveau){
+    var d = D[niveau], i = pak(d.alin, 'alin' + niveau), r = d.alin[i], z = zinnenVan(r);
+    var regels = z.map(function(t, j){ return '<span class="regel"><b>' + (j + 1) + '. ' + ROL[j] + '</b> ' + S(t) + '</span>'; }).join(' ');
+    return {
+      onderdeel:'alinea: volgorde', onderdeelNaam:'volgorde', vorm:'sleep', sleutel:'vo' + niveau + i,
+      vraag: 'Zet de zinnen van deze alinea in de goede volgorde.',
+      opdracht: niveau === 'bb' ? 'Begin met de zin die zegt waar de alinea over gaat.'
+        : niveau === 'kgt' ? 'Een alinea begint met de kernzin en eindigt met een zin die afrondt.'
+        : 'Let op woorden die naar iets terugwijzen, zoals dat, dit, zo en daarom.',
+      beeld: onderwerp(r[0]),
+      kaarten: z.map(function(t, j){ return { id:'s' + j, tekst:S(t) }; }),
+      vakken: z.map(function(t, j){ var v = { id:'p' + j, max:1, hoort:['s' + j] }; if (niveau !== 'hv') v.naam = ROL[j]; return v; }),
+      sleepuit: 'Vak 1 is het begin van de alinea. Op een telefoon: tik een zin aan en dan het vak.',
+      uitleg: 'Zo loopt de alinea: ' + regels + ' <span class="regel">De kernzin zegt waar het over gaat, de toelichting zegt waarom dat zo is en het voorbeeld laat het zien met een situatie.' + (r[4] ? ' De slotzin rondt af.' : '') + '</span>',
+      antwoordTekst: z.join(' ')
+    };
+  }
+
+  /* 2. kernzin: kies de zin die bij de toelichting en het voorbeeld hoort */
+  function kernzin(niveau){
+    var d = D[niveau], i = pak(d.kern, 'kern' + niveau), r = d.kern[i];
+    var z = [r[1], r[2]]; if (r[3]) z.push(r[3]);
+    return {
+      onderdeel:'alinea: kernzin', onderdeelNaam:'kernzin', vorm:'meerkeuze', sleutel:'kz' + niveau + i,
+      vraag: 'Welke kernzin hoort bovenaan deze alinea?',
+      opdracht: 'De kernzin zegt waar de hele alinea over gaat, niet maar een stukje ervan.',
+      beeld: '<div class="tv" id="tv"><span class="kz" id="kzgat">hier ontbreekt de kernzin</span>' + z.map(S).join(' ') + '</div>',
+      opties: [r[4], r[5], r[6], r[7]].map(S), goed: 0,
+      uitleg: '<span class="regel"><b>Dit is de kernzin:</b> ' + S(r[4]) + ' De toelichting en het voorbeeld leggen precies dit uit.</span>' +
+        '<span class="regel"><b>Te smal:</b> ' + S(r[5]) + ' Dat is maar een deel van de alinea.</span>' +
+        '<span class="regel"><b>Te breed of ander onderwerp:</b> ' + S(r[6]) + ' Daar gaat deze alinea niet over.</span>' +
+        '<span class="regel"><b>Klopt niet:</b> ' + S(r[7]) + ' Dat zegt iets anders dan de alinea.</span>',
+      antwoordTekst: r[4],
+      na: beide(langeOpties(false), naAntwoord(function(){ var g = el('kzgat'), t = el('tv'); if (g) g.textContent = r[4]; if (t) t.classList.add('toon'); }))
+    };
+  }
+
+  /* 3. hoort niet: welke zin dwaalt af van de kernzin */
+  function hoortniet(niveau){
+    var d = D[niveau], i = pak(d.alin, 'alin' + niveau), r = d.alin[i], z = zinnenVan(r);
+    var pos = 1 + Math.floor(Math.random() * z.length);
+    var lijst = z.slice(); lijst.splice(pos, 0, r[5]);
+    return {
+      onderdeel:'alinea: hoortniet', onderdeelNaam:'hoort niet erbij', vorm:'meerkeuze', sleutel:'hn' + niveau + i,
+      vraag: 'Welke zin hoort niet in deze alinea?',
+      opdracht: 'Eén zin dwaalt af van de kernzin. Lees de alinea en kijk welke zin niets zegt over waar het om gaat.',
+      beeld: onderwerp(r[0]),
+      opties: lijst.map(S), goed: pos, vasteVolgorde: true,
+      uitleg: '<span class="regel">De kernzin zegt: <i>' + S(r[1]) + '</i></span>' +
+        '<span class="regel">De zin <i>' + S(r[5]) + '</i> hoort daar niet bij: hij ' + S(r[6]) + '. Hij kan lijken te passen, maar hij helpt de kernzin niet.</span>' +
+        '<span class="regel">De andere zinnen leggen de kernzin uit, laten hem zien' + (r[4] ? ' of ronden hem af' : '') + '.</span>',
+      antwoordTekst: r[5],
+      na: langeOpties(true)
+    };
+  }
+
+  /* 4. verbinden: welk woord past tussen twee zinnen, en waarom */
+  var VERBAND = {
+    want: 'een reden aan: wat erna komt, verklaart wat ervoor staat',
+    dus: 'een gevolg of conclusie aan',
+    maar: 'een tegenstelling aan',
+    daardoor: 'een gevolg aan: wat erna komt, komt door wat ervoor staat',
+    toch: 'een tegenstelling aan: het gaat anders dan je zou verwachten',
+    bijvoorbeeld: 'een voorbeeld aan',
+    daarna: 'een volgorde in de tijd aan',
+    bovendien: 'een toevoeging aan: er komt nog iets bij',
+    anders: 'aan wat er gebeurt als het eerste niet zo is',
+    zodat: 'een doel aan',
+    hoewel: 'een toegeving aan: het gebeurt ondanks wat je verwacht',
+    terwijl: 'een tegenstelling aan, of dat iets tegelijk gebeurt',
+    tenzij: 'een uitzondering aan',
+    nadat: 'een volgorde in de tijd aan: eerst wat in de bijzin staat',
+    doordat: 'een oorzaak aan',
+    desondanks: 'een toegeving aan: ondanks wat ervoor staat gebeurt dit',
+    integendeel: 'het tegenovergestelde aan van wat ervoor staat',
+    kortom: 'een samenvatting of conclusie aan',
+    daarentegen: 'een tegenstelling aan: twee zaken naast elkaar',
+    vervolgens: 'de volgende stap in een volgorde aan'
+  };
+  function verbinden(niveau){
+    var d = D[niveau], i = pak(d.verb, 'verb' + niveau), x = d.verb[i];
+    var punt = x[2] === '.', woord = x[3];
+    var tekst = S(x[0]) + (punt ? '. ' : ', ') + '<span class="gat" id="gatvak">&hellip;</span> ' + S(x[1]) + '.';
+    return {
+      onderdeel:'alinea: verbinden', onderdeelNaam:'verbinden', vorm:'meerkeuze', sleutel:'vb' + niveau + i,
+      vraag: 'Welk verbindingswoord past op de plek van het gat?',
+      opdracht: 'Bedenk eerst wat het verband is tussen de twee delen: oorzaak, gevolg, tegenstelling, voorbeeld of volgorde in de tijd.',
+      beeld: '<div class="tv" id="tv">' + tekst + '</div>',
+      opties: [woord].concat(x[4]).map(S), goed: 0,
+      uitleg: '<span class="regel"><b>' + S(hoofd(woord)) + '</b> geeft ' + VERBAND[woord] + '.</span> <span class="regel">' + x[5] + '</span>',
+      antwoordTekst: woord,
+      na: naAntwoord(function(){ var g = el('gatvak'), t = el('tv'); if (g) g.textContent = punt ? hoofd(woord) : woord; if (t) t.classList.add('toon'); })
+    };
+  }
+
+  /* 5. herschrijven (vanaf kgt): welke versie loopt het best */
+  var FOUT = {
+    h: 'Herhaling: hetzelfde woord of dezelfde woorden komen steeds terug. Zeg het één keer en gebruik daarna een ander woord of laat het weg.',
+    l: 'Te lang: te veel delen in één zin, dus je raakt de draad kwijt. Knip de zin in stukken of laat over wat er niet toe doet.',
+    v: 'Onduidelijke verwijzing: een woord als zij, hij, die of dit kan naar meer dan één persoon of ding wijzen. Noem dan de naam of de zaak zelf.'
+  };
+  function herschrijf(niveau){
+    /* bij vmbo-bb de makkelijkste zinnen van kgt: zonder verwijzing */
+    var bron = niveau === 'bb' ? D.kgt.her.filter(function(x){ return !x[0]; }) : D[niveau].her;
+    var i = pak(bron, 'her' + niveau), x = bron[i];
+    var fouten = [x[2], x[3]];
+    return {
+      onderdeel:'alinea: herschrijf', onderdeelNaam:'herschrijven', vorm:'meerkeuze', sleutel:'he' + niveau + bron[i][1].slice(0, 24),
+      vraag: 'Welke versie van deze zin loopt het best?',
+      opdracht: 'Let op herhaling, zinnen die te lang worden en woorden als hij, zij of dit waarvan je niet weet waar ze naar verwijzen.',
+      beeld: x[0] ? '<div class="tv"><span class="over">wat je al weet</span>' + S(x[0]) + '</div>' : '',
+      opties: [x[1], fouten[0][0], fouten[1][0]].map(S), goed: 0,
+      uitleg: '<span class="regel"><b>Dit loopt het best:</b> ' + S(x[1]) + ' Het zegt het één keer, het is een zin die je in één keer leest en je weet steeds wie of wat bedoeld wordt.</span>' +
+        fouten.map(function(f){ return '<span class="regel">' + S(FOUT[f[1]]) + '</span>'; }).join(' ') +
+        '<span class="regel">' + S(x[4]) + '</span>',
+      antwoordTekst: x[1],
+      na: langeOpties(false)
+    };
+  }
+
+  var SOORTEN = { volgorde: volgorde, kernzin: kernzin, hoortniet: hoortniet, verbinden: verbinden, herschrijf: herschrijf };
+  function soortenVoor(niveau){ return niveau === 'bb' ? ['volgorde', 'kernzin', 'hoortniet', 'verbinden'] : ['volgorde', 'kernzin', 'hoortniet', 'verbinden', 'herschrijf']; }
+
+  VAKSPEL.maak({
+    id:'alinea', naam:'Bouw een alinea', vak:'ned', kleur:'#F26749',
+    hand:'kernzin, toelichting, voorbeeld',
+    lead:'Een goede alinea is een klein bouwwerk. Bovenaan staat de kernzin, die zegt waar het over gaat. Daarna komen een toelichting, een voorbeeld en een slotzin. Je oefent zelf schrijven in kleine stappen: zinnen op volgorde zetten, de kernzin kiezen, de zin vinden die afdwaalt, het goede verbindingswoord kiezen en zinnen beter laten lopen.',
+    leerdoel:'Je leert hoe een alinea is opgebouwd en hoe je zinnen goed aan elkaar maakt, zodat je zelf een heldere alinea kunt schrijven.',
+    hoe:[
+      { kop:'De bouw van een alinea', tekst:'De <b>kernzin</b> zegt waar de alinea over gaat. De <b>toelichting</b> zegt waarom dat zo is, het <b>voorbeeld</b> laat het zien en de <b>slotzin</b> rondt af.' },
+      { kop:'Verbindingswoorden', tekst:'Woorden als <b>want</b>, <b>daardoor</b>, <b>bijvoorbeeld</b>, <b>toch</b> en <b>daarna</b> laten zien hoe twee zinnen bij elkaar horen. Het verkeerde woord geeft een verkeerd verband.' },
+      { kop:'Vijf soorten opgaven', tekst:'Zinnen op volgorde zetten, de kernzin kiezen, de zin vinden die niet past, het verbindingswoord kiezen en kiezen welke versie van een zin het best loopt. Tien per ronde.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'Korte alinea\'s van drie zinnen: kernzin, toelichting en voorbeeld. Bij het op volgorde zetten staat de naam van elk vak erbij.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Alinea\'s van vier zinnen, met een slotzin. Ook zinnen die beter kunnen lopen: herhaling, te lang en een onduidelijke verwijzing.' },
+        { id:'hv', naam:'havo en vwo', uit:'Langere alinea\'s zonder namen bij de vakken, lastigere verbanden zoals hoewel, terwijl en desondanks, en subtielere zinnen om te herschrijven.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' },
+        { id:'volgorde', naam:'volgorde', uit:'De zinnen van een alinea staan door elkaar. Zet ze in de goede volgorde: kernzin, toelichting, voorbeeld en (vanaf kgt) slotzin.' },
+        { id:'kernzin', naam:'kernzin', uit:'Je ziet een alinea zonder kernzin. Welke van de vier zinnen zegt waar de hele alinea over gaat?' },
+        { id:'hoortniet', naam:'hoort niet erbij', uit:'In een alinea staat een zin die afdwaalt van de kernzin. Welke?' },
+        { id:'verbinden', naam:'verbinden', uit:'Welk verbindingswoord past tussen twee zinnen, en waarom: want, daardoor, bijvoorbeeld, toch, daarna en meer.' },
+        { id:'herschrijf', naam:'herschrijven', uit:'Drie versies van een zin: welke loopt het best? Bij vmbo-bb krijg je de makkelijkste zinnen, zonder verwijzing.' } ] }
+    ],
+    aantal:10, minuten:8,
+    maak:function(keuze, nr){
+      var niveau = D[keuze.niveau] ? keuze.niveau : 'kgt';
+      var soort = keuze.soort === 'alles' ? kies(soortenVoor(niveau)) : keuze.soort;
+      return SOORTEN[soort](niveau);
+    },
+    uitleg:{ doel:'Een alinea opbouwen en zinnen goed aan elkaar maken.', tijd:'tien opgaven per ronde', bediening:'Kies het antwoord dat klopt (of druk op 1 tot 5). Bij volgorde sleep je de zinnen naar de vakken; op een telefoon tik je een zin en dan het vak.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>
