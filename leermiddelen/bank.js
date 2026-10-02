@@ -91,6 +91,7 @@ var ONDERDELEN = {
   wis: [{id:'vergelijking',naam:'vergelijkingen'},{id:'formule',naam:'formules'},{id:'oppervlakte',naam:'oppervlakte en inhoud'},{id:'omtrek',naam:'omtrek'},{id:'hoeken',naam:'hoeken'},{id:'grafiek',naam:'grafieken en assenstelsel'},{id:'statistiek',naam:'statistiek'},{id:'pythagoras',naam:'stelling van Pythagoras'},{id:'vlakken',naam:'vlakken herkennen'}],
   burg: [{id:'democratie',naam:'democratie en verkiezingen'},{id:'rechtsstaat',naam:'rechtsstaat en grondrechten'},{id:'media',naam:'media en nieuws'},{id:'europa',naam:'Europa en de wereld'},{id:'samenleven',naam:'samenleven'},{id:'geld',naam:'geld en werk'}]
 };
+ONDERDELEN.aard.push({id:'waarom', naam:'waarom ligt het daar'});
 ONDERDELEN.aard.push({id:'examen-ak', naam:'weer, water, bevolking (examen vmbo)'});
 ONDERDELEN.bio.push({id:'examen-bio', naam:'examenstof vmbo'});
 ONDERDELEN.wis.push({id:'examen-wis', naam:'examenstof vmbo'});
@@ -102,7 +103,8 @@ ONDERDELEN.eng.push({id:'phrasal verbs', naam:'phrasal verbs', groep:'woordensch
 ONDERDELEN.ges.push({id:'oorzaak en gevolg', naam:'oorzaak en gevolg'}, {id:'wie ben ik', naam:'wie ben ik?'});
 ONDERDELEN.wis.push({id:'co\u00f6rdinaten', naam:'co\u00f6rdinaten aflezen'});
 ONDERDELEN.reken.push({id:'klok', naam:'klokkijken'}, {id:'metriek', naam:'metriek stelsel'}, {id:'schatten', naam:'schatten en afronden'});
-ONDERDELEN.eco = [{id:'examen-eco', naam:'examenstof vmbo'}];
+/* economie: onderbouw (geld, markt) en examen */
+ONDERDELEN.eco = [{id:'geld', naam:'geld en budget'}, {id:'markt', naam:'markt en prijs'}, {id:'examen-eco', naam:'examenstof vmbo'}];
 /* ook uit de vakspellen (bank-spellen.js): Democratie, Welke partij is dit?, Verkiezingen,
    Bevolkingspiramides, Klimaatgrafieken, Kaartvaardigheden, Kruisingsschema, Voedselweb
    en Vraag en aanbod. De rest van hun vragen valt onder democratie, rechtsstaat en erfelijkheid. */
@@ -160,10 +162,10 @@ var IN_GROEP = {
           'de ladder':'cellen', cel:'cellen', weefsel:'cellen', orgaan:'cellen', orgaanstelsel:'cellen',
           organisme:'cellen', 'plantcel of diercel':'cellen', taken:'cellen', voedselweb:'natuur' },
   aard: { vlaggen:'landen', landvormen:'landen', topografie:'landen', 'examen-ak':'examen',
-          bevolking:'klimaat', klimaten:'klimaat', kaartlezen:'kaart' },
+          bevolking:'klimaat', klimaten:'klimaat', kaartlezen:'kaart', waarom:'kaart' },
   burg: { democratie:'staat', rechtsstaat:'staat', media:'samen', samenleven:'samen',
           europa:'wereld', geld:'wereld', 'examen-mk':'examen', partijen:'staat', bestuurslagen:'staat' },
-  eco:  { 'vraag en aanbod':'markt', 'examen-eco':'examen' },
+  eco:  { 'vraag en aanbod':'markt', 'examen-eco':'examen', geld:'geld', markt:'markt' },
   ges:  { staat:'examen', nl1900:'examen', 'oorzaak en gevolg':'vaardig', 'wie ben ik':'vaardig',
           /* Poortrace vraagt jaartallen uit Tijdvakken sorteren */
           jaartallen:'tijdvakken' }

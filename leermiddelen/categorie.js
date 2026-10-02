@@ -33,7 +33,7 @@ window.CATEGORIE = (function(){
            {id:'statistiek', naam:'Statistiek'}, {id:'examen', naam:'Examenstof'}],
     ges:  [{id:'tijdvakken', naam:'Tijdvakken'}, {id:'vaardig', naam:'Vaardigheden'},
            {id:'staat', naam:'Staatsinrichting'}, {id:'nl1900', naam:'Nederland na 1900'}],
-    aard: [{id:'topo', naam:'Topografie'}, {id:'kaart', naam:'Kaartvaardigheid'}, {id:'klimaat', naam:'Weer en klimaat'},
+    aard: [{id:'topo', naam:'Topografie'}, {id:'kaart', naam:'Kaartvaardigheid'}, {id:'ruimte', naam:'Waarom ligt het daar'}, {id:'klimaat', naam:'Weer en klimaat'},
            {id:'bevolking', naam:'Bevolking'}, {id:'examen', naam:'Examenstof'}],
     bio:  [{id:'lichaam', naam:'Mens en lichaam'}, {id:'cellen', naam:'Cellen en erfelijkheid'},
            {id:'natuur', naam:'Planten en ecologie'}, {id:'examen', naam:'Examenstof'}],
@@ -66,7 +66,8 @@ window.CATEGORIE = (function(){
     ges:  { jaartallen:'tijdvakken', 'wie ben ik':'tijdvakken', 'oorzaak en gevolg':'vaardig', 'werken met bronnen':'vaardig',
             staat:'staat', nl1900:'nl1900' },
     aard: { vlaggen:'topo', landvormen:'topo', topografie:'topo', kaartlezen:'kaart', klimaten:'klimaat',
-            bevolking:'bevolking', 'examen-ak':'examen' }
+            bevolking:'bevolking', 'examen-ak':'examen', waarom:'ruimte' },
+    eco:  { geld:'geld', markt:'markt', 'examen-eco':'examen' }
   };
   /* 2. de onderdelen van de vakspellen en de losse spellen, op hoe hun naam begint */
   var PATROON = {
