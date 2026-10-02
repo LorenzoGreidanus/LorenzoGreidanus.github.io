@@ -39,6 +39,31 @@ window.VAKSPEL = (function(){
   function tekstNorm(t){ return String(t == null ? '' : t).toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim(); }
   function pct(c){ return c && c[1] ? Math.round(c[0] / c[1] * 100) : 0; }
 
+  /* zelfinschatting vooraf: 0 nog niet, 1 een beetje, 2 goed */
+  var ZELF = ['nog niet', 'een beetje', 'goed'], zelfVoor = null;
+  function zelfBand(p){ return p >= .8 ? 2 : p >= .5 ? 1 : 0; }
+  /* de vorige rondes van dit spel, op dit apparaat: { p, t } */
+  function groeiLees(){ try { var l = JSON.parse(localStorage.getItem('lg-groei-' + cfg.id) || '[]'); return Array.isArray(l) ? l : []; } catch (e){ return []; } }
+  function groeiZet(l){ try { localStorage.setItem('lg-groei-' + cfg.id, JSON.stringify(l.slice(-12))); } catch (e){} }
+  function tekenGroei(deel, gedaan){
+    var el = $('groei'); if (!el) return;
+    if (!gedaan || oneindig && gedaan < 5){ el.classList.add('hide'); return; }
+    var vorige = groeiLees(), h = '';
+    if (zelfVoor !== null){
+      var echt = zelfBand(deel), p = Math.round(deel * 100);
+      h += '<p><b>Vooraf dacht je: ' + ZELF[zelfVoor] + '.</b> Je had ' + p + '% goed' + (echt > zelfVoor ? ': je kunt meer dan je dacht.' : echt < zelfVoor ? ': het ging minder goed dan je dacht. Goed om te weten; kijk welk onderdeel het lastigst was.' : ': dat klopte met wat je dacht.') + '</p>';
+    }
+    var reeks = vorige.concat([{ p:deel, t:Date.now() }]).slice(-6);
+    if (vorige.length){
+      var v = vorige[vorige.length - 1].p, verschil = Math.round((deel - v) * 100);
+      h += '<p>Vorige keer ' + Math.round(v * 100) + '%, nu ' + Math.round(deel * 100) + '%' + (verschil >= 10 ? ': je bent ' + verschil + ' procentpunt vooruit.' : verschil <= -10 ? '. Een mindere ronde; vaak scheelt het welk onderdeel je kreeg.' : '.') + '</p>' +
+        '<div class="groeibalk" aria-hidden="true">' + reeks.map(function(x, i){ return '<i style="height:' + Math.max(6, Math.round(x.p * 100)) + '%"' + (i === reeks.length - 1 ? ' class="nu"' : '') + '></i>'; }).join('') + '</div><p class="groeionder">je laatste ' + reeks.length + ' rondes</p>';
+    }
+    groeiZet(vorige.concat([{ p:Math.round(deel * 100) / 100, t:Date.now() }]));
+    el.innerHTML = h; el.classList.toggle('hide', !h);
+    /* een volgende ronde vraagt het opnieuw */
+    zelfVoor = null; Array.prototype.forEach.call(document.querySelectorAll('#zelfVoor button'), function(x){ x.classList.remove('on'); x.setAttribute('aria-pressed', 'false'); });
+  }
   var cfg = null, keuze = {}, nr = 0, goed = 0, fout = 0, punten = 0, reeks = 0, besteReeks = 0, od = {}, missers = [], perDeel = {}, bezig = false, opgave = null;
 
   /* ---------- de pagina ---------- */
@@ -76,6 +101,10 @@ window.VAKSPEL = (function(){
           if (k.inklap) return '<details class="keuzeklap' + (i ? ' kop2' : '') + '"><summary><span class="eyebrow" id="kop-' + k.id + '">' + schoon(k.kop) + '</span> <b id="nu-' + k.id + '"></b></summary>' + rij + '</details>';
           return '<p class="eyebrow' + (i ? ' kop2' : '') + '" id="kop-' + k.id + '">' + schoon(k.kop) + '</p>' + rij;
         }).join('') +
+        /* het leerdoel, en hoe goed je denkt dat je het al kunt: achteraf leg je dat naast je uitslag */
+        '<div class="leerdoel">' + (cfg.leerdoel ? '<p class="eyebrow">wat je hier leert</p><p class="ldtekst">' + schoon(cfg.leerdoel) + '</p>' : '') +
+          '<p class="ldvraag" id="ldVraag">Hoe goed kun je dit nu al? Aan het eind zie je of het klopte.</p><div class="keuze ldkeuze" id="zelfVoor" role="group" aria-labelledby="ldVraag">' +
+          ZELF.map(function(z, i){ return '<button type="button" data-z="' + i + '" aria-pressed="false">' + z + '</button>'; }).join('') + '</div></div>' +
         '<div class="startknoppen"><button class="btn" id="startBtn" type="button">Start</button>' +
         '<button class="btn tweede" id="oneindigBtn" type="button" title="Zoveel opgaven als je wilt, je stopt zelf">Oneindig oefenen</button></div>' +
       '</section>' +
@@ -96,6 +125,7 @@ window.VAKSPEL = (function(){
          hieronder alleen wat die kaart niet zegt: hoe het per onderdeel ging en wat er mis ging */
       '<section class="wrap eind hide" id="scherm-einde">' +
         '<p class="eindzin" id="eindUit"><b id="eindKop"></b> <span id="eindBand"></span></p>' +
+        '<div class="groei hide" id="groei"></div>' +
         '<div class="zwakst hide" id="zwakst"></div>' +
         '<p class="eyebrow">per onderdeel</p><div class="perdeel" id="perdeel"></div>' +
         '<div id="missers"></div>' +
@@ -507,6 +537,7 @@ window.VAKSPEL = (function(){
       : deel >= .5 ? 'Een flink deel zit er al. Lees de uitleg bij je missers, dan gaat de volgende ronde beter.'
       : 'Dit is nog nieuw. Lees de uitleg bij je missers rustig door en oefen één onderdeel tegelijk.';
     $('eindBand').textContent = (nv ? nv.naam + '. ' : '') + (cfg.eindTekst || band);
+    tekenGroei(deel, gedaan);
     /* per onderdeel; bij één opgave zegt een percentage niets, dan alleen 0/1 of 1/1 */
     $('perdeel').innerHTML = Object.keys(perDeel).map(function(k){ var c = perDeel[k], p = pct(c);
       return c[1] < 2 ? '<span class="e">' + schoon(c[2]) + ' <small>' + c[0] + '/' + c[1] + '</small></span>'
@@ -661,6 +692,8 @@ window.VAKSPEL = (function(){
     tekenKeuzes();
     leadKort();
     $('startBtn').addEventListener('click', function(){ start(oneindigUrl); });
+    $('zelfVoor').addEventListener('click', function(e){ var b = e.target.closest('button'); if (!b) return; var z = +b.getAttribute('data-z'); zelfVoor = zelfVoor === z ? null : z;
+      Array.prototype.forEach.call(this.querySelectorAll('button'), function(x){ var aan = +x.getAttribute('data-z') === zelfVoor; x.classList.toggle('on', aan); x.setAttribute('aria-pressed', aan ? 'true' : 'false'); }); });
     $('oneindigBtn').addEventListener('click', function(){ start(true); });
     $('stopBtn').addEventListener('click', function(){ if (!bezig) einde(); });
     /* de docent linkt met ?oneindig=1: dan is Start meteen oneindig */
