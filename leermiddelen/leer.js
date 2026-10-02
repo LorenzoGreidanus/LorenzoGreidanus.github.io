@@ -1,0 +1,162 @@
+/* Leer de trucjes: een uitlegstand voor de oefenspellen.
+
+   Wie een regel of een trucje snapt, hoeft minder te stampen en kan zichzelf
+   redden als hij iets vergeet. Per trucje: de uitleg met een voorbeeld, dan
+   vier sommen met de stappen erbij, dan vier zonder (met een knop als je
+   vastloopt), en daarna meteen het spel. Zo gaat het van voordoen naar zelf
+   doen, de manier waarop een docent het aan het bord ook doet.
+
+     LEER.open({
+       titel:'Rekentrucjes', hand:'minder rekenen, meer snappen',
+       intro:'een alinea over wat je gaat leren',
+       lessen:[{ kop, kort, uit, voorbeeld,                 uitleg in tekst, voorbeeld als regels
+                 maak:function(){ return { vraag, stappen:[...], slot:'45 + 18 =', antwoord:['63'], invoer:'getal'|'tekst' }; } }],
+       verberg:[elementen die weg moeten], terug, klaar:function(){ naar het spel }, klaarTekst:'Nu de race'
+     })
+   stappen zijn de tussenstappen; slot is de laatste stap zonder antwoord. Bij
+   "met hulp" staan de stappen er, en het slot met een vraagteken. */
+window.LEER = (function(){
+  'use strict';
+  function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+  function norm(t){ return String(t == null ? '' : t).toLowerCase().replace(/\s+/g, ' ').replace(/\./g, ',').replace(/^\s+|\s+$/g, '').replace(/^(\d+),0+$/, '$1').replace(/(,\d*?)0+$/, '$1').replace(/,$/, ''); }
+  var stijl = false;
+  function zetStijl(){
+    if (stijl) return; stijl = true;
+    var s = document.createElement('style');
+    s.textContent = [
+      '.lr{max-width:760px;margin:0 auto;padding:28px 0 60px}',
+      '.lr-kaart{background:var(--kaart,#fff);border:2px solid rgba(20,34,76,.10);border-radius:22px;padding:clamp(16px,3vw,26px);margin-top:16px}',
+      ':root[data-theme="dark"] .lr-kaart{border-color:rgba(243,239,233,.12)}',
+      '@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .lr-kaart{border-color:rgba(243,239,233,.12)}}',
+      '.lr h2{font-size:clamp(1.5rem,4vw,2.1rem)}',
+      '.lr-kort{font-size:1.15rem;font-weight:600;color:var(--ocean,#204ECF);margin-top:4px}',
+      ':root[data-theme="dark"] .lr-kort{color:var(--vista,#83A5F2)}',
+      '@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .lr-kort{color:var(--vista,#83A5F2)}}',
+      '.lr-uit{margin-top:10px}',
+      '.lr-vb{list-style:none;padding:0;margin:14px 0 0;display:grid;gap:6px}',
+      '.lr-vb li{background:rgba(131,165,242,.16);border-radius:10px;padding:8px 12px;font-variant-numeric:tabular-nums}',
+      '.lr-vb li b{color:var(--crab,#F26749)}',
+      '.lr-som{font-size:clamp(1.5rem,5.5vw,2.6rem);font-weight:700;text-align:center;margin-top:8px;font-variant-numeric:tabular-nums;line-height:1.25}',
+      '.lr-hulp{list-style:none;padding:0;margin:12px auto 0;max-width:420px;display:grid;gap:6px}',
+      '.lr-hulp li{background:rgba(131,165,242,.16);border-radius:10px;padding:7px 12px;font-variant-numeric:tabular-nums}',
+      '.lr-hulp li.vraag{background:rgba(242,103,73,.14);font-weight:600}',
+      '.lr-invoer{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px}',
+      '.lr-invoer input{width:min(220px,60vw);min-height:54px;text-align:center;font:700 1.4rem Poppins,system-ui,sans-serif;border-radius:14px;border:2px solid rgba(20,34,76,.2);background:var(--kaart,#fff);color:var(--ink,#14224C)}',
+      '.lr-invoer input:focus{outline:3px solid var(--focusring,#B4701A);outline-offset:2px}',
+      '.lr-terug{text-align:center;margin-top:12px;min-height:1.6em;font-weight:600}',
+      '.lr-terug.goed{color:var(--op,#2f7d52)} .lr-terug.fout{color:var(--neer,#c0442c)}',
+      '.lr-voort{display:flex;gap:6px;justify-content:center;margin-top:10px}',
+      '.lr-voort i{width:12px;height:12px;border-radius:50%;border:2px solid var(--muted,#5b6480)}',
+      '.lr-voort i.goed{background:var(--op,#2f7d52);border-color:var(--op,#2f7d52)} .lr-voort i.fout{background:var(--neer,#c0442c);border-color:var(--neer,#c0442c)}',
+      '.lr-knoppen{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:18px}',
+      '.lr-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}',
+      '.lr-chips span{border-radius:999px;padding:4px 11px;font-size:.84rem;background:rgba(20,34,76,.07)}',
+      ':root[data-theme="dark"] .lr-chips span{background:rgba(243,239,233,.10)}',
+      '@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .lr-chips span{background:rgba(243,239,233,.10)}}',
+      '.lr-chips span.klaar{background:var(--goed-bg,#e7f3ec);font-weight:600}',
+      '.lr-chips span.nu{outline:2px solid var(--crab,#F26749)}',
+      '.lr-verder{display:block;margin:12px auto 0}'
+    ].join('\n');
+    document.head.appendChild(s);
+  }
+  var vak = null, o = {}, nr = 0, sommen = [], sNr = 0, uitslag = [];
+  function el(id){ return document.getElementById(id); }
+  function open(opts){
+    zetStijl();
+    o = opts || {};
+    (o.verberg || []).forEach(function(x){ if (x) x.classList.add('hide'); });
+    if (!vak){
+      vak = document.createElement('section'); vak.className = 'wrap lr'; vak.id = 'scherm-leer';
+      var na = o.na || el('scherm-start'); na.parentNode.insertBefore(vak, na.nextSibling);
+    }
+    vak.classList.remove('hide');
+    nr = 0; uitslag = [];
+    intro();
+  }
+  function sluit(){
+    if (vak) vak.classList.add('hide');
+    (o.verberg || []).forEach(function(x){ if (x) x.classList.remove('hide'); });
+    scrollTo({ top:0, behavior:'auto' });
+  }
+  function chips(){ return '<div class="lr-chips">' + o.lessen.map(function(l, i){ return '<span class="' + (i < nr ? 'klaar' : i === nr ? 'nu' : '') + '">' + schoon(l.kop) + '</span>'; }).join('') + '</div>'; }
+  function intro(){
+    vak.innerHTML = '<p class="hand" style="font-size:1.5rem">' + schoon(o.hand || 'eerst snappen, dan oefenen') + '</p><h1>' + schoon(o.titel || 'Leer de trucjes') + '</h1>' +
+      '<div class="lr-kaart"><p class="lr-uit">' + schoon(o.intro || '') + '</p>' +
+      '<p class="lr-uit">Per trucje lees je eerst hoe het werkt, dan oefen je vier keer met de stappen erbij en vier keer zonder. Je leert:</p>' +
+      '<ul class="lr-vb">' + o.lessen.map(function(l){ return '<li><b>' + schoon(l.kop) + '</b>: ' + schoon(l.kort) + '</li>'; }).join('') + '</ul>' +
+      '<div class="lr-knoppen"><button class="btn" type="button" id="lrStart">Begin</button><button class="linkbtn" type="button" id="lrTerug">Terug</button></div></div>';
+    el('lrStart').addEventListener('click', uitleg);
+    el('lrTerug').addEventListener('click', sluit);
+    el('lrStart').focus({ preventScroll:true });
+    scrollTo({ top:0, behavior:'auto' });
+  }
+  function uitleg(){
+    var l = o.lessen[nr];
+    vak.innerHTML = chips() + '<div class="lr-kaart"><p class="eyebrow">het trucje</p><h2>' + schoon(l.kop) + '</h2>' +
+      '<p class="lr-kort">' + schoon(l.kort) + '</p><p class="lr-uit">' + schoon(l.uit) + '</p>' +
+      (l.voorbeeld ? '<ul class="lr-vb">' + l.voorbeeld.map(function(v){ return '<li>' + schoon(v) + '</li>'; }).join('') + '</ul>' : '') +
+      '<div class="lr-knoppen"><button class="btn" type="button" id="lrOefen">Oefen met hulp</button><button class="linkbtn" type="button" id="lrTerug">Stoppen</button></div></div>';
+    el('lrOefen').addEventListener('click', function(){ maakSommen(l); sNr = 0; som(); });
+    el('lrTerug').addEventListener('click', sluit);
+    el('lrOefen').focus({ preventScroll:true });
+    scrollTo({ top:0, behavior:'auto' });
+  }
+  function maakSommen(l){
+    sommen = []; var gezien = {};
+    for (var p = 0; sommen.length < 8 && p < 60; p++){ var s = l.maak(); if (gezien[s.vraag]) continue; gezien[s.vraag] = 1; s.goed = null; sommen.push(s); }
+    while (sommen.length < 8){ var x = l.maak(); x.goed = null; sommen.push(x); }
+  }
+  function som(){
+    var s = sommen[sNr], metHulp = sNr < 4;
+    vak.innerHTML = chips() + '<div class="lr-kaart"><p class="eyebrow">' + (metHulp ? 'met hulp' : 'nu zelf') + ' · ' + (sNr + 1) + ' van 8</p>' +
+      '<div class="lr-som">' + schoon(s.vraag) + '</div>' +
+      '<ul class="lr-hulp' + (metHulp ? '' : ' hide') + '" id="lrHulp">' + s.stappen.map(function(x){ return '<li>' + schoon(x) + '</li>'; }).join('') +
+        '<li class="vraag" id="lrSlot">' + schoon(s.slot) + ' ?</li></ul>' +
+      '<div class="lr-invoer"><input id="lrIn" type="text" inputmode="' + (s.invoer === 'getal' ? 'decimal' : 'text') + '" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Jouw antwoord"><button class="btn" type="button" id="lrCheck">Kijk na</button></div>' +
+      '<p class="lr-terug" id="lrTerugk" role="status" aria-live="polite"></p>' +
+      '<div class="lr-voort" aria-hidden="true">' + sommen.map(function(x){ return '<i class="' + (x.goed === true ? 'goed' : x.goed === false ? 'fout' : '') + '"></i>'; }).join('') + '</div>' +
+      (metHulp ? '' : '<div class="lr-knoppen"><button class="linkbtn" type="button" id="lrToon">Ik zit vast: laat de stappen zien</button></div>') + '</div>';
+    var inp = el('lrIn'), af = false;
+    function kijk(){
+      if (af || !inp.value.trim()) return;
+      af = true; inp.disabled = true; el('lrCheck').disabled = true;
+      var ok = s.antwoord.some(function(a){ return norm(a) === norm(inp.value); });
+      s.goed = ok;
+      var tk = el('lrTerugk');
+      tk.className = 'lr-terug ' + (ok ? 'goed' : 'fout');
+      tk.textContent = ok ? 'Goed!' : 'Niet goed, het is ' + s.antwoord[0] + '. Kijk hierboven hoe het gaat.';
+      el('lrHulp').classList.remove('hide');
+      el('lrSlot').textContent = s.slot + ' ' + s.antwoord[0];
+      var vast = el('lrToon'); if (vast) vast.classList.add('hide');
+      var verder = document.createElement('button');
+      verder.className = 'btn lr-verder'; verder.type = 'button'; verder.id = 'lrVerder';
+      verder.textContent = sNr < 7 ? 'Volgende' : 'Klaar met dit trucje';
+      verder.addEventListener('click', function(){ sNr++; if (sNr < 8) som(); else lesKlaar(); });
+      tk.parentNode.insertBefore(verder, tk.nextSibling);
+      verder.focus({ preventScroll:true });
+    }
+    el('lrCheck').addEventListener('click', kijk);
+    inp.addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); kijk(); } });
+    var toon = el('lrToon'); if (toon) toon.addEventListener('click', function(){ el('lrHulp').classList.remove('hide'); toon.classList.add('hide'); });
+    setTimeout(function(){ try { inp.focus({ preventScroll:true }); } catch (e){} }, 30);
+  }
+  function lesKlaar(){
+    var l = o.lessen[nr], zelf = sommen.slice(4).filter(function(x){ return x.goed; }).length;
+    uitslag.push({ kop:l.kop, zelf:zelf });
+    nr++;
+    var laatste = nr >= o.lessen.length;
+    vak.innerHTML = chips() + '<div class="lr-kaart"><p class="eyebrow">' + schoon(l.kop) + '</p>' +
+      '<h2>' + (zelf === 4 ? 'Dat zit erin' : zelf >= 3 ? 'Bijna' : 'Nog even oefenen') + '</h2>' +
+      '<p class="lr-uit">Zonder hulp had je er ' + zelf + ' van de 4 goed. ' + (zelf === 4 ? 'Het trucje werkt.' : 'Het trucje nog eens: ' + schoon(l.kort.charAt(0).toLowerCase() + l.kort.slice(1)) + '.') + '</p>' +
+      '<div class="lr-knoppen">' + (zelf < 4 ? '<button class="btn ghost" type="button" id="lrNog">Dit trucje nog een keer</button>' : '') +
+      (laatste ? (o.klaar ? '<button class="btn" type="button" id="lrSpel">' + schoon(o.klaarTekst || 'Nu het spel') + '</button>' : '') : '<button class="btn" type="button" id="lrVolg">Volgende: ' + schoon(o.lessen[nr].kop.toLowerCase()) + '</button>') +
+      '<button class="linkbtn" type="button" id="lrTerug">' + (laatste ? 'Terug' : 'Stoppen') + '</button></div>' +
+      (laatste ? '<p class="lr-uit">' + uitslag.map(function(u){ return schoon(u.kop) + ': ' + u.zelf + ' van 4 zelf goed'; }).join(' · ') + '</p>' : '') + '</div>';
+    var nog = el('lrNog'); if (nog) nog.addEventListener('click', function(){ nr--; uitslag.pop(); uitleg(); });
+    var volg = el('lrVolg'); if (volg) volg.addEventListener('click', uitleg);
+    var spel = el('lrSpel'); if (spel) spel.addEventListener('click', function(){ sluit(); o.klaar(); });
+    el('lrTerug').addEventListener('click', sluit);
+    (volg || spel || el('lrTerug')).focus({ preventScroll:true });
+  }
+  return { open:open };
+})();

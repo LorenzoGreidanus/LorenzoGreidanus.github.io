@@ -270,6 +270,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 
   <p class="eyebrow" id="soortKop" style="margin-top:24px">waar wil je mee oefenen</p>
   <div class="kies" id="soorten"></div>
+  <div class="leertafels hide" id="leerRij"><button class="btn ghost" type="button" id="leerTrucBtn">Leer de trucjes</button><p class="stapuitleg" id="leerUit"></p></div>
 
   <div class="stap hide" id="tafelvak">
     <p class="eyebrow" id="tafelKop">welke tafels</p>
@@ -284,7 +285,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
       <button type="button" id="tafelGeen">Wis keuze</button>
     </div>
     <p class="tafelstand" id="tafelstand" aria-live="polite"></p>
-    <div class="leertafels"><button class="btn tweede" type="button" id="leerBtn">Leer de tafels met trucjes</button><p class="stapuitleg">De tafel van 4 is die van 2 maar dan dubbel, die van 9 is die van 10 min een keer. Per tafel het trucje, dan oefenen met en zonder hulp.</p></div>
+    <div class="leertafels"><button class="btn ghost" type="button" id="leerBtn">Leer de tafels met trucjes</button><p class="stapuitleg">De tafel van 4 is die van 2 maar dan dubbel, die van 9 is die van 10 min een keer. Per tafel het trucje, dan oefenen met en zonder hulp.</p></div>
   </div>
 
   <div class="stap hide" id="bereikRij">
@@ -352,6 +353,8 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 <div class="vlieger" id="vlieger"></div>
 
 <script src="tafels-leer.js"></script>
+<script src="leer.js"></script>
+<script src="leer-rekenen.js"></script>
 <script src="tutorial.js"></script>
 <script src="tutorials.js"></script>
 <script>
@@ -586,6 +589,10 @@ function maakOpties(goed, decimalen){
       document.getElementById('tempoRij').classList.remove('hide');
       tekenTafels();
       klaarCheck();
+      /* de trucjes van dit onderdeel (leer-rekenen.js); bij tafels staat de knop bij de tafelkiezer */
+      var lessen = window.LEER_REKENEN && LEER_REKENEN[soort.id];
+      document.getElementById('leerRij').classList.toggle('hide', !lessen);
+      if (lessen) document.getElementById('leerUit').textContent = lessen.map(function(l){ return l.kort; }).join('. ') + '.';
     });
   });
 
@@ -678,6 +685,12 @@ function maakOpties(goed, decimalen){
   if (window.TUTORIAL && window.TUTORIALS && TUTORIALS['rekenen']) TUTORIAL.naStart('startBtn', 'rekenen', TUTORIALS['rekenen'], { bewaar: function(){ return tijd; }, herstel: function(t){ tijd = t; laatsteTik = performance.now(); } });
   document.getElementById('startBtn').addEventListener('click', start);
   /* Leer de tafels: de trucjes per tafel (tafels-leer.js), en daarna meteen de race met dezelfde tafels */
+  document.getElementById('leerTrucBtn').addEventListener('click', function(){
+    var lessen = window.LEER && window.LEER_REKENEN && soort && LEER_REKENEN[soort.id]; if (!lessen) return;
+    LEER.open({ titel:'Rekentrucjes: ' + soort.naam.toLowerCase(), hand:'minder rekenen, meer snappen', lessen:lessen, verberg:[elStart], klaarTekst:'Nu de race',
+      intro:'Wie handig rekent, maakt minder fouten en is sneller. Hier leer je de trucjes die je in je hoofd gebruikt, zodat je geen kladblaadje nodig hebt.',
+      klaar:function(){ if (!tempo){ var tk = tempoVak.children[Math.min(1, tempoVak.children.length - 1)]; if (tk) tk.click(); } if (bereikTelt() && !bereik){ var bk = bereikVak.children[1]; if (bk) bk.click(); } klaarCheck(); if (!document.getElementById('startBtn').disabled) start(); } });
+  });
   document.getElementById('leerBtn').addEventListener('click', function(){
     if (!window.TAFELLEER) return;
     TAFELLEER.open(gekozenTafels.length ? gekozenTafels : standaardTafels(), { verberg:[elStart], klaar:function(t){

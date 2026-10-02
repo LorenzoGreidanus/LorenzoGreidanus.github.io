@@ -232,7 +232,7 @@ window.TAFELLEER = (function(){
     vak.innerHTML = chips() + '<div class="tl-kaart"><p class="eyebrow">de tafel van ' + n + '</p>' +
       '<h2>' + (zelfGoed === 4 ? 'Die zit erin' : zelfGoed >= 3 ? 'Bijna' : 'Nog even oefenen') + '</h2>' +
       '<p class="tl-uit">Zonder hulp had je er ' + zelfGoed + ' van de 4 goed. ' + (zelfGoed === 4 ? 'Het trucje werkt.' : 'Lees het trucje nog eens: ' + schoon(TRUC[n].kort.toLowerCase()) + '.') + '</p>' +
-      '<div class="tl-knoppen">' + (zelfGoed < 4 ? '<button class="btn tweede" type="button" id="tlNog">Deze tafel nog een keer</button>' : '') +
+      '<div class="tl-knoppen">' + (zelfGoed < 4 ? '<button class="btn ghost" type="button" id="tlNog">Deze tafel nog een keer</button>' : '') +
       (laatste ? '<button class="btn" type="button" id="tlRace">Nu de race met deze tafels</button>' : '<button class="btn" type="button" id="tlVolg">Door naar de tafel van ' + lijst[nr] + '</button>') +
       '<button class="linkbtn" type="button" id="tlTerug">Stoppen</button></div>' +
       (laatste ? '<p class="tl-uit">' + uitslag.map(function(u){ return 'tafel van ' + u.n + ': ' + u.zelf + ' van 4 zelf goed'; }).join(' · ') + '</p>' : '') + '</div>';
