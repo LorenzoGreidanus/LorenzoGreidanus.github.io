@@ -11,6 +11,7 @@
      TYPEN.veld(doel, q, vak, klaar) zet het typveld in doel; klaar(uitslag, invoer)
      TYPEN.laad(vak)                de open versies van een vak ophalen (open/<vak>.json)
      TYPEN.vraag(q, vak)            de vraag zoals hij open gesteld wordt
+     TYPEN.open(q, vak, niveau, altijd)  deze keer open? (kans per niveau: bb nooit, vwo vaak)
 
    Nederlands en Engels kijken streng (de spelling is daar de stof), behalve
    hoofdletters. Bij de andere vakken telt een tikfout in een lang woord als
@@ -23,7 +24,7 @@ window.TYPEN = (function(){
      antwoord) alle goede antwoorden, en zo nodig de vraag zonder de opties
      ("Welke van deze organen..." wordt "Welk orgaan..."). Een vraag die daar
      staat kan altijd open, ook met een langer antwoord. */
-  var OPEN = {}, bezig = {};
+  var OPEN = {}, bezig = {}, NAMEN = { topografie:1, vlaggen:1 };
   function map(){
     try {
       var s = document.currentScript || [].slice.call(document.scripts).filter(function(x){ return /typen\.js/.test(x.src); })[0];
@@ -52,6 +53,15 @@ window.TYPEN = (function(){
   function kan(q, vak){
     if (!q || !Array.isArray(q.o) || q.svg) return false;
     if (open(q, vak)) return true;
+    /* Heeft het vak een lijst open vragen, dan alleen wat daarin staat: daar is
+       per vraag nagegaan dat er één goed antwoord is. Is de lijst er nog niet,
+       dan nu meerkeuze. Zonder lijst (rekenen, een eigen woordenlijst) kijkt de
+       regel hieronder of het antwoord kort genoeg is. */
+    /* hoofdsteden en vlaggen staan niet in die lijst, maar hebben altijd één naam als antwoord */
+    if (vak && !NAMEN[q.t]){
+      if (!OPEN[vak]){ laad(vak); return false; }
+      for (var heeft in OPEN[vak]) return false;
+    }
     var g = String(q.o[q.g] || '');
     if (!g || /[<>]/.test(g) || g.length > 24 || g.split(/\s+/).length > 3) return false;
     /* vragen die over de antwoorden zelf gaan, of ja/nee */
@@ -139,5 +149,11 @@ window.TYPEN = (function(){
     setTimeout(function(){ try { inp.focus({ preventScroll:true }); } catch (e){} }, 30);
     return inp;
   }
-  return { kan:kan, keur:keur, veld:veld, norm:norm, laad:laad, vraag:vraag };
+  /* Hoe hoger het niveau, hoe vaker je het antwoord zelf schrijft: op vmbo-bb
+     nooit, op vwo de meeste vragen die open kunnen. */
+  var KANS = { bb:0, kgt:0.15, havo:0.4, hv:0.5, vwo:0.65 };
+  function kans(niveau){ return KANS[niveau] || 0; }
+  /* deze keer open? altijd als de leerling zelf typen koos */
+  function open1(q, vak, niveau, altijd){ return kan(q, vak) && (altijd || Math.random() < kans(niveau)); }
+  return { kan:kan, keur:keur, veld:veld, norm:norm, laad:laad, vraag:vraag, kans:kans, open:open1 };
 })();

@@ -642,6 +642,7 @@ body.groot .meter b{font-size:1.45rem}
 <script src="melding.js"></script>
 <script src="voorlezen.js"></script>
 <script src="foutenmap.js"></script>
+<script src="typen.js"></script>
 <script src="bank.js"></script>
 <script src="tutorial.js"></script>
 <script>
@@ -1060,6 +1061,9 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     }
     return shuffleVraag(q);
   }
+  /* Op een hoger niveau vaker een open vraag: je typt het antwoord zelf (typen.js) */
+  var nieuweVraagKies = nieuweVraag;
+  nieuweVraag = function(){ var q = nieuweVraagKies(); if (q && window.TYPEN && vak !== 'reken') q.typ = TYPEN.open(q, vak, slim.niveau()); return q; };
   function beeldVoor(v){
     if (v.vlag){
       var land = v.o[v.g] || 'deze vlag';
@@ -1512,6 +1516,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     voorspel.aan = false; voorspel.hist = []; voorspel.ankers = {}; voorspel.st = null; voorspel.dashRest = 0;
     fouten = []; messen = []; munt = []; pluis = []; cijfers = []; aanvallen = []; teSpawnen = 0; tijdInRonde = 0;
     slim.reset(niveau); pot = null;
+    if (window.TYPEN) TYPEN.laad(vak);
     maxHp = maxLeven(); hp = maxHp; pauze = false;
     document.getElementById('scherm-start').classList.add('hide');
     document.getElementById('scherm-einde').classList.add('hide');
@@ -1630,7 +1635,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     toetsen[toets] = true;
     if ((e.key === 'p' || e.key === 'Escape') && !document.getElementById('scherm-spel').classList.contains('hide')) zetPauze();
     if (!e.ctrlKey && !e.altKey && !e.metaKey && !document.getElementById('scherm-spel').classList.contains('hide')) codeToets(e.key);
-    if (fase === 'vragen' && e.key >= '1' && e.key <= '4') antwoord(parseInt(e.key, 10) - 1);
+    if (fase === 'vragen' && !(vraag && vraag.typ) && !(e.target && e.target.tagName === 'INPUT') && e.key >= '1' && e.key <= '4') antwoord(parseInt(e.key, 10) - 1);
   });
   addEventListener('keyup', function(e){ toetsen[String(e.key || '').toLowerCase()] = false; if (e.key === 'Shift') blokToets = false; });
   addEventListener('blur', function(){ blokToets = false; });
@@ -2107,9 +2112,9 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     tekenZij();
   }
   function antwoord(i){
-    if (fase !== 'vragen' || !vraag || geklikt >= 0 || i >= vraag.o.length) return;
+    if (fase !== 'vragen' || !vraag || geklikt >= 0 || i >= vraag.o.length || (i < 0 && !vraag.typ)) return;
     var goed = i === vraag.g;
-    geklikt = i;
+    geklikt = i < 0 ? 99 : i;
     slim.toets(goed);
     if (window.KLAS) KLAS.tel(perOnderdeel, vraag.t, goed);
     if (!goed && window.FOUTENMAP && vak && vak !== 'reken') FOUTENMAP.noteer(vraag, vak);
@@ -2203,8 +2208,10 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (fase === 'vragen'){
       h += '<p class="eyebrow">vraag ' + (vragenTotaal - vragenOver + (geklikt >= 0 ? 0 : 1)) + ' van ' + vragenTotaal + ' \u00b7 ' + kopVoorVraag(vraag, vakNaamVan(vak)) +
         (slim.verhoogd() ? ' \u00b7 ' + vraagNiveauNaam() : '') + '</p>';
-      h += '<h2>' + hschoon(vraag.v) + '</h2>';
+      h += '<h2>' + hschoon(vraag.typ ? TYPEN.vraag(vraag, vak) : vraag.v) + '</h2>';
       var beeld = beeldVoor(vraag); if (beeld) h += '<div class="beeld">' + beeld + '</div>';
+      if (vraag.typ) h += geklikt < 0 ? '<div class="opties" id="typPlek"></div>' : '<p class="typuit">Jij typte: <b>' + hschoon(vraag.invoer || '') + '</b>' + (geklikt === vraag.g ? '' : ' \u00b7 goed is: <b>' + hschoon(vraag.o[vraag.g]) + '</b>') + '</p>';
+      else
       h += '<div class="opties">' + vraag.o.map(function(t, i){
         var kl = geklikt >= 0 ? (i === vraag.g ? ' juist' : i === geklikt ? ' mis' : '') : '';
         return '<button class="optie' + kl + '" type="button" data-i="' + i + '"' + (geklikt >= 0 ? ' disabled' : '') + '>' + hschoon(t) + '</button>';
@@ -2252,6 +2259,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     }
     z.innerHTML = '<div class="paneelkaart">' + h + '</div>';
     Array.prototype.forEach.call(z.querySelectorAll('.optie'), function(b){ b.addEventListener('click', function(){ antwoord(parseInt(b.getAttribute('data-i'), 10)); }); });
+    var tp = document.getElementById('typPlek'); if (tp && vraag && vraag.typ) TYPEN.veld(tp, vraag, vak, function(u, invoer){ vraag.invoer = invoer; antwoord(u.i); });
     var vb = document.getElementById('verderBtn'); if (vb) vb.addEventListener('click', verder);
     Array.prototype.forEach.call(z.querySelectorAll('[data-koop]'), function(b){ b.addEventListener('click', function(){ koop(b.getAttribute('data-koop')); }); });
     Array.prototype.forEach.call(z.querySelectorAll('[data-kies]'), function(b){ b.addEventListener('click', function(){ kiesVaardigheid(b.getAttribute('data-kies')); }); });

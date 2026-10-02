@@ -984,6 +984,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
 <script src="melding.js"></script>
 <script src="voorlezen.js"></script>
 <script src="foutenmap.js"></script>
+<script src="typen.js"></script>
 <script src="bank.js"></script>
 <script src="toren-motor.js"></script>
 <script>
@@ -2034,6 +2035,9 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     return shuffleVraag(q);
   }
 
+  /* Op een hoger niveau vaker een open vraag: je typt het antwoord zelf (typen.js) */
+  var nieuweVraagKies = nieuweVraag;
+  nieuweVraag = function(){ var q = nieuweVraagKies(); if (q && window.TYPEN && vak !== 'reken') q.typ = TYPEN.open(q, vak, slim.niveau()); return q; };
   /* de naam van het vak, als terugval voor het kopje boven de vraag */
   function vakNaamVan(id){ var v = VAKKEN.filter(function(x){ return x.id === id; })[0]; return v ? v.naam.toLowerCase() : 'vraag'; }
   function tekenVraag(){
@@ -2041,10 +2045,16 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (window.MELDING) MELDING.knop(document.getElementById('meldPlek'), function(){ return { spel:'toren', vraag:vraag ? vraag.v : '', q:vraag, vak:vak, niveau:niveau }; });
     document.getElementById('vraagKop').textContent = kopVoorVraag(vraag, vakNaamVan(vak)) + (slim.verhoogd() ? ' \u00b7 ' + vraagNiveauNaam() : '');
     document.getElementById('vraagBeeld').innerHTML = beeldVoor(vraag);
-    document.getElementById('vraagTekst').textContent = vraag.v;
+    document.getElementById('vraagTekst').textContent = vraag.typ ? TYPEN.vraag(vraag, vak) : vraag.v;
     if (window.VOORLEES) VOORLEES.knop(document.getElementById('vraagTekst'), function(){ return { v:vraag.v, o:vraag.o, taal:vak === 'eng' ? 'en-GB' : 'nl-NL' }; });
     document.getElementById('beeldVak').innerHTML = vraag.beeld || '';
     var vak2 = document.getElementById('opties');
+    if (vraag.typ){
+      if (gekliktIndex < 0) TYPEN.veld(vak2, vraag, vak, function(u, invoer){ vraag.invoer = invoer; antwoord(u.i); });
+      else vak2.innerHTML = '<p class="typuit">Jij typte: <b>' + schoonT(vraag.invoer || '') + '</b>' + (gekliktIndex === vraag.g ? '' : ' \u00b7 goed is: <b>' + schoonT(vraag.o[vraag.g]) + '</b>') + '</p>';
+      document.getElementById('reeksUit').textContent = reeks > 1 ? reeks + ' goed op rij, dat levert extra munten op.' : '';
+      return;
+    }
     vak2.innerHTML = vraag.o.map(function(tekst, i){
       var kl = '';
       if (gekliktIndex >= 0){
@@ -2094,7 +2104,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
        of vier eerder. */
     var MUNTFACTOR = 1.25;
     var winst = goed ? Math.round(MUNTFACTOR * (12 + Math.min(12, reeks * 3)) * (1 + (bank.ronde - 1) * 0.035)) : 0;
-    gekliktIndex = i;
+    /* getypt en geen van de vier: 99, dan kleurt er geen knop */
+    gekliktIndex = i < 0 ? 99 : i;
     uitlegTip(2);
     reeks = goed ? reeks + 1 : 0;
     if (window.STRIJD) STRIJD.reeks(reeks);
@@ -5923,6 +5934,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     var sk = document.getElementById('snelBtn');
     sk.classList.remove('hide'); zetSnel(false);
     slim.reset(niveau);
+    if (window.TYPEN) TYPEN.laad(vak);
     vraag = nieuweVraag();
     document.getElementById('uitlegVak').innerHTML = '';
     document.getElementById('scherm-start').classList.add('hide');

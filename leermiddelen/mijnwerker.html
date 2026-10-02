@@ -482,6 +482,7 @@ footer{border-top:1px solid rgba(20,34,76,.08);padding:22px 0 30px;text-align:ce
 <script src="melding.js"></script>
 <script src="voorlezen.js"></script>
 <script src="foutenmap.js"></script>
+<script src="typen.js"></script>
 <script src="bank.js"></script>
 <script>
 /* ============================================================================
@@ -789,7 +790,7 @@ footer{border-top:1px solid rgba(20,34,76,.08);padding:22px 0 30px;text-align:ce
     if (doel === 'INPUT' || doel === 'TEXTAREA') return;
     if (museumOpen){ if (e.key === 'Escape'){ e.preventDefault(); sluitMuseum(); } return; }
     if (vq){
-      if (vq.geklikt < 0 && /^[1-4]$/.test(e.key)){ e.preventDefault(); antwoord(parseInt(e.key, 10) - 1); }
+      if (vq.geklikt < 0 && !vq.vraag.typ && /^[1-4]$/.test(e.key)){ e.preventDefault(); antwoord(parseInt(e.key, 10) - 1); }
       else if (vq.geklikt < 0 && (e.key === 'h' || e.key === 'H')){ e.preventDefault(); hint(); }
       else if (vq.geklikt < 0 && e.key === 'Escape'){ e.preventDefault(); sluitVraag(false); }
       else if (vq.geklikt >= 0 && vq.geklikt !== vq.vraag.g && e.key === 'Enter' && !(document.activeElement && document.activeElement.id === 'verderBtn')){ e.preventDefault(); sluitVraag(false); }
@@ -1493,6 +1494,8 @@ footer{border-top:1px solid rgba(20,34,76,.08);padding:22px 0 30px;text-align:ce
   }
   function volgendeVraag(){
     vq.vraag = trekVraag(vq.band); vq.geklikt = -1; vq.weg = []; vq.hint = false;
+    /* op een hoger niveau vaker een open vraag: je typt het antwoord zelf */
+    vq.vraag.typ = !!window.TYPEN && vak !== 'reken' && TYPEN.open(vq.vraag, vak, niveau);
     tekenVraag();
     var eerste = document.querySelector('#paneel .optie');
     if (eerste && !raak()) try { eerste.focus({ preventScroll:true }); } catch (e){}
@@ -1507,8 +1510,10 @@ footer{border-top:1px solid rgba(20,34,76,.08);padding:22px 0 30px;text-align:ce
     kop.push(kopVoorVraag(q, vakNaamVan(vak)));
     if (hoger) kop.push('niveau ' + NIVEAUS.filter(function(n){ return n.rang === r + 1; })[0].naam);
     h += '<p class="eyebrow">' + schoon(kop.join(' · ')) + '</p>';
-    h += '<h2>' + schoon(q.v) + '</h2>';
+    h += '<h2>' + schoon(q.typ ? TYPEN.vraag(q, vak) : q.v) + '</h2>';
     var beeld = beeldVoor(q); if (beeld) h += '<div class="beeld">' + beeld + '</div>';
+    if (q.typ) h += vq.geklikt < 0 ? '<div class="opties" id="typPlek"></div>' : '<p class="typuit">Jij typte: <b>' + schoon(q.invoer || '') + '</b>' + (vq.geklikt === q.g ? '' : ' \u00b7 goed is: <b>' + schoon(q.o[q.g]) + '</b>') + '</p>';
+    else
     h += '<div class="opties">' + q.o.map(function(t, i){
       var kl = vq.geklikt >= 0 ? (i === q.g ? ' juist' : i === vq.geklikt ? ' mis' : '') : (vq.weg.indexOf(i) >= 0 ? ' weg' : '');
       return '<button class="optie' + kl + '" type="button" data-i="' + i + '"' + (vq.geklikt >= 0 || vq.weg.indexOf(i) >= 0 ? ' disabled' : '') + '><kbd>' + (i + 1) + '</kbd><span>' + schoon(t) + '</span></button>';
@@ -1524,7 +1529,7 @@ footer{border-top:1px solid rgba(20,34,76,.08);padding:22px 0 30px;text-align:ce
       }
     } else {
       h += '<div class="vraagvoet">' +
-        (vq.hintMag && q.o.length > 2 ? '<button type="button" class="stilknop" id="hintBtn"' + (vq.hint ? ' disabled' : '') + '>' + (vq.hint ? 'Er is er een weggestreept' : 'Hint: streep er een weg') + '</button>' : '') +
+        (vq.hintMag && !q.typ && q.o.length > 2 ? '<button type="button" class="stilknop" id="hintBtn"' + (vq.hint ? ' disabled' : '') + '>' + (vq.hint ? 'Er is er een weggestreept' : 'Hint: streep er een weg') + '</button>' : '') +
         '<button type="button" class="stilknop" id="laatBtn">Laat dit blok liggen</button></div>';
       if (vq.vol) h += '<p class="sub">Je laadruim is vol: het erts kun je nu niet meenemen.</p>';
     }
@@ -1533,6 +1538,7 @@ footer{border-top:1px solid rgba(20,34,76,.08);padding:22px 0 30px;text-align:ce
     Array.prototype.forEach.call(p.querySelectorAll('.optie'), function(b){ b.addEventListener('click', function(){ antwoord(parseInt(b.getAttribute('data-i'), 10)); }); });
     var vb = $('verderBtn'); if (vb) vb.addEventListener('click', function(){ sluitVraag(false); });
     var hb = $('hintBtn'); if (hb) hb.addEventListener('click', hint);
+    var tp = $('typPlek'); if (tp) TYPEN.veld(tp, q, vak, function(u, invoer){ q.invoer = invoer; antwoord(u.i); });
     var lb = $('laatBtn'); if (lb) lb.addEventListener('click', function(){ sluitVraag(false); });
   }
   function hint(){
@@ -1547,9 +1553,9 @@ footer{border-top:1px solid rgba(20,34,76,.08);padding:22px 0 30px;text-align:ce
     if (eerste && !raak()) try { eerste.focus({ preventScroll:true }); } catch (e){}
   }
   function antwoord(i){
-    if (!vq || vq.geklikt >= 0 || i < 0 || i >= vq.vraag.o.length || vq.weg.indexOf(i) >= 0) return;
+    if (!vq || vq.geklikt >= 0 || (i < 0 && !vq.vraag.typ) || i >= vq.vraag.o.length || vq.weg.indexOf(i) >= 0) return;
     var q = vq.vraag, goed = i === q.g;
-    vq.geklikt = i;
+    vq.geklikt = i < 0 ? 99 : i;
     if (window.KLAS) KLAS.tel(perOnderdeel, q.t, goed);
     if (!goed && window.FOUTENMAP && vak && vak !== 'reken') FOUTENMAP.noteer(q, vak);
     if (!goed && window.KLAS && KLAS.fout) KLAS.fout(q, i, vak);
