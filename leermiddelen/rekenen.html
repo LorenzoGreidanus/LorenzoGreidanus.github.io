@@ -67,6 +67,9 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .chip:hover{border-color:var(--vista);transform:translateY(-2px)}
 .chip[aria-pressed="true"]{background:var(--ocean);border-color:var(--ocean);color:#fff}
 .snel{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-top:14px}
+/* de knop naar Leer de tafels, onder de tafelkiezer */
+.leertafels{text-align:center;margin-top:18px}
+.leertafels .stapuitleg{max-width:480px;margin:8px auto 0}
 .snel button{background:none;border:1.5px solid rgba(20,34,76,.15);border-radius:999px;
   padding:8px 15px;font-size:.82rem;font-weight:600;min-height:40px}
 .snel button:hover{border-color:var(--ocean);color:var(--ocean)}
@@ -281,6 +284,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
       <button type="button" id="tafelGeen">Wis keuze</button>
     </div>
     <p class="tafelstand" id="tafelstand" aria-live="polite"></p>
+    <div class="leertafels"><button class="btn tweede" type="button" id="leerBtn">Leer de tafels met trucjes</button><p class="stapuitleg">De tafel van 4 is die van 2 maar dan dubbel, die van 9 is die van 10 min een keer. Per tafel het trucje, dan oefenen met en zonder hulp.</p></div>
   </div>
 
   <div class="stap hide" id="bereikRij">
@@ -347,6 +351,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 
 <div class="vlieger" id="vlieger"></div>
 
+<script src="tafels-leer.js"></script>
 <script src="tutorial.js"></script>
 <script src="tutorials.js"></script>
 <script>
@@ -672,6 +677,17 @@ function maakOpties(goed, decimalen){
   /* de tutorial, een keer, zodra het spelscherm er is; de klok staat intussen stil */
   if (window.TUTORIAL && window.TUTORIALS && TUTORIALS['rekenen']) TUTORIAL.naStart('startBtn', 'rekenen', TUTORIALS['rekenen'], { bewaar: function(){ return tijd; }, herstel: function(t){ tijd = t; laatsteTik = performance.now(); } });
   document.getElementById('startBtn').addEventListener('click', start);
+  /* Leer de tafels: de trucjes per tafel (tafels-leer.js), en daarna meteen de race met dezelfde tafels */
+  document.getElementById('leerBtn').addEventListener('click', function(){
+    if (!window.TAFELLEER) return;
+    TAFELLEER.open(gekozenTafels.length ? gekozenTafels : standaardTafels(), { verberg:[elStart], klaar:function(t){
+      zetTafels(t);
+      /* zonder tempo nog geen race: dan het middelste, zoals de meeste leerlingen kiezen */
+      if (!tempo){ var tk = tempoVak.children[Math.min(1, tempoVak.children.length - 1)]; if (tk) tk.click(); }
+      klaarCheck();
+      if (!document.getElementById('startBtn').disabled) start(); else elStart.scrollIntoView({ block:'start' });
+    } });
+  });
   document.getElementById('nogeensBtn').addEventListener('click', function(){ naarStart(); });
   document.getElementById('opnieuwBtn').addEventListener('click', naarStart);
   document.getElementById('grootBtn').addEventListener('click', function(){
@@ -791,6 +807,9 @@ function maakOpties(goed, decimalen){
     var uit = document.getElementById('rekenUitleg');
     uit.className = 'rekenuitleg nee';
     uit.textContent = 'Het is ' + toon(huidige.antwoord) + ': ' + huidige.vraag + ' = ' + toon(huidige.antwoord) + '.';
+    /* bij een tafelsom het trucje erbij (tafels-leer.js): de tafel van 4 is die van 2, maar dan dubbel */
+    var tm = /^tafel van ([0-9]+)$/.exec(huidige.soort || '');
+    if (tm && window.TAFELLEER && TAFELLEER.TRUC[+tm[1]] && +tm[1] > 1){ var tn = +tm[1], tk = huidige.antwoord / tn; if (tk > 1 && tk !== 10) uit.textContent += ' Trucje: ' + TAFELLEER.TRUC[tn].kort.toLowerCase() + '. ' + TAFELLEER.stappen(tn, tk).join(', ') + '.'; }
     var rijV = document.getElementById('volgendeRij'), knopV = document.getElementById('volgendeBtn');
     rijV.hidden = false;
     try { knopV.focus({ preventScroll:true }); } catch (e){ knopV.focus(); }
