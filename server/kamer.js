@@ -92,7 +92,8 @@ const RACE_AFTEL_MS = 2520, RACE_LEEG_MARGE = 800;
 /* de plekken tussen twee standen door (stuurPos): om de zoveel ms, voor wie binnen zoveel duizendsten van een poort rijdt */
 const RACE_POS_MS = 500, RACE_POS_BUURT = 3000;
 /* spellen met rollen op telefoons: het bord draait het spel, de kamer deelt kaarten uit en geeft acties door */
-const SPELLEN_ROLLEN = { polis: "De vergadering van de klas", meetlat: "Langs de meetlat", staten: "De vergadering", berlijn: "De Conferentie van Berlijn", standen: "Stem per stand", crisis: "De crisis", teken: "Tekenslag" };
+const SPELLEN_ROLLEN = { polis: "De vergadering van de klas", meetlat: "Langs de meetlat", staten: "De vergadering", berlijn: "De Conferentie van Berlijn", standen: "Stem per stand", crisis: "De crisis", teken: "Tekenslag",
+  markt: "De markt", ecosysteem: "Het ecosysteem", rivier: "Langs de rivier", gemeenteraad: "De gemeenteraad" };
 const KAART_MAX = 12000, BORD_MAX = 40000, ACTIE_MAX = 4000;
 const KLAS_SLAAPT = 400 * 24 * 60 * 60 * 1000; /* een klascode blijft tot de docent hem opheft, of tot hij ruim een jaar niet gebruikt is */
 const KLAS_MAX = 3000, KLAS_BYTES = 700000;   /* uitslagen: hoogstens zoveel, en samen hoogstens zoveel tekens */

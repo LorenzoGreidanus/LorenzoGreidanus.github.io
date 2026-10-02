@@ -46,7 +46,11 @@ window.ROLSPEL = (function(){
   }
   if (!window.VERBINDING) metVerbinding(function(){});
   function host(o){
-    var v = null, lijst = [], n = 0, voorlopig = [], weg = false;
+    /* De kaarten zijn genummerd, en een telefoon negeert een kaart voor iedereen
+       die ouder is dan zijn eigen laatste. Na het herladen van het bord begon die
+       teller weer bij nul, en kwam bijvoorbeeld de eindkaart nergens meer aan.
+       Dus beginnen bij de klok: een nieuw bord telt altijd verder dan het oude. */
+    var v = null, lijst = [], n = Date.now(), voorlopig = [], weg = false;
     function stuur(m){ if (v) return v.stuur(m); if (voorlopig.length < 200) voorlopig.push(m); return false; }
     metVerbinding(function(){
       if (weg) return;
