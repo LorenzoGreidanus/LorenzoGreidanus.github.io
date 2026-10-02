@@ -59,8 +59,8 @@ function netjes(inz){
   p.docent = (Array.isArray(inz.docent) ? inz.docent : []).slice(0, 30).map(k => k && typeof k === "object" ? {
     code: String(k.code || "").toUpperCase(), sleutel: String(k.sleutel || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 80), naam: schoon(k.naam, 30), gemaakt: getal(k.gemaakt, 1e14) } : null)
     .filter(k => k && /^[A-Z]{4}$/.test(k.code) && k.sleutel);
-  /* de foutenmap: kenmerk en vak, hoogstens tachtig */
-  p.fouten = (Array.isArray(inz.fouten) ? inz.fouten : []).slice(0, 80).map(x => x && typeof x === "object" ? { h: String(x.h || "").replace(/[^a-z0-9]/g, "").slice(0, 12), vak: schoon(x.vak, 8) } : null).filter(x => x && x.h);
+  /* de foutenmap: kenmerk, vak, bak (0 tot 3) en de dag waarop hij terugkomt, hoogstens honderdtwintig */
+  p.fouten = (Array.isArray(inz.fouten) ? inz.fouten : []).slice(0, 120).map(x => x && typeof x === "object" ? { h: String(x.h || "").replace(/[^a-z0-9]/g, "").slice(0, 12), vak: schoon(x.vak, 8), b: Math.max(0, Math.min(3, x.b | 0)), d: Math.max(0, Math.min(99999, x.d | 0)) } : null).filter(x => x && x.h);
   p.docentWeg = (Array.isArray(inz.docentWeg) ? inz.docentWeg : []).slice(0, 30).map(x => String(x || "").toUpperCase()).filter(x => /^[A-Z]{4}$/.test(x));
   return p;
 }

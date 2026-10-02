@@ -172,6 +172,10 @@ header{padding:12px 0;border-bottom:1px solid var(--rand);background:#fff;positi
 .snelknop .tegel svg{width:16px;height:16px;fill:none;stroke:#FBF6F1;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .verder{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}
 .verder .eyebrow{margin-right:4px}
+.verder a.herhaal{background:var(--sand);border-color:transparent;font-weight:600}
+.verder a.herhaal b{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#F26749;color:#14224C;font-size:.8rem}
+:root[data-theme="dark"] .verder a.herhaal{background:rgba(242,103,73,.18)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .verder a.herhaal{background:rgba(242,103,73,.18)}}
 .verder a{display:inline-flex;align-items:center;gap:8px;text-decoration:none;background:var(--kaart);border:1px solid var(--rand);
   border-radius:999px;padding:5px 12px 5px 5px;font-weight:600;font-size:.82rem;transition:border-color .16s var(--ease)}
 .verder a:hover{border-color:var(--vista)}
@@ -954,8 +958,8 @@ var SPELLEN = [
 
   { vak:['nederlands','engels','geschiedenis','aardrijkskunde','biologie','wiskunde','mens','economie'], bestand:'fouten.html', naam:'Oefen je fouten', kleur:'#F26749', tv:0,
     ico:'<path d="M4 4h12l4 4v12H4z"/><path d="M8 12l3 3 5-6"/>',
-    wat:'Alles wat je fout had in de Vragenrace, Torenverdediging, Zwaardvechter of de dagelijkse uitdaging komt hier terug, tot je het goed hebt. Hoogstens vijftien vragen per ronde, de oudste eerst. Met een speelcode reist je map mee.',
-    leer:'Je eigen fouten wegwerken', tijd:'vijf minuten' },
+    wat:'Alles wat je fout had in de Vragenrace, Torenverdediging, Zwaardvechter of de dagelijkse uitdaging komt hier terug: vandaag, na een dag, na drie dagen en na een week. Pas als je het dan nog weet, is het weg. Met een speelcode reist je map mee.',
+    leer:'Onthouden wat je fout had', tijd:'vijf minuten per dag' },
 
   { vak:['nederlands','engels','geschiedenis','aardrijkskunde','biologie','wiskunde','mens','economie'], bestand:'race.html', naam:'Vragenrace', kleur:'#EA9836', tv:0, examen:true,
     ico:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 3h6"/>',
@@ -1940,12 +1944,21 @@ var SPELLEN = [
     lijst.unshift(sp.bestand);
     try { localStorage.setItem('lg-recent', JSON.stringify(lijst.slice(0, 4))); } catch (e){}
   }
+  /* wat er vandaag uit de foutenmap terug moet komen (zie foutenmap.js: d is de dag waarop) */
+  function teHerhalen(){
+    try {
+      var l = JSON.parse(localStorage.getItem('lg-fouten') || '[]'), n = new Date();
+      var vandaag = Math.floor((n.getTime() - n.getTimezoneOffset() * 60000) / 86400000);
+      return Array.isArray(l) ? l.filter(function(x){ return x && (x.d | 0) <= vandaag; }).length : 0;
+    } catch (e){ return 0; }
+  }
   function tekenVerder(){
-    var lijst = leesRecent().map(spelMet).filter(function(sp){ return sp && !alInLes(sp); });
-    var vak = $('verder');
-    vak.classList.toggle('hide', !lijst.length);
-    if (!lijst.length) return;
-    vak.innerHTML = '<span class="eyebrow">ga verder met</span>' + lijst.map(function(sp){
+    var lijst = leesRecent().map(spelMet).filter(function(sp){ return sp && !alInLes(sp) && sp.bestand !== 'fouten.html'; });
+    var vak = $('verder'), herhaal = teHerhalen();
+    vak.classList.toggle('hide', !lijst.length && !herhaal);
+    if (!lijst.length && !herhaal) return;
+    vak.innerHTML = '<span class="eyebrow">ga verder met</span>' +
+      (herhaal ? '<a class="herhaal" href="fouten.html" data-start="fouten.html" title="Je fouten komen terug na een dag, na drie dagen en na een week">Vandaag herhalen <b>' + herhaal + '</b></a>' : '') + lijst.map(function(sp){
       return '<a href="' + linkNaar(sp) + '" data-start="' + sp.bestand + '"><i class="' + inkt(kleurVoor(sp)).trim() + '" style="background:' + kleurVoor(sp) + '"><svg viewBox="0 0 24 24" aria-hidden="true">' + sp.ico + '</svg></i>' + schoon(sp.naam) + '</a>';
     }).join('');
   }

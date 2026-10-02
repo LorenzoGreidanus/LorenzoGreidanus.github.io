@@ -91,8 +91,8 @@ window.PROFIEL = (function(){
   /* de klassen van de docent op dit apparaat (code + sleutel), en welke hij hier vergat */
   function docentLijst(){ try { var l = JSON.parse(ls('lg-klas-docent') || '[]'); return Array.isArray(l) ? l.filter(function(k){ return k && k.code && k.sleutel; }) : []; } catch (e){ return []; } }
   function docentWegWacht(){ try { return JSON.parse(ls('lg-klas-docent-weg') || '[]') || []; } catch (e){ return []; } }
-  /* de foutenmap: alleen kenmerk en vak gaan mee; de tekst haalt fouten.html weer uit de bank */
-  function foutenKort(){ try { var l = JSON.parse(ls('lg-fouten') || '[]'); return Array.isArray(l) ? l.slice(-80).map(function(x){ return { h:String(x.h || ''), vak:String(x.vak || '') }; }) : []; } catch (e){ return []; } }
+  /* de foutenmap: alleen kenmerk, vak, bak en dag gaan mee; de tekst haalt fouten.html weer uit de bank */
+  function foutenKort(){ try { var l = JSON.parse(ls('lg-fouten') || '[]'); return Array.isArray(l) ? l.slice(-120).map(function(x){ return { h:String(x.h || ''), vak:String(x.vak || ''), b:x.b | 0, d:x.d | 0 }; }) : []; } catch (e){ return []; } }
   /* klassen uit een lijst erbij zetten op dit apparaat, behalve wat hier net vergeten is */
   function neemKlassenOver(lijst){
     var dl = docentLijst(), dw = docentWegWacht(), erbij = false;

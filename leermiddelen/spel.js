@@ -422,7 +422,7 @@ window.SPEL = (function(){
         /* Delen hoort bij een goede uitslag. Ging het mis, dan hoort daar een
            uitweg: de foutenmap serveert precies de vragen die fout gingen. */
         (sterren === 0
-          ? (bestand !== 'fouten' && window.FOUTENMAP && FOUTENMAP.lijst && FOUTENMAP.lijst().length ? knopje('stil', IC.opnieuw, 'Oefen je fouten', 'a', ' href="fouten.html"') : '')
+          ? (bestand !== 'fouten' && window.FOUTENMAP && FOUTENMAP.nu && FOUTENMAP.nu().length ? knopje('stil', IC.opnieuw, 'Oefen je fouten', 'a', ' href="fouten.html"') : '')
           : knopje('stil deel', IC.deel, 'Delen')) +
         (o.opnieuw === false ? '' : knopje('stil', IC.alle, 'Alle spellen', 'a', ' href="index.html"')) +
         knopje('stil', IC.alle, 'Mijn voortgang', 'a', ' href="voortgang.html"') +

@@ -25,8 +25,8 @@ window.TUTORIALS = (function(){
       { titel: 'Het klassement', doel: null, tekst: 'Aan het eind zie je waar je staat tussen iedereen die vandaag speelde. Morgen zijn er weer tien nieuwe.' }
     ]; },
     fouten: function(){ return [
-      { titel: 'Jouw eigen fouten', doel: 'mVan', tekst: 'Dit zijn vragen die je eerder fout had in een ander spel. Ze komen terug tot je ze goed hebt.' },
-      { titel: 'De klok', doel: 'mOver', tekst: 'Je hebt even de tijd. Goed antwoord? Dan gaat de vraag uit je map. Fout? Dan komt hij nog eens.' },
+      { titel: 'Jouw eigen fouten', doel: 'mVan', tekst: 'Dit zijn vragen die je eerder fout had in een ander spel. De bolletjes bij de vraag zeggen hoe vaak je hem al goed had: vier keer is geleerd.' },
+      { titel: 'Over een paar dagen weer', doel: 'mOver', tekst: 'Goed antwoord? Dan komt de vraag terug na een dag, na drie dagen en na een week. Fout? Dan begint hij opnieuw, vandaag nog.' },
       { titel: 'Lees de uitleg', doel: 'terug', tekst: 'Na elk antwoord staat hier waarom. Dat is waar je van leert; lees het even voor je verder gaat.' }
     ]; },
     rekenen: function(){ return [
