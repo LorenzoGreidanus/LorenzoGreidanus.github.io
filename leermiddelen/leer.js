@@ -55,7 +55,14 @@ window.LEER = (function(){
       '@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .lr-chips span{background:rgba(243,239,233,.10)}}',
       '.lr-chips span.klaar{background:var(--goed-bg,#e7f3ec);font-weight:600}',
       '.lr-chips span.nu{outline:2px solid var(--crab,#F26749)}',
-      '.lr-verder{display:block;margin:12px auto 0}'
+      '.lr-verder{display:block;margin:12px auto 0}',
+      /* een som onder elkaar: cijfers in vaste kolommen, de onthouden cijfers klein erboven */
+      '.lr-beeld{display:flex;justify-content:center;margin-top:12px}',
+      '.lr-cijfer{border-collapse:collapse;font:600 1.5rem/1.15 ui-monospace,Consolas,monospace;font-variant-numeric:tabular-nums}',
+      '.lr-cijfer td{width:1.15em;text-align:center;padding:1px 0}',
+      '.lr-cijfer tr.onth td{font-size:.85rem;color:var(--crab,#F26749);height:1.1em}',
+      '.lr-cijfer tr.streep td{border-top:3px solid currentColor;padding-top:3px}',
+      '.lr-cijfer td.teken{color:var(--muted,#5b6480)}'
     ].join('\n');
     document.head.appendChild(s);
   }
@@ -94,7 +101,7 @@ window.LEER = (function(){
     var l = o.lessen[nr];
     vak.innerHTML = chips() + '<div class="lr-kaart"><p class="eyebrow">het trucje</p><h2>' + schoon(l.kop) + '</h2>' +
       '<p class="lr-kort">' + schoon(l.kort) + '</p><p class="lr-uit">' + schoon(l.uit) + '</p>' +
-      (l.voorbeeld ? '<ul class="lr-vb">' + l.voorbeeld.map(function(v){ return '<li>' + schoon(v) + '</li>'; }).join('') + '</ul>' : '') +
+      (l.beeld ? '<div class="lr-beeld">' + l.beeld + '</div>' : '') + (l.voorbeeld ? '<ul class="lr-vb">' + l.voorbeeld.map(function(v){ return '<li>' + schoon(v) + '</li>'; }).join('') + '</ul>' : '') +
       '<div class="lr-knoppen"><button class="btn" type="button" id="lrOefen">Oefen met hulp</button><button class="linkbtn" type="button" id="lrTerug">Stoppen</button></div></div>';
     el('lrOefen').addEventListener('click', function(){ maakSommen(l); sNr = 0; som(); });
     el('lrTerug').addEventListener('click', sluit);
@@ -110,6 +117,7 @@ window.LEER = (function(){
     var s = sommen[sNr], metHulp = sNr < 4;
     vak.innerHTML = chips() + '<div class="lr-kaart"><p class="eyebrow">' + (metHulp ? 'met hulp' : 'nu zelf') + ' · ' + (sNr + 1) + ' van 8</p>' +
       '<div class="lr-som">' + schoon(s.vraag) + '</div>' +
+      (s.beeld ? '<div class="lr-beeld' + (metHulp ? '' : ' hide') + '" id="lrBeeld">' + s.beeld + '</div>' : '') +
       '<ul class="lr-hulp' + (metHulp ? '' : ' hide') + '" id="lrHulp">' + s.stappen.map(function(x){ return '<li>' + schoon(x) + '</li>'; }).join('') +
         '<li class="vraag" id="lrSlot">' + schoon(s.slot) + ' ?</li></ul>' +
       '<div class="lr-invoer"><input id="lrIn" type="text" inputmode="' + (s.invoer === 'getal' ? 'decimal' : 'text') + '" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Jouw antwoord"><button class="btn" type="button" id="lrCheck">Kijk na</button></div>' +
@@ -126,6 +134,7 @@ window.LEER = (function(){
       tk.className = 'lr-terug ' + (ok ? 'goed' : 'fout');
       tk.textContent = ok ? 'Goed!' : 'Niet goed, het is ' + s.antwoord[0] + '. Kijk hierboven hoe het gaat.';
       el('lrHulp').classList.remove('hide');
+      var bl = el('lrBeeld'); if (bl){ bl.classList.remove('hide'); if (s.beeldNa) bl.innerHTML = s.beeldNa; }
       el('lrSlot').textContent = s.slot + ' ' + s.antwoord[0];
       var vast = el('lrToon'); if (vast) vast.classList.add('hide');
       var verder = document.createElement('button');
@@ -137,7 +146,7 @@ window.LEER = (function(){
     }
     el('lrCheck').addEventListener('click', kijk);
     inp.addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); kijk(); } });
-    var toon = el('lrToon'); if (toon) toon.addEventListener('click', function(){ el('lrHulp').classList.remove('hide'); toon.classList.add('hide'); });
+    var toon = el('lrToon'); if (toon) toon.addEventListener('click', function(){ el('lrHulp').classList.remove('hide'); var bl = el('lrBeeld'); if (bl) bl.classList.remove('hide'); toon.classList.add('hide'); });
     setTimeout(function(){ try { inp.focus({ preventScroll:true }); } catch (e){} }, 30);
   }
   function lesKlaar(){

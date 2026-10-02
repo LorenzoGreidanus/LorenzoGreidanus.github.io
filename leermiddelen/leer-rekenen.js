@@ -89,5 +89,49 @@ window.LEER_REKENEN = (function(){
         if (n >= 3 && Math.random() < .5){ var t = n - 1; return { vraag:t + '/' + n + ' van ' + g, stappen:['1/' + n + ' van ' + g + ' = ' + (g / n)], slot:t + ' ' + KEER + ' ' + (g / n) + ' =', antwoord:[String(t * g / n)], invoer:'getal' }; }
         return { vraag:'1/' + n + ' van ' + g, stappen:['1/' + n + ' is delen door ' + n], slot:g + ' : ' + n + ' =', antwoord:[String(g / n)], invoer:'getal' }; } }
   ];
-  return { plus:plus, delen:delen, komma:komma, procent:procent };
+  /* ---------- grote keersommen: splitsen en onder elkaar ---------- */
+  /* een getal in zijn delen: 489 -> [400, 80, 9], nullen weggelaten */
+  function delenVan(a){ var s = String(a), uit = []; for (var i = 0; i < s.length; i++){ var d = +s[i] * Math.pow(10, s.length - 1 - i); if (d) uit.push(d); } return uit; }
+  /* 489 x 9 onder elkaar, als tabel: onthouden cijfers klein erboven, en met of zonder de uitkomst */
+  function cijfer(a, b, metUitkomst){
+    var ds = String(a).split('').map(Number), uit = String(a * b), breed = Math.max(uit.length, ds.length) + 1;
+    /* onth[i]: wat er overblijft na het cijfer op plek i; dat staat boven het cijfer links ervan */
+    var onth = [], rest = 0;
+    for (var i = ds.length - 1; i >= 0; i--){ var p = ds[i] * b + rest; rest = Math.floor(p / 10); onth[i] = rest; }
+    function rij(cellen, kl){ var pad = []; for (var k = cellen.length; k < breed; k++) pad.push(''); return '<tr' + (kl ? ' class="' + kl + '"' : '') + '>' + pad.concat(cellen).map(function(c){ return '<td' + (c === KEER ? ' class="teken"' : '') + '>' + c + '</td>'; }).join('') + '</tr>'; }
+    var boven = ds.map(function(_, j){ return metUitkomst && j < ds.length - 1 && onth[j + 1] ? String(onth[j + 1]) : ''; });
+    var maal = [KEER]; for (var m = 1; m < ds.length; m++) maal.push(''); maal.push(String(b));
+    var streep = []; for (var s2 = 0; s2 < breed; s2++) streep.push('');
+    return '<table class="lr-cijfer" aria-label="' + a + ' keer ' + b + ' onder elkaar">' + rij(boven, 'onth') + rij(ds.map(String)) + rij(maal.slice(-(ds.length + 1))) +
+      rij(streep, 'streep') + (metUitkomst ? rij(uit.split('')) : rij(['?'])) + '</table>';
+  }
+  /* de stappen van onder elkaar, van rechts naar links */
+  function cijferStappen(a, b){
+    var ds = String(a).split('').map(Number), st = [], rest = 0;
+    for (var i = ds.length - 1; i >= 0; i--){
+      var p = ds[i] * b, tot = p + rest, laatste = i === 0;
+      st.push(b + ' ' + KEER + ' ' + ds[i] + ' = ' + p + (rest ? ', plus ' + rest + ' onthouden = ' + tot : '') + (laatste ? ': schrijf ' + tot + ' op' : ': schrijf ' + (tot % 10) + (tot >= 10 ? ', onthoud ' + Math.floor(tot / 10) : '')));
+      rest = Math.floor(tot / 10);
+    }
+    return st;
+  }
+  var keer = [
+    { kop:'Keer met splitsen', kort:'Splits het grote getal in honderdtallen, tientallen en eenheden',
+      uit:'Een grote keersom maak je klein: splits het getal in stukken die je met de tafels uitrekent, en tel de stukken op. Bij 400 ' + KEER + ' 9 reken je 4 ' + KEER + ' 9 = 36 en zet je er twee nullen achter.',
+      voorbeeld:['489 ' + KEER + ' 9', '400 ' + KEER + ' 9 = 3600', '80 ' + KEER + ' 9 = 720', '9 ' + KEER + ' 9 = 81', '3600 + 720 + 81 = 4401'],
+      maak:function(){ var a = Math.random() < .3 ? heel(23, 98) : heel(123, 899), b = heel(3, 9), d = delenVan(a);
+        return { vraag:a + ' ' + KEER + ' ' + b, stappen:[a + ' = ' + d.join(' + ')].concat(d.map(function(x){ return x + ' ' + KEER + ' ' + b + ' = ' + (x * b); })), slot:d.map(function(x){ return x * b; }).join(' + ') + ' =', antwoord:[String(a * b)], invoer:'getal' }; } },
+    { kop:'Onder elkaar', kort:'Van rechts naar links, en onthoud wat over de tien gaat',
+      uit:'Zet de getallen onder elkaar. Begin rechts: keer het laatste cijfer, schrijf de eenheden op en onthoud de tientallen. Bij het volgende cijfer tel je wat je onthield erbij op.',
+      beeld:cijfer(489, 9, true),
+      voorbeeld:cijferStappen(489, 9),
+      maak:function(){ var a = heel(123, 899), b = heel(3, 9);
+        return { vraag:a + ' ' + KEER + ' ' + b, beeld:cijfer(a, b, false), beeldNa:cijfer(a, b, true), stappen:cijferStappen(a, b), slot:'onder de streep staat', antwoord:[String(a * b)], invoer:'getal' }; } },
+    { kop:'Twee cijfers keer twee cijfers', kort:'Splits het tweede getal in tientallen en eenheden',
+      uit:'Bij 23 ' + KEER + ' 14 splits je de 14 in 10 en 4. Eerst 23 ' + KEER + ' 10, dan 23 ' + KEER + ' 4, en dan optellen.',
+      voorbeeld:['23 ' + KEER + ' 14', '23 ' + KEER + ' 10 = 230', '23 ' + KEER + ' 4 = 92', '230 + 92 = 322'],
+      maak:function(){ var a = heel(12, 49), t = heel(1, 4), e = heel(2, 9), b = 10 * t + e;
+        return { vraag:a + ' ' + KEER + ' ' + b, stappen:[b + ' = ' + (10 * t) + ' + ' + e, a + ' ' + KEER + ' ' + (10 * t) + ' = ' + (a * 10 * t), a + ' ' + KEER + ' ' + e + ' = ' + (a * e)], slot:(a * 10 * t) + ' + ' + (a * e) + ' =', antwoord:[String(a * b)], invoer:'getal' }; } }
+  ];
+  return { plus:plus, delen:delen, komma:komma, procent:procent, keer:keer, delenVan:delenVan };
 })();

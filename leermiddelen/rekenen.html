@@ -83,8 +83,8 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
    Een halfdoorzichtige crab-knop werd in het donker donkerrood met donkere letters. */
 .btn:disabled,.btn:disabled:hover{opacity:1;background:transparent;color:var(--muted);border:1.5px dashed var(--muted);
   box-shadow:none;cursor:not-allowed;transform:none}
-:root[data-theme="dark"] .btn.btn:disabled{color:var(--muted)}
-@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn.btn:disabled{color:var(--muted)}}
+:root[data-theme="dark"] .btn.btn.btn:disabled{color:var(--muted)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn.btn.btn:disabled{color:var(--muted)}}
 /* goed en fout blijven hier de volle kleuren: basis.css zet ze in het donker als vlak onder witte letters */
 /* na een fout: de som met het goede antwoord, en Volgende */
 .rekenuitleg{margin-top:14px;border-radius:16px;padding:12px 16px;font-size:.95rem;text-align:center;min-height:0}
@@ -394,6 +394,7 @@ var SOORTEN = [
   { id:'plus',   naam:'Optellen en aftrekken', uitleg:'Alleen plus- en minsommen.' },
   { id:'tafels', naam:'Tafels', uitleg:'Keersommen.' },
   { id:'delen',  naam:'Delen', uitleg:'Deelsommen die precies uitkomen.' },
+  { id:'keer',   naam:'Grote keersommen', uitleg:'489 \u00d7 9 en 23 \u00d7 14: met splitsen of onder elkaar.' },
   { id:'komma',  naam:'Kommagetallen', uitleg:'Optellen en aftrekken met een komma, en keer of delen door 10, 100 en 1000.' },
   { id:'procent',naam:'Procenten en breuken', uitleg:'Tien procent van 60, of een kwart van 80.' }
 ];
@@ -423,6 +424,34 @@ var FABRIEK = {
     /* de tafel staat afwisselend voor en achter, zodat 3 x 7 en 7 x 3 allebei langskomen */
     var links = Math.random() < .5 ? t : b, rechts = links === t ? b : t;
     return { vraag: links + ' \u00D7 ' + rechts, antwoord: t * b, soort:'tafel van ' + t };
+  },
+  /* Grote keersommen: twee of drie cijfers keer een cijfer, en soms twee keer twee
+     cijfers. De foute antwoorden zijn de fouten die je echt maakt: het onthouden
+     cijfer vergeten, een stuk van het splitsen vergeten, of een nul te veel of te weinig. */
+  keer: function(niv){
+    var a, b;
+    if (niv === 'bb'){ a = heel(12, 98); b = heel(2, 9); }
+    else if (Math.random() < (niv === 'hv' ? .35 : .2)){ a = heel(12, 49); b = heel(11, 39); }
+    else { a = Math.random() < .25 ? heel(23, 98) : heel(112, 899); b = heel(3, 9); }
+    var goed = a * b, mis = [];
+    if (b < 10){
+      /* zonder onthouden: elk cijfer keer b, alleen de eenheden opschrijven, behalve links */
+      var ds = String(a).split('').map(Number), zonder = '';
+      for (var i = ds.length - 1; i >= 0; i--) zonder = (i === 0 ? String(ds[i] * b) : String(ds[i] * b % 10)) + zonder;
+      mis.push(+zonder);
+      var d = String(a).length;
+      /* het middelste stuk vergeten: 400 x 9 + 9 x 9 */
+      if (d === 3) mis.push(goed - (Math.floor(a / 10) % 10) * 10 * b);
+      mis.push(goed + 10 * b, goed - b, goed + 100);
+    } else {
+      var t = Math.floor(b / 10) * 10, e = b % 10;
+      mis.push(a * t + e, a * (t / 10) + a * e, goed + a, goed - 10);
+    }
+    var opties = [goed];
+    mis.forEach(function(x){ if (opties.length < 4 && x > 0 && opties.indexOf(x) < 0) opties.push(x); });
+    while (opties.length < 4){ var x = goed + kies([10, -10, 20, -20, 1, -1]) * opties.length; if (opties.indexOf(x) < 0 && x > 0) opties.push(x); }
+    for (var q = opties.length - 1; q > 0; q--){ var w = Math.floor(Math.random() * (q + 1)), h = opties[q]; opties[q] = opties[w]; opties[w] = h; }
+    return { vraag: a + ' \u00D7 ' + b, antwoord: goed, soort:'grote keersom', opties:opties, a:a, b:b };
   },
   delen: function(niv, tafels){
     var lijst = (tafels && tafels.length) ? tafels : standaardTafels();
@@ -478,7 +507,7 @@ function standaardTafels(){
 
 function maakSom(niv, soort, tafels){
   var lijst = soort === 'alles'
-    ? (niv === 'hv' ? ['plus','tafels','delen','komma','procent'] : ['plus','tafels','delen','komma'])
+    ? (niv === 'hv' ? ['plus','tafels','delen','komma','procent','keer'] : niv === 'kgt' ? ['plus','tafels','delen','komma','keer'] : ['plus','tafels','delen','komma'])
     : [soort];
   var welke = kies(lijst);
   if (welke === 'procent' && niv !== 'hv') welke = 'tafels';
@@ -761,7 +790,7 @@ function maakOpties(goed, decimalen){
     huidige = maakSom(bereik.id, soort.id, actieveTafels());
     document.getElementById('vraag').textContent = huidige.vraag + ' =';
     document.getElementById('soortLabel').textContent = huidige.soort;
-    var opties = maakOpties(huidige.antwoord, huidige.decimalen);
+    var opties = huidige.opties || maakOpties(huidige.antwoord, huidige.decimalen);
     var vak = document.getElementById('opties');
     vak.innerHTML = '';
     opties.forEach(function(o, i){
@@ -821,6 +850,11 @@ function maakOpties(goed, decimalen){
     uit.className = 'rekenuitleg nee';
     uit.textContent = 'Het is ' + toon(huidige.antwoord) + ': ' + huidige.vraag + ' = ' + toon(huidige.antwoord) + '.';
     /* bij een tafelsom het trucje erbij (tafels-leer.js): de tafel van 4 is die van 2, maar dan dubbel */
+    if (huidige.soort === 'grote keersom' && window.LEER_REKENEN){
+      var ka = huidige.a, kb = huidige.b, kd = kb < 10 ? LEER_REKENEN.delenVan(ka) : [ka], kt = kb < 10 ? kb : null;
+      uit.textContent += kb < 10 ? ' Splits: ' + kd.map(function(x){ return x + ' \u00d7 ' + kb + ' = ' + (x * kb); }).join(', ') + ', samen ' + (ka * kb) + '.'
+        : ' Splits: ' + ka + ' \u00d7 ' + (kb - kb % 10) + ' = ' + (ka * (kb - kb % 10)) + ' en ' + ka + ' \u00d7 ' + (kb % 10) + ' = ' + (ka * (kb % 10)) + ', samen ' + (ka * kb) + '.';
+    }
     var tm = /^tafel van ([0-9]+)$/.exec(huidige.soort || '');
     if (tm && window.TAFELLEER && TAFELLEER.TRUC[+tm[1]] && +tm[1] > 1){ var tn = +tm[1], tk = huidige.antwoord / tn; if (tk > 1 && tk !== 10) uit.textContent += ' Trucje: ' + TAFELLEER.TRUC[tn].kort.toLowerCase() + '. ' + TAFELLEER.stappen(tn, tk).join(', ') + '.'; }
     var rijV = document.getElementById('volgendeRij'), knopV = document.getElementById('volgendeBtn');
