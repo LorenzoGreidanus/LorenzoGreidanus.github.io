@@ -21,8 +21,8 @@ STAPPEN.les('berlijn', function(){
           tekst: '<p>Jullie spelen de vier belangrijkste landen. Ieder heeft eigen doelen. Omdat niemand iets kan afdwingen, moet je praten en ruilen.</p>' },
         { kop: 'Elke ronde een zet', beeld: S.formule('claim leggen · ruilen'),
           tekst: '<p>Elke ronde leg je een claim op een gebied of doe je een ruil met een ander land.</p>' },
-        { kop: 'Tekenen', beeld: S.formule('alle vier tekenen, of bezwaar tegen één gebied'),
-          tekst: '<p>Aan het eind moet de kaart door alle vier ondertekend worden. Je mag ook bezwaar maken tegen één gebied.</p>' }
+        { kop: 'Tekenen', beeld: S.formule('alle vier tekenen, of bezwaar en opnieuw'),
+          tekst: '<p>Aan het eind moet de kaart door alle vier ondertekend worden. Wie niet tekent, maakt bezwaar tegen één gebied: dat komt weer op tafel en iedereen tekent opnieuw. Dat mag zo vaak als nodig, want er is pas een verdrag als alle vier tekenen.</p>' }
       ]
     }
   ];

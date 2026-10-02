@@ -208,6 +208,8 @@ header{position:sticky;top:0;z-index:30;background:var(--room);border-bottom:1px
 .legenda i{width:11px;height:11px;border-radius:4px;flex:none}
 .legenda p{margin:0;max-width:60ch}
 .tekenrij{display:grid;gap:7px;margin-top:12px}
+.tekenronde{font-size:.78rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--crab);margin-top:10px}
+.popupkaart .popupronde{font-weight:600;color:var(--crab);margin:2px 0 10px}
 .tekenaar{display:flex;align-items:center;gap:10px;background:var(--room);border-radius:14px;padding:9px 12px}
 .tekenaar i{width:17px;height:17px;border-radius:5px;flex:none}
 .tekenaar b{font-size:.88rem;font-weight:600;flex:1}
@@ -455,7 +457,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
     <div><b>1</b><span>Tik op een gebied op de kaart. Je ziet dan wat het waard is en wat het kost.</span></div>
     <div><b>2</b><span>Overleg hardop met de anderen. Ruilen mag, en een gebied weggeven kost je je beurt niet.</span></div>
     <div><b>3</b><span>Claim wat je wilt hebben. De conferentie loopt door tot heel Afrika verdeeld is, dus er komt geen bel die hem afkapt.</span></div>
-    <div><b>4</b><span>Daarna moet de kaart getekend worden, door alle vier. Wie niet tekent noemt &eacute;&eacute;n gebied dat hij terug op tafel wil; daarover wordt opnieuw onderhandeld. Bezwaar maken mag &eacute;&eacute;n keer per land.</span></div>
+    <div><b>4</b><span>Daarna moet de kaart getekend worden, door alle vier. Wie niet tekent noemt &eacute;&eacute;n gebied dat hij terug op tafel wil; daarover wordt opnieuw onderhandeld. Bezwaar maken mag zo vaak als je wilt: er ligt pas een verdrag als iedereen tekent.</span></div>
   </div>
 
   <p class="eyebrow">wie speelt wat</p>
@@ -535,12 +537,13 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
   <div class="popupkaart" role="dialog" aria-labelledby="popupKop" aria-modal="true">
     <p class="eyebrow">heel Afrika staat op de kaart</p>
     <h2 id="popupKop">Nu moet er getekend worden</h2>
+    <p class="popupronde hide" id="popupRonde"></p>
     <p>Een verdeling is pas een verdrag als iedereen zijn handtekening zet. In Berlijn tekenden veertien landen de Congo-akte; zonder die handtekeningen was er niets afgesproken.</p>
     <ul class="popuplijst">
       <li><b>Alle vier moeten tekenen.</b> Om de beurt. Pas als de laatste handtekening staat, ligt het verdrag er.</li>
       <li><b>Wie niet tekent, maakt bezwaar.</b> Je noemt &eacute;&eacute;n gebied van een ander dat je terug op tafel wilt.</li>
       <li><b>Dat gebied komt weer vrij.</b> De conferentie gaat er opnieuw over onderhandelen, en daarna tekent iedereen opnieuw.</li>
-      <li><b>Bezwaar maken mag &eacute;&eacute;n keer per land.</b> Anders komt er nooit een verdrag, en dat wisten ze in Berlijn ook.</li>
+      <li><b>Bezwaar maken mag zo vaak als je wilt.</b> Zolang &eacute;&eacute;n land nee zegt, ligt er niets. Dus blijf praten tot iedereen kan tekenen.</li>
       <li><b>Er wordt niet gevochten.</b> Wat hier gebeurt is onderhandelen. Het geweld kwam daarna, en niet tegen elkaar.</li>
     </ul>
     <button class="btn" id="popupDicht" type="button">Begrepen, we gaan tekenen</button>
@@ -1026,15 +1029,13 @@ var NOODREM = 30;
      \u00e9\u00e9n gebied van een ander. */
   function vraagHandtekening(m, leden){
     var items = [{ id:'teken', tekst:'Teken het verdrag', onder:'akkoord met de kaart zoals hij nu ligt' }];
-    if (!bezwaarOp[m.id]){
-      KAART.gebieden.forEach(function(g){
-        if (!bezit[g.id] || bezit[g.id] === m.id || INFO[g.id].vast || INFO[g.id].natie) return;
-        items.push({ id:'bezwaar:' + g.id, tekst:'Bezwaar: ' + g.naam,
-          onder:'nu van ' + naamVan(bezit[g.id]) + ' \u00b7 komt weer op tafel' });
-      });
-    }
+    KAART.gebieden.forEach(function(g){
+      if (!macht(bezit[g.id]) || bezit[g.id] === m.id || INFO[g.id].vast || INFO[g.id].natie) return;
+      items.push({ id:'bezwaar:' + g.id, tekst:'Bezwaar: ' + g.naam,
+        onder:'nu van ' + naamVan(bezit[g.id]) + ' \u00b7 komt weer op tafel' });
+    });
     deleg = ROLSPEL.delegatie(kamer, leden, { soort:'lijst', id:'teken' + beurt, kop:'de kaart moet ondertekend',
-      titel:m.naam, tekst:'Tekenen jullie, of maken jullie bezwaar tegen \u00e9\u00e9n gebied? Bezwaar maken mag \u00e9\u00e9n keer.', items:items },
+      titel:m.naam, tekst:'Tekenen jullie, of maken jullie bezwaar tegen \u00e9\u00e9n gebied? Bezwaar mag zo vaak als jullie willen, maar dan moet iedereen opnieuw tekenen.' + rondeTekst(), items:items },
       function(keuze){
         deleg = null;
         /* alleen een keuze die op de kaart stond: een telefoon kan ook iets anders terugsturen */
@@ -1046,8 +1047,11 @@ var NOODREM = 30;
     if (deleg) deleg.actie(pid, d);
   }
   var beurt = 0, ronde = 1, gekozen = null, klaar = false, regels = [], fase = 'conferentie';
-  /* wie het verdrag al tekende, en wie zijn ene bezwaar al gebruikt heeft */
-  var tekenden = {}, bezwaarOp = {};
+  /* wie het verdrag al tekende, en alle bezwaren tot nu toe: { wie, gebied, van } */
+  var tekenden = {}, bezwaren = [];
+  function bezwaarAantal(id){ return bezwaren.filter(function(b){ return b.wie === id; }).length; }
+  /* "tekenronde 3, na 2 bezwaren": zo blijft zichtbaar dat het pas klaar is als iedereen tekent */
+  function rondeTekst(){ return bezwaren.length ? ' Dit is tekenronde ' + (bezwaren.length + 1) + ', na ' + bezwaren.length + ' bezwa' + (bezwaren.length === 1 ? 'ar' : 'ren') + '.' : ''; }
 
 
   var elKaart = document.getElementById('kaartvak'),
@@ -1087,7 +1091,7 @@ var NOODREM = 30;
   /* De stand waarmee de doelen worden nagekeken. */
   var stand = {
     van: function(g){ return bezit[g] || null; },
-    bezwaarVan: function(id){ return !!bezwaarOp[id]; },
+    bezwaarVan: function(id){ return bezwaarAantal(id) > 0; },
     aantal: function(id){ return Object.keys(bezit).filter(function(g){ return bezit[g] === id; }).length; },
     meeste: function(){
       return MACHTEN.reduce(function(m, p){ return Math.max(m, stand.aantal(p.id)); }, 0);
@@ -1273,7 +1277,7 @@ var NOODREM = 30;
     var vak = document.getElementById('nieuwsvak'); if (vak) vak.remove();
     bezit = {}; regels = []; beurt = 0; ronde = 1; gekozen = null; klaar = false;
     KAART.gebieden.forEach(function(g){ bezit[g.id] = INFO[g.id].bezit || null; });
-    tekenden = {}; bezwaarOp = {};
+    tekenden = {}; bezwaren = [];
     if (wijze === 'tel'){ if (!kamer || spelers.length < 2) return; deelUit(); }
     elStart.classList.add('hide'); elEinde.classList.add('hide'); elSpel.classList.remove('hide');
     laag = 'verdeling'; tekenLagen();
@@ -1645,6 +1649,10 @@ var NOODREM = 30;
     tekenden = {};
     noteer('<b>Afrika is verdeeld.</b> Nu moet de kaart ondertekend worden. Pas als alle vier hun ' +
       'handtekening hebben gezet, ligt er een verdrag.');
+    var pr = document.getElementById('popupRonde');
+    document.getElementById('popupKop').textContent = bezwaren.length ? 'Tekenronde ' + (bezwaren.length + 1) + ': opnieuw tekenen' : 'Nu moet er getekend worden';
+    pr.classList.toggle('hide', !bezwaren.length);
+    pr.textContent = bezwaren.length ? 'Er is ' + bezwaren.length + ' keer bezwaar gemaakt. Zonder vier handtekeningen is er geen verdrag.' : '';
     toonPopup();
     nieuweBeurt();
   }
@@ -1658,17 +1666,18 @@ var NOODREM = 30;
   }
 
   /* Bezwaar: \u00e9\u00e9n gebied komt weer op tafel, en daarna moet iedereen
-     opnieuw tekenen. Eenmaal per mogendheid, anders loopt het rond. */
+     opnieuw tekenen. Zo vaak als nodig: het verdrag ligt er pas als iedereen tekent. */
   function maakBezwaar(machtId, gebiedId){
     var was = bezit[gebiedId];
-    if (!was || was === machtId){ tekenVerdrag(machtId); return; }
-    bezwaarOp[machtId] = gebiedId;
+    if (!macht(was) || was === machtId){ tekenVerdrag(machtId); return; }
+    bezwaren.push({ wie:machtId, gebied:gebiedId, van:was });
     bezit[gebiedId] = null;
     tekenden = {};
     fase = 'conferentie';
     gekozen = null;
     noteer('<b>' + naamVan(machtId) + '</b> weigert te tekenen zolang ' + naamVanGebied(gebiedId) +
-      ' van ' + naamVan(was) + ' is. Het gebied ligt weer op tafel, en daarna tekent iedereen opnieuw.');
+      ' van ' + naamVan(was) + ' is. Het gebied ligt weer op tafel, en daarna tekent iedereen opnieuw' +
+      (bezwaren.length > 1 ? ' (al het ' + bezwaren.length + 'e bezwaar)' : '') + '.');
     volgende();
   }
 
@@ -1780,16 +1789,18 @@ var NOODREM = 30;
   }
 
   /* Het verdrag. Je ziet wie er al tekende, je tekent zelf, of je maakt \u00e9\u00e9n
-     keer bezwaar tegen een gebied van een ander. */
+     bezwaar tegen een gebied van een ander, zo vaak als je wilt. */
   function toonTekenen(id, m, feiten, acties, staat, let_){
     document.getElementById('kNaam').textContent = 'Het verdrag van Berlijn';
     document.getElementById('kWaar').textContent = mens[m.id]
       ? 'Alle vier moeten tekenen. Wil je bezwaar maken, tik dan eerst op een gebied van een ander.'
       : 'Even wachten.';
-    feiten.innerHTML = '<div class="tekenrij">' + MACHTEN.map(function(a){
+    feiten.innerHTML = (bezwaren.length ? '<p class="tekenronde">Tekenronde ' + (bezwaren.length + 1) + ' \u00b7 ' + bezwaren.length + ' bezwa' + (bezwaren.length === 1 ? 'ar' : 'ren') + '</p>' : '') +
+      '<div class="tekenrij">' + MACHTEN.map(function(a){
+      var nb = bezwaarAantal(a.id);
       return '<div class="tekenaar' + (tekenden[a.id] ? ' af' : '') + '">' +
         '<i style="background:' + a.kleur + '"></i><b>' + a.naam + '</b><span>' +
-        (tekenden[a.id] ? 'getekend' : bezwaarOp[a.id] ? 'maakte bezwaar' : 'nog niet') + '</span></div>';
+        (tekenden[a.id] ? 'getekend' : nb ? 'maakte ' + (nb > 1 ? nb + ' keer ' : '') + 'bezwaar' : 'nog niet') + '</span></div>';
     }).join('') + '</div>';
     staat.classList.add('hide'); let_.classList.add('hide');
     acties.innerHTML = '';
@@ -1801,17 +1812,10 @@ var NOODREM = 30;
     teken.addEventListener('click', function(){ tekenVerdrag(m.id); });
     acties.appendChild(teken);
 
-    if (bezwaarOp[m.id]){
-      var p = document.createElement('p');
-      p.style.cssText = 'font-size:.85rem;color:var(--muted)';
-      p.textContent = jj('Jullie bezwaar is op.', 'Je bezwaar is op.') + ' Er valt nu alleen nog te tekenen.';
-      acties.appendChild(p);
-      return;
-    }
     if (!id) return;
     var g2 = KAART.gebieden.filter(function(x){ return x.id === id; })[0];
     var eig2 = bezit[id];
-    if (!g2 || !eig2 || eig2 === m.id || INFO[id].vast || INFO[id].natie) return;
+    if (!g2 || !macht(eig2) || eig2 === m.id || INFO[id].vast || INFO[id].natie) return;
     var bez = document.createElement('button');
     bez.className = 'btn ghost klein'; bez.type = 'button';
     bez.textContent = 'Bezwaar tegen ' + g2.naam;
@@ -1868,16 +1872,18 @@ var NOODREM = 30;
   }
 
   /* De computer tekent, tenzij een gebied dat hij voor een doel nodig heeft bij
-     een ander ligt. Daar maakt hij dan zijn ene bezwaar tegen. */
+     een ander ligt. Daar maakt hij dan bezwaar tegen. Hooguit twee keer en nooit
+     twee keer tegen hetzelfde gebied, anders blijven twee computers eeuwig ruziën. */
   function computerTekent(m){
-    if (!bezwaarOp[m.id]){
+    if (bezwaarAantal(m.id) < 2){
       var wil = null;
       m.doelen.forEach(function(d){
         if (wil || d.check(stand) || !d.wijst) return;
         d.wijst.forEach(function(gid){
           if (wil) return;
           var eig = bezit[gid];
-          if (!eig || eig === m.id || INFO[gid].vast || INFO[gid].natie) return;
+          if (!macht(eig) || eig === m.id || INFO[gid].vast || INFO[gid].natie) return;
+          if (bezwaren.some(function(b){ return b.wie === m.id && b.gebied === gid; })) return;
           wil = gid;
         });
       });
@@ -1959,6 +1965,9 @@ var NOODREM = 30;
           return g ? g.naam + ' (' + g.jaar + (g.soort === 'watals' ? ', niet echt gebeurd' : '') + ')' : id;
         }).join('. ') + '.</p>' : '') +
       '<h3>Wat die handtekeningen betekenden</h3>' +
+      (bezwaren.length ? '<p>' + jj('Jullie', 'Jouw') + ' verdrag kwam er pas na <b>' + (bezwaren.length + 1) + ' tekenrondes</b>. Er werd ' + bezwaren.length + ' keer bezwaar gemaakt: ' +
+        bezwaren.map(function(b){ return naamVan(b.wie) + ' tegen ' + naamVanGebied(b.gebied); }).join(', ') + '. Zo werkt een verdrag: niemand kan iets afdwingen, dus het is pas klaar als iedereen ja zegt.</p>' :
+        '<p>Alle vier tekenden in \u00e9\u00e9n keer, zonder bezwaar.</p>') +
       '<p>In Berlijn werd niet gevochten. Er werd getekend: op 26 februari 1885 zetten veertien landen ' +
       'hun naam onder de Congo-akte. Daarin stond ook dat een claim pas telt als je er ook echt zit, ' +
       '<b>effectieve bezetting</b>, en dat is de reden dat de lijnen op papier binnen twintig jaar ' +
@@ -1979,13 +1988,14 @@ var NOODREM = 30;
     var info = {};
     Object.keys(INFO).forEach(function(k){ if (INFO[k].vast || INFO[k].onafh) info[k] = { vast:!!INFO[k].vast, onafh:!!INFO[k].onafh }; });
     ROLSPEL.bewaar('berlijn', wijze === 'tel' ? kamerInfo : null, { wijze:wijze, bezit:bezit, mens:mens, machtVan:machtVan, beurt:beurt, ronde:ronde,
-      regels:regels, fase:fase, tekenden:tekenden, bezwaarOp:bezwaarOp, gehad:gehad, gebSoort:gebSoort.id, info:info });
+      regels:regels, fase:fase, tekenden:tekenden, bezwaren:bezwaren, gehad:gehad, gebSoort:gebSoort.id, info:info });
   }
   ROLSPEL.hervat('berlijn', elStart, function(b){
     var st = b.stand;
     wijze = st.wijze || 'bord';
     bezit = st.bezit || {}; mens = st.mens || {}; machtVan = st.machtVan || {}; beurt = st.beurt | 0; ronde = st.ronde || 1;
-    regels = st.regels || []; fase = st.fase || 'conferentie'; tekenden = st.tekenden || {}; bezwaarOp = st.bezwaarOp || {}; gehad = st.gehad || [];
+    regels = st.regels || []; fase = st.fase || 'conferentie'; tekenden = st.tekenden || {}; gehad = st.gehad || [];
+    bezwaren = st.bezwaren || Object.keys(st.bezwaarOp || {}).map(function(w){ return { wie:w, gebied:st.bezwaarOp[w], van:null }; });
     gebSoort = SOORTEN_GEB.filter(function(x){ return x.id === st.gebSoort; })[0] || gebSoort;
     Object.keys(BEGINSTAAT).forEach(function(k){ INFO[k].vast = BEGINSTAAT[k].vast; delete INFO[k].onafh; });
     Object.keys(st.info || {}).forEach(function(k){ if (!INFO[k]) return; INFO[k].vast = !!st.info[k].vast; if (st.info[k].onafh) INFO[k].onafh = true; });
@@ -2009,6 +2019,6 @@ var NOODREM = 30;
 <script src="thema.js"></script>
 <script src="klas.js"></script>
 <script src="spel.js"></script>
-<script>SPEL.uitleg({ doel:"Verdeel als grote mogendheid Afrika onder elkaar, teken het verdrag met zijn vieren, en zie wie er niet aan tafel zat.", tijd:"ongeveer 30 minuten, met de klas of alleen", bediening:"Kies elke ronde waar je een claim legt of wat je ruilt. Aan het eind teken je, of maak je bezwaar tegen \u00e9\u00e9n gebied." });</script>
+<script>SPEL.uitleg({ doel:"Verdeel als grote mogendheid Afrika onder elkaar, teken het verdrag met zijn vieren, en zie wie er niet aan tafel zat.", tijd:"ongeveer 30 minuten, met de klas of alleen", bediening:"Kies elke ronde waar je een claim legt of wat je ruilt. Aan het eind teken je, of maak je bezwaar tegen een gebied. Dan wordt er opnieuw onderhandeld, zo vaak als nodig: pas als alle vier tekenen ligt er een verdrag." });</script>
 </body>
 </html>
