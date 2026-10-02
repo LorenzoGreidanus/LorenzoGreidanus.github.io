@@ -227,7 +227,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     <p class="lead">Wat je fout had in de Vragenrace, Torenverdediging, Zwaardvechter of de dagelijkse uitdaging komt hier terug: vandaag, na een dag, na drie dagen en na een week. Zo blijft het hangen.</p>
     <div class="uitleg">
       <div><i style="background:var(--crab)">1</i><b>Speel gewoon</b><span>Je hoeft niets aan te zetten: elke fout uit die vier spellen belandt vanzelf in je map. Ook op een ander apparaat, als je een speelcode hebt.</span></div>
-      <div><i style="background:var(--amber)">2</i><b>Terug op het goede moment</b><span>Goed? Dan komt de vraag terug na een dag, daarna na drie dagen en na een week. Pas als je hem dan nog weet, is hij uit je map. Fout? Dan begint hij weer bij vandaag.</span></div>
+      <div><i style="background:var(--amber)">2</i><b>Terug op het goede moment</b><span>Goed? Dan komt de vraag terug na een dag, daarna na drie dagen en na een week. Pas als je hem dan nog weet, is hij uit je map. Vanaf de tweede keer typ je het antwoord zelf, als het kort is. Fout? Dan begint hij weer bij vandaag.</span></div>
       <div><i style="background:var(--ocean);color:#fff">3</i><b>Elke dag vijf minuten</b><span>Kom elke dag even langs: dan staat klaar wat vandaag terug moet komen, hoogstens vijftien vragen. Iets vergeten en weer ophalen is precies hoe je het onthoudt.</span></div>
     </div>
     <div class="kaart">
@@ -279,6 +279,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 <script src="melding.js"></script>
 <script src="voorlezen.js"></script>
 <script src="foutenmap.js"></script>
+<script src="typen.js"></script>
 <script src="tutorial.js"></script>
 <script src="tutorials.js"></script>
 <script>
@@ -329,6 +330,10 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     $('vraagKop').innerHTML = schoon(vakNaam(vraag.vak) + (vraag.t ? ' · ' + vraag.t : '')) + '<span class="vraagbak" title="' + (vraag.b | 0) + ' van de 4 keer goed" aria-label="' + (vraag.b | 0) + ' van de 4 keer goed">' + bol + '</span>';
     $('vraagTekst').textContent = vraag.v;
     var beeld = beeldVoor(vraag); $('beeld').innerHTML = beeld; $('beeld').classList.toggle('hide', !beeld);
+    if (vraag.typ){
+      if (geklikt < 0) TYPEN.veld($('opties'), vraag, vraag.vak, function(u, invoer){ vraag.invoer = invoer; vraag.bijna = u.bijna; antwoord(u.i); });
+      else $('opties').innerHTML = '<p class="typuit">Jij typte: <b>' + schoon(vraag.invoer || '') + '</b>' + (geklikt === vraag.g ? '' : ' · goed is: <b>' + schoon(vraag.o[vraag.g]) + '</b>') + '</p>';
+    } else
     $('opties').innerHTML = vraag.o.map(function(t, i){
       var kl = geklikt >= 0 ? (i === vraag.g ? ' juist' : (i === geklikt ? ' mis' : '')) : '';
       return '<button type="button" class="optie' + kl + '" data-i="' + i + '"' + (geklikt >= 0 ? ' disabled' : '') + '>' + schoon(t) + '</button>';
@@ -342,18 +347,21 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   function volgende(){
     wacht = false; $('volgendeRij').hidden = true;
     if (nr >= rij.length){ einde(); return; }
-    vraag = husssel(rij[nr]); geklikt = -1; tekenVraag(); tekenMeters();
+    vraag = husssel(rij[nr]); geklikt = -1;
+    /* had je hem al een keer goed, dan typ je hem nu zelf (als het antwoord kort is) */
+    vraag.typ = (vraag.b | 0) >= 1 && window.TYPEN && TYPEN.kan(vraag, vraag.vak);
+    tekenVraag(); tekenMeters();
   }
   function antwoord(i){
     if (!loopt || geklikt >= 0 || !vraag) return;
-    geklikt = i;
+    geklikt = i < 0 ? 99 : i;
     var isGoed = i === vraag.g;
     if (window.KLAS) KLAS.tel(perOnderdeel, vraag.t, isGoed);
     if (isGoed){
       goed++; reeks++; besteReeks = Math.max(besteReeks, reeks);
       var r = FOUTENMAP.goed(vraag.h);
       if (r.weg) geleerd++;
-      $('terug').textContent = r.weg ? 'Goed, en dat na een week nog steeds. Deze zit erin: hij is uit je map.' : 'Goed! Hij komt ' + overDagen(r.dagen) + ' nog een keer terug, om te kijken of hij blijft hangen.'; $('terug').className = 'terugkoppeling goed';
+      $('terug').textContent = r.weg ? 'Goed, en dat na een week nog steeds. Deze zit erin: hij is uit je map.' : 'Goed! Hij komt ' + overDagen(r.dagen) + ' nog een keer terug, om te kijken of hij blijft hangen.'; if (vraag.bijna) $('terug').textContent += ' Let op de spelling: ' + vraag.o[vraag.g] + '.'; $('terug').className = 'terugkoppeling goed';
     } else {
       fout++; reeks = 0; foutLijst.push(vraag);
       FOUTENMAP.noteer(vraag, vraag.vak);
@@ -407,7 +415,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   $('startBtn').addEventListener('click', start);
   $('nogBtn').addEventListener('click', start);
   $('stopBtn').addEventListener('click', function(){ einde(); });
-  addEventListener('keydown', function(e){ if (loopt && e.key >= '1' && e.key <= '4') antwoord(parseInt(e.key, 10) - 1); });
+  addEventListener('keydown', function(e){ if (loopt && !(vraag && vraag.typ) && e.key >= '1' && e.key <= '4') antwoord(parseInt(e.key, 10) - 1); });
 })();
 </script>
 <script src="thema.js"></script>

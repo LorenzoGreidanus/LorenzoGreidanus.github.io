@@ -218,6 +218,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     <div class="kaart">
       <div class="stap"><b>Vak</b><div class="chips" id="vakken"></div></div>
       <div class="stap"><b>Onderdeel</b><div class="chips schuif" id="onderdelen"></div><p class="tip" id="herhaalUit" style="margin-top:6px"></p></div>
+      <div class="stap"><b>Antwoorden</b><div class="chips" id="wijzen"></div><p class="tip" id="wijzeUit" style="margin-top:6px"></p></div>
       <div class="stap"><b>Niveau</b><div class="chips" id="niveaus"></div><p class="tip" id="niveauUit" style="margin-top:6px"></p></div>
       <div class="stap"><button class="knop crab groot" id="startBtn" type="button">Start de race</button></div>
     </div>
@@ -259,6 +260,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 <script src="melding.js"></script>
 <script src="voorlezen.js"></script>
 <script src="foutenmap.js"></script>
+<script src="typen.js"></script>
 <script src="tutorial.js"></script>
 <script src="tutorials.js"></script>
 <script>
@@ -277,6 +279,8 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id); } catch (e){} }
   var niveau = NIVEAUS.some(function(n){ return n.id === param('n'); }) ? param('n') : 'kgt';
   var onderdeel = '';
+  /* zelf typen in plaats van kiezen (typen.js), onthouden op dit apparaat */
+  var typen = false; try { typen = localStorage.getItem('lg-typen') === '1'; } catch (e){}
   /* Gemengd herhalen: wat je per onderdeel goed had staat op dit apparaat
      (klas.js, lg-per-onderdeel). Door elkaar herhalen blijft beter hangen dan
      blok voor blok, omdat je bij elke vraag eerst moet herkennen wat voor
@@ -307,6 +311,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     chips('onderdelen', [{ id:'', naam:'alles door elkaar' }].concat(gehad.length >= 2 ? [{ id:HERHAAL, naam:'gemengd herhalen (' + gehad.length + ')' }] : [], ONDERDELEN[vak] || []), onderdeel, function(id){ onderdeel = id; });
     $('herhaalUit').textContent = onderdeel === HERHAAL ? 'Vragen uit de ' + gehad.length + ' onderdelen die je al oefende, door elkaar. Wat minder goed ging, komt vaker. Door elkaar herhalen onthoud je beter dan alles van één soort achter elkaar.' : '';
     chips('niveaus', NIVEAUS, niveau, function(id){ niveau = id; onthoudNiveau(id); });
+    chips('wijzen', [{ id:'kies', naam:'kiezen uit vier' }, { id:'typ', naam:'zelf typen' }], typen ? 'typ' : 'kies', function(id){ typen = id === 'typ'; try { localStorage.setItem('lg-typen', typen ? '1' : ''); } catch (e){} });
+    $('wijzeUit').textContent = typen ? 'Heeft een vraag een kort antwoord, dan typ je het zelf; de rest blijft kiezen. Zelf typen is lastiger, maar zo onthoud je het beter: goed getypt geeft 5 punten extra.' : '';
     /* De uitleg bij het niveau hoort bij het vak: de regels uit bank.js gaan over getallen, en die zijn er alleen bij rekenen */
     var nv = NIVEAUS.filter(function(n){ return n.id === niveau; })[0];
     var vk = VAK_RACE.filter(function(v){ return v.id === vak; })[0];
@@ -358,6 +364,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (vak === 'eng' && /^woordjes /.test(q.t) && !/\?$/.test(q.v)) v = (q.t === 'woordjes NL naar EN' ? 'Hoe zeg je: ' : 'Wat betekent: ') + q.v + '?';
     var h = husssel(Object.assign({}, q, { v:v }));
     h.kop = kop;
+    h.typ = typen && window.TYPEN && TYPEN.kan(h, vak);
     return h;
   }
   function beeldVoor(q){
@@ -379,6 +386,10 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     $('vraagKop').textContent = vraag.kop;
     $('vraagTekst').textContent = vraag.v;
     var beeld = beeldVoor(vraag); $('beeld').innerHTML = beeld; $('beeld').classList.toggle('hide', !beeld);
+    if (vraag.typ){
+      if (geklikt < 0) TYPEN.veld($('opties'), vraag, vak, function(u, invoer){ vraag.invoer = invoer; vraag.bijna = u.bijna; antwoord(u.i, true); });
+      else $('opties').innerHTML = '<p class="typuit">Jij typte: <b>' + schoon(vraag.invoer || '') + '</b>' + (geklikt === vraag.g ? '' : ' · goed is: <b>' + schoon(vraag.o[vraag.g]) + '</b>') + '</p>';
+    } else
     $('opties').innerHTML = vraag.o.map(function(t, i){
       var kl = geklikt >= 0 ? (i === vraag.g ? ' juist' : (i === geklikt ? ' mis' : '')) : '';
       return '<button type="button" class="optie' + kl + '" data-i="' + i + '"' + (geklikt >= 0 ? ' disabled' : '') + '>' + schoon(t) + '</button>';
@@ -392,14 +403,15 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   function volgende(){ wacht = false; $('volgendeRij').hidden = true; vraag = nieuweVraag(); geklikt = -1; tekenVraag(); }
   function antwoord(i){
     if (!loopt || geklikt >= 0 || !vraag) return;
-    geklikt = i;
-    var isGoed = i === vraag.g;
+    /* getypt en geen van de vier antwoorden: 99, dan kleurt er geen knop */
+    geklikt = i < 0 ? 99 : i;
+    var isGoed = i === vraag.g, extra = isGoed && vraag.typ ? 5 : 0;
     slim.toets(isGoed);
     if (window.KLAS) KLAS.tel(perOnderdeel, vraag.t, isGoed);
     if (isGoed){
       reeks++; goed++; besteReeks = Math.max(besteReeks, reeks);
-      punten += reeks >= 3 ? 20 : 10; tijd = Math.min(DUUR + 30, tijd + 3);
-      $('terug').textContent = 'Goed! +' + (reeks >= 3 ? 20 : 10) + ' punten en 3 seconden erbij.'; $('terug').className = 'terugkoppeling goed';
+      punten += (reeks >= 3 ? 20 : 10) + extra; tijd = Math.min(DUUR + 30, tijd + 3);
+      $('terug').textContent = (extra ? 'Goed, zelf getypt! +' : 'Goed! +') + ((reeks >= 3 ? 20 : 10) + extra) + ' punten en 3 seconden erbij.' + (vraag.bijna ? ' Let op de spelling: ' + vraag.o[vraag.g] + '.' : ''); $('terug').className = 'terugkoppeling goed';
     } else {
       reeks = 0; fout++; tijd = Math.max(0, tijd - 5);
       foutLijst.push(vraag);
@@ -464,7 +476,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   $('nogBtn').addEventListener('click', startMetVragen);
   $('andersBtn').addEventListener('click', function(){ $('scherm-einde').classList.add('hide'); $('scherm-start').classList.remove('hide'); tekenKeuze(); });
   $('stopBtn').addEventListener('click', function(){ tijd = 0; einde(); });
-  addEventListener('keydown', function(e){ if (loopt && !wacht && e.key >= '1' && e.key <= '4') antwoord(parseInt(e.key, 10) - 1); });
+  addEventListener('keydown', function(e){ if (loopt && !wacht && !(vraag && vraag.typ) && e.key >= '1' && e.key <= '4') antwoord(parseInt(e.key, 10) - 1); });
 })();
 </script>
 <script src="thema.js"></script>
