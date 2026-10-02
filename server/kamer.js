@@ -290,6 +290,14 @@ const LOBBY_WACHT = 8000, ARENA_WACHT = 20000;
 const PERIODES_MAX = 12, PERIODE_NAAM = 40;
 
 /* per onderdeel [goed, gesteld]: hoogstens dertig onderdelen, korte namen, kleine getallen */
+/* De foute keuzes uit een melding: per vraag het kenmerk, de tekst, het goede
+   en het gekozen antwoord. Hoogstens twaalf per melding. */
+function schoonFk(fk){
+  if (!Array.isArray(fk)) return [];
+  return fk.slice(0, 12).map(x => x && typeof x === "object" ? { h: String(x.h || "").replace(/[^a-z0-9]/g, "").slice(0, 12), vak: schoon(x.vak, 8),
+    v: schoon(x.v, 200), g: schoon(x.g, 100), a: schoon(x.a, 100) } : null).filter(x => x && x.h && x.v && x.a && x.a !== x.g);
+}
+const FK_MAX = 80;   /* zoveel vragen houdt een klas bij; de langst niet geziene gaan eruit */
 function schoonOd(od){
   if (!od || typeof od !== "object") return undefined;
   const uit = {}; let n = 0;
@@ -422,6 +430,7 @@ export class Kamer extends DurableObject {
       if (url.pathname === "/echt" && req.method === "POST") return await this.echteNamen(await req.json());
       if (url.pathname === "/hoi" && req.method === "POST") return await this.hoi(await req.json());
       if (url.pathname === "/leerlingweg" && req.method === "POST") return await this.leerlingWeg(await req.json());
+      if (url.pathname === "/besproken" && req.method === "POST") return await this.besproken(await req.json());
       if (url.pathname === "/mijn") return this.mijn(url.searchParams.get("sid"));
       if (req.headers.get("Upgrade") === "websocket") return this.verbind(url);
       return json({ fout: "onbekend" }, 404);
@@ -1746,10 +1755,42 @@ export class Kamer extends DurableObject {
     if (acc) this.stand.leerlingen[kort].acc = acc;
     this.voegToe(Object.assign({ sid: kort, naam: nette(inz.naam, "Leerling"), av: schoonAv(inz.av), spel, ronde: getal(inz.ronde, 250), punten: getal(inz.punten, 5000),
                    niveau: schoon(inz.niveau, 10), vak: schoon(inz.vak, 10), od: schoonOd(inz.od), t: Date.now() }, spel === "dictee" ? dicteeVelden(inz) : {}));
+    this.telFk(kort, schoonFk(inz.fk));
     this.snoei();
     await this.zetAlarm({ wat: "opruimen" }, KLAS_SLAAPT);
     await this.bewaar();
     return json({ ok: true, n: this.stand.resultaten.length });
+  }
+  /* Wat bespreek ik morgen: per vraag hoe vaak hij fout ging, door hoeveel
+     leerlingen, en welke foute antwoorden ze kozen. Opgeteld, niet per potje,
+     zodat het klein blijft. */
+  telFk(sid, lijst){
+    if (!lijst.length) return;
+    const st = this.stand, nu = Date.now();
+    st.fk = st.fk || {};
+    for (const x of lijst){
+      const e = st.fk[x.h] = st.fk[x.h] || { v: x.v, g: x.g, vak: x.vak, n: 0, a: {}, l: [], t: nu };
+      e.n++; e.t = nu;
+      if (e.a[x.a] || Object.keys(e.a).length < 4) e.a[x.a] = (e.a[x.a] || 0) + 1;
+      const wie = sid.slice(0, 8);
+      if (e.l.indexOf(wie) < 0 && e.l.length < 40) e.l.push(wie);
+    }
+    const sl = Object.keys(st.fk);
+    if (sl.length > FK_MAX) sl.sort((p, q) => st.fk[p].t - st.fk[q].t).slice(0, sl.length - FK_MAX).forEach(k => { delete st.fk[k]; });
+  }
+  /* de docent heeft een vraag besproken: hij gaat van de lijst (h '*' is alles) */
+  async besproken(inz){
+    if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
+    if (!inz || inz.sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
+    const h = String(inz.h || "");
+    if (h === "*") this.stand.fk = {}; else if (this.stand.fk) delete this.stand.fk[h.replace(/[^a-z0-9]/g, "").slice(0, 12)];
+    await this.bewaar();
+    return json({ ok: true, fk: this.fkLijst() });
+  }
+  fkLijst(){
+    const fk = this.stand.fk || {};
+    return Object.keys(fk).map(h => ({ h, v: fk[h].v, g: fk[h].g, vak: fk[h].vak, n: fk[h].n, a: fk[h].a, ll: fk[h].l.length, t: fk[h].t }))
+      .sort((p, q) => q.ll - p.ll || q.n - p.n || q.t - p.t).slice(0, 40);
   }
   /* Een leerling meldt zich zodra hij de klascode invult, nog voor hij iets
      speelt. Zo ziet de docent aan het begin van de les wie er binnen is. */
@@ -2100,7 +2141,7 @@ export class Kamer extends DurableObject {
     return json({ code: this.stand.code, naam: this.stand.naam, gemaakt: this.stand.gemaakt, opdracht: opdrachten[0] || null, opdrachten,
                   klasdoel: this.klasdoelStand(),
                   spellen: this.stand.spellen || [], lesmodus: this.lesmodusAan(), lesmodusTot: this.lesmodusAan() ? (this.stand.lesmodusTot || 0) : 0,
-                  periodes: this.stand.periodes || [], echt: this.stand.echt || {},
+                  periodes: this.stand.periodes || [], echt: this.stand.echt || {}, fk: this.fkLijst(),
                   leerlingen: this.gekoppeld(),
                   /* elke uitslag onder de huidige bijnaam van de leerling: wie van naam wisselde of op een tweede apparaat speelde, staat er zo een keer in */
                   /* ingelogd met Microsoft: de docent ziet de accountnaam, niet de bijnaam */

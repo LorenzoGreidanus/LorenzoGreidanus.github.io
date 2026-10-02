@@ -269,7 +269,7 @@ window.STRIJD = (function(){
     }
     var uit = document.createElement('p');
     uit.className = 'afuit';
-    uit.innerHTML = (goed ? '<b>Goed.</b> ' : '<b>Niet goed.</b> ') + (afVraag.u ? schoon(afVraag.u) : '');
+    uit.innerHTML = (goed ? '<b>Goed.</b> ' : '<b>Niet goed.</b> ' + (window.WAAROM ? WAAROM.html(afVraag, i, schoon) : '')) + (afVraag.u ? schoon(afVraag.u) : '');
     sluier.querySelector('.afopties').insertAdjacentElement('afterend', uit);
     if (goed){ afGoed++; afKies(uit); }
     else {

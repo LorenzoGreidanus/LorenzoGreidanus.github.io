@@ -49,9 +49,9 @@ function shuffleVraag(vraag, goedTekst) {
   const o = vraag.o.slice();
   const paren = o.map((t, i) => ({t, g: i === vraag.g}));
   for (let i = paren.length - 1; i > 0; i--) { const j = rnd(i + 1); const h = paren[i]; paren[i] = paren[j]; paren[j] = h; }
-  /* svg meenemen, anders verdwijnt de vlag of de landvorm bij het schudden. */
+  /* svg meenemen, anders verdwijnt de vlag of de landvorm bij het schudden; w (waarom niet) ook */
   return {v: vraag.v, o: paren.map(p => p.t), g: paren.findIndex(p => p.g), u: vraag.u, t: vraag.t,
-          svg: vraag.svg, vlag: vraag.vlag};
+          svg: vraag.svg, vlag: vraag.vlag, w: vraag.w};
 }
 function uniek(goed, maakFout) {
   const set = [goed];
@@ -283,6 +283,79 @@ function groepen(vak){
 
 
 
+/* Waarom niet dit antwoord? Bij veel vragen staat per fout antwoord een zin
+   die zegt wat er misgaat als je dat kiest: "Waarom niet wort? Je hoort een t,
+   maar de stam is word met een d." Die zinnen staan per vak in
+   waarom/<vak>.json, los van de vragen, zodat de vragenbank niet zwaarder
+   wordt: ze komen binnen na de vragen, zonder dat een spel erop wacht.
+
+   De sleutel is de vraag samen met het goede antwoord, en daarbinnen de tekst
+   van het foute antwoord. Spellen schudden de opties en maken kopieën van een
+   vraag; aan de tekst herkennen we hem altijd terug.
+
+     WAAROM.laad(vak)          de zinnen van een vak ophalen (doet BANK.zorg zelf)
+     WAAROM.zin(q, i)          de zin bij optie i van vraag q, of ''
+     WAAROM.zinVan(h, keuze)   de zin bij een fout antwoord, op het kenmerk van vraag + goed antwoord
+     WAAROM.tekst(q, i)        'Waarom niet X? zin ' (met spatie erachter), of ''
+     WAAROM.html(q, i, schoon) hetzelfde als html, met X vet; schoon is de escape van het spel */
+var WAAROM = (function(){
+  var data = {}, bezig = {};
+  function map(){
+    try {
+      var s = document.currentScript || [].slice.call(document.scripts).filter(function(x){ return /bank\.js/.test(x.src); })[0];
+      if (s && s.src) return s.src.replace(/bank\.js.*$/, "");
+    } catch (e){}
+    return "";
+  }
+  var BASIS = map();
+  function hash(t){
+    var h = 5381; t = String(t || '');
+    for (var i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0;
+    return (h >>> 0).toString(36);
+  }
+  function laad(vak){
+    if (!vak || data[vak] || typeof fetch !== 'function') return Promise.resolve();
+    if (bezig[vak]) return bezig[vak];
+    return bezig[vak] = fetch(BASIS + 'waarom/' + vak + '.json').then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){ if (j && typeof j === 'object') data[vak] = j; }).catch(function(){});
+  }
+  /* staan de vragen al op de pagina (met script-tags), dan de zinnen erbij */
+  function alles(){ try { Object.keys(BRONNEN).forEach(laad); } catch (e){} }
+  function kaal(t){ return String(t == null ? '' : t).replace(/<[^>]*>/g, '').trim(); }
+  function zin(q, i){
+    if (!q || !Array.isArray(q.o) || i == null || i === q.g || !q.o[i]) return '';
+    if (q.w && typeof q.w === 'object' && q.w[q.o[i]]) return String(q.w[q.o[i]]);
+    var sl = hash(q.v + '|' + q.o[q.g]), keuze = String(q.o[i]);
+    for (var vak in data){
+      var w = data[vak][sl];
+      if (w && w[keuze]) return String(w[keuze]);
+    }
+    alles();
+    return '';
+  }
+  /* op kenmerk (vraag + goed antwoord), voor wie de vraag niet meer letterlijk heeft: het klasoverzicht */
+  function zinVan(sl, keuze){
+    for (var vak in data){ var w = data[vak][sl]; if (w && w[keuze]) return String(w[keuze]); }
+    return '';
+  }
+  function tekst(q, i){ var z = zin(q, i); return z ? 'Waarom niet ' + kaal(q.o[i]) + '? ' + z + ' ' : ''; }
+  var stijl = false;
+  function zetStijl(){
+    if (stijl || typeof document === 'undefined' || !document.head) return; stijl = true;
+    var s = document.createElement('style');
+    s.textContent = '.waarom{display:block;margin:.35em 0 .45em;padding-left:.7em;border-left:3px solid #F26749;font-weight:400}.waarom b{font-weight:700}';
+    document.head.appendChild(s);
+  }
+  function html(q, i, schoon){
+    var z = zin(q, i); if (!z) return '';
+    zetStijl();
+    schoon = schoon || function(t){ return String(t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); };
+    return '<span class="waarom">Waarom niet <b>' + schoon(kaal(q.o[i])) + '</b>? ' + schoon(z) + '</span> ';
+  }
+  if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('DOMContentLoaded', function(){ setTimeout(alles, 400); });
+  return { laad:laad, zin:zin, zinVan:zinVan, tekst:tekst, html:html };
+})();
+
 /* De vragen zelf staan per vak in bank-<vak>.js en komen hier binnen zodra ze
    nodig zijn. BANK.zorg('ges') geeft een belofte die klaar is als de vragen er
    staan; BANK.zorg() zonder vak haalt alles op. Een spel dat de vragen meteen
@@ -314,7 +387,7 @@ var BANK = (function(){
       var s = document.createElement("script");
       s.src = BASIS + "bank-" + vak + ".js";
       /* daarna de opgaven van de vakspellen erbij (bank-spellen.js); mislukt dat, dan gewoon zonder */
-      function erbij(){ metSpellen(vak).then(function(){ klaar[vak] = true; res(); }, function(){ klaar[vak] = true; res(); }); }
+      function erbij(){ WAAROM.laad(vak); metSpellen(vak).then(function(){ klaar[vak] = true; res(); }, function(){ klaar[vak] = true; res(); }); }
       s.onload = erbij;
       /* lukt het niet, dan gaat het spel gewoon door met wat er is */
       s.onerror = erbij;

@@ -1760,6 +1760,7 @@ function beeldVoor(v){
 }
 function toonVraag(m){
   vr = { id:m.id, wat:m.wat, v:m.v, o:m.o, kop:m.kop, svg:m.svg, vlag:m.vlag, schild:m.schild, schildNu:m.schild, geklikt:-1, uit:null };
+  if (window.WAAROM && keuze && keuze.vak) WAAROM.laad(keuze.vak);
   tekenVraag();
   var eerste = document.querySelector('#zij .optie');
   if (eerste && !document.documentElement.classList.contains('raak')) eerste.focus({ preventScroll:true });
@@ -1786,7 +1787,7 @@ function tekenVraag(){
       var na = vr.wat === 'kist' ? 'Deze kist blijft ' + M.KIST.slot + ' tellen dicht voor jou; daarna krijg je een andere vraag.'
         : vr.wat === 'steen' ? 'Deze steen blijft ' + M.STEEN.slot + ' tellen dicht voor jou.'
         : vr.wat === 'uitgang' ? 'Over ' + M.EXTRACT.slot + ' tellen kun je het met een andere vraag opnieuw proberen.' : '';
-      h += '<div class="terug"><b>Niet goed.</b> Het goede antwoord is: <b>' + schoon(vr.o[u.g]) + '</b>. ' + schoon(u.u || '') + (na ? '<br>' + na : '') + '</div>';
+      h += '<div class="terug"><b>Niet goed.</b> ' + (window.WAAROM ? WAAROM.html({ v:vr.v, o:vr.o, g:u.g }, vr.geklikt, schoon) : '') + 'Het goede antwoord is: <b>' + schoon(vr.o[u.g]) + '</b>. ' + schoon(u.u || '') + (na ? '<br>' + na : '') + '</div>';
       h += '<div class="paneelvoet"><button class="btn wit" id="volgendeBtn" type="button">Volgende →</button><p class="sub">' +
         (document.documentElement.classList.contains('raak') ? 'Lees de uitleg rustig.' : 'Of druk op Enter.') + '</p></div>';
     }
@@ -1821,6 +1822,7 @@ function toonUitslag(m){
   vr.uit = m;
   klasTelAntwoord(vr.kop, m);
   if (!m.goed && m.q && window.FOUTENMAP && keuze.vak !== 'reken') FOUTENMAP.noteer(m.q, keuze.vak);
+  if (!m.goed && window.KLAS && KLAS.fout) KLAS.fout({ v:vr.v, o:vr.o, g:m.g }, vr.geklikt, keuze.vak);
   tekenVraag();
   $('live').textContent = m.goed ? 'Goed.' : 'Niet goed. Het goede antwoord is: ' + String(vr.o[m.g]).replace(/<[^>]*>/g, '') + '. ' + String(m.u || '').replace(/<[^>]*>/g, '');
   if (m.goed){

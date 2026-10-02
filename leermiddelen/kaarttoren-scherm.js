@@ -123,6 +123,7 @@
     slim.toets(goed);
     if (st && window.KLAS) KLAS.tel(st.ui.od, q.t, goed);
     if (!goed && window.FOUTENMAP && vak && vak !== 'reken') FOUTENMAP.noteer(q, vak);
+    if (!goed && window.KLAS && KLAS.fout) KLAS.fout(q, i, vak);
     Array.prototype.forEach.call(h.plek.querySelectorAll('.optie'), function(b, k){
       b.disabled = true;
       if (k === q.g){ b.classList.add('juist'); b.insertAdjacentHTML('beforeend', '<span class="merk" aria-label="goed">✓</span>'); }
@@ -137,7 +138,7 @@
       h.klok = setTimeout(verder, h.o.snel ? 600 : 1100);
     } else {
       terug.className = 'terug fout';
-      terug.innerHTML = '<b>Niet goed.</b> Het goede antwoord is: <b>' + schoon(q.o[q.g]) + '</b>. ' + schoon(q.u || '') +
+      terug.innerHTML = '<b>Niet goed.</b> ' + (window.WAAROM ? WAAROM.html(q, i, schoon) : '') + 'Het goede antwoord is: <b>' + schoon(q.o[q.g]) + '</b>. ' + schoon(q.u || '') +
         (h.o.foutTekst ? '<span class="terugna">' + schoon(h.o.foutTekst) + '</span>' : '');
       var rij = $('volgendeRij'), knop = $('volgendeBtn');
       rij.hidden = false;

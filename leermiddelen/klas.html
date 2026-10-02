@@ -263,6 +263,22 @@ td.getal{font-variant-numeric:tabular-nums;text-align:right}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .bord .bordadres{color:var(--vista,#83A5F2)}}
 .voorles{margin-top:24px;background:var(--kaart2);border-radius:16px;padding:16px}
 .voorles .tip{margin-top:8px}
+/* wat bespreek ik morgen: de foute antwoorden die de klas het vaakst koos */
+.bespreek{margin-top:16px;border-top:1.5px solid var(--rand);padding-top:14px}
+.bespreek>b{display:block}
+.bvragen{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;margin-top:12px}
+.bvraag{background:var(--kaart);border:1.5px solid var(--rand);border-radius:14px;padding:13px 15px;display:flex;flex-direction:column;gap:6px}
+.bvraag .bwie{font-size:.72rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.bvraag h4{font-size:1rem;line-height:1.35;margin:0}
+.bkeuzes{display:flex;flex-wrap:wrap;gap:6px}
+.bkeuzes span{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:.84rem;background:rgba(242,103,73,.14);border:1.5px solid rgba(242,103,73,.45)}
+.bkeuzes span.goedk{background:rgba(47,125,82,.12);border-color:rgba(47,125,82,.45)}
+.bkeuzes small{font-weight:700}
+.bvraag .bwaarom{font-size:.88rem;color:var(--muted)}
+.bvraag .bklas{font-size:.9rem;background:var(--kaart2);border-radius:10px;padding:8px 10px}
+.bvraag .bklas b{display:block;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.bvraag .linkknop{align-self:flex-start;margin-top:2px}
+.bmeer{margin-top:10px}
 .filters{margin-top:24px;background:var(--kaart2);border-radius:16px;padding:12px 14px;display:grid;grid-template-columns:minmax(0,1fr);gap:8px;overflow:hidden}
 .filterrij{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
 .filternaam{flex:0 0 74px;font-size:.78rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
@@ -641,6 +657,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       </div>
       <p class="tip">Deze week, sinds maandag, los van de filters hieronder: wie nog niet speelde, hoe het met de opdrachten staat en welke onderdelen wegzakken. Met Mail naar mezelf gaat het als tekst naar je eigen mailprogramma.</p>
       <div class="aandacht" id="voorLesInhoud"></div>
+      <div class="bespreek hide" id="bespreek"></div>
       <p class="tip" id="lesStatus" role="status" aria-live="polite"></p>
     </div>
 
@@ -1051,6 +1068,10 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     return { code:'DEMO', naam:'Demoklas 2H', gemaakt: nu - 80 * DAG, resultaten: uit, leerlingen: gekoppeld, spellen:['race', 'toren', 'bronnenlab'], lesmodus:false,
              periodes: demoPeriodes.slice(),
              echt: { Noor:'Noor Bakker', Sem:'Sem de Jong', Fenna:'Fenna Visser' },
+             fk: [{ h:'1ecxwcn', vak:'ned', v:'Wij hebben lang ___.', g:'gewandeld', a:{ gewandelt:7, gewandelde:1 }, n:8, ll:6, t: nu - DAG },
+                  { h:'1b1zfmx', vak:'ges', v:'Wat veranderde er bij de landbouwrevolutie?', g:'mensen gingen zelf voedsel maken', a:{ 'mensen begonnen te jagen':4, 'mensen bouwden steden met muren':2 }, n:6, ll:5, t: nu - 2 * DAG },
+                  { h:'1ldz7rj', vak:'wis', v:'Wat is x?  x + 7 = 12', g:'5', a:{ '19':4, '7':1 }, n:5, ll:4, t: nu - DAG },
+                  { h:'u8uho1', vak:'ned', v:'Ik ___ het antwoord al.', g:'weet', a:{ weett:2 }, n:2, ll:2, t: nu - 3 * DAG }],
              klasdoel: { doel:400, stand: uit.filter(function(x){ return x.t >= weekBeginLokaal(nu); }).reduce(function(a, x){ var n = 0; if (x.od) Object.keys(x.od).forEach(function(k){ n += x.od[k][0]; }); return a + (n || Math.min(x.ronde, 250)); }, 0) },
              opdrachten: [{ id:'d1', spel:'race', vak:'ges', deel:'tv5', deelNaam:'5 ontdekkers en hervormers', min:4, tot: nu + 4 * DAG, tekst:'Voor de toets van vrijdag', sinds: nu - 5 * DAG },
                           { id:'d2', spel:'toren', vak:'aard', deel:'', deelNaam:'', min:6, tot: nu + 6 * DAG, tekst:'', sinds: nu - 3 * DAG },
@@ -1263,6 +1284,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     tekenKort(lijst);
     tekenOpdracht();
     tekenVoorLes();
+    tekenBespreek();
     tekenDoel();
     tekenEcht();
     /* alleen bij het openen van een klas overnemen; anders overschrijft een verversing wat je net aanklikte */
@@ -1691,6 +1713,59 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       v.stukken.map(function(s){ return s.kop + '\n' + s.regels.map(function(r){ return '- ' + r; }).join('\n'); }).join('\n\n') +
       '\n\nHet hele overzicht: ' + location.origin + '/leermiddelen/klas.html';
   }
+  /* ---------- wat bespreek ik morgen ----------
+     De foute antwoorden die de klas het vaakst koos, uit alle spellen samen,
+     met de zin uit de vragenbank waarom dat antwoord verleidelijk is en een
+     vraag om de klas mee te beginnen. Wat besproken is vink je af. */
+  var bespreekMeer = false, bespreekGeladen = {};
+  function bespreekLijst(){
+    var l = ((data && data.fk) || []).slice();
+    /* eerst wat meerdere leerlingen fout hadden; een enkele misser is geen klasgesprek */
+    var veel = l.filter(function(x){ return x.ll >= 2; });
+    return veel.length ? veel : l;
+  }
+  function tekenBespreek(){
+    var doel = $('bespreek'); if (!doel) return;
+    var l = bespreekLijst();
+    doel.classList.toggle('hide', !l.length);
+    if (!l.length){ doel.innerHTML = ''; return; }
+    /* de zinnen waarom; zodra ze binnen zijn nog een keer tekenen */
+    if (window.WAAROM) l.forEach(function(x){ if (x.vak && !bespreekGeladen[x.vak]){ bespreekGeladen[x.vak] = true; WAAROM.laad(x.vak).then(tekenBespreek); } });
+    var toon = bespreekMeer ? l.slice(0, 12) : l.slice(0, 3);
+    doel.innerHTML = '<b>Wat bespreek ik morgen</b>' +
+      '<p class="tip">De foute antwoorden die het vaakst gekozen werden, uit alle spellen samen. Begin de les met een van deze vragen: laat de klas eerst uitleggen waarom het foute antwoord logisch lijkt. Vink af wat je besproken hebt.</p>' +
+      '<div class="bvragen">' + toon.map(function(x){
+        var keuzes = Object.keys(x.a || {}).sort(function(p, q){ return x.a[q] - x.a[p]; });
+        var vaakst = keuzes[0] || '';
+        var z = window.WAAROM && vaakst ? WAAROM.zinVan(x.h, vaakst) : '';
+        return '<article class="bvraag">' +
+          '<span class="bwie">' + schoon(vakNaam(x.vak)) + ' · ' + x.ll + (x.ll === 1 ? ' leerling' : ' leerlingen') + ', ' + x.n + ' keer fout</span>' +
+          '<h4>' + schoon(x.v) + '</h4>' +
+          '<div class="bkeuzes">' + keuzes.map(function(k){ return '<span>' + schoon(k) + ' <small>' + x.a[k] + '×</small></span>'; }).join('') +
+            '<span class="goedk">goed: ' + schoon(x.g) + '</span></div>' +
+          (z ? '<p class="bwaarom">' + schoon(z) + '</p>' : '') +
+          '<p class="bklas"><b>vraag aan de klas</b>Waarom lijkt “' + schoon(vaakst) + '” een goed antwoord? En wat maakt “' + schoon(x.g) + '” anders?</p>' +
+          '<button class="linkknop" type="button" data-besproken="' + schoon(x.h) + '">Besproken, van de lijst</button>' +
+        '</article>';
+      }).join('') + '</div>' +
+      (l.length > 3 ? '<button class="linkknop bmeer" type="button" id="bespreekMeer">' + (bespreekMeer ? 'Alleen de eerste drie' : 'Meer laten zien (' + Math.min(l.length, 12) + ')') + '</button>' : '');
+    var m = $('bespreekMeer'); if (m) m.addEventListener('click', function(){ bespreekMeer = !bespreekMeer; tekenBespreek(); });
+    /* in de mail van Voor de les: de eerste drie */
+    if (voorLesTekst && voorLesTekst.indexOf('Om te bespreken') < 0) voorLesTekst = voorLesTekst.replace(/\n\nHet hele overzicht: /, '\n\nOm te bespreken\n' + l.slice(0, 3).map(function(x){
+      var k = Object.keys(x.a || {}).sort(function(p, q){ return x.a[q] - x.a[p]; })[0] || '';
+      return '- ' + x.v + ' (gekozen: ' + k + ', goed: ' + x.g + '; ' + x.ll + ' leerlingen)';
+    }).join('\n') + '\n\nHet hele overzicht: ');
+  }
+  $('bespreek').addEventListener('click', function(e){
+    var b = e.target.closest('[data-besproken]'); if (!b || !huidig || !data) return;
+    var h = b.getAttribute('data-besproken');
+    if (DEMO){ data.fk = (data.fk || []).filter(function(x){ return x.h !== h; }); tekenBespreek(); return; }
+    b.disabled = true; b.textContent = 'Even…';
+    fetch('/api/klas/' + huidig.code + '/besproken', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ sleutel:huidig.sleutel, h:h }) })
+      .then(function(r){ return r.json(); })
+      .then(function(j){ if (j && j.fk){ data.fk = j.fk; tekenBespreek(); } else { b.disabled = false; b.textContent = (j && j.fout) || 'Lukte niet'; } })
+      .catch(function(){ b.disabled = false; b.textContent = 'Geen verbinding, probeer opnieuw'; });
+  });
   $('lesMail').addEventListener('click', function(){
     if (!voorLesTekst) return;
     /* een mailto-adres mag niet eindeloos lang zijn; de rest staat in het overzicht */

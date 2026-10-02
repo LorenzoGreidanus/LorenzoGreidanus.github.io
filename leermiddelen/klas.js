@@ -128,6 +128,7 @@ window.KLAS = (function(){
     var k = lees();
     if (!k) return Promise.resolve(null);
     var body = Object.assign({ sid:sid(), naam:k.naam, av: window.PROFIEL ? PROFIEL.avatar() : '' }, gegevens || {});
+    if (fk.length){ body.fk = fk; fk = []; }
     return stuur(k.code, body)
       .then(function(x){
         if (x.ok) wachtLegen();
@@ -145,6 +146,18 @@ window.KLAS = (function(){
         return null;
       });
   }
+  /* De foute keuzes van dit potje, voor "Wat bespreek ik morgen" bij de docent:
+     welke vraag, welk fout antwoord. Ze gaan mee met de volgende uitslag die
+     het spel meldt, en alleen als er een klascode is. */
+  var fk = [];
+  function kenmerk(t){ var h = 5381; t = String(t || ''); for (var i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
+  function kaal(t){ return String(t == null ? '' : t).replace(/<[^>]*>/g, '').trim(); }
+  function fout(q, i, vak){
+    if (!q || !Array.isArray(q.o) || i == null || i === q.g || !q.o[i] || !lees()) return;
+    var goed = q.o[q.g], h = kenmerk(q.v + '|' + goed);
+    if (fk.some(function(x){ return x.h === h; }) || fk.length >= 12) return;
+    fk.push({ h:h, vak:String(vak || '').slice(0, 8), v:kaal(q.v).slice(0, 200), g:kaal(goed).slice(0, 100), a:kaal(q.o[i]).slice(0, 100) });
+  }
   /* een tellertje per onderdeel: tel(od, 'breuken', true) -> od.breuken = [goed, gesteld] */
   function tel(od, onderdeel, goed){
     var k = String(onderdeel || 'overig').slice(0, 40);
@@ -154,5 +167,5 @@ window.KLAS = (function(){
   }
   /* bij het openen van een pagina eerst kijken of er nog iets klaarstaat */
   if (typeof fetch === 'function') setTimeout(wachtLegen, 2000);
-  return { lees:lees, zet:zet, wis:wis, wisLokaal:wisLokaal, meld:meld, sid:sid, controleer:controleer, tel:tel, wachtLegen:wachtLegen, zwaai:zwaai, perOnderdeel:perOnderdeel };
+  return { lees:lees, zet:zet, wis:wis, wisLokaal:wisLokaal, meld:meld, sid:sid, controleer:controleer, tel:tel, fout:fout, wachtLegen:wachtLegen, zwaai:zwaai, perOnderdeel:perOnderdeel };
 })();

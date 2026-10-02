@@ -2113,6 +2113,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     slim.toets(goed);
     if (window.KLAS) KLAS.tel(perOnderdeel, vraag.t, goed);
     if (!goed && window.FOUTENMAP && vak && vak !== 'reken') FOUTENMAP.noteer(vraag, vak);
+    if (!goed && window.KLAS && KLAS.fout) KLAS.fout(vraag, i, vak);
     if (goed){
       blijTot = performance.now() + 2500;
       reeks++; goedAantal++; besteReeks = Math.max(besteReeks, reeks);
@@ -2128,7 +2129,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     /* Voor wie niet kijkt maar luistert: goed of fout, en bij fout het goede antwoord. */
     var live = document.getElementById('zwaardLive');
     if (live) live.textContent = goed ? 'Goed, ' + vraag.winst + ' munten.'
-      : 'Niet goed. Het goede antwoord is: ' + String(vraag.o[vraag.g]).replace(/<[^>]*>/g, '') + '. ' + String(vraag.u || '').replace(/<[^>]*>/g, '');
+      : 'Niet goed. ' + (window.WAAROM ? WAAROM.tekst(vraag, i) : '') + 'Het goede antwoord is: ' + String(vraag.o[vraag.g]).replace(/<[^>]*>/g, '') + '. ' + String(vraag.u || '').replace(/<[^>]*>/g, '');
     /* Goed gaat na een tel vanzelf door. Na een fout blijft de uitleg staan:
        de knop Volgende krijgt de focus, dus Enter werkt meteen. Een klok die
        na een fout doorgaat, haalt de uitleg weg voordat de klas hem gelezen heeft. */
@@ -2211,7 +2212,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       if (geklikt >= 0){
         var wasGoed = geklikt === vraag.g;
         h += '<div class="terug">' + (wasGoed ? '<b>Goed, ' + vraag.winst + ' munten.</b> '
-          : (vraag.tweedeKans ? '<b>Niet goed, maar je tweede kans vangt het op: je reeks blijft staan.</b> ' : '<b>Niet goed.</b> ') +
+          : (vraag.tweedeKans ? '<b>Niet goed, maar je tweede kans vangt het op: je reeks blijft staan.</b> ' : '<b>Niet goed.</b> ') + (window.WAAROM ? WAAROM.html(vraag, geklikt, hschoon) : '') +
             'Het goede antwoord is: <b class="antw">' + hschoon(vraag.o[vraag.g]) + '</b>. ') + hschoon(vraag.u || '') +
           (vraag.crit ? '<br><b>' + reeks + ' op rij: je volgende klap is een critical.</b>' : reeks > 1 ? '<br>' + reeks + ' goed op rij, dat levert extra op' + (COMBO - reeks % COMBO < COMBO ? '; nog ' + (COMBO - reeks % COMBO) + ' voor een critical' : '') + '.' : '') + '</div>';
         /* Goed gaat vanzelf door; na een fout blijft de uitleg staan tot je zelf verder gaat. */
