@@ -312,6 +312,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     $('herhaalUit').textContent = onderdeel === HERHAAL ? 'Vragen uit de ' + gehad.length + ' onderdelen die je al oefende, door elkaar. Wat minder goed ging, komt vaker. Door elkaar herhalen onthoud je beter dan alles van één soort achter elkaar.' : '';
     chips('niveaus', NIVEAUS, niveau, function(id){ niveau = id; onthoudNiveau(id); });
     chips('wijzen', [{ id:'kies', naam:'kiezen uit vier' }, { id:'typ', naam:'zelf typen' }], typen ? 'typ' : 'kies', function(id){ typen = id === 'typ'; try { localStorage.setItem('lg-typen', typen ? '1' : ''); } catch (e){} });
+    if (typen && window.TYPEN) TYPEN.laad(vak);
     $('wijzeUit').textContent = typen ? 'Heeft een vraag een kort antwoord, dan typ je het zelf; de rest blijft kiezen. Zelf typen is lastiger, maar zo onthoud je het beter: goed getypt geeft 5 punten extra.' : '';
     /* De uitleg bij het niveau hoort bij het vak: de regels uit bank.js gaan over getallen, en die zijn er alleen bij rekenen */
     var nv = NIVEAUS.filter(function(n){ return n.id === niveau; })[0];
@@ -384,7 +385,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   }
   function tekenVraag(){
     $('vraagKop').textContent = vraag.kop;
-    $('vraagTekst').textContent = vraag.v;
+    $('vraagTekst').textContent = vraag.typ ? TYPEN.vraag(vraag, vak) : vraag.v;
     var beeld = beeldVoor(vraag); $('beeld').innerHTML = beeld; $('beeld').classList.toggle('hide', !beeld);
     if (vraag.typ){
       if (geklikt < 0) TYPEN.veld($('opties'), vraag, vak, function(u, invoer){ vraag.invoer = invoer; vraag.bijna = u.bijna; antwoord(u.i, true); });
@@ -465,6 +466,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   /* eerst de vragen van dit vak ophalen, dan pas beginnen */
   function startMetVragen(){
     var knop = $('startBtn');
+    if (typen && window.TYPEN) TYPEN.laad(vak);
     if (!window.BANK || BANK.heeft(vak)) return start();
     /* de knop draait tot de vragen er zijn (fonts.css) */
     if (knop){ knop.disabled = true; knop.setAttribute('aria-busy', 'true'); }

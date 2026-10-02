@@ -313,6 +313,8 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     $('leegBtn').classList.toggle('hide', !l.length);
   }
   tekenMap();
+  /* de open versies van de vakken in de map alvast ophalen, voor als je gaat typen */
+  if (window.TYPEN) FOUTENMAP.lijst().forEach(function(x){ TYPEN.laad(x.vak); });
   $('leegBtn').addEventListener('click', function(){ if (!confirm('Je hele foutenmap leegmaken?')) return; FOUTENMAP.lijst().forEach(function(x){ FOUTENMAP.weg(x.h); }); tekenMap(); });
 
   var rij = [], nr = 0, goed = 0, fout = 0, vraag = null, geklikt = -1, klok = null, tijd = 0, loopt = false, wachtTimer = null, foutLijst = [], perOnderdeel = {}, reeks = 0, besteReeks = 0, geleerd = 0;
@@ -328,7 +330,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     /* hoe ver deze vraag is: een bolletje per keer goed, vier is geleerd */
     var bol = ''; for (var k = 0; k < 4; k++) bol += '<i' + (k < (vraag.b | 0) ? ' class="vol"' : '') + '></i>';
     $('vraagKop').innerHTML = schoon(vakNaam(vraag.vak) + (vraag.t ? ' · ' + vraag.t : '')) + '<span class="vraagbak" title="' + (vraag.b | 0) + ' van de 4 keer goed" aria-label="' + (vraag.b | 0) + ' van de 4 keer goed">' + bol + '</span>';
-    $('vraagTekst').textContent = vraag.v;
+    $('vraagTekst').textContent = vraag.typ ? TYPEN.vraag(vraag, vraag.vak) : vraag.v;
     var beeld = beeldVoor(vraag); $('beeld').innerHTML = beeld; $('beeld').classList.toggle('hide', !beeld);
     if (vraag.typ){
       if (geklikt < 0) TYPEN.veld($('opties'), vraag, vraag.vak, function(u, invoer){ vraag.invoer = invoer; vraag.bijna = u.bijna; antwoord(u.i); });
@@ -384,6 +386,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   function start(){
     haalOver();
     rij = FOUTENMAP.nu().slice(0, MAX_VRAGEN);
+    if (window.TYPEN) rij.forEach(function(x){ TYPEN.laad(x.vak); });
     if (!rij.length){ tekenMap(); return; }
     nr = 0; goed = 0; fout = 0; geleerd = 0; reeks = 0; besteReeks = 0; foutLijst = []; perOnderdeel = {}; tijd = DUUR; loopt = true; wacht = false;
     $('scherm-start').classList.add('hide'); $('scherm-einde').classList.add('hide'); $('scherm-spel').classList.remove('hide'); $('stopBtn').classList.remove('hide');

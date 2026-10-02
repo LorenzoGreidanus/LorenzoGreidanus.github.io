@@ -9,6 +9,8 @@
                                     index van een fout antwoord als je precies dat typte
                                     (dan kan WAAROM uitleggen waarom), anders -1
      TYPEN.veld(doel, q, vak, klaar) zet het typveld in doel; klaar(uitslag, invoer)
+     TYPEN.laad(vak)                de open versies van een vak ophalen (open/<vak>.json)
+     TYPEN.vraag(q, vak)            de vraag zoals hij open gesteld wordt
 
    Nederlands en Engels kijken streng (de spelling is daar de stof), behalve
    hoofdletters. Bij de andere vakken telt een tikfout in een lang woord als
@@ -17,8 +19,39 @@ window.TYPEN = (function(){
   'use strict';
   var STRENG = { ned:1, eng:1 };
   function kaal(t){ return String(t == null ? '' : t).replace(/<[^>]*>/g, '').trim(); }
+  /* De open versies uit open/<vak>.json: per vraag (kenmerk van vraag + goed
+     antwoord) alle goede antwoorden, en zo nodig de vraag zonder de opties
+     ("Welke van deze organen..." wordt "Welk orgaan..."). Een vraag die daar
+     staat kan altijd open, ook met een langer antwoord. */
+  var OPEN = {}, bezig = {};
+  function map(){
+    try {
+      var s = document.currentScript || [].slice.call(document.scripts).filter(function(x){ return /typen\.js/.test(x.src); })[0];
+      if (s && s.src) return s.src.replace(/typen\.js.*$/, '');
+    } catch (e){}
+    return '';
+  }
+  var BASIS = map();
+  function hash(t){ var h = 5381; t = String(t || ''); for (var i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
+  function laad(vak){
+    if (!vak || OPEN[vak] || typeof fetch !== 'function') return Promise.resolve();
+    if (bezig[vak]) return bezig[vak];
+    return bezig[vak] = fetch(BASIS + 'open/' + vak + '.json').then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){ OPEN[vak] = j && typeof j === 'object' ? j : {}; }).catch(function(){ OPEN[vak] = {}; });
+  }
+  function open(q, vak){
+    if (!q || !Array.isArray(q.o)) return null;
+    var sl = hash(q.v + '|' + q.o[q.g]);
+    if (vak && OPEN[vak]) return OPEN[vak][sl] || null;
+    if (vak) laad(vak);
+    for (var v in OPEN) if (OPEN[v][sl]) return OPEN[v][sl];
+    return null;
+  }
+  /* de vraag zoals hij open gesteld wordt */
+  function vraag(q, vak){ var o = open(q, vak); return o && o.v ? o.v : q.v; }
   function kan(q, vak){
-    if (!q || !Array.isArray(q.o) || q.svg || q.vlag) return false;
+    if (!q || !Array.isArray(q.o) || q.svg) return false;
+    if (open(q, vak)) return true;
     var g = String(q.o[q.g] || '');
     if (!g || /[<>]/.test(g) || g.length > 24 || g.split(/\s+/).length > 3) return false;
     /* vragen die over de antwoorden zelf gaan, of ja/nee */
@@ -65,7 +98,8 @@ window.TYPEN = (function(){
     return uit;
   }
   function keur(q, invoer, vak){
-    var x = norm(invoer, vak), vormen = goedeVormen(q.o[q.g], vak);
+    var x = norm(invoer, vak), vormen = goedeVormen(q.o[q.g], vak), op = open(q, vak);
+    if (op && Array.isArray(op.a)) op.a.forEach(function(a){ goedeVormen(a, vak).forEach(function(f){ if (vormen.indexOf(f) < 0) vormen.push(f); }); });
     if (!x) return { i:-1, goed:false, bijna:false };
     /* een euroteken of eenheid die je zelf typt, mag ook */
     var xKaal = x.replace(/^€\s*/, '').replace(/\s*(%|procent|euro)$/, '');
@@ -105,5 +139,5 @@ window.TYPEN = (function(){
     setTimeout(function(){ try { inp.focus({ preventScroll:true }); } catch (e){} }, 30);
     return inp;
   }
-  return { kan:kan, keur:keur, veld:veld, norm:norm };
+  return { kan:kan, keur:keur, veld:veld, norm:norm, laad:laad, vraag:vraag };
 })();
