@@ -185,6 +185,8 @@ body.groot .wet h2{font-size:2.2rem}
 .uitslag h3{font-size:1.15rem}
 .uitslag p{margin-top:8px;font-size:.95rem}
 .uitslag .echt{margin-top:12px;background:rgba(255,255,255,.75);border-radius:14px;padding:11px 15px;font-size:.87rem}
+:root[data-theme="dark"] .uitslag .echt{background:rgba(15,26,61,.55)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .uitslag .echt{background:rgba(15,26,61,.55)}}
 .uitslag .echt b{display:block;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
 .omwenteling{margin-top:12px;border:3px solid var(--crab);border-radius:22px;padding:20px;background:#fff}
 .omwenteling h3{font-size:clamp(1.2rem,3vw,1.7rem);margin-top:5px}
@@ -566,15 +568,18 @@ var GRIEKENLAND = {"breed":699,"hoog":420,"land":"m536,93l-9,2l-3,-1l3,-4l5,-2l2
    ============================================================================ */
 
 var ROLLEN = [
-  { id:'adel', naam:'Oude familie', mv:'oude families', kleur:'#8b6bb8',
+  { id:'adel', naam:'Oude familie', ev:'oude familie', mv:'oude families', kleur:'#8b6bb8',
     kaartje:'Je stamt uit een geslacht dat al generaties land bezit. Je naam opent deuren.' },
-  { id:'rijk', naam:'Rijke burger', mv:'rijke burgers', kleur:'#EA9836',
+  { id:'rijk', naam:'Rijke burger', ev:'rijke burger', mv:'rijke burgers', kleur:'#EA9836',
     kaartje:'Je bent koopman of reder en je hebt geld verdiend. Een adellijke naam heb je niet.' },
-  { id:'volk', naam:'Gewone burger', mv:'gewone burgers', kleur:'#2f7d52',
+  { id:'volk', naam:'Gewone burger', ev:'gewone burger', mv:'gewone burgers', kleur:'#2f7d52',
     kaartje:'Je bent boer, ambachtsman of roeier. Je bent vrij geboren en je bent burger.' },
-  { id:'buiten', naam:'Geen burger', mv:'zonder burgerrecht', kleur:'#5b6480',
+  { id:'buiten', naam:'Geen burger', ev:'zonder burgerrecht', mv:'zonder burgerrecht', kleur:'#5b6480',
     kaartje:'Je bent vrouw, slaaf of van elders gekomen. Je woont hier, je werkt hier, je betaalt mee. Stemmen doe je nooit.' }
 ];
+/* "1 oude familie" maar "2 oude families", en dan ook "mag" of "mogen". */
+function aantalRol(n, r){ return n + ' ' + (n === 1 ? r.ev : r.mv); }
+function magLabel(n, mag){ return n === 1 ? (mag ? 'mag stemmen' : 'stemt niet') : (mag ? 'mogen stemmen' : 'stemmen niet'); }
 
 /* Bij elke vorm hoort een teken: een kroon, een zuil, een weegschaal, een
    zwaard en een opgestoken hand. Het icoon staat op de banner, in de kopbalk
@@ -584,7 +589,7 @@ var VORMEN = {
   monarchie:  { naam:'Koningschap', wie:'de koning', stemt:[], alleen:true,
     ico:'<path d="M4.5 18.5h15M4.5 18.5l-1.2-9.6 5.2 3.9L12 5.2l3.5 7.6 5.2-3.9-1.2 9.6"/>',
     uit:'Er wordt niet gestemd. Een leerling is de koning en beslist alleen.' },
-  aristocratie:{ naam:'Aristocratie', wie:'de oude families', stemt:['adel'],
+  aristocratie:{ naam:'Aristocratie', wie:'de oude families', mv:true, stemt:['adel'],
     ico:'<path d="M4.5 4.5h15M6.5 8h11M8.5 8v8M15.5 8v8M6.5 16h11M4.5 19.5h15"/>',
     uit:'Alleen wie uit een oud geslacht komt, stemt mee.' },
   oligarchie: { naam:'Oligarchie', wie:'wie genoeg bezit heeft', stemt:['adel','rijk'],
@@ -593,10 +598,12 @@ var VORMEN = {
   tirannie:   { naam:'Tirannie', wie:'de tiran', stemt:[], alleen:true,
     ico:'<path d="M12 2.4l2.8 4.6v6.4H9.2V7zM5.8 13.4h12.4M12 13.4v6M9.8 21.6h4.4"/>',
     uit:'Er wordt niet gestemd. Een leerling heeft de macht gegrepen en beslist alleen.' },
-  democratie: { naam:'Democratie', wie:'alle burgers', stemt:['adel','rijk','volk'],
+  democratie: { naam:'Democratie', wie:'alle burgers', mv:true, stemt:['adel','rijk','volk'],
     ico:'<path d="M9 11.6V5.2a1.6 1.6 0 0 1 3.2 0v5.9M12.2 11.1V4.2a1.6 1.6 0 0 1 3.2 0v6.9M15.4 11.6V6.6a1.6 1.6 0 0 1 3.2 0v8.3a6 6 0 0 1-6 6h-1.1a6 6 0 0 1-6-6v-3.1a1.6 1.6 0 0 1 3.2 0v1.6"/>',
     uit:'Alle burgers stemmen. Wie geen burger is nog steeds niet.' }
 };
+/* "de koning stemt", maar "alle burgers stemmen": mv zegt welke van de twee. */
+function vanafNu(v){ return 'Vanaf nu ' + (v.mv ? 'stemmen ' : 'stemt ') + v.wie + '.'; }
 
 /* Geen verborgen tevredenheidssom meer. De bestuursvorm verandert doordat er
    iets gebeurt in die stad, en dat zijn gebeurtenissen die er echt waren. Zo
@@ -873,10 +880,10 @@ var KWESTIES = [
       if (!n) return '';
       var mag = stemt.indexOf(r.id) !== -1, pops = '';
       for (var j = 0; j < n; j++){ pops += poppetje(r.kleur, mag, i++); }
-      return '<div class="groep' + (mag ? ' mag' : '') + '" data-rol="' + r.id + '">' +
+      return '<div class="groep' + (mag ? ' mag' : '') + '" data-rol="' + r.id + '" data-n="' + n + '">' +
         '<div class="rij">' + pops + '</div>' +
-        '<span class="glabel"><b>' + n + '</b> ' + r.mv +
-        '<em>' + (mag ? 'mag stemmen' : 'stemt niet') + '</em></span></div>';
+        '<span class="glabel"><b>' + n + '</b> ' + (n === 1 ? r.ev : r.mv) +
+        '<em>' + magLabel(n, mag) + '</em></span></div>';
     }).join('') + '</div>';
   }
 
@@ -889,7 +896,7 @@ var KWESTIES = [
       var mag = stemt.indexOf(g.getAttribute('data-rol')) !== -1;
       g.classList.toggle('mag', mag);
       var em = g.querySelector('.glabel em');
-      if (em) em.textContent = mag ? 'mag stemmen' : 'stemt niet';
+      if (em) em.textContent = magLabel(+g.getAttribute('data-n'), mag);
       Array.prototype.forEach.call(g.querySelectorAll('.pop'), function(p){
         p.classList.toggle('uit', !mag);
       });
@@ -1661,9 +1668,9 @@ var KWESTIES = [
       } else if (om.zelfde){
         h += '<div class="nieuw">Er verandert niets aan wie er mag stemmen: nog steeds ' + v2.wie + '.</div>';
       } else {
-        h += '<div class="nieuw"><b>Vanaf nu stemt ' + v2.wie + '.</b> ' +
+        h += '<div class="nieuw"><b>' + vanafNu(v2) + '</b> ' +
           (v2.stemt.length
-            ? 'Dat zijn ' + v2.stemt.map(function(r){ return verdeling[r] + ' ' + rol(r).mv; }).join(' en ') +
+            ? 'Dat zijn ' + v2.stemt.map(function(r){ return aantalRol(verdeling[r], rol(r)); }).join(', ').replace(/, ([^,]*)$/, ' en $1') +
               ', samen ' + aantalNu + ' van de ' + klas + ' leerlingen. ' +
               'Kijk wie er zijn hand niet meer mag opsteken, en wie ineens wel.'
             : 'Niemand steekt nog een hand op. Wijs een leerling aan die alles beslist.') +
@@ -1684,7 +1691,7 @@ var KWESTIES = [
       var regels = [werkelijk.uit];
       if (w.anders && !alleen) regels.push('Als iedereen had mogen stemmen, was het anders uitgevallen.');
       if (opstand) regels.push(opstand.oud + ' wordt verjaagd. ' + opstand.naam + ' neemt de macht over.');
-      if (om && !om.zelfde){ regels.push('Vanaf nu stemt ' + VORMEN[om.naar].wie + '.'); heerser = null; }
+      if (om && !om.zelfde){ regels.push(vanafNu(VORMEN[om.naar])); heerser = null; }
       kamer.alle({ soort:'uitslag', kop: aangenomen ? 'aangenomen' : 'verworpen', titel: alleen && aangenomen ? 'De heerser voert het uit' : aangenomen ? 'Aangenomen' : 'Verworpen', tekst: reden || werkelijk.t, regels: regels });
     }
 
@@ -1702,7 +1709,7 @@ var KWESTIES = [
     if (om && !om.zelfde && !om.helotenopstand){
       var v3 = VORMEN[om.naar];
       moment({ vorm:om.naar, boven:'de macht verschuift: ' + v3.naam.toLowerCase(), kop:om.kop,
-        tekst:v3.stemt.length ? 'Vanaf nu stemt ' + v3.wie + '.' : 'Vanaf nu stemt niemand meer. Een leerling beslist alles alleen.',
+        tekst:v3.stemt.length ? vanafNu(v3) : 'Vanaf nu stemt niemand meer. Een leerling beslist alles alleen.',
         opdracht:v3.stemt.length ? 'Wie nu mag stemmen: ga staan. Wie dat niet meer mag: blijf zitten.' : 'Iedereen blijft zitten. Wijs een leerling aan die alles beslist.' });
     } else if (opstand){
       moment({ vorm:vormNu, boven:'opstand in de stad', kop:opstand.oud + ' wordt verjaagd',
@@ -1794,7 +1801,7 @@ var KWESTIES = [
       s.ostra = { naam:c.naam, rol:c.rol, scherven:hoogst };
     } else s.ostra = { naam:'', scherven:hoogst };
     var h = '<div class="uitslag' + (c ? '' : ' nee') + '"><h3>' + (c ? c.naam + ' moet de stad uit' : 'Niemand gaat') + '</h3>' +
-      '<p>' + (c ? c.naam + ' kreeg ' + hoogst + ' scherf' + (hoogst === 1 ? '' : 'en') + ' en vertrekt voor tien jaar. ' + rol(c.rol).mv.charAt(0).toUpperCase() + rol(c.rol).mv.slice(1) + ' zijn hun woordvoerder kwijt.' :
+      '<p>' + (c ? c.naam + ' kreeg ' + hoogst + ' ' + (hoogst === 1 ? 'scherf' : 'scherven') + ' en vertrekt voor tien jaar. ' + rol(c.rol).mv.charAt(0).toUpperCase() + rol(c.rol).mv.slice(1) + ' zijn hun woordvoerder kwijt.' :
         (hoogst ? 'Twee namen kregen evenveel scherven. Er is geen meerderheid, dus iedereen blijft.' : 'Er is geen scherf ingeleverd. Iedereen blijft.')) + '</p>' +
       (c ? '<p class="wiewint">' + effChips(c.eff) + '</p>' : '') +
       '<div class="echt"><b>hoe het echt ging</b>' + (c && c.echt ? c.echt + ' ' : '') + 'In Athene moesten er minstens zesduizend scherven zijn. De scherven met namen als Themistokles en Aristides zijn bij duizenden teruggevonden op de agora.</div></div>' +
