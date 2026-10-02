@@ -527,6 +527,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 <script src="voorlezen.js"></script>
 <script src="foutenmap.js"></script>
 <script src="bank.js"></script>
+<script src="adaptief.js"></script>
 <script src="poortrace-regels.js"></script>
 <script src="poortrace-motor.js"></script>
 <script>
@@ -699,21 +700,25 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 
   /* ---------- de vragen ---------- */
   var pot = [], recent = [];
+  /* Meegroeiend niveau, alleen als je alleen racet: gaat het te makkelijk, dan
+     komen de poorten een stap hoger; gaat het mis, een stap terug, nooit onder je keuze. */
+  var slim = window.Adaptief ? Adaptief({ ladder:NIVEAUS.map(function(n){ return n.id; }), start:niveau, naam:function(id){ var n = NIVEAUS.filter(function(x){ return x.id === id; })[0]; return n ? n.naam : id; }, wissel:function(){ pot = []; } }) : null;
+  function nivNu(){ return !RACE && slim ? slim.niveau() : niveau; }
   function toegestaan(){
     var aan = keuze[vak] || [];
     if (aan.length) return aan.slice();
     return delenVan(vak, rangVan(niveau)).map(function(o){ return o.id; });
   }
   function vulPot(){
-    pot = R.stapel(BRONNEN[vak] || [], NIVOS[vak] || [], toegestaan(), rangVan(niveau), vak === 'ges' ? GEB.length : 0);
+    pot = R.stapel(BRONNEN[vak] || [], NIVOS[vak] || [], toegestaan(), rangVan(nivNu()), vak === 'ges' ? GEB.length : 0);
   }
   var tvNamen = null;
   function jaarVraag(i){
     if (!tvNamen) tvNamen = TIJDVAKKEN.map(function(x){ return x.naam.replace(/^\d+ /, ''); });
-    return R.jaarVraag(GEB, i, rangVan(niveau), tvNamen);
+    return R.jaarVraag(GEB, i, rangVan(nivNu()), tvNamen);
   }
   function trek(){
-    var r = rangVan(niveau), q = null;
+    var r = rangVan(nivNu()), q = null;
     if (vak === 'reken'){
       for (var p = 0; p < 10 && !geschikt(q); p++) q = rekenVraag(r, toegestaan());
       return q;
@@ -788,6 +793,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   /* sec: in een race met vrienden telt de kamer zelf af; het aftellen duurt dan precies zo lang */
   function start(sec){
     if (!RACE) bewaarLaatst();
+    if (slim) slim.reset(niveau);
     pot = []; punten = 0; goedN = 0; foutN = 0; reeks = 0; besteReeks = 0; snelNiv = 0; verdiend = 0; perOnderdeel = {}; gemist = []; uitslagen = []; k = 0; vraag = null;
     toonScherm('scherm-spel');
     verbergOverlays();
@@ -1088,6 +1094,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     m.uitslag(k, baan, vraag.goed);
     uitslagen[k] = goed;
     if (window.KLAS) KLAS.tel(perOnderdeel, q.t, goed);
+    if (!RACE && slim) slim.toets(goed);
     $('wachtBtn').classList.add('hide');
     tekenBanen({ gekozen:baan });
     botLog('poort', { k:k, goed:goed, baan:baan });

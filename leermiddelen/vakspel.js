@@ -169,8 +169,29 @@ window.VAKSPEL = (function(){
   /* ---------- een ronde ---------- */
   /* oneindig: geen ronde van tien, doorgaan tot je zelf stopt */
   var oneindig = false, oneindigUrl = /[?&]oneindig=1\b/.test(location.search);
+  /* Meegroeiend niveau: vier goed op rij en de opgaven gaan een stap omhoog,
+     twee fout op rij een stap terug, nooit onder wat je zelf koos. Het gekozen
+     niveau blijft staan voor de uitslag en de klas; alleen de opgaven veranderen. */
+  var nivNu = null, nivReeks = 0, nivToast = null, nivKlok = null;
+  function nivKeuze(){ return (cfg.keuzes || []).filter(function(k){ return k.id === 'niveau'; })[0]; }
+  function nivStap(isGoed){
+    var nk = nivKeuze(); if (!nk || nk.items.length < 2 || !keuze.niveau) return;
+    var l = nk.items.map(function(x){ return x.id; });
+    if (nivNu == null) nivNu = keuze.niveau;
+    nivReeks = isGoed ? Math.max(0, nivReeks) + 1 : Math.min(0, nivReeks) - 1;
+    var i = l.indexOf(nivNu), basis = l.indexOf(keuze.niveau), naar = null;
+    if (nivReeks >= 4 && i >= 0 && i < l.length - 1) naar = l[i + 1];
+    else if (nivReeks <= -2 && i > basis) naar = l[i - 1];
+    if (!naar) return;
+    var omhoog = l.indexOf(naar) > i, it = nk.items[l.indexOf(naar)];
+    nivNu = naar; nivReeks = 0;
+    if (!nivToast){ nivToast = document.createElement('div'); nivToast.className = 'adaptief-toast'; nivToast.setAttribute('role', 'status'); nivToast.setAttribute('aria-live', 'polite'); document.body.appendChild(nivToast); }
+    nivToast.textContent = omhoog ? 'Dit gaat je makkelijk af. De opgaven gaan een stap omhoog: ' + it.naam + '.' : 'Even een stap terug: de opgaven zijn weer ' + it.naam + '.';
+    nivToast.classList.add('aan'); clearTimeout(nivKlok); nivKlok = setTimeout(function(){ nivToast.classList.remove('aan'); }, 4200);
+  }
   function start(zo){
     oneindig = !!zo;
+    nivNu = keuze.niveau || null; nivReeks = 0;
     nr = 0; goed = 0; fout = 0; punten = 0; reeks = 0; besteReeks = 0; od = {}; missers = []; perDeel = {};
     $('voortIn').parentNode.classList.toggle('hide', oneindig);
     $('scherm-start').classList.add('hide'); $('scherm-einde').classList.add('hide'); $('scherm-spel').classList.remove('hide');
@@ -179,7 +200,7 @@ window.VAKSPEL = (function(){
     volgende();
   }
   function balk(){
-    $('balk').innerHTML = '<span class="meter">opgave<b>' + (oneindig ? nr : Math.min(nr, cfg.aantal) + '/' + cfg.aantal) + '</b></span>' + (oneindig ? '<span class="meter oneindigmeter">oneindig</span>' : '') + '<span class="meter">goed<b>' + goed + '</b></span><span class="meter">punten<b>' + punten + '</b></span>' + (reeks >= 2 ? '<span class="meter reeks">reeks<b>' + reeks + '</b></span>' : '');
+    $('balk').innerHTML = '<span class="meter">opgave<b>' + (oneindig ? nr : Math.min(nr, cfg.aantal) + '/' + cfg.aantal) + '</b></span>' + (oneindig ? '<span class="meter oneindigmeter">oneindig</span>' : '') + '<span class="meter">goed<b>' + goed + '</b></span><span class="meter">punten<b>' + punten + '</b></span>' + (nivNu && nivNu !== keuze.niveau ? '<span class="meter">niveau<b>' + schoon((nivKeuze().items.filter(function(x){ return x.id === nivNu; })[0] || {}).naam || nivNu) + '</b></span>' : '') + (reeks >= 2 ? '<span class="meter reeks">reeks<b>' + reeks + '</b></span>' : '');
     /* tijdens een opgave telt hij de vorige; na het antwoord ook deze, zodat de balk bij de laatste vol is */
     $('voortIn').style.width = Math.round(Math.min(1, (bezig ? nr - 1 : nr) / cfg.aantal) * 100) + '%';
   }
@@ -205,7 +226,7 @@ window.VAKSPEL = (function(){
     /* niet steeds dezelfde, maar in een lange sessie mag er na een tijd weer een terugkomen */
     if (vorigeSleutels.length > 40) vorigeSleutels.splice(0, vorigeSleutels.length - 40);
     var probeer = 0;
-    do { opgave = cfg.maak(Object.assign({}, keuze), nr); probeer++; } while ((!opgave || (opgave.sleutel && vorigeSleutels.indexOf(opgave.sleutel) >= 0)) && probeer < 12);
+    do { opgave = cfg.maak(Object.assign({}, keuze, nivNu ? { niveau:nivNu } : {}), nr); probeer++; } while ((!opgave || (opgave.sleutel && vorigeSleutels.indexOf(opgave.sleutel) >= 0)) && probeer < 12);
     if (!opgave){ einde(); return; }
     if (opgave.sleutel) vorigeSleutels.push(opgave.sleutel);
     bezig = true;
@@ -431,6 +452,7 @@ window.VAKSPEL = (function(){
       missers.push({ v: kaleTekst(opgave.vraag), j: opgave.antwoordTekst || '', hoe: kaleTekst(opgave.uitleg), beeld: misserBeeld(opgave) }); }
     var deel = opgave.onderdeel || 'overig';
     if (window.KLAS && KLAS.tel) KLAS.tel(od, deel, isGoed);
+    nivStap(isGoed);
     var c = perDeel[deel] = perDeel[deel] || [0, 0, opgave.onderdeelNaam || deel]; c[1]++; if (isGoed) c[0]++;
     $('reactie').innerHTML = '<div class="uitslagregel ' + (isGoed ? 'goed' : bijna ? 'bijna' : 'fout') + '"><b>' + (isGoed && window.NAGEKEKEN ? NAGEKEKEN.svg({ maat: 24, teken: true }) : '') + (isGoed ? (reeks >= 3 ? 'Goed, ' + reeks + ' op rij!' : 'Goed!') : bijna ? 'Bijna: ' + deels.goed + ' van de ' + deels.van + ' goed.' : 'Niet goed.') + '</b>' +
       (extra ? '<p>' + extra + '</p>' : '') + (opgave.uitleg ? '<div class="waarom">' + opgave.uitleg + '</div>' : '') + '</div>';

@@ -343,14 +343,14 @@ var WAAROM = (function(){
   function zetStijl(){
     if (stijl || typeof document === 'undefined' || !document.head) return; stijl = true;
     var s = document.createElement('style');
-    s.textContent = '.waarom{display:block;margin:.35em 0 .45em;padding-left:.7em;border-left:3px solid #F26749;font-weight:400}.waarom b{font-weight:700}';
+    s.textContent = '.waaromniet{display:block;margin:.35em 0 .45em;padding-left:.7em;border-left:3px solid #F26749;font-weight:400}.waaromniet b{font-weight:700}';
     document.head.appendChild(s);
   }
   function html(q, i, schoon){
     var z = zin(q, i); if (!z) return '';
     zetStijl();
     schoon = schoon || function(t){ return String(t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); };
-    return '<span class="waarom">Waarom niet <b>' + schoon(kaal(q.o[i])) + '</b>? ' + schoon(z) + '</span> ';
+    return '<span class="waaromniet">Waarom niet <b>' + schoon(kaal(q.o[i])) + '</b>? ' + schoon(z) + '</span> ';
   }
   if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('DOMContentLoaded', function(){ setTimeout(alles, 400); });
   return { laad:laad, zin:zin, zinVan:zinVan, tekst:tekst, html:html };
