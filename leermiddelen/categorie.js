@@ -71,7 +71,7 @@ window.CATEGORIE = (function(){
   };
   /* 2. de onderdelen van de vakspellen en de losse spellen, op hoe hun naam begint */
   var PATROON = {
-    ned:  [[/^alinea: /, 'schrijven'], [/^dictee: /, 'spelling'], [/^(tegenwoordige tijd|verleden tijd|voltooid deelwoord|de d of t val)$/, 'spelling'],
+    ned:  [[/^begrijpend: /, 'lezen'], [/^alinea: /, 'schrijven'], [/^dictee: /, 'spelling'], [/^(tegenwoordige tijd|verleden tijd|voltooid deelwoord|de d of t val)$/, 'spelling'],
            [/^register: /, 'schrijven'], [/^samenvatten: /, 'schrijven'],
            [/^signaalwoorden: /, 'lezen'], [/^woordenschat: /, 'woordenschat']],
     eng:  [[/^situaties: /, 'luisteren'], [/^reading: /, 'lezen'], [/^dictation: /, 'luisteren'], [/^translate: /, 'schrijven'],

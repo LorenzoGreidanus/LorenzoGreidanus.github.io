@@ -179,7 +179,7 @@ var IN_PATROON = {
   reken: [[/^schatten: /, 'getallen'], [/^klok: /, 'meten'], [/^cijferen: /, 'getallen'], [/^metriek: /, 'meten'], [/^verhoudingstabel: /, 'verhoudingen'], [/^DHTE /, 'getallen'], [/./, 'verhoudingen']],
   /* de figuren uit Vlakken herkennen (vlak: ruit) en de soorten van De balans (vergelijking: ...) */
   wis: [[/^voordoen: /, 'algebra'], [/^co\u00f6rdinaten: /, 'meetkunde'], [/^hoeken: /, 'meetkunde'], [/^pythagoras: /, 'meetkunde'], [/^grafieken: /, 'verwerken'], [/^vlak: /, 'meetkunde'], [/^vergelijking: /, 'algebra']],
-  ned:   [[/^alinea: /, 'lezen'], [/^register: /, 'grammatica'], [/^signaalwoorden: /, 'lezen'], [/^woordenschat: /, 'lezen'], [/^samenvatten: /, 'lezen'], [/^dictee: /, 'spelling'], [/^(tegenwoordige tijd|verleden tijd|voltooid deelwoord|de d of t val)$/, 'spelling'], [/^(kernzin|schrijfdoel|tekstverbanden)$/, 'lezen']],
+  ned:   [[/^begrijpend: /, 'lezen'], [/^alinea: /, 'lezen'], [/^register: /, 'grammatica'], [/^signaalwoorden: /, 'lezen'], [/^woordenschat: /, 'lezen'], [/^samenvatten: /, 'lezen'], [/^dictee: /, 'spelling'], [/^(tegenwoordige tijd|verleden tijd|voltooid deelwoord|de d of t val)$/, 'spelling'], [/^(kernzin|schrijfdoel|tekstverbanden)$/, 'lezen']],
   eng:   [[/^situaties: /, 'woordenschat'], [/^reading: /, 'lezen'], [/^dictation: /, 'woordenschat'], [/^translate: /, 'grammatica'], [/^phrasal: /, 'woordenschat'], [/^irregular /, 'werkwoorden'], [/./, 'grammatica']],
   aard:  [[/^klimaatgrafiek: /, 'klimaat'], [/^bevolkingspiramide: /, 'klimaat'], [/^kaartvaardigheid: /, 'kaart'], [/^topografie/, 'landen']],
   eco:   [[/^huishoudboekje: /, 'geld'], [/^vraag en aanbod: /, 'markt']],

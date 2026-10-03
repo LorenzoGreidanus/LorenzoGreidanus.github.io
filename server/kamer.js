@@ -288,7 +288,8 @@ const KLAS_SPELLEN = { race: "Vragenrace", metriek: "Het metriek stelsel", eigen
   onderzoek: "Het eerlijke experiment",
   redeneren: "Denk als een historicus",
   situaties: "English in real life",
-  voordoen: "Eerst kijken, dan zelf" };
+  voordoen: "Eerst kijken, dan zelf",
+  begrijpend: "Begrijpend lezen" };
 /* Hoe lang de kamer wacht voor hij iemand die wegviel ook echt weghaalt. In de
    lobby kort: herladen duurt een paar tellen. In de arena langer: een
    telefoon die even geen bereik heeft, hoort er niet meteen uit te liggen. */
