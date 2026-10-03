@@ -24,7 +24,7 @@
    op jouw niveau staat niet in de kiezer. */
 var MAXANTW = 24, MAXVRAAG = 150, MINIMUM = 12, POORTEN = 15;
 var PAST = {
-  reken: ['tafels', 'hoofd', 'cijferen', 'machten', 'negatief', 'komma', 'gemiddelde', 'breuk', 'procent', 'verhouding', 'tijdgeld', 'meten', 'metriek', 'schatten'],
+  reken: ['tafels', 'hoofd', 'cijferen', 'machten', 'negatief', 'komma', 'gemiddelde', 'breuk', 'procent', 'verhouding', 'tijdgeld', 'meten', 'metriek', 'schatten', 'delen', 'keer'],
   ned:   ['betekenis', 'synoniemen', 'meervoud', 'werkwoordspelling', 'spelling'],
   eng:   ['woordjes NL naar EN', 'woordjes EN naar NL', 'irregular verbs', 'valse vrienden', 'phrasal verbs', 'examen-eng'],
   ges:   ['jaartallen', 'tv1', 'tv2', 'tv3', 'tv4', 'tv5', 'tv6', 'tv7', 'tv8', 'tv9', 'tv10', 'staat', 'nl1900'],

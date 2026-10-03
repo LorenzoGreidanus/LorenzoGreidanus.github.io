@@ -54,7 +54,7 @@ window.CATEGORIE = (function(){
             'phrasal verbs':'woordenschat', collocations:'woordenschat',
             'irregular verbs':'grammatica', voorzetselwerkwoorden:'grammatica', grammatica:'grammatica',
             vertalen:'schrijven', 'examen-eng':'lezen' },
-    reken:{ tafels:'getallen', hoofd:'getallen', cijferen:'getallen', dhte:'getallen', machten:'getallen', negatief:'getallen',
+    reken:{ tafels:'getallen', hoofd:'getallen', cijferen:'getallen', dhte:'getallen', machten:'getallen', negatief:'getallen', delen:'getallen', keer:'getallen', 'grote keersom':'getallen',
             komma:'getallen', schatten:'getallen',
             breuk:'verhoudingen', procent:'verhoudingen', verhouding:'verhoudingen',
             meten:'meten', tijdgeld:'meten', klok:'meten', metriek:'meten',

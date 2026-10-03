@@ -64,6 +64,14 @@ window.VAKSPEL = (function(){
     /* een volgende ronde vraagt het opnieuw */
     zelfVoor = null; Array.prototype.forEach.call(document.querySelectorAll('#zelfVoor button'), function(x){ x.classList.remove('on'); x.setAttribute('aria-pressed', 'false'); });
   }
+  /* Tien opgaven was kort voor een les. Standaard nu twintig; wie snel wil, kiest tien, wie lang wil dertig (of oneindig). */
+  var AANTALLEN = [10, 20, 30], aantal = 20;
+  try { var la = +localStorage.getItem('lg-aantal'); if (AANTALLEN.indexOf(la) >= 0) aantal = la; } catch (e){}
+  function tekenAantal(){
+    var v = $('keuze-aantal'); if (!v) return;
+    Array.prototype.forEach.call(v.querySelectorAll('button'), function(b){ var aan = +b.getAttribute('data-n') === aantal; b.classList.toggle('on', aan); b.setAttribute('aria-pressed', aan ? 'true' : 'false'); });
+    $('uit-aantal').textContent = 'Ongeveer ' + Math.max(3, Math.round(aantal / 2)) + ' minuten.';
+  }
   var cfg = null, keuze = {}, nr = 0, goed = 0, fout = 0, punten = 0, reeks = 0, besteReeks = 0, od = {}, missers = [], perDeel = {}, bezig = false, opgave = null;
 
   /* ---------- de pagina ---------- */
@@ -105,6 +113,9 @@ window.VAKSPEL = (function(){
         '<div class="leerdoel">' + (cfg.leerdoel ? '<p class="eyebrow">wat je hier leert</p><p class="ldtekst">' + schoon(cfg.leerdoel) + '</p>' : '') +
           '<p class="ldvraag" id="ldVraag">Hoe goed kun je dit nu al? Aan het eind zie je of het klopte.</p><div class="keuze ldkeuze" id="zelfVoor" role="group" aria-labelledby="ldVraag">' +
           ZELF.map(function(z, i){ return '<button type="button" data-z="' + i + '" aria-pressed="false">' + z + '</button>'; }).join('') + '</div></div>' +
+        /* hoeveel opgaven per ronde: standaard 20, onthouden op dit apparaat */
+        '<p class="eyebrow kop2" id="kop-aantal">hoeveel opgaven</p><div class="keuze" id="keuze-aantal" role="group" aria-labelledby="kop-aantal">' +
+          AANTALLEN.map(function(n){ return '<button type="button" data-n="' + n + '" aria-pressed="false">' + n + '</button>'; }).join('') + '</div><p class="keuzeuit" id="uit-aantal"></p>' +
         '<div class="startknoppen"><button class="btn" id="startBtn" type="button">Start</button>' +
         '<button class="btn tweede" id="oneindigBtn" type="button" title="Zoveel opgaven als je wilt, je stopt zelf">Oneindig oefenen</button></div>' +
       '</section>' +
@@ -221,6 +232,7 @@ window.VAKSPEL = (function(){
   }
   function start(zo){
     oneindig = !!zo;
+    cfg.aantal = aantal;
     nivNu = keuze.niveau || null; nivReeks = 0;
     nr = 0; goed = 0; fout = 0; punten = 0; reeks = 0; besteReeks = 0; od = {}; missers = []; perDeel = {};
     $('voortIn').parentNode.classList.toggle('hide', oneindig);
@@ -686,12 +698,14 @@ window.VAKSPEL = (function(){
 
   function maak(c){
     if (/[?&]werkblad=1/.test(location.search)){ werkbladModus(c); return; }
-    cfg = c;
+    cfg = c; if (!c.vastAantal) cfg.aantal = aantal;
     bouw();
     herinner();
     tekenKeuzes();
     leadKort();
     $('startBtn').addEventListener('click', function(){ start(oneindigUrl); });
+    $('keuze-aantal').addEventListener('click', function(e){ var b = e.target.closest('button'); if (!b) return; aantal = +b.getAttribute('data-n'); try { localStorage.setItem('lg-aantal', String(aantal)); } catch (x){} tekenAantal(); });
+    tekenAantal();
     $('zelfVoor').addEventListener('click', function(e){ var b = e.target.closest('button'); if (!b) return; var z = +b.getAttribute('data-z'); zelfVoor = zelfVoor === z ? null : z;
       Array.prototype.forEach.call(this.querySelectorAll('button'), function(x){ var aan = +x.getAttribute('data-z') === zelfVoor; x.classList.toggle('on', aan); x.setAttribute('aria-pressed', aan ? 'true' : 'false'); }); });
     $('oneindigBtn').addEventListener('click', function(){ start(true); });

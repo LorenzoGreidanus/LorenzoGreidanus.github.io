@@ -74,7 +74,7 @@ var TIJDVAKKEN = [
 ];
 
 var ONDERDELEN = {
-  reken: [{id:'tafels',naam:'tafels'},{id:'hoofd',naam:'hoofdrekenen'},{id:'cijferen',naam:'plaatswaarde en cijferen'},{id:'dhte',naam:'het DHTE-schema'},{id:'machten',naam:'machten en wortels'},{id:'negatief',naam:'negatieve getallen'},{id:'komma',naam:'kommagetallen'},{id:'gemiddelde',naam:'gemiddelde en schaal'},{id:'breuk',naam:'breuken'},{id:'procent',naam:'procenten'},{id:'verhouding',naam:'verhoudingen'},{id:'tijdgeld',naam:'tijd en geld'},{id:'meten',naam:'meten en meetkunde'}],
+  reken: [{id:'tafels',naam:'tafels'},{id:'hoofd',naam:'hoofdrekenen'},{id:'cijferen',naam:'plaatswaarde en cijferen'},{id:'dhte',naam:'het DHTE-schema'},{id:'machten',naam:'machten en wortels'},{id:'negatief',naam:'negatieve getallen'},{id:'komma',naam:'kommagetallen'},{id:'gemiddelde',naam:'gemiddelde en schaal'},{id:'breuk',naam:'breuken'},{id:'procent',naam:'procenten'},{id:'verhouding',naam:'verhoudingen'},{id:'tijdgeld',naam:'tijd en geld'},{id:'meten',naam:'meten en meetkunde'},{id:'delen',naam:'delen'},{id:'keer',naam:'grote keersommen'}],
   /* groep zet de onderdelen onder een kop in de kiezer; zie GROEPEN hieronder */
   ned: [{id:'werkwoordspelling',naam:'werkwoordspelling',groep:'spelling'},{id:'spelling',naam:'los van het werkwoord',groep:'spelling'},{id:'meervoud',naam:'enkel en meervoud',groep:'spelling'},
         {id:'leestekens',naam:'leestekens',groep:'interpunctie'},
@@ -148,7 +148,7 @@ var GROEPEN = {
    lijst daarboven leesbaar blijft. Wat hier niet genoemd wordt valt onder
    "overig" en verdwijnt dus niet. */
 var IN_GROEP = {
-  reken:{ tafels:'getallen', hoofd:'getallen', cijferen:'getallen', dhte:'getallen', machten:'getallen', negatief:'getallen', komma:'getallen',
+  reken:{ tafels:'getallen', hoofd:'getallen', cijferen:'getallen', dhte:'getallen', machten:'getallen', negatief:'getallen', komma:'getallen', delen:'getallen', keer:'getallen',
           breuk:'verhoudingen', procent:'verhoudingen', verhouding:'verhoudingen', gemiddelde:'verhoudingen',
           tijdgeld:'meten', meten:'meten', klok:'meten', metriek:'meten', schatten:'getallen',
           /* het DHTE-schema telt per onderdeel van zijn eigen spel */
@@ -803,10 +803,10 @@ function schatVraag(r){
 function rekenSom(rang, toegestaan) {
   const r = rang || 2;
   const potten = {
-    1: ['tafels','tafels','hoofd','hoofd','cijferen','dhte','breuk','tijdgeld','komma','klok','metriek','schatten'],
-    2: ['tafels','tafels','hoofd','hoofd','cijferen','dhte','breuk','procent','tijdgeld','meten','komma','gemiddelde','klok','metriek','schatten'],
-    3: ['tafels','hoofd','cijferen','breuk','procent','verhouding','tijdgeld','meten','komma','gemiddelde','machten','negatief','klok','metriek','schatten'],
-    4: ['hoofd','breuk','procent','verhouding','verhouding','meten','machten','machten','negatief','gemiddelde','metriek','schatten']
+    1: ['tafels','tafels','hoofd','hoofd','cijferen','dhte','breuk','tijdgeld','komma','klok','metriek','schatten','delen','keer'],
+    2: ['tafels','tafels','hoofd','hoofd','cijferen','dhte','breuk','procent','tijdgeld','meten','komma','gemiddelde','klok','metriek','schatten','delen','keer'],
+    3: ['tafels','hoofd','cijferen','breuk','procent','verhouding','tijdgeld','meten','komma','gemiddelde','machten','negatief','klok','metriek','schatten','delen','keer'],
+    4: ['hoofd','breuk','procent','verhouding','verhouding','meten','machten','machten','negatief','gemiddelde','metriek','schatten','keer']
   };
   /* Heb je zelf onderdelen aangewezen, dan zijn dat ze, en bepaalt het niveau
      alleen nog hoe zwaar de som binnen dat onderdeel wordt. Eerst kijken wat
@@ -838,6 +838,49 @@ function rekenSom(rang, toegestaan) {
     return bouw(a + ' \u00d7 ' + b, String(goed),
       function(){ return String(kies(fouten)); },
       a + ' \u00d7 ' + b + ' = ' + goed + '. ' + hulp, 'tafel van ' + a);
+  }
+  if (soort === 'delen') {
+    /* Delen is de tafel omdraaien. De foute antwoorden: een te ver of te weinig in
+       dezelfde tafel, of het getal waardoor je deelt verward met de uitkomst. */
+    const tafelsVan = { 1:[2,3,4,5,10], 2:[2,3,4,5,6,7,8,9], 3:[3,4,6,7,8,9,11,12], 4:[6,7,8,9,11,12,13,15] };
+    const d = kies(tafelsVan[r] || tafelsVan[2]), q = 2 + rnd(r === 1 ? 9 : 11), v = d * q;
+    if (r >= 3 && rnd(3) === 0){
+      /* een groot getal splitsen: 84 : 4 = 80 : 4 + 4 : 4 */
+      const d2 = 2 + rnd(5), t = 1 + rnd(4), e = 1 + rnd(9), q2 = 10 * t + e, v2 = d2 * q2;
+      return bouw(v2 + ' : ' + d2, String(q2), () => String(kies([q2 + 1, q2 - 1, q2 + 10, q2 - 10, 10 * t, q2 + d2].filter(n => n > 0 && n !== q2))),
+        'Splits ' + v2 + ' in ' + (d2 * 10 * t) + ' en ' + (d2 * e) + ': ' + (d2 * 10 * t) + ' : ' + d2 + ' = ' + (10 * t) + ' en ' + (d2 * e) + ' : ' + d2 + ' = ' + e + ', samen ' + q2 + '.', 'delen');
+    }
+    return bouw(v + ' : ' + d, String(q), () => String(kies([q + 1, q - 1, q + 2, d, q * 2].filter(n => n > 0 && n !== q))),
+      v + ' : ' + d + ' = ' + q + ', want ' + d + ' \u00d7 ' + q + ' = ' + v + '. Delen is de tafel omdraaien.', 'delen');
+  }
+  if (soort === 'keer') {
+    /* Grote keersommen: twee of drie cijfers keer een cijfer, of twee keer twee
+       cijfers. Fout: het onthouden cijfer vergeten, een stuk van het splitsen
+       vergeten, of een tiental ernaast. */
+    let a, b;
+    if (r <= 1){ a = 12 + rnd(87); b = 2 + rnd(8); }
+    else if (r >= 3 && rnd(3) === 0){ a = 12 + rnd(38); b = 11 + rnd(29); }
+    else { a = rnd(4) === 0 ? 23 + rnd(76) : 112 + rnd(788); b = 3 + rnd(7); }
+    /* een rond getal is geen grote keersom: dan een eenheid erbij */
+    if (a % 10 === 0) a += 1 + rnd(9);
+    const goed = a * b, mis = [];
+    let uitleg;
+    if (b < 10){
+      const ds = String(a).split('').map(Number);
+      let zonder = '';
+      for (let i = ds.length - 1; i >= 0; i--) zonder = (i === 0 ? String(ds[i] * b) : String(ds[i] * b % 10)) + zonder;
+      mis.push(+zonder);
+      if (ds.length === 3) mis.push(goed - ds[1] * 10 * b);
+      mis.push(goed + 10 * b, goed - b, goed + 100);
+      const stukken = ds.map((c, i) => c * Math.pow(10, ds.length - 1 - i)).filter(Boolean);
+      uitleg = 'Splits ' + a + ': ' + stukken.map(x => x + ' \u00d7 ' + b + ' = ' + (x * b)).join(', ') + '. Samen ' + goed + '.';
+    } else {
+      const t = b - b % 10, e = b % 10;
+      mis.push(a * t + e, a * (t / 10) + a * e, goed + a, goed - 10);
+      uitleg = 'Splits ' + b + ' in ' + t + ' en ' + e + ': ' + a + ' \u00d7 ' + t + ' = ' + (a * t) + ' en ' + a + ' \u00d7 ' + e + ' = ' + (a * e) + '. Samen ' + goed + '.';
+    }
+    const kandidaten = mis.filter(n => n > 0 && n !== goed);
+    return bouw(a + ' \u00d7 ' + b, String(goed), () => String(kies(kandidaten.length ? kandidaten : [goed + 10, goed - 10])), uitleg, 'grote keersom');
   }
   if (soort === 'machten') {
     /* Kwadraten en wortels. De afleiders zijn de klassieke verwarringen: keer twee
