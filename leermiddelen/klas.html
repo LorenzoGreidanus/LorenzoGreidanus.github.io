@@ -221,6 +221,21 @@ td.getal{font-variant-numeric:tabular-nums;text-align:right}
 .gekoppeld .wie button:hover,.gekoppeld .wie button:focus-visible{color:var(--crab)}
 @media print{.gekoppeld .wie button{display:none}}
 .gekoppeld .leeg{color:var(--muted);font-size:.92rem}
+/* dubbel in de lijst: eerst als gast, later met Microsoft. Ingeklapt, want het is een klusje voor af en toe */
+.samenvoeg{margin-top:14px;border-top:1px solid var(--rand);padding-top:6px}
+.samenvoeg>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;gap:8px;font-weight:600;font-size:.94rem;color:var(--ink)}
+.samenvoeg>summary{list-style:none}.samenvoeg>summary::-webkit-details-marker{display:none}
+.samenvoeg>summary::before{content:"▸";color:var(--muted);transition:transform .15s}
+.samenvoeg[open]>summary::before{transform:rotate(90deg)}
+@media (prefers-reduced-motion:reduce){.samenvoeg>summary::before{transition:none}}
+.samenvoeg>summary small{font-weight:400;color:var(--muted);font-size:.88rem}
+.samenvoeg .rijen{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:end;margin-top:6px}
+.samenvoeg label{display:flex;flex-direction:column;gap:4px;font-size:.86rem;color:var(--muted);min-width:0}
+.samenvoeg .pijl{padding-bottom:12px;color:var(--muted);font-size:1.2rem}
+.samenvoeg .doe{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin-top:10px}
+.samenvoeg .doe p{margin:0;font-size:.88rem;color:var(--muted)}
+@media (max-width:560px){.samenvoeg .rijen{grid-template-columns:1fr}.samenvoeg .pijl{display:none}}
+@media print{.samenvoeg{display:none}}
 /* ---------- het overzicht van een klas ----------
    Bovenaan de klas en drie knoppen, daaronder de filters die voor alles
    gelden (periode en spel), dan de tabbladen. Wat je zelden nodig hebt, zoals
@@ -749,6 +764,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
         <b>Wie is er gekoppeld?</b>
         <p class="tip">Iedereen die jouw klascode heeft ingevuld, ook wie nog niets gespeeld heeft. Handig aan het begin van de les: zo zie je in een oogopslag wie er nog niet binnen is.</p>
         <div class="gekoppeld" id="gekoppeld"></div>
+        <div id="samenVak"></div>
       </div>
     </div>
 
@@ -1248,6 +1264,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     var vak = $('koppelVak'), doel = $('gekoppeld');
     if (!vak || !doel) return;
     var l = (data && data.leerlingen) || [];
+    tekenSamen(l);
     if (!l.length){
       doel.innerHTML = '<p class="leeg">Nog niemand gekoppeld. Laat je klas de code invullen in de leeromgeving, bij het rondje met het gezichtje rechtsboven.</p>';
       return;
@@ -1283,6 +1300,55 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
           haal();
         })
         .catch(function(){ alert('Geen verbinding. Controleer je internet en probeer het opnieuw.'); b.disabled = false; });
+    });
+  }
+  /* Samenvoegen: wie eerst als gast meedeed en later met Microsoft inlogde,
+     staat er twee keer in. De docent kiest de gastregel en het account; de
+     uitslagen gaan mee naar het account. De lijst wordt elke twintig seconden
+     ververst; dit blok alleen als er iemand bij komt of weggaat, zodat een
+     keuze die je net maakte blijft staan. */
+  function tekenSamen(l){
+    var plek = $('samenVak');
+    if (!plek) return;
+    var sleutel = (huidig ? huidig.code : '') + '|' + l.map(function(x){ return x.id + ':' + (x.ms ? 1 : 0) + ':' + x.naam; }).join(',');
+    if (plek.__sleutel === sleutel) return;
+    plek.__sleutel = sleutel;
+    var gast = l.filter(function(x){ return x.id && !x.ms; }), ms = l.filter(function(x){ return x.id && x.ms; });
+    if (l.length < 2 || !gast.length){ plek.innerHTML = ''; return; }
+    var open = plek.querySelector('details') && plek.querySelector('details').open;
+    var oudVan = $('samenVan') ? $('samenVan').value : '', oudNaar = $('samenNaar') ? $('samenNaar').value : '';
+    var optie = function(x){ return '<option value="' + schoon(x.id) + '">' + schoon(wieTekst(x.naam)) + (x.bijnaam ? ' (' + schoon(x.bijnaam) + ')' : '') + '</option>'; };
+    plek.innerHTML = '<details class="samenvoeg"' + (open ? ' open' : '') + '><summary>Staat iemand er dubbel in? <small>samenvoegen</small></summary>' +
+      '<p class="tip">Deed een leerling eerst mee zonder Microsoft en later met? Kies zijn oude naam en zijn Microsoft-account. Zijn uitslagen komen bij het account, en speelt hij nog eens op het oude apparaat, dan telt dat ook daar.</p>' +
+      '<div class="rijen"><label for="samenVan">Zonder account<select class="veld" id="samenVan">' + gast.map(optie).join('') + '</select></label>' +
+      '<span class="pijl" aria-hidden="true">\u2192</span>' +
+      '<label for="samenNaar">Hoort bij<select class="veld" id="samenNaar">' +
+        (ms.length ? '<optgroup label="Met Microsoft">' + ms.map(optie).join('') + '</optgroup>' : '') +
+        '<optgroup label="Ook zonder account">' + gast.map(optie).join('') + '</optgroup></select></label></div>' +
+      '<div class="doe"><button type="button" class="knop klein" id="samenBtn">Samenvoegen</button><p id="samenUit" role="status"></p></div></details>';
+    var van = $('samenVan'), naar = $('samenNaar');
+    if (oudVan && van.querySelector('option[value="' + oudVan + '"]')) van.value = oudVan;
+    if (oudNaar && naar.querySelector('option[value="' + oudNaar + '"]')) naar.value = oudNaar;
+    else if (!ms.length && gast.length > 1) naar.selectedIndex = van.selectedIndex === 0 ? 1 : 0;
+    var naamVan = function(s){ var o = s.options[s.selectedIndex]; return o ? o.textContent : ''; };
+    $('samenBtn').addEventListener('click', function(){
+      var b = this, uit = $('samenUit');
+      if (!huidig) return;
+      if (van.value === naar.value){ uit.textContent = 'Kies twee verschillende leerlingen.'; return; }
+      if (DEMO){ uit.textContent = 'In de demoklas wordt niets bewaard. Maak je eigen klascode om dit echt te doen.'; return; }
+      if (!confirm(naamVan(van) + ' samenvoegen met ' + naamVan(naar) + '? De uitslagen gaan mee. Dit is niet terug te draaien.')) return;
+      b.disabled = true; uit.textContent = 'Bezig met samenvoegen\u2026';
+      fetch('/api/klas/' + huidig.code + '/samen', { method:'POST', headers:{ 'content-type':'application/json' },
+        body: JSON.stringify({ sleutel: huidig.sleutel, van: van.value, naar: naar.value }) })
+        .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+        .then(function(x){
+          b.disabled = false;
+          if (!x.ok){ uit.textContent = x.j.fout ? x.j.fout.charAt(0).toUpperCase() + x.j.fout.slice(1) + '.' : 'Samenvoegen lukte niet.'; return; }
+          var tekst = 'Samengevoegd' + (x.j.mee ? ', ' + x.j.mee + (x.j.mee === 1 ? ' uitslag' : ' uitslagen') + ' verplaatst' : '') + '.';
+          haal();
+          setTimeout(function(){ var u = $('samenUit'); if (u) u.textContent = tekst; var d = document.querySelector('.samenvoeg'); if (d) d.open = true; }, 600);
+        })
+        .catch(function(){ b.disabled = false; uit.textContent = 'Geen verbinding. Controleer je internet en probeer het opnieuw.'; });
     });
   }
   function teken(){

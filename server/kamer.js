@@ -535,6 +535,7 @@ export class Kamer extends DurableObject {
       if (url.pathname === "/echt" && req.method === "POST") return await this.echteNamen(await req.json());
       if (url.pathname === "/hoi" && req.method === "POST") return await this.hoi(await req.json());
       if (url.pathname === "/leerlingweg" && req.method === "POST") return await this.leerlingWeg(await req.json());
+      if (url.pathname === "/samen" && req.method === "POST") return await this.leerlingSamen(await req.json());
       if (url.pathname === "/besproken" && req.method === "POST") return await this.besproken(await req.json());
       if (url.pathname === "/rooster" && req.method === "POST") return await this.dicteeRooster(await req.json());
       if (url.pathname === "/mijn") return this.mijn(url.searchParams.get("sid"));
@@ -2253,6 +2254,35 @@ export class Kamer extends DurableObject {
     if (!had && voor === this.stand.resultaten.length) return json({ fout: "die leerling zit niet in deze klas" }, 404);
     await this.bewaar();
     return json({ ok: true, weg: voor - this.stand.resultaten.length, leerlingen: this.gekoppeld() });
+  }
+  /* Twee regels voor dezelfde leerling: eerst als gast meegedaan, later met
+     Microsoft. De docent voegt ze samen. De regel met het account blijft; de
+     andere wordt een verwijzing ernaar, met al zijn uitslagen. Speelt hij nog
+     eens op het oude apparaat, dan komt dat ook bij de goede regel. */
+  async leerlingSamen(inz){
+    if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
+    if (!inz || inz.sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
+    const st = this.stand, l = st.leerlingen || {};
+    st.alias = st.alias || {}; st.accounts = st.accounts || {};
+    let van = schoon(inz.van, 12), naar = schoon(inz.naar, 12);
+    if (!van || !naar || van === naar) return json({ fout: "kies twee verschillende leerlingen" }, 400);
+    if (!l[van] || !l[naar]) return json({ fout: "die leerling zit niet in deze klas" }, 404);
+    if (l[van].acc && l[naar].acc && l[van].acc !== l[naar].acc) return json({ fout: "dit zijn twee verschillende Microsoft-accounts, dus twee leerlingen" }, 409);
+    /* de regel met het account blijft altijd staan */
+    if (l[van].acc && !l[naar].acc){ const t = van; van = naar; naar = t; }
+    const a = l[van], b = l[naar];
+    st.alias[van] = naar;
+    Object.keys(st.alias).forEach(k => { if (st.alias[k] === van) st.alias[k] = naar; });
+    Object.keys(st.accounts).forEach(x => { if (st.accounts[x] === van) st.accounts[x] = naar; });
+    if (a.acc && !b.acc) b.acc = a.acc;
+    if (a.ms && !b.ms) b.ms = a.ms;
+    if (a.av && !b.av) b.av = a.av;
+    if (a.sinds && (!b.sinds || a.sinds < b.sinds)) b.sinds = a.sinds;
+    let mee = 0;
+    st.resultaten.forEach(r => { if (r.sid === van){ r.sid = naar; mee++; } });
+    delete l[van];
+    await this.bewaar();
+    return json({ ok: true, mee, leerlingen: this.gekoppeld() });
   }
   /* de docent heft de klascode op: alles weg, en de leerlingen merken het bij hun volgende melding */
   async opheffen(inz){
