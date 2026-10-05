@@ -976,12 +976,12 @@ var SPELLEN = [
     wat:'Elke dag tien vragen die voor iedereen hetzelfde zijn, uit alle vakken. Eén poging per dag: honderd punten per goed antwoord en bonus voor snelheid. Aan het eind het klassement van vandaag; morgen tien nieuwe.',
     leer:'Elke dag even oefenen', tijd:'een paar minuten per dag' },
 
-  { vak:['nederlands','engels','geschiedenis','aardrijkskunde','biologie','wiskunde','mens','economie'], bestand:'fouten.html', naam:'Oefen je fouten', kleur:'#F26749', tv:0,
+  { vak:['rekenen','nederlands','engels','geschiedenis','aardrijkskunde','biologie','wiskunde','mens','economie'], bestand:'fouten.html', naam:'Oefen je fouten', kleur:'#F26749', tv:0,
     ico:'<path d="M4 4h12l4 4v12H4z"/><path d="M8 12l3 3 5-6"/>',
     wat:'Alles wat je fout had in de Vragenrace, Torenverdediging, Zwaardvechter of de dagelijkse uitdaging komt hier terug: vandaag, na een dag, na drie dagen en na een week. Pas als je het dan nog weet, is het weg. Met een speelcode reist je map mee.',
     leer:'Onthouden wat je fout had', tijd:'vijf minuten per dag' },
 
-  { vak:['nederlands','engels','geschiedenis','aardrijkskunde','biologie','wiskunde','mens','economie'], bestand:'race.html', naam:'Vragenrace', kleur:'#EA9836', tv:0, examen:true,
+  { vak:['rekenen','nederlands','engels','geschiedenis','aardrijkskunde','biologie','wiskunde','mens','economie'], bestand:'race.html', naam:'Vragenrace', kleur:'#EA9836', tv:0, examen:true,
     ico:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 3h6"/>',
     wat:'Zestig seconden, zoveel mogelijk vragen goed. Elk goed antwoord is punten en drie seconden erbij, elk fout antwoord kost vijf seconden; vanaf drie goed op rij tellen je punten dubbel. Kaal en snel, met de uitleg bij elke fout en aan het eind de vragen om nog even na te kijken. Dezelfde vragen als in Torenverdediging en de Klasquiz, op jouw niveau.',
     leer:'Snel herhalen', tijd:'een paar minuten per race' },
@@ -1377,7 +1377,7 @@ var SPELLEN = [
   function tvVan(nr){ return TIJDVAKKEN.filter(function(t){ return t.nr === nr; })[0] || null; }
   function vakVan(id){ return VAKKEN.filter(function(v){ return v.id === id; })[0] || null; }
   var TORENVAK = { rekenen:'reken', nederlands:'ned', engels:'eng', geschiedenis:'ges', aardrijkskunde:'aard', biologie:'bio', wiskunde:'wis', mens:'burg', economie:'eco' };
-  var MET_TORENVAK = { 'toren.html':1, 'race.html':1, 'mijnwerker.html':1, 'poortrace.html':1, 'kaarttoren.html':1 };
+  var MET_TORENVAK = { 'toren.html':1, 'race.html':1, 'mijnwerker.html':1, 'poortrace.html':1, 'kaarttoren.html':1, 'zwaard.html':1 };
 
   /* ---------- de stand van de pagina ---------- */
   var stand = { niveau:null, leerjaar:'12', vak:'alle', soort:'alles', tv:0, zoek:'' };
@@ -1514,7 +1514,8 @@ var SPELLEN = [
   }
 
   /* ---------- de kolom links ---------- */
-  function aantalIn(vakId){ return SPELLEN.filter(function(s){ return s.bestand && hoortBij(s, vakId) && !isBreed(s); }).length; }
+  /* ook de spellen voor elk vak tellen mee: bij Rekenen hoort Torenverdediging net zo goed */
+  function aantalIn(vakId){ return SPELLEN.filter(function(s){ return s.bestand && hoortBij(s, vakId); }).length; }
   function rij(opties){
     return '<button type="button" class="rij' + (opties.on ? ' on' : '') + '" aria-pressed="' + (opties.on ? 'true' : 'false') + '" ' + opties.data + (opties.uit ? ' disabled' : '') +
       (opties.titel ? ' title="' + schoon(opties.titel) + '"' : '') + '>' +
@@ -1598,8 +1599,8 @@ var SPELLEN = [
     var woorden = plat(stand.zoek).split(/\s+/).filter(Boolean);
     return SPELLEN.filter(function(sp){
       if (!sp.bestand) return false;
-      /* bij een vak alleen wat bij dat vak hoort; de spellen voor elk vak staan een keer, onder Alle vakken */
-      if (stand.vak !== 'alle' && (!hoortBij(sp, stand.vak) || isBreed(sp))) return false;
+      /* bij een vak alleen wat bij dat vak hoort, ook de spellen waarin je het vak kiest (die staan dan al op dat vak) */
+      if (stand.vak !== 'alle' && !hoortBij(sp, stand.vak)) return false;
       if (stand.soort !== 'alles' && soortVan(sp) !== stand.soort && !(stand.soort === 'samen' && OOK_SAMEN[sp.bestand.replace('.html', '')])) return false;
       if (stand.tv && tvLijst(sp).indexOf(stand.tv) < 0) return false;
       if (woorden.length){
@@ -1941,6 +1942,14 @@ var SPELLEN = [
       if (rs) rs.addEventListener('toggle', function(){ uitgeklapt.rest = rs.open; });
       return;
     }
+    /* bij een vak eerst de spellen van dat vak, daarna de spellen voor elk vak, met dit vak alvast gekozen */
+    var breedHier = [];
+    if (!stand.zoek && stand.vak !== 'alle'){
+      /* wat je alleen speelt eerst, wat je docent start (Klasquiz, Klasstrijd) achteraan */
+      var docentStart = function(sp){ return soortVan(sp) === 'samen' || OOK_SAMEN[sp.bestand.replace('.html', '')] || sp.bestand === 'strijd.html' ? 1 : 0; };
+      breedHier = lijst.filter(isBreed).map(function(sp, i){ return [sp, i]; }).sort(function(a, b){ return docentStart(a[0]) - docentStart(b[0]) || a[1] - b[1]; }).map(function(x){ return x[0]; });
+      if (breedHier.length < lijst.length) lijst = lijst.filter(function(sp){ return !isBreed(sp); }); else breedHier = [];
+    }
     if (stand.zoek){
       var ww = plat(stand.zoek).split(/\s+/).filter(Boolean);
       var score = function(sp){ var n = plat(sp.naam), l = plat(sp.leer); return ww.every(function(w){ return n.indexOf(w) >= 0; }) ? 3 : ww.every(function(w){ return (n + ' ' + l).indexOf(w) >= 0; }) ? 2 : 1; };
@@ -1978,8 +1987,10 @@ var SPELLEN = [
       var v2 = vakVan(stand.vak);
       s += sectie(v2.ico, v2.kleur, v2.naam, stand.soort !== 'alles' ? soortNaam(stand.soort).toLowerCase() : '', lijst.length, lijst);
     }
-    /* een regel die zegt waar Torenverdediging en de andere spellen voor elk vak staan */
-    if (stand.vak !== 'alle') s += '<p class="ookoveral">Spellen waarin je zelf het vak kiest, zoals Torenverdediging en Zwaardvechter, staan bij <button type="button" id="naarAlle">Alle vakken</button></p>';
+    if (breedHier.length){
+      var v3 = vakVan(stand.vak).naam.toLowerCase();
+      s += sectie('<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>', 'var(--muted)', 'Ook met ' + v3, 'spellen voor elk vak, met ' + v3 + ' al gekozen', breedHier.length, breedHier);
+    }
     kleurNu = '';
     $('secties').innerHTML = s;
     var na = $('naarAlle');
