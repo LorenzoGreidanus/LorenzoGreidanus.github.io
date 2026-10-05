@@ -157,8 +157,11 @@ body.groot .cschema input{height:60px;font-size:1.4rem}
     if (b > 9 && b % 10 === 0) b += tussen(1, 9);
     if (a % 10 === 0) a += tussen(1, 9);
     var rijen = [], stappen = [], som = a * b, aT = komma ? net(a / 10) : dz(a);
-    /* met 1 cijfer splits je het bovenste getal; met 2 cijfers de vermenigvuldiger (4 × 23, dan 10 × 23) */
-    var delen = b < 10 ? splits(a).reverse().map(function(p){ return { f: b, g: p }; }) : splits(b).reverse().map(function(p){ return { f: p, g: a }; });
+    /* Beide getallen gesplitst, zodat elke rij een kleine som is: 36 × 782 wordt
+       30 × 700, 30 × 80, 30 × 2, 6 × 700, 6 × 80, 6 × 2. Eerder stond er
+       30 × 782 en 6 × 782 in een rij, en dat is zelf weer een moeilijke som. */
+    var delen = [];
+    splits(b).forEach(function(f){ splits(a).forEach(function(g){ delen.push({ f: f, g: g }); }); });
     rijen.push({ klasse:'kop', get: aT, lab: komma ? 'reken eerst zonder komma: ' + dz(a) : '' });
     rijen.push({ get: '<span class="teken">' + dz(b) + '</span> ×', lab: '' });
     delen.forEach(function(p, i){
@@ -171,7 +174,7 @@ body.groot .cschema input{height:60px;font-size:1.4rem}
     return schemaOpgave({
       onderdeel:'cijferen: vermenigvuldigen', onderdeelNaam:'vermenigvuldigen', sleutel:'v' + a + 'x' + b + komma,
       vraag: '<b>' + aT + ' × ' + dz(b) + '</b>',
-      opdracht: 'Vul elke rij van het schema in: ' + (b < 10 ? 'eerst de eenheden, dan de tientallen' + (a > 99 ? ', dan de honderdtallen' : '') : 'eerst ' + (b % 10) + ' × ' + dz(a) + ', dan ' + dz(b - b % 10) + ' × ' + dz(a)) + '. Onderaan tel je alles bij elkaar.' + (komma ? ' Reken zonder komma en zet hem aan het eind terug.' : ''),
+      opdracht: 'Splits ' + (b < 10 ? dz(a) : 'beide getallen') + ' en vul elke rij in: elke rij is een kleine som, ' + delen.slice(0, 3).map(function(p){ return dz(p.f) + ' × ' + dz(p.g); }).join(', ') + (delen.length > 3 ? ' enzovoort' : '') + '. Onderaan tel je alles bij elkaar.' + (komma ? ' Reken zonder komma en zet hem aan het eind terug.' : ''),
       rijen: rijen,
       uitleg: stappen.join(', ') + '. Bij elkaar: ' + dz(som) + '.' + (komma ? ' ' + aT + ' heeft 1 cijfer achter de komma, dus het antwoord ook: ' + net(antwoord) + '.' : '') + ' In het oppervlaktemodel zie je elke rij van het schema als een strook:' + model(a, b),
       antwoordTekst: aT + ' × ' + dz(b) + ' = ' + net(antwoord)
