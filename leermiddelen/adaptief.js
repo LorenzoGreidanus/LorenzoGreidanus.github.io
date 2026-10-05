@@ -13,6 +13,7 @@
      slim.toets(goed)      na elk antwoord; geeft 'omhoog', 'omlaag' of null terug
      slim.niveau()         het niveau dat nu voor de vragen geldt
      slim.reset(start)     bij een nieuwe partij
+     slim.stand() / slim.herstel(s)   de stand bewaren en terugzetten
    Opties: venster (hoeveel antwoorden meetellen voor een stap omlaag, 8), minimum
    (vanaf hoeveel antwoorden er gekeken wordt, 6), omhoog (deel goed, .85), omlaag (.4).
    Omhoog gaat twee keer zo traag als omlaag: daar tellen zestien antwoorden mee en
@@ -63,6 +64,15 @@ window.Adaptief = function(o){
     niveau: function(){ return huidig; },
     verhoogd: function(){ return idx(huidig) > idx(basis); },
     reset: function(start){ huidig = start; basis = start; venster = []; lang = []; },
+    /* de stand om te bewaren, en terug te zetten (Zwaardvechter: verder met je potje) */
+    stand: function(){ return { huidig:huidig, basis:basis, venster:venster.slice(), lang:lang.slice() }; },
+    herstel: function(s){
+      if (!s || idx(s.huidig) < 0 || idx(s.basis) < 0) return false;
+      huidig = s.huidig; basis = s.basis;
+      venster = (Array.isArray(s.venster) ? s.venster : []).slice(-VENSTER).map(Boolean);
+      lang = (Array.isArray(s.lang) ? s.lang : []).slice(-VENSTER_OP).map(Boolean);
+      return true;
+    },
     toast: toast
   };
 };

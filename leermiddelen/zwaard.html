@@ -74,6 +74,9 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
   box-shadow:0 9px 0 rgba(20,34,76,.10);transition:transform .16s var(--ease)}
 .verderknop small{font-weight:500;font-size:.84rem}
 .verderknop:hover{transform:translateY(-2px)}
+.verderknop.tweede{background:var(--kaart,#fff);color:var(--ink);font-size:.98rem;box-shadow:none;border:1.5px solid rgba(20,34,76,.18)}
+:root[data-theme="dark"] .verderknop.tweede{border-color:rgba(243,239,233,.25)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .verderknop.tweede{border-color:rgba(243,239,233,.25)}}
 .anders > summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;min-height:44px;padding:0 20px;margin:0 auto 8px;
   border-radius:999px;border:1.5px solid rgba(20,34,76,.18);background:var(--kaart,#fff);font-weight:600;font-size:.9rem;color:var(--ink)}
 .anders > summary::-webkit-details-marker{display:none}
@@ -1117,7 +1120,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   function testDoe(wat){
     if (co.aan){ document.getElementById('arenatip').textContent = 'Het testpaneel werkt alleen als je alleen speelt.'; return; }
     if (!W) return;
-    cheat = true; if (window.STRIJD && STRIJD.knoei) STRIJD.knoei(); var P = W.spelers[0];
+    cheat = true; knoeiNu(); var P = W.spelers[0];
     if (wat === 'leven'){ P.hp = P.maxHp; hp = maxHp; }
     else if (wat === 'god'){ god = !god; }
     else if (wat === 'munten'){ munten += 500; }
@@ -1171,7 +1174,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (!def) return;
     if (!vak){ tipTekst('Kies eerst een vak: de vragen tussendoor blijven ook in de nachtmerrie.'); return; }
     metVragen(function(){
-      begin();
+      nmStart = true; begin(); nmStart = false;
       /* na begin(), want die zet een gewoon potje op en wist de nachtmerrie */
       nachtmerrie = { def: def };
       /* alles vol, na begin() want die maakt de uitrusting leeg */
@@ -1503,7 +1506,13 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
 
 
   /* ---------- beginnen ---------- */
-  function begin(){
+  function begin(terug){
+    /* verder met een bewaard potje: de keuzes van toen (zie leesPotje) */
+    if (terug && !co.aan){
+      stijl = terug.stijl; uitlegstand = !!terug.uitleg;
+      var vk0 = document.getElementById('uitlegAan'); if (vk0) vk0.checked = uitlegstand;
+      tekenStijlen();
+    } else terug = null;
     /* samen in een arena loopt iedereen op dezelfde snelheid */
     if (co.aan) uitlegstand = false;
     traagKlok = 0; alGezien = {}; wolk = null; uitlegPauze = false; wachtUitleg = [];
@@ -1512,12 +1521,16 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     co.dashVraag = false; co.wapenVraag = 0; co.laatsteInvoer = '';
     vaardig = {}; keuzeOpen = null; tweedeKansOver = 0; zones = []; baasWeg = 0; blokToets = false; cheat = false; god = false; trofeeLater = [];
     bewaarLaatst();
+    /* een nieuw potje alleen: het bewaarde potje is dan voorbij (de nachtmerrie en de kamer raken het niet aan) */
+    if (!terug && !co.aan && !nmStart && !(window.STRIJD && STRIJD.actief)) wisPotje();
     nachtmerrie = null;
     voorspel.aan = false; voorspel.hist = []; voorspel.ankers = {}; voorspel.st = null; voorspel.dashRest = 0;
     fouten = []; messen = []; munt = []; pluis = []; cijfers = []; aanvallen = []; teSpawnen = 0; tijdInRonde = 0;
     slim.reset(niveau); pot = null;
+    if (terug) zetPotjeTerug(terug);
     if (window.TYPEN) TYPEN.laad(vak);
     maxHp = maxLeven(); hp = maxHp; pauze = false;
+    if (terug) hp = Math.max(1, Math.min(maxHp, terug.hp, terug.bezig ? terug.hpRonde : terug.hp));
     document.getElementById('scherm-start').classList.add('hide');
     document.getElementById('scherm-einde').classList.add('hide');
     document.getElementById('scherm-spel').classList.remove('hide');
@@ -1537,12 +1550,17 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       W = ZWAARDMOTOR.maak({ spelers:[{ naam:'jij' }], haak:HAAK });
       sp = W.spelers[0].sp;
       W.zetStats(0, mijnStats(), hp);
-      W.volgendeRonde(); spiegel();
+      if (terug){
+        /* de motor staat na de ronde die je haalde, tussen de rondes in */
+        W.ronde = terug.ronde; W.fase = 'vragen'; W.baasGeveld = baasWeg;
+        sp.crit = !!terug.crit; sp.wapen = terug.wapen === 'boog' ? 'boog' : 'zwaard';
+        spiegel(); hervatFase(terug);
+      } else { W.volgendeRonde(); spiegel(); }
     }
     scrollTo({ top:0, behavior:'auto' });
     if (!loopt){ loopt = true; laatste = performance.now(); laatsteTik = laatste; if (!rafId) rafId = requestAnimationFrame(tik); }
     /* de tutorial, een keer: na begin(), want de nachtmerrie zet zich pas daarna */
-    setTimeout(tutorial, 60);
+    if (!terug) setTimeout(tutorial, 60);
   }
   /* De tutorial: het spel staat stil tot je hem doorlopen of overgeslagen hebt.
      Niet samen (de kamer loopt door), niet in de nachtmerrie (die speel je pas
@@ -1598,11 +1616,14 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     corrGem:+((voorspel.corrSom || 0) / Math.max(1, voorspel.corrN || 0)).toFixed(2), corrMax:+(voorspel.corrMax || 0).toFixed(2), corrN:voorspel.corrN || 0, t:+tijdInRonde.toFixed(3) }; };
   window.__zwaardCorrReset = function(){ voorspel.corrSom = 0; voorspel.corrN = 0; voorspel.corrMax = 0; };
   /* voor het testen: __zwaardSpring(5) springt naar een baasronde */
-  window.__zwaardSpring = function(n){ if (!W) return; if (window.STRIJD && STRIJD.knoei) STRIJD.knoei(); W.ronde = n - 1; W.volgendeRonde(); spiegel(); };
+  window.__zwaardSpring = function(n){ if (!W) return; knoeiNu(); W.ronde = n - 1; W.volgendeRonde(); spiegel(); };
+  /* voor het testen van verder met je potje: alleen kijken, dus geen knoeien */
+  window.__zwaardStand = function(){ return JSON.parse(JSON.stringify({ ronde:ronde, fase:fase, hp:Math.round(hp), maxHp:maxHp, munten:munten, geveld:geveld, level:level, vaardig:vaardig, stijl:stijl,
+    reeks:reeks, besteReeks:besteReeks, goed:goedAantal, fout:foutAantal, od:perOnderdeel, crit:!!sp.crit, uitleg:uitlegstand, vak:vak, niveau:niveau, slim:slim.niveau() })); };
   /* en een kijkgaatje: wat staat er nu in de arena */
-  window.__zwaardVol = function(){ if (!W) return; if (window.STRIJD && STRIJD.knoei) STRIJD.knoei(); W.spelers.forEach(function(P){ P.hp = P.maxHp; }); };
+  window.__zwaardVol = function(){ if (!W) return; knoeiNu(); W.spelers.forEach(function(P){ P.hp = P.maxHp; }); };
   /* hiermee heb je de hele arena in handen, dus dit telt als knoeien */
-  window.__zwaardW = function(){ if (window.STRIJD && STRIJD.knoei) STRIJD.knoei(); return W; };
+  window.__zwaardW = function(){ knoeiNu(); return W; };
   window.__zwaardKijk = function(){
     return { ronde:ronde, fase:fase, hp:Math.round(hp), wapen:sp.wapen,
       soorten:fouten.map(function(f){ return f.baas ? 'baas:' + f.def.id : f.soort.id; }),
@@ -1841,6 +1862,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (fase === 'ronde' && uitlegstand) kijkWachtUitleg();
     spiegel();
     if (fase === 'ronde') tekenHud();
+    /* om de twee seconden: met hoeveel leven je in deze ronde nog staat */
+    if (fase === 'ronde' && potjeNu && W.tik % 120 === 0) zakHp();
   }
 
   /* ---------- de spelers als records ---------- */
@@ -2096,6 +2119,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       return;
     }
     if (!W) return;
+    bewaarPotje(true);
     W.zetStats(0, mijnStats(), hp);
     W.volgendeRonde(); spiegel();
   }
@@ -2110,6 +2134,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     tekenDash();
     document.getElementById('arenatip').textContent = 'Ronde ' + ronde + ' overleefd. Nu ' + vragenTotaal + ' vragen voor de klas; elk goed antwoord is geld voor de winkel.';
     tekenZij();
+    bewaarPotje();
   }
   function antwoord(i){
     if (fase !== 'vragen' || !vraag || geklikt >= 0 || i >= vraag.o.length || (i < 0 && !vraag.typ)) return;
@@ -2130,6 +2155,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     } else if (tweedeKansOver > 0){ tweedeKansOver--; foutAantal++; vraag.winst = 0; vraag.tweedeKans = true; }
     else { reeks = 0; foutAantal++; vraag.winst = 0; }
     vragenOver--;
+    bewaarPotje();
     tekenZij(); tekenHud();
     /* Voor wie niet kijkt maar luistert: goed of fout, en bij fout het goede antwoord. */
     var live = document.getElementById('zwaardLive');
@@ -2161,6 +2187,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     }
     else if (keuzeOpen){ fase = 'kies'; document.getElementById('arenatip').textContent = 'De baas is geveld. Kies een vaardigheid; die houd je de rest van het gevecht.'; tekenZij(); }
     else { fase = 'winkel'; document.getElementById('arenatip').textContent = 'De winkel. Koop wat je nodig hebt en start dan ronde ' + (ronde + 1) + '.'; tekenZij(); }
+    if (fase !== 'vragen') bewaarPotje();
     if (fase !== 'vragen' && hadFocus){ var k1 = document.querySelector('#zij button:not(:disabled)'); if (k1) k1.focus({ preventScroll:true }); }
   }
   /* drie vaardigheden om uit te kiezen: nooit een die vol is, en het schild alleen voor de schildwacht */
@@ -2175,6 +2202,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (id === 'leven'){ maxHp = maxLeven(); hp = maxHp; }
     keuzeOpen = null; fase = 'winkel';
     document.getElementById('arenatip').textContent = 'De winkel. Koop wat je nodig hebt en start dan ronde ' + (ronde + 1) + '.';
+    bewaarPotje();
     tekenZij(); tekenHud();
   }
 
@@ -2190,6 +2218,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       munten -= prijs; level[id] = lv + 1;
       if (id === 'harnas'){ var oud = maxHp; maxHp = maxLeven(); hp += maxHp - oud; }
     }
+    bewaarPotje();
     tekenZij(); tekenHud();
   }
 
@@ -2997,6 +3026,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (fase === 'einde') return;
     botLog('einde');
     fase = 'einde';
+    /* gevallen: dit potje is voorbij, er valt niets meer te hervatten */
+    if (potjeVanMij()) wisPotje();
     if (window.STRIJD) STRIJD.af({ ronde:ronde, punten:geveld });
     if (window.KLAS) KLAS.meld({ spel:'zwaard', ronde:ronde, punten:geveld, niveau:niveau, vak:vak, od:perOnderdeel }, 'eindUit');
     loopt = false; pauze = false;
@@ -3054,7 +3085,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     BANK.zorg(vak).then(function(){ if (knop){ knop.disabled = false; knop.removeAttribute('aria-busy'); } daarna(); });
   }
   document.getElementById('startBtn').addEventListener('click', function(){
-    if (!vak) return;
+    if (!vak || !nieuwPotjeOk()) return;
     metVragen(begin, this);
   });
   /* Nog een keer: meteen een nieuw gevecht met dezelfde keuzes, zoals in
@@ -3087,10 +3118,13 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       return;
     }
     opnieuwTerug(); this.classList.add('hide');
+    /* wie zelf opnieuw begint, stopt dit potje: het bewaarde potje gaat weg */
+    if (potjeVanMij() && fase !== 'einde') wisPotje();
     loopt = false; fase = 'ronde'; pauze = false;
     document.getElementById('pauzeBtn').classList.add('hide');
     document.getElementById('scherm-spel').classList.add('hide'); document.getElementById('scherm-einde').classList.add('hide');
     document.getElementById('scherm-start').classList.remove('hide');
+    tekenVerder();
     scrollTo({ top:0, behavior:'smooth' });
   });
   document.getElementById('bordBtn').addEventListener('click', function(){
@@ -3114,26 +3148,156 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
      Het staat in localStorage, op dit apparaat. */
   var LAATST = 'lg-zwaard-laatst';
   function bewaarLaatst(){ try { if (vak) localStorage.setItem(LAATST, JSON.stringify({ vak:vak, deel:(keuze[vak] || []).slice(), niveau:niveau })); } catch (e){} }
-  var metLink = !!vak;
+  var metLink = !!vak, laatstOk = false;
   (function(){
     if (metLink || (window.STRIJD && STRIJD.actief)) return;
     var l = null; try { l = JSON.parse(localStorage.getItem(LAATST) || 'null'); } catch (e){}
     if (!l || !VAKKEN.some(function(x){ return x.id === l.vak; })) return;
     vak = l.vak; keuze[vak] = (l.deel || []).filter(function(id){ return (ONDERDELEN[vak] || []).some(function(o){ return o.id === id; }); });
     if (NIVEAUS.some(function(x){ return x.id === l.niveau; })) niveau = l.niveau;
-    var v = VAKKEN.filter(function(x){ return x.id === vak; })[0], nv = NIVEAUS.filter(function(x){ return x.id === niveau; })[0];
-    var st = STIJLEN.filter(function(x){ return x.id === stijl; })[0];
-    var box = document.getElementById('verderVak');
-    box.innerHTML = '<button class="verderknop" type="button" id="verderStart">Verder met ' + v.naam.toLowerCase() + ' \u00b7 ' + (nv ? nv.naam : niveau) +
-      '<small>' + (keuze[vak].length ? keuze[vak].length + (keuze[vak].length === 1 ? ' onderdeel' : ' onderdelen') : 'alle onderdelen') + (st ? ', als ' + st.naam.toLowerCase() : '') + '</small></button>';
-    box.classList.remove('hide');
-    var d = document.getElementById('anders'); d.classList.remove('zonder'); d.open = false;
-    document.getElementById('verderStart').addEventListener('click', function(){ metVragen(begin, this); });
+    laatstOk = true;
   })();
+
+  /* ---------- verder met je potje ----------
+     Wie weggaat (tabblad dicht, pagina ververst, laptop dicht) komt terug in
+     het potje alleen, na de laatste ronde die hij haalde: met zijn munten,
+     uitrusting, vaardigheden, stijl, reeks en wat hij goed en fout had. Het
+     potje wordt bewaard zodra een ronde gehaald is, en daarna bij elk
+     antwoord, elke vaardigheid en elke aankoop, zodat terugkomen geen vragen
+     overdoet en geen munten dubbel geeft. Ga je weg midden in een ronde, dan
+     begint die ronde opnieuw, maar met het leven dat je toen nog had: verversen
+     vlak voor je valt maakt je dus niet beter. Gevallen, of zelf Opnieuw: dan
+     is het potje weg. De nachtmerrie en de kamers bewaren niets; een kamer
+     heeft zijn eigen terugkeer met de code. */
+  var POTJE = 'lg-zwaard-potje', POTJE_VERSIE = 1, POTJE_DAGEN = 7;
+  var potjeNu = null, nmStart = false, geknoeid = false;
+  /* een testluik gebruikt: dit potje telt niet voor het klassement, ook niet na terugkomen */
+  function knoeiNu(){ geknoeid = true; if (window.STRIJD && STRIJD.knoei) STRIJD.knoei(); }
+  function potjeVanMij(){ return !co.aan && !nachtmerrie && !(window.STRIJD && STRIJD.actief); }
+  function wisPotje(){ potjeNu = null; try { localStorage.removeItem(POTJE); } catch (e){} }
+  function schrijfPotje(){ try { localStorage.setItem(POTJE, JSON.stringify(potjeNu)); } catch (e){} }
+  function bewaarPotje(bezig){
+    if (!W || !potjeVanMij() || fase === 'einde' || ronde < 1) return;
+    potjeNu = { v:POTJE_VERSIE, t:Date.now(), vak:vak, deel:(keuze[vak] || []).slice(), niveau:niveau, uitleg:uitlegstand, stijl:stijl,
+      ronde:ronde, fase:fase === 'kies' || fase === 'winkel' ? fase : 'vragen', vragenOver:vragenOver, vragenTotaal:vragenTotaal,
+      keuze:keuzeOpen ? keuzeOpen.map(function(x){ return x.id; }) : null, trofeeTekst:trofeeTekst || '',
+      hp:Math.round(hp), maxHp:maxHp, munten:munten, geveld:geveld, level:level, vaardig:vaardig,
+      reeks:reeks, besteReeks:besteReeks, goed:goedAantal, fout:foutAantal, od:perOnderdeel, tweede:tweedeKansOver, baasWeg:baasWeg,
+      crit:!!(sp && sp.crit), wapen:sp && sp.wapen, slim:slim.stand(), gezien:alGezien, trofeeLater:trofeeLater, knoei:geknoeid,
+      bezig:!!bezig, hpRonde:Math.round(hp) };
+    schrijfPotje();
+  }
+  /* in een ronde: het leven gaat in het bewaarde potje alleen omlaag (bij het wegklikken, en om de twee seconden) */
+  function zakHp(){
+    if (!potjeNu || !potjeNu.bezig || fase !== 'ronde' || !potjeVanMij() || ronde !== potjeNu.ronde + 1) return;
+    var h = Math.max(1, Math.round(hp));
+    if (h < potjeNu.hpRonde){ potjeNu.hpRonde = h; schrijfPotje(); }
+  }
+  addEventListener('pagehide', zakHp);
+  document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'hidden') zakHp(); });
+  function getal(x, min, max){ return typeof x === 'number' && isFinite(x) && x >= min && x <= max; }
+  function telLijst(o, ids, max){
+    var uit = {};
+    if (!o || typeof o !== 'object') return uit;
+    ids.forEach(function(id){ if (getal(o[id], 0, max)) uit[id] = Math.floor(o[id]); });
+    return uit;
+  }
+  /* het bewaarde potje, of null als er geen is of als het niet meer klopt (oud, te oud, kapot) */
+  function leesPotje(){
+    var p = null;
+    try { p = JSON.parse(localStorage.getItem(POTJE) || 'null'); } catch (e){ wisPotje(); }
+    if (!p) return null;
+    var ok = p.v === POTJE_VERSIE && getal(p.t, 0, Date.now() + 6e4) && Date.now() - p.t < POTJE_DAGEN * 864e5 &&
+      VAKKEN.some(function(x){ return x.id === p.vak; }) && NIVEAUS.some(function(x){ return x.id === p.niveau; }) &&
+      STIJLEN.some(function(x){ return x.id === p.stijl; }) && getal(p.ronde, 1, 500) && Math.floor(p.ronde) === p.ronde &&
+      ['vragen', 'kies', 'winkel'].indexOf(p.fase) >= 0 && getal(p.hp, 1, 1e5) && getal(p.munten, 0, 1e8) && getal(p.geveld, 0, 1e8) &&
+      getal(p.goed, 0, 1e6) && getal(p.fout, 0, 1e6) && getal(p.vragenOver, 0, 50) && getal(p.vragenTotaal, 0, 50);
+    if (!ok){ wisPotje(); return null; }
+    p.level = telLijst(p.level, UITRUSTING.filter(function(u){ return !u.los; }).map(function(u){ return u.id; }), 20);
+    UITRUSTING.forEach(function(u){ if (!u.los && p.level[u.id] > u.prijs.length) p.level[u.id] = u.prijs.length; });
+    p.vaardig = telLijst(p.vaardig, VAARDIGHEDEN.map(function(x){ return x.id; }), 20);
+    p.deel = (Array.isArray(p.deel) ? p.deel : []).filter(function(id){ return (ONDERDELEN[p.vak] || []).some(function(o){ return o.id === id; }); });
+    var od = {};
+    if (p.od && typeof p.od === 'object') Object.keys(p.od).slice(0, 200).forEach(function(k){
+      var w = p.od[k]; if (Array.isArray(w) && getal(w[0], 0, 1e6) && getal(w[1], 0, 1e6) && w[0] <= w[1]) od[String(k).slice(0, 40)] = [w[0], w[1]];
+    });
+    p.od = od;
+    p.keuze = Array.isArray(p.keuze) ? p.keuze.map(function(id){ return VAARDIGHEDEN.filter(function(x){ return x.id === id; })[0]; }).filter(Boolean) : null;
+    if (p.keuze && !p.keuze.length) p.keuze = null;
+    p.hpRonde = getal(p.hpRonde, 1, 1e5) ? p.hpRonde : p.hp;
+    return p;
+  }
+  /* in begin(), na het leegmaken: alles van het bewaarde potje terug */
+  function zetPotjeTerug(p){
+    level = Object.assign({}, p.level); vaardig = Object.assign({}, p.vaardig);
+    munten = Math.floor(p.munten); geveld = Math.floor(p.geveld);
+    reeks = getal(p.reeks, 0, 1e6) ? p.reeks : 0; besteReeks = getal(p.besteReeks, 0, 1e6) ? p.besteReeks : reeks;
+    goedAantal = p.goed; foutAantal = p.fout; perOnderdeel = JSON.parse(JSON.stringify(p.od));
+    tweedeKansOver = getal(p.tweede, 0, 20) ? p.tweede : 0; baasWeg = getal(p.baasWeg, 0, 500) ? p.baasWeg : 0;
+    alGezien = p.gezien && typeof p.gezien === 'object' ? p.gezien : {};
+    trofeeLater = Array.isArray(p.trofeeLater) ? p.trofeeLater.map(String).slice(0, 20) : [];
+    if (p.slim) slim.herstel(p.slim);
+    if (p.knoei) knoeiNu();
+  }
+  /* na zetPotjeTerug en de motor: weer tussen de rondes, waar je was */
+  function hervatFase(p){
+    vragenOver = p.vragenOver; vragenTotaal = p.vragenTotaal;
+    keuzeOpen = p.keuze; trofeeTekst = p.trofeeTekst ? String(p.trofeeTekst) : '';
+    fase = p.fase;
+    if (fase === 'vragen' && vragenOver <= 0) fase = keuzeOpen ? 'kies' : 'winkel';
+    if (fase === 'kies' && !keuzeOpen) fase = 'winkel';
+    if (fase === 'vragen'){ vraag = nieuweVraag(); geklikt = -1; }
+    potjeNu = null; bewaarPotje(p.bezig);
+    if (p.bezig) potjeNu.hpRonde = Math.round(hp);
+    tipTekst('Welkom terug. Je haalde ronde ' + ronde + (p.bezig ? '; ronde ' + (ronde + 1) + ' begint opnieuw, met het leven dat je nog had' : '') + '. ' +
+      (fase === 'vragen' ? 'Nog ' + vragenOver + (vragenOver === 1 ? ' vraag' : ' vragen') + ', dan de winkel.' : fase === 'kies' ? 'Kies eerst een vaardigheid.' : 'De winkel staat open.'));
+    tekenDash(); tekenZij(); tekenHud();
+  }
+  /* een nieuw potje beginnen terwijl er een bewaard is: eerst vragen */
+  function nieuwPotjeOk(){
+    var p = leesPotje();
+    if (!p || (window.STRIJD && STRIJD.actief)) return true;
+    if (!confirm('Een nieuw potje beginnen? Je potje na ronde ' + p.ronde + ' ben je dan kwijt.')) return false;
+    wisPotje(); return true;
+  }
+  /* Bovenaan het startscherm: verder met je potje (groot), of verder met je vak.
+     Staat er een potje, dan is "Nieuw potje" met je vak de tweede knop. */
+  function tekenVerder(){
+    var box = document.getElementById('verderVak'), d = document.getElementById('anders');
+    if (!box || (window.STRIJD && STRIJD.actief)) return;
+    var p = leesPotje(); if (p && metLink && p.vak !== vak) p = null;
+    var h = '';
+    function vakNiv(v1, n1){
+      var vv = VAKKEN.filter(function(x){ return x.id === v1; })[0], nv = NIVEAUS.filter(function(x){ return x.id === n1; })[0];
+      return (vv ? vv.naam.toLowerCase() : v1) + ' \u00b7 ' + (nv ? nv.naam : n1);
+    }
+    if (p){
+      var stp = STIJLEN.filter(function(x){ return x.id === p.stijl; })[0];
+      h += '<button class="verderknop" type="button" id="potjeVerder">Verder met je potje: ronde ' + (p.ronde + 1) +
+        '<small>' + vakNiv(p.vak, p.niveau) + ' \u00b7 ronde ' + p.ronde + ' gehaald \u00b7 ' + (stp ? stp.naam.toLowerCase() + ' \u00b7 ' : '') + p.munten + ' munten' + (p.uitleg ? ' \u00b7 uitlegstand' : '') + '</small></button>';
+    }
+    if (laatstOk){
+      var st = STIJLEN.filter(function(x){ return x.id === stijl; })[0];
+      h += '<button class="verderknop' + (p ? ' tweede' : '') + '" type="button" id="verderStart">' + (p ? 'Nieuw potje' : 'Verder met ' + vakNiv(vak, niveau)) +
+        '<small>' + (p ? vakNiv(vak, niveau) + ', ' : '') + ((keuze[vak] || []).length ? keuze[vak].length + (keuze[vak].length === 1 ? ' onderdeel' : ' onderdelen') : 'alle onderdelen') + (st ? ', als ' + st.naam.toLowerCase() : '') + '</small></button>';
+    }
+    box.innerHTML = h;
+    box.classList.toggle('hide', !h);
+    if (h && !metLink && d.classList.contains('zonder')){ d.classList.remove('zonder'); d.open = false; }
+    var pv = document.getElementById('potjeVerder');
+    if (pv) pv.addEventListener('click', function(){
+      var q = leesPotje(); if (!q){ tekenVerder(); return; }
+      vak = q.vak; keuze[vak] = q.deel.slice(); niveau = q.niveau;
+      tekenNiveaus(); tekenVakken(); tekenDeelvakken(); tekenStartknop();
+      metVragen(function(){ begin(q); }, this);
+    });
+    var vs = document.getElementById('verderStart');
+    if (vs) vs.addEventListener('click', function(){ if (nieuwPotjeOk()) metVragen(begin, this); });
+  }
   /* Een eerste bezoek: rekenen staat al klaar (dat heeft geen vragenbestand
      nodig), zodat Start meteen kan. Een ander vak is een tik. */
   if (!vak && !(window.STRIJD && STRIJD.actief)){ vak = 'reken'; if (!keuze[vak]) keuze[vak] = []; }
-  tekenNiveaus(); tekenStijlen(); tekenVakken(); tekenDeelvakken(); tekenStartknop();
+  tekenNiveaus(); tekenStijlen(); tekenVakken(); tekenDeelvakken(); tekenStartknop(); tekenVerder();
   /* de echte hoogte van de kopbalk, voor de hoogte van de arena en de plek van het paneel */
   function meetKop(){ var h = document.querySelector('header'); if (h) document.documentElement.style.setProperty('--kop', h.offsetHeight + 'px'); }
   meetKop(); addEventListener('resize', meetKop);
