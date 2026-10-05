@@ -273,6 +273,60 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
     } catch (e){ return null; }
   }
 
+  /* ---------- het rooster van een klas ----------
+     ?week=1&klas=ABCD (en eventueel &wk=2026-W42): het dictee van die week zoals
+     de docent het in het klasoverzicht plande (Dictee-rooster). De sleutel van
+     de klas staat in deze browser; zonder sleutel, of als er niets gepland is,
+     blijft het de tekst die het dictee zelf kiest. */
+  var rooster = null, roosterNr = 0;
+  function klasSleutel(code){
+    try { var l = JSON.parse(localStorage.getItem('lg-klas-docent') || '[]'); var k = (Array.isArray(l) ? l : []).filter(function(x){ return x && x.code === code; })[0]; return k && k.sleutel || ''; } catch (e){ return ''; }
+  }
+  /* maandag van een week als 2026-W42, rond het middaguur */
+  function weekDatum(sleutel){
+    var m = /^(\d{4})-W(\d{2})$/.exec(sleutel || ''); if (!m) return new Date();
+    var j4 = Date.UTC(+m[1], 0, 4), wd = (new Date(j4).getUTCDay() + 6) % 7, d = new Date(j4 + ((+m[2] - 1) * 7 - wd) * DAG);
+    return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 12);
+  }
+  function kort(x, n){ return n && Array.isArray(x.zinnen) && x.zinnen.length > n ? Object.assign({}, x, { zinnen: x.zinnen.slice(0, n) }) : x; }
+  /* de tekst van het rooster voor dit niveau; een belofte, want een eigen dictee komt van de server */
+  function roosterTekst(nv){
+    var p = rooster.plan.t && rooster.plan.t[nv], D = window.DICTEE_OPGAVEN, datum = weekDatum(rooster.week);
+    var auto = function(n){
+      var x = D && D.weektekst ? D.weektekst(nv, datum) : null;
+      if (x && n && D.tekst(x.id)) x = D.tekst(x.id);
+      return x ? netteTekst(kort(x, n)) : null;
+    };
+    if (!p || p.bron === 'auto') return Promise.resolve(auto(p && p.n));
+    if (p.bron === 'bank'){ var b = D && D.tekst ? D.tekst(p.tekst) : null; return Promise.resolve(b ? netteTekst(kort(b, p.n)) : auto(0)); }
+    if (!window.EIGEN) return Promise.resolve(auto(0));
+    return EIGEN.haal(p.tekst).then(function(m){
+      if (!m || m.soort !== 'dictee') throw new Error('geen dictee');
+      var zu = Array.isArray(m.zu) ? m.zu : [];
+      return netteTekst(kort({ id: 'eigen-' + p.tekst, titel: m.naam || p.titel || 'Dictee', niveau: nv, uitleg: m.uitleg || '',
+        zinnen: (m.zinnen || []).map(function(z, i){ return zu[i] ? { z: z, u: zu[i] } : z; }) }, p.n));
+    });
+  }
+  function laadRooster(code, wk){
+    var sleutel = klasSleutel(code);
+    if (!sleutel || typeof fetch !== 'function'){ melding('Het rooster van klas ' + code + ' staat niet op dit apparaat. Je ziet de tekst die het dictee zelf kiest.'); kies(); return; }
+    melding('Het rooster van de klas ophalen…', true);
+    fetch('/api/klas/' + code + '/rooster', { method:'POST', headers:{ 'content-type':'application/json' }, body: JSON.stringify({ sleutel: sleutel }) })
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        var week = /^\d{4}-W\d{2}$/.test(wk || '') ? wk : (j && j.nu) || '';
+        var plan = j && j.rooster && week ? j.rooster[week] : null;
+        if (plan && !plan.uit){
+          rooster = { code: code, week: week, plan: plan };
+          roosterNr = +week.slice(-2);
+          var niv = Object.keys(plan.t || {});
+          if (niv.length === 1 || (niv.length && niv.indexOf($('niveau').value) < 0 && !DNIV[zoek.get('n')])) $('niveau').value = niv[0];
+        } else if (plan && plan.uit) { melding('In week ' + (+week.slice(-2)) + ' heeft deze klas geen dictee.'); return; }
+        kies();
+      })
+      .catch(function(){ melding('Het rooster ophalen lukte niet. Je ziet de tekst die het dictee zelf kiest.'); kies(); });
+  }
+
   /* Geen lijst met lastige woorden (een eigen dictee): dan kiest het blad zelf
      de woorden waar de spelling om draait, met de regel erbij. */
   /* woorden die iedereen al kan schrijven, ook al staat er ij in */
@@ -319,7 +373,7 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
     var t = laatste;
     if (!t){ $('bladen').innerHTML = ''; $('schermtip').classList.add('hide'); $('print').disabled = true; return; }
     var woorden = t.lastig.length ? t.lastig : geraden(t.zinnen);
-    var w = isoWeek(Date.now());
+    var w = { nr: t.weekNr || isoWeek(Date.now()).nr };
     var sub = [t.niveau ? DNIV[t.niveau] : '', t.week ? 'week ' + w.nr : '', t.zinnen.length + ' zinnen'].filter(Boolean).join(' · ');
     var titel = t.week ? 'Dictee van week ' + w.nr + ': ' + t.titel : t.titel;
     var lees = '<section class="blad" aria-label="Voorleesblad"><div class="bkop"><div><h2>' + schoon(titel) + '</h2><p class="sub">Voorleesblad · ' + schoon(sub) + '</p></div></div>' +
@@ -372,7 +426,24 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
     tekstLijst();
     melding('');
     var geenBank = !window.DICTEE_OPGAVEN || !ruweTeksten().length;
-    if (bron === 'week'){
+    if (bron === 'week' && rooster){
+      /* uit het rooster van de klas */
+      var nv = $('niveau').value, vraag = kies.vraag = (kies.vraag || 0) + 1;
+      laatste = null; teken();
+      $('weekregel').textContent = 'Week ' + roosterNr + ', ' + DNIV[nv] + ': even ophalen…';
+      roosterTekst(nv).then(function(t){
+        if (vraag !== kies.vraag || bron !== 'week') return;
+        if (!t || !t.zinnen.length){ melding('Voor dit niveau is er die week geen tekst gevonden.'); return; }
+        t.week = true; t.weekNr = roosterNr; laatste = t;
+        if (!DNIV[t.niveau]) t.niveau = nv;
+        $('weekregel').innerHTML = 'Week ' + roosterNr + ', ' + schoon(DNIV[nv]) + ': <b>' + schoon(t.titel) + '</b> · uit het dictee-rooster van klas ' + schoon(rooster.code);
+        teken();
+      }).catch(function(){
+        if (vraag !== kies.vraag) return;
+        melding('Het dictee van die week kon niet worden opgehaald. Bestaat de code nog?');
+      });
+      return;
+    } else if (bron === 'week'){
       var t = weekTekst($('niveau').value), w = isoWeek(Date.now());
       if (t && t.zinnen.length){ t.week = true; laatste = t; $('weekregel').innerHTML = 'Week ' + w.nr + ', ' + schoon(DNIV[$('niveau').value]) + ': <b>' + schoon(t.titel) + '</b>'; }
       else { laatste = null; $('weekregel').textContent = 'Week ' + w.nr + '.'; melding(geenBank ? 'De teksten van het dictee staan nog niet op deze pagina. Kies een eigen dictee.' : 'Voor dit niveau is er deze week geen tekst gevonden.'); }
@@ -422,6 +493,7 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
   var n0 = zoek.get('n');
   if (DNIV[n0]) $('niveau').value = n0;
   if (zoek.get('eigen')) { bron = 'eigen'; kies(); haalEigen(zoek.get('eigen')); }
+  else if (zoek.get('klas') && /^[A-Za-z]{4}$/.test(zoek.get('klas'))) { bron = 'week'; laadRooster(zoek.get('klas').toUpperCase(), zoek.get('wk') || ''); }
   else {
     if (zoek.get('tekst')){
       bron = 'tekst';

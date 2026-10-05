@@ -229,8 +229,88 @@
   })();
   function docentTekst(keuze){
     if (!docent) return null;
-    if (docent.wat === 'week') return D.weektekst((keuze && keuze.niveau) || 'kgt');
+    if (docent.wat === 'week') return roosterTekst((keuze && keuze.niveau) || 'kgt');
     return vasteTekst;
+  }
+
+  /* ---------- het rooster van de klas ----------
+     Bij ?week=1 met een klascode kan de docent het dictee van de week zelf
+     gekozen hebben (klasoverzicht, Dictee-rooster): per niveau de tekst die het
+     dictee kiest met een ander aantal zinnen, een tekst uit de bank, of een
+     eigen dictee. De server geeft bij /mijn alleen de week die nu loopt. Niets
+     gepland, geen klas of geen verbinding: de tekst die het dictee zelf kiest. */
+  var rooster = null, roosterKlaar = {}, roosterWacht = false;
+  /* een eigen dictee van de server als tekst: zinnen met hun uitleg (zu), hoogstens veertig */
+  function eigenTekst(m, code){
+    var x = m && m.inhoud && Array.isArray(m.inhoud.zinnen) ? m.inhoud : m;
+    if (!x || (x.soort && x.soort !== 'dictee') || !Array.isArray(x.zinnen)) throw new Error('Deze code hoort niet bij een dictee.');
+    var zu = Array.isArray(x.zu) ? x.zu : [];
+    var zinnen = x.zinnen.map(function(z, i){
+      var t = String(typeof z === 'string' ? z : (z && z.z) || '').replace(/\s+/g, ' ').trim(), u = String(zu[i] || (z && z.u) || '').slice(0, 300);
+      return t ? (u ? { z: t, u: u } : t) : null;
+    }).filter(Boolean).slice(0, 40);
+    if (!zinnen.length) throw new Error('In dit dictee staan nog geen zinnen.');
+    return { id:'eigen-' + code, titel: String(x.naam || (m && m.naam) || 'Dictee').slice(0, 80), n: NIV[x.niveau] || 0,
+      zinnen: zinnen, uitleg: x.uitleg ? String(x.uitleg).slice(0, 600) : '' };
+  }
+  function ingekort(t, n){ return t && n && t.zinnen.length > n ? Object.assign({}, t, { zinnen: t.zinnen.slice(0, n) }) : t; }
+  /* de tekst die het dictee zelf kiest in de week van het rooster (die kan al voorbij zijn: een periode tot dinsdag) */
+  function autoTekst(nv, n){
+    var datum = rooster && rooster.ma ? new Date(rooster.ma + 12 * 3600000) : new Date();
+    var t = D.weektekst(nv, datum);
+    if (!t || !n) return t;
+    return ingekort(D.tekst(t.id) || t, n);
+  }
+  function roosterTekst(nv){
+    if (!rooster || rooster.uit) return D.weektekst(nv);
+    if (roosterKlaar[nv]) return roosterKlaar[nv];
+    var p = rooster.t && rooster.t[nv];
+    if (!p || p.bron === 'auto') return autoTekst(nv, p && p.n);
+    if (p.bron === 'bank') return ingekort(D.tekst(p.tekst), p.n) || autoTekst(nv, 0);
+    return null;   /* een eigen dictee: nog onderweg */
+  }
+  function laadRooster(){
+    var k = window.KLAS && KLAS.lees && KLAS.lees();
+    if (!docent || docent.wat !== 'week' || !k || typeof fetch !== 'function') return;
+    roosterWacht = true;
+    var sb = $('startBtn'); if (sb) sb.disabled = true;
+    toonKlaar();
+    var klaar = function(){ roosterWacht = false; if (sb) sb.disabled = false; zetRoosterNiveau(); toonKlaar(); };
+    /* een trage verbinding houdt het dictee niet tegen: na vijf tellen de tekst van de week */
+    var klok = setTimeout(function(){ if (roosterWacht){ rooster = null; klaar(); } }, 5000);
+    fetch('/api/klas/' + k.code + '/mijn?sid=' + encodeURIComponent(KLAS.sid()), { cache:'no-store' })
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        var r = j && j.dictee;
+        if (!r || !r.week || !roosterWacht) return null;
+        rooster = r;
+        /* de eigen dictees van de week ophalen, per niveau */
+        var t = r.t || {};
+        return Promise.all(Object.keys(t).filter(function(nv){ return t[nv] && (t[nv].bron === 'eigen' || t[nv].bron === 'zelf'); }).map(function(nv){
+          return (window.EIGEN && EIGEN.haal ? EIGEN.haal(t[nv].tekst) : Promise.reject(new Error('geen EIGEN'))).then(function(m){
+            var x = eigenTekst(m, String(t[nv].tekst).toUpperCase());
+            if (!x.n) x.n = NIV[nv];
+            roosterKlaar[nv] = ingekort(x, t[nv].n);
+          }).catch(function(){ /* weg of niet te halen: dan de tekst die het dictee zelf kiest */ roosterKlaar[nv] = autoTekst(nv, 0); });
+        }));
+      })
+      .catch(function(){ rooster = null; })
+      .then(function(){ clearTimeout(klok); if (roosterWacht) klaar(); });
+  }
+  /* een niveau gepland: dan is dat het niveau, net als ?n= van de docent */
+  function zetRoosterNiveau(){
+    var t = rooster && !rooster.uit ? Object.keys(rooster.t || {}) : [];
+    if (t.length !== 1) return;
+    var b = document.querySelector('#keuze-niveau button[data-id="' + t[0] + '"]');
+    if (b && !b.classList.contains('on')) b.click();
+    var vak = $('keuze-niveau'); if (vak) vak.classList.add('hide');
+    var kop = $('kop-niveau'); if (kop) kop.textContent = 'hoe moeilijk: ' + (NIVNAAM[t[0]] || t[0]) + ', gekozen door je docent';
+  }
+  function weekNr(){ return rooster && !rooster.uit ? rooster.nr : D.isoWeek().week; }
+  function weekSleutel(){
+    if (rooster && !rooster.uit) return rooster.week;
+    var wk = D.isoWeek();
+    return wk.jaar + '-W' + (wk.week < 10 ? '0' : '') + wk.week;
   }
   var NIVEAU = { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
     { id:'bb', naam:'vmbo-bb', uit:'Korte zinnen, de basisregels van de werkwoordspelling, namen en plaatsnamen, en veelgebruikte woorden.' },
@@ -295,9 +375,10 @@
       knoppen.parentNode.insertBefore(blok, knoppen);
     }
     if (docentFout){ blok.innerHTML = '<p class="klaarfout">' + S(docentFout) + '</p>'; return; }
-    var t = docent.wat === 'week' ? D.weektekst(huidigNiveau()) : vasteTekst;
-    /* van=opdracht: de leerling kwam via de knop van een opdracht van de docent */
-    var kop = docent.wat === 'week' ? (opdracht ? 'Klaargezet door je docent &middot; dictee van week ' : 'Dictee van deze week &middot; week ') + D.isoWeek().week : 'Klaargezet door je docent';
+    var t = docent.wat === 'week' ? (roosterWacht ? null : roosterTekst(huidigNiveau())) : vasteTekst;
+    /* van=opdracht: de leerling kwam via de knop van een opdracht van de docent; uit het rooster komt hij ook van de docent */
+    var vanDocent = opdracht || (rooster && !rooster.uit);
+    var kop = docent.wat === 'week' ? (vanDocent ? 'Klaargezet door je docent &middot; dictee van week ' : 'Dictee van deze week &middot; week ') + weekNr() : 'Klaargezet door je docent';
     if (!t){ blok.innerHTML = '<p class="eyebrow">' + kop + '</p><h2>Even ophalen&hellip;</h2>'; return; }
     var nv = docent.wat === 'week' ? huidigNiveau() : NIVID[t.n];
     blok.innerHTML = '<p class="eyebrow">' + kop + '</p><h2>' + S(t.titel) + '</h2><p class="klaarmeta">' +
@@ -311,18 +392,15 @@
       var kn = $('keuze-niveau'); if (kn) kn.addEventListener('click', function(){ setTimeout(toonKlaar, 0); });
     }
     if (docent && docent.wat === 'eigen') laadEigen();
+    /* klas.js komt na dit script: het rooster pas als de pagina er staat */
+    if (docent && docent.wat === 'week'){ if (window.KLAS) laadRooster(); else document.addEventListener('DOMContentLoaded', laadRooster); }
   }
   function laadEigen(){
     var sb = $('startBtn'); if (sb) sb.disabled = true;
     var belofte = window.EIGEN && EIGEN.haal ? EIGEN.haal(docent.code) : Promise.reject(new Error('Het dictee kon niet worden opgehaald.'));
     belofte.then(function(m){
-      /* het materiaal zelf, of (als de server het ooit inpakt) in m.inhoud */
-      var x = m && m.inhoud && Array.isArray(m.inhoud.zinnen) ? m.inhoud : m;
-      if (!x || (x.soort && x.soort !== 'dictee') || !Array.isArray(x.zinnen)) throw new Error('Deze code hoort niet bij een dictee.');
-      var zinnen = x.zinnen.map(function(z){ return String(typeof z === 'string' ? z : (z && z.z) || '').replace(/\s+/g, ' ').trim(); }).filter(Boolean).slice(0, 40);
-      if (!zinnen.length) throw new Error('In dit dictee staan nog geen zinnen.');
-      vasteTekst = { id:'eigen-' + docent.code, titel: String(x.naam || (m && m.naam) || 'Dictee').slice(0, 80), n: NIV[x.niveau] || 0,
-        zinnen: zinnen, uitleg: x.uitleg ? String(x.uitleg).slice(0, 600) : '' };
+      /* het materiaal zelf, of (als de server het ooit inpakt) in m.inhoud; met de uitleg per zin als die er is */
+      vasteTekst = eigenTekst(m, docent.code);
       toonKlaar();
       if (sb) sb.disabled = false;
     }).catch(function(f){
@@ -428,10 +506,9 @@
           if (p.ok || !p.g) return;
           p.g.split(' ').forEach(function(x){ x = x.replace(/^["'‘“(]+|["'’”),.?!;:]+$/g, ''); if (x && fout.indexOf(x) < 0 && fout.length < 40) fout.push(x); });
         }); }); });
-        var wk = D.isoWeek();
         klasExtra = { goed: w.goed, woorden: w.van, fout: fout };
         if (een) klasExtra.tekst = een.id;
-        if (docent && docent.wat === 'week') klasExtra.week = wk.jaar + '-W' + (wk.week < 10 ? '0' : '') + wk.week;
+        if (docent && docent.wat === 'week') klasExtra.week = weekSleutel();
       }
       return eigenlijk.call(this, o);
     };

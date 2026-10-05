@@ -356,7 +356,7 @@ async function verdeel(req, env, ctx){
     }
 
     /* het klasoverzicht: leerlingen melden hun uitslag, de docent haalt ze op met de sleutel */
-    const kl = p.match(/^\/api\/klas\/([A-Za-z]{4})(\/meld|\/melden|\/opheffen|\/opdracht|\/mijn|\/instelling|\/periodes|\/naam|\/echt|\/hoi|\/leerlingweg|\/besproken)?\/?$/);
+    const kl = p.match(/^\/api\/klas\/([A-Za-z]{4})(\/meld|\/melden|\/opheffen|\/opdracht|\/mijn|\/instelling|\/periodes|\/naam|\/echt|\/hoi|\/leerlingweg|\/besproken|\/rooster)?\/?$/);
     if (kl){
       const stub = env.KAMERS.get(env.KAMERS.idFromName(kl[1].toUpperCase()));
       /* de leerling: heb ik de opdracht gehaald? */

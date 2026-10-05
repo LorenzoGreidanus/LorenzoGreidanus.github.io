@@ -213,11 +213,108 @@ function dicteePast(r, o){
   }
   return !!r.dt && r.dt === o.dt && r.t >= o.sinds;
 }
-/* de opdracht zoals hij nu is: een dictee dat elke week vanzelf vernieuwt krijgt de week van vandaag */
-function opdrachtNu(o, nu){
+/* De opdracht zoals hij nu is: een dictee dat elke week vanzelf vernieuwt krijgt de week van vandaag.
+   Staat die week in het dictee-rooster van de klas, dan geldt het rooster: de periode, de titel en
+   het niveau komen daarvandaan, en een week zonder dictee of zonder opdracht krijgt uit: true
+   (de leerling ziet hem dan niet, de docent wel). */
+function opdrachtNu(o, nu, rooster){
   if (!o || o.spel !== "dictee" || !o.auto) return o;
-  const w = dicteeWeek(nu);
-  return Object.assign({}, o, { week: w.sleutel, weekNr: w.nr, sinds: w.van, tot: w.tot });
+  const w = dicteeWeek(nu), r = roosterNu(rooster, nu);
+  if (!r) return Object.assign({}, o, { week: w.sleutel, weekNr: w.nr, sinds: w.van, tot: w.tot });
+  return Object.assign({}, o, { week: r.week, weekNr: r.nr, sinds: r.van, tot: r.tot, rooster: true,
+    niveau: roosterNiveau(r) || o.niveau, titel: roosterTitel(r), uit: !!r.uit || !r.opdracht });
+}
+
+/* ---------- het dictee-rooster ----------
+   Per klas en per week welke tekst het dictee van de week is: de tekst die het
+   dictee zelf kiest (auto, eventueel met een ander aantal zinnen), een tekst uit
+   de bank (t-kgt-03), of een eigen dictee (een code van Eigen materiaal; zelf:
+   in het rooster geschreven, eigen: een bestaand). Per niveau mag het anders.
+     rooster: { "2026-W42": { van, tot, opdracht, uit?, t: { kgt: { bron, tekst, n, titel } } } }
+   van en tot: standaard maandag 0:00 tot zondag 23:59 van die week, en anders
+   wat de docent koos. opdracht: in die week vanzelf een opdracht voor de klas.
+   uit: deze week geen dictee (vakantie). De zinnen zelf staan hier niet: die
+   staan in de bank of bij Eigen materiaal, met hun eigen controle. */
+const ROOSTER_BRONNEN = { auto: 1, bank: 1, eigen: 1, zelf: 1 };
+const ROOSTER_MAX = 60, ROOSTER_ZINNEN = 40;
+/* maandag 0:00 en zondag 23:59 van een week als 2026-W42, of null als die week niet bestaat */
+function weekGrenzen(sleutel){
+  const m = /^(\d{4})-W(\d{2})$/.exec(String(sleutel || ""));
+  if (!m) return null;
+  const j4 = Date.UTC(+m[1], 0, 4), wd = (new Date(j4).getUTCDay() + 6) % 7;
+  const ma = new Date(j4 + ((+m[2] - 1) * 7 - wd) * DAG_MS), zo = new Date(ma.getTime() + 6 * DAG_MS);
+  const van = amsTijd(ma.getUTCFullYear(), ma.getUTCMonth() + 1, ma.getUTCDate(), 0, 0);
+  if (dicteeWeek(van + 12 * 3600000).sleutel !== sleutel) return null;
+  return { van, tot: amsTijd(zo.getUTCFullYear(), zo.getUTCMonth() + 1, zo.getUTCDate(), 23, 59) };
+}
+/* De week van het rooster die nu loopt: van de weken waarvan de periode nu
+   loopt de laatst begonnen; anders de week van de kalender, als die gepland is.
+   Niets gepland: null, en dan is het de tekst die het dictee zelf kiest. */
+export function roosterNu(rooster, nu){
+  if (!rooster || typeof rooster !== "object") return null;
+  let beste = null;
+  for (const k of Object.keys(rooster)){
+    const p = rooster[k];
+    if (p && nu >= p.van && nu <= p.tot && (!beste || p.van > beste.van)) beste = Object.assign({ week: k }, p);
+  }
+  const w = dicteeWeek(nu).sleutel;
+  if (!beste && rooster[w]) beste = Object.assign({ week: w }, rooster[w]);
+  if (beste) beste.nr = +beste.week.slice(-2);
+  return beste;
+}
+/* een niveau als er maar een gepland is; bij meer telt elk niveau */
+function roosterNiveau(r){ const k = Object.keys((r && r.t) || {}); return k.length === 1 ? k[0] : ""; }
+function roosterTitel(r){ const t = (r && r.t) || {}; return Object.keys(t).map(k => t[k].titel).filter(Boolean).join(" / ").slice(0, 80); }
+/* een geplande week, schoon en gecontroleerd; geeft { plan } of { fout } */
+export function roosterPlan(week, p, nu){
+  const g = weekGrenzen(week);
+  if (!g) return { fout: "dat is geen week" };
+  if (g.tot < nu - 120 * DAG_MS || g.van > nu + 200 * DAG_MS) return { fout: "plan hoogstens een half jaar vooruit" };
+  if (!p || typeof p !== "object") return { fout: "geen plan" };
+  /* de periode: standaard de hele week; anders binnen een week ervoor en erna, en hoogstens drie weken lang */
+  let van = p.van === undefined || p.van === null || p.van === "" ? g.van : getal(p.van, 4e12);
+  let tot = p.tot === undefined || p.tot === null || p.tot === "" ? g.tot : getal(p.tot, 4e12);
+  if (van < g.van - 7 * DAG_MS || van > g.tot) return { fout: "de periode begint in of vlak voor die week" };
+  if (tot <= van) return { fout: "de einddatum ligt voor de begindatum" };
+  if (tot - van > 21 * DAG_MS) return { fout: "een periode is hoogstens drie weken" };
+  const plan = { van, tot, opdracht: p.opdracht !== false, t: {} };
+  if (p.uit === true){ plan.uit = true; return { plan }; }
+  const t = p.t && typeof p.t === "object" ? p.t : {};
+  for (const niv of Object.keys(t).slice(0, 6)){
+    if (!DICTEE_NIVEAUS[niv]) continue;
+    const x = t[niv] || {}, bron = ROOSTER_BRONNEN[x.bron] ? String(x.bron) : "";
+    if (!bron) return { fout: "kies waar de tekst vandaan komt" };
+    const n = getal(x.n, ROOSTER_ZINNEN);
+    if (n && n < 3) return { fout: "een dictee heeft minstens drie zinnen" };
+    const uit = { bron, n, titel: schoon(x.titel, 80).replace(/[<>]/g, "") };
+    if (bron === "bank"){
+      const dt = dicteeTekst(x.tekst);
+      if (!dt || dt.indexOf("eigen-") === 0) return { fout: "kies een tekst uit de lijst" };
+      uit.tekst = dt;
+    } else if (bron !== "auto"){
+      const code = String(x.tekst || "").toUpperCase().replace(/^EIGEN-/, "").replace(/[^A-Z0-9]/g, "");
+      if (!/^[A-Z0-9]{6}$/.test(code)) return { fout: "een eigen dictee heeft een code van zes tekens" };
+      uit.tekst = code;
+    }
+    plan.t[niv] = uit;
+  }
+  if (!Object.keys(plan.t).length) return { fout: "kies een niveau en een tekst" };
+  return { plan };
+}
+/* wat de leerling van het rooster ziet: alleen de week die nu loopt */
+function roosterVoorLeerling(r){
+  if (!r) return null;
+  const g = weekGrenzen(r.week);
+  return { week: r.week, nr: r.nr, ma: g ? g.van : r.van, van: r.van, tot: r.tot, uit: !!r.uit, t: r.uit ? {} : r.t };
+}
+/* Geen opdracht voor het dictee van de week, maar het rooster wil er deze week
+   wel een: dan staat hij er vanzelf bij, zolang de week loopt. */
+function roosterOpdracht(lijst, rooster, nu){
+  const r = roosterNu(rooster, nu);
+  if (!r || r.uit || !r.opdracht || nu < r.van || nu > r.tot) return null;
+  if (lijst.some(o => o && o.spel === "dictee" && o.bron === "week" && o.auto)) return null;
+  return { id: "rooster", spel: "dictee", vak: "ned", deel: "", deelNaam: "", min: 1, bron: "week", auto: true, rooster: true,
+    niveau: roosterNiveau(r), titel: roosterTitel(r), tekst: "", week: r.week, weekNr: r.nr, sinds: r.van, tot: r.tot };
 }
 function maatVoor(r, o){
   /* bij het dictee: het deel van de woorden dat goed was, in procenten */
@@ -439,6 +536,7 @@ export class Kamer extends DurableObject {
       if (url.pathname === "/hoi" && req.method === "POST") return await this.hoi(await req.json());
       if (url.pathname === "/leerlingweg" && req.method === "POST") return await this.leerlingWeg(await req.json());
       if (url.pathname === "/besproken" && req.method === "POST") return await this.besproken(await req.json());
+      if (url.pathname === "/rooster" && req.method === "POST") return await this.dicteeRooster(await req.json());
       if (url.pathname === "/mijn") return this.mijn(url.searchParams.get("sid"));
       if (req.headers.get("Upgrade") === "websocket") return this.verbind(url);
       return json({ fout: "onbekend" }, 404);
@@ -1930,7 +2028,7 @@ export class Kamer extends DurableObject {
       if (d.fout) return json({ fout: d.fout }, 400);
       lijst.push(d);
       await this.bewaar();
-      return json({ ok: true, opdracht: opdrachtNu(d, Date.now()), opdrachten: lijst.map(x => opdrachtNu(x, Date.now())) });
+      return json({ ok: true, opdracht: opdrachtNu(d, Date.now(), this.stand.rooster), opdrachten: lijst.map(x => opdrachtNu(x, Date.now(), this.stand.rooster)) });
     }
     if (!vak) return json({ fout: "kies een vak" }, 400);
     const min = getal(o.min, 250), tot = getal(o.tot, 4e12);
@@ -1939,7 +2037,7 @@ export class Kamer extends DurableObject {
     const nieuw = { id: sleutelMaken(3), spel, vak, deel, deelNaam: schoon(o.deelNaam, 60), min, tot, tekst: schoon(o.tekst, 140), sinds: Date.now() };
     lijst.push(nieuw);
     await this.bewaar();
-    return json({ ok: true, opdracht: nieuw, opdrachten: lijst.map(x => opdrachtNu(x, Date.now())) });
+    return json({ ok: true, opdracht: nieuw, opdrachten: lijst.map(x => opdrachtNu(x, Date.now(), this.stand.rooster)) });
   }
   /* Een dictee als opdracht, schoon en gecontroleerd. De titel komt van de pagina
      van de docent (uit de tekstbank of de naam van zijn eigen dictee) en is
@@ -1971,6 +2069,31 @@ export class Kamer extends DurableObject {
     if (tot < nu - 3600000 || tot > nu + 120 * 86400000) return { fout: "kies een datum binnen vier maanden" };
     d.tot = tot;
     return d;
+  }
+  /* Het dictee-rooster (zie roosterPlan). Met alleen de sleutel: het hele rooster
+     (voor het voorleesblad). Met week en plan: die week zetten; plan null haalt
+     hem weg, dan is het weer de tekst die het dictee zelf kiest. Hoogstens
+     ROOSTER_MAX weken; de oudste gaan eerst. */
+  async dicteeRooster(inz){
+    if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
+    if (!inz || inz.sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
+    const nu = Date.now();
+    if (inz.week !== undefined){
+      const week = dicteeWeekSleutel(inz.week);
+      if (!week) return json({ fout: "dat is geen week" }, 400);
+      const r = Object.assign({}, this.stand.rooster || {});
+      if (inz.plan === null) delete r[week];
+      else {
+        const p = roosterPlan(week, inz.plan, nu);
+        if (p.fout) return json({ fout: p.fout }, 400);
+        r[week] = p.plan;
+      }
+      const k = Object.keys(r).sort();
+      k.slice(0, Math.max(0, k.length - ROOSTER_MAX)).forEach(x => { delete r[x]; });
+      if (Object.keys(r).length) this.stand.rooster = r; else delete this.stand.rooster;
+      await this.bewaar();
+    }
+    return json({ ok: true, rooster: this.stand.rooster || {}, nu: (roosterNu(this.stand.rooster, nu) || {}).week || "" });
   }
   /* De instellingen van een klas: welke spellen de leerlingen zien, en of de lesmodus aanstaat.
      Leeg lijstje betekent: alles mag. In de lesmodus ziet een gekoppelde leerling alleen die spellen. */
@@ -2082,9 +2205,10 @@ export class Kamer extends DurableObject {
       /* zat deze leerling bij de eigenaar van de site in de klas? */
       oudleerling: !!this.stand.vanEigenaar, klasdoel: this.klasdoelStand(s) };
     const mijn = this.stand.resultaten.filter(r => r.sid === s);
-    const nu = Date.now();
-    const lijst = this.opdrachtLijst().map(o0 => {
-      const o = opdrachtNu(o0, nu);
+    const nu = Date.now(), rooster = this.stand.rooster;
+    /* uit het rooster: deze week geen dictee, of geen opdracht; dan ziet de leerling hem niet */
+    const eigenlijk = this.opdrachtLijst(), extra = roosterOpdracht(eigenlijk, rooster, nu);
+    const lijst = eigenlijk.concat(extra ? [extra] : []).map(o0 => opdrachtNu(o0, nu, rooster)).filter(o => !o.uit).map(o => {
       const x = Object.assign({}, o, { gehaald: mijn.some(r => haaltOpdracht(r, o)), beste: mijn.reduce((a, r) => Math.max(a, maatVoor(r, o)), 0) });
       /* bij het dictee ook hoeveel woorden goed, van de beste keer */
       if (o.spel === "dictee"){
@@ -2095,6 +2219,8 @@ export class Kamer extends DurableObject {
     });
     /* de eerste ook los, voor een pagina van voor de lijst */
     const eerste = lijst[0] || null;
+    /* het dictee van de week uit het rooster van de klas, voor dictee.html?week=1 */
+    opzet.dictee = roosterVoorLeerling(roosterNu(rooster, nu));
     return json(Object.assign({ opdrachten: lijst, opdracht: eerste, gehaald: eerste ? eerste.gehaald : false, beste: eerste ? eerste.beste : 0 }, opzet));
   }
   /* Een leerling uit de klas halen: hij verdwijnt uit de lijst en zijn
@@ -2145,11 +2271,13 @@ export class Kamer extends DurableObject {
     if (!this.stand.samengevoegd){ this.samenvoegen(); await this.bewaar(); }
     /* kijken telt ook als gebruik, hoogstens een keer per uur bijgeschreven */
     if (Date.now() - this.stand.laatst > 3600000){ await this.zetAlarm({ wat: "opruimen" }, KLAS_SLAAPT); await this.bewaar(); }
-    const opdrachten = this.opdrachtLijst().map(o => opdrachtNu(o, Date.now()));
+    const nu = Date.now(), eigenlijk = this.opdrachtLijst(), extra = roosterOpdracht(eigenlijk, this.stand.rooster, nu);
+    const opdrachten = eigenlijk.concat(extra ? [extra] : []).map(o => opdrachtNu(o, nu, this.stand.rooster));
     return json({ code: this.stand.code, naam: this.stand.naam, gemaakt: this.stand.gemaakt, opdracht: opdrachten[0] || null, opdrachten,
                   klasdoel: this.klasdoelStand(),
                   spellen: this.stand.spellen || [], lesmodus: this.lesmodusAan(), lesmodusTot: this.lesmodusAan() ? (this.stand.lesmodusTot || 0) : 0,
                   periodes: this.stand.periodes || [], echt: this.stand.echt || {}, fk: this.fkLijst(),
+                  rooster: this.stand.rooster || {}, roosterNu: (roosterNu(this.stand.rooster, nu) || {}).week || "",
                   leerlingen: this.gekoppeld(),
                   /* elke uitslag onder de huidige bijnaam van de leerling: wie van naam wisselde of op een tweede apparaat speelde, staat er zo een keer in */
                   /* ingelogd met Microsoft: de docent ziet de accountnaam, niet de bijnaam */
@@ -2172,7 +2300,7 @@ export class Kamer extends DurableObject {
     const st = this.stand, basis = { code: st.code, spel: st.spel, vak: st.vak, niveau: st.niveau, deel: st.deel || "", fase: st.fase };
     /* verhuisd naar een nieuwe kamer: wie de oude code nog intypt, kan door naar de nieuwe */
     if (st.verhuis) basis.verhuis = st.verhuis;
-    if (st.spel === "klas") return Object.assign(basis, { naam: st.naam, n: st.resultaten.length, gemaakt: st.gemaakt, opdracht: opdrachtNu(this.opdrachtLijst()[0], Date.now()) || null });
+    if (st.spel === "klas") return Object.assign(basis, { naam: st.naam, n: st.resultaten.length, gemaakt: st.gemaakt, opdracht: opdrachtNu(this.opdrachtLijst()[0], Date.now(), st.rooster) || null });
     if (this.strijd){
       const lijst = this.strijdLijst();
       return Object.assign(basis, { game: st.game, modus: st.modus || undefined, duel: !!st.duel, max: st.duel ? this.samenMax() : undefined, gastheer: st.gastheer ? this.pid(st.gastheer) : null, gestart: st.gestart, bezig: lijst.filter(r => !r.af).length, spelers: lijst });

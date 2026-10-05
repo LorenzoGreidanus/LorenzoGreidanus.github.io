@@ -71,9 +71,17 @@ function ongepast(tekst){
     return !DICTEE_MAG.test(w.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z]/g, ""));
   });
 }
+/* Een zin mag ook { z, u } zijn: de zin met een korte uitleg erbij (het dictee-rooster
+   in het klasoverzicht). De uitleg staat apart in zu, op dezelfde plek als zijn zin, zodat
+   een oudere pagina de zinnen gewoon als tekst blijft krijgen. */
+const UITLEG_ZIN = 200;
 function dictee(inz){
-  const ruw = Array.isArray(inz.zinnen) ? inz.zinnen : [];
-  const zinnen = ruw.slice(0, 100).map(z => String(z == null ? "" : z).replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim()).filter(Boolean);
+  const ruw = (Array.isArray(inz.zinnen) ? inz.zinnen : []).slice(0, 100);
+  const kaal = x => String(x == null ? "" : x).replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
+  const paren = ruw.map((z, i) => z && typeof z === "object"
+    ? { z: kaal(z.z), u: kaal(z.u).slice(0, UITLEG_ZIN) }
+    : { z: kaal(z), u: Array.isArray(inz.zu) ? kaal(inz.zu[i]).slice(0, UITLEG_ZIN) : "" }).filter(p => p.z);
+  const zinnen = paren.map(p => p.z), zu = paren.map(p => p.u);
   if (zinnen.length < ZINNEN_MIN) return { fout: "een dictee heeft minstens " + ZINNEN_MIN + " zinnen nodig" };
   if (zinnen.length > ZINNEN_MAX) return { fout: "een dictee heeft hoogstens " + ZINNEN_MAX + " zinnen; maak er twee van" };
   const lang = zinnen.findIndex(z => z.length > ZIN_MAX);
@@ -85,7 +93,13 @@ function dictee(inz){
   const vies = zinnen.findIndex(ongepast);
   if (vies >= 0) return { fout: "in zin " + (vies + 1) + " staat een woord dat hier niet kan" };
   if (ongepast(uitleg)) return { fout: "in de uitleg staat een woord dat hier niet kan" };
-  return { soort: "dictee", naam, vak: t(inz.vak, 12), niveau: DICTEE_NIVEAUS[inz.niveau] ? inz.niveau : "", zinnen, uitleg };
+  const zuFout = zu.findIndex(u => /[<>]/.test(u) || ongepast(u));
+  if (zuFout >= 0) return { fout: "in de uitleg bij zin " + (zuFout + 1) + (/[<>]/.test(zu[zuFout]) ? " staan de tekens < of >" : " staat een woord dat hier niet kan") };
+  const uit = { soort: "dictee", naam, vak: t(inz.vak, 12), niveau: DICTEE_NIVEAUS[inz.niveau] ? inz.niveau : "", zinnen, uitleg };
+  if (zu.some(Boolean)) uit.zu = zu;
+  /* zonder zu (een oudere pagina die alleen de zinnen stuurt): werk() houdt de uitleg bij een zin die bleef */
+  else if (!Array.isArray(inz.zu) && !ruw.some(z => z && typeof z === "object")) uit.zuOnbekend = true;
+  return uit;
 }
 
 /* Wat er binnenkomt, schoon en in vorm. Geeft null als het niet deugt. */
@@ -260,6 +274,7 @@ export class Materiaal extends DurableObject {
     const m = netjes(inz);
     if (!m) return json({ fout: "geen geldig materiaal" }, 400);
     if (m.fout) return json({ fout: m.fout }, 400);
+    delete m.zuOnbekend;
     let code = willekeurig(6, LETTERS);
     while (await this.ctx.storage.get("m:" + code)) code = willekeurig(6, LETTERS);
     const sleutel = willekeurig(20, LETTERS);
@@ -274,6 +289,16 @@ export class Materiaal extends DurableObject {
     const m = netjes(inz);
     if (!m) return json({ fout: "geen geldig materiaal" }, 400);
     if (m.fout) return json({ fout: m.fout }, 400);
+    /* Een dictee uit maken.html stuurt alleen de zinnen: de uitleg per zin (uit het
+       dictee-rooster) blijft bij elke zin die er nog precies zo staat. */
+    if (m.zuOnbekend){
+      delete m.zuOnbekend;
+      if (Array.isArray(oud.zu) && Array.isArray(oud.zinnen)){
+        const bij = {}; oud.zinnen.forEach((z, i) => { if (oud.zu[i]) bij[z] = oud.zu[i]; });
+        const zu = m.zinnen.map(z => bij[z] || "");
+        if (zu.some(Boolean)) m.zu = zu;
+      }
+    }
     /* de instellingen van het nakijken blijven staan */
     const blijft = { sleutel: oud.sleutel, gemaakt: oud.gemaakt, bijgewerkt: Date.now(), gebruikt: Date.now(), n: oud.n || 0, afbs: oud.afbs || [] };
     ["norm", "neutraal"].forEach(k => { if (oud[k] !== undefined) blijft[k] = oud[k]; });
@@ -347,7 +372,7 @@ export class Materiaal extends DurableObject {
     if (Date.now() - (m.gebruikt || 0) > DAG){ m.gebruikt = Date.now(); await this.ctx.storage.put("m:" + code, m); }
     const uit = { code, soort: m.soort, naam: m.naam, vak: m.vak };
     if (m.soort === "lijst") Object.assign(uit, { kopA: m.kopA, kopB: m.kopB, paren: m.paren });
-    else if (m.soort === "dictee") Object.assign(uit, { niveau: m.niveau || "", zinnen: m.zinnen, uitleg: m.uitleg || "" });
+    else if (m.soort === "dictee") Object.assign(uit, { niveau: m.niveau || "", zinnen: m.zinnen, uitleg: m.uitleg || "" }, Array.isArray(m.zu) ? { zu: m.zu } : {});
     else if (m.modus === "toets") Object.assign(uit, { modus: "toets", verborgen: true, items: m.items.map(verborgen) });
     else Object.assign(uit, { modus: m.modus, items: m.items });
     return json(uit);
