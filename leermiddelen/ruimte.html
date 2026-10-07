@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Ruimtefiguren, versie 1.0: op vakspel.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Ruimtefiguren &middot; meneer Greidanus</title>
+<meta name="description" content="Meetkunde van het examen wiskunde vmbo: ruimtefiguren herkennen, aanzichten, uitslagen, inhoud en oppervlakte, Pythagoras in de ruimte en goniometrie.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Ruimtefiguren">
+<meta property="og:description" content="Ruimtefiguren, aanzichten, uitslagen, inhoud, Pythagoras in de ruimte en goniometrie, zoals op het examen wiskunde vmbo.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/ruimte.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M51.3 9.8 C74.8 10.9 90.6 27.2 90.2 49.6 C89.8 73.4 75.1 91.5 51.6 91.1 C27.9 90.7 9.9 75.3 10.2 51.2 C10.5 27.1 27.6 8.7 51.3 9.8Z' fill='%232F6FDB'/><g transform='translate(50 51) scale(2.2) translate(-12 -12)' fill='none' stroke='%23ffffff' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'><path d='M12 3l8 4.5v9L12 21l-8-4.5v-9z'/><path d='M4 7.5l8 4.5 8-4.5M12 12v9'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+/* de tekeningen: een vast licht vel met vaste donkere lijnen, ook in de donkere stand */
+.beeld svg.rf{width:100%;max-width:min(100%,400px);height:auto;max-height:min(56vh,380px);display:block}
+.beeld svg.rf.klein{max-width:min(100%,300px)}
+.opties button.optie svg.rf{width:100%;max-width:170px;height:auto;display:block;margin:0 auto}
+/* plaatjes als antwoord: twee naast elkaar, ook op een telefoon */
+.opties:has(svg.rf){grid-template-columns:repeat(2,minmax(0,1fr))}
+.opties:has(svg.rf) button.optie{padding:8px;text-align:center}
+.uitslagregel svg.rf{max-width:170px;display:inline-block;vertical-align:middle;height:auto}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  function tussen(a, b){ return a + Math.floor(Math.random() * (b - a + 1)); }
+  function rond(x, d){ var f = Math.pow(10, d || 0); return Math.round(x * f * (1 + 1e-12)) / f; }
+  /* een getal met een komma, en bij grote getallen een spatie tussen de duizendtallen */
+  function net(x, d){
+    var r = d == null ? Math.round(x * 1e6) / 1e6 : rond(x, d), neg = r < 0;
+    r = Math.abs(r);
+    var s = String(r); if (/e/.test(s)) s = r.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
+    var delen = s.split('.'), heel = delen[0];
+    if (heel.length > 4) heel = heel.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    return (neg ? '−' : '') + heel + (delen[1] ? ',' + delen[1] : '');
+  }
+  function grote(t){ return t.charAt(0).toUpperCase() + t.slice(1); }
+  /* een invulveld met een afgerond antwoord. alt: de uitkomst als je een tussenstap al afrondt;
+     scheelt dat precies één in de laatste decimaal, dan is die ook goed. */
+  function veld(label, waarde, eenheid, d, alt){
+    var sp = eenheid === '°' ? '' : ' ', r = rond(waarde, d), v = { label:label, antwoord:r, eenheid:eenheid, tol:1e-4, toon:net(r, d) + (eenheid ? sp + eenheid : '') };
+    if (alt != null){
+      var ra = rond(alt, d), stap = Math.pow(10, -d);
+      if (Math.abs(ra - r) > 1e-9 && Math.abs(ra - r) <= stap * 1.01){ v.antwoord = (r + ra) / 2; v.tol = Math.abs(r - ra) / 2 + 1e-4; v.toon = net(r, d) + (eenheid ? sp + eenheid : '') + ' (of ' + net(ra, d) + ')'; }
+    }
+    return v;
+  }
+  var EEN = 'Rond af op één decimaal.';
+  var PI_TEKST = 'Gebruik de π-knop van je rekenmachine.';
+
+  /* ---------- vectoren ---------- */
+  var RAD = Math.PI / 180;
+  function plus(a, b, f){ f = f == null ? 1 : f; return [a[0] + b[0] * f, a[1] + b[1] * f, a[2] + b[2] * f]; }
+  function min3(a, b){ return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]; }
+  function dot(a, b){ return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }
+  function eenh(a){ var l = Math.sqrt(dot(a, a)) || 1; return [a[0] / l, a[1] / l, a[2] / l]; }
+  function kruis(a, b){ return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]; }
+  function midden(ps){ var m = [0, 0, 0]; ps.forEach(function(p){ m[0] += p[0]; m[1] += p[1]; m[2] += p[2]; }); return [m[0] / ps.length, m[1] / ps.length, m[2] / ps.length]; }
+
+  /* ---------- tekenen ----------
+     Vaste kleuren: een licht vel, lichte vlakken, donkere lijnen. Zo is elke tekening
+     in de lichte en de donkere stand hetzelfde en goed te lezen. */
+  var INK = '#14224C', PAP = '#FFFDF8', RAND = '#D9CDB8', LICHT = '#FFF3DE', MID = '#F4D7A6', DONKER = '#E2B877', ROOD = '#C2410C', BLAUW = '#1E4FD0';
+  function hex(h){ return [1, 3, 5].map(function(i){ return parseInt(h.substr(i, 2), 16); }); }
+  function meng(a, b, t){ var x = hex(a), y = hex(b); return 'rgb(' + x.map(function(v, i){ return Math.round(v + (y[i] - v) * t); }).join(',') + ')'; }
+  var LAMP = eenh([-0.35, -0.55, 0.85]);
+  function tint(n){ var t = Math.max(0, dot(n, LAMP)); return meng(DONKER, LICHT, Math.min(1, 0.2 + 0.8 * t)); }
+  function f1(x){ return Math.round(x * 10) / 10; }
+  function tekstBreed(t){ return String(t).replace(/<[^>]+>/g, '').length * 8.4; }
+  function omhulsel(ps){
+    ps = ps.slice().sort(function(a, b){ return a[0] - b[0] || a[1] - b[1]; });
+    function x(o, a, b){ return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]); }
+    var lo = [], hi = [], i;
+    for (i = 0; i < ps.length; i++){ while (lo.length >= 2 && x(lo[lo.length - 2], lo[lo.length - 1], ps[i]) <= 0) lo.pop(); lo.push(ps[i]); }
+    for (i = ps.length - 1; i >= 0; i--){ while (hi.length >= 2 && x(hi[hi.length - 2], hi[hi.length - 1], ps[i]) <= 0) hi.pop(); hi.push(ps[i]); }
+    lo.pop(); hi.pop(); return lo.concat(hi);
+  }
+  function tekstEl(x, y, t, anker, kleur, maat){
+    return '<text x="' + f1(x) + '" y="' + f1(y) + '" text-anchor="' + anker + '" fill="' + (kleur || INK) + '" font-size="' + (maat || 15) + '" font-weight="600" stroke="' + PAP + '" stroke-width="4" stroke-linejoin="round" paint-order="stroke">' + t + '</text>';
+  }
+  function vel(x, y, w, h, inhoud, naam, klasse){
+    return '<svg class="rf' + (klasse ? ' ' + klasse : '') + '" viewBox="' + f1(x) + ' ' + f1(y) + ' ' + f1(w) + ' ' + f1(h) + '" role="img" aria-label="' + S(naam) + '" font-family="inherit">' +
+      '<rect x="' + f1(x + 1) + '" y="' + f1(y + 1) + '" width="' + f1(w - 2) + '" height="' + f1(h - 2) + '" rx="12" fill="' + PAP + '" stroke="' + RAND + '"/>' + inhoud + '</svg>';
+  }
+
+  /* Een ruimtelijke tekening: een loodrechte projectie van schuin boven en rechts voor.
+     az draait om de verticale as, el is hoe hoog je kijkt. Een liggende cirkel wordt zo
+     een rechte ellips. */
+  function scene(az, el){
+    az = (az == null ? 28 : az) * RAD; el = (el == null ? 22 : el) * RAD;
+    var ca = Math.cos(az), sa = Math.sin(az), cf = Math.cos(el), sf = Math.sin(el);
+    var sc = { d:[sa * cf, -ca * cf, sf], er:[ca, sa, 0], items:[] };
+    sc.pr = function(p){ var u = p[0] * ca + p[1] * sa, w = -p[0] * sa + p[1] * ca; return [u, -(p[2] * cf + w * sf)]; };
+    sc.vlak = function(p, fill, rand){ sc.items.push({ t:'vlak', p:p, fill:fill, rand:rand }); };
+    sc.lijn = function(p, o){ sc.items.push({ t:'lijn', p:p, o:o || {} }); };
+    sc.romp = function(p, fill){ sc.items.push({ t:'romp', p:p, fill:fill }); };
+    sc.maat = function(a, b, tekst, o){ sc.items.push({ t:'maat', a:a, b:b, tekst:tekst, o:o || {} }); };
+    sc.label = function(p, tekst, o){ sc.items.push({ t:'label', q:p, tekst:tekst, o:o || {} }); };
+    sc.haaks = function(p, u1, u2){ sc.items.push({ t:'haaks', q:p, u1:u1, u2:u2 }); };
+    sc.boog = function(p, u1, u2, o){ sc.items.push({ t:'boog', q:p, u1:u1, u2:u2, o:o || {} }); };
+    sc.pijl = function(a, b, tekst){ sc.items.push({ t:'pijl', a:a, b:b, tekst:tekst }); };
+    sc.teken = function(maxB, maxH, naam, klasse){ return teken(sc, maxB, maxH, naam, klasse); };
+    return sc;
+  }
+  function teken(sc, maxB, maxH, naam, klasse){
+    var geo = [];
+    sc.items.forEach(function(it){
+      if (it.t === 'vlak' || it.t === 'lijn' || it.t === 'romp') it.p.forEach(function(p){ geo.push(sc.pr(p)); });
+      if (it.t === 'pijl'){ geo.push(sc.pr(it.a)); geo.push(sc.pr(it.b)); }
+    });
+    var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    geo.forEach(function(q){ x0 = Math.min(x0, q[0]); y0 = Math.min(y0, q[1]); x1 = Math.max(x1, q[0]); y1 = Math.max(y1, q[1]); });
+    var bw = Math.max(x1 - x0, 1e-6), bh = Math.max(y1 - y0, 1e-6), s = Math.min(maxB / bw, maxH / bh);
+    function T(p){ var q = sc.pr(p); return [(q[0] - x0) * s, (q[1] - y0) * s]; }
+    var mid = [bw * s / 2, bh * s / 2], box = [0, 0, bw * s, bh * s], uit = '';
+    function groei(x, y){ box[0] = Math.min(box[0], x); box[1] = Math.min(box[1], y); box[2] = Math.max(box[2], x); box[3] = Math.max(box[3], y); }
+    function pts(a){ return a.map(function(q){ return f1(q[0]) + ',' + f1(q[1]); }).join(' '); }
+    function tekst(x, y, t, anker, kleur){
+      var w = tekstBreed(t), l = anker === 'middle' ? x - w / 2 : anker === 'end' ? x - w : x;
+      groei(l - 3, y - 15); groei(l + w + 3, y + 5);
+      return tekstEl(x, y, t, anker, kleur);
+    }
+    function richting(a, b){ var d = [b[0] - a[0], b[1] - a[1]], l = Math.sqrt(d[0] * d[0] + d[1] * d[1]) || 1; return [d[0] / l, d[1] / l]; }
+    function anker(d){ return d[0] > 0.35 ? 'start' : d[0] < -0.35 ? 'end' : 'middle'; }
+    function basis(y, d){ return y + 5 + (d[1] > 0.5 ? 5 : d[1] < -0.5 ? -3 : 0); }
+    sc.items.forEach(function(it){
+      var o = it.o || {};
+      if (it.t === 'vlak') uit += '<polygon points="' + pts(it.p.map(T)) + '" fill="' + it.fill + '"' + (it.rand ? ' stroke="' + INK + '" stroke-width="1.8" stroke-linejoin="round"' : '') + '/>';
+      else if (it.t === 'romp') uit += '<polygon points="' + pts(omhulsel(it.p.map(T))) + '" fill="' + it.fill + '" stroke="' + INK + '" stroke-width="2.2" stroke-linejoin="round"/>';
+      else if (it.t === 'lijn') uit += '<polyline points="' + pts(it.p.map(T)) + '" fill="none" stroke="' + (o.kleur || INK) + '" stroke-width="' + (o.dik || (o.stip ? 1.7 : 2.2)) + '"' + (o.stip ? ' stroke-dasharray="6 5"' : '') + ' stroke-linecap="round" stroke-linejoin="round"/>';
+      else if (it.t === 'maat'){
+        var a = T(it.a), b = T(it.b), m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], d = richting(a, b), n = [-d[1], d[0]];
+        var weg = o.van ? T(o.van) : mid;
+        if ((m[0] - weg[0]) * n[0] + (m[1] - weg[1]) * n[1] < 0) n = [-n[0], -n[1]];
+        if (o.om) n = [-n[0], -n[1]];
+        var af = o.af || 11, p = [m[0] + n[0] * af, m[1] + n[1] * af];
+        uit += tekst(p[0], basis(p[1], n), it.tekst, anker(n), o.kleur);
+      }
+      else if (it.t === 'label'){
+        var q = T(it.q);
+        if (o.van){ var r = richting(T(o.van), q), af2 = o.af || 13; q = [q[0] + r[0] * af2, q[1] + r[1] * af2]; uit += tekst(q[0], basis(q[1], r), it.tekst, anker(r), o.kleur); }
+        else uit += tekst(q[0] + (o.dx || 0), q[1] + (o.dy || 0) + 5, it.tekst, o.anker || 'middle', o.kleur);
+      }
+      else if (it.t === 'haaks'){
+        var P = T(it.q), e1 = richting(P, T(plus(it.q, it.u1))), e2 = richting(P, T(plus(it.q, it.u2))), k = 10;
+        uit += '<polyline points="' + pts([[P[0] + e1[0] * k, P[1] + e1[1] * k], [P[0] + (e1[0] + e2[0]) * k, P[1] + (e1[1] + e2[1]) * k], [P[0] + e2[0] * k, P[1] + e2[1] * k]]) + '" fill="none" stroke="' + INK + '" stroke-width="1.5"/>';
+      }
+      else if (it.t === 'boog'){
+        var P2 = T(it.q), g1 = richting(P2, T(plus(it.q, it.u1))), g2 = richting(P2, T(plus(it.q, it.u2)));
+        var t1 = Math.atan2(g1[1], g1[0]), t2 = Math.atan2(g2[1], g2[0]), dt = t2 - t1;
+        while (dt > Math.PI) dt -= 2 * Math.PI; while (dt <= -Math.PI) dt += 2 * Math.PI;
+        var rr = o.r || 24, boog = [], i;
+        for (i = 0; i <= 14; i++){ var t = t1 + dt * i / 14; boog.push([P2[0] + rr * Math.cos(t), P2[1] + rr * Math.sin(t)]); }
+        uit += '<polygon points="' + f1(P2[0]) + ',' + f1(P2[1]) + ' ' + pts(boog) + '" fill="' + ROOD + '" fill-opacity=".14" stroke="none"/>';
+        uit += '<polyline points="' + pts(boog) + '" fill="none" stroke="' + ROOD + '" stroke-width="2"/>';
+        if (o.tekst){ var tm = t1 + dt / 2, dm = [Math.cos(tm), Math.sin(tm)]; uit += tekst(P2[0] + dm[0] * (rr + 8), basis(P2[1] + dm[1] * (rr + 8), dm), o.tekst, anker(dm), ROOD); }
+      }
+      else if (it.t === 'pijl'){
+        var A = T(it.a), B = T(it.b), dd = richting(A, B), nn = [-dd[1], dd[0]];
+        uit += '<line x1="' + f1(A[0]) + '" y1="' + f1(A[1]) + '" x2="' + f1(B[0] - dd[0] * 6) + '" y2="' + f1(B[1] - dd[1] * 6) + '" stroke="' + BLAUW + '" stroke-width="3" stroke-linecap="round"/>';
+        uit += '<polygon points="' + pts([B, [B[0] - dd[0] * 13 + nn[0] * 6.5, B[1] - dd[1] * 13 + nn[1] * 6.5], [B[0] - dd[0] * 13 - nn[0] * 6.5, B[1] - dd[1] * 13 - nn[1] * 6.5]]) + '" fill="' + BLAUW + '"/>';
+        var terug = [-dd[0], -dd[1]];
+        if (it.tekst) uit += tekst(A[0] + terug[0] * 8, basis(A[1] + terug[1] * 8, terug), it.tekst, anker(terug), BLAUW);
+      }
+    });
+    var pad = 9;
+    return vel(box[0] - pad, box[1] - pad, box[2] - box[0] + 2 * pad, box[3] - box[1] + 2 * pad, uit, naam, klasse);
+  }
+
+  /* ---------- lichamen ---------- */
+  function veelvlak(sc, L){
+    var V = L.V, c = midden(V), zie = [], randen = {}, volg = [];
+    L.F.forEach(function(f, k){
+      var n = [0, 0, 0], i;
+      for (i = 0; i < f.length; i++){ var p = V[f[i]], q = V[f[(i + 1) % f.length]]; n[0] += (p[1] - q[1]) * (p[2] + q[2]); n[1] += (p[2] - q[2]) * (p[0] + q[0]); n[2] += (p[0] - q[0]) * (p[1] + q[1]); }
+      var fc = midden(f.map(function(j){ return V[j]; }));
+      if (dot(n, min3(fc, c)) < 0) n = [-n[0], -n[1], -n[2]];
+      n = eenh(n); zie[k] = dot(n, sc.d) > 1e-4;
+      if (zie[k]) sc.vlak(f.map(function(j){ return V[j]; }), tint(n));
+      for (i = 0; i < f.length; i++){
+        var a = f[i], b = f[(i + 1) % f.length], key = Math.min(a, b) + '-' + Math.max(a, b);
+        if (!randen[key]){ randen[key] = { a:a, b:b, f:[] }; volg.push(key); }
+        randen[key].f.push(k);
+      }
+    });
+    volg.forEach(function(key){ var r = randen[key]; if (!r.f.some(function(k){ return zie[k]; })) sc.lijn([V[r.a], V[r.b]], { stip:true }); });
+    volg.forEach(function(key){ var r = randen[key]; if (r.f.some(function(k){ return zie[k]; })) sc.lijn([V[r.a], V[r.b]]); });
+  }
+  function balkL(l, b, h){ return { V:[[0, 0, 0], [l, 0, 0], [l, b, 0], [0, b, 0], [0, 0, h], [l, 0, h], [l, b, h], [0, b, h]], F:[[0, 1, 2, 3], [4, 5, 6, 7], [0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7]] }; }
+  function prismaL(grond, h){
+    var n = grond.length, V = [], F = [[], []], i;
+    for (i = 0; i < n; i++) V.push([grond[i][0], grond[i][1], 0]);
+    for (i = 0; i < n; i++) V.push([grond[i][0], grond[i][1], h]);
+    for (i = 0; i < n; i++){ F[0].push(i); F[1].push(n + i); F.push([i, (i + 1) % n, n + (i + 1) % n, n + i]); }
+    return { V:V, F:F };
+  }
+  /* een liggend prisma: de driehoek staat vooraan (y = 0) en loopt door naar achteren */
+  function liggendL(drie, lang){
+    var n = drie.length, V = [], F = [[], []], i;
+    for (i = 0; i < n; i++) V.push([drie[i][0], 0, drie[i][1]]);
+    for (i = 0; i < n; i++) V.push([drie[i][0], lang, drie[i][1]]);
+    for (i = 0; i < n; i++){ F[0].push(i); F[1].push(n + i); F.push([i, (i + 1) % n, n + (i + 1) % n, n + i]); }
+    return { V:V, F:F };
+  }
+  function piramideL(grond, top){
+    var n = grond.length, V = grond.map(function(p){ return [p[0], p[1], 0]; }), F = [grond.map(function(p, i){ return i; })], i;
+    V.push(top);
+    for (i = 0; i < n; i++) F.push([i, (i + 1) % n, n]);
+    return { V:V, F:F };
+  }
+  function veelhoek(n, r, draai){ var p = [], i; for (i = 0; i < n; i++){ var t = (draai + 360 * i / n) * RAD; p.push([r * Math.cos(t), r * Math.sin(t)]); } return p; }
+  function cirkel(c, r, van, tot){
+    var p = [], n = Math.max(8, Math.ceil(Math.abs(tot - van) / (Math.PI / 36))), i;
+    for (i = 0; i <= n; i++){ var t = van + (tot - van) * i / n; p.push([c[0] + r * Math.cos(t), c[1] + r * Math.sin(t), c[2]]); }
+    return p;
+  }
+  function voorHoek(sc){ return Math.atan2(sc.d[1], sc.d[0]); }
+  function cilinder(sc, r, h){
+    var t0 = voorHoek(sc), P = 2 * Math.PI;
+    sc.romp(cirkel([0, 0, 0], r, 0, P).concat(cirkel([0, 0, h], r, 0, P)), meng(DONKER, LICHT, 0.45));
+    sc.lijn(cirkel([0, 0, 0], r, t0 + Math.PI / 2, t0 + 1.5 * Math.PI), { stip:true });
+    sc.vlak(cirkel([0, 0, h], r, 0, P), LICHT, true);
+  }
+  function kegel(sc, r, h){
+    var t0 = voorHoek(sc), P = 2 * Math.PI;
+    sc.romp(cirkel([0, 0, 0], r, 0, P).concat([[0, 0, h]]), meng(DONKER, LICHT, 0.5));
+    sc.lijn(cirkel([0, 0, 0], r, t0 + Math.PI / 2, t0 + 1.5 * Math.PI), { stip:true });
+  }
+  function bol(sc, r){
+    var e1 = eenh(kruis(sc.d, [0, 0, 1])), e2 = eenh(kruis(sc.d, e1)), rand = [], i, t0 = voorHoek(sc);
+    for (i = 0; i < 72; i++){ var t = i * 5 * RAD; rand.push(plus(plus([0, 0, 0], e1, r * Math.cos(t)), e2, r * Math.sin(t))); }
+    sc.romp(rand, meng(DONKER, LICHT, 0.6));
+    sc.lijn(cirkel([0, 0, 0], r, t0 + Math.PI / 2, t0 + 1.5 * Math.PI), { stip:true });
+    sc.lijn(cirkel([0, 0, 0], r, t0 - Math.PI / 2, t0 + Math.PI / 2), { dik:1.6 });
+  }
+  /* de tekening hoeft niet op schaal, maar wel ongeveer: niets wordt dunner dan 0,38 van het grootste */
+  function schaal(w){ var m = Math.max.apply(null, w); return w.map(function(v){ return Math.max(0.38, v / m); }); }
+
+  /* de figuren met maten erbij; elk geeft { sc, V } terug zodat er lijnen bij kunnen */
+  function balkTek(l, b, h, o){
+    o = o || {}; var w = schaal([l, b, h]), sc = scene(), L = balkL(w[0], w[1], w[2]), V = L.V;
+    veelvlak(sc, L);
+    if (o.l) sc.maat(V[0], V[1], o.l);
+    if (o.b) sc.maat(V[1], V[2], o.b);
+    if (o.h) sc.maat(V[0], V[4], o.h);
+    return { sc:sc, V:V };
+  }
+  function cilTek(r, h, o){
+    o = o || {}; var w = schaal([2 * r, h]), sc = scene(), rr = w[0] / 2, hh = w[1], e = sc.er;
+    cilinder(sc, rr, hh);
+    var R1 = [rr * e[0], rr * e[1], 0], R2 = [rr * e[0], rr * e[1], hh];
+    if (o.d){ var a = [-rr * e[0], -rr * e[1], hh]; sc.lijn([a, R2], { kleur:BLAUW }); sc.maat(a, R2, o.d, { af:9 }); }
+    if (o.r){ sc.lijn([[0, 0, hh], R2], { kleur:BLAUW }); sc.maat([0, 0, hh], R2, o.r, { af:9 }); }
+    if (o.h) sc.maat(R1, R2, o.h);
+    return { sc:sc, R1:R1, R2:R2 };
+  }
+  function kegelTek(r, h, o){
+    o = o || {}; var w = schaal([2 * r, h]), sc = scene(), rr = w[0] / 2, hh = w[1], e = sc.er;
+    kegel(sc, rr, hh);
+    var M = [0, 0, 0], T = [0, 0, hh], R = [rr * e[0], rr * e[1], 0];
+    if (o.hLijn || o.h){ sc.lijn([M, T], { stip:true, kleur:o.hKleur || INK }); }
+    if (o.h) sc.maat(M, T, o.h, { van:R });
+    if (o.r || o.rLijn){ sc.lijn([M, R], { kleur:BLAUW }); }
+    if (o.r) sc.maat(M, R, o.r, { van:T });
+    if (o.d){ var a = [-rr * e[0], -rr * e[1], 0]; sc.lijn([a, R], { kleur:BLAUW }); sc.maat(a, R, o.d, { van:T }); }
+    if (o.s) sc.maat(R, T, o.s);
+    if (o.sKleur) sc.lijn([R, T], { kleur:o.sKleur, dik:3 });
+    if (o.haaks) sc.haaks(M, min3(R, M), min3(T, M));
+    return { sc:sc, M:M, T:T, R:R };
+  }
+  function bolTek(r, o){
+    o = o || {}; var sc = scene(), e = sc.er;
+    bol(sc, 1);
+    var R = [e[0], e[1], 0];
+    if (o.d){ var a = [-e[0], -e[1], 0]; sc.lijn([a, R], { kleur:BLAUW }); sc.label([0, 0, 0], o.d, { dy:-12 }); }
+    if (o.r){ sc.lijn([[0, 0, 0], R], { kleur:BLAUW }); sc.label([e[0] / 2, e[1] / 2, 0], o.r, { dy:-12 }); }
+    return { sc:sc };
+  }
+  /* liggend driezijdig prisma: basis b, hoogte van de driehoek t, lengte lang */
+  function prismaTek(b, t, lang, o){
+    o = o || {}; var w = schaal([b, t, lang]), sc = scene(24, 34), L = liggendL([[0, 0], [w[0], 0], [w[0] / 2, w[1]]], w[2]), V = L.V;
+    veelvlak(sc, L);
+    if (o.b) sc.maat(V[0], V[1], o.b);
+    if (o.lang) sc.maat(V[1], V[4], o.lang);
+    if (o.t){ var F = [w[0] / 2, 0, 0]; sc.lijn([F, V[2]], { stip:true }); sc.maat(F, V[2], o.t, { van:V[1], af:7 }); sc.haaks(F, min3(V[1], F), min3(V[2], F)); }
+    if (o.schuin) sc.maat(V[1], V[2], o.schuin);
+    return { sc:sc, V:V, w:w };
+  }
+  /* vierzijdige piramide met een vierkant grondvlak a bij a, de top recht boven het midden */
+  function pirTek(a, h, o){
+    o = o || {}; var w = schaal([a, h]), sc = scene(), z = w[0] / 2, L = piramideL([[-z, -z], [z, -z], [z, z], [-z, z]], [0, 0, w[1]]), V = L.V, M = [0, 0, 0];
+    veelvlak(sc, L);
+    if (o.a) sc.maat(V[0], V[1], o.a);
+    if (o.h || o.hLijn){ sc.lijn([M, V[4]], { stip:true }); }
+    if (o.h) sc.maat(M, V[4], o.h, { van:V[0], af:7 });
+    return { sc:sc, V:V, M:M, w:w };
+  }
+
+  /* ---------- 1. ruimtefiguren ---------- */
+  var FIG = {
+    kubus:   { naam:'kubus', g:6, r:12, p:8 },
+    balk:    { naam:'balk', g:6, r:12, p:8 },
+    prisma3: { naam:'driezijdig prisma', g:5, r:9, p:6, n:3, soort:'prisma' },
+    prisma5: { naam:'vijfzijdig prisma', g:7, r:15, p:10, n:5, soort:'prisma' },
+    prisma6: { naam:'zeszijdig prisma', g:8, r:18, p:12, n:6, soort:'prisma' },
+    pir3:    { naam:'driezijdige piramide', g:4, r:6, p:4, n:3, soort:'piramide' },
+    pir4:    { naam:'vierzijdige piramide', g:5, r:8, p:5, n:4, soort:'piramide' },
+    pir6:    { naam:'zeszijdige piramide', g:7, r:12, p:7, n:6, soort:'piramide' },
+    cilinder:{ naam:'cilinder', rond:true },
+    kegel:   { naam:'kegel', rond:true },
+    bol:     { naam:'bol', rond:true }
+  };
+  var FIG_NIV = {
+    bb: ['kubus', 'balk', 'prisma3', 'pir4', 'cilinder', 'kegel', 'bol'],
+    kgt:['kubus', 'balk', 'prisma3', 'prisma5', 'prisma6', 'pir3', 'pir4', 'cilinder', 'kegel', 'bol'],
+    hv: ['kubus', 'balk', 'prisma3', 'prisma5', 'prisma6', 'pir3', 'pir4', 'pir6', 'cilinder', 'kegel', 'bol']
+  };
+  function figuurSvg(id, klasse){
+    var sc = scene(28, 22);
+    if (id === 'kubus') veelvlak(sc, balkL(1, 1, 1));
+    else if (id === 'balk') veelvlak(sc, balkL(1.8, 0.9, 0.75));
+    else if (id === 'prisma3'){ sc = scene(24, 34); veelvlak(sc, liggendL([[0, 0], [1.3, 0], [0.65, 0.75]], 1.6)); }
+    else if (id === 'prisma5') veelvlak(sc, prismaL(veelhoek(5, 0.75, 100), 1.15));
+    else if (id === 'prisma6') veelvlak(sc, prismaL(veelhoek(6, 0.75, 10), 1.15));
+    else if (id === 'pir3') veelvlak(sc, piramideL(veelhoek(3, 0.9, 200), [0, 0, 1.2]));
+    else if (id === 'pir4') veelvlak(sc, piramideL([[-0.65, -0.65], [0.65, -0.65], [0.65, 0.65], [-0.65, 0.65]], [0, 0, 1.25]));
+    else if (id === 'pir6') veelvlak(sc, piramideL(veelhoek(6, 0.8, 10), [0, 0, 1.3]));
+    else if (id === 'cilinder') cilinder(sc, 0.6, 1.25);
+    else if (id === 'kegel') kegel(sc, 0.7, 1.35);
+    else if (id === 'bol') bol(sc, 0.8);
+    return sc.teken(170, 140, 'tekening van een ruimtefiguur', klasse || 'klein');
+  }
+  var DINGEN = [
+    ['een blikje frisdrank', 'cilinder'], ['een dobbelsteen', 'kubus'], ['een schoenendoos', 'balk'], ['een ijshoorntje', 'kegel'],
+    ['een voetbal', 'bol'], ['een tentje met een driehoekige voorkant en achterkant', 'prisma3'], ['de piramide van Cheops in Egypte', 'pir4'],
+    ['een pion op de sportles (een punt met een rond grondvlak)', 'kegel'], ['een suikerklontje', 'kubus'], ['een knikker', 'bol'],
+    ['een pak melk', 'balk'], ['een theelichtje', 'cilinder'], ['een tennisbal', 'bol'], ['een regenton', 'cilinder'],
+    ['een puntzak voor patat', 'kegel'], ['een punt kaas met een driehoekige zijkant', 'prisma3'], ['een stoeptegel', 'balk'],
+    ['een sinaasappel', 'bol'], ['een ongeslepen potlood met zes kanten', 'prisma6', ['kgt', 'hv']], ['een cel van een honingraat', 'prisma6', ['kgt', 'hv']],
+    ['een bouwblok van 5 bij 5 bij 5 cm', 'kubus'], ['een rol koekjes', 'cilinder'], ['een tetraëder-pak (vier gelijke driehoeken als zijvlakken)', 'pir3', ['kgt', 'hv']]
+  ];
+  function dezeDit(id){ return FIG[id].soort === 'prisma' ? 'dit' : 'deze'; }
+  function dingenVoor(niv){ return DINGEN.filter(function(d){ return !d[2] || d[2].indexOf(niv) >= 0; }); }
+  /* andere namen als keuzes, maar geen dubbelzinnige: een kubus is ook een balk */
+  function andereNamen(id, lijst, n){
+    var uit = H(lijst.filter(function(x){ return x !== id && !(id === 'kubus' && x === 'balk'); })).slice(0, n);
+    return uit.map(function(x){ return FIG[x].naam; });
+  }
+  function figuurUitleg(id){
+    var f = FIG[id];
+    if (id === 'kubus') return 'Een kubus heeft zes vierkanten als grensvlakken, allemaal even groot.';
+    if (id === 'balk') return 'Een balk heeft zes rechthoeken als grensvlakken; de overstaande vlakken zijn even groot. Het is geen kubus: niet alle ribben zijn even lang.';
+    if (id === 'cilinder') return 'Een cilinder heeft twee gelijke cirkels als grondvlak en bovenvlak, en een gebogen zijkant.';
+    if (id === 'kegel') return 'Een kegel heeft een cirkel als grondvlak en loopt naar boven toe in een punt: de top.';
+    if (id === 'bol') return 'Een bol is helemaal rond: elk punt aan de buitenkant ligt even ver van het middelpunt.';
+    if (f.soort === 'prisma') return 'Een prisma heeft twee gelijke evenwijdige vlakken (grondvlak en bovenvlak) met rechthoeken ertussen. Hier is dat grondvlak een ' + ['', '', '', 'driehoek', '', 'vijfhoek', 'zeshoek'][f.n] + ', dus een ' + f.naam + '.';
+    return 'Een piramide heeft één grondvlak en driehoeken die samenkomen in de top. Hier is het grondvlak een ' + ['', '', '', 'driehoek', 'vierhoek', '', 'zeshoek'][f.n] + ', dus een ' + f.naam + '.';
+  }
+  function figHerken(niv){
+    var id = kies(FIG_NIV[niv]), opties = [FIG[id].naam].concat(andereNamen(id, FIG_NIV[niv], 3));
+    return {
+      onderdeel:'ruimte: figuren', onderdeelNaam:'ruimtefiguren', vorm:'meerkeuze', sleutel:'fh' + id,
+      vraag:'Welke ruimtefiguur zie je hier?', opdracht:'De stippellijnen zijn ribben die je niet kunt zien.',
+      beeld:figuurSvg(id), opties:opties, goed:0, antwoordTekst:FIG[id].naam, uitleg:figuurUitleg(id)
+    };
+  }
+  function figDing(niv){
+    var d = kies(dingenVoor(niv)), id = d[1], opties = [FIG[id].naam].concat(andereNamen(id, FIG_NIV[niv], 3));
+    return {
+      onderdeel:'ruimte: figuren', onderdeelNaam:'ruimtefiguren', vorm:'meerkeuze', sleutel:'fd' + d[0],
+      vraag:grote(d[0]) + ' heeft de vorm van een …', opdracht:'Kies de ruimtefiguur die het best past.',
+      opties:opties, goed:0, antwoordTekst:FIG[id].naam, uitleg:grote(d[0]) + ' is een ' + FIG[id].naam + '. ' + figuurUitleg(id)
+    };
+  }
+  var TEL = { g:['grensvlakken', 'grensvlak'], r:['ribben', 'ribbe'], p:['hoekpunten', 'hoekpunt'] };
+  function telUitleg(id){
+    var f = FIG[id], n = f.n || 4, pr = id === 'kubus' || id === 'balk' || f.soort === 'prisma';
+    return pr ? 'Grensvlakken: grondvlak, bovenvlak en ' + n + ' zijvlakken, samen ' + f.g + '. Ribben: ' + n + ' onder, ' + n + ' boven en ' + n + ' staand, samen ' + f.r + '. Hoekpunten: ' + n + ' onder en ' + n + ' boven, samen ' + f.p + '. Tel ook wat je niet ziet: de stippellijnen.'
+      : 'Grensvlakken: het grondvlak en ' + n + ' driehoeken, samen ' + f.g + '. Ribben: ' + n + ' in het grondvlak en ' + n + ' naar de top, samen ' + f.r + '. Hoekpunten: ' + n + ' in het grondvlak en de top, samen ' + f.p + '. Tel ook wat je niet ziet: de stippellijnen.';
+  }
+  function figTel(niv){
+    var lijst = FIG_NIV[niv].filter(function(x){ return !FIG[x].rond; }), id = kies(lijst), f = FIG[id];
+    if (niv === 'kgt' && Math.random() < 0.4){
+      return {
+        onderdeel:'ruimte: figuren', onderdeelNaam:'ruimtefiguren', vorm:'invul', sleutel:'ft3' + id,
+        vraag:'Hoeveel grensvlakken, ribben en hoekpunten heeft ' + dezeDit(id) + ' ' + f.naam + '?', opdracht:'Tel ook de vlakken, ribben en hoekpunten die je niet ziet.',
+        beeld:figuurSvg(id), velden:[{ label:'grensvlakken', antwoord:f.g }, { label:'ribben', antwoord:f.r }, { label:'hoekpunten', antwoord:f.p }],
+        antwoordTekst:f.g + ' grensvlakken, ' + f.r + ' ribben, ' + f.p + ' hoekpunten', uitleg:telUitleg(id)
+      };
+    }
+    var w = kies(['g', 'r', 'p']);
+    return {
+      onderdeel:'ruimte: figuren', onderdeelNaam:'ruimtefiguren', vorm:'invul', sleutel:'ft' + id + w,
+      vraag:'Hoeveel <b>' + TEL[w][0] + '</b> heeft ' + dezeDit(id) + ' ' + f.naam + '?', opdracht:'Tel ook wat je niet ziet: de stippellijnen.',
+      beeld:figuurSvg(id), velden:[{ label:TEL[w][0], antwoord:f[w] }],
+      antwoordTekst:f[w] + ' ' + TEL[w][0], uitleg:telUitleg(id) + (w === 'r' && (id === 'kubus' || id === 'balk') ? ' Wie alleen de zichtbare ribben telt, komt op 9.' : '')
+    };
+  }
+  function figSleep(niv){
+    var lijst = dingenVoor(niv), soorten = H(lijst.map(function(d){ return d[1]; }).filter(function(x, i, a){ return a.indexOf(x) === i; })).slice(0, 3);
+    var kaarten = [], vakken = soorten.map(function(id, i){
+      var hier = H(lijst.filter(function(d){ return d[1] === id; })).slice(0, 2);
+      hier.forEach(function(d, j){ kaarten.push({ id:'k' + i + j, tekst:S(d[0]), d:d }); });
+      return { id:'v' + i, naam:FIG[id].naam, hoort:hier.map(function(d, j){ return 'k' + i + j; }) };
+    });
+    return {
+      onderdeel:'ruimte: figuren', onderdeelNaam:'ruimtefiguren', vorm:'sleep', sleutel:'fs' + kaarten.map(function(k){ return k.tekst; }).join('|'),
+      vraag:'Welke vorm hebben deze dingen?', sleepuit:'Sleep elk ding naar de ruimtefiguur die erbij past. Op een telefoon: tik een kaartje aan en dan het vak.',
+      kaarten:kaarten.map(function(k){ return { id:k.id, tekst:k.tekst }; }), vakken:vakken,
+      antwoordTekst:vakken.map(function(v){ return v.naam + ': ' + v.hoort.map(function(h){ return kaarten.filter(function(k){ return k.id === h; })[0].d[0]; }).join(', '); }).join('; '),
+      uitleg:soorten.map(function(id){ return figuurUitleg(id); }).join(' ')
+    };
+  }
+  function figEigen(niv){
+    var lijst = FIG_NIV[niv].filter(function(x){ return !FIG[x].rond && x !== 'kubus'; }), id = kies(lijst), f = FIG[id];
+    var andere = H(lijst.filter(function(x){ return x !== id && FIG[x].naam !== f.naam && !(FIG[x].g === f.g && FIG[x].r === f.r && FIG[x].p === f.p); })).slice(0, 3);
+    return {
+      onderdeel:'ruimte: figuren', onderdeelNaam:'ruimtefiguren', vorm:'meerkeuze', sleutel:'fe' + id,
+      vraag:'Een ruimtefiguur heeft <b>' + f.g + ' grensvlakken, ' + f.r + ' ribben en ' + f.p + ' hoekpunten</b>. Welke figuur kan het zijn?',
+      opties:[f.naam].concat(andere.map(function(x){ return FIG[x].naam; })), goed:0, antwoordTekst:f.naam,
+      uitleg:telUitleg(id)
+    };
+  }
+  /* havo/vwo: rekenen met de regels voor een prisma of piramide met n hoeken, en een afgezaagde hoek */
+  function figRegel(niv){
+    var k = tussen(0, 3);
+    if (k === 0){
+      var n = tussen(7, 12), pr = Math.random() < 0.5, w = kies(['g', 'r', 'p']);
+      var waarde = pr ? { g:n + 2, r:3 * n, p:2 * n }[w] : { g:n + 1, r:2 * n, p:n + 1 }[w];
+      var naam = n + '-zijdig' + (pr ? ' prisma' : 'e piramide');
+      return {
+        onderdeel:'ruimte: figuren', onderdeelNaam:'ruimtefiguren', vorm:'invul', sleutel:'fr0' + n + pr + w,
+        vraag:'Een ' + naam + ' heeft een grondvlak met ' + n + ' hoeken. Hoeveel <b>' + TEL[w][0] + '</b> heeft deze figuur?', opdracht:'Je hoeft niet te tekenen: bedenk hoe het bij een driezijdig' + (pr ? ' prisma' : 'e piramide') + ' gaat.',
+        velden:[{ label:TEL[w][0], antwoord:waarde }], antwoordTekst:waarde + ' ' + TEL[w][0],
+        uitleg:pr ? 'Een prisma met ' + n + ' hoeken in het grondvlak heeft ' + n + ' + 2 = ' + (n + 2) + ' grensvlakken, 3 × ' + n + ' = ' + 3 * n + ' ribben en 2 × ' + n + ' = ' + 2 * n + ' hoekpunten.'
+          : 'Een piramide met ' + n + ' hoeken in het grondvlak heeft ' + n + ' + 1 = ' + (n + 1) + ' grensvlakken, 2 × ' + n + ' = ' + 2 * n + ' ribben en ' + n + ' + 1 = ' + (n + 1) + ' hoekpunten.'
+      };
+    }
+    if (k === 1){
+      var m = tussen(5, 12), pr2 = Math.random() < 0.5, r = pr2 ? 3 * m : 2 * m, vraagP = Math.random() < 0.5;
+      var ant = vraagP ? (pr2 ? 2 * m : m + 1) : (pr2 ? m + 2 : m + 1);
+      return {
+        onderdeel:'ruimte: figuren', onderdeelNaam:'ruimtefiguren', vorm:'invul', sleutel:'fr1' + m + pr2 + vraagP,
+        vraag:'Een ' + (pr2 ? 'prisma' : 'piramide') + ' heeft <b>' + r + ' ribben</b>. Hoeveel ' + (vraagP ? 'hoekpunten' : 'grensvlakken') + ' heeft ' + (pr2 ? 'dit prisma' : 'deze piramide') + '?',
+        opdracht:'Bereken eerst hoeveel hoeken het grondvlak heeft.',
+        velden:[{ label:vraagP ? 'hoekpunten' : 'grensvlakken', antwoord:ant }], antwoordTekst:String(ant),
+        uitleg:pr2 ? 'Een prisma heeft 3 ribben per hoek van het grondvlak (onder, boven, staand). ' + r + ' : 3 = ' + m + ' hoeken. Dan heeft het ' + 2 * m + ' hoekpunten en ' + (m + 2) + ' grensvlakken.'
+          : 'Een piramide heeft 2 ribben per hoek van het grondvlak (in het grondvlak en naar de top). ' + r + ' : 2 = ' + m + ' hoeken. Dan heeft hij ' + (m + 1) + ' hoekpunten en ' + (m + 1) + ' grensvlakken.'
+      };
+    }
+    if (k === 2){
+      var w2 = kies(['g', 'r', 'p']), af = { g:7, r:15, p:10 }[w2], wat = kies(['een kubus', 'een balk', 'een kaasblok in de vorm van een balk']);
+      return {
+        onderdeel:'ruimte: figuren', onderdeelNaam:'ruimtefiguren', vorm:'invul', sleutel:'fr2' + w2 + wat,
+        vraag:'Van ' + wat + ' zaag je één hoek recht af: er komt een driehoekig vlak bij en het hoekpunt verdwijnt. Hoeveel <b>' + TEL[w2][0] + '</b> heeft de figuur die overblijft?',
+        opdracht:'Een balk heeft 6 grensvlakken, 12 ribben en 8 hoekpunten; een kubus ook.',
+        velden:[{ label:TEL[w2][0], antwoord:af }], antwoordTekst:af + ' ' + TEL[w2][0],
+        uitleg:'Het driehoekige vlak komt erbij: 6 + 1 = 7 grensvlakken. De drie zijden van die driehoek zijn nieuwe ribben: 12 + 3 = 15. Eén hoekpunt verdwijnt, drie nieuwe komen erbij: 8 − 1 + 3 = 10. Controle: hoekpunten + grensvlakken = ribben + 2, en 10 + 7 = 15 + 2.'
+      };
+    }
+    var p = tussen(6, 16), g = tussen(5, 12), rib = p + g - 2;
+    return {
+      onderdeel:'ruimte: figuren', onderdeelNaam:'ruimtefiguren', vorm:'invul', sleutel:'fr3' + p + '_' + g,
+      vraag:'Voor elke ruimtefiguur met platte vlakken geldt: <b>hoekpunten + grensvlakken = ribben + 2</b>. Een figuur heeft ' + p + ' hoekpunten en ' + g + ' grensvlakken. Hoeveel ribben heeft hij?',
+      velden:[{ label:'ribben', antwoord:rib }], antwoordTekst:rib + ' ribben',
+      uitleg:p + ' + ' + g + ' = ' + (p + g) + ', en dat is ribben + 2. Dus ribben = ' + (p + g) + ' − 2 = ' + rib + '. Controle bij een kubus: 8 + 6 = 12 + 2.'
+    };
+  }
+  function figuren(niv){
+    var r = Math.random();
+    if (niv === 'bb') return r < 0.3 ? figHerken(niv) : r < 0.55 ? figDing(niv) : r < 0.85 ? figTel(niv) : figSleep(niv);
+    if (niv === 'kgt') return r < 0.22 ? figHerken(niv) : r < 0.4 ? figDing(niv) : r < 0.7 ? figTel(niv) : r < 0.85 ? figSleep(niv) : figEigen(niv);
+    return r < 0.15 ? figHerken(niv) : r < 0.3 ? figTel(niv) : r < 0.42 ? figSleep(niv) : r < 0.55 ? figEigen(niv) : figRegel(niv);
+  }
+
+  /* ---------- 2. aanzichten ---------- */
+  /* een bouwsel: h[x][y] blokjes hoog; x van links naar rechts, y van voor naar achter */
+  function bezet(h, W, D, x, y, z){ return x >= 0 && y >= 0 && x < W && y < D && z >= 0 && z < h[x][y]; }
+  /* in de isometrische tekening moet van elk stapeltje de bovenkant te zien zijn */
+  function topsZichtbaar(h, W, D){
+    for (var x = 0; x < W; x++) for (var y = 0; y < D; y++){
+      if (!h[x][y]) continue;
+      for (var t = 0.03; t < 12; t += 0.03){
+        var px = x + 0.5 + t, py = y + 0.5 - t, pz = h[x][y] + t;
+        if (bezet(h, W, D, Math.floor(px), Math.floor(py), Math.floor(pz))) return false;
+      }
+    }
+    return true;
+  }
+  function vooraanzicht(h, W, D){ var k = [], x, y; for (x = 0; x < W; x++){ var m = 0; for (y = 0; y < D; y++) m = Math.max(m, h[x][y]); k.push(m); } return k; }
+  function zijaanzicht(h, W, D){ var k = [], x, y; for (y = 0; y < D; y++){ var m = 0; for (x = 0; x < W; x++) m = Math.max(m, h[x][y]); k.push(m); } return k; }
+  function bouwsel(niv){
+    var W = niv === 'bb' ? kies([2, 3]) : niv === 'kgt' ? 3 : kies([3, 4]), D = niv === 'bb' ? 2 : niv === 'kgt' ? kies([2, 3]) : 3, maxh = niv === 'bb' ? 2 : 3;
+    for (var poging = 0; poging < 400; poging++){
+      var h = [], x, y, som = 0;
+      for (x = 0; x < W; x++){ h.push([]); for (y = 0; y < D; y++){ var v = Math.random() < 0.18 ? 0 : tussen(1, maxh); h[x].push(v); som += v; } }
+      var vo = vooraanzicht(h, W, D), zi = zijaanzicht(h, W, D);
+      if (vo.indexOf(0) >= 0 || zi.indexOf(0) >= 0) continue;
+      if (Math.max.apply(null, vo) < 2) continue;
+      if (vo.every(function(q){ return q === vo[0]; }) && zi.every(function(q){ return q === zi[0]; })) continue;
+      if (!topsZichtbaar(h, W, D)) continue;
+      return { h:h, W:W, D:D, som:som };
+    }
+    var vast = []; for (var i = 0; i < W; i++){ vast.push([]); for (var j = 0; j < D; j++) vast[i].push(j === D - 1 && i === 0 ? 2 : 1); } return { h:vast, W:W, D:D, som:0 };
+  }
+  function blokkenSvg(b){
+    var sc = scene(45, 35.264), h = b.h, W = b.W, D = b.D, lijst = [], x, y, z;
+    for (x = 0; x <= W; x++) sc.lijn([[x, 0, 0], [x, D, 0]], { kleur:RAND, dik:1.2 });
+    for (y = 0; y <= D; y++) sc.lijn([[0, y, 0], [W, y, 0]], { kleur:RAND, dik:1.2 });
+    for (x = 0; x < W; x++) for (y = 0; y < D; y++) for (z = 0; z < h[x][y]; z++) lijst.push([x, y, z]);
+    lijst.sort(function(a, c){ return (a[0] - a[1] + a[2]) - (c[0] - c[1] + c[2]); });
+    lijst.forEach(function(k){
+      var X = k[0], Y = k[1], Z = k[2];
+      sc.vlak([[X, Y, Z + 1], [X + 1, Y, Z + 1], [X + 1, Y + 1, Z + 1], [X, Y + 1, Z + 1]], LICHT, true);
+      sc.vlak([[X, Y, Z], [X + 1, Y, Z], [X + 1, Y, Z + 1], [X, Y, Z + 1]], MID, true);
+      sc.vlak([[X + 1, Y, Z], [X + 1, Y + 1, Z], [X + 1, Y + 1, Z + 1], [X + 1, Y, Z + 1]], DONKER, true);
+    });
+    sc.pijl([W / 2, -1.9, 0], [W / 2, -0.25, 0], 'voor');
+    sc.pijl([W + 1.9, D / 2, 0], [W + 0.25, D / 2, 0], 'rechts');
+    return sc.teken(250, 200, 'bouwsel van blokjes, getekend van schuin boven');
+  }
+  /* een aanzicht: kolommen met hoogtes, links naar rechts */
+  function aanzichtSvg(kol, n, maxH, klasse){
+    var c = 22, p = 12, w = n * c + 2 * p, hh = maxH * c + 2 * p, s = '', i, j;
+    for (i = 0; i < kol.length; i++) for (j = 0; j < kol[i]; j++) s += '<rect x="' + (p + i * c) + '" y="' + (p + (maxH - 1 - j) * c) + '" width="' + c + '" height="' + c + '" fill="' + LICHT + '" stroke="' + INK + '" stroke-width="1.8"/>';
+    s += '<line x1="' + (p - 6) + '" y1="' + (p + maxH * c) + '" x2="' + (w - p + 6) + '" y2="' + (p + maxH * c) + '" stroke="' + INK + '" stroke-width="2.4" stroke-linecap="round"/>';
+    return vel(0, 0, w, hh + 4, s, 'aanzicht met de hoogtes ' + kol.join(', '), klasse);
+  }
+  function bovenSvg(occ, W, D, klasse){
+    var c = 22, p = 12, s = '', x, y;
+    for (x = 0; x < W; x++) for (y = 0; y < D; y++){
+      var X = p + x * c, Y = p + (D - 1 - y) * c;
+      s += occ[x][y] ? '<rect x="' + X + '" y="' + Y + '" width="' + c + '" height="' + c + '" fill="' + LICHT + '" stroke="' + INK + '" stroke-width="1.8"/>'
+        : '<rect x="' + X + '" y="' + Y + '" width="' + c + '" height="' + c + '" fill="none" stroke="' + RAND + '" stroke-width="1" stroke-dasharray="3 3"/>';
+    }
+    s += tekstEl(p + W * c / 2, p + D * c + 17, 'voor', 'middle', BLAUW, 13);
+    return vel(0, 0, W * c + 2 * p, D * c + 2 * p + 16, s, 'bovenaanzicht', klasse);
+  }
+  function plattegrondSvg(h, W, D){
+    var c = 40, p = 14, s = '', x, y;
+    for (x = 0; x < W; x++) for (y = 0; y < D; y++){
+      var X = p + x * c, Y = p + (D - 1 - y) * c;
+      s += '<rect x="' + X + '" y="' + Y + '" width="' + c + '" height="' + c + '" fill="' + (h[x][y] ? LICHT : PAP) + '" stroke="' + INK + '" stroke-width="1.8"/>';
+      if (h[x][y]) s += tekstEl(X + c / 2, Y + c / 2 + 7, String(h[x][y]), 'middle', INK, 20);
+    }
+    s += tekstEl(p + W * c / 2, p + D * c + 20, 'voor', 'middle', BLAUW, 14);
+    s += tekstEl(p + W * c + 8, p + D * c / 2 + 5, 'rechts', 'start', BLAUW, 14);
+    return vel(0, 0, W * c + 2 * p + 54, D * c + 2 * p + 20, s, 'plattegrond met het aantal blokjes per vakje', 'klein');
+  }
+  function kolKey(k){ return k.join(','); }
+  /* vier aanzichten: het goede, en wat je ziet als je het verkeerd doet */
+  function kolOpties(goed, valkuilen, maxH){
+    var gezien = {}, uit = [goed]; gezien[kolKey(goed)] = 1;
+    valkuilen.forEach(function(k){ if (uit.length < 4 && k.length === goed.length && !gezien[kolKey(k)]){ gezien[kolKey(k)] = 1; uit.push(k); } });
+    for (var poging = 0; uit.length < 4 && poging < 200; poging++){
+      var k = goed.slice(), i = tussen(0, k.length - 1); k[i] = Math.max(1, Math.min(maxH, k[i] + kies([-1, 1])));
+      if (Math.random() < 0.4){ var j = tussen(0, k.length - 1); k[j] = Math.max(1, Math.min(maxH, k[j] + kies([-1, 1]))); }
+      if (!gezien[kolKey(k)]){ gezien[kolKey(k)] = 1; uit.push(k); }
+    }
+    return uit;
+  }
+  function aanzKies(niv){
+    var b = bouwsel(niv), W = b.W, D = b.D, vo = vooraanzicht(b.h, W, D), zi = zijaanzicht(b.h, W, D), welk = kies(niv === 'bb' ? ['voor', 'voor', 'zij', 'boven'] : ['voor', 'zij', 'zij', 'boven']);
+    var maxH = Math.max(Math.max.apply(null, vo), 3), n = Math.max(W, D), opties, goedTekst, uitleg;
+    if (welk === 'boven'){
+      var occ = b.h.map(function(c){ return c.map(function(v){ return v > 0; }); });
+      var kand = [occ, occ.slice().reverse(), occ.map(function(c){ return c.slice().reverse(); })], gez = {}, lijst = [];
+      for (var t = 0; t < 30 && kand.length < 12; t++){ var o = occ.map(function(c){ return c.slice(); }), x = tussen(0, W - 1), y = tussen(0, D - 1); o[x][y] = !o[x][y]; kand.push(o); }
+      kand.forEach(function(o2){ var k = JSON.stringify(o2), leeg = o2.every(function(c){ return c.every(function(v){ return !v; }); }); if (!gez[k] && !leeg && lijst.length < 4){ gez[k] = 1; lijst.push(o2); } });
+      opties = lijst.map(function(o2){ return bovenSvg(o2, W, D); });
+      goedTekst = 'het bovenaanzicht waarin je van elk stapeltje één vierkant ziet';
+      uitleg = 'Van boven zie je van elk stapeltje alleen het bovenste blokje: één vierkantje per plek, hoe hoog het stapeltje ook is. De voorkant ligt onderaan. Pas op voor het gespiegelde plaatje: dat is van achteren of van de andere kant gezien.';
+      return {
+        onderdeel:'ruimte: aanzichten', onderdeelNaam:'aanzichten', vorm:'meerkeuze', sleutel:'ab' + JSON.stringify(b.h),
+        vraag:'Welk plaatje is het <b>bovenaanzicht</b> van dit bouwsel?', opdracht:'Je kijkt recht van boven. De voorkant ligt onderaan.',
+        beeld:blokkenSvg(b), opties:opties, goed:0, vasteVolgorde:false, antwoordTekst:goedTekst, uitleg:uitleg
+      };
+    }
+    if (welk === 'voor'){
+      opties = kolOpties(vo, [vo.slice().reverse(), zi, zi.slice().reverse()], maxH);
+      goedTekst = 'het vooraanzicht met de hoogtes ' + vo.join(', ');
+      uitleg = 'Kijk van voren, in de richting van de pijl voor. Per kolom van links naar rechts zie je het hoogste stapeltje: ' + vo.join(', ') + '. Wat erachter staat en lager is, zie je niet.';
+    } else {
+      opties = kolOpties(zi, [zi.slice().reverse(), vo, vo.slice().reverse()], maxH);
+      goedTekst = 'het rechterzijaanzicht met de hoogtes ' + zi.join(', ');
+      uitleg = 'Kijk van rechts, in de richting van de pijl rechts. Dan is de voorkant links op je plaatje en de achterkant rechts. Per rij van voor naar achter zie je het hoogste stapeltje: ' + zi.join(', ') + '.';
+    }
+    return {
+      onderdeel:'ruimte: aanzichten', onderdeelNaam:'aanzichten', vorm:'meerkeuze', sleutel:'a' + welk + JSON.stringify(b.h),
+      vraag:'Welk plaatje is het <b>' + (welk === 'voor' ? 'vooraanzicht' : 'rechterzijaanzicht') + '</b> van dit bouwsel?',
+      opdracht:welk === 'voor' ? 'Je kijkt recht van voren, in de richting van de pijl voor.' : 'Je kijkt recht van rechts, in de richting van de pijl rechts.',
+      beeld:blokkenSvg(b), opties:opties.map(function(k){ return aanzichtSvg(k, welk === 'voor' ? W : D, maxH); }), goed:0, antwoordTekst:goedTekst, uitleg:uitleg
+    };
+  }
+  /* met een plattegrond met getallen: per vakje hoeveel blokjes er staan */
+  function aanzPlat(niv){
+    var b = bouwsel(niv === 'bb' ? 'kgt' : niv), W = b.W, D = b.D, vo = vooraanzicht(b.h, W, D), zi = zijaanzicht(b.h, W, D), maxH = Math.max(3, Math.max.apply(null, vo));
+    if (niv === 'bb' || Math.random() < 0.3){
+      var som = 0; b.h.forEach(function(c){ c.forEach(function(v){ som += v; }); });
+      return {
+        onderdeel:'ruimte: aanzichten', onderdeelNaam:'aanzichten', vorm:'invul', sleutel:'ap' + JSON.stringify(b.h),
+        vraag:'Dit is de plattegrond van een bouwsel. In elk vakje staat hoeveel blokjes er op elkaar staan. Hoeveel blokjes zijn er in totaal?',
+        beeld:plattegrondSvg(b.h, W, D), velden:[{ label:'blokjes', antwoord:som }], antwoordTekst:som + ' blokjes',
+        uitleg:'Tel de getallen in de vakjes op: ' + [].concat.apply([], b.h).filter(function(v){ return v; }).join(' + ') + ' = ' + som + '.'
+      };
+    }
+    var voor = Math.random() < 0.5, goed = voor ? vo : zi;
+    var opties = kolOpties(goed, voor ? [vo.slice().reverse(), zi] : [zi.slice().reverse(), vo], maxH);
+    return {
+      onderdeel:'ruimte: aanzichten', onderdeelNaam:'aanzichten', vorm:'meerkeuze', sleutel:'aq' + voor + JSON.stringify(b.h),
+      vraag:'Dit is de plattegrond van een bouwsel: in elk vakje staat hoeveel blokjes er op elkaar staan. Welk plaatje is het <b>' + (voor ? 'vooraanzicht' : 'rechterzijaanzicht') + '</b>?',
+      opdracht:voor ? 'Van voren zie je per kolom (van links naar rechts) het hoogste getal.' : 'Van rechts zie je per rij het hoogste getal. De voorkant komt links op je plaatje.',
+      beeld:plattegrondSvg(b.h, W, D), opties:opties.map(function(k){ return aanzichtSvg(k, voor ? W : D, maxH); }), goed:0,
+      antwoordTekst:(voor ? 'vooraanzicht ' : 'rechterzijaanzicht ') + goed.join(', '),
+      uitleg:voor ? 'Neem per kolom van links naar rechts het hoogste getal: ' + vo.join(', ') + '.' : 'Neem per rij het hoogste getal, en begin bij de voorste rij (links op je plaatje): ' + zi.join(', ') + '.'
+    };
+  }
+  function tweeAanzichten(a, b, maxH){
+    var c = 20, p = 12, s = '', i, j, bx = a.length * c + 2 * p + 26;
+    function teken(k, x0){
+      var t = '';
+      for (i = 0; i < k.length; i++) for (j = 0; j < k[i]; j++) t += '<rect x="' + (x0 + p + i * c) + '" y="' + (p + 18 + (maxH - 1 - j) * c) + '" width="' + c + '" height="' + c + '" fill="' + LICHT + '" stroke="' + INK + '" stroke-width="1.8"/>';
+      return t + '<line x1="' + (x0 + p - 5) + '" y1="' + (p + 18 + maxH * c) + '" x2="' + (x0 + p + k.length * c + 5) + '" y2="' + (p + 18 + maxH * c) + '" stroke="' + INK + '" stroke-width="2.4"/>';
+    }
+    s += teken(a, 0) + tekstEl(p + a.length * c / 2, p + 4, 'voor', 'middle', BLAUW, 14);
+    s += teken(b, bx) + tekstEl(bx + p + b.length * c / 2, p + 4, 'rechts', 'middle', BLAUW, 14);
+    return vel(0, 0, bx + b.length * c + 2 * p, maxH * c + 2 * p + 22, s, 'vooraanzicht en rechterzijaanzicht', 'klein');
+  }
+  function aanzMinMax(niv){
+    var b = bouwsel('hv'), W = b.W, D = b.D, vo = vooraanzicht(b.h, W, D), zi = zijaanzicht(b.h, W, D), maxH = Math.max.apply(null, vo), meest = Math.random() < 0.5;
+    var max = 0, x, y; for (x = 0; x < W; x++) for (y = 0; y < D; y++) max += Math.min(vo[x], zi[y]);
+    var hoogtes = vo.concat(zi).filter(function(v, i, l){ return l.indexOf(v) === i; }).sort(), min = 0, uitMin = [];
+    hoogtes.forEach(function(v){ var ca = vo.filter(function(q){ return q === v; }).length, cb = zi.filter(function(q){ return q === v; }).length, m = Math.max(ca, cb); min += v * m; uitMin.push(m + ' ' + (m === 1 ? 'stapel' : 'stapels') + ' van ' + v); });
+    var ant = meest ? max : min;
+    return {
+      onderdeel:'ruimte: aanzichten', onderdeelNaam:'aanzichten', vorm:'invul', sleutel:'am' + meest + vo.join('') + '_' + zi.join(''),
+      vraag:'Een bouwsel staat op een grondvlak van ' + W + ' bij ' + D + ' vakjes. Je ziet het vooraanzicht en het rechterzijaanzicht. Hoeveel blokjes zijn er <b>' + (meest ? 'hoogstens' : 'minstens') + '</b>?',
+      opdracht:meest ? 'Op elk vakje kan hoogstens zoveel staan als beide aanzichten toelaten.' : 'Een stapel kan voor beide aanzichten tegelijk tellen.',
+      beeld:tweeAanzichten(vo, zi, maxH), velden:[{ label:'blokjes', antwoord:ant }], antwoordTekst:ant + ' blokjes',
+      uitleg:meest ? 'Op het vakje in kolom k en rij r passen hoogstens zoveel blokjes als het kleinste van de twee hoogtes uit de aanzichten. Tel je dat voor alle ' + W * D + ' vakjes op, dan kom je op ' + max + '.'
+        : 'Elke hoogte uit het vooraanzicht moet ergens staan, en elke hoogte uit het zijaanzicht ook. Een stapel kan twee keer meetellen als hij in beide even hoog is. Zo heb je nodig: ' + uitMin.join(', ') + '. Samen ' + min + ' blokjes.'
+    };
+  }
+  function aanzichten(niv){
+    var r = Math.random();
+    if (niv === 'bb') return r < 0.75 ? aanzKies(niv) : aanzPlat(niv);
+    if (niv === 'kgt') return r < 0.6 ? aanzKies(niv) : aanzPlat(niv);
+    return r < 0.4 ? aanzKies(niv) : r < 0.65 ? aanzPlat(niv) : aanzMinMax(niv);
+  }
+
+  /* ---------- 3. uitslagen ---------- */
+  var RICHT = { n:[0, -1], s:[0, 1], o:[1, 0], w:[-1, 0] };
+  function rol(s, d){
+    var t = { b:s.b, t:s.t, n:s.n, s:s.s, o:s.o, w:s.w };
+    if (d === 'o'){ t.b = s.o; t.o = s.t; t.t = s.w; t.w = s.b; }
+    if (d === 'w'){ t.b = s.w; t.w = s.t; t.t = s.o; t.o = s.b; }
+    if (d === 'n'){ t.b = s.n; t.n = s.t; t.t = s.s; t.s = s.b; }
+    if (d === 's'){ t.b = s.s; t.s = s.t; t.t = s.n; t.n = s.b; }
+    return t;
+  }
+  /* een uitslag vouwen = de kubus over de uitslag rollen; elk vakje krijgt het vlak dat onder ligt */
+  function vouw(cel){
+    var idx = {}, st = [], rij = [0], i;
+    cel.forEach(function(c, j){ idx[c[0] + ',' + c[1]] = j; });
+    st[0] = { b:0, t:1, n:2, s:3, o:4, w:5 };
+    while (rij.length){
+      i = rij.shift();
+      Object.keys(RICHT).forEach(function(d){
+        var j = idx[(cel[i][0] + RICHT[d][0]) + ',' + (cel[i][1] + RICHT[d][1])];
+        if (j != null && !st[j]){ st[j] = rol(st[i], d); rij.push(j); }
+      });
+    }
+    var vlak = st.map(function(x){ return x.b; });
+    return { ok:vlak.filter(function(v, k){ return vlak.indexOf(v) === k; }).length === 6, st:st, vlak:vlak, idx:idx };
+  }
+  function normaal(cel){
+    var mx = Math.min.apply(null, cel.map(function(c){ return c[0]; })), my = Math.min.apply(null, cel.map(function(c){ return c[1]; }));
+    return cel.map(function(c){ return [c[0] - mx, c[1] - my]; }).sort(function(a, b){ return a[1] - b[1] || a[0] - b[0]; });
+  }
+  function celKey(cel){ return normaal(cel).map(function(c){ return c.join(','); }).join(';'); }
+  function heeftBlok(cel){ var k = {}; cel.forEach(function(c){ k[c.join(',')] = 1; }); return cel.some(function(c){ return k[(c[0] + 1) + ',' + c[1]] && k[c[0] + ',' + (c[1] + 1)] && k[(c[0] + 1) + ',' + (c[1] + 1)]; }); }
+  function hexomino(){
+    var cel = [[0, 0]], set = { '0,0':1 };
+    while (cel.length < 6){ var c = kies(cel), d = RICHT[kies(['n', 's', 'o', 'w'])], n = [c[0] + d[0], c[1] + d[1]], k = n.join(','); if (!set[k]){ set[k] = 1; cel.push(n); } }
+    cel = normaal(cel);
+    var bw = Math.max.apply(null, cel.map(function(c){ return c[0]; })) + 1, bh = Math.max.apply(null, cel.map(function(c){ return c[1]; })) + 1;
+    return { cel:cel, past:Math.max(bw, bh) <= 5 && Math.min(bw, bh) <= 4 };
+  }
+  function uitslag(goed, blokMag){
+    for (var i = 0; i < 6000; i++){
+      var h = hexomino(); if (!h.past) continue;
+      var blok = heeftBlok(h.cel);
+      if (goed){ if (!blok && vouw(h.cel).ok) return h.cel; }
+      else if ((blokMag || !blok) && !(!blok && vouw(h.cel).ok)) return h.cel;
+    }
+    return goed ? normaal([[1, 0], [0, 1], [1, 1], [2, 1], [3, 1], [1, 2]]) : normaal([[0, 0], [1, 0], [2, 0], [3, 0], [1, 1], [2, 1]]);
+  }
+  var OGEN = { 1:[[.5, .5]], 2:[[.27, .27], [.73, .73]], 3:[[.25, .25], [.5, .5], [.75, .75]], 4:[[.27, .27], [.73, .27], [.27, .73], [.73, .73]], 5:[[.25, .25], [.75, .25], [.5, .5], [.25, .75], [.75, .75]], 6:[[.27, .22], [.73, .22], [.27, .5], [.73, .5], [.27, .78], [.73, .78]] };
+  function netSvg(cel, o){
+    o = o || {}; var c = o.c || 30, p = o.p || 16, s = '';
+    var mc = Math.max.apply(null, cel.map(function(q){ return q[0]; })), mr = Math.max.apply(null, cel.map(function(q){ return q[1]; }));
+    cel.forEach(function(q, i){
+      var x = p + q[0] * c, y = p + q[1] * c;
+      s += '<rect x="' + x + '" y="' + y + '" width="' + c + '" height="' + c + '" fill="' + (o.kleur && o.kleur[i] || LICHT) + '" stroke="' + INK + '" stroke-width="2" stroke-linejoin="round"/>';
+      if (o.tekst && o.tekst[i] != null) s += tekstEl(x + c / 2, y + c / 2 + 7, o.tekst[i], 'middle', o.tekstKleur && o.tekstKleur[i] || INK, 19);
+      if (o.ogen && o.ogen[i]) OGEN[o.ogen[i]].forEach(function(g){ s += '<circle cx="' + f1(x + g[0] * c) + '" cy="' + f1(y + g[1] * c) + '" r="' + f1(c * 0.08) + '" fill="' + INK + '"/>'; });
+    });
+    (o.zijden || []).forEach(function(z){
+      var q = cel[z.i], x = p + q[0] * c, y = p + q[1] * c, a, b, u;
+      if (z.d === 'n'){ a = [x, y]; b = [x + c, y]; u = [0, -1]; }
+      if (z.d === 's'){ a = [x, y + c]; b = [x + c, y + c]; u = [0, 1]; }
+      if (z.d === 'w'){ a = [x, y]; b = [x, y + c]; u = [-1, 0]; }
+      if (z.d === 'o'){ a = [x + c, y]; b = [x + c, y + c]; u = [1, 0]; }
+      if (z.rood) s += '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '" stroke="' + ROOD + '" stroke-width="6" stroke-linecap="round"/>';
+      if (z.label){ var m = [(a[0] + b[0]) / 2 + u[0] * 11, (a[1] + b[1]) / 2 + u[1] * 11 + 5]; s += tekstEl(m[0], m[1], z.label, 'middle', BLAUW, 15); }
+    });
+    return vel(0, 0, (mc + 1) * c + 2 * p, (mr + 1) * c + 2 * p, s, o.naam || 'uitslag', o.klasse);
+  }
+  /* uitslagen van de andere figuren, met de hand getekend */
+  function poly(ps, fill){ return '<polygon points="' + ps.map(function(q){ return f1(q[0]) + ',' + f1(q[1]); }).join(' ') + '" fill="' + (fill || LICHT) + '" stroke="' + INK + '" stroke-width="2" stroke-linejoin="round"/>'; }
+  function rh(x, y, w, h){ return poly([[x, y], [x + w, y], [x + w, y + h], [x, y + h]]); }
+  function figNet(id, klasse){
+    var s = '', w, h, naam = 'uitslag';
+    if (id === 'kubus') return netSvg([[1, 0], [0, 1], [1, 1], [2, 1], [3, 1], [1, 2]], { c:28, klasse:klasse });
+    if (id === 'balk'){ var l = 44, b = 20, hh = 28, x = 10, y = 10 + b; s = rh(x, y, b, hh) + rh(x + b, y, l, hh) + rh(x + b + l, y, b, hh) + rh(x + 2 * b + l, y, l, hh) + rh(x + b, y - b, l, b) + rh(x + b, y + hh, l, b); w = 2 * b + 2 * l + 20; h = 2 * b + hh + 20; }
+    if (id === 'prisma3'){ var z = 34, t = 29.4, L = 54, x0 = 10, y0 = 10 + t; s = rh(x0, y0, z, L) + rh(x0 + z, y0, z, L) + rh(x0 + 2 * z, y0, z, L) + poly([[x0 + z, y0], [x0 + 2 * z, y0], [x0 + 1.5 * z, y0 - t]]) + poly([[x0 + z, y0 + L], [x0 + 2 * z, y0 + L], [x0 + 1.5 * z, y0 + L + t]]); w = 3 * z + 20; h = L + 2 * t + 20; }
+    if (id === 'pir4'){ var a = 40, tt = 36, cx = 10 + tt, cy = 10 + tt; s = rh(cx, cy, a, a) + poly([[cx, cy], [cx + a, cy], [cx + a / 2, cy - tt]]) + poly([[cx, cy + a], [cx + a, cy + a], [cx + a / 2, cy + a + tt]]) + poly([[cx, cy], [cx, cy + a], [cx - tt, cy + a / 2]]) + poly([[cx + a, cy], [cx + a, cy + a], [cx + a + tt, cy + a / 2]]); w = a + 2 * tt + 20; h = w; }
+    if (id === 'pir3'){ var zz = 120, hd = zz * Math.sqrt(3) / 2, A = [10, 10 + hd], B = [10 + zz, 10 + hd], C = [10 + zz / 2, 10], mab = [(A[0] + B[0]) / 2, A[1]], mac = [(A[0] + C[0]) / 2, (A[1] + C[1]) / 2], mbc = [(B[0] + C[0]) / 2, (B[1] + C[1]) / 2];
+      s = poly([A, mab, mac]) + poly([mab, B, mbc]) + poly([mac, mbc, C]) + poly([mab, mbc, mac]); w = zz + 20; h = hd + 20; }
+    if (id === 'cilinder'){ var r = 15, om = 2 * Math.PI * r, hc = 46, xx = 10, yy = 10 + 2 * r; s = rh(xx, yy, om, hc) + '<circle cx="' + f1(xx + om / 2) + '" cy="' + f1(yy - r) + '" r="' + r + '" fill="' + LICHT + '" stroke="' + INK + '" stroke-width="2"/><circle cx="' + f1(xx + om / 2) + '" cy="' + f1(yy + hc + r) + '" r="' + r + '" fill="' + LICHT + '" stroke="' + INK + '" stroke-width="2"/>'; w = om + 20; h = hc + 4 * r + 20; }
+    if (id === 'kegel'){ var R = 66, hoek = 120, rk = R * hoek / 360, top = [10 + R, 10], pad = [], i;
+      for (i = 0; i <= 30; i++){ var tk = (90 - hoek / 2 + hoek * i / 30) * RAD; pad.push([top[0] + R * Math.cos(tk), top[1] + R * Math.sin(tk)]); }
+      s = poly([top].concat(pad)) + '<circle cx="' + f1(top[0]) + '" cy="' + f1(top[1] + R + rk) + '" r="' + f1(rk) + '" fill="' + LICHT + '" stroke="' + INK + '" stroke-width="2"/>'; w = 2 * R + 20; h = R + 2 * rk + 20; }
+    return vel(0, 0, w, h, s, naam, klasse);
+  }
+  var NET_FIG = ['kubus', 'balk', 'prisma3', 'pir4', 'pir3', 'cilinder', 'kegel'];
+  function netKubus(niv){
+    var geen = niv === 'hv' && Math.random() < 0.5, opties = [], gez = {};
+    var eerste = uitslag(!geen, false); opties.push(eerste); gez[celKey(eerste)] = 1;
+    for (var t = 0; opties.length < 4 && t < 100; t++){ var c = uitslag(geen, niv === 'bb'); if (!gez[celKey(c)]){ gez[celKey(c)] = 1; opties.push(c); } }
+    return {
+      onderdeel:'ruimte: uitslagen', onderdeelNaam:'uitslagen', vorm:'meerkeuze', sleutel:'uk' + geen + celKey(eerste),
+      vraag:geen ? 'Drie van deze vier zijn een uitslag van een kubus. Welke is <b>geen</b> uitslag van een kubus?' : 'Welke van deze vier is een <b>uitslag van een kubus</b>?',
+      opdracht:'Vouw in gedachten: kies één vierkant als bodem en klap de rest omhoog. Twee vierkanten mogen niet op dezelfde plek uitkomen.',
+      opties:opties.map(function(c){ return netSvg(c, { c:24, p:12 }); }), goed:0,
+      antwoordTekst:geen ? 'de uitslag die niet dichtvouwt' : 'de uitslag die een kubus wordt',
+      uitleg:geen ? 'Als je deze vouwt, komen twee vierkanten op dezelfde plek terecht en blijft er een kant open. De andere drie vouwen dicht tot een kubus.'
+        : 'Deze vouwt dicht tot een kubus: elk vierkant komt op een andere kant. Bij de andere drie komen twee vierkanten op elkaar' + (niv === 'bb' ? ' of zitten vier vierkanten in een blok van twee bij twee' : '') + ' en blijft er een kant open.'
+    };
+  }
+  function netFiguur(niv){
+    var id = kies(NET_FIG), andere = H(NET_FIG.filter(function(x){ return x !== id; })).slice(0, 3);
+    if (Math.random() < 0.5){
+      return {
+        onderdeel:'ruimte: uitslagen', onderdeelNaam:'uitslagen', vorm:'meerkeuze', sleutel:'uf1' + id + andere.join(''),
+        vraag:'Welke uitslag hoort bij ' + dezeDit(id) + ' <b>' + FIG[id].naam + '</b>?', beeld:figuurSvg(id),
+        opties:[id].concat(andere).map(function(x){ return figNet(x); }), goed:0, antwoordTekst:'de uitslag van een ' + FIG[id].naam,
+        uitleg:'Tel de vlakken en kijk naar hun vorm. ' + figuurUitleg(id) + (id === 'kegel' ? ' In de uitslag wordt de schuine kant een stuk van een cirkel (een taartpunt).' : id === 'cilinder' ? ' In de uitslag wordt de gebogen kant een rechthoek.' : '')
+      };
+    }
+    return {
+      onderdeel:'ruimte: uitslagen', onderdeelNaam:'uitslagen', vorm:'meerkeuze', sleutel:'uf2' + id,
+      vraag:'Van welke ruimtefiguur is dit de uitslag?', beeld:figNet(id, 'klein'),
+      opties:[FIG[id].naam].concat(andere.filter(function(x){ return !(id === 'kubus' && x === 'balk'); }).map(function(x){ return FIG[x].naam; })), goed:0, antwoordTekst:FIG[id].naam,
+      uitleg:'Tel de vlakken en kijk naar hun vorm. ' + figuurUitleg(id)
+    };
+  }
+  var LETTERS6 = ['A', 'B', 'C', 'D', 'E', 'F'];
+  function netTegenover(niv){
+    var cel = uitslag(true), v = vouw(cel), dobbel = niv === 'kgt' && Math.random() < 0.45;
+    if (dobbel){
+      /* tegenover elkaar samen 7 */
+      var paren = H([[1, 6], [2, 5], [3, 4]]), waarde = {};
+      [[0, 1], [2, 3], [4, 5]].forEach(function(fp, k){ var p = Math.random() < 0.5 ? paren[k] : [paren[k][1], paren[k][0]]; waarde[fp[0]] = p[0]; waarde[fp[1]] = p[1]; });
+      var leeg = tussen(0, 5), ogen = cel.map(function(c, i){ return i === leeg ? 0 : waarde[v.vlak[i]]; }), ant = waarde[v.vlak[leeg]], over = 7 - ant;
+      return {
+        onderdeel:'ruimte: uitslagen', onderdeelNaam:'uitslagen', vorm:'invul', sleutel:'ud' + celKey(cel) + leeg + ant,
+        vraag:'Dit is de uitslag van een dobbelsteen. Bij een dobbelsteen zijn de ogen van twee tegenover elkaar liggende vlakken samen altijd <b>7</b>. Hoeveel ogen horen op het vlak met het vraagteken?',
+        opdracht:'Zoek eerst welk vlak tegenover het vraagteken ligt.',
+        beeld:netSvg(cel, { ogen:ogen, tekst:cel.map(function(c, i){ return i === leeg ? '?' : null; }), tekstKleur:cel.map(function(){ return ROOD; }), c:40, klasse:'klein', naam:'uitslag van een dobbelsteen' }),
+        velden:[{ label:'ogen', antwoord:ant }], antwoordTekst:ant + (ant === 1 ? ' oog' : ' ogen'),
+        uitleg:'Als je de uitslag vouwt, ligt het vlak met ' + over + ' ' + (over === 1 ? 'oog' : 'ogen') + ' tegenover het vraagteken. Dan ' + (ant === 1 ? 'hoort' : 'horen') + ' er 7 − ' + over + ' = ' + ant + (ant === 1 ? ' oog' : ' ogen') + ' op.'
+      };
+    }
+    var i = tussen(0, 5), j = v.vlak.indexOf(v.vlak[i] ^ 1), letters = H(LETTERS6), andere = H([0, 1, 2, 3, 4, 5].filter(function(k){ return k !== i && k !== j; })).slice(0, 3);
+    var kleur = cel.map(function(c, k){ return k === i ? '#FBD3C2' : null; });
+    return {
+      onderdeel:'ruimte: uitslagen', onderdeelNaam:'uitslagen', vorm:'meerkeuze', sleutel:'ut' + celKey(cel) + i,
+      vraag:'Je vouwt deze uitslag tot een kubus. Welk vlak ligt dan <b>tegenover vlak ' + letters[i] + '</b>?',
+      opdracht:'Twee vlakken met precies één vlak ertussen op een rechte rij liggen tegenover elkaar.',
+      beeld:netSvg(cel, { tekst:letters, kleur:kleur, c:40, klasse:'klein', naam:'uitslag van een kubus met letters' }),
+      opties:['vlak ' + letters[j]].concat(andere.map(function(k){ return 'vlak ' + letters[k]; })), goed:0, antwoordTekst:'vlak ' + letters[j],
+      uitleg:'Vouw vlak ' + letters[i] + ' als bodem: vlak ' + letters[j] + ' komt dan bovenop, tegenover ' + letters[i] + '. De vlakken die ernaast liggen in de uitslag worden de zijkanten, en die raken vlak ' + letters[i] + ' juist.'
+    };
+  }
+  /* havo/vwo: welke rand komt tegen de rode rand als je vouwt */
+  function netRand(niv){
+    var cel = uitslag(true), v = vouw(cel), randen = [];
+    cel.forEach(function(c, i){ Object.keys(RICHT).forEach(function(d){ if (v.idx[(c[0] + RICHT[d][0]) + ',' + (c[1] + RICHT[d][1])] == null){ var a = v.st[i].b, b = v.st[i][d]; randen.push({ i:i, d:d, key:Math.min(a, b) + '-' + Math.max(a, b) }); } }); });
+    var rood = kies(randen), maat = randen.filter(function(r){ return r !== rood && r.key === rood.key; })[0];
+    var rest = H(randen.filter(function(r){ return r !== rood && r !== maat; })).slice(0, 3), labels = ['a', 'b', 'c', 'd'], keus = H([maat].concat(rest));
+    var zijden = [{ i:rood.i, d:rood.d, rood:true }].concat(keus.map(function(r, k){ return { i:r.i, d:r.d, label:labels[k] }; }));
+    var goedLabel = labels[keus.indexOf(maat)];
+    return {
+      onderdeel:'ruimte: uitslagen', onderdeelNaam:'uitslagen', vorm:'meerkeuze', sleutel:'ur' + celKey(cel) + rood.i + rood.d,
+      vraag:'Je vouwt deze uitslag tot een kubus. Tegen welke rand komt de <b>rode rand</b> te liggen?',
+      opdracht:'Vouw in gedachten; de randen die tegen elkaar komen, worden samen één ribbe.',
+      beeld:netSvg(cel, { zijden:zijden, c:40, p:24, klasse:'klein', naam:'uitslag van een kubus met een rode rand' }),
+      opties:labels.map(function(l){ return 'rand ' + l; }), vasteVolgorde:true, goed:labels.indexOf(goedLabel), antwoordTekst:'rand ' + goedLabel,
+      uitleg:'Bij het vouwen draaien de vlakken om de randen waar ze aan elkaar vastzitten. De rode rand en rand ' + goedLabel + ' komen dan samen: ze vormen één ribbe van de kubus. Vaak liggen zulke randen in de uitslag in een hoek van een vlak bij elkaar, of op een rij met één vlak ertussen.'
+    };
+  }
+  function uitslagen(niv){
+    var r = Math.random();
+    if (niv === 'bb') return r < 0.45 ? netKubus(niv) : r < 0.85 ? netFiguur(niv) : netTegenover('kgt');
+    if (niv === 'kgt') return r < 0.3 ? netKubus(niv) : r < 0.55 ? netFiguur(niv) : netTegenover(niv);
+    return r < 0.25 ? netKubus(niv) : r < 0.4 ? netFiguur(niv) : r < 0.65 ? netTegenover(niv) : netRand(niv);
+  }
+
+  /* ---------- 4. inhoud en oppervlakte ---------- */
+  function inh(o){ o.onderdeel = 'ruimte: inhoud'; o.onderdeelNaam = 'inhoud en oppervlakte'; o.vorm = o.vorm || 'invul'; return o; }
+  var LITER = '1 liter = 1 dm³ = 1000 cm³.';
+  function inhBalk(niv){
+    var c = kies([
+      { wat:'een aquarium', l:[40, 50, 60, 80, 100], b:[20, 30, 40], h:[30, 40, 50], liter:true },
+      { wat:'een schoenendoos', l:[30, 32, 34, 36], b:[18, 20, 22], h:[10, 11, 12], liter:false },
+      { wat:'een koelbox', l:[40, 45, 50], b:[25, 30], h:[30, 35, 40], liter:true },
+      { wat:'een bloembak', l:[60, 80, 100], b:[15, 20, 25], h:[15, 20], liter:true }
+    ]);
+    var l = kies(c.l), b = kies(c.b), h = kies(c.h), cm3 = l * b * h, lit = cm3 / 1000;
+    return inh({
+      sleutel:'ib' + c.wat + l + b + h,
+      vraag:grote(c.wat) + ' heeft de vorm van een balk: ' + l + ' cm lang, ' + b + ' cm breed en ' + h + ' cm hoog. ' + (c.liter ? 'Hoeveel <b>liter</b> past erin?' : 'Wat is de <b>inhoud</b> in cm³?'),
+      opdracht:'inhoud balk = lengte × breedte × hoogte.' + (c.liter ? ' ' + LITER : '') + (c.liter && Math.abs(lit - rond(lit, 1)) > 1e-9 ? ' ' + EEN : ''),
+      beeld:balkTek(l, b, h, { l:l + ' cm', b:b + ' cm', h:h + ' cm' }).sc.teken(230, 150, 'balk'),
+      velden:[c.liter ? veld('inhoud', lit, 'liter', 1) : veld('inhoud', cm3, 'cm³', 0)],
+      antwoordTekst:c.liter ? net(lit) + ' liter' : net(cm3) + ' cm³',
+      uitleg:'Inhoud = ' + l + ' × ' + b + ' × ' + h + ' = ' + net(cm3) + ' cm³.' + (c.liter ? ' Dat is ' + net(cm3) + ' : 1000 = ' + net(lit) + ' liter, want 1000 cm³ is 1 liter.' : '')
+    });
+  }
+  function inhKubus(niv){
+    var c = kies([{ wat:'een kist', r:[40, 50, 60, 70, 80], liter:true }, { wat:'een bouwblok', r:[3, 4, 5, 6, 7, 8], liter:false }, { wat:'een opbergbox', r:[30, 40, 50], liter:true }]);
+    var r = kies(c.r), cm3 = r * r * r;
+    return inh({
+      sleutel:'ik' + c.wat + r, vraag:grote(c.wat) + ' is een kubus met ribben van ' + r + ' cm. ' + (c.liter ? 'Hoeveel <b>liter</b> past erin?' : 'Wat is de <b>inhoud</b> in cm³?'),
+      opdracht:'inhoud kubus = ribbe × ribbe × ribbe.' + (c.liter ? ' ' + LITER : ''),
+      beeld:balkTek(r, r, r, { l:r + ' cm' }).sc.teken(180, 150, 'kubus', 'klein'),
+      velden:[c.liter ? veld('inhoud', cm3 / 1000, 'liter', 3) : veld('inhoud', cm3, 'cm³', 0)],
+      antwoordTekst:c.liter ? net(cm3 / 1000) + ' liter' : net(cm3) + ' cm³',
+      uitleg:'Inhoud = ' + r + ' × ' + r + ' × ' + r + ' = ' + net(cm3) + ' cm³.' + (c.liter ? ' Gedeeld door 1000 geeft ' + net(cm3 / 1000) + ' liter.' : '')
+    });
+  }
+  function inhOpp(niv){
+    var c = kies([{ wat:'een cadeaudoos', vraag:'Hoeveel cm² papier heb je minstens nodig om hem helemaal in te pakken?' }, { wat:'een houten kist', vraag:'Je verft de kist aan alle kanten. Hoeveel cm² moet je verven?' }, { wat:'een doos', vraag:'Hoeveel cm² karton zit er in de doos (zonder overlap)?' }]);
+    var kub = niv !== 'bb' && Math.random() < 0.25, l = tussen(8, 30), b = kub ? l : tussen(6, 20), h = kub ? l : tussen(5, 20);
+    var opp = 2 * (l * b + l * h + b * h);
+    return inh({
+      sleutel:'io' + l + b + h, vraag:grote(c.wat) + (kub ? ' is een kubus met ribben van ' + l + ' cm. ' : ' is een balk van ' + l + ' bij ' + b + ' bij ' + h + ' cm. ') + c.vraag,
+      opdracht:'Een balk heeft zes rechthoeken: steeds twee dezelfde.',
+      beeld:balkTek(l, b, h, { l:l + ' cm', b:b + ' cm', h:h + ' cm' }).sc.teken(230, 150, 'balk'),
+      velden:[veld('oppervlakte', opp, 'cm²', 0)], antwoordTekst:net(opp) + ' cm²',
+      uitleg:kub ? 'Een kubus heeft 6 gelijke vierkanten: 6 × ' + l + ' × ' + l + ' = ' + net(opp) + ' cm².' : 'Voor en achter: 2 × ' + l + ' × ' + h + ' = ' + 2 * l * h + '. Boven en onder: 2 × ' + l + ' × ' + b + ' = ' + 2 * l * b + '. Links en rechts: 2 × ' + b + ' × ' + h + ' = ' + 2 * b * h + '. Samen ' + net(opp) + ' cm². Wie de inhoud uitrekent, vergist zich: oppervlakte is de buitenkant.'
+    });
+  }
+  function inhCilGegeven(niv){
+    var G = kies([1200, 1500, 1800, 2000, 2500]), h = kies([60, 70, 80, 90, 100]), cm3 = G * h, wat = kies(['Een regenton', 'Een waterton', 'Een bak voor regenwater']);
+    return inh({
+      sleutel:'icg' + G + h, vraag:wat + ' heeft de vorm van een cilinder. Het grondvlak is ' + net(G) + ' cm² en de ton is ' + h + ' cm hoog. Hoeveel <b>liter</b> water past erin?',
+      opdracht:'inhoud cilinder = oppervlakte grondvlak × hoogte. ' + LITER,
+      beeld:cilTek(30, h, { h:h + ' cm' }).sc.teken(170, 150, 'cilinder', 'klein'),
+      velden:[veld('inhoud', cm3 / 1000, 'liter', 1)], antwoordTekst:net(cm3 / 1000) + ' liter',
+      uitleg:'Inhoud = ' + net(G) + ' × ' + h + ' = ' + net(cm3) + ' cm³. Gedeeld door 1000 is dat ' + net(cm3 / 1000) + ' liter.'
+    });
+  }
+  function inhPrismaGegeven(niv){
+    var b = kies([1.6, 2, 2.4, 3]), t = kies([1, 1.2, 1.5]), L = kies([2, 2.5, 3]), G = b * t / 2, m3 = G * L;
+    return inh({
+      sleutel:'ipg' + b + t + L, vraag:'Een tent heeft de vorm van een liggend driezijdig prisma. De voorkant is een driehoek van ' + net(b) + ' m breed en ' + net(t) + ' m hoog. De tent is ' + net(L) + ' m lang. Hoeveel m³ lucht zit er in de tent?',
+      opdracht:'oppervlakte driehoek = basis × hoogte : 2. inhoud prisma = oppervlakte grondvlak × lengte. Rond af op twee decimalen als het nodig is.',
+      beeld:prismaTek(b, t, L, { b:net(b) + ' m', t:net(t) + ' m', lang:net(L) + ' m' }).sc.teken(230, 150, 'tent als prisma'),
+      velden:[veld('inhoud', m3, 'm³', 2)], antwoordTekst:net(rond(m3, 2)) + ' m³',
+      uitleg:'Het grondvlak is hier de driehoek: ' + net(b) + ' × ' + net(t) + ' : 2 = ' + net(G) + ' m². Inhoud = ' + net(G) + ' × ' + net(L) + ' = ' + net(rond(m3, 3)) + ' m³. Vergeet de : 2 niet: anders reken je met een rechthoek en krijg je het dubbele.'
+    });
+  }
+  function inhCil(niv){
+    var c = kies([
+      { wat:'Een blik soep', d:[7, 8, 9, 10], h:[10, 11, 12, 13], e:'cm', liter:false },
+      { wat:'Een regenton', d:[50, 55, 60, 70], h:[80, 90, 100], e:'cm', liter:true },
+      { wat:'Een pan', d:[20, 24, 28], h:[12, 14, 16], e:'cm', liter:true },
+      { wat:'Een waterput', d:[1.2, 1.5, 1.8], h:[2, 3, 4], e:'m', liter:false }
+    ]);
+    var d = kies(c.d), h = kies(c.h), r = d / 2, v = Math.PI * r * r * h, ant = c.liter ? v / 1000 : v, eh = c.liter ? 'liter' : c.e + '³';
+    return inh({
+      sleutel:'ic' + c.wat + d + h, vraag:c.wat + ' heeft de vorm van een cilinder met een diameter van ' + net(d) + ' ' + c.e + ' en een hoogte van ' + net(h) + ' ' + c.e + '. Bereken de inhoud in <b>' + eh + '</b>.',
+      opdracht:'inhoud cilinder = π × straal × straal × hoogte. ' + PI_TEKST + (c.liter ? ' ' + LITER : '') + ' ' + EEN,
+      beeld:cilTek(r, h, { d:'d = ' + net(d) + ' ' + c.e, h:net(h) + ' ' + c.e }).sc.teken(170, 150, 'cilinder', 'klein'),
+      velden:[veld('inhoud', ant, eh, 1)], antwoordTekst:net(rond(ant, 1)) + ' ' + eh,
+      uitleg:'De straal is de helft van de diameter: ' + net(r) + ' ' + c.e + '. Inhoud = π × ' + net(r) + ' × ' + net(r) + ' × ' + net(h) + ' ≈ ' + net(rond(v, 1)) + ' ' + c.e + '³' + (c.liter ? ', en dat is ' + net(rond(ant, 1)) + ' liter.' : '.') + ' Reken je met de diameter in plaats van de straal, dan krijg je vier keer zoveel.'
+    });
+  }
+  function inhPrisma(niv){
+    var b = kies([20, 24, 30, 36]), t = kies([15, 18, 20, 25]), L = kies([40, 50, 60, 80]), G = b * t / 2, v = G * L, wat = kies(['Een chocoladedoos', 'Een dakgoot-element', 'Een kaasplank-doos', 'Een speelgoedtent']);
+    return inh({
+      sleutel:'ip' + b + t + L + wat, vraag:wat + ' heeft de vorm van een liggend driezijdig prisma. De driehoek is ' + b + ' cm breed en ' + t + ' cm hoog, de lengte is ' + L + ' cm. Hoeveel <b>liter</b> is de inhoud?',
+      opdracht:'inhoud prisma = oppervlakte grondvlak × lengte. ' + LITER + ' ' + EEN,
+      beeld:prismaTek(b, t, L, { b:b + ' cm', t:t + ' cm', lang:L + ' cm' }).sc.teken(230, 150, 'driezijdig prisma'),
+      velden:[veld('inhoud', v / 1000, 'liter', 1)], antwoordTekst:net(rond(v / 1000, 1)) + ' liter',
+      uitleg:'Grondvlak (de driehoek): ' + b + ' × ' + t + ' : 2 = ' + net(G) + ' cm². Inhoud = ' + net(G) + ' × ' + L + ' = ' + net(v) + ' cm³ = ' + net(rond(v / 1000, 1)) + ' liter.'
+    });
+  }
+  function inhPiramide(niv){
+    var a = kies([6, 8, 9, 10, 12, 15]), h = kies([7, 9, 10, 12, 14, 16]), v = a * a * h / 3, wat = kies(['Een glazen presse-papier', 'Een kaars', 'Een doosje voor een cadeau', 'Een dakje van een vogelhuis']);
+    return inh({
+      sleutel:'ipi' + a + h + wat, vraag:wat + ' heeft de vorm van een piramide met een vierkant grondvlak van ' + a + ' bij ' + a + ' cm. De hoogte is ' + h + ' cm. Bereken de inhoud in cm³.',
+      opdracht:'inhoud piramide = ⅓ × oppervlakte grondvlak × hoogte. ' + EEN,
+      beeld:pirTek(a, h, { a:a + ' cm', h:h + ' cm' }).sc.teken(180, 150, 'piramide', 'klein'),
+      velden:[veld('inhoud', v, 'cm³', 1)], antwoordTekst:net(rond(v, 1)) + ' cm³',
+      uitleg:'Grondvlak: ' + a + ' × ' + a + ' = ' + a * a + ' cm². Inhoud = ⅓ × ' + a * a + ' × ' + h + ' = ' + a * a * h + ' : 3 ≈ ' + net(rond(v, 1)) + ' cm³. Zonder de ⅓ reken je de inhoud van een balk uit, drie keer te veel.'
+    });
+  }
+  function inhKegel(niv){
+    var c = kies([{ wat:'Een hoop zand', d:[3, 4, 5, 6], h:[1.2, 1.5, 2], e:'m' }, { wat:'Een puntzak', d:[8, 9, 10, 12], h:[12, 14, 15, 18], e:'cm' }, { wat:'Een hoop strooizout', d:[4, 5, 6, 8], h:[1.5, 2, 2.5], e:'m' }]);
+    var d = kies(c.d), h = kies(c.h), r = d / 2, v = Math.PI * r * r * h / 3;
+    return inh({
+      sleutel:'ike' + c.wat + d + h, vraag:c.wat + ' heeft de vorm van een kegel met een diameter van ' + net(d) + ' ' + c.e + ' en een hoogte van ' + net(h) + ' ' + c.e + '. Bereken de inhoud in ' + c.e + '³.',
+      opdracht:'inhoud kegel = ⅓ × π × straal × straal × hoogte. ' + PI_TEKST + ' ' + EEN,
+      beeld:kegelTek(r, h, { d:'d = ' + net(d) + ' ' + c.e, h:net(h) + ' ' + c.e }).sc.teken(180, 150, 'kegel', 'klein'),
+      velden:[veld('inhoud', v, c.e + '³', 1)], antwoordTekst:net(rond(v, 1)) + ' ' + c.e + '³',
+      uitleg:'Straal = ' + net(d) + ' : 2 = ' + net(r) + ' ' + c.e + '. Inhoud = ⅓ × π × ' + net(r) + ' × ' + net(r) + ' × ' + net(h) + ' ≈ ' + net(rond(v, 1)) + ' ' + c.e + '³.'
+    });
+  }
+  function inhBol(niv){
+    var c = kies([{ wat:'Een voetbal', d:[21, 22], e:'cm' }, { wat:'Een tennisbal', d:[6, 7], e:'cm' }, { wat:'Een kogel bij kogelstoten', d:[10, 11, 12], e:'cm' }, { wat:'Een bolvormige lamp', d:[20, 25, 30], e:'cm' }, { wat:'Een knikker', d:[1.5, 2, 2.5], e:'cm' }]);
+    var d = kies(c.d), r = d / 2, v = 4 / 3 * Math.PI * r * r * r;
+    return inh({
+      sleutel:'ibo' + c.wat + d, vraag:c.wat + ' heeft een diameter van ' + net(d) + ' ' + c.e + '. Bereken de inhoud in cm³.',
+      opdracht:'inhoud bol = ⁴⁄₃ × π × straal × straal × straal. ' + PI_TEKST + ' ' + EEN,
+      beeld:bolTek(r, { d:'d = ' + net(d) + ' cm' }).sc.teken(150, 150, 'bol', 'klein'),
+      velden:[veld('inhoud', v, 'cm³', 1)], antwoordTekst:net(rond(v, 1)) + ' cm³',
+      uitleg:'Straal = ' + net(d) + ' : 2 = ' + net(r) + ' cm. Inhoud = ⁴⁄₃ × π × ' + net(r) + ' × ' + net(r) + ' × ' + net(r) + ' ≈ ' + net(rond(v, 1)) + ' cm³.'
+    });
+  }
+  /* havo/vwo: terugrekenen en samengestelde figuren */
+  function inhHoogte(niv){
+    var d = kies([40, 50, 60, 80]), lit = kies([100, 150, 200, 250, 300]), r = d / 2, G = Math.PI * r * r, h = lit * 1000 / G;
+    return inh({
+      sleutel:'ih' + d + lit, vraag:'Een cilindervormige ton met een diameter van ' + d + ' cm moet precies ' + lit + ' liter kunnen bevatten. Hoe hoog moet de ton zijn?',
+      opdracht:'Reken de liters om naar cm³ en deel door de oppervlakte van het grondvlak. ' + PI_TEKST + ' ' + EEN,
+      beeld:cilTek(r, h, { d:'d = ' + d + ' cm', h:'h = ?' }).sc.teken(170, 150, 'cilinder', 'klein'),
+      velden:[veld('hoogte', h, 'cm', 1, lit * 1000 / rond(G, 1))], antwoordTekst:net(rond(h, 1)) + ' cm',
+      uitleg:lit + ' liter = ' + net(lit * 1000) + ' cm³. Grondvlak = π × ' + r + ' × ' + r + ' ≈ ' + net(rond(G, 1)) + ' cm². Hoogte = ' + net(lit * 1000) + ' : ' + net(rond(G, 1)) + ' ≈ ' + net(rond(h, 1)) + ' cm.'
+    });
+  }
+  function inhSilo(niv){
+    var d = kies([4, 5, 6]), hc = kies([8, 10, 12]), hk = kies([1.5, 2, 2.5]), r = d / 2, vc = Math.PI * r * r * hc, vk = Math.PI * r * r * hk / 3, v = vc + vk;
+    var sc = scene(), w = schaal([d, hc + hk]), rr = w[0] / 2, hcw = w[1] * hc / (hc + hk), hkw = w[1] * hk / (hc + hk), e = sc.er;
+    cilinder(sc, rr, hcw);
+    var t0 = voorHoek(sc); sc.romp(cirkel([0, 0, hcw], rr, 0, 2 * Math.PI).concat([[0, 0, hcw + hkw]]), meng(DONKER, LICHT, 0.6));
+    sc.lijn(cirkel([0, 0, hcw], rr, t0 - Math.PI / 2, t0 + Math.PI / 2));
+    sc.maat([rr * e[0], rr * e[1], 0], [rr * e[0], rr * e[1], hcw], net(hc) + ' m');
+    sc.lijn([[0, 0, hcw], [0, 0, hcw + hkw]], { stip:true }); sc.label([0, 0, hcw + hkw], 'kegel ' + net(hk) + ' m', { dx:12, dy:-4, anker:'start' });
+    sc.lijn([[-rr * e[0], -rr * e[1], 0], [rr * e[0], rr * e[1], 0]], { kleur:BLAUW, stip:true }); var vh = eenh([sc.d[0], sc.d[1], 0]); sc.label([vh[0] * rr, vh[1] * rr, 0], 'd = ' + d + ' m', { dy:18 });
+    return inh({
+      sleutel:'is' + d + hc + hk, vraag:'Een silo voor graan is een cilinder met een kegel erop. De diameter is ' + d + ' m, de cilinder is ' + hc + ' m hoog en de kegel ' + net(hk) + ' m. Hoeveel m³ graan past er in de hele silo?',
+      opdracht:'inhoud cilinder = π × r² × h; inhoud kegel = ⅓ × π × r² × h. ' + PI_TEKST + ' ' + EEN,
+      beeld:sc.teken(170, 170, 'silo: cilinder met een kegel erop', 'klein'),
+      velden:[veld('inhoud', v, 'm³', 1, rond(vc, 1) + rond(vk, 1))], antwoordTekst:net(rond(v, 1)) + ' m³',
+      uitleg:'Cilinder: π × ' + net(r) + ' × ' + net(r) + ' × ' + hc + ' ≈ ' + net(rond(vc, 1)) + ' m³. Kegel: ⅓ × π × ' + net(r) + ' × ' + net(r) + ' × ' + net(hk) + ' ≈ ' + net(rond(vk, 1)) + ' m³. Samen ≈ ' + net(rond(v, 1)) + ' m³.'
+    });
+  }
+  function inhWater(niv){
+    var l = kies([60, 80, 100, 120]), b = kies([30, 35, 40, 50]), h = kies([40, 50, 60]), lit = kies([40, 60, 75, 90, 100, 120]);
+    if (lit * 1000 >= l * b * h) lit = Math.floor(l * b * h / 2000 / 5) * 5 || 20;
+    var wh = lit * 1000 / (l * b);
+    return inh({
+      sleutel:'iw' + l + b + h + lit, vraag:'Een aquarium is ' + l + ' cm lang, ' + b + ' cm breed en ' + h + ' cm hoog. Je giet er ' + lit + ' liter water in. Hoe hoog staat het water?',
+      opdracht:LITER + ' ' + EEN,
+      beeld:balkTek(l, b, h, { l:l + ' cm', b:b + ' cm', h:h + ' cm' }).sc.teken(230, 150, 'aquarium als balk'),
+      velden:[veld('waterhoogte', wh, 'cm', 1)], antwoordTekst:net(rond(wh, 1)) + ' cm',
+      uitleg:lit + ' liter = ' + net(lit * 1000) + ' cm³. De bodem is ' + l + ' × ' + b + ' = ' + net(l * b) + ' cm². Hoogte = ' + net(lit * 1000) + ' : ' + net(l * b) + ' ≈ ' + net(rond(wh, 1)) + ' cm.'
+    });
+  }
+  function inhCilOpp(niv){
+    var d = kies([6, 7, 8, 10]), h = kies([10, 11, 12, 15]), r = d / 2, cirk = Math.PI * r * r, mant = Math.PI * d * h, opp = 2 * cirk + mant;
+    return inh({
+      sleutel:'ico' + d + h, vraag:'Een blik is een cilinder met een diameter van ' + d + ' cm en een hoogte van ' + h + ' cm. Hoeveel cm² blik is er nodig voor de bodem, het deksel en de zijkant samen?',
+      opdracht:'De zijkant is uitgerold een rechthoek: de omtrek van de cirkel (π × diameter) bij de hoogte. ' + PI_TEKST + ' ' + EEN,
+      beeld:cilTek(r, h, { d:'d = ' + d + ' cm', h:h + ' cm' }).sc.teken(170, 150, 'blik als cilinder', 'klein'),
+      velden:[veld('oppervlakte', opp, 'cm²', 1, 2 * rond(cirk, 1) + rond(mant, 1))], antwoordTekst:net(rond(opp, 1)) + ' cm²',
+      uitleg:'Bodem en deksel: 2 × π × ' + net(r) + ' × ' + net(r) + ' ≈ ' + net(rond(2 * cirk, 1)) + ' cm². Zijkant: π × ' + d + ' × ' + h + ' ≈ ' + net(rond(mant, 1)) + ' cm². Samen ≈ ' + net(rond(opp, 1)) + ' cm².'
+    });
+  }
+  function inhLeeg(niv){
+    var d = kies([6, 8, 10, 12, 20, 22]), r = d / 2, kub = d * d * d, b = 4 / 3 * Math.PI * r * r * r, leeg = kub - b;
+    return inh({
+      sleutel:'il' + d, vraag:'Een bal met een diameter van ' + d + ' cm zit precies in een kubusvormige doos: de bal raakt alle zes de wanden. Hoeveel cm³ van de doos is <b>lucht</b>?',
+      opdracht:'inhoud bol = ⁴⁄₃ × π × r³. ' + PI_TEKST + ' ' + EEN,
+      beeld:bolTek(r, { d:'d = ' + d + ' cm' }).sc.teken(150, 150, 'bal', 'klein'),
+      velden:[veld('lucht', leeg, 'cm³', 1, kub - rond(b, 1))], antwoordTekst:net(rond(leeg, 1)) + ' cm³',
+      uitleg:'De ribbe van de doos is de diameter: ' + d + ' cm. Doos: ' + d + ' × ' + d + ' × ' + d + ' = ' + net(kub) + ' cm³. Bal: ⁴⁄₃ × π × ' + net(r) + '³ ≈ ' + net(rond(b, 1)) + ' cm³. Lucht: ' + net(kub) + ' − ' + net(rond(b, 1)) + ' ≈ ' + net(rond(leeg, 1)) + ' cm³.'
+    });
+  }
+  function inhPirHoogte(niv){
+    var a = kies([6, 8, 10, 12]), v = kies([150, 200, 240, 300, 360, 400]), h = 3 * v / (a * a);
+    return inh({
+      sleutel:'iph' + a + v, vraag:'Een piramide heeft een vierkant grondvlak van ' + a + ' bij ' + a + ' cm en een inhoud van ' + v + ' cm³. Hoe hoog is de piramide?',
+      opdracht:'inhoud piramide = ⅓ × oppervlakte grondvlak × hoogte. ' + EEN,
+      beeld:pirTek(a, h, { a:a + ' cm', h:'h = ?' }).sc.teken(180, 150, 'piramide', 'klein'),
+      velden:[veld('hoogte', h, 'cm', 1)], antwoordTekst:net(rond(h, 1)) + ' cm',
+      uitleg:'⅓ × ' + a * a + ' × hoogte = ' + v + '. Dan is ' + a * a + ' × hoogte = 3 × ' + v + ' = ' + 3 * v + ', dus hoogte = ' + 3 * v + ' : ' + a * a + ' ≈ ' + net(rond(h, 1)) + ' cm.'
+    });
+  }
+  function inhoud(niv){
+    if (niv === 'bb') return kies([inhBalk, inhBalk, inhKubus, inhOpp, inhCilGegeven, inhPrismaGegeven])(niv);
+    if (niv === 'kgt') return kies([inhBalk, inhOpp, inhCil, inhCil, inhPrisma, inhPiramide, inhKegel, inhBol])(niv);
+    return kies([inhCil, inhPiramide, inhKegel, inhBol, inhHoogte, inhSilo, inhWater, inhCilOpp, inhLeeg, inhPirHoogte])(niv);
+  }
+
+  /* ---------- 5. Pythagoras in de ruimte ---------- */
+  function pyt(o){ o.onderdeel = 'ruimte: pythagoras'; o.onderdeelNaam = 'Pythagoras in de ruimte'; o.vorm = o.vorm || 'invul'; return o; }
+  var PYT = 'a² + b² = c², met c de schuine zijde (tegenover de rechte hoek).';
+  function pytBalk(niv){
+    var c = kies([{ wat:'een doos', l:[30, 40, 50], b:[20, 25, 30], h:[15, 20, 25, 30], e:'cm' }, { wat:'een verhuisdoos', l:[50, 60], b:[35, 40], h:[30, 40], e:'cm' }, { wat:'een container', l:[6, 12], b:[2, 2.5], h:[2.5, 3], e:'m' }, { wat:'een kamer', l:[4, 5, 6], b:[3, 3.5, 4], h:[2.5, 2.6, 3], e:'m' }]);
+    var kub = Math.random() < 0.2, l = kies(c.l), b = kub ? l : kies(c.b), h = kub ? l : kies(c.h), g = Math.sqrt(l * l + b * b), d = Math.sqrt(l * l + b * b + h * h), dAlt = Math.sqrt(rond(g, 1) * rond(g, 1) + h * h);
+    var t = balkTek(l, b, h, { l:net(l) + ' ' + c.e, b:net(b) + ' ' + c.e, h:net(h) + ' ' + c.e }), V = t.V;
+    t.sc.lijn([V[0], V[2]], { stip:true, kleur:BLAUW, dik:2.4 }); t.sc.lijn([V[0], V[6]], { stip:true, kleur:ROOD, dik:2.6 }); t.sc.haaks(V[2], min3(V[0], V[2]), min3(V[6], V[2]));
+    var velden = niv === 'kgt' ? [veld('diagonaal grondvlak', g, c.e, 1), veld('lichaamsdiagonaal', d, c.e, 1, dAlt)] : [veld('lichaamsdiagonaal', d, c.e, 1, dAlt)];
+    return pyt({
+      sleutel:'pb' + l + b + h + c.wat,
+      vraag:'In ' + c.wat + ' van ' + net(l) + ' bij ' + net(b) + ' bij ' + net(h) + ' ' + c.e + ' span je een draad van de ene hoek onderin naar de hoek die er schuin tegenover ligt bovenin (de rode lijn). Hoe lang is die lichaamsdiagonaal?',
+      opdracht:(niv === 'kgt' ? 'Bereken eerst de blauwe diagonaal van het grondvlak, dan de rode. ' : '') + PYT + ' ' + EEN,
+      beeld:t.sc.teken(230, 160, 'balk met lichaamsdiagonaal'), velden:velden, antwoordTekst:net(rond(d, 1)) + ' ' + c.e,
+      uitleg:'Diagonaal grondvlak: √(' + net(l) + '² + ' + net(b) + '²) = √' + net(l * l + b * b) + ' ≈ ' + net(rond(g, 1)) + ' ' + c.e + '. Die staat loodrecht op de staande ribbe van ' + net(h) + ' ' + c.e + '. Lichaamsdiagonaal: √(' + net(rond(g, 1)) + '² + ' + net(h) + '²) ≈ ' + net(rond(d, 1)) + ' ' + c.e + '. In één keer kan ook: √(' + net(l) + '² + ' + net(b) + '² + ' + net(h) + '²).'
+    });
+  }
+  function pytKegel(niv){
+    var c = kies([{ wat:'Een ijshoorntje', d:[5, 6, 7], h:[10, 12, 13], e:'cm' }, { wat:'Een pion', d:[16, 18, 20], h:[20, 25, 30], e:'cm' }, { wat:'Een rond tentdak', d:[4, 5, 6], h:[2, 2.5, 3], e:'m' }, { wat:'Een hoop zand', d:[3, 4, 5], h:[1.2, 1.5, 2], e:'m' }]);
+    var d = kies(c.d), h = kies(c.h), r = d / 2, terug = niv === 'hv' && Math.random() < 0.5, s = Math.sqrt(r * r + h * h);
+    if (terug){
+      var sr = rond(s + kies([0.3, 0.5, 0.8, 1]), 1), hh = Math.sqrt(sr * sr - r * r), t2 = kegelTek(r, hh, { d:'d = ' + net(d) + ' ' + c.e, s:net(sr) + ' ' + c.e, hLijn:true, haaks:true, rLijn:true });
+      t2.sc.label(midden([t2.M, t2.T]), 'h = ?', { dx:-8, anker:'end' });
+      return pyt({
+        sleutel:'pkt' + c.wat + d + sr, vraag:c.wat + ' is een kegel met een diameter van ' + net(d) + ' ' + c.e + '. De schuine zijde (van de rand naar de top) is ' + net(sr) + ' ' + c.e + '. Hoe hoog is de kegel?',
+        opdracht:'De hoogte, de straal en de schuine zijde vormen een rechthoekige driehoek. ' + EEN,
+        beeld:t2.sc.teken(180, 150, 'kegel', 'klein'), velden:[veld('hoogte', hh, c.e, 1)], antwoordTekst:net(rond(hh, 1)) + ' ' + c.e,
+        uitleg:'Straal = ' + net(r) + ' ' + c.e + '. De schuine zijde is de langste zijde: h² = ' + net(sr) + '² − ' + net(r) + '² = ' + net(rond(sr * sr - r * r, 4)) + ', dus h ≈ ' + net(rond(hh, 1)) + ' ' + c.e + '. Hier trek je af, want je zoekt een rechthoekszijde.'
+      });
+    }
+    var t = kegelTek(r, h, { d:'d = ' + net(d) + ' ' + c.e, h:net(h) + ' ' + c.e, haaks:true, rLijn:true, sKleur:ROOD });
+    t.sc.label(midden([t.R, t.T]), '?', { van:t.M, kleur:ROOD });
+    return pyt({
+      sleutel:'pk' + c.wat + d + h, vraag:c.wat + ' is een kegel met een diameter van ' + net(d) + ' ' + c.e + ' en een hoogte van ' + net(h) + ' ' + c.e + '. Hoe lang is de schuine zijde van de rand naar de top (rood)?',
+      opdracht:'Gebruik de straal, niet de diameter. ' + PYT + ' ' + EEN,
+      beeld:t.sc.teken(180, 150, 'kegel', 'klein'), velden:[veld('schuine zijde', s, c.e, 1)], antwoordTekst:net(rond(s, 1)) + ' ' + c.e,
+      uitleg:'De straal is ' + net(r) + ' ' + c.e + '. Straal en hoogte staan loodrecht op elkaar: s = √(' + net(r) + '² + ' + net(h) + '²) = √' + net(rond(r * r + h * h, 4)) + ' ≈ ' + net(rond(s, 1)) + ' ' + c.e + '.'
+    });
+  }
+  function pytPiramide(niv){
+    var a = kies([6, 8, 10, 12, 14, 20, 24]), h = kies([8, 9, 10, 12, 15, 18]), e = a >= 20 ? 'm' : 'cm', wat = e === 'm' ? 'Een glazen piramide bij een museum' : kies(['Een piramide van karton', 'Een presse-papier', 'Een kaars']);
+    var hd = a * Math.SQRT2 / 2, ribbe = Math.sqrt(hd * hd + h * h), ap = Math.sqrt(a * a / 4 + h * h), welk = kies(niv === 'hv' ? ['ribbe', 'apo', 'terug'] : ['ribbe', 'ribbe', 'apo']);
+    var t = pirTek(a, h, { a:a + ' ' + e, hLijn:true }), V = t.V, M = t.M, sc = t.sc;
+    if (welk === 'ribbe'){
+      sc.maat(M, V[4], h + ' ' + e, { van:V[1], af:7 });
+      sc.lijn([M, V[1]], { stip:true, kleur:BLAUW, dik:2.4 }); sc.lijn([V[1], V[4]], { kleur:ROOD, dik:3 }); sc.haaks(M, min3(V[1], M), min3(V[4], M)); sc.label(midden([V[1], V[4]]), '?', { van:M, kleur:ROOD });
+      return pyt({
+        sleutel:'pp' + a + h, vraag:wat + ' heeft een vierkant grondvlak van ' + a + ' bij ' + a + ' ' + e + ' en is ' + h + ' ' + e + ' hoog. De top staat recht boven het midden. Hoe lang is een opstaande ribbe (rood)?',
+        opdracht:'Bereken eerst de halve diagonaal van het grondvlak (blauw). ' + EEN,
+        beeld:sc.teken(200, 160, 'piramide met een opstaande ribbe'), velden:[veld('ribbe', ribbe, e, 1, Math.sqrt(rond(hd, 1) * rond(hd, 1) + h * h))], antwoordTekst:net(rond(ribbe, 1)) + ' ' + e,
+        uitleg:'Diagonaal grondvlak: √(' + a + '² + ' + a + '²) ≈ ' + net(rond(2 * hd, 1)) + ' ' + e + ', de helft is ≈ ' + net(rond(hd, 1)) + ' ' + e + '. Die halve diagonaal en de hoogte maken een rechte hoek: ribbe = √(' + net(rond(hd, 1)) + '² + ' + h + '²) ≈ ' + net(rond(ribbe, 1)) + ' ' + e + '.'
+      });
+    }
+    if (welk === 'apo'){
+      var F = [0, -t.w[0] / 2, 0];
+      sc.maat(M, V[4], h + ' ' + e, { van:V[1], af:7 });
+      sc.lijn([M, F], { stip:true, kleur:BLAUW, dik:2.4 }); sc.lijn([F, V[4]], { kleur:ROOD, dik:3 }); sc.haaks(M, min3(F, M), min3(V[4], M)); sc.label(midden([F, V[4]]), '?', { van:V[1], kleur:ROOD });
+      return pyt({
+        sleutel:'pa' + a + h, vraag:wat + ' heeft een vierkant grondvlak van ' + a + ' bij ' + a + ' ' + e + ' en is ' + h + ' ' + e + ' hoog. Hoe lang is de rode lijn: de hoogte van een zijvlak, van het midden van een grondribbe naar de top?',
+        opdracht:'Van het midden van het grondvlak naar het midden van een ribbe is de helft van ' + a + ' ' + e + '. ' + EEN,
+        beeld:sc.teken(200, 160, 'piramide met de hoogte van een zijvlak'), velden:[veld('lengte', ap, e, 1)], antwoordTekst:net(rond(ap, 1)) + ' ' + e,
+        uitleg:'De blauwe lijn is ' + a + ' : 2 = ' + net(a / 2) + ' ' + e + '. Die maakt een rechte hoek met de hoogte: √(' + net(a / 2) + '² + ' + h + '²) = √' + net(a * a / 4 + h * h) + ' ≈ ' + net(rond(ap, 1)) + ' ' + e + '.'
+      });
+    }
+    var rib = rond(ribbe + kies([0.4, 0.7, 1.2, 2]), 1), hh = Math.sqrt(rib * rib - hd * hd), t2 = pirTek(a, hh, { a:a + ' ' + e, hLijn:true }), V2 = t2.V;
+    t2.sc.lijn([t2.M, V2[1]], { stip:true, kleur:BLAUW, dik:2.4 }); t2.sc.maat(V2[1], V2[4], net(rib) + ' ' + e); t2.sc.haaks(t2.M, min3(V2[1], t2.M), min3(V2[4], t2.M)); t2.sc.label(midden([t2.M, V2[4]]), 'h = ?', { dx:-8, anker:'end' });
+    return pyt({
+      sleutel:'ph' + a + rib, vraag:wat + ' heeft een vierkant grondvlak van ' + a + ' bij ' + a + ' ' + e + '. Elke opstaande ribbe is ' + net(rib) + ' ' + e + '. De top staat recht boven het midden. Hoe hoog is de piramide?',
+      opdracht:'Halve diagonaal, hoogte en ribbe vormen een rechthoekige driehoek. ' + EEN,
+      beeld:t2.sc.teken(200, 160, 'piramide'), velden:[veld('hoogte', hh, e, 1, Math.sqrt(rib * rib - rond(hd, 1) * rond(hd, 1)))], antwoordTekst:net(rond(hh, 1)) + ' ' + e,
+      uitleg:'Halve diagonaal: ½ × √(' + a + '² + ' + a + '²) ≈ ' + net(rond(hd, 1)) + ' ' + e + '. De ribbe is de schuine zijde: h = √(' + net(rib) + '² − ' + net(rond(hd, 1)) + '²) ≈ ' + net(rond(hh, 1)) + ' ' + e + '.'
+    });
+  }
+  function pytTent(niv){
+    var b = kies([2, 2.4, 3, 3.2, 4]), t = kies([1.2, 1.5, 1.8, 2]), L = kies([2, 3, 4]), s = Math.sqrt(b * b / 4 + t * t);
+    var tk = prismaTek(b, t, L, { b:net(b) + ' m', t:net(t) + ' m', lang:net(L) + ' m' }), V = tk.V;
+    tk.sc.lijn([V[1], V[2]], { kleur:ROOD, dik:3 }); tk.sc.label(midden([V[1], V[2]]), '?', { van:V[0], kleur:ROOD });
+    return pyt({
+      sleutel:'pt' + b + t + L, vraag:'Een tent is een liggend driezijdig prisma. De voorkant is een gelijkbenige driehoek van ' + net(b) + ' m breed en ' + net(t) + ' m hoog. Hoe lang is de schuine kant van het dak (rood)?',
+      opdracht:'De hoogte staat precies in het midden. ' + PYT + ' ' + EEN,
+      beeld:tk.sc.teken(230, 150, 'tent'), velden:[veld('schuine kant', s, 'm', 1)], antwoordTekst:net(rond(s, 1)) + ' m',
+      uitleg:'De halve breedte is ' + net(b / 2) + ' m. Die staat loodrecht op de hoogte: √(' + net(b / 2) + '² + ' + net(t) + '²) = √' + net(rond(b * b / 4 + t * t, 4)) + ' ≈ ' + net(rond(s, 1)) + ' m. De lengte van ' + net(L) + ' m heb je hier niet nodig.'
+    });
+  }
+  function pytKubusTerug(niv){
+    var d = kies([10, 12, 15, 20, 25, 30, 40]), r = d / Math.sqrt(3);
+    var t = balkTek(1, 1, 1, {}), V = t.V; t.sc.lijn([V[0], V[6]], { stip:true, kleur:ROOD, dik:2.6 }); t.sc.label(midden([V[0], V[6]]), net(d) + ' cm', { dy:-10, kleur:ROOD }); t.sc.maat(V[0], V[1], 'r = ?');
+    return pyt({
+      sleutel:'pkt' + d, vraag:'De lichaamsdiagonaal van een kubus is ' + d + ' cm. Hoe lang is een ribbe?',
+      opdracht:'Noem de ribbe r. Dan is de diagonaal van een zijvlak √(r² + r²), en de lichaamsdiagonaal √(r² + r² + r²). ' + EEN,
+      beeld:t.sc.teken(170, 150, 'kubus met lichaamsdiagonaal', 'klein'), velden:[veld('ribbe', r, 'cm', 1)], antwoordTekst:net(rond(r, 1)) + ' cm',
+      uitleg:'3 × r² = ' + d + '² = ' + d * d + ', dus r² = ' + net(rond(d * d / 3, 3)) + ' en r ≈ ' + net(rond(r, 1)) + ' cm. Controle: √(3 × ' + net(rond(r, 1)) + '²) ≈ ' + net(rond(Math.sqrt(3) * rond(r, 1), 1)) + '.'
+    });
+  }
+  function pytPast(niv){
+    var l = kies([40, 50, 60, 80]), b = kies([30, 40]), h = kies([20, 30, 40]), d = Math.sqrt(l * l + b * b + h * h), stok = Math.round(d + kies([-6, -4, -2, 2, 4, 6]));
+    var past = stok <= d, t = balkTek(l, b, h, { l:l + ' cm', b:b + ' cm', h:h + ' cm' }), V = t.V; t.sc.lijn([V[0], V[6]], { stip:true, kleur:ROOD, dik:2.6 });
+    return pyt({
+      vorm:'meerkeuze', sleutel:'pps' + l + b + h + stok,
+      vraag:'Past een stok van <b>' + stok + ' cm</b> helemaal in een doos van ' + l + ' bij ' + b + ' bij ' + h + ' cm? De stok mag schuin liggen, van hoek tot hoek.',
+      opdracht:'De langste stok die past, ligt langs de lichaamsdiagonaal (rood).',
+      beeld:t.sc.teken(230, 150, 'doos'),
+      opties:past ? ['Ja, de lichaamsdiagonaal is langer dan de stok.', 'Nee, de stok is langer dan de lichaamsdiagonaal.', 'Nee, want de stok is langer dan de langste ribbe van ' + l + ' cm.'] : ['Nee, de stok is langer dan de lichaamsdiagonaal.', 'Ja, de lichaamsdiagonaal is langer dan de stok.', 'Ja, want de diagonaal van de bodem is lang genoeg.'],
+      goed:0, antwoordTekst:past ? 'ja' : 'nee',
+      uitleg:'Lichaamsdiagonaal = √(' + l + '² + ' + b + '² + ' + h + '²) = √' + (l * l + b * b + h * h) + ' ≈ ' + net(rond(d, 1)) + ' cm. ' + (past ? 'De stok van ' + stok + ' cm is korter, dus hij past.' : 'De stok van ' + stok + ' cm is langer, dus hij past niet.')
+    });
+  }
+  function pythagoras(niv){
+    if (niv !== 'hv') return kies([pytBalk, pytBalk, pytKegel, pytPiramide, pytTent])('kgt');
+    return kies([pytBalk, pytKegel, pytPiramide, pytPiramide, pytTent, pytKubusTerug, pytPast])(niv);
+  }
+
+  /* ---------- 6. goniometrie ---------- */
+  function gon(o){ o.onderdeel = 'ruimte: goniometrie'; o.onderdeelNaam = 'goniometrie'; o.vorm = o.vorm || 'invul'; return o; }
+  var NAMEN = [['A', 'B', 'C'], ['P', 'Q', 'R'], ['K', 'L', 'M'], ['D', 'E', 'F']];
+  var SOS = 'sin = overstaande : schuine zijde, cos = aanliggende : schuine zijde, tan = overstaande : aanliggende.';
+  function graden(x){ return x / RAD; }
+  /* rechthoekige driehoek: hoek bij A, rechte hoek bij C, B erboven. a = BC (overstaand), b = AC (aanliggend) */
+  function driehoekSvg(n, a, b, lab, hoekTekst){
+    var sc = scene(0, 0), sp = Math.random() < 0.5 ? -1 : 1, ra = Math.max(0.3, Math.min(2.6, a / b)), A = [0, 0, 0], C = [sp * 1, 0, 0], B = [sp * 1, 0, ra];
+    sc.vlak([A, C, B], LICHT, true);
+    sc.haaks(C, min3(A, C), min3(B, C));
+    sc.boog(A, min3(C, A), min3(B, A), { tekst:hoekTekst });
+    var m = midden([A, B, C]);
+    sc.label(A, n[0], { van:m }); sc.label(B, n[1], { van:m }); sc.label(C, n[2], { van:m });
+    if (lab.b) sc.maat(A, C, lab.b, { van:B }); if (lab.a) sc.maat(C, B, lab.a, { van:A }); if (lab.c) sc.maat(A, B, lab.c, { van:C });
+    return sc.teken(230, 170, 'rechthoekige driehoek ' + n.join(''));
+  }
+  function goniKies(niv){
+    var n = kies(NAMEN), A = n[0], B = n[1], C = n[2], hoek = Math.random() < 0.5, opties, goed, uitleg, beeld, vraag;
+    var ov = B + C, aan = A + C, sch = A + B;
+    if (hoek){
+      var combo = kies(['tan', 'sin', 'cos']), x, y;
+      if (combo === 'tan'){ x = tussen(3, 15); y = tussen(3, 15); if (x === y) y++; }
+      else { x = tussen(3, 12); y = x + tussen(2, 9); }
+      /* tan: x = overstaand, y = aanliggend; sin: x = overstaand, y = schuin; cos: x = aanliggend, y = schuin */
+      var lab = combo === 'tan' ? { a:x, b:y } : combo === 'sin' ? { a:x, c:y } : { b:x, c:y };
+      var aa = combo === 'cos' ? Math.sqrt(y * y - x * x) : x, bb = combo === 'tan' ? y : combo === 'sin' ? Math.sqrt(y * y - x * x) : x;
+      beeld = driehoekSvg(n, aa, bb, lab, '?');
+      vraag = 'In driehoek ' + A + B + C + ' is ∠' + C + ' = 90°. Je wilt ∠' + A + ' berekenen. Met welke verhouding doe je dat?';
+      var fr = x + '/' + y, fr2 = y + '/' + x, f = ['sin', 'cos', 'tan'];
+      opties = [combo + ' ∠' + A + ' = ' + fr].concat(f.filter(function(q){ return q !== combo; }).map(function(q){ return q + ' ∠' + A + ' = ' + fr; })).concat([combo + ' ∠' + A + ' = ' + fr2]);
+      uitleg = 'Vanuit ∠' + A + ': ' + ov + ' ligt er tegenover (overstaande zijde), ' + aan + ' ligt ertegen (aanliggende zijde) en ' + sch + ' ligt tegenover de rechte hoek (schuine zijde). Je kent ' + (combo === 'tan' ? 'de overstaande en de aanliggende zijde: tan' : combo === 'sin' ? 'de overstaande en de schuine zijde: sin' : 'de aanliggende en de schuine zijde: cos') + '. Onthoud SOS CAS TOA: ' + SOS;
+      goed = opties[0];
+      return gon({ vorm:'meerkeuze', sleutel:'gk1' + combo + x + y, vraag:vraag, beeld:beeld, opties:opties, goed:0, antwoordTekst:goed, uitleg:uitleg });
+    }
+    var alfa = tussen(20, 70), bek = kies(['a', 'b', 'c']), gev = kies(['a', 'b', 'c'].filter(function(q){ return q !== bek; })), len = tussen(4, 20);
+    var naam = { a:ov, b:aan, c:sch }, func = (bek === 'a' && gev === 'c') || (bek === 'c' && gev === 'a') ? 'sin' : (bek === 'b' && gev === 'c') || (bek === 'c' && gev === 'b') ? 'cos' : 'tan';
+    /* teller en noemer zoals de verhouding gaat */
+    var teller = func === 'sin' || func === 'tan' ? 'a' : 'b', noemer = func === 'tan' ? 'b' : 'c';
+    function deel(q){ return q === bek ? naam[q] : String(len); }
+    var lab2 = {}; lab2[bek] = '?'; lab2[gev] = String(len);
+    beeld = driehoekSvg(n, Math.tan(alfa * RAD), 1, lab2, alfa + '°');
+    vraag = 'In driehoek ' + A + B + C + ' is ∠' + C + ' = 90° en ∠' + A + ' = ' + alfa + '°. ' + naam[gev] + ' = ' + len + '. Je wilt ' + naam[bek] + ' berekenen. Welke vergelijking klopt?';
+    var goedT = func + ' ' + alfa + '° = ' + deel(teller) + '/' + deel(noemer);
+    opties = [goedT].concat(['sin', 'cos', 'tan'].filter(function(q){ return q !== func; }).map(function(q){ return q + ' ' + alfa + '° = ' + deel(teller) + '/' + deel(noemer); })).concat([func + ' ' + alfa + '° = ' + deel(noemer) + '/' + deel(teller)]);
+    return gon({
+      vorm:'meerkeuze', sleutel:'gk2' + func + bek + gev + alfa + len, vraag:vraag, beeld:beeld, opties:opties, goed:0, antwoordTekst:goedT,
+      uitleg:'Vanuit ∠' + A + ' is ' + ov + ' de overstaande zijde, ' + aan + ' de aanliggende en ' + sch + ' de schuine zijde. Je hebt ' + naam[gev] + ' en zoekt ' + naam[bek] + ': dat zijn de ' + (func === 'sin' ? 'overstaande en de schuine zijde, dus sin' : func === 'cos' ? 'aanliggende en de schuine zijde, dus cos' : 'overstaande en de aanliggende zijde, dus tan') + '. ' + SOS
+    });
+  }
+  function goniHoek(niv){
+    var n = kies(NAMEN), A = n[0], B = n[1], C = n[2], combo = kies(['tan', 'sin', 'cos']), x, y, ang, lab, aa, bb;
+    if (combo === 'tan'){ x = tussen(3, 18); y = tussen(3, 18); if (x === y) y += 2; ang = graden(Math.atan(x / y)); lab = { a:x, b:y }; aa = x; bb = y; }
+    else { x = tussen(3, 14); y = x + tussen(2, 10); ang = graden(combo === 'sin' ? Math.asin(x / y) : Math.acos(x / y)); lab = combo === 'sin' ? { a:x, c:y } : { b:x, c:y }; aa = combo === 'sin' ? x : Math.sqrt(y * y - x * x); bb = combo === 'sin' ? Math.sqrt(y * y - x * x) : x; }
+    var eh = kies(['cm', 'm']), zin = { a:B + C, b:A + C, c:A + B };
+    var bek = combo === 'tan' ? [['a', x], ['b', y]] : combo === 'sin' ? [['a', x], ['c', y]] : [['b', x], ['c', y]];
+    Object.keys(lab).forEach(function(k){ lab[k] = lab[k] + ' ' + eh; });
+    return gon({
+      sleutel:'gh' + combo + x + y, vraag:'In driehoek ' + A + B + C + ' is ∠' + C + ' = 90°, ' + zin[bek[0][0]] + ' = ' + bek[0][1] + ' ' + eh + ' en ' + zin[bek[1][0]] + ' = ' + bek[1][1] + ' ' + eh + '. Bereken ∠' + A + '.',
+      opdracht:'Kies sin, cos of tan en gebruik de knop sin⁻¹, cos⁻¹ of tan⁻¹ op je rekenmachine. ' + EEN,
+      beeld:driehoekSvg(n, aa, bb, lab, '?'), velden:[veld('∠' + A, ang, '°', 1)], antwoordTekst:net(rond(ang, 1)) + '°',
+      uitleg:combo + ' ∠' + A + ' = ' + x + '/' + y + ' ≈ ' + net(rond(x / y, 4)) + '. ∠' + A + ' = ' + combo + '⁻¹(' + x + '/' + y + ') ≈ ' + net(rond(ang, 1)) + '°. ' + (combo === 'tan' ? zin.a + ' ligt tegenover ∠' + A + ' en ' + zin.b + ' ligt ertegen.' : combo === 'sin' ? zin.a + ' ligt tegenover ∠' + A + ' en ' + zin.c + ' is de schuine zijde.' : zin.b + ' ligt tegen ∠' + A + ' en ' + zin.c + ' is de schuine zijde.')
+    });
+  }
+  function goniZijde(niv){
+    var n = kies(NAMEN), A = n[0], B = n[1], C = n[2], alfa = tussen(20, 70), len = tussen(4, 20), t = Math.tan(alfa * RAD), sn = Math.sin(alfa * RAD), cs = Math.cos(alfa * RAD);
+    var soorten = [['c', 'a', 'sin'], ['c', 'b', 'cos'], ['b', 'a', 'tan'], ['a', 'b', 'tan'], ['a', 'c', 'sin'], ['b', 'c', 'cos']];
+    var k = kies(niv === 'hv' ? soorten : soorten.slice(0, 5)), gev = k[0], gez = k[1], func = k[2], zin = { a:B + C, b:A + C, c:A + B };
+    var verh = { a:sn, b:cs, c:1 }, uit = len / verh[gev] * verh[gez];
+    var lab = {}; lab[gev] = len + ' cm'; lab[gez] = '?';
+    var stap = gez === 'c' || (func === 'tan' && gez === 'b') ? zin[gez] + ' = ' + len + ' : ' + func + ' ' + alfa + '°' : zin[gez] + ' = ' + func + ' ' + alfa + '° × ' + len;
+    return gon({
+      sleutel:'gz' + gev + gez + alfa + len, vraag:'In driehoek ' + A + B + C + ' is ∠' + C + ' = 90°, ∠' + A + ' = ' + alfa + '° en ' + zin[gev] + ' = ' + len + ' cm. Bereken ' + zin[gez] + '.',
+      opdracht:SOS + ' ' + EEN,
+      beeld:driehoekSvg(n, t, 1, lab, alfa + '°'), velden:[veld(zin[gez], uit, 'cm', 1)], antwoordTekst:net(rond(uit, 1)) + ' cm',
+      uitleg:'Vanuit ∠' + A + ' is ' + zin[gev] + ' de ' + { a:'overstaande', b:'aanliggende', c:'schuine' }[gev] + ' zijde en ' + zin[gez] + ' de ' + { a:'overstaande', b:'aanliggende', c:'schuine' }[gez] + ' zijde: gebruik ' + func + '. ' + stap + ' ≈ ' + net(rond(uit, 1)) + ' cm.' + (gez === 'c' || (func === 'tan' && gez === 'b') ? ' Hier deel je, want de zijde die je zoekt staat onder de streep.' : '')
+    });
+  }
+  /* situaties met een hellingshoek */
+  function situatieSvg(o){
+    var sc = scene(0, 0), sp = o.spiegel ? -1 : 1, A = [0, 0, 0], C = [sp * o.x, 0, 0], B = [sp * o.x, 0, o.y];
+    if (o.muur){ sc.vlak([[sp * o.x, 0, 0], [sp * (o.x + 0.12), 0, 0], [sp * (o.x + 0.12), 0, o.y * 1.15], [sp * o.x, 0, o.y * 1.15]], MID, true); }
+    sc.lijn([[sp * -0.15, 0, 0], [sp * (o.x + (o.muur ? 0.12 : 0.15)), 0, 0]], { dik:2.4 });
+    sc.vlak([A, C, B], LICHT, false);
+    sc.lijn([A, B], { kleur:o.schuinKleur || BLAUW, dik:3.4 });
+    if (!o.muur) sc.lijn([C, B], { stip:true });
+    sc.haaks(C, min3(A, C), min3(B, C));
+    sc.boog(A, min3(C, A), min3(B, A), { tekst:o.hoek });
+    if (o.ls) sc.maat(A, B, o.ls, { van:C });
+    if (o.lx) sc.maat(A, C, o.lx, { van:B });
+    if (o.ly) sc.maat(C, B, o.ly, { van:A, af:o.muur ? 22 : 11 });
+    return sc.teken(250, 160, o.naam || 'situatie met een rechthoekige driehoek');
+  }
+  function goniSituatie(niv){
+    var k = kies(niv === 'hv' ? ['ladder', 'helling', 'vlieger', 'boom', 'dak', 'kabel', 'vliegtuig', 'glijbaan', 'procent'] : ['ladder', 'helling', 'vlieger', 'boom', 'dak', 'kabel', 'vliegtuig', 'glijbaan']);
+    var a, x, y, L, ant, uit, vraag, beeld, eh, label, opdr = EEN;
+    if (k === 'ladder'){
+      L = kies([3.5, 4, 4.5, 5, 5.5, 6]); a = tussen(62, 76); var w = kies(['hoog', 'voet', 'hoek']);
+      if (w === 'hoek'){ y = rond(L * Math.sin(tussen(62, 76) * RAD), 1); ant = graden(Math.asin(y / L));
+        beeld = situatieSvg({ x:Math.sqrt(L * L - y * y), y:y, muur:true, hoek:'?', ls:'ladder ' + net(L) + ' m', ly:net(y) + ' m', naam:'ladder tegen een muur' });
+        vraag = 'Een ladder van ' + net(L) + ' m staat tegen een muur en raakt de muur op ' + net(y) + ' m hoogte. Welke hoek maakt de ladder met de grond?'; label = 'hoek'; eh = '°';
+        uit = 'De hoogte ligt tegenover de hoek, de ladder is de schuine zijde: sin(hoek) = ' + net(y) + '/' + net(L) + '. Hoek = sin⁻¹(' + net(y) + '/' + net(L) + ') ≈ ' + net(rond(ant, 1)) + '°.';
+      } else if (w === 'hoog'){ ant = L * Math.sin(a * RAD);
+        beeld = situatieSvg({ x:Math.cos(a * RAD), y:Math.sin(a * RAD), muur:true, hoek:a + '°', ls:'ladder ' + net(L) + ' m', ly:'?', naam:'ladder tegen een muur' });
+        vraag = 'Een ladder van ' + net(L) + ' m staat tegen een muur en maakt een hoek van ' + a + '° met de grond. Op welke hoogte raakt de ladder de muur?'; label = 'hoogte'; eh = 'm';
+        uit = 'De hoogte ligt tegenover de hoek van ' + a + '°, de ladder is de schuine zijde: sin. Hoogte = sin ' + a + '° × ' + net(L) + ' ≈ ' + net(rond(ant, 1)) + ' m.';
+      } else { ant = L * Math.cos(a * RAD);
+        beeld = situatieSvg({ x:Math.cos(a * RAD), y:Math.sin(a * RAD), muur:true, hoek:a + '°', ls:'ladder ' + net(L) + ' m', lx:'?', naam:'ladder tegen een muur' });
+        vraag = 'Een ladder van ' + net(L) + ' m staat tegen een muur en maakt een hoek van ' + a + '° met de grond. Hoe ver staat de voet van de ladder van de muur?'; label = 'afstand'; eh = 'm';
+        uit = 'De afstand over de grond ligt tegen de hoek aan, de ladder is de schuine zijde: cos. Afstand = cos ' + a + '° × ' + net(L) + ' ≈ ' + net(rond(ant, 1)) + ' m.';
+      }
+    } else if (k === 'helling'){
+      var hcm = kies([20, 25, 30, 40, 45, 50, 60]); x = kies([3, 4, 5, 6, 8]); ant = graden(Math.atan(hcm / 100 / x));
+      beeld = situatieSvg({ x:x, y:hcm / 100 * 4, hoek:'?', lx:net(x) + ' m', ly:hcm + ' cm', naam:'hellingbaan' });
+      vraag = 'Een hellingbaan voor een rolstoel overbrugt een hoogte van ' + hcm + ' cm over een horizontale afstand van ' + x + ' m. Bereken de hellingshoek.'; label = 'hellingshoek'; eh = '°';
+      opdr = 'Let op de eenheden: maak eerst alles meters. ' + EEN;
+      uit = hcm + ' cm = ' + net(hcm / 100) + ' m. Hoogte en horizontale afstand: tan(hoek) = ' + net(hcm / 100) + '/' + x + '. Hoek = tan⁻¹(' + net(hcm / 100) + '/' + x + ') ≈ ' + net(rond(ant, 1)) + '°. Wie met ' + hcm + '/' + x + ' rekent, krijgt een veel te steile helling.';
+    } else if (k === 'vlieger'){
+      L = kies([30, 40, 50, 60, 75, 80]); a = tussen(35, 65); ant = L * Math.sin(a * RAD);
+      beeld = situatieSvg({ x:Math.cos(a * RAD), y:Math.sin(a * RAD), hoek:a + '°', ls:'touw ' + L + ' m', ly:'?', naam:'vlieger aan een touw' });
+      vraag = 'Het touw van een vlieger is ' + L + ' m lang en strak. Het touw maakt een hoek van ' + a + '° met de grond. Hoe hoog hangt de vlieger? (Je houdt het touw bij de grond vast.)'; label = 'hoogte'; eh = 'm';
+      uit = 'De hoogte ligt tegenover de hoek, het touw is de schuine zijde: sin. Hoogte = sin ' + a + '° × ' + L + ' ≈ ' + net(rond(ant, 1)) + ' m.';
+    } else if (k === 'boom'){
+      x = kies([8, 10, 12, 15, 18, 20, 24]); a = tussen(25, 55); ant = x * Math.tan(a * RAD);
+      beeld = situatieSvg({ x:1, y:Math.tan(a * RAD), hoek:a + '°', lx:'schaduw ' + x + ' m', ly:'?', schuinKleur:'#E0A21B', naam:'boom met een schaduw' });
+      vraag = 'Een boom heeft een schaduw van ' + x + ' m. De zonnestralen maken een hoek van ' + a + '° met de grond. Hoe hoog is de boom?'; label = 'hoogte'; eh = 'm';
+      uit = 'De hoogte ligt tegenover de hoek, de schaduw ligt ertegen: tan. Hoogte = tan ' + a + '° × ' + x + ' ≈ ' + net(rond(ant, 1)) + ' m.';
+    } else if (k === 'dak'){
+      var br = kies([7, 8, 9, 10, 12]), nok = kies([3, 3.5, 4, 4.5, 5]); ant = graden(Math.atan(nok / (br / 2)));
+      var sc = scene(0, 0), hb = br / 2, P1 = [-hb, 0, 0], P2 = [hb, 0, 0], N = [0, 0, nok], Mm = [0, 0, 0];
+      sc.vlak([P1, P2, N], LICHT, true); sc.lijn([Mm, N], { stip:true }); sc.haaks(Mm, min3(P2, Mm), min3(N, Mm)); sc.boog(P1, min3(P2, P1), min3(N, P1), { tekst:'?' });
+      sc.maat(P1, P2, br + ' m', { af:12 }); sc.maat(Mm, N, net(nok) + ' m', { van:P2, af:7 });
+      beeld = sc.teken(250, 150, 'dak van een huis');
+      vraag = 'De voorkant van een dak is een gelijkbenige driehoek: ' + br + ' m breed, en de nok ligt ' + net(nok) + ' m boven de onderkant. Bereken de hellingshoek van het dak.'; label = 'hellingshoek'; eh = '°';
+      uit = 'De hoogte staat precies in het midden, dus de halve breedte is ' + net(hb) + ' m. tan(hoek) = ' + net(nok) + '/' + net(hb) + '. Hoek = tan⁻¹(' + net(nok) + '/' + net(hb) + ') ≈ ' + net(rond(ant, 1)) + '°. Met de hele breedte reken je een te kleine hoek uit.';
+    } else if (k === 'kabel'){
+      L = kies([400, 600, 800, 1000, 1200, 1500]); y = Math.round(L * kies([0.25, 0.3, 0.35, 0.4, 0.45])); ant = graden(Math.asin(y / L));
+      beeld = situatieSvg({ x:Math.sqrt(L * L - y * y), y:y, hoek:'?', ls:'kabel ' + net(L) + ' m', ly:net(y) + ' m', naam:'kabelbaan' });
+      vraag = 'De kabel van een kabelbaan is ' + net(L) + ' m lang en loopt in een rechte lijn ' + net(y) + ' m omhoog. Welke hoek maakt de kabel met de horizontaal?'; label = 'hoek'; eh = '°';
+      uit = 'Het hoogteverschil ligt tegenover de hoek, de kabel is de schuine zijde: sin(hoek) = ' + net(y) + '/' + net(L) + '. Hoek ≈ ' + net(rond(ant, 1)) + '°.';
+    } else if (k === 'vliegtuig'){
+      a = tussen(8, 16); x = kies([2, 2.5, 3, 4, 5]); ant = x * 1000 * Math.tan(a * RAD);
+      beeld = situatieSvg({ x:1, y:Math.tan(a * RAD) * 1.6, hoek:a + '°', lx:net(x) + ' km', ly:'?', naam:'opstijgend vliegtuig' });
+      vraag = 'Een vliegtuig stijgt op onder een hoek van ' + a + '° en vliegt in een rechte lijn omhoog. Als het ' + net(x) + ' km over de grond heeft afgelegd, hoe hoog vliegt het dan in meter?'; label = 'hoogte'; eh = 'm'; opdr = EEN;
+      uit = 'De hoogte ligt tegenover de hoek, de afstand over de grond ligt ertegen: tan. ' + net(x) + ' km = ' + net(x * 1000) + ' m. Hoogte = tan ' + a + '° × ' + net(x * 1000) + ' ≈ ' + net(rond(ant, 1)) + ' m.';
+    } else if (k === 'glijbaan'){
+      y = kies([1.5, 1.8, 2, 2.4, 2.5, 3]); a = tussen(28, 42); ant = y / Math.sin(a * RAD);
+      beeld = situatieSvg({ x:1 / Math.tan(a * RAD), y:1, hoek:a + '°', ls:'?', ly:net(y) + ' m', naam:'glijbaan' });
+      vraag = 'Een glijbaan begint op ' + net(y) + ' m hoogte en maakt een hoek van ' + a + '° met de grond. Hoe lang is de glijbaan?'; label = 'lengte'; eh = 'm';
+      uit = 'De hoogte ligt tegenover de hoek, de glijbaan is de schuine zijde: sin ' + a + '° = ' + net(y) + '/lengte. Dus lengte = ' + net(y) + ' : sin ' + a + '° ≈ ' + net(rond(ant, 1)) + ' m. Hier deel je door de sinus.';
+    } else {
+      var p = kies([5, 6, 8, 10, 12, 15, 20]); ant = graden(Math.atan(p / 100));
+      beeld = situatieSvg({ x:100, y:p * 2, hoek:'?', lx:'100 m', ly:p + ' m', naam:'helling van een weg' });
+      vraag = 'Op een verkeersbord staat dat een weg een helling van <b>' + p + '%</b> heeft: per 100 m horizontaal gaat de weg ' + p + ' m omhoog. Bereken de hellingshoek.'; label = 'hellingshoek'; eh = '°';
+      uit = 'tan(hoek) = ' + p + '/100 = ' + net(p / 100) + '. Hoek = tan⁻¹(' + net(p / 100) + ') ≈ ' + net(rond(ant, 1)) + '°. Een helling van ' + p + '% is dus geen hoek van ' + p + '°.';
+    }
+    return gon({ sleutel:'gs' + k + vraag.length + vraag.replace(/\D/g, ''), vraag:vraag, opdracht:opdr, beeld:beeld, velden:[veld(label, ant, eh, 1)], antwoordTekst:net(rond(ant, 1)) + (eh === '°' ? '°' : ' ' + eh), uitleg:uit + ' ' + SOS });
+  }
+  /* havo/vwo: hoeken in ruimtefiguren */
+  function goniRuimte(niv){
+    var k = kies(['balk', 'ribbe', 'zijvlak', 'kegel', 'pirHoogte']), ant, alt, vraag, uit, beeld, label = 'hoek', eh = '°', sl;
+    if (k === 'balk'){
+      var l = tussen(4, 12), b = tussen(3, 9), h = tussen(3, 10), g = Math.sqrt(l * l + b * b); ant = graden(Math.atan(h / g)); alt = graden(Math.atan(h / rond(g, 1)));
+      var t = balkTek(l, b, h, { l:l + ' cm', b:b + ' cm', h:h + ' cm' }), V = t.V;
+      t.sc.lijn([V[0], V[2]], { stip:true, kleur:BLAUW, dik:2.4 }); t.sc.lijn([V[0], V[6]], { stip:true, kleur:ROOD, dik:2.6 }); t.sc.haaks(V[2], min3(V[0], V[2]), min3(V[6], V[2])); t.sc.boog(V[0], min3(V[2], V[0]), min3(V[6], V[0]), { tekst:'?', r:30 });
+      beeld = t.sc.teken(230, 160, 'balk met lichaamsdiagonaal'); sl = 'gb' + l + b + h;
+      vraag = 'Een balk is ' + l + ' cm lang, ' + b + ' cm breed en ' + h + ' cm hoog. Bereken de hoek tussen de lichaamsdiagonaal (rood) en het grondvlak.';
+      uit = 'De hoek zit in de driehoek met de diagonaal van het grondvlak (blauw), de staande ribbe en de lichaamsdiagonaal. Blauw: √(' + l + '² + ' + b + '²) ≈ ' + net(rond(g, 1)) + ' cm. De staande ribbe van ' + h + ' cm ligt tegenover de hoek: tan(hoek) = ' + h + '/' + net(rond(g, 1)) + ', hoek ≈ ' + net(rond(ant, 1)) + '°.';
+    } else if (k === 'ribbe' || k === 'zijvlak' || k === 'pirHoogte'){
+      var a = kies([6, 8, 10, 12, 16, 20]), hp = kies([7, 8, 9, 10, 12, 15]), hd = a * Math.SQRT2 / 2, tp = pirTek(a, hp, { a:a + ' cm', hLijn:true }), Vp = tp.V, M = tp.M, sc = tp.sc;
+      if (k === 'ribbe'){
+        ant = graden(Math.atan(hp / hd)); alt = graden(Math.atan(hp / rond(hd, 1)));
+        sc.maat(M, Vp[4], hp + ' cm', { van:Vp[1], af:7 }); sc.lijn([M, Vp[1]], { stip:true, kleur:BLAUW, dik:2.4 }); sc.lijn([Vp[1], Vp[4]], { kleur:ROOD, dik:3 }); sc.haaks(M, min3(Vp[1], M), min3(Vp[4], M)); sc.boog(Vp[1], min3(M, Vp[1]), min3(Vp[4], Vp[1]), { tekst:'?', r:28 });
+        vraag = 'Een piramide heeft een vierkant grondvlak van ' + a + ' bij ' + a + ' cm en is ' + hp + ' cm hoog; de top staat recht boven het midden. Bereken de hoek tussen een opstaande ribbe (rood) en het grondvlak.';
+        uit = 'De halve diagonaal (blauw) is ½ × √(' + a + '² + ' + a + '²) ≈ ' + net(rond(hd, 1)) + ' cm. De hoogte ligt tegenover de hoek: tan(hoek) = ' + hp + '/' + net(rond(hd, 1)) + ', hoek ≈ ' + net(rond(ant, 1)) + '°.'; sl = 'gr' + a + hp;
+      } else if (k === 'zijvlak'){
+        ant = graden(Math.atan(hp / (a / 2))); var F = [0, -tp.w[0] / 2, 0];
+        sc.maat(M, Vp[4], hp + ' cm', { van:Vp[1], af:7 }); sc.lijn([M, F], { stip:true, kleur:BLAUW, dik:2.4 }); sc.lijn([F, Vp[4]], { kleur:ROOD, dik:3 }); sc.haaks(M, min3(F, M), min3(Vp[4], M)); sc.boog(F, min3(M, F), min3(Vp[4], F), { tekst:'?', r:26 });
+        vraag = 'Een piramide heeft een vierkant grondvlak van ' + a + ' bij ' + a + ' cm en is ' + hp + ' cm hoog; de top staat recht boven het midden. Bereken de hoek tussen een zijvlak en het grondvlak (de hoek bij de blauwe en de rode lijn).';
+        uit = 'Van het midden naar het midden van een ribbe (blauw) is ' + a + ' : 2 = ' + net(a / 2) + ' cm. tan(hoek) = ' + hp + '/' + net(a / 2) + ', hoek ≈ ' + net(rond(ant, 1)) + '°.'; sl = 'gv' + a + hp;
+      } else {
+        var al = tussen(45, 70); ant = hd * Math.tan(al * RAD); alt = rond(hd, 1) * Math.tan(al * RAD); label = 'hoogte'; eh = 'cm';
+        sc.lijn([M, Vp[1]], { stip:true, kleur:BLAUW, dik:2.4 }); sc.lijn([Vp[1], Vp[4]], { kleur:ROOD, dik:3 }); sc.haaks(M, min3(Vp[1], M), min3(Vp[4], M)); sc.boog(Vp[1], min3(M, Vp[1]), min3(Vp[4], Vp[1]), { tekst:al + '°', r:28 }); sc.label(midden([M, Vp[4]]), 'h = ?', { dx:-8, anker:'end' });
+        vraag = 'Een piramide heeft een vierkant grondvlak van ' + a + ' bij ' + a + ' cm; de top staat recht boven het midden. Een opstaande ribbe maakt een hoek van ' + al + '° met het grondvlak. Hoe hoog is de piramide?';
+        uit = 'De halve diagonaal (blauw) is ≈ ' + net(rond(hd, 1)) + ' cm en ligt tegen de hoek aan; de hoogte ligt ertegenover: h = tan ' + al + '° × ' + net(rond(hd, 1)) + ' ≈ ' + net(rond(ant, 1)) + ' cm.'; sl = 'gp' + a + al;
+      }
+      beeld = sc.teken(200, 160, 'piramide');
+    } else {
+      var d = kies([4, 5, 6, 8, 10, 12]), hk = kies([5, 6, 8, 9, 10, 12]), r = d / 2; ant = graden(Math.atan(hk / r));
+      var tk = kegelTek(r, hk, { d:'d = ' + d + ' cm', h:hk + ' cm', haaks:true, rLijn:true, sKleur:ROOD });
+      tk.sc.boog(tk.R, min3(tk.M, tk.R), min3(tk.T, tk.R), { tekst:'?', r:24 });
+      beeld = tk.sc.teken(180, 150, 'kegel', 'klein'); sl = 'gk' + d + hk;
+      vraag = 'Een kegel heeft een diameter van ' + d + ' cm en is ' + hk + ' cm hoog. Bereken de hoek tussen de schuine zijde (rood) en het grondvlak.';
+      uit = 'De straal is ' + net(r) + ' cm en ligt tegen de hoek aan; de hoogte ligt ertegenover. tan(hoek) = ' + hk + '/' + net(r) + ', hoek ≈ ' + net(rond(ant, 1)) + '°. Met de diameter in plaats van de straal krijg je een te kleine hoek.';
+    }
+    return gon({ sleutel:sl, vraag:vraag, opdracht:'Zoek de rechthoekige driehoek waar de hoek in zit. ' + EEN, beeld:beeld, velden:[veld(label, ant, eh, 1, alt)], antwoordTekst:net(rond(ant, 1)) + (eh === '°' ? '°' : ' ' + eh), uitleg:uit });
+  }
+  function goniometrie(niv){
+    if (niv !== 'hv') return kies([goniKies, goniHoek, goniZijde, goniSituatie, goniSituatie])('kgt');
+    return kies([goniKies, goniHoek, goniZijde, goniSituatie, goniSituatie, goniRuimte, goniRuimte, goniRuimte])(niv);
+  }
+
+  var SOORTEN = { figuren:figuren, aanzichten:aanzichten, uitslagen:uitslagen, inhoud:inhoud, pythagoras:pythagoras, goniometrie:goniometrie };
+  VAKSPEL.maak({
+    id:'ruimte', naam:'Ruimtefiguren', vak:'wis', kleur:'#2F6FDB',
+    hand:'van plaatje naar ruimte en terug',
+    lead:'Meetkunde zoals op het examen wiskunde vmbo: je herkent ruimtefiguren, leest aanzichten van een bouwsel, vouwt uitslagen in gedachten, rekent inhoud en oppervlakte uit, en gebruikt Pythagoras en sinus, cosinus en tangens in balken, piramides en kegels. Bij elke opgave staat een tekening.',
+    leerdoel:'Je leert ruimtefiguren lezen en doorrekenen: aanzichten en uitslagen, inhoud en oppervlakte, en lengtes en hoeken met Pythagoras en goniometrie.',
+    hoe:[
+      { kop:'Kijk goed', tekst:'Stippellijnen zijn ribben die je niet ziet. Bij een bouwsel wijzen de pijlen <b>voor</b> en <b>rechts</b> aan waar je staat.' },
+      { kop:'Rekenen', tekst:'De formules staan bij de opgave, net als op het examen. Gebruik de π-knop, rond pas aan het eind af, en typ <b>12,5</b> of <b>12.5</b>.' },
+      { kop:'Zes onderdelen', tekst:'Ruimtefiguren, aanzichten, uitslagen, inhoud en oppervlakte, Pythagoras in de ruimte en goniometrie. Twintig opgaven per ronde, elk met uitleg.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'Figuren herkennen, aanzichten, uitslagen en de inhoud van een balk, kubus en cilinder met een gegeven formule. Pythagoras en goniometrie zijn geen bb-stof.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Ook inhoud van prisma, piramide, kegel en bol, Pythagoras in de ruimte, en sinus, cosinus en tangens in rechthoekige driehoeken.' },
+        { id:'hv', naam:'havo en vwo', uit:'Examenniveau gl/tl en hoger: hoeken in balk, piramide en kegel, terugrekenen, samengestelde figuren en aanzichten met zo min of zo veel mogelijk blokjes.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' }, { id:'figuren', naam:'ruimtefiguren', uit:'Kubus, balk, prisma, piramide, cilinder, kegel en bol: herkennen en vlakken, ribben en hoekpunten tellen.' },
+        { id:'aanzichten', naam:'aanzichten', uit:'Vooraanzicht, zijaanzicht en bovenaanzicht van een bouwsel van blokjes.' },
+        { id:'uitslagen', naam:'uitslagen', uit:'Welke uitslag wordt een kubus, welke vlakken komen tegenover elkaar.' },
+        { id:'inhoud', naam:'inhoud en oppervlakte', uit:'In cm³, m³ en liter, met de formules van het examen.' },
+        { id:'pythagoras', naam:'Pythagoras in de ruimte', uit:'Lichaamsdiagonaal, ribbe van een piramide, schuine zijde van een kegel. Examenstof vanaf vmbo-kgt; op vmbo-bb krijg je de kgt-opgaven.' },
+        { id:'goniometrie', naam:'goniometrie', uit:'Sinus, cosinus en tangens: een hoek of zijde berekenen. Examenstof vanaf vmbo-kgt; op vmbo-bb krijg je de kgt-opgaven.' } ] }
+    ],
+    aantal:10, minuten:9,
+    maak:function(keuze, nr){
+      var niv = keuze.niveau || 'kgt';
+      var soort = keuze.soort === 'alles' ? kies(niv === 'bb' ? ['figuren', 'aanzichten', 'uitslagen', 'inhoud', 'inhoud'] : ['figuren', 'aanzichten', 'uitslagen', 'inhoud', 'pythagoras', 'goniometrie']) : keuze.soort;
+      return SOORTEN[soort](niv);
+    },
+    uitleg:{ doel:'Ruimtefiguren herkennen, aanzichten en uitslagen lezen, inhoud en oppervlakte berekenen, en lengtes en hoeken in de ruimte vinden met Pythagoras en goniometrie.', tijd:'twintig opgaven per ronde, of kies 10 of 30', bediening:'Kies het plaatje of antwoord dat klopt (of druk op 1 tot 4). Bij een berekening typ je het getal en druk je op Nakijken of Enter; een komma of een punt mag allebei. Bij een sleepopgave sleep je de kaartjes; op een telefoon tik je een kaartje en dan het vak.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>

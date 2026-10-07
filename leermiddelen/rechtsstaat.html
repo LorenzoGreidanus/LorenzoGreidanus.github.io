@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Van aangifte tot uitspraak, versie 1.0: op vakspel.js; de zaken en vragen staan in dit bestand -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Van aangifte tot uitspraak &middot; meneer Greidanus</title>
+<meta name="description" content="Criminaliteit en rechtsstaat voor het examen maatschappijkunde: volg een strafzaak van aangifte tot uitspraak, zet de rechtsgang op volgorde, meet criminaliteit met het dark number en oefen soorten recht, de rechten van de verdachte, straffen, maatregelen en de aanpak van criminaliteit.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Van aangifte tot uitspraak">
+<meta property="og:description" content="Volg een strafzaak van aangifte tot uitspraak en oefen criminaliteit en rechtsstaat voor het examen maatschappijkunde.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/rechtsstaat.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M50.6 9.2 C74.1 8.4 90.2 25.1 90.4 47.6 C90.6 71.2 76.1 91.4 52.8 91.8 C29.2 92.2 9.6 77.1 10.2 53.4 C10.8 29.7 27.4 10 50.6 9.2Z' fill='%235a4fa0'/><g transform='translate(50 51) scale(2.2) translate(-12 -12)' fill='none' stroke='%23ffffff' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'><path d='M14.5 3.5l6 6-4 4-6-6z'/><path d='M13.5 10.5L4 20'/><path d='M12 21h9'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+/* De zaak, de route en de tabellen lezen hun kleuren uit de tokens van vakspel.css, zodat de
+   donkere stand meekantelt. Alleen de rand van de zaak en de huidige stap hebben de spelkleur;
+   de tekst op de spelkleur is --spelinkt (wit of navy, door vakspel.js gekozen). */
+.rs-wrap{display:grid;gap:8px;justify-items:center;width:100%}
+.rs-casus,.rs-sit{max-width:62ch;width:100%;text-align:left;background:var(--kaart2);border-left:4px solid var(--spelkleur);border-radius:0 14px 14px 0;padding:12px 16px 12px 14px;font-size:1.02rem;line-height:1.58}
+.rs-casus .rs-titel{display:block;font-size:.74rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.rs-casus .rs-eerder{display:block;color:var(--muted);font-size:.88rem;line-height:1.45;margin-bottom:6px}
+.rs-route{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:5px 6px;justify-content:center;max-width:62ch}
+.rs-route li{font-size:.76rem;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--kaart2);color:var(--muted);line-height:1.45}
+.rs-route li.af{color:var(--ink)}
+.rs-route li.af::before{content:'\2713\00a0'}
+.rs-route li.nu{background:var(--spelkleur);color:var(--spelinkt)}
+.rs-bron{max-width:62ch;width:100%;text-align:left;border:1px solid var(--rand2);border-radius:12px;padding:12px 16px;background:var(--kaart);font-size:1rem;line-height:1.58}
+.rs-bron .rs-kop{display:block;font-weight:700;margin-bottom:4px}
+.rs-bron small{display:block;color:var(--muted);font-size:.8rem;margin-top:6px}
+.rs-tab{border-collapse:collapse;width:100%;max-width:520px;font-size:.92rem;background:var(--kaart);font-variant-numeric:tabular-nums}
+.rs-tab caption{caption-side:top;text-align:left;font-size:.82rem;color:var(--muted);font-weight:600;padding:0 2px 6px}
+.beeld .rs-tab td,.beeld .rs-tab th{padding:7px 10px;text-align:right;border-bottom:1px solid var(--rand);line-height:1.35}
+.beeld .rs-tab th[scope=row]{text-align:left;font-weight:600}
+.beeld .rs-tab thead th{background:var(--kaart2);font-weight:600;vertical-align:bottom}
+.beeld .rs-tab thead th:first-child{text-align:left}
+body.groot .rs-casus,body.groot .rs-sit,body.groot .rs-bron{font-size:1.25rem}
+/* de stappen van een zaak: elke stap een eigen rij, anders staan lange zinnen in smalle kolommen */
+body.rs-stap .vakken.rij{grid-template-columns:1fr}
+body.rs-stap .vakken.rij .sleepdoel{flex-direction:row;align-items:center;min-height:58px;gap:10px}
+body.rs-stap .vakken.rij .doelknop{width:auto;flex:none}
+body.rs-stap .vakken.rij .sleepdoel .inhoud{justify-content:flex-start;flex:1;min-height:32px}
+body.rs-stap .sleepkaart{text-align:left;font-weight:500;font-size:.92rem;display:flex}
+body.rs-stap .kaartjes{flex-direction:column;align-items:stretch}
+@media(max-width:560px){.rs-casus,.rs-sit{font-size:.97rem;padding:10px 12px}.rs-bron{font-size:.97rem;padding:10px 12px}.rs-tab{font-size:.84rem}.beeld .rs-tab td,.beeld .rs-tab th{padding:6px 7px}.rs-route li{font-size:.72rem;padding:3px 8px}}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  function tussen(a, b){ return a + Math.floor(Math.random() * (b - a + 1)); }
+  function cap(t){ t = String(t); return t.charAt(0).toUpperCase() + t.slice(1); }
+  /* duizendtallen met een punt: 1.200 */
+  function dz(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+  function nr(niveau){ return { bb:1, kgt:2, hv:3 }[niveau] || 2; }
+  /* een lijst met n:[1,2,3] per item: alleen wat bij dit niveau hoort */
+  function voor(lijst, n){ return lijst.filter(function(x){ return !x.n || x.n.indexOf(n) >= 0; }); }
+  /* een getal als antwoord: 1200, 1.200 en 1 200 zijn allemaal goed */
+  function getalAntw(x){ return x >= 1000 ? { antwoord:[String(x), dz(x)], type:'tekst', toon:dz(x) } : { antwoord:x, tol:.001 }; }
+
+  var DEEL = { route:'de zaak volgen', volgorde:'de rechtsgang op volgorde', criminaliteit:'criminaliteit meten en verklaren', recht:'soorten recht',
+    rechten:'rechtsstaat en rechten van de verdachte', straffen:'straffen en maatregelen', aanpak:'de aanpak van criminaliteit' };
+  /* meerkeuze: het goede antwoord eerst, de motor husselt; met opties staat de volgorde vast */
+  function mk(deel, o){
+    var opties = o.opties || [o.goed].concat(o.fout);
+    return { onderdeel:'rechtsstaat: ' + deel, onderdeelNaam:DEEL[deel], vorm:'meerkeuze', sleutel:o.sleutel,
+      vraag:o.vraag, opdracht:o.opdracht || '', beeld:o.beeld || '', opties:opties, goed:o.opties ? o.opties.indexOf(o.goed) : 0,
+      vasteVolgorde:!!o.opties, uitleg:o.uitleg, antwoordTekst:o.goed };
+  }
+  function iv(deel, o){
+    var v = { label:o.label || 'antwoord', antwoord:o.antwoord, tol:o.tol, eenheid:o.eenheid, type:o.type, breed:o.breed, toon:o.toon };
+    var toon = o.toon || (Array.isArray(o.antwoord) ? o.antwoord[0] : String(o.antwoord)) + (o.eenheid ? ' ' + o.eenheid : '');
+    return { onderdeel:'rechtsstaat: ' + deel, onderdeelNaam:DEEL[deel], vorm:'invul', sleutel:o.sleutel,
+      vraag:o.vraag, opdracht:o.opdracht || '', beeld:o.beeld || '', velden:[v], uitleg:o.uitleg, antwoordTekst:toon };
+  }
+  function sit(t){ return '<div class="rs-sit">' + t + '</div>'; }
+  function bron(kop, t, onder){ return '<div class="rs-bron">' + (kop ? '<span class="rs-kop">' + kop + '</span>' : '') + t + (onder ? '<small>' + onder + '</small>' : '') + '</div>'; }
+  function tabel(onderschrift, kop, rijen){
+    return '<table class="rs-tab"><caption>' + onderschrift + '</caption><thead><tr>' + kop.map(function(k){ return '<th scope="col">' + k + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      rijen.map(function(r){ return '<tr><th scope="row">' + r[0] + '</th>' + r.slice(1).map(function(x){ return '<td>' + x + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table>';
+  }
+  /* uit een lijst namen er k kiezen, zonder het goede en zonder wat niet mag */
+  function anderen(lijst, goed, k, niet){ return H(lijst.filter(function(x){ return x !== goed && (!niet || niet.indexOf(x) < 0); })).slice(0, k); }
+
+  /* ================= de zaken (allemaal verzonnen) ================= */
+  var SOORT_UIT = {
+    'veelvoorkomende criminaliteit':'Veelvoorkomende criminaliteit: lichtere misdrijven die vaak gebeuren en waar veel mensen last van hebben, zoals fietsdiefstal, inbraak en vernieling.',
+    'georganiseerde criminaliteit':'Georganiseerde criminaliteit: groepen die gepland samenwerken om veel geld te verdienen, zoals bij drugshandel en mensenhandel.',
+    'witteboordencriminaliteit':'Witteboordencriminaliteit: misdrijven die iemand pleegt via zijn werk of functie, zoals fraude, verduistering of omkoping.',
+    'cybercriminaliteit':'Cybercriminaliteit: misdrijven met of tegen computers en internet, zoals hacken, phishing en oplichting via internet.',
+    'verkeerscriminaliteit':'Verkeerscriminaliteit: zware verkeersdelicten, zoals rijden onder invloed of doorrijden na een ongeluk.',
+    'geweldscriminaliteit':'Geweldscriminaliteit: misdrijven waarbij iemand geweld gebruikt of ermee dreigt, zoals mishandeling, bedreiging en beroving.'
+  };
+  var SOORT_KORT = {
+    'veelvoorkomende criminaliteit':'dat zijn lichtere misdrijven die vaak gebeuren', 'georganiseerde criminaliteit':'daarvoor moet een groep gepland samenwerken om geld te verdienen',
+    'witteboordencriminaliteit':'daarbij pleegt iemand het misdrijf via zijn werk of functie', 'cybercriminaliteit':'daarbij gaat het om computers en internet',
+    'verkeerscriminaliteit':'daarbij gaat het om zware verkeersdelicten', 'geweldscriminaliteit':'daarbij gebruikt iemand geweld of dreigt ermee'
+  };
+  var NAAM = { feit:'het feit', aangifte:'aangifte', opsporing:'opsporing', verhoor:'verhoor', vast:'vastzetten', om:'officier van justitie',
+    beschikking:'strafbeschikking', halt:'Halt', zitting:'zitting', uitspraak:'uitspraak', beroep:'hoger beroep' };
+  var RECHTER_WAAROM = {
+    politierechter:'Het is een eenvoudige zaak: één rechter, de politierechter, die maximaal een jaar gevangenisstraf mag opleggen.',
+    'meervoudige kamer':'Het is een zware zaak: dan beslissen drie rechters samen in de meervoudige kamer.',
+    kinderrechter:'De verdachte was jonger dan 18 toen het gebeurde: dan komt de zaak bij de kinderrechter.',
+    kantonrechter:'Het gaat om een overtreding, zoals door rood fietsen: die zaken doet de kantonrechter.'
+  };
+  var UITSPRAAK = {
+    veroordeling:{ naam:'een veroordeling', u:'Bij een veroordeling vindt de rechter het feit bewezen en strafbaar en legt hij een straf op.' },
+    vrijspraak:{ naam:'vrijspraak', u:'Bij vrijspraak vindt de rechter niet bewezen dat de verdachte het feit heeft gepleegd.' },
+    ontslag:{ naam:'ontslag van alle rechtsvervolging', u:'Bij ontslag van alle rechtsvervolging is het feit wel bewezen, maar is het niet strafbaar (bijvoorbeeld door noodweer) of kan de dader het niet worden aangerekend.' },
+    schuld:{ naam:'schuldigverklaring zonder straf', u:'Bij een schuldigverklaring zonder straf vindt de rechter de verdachte schuldig, maar legt hij geen straf op, bijvoorbeeld omdat het feit heel licht was.' }
+  };
+  var DOELEN4 = ['vergelding', 'afschrikking', 'resocialisatie', 'beveiliging van de samenleving'];
+  var DOEL_UIT = {
+    vergelding:'Vergelding: de dader krijgt leed terug voor het leed dat hij een ander aandeed.',
+    afschrikking:'Afschrikking: de straf moet voorkomen dat de dader of anderen het (opnieuw) doen.',
+    resocialisatie:'Resocialisatie: de dader leert zich aan de regels te houden, zodat hij na zijn straf weer gewoon mee kan doen.',
+    'beveiliging van de samenleving':'Beveiliging van de samenleving: zolang de dader vastzit of iets niet mag, kan hij geen nieuwe slachtoffers maken.'
+  };
+
+  var CASUS = [
+    { id:'fiets', titel:'De gestolen fiets', wie:'Milan', hij:'hij', hem:'hem', zijn:'zijn', sl:'Noor', delict:'diefstal',
+      soort:'veelvoorkomende criminaliteit', soortFout:['georganiseerde criminaliteit', 'witteboordencriminaliteit', 'cybercriminaliteit'],
+      bewijs:'camerabeelden van het station', bs:'camera', om:'dag', rechter:'politierechter', eis:'80 uur taakstraf', uitspraak:'veroordeling',
+      strafKort:'60 uur taakstraf', strafFout:['6 maanden gevangenisstraf', 'een Halt-straf', 'tbs'], taak:true,
+      doel:{ zin:'Milan moet leren zich aan de regels te houden, zodat hij later niet opnieuw de fout in gaat.', goed:'resocialisatie' },
+      route:['feit', 'aangifte', 'opsporing', 'verhoor', 'om', 'zitting', 'uitspraak'],
+      t:{ feit:'Bij het station van Lindeveen wordt de elektrische fiets van Noor gestolen. Een camera filmt de dief.',
+        aangifte:'Noor doet aangifte van diefstal bij de politie.',
+        opsporing:'De politie bekijkt de camerabeelden en herkent Milan (19). Agenten houden hem aan.',
+        verhoor:'Milan wordt op het bureau verhoord. Eerst praat hij met een advocaat.',
+        om:'De officier van justitie vindt dat er genoeg bewijs is en stuurt Milan een dagvaarding.',
+        zitting:'De politierechter behandelt de zaak. De officier van justitie eist 80 uur taakstraf.',
+        uitspraak:'De politierechter vindt de diefstal bewezen en veroordeelt Milan tot 60 uur taakstraf.' } },
+    { id:'voetbal', titel:'De klap na de wedstrijd', wie:'Ruben', hij:'hij', hem:'hem', zijn:'zijn', sl:'Joep', delict:'mishandeling',
+      soort:'geweldscriminaliteit', soortFout:['witteboordencriminaliteit', 'cybercriminaliteit', 'verkeerscriminaliteit'],
+      bewijs:'getuigen en een filmpje van een supporter', bs:'getuige', om:'dag', rechter:'politierechter', eis:'120 uur taakstraf en 2 maanden voorwaardelijke gevangenisstraf', uitspraak:'veroordeling',
+      strafKort:'100 uur taakstraf en 2 maanden voorwaardelijke gevangenisstraf', strafFout:['2 jaar gevangenisstraf', 'alleen een waarschuwing', 'tbs'], taak:true, voorw:'2 maanden', benadeeld:true, beroep:'verdachte',
+      doel:{ zin:'Andere supporters zien dat geweld rond het stadion bestraft wordt, en denken wel twee keer na.', goed:'afschrikking' },
+      route:['feit', 'aangifte', 'opsporing', 'verhoor', 'om', 'zitting', 'uitspraak', 'beroep'],
+      t:{ feit:'Na een voetbalwedstrijd in Lindeveen slaat een man een supporter van de andere club, Joep, op zijn neus. Joep breekt zijn neus.',
+        aangifte:'Joep doet aangifte van mishandeling. Twee getuigen geven hun naam aan de politie.',
+        opsporing:'De politie spreekt de getuigen en bekijkt een filmpje dat een supporter maakte. Daarop is Ruben (24) te zien. Hij wordt aangehouden.',
+        verhoor:'Ruben wordt verhoord. Hij zegt dat hij niets wil verklaren.',
+        om:'De officier van justitie stuurt Ruben een dagvaarding.',
+        zitting:'De politierechter behandelt de zaak. Joep vraagt een schadevergoeding voor zijn ziekenhuiskosten. De officier eist 120 uur taakstraf en 2 maanden voorwaardelijke gevangenisstraf.',
+        uitspraak:'De politierechter veroordeelt Ruben tot 100 uur taakstraf en 2 maanden voorwaardelijke gevangenisstraf. Hij moet Joep de kosten vergoeden.',
+        beroep:'Ruben vindt de straf te hoog. Hij gaat in hoger beroep.' } },
+    { id:'inbraak', titel:'De inbraken in Oosterkamp', wie:'Kevin', hij:'hij', hem:'hem', zijn:'zijn', sl:'de familie Bakker', delict:'woninginbraak (diefstal met braak)',
+      soort:'veelvoorkomende criminaliteit', soortFout:['witteboordencriminaliteit', 'cybercriminaliteit', 'verkeerscriminaliteit'],
+      bewijs:'vingerafdrukken op een raam', bs:'sporen', om:'dag', rechter:'meervoudige kamer', eis:'18 maanden gevangenisstraf', uitspraak:'veroordeling', vast:true,
+      strafKort:'15 maanden gevangenisstraf', strafFout:['80 uur taakstraf', 'een geldboete', 'een Halt-straf'], beroep:'officier',
+      doel:{ zin:'Zolang Kevin vastzit, kan hij geen huizen leeghalen.', goed:'beveiliging van de samenleving' },
+      route:['feit', 'aangifte', 'opsporing', 'verhoor', 'vast', 'om', 'zitting', 'uitspraak', 'beroep'],
+      t:{ feit:'In de wijk Oosterkamp in Lindeveen wordt in één maand in zes huizen ingebroken. Bij de familie Bakker verdwijnen sieraden en een laptop.',
+        aangifte:'De familie Bakker doet aangifte van inbraak.',
+        opsporing:'Op een raam vindt de politie vingerafdrukken. Die zijn van Kevin (31). Hij wordt aangehouden.',
+        verhoor:'Kevin wordt verhoord. Zijn advocaat is bij het verhoor.',
+        vast:'De officier van justitie stelt Kevin in verzekering. Daarna beslist de rechter-commissaris dat hij in bewaring blijft.',
+        om:'De officier van justitie dagvaardt Kevin voor zes inbraken.',
+        zitting:'Drie rechters van de meervoudige kamer behandelen de zaak. De officier eist 18 maanden gevangenisstraf.',
+        uitspraak:'De rechtbank veroordeelt Kevin tot 15 maanden gevangenisstraf. De tijd dat hij al vastzat, gaat daar vanaf.',
+        beroep:'De officier van justitie vindt 15 maanden te weinig en gaat in hoger beroep.' } },
+    { id:'straatroof', titel:'De beroofde bezorger', wie:'Jayden', hij:'hij', hem:'hem', zijn:'zijn', sl:'Ravi', delict:'diefstal met geweld (beroving)', jeugd:true, vast:true, spreek:true,
+      soort:'geweldscriminaliteit', soortFout:['witteboordencriminaliteit', 'cybercriminaliteit', 'verkeerscriminaliteit'],
+      bewijs:'de gestolen telefoon die de politie opspoorde', bs:'telefoon', om:'dag', rechter:'kinderrechter', eis:'jeugddetentie en een taakstraf', uitspraak:'veroordeling',
+      strafKort:'90 dagen jeugddetentie (waarvan 60 voorwaardelijk) en 80 uur taakstraf', strafFout:['5 jaar gevangenisstraf', 'alleen een Halt-straf', 'tbs'], taak:true, voorw:'60 dagen',
+      doel:{ zin:'Het voorwaardelijke deel hangt Jayden boven het hoofd: doet hij weer iets, dan moet hij alsnog vast.', goed:'afschrikking' },
+      route:['feit', 'aangifte', 'opsporing', 'verhoor', 'vast', 'om', 'zitting', 'uitspraak'],
+      t:{ feit:'Op een avond in Lindeveen bedreigen twee jongens een maaltijdbezorger, Ravi, met een mes. Ze pakken zijn telefoon en zijn geld af.',
+        aangifte:'Ravi doet aangifte van beroving.',
+        opsporing:'De politie spoort de gestolen telefoon op. Die ligt bij Jayden (16) thuis. Hij wordt aangehouden.',
+        verhoor:'Voor het verhoor praat Jayden met een advocaat. Zijn ouders krijgen bericht dat hij is aangehouden.',
+        vast:'De rechter-commissaris beslist dat Jayden in bewaring blijft, in een justitiële jeugdinrichting.',
+        om:'De officier van justitie dagvaardt Jayden. De Raad voor de Kinderbescherming onderzoekt hoe het met hem gaat en geeft advies.',
+        zitting:'De kinderrechter behandelt de zaak achter gesloten deuren. Ravi vertelt wat de beroving met hem deed. De officier eist jeugddetentie en een taakstraf.',
+        uitspraak:'De kinderrechter veroordeelt Jayden tot 90 dagen jeugddetentie, waarvan 60 dagen voorwaardelijk, en 80 uur taakstraf.' } },
+    { id:'oplichting', titel:'De telefoons die nooit kwamen', wie:'Lars', hij:'hij', hem:'hem', zijn:'zijn', sl:'Mila', delict:'oplichting via internet',
+      soort:'cybercriminaliteit', soortFout:['geweldscriminaliteit', 'verkeerscriminaliteit', 'georganiseerde criminaliteit'],
+      bewijs:'gegevens van de bank over wie het geld kreeg', bs:'bank', om:'dag', rechter:'politierechter', eis:'6 maanden gevangenisstraf', uitspraak:'veroordeling',
+      strafKort:'4 maanden gevangenisstraf, waarvan 2 voorwaardelijk', strafFout:['240 uur taakstraf', 'een Halt-straf', 'tbs'], voorw:'2 maanden', benadeeld:true,
+      doel:{ zin:'Lars heeft veertien mensen bedrogen. Daar hoort een stevige straf tegenover te staan.', goed:'vergelding' },
+      route:['feit', 'aangifte', 'opsporing', 'verhoor', 'om', 'zitting', 'uitspraak'],
+      t:{ feit:'Op een website voor tweedehands spullen biedt iemand nieuwe telefoons aan voor een lage prijs. Veertien kopers betalen, maar krijgen nooit een telefoon.',
+        aangifte:'Mila en dertien andere kopers doen aangifte van oplichting via internet.',
+        opsporing:'De politie vraagt bij de bank op wiens rekening het geld is gestort. De rekening is van Lars (22). Hij wordt aangehouden.',
+        verhoor:'Lars wordt verhoord en bekent.',
+        om:'De officier van justitie dagvaardt Lars.',
+        zitting:'De politierechter behandelt de zaak. Mila en de andere kopers vragen hun geld terug. De officier eist 6 maanden gevangenisstraf.',
+        uitspraak:'De politierechter veroordeelt Lars tot 4 maanden gevangenisstraf, waarvan 2 maanden voorwaardelijk. Hij moet de kopers hun geld terugbetalen.' } },
+    { id:'bushokje', titel:'Het kapotte bushokje', wie:'Thijs', hij:'hij', hem:'hem', zijn:'zijn', sl:'het busbedrijf', delict:'vernieling',
+      soort:'veelvoorkomende criminaliteit', soortFout:['witteboordencriminaliteit', 'cybercriminaliteit', 'georganiseerde criminaliteit'],
+      bewijs:'een buurman die alles zag', bs:'getuige', om:'beschikking',
+      route:['feit', 'aangifte', 'opsporing', 'verhoor', 'beschikking'],
+      t:{ feit:'Op een zaterdagnacht trapt iemand de glazen wand van een bushokje in Lindeveen kapot.',
+        aangifte:'Het busbedrijf doet aangifte van vernieling.',
+        opsporing:'Een buurman heeft alles gezien en herkent Thijs (20). De politie houdt hem aan.',
+        verhoor:'Thijs wordt verhoord en geeft toe dat hij de glazen wand kapot trapte.',
+        beschikking:'De officier van justitie geeft Thijs een strafbeschikking: een geldboete, en hij moet de schade betalen. De zaak komt niet bij de rechter.' } },
+    { id:'laptop', titel:'De laptop uit de kantine', wie:'Bas', hij:'hij', hem:'hem', zijn:'zijn', sl:'Eva', delict:'diefstal',
+      soort:'veelvoorkomende criminaliteit', soortFout:['georganiseerde criminaliteit', 'witteboordencriminaliteit', 'cybercriminaliteit'],
+      bewijs:'wazige camerabeelden', bs:'camera', om:'dag', rechter:'politierechter', eis:'40 uur taakstraf', uitspraak:'vrijspraak',
+      route:['feit', 'aangifte', 'opsporing', 'verhoor', 'om', 'zitting', 'uitspraak'],
+      t:{ feit:'Uit de kantine van een sportclub in Lindeveen verdwijnt de laptop van trainer Eva.',
+        aangifte:'Eva doet aangifte van diefstal.',
+        opsporing:'Op wazige camerabeelden lijkt een man op Bas (27), een lid van de club. De politie houdt hem aan.',
+        verhoor:'Bas zegt in het verhoor dat hij de laptop niet heeft gepakt.',
+        om:'De officier van justitie dagvaardt Bas.',
+        zitting:'De politierechter bekijkt de beelden. De advocaat van Bas zegt dat er niet op te zien is wie het is. De officier eist 40 uur taakstraf.',
+        uitspraak:'De politierechter vindt niet bewezen dat Bas de laptop heeft gestolen. Hij spreekt Bas vrij.' } },
+    { id:'noodweer', titel:'De duw bij de fietsenstalling', wie:'Sanne', hij:'ze', hem:'haar', zijn:'haar', sl:'Dirk', delict:'mishandeling',
+      soort:'geweldscriminaliteit', soortFout:['witteboordencriminaliteit', 'cybercriminaliteit', 'verkeerscriminaliteit'],
+      bewijs:'getuigen en camerabeelden van de stalling', bs:'camera', om:'dag', rechter:'politierechter', uitspraak:'ontslag',
+      route:['feit', 'aangifte', 'opsporing', 'verhoor', 'om', 'zitting', 'uitspraak'],
+      t:{ feit:'Bij een fietsenstalling in Lindeveen probeert een man, Dirk, de tas van Sanne (34) af te pakken. Sanne duwt hem hard weg. Dirk valt en breekt zijn pols.',
+        aangifte:'Sanne doet aangifte van een poging tot beroving. Dirk doet aangifte van mishandeling tegen Sanne.',
+        opsporing:'De politie spreekt getuigen en bekijkt de camerabeelden van de stalling.',
+        verhoor:'Sanne wordt verhoord als verdachte van mishandeling. Ze vertelt dat ze zich verdedigde.',
+        om:'De officier van justitie wil dat de rechter erover beslist en dagvaardt Sanne.',
+        zitting:'De politierechter behandelt de zaak. De advocaat van Sanne zegt dat het noodweer was.',
+        uitspraak:'De politierechter vindt bewezen dat Sanne Dirk heeft geduwd, maar het was noodweer. Sanne krijgt ontslag van alle rechtsvervolging.' } },
+    { id:'auto', titel:'Dronken achter het stuur', wie:'Erik', hij:'hij', hem:'hem', zijn:'zijn', sl:'Lotte', delict:'rijden onder invloed van alcohol',
+      soort:'verkeerscriminaliteit', soortFout:['witteboordencriminaliteit', 'cybercriminaliteit', 'georganiseerde criminaliteit'],
+      bewijs:'een ademtest', bs:'adem', om:'dag', rechter:'politierechter', eis:'200 uur taakstraf, een voorwaardelijke gevangenisstraf en een rijverbod', uitspraak:'veroordeling',
+      strafKort:'180 uur taakstraf, 3 maanden voorwaardelijk en 2 jaar rijontzegging', strafFout:['10 jaar gevangenisstraf', 'een Halt-straf', 'alleen een geldboete'], taak:true, voorw:'3 maanden', geenAangifte:true,
+      doel:{ zin:'Zolang Erik niet mag rijden, kan hij in het verkeer geen nieuwe slachtoffers maken.', goed:'beveiliging van de samenleving' },
+      route:['feit', 'opsporing', 'verhoor', 'om', 'zitting', 'uitspraak'],
+      t:{ feit:'Op een zondagavond rijdt een auto in Lindeveen een fietser aan, Lotte. Ze raakt zwaargewond. Een getuige belt 112.',
+        opsporing:'Agenten komen meteen. Een ademtest laat zien dat de bestuurder, Erik (45), veel te veel alcohol op heeft. Hij wordt aangehouden.',
+        verhoor:'Erik wordt verhoord. Hij hoeft niet te antwoorden, maar hij vertelt wat er gebeurd is.',
+        om:'De officier van justitie dagvaardt Erik.',
+        zitting:'De politierechter behandelt de zaak. De officier eist 200 uur taakstraf, een voorwaardelijke gevangenisstraf en een rijverbod.',
+        uitspraak:'De politierechter veroordeelt Erik tot 180 uur taakstraf, 3 maanden voorwaardelijke gevangenisstraf en een ontzegging van de rijbevoegdheid van 2 jaar.' } },
+    { id:'graffiti', titel:'Graffiti op de school', wie:'Femke', hij:'ze', hem:'haar', zijn:'haar', sl:'de school', delict:'vernieling (graffiti)', jeugd:true,
+      soort:'veelvoorkomende criminaliteit', soortFout:['witteboordencriminaliteit', 'cybercriminaliteit', 'georganiseerde criminaliteit'],
+      bewijs:'beelden van een schoolcamera', bs:'camera', om:'halt',
+      route:['feit', 'aangifte', 'opsporing', 'verhoor', 'halt'],
+      t:{ feit:'Op een vrijdagavond spuiten een paar jongeren graffiti op de muur van een basisschool in Lindeveen.',
+        aangifte:'De directeur van de school doet aangifte van vernieling.',
+        opsporing:'Op de beelden van een schoolcamera herkent een wijkagent Femke (14).',
+        verhoor:'Femke wordt verhoord en geeft toe dat ze heeft meegedaan.',
+        halt:'De politie stuurt Femke naar Halt. Ze moet de muur helpen schoonmaken en een les volgen over de gevolgen van vandalisme.' } }
+  ];
+
+  /* ================= de vragen per stap van de zaak =================
+     Elke variant: n (de niveaus), als (geldt hij voor deze zaak), f (maakt de vraag). */
+  function Hij(c){ return cap(c.hij); }
+  var STAP = {
+    feit:[
+      { n:[1], f:function(c){ return { vraag:'Waarom is dit een zaak voor de politie?', goed:'Het is een strafbaar feit: in de wet staat dat het verboden is.',
+        fout:['Iemand is boos geworden, en dan moet de politie altijd komen.', 'Het is op straat gebeurd, en alles op straat is van de politie.'],
+        uitleg:'De politie komt in actie bij een <b>strafbaar feit</b>: iets wat volgens de wet verboden is en waar een straf op staat. Dat iemand boos is of dat het op straat gebeurt, maakt iets nog niet strafbaar.' }; } },
+      { n:[1, 2], f:function(c, n){ var f = c.soortFout.slice(0, n === 1 ? 2 : 3); return { vraag:'Bij welke soort criminaliteit hoort ' + c.delict + ' zoals in deze zaak?', goed:c.soort, fout:f,
+        uitleg:SOORT_UIT[c.soort] + ' Het is geen ' + f[0] + ': ' + SOORT_KORT[f[0]] + '.' }; } },
+      { n:[2, 3], f:function(c){ return { vraag:'In deze zaak gaat het om ' + c.delict + '. Is dat een misdrijf of een overtreding?', opties:['een misdrijf', 'een overtreding'], goed:'een misdrijf',
+        uitleg:'Een <b>misdrijf</b> is een zwaarder strafbaar feit, zoals diefstal, mishandeling, vernieling of rijden onder invloed. Een <b>overtreding</b> is lichter, zoals door rood fietsen of zonder licht rijden. ' + cap(c.delict) + ' is een misdrijf.' }; } },
+      { n:[3], f:function(c){ return { vraag:'Wie is in deze strafzaak de tegenpartij van de verdachte?', goed:'de staat: het Openbaar Ministerie vervolgt',
+        fout:['het slachtoffer, dat de zaak zelf bij de rechter aanspant', 'de politie, die de verdachte heeft opgepakt', 'de rechter, die de verdachte wil straffen'],
+        uitleg:'In het <b>strafrecht</b> vervolgt de overheid de verdachte: het Openbaar Ministerie brengt de zaak bij de rechter. Het slachtoffer doet aangifte, maar spant de zaak niet zelf aan; dat gebeurt wel in het civiel recht, bij een ruzie tussen burgers. De rechter is geen partij: die moet onpartijdig zijn.' }; } },
+      { n:[3], f:function(c){ return { vraag:'Wanneer telt dit feit mee in de geregistreerde criminaliteit?', goed:'als het bij de politie bekend wordt, bijvoorbeeld door een aangifte of een melding',
+        fout:['altijd, want elk misdrijf wordt vanzelf geteld', 'pas als de rechter de dader heeft veroordeeld', 'alleen als het in de krant komt'],
+        uitleg:'<b>Geregistreerde criminaliteit</b> is wat bij de politie bekend is. Wat nooit gemeld of ontdekt wordt, telt niet mee: dat is het <b>dark number</b>. Een veroordeling is niet nodig om in de politiecijfers te komen.' }; } }
+    ],
+    aangifte:[
+      { n:[1], f:function(c){ return { vraag:'Wat betekent <b>aangifte doen</b>?', goed:'Je meldt bij de politie dat er een strafbaar feit is gepleegd.',
+        fout:['Je vraagt de rechter om de dader te straffen.', 'Je spreekt met de dader af dat hij de schade betaalt.'],
+        uitleg:'Bij een aangifte meld je een strafbaar feit bij de politie. De politie schrijft dat op in een proces-verbaal. Je vraagt de rechter niet zelf om straf: dat doet de officier van justitie.' }; } },
+      { n:[1, 2], f:function(c){ return { vraag:'Wie beslist na de aangifte of de verdachte vervolgd wordt?', goed:'de officier van justitie',
+        fout:['het slachtoffer', 'de agent die de aangifte opneemt', 'de burgemeester'],
+        uitleg:'Het slachtoffer doet aangifte, maar het Openbaar Ministerie, met de <b>officier van justitie</b>, beslist of er vervolgd wordt. Daarom kan de officier ook doorgaan als het slachtoffer dat niet meer wil (behalve bij klachtdelicten, zoals belediging).' }; } },
+      { n:[2], f:function(c){ return { vraag:'De politie schrijft de aangifte op in een officieel verslag. Hoe heet zo’n verslag?', iv:true, label:'verslag', type:'tekst',
+        antwoord:['proces-verbaal', 'proces verbaal', 'procesverbaal', 'pv', 'p.v.', 'een proces-verbaal', 'het proces-verbaal'], toon:'proces-verbaal',
+        uitleg:'Een <b>proces-verbaal</b> (pv) is het officiële verslag van de politie. Het gaat naar de officier van justitie en kan later bewijs zijn bij de rechter.' }; } },
+      { n:[2, 3], f:function(c){ return { vraag:'Stel dat ' + c.sl + ' geen aangifte had gedaan en niemand het had gemeld. Wat betekent dat voor de cijfers over criminaliteit?',
+        goed:'Het feit telt niet mee in de geregistreerde criminaliteit: het hoort bij het dark number.',
+        fout:['Het feit telt toch mee, want de politie telt alle misdrijven.', 'Het feit telt alleen mee als de dader later wordt veroordeeld.'],
+        uitleg:'De politie kan alleen tellen wat ze weet. Misdrijven die niet gemeld worden, vormen samen het <b>dark number</b>. Daarom zijn de politiecijfers altijd lager dan de echte criminaliteit.' }; } },
+      { n:[3], f:function(c){ return { vraag:'Waarom is aangifte doen ook nuttig als de dader nooit gevonden wordt?', goed:'De politie ziet dan waar en hoe vaak iets gebeurt, en kan daar extra op letten.',
+        fout:['Na elke aangifte moet de rechter een straf opleggen.', 'Zonder aangifte mag de politie nooit onderzoek doen.'],
+        uitleg:'Aangiften laten zien waar en wanneer er veel gebeurt. Daar kan de politie haar inzet op afstemmen. De politie mag ook zonder aangifte onderzoek doen, bijvoorbeeld als agenten zelf iets zien; en de rechter komt pas in beeld als de officier dagvaardt.' }; } },
+      { n:[3], f:function(c){ return { vraag:'Bij de meeste misdrijven kan het OM vervolgen, ook als het slachtoffer dat niet wil. Bij een <b>klachtdelict</b>, zoals belediging, is dat anders. Wat is daar nodig?',
+        goed:'een klacht van het slachtoffer; zonder klacht mag het OM niet vervolgen', fout:['een bekentenis van de verdachte', 'toestemming van de burgemeester', 'een uitspraak van de rechter-commissaris'],
+        uitleg:'Bij een klachtdelict mag het Openbaar Ministerie alleen vervolgen als het slachtoffer een <b>klacht</b> indient. Bij gewone misdrijven, zoals ' + c.delict + ', is dat niet nodig: daar beslist de officier zelf.' }; } }
+    ],
+    opsporing:[
+      { n:[1], f:function(c){ return { vraag:'Wie zoekt uit wie het gedaan heeft?', goed:'de politie', fout:['de rechter', 'de advocaat'],
+        uitleg:'Het zoeken naar de dader heet <b>opsporing</b>: dat doet de politie. De rechter beslist later over schuld en straf, en de advocaat helpt de verdachte.' }; } },
+      { n:[1, 2], f:function(c, n){ var andere = H(CASUS.filter(function(x){ return x.bs !== c.bs; })), fout = [];
+          andere.forEach(function(x){ if (fout.length < (n === 1 ? 2 : 3) && fout.indexOf(x.bewijs) < 0) fout.push(x.bewijs); });
+          return { vraag:'Welk bewijs gebruikt de politie in deze zaak?', goed:c.bewijs, fout:fout,
+          uitleg:'In deze zaak gaat het om ' + c.bewijs + '. Bewijs kan bestaan uit camerabeelden, getuigen, sporen zoals vingerafdrukken, gegevens van een telefoon of een bank, en wat de verdachte zelf verklaart.' }; } },
+      { n:[1, 2], f:function(c){ return { vraag:c.wie + ' is in deze zaak verdachte. Betekent dat dat ' + c.hij + ' het gedaan heeft?', goed:'Nee. ' + Hij(c) + ' is verdachte: alleen een rechter kan beslissen of ' + c.hij + ' schuldig is.',
+        fout:['Ja, wie verdachte is, is de dader.', 'Ja, als de politie denkt dat er genoeg bewijs is.'],
+        uitleg:'Een verdachte geldt als onschuldig tot een rechter heeft bewezen dat hij schuldig is: de <b>onschuldpresumptie</b>. Wat de politie denkt, is nog geen bewijs.' }; } },
+      { n:[2, 3], f:function(c){ return { vraag:'Onder wiens gezag doet de politie het opsporingsonderzoek?', goed:'de officier van justitie', fout:['de burgemeester', 'de rechter-commissaris', 'de minister van Justitie en Veiligheid'],
+        uitleg:'Bij de <b>opsporing</b> van strafbare feiten heeft de officier van justitie het gezag over de politie. Bij de <b>openbare orde</b>, bijvoorbeeld rond een voetbalwedstrijd, heeft de burgemeester het gezag.' }; } },
+      { n:[3], f:function(c){ return { vraag:'Stel dat iemand ' + c.wie + ' op heterdaad had betrapt. Wie had ' + c.hem + ' dan mogen aanhouden?', goed:'iedereen, ook een gewone burger',
+        fout:['alleen een politieagent', 'alleen een agent met toestemming van de officier van justitie', 'niemand: eerst moet de rechter toestemming geven'],
+        uitleg:'Bij ontdekking <b>op heterdaad</b> mag iedereen een verdachte aanhouden. Wie dat doet, moet de verdachte meteen aan de politie overdragen. Buiten heterdaad mag alleen de politie (een opsporingsambtenaar) aanhouden.' }; } }
+    ],
+    verhoor:[
+      { n:[1], f:function(c){ return { vraag:'Moet ' + c.wie + ' antwoord geven op de vragen van de politie?', goed:'Nee, een verdachte hoeft geen antwoord te geven.',
+        fout:['Ja, wie niets zegt, is meteen schuldig.', 'Ja, de politie mag ' + c.hem + ' dwingen om te praten.'],
+        uitleg:'Een verdachte heeft <b>zwijgrecht</b>. De politie moet dat voor het verhoor zeggen. Zwijgen alleen is geen bewijs dat iemand schuldig is, en dwingen mag nooit.' }; } },
+      { n:[1, 2], f:function(c){ return { vraag:'Wie mag ' + c.wie + ' helpen bij het verhoor?', goed:'een advocaat', fout:['de officier van justitie', 'de rechter', 'het slachtoffer'],
+        uitleg:'Een verdachte heeft recht op een <b>advocaat</b>. Die mag hij voor het eerste verhoor spreken en die mag bij het verhoor zijn. De officier van justitie staat juist aan de andere kant: die vervolgt.' }; } },
+      { n:[2], f:function(c){ return { vraag:'Voor het verhoor zegt de agent tegen ' + c.wie + ': "U bent niet verplicht om te antwoorden." Hoe heet deze mededeling?', iv:true, label:'naam', type:'tekst',
+        antwoord:['cautie', 'de cautie'], toon:'cautie',
+        uitleg:'Dit heet de <b>cautie</b>. De politie moet de verdachte voor het verhoor vertellen dat hij niet hoeft te antwoorden: zo weet hij dat hij zwijgrecht heeft.' }; } },
+      { n:[2, 3], f:function(c){ return { vraag:'Waarom heeft een verdachte zwijgrecht?', goed:'Niemand hoeft mee te werken aan zijn eigen veroordeling: de overheid moet de schuld bewijzen.',
+        fout:['Zodat de politie sneller klaar is met het verhoor.', 'Omdat wat een verdachte zegt nooit als bewijs mag tellen.'],
+        uitleg:'Het zwijgrecht beschermt de verdachte: niet hij moet zijn onschuld bewijzen, de overheid moet zijn schuld bewijzen. Wat een verdachte wel zegt, mag juist wel als bewijs gebruikt worden.' }; } },
+      { n:[3], f:function(c){ return { vraag:'Na de aanhouding mag de politie ' + c.wie + ' op het bureau <b>ophouden voor onderzoek</b>. Hoeveel uur mag dat maximaal duren? De uren tussen middernacht en 9 uur ’s ochtends tellen niet mee.', iv:true, label:'maximaal', antwoord:9, eenheid:'uur',
+        uitleg:'Ophouden voor onderzoek duurt maximaal <b>9 uur</b> (zonder de nachturen). Daarna moet de verdachte vrij, tenzij hij in verzekering wordt gesteld; dat mag maximaal 3 dagen, en kan één keer met 3 dagen verlengd worden.' }; } },
+      { n:[3], f:function(c){ return { vraag:'Stel: voor het eerste verhoor vraagt ' + c.wie + ' om een advocaat. Wat moet de politie doen?', goed:'wachten met het verhoor tot ' + c.hij + ' met een advocaat heeft kunnen praten',
+        fout:['het verhoor gewoon beginnen; een advocaat komt pas bij de rechter', 'de officier van justitie laten beslissen of ' + c.hij + ' een advocaat krijgt'],
+        uitleg:'Een verdachte heeft het recht om <b>voor het eerste verhoor</b> met een advocaat te praten, en de advocaat mag ook bij het verhoor zijn. De politie moet daarop wachten.' }; } },
+      { n:[2, 3], als:function(c){ return c.jeugd && c.vast; }, f:function(c){ return { vraag:'Jayden is 16. Wat geldt voor hem bij het verhoor?', goed:'Hij moet voor het verhoor met een advocaat praten; daar kan hij als jongere niet van afzien.',
+        fout:['Hij mag niet verhoord worden; alleen zijn ouders.', 'Hij heeft geen zwijgrecht, want hij is minderjarig.'],
+        uitleg:'Jongeren onder de 18 kunnen geen afstand doen van het gesprek met een advocaat voor het eerste verhoor. Een jongere heeft net als een volwassene zwijgrecht, en de politie mag hem wel verhoren.' }; } }
+    ],
+    vast:[
+      { n:[1], f:function(c){ return { vraag:'Hoe heet het als een verdachte vastzit voordat de rechter uitspraak heeft gedaan?', goed:'voorlopige hechtenis', fout:['gevangenisstraf', 'een taakstraf', 'tbs'],
+        uitleg:'Vastzitten voor de uitspraak heet <b>voorlopige hechtenis</b>. Het is geen straf: de verdachte is nog niet veroordeeld. Een gevangenisstraf kan pas na een veroordeling.' }; } },
+      { n:[1, 2], f:function(c){ return { vraag:c.wie + ' zit vast, maar de rechter heeft nog geen uitspraak gedaan. Is ' + c.hij + ' daarom schuldig?', goed:'Nee, ' + c.hij + ' geldt als onschuldig tot de rechter ' + c.hem + ' veroordeelt.',
+        fout:['Ja, anders mag niemand vastgezet worden.', 'Ja, de rechter-commissaris heeft dat al beslist.'],
+        uitleg:'De rechter-commissaris beslist alleen of een verdachte vast moet blijven, bijvoorbeeld omdat hij kan vluchten. Over schuld beslist pas de rechter op de zitting: tot dan geldt de <b>onschuldpresumptie</b>.' }; } },
+      { n:[2], f:function(c){ return { vraag:'Wie beslist dat ' + c.wie + ' na de inverzekeringstelling in <b>bewaring</b> blijft?', goed:'de rechter-commissaris', fout:['de officier van justitie', 'de politie', 'de burgemeester'],
+        uitleg:'De officier van justitie mag een verdachte een paar dagen <b>in verzekering</b> stellen. Voor langer vastzitten is een rechter nodig: de <b>rechter-commissaris</b> beslist over de bewaring.' }; } },
+      { n:[2, 3], f:function(c){ return { vraag:'Waarom mag een verdachte zoals ' + c.wie + ' vastgehouden worden voordat de zaak voor de rechter komt?', goed:'bijvoorbeeld omdat ' + c.hij + ' kan vluchten of opnieuw een misdrijf kan plegen',
+        fout:['omdat er dan alvast een deel van de straf op zit', 'omdat het slachtoffer dat wil'],
+        uitleg:'Voorlopige hechtenis mag alleen bij een ernstige verdenking en een goede reden: <b>vluchtgevaar</b>, gevaar voor <b>nieuwe misdrijven</b> of het belang van het onderzoek. Het is geen straf vooraf, ook al gaat de tijd later wel van een straf af.' }; } },
+      { n:[3], f:function(c){ return { vraag:'De rechter-commissaris beveelt de bewaring van ' + c.wie + '. Hoeveel dagen mag de bewaring maximaal duren?', iv:true, label:'maximaal', antwoord:14, eenheid:'dagen',
+        uitleg:'De bewaring duurt maximaal <b>14 dagen</b>. Moet de verdachte daarna nog vast blijven, dan beslist de raadkamer van de rechtbank over de gevangenhouding: maximaal 90 dagen.' }; } },
+      { n:[3], f:function(c){ return { vraag:'Na de bewaring kan ' + c.wie + ' nog langer vast blijven: de <b>gevangenhouding</b>. Wie beslist daarover?', goed:'de raadkamer van de rechtbank',
+        fout:['de rechter-commissaris alleen', 'de officier van justitie', 'het gerechtshof'],
+        uitleg:'Over de gevangenhouding beslist de <b>raadkamer</b> van de rechtbank (meestal drie rechters), voor maximaal 90 dagen. De rechter-commissaris beslist over de bewaring daarvoor, de officier van justitie over de inverzekeringstelling.' }; } },
+      { n:[3], f:function(c){ return { vraag:'Een verdachte wordt <b>in verzekering gesteld</b>. Hoeveel dagen mag dat maximaal duren, zonder verlenging?', iv:true, label:'maximaal', antwoord:3, eenheid:'dagen',
+        uitleg:'De inverzekeringstelling duurt maximaal <b>3 dagen</b>. Wil de officier de verdachte langer vasthouden, dan moet de rechter-commissaris bewaring bevelen (maximaal 14 dagen).' }; } },
+      { n:[3], f:function(c){ return { vraag:'Stel dat ' + c.wie + ' later veroordeeld wordt tot ' + (c.jeugd ? 'jeugddetentie' : 'een gevangenisstraf') + '. Wat gebeurt er met de dagen die ' + c.hij + ' al vastzat?',
+        goed:'die gaan van de straf af', fout:['die tellen niet mee', 'die komen er nog bij'],
+        uitleg:'De tijd in voorlopige hechtenis wordt <b>afgetrokken</b> van de vrijheidsstraf. Zo zit niemand langer vast dan de rechter heeft bepaald.' }; } }
+    ],
+    om:[
+      { n:[1], f:function(c){ return { vraag:'Wie beslist of ' + c.wie + ' voor de rechter moet komen?', goed:'de officier van justitie', fout:['de politie', 'het slachtoffer', 'de advocaat'],
+        uitleg:'De <b>officier van justitie</b> van het Openbaar Ministerie beslist over vervolging. De politie levert het onderzoek aan, het slachtoffer doet aangifte en de advocaat verdedigt.' }; } },
+      { n:[1], f:function(c){ return { vraag:'Hoe heet de brief waarmee ' + c.wie + ' wordt opgeroepen om voor de rechter te komen?', goed:'een dagvaarding', fout:['een proces-verbaal', 'een vonnis', 'een strafbeschikking'],
+        uitleg:'Met een <b>dagvaarding</b> roept de officier de verdachte op voor de zitting. Een proces-verbaal is het verslag van de politie, een vonnis is de uitspraak van de rechter.' }; } },
+      { n:[2], f:function(c){ return { vraag:'De officier van justitie roept ' + c.wie + ' met een brief op voor de zitting. Hoe heet die brief?', iv:true, label:'naam', type:'tekst',
+        antwoord:['dagvaarding', 'een dagvaarding', 'de dagvaarding'], toon:'dagvaarding',
+        uitleg:'Die brief heet een <b>dagvaarding</b>. Daarin staat waarvan de verdachte beschuldigd wordt en wanneer hij voor de rechter moet komen.' }; } },
+      { n:[2, 3], f:function(c){ return { vraag:'De officier van justitie dagvaardt ' + c.wie + '. Welke andere keuze had de officier ook kunnen maken?', goed:'De zaak seponeren: niet vervolgen.',
+        fout:['Zelf een gevangenisstraf opleggen.', 'De verdachte vrijspreken.', 'Meteen in hoger beroep gaan.'],
+        uitleg:'De officier kan <b>dagvaarden</b>, <b>seponeren</b> (niet vervolgen) of zelf een <b>strafbeschikking</b> geven, zoals een boete of taakstraf. Een gevangenisstraf opleggen of iemand vrijspreken kan alleen de rechter.' }; } },
+      { n:[3], f:function(c){ return { vraag:'Een officier van justitie mag besluiten een zaak niet te vervolgen, bijvoorbeeld omdat het feit klein is en de schade al betaald is. Hoe heet dit beginsel?', goed:'het opportuniteitsbeginsel',
+        fout:['het legaliteitsbeginsel', 'de onschuldpresumptie', 'de scheiding der machten'],
+        uitleg:'Het <b>opportuniteitsbeginsel</b>: het OM mag afwegen of vervolgen zinvol is. Het legaliteitsbeginsel is iets anders: je kunt alleen gestraft worden voor wat al in de wet stond.' }; } },
+      { n:[2, 3], f:function(c){ return { vraag:'Bij welke organisatie werkt de officier van justitie?', iv:true, label:'organisatie', type:'tekst', breed:true,
+        antwoord:['Openbaar Ministerie', 'het Openbaar Ministerie', 'OM', 'het OM'], toon:'het Openbaar Ministerie (OM)',
+        uitleg:'De officier van justitie werkt bij het <b>Openbaar Ministerie</b> (OM). Het OM vervolgt verdachten namens de samenleving en eist straf bij de rechter.' }; } },
+      { n:[3], als:function(c){ return !!c.rechter; }, f:function(c){ var goed = RECHTER_WAAROM[c.rechter]; return { vraag:'De officier brengt de zaak bij de ' + c.rechter + '. Waarom juist daar?', goed:goed,
+        fout:Object.keys(RECHTER_WAAROM).filter(function(k){ return k !== c.rechter; }).map(function(k){ return RECHTER_WAAROM[k]; }),
+        uitleg:'Welke rechter een strafzaak doet, hangt af van de zaak. Eenvoudige zaken gaan naar de politierechter, zware naar de meervoudige kamer (drie rechters), zaken van jongeren naar de kinderrechter en overtredingen naar de kantonrechter.' }; } }
+    ],
+    beschikking:[
+      { n:[1], f:function(c){ return { vraag:'Moet Thijs nu nog voor de rechter komen?', goed:'Nee, de officier van justitie legt zelf een straf op.',
+        fout:['Ja, alleen een rechter mag een boete geven.', 'Nee, want vernieling is niet strafbaar.'],
+        uitleg:'Met een <b>strafbeschikking</b> straft de officier van justitie zelf, zonder rechter. Dat mag bij eenvoudige zaken. Vernieling is wel strafbaar: het is een misdrijf.' }; } },
+      { n:[1], f:function(c){ return { vraag:'Hoe heet een straf die de officier van justitie zelf oplegt, zonder rechter?', goed:'een strafbeschikking', fout:['een dagvaarding', 'een sepot', 'een vonnis'],
+        uitleg:'Dat is een <b>strafbeschikking</b>. Bij een dagvaarding moet de verdachte juist wel voor de rechter komen, en een sepot betekent dat de zaak stopt zonder straf.' }; } },
+      { n:[2], f:function(c){ return { vraag:'De officier van justitie straft Thijs zelf, zonder rechter. Hoe heet zo’n straf van de officier?', iv:true, label:'naam', type:'tekst',
+        antwoord:['strafbeschikking', 'een strafbeschikking', 'OM-strafbeschikking'], toon:'strafbeschikking',
+        uitleg:'Dit heet een <b>strafbeschikking</b>. Daarmee kan het OM eenvoudige zaken snel afhandelen.' }; } },
+      { n:[2, 3], f:function(c){ return { vraag:'Welke straf mag de officier van justitie <b>niet</b> opleggen met een strafbeschikking?', goed:'een gevangenisstraf', fout:['een geldboete', 'een taakstraf', 'het betalen van de schade'],
+        uitleg:'Met een strafbeschikking kan de officier onder meer een geldboete, een taakstraf of het betalen van de schade opleggen. Een <b>vrijheidsstraf</b>, zoals een gevangenisstraf, kan alleen een rechter opleggen.' }; } },
+      { n:[3], f:function(c){ return { vraag:'Stel dat Thijs het niet eens is met de strafbeschikking. Wat kan hij doen?', goed:'verzet doen; dan behandelt de rechter de zaak',
+        fout:['in hoger beroep gaan bij het gerechtshof', 'niets: een strafbeschikking is altijd definitief'],
+        uitleg:'Tegen een strafbeschikking kan de verdachte <b>verzet</b> doen. Dan komt de zaak alsnog bij de rechter. Hoger beroep is er pas na een uitspraak van een rechter.' }; } },
+      { n:[1, 2, 3], f:function(c){ return { vraag:'Waarom handelt het OM eenvoudige zaken zoals deze vaak af met een strafbeschikking?', goed:'Zo gaat het snel, en houden de rechters tijd voor zwaardere zaken.',
+        fout:['Een strafbeschikking is altijd zwaarder dan een straf van de rechter.', 'De verdachte krijgt dan nooit een strafblad.'],
+        uitleg:'Een strafbeschikking is een snelle manier om eenvoudige zaken af te handelen. Ook een strafbeschikking voor een misdrijf komt in de justitiële documentatie: het is dus niet zonder gevolgen.' }; } }
+    ],
+    halt:[
+      { n:[1], f:function(c){ return { vraag:'Femke is 14. Wat is Halt?', goed:'een straf voor jongeren voor een licht strafbaar feit, zonder rechter', fout:['een jeugdgevangenis', 'een rechtszaak bij de kinderrechter'],
+        uitleg:'<b>Halt</b> is een straf voor jongeren van 12 tot 18 jaar bij lichte strafbare feiten, zoals vandalisme. Er komt geen rechter aan te pas, en wie de Halt-straf goed afmaakt, krijgt geen strafblad.' }; } },
+      { n:[1, 2], f:function(c){ return { vraag:'Wat krijgt Femke als ze de Halt-straf goed afmaakt?', goed:'geen strafblad', fout:['een geldboete erbij', 'alsnog een rechtszaak'],
+        uitleg:'Maakt een jongere de Halt-straf goed af, dan is de zaak klaar en krijgt hij of zij <b>geen strafblad</b>. Daar is Halt juist voor: een tweede kans na een eerste fout.' }; } },
+      { n:[2, 3], f:function(c){ return { vraag:'Hoeveel uur mag een Halt-straf maximaal duren?', iv:true, label:'maximaal', antwoord:20, eenheid:'uur',
+        uitleg:'Een Halt-straf duurt maximaal <b>20 uur</b>. Femke maakt bijvoorbeeld de muur schoon en volgt een les over de gevolgen van vandalisme.' }; } },
+      { n:[2], f:function(c){ return { vraag:'Voor welke leeftijd is Halt bedoeld?', goed:'van 12 tot 18 jaar', fout:['van 8 tot 12 jaar', 'van 16 tot 23 jaar', 'voor iedereen'],
+        uitleg:'Halt is er voor jongeren van <b>12 tot 18 jaar</b>. Onder de 12 kun je niet strafrechtelijk vervolgd worden; voor jongvolwassenen van 18 tot 23 bestaat wel het adolescentenstrafrecht, maar geen Halt.' }; } },
+      { n:[3], f:function(c){ return { vraag:'Wat gebeurt er als Femke de Halt-straf niet goed afmaakt?', goed:'De zaak gaat terug naar de politie en het OM; de officier kan haar dan alsnog vervolgen.',
+        fout:['Er gebeurt niets meer: de zaak is gesloten.', 'Ze moet meteen naar een jeugdgevangenis.'],
+        uitleg:'Halt is een kans, geen vrijbrief. Maakt een jongere de afspraken niet af, dan gaat de zaak terug naar de politie en het <b>Openbaar Ministerie</b>, en kan alsnog een rechtszaak volgen.' }; } },
+      { n:[3], f:function(c){ return { vraag:'Femke moet de muur zelf schoonmaken en een les volgen over de gevolgen. Welk doel van straffen past daar het best bij?', goed:'resocialisatie: leren van wat ze deed, zodat ze het niet opnieuw doet',
+        fout:['vergelding: zoveel mogelijk leed terug', 'beveiliging: de samenleving beschermen door haar op te sluiten'],
+        uitleg:'Halt is vooral opvoedend: Femke maakt de schade goed en leert waarom het fout was. Dat past bij <b>resocialisatie</b>. Er is geen opsluiting, dus beveiliging past niet.' }; } }
+    ],
+    zitting:[
+      { n:[1], f:function(c){ return { vraag:'Wie eist op de zitting een straf?', goed:'de officier van justitie', fout:['de advocaat', 'de rechter', 'het slachtoffer'],
+        uitleg:'De <b>officier van justitie</b> zegt welke straf hij passend vindt: de eis. De rechter beslist daarna zelf, en de advocaat verdedigt de verdachte.' }; } },
+      { n:[1], f:function(c){ return { vraag:'Wat doet de advocaat van ' + c.wie + ' op de zitting?', goed:'Die verdedigt ' + c.wie + ' en komt op voor ' + c.zijn + ' belangen.', fout:['Die eist een straf.', 'Die beslist over de straf.'],
+        uitleg:'De <b>advocaat</b> staat aan de kant van de verdachte. De officier van justitie eist een straf en de rechter beslist.' }; } },
+      { n:[1, 2], f:function(c){ var r = c.rechter === 'meervoudige kamer' ? 'de drie rechters' : 'de ' + c.rechter; return { vraag:'Wie beslist op de zitting of ' + c.wie + ' schuldig is?', goed:r,
+        fout:['de officier van justitie', 'een jury van burgers', 'het slachtoffer'],
+        uitleg:'In Nederland beslissen beroepsrechters over schuld en straf, hier ' + r + '. Er is geen jury van burgers zoals in Amerikaanse films. De officier van justitie eist alleen.' }; } },
+      { n:[2], f:function(c){ return { vraag:'Wie heeft op de zitting het laatste woord?', goed:'de verdachte', fout:['de officier van justitie', 'de rechter', 'het slachtoffer'],
+        uitleg:'De verdachte krijgt altijd het <b>laatste woord</b>: zo kan hij als laatste nog iets zeggen voordat de rechter beslist. Dat hoort bij een eerlijk proces.' }; } },
+      { n:[2, 3], als:function(c){ return !c.jeugd; }, f:function(c){ return { vraag:'Iedereen mag de zitting van ' + c.wie + ' bijwonen. Waarom zijn rechtszaken openbaar?', goed:'Zo kan iedereen controleren of de rechtspraak eerlijk verloopt.',
+        fout:['Zo kan het publiek meebeslissen over de straf.', 'Zo wordt de verdachte extra gestraft.'],
+        uitleg:'<b>Openbare rechtspraak</b> is een kenmerk van de rechtsstaat: de rechter werkt niet in het geheim, dus pers en publiek kunnen zien of het eerlijk gaat. Het publiek beslist niet mee.' }; } },
+      { n:[2, 3], als:function(c){ return c.jeugd; }, f:function(c){ return { vraag:'De zitting van Jayden is achter gesloten deuren. Waarom?', goed:'Hij is een jongere: jeugdzaken zijn niet openbaar, om de jongere te beschermen.',
+        fout:['Omdat er een mes gebruikt is.', 'Omdat het slachtoffer dat vroeg.'],
+        uitleg:'Gewone strafzaken zijn openbaar, maar een zaak bij de <b>kinderrechter</b> is achter gesloten deuren. Zo krijgt een jongere een betere kans om opnieuw te beginnen.' }; } },
+      { n:[3], f:function(c){ return { vraag:'De officier houdt een <b>requisitoir</b> met de eis. Hoe heet de verdediging die de advocaat daarna houdt?', iv:true, label:'naam', type:'tekst',
+        antwoord:['pleidooi', 'het pleidooi', 'een pleidooi'], toon:'pleidooi',
+        uitleg:'De advocaat houdt een <b>pleidooi</b>: hij legt uit waarom de verdachte vrijgesproken moet worden of een lagere straf verdient. Daarna krijgt de verdachte het laatste woord.' }; } },
+      { n:[3], als:function(c){ return !!c.eis; }, f:function(c){ return { vraag:'De officier eiste ' + c.eis + '. Moet de rechter zich aan die eis houden?', goed:'Nee, de rechter mag een lagere of hogere straf geven, binnen het maximum van de wet.',
+        fout:['Ja, de rechter moet precies de eis opleggen.', 'Nee, maar de rechter mag alleen lager uitkomen dan de eis.'],
+        uitleg:'De rechter is <b>niet gebonden aan de eis</b>. Hij kan lager uitkomen, maar ook hoger, zolang hij binnen het maximum blijft dat in de wet staat. Dat hoort bij een onafhankelijke rechter.' }; } },
+      { n:[3], als:function(c){ return c.rechter === 'politierechter'; }, f:function(c){ return { vraag:'De politierechter behandelt de zaak alleen. Hoeveel jaar gevangenisstraf mag een politierechter maximaal opleggen?', iv:true, label:'maximaal', antwoord:1, eenheid:'jaar',
+        uitleg:'Een politierechter mag maximaal <b>1 jaar</b> gevangenisstraf opleggen. Is een zwaardere straf nodig, dan gaat de zaak naar de meervoudige kamer met drie rechters.' }; } },
+      { n:[2, 3], als:function(c){ return c.spreek; }, f:function(c){ return { vraag:'Ravi mag op de zitting vertellen wat de beroving met hem deed. Hoe heet dit recht?', goed:'spreekrecht', fout:['zwijgrecht', 'hoger beroep', 'het laatste woord'],
+        uitleg:'Bij zwaardere misdrijven heeft het slachtoffer <b>spreekrecht</b>: hij mag op de zitting vertellen wat het misdrijf met hem heeft gedaan. Het laatste woord is voor de verdachte.' }; } },
+      { n:[2, 3], als:function(c){ return c.benadeeld; }, f:function(c){ return { vraag:c.sl + ' vraagt in deze strafzaak om geld voor de schade. Hoe kan dat?', goed:'Een slachtoffer mag zich in de strafzaak voegen als benadeelde partij.',
+        fout:['Dat kan niet; daarvoor is altijd een aparte civiele zaak nodig.', 'De officier van justitie betaalt de schade uit zijn eigen budget.'],
+        uitleg:'Een slachtoffer kan zich als <b>benadeelde partij</b> voegen in de strafzaak en daar schadevergoeding vragen. Dan hoeft hij geen aparte civiele zaak te beginnen.' }; } }
+    ],
+    uitspraak:[
+      { n:[1], als:function(c){ return c.uitspraak === 'veroordeling'; }, f:function(c){ return { vraag:'Welke straf krijgt ' + c.wie + '?', goed:c.strafKort, fout:c.strafFout,
+        uitleg:'De rechter legt ' + c.strafKort + ' op. De rechter bepaalt de straf, en die hoeft niet gelijk te zijn aan de eis van de officier.' }; } },
+      { n:[1, 2], als:function(c){ return c.uitspraak === 'vrijspraak'; }, f:function(c){ return { vraag:'Wat betekent het dat Bas wordt vrijgesproken?', goed:'De rechter vindt niet bewezen dat hij het gedaan heeft; hij krijgt geen straf.',
+        fout:['Hij heeft het gedaan, maar krijgt een lage straf.', 'Hij moet de zaak overdoen bij een andere rechter.'],
+        uitleg:'Bij <b>vrijspraak</b> is niet bewezen dat de verdachte het feit heeft gepleegd. De wazige beelden waren te weinig bewijs: liever een schuldige vrij dan een onschuldige gestraft.' }; } },
+      { n:[1, 2], als:function(c){ return c.uitspraak === 'ontslag'; }, f:function(c){ return { vraag:'Wat betekent de uitspraak voor Sanne?', goed:'Ze krijgt geen straf: ze duwde Dirk wel, maar dat was noodweer.',
+        fout:['Ze krijgt een lagere straf omdat ze zich verdedigde.', 'Ze is vrijgesproken omdat er geen bewijs was.'],
+        uitleg:'Het duwen is wel bewezen, maar bij <b>noodweer</b> is het niet strafbaar: je mag je verdedigen tegen een aanval. Daarom is het ontslag van alle rechtsvervolging en geen vrijspraak.' }; } },
+      { n:[1], f:function(c){ return { vraag:'Wie doet de uitspraak in de zaak van ' + c.wie + '?', goed:'de rechter', fout:['de officier van justitie', 'de politie'],
+        uitleg:'De <b>rechter</b> beslist over schuld en straf. De officier van justitie eist een straf, maar beslist niet. Dat de rechter onafhankelijk beslist, is een kenmerk van de rechtsstaat.' }; } },
+      { n:[2, 3], f:function(c){ var namen = ['veroordeling', 'vrijspraak', 'ontslag', 'schuld'], goed = UITSPRAAK[c.uitspraak].naam;
+        return { vraag:'Hoe heet de uitspraak van de rechter in deze zaak?', opties:namen.map(function(k){ return UITSPRAAK[k].naam; }), goed:goed,
+        uitleg:UITSPRAAK[c.uitspraak].u + (c.uitspraak === 'ontslag' ? ' Het is geen vrijspraak: het duwen is wel bewezen.' : c.uitspraak === 'vrijspraak' ? ' Het is geen ontslag van alle rechtsvervolging: daarvoor had het feit wel bewezen moeten zijn.' : ' Bij vrijspraak of ontslag van alle rechtsvervolging was er geen straf geweest.') }; } },
+      { n:[2], als:function(c){ return c.taak; }, f:function(c){ return c.jeugd ?
+        { vraag:'Een taakstraf voor een jongere kan een werkstraf zijn: onbetaald werk. Hoeveel uur <b>werkstraf</b> mag de kinderrechter een jongere maximaal opleggen?', iv:true, label:'maximaal', antwoord:200, eenheid:'uur',
+          uitleg:'In het jeugdstrafrecht is een werkstraf maximaal <b>200 uur</b>, een leerstraf ook 200 uur, en een combinatie van werkstraf en leerstraf maximaal 240 uur. Voor een volwassene is een taakstraf maximaal 240 uur.' } :
+        { vraag:'Hoeveel uur taakstraf mag een rechter een volwassene maximaal opleggen?', iv:true, label:'maximaal', antwoord:240, eenheid:'uur',
+          uitleg:'Een taakstraf voor een volwassene is maximaal <b>240 uur</b>. Bij jongeren is een werkstraf of leerstraf maximaal 200 uur, en een combinatie van beide maximaal 240 uur.' }; } },
+      { n:[2, 3], als:function(c){ return !!c.voorw; }, f:function(c){ return { vraag:'In de uitspraak staat "' + c.voorw + ' voorwaardelijk". Wat betekent dat?', goed:'Die straf hoeft ' + c.wie + ' niet uit te zitten, als ' + c.hij + ' zich tijdens de proeftijd aan de voorwaarden houdt.',
+        fout:['Die straf zit ' + c.hij + ' pas uit als ' + c.hij + ' ouder is.', 'Die straf is al voorbij, want ' + c.hij + ' zat al vast.'],
+        uitleg:'Een <b>voorwaardelijke straf</b> hoeft de veroordeelde niet uit te zitten, zolang hij zich in de proeftijd aan de voorwaarden houdt, zoals geen nieuw strafbaar feit plegen. Doet hij dat wel, dan kan hij de straf alsnog krijgen.' }; } },
+      { n:[3], als:function(c){ return !!c.doel; }, f:function(c){ return { vraag:'Welk doel van straffen past het best bij deze gedachte? "' + c.doel.zin + '"', goed:c.doel.goed, fout:DOELEN4.filter(function(d){ return d !== c.doel.goed; }),
+        uitleg:DOEL_UIT[c.doel.goed] }; } }
+    ],
+    beroep:[
+      { n:[1], f:function(c){ var w = c.beroep === 'officier' ? 'De officier van justitie' : c.wie; return { vraag:w + ' is het niet eens met de uitspraak. Wat kan ' + (c.beroep === 'officier' ? 'de officier' : c.hij) + ' doen?', goed:'in hoger beroep gaan',
+        fout:['een nieuwe aangifte doen', 'de uitspraak zelf veranderen'],
+        uitleg:'Wie het niet eens is met de uitspraak, kan in <b>hoger beroep</b>. Dan kijken andere rechters, bij het gerechtshof, opnieuw naar de zaak. Zelf de uitspraak veranderen kan niemand.' }; } },
+      { n:[2, 3], f:function(c){ return { vraag:'Binnen hoeveel dagen na de uitspraak moet het hoger beroep in een strafzaak worden ingesteld?', iv:true, label:'binnen', antwoord:14, eenheid:'dagen',
+        uitleg:'Hoger beroep in een strafzaak moet binnen <b>14 dagen</b> na de uitspraak worden ingesteld. Daarna staat de uitspraak vast.' }; } },
+      { n:[2], f:function(c){ return { vraag:'Welk gerecht behandelt het hoger beroep?', goed:'het gerechtshof', fout:['de Hoge Raad', 'de rechtbank', 'de Raad van State'],
+        uitleg:'Het <b>gerechtshof</b> behandelt het hoger beroep. Daarna kan nog cassatie bij de Hoge Raad. De Raad van State is de hoogste rechter in veel zaken tegen de overheid, niet in strafzaken.' }; } },
+      { n:[3], f:function(c){ return { vraag:'Wie mogen in een strafzaak in hoger beroep gaan?', goed:'de verdachte en de officier van justitie', fout:['alleen de verdachte', 'alleen het slachtoffer', 'alleen de officier van justitie'],
+        uitleg:'Zowel de <b>verdachte</b> als de <b>officier van justitie</b> kan in hoger beroep. ' + (c.beroep === 'officier' ? 'Hier doet de officier het, omdat hij de straf te laag vindt.' : 'Hier doet de verdachte het, omdat hij de straf te hoog vindt.') + ' Het slachtoffer kan dat niet.' }; } },
+      { n:[3], f:function(c){ return { vraag:'Na het gerechtshof kan nog <b>cassatie</b> bij de Hoge Raad. Wat doet de Hoge Raad?', goed:'controleren of het recht goed is toegepast, zonder de feiten opnieuw te onderzoeken',
+        fout:['de hele zaak met nieuwe getuigen overdoen', 'een hogere straf eisen'],
+        uitleg:'De <b>Hoge Raad</b> kijkt alleen of de wet goed is toegepast en of de regels van het proces zijn gevolgd. Getuigen horen en feiten vaststellen doen de rechtbank en het gerechtshof.' }; } },
+      { n:[2, 3], f:function(c){ return { vraag:'Welk kenmerk van de rechtsstaat zie je in het hoger beroep?', goed:'Een uitspraak kan door andere rechters opnieuw bekeken worden, zodat fouten hersteld kunnen worden.',
+        fout:['De regering kan een uitspraak veranderen als ze die niet goed vindt.', 'Het slachtoffer bepaalt uiteindelijk de straf.'],
+        uitleg:'Ook rechters kunnen fouten maken. Daarom kan een zaak in <b>hoger beroep</b>. Dat de regering zich niet met uitspraken bemoeit, hoort juist bij de onafhankelijke rechter.' }; } }
+    ]
+  };
+
+  /* de zaak volgen: één zaak, stap voor stap; na de laatste stap begint een nieuwe zaak */
+  var rStapel = [], rCasus = null, rI = 0;
+  function trekCasus(){
+    if (!rStapel.length) rStapel = H(CASUS.slice());
+    var c = rStapel.shift();
+    if (rCasus && c === rCasus && CASUS.length > 1){ rStapel.push(c); c = rStapel.shift(); }
+    return c;
+  }
+  function routeBeeld(c, i){
+    var chips = '<ol class="rs-route" aria-label="de stappen van deze zaak">' + c.route.map(function(k, j){
+      return '<li class="' + (j < i ? 'af' : j === i ? 'nu' : '') + '"' + (j === i ? ' aria-current="step"' : '') + '>' + NAAM[k] + '</li>'; }).join('') + '</ol>';
+    var eerder = i > 0 ? '<span class="rs-eerder">Eerder: ' + c.t[c.route[i - 1]] + '</span>' : '';
+    return '<div class="rs-wrap">' + chips + '<div class="rs-casus"><span class="rs-titel">' + c.titel + ', stap ' + (i + 1) + ' van ' + c.route.length + '</span>' + eerder + c.t[c.route[i]] + '</div></div>';
+  }
+  function route(niveau){
+    var n = nr(niveau);
+    if (!rCasus || rI >= rCasus.route.length){ rCasus = trekCasus(); rI = 0; }
+    var c = rCasus, i = rI, k = c.route[i]; rI++;
+    var lijst = STAP[k].filter(function(v){ return !v.als || v.als(c); }), mag = voor(lijst, n);
+    if (!mag.length) mag = lijst;
+    var v = kies(mag), o = v.f(c, n);
+    o.sleutel = 'r-' + c.id + '-' + k + '-' + STAP[k].indexOf(v);
+    o.beeld = routeBeeld(c, i);
+    o.opdracht = o.opdracht || '';
+    return o.iv ? iv('route', o) : mk('route', o);
+  }
+
+  /* ================= de rechtsgang op volgorde ================= */
+  var ACTOREN = ['Het slachtoffer doet aangifte bij de politie.', 'De politie spoort de verdachte op en verhoort hem.', 'De officier van justitie besluit de verdachte te dagvaarden.',
+    'De rechtbank behandelt de zaak op de zitting en doet uitspraak.', 'Het gerechtshof behandelt de zaak in hoger beroep.', 'De Hoge Raad behandelt de zaak in cassatie.'];
+  var VRIJHEID = ['De politie houdt de verdachte aan.', 'De verdachte wordt op het bureau opgehouden voor onderzoek (maximaal 9 uur, zonder de nachturen).',
+    'De officier van justitie stelt de verdachte in verzekering (maximaal 3 dagen, één keer te verlengen).', 'De rechter-commissaris beveelt de bewaring (maximaal 14 dagen).',
+    'De raadkamer van de rechtbank beveelt de gevangenhouding (maximaal 90 dagen).', 'De rechtbank behandelt de zaak op de zitting en doet uitspraak.'];
+  function volgordeLijst(n, lijst, naam, sleutel, uit){
+    var len = n === 3 ? kies([5, 6]) : kies([4, 5]), van = tussen(0, lijst.length - len), idx = [];
+    for (var i = van; i < van + len; i++) idx.push(i);
+    return { onderdeel:'rechtsstaat: volgorde', onderdeelNaam:DEEL.volgorde, vorm:'sleep', sleutel:sleutel + '-' + van + '-' + len,
+      vraag:'Zet deze stappen in de goede volgorde: ' + naam + '.', opdracht:'Sleep elke stap naar het goede cijfer: 1 is het eerst.',
+      kaarten:idx.map(function(i){ return { id:'s' + i, tekst:lijst[i] }; }), vakken:idx.map(function(i){ return { id:'p' + i, max:1, hoort:['s' + i] }; }),
+      sleepuit:'Op een telefoon: tik een stap aan en dan het cijfer.', stapLijst:true, uitleg:uit, antwoordTekst:idx.map(function(i){ return i - van + 1; }).join(', ') };
+  }
+  function volgorde(niveau){
+    var n = nr(niveau);
+    if (n === 3 && Math.random() < .3) return volgordeLijst(n, VRIJHEID, 'een verdachte die vast blijft zitten tot de zitting', 'vh',
+      'Eerst de <b>aanhouding</b> en het <b>ophouden voor onderzoek</b>. Dan de <b>inverzekeringstelling</b> door de officier van justitie. Daarna beslist een rechter: eerst de rechter-commissaris over de <b>bewaring</b>, dan de raadkamer over de <b>gevangenhouding</b>. Hoe langer iemand vastzit, hoe zwaarder de toets: daarom beslist er steeds eerder een rechter.');
+    if (n >= 2 && Math.random() < .25) return volgordeLijst(n, ACTOREN, 'wie komt wanneer in actie', 'ac',
+      'De volgorde is: het slachtoffer (aangifte), de politie (opsporing), de officier van justitie (vervolging), de rechtbank (uitspraak), het gerechtshof (hoger beroep) en de Hoge Raad (cassatie).');
+    var c = kies(CASUS), r = c.route, len = n === 1 ? 4 : n === 2 ? 6 : Math.max(5, r.length - kies([0, 1]));
+    len = Math.min(len, r.length);
+    var van = tussen(0, r.length - len), idx = [];
+    for (var i = van; i < van + len; i++) idx.push(i);
+    return { onderdeel:'rechtsstaat: volgorde', onderdeelNaam:DEEL.volgorde, vorm:'sleep', sleutel:'v-' + c.id + '-' + van + '-' + len,
+      vraag:'Zet de stappen van deze zaak in de goede volgorde.', opdracht:'De zaak: ' + c.titel.toLowerCase() + '. Sleep elke stap naar het goede cijfer: 1 is het eerst.',
+      kaarten:idx.map(function(i){ return { id:'s' + i, tekst:c.t[r[i]] }; }), vakken:idx.map(function(i){ return { id:'p' + i, max:1, hoort:['s' + i] }; }),
+      sleepuit:'Op een telefoon: tik een stap aan en dan het cijfer.', stapLijst:true,
+      uitleg:'De volgorde is: ' + idx.map(function(i){ return NAAM[r[i]]; }).join(', ') + '. Eerst gebeurt het feit en wordt het gemeld. Dan spoort de politie de verdachte op en verhoort hem. Daarna beslist de officier van justitie wat er met de zaak gebeurt. Alleen als de zaak bij de rechter komt, volgen de zitting en de uitspraak, en daarna eventueel hoger beroep.',
+      antwoordTekst:idx.map(function(i){ return NAAM[r[i]]; }).join(' > ') };
+  }
+
+  /* ================= criminaliteit meten en verklaren ================= */
+  var DELICT = [{ e:'fietsdiefstal', mv:'fietsdiefstallen' }, { e:'woninginbraak', mv:'woninginbraken' }, { e:'vernieling', mv:'vernielingen' },
+    { e:'online oplichting', mv:'gevallen van online oplichting' }, { e:'autokraak', mv:'autokraken' }, { e:'zakkenrollerij', mv:'gevallen van zakkenrollerij' }];
+  var GEMEENTE = ['Lindeveen', 'Oosterbroek', 'Zandwijk', 'Hoeveldam', 'Brakelvoort'];
+  function darkNumber(n){
+    var d = kies(DELICT), g = kies(GEMEENTE), jaar = kies([2023, 2024, 2025]);
+    if (n === 3 && Math.random() < .7) return Math.random() < .5 ? aangifteBereid(d, g, jaar) : schatTotaal(d, g, jaar);
+    var W = tussen(8, 30) * 100, fr = kies([.2, .25, .3, .4]), G = Math.round(W * fr / 10) * 10, D = W - G;
+    var beeld = tabel('Verzonnen cijfers over ' + g + ', ' + jaar, ['', d.mv], [['volgens de slachtofferenquête', dz(W)], ['geregistreerd door de politie', dz(G)]]);
+    var uit = 'Het <b>dark number</b> is het deel van de criminaliteit dat niet bij de politie bekend is: ' + dz(W) + ' min ' + dz(G) + ' is ' + dz(D) + '. ';
+    if (n === 1){
+      var fout = [W, G, W + G].filter(function(x){ return x !== D; }).map(dz);
+      return mk('criminaliteit', { sleutel:'dn-' + W + '-' + G, vraag:'Hoe groot was in ' + g + ' het <b>dark number</b> bij ' + d.mv + '?', beeld:beeld, goed:dz(D), fout:fout,
+        uitleg:uit + 'Het getal ' + dz(W) + ' is de schatting van alle ' + d.mv + ' samen: dat is niet het dark number, want een deel daarvan kent de politie wel.' });
+    }
+    var a = getalAntw(D);
+    return iv('criminaliteit', { sleutel:'dn-' + W + '-' + G, vraag:'Bereken het <b>dark number</b> bij ' + d.mv + ' in ' + g + '.', beeld:beeld, label:'dark number', antwoord:a.antwoord, type:a.type, toon:a.toon, tol:a.tol,
+      uitleg:uit + 'De slachtofferenquête geeft een schatting van alle ' + d.mv + ', ook van die nooit gemeld zijn.' });
+  }
+  function aangifteBereid(d, g, jaar){
+    var S = tussen(4, 24) * 50, p = kies([20, 30, 40, 50, 60]), A = S * p / 100;
+    return iv('criminaliteit', { sleutel:'ab-' + S + '-' + p, vraag:'In een slachtofferenquête in ' + g + ' (' + jaar + ') zeggen ' + dz(S) + ' mensen dat ze slachtoffer waren van ' + d.e + '. Van hen deden er ' + dz(A) + ' aangifte. Hoe groot is de <b>aangiftebereidheid</b>?',
+      label:'aangiftebereidheid', antwoord:p, tol:.5, eenheid:'%',
+      uitleg:'De aangiftebereidheid is het percentage slachtoffers dat aangifte doet: ' + dz(A) + ' gedeeld door ' + dz(S) + ', keer 100, is ' + p + '%. Van de andere ' + (100 - p) + '% weet de politie niets: dat hoort bij het dark number.' });
+  }
+  function schatTotaal(d, g, jaar){
+    var p = kies([20, 25, 40, 50]), T = tussen(4, 30) * 100, G = T * p / 100, vraagDark = Math.random() < .4, x = vraagDark ? T - G : T, a = getalAntw(x);
+    return iv('criminaliteit', { sleutel:'st-' + T + '-' + p + (vraagDark ? 'd' : 't'),
+      vraag:'In ' + jaar + ' registreerde de politie in ' + g + ' ' + dz(G) + ' ' + d.mv + '. Uit een slachtofferenquête blijkt dat maar ' + p + '% van de slachtoffers aangifte doet. ' + (vraagDark ? 'Hoe groot is naar schatting het <b>dark number</b>?' : 'Hoeveel ' + d.mv + ' waren er naar schatting <b>in totaal</b>?'),
+      label:vraagDark ? 'dark number' : 'totaal', antwoord:a.antwoord, type:a.type, toon:a.toon, tol:a.tol,
+      uitleg:'De ' + dz(G) + ' geregistreerde gevallen zijn ' + p + '% van het totaal. Dan is 1% gelijk aan ' + dz(G / p) + ', en 100% is ' + dz(T) + '.' + (vraagDark ? ' Het dark number is ' + dz(T) + ' min ' + dz(G) + ' is ' + dz(T - G) + '.' : ' Het dark number is dan ' + dz(T - G) + '.') });
+  }
+  var VERKL = {
+    minderAangifte:function(mv){ return 'Er werden ongeveer evenveel ' + mv + ' gepleegd, maar minder slachtoffers deden aangifte.'; },
+    meerAangifte:function(mv){ return 'Er werden ongeveer evenveel ' + mv + ' gepleegd, maar meer slachtoffers deden aangifte.'; },
+    echtMinder:function(mv){ return 'Er werden echt minder ' + mv + ' gepleegd.'; },
+    echtMeer:function(mv){ return 'Er werden echt meer ' + mv + ' gepleegd.'; }
+  };
+  function trend(n){
+    var d = kies(DELICT), g = kies(GEMEENTE), y0 = kies([2019, 2020, 2021]), sc = kies(['minderAangifte', 'meerAangifte', 'echtMinder', 'echtMeer']);
+    var E0 = tussen(20, 40) * 100, f0 = kies([.3, .35, .4]), E = [], R = [], D = [], jaren = [];
+    for (var i = 0; i < 5; i++){
+      var e = sc === 'echtMinder' ? E0 * Math.pow(.88, i) : sc === 'echtMeer' ? E0 * Math.pow(1.12, i) : E0 * (1 + (Math.random() * .04 - .02));
+      var f = sc === 'minderAangifte' ? f0 - .05 * i : sc === 'meerAangifte' ? f0 + .05 * i : f0;
+      e = Math.round(e / 10) * 10; E.push(e); R.push(Math.round(e * f / 10) * 10); D.push(E[i] - R[i]); jaren.push(y0 + i);
+    }
+    var beeld = tabel('Verzonnen cijfers over ' + d.mv + ' in ' + g, ['jaar', 'volgens de slachtoffer&shy;enquête', 'geregistreerd door de politie'],
+      jaren.map(function(j, i){ return [String(j), dz(E[i]), dz(R[i])]; }));
+    function uniekMax(l){ var m = Math.max.apply(null, l); return l.filter(function(x){ return x === m; }).length === 1 ? l.indexOf(m) : -1; }
+    var soortVraag = n === 1 ? kies(['meest', 'kolom']) : n === 2 ? kies(['verkl', 'verkl', 'meest']) : kies(['verkl', 'dark', 'procent']);
+    var sleutel = 'tr-' + sc + '-' + E0 + '-' + f0 + '-' + y0 + '-' + soortVraag;
+    if (soortVraag === 'meest'){
+      var im = uniekMax(R); if (im < 0) soortVraag = 'verkl';
+      else { var opts = H(jaren.filter(function(j, i){ return i !== im; })).slice(0, 3).map(String);
+        return mk('criminaliteit', { sleutel:sleutel, vraag:'In welk jaar registreerde de politie de meeste ' + d.mv + '?', beeld:beeld, goed:String(jaren[im]), fout:opts,
+          uitleg:'Kijk in de kolom van de politie: in ' + jaren[im] + ' staan er ' + dz(R[im]) + ', meer dan in de andere jaren. De andere kolom, de slachtofferenquête, is een schatting van alle ' + d.mv + ', ook die niet gemeld zijn.' }); }
+    }
+    if (soortVraag === 'kolom') return mk('criminaliteit', { sleutel:sleutel, vraag:'Welke kolom laat het beste zien hoeveel ' + d.mv + ' er echt waren?', beeld:beeld,
+      goed:'de slachtofferenquête', fout:['de cijfers van de politie', 'ze laten allebei precies hetzelfde zien'],
+      uitleg:'De politie telt alleen wat gemeld wordt. In een <b>slachtofferenquête</b> vertellen mensen ook over misdrijven die ze nooit hebben gemeld. Daarom liggen die cijfers hoger.' });
+    if (soortVraag === 'dark'){
+      var id = uniekMax(D);
+      if (id >= 0) return iv('criminaliteit', { sleutel:sleutel, vraag:'In welk jaar was het <b>dark number</b> bij ' + d.mv + ' het grootst?', beeld:beeld, label:'jaar', antwoord:jaren[id], tol:.1,
+        uitleg:'Het dark number is de enquête min de politiecijfers. ' + jaren.map(function(j, i){ return j + ': ' + dz(D[i]); }).join(', ') + '. Het grootst is het in ' + jaren[id] + '.' });
+      soortVraag = 'verkl';
+    }
+    if (soortVraag === 'procent'){
+      var pr = Math.round(Math.abs(R[4] - R[0]) / R[0] * 100), daalt = R[4] < R[0];
+      if (pr > 0) return iv('criminaliteit', { sleutel:sleutel, vraag:'Met hoeveel procent ' + (daalt ? 'daalde' : 'steeg') + ' het aantal <b>geregistreerde</b> ' + d.mv + ' van ' + jaren[0] + ' tot ' + jaren[4] + '? Rond af op een heel getal.', beeld:beeld,
+        label:daalt ? 'daling' : 'stijging', antwoord:pr, tol:1, eenheid:'%',
+        uitleg:'Van ' + dz(R[0]) + ' naar ' + dz(R[4]) + ' is een verschil van ' + dz(Math.abs(R[4] - R[0])) + '. Dat gedeeld door het oude getal (' + dz(R[0]) + '), keer 100, is ongeveer ' + pr + '%. Let op: dat zegt alleen iets over de politiecijfers, niet over alle ' + d.mv + '.' });
+      soortVraag = 'verkl';
+    }
+    var goed = VERKL[sc](d.mv), fout = Object.keys(VERKL).filter(function(k){ return k !== sc; }).map(function(k){ return VERKL[k](d.mv); });
+    var waarom = { minderAangifte:'De enquête blijft ongeveer gelijk, dus er gebeurt niet minder. De politiecijfers dalen wel: er wordt dus minder gemeld, en het dark number groeit.',
+      meerAangifte:'De enquête blijft ongeveer gelijk, dus er gebeurt niet meer. De politiecijfers stijgen wel: er wordt dus vaker aangifte gedaan, bijvoorbeeld omdat het online makkelijker kan.',
+      echtMinder:'Zowel de enquête als de politiecijfers dalen. Als ook de slachtoffers zelf minder melden in de enquête, is er echt minder gepleegd.',
+      echtMeer:'Zowel de enquête als de politiecijfers stijgen. Als ook de slachtoffers zelf meer melden in de enquête, is er echt meer gepleegd.' }[sc];
+    return mk('criminaliteit', { sleutel:sleutel, vraag:'Welke verklaring past het best bij deze cijfers?', opdracht:'Vergelijk de twee kolommen: wat doet de enquête, en wat doen de politiecijfers?', beeld:beeld, goed:goed, fout:fout,
+      uitleg:waarom + ' Politiecijfers alleen zeggen dus weinig: kijk altijd ook naar de slachtofferenquête.' });
+  }
+  var BEGRIP = [
+    { b:'geregistreerde criminaliteit', u:'de misdrijven die bij de politie bekend zijn, bijvoorbeeld door een aangifte', n:[1, 2, 3] },
+    { b:'het dark number', u:'de misdrijven die wel gepleegd zijn, maar niet bij de politie bekend zijn', n:[1, 2, 3] },
+    { b:'een slachtofferenquête', u:'een vragenlijst waarin mensen vertellen of ze slachtoffer zijn geweest van een misdrijf, ook als ze het niet hebben gemeld', n:[1, 2, 3] },
+    { b:'aangifte', u:'het melden van een strafbaar feit bij de politie', n:[1, 2] },
+    { b:'recidive', u:'opnieuw een misdrijf plegen na een eerdere straf', n:[1, 2, 3] },
+    { b:'een misdrijf', u:'een zwaarder strafbaar feit, zoals diefstal of mishandeling', n:[1] },
+    { b:'een overtreding', u:'een licht strafbaar feit, zoals door rood fietsen', n:[1] },
+    { b:'een daderenquête', u:'een anonieme vragenlijst waarin mensen vertellen welke strafbare feiten ze zelf hebben gepleegd', n:[2, 3] },
+    { b:'de aangiftebereidheid', u:'het percentage slachtoffers dat aangifte doet bij de politie', n:[2, 3] },
+    { b:'het ophelderingspercentage', u:'het percentage geregistreerde misdrijven waarbij de politie een verdachte heeft gevonden', n:[3] },
+    { b:'veelvoorkomende criminaliteit', u:'lichtere misdrijven die vaak gebeuren, zoals fietsdiefstal, winkeldiefstal en vernieling', n:[2, 3] },
+    { b:'georganiseerde criminaliteit', u:'misdaad door groepen die gepland samenwerken om veel geld te verdienen, zoals drugshandel', n:[2, 3] },
+    { b:'witteboordencriminaliteit', u:'misdrijven die iemand pleegt via zijn werk of functie, zoals fraude met de boekhouding', n:[3] },
+    { b:'cybercriminaliteit', u:'misdrijven met of tegen computers en internet, zoals hacken en phishing', n:[2, 3] },
+    { b:'gevoelens van onveiligheid', u:'hoe onveilig mensen zich voelen, los van hoeveel misdrijven er echt gebeuren', n:[3] }
+  ];
+  function begrip(n){
+    var lijst = voor(BEGRIP, n), b = kies(lijst), anders = anderen(lijst, b, n === 1 ? 2 : 3), omgekeerd = Math.random() < .5;
+    if (omgekeerd) return mk('criminaliteit', { sleutel:'bg-o-' + b.b, vraag:'Wat betekent <b>' + b.b + '</b>?', goed:cap(b.u) + '.', fout:anders.map(function(x){ return cap(x.u) + '.'; }),
+      uitleg:cap(b.b) + ': ' + b.u + '. Het verkeerde antwoord "' + anders[0].u + '" hoort bij ' + anders[0].b + '.' });
+    return mk('criminaliteit', { sleutel:'bg-' + b.b, vraag:'Welk begrip hoort hierbij: <b>' + b.u + '</b>?', goed:b.b, fout:anders.map(function(x){ return x.b; }),
+      uitleg:cap(b.b) + ': ' + b.u + '. ' + cap(anders[0].b) + ' is iets anders: ' + anders[0].u + '.' });
+  }
+  var SOORTSIT = [
+    { s:'Een groep van tien mensen smokkelt al jaren cocaïne via de haven en wast het geld wit via kapperszaken.', g:'georganiseerde criminaliteit' },
+    { s:'Een boekhouder van een bouwbedrijf zet jarenlang geld van het bedrijf op zijn eigen rekening.', g:'witteboordencriminaliteit' },
+    { s:'Iemand stuurt duizenden nepmails namens een bank, zodat mensen hun inloggegevens invullen.', g:'cybercriminaliteit', niet:['georganiseerde criminaliteit'] },
+    { s:'In het centrum van Lindeveen worden in een maand veertig fietsen gestolen.', g:'veelvoorkomende criminaliteit' },
+    { s:'Een directeur laat zijn bedrijf expres te weinig belasting opgeven, zodat het bedrijf minder betaalt.', g:'witteboordencriminaliteit' },
+    { s:'Een jongen hackt het account van een klasgenoot en zet nare berichten online.', g:'cybercriminaliteit' },
+    { s:'Een bende brengt vrouwen naar Nederland en dwingt hen om in de prostitutie te werken.', g:'georganiseerde criminaliteit' },
+    { s:'Iemand steelt een pak koekjes en een energiedrankje in de supermarkt.', g:'veelvoorkomende criminaliteit' },
+    { s:'Een paar jongeren trappen tijdens de jaarwisseling bushokjes en lantaarnpalen kapot.', g:'veelvoorkomende criminaliteit' },
+    { s:'Een netwerk met eigen loodsen, vrachtwagens en boekhouders kweekt en verkoopt op grote schaal hennep.', g:'georganiseerde criminaliteit' },
+    { s:'De computers van een ziekenhuis worden met een virus op slot gezet. De daders eisen losgeld om ze weer te openen.', g:'cybercriminaliteit', niet:['georganiseerde criminaliteit'] },
+    { s:'In een wijk wordt in één week bij drie auto’s een ruit ingeslagen om er een tas uit te pakken.', g:'veelvoorkomende criminaliteit' },
+    { s:'Een ambtenaar van de gemeente geeft een bedrijf een vergunning, in ruil voor een flink bedrag op zijn rekening.', g:'witteboordencriminaliteit' },
+    { s:'Iemand rijdt met veel te veel alcohol op naar huis.', g:'verkeerscriminaliteit' },
+    { s:'Een automobilist rijdt door na een aanrijding met een fietser.', g:'verkeerscriminaliteit' },
+    { s:'Twee mannen slaan na het uitgaan een voorbijganger in elkaar.', g:'geweldscriminaliteit' },
+    { s:'Een man bedreigt een buschauffeur met een mes.', g:'geweldscriminaliteit' }
+  ];
+  function soortCrim(n){
+    var x = kies(SOORTSIT), f = anderen(Object.keys(SOORT_UIT), x.g, 3, x.niet);
+    return mk('criminaliteit', { sleutel:'sc-' + SOORTSIT.indexOf(x), vraag:'Bij welke soort criminaliteit hoort dit?', beeld:sit(x.s), goed:x.g, fout:f,
+      uitleg:SOORT_UIT[x.g] + ' Het is geen ' + f[0] + ': ' + SOORT_KORT[f[0]] + '.' });
+  }
+  var OORZAAK = {
+    gelegenheid:{ kort:'gelegenheid: het is makkelijk en er is weinig toezicht', naam:'de gelegenheidstheorie', u:'De gelegenheidstheorie: "gelegenheid maakt de dief". Als iets makkelijk is en er weinig toezicht is, gebeurt er meer.' },
+    binding:{ kort:'weinig binding met school, werk, familie of club', naam:'de bindingstheorie', u:'De bindingstheorie: wie weinig banden heeft met school, werk, familie of een club, heeft minder te verliezen en voelt minder controle.' },
+    aangeleerd:{ kort:'aangeleerd gedrag: vrienden of familie doen het ook', naam:'de theorie van aangeleerd gedrag', u:'Aangeleerd gedrag: crimineel gedrag leer je van anderen, zoals vrienden of familie, net als ander gedrag.' },
+    frustratie:{ kort:'frustratie: iemand kan op een eerlijke manier niet krijgen wat hij wil', naam:'de frustratietheorie', u:'De frustratietheorie: iedereen wil dezelfde dingen, zoals geld en spullen, maar niet iedereen kan die op een eerlijke manier krijgen. Uit frustratie kiezen sommigen een oneerlijke weg.' },
+    etiket:{ kort:'een etiket: iemand krijgt het stempel crimineel', naam:'de etiketteringstheorie', u:'De etiketteringstheorie: wie eenmaal het stempel "crimineel" krijgt, wordt zo behandeld en gaat zich er ook naar gedragen.' },
+    persoon:{ kort:'persoonlijke factoren, zoals een stoornis of een opvliegend karakter', naam:'persoonlijke factoren (biologisch en psychologisch)', u:'Persoonlijke factoren: de oorzaak ligt in de persoon zelf, bijvoorbeeld een psychische stoornis of een heel impulsief karakter.' }
+  };
+  var OORZAAKSIT = [
+    { o:'gelegenheid', s:'Op het station van Lindeveen staan honderden fietsen, en de helft staat niet op slot. Er hangen geen camera’s. Elke week verdwijnen er fietsen.' },
+    { o:'gelegenheid', s:'Een winkel legt dure koptelefoons zonder beveiliging vlak bij de uitgang. Het aantal diefstallen stijgt snel.' },
+    { o:'gelegenheid', s:'In de zomervakantie staan veel huizen leeg en zijn buren weg. Inbrekers slaan juist dan toe.' },
+    { o:'gelegenheid', s:'Sinds de parkeergarage geen bewaker meer heeft, worden er veel meer auto’s opengebroken.' },
+    { o:'binding', s:'Kai (17) is van school gegaan, heeft geen baan en is gestopt met voetbal. Thuis praat hij weinig met zijn ouders. Hij heeft het gevoel dat hij niets te verliezen heeft.' },
+    { o:'binding', s:'Onderzoekers zien dat jongeren die bij een sportclub zitten en een bijbaan hebben, minder vaak met de politie in aanraking komen.' },
+    { o:'binding', s:'Lisa (16) spijbelt veel, heeft geen hobby’s en ziet haar familie bijna nooit. Ze zegt: "Niemand let er toch op wat ik doe."' },
+    { o:'binding', s:'Een man verliest zijn baan, zijn huwelijk en het contact met zijn vrienden. Niemand let nog op hem, en hij voelt zich nergens meer verantwoordelijk voor.' },
+    { o:'aangeleerd', s:'Daan (15) trekt veel op met oudere jongens die scooters stelen. Zij laten hem zien hoe je een slot openbreekt en zeggen dat het stoer is.' },
+    { o:'aangeleerd', s:'In de familie van Bram is het heel gewoon om spullen te verkopen die "van de vrachtwagen gevallen" zijn. Bram doet het nu ook.' },
+    { o:'aangeleerd', s:'In een groepje vrienden is het normaal om in de supermarkt snoep te pikken. Wie dat niet doet, hoort er niet bij.' },
+    { o:'aangeleerd', s:'Een jongen kijkt op naar zijn oudere broer, die geld verdient met het verkopen van drugs. Van hem leert hij hoe dat gaat.' },
+    { o:'frustratie', s:'Overal ziet Romy reclame voor dure merkkleding en telefoons. Haar ouders hebben weinig geld en zij vindt geen bijbaan. Ze begint kleding te stelen.' },
+    { o:'frustratie', s:'Een groep jongeren wil net zo rijk worden als de rappers die ze volgen, maar zonder diploma vinden ze geen werk. Ze gaan drugs verkopen.' },
+    { o:'frustratie', s:'Een man solliciteert al jaren zonder succes en ziet zijn buren nieuwe auto’s kopen. Hij voelt zich buitengesloten en begint te frauderen met zijn uitkering.' },
+    { o:'etiket', s:'Na één winkeldiefstal noemt iedereen in het dorp Joris "die dief". Hij denkt: "Ze zien me toch al als crimineel." Hij steelt vaker.' },
+    { o:'etiket', s:'Een jongen die vroeger een keer met de politie in aanraking kwam, wordt op school steeds als eerste verdacht. Hij gaat zich gedragen zoals iedereen van hem verwacht.' },
+    { o:'etiket', s:'Een meisje krijgt van buren steeds te horen dat ze "net zo wordt als haar vader in de gevangenis". Na een tijd gelooft ze het zelf.' },
+    { o:'persoon', s:'Een man met een ernstige psychische stoornis hoort stemmen die zeggen dat hij zijn buurman moet aanvallen.', n:[2, 3] },
+    { o:'persoon', s:'Een jongen is heel impulsief en wordt bij de kleinste aanleiding woedend. Hij raakt vaak betrokken bij vechtpartijen.', n:[2, 3] }
+  ];
+  function oorzaak(n){
+    var magO = n === 1 ? ['gelegenheid', 'binding', 'aangeleerd', 'frustratie'] : Object.keys(OORZAAK);
+    var lijst = voor(OORZAAKSIT, n).filter(function(x){ return magO.indexOf(x.o) >= 0; }), x = kies(lijst), f = anderen(magO, x.o, n === 1 ? 2 : 3);
+    function nm(k){ return n === 1 ? OORZAAK[k].kort : n === 2 ? OORZAAK[k].naam + ' (' + OORZAAK[k].kort.split(':')[0] + ')' : OORZAAK[k].naam; }
+    return mk('criminaliteit', { sleutel:'oz-' + OORZAAKSIT.indexOf(x), vraag:'Welke verklaring voor criminaliteit past het best bij dit voorbeeld?', beeld:sit(x.s), goed:nm(x.o), fout:f.map(nm),
+      uitleg:OORZAAK[x.o].u + ' Niet ' + OORZAAK[f[0]].naam + ': ' + OORZAAK[f[0]].u.split(': ').slice(1).join(': ') });
+  }
+  function criminaliteit(niveau){
+    var n = nr(niveau);
+    var f = n === 1 ? kies([darkNumber, trend, begrip, begrip, oorzaak, oorzaak]) : n === 2 ? kies([darkNumber, trend, begrip, soortCrim, oorzaak, oorzaak]) : kies([darkNumber, darkNumber, trend, trend, begrip, soortCrim, oorzaak]);
+    return f(n);
+  }
+
+  /* ================= soorten recht ================= */
+  var RG = { s:'strafrecht', c:'civiel recht', b:'bestuursrecht' };
+  var RG_UIT = { s:'In het <b>strafrecht</b> vervolgt de overheid (het OM) iemand die een strafbaar feit heeft gepleegd.',
+    c:'Het <b>civiel recht</b> (privaatrecht) gaat over ruzies tussen burgers of bedrijven, bijvoorbeeld over geld, koop, huur, werk of een scheiding.',
+    b:'Het <b>bestuursrecht</b> gaat over ruzies tussen een burger en de overheid, bijvoorbeeld over een vergunning, een uitkering of een boete van een overheidsdienst.' };
+  var RG_LANG = { s:'strafrecht: het OM vervolgt een verdachte', c:'civiel recht: een burger of bedrijf begint zelf een zaak tegen een ander', b:'bestuursrecht: een burger maakt bezwaar tegen een besluit van de overheid' };
+  var RECHT = [
+    { s:'Een storm laat de boom van Peter op de schutting van zijn buurman vallen. De buurman wil dat Peter een nieuwe schutting betaalt en stapt naar de rechter.', r:'c' },
+    { s:'Een man wordt door de officier van justitie vervolgd voor het stelen van een auto.', r:'s' },
+    { s:'De gemeente weigert Aylin een vergunning voor een dakkapel. Aylin is het daar niet mee eens.', r:'b', org:'de gemeente' },
+    { s:'Een webwinkel levert een kapotte laptop en weigert die te vervangen. De koper stapt naar de rechter.', r:'c' },
+    { s:'Een vrouw krijgt een boete van de Belastingdienst omdat ze haar belastingaangifte te laat deed. Ze vindt de boete onterecht.', r:'b', org:'de Belastingdienst' },
+    { s:'Een werknemer wordt ontslagen door zijn baas en vindt dat onterecht.', r:'c' },
+    { s:'Twee mensen gaan scheiden en zijn het niet eens over de verdeling van hun huis.', r:'c' },
+    { s:'Een jongen wordt verdacht van het in brand steken van een auto.', r:'s' },
+    { s:'Het UWV stopt de uitkering van een man. Hij vindt dat het UWV een fout maakt.', r:'b', org:'het UWV' },
+    { s:'Een huurder betaalt al maanden geen huur. De verhuurder wil dat hij het huis uit gaat.', r:'c' },
+    { s:'Een vrouw wordt verdacht van het bedreigen van een agent.', r:'s' },
+    { s:'Na een vechtpartij sluit de burgemeester een café voor drie maanden. De eigenaar wil dat die beslissing wordt teruggedraaid.', r:'b', org:'de burgemeester' },
+    { s:'Een man rijdt met te veel alcohol op en veroorzaakt een ongeluk. Het OM vervolgt hem.', r:'s' },
+    { s:'Een student is het niet eens met de beslissing van DUO dat zij geen studiefinanciering krijgt.', r:'b', org:'DUO' },
+    { s:'Een fotograaf ontdekt dat een bedrijf zijn foto zonder toestemming gebruikt in een reclame. Hij wil daarvoor betaald worden.', r:'c' },
+    { s:'Een man wordt verdacht van oplichting met een nepwebsite.', r:'s' },
+    { s:'Een bouwbedrijf maakt een verbouwing niet af, terwijl de klant al heeft betaald. De klant wil zijn geld terug.', r:'c' },
+    { s:'De gemeente laat een fout geparkeerde auto wegslepen. De eigenaar moet de kosten betalen en vindt dat onterecht.', r:'b', org:'de gemeente' },
+    { s:'Een vrouw wordt vervolgd voor het verkopen van drugs.', r:'s' }
+  ];
+  var MO = [
+    { s:'Iemand steelt een fiets.', m:true }, { s:'Iemand slaat een ander zo hard dat die gewond raakt.', m:true }, { s:'Iemand rijdt auto met veel te veel alcohol op.', m:true },
+    { s:'Iemand bedreigt een buschauffeur.', m:true }, { s:'Iemand breekt in bij een school.', m:true }, { s:'Iemand verkoopt spullen waarvan hij weet dat ze gestolen zijn.', m:true },
+    { s:'Iemand spuit graffiti op de muur van een school.', m:true }, { s:'Iemand fietst door rood.', m:false }, { s:'Iemand fietst in het donker zonder licht.', m:false },
+    { s:'Iemand rijdt 10 kilometer per uur te hard.', m:false }, { s:'Iemand plast in de stad tegen een muur.', m:false },
+    { s:'Iemand van 16 kan een agent op straat geen identiteitsbewijs laten zien als die erom vraagt.', m:false }, { s:'Iemand laat zijn hond loslopen waar dat verboden is.', m:false },
+    { s:'Iemand is op straat zo dronken dat hij anderen lastigvalt.', m:false }
+  ];
+  function rechtsgebied(n){
+    var x = kies(RECHT), lang = n === 3, opties = ['s', 'c', 'b'].map(function(k){ return lang ? RG_LANG[k] : RG[k]; });
+    var fk = ['s', 'c', 'b'].filter(function(k){ return k !== x.r; });
+    return mk('recht', { sleutel:'rg-' + RECHT.indexOf(x) + (lang ? 'l' : ''), vraag:'Over welk soort recht gaat deze zaak?', beeld:sit(x.s), opties:opties, goed:lang ? RG_LANG[x.r] : RG[x.r],
+      uitleg:RG_UIT[x.r] + ' ' + (x.r === 's' ? 'Het is geen civiel recht, want het slachtoffer begint de zaak niet zelf: de officier van justitie vervolgt.' :
+        x.r === 'c' ? 'Het is geen strafrecht: niemand wordt vervolgd door het OM. De burger of het bedrijf stapt zelf naar de rechter.' :
+        'Het is geen civiel recht, want de tegenpartij is een overheidsorgaan (' + x.org + '), geen gewone burger of bedrijf.') });
+  }
+  function misdrijfOvertreding(n){
+    var x = kies(MO);
+    return mk('recht', { sleutel:'mo-' + MO.indexOf(x), vraag:'Is dit een misdrijf of een overtreding?', beeld:sit(x.s), opties:['een misdrijf', 'een overtreding'], goed:x.m ? 'een misdrijf' : 'een overtreding',
+      uitleg:x.m ? 'Dit is een <b>misdrijf</b>: een zwaarder strafbaar feit. Bij een misdrijf kan de rechter een zwaardere straf geven en krijg je eerder een strafblad.' :
+        'Dit is een <b>overtreding</b>: een licht strafbaar feit, vaak afgedaan met een boete. Misdrijven zijn zwaarder, zoals diefstal, mishandeling of rijden onder invloed.' });
+  }
+  function eersteStap(n){
+    var lijst = RECHT.filter(function(x){ return x.r === 'b'; }), x = kies(lijst);
+    return mk('recht', { sleutel:'eb-' + RECHT.indexOf(x), vraag:'Wat is in deze zaak de eerste stap?', beeld:sit(x.s), goed:'bezwaar maken bij ' + x.org,
+      fout:['aangifte doen bij de politie', 'meteen in hoger beroep gaan bij het gerechtshof', 'de officier van justitie vragen om ' + x.org + ' te vervolgen'],
+      uitleg:'Dit is <b>bestuursrecht</b>: een ruzie met de overheid. Eerst maak je <b>bezwaar</b> bij het overheidsorgaan dat het besluit nam, hier ' + x.org + '. Pas als dat niets oplevert, ga je in beroep bij de bestuursrechter. Aangifte doen past niet: niemand heeft een strafbaar feit gepleegd.' });
+  }
+  function kantonrechter(n){
+    var lijst = MO.filter(function(x){ return !x.m; }), x = kies(lijst);
+    return mk('recht', { sleutel:'kr-' + MO.indexOf(x), vraag:'Deze zaak komt bij de rechter. Welke rechter behandelt hem?', beeld:sit(x.s), goed:'de kantonrechter',
+      fout:['de politierechter', 'de meervoudige kamer', 'de rechter-commissaris'],
+      uitleg:'Dit is een <b>overtreding</b>. Komt een overtreding bij de rechter, dan doet de <b>kantonrechter</b> de zaak. De politierechter behandelt eenvoudige misdrijven, de meervoudige kamer zware misdrijven. De rechter-commissaris doet geen zittingen over schuld en straf.' });
+  }
+  function recht(niveau){
+    var n = nr(niveau), r = Math.random();
+    if (n === 1) return r < .7 ? rechtsgebied(n) : misdrijfOvertreding(n);
+    if (n === 2) return r < .5 ? rechtsgebied(n) : misdrijfOvertreding(n);
+    return r < .4 ? rechtsgebied(n) : r < .6 ? misdrijfOvertreding(n) : r < .8 ? eersteStap(n) : kantonrechter(n);
+  }
+
+  /* ================= rechtsstaat en rechten van de verdachte ================= */
+  var BEG = {
+    legaliteit:{ kort:'geen straf zonder wet', naam:'het legaliteitsbeginsel', u:'Het <b>legaliteitsbeginsel</b>: je kunt alleen gestraft worden voor iets wat al in de wet stond toen je het deed (artikel 1 van het Wetboek van Strafrecht en artikel 16 van de Grondwet).' },
+    onschuld:{ kort:'onschuldig tot het bewezen is', naam:'de onschuldpresumptie', u:'De <b>onschuldpresumptie</b>: iedereen geldt als onschuldig tot een rechter heeft bewezen dat hij schuldig is (artikel 6 van het EVRM).' },
+    zwijg:{ kort:'zwijgrecht', naam:'het zwijgrecht', u:'Het <b>zwijgrecht</b>: een verdachte hoeft geen vragen te beantwoorden en hoeft niet mee te werken aan zijn eigen veroordeling.' },
+    advocaat:{ kort:'recht op een advocaat', naam:'het recht op een advocaat', u:'Het <b>recht op een advocaat</b>: een verdachte mag zich laten bijstaan door een advocaat, ook als hij weinig geld heeft.' },
+    onafh:{ kort:'een onafhankelijke rechter', naam:'een onafhankelijke rechter', u:'Een <b>onafhankelijke rechter</b>: de rechter beslist zelf, zonder dat de regering of het parlement hem iets kan opdragen, en zonder eigen belang bij de zaak.' },
+    trias:{ kort:'scheiding der machten', naam:'de scheiding der machten (trias politica)', u:'De <b>scheiding der machten</b> (trias politica): de wetgevende, de uitvoerende en de rechterlijke macht zijn verdeeld, zodat niemand alle macht heeft.' },
+    openbaar:{ kort:'openbare rechtszaken', naam:'openbare rechtspraak', u:'<b>Openbare rechtspraak</b>: zittingen en uitspraken zijn in principe openbaar, zodat iedereen kan controleren of het eerlijk gaat (artikel 121 van de Grondwet).' },
+    beroep:{ kort:'hoger beroep', naam:'het recht op hoger beroep', u:'<b>Hoger beroep</b>: wie het niet eens is met een uitspraak, kan de zaak opnieuw laten behandelen door het gerechtshof.' },
+    gelijk:{ kort:'gelijke behandeling', naam:'gelijke behandeling', u:'<b>Gelijke behandeling</b>: iedereen is gelijk voor de wet en mag niet gediscrimineerd worden (artikel 1 van de Grondwet).' },
+    eigen:{ kort:'niet zelf straffen (geen eigenrichting)', naam:'het verbod op eigenrichting', u:'Het <b>verbod op eigenrichting</b>: burgers mogen niet zelf straffen. Dat doet de overheid, via de politie, het OM en de rechter.' }
+  };
+  var BEGSIT = [
+    { b:'legaliteit', s:'De regering wil een nieuwe wet tegen het verspreiden van nepnieuws. Iemand die vorig jaar nepnieuws verspreidde, kan met die nieuwe wet niet gestraft worden.', n:[2, 3] },
+    { b:'legaliteit', s:'Een agent wil een jongen een boete geven omdat hij er "verdacht" uitziet. Maar nergens in de wet staat dat dat verboden is.', n:[2, 3] },
+    { b:'legaliteit', s:'Een rechter mag alleen straffen voor iets wat al strafbaar was op het moment dat het gebeurde.', n:[3] },
+    { b:'onschuld', s:'Op sociale media wordt een verdachte al "de moordenaar" genoemd, maar de rechter heeft nog niets beslist. Dat is niet eerlijk.', n:[1, 2, 3] },
+    { b:'onschuld', s:'De rechter zegt tegen de officier van justitie: "U moet bewijzen dat de verdachte het gedaan heeft, niet andersom."', n:[1, 2, 3], niet:['zwijg'] },
+    { b:'onschuld', s:'Een krant schrijft over "verdachte Mark V." en niet over "dader Mark V.", omdat de rechter nog geen uitspraak heeft gedaan.', n:[2, 3] },
+    { b:'zwijg', s:'Bij het verhoor zegt een verdachte: "Daar zeg ik niets over." De agent mag hem niet dwingen om toch te praten.', n:[1, 2, 3] },
+    { b:'zwijg', s:'Voor het verhoor zegt de agent: "U bent niet verplicht om te antwoorden."', n:[2, 3] },
+    { b:'advocaat', s:'Een verdachte met weinig geld krijgt toch een advocaat. De overheid betaalt (een deel van) de kosten.', n:[1, 2, 3], niet:['gelijk'] },
+    { b:'advocaat', s:'Voor het eerste verhoor mag een verdachte eerst met een advocaat praten.', n:[1, 2, 3] },
+    { b:'onafh', s:'Een minister vindt een uitspraak te licht. Maar hij mag de rechter niet vertellen wat die had moeten beslissen.', n:[1, 2, 3], niet:['trias'] },
+    { b:'onafh', s:'Rechters worden voor het leven benoemd, zodat ze niet bang hoeven te zijn hun baan te verliezen door een uitspraak.', n:[2, 3], niet:['trias'] },
+    { b:'onafh', s:'Een rechter die familie is van de verdachte, mag de zaak niet behandelen.', n:[2, 3], niet:['trias', 'gelijk'] },
+    { b:'trias', s:'De regering en het parlement maken samen de wetten, de regering voert ze uit en de rechter spreekt recht.', n:[1, 2, 3], niet:['onafh'] },
+    { b:'trias', s:'De macht in Nederland is verdeeld over drie groepen, zodat niemand alle macht heeft.', n:[1, 2, 3], niet:['onafh'] },
+    { b:'openbaar', s:'Een journalist en een schoolklas zitten op de publieke tribune bij een strafzaak.', n:[1, 2, 3] },
+    { b:'openbaar', s:'De rechter spreekt het vonnis in het openbaar uit, en veel uitspraken zijn daarna op internet te lezen.', n:[2, 3] },
+    { b:'beroep', s:'Een veroordeelde vindt dat de rechter een fout maakte. Hij vraagt het gerechtshof om de zaak opnieuw te bekijken.', n:[1, 2, 3] },
+    { b:'gelijk', s:'Een bekende voetballer krijgt voor rijden onder invloed dezelfde straf als ieder ander.', n:[1, 2, 3] },
+    { b:'gelijk', s:'De politie mag iemand niet vaker controleren alleen vanwege zijn huidskleur.', n:[2, 3] },
+    { b:'zwijg', s:'Een verdachte noemt bij de politie alleen zijn naam en zegt verder niets. Dat mag.', n:[1, 2, 3] },
+    { b:'beroep', s:'De officier van justitie vindt een straf veel te laag. Hij vraagt het gerechtshof om de zaak opnieuw te behandelen.', n:[1, 2, 3] },
+    { b:'gelijk', s:'Een rijke en een arme man stelen allebei een fiets. De rechter geeft hun dezelfde straf.', n:[1, 2, 3] },
+    { b:'eigen', s:'Een buurtbewoner betrapt een fietsendief. Hij mag hem vasthouden tot de politie er is, maar hem niet zelf in elkaar slaan.', n:[1, 2, 3] },
+    { b:'eigen', s:'Na een inbraak willen een paar buurtbewoners de verdachte zelf "een lesje leren". De politie waarschuwt dat ze dan zelf strafbaar zijn.', n:[1, 2, 3] }
+  ];
+  var SCHENDING = [
+    { b:'onafh', s:'In een ander land zet de president een rechter af, omdat die een uitspraak deed die de president niet beviel.', niet:['trias'] },
+    { b:'advocaat', s:'Een verdachte vraagt om een advocaat, maar wordt drie dagen verhoord zonder dat hij er een mag spreken.', niet:['zwijg'] },
+    { b:'legaliteit', s:'Een man wordt gestraft voor iets wat pas strafbaar werd nadat hij het had gedaan.' },
+    { b:'openbaar', s:'De rechtszaak tegen een journalist wordt in het geheim gehouden. Niemand mag erbij zijn en de uitspraak wordt niet bekendgemaakt.' },
+    { b:'zwijg', s:'Een agent zegt tegen een verdachte: "Als je niets zegt, krijg je straks een veel zwaardere straf."' },
+    { b:'onschuld', s:'Een verdachte wordt op televisie getoond met een bord "schuldig", nog voordat de rechter iets heeft beslist.' },
+    { b:'gelijk', s:'Rijke verdachten mogen hun celstraf afkopen met geld; arme verdachten moeten de cel in.' },
+    { b:'eigen', s:'Een winkeleigenaar sluit een vermoedelijke winkeldief een nacht op in zijn magazijn, "als straf".' }
+  ];
+  var LOS = [
+    { n:[1, 2], vraag:'Wie maakt in Nederland de wetten?', goed:'de regering en het parlement (Tweede en Eerste Kamer) samen', fout:['de rechter', 'de politie', 'de burgemeester'],
+      uitleg:'De wetgevende macht is de regering samen met het parlement. De rechter past de wetten toe, en de politie handhaaft ze. Zo is de macht verdeeld: de <b>trias politica</b>.' },
+    { n:[1, 2], vraag:'Wie beslist of iemand die de wet heeft overtreden, gestraft wordt?', goed:'de rechter', fout:['de regering', 'de Tweede Kamer', 'de politie'],
+      uitleg:'Rechtspreken is de taak van de <b>rechterlijke macht</b>. De regering en de Tweede Kamer maken de regels; de politie spoort op. Zo houden de machten elkaar in evenwicht.' },
+    { n:[1, 2], vraag:'Welk recht heeft een verdachte <b>niet</b>?', goed:'zelf kiezen welke rechter zijn zaak behandelt', fout:['zwijgen bij het verhoor', 'een advocaat', 'in hoger beroep gaan'],
+      uitleg:'Een verdachte heeft zwijgrecht, recht op een advocaat en recht op hoger beroep. Welke rechter de zaak doet, bepaalt de rechtbank zelf: zo kan niemand een rechter uitkiezen die hem goed uitkomt.' },
+    { n:[2, 3], vraag:'Welke van deze uitspraken past <b>niet</b> bij een rechtsstaat?', goed:'De regering mag een rechter ontslaan als ze het niet eens is met een uitspraak.',
+      fout:['Ook de overheid moet zich aan de wet houden.', 'Iedereen heeft recht op een eerlijk proces.', 'Grondrechten beschermen burgers tegen de overheid.'],
+      uitleg:'In een <b>rechtsstaat</b> is de rechter onafhankelijk: de regering kan hem niet ontslaan om een uitspraak. De andere drie zijn juist kenmerken van een rechtsstaat.' },
+    { n:[2, 3], vraag:'Welke van deze uitspraken past <b>niet</b> bij een rechtsstaat?', goed:'De politie mag een verdachte zo lang vasthouden als ze wil.',
+      fout:['Een verdachte mag een advocaat spreken.', 'Een rechter doet uitspraak in het openbaar.', 'Je kunt alleen gestraft worden voor wat in de wet staat.'],
+      uitleg:'In een rechtsstaat zijn er strenge regels voor vrijheidsbeneming: ophouden voor onderzoek maximaal 9 uur, inverzekeringstelling maximaal 3 dagen (één keer te verlengen), en voor langer moet een <b>rechter</b> beslissen.' },
+    { n:[2, 3], vraag:'Welke van deze uitspraken past <b>niet</b> bij een rechtsstaat?', goed:'Een verdachte moet zelf bewijzen dat hij onschuldig is.',
+      fout:['De officier van justitie moet bewijzen dat de verdachte schuldig is.', 'Een verdachte mag zwijgen.', 'Wie het niet eens is met de uitspraak, kan in hoger beroep.'],
+      uitleg:'Door de <b>onschuldpresumptie</b> moet de overheid de schuld bewijzen, niet de verdachte zijn onschuld. De andere drie passen juist wel bij een rechtsstaat.' }
+  ];
+  function rechten(niveau){
+    var n = nr(niveau), r = Math.random(), losLijst = voor(LOS, n);
+    if (r < (n === 3 ? .12 : .18)){ var l = kies(losLijst); return mk('rechten', { sleutel:'ls-' + LOS.indexOf(l), vraag:l.vraag, goed:l.goed, fout:n === 1 ? l.fout.slice(0, 2) : l.fout, uitleg:l.uitleg }); }
+    var schending = n === 3 && r < .45, x = schending ? kies(SCHENDING) : kies(voor(BEGSIT, n));
+    var pool = Object.keys(BEG).filter(function(k){ return n > 1 || k !== 'legaliteit'; }), f = anderen(pool, x.b, n === 1 ? 2 : 3, x.niet);
+    function nm(k){ return n === 1 ? BEG[k].kort : n === 2 && ['legaliteit', 'onschuld', 'eigen'].indexOf(k) >= 0 ? BEG[k].naam + ' (' + BEG[k].kort.replace(/ \(geen eigenrichting\)/, '') + ')' : BEG[k].naam; }
+    return mk('rechten', { sleutel:(schending ? 'sc-' + SCHENDING.indexOf(x) : 'bs-' + BEGSIT.indexOf(x)), vraag:schending ? 'Welk kenmerk van de rechtsstaat wordt hier <b>geschonden</b>?' : 'Welk kenmerk van de rechtsstaat zie je hier?',
+      beeld:schending ? bron('Uit het nieuws', x.s, 'verzonnen bericht') : sit(x.s), goed:nm(x.b), fout:f.map(nm),
+      uitleg:BEG[x.b].u + ' ' + cap(BEG[f[0]].naam) + ' gaat over iets anders: ' + BEG[f[0]].u.replace(/<[^>]+>/g, '').split(': ').slice(1).join(': ') });
+  }
+
+  /* ================= straffen en maatregelen ================= */
+  var DOELSIT = [
+    { d:'vergelding', s:'Hij heeft iemand zwaar mishandeld. Dan is het niet meer dan rechtvaardig dat hij daar zelf ook voor moet boeten.' },
+    { d:'vergelding', s:'Wie een ander leed aandoet, moet daar zelf ook leed voor terugkrijgen.' },
+    { d:'vergelding', s:'Het slachtoffer zegt: "Ik wil dat hij voelt wat hij mij heeft aangedaan."' },
+    { d:'vergelding', s:'Hoe zwaarder het misdrijf, hoe zwaarder de straf moet zijn. Dat is eerlijk.' },
+    { d:'speciaal', s:'Na een nacht in de cel zegt Tim: "Hier wil ik nooit meer terechtkomen."' },
+    { d:'speciaal', s:'De rechter geeft een voorwaardelijke straf. Doet de dader binnen twee jaar weer iets, dan moet hij alsnog de cel in.' },
+    { d:'speciaal', s:'Een veelpleger krijgt een zware straf, zodat hij wel twee keer nadenkt voordat hij weer steelt.' },
+    { d:'generaal', s:'De rechter legt een hoge straf op en zegt erbij: "Iedereen moet weten dat geweld tegen hulpverleners niet wordt geaccepteerd."' },
+    { d:'generaal', s:'Een gemeente maakt bekend dat er bij vuurwerkoverlast streng gecontroleerd en hard gestraft wordt, zodat niemand het in zijn hoofd haalt.' },
+    { d:'generaal', s:'In de krant staat welke straf een winkeldief kreeg. Lezers denken: dat ga ik niet riskeren.' },
+    { d:'resocialisatie', s:'In de gevangenis volgt Kevin een opleiding tot lasser, zodat hij na zijn straf werk kan vinden.' },
+    { d:'resocialisatie', s:'Een jongen krijgt een leerstraf: een training over hoe hij met zijn boosheid omgaat.' },
+    { d:'resocialisatie', s:'De reclassering helpt een man na zijn straf aan een woning en een baan, zodat hij niet terugvalt.' },
+    { d:'resocialisatie', s:'Een verslaafde dader krijgt hulp om af te kicken, zodat hij na zijn straf een normaal leven kan leiden.' },
+    { d:'beveiliging', s:'Zolang de inbreker in de gevangenis zit, kan hij geen huizen leeghalen.' },
+    { d:'beveiliging', s:'Een man met een ernstige stoornis krijgt tbs, omdat hij anders een gevaar is voor anderen.' },
+    { d:'beveiliging', s:'Een dronken automobilist mag twee jaar niet rijden, zodat hij in die tijd geen ongelukken kan veroorzaken.' },
+    { d:'beveiliging', s:'Een man die zijn ex-vriendin bedreigde, mag niet meer in haar straat komen.' }
+  ];
+  var DOEL = {
+    vergelding:{ naam:'vergelding', u:'<b>Vergelding</b>: de dader krijgt leed terug voor het leed dat hij een ander aandeed. Hoe erger het misdrijf, hoe zwaarder de straf.' },
+    speciaal:{ naam:'afschrikking', hv:'speciale preventie: de dader zelf afschrikken', u:'<b>Afschrikking</b> van de dader zelf (speciale preventie): de straf moet ervoor zorgen dat hij het niet nog eens doet.' },
+    generaal:{ naam:'afschrikking', hv:'generale preventie: anderen afschrikken', u:'<b>Afschrikking</b> van anderen (generale preventie): als mensen zien welke straf erop staat, doen ze het zelf niet.' },
+    resocialisatie:{ naam:'resocialisatie', u:'<b>Resocialisatie</b>: de dader leert zich aan de regels te houden, zodat hij na zijn straf weer gewoon mee kan doen in de samenleving.' },
+    beveiliging:{ naam:'beveiliging van de samenleving', u:'<b>Beveiliging</b> van de samenleving: zolang de dader vastzit of iets niet mag, kan hij geen nieuwe slachtoffers maken.' }
+  };
+  function doel(n){
+    var x = kies(DOELSIT), keys = n === 3 ? ['vergelding', 'speciaal', 'generaal', 'resocialisatie', 'beveiliging'] : ['vergelding', 'speciaal', 'resocialisatie', 'beveiliging'];
+    function nm(k){ return n === 3 ? (DOEL[k].hv || DOEL[k].naam) : DOEL[k].naam; }
+    var goedK = n < 3 && x.d === 'generaal' ? 'speciaal' : x.d, f = anderen(keys, goedK, n === 1 ? 2 : 3);
+    return mk('straffen', { sleutel:'dl-' + DOELSIT.indexOf(x), vraag:'Welk doel van straffen past het best bij deze uitspraak?', beeld:sit('"' + x.s + '"'), goed:nm(goedK), fout:f.map(nm),
+      uitleg:DOEL[x.d].u + ' Niet ' + nm(f[0]) + ': ' + DOEL[f[0]].u.replace(/<[^>]+>/g, '').split(': ').slice(1).join(': ') });
+  }
+  var STRAFSIT = [
+    { g:'een taakstraf', s:'Milan moet 60 uur onbetaald werken in een park.', n:[1, 2, 3] },
+    { g:'een geldboete', s:'Lisa moet € 400 betalen aan de staat.', n:[1, 2, 3] },
+    { g:'een gevangenisstraf', s:'Een man moet twee jaar in de gevangenis zitten.', n:[1, 2, 3] },
+    { g:'een voorwaardelijke straf', s:'Een vrouw krijgt drie maanden cel, maar hoeft die niet uit te zitten als ze zich twee jaar lang aan de voorwaarden houdt.', n:[1, 2, 3] },
+    { g:'tbs', s:'Een man die door een ernstige stoornis iemand neerstak, wordt na zijn straf behandeld in een kliniek, omdat hij anders gevaarlijk blijft.', n:[1, 2, 3] },
+    { g:'een Halt-straf', s:'Een meisje van 13 moet na vuurwerkoverlast een paar uur helpen opruimen en een les volgen, zonder rechter.', n:[1, 2, 3] },
+    { g:'een ontzegging van de rijbevoegdheid', s:'Een automobilist die dronken reed, mag van de rechter een jaar geen auto rijden.', n:[2, 3] },
+    { g:'jeugddetentie', s:'Een jongen van 16 moet van de kinderrechter vier maanden in een justitiële jeugdinrichting zitten.', n:[2, 3] },
+    { g:'een PIJ-maatregel', s:'Een jongen van 17 met een ernstige gedragsstoornis wordt na een zwaar misdrijf voor behandeling in een justitiële jeugdinrichting geplaatst.', n:[3] },
+    { g:'een schadevergoedingsmaatregel', s:'De rechter bepaalt dat de dader de schade van het slachtoffer moet betalen aan de staat, die het geld aan het slachtoffer geeft.', n:[3] },
+    { g:'een ontnemingsmaatregel', s:'Een drugsdealer moet het geld terugbetalen dat hij met zijn drugshandel heeft verdiend.', n:[3] }
+  ];
+  function strafSoort(n){
+    var lijst = voor(STRAFSIT, n), x = kies(lijst), f = anderen(lijst.map(function(y){ return y.g; }), x.g, n === 1 ? 2 : 3);
+    var u = { 'een taakstraf':'Een <b>taakstraf</b> is onbetaald werk (werkstraf) of een cursus (leerstraf).', 'een geldboete':'Een <b>geldboete</b> is een bedrag dat je aan de staat betaalt.',
+      'een gevangenisstraf':'Een <b>gevangenisstraf</b> is een vrijheidsstraf in de gevangenis.', 'een voorwaardelijke straf':'Een <b>voorwaardelijke straf</b> hoef je niet uit te zitten zolang je je in de proeftijd aan de voorwaarden houdt.',
+      'tbs':'<b>Tbs</b> (terbeschikkingstelling) is een maatregel voor daders met een stoornis die gevaarlijk zijn: ze worden behandeld in een kliniek.',
+      'een Halt-straf':'Een <b>Halt-straf</b> is voor jongeren van 12 tot 18 bij lichte strafbare feiten, zonder rechter en zonder strafblad als ze hem goed afmaken.',
+      'een ontzegging van de rijbevoegdheid':'Een <b>ontzegging van de rijbevoegdheid</b> is een bijkomende straf: je mag een tijd niet rijden.',
+      'jeugddetentie':'<b>Jeugddetentie</b> is de vrijheidsstraf van het jeugdstrafrecht, in een justitiële jeugdinrichting.',
+      'een PIJ-maatregel':'De <b>PIJ-maatregel</b> (plaatsing in een inrichting voor jeugdigen) is een soort tbs voor jongeren: behandeling in een justitiële jeugdinrichting.',
+      'een schadevergoedingsmaatregel':'Bij een <b>schadevergoedingsmaatregel</b> betaalt de dader de schade aan de staat, en de staat geeft het geld aan het slachtoffer.',
+      'een ontnemingsmaatregel':'Met een <b>ontnemingsmaatregel</b> pakt de staat het geld af dat iemand met misdaad heeft verdiend ("pluk ze").' };
+    return mk('straffen', { sleutel:'ss-' + STRAFSIT.indexOf(x), vraag:'Welke straf of maatregel is dit?', beeld:sit(x.s), goed:x.g, fout:f, uitleg:u[x.g] + ' ' + u[f[0]].replace(/<[^>]+>/g, '') });
+  }
+  var GETAL = [
+    { n:[1, 2, 3], v:'Vanaf welke leeftijd kun je in Nederland strafrechtelijk vervolgd worden?', a:12, e:'jaar', mk:['10 jaar', '14 jaar', '16 jaar'],
+      u:'Vanaf <b>12 jaar</b> kun je vervolgd worden. Kinderen onder de 12 kunnen geen straf krijgen; wel kan de politie hun ouders aanspreken en hulp inschakelen.' },
+    { n:[1, 2, 3], v:'Het jeugdstrafrecht geldt voor jongeren vanaf 12 jaar. Tot welke leeftijd? Je moet jonger zijn dan …', a:18, e:'jaar', mk:['16 jaar', '21 jaar', '23 jaar'],
+      u:'Het jeugdstrafrecht geldt van <b>12 tot 18 jaar</b>. Het richt zich meer op opvoeden en begeleiden dan het strafrecht voor volwassenen.' },
+    { n:[1, 2, 3], v:'Hoeveel uur taakstraf mag een rechter een volwassene maximaal geven?', a:240, e:'uur', mk:['100 uur', '480 uur', '1000 uur'],
+      u:'Voor een volwassene is een taakstraf maximaal <b>240 uur</b>. Bij jongeren is een werkstraf of leerstraf maximaal 200 uur, een combinatie van beide maximaal 240 uur.' },
+    { n:[1, 2, 3], v:'Hoeveel uur mag een Halt-straf maximaal duren?', a:20, e:'uur', mk:['8 uur', '60 uur', '200 uur'],
+      u:'Een Halt-straf duurt maximaal <b>20 uur</b>. Het is een lichte straf voor jongeren van 12 tot 18, zonder rechter.' },
+    { n:[2, 3], v:'Een jongere krijgt alleen een werkstraf (onbetaald werk), zonder leerstraf. Hoeveel uur werkstraf mag de rechter in het jeugdstrafrecht maximaal geven?', a:200, e:'uur',
+      u:'In het jeugdstrafrecht is een werkstraf maximaal <b>200 uur</b>. Een leerstraf ook, en een combinatie van werkstraf en leerstraf maximaal 240 uur. Voor volwassenen is een taakstraf maximaal 240 uur.' },
+    { n:[2, 3], v:'Een jongen was 15 toen hij een zwaar misdrijf pleegde. Hoeveel maanden jeugddetentie kan hij maximaal krijgen?', a:12, e:'maanden',
+      u:'Wie bij het misdrijf jonger dan 16 was, kan maximaal <b>12 maanden</b> jeugddetentie krijgen. Voor jongeren van 16 en 17 is het maximum 24 maanden.' },
+    { n:[2, 3], v:'Een meisje was 17 toen ze een zwaar misdrijf pleegde. Hoeveel maanden jeugddetentie kan ze maximaal krijgen?', a:24, e:'maanden',
+      u:'Voor jongeren van 16 en 17 is jeugddetentie maximaal <b>24 maanden</b>. Wie jonger dan 16 was, kan maximaal 12 maanden krijgen.' },
+    { n:[3], v:'Met het adolescentenstrafrecht kan de rechter het jeugdstrafrecht ook gebruiken voor jongvolwassenen. Tot welke leeftijd? Ze moeten bij het misdrijf jonger zijn dan …', a:23, e:'jaar',
+      u:'Het adolescentenstrafrecht is er voor jongeren van 16 tot <b>23 jaar</b>. De rechter kan zo een 19-jarige volgens het jeugdstrafrecht straffen, of een 17-jarige bij een zwaar misdrijf volgens het strafrecht voor volwassenen.' },
+    { n:[3], v:'Hoeveel uur taakstraf mag de officier van justitie maximaal opleggen met een strafbeschikking?', a:180, e:'uur',
+      u:'Met een strafbeschikking mag de officier maximaal <b>180 uur</b> taakstraf opleggen. Een rechter mag een volwassene tot 240 uur geven.' },
+    { n:[3], v:'Tbs met dwangverpleging duurt eerst … jaar. Daarna kan de rechter het verlengen.', a:2, e:'jaar',
+      u:'Tbs met dwangverpleging duurt eerst <b>2 jaar</b>. Is de tbs’er daarna nog gevaarlijk, dan kan de rechter het steeds met één of twee jaar verlengen.' }
+  ];
+  function getal(n){
+    var x = kies(voor(GETAL, n));
+    if (n === 1) return mk('straffen', { sleutel:'gt-' + GETAL.indexOf(x), vraag:x.v, goed:x.a + ' ' + x.e, fout:x.mk.slice(0, 2), uitleg:x.u });
+    return iv('straffen', { sleutel:'gt-' + GETAL.indexOf(x), vraag:x.v, label:'antwoord', antwoord:x.a, eenheid:x.e, uitleg:x.u });
+  }
+  var STRAFLIJST = ['gevangenisstraf', 'taakstraf', 'geldboete', 'jeugddetentie', 'hechtenis'];
+  /* bij de maatregelen niet het woord maatregel op het kaartje, anders verraadt het kaartje zelf het vak */
+  var MAATLIJST = ['tbs', 'PIJ: plaatsing in een jeugdinrichting voor behandeling', 'de dader betaalt de schade via de staat aan het slachtoffer', 'crimineel verdiend geld afpakken (ontneming)', 'onttrekking aan het verkeer, zoals een wapen laten vernietigen'];
+  function strafMaatregel(n){
+    var s = H(STRAFLIJST).slice(0, 3), m = H(MAATLIJST).slice(0, 3), kaarten = H(s.concat(m)).map(function(t){ return { id:'k' + (STRAFLIJST.indexOf(t) >= 0 ? 's' + STRAFLIJST.indexOf(t) : 'm' + MAATLIJST.indexOf(t)), tekst:t }; });
+    return { onderdeel:'rechtsstaat: straffen', onderdeelNaam:DEEL.straffen, vorm:'sleep', sleutel:'sm-' + s.sort().join(',') + '|' + m.sort().join(','),
+      vraag:'Is het een <b>straf</b> of een <b>maatregel</b>?', opdracht:'Sleep elk kaartje naar het goede vak.', kaarten:kaarten,
+      vakken:[{ id:'straf', naam:'straf', uit:'reactie op de schuld van de dader', hoort:s.map(function(t){ return 'ks' + STRAFLIJST.indexOf(t); }) },
+        { id:'maat', naam:'maatregel', uit:'beveiligen of herstellen', hoort:m.map(function(t){ return 'km' + MAATLIJST.indexOf(t); }) }],
+      uitleg:'Een <b>straf</b> (gevangenisstraf, hechtenis, taakstraf, geldboete, jeugddetentie) is een reactie op de schuld van de dader. Een <b>maatregel</b> (zoals tbs, de PIJ-maatregel, schadevergoeding, ontneming van crimineel geld of onttrekking aan het verkeer) is bedoeld om de samenleving te beveiligen of iets te herstellen. Een maatregel kan ook als de dader niets kan worden aangerekend, bijvoorbeeld door een stoornis.',
+      antwoordTekst:'straf: ' + s.join(', ') + '; maatregel: ' + m.join(', ') };
+  }
+  function straffen(niveau){
+    var n = nr(niveau), r = Math.random();
+    if (n === 1) return r < .5 ? doel(n) : r < .8 ? strafSoort(n) : getal(n);
+    if (n === 2) return r < .4 ? doel(n) : r < .7 ? strafSoort(n) : getal(n);
+    return r < .35 ? doel(n) : r < .55 ? strafSoort(n) : r < .75 ? getal(n) : strafMaatregel(n);
+  }
+
+  /* ================= de aanpak van criminaliteit ================= */
+  var ORGAAN = [
+    { o:'de politie', t:'zoekt uit wie een misdrijf heeft gepleegd en houdt verdachten aan', n:[1, 2, 3] },
+    { o:'het Openbaar Ministerie', t:'beslist of een verdachte vervolgd wordt en eist straf op de zitting', n:[1, 2, 3] },
+    { o:'de rechter', t:'beslist of een verdachte schuldig is en welke straf hij krijgt', n:[1, 2, 3] },
+    { o:'Halt', t:'geeft jongeren van 12 tot 18 een straf voor lichte vergrijpen, zoals vandalisme, zodat ze geen strafblad krijgen', n:[1, 2, 3] },
+    { o:'de reclassering', t:'houdt toezicht op veroordeelden, regelt taakstraffen en geeft de rechter advies over een verdachte', n:[2, 3] },
+    { o:'de Dienst Justitiële Inrichtingen', t:'zorgt voor de gevangenissen en de justitiële jeugdinrichtingen', n:[2, 3] },
+    { o:'de Raad voor de Kinderbescherming', t:'onderzoekt bij een jonge verdachte hoe het thuis en op school gaat, en geeft advies aan de officier en de rechter', n:[2, 3] },
+    { o:'de burgemeester', t:'heeft het gezag over de politie bij het handhaven van de openbare orde, bijvoorbeeld bij een voetbalwedstrijd', n:[2, 3] },
+    { o:'Slachtofferhulp Nederland', t:'helpt slachtoffers na een misdrijf, bijvoorbeeld bij het spreken op de zitting of het vragen van schadevergoeding', n:[2, 3] },
+    { o:'de minister van Justitie en Veiligheid', t:'is verantwoordelijk voor het beleid tegen criminaliteit en maakt wetsvoorstellen over straffen', n:[3] },
+    { o:'het CJIB', t:'int boetes en zorgt dat opgelegde geldbedragen betaald worden', n:[3] }
+  ];
+  function orgaan(n){
+    var lijst = voor(ORGAAN, n), x = kies(lijst), f = anderen(lijst, x, n === 1 ? 2 : 3);
+    return mk('aanpak', { sleutel:'or-' + ORGAAN.indexOf(x), vraag:'Wie doet dit? <b>' + cap(x.t) + '.</b>', goed:cap(x.o), fout:f.map(function(y){ return cap(y.o); }),
+      uitleg:cap(x.o) + ' ' + x.t + '. ' + cap(f[0].o) + ' doet iets anders: ' + f[0].t + '.' });
+  }
+  var PREREP = [
+    { p:true, s:'De gemeente zet meer straatverlichting in een donker park.' }, { p:true, s:'Leerlingen krijgen op school les over de gevaren van online oplichting.' },
+    { p:true, s:'Een winkel hangt camera’s op en zet beveiligingspoortjes bij de uitgang.' }, { p:true, s:'Buurtbewoners lopen ’s avonds een ronde als buurtpreventieteam.' },
+    { p:true, s:'De gemeente opent een jongerencentrum en organiseert sport voor jongeren die op straat rondhangen.' }, { p:true, s:'De politie geeft tips om je fiets met twee sloten vast te zetten.' },
+    { p:true, s:'Huiseigenaren krijgen subsidie voor betere sloten op deuren en ramen.' }, { p:true, s:'Supermarkten zetten alcohol achter de kassa, zodat jongeren het niet zomaar meenemen.' },
+    { p:false, s:'De politie houdt een groep inbrekers op heterdaad aan.' }, { p:false, s:'De rechter geeft een fietsendief een taakstraf.' },
+    { p:false, s:'Het OM vervolgt een man die zijn buurman heeft mishandeld.' }, { p:false, s:'De politie doet een inval in een drugslab.' },
+    { p:false, s:'Een winkeldief krijgt een boete.' }, { p:false, s:'De politie onderzoekt een inbraak en verhoort de verdachte.' },
+    { p:false, s:'Een veelpleger moet van de rechter twee jaar de gevangenis in.' }
+  ];
+  function preRep(n){
+    var x = kies(PREREP), opt = ['preventie: voorkomen dat het gebeurt', 'repressie: optreden nadat het gebeurd is'];
+    return mk('aanpak', { sleutel:'pr-' + PREREP.indexOf(x), vraag:'Is dit preventie of repressie?', beeld:sit(x.s), opties:opt, goed:opt[x.p ? 0 : 1],
+      uitleg:x.p ? 'Dit is <b>preventie</b>: de maatregel moet voorkomen dat er een misdrijf gebeurt. Er is nog niemand opgepakt of gestraft.' :
+        'Dit is <b>repressie</b>: er is al een misdrijf gepleegd, en de politie, het OM of de rechter treden op tegen de dader. Preventie zou zijn: zorgen dat het niet gebeurt.' });
+  }
+  var STROMING = {
+    lib:{ naam:'liberalisme', kgt:'liberalisme (vrijheid en eigen verantwoordelijkheid)', u:'Het <b>liberalisme</b> gaat uit van vrijheid en eigen verantwoordelijkheid: wie een misdrijf pleegt, is daar zelf verantwoordelijk voor en moet stevig gestraft worden. De overheid moet zorgen voor veiligheid, met genoeg politie.' },
+    soc:{ naam:'socialisme', kgt:'socialisme (gelijkheid, oorzaken aanpakken)', u:'Het <b>socialisme</b> (de sociaaldemocratie) zoekt de oorzaken van criminaliteit vooral in de samenleving, zoals armoede, werkloosheid en achterstand. Pak die aan, en help daders om na hun straf weer mee te doen.' },
+    conf:{ naam:'confessionalisme', kgt:'confessionalisme (normen en waarden, samen verantwoordelijk)', u:'Het <b>confessionalisme</b> (de christendemocratie) legt de nadruk op normen en waarden en op gedeelde verantwoordelijkheid van gezin, school, kerk en vereniging. Straf hoort erbij, maar ook het goedmaken met het slachtoffer.' }
+  };
+  var STROMSIT = [
+    { s:'lib', t:'Iedereen is zelf verantwoordelijk voor wat hij doet. Wie een misdrijf pleegt, moet daar stevig voor gestraft worden.' },
+    { s:'lib', t:'De overheid moet vooral zorgen voor veiligheid: meer politie op straat en snellere straffen.' },
+    { s:'lib', t:'Vrijheid is belangrijk, maar wie die vrijheid misbruikt om anderen schade te doen, verdient een harde aanpak.' },
+    { s:'lib', t:'Een veelpleger moet niet steeds een nieuwe kans krijgen: na de derde keer moet hij langer de cel in.' },
+    { s:'soc', t:'Criminaliteit heeft vaak te maken met armoede, werkloosheid en achterstand. Pak die oorzaken aan.' },
+    { s:'soc', t:'Investeer in goed onderwijs, werk en jongerenwerk in arme wijken. Dat voorkomt meer misdaad dan zwaardere straffen.' },
+    { s:'soc', t:'Help gevangenen aan een opleiding en een baan, zodat ze na hun straf niet terugvallen.' },
+    { s:'soc', t:'Het is oneerlijk dat fraude door rijke bedrijven minder hard wordt aangepakt dan diefstal door arme mensen.' },
+    { s:'conf', t:'Gezinnen, kerken, scholen en verenigingen moeten samen normen en waarden doorgeven. Dan ontstaat er minder criminaliteit.' },
+    { s:'conf', t:'Een dader moet gestraft worden, maar moet ook de kans krijgen om het goed te maken met het slachtoffer.' },
+    { s:'conf', t:'Ouders zijn als eerste verantwoordelijk voor de opvoeding. Help gezinnen die het moeilijk hebben.' },
+    { s:'conf', t:'Respect voor elkaar en zorg voor je naasten vormen de basis van een veilige samenleving.' }
+  ];
+  function stroming(n){
+    var x = kies(STROMSIT), keys = ['lib', 'soc', 'conf'], opt = keys.map(function(k){ return n === 2 ? STROMING[k].kgt : STROMING[k].naam; });
+    var f = keys.filter(function(k){ return k !== x.s; })[0];
+    return mk('aanpak', { sleutel:'sr-' + STROMSIT.indexOf(x), vraag:'Bij welke politieke stroming past deze visie op criminaliteit het best?', beeld:sit('"' + x.t + '"'), opties:opt, goed:opt[keys.indexOf(x.s)],
+      uitleg:STROMING[x.s].u + ' ' + cap(STROMING[f].naam) + ' legt de nadruk ergens anders op.' });
+  }
+  var EFWE = [
+    { e:true, s:'Uit onderzoek blijkt dat camera’s in uitgaansgebieden weinig geweld voorkomen.' },
+    { e:true, s:'Na de start van het buurtpreventieteam daalde het aantal inbraken in de wijk met een derde.' },
+    { e:true, s:'Jongeren die een leerstraf kregen, plegen daarna minder vaak een nieuw misdrijf dan jongeren die vast zaten.' },
+    { e:true, s:'Zwaardere straffen helpen nauwelijks, want de meeste daders denken van tevoren niet na over de straf.' },
+    { e:true, s:'Sinds er meer straatverlichting is, worden er in het park minder mensen beroofd.' },
+    { e:false, s:'Camera’s op elke straathoek tasten de privacy van gewone burgers aan.' },
+    { e:false, s:'Het is onrechtvaardig om iemand voor een kleine diefstal jarenlang op te sluiten.' },
+    { e:false, s:'Als de politie bepaalde groepen vaker controleert, is dat in strijd met gelijke behandeling.' },
+    { e:false, s:'Een straf moet ook recht doen aan het leed van het slachtoffer; een taakstraf voor zwaar geweld voelt daarom verkeerd.' },
+    { e:false, s:'Een samenleving waarin buren elkaar voortdurend in de gaten houden, voelt niet meer vrij.' }
+  ];
+  function effectWens(n){
+    var x = kies(EFWE), opt = ['effectiviteit: werkt de maatregel?', 'wenselijkheid: past de maatregel bij onze waarden?'];
+    return mk('aanpak', { sleutel:'ew-' + EFWE.indexOf(x), vraag:'Gaat dit argument over de <b>effectiviteit</b> of over de <b>wenselijkheid</b> van een maatregel?', beeld:sit('"' + x.s + '"'), opties:opt, goed:opt[x.e ? 0 : 1],
+      uitleg:x.e ? 'Dit gaat over <b>effectiviteit</b>: helpt de maatregel om criminaliteit te verminderen? Zulke argumenten kun je met onderzoek en cijfers controleren.' :
+        'Dit gaat over <b>wenselijkheid</b>: vinden we de maatregel goed, ook als hij werkt? Hier spelen waarden mee, zoals privacy, rechtvaardigheid en gelijke behandeling.' });
+  }
+  function aanpak(niveau){
+    var n = nr(niveau), r = Math.random();
+    if (n === 1) return r < .5 ? orgaan(n) : preRep(n);
+    if (n === 2) return r < .35 ? orgaan(n) : r < .65 ? preRep(n) : stroming(n);
+    return r < .25 ? orgaan(n) : r < .4 ? preRep(n) : r < .7 ? stroming(n) : effectWens(n);
+  }
+
+  var SOORTEN = { route:route, volgorde:volgorde, criminaliteit:criminaliteit, recht:recht, rechten:rechten, straffen:straffen, aanpak:aanpak };
+  var MIX = ['route', 'route', 'route', 'volgorde', 'criminaliteit', 'criminaliteit', 'recht', 'rechten', 'rechten', 'straffen', 'straffen', 'aanpak'];
+  VAKSPEL.maak({
+    id:'rechtsstaat', naam:'Van aangifte tot uitspraak', vak:'burg', kleur:'#5a4fa0',
+    hand:'eerst bewijzen, dan straffen',
+    lead:'Een gestolen fiets, een klap na de voetbal, een reeks inbraken. Wat gebeurt er daarna? Je volgt een zaak van de aangifte tot de uitspraak en beantwoordt bij elke stap een vraag. Daarnaast oefen je de rest van het examenonderwerp criminaliteit en rechtsstaat: criminaliteit meten en verklaren, soorten recht, de rechten van de verdachte, straffen en maatregelen, en de aanpak van criminaliteit.',
+    leerdoel:'Je leert hoe een strafzaak verloopt en wie wat beslist, welke rechten een verdachte heeft, hoe je criminaliteit meet en verklaart, en welke straffen en maatregelen er zijn en waarvoor.',
+    minuten:8,
+    hoe:[
+      { kop:'Volg de zaak', tekst:'Bij <b>de zaak volgen</b> loop je mee met één zaak: aangifte, opsporing, verhoor, de officier van justitie, de zitting en de uitspraak. Bij elke stap hoort een vraag.' },
+      { kop:'Wie beslist wat', tekst:'De <b>politie</b> spoort op, de <b>officier van justitie</b> beslist over vervolging en eist een straf, de <b>advocaat</b> verdedigt en de <b>rechter</b> beslist over schuld en straf.' },
+      { kop:'Zeven onderdelen', tekst:'Ook de rechtsgang op volgorde, criminaliteit meten en verklaren, soorten recht, de rechtsstaat, straffen en maatregelen, en de aanpak van criminaliteit. Bij elke opgave lees je waarom.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'Korte vragen met drie antwoorden: wie doet wat, de rechten van de verdachte, het dark number, oorzaken en de doelen van straffen.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Ook voorlopige hechtenis, de strafbeschikking, misdrijf of overtreding, verklaringen voor criminaliteit en politieke stromingen. Getallen en begrippen typ je zelf.' },
+        { id:'hv', naam:'havo en vwo', uit:'Examenstijl op het hoogste niveau: bewaring en gevangenhouding, soorten uitspraken, aangiftebereidheid en trends in tabellen, straf of maatregel, effectiviteit en wenselijkheid.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' },
+        { id:'route', naam:'de zaak volgen', uit:'Eén zaak, stap voor stap: van het feit en de aangifte tot de uitspraak, met bij elke stap een vraag.' },
+        { id:'volgorde', naam:'de rechtsgang op volgorde', uit:'Sleep de stappen van een zaak in de goede volgorde.' },
+        { id:'criminaliteit', naam:'criminaliteit meten en verklaren', uit:'Het dark number, de slachtofferenquête, cijfers in een tabel, soorten criminaliteit en oorzaken.' },
+        { id:'recht', naam:'soorten recht', uit:'Strafrecht, civiel recht of bestuursrecht, en misdrijf of overtreding.' },
+        { id:'rechten', naam:'rechtsstaat en rechten van de verdachte', uit:'Zwijgrecht, de onschuldpresumptie, het legaliteitsbeginsel, een onafhankelijke rechter en de scheiding der machten.' },
+        { id:'straffen', naam:'straffen en maatregelen', uit:'Taakstraf, boete, gevangenisstraf, tbs, het jeugdstrafrecht en Halt, en de doelen van straffen.' },
+        { id:'aanpak', naam:'de aanpak van criminaliteit', uit:'Wie doet wat, preventie of repressie, de visies van politieke stromingen en effectiviteit tegenover wenselijkheid.' } ] }
+    ],
+    aantal:10,
+    maak:function(keuze, nrOpg){
+      var soort = keuze.soort === 'alles' ? kies(MIX) : keuze.soort;
+      var o = SOORTEN[soort](keuze.niveau), oud = o.na;
+      o.na = function(vak){ document.body.classList.toggle('rs-stap', !!o.stapLijst); if (oud) oud(vak); };
+      return o;
+    },
+    uitleg:{ doel:'Criminaliteit en rechtsstaat voor het examen maatschappijkunde: de rechtsgang van aangifte tot uitspraak, de rechten van de verdachte, criminaliteit meten en verklaren, soorten recht, straffen en maatregelen en de aanpak van criminaliteit.', tijd:'twintig opgaven per ronde, of kies 10 of 30', bediening:'Kies het antwoord dat klopt (of druk op 1 tot 4). Bij een getal of begrip typ je het antwoord en druk je op Nakijken. Bij de volgorde sleep je de stappen naar het goede cijfer; op een telefoon tik je een stap aan en dan het cijfer.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>

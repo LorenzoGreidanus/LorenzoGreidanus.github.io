@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Water in Nederland, versie 1.0: op vakspel.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Water in Nederland &middot; meneer Greidanus</title>
+<meta name="description" content="Examenstof aardrijkskunde vmbo over water: rivieren en afvoergrafieken, de rivier in doorsnede, zee en kust, laag Nederland met polders en NAP, en zoet water en droogte.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Water in Nederland">
+<meta property="og:description" content="Rivieren en afvoer, de rivier in doorsnede, zee en kust, polders en NAP, zoet water en droogte: de examenstof water voor het vmbo.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/water.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M47.2 9.1 C71 7.6 89.6 24.4 89.9 47.6 C90.2 71.6 75.4 92.1 51.4 92.6 C27.5 93.1 9.4 77.2 9.9 53.3 C10.4 29.4 23.4 10.6 47.2 9.1Z' fill='%232f7d52'/><g transform='translate(50 51) scale(2.2) translate(-12 -12)' fill='none' stroke='%23ffffff' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'><path d='M12 3c-2.5 3.2-4 5.4-4 7.2a4 4 0 0 0 8 0c0-1.8-1.5-4-4-7.2z'/><path d='M3 18c2 1.5 4 1.5 6 0s4-1.5 6 0 4 1.5 6 0'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+/* grafieken en kaarten: even breed als de kaart, tot 420 px */
+.beeld svg.wgr{width:100%;max-width:min(100%,420px);height:auto;display:block}
+.beeld .twee{display:grid;gap:10px;width:100%;justify-items:center}
+/* de doorsnede en de kaart zijn tekeningen met vaste lichte vlakken (water, gras, klei) en vaste donkere tekst */
+svg.ds{width:100%;max-width:min(100%,560px);height:auto;display:block;margin:0 auto}
+.bijschrift{text-align:center;color:var(--muted);font-size:.84rem;margin:6px 0 0}
+/* aanwijzen in de doorsnede: stroken die je aantikt */
+.dswrap svg .strook{fill:transparent;cursor:pointer;outline:none}
+.dswrap svg .strook:hover{fill:rgba(32,78,207,.12)}
+.dswrap svg .strook:focus-visible{stroke:#204ECF;stroke-width:5}
+.dswrap svg .strook.kies{fill:rgba(32,78,207,.26);stroke:#204ECF;stroke-width:4}
+.dswrap svg .strook.goed{fill:rgba(47,125,82,.38);stroke:#2f7d52;stroke-width:4}
+.dswrap svg .strook.mis{fill:rgba(192,57,43,.32);stroke:#c0392b;stroke-width:4}
+.dswrap.klaar svg .strook{cursor:default;pointer-events:none}
+:root{--lijn2:#B83D20}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--lijn2:#F26749}}
+:root[data-theme="dark"]{--lijn2:#F26749}
+.tekenuit{text-align:center;color:var(--muted);font-size:.9rem;margin:8px 0 0}
+/* een tabel in de bron: smal genoeg voor een telefoon */
+.beeld table.wt td,.beeld table.wt th{min-width:0;padding:7px 10px}
+.beeld table.wt td{font-variant-numeric:tabular-nums}
+.beeld .bron{max-width:440px;font-size:.95rem;line-height:1.45;background:var(--kaart2);border-radius:12px;padding:10px 14px;margin:0 0 8px}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  function tussen(a, b){ return a + Math.floor(Math.random() * (b - a + 1)); }
+  function rond(x, n){ var f = Math.pow(10, n || 0); return Math.round(x * f) / f; }
+  /* een getal met een komma, zonder punt voor duizendtallen (dan kun je het precies zo intypen) */
+  function net(x){ return String(rond(x, 2)).replace('.', ','); }
+  function napKort(x){ x = rond(x, 2); return 'NAP ' + (x < 0 ? '−' : x > 0 ? '+' : '') + net(Math.abs(x)) + ' m'; }
+  function napZin(x){ x = rond(x, 2); return x < 0 ? net(-x) + ' m onder NAP' : x > 0 ? net(x) + ' m boven NAP' : 'precies op NAP'; }
+  function cap(t){ return t.charAt(0).toUpperCase() + t.slice(1); }
+  function weeg(l){ var som = 0, i; for (i = 0; i < l.length; i++) som += l[i][1]; var r = Math.random() * som; for (i = 0; i < l.length; i++){ r -= l[i][1]; if (r < 0) return l[i][0]; } return l[l.length - 1][0]; }
+  function letter(niveau){ return niveau === 'bb' ? 'b' : niveau === 'kgt' ? 'k' : 'h'; }
+  function past(it, niveau){ return it.n.indexOf(letter(niveau)) >= 0; }
+
+  var DEEL = {
+    rivier:{ od:'water: rivieren', naam:'rivieren en afvoer' },
+    doorsnede:{ od:'water: doorsnede', naam:'de rivier in doorsnede' },
+    kust:{ od:'water: kust', naam:'zee en kust' },
+    laag:{ od:'water: laag Nederland', naam:'laag Nederland' },
+    zoet:{ od:'water: zoet water', naam:'zoet water en droogte' }
+  };
+  function basis(deel){ return { onderdeel:DEEL[deel].od, onderdeelNaam:DEEL[deel].naam }; }
+  function mk(deel, extra){ return Object.assign(basis(deel), { vorm:'meerkeuze' }, extra); }
+  function inv(deel, extra){ return Object.assign(basis(deel), { vorm:'invul' }, extra); }
+
+  /* ================= de lijsten =================
+     n: voor welke niveaus (b = vmbo-bb, k = kgt en tl, h = havo en vwo).
+     o[0] is goed, o[1] het verleidelijke foute antwoord; f zegt waarom dat niet klopt.
+     Op vmbo-bb staan er drie antwoorden, anders vier. */
+  var LIJST = {
+    rivier:[
+      { n:'bk', v:'Waar begint een rivier?', o:['bij de bron','bij de monding','in de delta','in de uiterwaard'], u:'De bron is de plek waar een rivier begint, vaak in de bergen of de heuvels.', f:'De monding is juist het eind: daar stroomt de rivier in zee, in een meer of in een andere rivier.' },
+      { n:'bk', v:'Wat is de monding van een rivier?', o:['de plek waar de rivier in zee, een meer of een andere rivier uitkomt','de plek waar de rivier begint','het land tussen de rivier en de dijk','een rivier die in een grotere rivier uitkomt'], u:'Bij de monding houdt de rivier op: het water stroomt in zee, in een meer of in een grotere rivier.', f:'De plek waar de rivier begint, heet de bron.' },
+      { n:'bk', v:'Wat is het stroomgebied van een rivier?', o:['het hele gebied waarvan het regenwater naar die rivier stroomt','alleen de rivier zelf en haar oevers','het gebied dat bij hoogwater onder water loopt','het stuk rivier waar schepen varen'], u:'Alle regen die in het stroomgebied valt, komt uiteindelijk in die rivier of in haar zijrivieren terecht.', f:'Het stroomgebied is veel groter dan de rivier zelf: het gaat om al het land waarvan het water naar de rivier stroomt.' },
+      { n:'bk', v:'Wat is een zijrivier?', o:['een rivier die uitkomt in een grotere rivier','een rivier die naast de dijk stroomt','een gegraven kanaal voor schepen','de laatste tak van een rivier bij zee'], u:'Een zijrivier voert water naar een grotere rivier. De Moezel is bijvoorbeeld een zijrivier van de Rijn.', f:'Een rivier stroomt altijd tussen de dijken, niet ernaast; zijrivier gaat over waar het water heen stroomt.' },
+      { n:'bk', v:'Waar komt het water van een regenrivier vandaan?', o:['vooral van regen','vooral van smeltende sneeuw en gletsjers','vooral van zeewater','vooral van water uit de duinen'], u:'Een regenrivier krijgt zijn water van regen. De Maas en de Schelde zijn regenrivieren.', f:'Smeltwater uit de bergen hoort bij een gemengde rivier, zoals de Rijn.' },
+      { n:'bk', v:'De Rijn is een gemengde rivier. Wat betekent dat?', o:['hij krijgt water van regen en van smeltwater uit de Alpen','hij stroomt door meer dan één land','hij heeft zoet en zout water','hij heeft een zomerbed en een winterbed'], u:'Gemengd zegt waar het water vandaan komt: regen, en smeltende sneeuw en gletsjers in de Alpen.', f:'Dat de Rijn door veel landen stroomt klopt, maar daar gaat het woord gemengd niet over.' },
+      { n:'bk', v:'Waar ontspringt de Rijn?', o:['in de Alpen in Zwitserland','in de Ardennen in België','in het noordoosten van Frankrijk','in Limburg'], u:'De Rijn begint in de Zwitserse Alpen. Daarom krijgt hij ook smeltwater.', f:'In de Ardennen stromen wel zijrivieren van de Maas, maar de Rijn begint in de Alpen.' },
+      { n:'bk', v:'Waar ontspringt de Maas?', o:['in Frankrijk','in Zwitserland','in Duitsland','in Nederland'], u:'De Maas begint in het noordoosten van Frankrijk en stroomt via België naar Nederland. Hij krijgt alleen regenwater: een regenrivier.', f:'In Zwitserland, in de Alpen, ontspringt de Rijn.' },
+      { n:'bk', v:'Bij welke plaats stroomt de Rijn Nederland binnen?', o:['bij Lobith','bij Eijsden','bij Vlissingen','bij Hoek van Holland'], u:'Bij Lobith in Gelderland komt de Rijn ons land binnen. Daar meet Rijkswaterstaat hoeveel water de Rijn aanvoert.', f:'Bij Eijsden in Limburg komt de Maas Nederland binnen.' },
+      { n:'bk', v:'Wanneer heeft de Maas meestal het minste water?', o:['aan het eind van de zomer','midden in de winter','in het vroege voorjaar','in december'], u:'In de zomer verdampt er veel water en nemen planten veel water op. Er komt dan weinig regenwater in de rivier, en de Maas krijgt geen smeltwater.', f:'In de winter verdampt er weinig, dus komt veel regen in de rivier terecht: dan is de afvoer juist hoog.' },
+      { n:'b', v:'Wat is hoogwater op een rivier?', o:['er stroomt heel veel water door de rivier en het water staat hoog','het water staat heel laag','de rivier is bevroren'], u:'Bij hoogwater komt er veel meer water dan normaal, bijvoorbeeld na lange regen. De uiterwaarden lopen dan onder.', f:'Heel laag water heet laagwater.' },
+      { n:'b', v:'Wat is een probleem bij laagwater op de Rijn?', o:['schepen kunnen minder lading meenemen','de uiterwaarden lopen onder','de dijken kunnen doorbreken'], u:'Bij laagwater is de rivier ondiep. Schepen mogen dan minder zwaar beladen zijn, anders lopen ze vast.', f:'Ondergelopen uiterwaarden horen bij hoogwater, niet bij laagwater.' },
+      { n:'bk', v:'Wat is grondwater?', o:['water dat in de bodem zit, tussen het zand en de klei','water in sloten en rivieren','water dat uit de lucht valt','zout water onder de zee'], u:'Regen zakt in de grond en vult de ruimtes tussen de zandkorrels. Dat is grondwater.', f:'Water in sloten en rivieren heet oppervlaktewater.' },
+      { n:'bk', v:'Wat gebeurt er bij verdamping?', o:['water wordt door warmte waterdamp en gaat de lucht in','waterdamp wordt weer water en vormt wolken','water zakt in de bodem','water stroomt naar zee'], u:'Door de warmte van de zon wordt water uit zee, meren en planten waterdamp.', f:'Waterdamp die weer water wordt, heet condensatie: zo ontstaan wolken.' },
+      { n:'kh', v:'Waarom heeft de Rijn in de zomer meer water dan de Maas?', o:['de Rijn krijgt in het voorjaar en de zomer smeltwater uit de Alpen','in Duitsland regent het in de zomer veel meer','de Maas wordt in de zomer afgesloten met sluizen','de Rijn krijgt zeewater via de Waddenzee'], u:'Sneeuw en gletsjers in de Alpen smelten in het voorjaar en de zomer. Dat smeltwater vult de Rijn aan, ook als het weinig regent. De Maas heeft dat niet.', f:'Het verschil komt niet door meer regen, maar door het smeltwater.' },
+      { n:'kh', v:'In welke drie rivieren splitst de Rijn zich in Nederland?', o:['Waal, Nederrijn (Lek) en IJssel','Maas, Waal en IJssel','Waal, Lek en Schelde','IJssel, Vecht en Maas'], u:'Bij de Pannerdensche Kop splitst de Rijn in de Waal en het Pannerdensch Kanaal. Dat splitst daarna in de Nederrijn (verderop de Lek) en de IJssel.', f:'De Maas is een eigen rivier uit Frankrijk en geen tak van de Rijn.' },
+      { n:'kh', v:'Welke tak van de Rijn voert het meeste water af?', o:['de Waal','de IJssel','de Nederrijn','de Lek'], u:'Ongeveer twee derde van het Rijnwater stroomt via de Waal. Daarom varen daar ook de meeste schepen naar Duitsland.', f:'De IJssel krijgt maar een klein deel van het Rijnwater.' },
+      { n:'kh', v:'Wat is de afvoer van een rivier?', o:['de hoeveelheid water die per seconde langs een punt stroomt','de snelheid van het water in kilometer per uur','de hoogte van het water ten opzichte van NAP','het water dat uit een polder wordt gepompt'], u:'Afvoer meet je in kubieke meter per seconde (m³/s): hoeveel water er elke seconde langs stroomt.', f:'De hoogte van het water is de waterstand; dat is iets anders dan de afvoer.' },
+      { n:'kh', v:'Wat is een waterscheiding?', o:['de grens tussen twee stroomgebieden','een dam die zoet en zout water scheidt','de plek waar een rivier zich splitst','een sluis tussen twee kanalen'], u:'Aan de ene kant van een waterscheiding stroomt het water naar de ene rivier, aan de andere kant naar een andere. Vaak is het een bergkam.', f:'Een dam tussen zoet en zout water is een afsluitdam of kering, geen waterscheiding.' },
+      { n:'kh', v:'In een stad zijn veel straten en daken. Wat gebeurt er met de regen bij een hevige bui?', o:['die stroomt snel weg naar riool en sloot, want hij kan niet in de grond zakken','die zakt snel in de grond, want stenen laten water door','die verdampt meteen van de warme stenen','die blijft op de daken liggen tot het droog is'], u:'Op verharding kan water niet infiltreren. Het stroomt snel af, zodat riolen en sloten in korte tijd heel veel water krijgen.', f:'Stenen en asfalt laten bijna geen water door; daardoor ontstaat juist wateroverlast.' },
+      { n:'kh', v:'Welk land ligt niet in het stroomgebied van de Rijn?', o:['Spanje','Zwitserland','Duitsland','Frankrijk'], u:'Het stroomgebied van de Rijn ligt onder meer in Zwitserland, Oostenrijk, Duitsland, Frankrijk, Luxemburg en Nederland. Spanje ligt er ver buiten.', f:'Zwitserland hoort er zeker bij: daar ligt de bron van de Rijn.' },
+      { n:'kh', v:'Na weken regen valt er in Duitsland nog een flinke bui. Waarom stijgt de Rijn dan extra snel?', o:['de bodem is verzadigd, dus de regen stroomt meteen af naar de rivier','de bodem is droog en hard, dus de regen verdampt niet','na veel regen smelt de sneeuw in de Alpen niet meer','na een natte periode is de rivier juist leeg'], u:'Een verzadigde bodem kan geen water meer opnemen. Alle nieuwe regen stroomt meteen naar beken en rivieren.', f:'Hier gaat het om een natte bodem na weken regen, niet om een droge.' },
+      { n:'h', v:'In Duitsland zijn rivierbochten afgesneden en uiterwaarden ingedijkt. Wat betekent dat voor een hoogwatergolf in Nederland?', o:['de golf komt sneller en hoger bij ons aan','de golf komt later en lager aan','de golf wordt in Duitsland helemaal opgevangen','er verandert niets, want het is evenveel water'], u:'Een kortere rivier zonder ruimte voert het water sneller af, en er is minder ruimte om water tijdelijk op te slaan. De top komt dus eerder en hoger aan.', f:'Later en lager zou gebeuren als er juist meer bochten en meer ruimte waren.' },
+      { n:'h', v:'In de Alpen valt door klimaatverandering vaker regen in plaats van sneeuw, en de gletsjers krimpen. Wat betekent dat voor de Rijn?', o:['meer water in de winter en minder in de zomer: hij gaat meer op een regenrivier lijken','blijvend meer water in de zomer, want de gletsjers smelten sneller','minder water in de winter, want er valt minder sneeuw','niets, want de neerslag blijft gelijk'], u:'Regen stroomt meteen af, dus de winterafvoer stijgt. Sneeuw en gletsjerijs leveren pas in de zomer water; minder sneeuw en kleinere gletsjers geven dus minder smeltwater in de zomer.', f:'Gletsjers die sneller smelten geven even meer water, maar als ze kleiner worden, neemt het smeltwater juist af.' },
+      { n:'h', v:'Waarom duurt het een paar dagen voordat regen in Duitsland als hoogwater bij Lobith aankomt?', o:['het water moet eerst via beken, zijrivieren en de Rijn honderden kilometers stromen','het water zakt eerst in de grond en komt pas na maanden boven','de stuwen in Duitsland houden al het water een week vast','het regenwater moet eerst verdampen en opnieuw vallen'], u:'Het stroomgebied is groot: water uit Zwitserland en Duitsland legt een lange weg af. Daardoor ziet Rijkswaterstaat een hoogwatergolf dagen van tevoren aankomen.', f:'Grondwater stroomt wel heel langzaam, maar een hoogwatergolf komt van water dat over de grond en door de rivieren stroomt.' },
+      { n:'h', v:'In juli 2021 overstroomden de Geul en de Maas in Limburg, midden in de zomer. Hoe kon dat bij een regenrivier?', o:['er viel in korte tijd extreem veel regen in een heuvelachtig gebied, en dat stroomde snel af','er kwam ineens veel smeltwater uit de Alpen','de zee drukte het water de Maas op','de dijken langs de Maas waren te hoog'], u:'Een regenrivier reageert snel op regen. In de heuvels van Zuid-Limburg en het gebied erachter stroomde de extreme regen snel naar beken en rivieren.', f:'De Maas krijgt geen smeltwater uit de Alpen; dat is juist het verschil met de Rijn.' },
+      { n:'h', v:'Bij laagwater op de Rijn dringt zout zeewater verder het land in via de Nieuwe Waterweg. Waarom?', o:['er stroomt minder zoet rivierwater naar zee dat het zoute water terugduwt','de zee is bij droogte zouter','bij laagwater staan de keringen open','laag rivierwater verdampt sneller en wordt zout'], u:'Normaal duwt het rivierwater het zoute water terug. Bij een lage afvoer is die tegendruk kleiner en schuift de zouttong verder landinwaarts. Dan kunnen inlaten voor drinkwater en landbouw zout water binnenkrijgen.', f:'De zee wordt bij droogte niet zouter; het verschil zit in hoeveel zoet water er tegenin stroomt.' }
+    ],
+    doorsnede:[
+      { n:'bk', v:'Wat is een uiterwaard?', o:['het land tussen de rivier en de dijk','het land achter de dijk waar mensen wonen','de bodem van de rivier','een eiland in de rivier'], u:'De uiterwaard ligt buitendijks, tussen het zomerbed en de winterdijk. Bij hoogwater loopt hij onder.', f:'Het land achter de dijk heet binnendijks land; dat moet juist droog blijven.' },
+      { n:'bk', v:'Waarvoor dienen kribben?', o:['ze houden het water in het midden van de rivier, zodat de vaargeul diep genoeg blijft','ze houden de zee tegen bij storm','ze pompen water uit de polder','ze zijn een aanlegplaats voor schepen'], u:'Kribben zijn stenen dammetjes haaks op de oever. Het water stroomt daardoor sneller in het midden, zodat de vaargeul diep blijft en de oever niet wegspoelt.', f:'Tegen de zee bij storm helpen dijken, duinen en stormvloedkeringen, geen kribben.' },
+      { n:'bk', v:'Wat is het winterbed van een rivier?', o:['het zomerbed samen met de uiterwaarden','alleen de uiterwaarden','het land achter de winterdijk','de rivier als hij bevroren is'], u:'Bij hoogwater, vaak in de winter, gebruikt de rivier het zomerbed én de uiterwaarden: samen het winterbed, tussen de winterdijken.', f:'Alleen de uiterwaarden is te weinig: het zomerbed hoort er ook bij.' },
+      { n:'kh', v:'Wat is een zomerkade?', o:['een lage dijk in de uiterwaard die bij gewoon hoog water de uiterwaard droog houdt','de hoge dijk die bij hoogwater het land beschermt','een kade waar schepen in de zomer aanleggen','een dam die de rivier in de zomer afsluit'], u:'Een zomerkade is laag. Bij echt hoogwater loopt hij over en staat de uiterwaard toch onder water; dan houdt de winterdijk het water tegen.', f:'De hoge dijk die het land beschermt, is de winterdijk (de bandijk).' },
+      { n:'kh', v:'Wat is kwel?', o:['grondwater dat onder de dijk door omhoog komt in de polder','rivierwater dat over de dijk heen loopt','water dat een gemaal naar de rivier pompt','water dat bij eb uit de polder stroomt'], u:'Staat het water buiten de dijk hoger dan de polder, dan drukt het water onder de dijk door. Achter de dijk komt het als kwel omhoog.', f:'Water dat over de dijk loopt, is overloop. Dat gebeurt pas als het water hoger komt dan de kruin, en is veel gevaarlijker.' },
+      { n:'kh', v:'Waarom liggen uiterwaarden vaak hoger dan het land achter de dijk?', o:['bij elk hoogwater blijft er klei en zand (slib) op de uiterwaarden liggen','de boeren hebben de uiterwaarden opgehoogd voor hun koeien','het land achter de dijk is weggespoeld door regen','de uiterwaarden zijn opgespoten met zeezand'], u:'Als de uiterwaard onder water staat, stroomt het water er langzaam en zakt het slib naar de bodem. Achter de dijk gebeurt dat niet.', f:'Ophogen door boeren is niet de oorzaak: het slib van de rivier doet het werk.' },
+      { n:'kh', v:'Bij welke maatregel krijgt de rivier geen extra ruimte?', o:['de dijk verhogen','de uiterwaard verlagen','een nevengeul graven','de dijk landinwaarts verleggen'], u:'Een hogere dijk houdt meer water tegen, maar de rivier wordt er niet breder of dieper van. Bij Ruimte voor de Rivier ging het juist om meer ruimte, zodat de waterstand bij hoogwater lager blijft.', f:'Een lagere uiterwaard geeft de rivier wel meer ruimte: er past meer water tussen de dijken.' },
+      { n:'kh', v:'Waarom kwam er na de hoogwaters van 1993 en 1995 het programma Ruimte voor de Rivier?', o:['steeds hogere dijken werd te riskant; de rivier moest meer ruimte krijgen zodat het water lager blijft','de scheepvaart wilde bredere rivieren','de rivieren moesten weer stromen zoals in de middeleeuwen','er was te weinig klei voor nieuwe dijken'], u:'In 1995 moesten meer dan 200.000 mensen hun huis uit. Daarna koos de overheid ervoor de rivieren meer ruimte te geven in plaats van alleen de dijken te verhogen.', f:'De scheepvaart was niet de reden; het ging om veiligheid bij hoogwater.' },
+      { n:'h', v:'Bij Nijmegen is de dijk bij Lent landinwaarts verlegd en is er een nevengeul gegraven. Wat is het doel?', o:['de Waal krijgt meer ruimte, zodat de waterstand bij hoogwater lager blijft','er komt meer land vrij om te bouwen','de schepen kunnen sneller varen','de rivier wordt korter'], u:'De Waal maakt bij Nijmegen een scherpe bocht en was daar smal. Met de verlegde dijk en de nevengeul kan er bij hoogwater meer water door.', f:'Er kwam juist minder land vrij, want de rivier kreeg een deel erbij; het doel was veiligheid.' },
+      { n:'h', v:'Bij hoogwater zie je achter de dijk op een paar plekken water met zand omhoog borrelen. Waarom is dat gevaarlijk?', o:['het water spoelt zand onder de dijk weg, waardoor de dijk kan bezwijken','het water is zout en maakt de akkers kapot','het betekent dat de rivier al over de dijk loopt','het zand maakt de sloten ondiep'], u:'Dit heet piping. Spoelt er steeds meer zand onder de dijk weg, dan ontstaat er een gang en kan de dijk bezwijken. Daarom leggen dijkwachten er een ring van zandzakken omheen.', f:'Het water stroomt onder de dijk door, niet eroverheen; juist daarom is het gevaar lastig te zien.' },
+      { n:'h', v:'Waarom mag je in de uiterwaarden bijna geen huizen bouwen?', o:['bij hoogwater moet het water er vrij door kunnen stromen; huizen nemen ruimte weg en lopen zelf onder','de grond in de uiterwaarden is te zout','de uiterwaarden zijn van de scheepvaart','er mag alleen gebouwd worden op plekken onder NAP'], u:'Elk gebouw in het winterbed neemt ruimte van de rivier in. Dan komt het water bij hoogwater hoger, en de bewoners lopen zelf ook gevaar.', f:'Zout speelt bij de grote rivieren in het binnenland geen rol; het gaat om de ruimte voor het water.' }
+    ],
+    kust:[
+      { n:'bk', v:'Wat gebeurt er met het water in zee bij vloed?', o:['het water stijgt','het water daalt','het water blijft gelijk','het water wordt zouter'], u:'Bij vloed komt het water op: het stijgt tot hoogwater. Daarna begint de eb en daalt het weer.', f:'Bij eb daalt het water.' },
+      { n:'bk', v:'Hoe vaak is het ongeveer hoogwater aan de Nederlandse kust?', o:['twee keer per dag','één keer per dag','vier keer per dag','één keer per week'], u:'Tussen twee keer hoogwater zit ongeveer 12 uur en 25 minuten. Zo is het bijna elke dag twee keer hoogwater en twee keer laagwater.', f:'Eén keer per dag is te weinig: na ongeveer 12 uur en 25 minuten is het alweer hoogwater.' },
+      { n:'bk', v:'Waardoor ontstaan eb en vloed?', o:['door de aantrekkingskracht van de maan (en de zon)','door de wind boven zee','door het water dat de rivieren naar zee brengen','door de grote schepen op zee'], u:'De maan trekt aan het water van de oceanen. Terwijl de aarde draait, stijgt en daalt het water op een vaste plek.', f:'Wind kan het water bij storm wel extra opstuwen, maar eb en vloed komen door de maan.' },
+      { n:'bk', v:'Wat beschermt een groot deel van de Hollandse kust tegen de zee?', o:['de duinen','de uiterwaarden','de kribben','de gemalen'], u:'Langs Noord- en Zuid-Holland liggen brede duinen: een natuurlijke zeewering.', f:'Uiterwaarden liggen langs de rivieren, niet langs de kust.' },
+      { n:'bk', v:'In welk jaar was de Watersnoodramp?', o:['1953','1995','1916','1932'], u:'In de nacht van 31 januari op 1 februari 1953 braken in Zeeland, Zuid-Holland en West-Brabant de dijken door. Er kwamen 1836 mensen om.', f:'In 1995 was er hoogwater op de rivieren, geen ramp vanuit zee.' },
+      { n:'bk', v:'Welk gebied werd bij de Watersnoodramp het zwaarst getroffen?', o:['Zeeland en Zuid-Holland','Groningen en Friesland','Limburg','de Veluwe'], u:'De storm trof vooral de eilanden in het zuidwesten: Zeeland, de Zuid-Hollandse eilanden en West-Brabant.', f:'Groningen en Friesland liggen ook aan zee, maar in 1953 ging het vooral mis in de zuidwestelijke delta.' },
+      { n:'bk', v:'Wat zijn de Deltawerken?', o:['dammen, dijken en stormvloedkeringen in Zeeland en Zuid-Holland','kanalen voor de scheepvaart naar Duitsland','gemalen die polders droogpompen','windmolens langs de kust'], u:'Na de ramp van 1953 kwam het Deltaplan. De zeegaten in de delta werden afgesloten of kregen een stormvloedkering.', f:'Gemalen staan overal in Nederland, maar ze horen niet bij de Deltawerken.' },
+      { n:'bk', v:'Wat deed de Afsluitdijk?', o:['hij maakte van de Zuiderzee het IJsselmeer','hij sloot de Oosterschelde af','hij beschermt Rotterdam tegen storm','hij verbindt Zeeland met Zuid-Holland'], u:'De Afsluitdijk werd in 1932 gesloten. De zoute Zuiderzee werd daarna het zoete IJsselmeer.', f:'De Oosterschelde heeft een eigen stormvloedkering: de Oosterscheldekering.' },
+      { n:'bk', v:'Wat doet de Maeslantkering?', o:['hij sluit bij zware storm de Nieuwe Waterweg af en beschermt zo Rotterdam','hij pompt water uit de polders rond Rotterdam','hij houdt het IJsselmeer zoet','hij staat altijd dicht'], u:'De Maeslantkering heeft twee enorme deuren. Normaal staan ze open voor de schepen; bij zware storm gaan ze dicht.', f:'Hij staat juist bijna altijd open, anders kunnen de schepen de haven niet in.' },
+      { n:'bk', v:'Wat is een stormvloed?', o:['heel hoog water doordat een storm het zeewater naar de kust blaast','een rivier die na veel regen overstroomt','een golf door een aardbeving','gewone vloed bij mooi weer'], u:'Bij een stormvloed stuwt de wind het water op. Valt dat samen met springtij, dan wordt het extra gevaarlijk.', f:'Een rivier die na regen overstroomt, heeft hoogwater; dat is geen stormvloed.' },
+      { n:'bk', v:'Wat is zandsuppletie?', o:['zand opspuiten op het strand of voor de kust, zodat de kust niet wegspoelt','zand uit de duinen halen voor de bouw','zand in de rivier storten zodat schepen niet vastlopen','zand op de akkers strooien tegen droogte'], u:'De zee neemt steeds zand mee. Rijkswaterstaat brengt daarom nieuw zand aan, zodat de kustlijn op zijn plek blijft.', f:'Zand weghalen uit de duinen zou de kust juist zwakker maken.' },
+      { n:'bk', v:'Wat is laagwater?', o:['het moment waarop het water in zee het laagst staat','het moment waarop het water in zee het hoogst staat','water in een rivier dat stilstaat','een droge zomer'], u:'Na de eb komt laagwater: het laagste punt. Daarna begint de vloed weer.', f:'Het hoogste punt heet hoogwater.' },
+      { n:'bk', v:'Wat gebeurt er bij eb in de Waddenzee?', o:['grote zandplaten vallen droog','de Waddenzee wordt zoet','de eilanden lopen onder','het water bevriest'], u:'De Waddenzee is ondiep. Bij eb vallen de platen (het wad) droog; bij vloed staan ze weer onder water.', f:'Zoet wordt de Waddenzee nooit: hij staat in open verbinding met de Noordzee.' },
+      { n:'bk', v:'Waarom liggen er in Zeeland zoveel dammen en keringen?', o:['om het land na de ramp van 1953 te beschermen tegen de zee','om er stroom mee op te wekken','om schepen tegen te houden','om de rivieren schoon te houden'], u:'Na de Watersnoodramp zijn met de Deltawerken de zeegaten afgesloten of kregen ze een kering die bij storm dichtgaat.', f:'Stroom opwekken was niet het doel; het ging om veiligheid.' },
+      { n:'kh', v:'Wanneer is het springtij?', o:['bij volle maan en nieuwe maan, als zon en maan op één lijn staan','bij halve maan','alleen in het voorjaar','bij een storm uit het noordwesten'], u:'Bij volle en nieuwe maan trekken zon en maan in dezelfde lijn: hoogwater is extra hoog en laagwater extra laag. Bij halve maan is het doodtij.', f:'Bij halve maan is het juist doodtij: het verschil tussen hoog- en laagwater is dan het kleinst.' },
+      { n:'kh', v:'Waarom kwam het water in 1953 zo hoog?', o:['een zware noordwesterstorm viel samen met springtij','er was een aardbeving in de Noordzee','de rivieren hadden tegelijk hoogwater door smeltwater','de duinen waren afgegraven'], u:'De storm stuwde het water urenlang op richting de kust, en het was ook nog springtij. De dijken waren te laag en te zwak.', f:'Het water kwam uit zee, niet van de rivieren.' },
+      { n:'kh', v:'Waarom is de Oosterscheldekering een open kering die alleen bij storm dichtgaat?', o:['zo blijven eb en vloed en het zoute water, voor de natuur en de visserij','een dichte dam was niet sterk genoeg','zo kunnen schepen naar Antwerpen','de Oosterschelde moest zoet worden'], u:'Eerst zou de Oosterschelde helemaal dicht. Na protest van vissers en natuurbeschermers kwam er een kering met beweegbare schuiven. Hij was in 1986 klaar.', f:'Schepen naar Antwerpen varen over de Westerschelde, niet over de Oosterschelde.' },
+      { n:'kh', v:'Waarom is de Westerschelde niet afgesloten?', o:['de schepen moeten de haven van Antwerpen kunnen bereiken','het water is daar niet zout','er wonen daar geen mensen','de Westerschelde ligt in België'], u:'De Westerschelde is de vaarweg naar Antwerpen. Daarom zijn daar de dijken verhoogd en versterkt in plaats van het water af te sluiten.', f:'De Westerschelde ligt in Zeeland, in Nederland; alleen Antwerpen ligt in België.' },
+      { n:'kh', v:'Waarom gaat de Maeslantkering bijna nooit dicht?', o:['schepen moeten de haven van Rotterdam in en uit kunnen','hij is te zwaar om vaak te bewegen','hij gaat alleen dicht bij hoogwater op de Rijn','het water bij Rotterdam is te ondiep'], u:'De Nieuwe Waterweg is de toegang tot de haven van Rotterdam. De kering sluit alleen als er bij zware storm een gevaarlijk hoge waterstand wordt verwacht.', f:'Het gaat om storm vanuit zee, niet om hoogwater op de rivier.' },
+      { n:'kh', v:'Waarom bouwde men na 1953 dammen in de zeegaten in plaats van alle dijken op de eilanden te verhogen?', o:['met dammen in de zeegaten werd de kustlijn veel korter, dus er hoefde minder dijk sterk te zijn','dammen zijn van zand en dus goedkoop','de dijken waren al hoog genoeg','zo werden de eilanden groter'], u:'Dat heet kustverkorting. Een paar dammen in de zeegaten beschermen het land achter honderden kilometers dijk langs de eilanden.', f:'De dijken waren in 1953 juist te laag en te zwak; dat was het probleem.' },
+      { n:'kh', v:'Hoe beschermen duinen het land?', o:['het zand vangt de golven op; bij storm slaat de zee wat zand weg, maar een breed duin blijft staan','duinen pompen het zeewater terug','duinen zijn van binnen van beton','de bomen op de duinen houden het water tegen'], u:'Een duin is een natuurlijke zeewering. Met zandsuppleties zorgt Rijkswaterstaat dat er genoeg zand blijft.', f:'Het duin werkt door het zand; de begroeiing houdt alleen het zand vast tegen de wind.' },
+      { n:'kh', v:'Waarom heet het zuidwesten van Nederland een delta?', o:['de Rijn, de Maas en de Schelde komen daar in zee uit en vormden er eilanden en zeearmen','er liggen daar veel Deltawerken','het gebied heeft de vorm van een driehoek','er is daar vroeger een meer drooggemaakt'], u:'Een delta ontstaat bij de monding, waar rivieren zich splitsen en zand en klei afzetten.', f:'De Deltawerken zijn naar de delta genoemd, niet andersom.' },
+      { n:'h', v:'Waarom zal de Maeslantkering in de toekomst vaker dicht moeten?', o:['de zeespiegel stijgt, dus komt het water vaker zo hoog dat hij dicht moet','er komen meer schepen naar Rotterdam','de kering slijt en lekt steeds meer','de Rijn voert in de zomer meer water af'], u:'Als het gewone zeeniveau hoger ligt, is er bij een storm minder opstuwing nodig om de gevaarlijke waterstand te halen.', f:'Meer schepen maken het juist lastiger als de kering vaker dicht is; het is geen oorzaak.' },
+      { n:'h', v:'Wat is het verschil tussen een dam en een stormvloedkering?', o:['een dam sluit het water af; een stormvloedkering staat meestal open en gaat alleen bij storm dicht','een dam ligt in een rivier, een kering in een meer','een stormvloedkering is altijd dicht, een dam heeft sluizen','er is geen verschil'], u:'Een dam sluit een zeearm of rivier af. Een kering zoals de Oosterscheldekering of de Maeslantkering laat het water door tot er storm komt.', f:'Het is precies andersom: de kering kan open, de dam niet.' },
+      { n:'h', v:'Waarom werd de Afsluitdijk gebouwd?', o:['na een overstroming in 1916 wilde men de Zuiderzee afsluiten, tegen overstromingen en voor nieuw land','om herhaling van de Watersnoodramp van 1953 te voorkomen','om een snelweg naar Friesland te maken','om zoet water naar Duitsland te sturen'], u:'Na de overstroming van 1916 kwam in 1918 de Zuiderzeewet. De Afsluitdijk werd in 1932 gesloten; daarna kwamen de IJsselmeerpolders.', f:'De Afsluitdijk lag er al in 1932, ruim vóór de ramp van 1953.' },
+      { n:'h', v:'De Zandmotor bij Ter Heijde is een groot schiereiland van zand. Hoe werkt hij?', o:['wind, golven en stroming verspreiden het zand langs de kust, zodat een lange strook kust sterker wordt','het zand houdt als een dam de golven tegen','het zand wordt elke week opnieuw op het strand gelegd','het zand zakt in en wordt een nieuwe polder'], u:'In plaats van steeds een beetje zand op het strand te spuiten, ligt er één grote voorraad. De natuur verdeelt het zand langs de kust.', f:'De Zandmotor is geen dam: het zand mag juist wegspoelen naar de kust ernaast.' },
+      { n:'h', v:'Waarom is de Waddenzee tot nu toe meegegroeid met de zeespiegel?', o:['bij elk getij blijven zand en slib op de platen en kwelders liggen','de eilanden houden al het water tegen','de bodem van de Waddenzee wordt omhoog gedrukt','er wordt elk jaar zand in de Waddenzee gespoten'], u:'Zolang de zeespiegel niet te snel stijgt, brengt het getij genoeg zand en slib om de wadplaten mee te laten groeien. Stijgt hij sneller, dan kunnen de platen dat niet bijhouden.', f:'De eilanden laten het getij juist door de zeegaten ertussen.' }
+    ],
+    laag:[
+      { n:'bk', v:'Wat is een polder?', o:['een stuk laag land met dijken eromheen, waar het waterpeil geregeld wordt','een meer midden in het land','een heuvel van zand in de duinen','een rivier met uiterwaarden'], u:'In een polder bepaalt het waterschap hoe hoog het water staat. Water dat te veel is, wordt weggepompt.', f:'Een polder kan vroeger een meer zijn geweest, maar nu is het juist land.' },
+      { n:'bk', v:'Wat doet een gemaal?', o:['het pompt water uit de polder','het maakt drinkwater van zeewater','het wekt stroom op met wind','het tilt schepen omhoog'], u:'Regen en kwel komen steeds in de polder. Het gemaal pompt dat water naar een hoger kanaal (de boezem) of een rivier.', f:'Drinkwater maken gebeurt bij een drinkwaterbedrijf, niet bij een gemaal.' },
+      { n:'bk', v:'Waar staat NAP voor?', o:['Normaal Amsterdams Peil','Nationaal Afvoer Punt','Nieuw Algemeen Polderpeil','Noordzee Afstand Peil'], u:'NAP is de hoogte waarmee we in Nederland alle hoogtes vergelijken. Het ligt ongeveer op het gemiddelde zeeniveau.', f:'Het heeft niets met afvoer te maken: NAP is een hoogte.' },
+      { n:'bk', v:'Een dorp ligt op 3 meter onder NAP. Wat betekent dat?', o:['het dorp ligt 3 meter lager dan NAP','het dorp ligt 3 meter hoger dan NAP','het dorp ligt 3 meter van de zee','het water staat er 3 meter hoog'], u:'NAP ligt ongeveer op het gemiddelde zeeniveau. Onder NAP betekent lager dan dat niveau; je schrijft het met een min: NAP −3 m.', f:'Boven NAP schrijf je met een plus.' },
+      { n:'bk', v:'Wat doet een waterschap?', o:['het zorgt voor de dijken, het waterpeil en schoon water in een gebied','het verkoopt drinkwater','het bouwt schepen','het maakt de wetten van Nederland'], u:'Waterschappen zijn de oudste democratische besturen van Nederland. Je kunt zelf op ze stemmen bij de waterschapsverkiezingen.', f:'Drinkwater komt van een drinkwaterbedrijf, niet van het waterschap.' },
+      { n:'bk', v:'Hoe werden polders vroeger drooggemaakt?', o:['met windmolens die het water wegmaalden','met emmers en paarden','met stoomschepen','het water verdampte vanzelf'], u:'Windmolens maalden het water omhoog. Later kwamen er stoomgemalen, en nu elektrische en dieselgemalen.', f:'Met emmers kom je bij een heel meer niet ver: daar waren molens voor nodig.' },
+      { n:'bk', v:'Hoeveel van Nederland ligt onder zeeniveau?', o:['ongeveer een kwart','bijna niets','bijna alles','precies de helft'], u:'Ongeveer een kwart van Nederland ligt onder zeeniveau, vooral in het westen en noorden. Een nog groter deel zou kunnen overstromen als er geen dijken en duinen waren.', f:'Bijna niets klopt niet: grote delen van Holland, Zeeland, Flevoland en Friesland liggen onder zeeniveau.' },
+      { n:'bk', v:'Hoe is Flevoland ontstaan?', o:['het is drooggemalen uit het IJsselmeer','het is aangeslibd door de Rijn','het is opgespoten met zand uit de Noordzee','het lag er altijd al'], u:'Na de Afsluitdijk werden delen van het IJsselmeer ingepolderd. Flevoland is sinds 1986 een provincie.', f:'Opspuiten met zand gebeurde bijvoorbeeld bij de Tweede Maasvlakte; Flevoland is drooggemalen.' },
+      { n:'bk', v:'Waarom moet een gemaal ook pompen als het niet regent?', o:['er komt steeds kwelwater uit de grond de polder in','de vissen hebben stromend water nodig','anders bevriest het water','de boeren willen het water warm houden'], u:'Omdat de polder laag ligt, drukt het water van buiten onder de dijk door. Dat kwelwater moet steeds weg.', f:'Om vissen gaat het niet: zonder pompen loopt de polder langzaam vol.' },
+      { n:'kh', v:'Waarom daalt de bodem in veengebieden?', o:['het grondwater wordt laag gehouden, waardoor het veen uitdroogt, verteert en inklinkt','er wordt te veel gebouwd op de dijken','de zee trekt het land omlaag','de regen spoelt het veen naar zee'], u:'Om het land droog genoeg te houden voor landbouw blijft het grondwater laag. Veen boven het water komt in contact met lucht en verteert. Zo zakt de bodem, soms tot ongeveer een centimeter per jaar.', f:'Bouwen op dijken heeft er niets mee te maken; het gaat om het veen dat droog komt te liggen.' },
+      { n:'kh', v:'Wat is de belangrijkste oorzaak van bodemdaling in het noorden van Groningen?', o:['gaswinning','veel regen','het smelten van gletsjers','de bouw van windmolens'], u:'Doordat er gas uit de diepe ondergrond is gehaald, zakt de grond erboven. Daardoor zijn er ook aardbevingen.', f:'Regen laat de bodem niet dalen.' },
+      { n:'kh', v:'Waarom wordt een polder steeds lastiger droog te houden als de bodem daalt?', o:['het verschil met het water buiten de polder wordt groter, dus er komt meer kwel en er moet meer gepompt worden','de gemalen zakken mee en werken dan niet meer','er valt meer regen op lage grond','het water stroomt dan vanzelf naar zee'], u:'Hoe lager de polder ligt, hoe harder het water van buiten onder de dijk door drukt. De gemalen moeten meer en hoger pompen.', f:'Er valt niet meer regen op lage grond; het gaat om het hoogteverschil.' },
+      { n:'kh', v:'Wat zijn de twee belangrijkste oorzaken van zeespiegelstijging?', o:['smeltend landijs en zeewater dat uitzet doordat het warmer wordt','smeltend zee-ijs en meer regen boven zee','meer schepen en meer zand uit de rivieren','eb en vloed die sterker worden'], u:'IJs op Groenland en Antarctica smelt en stroomt in zee. En warm water neemt meer ruimte in.', f:'Zee-ijs drijft al in het water; als het smelt, stijgt de zee daar nauwelijks door. Regen boven zee kwam eerst uit zee.' },
+      { n:'kh', v:'Wat is de boezem in een poldergebied?', o:['kanalen en meren die hoger liggen dan de polders en het water afvoeren naar zee of rivier','het laagste stuk van de polder','de pompkamer van een gemaal','de plek waar de dijk het breedst is'], u:'Gemalen pompen het polderwater in de boezem. Via de boezem gaat het water naar een groot gemaal of een sluis bij zee of rivier.', f:'Het laagste stuk is juist de polder zelf; de boezem ligt hoger.' },
+      { n:'kh', v:'Wat is een dijkring?', o:['een gebied dat helemaal omringd is door dijken en hoge grond','een ring van ijzer in een dijk','een rondje dijk rond één boerderij','een groep dijkwerkers'], u:'Breekt ergens een dijk door, dan kan het hele gebied binnen de ring onderlopen. Daarom moet elk stuk dijk van de ring sterk genoeg zijn.', f:'Een dijkring is veel groter dan één boerderij: vaak een hele streek.' },
+      { n:'kh', v:'Een boer wil het waterpeil in de polder laag; natuurbeschermers willen het hoog. Wie beslist over het peil?', o:['het waterschap','de gemeente','de koning','Rijkswaterstaat'], u:'Het waterschap stelt het peil vast en weegt de belangen af: landbouw, natuur, wonen en bodemdaling.', f:'Rijkswaterstaat zorgt voor de grote wateren, zoals de rivieren en de kust, niet voor het peil in een polder.' },
+      { n:'h', v:'Waarom zijn bodemdaling en zeespiegelstijging samen een groot probleem?', o:['het land zakt en de zee stijgt: het hoogteverschil groeit van twee kanten','ze heffen elkaar op','alleen de zeespiegelstijging telt','bodemdaling laat de zee dalen'], u:'Het verschil tussen het water buiten de dijk en het land erachter wordt groter. Dat geeft meer kwel en verzilting, hogere pompkosten en zwaardere eisen aan de dijken.', f:'Ze heffen elkaar niet op: allebei maken ze het verschil groter.' },
+      { n:'h', v:'Wat helpt het best tegen verdere bodemdaling in een veenweidegebied?', o:['het grondwaterpeil hoger zetten, zodat het veen nat blijft','dieper pompen zodat het land droger wordt','meer huizen bouwen op het veen','extra sloten graven om water af te voeren'], u:'Nat veen verteert niet. Een hoger peil remt de daling, maar maakt het land natter en lastiger voor de boeren: daar zit de afweging.', f:'Dieper pompen maakt het juist erger: het veen droogt verder uit en zakt sneller.' },
+      { n:'h', v:'Meerlaagsveiligheid heeft drie lagen. Welke rij klopt?', o:['overstromingen voorkomen, slim bouwen en inrichten, en goede rampenplannen','dijken, duinen en dammen','gemeente, provincie en Rijk','eb, vloed en springtij'], u:'Laag 1 is voorkomen (dijken en duinen). Laag 2 is de ruimte zo inrichten dat de schade beperkt blijft. Laag 3 is de rampenbestrijding, zoals evacueren.', f:'Dijken, duinen en dammen horen samen bij laag 1.' },
+      { n:'h', v:'Sinds 2017 gelden nieuwe normen voor de dijken. Wat is het doel voor iedereen achter een dijk?', o:['de kans om door een overstroming om te komen is niet groter dan 1 op 100.000 per jaar','nooit meer een overstroming','elke dijk wordt 1 meter hoger','alleen steden krijgen een sterke dijk'], u:'Dat heet de basisveiligheid; de dijken moeten er in 2050 aan voldoen. Waar veel mensen of veel waarde achter een dijk zitten, is de norm strenger.', f:'Helemaal geen overstroming kan niemand beloven; daarom werkt men met kansen.' },
+      { n:'h', v:'Wat doet de Deltacommissaris?', o:['zorgen dat het Deltaprogramma wordt uitgevoerd: Nederland veilig houden tegen water en genoeg zoet water houden','alle waterschappen besturen','de Maeslantkering bedienen','drinkwater verkopen aan Duitsland'], u:'Het Deltaprogramma kijkt vooruit naar 2050 en 2100: hoe blijft het land veilig en houden we genoeg zoet water als het klimaat verandert?', f:'De waterschappen hebben elk hun eigen bestuur.' },
+      { n:'h', v:'Waarom is een overstroming in een diepe polder gevaarlijker dan in een ondiepe?', o:['het water komt er dieper te staan en stroomt er met meer kracht in','diepe polders hebben zout water','in diepe polders werken de gemalen beter','het water verdampt er langzamer'], u:'Hoe dieper de polder onder het buitenwater ligt, hoe meer water erin kan voordat het gelijk staat. Mensen kunnen dan soms niet eens op de eerste verdieping schuilen.', f:'Zout of zoet maakt voor de diepte niet uit.' }
+    ],
+    zoet:[
+      { n:'bk', v:'Waar halen de drinkwaterbedrijven het meeste drinkwater vandaan?', o:['uit grondwater','uit de Noordzee','uit regentonnen','uit het riool'], u:'Het meeste drinkwater komt uit grondwater; de rest uit rivieren en meren (oppervlaktewater). Het wordt altijd eerst gezuiverd.', f:'Zeewater is zout; daar maken we in Nederland bijna geen drinkwater van.' },
+      { n:'bk', v:'Waarom kun je zeewater niet zomaar drinken?', o:['het is te zout','het is te koud','er zitten te veel vissen in','het is te warm'], u:'Zout water maakt je juist dorstiger, en te veel zout is slecht voor je lichaam.', f:'Koud water kun je gewoon drinken; het zout is het probleem.' },
+      { n:'bk', v:'Wat gebeurt er in een rioolwaterzuivering?', o:['vuil water wordt schoongemaakt voordat het terug in de sloot of rivier gaat','zeewater wordt zoet gemaakt','regenwater wordt bewaard voor droge zomers','drinkwater wordt in flessen gedaan'], u:'Het waterschap zuivert het afvalwater van huizen en bedrijven. Daarna mag het terug in het oppervlaktewater.', f:'Zeewater zoet maken heet ontzilten; dat gebeurt in een rioolwaterzuivering niet.' },
+      { n:'bk', v:'Wat is verzilting?', o:['zout water komt in de bodem of in het zoete water','het water wordt te warm','er komt te veel zand in de rivier','zoet water bevriest'], u:'Bij droogte en lage rivieren dringt zout water verder het land in. Veel gewassen kunnen daar niet tegen.', f:'Warm water is een ander probleem; verzilting gaat over zout.' },
+      { n:'bk', v:'Wat kun je thuis doen om water te besparen?', o:['korter douchen','vaker in bad gaan','de kraan laten lopen bij het tandenpoetsen','de wasmachine half vol aanzetten'], u:'Douchen kost het meeste water in huis. Een paar minuten korter scheelt al tientallen liters.', f:'Een bad kost juist veel meer water dan een korte douche.' },
+      { n:'bk', v:'Waarom is een droge zomer een probleem voor boeren?', o:['de gewassen krijgen te weinig water en drogen uit','er groeit te veel gras','de koeien willen niet naar buiten','de grond wordt te nat'], u:'Bij droogte verdampt er meer water dan er regen valt. Boeren moeten dan beregenen, als dat mag.', f:'Bij droogte groeit het gras juist slecht.' },
+      { n:'bk', v:'Waarom is het IJsselmeer belangrijk voor zoet water?', o:['het is een grote voorraad zoet water voor drinkwater en landbouw','het is de diepste zee van Nederland','het water is er zout','er wordt zout uit gewonnen'], u:'Sinds de Afsluitdijk is het IJsselmeer zoet. In droge tijden halen drinkwaterbedrijven en boeren er water uit.', f:'Het IJsselmeer is geen zee meer en niet diep; het belang is de voorraad zoet water.' },
+      { n:'kh', v:'Wat is een overstort van het riool?', o:['bij hevige regen stroomt rioolwater ongezuiverd naar sloot of gracht','een buis die drinkwater naar huizen brengt','een gemaal dat de polder leegpompt','een put waarin regen in de grond zakt'], u:'Als het riool de regen niet aankan, loopt het via de overstort over. Dat is slecht voor de waterkwaliteit.', f:'Drinkwater gaat door een aparte waterleiding, niet door het riool.' },
+      { n:'kh', v:'Waarom leggen gemeenten een gescheiden riool aan?', o:['regenwater gaat apart, zodat de zuivering minder water krijgt en er minder overstort is','zo kan het rioolwater sneller naar zee','zo komt er drinkwater uit het riool','het is goedkoper dan één buis'], u:'Schoon regenwater hoeft niet naar de zuivering. Het kan naar de sloot of in de grond zakken.', f:'Rioolwater moet juist naar de zuivering, niet sneller naar zee.' },
+      { n:'kh', v:'Wat gebeurt er als er veel mest van akkers in de sloot spoelt?', o:['er komen te veel voedingsstoffen in het water, algen woekeren en vissen krijgen te weinig zuurstof','het water wordt zout','het water wordt helderder','er groeien minder planten'], u:'Te veel stikstof en fosfaat laten algen en kroos hard groeien. Als die afsterven, kost het afbreken veel zuurstof.', f:'Mest maakt het water niet zout, wel te voedselrijk.' },
+      { n:'kh', v:'Waarom laten sommige drinkwaterbedrijven rivierwater eerst door de duinen zakken?', o:['het zand zuivert het water op een natuurlijke manier','het water wordt zo zout','het water wordt zo warmer','zo kan het niet verdampen'], u:'In de duinen sijpelt het water langzaam door het zand en wordt het schoner. Daarna pompen de bedrijven het weer op.', f:'Zout wil je juist niet in drinkwater.' },
+      { n:'kh', v:'Wat is een wadi in een woonwijk?', o:['een lage plek waar regenwater tijdelijk blijft staan en in de grond zakt','een rioolbuis onder de straat','een gemaal in de stad','een dijk langs een kanaal'], u:'Met wadi’s, groene daken en waterpleinen houden steden regenwater vast. Zo is er minder wateroverlast en zakt er meer water in de grond.', f:'Een rioolbuis voert het water juist snel af; een wadi houdt het vast.' },
+      { n:'kh', v:'Wat is verdroging van de natuur?', o:['het grondwater staat te laag doordat water wordt weggepompt of afgevoerd','een droge zomer van één week','te veel regen in de winter','planten die verdorren door zout'], u:'Door ontwatering voor landbouw en wonen en door grondwater op te pompen, zakt het grondwater. Natte natuur, zoals veen en vochtige heide, verdroogt dan.', f:'Eén droge week is nog geen verdroging; het gaat om een grondwater dat blijvend te laag staat.' },
+      { n:'h', v:'In Egypte staat sinds 1970 de Hoge Dam bij Aswan in de Nijl. Wat is een nadeel?', o:['het slib blijft achter in het stuwmeer, dus boeren hebben kunstmest nodig en de delta kalft af','er is minder water voor irrigatie','de Nijl overstroomt nu elk jaar','het stuwmeer is zout geworden'], u:'Vroeger bracht de jaarlijkse overstroming vruchtbaar slib. Nu bezinkt dat in het Nassermeer. Wel kunnen boeren nu het hele jaar irrigeren.', f:'Er is juist meer water voor irrigatie, het hele jaar door.' },
+      { n:'h', v:'Ethiopië bouwde een grote stuwdam in de Blauwe Nijl. Waarom maakt Egypte zich zorgen?', o:['Egypte ligt benedenstrooms en is bijna helemaal afhankelijk van het Nijlwater','Egypte ligt bovenstrooms en krijgt te veel water','de dam maakt het Nijlwater zout','Egypte wil zelf stroom verkopen aan Ethiopië'], u:'Bij een rivier door meer landen bepaalt het land bovenstrooms hoeveel water er doorstroomt. Vooral bij het vullen van het stuwmeer en in droge jaren kan er minder water in Egypte aankomen.', f:'Egypte ligt juist benedenstrooms, aan het eind van de Nijl.' },
+      { n:'h', v:'Bangladesh ligt in de delta van de Ganges en de Brahmaputra. Waardoor overstroomt het land zo vaak?', o:['moessonregen en smeltwater uit de Himalaya, en cyclonen die zeewater het lage land op stuwen','de zeespiegel daalt daar steeds','het regent er nooit, maar het water komt uit zee','er zijn daar te veel dijken'], u:'In de moesson valt er heel veel regen in het stroomgebied, en in de zomer smelt er sneeuw in de Himalaya. Vanuit zee komen cyclonen. Het land is laag en vlak.', f:'De zeespiegel daalt niet; hij stijgt, en dat maakt het juist erger.' },
+      { n:'h', v:'Welke maatregel in Bangladesh redt bij een cycloon de meeste levens?', o:['op tijd waarschuwen en hoge, stevige schuilplaatsen','dijken van 20 meter hoog langs de hele kust','alle rivieren afdammen','de mangrovebossen kappen voor akkers'], u:'Een betaalbare aanpak: mensen op tijd waarschuwen en naar stevige cycloonschuilplaatsen brengen. Mangrovebossen langs de kust remmen ook de golven.', f:'Zulke dijken langs een hele delta zijn voor een arm land onbetaalbaar en houden het rivierwater niet tegen.' },
+      { n:'h', v:'In droge gebieden geven boeren veel irrigatiewater. Waarom kan de grond daardoor zout worden?', o:['het water verdampt, maar het zout dat erin zat blijft achter in de bodem','irrigatiewater is zeewater','het zout komt uit de lucht','de planten maken zout'], u:'Ook zoet water bevat een beetje zout. Bij veel verdamping hoopt dat zich op in de bovenste laag: verzilting.', f:'Irrigatiewater is gewoon zoet water; juist het kleine beetje zout erin hoopt zich op.' },
+      { n:'h', v:'In een droge zomer is er te weinig zoet water. Wat gaat volgens de verdringingsreeks voor alles?', o:['de veiligheid (stevige dijken) en het voorkomen van onherstelbare schade aan natuur en bodem','de landbouw, want de oogst is veel waard','de scheepvaart','de industrie'], u:'De verdringingsreeks legt de volgorde vast. Eerst veiligheid en onomkeerbare schade, dan drinkwater en energie, dan klein maar hoogwaardig gebruik, en pas daarna de rest.', f:'Landbouw, scheepvaart en industrie staan pas in de laatste groep.' },
+      { n:'h', v:'Boeren pompen in een droge zomer veel grondwater op om te beregenen. Wat is een effect?', o:['het grondwater zakt, waardoor beken en natuur in de buurt verdrogen','de rivieren krijgen meer water','het grondwater wordt zoeter','er komt meer kwel in de polders'], u:'Grondwater dat je oppompt, is weg uit de bodem. In een droog jaar zakt het grondwater extra, en beken en natte natuur drogen uit. Daarom geldt er soms een beregeningsverbod.', f:'Het water dat je oppompt verdampt grotendeels op het land; de rivieren krijgen er niets bij.' }
+    ]
+  };
+  /* open vragen: één begrip is goed, met de varianten die ook goed zijn */
+  var BEGRIP = {
+    rivier:[
+      { n:'bk', d:'Hoe heet de plek waar een rivier begint?', a:['bron','de bron'], u:'De bron is het begin van een rivier.' },
+      { n:'bk', d:'Hoe heet de plek waar een rivier in zee uitkomt?', a:['monding','de monding','riviermonding'], u:'Bij de monding stroomt de rivier in zee, een meer of een andere rivier.' },
+      { n:'kh', d:'Een rivier die alleen water krijgt van regen, zoals de Maas. Hoe heet zo’n rivier?', a:['regenrivier','een regenrivier'], u:'De Maas en de Schelde zijn regenrivieren: ze krijgen geen smeltwater.' },
+      { n:'kh', d:'Een rivier die water krijgt van regen en van smeltwater, zoals de Rijn. Hoe heet zo’n rivier?', a:['gemengde rivier','een gemengde rivier','gemengd'], u:'De Rijn is een gemengde rivier: regen en smeltwater uit de Alpen.' },
+      { n:'kh', d:'Het hele gebied waarvan het regenwater naar één rivier stroomt. Hoe heet dat?', a:['stroomgebied','het stroomgebied'], u:'Het stroomgebied van de Rijn reikt van Zwitserland tot Nederland.' },
+      { n:'kh', d:'Waterdamp koelt af en wordt weer kleine druppeltjes; zo ontstaan wolken. Hoe heet dat?', a:['condensatie','condenseren'], u:'Bij condensatie wordt waterdamp weer water.' },
+      { n:'kh', d:'Regenwater zakt de bodem in. Hoe heet dat?', a:['infiltratie','infiltreren','inzijging','inzijgen'], u:'Bij infiltratie zakt water de grond in en wordt het grondwater.' },
+      { n:'h', d:'De hoeveelheid water die per seconde langs een punt in de rivier stroomt. Hoe heet dat?', a:['afvoer','de afvoer','debiet'], u:'Afvoer meet je in kubieke meter per seconde.' },
+      { n:'h', d:'De grens tussen twee stroomgebieden, vaak een bergkam. Hoe heet die?', a:['waterscheiding','de waterscheiding'], u:'Aan weerskanten van een waterscheiding stroomt het water naar een andere rivier.' }
+    ],
+    doorsnede:[
+      { n:'bk', d:'Hoe heet het land tussen de rivier en de winterdijk?', a:['uiterwaard','uiterwaarden','de uiterwaard','de uiterwaarden'], u:'De uiterwaarden liggen buitendijks en lopen bij hoogwater onder.' },
+      { n:'bk', d:'Hoe heet de geul waar de rivier het hele jaar door stroomt?', a:['zomerbed','het zomerbed'], u:'Het zomerbed is de vaste geul van de rivier.' },
+      { n:'kh', d:'Het zomerbed en de uiterwaarden samen. Hoe heet dat?', a:['winterbed','het winterbed'], u:'Bij hoogwater gebruikt de rivier het hele winterbed, tussen de winterdijken.' },
+      { n:'kh', d:'Stenen dammetjes haaks op de oever, die het water in het midden van de rivier houden. Hoe heten die?', a:['kribben','krib','kribbe','de kribben'], u:'Kribben houden de vaargeul diep en beschermen de oever.' },
+      { n:'kh', d:'Een lage dijk in de uiterwaard. Hoe heet die?', a:['zomerkade','zomerdijk','kade','de zomerkade'], u:'De zomerkade loopt bij echt hoogwater over.' },
+      { n:'h', d:'Een extra geul in de uiterwaard, zodat bij hoogwater meer water kan wegstromen. Hoe heet die?', a:['nevengeul','de nevengeul','hoogwatergeul'], u:'Nevengeulen zijn een maatregel van Ruimte voor de Rivier, zoals bij Nijmegen.' },
+      { n:'h', d:'Zand dat bij hoogwater met kwelwater onder de dijk door wegspoelt. Hoe heet dat gevaar?', a:['piping','zandmeevoerende wel','wel'], u:'Bij piping kan er een gang onder de dijk ontstaan, waardoor de dijk bezwijkt.' }
+    ],
+    kust:[
+      { n:'bk', d:'Het water in zee stijgt. Hoe heet dat?', a:['vloed','de vloed','opkomend tij'], u:'Bij vloed stijgt het water, tot het hoogwater is.' },
+      { n:'bk', d:'Het water in zee daalt. Hoe heet dat?', a:['eb','de eb','afgaand tij'], u:'Bij eb daalt het water, tot het laagwater is.' },
+      { n:'kh', d:'Het getij bij volle en nieuwe maan, met extra hoog hoogwater. Hoe heet dat?', a:['springtij','springvloed'], u:'Bij springtij staan zon en maan op één lijn.' },
+      { n:'kh', d:'Het getij bij halve maan, met het kleinste verschil tussen hoog- en laagwater. Hoe heet dat?', a:['doodtij'], u:'Bij doodtij werken zon en maan elkaar een beetje tegen.' },
+      { n:'kh', d:'Het hoogteverschil tussen hoogwater en laagwater. Hoe heet dat?', a:['getijverschil','tijverschil','het getijverschil'], u:'Het getijverschil is in Zeeland groter dan bij Den Helder.' },
+      { n:'h', d:'Zand op het strand of voor de kust opspuiten om de kust op zijn plek te houden. Hoe heet dat?', a:['zandsuppletie','suppletie','zandsuppleties','kustsuppletie','strandsuppletie','vooroeversuppletie'], u:'Met zandsuppletie houdt Rijkswaterstaat de kustlijn op zijn plek.' },
+      { n:'h', d:'Dammen in de zeegaten maken de kustlijn korter, zodat er minder dijk sterk hoeft te zijn. Hoe heet dat?', a:['kustverkorting'], u:'Kustverkorting was het idee achter de Deltawerken.' }
+    ],
+    laag:[
+      { n:'bk', d:'Water dat onder de dijk door omhoog komt in de polder. Hoe heet dat?', a:['kwel','kwelwater'], u:'Kwel ontstaat als het water buiten de dijk hoger staat dan de polder.' },
+      { n:'bk', d:'Een gebouw met pompen dat het water uit de polder pompt. Hoe heet dat?', a:['gemaal','een gemaal','het gemaal','poldergemaal'], u:'Een gemaal pompt het polderwater naar de boezem of een rivier.' },
+      { n:'kh', d:'De overheid die in een gebied zorgt voor dijken, waterpeil en het zuiveren van afvalwater. Hoe heet die?', a:['waterschap','het waterschap','hoogheemraadschap'], u:'Waterschappen zijn de oudste democratische besturen van Nederland.' },
+      { n:'kh', d:'Het zakken van de bodem, bijvoorbeeld doordat veen uitdroogt. Hoe heet dat?', a:['bodemdaling','inklinking','klink'], u:'Bodemdaling maakt het hoogteverschil met het water buiten de dijk groter.' },
+      { n:'kh', d:'Een drooggemaakt meer, zoals de Beemster. Hoe heet dat?', a:['droogmakerij','een droogmakerij','polder'], u:'De Beemster is een droogmakerij uit de zeventiende eeuw.' },
+      { n:'h', d:'Het hoogtepeil waarmee we in Nederland alle hoogtes vergelijken. Schrijf de afkorting.', a:['NAP','N.A.P.'], u:'NAP staat voor Normaal Amsterdams Peil.' },
+      { n:'h', d:'Kanalen en meren die hoger liggen dan de polders en waar het polderwater in gepompt wordt. Hoe heet dat geheel?', a:['boezem','de boezem','boezemwater'], u:'Via de boezem gaat het water naar zee of een rivier.' }
+    ],
+    zoet:[
+      { n:'bk', d:'Zout water dat in de bodem of in het zoete water komt. Hoe heet dat?', a:['verzilting'], u:'Verzilting is een probleem bij droogte en zeespiegelstijging.' },
+      { n:'kh', d:'Een lange periode waarin er veel meer water verdampt dan er regen valt. Hoe heet dat?', a:['droogte','neerslagtekort'], u:'Bij droogte loopt het neerslagtekort op.' },
+      { n:'kh', d:'Water in sloten, rivieren en meren. Hoe heet dat soort water?', a:['oppervlaktewater'], u:'Water in de bodem heet grondwater; water erboven oppervlaktewater.' },
+      { n:'h', d:'Het grondwater in een natuurgebied staat blijvend te laag doordat er water wordt weggepompt of afgevoerd. Hoe heet dat?', a:['verdroging'], u:'Verdroging bedreigt natte natuur zoals veen en vochtige heide.' },
+      { n:'h', d:'Land bewateren in een droog gebied met water uit een rivier of uit de grond. Hoe heet dat?', a:['irrigatie','irrigeren','bevloeiing'], u:'Irrigatie maakt landbouw mogelijk in droge gebieden, maar kan tot verzilting leiden.' }
+    ]
+  };
+  Object.keys(LIJST).forEach(function(k){ LIJST[k].forEach(function(x, i){ x.i = i; }); });
+  Object.keys(BEGRIP).forEach(function(k){ BEGRIP[k].forEach(function(x, i){ x.i = i; }); });
+
+  function uitLijst(deel, niveau){
+    var it = kies(LIJST[deel].filter(function(x){ return past(x, niveau); }));
+    var n = niveau === 'bb' ? 3 : 4;
+    return mk(deel, { sleutel:deel + '-l' + it.i, vraag:it.v, opties:it.o.slice(0, n), goed:0,
+      uitleg:S(it.u) + (it.f ? ' ' + S(it.f) : ''), antwoordTekst:it.o[0] });
+  }
+  function Lf(deel){ return function(n){ return uitLijst(deel, n); }; }
+  function Bf(deel){ return function(n){ return uitBegrip(deel, n); }; }
+  function uitBegrip(deel, niveau){
+    var l = BEGRIP[deel].filter(function(x){ return past(x, niveau); }); if (!l.length) return uitLijst(deel, niveau);
+    var it = kies(l);
+    return inv(deel, { sleutel:deel + '-b' + it.i, vraag:it.d, opdracht:'Typ het begrip.',
+      velden:[{ label:'begrip', antwoord:it.a, type:'tekst', breed:true }],
+      uitleg:'Het goede begrip is <b>' + S(it.a[0]) + '</b>. ' + S(it.u), antwoordTekst:it.a[0] });
+  }
+
+  /* ================= tekenen: grafieken ================= */
+  var teller = 0;
+  /* een assenstelsel: o = { xmin, xmax, xstap, xlab, ymin, ymax, ystap, ylab, xnaam, ynaam, hoog, xtekst } */
+  function assen(o){
+    var W = 380, Hh = o.hoog || 250, L = 50, R = 14, T = 30, B = 44;
+    var sx = (W - L - R) / (o.xmax - o.xmin), sy = (Hh - T - B) / (o.ymax - o.ymin);
+    function X(x){ return rond(L + (x - o.xmin) * sx, 1); }
+    function Y(y){ return rond(T + (o.ymax - y) * sy, 1); }
+    var s = '', x, y, i, n;
+    s += '<g stroke="var(--rand2)" stroke-width="1">';
+    n = Math.round((o.xmax - o.xmin) / o.xstap);
+    for (i = 0; i <= n; i++){ x = o.xmin + i * o.xstap; s += '<line x1="' + X(x) + '" y1="' + T + '" x2="' + X(x) + '" y2="' + (Hh - B) + '"/>'; }
+    n = Math.round((o.ymax - o.ymin) / o.ystap);
+    for (i = 0; i <= n; i++){ y = o.ymin + i * o.ystap; s += '<line x1="' + L + '" y1="' + Y(y) + '" x2="' + (W - R) + '" y2="' + Y(y) + '"/>'; }
+    s += '</g><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="' + L + '" y1="' + (Hh - B) + '" x2="' + (W - R) + '" y2="' + (Hh - B) + '"/><line x1="' + L + '" y1="' + T + '" x2="' + L + '" y2="' + (Hh - B) + '"/></g>';
+    if (o.ymin < 0 && o.ymax > 0) s += '<line x1="' + L + '" y1="' + Y(0) + '" x2="' + (W - R) + '" y2="' + Y(0) + '" stroke="currentColor" stroke-width="1.5" stroke-dasharray="5 4"/>';
+    s += '<g font-size="14" fill="var(--muted)">';
+    n = Math.round((o.xmax - o.xmin) / o.xlab);
+    for (i = 0; i <= n; i++){ x = o.xmin + i * o.xlab; s += '<text x="' + X(x) + '" y="' + (Hh - B + 18) + '" text-anchor="middle">' + (o.xtekst ? o.xtekst(x) : net(x)) + '</text>'; }
+    n = Math.round((o.ymax - o.ymin) / o.ylab);
+    for (i = 0; i <= n; i++){ y = o.ymin + i * o.ylab; s += '<text x="' + (L - 6) + '" y="' + (Y(y) + 5) + '" text-anchor="end">' + (y < 0 ? '−' + net(-y) : net(y)) + '</text>'; }
+    s += '</g><g font-size="14" font-weight="600" fill="currentColor">';
+    s += '<text x="' + (W - R) + '" y="' + (Hh - 6) + '" text-anchor="end">' + S(o.xnaam) + '</text>';
+    s += '<text x="' + (L - 40) + '" y="' + (T - 12) + '">' + S(o.ynaam) + '</text>';
+    if (o.titel) s += '<text x="' + (W - R) + '" y="' + (T - 12) + '" text-anchor="end">' + S(o.titel) + '</text>';
+    s += '</g>';
+    return { X:X, Y:Y, kop:'<svg class="wgr" viewBox="0 0 ' + W + ' ' + Hh + '" font-family="inherit" role="img" aria-label="' + S(o.aria || 'grafiek') + '">' + s, staart:'</svg>' };
+  }
+  function lijn(a, punten, kleur, streep){
+    return '<polyline points="' + punten.map(function(p){ return a.X(p[0]) + ',' + a.Y(p[1]); }).join(' ') + '" fill="none" stroke="' + kleur + '" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"' + (streep ? ' stroke-dasharray="7 5"' : '') + '/>';
+  }
+  /* afvoer per maand als staafdiagram */
+  var MND = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+  var MAAND = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
+  function staven(vals, o){
+    var W = 380, Hh = o.hoog || 240, L = 50, R = 10, T = 30, B = 28, ymax = o.ymax;
+    var sy = (Hh - T - B) / ymax, bw = (W - L - R) / 12, s = '', i, g;
+    s += '<g stroke="var(--rand2)" stroke-width="1">';
+    for (g = 0; g <= ymax + 1e-9; g += o.grid) s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + rond(T + (ymax - g) * sy, 1) + '" y2="' + rond(T + (ymax - g) * sy, 1) + '"/>';
+    s += '</g>';
+    for (i = 0; i < 12; i++){
+      var h = vals[i] * sy;
+      s += '<rect x="' + rond(L + i * bw + bw * .18, 1) + '" y="' + rond(T + (ymax - vals[i]) * sy, 1) + '" width="' + rond(bw * .64, 1) + '" height="' + rond(h, 1) + '" fill="var(--nadruk)" opacity=".85"/>';
+    }
+    s += '<g stroke="currentColor" stroke-width="2"><line x1="' + L + '" y1="' + (Hh - B) + '" x2="' + (W - R) + '" y2="' + (Hh - B) + '"/><line x1="' + L + '" y1="' + T + '" x2="' + L + '" y2="' + (Hh - B) + '"/></g>';
+    s += '<g font-size="14" fill="var(--muted)">';
+    for (g = 0; g <= ymax + 1e-9; g += o.lab) s += '<text x="' + (L - 6) + '" y="' + rond(T + (ymax - g) * sy + 5, 1) + '" text-anchor="end">' + g + '</text>';
+    for (i = 0; i < 12; i++) s += '<text x="' + rond(L + i * bw + bw / 2, 1) + '" y="' + (Hh - B + 18) + '" text-anchor="middle">' + MND[i] + '</text>';
+    s += '</g><g font-size="14" font-weight="600" fill="currentColor"><text x="' + (L - 40) + '" y="' + (T - 12) + '">afvoer (m³/s)</text>' + (o.titel ? '<text x="' + (W - R) + '" y="' + (T - 12) + '" text-anchor="end">' + S(o.titel) + '</text>' : '') + '</g>';
+    return '<svg class="wgr" viewBox="0 0 ' + W + ' ' + Hh + '" font-family="inherit" role="img" aria-label="' + S(o.aria || 'afvoer per maand') + '">' + s + '</svg>';
+  }
+
+  /* ================= 1. rivieren en afvoer ================= */
+  /* de vorm van het jaar: een regenrivier zakt in de zomer diep weg, een gemengde rivier blijft gelijkmatiger door smeltwater */
+  var REGEN = [1.9, 1.85, 1.6, 1.1, .72, .5, .4, .35, .42, .62, 1.1, 1.6];
+  var GEMENGD = [1.25, 1.3, 1.25, 1.1, 1.02, 1.06, 1.0, .86, .76, .74, .9, 1.15];
+  function regime(type, gem, stap){
+    var vorm = type === 'regen' ? REGEN : GEMENGD, v, i, p;
+    for (p = 0; p < 30; p++){
+      v = vorm.map(function(f){ return Math.max(stap, Math.round(f * gem * (1 + (Math.random() - .5) * .1) / stap) * stap); });
+      var mx = Math.max.apply(null, v), mn = Math.min.apply(null, v);
+      /* precies één hoogste en één laagste maand */
+      if (v.filter(function(x){ return x === mx; }).length === 1 && v.filter(function(x){ return x === mn; }).length === 1) break;
+    }
+    return v;
+  }
+  function plafond(v, grid){ return Math.ceil((Math.max.apply(null, v) + grid * .5) / grid) * grid; }
+  function afvoer(niveau){
+    var vorm = niveau === 'bb' ? kies(['hoogst', 'lezen', 'seizoen']) : niveau === 'kgt' ? kies(['lezen', 'verschil', 'gemengd', 'gemengd']) : kies(['rijn', 'procent', 'golf', 'golf']);
+    if (vorm === 'gemengd' || vorm === 'rijn') return tweeRivieren(niveau, vorm);
+    if (vorm === 'golf') return golf(niveau);
+    var type = niveau === 'bb' || vorm === 'seizoen' || vorm === 'procent' ? 'regen' : kies(['regen', 'gemengd']);
+    var stap, grid, lab, tol, gem;
+    if (type === 'regen'){ gem = kies([200, 250, 300, 350]); stap = 50; grid = 50; lab = 100; tol = niveau === 'bb' ? 10 : 25; }
+    else { gem = kies([1600, 1800, 2000, 2200, 2400]); stap = 100; grid = 250; lab = 500; tol = 100; }
+    var v = regime(type, gem, stap), ymax = plafond(v, lab), mx = Math.max.apply(null, v), mn = Math.min.apply(null, v);
+    var iMax = v.indexOf(mx), iMin = v.indexOf(mn), beeld = staven(v, { ymax:ymax, grid:grid, lab:lab, titel:'rivier A', aria:'afvoer van rivier A per maand' });
+    var sl = 'af-' + vorm + v.join('.');
+    if (vorm === 'hoogst'){
+      var ander = kies([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].filter(function(i){ return i !== iMax && i !== iMin; }));
+      return mk('rivier', { sleutel:sl, vraag:'In welke maand is de afvoer van rivier A het grootst?', opdracht:'Zoek de hoogste staaf.', beeld:beeld,
+        opties:[MAAND[iMax], MAAND[iMin], MAAND[ander]], goed:0, antwoordTekst:MAAND[iMax],
+        uitleg:'De hoogste staaf staat bij ' + MAAND[iMax] + ': ' + mx + ' m³/s. In ' + MAAND[iMin] + ' is de staaf juist het laagst (' + mn + ' m³/s). Let op: een hoge staaf is veel water.' });
+    }
+    if (vorm === 'seizoen'){
+      return mk('rivier', { sleutel:sl, vraag:'In welk seizoen heeft rivier A het minste water?', beeld:beeld, vasteVolgorde:true,
+        opties:['in de zomer', 'in de winter', 'in het voorjaar'], goed:0, antwoordTekst:'in de zomer',
+        uitleg:'De laagste staaf staat in ' + MAAND[iMin] + ' (' + mn + ' m³/s). In de zomer verdampt er veel water, dus komt er weinig regen in de rivier. In de winter is de afvoer juist het grootst.' });
+    }
+    if (vorm === 'lezen'){
+      var m = kies([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+      return inv('rivier', { sleutel:sl + m, vraag:'Hoe groot is de afvoer van rivier A in <b>' + MAAND[m] + '</b>?', opdracht:'Ga vanaf de bovenkant van de staaf naar links en lees af op de as.', beeld:beeld,
+        velden:[{ label:'afvoer in ' + MAAND[m], antwoord:v[m], tol:tol, eenheid:'m³/s' }],
+        uitleg:'De staaf van ' + MAAND[m] + ' komt tot ' + v[m] + ' m³/s. Lees af bij de lijnen van het rooster: elk hokje is ' + grid + ' m³/s.', antwoordTekst:v[m] + ' m³/s' });
+    }
+    if (vorm === 'verschil'){
+      return inv('rivier', { sleutel:sl, vraag:'Hoeveel m³/s is de afvoer in de natste maand groter dan in de droogste maand?', opdracht:'Lees de hoogste en de laagste staaf af en trek ze van elkaar af.', beeld:beeld,
+        velden:[{ label:'verschil', antwoord:mx - mn, tol:tol * 2, eenheid:'m³/s' }],
+        uitleg:'Hoogste: ' + MAAND[iMax] + ', ' + mx + ' m³/s. Laagste: ' + MAAND[iMin] + ', ' + mn + ' m³/s. Het verschil is ' + mx + ' − ' + mn + ' = ' + (mx - mn) + ' m³/s.' + (type === 'regen' ? ' Zo’n groot verschil past bij een regenrivier.' : ' Het verschil is klein vergeleken met de afvoer: dat past bij een gemengde rivier.'), antwoordTekst:(mx - mn) + ' m³/s' });
+    }
+    /* procent */
+    var p = Math.round((mx - mn) / mx * 100);
+    return inv('rivier', { sleutel:sl, vraag:'Met hoeveel procent is de afvoer in de droogste maand lager dan in de natste maand?', opdracht:'Rond af op een heel procent.', beeld:beeld,
+      velden:[{ label:'lager', antwoord:p, tol:2, eenheid:'%' }],
+      uitleg:'Natste maand: ' + MAAND[iMax] + ', ' + mx + ' m³/s. Droogste: ' + MAAND[iMin] + ', ' + mn + ' m³/s. Verschil ' + (mx - mn) + '. Dat is ' + (mx - mn) + ' / ' + mx + ' × 100 ≈ ' + p + '% van de natste maand. Een regenrivier zakt in de zomer zo diep weg.', antwoordTekst:p + '%' });
+  }
+  function tweeRivieren(niveau, vorm){
+    var gemIsA = Math.random() < .5;
+    var vr = regime('regen', kies([200, 250, 300, 350]), 50), vg = regime('gemengd', kies([1600, 1800, 2000, 2200]), 100);
+    var cr = staven(vr, { ymax:plafond(vr, 100), grid:50, lab:100, hoog:200, titel:gemIsA ? 'rivier B' : 'rivier A', aria:'afvoer per maand van een rivier' });
+    var cg = staven(vg, { ymax:plafond(vg, 500), grid:250, lab:500, hoog:200, titel:gemIsA ? 'rivier A' : 'rivier B', aria:'afvoer per maand van een rivier' });
+    var X = gemIsA ? 'rivier A' : 'rivier B', Y = gemIsA ? 'rivier B' : 'rivier A';
+    var beeld = '<div class="twee">' + (gemIsA ? cg + cr : cr + cg) + '</div>';
+    var rmx = Math.max.apply(null, vr), rmn = Math.min.apply(null, vr), gmx = Math.max.apply(null, vg), gmn = Math.min.apply(null, vg);
+    var waarom = X + ' zakt van ' + gmx + ' naar ' + gmn + ' m³/s: nog niet de helft eraf. ' + Y + ' zakt van ' + rmx + ' naar ' + rmn + ' m³/s: in de zomer is er bijna niets meer over. Let op de assen: die hebben een andere schaal.';
+    if (vorm === 'gemengd'){
+      var opt = [X + ', want de afvoer is over het hele jaar gelijkmatiger', Y + ', want de afvoer is in de winter het grootst', Y + ', want in de zomer is er bijna geen water', X + ', want in de winter is de afvoer het kleinst'];
+      return mk('rivier', { sleutel:'tw-' + vr.join('.') + gemIsA, vraag:'Welke rivier is een gemengde rivier?', opdracht:'Vergelijk hoe ver de afvoer in de zomer wegzakt.', beeld:beeld,
+        opties:opt, goed:0, antwoordTekst:opt[0],
+        uitleg:'Een gemengde rivier krijgt in de winter regen en in voorjaar en zomer ook smeltwater, dus de afvoer blijft het jaar door redelijk gelijk. ' + waarom + ' Dat beide rivieren in de winter het meeste water hebben, zegt dus niets.' });
+    }
+    var opt2 = [X + ': in voorjaar en zomer blijft de afvoer hoog door smeltwater uit de Alpen', Y + ': in de winter is de afvoer veel groter dan in de zomer, net als bij de Rijn', Y + ': de afvoer is het hele jaar ongeveer gelijk', X + ': in augustus en september is de afvoer het grootst'];
+    return mk('rivier', { sleutel:'rn-' + vr.join('.') + gemIsA, vraag:'Welke van de twee grafieken lijkt het meest op de afvoer van de Rijn bij Lobith, en waarom?', beeld:beeld,
+      opties:opt2, goed:0, antwoordTekst:opt2[0],
+      uitleg:'De Rijn is een gemengde rivier: regen in de winter, en smeltwater uit de Alpen in voorjaar en zomer. Daardoor zakt de afvoer in de zomer niet diep weg. ' + waarom + ' ' + Y + ' lijkt op de Maas, een regenrivier.' });
+  }
+  /* een hoogwatergolf bij twee meetpunten langs de rivier */
+  function golf(niveau){
+    var b = kies([1500, 2000, 2500]), topP = kies([6500, 7000, 7500, 8000, 8500, 9000]), dp = tussen(4, 6), d = tussen(1, 3), topQ = topP - kies([0, 500, 500, 1000]);
+    function reeks(top, dag, val){
+      var r = [], t;
+      for (t = 1; t <= 14; t++){
+        var w;
+        if (t <= dag - 3 || t >= dag + val) w = b;
+        else if (t <= dag) w = b + (top - b) * (t - (dag - 3)) / 3;
+        else w = top - (top - b) * (t - dag) / val;
+        r.push([t, Math.round(w / 100) * 100]);
+      }
+      return r;
+    }
+    var P = reeks(topP, dp, 5), Q = reeks(topQ, dp + d, 6), ymax = Math.ceil((topP + 600) / 1000) * 1000;
+    var a = assen({ xmin:0, xmax:14, xstap:1, xlab:2, ymin:0, ymax:ymax, ystap:500, ylab:1000, xnaam:'dag', ynaam:'afvoer (m³/s)', hoog:270, aria:'afvoer per dag bij plaats P en plaats Q' });
+    var beeld = a.kop + lijn(a, P, 'var(--nadruk)') + lijn(a, Q, 'var(--lijn2)', true) +
+      '<g font-size="14" font-weight="600"><text x="' + (a.X(dp) - 6) + '" y="' + (a.Y(topP) - 8) + '" text-anchor="end" fill="var(--nadruk)">P</text><text x="' + (a.X(dp + d) + 8) + '" y="' + (a.Y(topQ) - 8) + '" fill="var(--lijn2)">Q</text></g>' + a.staart +
+      '<p class="bijschrift">P ligt bovenstrooms (doorgetrokken lijn), Q verder stroomafwaarts (gestippeld).</p>';
+    var vorm = kies(['dagen', 'top', 'stijging', 'dagQ']), sl = 'gf-' + vorm + b + topP + dp + d + topQ;
+    if (vorm === 'dagen') return inv('rivier', { sleutel:sl, vraag:'Een hoogwatergolf trekt over de rivier. Hoeveel dagen na plaats P bereikt de top plaats Q?', beeld:beeld,
+      velden:[{ label:'aantal dagen', antwoord:d, tol:0, eenheid:'dagen' }],
+      uitleg:'De top bij P is op dag ' + dp + ', de top bij Q op dag ' + (dp + d) + '. Dat is ' + d + (d === 1 ? ' dag' : ' dagen') + ' later. Zo kan Rijkswaterstaat benedenstrooms op tijd waarschuwen.', antwoordTekst:d + ' dagen' });
+    if (vorm === 'dagQ') return inv('rivier', { sleutel:sl, vraag:'Op welke dag is de afvoer bij plaats Q het grootst?', beeld:beeld,
+      velden:[{ label:'dag', antwoord:dp + d, tol:0 }],
+      uitleg:'De gestippelde lijn van Q is het hoogst op dag ' + (dp + d) + ', met ' + topQ + ' m³/s. Bij P was de top al op dag ' + dp + '.', antwoordTekst:'dag ' + (dp + d) });
+    if (vorm === 'top') return inv('rivier', { sleutel:sl, vraag:'Hoe groot is de afvoer op de top van de golf bij plaats Q?', beeld:beeld,
+      velden:[{ label:'afvoer', antwoord:topQ, tol:250, eenheid:'m³/s' }],
+      uitleg:'De top van Q ligt op ' + topQ + ' m³/s (dag ' + (dp + d) + '). ' + (topQ < topP ? 'Dat is lager dan bij P: de golf wordt onderweg breder en platter, omdat er water in de uiterwaarden wordt opgevangen.' : 'Even hoog als bij P.'), antwoordTekst:topQ + ' m³/s' });
+    return inv('rivier', { sleutel:sl, vraag:'Hoeveel m³/s steeg de afvoer bij plaats P, van dag 1 tot de top?', beeld:beeld,
+      velden:[{ label:'stijging', antwoord:topP - b, tol:250, eenheid:'m³/s' }],
+      uitleg:'Op dag 1 is de afvoer ' + b + ' m³/s, op de top (dag ' + dp + ') ' + topP + ' m³/s. De stijging is ' + topP + ' − ' + b + ' = ' + (topP - b) + ' m³/s.', antwoordTekst:(topP - b) + ' m³/s' });
+  }
+  /* de waterkringloop en het water naar zee, op volgorde */
+  var KETENS = [
+    { n:'bk', kop:'de waterkringloop', s:['Water verdampt uit de zee.', 'De waterdamp koelt af en vormt wolken.', 'Er valt neerslag op het land.', 'Het water stroomt via beken en rivieren terug naar zee.'] },
+    { n:'b', kop:'van zon tot regen', s:['De zon verwarmt het water.', 'Het water verdampt.', 'Er ontstaan wolken.', 'Het gaat regenen.'] },
+    { n:'kh', kop:'de weg onder de grond', s:['Regen valt op het land.', 'Het water zakt in de bodem (infiltratie).', 'Het grondwater stroomt langzaam naar een beek.', 'De beek stroomt in een rivier.', 'De rivier mondt uit in zee.'] },
+    { n:'kh', kop:'smeltwater in de Rijn', s:['Er valt sneeuw in de Alpen.', 'In het voorjaar smelt de sneeuw.', 'Het smeltwater stroomt in de Rijn.', 'Bij Lobith komt het water Nederland binnen.', 'Via de Waal stroomt het verder naar zee.'] },
+    { n:'h', kop:'een hoogwatergolf', s:['Dagenlang valt er veel regen in Duitsland.', 'De bodem raakt verzadigd.', 'Het water stroomt snel af naar de zijrivieren.', 'De afvoer bij Lobith stijgt.', 'De uiterwaarden lopen onder.'] }
+  ];
+  function keten(niveau){
+    var l = KETENS.filter(function(k){ return past(k, niveau); }), k = kies(l), idx = KETENS.indexOf(k);
+    return Object.assign(basis('rivier'), { vorm:'sleep', sleutel:'kt' + idx,
+      vraag:'Zet de stappen op volgorde: <b>' + S(k.kop) + '</b>.', opdracht:'Sleep elk kaartje naar zijn plek, of tik een kaartje en dan het vak. In vak 1 komt de eerste stap.',
+      kaarten:k.s.map(function(t, i){ return { id:'s' + i, tekst:t }; }),
+      vakken:k.s.map(function(t, i){ return { id:'v' + i, max:1, hoort:['s' + i] }; }),
+      uitleg:'De goede volgorde: ' + k.s.map(function(t, i){ return (i + 1) + '. ' + S(t); }).join(' '), antwoordTekst:'de volgorde hierboven' });
+  }
+  /* regenrivier of gemengde rivier: kaartjes sorteren */
+  var KENMERK = [
+    { t:'de Maas', r:'regen' }, { t:'de Schelde', r:'regen' }, { t:'de Rijn', r:'gemengd' },
+    { t:'krijgt smeltwater uit de Alpen', r:'gemengd' }, { t:'heeft in een droge zomer heel weinig water', r:'regen' },
+    { t:'de afvoer is over het jaar gelijkmatiger', r:'gemengd' }, { t:'krijgt alleen water van regen', r:'regen' }, { t:'ontspringt in Zwitserland', r:'gemengd' }
+  ];
+  function sorteer(niveau){
+    var gekozen = H(KENMERK).slice(0, niveau === 'hv' ? 6 : 5);
+    if (!gekozen.some(function(x){ return x.r === 'regen'; }) || !gekozen.some(function(x){ return x.r === 'gemengd'; })) return sorteer(niveau);
+    return Object.assign(basis('rivier'), { vorm:'sleep', sleutel:'so' + gekozen.map(function(x){ return KENMERK.indexOf(x); }).sort().join(''),
+      vraag:'Hoort het bij een <b>regenrivier</b> of bij een <b>gemengde rivier</b>?', opdracht:'Sleep elk kaartje naar het goede vak.',
+      kaarten:gekozen.map(function(x){ return { id:'k' + KENMERK.indexOf(x), tekst:x.t }; }),
+      vakken:[{ id:'regen', naam:'regenrivier', hoort:gekozen.filter(function(x){ return x.r === 'regen'; }).map(function(x){ return 'k' + KENMERK.indexOf(x); }) },
+              { id:'gemengd', naam:'gemengde rivier', hoort:gekozen.filter(function(x){ return x.r === 'gemengd'; }).map(function(x){ return 'k' + KENMERK.indexOf(x); }) }],
+      uitleg:'Een regenrivier, zoals de Maas en de Schelde, krijgt alleen regenwater en heeft in de zomer weinig water. Een gemengde rivier, zoals de Rijn, ontspringt in de Alpen en krijgt ook smeltwater; daardoor is de afvoer gelijkmatiger.', antwoordTekst:'zie de uitleg' });
+  }
+  function rivier(niveau){
+    if (niveau === 'bb') return weeg([[Lf('rivier'), 45], [Bf('rivier'), 8], [afvoer, 32], [keten, 15]])(niveau);
+    return weeg([[Lf('rivier'), 32], [Bf('rivier'), 13], [afvoer, 35], [keten, 10], [sorteer, 10]])(niveau);
+  }
+
+  /* ================= 2. de rivier in doorsnede ================= */
+  /* vaste kleuren: een tekening met lichte vlakken en donkere tekst, in licht en donker gelijk */
+  var DK = { grond:'#d9c49c', gras:'#5f9a3f', water:'#93c3ea', waterRand:'#2f6fae', krib:'#6f757e', muur:'#f4efe6', dak:'#b8553a', oud:'#d0461e', inkt:'#14224C', wit:'#ffffff' };
+  var PEIL = { laag:214, normaal:190, hoog:122 };
+  /* de stroken (zonder spiegeling) om aan te tikken: elk minstens 84 breed */
+  var STROOK = [['polder', 0, 88], ['dijk', 88, 172], ['uiter', 172, 268], ['zomer', 268, 372], ['uiter', 372, 468], ['dijk', 468, 552], ['polder', 552, 640]];
+  var NAAM = { polder:'binnendijks land (de polder)', dijk:'de winterdijk', uiter:'de uiterwaard', zomer:'het zomerbed', kade:'de zomerkade', krib:'de krib', geul:'de nevengeul' };
+  var KORT = { polder:'binnendijks land', dijk:'winterdijk', uiter:'uiterwaard', zomer:'zomerbed', kade:'zomerkade', krib:'krib', geul:'nevengeul' };
+  function profiel(o){
+    var u = o.uiterY || 166, bed = o.bedY || 232, k = o.kruinY || 92, p = [[0, 200], [88, 200], [118, k], [142, k], [172, u]];
+    if (o.kade) p.push([200, u], [210, u - 16], [224, u - 16], [234, u]);
+    p.push([268, u], [300, bed], [340, bed], [372, u]);
+    if (o.geul) p.push([388, u], [400, 206], [432, 206], [444, u]);
+    if (o.verleg) p.push([548, u], [578, k], [602, k], [632, 200], [640, 200]);
+    else p.push([468, u], [498, k], [522, k], [552, 200], [640, 200]);
+    return p;
+  }
+  function kribVorm(top, rechts, u){ u = u || 166; var l = [[268, u], [308, Math.max(top, u + 8)], [308, Math.max(top, u + 8) + 10], [284, 199]]; return rechts ? l.map(function(q){ return [640 - q[0], q[1]]; }) : l; }
+  function pts(l){ return l.map(function(q){ return q[0] + ',' + q[1]; }).join(' '); }
+  function huis(x){ return '<rect x="' + x + '" y="184" width="26" height="16" fill="' + DK.muur + '" stroke="' + DK.inkt + '" stroke-width="1.5"/><path d="M' + (x - 3) + ' 184 L' + (x + 13) + ' 170 L' + (x + 29) + ' 184Z" fill="' + DK.dak + '" stroke="' + DK.inkt + '" stroke-width="1.5"/>'; }
+  /* de tekening: o = { stand, kade, geul, verleg, uiterY, bedY, kruinY, kribTop, oud:[[punten]], oudKrib, huizen } ; de vormen staan in een groep die gespiegeld kan worden */
+  function doorsnede(o){
+    var p = profiel(o), s = '', kt = o.kribTop || 182, rechtsEind = o.verleg ? 590 : 510;
+    s += '<rect x="130" y="' + PEIL[o.stand] + '" width="' + (rechtsEind - 130) + '" height="' + (262 - PEIL[o.stand]) + '" fill="' + DK.water + '"/>';
+    s += '<line x1="130" x2="' + rechtsEind + '" y1="' + PEIL[o.stand] + '" y2="' + PEIL[o.stand] + '" stroke="' + DK.waterRand + '" stroke-width="2"/>';
+    s += '<polygon points="' + pts(p.concat([[640, 262], [0, 262]])) + '" fill="' + DK.grond + '"/>';
+    s += '<polyline points="' + pts(p.filter(function(q){ return q[0] <= 268; })) + '" fill="none" stroke="' + DK.gras + '" stroke-width="5" stroke-linejoin="round"/>';
+    s += '<polyline points="' + pts(p.filter(function(q){ return q[0] >= 372; })) + '" fill="none" stroke="' + DK.gras + '" stroke-width="5" stroke-linejoin="round"/>';
+    s += '<polygon points="' + pts(kribVorm(kt, false, o.uiterY)) + '" fill="' + DK.krib + '"/><polygon points="' + pts(kribVorm(kt, true, o.uiterY)) + '" fill="' + DK.krib + '"/>';
+    if (o.huizen !== false){ s += huis(30); if (!o.verleg) s += huis(588); }
+    (o.oud || []).forEach(function(l){ s += '<polyline points="' + pts(l) + '" fill="none" stroke="' + DK.oud + '" stroke-width="4" stroke-dasharray="8 5"/>'; });
+    if (o.oudKrib){ s += '<polygon points="' + pts(kribVorm(182, false)) + '" fill="none" stroke="' + DK.oud + '" stroke-width="3" stroke-dasharray="6 4"/><polygon points="' + pts(kribVorm(182, true)) + '" fill="none" stroke="' + DK.oud + '" stroke-width="3" stroke-dasharray="6 4"/>'; }
+    return s;
+  }
+  function svgDs(binnen, buiten, spiegel, aria){
+    return '<svg class="ds" viewBox="0 0 640 262" font-family="inherit" role="img" aria-label="' + S(aria) + '"><g' + (spiegel ? ' transform="translate(640 0) scale(-1 1)"' : '') + '>' + binnen + '</g>' + (buiten || '') + '</svg>';
+  }
+  function mx(x, spiegel){ return spiegel ? 640 - x : x; }
+  /* een letter in een rondje, of een kaartje met twee regels: wit vlak, donkere tekst */
+  function rondje(x, y, t){ return '<circle cx="' + x + '" cy="' + y + '" r="22" fill="' + DK.wit + '" stroke="' + DK.inkt + '" stroke-width="2"/><text x="' + x + '" y="' + (y + 9) + '" text-anchor="middle" font-size="26" font-weight="700" fill="' + DK.inkt + '">' + t + '</text>'; }
+  function kaartje(x, y, r1, r2, k){
+    k = k || 1; var w = Math.max(r1.length, r2.length) * 9.6 * k + 18 * k;
+    return '<rect x="' + rond(x - w / 2, 1) + '" y="' + rond(y - 22 * k, 1) + '" width="' + rond(w, 1) + '" height="' + rond(46 * k, 1) + '" rx="' + rond(8 * k, 1) + '" fill="' + DK.wit + '" stroke="' + DK.inkt + '" stroke-width="1.5"/>' +
+      '<text x="' + x + '" y="' + rond(y - 3 * k, 1) + '" text-anchor="middle" font-size="' + rond(16 * k, 1) + '" fill="' + DK.inkt + '">' + S(r1) + '</text><text x="' + x + '" y="' + rond(y + 17 * k, 1) + '" text-anchor="middle" font-size="' + rond(17 * k, 1) + '" font-weight="700" fill="' + DK.inkt + '">' + S(r2) + '</text>';
+  }
+  var DEELUIT = {
+    zomer:'Het zomerbed is de geul waar de rivier het hele jaar stroomt en waar de schepen varen.',
+    uiter:'De uiterwaard ligt buitendijks, tussen het zomerbed en de winterdijk. In de zomer grazen er koeien; bij hoogwater loopt hij onder en blijft er slib liggen.',
+    dijk:'De winterdijk (bandijk) is de hoge dijk. Bij hoogwater houdt hij het water tegen.',
+    polder:'Achter de winterdijk ligt het binnendijkse land, vaak een polder. Daar wonen de mensen; bij hoogwater kan hier kwel omhoog komen.'
+  };
+  var VOLG = 'Van de rivier naar buiten: zomerbed, uiterwaard (die twee samen zijn het winterbed), winterdijk en dan het binnendijkse land.';
+  var TIK = [
+    { n:'bkh', d:'zomer', v:'Tik op het <b>zomerbed</b>.' },
+    { n:'bkh', d:'uiter', v:'Tik op een <b>uiterwaard</b>.' },
+    { n:'bkh', d:'dijk', v:'Tik op een <b>winterdijk</b>.' },
+    { n:'bk', d:'polder', v:'Tik op het <b>binnendijkse land</b> (de polder).' },
+    { n:'bk', d:'zomer', v:'Waar varen de schepen, ook als het water laag staat?' },
+    { n:'bk', d:'uiter', v:'Waar grazen in de zomer koeien, maar staat in de winter soms water?' },
+    { n:'bk', d:'dijk', v:'Welk deel houdt bij hoogwater het water tegen?' },
+    { n:'b', d:'polder', v:'Waar wonen de mensen veilig achter de dijk?' },
+    { n:'kh', d:'polder', v:'Waar kan bij hoogwater kwel omhoog komen?' },
+    { n:'kh', d:'uiter', v:'Waar blijft bij hoogwater slib (klei en zand) liggen?' },
+    { n:'kh', d:'uiter', v:'Welk deel kun je afgraven om de rivier meer ruimte te geven?' },
+    { n:'kh', d:'zomer', v:'Waar stroomt het water bij een normale waterstand?' },
+    { n:'h', d:'polder', v:'Welk deel ligt binnendijks?' },
+    { n:'h', d:'dijk', v:'Welk deel moet hoger als je de rivier géén extra ruimte geeft?' }
+  ];
+  function aanwijzen(niveau){
+    var t = kies(TIK.filter(function(x){ return past(x, niveau); })), ti = TIK.indexOf(t);
+    var spiegel = Math.random() < .5, stand = t.d === 'zomer' && /laag/.test(t.v) ? 'laag' : kies(['laag', 'normaal', 'normaal', 'hoog']);
+    if (t.d === 'polder' && /kwel/.test(t.v)) stand = 'hoog';
+    if (t.d === 'uiter' && /slib/.test(t.v)) stand = 'hoog';
+    var kade = niveau !== 'bb' && Math.random() < .5;
+    return Object.assign(basis('doorsnede'), { vorm:'eigen', sleutel:'tk' + ti + stand + (spiegel ? 's' : '') + (kade ? 'k' : ''),
+      vraag:t.v, opdracht:'Tik op het deel in de tekening en druk op Nakijken.',
+      uitleg:DEELUIT[t.d] + ' ' + VOLG, antwoordTekst:NAAM[t.d],
+      teken:function(el, api){
+        var stroken = STROOK.map(function(st, i){ return '<rect class="strook" data-i="' + i + '" data-deel="' + st[0] + '" x="' + st[1] + '" y="0" width="' + (st[2] - st[1]) + '" height="262" tabindex="0" role="button" aria-label="strook ' + (spiegel ? 7 - i : i + 1) + ' van links"/>'; }).join('');
+        el.innerHTML = '<div class="dswrap">' + svgDs(doorsnede({ stand:stand, kade:kade }) + stroken, '', spiegel, 'doorsnede van een rivier met dijken') + '</div><p class="tekenuit">Tik op een deel van de tekening.</p>';
+        var wrap = el.querySelector('.dswrap'), uit = el.querySelector('.tekenuit'), gekozen = null;
+        function kiesStrook(r){ if (!api.bezig()) return; if (gekozen) gekozen.classList.remove('kies'); gekozen = r; r.classList.add('kies'); uit.textContent = 'Gekozen. Druk op Nakijken, of tik op een ander deel.'; }
+        wrap.addEventListener('click', function(e){ var r = e.target.closest ? e.target.closest('.strook') : null; if (r) kiesStrook(r); });
+        wrap.addEventListener('keydown', function(e){ var r = e.target.closest ? e.target.closest('.strook') : null; if (r && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); e.stopPropagation(); kiesStrook(r); } });
+        var knop = api.knop('Nakijken', function(){
+          if (!gekozen){ api.uit('Tik eerst op een deel van de tekening.'); return; }
+          var deel = gekozen.getAttribute('data-deel'), ok = deel === t.d;
+          wrap.classList.add('klaar'); knop.disabled = true; gekozen.classList.remove('kies'); gekozen.classList.add(ok ? 'goed' : 'mis');
+          Array.prototype.forEach.call(wrap.querySelectorAll('.strook[data-deel="' + t.d + '"]'), function(r){ r.classList.add('goed'); });
+          uit.textContent = 'Groen: ' + KORT[t.d] + '.';
+          api.klaar(ok, ok ? '' : 'Je tikte op ' + NAAM[deel] + '.');
+        });
+        /* voor de proef */
+        function tik(r){ r.dispatchEvent(new MouseEvent('click', { bubbles:true })); }
+        el.proef = function(){ tik(wrap.querySelector('.strook[data-deel="' + t.d + '"]')); knop.click(); };
+        el.proefFout = function(){ tik(wrap.querySelector('.strook:not([data-deel="' + t.d + '"])')); knop.click(); };
+      }
+    });
+  }
+  /* letters bij de delen (zonder spiegeling); de krib met een lijntje naar het dammetje */
+  var LETTERPLEK = { polder:[44, 142], dijk:[130, 58], zomer:[320, 216], kade:[217, 122], krib:[300, 132], geul:[416, 136] };
+  function letters(niveau){
+    var spiegel = Math.random() < .5, geul = niveau === 'hv' && Math.random() < .5, kade = niveau !== 'bb' && !geul;
+    var delen = ['polder', 'dijk', 'uiter', 'zomer'];
+    if (kade) delen.push('kade'); if (niveau !== 'bb') delen.push('krib'); if (geul) delen.push('geul');
+    var plek = Object.assign({}, LETTERPLEK, { uiter: kade ? [420, 140] : [220, 140] });
+    var lt = 'ABCDEFG'.split(''), volg = H(delen), bij = {}, buiten = '';
+    volg.forEach(function(d, i){ bij[d] = lt[i]; });
+    delen.forEach(function(d){
+      var q = plek[d], x = mx(q[0], spiegel);
+      if (d === 'krib') buiten += '<line x1="' + x + '" y1="' + (q[1] + 22) + '" x2="' + mx(290, spiegel) + '" y2="' + 180 + '" stroke="' + DK.inkt + '" stroke-width="2"/>';
+      buiten += rondje(x, q[1], bij[d]);
+    });
+    var stand = kies(['normaal', 'normaal', 'laag']);
+    var beeld = svgDs(doorsnede({ stand:stand, kade:kade, geul:geul }), buiten, spiegel, 'doorsnede van een rivier met letters bij de delen');
+    var vorm = niveau === 'bb' ? kies(['welke', 'wat']) : kies(['welke', 'wat', 'winterbed']);
+    var doel = kies(delen), sl = 'lt' + vorm + doel + volg.join('') + (spiegel ? 's' : '');
+    var n = niveau === 'bb' ? 3 : 4, alleLetters = delen.map(function(d){ return bij[d]; });
+    if (vorm === 'welke'){
+      var opties = [bij[doel]].concat(H(alleLetters.filter(function(x){ return x !== bij[doel]; })).slice(0, n - 1)).sort();
+      return mk('doorsnede', { sleutel:sl, vraag:'Welke letter staat bij de <b>' + KORT[doel] + '</b>?', beeld:beeld, vasteVolgorde:true,
+        opties:opties, goed:opties.indexOf(bij[doel]), antwoordTekst:bij[doel],
+        uitleg:'Letter ' + bij[doel] + ' is ' + NAAM[doel] + '. ' + (DEELUIT[doel] || ({ kade:'De zomerkade is een lage dijk in de uiterwaard.', krib:'Een krib is een stenen dammetje haaks op de oever.', geul:'De nevengeul is een extra geul in de uiterwaard, voor meer ruimte bij hoogwater.' })[doel]) + ' ' + VOLG });
+    }
+    if (vorm === 'wat'){
+      var namen = [KORT[doel]].concat(H(delen.filter(function(x){ return x !== doel; })).slice(0, n - 1).map(function(x){ return KORT[x]; }));
+      return mk('doorsnede', { sleutel:sl, vraag:'Wat staat er bij letter <b>' + bij[doel] + '</b>?', beeld:beeld,
+        opties:namen, goed:0, antwoordTekst:KORT[doel],
+        uitleg:'Letter ' + bij[doel] + ' is ' + NAAM[doel] + '. ' + VOLG });
+    }
+    var goedT = [bij.zomer, bij.uiter].sort().join(' en ');
+    var opt = [goedT, bij.zomer + ' alleen', [bij.uiter, bij.dijk].sort().join(' en '), [bij.polder, bij.dijk].sort().join(' en ')];
+    return mk('doorsnede', { sleutel:sl, vraag:'Welke letters horen samen bij het <b>winterbed</b>?', beeld:beeld,
+      opties:opt, goed:0, antwoordTekst:goedT,
+      uitleg:'Het winterbed is het zomerbed (' + bij.zomer + ') samen met de uiterwaarden (' + bij.uiter + '). Bij hoogwater stroomt het water door dat hele winterbed, tussen de winterdijken.' + (bij.dijk ? ' De dijk (' + bij.dijk + ') begrenst het winterbed, maar hoort er zelf niet bij.' : '') });
+  }
+  function waterstand(niveau){
+    var spiegel = Math.random() < .5, stand = kies(['laag', 'normaal', 'hoog']), kade = niveau !== 'bb' && Math.random() < .5;
+    var uit = { laag:'Het water staat diep in het zomerbed: de kribben steken er ver bovenuit. Dat is laagwater; schepen kunnen dan minder lading meenemen.',
+      normaal:'Het water vult het zomerbed en de uiterwaarden zijn droog. Dat is een normale waterstand.',
+      hoog:'De uiterwaarden staan onder water en het water staat tegen de winterdijken. Dat is hoogwater: de rivier gebruikt haar hele winterbed.' };
+    var opties = ['laagwater', 'normale waterstand', 'hoogwater'], goed = { laag:0, normaal:1, hoog:2 }[stand];
+    return mk('doorsnede', { sleutel:'ws' + stand + (spiegel ? 's' : '') + (kade ? 'k' : ''), vraag:'Welke waterstand zie je in deze doorsnede?', beeld:svgDs(doorsnede({ stand:stand, kade:kade }), '', spiegel, 'doorsnede van een rivier'),
+      opties:opties, goed:goed, vasteVolgorde:true, antwoordTekst:opties[goed], uitleg:uit[stand] });
+  }
+  var MAAT = {
+    verlagen:{ naam:'uiterwaard verlagen', uit:'De uiterwaarden zijn afgegraven en liggen nu lager. Tussen de dijken past meer water, dus blijft de waterstand bij hoogwater lager.', o:{ uiterY:180 }, oud:[[[172, 166], [268, 166]], [[372, 166], [468, 166]]] },
+    geul:{ naam:'nevengeul graven', uit:'In de uiterwaard is een extra geul gegraven. Bij hoogwater stroomt daar ook water door, en dat verlaagt de waterstand.', o:{ geul:true }, oud:[[[388, 166], [444, 166]]] },
+    verleg:{ naam:'dijk landinwaarts verleggen', uit:'De dijk ligt nu verder van de rivier. De uiterwaard wordt breder, zodat de rivier meer ruimte heeft.', o:{ verleg:true }, oud:[[[468, 166], [498, 92], [522, 92], [552, 200]]] },
+    verdiepen:{ naam:'zomerbed verdiepen', uit:'De bodem van het zomerbed is uitgediept. Er past meer water in de geul, dus de waterstand blijft lager.', o:{ bedY:250 }, oud:[[[300, 232], [340, 232]]] },
+    kribben:{ naam:'kribben verlagen', uit:'De kribben zijn lager gemaakt. Bij hoogwater remmen ze het water minder af, zodat het sneller wegstroomt en de waterstand daalt.', o:{ kribTop:194 }, oudKrib:true },
+    verhogen:{ naam:'dijk verhogen', uit:'De dijk is hoger gemaakt. Die houdt meer water tegen, maar de rivier krijgt er geen ruimte bij. Dat is de oude aanpak; bij Ruimte voor de Rivier ging het juist om meer ruimte.', o:{ kruinY:70 }, oud:[[[88, 200], [118, 92], [142, 92], [172, 166]], [[468, 166], [498, 92], [522, 92], [552, 200]]] }
+  };
+  function maatregel(niveau){
+    var keys = niveau === 'hv' ? Object.keys(MAAT) : ['verlagen', 'geul', 'verleg', 'verhogen'], k = kies(keys), m = MAAT[k], spiegel = Math.random() < .5;
+    var o = Object.assign({ stand:'normaal', huizen:k !== 'verleg' }, m.o); if (m.oud) o.oud = m.oud; if (m.oudKrib) o.oudKrib = true;
+    var opties = [m.naam].concat(H(keys.filter(function(x){ return x !== k; })).slice(0, 3).map(function(x){ return MAAT[x].naam; }));
+    return mk('doorsnede', { sleutel:'mr' + k + (spiegel ? 's' : ''), vraag:'Welke maatregel zie je in deze doorsnede?', opdracht:'De rode stippellijn laat zien hoe het eerst was.',
+      beeld:svgDs(doorsnede(o), '', spiegel, 'doorsnede van een rivier, voor en na een maatregel') + '<p class="bijschrift">rood gestippeld: zoals het eerst was</p>',
+      opties:opties, goed:0, antwoordTekst:m.naam, uitleg:m.uit });
+  }
+  function hoogte(niveau){
+    var spiegel = Math.random() < .5, st = niveau === 'hv' ? .1 : .5;
+    var K = rond(tussen(14, 20) * .5 + (niveau === 'hv' ? tussen(0, 4) * .1 : 0), 1);
+    var W = rond(K - (niveau === 'hv' ? tussen(10, 30) * .1 : tussen(2, 6) * .5), 1);
+    var P = rond(niveau === 'hv' ? tussen(-30, 10) * .1 : tussen(-4, 2) * .5, 1);
+    var buiten = kaartje(mx(130, spiegel), 46, 'kruin dijk', napKort(K), 1.5) + kaartje(mx(320, spiegel), 76, 'hoogwater', napKort(W), 1.5) + kaartje(mx(566, spiegel), 228, 'polder', napKort(P), 1.3);
+    var beeld = svgDs(doorsnede({ stand:'hoog', huizen:false }), buiten, spiegel, 'doorsnede van een rivier bij hoogwater met hoogtes ten opzichte van NAP');
+    var vorm = niveau === 'hv' ? kies(['marge', 'polder', 'stijgt', 'waak']) : kies(['marge', 'polder']), sl = 'ht' + vorm + K + W + P;
+    function veld(a, lbl){ return [{ label:lbl, antwoord:rond(a, 2), tol:.01, eenheid:'m' }]; }
+    if (vorm === 'marge') return inv('doorsnede', { sleutel:sl, vraag:'Hoeveel meter ligt de kruin van de dijk boven het hoogwater?', beeld:beeld, velden:veld(K - W, 'verschil'),
+      uitleg:'Kruin ' + napKort(K) + ', water ' + napKort(W) + '. Verschil: ' + net(K) + ' − ' + net(W) + ' = ' + net(K - W) + ' m. Zoveel ruimte is er nog voordat het water over de dijk loopt.', antwoordTekst:net(K - W) + ' m' });
+    if (vorm === 'polder') return inv('doorsnede', { sleutel:sl, vraag:'Hoeveel meter staat het hoogwater hoger dan de polder?', opdracht:P < 0 ? 'Let op: de polder ligt onder NAP.' : '', beeld:beeld, velden:veld(W - P, 'verschil'),
+      uitleg:'Water ' + napKort(W) + ', polder ' + napKort(P) + '. ' + (P < 0 ? 'Van NAP omhoog naar het water is ' + net(W) + ' m, en van de polder omhoog naar NAP nog eens ' + net(-P) + ' m. Samen ' + net(W - P) + ' m.' : 'Verschil: ' + net(W) + ' − ' + net(P) + ' = ' + net(W - P) + ' m.') + ' Hoe groter dit verschil, hoe meer het water onder de dijk door drukt: kwel.', antwoordTekst:net(W - P) + ' m' });
+    var s = rond(tussen(2, 8) * .1, 1);
+    if (vorm === 'stijgt') return inv('doorsnede', { sleutel:sl + s, vraag:'Het water stijgt nog ' + net(s) + ' m. Hoeveel meter ligt het water dan nog onder de kruin van de dijk?', beeld:beeld, velden:veld(K - W - s, 'nog over'),
+      uitleg:'Het water komt op ' + napKort(W + s) + '. De kruin ligt op ' + napKort(K) + '. Over: ' + net(K) + ' − ' + net(W + s) + ' = ' + net(K - W - s) + ' m.', antwoordTekst:net(K - W - s) + ' m' });
+    /* waakhoogte: de dijk moet minstens 1 m boven het hoogste water uitkomen */
+    var s2 = rond(K - W - 1 + tussen(2, 6) * .1, 1), nodig = rond(W + s2 + 1 - K, 1);
+    return inv('doorsnede', { sleutel:sl + s2, vraag:'Stel: de kruin van een dijk moet minstens 1 m boven het hoogste water uitkomen. Door een hogere afvoer komt het hoogwater straks ' + net(s2) + ' m hoger. Hoeveel meter moet de dijk dan omhoog?', beeld:beeld, velden:veld(nodig, 'ophogen'),
+      uitleg:'Nieuw hoogwater: ' + net(W) + ' + ' + net(s2) + ' = ' + napKort(W + s2) + '. Plus 1 m is ' + napKort(W + s2 + 1) + '. De kruin ligt op ' + napKort(K) + ', dus de dijk moet ' + net(nodig) + ' m omhoog. Of: de rivier meer ruimte geven, zodat het water minder hoog komt.', antwoordTekst:net(nodig) + ' m' });
+  }
+  function doorsnedeDeel(niveau){
+    if (niveau === 'bb') return weeg([[aanwijzen, 40], [letters, 22], [waterstand, 18], [Lf('doorsnede'), 14], [Bf('doorsnede'), 6]])(niveau);
+    if (niveau === 'kgt') return weeg([[aanwijzen, 26], [letters, 18], [waterstand, 8], [maatregel, 16], [hoogte, 14], [Lf('doorsnede'), 12], [Bf('doorsnede'), 6]])(niveau);
+    return weeg([[aanwijzen, 18], [letters, 18], [maatregel, 20], [hoogte, 22], [Lf('doorsnede'), 14], [Bf('doorsnede'), 8]])(niveau);
+  }
+
+  /* ================= 3. zee en kust ================= */
+  var GETIJ = 12 + 25 / 60;   /* tussen twee keer hoogwater: 12 uur en 25 minuten */
+  function klok(t){ t = ((t % 24) + 24) % 24; var u = Math.floor(t), m = Math.round((t - u) * 60 / 5) * 5; if (m === 60){ u = (u + 1) % 24; m = 0; } return u + ':' + (m < 10 ? '0' : '') + m; }
+  function getij(niveau){
+    var t0 = niveau === 'bb' ? tussen(1, 5) : tussen(2, 10) * .5;
+    var hw = niveau === 'bb' ? kies([1, 1.5, 2]) : rond(tussen(7, 16) * .1, 1), lw = niveau === 'bb' ? kies([-.5, -1, -1.5]) : rond(-tussen(5, 12) * .1, 1);
+    if (niveau === 'hv' && Math.random() < .5){ hw = rond(tussen(16, 24) * .1, 1); lw = rond(-tussen(14, 20) * .1, 1); }
+    var mid = (hw + lw) / 2, amp = (hw - lw) / 2, pnt = [], t;
+    for (t = 0; t <= 24.001; t += .25) pnt.push([t, mid + amp * Math.cos(2 * Math.PI * (t - t0) / GETIJ)]);
+    var ymax = Math.ceil(hw * 2 + .6) / 2, ymin = Math.floor(lw * 2 - 1.1) / 2;
+    var a = assen({ xmin:0, xmax:24, xstap:1, xlab:4, ymin:ymin, ymax:ymax, ystap:.5, ylab:.5, xnaam:'tijd (uur)', ynaam:'waterstand (m NAP)', hoog:260, aria:'waterstand aan de kust over een dag', xtekst:function(x){ return x + ':00'; } });
+    var labels = niveau === 'bb' ? '' : '<g font-size="13" font-weight="600" fill="currentColor"><text x="' + a.X(t0 + GETIJ) + '" y="' + (a.Y(hw) - 7) + '" text-anchor="middle">' + napKort(hw).replace('NAP ', '') + '</text><text x="' + a.X(t0 + GETIJ / 2) + '" y="' + (a.Y(lw) + 17) + '" text-anchor="middle">' + napKort(lw).replace('NAP ', '') + '</text></g>';
+    var beeld = a.kop + lijn(a, pnt, 'var(--nadruk)') + labels + a.staart;
+    var vorm = niveau === 'bb' ? kies(['wanneer', 'ebvloed', 'hoe']) : niveau === 'kgt' ? kies(['verschil', 'verschil', 'tweede', 'ebvloed']) : kies(['verschil', 'storm', 'kruin', 'tweede']);
+    var sl = 'gt' + vorm + t0 + hw + lw;
+    if (vorm === 'wanneer'){
+      var o1 = [klok(t0), klok(t0 + 6), klok(t0 + 3)].map(function(x){ return 'om ' + x; });
+      return mk('kust', { sleutel:sl, vraag:'De grafiek toont de waterstand aan de kust. Hoe laat is het de eerste keer <b>hoogwater</b>?', beeld:beeld, opties:o1, goed:0, antwoordTekst:o1[0],
+        uitleg:'Hoogwater is het hoogste punt van de lijn: om ' + klok(t0) + '. Om ongeveer ' + klok(t0 + GETIJ / 2) + ' is het laagwater, het laagste punt.' });
+    }
+    if (vorm === 'hoe'){
+      var hoog = Math.random() < .5, o4 = hoog ? [napKort(hw), napKort(lw), napKort(hw - .5)] : [napKort(lw), napKort(hw), napKort(lw + .5)];
+      return mk('kust', { sleutel:sl + (hoog ? 'h' : 'l'), vraag:'Hoe hoog staat het water bij ' + (hoog ? '<b>hoogwater</b>' : '<b>laagwater</b>') + '?', opdracht:'Zoek het ' + (hoog ? 'hoogste' : 'laagste') + ' punt van de lijn en kijk links op de as.', beeld:beeld, opties:o4, goed:0, antwoordTekst:o4[0],
+        uitleg:'Bij ' + (hoog ? 'hoogwater' : 'laagwater') + ' staat het water op ' + o4[0] + '. ' + (hoog ? 'Laagwater is het laagste punt: ' + napKort(lw) + '.' : 'Hoogwater is het hoogste punt: ' + napKort(hw) + '.') + ' Een min betekent onder NAP.' });
+    }
+    if (vorm === 'ebvloed'){
+      var stijgt = Math.random() < .5, tt = stijgt ? Math.round(t0 + 9) : Math.round(t0 + 3);
+      var o2 = ['vloed: het water stijgt', 'eb: het water daalt', 'het water staat stil'];
+      return mk('kust', { sleutel:sl + tt, vraag:'Is het om <b>' + klok(tt) + '</b> eb of vloed?', opdracht:'Kijk of de lijn op dat moment omhoog of omlaag gaat.', beeld:beeld, vasteVolgorde:true,
+        opties:o2, goed:stijgt ? 0 : 1, antwoordTekst:o2[stijgt ? 0 : 1],
+        uitleg:'Om ' + klok(tt) + ' gaat de lijn ' + (stijgt ? 'omhoog: het water stijgt, dat is vloed.' : 'omlaag: het water daalt, dat is eb.') + ' Stil staat het water alleen heel even bij hoogwater en laagwater.' });
+    }
+    if (vorm === 'verschil') return inv('kust', { sleutel:sl, vraag:'Hoe groot is het <b>getijverschil</b> op deze dag?', opdracht:'Het getijverschil is het verschil tussen hoogwater en laagwater.', beeld:beeld,
+      velden:[{ label:'getijverschil', antwoord:rond(hw - lw, 2), tol:.01, eenheid:'m' }],
+      uitleg:'Hoogwater ' + napKort(hw) + ', laagwater ' + napKort(lw) + '. Van laagwater omhoog naar NAP is ' + net(-lw) + ' m, van NAP naar hoogwater ' + net(hw) + ' m. Samen ' + net(hw - lw) + ' m.', antwoordTekst:net(hw - lw) + ' m' });
+    if (vorm === 'tweede'){
+      var o3 = [klok(t0 + GETIJ), klok(t0 + GETIJ / 2), klok(t0 + 10), klok(t0 + 15)].map(function(x){ return 'om ' + x; });
+      return mk('kust', { sleutel:sl, vraag:'Hoe laat is het ongeveer de tweede keer hoogwater op deze dag?', beeld:beeld, opties:o3, goed:0, antwoordTekst:o3[0],
+        uitleg:'Tussen twee keer hoogwater zit ongeveer 12 uur en 25 minuten. ' + klok(t0) + ' plus 12:25 is ' + klok(t0 + GETIJ) + '. Om ' + klok(t0 + GETIJ / 2) + ' is het laagwater.' });
+    }
+    var s = rond(tussen(15, 30) * .1, 1);
+    if (vorm === 'storm') return inv('kust', { sleutel:sl + s, vraag:'Er komt een zware noordwesterstorm. Die stuwt het water ' + net(s) + ' m hoger op dan in de grafiek. Hoe hoog komt het eerste hoogwater dan?', beeld:beeld,
+      velden:[{ label:'hoogwater', antwoord:rond(hw + s, 2), tol:.01, voor:'NAP +', eenheid:'m' }],
+      uitleg:'Normaal hoogwater: ' + napKort(hw) + '. Plus ' + net(s) + ' m windopzet: ' + napKort(hw + s) + '. Valt zo’n storm samen met springtij, zoals in 1953, dan komt het water nog hoger.', antwoordTekst:napKort(hw + s) });
+    var K = rond(hw + s + tussen(10, 40) * .1, 1);
+    return inv('kust', { sleutel:sl + s + K, vraag:'Een storm stuwt het water ' + net(s) + ' m hoger op dan in de grafiek. De kruin van de zeedijk ligt op ' + napKort(K) + '. Hoeveel meter blijft er bij het eerste hoogwater nog over tot de kruin?', beeld:beeld,
+      velden:[{ label:'nog over', antwoord:rond(K - hw - s, 2), tol:.01, eenheid:'m' }],
+      uitleg:'Het water komt op ' + net(hw) + ' + ' + net(s) + ' = ' + napKort(hw + s) + '. Tot de kruin (' + napKort(K) + ') is het nog ' + net(K - hw - s) + ' m. Golven slaan daar nog overheen, dus een dijk heeft extra hoogte nodig.', antwoordTekst:net(K - hw - s) + ' m' });
+  }
+  var JAREN = [
+    { j:1932, t:'De Afsluitdijk wordt gesloten.', b:1 },
+    { j:1953, t:'De Watersnoodramp in Zeeland en Zuid-Holland.', b:1 },
+    { j:1958, t:'De Deltawet: het plan voor de Deltawerken wordt wet.', b:0 },
+    { j:1986, t:'De Oosterscheldekering is klaar.', b:1 },
+    { j:1995, t:'Hoogwater op de rivieren: meer dan 200.000 mensen moeten hun huis uit.', b:0 },
+    { j:1997, t:'De Maeslantkering is klaar.', b:1 }
+  ];
+  function tijdlijn(niveau){
+    var bron = niveau === 'bb' ? JAREN.filter(function(x){ return x.b; }) : JAREN, k = niveau === 'bb' ? 3 : niveau === 'kgt' ? 4 : 5;
+    var set = H(bron).slice(0, k).sort(function(a, b){ return a.j - b.j; });
+    return Object.assign(basis('kust'), { vorm:'sleep', sleutel:'tl' + set.map(function(x){ return x.j; }).join(''),
+      vraag:'Zet deze gebeurtenissen in de goede volgorde: de oudste in vak 1.', opdracht:'Sleep elk kaartje naar zijn plek, of tik een kaartje en dan het vak.',
+      kaarten:set.map(function(x){ return { id:'j' + x.j, tekst:x.t }; }), vakken:set.map(function(x, i){ return { id:'p' + i, max:1, hoort:['j' + x.j] }; }),
+      uitleg:set.map(function(x){ return x.j + ': ' + S(x.t); }).join(' ') + ' De Afsluitdijk kwam na de overstroming van 1916; de Deltawerken na de ramp van 1953; Ruimte voor de Rivier na de hoogwaters van 1993 en 1995.', antwoordTekst:'van ' + set[0].j + ' tot ' + set[set.length - 1].j });
+  }
+  function kust(niveau){
+    if (niveau === 'bb') return weeg([[Lf('kust'), 46], [Bf('kust'), 8], [getij, 34], [tijdlijn, 12]])(niveau);
+    return weeg([[Lf('kust'), 40], [Bf('kust'), 12], [getij, 34], [tijdlijn, 14]])(niveau);
+  }
+
+  /* ================= 4. laag Nederland ================= */
+  var NK = { land:'#e3ecd0', landRand:'#9db27a', water:'#93c3ea', dijk:'#8a6a3a', breuk:'#c0392b', inkt:'#14224C' };
+  /* een staande doorsnede: rivier achter de dijk, de polder ernaast, en de NAP-lijn */
+  function napBeeld(w, p, liniaal){
+    var W = 380, Hh = 260, top = 6, sy = 16, Y = function(h){ return rond(28 + (top - h) * sy, 1); };
+    var kruin = Math.min(top - .5, w + 1.5), s = '<svg class="wgr" viewBox="0 0 ' + W + ' ' + Hh + '" font-family="inherit" role="img" aria-label="doorsnede: rivier, dijk en polder met NAP">';
+    s += '<rect x="30" y="' + Y(w) + '" width="130" height="' + (Y(-3.4) - Y(w)) + '" fill="' + NK.water + '"/>';
+    s += '<polygon points="30,' + Y(-3.4) + ' 160,' + Y(-3.4) + ' 175,' + Y(kruin) + ' 205,' + Y(kruin) + ' 240,' + Y(-p) + ' 370,' + Y(-p) + ' 370,' + Hh + ' 30,' + Hh + '" fill="#d9c49c"/>';
+    s += '<polyline points="160,' + Y(-3.4) + ' 175,' + Y(kruin) + ' 205,' + Y(kruin) + ' 240,' + Y(-p) + ' 370,' + Y(-p) + '" fill="none" stroke="#5f9a3f" stroke-width="4" stroke-linejoin="round"/>';
+    s += '<line x1="10" x2="372" y1="' + Y(0) + '" y2="' + Y(0) + '" stroke="currentColor" stroke-width="1.5" stroke-dasharray="6 4"/>';
+    s += '<text x="377" y="' + (Y(0) - 6) + '" text-anchor="end" font-size="14" font-weight="600" fill="currentColor">NAP</text>';
+    if (liniaal){
+      s += '<g stroke="currentColor" stroke-width="1.5"><line x1="16" x2="16" y1="' + Y(6) + '" y2="' + Y(-7) + '"/>';
+      for (var h = -7; h <= 6; h++) s += '<line x1="12" x2="20" y1="' + Y(h) + '" y2="' + Y(h) + '"/>';
+      s += '</g>';
+    }
+    s += kaartje(95, Y(w) - 30, 'rivier', napKort(w)) + kaartje(285, Y(-p) - 30, 'polder', napKort(-p));
+    return s + '</svg>';
+  }
+  function napSom(niveau){
+    var w, p, sl;
+    if (niveau === 'bb'){ w = tussen(1, 4); p = tussen(2, 5); }
+    else if (niveau === 'kgt'){ w = rond(tussen(5, 40) * .1, 1); p = rond(tussen(10, 50) * .1, 1); }
+    else {
+      /* bodemdaling: hoe laag ligt het land over een aantal jaar? */
+      var nu = rond(tussen(10, 30) * .1, 1), cm = kies([.5, .8, 1, 1.2]), jaar = kies([20, 30, 40, 50]), dan = rond(nu + cm * jaar / 100, 2);
+      if (Math.random() < .5){
+        return inv('laag', { sleutel:'bd' + nu + cm + jaar, vraag:'Een veenweidepolder ligt nu op ' + napKort(-nu) + '. De bodem daalt ' + net(cm) + ' cm per jaar. Hoeveel meter onder NAP ligt de polder over ' + jaar + ' jaar?', opdracht:'Reken de centimeters om naar meters.',
+          velden:[{ label:'onder NAP', antwoord:dan, tol:.01, eenheid:'m' }],
+          uitleg:jaar + ' × ' + net(cm) + ' cm = ' + net(cm * jaar) + ' cm = ' + net(cm * jaar / 100) + ' m. De polder zakt van ' + net(nu) + ' naar ' + net(nu) + ' + ' + net(cm * jaar / 100) + ' = ' + net(dan) + ' m onder NAP. Een hoger grondwaterpeil zou de daling remmen.', antwoordTekst:net(dan) + ' m onder NAP' });
+      }
+      var zs = kies([20, 30, 40, 50]), bd = kies([10, 20, 30, 40]);
+      return inv('laag', { sleutel:'zb' + zs + bd, vraag:'Stel: in de komende 50 jaar stijgt de zeespiegel ' + zs + ' cm en daalt de bodem van een polder achter de zeedijk ' + bd + ' cm. Hoeveel centimeter groter wordt het hoogteverschil tussen de zee en de polder?',
+        velden:[{ label:'groter', antwoord:zs + bd, tol:0, eenheid:'cm' }],
+        uitleg:'De zee gaat ' + zs + ' cm omhoog en het land ' + bd + ' cm omlaag. Het verschil groeit van twee kanten: ' + zs + ' + ' + bd + ' = ' + (zs + bd) + ' cm. Daardoor komt er meer kwel en moeten de dijken sterker.', antwoordTekst:(zs + bd) + ' cm' });
+    }
+    sl = 'ns' + w + p;
+    return inv('laag', { sleutel:sl, vraag:'Het water in de rivier staat op ' + napKort(w) + '. De polder ligt op ' + napKort(-p) + '. Als de dijk doorbreekt, kan de polder vollopen tot het water even hoog staat als in de rivier. Hoe diep komt het water in de polder dan te staan?', opdracht:'Tel van de polder omhoog naar NAP, en van NAP omhoog naar het water.',
+      beeld:napBeeld(w, p, niveau === 'bb'),
+      velden:[{ label:'waterdiepte', antwoord:rond(w + p, 2), tol:.01, eenheid:'m' }],
+      uitleg:'Van de polder (' + napKort(-p) + ') tot NAP is ' + net(p) + ' m. Van NAP tot het water (' + napKort(w) + ') is ' + net(w) + ' m. Samen: ' + net(p) + ' + ' + net(w) + ' = ' + net(w + p) + ' m water. Je trekt hier niet af: de polder ligt onder NAP en het water erboven.', antwoordTekst:net(w + p) + ' m' });
+  }
+  var DORPEN = ['Akkerdam', 'Bremvliet', 'Kreekhoven', 'Veendrecht', 'Slikwaard', 'Zegmond', 'Rietoord', 'Ganzeveld'];
+  var PLEK = [[92, 130], [282, 122], [104, 222], [290, 228]];
+  function kaartOver(niveau){
+    var namen = H(DORPEN).slice(0, 4), hs, i, p;
+    for (p = 0; p < 40; p++){
+      hs = namen.map(function(){ return niveau === 'bb' ? tussen(-6, 1) : rond(tussen(-60, 15) * .1, 1); });
+      var ok = true;
+      for (i = 0; i < 4; i++) for (var j = i + 1; j < 4; j++) if (Math.abs(hs[i] - hs[j]) < (niveau === 'bb' ? 1 : .6)) ok = false;
+      if (ok) break;
+    }
+    var bx = tussen(120, 260), s = '<svg class="wgr" viewBox="0 0 380 280" font-family="inherit" role="img" aria-label="kaart van een dijkring met vier dorpen en een dijkdoorbraak">';
+    s += '<rect x="0" y="0" width="380" height="50" fill="' + NK.water + '"/><text x="12" y="31" font-size="15" font-weight="600" fill="' + NK.inkt + '">rivier</text>';
+    s += '<rect x="0" y="56" width="380" height="224" fill="' + NK.land + '"/>';
+    s += '<line x1="0" y1="53" x2="' + (bx - 12) + '" y2="53" stroke="' + NK.dijk + '" stroke-width="7"/><line x1="' + (bx + 12) + '" y1="53" x2="380" y2="53" stroke="' + NK.dijk + '" stroke-width="7"/>';
+    s += '<path d="M' + bx + ' 46 L' + bx + ' 82 M' + (bx - 7) + ' 74 L' + bx + ' 84 L' + (bx + 7) + ' 74" stroke="' + NK.breuk + '" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>';
+    s += '<text x="' + (bx + 12) + '" y="76" font-size="14" font-weight="700" fill="' + NK.breuk + '">dijkdoorbraak</text>';
+    namen.forEach(function(nm, i){
+      var q = PLEK[i];
+      s += '<circle cx="' + q[0] + '" cy="' + q[1] + '" r="6" fill="' + NK.inkt + '"/><text x="' + q[0] + '" y="' + (q[1] - 12) + '" text-anchor="middle" font-size="15" font-weight="700" fill="' + NK.inkt + '">' + nm + '</text>';
+      s += '<text x="' + q[0] + '" y="' + (q[1] + 24) + '" text-anchor="middle" font-size="14" fill="' + NK.inkt + '">' + napKort(hs[i]) + '</text>';
+    });
+    s += '<text x="372" y="272" text-anchor="end" font-size="12" fill="' + NK.inkt + '">verzonnen dorpen</text></svg>';
+    var laag = hs.indexOf(Math.min.apply(null, hs)), sl = 'ko' + namen.join('') + hs.join('');
+    if (niveau === 'bb'){
+      var ander = H([0, 1, 2, 3].filter(function(x){ return x !== laag; })).slice(0, 2), o = [namen[laag], namen[ander[0]], namen[ander[1]]];
+      return mk('laag', { sleutel:sl, vraag:'De dijk breekt door en het water stroomt de dijkring in. In welk dorp komt het water het <b>diepst</b> te staan?', opdracht:'Kijk naar de hoogtes bij de dorpen.', beeld:s,
+        opties:o, goed:0, antwoordTekst:namen[laag],
+        uitleg:namen[laag] + ' ligt het laagst: ' + napKort(hs[laag]) + '. Water stroomt naar de laagste plek en komt daar het diepst te staan. Het maakt niet uit hoe dicht een dorp bij de doorbraak ligt.' });
+    }
+    var srt = hs.map(function(h, i){ return i; }).sort(function(a, b){ return hs[a] - hs[b]; });
+    if (niveau === 'kgt'){
+      /* het water komt tot een peil tussen het hoogste en het op één na hoogste dorp */
+      var L = rond((hs[srt[2]] + hs[srt[3]]) / 2, 1), droog = srt[3];
+      if (Math.random() < .5) return mk('laag', { sleutel:sl + 'd', vraag:'Na de doorbraak loopt de dijkring vol tot ' + napKort(L) + '. Welk dorp blijft droog?', beeld:s,
+        opties:namen.slice(), goed:droog, antwoordTekst:namen[droog],
+        uitleg:'Alleen ' + namen[droog] + ' (' + napKort(hs[droog]) + ') ligt hoger dan het water (' + napKort(L) + '). De andere dorpen liggen lager en lopen onder.' });
+      var x = kies(srt.slice(0, 3));
+      return inv('laag', { sleutel:sl + 'x' + x, vraag:'Na de doorbraak loopt de dijkring vol tot ' + napKort(L) + '. Hoe diep staat het water in <b>' + namen[x] + '</b>?', beeld:s,
+        velden:[{ label:'waterdiepte', antwoord:rond(L - hs[x], 2), tol:.01, eenheid:'m' }],
+        uitleg:'Het water staat op ' + napKort(L) + ', ' + namen[x] + ' ligt op ' + napKort(hs[x]) + '. Diepte: ' + net(L) + ' − (' + (hs[x] < 0 ? '−' : '') + net(Math.abs(hs[x])) + ') = ' + net(L - hs[x]) + ' m.', antwoordTekst:net(L - hs[x]) + ' m' });
+    }
+    if (Math.random() < .5) return Object.assign(basis('laag'), { vorm:'sleep', sleutel:sl + 'v',
+      vraag:'De dijk breekt door en de hele dijkring loopt onder. Zet de dorpen op volgorde: in vak 1 het dorp waar het water het <b>diepst</b> komt te staan.', beeld:s,
+      opdracht:'Sleep elk kaartje naar zijn plek, of tik een kaartje en dan het vak.',
+      kaarten:namen.map(function(nm, i){ return { id:'d' + i, tekst:nm }; }), vakken:srt.map(function(i, r){ return { id:'r' + r, max:1, hoort:['d' + i] }; }),
+      uitleg:'Hoe lager het dorp ligt, hoe dieper het water er staat: ' + srt.map(function(i){ return namen[i] + ' (' + napKort(hs[i]) + ')'; }).join(', ') + '.', antwoordTekst:srt.map(function(i){ return namen[i]; }).join(', ') });
+    var a2 = srt[0], b2 = srt[2];
+    return inv('laag', { sleutel:sl + 'w', vraag:'De hele dijkring loopt onder, tot boven alle dorpen. Hoeveel meter dieper staat het water in ' + namen[a2] + ' dan in ' + namen[b2] + '?', beeld:s,
+      velden:[{ label:'dieper', antwoord:rond(hs[b2] - hs[a2], 2), tol:.01, eenheid:'m' }],
+      uitleg:'Het water staat overal even hoog. Het verschil in diepte is dus het verschil in hoogte van de dorpen: ' + napKort(hs[b2]) + ' en ' + napKort(hs[a2]) + ' scheelt ' + net(hs[b2] - hs[a2]) + ' m.', antwoordTekst:net(hs[b2] - hs[a2]) + ' m' });
+  }
+  function laag(niveau){ return weeg([[Lf('laag'), 40], [Bf('laag'), 10], [napSom, 25], [kaartOver, 25]])(niveau); }
+
+  /* ================= 5. zoet water en droogte ================= */
+  var ZOMER = ['april', 'mei', 'juni', 'juli', 'augustus', 'september'], VERD = [55, 80, 95, 100, 85, 50];
+  function tekort(niveau){
+    var v = VERD.map(function(x){ return x + tussen(-5, 5); }), n, p;
+    for (p = 0; p < 40; p++){
+      n = v.map(function(x){ return Math.max(2, x + tussen(-55, 30)); });
+      var vrs = v.map(function(x, i){ return x - n[i]; }), mx = Math.max.apply(null, vrs);
+      var over = vrs.filter(function(x){ return x < 0; }).length;
+      if (vrs.filter(function(x){ return x === mx; }).length === 1 && over >= 1 && over <= 2 && vrs[0] > 0 && vrs[1] > 0 && vrs[2] > 0) break;
+    }
+    var d = v.map(function(x, i){ return x - n[i]; });
+    if (!(d[0] > 0 && d[1] > 0 && d[2] > 0) || !d.some(function(x){ return x < 0; }) || d.filter(function(x){ return x === Math.max.apply(null, d); }).length > 1) return tekort(niveau);
+    var tabel = '<table class="wt"><tr><th>maand</th><th>neerslag (mm)</th><th>verdamping (mm)</th></tr>' + ZOMER.map(function(m, i){ return '<tr><td>' + m + '</td><td>' + n[i] + '</td><td>' + v[i] + '</td></tr>'; }).join('') + '</table>';
+    var beeld = '<div><p class="bron">Neerslag en verdamping in een voorbeeldzomer. Verdampt er meer dan er regen valt, dan is er een <b>neerslagtekort</b>.</p>' + tabel + '</div>';
+    var grootst = d.indexOf(Math.max.apply(null, d)), sl = 'nt' + n.join('.') + v.join('.');
+    var vorm = niveau === 'bb' ? kies(['grootst', 'overschot']) : niveau === 'kgt' ? kies(['maand', 'maand', 'overschot']) : kies(['drie', 'maand', 'drie']);
+    if (vorm === 'grootst'){
+      var andere = H([0, 1, 2, 3, 4, 5].filter(function(i){ return i !== grootst; })).slice(0, 2), o = [ZOMER[grootst], ZOMER[andere[0]], ZOMER[andere[1]]];
+      return mk('zoet', { sleutel:sl + 'g', vraag:'In welke maand was het neerslagtekort het grootst?', opdracht:'Reken per maand: verdamping min neerslag.', beeld:beeld, opties:o, goed:0, antwoordTekst:ZOMER[grootst],
+        uitleg:'In ' + ZOMER[grootst] + ' verdampte er ' + v[grootst] + ' mm en viel er ' + n[grootst] + ' mm: een tekort van ' + d[grootst] + ' mm. Dat is het meest. ' + o.slice(1).map(function(m){ var i = ZOMER.indexOf(m); return cap(m) + ': ' + v[i] + ' − ' + n[i] + ' = ' + d[i] + ' mm.'; }).join(' ') });
+    }
+    if (vorm === 'overschot'){
+      var ov = d.map(function(x, i){ return x < 0 ? i : -1; }).filter(function(i){ return i >= 0; }), goedI = ov[0];
+      var fout = H([0, 1, 2, 3, 4, 5].filter(function(i){ return ov.indexOf(i) < 0; })).slice(0, niveau === 'bb' ? 2 : 3);
+      var o2 = [ZOMER[goedI]].concat(fout.map(function(i){ return ZOMER[i]; }));
+      return mk('zoet', { sleutel:sl + 'o', vraag:'In welke van deze maanden viel er méér regen dan er verdampte (een neerslagoverschot)?', beeld:beeld, opties:o2, goed:0, antwoordTekst:ZOMER[goedI],
+        uitleg:'In ' + ZOMER[goedI] + ' viel er ' + n[goedI] + ' mm regen en verdampte er ' + v[goedI] + ' mm. Er viel dus meer dan er verdampte. In de andere genoemde maanden verdampte er meer dan er viel.' });
+    }
+    if (vorm === 'maand'){
+      var tek = d.map(function(x, i){ return x > 0 ? i : -1; }).filter(function(i){ return i >= 0; }), m = kies(tek);
+      return inv('zoet', { sleutel:sl + 'm' + m, vraag:'Hoe groot was het neerslagtekort in <b>' + ZOMER[m] + '</b>?', beeld:beeld,
+        velden:[{ label:'tekort', antwoord:d[m], tol:0, eenheid:'mm' }],
+        uitleg:'Verdamping min neerslag: ' + v[m] + ' − ' + n[m] + ' = ' + d[m] + ' mm. Er verdampte meer dan er viel, dus de bodem droogt uit.', antwoordTekst:d[m] + ' mm' });
+    }
+    var som = d[0] + d[1] + d[2];
+    return inv('zoet', { sleutel:sl + 'd', vraag:'Hoe groot was het neerslagtekort van april tot en met juni samen?', opdracht:'Reken per maand verdamping min neerslag, en tel op.', beeld:beeld,
+      velden:[{ label:'tekort', antwoord:som, tol:0, eenheid:'mm' }],
+      uitleg:'April ' + d[0] + ', mei ' + d[1] + ', juni ' + d[2] + ' mm. Samen ' + som + ' mm. Loopt het tekort zo verder op, dan kan er een beregeningsverbod komen en wordt er gekeken naar de verdringingsreeks.', antwoordTekst:som + ' mm' });
+  }
+  var GEBRUIK = [['douchen', 150, 220, 10], ['toilet doorspoelen', 90, 130, 5], ['wasmachine', 40, 70, 5], ['afwassen', 10, 25, 5], ['koken en drinken', 10, 20, 2]];
+  function gezin(niveau){
+    var pers = niveau === 'bb' ? 4 : kies([3, 4, 5]), l = niveau === 'bb' ? GEBRUIK.slice(0, 4) : GEBRUIK;
+    var w = l.map(function(g){ return niveau === 'bb' ? Math.round(tussen(g[1], g[2]) / 10) * 10 : Math.round(tussen(g[1], g[2]) / g[3]) * g[3]; });
+    var tot = w.reduce(function(a, b){ return a + b; }, 0), naam = kies(['Noor', 'Sem', 'Daan', 'Yara', 'Milan', 'Fenna']);
+    var tabel = '<table class="wt"><tr><th>waarvoor</th><th>liter per dag</th></tr>' + l.map(function(g, i){ return '<tr><td>' + g[0] + '</td><td>' + w[i] + '</td></tr>'; }).join('') + '</table>';
+    var beeld = '<div><p class="bron">Het gezin van ' + naam + ' (' + pers + ' personen) houdt een dag lang bij hoeveel kraanwater ze gebruiken.</p>' + tabel + '</div>';
+    var vorm = niveau === 'bb' ? kies(['totaal', 'minst']) : niveau === 'kgt' ? kies(['persoon', 'week']) : kies(['procent', 'besparen']), sl = 'gz' + vorm + pers + w.join('.');
+    if (vorm === 'totaal') return inv('zoet', { sleutel:sl, vraag:'Hoeveel liter water gebruikt het gezin samen op deze dag?', beeld:beeld,
+      velden:[{ label:'totaal', antwoord:tot, tol:0, eenheid:'liter' }], uitleg:w.join(' + ') + ' = ' + tot + ' liter. Douchen kost het meeste water.', antwoordTekst:tot + ' liter' });
+    if (vorm === 'minst'){
+      var mi = w.indexOf(Math.min.apply(null, w)), ma = w.indexOf(Math.max.apply(null, w)), r = H([0, 1, 2, 3].filter(function(i){ return i !== mi && i !== ma; }))[0];
+      if (w.filter(function(x){ return x === w[mi]; }).length > 1) return gezin(niveau);
+      var o = [l[mi][0], l[ma][0], l[r][0]];
+      return mk('zoet', { sleutel:sl, vraag:'Waarvoor gebruikt het gezin het <b>minste</b> water?', beeld:beeld, opties:o, goed:0, antwoordTekst:o[0],
+        uitleg:cap(l[mi][0]) + ' kost het minst: ' + w[mi] + ' liter. ' + cap(l[ma][0]) + ' kost juist het meest: ' + w[ma] + ' liter.' });
+    }
+    if (vorm === 'persoon'){ var pp = rond(tot / pers, 0);
+      return inv('zoet', { sleutel:sl, vraag:'Hoeveel liter gebruikt het gezin gemiddeld <b>per persoon</b> op deze dag?', opdracht:'Rond af op hele liters.', beeld:beeld,
+        velden:[{ label:'per persoon', antwoord:pp, tol:1, eenheid:'liter' }], uitleg:'Totaal ' + tot + ' liter, gedeeld door ' + pers + ' personen is ongeveer ' + pp + ' liter per persoon.', antwoordTekst:pp + ' liter' }); }
+    if (vorm === 'week') return inv('zoet', { sleutel:sl, vraag:'Stel dat het gezin elke dag evenveel gebruikt. Hoeveel liter is dat in een week?', beeld:beeld,
+      velden:[{ label:'per week', antwoord:tot * 7, tol:0, eenheid:'liter' }], uitleg:'Per dag ' + w.join(' + ') + ' = ' + tot + ' liter. Per week 7 × ' + tot + ' = ' + (tot * 7) + ' liter.', antwoordTekst:(tot * 7) + ' liter' });
+    if (vorm === 'procent'){ var pc = Math.round(w[0] / tot * 100);
+      return inv('zoet', { sleutel:sl, vraag:'Hoeveel procent van het water gaat naar douchen?', opdracht:'Rond af op een heel procent.', beeld:beeld,
+        velden:[{ label:'douchen', antwoord:pc, tol:1, eenheid:'%' }], uitleg:'Totaal: ' + tot + ' liter. Douchen: ' + w[0] + ' liter. ' + w[0] + ' / ' + tot + ' × 100 ≈ ' + pc + '%.', antwoordTekst:pc + '%' }); }
+    var min = kies([2, 3]), lpm = kies([7, 8, 9]), bes = pers * min * lpm, pb = Math.round(bes / tot * 100);
+    return inv('zoet', { sleutel:sl + min + lpm, vraag:'Iedereen in het gezin doucht ' + min + ' minuten korter. De douche gebruikt ' + lpm + ' liter per minuut. Met hoeveel procent daalt het waterverbruik van het gezin op zo’n dag?', opdracht:'Rond af op een heel procent.', beeld:beeld,
+      velden:[{ label:'minder', antwoord:pb, tol:1, eenheid:'%' }],
+      uitleg:'Besparing: ' + pers + ' × ' + min + ' × ' + lpm + ' = ' + bes + ' liter. Dat is ' + bes + ' / ' + tot + ' × 100 ≈ ' + pb + '% van ' + tot + ' liter.', antwoordTekst:pb + '%' });
+  }
+  function zoet(niveau){ return weeg([[Lf('zoet'), 45], [Bf('zoet'), 10], [tekort, 25], [gezin, 20]])(niveau); }
+
+  var SOORTEN = { rivier:rivier, doorsnede:doorsnedeDeel, kust:kust, laag:laag, zoet:zoet };
+  VAKSPEL.maak({
+    id:'water', naam:'Water in Nederland', vak:'aard', kleur:'#2f7d52', minuten:8,
+    hand:'rivieren, dijken, zee en zoet water',
+    lead:'Een kwart van Nederland ligt onder zeeniveau. Je leest afvoergrafieken van de Rijn en de Maas, wijst in een getekende doorsnede het zomerbed, de uiterwaard en de dijk aan, rekent met NAP en het getij, en legt uit hoe Nederland zich beschermt en zuinig is met zoet water. Precies de examenstof water van het vmbo.',
+    leerdoel:'Je leert waar het water in Nederland vandaan komt en hoe we ons ertegen beschermen: rivieren en afvoer, de rivier in doorsnede, zee en kust, polders en NAP, en zoet water bij droogte. Je oefent met grafieken, tabellen, kaarten en doorsneden zoals op het examen.',
+    hoe:[
+      { kop:'Lees de bron', tekst:'Bij veel opgaven staat een grafiek, tabel, kaart of doorsnede. Kijk eerst wat er op de assen of in de kolommen staat.' },
+      { kop:'Rekenen met NAP', tekst:'Boven NAP is plus, onder NAP is min. Van <b>NAP −2 m</b> naar <b>NAP +3 m</b> is samen <b>5 m</b>.' },
+      { kop:'Vijf onderdelen', tekst:'Rivieren en afvoer, de rivier in doorsnede, zee en kust, laag Nederland, en zoet water. Twintig opgaven per ronde, elk met uitleg.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'De belangrijkste begrippen, een staafdiagram en een getijgrafiek aflezen, en de delen van een rivier aanwijzen.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Ook rekenen met NAP en het getijverschil, regenrivier en gemengde rivier in grafieken, en maatregelen van Ruimte voor de Rivier.' },
+        { id:'hv', naam:'havo en vwo', uit:'Examenniveau: een hoogwatergolf, procenten, bodemdaling, een overstroomde dijkring, en watermanagement in Egypte en Bangladesh.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' },
+        { id:'rivier', naam:'rivieren en afvoer', uit:'Bron, monding, stroomgebied, regenrivier en gemengde rivier, en afvoergrafieken.' },
+        { id:'doorsnede', naam:'de rivier in doorsnede', uit:'Zomerbed, uiterwaard, winterdijk en kribben aanwijzen, en Ruimte voor de Rivier.' },
+        { id:'kust', naam:'zee en kust', uit:'Eb en vloed, stormvloed, duinen, de Watersnoodramp, de Afsluitdijk en de Deltawerken.' },
+        { id:'laag', naam:'laag Nederland', uit:'Polders en gemalen, NAP, waterschappen, bodemdaling en zeespiegelstijging.' },
+        { id:'zoet', naam:'zoet water en droogte', uit:'Drinkwater, neerslagtekort, verzilting en water zuinig gebruiken, hier en elders.' } ] }
+    ],
+    aantal:10,
+    maak:function(keuze, nr){
+      var soort = keuze.soort === 'alles' ? kies(['rivier', 'doorsnede', 'kust', 'laag', 'zoet']) : keuze.soort;
+      return SOORTEN[soort](keuze.niveau);
+    },
+    uitleg:{ doel:'De examenstof water: rivieren en afvoer, de rivier in doorsnede, zee en kust, laag Nederland met NAP, en zoet water en droogte.', tijd:'twintig opgaven per ronde, of kies 10 of 30', bediening:'Kies een antwoord (of druk op 1 tot 4), typ een getal of begrip en druk op Nakijken, sleep kaartjes naar hun plek, of tik in de doorsnede op het goede deel en druk op Nakijken.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>

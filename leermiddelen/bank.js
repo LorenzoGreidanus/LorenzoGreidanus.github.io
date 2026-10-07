@@ -176,16 +176,16 @@ TIJDVAKKEN.forEach(function(t){ IN_GROEP.ges[t.id] = 'tijdvakken'; });
    tot 1000", "korting uitrekenen", "topografie: Europa, landen". Die staan
    niet los in de lijst hierboven; hun groep volgt uit hoe de naam begint. */
 var IN_PATROON = {
-  reken: [[/^schatten: /, 'getallen'], [/^klok: /, 'meten'], [/^cijferen: /, 'getallen'], [/^metriek: /, 'meten'], [/^verhoudingstabel: /, 'verhoudingen'], [/^DHTE /, 'getallen'], [/./, 'verhoudingen']],
+  reken: [[/^bronlezen: /, 'verbanden'], [/^schatten: /, 'getallen'], [/^klok: /, 'meten'], [/^cijferen: /, 'getallen'], [/^metriek: /, 'meten'], [/^verhoudingstabel: /, 'verhoudingen'], [/^DHTE /, 'getallen'], [/./, 'verhoudingen']],
   /* de figuren uit Vlakken herkennen (vlak: ruit) en de soorten van De balans (vergelijking: ...) */
-  wis: [[/^woordformules: /, 'verbanden'], [/^voordoen: /, 'algebra'], [/^co\u00f6rdinaten: /, 'meetkunde'], [/^hoeken: /, 'meetkunde'], [/^pythagoras: /, 'meetkunde'], [/^grafieken: /, 'verwerken'], [/^vlak: /, 'meetkunde'], [/^vergelijking: /, 'algebra']],
-  ned:   [[/^begrijpend: /, 'lezen'], [/^alinea: /, 'lezen'], [/^register: /, 'grammatica'], [/^signaalwoorden: /, 'lezen'], [/^woordenschat: /, 'lezen'], [/^samenvatten: /, 'lezen'], [/^dictee: /, 'spelling'], [/^(tegenwoordige tijd|verleden tijd|voltooid deelwoord|de d of t val)$/, 'spelling'], [/^(kernzin|schrijfdoel|tekstverbanden)$/, 'lezen']],
+  wis: [[/^ruimte: /, 'meetkunde'], [/^woordformules: /, 'verbanden'], [/^voordoen: /, 'algebra'], [/^co\u00f6rdinaten: /, 'meetkunde'], [/^hoeken: /, 'meetkunde'], [/^pythagoras: /, 'meetkunde'], [/^grafieken: /, 'verwerken'], [/^vlak: /, 'meetkunde'], [/^vergelijking: /, 'algebra']],
+  ned:   [[/^schrijfopdracht: /, 'schrijven'], [/^schrijfopdracht: verbeter/, 'spelling'], [/^begrijpend: /, 'lezen'], [/^alinea: /, 'lezen'], [/^register: /, 'grammatica'], [/^signaalwoorden: /, 'lezen'], [/^woordenschat: /, 'lezen'], [/^samenvatten: /, 'lezen'], [/^dictee: /, 'spelling'], [/^(tegenwoordige tijd|verleden tijd|voltooid deelwoord|de d of t val)$/, 'spelling'], [/^(kernzin|schrijfdoel|tekstverbanden)$/, 'lezen']],
   eng:   [[/^situaties: /, 'woordenschat'], [/^reading: /, 'lezen'], [/^dictation: /, 'woordenschat'], [/^translate: /, 'grammatica'], [/^phrasal: /, 'woordenschat'], [/^irregular /, 'werkwoorden'], [/./, 'grammatica']],
-  aard:  [[/^klimaatgrafiek: /, 'klimaat'], [/^bevolkingspiramide: /, 'klimaat'], [/^kaartvaardigheid: /, 'kaart'], [/^topografie/, 'landen']],
+  aard:  [[/^water: /, 'examen'], [/^klimaatgrafiek: /, 'klimaat'], [/^bevolkingspiramide: /, 'klimaat'], [/^kaartvaardigheid: /, 'kaart'], [/^topografie/, 'landen']],
   eco:   [[/^bedrijf: /, 'examen'], [/^huishoudboekje: /, 'geld'], [/^vraag en aanbod: /, 'markt']],
   ges:   [[/^redeneren: /, 'vaardig'], [/^kaart door de tijd: /, 'vaardig'], [/^wie ben ik: /, 'vaardig'], [/^oorzaak en gevolg: /, 'vaardig'], [/^werken met bronnen$/, 'vaardig']],
-  bio: [[/^onderzoek: /, 'natuur'], [/^kruisen: /, 'cellen'], [/^voedselweb: /, 'natuur']],
-  burg: [[/^afwegen: /, 'samen'], [/^democratie: /, 'staat'], [/^partijen: /, 'staat'], [/^verkiezingen: /, 'staat']]
+  bio: [[/^afweer: gedrag/, 'natuur'], [/^afweer: evolutie/, 'cellen'], [/^afweer: (verdediging|bloed|immuniteit)/, 'lichaam'], [/^onderzoek: /, 'natuur'], [/^kruisen: /, 'cellen'], [/^voedselweb: /, 'natuur']],
+  burg: [[/^rechtsstaat: /, 'examen'], [/^afwegen: /, 'samen'], [/^democratie: /, 'staat'], [/^partijen: /, 'staat'], [/^verkiezingen: /, 'staat']]
 };
 function groepVan(vak, o){
   var g = o.groep || (IN_GROEP[vak] && IN_GROEP[vak][o.id]);

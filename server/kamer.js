@@ -389,7 +389,13 @@ const KLAS_SPELLEN = { race: "Vragenrace", metriek: "Het metriek stelsel", eigen
   voordoen: "Eerst kijken, dan zelf",
   begrijpend: "Begrijpend lezen",
   woordformules: "Tabel, grafiek en formule",
-  bedrijf: "Werk, bedrijf en wereld" };
+  bedrijf: "Werk, bedrijf en wereld",
+  afweer: "Afweer en evolutie",
+  ruimte: "Ruimtefiguren",
+  schrijfopdracht: "De schrijfopdracht",
+  bronlezen: "Lees de bron",
+  rechtsstaat: "Van aangifte tot uitspraak",
+  water: "Water in Nederland" };
 /* Hoe lang de kamer wacht voor hij iemand die wegviel ook echt weghaalt. In de
    lobby kort: herladen duurt een paar tellen. In de arena langer: een
    telefoon die even geen bereik heeft, hoort er niet meteen uit te liggen. */

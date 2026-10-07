@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Afweer en evolutie, versie 1.0: op vakspel.js; de opgaven staan in dit bestand -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Afweer en evolutie &middot; meneer Greidanus</title>
+<meta name="description" content="Hoe je lichaam zich verdedigt: huid, slijm en maagzuur, witte bloedcellen, antigenen en antistoffen, vaccinatie en antibiotica. En hoe soorten veranderen door natuurlijke selectie, en hoe je gedrag van dieren beschrijft en verklaart.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Afweer en evolutie">
+<meta property="og:description" content="Afweer, immuniteit, evolutie en gedrag: examenstof biologie met situaties, grafieken en stambomen.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/afweer.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M51.6 9.8 C74.2 11.4 90.6 27.8 89.8 50.6 C89 74.2 73.4 91.6 50.2 90.6 C26.6 89.6 9.6 73.2 10.4 49.8 C11.2 26.2 28.4 8.2 51.6 9.8Z' fill='%23a8394a'/><g transform='translate(50 51) scale(2.2) translate(-12 -12)' fill='none' stroke='%23ffffff' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'><path d='M12 3l7 3v5c0 5-3.2 8.6-7 10-3.8-1.4-7-5-7-10V6z'/><path d='M12 8.5v6M9 11.5h6'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+/* De situatie, de tabellen en de tekeningen lezen hun kleuren uit de tokens van vakspel.css,
+   zodat de donkere stand meekantelt. Alleen de rand van de situatie heeft de spelkleur. */
+.af-sit{max-width:62ch;width:100%;text-align:left;background:var(--kaart2);border-left:4px solid var(--spelkleur);border-radius:0 14px 14px 0;padding:13px 18px 13px 16px;font-size:1.02rem;line-height:1.6}
+.af-sit p+p{margin-top:8px}
+.af-wrap{display:grid;gap:10px;justify-items:center;width:100%}
+.af-tab{border-collapse:collapse;width:100%;max-width:520px;font-size:.9rem;background:var(--kaart);margin-top:10px}
+.af-tab caption{caption-side:top;text-align:left;font-size:.82rem;color:var(--muted);font-weight:600;padding:0 2px 6px}
+.af-tab td,.af-tab th{padding:7px 10px;text-align:left;border:1px solid var(--rand2);line-height:1.35}
+.af-tab thead th{background:var(--kaart2);font-weight:600}
+.af-tab td.n,.af-tab th.n{text-align:center;font-variant-numeric:tabular-nums}
+.beeld svg.af-gr,.missers svg.af-gr{width:100%;max-width:min(100%,440px);height:auto;display:block;font-family:inherit;color:var(--ink)}
+.af-gr text{fill:var(--muted);font-size:13px}
+.af-gr .kop{fill:var(--ink);font-weight:600}
+.af-gr .raster{stroke:var(--rand2);stroke-width:1}
+.af-gr .as{stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.af-gr .lijn{fill:none;stroke:var(--nadruk);stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+.af-gr .mark{stroke:var(--hand);stroke-width:2;stroke-dasharray:5 4}
+.af-gr .marktekst{fill:var(--hand);font-weight:600;font-size:12.5px}
+.af-gr .tak{fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round}
+.af-gr .soort{fill:var(--ink);font-size:14px;font-weight:600}
+body.groot .af-sit{font-size:1.25rem}
+.af-mis{display:none}
+/* een rij stappen op volgorde: elke stap een eigen rij, anders staan lange zinnen in smalle kolommen */
+body.af-stap .vakken.rij{grid-template-columns:1fr}
+body.af-stap .vakken.rij .sleepdoel{flex-direction:row;align-items:center;min-height:58px;gap:10px}
+body.af-stap .vakken.rij .doelknop{width:auto;flex:none}
+body.af-stap .vakken.rij .sleepdoel .inhoud{justify-content:flex-start;flex:1;min-height:32px}
+body.af-stap .sleepkaart{text-align:left;font-weight:500;font-size:.92rem;display:flex}
+body.af-stap .kaartjes{flex-direction:column;align-items:stretch}
+@media(max-width:560px){.af-sit{font-size:.97rem;padding:11px 14px}.af-tab{font-size:.84rem}.af-tab td,.af-tab th{padding:6px 7px}}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  function tussen(a, b){ return a + Math.floor(Math.random() * (b - a + 1)); }
+  function kaal(t){ return String(t || '').replace(/<[^>]+>/g, '').trim(); }
+  function sit(t){ return '<div class="af-sit">' + t + '</div>'; }
+
+  var NAAM = { verdediging:'eerste verdediging', bloed:'afweer in je bloed', immuniteit:'immuniteit', evolutie:'evolutie', gedrag:'gedrag' };
+  var ALLE = ['verdediging', 'bloed', 'immuniteit', 'evolutie', 'gedrag'];
+  /* vmbo-bb: bescherming en het bloed horen bij de stof; evolutie en gedrag niet */
+  var BB = ['verdediging', 'bloed', 'immuniteit'];
+  function basis(deel, niv){ return { onderdeel:'afweer: ' + deel, onderdeelNaam:NAAM[deel] }; }
+
+  /* een meerkeuzevraag: het eerste antwoord is het goede (de motor husselt) */
+  function M(s, v, o, u){ return { t:'m', s:s, v:v, o:o, u:u }; }
+  /* een invulvraag met een begrip; alle teksten in a zijn goed */
+  function I(s, v, l, a, u){ return { t:'i', s:s, v:v, l:l, a:a, u:u }; }
+
+  /* =====================================================================
+     DE LIJSTEN: per onderdeel en niveau
+     ===================================================================== */
+  var LIJST = { verdediging:{}, bloed:{}, immuniteit:{}, evolutie:{}, gedrag:{} };
+
+  /* ---------- eerste verdediging ---------- */
+  LIJST.verdediging.bb = [
+    M('Je huid is aan de buitenkant bedekt met een laag dode, platte cellen.', 'Hoe heet deze laag?',
+      ['de hoornlaag', 'de kiemlaag', 'de lederhuid', 'het onderhuids bindweefsel'],
+      'De hoornlaag is de buitenste laag van je huid. Hij bestaat uit dode cellen en houdt ziekteverwekkers en water tegen. De kiemlaag ligt eronder: daar worden nieuwe huidcellen gemaakt.'),
+    M('', 'Waartegen beschermt de hoornlaag van je huid je <b>niet</b>?',
+      ['tegen ziekteverwekkers die je inademt', 'tegen uitdroging', 'tegen infecties via de huid', 'tegen beschadiging van de huid'],
+      'De hoornlaag beschermt tegen infecties, uitdroging en beschadiging. Wat je inademt, komt niet langs je huid maar in je luchtwegen. Daar beschermen slijm en trilhaartjes je.'),
+    M('Sanne ligt de hele middag in de zon. Na een paar dagen is haar huid bruiner geworden.', 'Wat is de functie van het bruine pigment in haar huid?',
+      ['Het beschermt tegen ultraviolette straling (uv) uit zonlicht.', 'Het houdt ziekteverwekkers tegen.', 'Het voorkomt dat de huid uitdroogt.', 'Het maakt de huid dikker, zodat hij niet beschadigt.'],
+      'Pigment vangt uv-straling op, zodat de cellen dieper in de huid minder schade krijgen. Bruin worden is dus een bescherming, maar geen volledige: je kunt toch verbranden.'),
+    M('In je neus en luchtpijp zit een laagje slijm. Stofjes en bacteriën die je inademt, blijven eraan plakken.', 'Wat werkt dit slijm naar je keel?',
+      ['trilhaartjes', 'de hoornlaag', 'maagzuur', 'pigment'],
+      'Trilhaartjes bewegen steeds dezelfde kant op en werken het slijm met stof en bacteriën naar je keel. Daar slik je het in of hoest je het op.'),
+    M('Je eet een broodje waar een paar bacteriën op zitten.', 'Wat doodt in je lichaam de meeste van die bacteriën?',
+      ['het zoutzuur in je maag', 'de trilhaartjes in je luchtpijp', 'het pigment in je huid', 'de hoornlaag van je huid'],
+      'Je maagsap bevat zoutzuur. Dat is zo zuur dat de meeste bacteriën in je eten doodgaan voordat ze je darmen bereiken.'),
+    M('Je valt van je fiets en schaaft je knie. Er komt wat bloed uit, en na een tijdje zit er een korstje op.', 'Waarom is het korstje belangrijk?',
+      ['Het sluit de wond af, zodat er geen ziekteverwekkers meer in komen.', 'Het maakt nieuwe bloedcellen.', 'Het doodt alle bacteriën in de wond.', 'Het houdt uv-straling tegen.'],
+      'Op de plek van de wond is de hoornlaag weg. Het bloed stolt en het korstje sluit de wond af: bloed blijft binnen en ziekteverwekkers blijven buiten. Het korstje doodt zelf geen bacteriën.'),
+    M('Je hebt je hand opengehaald aan een roestig hek.', 'Waarom spoel je het wondje schoon?',
+      ['Om vuil en ziekteverwekkers weg te halen voordat ze in de wond kunnen groeien.', 'Om het bloed sneller te laten stollen.', 'Om de hoornlaag sneller terug te laten groeien.', 'Om de wond te beschermen tegen zonlicht.'],
+      'Door de wond is de hoornlaag kapot, dus ziekteverwekkers kunnen naar binnen. Schoonmaken haalt vuil en bacteriën weg. Zo is de kans op een ontsteking kleiner.'),
+    M('', 'Waarom is het slim om je handen te wassen voor het eten en na de wc?',
+      ['Zo spoel je ziekteverwekkers weg voordat ze in je lichaam komen.', 'Zo wordt je hoornlaag dikker.', 'Zo maakt je lichaam meer pigment.', 'Zo heb je daarna geen afweer meer nodig.'],
+      'Op je handen zitten vaak bacteriën en virussen. Met eten of door aan je mond te zitten komen ze naar binnen. Handen wassen haalt ze weg voordat dat gebeurt.'),
+    M('Als er een vuiltje in je oog komt, gaat je oog tranen.', 'Hoe beschermt traanvocht je oog?',
+      ['Het spoelt vuil en ziekteverwekkers weg en bevat een stof die bacteriën doodt.', 'Het maakt een nieuwe hoornlaag op je oog.', 'Het houdt uv-straling tegen.', 'Het laat je bloed sneller stollen.'],
+      'Traanvocht spoelt het oog schoon. Er zit ook een stof in (lysozym) die bacteriën kapotmaakt. Je oog heeft geen hoornlaag, dus dit is daar de bescherming.'),
+    M('Hepatitis B en hiv kunnen via bloed van de ene op de andere persoon overgaan.', 'Hoe verklein je de kans op besmetting?',
+      ['Gebruik nooit een naald, scheermesje of tandenborstel van een ander.', 'Smeer je goed in met zonnebrandcrème.', 'Was je handen na het sporten.', 'Eet geen rauwe groente.'],
+      'Op een naald, scheermesje of tandenborstel kan een beetje bloed zitten. Zo kan het virus van de een naar de ander gaan. Zonnebrandcrème en handen wassen beschermen hier niet tegen.'),
+    M('', 'Wat beschermt bij seks het best tegen soa’s zoals chlamydia en gonorroe?',
+      ['een condoom', 'de anticonceptiepil', 'na de seks je handen wassen', 'vooraf een paar antibiotica slikken'],
+      'Een condoom houdt ziekteverwekkers in sperma, voorvocht en vaginavocht tegen. De pil beschermt alleen tegen zwanger worden, niet tegen soa’s.'),
+    M('Tuberculose (tbc) is een besmettelijke ziekte die vooral de longen aantast.', 'Hoe wordt tbc meestal verspreid?',
+      ['via kleine druppeltjes in de lucht als een zieke hoest', 'via een muggenbeet', 'via bedorven eten', 'via een schaafwond'],
+      'Tbc-bacteriën zitten in de longen. Als een zieke hoest of niest, komen ze in kleine druppeltjes in de lucht. Wie die inademt, kan besmet raken.'),
+    M('Je hebt verkoudheid en moet vaak niezen.', 'Waarom is niezen of hoesten in je elleboog beter dan in je hand?',
+      ['Dan komen de ziekteverwekkers niet op je hand, waarmee je daarna deurklinken en mensen aanraakt.', 'Dan ben je zelf sneller beter.', 'Dan maak je meer slijm aan.', 'Dan worden de ziekteverwekkers in je elleboog gedood.'],
+      'Met je hand raak je van alles aan. Zo geef je ziekteverwekkers door. In je elleboog blijven ze op een plek waar je niemand mee aanraakt.'),
+    I('', 'Hoe heet de laag dode cellen aan de buitenkant van je huid?', 'de laag', ['hoornlaag', 'de hoornlaag'],
+      'De hoornlaag bestaat uit dode cellen. Hij beschermt tegen infecties, uitdroging en beschadiging.'),
+    I('', 'Je maag maakt een zuur dat bacteriën in je eten doodt. Hoe heet dat zuur?', 'het zuur', ['zoutzuur', 'maagzuur'],
+      'Het maagsap bevat zoutzuur. Daarom heet het ook wel maagzuur. De meeste bacteriën gaan erdoor dood.'),
+    I('', 'Kleine haartjes in je luchtwegen werken slijm met stof en bacteriën naar je keel. Hoe heten ze?', 'de haartjes', ['trilhaartjes', 'trilharen', 'trilhaartje'],
+      'Trilhaartjes bewegen als een golf steeds naar boven. Zo gaat het slijm met stof en bacteriën naar je keel.')
+  ];
+  LIJST.verdediging.kgt = [
+    M('Op een tekening van de huid zie je van buiten naar binnen: de hoornlaag, de kiemlaag, de lederhuid en het onderhuids bindweefsel.', 'In welke laag worden nieuwe huidcellen gemaakt, die later de hoornlaag vormen?',
+      ['de kiemlaag', 'de hoornlaag', 'de lederhuid', 'het onderhuids bindweefsel'],
+      'In de kiemlaag delen cellen zich. De nieuwe cellen schuiven naar buiten, sterven af en verhoornen. Zo wordt de hoornlaag steeds aangevuld. De hoornlaag zelf bestaat uit dode cellen en kan dus niet delen.'),
+    M('Iemand met grote brandwonden ligt in het ziekenhuis vaak in een extra schone kamer.', 'Waarom is dat nodig?',
+      ['Door de brandwonden is de hoornlaag weg, dus ziekteverwekkers komen makkelijk binnen.', 'Door de brandwonden maakt het lichaam geen pigment meer.', 'Door de brandwonden werken de trilhaartjes niet meer.', 'Door de brandwonden is het bloed besmettelijk voor anderen.'],
+      'De hoornlaag houdt normaal ziekteverwekkers en water tegen. Bij grote brandwonden is die laag weg. De patiënt kan dan makkelijk een infectie krijgen en droogt ook sneller uit.'),
+    M('Mensen die veel roken, hoesten vaak ’s ochtends en krijgen vaker een longontsteking. Roken beschadigt de trilhaartjes in hun luchtwegen.', 'Welke verklaring past hierbij?',
+      ['Slijm met ziekteverwekkers wordt minder goed afgevoerd en blijft in de luchtwegen.', 'Rook doodt alle witte bloedcellen in het bloed.', 'Rook maakt de hoornlaag van de huid dunner.', 'Door roken wordt het maagzuur minder zuur.'],
+      'Trilhaartjes werken slijm met stof en ziekteverwekkers naar boven. Werken ze slecht, dan blijft het slijm liggen en kunnen bacteriën zich daar vermenigvuldigen. Het ochtendhoesten is het lichaam dat dat slijm toch kwijt wil.'),
+    M('Meneer De Vries slikt al jaren een medicijn dat zijn maag minder zuur maakt.', 'Welk risico loopt hij daardoor?',
+      ['Meer bacteriën uit zijn eten overleven de maag, dus hij heeft meer kans op een darminfectie.', 'Zijn eten wordt niet meer verteerd in de dunne darm.', 'Hij maakt minder antistoffen.', 'Hij verbrandt sneller in de zon.'],
+      'Maagzuur doodt de meeste bacteriën in je eten. Is de maag minder zuur, dan komen er meer levende bacteriën in de darmen. De vertering in de dunne darm gaat gewoon door.'),
+    M('Je hebt een splinter in je vinger. Een dag later is de plek rood, warm, dik en pijnlijk.', 'Waardoor wordt de plek rood en warm?',
+      ['Er stroomt meer bloed naar de plek, want de bloedvaten daar worden wijder.', 'De bacteriën maken warmte en een rode kleurstof.', 'De hoornlaag rond de splinter verbrandt.', 'De rode bloedcellen gaan op die plek kapot.'],
+      'Dit is een ontsteking. De bloedvaten worden wijder, er stroomt meer warm bloed naar de plek en daarmee komen ook meer witte bloedcellen. Die ruimen de bacteriën op.'),
+    M('In een ontstoken wondje zit na een paar dagen geelwit vocht: pus.', 'Waaruit bestaat pus vooral?',
+      ['dode witte bloedcellen en bacteriën', 'rode bloedcellen', 'stukjes hoornlaag', 'vet uit de huid'],
+      'Witte bloedcellen ruimen de bacteriën op en gaan daarbij zelf ook dood. Die dode witte bloedcellen, dode bacteriën en weefselresten vormen samen pus.'),
+    M('Bij een wondje plakken bloedplaatjes aan de wondrand. Er ontstaat een netwerk van draden waarin bloedcellen blijven hangen.', 'Hoe heten deze draden?',
+      ['fibrine', 'antistoffen', 'hemoglobine', 'pigment'],
+      'Bloedplaatjes zetten de bloedstolling in gang. Daarbij ontstaan fibrinedraden. In dat netwerk blijven bloedcellen hangen: zo ontstaat een stolsel, en later een korstje.'),
+    M('Mensen met albinisme maken (bijna) geen pigment.', 'Waarom moeten zij extra goed oppassen in de zon?',
+      ['Hun huid wordt minder beschermd tegen uv-straling, dus ze verbranden sneller.', 'Hun hoornlaag laat meer bacteriën door.', 'Ze kunnen niet zweten en raken oververhit.', 'Ze maken geen antistoffen tegen zonlicht.'],
+      'Pigment vangt uv-straling op. Zonder pigment komt de straling diep in de huid. Dat geeft snel verbranding en op den duur meer kans op huidkanker. De hoornlaag en het zweten werken bij hen gewoon.'),
+    M('Zweet en talg maken je huid een beetje zuur.', 'Wat is daarvan het voordeel?',
+      ['Veel bacteriën groeien slecht op een zure huid.', 'Een zure huid verbrandt minder snel.', 'Een zure huid maakt meer pigment.', 'Op een zure huid stolt het bloed sneller.'],
+      'Ziekteverwekkers groeien het best in een vochtige, niet zure omgeving. De droge, licht zure huid remt de groei van veel bacteriën.'),
+    M('Bloeddonors worden elke keer gecontroleerd op hiv en hepatitis.', 'Waarom is dat nodig?',
+      ['Deze virussen kunnen met het bloed van de donor bij de ontvanger komen.', 'Deze virussen maken het bloed te dik om te geven.', 'Mensen met hepatitis hebben geen witte bloedcellen.', 'Deze ziekten zijn erfelijk.'],
+      'Hiv en hepatitis B en C worden via bloed overgedragen. Bij een bloedtransfusie gaat bloed rechtstreeks het lichaam van de ontvanger in. Daarom wordt elk bloedzakje getest.'),
+    M('Je hebt per ongeluk een stukje bedorven eten gegeten en moet overgeven.', 'Is overgeven hier een vorm van verdediging?',
+      ['Ja, zo raak je de schadelijke stoffen en bacteriën snel kwijt.', 'Nee, overgeven heeft geen functie.', 'Ja, want bij overgeven maak je antistoffen.', 'Nee, overgeven maakt de bacteriën juist sterker.'],
+      'Overgeven en diarree zijn manieren om schadelijke stoffen en ziekteverwekkers snel uit je lichaam te krijgen. Antistoffen hebben er niets mee te maken.'),
+    M('Een leerling zegt: "Slijm in je neus is vies en heeft geen nut."', 'Waarom klopt dat niet?',
+      ['Slijm vangt stof en ziekteverwekkers voordat ze je longen bereiken.', 'Slijm maakt pigment tegen uv-straling.', 'Slijm bevat antibiotica.', 'Slijm maakt de lucht droger.'],
+      'Het slijm in neus en luchtpijp is een vangnet. Stof en ziekteverwekkers plakken eraan vast en trilhaartjes voeren het af. Slijm maakt de lucht juist vochtiger.'),
+    M('Bij verkoudheid zijn je lymfeklieren in je hals soms dik en gevoelig.', 'Wat gebeurt daar?',
+      ['Daar zijn veel witte bloedcellen bezig de ziekteverwekkers te bestrijden.', 'Daar wordt slijm gemaakt.', 'Daar wordt maagzuur gemaakt.', 'Daar worden nieuwe huidcellen gemaakt.'],
+      'In lymfeklieren zitten veel witte bloedcellen. Bij een infectie gaan die delen en aan het werk. Daardoor zwellen de klieren op.'),
+    I('', 'Hoe heet de reactie waarbij een plek in je lichaam rood, warm, gezwollen en pijnlijk wordt omdat je lichaam ziekteverwekkers bestrijdt?', 'de reactie', ['ontsteking', 'een ontsteking', 'ontstekingsreactie'],
+      'Bij een ontsteking worden de bloedvaten wijder. Er komt meer bloed en er komen meer witte bloedcellen naar de plek.'),
+    I('', 'In welke laag van de opperhuid worden nieuwe huidcellen en pigment gemaakt?', 'de laag', ['kiemlaag', 'de kiemlaag'],
+      'De kiemlaag ligt onder de hoornlaag. Daar delen cellen en wordt pigment gemaakt.'),
+    I('', 'Welke draden vormen bij de bloedstolling een netwerk waarin bloedcellen blijven hangen?', 'de draden', ['fibrine', 'fibrinedraden', 'fibrinedraad'],
+      'Fibrinedraden ontstaan bij de bloedstolling, die door de bloedplaatjes in gang wordt gezet.')
+  ];
+  LIJST.verdediging.hv = [
+    M('Het afweersysteem wordt vaak in twee delen verdeeld: de aspecifieke afweer en de specifieke afweer.', 'Welke uitspraak over de aspecifieke afweer is juist?',
+      ['Hij werkt op dezelfde manier tegen allerlei ziekteverwekkers en is meteen actief.', 'Hij werkt alleen tegen een ziekteverwekker waarmee je eerder besmet bent.', 'Hij bestaat uit antistoffen die op één antigeen passen.', 'Hij wordt pas actief na een vaccinatie.'],
+      'Aspecifieke afweer (huid, slijm, maagzuur, fagocyten, ontsteking) maakt geen onderscheid tussen ziekteverwekkers en hoeft niets te leren. Specifieke afweer (antistoffen, T-cellen, geheugencellen) richt zich op één antigeen en heeft bij de eerste keer dagen nodig.'),
+    M('Traanvocht en speeksel bevatten lysozym, een enzym dat de celwand van bacteriën afbreekt.', 'Tegen welke ziekteverwekkers helpt lysozym niet?',
+      ['virussen, want die hebben geen celwand', 'bacteriën in je mond', 'bacteriën op je oog', 'bacteriën in je neus'],
+      'Lysozym breekt een stof in de celwand van bacteriën af. Virussen hebben geen celwand: ze bestaan uit erfelijk materiaal in een eiwitmantel. Daar heeft lysozym geen vat op.'),
+    M('Bij een ontsteking geven mestcellen histamine af. Histamine maakt de haarvaten wijder en de wand van de haarvaten beter doorlaatbaar.', 'Hoe helpt dit bij de afweer?',
+      ['Er komt meer bloed naar de plek, en witte bloedcellen en bloedplasma kunnen makkelijker uit de haarvaten naar het weefsel.', 'Het bloed stolt sneller, zodat de bacteriën vastkomen te zitten.', 'De rode bloedcellen kunnen zo de bacteriën opnemen.', 'De bacteriën worden zo het bloed in gezogen en door de nieren uitgescheiden.'],
+      'Wijdere haarvaten geven meer doorbloeding (rood en warm). Doordat de wand beter doorlaatbaar is, komen fagocyten en vocht in het weefsel: daar zijn de bacteriën. Rode bloedcellen doen niet aan fagocytose.'),
+    M('Een ontstoken enkel is dik en gezwollen.', 'Waardoor ontstaat de zwelling bij een ontsteking?',
+      ['Er lekt meer vocht uit de haarvaten naar het weefsel.', 'De bacteriën vermenigvuldigen zich en nemen ruimte in.', 'Er worden extra huidcellen gemaakt.', 'De hoornlaag neemt water op.'],
+      'Door histamine worden de haarvaten beter doorlaatbaar. Er lekt bloedplasma naar het weefsel tussen de cellen: dat geeft de zwelling. De bacteriën zelf zijn veel te klein om een enkel dik te maken.'),
+    M('Na een antibioticakuur krijgt Lisa een schimmelinfectie (candida) in haar vagina.', 'Welke verklaring past hierbij?',
+      ['De antibiotica hebben ook onschuldige bacteriën gedood, waardoor de schimmel de ruimte kreeg.', 'De antibiotica hebben de schimmel resistent gemaakt.', 'De antibiotica bevatten zelf schimmels.', 'De antibiotica hebben haar antistoffen tegen candida afgebroken.'],
+      'Onschuldige bacteriën op huid en slijmvliezen nemen ruimte en voedsel in en houden de schimmel klein. Antibiotica doden bacteriën, geen schimmels. Valt de concurrentie weg, dan kan de schimmel groeien.'),
+    M('In je darmen leven miljarden onschuldige bacteriën: de darmflora.', 'Hoe beschermt de darmflora je tegen ziekteverwekkers?',
+      ['De bacteriën nemen ruimte en voedsel in, zodat ziekteverwekkers moeilijk kunnen groeien.', 'De bacteriën maken antistoffen voor je.', 'De bacteriën eten je witte bloedcellen op.', 'De bacteriën maken de darmwand ondoorlaatbaar voor water.'],
+      'Dit heet concurrentie. Waar al veel onschuldige bacteriën zitten, is weinig plaats en voedsel voor ziekteverwekkers. Antistoffen maakt alleen je eigen afweersysteem.'),
+    M('Een macrofaag nadert een bacterie, omsluit hem met uitstulpingen van zijn celmembraan en verteert hem in een blaasje.', 'Hoe heet dit proces?',
+      ['fagocytose', 'klontering', 'mitose', 'osmose'],
+      'Fagocytose betekent letterlijk het opeten door een cel. Macrofagen en andere fagocyten doen dit bij elke ziekteverwekker: het hoort bij de aspecifieke afweer.'),
+    M('Salmonellabacteriën in rauwe kip kunnen een darminfectie veroorzaken. Toch worden mensen die een klein beetje besmette kip eten, niet altijd ziek.', 'Welke verklaring past het best?',
+      ['Bij een kleine hoeveelheid doodt het maagzuur de meeste bacteriën voordat ze de darm bereiken.', 'Salmonella wordt in de mond verteerd door speeksel.', 'In de dikke darm worden de bacteriën door antibiotica gedood.', 'Mensen die niet ziek worden, hebben geen darmflora.'],
+      'Hoe meer bacteriën je binnenkrijgt, hoe groter de kans dat er genoeg het zure maagsap overleven. Bij weinig bacteriën is de eerste verdediging vaak voldoende.'),
+    M('Bij een wond wordt het opgeloste eiwit fibrinogeen omgezet in fibrine.', 'Wat is de functie van fibrine bij de afweer?',
+      ['Fibrinedraden vormen een netwerk dat de wond afsluit, zodat ziekteverwekkers niet verder binnendringen.', 'Fibrine bindt zich aan de antigenen van bacteriën.', 'Fibrine verteert bacteriën.', 'Fibrine vervoert zuurstof naar de wond.'],
+      'De bloedstolling sluit de opening in de huid. Zo verlies je geen bloed en komen er geen nieuwe ziekteverwekkers binnen. Binden aan antigenen is wat antistoffen doen.'),
+    M('Bij taaislijmziekte (cystische fibrose) is het slijm in de luchtwegen veel dikker en taaier dan normaal. Mensen met deze ziekte hebben vaak longinfecties.', 'Welke verklaring past hierbij?',
+      ['De trilhaartjes kunnen het taaie slijm met ziekteverwekkers niet goed afvoeren.', 'Taai slijm bevat zelf ziekteverwekkers.', 'Door het slijm maakt het lichaam geen witte bloedcellen meer.', 'Door het taaie slijm komt er te veel zuurstof in de longen.'],
+      'Slijm vangt ziekteverwekkers, maar dat werkt alleen als de trilhaartjes het slijm afvoeren. Blijft het liggen, dan is het juist een goede plek voor bacteriën om te groeien.'),
+    M('Een hond likt zijn wond, en mensen zeggen soms dat speeksel helpt tegen bacteriën.', 'Welke stof in speeksel kan bacteriën doden?',
+      ['lysozym', 'amylase', 'fibrine', 'histamine'],
+      'Lysozym in speeksel en traanvocht breekt de celwand van bacteriën af. Amylase zit ook in speeksel, maar dat verteert zetmeel. Een wond likken brengt overigens ook nieuwe bacteriën in de wond.'),
+    M('Een patiënt krijgt een beademingsbuis in de luchtpijp. Daardoor gaat de lucht niet meer langs neus en keel.', 'Waarom heeft hij meer kans op een longontsteking?',
+      ['De lucht wordt niet meer gefilterd door het slijm en de haren in de neus, en de afvoer van slijm door trilhaartjes werkt minder goed.', 'Via de buis komen antistoffen in de longen die de longen aanvallen.', 'Door de buis maakt hij geen fibrine meer.', 'Door de buis daalt de hoeveelheid maagzuur.'],
+      'Neus en luchtpijp vormen samen een filter: haren, slijm en trilhaartjes. Een buis slaat een deel daarvan over, en ziekteverwekkers komen makkelijker diep in de longen.'),
+    M('De specifieke afweer is veel gerichter dan de aspecifieke afweer.', 'Waarom is de aspecifieke afweer toch onmisbaar?',
+      ['De specifieke afweer heeft bij een eerste besmetting dagen nodig; de aspecifieke afweer werkt meteen en houdt de infectie in die tijd klein.', 'De aspecifieke afweer maakt de antistoffen.', 'De aspecifieke afweer heeft geheugencellen.', 'De specifieke afweer werkt alleen bij kinderen.'],
+      'Bij een eerste besmetting moet de passende B- of T-cel nog gevonden worden en zich delen. In die dagen houden huid, slijm, fagocyten en ontsteking de ziekteverwekker zo goed mogelijk tegen. Antistoffen en geheugencellen horen bij de specifieke afweer.'),
+    I('', 'Hoe heet de afweer die op dezelfde manier tegen allerlei ziekteverwekkers werkt, zoals de huid en fagocytose?', 'de afweer', ['aspecifieke afweer', 'aspecifiek', 'aspecifieke', 'niet-specifieke afweer', 'aangeboren afweer'],
+      'Aspecifieke afweer werkt meteen en tegen alles. De specifieke afweer richt zich op één antigeen.'),
+    I('', 'Welke stof geven mestcellen af die de haarvaten wijder en beter doorlaatbaar maakt?', 'de stof', ['histamine'],
+      'Histamine zorgt bij een ontsteking voor roodheid, warmte en zwelling. Bij een allergie veroorzaakt het jeuk en zwelling.'),
+    I('', 'Hoe heet het proces waarbij een witte bloedcel een bacterie omsluit en verteert?', 'het proces', ['fagocytose'],
+      'Bij fagocytose neemt een cel een deeltje op in een blaasje en verteert het daar.')
+  ];
+
+  /* ---------- afweer in je bloed ---------- */
+  LIJST.bloed.bb = [
+    M('', 'Welke bloedcellen ruimen ziekteverwekkers op?',
+      ['witte bloedcellen', 'rode bloedcellen', 'bloedplaatjes', 'bloedplasma'],
+      'Witte bloedcellen bestrijden ziekteverwekkers. Rode bloedcellen vervoeren zuurstof en bloedplaatjes zorgen voor de bloedstolling.'),
+    M('Je hebt een sneetje in je vinger. Na een paar minuten stopt het bloeden.', 'Welke delen van je bloed zorgen daarvoor?',
+      ['bloedplaatjes', 'rode bloedcellen', 'witte bloedcellen', 'bloedplasma'],
+      'Bloedplaatjes zorgen dat het bloed stolt. Zo gaat het wondje dicht. Witte bloedcellen ruimen daarna de ziekteverwekkers op die toch binnen zijn gekomen.'),
+    M('', 'Wat is de taak van rode bloedcellen?',
+      ['zuurstof vervoeren', 'ziekteverwekkers opruimen', 'een wondje dichten', 'antistoffen maken'],
+      'Rode bloedcellen vervoeren zuurstof van je longen naar je hele lichaam. Ze hebben niets met de afweer te maken.'),
+    M('Bij een bloedonderzoek blijkt dat Daan veel meer witte bloedcellen in zijn bloed heeft dan normaal.', 'Wat is hiervoor de meest waarschijnlijke oorzaak?',
+      ['Hij heeft een infectie.', 'Hij heeft bloedarmoede.', 'Hij heeft te veel in de zon gelegen.', 'Hij heeft net gegeten.'],
+      'Bij een infectie maakt je lichaam extra witte bloedcellen om de ziekteverwekkers te bestrijden. Bij bloedarmoede heb je juist te weinig rode bloedcellen.'),
+    M('Een witte bloedcel komt een bacterie tegen. Hij omsluit de bacterie en verteert hem.', 'Wat doet de witte bloedcel hier?',
+      ['Hij eet de bacterie op.', 'Hij vervoert de bacterie naar de longen.', 'Hij maakt de bacterie groter.', 'Hij plakt de bacterie vast aan de huid.'],
+      'Sommige witte bloedcellen zijn vreetcellen. Ze nemen een ziekteverwekker in zich op en verteren hem. Zo ruimen ze hem op.'),
+    M('Je hebt een wondje aan je voet en er zijn bacteriën in gekomen.', 'Hoe komen witte bloedcellen bij het wondje?',
+      ['via het bloed in de bloedvaten', 'via de zenuwen', 'via de luchtwegen', 'via de darmen'],
+      'Witte bloedcellen worden met het bloed door je hele lichaam vervoerd. Ze kunnen bij een ontsteking ook uit de haarvaten naar het weefsel gaan.'),
+    M('Bloed bestaat uit bloedplasma met daarin rode bloedcellen, witte bloedcellen en bloedplaatjes.', 'Welk deel van het bloed is vloeibaar?',
+      ['het bloedplasma', 'de rode bloedcellen', 'de witte bloedcellen', 'de bloedplaatjes'],
+      'Bloedplasma is het vloeibare deel van het bloed. Het bestaat vooral uit water, met opgeloste voedingsstoffen en afvalstoffen. De cellen drijven erin.'),
+    M('Je bekijkt een druppel bloed onder de microscoop. Je ziet heel veel kleine ronde rode cellen, en hier en daar een grotere cel met een kern.', 'Wat is die grotere cel met een kern?',
+      ['een witte bloedcel', 'een rode bloedcel', 'een bloedplaatje', 'een huidcel'],
+      'Rode bloedcellen hebben bij de mens geen kern. Witte bloedcellen zijn groter en hebben wel een kern. Bloedplaatjes zijn kleine stukjes van een cel.'),
+    M('Door een behandeling tegen kanker heeft Fatima tijdelijk heel weinig witte bloedcellen.', 'Waarom moet zij extra oppassen voor mensen die verkouden of ziek zijn?',
+      ['Er zijn minder cellen die ziekteverwekkers opruimen, dus ze wordt sneller ziek.', 'Er wordt minder zuurstof vervoerd.', 'Haar bloed stolt minder goed.', 'Haar hoornlaag wordt dunner.'],
+      'Witte bloedcellen bestrijden ziekteverwekkers. Met weinig witte bloedcellen kan een gewone infectie al gevaarlijk worden.'),
+    M('', 'Waar worden je bloedcellen gemaakt?',
+      ['in het rode beenmerg in je botten', 'in je hart', 'in je longen', 'in je maag'],
+      'Bloedcellen worden gemaakt in het rode beenmerg, in onder andere je borstbeen, ribben en bekken. Het hart pompt het bloed alleen rond.'),
+    M('Iemand heeft veel te weinig bloedplaatjes.', 'Wat merkt hij daarvan?',
+      ['Een wondje blijft lang bloeden.', 'Hij is snel moe door een tekort aan zuurstof.', 'Hij krijgt vaker griep.', 'Hij verbrandt sneller in de zon.'],
+      'Bloedplaatjes zorgen voor de bloedstolling. Snel moe zijn past bij te weinig rode bloedcellen, en vaker ziek worden bij te weinig witte bloedcellen.'),
+    M('Je wordt ziek van een virus. Na een paar dagen word je weer beter.', 'Wat heeft ervoor gezorgd dat je beter werd?',
+      ['Je witte bloedcellen hebben het virus bestreden.', 'Je rode bloedcellen hebben het virus opgegeten.', 'Je bloedplaatjes hebben het virus weggespoeld.', 'Je maagzuur heeft het virus in je bloed gedood.'],
+      'Je afweer, vooral de witte bloedcellen, ruimt het virus op. Rode bloedcellen en bloedplaatjes hebben een andere taak, en maagzuur werkt alleen in je maag.'),
+    I('', 'Hoe heten de bloedcellen die ziekteverwekkers opruimen?', 'de bloedcellen', ['witte bloedcellen', 'witte bloedcel', 'witte bloedlichaampjes'],
+      'Witte bloedcellen horen bij je afweer. Er zijn er minder dan rode bloedcellen, maar bij een infectie komen er meer.'),
+    I('', 'Hoe heten de kleine deeltjes in je bloed die zorgen dat een wondje dichtgaat?', 'de deeltjes', ['bloedplaatjes', 'bloedplaatje'],
+      'Bloedplaatjes zetten de bloedstolling in gang. Zo ontstaat een korstje.'),
+    I('', 'Hoe heet het vloeibare deel van je bloed?', 'het deel', ['bloedplasma', 'plasma'],
+      'Bloedplasma is vooral water, met opgeloste stoffen zoals voedingsstoffen en afvalstoffen.')
+  ];
+  LIJST.bloed.kgt = [
+    M('Op de buitenkant van een bacterie zitten stoffen die je lichaam herkent als lichaamsvreemd.', 'Hoe heten zulke stoffen?',
+      ['antigenen', 'antistoffen', 'antibiotica', 'enzymen'],
+      'Antigenen zitten op de ziekteverwekker. Antistoffen maakt je lichaam zelf om die antigenen onschadelijk te maken. Ezelsbruggetje: een antiGEEN zit op de indringer, een antiSTOF komt van jou.'),
+    M('', 'Welke cellen maken antistoffen?',
+      ['bepaalde witte bloedcellen', 'rode bloedcellen', 'bloedplaatjes', 'cellen van de hoornlaag'],
+      'Bepaalde witte bloedcellen (lymfocyten) maken antistoffen. De antistoffen komen in het bloedplasma terecht.'),
+    M('Tom heeft de mazelen gehad. Tegen het mazelenvirus heeft hij nu antistoffen en geheugencellen.', 'Beschermen deze hem ook tegen het griepvirus?',
+      ['Nee, antistoffen passen alleen op het antigeen waartegen ze gemaakt zijn.', 'Ja, antistoffen werken tegen alle virussen.', 'Ja, maar alleen als hij binnen een jaar griep krijgt.', 'Nee, want antistoffen werken alleen tegen bacteriën.'],
+      'Antistoffen zijn specifiek: ze passen op één antigeen, zoals een sleutel op één slot. Het griepvirus heeft andere antigenen dan het mazelenvirus.'),
+    M('Antistoffen hechten zich aan de antigenen van bacteriën. Daardoor plakken de bacteriën aan elkaar vast.', 'Hoe helpt dat?',
+      ['De samengeklonterde bacteriën verspreiden zich niet goed en worden makkelijk opgeruimd door vreetcellen.', 'De bacteriën worden zo groot dat ze met de urine naar buiten gaan.', 'De bacteriën veranderen in onschuldige bacteriën.', 'De bacteriën worden omgebouwd tot nieuwe antistoffen.'],
+      'Dit heet klontering. Een klontje bacteriën is onschadelijker en vreetcellen kunnen het in één keer opruimen.'),
+    M('Na een infectie blijven er in je lichaam witte bloedcellen achter die het antigeen "onthouden".', 'Hoe heten deze cellen?',
+      ['geheugencellen', 'vreetcellen', 'rode bloedcellen', 'bloedplaatjes'],
+      'Geheugencellen blijven soms je hele leven in je lichaam. Komt hetzelfde antigeen terug, dan maken ze snel veel antistoffen.'),
+    M('Wie de waterpokken heeft gehad, krijgt het meestal geen tweede keer.', 'Hoe komt dat?',
+      ['Bij een tweede besmetting zorgen geheugencellen zo snel voor antistoffen dat je niet ziek wordt.', 'Na de eerste keer is je huid ongevoelig geworden voor het virus.', 'Na de eerste keer zitten er altijd antibiotica in je bloed.', 'Kinderen kunnen niet twee keer ziek worden van een virus.'],
+      'Je bent immuun geworden. Door de geheugencellen gaat de tweede afweerreactie veel sneller en sterker dan de eerste. Antibiotica werken trouwens niet tegen virussen.'),
+    M('', 'Hoe heten witte bloedcellen die ziekteverwekkers opnemen en verteren?',
+      ['vreetcellen (fagocyten)', 'geheugencellen', 'bloedplaatjes', 'antistoffen'],
+      'Vreetcellen omsluiten een ziekteverwekker en verteren hem. Ze ruimen ook bacteriën op die door antistoffen zijn samengeklonterd.'),
+    M('Je wordt voor het eerst besmet met een griepvirus. Pas na een paar dagen heb je genoeg antistoffen.', 'Waarom ben je in die eerste dagen ziek?',
+      ['Het virus kan zich vermenigvuldigen voordat er genoeg antistoffen zijn.', 'Antistoffen maken je ziek.', 'Je hebt in die dagen geen witte bloedcellen.', 'Het virus wordt pas na een paar dagen gevaarlijk.'],
+      'Bij een eerste besmetting moet je afweer de ziekteverwekker nog leren kennen. Dat kost dagen. In die tijd vermenigvuldigt het virus zich en word je ziek.'),
+    M('', 'Wat is het verschil tussen een antistof en een antibioticum?',
+      ['Een antistof maakt je lichaam zelf tegen één antigeen; een antibioticum is een medicijn dat bacteriën doodt of remt.', 'Een antistof doodt bacteriën, een antibioticum doodt virussen.', 'Er is geen verschil: het zijn twee woorden voor hetzelfde.', 'Een antistof is een medicijn, een antibioticum maakt je lichaam zelf.'],
+      'De woorden lijken op elkaar, maar het zijn heel verschillende dingen. Antistoffen komen van je eigen witte bloedcellen. Antibiotica krijg je van de dokter en die werken alleen tegen bacteriën.'),
+    M('Een antistof wordt vaak vergeleken met een sleutel die op één slot past.', 'Wat is in deze vergelijking het slot?',
+      ['het antigeen op de ziekteverwekker', 'de witte bloedcel', 'het bloedplasma', 'het vaccin'],
+      'De antistof (de sleutel) past precies op één antigeen (het slot). Daarom werkt een antistof tegen maar één soort ziekteverwekker.'),
+    M('Hiv is een virus dat bepaalde witte bloedcellen aantast. Zonder behandeling kan iemand na jaren aids krijgen.', 'Waarom worden mensen met aids ziek van infecties die voor anderen onschuldig zijn?',
+      ['Hun afweer werkt slecht, omdat er te weinig van die witte bloedcellen over zijn.', 'Hiv maakt alle bacteriën gevaarlijker.', 'Ze hebben te veel antistoffen in hun bloed.', 'Hun rode bloedcellen vervoeren geen zuurstof meer.'],
+      'Bij aids is het afweersysteem zo verzwakt dat zelfs onschuldige ziekteverwekkers een gevaarlijke infectie kunnen geven. Met medicijnen tegen hiv kun je dat voorkomen.'),
+    M('', 'Waar in het bloed bevinden zich de antistoffen?',
+      ['in het bloedplasma', 'in de rode bloedcellen', 'in de bloedplaatjes', 'in de hoornlaag'],
+      'Antistoffen zijn opgelost in het bloedplasma. Zo worden ze door het hele lichaam vervoerd.'),
+    M('Een arts ziet in het bloed van een patiënt antistoffen tegen hepatitis B, terwijl de patiënt nooit is ingeënt.', 'Wat kun je daaruit afleiden?',
+      ['De patiënt is ooit besmet geweest met het hepatitis B-virus.', 'De patiënt heeft hepatitis B geërfd van zijn ouders.', 'De patiënt heeft antibiotica tegen hepatitis B gehad.', 'Iedereen heeft vanzelf antistoffen tegen hepatitis B.'],
+      'Antistoffen tegen een bepaald antigeen maak je pas als je lichaam dat antigeen is tegengekomen: door een infectie of een vaccin. Een vaccin had hij niet, dus het was een infectie.'),
+    I('', 'Hoe heten de stoffen die je witte bloedcellen maken tegen een antigeen?', 'de stoffen', ['antistoffen', 'antistof', 'antilichamen', 'antilichaam'],
+      'Antistoffen binden aan het antigeen. Daardoor klonteren de ziekteverwekkers samen en worden ze opgeruimd.'),
+    I('', 'Hoe heten lichaamsvreemde stoffen op een ziekteverwekker, die je afweer herkent?', 'de stoffen', ['antigenen', 'antigeen'],
+      'Antigenen zijn meestal eiwitten op de buitenkant van een ziekteverwekker.'),
+    I('', 'Hoe heten de witte bloedcellen die na een infectie overblijven en het antigeen onthouden?', 'de cellen', ['geheugencellen', 'geheugencel'],
+      'Geheugencellen zorgen bij een tweede besmetting voor een snelle en sterke afweerreactie.')
+  ];
+  LIJST.bloed.hv = [
+    M('Een macrofaag heeft een bacterie opgenomen en laat stukjes van het antigeen zien op zijn celmembraan.', 'Welke cel herkent dit antigeen en activeert daarna de B-cellen?',
+      ['de T-helpercel', 'de plasmacel', 'de rode bloedcel', 'de geheugencel'],
+      'De macrofaag presenteert het antigeen. Een T-helpercel met een passende receptor herkent het en activeert B-cellen en T-killercellen voor hetzelfde antigeen. Plasmacellen ontstaan pas later, uit de B-cellen.'),
+    M('', 'Welke cellen maken bij de specifieke afweer de antistoffen?',
+      ['plasmacellen, die ontstaan uit geactiveerde B-cellen', 'T-helpercellen', 'macrofagen', 'T-killercellen'],
+      'Een geactiveerde B-cel deelt zich vaak. Een deel wordt plasmacel en maakt grote hoeveelheden antistoffen, een deel wordt geheugencel.'),
+    M('Een virus is lichaamscellen binnengedrongen en vermenigvuldigt zich daarin. Antistoffen in het bloed kunnen het virus in de cel niet bereiken.', 'Welke cellen ruimen de geïnfecteerde lichaamscellen op?',
+      ['T-killercellen (cytotoxische T-cellen)', 'plasmacellen', 'bloedplaatjes', 'B-geheugencellen'],
+      'T-killercellen herkennen lichaamscellen die stukjes virusantigeen op hun membraan laten zien, en doden die cellen. Dat is de cellulaire afweer. Antistoffen werken alleen buiten de cellen.'),
+    M('', 'Wat is het verschil tussen de humorale en de cellulaire specifieke afweer?',
+      ['Bij de humorale afweer werken antistoffen in bloed en weefselvocht; bij de cellulaire afweer doden T-killercellen geïnfecteerde cellen.', 'Bij de humorale afweer werken fagocyten; bij de cellulaire afweer werken antistoffen.', 'De humorale afweer is aspecifiek, de cellulaire afweer is specifiek.', 'De humorale afweer werkt alleen tegen virussen, de cellulaire alleen tegen bacteriën.'],
+      'Humor betekent lichaamsvocht: de antistoffen zitten in bloed en weefselvocht. Cellulair betekent dat cellen het werk doen: T-killercellen. Allebei zijn ze specifiek.'),
+    M('Hiv infecteert vooral T-helpercellen.', 'Waarom gaan daardoor zowel de productie van antistoffen als de cellulaire afweer achteruit?',
+      ['T-helpercellen activeren zowel B-cellen als T-killercellen.', 'T-helpercellen maken zelf de antistoffen en doden ook geïnfecteerde cellen.', 'Zonder T-helpercellen worden er geen rode bloedcellen meer gemaakt.', 'Hiv vernietigt ook alle B-cellen en T-killercellen direct.'],
+      'De T-helpercel is de schakel in het midden van de specifieke afweer. Zonder voldoende T-helpercellen worden B-cellen en T-killercellen niet goed geactiveerd.'),
+    M('In je lichaam zijn miljoenen verschillende B-cellen, elk met een eigen receptor. Bij een infectie gaat alleen de B-cel delen waarvan de receptor op het antigeen past.', 'Wat is daarvan het gevolg?',
+      ['Er ontstaan veel plasmacellen en geheugencellen die allemaal hetzelfde passende antigeen herkennen.', 'Alle B-cellen gaan delen, zodat er antistoffen tegen elk antigeen komen.', 'De passende B-cel sterft en de andere nemen het over.', 'De B-cel verandert zijn receptor tot hij past.'],
+      'Dit heet klonale selectie: de passende B-cel wordt uitgekozen en vormt een kloon. Daarom duurt de eerste reactie een paar dagen, en is de tweede reactie (met geheugencellen) veel sneller.'),
+    M('Bij hooikoorts reageert het afweersysteem op stuifmeel. Antistoffen tegen stuifmeel zitten vast op mestcellen. Komt er stuifmeel aan, dan geven de mestcellen histamine af.', 'Welke klachten veroorzaakt de histamine?',
+      ['zwelling, jeuk, een loopneus en tranende ogen', 'koorts door bacteriën', 'een tekort aan rode bloedcellen', 'een bloeding in de neus door te weinig bloedplaatjes'],
+      'Histamine maakt haarvaten wijder en doorlaatbaarder. In neus en ogen geeft dat zwelling, jeuk en veel vocht. Er zijn geen bacteriën bij betrokken.'),
+    M('Iemand met hooikoorts slikt een antihistaminicum.', 'Waarom helpt dit tegen de klachten maar niet tegen de allergie zelf?',
+      ['Het remt de werking van histamine, maar de antistoffen en mestcellen blijven gevoelig voor stuifmeel.', 'Het doodt het stuifmeel in de neus.', 'Het maakt nieuwe antistoffen tegen histamine.', 'Het vervangt de mestcellen door geheugencellen.'],
+      'De allergie zit in het afweersysteem: er zijn antistoffen tegen stuifmeel op de mestcellen. Een antihistaminicum werkt alleen op het laatste stapje, het effect van histamine.'),
+    M('', 'Wat is een allergeen?',
+      ['een onschuldige stof waarop het afweersysteem van sommige mensen toch reageert', 'een ziekteverwekker die alleen bij kinderen voorkomt', 'een antistof die stuifmeel afbreekt', 'een medicijn tegen allergie'],
+      'Stuifmeel, huisstofmijt en pinda’s zijn voor de meeste mensen onschuldig. Bij een allergie maakt het afweersysteem er toch antistoffen tegen.'),
+    M('Bij diabetes type 1 vallen witte bloedcellen de cellen in de alvleesklier aan die insuline maken.', 'Hoe heet zo’n ziekte?',
+      ['een auto-immuunziekte', 'een allergie', 'een infectieziekte', 'een soa'],
+      'Bij een auto-immuunziekte ziet het afweersysteem eigen lichaamscellen aan voor lichaamsvreemd. Bij een allergie gaat het om een stof van buiten, zoals stuifmeel.'),
+    M('Na een niertransplantatie moet Ahmed zijn hele leven medicijnen slikken die zijn afweer onderdrukken.', 'Waarom is dat nodig, en wat is het nadeel?',
+      ['Zijn afweer herkent de antigenen op de cellen van de donornier als lichaamsvreemd; door de medicijnen is hij wel vatbaarder voor infecties.', 'De medicijnen zorgen dat de nier urine maakt; het nadeel is dat hij snel aankomt.', 'Zijn afweer maakt anders te weinig antistoffen tegen de nier; het nadeel is bloedarmoede.', 'De medicijnen laten de nier groeien; het nadeel is dat hij sneller verbrandt in de zon.'],
+      'Elke cel heeft eigen antigenen op het membraan. Die van de donor wijken af, dus T-cellen en antistoffen vallen de nier aan: afstoting. Remmen van de afweer voorkomt dat, maar remt ook de afweer tegen ziekteverwekkers.'),
+    M('Een rhesusnegatieve vrouw is zwanger van haar tweede kind, dat rhesuspositief is. Bij de bevalling van haar eerste kind (ook rhesuspositief) is er bloed van het kind in haar bloed gekomen. Ze heeft toen geen behandeling gekregen.', 'Waarom loopt het tweede kind gevaar?',
+      ['De moeder heeft antistoffen tegen het rhesusantigeen gemaakt, en die kunnen via de placenta de rode bloedcellen van het kind aantasten.', 'Het kind maakt antistoffen tegen het bloed van de moeder.', 'Het rhesusantigeen is een virus dat van moeder op kind overgaat.', 'Het eerste kind heeft de antistoffen van de moeder opgebruikt.'],
+      'De moeder heeft geen rhesusantigeen en reageert erop als op iets lichaamsvreemds. Er ontstaan antistoffen en geheugencellen. Bij een volgend rhesuspositief kind gaan die antistoffen door de placenta en breken ze de rode bloedcellen van het kind af.'),
+    M('Rhesusnegatieve zwangere vrouwen in Nederland krijgen (onder andere na de bevalling) een injectie met antistoffen tegen het rhesusantigeen (anti-D).', 'Hoe voorkomt dit problemen bij een volgende zwangerschap?',
+      ['De ingespoten antistoffen ruimen de rode bloedcellen van het kind op voordat de moeder zelf antistoffen en geheugencellen maakt.', 'De antistoffen maken de moeder rhesuspositief.', 'De antistoffen blijven levenslang in haar bloed en beschermen het volgende kind.', 'De antistoffen werken als een vaccin, zodat de moeder geheugencellen maakt.'],
+      'Dit is passieve immuniteit met een slim doel: de rode bloedcellen van het kind verdwijnen snel, dus het afweersysteem van de moeder komt niet in actie en maakt geen geheugencellen. De ingespoten antistoffen zijn na een paar maanden weer weg.'),
+    I('', 'Welke cellen ontstaan uit B-cellen en maken grote hoeveelheden antistoffen?', 'de cellen', ['plasmacellen', 'plasmacel'],
+      'Plasmacellen zijn de antistoffenfabriekjes van de humorale afweer.'),
+    I('', 'Hoe heet een ziekte waarbij het afweersysteem eigen lichaamscellen aanvalt?', 'de ziekte', ['auto-immuunziekte', 'autoimmuunziekte', 'auto-immuunziektes', 'auto immuun ziekte'],
+      'Voorbeelden zijn diabetes type 1, reuma en coeliakie.'),
+    I('', 'Welke witte bloedcellen doden lichaamscellen die met een virus geïnfecteerd zijn?', 'de cellen', ['T-killercellen', 'T-killercel', 'killercellen', 'cytotoxische T-cellen', 'cytotoxische T-cel'],
+      'T-killercellen (cytotoxische T-cellen) horen bij de cellulaire afweer.')
+  ];
+
+  /* ---------- immuniteit ---------- */
+  LIJST.immuniteit.bb = [
+    M('', 'Wat zit er in een vaccin?',
+      ['dode of verzwakte ziekteverwekkers, of stukjes ervan', 'antibiotica', 'witte bloedcellen van iemand anders', 'vitamines tegen ziekte'],
+      'Een vaccin bevat iets van de ziekteverwekker, maar je wordt er niet ziek van. Je lichaam leert de ziekteverwekker zo alvast kennen.'),
+    M('Baby’s en kinderen in Nederland krijgen inentingen via het Rijksvaccinatieprogramma, bijvoorbeeld tegen de mazelen.', 'Waarom is een inenting belangrijk?',
+      ['Je lichaam leert de ziekteverwekker kennen, zodat je later niet of minder ziek wordt.', 'De inenting geneest je als je al ziek bent.', 'De inenting maakt je hoornlaag dikker.', 'Na een inenting kun je van geen enkele ziekte meer ziek worden.'],
+      'Een inenting voorkomt een ziekte. Hij werkt alleen tegen de ziekte waartegen je bent ingeënt, en niet als genezing als je al ziek bent.'),
+    M('Je hebt griep. Griep wordt veroorzaakt door een virus.', 'Helpen antibiotica tegen je griep?',
+      ['Nee, antibiotica werken alleen tegen bacteriën.', 'Ja, antibiotica doden alle ziekteverwekkers.', 'Ja, maar alleen als je ze lang genoeg slikt.', 'Nee, antibiotica werken alleen tegen schimmels.'],
+      'Antibiotica doden bacteriën of remmen hun groei. Tegen virussen, zoals griep en verkoudheid, doen ze niets. Je lichaam moet het virus zelf opruimen.'),
+    M('', 'Bij welke ziekte kan een arts antibiotica voorschrijven?',
+      ['een blaasontsteking door bacteriën', 'griep', 'verkoudheid', 'waterpokken'],
+      'Een blaasontsteking wordt meestal door bacteriën veroorzaakt. Griep, verkoudheid en waterpokken komen door virussen: daar helpen antibiotica niet.'),
+    M('De dokter schrijft Mila een antibioticakuur van zeven dagen voor. Na drie dagen voelt ze zich al beter.', 'Wat doet ze het best?',
+      ['De antibiotica blijven slikken zoals de dokter heeft gezegd.', 'Stoppen, want ze is beter.', 'De rest bewaren voor de volgende keer dat ze ziek is.', 'De rest aan een zieke vriendin geven.'],
+      'Gebruik antibiotica precies zoals de arts zegt en stop niet zelf eerder. Bewaren of doorgeven is niet goed: een ander middel of een andere dosis kan nodig zijn.'),
+    M('', 'Waarom mag je antibiotica niet zomaar gebruiken als het niet nodig is?',
+      ['Bacteriën kunnen ongevoelig (resistent) worden, en dan werken antibiotica later niet meer.', 'Antibiotica maken je hoornlaag dunner.', 'Je wordt er allergisch voor alle medicijnen van.', 'Antibiotica doden je witte bloedcellen.'],
+      'Hoe vaker antibiotica worden gebruikt, hoe meer kans dat er bacteriën overblijven waar ze niet meer tegen werken. Dat zijn resistente bacteriën.'),
+    M('Kinderen in Nederland krijgen rond hun tiende verjaardag een prik tegen HPV. Dit virus kan later onder andere baarmoederhalskanker veroorzaken.', 'Waarom krijgen ze die prik al zo jong?',
+      ['Zo zijn ze beschermd voordat ze met het virus in aanraking kunnen komen.', 'Omdat het virus alleen kinderen ziek maakt.', 'Omdat de prik bij volwassenen ziek maakt.', 'Omdat antibiotica bij kinderen niet werken.'],
+      'HPV gaat vooral over bij seks. Een inenting werkt het best als je al beschermd bent voordat je het virus kunt oplopen.'),
+    M('Na een inenting heeft Jesse een rode, wat dikke plek op zijn arm en voelt hij zich een dag niet zo lekker.', 'Wat is hiervoor de verklaring?',
+      ['Zijn afweer reageert op het vaccin.', 'Hij heeft nu de ziekte waartegen hij is ingeënt.', 'De naald was vies.', 'Hij is allergisch voor alle vaccins.'],
+      'Je afweer komt in actie tegen wat er in het vaccin zit. Dat kan een rode plek en een dag hangerigheid geven. De ziekte zelf krijg je er niet van.'),
+    M('In een klas zijn bijna alle kinderen ingeënt tegen de mazelen. Eén kind kan door een ziekte geen inenting krijgen.', 'Waarom is dat kind toch redelijk beschermd?',
+      ['Bijna niemand om hem heen kan het virus krijgen en doorgeven.', 'Het krijgt antistoffen van de anderen door met ze te spelen.', 'Mazelen maakt alleen ingeënte kinderen ziek.', 'Het kind slikt antibiotica tegen de mazelen.'],
+      'Dit heet groepsimmuniteit. Als bijna iedereen is ingeënt, kan het virus zich bijna niet verspreiden. Zo worden ook mensen beschermd die geen inenting kunnen krijgen.'),
+    M('', 'Wat is het verschil tussen een vaccin en antibiotica?',
+      ['Een vaccin voorkomt een ziekte; antibiotica bestrijden een infectie met bacteriën die je al hebt.', 'Een vaccin bestrijdt bacteriën; antibiotica voorkomen een ziekte.', 'Ze doen precies hetzelfde.', 'Een vaccin werkt alleen bij volwassenen, antibiotica alleen bij kinderen.'],
+      'Een vaccin krijg je als je gezond bent, om later niet ziek te worden. Antibiotica krijg je als je al een infectie met bacteriën hebt.'),
+    M('Chlamydia is een soa. Veel mensen merken er eerst niets van.', 'Waarom is het toch belangrijk om je te laten testen en behandelen?',
+      ['Zonder behandeling kan het schade doen, zoals onvruchtbaarheid, en kun je anderen besmetten.', 'Omdat chlamydia vanzelf overgaat.', 'Omdat je anders allergisch wordt voor condooms.', 'Omdat je dan een inenting tegen alle soa’s krijgt.'],
+      'Chlamydia wordt door een bacterie veroorzaakt en is met antibiotica goed te behandelen. Onbehandeld kan het de eileiders beschadigen. En wie het niet weet, kan het doorgeven.'),
+    M('', 'Tegen welke van deze ziekten krijgen kinderen in Nederland een inenting?',
+      ['de mazelen', 'chlamydia', 'verkoudheid', 'voetschimmel'],
+      'Tegen de mazelen krijg je de BMR-prik (bof, mazelen, rodehond). Tegen chlamydia, verkoudheid en voetschimmel bestaat in het vaccinatieprogramma geen inenting.'),
+    M('Mensen van 60 jaar en ouder krijgen in Nederland elk najaar een uitnodiging voor de griepprik.', 'Waarom moet de griepprik elk jaar opnieuw?',
+      ['Het griepvirus verandert steeds een beetje, dus elk jaar is er een nieuw vaccin nodig.', 'De griepprik werkt maar een week.', 'Ouderen hebben geen witte bloedcellen.', 'Griep wordt door een bacterie veroorzaakt die resistent wordt.'],
+      'Griep komt door een virus dat snel verandert. Het vaccin van vorig jaar past daardoor minder goed op het virus van dit jaar.'),
+    I('', 'Hoe heten medicijnen die bacteriën doden of hun groei remmen?', 'de medicijnen', ['antibiotica', 'antibioticum'],
+      'Antibiotica werken tegen bacteriën, niet tegen virussen.'),
+    I('', 'Een ander woord voor een inenting is een ...', 'het woord', ['vaccinatie', 'vaccin', 'prik', 'injectie'],
+      'Bij een vaccinatie krijg je een vaccin, meestal met een prik.'),
+    I('', 'Bacteriën waar een antibioticum niet meer tegen werkt, noem je ...', 'het woord', ['resistent', 'resistente bacteriën', 'resistente'],
+      'Resistent betekent ongevoelig. Hoe vaker antibiotica worden gebruikt, hoe meer resistente bacteriën er komen.')
+  ];
+  LIJST.immuniteit.kgt = [
+    M('Daan wordt ingeënt tegen difterie, kinkhoest en tetanus.', 'Welke vorm van immuniteit krijgt hij?',
+      ['kunstmatige actieve immuniteit', 'kunstmatige passieve immuniteit', 'natuurlijke actieve immuniteit', 'natuurlijke passieve immuniteit'],
+      'Actief: zijn eigen lichaam maakt de antistoffen en geheugencellen. Kunstmatig: het gebeurt door een vaccin en niet doordat hij de ziekte heeft gehad.'),
+    M('Een baby krijgt via de placenta en de moedermelk antistoffen van zijn moeder.', 'Welke vorm van immuniteit is dit?',
+      ['natuurlijke passieve immuniteit', 'natuurlijke actieve immuniteit', 'kunstmatige passieve immuniteit', 'kunstmatige actieve immuniteit'],
+      'Passief: de baby krijgt kant-en-klare antistoffen en maakt ze niet zelf. Natuurlijk: er is geen prik of medicijn aan te pas gekomen.'),
+    M('Iemand wordt gebeten door een giftige slang en krijgt in het ziekenhuis een serum met antistoffen tegen het gif.', 'Welke vorm van immuniteit is dit?',
+      ['kunstmatige passieve immuniteit', 'kunstmatige actieve immuniteit', 'natuurlijke passieve immuniteit', 'natuurlijke actieve immuniteit'],
+      'Passief, want hij krijgt kant-en-klare antistoffen. Kunstmatig, want ze worden ingespoten. Een vaccin zou te laat werken: het gif moet meteen onschadelijk worden.'),
+    M('Sem heeft de waterpokken gehad en wordt er niet meer ziek van.', 'Welke vorm van immuniteit heeft Sem?',
+      ['natuurlijke actieve immuniteit', 'kunstmatige actieve immuniteit', 'natuurlijke passieve immuniteit', 'kunstmatige passieve immuniteit'],
+      'Sem heeft zelf antistoffen en geheugencellen gemaakt (actief), doordat hij de ziekte heeft gehad (natuurlijk).'),
+    M('', 'Waarom werkt een serum met antistoffen meteen, maar beschermt het maar kort?',
+      ['Je krijgt kant-en-klare antistoffen, maar je maakt zelf geen geheugencellen.', 'Een serum bevat verzwakte ziekteverwekkers die snel doodgaan.', 'Een serum werkt alleen in het bloed van kinderen.', 'Een serum werkt alleen tegen bacteriën, niet tegen gif.'],
+      'Antistoffen worden na een tijd afgebroken. Omdat je lichaam ze niet zelf heeft gemaakt, zijn er geen geheugencellen om nieuwe te maken.'),
+    M('Tim stapt in een roestige spijker. Hij is nooit ingeënt tegen tetanus.', 'Wat geeft de arts hem om hem meteen te beschermen?',
+      ['een serum met antistoffen tegen tetanus', 'alleen een vaccin, want dat werkt binnen een uur', 'antibiotica tegen virussen', 'niets, want tetanus is niet gevaarlijk'],
+      'Een vaccin werkt pas na een paar weken. Antistoffen (passieve immuniteit) beschermen meteen. Vaak krijgt hij daarnaast ook de eerste tetanusprik, zodat hij later zelf beschermd is.'),
+    M('Als in een gemeente minder kinderen worden ingeënt tegen de mazelen, komen daar vaker uitbraken.', 'Welke verklaring past hierbij?',
+      ['Het virus vindt dan meer mensen die het kunnen krijgen en doorgeven, dus het kan zich makkelijker verspreiden.', 'Het mazelenvirus wordt sterker als er minder kinderen zijn ingeënt.', 'Ingeënte kinderen kunnen het virus daar niet meer bestrijden.', 'Kinderen die niet zijn ingeënt, maken het vaccin bij anderen minder goed.'],
+      'Groepsimmuniteit werkt alleen als bijna iedereen immuun is. Zijn er veel mensen zonder bescherming, dan kan het virus van de een naar de ander springen.'),
+    M('Een huisarts schrijft vaak antibiotica voor, ook bij verkoudheid.', 'Waarom is dat een probleem voor iedereen?',
+      ['Bacteriën die toevallig niet doodgaan, vermenigvuldigen zich: zo ontstaan resistente bacteriën die moeilijk te bestrijden zijn.', 'Het verkoudheidsvirus wordt resistent tegen antibiotica.', 'Mensen worden zelf resistent tegen antibiotica.', 'Antibiotica maken het verkoudheidsvirus sterker.'],
+      'Niet de mens maar de bacterie wordt resistent. Elk gebruik van antibiotica geeft resistente bacteriën een voorsprong. Bij verkoudheid (een virus) helpt het bovendien niet.'),
+    M('In ziekenhuizen komt soms MRSA voor: een bacterie waar veel antibiotica niet meer tegen werken.', 'Hoe heet deze eigenschap van de bacterie?',
+      ['resistentie', 'immuniteit', 'allergie', 'vaccinatie'],
+      'Resistentie is een eigenschap van een bacterie: het antibioticum doodt hem niet meer. Immuniteit is een eigenschap van jou: je afweer herkent een ziekteverwekker.'),
+    M('', 'Waarom maak je na een vaccinatie geheugencellen?',
+      ['Het vaccin bevat antigenen van de ziekteverwekker, waartegen je lichaam een afweerreactie start.', 'Het vaccin bevat geheugencellen van een ander.', 'Het vaccin bevat antistoffen die geheugencellen worden.', 'Het vaccin bevat antibiotica die je afweer sterker maken.'],
+      'De antigenen in het vaccin lijken op die van de echte ziekteverwekker. Je afweer reageert erop zoals bij een echte besmetting, maar zonder dat je ziek wordt.'),
+    M('Voor sommige vaccins krijg je na een paar jaar een herhalingsprik.', 'Wat doet de herhalingsprik?',
+      ['Je geheugencellen reageren snel en je maakt veel meer antistoffen; de bescherming wordt sterker en duurt langer.', 'Je krijgt de ziekte, zodat je echt immuun wordt.', 'De oude antistoffen worden verwijderd.', 'Je wordt er passief immuun door.'],
+      'Bij de herhalingsprik zijn er al geheugencellen. De reactie is daardoor sneller en sterker dan de eerste keer, net als bij een tweede besmetting.'),
+    M('Mensen van 60 jaar en ouder krijgen in Nederland elk jaar een griepprik.', 'Waarom is de prik van vorig jaar niet genoeg?',
+      ['Het griepvirus verandert steeds, waardoor de antigenen anders worden en de oude antistoffen minder goed passen.', 'De antistoffen van de griepprik worden na een week uitgeplast.', 'Het griepvirus is een bacterie die resistent wordt.', 'Ouderen maken geen geheugencellen.'],
+      'Griepvirussen veranderen door mutaties. Andere antigenen betekent dat de antistoffen en geheugencellen van vorig jaar minder goed passen. Daarom wordt het vaccin elk jaar aangepast.'),
+    M('', 'Waarom werken antibiotica niet tegen virussen?',
+      ['Antibiotica grijpen in op onderdelen van bacteriën, en virussen hebben die onderdelen niet.', 'Virussen zijn te groot voor antibiotica.', 'Virussen zijn altijd resistent.', 'Virussen zitten alleen in het bloed en antibiotica niet.'],
+      'Antibiotica tasten bijvoorbeeld de celwand van een bacterie aan. Een virus is geen cel en vermenigvuldigt zich in je eigen lichaamscellen.'),
+    I('', 'Iemand krijgt kant-en-klare antistoffen ingespoten. Is dit actieve of passieve immuniteit?', 'actief of passief', ['passieve', 'passief', 'passieve immuniteit', 'kunstmatige passieve immuniteit'],
+      'Passief: je lichaam maakt de antistoffen niet zelf. Daarom werkt het meteen, maar kort.'),
+    I('', 'Hoe heet de bescherming van mensen die niet zijn ingeënt, doordat bijna iedereen om hen heen immuun is?', 'het begrip', ['groepsimmuniteit', 'groepsbescherming', 'kudde-immuniteit'],
+      'Bij groepsimmuniteit kan een ziekteverwekker zich nauwelijks verspreiden.'),
+    I('', 'Hoe heet de vloeistof met antistoffen die je ingespoten krijgt na een slangenbeet?', 'de vloeistof', ['serum', 'antiserum', 'een serum'],
+      'Een serum geeft kunstmatige passieve immuniteit.')
+  ];
+  LIJST.immuniteit.hv = [
+    M('Antistoffen tegen slangengif worden gemaakt door een paard kleine hoeveelheden gif in te spuiten. Later wordt bloed afgenomen en worden de antistoffen eruit gehaald. Daarmee wordt een patiënt behandeld.', 'Welke immuniteit heeft het paard, en welke de patiënt?',
+      ['paard: kunstmatige actieve immuniteit; patiënt: kunstmatige passieve immuniteit', 'paard: natuurlijke actieve; patiënt: kunstmatige actieve', 'paard: kunstmatige passieve; patiënt: natuurlijke passieve', 'paard en patiënt: kunstmatige actieve immuniteit'],
+      'Het paard maakt zelf antistoffen na een ingespoten antigeen: actief en kunstmatig. De patiënt krijgt kant-en-klare antistoffen: passief en kunstmatig.'),
+    M('Bacteriën kunnen met plasmiden genen voor resistentie aan andere bacteriën doorgeven, ook aan andere soorten.', 'Waarom maakt dit het probleem van resistentie groter?',
+      ['Resistentie kan zich zo veel sneller verspreiden dan alleen via deling.', 'Plasmiden breken de antibiotica in het bloed af.', 'Daardoor worden mensen zelf resistent.', 'Daardoor ontstaan nieuwe virussen.'],
+      'Normaal krijgen alleen de nakomelingen van een resistente bacterie het gen. Met plasmiden kan het gen tussen bacteriën overspringen, zelfs naar een andere soort.'),
+    M('In de veehouderij werden vroeger veel antibiotica gebruikt, ook bij gezonde dieren.', 'Welk risico heeft dat voor mensen?',
+      ['Er ontstaan resistente bacteriën die via vlees, mest of contact bij mensen terecht kunnen komen.', 'Mensen worden allergisch voor vlees.', 'De dieren worden immuun voor alle ziekten.', 'De antibiotica veranderen in vaccins.'],
+      'Waar veel antibiotica worden gebruikt, hebben resistente bacteriën een selectievoordeel. Die bacteriën blijven niet bij de dieren. Daarom is het gebruik in Nederland sterk teruggedrongen.'),
+    M('Bij de mazelen besmet één zieke in een groep zonder immuniteit gemiddeld 12 tot 18 anderen. Daarom moet ongeveer 95% van de bevolking immuun zijn om uitbraken te voorkomen. Bij griep is dat percentage veel lager.', 'Welke uitspraak volgt hieruit?',
+      ['Hoe besmettelijker een ziekte, hoe groter het deel van de bevolking dat immuun moet zijn voor groepsimmuniteit.', 'Hoe besmettelijker een ziekte, hoe minder mensen gevaccineerd hoeven te worden.', 'Groepsimmuniteit hangt niet af van hoe besmettelijk een ziekte is.', 'Bij griep is groepsimmuniteit onmogelijk.'],
+      'Steekt één zieke veel mensen aan, dan moet bijna iedereen beschermd zijn om de keten te breken. Bij een minder besmettelijke ziekte is een kleiner deel al genoeg.'),
+    M('Moedermelk bevat antistoffen die in de darm van de baby werken.', 'Waarom is de baby na het stoppen met borstvoeding niet meer beschermd door deze antistoffen?',
+      ['De baby heeft ze niet zelf gemaakt en heeft dus geen geheugencellen om nieuwe te maken.', 'De antistoffen worden in de maag van de baby omgezet in vaccins.', 'Na de borstvoeding maakt de baby antistoffen tegen de moeder.', 'De baby wordt resistent tegen de antistoffen.'],
+      'Dit is natuurlijke passieve immuniteit: tijdelijk. Zodra de aanvoer stopt, worden de antistoffen afgebroken. Daarom krijgen baby’s ook hun eigen vaccinaties.'),
+    M('Een mRNA-vaccin bevat de code voor een eiwit van een virus. Lichaamscellen maken dat eiwit een tijdje en laten het zien.', 'Waarom word je hierdoor immuun?',
+      ['Het eiwit werkt als antigeen; B- en T-cellen reageren erop en er ontstaan geheugencellen.', 'Het mRNA doodt het virus direct.', 'Het mRNA verandert het DNA van je cellen, zodat ze ongevoelig worden.', 'Het eiwit is een antistof die het virus onschadelijk maakt.'],
+      'Je afweer ziet het viruseiwit als lichaamsvreemd antigeen. Daartegen ontstaan antistoffen en geheugencellen. Het mRNA komt niet in de celkern en verandert het DNA niet.'),
+    M('Het griepvirus muteert snel. Daardoor veranderen de eiwitten op de buitenkant van het virus.', 'Waarom beschermen de geheugencellen van vorig jaar dan vaak minder goed?',
+      ['De antigenen zijn veranderd, dus de bestaande antistoffen en geheugencellen passen minder goed.', 'Geheugencellen worden door het griepvirus opgegeten.', 'Door de mutaties is het virus resistent tegen antibiotica geworden.', 'De geheugencellen zijn allemaal plasmacel geworden.'],
+      'Antistoffen en receptoren passen op een bepaald antigeen. Verandert het antigeen, dan past de sleutel niet meer goed op het slot. Resistentie tegen antibiotica speelt bij virussen geen rol.'),
+    M('Voor een goede bescherming krijgen baby’s sommige vaccins twee of drie keer, met een paar maanden ertussen.', 'Wat is het voordeel van een tweede of derde prik?',
+      ['Bij elke volgende prik reageren de geheugencellen sneller en sterker, zodat er meer antistoffen en geheugencellen komen.', 'Bij elke prik krijgt de baby een andere ziekte.', 'De eerste prik werkt pas als de tweede er is.', 'Bij een volgende prik worden de oude geheugencellen gewist.'],
+      'Een herhaalde prik werkt als een tweede besmetting: de secundaire reactie is sneller en sterker. Zo wordt de bescherming hoger en houdt hij langer aan.'),
+    M('', 'Waarom werken antibiotica niet tegen virussen?',
+      ['Antibiotica grijpen in op onderdelen van bacteriën, zoals de celwand of de ribosomen; virussen hebben die niet en vermenigvuldigen zich in je eigen cellen.', 'Virussen zijn te groot om door antibiotica te worden aangetast.', 'Virussen zijn van nature allemaal resistent.', 'Antibiotica worden door virussen afgebroken.'],
+      'Een virus heeft geen eigen stofwisseling en geen celwand. Het gebruikt jouw cellen om zich te vermenigvuldigen. Een middel dat het virus raakt, raakt al snel ook je eigen cellen.'),
+    M('Een patiënt heeft een longontsteking. De arts wil weten welk antibioticum werkt. In het lab worden bacteriën uit het slijm op een voedingsbodem gekweekt, met schijfjes met verschillende antibiotica erop.', 'Rond welk schijfje werkt het antibioticum het best?',
+      ['rond het schijfje met de grootste heldere zone zonder bacteriën', 'rond het schijfje met de meeste bacteriën', 'rond het kleinste schijfje', 'rond het schijfje waar de bacteriën het snelst groeien'],
+      'Waar het antibioticum de bacteriën doodt of remt, blijft een heldere ring over. Hoe groter die ring, hoe gevoeliger de bacterie voor dat antibioticum.'),
+    M('Iemand is allergisch voor penicilline.', 'Waarom is dat geen resistentie?',
+      ['Bij een allergie reageert het afweersysteem van de mens op het middel; bij resistentie is de bacterie ongevoelig geworden.', 'Het is wel resistentie, want het middel werkt niet bij die persoon.', 'Allergie en resistentie zijn allebei eigenschappen van de bacterie.', 'Bij een allergie maakt de bacterie histamine.'],
+      'Een allergie is een eigenschap van de patiënt. Resistentie is een eigenschap van de bacterie. Bij een allergische patiënt kan penicilline de bacteriën best doden, maar de patiënt krijgt een gevaarlijke afweerreactie.'),
+    M('Een land stopt met vaccineren tegen kinkhoest. Een paar jaar later stijgt het aantal baby’s met kinkhoest sterk.', 'Waarom lopen juist baby’s gevaar?',
+      ['Ze zijn te jong om zelf al volledig gevaccineerd te zijn en waren beschermd doordat de mensen om hen heen immuun waren.', 'Baby’s maken geen witte bloedcellen.', 'Kinkhoest is alleen besmettelijk voor baby’s.', 'Baby’s krijgen geen antistoffen van hun moeder.'],
+      'Jonge baby’s zijn nog niet volledig ingeënt en vallen het snelst onder groepsimmuniteit. Valt die weg, dan treft de ziekte hen het eerst. Daarom krijgen zwangere vrouwen in Nederland ook een kinkhoestprik: de antistoffen gaan via de placenta naar de baby.'),
+    I('', 'Welke vorm van immuniteit krijgt een baby via de placenta? Gebruik de woorden natuurlijk of kunstmatig, en actief of passief.', 'de vorm', ['natuurlijke passieve immuniteit', 'natuurlijke passieve', 'natuurlijk passief', 'passieve natuurlijke immuniteit', 'natuurlijk passieve immuniteit'],
+      'De moeder maakt de antistoffen, de baby krijgt ze: passief. Er komt geen prik aan te pas: natuurlijk.'),
+    I('', 'Hoe heet de reactie van het afweersysteem bij een tweede besmetting met dezelfde ziekteverwekker, die sneller en sterker is dan de eerste?', 'de reactie', ['secundaire reactie', 'secundaire afweerreactie', 'secundaire immuunrespons', 'secundaire respons'],
+      'De eerste keer heet de primaire reactie. Door geheugencellen is de secundaire reactie sneller en sterker.'),
+    I('', 'Hoe noem je een bacterie waartegen een antibioticum niet meer werkt?', 'het woord', ['resistent', 'resistente bacterie'],
+      'Resistentie ontstaat door mutaties en verspreidt zich door selectie: het antibioticum doodt de gevoelige bacteriën en laat de resistente over.')
+  ];
+
+  /* ---------- evolutie ---------- */
+  LIJST.evolutie.kgt = [
+    M('Rond 1850 was bijna elke peper-en-zoutvlinder bij Manchester licht. Rond 1900 was bijna elke vlinder daar donker. In die tijd werden de boomstammen zwart van het roet uit fabrieken. Vogels eten de vlinders als ze die zien zitten.', 'Welke verklaring is juist?',
+      ['Op zwarte stammen werden lichte vlinders vaker opgegeten; donkere vlinders overleefden vaker en kregen meer nakomelingen.', 'De vlinders werden donker van het roet en gaven die kleur door aan hun jongen.', 'De vlinders wilden niet opvallen en veranderden daarom van kleur.', 'Het roet veroorzaakte bij alle vlinders een mutatie naar donker.'],
+      'Dit is natuurlijke selectie. De donkere kleur was erfelijk en bestond al. Op zwarte stammen gaf die kleur een overlevingsvoordeel. Roet op je vleugels geef je niet door aan je nakomelingen.'),
+    M('Na 1960 werd de lucht in Engeland schoner en werden de boomstammen weer lichter van kleur.', 'Wat verwacht je dat er met de peper-en-zoutvlinders gebeurt?',
+      ['Het percentage lichte vlinders neemt weer toe.', 'Alle donkere vlinders worden licht.', 'Het percentage donkere vlinders blijft gelijk.', 'De vlinders sterven uit.'],
+      'Nu vallen de donkere vlinders op lichte stammen meer op en worden zij vaker opgegeten. De lichte vlinders krijgen meer nakomelingen. Een vlinder verandert zelf niet van kleur.'),
+    M('Iemand zegt: "Giraffen hebben een lange nek gekregen doordat hun voorouders zich steeds uitrekten naar hoge bladeren. Die langere nek gaven ze door aan hun jongen."', 'Wat is er mis met deze uitleg?',
+      ['Eigenschappen die je tijdens je leven krijgt door oefenen, geef je niet door aan je nakomelingen.', 'Giraffen eten geen bladeren.', 'Uitrekken maakt de nek juist korter.', 'Er is niets mis mee: zo werkt evolutie.'],
+      'Volgens de evolutietheorie waren er giraffen met een erfelijk iets langere nek. Die konden meer voedsel bereiken, overleefden vaker en kregen meer jongen. Wat je door oefenen krijgt, zit niet in je DNA.'),
+    M('', 'Wat bedoelde Darwin met natuurlijke selectie?',
+      ['Individuen met erfelijke eigenschappen die beter passen bij de omgeving, overleven vaker en krijgen meer nakomelingen.', 'De natuur kiest welke dieren een mutatie krijgen.', 'Dieren veranderen zelf om beter te passen bij hun omgeving.', 'De sterkste dieren leven het langst, ook als hun eigenschappen niet erfelijk zijn.'],
+      'Selectie werkt op erfelijke verschillen die er al zijn. Wie beter past, krijgt meer nakomelingen, en daarmee komt de eigenschap vaker voor. Een dier kan niet zelf besluiten te veranderen.'),
+    M('', 'Wat is nodig om natuurlijke selectie te laten werken?',
+      ['erfelijke variatie tussen de individuen van een soort', 'dat alle individuen precies gelijk zijn', 'een omgeving die nooit verandert', 'dat dieren nieuwe eigenschappen kunnen aanleren'],
+      'Als alle individuen gelijk zijn, valt er niets te kiezen. Selectie heeft verschillen nodig die erfelijk zijn, anders gaan ze niet over op de volgende generatie.'),
+    M('', 'Hoe ontstaan nieuwe erfelijke eigenschappen?',
+      ['door mutaties: veranderingen in het DNA', 'door veel te trainen', 'door ander voedsel te eten', 'door een oudere leeftijd van de ouders'],
+      'Een mutatie is een verandering in het DNA. Soms levert dat een nieuwe eigenschap op. Is die gunstig, dan kan hij door selectie vaker gaan voorkomen.'),
+    M('Door veel zonlicht ontstaat bij Kees een mutatie in een huidcel.', 'Krijgen zijn kinderen deze mutatie?',
+      ['Nee, alleen mutaties in geslachtscellen kunnen worden doorgegeven.', 'Ja, alle mutaties worden doorgegeven.', 'Ja, maar alleen aan zijn zonen.', 'Nee, want mutaties in huidcellen verdwijnen meteen weer.'],
+      'Je kinderen ontstaan uit een zaadcel en een eicel. Alleen wat in die geslachtscellen zit, krijgen ze mee. Een mutatie in een huidcel blijft in de huid.'),
+    M('In een steengroeve liggen lagen gesteente op elkaar. In de onderste laag vinden onderzoekers fossielen van eenvoudige zeedieren, in de bovenste laag fossielen van zoogdieren.', 'Wat kun je hieruit afleiden?',
+      ['De fossielen in de onderste laag zijn ouder dan die in de bovenste laag.', 'De zoogdieren hebben de zeedieren opgegeten.', 'De onderste fossielen zijn het jongst, want ze liggen het diepst.', 'Zeedieren en zoogdieren leefden altijd tegelijk.'],
+      'Lagen gesteente ontstaan op elkaar. Wat onderop ligt, is dus meestal eerder ontstaan. Zo laten fossielen zien in welke volgorde groepen dieren op aarde verschenen.'),
+    M('Een paard en een ezel kunnen samen een muilezel of muildier krijgen. Muilezels en muildieren zijn onvruchtbaar.', 'Wat betekent dit?',
+      ['Paard en ezel zijn twee verschillende soorten.', 'Paard en ezel zijn dezelfde soort.', 'Muildieren zijn een nieuwe soort.', 'Paarden en ezels zijn niet met elkaar verwant.'],
+      'Een soort is een groep organismen die samen vruchtbare nakomelingen kunnen krijgen. Paard en ezel krijgen wel jongen, maar die zijn onvruchtbaar. Ze zijn dus verschillende soorten, wel nauw verwant.'),
+    M('Op de Galapagoseilanden leven verschillende soorten vinken. Op elk eiland heeft de vink een snavel die past bij het voedsel daar: dik voor harde zaden, dun en spits voor insecten.', 'Hoe zijn deze soorten volgens de evolutietheorie ontstaan?',
+      ['Uit een gemeenschappelijke voorouder: op elk eiland overleefden de vinken met de best passende snavel, en na lange tijd ontstonden aparte soorten.', 'Elke vink heeft zijn snavel door oefenen aangepast aan het voedsel.', 'Ze zijn op elk eiland los van elkaar ontstaan, zonder gemeenschappelijke voorouder.', 'De vinken met een verkeerde snavel kregen een mutatie zodat de snavel ging passen.'],
+      'Darwin zag deze vinken op zijn reis. Op elk eiland gaf een andere snavelvorm een voordeel. Mutaties ontstaan toevallig en niet omdat ze nodig zijn.'),
+    M('Een boer laat alleen de koeien die veel melk geven, kalveren krijgen. Na veel generaties geven zijn koeien gemiddeld veel meer melk.', 'Hoe heet dit?',
+      ['kunstmatige selectie (veredeling)', 'natuurlijke selectie', 'mutatie', 'inprenting'],
+      'Hier kiest de mens welke dieren nakomelingen krijgen, niet de natuur. Zo zijn ook alle hondenrassen ontstaan.'),
+    M('Een sneeuwhaas heeft in de winter een witte vacht en in de zomer een bruine.', 'Wat is het voordeel voor de sneeuwhaas?',
+      ['Hij valt in elk seizoen minder op voor roofdieren.', 'Hij ziet zo beter in de sneeuw.', 'Hij trekt zo meer partners aan.', 'Hij hoeft zo minder te eten.'],
+      'Een kleur die past bij de omgeving is een aanpassing: de haas wordt minder snel gezien. Hazen die minder goed passen, worden vaker gegeten.'),
+    M('In een stad wordt jarenlang hetzelfde rattengif gebruikt. Na een tijd gaan veel ratten er niet meer dood aan.', 'Hoe komt dat?',
+      ['Een paar ratten waren door een mutatie ongevoelig; zij overleefden en kregen jongen met dezelfde eigenschap.', 'De ratten zijn gewend geraakt aan het gif en gaven die gewenning door.', 'Het gif is in de loop van de jaren zwakker geworden.', 'De ratten hebben antistoffen tegen het gif gemaakt en die doorgegeven aan hun jongen.'],
+      'Het gif doodt de gevoelige ratten. De paar ratten die toevallig ongevoelig waren, blijven over en krijgen jongen. Na een paar generaties zijn bijna alle ratten ongevoelig: resistent.'),
+    M('Het DNA van mensen en chimpansees lijkt heel erg op elkaar. Het DNA van mensen en muizen verschilt veel meer.', 'Wat kun je daaruit concluderen?',
+      ['Mensen en chimpansees hebben een recentere gemeenschappelijke voorouder dan mensen en muizen.', 'De mens stamt af van de chimpansee.', 'Muizen zijn niet verwant aan mensen.', 'Chimpansees zijn ouder dan muizen.'],
+      'Hoe meer het DNA lijkt, hoe korter geleden de soorten een gemeenschappelijke voorouder hadden. De mens stamt niet af van de chimpansee: ze hebben samen een voorouder.'),
+    I('', 'Hoe heet een blijvende verandering in het DNA?', 'het begrip', ['mutatie', 'een mutatie'],
+      'Mutaties zijn de bron van nieuwe erfelijke variatie.'),
+    I('', 'Welke Britse onderzoeker schreef in 1859 het boek over het ontstaan van soorten door natuurlijke selectie?', 'de naam', ['Darwin', 'Charles Darwin'],
+      'Charles Darwin publiceerde in 1859 On the Origin of Species.'),
+    I('', 'Een groep organismen die samen vruchtbare nakomelingen kunnen krijgen, heet een ...', 'het begrip', ['soort', 'een soort'],
+      'Paard en ezel zijn twee soorten: hun jongen zijn onvruchtbaar.')
+  ];
+  LIJST.evolutie.hv = [
+    M('', 'Welke processen zorgen bij geslachtelijke voortplanting voor nieuwe combinaties van allelen?',
+      ['crossing-over en de willekeurige verdeling van de chromosomen bij de meiose, en de bevruchting', 'alleen mutaties', 'de mitose bij de groei', 'natuurlijke selectie'],
+      'Dit heet recombinatie. Er ontstaan geen nieuwe allelen, maar wel nieuwe combinaties. Nieuwe allelen ontstaan alleen door mutatie. Selectie maakt geen variatie, maar kiest eruit.'),
+    M('Een plant plant zich alleen ongeslachtelijk voort, met uitlopers. De nakomelingen zijn genetisch gelijk aan de ouder.', 'Waardoor kan er in zo’n populatie toch genetische variatie ontstaan?',
+      ['door mutaties', 'door crossing-over', 'door bevruchting', 'door aanpassing tijdens het leven'],
+      'Zonder meiose en bevruchting is er geen recombinatie. De enige bron van nieuwe variatie is dan mutatie.'),
+    M('Mensen die homozygoot zijn voor het sikkelcelallel, hebben sikkelcelanemie. Heterozygoten hebben weinig klachten en worden minder ernstig ziek van malaria. In gebieden met veel malaria komt het allel veel vaker voor dan in Europa.', 'Welke verklaring is juist?',
+      ['In malariagebieden hebben heterozygoten een selectievoordeel, waardoor het allel in de populatie blijft.', 'Malaria veroorzaakt mutaties naar het sikkelcelallel.', 'Mensen in malariagebieden hebben het allel aangeleerd.', 'Het allel geeft in Europa een voordeel tegen griep.'],
+      'Homozygoten hebben een nadeel, maar heterozygoten overleven malaria vaker. Daardoor blijft het allel in die gebieden veel voorkomen. Zonder malaria valt het voordeel weg.'),
+    M('Een kleine groep van 30 mensen vestigde zich eeuwen geleden op een afgelegen eiland. Eén van hen droeg een zeldzaam allel voor een erfelijke oogziekte. Nu komt de ziekte op het eiland veel vaker voor dan elders.', 'Hoe heet dit verschijnsel?',
+      ['het stichtereffect (founder-effect), een vorm van genetische drift', 'natuurlijke selectie', 'kunstmatige selectie', 'convergente evolutie'],
+      'Door toeval was het zeldzame allel bij de stichters relatief vaak aanwezig. De ziekte gaf geen voordeel, dus het is geen selectie.'),
+    M('', 'Waarom heeft toeval meer invloed op de allelfrequentie in een kleine populatie dan in een grote?',
+      ['In een kleine populatie kan het toevallig overlijden of niet voortplanten van een paar individuen de frequentie flink veranderen.', 'In een kleine populatie ontstaan meer mutaties.', 'In een grote populatie werkt geen selectie.', 'In een kleine populatie komen geen recessieve allelen voor.'],
+      'Gooi je een munt tien keer, dan kan het makkelijk 7 keer kruis zijn. Bij duizend worpen kom je dicht bij de helft. Zo werkt ook genetische drift.'),
+    M('Een populatie muizen wordt door een rivier die van loop verandert, in twee groepen gesplitst. Na heel lange tijd kunnen muizen van de twee kanten samen geen vruchtbare jongen meer krijgen.', 'Wat is de belangrijkste oorzaak dat de groepen zo uit elkaar groeiden?',
+      ['Er was geen uitwisseling van genen meer, terwijl mutaties en selectie aan beide kanten verschillend waren.', 'De muizen aan de ene kant wilden niet meer met de andere paren.', 'Alle muizen kregen dezelfde mutaties.', 'Door de rivier werd het klimaat aan beide kanten hetzelfde.'],
+      'Dit is soortvorming door geografische isolatie. Zonder genenuitwisseling gaan de genenpoelen eigen wegen. Uiteindelijk ontstaat reproductieve isolatie: twee soorten.'),
+    M('Twee soorten kikkers leven in dezelfde vijver. De ene soort paart in het vroege voorjaar, de andere in de zomer.', 'Hoe heet het verschijnsel dat deze kikkers geen nakomelingen met elkaar krijgen?',
+      ['reproductieve isolatie', 'geografische isolatie', 'genetische drift', 'kunstmatige selectie'],
+      'Ze leven op dezelfde plek, dus geografische isolatie is het niet. Doordat ze op verschillende tijden paren, komen hun genen niet samen.'),
+    M('De arm van een mens, de vleugel van een vleermuis en de voorpoot van een walvis hebben dezelfde botten in dezelfde volgorde.', 'Wat zijn dit?',
+      ['homologe organen: ze wijzen op een gemeenschappelijke voorouder', 'analoge organen: ze hebben dezelfde functie', 'rudimentaire organen: ze hebben geen functie meer', 'organen die door convergente evolutie op elkaar lijken'],
+      'Homoloog: dezelfde bouw en afkomst, maar een andere functie (grijpen, vliegen, zwemmen). Dat wijst op een gemeenschappelijke voorouder met die botten.'),
+    M('De vleugel van een vlinder en de vleugel van een vogel hebben dezelfde functie, maar een totaal andere bouw.', 'Hoe heten zulke organen?',
+      ['analoge organen', 'homologe organen', 'rudimentaire organen', 'verwante organen'],
+      'Analoog: dezelfde functie, maar een andere bouw en afkomst. Ze zeggen dus niets over verwantschap.'),
+    M('Haaien (vissen) en dolfijnen (zoogdieren) hebben allebei een gestroomlijnd lichaam met vinnen.', 'Hoe verklaar je dat?',
+      ['Convergente evolutie: in dezelfde omgeving gaf dezelfde vorm een voordeel, terwijl ze niet nauw verwant zijn.', 'Dolfijnen stammen af van haaien.', 'Haaien en dolfijnen zijn één soort.', 'Dolfijnen hebben hun vorm aangeleerd van haaien.'],
+      'Een dolfijn ademt met longen en zoogt zijn jongen: het is een zoogdier. Dezelfde selectiedruk (snel zwemmen) leidde bij twee groepen tot dezelfde vorm.'),
+    M('Een pauwhaan met een grote, kleurige staart valt meer op bij roofdieren. Toch komen zulke staarten veel voor.', 'Welke verklaring past?',
+      ['Hennen kiezen vaker hanen met een grote staart, waardoor die meer nakomelingen krijgen.', 'Een grote staart beschermt tegen roofdieren.', 'Pauwen leren hun staart groot te maken.', 'De staart is ontstaan door genetische drift en heeft geen invloed op de voortplanting.'],
+      'Dit is seksuele selectie. Het nadeel (opvallen) weegt niet op tegen het voordeel: meer nakomelingen. Wat telt bij selectie is voortplantingssucces.'),
+    M('Vroeger hadden heel lichte en heel zware baby’s een kleinere overlevingskans dan baby’s met een gemiddeld geboortegewicht.', 'Welke vorm van selectie is dit?',
+      ['stabiliserende selectie', 'gerichte selectie', 'disruptieve selectie', 'kunstmatige selectie'],
+      'Bij stabiliserende selectie hebben de uitersten een nadeel. Het gemiddelde blijft gelijk, maar de spreiding wordt kleiner. Bij gerichte selectie schuift het gemiddelde op, zoals bij de peper-en-zoutvlinder.'),
+    M('Een patiënt krijgt een kuur met antibiotica. Na de kuur blijken alle overgebleven bacteriën resistent te zijn.', 'Heeft het antibioticum de mutatie voor resistentie veroorzaakt?',
+      ['Nee, de mutatie was er al bij een paar bacteriën; het antibioticum selecteerde die.', 'Ja, een antibioticum veroorzaakt altijd de passende mutatie.', 'Ja, bacteriën passen zich bewust aan.', 'Nee, de resistentie ontstaat door het afweersysteem van de patiënt.'],
+      'Mutaties ontstaan willekeurig, niet omdat ze nodig zijn. Het antibioticum is de selectiedruk: het doodt de gevoelige bacteriën en laat de resistente over.'),
+    M('In Noord-Europa kunnen de meeste volwassenen melksuiker (lactose) verteren, in grote delen van Azië veel minder volwassenen. De mutatie waardoor volwassenen lactase blijven maken, is vooral algemeen in gebieden waar mensen al duizenden jaren melkvee houden.', 'Welke verklaring past?',
+      ['Waar melk een belangrijke voedselbron was, hadden dragers van de mutatie een overlevingsvoordeel.', 'Door melk te drinken veranderde het DNA van volwassenen.', 'De mutatie ontstond pas als reactie op het drinken van melk.', 'De koeien gaven de mutatie door aan de mensen.'],
+      'De mutatie gaf alleen voordeel waar melk werd gedronken. Daar kregen dragers gemiddeld meer nakomelingen, en werd het allel algemeen. Gedrag verandert het DNA niet.'),
+    M('Walvissen hebben diep in hun lichaam kleine botjes van een bekken, maar geen achterpoten.', 'Hoe wordt dit verklaard?',
+      ['Het is een rudimentair orgaan: een overblijfsel van voorouders die op het land leefden en wel achterpoten hadden.', 'Walvissen krijgen later in hun leven alsnog achterpoten.', 'Het bekken is ontstaan omdat walvissen het nodig hebben om te zwemmen.', 'Walvissen stammen af van vissen met een bekken.'],
+      'Rudimentaire organen hebben (bijna) geen functie meer, maar laten zien hoe de voorouders eruitzagen. Walvissen stammen af van zoogdieren op het land.'),
+    I('', 'Hoe heet het verschijnsel dat allelfrequenties in een kleine populatie door toeval veranderen?', 'het begrip', ['genetische drift', 'drift'],
+      'Genetische drift is toeval, geen selectie. Het stichtereffect is er een voorbeeld van.'),
+    I('', 'Organen met dezelfde bouw en afkomst, maar een andere functie, heten ... organen.', 'het woord', ['homologe', 'homoloog', 'homologe organen'],
+      'Homologe organen wijzen op een gemeenschappelijke voorouder. Analoge organen hebben alleen dezelfde functie.'),
+    I('', 'Hoe heet het ontstaan van nieuwe erfelijke combinaties door crossing-over, de verdeling van chromosomen en bevruchting?', 'het begrip', ['recombinatie', 'genetische recombinatie'],
+      'Recombinatie maakt nieuwe combinaties van bestaande allelen. Nieuwe allelen ontstaan alleen door mutatie.')
+  ];
+
+  /* ---------- gedrag ---------- */
+  LIJST.gedrag.kgt = [
+    M('Een pasgeboren baby begint meteen te zuigen als je iets tegen zijn lippen houdt.', 'Wat voor gedrag is dit?',
+      ['aangeboren gedrag', 'aangeleerd gedrag door nadoen', 'aangeleerd gedrag door conditionering', 'aangeleerd gedrag door inzicht'],
+      'De baby heeft dit nooit geleerd of gezien: het gedrag is er meteen. Dat is aangeboren gedrag.'),
+    M('Een mannetjesstekelbaars met een rode buik valt in het voorjaar andere mannetjes aan. In een proef valt hij ook een ruw houten model aan, als dat maar een rode onderkant heeft. Een precies nagemaakt visje zonder rood laat hij met rust.', 'Hoe heet de rode kleur in dit gedrag?',
+      ['een sleutelprikkel', 'een inwendige prikkel', 'een gedragspatroon', 'een beloning'],
+      'Een sleutelprikkel is een prikkel die een bepaald aangeboren gedrag in gang zet. Hier is dat alleen het rood: de vorm van het model maakt niet uit.'),
+    M('Een jong zilvermeeuwtje pikt tegen de rode vlek op de snavel van zijn ouder. Daarna braakt de ouder voedsel op.', 'Wat is de sleutelprikkel voor het pikgedrag van het jong?',
+      ['de rode vlek op de snavel', 'het voedsel', 'de grootte van de ouder', 'het geluid van de ouder'],
+      'Bij proeven met nagemaakte meeuwenkoppen pikken jongen het meest naar een snavel met een rode vlek. Het voedsel komt pas na het pikken.'),
+    M('Een hond gaat eten als hij honger heeft en als hij het geluid van de voerbak hoort.', 'Welke van deze prikkels is een inwendige prikkel?',
+      ['de honger', 'het geluid van de voerbak', 'de geur van het voer', 'het zien van de baas'],
+      'Een inwendige prikkel komt van binnen uit het lichaam, zoals honger, dorst of een hormoon. Geluid, geur en wat de hond ziet, komen van buiten: uitwendige prikkels.'),
+    M('Konrad Lorenz zag dat jonge grauwe ganzen die net uit het ei kwamen, hém achternaliepen, omdat hij het eerste bewegende "iets" was dat ze zagen.', 'Hoe heet deze vorm van leren?',
+      ['inprenting', 'conditionering', 'gewenning', 'imitatie'],
+      'Bij inprenting leert een jong dier in een korte periode na de geboorte wie zijn ouder is. Normaal is dat de moedergans, maar het kan dus ook een mens zijn.'),
+    M('Elke keer voordat de hond van Pavlov eten kreeg, ging er een bel. Na een tijd begon de hond al te kwijlen als hij alleen de bel hoorde.', 'Hoe heet deze vorm van leren?',
+      ['conditionering', 'inprenting', 'gewenning', 'inzicht'],
+      'Bij conditionering leert een dier een verband tussen twee dingen: de bel en het eten. Kwijlen bij eten is aangeboren, kwijlen bij de bel is aangeleerd.'),
+    M('Een boer zet een vogelverschrikker in zijn veld. Na een paar weken landen de kraaien er gewoon naast.', 'Hoe heet deze vorm van leren?',
+      ['gewenning', 'inprenting', 'imitatie', 'conditionering'],
+      'Bij gewenning reageert een dier steeds minder op een prikkel die geen gevolgen heeft. De vogelverschrikker doet nooit iets, dus de kraaien letten er niet meer op.'),
+    M('Jonge chimpansees kijken hoe hun moeder met een takje termieten uit een termietenheuvel vist. Later doen ze het zelf.', 'Hoe heet deze vorm van leren?',
+      ['imitatie (nadoen)', 'inprenting', 'aangeboren gedrag', 'gewenning'],
+      'Ze leren het door te kijken en na te doen. Chimpansees in verschillende gebieden hebben daardoor zelfs verschillende gewoontes.'),
+    M('Een chimpansee kan niet bij een tros bananen die hoog in zijn kooi hangt. Na een tijdje stapelt hij een paar kisten op elkaar en klimt erop.', 'Hoe heet deze vorm van leren?',
+      ['inzicht', 'gewenning', 'inprenting', 'aangeboren gedrag'],
+      'Bij inzicht bedenkt een dier een oplossing voor een nieuw probleem, zonder het eerst vaak te proberen of na te doen.'),
+    M('Een kat zit in een kooi en duwt overal tegenaan. Toevallig raakt hij een hendel en gaat de deur open. Na een paar keer drukt hij meteen op de hendel.', 'Hoe heet deze vorm van leren?',
+      ['leren door proberen (trial-and-error)', 'inprenting', 'gewenning', 'imitatie'],
+      'De kat probeert van alles. Wat beloond wordt (de deur gaat open), doet hij voortaan vaker. Hij heeft het niet bedacht of nagedaan.'),
+    M('In het voorjaar zingt een merelmannetje steeds vanaf dezelfde hoge plekken. Komt er een ander mannetje, dan jaagt hij het weg.', 'Welk gedrag is dit?',
+      ['territoriumgedrag', 'baltsgedrag', 'broedgedrag', 'onderdanig gedrag'],
+      'Met zingen laat de merel weten dat dit gebied van hem is. Indringers worden verjaagd. Zo heeft hij genoeg voedsel voor zijn jongen.'),
+    M('Een kat ziet een vreemde hond. De kat zet een hoge rug op en zet zijn haren overeind.', 'Welk gedrag is dit?',
+      ['imponeergedrag', 'baltsgedrag', 'onderdanig gedrag', 'poetsgedrag'],
+      'Bij imponeergedrag maakt een dier zich groter en gevaarlijker dan het is. Zo probeert het een gevecht te voorkomen.'),
+    M('Een mannetjesfuut en een vrouwtjesfuut zwemmen naar elkaar toe, schudden met hun kop en komen met waterplanten in hun snavel tegen elkaar omhoog.', 'Welk gedrag is dit?',
+      ['baltsgedrag', 'territoriumgedrag', 'imponeergedrag', 'vluchtgedrag'],
+      'Baltsgedrag gaat vooraf aan de paring. Het zorgt dat mannetje en vrouwtje elkaar herkennen als soortgenoot en bij elkaar blijven.'),
+    M('Een jonge wolf gaat op zijn rug liggen als de leider van de roedel dreigend naar hem toe komt.', 'Welk gedrag is dit?',
+      ['onderdanig gedrag', 'imponeergedrag', 'baltsgedrag', 'territoriumgedrag'],
+      'Met onderdanig gedrag laat een dier zien dat het niet wil vechten. De leider valt dan meestal niet aan. Zo voorkomt de groep gewonden.'),
+    M('Een kip die net veel graan heeft gegeten, pikt nauwelijks naar nieuwe graankorrels. Een kip die een dag niets heeft gegeten, pikt er meteen op los.', 'Wat verklaart het verschil?',
+      ['De inwendige prikkel honger is anders, dus de motivatie om te eten is anders.', 'De graankorrels zijn een andere sleutelprikkel.', 'De verzadigde kip heeft het pikken afgeleerd.', 'De hongerige kip heeft inprenting gehad.'],
+      'Of een dier op een uitwendige prikkel reageert, hangt ook af van inwendige prikkels. Samen bepalen ze de motivatie.'),
+    I('', 'Hoe heet een lijst met nauwkeurige, objectieve beschrijvingen van de gedragingen van een diersoort?', 'het begrip', ['ethogram', 'een ethogram'],
+      'In een ethogram beschrijf je wat je ziet, niet wat het dier voelt of wil.'),
+    I('', 'Hoe heet een prikkel die een bepaald aangeboren gedrag in gang zet, zoals de rode buik van een stekelbaars?', 'het begrip', ['sleutelprikkel', 'een sleutelprikkel'],
+      'De sleutelprikkel is vaak maar een klein onderdeel van wat het dier ziet, zoals een kleur of een vlek.'),
+    I('', 'Honger en dorst komen van binnen uit het lichaam. Hoe heten zulke prikkels?', 'het begrip', ['inwendige prikkels', 'inwendige prikkel', 'inwendige'],
+      'Inwendige prikkels komen van binnen, uitwendige prikkels van buiten (geluid, licht, geur).')
+  ];
+  LIJST.gedrag.hv = [
+    M('Twee zilvermeeuwen staan tegenover elkaar aan de grens van hun territorium. Ze willen aanvallen en vluchten tegelijk. Plotseling trekken ze allebei plukjes gras uit de grond.', 'Hoe heet dit gedrag?',
+      ['overspronggedrag', 'omgericht gedrag', 'baltsgedrag', 'imponeergedrag'],
+      'Bij een conflict tussen twee neigingen (aanvallen en vluchten) kan een dier iets doen dat er niet bij lijkt te passen. Gras uittrekken hoort eigenlijk bij nestbouw.'),
+    M('Een man die boos is op zijn baas, geeft thuis een harde trap tegen een deur.', 'Hoe heet dit gedrag?',
+      ['omgericht gedrag', 'overspronggedrag', 'imponeergedrag', 'gewenning'],
+      'Bij omgericht gedrag wordt de agressie gericht op iets anders dan de echte oorzaak, omdat aanvallen van de echte oorzaak te riskant is.'),
+    M('Een scholekster kan kiezen tussen haar eigen ei en een nagemaakt ei dat veel groter is. Ze gaat op het grote ei zitten broeden.', 'Hoe heet zo’n prikkel?',
+      ['een supernormale prikkel', 'gewenning', 'inprenting', 'een inwendige prikkel'],
+      'Een supernormale prikkel is een overdreven versie van de sleutelprikkel. Die werkt sterker dan de natuurlijke prikkel, ook al is hij onnatuurlijk.'),
+    M('Een rat in een kooi krijgt voer zodra hij op een hendel drukt. Hij gaat steeds vaker op de hendel drukken.', 'Welke vorm van leren is dit?',
+      ['operante conditionering: gedrag wordt vaker vertoond doordat het beloond wordt', 'klassieke conditionering: een neutrale prikkel wordt gekoppeld aan een reflex', 'inprenting', 'gewenning'],
+      'Bij operante conditionering leert een dier dat zijn eigen gedrag een gevolg heeft. Bij klassieke conditionering (Pavlov) gaat het om een reflex die door een nieuwe prikkel wordt opgewekt.'),
+    M('Een hond kwijlt van nature als hij eten ruikt. Elke keer voordat hij eten krijgt, gaat er een bel. Na een tijd kwijlt hij al bij alleen de bel.', 'Welke vorm van leren is dit?',
+      ['klassieke conditionering', 'operante conditionering', 'inzicht', 'imitatie'],
+      'Kwijlen is een reflex. De bel was eerst een neutrale prikkel en wekt na koppeling met eten dezelfde reflex op. De hond hoeft er zelf niets voor te doen.'),
+    M('Een kuiken dat in de eerste dagen na het uitkomen geen bewegend voorwerp ziet, volgt later niets of niemand meer.', 'Wat laat dit zien over inprenting?',
+      ['Inprenting kan alleen gebeuren in een korte gevoelige periode.', 'Inprenting is aangeboren en heeft geen prikkel nodig.', 'Kuikens leren later alles door imitatie.', 'Inprenting komt alleen voor bij zoogdieren.'],
+      'Inprenting is een vorm van leren die aan een gevoelige periode vastzit. Gaat die voorbij, dan kan het niet meer.'),
+    M('Merelmannetjes zingen in het voorjaar veel.', 'Wat is de functie van dit zingen?',
+      ['een territorium afbakenen en een vrouwtje lokken, wat de kans op nakomelingen vergroot', 'de stembanden trainen voor de winter', 'warm blijven', 'insecten lokken om op te eten'],
+      'Bij de functie van gedrag vraag je: wat levert het op voor overleven en voortplanting? Een eigen territorium en een partner geven meer jongen.'),
+    M('In een groep kippen pikt kip A bij kip B, kip B bij kip C, maar kip C nooit bij A of B.', 'Wat is een voordeel van zo’n pikorde voor de groep?',
+      ['Er zijn minder gevechten, want elke kip kent haar plaats.', 'Alle kippen krijgen precies evenveel voer.', 'De zwakste kip krijgt het meeste voer.', 'De kippen leggen meer eieren door de gevechten.'],
+      'Als de rangorde eenmaal vaststaat, hoeft er niet steeds gevochten te worden. Dat scheelt energie en verwondingen. De hoogste in rang eet wel als eerste.'),
+    M('Een honingbij die voedsel heeft gevonden, doet in de kast een kwispeldans. De richting van de dans ten opzichte van recht omhoog geeft de richting ten opzichte van de zon aan.', 'Wat is de functie van de dans?',
+      ['andere bijen de richting en afstand van het voedsel doorgeven', 'de koningin lokken', 'vijanden afschrikken', 'de kast warm houden'],
+      'De kwispeldans is communicatie. Hoe lang het kwispelen duurt, zegt iets over de afstand. Zo vinden de andere bijen het voedsel.'),
+    M('In het voorjaar worden de dagen langer. Bij veel zangvogels stijgt dan de hoeveelheid geslachtshormonen in het bloed en beginnen de mannetjes te zingen.', 'Wat zijn de daglengte en het hormoon voor prikkels?',
+      ['De daglengte is een uitwendige prikkel, het hormoon een inwendige prikkel.', 'Beide zijn uitwendige prikkels.', 'De daglengte is een sleutelprikkel, het hormoon een supernormale prikkel.', 'Beide zijn inwendige prikkels.'],
+      'De daglengte komt van buiten. Het hormoon wordt in het lichaam gemaakt. De uitwendige prikkel zet hier de inwendige prikkel in gang.'),
+    M('Werksters bij bijen krijgen zelf geen nakomelingen. Ze zorgen voor de jongen van de koningin, hun zussen.', 'Hoe kan dit gedrag door selectie zijn ontstaan?',
+      ['Door voor verwanten te zorgen helpen de werksters genen door te geven die ze met die verwanten delen.', 'Werksters hebben geleerd dat helpen wordt beloond.', 'Het gedrag is ontstaan door inprenting.', 'Selectie werkt niet op gedrag.'],
+      'Gedrag kan erfelijk zijn en dus door selectie veranderen. Wie verwanten helpt, helpt ook kopieën van de eigen genen. Dat heet verwantschapsselectie.'),
+    M('Een slak trekt zich terug in zijn huisje als je hem aanraakt. Na tien keer zacht aanraken reageert hij niet meer, maar op een harde tik wel.', 'Waarom is dit gewenning en geen vermoeidheid?',
+      ['Hij reageert nog wel op een andere, sterkere prikkel, dus zijn spieren en zenuwen werken nog.', 'Omdat slakken nooit moe worden.', 'Omdat hij de aanraking koppelt aan een beloning.', 'Omdat gewenning altijd na precies tien keer optreedt.'],
+      'Bij vermoeidheid zou hij op geen enkele prikkel meer reageren. Bij gewenning leert hij alleen dat deze ene prikkel geen gevolg heeft.'),
+    M('Een onderzoeker wil weten of de rode kleur de sleutelprikkel is voor het aanvallen bij stekelbaarzen. Hij biedt modellen aan.', 'Welke modellen moet hij met elkaar vergelijken?',
+      ['modellen die alleen in de rode kleur verschillen en verder gelijk zijn', 'een echte stekelbaars en een houten blokje', 'een rood model en een blauw model met een andere vorm', 'alleen een rood model, zo vaak mogelijk'],
+      'Wil je het effect van één prikkel weten, dan verander je alleen die prikkel en houd je de rest gelijk. Anders weet je niet waar het verschil door komt.'),
+    M('Leerlingen observeren een groep cavia’s. Ze noteren: "Cavia 3 is jaloers op cavia 1 en wil haar eten."', 'Wat is er mis met deze waarneming voor een ethogram?',
+      ['Het is een interpretatie: jaloers en willen kun je niet zien. Ze moeten beschrijven wat de cavia doet.', 'Er staat niet bij hoe laat het was.', 'Cavia’s mogen niet met nummers worden aangeduid.', 'Er is niets mis mee.'],
+      'Een ethogram beschrijft objectief: wat je ziet en hoort, zoals "cavia 3 duwt cavia 1 weg bij de voerbak". Zo kunnen anderen dezelfde waarneming doen en vergelijken.'),
+    I('', 'Hoe heet gedrag dat niet bij de situatie past en optreedt bij een conflict tussen twee neigingen, zoals aanvallen en vluchten?', 'het begrip', ['overspronggedrag'],
+      'Een voorbeeld is een vogel die midden in een conflict zijn veren gaat poetsen.'),
+    I('', 'Een nagemaakte prikkel die sterker werkt dan de natuurlijke prikkel, heet een ... prikkel.', 'het woord', ['supernormale', 'supernormale prikkel', 'supernormaal'],
+      'Het grote nep-ei van de scholekster is een supernormale prikkel.'),
+    I('', 'Hoe heet de korte periode na de geboorte waarin inprenting kan plaatsvinden?', 'het begrip', ['gevoelige periode', 'de gevoelige periode', 'kritieke periode', 'sensitieve periode'],
+      'Na de gevoelige periode kan het jong niet meer ingeprent raken.')
+  ];
+
+  /* =====================================================================
+     DE GENERATOREN: slepen, grafieken, stambomen, tabellen
+     ===================================================================== */
+  /* kaartjes in vakken: elk bak { naam, uit, k:[teksten] }; per = hoeveel kaartjes per bak */
+  function sorteer(o){
+    var bakken = o.aantalBakken ? H(o.bakken).slice(0, o.aantalBakken) : o.bakken.slice();
+    bakken.sort(function(a, b){ return o.bakken.indexOf(a) - o.bakken.indexOf(b); });
+    var kaarten = [], vakken = [], sl = [], uit = [];
+    bakken.forEach(function(b){
+      var bi = o.bakken.indexOf(b), n = Array.isArray(o.per) ? tussen(o.per[0], o.per[1]) : (o.per || 1);
+      var gekozen = H(b.k.map(function(t, i){ return { t:t, i:i }; })).slice(0, n), ids = [];
+      gekozen.forEach(function(c){ var id = 'k' + bi + '_' + c.i; ids.push(id); sl.push(id); kaarten.push({ id:id, tekst:c.t }); });
+      vakken.push({ id:'v' + bi, naam:b.naam, uit:b.uit, hoort:ids });
+      uit.push('<b>' + b.naam + '</b>: ' + gekozen.map(function(c){ return c.t; }).join('; '));
+    });
+    return Object.assign(basis(o.deel), {
+      vorm:'sleep', sleutel:o.sleutel + ':' + sl.sort().join(','), vraag:o.vraag, opdracht:o.opdracht || '', beeld:o.beeld || '',
+      kaarten:kaarten, vakken:vakken,
+      uitleg:(o.uitleg ? o.uitleg + '<br>' : '') + uit.join('<br>'),
+      antwoordTekst:uit.map(kaal).join('. ')
+    });
+  }
+  /* stappen op volgorde: n van de stappen, in de goede volgorde */
+  function volgorde(o){
+    var idx = H(o.stappen.map(function(x, i){ return i; })).slice(0, o.n || o.stappen.length).sort(function(a, b){ return a - b; });
+    var kaarten = idx.map(function(i){ return { id:'s' + i, tekst:o.stappen[i] }; });
+    return Object.assign(basis(o.deel), {
+      vorm:'sleep', stapLijst:true, sleutel:o.sleutel + ':' + idx.join(''), vraag:o.vraag, opdracht:o.opdracht || 'Zet de stappen op volgorde: de eerste stap bovenaan.', beeld:o.beeld || '',
+      kaarten:kaarten, vakken:idx.map(function(i){ return { id:'p' + i, max:1, hoort:['s' + i] }; }),
+      sleepuit:'Sleep elke stap naar zijn plek. Op een telefoon: tik een stap aan en dan het vak.',
+      uitleg:(o.uitleg ? o.uitleg + '<br>' : '') + idx.map(function(i, k){ return (k + 1) + '. ' + o.stappen[i]; }).join('<br>'),
+      antwoordTekst:idx.map(function(i, k){ return (k + 1) + '. ' + o.stappen[i]; }).join(' ')
+    });
+  }
+
+  /* ---------- verdediging: waar beschermt wat ---------- */
+  var PLEKKEN = [
+    { naam:'huid', k:['een hoornlaag van dode cellen', 'pigment tegen uv-straling', 'talg en zweet maken het oppervlak licht zuur'] },
+    { naam:'neus en luchtwegen', k:['slijm waar stof en bacteriën aan blijven plakken', 'trilhaartjes die slijm naar de keel werken', 'haren in de neus die stof tegenhouden'] },
+    { naam:'mond en maag', k:['zoutzuur dat bacteriën in je eten doodt', 'speeksel dat bacteriën wegspoelt'] },
+    { naam:'ogen', k:['traanvocht dat vuil wegspoelt', 'knipperen met de oogleden', 'wimpers die stof tegenhouden'] }
+  ];
+  function plekken(niv){
+    return sorteer({ deel:'verdediging', sleutel:'plek' + niv, bakken:PLEKKEN, per:niv === 'bb' ? 1 : [1, 2],
+      vraag:'Waar in je lichaam werkt deze bescherming?', opdracht:'Sleep elke bescherming naar de plek waar hij werkt.',
+      uitleg:'Je lichaam heeft op elke plek waar ziekteverwekkers binnen kunnen komen, een eigen eerste verdediging.' });
+  }
+  var ONTSTEKING = [
+    'Bacteriën dringen via een wondje het weefsel binnen.',
+    'Mestcellen in het weefsel geven histamine af.',
+    'De haarvaten worden wijder en beter doorlaatbaar: de plek wordt rood, warm en dik.',
+    'Fagocyten gaan uit de haarvaten naar het weefsel.',
+    'De fagocyten nemen de bacteriën op en verteren ze.',
+    'Er ontstaat pus van dode fagocyten, bacteriën en weefselresten.'
+  ];
+  var ONTSTEKING_KGT = [
+    'Met een splinter komen bacteriën in je vinger.',
+    'De bloedvaten op die plek worden wijder: de plek wordt rood en warm.',
+    'Witte bloedcellen gaan uit het bloed naar de bacteriën.',
+    'De witte bloedcellen eten de bacteriën op.',
+    'Er ontstaat pus van dode witte bloedcellen en bacteriën.'
+  ];
+  function ontsteking(niv){
+    var hv = niv === 'hv';
+    return volgorde({ deel:'verdediging', sleutel:'ont' + niv, stappen:hv ? ONTSTEKING : ONTSTEKING_KGT, n:hv ? kies([5, 6]) : kies([4, 5]),
+      vraag:'Een splinter in je vinger raakt ontstoken. Zet de stappen van de ontstekingsreactie op volgorde.',
+      uitleg:hv ? 'Histamine maakt de haarvaten wijd en lek. Daardoor komen fagocyten bij de bacteriën. Pus ontstaat pas als er al veel fagocyten en bacteriën zijn doodgegaan.'
+        : 'Door de wijdere bloedvaten komt er meer bloed, en daarmee meer witte bloedcellen, naar de plek. Pus ontstaat pas als er veel witte bloedcellen en bacteriën zijn doodgegaan.' });
+  }
+  function aspecifiek(){
+    return sorteer({ deel:'verdediging', sleutel:'asp', per:3, bakken:[
+      { naam:'aspecifiek', uit:'tegen alles, meteen', k:['de hoornlaag van de huid', 'maagzuur', 'lysozym in traanvocht', 'fagocytose door macrofagen', 'een ontstekingsreactie met histamine', 'slijm en trilhaartjes'] },
+      { naam:'specifiek', uit:'tegen één antigeen', k:['antistoffen van plasmacellen', 'T-killercellen die geïnfecteerde cellen doden', 'geheugencellen na een infectie', 'B-cellen met een receptor voor één antigeen', 'T-helpercellen die één antigeen herkennen'] }
+    ], vraag:'Hoort dit bij de aspecifieke of bij de specifieke afweer?', opdracht:'Sleep elk onderdeel naar de juiste soort afweer.',
+      uitleg:'De aspecifieke afweer werkt meteen en op dezelfde manier tegen elke ziekteverwekker. De specifieke afweer herkent één antigeen, heeft de eerste keer dagen nodig en heeft een geheugen.' });
+  }
+
+  /* ---------- bloed: delen en taken, de stappen van een afweerreactie ---------- */
+  function bloeddelen(niv){
+    var wit = niv === 'bb' ? ['ruimen ziekteverwekkers op', 'worden er meer bij een infectie'] : ['ruimen ziekteverwekkers op', 'maken antistoffen', 'worden er meer bij een infectie'];
+    return sorteer({ deel:'bloed', sleutel:'bdeel' + niv, per:1, bakken:[
+      { naam:'rode bloedcellen', k:niv === 'bb' ? ['vervoeren zuurstof', 'geven het bloed zijn rode kleur'] : ['vervoeren zuurstof', 'bevatten hemoglobine', 'hebben geen kern'] },
+      { naam:'witte bloedcellen', k:wit },
+      { naam:'bloedplaatjes', k:['zorgen dat het bloed stolt', 'helpen een wondje te dichten'] },
+      { naam:'bloedplasma', k:['is het vloeibare deel van het bloed', 'vervoert opgeloste voedingsstoffen'] }
+    ], vraag:'Welke taak of eigenschap hoort bij welk deel van het bloed?', opdracht:'Sleep elk kaartje naar het juiste deel van het bloed.',
+      uitleg:'Alleen de witte bloedcellen horen bij de afweer. Bloedplaatjes helpen wel om een wond te sluiten, zodat er geen nieuwe ziekteverwekkers binnenkomen.' });
+  }
+  var REACTIE = [
+    'Een bacterie dringt binnen via een wondje en vermenigvuldigt zich.',
+    'Witte bloedcellen herkennen de antigenen van de bacterie als lichaamsvreemd.',
+    'Witte bloedcellen maken antistoffen die op het antigeen passen.',
+    'De antistoffen binden aan de antigenen en de bacteriën klonteren samen.',
+    'Vreetcellen ruimen de samengeklonterde bacteriën op.',
+    'Er blijven geheugencellen over die het antigeen onthouden.'
+  ];
+  function reactie(){ return volgorde({ deel:'bloed', sleutel:'reactie', stappen:REACTIE, n:kies([4, 5, 5, 6]), vraag:'Een afweerreactie tegen een bacterie verloopt in stappen. In welke volgorde?', uitleg:'Eerst moet het antigeen herkend worden, pas dan worden er passende antistoffen gemaakt. Na de opruiming blijven de geheugencellen over.' }); }
+  var SPECIFIEK = [
+    'Een macrofaag neemt een bacterie op door fagocytose.',
+    'De macrofaag presenteert stukjes van het antigeen op zijn celmembraan.',
+    'Een T-helpercel met een passende receptor herkent het antigeen.',
+    'De T-helpercel activeert B-cellen met een receptor voor hetzelfde antigeen.',
+    'De B-cellen delen zich en vormen plasmacellen en geheugencellen.',
+    'Plasmacellen maken antistoffen die aan het antigeen binden.'
+  ];
+  function specifiek(){ return volgorde({ deel:'bloed', sleutel:'spec', stappen:SPECIFIEK, n:kies([4, 5, 6]), vraag:'Zet de stappen van de humorale specifieke afweer op volgorde.', uitleg:'De macrofaag presenteert, de T-helpercel herkent en activeert, de B-cel deelt (klonale selectie) en de plasmacellen maken de antistoffen.' }); }
+  function cellen(){
+    return sorteer({ deel:'bloed', sleutel:'cel', per:1, aantalBakken:kies([3, 4]), bakken:[
+      { naam:'macrofaag', k:['neemt ziekteverwekkers op door fagocytose', 'presenteert antigenen aan T-helpercellen'] },
+      { naam:'T-helpercel', k:['activeert B-cellen en T-killercellen', 'wordt aangetast door hiv'] },
+      { naam:'plasmacel', k:['maakt grote hoeveelheden antistoffen', 'ontstaat uit een geactiveerde B-cel'] },
+      { naam:'T-killercel', k:['doodt lichaamscellen die met een virus zijn geïnfecteerd', 'ruimt kankercellen op'] },
+      { naam:'geheugencel', k:['blijft na een infectie jaren in het lichaam', 'zorgt bij een tweede besmetting voor een snelle reactie'] }
+    ], vraag:'Welke taak hoort bij welke cel van de afweer?', opdracht:'Sleep elke taak naar de cel die hem uitvoert.',
+      uitleg:'Macrofagen zijn aspecifiek, maar geven de specifieke afweer het startsein door antigenen te presenteren.' });
+  }
+  /* de bloedgroepen: antigenen op de rode bloedcellen, antistoffen in het plasma */
+  var BG = { A:{ ag:['A'], as:['B'] }, B:{ ag:['B'], as:['A'] }, AB:{ ag:['A', 'B'], as:[] }, O:{ ag:[], as:['A', 'B'] } };
+  function bloedgroep(){
+    var r = kies(['A', 'B', 'AB', 'O']), d = kies(['A', 'B', 'AB', 'O']), naam = kies(['Noor', 'Yusuf', 'Femke', 'Lucas', 'Sara', 'Milan']);
+    if (Math.random() < 0.3){
+      var g = kies(['A', 'B', 'AB', 'O']), x = BG[g];
+      var antw = g === 'A' ? ['anti-B', 'antistoffen tegen B', 'tegen B', 'B'] : g === 'B' ? ['anti-A', 'antistoffen tegen A', 'tegen A', 'A'] : g === 'AB' ? ['geen', 'geen antistoffen', 'geen enkele', 'niets'] : ['anti-A en anti-B', 'anti-B en anti-A', 'tegen A en B', 'A en B', 'beide', 'antistoffen tegen A en B'];
+      return Object.assign(basis('bloed'), { vorm:'invul', sleutel:'bgi' + g,
+        vraag:'Welke antistoffen zitten in het bloedplasma van iemand met bloedgroep ' + g + '?',
+        beeld:sit('Op de rode bloedcellen kunnen antigeen A en antigeen B zitten. In het plasma zitten van nature antistoffen tegen het antigeen dat je zelf <b>niet</b> hebt. Schrijf bijvoorbeeld: anti-A, anti-B, anti-A en anti-B, of geen.'),
+        velden:[{ label:'antistoffen', antwoord:antw, type:'tekst', breed:true, toon:antw[0] }],
+        uitleg:'Bloedgroep ' + g + ' heeft ' + (x.ag.length ? 'antigeen ' + x.ag.join(' en ') : 'geen antigenen') + ' op de rode bloedcellen en dus ' + (x.as.length ? 'anti-' + x.as.join(' en anti-') : 'geen antistoffen') + ' in het plasma. Antistoffen tegen een eigen antigeen zouden je eigen bloed laten klonteren.',
+        antwoordTekst:antw[0] });
+    }
+    var tegen = BG[d].ag.filter(function(a){ return BG[r].as.indexOf(a) >= 0; });
+    var goed = !tegen.length ? 'Ja: de ontvanger heeft geen antistoffen tegen de antigenen op deze rode bloedcellen.'
+      : 'Nee: de ontvanger heeft antistoffen tegen antigeen ' + tegen.join(' en ') + ' op deze rode bloedcellen.';
+    var alle = ['Ja: de ontvanger heeft geen antistoffen tegen de antigenen op deze rode bloedcellen.',
+      'Nee: de ontvanger heeft antistoffen tegen antigeen A op deze rode bloedcellen.',
+      'Nee: de ontvanger heeft antistoffen tegen antigeen B op deze rode bloedcellen.',
+      'Nee: de ontvanger heeft antistoffen tegen antigeen A en B op deze rode bloedcellen.',
+      'Nee: de rode bloedcellen van de donor maken antistoffen tegen de ontvanger.'];
+    var fout = H(alle.filter(function(x){ return x !== goed; })).slice(0, 3);
+    return Object.assign(basis('bloed'), { vorm:'meerkeuze', sleutel:'bg' + r + d,
+      vraag:naam + ' heeft bloedgroep ' + r + ' en heeft een bloedtransfusie nodig. Mag ' + naam + ' rode bloedcellen krijgen van een donor met bloedgroep ' + d + '?',
+      beeld:sit('Bloedgroep A: antigeen A op de rode bloedcellen, anti-B in het plasma.<br>Bloedgroep B: antigeen B, anti-A.<br>Bloedgroep AB: antigeen A en B, geen antistoffen.<br>Bloedgroep O: geen antigenen, anti-A en anti-B.'),
+      opties:[goed].concat(fout), goed:0,
+      uitleg:'Kijk naar de antigenen op de rode bloedcellen van de donor (' + (BG[d].ag.length ? BG[d].ag.join(' en ') : 'geen') + ') en de antistoffen in het plasma van de ontvanger (' + (BG[r].as.length ? 'anti-' + BG[r].as.join(' en anti-') : 'geen') + '). ' +
+        (tegen.length ? 'De antistoffen van de ontvanger binden aan antigeen ' + tegen.join(' en ') + ': de rode bloedcellen van de donor klonteren samen. Dat is levensgevaarlijk.' : 'Er past geen antistof van de ontvanger op deze rode bloedcellen, dus er klontert niets.') +
+        ' Rode bloedcellen maken zelf geen antistoffen.',
+      antwoordTekst:goed });
+  }
+
+  /* ---------- immuniteit: antibiotica, groepen ziekteverwekkers, vormen van immuniteit ---------- */
+  function antibioticaHelpt(){
+    return sorteer({ deel:'immuniteit', sleutel:'ab', per:2, bakken:[
+      { naam:'antibiotica kunnen helpen', uit:'door bacteriën', k:['een blaasontsteking', 'tuberculose (tbc)', 'chlamydia', 'een longontsteking door bacteriën', 'een ontstoken wond door bacteriën'] },
+      { naam:'antibiotica helpen niet', uit:'door virussen', k:['griep', 'verkoudheid', 'waterpokken', 'de mazelen', 'corona (covid-19)'] }
+    ], vraag:'Bij welke ziekte kunnen antibiotica helpen?', opdracht:'Sleep elke ziekte naar het goede vak.',
+      uitleg:'Antibiotica werken alleen tegen bacteriën. Tegen ziekten door virussen helpen ze niet.' });
+  }
+  function groepen(){
+    return sorteer({ deel:'immuniteit', sleutel:'grp', per:[1, 2], bakken:[
+      { naam:'bacterie', k:['chlamydia', 'gonorroe', 'syfilis', 'tuberculose', 'een blaasontsteking'] },
+      { naam:'virus', k:['griep', 'hiv', 'hepatitis B', 'waterpokken', 'de mazelen'] },
+      { naam:'schimmel', k:['voetschimmel', 'candida (spruw)', 'ringworm'] }
+    ], vraag:'Door welke groep ziekteverwekkers wordt deze ziekte veroorzaakt?', opdracht:'Sleep elke ziekte naar de groep ziekteverwekkers.',
+      uitleg:'Dit is belangrijk voor de behandeling: antibiotica werken alleen tegen bacteriën. Tegen schimmels bestaan aparte middelen, en tegen virussen helpt vooral vaccinatie.' });
+  }
+  function actiefPassief(){
+    return sorteer({ deel:'immuniteit', sleutel:'ap', per:2, bakken:[
+      { naam:'actieve immuniteit', uit:'je maakt zelf antistoffen', k:['je bent hersteld van de waterpokken', 'je krijgt een vaccin met verzwakte ziekteverwekkers', 'je krijgt een herhalingsprik', 'je hebt de mazelen gehad'] },
+      { naam:'passieve immuniteit', uit:'je krijgt antistoffen', k:['een baby krijgt antistoffen via de moedermelk', 'je krijgt een serum na een slangenbeet', 'een baby krijgt antistoffen via de placenta', 'je krijgt antistoffen tegen tetanus ingespoten'] }
+    ], vraag:'Is dit actieve of passieve immuniteit?', opdracht:'Sleep elke situatie naar de vorm van immuniteit.',
+      uitleg:'Actief: je maakt zelf antistoffen en geheugencellen, dus het duurt even maar beschermt lang. Passief: je krijgt kant-en-klare antistoffen, dus het werkt meteen maar kort.' });
+  }
+  function vierVormen(){
+    return sorteer({ deel:'immuniteit', sleutel:'vier', per:1, bakken:[
+      { naam:'natuurlijk actief', k:['je bent hersteld van de mazelen', 'je bent ziek geweest van een griepvirus'] },
+      { naam:'kunstmatig actief', k:['je krijgt de BMR-prik (bof, mazelen, rodehond)', 'je krijgt een mRNA-vaccin', 'een paard krijgt kleine hoeveelheden slangengif ingespoten'] },
+      { naam:'natuurlijk passief', k:['antistoffen via de placenta', 'antistoffen via de moedermelk'] },
+      { naam:'kunstmatig passief', k:['een serum na een slangenbeet', 'een injectie met anti-D na de bevalling', 'antistoffen tegen tetanus na een vieze wond'] }
+    ], vraag:'Welke vorm van immuniteit is dit?', opdracht:'Sleep elke situatie naar de juiste vorm.',
+      uitleg:'Actief of passief: maak je de antistoffen zelf of krijg je ze? Natuurlijk of kunstmatig: gebeurt het vanzelf of door een prik of medicijn?' });
+  }
+  var VACCIN = [
+    'Je krijgt een vaccin met verzwakte ziekteverwekkers.',
+    'Witte bloedcellen herkennen de antigenen in het vaccin.',
+    'Je lichaam maakt antistoffen en geheugencellen.',
+    'Later kom je in aanraking met de echte ziekteverwekker.',
+    'Geheugencellen zorgen snel voor veel antistoffen: je wordt niet ziek.'
+  ];
+  function vaccinStappen(){ return volgorde({ deel:'immuniteit', sleutel:'vac', stappen:VACCIN, n:kies([4, 5]), vraag:'Hoe beschermt een vaccin je? Zet de stappen op volgorde.', uitleg:'Het vaccin werkt als een oefenbesmetting. De geheugencellen die je dan maakt, beschermen je bij de echte besmetting.' }); }
+  var RESIST = [
+    'In een grote groep bacteriën heeft een enkele bacterie door een mutatie een gen voor resistentie.',
+    'De patiënt slikt antibiotica: de gevoelige bacteriën gaan dood.',
+    'De resistente bacterie overleeft en deelt zich.',
+    'Het resistentiegen gaat over op de nakomelingen, en soms via plasmiden op andere bacteriën.',
+    'De groep bestaat nu vooral uit resistente bacteriën.'
+  ];
+  function resistentie(){ return volgorde({ deel:'immuniteit', sleutel:'res', stappen:RESIST, n:kies([4, 5]), vraag:'Hoe ontstaat een groep resistente bacteriën? Zet de stappen op volgorde.', uitleg:'De mutatie komt eerst en is toeval. Het antibioticum veroorzaakt de resistentie niet, maar selecteert de resistente bacteriën.' }); }
+
+  /* ---------- de grafiek van de hoeveelheid antistoffen ---------- */
+  function antiGrafiek(g){
+    var W = 380, Hh = 270, L = 44, R = 14, T = 30, B = 46;
+    var sx = (W - L - R) / g.xmax, sy = (Hh - T - B) / g.ymax;
+    function X(x){ return Math.round((L + x * sx) * 10) / 10; }
+    function Y(y){ return Math.round((T + (g.ymax - y) * sy) * 10) / 10; }
+    var s = '<svg class="af-gr" viewBox="0 0 ' + W + ' ' + Hh + '" role="img" aria-label="grafiek van de hoeveelheid antistoffen in het bloed">', x, y;
+    for (x = 0; x <= g.xmax; x += 5) s += '<line class="raster" x1="' + X(x) + '" y1="' + T + '" x2="' + X(x) + '" y2="' + Y(0) + '"/>';
+    for (y = 0; y <= g.ymax; y += 10) s += '<line class="raster" x1="' + L + '" y1="' + Y(y) + '" x2="' + X(g.xmax) + '" y2="' + Y(y) + '"/>';
+    s += '<line class="as" x1="' + L + '" y1="' + Y(0) + '" x2="' + (X(g.xmax) + 4) + '" y2="' + Y(0) + '"/><line class="as" x1="' + L + '" y1="' + (T - 6) + '" x2="' + L + '" y2="' + Y(0) + '"/>';
+    for (x = 0; x <= g.xmax; x += 10) s += '<text x="' + X(x) + '" y="' + (Y(0) + 17) + '" text-anchor="middle">' + x + '</text>';
+    for (y = 0; y <= g.ymax; y += (g.ymax > 60 ? 20 : 10)) s += '<text x="' + (L - 6) + '" y="' + (Y(y) + 4.5) + '" text-anchor="end">' + y + '</text>';
+    s += '<text class="kop" x="' + X(g.xmax) + '" y="' + (Hh - 6) + '" text-anchor="end">tijd (dagen)</text>';
+    s += '<text class="kop" x="' + (L + 4) + '" y="' + (T - 14) + '">antistoffen (eenheden)</text>';
+    /* de besmettingen: stippellijnen met een label */
+    [[0, g.l1], [g.t2, g.l2]].forEach(function(m, i){ s += '<line class="mark" x1="' + X(m[0]) + '" y1="' + (T + 4) + '" x2="' + X(m[0]) + '" y2="' + Y(0) + '"/><text class="marktekst" x="' + (X(m[0]) + 4) + '" y="' + (T + 14 + i * 0) + '">' + m[1] + '</text>'; });
+    function r(t, st, lag, tp, P, dec){ if (t < st + lag) return 0; if (t <= tp){ var u = (t - st - lag) / (tp - st - lag); return P * u * u * (3 - 2 * u); } return P * Math.exp(-(t - tp) / dec); }
+    var pts = [];
+    for (var t = 0; t <= g.xmax + 1e-9; t += 0.5){ var v = Math.max(r(t, 0, 4, g.d1, g.p1, 4.5), r(t, g.t2, 1, g.d2, g.p2, 14)); pts.push(X(t) + ',' + Y(v)); }
+    s += '<polyline class="lijn" points="' + pts.join(' ') + '"/>';
+    return s + '</svg>';
+  }
+  function grafiek(niv){
+    var vac = Math.random() < 0.4, d1 = kies([10, 15]), p1 = kies([10, 20, 30]), t2 = kies([30, 35, 40]);
+    var f = p1 === 10 ? kies([4, 5, 6, 8]) : p1 === 20 ? kies([3, 4, 5]) : 3, p2 = p1 * f, d2 = t2 + 5;
+    var ymax = Math.ceil((p2 + 20) / 20) * 20;
+    var g = { xmax:60, ymax:ymax, d1:d1, p1:p1, t2:t2, d2:d2, p2:p2, l1:vac ? 'vaccinatie' : 'besmetting 1', l2:vac ? 'herhalingsprik' : 'besmetting 2' };
+    var wie = kies(['Lotte', 'Bram', 'Ayoub', 'Iris', 'Jens', 'Zoë']);
+    var bron = vac ? wie + ' krijgt op dag 0 een vaccinatie en op dag ' + t2 + ' een herhalingsprik. De grafiek laat de hoeveelheid antistoffen in het bloed zien.'
+      : wie + ' wordt op dag 0 besmet met een virus en op dag ' + t2 + ' opnieuw met hetzelfde virus. De grafiek laat de hoeveelheid antistoffen in het bloed zien.';
+    var eerste = vac ? 'de vaccinatie' : 'de eerste besmetting', tweede = vac ? 'de herhalingsprik' : 'de tweede besmetting';
+    var beeld = '<div class="af-wrap">' + sit(bron) + antiGrafiek(g) + '</div>';
+    var o = Object.assign(basis('immuniteit'), { beeld:beeld });
+    var types = niv === 'hv' ? ['factor', 'eerder', 'ander', 'top2', 'soort'] : ['dag1', 'top2', 'na2', 'vergelijk', 'waarom'];
+    var ty = kies(types);
+    o.sleutel = 'gr' + ty + (vac ? 'v' : 'b') + d1 + '_' + p1 + '_' + t2 + '_' + p2;
+    function invul(v, label, a, eenheid, tol, u){ return Object.assign(o, { vorm:'invul', vraag:v, velden:[{ label:label, antwoord:a, eenheid:eenheid, tol:tol }], uitleg:u, antwoordTekst:String(a).replace('.', ',') + (eenheid ? ' ' + eenheid : '') }); }
+    function mk(v, opties, u){ return Object.assign(o, { vorm:'meerkeuze', vraag:v, opties:opties, goed:0, uitleg:u, antwoordTekst:kaal(opties[0]) }); }
+    if (ty === 'dag1') return invul('Op welke dag is de hoeveelheid antistoffen na ' + eerste + ' het hoogst?', 'dag', d1, '', 1,
+      'Zoek de eerste top van de lijn en ga recht omlaag naar de tijdas: dag ' + d1 + '. Het duurt zo lang omdat het lichaam het antigeen nog niet kende.');
+    if (ty === 'top2') return invul('Hoeveel antistoffen zijn er op het hoogste punt na ' + tweede + '?', 'hoeveelheid', p2, 'eenheden', 2,
+      'Zoek de tweede top en ga recht naar links naar de verticale as: ' + p2 + ' eenheden. Bij de eerste top was het maar ' + p1 + '.');
+    if (ty === 'na2') return invul('Hoeveel dagen na ' + tweede + ' is de hoeveelheid antistoffen het hoogst?', 'aantal dagen', d2 - t2, 'dagen', 1,
+      tweede.charAt(0).toUpperCase() + tweede.slice(1) + ' is op dag ' + t2 + ', de top op dag ' + d2 + ': dat is ' + (d2 - t2) + ' dagen later. Na ' + eerste + ' duurde het ' + d1 + ' dagen.');
+    if (ty === 'vergelijk') return mk('Welke uitspraak over de reactie na ' + tweede + ' klopt, vergeleken met de reactie na ' + eerste + '?',
+      ['Het lichaam maakt sneller en meer antistoffen.', 'Het lichaam maakt langzamer maar meer antistoffen.', 'Het lichaam maakt sneller maar minder antistoffen.', 'De reactie is precies hetzelfde.'],
+      'De tweede top komt eerder (' + (d2 - t2) + ' in plaats van ' + d1 + ' dagen) en is hoger (' + p2 + ' in plaats van ' + p1 + '). Dat komt door de geheugencellen.');
+    if (ty === 'waarom') return mk('Waardoor verloopt de reactie na ' + tweede + ' sneller en sterker?',
+      ['Er zijn geheugencellen die het antigeen herkennen en snel antistoffen laten maken.', 'De antistoffen van de eerste keer zijn nog allemaal in het bloed.', 'Het virus is de tweede keer zwakker.', 'Het lichaam maakt de tweede keer rode bloedcellen in plaats van antistoffen.'],
+      'In de grafiek zie je dat de antistoffen van de eerste keer rond dag ' + t2 + ' al bijna weg zijn. Toch gaat de tweede reactie veel sneller: dat komt door de geheugencellen.');
+    if (ty === 'factor') return invul('Hoeveel keer zo hoog is de top na ' + tweede + ' als de top na ' + eerste + '?', 'keer zo hoog', f, 'keer', 0.05,
+      'De eerste top is ' + p1 + ', de tweede ' + p2 + '. ' + p2 + ' : ' + p1 + ' = ' + f + '. De secundaire reactie is dus ' + f + ' keer zo sterk.');
+    if (ty === 'eerder') return invul('Hoeveel dagen eerder na het binnenkomen van het antigeen wordt de top bij de tweede reactie bereikt dan bij de eerste?', 'aantal dagen', d1 - (d2 - t2), 'dagen', 1,
+      'Eerste reactie: top ' + d1 + ' dagen na dag 0. Tweede reactie: top ' + (d2 - t2) + ' dagen na dag ' + t2 + '. Het verschil is ' + d1 + ' − ' + (d2 - t2) + ' = ' + (d1 - (d2 - t2)) + ' dagen.');
+    if (ty === 'ander') return mk('Stel dat ' + wie + ' op dag ' + t2 + ' niet ' + (vac ? 'een herhalingsprik krijgt maar besmet raakt' : 'opnieuw met hetzelfde virus besmet raakt, maar') + ' met een heel ander virus. Hoe verloopt de lijn van de antistoffen tegen dát virus dan na dag ' + t2 + '?',
+      ['Zoals na dag 0: langzaam en laag, want er zijn geen geheugencellen tegen dit antigeen.', 'Zoals de tweede top in de grafiek: snel en hoog, want het lichaam heeft al geheugencellen.', 'Er komen helemaal geen antistoffen, want het lichaam is al bezig.', 'Even snel als de tweede top, maar lager.'],
+      'Geheugencellen zijn specifiek: ze herkennen alleen het antigeen waartegen ze zijn ontstaan. Tegen een ander virus volgt een primaire reactie, net als na dag 0.');
+    return mk('Welke vorm van immuniteit laat deze grafiek zien?',
+      vac ? ['kunstmatige actieve immuniteit', 'natuurlijke actieve immuniteit', 'kunstmatige passieve immuniteit', 'natuurlijke passieve immuniteit']
+        : ['natuurlijke actieve immuniteit', 'kunstmatige actieve immuniteit', 'natuurlijke passieve immuniteit', 'kunstmatige passieve immuniteit'],
+      'Het lichaam maakt zelf antistoffen (de lijn stijgt pas na een paar dagen): actief. ' + (vac ? 'Het komt door een vaccin: kunstmatig.' : 'Het komt door een echte besmetting: natuurlijk.') + ' Bij passieve immuniteit zou de hoeveelheid meteen hoog zijn en daarna alleen dalen.');
+  }
+
+  /* ---------- evolutie: stappen, erfelijk of niet, stambomen, allelfrequentie ---------- */
+  var SELECTIE = [
+    'Binnen een populatie verschillen de individuen erfelijk van elkaar.',
+    'Individuen met een gunstige eigenschap overleven vaker.',
+    'Zij krijgen meer nakomelingen.',
+    'De nakomelingen erven de gunstige eigenschap.',
+    'Na veel generaties komt de eigenschap veel vaker voor in de populatie.'
+  ];
+  function selectieStappen(){ return volgorde({ deel:'evolutie', sleutel:'sel', stappen:SELECTIE, n:kies([4, 5]), vraag:'Zet de stappen van natuurlijke selectie op volgorde.', uitleg:'Zonder erfelijke variatie valt er niets te selecteren. Overleven alleen is niet genoeg: het gaat om nakomelingen die de eigenschap erven.' }); }
+  var SOORTV = [
+    'Een populatie wordt door een rivier, zee of gebergte in twee groepen gesplitst.',
+    'Tussen de groepen worden geen genen meer uitgewisseld.',
+    'In elke groep ontstaan andere mutaties en werkt de selectie anders.',
+    'De groepen gaan erfelijk steeds meer van elkaar verschillen.',
+    'Als ze weer samenkomen, krijgen ze geen vruchtbare nakomelingen meer: er zijn twee soorten.'
+  ];
+  function soortvorming(){ return volgorde({ deel:'evolutie', sleutel:'sv', stappen:SOORTV, n:kies([4, 5]), vraag:'Zet de stappen van soortvorming door geografische isolatie op volgorde.', uitleg:'De scheiding stopt de uitwisseling van genen. Pas na lange tijd zijn de verschillen zo groot dat er reproductieve isolatie is.' }); }
+  function erfelijk(){
+    return sorteer({ deel:'evolutie', sleutel:'erf', per:[2, 3], bakken:[
+      { naam:'erfelijk', uit:'kan via selectie veranderen', k:['de kleur van je ogen', 'een mutatie in een geslachtscel', 'de vorm van de snavel van een vink', 'de vleugelkleur van een peper-en-zoutvlinder', 'je bloedgroep'] },
+      { naam:'niet erfelijk', uit:'tijdens je leven gekregen', k:['grotere spieren door veel trainen', 'een litteken van een val', 'een bruine huid door de zon', 'een taal die je hebt geleerd', 'een korte vacht omdat de hond is geschoren'] }
+    ], vraag:'Kan deze eigenschap worden doorgegeven aan de nakomelingen?', opdracht:'Sleep elke eigenschap naar het goede vak.',
+      uitleg:'Alleen erfelijke eigenschappen (in het DNA van de geslachtscellen) gaan over op de nakomelingen. Daarom werkt natuurlijke selectie alleen op erfelijke variatie.' });
+  }
+  /* stambomen: geneste paren, de tijd loopt van links (lang geleden) naar rechts (nu) */
+  var BOMEN = [
+    { naam:'mensapen', b:['gibbon', ['orang-oetan', ['gorilla', ['chimpansee', 'mens']]]] },
+    { naam:'gewervelden', b:['haai', ['zalm', ['kikker', ['muis', ['hagedis', ['krokodil', 'kip']]]]]] },
+    { naam:'hoefdieren', b:['paard', ['varken', ['koe', ['nijlpaard', 'walvis']]]] }
+  ];
+  function bladeren(n){ return typeof n === 'string' ? [n] : bladeren(n[0]).concat(bladeren(n[1])); }
+  function pad(n, blad){ if (typeof n === 'string') return n === blad ? [] : null; var a = pad(n[0], blad); if (a) return [0].concat(a); var b = pad(n[1], blad); return b ? [1].concat(b) : null; }
+  function lcaDiepte(boom, a, b){ var p = pad(boom, a), q = pad(boom, b), i = 0; while (i < p.length && i < q.length && p[i] === q[i]) i++; return i; }
+  function boomSvg(boom){
+    var lijst = bladeren(boom), diep = (function d(n){ return typeof n === 'string' ? 0 : 1 + Math.max(d(n[0]), d(n[1])); })(boom);
+    var W = 380, rij = 34, T = 18, xr = 250, L = 16, stap = (xr - L) / diep, Hh = T + rij * (lijst.length - 1) + 50, s = '', nr = 0;
+    function teken(n, dp){
+      if (typeof n === 'string'){ var y = T + rij * (nr++); s += '<text class="soort" x="' + (xr + 8) + '" y="' + (y + 5) + '">' + n + '</text>'; return { x:xr, y:y }; }
+      var a = teken(n[0], dp + 1), b = teken(n[1], dp + 1), x = L + dp * stap;
+      s += '<path class="tak" d="M' + a.x + ' ' + a.y + 'H' + x + 'V' + b.y + 'H' + b.x + '"/>';
+      return { x:x, y:(a.y + b.y) / 2 };
+    }
+    var w = teken(boom, 0);
+    s += '<path class="tak" d="M' + (L - 10) + ' ' + w.y + 'H' + L + '"/>';
+    var ya = T + rij * (lijst.length - 1) + 30;
+    s += '<line class="as" x1="' + L + '" y1="' + ya + '" x2="' + xr + '" y2="' + ya + '"/><path class="tak" d="M' + (xr - 8) + ' ' + (ya - 5) + 'L' + xr + ' ' + ya + 'L' + (xr - 8) + ' ' + (ya + 5) + '"/>';
+    s += '<text x="' + L + '" y="' + (ya + 16) + '">lang geleden</text><text x="' + xr + '" y="' + (ya + 16) + '" text-anchor="end">nu</text>';
+    return '<svg class="af-gr" viewBox="0 0 ' + W + ' ' + Hh + '" role="img" aria-label="stamboom van ' + lijst.join(', ') + '">' + s + '</svg>';
+  }
+  function stamboom(niv){
+    var bi = tussen(0, BOMEN.length - 1), boom = BOMEN[bi].b, lijst = bladeren(boom), x, y, z, dy, dz, poging = 0;
+    do {
+      var drie = H(lijst).slice(0, 3); x = drie[0]; y = drie[1]; z = drie[2];
+      dy = lcaDiepte(boom, x, y); dz = lcaDiepte(boom, x, z); poging++;
+    } while (niv !== 'hv' && dy === dz && poging < 40);
+    if (dy < dz){ var t = y; y = z; z = t; t = dy; dy = dz; dz = t; }
+    var gelijk = dy === dz, opties, u;
+    var beeld = '<div class="af-wrap">' + sit('De stamboom laat de verwantschap zien tussen ' + lijst.length + ' soorten. Waar twee lijnen samenkomen, leefde hun laatste gemeenschappelijke voorouder.') + boomSvg(boom) + '</div>';
+    if (gelijk){
+      opties = ['Met beide even nauw.', 'Met de ' + y + '.', 'Met de ' + z + '.'];
+      u = 'De lijn van de ' + x + ' komt met die van de ' + y + ' en de ' + z + ' samen bij dezelfde voorouder. De ' + x + ' is dus met beide even nauw verwant. Dat soorten in de lijst naast elkaar staan, zegt niets.';
+    } else {
+      opties = ['Met de ' + y + '.', 'Met de ' + z + '.'].concat(niv === 'hv' ? ['Met beide even nauw.'] : []);
+      u = 'Volg de lijnen naar links. De ' + x + ' en de ' + y + ' komen eerder samen, bij een voorouder die korter geleden leefde. De lijn naar de ' + z + ' komt pas verder naar links (langer geleden) samen.';
+    }
+    return Object.assign(basis('evolutie'), { vorm:'meerkeuze', vasteVolgorde:false, sleutel:'sb' + bi + x + y + z,
+      vraag:'Met welke soort is de <b>' + x + '</b> het nauwst verwant: met de ' + y + ' of met de ' + z + '?', beeld:beeld, opties:opties, goed:0, uitleg:u, antwoordTekst:kaal(opties[0]) });
+  }
+  function allelen(){
+    var y = 2 * tussen(3, 14), z = tussen(2, 15), x = 50 - y - z, vraag = kies(['a', 'A', 'licht']);
+    if (x < 3) return allelen();
+    var tab = '<table class="af-tab"><caption>getelde vlinders (50 in totaal)</caption><thead><tr><th>genotype</th><th>kleur</th><th class="n">aantal</th></tr></thead><tbody>' +
+      '<tr><td>AA</td><td>donker</td><td class="n">' + x + '</td></tr><tr><td>Aa</td><td>donker</td><td class="n">' + y + '</td></tr><tr><td>aa</td><td>licht</td><td class="n">' + z + '</td></tr></tbody></table>';
+    var beeld = '<div class="af-wrap">' + sit('Bij de peper-en-zoutvlinder is het allel voor de donkere kleur (A) dominant over het allel voor de lichte kleur (a). In een bos worden 50 vlinders gevangen en onderzocht.') + tab + '</div>';
+    var o = Object.assign(basis('evolutie'), { vorm:'invul', sleutel:'al' + vraag + x + '_' + y + '_' + z, beeld:beeld });
+    var a = y + 2 * z, A = 2 * x + y;
+    if (vraag === 'licht') return Object.assign(o, { vraag:'Hoeveel procent van de gevangen vlinders is licht?', velden:[{ label:'lichte vlinders', antwoord:2 * z, eenheid:'%', tol:0.1 }],
+      uitleg:'Alleen aa is licht: ' + z + ' van de 50 vlinders = ' + (2 * z) + '%. Let op: dat is niet hetzelfde als de frequentie van allel a (' + a + '%), want ook de ' + y + ' heterozygote vlinders dragen allel a.', antwoordTekst:(2 * z) + '%' });
+    var welk = vraag, w = vraag === 'a' ? a : A;
+    return Object.assign(o, { vraag:'Wat is de frequentie van allel ' + welk + ' in deze groep, in procenten?', velden:[{ label:'frequentie van ' + welk, antwoord:w, eenheid:'%', tol:0.1 }],
+      uitleg:'50 vlinders hebben samen 100 allelen. Allel ' + welk + ': ' + (welk === 'a' ? y + ' (bij Aa) + 2 × ' + z + ' (bij aa) = ' + a : '2 × ' + x + ' (bij AA) + ' + y + ' (bij Aa) = ' + A) + ' van de 100 allelen, dus ' + w + '%.' + ' Samen zijn A en a altijd 100%.', antwoordTekst:w + '%' });
+  }
+
+  /* ---------- gedrag: aangeboren of aangeleerd, leervormen, stekelbaars, ethogram ---------- */
+  function aangeboren(){
+    return sorteer({ deel:'gedrag', sleutel:'ab', per:[2, 3], bakken:[
+      { naam:'aangeboren', k:['een baby zuigt aan een speen', 'een spin maakt zonder voorbeeld een web', 'een stekelbaars valt een rood model aan', 'een meeuwenkuiken pikt naar de rode vlek op de snavel', 'een pasgeboren baby grijpt je vinger vast'] },
+      { naam:'aangeleerd', k:['een hond gaat zitten als je "zit" zegt', 'een jonge chimpansee vist termieten zoals zijn moeder', 'kraaien negeren een vogelverschrikker na een paar weken', 'een kind leert fietsen', 'pimpelmezen openen melkflessen na het zien bij andere mezen'] }
+    ], vraag:'Is dit gedrag aangeboren of aangeleerd?', opdracht:'Sleep elk gedrag naar het goede vak.',
+      uitleg:'Aangeboren gedrag is er vanaf het begin, zonder voorbeeld of oefening. Aangeleerd gedrag ontstaat door ervaring: oefenen, nadoen, gewenning of conditionering.' });
+  }
+  function leervormen(){
+    return sorteer({ deel:'gedrag', sleutel:'lv', per:1, aantalBakken:kies([3, 4]), bakken:[
+      { naam:'inprenting', k:['eendjes volgen het eerste bewegende voorwerp dat ze zien', 'een lammetje dat met de fles is grootgebracht, loopt achter de boer aan'] },
+      { naam:'klassieke conditionering', k:['een hond kwijlt bij een bel die altijd voor het eten gaat', 'je mond wordt al waterig als je een citroen ziet'] },
+      { naam:'operante conditionering', k:['een rat drukt steeds vaker op een hendel die voer geeft', 'een hond gaat vaker zitten omdat hij er een snoepje voor krijgt'] },
+      { naam:'gewenning', k:['kraaien landen naast een vogelverschrikker', 'een slak trekt zich niet meer terug na tien keer zacht aanraken'] },
+      { naam:'imitatie', k:['jonge apen vissen termieten zoals hun moeder', 'pimpelmezen openen melkflessen na het zien bij andere mezen'] },
+      { naam:'inzicht', k:['een chimpansee stapelt kisten om bij bananen te komen', 'een raaf trekt een touwtje omhoog om het vlees eraan te pakken'] }
+    ], vraag:'Welke vorm van leren is dit?', opdracht:'Sleep elk voorbeeld naar de vorm van leren.',
+      uitleg:'Klassiek: een reflex wordt aan een nieuwe prikkel gekoppeld. Operant: gedrag wordt vaker vertoond doordat het beloond wordt. Inzicht: een oplossing bedenken zonder eerst te proberen.' });
+  }
+  var BALTS = [
+    'Een vrouwtje met een dikke buik vol eitjes zwemt het territorium in.',
+    'Het mannetje maakt een zigzagdans.',
+    'Het mannetje zwemt naar het nest en het vrouwtje volgt hem.',
+    'Het mannetje wijst met zijn kop de ingang van het nest aan.',
+    'Het vrouwtje zwemt het nest in en legt haar eitjes.',
+    'Het mannetje zwemt door het nest en bevrucht de eitjes.'
+  ];
+  function balts(){ return volgorde({ deel:'gedrag', sleutel:'balts', stappen:BALTS, n:kies([4, 5, 6]), vraag:'Het baltsgedrag van de stekelbaars is een vast gedragspatroon. Zet de stappen op volgorde.',
+    uitleg:'Elke stap is de sleutelprikkel voor de volgende stap van de partner. Daarom gaat het altijd in dezelfde volgorde: een gedragsketen.' }); }
+  var OBJECTIEF = [
+    { dier:'een kat die een hond ziet', g:'De kat legt de oren plat naar achteren en blaast met open bek.', f:['De kat is boos op de hond.', 'De kat wil de hond wegjagen.', 'De kat is bang en wil weg.'] },
+    { dier:'een hond als de baas thuiskomt', g:'De hond beweegt zijn staart snel heen en weer en springt tegen de baas op.', f:['De hond is blij dat de baas thuis is.', 'De hond wil aandacht.', 'De hond heeft de baas gemist.'] },
+    { dier:'een kip op het erf', g:'De kip krabt met haar poten in het zand en pikt daarna met haar snavel in de grond.', f:['De kip zoekt naar iets lekkers.', 'De kip heeft honger.', 'De kip verveelt zich.'] },
+    { dier:'een chimpansee', g:'De chimpansee trekt zijn lippen terug, zodat zijn tanden te zien zijn.', f:['De chimpansee lacht omdat hij blij is.', 'De chimpansee wil vrienden worden.', 'De chimpansee vindt het grappig.'] },
+    { dier:'een cavia', g:'De cavia staat stil met de kop omhoog en piept hoog en hard.', f:['De cavia vraagt om eten.', 'De cavia is blij.', 'De cavia mist zijn maatje.'] },
+    { dier:'een konijn', g:'Het konijn slaat met zijn achterpoten hard op de grond.', f:['Het konijn waarschuwt de andere konijnen.', 'Het konijn is boos.', 'Het konijn wil spelen.'] }
+  ];
+  function objectief(){
+    var i = tussen(0, OBJECTIEF.length - 1), x = OBJECTIEF[i];
+    return Object.assign(basis('gedrag'), { vorm:'meerkeuze', sleutel:'obj' + i,
+      vraag:'Leerlingen maken een ethogram van ' + x.dier + '. Welke beschrijving mag in het ethogram?',
+      beeld:sit('In een ethogram beschrijf je gedrag op een vaste, controleerbare manier.'),
+      opties:[x.g].concat(x.f), goed:0,
+      uitleg:'Alleen "' + x.g + '" beschrijft wat je ziet. De andere zinnen zijn interpretaties: wat het dier voelt of wil, kun je niet waarnemen. Een ander die hetzelfde ziet, kan daar iets anders van maken.', antwoordTekst:x.g });
+  }
+  var DIEREN = [
+    { naam:'een cavia', el:['eten', 'drinken', 'lopen', 'poetsen', 'stil liggen'] },
+    { naam:'een kip', el:['pikken', 'krabben in de grond', 'poetsen', 'stofbaden', 'stil zitten'] },
+    { naam:'een konijn', el:['eten', 'knagen', 'rennen', 'poetsen', 'liggen'] },
+    { naam:'een hamster', el:['eten', 'graven', 'in het rad lopen', 'poetsen', 'slapen'] }
+  ];
+  function verdeel(totaal, n){ var a = []; for (var i = 0; i < n; i++) a.push(1); for (var k = n; k < totaal; k++) a[tussen(0, n - 1)]++; return a; }
+  function ethogramTel(niv){
+    var di = tussen(0, DIEREN.length - 1), d = DIEREN[di], hv = niv === 'hv', tot = hv ? 50 : 20, telling = verdeel(tot, d.el.length);
+    var tab = '<table class="af-tab"><caption>' + (hv ? 'elke 30 seconden, 25 minuten lang' : 'elke minuut, 20 minuten lang') + '</caption><thead><tr><th>gedragselement</th><th class="n">aantal keer gezien</th></tr></thead><tbody>' +
+      d.el.map(function(e, i){ return '<tr><td>' + e + '</td><td class="n">' + telling[i] + '</td></tr>'; }).join('') + '<tr><th>totaal</th><th class="n">' + tot + '</th></tr></tbody></table>';
+    var beeld = '<div class="af-wrap">' + sit('Een leerling observeert ' + d.naam + '. ' + (hv ? 'Elke 30 seconden noteert ze wat het dier op dat moment doet, 25 minuten lang.' : 'Elke minuut noteert ze wat het dier op dat moment doet, 20 minuten lang.')) + tab + '</div>';
+    var o = Object.assign(basis('gedrag'), { vorm:'invul', beeld:beeld });
+    var i = tussen(0, d.el.length - 1), j = (i + tussen(1, d.el.length - 1)) % d.el.length, per = 100 / tot;
+    function q(t){ return '"' + t + '"'; }
+    function pc(x){ return String(Math.round(x * 10) / 10).replace('.', ','); }
+    if (hv && Math.random() < 0.5){
+      var som = telling[i] + telling[j];
+      return Object.assign(o, { sleutel:'et2' + di + telling.join('') + i + j, vraag:'Bij hoeveel procent van de waarnemingen zag ze ' + q(d.el[i]) + ' of ' + q(d.el[j]) + '?',
+        velden:[{ label:'samen', antwoord:som * per, eenheid:'%', tol:0.1 }],
+        uitleg:'Samen ' + telling[i] + ' + ' + telling[j] + ' = ' + som + ' van de ' + tot + ' waarnemingen. ' + som + ' : ' + tot + ' × 100 = ' + pc(som * per) + '%.', antwoordTekst:pc(som * per) + '%' });
+    }
+    if (hv && Math.random() < 0.5) return Object.assign(o, { sleutel:'etm' + di + telling.join('') + i, vraag:'Hoeveel minuten besteedde het dier ongeveer aan ' + q(d.el[i]) + '? Elke waarneming telt voor 30 seconden.',
+      velden:[{ label:'tijd', antwoord:telling[i] / 2, eenheid:'minuten', tol:0.01 }],
+      uitleg:q(d.el[i]) + ' is ' + telling[i] + ' keer gezien. Elke waarneming staat voor een halve minuut: ' + telling[i] + ' × 0,5 = ' + pc(telling[i] / 2) + ' minuten.', antwoordTekst:pc(telling[i] / 2) + ' minuten' });
+    return Object.assign(o, { sleutel:'et' + di + telling.join('') + i, vraag:'Bij hoeveel procent van de waarnemingen zag ze ' + q(d.el[i]) + '?',
+      velden:[{ label:d.el[i], antwoord:telling[i] * per, eenheid:'%', tol:0.1 }],
+      uitleg:q(d.el[i]) + ' is ' + telling[i] + ' van de ' + tot + ' keer gezien. ' + telling[i] + ' : ' + tot + ' × 100 = ' + pc(telling[i] * per) + '%.', antwoordTekst:pc(telling[i] * per) + '%' });
+  }
+
+  var GEN = {
+    verdediging:{ bb:[plekken], kgt:[plekken, ontsteking], hv:[aspecifiek, ontsteking] },
+    bloed:{ bb:[bloeddelen], kgt:[bloeddelen, reactie], hv:[specifiek, cellen, bloedgroep, bloedgroep] },
+    immuniteit:{ bb:[antibioticaHelpt], kgt:[grafiek, grafiek, groepen, actiefPassief, vaccinStappen], hv:[grafiek, grafiek, vierVormen, resistentie] },
+    evolutie:{ kgt:[selectieStappen, erfelijk, stamboom], hv:[stamboom, allelen, allelen, soortvorming] },
+    gedrag:{ kgt:[aangeboren, balts, objectief, ethogramTel], hv:[leervormen, balts, objectief, ethogramTel] }
+  };
+  /* hoe vaak een opgave uit een generator komt: meer bij veel generatoren */
+  var GENKANS = { bb:0.25, kgt:0.4, hv:0.4 };
+
+  function uitLijst(deel, niv, i){
+    /* de situatie staat in het beeld; een verborgen kopie in de vraag zorgt dat hij ook in de lijst met missers op het eindscherm staat */
+    var it = LIJST[deel][niv][i], o = Object.assign(basis(deel), { sleutel:deel + '-' + niv + '-' + i, vraag:(it.s ? '<span class="af-mis">' + kaal(it.s) + ' </span>' : '') + it.v, beeld:it.s ? sit(it.s) : '', uitleg:it.u });
+    if (it.t === 'm') return Object.assign(o, { vorm:'meerkeuze', opties:it.o, goed:0, antwoordTekst:kaal(it.o[0]) });
+    return Object.assign(o, { vorm:'invul', velden:[{ label:it.l || 'je antwoord', antwoord:it.a, type:'tekst', breed:true, toon:it.a[0] }], antwoordTekst:it.a[0] });
+  }
+  function maakOpgave(keuze){
+    var niv = keuze.niveau || 'kgt', deel = keuze.soort === 'alles' || !NAAM[keuze.soort] ? kies(niv === 'bb' ? BB : ALLE) : keuze.soort;
+    /* evolutie en gedrag zijn geen stof voor vmbo-bb: dan de opgaven van kgt */
+    if (niv === 'bb' && BB.indexOf(deel) < 0) niv = 'kgt';
+    var gens = GEN[deel][niv] || [], o;
+    if (gens.length && Math.random() < GENKANS[niv]) o = kies(gens)(niv);
+    else o = uitLijst(deel, niv, Math.floor(Math.random() * LIJST[deel][niv].length));
+    var oud = o.na;
+    o.na = function(vak){ document.body.classList.toggle('af-stap', !!o.stapLijst); if (oud) oud(vak); };
+    return o;
+  }
+
+  VAKSPEL.maak({
+    id:'afweer', naam:'Afweer en evolutie', vak:'bio', kleur:'#a8394a',
+    hand:'je lichaam onthoudt elke indringer',
+    lead:'Een schaafwond, een griepprik, een kuur antibiotica, de peper-en-zoutvlinder en een stekelbaars met een rode buik. Je oefent hoe je lichaam zich verdedigt, van je huid tot je geheugencellen, hoe vaccinaties en antibiotica werken, hoe soorten veranderen door natuurlijke selectie, en hoe je gedrag van dieren beschrijft en verklaart. Met grafieken, stambomen en tabellen zoals op het examen.',
+    leerdoel:'Je leert hoe je lichaam zich beschermt tegen ziekteverwekkers, hoe je immuun wordt, hoe soorten door natuurlijke selectie veranderen en hoe je gedrag objectief beschrijft en verklaart.',
+    hoe:[
+      { kop:'Antigeen of antistof', tekst:'Een <b>antigeen</b> zit op de indringer. Een <b>antistof</b> maak je zelf, en die past maar op één antigeen. Geheugencellen onthouden het antigeen: de tweede keer reageer je sneller en sterker.' },
+      { kop:'Selectie kiest, mutatie maakt', tekst:'Nieuwe erfelijke eigenschappen ontstaan door <b>toeval</b> (mutatie). De omgeving bepaalt wie meer nakomelingen krijgt. Een dier verandert niet zelf omdat het nodig is.' },
+      { kop:'Vijf onderdelen', tekst:'Eerste verdediging, afweer in je bloed, immuniteit, evolutie en gedrag. Kies, sleep, lees een grafiek af of vul een begrip in. Twintig opgaven per ronde, elk met uitleg.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'De basis: hoe je huid, slijm en maagzuur je beschermen, wat je bloed doet, en waarom inenten en antibiotica belangrijk zijn.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Examenstof gl en tl: antigenen en antistoffen, actieve en passieve immuniteit, een grafiek van antistoffen, evolutie en gedrag.' },
+        { id:'hv', naam:'havo en vwo', uit:'Examenniveau: aspecifieke en specifieke afweer, B- en T-cellen, bloedgroepen en allergie, selectie, drift en soortvorming, en gedrag.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar', uit:'Op vmbo-bb alleen de eerste verdediging, je bloed en immuniteit.' },
+        { id:'verdediging', naam:'eerste verdediging', uit:'Huid, slijm en trilhaartjes, maagzuur, een wondje en een ontsteking.' },
+        { id:'bloed', naam:'afweer in je bloed', uit:'Witte bloedcellen, antigenen en antistoffen, geheugencellen; op havo en vwo ook B- en T-cellen en bloedgroepen.' },
+        { id:'immuniteit', naam:'immuniteit', uit:'Vaccinatie, actief en passief, groepsimmuniteit, antibiotica en resistentie, en een grafiek van antistoffen.' },
+        { id:'evolutie', naam:'evolutie', uit:'Variatie, natuurlijke selectie, soortvorming en stambomen. Geen stof voor vmbo-bb: daar krijg je de opgaven van kgt.' },
+        { id:'gedrag', naam:'gedrag', uit:'Aangeboren en aangeleerd gedrag, prikkels en het ethogram. Geen stof voor vmbo-bb: daar krijg je de opgaven van kgt.' } ] }
+    ],
+    aantal:10, minuten:8,
+    maak:function(keuze){ return maakOpgave(keuze); },
+    uitleg:{ doel:'Afweer, immuniteit, evolutie en gedrag oefenen met situaties, grafieken en stambomen zoals op het examen biologie.', tijd:'twintig opgaven per ronde, of kies 10 of 30', bediening:'Kies het antwoord dat klopt (of druk op 1 tot 4). Bij slepen zet je kaartjes in het goede vak of op volgorde; op een telefoon tik je een kaartje en dan het vak. Bij een begrip of getal typ je het antwoord en druk je op Nakijken.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>
