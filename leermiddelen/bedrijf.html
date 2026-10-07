@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Werk, bedrijf en wereld, versie 1.0: op vakspel.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Werk, bedrijf en wereld &middot; meneer Greidanus</title>
+<meta name="description" content="Examenstof economie vmbo: een loonstrook lezen, omzet, kosten en winst, productie en arbeidsproductiviteit, de arbeidsmarkt, rekenen met de wisselkoers en arm en rijk in de wereld.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Werk, bedrijf en wereld">
+<meta property="og:description" content="Loonstrook, kosten en winst, productie, de arbeidsmarkt, de wisselkoers en arm en rijk: rekenen met bronnen zoals op het examen.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/bedrijf.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M50.6 8.4 C74.2 9.1 90.8 26.3 90.1 49.6 C89.4 73.9 73.2 92.4 49.1 91.6 C25.3 90.8 8.6 72.1 9.6 48.2 C10.6 24.9 27.4 7.7 50.6 8.4Z' fill='%231d6f5c'/><g transform='translate(50 51) scale(2.2) translate(-12 -12)' fill='none' stroke='%23ffffff' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'><path d='M3.5 8h17v11.5h-17z'/><path d='M9 8V5.5h6V8'/><path d='M3.5 13h17'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+/* De bronnen: een loonstrook, een tabel en een bericht. Alles op de kleurtokens, zodat het in de donkere stand meekleurt.
+   Smal genoeg voor een telefoon van 375 breed: twee kolommen, kleine binnenruimte. */
+.beeld table.strook,.beeld table.bron{border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:.95rem;background:var(--kaart2);border-radius:12px;overflow:hidden;width:min(100%,360px)}
+.beeld table.strook caption,.beeld table.bron caption{caption-side:top;text-align:left;font-weight:700;padding:0 2px 6px;color:var(--ink)}
+.beeld table.strook td,.beeld table.bron td,.beeld table.bron th{border:0;border-bottom:1px solid var(--rand2);padding:7px 10px;min-width:0;text-align:left;vertical-align:top}
+.beeld table.strook td.b,.beeld table.bron td.b,.beeld table.bron th.b{text-align:right;white-space:nowrap}
+.beeld table.bron th{background:var(--kaart-aan);font-weight:700;font-size:.88rem}
+.beeld table.strook tr.som td{font-weight:700;border-top:2px solid var(--ink);border-bottom:0}
+.beeld table.strook tr:last-child td,.beeld table.bron tr:last-child td{border-bottom:0}
+.beeld .open{color:var(--nadruk);font-weight:700}
+.beeld .bronbij{font-size:.8rem;color:var(--muted);margin-top:6px;text-align:left;width:min(100%,360px)}
+.bericht{width:min(100%,420px);background:var(--kaart2);border-left:5px solid var(--spelkleur);border-radius:10px;padding:12px 14px;text-align:left;font-size:.95rem;line-height:1.45}
+.bericht b{display:block;margin-bottom:4px;color:var(--ink)}
+.bericht p{margin:0}
+.koers{display:inline-block;background:var(--kaart2);border:2px solid var(--rand2);border-radius:12px;padding:8px 14px;font-weight:700;font-variant-numeric:tabular-nums}
+.koers small{display:block;font-weight:600;color:var(--muted);font-size:.78rem}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon;
+  var NIV = { bb:1, kgt:2, hv:3 };
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  function tussen(a, b){ return a + Math.floor(Math.random() * (b - a + 1)); }
+  function rond(x, d){ var f = Math.pow(10, d === undefined ? 2 : d); return Math.round(x * f + (x >= 0 ? 1e-9 : -1e-9)) / f; }
+  /* een getal tussen lo en hi in stappen van st */
+  function stap(lo, hi, st){ return rond(lo + st * tussen(0, Math.round((hi - lo) / st)), 2); }
+  /* Nederlands geschreven: punt voor duizendtallen, komma voor decimalen */
+  function nl(x, dec){
+    var neg = x < 0, s = Math.abs(x).toFixed(dec === undefined ? 0 : dec), p = s.split('.');
+    return (neg ? '−' : '') + p[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + (p[1] ? ',' + p[1] : '');
+  }
+  function heel(x){ return Math.abs(Math.round(x * 100)) % 100 === 0; }
+  /* € 1.850 bij hele bedragen, € 12,50 met centen; geld2 altijd met centen */
+  function geld(x){ return '€ ' + nl(x, heel(x) ? 0 : 2); }
+  function geld2(x){ return '€ ' + nl(x, 2); }
+  function pct(x, d){ return nl(x, d === undefined ? 1 : d) + '%'; }
+  function hoofd(t){ t = String(t); return t.charAt(0).toUpperCase() + t.slice(1); }
+  /* het goede antwoord eerst, daarna drie andere die echt anders zijn */
+  function opties4(goed, fout){ var uit = [goed]; fout.forEach(function(f){ if (uit.length < 4 && uit.indexOf(f) < 0) uit.push(f); }); return uit; }
+
+  /* invulvelden voor bedragen, procenten en aantallen */
+  function bedrag(label, x, tol){ return { label:label, voor:'€', antwoord:rond(x, 2), tol:tol || 0.005, toon:geld2(x) }; }
+  function procent(label, x){ return { label:label, antwoord:rond(x, 1), tol:0.05, eenheid:'%', toon:pct(x) }; }
+  function aantal(label, x, eenheid){ return { label:label, antwoord:x, tol:0.5, eenheid:eenheid || '', toon:nl(x) + (eenheid ? ' ' + eenheid : '') }; }
+
+  /* ---------- de bronnen ---------- */
+  /* rijen: [label, bedrag, 'som' of 'open'] */
+  function strook(titel, rijen, onder){
+    return '<table class="strook"><caption>' + titel + '</caption>' + rijen.map(function(r){
+      return '<tr' + (r[2] === 'som' ? ' class="som"' : '') + '><td>' + r[0] + '</td><td class="b' + (r[1] === '?' ? ' open' : '') + '">' + r[1] + '</td></tr>';
+    }).join('') + '</table>' + (onder ? '<p class="bronbij">' + onder + '</p>' : '');
+  }
+  function tabel(titel, kop, rijen, onder){
+    return '<table class="bron"><caption>' + titel + '</caption><tr>' + kop.map(function(k, i){ return '<th scope="col"' + (i ? ' class="b"' : '') + '>' + k + '</th>'; }).join('') + '</tr>' +
+      rijen.map(function(r){ return '<tr>' + r.map(function(c, i){ return '<td' + (i ? ' class="b' + (c === '?' ? ' open' : '') + '"' : '') + '>' + c + '</td>'; }).join('') + '</tr>'; }).join('') + '</table>' +
+      (onder ? '<p class="bronbij">' + onder + '</p>' : '');
+  }
+  function bericht(kop, tekst){ return '<div class="bericht"><b>' + kop + '</b><p>' + tekst + '</p></div>'; }
+
+  /* een meerkeuzevraag uit een lijst: { v:vraag, g:goed (of een lijst om uit te kiezen), f:[fout…], u:uitleg, n:vanaf niveau, b:bron } */
+  function uitLijst(lijst, niv, deel, naam, pre){
+    var l = lijst.filter(function(x){ return (x.n || 1) <= NIV[niv]; }), i = Math.floor(Math.random() * l.length), x = l[i];
+    var g = Array.isArray(x.g) ? kies(x.g) : x.g, fout = H(x.f).slice(0, 3), opties = [g].concat(fout);
+    return { onderdeel:'bedrijf: ' + deel, onderdeelNaam:naam, vorm:'meerkeuze', sleutel:pre + lijst.indexOf(x) + g,
+      vraag:x.v, opdracht:x.o || '', beeld:x.b || '', opties:opties, goed:0,
+      uitleg:x.u.replace(/#g/g, g), antwoordTekst:g };
+  }
+  /* sleepopgave: kaarten in vakken */
+  function sleep(deel, naam, vraag, opdracht, vakken, kaarten, uitleg, pre){
+    var ks = kaarten.map(function(k, i){ return { id:'k' + i, tekst:k.t, vak:k.v }; });
+    return { onderdeel:'bedrijf: ' + deel, onderdeelNaam:naam, vorm:'sleep', sleutel:pre + kaarten.map(function(k){ return k.t.slice(0, 12); }).sort().join('|'),
+      vraag:vraag, opdracht:opdracht,
+      kaarten:ks.map(function(k){ return { id:k.id, tekst:k.tekst }; }),
+      vakken:vakken.map(function(v){ return { id:v.id, naam:v.naam, uit:v.uit, hoort:ks.filter(function(k){ return k.vak === v.id; }).map(function(k){ return k.id; }) }; }),
+      uitleg:uitleg || vakken.map(function(v){ var in_ = ks.filter(function(k){ return k.vak === v.id; }).map(function(k){ return k.tekst; }); return in_.length ? '<b>' + hoofd(v.naam) + '</b>: ' + in_.map(function(t){ return t.replace(/\.$/, ''); }).join('; ') + '.' : ''; }).filter(Boolean).join(' '),
+      antwoordTekst:vakken.map(function(v){ return v.naam + ': ' + ks.filter(function(k){ return k.vak === v.id; }).map(function(k){ return k.tekst; }).join(', '); }).join('; ') };
+  }
+
+  var NAMEN = ['Sanne', 'Daan', 'Noor', 'Mohammed', 'Lotte', 'Sem', 'Aylin', 'Jesse', 'Fenna', 'Ilias', 'Mila', 'Bram', 'Yara', 'Thijs', 'Esra', 'Luuk', 'Nina', 'Kevin'];
+  var BEROEP = ['als monteur', 'in de thuiszorg', 'als kok', 'bij een bouwbedrijf', 'als buschauffeur', 'in een distributiecentrum', 'als kapper', 'bij de gemeente', 'in een elektronicawinkel', 'als doktersassistent'];
+  var BIJBAAN = ['in de supermarkt', 'bij de bakker', 'in een tuincentrum', 'bij de snackbar', 'in de bioscoop', 'in de afwas van een restaurant', 'bij een fietsenwinkel', 'als vakkenvuller'];
+  var MAANDEN = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
+
+  /* =====================================================================
+     1. Werk en loon
+     ===================================================================== */
+  var LOON = 'werk en loon';
+  function loonstrook(niv){
+    var n = kies(NAMEN), werk = kies(BEROEP), mnd = kies(MAANDEN);
+    if (niv === 'bb'){
+      var bruto = tussen(160, 280) * 10, hef = Math.round(bruto * tussen(8, 14) / 100), netto = bruto - hef;
+      if (Math.random() < .6){
+        return { onderdeel:'bedrijf: loon', onderdeelNaam:LOON, vorm:'meerkeuze', sleutel:'lsn' + bruto + '-' + hef,
+          vraag:n + ' werkt ' + werk + '. Dit is de loonstrook over ' + mnd + '. Hoeveel geld komt er op de bankrekening van ' + n + '?',
+          opdracht:'Op je rekening komt het nettoloon: het brutoloon min de inhoudingen.',
+          beeld:strook('Loonstrook ' + mnd, [['Brutoloon', geld(bruto)], ['Loonheffing', '− ' + geld(hef)], ['Nettoloon', '?', 'som']]),
+          opties:opties4(geld(netto), [geld(bruto), geld(bruto + hef), geld(hef)]), goed:0,
+          uitleg:'Het nettoloon is ' + geld(bruto) + ' − ' + geld(hef) + ' = ' + geld(netto) + '. Het brutoloon is wat je verdient voordat er iets af gaat; dat krijg je dus niet helemaal op je rekening.', antwoordTekst:geld(netto) };
+      }
+      return { onderdeel:'bedrijf: loon', onderdeelNaam:LOON, vorm:'meerkeuze', sleutel:'lsh' + bruto + '-' + hef,
+        vraag:'Op de loonstrook van ' + n + ' is een bedrag weggevallen. Hoeveel loonheffing heeft de werkgever ingehouden?',
+        opdracht:'Brutoloon min loonheffing is nettoloon. Wat moet er dus tussen?',
+        beeld:strook('Loonstrook ' + mnd, [['Brutoloon', geld(bruto)], ['Loonheffing', '?'], ['Nettoloon', geld(netto), 'som']]),
+        opties:opties4(geld(hef), [geld(netto), geld(bruto + netto), geld(bruto)]), goed:0,
+        uitleg:'De loonheffing is het verschil tussen bruto en netto: ' + geld(bruto) + ' − ' + geld(netto) + ' = ' + geld(hef) + '. De werkgever houdt dat in en betaalt het aan de Belastingdienst.', antwoordTekst:geld(hef) };
+    }
+    var u = stap(15, 22, 0.05), h = kies([96, 112, 120, 128, 136, 144, 152, 160]), b = rond(u * h, 2);
+    var pens = rond(b * kies([0.04, 0.05, 0.06]), 2), heff = rond(b * tussen(9, 15) / 100 + tussen(0, 99) / 100, 2), net = rond(b - pens - heff, 2);
+    var rijen = [['Brutoloon', geld2(b)], ['Pensioenpremie', '− ' + geld2(pens)], ['Loonheffing', '− ' + geld2(heff)], ['Nettoloon', geld2(net), 'som']];
+    if (niv === 'kgt'){
+      if (Math.random() < .5){
+        return { onderdeel:'bedrijf: loon', onderdeelNaam:LOON, vorm:'invul', sleutel:'lsk' + u + '-' + h,
+          vraag:n + ' werkt ' + werk + '. Op de loonstrook over ' + mnd + ' ontbreken twee bedragen. Bereken het brutoloon en het nettoloon.',
+          opdracht:'Brutoloon = uurloon × uren. Nettoloon = brutoloon min alle inhoudingen.',
+          beeld:strook('Loonstrook ' + mnd, [['Uurloon', geld2(u)], ['Gewerkte uren', String(h)], ['Brutoloon', '?'], ['Pensioenpremie', '− ' + geld2(pens)], ['Loonheffing', '− ' + geld2(heff)], ['Nettoloon', '?', 'som']]),
+          velden:[bedrag('brutoloon', b), bedrag('nettoloon', net)],
+          uitleg:'Brutoloon: ' + h + ' × ' + geld2(u) + ' = ' + geld2(b) + '. Nettoloon: ' + geld2(b) + ' − ' + geld2(pens) + ' − ' + geld2(heff) + ' = ' + geld2(net) + '. Vergeet niet beide inhoudingen eraf te halen.', antwoordTekst:geld2(b) + ' en ' + geld2(net) };
+      }
+      return { onderdeel:'bedrijf: loon', onderdeelNaam:LOON, vorm:'invul', sleutel:'lsi' + b + '-' + pens,
+        vraag:'Hoeveel is er op de loonstrook van ' + n + ' in totaal <b>ingehouden</b>?',
+        opdracht:'Tel alle inhoudingen op. Controleer: brutoloon min inhoudingen moet het nettoloon zijn.',
+        beeld:strook('Loonstrook ' + mnd, rijen),
+        velden:[bedrag('ingehouden', pens + heff)],
+        uitleg:geld2(pens) + ' + ' + geld2(heff) + ' = ' + geld2(pens + heff) + '. Controle: ' + geld2(b) + ' − ' + geld2(pens + heff) + ' = ' + geld2(net) + ', het nettoloon.', antwoordTekst:geld2(pens + heff) };
+    }
+    var w = kies(['pct', 'cao', 'vak']);
+    if (w === 'pct'){
+      var p = heff / b * 100;
+      return { onderdeel:'bedrijf: loon', onderdeelNaam:LOON, vorm:'invul', sleutel:'lsp' + b + '-' + heff,
+        vraag:'Hoeveel procent van het brutoloon van ' + n + ' gaat naar de <b>loonheffing</b>?',
+        opdracht:'Deel de loonheffing door het brutoloon en doe keer 100. Rond af op één decimaal.',
+        beeld:strook('Loonstrook ' + mnd, rijen),
+        velden:[procent('loonheffing', p)],
+        uitleg:geld2(heff) + ' / ' + geld2(b) + ' × 100 = ' + pct(p) + '. Deel door het brutoloon, niet door het nettoloon: het percentage gaat over het hele loon.', antwoordTekst:pct(p) };
+    }
+    if (w === 'cao'){
+      var x = kies([2, 2.5, 3, 3.5, 4, 4.5, 5]), nb = b * (1 + x / 100);
+      return { onderdeel:'bedrijf: loon', onderdeelNaam:LOON, vorm:'invul', sleutel:'lsc' + b + '-' + x,
+        vraag:'In de nieuwe cao staat dat alle lonen per 1 januari met <b>' + nl(x, x % 1 ? 1 : 0) + '%</b> stijgen. Wat wordt het brutoloon per maand van ' + n + '?',
+        opdracht:'Gebruik het brutoloon van de loonstrook. Rond af op centen.',
+        beeld:strook('Loonstrook ' + mnd, rijen),
+        velden:[bedrag('nieuw brutoloon', nb, 0.011)],
+        uitleg:geld2(b) + ' × ' + nl(1 + x / 100, 3).replace(/0+$/, '') + ' = ' + geld2(nb) + '. Een cao is een afspraak tussen werkgevers en vakbonden; de loonsverhoging gaat over het brutoloon. Het nettoloon stijgt niet precies even hard, want de inhoudingen veranderen mee.', antwoordTekst:geld2(nb) };
+    }
+    var vm = b * 0.08, vj = b * 12 * 0.08;
+    return { onderdeel:'bedrijf: loon', onderdeelNaam:LOON, vorm:'invul', sleutel:'lsv' + b,
+      vraag:n + ' bouwt elke maand vakantiegeld op: 8% van het brutoloon. Hoeveel is dat deze maand, en hoeveel over een heel jaar met hetzelfde loon?',
+      opdracht:'Reken met het brutoloon, niet met het nettoloon. Rond af op centen.',
+      beeld:strook('Loonstrook ' + mnd, rijen),
+      velden:[bedrag('deze maand', vm, 0.011), bedrag('in een jaar', vj, 0.07)],
+      uitleg:'8% van ' + geld2(b) + ' = ' + geld2(vm) + ' per maand. Over twaalf maanden: ' + geld2(vm) + ' × 12 = ' + geld2(vj) + '. Vakantiegeld is minstens 8% van je brutoloon; de meeste mensen krijgen het in mei of juni.', antwoordTekst:geld2(vm) + ' en ' + geld2(vj) };
+  }
+
+  function bijbaan(niv){
+    var plek = kies(BIJBAAN);
+    if (niv === 'bb'){
+      var u = kies([6, 6.5, 7, 7.5, 8, 8.5, 9]), h = tussen(3, 12), w = u * h;
+      if (Math.random() < .5) return { onderdeel:'bedrijf: loon', onderdeelNaam:LOON, vorm:'invul', sleutel:'bbb' + u + '-' + h,
+        vraag:'Je bent 16 en werkt ' + plek + '. Je verdient <b>' + geld2(u) + '</b> bruto per uur. Deze week werk je <b>' + h + ' uur</b>. Hoeveel verdien je deze week bruto?',
+        opdracht:'Bruto weekloon = uurloon × aantal uren.', velden:[bedrag('bruto deze week', w)],
+        uitleg:h + ' × ' + geld2(u) + ' = ' + geld2(w) + '. Dit is je brutoloon; als er loonheffing wordt ingehouden, krijg je netto iets minder.', antwoordTekst:geld2(w) };
+      return { onderdeel:'bedrijf: loon', onderdeelNaam:LOON, vorm:'meerkeuze', sleutel:'bbb' + u + '-' + h,
+        vraag:'Je bent 16 en werkt ' + plek + '. Je verdient <b>' + geld2(u) + '</b> bruto per uur. Deze week werk je <b>' + h + ' uur</b>. Hoeveel verdien je deze week bruto?',
+        opdracht:'Bruto weekloon = uurloon × aantal uren.',
+        opties:opties4(geld2(w), [geld2(u * (h + 1)), geld2(u * (h - 1)), geld2(u + h)]), goed:0,
+        uitleg:h + ' × ' + geld2(u) + ' = ' + geld2(w) + '. Dit is je brutoloon; als er loonheffing wordt ingehouden, krijg je netto iets minder.', antwoordTekst:geld2(w) };
+    }
+    var dagen = H(['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag']).slice(0, niv === 'kgt' ? 3 : 2);
+    dagen.sort(function(a, b){ return ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag'].indexOf(a) - ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag'].indexOf(b); });
+    var uren = dagen.map(function(){ return kies([2.5, 3, 3.5, 4, 4.5, 5, 6, 6.5]); }), uu = stap(6, 9, 0.05), som = uren.reduce(function(s, x){ return s + x; }, 0);
+    var rijen = dagen.map(function(d, i){ return [d, nl(uren[i], uren[i] % 1 ? 1 : 0) + ' uur']; });
+    if (niv === 'kgt'){
+      var tot = uu * som;
+      return { onderdeel:'bedrijf: loon', onderdeelNaam:LOON, vorm:'invul', sleutel:'bbk' + uu + '-' + uren.join('-'),
+        vraag:'Je werkt ' + plek + ' voor <b>' + geld2(uu) + '</b> bruto per uur. Hoeveel verdien je deze week bruto?',
+        opdracht:'Tel eerst de uren op en doe dan keer het uurloon.',
+        beeld:tabel('Jouw rooster deze week', ['dag', 'uren'], rijen),
+        velden:[bedrag('bruto deze week', tot)],
+        uitleg:'Uren: ' + uren.map(function(x){ return nl(x, x % 1 ? 1 : 0); }).join(' + ') + ' = ' + nl(som, som % 1 ? 1 : 0) + ' uur. ' + nl(som, som % 1 ? 1 : 0) + ' × ' + geld2(uu) + ' = ' + geld2(tot) + '.', antwoordTekst:geld2(tot) };
+    }
+    var hz = kies([3, 4, 5, 6]), totz = uu * som + uu * 1.5 * hz;
+    rijen.push(['zondag', hz + ' uur']);
+    return { onderdeel:'bedrijf: loon', onderdeelNaam:LOON, vorm:'invul', sleutel:'bbh' + uu + '-' + uren.join('-') + '-' + hz,
+      vraag:'Je werkt ' + plek + ' voor <b>' + geld2(uu) + '</b> bruto per uur. Volgens de cao krijg je op zondag <b>50% toeslag</b> op je uurloon. Hoeveel verdien je deze week bruto?',
+      opdracht:'Reken de gewone uren en de zondaguren apart uit. Rond af op centen.',
+      beeld:tabel('Jouw rooster deze week', ['dag', 'uren'], rijen),
+      velden:[bedrag('bruto deze week', totz, 0.011)],
+      uitleg:'Gewone uren: ' + nl(som, som % 1 ? 1 : 0) + ' × ' + geld2(uu) + ' = ' + geld2(uu * som) + '. Zondag: ' + hz + ' × ' + geld2(uu) + ' × 1,5 = ' + geld2(uu * 1.5 * hz) + '. Samen ' + geld2(totz) + '. Met 50% toeslag krijg je anderhalf keer je uurloon, niet het uurloon plus 50 cent.', antwoordTekst:geld2(totz) };
+  }
+
+  function vakantiegeld(niv){
+    var n = kies(NAMEN);
+    if (niv === 'bb'){
+      var jaar = tussen(16, 70) * 500, v = jaar * 0.08;
+      return { onderdeel:'bedrijf: loon', onderdeelNaam:LOON, vorm:'meerkeuze', sleutel:'vgb' + jaar,
+        vraag:n + ' verdient in een jaar <b>' + geld(jaar) + '</b> bruto. Vakantiegeld is minstens <b>8%</b> van je brutoloon. Hoeveel vakantiegeld krijgt ' + n + ' minstens?',
+        opdracht:'8% is 8 per 100. Reken eerst 1% uit (delen door 100) en doe dan keer 8.',
+        opties:opties4(geld(v), [geld(Math.round(jaar / 12)), geld(jaar * 0.008), geld(jaar * 0.8)]), goed:0,
+        uitleg:'1% van ' + geld(jaar) + ' is ' + geld(jaar / 100) + '. Keer 8 is ' + geld(v) + '. De meeste mensen krijgen hun vakantiegeld in mei of juni.', antwoordTekst:geld(v) };
+    }
+    if (niv === 'kgt'){
+      var m = rond(tussen(140000, 320000) / 100, 2), j = m * 12, vg = j * 0.08;
+      return { onderdeel:'bedrijf: loon', onderdeelNaam:LOON, vorm:'invul', sleutel:'vgk' + m,
+        vraag:n + ' verdient elke maand <b>' + geld2(m) + '</b> bruto. Hoeveel is dat in een jaar, en hoeveel vakantiegeld krijgt ' + n + ' dan minstens?',
+        opdracht:'Vakantiegeld is minstens 8% van het brutoloon over een jaar. Rond af op centen.',
+        velden:[bedrag('brutoloon per jaar', j), bedrag('vakantiegeld', vg, 0.011)],
+        uitleg:'Per jaar: 12 × ' + geld2(m) + ' = ' + geld2(j) + '. Vakantiegeld: 0,08 × ' + geld2(j) + ' = ' + geld2(vg) + '. Het gaat om het brutoloon, niet om wat je netto krijgt.', antwoordTekst:geld2(j) + ' en ' + geld2(vg) };
+    }
+    if (Math.random() < .5){
+      var vv = tussen(80, 260) * 8, jj = vv / 0.08;
+      return { onderdeel:'bedrijf: loon', onderdeelNaam:LOON, vorm:'invul', sleutel:'vgh' + vv,
+        vraag:n + ' kreeg in mei <b>' + geld(vv) + '</b> vakantiegeld. Dat was precies 8% van het brutoloon over het afgelopen jaar. Hoeveel was dat brutojaarloon?',
+        opdracht:'8% hoort bij ' + geld(vv) + '. Reken terug naar 100%.',
+        velden:[bedrag('brutojaarloon', jj)],
+        uitleg:geld(vv) + ' / 8 = ' + geld2(vv / 8) + ' is 1%. Keer 100 is ' + geld(jj) + '. Je kunt ook in één keer delen door 0,08.', antwoordTekst:geld(jj) };
+    }
+    var mm = rond(tussen(150000, 300000) / 100, 2), mnd = kies([3, 4, 5, 7, 8]), opg = mm * mnd * 0.08;
+    var begin = MAANDEN[(4 - mnd + 12 + 1) % 12];
+    return { onderdeel:'bedrijf: loon', onderdeelNaam:LOON, vorm:'invul', sleutel:'vgd' + mm + '-' + mnd,
+      vraag:n + ' werkt sinds 1 ' + begin + ' en verdient <b>' + geld2(mm) + '</b> bruto per maand. In juni betaalt de werkgever het vakantiegeld uit over de maanden tot en met mei: dat zijn er <b>' + mnd + '</b>. Hoeveel vakantiegeld krijgt ' + n + '?',
+      opdracht:'Vakantiegeld is 8% van het brutoloon over de maanden dat je gewerkt hebt. Rond af op centen.',
+      velden:[bedrag('vakantiegeld', opg, 0.011)],
+      uitleg:mnd + ' × ' + geld2(mm) + ' = ' + geld2(mm * mnd) + '. Daarvan 8%: ' + geld2(opg) + '. Wie maar een deel van het jaar werkt, krijgt ook maar over dat deel vakantiegeld.', antwoordTekst:geld2(opg) };
+  }
+
+  /* het wettelijk minimumuurloon per 1 juli 2026 (rijksoverheid.nl), bruto */
+  var MINLOON = [[16, 5.17], [17, 5.92], [18, 7.50], [19, 8.99], [20, 11.99], [21, 14.99]];
+  function minBij(a){ return MINLOON[Math.min(a, 21) - 16][1]; }
+  function minTabel(){ return tabel('Wettelijk minimumloon per uur, bruto', ['leeftijd', 'per uur'], MINLOON.map(function(r){ return [r[0] === 21 ? '21 jaar en ouder' : r[0] + ' jaar', geld2(r[1])]; }), 'Bron: Rijksoverheid, bedragen vanaf 1 juli 2026.'); }
+  function minimumloon(niv){
+    var n = kies(NAMEN);
+    if (niv === 'bb'){
+      var a = tussen(16, 24), m = minBij(a), boven = Math.random() < .5, w = boven ? rond(m + stap(0.1, 2, 0.05), 2) : rond(m - stap(0.05, 1, 0.05), 2);
+      var ops = ['Ja, het is minstens het minimumloon voor die leeftijd', 'Nee, het is minder dan het minimumloon voor die leeftijd', 'Ja, als ' + n + ' ermee akkoord gaat, mag het altijd', 'Nee, iemand van die leeftijd mag geen betaald werk doen'];
+      return { onderdeel:'bedrijf: loon', onderdeelNaam:LOON, vorm:'meerkeuze', vasteVolgorde:true, sleutel:'mlb' + a + '-' + w,
+        vraag:n + ' is ' + a + ' jaar en krijgt <b>' + geld2(w) + '</b> bruto per uur. Mag dat?', opdracht:'Zoek de leeftijd op in de tabel.', beeld:minTabel(),
+        opties:ops, goed:boven ? 0 : 1,
+        uitleg:'Voor ' + (a >= 21 ? '21 jaar en ouder' : a + ' jaar') + ' is het minimumloon ' + geld2(m) + ' per uur. ' + geld2(w) + ' is ' + (boven ? 'meer, dus het mag.' : 'minder, dus het mag niet.') + ' Het minimumloon staat in de wet: ook als de werknemer akkoord gaat, mag een werkgever niet minder betalen.', antwoordTekst:ops[boven ? 0 : 1] };
+    }
+    if (niv === 'kgt'){
+      var a2 = tussen(16, 23), m2 = minBij(a2), h = tussen(8, 38), t = m2 * h;
+      return { onderdeel:'bedrijf: loon', onderdeelNaam:LOON, vorm:'invul', sleutel:'mlk' + a2 + '-' + h,
+        vraag:n + ' is ' + a2 + ' jaar en werkt deze week <b>' + h + ' uur</b>. Hoeveel moet ' + n + ' deze week bruto minstens verdienen?', opdracht:'Zoek het minimumloon per uur op en doe keer het aantal uren.', beeld:minTabel(),
+        velden:[bedrag('minstens', t)],
+        uitleg:'Het minimumloon voor ' + (a2 >= 21 ? '21 jaar en ouder' : a2 + ' jaar') + ' is ' + geld2(m2) + ' per uur. ' + h + ' × ' + geld2(m2) + ' = ' + geld2(t) + '.', antwoordTekst:geld2(t) };
+    }
+    var a3 = tussen(16, 20), m3 = minBij(a3), m4 = minBij(a3 + 1);
+    if (Math.random() < .5){
+      var hh = tussen(10, 36), ver = (m4 - m3) * hh;
+      return { onderdeel:'bedrijf: loon', onderdeelNaam:LOON, vorm:'invul', sleutel:'mlh' + a3 + '-' + hh,
+        vraag:n + ' werkt elke week <b>' + hh + ' uur</b> voor het minimumloon en wordt volgende week ' + (a3 + 1) + '. Hoeveel gaat ' + n + ' er per week bruto op vooruit?', opdracht:'Vergelijk het minimumloon bij ' + a3 + ' en bij ' + (a3 + 1) + ' jaar.', beeld:minTabel(),
+        velden:[bedrag('vooruit per week', ver)],
+        uitleg:'Per uur: ' + geld2(m4) + ' − ' + geld2(m3) + ' = ' + geld2(m4 - m3) + '. Per week: ' + hh + ' × ' + geld2(m4 - m3) + ' = ' + geld2(ver) + '. Het minimumjeugdloon stijgt elk jaar tot je 21 bent.', antwoordTekst:geld2(ver) };
+    }
+    var st = (m4 - m3) / m3 * 100;
+    return { onderdeel:'bedrijf: loon', onderdeelNaam:LOON, vorm:'invul', sleutel:'mlp' + a3,
+      vraag:'Met hoeveel procent stijgt het minimumloon per uur als je van <b>' + a3 + '</b> naar <b>' + (a3 + 1) + ' jaar</b> gaat?', opdracht:'Verschil gedeeld door het oude bedrag, keer 100. Rond af op één decimaal.', beeld:minTabel(),
+      velden:[procent('stijging', st)],
+      uitleg:'(' + geld2(m4) + ' − ' + geld2(m3) + ') / ' + geld2(m3) + ' × 100 = ' + pct(st) + '. Deel door het oude bedrag: je wilt weten hoeveel het erbij komt ten opzichte van wat het was.', antwoordTekst:pct(st) };
+  }
+
+  var LOONBEGRIP = [
+    { b:'brutoloon', s:'Het loon dat in je contract staat, voordat er iets van af gaat.', alt:['bruto loon', 'bruto'] },
+    { b:'nettoloon', s:'Het bedrag dat na alle inhoudingen op je bankrekening komt.', alt:['netto loon', 'netto'] },
+    { b:'loonheffing', s:'Het bedrag dat je werkgever van je loon inhoudt voor de loonbelasting en de premies volksverzekeringen.', alt:['loonheffingen'] },
+    { b:'cao', s:'Afspraken tussen werkgevers en vakbonden over loon, werktijden en vakantiedagen voor een hele bedrijfstak.', alt:['collectieve arbeidsovereenkomst'] },
+    { b:'vakbond', s:'Een organisatie die opkomt voor de belangen van werknemers, bijvoorbeeld als er over een nieuwe cao wordt onderhandeld.', alt:['de vakbond', 'vakbonden'] },
+    { b:'vakantiegeld', s:'Een extra bedrag van minstens 8% van je brutoloon, dat de meeste mensen in mei of juni krijgen.', alt:['vakantiebijslag'] },
+    { b:'minimumloon', s:'Het laagste loon per uur dat een werkgever volgens de wet mag betalen.', alt:['wettelijk minimumloon', 'minimumuurloon'] },
+    { b:'loonstrook', s:'Het overzicht dat je elke maand of elke vier weken van je werkgever krijgt, met je loon en de inhoudingen.', alt:['loonstrookje', 'salarisstrook'] },
+    { b:'uurloon', s:'Wat je verdient voor elk uur dat je werkt.', alt:['loon per uur'] },
+    { b:'arbeidsovereenkomst', s:'Het contract tussen jou en je werkgever, met daarin je loon, je uren en je taken.', alt:['arbeidscontract', 'contract'], n:2 },
+    { b:'pensioenpremie', s:'Een bedrag dat elke maand van je loon gaat, zodat je later, als je gestopt bent met werken, een extra inkomen hebt.', alt:['pensioen premie'], n:2 },
+    { b:'zzp’er', s:'Iemand die voor zichzelf werkt, zonder personeel, en zelf inkomstenbelasting betaalt over de winst.', alt:['zzper', 'zzp', 'zelfstandige zonder personeel'], n:2 },
+    { b:'minimumjeugdloon', s:'Het laagste loon dat iemand jonger dan 21 jaar mag krijgen; hoe jonger, hoe lager.', alt:['jeugdloon', 'minimum jeugdloon', 'wettelijk minimumjeugdloon'], n:2 },
+    { b:'werkgeversorganisatie', s:'Een organisatie die namens de bedrijven met de vakbonden over de cao onderhandelt.', alt:['werkgeversorganisaties'], n:3 },
+    { b:'premie volksverzekeringen', s:'Het deel van de loonheffing waarmee onder andere de AOW wordt betaald.', alt:['premies volksverzekeringen', 'volksverzekeringen'], n:3 },
+    { b:'WW-uitkering', s:'Een uitkering van een werknemersverzekering die je kunt krijgen als je je baan verliest.', alt:['ww', 'ww uitkering', 'werkloosheidsuitkering', 'werkloosheidswet'], n:3 }
+  ];
+  function loonbegrip(niv){
+    var l = LOONBEGRIP.filter(function(x){ return (x.n || 1) <= NIV[niv]; }), x = kies(l);
+    if (niv === 'hv' && Math.random() < .4){
+      return { onderdeel:'bedrijf: loon', onderdeelNaam:LOON, vorm:'invul', sleutel:'lbt' + x.b,
+        vraag:'Welk begrip hoort hierbij?', beeld:bericht('Omschrijving', x.s), opdracht:'Typ het begrip. Hoofdletters tellen niet.',
+        velden:[{ label:'begrip', antwoord:[x.b].concat(x.alt || []), type:'tekst', breed:true, toon:x.b }],
+        uitleg:hoofd(x.b) + ': ' + x.s.charAt(0).toLowerCase() + x.s.slice(1), antwoordTekst:x.b };
+    }
+    var ander = H(l.filter(function(y){ return y !== x; })).slice(0, 3);
+    return { onderdeel:'bedrijf: loon', onderdeelNaam:LOON, vorm:'meerkeuze', sleutel:'lb' + x.b,
+      vraag:'Welk begrip hoort hierbij?', beeld:bericht('Omschrijving', x.s),
+      opties:[x.b].concat(ander.map(function(y){ return y.b; })), goed:0,
+      uitleg:hoofd(x.b) + ': ' + x.s.charAt(0).toLowerCase() + x.s.slice(1), antwoordTekst:x.b };
+  }
+  function loon(niv){ return kies([loonstrook, loonstrook, bijbaan, vakantiegeld, minimumloon, loonbegrip])(niv); }
+
+  /* =====================================================================
+     2. Kosten en winst
+     ===================================================================== */
+  var WINST = 'kosten en winst';
+  var ZAKEN = [
+    { naam:'IJssalon Bella', een:'bolletje ijs', veel:'bolletjes ijs', p:[1.8, 2.8], v:[0.35, 0.7], q:[3000, 9000], F:[2500, 6000] },
+    { naam:'Fietsenmaker Snel', een:'reparatie', veel:'reparaties', p:[25, 45], v:[6, 14], q:[150, 400], F:[2500, 5000] },
+    { naam:'Webshop De Hoesjeshoek', een:'telefoonhoesje', veel:'telefoonhoesjes', p:[12, 20], v:[3, 7], q:[400, 1500], F:[2000, 5000] },
+    { naam:'Bakkerij Van Dam', een:'brood', veel:'broden', p:[2.5, 4], v:[0.8, 1.4], q:[3000, 7000], F:[4000, 9000] },
+    { naam:'Foodtruck De Frietkar', een:'portie friet', veel:'porties friet', p:[3, 4.5], v:[0.9, 1.5], q:[1500, 4000], F:[1500, 4000] },
+    { naam:'Kapsalon Knip', een:'knipbeurt', veel:'knipbeurten', p:[22, 38], v:[3, 6], q:[250, 600], F:[3000, 7000] },
+    { naam:'Pizzeria Napoli', een:'pizza', veel:'pizza’s', p:[9, 14], v:[2.5, 4.5], q:[800, 2000], F:[5000, 10000] },
+    { naam:'Drukkerij Inkt en Co', een:'T-shirt met opdruk', veel:'T-shirts met opdruk', p:[14, 22], v:[5, 9], q:[300, 1200], F:[2000, 5000] }
+  ];
+  function zaakGetallen(z, fijn){
+    var p = stap(z.p[0], z.p[1], z.p[1] > 10 ? (fijn ? 0.5 : 1) : (fijn ? 0.05 : 0.5)), v = stap(z.v[0], z.v[1], z.v[1] > 10 ? 0.5 : 0.05);
+    var q = Math.round(tussen(z.q[0], z.q[1]) / 50) * 50, F = Math.round(tussen(z.F[0], z.F[1]) / 50) * 50;
+    return { p:p, v:v, q:q, F:F };
+  }
+  function zaakTabel(z, g, wat){
+    var r = [];
+    if (wat.indexOf('p') >= 0) r.push(['verkoopprijs per ' + z.een, geld2(g.p)]);
+    if (wat.indexOf('q') >= 0) r.push(['afzet per maand', nl(g.q) + ' ' + z.veel]);
+    if (wat.indexOf('F') >= 0) r.push(['vaste kosten per maand', geld(g.F)]);
+    if (wat.indexOf('v') >= 0) r.push(['variabele kosten per ' + z.een, geld2(g.v)]);
+    return tabel(z.naam, ['', 'bedrag'], r);
+  }
+  function rekenWinst(niv){
+    var z = kies(ZAKEN), g;
+    if (niv === 'bb'){
+      if (Math.random() < .5){
+        var p = stap(z.p[0], z.p[1], z.p[1] > 10 ? 1 : 0.5), q = Math.round(tussen(z.q[0], z.q[1]) / 100) * 100, O = p * q;
+        if (Math.random() < .5) return { onderdeel:'bedrijf: winst', onderdeelNaam:WINST, vorm:'invul', sleutel:'wob' + z.naam + p + q,
+          vraag:z.naam + ' verkoopt deze maand <b>' + nl(q) + ' ' + z.veel + '</b> voor <b>' + geld2(p) + '</b> per ' + z.een + '. Hoeveel is de <b>omzet</b>?',
+          opdracht:'Omzet = prijs × afzet.', velden:[bedrag('omzet', O)],
+          uitleg:'Omzet = ' + geld2(p) + ' × ' + nl(q) + ' = ' + geld(O) + '. De omzet is al het geld dat binnenkomt. Dat is nog geen winst: de kosten moeten er nog af.', antwoordTekst:geld(O) };
+        return { onderdeel:'bedrijf: winst', onderdeelNaam:WINST, vorm:'meerkeuze', sleutel:'wob' + z.naam + p + q,
+          vraag:z.naam + ' verkoopt deze maand <b>' + nl(q) + ' ' + z.veel + '</b> voor <b>' + geld2(p) + '</b> per ' + z.een + '. Hoeveel is de <b>omzet</b>?',
+          opdracht:'Omzet = prijs × afzet.',
+          opties:opties4(geld(O), [geld(O / 10), geld(O + p * 100), geld(q)]), goed:0,
+          uitleg:'Omzet = ' + geld2(p) + ' × ' + nl(q) + ' = ' + geld(O) + '. De omzet is al het geld dat binnenkomt. Dat is nog geen winst: de kosten moeten er nog af.', antwoordTekst:geld(O) };
+      }
+      var O2 = tussen(40, 180) * 100, K = Math.round(O2 * tussen(60, 115) / 100 / 10) * 10; if (K === O2) K += 50;
+      var d = Math.abs(O2 - K), winst = O2 > K, goed = (winst ? 'winst van ' : 'verlies van ') + geld(d);
+      return { onderdeel:'bedrijf: winst', onderdeelNaam:WINST, vorm:'meerkeuze', sleutel:'wwb' + O2 + '-' + K,
+        vraag:'Hoe ging het deze maand bij ' + z.naam + '?', opdracht:'Winst = omzet − totale kosten. Zijn de kosten hoger dan de omzet, dan is er verlies.',
+        beeld:tabel(z.naam + ', deze maand', ['', 'bedrag'], [['omzet', geld(O2)], ['totale kosten', geld(K)]]),
+        opties:opties4(goed, [(winst ? 'verlies van ' : 'winst van ') + geld(d), 'winst van ' + geld(O2 + K), (winst ? 'winst van ' : 'verlies van ') + geld(K)]), goed:0,
+        uitleg:geld(O2) + ' − ' + geld(K) + ' = ' + (winst ? geld(d) + ': de omzet is groter dan de kosten, dus winst.' : '−' + geld(d).slice(2) + ': de kosten zijn groter dan de omzet, dus verlies.'), antwoordTekst:goed };
+    }
+    if (niv === 'kgt'){
+      do { g = zaakGetallen(z, true); } while (g.p * g.q - g.F - g.v * g.q <= 0);
+      var Ok = g.p * g.q, TK = g.F + g.v * g.q, W = Ok - TK;
+      if (Math.random() < .65){
+        return { onderdeel:'bedrijf: winst', onderdeelNaam:WINST, vorm:'invul', sleutel:'wwk' + z.naam + g.p + g.q + g.F + g.v,
+          vraag:'Bereken de omzet, de totale kosten en de winst van ' + z.naam + ' per maand.', opdracht:'Omzet = prijs × afzet. Totale kosten = vaste kosten + variabele kosten per stuk × afzet.',
+          beeld:zaakTabel(z, g, 'pqFv'),
+          velden:[bedrag('omzet', Ok), bedrag('totale kosten', TK), bedrag('winst', W)],
+          uitleg:'Omzet: ' + geld2(g.p) + ' × ' + nl(g.q) + ' = ' + geld2(Ok) + '. Variabele kosten: ' + geld2(g.v) + ' × ' + nl(g.q) + ' = ' + geld2(g.v * g.q) + ', plus ' + geld(g.F) + ' vaste kosten is ' + geld2(TK) + '. Winst: ' + geld2(Ok) + ' − ' + geld2(TK) + ' = ' + geld2(W) + '.', antwoordTekst:geld2(Ok) + ', ' + geld2(TK) + ', ' + geld2(W) };
+      }
+      var extra = kies([100, 150, 200, 250, 300, 500]), ew = extra * (g.p - g.v);
+      return { onderdeel:'bedrijf: winst', onderdeelNaam:WINST, vorm:'invul', sleutel:'wek' + z.naam + g.p + g.v + extra,
+        vraag:z.naam + ' verwacht volgende maand <b>' + extra + ' ' + z.veel + '</b> meer te verkopen. Prijs en kosten per stuk blijven gelijk. Hoeveel stijgt de winst?', opdracht:'Wat verandert er wel en wat niet? Denk aan de vaste kosten.',
+        beeld:zaakTabel(z, g, 'pqFv'),
+        velden:[bedrag('extra winst', ew)],
+        uitleg:'Per extra ' + z.een + ' verdient de zaak ' + geld2(g.p) + ' − ' + geld2(g.v) + ' = ' + geld2(g.p - g.v) + '. Keer ' + extra + ' is ' + geld2(ew) + '. De vaste kosten blijven gelijk, die tellen dus niet mee.', antwoordTekst:geld2(ew) };
+    }
+    var w = kies(['be', 'be', 'doel', 'prijs']);
+    if (w === 'be'){
+      g = zaakGetallen(z, true); var m = rond(g.p - g.v, 2), be = Math.round(tussen(z.q[0] * 0.3, z.q[0] * 0.9) / 10) * 10, F = rond(be * m, 2);
+      g.F = F;
+      return { onderdeel:'bedrijf: winst', onderdeelNaam:WINST, vorm:'invul', sleutel:'wbh' + z.naam + g.p + g.v + be,
+        vraag:'Bij hoeveel ' + z.veel + ' per maand speelt ' + z.naam + ' precies quitte (het <b>break-evenpunt</b>)?', opdracht:'Bij het break-evenpunt is de omzet gelijk aan de totale kosten. Elke ' + z.een + ' levert prijs min variabele kosten op voor de vaste kosten.',
+        beeld:tabel(z.naam, ['', 'bedrag'], [['verkoopprijs per ' + z.een, geld2(g.p)], ['variabele kosten per ' + z.een, geld2(g.v)], ['vaste kosten per maand', geld2(F)]]),
+        velden:[aantal('break-evenafzet', be, z.veel)],
+        uitleg:'Per ' + z.een + ' blijft er ' + geld2(g.p) + ' − ' + geld2(g.v) + ' = ' + geld2(m) + ' over voor de vaste kosten. ' + geld2(F) + ' / ' + geld2(m) + ' = ' + nl(be) + ' ' + z.veel + '. Daarboven maakt de zaak winst, daaronder verlies.', antwoordTekst:nl(be) + ' ' + z.veel };
+    }
+    if (w === 'doel'){
+      g = zaakGetallen(z, true); var mm = rond(g.p - g.v, 2), Wd, q2, tries = 0;
+      do { Wd = tussen(2, 12) * 500; q2 = (g.F + Wd) / mm; tries++; } while (Math.abs(q2 - Math.round(q2)) > 1e-6 && tries < 40);
+      if (Math.abs(q2 - Math.round(q2)) > 1e-6){ q2 = Math.ceil(q2); Wd = rond(q2 * mm - g.F, 2); }
+      q2 = Math.round(q2);
+      return { onderdeel:'bedrijf: winst', onderdeelNaam:WINST, vorm:'invul', sleutel:'wdh' + z.naam + g.p + g.v + g.F + Wd,
+        vraag:'De eigenaar van ' + z.naam + ' wil <b>' + geld(Wd) + '</b> winst per maand maken. Hoeveel ' + z.veel + ' moet de zaak daarvoor verkopen?', opdracht:'De vaste kosten én de gewenste winst moeten uit prijs min variabele kosten komen.',
+        beeld:tabel(z.naam, ['', 'bedrag'], [['verkoopprijs per ' + z.een, geld2(g.p)], ['variabele kosten per ' + z.een, geld2(g.v)], ['vaste kosten per maand', geld(g.F)]]),
+        velden:[aantal('afzet', q2, z.veel)],
+        uitleg:'Per ' + z.een + ' blijft ' + geld2(mm) + ' over. Nodig: ' + geld(g.F) + ' + ' + geld(Wd) + ' = ' + geld(g.F + Wd) + '. ' + geld(g.F + Wd) + ' / ' + geld2(mm) + ' = ' + nl(q2) + ' ' + z.veel + '.', antwoordTekst:nl(q2) + ' ' + z.veel };
+    }
+    var pp = kies([5, 10, 15, 20]), qq = kies([5, 10, 15, 20, 25]);
+    do { g = zaakGetallen(z, true); g.q = Math.round(g.q / 100) * 100 || 100; } while (g.p * g.q - g.F - g.v * g.q <= 0);
+    var W1 = g.p * g.q - g.F - g.v * g.q, p2 = rond(g.p * (1 + pp / 100), 2), q3 = g.q * (1 - qq / 100), W2 = p2 * q3 - g.F - g.v * q3;
+    return { onderdeel:'bedrijf: winst', onderdeelNaam:WINST, vorm:'invul', sleutel:'wph' + z.naam + g.p + g.q + pp + qq,
+      vraag:z.naam + ' verhoogt de prijs met <b>' + pp + '%</b>. Daardoor daalt de afzet met <b>' + qq + '%</b>. De kosten per stuk en de vaste kosten blijven gelijk. Bereken de winst per maand voor en na de prijsverhoging.',
+      opdracht:'Reken eerst de nieuwe prijs (afgerond op centen) en de nieuwe afzet uit. Is er verlies, typ dan een min ervoor. Rond af op centen.',
+      beeld:zaakTabel(z, g, 'pqFv'),
+      velden:[bedrag('winst ervoor', W1, 0.011), bedrag('winst erna', W2, 0.011)],
+      uitleg:'Ervoor: ' + geld2(g.p * g.q) + ' − ' + geld(g.F) + ' − ' + geld2(g.v * g.q) + ' = ' + geld2(W1) + '. Erna: prijs ' + geld2(p2) + ', afzet ' + nl(q3) + '. Omzet ' + geld2(p2 * q3) + ', variabele kosten ' + geld2(g.v * q3) + ', winst ' + geld2(W2) + '. De winst ' + (W2 > W1 ? 'stijgt: de hogere prijs weegt zwaarder dan de lagere afzet, en minder verkopen scheelt ook variabele kosten.' : 'daalt: de lagere afzet kost meer dan de hogere prijs oplevert.'), antwoordTekst:geld2(W1) + ' en ' + geld2(W2) };
+  }
+
+  var VAST = [['de huur van het pand', 1], ['de verzekering van de winkel', 1], ['het salaris van de vaste medewerker', 1], ['het abonnement op de kassasoftware', 2], ['de rente over de lening voor de verbouwing', 2], ['de afschrijving op de nieuwe oven', 3], ['de leasebetaling voor de bestelbus', 3]];
+  var VARIABEL = [['het meel voor elk brood', 1], ['de verpakking van elk product', 1], ['de verzendkosten per pakketje', 1], ['de grondstoffen voor elk product', 1], ['de inkoop van de producten die je verkoopt', 2], ['de provisie die de verkoper per verkocht product krijgt', 3], ['de kosten die de bank rekent per pinbetaling', 3]];
+  function vastVariabel(niv){
+    var n = NIV[niv], k = niv === 'bb' ? 2 : 3;
+    function pak(l){ var mag = l.filter(function(x){ return x[1] <= n; }), uit = H(mag).slice(0, k); if (niv === 'hv' && !uit.some(function(x){ return x[1] === 3; })) uit[0] = kies(l.filter(function(x){ return x[1] === 3; })); return uit; }
+    var kaarten = pak(VAST).map(function(x){ return { t:x[0], v:'vast' }; }).concat(pak(VARIABEL).map(function(x){ return { t:x[0], v:'var' }; }));
+    return sleep('winst', WINST, 'Welke kosten zijn <b>vast</b> en welke zijn <b>variabel</b>?', 'Vaste kosten blijven gelijk als het bedrijf meer of minder maakt. Variabele kosten stijgen mee met de productie.',
+      [{ id:'vast', naam:'vaste kosten', uit:'blijven gelijk' }, { id:'var', naam:'variabele kosten', uit:'stijgen mee met de productie' }], kaarten,
+      'Vraag je steeds af: wordt dit bedrag hoger als het bedrijf één product meer maakt? ' + '<b>Vast</b>: ' + kaarten.filter(function(x){ return x.v === 'vast'; }).map(function(x){ return x.t; }).join('; ') + '. <b>Variabel</b>: ' + kaarten.filter(function(x){ return x.v === 'var'; }).map(function(x){ return x.t; }).join('; ') + '.', 'vv');
+  }
+
+  var WINSTMK = [
+    { v:'Een snackbar verkoopt deze maand 2.000 porties friet. Hoe heet dat aantal?', g:'de afzet', f:['de omzet', 'de winst', 'de productiekosten'], u:'De afzet is het aantal verkochte producten. De omzet is het geld dat je ervoor krijgt: prijs × afzet.' },
+    { v:'Wat is de omzet van een bedrijf?', g:'prijs × afzet: alles wat het bedrijf ontvangt voor de verkochte producten', f:['wat er overblijft als je de kosten eraf haalt', 'alle kosten bij elkaar opgeteld', 'het aantal verkochte producten'], u:'Omzet is #g. Wat er overblijft na de kosten is de winst.' },
+    { v:'De omzet van een bedrijf is lager dan de totale kosten. Wat maakt het bedrijf?', g:'verlies', f:['winst', 'omzet', 'afzet'], u:'Winst = omzet − totale kosten. Is dat negatief, dan maakt het bedrijf verlies.' },
+    { v:'Hoe reken je de winst uit?', g:'omzet − totale kosten', f:['omzet + totale kosten', 'prijs × afzet', 'totale kosten − omzet'], u:'Winst = #g. Prijs × afzet is de omzet.' },
+    { v:'Een bakker bakt deze maand twee keer zoveel broden. Wat gebeurt er met de <b>vaste</b> kosten, zoals de huur?', g:'die blijven gelijk', f:['die worden twee keer zo hoog', 'die worden de helft', 'die stijgen een beetje'], u:'Vaste kosten hangen niet af van hoeveel je maakt: de huur is hetzelfde bij 100 of bij 1.000 broden.', n:2 },
+    { v:'Een bakker bakt meer broden, en de vaste kosten blijven gelijk. Wat gebeurt er met de vaste kosten <b>per brood</b>?', g:'die dalen', f:['die stijgen', 'die blijven gelijk', 'die worden nul'], u:'Dezelfde vaste kosten worden over meer broden verdeeld, dus per brood worden ze lager.', n:2 },
+    { v:'Wat zijn variabele kosten?', g:'kosten die meestijgen als het bedrijf meer produceert', f:['kosten die elke maand even hoog zijn', 'kosten die het bedrijf zelf mag kiezen', 'kosten die alleen in de zomer voorkomen'], u:'Variabele kosten, zoals grondstoffen en verpakking, stijgen mee met de productie.', n:2 },
+    { v:'Hoe bereken je de totale kosten?', g:'vaste kosten + variabele kosten', f:['omzet − winst − vaste kosten', 'variabele kosten × prijs', 'vaste kosten − variabele kosten'], u:'Totale kosten = #g.', n:2 },
+    { v:'Wat is het break-evenpunt?', g:'de afzet waarbij de omzet precies gelijk is aan de totale kosten', f:['de afzet waarbij de winst het hoogst is', 'de prijs waarbij het meest verkocht wordt', 'de afzet waarbij er geen vaste kosten meer zijn'], u:'Bij het break-evenpunt is de winst nul. Verkoop je meer, dan maak je winst.', n:3 },
+    { v:'Een bedrijf verkoopt meer dan bij het break-evenpunt. Wat geldt dan?', g:'het bedrijf maakt winst', f:['het bedrijf maakt verlies', 'de winst is precies nul', 'de vaste kosten stijgen'], u:'Boven het break-evenpunt is de omzet groter dan de totale kosten: winst.', n:3 },
+    { v:'Een ijssalon wil het break-evenpunt verlagen. Wat helpt?', g:'goedkoper ijs inkopen, zodat de variabele kosten per bolletje dalen', f:['een duurdere vriezer kopen', 'de prijs per bolletje verlagen', 'een extra medewerker in vaste dienst nemen'], u:'Als prijs min variabele kosten groter wordt, heb je minder bolletjes nodig om de vaste kosten terug te verdienen. Duurdere apparatuur en extra vast personeel verhogen juist de vaste kosten; een lagere prijs verkleint wat elk bolletje oplevert.', n:3 },
+    { v:'Een bedrijf verhoogt de prijs met 10%, maar verkoopt daardoor 4% minder. Wat gebeurt er met de omzet?', g:'die stijgt', f:['die daalt', 'die blijft gelijk', 'dat kun je niet zeggen zonder de kosten'], u:'Omzet = prijs × afzet = 1,10 × 0,96 = 1,056 keer zo groot: 5,6% meer. Voor de omzet heb je de kosten niet nodig.', n:3 }
+  ];
+  function winst(niv){ return kies([rekenWinst, rekenWinst, vastVariabel, function(n){ return uitLijst(WINSTMK, n, 'winst', WINST, 'wm'); }])(niv); }
+
+  /* =====================================================================
+     3. Productie
+     ===================================================================== */
+  var PROD = 'productie';
+  var FACTOR = {
+    arbeid:['de kok die het eten klaarmaakt', 'de chauffeur die de pakketten rondbrengt', 'de verkoper in de winkel', 'de monteur die een fiets repareert', 'de programmeur die een app bouwt', 'de schoonmaker in het ziekenhuis'],
+    kapitaal:['de bestelbus', 'de oven in de bakkerij', 'de computers op kantoor', 'het bedrijfspand', 'de melkrobot', 'de machines in de fabriek'],
+    natuur:['de grond waarop de boer aardappels teelt', 'aardgas uit de bodem', 'de wind die de windmolen laat draaien', 'water uit de rivier', 'de vis in de zee'],
+    onder:['de eigenaar die het risico neemt als het bedrijf verlies maakt', 'de oprichter die een idee bedenkt voor een nieuw product', 'de ondernemer die beslist hoeveel personeel en machines er nodig zijn']
+  };
+  function factoren(niv){
+    var aantal_ = niv === 'bb' ? [1, 1, 1, 1] : niv === 'kgt' ? [2, 2, 1, 1] : [2, 2, 2, 2];
+    var ids = H(['arbeid', 'kapitaal', 'natuur', 'onder']), kaarten = [];
+    ids.forEach(function(id, i){ H(FACTOR[id]).slice(0, aantal_[i]).forEach(function(t){ kaarten.push({ t:t, v:id }); }); });
+    return sleep('productie', PROD, 'Bij welke <b>productiefactor</b> hoort elk kaartje?', 'Arbeid is het werk van mensen. Kapitaal zijn hulpmiddelen die mensen gemaakt hebben. Natuur is wat de natuur levert. Ondernemerschap is het bedrijf leiden en het risico dragen.',
+      [{ id:'arbeid', naam:'arbeid' }, { id:'kapitaal', naam:'kapitaal' }, { id:'natuur', naam:'natuur' }, { id:'onder', naam:'ondernemerschap' }], kaarten, null, 'pf');
+  }
+  var PRODUCTEN = [['stoelen', 'een meubelfabriek'], ['fietsen', 'een fietsenfabriek'], ['taarten', 'een banketbakkerij'], ['pakketjes', 'een distributiecentrum'], ['zonnepanelen', 'een zonnepanelenfabriek'], ['pizza’s', 'een pizzafabriek'], ['spijkerbroeken', 'een kledingfabriek']];
+  function productiviteit(niv){
+    var pr = kies(PRODUCTEN);
+    if (niv === 'bb'){
+      var w = tussen(4, 20), p = tussen(4, 24) * 5, t = w * p;
+      return { onderdeel:'bedrijf: productie', onderdeelNaam:PROD, vorm:'meerkeuze', sleutel:'apb' + pr[0] + w + p,
+        vraag:'In ' + pr[1] + ' maken <b>' + w + ' werknemers</b> samen <b>' + nl(t) + ' ' + pr[0] + '</b> per week. Hoeveel ' + pr[0] + ' maakt één werknemer gemiddeld per week?',
+        opdracht:'Dit heet de arbeidsproductiviteit: de productie gedeeld door het aantal werknemers.',
+        opties:opties4(nl(p), [nl(p * 2), nl(t - w), nl(p + 10)]), goed:0,
+        uitleg:nl(t) + ' / ' + w + ' = ' + nl(p) + ' ' + pr[0] + ' per werknemer. Hoe hoger dit getal, hoe productiever de werknemers.', antwoordTekst:nl(p) };
+    }
+    var w1 = tussen(10, 30), p1 = tussen(8, 30) * 5, w2 = w1 - tussen(1, Math.min(6, w1 - 4)), p2 = p1 + tussen(2, 12) * 5, t1 = w1 * p1, t2 = w2 * p2;
+    var tab = tabel(pr[1].replace(/^een /, 'De ') + ', productie per week', ['', 'werknemers', 'productie'], [['vóór de nieuwe machines', String(w1), nl(t1)], ['na de nieuwe machines', String(w2), nl(t2)]]);
+    if (niv === 'kgt'){
+      return { onderdeel:'bedrijf: productie', onderdeelNaam:PROD, vorm:'invul', sleutel:'apk' + pr[0] + w1 + p1 + w2 + p2,
+        vraag:pr[1].replace(/^een/, 'Een') + ' koopt nieuwe machines. Bereken de arbeidsproductiviteit (' + pr[0] + ' per werknemer per week) vóór en na.', opdracht:'Arbeidsproductiviteit = productie / aantal werknemers.',
+        beeld:tab, velden:[aantal('vóór', p1, pr[0]), aantal('na', p2, pr[0])],
+        uitleg:'Vóór: ' + nl(t1) + ' / ' + w1 + ' = ' + p1 + '. Na: ' + nl(t2) + ' / ' + w2 + ' = ' + p2 + '. Met minder mensen wordt meer gemaakt: de machines maken de werknemers productiever.', antwoordTekst:p1 + ' en ' + p2 };
+    }
+    var v = kies(['pct', 'uur', 'nodig']);
+    if (v === 'pct'){
+      var s = (p2 - p1) / p1 * 100;
+      return { onderdeel:'bedrijf: productie', onderdeelNaam:PROD, vorm:'invul', sleutel:'aph' + pr[0] + w1 + p1 + w2 + p2,
+        vraag:'Met hoeveel procent is de <b>arbeidsproductiviteit</b> gestegen?', opdracht:'Bereken eerst de productie per werknemer vóór en na. Rond af op één decimaal.',
+        beeld:tab, velden:[procent('stijging', s)],
+        uitleg:'Vóór: ' + nl(t1) + ' / ' + w1 + ' = ' + p1 + '. Na: ' + nl(t2) + ' / ' + w2 + ' = ' + p2 + '. Stijging: (' + p2 + ' − ' + p1 + ') / ' + p1 + ' × 100 = ' + pct(s) + '. Let op: de totale productie steeg met een ander percentage, want er werken nu minder mensen.', antwoordTekst:pct(s) };
+    }
+    if (v === 'uur'){
+      var u = kies([32, 36, 38, 40]), pu = t2 / (w2 * u);
+      return { onderdeel:'bedrijf: productie', onderdeelNaam:PROD, vorm:'invul', sleutel:'apu' + pr[0] + w2 + p2 + u,
+        vraag:'Na de nieuwe machines werkt elke werknemer <b>' + u + ' uur</b> per week. Hoeveel ' + pr[0] + ' worden er gemaakt per <b>arbeidsuur</b>?', opdracht:'Deel de productie door het totaal aantal gewerkte uren. Rond af op één decimaal.',
+        beeld:tab, velden:[{ label:'per arbeidsuur', antwoord:rond(pu, 1), tol:0.05, eenheid:pr[0], toon:nl(pu, 1) + ' ' + pr[0] }],
+        uitleg:'Gewerkte uren: ' + w2 + ' × ' + u + ' = ' + (w2 * u) + '. ' + nl(t2) + ' / ' + (w2 * u) + ' = ' + nl(pu, 1) + ' ' + pr[0] + ' per arbeidsuur. Arbeidsproductiviteit kun je per werknemer of per arbeidsuur uitrekenen.', antwoordTekst:nl(pu, 1) };
+    }
+    var doel = p2 * (w2 + tussen(2, 8));
+    return { onderdeel:'bedrijf: productie', onderdeelNaam:PROD, vorm:'invul', sleutel:'apn' + pr[0] + p2 + doel,
+      vraag:'Er komt een grote order: het bedrijf wil <b>' + nl(doel) + ' ' + pr[0] + '</b> per week maken. De arbeidsproductiviteit blijft zoals na de nieuwe machines. Hoeveel werknemers zijn er dan nodig?', opdracht:'Bereken eerst hoeveel één werknemer na de nieuwe machines maakt.',
+      beeld:tab, velden:[aantal('werknemers', doel / p2)],
+      uitleg:'Eén werknemer maakt ' + nl(t2) + ' / ' + w2 + ' = ' + p2 + ' ' + pr[0] + '. ' + nl(doel) + ' / ' + p2 + ' = ' + (doel / p2) + ' werknemers. Dat zijn er ' + (doel / p2 - w2) + ' meer dan nu.', antwoordTekst:String(doel / p2) };
+  }
+
+  var KOLOMMEN = [
+    { prod:'een liter melk', s:['de melkveehouder', 'de zuivelfabriek', 'de supermarkt'], st:[0.35, 0.5], inc:[[0.25, 0.45], [0.25, 0.45]] },
+    { prod:'een brood', s:['de akkerbouwer (tarwe)', 'de meelfabriek', 'de bakkerij'], st:[0.15, 0.3], inc:[[0.1, 0.25], [1.5, 2.5]] },
+    { prod:'een houten tafel', s:['de bosbouwer', 'de zagerij', 'de meubelfabriek', 'de meubelwinkel'], st:[20, 40], inc:[[20, 40], [100, 180], [120, 250]], heel:true },
+    { prod:'een T-shirt', s:['de katoenboer', 'de spinnerij en weverij', 'de kledingfabriek', 'de kledingwinkel'], st:[0.4, 0.8], inc:[[0.5, 1], [1, 2.5], [8, 15]] },
+    { prod:'een pot pindakaas', s:['de pindaboer', 'de pindakaasfabriek', 'de groothandel', 'de supermarkt'], st:[0.3, 0.6], inc:[[0.6, 1], [0.2, 0.4], [0.4, 0.8]] },
+    { prod:'een reep chocola', s:['de cacaoboer', 'de chocoladefabriek', 'de groothandel', 'de supermarkt'], st:[0.1, 0.25], inc:[[0.6, 1], [0.1, 0.3], [0.3, 0.6]] }
+  ];
+  function kolomPrijzen(k){ var st = k.heel ? 1 : 0.05, p = [stap(k.st[0], k.st[1], st)]; k.inc.forEach(function(r){ p.push(rond(p[p.length - 1] + stap(r[0], r[1], st), 2)); }); return p; }
+  function kolomTabel(k, p, open){ return tabel('Bedrijfskolom van ' + k.prod, ['schakel', 'verkoopprijs'], k.s.map(function(s, i){ return [hoofd(s), i === open ? '?' : geld2(p[i])]; }), 'Verkoopprijzen per stuk, zonder btw. De eerste schakel koopt zelf niets in.'); }
+  function kolom(niv){
+    var k = kies(niv === 'bb' ? KOLOMMEN.filter(function(x){ return x.s.length === 3; }).concat(KOLOMMEN) : KOLOMMEN), p = kolomPrijzen(k);
+    if (niv !== 'hv' && Math.random() < .45){
+      var o = sleep('productie', PROD, 'Zet de <b>bedrijfskolom</b> van ' + k.prod + ' op volgorde.', 'Begin bij de grondstof en eindig bij de winkel waar de consument koopt. Elke schakel voegt waarde toe.',
+        k.s.map(function(s, i){ return { id:'p' + i, naam:'', uit:'' }; }), k.s.map(function(s, i){ return { t:s, v:'p' + i }; }), 'De volgorde is: ' + k.s.join(', ') + '. Elke schakel bewerkt het product of brengt het dichter bij de consument, en voegt zo waarde toe.', 'kv');
+      o.vakken.forEach(function(v){ v.max = 1; delete v.naam; delete v.uit; });
+      o.antwoordTekst = k.s.join(' → ');
+      return o;
+    }
+    var i = tussen(1, k.s.length - 1), tw = rond(p[i] - p[i - 1], 2);
+    if (niv === 'bb'){
+      return { onderdeel:'bedrijf: productie', onderdeelNaam:PROD, vorm:'meerkeuze', sleutel:'twb' + k.prod + p.join('-') + i,
+        vraag:'Hoeveel waarde voegt <b>' + k.s[i] + '</b> toe aan ' + k.prod + '?', opdracht:'Toegevoegde waarde = verkoopprijs − inkoopprijs. De inkoopprijs is de verkoopprijs van de schakel ervoor.',
+        beeld:kolomTabel(k, p),
+        opties:opties4(geld2(tw), [geld2(p[i]), geld2(p[i - 1]), geld2(p[i] + p[i - 1])]), goed:0,
+        uitleg:hoofd(k.s[i]) + ' koopt in voor ' + geld2(p[i - 1]) + ' en verkoopt voor ' + geld2(p[i]) + '. Toegevoegd: ' + geld2(tw) + '. Van dat bedrag betaalt de schakel lonen, huur en machines, en wat overblijft is winst.', antwoordTekst:geld2(tw) };
+    }
+    if (niv === 'kgt'){
+      return { onderdeel:'bedrijf: productie', onderdeelNaam:PROD, vorm:'invul', sleutel:'twk' + k.prod + p.join('-') + i,
+        vraag:'Bereken de <b>toegevoegde waarde</b> van ' + k.s[i] + ' per stuk.', opdracht:'Toegevoegde waarde = verkoopprijs − inkoop bij de schakel ervoor.',
+        beeld:kolomTabel(k, p), velden:[bedrag('toegevoegde waarde', tw)],
+        uitleg:geld2(p[i]) + ' − ' + geld2(p[i - 1]) + ' = ' + geld2(tw) + '. De verkoopprijs zelf is niet de toegevoegde waarde: een deel daarvan is al door de schakels ervoor gemaakt.', antwoordTekst:geld2(tw) };
+    }
+    var l = k.s.length - 1;
+    if (Math.random() < .5){
+      var tl = p[l] - p[l - 1], ps = tl / p[l] * 100;
+      return { onderdeel:'bedrijf: productie', onderdeelNaam:PROD, vorm:'invul', sleutel:'twp' + k.prod + p.join('-'),
+        vraag:'Hoeveel procent van de prijs die de consument betaalt, is toegevoegd door <b>' + k.s[l] + '</b>?', opdracht:'Bereken de toegevoegde waarde van de laatste schakel en deel door de eindprijs. Rond af op één decimaal.',
+        beeld:kolomTabel(k, p), velden:[procent('aandeel', ps)],
+        uitleg:'Toegevoegd: ' + geld2(p[l]) + ' − ' + geld2(p[l - 1]) + ' = ' + geld2(tl) + '. ' + geld2(tl) + ' / ' + geld2(p[l]) + ' × 100 = ' + pct(ps) + '. Tel je de toegevoegde waarde van alle schakels op, dan krijg je precies de eindprijs.', antwoordTekst:pct(ps) };
+    }
+    var j = tussen(1, l - 1), x = k.heel ? tussen(5, 30) : stap(0.05, 0.4, 0.05), nieuw = rond(p[l] + x, 2);
+    return { onderdeel:'bedrijf: productie', onderdeelNaam:PROD, vorm:'invul', sleutel:'twv' + k.prod + p.join('-') + j + x,
+      vraag:hoofd(k.s[j]) + ' gaat duurder werken en verhoogt de verkoopprijs met <b>' + geld2(x) + '</b>. De schakels erna houden hun toegevoegde waarde gelijk. Wat wordt de prijs voor de consument?', opdracht:'Welke schakels betalen de verhoging door?',
+      beeld:kolomTabel(k, p), velden:[bedrag('nieuwe eindprijs', nieuw)],
+      uitleg:'Elke volgende schakel koopt ' + geld2(x) + ' duurder in en telt er dezelfde toegevoegde waarde bij op. De verhoging schuift dus door tot de consument: ' + geld2(p[l]) + ' + ' + geld2(x) + ' = ' + geld2(nieuw) + '.', antwoordTekst:geld2(nieuw) };
+  }
+
+  var PRODMK = [
+    { v:'Wat is arbeidsdeling?', g:'het werk wordt in deeltaken verdeeld, en iedereen doet een eigen deel', f:['iedereen maakt een product helemaal zelf', 'machines nemen al het werk over', 'werknemers verdelen hun loon eerlijk'], u:'Bij arbeidsdeling wordt het werk gesplitst: #g.' },
+    { v:'In een broodjeszaak snijdt Tom alleen de broodjes, belegt Lisa ze en rekent Ali af. Hoe heet dit?', g:'arbeidsdeling', f:['automatisering', 'werkloosheid', 'ondernemerschap'], u:'Ieder doet een eigen deel van het werk: dat is arbeidsdeling.' },
+    { v:'Wat is een voordeel van arbeidsdeling?', g:'werknemers worden handig in hun eigen taak, zodat er meer gemaakt wordt', f:['het werk wordt afwisselender', 'het bedrijf heeft geen werknemers meer nodig', 'het bedrijf hoeft niets meer in te kopen'], u:'Door steeds hetzelfde te doen word je er snel en goed in: de arbeidsproductiviteit stijgt.' },
+    { v:'Welke productiefactor is een vrachtwagen van een transportbedrijf?', g:'kapitaal', f:['arbeid', 'natuur', 'ondernemerschap'], u:'Een vrachtwagen is een hulpmiddel dat door mensen gemaakt is: kapitaal.' },
+    { v:'Welke productiefactor is de grond van een boer?', g:'natuur', f:['kapitaal', 'arbeid', 'ondernemerschap'], u:'Grond, water, grondstoffen en wind komen uit de natuur.' },
+    { v:'Wat is een bedrijfskolom?', g:'alle bedrijven die na elkaar aan een product werken, van grondstof tot winkel', f:['alle werknemers van één bedrijf', 'een rij met de prijzen in een winkel', 'het deel van de krant met nieuws over bedrijven'], u:'In de bedrijfskolom zie je #g. Elke schakel voegt waarde toe.' },
+    { v:'Wat is een nadeel van arbeidsdeling voor de werknemer?', g:'het werk kan eentonig worden', f:['het werk duurt langer', 'de productie daalt', 'werknemers worden minder handig'], u:'Wie de hele dag dezelfde handeling doet, vindt het werk vaak saai.', n:2 },
+    { v:'Een melkveehouder koopt een melkrobot en heeft daardoor minder uren nodig voor het melken. Wat gebeurt er met de arbeidsproductiviteit?', g:'die stijgt: per gewerkt uur wordt er meer melk geproduceerd', f:['die daalt, want de robot doet het werk', 'die blijft gelijk, want er zijn evenveel koeien', 'die wordt nul, want er wordt niet meer met de hand gemolken'], u:'Arbeidsproductiviteit is de productie per werknemer of per arbeidsuur. Dezelfde melk met minder uren werk: de productiviteit stijgt.', n:2 },
+    { v:'Wat is arbeidsproductiviteit?', g:'de productie per werknemer of per arbeidsuur', f:['het aantal werknemers van een bedrijf', 'het loon per uur', 'de winst per verkocht product'], u:'Arbeidsproductiviteit = productie / aantal werknemers (of arbeidsuren).', n:2 },
+    { v:'Wat is toegevoegde waarde?', g:'de omzet min de inkoop van goederen en diensten bij andere bedrijven', f:['de omzet min alle kosten', 'de prijs × de afzet', 'het loon van alle werknemers samen'], u:'Toegevoegde waarde is #g. Daaruit betaalt een bedrijf lonen, rente, huur en winst.', n:2 },
+    { v:'Wat is mechanisatie?', g:'werk van mensen wordt voor een deel door machines gedaan', f:['werknemers krijgen een cursus', 'een bedrijf verhuist naar het buitenland', 'werk wordt in deeltaken verdeeld'], u:'Bij mechanisatie nemen machines een deel van het werk over; de arbeidsproductiviteit stijgt meestal.', n:2 },
+    { v:'Welke beloning hoort bij de productiefactor kapitaal?', g:'rente', f:['loon', 'pacht', 'winst'], u:'Arbeid krijgt loon, natuur pacht of huur, kapitaal rente en ondernemerschap winst.', n:3 },
+    { v:'Welke beloning hoort bij ondernemerschap?', g:'winst', f:['loon', 'rente', 'pacht'], u:'De ondernemer krijgt wat overblijft als alle kosten betaald zijn: de winst. Die kan ook negatief zijn, dat is het risico.', n:3 },
+    { v:'Welke beloning hoort bij de productiefactor natuur, zoals grond die een boer gebruikt?', g:'pacht', f:['rente', 'winst', 'loon'], u:'Wie grond van een ander gebruikt, betaalt pacht (of huur). Arbeid krijgt loon, kapitaal rente, ondernemerschap winst.', n:3 },
+    { v:'Een distributiecentrum zet robots in die het werk van twintig orderpickers overnemen. Wat is een gevolg?', g:'de arbeidsproductiviteit stijgt, maar er zijn minder orderpickers nodig', f:['de arbeidsproductiviteit daalt en er zijn meer orderpickers nodig', 'er verandert niets, want robots tellen niet mee', 'de orderpickers krijgen automatisch een hoger loon'], u:'Technologie verhoogt de productie per werknemer. Voor de werkgever is dat goedkoper, voor een deel van de werknemers betekent het ontslag of ander werk.', n:3 }
+  ];
+  function productie(niv){ return kies([factoren, productiviteit, productiviteit, kolom, function(n){ return uitLijst(PRODMK, n, 'productie', PROD, 'pm'); }])(niv); }
+
+  /* =====================================================================
+     4. De arbeidsmarkt
+     ===================================================================== */
+  var ARB = 'de arbeidsmarkt';
+  var GEMEENTEN = ['Lindeveen', 'Veldermeer', 'Kreekhaven', 'Ravenstedum', 'Hoogeweerd'];
+  function werkloosheid(niv){
+    var gm = kies(GEMEENTEN);
+    if (niv === 'bb'){
+      var B = kies([20000, 25000, 40000, 50000, 80000]), p = tussen(2, 9), w = B * p / 100;
+      return { onderdeel:'bedrijf: arbeidsmarkt', onderdeelNaam:ARB, vorm:'meerkeuze', sleutel:'wlb' + B + p,
+        vraag:'Hoeveel procent van de beroepsbevolking in ' + gm + ' is werkloos?', opdracht:'Werkloosheid in procenten = werklozen / beroepsbevolking × 100.',
+        beeld:tabel(gm + ' (een verzonnen gemeente)', ['', 'aantal'], [['beroepsbevolking', nl(B)], ['werklozen', nl(w)]]),
+        opties:opties4(p + '%', [(p * 10) + '%', (100 - p) + '%', nl(p / 10, 1) + '%']), goed:0,
+        uitleg:nl(w) + ' / ' + nl(B) + ' × 100 = ' + p + '%. De beroepsbevolking zijn de mensen met betaald werk plus de werklozen.', antwoordTekst:p + '%' };
+    }
+    if (niv === 'kgt'){
+      var Wz = tussen(180, 900) * 100, wl = tussen(30, 90) * Wz / 1000; wl = Math.round(wl / 10) * 10; var Bb = Wz + wl, pp = wl / Bb * 100;
+      return { onderdeel:'bedrijf: arbeidsmarkt', onderdeelNaam:ARB, vorm:'invul', sleutel:'wlk' + Wz + wl,
+        vraag:'Bereken de beroepsbevolking en het werkloosheidspercentage van ' + gm + '.', opdracht:'De beroepsbevolking is werkenden plus werklozen. Rond het percentage af op één decimaal.',
+        beeld:tabel(gm + ' (een verzonnen gemeente)', ['', 'aantal'], [['mensen met betaald werk', nl(Wz)], ['werklozen', nl(wl)]]),
+        velden:[aantal('beroepsbevolking', Bb), procent('werkloos', pp)],
+        uitleg:'Beroepsbevolking: ' + nl(Wz) + ' + ' + nl(wl) + ' = ' + nl(Bb) + '. Werkloosheid: ' + nl(wl) + ' / ' + nl(Bb) + ' × 100 = ' + pct(pp) + '. Deel door de hele beroepsbevolking, niet alleen door de werkenden.', antwoordTekst:nl(Bb) + ' en ' + pct(pp) };
+    }
+    var B1 = tussen(300, 900) * 100, p1 = tussen(30, 80) / 10, w1 = Math.round(B1 * p1 / 100 / 10) * 10;
+    if (Math.random() < .5){
+      var B2 = Math.round(B1 * tussen(101, 108) / 100 / 100) * 100, w2 = Math.round(w1 * tussen(80, 125) / 100 / 10) * 10, q1 = w1 / B1 * 100, q2 = w2 / B2 * 100, dpp = rond(q2, 1) - rond(q1, 1);
+      if (Math.abs(dpp) < 0.05) w2 += 200, q2 = w2 / B2 * 100, dpp = rond(q2, 1) - rond(q1, 1);
+      var op = dpp > 0;
+      return { onderdeel:'bedrijf: arbeidsmarkt', onderdeelNaam:ARB, vorm:'invul', sleutel:'wlh' + B1 + w1 + B2 + w2,
+        vraag:'Met hoeveel <b>procentpunt</b> is de werkloosheid in ' + gm + ' ' + (op ? 'gestegen' : 'gedaald') + '?', opdracht:'Bereken eerst het werkloosheidspercentage in beide jaren, elk afgerond op één decimaal. Het verschil tussen twee percentages heet procentpunt.',
+        beeld:tabel(gm + ' (een verzonnen gemeente)', ['', 'vorig jaar', 'dit jaar'], [['beroepsbevolking', nl(B1), nl(B2)], ['werklozen', nl(w1), nl(w2)]]),
+        velden:[{ label:'procentpunt', antwoord:rond(Math.abs(dpp), 1), tol:0.05, toon:nl(Math.abs(dpp), 1) + ' procentpunt' }],
+        uitleg:'Vorig jaar: ' + nl(w1) + ' / ' + nl(B1) + ' × 100 = ' + pct(q1) + '. Dit jaar: ' + nl(w2) + ' / ' + nl(B2) + ' × 100 = ' + pct(q2) + '. Verschil: ' + nl(Math.abs(dpp), 1) + ' procentpunt. Dat is iets anders dan een stijging of daling in procenten.', antwoordTekst:nl(Math.abs(dpp), 1) + ' procentpunt' };
+    }
+    var meer = Math.random() < .6, B3 = Math.round(B1 * tussen(110, 120) / 100 / 100) * 100, w3;
+    if (meer){ w3 = w1 + tussen(1, 4) * 10; while (w3 / B3 >= w1 / B1) B3 += 1000; }
+    else { w3 = Math.round(w1 * tussen(125, 140) / 100 / 10) * 10; }
+    var r1 = w1 / B1 * 100, r3 = w3 / B3 * 100;
+    var ops = ['Het aantal werklozen is gestegen, maar het werkloosheidspercentage is gedaald', 'Het aantal werklozen en het werkloosheidspercentage zijn allebei gestegen', 'Het aantal werklozen en het werkloosheidspercentage zijn allebei gedaald', 'Het aantal werklozen is gedaald, maar het werkloosheidspercentage is gestegen'];
+    var gi = meer ? 0 : 1;
+    return { onderdeel:'bedrijf: arbeidsmarkt', onderdeelNaam:ARB, vorm:'meerkeuze', vasteVolgorde:true, sleutel:'wlr' + B1 + w1 + B3 + w3,
+      vraag:'Een wethouder van ' + gm + ' zegt: "De werkloosheid is gestegen." Wat klopt er volgens de tabel?', opdracht:'Kijk naar het aantal werklozen én naar het percentage.',
+      beeld:tabel(gm + ' (een verzonnen gemeente)', ['', 'vorig jaar', 'dit jaar'], [['beroepsbevolking', nl(B1), nl(B3)], ['werklozen', nl(w1), nl(w3)]]),
+      opties:ops, goed:gi,
+      uitleg:'Werklozen: van ' + nl(w1) + ' naar ' + nl(w3) + '. Percentage: van ' + pct(r1) + ' naar ' + pct(r3) + '. ' + (meer ? 'De beroepsbevolking groeide harder dan het aantal werklozen, dus het percentage daalde. De wethouder heeft maar half gelijk.' : 'Allebei gestegen: de wethouder heeft gelijk.'), antwoordTekst:ops[gi] };
+  }
+  var BEROEPSBEV = {
+    werk:['Lotte (34) werkt 24 uur per week als verpleegkundige.', 'Mo (52) heeft een eigen klusbedrijf, zonder personeel.', 'Eva (27) werkt fulltime bij een bank.', 'Ruben (45) is buschauffeur.', 'Ahmed (38) werkt drie dagen per week in een fabriek.'],
+    loos:['Fatima (28) heeft geen baan, solliciteert elke week en kan meteen beginnen.', 'Ilse (45) is ontslagen, zoekt werk en kan direct aan de slag.', 'Jeroen (23) is net afgestudeerd, zoekt zijn eerste baan en kan meteen beginnen.'],
+    niet:['Kees (70) is met pensioen en zoekt geen werk.', 'Sem (40) zorgt thuis voor de kinderen en zoekt geen werk.', 'Noor (16) zit op school, heeft geen bijbaan en zoekt er ook geen.', 'Wim (59) is langdurig ziek en kan niet werken.', 'Sara (22) studeert voltijd en zoekt geen werk.']
+  };
+  function beroepsbevolking(niv){
+    if (niv === 'bb'){
+      var kb = H(BEROEPSBEV.werk.concat(BEROEPSBEV.loos)).slice(0, 2).map(function(t){ return { t:t, v:'in' }; }).concat(H(BEROEPSBEV.niet).slice(0, 2).map(function(t){ return { t:t, v:'uit' }; }));
+      return sleep('arbeidsmarkt', ARB, 'Wie hoort bij de <b>beroepsbevolking</b>?', 'Bij de beroepsbevolking horen mensen met betaald werk en werklozen: mensen zonder werk die werk zoeken en meteen kunnen beginnen.',
+        [{ id:'in', naam:'beroepsbevolking' }, { id:'uit', naam:'hoort er niet bij' }], kb, null, 'bvb');
+    }
+    var k = H(BEROEPSBEV.werk).slice(0, 2).map(function(t){ return { t:t, v:'werk' }; }).concat(H(BEROEPSBEV.loos).slice(0, 2).map(function(t){ return { t:t, v:'loos' }; }), H(BEROEPSBEV.niet).slice(0, 2).map(function(t){ return { t:t, v:'niet' }; }));
+    return sleep('arbeidsmarkt', ARB, 'Leg elke persoon in het goede vak.', 'Werkloos ben je als je geen betaald werk hebt, werk zoekt en meteen kunt beginnen. Wie geen werk zoekt of niet kan werken, hoort niet bij de beroepsbevolking.',
+      [{ id:'werk', naam:'werkt', uit:'beroepsbevolking' }, { id:'loos', naam:'werkloos', uit:'beroepsbevolking' }, { id:'niet', naam:'geen beroepsbevolking' }], k, null, 'bvk');
+  }
+  var ARBMK = [
+    { v:'Wie <b>vraagt</b> arbeid op de arbeidsmarkt?', g:'werkgevers: bedrijven en de overheid die personeel zoeken', f:['werknemers die een baan zoeken', 'de vakbonden', 'de werklozen'], u:'Werkgevers vragen arbeid; mensen die willen werken bieden arbeid aan. Dat is andersom dan je misschien denkt.' },
+    { v:'Wie <b>biedt</b> arbeid aan op de arbeidsmarkt?', g:'mensen die willen werken', f:['bedrijven met vacatures', 'de overheid als werkgever', 'uitzendbureaus die personeel zoeken'], u:'Mensen bieden hun arbeid aan; werkgevers vragen erom.' },
+    { v:'Een ziekenhuis zoekt 40 nieuwe verpleegkundigen. Hoe heten die open plekken?', g:'vacatures', f:['werklozen', 'uitkeringen', 'cao’s'], u:'Een vacature is een baan waarvoor een werkgever iemand zoekt: vraag naar arbeid.' },
+    { v:'Wie telt als werkloze?', g:'iemand zonder betaald werk die werk zoekt en meteen kan beginnen', f:['iemand die met pensioen is', 'iemand die parttime werkt', 'iemand die voltijd studeert'], u:'Een werkloze is #g.' },
+    { v:'Waar kun je recht op hebben als je als werknemer je baan verliest?', g:'een WW-uitkering', f:['vakantiegeld', 'AOW', 'kinderbijslag'], u:'De WW (Werkloosheidswet) is een werknemersverzekering. AOW krijg je pas als je de pensioenleeftijd hebt bereikt.' },
+    { v:'Er zijn veel meer vacatures dan mensen die werk zoeken. Hoe heet zo’n arbeidsmarkt?', g:'een krappe arbeidsmarkt', f:['een ruime arbeidsmarkt', 'een vrije markt', 'een open economie'], u:'Krap: de vraag naar arbeid is groter dan het aanbod. Ruim: er zijn meer mensen die werk zoeken dan banen.', n:2 },
+    { v:'Wat gebeurt er vaak op een krappe arbeidsmarkt?', g:'de lonen stijgen, omdat werkgevers moeite hebben om personeel te vinden', f:['de lonen dalen, omdat er te weinig werk is', 'de werkloosheid stijgt snel', 'werkgevers ontslaan meer mensen'], u:'Als werkgevers om personeel moeten vechten, bieden ze hogere lonen en betere voorwaarden.', n:2 },
+    { v:'Wat is werkgelegenheid?', g:'het aantal banen dat er is', f:['het aantal mensen dat werk zoekt', 'het aantal werklozen', 'het aantal mensen met pensioen'], u:'Werkgelegenheid gaat over de banen (arbeidsplaatsen), dus over de vraag naar arbeid.', n:2 },
+    { v:'Wat is de beroepsbevolking?', g:'iedereen met betaald werk plus de werklozen', f:['alleen de mensen met betaald werk', 'alle inwoners tussen 15 en 75 jaar', 'alle inwoners van Nederland'], u:'De beroepsbevolking zijn de mensen die werken of meteen willen en kunnen werken.', n:2 },
+    { v:'Medewerkers van een strandpaviljoen hebben in de winter geen werk. Welke soort werkloosheid is dit?', g:'seizoenswerkloosheid', f:['conjuncturele werkloosheid', 'structurele werkloosheid', 'frictiewerkloosheid'], u:'Werk dat alleen in een bepaald seizoen is, geeft seizoenswerkloosheid.', n:2 },
+    { v:'Het gaat slecht met de economie: mensen kopen minder en bedrijven ontslaan personeel. Welke soort werkloosheid is dit?', g:'conjuncturele werkloosheid', f:['seizoenswerkloosheid', 'frictiewerkloosheid', 'structurele werkloosheid'], u:'Werkloosheid door een laagconjunctuur (minder bestedingen) heet conjuncturele werkloosheid. Als de economie aantrekt, verdwijnt ze weer.', n:2 },
+    { v:'Kassamedewerkers verliezen hun baan door zelfscankassa’s. Hun opleiding past niet bij de vacatures in de zorg. Welke soort werkloosheid is dit?', g:'structurele werkloosheid', f:['conjuncturele werkloosheid', 'seizoenswerkloosheid', 'frictiewerkloosheid'], u:'Er zijn wel banen, maar ze passen niet bij wat de werklozen kunnen: structurele werkloosheid. Omscholing helpt.', n:3 },
+    { v:'Joris heeft een nieuwe baan gevonden die over twee maanden begint. Tot die tijd heeft hij geen werk. Welke soort werkloosheid is dit?', g:'frictiewerkloosheid', f:['structurele werkloosheid', 'conjuncturele werkloosheid', 'seizoenswerkloosheid'], u:'Korte werkloosheid tussen twee banen heet frictiewerkloosheid.', n:3 },
+    { v:'De komende jaren gaan veel mensen met pensioen (vergrijzing). Wat betekent dat voor de arbeidsmarkt?', g:'het aanbod van arbeid daalt, waardoor de arbeidsmarkt krapper wordt', f:['de vraag naar arbeid daalt, waardoor de werkloosheid stijgt', 'het aanbod van arbeid stijgt, waardoor de lonen dalen', 'er verandert niets, want gepensioneerden tellen niet mee'], u:'Mensen met pensioen bieden geen arbeid meer aan. Als er weinig jongeren bijkomen, daalt het aanbod en wordt de markt krap.', n:3 }
+  ];
+  function arbeidsmarkt(niv){ return kies([werkloosheid, werkloosheid, beroepsbevolking, function(n){ return uitLijst(ARBMK, n, 'arbeidsmarkt', ARB, 'am'); }])(niv); }
+
+  /* =====================================================================
+     5. Internationale handel
+     ===================================================================== */
+  var HANDEL = 'internationale handel';
+  var IMEX = {
+    imp:[['Een supermarkt in Utrecht koopt bananen uit Ecuador.', 1], ['Een Nederlandse autodealer koopt auto’s van een fabriek in Japan.', 1], ['Een kledingwinkel in Groningen koopt T-shirts uit Bangladesh.', 1], ['Een Nederlandse koffiebrander koopt koffiebonen uit Brazilië.', 1], ['Een Nederlands energiebedrijf koopt aardgas uit Noorwegen.', 2], ['Een Nederlands gezin betaalt een hotel in Spanje voor de zomervakantie.', 3]],
+    exp:[['Een tuinder uit het Westland verkoopt tomaten aan een supermarkt in Duitsland.', 1], ['Een kaasmakerij uit Gouda verkoopt kaas aan een winkel in Frankrijk.', 1], ['Een bloemenkweker verkoopt tulpen aan een bloemist in Engeland.', 1], ['Een Nederlandse fabriek verkoopt chipmachines aan een bedrijf in Taiwan.', 2], ['Een Nederlands ingenieursbureau ontwerpt een haven voor de regering van Ghana.', 3], ['Een Amerikaanse toerist slaapt een week in een hotel in Amsterdam.', 3]]
+  };
+  function importExport(niv){
+    var n = NIV[niv], k = niv === 'bb' ? 2 : 3;
+    function pak(l){ var uit = H(l.filter(function(x){ return x[1] <= n; })).slice(0, k); if (niv === 'hv' && !uit.some(function(x){ return x[1] === 3; })) uit[0] = kies(l.filter(function(x){ return x[1] === 3; })); return uit; }
+    var kaarten = pak(IMEX.imp).map(function(x){ return { t:x[0], v:'imp' }; }).concat(pak(IMEX.exp).map(function(x){ return { t:x[0], v:'exp' }; }));
+    var dienst = kaarten.some(function(x){ return /hotel|ingenieurs/.test(x.t); });
+    return sleep('handel', HANDEL, 'Is het <b>import</b> of <b>export</b> voor Nederland?', 'Import: Nederland koopt iets uit het buitenland. Export: Nederland verkoopt iets aan het buitenland.' + (niv === 'hv' ? ' Dat geldt ook voor diensten.' : ''),
+      [{ id:'imp', naam:'import' }, { id:'exp', naam:'export' }], kaarten,
+      '<b>Import</b>: ' + kaarten.filter(function(x){ return x.v === 'imp'; }).map(function(x){ return x.t; }).join(' ') + ' <b>Export</b>: ' + kaarten.filter(function(x){ return x.v === 'exp'; }).map(function(x){ return x.t; }).join(' ') + (dienst ? ' Bij diensten kijk je waar het geld heen gaat: een buitenlandse toerist in Amsterdam betaalt aan Nederland, dus dat is export.' : ''), 'ie');
+  }
+  var VALUTA = [
+    { mv:'dollar', naam:'de Amerikaanse dollar', land:'de Verenigde Staten', k:[1.05, 1.25] },
+    { mv:'pond', naam:'het Britse pond', land:'het Verenigd Koninkrijk', k:[0.80, 0.90] },
+    { mv:'frank', naam:'de Zwitserse frank', land:'Zwitserland', k:[0.90, 1.00] },
+    { mv:'Noorse kronen', naam:'de Noorse kroon', land:'Noorwegen', k:[11, 12] },
+    { mv:'yen', naam:'de Japanse yen', land:'Japan', k:[150, 175], heel:true }
+  ];
+  function koersKaart(v, k, k2){ return '<div class="koers"><small>stel</small>1 euro = ' + nl(k, v.heel ? 0 : 2) + ' ' + v.mv + (k2 ? '<small>en later 1 euro = ' + nl(k2, v.heel ? 0 : 2) + ' ' + v.mv + '</small>' : '') + '</div>'; }
+  function vb(v, x){ return nl(x, v.heel ? 0 : 2) + ' ' + v.mv; }
+  function wisselkoers(niv){
+    if (niv === 'bb'){
+      var v = kies(VALUTA.filter(function(x){ return !x.heel && x.k[1] < 5; })), k = stap(v.k[0], v.k[1] - 0.05, 0.05), E = kies([50, 100, 150, 200, 250, 300, 400, 500]), x = E * k;
+      return { onderdeel:'bedrijf: handel', onderdeelNaam:HANDEL, vorm:'meerkeuze', sleutel:'wkb' + v.mv + k + E,
+        vraag:'Je gaat op reis naar ' + v.land + ' en wisselt <b>' + geld(E) + '</b>. Hoeveel ' + v.mv + ' krijg je?', opdracht:'Van euro naar ' + v.mv + ': keer de koers.', beeld:koersKaart(v, k),
+        opties:opties4(vb(v, x), [vb(v, E / k), vb(v, E), vb(v, E * k * 10), vb(v, (E + 10) * k)]), goed:0,
+        uitleg:'Voor elke euro krijg je ' + nl(k, 2) + ' ' + v.mv + '. ' + E + ' × ' + nl(k, 2) + ' = ' + vb(v, x) + '.', antwoordTekst:vb(v, x) };
+    }
+    var v2 = kies(VALUTA), k2 = v2.heel ? tussen(v2.k[0], v2.k[1]) : stap(v2.k[0], v2.k[1], 0.01);
+    if (niv === 'kgt'){
+      if (Math.random() < .55){
+        var P = v2.heel ? tussen(20, 400) * 100 : rond(tussen(15, 400) - kies([0, 0.01, 0.05, 0.5]), 2), e = P / k2;
+        return { onderdeel:'bedrijf: handel', onderdeelNaam:HANDEL, vorm:'invul', sleutel:'wkk' + v2.mv + k2 + P,
+          vraag:'Een jas kost in een webshop in ' + v2.land + ' <b>' + vb(v2, P) + '</b>. Hoeveel euro is dat?', opdracht:'Van ' + v2.mv + ' naar euro: delen door de koers. Rond af op centen.', beeld:koersKaart(v2, k2),
+          velden:[bedrag('in euro', e, 0.011)],
+          uitleg:vb(v2, P) + ' / ' + nl(k2, v2.heel ? 0 : 2) + ' = ' + geld2(e) + '. Van een vreemde munt naar euro deel je door de koers' + (k2 < 1 ? '; hier is 1 euro minder dan 1 ' + v2.mv + ' waard, dus het bedrag in euro is groter.' : '.'), antwoordTekst:geld2(e) };
+      }
+      var E2 = rond(tussen(20, 600) + kies([0, 0.5, 0.25, 0.95]), 2), y = E2 * k2;
+      return { onderdeel:'bedrijf: handel', onderdeelNaam:HANDEL, vorm:'invul', sleutel:'wke' + v2.mv + k2 + E2,
+        vraag:'Een Nederlandse webshop verkoopt een fiets van <b>' + geld2(E2) + '</b> aan een klant in ' + v2.land + '. Hoeveel ' + v2.mv + ' betaalt de klant?', opdracht:'Van euro naar ' + v2.mv + ': keer de koers. Rond af op ' + (v2.heel ? 'hele yen.' : 'twee decimalen.'), beeld:koersKaart(v2, k2),
+        velden:[{ label:'in ' + v2.mv, antwoord:rond(y, v2.heel ? 0 : 2), tol:v2.heel ? 0.6 : 0.011, eenheid:v2.mv, toon:vb(v2, y) }],
+        uitleg:geld2(E2) + ' × ' + nl(k2, v2.heel ? 0 : 2) + ' = ' + vb(v2, y) + '.', antwoordTekst:vb(v2, y) };
+    }
+    var vh = kies(VALUTA.filter(function(x){ return !x.heel && x.k[1] < 5; })), ka = stap(vh.k[0], vh.k[1] - 0.06, 0.01), kb2 = rond(ka + kies([-1, 1]) * stap(0.04, 0.12, 0.01), 2), stijgt = kb2 > ka;
+    if (Math.random() < .5){
+      var Ep = rond(tussen(4, 40) + kies([0, 0.5, 0.95]), 2), d = Ep * (kb2 - ka);
+      return { onderdeel:'bedrijf: handel', onderdeelNaam:HANDEL, vorm:'invul', sleutel:'wkh' + vh.mv + ka + kb2 + Ep,
+        vraag:'Een kilo Nederlandse kaas kost <b>' + geld2(Ep) + '</b>. De koers van de euro verandert. Wat kost de kaas voor een klant in ' + vh.land + ' vóór en na de verandering?', opdracht:'Reken beide prijzen uit in ' + vh.mv + ', op twee decimalen.', beeld:koersKaart(vh, ka, kb2),
+        velden:[{ label:'vóór', antwoord:rond(Ep * ka, 2), tol:0.011, eenheid:vh.mv, toon:vb(vh, Ep * ka) }, { label:'na', antwoord:rond(Ep * kb2, 2), tol:0.011, eenheid:vh.mv, toon:vb(vh, Ep * kb2) }],
+        uitleg:'Vóór: ' + geld2(Ep) + ' × ' + nl(ka, 2) + ' = ' + vb(vh, Ep * ka) + '. Na: ' + geld2(Ep) + ' × ' + nl(kb2, 2) + ' = ' + vb(vh, Ep * kb2) + '. De euro is ' + (stijgt ? 'meer waard geworden: Nederlandse kaas wordt duurder voor buitenlandse klanten, en dat is slecht voor de export.' : 'minder waard geworden: Nederlandse kaas wordt goedkoper voor buitenlandse klanten, en dat is goed voor de export.'), antwoordTekst:vb(vh, Ep * ka) + ' en ' + vb(vh, Ep * kb2) };
+    }
+    var Pd = tussen(20, 300) * 10, ea = Pd / ka, eb = Pd / kb2, dd = Math.abs(rond(ea, 2) - rond(eb, 2));
+    return { onderdeel:'bedrijf: handel', onderdeelNaam:HANDEL, vorm:'invul', sleutel:'wki' + vh.mv + ka + kb2 + Pd,
+      vraag:'Een Nederlandse winkel koopt een partij spelcomputers in ' + vh.land + ' voor <b>' + vb(vh, Pd) + '</b>. Hoeveel euro is de partij na de koersverandering ' + (stijgt ? 'goedkoper' : 'duurder') + ' geworden?', opdracht:'Reken de prijs in euro uit bij beide koersen (afgerond op centen) en neem het verschil.', beeld:koersKaart(vh, ka, kb2),
+      velden:[bedrag('verschil', dd, 0.021)],
+      uitleg:'Eerst: ' + vb(vh, Pd) + ' / ' + nl(ka, 2) + ' = ' + geld2(ea) + '. Daarna: ' + vb(vh, Pd) + ' / ' + nl(kb2, 2) + ' = ' + geld2(eb) + '. Verschil: ' + geld2(dd) + '. ' + (stijgt ? 'Een duurdere euro maakt import goedkoper.' : 'Een goedkopere euro maakt import duurder.'), antwoordTekst:geld2(dd) };
+  }
+  function koersGevolg(niv){
+    var stijgt = Math.random() < .5, wat = kies(['export', 'import', 'reis']), v = kies(VALUTA.filter(function(x){ return !x.heel; }));
+    var zin = NIV[niv] === 3 && Math.random() < .5 ? hoofd(v.naam) + ' wordt ' + (stijgt ? 'goedkoper' : 'duurder') + ' ten opzichte van de euro.' : 'De euro wordt ' + (stijgt ? 'duurder (meer waard)' : 'goedkoper (minder waard)') + ' ten opzichte van ' + v.naam + '.';
+    var ops, gi;
+    if (wat === 'export'){ ops = ['De export naar ' + v.land + ' daalt, want Nederlandse producten worden duurder voor de klanten daar', 'De export naar ' + v.land + ' stijgt, want Nederlandse producten worden goedkoper voor de klanten daar', 'Er verandert niets, want de prijs in euro blijft gelijk']; gi = stijgt ? 0 : 1; }
+    else if (wat === 'import'){ ops = ['Producten uit ' + v.land + ' worden goedkoper voor Nederlanders, dus de import stijgt', 'Producten uit ' + v.land + ' worden duurder voor Nederlanders, dus de import daalt', 'Er verandert niets, want de prijs in ' + v.mv + ' blijft gelijk']; gi = stijgt ? 0 : 1; }
+    else { ops = ['Een vakantie in ' + v.land + ' wordt goedkoper voor Nederlanders', 'Een vakantie in ' + v.land + ' wordt duurder voor Nederlanders', 'Er verandert niets voor Nederlandse toeristen']; gi = stijgt ? 0 : 1; }
+    return { onderdeel:'bedrijf: handel', onderdeelNaam:HANDEL, vorm:'meerkeuze', vasteVolgorde:true, sleutel:'kg' + stijgt + wat + v.mv + (zin.charAt(4)),
+      vraag:'Wat is het gevolg?', beeld:bericht('Bericht', zin), opdracht:'Krijg je voor één euro nu meer of minder ' + v.mv + '?',
+      opties:ops, goed:gi,
+      uitleg:(stijgt ? 'Voor één euro krijg je nu meer ' + v.mv + '. Wie euro’s heeft, kan meer kopen in ' + v.land + '; wie ' + v.mv + ' heeft, moet meer betalen voor Nederlandse producten.' : 'Voor één euro krijg je nu minder ' + v.mv + '. Wie euro’s heeft, kan minder kopen in ' + v.land + '; Nederlandse producten worden goedkoper voor klanten daar.') + ' Dus: ' + ops[gi].charAt(0).toLowerCase() + ops[gi].slice(1) + '.', antwoordTekst:ops[gi] };
+  }
+  function handelsbalans(niv){
+    var ex = tussen(300, 800), im = ex - tussen(-60, 80); if (im === ex) im -= 10;
+    var over = ex > im;
+    return { onderdeel:'bedrijf: handel', onderdeelNaam:HANDEL, vorm:'invul', sleutel:'hb' + ex + im,
+      vraag:'Hoe groot is het <b>' + (over ? 'overschot' : 'tekort') + '</b> op de handelsbalans van dit land?', opdracht:'De handelsbalans is export min import van goederen.',
+      beeld:tabel('Een land in één jaar (verzonnen getallen)', ['', 'miljard euro'], [['export van goederen', nl(ex)], ['import van goederen', nl(im)]]),
+      velden:[{ label:over ? 'overschot' : 'tekort', antwoord:Math.abs(ex - im), tol:0.5, eenheid:'miljard euro', toon:nl(Math.abs(ex - im)) + ' miljard euro' }],
+      uitleg:nl(ex) + ' − ' + nl(im) + ' = ' + nl(ex - im) + ' miljard euro. ' + (over ? 'De export is groter: een overschot. Nederland heeft meestal een overschot, want het exporteert veel.' : 'De import is groter: een tekort.'), antwoordTekst:nl(Math.abs(ex - im)) + ' miljard euro' };
+  }
+  var HANDELMK = [
+    { v:'Wat is import?', g:'goederen en diensten die een land uit het buitenland koopt', f:['goederen en diensten die een land aan het buitenland verkoopt', 'producten die in eigen land worden gemaakt', 'belasting op producten uit het buitenland'], u:'Import is #g. Verkopen aan het buitenland is export.' },
+    { v:'Waarom koopt Nederland bananen in het buitenland?', g:'bananen groeien hier niet goed door het klimaat', f:['Nederlandse boeren mogen geen fruit telen', 'Nederland wil zo minder exporteren', 'bananen uit Nederland zijn verboden in de EU'], u:'Landen handelen omdat ze verschillen: in klimaat, grondstoffen, kennis en lonen. Wat je zelf niet (goedkoop) kunt maken, koop je in.' },
+    { v:'Nederland wordt een <b>open economie</b> genoemd. Wat betekent dat?', g:'Nederland handelt veel met het buitenland: de import en export zijn groot', f:['winkels mogen op zondag open zijn', 'iedereen mag in Nederland een bedrijf beginnen', 'Nederland heeft geen eigen munt meer'], u:'Een open economie is sterk afhankelijk van handel met het buitenland. Gaat het slecht in Duitsland, dan merkt Nederland dat.' },
+    { v:'Welk land is lid van de EU, maar betaalt <b>niet</b> met de euro?', g:['Zweden', 'Denemarken', 'Polen'], f:['Duitsland', 'België', 'Frankrijk', 'Italië', 'Spanje', 'Oostenrijk'], u:'#g is lid van de EU, maar heeft een eigen munt. Niet alle EU-landen gebruiken de euro.' },
+    { v:'Welk land betaalt met de euro?', g:['Duitsland', 'België', 'Spanje', 'Italië', 'Frankrijk'], f:['Zweden', 'Zwitserland', 'het Verenigd Koninkrijk', 'Noorwegen'], u:'#g gebruikt de euro, net als Nederland.' },
+    { v:'Je gaat met vakantie naar Italië. Wat is daar het voordeel van de euro?', g:'je hoeft geen geld te wisselen en kunt de prijzen makkelijk vergelijken', f:['alles is daar even duur als in Nederland', 'je hoeft daar geen btw te betalen', 'je krijgt daar korting met een Nederlandse pas'], u:'Met dezelfde munt heb je geen wisselkosten en geen koersrisico, en zie je meteen of iets duur is.' },
+    { v:'Welk land is <b>geen</b> lid van de Europese Unie?', g:['Noorwegen', 'Zwitserland', 'het Verenigd Koninkrijk'], f:['Oostenrijk', 'Portugal', 'Ierland', 'Griekenland', 'Finland'], u:'#g is geen lid van de EU, al handelt het wel veel met EU-landen.', n:2 },
+    { v:'Binnen de EU geldt vrij verkeer van goederen. Wat betekent dat voor een Nederlandse kaasmaker die naar Frankrijk exporteert?', g:'hij hoeft geen invoerrechten te betalen', f:['hij hoeft geen btw meer te rekenen', 'hij mag zijn kaas niet duurder maken dan in Nederland', 'hij moet zijn kaas eerst laten keuren in Brussel'], u:'Tussen EU-landen zijn er geen invoerrechten: goederen kunnen vrij over de grens.', n:2 },
+    { v:'Welke vier dingen mogen vrij bewegen binnen de interne markt van de EU?', g:'goederen, diensten, personen en kapitaal', f:['goederen, diensten, belastingen en wetten', 'personen, auto’s, banen en lonen', 'goederen, personen, uitkeringen en pensioenen'], u:'De interne markt kent vrij verkeer van #g.', n:2 },
+    { v:'Waarom specialiseren landen zich?', g:'ze maken vooral wat ze goed of goedkoop kunnen maken en kopen de rest in het buitenland', f:['zodat ze niets meer hoeven te importeren', 'omdat de EU dat verplicht', 'zodat ze minder hoeven te exporteren'], u:'Door specialisatie wordt er meer en goedkoper geproduceerd. Daarna ruilen landen via de handel.', n:2 },
+    { v:'Een Nederlandse exporteur verkoopt veel aan Amerikaanse klanten. Waarom is een veranderende wisselkoers een risico voor hem?', g:'als de euro duurder wordt, worden zijn producten duurder voor Amerikanen en verkoopt hij minder', f:['hij moet dan meer btw betalen', 'hij mag dan geen dollars meer aannemen', 'zijn kosten in euro stijgen dan altijd'], u:'Dit heet koersrisico. Binnen de eurozone heeft een exporteur daar geen last van.', n:2 },
+    { v:'Wat is het gemeenschappelijk buitentarief van de EU?', g:'alle EU-landen heffen dezelfde invoerrechten op goederen van buiten de EU', f:['alle EU-landen hebben dezelfde btw', 'EU-landen betalen elkaar een vast bedrag voor handel', 'goederen van buiten de EU zijn verboden'], u:'Zo maakt het niet uit via welk EU-land een product binnenkomt.', n:3 },
+    { v:'Een land legt hoge invoerrechten op buitenlandse auto’s om de eigen autofabrieken te beschermen. Hoe heet dat?', g:'protectionisme', f:['specialisatie', 'vrijhandel', 'wederuitvoer'], u:'Protectionisme beschermt eigen bedrijven tegen buitenlandse concurrentie. Consumenten betalen daardoor vaak meer.', n:3 },
+    { v:'Een Nederlands bedrijf koopt speelgoed uit China, dat in Rotterdam aankomt, en verkoopt het daarna door aan winkels in Duitsland. Hoe heet dat?', g:'wederuitvoer', f:['doorvoer', 'protectionisme', 'import voor eigen gebruik'], u:'Bij wederuitvoer wordt een product eerst door een Nederlands bedrijf ingevoerd en daarna weer uitgevoerd. Bij doorvoer reist het alleen door Nederland heen, zonder dat een Nederlands bedrijf het koopt.', n:3 },
+    { v:'Welke instelling voert het rentebeleid voor de euro?', g:'de Europese Centrale Bank (ECB)', f:['De Nederlandsche Bank alleen', 'de Europese Commissie', 'het Europees Parlement'], u:'De ECB in Frankfurt bepaalt de rente voor alle eurolanden.', n:3 }
+  ];
+  function handel(niv){
+    var l = [importExport, wisselkoers, wisselkoers, function(n){ return uitLijst(HANDELMK, n, 'handel', HANDEL, 'hm'); }];
+    if (niv !== 'bb') l.push(koersGevolg);
+    if (niv === 'hv') l.push(handelsbalans);
+    return kies(l)(niv);
+  }
+
+  /* =====================================================================
+     6. Arm en rijk
+     ===================================================================== */
+  var WERELD = 'arm en rijk';
+  function bbp(niv){
+    if (niv === 'bb' || niv === 'kgt'){
+      var ln, tries = 0;
+      do {
+        var per = H([kies([1, 2, 3]), kies([8, 10, 12, 15]), kies([30, 40, 45, 50])]).map(function(x){ return x * 1000; });
+        ln = per.map(function(p, i){ var inw = p < 5000 ? tussen(40, 150) : p < 20000 ? tussen(10, 60) : tussen(4, 30); return { naam:'Land ' + 'ABC'.charAt(i), per:p, inw:inw, bbp:p * inw / 1000 }; });
+        tries++;
+      } while (tries < 50 && ln.reduce(function(a, b){ return b.bbp > a.bbp ? b : a; }).per === Math.max.apply(null, per));
+      var tab = tabel('Drie landen (verzonnen getallen)', ['land', 'bbp', 'inwoners'], ln.map(function(x){ return [x.naam, nl(x.bbp) + ' mld', nl(x.inw) + ' mln']; }), 'Bbp in miljard euro, inwoners in miljoen.');
+      if (niv === 'bb'){
+        var rijk = ln.reduce(function(a, b){ return b.per > a.per ? b : a; }), groot = ln.reduce(function(a, b){ return b.bbp > a.bbp ? b : a; });
+        var ops = ln.map(function(x){ return x.naam; });
+        return { onderdeel:'bedrijf: wereld', onderdeelNaam:WERELD, vorm:'meerkeuze', vasteVolgorde:true, sleutel:'bpb' + ln.map(function(x){ return x.per + '-' + x.inw; }).join('|'),
+          vraag:'Welk land heeft het hoogste <b>bbp per inwoner</b>?', opdracht:'Bbp per inwoner = bbp / aantal inwoners. Het land met het grootste bbp is niet altijd het rijkste per persoon.', beeld:tab,
+          opties:ops, goed:ops.indexOf(rijk.naam),
+          uitleg:ln.map(function(x){ return x.naam + ': ' + geld(x.per); }).join(', ') + ' per inwoner. ' + rijk.naam + ' is per inwoner het rijkst' + (groot !== rijk ? ', al heeft ' + groot.naam + ' het grootste bbp: daar moet het bbp over veel meer mensen verdeeld worden.' : '.'), antwoordTekst:rijk.naam };
+      }
+      var x = kies(ln);
+      return { onderdeel:'bedrijf: wereld', onderdeelNaam:WERELD, vorm:'invul', sleutel:'bpk' + x.per + '-' + x.inw,
+        vraag:'Bereken het <b>bbp per inwoner</b> van ' + x.naam + ' in euro.', opdracht:'Let op de eenheden: miljard gedeeld door miljoen is keer 1.000.', beeld:tab,
+        velden:[bedrag('bbp per inwoner', x.per)],
+        uitleg:nl(x.bbp) + ' miljard / ' + nl(x.inw) + ' miljoen = ' + nl(x.bbp * 1e9) + ' / ' + nl(x.inw * 1e6) + ' = ' + geld(x.per) + ' per inwoner.', antwoordTekst:geld(x.per) };
+    }
+    var Y1 = tussen(20, 400), N1 = tussen(50, 600) / 10, gb = tussen(-2, 8), gn = tussen(0, 4), Y2 = Math.round(Y1 * (1 + gb / 100)), N2 = rond(N1 * (1 + gn / 100), 1);
+    if (Y2 === Y1) Y2 += 1;
+    var p1 = Y1 / N1, p2 = Y2 / N2, ch = (p2 - p1) / p1 * 100;
+    if (Math.random() < .5){
+      return { onderdeel:'bedrijf: wereld', onderdeelNaam:WERELD, vorm:'invul', sleutel:'bph' + Y1 + N1 + Y2 + N2,
+        vraag:'Met hoeveel procent is het <b>bbp per inwoner</b> van dit land ' + (ch >= 0 ? 'gestegen' : 'gedaald') + '?', opdracht:'Bereken het bbp per inwoner in beide jaren en dan de procentuele verandering. Rond af op één decimaal.',
+        beeld:tabel('Een land (verzonnen getallen)', ['', 'jaar 1', 'jaar 2'], [['bbp (miljard euro)', nl(Y1), nl(Y2)], ['inwoners (miljoen)', nl(N1, 1), nl(N2, 1)]]),
+        velden:[procent(ch >= 0 ? 'stijging' : 'daling', Math.abs(ch))],
+        uitleg:'Jaar 1: ' + nl(Y1) + ' / ' + nl(N1, 1) + ' = ' + nl(p1 * 1000, 0) + ' euro per inwoner. Jaar 2: ' + nl(Y2) + ' / ' + nl(N2, 1) + ' = ' + nl(p2 * 1000, 0) + ' euro. Verandering: ' + pct(ch) + '. ' + (Y2 > Y1 && ch < 0 ? 'Het bbp groeide, maar de bevolking groeide harder: per persoon is er minder.' : 'Vergelijk altijd de groei van het bbp met de groei van de bevolking.'), antwoordTekst:pct(Math.abs(ch)) };
+    }
+    var ops = ['Het bbp per inwoner stijgt', 'Het bbp per inwoner daalt', 'Het bbp per inwoner blijft gelijk'], gbb = kies([1, 2, 3, 4, 5]), gnn = kies([1, 2, 3, 4, 5]), gi = gbb > gnn ? 0 : gbb < gnn ? 1 : 2;
+    return { onderdeel:'bedrijf: wereld', onderdeelNaam:WERELD, vorm:'meerkeuze', vasteVolgorde:true, sleutel:'bpr' + gbb + gnn,
+      vraag:'Wat gebeurt er met het bbp per inwoner?', beeld:bericht('Uit een rapport over een ontwikkelingsland', 'Het bbp groeide vorig jaar met ' + gbb + '%. De bevolking groeide met ' + gnn + '%.'),
+      opties:ops, goed:gi,
+      uitleg:'Het bbp per inwoner stijgt alleen als het bbp harder groeit dan de bevolking. Hier ' + gbb + '% tegen ' + gnn + '%: ' + ops[gi].toLowerCase() + (gi === 2 ? ' (ongeveer).' : '.') + ' In landen met snelle bevolkingsgroei moet de economie dus hard groeien om per persoon vooruit te gaan.', antwoordTekst:ops[gi] };
+  }
+  var WERELDMK = [
+    { v:'Wat past bij een ontwikkelingsland?', g:'een laag inkomen per inwoner', f:['veel hoogopgeleide mensen', 'een goed werkende gezondheidszorg', 'weinig mensen die in de landbouw werken'], u:'Kenmerken van een ontwikkelingsland: een laag inkomen per inwoner, veel mensen in de landbouw, een snel groeiende bevolking en weinig goede scholen en zorg.' },
+    { v:'Wat past <b>niet</b> bij een ontwikkelingsland?', g:'bijna alle kinderen gaan tot hun achttiende naar school', f:['veel mensen werken in de landbouw', 'het inkomen per inwoner is laag', 'de bevolking groeit snel'], u:'In ontwikkelingslanden gaan veel kinderen niet lang naar school, vaak omdat ze moeten meewerken of omdat er geen school is.' },
+    { v:'Na een aardbeving stuurt Nederland tenten, drinkwater en artsen. Wat voor hulp is dit?', g:'noodhulp', f:['structurele hulp', 'een lening', 'handel'], u:'Noodhulp is snelle hulp na een ramp. Structurele hulp helpt een land op lange termijn, bijvoorbeeld met scholen of waterputten.' },
+    { v:'Nederland helpt een dorp een waterput en een school te bouwen, zodat het dorp zichzelf beter kan redden. Wat voor hulp is dit?', g:'structurele hulp', f:['noodhulp', 'gebonden hulp', 'protectionisme'], u:'Structurele hulp pakt de oorzaken van armoede aan, op lange termijn.' },
+    { v:'Wat betekent het keurmerk Fairtrade op een pak koffie?', g:'de koffieboeren krijgen een eerlijkere prijs voor hun koffie', f:['de koffie is in Nederland gebrand', 'de koffie is goedkoper dan andere koffie', 'de koffie bevat geen cafeïne'], u:'Bij eerlijke handel krijgen boeren in arme landen een betere prijs, zodat ze kunnen leven van hun werk.' },
+    { v:'Wat is het bbp per inwoner?', g:'de waarde van alles wat in een land in een jaar is geproduceerd, gedeeld door het aantal inwoners', f:['het loon van een gemiddelde werknemer per maand', 'het geld dat de overheid per inwoner uitgeeft', 'het spaargeld van alle inwoners samen'], u:'Het bbp (bruto binnenlands product) gedeeld door het aantal inwoners is een maat voor de welvaart per persoon.', n:2 },
+    { v:'Waarom zegt het bbp per inwoner niet alles over hoe goed mensen in een land leven?', g:'het zegt niets over hoe het inkomen verdeeld is, of over gezondheid en vrijheid', f:['omdat het bbp alleen over de overheid gaat', 'omdat arme landen geen bbp hebben', 'omdat het alleen over de export gaat'], u:'Een gemiddelde kan hoog zijn terwijl een kleine groep heel rijk is en de rest arm. En geluk, gezondheid en vrijheid tellen niet mee.', n:2 },
+    { v:'Wat is een microkrediet?', g:'een kleine lening aan iemand in een arm land om een eigen bedrijfje te beginnen', f:['een gift die je niet hoeft terug te betalen', 'een lening van de EU aan een rijk land', 'een korting op producten uit arme landen'], u:'Met een microkrediet kan iemand bijvoorbeeld een naaimachine kopen en zo een inkomen verdienen.', n:2 },
+    { v:'Wat bedoelen we met de vicieuze cirkel van armoede?', g:'arme mensen kunnen niet sparen of investeren in scholing, dus blijft hun inkomen laag', f:['rijke landen worden vanzelf armer', 'arme mensen geven te veel geld uit aan luxe', 'de prijzen in arme landen stijgen elk jaar'], u:'Een laag inkomen leidt tot weinig sparen en weinig scholing, en dat leidt weer tot een laag inkomen.', n:2 },
+    { v:'Nederland geeft geld aan een ontwikkelingsland, op voorwaarde dat het land daarmee Nederlandse producten koopt. Hoe heet dit?', g:'gebonden hulp', f:['multilaterale hulp', 'noodhulp', 'eerlijke handel'], u:'Bij gebonden hulp moet het geld (deels) in het gevers-land worden besteed. Dat helpt ook de eigen bedrijven.', n:3 },
+    { v:'Nederland geeft geld aan de Wereldbank, die het verdeelt over projecten in arme landen. Wat voor hulp is dit?', g:'multilaterale hulp', f:['bilaterale hulp', 'gebonden hulp', 'noodhulp'], u:'Multilateraal: via een internationale organisatie. Bilateraal: rechtstreeks van land tot land.', n:3 },
+    { v:'De Nederlandse regering betaalt rechtstreeks mee aan een drinkwaterproject van de regering van een Afrikaans land. Wat voor hulp is dit?', g:'bilaterale hulp', f:['multilaterale hulp', 'noodhulp', 'microkrediet'], u:'Bilaterale hulp gaat rechtstreeks van het ene land naar het andere.', n:3 },
+    { v:'Veel ontwikkelingslanden exporteren vooral één grondstof, zoals koffie of koper. Waarom is dat een risico?', g:'als de prijs van die grondstof daalt, daalt het inkomen van het hele land', f:['grondstoffen mogen niet geëxporteerd worden', 'rijke landen kopen geen grondstoffen', 'de grondstof wordt dan altijd duurder'], u:'Een land dat van één product afhankelijk is, is kwetsbaar voor prijsschommelingen op de wereldmarkt.', n:3 },
+    { v:'Rijke landen heffen invoerrechten op landbouwproducten van buiten. Wat betekent dat voor boeren in arme landen?', g:'ze kunnen hun producten moeilijker verkopen in rijke landen', f:['ze krijgen een hogere prijs voor hun producten', 'ze hoeven minder belasting te betalen', 'ze kunnen makkelijker exporteren'], u:'Invoerrechten maken hun producten duurder in rijke landen. Daarom zeggen veel economen: handel helpt arme landen soms meer dan hulp.', n:3 }
+  ];
+  function wereld(niv){ return kies([bbp, bbp, function(n){ return uitLijst(WERELDMK, n, 'wereld', WERELD, 'rm'); }, function(n){ return uitLijst(WERELDMK, n, 'wereld', WERELD, 'rm'); }])(niv); }
+
+  /* =====================================================================
+     Typen zoals je wilt: € 12,50 en 12.50 en 12,50 zijn allemaal goed.
+     Vlak voordat de motor nakijkt (de klik op Nakijken, ook via Enter),
+     haalt dit het euroteken, procentteken en de duizendtallen weg.
+     ===================================================================== */
+  function maakSchoon(w, verwacht){
+    var s = String(w).trim().toLowerCase().replace(/€|euro|eur\b|procentpunt|procent|%|\s/g, '').replace(/[,.]-+$/, '').replace(/[\u2212\u2013]/g, '-');
+    if (!s) return w;
+    var p = s.indexOf('.') >= 0, k = s.indexOf(',') >= 0, groot = Math.abs(verwacht) >= 1000;
+    if (p && k){ s = s.lastIndexOf(',') > s.lastIndexOf('.') ? s.replace(/\./g, '') : s.replace(/,/g, ''); }
+    else if (p && groot && /^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
+    else if (k && groot && /^-?\d{1,3}(,\d{3})+$/.test(s) && Math.abs(verwacht % 1) < 1e-9) s = s.replace(/,/g, '');
+    return /^-?\d*[.,]?\d+$/.test(s) ? s : w;
+  }
+  document.addEventListener('click', function(e){
+    if (!e.target || e.target.id !== 'nakijkBtn') return;
+    var o = VAKSPEL._opgave(); if (!o || o.vorm !== 'invul') return;
+    var inv = document.querySelectorAll('#antwoordvak .veldje input');
+    o.velden.forEach(function(v, i){ if (inv[i] && typeof v.antwoord === 'number' && v.type !== 'tekst' && !inv[i].disabled) inv[i].value = maakSchoon(inv[i].value, v.antwoord); });
+  }, true);
+
+  var SOORTEN = { loon:loon, winst:winst, productie:productie, arbeidsmarkt:arbeidsmarkt, handel:handel, wereld:wereld };
+  VAKSPEL.maak({
+    id:'bedrijf', naam:'Werk, bedrijf en wereld', vak:'eco', kleur:'#1d6f5c',
+    hand:'van loonstrook tot wereldhandel',
+    lead:'Je leest een loonstrook, rekent uit wat een bedrijf verdient, ziet waarom een fabriek met minder mensen meer maakt, berekent de werkloosheid, rekent met de wisselkoers en vergelijkt arme en rijke landen. Bijna elke opgave heeft een bron: een loonstrook, een tabel of een bericht, net als op het examen.',
+    leerdoel:'Je leert rekenen en redeneren over werk, bedrijven en de wereldhandel: loon, kosten en winst, productie, de arbeidsmarkt, de wisselkoers en arm en rijk, zoals op het examen economie.',
+    hoe:[
+      { kop:'Bruto en netto', tekst:'Je <b>brutoloon</b> min de inhoudingen is je <b>nettoloon</b>. Vakantiegeld is minstens 8% van je brutoloon.' },
+      { kop:'Omzet en winst', tekst:'<b>Omzet</b> = prijs × afzet. <b>Winst</b> = omzet − vaste kosten − variabele kosten.' },
+      { kop:'Typ zoals je wilt', tekst:'Een bedrag mag je typen als 12,50 of 12.50 of € 12,50. Rond af zoals de opgave zegt.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'kgt', items:[
+        { id:'bb', naam:'vmbo-bb', uit:'Eén stap per opgave en ronde getallen. Meestal kies je uit vier antwoorden.' },
+        { id:'kgt', naam:'vmbo-kgt en tl', uit:'Een loonstrook of tabel met meer regels, rekenen met centen, en de begrippen van het examen.' },
+        { id:'hv', naam:'havo en vwo', uit:'Examenniveau: break-even, procenten en procentpunten, koersveranderingen en bbp per inwoner door de tijd.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' },
+        { id:'loon', naam:'werk en loon', uit:'Loonstrook, bruto en netto, uurloon, vakantiegeld, minimumloon en cao.' },
+        { id:'winst', naam:'kosten en winst', uit:'Omzet, vaste en variabele kosten, winst en (havo en vwo) het break-evenpunt.' },
+        { id:'productie', naam:'productie', uit:'Productiefactoren, arbeidsdeling, arbeidsproductiviteit en toegevoegde waarde in de bedrijfskolom.' },
+        { id:'arbeidsmarkt', naam:'de arbeidsmarkt', uit:'Vraag naar en aanbod van arbeid, de beroepsbevolking en het werkloosheidspercentage.' },
+        { id:'handel', naam:'internationale handel', uit:'Import en export, de EU en de euro, en rekenen met de wisselkoers.' },
+        { id:'wereld', naam:'arm en rijk', uit:'Bbp per inwoner, kenmerken van ontwikkelingslanden en ontwikkelingshulp.' } ] }
+    ],
+    aantal:10, minuten:10,
+    maak:function(keuze, nr){
+      var soort = keuze.soort === 'alles' ? kies(['loon', 'winst', 'productie', 'arbeidsmarkt', 'handel', 'wereld']) : keuze.soort;
+      return SOORTEN[soort](keuze.niveau);
+    },
+    uitleg:{ doel:'Examenstof economie: loon en loonstrook, kosten en winst, productie, de arbeidsmarkt, internationale handel en arm en rijk.', tijd:'twintig opgaven per ronde, of kies 10 of 30', bediening:'Lees de bron, kies een antwoord (of druk op 1 tot 4) of typ een getal en druk op Nakijken. Een bedrag mag met een komma of een punt, met of zonder €. Bij een sleepopgave sleep je de kaartjes; op een telefoon tik je een kaartje en dan het vak.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>

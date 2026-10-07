@@ -78,13 +78,13 @@ window.CATEGORIE = (function(){
            [/^phrasal: /, 'woordenschat'], [/^irregular /, 'grammatica']],
     reken:[[/^(schatten|cijferen): /, 'getallen'], [/^DHTE /, 'getallen'], [/^(klok|metriek): /, 'meten'],
            [/^verhoudingstabel: /, 'verhoudingen']],
-    wis:  [[/^voordoen: /, 'algebra'], [/^vergelijking: /, 'algebra'], [/^grafieken: /, 'verbanden'], [/^coördinaten: /, 'verbanden'],
+    wis:  [[/^woordformules: /, 'verbanden'], [/^voordoen: /, 'algebra'], [/^vergelijking: /, 'algebra'], [/^grafieken: /, 'verbanden'], [/^coördinaten: /, 'verbanden'],
            [/^(hoeken|pythagoras|vlak): /, 'meetkunde']],
     ges:  [[/^redeneren: /, 'vaardig'], [/^tv\d+$/, 'tijdvakken'], [/^wie ben ik: /, 'tijdvakken'], [/^(oorzaak en gevolg|kaart door de tijd): /, 'vaardig']],
     aard: [[/^topografie/, 'topo'], [/^kaartvaardigheid: /, 'kaart'], [/^klimaatgrafiek: /, 'klimaat'], [/^bevolkingspiramide: /, 'bevolking']],
     bio:  [[/^onderzoek: /, 'natuur'], [/^kruisen: /, 'cellen'], [/^voedselweb: /, 'natuur']],
     burg: [[/^afwegen: /, 'samen'], [/^(democratie|partijen|verkiezingen): /, 'staat']],
-    eco:  [[/^huishoudboekje: /, 'geld'], [/^vraag en aanbod: /, 'markt']]
+    eco:  [[/^bedrijf: /, 'examen'], [/^huishoudboekje: /, 'geld'], [/^vraag en aanbod: /, 'markt']]
   };
   /* 3. de groep uit de vragenbank; een groep met dezelfde naam als een categorie hoeft hier niet */
   var GROEP = {
