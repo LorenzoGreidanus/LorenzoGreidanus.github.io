@@ -126,7 +126,7 @@ window.LEER_REKENEN = (function(){
       beeld:cijfer(489, 9, true),
       voorbeeld:cijferStappen(489, 9),
       maak:function(){ var a = heel(123, 899), b = heel(3, 9);
-        return { vraag:a + ' ' + KEER + ' ' + b, beeld:cijfer(a, b, false), beeldNa:cijfer(a, b, true), stappen:cijferStappen(a, b), slot:'onder de streep staat', antwoord:[String(a * b)], invoer:'getal' }; } },
+        return { vraag:a + ' ' + KEER + ' ' + b, beeld:cijfer(a, b, false), beeldNa:cijfer(a, b, true), stappen:cijferStappen(a, b), slot:'uitkomst onder de streep:', antwoord:[String(a * b)], invoer:'getal' }; } },
     { kop:'Twee cijfers keer twee cijfers', kort:'Splits het tweede getal in tientallen en eenheden',
       uit:'Bij 23 ' + KEER + ' 14 splits je de 14 in 10 en 4. Eerst 23 ' + KEER + ' 10, dan 23 ' + KEER + ' 4, en dan optellen.',
       voorbeeld:['23 ' + KEER + ' 14', '23 ' + KEER + ' 10 = 230', '23 ' + KEER + ' 4 = 92', '230 + 92 = 322'],

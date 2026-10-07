@@ -11,7 +11,7 @@ var VAKKEN = [
   {id:'aard',  naam:'Aardrijkskunde', mark:'A', kleur:'#2f7d52', onder:'Vlaggen en landenvormen, en de examenstof vmbo: weer en klimaat, water, bevolking en ruimte'},
   {id:'bio',   naam:'Biologie',    mark:'B', kleur:'#0d7b8a', onder:'Organen, bloed, vertering, planten, cellen, zintuigen en erfelijkheid'},
   {id:'wis',   naam:'Wiskunde',    mark:'W', kleur:'#6b3fa0', onder:'Vergelijkingen, formules, oppervlakte, hoeken, grafieken en Pythagoras'},
-  {id:'burg',  naam:'Samenleving', mark:'S', kleur:'#a0455f', onder:'Burgerschap: democratie, rechtsstaat, media, Europa, samenleven, geld en werk; plus maatschappijkunde voor het examen vmbo'},
+  {id:'burg',  naam:'Mens en maatschappij', mark:'M', kleur:'#a0455f', onder:'Burgerschap: democratie, rechtsstaat, media, Europa, samenleven, geld en werk; plus maatschappijkunde voor het examen vmbo'},
   {id:'eco',   naam:'Economie',    mark:'€', kleur:'#a3630f', onder:'Examenstof vmbo: consumptie, arbeid en productie, overheid, internationaal, natuur en milieu'}
 ];
 

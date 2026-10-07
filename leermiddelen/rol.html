@@ -44,7 +44,7 @@ button{cursor:pointer;touch-action:manipulation}
 .knop.stil{background:var(--kaart2);color:var(--ink)}
 .fout{color:var(--fout);font-size:.9rem;margin-top:8px;min-height:1.2em}
 /* de rolkaart: in de kleur van de rol */
-.rol{border-radius:22px;padding:18px 20px;color:#fff;margin-top:12px;position:relative;overflow:hidden}
+.rol{border-radius:22px;padding:18px 20px;color:#fff;margin-top:12px;position:relative;overflow:hidden}.rol>*{position:relative;z-index:1}
 .rol::before{content:'';position:absolute;right:-50px;top:-60px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.12)}
 .rol .eyebrow{color:inherit;opacity:.82}
 /* op een lichte rolkleur (koraal, amber) donkerblauwe letters, en dan niet doorschijnend: anders zakt het contrast weer */
@@ -68,6 +68,9 @@ button{cursor:pointer;touch-action:manipulation}
 .optie small{display:block;font-weight:400;font-size:.82rem;color:var(--muted);margin-top:2px}
 .optie.aan small{color:inherit;opacity:.88}
 .gestuurd.nog{color:#8a4b00}
+/* de standaardstip van een keuze: in het donker lichter, anders verdwijnt hij op de donkere kaart */
+:root[data-theme="dark"] .optie i:not([style]){background:var(--vista,#83A5F2)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .optie i:not([style]){background:var(--vista,#83A5F2)}}
 :root[data-theme="dark"] .gestuurd.nog{color:#ffd08a}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .gestuurd.nog{color:#ffd08a}}
 .optie:disabled{opacity:.55;cursor:default}
@@ -212,7 +215,9 @@ footer{text-align:center;font-size:.8rem;color:var(--muted);padding:20px 16px}
       toon(d);
       return;
     }
-    if (m.t === 'einde'){ klaar = true; if (!nu || nu.soort !== 'uitslag') toon({ soort:'wacht', titel:'Het spel is afgelopen', tekst:'Kijk naar het bord.' }); }
+    if (m.t === 'einde'){ klaar = true; if (!nu || nu.soort !== 'uitslag') toon({ soort:'wacht', titel:'Het spel is afgelopen', tekst:'Kijk naar het bord.' });
+      /* even wachten op een laatste kaart van het bord, dan ophangen: de kamer is klaar */
+      setTimeout(function(){ if (verb) verb.sluit(); status(''); }, 4000); }
   }
 
   /* ---------- tekenen ---------- */
@@ -235,7 +240,7 @@ footer{text-align:center;font-size:.8rem;color:var(--muted);padding:20px 16px}
           var kl = /^#[0-9a-f]{6}$/i.test(o.kleur || '') ? o.kleur : '';
           return '<button type="button" class="optie' + (keus === o.id ? ' aan' : '') + '" data-id="' + schoon(o.id) + '"' + (keus === o.id ? ' aria-pressed="true"' : ' aria-pressed="false"') +
             (kl ? ' style="--ok:' + kl + ';--okt:' + letterOp(kl) + '"' : '') + (d.dicht ? ' disabled' : '') + '><i' + (kl ? ' style="background:' + kl + '"' : '') + '></i><span>' + schoon(o.tekst) + (o.onder ? '<small>' + schoon(o.onder) + '</small>' : '') + '</span></button>';
-        }).join('') + '</div><p class="gestuurd" id="gestuurd" role="status">' + (keus ? 'Verstuurd. Je mag nog wisselen tot het bord de stemming sluit.' : '') + '</p>' +
+        }).join('') + '</div><p class="gestuurd" id="gestuurd" role="status">' + (keus ? 'Verstuurd. Je mag nog wisselen tot het bord verdergaat.' : '') + '</p>' +
         (d.meer ? '<p class="meer">' + schoon(d.meer) + '</p>' : '');
     } else if (d.soort === 'lat'){
       var w = gekozen[d.id] !== undefined ? gekozen[d.id] : (d.waarde !== undefined ? d.waarde : 50);
@@ -258,7 +263,7 @@ footer{text-align:center;font-size:.8rem;color:var(--muted);padding:20px 16px}
         if (d.dicht) return;
         gekozen[d.id] = b.getAttribute('data-id');
         Array.prototype.forEach.call(el.querySelectorAll('.optie'), function(x){ x.classList.toggle('aan', x === b); x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
-        var tekst = 'Verstuurd. Je mag nog wisselen tot het bord de stemming sluit.';
+        var tekst = 'Verstuurd. Je mag nog wisselen tot het bord verdergaat.';
         var weg = stuur({ t:'actie', d:{ vraag:d.id, keuze:gekozen[d.id] } }, { daarna:function(){ if (nu === d) zegGestuurd(true, tekst); } });
         zegGestuurd(weg, tekst);
         if (navigator.vibrate) navigator.vibrate(30);

@@ -23,6 +23,7 @@
                   (max 1 met vakken op een rij = op volgorde zetten)
      'eigen'      teken:function(el, api){ … }  met api.klaar(goed, uitlegHtml), api.knop(tekst, fn)
                   en api.uit(tekst); het spel roept klaar() als het antwoord er is.
+   misserBeeld:false houdt een versierend plaatje uit de lijst met missers op het eindscherm.
    onderdeel is waar KLAS.tel op telt (per onderdeel goed/gesteld, voor het
    klasoverzicht). niveau voor de klas komt uit keuze.niveau. */
 /* de nagekeken g in de kop, net als op de andere pagina's; merk.js tekent hem opnieuw als je er met de muis overheen gaat */
@@ -70,7 +71,13 @@ window.VAKSPEL = (function(){
   function tekenAantal(){
     var v = $('keuze-aantal'); if (!v) return;
     Array.prototype.forEach.call(v.querySelectorAll('button'), function(b){ var aan = +b.getAttribute('data-n') === aantal; b.classList.toggle('on', aan); b.setAttribute('aria-pressed', aan ? 'true' : 'false'); });
-    $('uit-aantal').textContent = 'Ongeveer ' + Math.max(3, Math.round(aantal / 2)) + ' minuten.';
+    $('uit-aantal').textContent = 'Ongeveer ' + minuten(aantal) + ' minuten.';
+  }
+  /* hoe lang een ronde duurt: een half minuutje per opgave, of naar rato van cfg.minuten
+     (dat geldt voor het aantal waar het spel mee kwam; een tekst lezen duurt langer dan een som) */
+  function minuten(n){
+    var per = cfg && cfg.minuten ? cfg.minuten / (cfg.basisAantal || 10) : .5;
+    return Math.max(3, Math.round(n * per));
   }
   var cfg = null, keuze = {}, nr = 0, goed = 0, fout = 0, punten = 0, reeks = 0, besteReeks = 0, od = {}, missers = [], perDeel = {}, bezig = false, opgave = null;
 
@@ -114,8 +121,8 @@ window.VAKSPEL = (function(){
           '<p class="ldvraag" id="ldVraag">Hoe goed kun je dit nu al? Aan het eind zie je of het klopte.</p><div class="keuze ldkeuze" id="zelfVoor" role="group" aria-labelledby="ldVraag">' +
           ZELF.map(function(z, i){ return '<button type="button" data-z="' + i + '" aria-pressed="false">' + z + '</button>'; }).join('') + '</div></div>' +
         /* hoeveel opgaven per ronde: standaard 20, onthouden op dit apparaat */
-        '<p class="eyebrow kop2" id="kop-aantal">hoeveel opgaven</p><div class="keuze" id="keuze-aantal" role="group" aria-labelledby="kop-aantal">' +
-          AANTALLEN.map(function(n){ return '<button type="button" data-n="' + n + '" aria-pressed="false">' + n + '</button>'; }).join('') + '</div><p class="keuzeuit" id="uit-aantal"></p>' +
+        '<div class="aantalrij"><p class="eyebrow" id="kop-aantal">hoeveel opgaven</p><div class="keuze" id="keuze-aantal" role="group" aria-labelledby="kop-aantal">' +
+          AANTALLEN.map(function(n){ return '<button type="button" data-n="' + n + '" aria-pressed="false">' + n + '</button>'; }).join('') + '</div><p class="keuzeuit" id="uit-aantal"></p></div>' +
         '<div class="startknoppen"><button class="btn" id="startBtn" type="button">Start</button>' +
         '<button class="btn tweede" id="oneindigBtn" type="button" title="Zoveel opgaven als je wilt, je stopt zelf">Oneindig oefenen</button></div>' +
       '</section>' +
@@ -217,6 +224,8 @@ window.VAKSPEL = (function(){
   function nivKeuze(){ return (cfg.keuzes || []).filter(function(k){ return k.id === 'niveau'; })[0]; }
   function nivStap(isGoed){
     var nk = nivKeuze(); if (!nk || nk.items.length < 2 || !keuze.niveau) return;
+    /* na de laatste opgave komt er geen volgende: dan ook geen bericht dat de opgaven omhoog gaan */
+    if (!oneindig && nr >= cfg.aantal) return;
     var l = nk.items.map(function(x){ return x.id; });
     if (nivNu == null) nivNu = keuze.niveau;
     nivReeks = isGoed ? Math.max(0, nivReeks) + 1 : Math.min(0, nivReeks) - 1;
@@ -481,7 +490,7 @@ window.VAKSPEL = (function(){
 
   /* ---------- nakijken, verder, einde ---------- */
   /* tekst zonder html; een plaatje dat achter de uitleg hangt gaat er helemaal af, anders staat de tekst uit de svg erin */
-  function kaleTekst(t){ return String(t || '').replace(/<(div|svg|ol|table)\b[\s\S]*$/i, '').replace(/<[^>]+>/g, '').trim(); }
+  function kaleTekst(t){ return String(t || '').replace(/<(div|svg|ol|table)\b[\s\S]*$/i, '').replace(/<br\s*\/?>|<\/(p|li|h\d)>/gi, ' ').replace(/<[^>]+>/g, '').replace(/\s{2,}/g, ' ').trim(); }
   function klaar(isGoed, extra, deels){
     if (!bezig) return;
     bezig = false;
@@ -521,7 +530,8 @@ window.VAKSPEL = (function(){
   /* een klein plaatje bij een misser: alleen een svg (geen lange tekst of tabel) */
   function misserBeeld(o){
     var b = String(o.beeld || '');
-    if (!/<svg[\s>]/i.test(b) || b.length > 60000) return '';
+    /* misserBeeld:false: het plaatje is versiering (een luidspreker), geen deel van de vraag */
+    if (o.misserBeeld === false || !/<svg[\s>]/i.test(b) || b.length > 60000) return '';
     var m = /<svg[\s\S]*<\/svg>/i.exec(b);
     return m ? m[0] : '';
   }
@@ -537,6 +547,7 @@ window.VAKSPEL = (function(){
   function einde(){
     $('scherm-spel').classList.add('hide'); $('scherm-einde').classList.remove('hide');
     opnieuwKnop(false);
+    if (nivToast){ clearTimeout(nivKlok); nivToast.classList.remove('aan'); }
     var gedaan = goed + fout, deel = gedaan ? goed / gedaan : 0;
     $('eindKop').textContent = goed + ' van de ' + gedaan + ' goed.';
     $('nogBtn').textContent = oneindig ? 'Verder oefenen' : 'Nog een ronde';
@@ -613,7 +624,8 @@ window.VAKSPEL = (function(){
   function tijdTekst(t){
     t = t || (cfg.aantal || 10) + ' opgaven per ronde';
     if (/minu/.test(t)) return t;
-    return t + ', ongeveer ' + (cfg.minuten || Math.max(3, Math.round((cfg.aantal || 10) / 2))) + ' minuten';
+    /* "twintig opgaven per ronde, of kies 10 of 30": de tijd hoort bij die twintig */
+    return t + ', ongeveer ' + minuten(/twintig/.test(t) ? 20 : /dertig/.test(t) ? 30 : /\btien\b/.test(t) ? 10 : (cfg.aantal || 10)) + ' minuten';
   }
   function naLaden(fn){ if (document.readyState === 'complete') fn(); else addEventListener('load', fn); }
 
@@ -698,7 +710,7 @@ window.VAKSPEL = (function(){
 
   function maak(c){
     if (/[?&]werkblad=1/.test(location.search)){ werkbladModus(c); return; }
-    cfg = c; if (!c.vastAantal) cfg.aantal = aantal;
+    cfg = c; cfg.basisAantal = c.aantal || 10; if (!c.vastAantal) cfg.aantal = aantal;
     bouw();
     herinner();
     tekenKeuzes();

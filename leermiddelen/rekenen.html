@@ -67,11 +67,15 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .chip:hover{border-color:var(--vista);transform:translateY(-2px)}
 .chip[aria-pressed="true"]{background:var(--ocean);border-color:var(--ocean);color:#fff}
 .snel{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-top:14px}
-/* de knop naar Leer de tafels, onder de tafelkiezer */
+/* de knoppen naar de leerstanden, onder Start */
 .leertafels{text-align:center;margin-top:18px}
+.leertafels .btn{margin-top:0}
 .leertafels .stapuitleg{max-width:480px;margin:8px auto 0}
 .snel button{background:none;border:1.5px solid rgba(20,34,76,.15);border-radius:999px;
-  padding:8px 15px;font-size:.82rem;font-weight:600;min-height:40px}
+  padding:8px 15px;font-size:.82rem;font-weight:600;min-height:44px}
+/* de randen van de tafelknopjes zijn donkerblauw: in het donker een lichte rand */
+:root[data-theme="dark"] .chip:not([aria-pressed="true"]),:root[data-theme="dark"] .snel button{border-color:rgba(243,239,233,.2)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .chip:not([aria-pressed="true"]),:root:not([data-theme="light"]) .snel button{border-color:rgba(243,239,233,.2)}}
 .snel button:hover{border-color:var(--ocean);color:var(--ocean)}
 .tafelstand{margin-top:12px;font-size:.85rem;color:var(--muted);text-align:center}
 .tafelstand.leeg{color:var(--neer);font-weight:600}
@@ -90,6 +94,8 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .rekenuitleg{margin-top:14px;border-radius:16px;padding:12px 16px;font-size:.95rem;text-align:center;min-height:0}
 .rekenuitleg:empty{display:none}
 .rekenuitleg.nee{background:var(--fout-bg);color:var(--ink)}
+.rekenuitleg .truc{display:block;margin-top:4px}
+.rekenuitleg .heel{white-space:nowrap}
 /* strakker onder elkaar, zodat Start op een laptop en een telefoon in beeld staat */
 #scherm-start.oefen{padding-top:30px}
 .start .kies{gap:10px;margin-top:10px}
@@ -99,7 +105,7 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 @media(max-width:560px){
   #scherm-start.oefen{padding-top:16px}
   .kies{grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
-  .start .kies .kaartje{padding:9px 12px;border-radius:16px}
+  .start .kies .kaartje{padding:9px 12px;border-radius:16px;min-height:44px}
   .kies .kaartje span{display:none}
   .kies .kaartje b{font-size:.92rem}
   /* getallen en tempo: drie keuzes op een rij */
@@ -138,6 +144,8 @@ body.groot .som .vraag{font-size:5rem}
 .optie kbd{display:block;font-size:.66rem;font-weight:600;color:var(--muted);font-family:inherit;margin-bottom:4px}
 .optie.goed{background:var(--goed-bg);border-color:var(--op)}
 .optie.fout{background:var(--fout-bg);border-color:var(--neer)}
+/* het cijfertje op een goed of fout vlak: de kleur van de knop, want in het donker worden die vlakken vol groen en rood */
+.optie.goed kbd,.optie.fout kbd{color:inherit}
 body.groot .optie{font-size:2.2rem;padding:26px 12px}
 
 .vlieger{position:fixed;left:50%;top:34%;translate:-50% 0;font-size:1.6rem;font-weight:600;pointer-events:none;
@@ -270,7 +278,6 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 
   <p class="eyebrow" id="soortKop" style="margin-top:24px">waar wil je mee oefenen</p>
   <div class="kies" id="soorten"></div>
-  <div class="leertafels hide" id="leerRij"><button class="btn ghost" type="button" id="leerTrucBtn">Leer de trucjes</button><p class="stapuitleg" id="leerUit"></p></div>
 
   <div class="stap hide" id="tafelvak">
     <p class="eyebrow" id="tafelKop">welke tafels</p>
@@ -285,7 +292,6 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
       <button type="button" id="tafelGeen">Wis keuze</button>
     </div>
     <p class="tafelstand" id="tafelstand" aria-live="polite"></p>
-    <div class="leertafels"><button class="btn ghost" type="button" id="leerBtn">Leer de tafels met trucjes</button><p class="stapuitleg">De tafel van 4 is die van 2 maar dan dubbel, die van 9 is die van 10 min een keer. Per tafel het trucje, dan oefenen met en zonder hulp.</p></div>
   </div>
 
   <div class="stap hide" id="bereikRij">
@@ -299,6 +305,9 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
   </div>
 
   <button class="btn" id="startBtn" type="button" disabled>Start de race</button>
+  <!-- de leerstanden onder Start, net als bij de Werkwoordrace: wie meteen wil racen, ziet Start eerst -->
+  <div class="leertafels hide" id="leerRij"><button class="btn ghost" type="button" id="leerTrucBtn">Leer de trucjes</button><p class="stapuitleg" id="leerUit"></p></div>
+  <div class="leertafels hide" id="leerTafelRij"><button class="btn ghost" type="button" id="leerBtn">Leer de tafels met trucjes</button><p class="stapuitleg">De tafel van 4 is die van 2 maar dan dubbel, die van 9 is die van 10 min een keer. Per tafel het trucje, dan oefenen met en zonder hulp.</p></div>
   <div id="startLijst" class="lijst"></div>
 </section>
 
@@ -622,7 +631,8 @@ function maakOpties(goed, decimalen){
       /* de trucjes van dit onderdeel (leer-rekenen.js); bij tafels staat de knop bij de tafelkiezer */
       var lessen = window.LEER_REKENEN && LEER_REKENEN[soort.id];
       document.getElementById('leerRij').classList.toggle('hide', !lessen);
-      if (lessen) document.getElementById('leerUit').textContent = lessen.map(function(l){ return l.kort; }).join('. ') + '.';
+      /* de namen van de trucjes, niet hun uitleg: die komt in de leerstand zelf */
+      if (lessen){ var kops = lessen.map(function(l){ return l.kop.toLowerCase(); }); document.getElementById('leerUit').textContent = (['', 'Een trucje', 'Twee trucjes', 'Drie trucjes', 'Vier trucjes', 'Vijf trucjes'][kops.length] || kops.length + ' trucjes') + ': ' + kops.join(' · '); }
     });
   });
 
@@ -691,6 +701,7 @@ function maakOpties(goed, decimalen){
     /* Alleen bij tafels en delen doet de keuze iets, en pas als er een
        onderdeel gekozen is. Anders staat er een vak zonder betekenis. */
     vak.classList.toggle('hide', !soort || !tafelsTellen());
+    document.getElementById('leerTafelRij').classList.toggle('hide', !soort || !tafelsTellen());
     Array.prototype.forEach.call(tafelrij.children, function(knop, i){
       knop.setAttribute('aria-pressed', gekozenTafels.indexOf(i + 1) !== -1 ? 'true' : 'false');
     });
@@ -850,14 +861,29 @@ function maakOpties(goed, decimalen){
     var uit = document.getElementById('rekenUitleg');
     uit.className = 'rekenuitleg nee';
     uit.textContent = 'Het is ' + toon(huidige.antwoord) + ': ' + huidige.vraag + ' = ' + toon(huidige.antwoord) + '.';
-    /* bij een tafelsom het trucje erbij (tafels-leer.js): de tafel van 4 is die van 2, maar dan dubbel */
-    if (huidige.soort === 'grote keersom' && window.LEER_REKENEN){
-      var ka = huidige.a, kb = huidige.b, kd = kb < 10 ? LEER_REKENEN.delenVan(ka) : [ka], kt = kb < 10 ? kb : null;
-      uit.textContent += kb < 10 ? ' Splits: ' + kd.map(function(x){ return x + ' \u00d7 ' + kb + ' = ' + (x * kb); }).join(', ') + ', samen ' + (ka * kb) + '.'
-        : ' Splits: ' + ka + ' \u00d7 ' + (kb - kb % 10) + ' = ' + (ka * (kb - kb % 10)) + ' en ' + ka + ' \u00d7 ' + (kb % 10) + ' = ' + (ka * (kb % 10)) + ', samen ' + (ka * kb) + '.';
+    /* het trucje op een eigen regel; elke som blijft heel, zodat er nooit een los "63." onderaan staat */
+    function trucRegel(kop, sommen){
+      var r = document.createElement('span'); r.className = 'truc';
+      r.appendChild(document.createTextNode(kop + ' '));
+      sommen.forEach(function(x, i){
+        var e = document.createElement('span'); e.className = 'heel'; e.textContent = x + (i < sommen.length - 1 ? ',' : '.');
+        r.appendChild(e); if (i < sommen.length - 1) r.appendChild(document.createTextNode(' '));
+      });
+      uit.appendChild(r);
     }
+    /* bij een grote keersom: splitsen in stukken die je met de tafels uitrekent */
+    if (huidige.soort === 'grote keersom' && window.LEER_REKENEN){
+      var ka = huidige.a, kb = huidige.b;
+      if (kb < 10) trucRegel('Splits:', LEER_REKENEN.delenVan(ka).map(function(x){ return x + ' \u00d7 ' + kb + ' = ' + (x * kb); }).concat(['samen ' + (ka * kb)]));
+      else trucRegel('Splits:', [ka + ' \u00d7 ' + (kb - kb % 10) + ' = ' + (ka * (kb - kb % 10)), ka + ' \u00d7 ' + (kb % 10) + ' = ' + (ka * (kb % 10)), 'samen ' + (ka * kb)]);
+    }
+    /* bij een tafelsom het trucje erbij (tafels-leer.js): de tafel van 4 is die van 2, maar dan dubbel.
+       Alleen bij keer: een deelsom heeft dezelfde soort ("tafel van 2"), maar daar past het trucje niet. */
     var tm = /^tafel van ([0-9]+)$/.exec(huidige.soort || '');
-    if (tm && window.TAFELLEER && TAFELLEER.TRUC[+tm[1]] && +tm[1] > 1){ var tn = +tm[1], tk = huidige.antwoord / tn; if (tk > 1 && tk !== 10) uit.textContent += ' Trucje: ' + TAFELLEER.TRUC[tn].kort.toLowerCase() + '. ' + TAFELLEER.stappen(tn, tk).join(', ') + '.'; }
+    if (tm && /\u00d7/.test(huidige.vraag) && window.TAFELLEER && TAFELLEER.TRUC[+tm[1]] && +tm[1] > 1){
+      var tn = +tm[1], tk = huidige.antwoord / tn, kort = TAFELLEER.TRUC[tn].kort, klein = kort.charAt(0).toLowerCase() + kort.slice(1);
+      if (tk > 1 && tk !== 10) trucRegel(/^De (tafel|helft)/.test(kort) ? 'De tafel van ' + tn + ' is ' + klein + ':' : tn === 10 ? 'Trucje:' : 'Keer ' + tn + ' is ' + klein + ':', TAFELLEER.stappen(tn, tk));
+    }
     var rijV = document.getElementById('volgendeRij'), knopV = document.getElementById('volgendeBtn');
     rijV.hidden = false;
     try { knopV.focus({ preventScroll:true }); } catch (e){ knopV.focus(); }

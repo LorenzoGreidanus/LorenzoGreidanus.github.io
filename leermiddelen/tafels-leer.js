@@ -18,41 +18,41 @@ window.TAFELLEER = (function(){
      van uitgaat, en hoe je ze samenneemt. */
   var TRUC = {
     1:  { kort:'Keer 1 verandert niets', uit:'Eén keer een getal is gewoon dat getal. Deze ken je dus al.', rijen:[1], doe:'zelf' },
-    10: { kort:'Zet er een nul achter', uit:'Tien keer een getal: schrijf het getal op en zet er een nul achter. 10 × 7 = 70.', rijen:[1], doe:'nul' },
-    2:  { kort:'Het getal plus zichzelf', uit:'Keer 2 is dubbel: tel het getal bij zichzelf op. 2 × 8 = 8 + 8 = 16. Alle uitkomsten zijn even.', rijen:[1], doe:'dubbel' },
-    5:  { kort:'De helft van de tafel van 10', uit:'Vijf is de helft van tien. Reken 10 keer uit en neem de helft: 5 × 8 is de helft van 80, dus 40. De uitkomst eindigt altijd op 0 of 5.', rijen:[10], doe:'helft' },
-    4:  { kort:'De tafel van 2, maar dan dubbel', uit:'Vier is twee keer twee. Verdubbel het getal, en verdubbel dan nog een keer: 4 × 7: 7 → 14 → 28.', rijen:[2], doe:'dubbel' },
-    3:  { kort:'De tafel van 2, plus nog één keer', uit:'Drie keer is twee keer en dan nog één keer erbij: 3 × 7 = 14 + 7 = 21.', rijen:[2, 1], doe:'plus' },
-    9:  { kort:'De tafel van 10, min één keer', uit:'Negen keer is tien keer min één keer: 9 × 7 = 70 − 7 = 63. Controle: de cijfers van de uitkomst tellen op tot 9 (6 + 3 = 9).', rijen:[10, 1], doe:'min' },
-    6:  { kort:'De tafel van 5, plus nog één keer', uit:'Zes keer is vijf keer plus één keer: 6 × 7 = 35 + 7 = 42. Of de tafel van 3, maar dan dubbel.', rijen:[5, 1], doe:'plus' },
-    8:  { kort:'De tafel van 4, maar dan dubbel', uit:'Acht is twee keer vier. Drie keer verdubbelen: 8 × 6: 6 → 12 → 24 → 48.', rijen:[4], doe:'dubbel' },
-    7:  { kort:'De tafel van 5 plus de tafel van 2', uit:'Zeven is vijf plus twee. 7 × 6 = 5 × 6 + 2 × 6 = 30 + 12 = 42. De tafel van 7 is de lastigste; met dit trucje kun je hem altijd uitrekenen.', rijen:[5, 2], doe:'plus' },
-    11: { kort:'De tafel van 10 plus nog één keer', uit:'Elf keer is tien keer plus één keer: 11 × 7 = 70 + 7 = 77. Tot en met 9 zie je het getal twee keer staan.', rijen:[10, 1], doe:'plus' },
-    12: { kort:'De tafel van 10 plus de tafel van 2', uit:'Twaalf is tien plus twee: 12 × 7 = 70 + 14 = 84.', rijen:[10, 2], doe:'plus' },
-    15: { kort:'De tafel van 10 plus de helft erbij', uit:'Vijftien is tien plus vijf, en vijf is de helft van tien: 15 × 6 = 60 + 30 = 90.', rijen:[10, 5], doe:'plus' },
-    13: { kort:'De tafel van 10 plus de tafel van 3', uit:'Dertien is tien plus drie: 13 × 7 = 70 + 21 = 91.', rijen:[10, 3], doe:'plus' },
-    14: { kort:'De tafel van 7, maar dan dubbel', uit:'Veertien is twee keer zeven: 14 × 6 = 42 + 42 = 84. Of tien keer plus vier keer: 60 + 24.', rijen:[7], doe:'dubbel' }
+    10: { kort:'Zet er een nul achter', uit:'Tien keer een getal: schrijf het getal op en zet er een nul achter. 10 × 7 = 70.', rijen:[1], doe:'nul' },
+    2:  { kort:'Het getal plus zichzelf', uit:'Keer 2 is dubbel: tel het getal bij zichzelf op. 2 × 8 = 8 + 8 = 16. Alle uitkomsten zijn even.', rijen:[1], doe:'dubbel' },
+    5:  { kort:'De helft van de tafel van 10', uit:'Vijf is de helft van tien. Reken 10 keer uit en neem de helft: 5 × 8 is de helft van 80, dus 40. De uitkomst eindigt altijd op 0 of 5.', rijen:[10], doe:'helft' },
+    4:  { kort:'De tafel van 2, maar dan dubbel', uit:'Vier is twee keer twee. Verdubbel het getal, en verdubbel dan nog een keer: 4 × 7: 7 → 14 → 28.', rijen:[2], doe:'dubbel' },
+    3:  { kort:'De tafel van 2, plus nog één keer', uit:'Drie keer is twee keer en dan nog één keer erbij: 3 × 7 = 14 + 7 = 21.', rijen:[2, 1], doe:'plus' },
+    9:  { kort:'De tafel van 10, min één keer', uit:'Negen keer is tien keer min één keer: 9 × 7 = 70 − 7 = 63. Controle: de cijfers van de uitkomst tellen op tot 9 (6 + 3 = 9).', rijen:[10, 1], doe:'min' },
+    6:  { kort:'De tafel van 5, plus nog één keer', uit:'Zes keer is vijf keer plus één keer: 6 × 7 = 35 + 7 = 42. Of de tafel van 3, maar dan dubbel.', rijen:[5, 1], doe:'plus' },
+    8:  { kort:'De tafel van 4, maar dan dubbel', uit:'Acht is twee keer vier. Drie keer verdubbelen: 8 × 6: 6 → 12 → 24 → 48.', rijen:[4], doe:'dubbel' },
+    7:  { kort:'De tafel van 5 plus de tafel van 2', uit:'Zeven is vijf plus twee. 7 × 6 = 5 × 6 + 2 × 6 = 30 + 12 = 42. De tafel van 7 is de lastigste; met dit trucje kun je hem altijd uitrekenen.', rijen:[5, 2], doe:'plus' },
+    11: { kort:'De tafel van 10 plus nog één keer', uit:'Elf keer is tien keer plus één keer: 11 × 7 = 70 + 7 = 77. Tot en met 9 zie je het getal twee keer staan.', rijen:[10, 1], doe:'plus' },
+    12: { kort:'De tafel van 10 plus de tafel van 2', uit:'Twaalf is tien plus twee: 12 × 7 = 70 + 14 = 84.', rijen:[10, 2], doe:'plus' },
+    15: { kort:'De tafel van 10 plus de helft erbij', uit:'Vijftien is tien plus vijf, en vijf is de helft van tien: 15 × 6 = 60 + 30 = 90.', rijen:[10, 5], doe:'plus' },
+    13: { kort:'De tafel van 10 plus de tafel van 3', uit:'Dertien is tien plus drie: 13 × 7 = 70 + 21 = 91.', rijen:[10, 3], doe:'plus' },
+    14: { kort:'De tafel van 7, maar dan dubbel', uit:'Veertien is twee keer zeven: 14 × 6 = 42 + 42 = 84. Of tien keer plus vier keer: 60 + 24.', rijen:[7], doe:'dubbel' }
   };
   /* de volgorde om ze te leren: eerst wat je al kent, dan wat je ervan afleidt */
   var VOLG = [1, 10, 2, 5, 4, 3, 9, 6, 8, 7, 11, 12, 15, 13, 14];
 
   function schoon(t){ return String(t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
   function rnd(a, b){ return a + Math.floor(Math.random() * (b - a + 1)); }
-  /* de stappen van het trucje voor n × k */
+  /* de stappen van het trucje voor n × k */
   function stappen(n, k){
     var t = TRUC[n], r = t.rijen;
-    if (t.doe === 'zelf') return [n + ' × ' + k + ' = ' + k];
+    if (t.doe === 'zelf') return [n + ' × ' + k + ' = ' + k];
     if (t.doe === 'nul') return [k + ' met een nul erachter: ' + (10 * k)];
-    if (t.doe === 'helft') return ['10 × ' + k + ' = ' + (10 * k), 'de helft van ' + (10 * k) + ' is ' + (5 * k)];
+    if (t.doe === 'helft') return ['10 × ' + k + ' = ' + (10 * k), 'de helft van ' + (10 * k) + ' is ' + (5 * k)];
     if (t.doe === 'dubbel'){
       var b = r[0], uit = [];
       if (b === 1) return [k + ' + ' + k + ' = ' + (2 * k)];
-      uit.push(b + ' × ' + k + ' = ' + (b * k));
+      uit.push(b + ' × ' + k + ' = ' + (b * k));
       uit.push('dubbel: ' + (b * k) + ' + ' + (b * k) + ' = ' + (n * k));
       return uit;
     }
     var a1 = r[0] * k, a2 = r[1] * k;
-    return [r[0] + ' × ' + k + ' = ' + a1, r[1] + ' × ' + k + ' = ' + a2,
+    return [r[0] + ' × ' + k + ' = ' + a1, r[1] + ' × ' + k + ' = ' + a2,
       a1 + (t.doe === 'min' ? ' − ' : ' + ') + a2 + ' = ' + (n * k)];
   }
   /* de tabel: de tafel(s) waar je van uitgaat, en wat er uitkomt */
@@ -62,14 +62,14 @@ window.TAFELLEER = (function(){
     h += '</div>';
     if (t.doe !== 'zelf' && t.doe !== 'nul'){
       t.rijen.forEach(function(b){
-        h += '<div class="tl-rij bron" role="row"><span role="rowheader">tafel van ' + b + '</span>';
+        h += '<div class="tl-rij bron" role="row"><span role="rowheader">tafel van ' + b + '</span>';
         for (k = 1; k <= 10; k++) h += '<span role="cell">' + (b * k) + '</span>';
         h += '</div>';
       });
       var teken = t.doe === 'plus' ? '+' : t.doe === 'min' ? '−' : t.doe === 'helft' ? 'de helft' : 'dubbel';
       h += '<div class="tl-rij teken" role="row"><span role="rowheader"></span><span class="tl-op" role="cell">' + teken + '</span></div>';
     }
-    h += '<div class="tl-rij doel" role="row"><span role="rowheader">tafel van ' + n + '</span>';
+    h += '<div class="tl-rij doel" role="row"><span role="rowheader">tafel van ' + n + '</span>';
     for (k = 1; k <= 10; k++) h += '<span role="cell">' + (n * k) + '</span>';
     return h + '</div></div>';
   }
@@ -84,16 +84,23 @@ window.TAFELLEER = (function(){
   }
 
   var stijl = false;
+  /* een regel voor de donkere stand: met de themaknop en met de instelling van het apparaat */
+  function donker(sel, decl){
+    var a = sel.split(',').map(function(x){ return ':root[data-theme="dark"] ' + x; }).join(','),
+        b = sel.split(',').map(function(x){ return ':root:not([data-theme="light"]) ' + x; }).join(',');
+    return a + '{' + decl + '}\n@media(prefers-color-scheme:dark){' + b + '{' + decl + '}}';
+  }
   function zetStijl(){
     if (stijl) return; stijl = true;
     var s = document.createElement('style');
     s.textContent = [
       '.tl{max-width:760px;margin:0 auto;padding:28px 0 60px}',
+      '.tl h1{font-size:clamp(2rem,6vw,2.6rem)}',
       '.tl-kaart{background:var(--kaart,#fff);border:2px solid rgba(20,34,76,.10);border-radius:22px;padding:clamp(16px,3vw,26px);margin-top:16px}',
-      ':root[data-theme="dark"] .tl-kaart{border-color:rgba(243,239,233,.12)}',
+      donker('.tl-kaart', 'border-color:rgba(243,239,233,.12)'),
       '.tl h2{font-size:clamp(1.5rem,4vw,2.1rem)}',
       '.tl-kort{font-size:1.15rem;font-weight:600;color:var(--ocean);margin-top:4px}',
-      ':root[data-theme="dark"] .tl-kort{color:var(--vista)}',
+      donker('.tl-kort', 'color:var(--vista)'),
       '.tl-uit{margin-top:10px}',
       '.tl-tabel{margin-top:16px;overflow-x:auto;font-variant-numeric:tabular-nums}',
       '.tl-rij{display:grid;grid-template-columns:92px repeat(10,minmax(30px,1fr));gap:3px;min-width:430px}',
@@ -102,32 +109,44 @@ window.TAFELLEER = (function(){
       '.tl-rij.kop span{font-size:.72rem;color:var(--muted)}',
       '.tl-rij.bron span+span{background:rgba(131,165,242,.18)}',
       '.tl-rij.doel span+span{background:rgba(242,103,73,.16);font-weight:700}',
+      donker('.tl-rij.doel span+span', 'background:rgba(242,103,73,.28)'),
       '.tl-rij.teken{grid-template-columns:92px 1fr}',
       '.tl-op{font-size:.8rem !important;font-weight:600;color:var(--muted)}',
       '.tl-raster{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;width:min(220px,60vw);margin-top:12px}',
       '.tl-raster i{aspect-ratio:1;border-radius:3px;background:rgba(20,34,76,.10)}',
-      ':root[data-theme="dark"] .tl-raster i{background:rgba(243,239,233,.22)}',
-      '@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .tl-raster i{background:rgba(243,239,233,.22)}}',
-      '.tl-raster i.aan{background:var(--crab)}',
+      donker('.tl-raster i', 'background:rgba(243,239,233,.22)'),
+      /* de vakjes die je al kent: ook in het donker oranje (de regel hierboven weegt zwaarder) */
+      '.tl-raster i.aan{background:var(--crab,#F26749)}', donker('.tl-raster i.aan', 'background:var(--crab,#F26749)'),
       '.tl-som{font-size:clamp(2rem,7vw,3rem);font-weight:700;text-align:center;margin-top:8px;font-variant-numeric:tabular-nums}',
       '.tl-hulp{list-style:none;padding:0;margin:12px auto 0;max-width:360px;display:grid;gap:6px}',
       '.tl-hulp li{background:rgba(131,165,242,.16);border-radius:10px;padding:7px 12px;font-variant-numeric:tabular-nums}',
       '.tl-hulp li.vraag{background:rgba(242,103,73,.14);font-weight:600}',
-      '.tl-invoer{display:flex;gap:8px;justify-content:center;margin-top:16px}',
+      donker('.tl-hulp li.vraag', 'background:rgba(242,103,73,.28)'),
+      '.tl-invoer{display:flex;gap:8px;justify-content:center;align-items:center;margin-top:16px}',
+      '.tl-invoer .btn{margin-top:0}',
       '.tl-invoer input{width:130px;min-height:54px;text-align:center;font:700 1.5rem Poppins,system-ui,sans-serif;border-radius:14px;border:2px solid rgba(20,34,76,.2);background:var(--kaart,#fff);color:var(--ink)}',
+      donker('.tl-invoer input', 'border-color:rgba(243,239,233,.32)'),
+      '.tl-invoer input:disabled{opacity:1;color:var(--ink)}',
       '.tl-invoer input:focus{outline:3px solid var(--focusring,#B4701A);outline-offset:2px}',
       '.tl-terug{text-align:center;margin-top:12px;min-height:1.6em;font-weight:600}',
       '.tl-terug.goed{color:var(--op)} .tl-terug.fout{color:var(--neer)}',
-      '.tl-voort{display:flex;gap:6px;justify-content:center;margin-top:10px}',
+      donker('.tl-terug.goed', 'color:#5fbf88'), donker('.tl-terug.fout', 'color:#f4a28c'),
+      '.tl-voort{display:flex;gap:6px;justify-content:center;margin-top:16px}',
       '.tl-voort i{width:12px;height:12px;border-radius:50%;border:2px solid var(--muted)}',
       '.tl-voort i.goed{background:var(--op);border-color:var(--op)} .tl-voort i.fout{background:var(--neer);border-color:var(--neer)}',
-      '.tl-knoppen{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:18px}',
+      '.tl-verder{display:block;margin:12px auto 6px}',
+      '.tl-knoppen{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:center;margin-top:18px}',
+      '.tl-knoppen .btn{margin-top:0}',
       '.tl-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}',
       '.tl-chips span{border-radius:999px;padding:4px 11px;font-size:.84rem;background:rgba(20,34,76,.07)}',
-      ':root[data-theme="dark"] .tl-chips span{background:rgba(243,239,233,.10)}',
+      donker('.tl-chips span', 'background:rgba(243,239,233,.10)'),
       '.tl-chips span.klaar{background:var(--goed-bg);font-weight:600}',
       '.tl-chips span.nu{outline:2px solid var(--crab)}',
-      '@media(max-width:520px){.tl-rij{grid-template-columns:70px repeat(10,minmax(26px,1fr));min-width:340px}.tl-rij span{font-size:.8rem}}'
+      '.tl-uitslag{list-style:none;padding:0;margin:16px 0 0;display:grid;gap:6px}',
+      '.tl-uitslag li{display:flex;justify-content:space-between;gap:4px 14px;flex-wrap:wrap;background:rgba(131,165,242,.16);border-radius:10px;padding:8px 12px}',
+      '.tl-uitslag li span{white-space:nowrap;color:var(--muted);font-size:.92rem}',
+      /* op een telefoon past de hele tafel in de kaart, zonder opzij te schuiven */
+      '@media(max-width:520px){.tl-rij,.tl-rij.teken{grid-template-columns:54px repeat(10,minmax(0,1fr));gap:2px;min-width:0}.tl-rij.teken{grid-template-columns:54px 1fr}.tl-rij span{font-size:.74rem;padding:5px 0;letter-spacing:-.02em}.tl-rij span:first-child{font-size:.66rem;line-height:1.15;letter-spacing:0}}'
     ].join('\n');
     document.head.appendChild(s);
   }
@@ -159,9 +178,9 @@ window.TAFELLEER = (function(){
     var gekend = [1, 2, 5, 10];
     vak.innerHTML = '<p class="hand" style="font-size:1.5rem">minder stampen, meer snappen</p><h1>Leer de tafels</h1>' +
       '<div class="tl-kaart"><h2>Je kent er al meer dan je denkt</h2>' +
-      '<p class="tl-uit">Bij keer maakt de volgorde niet uit: 3 × 7 is hetzelfde als 7 × 3. Ken je de tafels van 1, 2, 5 en 10, dan ken je de gekleurde vakjes al. Van de honderd sommen tot 10 × 10 blijven er dan maar weinig over, en die leid je af van wat je al kent.</p>' +
+      '<p class="tl-uit">Bij keer maakt de volgorde niet uit: 3 × 7 is hetzelfde als 7 × 3. Ken je de tafels van 1, 2, 5 en 10, dan ken je de gekleurde vakjes al. Van de honderd sommen tot 10 × 10 blijven er dan maar weinig over, en die leid je af van wat je al kent.</p>' +
       raster(gekend) +
-      '<p class="tl-uit">Per tafel zie je het trucje, oefen je vier sommen met de stappen erbij en vier zonder. Je leert: ' + lijst.map(function(t){ return 'de tafel van ' + t; }).join(', ').replace(/, ([^,]*)$/, ' en $1') + '.</p>' +
+      '<p class="tl-uit">Per tafel zie je het trucje, oefen je vier sommen met de stappen erbij en vier zonder. Je leert ' + (lijst.length === 1 ? 'de tafel van ' + lijst[0] : 'de tafels van ' + lijst.slice(0, -1).join(', ') + ' en ' + lijst[lijst.length - 1]) + '.</p>' +
       '<div class="tl-knoppen"><button class="btn" type="button" id="tlStart">Begin met de tafel van ' + lijst[0] + '</button><button class="linkbtn" type="button" id="tlTerug">Terug</button></div></div>';
     el('tlStart').addEventListener('click', uitleg);
     el('tlTerug').addEventListener('click', sluit);
@@ -190,7 +209,7 @@ window.TAFELLEER = (function(){
     fase = metHulp ? 'hulp' : 'zelf';
     var stap = stappen(s.n, s.k);
     vak.innerHTML = chips() + '<div class="tl-kaart"><p class="eyebrow">' + (metHulp ? 'met hulp' : 'nu zelf') + ' · som ' + (sNr + 1) + ' van 8</p>' +
-      '<div class="tl-som">' + s.n + ' × ' + s.k + ' = ?</div>' +
+      '<div class="tl-som">' + s.n + ' × ' + s.k + ' = ?</div>' +
       (metHulp ? '<ul class="tl-hulp">' + stap.slice(0, -1).map(function(x){ return '<li>' + schoon(x) + '</li>'; }).join('') + '<li class="vraag">' + schoon(stap[stap.length - 1].replace(/= \d+$/, '= ?').replace(/: \d+$/, ': ?').replace(/ is \d+$/, ' is ?')) + '</li></ul>' : '<ul class="tl-hulp hide" id="tlHulp">' + stap.map(function(x){ return '<li>' + schoon(x) + '</li>'; }).join('') + '</ul>') +
       '<div class="tl-invoer"><input id="tlIn" type="text" inputmode="numeric" autocomplete="off" aria-label="Jouw antwoord"><button class="btn" type="button" id="tlCheck">Kijk na</button></div>' +
       '<p class="tl-terug" id="tlTerugk" role="status" aria-live="polite"></p>' +
@@ -206,17 +225,16 @@ window.TAFELLEER = (function(){
       s.goed = ok;
       var tk = el('tlTerugk');
       tk.className = 'tl-terug ' + (ok ? 'goed' : 'fout');
-      tk.textContent = ok ? 'Goed! ' + s.n + ' × ' + s.k + ' = ' + (s.n * s.k) + '.' : 'Niet goed, het is ' + (s.n * s.k) + '. Kijk hierboven hoe het trucje werkt.';
+      tk.textContent = ok ? 'Goed! ' + s.n + ' × ' + s.k + ' = ' + (s.n * s.k) + '.' : 'Niet goed, het is ' + (s.n * s.k) + '. Kijk hierboven hoe het trucje werkt.';
       var hulp = el('tlHulp'); if (hulp && !ok) hulp.classList.remove('hide');
       /* bij een fout met hulp: de laatste stap met het antwoord erin */
       if (!ok && metHulp){ var laatst = vak.querySelector('.tl-hulp li.vraag'); if (laatst) laatst.textContent = stap[stap.length - 1]; }
       var vast = el('tlToon'); if (vast) vast.classList.add('hide');
       var verder = document.createElement('button');
-      verder.className = 'btn'; verder.type = 'button'; verder.id = 'tlVerder';
+      verder.className = 'btn tl-verder'; verder.type = 'button'; verder.id = 'tlVerder';
       verder.textContent = sNr < 7 ? 'Volgende som' : 'Klaar met deze tafel';
       verder.addEventListener('click', function(){ sNr++; if (sNr < 8) som(); else tafelKlaar(); });
       tk.parentNode.insertBefore(verder, tk.nextSibling);
-      verder.style.display = 'block'; verder.style.margin = '12px auto 0';
       verder.focus({ preventScroll:true });
     }
     el('tlCheck').addEventListener('click', kijk);
@@ -232,10 +250,10 @@ window.TAFELLEER = (function(){
     vak.innerHTML = chips() + '<div class="tl-kaart"><p class="eyebrow">de tafel van ' + n + '</p>' +
       '<h2>' + (zelfGoed === 4 ? 'Die zit erin' : zelfGoed >= 3 ? 'Bijna' : 'Nog even oefenen') + '</h2>' +
       '<p class="tl-uit">Zonder hulp had je er ' + zelfGoed + ' van de 4 goed. ' + (zelfGoed === 4 ? 'Het trucje werkt.' : 'Lees het trucje nog eens: ' + schoon(TRUC[n].kort.toLowerCase()) + '.') + '</p>' +
+      (laatste && uitslag.length > 1 ? '<ul class="tl-uitslag">' + uitslag.map(function(u){ return '<li><b>Tafel van ' + u.n + '</b><span>' + u.zelf + ' van 4 zelf goed</span></li>'; }).join('') + '</ul>' : '') +
       '<div class="tl-knoppen">' + (zelfGoed < 4 ? '<button class="btn ghost" type="button" id="tlNog">Deze tafel nog een keer</button>' : '') +
-      (laatste ? '<button class="btn" type="button" id="tlRace">Nu de race met deze tafels</button>' : '<button class="btn" type="button" id="tlVolg">Door naar de tafel van ' + lijst[nr] + '</button>') +
-      '<button class="linkbtn" type="button" id="tlTerug">Stoppen</button></div>' +
-      (laatste ? '<p class="tl-uit">' + uitslag.map(function(u){ return 'tafel van ' + u.n + ': ' + u.zelf + ' van 4 zelf goed'; }).join(' · ') + '</p>' : '') + '</div>';
+      (laatste ? '<button class="btn" type="button" id="tlRace">' + (lijst.length === 1 ? 'Nu de race met de tafel van ' + lijst[0] : 'Nu de race met deze tafels') + '</button>' : '<button class="btn" type="button" id="tlVolg">Door naar de tafel van ' + lijst[nr] + '</button>') +
+      '<button class="linkbtn" type="button" id="tlTerug">' + (laatste ? 'Terug' : 'Stoppen') + '</button></div></div>';
     var nog = el('tlNog'); if (nog) nog.addEventListener('click', function(){ nr--; uitslag.pop(); uitleg(); });
     var volg = el('tlVolg'); if (volg) volg.addEventListener('click', uitleg);
     var race = el('tlRace'); if (race) race.addEventListener('click', function(){ sluit(); if (opts.klaar) opts.klaar(lijst.slice()); });

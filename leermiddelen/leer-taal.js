@@ -26,7 +26,7 @@
   function vt(w){ return w.stam + (w.kof ? 'te' : 'de'); }
   function vd(w){ return 'ge' + w.stam + (opDT(w.stam) ? '' : (w.kof ? 't' : 'd')); }
   function zinMet(w, wie, gat){ var z = w.zin.replace('%', gat); return wie.charAt(0).toUpperCase() + wie.slice(1) + ' ' + z + '.'; }
-  var STAM = 'De stam is de ik-vorm: ik ';
+  var STAM = 'de stam is de ik-vorm: ik ';
   var WERKWOORDEN = [
     { kop:'Hij, zij en het: stam + t', kort:'Bij hij, zij, het en jij komt er een t achter de stam',
       uit:'Zoek eerst de stam: dat is wat je zegt na "ik" (ik werk, ik maak). Bij ik schrijf je alleen de stam. Bij hij, zij, het en jij komt er een t achter. Eindigt de stam al op een t, dan komt er geen tweede t bij.',
@@ -34,18 +34,18 @@
       maak:function(){ var w = kies(WW), wie = kies(['hij', 'zij', 'ik', 'hij', 'jij']), ik = wie === 'ik', goed = ik ? w.stam : hijVorm(w);
         return { vraag:zinMet(w, wie, '___') + ' (' + w.inf + ')', stappen:[STAM + w.stam],
           slot:ik ? 'ik: alleen de stam =' : (opT(w.stam) ? 'de stam eindigt al op t, dus ' + wie + ':' : wie + ': stam + t ='), antwoord:[goed], invoer:'tekst' }; } },
-    { kop:'Verleden tijd: ’t kofschip', kort:'Staat de laatste letter van de stam in ’t kofschip, dan -te, anders -de',
-      uit:'Kijk naar de laatste letter van de stam. Zit die in ’t kofschip (t, k, f, s, ch, p), dan schrijf je -te (meervoud -ten). Anders -de (meervoud -den).',
-      voorbeeld:['Gisteren ___ hij naar school. (fietsen)', STAM + 'fiets', 'de s zit in ’t kofschip, dus -te: fietste'],
+    { kop:'Verleden tijd: ’t kofschip', kort:'Staat de laatste letter van de stam in ’t kofschip, dan -te, anders -de',
+      uit:'Kijk naar de laatste letter van de stam. Zit die in ’t kofschip (t, k, f, s, ch, p), dan schrijf je -te (meervoud -ten). Anders -de (meervoud -den).',
+      voorbeeld:['Gisteren ___ hij naar school. (fietsen)', STAM + 'fiets', 'de s zit in ’t kofschip, dus -te: fietste'],
       maak:function(){ var w = kies(WW), mv = Math.random() < .3 && !/zijn /.test(w.zin), letter = /ch$/.test(w.stam) ? 'ch' : w.stam.slice(-1), goed = vt(w) + (mv ? 'n' : '');
-        return { vraag:'Gisteren ___ ' + (mv ? 'wij' : 'hij') + ' ' + w.zin.replace('% ', '').replace('%', '') + '. (' + w.inf + ')', stappen:[STAM + w.stam, 'de laatste letter is ' + letter + ': ' + (w.kof ? 'die zit in ’t kofschip' : 'die zit niet in ’t kofschip')],
+        return { vraag:'Gisteren ___ ' + (mv ? 'wij' : 'hij') + ' ' + w.zin.replace('% ', '').replace('%', '') + '. (' + w.inf + ')', stappen:[STAM + w.stam, 'de laatste letter is ' + letter + ': ' + (w.kof ? 'die zit in ’t kofschip' : 'die zit niet in ’t kofschip')],
           slot:'dus ' + (w.kof ? '-te' : '-de') + (mv ? 'n' : '') + ':', antwoord:[goed], invoer:'tekst' }; } },
     { kop:'Voltooid deelwoord: d of t', kort:'ge + stam + t of d, met dezelfde kofschip-regel',
-      uit:'Het voltooid deelwoord (na heeft, is of zijn) maak je met ge + stam + t of d. Zit de laatste letter in ’t kofschip, dan een t, anders een d. Eindigt de stam al op t of d, dan komt er niets meer bij: gepraat, gered.',
-      voorbeeld:['Hij heeft lang ___. (wandelen)', STAM + 'wandel', 'de l zit niet in ’t kofschip, dus ge + wandel + d: gewandeld'],
+      uit:'Het voltooid deelwoord (na heeft, is of zijn) maak je met ge + stam + t of d. Zit de laatste letter in ’t kofschip, dan een t, anders een d. Eindigt de stam al op t of d, dan komt er niets meer bij: gepraat, gered.',
+      voorbeeld:['Hij heeft lang ___. (wandelen)', STAM + 'wandel', 'de l zit niet in ’t kofschip, dus ge + wandel + d: gewandeld'],
       maak:function(){ var w = kies(WW), letter = /ch$/.test(w.stam) ? 'ch' : w.stam.slice(-1);
         return { vraag:'Hij heeft ' + w.zin.replace('% ', '').replace('%', '') + ' ___. (' + w.inf + ')', stappen:[STAM + w.stam,
-          opDT(w.stam) ? 'de stam eindigt al op ' + letter + ': er komt geen letter achter' : 'de laatste letter is ' + letter + ': ' + (w.kof ? 'in ’t kofschip, dus t' : 'niet in ’t kofschip, dus d')],
+          opDT(w.stam) ? 'de stam eindigt al op ' + letter + ': er komt geen letter achter' : 'de laatste letter is ' + letter + ': ' + (w.kof ? 'in ’t kofschip, dus t' : 'niet in ’t kofschip, dus d')],
           slot:'ge + ' + w.stam + (opDT(w.stam) ? ' =' : (w.kof ? ' + t =' : ' + d =')), antwoord:[vd(w)], invoer:'tekst' }; } },
     { kop:'De d of t-val', kort:'Hoor je een t maar staat er een d in de stam, schrijf dan allebei',
       uit:'Bij worden, vinden en antwoorden eindigt de stam op een d: ik word, ik vind. Bij hij, zij en het komt er toch een t achter: hij wordt, zij vindt. Je hoort het niet, dus denk aan de regel.',
@@ -79,6 +79,6 @@
       maak:function(){ var v = kies(r.l), vb, gat = Math.random() < .5 ? 1 : 2;
         do { vb = kies(r.l); } while (vb === v && r.l.length > 1);
         var toon = v.slice(); toon[gat] = '___';
-        return { vraag:toon.join(', '), stappen:['dit rijtje: ' + r.patroon, 'net als ' + vb.join(', ')], slot:'dus ' + v.slice(0, gat).join(', ') + ',', antwoord:[v[gat]], invoer:'tekst' }; } };
+        return { vraag:toon.join(', '), stappen:['dit rijtje: ' + r.patroon, 'net als ' + vb.join(', ')], slot:(gat === 1 ? 'dus de verleden tijd van ' : 'dus het voltooid deelwoord van ') + v[0] + ' is', antwoord:[v[gat]], invoer:'tekst' }; } };
   });
 })();

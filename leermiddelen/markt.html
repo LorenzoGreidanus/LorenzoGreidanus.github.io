@@ -204,9 +204,10 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 .groep button{min-width:44px;min-height:44px;border:1.5px solid var(--rand2);background:var(--kaart);border-radius:10px;font-weight:600;font-size:.85rem;padding:0 6px}
 .groep.bot input{opacity:.7}
 /* de voorspelling: wat denkt de klas dat de prijs doet */
-.tally{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}
+.tally{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px;container-type:inline-size}
 .tally>*{background:var(--kaart2);border:1.5px solid var(--rand);border-radius:16px;padding:12px;text-align:center;min-height:44px}
-.tally b{display:block;font-size:1.6rem;line-height:1.1;font-variant-numeric:tabular-nums}
+.tally b{display:block;font-size:clamp(1.05rem,5.6cqi,1.6rem);line-height:1.1;font-variant-numeric:tabular-nums}
+@media(max-width:520px){.tally>*{padding:10px 6px}}
 .tally span{display:block;font-size:.82rem;color:var(--muted)}
 .tally .staaf{height:6px;border-radius:999px;background:var(--rand);margin-top:8px;overflow:hidden}
 .tally .staaf i{display:block;height:100%;background:var(--eco);border-radius:999px;transition:width .3s var(--ease)}
@@ -252,7 +253,7 @@ body.bord .boekkop{font-size:clamp(.7rem,.85vw,.9rem)}
 body.bord .uitslagkop b{font-size:clamp(1.2rem,1.7vw,1.9rem)}
 body.bord .uitslagkop span,body.bord .uitslagnoot{font-size:clamp(1rem,1.2vw,1.3rem)}
 body.bord .wiechips span{font-size:clamp(.85rem,1vw,1.1rem)}
-body.bord .tally b{font-size:clamp(1.6rem,2.4vw,2.6rem)}
+body.bord .tally b{font-size:clamp(1.05rem,5.6cqi,2.6rem)}
 body.bord .tally span{font-size:clamp(.85rem,1vw,1.1rem)}
 body.bord .grafiek .gkop b{font-size:clamp(.95rem,1.15vw,1.25rem)}
 body.bord .legenda{font-size:clamp(.82rem,1vw,1.05rem)}
@@ -753,7 +754,7 @@ var VOORSPEL = [{ id:'op', tekst:'De prijs gaat omhoog', kort:'omhoog' }, { id:'
     /* het prijsbord in het midden */
     var ps = rondes.filter(function(x){ return x.gem !== null; }).map(function(x){ return x.gem; });
     var nu = r && r.gem !== null ? r.gem : null, vorig = vr && vr.gem !== null ? vr.gem : null;
-    var sub = !r ? 'nog geen prijs' : dicht ? (r.n ? r.n + (r.n === 1 ? ' deal' : ' deals') : 'geen deal') : 'vorige ronde';
+    var sub = !r ? 'nog geen prijs' : dicht ? (r.n ? r.n + (r.n === 1 ? ' deal' : ' deals') : 'geen deal') : nu === null ? 'geen deal' : 'vorige ronde';
     h += '<g transform="translate(600 0)"><path d="M-70 300l-16 92M70 300l16 92M0 300v84" stroke="#7a4a10" stroke-width="7" stroke-linecap="round"/>' +
       '<rect x="-118" y="104" width="236" height="200" rx="10" fill="#a3630f"/><rect x="-108" y="114" width="216" height="180" rx="6" fill="#1f3b33"/>' +
       '<text class="sc-klein" x="-96" y="140" font-size="14" font-weight="600" letter-spacing="2" fill="#F3EFE9" opacity=".75">VENTILATOR</text>' +
@@ -802,7 +803,7 @@ var VOORSPEL = [{ id:'op', tekst:'De prijs gaat omhoog', kort:'omhoog' }, { id:'
   function meters(){
     var r = rondes[rondes.length - 1], f = fase(), m = [];
     m.push(['ronde', String(stap === 'voorspel' ? ronde + 1 : Math.max(ronde, 1))]);
-    m.push(['deals vorige ronde', r ? String(r.n) : '0']);
+    m.push([r && r.n === 1 ? 'deal vorige ronde' : 'deals vorige ronde', r ? String(r.n) : '0']);
     m.push(['prijs vorige ronde', r && r.gem !== null ? eu(r.gem) : 'nog geen']);
     if (f.belasting){ var b = som(rondes.filter(function(x){ return x.fase === 'belasting'; }).map(function(x){ return x.taks; })); m.push(['belasting opgehaald', eu(b)]); }
     else if (f.max) m.push(['maximumprijs', eu(maxPrijs)]);
@@ -1115,7 +1116,7 @@ var VOORSPEL = [{ id:'op', tekst:'De prijs gaat omhoog', kort:'omhoog' }, { id:'
     });
     var noot = [];
     var zonderK = u.K.length - r.n, zonderV = u.V.length - r.n;
-    if (r.n) noot.push('Laagste prijs ' + eu(r.lo) + ', hoogste ' + eu(r.hi) + '.');
+    if (r.n) noot.push(r.lo === r.hi ? (r.n === 1 ? 'De enige deal ging voor ' + eu(r.lo) + '.' : 'Alle deals gingen voor ' + eu(r.lo) + '.') : 'Laagste prijs ' + eu(r.lo) + ', hoogste ' + eu(r.hi) + '.');
     if (zonderK > 0) noot.push('<b>' + zonderK + (zonderK === 1 ? ' koper' : ' kopers') + '</b>' + (zonderK === 1 ? ' wilde kopen maar kreeg' : ' wilden kopen maar kregen') + ' geen ventilator.');
     if (zonderV > 0) noot.push('<b>' + zonderV + (zonderV === 1 ? ' verkoper' : ' verkopers') + '</b>' + (zonderV === 1 ? ' bleef' : ' bleven') + ' met een ventilator zitten.');
     if (u.te.length) noot.push('<b>' + u.te.length + '</b> ' + (u.te.length === 1 ? 'vraagprijs lag' : 'vraagprijzen lagen') + ' boven de maximumprijs en ' + (u.te.length === 1 ? 'telde' : 'telden') + ' niet mee.');
@@ -1307,7 +1308,7 @@ var VOORSPEL = [{ id:'op', tekst:'De prijs gaat omhoog', kort:'omhoog' }, { id:'
         var t = handelVan(s.sid), k = isK(t), n = aantal[t.id] || 0, w = winst[t.id] || 0;
         var zelfde = handel.filter(function(x){ return x.kant === t.kant; }).map(function(x){ return winst[x.id] || 0; }).sort(function(a, b){ return b - a; });
         return { pid:s.sid, d:{ soort:'uitslag', kop:'de markt is dicht', titel:'Jouw ' + (k ? 'voordeel' : 'winst') + ': ' + eu(w),
-          tekst:'Je ' + (k ? 'kocht' : 'verkocht') + ' ' + n + (n === 1 ? ' ventilator' : ' ventilatoren') + ' in ' + rondes.length + ' rondes.',
+          tekst:'Je ' + (k ? 'kocht' : 'verkocht') + ' ' + (n === 0 ? 'geen ventilator' : n + (n === 1 ? ' ventilator' : ' ventilatoren')) + ' in ' + rondes.length + (rondes.length === 1 ? ' ronde.' : ' rondes.'),
           regels:[e0.p !== null ? 'Het evenwicht van jullie klas lag bij ' + eu(e0.p) + ': bij die prijs wilden evenveel kopers kopen als verkopers verkopen.' : 'Kijk naar het bord.',
             'Je staat ' + (zelfde.indexOf(w) + 1) + 'e van de ' + zelfde.length + ' ' + (k ? 'kopers' : 'verkopers') + '.'] } };
       }));
@@ -1408,15 +1409,15 @@ var VOORSPEL = [{ id:'op', tekst:'De prijs gaat omhoog', kort:'omhoog' }, { id:'
   /* "van 52 naar 61 euro, en van 4 naar 5 ventilatoren", of wat er gelijk bleef */
   function verschil(b, e){
     var p = b.p === e.p ? 'De prijs blijft ' + eu(e.p) : 'Het evenwicht gaat van ' + eu(b.p) + ' naar <b>' + eu(e.p) + '</b>';
-    var q = b.q === e.q ? ', het aantal blijft ' + e.q + (e.q === 1 ? ' ventilator' : ' ventilatoren') + '.' : ', en van ' + b.q + ' naar <b>' + e.q + '</b> ventilatoren.';
+    var q = b.q === e.q ? ', het aantal blijft ' + e.q + (e.q === 1 ? ' ventilator' : ' ventilatoren') + '.' : ', en van ' + b.q + ' naar <b>' + e.q + '</b> ' + (e.q === 1 ? 'ventilator' : 'ventilatoren') + '.';
     return p + q;
   }
   function vaTekst(fid, b, e, rk){
     var jullie = rk ? ' Jullie eigen prijs: <b>' + eu(rk.gem) + '</b> bij ' + rk.n + (rk.n === 1 ? ' deal' : ' deals') + '.' : '';
     if (b.p === null) return 'Met deze kaarten kon er geen enkele deal zijn: elke verkoper had hogere kosten dan wat de kopers over hadden.';
-    if (fid === 'gewoon') return 'Elke trede van de blauwe lijn is een koper: hoe hoger de trede, hoe meer hij over had. Elke trede van de bruine lijn is een verkoper. Links van het kruispunt staan de kopers en verkopers die het met elkaar eens kunnen worden; rechts ervan niet. Het evenwicht ligt bij <b>' + eu(b.p) + '</b> met <b>' + b.q + '</b> ventilatoren.' + jullie;
+    if (fid === 'gewoon') return 'Elke trede van de blauwe lijn is een koper: hoe hoger de trede, hoe meer hij over had. Elke trede van de bruine lijn is een verkoper. Links van het kruispunt staan de kopers en verkopers die het met elkaar eens kunnen worden; rechts ervan niet. Het evenwicht ligt bij <b>' + eu(b.p) + '</b> met <b>' + b.q + '</b> ' + (b.q === 1 ? 'ventilator' : 'ventilatoren') + '.' + jullie;
     if (fid === 'hittegolf') return 'Door de hitte heeft elke koper ' + eu(HITTE) + ' meer over: de hele vraaglijn schuift omhoog, naar rechts. ' + verschil(b, e) + ' Meer vraag: een hogere prijs' + (e.q > b.q ? ' en meer verkocht.' : '. In een grotere markt wordt er ook meer verkocht; in deze kleine klas net niet.') + jullie;
-    if (fid === 'fabriek') return 'De fabriek zet ' + aantalBots() + ' ventilatoren van ' + eu(FABRIEK_PRIJS) + ' op de markt: de aanbodlijn schuift naar rechts. ' + verschil(b, e) + ' Meer aanbod: een lagere prijs' + (e.q > b.q ? ' en meer verkocht.' : '.') + ' Verkopers met hoge kosten vallen af.' + jullie;
+    if (fid === 'fabriek') return 'De fabriek zet ' + aantalBots() + (aantalBots() === 1 ? ' ventilator' : ' ventilatoren') + ' van ' + eu(FABRIEK_PRIJS) + ' op de markt: de aanbodlijn schuift naar rechts. ' + verschil(b, e) + ' Meer aanbod: een lagere prijs' + (e.q > b.q ? ' en meer verkocht.' : '.') + ' Verkopers met hoge kosten vallen af.' + jullie;
     if (fid === 'belasting'){
       var dk = e.p - b.p;
       return 'Elke verkoper wil de ' + eu(TAKS) + ' belasting terugverdienen: de aanbodlijn schuift ' + eu(TAKS) + ' omhoog. ' + verschil(b, e) + ' ' +
@@ -1461,7 +1462,7 @@ var VOORSPEL = [{ id:'op', tekst:'De prijs gaat omhoog', kort:'omhoog' }, { id:'
       l.forEach(function(x){ (x.deals || []).forEach(function(dd){ if (dd.v) wel[dd.v] = true; }); });
       var niet = handel.filter(function(t){ return isV(t) && !wel[t.id]; }).length;
       kop = d === null ? 'Fabriek opent zijn deuren' : d <= -2 ? 'Fabriek drukt de prijs' : d >= 2 ? 'Prijs stijgt, ondanks de fabriek' : 'Fabriek verandert weinig aan de prijs';
-      tekst = 'Een fabriek zette elke ronde ' + aantalBots() + ' ventilatoren van ' + eu(FABRIEK_PRIJS) + ' op de markt en verkocht er in totaal ' + bot + '. ' + koers + theorie +
+      tekst = 'Een fabriek zette elke ronde ' + aantalBots() + (aantalBots() === 1 ? ' ventilator' : ' ventilatoren') + ' van ' + eu(FABRIEK_PRIJS) + ' op de markt en verkocht er in totaal ' + bot + '. ' + koers + theorie +
         (niet ? ' ' + (niet === 1 ? 'Eén verkoper' : niet + ' verkopers') + ' uit de klas ' + (niet === 1 ? 'verkocht' : 'verkochten') + ' in die rondes niets: tegen de fabriek kon je met hoge kosten niet op.' : ' Elke verkoper uit de klas verkocht er toch nog iets.');
     } else if (fid === 'belasting'){
       var tk = som(l.map(function(x){ return x.taks; }));
@@ -1545,7 +1546,7 @@ var VOORSPEL = [{ id:'op', tekst:'De prijs gaat omhoog', kort:'omhoog' }, { id:'
         '<h3>Het Marktbericht</h3><p class="kmotto">Koersen, deals en nieuws van de ventilatorenmarkt in jullie klas</p>' +
         '<div class="kticker">' + tick.join('') + '</div></div>' +
       '<section class="kvoor"><div><p class="kkick">voorpagina</p><h4>' + kop + '</h4><p>' + schoon(uit) + '</p>' +
-        (nDeals ? '<p>In ' + rondes.length + (rondes.length === 1 ? ' ronde' : ' rondes') + ' gingen er ' + nDeals + ' ventilatoren van eigenaar, voor gemiddeld ' + eu(gem) + '. ' + handel.filter(isK).length + ' kopers en ' + handel.filter(isV).length + ' verkopers deden mee.' + (last && last !== r0 ? ' De slotkoers: ' + eu(last.gem) + '.' : '') + '</p>' : '') + '</div>' +
+        (nDeals ? '<p>In ' + rondes.length + (rondes.length === 1 ? ' ronde' : ' rondes') + (nDeals === 1 ? ' ging er 1 ventilator' : ' gingen er ' + nDeals + ' ventilatoren') + ' van eigenaar, voor gemiddeld ' + eu(gem) + '. ' + handel.filter(isK).length + ' kopers en ' + handel.filter(isV).length + ' verkopers deden mee.' + (last && last !== r0 ? ' De slotkoers: ' + eu(last.gem) + '.' : '') + '</p>' : '') + '</div>' +
         '<div><p class="kkick">koers van de ventilator, per ronde</p><div class="kgraf" id="kKoers"></div><p class="kbij">lijn: gemiddelde prijs &middot; stippels: evenwicht volgens de kaarten &middot; staafjes: aantal deals</p></div></section>' +
       '<div class="kkolommen">' + art.join('') + '</div>' +
       '<aside class="kkader"><div><p class="kkick">achtergrond</p><h5>Vraag en aanbod van de klas</h5><div class="kgraf" id="kVa"></div>' +

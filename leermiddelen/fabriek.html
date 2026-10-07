@@ -217,6 +217,8 @@ body.speelt .wrap{width:min(100% - 32px,1400px)}
 .groep .rij>span{font-size:.74rem;color:var(--muted);min-width:64px}
 .kies{border:1.5px solid var(--rand2);background:var(--kaart);border-radius:999px;padding:4px 11px;font-weight:600;font-size:.82rem;min-height:44px}
 .kies.on{background:var(--ocean);border-color:var(--ocean);color:#fff}
+/* basis.css maakt in het donker van elke .rij button.on een bijna onzichtbaar vlak: hier blijft de keuze blauw */
+html:root .groep .rij .kies.on{background:var(--ocean);border-color:var(--ocean);color:#fff}
 .tally{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
 .tally>div{background:var(--kaart2);border-radius:16px;padding:12px;text-align:center}
 .tally b{display:block;font-size:2rem;line-height:1.1;font-variant-numeric:tabular-nums}
@@ -370,6 +372,8 @@ body.bord .uitrij .rk span,body.bord .uitrij>p{font-size:clamp(.84rem,1vw,1.1rem
 .ktabel th{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;font-weight:400;color:#6d6455}
 .ktabel td:last-child,.ktabel th:last-child{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .ktabel tr.som td{border-bottom:0;border-top:1px solid #1d1b17;font-weight:700}
+/* basis.css geeft elke .som in het donker een donker vlak: op het krantenpapier blijft de rij papier */
+html .krant .ktabel tr.som{background:none}
 .kduo p{font-size:.9rem;line-height:1.48;margin-top:6px}
 .kadv{border-top:3px double #1d1b17;margin-top:14px;padding-top:4px}
 .kadvs{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:6px}
@@ -380,7 +384,9 @@ body.bord .uitrij .rk span,body.bord .uitrij>p{font-size:clamp(.84rem,1vw,1.1rem
 .adv .groot{font-size:1.3rem;font-weight:700;margin-top:4px}
 .kvoet{font-family:'Poppins',sans-serif;font-size:.7rem;text-align:center;color:#6d6455;border-top:1px solid #1d1b17;margin-top:14px;padding-top:6px}
 .krantknop{display:flex;justify-content:center;margin-top:12px}
-@media(max-width:520px){.kboven{justify-content:center;gap:2px 14px}}
+@media(max-width:520px){.kboven{justify-content:center;gap:2px 14px}
+  .krubriek{letter-spacing:.12em}
+  .krubriek::before,.krubriek::after{width:1.2em;margin:0 .45em}}
 @media print{
   header,footer,#scherm-start,#scherm-spel,.moment,.vangnet,.krantknop,
   #scherm-einde>*:not(#krantvak),#krantvak>*:not(.krant){display:none !important}
@@ -418,8 +424,9 @@ body.bord .uitrij .rk span,body.bord .uitrij>p{font-size:clamp(.84rem,1vw,1.1rem
 .soorten b{display:block}
 .soorten p{font-size:.88rem;color:var(--muted);margin-top:4px}
 .soorten strong{font-variant-numeric:tabular-nums}
-.begrippen{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-top:10px}
-.begrippen div{background:var(--kaart);border:1px solid var(--rand);border-radius:14px;padding:12px 14px;font-size:.9rem}
+/* kolommen in plaats van een raster: tien kaarten van ongelijke lengte, zonder gaten in de laatste rij */
+.begrippen{columns:4 260px;column-gap:10px;margin-top:10px}
+.begrippen div{break-inside:avoid;margin-bottom:10px;background:var(--kaart);border:1px solid var(--rand);border-radius:14px;padding:12px 14px;font-size:.9rem}
 .begrippen b{display:block;font-size:1rem;margin-bottom:2px}
 .begrippen span{color:var(--muted)}
 .begrippen em{font-style:normal;color:var(--fab-tekst);font-weight:600}
@@ -435,6 +442,8 @@ body.bord .uitrij .rk span,body.bord .uitrij>p{font-size:clamp(.84rem,1vw,1.1rem
   .kaart{padding:16px}
   .nieuws{padding:12px}
   .nieuws .ico{width:38px;height:38px}
+  /* het rapport krijgt op een smal scherm de hele breedte, niet alleen de kolom naast het icoon */
+  .nieuws .rapport{margin-left:-52px}
   .briefje div b{font-size:1rem}
 }
 /* de bordstand: breder, en letters die je achter in het lokaal kunt lezen */
@@ -1171,7 +1180,7 @@ var LONEN = [6, 8, 10, 12], UREN = [10, 12, 14];
   function rolKaart(a){
     if (a.soort === 'fab'){
       var fb = fabVan(a.fid);
-      return { soort:'rol', rol:'fab', titel:'Fabrikant', onder:'eigenaar van ' + (S.ri === 0 && S.fase !== 'u' ? 'de nieuwe fabriek ' : 'fabriek ') + fb.naam + ' · winst tot nu toe ' + gldR(a.winst),
+      return { soort:'rol', rol:'fab', titel:'Fabrikant', onder:'eigenaar van ' + (S.ri === 0 && S.fase !== 'u' ? 'de nieuwe fabriek ' : 'fabriek ') + fb.naam + (Math.round(a.winst) < 0 ? ' · verlies tot nu toe ' + gldR(-a.winst) : ' · winst tot nu toe ' + gldR(a.winst)),
         tekst:'Jij kiest elk jaar het loon, de werkdag en of je kinderen aanneemt. Lage lonen geven meer winst, maar alleen als er arbeiders komen. Je winst telt op.', kleur:SOORT.fab.kleur };
     }
     var p = a.p, s = SOORT[a.soort], st = a.rondes ? ' · genoeg te eten: ' + a.genoeg + ' van ' + a.rondes + ' jaar' : '';
@@ -1258,15 +1267,15 @@ var LONEN = [6, 8, 10, 12], UREN = [10, 12, 14];
     if (fr.betrapt) regels.push('De controleur betrapte je op kinderarbeid: ' + gldR(BOETE) + ' boete.');
     var st = S.uit.staking[fb.id];
     if (st) regels.push(st.gelukt ? 'Staking! ' + st.n + ' van je ' + st.van + ' arbeiders legden het werk neer. Ze eisen minstens ' + S.eis[fb.id].loon + ' cent en hoogstens ' + S.eis[fb.id].uren + ' uur.' : (st.n === 1 ? '1 arbeider probeerde' : st.n + ' arbeiders probeerden') + ' te staken, maar het waren er te weinig.');
-    regels.push('Je winst tot nu toe: ' + gldR(a.winst) + '.');
-    return { soort:'uitslag', kop:r.jaar + ': jouw fabriek', titel:(Math.round(fr.winst) >= 0 ? 'Winst: ' : 'Verlies: ') + gldR(fr.winst), tekst:fb.naam + ' betaalde ' + fr.aanbod.loon + ' cent per uur, ' + fr.aanbod.uren + ' uur per dag.', regels:regels };
+    regels.push(Math.round(a.winst) < 0 ? 'Je verlies tot nu toe: ' + gldR(-a.winst) + '.' : 'Je winst tot nu toe: ' + gldR(a.winst) + '.');
+    return { soort:'uitslag', kop:r.jaar + ': jouw fabriek', titel:(Math.round(fr.winst) >= 0 ? 'Winst: ' + gldR(fr.winst) : 'Verlies: ' + gldR(-fr.winst)), tekst:fb.naam + ' betaalde ' + fr.aanbod.loon + ' cent per uur, ' + fr.aanbod.uren + ' uur per dag.', regels:regels };
   }
   function kaartVoor(a){
     var r = R(), ri = S.ri;
     if (S.fase === 'stem'){
       var rp = rapport();
       return { soort:'vraag', id:'stem-wet', kop:'stemming, 1874', titel:'Moet kinderarbeid onder de 12 in fabrieken verboden worden?',
-        tekst:'Uit het rapport van de stadsdokter: vorig jaar werkten ' + rp.kinderen + ' kinderen in de fabrieken, gemiddeld ' + rp.uren + ' uur per dag.' + (rp.kinderGez !== null ? ' De kinderen hebben een gezondheid van gemiddeld ' + rp.kinderGez + '.' : '') + ' Denk aan je eigen rol: wat betekent de wet voor jou?',
+        tekst:'Uit het rapport van de stadsdokter: ' + (rp.kinderen ? 'vorig jaar ' + (rp.kinderen === 1 ? 'werkte 1 kind' : 'werkten ' + rp.kinderen + ' kinderen') + ' in de fabrieken, gemiddeld ' + rp.uren + ' uur per dag.' : 'vorig jaar werkten er geen kinderen in de fabrieken.') + (rp.kinderGez !== null ? ' De kinderen hebben een gezondheid van gemiddeld ' + rp.kinderGez + '.' : '') + ' Denk aan je eigen rol: wat betekent de wet voor jou?',
         opties:[{ id:'voor', tekst:'Voor de wet', kleur:'#2f7d52' }, { id:'tegen', tekst:'Tegen de wet', kleur:'#c0442c' }],
         meer:'Met de wet mag een kind onder de 12 niet meer in een fabriek werken. Werk op het land en in huis blijft toegestaan. Een gezin mist dan het loon van het kind.' };
     }
@@ -1354,9 +1363,9 @@ var LONEN = [6, 8, 10, 12], UREN = [10, 12, 14];
     if (S.fase === 'stem' || S.fase === 'stemu'){
       var rp = rapport();
       extra = '<div class="rapport"><p class="kick">rapport van de stadsdokter, 1874</p><h3>Over de kinderen in de fabrieken van onze stad</h3><ul>' +
-        '<li>Vorig jaar werkten er <b>' + rp.kinderen + '</b> kinderen in de fabrieken, gemiddeld ' + rp.uren + ' uur per dag.</li>' +
+        '<li>' + (rp.kinderen ? 'Vorig jaar ' + (rp.kinderen === 1 ? 'werkte er <b>1</b> kind' : 'werkten er <b>' + rp.kinderen + '</b> kinderen') + ' in de fabrieken, gemiddeld ' + rp.uren + ' uur per dag.' : 'Vorig jaar werkten er <b>geen</b> kinderen in de fabrieken.') + '</li>' +
         (rp.kinderGez !== null ? '<li>De kinderen die zelf werk zoeken, hebben een gezondheid van gemiddeld <b>' + rp.kinderGez + '</b> (de volwassenen: ' + rp.vwGez + ').</li>' : '') +
-        '<li>Er gingen ' + rp.school + ' kinderen naar school.</li></ul>' +
+        '<li>' + (rp.school === 0 ? 'Er ging geen enkel kind' : rp.school === 1 ? 'Er ging 1 kind' : 'Er gingen ' + rp.school + ' kinderen') + ' naar school.</li></ul>' +
         '<p>"Kinderen die van hun negende jaar af twaalf uur per dag in stof en lawaai staan, groeien slecht en worden vroeg oud."</p></div>';
     }
     var html = '<div class="nieuws' + crisis + '"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true">' + ICO[r.ico] + '</svg></span><div><p class="eyebrow">' + r.jaar + ' · ronde ' + (S.ri + 1) + ' van ' + S.plan.length + '</p><b>' + schoon(r.kop) + '</b><span>' + schoon(r.nieuws) + '</span>' + extra + '</div></div>';
@@ -1397,7 +1406,7 @@ var LONEN = [6, 8, 10, 12], UREN = [10, 12, 14];
       h += '<p class="eyebrow">' + r.jaar + ' · de uitslag</p><h2>' + rij.genoeg + ' van de ' + rij.n + ' gezinnen hadden genoeg te eten</h2>';
       h += '<p class="lead">' + (isHandwerk() ? 'Iedereen werkte thuis: samen ' + rij.prod + ' el katoen.' : 'De fabrieken maakten ' + rij.prod + ' el katoen en verdienden samen ' + gldR(rij.winst) + '.') + (S.modus === 'telefoon' ? ' Kijk op je telefoon wat jouw keuze voor jouw gezin betekende.' : ' Op het bord zie je bij elk gezin of het genoeg had.') + '</p>';
       if (bord) h += bordUitslag();
-      if (S.uit.kas !== undefined) h += '<p class="stand">In de kas van de vakbond: <b>' + gld(S.uit.kas) + '</b>, ' + volwassenen().filter(function(a){ return a.lid; }).length + ' leden.</p>';
+      if (S.uit.kas !== undefined) h += '<p class="stand">In de kas van de vakbond: <b>' + gld(S.uit.kas) + '</b>, ' + (function(n){ return n === 1 ? '1 lid' : n + ' leden'; })(volwassenen().filter(function(a){ return a.lid; }).length) + '.</p>';
       h += '<div class="knoprij">' + knop('verder', volg ? 'Naar ' + volg.jaar + (volg.stemming && S.wet === null ? ': de stemming' : '') : 'Naar de nabespreking', true) + '</div>';
     } else if (S.fase === 'stem'){
       h += '<p class="eyebrow">1874 · stemming</p><h2>Het Kinderwetje: voor of tegen?</h2><p class="lead">Lees het rapport. Bespreek even met je buren wat de wet betekent voor jouw rol. ' + (bord ? 'Laat de klas dan stemmen met handen en vul de aantallen in.' : 'Stem dan op je telefoon.') + '</p>';
@@ -1750,7 +1759,7 @@ var LONEN = [6, 8, 10, 12], UREN = [10, 12, 14];
       } else {
         var fr = u ? u.fabs[fb.id] : null, ab = (fr && fr.aanbod) || fb.aanbod, cap = fr ? fr.cap : capVan(fb);
         d.push('<strong>' + ab.loon + ' ct</strong> per uur, ' + ab.uren + ' uur, kinderen ' + kindLabel(ab.kind));
-        if (fase === 'b'){ var kom = arbeiders().filter(function(a){ return S.kb[a.id] === fb.id; }).length; d.push('<strong>' + kom + '</strong> ' + (kom === 1 ? 'wil' : 'willen') + ' erin, ' + cap + ' plaatsen' + (kom > cap ? ': ' + (kom - cap) + ' worden weggestuurd' : '')); }
+        if (fase === 'b'){ var kom = arbeiders().filter(function(a){ return S.kb[a.id] === fb.id; }).length; d.push('<strong>' + kom + '</strong> ' + (kom === 1 ? 'wil' : 'willen') + ' erin, ' + cap + ' plaatsen' + (kom > cap ? ': ' + (kom - cap) + (kom - cap === 1 ? ' wordt' : ' worden') + ' weggestuurd' : '')); }
         if (fr){
           d.push('<strong>' + fr.aan.length + '</strong> van de ' + fr.cap + ' plaatsen bezet' + (fr.weg.length ? ', ' + fr.weg.length + ' weggestuurd' : ''));
           d.push(Math.round(fr.prod) + ' el, winst <b class="' + (fr.winst >= 0 ? 'plus' : 'min') + '">' + gldR(fr.winst) + '</b>');
@@ -1888,12 +1897,12 @@ var LONEN = [6, 8, 10, 12], UREN = [10, 12, 14];
       kamer.kaarten(alle().map(function(a){
         if (a.soort === 'fab'){
           var rang = fabActoren().map(function(x){ return x.winst; }).sort(function(x, y){ return y - x; });
-          return { pid:a.id, d:{ soort:'uitslag', kop:'de fabrieksfluit zwijgt', titel:'Jouw winst: ' + gldR(a.winst), tekst:'Je staat ' + (rang.indexOf(a.winst) + 1) + 'e van de ' + rang.length + ' fabrikanten.',
-            regels:['De arbeiders in de stad hadden in het laatste jaar ' + (laatste ? laatste.genoeg + ' van de ' + laatste.n : '0') + ' keer genoeg te eten.', 'Kijk op het bord hoe het in het echt ging.'] } };
+          return { pid:a.id, d:{ soort:'uitslag', kop:'de fabrieksfluit zwijgt', titel:Math.round(a.winst) < 0 ? 'Jouw verlies: ' + gldR(-a.winst) : 'Jouw winst: ' + gldR(a.winst), tekst:rang.length === 1 ? 'Je was de enige fabrikant in de stad.' : 'Je staat ' + (rang.indexOf(a.winst) + 1) + 'e van de ' + rang.length + ' fabrikanten.',
+            regels:[laatste ? 'In het laatste jaar hadden ' + laatste.genoeg + ' van de ' + laatste.n + ' gezinnen in de stad genoeg te eten.' : 'In de stad had nog geen gezin genoeg te eten.', 'Kijk op het bord hoe het in het echt ging.'] } };
         }
         return { pid:a.id, d:{ soort:'uitslag', kop:'de fabrieksfluit zwijgt', titel:'Genoeg te eten: ' + a.genoeg + ' van de ' + a.rondes + ' jaar',
           tekst:a.p.n + ' ' + a.p.ach + ' eindigt met een gezondheid van ' + a.gez + '.',
-          regels:[a.soort === 'kind' ? 'Je ging ' + a.school + (a.school === 1 ? ' jaar' : ' jaar') + ' naar school.' : a.p.kind + ' ging ' + a.kindSchool + ' jaar naar school en werkte ' + a.kindWerk + ' jaar mee.', 'Je verdiende samen ' + gldR(a.verdiend) + ' per week, opgeteld over alle jaren.', 'Kijk op het bord hoe het in het echt ging.'] } };
+          regels:[a.soort === 'kind' ? 'Je ging ' + a.school + ' jaar naar school.' : a.p.kind + ' ging ' + a.kindSchool + ' jaar naar school en werkte ' + a.kindWerk + ' jaar mee.', 'Je verdiende samen ' + gldR(a.verdiend) + ' per week, opgeteld over alle jaren.', 'Kijk op het bord hoe het in het echt ging.'] } };
       }));
       kamer.stop();
     }
@@ -1944,7 +1953,7 @@ var LONEN = [6, 8, 10, 12], UREN = [10, 12, 14];
         var gelukt = fs.filter(function(f){ return f.staking && f.staking.gelukt; }), mis = fs.filter(function(f){ return f.staking && !f.staking.gelukt; });
         var toe = fs.filter(function(f){ return f.eis === 'ja'; }), nietToe = fs.filter(function(f){ return f.eis === 'nee'; }), betrapt = fs.filter(function(f){ return f.betrapt; });
         function namen(l){ return lijstje(l.map(function(f){ return f.naam; })); }
-        if (x.stem) kp = 'Kinderwetje ' + (x.stem.wet ? 'aangenomen' : 'verworpen') + ', ' + x.stem.voor + ' tegen ' + x.stem.tegen;
+        if (x.stem) kp = 'Kinderwetje ' + (x.stem.wet ? 'aangenomen' : 'verworpen') + ', ' + x.stem.voor + ' tegen ' + x.stem.tegen;
         else if (toe.length) kp = namen(toe) + ' geeft toe aan de stakers';
         else if (gelukt.length) kp = 'Staking bij ' + namen(gelukt);
         else if (r.crisis) kp = 'Katoencrisis: ' + (x.n - x.genoeg) + ' van de ' + x.n + (x.n - x.genoeg === 1 ? ' gezin komt' : ' gezinnen komen') + ' tekort';
@@ -2091,7 +2100,7 @@ var LONEN = [6, 8, 10, 12], UREN = [10, 12, 14];
     blok('Sociale kwestie', 'Zo noemde men in de negentiende eeuw de slechte omstandigheden van arbeiders: lange werkdagen, lage lonen, kinderarbeid, krotwoningen en ziekte. En de vraag wie dat moest oplossen: de fabrikant, de kerk, de arbeiders zelf of de overheid. Veel liberalen vonden lang dat de overheid zich niet met lonen en werktijden moest bemoeien; socialisten en confessionelen wilden dat wel.',
       hs.length ? 'in het laatste jaar had ' + hs[hs.length - 1].genoeg + ' van de ' + hs[hs.length - 1].n + ' gezinnen genoeg te eten.' : '');
     blok('Kinderarbeid', 'Kinderen werkten al eeuwen mee, op het land en thuis. In de fabriek werd het zwaarder: twaalf uur of langer in lawaai en stof, aan gevaarlijke machines. Kinderen waren goedkoop en klein genoeg om onder de machines te kruipen. Arbeidersgezinnen hadden hun loon vaak hard nodig.',
-      Math.max.apply(null, hs.map(function(x){ return x.kinderen; }).concat([0])) + ' kinderen tegelijk in de fabriek, op het hoogste moment.');
+      (function(mk){ return mk === 0 ? 'geen enkel kind in de fabriek.' : mk === 1 ? '1 kind in de fabriek, op het hoogste moment.' : mk + ' kinderen tegelijk in de fabriek, op het hoogste moment.'; })(Math.max.apply(null, hs.map(function(x){ return x.kinderen; }).concat([0]))));
     blok('Vakbond', 'Een vereniging van arbeiders die samen opkomen voor hun loon en werktijden. Leden betalen contributie, daaruit komt stakingsgeld. De eerste landelijke vakbond in Nederland was de Algemene Nederlandsche Typografenbond, in 1866. In 1872 werd het coalitieverbod afgeschaft: daarna was samen het werk neerleggen niet meer strafbaar.');
     blok('Staking', 'Samen het werk neerleggen om een betere regeling af te dwingen. Het werkt alleen als genoeg mensen meedoen en de kas het volhoudt. Wie toch gaat werken, heet een onderkruiper. Bekend zijn de spoorwegstakingen van 1903; daarna verbood de regering-Kuyper staken bij de spoorwegen.',
       hs.some(function(x){ return x.stakingen; }) ? som(hs.map(function(x){ return x.stakingen; })) + ' keer legden arbeiders een fabriek stil.' : '');

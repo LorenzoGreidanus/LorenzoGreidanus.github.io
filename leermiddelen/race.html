@@ -47,7 +47,7 @@ p{margin:0}
 button,input,select{font:inherit;color:inherit}
 button{cursor:pointer;touch-action:manipulation}
 .hide{display:none !important}
-.adaptief-toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,12px);z-index:80;background:var(--ink);color:var(--room);font-weight:600;font-size:.9rem;line-height:1.35;padding:11px 18px;border-radius:999px;max-width:min(92vw,560px);text-align:center;box-shadow:0 14px 34px rgba(20,34,76,.28);opacity:0;pointer-events:none;transition:opacity .3s,transform .3s}
+.adaptief-toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,12px);z-index:80;background:var(--ink);color:var(--room);font-weight:600;font-size:.9rem;line-height:1.35;padding:11px 18px;border-radius:999px;width:max-content;max-width:min(calc(100% - 32px),560px);text-align:center;text-wrap:balance;box-shadow:0 14px 34px rgba(20,34,76,.28);opacity:0;pointer-events:none;transition:opacity .3s,transform .3s}
 .adaptief-toast.aan{opacity:1;transform:translate(-50%,0)}
 .eyebrow{font-size:.72rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
 .hand{font-family:'Caveat',cursive;font-weight:600;color:var(--hand,#D9522F)}
@@ -144,6 +144,18 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;pa
 
 .terugkoppeling.goed{color:var(--goed)}
 .terugkoppeling.fout{color:var(--fout)}
+/* Na een fout: het oordeel vet in rood, de uitleg (waarom niet, en de toelichting) in gewone inkt,
+   want een hele alinea rood leest slecht. In het donker lichtere tinten van rood en groen. */
+.terugkoppeling.fout{color:var(--ink)}
+.terugkoppeling.fout>b:first-child{color:var(--fout)}
+.terugkoppeling .waaromniet{border-left-color:var(--crab)}
+:root[data-theme="dark"] .terugkoppeling.goed{color:#8FD8AC}
+:root[data-theme="dark"] .terugkoppeling.fout>b:first-child{color:#F0A090}
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .terugkoppeling.goed{color:#8FD8AC}
+  :root:not([data-theme="light"]) .terugkoppeling.fout>b:first-child{color:#F0A090}
+}
+.lead{text-wrap:pretty}
 .reeks{margin-top:6px;font-size:.85rem;color:var(--muted)}
 /* einde */
 .cijfers{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:14px 0}
@@ -187,6 +199,12 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   #scherm-start .stap:first-child{margin-top:0}
   #scherm-start .chips{gap:6px}
   #scherm-start .chips button{padding:8px 10px;font-size:.84rem}
+  #scherm-start #niveaus{gap:5px}
+  #scherm-start #niveaus button{padding:8px 9px}
+  /* het startscherm is langer dan een telefoon: Start blijft onderin staan tot je bij het eind van de kaart bent */
+  #scherm-start .stap:last-child{position:sticky;bottom:0;z-index:2;margin:14px -12px -14px;padding:14px 12px calc(12px + env(safe-area-inset-bottom));
+    background:linear-gradient(to bottom,transparent,var(--kaart) 16px);border-radius:0 0 20px 20px}
+  #scherm-start .stap:last-child .knop{width:100%}
 }
 </style>
 <script src="/vangnet.js" defer></script>
@@ -419,7 +437,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       foutLijst.push(vraag);
       if (window.FOUTENMAP) FOUTENMAP.noteer(vraag, vak);
       if (window.KLAS && KLAS.fout) KLAS.fout(vraag, i, vak);
-      $('terug').textContent = 'Niet goed, 5 seconden eraf. ' + (window.WAAROM ? WAAROM.tekst(vraag, i) : '') + (vraag.u || ''); $('terug').className = 'terugkoppeling fout';
+      $('terug').innerHTML = '<b>Niet goed, 5 seconden eraf.</b> ' + (window.WAAROM ? WAAROM.html(vraag, i, schoon) : '') + schoon(vraag.u || ''); $('terug').className = 'terugkoppeling fout';
     }
     tekenVraag(); tekenMeters();
     if (tijd <= 0){ einde(); return; }

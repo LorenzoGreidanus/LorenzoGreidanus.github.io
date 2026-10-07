@@ -94,6 +94,11 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;pa
 :root[data-theme="dark"]{--sc-lucht:#16224C;--sc-grond:#1d2c5e;--sc-ink:#F3EFE9;--sc-licht:#2a3a72;--sc-hout:#6b4c3a}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--sc-lucht:#16224C;--sc-grond:#1d2c5e;--sc-ink:#F3EFE9;--sc-licht:#2a3a72;--sc-hout:#6b4c3a}}
 @media(max-width:560px){#scherm-start .tafereel{display:none}}
+@media print{
+  header,footer,#scherm-start,#scherm-spel,.moment,#scherm-einde>*:not(#krantvak),#krantvak>*:not(.krant){display:none !important}
+  body{background:#fff}
+  .krant{box-shadow:none !important;border:0 !important;margin:0 !important;padding:0 !important}
+}
 .uitleg{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:18px 0}
 .uitleg div{background:var(--kaart);border:1px solid var(--rand);border-radius:16px;padding:14px}
 .uitleg i{width:26px;height:26px;border-radius:9px;display:grid;place-items:center;font-style:normal;font-weight:600;margin-bottom:6px}
@@ -141,6 +146,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 .geld{margin-top:10px;background:var(--kaart2);border-radius:12px;padding:9px 12px;font-size:.9rem}
 .neutraal{margin-top:10px;border-left:4px solid var(--raad);padding:6px 12px;font-size:.9rem;color:var(--muted)}
 .insprekers{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-top:8px}
+@media(min-width:521px){.insprekers:has(> :nth-child(4):last-child){grid-template-columns:repeat(2,minmax(0,1fr))}}
 .insp{background:var(--kaart2);border-radius:14px;padding:10px 12px;font-size:.88rem}
 .insp b{display:block;font-size:.95rem}
 .insp .wie{color:var(--raad);font-weight:600;font-size:.8rem}
@@ -149,18 +155,19 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 .klok{display:inline-flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
 .klok b{font-variant-numeric:tabular-nums;font-size:1.3rem;min-width:3.2ch}
 .klok b.op{color:var(--fout)}
-.knopje{border:1.5px solid var(--rand2);background:var(--kaart);border-radius:999px;padding:7px 13px;font-weight:600;font-size:.86rem;min-height:44px}
+.knopje{border:1.5px solid var(--rand2);background:var(--kaart);border-radius:999px;padding:7px 13px;font-weight:600;font-size:.86rem;min-height:44px;min-width:44px}
 .knopje.on{background:var(--ocean);color:#fff;border-color:var(--ocean)}
 .knopje.voor.on{background:#2f7d52;border-color:#2f7d52;color:#fff}
 .knopje.tegen.on{background:#c0442c;border-color:#c0442c;color:#fff}
 .knopje:disabled{cursor:default}
 /* formatie: de fracties om aan te tikken */
 .fkaarten{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;margin-top:12px}
-.fkaart{text-align:left;background:var(--kaart);border:2px solid var(--rand2);border-left:8px solid var(--fk);border-radius:14px;padding:10px 12px;min-height:44px;display:grid;gap:3px}
+.fkaart{text-align:left;background:var(--kaart);border:2px solid var(--rand2);border-left:8px solid var(--fk);border-radius:14px;padding:10px 12px;min-height:44px;display:grid;gap:3px;align-content:start}
 .fkaart b{font-size:.98rem}
 .fkaart small{color:var(--muted);font-size:.8rem;line-height:1.35}
 .fkaart.on{border-color:var(--fk);box-shadow:inset 0 0 0 2px var(--fk)}
-.fkaart.on b::after{content:" \2713  coalitie";color:var(--raad);font-size:.78rem}
+.fkaart .fz{font-size:.82rem;font-weight:600;color:var(--muted)}
+.fkaart.on .fz::after{content:" \00b7  \2713  coalitie";color:var(--raad);white-space:nowrap}
 .teller{margin-top:12px;font-weight:600;font-size:1.05rem}
 .teller.ok{color:var(--goed)}
 /* fractieoverleg en stemmingen */
@@ -177,6 +184,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 .frijk>b{flex:1 1 150px;min-width:0;display:flex;align-items:center;gap:7px;font-size:.92rem}
 .frijk>b i{width:11px;height:11px;border-radius:50%;flex:none}
 .frijk .st{font-size:.82rem;color:var(--muted)}
+@media(max-width:520px){.frijk>b{flex-basis:100%}}
 .stemstand{margin-top:10px;font-size:.92rem;color:var(--muted)}
 .regelbalk{background:var(--kaart2);border-radius:12px;padding:8px 12px;font-size:.86rem;margin-top:10px}
 .uitslag{margin-top:14px;border-radius:16px;padding:14px;background:var(--kaart2)}
@@ -722,7 +730,7 @@ var VOORSTELLEN = [
       wie.push(f.zetels + ' zetels');
       if (telefoons()) wie.push(n ? n + (n === 1 ? ' leerling' : ' leerlingen') : 'het bord stemt');
       var badge = S && S.fase !== 'formatie' || (S && !S.eerste) ? (inCoalitie(f.id) ? '<span class="badge co">coalitie</span>' : '<span class="badge op">oppositie</span>') : '';
-      var rechts = u ? '<b class="v">' + u.voor + '</b> voor &middot; <b class="t">' + u.tegen + '</b> tegen' + (u.door === 'bord' ? '<br><small>standpunt</small>' : '')
+      var rechts = u ? '<b class="v">' + u.voor + '</b> voor &middot; <b class="t">' + u.tegen + '</b> tegen' + (u.door === 'bord' ? '<br><small>volgens standpunt</small>' : '')
         : S && S.wethouders[f.id] && inCoalitie(f.id) ? '<small>wethouder ' + schoon(S.wethouders[f.id]) + '</small>' : '';
       return '<div class="frij"><i style="background:' + f.kleur + '"></i><span><b>' + schoon(f.naam) + badge + '</b><small>' + wie.join(' · ') + '</small></span><span class="fs">' + rechts + '</span></div>';
     }).join('');
@@ -798,7 +806,7 @@ var VOORSTELLEN = [
         : 'Er is een fractie uit de coalitie gestapt. Zonder meerderheid kan het college geen enkel voorstel meer door de raad krijgen. Zoek een nieuwe partner, of een heel nieuwe coalitie.') + '</p>' +
       '<p class="notitie">Tik de fracties aan die samen de coalitie vormen.' + (telefoons() ? ' Laat de fracties eerst kort met elkaar praten: wie wil met wie?' : ' Zet de klas in vijf groepjes, ongeveer zo groot als de fracties; twee of drie leerlingen zijn inwoners.') + '</p>' +
       '<div class="fkaarten">' + FRACTIES.map(function(f){
-        return '<button type="button" class="fkaart' + (inCoalitie(f.id) ? ' on' : '') + '" style="--fk:' + f.kleur + '" data-actie="coal" data-f="' + f.id + '" aria-pressed="' + inCoalitie(f.id) + '"><b>' + schoon(f.naam) + ', ' + f.zetels + ' zetels</b><small>' + schoon(f.waar) + '</small></button>';
+        return '<button type="button" class="fkaart' + (inCoalitie(f.id) ? ' on' : '') + '" style="--fk:' + f.kleur + '" data-actie="coal" data-f="' + f.id + '" aria-pressed="' + inCoalitie(f.id) + '"><b>' + schoon(f.naam) + '</b><span class="fz">' + f.zetels + ' zetels</span><small>' + schoon(f.waar) + '</small></button>';
       }).join('') + '</div>' +
       '<p class="teller' + (ok ? ' ok' : '') + '">' + cz + ' van de ' + ZETELS + ' zetels: ' + (ok ? 'een meerderheid' + (cz === NODIG ? ', maar krap: één raadslid dat afwijkt kan alles laten vallen' : '') : 'nog ' + (NODIG - cz) + ' nodig') + '</p>' +
       '<div class="knoprij"><button class="knop crab" id="verderBtn" type="button" data-actie="formatieKlaar"' + (ok ? '' : ' disabled') + '>Dit is de coalitie</button></div>';
@@ -1088,7 +1096,7 @@ var VOORSTELLEN = [
     if (mi.length) items.push({ soort:'motie', indieners:mi });
     R.items = items;
     var ingediend = items.filter(function(x){ return x.soort !== 'voorstel'; });
-    schrijf(ingediend.length ? 'Ingediend: ' + ingediend.map(function(x){ return x.soort === 'amend' ? 'amendement ' + L(x.k) : 'een motie'; }).join(' en ') + '.' : 'Geen amendementen of moties: de raad stemt over het voorstel zoals het is.');
+    schrijf(ingediend.length ? 'Ingediend: ' + opsomming(ingediend.map(function(x){ return x.soort === 'amend' ? 'amendement ' + L(x.k) : 'een motie'; })) + '.' : 'Geen amendementen of moties: de raad stemt over het voorstel zoals het is.');
     S.fase = 'stem'; R.si = -1;
     volgendeStemming();
   }
@@ -1189,13 +1197,14 @@ var VOORSTELLEN = [
       '<div><b>' + schoon(blij[0].naam) + '</b><span>meest tevreden</span></div>' +
       '<div><b>' + schoon(blij[blij.length - 1].naam) + '</b><span>minst tevreden</span></div>' +
       '<div><b>' + coalitieZetels() + '</b><span>zetels coalitie</span></div>';
-    $('krantvak').innerHTML = n ? krant() : '';
+    $('krantvak').innerHTML = n ? krant() + '<div style="text-align:center;margin-top:14px"><button class="knop stil" id="krantPrint" type="button">Print de krant</button></div>' : '';
+    if ($('krantPrint')) $('krantPrint').addEventListener('click', function(){ window.print(); });
     var vk = verkiezing();
     $('verkiezingvak').innerHTML = '<p class="eyebrow">over vier jaar: gemeenteraadsverkiezingen</p><h3 style="margin-top:6px">Hielden de fracties zich aan hun woord?</h3>' +
       '<p class="lead">Bij elke stemming kun je zien of een fractie stemde zoals ze had beloofd. Stel dat de kiezers alleen daarop letten: dan zou de raad er na de volgende verkiezingen zo uitzien. In het echt kijken kiezers naar veel meer, ook naar de landelijke politiek.</p>' +
       '<div class="verkiezing">' + vk.map(function(x){
         var d = x.nieuw - x.f.zetels;
-        return '<div class="vrij"><i style="background:' + x.f.kleur + '"></i><span><b>' + schoon(x.f.naam) + '</b><small>' + (x.t && x.t.n ? 'stemde ' + x.t.ja + ' van de ' + x.t.n + ' keer volgens het eigen standpunt' : 'geen stemmingen geteld') + (S.coalitie.indexOf(x.f.id) >= 0 ? ' · coalitie' : '') + '</small></span>' +
+        return '<div class="vrij"><i style="background:' + x.f.kleur + '"></i><span><b>' + schoon(x.f.naam) + '</b><small>' + (x.t && x.t.n ? (x.t.n === 1 ? 'stemde de enige keer ' + (x.t.ja ? 'volgens' : 'tegen') + ' het eigen standpunt' : 'stemde ' + x.t.ja + ' van de ' + x.t.n + ' keer volgens het eigen standpunt') : 'geen stemmingen geteld') + (S.coalitie.indexOf(x.f.id) >= 0 ? ' · coalitie' : '') + '</small></span>' +
           '<span class="zt">' + x.f.zetels + ' → ' + x.nieuw + (d ? ' <span class="' + (d > 0 ? 'op' : 'af') + '">(' + (d > 0 ? '+' : '−') + Math.abs(d) + ')</span>' : '') + '</span></div>';
       }).join('') + '</div>';
     $('echtvak').innerHTML = '<p class="eyebrow">hoe het echt zit</p><h3 style="margin-top:6px">De gemeente, in echte woorden</h3><div class="begrippen">' + [
@@ -1227,16 +1236,17 @@ var VOORSTELLEN = [
     stopZeker(false); $('kopCode').classList.add('hide');
     scrollTo({ top:0, behavior:'auto' });
   }
+  function opsomming(a){ return a.length > 1 ? a.slice(0, -1).join(', ') + ' en ' + a[a.length - 1] : a.join(''); }
   function krant(){
     var b = S.besluiten, voor = b[0];
     var rest = b.slice(1);
     return '<p class="eyebrow" style="margin-top:22px">de krant van morgen</p><article class="krant"><div class="kkop"><div class="kboven"><span>Molenveen en Holtakker</span><span>na de raadsvergadering</span></div><h2>Molenveense Courant</h2></div>' +
-      '<div class="kvoor"><h3>' + schoon(voor.kop) + '</h3><p>' + schoon(voor.tekst) + ' De raad stemde ' + voor.voor + ' tegen ' + voor.tegen + '.</p></div>' +
+      '<div class="kvoor"><h3>' + schoon(voor.kop) + '</h3><p>' + schoon(voor.tekst) + ' De raad stemde ' + voor.voor + ' voor en ' + voor.tegen + ' tegen.</p></div>' +
       '<div class="kkolommen">' + rest.map(function(x){
         return '<div class="kart"><span class="kick">' + schoon(x.kort) + '</span><h4>' + schoon(x.kop) + '</h4><span class="kstem">' + (x.aan ? 'aangenomen' : 'verworpen') + ', ' + x.voor + ' tegen ' + x.tegen + '</span><p>' + schoon(x.tekst) + '</p></div>';
       }).join('') +
       '<div class="kart"><span class="kick">begroting</span><h4>' + (S.m.geld >= 0 ? 'Begroting sluitend' : 'Gat in de begroting') + '</h4><p>Molenveen heeft nu een ' + schoon(begrotingTekst(S.m.geld)) + ' per jaar.</p></div>' +
-      '<div class="kart"><span class="kick">coalitie</span><h4>' + (S.crises ? 'Coalitie wankelde' : 'Coalitie houdt stand') + '</h4><p>De coalitie bestaat nu uit ' + schoon(S.coalitie.map(function(id){ return fractie(id).naam; }).join(', ')) + ', samen ' + coalitieZetels() + ' zetels.</p></div>' +
+      '<div class="kart"><span class="kick">coalitie</span><h4>' + (S.crises ? 'Coalitie wankelde' : 'Coalitie houdt stand') + '</h4><p>De coalitie bestaat nu uit ' + schoon(opsomming(S.coalitie.map(function(id){ return fractie(id).naam; }))) + ', samen ' + coalitieZetels() + ' zetels.</p></div>' +
       '</div><p class="kvoet">Molenveen en de mensen in deze krant zijn verzonnen</p></article>';
   }
 
