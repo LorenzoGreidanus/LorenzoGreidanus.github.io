@@ -8,6 +8,7 @@
 <script src="cosmetica.js"></script>
 <script src="avatar.js"></script>
 <script src="profiel.js"></script>
+<script src="leerlijn.js"></script>
 <link rel="apple-touch-icon" href="/icoon-192.png">
 <script>
 /* Opgeslagen themakeuze meteen toepassen, nog voor de pagina getekend wordt. */
@@ -661,6 +662,49 @@ a:focus-visible,button:focus-visible,input:focus-visible,summary:focus-visible{o
 .snelkop span{font-size:.8rem;color:var(--muted)}
 .spellen+.snelkop{margin-top:20px}
 .sectie>.snelkop:first-of-type{margin-top:4px}
+/* ---------- de leerlijn per vak: van basis naar examen ----------
+   Genummerde stappen met een lijn ertussen; per onderwerp op welk examen het
+   terugkomt en de spellen als compacte knoppen. De nummers en het eigen
+   examen in de kleur van het vak (als rand, zodat de tekst leesbaar blijft). */
+.llwissel{display:inline-flex;gap:4px;padding:4px;border-radius:999px;background:var(--kaart);border:1px solid var(--rand);margin-top:24px}
+.llwissel button{min-height:44px;padding:0 18px;border-radius:999px;border:0;background:none;color:var(--ink);font:inherit;font-weight:600;font-size:.88rem;cursor:pointer}
+.llwissel button[aria-pressed="true"]{background:var(--ocean);color:#fff}
+.llwissel+.sectie{margin-top:14px}
+.leerlijn .sectiekop{margin-bottom:12px}
+.llnav{list-style:none;margin:0 0 4px;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.llnav button{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:4px 14px 4px 5px;border-radius:999px;border:1px solid var(--rand);background:var(--kaart);color:var(--ink);font:inherit;font-size:.86rem;font-weight:600;cursor:pointer}
+.llnav button:hover{border-color:var(--vk,var(--vista))}
+.llnav b,.llnr{display:grid;place-items:center;border-radius:50%;border:2px solid var(--vk,var(--ocean));background:var(--room);color:var(--ink);font-weight:700;flex:none}
+.llnav b{width:32px;height:32px;font-size:.85rem}
+.llstap{position:relative;display:grid;grid-template-columns:44px minmax(0,1fr);gap:14px;padding-top:22px;scroll-margin-top:90px}
+.llstap::before{content:'';position:absolute;left:21px;top:66px;bottom:-22px;width:2px;background:var(--rand)}
+.llstap:last-of-type::before{display:none}
+.llnr{width:44px;height:44px;font-size:1.05rem;position:relative}
+.llin h3{font-size:1.1rem;margin:9px 0 3px}
+.lluit{color:var(--muted);font-size:.9rem;line-height:1.45;margin:0 0 8px;max-width:70ch;text-wrap:pretty}
+.lldom{padding:12px 0}
+.lldom+.lldom{border-top:1px dashed var(--rand2)}
+.lldkop{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin-bottom:9px}
+.lldkop b{font-size:.94rem;line-height:1.35;text-wrap:pretty}
+.llex{font-size:.75rem;color:var(--muted);border:1px solid var(--rand2);border-radius:999px;padding:1px 9px;white-space:nowrap}
+.lldom.mijn .llex{border-color:var(--vk,var(--ocean));color:var(--ink);font-weight:600}
+.llspel{display:flex;flex-wrap:wrap;gap:8px}
+.llchip{display:inline-flex;align-items:center;gap:9px;min-height:44px;max-width:100%;padding:4px 14px 4px 4px;border-radius:13px;background:var(--kaart);border:1px solid var(--rand);
+  text-decoration:none;color:inherit;font-size:.86rem;font-weight:600;line-height:1.25;transition:border-color .16s var(--ease),transform .16s var(--ease)}
+.llchip:hover{border-color:var(--vista);transform:translateY(-1px)}
+.llchip .tegel{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:none}
+.llchip .tegel svg{width:19px;height:19px;fill:none;stroke:#FBF6F1;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.llchip.llrace{background:transparent;border-style:dashed;font-weight:500}
+.llq{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:none;background:var(--kaart);border:1px solid var(--rand2);color:var(--muted);font-weight:700}
+.llleeg{font-size:.85rem;color:var(--muted);font-style:italic;min-height:44px;display:inline-flex;align-items:center}
+@media (max-width:560px){
+  .llstap{grid-template-columns:34px minmax(0,1fr);gap:10px}
+  .llnr{width:34px;height:34px;font-size:.92rem}
+  .llstap::before{left:16px;top:58px}
+  .llin h3{margin-top:5px}
+  .llchip{flex:1 1 100%}
+}
+@media (prefers-reduced-motion:reduce){.llchip{transition:none}.llchip:hover{transform:none}}
 .reeksen{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px}
 .reeks{display:flex;align-items:center;gap:12px;min-height:60px;padding:9px 14px 9px 10px;background:var(--kaart);border:1px solid var(--rand);border-radius:14px;
   text-decoration:none;color:inherit;transition:border-color .16s var(--ease),transform .16s var(--ease)}
@@ -1926,6 +1970,59 @@ var SPELLEN = [
      zich hier zodra hij er staat, zodat het blok op het juiste moment opengaat. */
   window.LESVAKBIJ = tekenLesvak;
 
+  /* ---------- de leerlijn per vak (leerlijn.js) ----------
+     Bij een gekozen vak: de stappen van basis naar examen, met per onderwerp
+     de examens waar het terugkomt en de spellen in volgorde. Waar alleen de
+     vragenbank iets heeft, een knop naar de Vragenrace met dat onderwerp.
+     Met de knop Alle spellen terug naar de gewone lijst; dat wordt onthouden. */
+  var weergave = 'leerlijn';
+  try { if (localStorage.getItem('lg-weergave') === 'alles') weergave = 'alles'; } catch (e){}
+  function llKan(){ return !stand.zoek && stand.vak !== 'alle' && stand.soort === 'alles' && !stand.tv && !!(window.LEERLIJN && LEERLIJN[stand.vak]); }
+  function exLijst(ex){ return String(ex || '').split(' ').filter(Boolean); }
+  function exTekst(ex){
+    var l = exLijst(ex), t = [], vm = ['bb', 'kb', 'gltl'].filter(function(x){ return l.indexOf(x) >= 0; });
+    if (vm.length === 3) t.push('vmbo');
+    else if (vm.length) t.push('vmbo-' + vm.map(function(x){ return { bb:'bb', kb:'kgt', gltl:'tl' }[x]; }).join('/'));
+    if (l.indexOf('havo') >= 0) t.push('havo');
+    if (l.indexOf('vwo') >= 0) t.push('vwo');
+    return t.join(', ').replace(/, ([^,]*)$/, ' en $1');
+  }
+  /* het eigen niveau uit de keuze bovenaan: kgt telt voor kader en gl/tl, havo en vwo samen */
+  function mijnExamen(ex){
+    if (!stand.niveau) return false;
+    var l = exLijst(ex), wil = { bb:['bb'], kgt:['kb', 'gltl'], hv:['havo', 'vwo'] }[stand.niveau.id] || [];
+    return wil.some(function(x){ return l.indexOf(x) >= 0; });
+  }
+  function wisselHtml(){
+    return '<div class="llwissel" role="group" aria-label="Weergave">' +
+      [['leerlijn', 'Leerlijn'], ['alles', 'Alle spellen']].map(function(w){ return '<button type="button" data-weergave="' + w[0] + '" aria-pressed="' + (weergave === w[0] ? 'true' : 'false') + '">' + w[1] + '</button>'; }).join('') + '</div>';
+  }
+  function leerlijnHtml(vakId, lijst){
+    var L = LEERLIJN[vakId], v = vakVan(vakId), opNaam = {}, gebruikt = {};
+    lijst.forEach(function(sp){ opNaam[sp.bestand] = sp; });
+    var h = '<section class="sectie leerlijn" style="--vk:' + v.kleur + '"><div class="sectiekop"><i style="background:' + v.kleur + '"><svg viewBox="0 0 24 24" aria-hidden="true">' + v.ico + '</svg></i>' +
+      '<div class="kopje"><h2>' + schoon(v.naam) + ': van basis naar examen</h2><p class="onder">Begin bij stap 1: elke stap bouwt voort op de vorige. Bij elk onderwerp staat op welk examen het terugkomt' + (stand.niveau ? ', en jouw examen is gemarkeerd' : '') + '.</p></div></div>' +
+      '<ol class="llnav">' + L.stappen.map(function(s, i){ return '<li><button type="button" data-llnaar="ll-' + s.id + '"><b>' + (i + 1) + '</b>' + schoon(s.naam.replace(/[:(].*$/, '').trim()) + '</button></li>'; }).join('') + '</ol>';
+    L.stappen.forEach(function(s, i){
+      h += '<div class="llstap" id="ll-' + s.id + '"><div class="llnr" aria-hidden="true">' + (i + 1) + '</div><div class="llin"><h3>' + schoon(s.naam) + '</h3><p class="lluit">' + schoon(s.uit) + '</p>';
+      s.dom.forEach(function(d){
+        var sp = d.sp.map(function(b){ return opNaam[b]; }).filter(Boolean), od = d.od || [];
+        sp.forEach(function(x){ gebruikt[x.bestand] = 1; });
+        var ex = exTekst(d.ex), mijn = mijnExamen(d.ex);
+        h += '<div class="lldom' + (mijn ? ' mijn' : '') + '"><div class="lldkop"><b>' + schoon(d.naam) + '</b>' + (ex ? '<span class="llex">' + (mijn ? 'jouw examen' : 'examen') + ': ' + schoon(ex) + '</span>' : '') + '</div><div class="llspel">' +
+          sp.map(function(x){ return '<a class="llchip" href="' + linkNaar(x) + '" data-start="' + x.bestand + '" title="' + schoon(knip(x.wat).kort) + '">' + tegel(x) + '<span>' + schoon(x.naam) + '</span></a>'; }).join('') +
+          od.map(function(o){ var race = { bestand:'race.html', param:'deel=' + encodeURIComponent(o[0]) };
+            return '<a class="llchip llrace" href="' + linkNaar(race) + '" data-start="race.html" title="Vragenrace over ' + schoon(o[1]) + '"><span class="llq" aria-hidden="true">?</span><span>Vragen: ' + schoon(o[1]) + '</span></a>'; }).join('') +
+          (!sp.length && !od.length ? '<span class="llleeg">Hier komt nog een oefening.</span>' : '') + '</div></div>';
+      });
+      h += '</div></div>';
+    });
+    h += '</section>';
+    /* wat niet in een stap staat (beleven, met de klas) verdwijnt niet */
+    var rest = lijst.filter(function(sp){ return !gebruikt[sp.bestand]; });
+    if (rest.length) h += sectie('', '', 'Meer bij ' + inZin(v.naam), 'om te beleven, met de klas en meer oefenen', rest.length, rest);
+    return h;
+  }
   function tekenSpellenNu(){
     var lijst = gefilterd(), s = '';
     kleurNu = stand.vak !== 'alle' && vakVan(stand.vak) ? vakVan(stand.vak).kleur : '';
@@ -1974,7 +2071,11 @@ var SPELLEN = [
       breedHier = lijst.filter(isBreed).map(function(sp, i){ return [sp, i]; }).sort(function(a, b){ return docentStart(a[0]) - docentStart(b[0]) || a[1] - b[1]; }).map(function(x){ return x[0]; });
       if (breedHier.length < lijst.length) lijst = lijst.filter(function(sp){ return !isBreed(sp); }); else breedHier = [];
     }
-    if (stand.zoek){
+    var metLeerlijn = llKan();
+    if (metLeerlijn) s += wisselHtml();
+    if (metLeerlijn && weergave === 'leerlijn'){
+      s += leerlijnHtml(stand.vak, lijst);
+    } else if (stand.zoek){
       var ww = plat(stand.zoek).split(/\s+/).filter(Boolean);
       var score = function(sp){ var n = plat(sp.naam), l = plat(sp.leer); return ww.every(function(w){ return n.indexOf(w) >= 0; }) ? 3 : ww.every(function(w){ return (n + ' ' + l).indexOf(w) >= 0; }) ? 2 : 1; };
       lijst = lijst.slice().sort(function(a, b){ return score(b) - score(a) || a.naam.localeCompare(b.naam, 'nl'); });
@@ -2017,6 +2118,12 @@ var SPELLEN = [
     }
     kleurNu = '';
     $('secties').innerHTML = s;
+    Array.prototype.forEach.call($('secties').querySelectorAll('[data-weergave]'), function(b){
+      b.addEventListener('click', function(){ weergave = b.getAttribute('data-weergave'); try { localStorage.setItem('lg-weergave', weergave); } catch (e){} tekenSpellen(); });
+    });
+    Array.prototype.forEach.call($('secties').querySelectorAll('[data-llnaar]'), function(b){
+      b.addEventListener('click', function(){ var doel = $(b.getAttribute('data-llnaar')); if (doel) doel.scrollIntoView({ block:'start', behavior: magBewegen ? 'smooth' : 'auto' }); });
+    });
     var na = $('naarAlle');
     if (na) na.addEventListener('click', function(){ stand.vak = 'alle'; stand.tv = 0; alles(); $('secties').scrollIntoView({ block:'start', behavior: magBewegen ? 'smooth' : 'auto' }); });
     var ab = $('alleBeleef');

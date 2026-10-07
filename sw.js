@@ -20,7 +20,7 @@
 
    Wat hij niet aanraakt: de spelkamers en het klassement (/api/, /ws/, /q),
    want die moeten altijd live zijn. */
-var VERSIE = "v304";
+var VERSIE = "v305";
 var KERN = "kern-" + VERSIE, VOORRAAD = "voorraad-" + VERSIE;
 /* hoe lang er op het net gewacht wordt voor de voorraad het overneemt */
 var NETGEDULD = 3000;
