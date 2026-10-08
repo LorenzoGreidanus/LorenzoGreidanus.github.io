@@ -42,6 +42,9 @@
 .telling{text-align:center;font-weight:600;margin-top:10px}
 .telling b{color:var(--nadruk)}
 .telling .ja{color:var(--goed)}.telling .nee{color:var(--fout)}
+/* op een werkblad (werkblad.html zet deze stijl in zijn .blad): de kleurvakjes bij de partijen drukken anders niet af */
+.blad .partij i,.blad .uitslag i{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.blad .vk-samen{margin:10px 0 0;text-align:center;font-size:.93rem}
 </style>
 <script src="/vangnet.js" defer></script>
 </head>
@@ -53,6 +56,8 @@
 (function(){
   'use strict';
   var H = VAKSPEL.husselen, S = VAKSPEL.schoon;
+  /* op een werkblad (?werkblad=1): op het antwoordblad ook een coalitie die kan */
+  var PAPIER = /[?&]werkblad=1/.test(location.search);
   function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
   function tussen(a, b){ return a + Math.floor(Math.random() * (b - a + 1)); }
   function dz(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
@@ -110,14 +115,22 @@
   /* 2. meerderheid: partijen aantikken tot een coalitie (eigen vorm) */
   function meerderheid(niveau){
     var zetels = niveau === 'bb' ? 25 : niveau === 'kgt' ? 45 : 150, u = uitslag(zetels, niveau === 'bb' ? 4 : 6, zetels * 2000), nodig = Math.floor(zetels / 2) + 1;
+    /* heeft een partij alleen al een meerderheid, dan valt er geen coalitie te vormen: een nieuwe uitslag */
+    for (var poging = 0; u.partijen[0].zetels >= nodig && poging < 50; poging++) u = uitslag(zetels, niveau === 'bb' ? 4 : 6, zetels * 2000);
     /* de kleinste coalitie: alle deelverzamelingen doorlopen (hoogstens 6 partijen) */
     var beste = null, n = u.partijen.length;
     for (var m = 1; m < (1 << n); m++){ var som = 0, aantal = 0; for (var i = 0; i < n; i++) if (m & (1 << i)){ som += u.partijen[i].zetels; aantal++; } if (som >= nodig && (!beste || aantal < beste.aantal || (aantal === beste.aantal && som < beste.som))) beste = { m:m, aantal:aantal, som:som }; }
     var minst = beste.aantal;
     return { onderdeel:'verkiezingen: meerderheid', onderdeelNaam:'meerderheid', vorm:'eigen', sleutel:'m' + u.partijen.map(function(p){ return p.zetels; }).join('-'),
       vraag:'Vorm een <b>coalitie met een meerderheid</b>: minstens ' + nodig + ' van de ' + zetels + ' zetels' + (niveau === 'hv' ? ', met zo min mogelijk partijen' : '') + '.', opdracht:'Tik partijen aan om ze in de coalitie te zetten. Een meerderheid is meer dan de helft.',
-      uitleg:'Meer dan de helft van ' + zetels + ' is minstens ' + nodig + ' zetels. ' + (niveau === 'hv' ? 'Dat kan al met ' + minst + ' partijen.' : 'Elke combinatie met ' + nodig + ' of meer zetels is goed.') + ' In Nederland heeft geen partij ooit alleen een meerderheid: er is altijd een coalitie nodig.', antwoordTekst: 'minstens ' + nodig + ' zetels',
+      uitleg:'Meer dan de helft van ' + zetels + ' is minstens ' + nodig + ' zetels. ' + (niveau === 'hv' ? 'Dat kan al met ' + minst + ' partijen.' : 'Elke combinatie met ' + nodig + ' of meer zetels is goed.') + ' In Nederland heeft geen partij ooit alleen een meerderheid: er is altijd een coalitie nodig.', antwoordTekst: 'minstens ' + nodig + ' zetels' + (PAPIER ? ', bijvoorbeeld ' + u.partijen.filter(function(p, i){ return beste.m & (1 << i); }).map(function(p){ return p.naam; }).join(' + ') + ' (' + beste.som + ' zetels)' : ''),
       teken:function(el, api){
+        /* op een werkblad: het halfrond en de partijen om te omcirkelen, en een lijn voor de zetels samen */
+        if (api.papier){
+          el.innerHTML = halfrond(u, null) + '<div class="partijen">' + u.partijen.map(function(p){ return '<button type="button" class="partij"><i style="background:' + p.kleur + '"></i>' + S(p.naam) + ' <span>' + p.zetels + '</span></button>'; }).join('') + '</div>' +
+            '<p class="vk-samen">jouw coalitie: samen <i class="lijn kort"></i> zetels</p>';
+          return;
+        }
         var aan = [];
         function render(){ el.querySelector('#hr').innerHTML = halfrond(u, aan.length ? aan : null); var som = u.partijen.filter(function(p){ return aan.indexOf(p.naam) >= 0; }).reduce(function(a, p){ return a + p.zetels; }, 0); el.querySelector('#telling').innerHTML = 'coalitie: <b>' + som + '</b> van de ' + zetels + ' zetels ' + (som >= nodig ? '<span class="ja">(meerderheid)</span>' : '<span class="nee">(nog ' + (nodig - som) + ' te weinig)</span>'); knop.disabled = !aan.length; }
         el.innerHTML = '<div id="hr">' + halfrond(u, null) + '</div><div class="partijen">' + u.partijen.map(function(p){ return '<button type="button" class="partij" data-p="' + S(p.naam) + '"><i style="background:' + p.kleur + '"></i>' + S(p.naam) + ' <span>' + p.zetels + '</span></button>'; }).join('') + '</div><p class="telling" id="telling"></p>';

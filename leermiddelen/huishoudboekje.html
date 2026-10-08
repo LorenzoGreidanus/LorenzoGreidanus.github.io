@@ -67,6 +67,11 @@
   .beeld .maanden th small.ineur{display:block;margin-left:0;font-size:.72rem}}
 @media(max-width:360px){.beeld .kasboek td.balk{width:34px}}
 body.groot .beeld .kasboek{font-size:1.15rem}
+/* Op een werkblad (werkblad.html zet deze stijl in zijn .blad): de spaar- en leengrafiek op de
+   breedte van het spel, anders worden de getallen te klein; de balkjes in het kasboek drukken
+   anders niet af. */
+.blad .vakspel .beeld>svg.hb-grafiek{width:min(100%,460px)}
+.blad .beeld .kasboek .balk i{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 </style>
 <script src="/vangnet.js" defer></script>
 </head>
@@ -96,6 +101,11 @@ body.groot .beeld .kasboek{font-size:1.15rem}
     var velden = o.velden;
     o.vorm = 'eigen';
     o.teken = function(el, api){
+      /* op een werkblad: een lijn per bedrag, net als de invulopgaven van de motor; vakjes om in te typen kunnen op papier niet */
+      if (api.papier){
+        el.innerHTML = '<div class="velden-wb">' + velden.map(function(v){ return '<span class="veldlijn">' + S(v.label) + (v.voor ? ' ' + S(v.voor) : '') + ' <i class="lijn"></i>' + (v.eenheid ? ' ' + S(v.eenheid) : '') + '</span>'; }).join('') + '</div>';
+        return;
+      }
       el.innerHTML = '<div class="velden">' + velden.map(function(v, i){
         return '<div class="veldje"><label for="hb-' + i + '">' + S(v.label) + '</label><div class="rij">' + (v.voor ? '<span class="eenheid">' + S(v.voor) + '</span>' : '') +
           '<input id="hb-' + i + '" inputmode="decimal" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="' + S(v.label) + '">' + (v.eenheid ? '<span class="eenheid">' + S(v.eenheid) + '</span>' : '') + '</div><span class="juist"></span></div>';
@@ -280,23 +290,27 @@ body.groot .beeld .kasboek{font-size:1.15rem}
   function spaarGrafiek(maanden, per, doel, start){
     var w = 420, h = 200, links = 44, onder = 30, top = 14, bw = (w - links - 10) / maanden;
     var max = Math.max(doel, start + per * maanden), schaal = (h - top - onder) / max;
-    var s = '<svg class="grafiek" viewBox="0 0 ' + w + ' ' + h + '" width="' + w + '" role="img" aria-label="Spaargrafiek: elke maand komt er ' + net(per) + ' euro bij tot het doel van ' + net(doel) + ' euro">';
+    var s = '<svg class="grafiek hb-grafiek" viewBox="0 0 ' + w + ' ' + h + '" width="' + w + '" role="img" aria-label="Spaargrafiek: elke maand komt er ' + net(per) + ' euro bij tot het doel van ' + net(doel) + ' euro">';
     s += '<line class="as" x1="' + links + '" y1="' + top + '" x2="' + links + '" y2="' + (h - onder) + '"/><line class="as" x1="' + links + '" y1="' + (h - onder) + '" x2="' + (w - 6) + '" y2="' + (h - onder) + '"/>';
     for (var m = 1; m <= maanden; m++){
       var tot = start + per * m, x = links + (m - 1) * bw + bw * 0.15, bwi = bw * 0.7;
       if (start) s += '<rect class="staaf start" x="' + x + '" y="' + (h - onder - start * schaal) + '" width="' + bwi + '" height="' + (start * schaal) + '"/>';
       s += '<rect class="staaf" x="' + x + '" y="' + (h - onder - tot * schaal) + '" width="' + bwi + '" height="' + (per * m * schaal) + '" rx="2"/>';
-      if (maanden <= 12 || m % 3 === 0 || m === maanden) s += '<text x="' + (x + bwi / 2) + '" y="' + (h - onder + 14) + '" text-anchor="middle">' + m + '</text>';
+      /* per drie maanden een getal, en de laatste maand; vlak voor de laatste geen getal, anders staan 21 en 22 op elkaar */
+      if (maanden <= 12 || (m % 3 === 0 && maanden - m >= 2) || m === maanden) s += '<text x="' + (x + bwi / 2) + '" y="' + (h - onder + 14) + '" text-anchor="middle">' + m + '</text>';
     }
     var yd = h - onder - doel * schaal;
     s += '<line class="doel" x1="' + links + '" y1="' + yd + '" x2="' + (w - 6) + '" y2="' + yd + '"/><text x="' + (links + 4) + '" y="' + (yd - 4) + '">doel ' + geld(doel) + '</text>';
-    s += '<text x="' + (w - 6) + '" y="' + (h - 4) + '" text-anchor="end" class="mut">maanden</text><text x="' + (links - 4) + '" y="' + (h - onder) + '" text-anchor="end">0</text>';
+    s += '<text x="' + (w - 6) + '" y="' + (h - 1) + '" text-anchor="end" class="mut">maanden</text><text x="' + (links - 4) + '" y="' + (h - onder) + '" text-anchor="end">0</text>';
     return s + '</svg>';
   }
   function leenGrafiek(leen, rente){
     var w = 420, h = 110, tot = leen + rente, x0 = 10, bw = w - 20, bl = bw * leen / tot;
-    return '<svg class="grafiek" viewBox="0 0 ' + w + ' ' + h + '" width="' + w + '" role="img" aria-label="Geleend ' + net(leen) + ' euro plus rente is wat je terugbetaalt">' +
-      '<text x="' + x0 + '" y="18">geleend</text><text x="' + (x0 + bl + 6) + '" y="18">+ rente</text>' +
+    /* "+ rente" boven het oranje stuk; is dat stuk smal (weinig rente), dan rechts uitgelijnd, anders valt het buiten beeld */
+    var rx = x0 + bl + 6, rAnker = rx + 52 > w ? ' text-anchor="end"' : '';
+    if (rAnker) rx = w - 4;
+    return '<svg class="grafiek hb-grafiek" viewBox="0 0 ' + w + ' ' + h + '" width="' + w + '" role="img" aria-label="Geleend ' + net(leen) + ' euro plus rente is wat je terugbetaalt">' +
+      '<text x="' + x0 + '" y="18">geleend</text><text x="' + rx + '" y="18"' + rAnker + '>+ rente</text>' +
       '<rect class="leen" x="' + x0 + '" y="26" width="' + bl + '" height="40" rx="8"/><rect class="rente" x="' + (x0 + bl) + '" y="26" width="' + (bw - bl) + '" height="40" rx="8"/><rect class="leen" x="' + (x0 + bl - 8) + '" y="26" width="8" height="40"/>' +
       '<text class="licht" x="' + (x0 + bl / 2) + '" y="51" text-anchor="middle">' + geld(leen) + '</text>' +
       '<text x="' + (x0 + bw / 2) + '" y="92" text-anchor="middle">terugbetalen = geleend + rente = ?</text></svg>';

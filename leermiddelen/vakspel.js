@@ -651,7 +651,7 @@ window.VAKSPEL = (function(){
       return { kop: o.onderdeelNaam || o.onderdeel || '', vraag: vr, opties: opties, kanOpen: kanOpen, antwoord: antwoord, antwoordOpen: goedTekst, uitleg: (o.uitleg || '').replace(/<div[\s\S]*$/, '') };
     } else if (o.vorm === 'invul'){
       vr += '<div class="velden-wb">' + o.velden.map(function(v){ return '<span class="veldlijn">' + schoon(v.label || '') + (v.voor ? ' ' + schoon(v.voor) : '') + ' <i class="lijn"></i>' + (v.eenheid ? ' ' + schoon(v.eenheid) : '') + '</span>'; }).join('') + '</div>';
-      antwoord = o.velden.map(function(v){ return (v.label ? v.label + ': ' : '') + toonAntwoord(v); }).join('; ');
+      antwoord = o.velden.map(function(v){ return (v.label ? v.label + ': ' : '') + (v.voor && !v.toon ? v.voor + ' ' : '') + toonAntwoord(v); }).join('; ');
     } else if (o.vorm === 'sleep'){
       var kaarten = o.vasteVolgorde ? o.kaarten.slice() : husselen(o.kaarten), let2 = {};
       kaarten.forEach(function(k, i){ let2[k.id] = LET[i] || String(i + 1); });

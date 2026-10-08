@@ -70,6 +70,8 @@ body.groot .va{width:min(100%,560px)}
   var H = VAKSPEL.husselen, S = VAKSPEL.schoon;
   function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
   function tussen(a, b){ return a + Math.floor(Math.random() * (b - a + 1)); }
+  /* op een werkblad (?werkblad=1) gaat de grafiek in de uitleg niet mee naar het antwoordblad, dus ook de zin ervoor niet */
+  var PAPIER = /[?&]werkblad=1/.test(location.search);
   function geld(x){ return '€ ' + (Math.round(x * 100) / 100).toFixed(2).replace('.', ','); }
 
   /* Een markt: prijzen van 0 tot 10 euro in stappen, hoeveelheden van 0 tot
@@ -151,6 +153,8 @@ body.groot .va{width:min(100%,560px)}
       vraag:'Markt voor <b>' + m.product + '</b>. Zet de prijs met de schuif op de <b>evenwichtsprijs</b>.', opdracht:'Bij elke prijs zie je hoeveel er gevraagd (blauw) en aangeboden (oranje) wordt. Zoek de prijs waar dat gelijk is.',
       uitleg:'Bij ' + geld(m.pe) + ' zijn vraag en aanbod allebei ' + m.qe + '. Daarboven is er een overschot (aanbod groter dan vraag), daaronder een tekort.', antwoordTekst: geld(m.pe),
       teken:function(el, api){
+        /* op een werkblad: alleen de grafiek. De stippellijn met de stippen is de stand van de schuif, en die is er op papier niet */
+        if (api.papier){ el.innerHTML = grafiek(m, {}); return; }
         var prijs = m.pe > 5 ? 2 : 8;
         /* de stand onder de schuif wordt voorgelezen: zo hoort een schermlezer bij elke prijs de vraag en het aanbod */
         el.innerHTML = '<div id="grafiekvak">' + grafiek(m, { prijs:prijs }) + '</div><div class="schuif"><input type="range" id="prijsSchuif" min="0" max="10" step="' + stap + '" value="' + prijs + '" aria-label="prijs" aria-describedby="stand"><p class="stand" id="stand" aria-live="polite"></p></div>';
@@ -183,7 +187,7 @@ body.groot .va{width:min(100%,560px)}
     return { onderdeel:'vraag en aanbod: verschuiven', onderdeelNaam:'een lijn verschuift', vorm:'meerkeuze', vasteVolgorde:true, sleutel:'g' + g.t,
       vraag:S(g.t) + ' Wat gebeurt er op de markt voor <b>' + g.product + '</b>?', opdracht:'Verandert er iets bij de kopers (vraag) of bij de verkopers (aanbod)? En wordt het meer of minder?',
       beeld: beeldMet(m, { evenwicht:true }), opties: opties, goed: opties.indexOf(goed),
-      uitleg: g.uit + ' Gestippeld de oude lijn, doorgetrokken de nieuwe: ' + '<div style="margin-top:8px">' + grafiek(nieuw, { oud:m, evenwicht:false }) + '</div>', antwoordTekst: goed };
+      uitleg: g.uit + (PAPIER ? '' : ' Gestippeld de oude lijn, doorgetrokken de nieuwe: ' + '<div style="margin-top:8px">' + grafiek(nieuw, { oud:m, evenwicht:false }) + '</div>'), antwoordTekst: goed };
   }
   /* 4. tekort of overschot bij een prijs */
   function tekort(niveau){

@@ -43,6 +43,8 @@ svg.ds{width:100%;max-width:min(100%,560px);height:auto;display:block;margin:0 a
 :root{--lijn2:#B83D20}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--lijn2:#F26749}}
 :root[data-theme="dark"]{--lijn2:#F26749}
+/* het papier van een werkblad (werkblad.html) is altijd licht, ook als het scherm donker staat */
+.blad{--lijn2:#B83D20}
 .tekenuit{text-align:center;color:var(--muted);font-size:.9rem;margin:8px 0 0}
 /* een tabel in de bron: smal genoeg voor een telefoon */
 .beeld table.wt td,.beeld table.wt th{min-width:0;padding:7px 10px}
@@ -57,6 +59,9 @@ svg.ds{width:100%;max-width:min(100%,560px);height:auto;display:block;margin:0 a
 <script>
 (function(){
   'use strict';
+  /* op een werkblad (?werkblad=1) staan de opdrachten zoals ze met een pen kunnen: geen slepen of tikken */
+  var WB = /[?&]werkblad=1/.test(location.search);
+  var SLEEPOPDR = WB ? '' : 'Sleep elk kaartje naar zijn plek, of tik een kaartje en dan het vak.';
   var H = VAKSPEL.husselen, S = VAKSPEL.schoon;
   function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
   function tussen(a, b){ return a + Math.floor(Math.random() * (b - a + 1)); }
@@ -297,7 +302,8 @@ svg.ds{width:100%;max-width:min(100%,560px);height:auto;display:block;margin:0 a
     s += '<text x="' + (L - 40) + '" y="' + (T - 12) + '">' + S(o.ynaam) + '</text>';
     if (o.titel) s += '<text x="' + (W - R) + '" y="' + (T - 12) + '" text-anchor="end">' + S(o.titel) + '</text>';
     s += '</g>';
-    return { X:X, Y:Y, kop:'<svg class="wgr" viewBox="0 0 ' + W + ' ' + Hh + '" font-family="inherit" role="img" aria-label="' + S(o.aria || 'grafiek') + '">' + s, staart:'</svg>' };
+    /* overflow zichtbaar: het laatste getal onder de as (24:00) steekt een paar punten buiten de rand */
+    return { X:X, Y:Y, kop:'<svg class="wgr" viewBox="0 0 ' + W + ' ' + Hh + '" overflow="visible" font-family="inherit" role="img" aria-label="' + S(o.aria || 'grafiek') + '">' + s, staart:'</svg>' };
   }
   function lijn(a, punten, kleur, streep){
     return '<polyline points="' + punten.map(function(p){ return a.X(p[0]) + ',' + a.Y(p[1]); }).join(' ') + '" fill="none" stroke="' + kleur + '" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"' + (streep ? ' stroke-dasharray="7 5"' : '') + '/>';
@@ -441,7 +447,7 @@ svg.ds{width:100%;max-width:min(100%,560px);height:auto;display:block;margin:0 a
   function keten(niveau){
     var l = KETENS.filter(function(k){ return past(k, niveau); }), k = kies(l), idx = KETENS.indexOf(k);
     return Object.assign(basis('rivier'), { vorm:'sleep', sleutel:'kt' + idx,
-      vraag:'Zet de stappen op volgorde: <b>' + S(k.kop) + '</b>.', opdracht:'Sleep elk kaartje naar zijn plek, of tik een kaartje en dan het vak. In vak 1 komt de eerste stap.',
+      vraag:'Zet de stappen op volgorde: <b>' + S(k.kop) + '</b>.', opdracht:(SLEEPOPDR ? SLEEPOPDR + ' ' : '') + 'In vak 1 komt de eerste stap.',
       kaarten:k.s.map(function(t, i){ return { id:'s' + i, tekst:t }; }),
       vakken:k.s.map(function(t, i){ return { id:'v' + i, max:1, hoort:['s' + i] }; }),
       uitleg:'De goede volgorde: ' + k.s.map(function(t, i){ return (i + 1) + '. ' + S(t); }).join(' '), antwoordTekst:'de volgorde hierboven' });
@@ -542,7 +548,8 @@ svg.ds{width:100%;max-width:min(100%,560px);height:auto;display:block;margin:0 a
     if (t.d === 'uiter' && /slib/.test(t.v)) stand = 'hoog';
     var kade = niveau !== 'bb' && Math.random() < .5;
     return Object.assign(basis('doorsnede'), { vorm:'eigen', sleutel:'tk' + ti + stand + (spiegel ? 's' : '') + (kade ? 'k' : ''),
-      vraag:t.v, opdracht:'Tik op het deel in de tekening en druk op Nakijken.',
+      vraag:WB ? t.v.replace(/^Tik op (het|een) /, 'Zet een kruisje op $1 ') : t.v,
+      opdracht:!WB ? 'Tik op het deel in de tekening en druk op Nakijken.' : /^Tik/.test(t.v) ? '' : 'Zet een kruisje in het goede deel van de tekening.',
       uitleg:DEELUIT[t.d] + ' ' + VOLG, antwoordTekst:NAAM[t.d],
       teken:function(el, api){
         var stroken = STROOK.map(function(st, i){ return '<rect class="strook" data-i="' + i + '" data-deel="' + st[0] + '" x="' + st[1] + '" y="0" width="' + (st[2] - st[1]) + '" height="262" tabindex="0" role="button" aria-label="strook ' + (spiegel ? 7 - i : i + 1) + ' van links"/>'; }).join('');
@@ -716,7 +723,7 @@ svg.ds{width:100%;max-width:min(100%,560px);height:auto;display:block;margin:0 a
     var bron = niveau === 'bb' ? JAREN.filter(function(x){ return x.b; }) : JAREN, k = niveau === 'bb' ? 3 : niveau === 'kgt' ? 4 : 5;
     var set = H(bron).slice(0, k).sort(function(a, b){ return a.j - b.j; });
     return Object.assign(basis('kust'), { vorm:'sleep', sleutel:'tl' + set.map(function(x){ return x.j; }).join(''),
-      vraag:'Zet deze gebeurtenissen in de goede volgorde: de oudste in vak 1.', opdracht:'Sleep elk kaartje naar zijn plek, of tik een kaartje en dan het vak.',
+      vraag:'Zet deze gebeurtenissen in de goede volgorde: de oudste in vak 1.', opdracht:SLEEPOPDR,
       kaarten:set.map(function(x){ return { id:'j' + x.j, tekst:x.t }; }), vakken:set.map(function(x, i){ return { id:'p' + i, max:1, hoort:['j' + x.j] }; }),
       uitleg:set.map(function(x){ return x.j + ': ' + S(x.t); }).join(' ') + ' De Afsluitdijk kwam na de overstroming van 1916; de Deltawerken na de ramp van 1953; Ruimte voor de Rivier na de hoogwaters van 1993 en 1995.', antwoordTekst:'van ' + set[0].j + ' tot ' + set[set.length - 1].j });
   }
@@ -810,7 +817,7 @@ svg.ds{width:100%;max-width:min(100%,560px);height:auto;display:block;margin:0 a
     }
     if (Math.random() < .5) return Object.assign(basis('laag'), { vorm:'sleep', sleutel:sl + 'v',
       vraag:'De dijk breekt door en de hele dijkring loopt onder. Zet de dorpen op volgorde: in vak 1 het dorp waar het water het <b>diepst</b> komt te staan.', beeld:s,
-      opdracht:'Sleep elk kaartje naar zijn plek, of tik een kaartje en dan het vak.',
+      opdracht:SLEEPOPDR,
       kaarten:namen.map(function(nm, i){ return { id:'d' + i, tekst:nm }; }), vakken:srt.map(function(i, r){ return { id:'r' + r, max:1, hoort:['d' + i] }; }),
       uitleg:'Hoe lager het dorp ligt, hoe dieper het water er staat: ' + srt.map(function(i){ return namen[i] + ' (' + napKort(hs[i]) + ')'; }).join(', ') + '.', antwoordTekst:srt.map(function(i){ return namen[i]; }).join(', ') });
     var a2 = srt[0], b2 = srt[2];

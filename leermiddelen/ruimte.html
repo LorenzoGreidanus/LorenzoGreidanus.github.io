@@ -34,6 +34,10 @@
 .opties:has(svg.rf){grid-template-columns:repeat(2,minmax(0,1fr))}
 .opties:has(svg.rf) button.optie{padding:8px;text-align:center}
 .uitslagregel svg.rf{max-width:170px;display:inline-block;vertical-align:middle;height:auto}
+/* op het werkblad: de keuzeplaatjes zo groot als in het spel, zodat een opgave op een bladzijde past */
+.blad .vakspel .opties svg.rf{display:block;width:150px;max-width:100%;height:auto}
+.blad .vakspel .beeld svg.rf{width:min(100%,320px)}
+.blad .vakspel .beeld svg.rf.klein{width:min(100%,260px)}
 </style>
 <script src="/vangnet.js" defer></script>
 </head>
@@ -304,7 +308,8 @@
     veelvlak(sc, L);
     if (o.b) sc.maat(V[0], V[1], o.b);
     if (o.lang) sc.maat(V[1], V[4], o.lang);
-    if (o.t){ var F = [w[0] / 2, 0, 0]; sc.lijn([F, V[2]], { stip:true }); sc.maat(F, V[2], o.t, { van:V[1], af:7 }); sc.haaks(F, min3(V[1], F), min3(V[2], F)); }
+    /* de hoogte laag links naast de stippellijn: halverwege viel hij over de schuine kant van de driehoek */
+    if (o.t){ var F = [w[0] / 2, 0, 0]; sc.lijn([F, V[2]], { stip:true }); sc.label([F[0] + (V[2][0] - F[0]) * 0.28, F[1] + (V[2][1] - F[1]) * 0.28, F[2] + (V[2][2] - F[2]) * 0.28], o.t, { dx:-7, anker:'end' }); sc.haaks(F, min3(V[1], F), min3(V[2], F)); }
     if (o.schuin) sc.maat(V[1], V[2], o.schuin);
     return { sc:sc, V:V, w:w };
   }
@@ -727,6 +732,7 @@
       if (o.tekst && o.tekst[i] != null) s += tekstEl(x + c / 2, y + c / 2 + 7, o.tekst[i], 'middle', o.tekstKleur && o.tekstKleur[i] || INK, 19);
       if (o.ogen && o.ogen[i]) OGEN[o.ogen[i]].forEach(function(g){ s += '<circle cx="' + f1(x + g[0] * c) + '" cy="' + f1(y + g[1] * c) + '" r="' + f1(c * 0.08) + '" fill="' + INK + '"/>'; });
     });
+    var letters = [];
     (o.zijden || []).forEach(function(z){
       var q = cel[z.i], x = p + q[0] * c, y = p + q[1] * c, a, b, u;
       if (z.d === 'n'){ a = [x, y]; b = [x + c, y]; u = [0, -1]; }
@@ -734,8 +740,17 @@
       if (z.d === 'w'){ a = [x, y]; b = [x, y + c]; u = [-1, 0]; }
       if (z.d === 'o'){ a = [x + c, y]; b = [x + c, y + c]; u = [1, 0]; }
       if (z.rood) s += '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '" stroke="' + ROOD + '" stroke-width="6" stroke-linecap="round"/>';
-      if (z.label){ var m = [(a[0] + b[0]) / 2 + u[0] * 11, (a[1] + b[1]) / 2 + u[1] * 11 + 5]; s += tekstEl(m[0], m[1], z.label, 'middle', BLAUW, 15); }
+      if (z.label) letters.push({ m:[(a[0] + b[0]) / 2 + u[0] * 11, (a[1] + b[1]) / 2 + u[1] * 11 + 5], r:[(b[0] - a[0]) / c, (b[1] - a[1]) / c], t:z.label });
     });
+    /* twee randen in een binnenhoek: hun letters stonden over elkaar (ab); schuif ze langs hun rand van elkaar af */
+    letters.forEach(function(l, i){ letters.slice(i + 1).forEach(function(k){
+      var dx = k.m[0] - l.m[0], dy = k.m[1] - l.m[1];
+      if (Math.abs(dx) < 16 && Math.abs(dy) < 18){
+        var sl = (l.r[0] * dx + l.r[1] * dy) > 0 ? -1 : 1, sk = (k.r[0] * dx + k.r[1] * dy) > 0 ? 1 : -1, d = c / 2 - 7;
+        l.m = [l.m[0] + l.r[0] * sl * d, l.m[1] + l.r[1] * sl * d]; k.m = [k.m[0] + k.r[0] * sk * d, k.m[1] + k.r[1] * sk * d];
+      }
+    }); });
+    letters.forEach(function(l){ s += tekstEl(l.m[0], l.m[1], l.t, 'middle', BLAUW, 15); });
     return vel(0, 0, (mc + 1) * c + 2 * p, (mr + 1) * c + 2 * p, s, o.naam || 'uitslag', o.klasse);
   }
   /* uitslagen van de andere figuren, met de hand getekend */
@@ -1093,7 +1108,8 @@
     }
     if (welk === 'apo'){
       var F = [0, -t.w[0] / 2, 0];
-      sc.maat(M, V[4], h + ' ' + e, { van:V[1], af:7 });
+      /* de hoogte aan de andere kant dan het vraagteken van de rode lijn */
+      sc.maat(M, V[4], h + ' ' + e, { van:F, af:7 });
       sc.lijn([M, F], { stip:true, kleur:BLAUW, dik:2.4 }); sc.lijn([F, V[4]], { kleur:ROOD, dik:3 }); sc.haaks(M, min3(F, M), min3(V[4], M)); sc.label(midden([F, V[4]]), '?', { van:V[1], kleur:ROOD });
       return pyt({
         sleutel:'pa' + a + h, vraag:wat + ' heeft een vierkant grondvlak van ' + a + ' bij ' + a + ' ' + e + ' en is ' + h + ' ' + e + ' hoog. Hoe lang is de rode lijn: de hoogte van een zijvlak, van het midden van een grondribbe naar de top?',

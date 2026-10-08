@@ -70,6 +70,13 @@ table.wf-invul th{background:var(--kaart2);text-align:left}
 body.groot .wf-in input{height:60px;font-size:1.35rem}
 body.groot .wf-regel{font-size:1.3rem}
 body.groot .wf-regel .t{line-height:60px}
+/* Op het werkblad (werkblad.html): het papier is altijd licht, dus ook de lijnkleuren (in de donkere stand werden ze
+   pastel op wit), de grafiek niet breder dan op het scherm, en randen in plaats van vlakken: een printer laat vlakken vaak weg. */
+.blad .vakspel{--lijnA:#204ECF;--lijnB:#C2410C;--lijnC:#7A3FB0;--lijnD:#0F766E;--spelkleur:#204ECF}
+.blad .vakspel .beeld svg.gr{width:100%;max-width:400px}
+.blad .wf{background:#fff;border:1px solid #c9cfdd;padding:1px 4px;-webkit-box-decoration-break:slice;box-decoration-break:slice}
+.blad .wf-sit{background:#fff;border:1px solid #c9cfdd;border-left:4px solid #204ECF}
+.blad table.wf-invul th{background:#fff}
 </style>
 <script src="/vangnet.js" defer></script>
 </head>
@@ -289,7 +296,8 @@ body.groot .wf-regel .t{line-height:60px}
       letters:function(lijst){
         var labs = lijst.map(function(q){ var p = laatste(q.f) || [W - R, T]; return { t:q.t, k:q.k, x:Math.min(W - 12, p[0] + 8), y:Math.max(T + 6, Math.min(Y(0) - 6, p[1] + 5)) }; });
         labs.sort(function(p, q){ return p.y - q.y; });
-        for (var j = 1; j < labs.length; j++) if (Math.abs(labs[j].x - labs[j - 1].x) < 22 && labs[j].y - labs[j - 1].y < 18) labs[j].y = labs[j - 1].y + 18;
+        /* tegen alle letters erboven, niet alleen de vorige: B en D konden anders over elkaar vallen met C ertussen (17,5 en niet 18: met kommagetallen bleef hij anders schuiven) */
+        for (var j = 1; j < labs.length; j++) for (var i = 0; i < j; i++) if (Math.abs(labs[j].x - labs[i].x) < 22 && Math.abs(labs[j].y - labs[i].y) < 17.5){ labs[j].y = labs[i].y + 18; i = -1; }
         return labs.map(function(q){ return '<text class="lab" x="' + q.x + '" y="' + q.y + '" fill="' + q.k + '">' + q.t + '</text>'; }).join('');
       }
     };

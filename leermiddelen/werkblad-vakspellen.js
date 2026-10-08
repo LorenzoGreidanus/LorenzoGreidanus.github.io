@@ -30,12 +30,15 @@
      lijn om het antwoord op te schrijven, want op het scherm was dat de schuif. */
   var PAPIER = [
     [/Typ je antwoord en druk op Nakijken\.?/g, 'Schrijf je antwoord op de lijn.'],
-    [/\b(druk|klik) (dan )?op Nakijken\.?/gi, ''],
+    [/,? ?(en |of )?(druk|klik) (dan )?op Nakijken\.?/gi, '.'],
+    [/,? of tik (eerst )?een kaartje( aan)? en dan (het|de) (vak|plek)/g, ''],
+    [/\.\./g, '.'],
     [/\bTyp in elk vakje\b/g, 'Schrijf in elk vakje'],
     [/\bTyp\b/g, 'Schrijf'], [/\btyp\b/g, 'schrijf'], [/\btypt\b/g, 'schrijft'], [/\bintypen\b/g, 'opschrijven'], [/\btypen\b/g, 'schrijven'],
     /* sleepopgaven: onder de opgave staat al "Schrijf bij elk vak de letters van de kaartjes die erin horen" */
     [/\b[Ss]leep (elk|elke|de|ze|het|alle)((?: [^.<]*?)?) naar ([^.]*?)\./g, 'Zet $1$2 bij $3.'],
     [/\bTik op de kaart het gebied aan van\b/g, 'Zet op de kaart een kruisje in het gebied van'],
+    [/\bTik op (het|een|de) /g, 'Zet een kruisje op $1 '],
     [/\bTik het punt (.*?) aan\./g, 'Zet een stip op het punt $1.'],
     [/\bTik het logo aan\./g, 'Omcirkel de letter bij het goede logo.'],
     [/\bTik minstens drie roosterpunten aan die op de lijn liggen\./g, 'Zet minstens drie stippen op roosterpunten die op de lijn liggen, en trek de lijn erdoor.'],
@@ -56,7 +59,7 @@
     }, String(html == null ? '' : html));
   }
   /* is er op papier ergens plek voor het antwoord? */
-  function heeftPlek(h){ return /<input|class="[^"]*\b(lijn|opties|sleep-wb|velden-wb|wb-keus)\b|stip|kruisje|[Oo]mcirkel/.test(h); }
+  function heeftPlek(h){ return /<input|<(span|i) class="[^"]*\blijn\b|class="[^"]*\b(opties|sleep-wb|velden-wb|wb-keus)\b|stip|kruisje|[Oo]mcirkel/.test(h); }
   function papierItem(it){
     var vlag = {};
     it.vraag = naarPapier(it.vraag, vlag);
@@ -138,13 +141,15 @@
         if (keuzes) return teken();
         vraag(spel, { t:'werkblad-keuzes' }).then(function(b){
           keuzes = b.keuzes || [];
+          Array.prototype.forEach.call(document.querySelectorAll('style[data-spel]'), function(x){ if (x.getAttribute('data-spel') !== spel){ x.parentNode.removeChild(x); stijlGezet[x.getAttribute('data-spel')] = false; } });
           if (b.stijl && !stijlGezet[spel]){ stijlGezet[spel] = true; var st = document.createElement('style'); st.setAttribute('data-spel', spel); st.textContent = b.stijl; document.head.appendChild(st); }
           if (doel && document.getElementById('blad').value === spel) doel.innerHTML = teken();
         }, function(){ if (doel) doel.innerHTML = '<p class="kop">Het spel laden lukte niet.</p>'; });
         return '<p class="kop">Keuzes ophalen…</p>';
       },
       lees: function(el, rang){
-        var keuze = { niveau: rang <= 1 ? 'bb' : rang === 2 ? 'kgt' : 'hv' };
+        var heeftVwo = (keuzes || []).some(function(k){ return k.id === 'niveau' && k.items.some(function(it){ return it.id === 'vwo'; }); });
+        var keuze = { niveau: rang <= 1 ? 'bb' : rang === 2 ? 'kgt' : rang >= 4 && heeftVwo ? 'vwo' : 'hv' };
         (keuzes || []).forEach(function(k){ if (k.id === 'niveau') return; var r = el.querySelector('input[name="vs-' + k.id + '"]:checked'); if (r) keuze[k.id] = r.value; });
         return keuze;
       },

@@ -49,7 +49,8 @@
 .vw-web .vw-pijlkop{fill:var(--muted);stroke:none}
 .vw-web .vw-pijlkop.aan{fill:var(--nadruk)}
 .vw-web .vw-letter circle{fill:var(--nadruk);stroke:none}
-.vw-web .vw-letter text{fill:#fff;font-size:11px;text-anchor:middle}
+/* zonder de witte rand van de namen: die rand vulde het hele rondje, en dan was de letter weg */
+.vw-web .vw-letter text{fill:#fff;font-size:11px;text-anchor:middle;stroke:none}
 .vw-web .vw-tekst{fill:var(--muted);font-size:11.5px;font-weight:500}
 .vw-legenda{font-size:.78rem;color:var(--muted);text-align:center;margin-top:4px}
 .beeld .vw-blok{display:grid;justify-items:center;gap:6px;max-width:100%}
@@ -179,7 +180,16 @@ body.groot .vw-web text{font-size:15px}
       s += '<line class="vw-pijl' + (aan ? ' aan' : '') + '" x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '"/>';
       var px = -uy, py = ux;
       s += '<path class="vw-pijlkop' + (aan ? ' aan' : '') + '" d="M' + (x2 + ux * 8).toFixed(1) + ' ' + (y2 + uy * 8).toFixed(1) + 'L' + (x2 + px * 4.5).toFixed(1) + ' ' + (y2 + py * 4.5).toFixed(1) + 'L' + (x2 - px * 4.5).toFixed(1) + ' ' + (y2 - py * 4.5).toFixed(1) + 'z"/>';
-      if (p[2]){ var mx = (x1 + x2) / 2, my = (y1 + y2) / 2; s += '<g class="vw-letter"><circle cx="' + mx.toFixed(1) + '" cy="' + my.toFixed(1) + '" r="9"/><text x="' + mx.toFixed(1) + '" y="' + (my + 4).toFixed(1) + '">' + p[2] + '</text></g>'; }
+      /* de letter op de pijl, liefst in het midden; loopt de pijl daar langs een andere knoop, dan
+         schuift hij op over de pijl (anders verdween hij onder het plaatje van die knoop) */
+      if (p[2]){
+        var mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+        [0.5, 0.35, 0.65, 0.25, 0.75].some(function(t){
+          var tx = x1 + (x2 - x1) * t, ty = y1 + (y2 - y1) * t;
+          var vrij = web.n.every(function(id){ return id === p[0] || id === p[1] || Math.hypot(pos[id].x - tx, pos[id].y + 8 - ty) > R + 16; });
+          if (vrij){ mx = tx; my = ty; } return vrij;
+        });
+        s += '<g class="vw-letter"><circle cx="' + mx.toFixed(1) + '" cy="' + my.toFixed(1) + '" r="9"/><text x="' + mx.toFixed(1) + '" y="' + (my + 4).toFixed(1) + '">' + p[2] + '</text></g>'; }
     });
     web.n.forEach(function(id){
       var q = pos[id], aan = o.knopen && o.knopen.indexOf(id) >= 0;
@@ -366,9 +376,10 @@ body.groot .vw-web text{font-size:15px}
       return s + '</svg>';
     }
   };
+  /* de bovenste laag minstens 130 breed: bij 90 viel het getal (2) over de naam (buizerd) */
   function piramide(lagen, soort){
     var W = 320, Hh = lagen.length * 44 + 10, s = '<svg class="vw-web" viewBox="0 0 ' + W + ' ' + Hh + '" width="' + W + '" height="' + Hh + '">';
-    lagen.forEach(function(l, i){ var n = lagen.length, breed = 90 + (i / (n - 1)) * 200, x = (W - breed) / 2, y = 5 + i * 44;
+    lagen.forEach(function(l, i){ var n = lagen.length, breed = 130 + (i / (n - 1)) * 170, x = (W - breed) / 2, y = 5 + i * 44;
       s += '<rect x="' + x.toFixed(1) + '" y="' + y + '" width="' + breed.toFixed(1) + '" height="38" rx="8" fill="var(--kaart2)" stroke="var(--rand2)" stroke-width="1.5"/>';
       s += '<g transform="translate(' + (x + 8).toFixed(1) + ' ' + (y + 3) + ') scale(0.667)">' + ICO[ORG[l[0]].ico] + '</g>';
       s += '<text x="' + (x + 44).toFixed(1) + '" y="' + (y + 24) + '">' + ORG[l[0]].n + '</text><text class="vw-tekst" text-anchor="end" x="' + (x + breed - 10).toFixed(1) + '" y="' + (y + 24) + '">' + l[1] + '</text>'; });

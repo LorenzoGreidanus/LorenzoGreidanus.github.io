@@ -32,11 +32,31 @@
       });
     });
     /* de nummers als laatste, boven alles; bij een stip iets ernaast met een streepje */
-    items.forEach(function(it){
+    var plek = items.map(function(it){
       var l = it.land, punt = soortVan(m, l) === 'punt', x = l.x, y = l.y;
       if (punt){ var dx = l.x > m.breed * 0.9 ? -r * 1.4 : r * 1.4, dy = l.y < r * 3 ? r * 1.4 : -r * 1.4; x = l.x + dx; y = l.y + dy; }
-      s += '<g class="nr">' + (punt ? '<line x1="' + l.x + '" y1="' + l.y + '" x2="' + x + '" y2="' + y + '"/>' : '') +
-        '<circle cx="' + x + '" cy="' + y + '" r="' + r + '"/><text x="' + x + '" y="' + y + '" style="font-size:' + fs + 'px">' + it.nr + '</text></g>';
+      return { it:it, ax:l.x, ay:l.y, x:x, y:y, punt:punt };
+    });
+    /* Kleine landen liggen dicht bij elkaar (Luxemburg, Liechtenstein; Chili en Argentinie op de
+       wereldkaart): duw nummers die elkaar raken uit elkaar, binnen de kaart. Een nummer dat zo
+       van zijn plek schuift, krijgt een streepje naar die plek. */
+    var min = r * 2 + 2;
+    for (var ronde = 0; ronde < 60; ronde++){
+      var geschoven = false;
+      for (var i = 0; i < plek.length; i++) for (var j = i + 1; j < plek.length; j++){
+        var a = plek[i], b = plek[j], dx2 = b.x - a.x, dy2 = b.y - a.y, d = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+        if (d >= min) continue;
+        if (d < 0.01){ dx2 = 1; dy2 = 0; d = 1; }
+        var duw = (min - d) / 2 + 0.5, ux = dx2 / d, uy = dy2 / d;
+        a.x -= ux * duw; a.y -= uy * duw; b.x += ux * duw; b.y += uy * duw; geschoven = true;
+      }
+      plek.forEach(function(p){ p.x = Math.max(r + 1, Math.min(m.breed - r - 1, p.x)); p.y = Math.max(r + 1, Math.min(m.hoog - r - 1, p.y)); });
+      if (!geschoven) break;
+    }
+    plek.forEach(function(p){
+      var weg = Math.sqrt(Math.pow(p.x - p.ax, 2) + Math.pow(p.y - p.ay, 2)) > r * 0.9, x = Math.round(p.x * 10) / 10, y = Math.round(p.y * 10) / 10;
+      s += '<g class="nr">' + (p.punt || weg ? '<line x1="' + p.ax + '" y1="' + p.ay + '" x2="' + x + '" y2="' + y + '"/>' : '') + (weg && !p.punt ? '<circle class="anker" style="fill:#14224C;stroke:none" cx="' + p.ax + '" cy="' + p.ay + '" r="' + Math.max(2, r * 0.22) + '"/>' : '') +
+        '<circle cx="' + x + '" cy="' + y + '" r="' + r + '"/><text x="' + x + '" y="' + y + '" style="font-size:' + fs + 'px">' + p.it.nr + '</text></g>';
     });
     return s + '</svg>';
   }

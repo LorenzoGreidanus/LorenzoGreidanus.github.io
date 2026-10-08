@@ -155,6 +155,11 @@
 }
 body.groot .bl-body{font-size:1.25rem}
 @media (prefers-reduced-motion:reduce){.lr-denk li{animation:none}}
+/* Op het werkblad (.blad bestaat alleen op werkblad.html): in- en uitklappen kan op papier
+   niet; een gemarkeerde zin krijgt een stippellijn, want een achtergrondkleur valt bij het printen weg */
+.blad .bl-klap{display:none}
+.blad .bl-z.wijs{background:none;box-shadow:none;border-bottom:1.5px dashed #14224C}
+.blad .bl-verwijs{font-size:.9rem;color:#4a5270;border-left:3px solid #14224C;padding:2px 0 2px 10px}
 </style>
 <script src="/vangnet.js" defer></script>
 </head>
@@ -1260,6 +1265,25 @@ body.groot .bl-body{font-size:1.25rem}
 
   /* ---------- het spel: een tekst, dan twee tot vier vragen erbij ---------- */
   var rij = [], rijSoort = null, laatsteNr = 0, recent = [], tekstOpen = true, huidigeTekst = null;
+
+  /* ---------- op een werkblad (?werkblad=1, zie vakspel.js) ----------
+     Op het scherm staat de tekst bij elke vraag. Op papier staat hij een keer, bij
+     de eerste vraag; de volgende vragen bij dezelfde tekst verwijzen naar dat nummer.
+     Een vraag over een onderstreept woord krijgt de tekst wel opnieuw, met de streep:
+     op het scherm zet naTekenen die erin, op papier doet merk het hier al.
+     nr is het nummer op het blad. Komt dezelfde nr nog eens, dan viel de vorige opgave
+     af (dubbel); pas bij nr + 1 weten we dat de tekst echt op het blad staat. */
+  var WERKBLAD = /[?&]werkblad=1/.test(location.search), papier = { op:{}, vorige:null };
+  function opPapier(o, nr){
+    if (nr === 1) papier.op = {};
+    var v = papier.vorige, t = o.tekst, voor = o.papierVoor || {};
+    if (v && nr === v.nr + 1 && v.vol && !papier.op[v.id]) papier.op[v.id] = v.nr;
+    var al = papier.op[t.id], vol = !al || (voor.wijs || []).length > 0;
+    papier.vorige = { nr:nr, id:t.id, vol:vol };
+    if (vol){ var d = document.createElement('div'); d.innerHTML = tekstHtml(t, {}); merk(d, t, voor); o.beeld = d.innerHTML; }
+    else o.beeld = '<p class="bl-verwijs">Lees de tekst ‘' + S(t.titel) + '’ bij opgave ' + al + '.</p>';
+    return o;
+  }
   function kiesTekst(niv, deel){
     var kan = TEKSTEN.filter(function(t){ return t.niv === niv && (!deel || t.vragen.some(function(q){ return q.d === deel; })); });
     if (!kan.length) kan = TEKSTEN.filter(function(t){ return !deel || t.vragen.some(function(q){ return q.d === deel; }); });
@@ -1288,6 +1312,7 @@ body.groot .bl-body{font-size:1.25rem}
       tekst:t
     };
     o.na = function(vak){ naTekenen(vak, info, j === 0); };
+    o.papierVoor = info.voor;
     return o;
   }
   /* na het tekenen: de merken voor het antwoord, het inklappen onthouden, en na het antwoord de uitleg op zijn plek */
@@ -1684,7 +1709,8 @@ body.groot .bl-body{font-size:1.25rem}
       laatsteNr = nr;
       if (keuze.soort !== rijSoort){ rij = []; rijSoort = keuze.soort; }
       if (!rij.length) vulRij(keuze);
-      return rij.shift() || null;
+      var o = rij.shift() || null;
+      return o && WERKBLAD ? opPapier(o, nr) : o;
     },
     tutorial:[
       { titel:'De tekst', tekst:'Lees eerst de tekst. Op een telefoon staat hij boven de vraag: tik op de titel om hem in en uit te klappen.', doel:'beeld' },

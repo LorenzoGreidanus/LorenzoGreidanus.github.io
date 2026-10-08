@@ -47,6 +47,19 @@
 .vd-us{display:block;margin-top:5px}
 .vd-us.vd-let{margin-top:8px}
 @media(max-width:480px){.vd-st li{font-size:.9rem;padding:9px 10px;gap:8px}.vd-vraagblok{font-size:1.3rem}}
+/* Op het werkblad (werkblad.html) gelden de regels voor een genummerde opgave (.blad li) ook voor deze stappen:
+   het nummer stond los (absolute) en de tekst zat in de smalle kolom van 28px, letter voor letter. Hier weer gewoon.
+   En randen in plaats van vlakken, want een printer laat vlakken vaak weg; de spelkleur bestaat daar niet. */
+.blad .vd{--hand:#D9522F;--spelkleur:#204ECF;--spelinkt:#fff}
+.blad .vd-st li{position:static;padding:8px 12px;border:1px solid #c9cfdd;border-radius:12px;background:#fff;break-inside:avoid}
+.blad .vd-st li::before{position:static;top:auto;left:auto;background:#fff;border:1.5px solid #14224C;color:#14224C;width:24px;height:24px;border-radius:50%}
+.blad .vd-st li.open{border:2px dashed #9aa3bd}
+.blad .vd-st li.open::before{border:1.5px dashed #9aa3bd;color:#5b6480}
+.blad .vd-formule{background:#fff;border:1px solid #c9cfdd}
+/* compacter, zodat een opgave met tekening en stappen op een bladzijde past */
+.blad .vd-fig svg{max-height:230px;width:auto}
+.blad .vd-st{gap:5px}
+.blad .vd-st li{padding:6px 12px}
 </style>
 <script src="/vangnet.js" defer></script>
 </head>
@@ -510,15 +523,22 @@
       var cx = d.punten.reduce(function(a, p){ return a + p[0]; }, 0) / d.punten.length, cy = d.punten.reduce(function(a, p){ return a + p[1]; }, 0) / d.punten.length;
       s += '<text x="' + X(cx + (d.dx || 0)) + '" y="' + (Y(cy) + 8) + '" font-size="24" font-weight="700" text-anchor="middle" fill="var(--ink)" opacity=".5">' + d.naam + '</text>';
     });
-    f.labels.forEach(function(l){
-      var kl = l.vraag ? 'var(--hand)' : 'var(--ink)', tx;
-      if (l.binnen){ s += '<text x="' + X(l.x) + '" y="' + (Y(l.y) + 5) + '" font-size="14" font-weight="700" text-anchor="' + (l.anker || 'middle') + '" fill="' + kl + '" ' + HALO + '>' + S(l.t) + '</text>'; return; }
+    /* eerst alle maten een plek geven, dan tekenen: twee korte zijden bij een binnenhoek gaven maten over elkaar (3 cm 4 cm) */
+    var maten = f.labels.map(function(l){
+      var kl = l.vraag ? 'var(--hand)' : 'var(--ink)';
+      if (l.binnen) return { x:X(l.x), y:Y(l.y) + 5, anker:l.anker || 'middle', kl:kl, t:l.t };
       var mx = (l.a[0] + l.b[0]) / 2, my = (l.a[1] + l.b[1]) / 2, dx = l.b[0] - l.a[0], dy = l.b[1] - l.a[1], len = Math.hypot(dx, dy), nx = -dy / len, ny = dx / len;
       if (inPoly([mx + nx * 0.02, my + ny * 0.02], P)){ nx = -nx; ny = -ny; }
       var px = X(mx), py = Y(my);
-      if (Math.abs(nx) > 0.5){ s += '<text x="' + (px + nx * 9) + '" y="' + (py + 5) + '" font-size="14" font-weight="700" text-anchor="' + (nx > 0 ? 'start' : 'end') + '" fill="' + kl + '" ' + HALO + '>' + S(l.t) + '</text>'; }
-      else { s += '<text x="' + px + '" y="' + (ny > 0 ? py + 20 : py - 9) + '" font-size="14" font-weight="700" text-anchor="middle" fill="' + kl + '" ' + HALO + '>' + S(l.t) + '</text>'; }
+      if (Math.abs(nx) > 0.5) return { x:px + nx * 9, y:py + 5, anker:nx > 0 ? 'start' : 'end', kl:kl, t:l.t };
+      return { x:px, y:ny > 0 ? py + 20 : py - 9, anker:'middle', kl:kl, t:l.t, weg:ny > 0 ? 1 : -1 };
     });
+    function vak(m){ var b = String(m.t).length * 8.6, x0 = m.anker === 'start' ? m.x : m.anker === 'end' ? m.x - b : m.x - b / 2; return { l:x0, r:x0 + b, t:m.y - 12, o:m.y + 2 }; }
+    for (var ronde = 0; ronde < 3; ronde++) maten.forEach(function(m, i){
+      if (!m.weg) return;
+      maten.forEach(function(n, j){ if (i === j) return; var a = vak(m), b = vak(n); if (a.l < b.r && b.l < a.r && a.t < b.o && b.t < a.o) m.y += m.weg * 15; });
+    });
+    maten.forEach(function(m){ s += '<text x="' + m.x + '" y="' + m.y + '" font-size="14" font-weight="700" text-anchor="' + m.anker + '" fill="' + m.kl + '" ' + HALO + '>' + S(m.t) + '</text>'; });
     return s + '</svg>';
   }
   var HALO = 'stroke="var(--kaart)" stroke-width="4" paint-order="stroke" stroke-linejoin="round"';

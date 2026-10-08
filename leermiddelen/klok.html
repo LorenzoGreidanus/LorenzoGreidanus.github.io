@@ -31,8 +31,13 @@
 #antwoordvak.klokkeus .opties button.optie{text-align:center;padding:10px}
 .opties .optie svg,.uitslagregel svg.klok{display:block;margin:0 auto;max-width:150px;width:100%}
 .beeld svg.klok{max-width:250px;width:100%}
-.beeld svg.lijn,.uitslagregel svg.lijn{max-width:560px;width:100%;display:block;margin:6px auto 0}
+.beeld svg.tijdlijn,.uitslagregel svg.tijdlijn{max-width:560px;width:100%;display:block;margin:6px auto 0}
 .klokuit{display:block;text-align:center;font-size:.84rem;color:var(--muted);margin-top:4px}
+/* op het werkblad: een klok zo groot dat je hem goed afleest, vier keuzeklokken twee aan twee, en de tijdlijn op een halve bladbreedte */
+.blad .vakspel .beeld svg.klok{width:210px;max-width:100%}
+.blad .vakspel .beeld .klokuit{width:210px}
+.blad .vakspel .opties svg.klok{display:block;width:150px;max-width:100%}
+.blad svg.tijdlijn,.blad .vakspel .beeld svg.tijdlijn{display:block;width:100%;max-width:480px;height:auto;margin:4px 0}
 </style>
 <script src="/vangnet.js" defer></script>
 </head>
@@ -79,12 +84,13 @@
      als bogen erboven: eerst naar het hele uur, dan hele uren, dan de rest */
   function tijdlijn(van, tot, sprongen, label){
     var lo = Math.min(van, tot), hi = Math.max(van, tot), h0 = Math.floor(lo / 60), h1 = Math.ceil(hi / 60); if (h1 === h0) h1++;
-    var W = 560, P = 34, Y = 62, sch = (W - 2 * P) / ((h1 - h0) * 60), uit = '<svg class="lijn" viewBox="0 0 ' + W + ' 96" role="img" aria-label="' + S(label || 'tijdlijn van ' + tijd(van) + ' tot ' + tijd(tot)) + '">';
+    var W = 560, P = 34, Y = 62, sch = (W - 2 * P) / ((h1 - h0) * 60), uit = '<svg class="tijdlijn" viewBox="0 0 ' + W + ' 96" role="img" aria-label="' + S(label || 'tijdlijn van ' + tijd(van) + ' tot ' + tijd(tot)) + '">';
     function x(min){ return P + (min - h0 * 60) * sch; }
     uit += '<line x1="' + P + '" y1="' + Y + '" x2="' + (W - P) + '" y2="' + Y + '" style="stroke:var(--ink);stroke-width:2"/>';
     for (var h = h0; h <= h1; h++) uit += '<line x1="' + x(h * 60) + '" y1="' + (Y - 8) + '" x2="' + x(h * 60) + '" y2="' + (Y + 8) + '" style="stroke:var(--ink);stroke-width:2"/><text x="' + x(h * 60) + '" y="' + (Y + 26) + '" text-anchor="middle" font-size="' + (h1 - h0 > 7 ? 11 : 13) + '" style="fill:var(--muted)">' + tijd(h * 60) + '</text>';
     (sprongen || []).forEach(function(s, i){
-      var x1 = x(s.van), x2 = x(s.tot), xm = (x1 + x2) / 2, top = Y - 26 - (i % 2 ? 0 : 8);
+      /* om en om hoger: twee korte sprongen naast elkaar (+ 11 min, + 10 min) vielen anders over elkaar */
+      var x1 = x(s.van), x2 = x(s.tot), xm = (x1 + x2) / 2, top = Y - 26 - (i % 2 ? 0 : 16);
       uit += '<path d="M' + x1 + ' ' + (Y - 4) + ' Q' + xm + ' ' + (top - 14) + ' ' + x2 + ' ' + (Y - 4) + '" style="fill:none;stroke:var(--nadruk);stroke-width:2"/>' +
         '<text x="' + xm + '" y="' + (top - 6) + '" text-anchor="middle" font-size="13" font-weight="600" style="fill:var(--nadruk)">' + s.tekst + '</text>';
     });

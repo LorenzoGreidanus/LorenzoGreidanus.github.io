@@ -75,8 +75,11 @@ var OPENVRAAG = (function(){
       /\bwat (is|zijn|was|waren) geen\b/i.test(vraag) ||
       /* "Welk woord is een lidwoord?" zonder zin erbij: welk woord dan? */
       (/\bwelke? (twee )?(woord|woorden) (is|zijn) (een|de|het)\b/i.test(v) && !/:\s*\S/.test(v)) ||
-      /\b(welke?|in welke|which|what)\b[^?]*(\b(is|zijn|staat|staan|wordt|worden|geschreven|gespeld)\s+(goed|juist|fout|onjuist|correct|waar)\b|\b(goede|juiste|foute|correcte|klopt|kloppen|right|wrong|incorrect|correct|true|false)\b|\b(goed|juist|fout)\s*$)/i.test(vraag) ||
+      /\b(welke?|in welke|wat|which|what)\b[^?]*(\b(is|zijn|staat|staan|wordt|worden|geschreven|gespeld)\s+(goed|juist|fout|onjuist|correct|waar)\b|\b(goede|juiste|foute|correcte|klopt|kloppen|right|wrong|incorrect|correct|true|false)\b|\b(goed|juist|fout)\s*$)/i.test(vraag) ||
       /\bwelke? bewering(en)? (is|zijn) waar\b/i.test(vraag) ||
+      /* de beste keuze uit een rij: zonder de rij is er geen antwoord */
+      /\b(het (meest|minst|best|beste)|verstandigst|slimst|duurzaamst|voordeligst|goedkoopst)\b/i.test(vraag) ||
+      /\bwelke? (situatie|keuze|aankoop|uitgave|voorbeeld|kenmerk)\b[^?]*\b(hoort|past)\b/i.test(vraag) ||
       /\b(welke?|which) (getal|getallen|breuk|breuken|verhouding|kaart|schaal|number|fraction)\b[^?]*\b(grootst|kleinst|hoogst|laagst|meeste|minste|biggest|smallest|largest|highest|lowest)\b/i.test(vraag) ||
       /\b(welke?|in welke|which) (zin|zinnen|versie|vraag|uitroep|schrijfwijze|spelling|vervolg|reeks|rij|combinatie|bewering|beweringen|uitspraak|reactie|samenvatting|conclusie|sentence|sentences|version|option|answer|translation|reply|response|question)\b/i.test(vraag) ||
       /^(wat is (goed|beter|juist|fout|correct)(?! aan)|kies|choose|pick)\b/i.test(v) || /\b(kies|choose) (de|het|the) (goede|juiste|correct|right)\b/i.test(v) ||
@@ -213,7 +216,7 @@ var SPELBLAD = (function(){
           var d = q.doelen.map(function(x){ return x.id; }).indexOf(q.doel);
           r.push('<span class="goed">Schrijfdoel: ' + ABCD[d] + '. ' + schoon(q.doelen[d].naam) + '</span>' + (w.uitleg ? '<small>' + schoon(q.doelen[d].uit.charAt(0).toUpperCase() + q.doelen[d].uit.slice(1)) + '.</small>' : ''));
         }
-        return '<li>' + r.join('<br>') + '</li>';
+        return '<li>' + r.map(function(x){ return '<div>' + x + '</div>'; }).join('') + '</li>';
       }).join('');
       var lj = (T.LEERJAREN.filter(function(l){ return l.id === o.lj; })[0] || {}).naam || '';
       return { titel:'Werkblad Tekstdetective', sub:w.niveauNaam + ' · ' + lj + ' · ' + w.items.length + ' alinea’s', klasse:'', vragen:vragen, antwoorden:antwoorden };

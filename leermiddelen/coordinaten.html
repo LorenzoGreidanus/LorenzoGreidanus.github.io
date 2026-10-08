@@ -89,7 +89,8 @@
     if (b.x0 < 0) s += '<text x="' + (X(0) - 6) + '" y="' + (Y(0) + 14) + '" text-anchor="end">O</text>';
     if (o.figuur) s += '<polygon class="figuur" points="' + o.figuur.map(function(p){ return X(p[0]) + ',' + Y(p[1]); }).join(' ') + '"/>';
     (o.pijlen || []).forEach(function(pl){ s += '<line x1="' + X(pl[0][0]) + '" y1="' + Y(pl[0][1]) + '" x2="' + X(pl[1][0]) + '" y2="' + Y(pl[1][1]) + '" stroke="var(--amber)" stroke-width="3" stroke-linecap="round"/>'; });
-    (o.punten || []).forEach(function(p){ s += '<circle class="punt ' + (p.klas || '') + '" cx="' + X(p.p[0]) + '" cy="' + Y(p.p[1]) + '" r="6"/>' + (p.naam ? '<text x="' + (X(p.p[0]) + 8) + '" y="' + (Y(p.p[1]) - 8) + '" style="fill:var(--ink)">' + S(p.naam) + '</text>' : ''); });
+    /* de naam bij een punt (start): aan de rand van het rooster naar binnen, anders viel hij over x of y of buiten beeld */
+    (o.punten || []).forEach(function(p){ var re = p.p[0] >= b.x1 - 0.5, bo = p.p[1] >= b.y1 - 0.5; s += '<circle class="punt ' + (p.klas || '') + '" cx="' + X(p.p[0]) + '" cy="' + Y(p.p[1]) + '" r="6"/>' + (p.naam ? '<text x="' + (X(p.p[0]) + (re ? -10 : bo ? 10 : 8)) + '" y="' + (Y(p.p[1]) + (bo ? 11 : -8)) + '"' + (re ? ' text-anchor="end"' : '') + ' style="fill:var(--ink);paint-order:stroke;stroke:var(--kaart);stroke-width:3px">' + S(p.naam) + '</text>' : ''); });
     if (o.schat) s += '<g transform="translate(' + X(o.schat[0]) + ' ' + Y(o.schat[1]) + ')">' + SCHAT + '</g>';
     if (o.tikbaar) s += '<circle class="cursor" cx="' + X(0) + '" cy="' + Y(0) + '" r="13"/>';
     s += '<g class="stippen"></g></svg>';
@@ -188,6 +189,8 @@
   /* 3. route: vanaf een punt stappen zetten */
   function route(niveau){
     var b = bereik(niveau), start = willekeurig(b, false), dx, dy, eind;
+    /* bij bb gaat de route alleen naar rechts en omhoog: vanuit de hoek rechtsboven kan dat niet, en bleef de lus hieronder eeuwig zoeken */
+    while (niveau === 'bb' && start[0] >= b.x1 && start[1] >= b.y1) start = willekeurig(b, false);
     do { dx = tussen(-4, 4); dy = tussen(-4, 4); if (niveau === 'bb'){ dx = Math.abs(dx); dy = Math.abs(dy); } eind = [start[0] + dx, start[1] + dy]; }
     while ((dx === 0 && dy === 0) || eind[0] < b.x0 || eind[0] > b.x1 || eind[1] < b.y0 || eind[1] > b.y1);
     var stappen = [];

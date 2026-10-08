@@ -55,6 +55,8 @@
 .bl-uit{display:block;max-width:62ch;margin:8px auto 0;padding:9px 14px;border-left:4px solid var(--spelkleur);background:var(--kaart2);border-radius:0 12px 12px 0;font-weight:600;font-size:1rem;line-height:1.5}
 @media(max-width:560px){.bl-bron{padding:10px 10px 8px}.beeld .bl-tab{font-size:.84rem}.beeld .bl-tab th,.beeld .bl-tab td{padding:5px 6px}}
 body.groot .beeld .bl-tab{font-size:1.05rem}
+/* op het werkblad (zonder vakspel.css) de tokens die de bronnen gebruiken, in de lichte tinten */
+.blad .bl-bron,.blad .bl-uit{--hand:#D9522F;--spelkleur:#EA9836}
 </style>
 <script src="/vangnet.js" defer></script>
 </head>
@@ -123,11 +125,14 @@ body.groot .beeld .bl-tab{font-size:1.05rem}
     var n = o.labels.length, s = '', b = o.bereik, dec = o.dec, kleur = o.kleur || KLEUR[0];
     if (o.liggend){
       var lang = Math.max.apply(null, o.labels.map(function(l){ return String(l).length; }));
-      var L = Math.min(150, Math.round(lang * 7.4 + 14)), W = 360, R = o.waarden ? 46 : 16, T = 8, rij = 30, ph = n * rij, Hh = T + ph + 42, pw = W - L - R;
+      var L = Math.min(150, Math.round(lang * 8.2 + 14)), W = 360, R = o.waarden ? 46 : 16, T = 8, rij = 30, ph = n * rij, Hh = T + ph + 42, pw = W - L - R;
       var X = function(v){ return rond(L + pw * (v - b.min) / (b.max - b.min), 1); };
+      /* de getallen onder de liggende as niet tegen elkaar aan (800 1.0001.200): zo nodig minder getallen */
+      var lw = nl(b.max, dec).length * 8 + 8, stapL = b.elke;
+      while (pw * stapL / b.n < lw && stapL < b.n) stapL += b.elke;
       rasterwaarden(b).forEach(function(t, i){
         s += '<line class="raster" x1="' + X(t) + '" y1="' + T + '" x2="' + X(t) + '" y2="' + (T + ph) + '"/>';
-        if (i % b.elke === 0) s += '<text x="' + X(t) + '" y="' + (T + ph + 16) + '" text-anchor="middle">' + nl(t, dec) + '</text>';
+        if (i % stapL === 0) s += '<text x="' + X(t) + '" y="' + (T + ph + 16) + '" text-anchor="middle">' + nl(t, dec) + '</text>';
       });
       o.labels.forEach(function(l, i){
         var y = T + i * rij, v = o.w[i];
@@ -222,7 +227,7 @@ body.groot .beeld .bl-tab{font-size:1.05rem}
   /* beeldgrafiek: elk poppetje is een vast aantal, een half poppetje de helft */
   var POP = '<circle cx="11" cy="5" r="4.3"/><path d="M2.5 21.5v-3.2a8.5 8.5 0 0 1 17 0v3.2z"/>';
   function beeldSvg(o){
-    var n = o.namen.length, lang = Math.max.apply(null, o.namen.map(function(l){ return String(l).length; })), L = Math.min(132, Math.round(lang * 7.4 + 14));
+    var n = o.namen.length, lang = Math.max.apply(null, o.namen.map(function(l){ return String(l).length; })), L = Math.min(140, Math.round(lang * 8.2 + 14));
     var W = 360, rij = 32, T = 6, Hh = T + n * rij + 40, id = 'blh' + (++teller), s = '<defs><clipPath id="' + id + '"><rect x="0" y="0" width="11" height="23"/></clipPath></defs>';
     o.namen.forEach(function(nm, i){
       var y = T + i * rij, aantal = o.w[i] / o.per, heel = Math.floor(aantal + 1e-9), half = aantal - heel > 0.25, k;

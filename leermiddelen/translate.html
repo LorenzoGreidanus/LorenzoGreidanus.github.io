@@ -37,6 +37,14 @@
 .beeld .zinnen{width:100%;display:grid;place-items:center}
 .veldje input.breed{width:min(30em,calc(100vw - 60px))}
 body.groot .zinkaart p{font-size:1.5rem}
+/* Op het werkblad (.blad bestaat alleen op werkblad.html): een hele zin schrijf je niet op
+   een kort streepje. Het label erboven, daaronder twee lijnen over de hele breedte. Alleen bij
+   een opgave met het zinkaartje van dit spel (met een label erin): de stijl van een spel blijft
+   op werkblad.html staan als de docent daarna een ander spel kiest. */
+.blad .vakspel li:has(.zinkaart>small) .velden-wb{display:block}
+.blad .vakspel li:has(.zinkaart>small) .velden-wb .veldlijn{display:block;width:100%}
+.blad .vakspel li:has(.zinkaart>small) .velden-wb .veldlijn .lijn{display:block;width:100%;max-width:none;height:62px;position:relative}
+.blad .vakspel li:has(.zinkaart>small) .velden-wb .veldlijn .lijn::before{content:"";position:absolute;left:0;right:0;top:28px;border-top:1px solid #14224C}
 </style>
 <script src="/vangnet.js" defer></script>
 </head>
@@ -64,10 +72,13 @@ body.groot .zinkaart p{font-size:1.5rem}
 
   /* ---------- geen herhaling binnen een ronde ---------- */
   var gebruikt = {};
+  /* liever een zin die deze ronde nog in geen enkele soort kwam: anders verraadt
+     "kies de vertaling" het antwoord van "naar het Engels" met dezelfde zin */
   function vers(lijst, deel){
+    var nieuw = lijst.filter(function(z){ return !gebruikt['*' + z.nl]; });
     var over = lijst.filter(function(z){ return !gebruikt[deel + z.nl]; });
-    var z = kies(over.length ? over : lijst);
-    gebruikt[deel + z.nl] = 1;
+    var z = kies(nieuw.length ? nieuw : over.length ? over : lijst);
+    gebruikt[deel + z.nl] = 1; gebruikt['*' + z.nl] = 1;
     return z;
   }
   function pool(niveau, deel){ return Z.filter(function(z){ return z.n === niveau && (deel === 'kies' ? !!z.fout : deel === 'verbeter' ? !!z.mis : true); }); }

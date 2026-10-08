@@ -26,13 +26,19 @@
 <link rel="stylesheet" href="basis.css">
 <link rel="stylesheet" href="spel.css">
 <style>
-.beeld svg.lijn{max-width:420px;width:100%;display:block}
+.beeld svg.getallijn{max-width:420px;width:100%;display:block}
 .beeld svg.strook{max-width:460px;width:100%;display:block}
 .beeld svg.bon{max-width:240px;width:100%;display:block}
 .beeld svg.scherm{max-width:300px;width:100%;display:block}
 .beeld svg.tel{max-width:440px;width:100%;display:block}
 .beeld svg.ico{max-width:120px;width:100%;display:block}
 .uitslagregel svg{max-width:420px;width:100%;display:block;margin:6px auto 0}
+/* op het werkblad: elk beeld op een vaste maat, de rekenmachine met een rand in plaats van een zwart vlak */
+.blad .vakspel .beeld svg.getallijn{width:100%;max-width:420px;height:auto}
+.blad .vakspel .beeld svg.bon{width:220px}
+.blad .vakspel .beeld svg.scherm{width:260px}
+.blad .vakspel .beeld svg.scherm .kast{fill:#fff !important;stroke:#14224C;stroke-width:3}
+.blad .vakspel .beeld svg.ico{width:110px}
 </style>
 <script src="/vangnet.js" defer></script>
 </head>
@@ -60,7 +66,7 @@
   function lijn(n, p, dec){
     p = p || pow10(n); if (dec == null) dec = decVan(p);
     var lo = vast(Math.floor(n / p + 1e-9) * p), hi = vast(lo + p), W = 420, x = 30 + (n - lo) / p * (W - 60);
-    return '<svg class="lijn" viewBox="0 0 ' + W + ' 60" role="img" aria-label="getallenlijn van ' + dz(lo, dec) + ' tot ' + dz(hi, dec) + ' met ' + dz(n) + '">' +
+    return '<svg class="getallijn" viewBox="0 0 ' + W + ' 60" role="img" aria-label="getallenlijn van ' + dz(lo, dec) + ' tot ' + dz(hi, dec) + ' met ' + dz(n) + '">' +
       '<line x1="30" y1="28" x2="' + (W - 30) + '" y2="28" style="stroke:var(--ink);stroke-width:2"/>' +
       [0, 0.5, 1].map(function(t){ return '<line x1="' + (30 + t * (W - 60)) + '" y1="' + (t === 0.5 ? 21 : 17) + '" x2="' + (30 + t * (W - 60)) + '" y2="' + (t === 0.5 ? 35 : 39) + '" style="stroke:var(--ink);stroke-width:2"/>'; }).join('') +
       '<text x="30" y="56" text-anchor="middle" font-size="14" font-weight="600" style="fill:var(--ink)">' + dz(lo, dec) + '</text>' +
@@ -70,7 +76,7 @@
   }
   /* stroken: elk getal een balk, met streepjes per honderdtal (of wat het afrondgetal is) */
   function stroken(getallen, p){
-    var max = Math.max.apply(null, getallen), top = Math.ceil(max / p) * p + p, W = 460, L = 70, uit = '<svg class="strook" viewBox="0 0 ' + W + ' ' + (getallen.length * 34 + 26) + '" role="img" aria-label="stroken van ' + getallen.map(function(g){ return dz(g); }).join(' en ') + '">';
+    var max = Math.max.apply(null, getallen), top = Math.ceil(max / p) * p + p, W = 460, L = 70, uit = '<svg class="strook" viewBox="0 0 ' + (W + 24) + ' ' + (getallen.length * 34 + 26) + '" role="img" aria-label="stroken van ' + getallen.map(function(g){ return dz(g); }).join(' en ') + '">';
     var sch = (W - L - 10) / top, n = top / p;
     for (var i = 0; i <= n; i++){ var x = L + i * p * sch; uit += '<line x1="' + x + '" y1="4" x2="' + x + '" y2="' + (getallen.length * 34 + 6) + '" style="stroke:var(--rand2);stroke-width:1"/>' + (i % (n <= 6 ? 1 : n <= 12 ? 2 : 4) === 0 ? '<text x="' + x + '" y="' + (getallen.length * 34 + 22) + '" text-anchor="middle" font-size="11" style="fill:var(--muted)">' + dz(vast(i * p)) + '</text>' : ''); }
     getallen.forEach(function(g, i){
@@ -81,7 +87,7 @@
   }
   /* een kassabon */
   function bon(regels){
-    var Hh = 52 + regels.length * 22 + 18, uit = '<svg class="bon" viewBox="0 0 240 ' + Hh + '" role="img" aria-label="kassabon met ' + regels.length + ' dingen">';
+    var Hh = 52 + regels.length * 22 + 34, uit = '<svg class="bon" viewBox="0 0 240 ' + Hh + '" role="img" aria-label="kassabon met ' + regels.length + ' dingen">';
     var kartel = ''; for (var k = 0; k < 12; k++) kartel += 'l-9 8-9-8';
     uit += '<path d="M12 6h216v' + (Hh - 18) + kartel + 'z" style="fill:var(--kaart);stroke:var(--rand2);stroke-width:1.5"/>';
     uit += '<text x="120" y="28" text-anchor="middle" font-size="12" font-weight="700" letter-spacing="2" style="fill:var(--muted)">KASSABON</text><line x1="26" y1="36" x2="214" y2="36" style="stroke:var(--rand2);stroke-dasharray:3 3"/>';
@@ -91,7 +97,7 @@
   }
   /* een rekenmachine-scherm met een som erop */
   function scherm(tekst){
-    return '<svg class="scherm" viewBox="0 0 300 70" role="img" aria-label="rekenmachine: ' + S(tekst) + '"><rect x="2" y="2" width="296" height="66" rx="12" style="fill:var(--ink)"/><rect x="14" y="12" width="272" height="46" rx="6" style="fill:var(--kaart2);stroke:var(--rand2)"/>' +
+    return '<svg class="scherm" viewBox="0 0 300 70" role="img" aria-label="rekenmachine: ' + S(tekst) + '"><rect class="kast" x="2" y="2" width="296" height="66" rx="12" style="fill:var(--ink)"/><rect x="14" y="12" width="272" height="46" rx="6" style="fill:var(--kaart2);stroke:var(--rand2)"/>' +
       '<text x="272" y="44" text-anchor="end" font-size="22" font-weight="600" style="fill:var(--ink);font-variant-numeric:tabular-nums">' + S(tekst) + '</text></svg>';
   }
   /* stippen, blokjes of munten, in groepjes van tien (twee rijen van vijf) */
