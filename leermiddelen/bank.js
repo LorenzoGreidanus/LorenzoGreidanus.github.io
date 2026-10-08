@@ -180,11 +180,11 @@ var IN_PATROON = {
   /* de figuren uit Vlakken herkennen (vlak: ruit) en de soorten van De balans (vergelijking: ...) */
   wis: [[/^ruimte: /, 'meetkunde'], [/^woordformules: /, 'verbanden'], [/^voordoen: /, 'algebra'], [/^co\u00f6rdinaten: /, 'meetkunde'], [/^hoeken: /, 'meetkunde'], [/^pythagoras: /, 'meetkunde'], [/^grafieken: /, 'verwerken'], [/^vlak: /, 'meetkunde'], [/^vergelijking: /, 'algebra']],
   ned:   [[/^luisteren: /, 'lezen'], [/^schrijfopdracht: /, 'schrijven'], [/^schrijfopdracht: verbeter/, 'spelling'], [/^begrijpend: /, 'lezen'], [/^alinea: /, 'lezen'], [/^register: /, 'grammatica'], [/^signaalwoorden: /, 'lezen'], [/^woordenschat: /, 'lezen'], [/^samenvatten: /, 'lezen'], [/^dictee: /, 'spelling'], [/^(tegenwoordige tijd|verleden tijd|voltooid deelwoord|de d of t val)$/, 'spelling'], [/^(kernzin|schrijfdoel|tekstverbanden)$/, 'lezen']],
-  eng:   [[/^listening: /, 'luisteren'], [/^situaties: /, 'woordenschat'], [/^reading: /, 'lezen'], [/^dictation: /, 'woordenschat'], [/^translate: /, 'grammatica'], [/^phrasal: /, 'woordenschat'], [/^irregular /, 'werkwoorden'], [/./, 'grammatica']],
+  eng:   [[/^examreading: /, 'lezen'], [/^listening: /, 'luisteren'], [/^situaties: /, 'woordenschat'], [/^reading: /, 'lezen'], [/^dictation: /, 'woordenschat'], [/^translate: /, 'grammatica'], [/^phrasal: /, 'woordenschat'], [/^irregular /, 'werkwoorden'], [/./, 'grammatica']],
   aard:  [[/^water: /, 'examen'], [/^klimaatgrafiek: /, 'klimaat'], [/^bevolkingspiramide: /, 'klimaat'], [/^kaartvaardigheid: /, 'kaart'], [/^topografie/, 'landen']],
   eco:   [[/^bedrijf: /, 'examen'], [/^huishoudboekje: /, 'geld'], [/^vraag en aanbod: /, 'markt']],
   ges:   [[/^contextenvwo: /, 'tijdvakken'], [/^contextenvwo: bron/, 'vaardig'], [/^contextenhavo: /, 'tijdvakken'], [/^contextenhavo: bronnen/, 'vaardig'], [/^contextenhavo: nederland/, 'nl1900'], [/^redeneren: /, 'vaardig'], [/^kaart door de tijd: /, 'vaardig'], [/^wie ben ik: /, 'vaardig'], [/^oorzaak en gevolg: /, 'vaardig'], [/^werken met bronnen$/, 'vaardig']],
-  bio: [[/^afweer: gedrag/, 'natuur'], [/^afweer: evolutie/, 'cellen'], [/^afweer: (verdediging|bloed|immuniteit)/, 'lichaam'], [/^onderzoek: /, 'natuur'], [/^kruisen: /, 'cellen'], [/^voedselweb: /, 'natuur']],
+  bio: [[/^stofwisseling: (fotosynthese|kringloop)/, 'natuur'], [/^stofwisseling: (enzymen|dissimilatie)/, 'cellen'], [/^afweer: gedrag/, 'natuur'], [/^afweer: evolutie/, 'cellen'], [/^afweer: (verdediging|bloed|immuniteit)/, 'lichaam'], [/^onderzoek: /, 'natuur'], [/^kruisen: /, 'cellen'], [/^voedselweb: /, 'natuur']],
   burg: [[/^rechtsstaat: /, 'examen'], [/^afwegen: /, 'samen'], [/^democratie: /, 'staat'], [/^partijen: /, 'staat'], [/^verkiezingen: /, 'staat']]
 };
 function groepVan(vak, o){

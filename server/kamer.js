@@ -404,7 +404,9 @@ const KLAS_SPELLEN = { race: "Vragenrace", metriek: "Het metriek stelsel", eigen
   luisteren: "Luister goed",
   contextenhavo: "Historische contexten havo",
   contextenvwo: "Historische contexten vwo",
-  listening: "Listen carefully" };
+  listening: "Listen carefully",
+  examreading: "Exam reading",
+  stofwisseling: "Stofwisseling" };
 /* Hoe lang de kamer wacht voor hij iemand die wegviel ook echt weghaalt. In de
    lobby kort: herladen duurt een paar tellen. In de arena langer: een
    telefoon die even geen bereik heeft, hoort er niet meteen uit te liggen. */

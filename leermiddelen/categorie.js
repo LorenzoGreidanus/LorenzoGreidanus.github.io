@@ -74,7 +74,7 @@ window.CATEGORIE = (function(){
     ned:  [[/^luisteren: /, 'lezen'], [/^schrijfopdracht: /, 'schrijven'], [/^schrijfopdracht: verbeter/, 'spelling'], [/^begrijpend: /, 'lezen'], [/^alinea: /, 'schrijven'], [/^dictee: /, 'spelling'], [/^(tegenwoordige tijd|verleden tijd|voltooid deelwoord|de d of t val)$/, 'spelling'],
            [/^register: /, 'schrijven'], [/^samenvatten: /, 'schrijven'],
            [/^signaalwoorden: /, 'lezen'], [/^woordenschat: /, 'woordenschat']],
-    eng:  [[/^listening: /, 'luisteren'], [/^situaties: /, 'luisteren'], [/^reading: /, 'lezen'], [/^dictation: /, 'luisteren'], [/^translate: /, 'schrijven'],
+    eng:  [[/^examreading: /, 'lezen'], [/^listening: /, 'luisteren'], [/^situaties: /, 'luisteren'], [/^reading: /, 'lezen'], [/^dictation: /, 'luisteren'], [/^translate: /, 'schrijven'],
            [/^phrasal: /, 'woordenschat'], [/^irregular /, 'grammatica']],
     reken:[[/^bronlezen: /, 'verbanden'], [/^(schatten|cijferen): /, 'getallen'], [/^DHTE /, 'getallen'], [/^(klok|metriek): /, 'meten'],
            [/^verhoudingstabel: /, 'verhoudingen']],
@@ -82,7 +82,7 @@ window.CATEGORIE = (function(){
            [/^(hoeken|pythagoras|vlak): /, 'meetkunde']],
     ges:  [[/^contextenvwo: /, 'tijdvakken'], [/^contextenvwo: bron/, 'vaardig'], [/^contextenhavo: /, 'tijdvakken'], [/^contextenhavo: bronnen/, 'vaardig'], [/^contextenhavo: nederland/, 'nl1900'], [/^redeneren: /, 'vaardig'], [/^tv\d+$/, 'tijdvakken'], [/^wie ben ik: /, 'tijdvakken'], [/^(oorzaak en gevolg|kaart door de tijd): /, 'vaardig']],
     aard: [[/^water: /, 'examen'], [/^topografie/, 'topo'], [/^kaartvaardigheid: /, 'kaart'], [/^klimaatgrafiek: /, 'klimaat'], [/^bevolkingspiramide: /, 'bevolking']],
-    bio:  [[/^afweer: gedrag/, 'natuur'], [/^afweer: evolutie/, 'cellen'], [/^afweer: (verdediging|bloed|immuniteit)/, 'lichaam'], [/^onderzoek: /, 'natuur'], [/^kruisen: /, 'cellen'], [/^voedselweb: /, 'natuur']],
+    bio:  [[/^stofwisseling: (fotosynthese|kringloop)/, 'natuur'], [/^stofwisseling: (enzymen|dissimilatie)/, 'cellen'], [/^afweer: gedrag/, 'natuur'], [/^afweer: evolutie/, 'cellen'], [/^afweer: (verdediging|bloed|immuniteit)/, 'lichaam'], [/^onderzoek: /, 'natuur'], [/^kruisen: /, 'cellen'], [/^voedselweb: /, 'natuur']],
     burg: [[/^rechtsstaat: /, 'examen'], [/^afwegen: /, 'samen'], [/^(democratie|partijen|verkiezingen): /, 'staat']],
     eco:  [[/^bedrijf: /, 'examen'], [/^huishoudboekje: /, 'geld'], [/^vraag en aanbod: /, 'markt']]
   };

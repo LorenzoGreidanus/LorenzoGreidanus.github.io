@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Stofwisseling, versie 1.0: op vakspel.js -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Stofwisseling &middot; meneer Greidanus</title>
+<meta name="description" content="Examenstof biologie havo en vwo over stofwisseling: enzymen, fotosynthese en beperkende factoren, aerobe en anaerobe dissimilatie, ATP, assimilatie en de koolstofkringloop, met grafieken van proeven en rekenen met zuurstof en energie.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Stofwisseling">
+<meta property="og:description" content="Enzymen, fotosynthese, dissimilatie, ATP en de koolstofkringloop: de stofwisseling van cel en organisme voor havo en vwo.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/stofwisseling.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M46.1 9.6 C69.8 7.9 89.2 24.1 90.3 47.4 C91.4 71.1 76.6 91.2 52.7 92.4 C28.8 93.6 10.6 77.9 9.6 54.1 C8.6 30.3 22.4 11.3 46.1 9.6Z' fill='%233F7A34'/><g transform='translate(50 51) scale(2.2) translate(-12 -12)' fill='none' stroke='%23ffffff' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'><path d='M20 4c-8 0-14 4-14 11 0 2 .5 3.5 1.2 4.8'/><path d='M20 4c0 8-4 14-11 14'/><path d='M4 21l6-6'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+/* grafieken en schema's: even breed als de kaart, tot 440 px */
+.beeld svg.sgr{width:100%;max-width:min(100%,440px);height:auto;display:block;margin:0 auto}
+.bijschrift{text-align:center;color:var(--muted);font-size:.84rem;margin:6px 0 0}
+/* een tweede lijnkleur in grafieken; op het werkblad (altijd licht papier) de lichte variant */
+:root{--lijn2:#B83D20;--lijn3:#2f7d52}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--lijn2:#F26749;--lijn3:#8fd8ac}}
+:root[data-theme="dark"]{--lijn2:#F26749;--lijn3:#8fd8ac}
+.blad{--lijn2:#B83D20;--lijn3:#2f7d52}
+/* een korte bron bij de opgave: een proef, een tabel of een reactievergelijking */
+.beeld .bron{max-width:460px;font-size:.95rem;line-height:1.5;background:var(--kaart2);border-radius:12px;padding:10px 14px;margin:0 auto 8px;text-align:left}
+.beeld .rv{font-size:1.02rem;text-align:center;font-variant-numeric:tabular-nums;line-height:1.7}
+.beeld table.st td,.beeld table.st th{min-width:0;padding:6px 10px;font-variant-numeric:tabular-nums}
+/* een schema met lege plekken: de nummers staan in een omlijnd vakje */
+.beeld .gatnr{display:inline-block;min-width:2.2em;text-align:center;border:1.5px solid currentColor;border-radius:6px;padding:0 6px;font-weight:700;font-size:.9rem;line-height:1.5}
+/* juist of onjuist met een reden: hele zinnen, links uitgelijnd */
+#scherm-spel .opties .optie{text-align:left;justify-content:flex-start}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script>
+(function(){
+  'use strict';
+  /* op een werkblad (?werkblad=1) staan de opdrachten zoals ze met een pen kunnen: geen slepen of tikken */
+  var WB = /[?&]werkblad=1/.test(location.search);
+  var SLEEPOPDR = WB ? '' : 'Sleep elk kaartje naar zijn plek, of tik een kaartje en dan het vak.';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  function tussen(a, b){ return a + Math.floor(Math.random() * (b - a + 1)); }
+  function rond(x, n){ var f = Math.pow(10, n || 0); return Math.round(x * f) / f; }
+  /* een getal met een komma (zo kun je het precies zo intypen) */
+  function net(x, n){ return String(rond(x, n === undefined ? 2 : n)).replace('.', ','); }
+  function niv(n){ return n === 'vwo' ? 'v' : 'h'; }
+  function past(it, n){ return it.n.indexOf(niv(n)) >= 0; }
+  function cap(t){ return t.charAt(0).toUpperCase() + t.slice(1); }
+  /* een item uit een lijst; op vwo vaker een vraag die alleen bij vwo hoort */
+  function kiesItem(lijst, n){
+    var eigen = lijst.filter(function(it){ return it.n === 'v'; });
+    if (n === 'vwo' && eigen.length && Math.random() < .65) return kies(eigen);
+    return kies(lijst.filter(function(it){ return past(it, n); }));
+  }
+  function bron(h){ return '<div class="bron">' + h + '</div>'; }
+
+  var DEEL = {
+    enzymen:{ od:'stofwisseling: enzymen', naam:'enzymen' },
+    fotosynthese:{ od:'stofwisseling: fotosynthese', naam:'fotosynthese' },
+    dissimilatie:{ od:'stofwisseling: dissimilatie', naam:'dissimilatie en ATP' },
+    kringloop:{ od:'stofwisseling: kringloop', naam:'assimilatie en koolstofkringloop' }
+  };
+  function basis(deel, sleutel){ return { onderdeel:DEEL[deel].od, onderdeelNaam:DEEL[deel].naam, sleutel:sleutel }; }
+
+  /* ---------- opgaven uit een lijst ----------
+     Een item: { n:'hv' (havo en vwo), 'h' of 'v', k:sleutel, v:vraag, o:[goed, fout, fout, fout], u:uitleg }
+     of met a (een open antwoord: getal of lijst met goede woorden) in plaats van o.
+     jo: een juist/onjuist-vraag; dan staan de keuzes in vaste volgorde en is g het goede antwoord. */
+  function uitLijst(deel, it){
+    var o = Object.assign(basis(deel, it.k), { vraag:it.v, beeld:it.b || '', uitleg:it.u });
+    if (it.a !== undefined){
+      var num = typeof it.a === 'number';
+      return Object.assign(o, { vorm:'invul', opdracht:it.op || (num ? 'Schrijf het getal op.' : 'Schrijf het begrip op.'),
+        velden:[{ label:it.l || (num ? 'antwoord' : 'begrip'), antwoord:it.a, tol:it.tol || 0.001, eenheid:it.e || '', type:num ? undefined : 'tekst', breed:!num }],
+        antwoordTekst:num ? net(it.a) + (it.e ? ' ' + it.e : '') : it.a[0] });
+    }
+    if (it.jo) return Object.assign(o, { vorm:'meerkeuze', opdracht:'Is de bewering juist of onjuist? Kies het antwoord met de goede reden.', opties:it.o, goed:it.g, vasteVolgorde:true, antwoordTekst:it.o[it.g] });
+    return Object.assign(o, { vorm:'meerkeuze', opdracht:it.op || '', opties:it.o, goed:0, antwoordTekst:it.o[0] });
+  }
+  /* een juist/onjuist-vraag: twee keer juist, twee keer onjuist, met elk een reden; g is het goede */
+  function jo(n, k, bewering, juist1, juist2, onjuist1, onjuist2, g, u){
+    return { n:n, k:k, jo:true, v:'Bewering: <i>' + bewering + '</i>', o:['Juist, want ' + juist1, 'Juist, want ' + juist2, 'Onjuist, want ' + onjuist1, 'Onjuist, want ' + onjuist2], g:g, u:u };
+  }
+
+  /* ================= tekenen ================= */
+  /* een assenstelsel: o = { xmin, xmax, xstap, xlab, ymin, ymax, ystap, ylab, xnaam, ynaam, hoog, titel } */
+  function assen(o){
+    var W = 400, Hh = o.hoog || 260, L = 52, R = 16, T = 42, B = 46;
+    var sx = (W - L - R) / (o.xmax - o.xmin), sy = (Hh - T - B) / (o.ymax - o.ymin);
+    function X(x){ return rond(L + (x - o.xmin) * sx, 1); }
+    function Y(y){ return rond(T + (o.ymax - y) * sy, 1); }
+    var s = '', x, y, i, n;
+    s += '<g stroke="var(--rand2)" stroke-width="1">';
+    n = Math.round((o.xmax - o.xmin) / o.xstap);
+    for (i = 0; i <= n; i++){ x = o.xmin + i * o.xstap; s += '<line x1="' + X(x) + '" y1="' + T + '" x2="' + X(x) + '" y2="' + (Hh - B) + '"/>'; }
+    n = Math.round((o.ymax - o.ymin) / o.ystap);
+    for (i = 0; i <= n; i++){ y = o.ymin + i * o.ystap; s += '<line x1="' + L + '" y1="' + Y(y) + '" x2="' + (W - R) + '" y2="' + Y(y) + '"/>'; }
+    var ybasis = o.ymin < 0 && o.ymax > 0 ? Y(0) : Hh - B;
+    s += '</g><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="' + L + '" y1="' + ybasis + '" x2="' + (W - R) + '" y2="' + ybasis + '"/><line x1="' + L + '" y1="' + T + '" x2="' + L + '" y2="' + (Hh - B) + '"/></g>';
+    s += '<g font-size="14" fill="var(--muted)">';
+    n = Math.floor((o.xmax - o.xmin) / o.xlab + 1e-9);
+    for (i = 0; i <= n; i++){ x = o.xmin + i * o.xlab; s += '<text x="' + X(x) + '" y="' + (Hh - B + 18) + '" text-anchor="middle">' + (o.xtekst ? o.xtekst(x) : net(x)) + '</text>'; }
+    n = Math.floor((o.ymax - o.ymin) / o.ylab + 1e-9);
+    for (i = 0; i <= n; i++){ y = o.ymin + i * o.ylab; s += '<text x="' + (L - 6) + '" y="' + (Y(y) + 5) + '" text-anchor="end">' + (y < 0 ? '−' + net(-y) : net(y)) + '</text>'; }
+    s += '</g><g font-size="14" font-weight="600" fill="currentColor">';
+    s += '<text x="' + (W - R) + '" y="' + (Hh - 8) + '" text-anchor="end">' + S(o.xnaam) + '</text>';
+    s += '<text x="' + (L - 44) + '" y="' + (T - 22) + '">' + S(o.ynaam) + '</text>';
+    s += '</g>';
+    return { X:X, Y:Y, kop:'<svg class="sgr" viewBox="0 0 ' + W + ' ' + Hh + '" overflow="visible" font-family="inherit" role="img" aria-label="' + S(o.aria || 'grafiek') + '">' + s, staart:'</svg>' };
+  }
+  /* een vloeiende lijn door punten (monotone kubische interpolatie): geen bobbels die niet in de meting zitten */
+  function glad(p, per){
+    per = per || 16;
+    var n = p.length, d = [], m = [], i, uit = [];
+    for (i = 0; i < n - 1; i++) d.push((p[i + 1][1] - p[i][1]) / (p[i + 1][0] - p[i][0]));
+    m[0] = d[0]; m[n - 1] = d[n - 2];
+    for (i = 1; i < n - 1; i++) m[i] = d[i - 1] * d[i] <= 0 ? 0 : (d[i - 1] + d[i]) / 2;
+    for (i = 0; i < n - 1; i++){
+      if (d[i] === 0){ m[i] = 0; m[i + 1] = 0; continue; }
+      var a = m[i] / d[i], b = m[i + 1] / d[i], h = a * a + b * b;
+      if (h > 9){ var t = 3 / Math.sqrt(h); m[i] = t * a * d[i]; m[i + 1] = t * b * d[i]; }
+    }
+    for (i = 0; i < n - 1; i++){
+      var x0 = p[i][0], x1 = p[i + 1][0], y0 = p[i][1], y1 = p[i + 1][1], hh = x1 - x0;
+      for (var k = 0; k < per; k++){
+        var s = k / per, s2 = s * s, s3 = s2 * s;
+        uit.push([x0 + s * hh, (2 * s3 - 3 * s2 + 1) * y0 + (s3 - 2 * s2 + s) * hh * m[i] + (-2 * s3 + 3 * s2) * y1 + (s3 - s2) * hh * m[i + 1]]);
+      }
+    }
+    uit.push(p[n - 1]);
+    return uit;
+  }
+  function lijn(a, punten, kleur, streep){
+    return '<polyline points="' + punten.map(function(p){ return a.X(p[0]) + ',' + a.Y(p[1]); }).join(' ') + '" fill="none" stroke="' + kleur + '" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"' + (streep ? ' stroke-dasharray="7 5"' : '') + '/>';
+  }
+  function tekst(a, x, y, t, kleur, anker, dx, dy){
+    return '<text x="' + rond(a.X(x) + (dx || 0), 1) + '" y="' + rond(a.Y(y) + (dy || 0), 1) + '" font-size="14" font-weight="700" fill="' + (kleur || 'currentColor') + '" text-anchor="' + (anker || 'start') + '">' + t + '</text>';
+  }
+  function stip(a, x, y, letter, kleur, dx, dy){
+    return '<circle cx="' + a.X(x) + '" cy="' + a.Y(y) + '" r="5" fill="' + (kleur || 'currentColor') + '"/>' + (letter ? tekst(a, x, y, letter, 'currentColor', 'middle', dx || 0, dy || -10) : '');
+  }
+  var L1 = 'var(--nadruk)', L2 = 'var(--lijn2)', L3 = 'var(--lijn3)';
+
+
+  /* ================= 1. enzymen ================= */
+  var ENZ_LIJST = [
+    { n:'hv', k:'ek1', v:'Wat doet een enzym met de activeringsenergie van een reactie?', o:[
+      'Het verlaagt de activeringsenergie, zodat de reactie bij lichaamstemperatuur snel genoeg verloopt.',
+      'Het levert de activeringsenergie, zodat de reactie kan beginnen.',
+      'Het verhoogt de activeringsenergie, zodat de reactie niet te snel gaat.',
+      'Het verandert de hoeveelheid energie die bij de reactie in totaal vrijkomt.'],
+      u:'Een enzym is een biokatalysator: het verlaagt de activeringsenergie. Het levert zelf geen energie, en hoeveel energie de reactie in totaal oplevert of kost, verandert niet.' },
+    { n:'hv', k:'ek2', v:'Wat is er na afloop van de reactie met het enzym gebeurd?', o:[
+      'Niets: het is onveranderd en kan opnieuw een substraatmolecuul binden.',
+      'Het is opgebruikt en moet opnieuw worden gemaakt.',
+      'Het is omgezet in een van de producten.',
+      'Het is gedenatureerd door de reactie.'],
+      u:'Een katalysator wordt bij de reactie niet verbruikt. Na het loslaten van de producten is de actieve plaats weer vrij. Daarom is er van een enzym maar weinig nodig.' },
+    { n:'hv', k:'ek3', v:'Amylase breekt zetmeel af, maar geen cellulose, hoewel beide uit glucose-eenheden bestaan. Hoe komt dat?', o:[
+      'De bindingen tussen de glucose-eenheden zijn anders, en de actieve plaats past alleen bij de binding in zetmeel.',
+      'Cellulose is te groot om door een enzym te worden afgebroken.',
+      'Cellulose denatureert het amylase.',
+      'Amylase werkt alleen in de mond en cellulose komt pas in de darm.'],
+      u:'Enzymen zijn specifiek: het substraat moet in de actieve plaats passen. In zetmeel en cellulose zitten de glucose-eenheden op een andere manier aan elkaar vast; amylase past alleen op de binding in zetmeel.' },
+    jo('hv', 'ek4', 'Bij 0 °C is de activiteit van een enzym bijna nul, omdat het enzym dan gedenatureerd is.',
+      'bij een lage temperatuur verandert de vorm van de actieve plaats blijvend.', 'het enzym bevriest bij 0 °C.',
+      'bij een lage temperatuur bewegen de moleculen langzaam, zodat er weinig botsingen zijn; het enzym zelf is niet beschadigd.', 'enzymen werken bij 0 °C het best.', 2,
+      'Bij lage temperatuur bewegen enzym en substraat langzaam en botsen ze zelden. Warm je het weer op, dan werkt het enzym weer normaal. Denatureren (blijvend van vorm veranderen) gebeurt bij een te hoge temperatuur.'),
+    { n:'hv', k:'ek5', v:'Speeksel bevat amylase. Met het voedsel komt het in de maag, waar de pH ongeveer 2 is. Wat gebeurt er met de werking van het amylase in de maag?', o:[
+      'Die stopt vrijwel, omdat de pH ver van het optimum van amylase ligt.',
+      'Die wordt sneller, omdat de maag warmer is dan de mond.',
+      'Die blijft gelijk, omdat enzymen bij elke pH even goed werken.',
+      'Die wordt sneller, omdat er in de maag meer zetmeel is.'],
+      u:'Speekselamylase werkt het best bij een pH rond 7. In het zure maagsap verandert de vorm van het enzym en stopt de afbraak van zetmeel. Pas in de dunne darm gaat amylase uit de alvleesklier verder.' },
+    { n:'hv', k:'ek6', v:'Lactase splitst melksuiker (lactose) in glucose en galactose. Mensen met lactose-intolerantie maken te weinig lactase. Waarom krijgen zij darmklachten van melk?', o:[
+      'Lactose wordt niet gesplitst en komt in de dikke darm, waar bacteriën het vergisten en er gassen ontstaan.',
+      'Lactase hoopt zich op in de darm en veroorzaakt een ontsteking.',
+      'Galactose is giftig voor de darmwand.',
+      'Melk denatureert de andere enzymen in de darm.'],
+      u:'Zonder lactase kan lactose niet worden opgenomen; alleen glucose en galactose gaan door de darmwand. De lactose gaat door naar de dikke darm. Daar vergisten bacteriën het, en dat geeft gas en buikpijn.' },
+    { n:'hv', k:'ek7', v:'Een wasmiddel bevat enzymen die vlekken van eiwit en vet afbreken. Op de verpakking staat: was op 30 tot 40 °C. Waarom niet op 90 °C?', o:[
+      'Bij 90 °C denatureren de enzymen, zodat ze de vlekken niet meer afbreken.',
+      'Bij 90 °C werken de enzymen te snel en beschadigen ze de kleding.',
+      'Bij 90 °C lossen de vlekken vanzelf op, dus de enzymen zijn niet nodig.',
+      'Bij 90 °C zijn er te weinig botsingen tussen enzym en vlek.'],
+      u:'Een hoge temperatuur verandert de ruimtelijke vorm van het enzym blijvend (denaturatie). Dan past het substraat niet meer in de actieve plaats.' },
+    { n:'hv', k:'ek8', v:'Hoe heet het deel van een enzym waar het substraat bindt?', a:['actieve plaats', 'actief centrum', 'actieve centrum', 'active site', 'actieve plek'],
+      u:'Het substraat bindt in de <b>actieve plaats</b> (ook wel actief centrum). Zo ontstaat het enzym-substraatcomplex.' },
+    { n:'hv', k:'ek9', v:'Een eiwit verliest door verhitting blijvend zijn ruimtelijke vorm. Hoe heet dit proces?', a:['denaturatie', 'denatureren', 'denaturering', 'denatureert', 'gedenatureerd'],
+      u:'Dat is <b>denaturatie</b>. Het enzym kan daarna geen substraat meer binden, ook niet als het weer afkoelt.' },
+    { n:'hv', k:'ek10', v:'Waarom stijgt de activiteit van een enzym als de temperatuur van 10 °C naar 30 °C gaat?', o:[
+      'Enzym en substraat bewegen sneller en botsen vaker.',
+      'Er worden meer enzymen gemaakt.',
+      'De actieve plaats wordt groter.',
+      'Het substraat denatureert, waardoor het makkelijker breekt.'],
+      u:'Bij een hogere temperatuur bewegen moleculen sneller. Er ontstaan per seconde meer enzym-substraatcomplexen. Dat gaat door tot het optimum; daarboven begint het enzym te denatureren.' },
+    { n:'v', k:'ek11', v:'In een reeks reacties A → B → C → D remt stof D het enzym dat A omzet in B. Wat is het effect van deze regeling?', o:[
+      'Als er veel D is, wordt er minder D gemaakt: negatieve terugkoppeling.',
+      'Als er veel D is, wordt er nog meer D gemaakt: positieve terugkoppeling.',
+      'Stof D wordt door het enzym weer omgezet in A.',
+      'Stof D denatureert het enzym, zodat de reeks voorgoed stopt.'],
+      u:'Dit heet eindproductremming. Het eindproduct remt het eerste enzym van de reeks. Is er genoeg D, dan wordt de aanmaak afgeremd; daalt D, dan gaat de remming eraf. Zo blijft de hoeveelheid D ongeveer gelijk.' },
+    { n:'v', k:'ek12', v:'Een remmer bindt aan een enzym op een andere plek dan de actieve plaats. Daardoor verandert de vorm van de actieve plaats. Wat gebeurt er als je veel extra substraat toevoegt?', o:[
+      'De maximale reactiesnelheid blijft lager, want het substraat verdringt de remmer niet.',
+      'De remming verdwijnt, want het substraat verdringt de remmer uit de actieve plaats.',
+      'De reactiesnelheid wordt hoger dan zonder remmer.',
+      'Het enzym denatureert door het vele substraat.'],
+      u:'Dit is een niet-competitieve remmer: hij concurreert niet met het substraat om de actieve plaats. Meer substraat helpt dus niet. Bij een competitieve remmer, die wel in de actieve plaats bindt, verdringt veel substraat de remmer wel.' },
+    { n:'v', k:'ek13', v:'Veel enzymen hebben een cofactor nodig, zoals een metaalion. Wat gebeurt er als die cofactor ontbreekt?', o:[
+      'Het enzym werkt niet of nauwelijks, omdat de actieve plaats dan niet goed functioneert.',
+      'Het enzym werkt sneller, omdat de actieve plaats vrij is.',
+      'Het enzym wordt een ander enzym met een ander substraat.',
+      'Het enzym denatureert meteen.'],
+      u:'Een cofactor is nodig voor de binding van het substraat of voor de reactie zelf. Zonder cofactor is het enzym inactief. Daarom heb je kleine hoeveelheden mineralen en vitamines nodig: veel cofactoren en co-enzymen komen daaruit.' },
+    jo('v', 'ek14', 'Een competitieve remmer verlaagt de maximale reactiesnelheid van een enzym, ook bij een zeer hoge substraatconcentratie.',
+      'de remmer bindt blijvend aan het enzym.', 'de remmer verandert de vorm van het enzym.',
+      'bij een zeer hoge substraatconcentratie wint het substraat de concurrentie om de actieve plaats, zodat de maximale snelheid toch wordt bereikt.', 'een competitieve remmer heeft geen effect op de reactiesnelheid.', 2,
+      'Een competitieve remmer lijkt op het substraat en bindt in de actieve plaats. Hoe meer substraat, hoe kleiner de kans dat de remmer bindt. Bij een heel hoge substraatconcentratie wordt de maximale snelheid daarom wel gehaald; je hebt er alleen meer substraat voor nodig.'),
+    { n:'v', k:'ek15', v:'Waarom verandert de activiteit van een enzym als de pH verandert?', o:[
+      'H⁺-ionen veranderen de ladingen in het eiwit, waardoor de vorm van de actieve plaats verandert.',
+      'Bij een andere pH bewegen de moleculen langzamer.',
+      'Bij een andere pH wordt het enzym verbruikt.',
+      'H⁺-ionen binden aan het substraat, waardoor het groter wordt.'],
+      u:'De ruimtelijke vorm van een eiwit hangt af van onder andere ionbindingen en waterstofbruggen tussen zijgroepen. De pH verandert de lading van die groepen, en daarmee de vorm van de actieve plaats.' },
+    { n:'v', k:'ek16', v:'Een enzym uit een bacterie in heetwaterbronnen werkt nog goed bij 75 °C, terwijl de meeste enzymen van de mens dan gedenatureerd zijn. Welke verklaring past hierbij?', o:[
+      'De ruimtelijke structuur van dit eiwit wordt door meer bindingen binnen het eiwit bij elkaar gehouden.',
+      'Dit enzym is geen eiwit.',
+      'Bij 75 °C botsen de moleculen te snel om te denatureren.',
+      'De bacterie maakt het enzym steeds opnieuw aan, zodat er altijd genoeg is.'],
+      u:'Of een eiwit denatureert, hangt af van hoe sterk zijn vorm wordt vastgehouden. Eiwitten van zulke bacteriën hebben extra bindingen, waardoor ze pas bij een veel hogere temperatuur hun vorm verliezen.' }
+  ];
+
+  /* --- de temperatuurgrafiek: activiteit bij verschillende temperaturen --- */
+  var ENZ_HERKOMST = [
+    { w:'een enzym uit de mens', opt:[37, 40], xmax:80 },
+    { w:'een enzym uit een bacterie die in heetwaterbronnen leeft', opt:[65, 70, 75], xmax:100 },
+    { w:'een enzym uit een plant', opt:[25, 30, 35], xmax:70 }
+  ];
+  function tempLijn(T0, xmax){
+    return glad([[0, 6], [rond(T0 * .5), 26], [rond(T0 * .8), 62], [T0, 100], [T0 + 5, 62], [T0 + 9, 14], [T0 + 12, 0], [xmax, 0]]);
+  }
+  function tempGrafiek(lijnen, xmax){
+    var a = assen({ xmin:0, xmax:xmax, xstap:5, xlab:xmax > 80 ? 20 : 10, ymin:0, ymax:100, ystap:10, ylab:20, xnaam:'temperatuur (°C)', ynaam:'activiteit (%)', aria:'activiteit van het enzym bij verschillende temperaturen' });
+    return a.kop + lijnen.map(function(l){ return lijn(a, tempLijn(l.T0, xmax), l.kleur) + (l.naam ? tekst(a, l.T0 + 4, 92, l.naam, l.kleur) : ''); }).join('') + a.staart;
+  }
+  function enzTemp(n){
+    var c = kies(ENZ_HERKOMST), T0 = kies(c.opt);
+    var soorten = ['opt', 'hoog', 'laag', 'terug', 'koud'];
+    if (n === 'vwo') soorten.push('twee');
+    var s = kies(soorten);
+    var intro = 'In een proef wordt de activiteit gemeten van ' + c.w + ', bij verschillende temperaturen. De grafiek toont de resultaten.';
+    var beeld = tempGrafiek([{ T0:T0, kleur:L1 }], c.xmax), k = 'et-' + s + T0;
+    if (s === 'opt') return Object.assign(basis('enzymen', k), { vorm:'invul', vraag:intro + ' Bij welke temperatuur werkt dit enzym het best?', opdracht:'Lees de grafiek af.', beeld:beeld,
+      velden:[{ label:'temperatuur', antwoord:T0, tol:2, eenheid:'°C' }], uitleg:'De top van de grafiek ligt bij <b>' + T0 + ' °C</b>: dat is de optimumtemperatuur. Daar is de activiteit 100%.', antwoordTekst:T0 + ' °C' });
+    if (s === 'hoog') return Object.assign(basis('enzymen', k), { vorm:'meerkeuze', vraag:intro + ' Waarom daalt de activiteit boven ' + T0 + ' °C zo snel?', beeld:beeld, opties:[
+      'Het enzym denatureert: de vorm van de actieve plaats verandert, zodat het substraat niet meer past.',
+      'Het enzym is opgebruikt.',
+      'Enzym en substraat bewegen te langzaam om te botsen.',
+      'Het product van de reactie lost niet meer op.'], goed:0,
+      uitleg:'Boven het optimum gaan bindingen in het eiwit kapot en verandert de ruimtelijke vorm. Dat heet denaturatie. Het enzym wordt niet opgebruikt, en bij hogere temperatuur bewegen moleculen juist sneller.', antwoordTekst:'Het enzym denatureert.' });
+    if (s === 'laag'){
+      var t = rond(T0 * .3 / 5) * 5 || 5;
+      return Object.assign(basis('enzymen', k + t), { vorm:'meerkeuze', vraag:intro + ' Waarom is de activiteit bij ' + t + ' °C laag?', beeld:beeld, opties:[
+        'De moleculen bewegen langzaam, zodat enzym en substraat weinig botsen.',
+        'Het enzym is bij deze temperatuur gedenatureerd.',
+        'Er is bij deze temperatuur geen substraat meer.',
+        'Het enzym is bij lage temperatuur opgebruikt.'], goed:0,
+        uitleg:'Bij een lage temperatuur bewegen de moleculen traag en ontstaan er weinig enzym-substraatcomplexen. Het enzym is niet beschadigd: verwarm je het tot ' + T0 + ' °C, dan werkt het weer optimaal.', antwoordTekst:'Weinig botsingen door langzame beweging.' });
+    }
+    if (s === 'terug'){
+      var heet = T0 + 15;
+      return Object.assign(uitLijst('enzymen', jo('hv', k, 'Als je het enzym eerst tien minuten op ' + heet + ' °C houdt en daarna afkoelt tot ' + T0 + ' °C, is de activiteit weer 100%.',
+        'het enzym past zich aan de temperatuur aan.', 'bij ' + T0 + ' °C is de activiteit altijd 100%.',
+        'bij ' + heet + ' °C is het enzym gedenatureerd, en dat is blijvend.', 'het enzym werkt na afkoelen beter dan 100%.', 2,
+        'Bij ' + heet + ' °C is de activiteit volgens de grafiek 0%: het enzym is gedenatureerd. Denaturatie is onomkeerbaar; afkoelen herstelt de vorm van de actieve plaats niet.')), { vraag:intro + '<br>Bewering: <i>Als je het enzym eerst tien minuten op ' + heet + ' °C houdt en daarna afkoelt tot ' + T0 + ' °C, is de activiteit weer 100%.</i>', beeld:beeld });
+    }
+    if (s === 'koud'){
+      return Object.assign(uitLijst('enzymen', jo('hv', k, 'Als je het enzym een uur bij 2 °C bewaart en daarna opwarmt tot ' + T0 + ' °C, is de activiteit weer ongeveer 100%.',
+        'bij lage temperatuur verandert het enzym niet blijvend; alleen de botsingen worden minder.', 'het enzym wordt in de kou sterker.',
+        'bij 2 °C is het enzym gedenatureerd.', 'na afkoelen werkt een enzym nooit meer.', 0,
+        'Kou remt een enzym alleen zolang het koud is: de moleculen bewegen trager. De vorm blijft intact, dus bij ' + T0 + ' °C werkt het weer optimaal. Daarom kun je enzymen in de koelkast bewaren.')), { vraag:intro + '<br>Bewering: <i>Als je het enzym een uur bij 2 °C bewaart en daarna opwarmt tot ' + T0 + ' °C, is de activiteit weer ongeveer 100%.</i>', beeld:beeld });
+    }
+    /* twee: een enzym uit de mens en een uit een heetwaterbacterie */
+    var Ta = kies([37, 40]), Tb = kies([65, 70, 75]), pLetter = kies([['P', 'Q'], ['Q', 'P']]);
+    return Object.assign(basis('enzymen', 'et-twee' + Ta + Tb + pLetter[0]), { vorm:'meerkeuze',
+      vraag:'De grafiek toont de activiteit van hetzelfde soort enzym uit twee organismen: een mens en een bacterie uit een heetwaterbron. Welke conclusie is juist?',
+      beeld:tempGrafiek([{ T0:Ta, kleur:L1, naam:pLetter[0] }, { T0:Tb, kleur:L2, naam:pLetter[1] }], 100), opties:[
+        'Lijn ' + pLetter[1] + ' hoort bij de bacterie; dit enzym denatureert pas bij een hogere temperatuur.',
+        'Lijn ' + pLetter[0] + ' hoort bij de bacterie; bij hoge temperatuur werkt elk enzym slechter.',
+        'Beide enzymen denatureren bij dezelfde temperatuur.',
+        'Bij ' + Ta + ' °C werkt het enzym van lijn ' + pLetter[1] + ' beter dan dat van lijn ' + pLetter[0] + '.'], goed:0,
+      uitleg:'Een bacterie uit een heetwaterbron leeft bij hoge temperatuur; zijn enzymen hebben daar hun optimum (lijn ' + pLetter[1] + ', rond ' + Tb + ' °C). Het enzym van de mens (lijn ' + pLetter[0] + ') is boven ongeveer ' + (Ta + 10) + ' °C al gedenatureerd.', antwoordTekst:'Lijn ' + pLetter[1] + ' hoort bij de bacterie.' });
+  }
+
+  /* --- de pH-grafiek: pepsine uit de maag en een enzym uit de mond of de dunne darm --- */
+  function phLijn(opt){
+    var p = [[opt - 3, 0], [opt - 2, 14], [opt - 1, 62], [opt, 100], [opt + 1, 62], [opt + 2, 14], [opt + 3, 0]].filter(function(q){ return q[0] >= 0 && q[0] <= 12; });
+    if (p[0][0] > 0) p.unshift([0, 0]); if (p[p.length - 1][0] < 12) p.push([12, 0]);
+    return glad(p);
+  }
+  function enzPh(n){
+    var ander = kies([{ w:'amylase uit speeksel', opt:7, plek:'de mond' }, { w:'trypsine, dat in de dunne darm werkt', opt:8, plek:'de dunne darm' }]);
+    var lt = kies([['P', 'Q'], ['Q', 'P']]);   /* lt[0] is pepsine */
+    var a = assen({ xmin:0, xmax:12, xstap:1, xlab:2, ymin:0, ymax:100, ystap:10, ylab:20, xnaam:'pH', ynaam:'activiteit (%)', aria:'activiteit van twee enzymen bij verschillende pH' });
+    var beeld = a.kop + lijn(a, phLijn(2), L1) + lijn(a, phLijn(ander.opt), L2) + tekst(a, 2, 100, lt[0], L1, 'middle', 0, -8) + tekst(a, ander.opt, 100, lt[1], L2, 'middle', 0, -8) + a.staart;
+    var intro = 'De grafiek toont de activiteit van twee verteringsenzymen bij verschillende pH: pepsine en ' + ander.w + '.';
+    var soorten = ['pep', 'opt', 'maag'];
+    var s = kies(soorten), k = 'ep-' + s + ander.opt + lt[0];
+    if (s === 'pep') return Object.assign(basis('enzymen', k), { vorm:'meerkeuze', vraag:intro + ' Pepsine werkt in de maag. Welke lijn hoort bij pepsine?', beeld:beeld,
+      opties:['lijn ' + lt[0], 'lijn ' + lt[1]], goed:0, vasteVolgorde:true,
+      uitleg:'Maagsap is zuur: de pH is ongeveer 2. Pepsine heeft daar zijn optimum, dus het hoort bij lijn ' + lt[0] + '. Het enzym van lijn ' + lt[1] + ' werkt het best bij pH ' + ander.opt + ', in ' + ander.plek + '.', antwoordTekst:'lijn ' + lt[0] });
+    if (s === 'opt') return Object.assign(basis('enzymen', k), { vorm:'invul', vraag:intro + ' Bij welke pH werkt het enzym van lijn ' + lt[1] + ' het best?', opdracht:'Lees de grafiek af.', beeld:beeld,
+      velden:[{ label:'pH', antwoord:ander.opt, tol:.5 }], uitleg:'De top van lijn ' + lt[1] + ' ligt bij <b>pH ' + ander.opt + '</b>. Dat past bij ' + ander.plek + ', waar de pH ongeveer neutraal tot licht basisch is.', antwoordTekst:'pH ' + ander.opt });
+    return Object.assign(basis('enzymen', k), { vorm:'meerkeuze', vraag:intro + ' Het enzym van lijn ' + lt[1] + ' komt in een omgeving met pH 2. Wat gebeurt er?', beeld:beeld, opties:[
+      'De activiteit is daar vrijwel nul, omdat de pH ver van het optimum ligt.',
+      'De activiteit is daar maximaal.',
+      'De activiteit is daar ongeveer de helft van het maximum.',
+      'Het enzym wordt omgezet in pepsine.'], goed:0,
+      uitleg:'Bij pH 2 ligt lijn ' + lt[1] + ' op 0%. Het zuur verandert de vorm van de actieve plaats, zodat het enzym niet werkt. Alleen pepsine (lijn ' + lt[0] + ') werkt bij die pH.', antwoordTekst:'Vrijwel geen activiteit.' });
+  }
+
+  /* --- substraatconcentratie en remmers --- */
+  function mm(vmax, km){ var p = []; for (var x = 0; x <= 20.0001; x += .5) p.push([x, vmax * x / (km + x)]); return p; }
+  function enzSubstraat(n){
+    var a = assen({ xmin:0, xmax:20, xstap:2, xlab:4, ymin:0, ymax:100, ystap:10, ylab:20, xnaam:'substraat (mmol/L)', ynaam:'reactiesnelheid (%)', aria:'reactiesnelheid bij verschillende substraatconcentraties' });
+    if (n !== 'vwo'){
+      var s = kies(['verz', 'meer']);
+      var beeld = a.kop + lijn(a, mm(100, .8), L1) + a.staart;
+      var intro = 'In een proef wordt de reactiesnelheid van een enzym gemeten bij verschillende substraatconcentraties. De hoeveelheid enzym is steeds gelijk.';
+      if (s === 'verz') return Object.assign(basis('enzymen', 'es-verz'), { vorm:'meerkeuze', vraag:intro + ' Waarom neemt de reactiesnelheid bij een hoge substraatconcentratie bijna niet meer toe?', beeld:beeld, opties:[
+        'Bijna alle actieve plaatsen zijn steeds bezet: het enzym is de beperkende factor.',
+        'Het substraat is op.',
+        'Het enzym is gedenatureerd door het vele substraat.',
+        'Bij veel substraat bewegen de moleculen langzamer.'], goed:0,
+        uitleg:'Bij weinig substraat bepaalt het substraat de snelheid. Bij veel substraat is elk enzymmolecuul steeds bezig: meer substraat kan niet sneller worden omgezet. Het substraat is juist in overmaat aanwezig, niet op.', antwoordTekst:'Alle actieve plaatsen zijn bezet.' });
+      return Object.assign(basis('enzymen', 'es-meer'), { vorm:'meerkeuze', vraag:intro + ' De proef wordt herhaald met twee keer zoveel enzym. Wat verwacht je bij een hoge substraatconcentratie?', beeld:beeld, opties:[
+        'De reactiesnelheid wordt ongeveer twee keer zo hoog.',
+        'De reactiesnelheid blijft gelijk.',
+        'De reactiesnelheid wordt lager.',
+        'De reactie stopt eerder, omdat het enzym sneller op is.'], goed:0,
+        uitleg:'Bij een hoge substraatconcentratie is het enzym de beperkende factor. Met twee keer zoveel enzym zijn er twee keer zoveel actieve plaatsen, dus kan er per seconde ongeveer twee keer zoveel substraat worden omgezet.', antwoordTekst:'Ongeveer twee keer zo hoog.' });
+    }
+    var comp = Math.random() < .5, lt = kies([['P', 'Q'], ['Q', 'P']]);
+    var met = comp ? mm(100, 2.4) : mm(50, .8);
+    var beeld2 = a.kop + lijn(a, mm(100, .8), L1) + lijn(a, met, L2, true) + tekst(a, 19.4, 100 * 19.4 / 20.2, lt[0], L1, 'end', 0, -10) + tekst(a, 19.4, met[met.length - 2][1], lt[1], L2, 'end', 0, 22) + a.staart;
+    var intro2 = 'Lijn ' + lt[0] + ' toont de reactiesnelheid van een enzym zonder remmer, lijn ' + lt[1] + ' van hetzelfde enzym met een vaste hoeveelheid remmer.';
+    var s2 = kies(['type', 'veel']);
+    if (s2 === 'type') return Object.assign(basis('enzymen', 'es-type' + (comp ? 'c' : 'n') + lt[0]), { vorm:'meerkeuze', vraag:intro2 + ' Wat voor remmer is gebruikt?', beeld:beeld2, opties:[
+      comp ? 'een competitieve remmer: bij veel substraat nadert lijn ' + lt[1] + ' toch de snelheid van lijn ' + lt[0] : 'een niet-competitieve remmer: ook bij veel substraat blijft lijn ' + lt[1] + ' op de helft',
+      comp ? 'een niet-competitieve remmer: de remmer bindt buiten de actieve plaats' : 'een competitieve remmer: de remmer bindt in de actieve plaats',
+      'een stof die het enzym denatureert, want de lijn is lager',
+      'Dat is niet te zeggen, want beide lijnen stijgen.'], goed:0,
+      uitleg:comp ? 'Een competitieve remmer concurreert met het substraat om de actieve plaats. Bij veel substraat wint het substraat, dus lijn ' + lt[1] + ' kruipt naar dezelfde maximale snelheid toe; hij stijgt alleen langzamer.'
+        : 'Een niet-competitieve remmer bindt buiten de actieve plaats en verandert de vorm van het enzym. Extra substraat verdringt hem niet, dus de maximale snelheid blijft lager (hier de helft).', antwoordTekst:comp ? 'competitieve remmer' : 'niet-competitieve remmer' });
+    return Object.assign(basis('enzymen', 'es-veel' + (comp ? 'c' : 'n') + lt[0]), { vorm:'meerkeuze', vraag:intro2 + ' Wat gebeurt er met de snelheid bij lijn ' + lt[1] + ' als je de substraatconcentratie veel verder verhoogt, bijvoorbeeld tot 100 mmol/L?', beeld:beeld2, opties:comp ? [
+      'Die nadert de maximale snelheid van lijn ' + lt[0] + ', omdat het substraat de remmer uit de actieve plaatsen verdringt.',
+      'Die blijft op de helft, omdat de remmer buiten de actieve plaats bindt.',
+      'Die daalt, omdat het substraat het enzym remt.',
+      'Die wordt hoger dan bij lijn ' + lt[0] + '.'] : [
+      'Die blijft ongeveer op de helft, omdat extra substraat de remmer niet verdringt.',
+      'Die nadert de maximale snelheid van lijn ' + lt[0] + ', omdat het substraat de remmer verdringt.',
+      'Die daalt naar nul.',
+      'Die wordt hoger dan bij lijn ' + lt[0] + '.'], goed:0,
+      uitleg:comp ? 'Lijn ' + lt[1] + ' stijgt langzamer maar heeft dezelfde top: kenmerk van een competitieve remmer. Bij heel veel substraat wint het substraat de concurrentie om de actieve plaats.' : 'Lijn ' + lt[1] + ' vlakt af op de helft: kenmerk van een niet-competitieve remmer. Die verandert de vorm van een deel van de enzymen; meer substraat verandert daar niets aan.',
+      antwoordTekst:comp ? 'Nadert dezelfde maximale snelheid.' : 'Blijft op de helft.' });
+  }
+
+  /* --- katalase en waterstofperoxide: zuurstof opvangen --- */
+  var KAT = [[30, [10, 20, 25, 28]], [40, [15, 25, 32, 37]], [50, [20, 35, 43, 48]], [60, [25, 40, 50, 56]]];
+  function enzKatalase(n){
+    var r = kies(KAT), V = r[0], v = r[1];
+    var a = assen({ xmin:0, xmax:10, xstap:1, xlab:2, ymin:0, ymax:V + 10, ystap:5, ylab:10, xnaam:'tijd (min)', ynaam:'zuurstof (ml)', aria:'volume zuurstof dat ontstaat in de tijd' });
+    var punten = glad([[0, 0], [1, v[0]], [2, v[1]], [3, v[2]], [4, v[3]], [6, V], [10, V]]);
+    var beeld = a.kop + lijn(a, punten, L1) + stip(a, 2, v[1], 'P', L1, -12, -6) + a.staart;
+    var intro = 'Katalase is een enzym dat waterstofperoxide afbreekt: 2 H<sub>2</sub>O<sub>2</sub> → 2 H<sub>2</sub>O + O<sub>2</sub>. Een leerling doet katalase bij een oplossing van waterstofperoxide en vangt de zuurstof op. De grafiek toont het volume zuurstof.';
+    var s = kies(['snel', 'op', 'enzym', 'substraat']);
+    if (s === 'snel') return Object.assign(basis('enzymen', 'ek-snel' + V), { vorm:'invul', vraag:intro + ' Bereken de gemiddelde snelheid van de zuurstofproductie in de eerste 2 minuten.', opdracht:'Lees bij punt P af hoeveel zuurstof er na 2 minuten is.', beeld:beeld,
+      velden:[{ label:'snelheid', antwoord:v[1] / 2, tol:.6, eenheid:'ml per minuut' }],
+      uitleg:'Na 2 minuten (punt P) is er ' + v[1] + ' ml zuurstof. Gemiddelde snelheid = ' + v[1] + ' ml ÷ 2 min = <b>' + net(v[1] / 2) + ' ml per minuut</b>.', antwoordTekst:net(v[1] / 2) + ' ml per minuut' });
+    if (s === 'op') return Object.assign(basis('enzymen', 'ek-op' + V), { vorm:'meerkeuze', vraag:intro + ' Waarom neemt het volume zuurstof na ongeveer 6 minuten niet meer toe?', beeld:beeld, opties:[
+      'Al het waterstofperoxide is omgezet.',
+      'Het katalase is opgebruikt.',
+      'Het katalase is gedenatureerd door de zuurstof.',
+      'De zuurstof lost op in het water.'], goed:0,
+      uitleg:'Een enzym wordt niet verbruikt. De lijn vlakt af omdat het substraat op is: er is geen waterstofperoxide meer om af te breken. Voeg je nieuw waterstofperoxide toe, dan ontstaat er weer zuurstof.', antwoordTekst:'Het waterstofperoxide is op.' });
+    if (s === 'enzym') return Object.assign(basis('enzymen', 'ek-enz' + V), { vorm:'meerkeuze', vraag:intro + ' De leerling herhaalt de proef met twee keer zoveel katalase en evenveel waterstofperoxide. Wat verwacht je?', beeld:beeld, opties:[
+      'Hetzelfde eindvolume zuurstof (' + V + ' ml), maar dat is eerder bereikt.',
+      'Twee keer zoveel zuurstof: ' + 2 * V + ' ml.',
+      'Hetzelfde eindvolume, maar dat is later bereikt.',
+      'Half zoveel zuurstof: ' + V / 2 + ' ml.'], goed:0,
+      uitleg:'De hoeveelheid zuurstof hangt af van de hoeveelheid substraat (waterstofperoxide), en die is gelijk. Met meer enzym gaat de reactie wel sneller, dus de lijn stijgt steiler en vlakt eerder af.', antwoordTekst:'Zelfde eindvolume, eerder bereikt.' });
+    return Object.assign(basis('enzymen', 'ek-sub' + V), { vorm:'meerkeuze', vraag:intro + ' De leerling herhaalt de proef met evenveel katalase en twee keer zoveel waterstofperoxide (zelfde volume, dubbele concentratie). Wat verwacht je voor het eindvolume zuurstof?', beeld:beeld, opties:[
+      'ongeveer ' + 2 * V + ' ml', 'ongeveer ' + V + ' ml', 'ongeveer ' + V / 2 + ' ml', 'ongeveer ' + 4 * V + ' ml'], goed:0, vasteVolgorde:false,
+      uitleg:'Uit twee keer zoveel waterstofperoxide ontstaat volgens 2 H<sub>2</sub>O<sub>2</sub> → 2 H<sub>2</sub>O + O<sub>2</sub> ook twee keer zoveel zuurstof: ongeveer ' + 2 * V + ' ml. Het enzym bepaalt alleen hoe snel dat gaat.', antwoordTekst:'ongeveer ' + 2 * V + ' ml' });
+  }
+
+  function maakEnzymen(n){
+    var r = Math.random();
+    if (r < .3) return uitLijst('enzymen', kiesItem(ENZ_LIJST, n));
+    if (r < .52) return enzTemp(n);
+    if (r < .68) return enzPh(n);
+    if (r < .84) return enzSubstraat(n);
+    return enzKatalase(n);
+  }
+
+
+  /* ================= 2. fotosynthese ================= */
+  var FOTO_LIJST = [
+    { n:'hv', k:'fk1', v:'Welke kleuren licht gebruikt een plant vooral voor fotosynthese?', o:['rood en blauw', 'groen', 'geel en groen', 'alleen wit licht'],
+      u:'Bladgroen (chlorofyl) absorbeert vooral rood en blauw licht. Groen licht wordt grotendeels teruggekaatst: daarom zie je bladeren groen.' },
+    { n:'hv', k:'fk2', v:'Via welke openingen in het blad neemt een plant CO<sub>2</sub> op?', a:['huidmondjes', 'huidmondje', 'stomata', 'stoma'],
+      u:'CO<sub>2</sub> komt via de <b>huidmondjes</b> het blad in, vooral aan de onderkant van het blad. Door dezelfde openingen gaan O<sub>2</sub> en waterdamp naar buiten.' },
+    { n:'hv', k:'fk3', v:'Op een warme, droge dag sluit een plant zijn huidmondjes. Wat is het gevolg voor de fotosynthese?', o:[
+      'Die neemt af, omdat er minder CO<sub>2</sub> het blad in kan.',
+      'Die neemt toe, omdat de plant water bespaart.',
+      'Die stopt, omdat er geen licht meer bij de bladgroenkorrels komt.',
+      'Die verandert niet, omdat de plant CO<sub>2</sub> via de wortels opneemt.'],
+      u:'Gesloten huidmondjes beperken het verlies van water, maar ook de opname van CO<sub>2</sub>. CO<sub>2</sub> wordt dan de beperkende factor. Licht komt gewoon door de bladhuid heen.' },
+    { n:'hv', k:'fk4', v:'In welke organellen van een plantencel vindt fotosynthese plaats?', a:['bladgroenkorrels', 'bladgroenkorrel', 'chloroplasten', 'chloroplast', 'chloroplasts'],
+      u:'Fotosynthese vindt plaats in de <b>bladgroenkorrels</b> (chloroplasten). Daar zit het chlorofyl dat licht opvangt.' },
+    jo('hv', 'fk5', 'Een plant doet overdag aan fotosynthese en \'s nachts aan dissimilatie.',
+      'in het licht heeft een plant geen energie nodig.', 'fotosynthese en dissimilatie kunnen niet tegelijk plaatsvinden.',
+      'dissimilatie gaat dag en nacht door; overdag vindt daarnaast fotosynthese plaats.', 'een plant doet nooit aan dissimilatie.', 2,
+      'Elke levende cel heeft steeds energie nodig, dus de dissimilatie stopt nooit. Overdag is de fotosynthese meestal groter dan de dissimilatie, zodat een plant netto zuurstof afgeeft.'),
+    { n:'hv', k:'fk6', v:'Waarvoor gebruikt een plant de glucose die bij fotosynthese ontstaat?', o:[
+      'als brandstof voor de dissimilatie en als grondstof voor andere stoffen, zoals zetmeel, cellulose en eiwitten',
+      'alleen als brandstof voor de dissimilatie',
+      'alleen om zuurstof te maken',
+      'alleen als opslag in de wortels'],
+      u:'Glucose is brandstof (dissimilatie levert ATP) én bouwstof: de plant maakt er zetmeel (opslag), cellulose (celwand), vetten en, met nitraat uit de bodem, aminozuren en eiwitten van. Dat laatste heet voortgezette assimilatie.' },
+    { n:'hv', k:'fk7', v:'Een tuinder verhoogt in zijn kas de CO<sub>2</sub>-concentratie. Wanneer levert dat meer opbrengst op?', o:[
+      'Als CO<sub>2</sub> de beperkende factor is, dus bij genoeg licht en een gunstige temperatuur.',
+      'Altijd, ook als het donker is.',
+      'Alleen \'s nachts, als er geen fotosynthese is.',
+      'Alleen als de huidmondjes gesloten zijn.'],
+      u:'Een factor verhogen helpt alleen als die factor beperkend is. Bij weinig licht is licht beperkend, dan helpt extra CO<sub>2</sub> niet. In het donker is er geen fotosynthese.' },
+    { n:'hv', k:'fk8', v:'Waar komt de zuurstof vandaan die bij fotosynthese vrijkomt?', o:['uit water', 'uit koolstofdioxide', 'uit glucose', 'uit de lucht'],
+      u:'Bij de lichtreactie wordt water gesplitst. Daarbij komt O<sub>2</sub> vrij. Dat is aangetoond met water waarin een zwaardere zuurstofisotoop zat: die isotoop kwam terug in het O<sub>2</sub>, niet in de glucose.' },
+    jo('hv', 'fk9', 'Bij het compensatiepunt vindt er geen fotosynthese plaats.',
+      'bij het compensatiepunt is het donker.', 'bij het compensatiepunt komt er geen zuurstof vrij.',
+      'fotosynthese en dissimilatie zijn dan even groot, zodat de plant netto geen zuurstof opneemt of afgeeft.', 'bij het compensatiepunt is de fotosynthese maximaal.', 2,
+      'Bij het compensatiepunt maakt de plant evenveel zuurstof als hij verbruikt. Netto zie je dus niets, maar er is wel fotosynthese.'),
+    { n:'hv', k:'fk10', v:'Een waterplant staat in een buis met broomthymolblauw. Deze indicator is blauw in een basische oplossing en geel in een zure. CO<sub>2</sub> maakt water zuur. De buis staat een paar uur in fel licht. Wat zie je?', o:[
+      'De vloeistof wordt blauwer, omdat de plant CO<sub>2</sub> opneemt.',
+      'De vloeistof wordt geel, omdat de plant CO<sub>2</sub> afgeeft.',
+      'Er verandert niets, omdat de plant alleen zuurstof afgeeft.',
+      'De vloeistof wordt geel, omdat de plant zuurstof afgeeft.'],
+      u:'In fel licht is de fotosynthese groter dan de dissimilatie: de plant haalt netto CO<sub>2</sub> uit het water. Het water wordt minder zuur en de indicator kleurt blauw. In het donker gebeurt het omgekeerde.' },
+    { n:'v', k:'fk11', v:'Welke stoffen levert de lichtreactie aan de Calvincyclus?', o:['ATP en NADPH', 'O<sub>2</sub> en glucose', 'CO<sub>2</sub> en water', 'ADP en NADP<sup>+</sup>'],
+      u:'De lichtreactie zet lichtenergie om in ATP en NADPH. De Calvincyclus gebruikt die om CO<sub>2</sub> vast te leggen en om te zetten in G3P. ADP en NADP<sup>+</sup> gaan daarna terug naar de lichtreactie.' },
+    { n:'v', k:'fk12', v:'Welk enzym bindt CO<sub>2</sub> aan RuBP in de Calvincyclus?', a:['rubisco', 'RuBisCO', 'ribulosedifosfaatcarboxylase', 'ribulose-1,5-bisfosfaatcarboxylase'],
+      u:'Dat is <b>rubisco</b>. Het bindt CO<sub>2</sub> aan RuBP (C<sub>5</sub>); er ontstaan twee moleculen 3-fosfoglyceraat (C<sub>3</sub>).' },
+    { n:'v', k:'fk13', v:'Waarom stopt de Calvincyclus in het donker na korte tijd, ook als er genoeg CO<sub>2</sub> is?', o:[
+      'De lichtreactie maakt dan geen ATP en NADPH meer.',
+      'Rubisco denatureert in het donker.',
+      'In het donker is er geen CO<sub>2</sub> in het blad.',
+      'De Calvincyclus heeft zelf licht nodig om CO<sub>2</sub> te binden.'],
+      u:'De Calvincyclus heeft geen licht nodig, maar wel ATP en NADPH uit de lichtreactie. Zodra die op zijn, stopt de reductie tot G3P en daarna ook de vorming van RuBP.' },
+    { n:'v', k:'fk14', v:'Bij de lichtreactie worden H<sup>+</sup>-ionen het thylakoïd in gepompt. Waarvoor dient dat?', o:[
+      'H<sup>+</sup> stroomt via ATP-synthase terug naar het stroma; die stroom levert de energie om ATP te maken.',
+      'Het zure thylakoïd breekt water af.',
+      'De H<sup>+</sup>-ionen worden in glucose ingebouwd.',
+      'Zo komt CO<sub>2</sub> het thylakoïd in.'],
+      u:'Het elektronentransport pompt H<sup>+</sup> naar binnen, zodat er een concentratieverschil ontstaat. ATP-synthase laat de H<sup>+</sup> terugstromen en gebruikt die energie om ATP te maken uit ADP en fosfaat. In het mitochondrion werkt het net zo.' },
+    { n:'v', k:'fk15', v:'De Calvincyclus legt per keer één CO<sub>2</sub> vast. Hoe vaak moet de cyclus rond om één molecuul glucose (C<sub>6</sub>H<sub>12</sub>O<sub>6</sub>) te maken?', a:6, l:'aantal keer', e:'keer',
+      u:'Glucose bevat zes C-atomen. Elke ronde legt één C vast, dus de cyclus moet <b>6</b> keer rond (en levert dan twee G3P, samen zes C).' }
+  ];
+
+  /* --- de lichtcurve: netto zuurstofproductie bij verschillende lichtintensiteit --- */
+  var LICHT = [
+    { R:5, Lc:5, P:30, y2:20, y3:27 }, { R:5, Lc:5, P:35, y2:20, y3:30 }, { R:10, Lc:10, P:30, y2:20, y3:25 },
+    { R:10, Lc:10, P:35, y2:20, y3:30 }, { R:5, Lc:10, P:25, y2:15, y3:20 }, { R:10, Lc:5, P:30, y2:15, y3:25 }
+  ];
+  function fotoLicht(n){
+    var c = kies(LICHT), x2 = c.Lc + 10, x3 = c.Lc + 20;
+    var a = assen({ xmin:0, xmax:50, xstap:5, xlab:10, ymin:-10, ymax:40, ystap:5, ylab:10, xnaam:'lichtintensiteit (klux)', ynaam:'netto O₂-productie (ml/uur)', aria:'netto zuurstofproductie van een plant bij verschillende lichtintensiteit' });
+    var punten = glad([[0, -c.R], [c.Lc, 0], [x2, c.y2], [x3, c.y3], [c.Lc + 30, c.P], [50, c.P]]);
+    var s = kies(['comp', 'bruto', 'donker', 'compbet', 'plateau']);
+    var beeld = a.kop + lijn(a, punten, L1) + (s === 'bruto' ? stip(a, x2, c.y2, 'P', L1, -12, -6) : '') + a.staart;
+    var intro = 'Bij een waterplant wordt de netto zuurstofproductie gemeten bij verschillende lichtintensiteiten. De temperatuur en de CO<sub>2</sub>-concentratie zijn steeds gelijk.';
+    var k = 'fl-' + s + c.R + c.Lc + c.P + c.y2;
+    if (s === 'comp') return Object.assign(basis('fotosynthese', k), { vorm:'invul', vraag:intro + ' Bij welke lichtintensiteit is de fotosynthese even groot als de dissimilatie?', opdracht:'Lees de grafiek af.', beeld:beeld,
+      velden:[{ label:'lichtintensiteit', antwoord:c.Lc, tol:1.5, eenheid:'klux' }],
+      uitleg:'Fotosynthese en dissimilatie zijn even groot waar de netto zuurstofproductie 0 is: bij <b>' + c.Lc + ' klux</b>. Dat heet het compensatiepunt.', antwoordTekst:c.Lc + ' klux' });
+    if (s === 'bruto') return Object.assign(basis('fotosynthese', k), { vorm:'invul', vraag:intro + ' Bereken de bruto zuurstofproductie bij punt P. Neem aan dat de dissimilatie bij elke lichtintensiteit even groot is.', opdracht:'Bruto productie = netto productie + verbruik door dissimilatie. Lees beide af.', beeld:beeld,
+      velden:[{ label:'bruto productie', antwoord:c.y2 + c.R, tol:1, eenheid:'ml/uur' }],
+      uitleg:'Bij punt P is de netto productie ' + c.y2 + ' ml/uur. In het donker (0 klux) is er alleen dissimilatie: de plant verbruikt dan ' + c.R + ' ml O<sub>2</sub> per uur. Bruto = ' + c.y2 + ' + ' + c.R + ' = <b>' + (c.y2 + c.R) + ' ml/uur</b>.', antwoordTekst:(c.y2 + c.R) + ' ml/uur' });
+    if (s === 'donker') return Object.assign(basis('fotosynthese', k), { vorm:'meerkeuze', vraag:intro + ' Waarom is de netto zuurstofproductie bij 0 klux negatief?', beeld:beeld, opties:[
+      'De plant dissimileert en verbruikt zuurstof, terwijl er geen fotosynthese is.',
+      'De plant geeft in het donker CO<sub>2</sub> af in plaats van zuurstof, dus de meting klopt niet.',
+      'In het donker breekt de plant zijn chlorofyl af.',
+      'In het donker doet de plant aan omgekeerde fotosynthese.'], goed:0,
+      uitleg:'Zonder licht is er geen fotosynthese, maar de dissimilatie gaat door. De plant neemt dan zuurstof op: een negatieve netto productie van ' + c.R + ' ml/uur.', antwoordTekst:'Alleen dissimilatie: zuurstof wordt verbruikt.' });
+    if (s === 'compbet') return Object.assign(basis('fotosynthese', k), { vorm:'meerkeuze', vraag:intro + ' Wat geldt bij een lichtintensiteit van ' + c.Lc + ' klux?', beeld:beeld, opties:[
+      'De fotosynthese is even groot als de dissimilatie.',
+      'Er is geen fotosynthese.',
+      'Er is geen dissimilatie.',
+      'De fotosynthese is maximaal.'], goed:0,
+      uitleg:'Bij ' + c.Lc + ' klux is de netto productie 0: de plant maakt evenveel zuurstof als hij verbruikt. Dat is het compensatiepunt. Beide processen lopen dus wel.', antwoordTekst:'Fotosynthese = dissimilatie.' });
+    return Object.assign(basis('fotosynthese', k), { vorm:'meerkeuze', vraag:intro + ' Boven ' + (c.Lc + 30) + ' klux stijgt de lijn niet meer. Welke conclusie is juist?', beeld:beeld, opties:[
+      'Licht is daar niet meer de beperkende factor; iets anders, zoals CO<sub>2</sub> of de temperatuur, beperkt de fotosynthese.',
+      'De plant kan bij veel licht niet meer dissimileren.',
+      'Het chlorofyl is bij veel licht kapot.',
+      'Licht is daar de beperkende factor.'], goed:0,
+      uitleg:'Meer licht levert niets meer op, dus licht beperkt de fotosynthese niet. Een andere factor is dan beperkend: hier de CO<sub>2</sub>-concentratie of de temperatuur, die in de proef gelijk bleven.', antwoordTekst:'Een andere factor dan licht is beperkend.' });
+  }
+
+  /* --- twee lijnen: licht en CO2 of temperatuur als beperkende factor --- */
+  var LAAG = [[0, 0], [5, 15], [10, 28], [15, 36], [20, 40], [50, 40]], HOOG = [[0, 0], [5, 15], [10, 28], [15, 40], [20, 50], [30, 68], [40, 78], [50, 80]];
+  function fotoBeperkend(n){
+    var f = kies([{ id:'co2', laag:'0,04% CO₂', hoog:'0,10% CO₂', naam:'de CO<sub>2</sub>-concentratie' }, { id:'temp', laag:'15 °C', hoog:'25 °C', naam:'de temperatuur' }]);
+    var a = assen({ xmin:0, xmax:50, xstap:5, xlab:10, ymin:0, ymax:100, ystap:10, ylab:20, xnaam:'lichtintensiteit (klux)', ynaam:'fotosynthese (relatief)', aria:'fotosynthese bij verschillende lichtintensiteit, twee lijnen' });
+    var beeld = a.kop + lijn(a, glad(LAAG), L2) + lijn(a, glad(HOOG), L1) + tekst(a, 50, 40, f.laag, L2, 'end', 0, 22) + tekst(a, 50, 80, f.hoog, L1, 'end', 0, -10) +
+      stip(a, 5, 15, 'A', 'currentColor', -10, -8) + stip(a, 35, 40, 'B', 'currentColor', 0, -10) + (n === 'vwo' ? stip(a, 45, 79.5, 'C', 'currentColor', 0, 22) : '') + a.staart;
+    var intro = 'Bij een plant is de fotosynthese gemeten bij verschillende lichtintensiteiten, bij ' + f.laag + ' en bij ' + f.hoog + '. Verder waren de omstandigheden gelijk.';
+    var soorten = ['A', 'B', 'tuin'];
+    if (n === 'vwo') soorten.push('C');
+    var s = kies(soorten), k = 'fb-' + s + f.id;
+    var factoren = ['de lichtintensiteit', f.naam, f.id === 'co2' ? 'de temperatuur' : 'de CO<sub>2</sub>-concentratie', 'de hoeveelheid water'];
+    if (s === 'A') return Object.assign(basis('fotosynthese', k), { vorm:'meerkeuze', vraag:intro + ' Welke factor is bij punt A beperkend?', beeld:beeld, opties:factoren, goed:0,
+      uitleg:'Bij punt A liggen de twee lijnen op elkaar: meer ' + (f.id === 'co2' ? 'CO<sub>2</sub>' : 'warmte') + ' helpt daar niet. Meer licht wel, want de lijn stijgt nog. Licht is dus beperkend.', antwoordTekst:'de lichtintensiteit' });
+    if (s === 'B') return Object.assign(basis('fotosynthese', k), { vorm:'meerkeuze', vraag:intro + ' Welke factor is bij punt B (de lijn bij ' + f.laag + ') beperkend?', beeld:beeld, opties:[f.naam, 'de lichtintensiteit', factoren[2], 'de hoeveelheid water'], goed:0,
+      uitleg:'Bij punt B is de lijn vlak: meer licht helpt niet. Bij ' + f.hoog + ' is de fotosynthese bij dezelfde lichtintensiteit wel hoger. Dus is ' + f.naam + ' bij B beperkend.', antwoordTekst:f.naam.replace(/<[^>]+>/g, '') });
+    if (s === 'tuin') return Object.assign(basis('fotosynthese', k), { vorm:'meerkeuze', vraag:intro + ' Op een donkere winterdag is de lichtintensiteit in een kas ongeveer 5 klux. Heeft het zin om ' + (f.id === 'co2' ? 'extra CO<sub>2</sub> in de kas te blazen' : 'de kas extra te verwarmen') + ' om de fotosynthese te verhogen?', beeld:beeld, opties:[
+      'Nee, want bij 5 klux is licht de beperkende factor.',
+      'Ja, want dan stijgt de fotosynthese naar de bovenste lijn.',
+      'Ja, want ' + f.naam + ' is altijd beperkend.',
+      'Nee, want in de winter is er geen fotosynthese.'], goed:0,
+      uitleg:'Bij 5 klux (punt A) liggen de lijnen op elkaar. Extra ' + (f.id === 'co2' ? 'CO<sub>2</sub>' : 'warmte') + ' verandert de fotosynthese daar niet; alleen meer licht helpt. Daarom gebruiken tuinders in de winter groeilampen.', antwoordTekst:'Nee, licht is beperkend.' });
+    return Object.assign(basis('fotosynthese', k), { vorm:'meerkeuze', vraag:intro + ' Wat kun je uit deze grafiek afleiden over de beperkende factor bij punt C?', beeld:beeld, opties:[
+      'Licht is daar niet beperkend, maar welke factor wel, kun je met deze proef niet bepalen.',
+      'Licht is daar beperkend.',
+      f.naam.charAt(0).toUpperCase() + f.naam.slice(1) + ' is daar zeker beperkend.',
+      'Bij punt C is geen enkele factor beperkend.'], goed:0,
+      uitleg:'Bij C is de lijn vrijwel vlak, dus meer licht helpt niet. Er is altijd een beperkende factor, maar of dat ' + f.naam + ' (nog hoger), ' + factoren[2] + ' of iets anders is, is niet gemeten. Daarvoor zou je een lijn bij nog meer ' + (f.id === 'co2' ? 'CO<sub>2</sub>' : 'warmte') + ' nodig hebben.', antwoordTekst:'Licht niet; welke wel is niet te bepalen.' });
+  }
+
+  /* --- de reactievergelijking en rekenen met mol en gram --- */
+  function fotoVergelijking(n){
+    return Object.assign(basis('fotosynthese', 'fv-coef'), { vorm:'invul', vraag:'Maak de reactievergelijking van de fotosynthese kloppend.',
+      beeld:'<div class="bron rv">… CO<sub>2</sub> + … H<sub>2</sub>O → C<sub>6</sub>H<sub>12</sub>O<sub>6</sub> + … O<sub>2</sub></div>', opdracht:'Vul de getallen voor de stoffen in.',
+      velden:[{ label:'voor CO₂', antwoord:6 }, { label:'voor H₂O', antwoord:6 }, { label:'voor O₂', antwoord:6 }],
+      uitleg:'6 CO<sub>2</sub> + 6 H<sub>2</sub>O → C<sub>6</sub>H<sub>12</sub>O<sub>6</sub> + 6 O<sub>2</sub>. Tel na: links 6 C, 12 H en 6×2 + 6 = 18 O; rechts 6 C, 12 H en 6 + 6×2 = 18 O.', antwoordTekst:'6, 6 en 6' });
+  }
+  function fotoRekenen(n){
+    var g = kies([9, 18, 36, 45, 90]), stof = kies(n === 'vwo' ? ['co2', 'o2', 'molco2'] : ['co2', 'o2', 'molco2', 'molco2']);
+    var mol = g / 180, bron0 = '<div class="bron rv">6 CO<sub>2</sub> + 6 H<sub>2</sub>O → C<sub>6</sub>H<sub>12</sub>O<sub>6</sub> + 6 O<sub>2</sub><br><small>molaire massa: glucose 180 g/mol, CO<sub>2</sub> 44 g/mol, O<sub>2</sub> 32 g/mol</small></div>';
+    if (stof === 'molco2'){
+      var m = kies([.5, 1, 1.5, 2, 3]);
+      return Object.assign(basis('fotosynthese', 'fr-mol' + m), { vorm:'invul', vraag:'Een plant maakt met fotosynthese ' + net(m) + ' mol glucose. Hoeveel mol CO<sub>2</sub> heeft de plant daarvoor vastgelegd?', beeld:bron0, opdracht:'Gebruik de verhouding in de reactievergelijking.',
+        velden:[{ label:'CO₂', antwoord:6 * m, tol:.01, eenheid:'mol' }], uitleg:'Per mol glucose is 6 mol CO<sub>2</sub> nodig: 6 × ' + net(m) + ' = <b>' + net(6 * m) + ' mol</b>.', antwoordTekst:net(6 * m) + ' mol' });
+    }
+    var M = stof === 'co2' ? 44 : 32, uit = rond(mol * 6 * M, 2), naam = stof === 'co2' ? 'CO<sub>2</sub> heeft de plant daarvoor opgenomen' : 'O<sub>2</sub> komt daarbij vrij';
+    return Object.assign(basis('fotosynthese', 'fr-' + stof + g), { vorm:'invul', vraag:'Een plant maakt met fotosynthese ' + g + ' g glucose. Hoeveel gram ' + naam + '?', beeld:bron0, opdracht:'Reken eerst om naar mol glucose.',
+      velden:[{ label:stof === 'co2' ? 'CO₂' : 'O₂', antwoord:uit, tol:.15, eenheid:'g' }],
+      uitleg:g + ' g ÷ 180 g/mol = ' + net(mol, 3) + ' mol glucose. Daarbij hoort 6 × ' + net(mol, 3) + ' = ' + net(mol * 6, 3) + ' mol ' + (stof === 'co2' ? 'CO<sub>2</sub>' : 'O<sub>2</sub>') + '. Dat is ' + net(mol * 6, 3) + ' × ' + M + ' = <b>' + net(uit, 1) + ' g</b>.', antwoordTekst:net(uit, 1) + ' g' });
+  }
+
+  /* --- broomthymolblauw in drie buizen --- */
+  function fotoBuizen(n){
+    var vraag = kies(['geel', 'blauw']);
+    var buizen = H([{ id:'A', t:'een waterplant in het licht' }, { id:'B', t:'een waterplant in het donker' }, { id:'C', t:'geen plant, in het licht' }]);
+    var letters = ['1', '2', '3'];
+    var beschr = buizen.map(function(b, i){ return 'buis ' + letters[i] + ': ' + b.t; }).join('<br>');
+    var goedI = buizen.map(function(b){ return b.id; }).indexOf(vraag === 'geel' ? 'B' : 'A');
+    return Object.assign(basis('fotosynthese', 'fz-' + vraag + buizen.map(function(b){ return b.id; }).join('')), { vorm:'meerkeuze',
+      vraag:'Drie buizen bevatten water met broomthymolblauw. Deze indicator is groen bij het begin, wordt geel als het water zuurder wordt en blauw als het minder zuur wordt. CO<sub>2</sub> maakt water zuur. Na drie uur: in welke buis is de vloeistof ' + vraag + '?',
+      beeld:bron(beschr), opties:['buis 1', 'buis 2', 'buis 3'], goed:goedI, vasteVolgorde:true,
+      uitleg:vraag === 'geel' ? 'In het donker is er alleen dissimilatie: de plant geeft CO<sub>2</sub> af en het water wordt zuurder (geel). In het licht neemt de plant netto CO<sub>2</sub> op (blauw). Zonder plant verandert er niets: dat is de controlebuis.'
+        : 'In het licht is de fotosynthese groter dan de dissimilatie: de plant haalt CO<sub>2</sub> uit het water, dat minder zuur wordt (blauw). In het donker wordt het geel; zonder plant blijft het groen.', antwoordTekst:'buis ' + letters[goedI] });
+  }
+
+  /* --- vwo: het Calvin-experiment, RuBP en 3-fosfoglyceraat --- */
+  function fotoCalvin(n){
+    var licht = Math.random() < .5, lt = kies([['X', 'Y'], ['Y', 'X']]);   /* lt[0] = RuBP */
+    var a = assen({ xmin:0, xmax:10, xstap:1, xlab:2, ymin:0, ymax:100, ystap:10, ylab:20, xnaam:'tijd (min)', ynaam:'concentratie (relatief)', aria:'concentratie van twee stoffen in de Calvincyclus voor en na een verandering op tijdstip 4' });
+    var stijg = glad([[0, 40], [4, 40], [5, 62], [6, 74], [8, 80], [10, 81]]), daal = glad([[0, 40], [4, 40], [5, 18], [6, 8], [8, 3], [10, 2]]);
+    var rubp = licht ? daal : stijg, pga = licht ? stijg : daal;
+    var beeld = a.kop + '<line x1="' + a.X(4) + '" y1="' + a.Y(100) + '" x2="' + a.X(4) + '" y2="' + a.Y(0) + '" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 4"/>' +
+      lijn(a, rubp, L1) + lijn(a, pga, L2) + tekst(a, 9.8, rubp[rubp.length - 1][1], lt[0], L1, 'end', 0, licht ? -8 : -10) + tekst(a, 9.8, pga[pga.length - 1][1], lt[1], L2, 'end', 0, licht ? -10 : -8) + a.staart;
+    var wat = licht ? 'wordt het licht uitgedaan; er is genoeg CO<sub>2</sub>' : 'wordt de toevoer van CO<sub>2</sub> gestopt; het licht blijft aan';
+    var vraag = 'Algen worden belicht en krijgen CO<sub>2</sub>. Op tijdstip 4 minuten ' + wat + '. De grafiek toont de concentratie van RuBP (ribulosedifosfaat, C<sub>5</sub>) en 3-fosfoglyceraat (PGA, C<sub>3</sub>). Welke lijn is RuBP?';
+    var opties = licht ? [
+      'lijn ' + lt[0] + ': RuBP wordt nog wel gebruikt om CO<sub>2</sub> te binden, maar zonder ATP en NADPH niet meer teruggevormd',
+      'lijn ' + lt[1] + ': zonder licht wordt RuBP niet meer verbruikt en hoopt het zich op',
+      'lijn ' + lt[1] + ': RuBP ontstaat uit PGA, en dat gaat in het donker sneller',
+      'lijn ' + lt[0] + ': RuBP wordt in het donker afgebroken tot CO<sub>2</sub>']
+      : [
+      'lijn ' + lt[0] + ': zonder CO<sub>2</sub> wordt RuBP niet meer verbruikt, maar wel nog gevormd uit G3P',
+      'lijn ' + lt[1] + ': zonder CO<sub>2</sub> wordt RuBP niet meer gevormd',
+      'lijn ' + lt[1] + ': RuBP wordt omgezet in PGA zonder CO<sub>2</sub>',
+      'lijn ' + lt[0] + ': RuBP ontstaat uit CO<sub>2</sub>, dus bij minder CO<sub>2</sub> ontstaat er meer'];
+    return Object.assign(basis('fotosynthese', 'fc-' + (licht ? 'l' : 'c') + lt[0]), { vorm:'meerkeuze', vraag:vraag, beeld:beeld, opties:opties, goed:0,
+      uitleg:licht ? 'In het donker stopt de lichtreactie: geen ATP en NADPH meer. Rubisco bindt nog CO<sub>2</sub> aan RuBP, dus RuBP daalt (lijn ' + lt[0] + ') en PGA stijgt, want PGA kan zonder ATP en NADPH niet verder worden omgezet (lijn ' + lt[1] + ').'
+        : 'Zonder CO<sub>2</sub> kan rubisco RuBP niet meer gebruiken. Uit G3P wordt met ATP nog wel RuBP teruggevormd, dus RuBP stijgt (lijn ' + lt[0] + '). Er ontstaat geen nieuw PGA meer, terwijl het bestaande PGA wordt omgezet: PGA daalt (lijn ' + lt[1] + ').',
+      antwoordTekst:'lijn ' + lt[0] });
+  }
+
+  /* --- vwo: lichtreactie of Calvincyclus, en rekenen met ATP en NADPH --- */
+  var THYL = ['fotolyse van water', 'vorming van O₂', 'vorming van NADPH', 'lichtenergie opvangen met chlorofyl', 'ATP-vorming door ATP-synthase'];
+  var STROMA = ['binding van CO₂ aan RuBP', 'werking van rubisco', 'vorming van G3P (glyceraldehyde-3-fosfaat)', 'terugvorming van RuBP'];
+  function fotoPlaats(n){
+    var t = H(THYL).slice(0, 3), s = H(STROMA).slice(0, 3), kaarten = [];
+    t.forEach(function(x, i){ kaarten.push({ id:'t' + i, tekst:S(x) }); }); s.forEach(function(x, i){ kaarten.push({ id:'s' + i, tekst:S(x) }); });
+    return Object.assign(basis('fotosynthese', 'fp-' + t.map(function(x){ return THYL.indexOf(x); }).sort().join('') + s.map(function(x){ return STROMA.indexOf(x); }).sort().join('')), { vorm:'sleep',
+      vraag:'Waar in de bladgroenkorrel vindt elk proces plaats?', opdracht:SLEEPOPDR,
+      kaarten:kaarten, vakken:[{ id:'thyl', naam:'thylakoïdmembraan', uit:'lichtreactie', hoort:['t0', 't1', 't2'] }, { id:'stroma', naam:'stroma', uit:'Calvincyclus', hoort:['s0', 's1', 's2'] }],
+      uitleg:'De lichtreactie zit in het thylakoïdmembraan: daar vangt chlorofyl licht op, wordt water gesplitst (O<sub>2</sub> komt vrij) en ontstaan ATP en NADPH. De Calvincyclus vindt plaats in het stroma: rubisco bindt CO<sub>2</sub> aan RuBP, er ontstaat G3P en RuBP wordt teruggevormd.',
+      antwoordTekst:'thylakoïdmembraan: ' + t.join(', ') + '; stroma: ' + s.join(', ') });
+  }
+  function fotoTellen(n){
+    var g = kies([1, 2, 3, 5]), wat = kies(['ATP', 'NADPH']);
+    var per = wat === 'ATP' ? 3 : 2;
+    return Object.assign(basis('fotosynthese', 'ft-' + wat + g), { vorm:'invul',
+      vraag:'Voor elk molecuul CO<sub>2</sub> dat de Calvincyclus vastlegt, zijn 3 ATP en 2 NADPH nodig. Hoeveel ' + wat + ' is nodig om ' + g + ' molecu' + (g === 1 ? 'ul' : 'len') + ' glucose (C<sub>6</sub>H<sub>12</sub>O<sub>6</sub>) te maken?',
+      beeld:'', opdracht:'Bedenk eerst hoeveel CO<sub>2</sub> er nodig is.', velden:[{ label:wat, antwoord:6 * g * per, eenheid:'moleculen' }],
+      uitleg:'Eén glucose bevat 6 C, dus 6 CO<sub>2</sub>. Voor ' + g + ' glucose is dat ' + 6 * g + ' CO<sub>2</sub>. Per CO<sub>2</sub> ' + per + ' ' + wat + ': ' + 6 * g + ' × ' + per + ' = <b>' + 6 * g * per + '</b>.', antwoordTekst:String(6 * g * per) });
+  }
+
+  function maakFotosynthese(n){
+    var r = Math.random();
+    if (n === 'vwo'){
+      if (r < .22) return uitLijst('fotosynthese', kiesItem(FOTO_LIJST, n));
+      if (r < .37) return fotoLicht(n);
+      if (r < .5) return fotoBeperkend(n);
+      if (r < .6) return fotoRekenen(n);
+      if (r < .73) return fotoCalvin(n);
+      if (r < .84) return fotoPlaats(n);
+      if (r < .93) return fotoTellen(n);
+      return Math.random() < .5 ? fotoBuizen(n) : fotoVergelijking(n);
+    }
+    if (r < .3) return uitLijst('fotosynthese', kiesItem(FOTO_LIJST, n));
+    if (r < .52) return fotoLicht(n);
+    if (r < .7) return fotoBeperkend(n);
+    if (r < .82) return fotoRekenen(n);
+    if (r < .92) return fotoBuizen(n);
+    return fotoVergelijking(n);
+  }
+
+
+  /* ================= 3. dissimilatie en ATP ================= */
+  var DIS_LIJST = [
+    { n:'hv', k:'dk1', v:'In welke organellen vindt het grootste deel van de aerobe dissimilatie plaats?', a:['mitochondriën', 'mitochondrien', 'mitochondrium', 'mitochondrion', 'mitochondria'],
+      u:'In de <b>mitochondriën</b>. Alleen de eerste stap, de glycolyse, vindt plaats in het cytoplasma.' },
+    { n:'hv', k:'dk2', v:'Welke stoffen ontstaan bij alcoholgisting door gistcellen?', o:['ethanol (alcohol) en CO<sub>2</sub>', 'melkzuur', 'ethanol en O<sub>2</sub>', 'CO<sub>2</sub> en water'],
+      u:'Gist breekt zonder zuurstof glucose af tot ethanol en CO<sub>2</sub>. CO<sub>2</sub> en water zijn de eindproducten van aerobe dissimilatie; melkzuur ontstaat bij melkzuurgisting.' },
+    { n:'hv', k:'dk3', v:'Bij een sprint ontstaat in je beenspieren melkzuur. Hoe komt dat?', o:[
+      'Er komt te weinig zuurstof bij de spiercellen, zodat ze ook anaeroob dissimileren.',
+      'Bij aerobe dissimilatie ontstaat altijd melkzuur.',
+      'De spieren maken melkzuur om ATP op te slaan.',
+      'Melkzuur komt uit de spijsvertering in het bloed.'],
+      u:'Bij zware inspanning kan het bloed niet genoeg zuurstof aanvoeren. Spiercellen maken dan extra ATP met melkzuurgisting: glucose wordt omgezet in melkzuur.' },
+    { n:'hv', k:'dk4', v:'Hoeveel ATP levert anaerobe dissimilatie netto op per molecuul glucose?', a:2, l:'ATP', e:'moleculen',
+      u:'Netto <b>2 ATP</b>, uit de glycolyse. De rest van de energie blijft in melkzuur of ethanol zitten. Aerobe dissimilatie levert ongeveer vijftien keer zoveel ATP op.' },
+    { n:'hv', k:'dk5', v:'Deeg met gist rijst in een warme keuken. Welke stof laat het deeg rijzen?', o:['CO<sub>2</sub> dat de gist maakt', 'zuurstof uit de lucht', 'alcohol die verdampt', 'waterdamp uit het meel'],
+      u:'De gist dissimileert de suikers in het deeg. Daarbij ontstaat CO<sub>2</sub>; de gasbelletjes blijven in het deeg zitten en het deeg rijst. De alcohol verdampt bij het bakken.' },
+    jo('hv', 'dk6', 'Bij aerobe dissimilatie komt uit een molecuul glucose meer energie vrij dan bij anaerobe dissimilatie.',
+      'glucose wordt dan volledig afgebroken tot CO<sub>2</sub> en water; bij anaerobe dissimilatie blijft veel energie in melkzuur of ethanol.', 'bij aerobe dissimilatie wordt zuurstof omgezet in energie.',
+      'bij beide komt evenveel energie vrij, alleen sneller of langzamer.', 'bij anaerobe dissimilatie wordt glucose volledig afgebroken.', 0,
+      'Melkzuur en ethanol bevatten nog veel chemische energie (ethanol kun je zelfs verbranden). Alleen bij volledige afbraak tot CO<sub>2</sub> en water komt alle energie vrij. Zuurstof wordt niet omgezet in energie; het neemt de elektronen op aan het eind van de keten.'),
+    { n:'hv', k:'dk7', v:'ATP levert energie voor bijvoorbeeld het samentrekken van een spier. Wat gebeurt er dan met het ATP?', o:[
+      'Het wordt gesplitst in ADP en fosfaat.',
+      'Het wordt omgezet in glucose.',
+      'Het wordt verbrand met zuurstof.',
+      'Het wordt opgeslagen als glycogeen.'],
+      u:'Bij het afsplitsen van een fosfaatgroep (ATP → ADP + P) komt energie vrij. Bij de dissimilatie wordt van ADP en fosfaat weer ATP gemaakt.' },
+    { n:'hv', k:'dk8', v:'Een spiercel bevat maar weinig ATP, genoeg voor een paar seconden werk. Hoe kan een spier toch urenlang werken?', o:[
+      'ATP wordt steeds opnieuw gemaakt uit ADP en fosfaat, met energie uit de dissimilatie.',
+      'De spier haalt ATP uit het bloed.',
+      'ATP wordt in de lever gemaakt en naar de spier gebracht.',
+      'Een werkende spier heeft geen ATP nodig.'],
+      u:'ATP is een kortdurende energiedrager, geen opslag. Het wordt voortdurend verbruikt en opnieuw gemaakt. De energievoorraad zit in glycogeen en vet.' },
+    { n:'hv', k:'dk9', v:'Hoeveel moleculen CO<sub>2</sub> ontstaan bij de volledige aerobe afbraak van één molecuul glucose?', a:6, l:'CO₂', e:'moleculen',
+      u:'C<sub>6</sub>H<sub>12</sub>O<sub>6</sub> + 6 O<sub>2</sub> → <b>6</b> CO<sub>2</sub> + 6 H<sub>2</sub>O. Elk van de zes C-atomen van glucose komt in een CO<sub>2</sub> terecht.' },
+    { n:'hv', k:'dk10', v:'Welke stoffen kan je lichaam behalve koolhydraten ook dissimileren om energie te krijgen?', o:['vetten en eiwitten', 'alleen vetten', 'vitamines en mineralen', 'water en zouten'],
+      u:'Vetten (vetzuren en glycerol) en eiwitten (aminozuren) kunnen ook worden afgebroken. Bij aminozuren ontstaat daarbij ook ureum, dat je met de urine uitscheidt. Vitamines en mineralen leveren geen energie.' },
+    { n:'hv', k:'dk11', v:'Melkzuurbacteriën maken van melk yoghurt. Waarom wordt de melk daarbij zuur?', o:[
+      'De bacteriën zetten melksuiker om in melkzuur.',
+      'De bacteriën maken azijnzuur uit alcohol.',
+      'De bacteriën maken CO<sub>2</sub>, en dat maakt de melk zuur.',
+      'Het eiwit in de melk denatureert tot zuur.'],
+      u:'Melkzuurbacteriën dissimileren de suiker (lactose) in melk anaeroob tot melkzuur. Door het zuur dikt de melk ook in: het melkeiwit klontert.' },
+    { n:'v', k:'dk12', v:'Waarom is zuurstof nodig bij aerobe dissimilatie?', o:[
+      'O<sub>2</sub> neemt aan het eind van de elektronentransportketen de elektronen op; zonder O<sub>2</sub> stopt de keten.',
+      'O<sub>2</sub> is nodig om glucose te splitsen in de glycolyse.',
+      'De O-atomen van O<sub>2</sub> komen in het CO<sub>2</sub> terecht.',
+      'O<sub>2</sub> levert de energie om ATP te maken.'],
+      u:'O<sub>2</sub> is de laatste elektronenacceptor: met elektronen en H<sup>+</sup> vormt het water. De glycolyse heeft geen O<sub>2</sub> nodig, en het CO<sub>2</sub> ontstaat in de citroenzuurcyclus en bij de vorming van acetyl-CoA, uit de koolstofketen van glucose.' },
+    { n:'v', k:'dk13', v:'Waarom zetten spiercellen bij melkzuurgisting pyrodruivenzuur om in melkzuur?', o:[
+      'Zo wordt NADH weer omgezet in NAD<sup>+</sup>, zodat de glycolyse door kan gaan.',
+      'Bij die omzetting ontstaat extra ATP.',
+      'Melkzuur is nodig voor het samentrekken van de spier.',
+      'Pyrodruivenzuur is giftig en moet snel weg.'],
+      u:'De glycolyse heeft NAD<sup>+</sup> nodig. Zonder zuurstof kan NADH zijn elektronen niet aan de keten kwijt. Door pyrodruivenzuur om te zetten in melkzuur ontstaat weer NAD<sup>+</sup>. Die stap zelf levert geen ATP.' },
+    { n:'v', k:'dk14', v:'Een stof maakt het binnenmembraan van mitochondriën lek voor H<sup>+</sup>-ionen. Wat is het gevolg?', o:[
+      'Er wordt veel minder ATP gemaakt en meer energie komt vrij als warmte.',
+      'Er wordt meer ATP gemaakt, omdat H<sup>+</sup> sneller stroomt.',
+      'De citroenzuurcyclus stopt meteen.',
+      'Er wordt geen zuurstof meer verbruikt.'],
+      u:'ATP-synthase gebruikt de stroom van H<sup>+</sup> terug naar de matrix. Lekt H<sup>+</sup> via een andere weg terug, dan verdwijnt het concentratieverschil zonder ATP-vorming. De keten loopt door (zuurstofverbruik gaat door), maar de energie wordt warmte.' },
+    { n:'v', k:'dk15', v:'Cyanide blokkeert het laatste enzym van de elektronentransportketen. Wat gebeurt er in de cel?', o:[
+      'Er wordt geen O<sub>2</sub> meer verbruikt en de mitochondriën maken bijna geen ATP meer.',
+      'De cel maakt meer ATP met de citroenzuurcyclus.',
+      'Er ontstaat meer CO<sub>2</sub>.',
+      'De glycolyse stopt als eerste.'],
+      u:'Zonder het laatste enzym kunnen de elektronen niet naar O<sub>2</sub>. De keten loopt vast, er wordt geen H<sup>+</sup> meer gepompt en de oxidatieve fosforylering stopt. Ook de citroenzuurcyclus stopt, omdat NAD<sup>+</sup> op raakt. Alleen gisting levert nog wat ATP.' },
+    { n:'v', k:'dk16', v:'In welke stap van de aerobe dissimilatie ontstaat het meeste ATP?', o:['de oxidatieve fosforylering', 'de glycolyse', 'de citroenzuurcyclus', 'de vorming van acetyl-CoA'],
+      u:'De glycolyse en de citroenzuurcyclus leveren elk netto 2 ATP per glucose. Het grootste deel ontstaat bij de oxidatieve fosforylering, met de energie van NADH en FADH<sub>2</sub>. Bij de vorming van acetyl-CoA ontstaat geen ATP.' },
+    { n:'v', k:'dk17', v:'Hoeveel moleculen CO<sub>2</sub> ontstaan per molecuul glucose in de citroenzuurcyclus?', a:4, l:'CO₂', e:'moleculen',
+      u:'Per glucose gaat de cyclus twee keer rond (twee acetyl-CoA), met elke keer 2 CO<sub>2</sub>: samen <b>4</b>. De andere 2 CO<sub>2</sub> ontstaan bij de omzetting van pyrodruivenzuur in acetyl-CoA.' },
+    { n:'v', k:'dk18', v:'Hoeveel NADH ontstaat er per molecuul glucose bij de glycolyse?', a:2, l:'NADH', e:'moleculen',
+      u:'Bij de glycolyse ontstaan uit één glucose twee pyrodruivenzuur, netto 2 ATP en <b>2 NADH</b>.' },
+    jo('v', 'dk19', 'Het CO<sub>2</sub> dat je uitademt, ontstaat in de elektronentransportketen.',
+      'in de keten reageert zuurstof met koolstof.', 'de elektronentransportketen breekt glucose af.',
+      'CO<sub>2</sub> ontstaat bij de vorming van acetyl-CoA en in de citroenzuurcyclus; in de keten ontstaat water.', 'CO<sub>2</sub> ontstaat alleen bij de glycolyse.', 2,
+      'In de elektronentransportketen nemen O<sub>2</sub>, elektronen en H<sup>+</sup> samen water op. Het CO<sub>2</sub> komt uit de koolstofketen: 2 bij de omzetting van pyrodruivenzuur in acetyl-CoA en 4 in de citroenzuurcyclus.')
+  ];
+
+  /* --- gist in een afgesloten fles: zuurstof op, dan alcoholgisting --- */
+  function disGist(n){
+    var t0 = kies([3, 4, 5, 6]);
+    var a = assen({ xmin:0, xmax:10, xstap:1, xlab:2, ymin:0, ymax:100, ystap:10, ylab:20, xnaam:'tijd (uur)', ynaam:'concentratie (relatief)', aria:'zuurstof en ethanol in een fles met gist' });
+    var o2 = glad([[0, 90], [t0 * .5, 55], [t0 * .85, 12], [t0, 0], [10, 0]]), eth = glad([[0, 0], [t0, 0], [t0 + 1, 12], [t0 + 3, 40], [10, 40 + (7 - t0) * 8]]);
+    var beeld = a.kop + lijn(a, o2, L1) + lijn(a, eth, L2) + tekst(a, .3, 92, 'zuurstof', L1, 'start', 4, -6) + tekst(a, 9.8, eth[eth.length - 1][1], 'ethanol', L2, 'end', 0, -8) + a.staart;
+    var intro = 'Gistcellen worden in een afgesloten fles met een glucoseoplossing gezet. De grafiek toont de concentratie zuurstof en ethanol in de fles.';
+    var soorten = ['start', 'waarom', 'co2', 'groei'];
+    if (n === 'vwo') soorten.push('glucose');
+    var s = kies(soorten), k = 'dg-' + s + t0;
+    if (s === 'start') return Object.assign(basis('dissimilatie', k), { vorm:'invul', vraag:intro + ' Vanaf welk tijdstip vindt er alcoholgisting plaats?', opdracht:'Lees de grafiek af.', beeld:beeld,
+      velden:[{ label:'tijdstip', antwoord:t0, tol:.5, eenheid:'uur' }], uitleg:'Na <b>' + t0 + ' uur</b> is de zuurstof op en begint de concentratie ethanol te stijgen. Vanaf dan dissimileert de gist anaeroob.', antwoordTekst:t0 + ' uur' });
+    if (s === 'waarom') return Object.assign(basis('dissimilatie', k), { vorm:'meerkeuze', vraag:intro + ' Waarom ontstaat er pas na ' + t0 + ' uur ethanol?', beeld:beeld, opties:[
+      'Zolang er zuurstof is, dissimileert de gist aeroob; pas als de zuurstof op is, gaat hij over op alcoholgisting.',
+      'De gist moet eerst ethanol opsparen voordat het vrijkomt.',
+      'De glucose is pas na ' + t0 + ' uur opgelost.',
+      'Ethanol ontstaat uit de zuurstof in de fles.'], goed:0,
+      uitleg:'Gist kan aeroob en anaeroob dissimileren. Met zuurstof levert aerobe dissimilatie veel meer ATP op. Als de zuurstof op is (na ' + t0 + ' uur), schakelt de gist over op alcoholgisting en ontstaat ethanol.', antwoordTekst:'Pas zonder zuurstof gaat de gist gisten.' });
+    if (s === 'co2') return Object.assign(basis('dissimilatie', k), { vorm:'meerkeuze', vraag:intro + ' Ook na ' + t0 + ' uur blijft er CO<sub>2</sub> ontstaan in de fles. Hoe kan dat?', beeld:beeld, opties:[
+      'Bij alcoholgisting ontstaat ook CO<sub>2</sub>.',
+      'De gist doet na ' + t0 + ' uur aan fotosynthese.',
+      'Het CO<sub>2</sub> komt uit de lucht boven de vloeistof.',
+      'Ethanol wordt omgezet in CO<sub>2</sub> en zuurstof.'], goed:0,
+      uitleg:'Alcoholgisting: glucose → 2 ethanol + 2 CO<sub>2</sub> (+ 2 ATP). Dus ook zonder zuurstof komt er CO<sub>2</sub> vrij. Daarom borrelt gistend druivensap.', antwoordTekst:'Alcoholgisting maakt ook CO₂.' });
+    if (s === 'groei') return Object.assign(basis('dissimilatie', k), { vorm:'meerkeuze', vraag:intro + ' Na ' + t0 + ' uur groeit de gist veel langzamer. Welke verklaring is juist?', beeld:beeld, opties:[
+      'Alcoholgisting levert per glucose veel minder ATP op dan aerobe dissimilatie.',
+      'De glucose is na ' + t0 + ' uur op.',
+      'Zonder zuurstof kan gist geen glucose opnemen.',
+      'Gist groeit alleen in het licht.'], goed:0,
+      uitleg:'Zonder zuurstof krijgt de gist netto 2 ATP per glucose, in plaats van ongeveer 30 bij aerobe dissimilatie. Er is dus minder energie voor groei. (Op den duur remt ook de ethanol de gist.)', antwoordTekst:'Gisting levert veel minder ATP.' });
+    return Object.assign(basis('dissimilatie', k), { vorm:'meerkeuze', vraag:intro + ' Na ' + t0 + ' uur daalt de glucoseconcentratie sneller dan ervoor, terwijl de gist niet sneller groeit. Welke verklaring is juist?', beeld:beeld, opties:[
+      'Per glucose levert gisting maar 2 ATP; om genoeg ATP te krijgen, moet de gist veel meer glucose afbreken.',
+      'Zonder zuurstof wordt glucose omgezet in zetmeel.',
+      'De ethanol breekt de glucose af.',
+      'Zonder zuurstof wordt glucose opgeslagen in de vacuole.'], goed:0,
+      uitleg:'Voor dezelfde hoeveelheid ATP moet de gist bij gisting ongeveer vijftien keer zoveel glucose afbreken als bij aerobe dissimilatie. Het glucoseverbruik stijgt dus sterk zodra de zuurstof op is.', antwoordTekst:'Gisting vraagt veel meer glucose per ATP.' });
+  }
+
+  /* --- rekenen met de reactievergelijking van de aerobe dissimilatie --- */
+  var DIS_RV = '<div class="bron rv">C<sub>6</sub>H<sub>12</sub>O<sub>6</sub> + 6 O<sub>2</sub> → 6 CO<sub>2</sub> + 6 H<sub>2</sub>O<br><small>molaire massa: glucose 180 g/mol, O<sub>2</sub> 32 g/mol, CO<sub>2</sub> 44 g/mol</small></div>';
+  function disRekenen(n){
+    var s = kies(['o2mol', 'glucmol', 'co2g', 'o2g', 'kj']);
+    if (s === 'o2mol'){ var m = kies([.1, .25, .5, 2]);
+      return Object.assign(basis('dissimilatie', 'dr-o2mol' + m), { vorm:'invul', vraag:'Een spier breekt ' + net(m) + ' mol glucose volledig aeroob af. Hoeveel mol O<sub>2</sub> is daarvoor nodig?', beeld:DIS_RV, opdracht:'Gebruik de verhouding in de reactievergelijking.',
+        velden:[{ label:'O₂', antwoord:6 * m, tol:.01, eenheid:'mol' }], uitleg:'Per mol glucose is 6 mol O<sub>2</sub> nodig: 6 × ' + net(m) + ' = <b>' + net(6 * m) + ' mol</b>.', antwoordTekst:net(6 * m) + ' mol' }); }
+    if (s === 'glucmol'){ var o = kies([.06, .12, .18, .3, .6]);
+      return Object.assign(basis('dissimilatie', 'dr-gm' + o), { vorm:'invul', vraag:'Een sporter neemt in een minuut ' + net(o) + ' mol O<sub>2</sub> op, die volledig wordt gebruikt voor de afbraak van glucose. Hoeveel mol glucose wordt er in die minuut afgebroken?', beeld:DIS_RV, opdracht:'Gebruik de verhouding in de reactievergelijking.',
+        velden:[{ label:'glucose', antwoord:rond(o / 6, 3), tol:.001, eenheid:'mol' }], uitleg:'Per mol glucose is 6 mol O<sub>2</sub> nodig. Dus ' + net(o) + ' ÷ 6 = <b>' + net(o / 6, 3) + ' mol</b> glucose.', antwoordTekst:net(o / 6, 3) + ' mol' }); }
+    var g = kies([9, 18, 45, 90]), mol = g / 180;
+    if (s === 'kj') return Object.assign(basis('dissimilatie', 'dr-kj' + g), { vorm:'invul', vraag:'Bij de volledige afbraak van 1 mol glucose komt 2,8 × 10<sup>3</sup> kJ energie vrij. Hoeveel kJ komt er vrij bij de volledige afbraak van ' + g + ' g glucose?', beeld:DIS_RV, opdracht:'Reken eerst om naar mol glucose.',
+      velden:[{ label:'energie', antwoord:rond(mol * 2800), tol:2, eenheid:'kJ' }], uitleg:g + ' g ÷ 180 g/mol = ' + net(mol, 3) + ' mol. ' + net(mol, 3) + ' × 2800 kJ = <b>' + rond(mol * 2800) + ' kJ</b>.', antwoordTekst:rond(mol * 2800) + ' kJ' });
+    var M = s === 'co2g' ? 44 : 32, uit = rond(mol * 6 * M, 2);
+    return Object.assign(basis('dissimilatie', 'dr-' + s + g), { vorm:'invul', vraag:'Een cel breekt ' + g + ' g glucose volledig aeroob af. Hoeveel gram ' + (s === 'co2g' ? 'CO<sub>2</sub> ontstaat daarbij' : 'O<sub>2</sub> is daarvoor nodig') + '?', beeld:DIS_RV, opdracht:'Reken eerst om naar mol glucose.',
+      velden:[{ label:s === 'co2g' ? 'CO₂' : 'O₂', antwoord:uit, tol:.15, eenheid:'g' }],
+      uitleg:g + ' g ÷ 180 g/mol = ' + net(mol, 3) + ' mol glucose → 6 × ' + net(mol, 3) + ' = ' + net(mol * 6, 3) + ' mol ' + (s === 'co2g' ? 'CO<sub>2</sub>' : 'O<sub>2</sub>') + ' → ' + net(mol * 6, 3) + ' × ' + M + ' = <b>' + net(uit, 1) + ' g</b>.', antwoordTekst:net(uit, 1) + ' g' });
+  }
+
+  /* --- vwo: rendement, ATP-opbrengst en RQ --- */
+  function disVwoReken(n){
+    var s = kies(['rend', 'rendan', 'atp', 'rq', 'rqkies']);
+    if (s === 'rend' || s === 'rendan'){
+      var atp = s === 'rendan' ? 2 : kies([30, 32, 36]), p = rond(atp * 30.5 / 2800 * 100, 1);
+      return Object.assign(basis('dissimilatie', 'dv-' + s + atp), { vorm:'invul',
+        vraag:'Bij de volledige verbranding van 1 mol glucose komt 2,8 × 10<sup>3</sup> kJ vrij. In een cel wordt ' + (s === 'rendan' ? '1 mol glucose anaeroob afgebroken, wat netto 2 mol ATP oplevert' : '1 mol glucose aeroob afgebroken, wat ' + atp + ' mol ATP oplevert') + '. Per mol ATP wordt 30,5 kJ vastgelegd. Welk percentage van de energie uit glucose wordt vastgelegd in ATP?',
+        opdracht:'Rond af op één decimaal.', velden:[{ label:'rendement', antwoord:p, tol:.3, eenheid:'%' }],
+        uitleg:atp + ' × 30,5 kJ = ' + net(atp * 30.5, 1) + ' kJ. ' + net(atp * 30.5, 1) + ' ÷ 2800 × 100% = <b>' + net(p, 1) + '%</b>. ' + (s === 'rendan' ? 'Het meeste blijft in het melkzuur of de ethanol zitten.' : 'De rest komt vrij als warmte.'), antwoordTekst:net(p, 1) + '%' });
+    }
+    if (s === 'atp'){
+      var set = kies([{ nadh:2.5, fadh:1.5 }, { nadh:3, fadh:2 }]), totaal = Math.random() < .5;
+      var ox = 10 * set.nadh + 2 * set.fadh, uit = totaal ? ox + 4 : ox;
+      return Object.assign(basis('dissimilatie', 'dv-atp' + set.nadh + (totaal ? 't' : 'o')), { vorm:'invul',
+        vraag:'Per glucose ontstaan bij de glycolyse 2 ATP en 2 NADH, bij de vorming van acetyl-CoA 2 NADH, en in de citroenzuurcyclus 2 ATP, 6 NADH en 2 FADH<sub>2</sub>. Stel dat de oxidatieve fosforylering per NADH ' + net(set.nadh) + ' ATP oplevert en per FADH<sub>2</sub> ' + net(set.fadh) + ' ATP. Hoeveel ATP ' + (totaal ? 'levert de volledige aerobe afbraak van één glucose in totaal op' : 'levert de oxidatieve fosforylering per glucose op') + '?',
+        opdracht:'Tel eerst alle NADH en FADH<sub>2</sub> bij elkaar.', velden:[{ label:'ATP', antwoord:uit, tol:.01, eenheid:'moleculen' }],
+        uitleg:'NADH: 2 + 2 + 6 = 10, dus 10 × ' + net(set.nadh) + ' = ' + net(10 * set.nadh) + ' ATP. FADH<sub>2</sub>: 2 × ' + net(set.fadh) + ' = ' + net(2 * set.fadh) + ' ATP. Samen ' + net(ox) + ' ATP' + (totaal ? ', plus 2 + 2 = 4 uit de glycolyse en de citroenzuurcyclus: <b>' + net(uit) + ' ATP</b>.' : ': <b>' + net(ox) + ' ATP</b>.'), antwoordTekst:net(uit) + ' ATP' });
+    }
+    var O = kies([.3, .4, .5]), RQ = kies([.7, .8, .85, .9, 1]), C = rond(O * RQ, 3);
+    if (s === 'rq') return Object.assign(basis('dissimilatie', 'dv-rq' + O + RQ), { vorm:'invul',
+      vraag:'Het respiratoir quotiënt (RQ) is de hoeveelheid CO<sub>2</sub> die je afgeeft gedeeld door de hoeveelheid O<sub>2</sub> die je opneemt. Iemand neemt in een minuut ' + net(O) + ' L O<sub>2</sub> op en geeft ' + net(C, 3) + ' L CO<sub>2</sub> af. Bereken het RQ.',
+      opdracht:'Rond af op twee decimalen.', velden:[{ label:'RQ', antwoord:RQ, tol:.011 }],
+      uitleg:'RQ = CO<sub>2</sub> ÷ O<sub>2</sub> = ' + net(C, 3) + ' ÷ ' + net(O) + ' = <b>' + net(RQ) + '</b>. ' + (RQ >= 1 ? 'Dat past bij de verbranding van koolhydraten.' : RQ <= .7 ? 'Dat past bij de verbranding van vetten.' : 'Dat past bij een mengsel van vetten en koolhydraten.'), antwoordTekst:net(RQ) });
+    var rq2 = kies([.7, 1, .85]);
+    return Object.assign(basis('dissimilatie', 'dv-rqk' + rq2), { vorm:'meerkeuze',
+      vraag:'Voor glucose geldt: C<sub>6</sub>H<sub>12</sub>O<sub>6</sub> + 6 O<sub>2</sub> → 6 CO<sub>2</sub> + 6 H<sub>2</sub>O, dus RQ = 6 ÷ 6 = 1. Voor het vetzuur palmitinezuur geldt: C<sub>16</sub>H<sub>32</sub>O<sub>2</sub> + 23 O<sub>2</sub> → 16 CO<sub>2</sub> + 16 H<sub>2</sub>O. Bij een proefpersoon wordt een RQ van ' + net(rq2) + ' gemeten. Wat verbrandt deze persoon vooral?',
+      opties:['vooral koolhydraten', 'vooral vetten', 'een mengsel van vetten en koolhydraten', 'vooral alcohol'], goed:rq2 === 1 ? 0 : rq2 === .7 ? 1 : 2, vasteVolgorde:true,
+      uitleg:'Voor palmitinezuur is RQ = 16 ÷ 23 = 0,70. Een RQ van 1 past dus bij koolhydraten, 0,70 bij vetten, en een waarde ertussen bij een mengsel. Gemeten: ' + net(rq2) + '.', antwoordTekst:rq2 === 1 ? 'vooral koolhydraten' : rq2 === .7 ? 'vooral vetten' : 'een mengsel van vetten en koolhydraten' });
+  }
+
+  /* --- vwo: waar in de cel, en in welke volgorde --- */
+  var PLEK = {
+    cyto:{ naam:'cytoplasma', l:['glycolyse', 'melkzuurgisting', 'alcoholgisting'] },
+    matrix:{ naam:'matrix van het mitochondrion', l:['vorming van acetyl-CoA uit pyrodruivenzuur', 'citroenzuurcyclus'] },
+    mem:{ naam:'binnenmembraan van het mitochondrion', l:['elektronentransportketen', 'ATP-vorming door ATP-synthase', 'vorming van water uit O₂'] }
+  };
+  function disPlaats(n){
+    var kaarten = [], vakken = [], gekozen = [];
+    ['cyto', 'matrix', 'mem'].forEach(function(p){
+      var l = H(PLEK[p].l).slice(0, 2), hoort = [];
+      l.forEach(function(x, i){ kaarten.push({ id:p + i, tekst:S(x) }); hoort.push(p + i); gekozen.push(x); });
+      vakken.push({ id:p, naam:PLEK[p].naam, hoort:hoort });
+    });
+    return Object.assign(basis('dissimilatie', 'dp-' + gekozen.map(function(x){ return x.length; }).join('.')), { vorm:'sleep',
+      vraag:'Waar in de cel vindt elk proces plaats?', opdracht:SLEEPOPDR, kaarten:kaarten, vakken:vakken,
+      uitleg:'De glycolyse en de gisting vinden plaats in het cytoplasma. Pyrodruivenzuur gaat het mitochondrion in: in de matrix ontstaat acetyl-CoA en draait de citroenzuurcyclus. De elektronentransportketen en ATP-synthase zitten in het binnenmembraan; daar vormt O<sub>2</sub> water.',
+      antwoordTekst:vakken.map(function(v){ return v.naam + ': ' + kaarten.filter(function(k){ return v.hoort.indexOf(k.id) >= 0; }).map(function(k){ return k.tekst; }).join(', '); }).join('; ') });
+  }
+  var VOLG = [
+    { k:'stap', v:'Zet de stappen van de aerobe dissimilatie in de goede volgorde.', l:['glycolyse', 'vorming van acetyl-CoA', 'citroenzuurcyclus', 'oxidatieve fosforylering'],
+      u:'Eerst splitst de glycolyse glucose in twee pyrodruivenzuur (cytoplasma). In de matrix wordt dat acetyl-CoA, dat de citroenzuurcyclus in gaat. De NADH en FADH<sub>2</sub> die daarbij ontstaan, leveren elektronen aan de keten: de oxidatieve fosforylering.' },
+    { k:'stof', v:'Volg de koolstof van glucose bij de aerobe dissimilatie. Zet de stoffen in de goede volgorde.', l:['glucose', 'pyrodruivenzuur', 'acetyl-CoA', 'CO₂'],
+      u:'Glucose (C<sub>6</sub>) wordt bij de glycolyse twee keer pyrodruivenzuur (C<sub>3</sub>). Daar gaat een CO<sub>2</sub> af en ontstaat acetyl-CoA (C<sub>2</sub>). In de citroenzuurcyclus komen de laatste twee C-atomen vrij als CO<sub>2</sub>.' },
+    { k:'elek', v:'Volg de elektronen (met waterstof) van glucose bij de aerobe dissimilatie. Zet ze in de goede volgorde.', l:['glucose', 'NADH', 'elektronentransportketen', 'water'],
+      u:'Bij de afbraak van glucose worden elektronen met H<sup>+</sup> afgegeven aan NAD<sup>+</sup>, dat NADH wordt. NADH geeft ze af aan de elektronentransportketen. Aan het eind neemt O<sub>2</sub> ze op en ontstaat water.' }
+  ];
+  function disVolgorde(n){
+    var it = kies(VOLG), kaarten = it.l.map(function(x, i){ return { id:'v' + i, tekst:S(x) }; });
+    return Object.assign(basis('dissimilatie', 'dvo-' + it.k), { vorm:'sleep', vraag:it.v, opdracht:WB ? 'Vak 1 is wat het eerst komt.' : 'Leg in vak 1 wat het eerst komt.',
+      kaarten:kaarten, vakken:kaarten.map(function(x, i){ return { id:'p' + i, max:1, hoort:[x.id] }; }),
+      uitleg:it.u, antwoordTekst:it.l.join(' → ') });
+  }
+
+  /* --- een schema met lege plekken: de reacties van fotosynthese en dissimilatie --- */
+  var W = { glucose:['glucose', 'suiker', 'druivensuiker', 'C6H12O6'], zuurstof:['zuurstof', 'O2', 'zuurstofgas'], co2:['koolstofdioxide', 'CO2', 'kooldioxide', 'koolzuurgas', 'koolstofdioxyde'],
+    water:['water', 'H2O'], melkzuur:['melkzuur', 'lactaat'], ethanol:['ethanol', 'alcohol'], blad:['bladgroenkorrels', 'bladgroenkorrel', 'chloroplasten', 'chloroplast'], mito:['mitochondriën', 'mitochondrien', 'mitochondrion', 'mitochondrium', 'mitochondria'] };
+  function gat(nr){ return '<span class="gatnr">' + nr + '</span>'; }
+  var SCHEMA = [
+    { k:'a', r:['fotosynthese: koolstofdioxide + water → ' + gat(1) + ' + ' + gat(2), 'aerobe dissimilatie: ' + gat(3) + ' + ' + gat(4) + ' → koolstofdioxide + water + energie'], a:['glucose', 'zuurstof', 'glucose', 'zuurstof'],
+      u:'Fotosynthese maakt van koolstofdioxide en water <b>glucose</b> en <b>zuurstof</b> (met lichtenergie). Aerobe dissimilatie is precies het omgekeerde: <b>glucose</b> en <b>zuurstof</b> worden koolstofdioxide en water, en er komt energie vrij.' },
+    { k:'b', r:['fotosynthese: ' + gat(1) + ' + water → glucose + ' + gat(2), 'aerobe dissimilatie: glucose + ' + gat(3) + ' → ' + gat(4) + ' + water + energie'], a:['co2', 'zuurstof', 'zuurstof', 'co2'],
+      u:'Fotosynthese: <b>koolstofdioxide</b> + water → glucose + <b>zuurstof</b>. Aerobe dissimilatie: glucose + <b>zuurstof</b> → <b>koolstofdioxide</b> + water + energie.' },
+    { k:'c', r:['melkzuurgisting (in een spiercel): glucose → ' + gat(1) + ' + energie', 'alcoholgisting (in gist): glucose → ' + gat(2) + ' + koolstofdioxide + energie'], a:['melkzuur', 'ethanol'],
+      u:'Zonder zuurstof breekt een spiercel glucose af tot <b>melkzuur</b>; gist maakt er <b>ethanol</b> (alcohol) en koolstofdioxide van. Beide leveren veel minder energie op dan aerobe dissimilatie.' },
+    { k:'d', r:['Fotosynthese vindt plaats in de ' + gat(1) + ' van een plantencel.', 'Aerobe dissimilatie vindt vooral plaats in de ' + gat(2) + ', bij planten én dieren.'], a:['blad', 'mito'],
+      u:'Fotosynthese gebeurt in de <b>bladgroenkorrels</b> (chloroplasten). Aerobe dissimilatie gebeurt vooral in de <b>mitochondriën</b>, en die hebben planten ook.' }
+  ];
+  function disSchema(n){
+    var it = kies(SCHEMA);
+    return Object.assign(basis('dissimilatie', 'dsch-' + it.k), { vorm:'invul', vraag:'Vul het schema aan.', beeld:'<div class="bron rv">' + it.r.join('<br>') + '</div>',
+      opdracht:'Schrijf bij elk nummer het woord dat op die plek hoort.',
+      velden:it.a.map(function(w, i){ return { label:String(i + 1), antwoord:W[w], type:'tekst' }; }),
+      uitleg:it.u, antwoordTekst:it.a.map(function(w, i){ return (i + 1) + ' = ' + W[w][0]; }).join(', ') });
+  }
+
+  function maakDissimilatie(n){
+    var r = Math.random();
+    if (n === 'vwo'){
+      if (r < .26) return uitLijst('dissimilatie', kiesItem(DIS_LIJST, n));
+      if (r < .4) return disGist(n);
+      if (r < .5) return disRekenen(n);
+      if (r < .56) return disSchema(n);
+      if (r < .74) return disVwoReken(n);
+      if (r < .86) return disPlaats(n);
+      return disVolgorde(n);
+    }
+    if (r < .36) return uitLijst('dissimilatie', kiesItem(DIS_LIJST, n));
+    if (r < .58) return disGist(n);
+    if (r < .78) return disSchema(n);
+    return disRekenen(n);
+  }
+
+
+  /* ================= 4. assimilatie en koolstofkringloop ================= */
+  var KRING_LIJST = [
+    { n:'hv', k:'kk1', v:'Wat is het verschil tussen assimilatie en dissimilatie?', o:[
+      'Bij assimilatie worden grotere moleculen opgebouwd, wat energie kost; bij dissimilatie worden stoffen afgebroken, waarbij energie vrijkomt.',
+      'Bij assimilatie komt energie vrij; bij dissimilatie kost het energie.',
+      'Assimilatie gebeurt alleen bij planten, dissimilatie alleen bij dieren.',
+      'Assimilatie is de opname van voedsel, dissimilatie de uitscheiding van afval.'],
+      u:'Assimilatie is opbouw (fotosynthese, eiwitten uit aminozuren, zetmeel uit glucose) en kost energie, vaak in de vorm van ATP. Dissimilatie is afbraak en levert de energie, ook bij planten.' },
+    { n:'hv', k:'kk2', v:'Een plant maakt aminozuren uit glucose. Welke stof moet de plant daarvoor ook uit de bodem opnemen?', o:['nitraat', 'zuurstof', 'zetmeel', 'koolstofdioxide'],
+      u:'Aminozuren bevatten stikstof (N). Glucose bevat alleen C, H en O. De stikstof neemt de plant op als nitraat (of ammonium) uit de bodem.' },
+    { n:'hv', k:'kk3', v:'Hoe heet een organisme dat zelf organische stoffen maakt uit anorganische stoffen, zoals een plant?', a:['autotroof', 'autotrofe', 'autotroph', 'autotrof organisme', 'autotroof organisme'],
+      u:'Zo\'n organisme is <b>autotroof</b>. Organismen die organische stoffen uit voedsel halen, zoals dieren en schimmels, zijn heterotroof.' },
+    { n:'hv', k:'kk4', v:'Welke rol hebben reducenten (bacteriën en schimmels) in de koolstofkringloop?', o:[
+      'Ze breken dood organisch materiaal af, waarbij CO<sub>2</sub> vrijkomt.',
+      'Ze leggen CO<sub>2</sub> vast met fotosynthese.',
+      'Ze zetten CO<sub>2</sub> om in fossiele brandstoffen.',
+      'Ze nemen geen deel aan de koolstofkringloop.'],
+      u:'Reducenten dissimileren de organische stoffen in dode resten en uitwerpselen. De koolstof komt daarbij als CO<sub>2</sub> terug in de lucht, en de mineralen komen terug in de bodem.' },
+    { n:'hv', k:'kk5', v:'Waardoor is de CO<sub>2</sub>-concentratie in de atmosfeer de afgelopen 150 jaar sterk gestegen?', o:[
+      'vooral door het verbranden van fossiele brandstoffen, en ook door ontbossing',
+      'vooral door de dissimilatie van mensen en dieren',
+      'vooral door vulkaanuitbarstingen',
+      'vooral doordat planten minder fotosynthese doen'],
+      u:'Bij verbranding van steenkool, olie en gas komt koolstof vrij die miljoenen jaren vastlag. Die komt er bovenop de gewone kringloop. Bij ontbossing verdwijnen planten die CO<sub>2</sub> vastleggen en komt koolstof uit het hout vrij.' },
+    jo('hv', 'kk6', 'De koolstof in steenkool was ooit CO<sub>2</sub> in de atmosfeer.',
+      'steenkool is ontstaan uit resten van planten, die die koolstof met fotosynthese hadden vastgelegd.', 'steenkool neemt CO<sub>2</sub> op uit de lucht.',
+      'steenkool is ontstaan uit gesteente.', 'koolstof in de aarde komt nooit uit de lucht.', 0,
+      'Steenkool is ontstaan uit plantenresten die in moerassen werden begraven en niet volledig zijn afgebroken. Die planten hadden de koolstof met fotosynthese uit de lucht gehaald. Bij verbranding komt het weer vrij als CO<sub>2</sub>.'),
+    { n:'hv', k:'kk7', v:'Welke stof maakt een plant uit glucose om zijn celwanden te bouwen?', a:['cellulose'],
+      u:'De celwand bestaat vooral uit <b>cellulose</b>, een lange keten van glucose-eenheden. Dat is voortgezette assimilatie.' },
+    { n:'hv', k:'kk8', v:'In welke stof slaat een plant glucose op, bijvoorbeeld in een aardappelknol?', a:['zetmeel'],
+      u:'Planten slaan glucose op als <b>zetmeel</b>. Dieren en schimmels slaan glucose op als glycogeen.' },
+    { n:'hv', k:'kk9', v:'Bij de vorming van een eiwit worden aminozuren aan elkaar gekoppeld. Bij elke koppeling komt een watermolecuul vrij. Hoeveel watermoleculen komen vrij bij de vorming van een eiwit van 100 aminozuren?', a:99, l:'water', e:'moleculen',
+      u:'Tussen 100 aminozuren op een rij zitten <b>99</b> bindingen (peptidebindingen). Elke binding levert één H<sub>2</sub>O op.' },
+    { n:'hv', k:'kk10', v:'Bij welk van deze processen wordt netto ATP verbruikt?', o:['de opbouw van eiwitten uit aminozuren', 'de glycolyse', 'de afbraak van glucose tot CO<sub>2</sub> en water', 'alcoholgisting'],
+      u:'De opbouw van een eiwit is assimilatie en kost energie: ATP. De andere drie zijn dissimilatie en leveren netto ATP op.' },
+    { n:'v', k:'kk11', v:'Oceanen nemen een deel van het extra CO<sub>2</sub> uit de atmosfeer op. Welk gevolg heeft dat voor het zeewater?', o:[
+      'Het zeewater wordt zuurder, wat het voor koralen en schelpdieren moeilijker maakt om kalk te vormen.',
+      'Het zeewater wordt zouter.',
+      'Het zeewater bevat meer zuurstof.',
+      'Er verandert niets, want CO<sub>2</sub> lost niet op in water.'],
+      u:'CO<sub>2</sub> vormt in water koolzuur, waardoor de pH daalt (verzuring). Daardoor is er minder carbonaat beschikbaar voor kalkskeletten en schelpen.' },
+    { n:'v', k:'kk12', v:'Een koe eet gras. Maar een klein deel van de energie in het gras komt terecht in de groei van de koe. Waar blijft het grootste deel?', o:[
+      'Het wordt gedissimileerd (en komt vrij als warmte) of verlaat de koe onverteerd in de mest.',
+      'Het wordt omgezet in zuurstof.',
+      'Het wordt opgeslagen in de botten.',
+      'Het gaat verloren bij de fotosynthese.'],
+      u:'De koe dissimileert veel voedsel voor beweging, lichaamswarmte en het in stand houden van haar cellen; die energie wordt uiteindelijk warmte. Een deel wordt niet verteerd en komt in de mest, waar reducenten het gebruiken.' },
+    { n:'v', k:'kk13', v:'Welk van deze organismen is autotroof?', o:['een alg', 'een paddenstoel', 'gist', 'een sprinkhaan'],
+      u:'Een alg doet aan fotosynthese en maakt zijn organische stoffen zelf: autotroof. Paddenstoelen en gist zijn schimmels; zij zijn, net als dieren, heterotroof.' },
+    jo('v', 'kk14', 'Een boom die in een bos groeit, legt evenveel koolstof vast als er bij de dissimilatie van de boom vrijkomt.',
+      'fotosynthese en dissimilatie zijn bij planten altijd even groot.', 'de boom neemt geen koolstof op.',
+      'een groeiende boom legt meer koolstof vast dan hij met dissimilatie afgeeft; het verschil wordt hout, bladeren en wortels.', 'een boom doet niet aan dissimilatie.', 2,
+      'Groei is netto vastlegging: de koolstof in nieuw hout en blad komt uit de fotosynthese, en die is groter dan de dissimilatie. Een volgroeid bos waarin evenveel afsterft als groeit, legt netto weinig vast.'),
+    { n:'v', k:'kk15', v:'Bij het maken van zetmeel uit glucose koppelt een plant glucose-eenheden aan elkaar. Waar komt de energie voor dit proces vandaan?', o:['uit ATP, dat bij de dissimilatie (en in bladgroenkorrels ook bij de lichtreactie) ontstaat', 'uit de zuurstof die vrijkomt', 'uit het zetmeel zelf', 'uit de warmte van de zon, rechtstreeks'],
+      u:'Opbouwreacties (assimilatie) gebruiken ATP. In bladgroenkorrels komt dat ATP ook uit de lichtreactie; elders in de plant uit de dissimilatie in de mitochondriën.' }
+  ];
+
+  /* --- de koolstofkringloop als schema met genummerde pijlen --- */
+  var BOX = { lucht:[200, 30, 150, ['CO₂ in de lucht']], plant:[62, 150, 104, ['planten']], dier:[190, 262, 100, ['dieren']], red:[330, 262, 110, ['reducenten']], fos:[352, 150, 92, ['fossiele', 'brandstoffen']] };
+  var PIJLEN = [
+    { id:'a', van:[140, 52], naar:[62, 128], p:'fotosynthese' },
+    { id:'b', van:[102, 128], naar:[180, 52], p:'dissimilatie' },
+    { id:'c', van:[92, 172], naar:[162, 240], p:'opeten' },
+    { id:'d', van:[205, 240], naar:[205, 52], p:'dissimilatie' },
+    { id:'e', van:[242, 262], naar:[272, 262], p:'dode resten' },
+    { id:'f', van:[318, 240], naar:[244, 52], p:'dissimilatie' },
+    { id:'g', van:[352, 128], naar:[272, 50], p:'verbranding' }
+  ];
+  var PROC = [
+    { id:'fotosynthese', naam:'fotosynthese' }, { id:'dissimilatie', naam:'dissimilatie' }, { id:'opeten', naam:'opeten (voedsel)' },
+    { id:'dode resten', naam:'dode resten en uitwerpselen' }, { id:'verbranding', naam:'verbranding' }
+  ];
+  function kringSchema(nummer){
+    var s = '<svg class="sgr" viewBox="0 0 400 300" font-family="inherit" role="img" aria-label="schema van de koolstofkringloop met genummerde pijlen"><defs><marker id="kp" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>';
+    Object.keys(BOX).forEach(function(k){ var b = BOX[k], w = b[2];
+      s += '<rect x="' + (b[0] - w / 2) + '" y="' + (b[1] - 20) + '" width="' + w + '" height="40" rx="10" fill="var(--kaart2)" stroke="currentColor" stroke-width="1.5"/>';
+      var regels = b[3];
+      regels.forEach(function(r, i){ s += '<text x="' + b[0] + '" y="' + (b[1] + 5 + (i - (regels.length - 1) / 2) * 15) + '" font-size="' + (regels.length > 1 ? 12.5 : 14) + '" font-weight="600" text-anchor="middle" fill="currentColor">' + r + '</text>'; });
+    });
+    PIJLEN.forEach(function(p){
+      s += '<line x1="' + p.van[0] + '" y1="' + p.van[1] + '" x2="' + p.naar[0] + '" y2="' + p.naar[1] + '" stroke="currentColor" stroke-width="2" marker-end="url(#kp)"/>';
+      var nr = nummer[p.id]; if (!nr) return;
+      var mx = (p.van[0] + p.naar[0]) / 2, my = (p.van[1] + p.naar[1]) / 2;
+      s += '<circle cx="' + mx + '" cy="' + my + '" r="11" fill="var(--kaart)" stroke="var(--nadruk)" stroke-width="2"/><text x="' + mx + '" y="' + (my + 5) + '" font-size="13" font-weight="700" text-anchor="middle" fill="currentColor">' + nr + '</text>';
+    });
+    return s + '</svg>';
+  }
+  function kringSleep(n){
+    var gekozen = H(PIJLEN).slice(0, n === 'vwo' ? 6 : 5), nummer = {};
+    gekozen.forEach(function(p, i){ nummer[p.id] = i + 1; });
+    var kaarten = gekozen.map(function(p){ return { id:p.id, tekst:'pijl ' + nummer[p.id] }; }).sort(function(x, y){ return x.tekst < y.tekst ? -1 : 1; });
+    var vakken = PROC.map(function(pr){ return { id:'pr-' + pr.id, naam:pr.naam, hoort:gekozen.filter(function(p){ return p.p === pr.id; }).map(function(p){ return p.id; }) }; });
+    return Object.assign(basis('kringloop', 'ks-' + gekozen.map(function(p){ return p.id + nummer[p.id]; }).join('')), { vorm:'sleep', vasteVolgorde:true,
+      vraag:'Het schema toont de koolstofkringloop. Welk proces hoort bij elke genummerde pijl?', opdracht:WB ? 'Bij een proces kunnen meer pijlen horen, of geen.' : 'Sleep elke pijl naar het goede proces. Bij een proces kunnen meer pijlen horen, of geen.',
+      beeld:kringSchema(nummer), kaarten:kaarten, vakken:vakken,
+      uitleg:'Van de lucht naar de planten gaat koolstof via fotosynthese. Planten, dieren en reducenten geven CO<sub>2</sub> terug door dissimilatie. Dieren krijgen koolstof door planten te eten; dode resten en uitwerpselen gaan naar de reducenten. Fossiele brandstoffen geven CO<sub>2</sub> af bij verbranding.',
+      antwoordTekst:vakken.filter(function(v){ return v.hoort.length; }).map(function(v){ return v.naam + ': ' + v.hoort.map(function(id){ return 'pijl ' + nummer[id]; }).join(', '); }).join('; ') });
+  }
+  function kringPijl(n){
+    var volg = H(PIJLEN), nummer = {};
+    volg.forEach(function(p, i){ nummer[p.id] = i + 1; });
+    var vr = kies([
+      { p:'g', v:'Bij welke pijl komt koolstof in de lucht die miljoenen jaren in de bodem vastlag?' },
+      { p:'a', v:'Bij welke pijl wordt koolstof uit de lucht vastgelegd in organische stoffen?' },
+      { p:'c', v:'Bij welke pijl gaat koolstof van een producent naar een consument?' },
+      { p:'e', v:'Bij welke pijl gaat koolstof in dode resten en uitwerpselen naar de reducenten?' }]);
+    var goed = nummer[vr.p], andere = H(PIJLEN.filter(function(p){ return p.id !== vr.p; })).slice(0, 3).map(function(p){ return nummer[p.id]; });
+    var naamGoed = PIJLEN.filter(function(p){ return p.id === vr.p; })[0].p;
+    return Object.assign(basis('kringloop', 'kp-' + vr.p + volg.map(function(p){ return p.id; }).join('')), { vorm:'meerkeuze', vraag:'Het schema toont de koolstofkringloop. ' + vr.v, beeld:kringSchema(nummer),
+      opties:['pijl ' + goed].concat(andere.map(function(x){ return 'pijl ' + x; })), goed:0,
+      uitleg:'Pijl ' + goed + ' is ' + (naamGoed === 'dode resten' ? 'het transport van dode resten en uitwerpselen' : naamGoed) + '. ' + ({ g:'Fossiele brandstoffen bevatten koolstof die planten lang geleden vastlegden; verbranding brengt die terug in de lucht.', a:'Bij fotosynthese maken planten van CO<sub>2</sub> en water glucose.', c:'Planten zijn producenten, dieren consumenten: door te eten krijgen dieren de koolstof binnen.', e:'Reducenten breken dood materiaal af en dissimileren het.' })[vr.p], antwoordTekst:'pijl ' + goed });
+  }
+
+  /* --- CO2 in de lucht over drie jaar: seizoenen en een stijgende lijn --- */
+  var SEIZOEN = [1.0, 1.8, 2.6, 3.4, 3.8, 2.6, .4, -2.0, -3.4, -3.2, -1.4, 0];
+  function kringSeizoen(n){
+    var trend = kies([2, 2.5, 3]), basisw = kies([410, 412, 414]), pts = [];
+    for (var m = 0; m <= 36; m++) pts.push([m, basisw + trend * m / 12 + SEIZOEN[m % 12]]);
+    var top1 = basisw + trend * 4 / 12 + 3.8, top3 = basisw + trend * 28 / 12 + 3.8;
+    var a = assen({ xmin:0, xmax:36, xstap:3, xlab:12, ymin:405, ymax:430, ystap:1, ylab:5, xnaam:'tijd (maanden)', ynaam:'CO₂ (ppm)', aria:'CO2-concentratie in de lucht over drie jaar', xtekst:function(x){ return x === 36 ? '' : 'jan jaar ' + (x / 12 + 1); } });
+    var s = kies(n === 'vwo' ? ['zomer', 'winter', 'trend', 'reken', 'zuid'] : ['zomer', 'winter', 'trend', 'reken']);
+    var beeld = a.kop + lijn(a, glad(pts, 4), L1) + (s === 'reken' ? stip(a, 4, top1, net(rond(top1, 1), 1), L1, 0, -10) + stip(a, 28, top3, net(rond(top3, 1), 1), L1, 0, -10) : '') + a.staart;
+    var intro = 'De grafiek toont de CO<sub>2</sub>-concentratie in de lucht, gemeten op een meetstation op het noordelijk halfrond, gedurende drie jaar.';
+    var k = 'kz-' + s + trend + basisw;
+    if (s === 'reken'){ var st = rond((rond(top3, 1) - rond(top1, 1)) / 2, 2);
+      return Object.assign(basis('kringloop', k), { vorm:'invul', vraag:intro + ' De twee stippen geven de hoogste waarde in mei van jaar 1 en van jaar 3. Bereken de gemiddelde stijging van de CO<sub>2</sub>-concentratie per jaar.', opdracht:'Let op: van jaar 1 naar jaar 3 is twee jaar.', beeld:beeld,
+        velden:[{ label:'stijging', antwoord:st, tol:.06, eenheid:'ppm per jaar' }], uitleg:'(' + net(rond(top3, 1), 1) + ' − ' + net(rond(top1, 1), 1) + ') ÷ 2 jaar = <b>' + net(st) + ' ppm per jaar</b>.', antwoordTekst:net(st) + ' ppm per jaar' }); }
+    if (s === 'zomer') return Object.assign(basis('kringloop', k), { vorm:'meerkeuze', vraag:intro + ' Elk jaar is de concentratie in september en oktober het laagst. Hoe komt dat?', beeld:beeld, opties:[
+      'In de zomer is de fotosynthese op het noordelijk halfrond groter dan de dissimilatie: planten nemen netto CO<sub>2</sub> op.',
+      'In de zomer verbranden mensen minder fossiele brandstoffen, omdat ze minder stoken.',
+      'In de zomer dissimileren planten niet.',
+      'Warme lucht bevat minder CO<sub>2</sub>.'], goed:0,
+      uitleg:'In het groeiseizoen leggen de planten op het noordelijk halfrond veel CO<sub>2</sub> vast. Aan het eind van de zomer is de concentratie het laagst. Minder stoken speelt een veel kleinere rol; planten dissimileren ook in de zomer.', antwoordTekst:'Fotosynthese groter dan dissimilatie.' });
+    if (s === 'winter') return Object.assign(basis('kringloop', k), { vorm:'meerkeuze', vraag:intro + ' Waarom stijgt de concentratie elk jaar in de herfst en de winter?', beeld:beeld, opties:[
+      'Er is weinig fotosynthese, terwijl de dissimilatie door planten, dieren en vooral reducenten (afgevallen blad) doorgaat.',
+      'In de winter doen planten aan omgekeerde fotosynthese.',
+      'In de winter is er meer zuurstof in de lucht.',
+      'In de winter stopt alle dissimilatie.'], goed:0,
+      uitleg:'Bomen verliezen hun blad en de fotosynthese neemt sterk af. Reducenten breken het afgevallen blad af en geven CO<sub>2</sub> af. Daardoor stijgt de concentratie tot het voorjaar.', antwoordTekst:'Weinig fotosynthese, dissimilatie gaat door.' });
+    if (s === 'trend') return Object.assign(basis('kringloop', k), { vorm:'meerkeuze', vraag:intro + ' Elk jaar ligt de lijn hoger dan het jaar ervoor. Wat is daarvan de belangrijkste oorzaak?', beeld:beeld, opties:[
+      'het verbranden van fossiele brandstoffen',
+      'de dissimilatie van de groeiende wereldbevolking',
+      'meer fotosynthese',
+      'de seizoenen worden langer'], goed:0,
+      uitleg:'Bij verbranding van steenkool, olie en gas komt koolstof vrij die al miljoenen jaren uit de kringloop was. De natuur kan dat extra CO<sub>2</sub> niet helemaal opnemen, dus de concentratie stijgt elk jaar. De dissimilatie van mensen is onderdeel van de gewone kringloop: die koolstof kwam kort ervoor uit voedsel.', antwoordTekst:'verbranding van fossiele brandstoffen' });
+    return Object.assign(basis('kringloop', k), { vorm:'meerkeuze', vraag:intro + ' Op een meetstation op het zuidelijk halfrond is de schommeling binnen een jaar veel kleiner. Welke verklaring past daarbij?', beeld:beeld, opties:[
+      'Op het zuidelijk halfrond is veel minder land met planten; het grootste deel is oceaan.',
+      'Op het zuidelijk halfrond zijn er geen seizoenen.',
+      'Op het zuidelijk halfrond doen planten niet aan dissimilatie.',
+      'Op het zuidelijk halfrond is er geen fotosynthese in de winter.'], goed:0,
+      uitleg:'De seizoensschommeling komt door de planten op het land: groeiseizoen tegenover winter. Het zuidelijk halfrond heeft veel minder landoppervlak, dus is het effect kleiner. Seizoenen zijn er wel, alleen zijn ze omgekeerd.', antwoordTekst:'Minder land met planten.' });
+  }
+
+  /* --- een gesloten kas, een etmaal lang --- */
+  function kringKas(n){
+    var tmax = kies([6, 7, 8]), tmin = kies([16, 17, 18]);
+    var a = assen({ xmin:0, xmax:24, xstap:2, xlab:4, ymin:200, ymax:650, ystap:50, ylab:100, xnaam:'tijd (uur)', ynaam:'CO₂ (ppm)', aria:'CO2-concentratie in een gesloten kas gedurende een etmaal' });
+    var dt = tmin - tmax;
+    var pts = glad([[0, 520], [tmax, 600], [tmax + dt * .25, 560], [tmax + dt * .5, 430], [tmax + dt * .75, 320], [tmin, 280], [tmin + 2.5, 330], [24, 470]]);
+    var beeld = a.kop + lijn(a, pts, L1) + a.staart;
+    var intro = 'In een afgesloten kas met tomatenplanten wordt een etmaal lang de CO<sub>2</sub>-concentratie gemeten. Er wordt geen CO<sub>2</sub> toegevoegd en er is geen ventilatie.';
+    var s = kies(['min', 'max', 'nacht', 'daal']), k = 'kk-' + s + tmax + tmin;
+    if (s === 'min' || s === 'max'){ var t = s === 'min' ? tmin : tmax;
+      return Object.assign(basis('kringloop', k), { vorm:'invul', vraag:intro + ' Op welk tijdstip ' + (s === 'min' ? 'aan het eind van de middag' : 'in de ochtend') + ' is de fotosynthese even groot als de dissimilatie?', opdracht:'Lees de grafiek af: let op waar de lijn van richting verandert.', beeld:beeld,
+        velden:[{ label:'tijdstip', antwoord:t, tol:.6, eenheid:'uur' }],
+        uitleg:'Als fotosynthese en dissimilatie even groot zijn, verandert de CO<sub>2</sub>-concentratie niet: de lijn heeft dan een ' + (s === 'min' ? 'laagste' : 'hoogste') + ' punt. Dat is om <b>' + t + ' uur</b>. ' + (s === 'min' ? 'Daarna wordt het licht te zwak en stijgt de concentratie weer.' : 'Daarvoor stijgt de concentratie, daarna is de fotosynthese groter en daalt hij.'), antwoordTekst:t + ' uur' }); }
+    if (s === 'nacht') return Object.assign(basis('kringloop', k), { vorm:'meerkeuze', vraag:intro + ' Waarom stijgt de concentratie tussen ' + (tmin + 2) + ' uur en 24 uur?', beeld:beeld, opties:[
+      'Er is (vrijwel) geen fotosynthese meer, maar de planten dissimileren wel.',
+      'De planten nemen \'s avonds meer CO<sub>2</sub> op.',
+      'De temperatuur daalt, waardoor CO<sub>2</sub> uit de grond komt.',
+      '\'s Avonds doen de planten meer aan fotosynthese.'], goed:0,
+      uitleg:'Zonder licht stopt de fotosynthese. De dissimilatie van planten (en bodemorganismen) gaat door en geeft CO<sub>2</sub> af. In een gesloten kas hoopt dat zich op.', antwoordTekst:'Alleen nog dissimilatie.' });
+    return Object.assign(basis('kringloop', k), { vorm:'meerkeuze', vraag:intro + ' Waarom daalt de concentratie tussen ' + (tmax + 1) + ' uur en 12 uur?', beeld:beeld, opties:[
+      'De fotosynthese is groter dan de dissimilatie, zodat de planten netto CO<sub>2</sub> opnemen.',
+      'De planten dissimileren overdag niet.',
+      'De dissimilatie is groter dan de fotosynthese.',
+      'CO<sub>2</sub> ontsnapt uit de kas.'], goed:0,
+      uitleg:'Bij meer licht neemt de fotosynthese toe en wordt hij groter dan de dissimilatie. De planten halen dan netto CO<sub>2</sub> uit de lucht. Er is geen ventilatie, dus ontsnappen kan niet.', antwoordTekst:'Fotosynthese groter dan dissimilatie.' });
+  }
+
+  /* --- assimilatie of dissimilatie --- */
+  var ASS = ['fotosynthese', 'vorming van zetmeel uit glucose', 'vorming van eiwitten uit aminozuren', 'vorming van glycogeen in de lever', 'vorming van cellulose voor de celwand', 'vorming van vet uit glucose'];
+  var DIS = ['glycolyse', 'alcoholgisting', 'melkzuurgisting', 'citroenzuurcyclus', 'afbraak van vetzuren in een spiercel', 'afbraak van glucose tot CO₂ en water'];
+  function kringSoort(n){
+    var as = H(ASS).slice(0, 3), ds = H(DIS).slice(0, 3), kaarten = [];
+    as.forEach(function(x, i){ kaarten.push({ id:'a' + i, tekst:S(x) }); }); ds.forEach(function(x, i){ kaarten.push({ id:'d' + i, tekst:S(x) }); });
+    return Object.assign(basis('kringloop', 'ka-' + as.map(function(x){ return ASS.indexOf(x); }).sort().join('') + ds.map(function(x){ return DIS.indexOf(x); }).sort().join('')), { vorm:'sleep',
+      vraag:'Is elk proces assimilatie of dissimilatie?', opdracht:SLEEPOPDR, kaarten:kaarten,
+      vakken:[{ id:'ass', naam:'assimilatie', uit:'opbouw, kost energie', hoort:['a0', 'a1', 'a2'] }, { id:'dis', naam:'dissimilatie', uit:'afbraak, levert energie', hoort:['d0', 'd1', 'd2'] }],
+      uitleg:'Assimilatie bouwt grotere moleculen op uit kleinere en kost energie: ' + as.join(', ') + '. Dissimilatie breekt organische stoffen af en levert energie (ATP): ' + ds.join(', ') + '.',
+      antwoordTekst:'assimilatie: ' + as.join(', ') + '; dissimilatie: ' + ds.join(', ') });
+  }
+
+  function maakKringloop(n){
+    var r = Math.random();
+    if (r < .28) return uitLijst('kringloop', kiesItem(KRING_LIJST, n));
+    if (r < .42) return kringSleep(n);
+    if (r < .52) return kringPijl(n);
+    if (r < .68) return kringSeizoen(n);
+    if (r < .84) return kringKas(n);
+    return kringSoort(n);
+  }
+
+
+  var SOORTEN = { enzymen:maakEnzymen, fotosynthese:maakFotosynthese, dissimilatie:maakDissimilatie, kringloop:maakKringloop };
+
+  VAKSPEL.maak({
+    id:'stofwisseling', naam:'Stofwisseling', vak:'bio', kleur:'#3F7A34', minuten:8,
+    hand:'opbouwen, afbreken, energie',
+    lead:'Hoe maakt een plant glucose, hoe haalt een spiercel er energie uit, en waarom werkt een enzym bij 37 °C wel en bij 70 °C niet? Je leest grafieken van proeven met enzymen en fotosynthese, zoekt de beperkende factor, vult schema\'s aan, rekent met zuurstof, glucose en energie, en beoordeelt beweringen. Examenstof biologie havo en vwo.',
+    leerdoel:'Je leert de stofwisseling van cel en organisme: hoe enzymen werken, hoe fotosynthese afhangt van licht, CO₂ en temperatuur, hoe aerobe en anaerobe dissimilatie ATP opleveren, en hoe koolstof via assimilatie en dissimilatie rondgaat. Op vwo ook de lichtreactie, de Calvincyclus, de citroenzuurcyclus en de oxidatieve fosforylering.',
+    hoe:[
+      { kop:'Lees de proef', tekst:'Bij veel opgaven staat een grafiek van een proef. Kijk eerst wat er op de assen staat en wat er in de proef verandert. Zoek dan het punt waar de vraag over gaat.' },
+      { kop:'De beperkende factor', tekst:'Stijgt de lijn nog als je meer licht geeft, dan is <b>licht</b> beperkend. Is de lijn vlak, dan beperkt iets anders, zoals CO<sub>2</sub> of de temperatuur.' },
+      { kop:'Vier onderdelen', tekst:'Enzymen, fotosynthese, dissimilatie en ATP, en assimilatie met de koolstofkringloop. Bij rekenvragen staan de reactievergelijking en de molaire massa\'s erbij.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'welk examen', std:'hv', items:[
+        { id:'hv', naam:'havo', uit:'Enzymen bij temperatuur en pH, fotosynthese en beperkende factoren, aerobe en anaerobe dissimilatie, ATP, assimilatie en de koolstofkringloop, met grafieken en rekenen met mol en gram.' },
+        { id:'vwo', naam:'vwo', uit:'Ook remmers van enzymen, de lichtreactie en de Calvincyclus, de stappen van de dissimilatie in het mitochondrion, ATP-opbrengst, rendement en het respiratoir quotiënt.' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' },
+        { id:'enzymen', naam:'enzymen', uit:'Activeringsenergie, de actieve plaats, temperatuur en pH, substraatconcentratie en remmers, en een proef met katalase.' },
+        { id:'fotosynthese', naam:'fotosynthese', uit:'De reactievergelijking, het compensatiepunt, bruto en netto, beperkende factoren, en op vwo de lichtreactie en de Calvincyclus.' },
+        { id:'dissimilatie', naam:'dissimilatie en ATP', uit:'Aeroob en anaeroob, gist en melkzuur, rekenen met zuurstof en energie, en op vwo glycolyse, citroenzuurcyclus en oxidatieve fosforylering.' },
+        { id:'kringloop', naam:'assimilatie en koolstofkringloop', uit:'Opbouw en afbraak, de koolstofkringloop in een schema, CO₂ in de lucht en in een kas.' } ] }
+    ],
+    aantal:10,
+    maak:function(keuze, nr){
+      var soort = keuze.soort === 'alles' ? kies(['enzymen', 'fotosynthese', 'dissimilatie', 'kringloop']) : keuze.soort;
+      return SOORTEN[soort](keuze.niveau === 'vwo' ? 'vwo' : 'hv');
+    },
+    uitleg:{ doel:'De stofwisseling van cel en organisme voor havo en vwo: enzymen, fotosynthese, dissimilatie en ATP, assimilatie en de koolstofkringloop, met grafieken van proeven en rekenwerk.', tijd:'twintig opgaven per ronde, of kies 10 of 30',
+      bediening:'Kies een antwoord (of druk op 1 tot 4). Bij een getal of begrip typ je het antwoord en druk je op Nakijken; een komma of een punt mag allebei. Bij een schema sleep je de kaartjes naar hun plek, of tik je een kaartje en dan het vak.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>
