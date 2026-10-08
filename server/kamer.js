@@ -106,6 +106,11 @@ const KLAS_LEERLINGEN = 400;
 /* spellen die een opdracht kunnen zijn: bij een onderdeel telt het aantal goed in dat onderdeel, anders de ronde (of het aantal goed bij de Vragenrace).
    Bij Mijnwerker is de ronde het diepste punt in meters, bij Poortrace het aantal goede poorten en bij Kaarttoren het aantal verdiepingen. */
 const OPDRACHT_SPELLEN = { race: true, toren: true, zwaard: true, dictee: true, mijnwerker: true, poortrace: true, kaarttoren: true };
+/* Ook elke losse oefening uit de klas (de vakspellen en de oefenspellen) kan een
+   opdracht zijn, met de keuzes van de docent in kz (n=kgt&soort=...&aantal=20).
+   Niet de spellen die geen eigen uitslag per leerling hebben. */
+const GEEN_OPDRACHT = { klasquiz: 1, dag: 1, fouten: 1, eigen: 1, stad: 1 };
+function magOpdracht(spel){ return !!(OPDRACHT_SPELLEN[spel] || (KLAS_SPELLEN[spel] && !GEEN_OPDRACHT[spel])); }
 /* Het dictee als opdracht. Drie bronnen: de tekst van deze week (per niveau,
    uit de tekstbank van dictee.html), een vaste tekst uit die bank (dt: t-bb-01),
    of een eigen dictee van de docent (dt: eigen-K7M2QX, uit materiaal.js).
@@ -2032,7 +2037,7 @@ export class Kamer extends DurableObject {
     if (!o){ this.stand.opdrachten = []; await this.bewaar(); return json({ ok: true, opdracht: null, opdrachten: [] }); }
     if (lijst.length >= OPDRACHTEN_MAX) return json({ fout: "er staan al " + OPDRACHTEN_MAX + " opdrachten; haal er eerst een weg" }, 400);
     const spel = String(o.spel || ""), vak = String(o.vak || "").replace(/[^a-z]/g, "").slice(0, 8), deel = schoon(o.deel, 40);
-    if (!OPDRACHT_SPELLEN[spel]) return json({ fout: "dit spel kan geen opdracht zijn" }, 400);
+    if (!magOpdracht(spel)) return json({ fout: "dit spel kan geen opdracht zijn" }, 400);
     if (spel === "dictee"){
       const d = this.dicteeOpdracht(o);
       if (d.fout) return json({ fout: d.fout }, 400);
@@ -2045,6 +2050,12 @@ export class Kamer extends DurableObject {
     if (min < 1) return json({ fout: "het minimum is minstens 1" }, 400);
     if (tot < Date.now() - 3600000 || tot > Date.now() + 120 * 86400000) return json({ fout: "kies een datum binnen vier maanden" }, 400);
     const nieuw = { id: sleutelMaken(3), spel, vak, deel, deelNaam: schoon(o.deelNaam, 60), min, tot, tekst: schoon(o.tekst, 140), sinds: Date.now() };
+    /* een losse oefening: de naam om te tonen en de keuzes voor in de link */
+    if (!OPDRACHT_SPELLEN[spel]){
+      const kz = String(o.kz || "");
+      nieuw.kz = /^[a-z0-9=&_%.-]{0,160}$/i.test(kz) ? kz : "";
+      nieuw.naam = schoon(o.naam, 90) || KLAS_SPELLEN[spel];
+    }
     lijst.push(nieuw);
     await this.bewaar();
     return json({ ok: true, opdracht: nieuw, opdrachten: lijst.map(x => opdrachtNu(x, Date.now(), this.stand.rooster)) });

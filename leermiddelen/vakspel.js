@@ -579,7 +579,7 @@ window.VAKSPEL = (function(){
     /* Een oneindige sessie heeft geen "beste ooit": hoe langer je doorgaat, hoe meer punten, dus een record zegt niets.
        De sterren gaan wel over hoeveel er goed was. */
     var max = (oneindig ? Math.max(gedaan, 1) : cfg.aantal) * 10 || 1, r = punten / max;
-    if (window.SPEL && SPEL.einde) SPEL.einde({ spel: cfg.id, vak: cfg.vak, od: od, goed: goed, reeks: besteReeks, score: oneindig ? String(punten) : punten, label: 'punten', waarde: oneindig ? undefined : punten, max: max,
+    if (window.SPEL && SPEL.einde) SPEL.einde({ spel: cfg.id, vak: cfg.vak, od: od, goed: goed, ronde: goed, reeks: besteReeks, score: oneindig ? String(punten) : punten, label: 'punten', waarde: oneindig ? undefined : punten, max: max,
       sterren: oneindig ? (r >= .9 ? 3 : r >= .7 ? 2 : r >= .4 ? 1 : 0) : undefined,
       opnieuw: function(){ start(oneindig); }, opnieuwTekst: oneindig ? 'Verder oefenen' : 'Nog een ronde',
       ronde: goed, punten: punten, niveau: keuze.niveau || '', sleutel: Object.keys(keuze).map(function(k){ return keuze[k]; }).join('-') + (oneindig ? '-oneindig' : ''), deelTekst: goed + ' van de ' + gedaan + ' goed' + (oneindig ? ', oneindig geoefend' : '') });
@@ -717,6 +717,8 @@ window.VAKSPEL = (function(){
     leadKort();
     $('startBtn').addEventListener('click', function(){ start(oneindigUrl); });
     $('keuze-aantal').addEventListener('click', function(e){ var b = e.target.closest('button'); if (!b) return; aantal = +b.getAttribute('data-n'); try { localStorage.setItem('lg-aantal', String(aantal)); } catch (x){} tekenAantal(); });
+    /* ?aantal=20 uit een opdracht van de docent */
+    (function(){ var ma = /[?&]aantal=(\d+)/.exec(location.search); if (ma && AANTALLEN.indexOf(+ma[1]) >= 0) aantal = +ma[1]; })();
     tekenAantal();
     $('zelfVoor').addEventListener('click', function(e){ var b = e.target.closest('button'); if (!b) return; var z = +b.getAttribute('data-z'); zelfVoor = zelfVoor === z ? null : z;
       Array.prototype.forEach.call(this.querySelectorAll('button'), function(x){ var aan = +x.getAttribute('data-z') === zelfVoor; x.classList.toggle('on', aan); x.setAttribute('aria-pressed', aan ? 'true' : 'false'); }); });
@@ -725,6 +727,8 @@ window.VAKSPEL = (function(){
     /* de docent linkt met ?oneindig=1: dan is Start meteen oneindig */
     if (oneindigUrl){ $('startBtn').textContent = 'Start: oneindig oefenen'; $('oneindigBtn').classList.add('hide'); }
     $('verderBtn').addEventListener('click', function(){ if (!bezig) volgende(); });
+    /* ?start=1: de opdracht van de docent in de leeromgeving aangeklikt, dus meteen beginnen */
+    if (/[?&]start=1\b/.test(location.search)) setTimeout(function(){ start(oneindigUrl); }, 0);
     /* nog een ronde: meteen, met dezelfde keuzes; wie iets anders wil, gaat via Opnieuw naar het startscherm */
     $('nogBtn').addEventListener('click', function(){ start(oneindig); });
     $('opnieuwBtn').addEventListener('click', function(){

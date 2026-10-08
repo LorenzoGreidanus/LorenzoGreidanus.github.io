@@ -2254,7 +2254,9 @@ var SPELLEN = [
   /* naam, bestand en, als het niet om rondes gaat, wat het getal van de opdracht is */
   var OP_SPEL = { race:['Vragenrace', 'race.html', 'goed'], toren:['Torenverdediging', 'toren.html'], zwaard:['Zwaardvechter', 'zwaard.html'],
     mijnwerker:['Mijnwerker', 'mijnwerker.html', 'meter diep'], poortrace:['Poortrace', 'poortrace.html', 'poorten goed'], kaarttoren:['Kaarttoren', 'kaarttoren.html', 'verdiepingen'] };
-  var OP_VAK = { reken:'rekenen', ned:'Nederlands', eng:'Engels', ges:'geschiedenis', aard:'aardrijkskunde', bio:'biologie', wis:'wiskunde', burg:'samenleving', eco:'economie' };
+  /* een losse oefening als opdracht: het spel uit de spellenlijst */
+  function oefSpel(o){ if (!o || OP_SPEL[o.spel] || o.spel === 'dictee') return null; return (window.SPELLEN || []).filter(function(s){ return s.bestand === o.spel + '.html'; })[0] || null; }
+  var OP_VAK = { reken:'rekenen', ned:'Nederlands', eng:'Engels', ges:'geschiedenis', aard:'aardrijkskunde', bio:'biologie', wis:'wiskunde', burg:'mens en maatschappij', eco:'economie' };
   function deelNaam(vak, id){ var l = window.ONDERDELEN && ONDERDELEN[vak], o = l && l.filter(function(x){ return x.id === id; })[0]; return o ? o.naam : id; }
   /* Welke spellen deze klas ziet, of de lesmodus aanstaat en de opdracht van
      de week komen alle drie uit hetzelfde antwoord. Dus een verzoek, niet twee. */
@@ -2319,7 +2321,7 @@ var SPELLEN = [
     function klaar(){ if (window.LESVAKBIJ) LESVAKBIJ(); }
     /* een oudere server stuurt nog een losse opdracht, met gehaald en beste ernaast */
     var lijst = (j && j.opdrachten) || (j && j.opdracht ? [Object.assign({ gehaald: j.gehaald, beste: j.beste }, j.opdracht)] : []);
-    lijst = lijst.filter(function(o){ return OP_SPEL[o.spel] || o.spel === 'dictee'; });
+    lijst = lijst.filter(function(o){ return OP_SPEL[o.spel] || o.spel === 'dictee' || oefSpel(o); });
     /* eerst wat nog moet, dan wat gehaald is, en verlopen achteraan */
     var nu = Date.now();
     function rang(o){ return o.gehaald ? 1 : o.tot < nu ? 2 : 0; }
@@ -2331,13 +2333,15 @@ var SPELLEN = [
     if (lijst.length) html += '<p class="eyebrow">' + (lijst.length > 1 ? lijst.length + ' opdrachten' : 'opdracht') + ' van je docent</p>';
     html += lijst.map(function(o){
       if (o.spel === 'dictee') return dicteeStuk(o, nu);
-      var sp = OP_SPEL[o.spel], verlopen = o.tot < nu, maat = o.deel ? 'goed' : sp[2] || 'rondes';
-      var link = sp[1] + '?vak=' + encodeURIComponent(o.vak) + (o.deel ? '&deel=' + encodeURIComponent(o.deel) : '');
+      var oef = !OP_SPEL[o.spel] && oefSpel(o);
+      var sp = oef ? [o.naam || oef.naam, oef.bestand, 'goed'] : OP_SPEL[o.spel], verlopen = o.tot < nu, maat = o.deel ? 'goed' : sp[2] || 'rondes';
+      /* een losse oefening: de keuzes van de docent in de link, en start=1 zodat hij meteen begint */
+      var link = oef ? sp[1] + '?' + (o.kz ? o.kz + '&' : '') + 'start=1' : sp[1] + '?vak=' + encodeURIComponent(o.vak) + (o.deel ? '&deel=' + encodeURIComponent(o.deel) : '');
       return '<div class="opstuk' + (o.gehaald || verlopen ? ' af' : '') + '">' +
-        '<b>' + schoon(sp[0]) + ', ' + schoon(OP_VAK[o.vak] || o.vak) + (o.deel ? ', ' + schoon(o.deelNaam || deelNaam(o.vak, o.deel)) : '') + ': minstens ' + o.min + ' ' + maat + '</b>' +
+        '<b>' + schoon(sp[0]) + (oef ? '' : ', ' + schoon(OP_VAK[o.vak] || o.vak)) + (o.deel ? ', ' + schoon(o.deelNaam || deelNaam(o.vak, o.deel)) : '') + ': minstens ' + o.min + ' ' + maat + '</b>' +
         '<span>' + (verlopen ? 'De tijd was tot ' : 'Tot ') + new Date(o.tot).toLocaleDateString('nl-NL', { weekday:'long', day:'numeric', month:'long' }) + '.' + (o.tekst ? ' ' + schoon(o.tekst) : '') + '</span>' +
         (o.gehaald ? '<span class="klaar">Gehaald ✓ Je beste: ' + o.beste + ' ' + maat + '.</span>' : '<span class="nog">' + (o.beste ? 'Je beste tot nu toe: ' + o.beste + ' van ' + o.min + '. ' : '') + (verlopen ? 'Verlopen.' : 'Nog te doen.') + '</span>') +
-        '<a class="knop" href="' + link + '">' + (o.gehaald ? 'Nog een keer' : 'Aan de slag') + '</a></div>';
+        '<a class="knop" href="' + link + '">' + (o.gehaald ? 'Nog een keer' : oef ? 'Begin meteen' : 'Aan de slag') + '</a></div>';
     }).join('');
     /* het klasdoel: samen zoveel goede antwoorden deze week */
     if (doel){

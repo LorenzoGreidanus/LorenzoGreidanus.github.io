@@ -221,6 +221,10 @@ td.getal{font-variant-numeric:tabular-nums;text-align:right}
 .gekoppeld .wie button:hover,.gekoppeld .wie button:focus-visible{color:var(--crab)}
 @media print{.gekoppeld .wie button{display:none}}
 .gekoppeld .leeg{color:var(--muted);font-size:.92rem}
+/* de keuzes van een losse oefening als opdracht: onderdeel, niveau en het aantal opgaven */
+.opkeuzes{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;flex:1 1 100%}
+.opkeuzes.hide{display:none}
+.opkeuzes .veld{width:auto;max-width:100%}
 /* dubbel in de lijst: eerst als gast, later met Microsoft. Ingeklapt, want het is een klusje voor af en toe */
 .samenvoeg{margin-top:14px;border-top:1px solid var(--rand);padding-top:6px}
 .samenvoeg>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;gap:8px;font-weight:600;font-size:.94rem;color:var(--ink)}
@@ -816,7 +820,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     <div class="paneel" role="tabpanel" id="paneel-inst" aria-labelledby="tab-inst" hidden>
       <div class="stap opdrachtvak" id="opdrachtVak">
         <b>Opdrachten voor de klas</b>
-        <p class="tip">Tot vijf opdrachten tegelijk, bijvoorbeeld: Vragenrace, geschiedenis, tijd van ontdekkers, minstens 15 goed, vóór vrijdag. Of een dictee: de tekst van de week, elke maandag vanzelf een nieuwe. Leerlingen zien ze bovenaan in de leeromgeving met een knop naar het spel; hier zie je per opdracht wie hem gehaald heeft.</p>
+        <p class="tip">Tot vijf opdrachten tegelijk, bijvoorbeeld: Vragenrace, geschiedenis, tijd van ontdekkers, minstens 15 goed, vóór vrijdag. Of een dictee: de tekst van de week, elke maandag vanzelf een nieuwe. Of een losse oefening, zoals Tabel, grafiek en formule, met het onderdeel en het niveau al gekozen: dan begint de oefening meteen als een leerling erop klikt. Leerlingen zien ze bovenaan in de leeromgeving met een knop naar het spel; hier zie je per opdracht wie hem gehaald heeft.</p>
         <div id="opdrachtStand"></div>
         <div class="rij opdrachtvorm" id="opdrachtVorm">
           <select id="opSpel" class="veld" aria-label="Spel"><option value="race">Vragenrace</option><option value="toren">Torenverdediging</option><option value="zwaard">Zwaardvechter</option><option value="mijnwerker">Mijnwerker</option><option value="poortrace">Poortrace</option><option value="kaarttoren">Kaarttoren</option><option value="dictee">Dictee</option></select>
@@ -843,6 +847,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
           </div>
           <select id="opVak" class="veld" aria-label="Vak"></select>
           <select id="opDeel" class="veld" aria-label="Onderdeel"><option value="">alle onderdelen</option></select>
+          <div class="opkeuzes hide" id="opKeuzes" aria-live="polite"></div>
           <label class="minlabel">minstens <input id="opMin" class="veld" type="number" min="1" max="250" value="15" style="width:74px"> <span id="opMaat">goed</span></label>
           <label class="minlabel">vóór <input id="opTot" class="veld" type="date"></label>
           <input id="opTekst" class="veld" maxlength="140" placeholder="korte toelichting (mag leeg)" style="flex:1;min-width:200px">
@@ -1864,7 +1869,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       var beste = {}; alle.forEach(function(r){ beste[r.naam] = Math.max(beste[r.naam] || 0, haaltOp(r, o)); });
       var ja = klas.filter(function(n){ return (beste[n] || 0) >= o.min; }), nee = klas.filter(function(n){ return (beste[n] || 0) < o.min; });
       var verlopen = o.tot < nu;
-      stukken.push({ kop: 'Opdracht: ' + (OP_SPEL[o.spel] || o.spel) + ', ' + (VAKKEN[o.vak] || o.vak) + (o.deel ? ', ' + onderdeelNaam(o.vak, o.deel) : ''),
+      stukken.push({ kop: 'Opdracht: ' + (OP_SPEL[o.spel] || o.naam || o.spel) + ', ' + (VAKKEN[o.vak] || o.vak) + (o.deel ? ', ' + onderdeelNaam(o.vak, o.deel) : ''),
         regels: [ja.length + ' van de ' + klas.length + ' gehaald, ' + (verlopen ? 'verlopen op ' : 'tot ') + new Date(o.tot).toLocaleDateString('nl-NL', { weekday:'long', day:'numeric', month:'long' }) + '.']
           .concat(nee.length && ja.length ? ['Nog niet: ' + nee.map(function(n){ return wieTekst(n) + (beste[n] ? ' ' + beste[n] + '/' + o.min : ''); }).join(', ') + '.'] : []) });
     });
@@ -2353,9 +2358,60 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
      een race heeft vijftien poorten, de toren twaalf verdiepingen, de mijn is 150 meter diep */
   var OP_MAAT = { race:'goed', mijnwerker:'meter diep', poortrace:'poorten goed', kaarttoren:'verdiepingen' };
   var OP_MAX = { mijnwerker:150, poortrace:15, kaarttoren:12 };
-  function opMaat(spel, deel){ return deel ? 'goed in dat onderdeel' : OP_MAAT[spel] || 'rondes'; }
+  function opMaat(spel, deel){ if (isOefening(spel)) return (MAAT[spel] && MAAT[spel].v === 'ronde' && MAAT[spel].l) || 'opgaven goed'; return deel ? 'goed in dat onderdeel' : OP_MAAT[spel] || 'rondes'; }
+  /* Een losse oefening als opdracht: elk spel uit de klas met een eigen vak,
+     behalve de spellen met de klas en om te beleven. De keuzes (onderdeel,
+     niveau) vraagt de pagina aan het spel zelf, net als het werkblad doet. */
+  var GEEN_OEFENING = { jagers:1, feodalisme:1, leenmannen:1, handel:1, vergadering:1, stadsontwerp:1, dictee:1, dictation:1 };
+  function isOefening(spel){ return !OP_SPEL[spel] && !!SPELVAK[spel] && !GEEN_OEFENING[spel]; }
+  function oefNaam(spel){ var x = KLASSPELLEN.filter(function(k){ return k[0] === spel; })[0]; return x ? x[1] : spel; }
+  (function(){
+    var sel = $('opSpel'), vaste = sel.innerHTML;
+    var oef = KLASSPELLEN.filter(function(k){ return isOefening(k[0]); }).sort(function(a, b){ return (VAKKEN[SPELVAK[a[0]]] || '').localeCompare(VAKKEN[SPELVAK[b[0]]] || '', 'nl') || a[1].localeCompare(b[1], 'nl'); });
+    var perVak = {}; oef.forEach(function(k){ var v = SPELVAK[k[0]]; (perVak[v] = perVak[v] || []).push(k); });
+    sel.innerHTML = '<optgroup label="Spellen met een vak naar keuze">' + vaste + '</optgroup>' +
+      Object.keys(perVak).map(function(v){ return '<optgroup label="Oefening ' + schoon(VAKKEN[v] || v) + '">' + perVak[v].map(function(k){ return '<option value="' + k[0] + '">' + schoon(k[1]) + '</option>'; }).join('') + '</optgroup>'; }).join('');
+  })();
+  /* de keuzes van een vakspel ophalen: het spel in een verborgen kader, zoals het werkblad */
+  var oefKeuzes = {}, oefKader = null, oefWacht = null;
+  addEventListener('message', function(e){ var b = e.data || {}; if (!oefWacht) return; if (b.t === 'werkblad-klaar' && oefKader) oefKader.contentWindow.postMessage({ t:'werkblad-keuzes' }, '*'); if (b.t === 'werkblad-keuzes'){ var w = oefWacht; oefWacht = null; w(b.keuzes || []); } });
+  function haalKeuzes(spel, klaar){
+    if (oefKeuzes[spel]) return klaar(oefKeuzes[spel]);
+    if (oefKader) oefKader.parentNode.removeChild(oefKader);
+    oefKader = document.createElement('iframe'); oefKader.setAttribute('aria-hidden', 'true'); oefKader.tabIndex = -1; oefKader.style.cssText = 'position:absolute;width:0;height:0;border:0;visibility:hidden';
+    var klok = setTimeout(function(){ if (oefWacht){ oefWacht = null; oefKeuzes[spel] = []; klaar([]); } }, 6000);
+    oefWacht = function(k){ clearTimeout(klok); oefKeuzes[spel] = k; klaar(k); };
+    oefKader.src = spel + '.html?werkblad=1'; document.body.appendChild(oefKader);
+  }
+  function tekenOefKeuzes(){
+    var spel = $('opSpel').value, vak = $('opKeuzes');
+    vak.innerHTML = '<span class="tip">Keuzes laden\u2026</span>';
+    haalKeuzes(spel, function(keuzes){
+      if ($('opSpel').value !== spel) return;
+      var h = (keuzes || []).map(function(k){
+        var eerst = k.id === 'niveau' ? '<option value="">elk zijn eigen niveau</option>' : '<option value="">' + (k.id === 'soort' ? 'alles door elkaar' : 'laat de leerling kiezen') + '</option>';
+        return '<label class="minlabel">' + schoon(k.kop || k.id) + ' <select class="veld" data-kz="' + schoon(k.id) + '">' + eerst + k.items.filter(function(it){ return !(k.id === 'soort' && /door elkaar|alles/i.test(it.naam)); }).map(function(it){ return '<option value="' + schoon(it.id) + '">' + schoon(it.naam) + '</option>'; }).join('') + '</select></label>';
+      }).join('');
+      if (keuzes && keuzes.length) h += '<label class="minlabel">ronde van <select class="veld" data-kz="aantal"><option value="10">10</option><option value="20" selected>20</option><option value="30">30</option></select> opgaven</label>';
+      vak.innerHTML = h || '<span class="tip">Dit spel heeft geen keuzes om vast te zetten; de leerling begint gewoon.</span>';
+    });
+  }
+  function oefKz(){
+    var delen = [], namen = [];
+    Array.prototype.forEach.call(document.querySelectorAll('#opKeuzes [data-kz]'), function(s){ if (!s.value) return; var k = s.getAttribute('data-kz'); delen.push((k === 'niveau' ? 'n' : k) + '=' + encodeURIComponent(s.value)); if (k !== 'aantal') namen.push(s.options[s.selectedIndex].textContent); });
+    return { kz: delen.join('&'), naam: oefNaam($('opSpel').value) + (namen.length ? ' (' + namen.join(', ') + ')' : '') };
+  }
   function opVul(){
     var spel = $('opSpel').value, vakken = Object.keys(VAKKEN).filter(function(){ return true; });
+    var oef = isOefening(spel);
+    $('opVak').classList.toggle('hide', oef); $('opDeel').classList.toggle('hide', oef); $('opKeuzes').classList.toggle('hide', !oef);
+    if (oef){
+      if ($('opKeuzes').getAttribute('data-spel') !== spel){ $('opKeuzes').setAttribute('data-spel', spel); tekenOefKeuzes(); }
+      $('opMaat').textContent = opMaat(spel, '');
+      var m2 = $('opMin'); m2.max = 30; if ((parseInt(m2.value, 10) || 0) > 30) m2.value = 15;
+      dVorm();
+      return;
+    }
     var vakNu = $('opVak').value;
     $('opVak').innerHTML = vakken.map(function(v){ return '<option value="' + v + '"' + (v === vakNu ? ' selected' : '') + '>' + schoon(VAKKEN[v]) + '</option>'; }).join('');
     var vak = $('opVak').value, lijst = (window.ONDERDELEN && ONDERDELEN[vak]) || [], deelNu = $('opDeel').value;
@@ -2459,6 +2515,9 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     var dictee = $('opSpel').value === 'dictee';
     $('opDictee').classList.toggle('hide', !dictee);
     [$('opVak'), $('opDeel'), $('opMin').closest('label')].forEach(function(el){ el.classList.toggle('hide', dictee); });
+    /* bij een losse oefening liggen vak en onderdeel vast in het spel */
+    if (!dictee && isOefening($('opSpel').value)){ $('opVak').classList.add('hide'); $('opDeel').classList.add('hide'); }
+    $('opKeuzes').classList.toggle('hide', dictee || !isOefening($('opSpel').value));
     var auto = dictee && dBron === 'week' && $('opDAuto').checked;
     $('opTot').closest('label').classList.toggle('hide', auto);
     if (!dictee) return;
@@ -2615,7 +2674,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     (data.resultaten || []).forEach(function(r){ namen[r.naam] = Math.max(namen[r.naam] || 0, haaltOp(r, o)); });
     var lijst = klasNamen(), n = lijst.filter(function(x){ return namen[x] >= o.min; }).length;
     var verlopen = o.tot < Date.now();
-    return '<div class="opdrachtstand"><div class="nu"><b>' + schoon(OP_SPEL[o.spel] || o.spel) + ' · ' + schoon(VAKKEN[o.vak] || o.vak) + (o.deel ? ' · ' + schoon(onderdeelNaam(o.vak, o.deel)) : '') + ': minstens ' + o.min + ' ' + opMaat(o.spel, o.deel) + '</b>' +
+    return '<div class="opdrachtstand"><div class="nu"><b>' + schoon(OP_SPEL[o.spel] || o.naam || o.spel) + ' · ' + schoon(VAKKEN[o.vak] || o.vak) + (o.deel ? ' · ' + schoon(onderdeelNaam(o.vak, o.deel)) : '') + ': minstens ' + o.min + ' ' + opMaat(o.spel, o.deel) + '</b>' +
       '<small>' + (verlopen ? 'verlopen op ' : 'tot ') + new Date(o.tot).toLocaleDateString('nl-NL', { weekday:'long', day:'numeric', month:'long' }) + (o.tekst ? ' · ' + schoon(o.tekst) : '') + ' · gezet ' + wanneer(o.sinds) + '</small></div>' +
       '<button type="button" class="knop stil klein" data-opweg="' + schoon(o.id || '') + '">Weghalen</button></div>' +
       '<p class="tip" style="margin-top:8px">' + (lijst.length ? n + ' van de ' + lijst.length + ' leerlingen gehaald.' : 'Er zijn nog geen leerlingen gekoppeld.') + '</p>' +
@@ -2643,6 +2702,11 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       return;
     }
     if (isNaN(tot.getTime())){ $('opFout').textContent = 'Kies een datum.'; return; }
+    if (isOefening($('opSpel').value)){
+      var oz = oefKz();
+      zetOpdracht({ spel:$('opSpel').value, vak:SPELVAK[$('opSpel').value], deel:'', min:parseInt($('opMin').value, 10) || 1, tot:tot.getTime(), tekst:$('opTekst').value.trim(), kz:oz.kz, naam:oz.naam });
+      return;
+    }
     zetOpdracht({ spel:$('opSpel').value, vak:$('opVak').value, deel:$('opDeel').value, deelNaam:$('opDeel').value ? $('opDeel').options[$('opDeel').selectedIndex].textContent : '', min:parseInt($('opMin').value, 10) || 1, tot:tot.getTime(), tekst:$('opTekst').value.trim() });
   });
   opVul();
