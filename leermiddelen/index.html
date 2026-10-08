@@ -9,6 +9,7 @@
 <script src="avatar.js"></script>
 <script src="profiel.js"></script>
 <script src="leerlijn.js"></script>
+<script>/* de zoekregel van het begin: de pagina zet de filters later zelf in de adresbalk */ window.START_ZOEK = location.search;</script>
 <link rel="apple-touch-icon" href="/icoon-192.png">
 <script>
 /* Opgeslagen themakeuze meteen toepassen, nog voor de pagina getekend wordt. */
@@ -1601,7 +1602,7 @@ var SPELLEN = [
     var quiz = spelMet('klasquiz.html'), toren = spelMet('toren.html'), s = '';
     if (alInLes(quiz)) quiz = null;
     if (alInLes(toren)) toren = null;
-    if (quiz) s += '<a class="snelknop" href="' + linkNaar(quiz) + '" data-start="' + quiz.bestand + '" title="Doe mee met de quiz op het digibord; je docent geeft de code">' + tegel(quiz) + 'Klasquiz meedoen</a>';
+    if (quiz) s += '<a class="snelknop" href="mee.html" title="Doe mee met een spel op het digibord: de Klasquiz, de Klasstrijd of een spel met de klas. Je hebt alleen de code nodig.">' + tegel(quiz) + 'Meedoen met een code</a>';
     if (toren) s += '<a class="snelknop" href="' + linkNaar(toren) + '" data-start="' + toren.bestand + '" title="Oefenen voor een toets, elk vak">' + tegel(toren) + 'Torenverdediging</a>';
     s += '<button class="snelknop" type="button" id="verras" title="Een willekeurig spel uit je keuze"><span class="tegel" style="--tk:#EA9836;background:var(--amber)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.4" fill="#FBF6F1" stroke="none"/><circle cx="16" cy="8" r="1.4" fill="#FBF6F1" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="#FBF6F1" stroke="none"/><circle cx="8" cy="16" r="1.4" fill="#FBF6F1" stroke="none"/><circle cx="16" cy="16" r="1.4" fill="#FBF6F1" stroke="none"/></svg></span>Verras me</button>';
     $('snel').innerHTML = s;
@@ -2423,7 +2424,7 @@ var SPELLEN = [
     var strip = document.getElementById('klasstrip');
     /* een keer opbouwen: teken() komt vaker langs, en dan zou een half ingevulde code weer verdwijnen */
     if (strip && !strip.querySelector('#klasvorm')){
-      strip.innerHTML = '<div class="klasregel"><span>Code van je docent?</span>' +
+      strip.innerHTML = '<div class="klasregel"><span>Code van je docent of van het bord?</span>' +
         '<button type="button" class="klasopen" id="klasOpen" aria-expanded="false" aria-controls="klasvorm">Vul hem in</button></div>' +
         '<div class="klasvorm" id="klasvorm" hidden></div>';
       koppelVorm(strip.querySelector('#klasvorm'));
@@ -2478,8 +2479,8 @@ var SPELLEN = [
   }
   function koppelVorm(waar, kop){
     waar.innerHTML = (kop || '') +
-      '<div class="invulrij"><input id="klasCode" maxlength="6" placeholder="CODE" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Klascode"><input id="klasNaam" class="naam" maxlength="16" placeholder="Je bijnaam" autocomplete="nickname" aria-label="Je bijnaam"><button type="button" id="klasKoppel">Koppelen</button></div>' +
-      '<p class="status" id="klasStatus" role="status" aria-live="polite">Alleen als je docent je een code gaf. Dan gaan je uitslagen naar je docent, met je bijnaam erbij. Een code van zes tekens is een oefening: vul hem hier in, of op <a href="oefen.html">oefenen met een code</a>.</p>';
+      '<div class="invulrij"><input id="klasCode" maxlength="6" placeholder="CODE" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Klascode"><input id="klasNaam" class="naam" maxlength="16" placeholder="Je bijnaam" autocomplete="nickname" aria-label="Je bijnaam"><button type="button" id="klasKoppel">Doe mee</button></div>' +
+      '<p class="status" id="klasStatus" role="status" aria-live="polite">Elke code werkt hier. Een klascode van je docent koppelt je aan je klas, zodat je uitslagen naar je docent gaan. Een code op het bord brengt je meteen in het spel, zoals de Klasquiz of een spel met de klas. Een code van zes tekens is een oefening van je docent.</p>';
     var knop = waar.querySelector('#klasKoppel'), codeVeld = waar.querySelector('#klasCode'), naamVeld = waar.querySelector('#klasNaam');
     msToepassen();
     /* Enter in een van de twee velden koppelt ook */
@@ -2498,12 +2499,31 @@ var SPELLEN = [
       st.classList.remove('fout'); st.textContent = 'Even kijken\u2026';
       fetch('/api/kamer/' + code).then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); }).then(function(x){
         knop.disabled = false; knop.removeAttribute('aria-busy');
-        if (!x.ok || x.j.spel !== 'klas'){ st.textContent = 'Er is geen klas met code ' + code + '. Kijk of je hem goed overnam.'; st.classList.add('fout'); codeVeld.focus(); return; }
+        if (!x.ok){ st.textContent = 'Er is geen klas of spel met code ' + code + '. Kijk of je hem goed overnam.'; st.classList.add('fout'); codeVeld.focus(); return; }
+        if (x.j.spel !== 'klas'){
+          /* een code van het bord: naar het spel, met je bijnaam alvast ingevuld (zoals meneergreidanus.nl/q) */
+          var spelDoel = x.j.spel === 'rollen' ? (x.j.game === 'teken' ? 'tekenslag.html' : x.j.game === 'crisis' ? 'crisis-team.html' : 'rol.html') : ({ strijd:'strijd.html', quiz:'klasquiz.html' })[x.j.spel];
+          if (!spelDoel){ st.textContent = 'Deze code hoort bij een spel dat je hier niet kunt openen. Vraag je docent waar je hem invult.'; st.classList.add('fout'); return; }
+          try { localStorage.setItem('lg-quiz-naam', naam); } catch (e){}
+          st.textContent = 'Op naar het spel\u2026';
+          location.href = spelDoel + '?k=' + code + '&ga=1';
+          return;
+        }
         KLAS.zet(code, naam); netGekoppeld = true; teken();
       }).catch(function(){ knop.disabled = false; knop.removeAttribute('aria-busy'); st.textContent = 'Geen verbinding. Kijk of je internet hebt en tik dan nog een keer op Koppelen.'; st.classList.add('fout'); });
     });
   }
   teken();
+  (function(){
+    var q = new URLSearchParams(window.START_ZOEK || location.search), c = (q.get('koppel') || '').toUpperCase().replace(/[^A-Z]/g, '');
+    if (c.length !== 4 || (window.KLAS && KLAS.lees())) return;
+    var vorm = document.getElementById('klasvorm'), open = document.getElementById('klasOpen');
+    if (!vorm) return;
+    if (vorm.hidden && open) open.click();
+    document.getElementById('klasCode').value = c;
+    var n = q.get('naam'); if (n) document.getElementById('klasNaam').value = n.slice(0, 16);
+    if (n || msNaam()) document.getElementById('klasKoppel').click();
+  })();
   if (window.PROFIEL){
     PROFIEL.op(teken);
     /* Ook als je niet bent ingelogd opnieuw tekenen: dan weten we pas of

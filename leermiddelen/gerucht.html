@@ -40,6 +40,11 @@
   --gr-tekst:#6fd3df;--m1:#9FB8FF;--m2:#F0A868;--m3:#C2AEF5;--m4:#7fd6c2;--m5:#9aa3bb;--echt:#8fd8ac;--nep:#f59a86;--satire:#C2AEF5;--click:#E8B26A}
 :root[data-theme="light"]{color-scheme:light}
 *{box-sizing:border-box}
+/* de rollen in het netwerk, onder de code in de lobby */
+.rollenuitleg{margin-top:16px;padding:14px 16px;border-radius:16px;background:var(--kaart);border:1px solid var(--rand);font-size:.95rem;line-height:1.45}
+.rollenuitleg ul{margin:6px 0 8px;padding-left:20px}
+.rollenuitleg li+li{margin-top:3px}
+.rollenuitleg p{margin:0}
 /* de site belooft tikdoelen van 44 beeldpunten; het vak groeit, de tekst niet */
 .mark{min-height:44px}
 footer a{display:inline-flex;align-items:center;min-height:44px;padding:0 2px}
@@ -1877,18 +1882,39 @@ var TEKENING = {
   }
 
   /* ---------- de rolkaart ---------- */
+  /* Elke rol een duidelijk doel en hoe je punten haalt. Het nepaccount en de
+     bot weten dat ze geheim zijn en dat ze samen scoren met wat de klas gelooft. */
+  var EERLIJK = ['Echt nieuws delen: 2 punten.', 'Nepnieuws niet delen: 1 punt, na een check 2.', 'Nepnieuws delen: 3 punten eraf.', 'Clickbait delen: 1 punt eraf.'];
+  var ROLDOEL = {
+    gewoon:{ tekst:'Je zit op Kringel, het netwerk van de klas. Wat je deelt, gaat meteen naar je volgers. Je hebt een check per ronde.',
+      doel:'Word de betrouwbaarste gebruiker: deel wat klopt en laat nepnieuws liggen.', punten:EERLIJK },
+    influencer:{ tekst:'Bijna iedereen in de klas volgt jou. Wat jij deelt, zien de meeste klasgenoten. Je hebt een check per ronde.',
+      doel:'Gebruik je bereik goed. Eén nepbericht van jou komt bij heel veel mensen terecht.', punten:EERLIJK },
+    journalist:{ tekst:'Jij werkt voor de krant van Lindedam. Je hebt drie checks per ronde, de anderen een.',
+      doel:'Zoek uit wat klopt: help echt nieuws verder en houd nepnieuws tegen.', punten:EERLIJK },
+    factchecker:{ tekst:'Jij mag alles checken. Klopt iets niet, zet er dan een factcheck bij: die ziet iedereen de volgende ronde bij het bericht.',
+      doel:'Ontmasker nepnieuws zo snel mogelijk met een factcheck.', punten:['Een factcheck bij nepnieuws: 4 punten.'].concat(EERLIJK) },
+    trol:{ tekst:'Geheim, vertel het niemand. Jij beheert een nepaccount dat expres nepnieuws verspreidt. Elke ronde kies jij de kop van jullie nepbericht: rustig, boos of bang.',
+      doel:'Zorg dat zoveel mogelijk klasgenoten jullie nepnieuws geloven.', punten:['Elke klasgenoot die jullie nepbericht gelooft, telt voor jou en de bot.', 'Deel ook eens iets echts, anders val je op.', 'Een factcheck bij jullie bericht maakt het moeilijker.'] },
+    bot:{ tekst:'Geheim, vertel het niemand. Jij bent een bot: een programma dat doet alsof het een mens is, met twintig nepaccounts erachter.',
+      doel:'Help het nepaccount: zorg dat nepnieuws trending gaat.', punten:['Wat jij deelt, gaat de volgende ronde trending: dan zien veel meer mensen het.', 'Elke klasgenoot die het nepbericht gelooft, telt voor jou en het nepaccount.'] }
+  };
   function rolKaart(g){
-    var nV = volgers[g.id].length, t;
-    var basis = 'Wat je deelt, gaat meteen naar je volgers. ';
-    if (g.rol === 'gewoon') t = basis + 'Deel wat de moeite waard is, maar niet alles klopt. Je hebt een check per ronde.';
-    else if (g.rol === 'influencer') t = basis + 'Jij hebt heel veel volgers. Dat is macht: gebruik hem goed. Je hebt een check per ronde.';
-    else if (g.rol === 'journalist') t = basis + 'Jij hebt drie checks per ronde, de anderen een. Help alleen echt nieuws verder.';
-    else if (g.rol === 'factchecker') t = basis + 'Jij mag alles checken. Klopt iets niet, zet er dan een factcheck bij. Die ziet iedereen pas de volgende ronde.';
-    else if (g.rol === 'trol') t = 'Geheim: jij verspreidt expres nepnieuws en kiest de kop van jullie nepbericht. Doel: zoveel mogelijk klasgenoten laten geloven wat niet klopt. Deel ook eens iets echts, anders val je op.';
-    else t = 'Geheim: jij bent een bot, een programma dat doet alsof het een mens is, met twintig nepaccounts. Wat jij deelt, gaat de volgende ronde trending. Je helpt het nepaccount.';
-    return { soort:'rol', rol:g.rol, titel:ROLINFO[g.rol].naam,
+    var nV = volgers[g.id].length, d = ROLDOEL[g.rol] || ROLDOEL.gewoon, geheim = g.rol === 'trol' || g.rol === 'bot';
+    return { soort:'rol', rol:g.rol, titel:ROLINFO[g.rol].naam + (geheim ? ' (geheim)' : ''),
       onder:g.rol === 'bot' ? '1 echte volger, 20 nepaccounts' : nV + (nV === 1 ? ' volger' : ' volgers') + ' in de klas, zo’n ' + getal(rond(g.buiten)) + ' daarbuiten',
-      tekst:t, kleur:ROLINFO[g.rol].kleur };
+      tekst:d.tekst, doel:d.doel, punten:d.punten, kleur:ROLINFO[g.rol].kleur };
+  }
+  /* Op het bord: welke rollen er in dit netwerk zitten. Twee ervan zijn geheim;
+     het bord zegt wel dat ze er zijn, niet wie het zijn. */
+  function rollenHtml(n){
+    var aantal = {}; rollenVoor(n).forEach(function(r){ aantal[r.id] = r.aantal; });
+    var rest = n - ['trol', 'bot', 'influencer', 'journalist', 'factchecker'].reduce(function(s, k){ return s + (aantal[k] || 0); }, 0);
+    var rij = [['influencer', 'heel veel volgers'], ['journalist', 'drie checks per ronde'], ['factchecker', 'zet een factcheck bij nepnieuws'], ['gewoon', 'kiezen zelf of ze delen, laten liggen of eerst checken']]
+      .map(function(r){ var k = r[0] === 'gewoon' ? rest : aantal[r[0]] || 0; return k ? '<li><b>' + k + ' ' + schoon(k === 1 ? ROLINFO[r[0]].naam.toLowerCase() : ({ influencer:'influencers', journalist:'journalisten', factchecker:'factcheckers', gewoon:'gewone gebruikers' })[r[0]]) + '</b>: ' + (k === 1 && r[0] === 'gewoon' ? 'kiest zelf of hij deelt, laat liggen of eerst checkt' : r[1]) + '</li>' : ''; }).join('');
+    var geheim = (aantal.trol || 0) + (aantal.bot || 0);
+    return '<div class="rollenuitleg"><p class="eyebrow">de rollen in jullie netwerk</p><ul>' + rij + '</ul>' +
+      (geheim ? '<p><b>En in het geheim ' + (aantal.trol ? (aantal.trol === 1 ? 'een nepaccount' : aantal.trol + ' nepaccounts') : '') + (aantal.trol && aantal.bot ? ' en ' : '') + (aantal.bot ? (aantal.bot === 1 ? 'een bot' : aantal.bot + ' bots') : '') + '.</b> Zij verspreiden expres nepnieuws en willen dat jullie het geloven. Wie het zijn, hoort niemand. Iedereen ziet zijn eigen rol en doel op de telefoon.</p>' : '<p>Iedereen ziet zijn eigen rol en doel op de telefoon.</p>') + '</div>';
   }
   function rolkaarten(){ if (!telefoons()) return; gebr.forEach(function(g){ if (g.echt) stuur(g.id, rolKaart(g)); }); }
 
@@ -2236,6 +2262,7 @@ var TEKENING = {
     var sk = ROLSPEL.startknop(modus === 'telefoon' ? $('startBtn') : null, { aantal:spelers.length, nodig:3, klaar:'Open Kringel' });
     ROLSPEL.lobby($('lobbyvak'), kamerInfo.code, spelers,
       sk.tekort ? sk.tekst + ': met drie telefoons kan een bericht al rondgaan.' : 'Iedereen krijgt een rol en eigen volgers. Iedereen erbij? Open Kringel.');
+    if (spelers.length >= 3) $('lobbyvak').insertAdjacentHTML('beforeend', rollenHtml(spelers.length));
   }
   var naSpelers = null;
   function koppelKamer(k){
