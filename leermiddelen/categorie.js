@@ -71,16 +71,16 @@ window.CATEGORIE = (function(){
   };
   /* 2. de onderdelen van de vakspellen en de losse spellen, op hoe hun naam begint */
   var PATROON = {
-    ned:  [[/^schrijfopdracht: /, 'schrijven'], [/^schrijfopdracht: verbeter/, 'spelling'], [/^begrijpend: /, 'lezen'], [/^alinea: /, 'schrijven'], [/^dictee: /, 'spelling'], [/^(tegenwoordige tijd|verleden tijd|voltooid deelwoord|de d of t val)$/, 'spelling'],
+    ned:  [[/^luisteren: /, 'lezen'], [/^schrijfopdracht: /, 'schrijven'], [/^schrijfopdracht: verbeter/, 'spelling'], [/^begrijpend: /, 'lezen'], [/^alinea: /, 'schrijven'], [/^dictee: /, 'spelling'], [/^(tegenwoordige tijd|verleden tijd|voltooid deelwoord|de d of t val)$/, 'spelling'],
            [/^register: /, 'schrijven'], [/^samenvatten: /, 'schrijven'],
            [/^signaalwoorden: /, 'lezen'], [/^woordenschat: /, 'woordenschat']],
-    eng:  [[/^situaties: /, 'luisteren'], [/^reading: /, 'lezen'], [/^dictation: /, 'luisteren'], [/^translate: /, 'schrijven'],
+    eng:  [[/^listening: /, 'luisteren'], [/^situaties: /, 'luisteren'], [/^reading: /, 'lezen'], [/^dictation: /, 'luisteren'], [/^translate: /, 'schrijven'],
            [/^phrasal: /, 'woordenschat'], [/^irregular /, 'grammatica']],
     reken:[[/^bronlezen: /, 'verbanden'], [/^(schatten|cijferen): /, 'getallen'], [/^DHTE /, 'getallen'], [/^(klok|metriek): /, 'meten'],
            [/^verhoudingstabel: /, 'verhoudingen']],
     wis:  [[/^ruimte: /, 'meetkunde'], [/^woordformules: /, 'verbanden'], [/^voordoen: /, 'algebra'], [/^vergelijking: /, 'algebra'], [/^grafieken: /, 'verbanden'], [/^coördinaten: /, 'verbanden'],
            [/^(hoeken|pythagoras|vlak): /, 'meetkunde']],
-    ges:  [[/^redeneren: /, 'vaardig'], [/^tv\d+$/, 'tijdvakken'], [/^wie ben ik: /, 'tijdvakken'], [/^(oorzaak en gevolg|kaart door de tijd): /, 'vaardig']],
+    ges:  [[/^contextenvwo: /, 'tijdvakken'], [/^contextenvwo: bron/, 'vaardig'], [/^contextenhavo: /, 'tijdvakken'], [/^contextenhavo: bronnen/, 'vaardig'], [/^contextenhavo: nederland/, 'nl1900'], [/^redeneren: /, 'vaardig'], [/^tv\d+$/, 'tijdvakken'], [/^wie ben ik: /, 'tijdvakken'], [/^(oorzaak en gevolg|kaart door de tijd): /, 'vaardig']],
     aard: [[/^water: /, 'examen'], [/^topografie/, 'topo'], [/^kaartvaardigheid: /, 'kaart'], [/^klimaatgrafiek: /, 'klimaat'], [/^bevolkingspiramide: /, 'bevolking']],
     bio:  [[/^afweer: gedrag/, 'natuur'], [/^afweer: evolutie/, 'cellen'], [/^afweer: (verdediging|bloed|immuniteit)/, 'lichaam'], [/^onderzoek: /, 'natuur'], [/^kruisen: /, 'cellen'], [/^voedselweb: /, 'natuur']],
     burg: [[/^rechtsstaat: /, 'examen'], [/^afwegen: /, 'samen'], [/^(democratie|partijen|verkiezingen): /, 'staat']],

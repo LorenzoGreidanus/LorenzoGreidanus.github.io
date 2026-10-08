@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<!-- Historische contexten havo, versie 1.0: op vakspel.js; de stof volgt de syllabus geschiedenis havo, centraal examen 2027 (hoofdstuk 4) -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<title>Historische contexten havo &middot; meneer Greidanus</title>
+<meta name="description" content="Oefenen voor het centraal examen geschiedenis havo: het Britse Rijk 1585-1900, Duitsland in Europa 1918-1991 en Nederland 1948-2008, met kenmerkende aspecten en bronvragen.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Historische contexten havo">
+<meta property="og:description" content="De drie historische contexten van het examen geschiedenis havo: jaartallen, oorzaak en gevolg, begrippen, kenmerkende aspecten en bronvragen.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/contextenhavo.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M49.2 10.4 C72.6 9.2 89.3 24.6 90 46.8 C90.7 70.6 77.4 90.6 54.1 91.2 C30.4 91.8 10.6 78.3 11.4 54.6 C12.2 30.8 26.3 11.6 49.2 10.4Z' fill='%238c3f2b'/><g transform='translate(50 51) scale(2.2) translate(-12 -12)' fill='none' stroke='%23ffffff' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'><path d='M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z'/><path d='M9 9h6M9 13h6'/></g></svg>">
+<link rel="stylesheet" href="vakspel.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="stylesheet" href="spel.css">
+<style>
+/* De bron, de bewering en de omschrijving lezen hun kleuren uit de tokens die ook op het werkblad bestaan
+   (--kaart2, --ink, --muted), zodat de donkere stand meekantelt en het op wit papier leesbaar blijft. */
+.hc-vak{max-width:62ch;width:100%;text-align:left;background:var(--kaart2);border-left:4px solid var(--ink);border-radius:0 14px 14px 0;padding:12px 18px 12px 16px;font-size:1.02rem;line-height:1.6}
+.hc-vak p{margin:0}
+.hc-kop{font-size:.78rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:0 0 6px !important}
+.hc-bron blockquote{margin:0;font-size:1.02rem;line-height:1.6}
+.hc-bij{margin:8px 0 0 !important;font-size:.86rem;line-height:1.45;color:var(--muted)}
+.hc-bij b{color:var(--ink);font-weight:600}
+body.groot .hc-vak{font-size:1.25rem}
+/* op volgorde: elke gebeurtenis een eigen rij, anders staan lange zinnen in smalle kolommen */
+body.hc-volg .vakken.rij{grid-template-columns:1fr}
+body.hc-volg .vakken.rij .sleepdoel{flex-direction:row;align-items:center;min-height:58px;gap:10px}
+body.hc-volg .vakken.rij .doelknop{width:auto;flex:none}
+body.hc-volg .vakken.rij .sleepdoel .inhoud{justify-content:flex-start;flex:1;min-height:32px}
+body.hc-volg .sleepkaart,body.hc-lijst .sleepkaart{text-align:left;font-weight:500;font-size:.92rem;display:flex}
+body.hc-volg .kaartjes,body.hc-lijst .kaartjes{flex-direction:column;align-items:stretch}
+/* koppelen: een vak per gevolg of kenmerkend aspect, onder elkaar, met de tekst links */
+body.hc-lijst .vakken,body.hc-lijst .vakken.rij{grid-template-columns:1fr}
+body.hc-lijst .sleepdoel{min-height:0}
+body.hc-lijst .doelknop{place-items:start;padding-left:22px}
+body.hc-lijst .doelknop b{text-align:left;font-weight:600}
+body.hc-lijst .sleepdoel .inhoud{justify-content:flex-start}
+@media(max-width:560px){.hc-vak{font-size:.97rem;padding:11px 14px}}
+</style>
+<script src="/vangnet.js" defer></script>
+</head>
+<body>
+<div id="vakspel"></div>
+<script src="vakspel.js"></script>
+<script>
+(function(){
+  'use strict';
+  var H = VAKSPEL.husselen, S = VAKSPEL.schoon;
+  function kies(a){ return a[Math.floor(Math.random() * a.length)]; }
+  function cap(t){ t = String(t); return t.charAt(0).toUpperCase() + t.slice(1); }
+  function vwo(niv){ return niv === 'vwo'; }
+  /* uit een lijst met niveau-labels: op havo alleen 'hv', op vwo alles, met voorrang (kans p) voor de vwo-stof */
+  function poel(lijst, niv, p){
+    var hv = lijst.filter(function(x){ return x.n === 'hv'; });
+    if (!vwo(niv)) return hv;
+    var vw = lijst.filter(function(x){ return x.n === 'vwo'; });
+    return vw.length && Math.random() < (p == null ? .6 : p) ? vw : lijst;
+  }
+  function vak(kop, html, klas){ return '<div class="hc-vak' + (klas ? ' ' + klas : '') + '">' + (kop ? '<p class="hc-kop">' + kop + '</p>' : '') + html + '</div>'; }
+
+  /* ================= de stof per context (syllabus havo 2027, hoofdstuk 4.2 tot en met 4.4) =================
+     tijd:    [sorteerwaarde, hoe het jaar er staat, gebeurtenis, niveau, vraag naar het jaartal]
+     oorzaak: [oorzaak, gevolg, niveau, groep]  (paren uit dezelfde groep komen niet samen in een opgave)
+     stel:    { s: bewering, o: [goed, fout, fout, fout], u: uitleg, n }
+     begrip:  [omschrijving, [goede antwoorden], uitleg, niveau]
+     diep:    vwo: { v: vraag, b: situatie, o: [goed, fout, fout, fout], u } */
+  function T(a){ return { j:a[0], d:a[1], t:a[2], n:a[3], vr:a[4] }; }
+  function O(a){ return { o:a[0], g:a[1], n:a[2], grp:a[3] || '' }; }
+  function B(a){ return { v:a[0], a:a[1], u:a[2], n:a[3] || 'hv' }; }
+
+  var CTX = {};
+
+  /* ---------- Het Britse Rijk 1585-1900 ---------- */
+  CTX.brits = {
+    id:'brits', naam:'Het Britse Rijk', od:'contextenhavo: brits', vol:'het Britse Rijk 1585-1900',
+    tijd:[
+      [1585, "1585", "De Engelsen doen op het eiland Roanoke hun eerste poging om een kolonie in Noord-Amerika te stichten", "vwo", "In welk jaar deden de Engelsen op Roanoke hun eerste poging om een kolonie in Noord-Amerika te stichten?"],
+      [1600, "1600", "De East India Company wordt opgericht", "vwo", "In welk jaar werd de East India Company opgericht?"],
+      [1607, "1607", "Jamestown wordt gesticht, de eerste blijvende Engelse nederzetting in Noord-Amerika", "vwo"],
+      [1620, "1620", "De protestantse Pilgrim Fathers stichten een Engelse nederzetting in Noord-Amerika", "hv", "In welk jaar stichtten de Pilgrim Fathers een Engelse nederzetting in Noord-Amerika?"],
+      [1757, "1757", "De East India Company verslaat de heerser van Bengalen in de slag bij Plassey", "vwo"],
+      [1765, "1765", "Het verdrag van Allahabad: het begin van het Britse rijk in India", "hv", "In welk jaar werd het verdrag van Allahabad gesloten, het begin van het Britse rijk in India?"],
+      [1773, "1773", "Kolonisten gooien uit protest tegen de Britse belasting thee in de haven van Boston", "vwo"],
+      [1776, "1776", "De dertien koloniën komen in opstand en verklaren zich onafhankelijk", "hv", "In welk jaar kwamen de dertien koloniën in Noord-Amerika in opstand en verklaarden zij zich onafhankelijk?"],
+      [1783, "1783", "Groot-Brittannië erkent bij de Vrede van Parijs de onafhankelijkheid van de Verenigde Staten", "vwo"],
+      [1807, "1807", "Een verbod op de slavenhandel in het Britse Rijk", "hv", "In welk jaar werd de slavenhandel in het Britse Rijk verboden?"],
+      [1830, "1830", "De spoorlijn tussen Liverpool en Manchester gaat open", "vwo"],
+      [1832, "1832", "De Reform Bill geeft ondernemers meer politieke invloed", "hv", "In welk jaar kregen Britse ondernemers met de Reform Bill meer politieke invloed?"],
+      [1833, "1833", "Groot-Brittannië verbiedt de slavernij in grote delen van het rijk", "hv", "In welk jaar verbood Groot-Brittannië de slavernij in grote delen van het rijk?"],
+      [1833.5, "1833", "De eerste Factory Act moet excessen in de fabrieken voorkomen", "vwo", "Vanaf welk jaar probeerde de Britse overheid met de Factory Acts excessen in fabrieken te voorkomen?"],
+      [1846, "1846", "De graanwetten (Corn Laws) worden afgeschaft: een stap naar vrijhandel", "vwo"],
+      [1851, "1851", "De eerste wereldtentoonstelling in Londen", "hv", "In welk jaar werd in Londen de eerste wereldtentoonstelling gehouden?"],
+      [1857, "1857", "Een opstand van ontevreden Indiase soldaten tegen de Britten", "hv", "In welk jaar kwamen ontevreden Indiase soldaten in opstand tegen de Britten?"],
+      [1858, "1858", "India komt onder direct gezag van de Britse regering", "vwo"],
+      [1869, "1869", "Het Suezkanaal gaat open", "vwo", "In welk jaar ging het Suezkanaal open?"],
+      [1871, "na 1870", "De Britse industrie krijgt groeiende concurrentie van de Verenigde Staten en Duitsland", "hv"],
+      [1885, "1885", "Hoogopgeleide Indiërs richten het Indian National Congress op", "hv", "In welk jaar werd het Indian National Congress opgericht?"],
+      [1900, "rond 1900", "Groot-Brittannië heerst over ongeveer een kwart van de wereldbevolking", "hv"]
+    ].map(T),
+    oorzaak:[
+      ["De kolonisten betaalden belasting aan Groot-Brittannië, maar hadden geen vertegenwoordiging in het parlement", "De dertien koloniën kwamen in 1776 in opstand", "hv", "opstand"],
+      ["Kolonisten kwamen in aanraking met Verlichte ideeën als volkssoevereiniteit en natuurlijke rechten", "De kolonisten vormden een onafhankelijke federale staat met eigen rechten", "vwo", "opstand"],
+      ["In verlichte en religieuze kringen kwam het abolitionisme op", "In 1807 werd de slavenhandel in het Britse Rijk verboden", "hv", "slaaf"],
+      ["De slavenhandel werd in 1807 verboden", "Barbados en Jamaica raakten economisch in verval", "hv", "slaaf2"],
+      ["In de zuidelijke koloniën werden tabak en katoen voor de export verbouwd", "Slaafgemaakten vormden in het zuiden een groot deel van de bevolking", "hv", "plantage"],
+      ["Bloedige oorlogen en ziekten die de Europeanen meebrachten", "De inheemse bevolking van Noord-Amerika werd gedecimeerd", "hv", "inheems"],
+      ["De macht van de Mogol-vorsten werd zwakker", "De East India Company breidde haar macht over India uit", "hv", "eic"],
+      ["De Britten sloegen de opstand van Indiase soldaten in 1857 hard neer", "India kwam onder direct gezag van de Britse regering", "hv", "1857"],
+      ["De Britten voerden de Engelse taal, hun rechtssysteem en hun onderwijs in India in", "Hoogopgeleide Indiërs richtten in 1885 het Indian National Congress op", "hv", "inc"],
+      ["Goedkope Engelse industrieproducten werden in India verkocht", "De Indiase huisnijverheid kreeg zware concurrentie", "hv", "markt"],
+      ["Stoomschepen en de opening van het Suezkanaal", "Snellere verbindingen met het moederland en meer controle over India", "hv", "controle"],
+      ["Uitvindingen zoals de spinning jenny en de stoommachine", "De industriële revolutie werd mogelijk", "hv", "ir"],
+      ["Verbeteringen in de landbouw en ziektebestrijding", "De bevolking groeide en er was meer vraag naar goederen en goedkope arbeid", "hv", "bevolking"],
+      ["Rijk geworden ondernemers wilden meer politieke invloed", "In 1832 kwam de Reform Bill", "hv", "reform"],
+      ["Fabrieksarbeiders leefden en werkten onder slechte omstandigheden en kwamen in protest", "Vanaf 1833 probeerde de overheid met de Factory Acts excessen te voorkomen", "hv", "fabriek"],
+      ["Na 1870 groeide de concurrentie van de Verenigde Staten en Duitsland", "Op zoek naar nieuwe markten breidden de Britten hun rijk verder uit", "hv", "concurrentie"],
+      ["Ondernemers investeerden winsten uit de koloniën in Groot-Brittannië", "Eerst vaarwegen en daarna spoorwegen werden aangelegd", "vwo", "investering"],
+      ["Ondernemers streefden naar vrijhandel, ook binnen het wereldrijk", "De Britten zetten de marine in om vrijhandel af te dwingen, ook buiten hun koloniën", "vwo", "vrijhandel"],
+      ["Katoen uit de koloniën en de Verenigde Staten was onmisbaar voor de Britse fabrieken", "De Britse markt werd gevoelig voor gebeurtenissen op mondiaal niveau", "vwo", "mondiaal"]
+    ].map(O),
+    stel:[
+      { n:'hv', s:"De noordelijke koloniën aan de oostkust van Noord-Amerika waren vooral plantagekoloniën.", o:["Onjuist, want het waren vestigingskoloniën, gericht op landbouw, handel en nijverheid.", "Onjuist, want in de noordelijke koloniën werd helemaal geen gebruik gemaakt van slaafgemaakten.", "Juist, want in het noorden werden tabak en katoen voor de export verbouwd.", "Juist, want alle dertien koloniën leefden van de export van plantageproducten."], u:"De plantage-economieën lagen in het zuiden. Let op de verleidelijke fout: alle Engelse koloniën gebruikten de arbeid van slaafgemaakten, ook in het noorden, maar in het zuiden vormden zij een groter deel van de bevolking." },
+      { n:'hv', s:"De dertien koloniën in Noord-Amerika waren voor Groot-Brittannië de winstgevendste koloniën in Amerika.", o:["Onjuist, want plantagekoloniën in het Caribisch gebied, zoals Barbados en Jamaica, waren winstgevender.", "Onjuist, want de koloniën in Noord-Amerika brachten Groot-Brittannië helemaal geen winst op.", "Juist, want de dertien koloniën vormden het hele Britse rijk in Amerika.", "Juist, want in Noord-Amerika woonden de meeste Britse kolonisten."], u:"De dertien koloniën waren maar een deel van het Britse rijk in Amerika. De suikereilanden in het Caribisch gebied leverden meer winst op. Dat er veel kolonisten woonden, zegt niets over de winst." },
+      { n:'hv', s:"India was voor Groot-Brittannië een vestigingskolonie, net als de noordelijke koloniën in Amerika.", o:["Onjuist, want er was nauwelijks migratie: een kleine groep Britten bestuurde miljoenen Indiërs.", "Onjuist, want India werd door de Britten nooit bestuurd, alleen bezocht voor handel.", "Juist, want na 1857 kwam India onder direct gezag van de Britse regering.", "Juist, want de Britten voerden in India de Engelse taal en hun onderwijs in."], u:"Een vestigingskolonie is een gebied waar veel Europeanen zich blijvend vestigen. In India gebeurde dat niet: een kleine groep Britten bestuurde het land met hulp van het bestaande inheemse bestuur. Direct gezag of Engels onderwijs maakt een land nog geen vestigingskolonie." },
+      { n:'hv', s:"Het Brits-Indische leger bestond vooral uit Britse soldaten.", o:["Onjuist, want het bestond uit Indiase soldaten met Britse officieren.", "Onjuist, want de Britten lieten de verdediging over aan de Mogol-vorsten.", "Juist, want na 1857 namen de Britten geen Indiase soldaten meer aan.", "Juist, want er migreerden veel Britse soldaten met hun gezin naar India."], u:"Het Brits-Indische leger bestond uit Indiase soldaten met Britse officieren. Juist daarom was de opstand van ontevreden Indiase soldaten in 1857 zo gevaarlijk voor de Britten." },
+      { n:'hv', s:"Het Indian National Congress streefde bij de oprichting in 1885 meteen naar onafhankelijkheid van India.", o:["Onjuist, want het streefde in eerste instantie naar gelijke kansen binnen het Brits-Indische bestuur.", "Onjuist, want het werd opgericht door Britse bestuurders om India beter te besturen.", "Juist, want het werd opgericht direct na de opstand van 1857.", "Juist, want hoogopgeleide Indiërs wezen het Britse onderwijs helemaal af."], u:"Hoogopgeleide Indiërs, opgeleid in het Britse onderwijs, vroegen eerst om gelijke kansen in het bestuur. De Britten gaven daar niet aan toe. Het Congress werd in 1885 opgericht, bijna dertig jaar na de opstand." },
+      { n:'hv', s:"Het verdrag van Allahabad in 1765 betekende het begin van het Britse rijk in India.", o:["Juist, want de East India Company kreeg daarna macht over een groot gebied en kon er belasting innen.", "Juist, want India kwam toen onder direct gezag van de Britse regering.", "Onjuist, want het Britse rijk in India begon pas na de opening van het Suezkanaal.", "Onjuist, want de East India Company dreef in India alleen handel en bestuurde niets."], u:"Na Allahabad heerste de East India Company al snel over een groot deel van het subcontinent, en het innen van belasting werd een belangrijke inkomstenbron. Direct gezag van de Britse regering kwam pas na de opstand van 1857." },
+      { n:'hv', s:"India werd in de 19e eeuw een belangrijke afzetmarkt voor de Britse katoenindustrie.", o:["Juist, want Engelse fabrieksstoffen werden in India verkocht.", "Juist, want India kocht vooral ruwe katoen in Groot-Brittannië.", "Onjuist, want India leverde alleen grondstoffen en kocht zelf niets.", "Onjuist, want de Britten verboden de verkoop van Engelse stoffen daar."], u:"India leverde grondstoffen zoals katoen en was tegelijk een markt voor Engelse fabrieksstoffen. Die import maakte het de Indiase huisnijverheid moeilijk." },
+      { n:'hv', s:"De Britse overheid greep vanaf het begin van de industrialisatie in om de omstandigheden van fabrieksarbeiders te verbeteren.", o:["Onjuist, want pas vanaf 1833 kwamen de Factory Acts tegen excessen.", "Onjuist, want de Britse overheid greep in de hele 19e eeuw nooit in.", "Juist, want de Reform Bill van 1832 regelde de werktijden in fabrieken.", "Juist, want minister Robert Owen voerde al vroeg sociale wetten in."], u:"Eerst liet de overheid het over aan de markt. Vanaf 1833 kwamen de Factory Acts. De Reform Bill ging over politieke invloed, niet over arbeidstijden. Robert Owen was ondernemer en hervormer, geen minister." },
+      { n:'hv', s:"De wereldtentoonstelling van 1851 liet zien dat Groot-Brittannië de werkplaats van de wereld was.", o:["Juist, want de Britse industrie liep toen voor op de rest van de wereld.", "Juist, want daar werden de koloniën officieel verdeeld.", "Onjuist, want de Verenigde Staten en Duitsland waren toen al de grootste industrielanden.", "Onjuist, want de industriële revolutie begon pas na 1870."], u:"In 1851 was Groot-Brittannië het voorbeeld van een industrieland. De concurrentie van de Verenigde Staten en Duitsland groeide pas na 1870." },
+      { n:'hv', s:"Met de Reform Bill van 1832 kregen alle volwassen mannen in Groot-Brittannië kiesrecht.", o:["Onjuist, want de Reform Bill gaf vooral ondernemers meer politieke invloed, niet iedereen.", "Onjuist, want de Reform Bill ging over de afschaffing van de slavernij.", "Juist, want daarmee werd Groot-Brittannië in 1832 een volledige democratie.", "Juist, want fabrieksarbeiders hadden de Reform Bill met stakingen afgedwongen."], u:"Rijk geworden ondernemers wilden politieke invloed en kregen die met de Reform Bill. Arbeiders en vrouwen bleven nog lang zonder kiesrecht: de democratisering ging stap voor stap." },
+      { n:'hv', s:"Door het verbod op de slavenhandel in 1807 bloeiden Barbados en Jamaica economisch op.", o:["Onjuist, want het verbod betekende de economische neergang van Barbados en Jamaica.", "Onjuist, want op Barbados en Jamaica werkten geen slaafgemaakten.", "Juist, want de planters konden voortaan betaalde arbeiders inhuren.", "Juist, want de slavernij werd daar in 1807 ook afgeschaft."], u:"De suikerplantages op Barbados en Jamaica waren afhankelijk van de aanvoer van slaafgemaakten. Het verbod op de handel in 1807 was nog geen verbod op slavernij: dat kwam in 1833." },
+      { n:'hv', s:"Na 1870 had de Britse industrie geen serieuze concurrentie.", o:["Onjuist, want de concurrentie van de Verenigde Staten en Duitsland groeide.", "Onjuist, want Frankrijk en Nederland namen de Britse koloniën over.", "Juist, want rond 1900 heerste Groot-Brittannië over een kwart van de wereldbevolking.", "Juist, want Londen was het financiële hart van de wereld."], u:"Juist die concurrentie was een reden om nieuwe markten te zoeken en het rijk uit te breiden. Een groot rijk of een sterke financiële positie betekent niet dat er geen concurrentie was." },
+      { n:'vwo', s:"Het bezit van India was voor Groot-Brittannië vooral van politiek belang.", o:["Onjuist, want het gaf wel politiek en militair aanzien, maar was vooral economisch belangrijk.", "Onjuist, want India had voor Groot-Brittannië geen enkel politiek belang.", "Juist, want koningin Victoria werd keizerin van India.", "Juist, want de Britten wilden de wereld naar Brits model beschaven."], u:"India leverde belasting, handelsgewassen van plantages en een afzetmarkt voor Britse industrieproducten. Het keizerschap en het beschavingsideaal laten het zelfbeeld zien, maar weerleggen niet dat het economische belang voorop stond." },
+      { n:'vwo', s:"Vrijhandel betekende dat de Britse staat zich afzijdig hield van de wereldhandel.", o:["Onjuist, want de Britten zetten desnoods de marine in om vrijhandel af te dwingen, ook buiten hun koloniën.", "Onjuist, want de Britten hieven juist hoge invoerrechten op alle goederen.", "Juist, want liberalen wilden een kleine rol voor de overheid.", "Juist, want de marine werd alleen gebruikt om de kust van Groot-Brittannië te verdedigen."], u:"Een kleine rol voor de overheid in de economie ging samen met een grote rol van de marine in de wereld: de staat dwong open markten af. Dat is het verleidelijke: liberaal klinkt als afzijdig, maar dat was het buiten Europa niet." },
+      { n:'vwo', s:"Door de industrialisatie werd de Britse markt minder afhankelijk van wat er elders in de wereld gebeurde.", o:["Onjuist, want katoen en afzet hingen af van India en de Verenigde Staten.", "Onjuist, want de industrialisatie maakte het land vooral afhankelijk van Frankrijk.", "Juist, want Groot-Brittannië maakte voortaan alles in eigen fabrieken.", "Juist, want het handelskapitalisme was vervangen door industrieel kapitalisme."], u:"Fabrieken in Lancashire draaiden op katoen uit Amerika en India, en verkochten aan India. Tijdens de Amerikaanse Burgeroorlog kwamen daardoor veel Britse katoenfabrieken stil te liggen." },
+      { n:'vwo', s:"De kolonisten in Noord-Amerika verzetten zich tegen Groot-Brittannië met ideeën die ook in Groot-Brittannië zelf waren ontstaan.", o:["Juist, want het idee van natuurlijke rechten kwam onder anderen van de Engelse filosoof John Locke.", "Juist, want de kolonisten wilden een absoluut vorst, net als in Groot-Brittannië.", "Onjuist, want de Verlichting was een uitsluitend Franse beweging.", "Onjuist, want de kolonisten verzetten zich alleen om economische redenen."], u:"Locke schreef over natuurlijke rechten zoals leven, vrijheid en bezit. De kolonisten gebruikten zulke Verlichte ideeën tegen belasting zonder vertegenwoordiging. Economische belangen speelden mee, maar niet alleen." },
+      { n:'vwo', s:"De Britse heerschappij in India rustte alleen op geweld en had geen steun onder Indiërs.", o:["Onjuist, want veel Indiërs accepteerden het gezag en inheemse bestuurders werkten mee.", "Onjuist, want de Britten hadden in India helemaal geen leger tot hun beschikking.", "Juist, want de opstand van 1857 werd door de Britten hard neergeslagen.", "Juist, want de Britten wezen veel Indiase religieuze en sociale gebruiken af."], u:"Het neerslaan van de opstand van 1857 laat geweld zien, maar het bestuur van miljoenen mensen door een kleine groep Britten kon alleen met medewerking van inheemse bestuurders en Indiase soldaten." }
+    ],
+    begrip:[
+      ["De handel waarbij schepen goederen naar Afrika brachten, slaafgemaakten naar Amerika en plantageproducten naar Europa", ["driehoekshandel", "de driehoekshandel"], "De driehoekshandel verbond Europa, Afrika en Amerika. De Engelsen richtten er de Royal African Company voor op."],
+      ["Het Engelse bedrijf dat werd opgericht voor de driehoekshandel", ["Royal African Company", "de Royal African Company", "RAC"], "De Royal African Company had zijn winst uit de handel in slaafgemaakten."],
+      ["De beweging die vanaf het einde van de 18e eeuw de afschaffing van slavenhandel en slavernij wilde", ["abolitionisme", "abolitionisten", "abolitionistische beweging", "het abolitionisme"], "Het abolitionisme kwam op in verlichte en religieuze kringen en leidde tot het verbod op de slavenhandel in 1807."],
+      ["Het Britse handelsbedrijf dat sinds het begin van de 17e eeuw factorijen in India had", ["East India Company", "EIC", "de East India Company", "British East India Company", "English East India Company", "Engelse Oost-Indische Compagnie", "Britse Oost-Indische Compagnie"], "De East India Company breidde haar macht uit toen de Mogol-vorsten verzwakten."],
+      ["Een handelspost overzee, van waaruit een handelscompagnie handel dreef", ["factorij", "een factorij", "factorijen"], "Vanuit factorijen dreef de East India Company handel met de Mogol-vorsten."],
+      ["Een kolonie waar veel Europeanen zich blijvend vestigden, zoals de noordelijke koloniën aan de oostkust van Noord-Amerika", ["vestigingskolonie", "een vestigingskolonie", "volksplantingskolonie"], "In een vestigingskolonie wonen veel kolonisten. In India was dat niet zo: daar was nauwelijks migratie."],
+      ["De groep protestanten die in 1620 een Engelse nederzetting stichtte om een geheel nieuwe samenleving te beginnen", ["Pilgrim Fathers", "de Pilgrim Fathers", "pilgrims", "pelgrimvaders"], "De Pilgrim Fathers kwamen met de Mayflower naar Noord-Amerika."],
+      ["De organisatie die hoogopgeleide Indiërs in 1885 oprichtten", ["Indian National Congress", "het Indian National Congress", "INC", "Congress", "Congres", "Indiaas Nationaal Congres", "Indiase Nationale Congres", "Congrespartij"], "Het Indian National Congress vroeg eerst om gelijke kansen in het Brits-Indische bestuur."],
+      ["De wetten waarmee de Britse overheid vanaf 1833 excessen in fabrieken probeerde te voorkomen", ["Factory Acts", "Factory Act", "fabriekswetten", "de Factory Acts"], "Eerst greep de overheid niet in. Vanaf 1833 kwamen de Factory Acts."],
+      ["De wet waarmee rijk geworden ondernemers in 1832 meer politieke invloed kregen", ["Reform Bill", "Reform Act", "de Reform Bill"], "De Reform Bill van 1832 was een stap in de democratisering, maar gaf nog lang niet iedereen kiesrecht."],
+      ["Het economische stelsel waarin winst vooral komt uit handel tussen werelddelen", ["handelskapitalisme"], "Door de industrialisatie veranderde het handelskapitalisme in industrieel kapitalisme."],
+      ["Het economische stelsel waarin winst vooral komt uit productie in fabrieken", ["industrieel kapitalisme", "industriekapitalisme"], "Bij industrieel kapitalisme investeren ondernemers in fabrieken en machines."],
+      ["Handel tussen landen zonder invoerrechten of andere belemmeringen", ["vrijhandel"], "Britse ondernemers streefden naar vrijhandel en een kleine rol voor de overheid."],
+      ["De Britse oorlogsvloot die de handel afdwong en beschermde", ["Royal Navy", "de Royal Navy", "marine", "de marine", "Britse marine", "de Britse marine"], "Met de Royal Navy beschermden en dwongen de Britten hun handel af."],
+      ["Het kanaal dat zorgde voor een snellere verbinding tussen Groot-Brittannië en India", ["Suezkanaal", "het Suezkanaal", "Suez kanaal", "kanaal van Suez"], "Het Suezkanaal ging in 1869 open en maakte de reis naar India veel korter."],
+      ["De vorsten die over grote delen van India heersten voordat de East India Company daar machtig werd", ["Mogol-vorsten", "Mogolvorsten", "Mogols", "Moguls", "Mughals", "Mogolkeizers", "Mogol"], "Toen de Mogol-vorsten verzwakten, breidde de East India Company haar macht uit."],
+      ["De Britse koningin die keizerin van India werd", ["Victoria", "koningin Victoria"], "Na de opstand van 1857 kwam India onder direct gezag van de Britse regering, en Victoria werd keizerin van India."],
+      ["De ondernemer en hervormer die zich inzette voor betere omstandigheden van arbeiders", ["Robert Owen", "Owen"], "Mede onder invloed van mensen als Robert Owen dwongen arbeiders via vakbonden meer rechten af."],
+      ["De spinmachine waarmee één arbeider meerdere draden tegelijk kon spinnen", ["spinning jenny", "de spinning jenny", "jenny"], "De spinning jenny en de stoommachine maakten de industriële revolutie mogelijk."],
+      ["Een groot landbouwbedrijf in de koloniën waar slaafgemaakten handelsgewassen voor de export verbouwden", ["plantage", "een plantage", "plantages"], "Tabak, katoen en suiker kwamen van plantages."],
+      ["Het idee dat de macht in een staat bij het volk ligt", ["volkssoevereiniteit"], "Volkssoevereiniteit was een Verlicht idee waar de kolonisten zich op beriepen."],
+      ["Het verdrag uit 1765 dat het begin van het Britse rijk in India betekende", ["verdrag van Allahabad", "Allahabad"], "Na het verdrag van Allahabad heerste de East India Company al snel over een groot deel van India.", "vwo"],
+      ["Het idee dat de wetgevende, uitvoerende en rechterlijke macht gescheiden moeten zijn", ["trias politica", "scheiding der machten", "machtenscheiding"], "De trias politica was een van de Verlichte ideeën waarmee de kolonisten in aanraking kwamen.", "vwo"],
+      ["De Britse graanwetten die in 1846 werden afgeschaft, als stap naar vrijhandel", ["Corn Laws", "graanwetten", "de Corn Laws"], "Met het afschaffen van de Corn Laws in 1846 koos Groot-Brittannië voor vrijhandel.", "vwo"]
+    ].map(B),
+    diep:[
+      { v:"Vergelijk de Britse koloniën in Noord-Amerika met Brits-India. Welk verschil is juist?", o:["In Noord-Amerika vestigden zich veel kolonisten; India bestuurde een kleine groep Britten.", "In Noord-Amerika werkten slaafgemaakten; in India verbouwden de Britten geen handelsgewassen.", "India kwam eerder onder Brits gezag dan de eerste Engelse nederzetting in Amerika.", "In Noord-Amerika ging het om handel; in India alleen om politiek aanzien."], u:"Het verschil zit in migratie en bestuur. In India werden ook plantages opgezet, en Allahabad (1765) kwam ruim een eeuw na 1620. Ook in India was het economische belang het grootst." },
+      { v:"Welke redenering verbindt de industriële revolutie in Groot-Brittannië met de problemen van de Indiase huisnijverheid?", o:["Goedkope Britse fabrieksstoffen werden in India verkocht en verdrongen handgemaakte stoffen.", "De Britten verboden de Indiase huisnijverheid omdat zij Indiase gebruiken afwezen.", "Indiase wevers trokken massaal naar Britse fabrieken, zodat er in India niemand overbleef.", "Door het Suezkanaal kon India geen katoen meer naar Groot-Brittannië sturen."], u:"Grondstof uit India, verwerkt in Britse fabrieken, en terug als goedkoop product: India werd zo afzetmarkt en grondstoffenleverancier tegelijk." },
+      { v:"Een historicus stelt: 'Zonder koloniën was de Britse industrialisatie trager verlopen.' Welk gegeven uit de context ondersteunt dit het best?", o:["Ondernemers investeerden koloniale winsten in industrie en transport.", "Uitvindingen zoals de spinning jenny en de stoommachine maakten industrie mogelijk.", "Door verbeteringen in de landbouw groeide de Britse bevolking snel.", "Na 1870 groeide de concurrentie van de Verenigde Staten en Duitsland."], u:"De stelling gaat over de rol van de koloniën. Uitvindingen en bevolkingsgroei zijn ook oorzaken van de industrialisatie, maar ze ondersteunen deze stelling niet." },
+      { v:"'Op zoek naar nieuwe markten breidden de Britten hun rijk aan het einde van de 19e eeuw verder uit.' Welke twee kenmerkende aspecten verbindt deze zin?", o:["De industriële revolutie en de moderne vorm van imperialisme.", "Wereldwijde handelscontacten en de democratische revoluties.", "Discussies over de sociale kwestie en de opkomst van emancipatiebewegingen.", "De uitbouw van plantagekoloniën en de opkomst van het abolitionisme."], u:"De industrie had markten en grondstoffen nodig; dat dreef de uitbreiding van het rijk na 1870. Dat is precies het verband in het kenmerkend aspect over modern imperialisme." },
+      { v:"De Britten voerden in India Engels onderwijs in om Indiërs naar Brits model te 'beschaven'. Welk gevolg daarvan is een onbedoeld gevolg?", o:["Opgeleide Indiërs richtten het Indian National Congress op en eisten gelijke kansen.", "Indiërs konden voortaan Britse bevelen en wetten in het Engels lezen.", "Er kwamen voortaan meer Britse leraren en ambtenaren naar India.", "De Britten konden India daardoor met minder eigen ambtenaren besturen."], u:"Een onbedoeld gevolg gaat in tegen wat de makers van het beleid wilden. De Britten wilden loyale onderdanen; ze kregen een opgeleide groep die zich tegen de ongelijkheid keerde." },
+      { v:"Welke gebeurtenis laat zien dat de Britse markt in de 19e eeuw gevoelig was voor gebeurtenissen op mondiaal niveau?", o:["In de Amerikaanse Burgeroorlog kwam weinig katoen, en Britse fabrieken lagen stil.", "In 1851 liet de wereldtentoonstelling in Londen de Britse industrie zien.", "In 1832 kregen ondernemers met de Reform Bill meer politieke invloed.", "In 1833 kwamen de eerste Factory Acts tegen excessen in fabrieken."], u:"Een oorlog aan de andere kant van de oceaan raakte direct de fabrieken in Lancashire: dat is gevoeligheid voor gebeurtenissen op mondiaal niveau." },
+      { v:"Waarom past de opstand van de dertien koloniën bij het kenmerkend aspect over democratische revoluties, en niet alleen bij een belastingconflict?", o:["De kolonisten beriepen zich op Verlichte ideeën en vormden een nieuwe staat.", "De kolonisten weigerden alleen om economische redenen belasting te betalen.", "De opstand werd gesteund en betaald door de Royal African Company.", "Na de opstand werd de slavernij in de Verenigde Staten meteen afgeschaft."], u:"Een democratische revolutie gaat over wie de macht heeft en welke rechten burgers hebben. Dat de slavernij meteen werd afgeschaft, klopt niet: dat gebeurde in de Verenigde Staten pas in 1865." },
+      { v:"Welke uitspraak over continuïteit in het Britse Rijk van 1585 tot 1900 is het best te verdedigen?", o:["Van de kolonies in Amerika tot India ging het de Britten steeds vooral om handel en winst.", "De Britten bestuurden hun koloniën steeds via grote groepen Britse kolonisten.", "De Britten gebruikten in al hun koloniën tot 1900 de arbeid van slaafgemaakten.", "Het zwaartepunt van het rijk lag de hele periode in Noord-Amerika."], u:"Het zwaartepunt verschoof na 1776 naar India en de slavernij werd in 1833 verboden, maar het economische motief liep door: driehoekshandel, plantages, belasting en afzetmarkten." }
+    ]
+  };
+
+  /* ---------- Duitsland in Europa 1918-1991 ---------- */
+  CTX.duits = {
+    id:'duits', naam:'Duitsland in Europa', od:'contextenhavo: duitsland', vol:'Duitsland in Europa 1918-1991',
+    tijd:[
+      [1918.9, "1918", "In het Duitse keizerrijk wordt de republiek uitgeroepen", "hv", "In welk jaar werd in het Duitse keizerrijk de republiek uitgeroepen?"],
+      [1919, "1919", "Het Verdrag van Versailles", "hv", "In welk jaar werd het Verdrag van Versailles gesloten?"],
+      [1924, "1924", "Het Dawesplan helpt de Duitse economie weer op gang", "vwo"],
+      [1929, "1929", "De beurskrach in New York", "hv", "In welk jaar was de beurskrach die Duitsland meetrok in een diepe economische crisis?"],
+      [1933.01, "januari 1933", "Hitler wordt benoemd tot rijkskanselier", "hv", "In welk jaar werd Hitler benoemd tot rijkskanselier?"],
+      [1933.02, "februari 1933", "De Rijksdagbrand", "vwo"],
+      [1933.03, "maart 1933", "Het parlement neemt de machtigingswet aan", "vwo"],
+      [1935, "1935", "De Neurenberger rassenwetten maken joden tot tweederangsburgers", "vwo"],
+      [1938.09, "september 1938", "De Conferentie van München", "hv", "In welk jaar vond de Conferentie van München plaats?"],
+      [1938.11, "november 1938", "De Kristallnacht: georganiseerd geweld tegen joden, synagogen en joodse winkels", "vwo"],
+      [1939, "1939", "Duitsland valt Polen binnen", "hv", "In welk jaar viel Duitsland Polen binnen?"],
+      [1940, "1940", "Duitsland valt Nederland binnen", "hv"],
+      [1942, "1942", "Op de Wannseeconferentie regelen nazi-leiders de uitvoering van de moord op de Europese joden", "vwo"],
+      [1945, "1945", "Duitsland geeft zich onvoorwaardelijk over", "hv", "In welk jaar gaf Duitsland zich onvoorwaardelijk over?"],
+      [1948, "1948", "De Blokkade van Berlijn en de luchtbrug", "hv", "In welk jaar begon de Blokkade van Berlijn?"],
+      [1949, "1949", "De Bondsrepubliek Duitsland en de DDR worden opgericht", "hv", "In welk jaar werden de Bondsrepubliek Duitsland en de DDR opgericht?"],
+      [1951, "1951", "De Bondsrepubliek is een van de zes oprichters van de EGKS", "vwo"],
+      [1953, "1953", "Een opstand in de DDR mislukt", "hv", "In welk jaar mislukte de opstand in de DDR?"],
+      [1955, "1955", "De Bondsrepubliek wordt lid van de NAVO", "vwo"],
+      [1961, "1961", "De bouw van de Berlijnse muur", "hv", "In welk jaar werd de Berlijnse muur gebouwd?"],
+      [1963, "1963", "Kennedy spreekt in West-Berlijn: Ich bin ein Berliner", "vwo"],
+      [1970, "1970", "Brandt knielt in Warschau bij het monument voor de opstand in het getto", "vwo"],
+      [1972, "1972", "De BRD en de DDR erkennen elkaar als gelijkwaardige staten", "hv", "In welk jaar erkenden de BRD en de DDR elkaar als gelijkwaardige staten?"],
+      [1985, "1985", "Gorbatsjov komt aan de macht in de Sovjet-Unie", "vwo"],
+      [1989, "1989", "De val van de Berlijnse muur", "hv", "In welk jaar viel de Berlijnse muur?"],
+      [1990, "1990", "De hereniging van Duitsland, met Berlijn als hoofdstad", "hv", "In welk jaar werd Duitsland herenigd?"],
+      [1991, "1991", "De Sovjet-Unie valt uiteen en de Koude Oorlog eindigt", "hv", "In welk jaar viel de Sovjet-Unie uiteen?"]
+    ].map(T),
+    oorzaak:[
+      ["De dolkstootlegende", "Veel Duitsers hielden de leiders van de Republiek verantwoordelijk voor de nederlaag en voor Versailles", "hv", "dolk"],
+      ["Hoge herstelbetalingen en het verlies van grondstofrijke gebieden", "De Duitse economie had het zwaar in de eerste jaren van de Republiek", "hv", "eco1"],
+      ["Het Dawesplan en de verzoeningspolitiek met Frankrijk", "De Duitse economie bloeide weer op", "hv", "eco2"],
+      ["De beurskrach van 1929", "Duitsland raakte in een diepe economische crisis", "hv", "crisis"],
+      ["Economische crisis en hernieuwde politieke instabiliteit", "De NSDAP groeide uit tot een massaorganisatie", "hv", "nsdap"],
+      ["Na de Rijksdagbrand nam het parlement de machtigingswet aan", "Het parlement zette zichzelf buitenspel en de Republiek van Weimar kwam ten einde", "hv", "macht"],
+      ["Het regime leek snel economisch herstel te realiseren", "Grote delen van de bevolking steunden het regime lange tijd", "hv", "steun"],
+      ["De eis tot aansluiting van Duitstalige gebieden", "De Conferentie van München in 1938", "hv", "munchen"],
+      ["De Duitse inval in Polen in 1939", "Groot-Brittannië en Frankrijk verklaarden Duitsland de oorlog", "hv", "polen"],
+      ["De Blokkade van Berlijn in 1948", "De Amerikanen behielden West-Berlijn met een luchtbrug", "hv", "blokkade"],
+      ["In de westelijke zones werd in 1949 de Bondsrepubliek opgericht", "In de sovjetzone werd in hetzelfde jaar de DDR opgericht", "hv", "staten"],
+      ["De mislukte opstand van 1953", "De bevolking van de DDR kwam onder strenge controle van de Stasi", "hv", "stasi"],
+      ["DDR-burgers vluchtten op zoek naar vrijheid en welvaart naar het Westen", "In 1961 werd de Berlijnse muur gebouwd", "hv", "muur"],
+      ["Herstelbetalingen aan de Sovjet-Unie en een slecht functionerende planeconomie", "Economische malaise in de DDR", "hv", "malaise"],
+      ["Het beleid van Adenauer en het Wirtschaftswunder", "West-Duitsland werd in de jaren 1950 een stabiele democratie", "hv", "stabiel"],
+      ["De Ostpolitik van Brandt", "In 1972 erkenden de BRD en de DDR elkaar als gelijkwaardige staten", "hv", "ost"],
+      ["Gorbatsjov had voor zijn hervormingen de medewerking van het Westen nodig", "Gorbatsjov liet de Brezjnevdoctrine los", "hv", "brezjnev"],
+      ["Enkele Oost-Europese landen stelden in 1989 hun grenzen open", "Veel DDR-burgers trokken naar het Westen", "hv", "grens"],
+      ["Frankrijk steunde de hereniging en de uitbreiding van de Europese Unie", "Bondskanselier Kohl accepteerde de invoering van de euro", "hv", "euro"],
+      ["Kritiek van jongeren op de consumptiecultuur en de beperkt gebleven denazificatie", "In de BRD ontstond links terrorisme, zoals van de Baader-Meinhof Gruppe", "vwo", "raf"],
+      ["De nadruk op stabiliteit en wederopbouw in de BRD", "De kritische confrontatie met het naziverleden verschoof snel naar de achtergrond", "vwo", "verleden"],
+      ["DDR-inwoners zagen via de televisie hoe er in West-Duitsland geleefd werd", "Veel DDR-inwoners waren ontevreden", "vwo", "tv"],
+      ["De DDR-leiding vreesde de gevolgen van hervormingen", "De DDR-leiding keerde zich af van de liberale koers van de Sovjet-Unie", "vwo", "koers"]
+    ].map(O),
+    stel:[
+      { n:'hv', s:"De Republiek van Weimar kon vanaf het begin rekenen op brede steun van de Duitse bevolking.", o:["Onjuist, want de dolkstootlegende ondermijnde het vertrouwen in de leiders.", "Onjuist, want de Republiek werd pas in 1933 uitgeroepen, door Hitler zelf.", "Juist, want de sociaaldemocratische regering tekende de wapenstilstand.", "Juist, want links en rechts werkten samen om de democratie op te bouwen."], u:"Tegenstand van de conservatieve elite en van extremisten van links en rechts maakte de democratie wankel. Dat de regering de wapenstilstand tekende, werd haar juist kwalijk genomen." },
+      { n:'hv', s:"Hitler kwam in 1933 aan de macht door een staatsgreep.", o:["Onjuist, want hij werd rijkskanselier nadat de NSDAP de grootste partij werd.", "Onjuist, want Hitler kwam pas in 1938 aan de macht, na de Conferentie van München.", "Juist, want de paramilitairen van de NSDAP grepen in 1933 met geweld de macht.", "Juist, want Hitler schafte direct na zijn benoeming alle verkiezingen af."], u:"Hitler kwam langs legale weg aan de macht. Daarna gebruikte hij de machtigingswet om het parlement buitenspel te zetten. Paramilitair vertoon hoorde bij de propaganda, niet bij een staatsgreep in 1933." },
+      { n:'hv', s:"Met de machtigingswet zette het Duitse parlement zichzelf buitenspel.", o:["Juist, want daarna kon de regering wetten maken zonder het parlement.", "Juist, want met de machtigingswet werd de NSDAP door het parlement verboden.", "Onjuist, want de machtigingswet gaf het parlement juist meer macht.", "Onjuist, want de machtigingswet werd al in 1919 bij Versailles aangenomen."], u:"De machtigingswet werd na de Rijksdagbrand in 1933 aangenomen. Daarmee kwam een einde aan de parlementaire democratie." },
+      { n:'hv', s:"De eerste slachtoffers van het naziregime waren politieke tegenstanders.", o:["Juist, want daarna volgden de mensen die niet tot de Volksgemeinschaft werden gerekend.", "Juist, want joden werden pas na 1945 vervolgd.", "Onjuist, want de nazi's lieten tegenstanders met rust zolang de economie herstelde.", "Onjuist, want de eerste slachtoffers waren Britse en Franse soldaten."], u:"Direct na hun aantreden pakten de nazi's politieke tegenstanders aan, zoals communisten en sociaaldemocraten. Daarna volgden de groepen die buiten de Volksgemeinschaft werden geplaatst." },
+      { n:'hv', s:"Met de appeasementpolitiek probeerde Groot-Brittannië een oorlog met Duitsland te voorkomen.", o:["Juist, want Groot-Brittannië gaf in 1938 in München toe aan Duitse eisen.", "Juist, want Groot-Brittannië verklaarde Duitsland daarmee de oorlog.", "Onjuist, want Groot-Brittannië wilde in 1938 juist oorlog met Duitsland.", "Onjuist, want appeasement was de Duitse politiek tegenover Polen."], u:"Appeasement betekent tegemoetkomen: door toe te geven aan de eis tot aansluiting van Duitstalige gebieden hoopte Groot-Brittannië een oorlog te voorkomen. De oorlogsverklaring kwam pas na de inval in Polen in 1939." },
+      { n:'hv', s:"Na de Tweede Wereldoorlog werd Duitsland verdeeld in twee bezettingszones.", o:["Onjuist, want de geallieerden verdeelden Duitsland in vier bezettingszones.", "Onjuist, want Duitsland werd na 1945 niet bezet.", "Juist, want er ontstonden twee Duitse staten: de BRD en de DDR.", "Juist, want alleen de Verenigde Staten en de Sovjet-Unie bezetten Duitsland."], u:"Er waren vier zones: een Amerikaanse, Britse, Franse en Sovjetzone. Pas in 1949 ontstonden twee staten." },
+      { n:'hv', s:"De DDR werd opgericht als reactie op de oprichting van de Bondsrepubliek.", o:["Juist, want de DDR volgde in 1949, kort na de oprichting van de Bondsrepubliek.", "Juist, want de DDR werd al in 1945 opgericht, direct na de Duitse overgave.", "Onjuist, want de DDR werd pas na de bouw van de muur in 1961 opgericht.", "Onjuist, want de Bondsrepubliek werd opgericht als reactie op de DDR."], u:"De volgorde was: eerst de Bondsrepubliek in het westen, daarna in hetzelfde jaar de DDR, een volksdemocratie naar Sovjetmodel." },
+      { n:'hv', s:"Adenauer erkende de DDR als zelfstandige staat.", o:["Onjuist, want hij erkende de DDR niet en wilde Duitse eenheid.", "Onjuist, want Adenauer was zelf de leider van de DDR in Oost-Berlijn.", "Juist, want hij richtte zich op snelle integratie in het Westen.", "Juist, want de BRD en de DDR werden samen lid van de NAVO."], u:"Adenauer koos voor het Westen en weigerde de DDR te erkennen. De DDR was lid van het Warschaupact, niet van de NAVO. Pas in 1972, onder Brandt, erkenden beide staten elkaar." },
+      { n:'hv', s:"Bij de bouw van de Berlijnse muur in 1961 grepen de Verenigde Staten militair in.", o:["Onjuist, want de VS erkenden de invloedssfeer van de Sovjet-Unie.", "Onjuist, want de muur werd door de Verenigde Staten zelf gebouwd.", "Juist, want de Amerikanen hielden West-Berlijn met een luchtbrug in leven.", "Juist, want de Verenigde Staten wilden de vlucht naar het Westen stoppen."], u:"De luchtbrug hoort bij de blokkade van 1948. In 1961 accepteerden de Verenigde Staten de muur; zo hoefden ze geen oorlog te riskeren." },
+      { n:'hv', s:"Door de erkenning van de DDR in 1972 gaf de Bondsrepubliek het streven naar Duitse eenheid op.", o:["Onjuist, want de Bondsrepubliek hield vast aan het streven naar Duitse eenheid.", "Onjuist, want de BRD en de DDR erkenden elkaar pas in 1990.", "Juist, want Brandt zag de Duitse deling als definitief.", "Juist, want de BRD wilde daarna geen contact meer met de DDR."], u:"Het was DDR-leider Honecker die de deling als definitief zag, niet Brandt. De Bondsrepubliek bleef streven naar eenheid." },
+      { n:'hv', s:"De DDR-leiding steunde het hervormingsbeleid van Gorbatsjov.", o:["Onjuist, want de DDR-leiding vreesde de gevolgen van hervormingen.", "Onjuist, want Gorbatsjov voerde in de Sovjet-Unie geen hervormingen door.", "Juist, want de DDR was een integraal deel van het Oostblok.", "Juist, want glasnost en perestrojka waren in de DDR bedacht."], u:"Glasnost (openheid) en perestrojka (hervorming) waren beleid van Gorbatsjov. Juist omdat de DDR zich ertegen keerde, groeide de onvrede onder de bevolking." },
+      { n:'hv', s:"Na de hereniging in 1990 bleef Bonn de hoofdstad van Duitsland.", o:["Onjuist, want Duitsland werd herenigd met Berlijn als nieuwe hoofdstad.", "Onjuist, want de hoofdstad werd Frankfurt.", "Juist, want Bonn was de hoofdstad van de Bondsrepubliek.", "Juist, want Berlijn lag in de voormalige DDR."], u:"Bonn was de hoofdstad van de Bondsrepubliek, maar het herenigde Duitsland koos Berlijn." },
+      { n:'hv', s:"Met het Marshallplan wilden de Verenigde Staten een dam opwerpen tegen communistische expansie.", o:["Juist, want economisch herstel moest voorkomen dat het communisme in West-Europa aanhang won.", "Juist, want het Marshallplan was hulp aan de Sovjet-Unie.", "Onjuist, want het Marshallplan was bedoeld om Duitsland te straffen.", "Onjuist, want het Marshallplan ging alleen over de verdeling in bezettingszones."], u:"Samen met de Trumandoctrine en het stimuleren van Europese eenwording was het Marshallplan bedoeld om communistische expansie tegen te houden." },
+      { n:'hv', s:"In bezet Nederland bleef de rechtsstaat tijdens de Duitse bezetting gewoon werken.", o:["Onjuist, want de Duitsers zetten de rechtsstaat buiten werking.", "Onjuist, want Nederland werd in de oorlog niet door Duitsland bezet.", "Juist, want de Nederlandse rechters bleven gewoon in functie.", "Juist, want de Duitsers wilden de Nederlanders als bondgenoot."], u:"In de veroverde gebieden, waaronder Nederland, zetten de Duitsers de rechtsstaat buiten werking. Joden werden er systematisch uitgesloten en gedeporteerd." },
+      { n:'vwo', s:"Na 1945 begonnen de geallieerden in hun bezettingszones met denazificatie.", o:["Juist, want elk van de vier bezetters begon in de eigen zone met denazificatie.", "Juist, want alleen de Verenigde Staten deden aan denazificatie.", "Onjuist, want de geallieerden lieten nazi's ongemoeid in hun functie.", "Onjuist, want denazificatie begon pas na de hereniging van 1990."], u:"Volgens afspraak verdeelden de geallieerden Duitsland in vier zones, waarin zij elk begonnen met denazificatie. Dat die in de BRD beperkt bleef, werd later een punt van kritiek." },
+      { n:'vwo', s:"In de BRD stond in de jaren 1950 de kritische confrontatie met het naziverleden centraal.", o:["Onjuist, want door de nadruk op wederopbouw raakte het verleden op de achtergrond.", "Onjuist, want de BRD presenteerde zich als erfgenaam van het communistische verzet.", "Juist, want Adenauer hield vast aan het ideaal van een herenigd Duitsland.", "Juist, want het Wirtschaftswunder gaf ruimte voor een kritische blik terug."], u:"De BRD zocht vooral stabiliteit en welvaart. Het was de DDR die zich als erfgenaam van het communistische verzet presenteerde." },
+      { n:'vwo', s:"De DDR presenteerde zich als ideologische erfgenaam van het communistische verzet tegen de nazi's.", o:["Juist, want zij wilde een socialistische staat waarin het fascisme geen kans kreeg.", "Juist, want de DDR werkte samen met de Baader-Meinhof Gruppe tegen de nazi's.", "Onjuist, want de DDR zag zichzelf als voortzetting van de Republiek van Weimar.", "Onjuist, want de DDR-leiding beschouwde het naziverleden niet als een probleem."], u:"Dit antifascisme was de kern van het zelfbeeld van de DDR. De steun aan de Baader-Meinhof Gruppe hoort bij de jaren 1970 en had niets met verzet tegen de nazi's te maken." },
+      { n:'vwo', s:"De Baader-Meinhof Gruppe was een rechts-extremistische terreurgroep in de BRD.", o:["Onjuist, want het was een linkse groep, gesteund vanuit de DDR.", "Onjuist, want de groep pleegde haar aanslagen alleen in de DDR.", "Juist, want de groep verheerlijkte het naziverleden van Duitsland.", "Juist, want de groep kreeg steun van conservatieve partijen in de BRD."], u:"De Baader-Meinhof Gruppe hoort bij het linkse terrorisme in de BRD, en ontving steun vanuit de DDR." },
+      { n:'vwo', s:"Na de hereniging had Oost-Duitsland alleen economische problemen.", o:["Onjuist, want er waren ook mentale gevolgen van het totalitaire regime.", "Onjuist, want Oost-Duitsland had na 1990 helemaal geen problemen meer.", "Juist, want alleen de planeconomie had de economie van de DDR verzwakt.", "Juist, want de mensen in de voormalige DDR waren al gewend aan democratie."], u:"Veertig jaar dictatuur liet ook sporen na in hoe mensen dachten en samenleefden. De planeconomie verklaart alleen het economische deel." },
+      { n:'vwo', s:"Gorbatsjov liet de Brezjnevdoctrine los omdat hij het communisme wilde afschaffen.", o:["Onjuist, want hij wilde hervormen en had daarvoor het Westen nodig.", "Onjuist, want de Brezjnevdoctrine werd pas na 1991 losgelaten.", "Juist, want glasnost en perestrojka moesten de Sovjet-Unie opheffen.", "Juist, want hij wilde dat de DDR lid werd van de NAVO."], u:"Gorbatsjov wilde de Sovjet-Unie redden met hervormingen, niet opheffen. Het loslaten van de doctrine was een middel om de relatie met het Westen te verbeteren, met grote onbedoelde gevolgen." }
+    ],
+    begrip:[
+      ["Het verhaal dat het Duitse leger in 1918 niet verslagen was, maar in de rug was gestoken door politici thuis", ["dolkstootlegende", "Dolchstosslegende", "dolkstoot legende", "Dolchstoßlegende"], "De dolkstootlegende ondermijnde het vertrouwen in de leiders van de Republiek."],
+      ["De betalingen die Duitsland na de Eerste Wereldoorlog moest doen als schadevergoeding", ["herstelbetalingen", "herstelbetaling", "reparaties", "herstelbetalingen"], "De hoge herstelbetalingen uit het Verdrag van Versailles drukten zwaar op de Duitse economie."],
+      ["Het Amerikaanse plan uit 1924 dat de Duitse economie weer op gang hielp", ["Dawesplan", "het Dawesplan", "Dawes plan", "plan Dawes"], "Het Dawesplan en de verzoeningspolitiek met Frankrijk lieten de economie opbloeien."],
+      ["De ultrarechtse en antisemitische partij onder leiding van Adolf Hitler", ["NSDAP", "nazipartij", "de NSDAP", "nationaalsocialistische partij", "Nationalsozialistische Deutsche Arbeiterpartei"], "Door propaganda en paramilitair vertoon werd de NSDAP een massaorganisatie."],
+      ["De functie waarin Hitler in 1933 werd benoemd", ["rijkskanselier", "kanselier", "Reichskanzler"], "Als rijkskanselier was Hitler regeringsleider."],
+      ["De wet waarmee het Duitse parlement in 1933 zichzelf buitenspel zette", ["machtigingswet", "de machtigingswet", "Ermächtigungsgesetz", "Ermachtigungsgesetz"], "Met de machtigingswet kwam de Republiek van Weimar ten einde."],
+      ["Het nazi-ideaal van een volksgemeenschap waar alleen 'echte' Duitsers bij hoorden", ["Volksgemeinschaft", "volksgemeenschap"], "Wie niet tot de Volksgemeinschaft werd gerekend, werd uitgesloten en vervolgd."],
+      ["Een regime dat met terreur en propaganda alle terreinen van het leven wil beheersen", ["totalitair regime", "totalitaire staat", "totalitarisme", "totalitaire dictatuur", "totalitair"], "Zowel nazi-Duitsland als de DDR onder Ulbricht waren totalitaire dictaturen."],
+      ["De Britse politiek van toegeven aan Duitse eisen om oorlog te voorkomen", ["appeasement", "appeasementpolitiek", "appeasement politiek"], "Op de Conferentie van München in 1938 gaf Groot-Brittannië toe aan Hitler."],
+      ["De Duitsers die na 1945 uit de verloren oostelijke gebieden werden verdreven", ["Heimatvertriebene", "Heimatvertriebenen", "vertriebenen", "verdrevenen"], "Door het verleggen van de grenzen kwam een grote stroom Heimatvertriebene op gang."],
+      ["De Amerikaanse belofte uit 1947 om landen te steunen die zich tegen het communisme verzetten", ["Trumandoctrine", "Truman doctrine", "de Trumandoctrine"], "De Trumandoctrine en het Marshallplan moesten een dam opwerpen tegen communistische expansie."],
+      ["Het Amerikaanse hulpprogramma voor het economisch herstel van Europa na 1945", ["Marshallplan", "Marshallhulp", "het Marshallplan", "Marshall plan"], "Met het Marshallplan wilden de Verenigde Staten het communisme in Europa tegenhouden."],
+      ["De manier waarop de Amerikanen West-Berlijn in 1948 en 1949 bevoorraadden", ["luchtbrug", "de luchtbrug", "Berliner Luftbrücke", "Berlijnse luchtbrug"], "Tijdens de Blokkade van Berlijn vlogen vliegtuigen voedsel en brandstof naar West-Berlijn."],
+      ["Het snelle economisch herstel van West-Duitsland in de jaren 1950", ["Wirtschaftswunder", "Wirtschaftswunder", "economisch wonder", "Wirtschafswunder"], "Het Wirtschaftswunder hielp de BRD een stabiele democratie te worden."],
+      ["De eerste bondskanselier van de BRD, die koos voor snelle integratie in het Westen", ["Adenauer", "Konrad Adenauer"], "Adenauer erkende de DDR niet en hield vast aan het ideaal van Duitse eenheid."],
+      ["De DDR-leider die van de DDR in de jaren 1950 een totalitaire dictatuur naar Sovjetmodel maakte", ["Ulbricht", "Walter Ulbricht"], "Onder Ulbricht kwam de bevolking onder strenge controle van de Stasi."],
+      ["De geheime politie van de DDR", ["Stasi", "Staatssicherheitsdienst", "Staatssicherheit", "de Stasi", "Ministerium für Staatssicherheit", "MfS"], "Vooral na de mislukte opstand van 1953 hield de Stasi de bevolking streng onder controle."],
+      ["Het militaire bondgenootschap van de Sovjet-Unie en de Oost-Europese landen", ["Warschaupact", "het Warschaupact", "Warschau pact"], "Door het Warschaupact en de Comecon werd de DDR een integraal deel van het Oostblok."],
+      ["De economische samenwerking van de landen van het Oostblok", ["Comecon", "RGW", "Raad voor Wederzijdse Economische Bijstand"], "De Comecon was het Oost-Europese antwoord op de Marshallhulp."],
+      ["Een economie waarin de staat bepaalt wat er wordt gemaakt en tegen welke prijs", ["planeconomie", "geleide economie", "centraal geleide economie", "commando economie"], "De slecht functionerende planeconomie zorgde voor malaise in de DDR."],
+      ["De ontspanning tussen de Verenigde Staten en de Sovjet-Unie vanaf de jaren 1960", ["detente", "ontspanning", "de detente"], "Tijdens de detente kon Brandt zijn Ostpolitik voeren."],
+      ["De politiek van Brandt om de relatie met de DDR en andere Oost-Europese landen te verbeteren", ["Ostpolitik", "Ostpolitiek", "oostpolitiek"], "De Ostpolitik leidde in 1972 tot de wederzijdse erkenning van de BRD en de DDR."],
+      ["De bondskanselier van de BRD die de Ostpolitik voerde", ["Brandt", "Willy Brandt"], "Brandt zette zich ook in voor Europese integratie, om de goede verhouding met het Westen te waarborgen."],
+      ["De DDR-leider die openstond voor de Ostpolitik maar de Duitse deling als definitief zag", ["Honecker", "Erich Honecker"], "Honecker volgde Ulbricht op als leider van de DDR."],
+      ["Het beleid van Gorbatsjov dat meer openheid in de Sovjet-Unie bracht", ["glasnost"], "Glasnost (openheid) en perestrojka (hervorming) moesten de Sovjet-Unie vernieuwen."],
+      ["Het beleid van Gorbatsjov om de economie van de Sovjet-Unie te hervormen", ["perestrojka", "perestroika"], "Voor het slagen van perestrojka was de medewerking van het Westen nodig."],
+      ["De Sovjetregel dat de Sovjet-Unie mocht ingrijpen als het communisme in een Oostblokland in gevaar kwam", ["Brezjnevdoctrine", "Brezjnev doctrine", "Breznjevdoctrine", "Brezhnev doctrine", "Brezjnev-doctrine"], "Gorbatsjov liet de Brezjnevdoctrine los, waardoor de Sovjet-Unie in 1989 niet ingreep."],
+      ["De bondskanselier die in ruil voor Franse steun voor de hereniging de invoering van de euro accepteerde", ["Kohl", "Helmut Kohl"], "Onder Kohl werd Duitsland in 1990 herenigd."],
+      ["Het verwijderen van nazi's uit bestuur en samenleving na 1945", ["denazificatie", "denazificering", "Entnazifizierung"], "Elk van de vier bezetters begon in de eigen zone met denazificatie.", "vwo"],
+      ["De linkse terreurgroep in de BRD die steun ontving uit de DDR", ["Baader-Meinhof Gruppe", "Baader Meinhof", "Baader-Meinhof", "RAF", "Rote Armee Fraktion", "Baader-Meinhofgroep", "Baader Meinhof Gruppe"], "Kritiek op de consumptiecultuur en de beperkt gebleven denazificatie ontaardde in links terrorisme.", "vwo"]
+    ].map(B),
+    diep:[
+      { v:"Welke overeenkomst tussen nazi-Duitsland en de DDR onder Ulbricht past bij het kenmerkend aspect over totalitaire ideologieën?", o:["Beide gebruikten terreur, een geheime politie en propaganda om alles te beheersen.", "Beide regimes hadden een planeconomie naar het model van de Sovjet-Unie.", "Beide regimes werden in hun begintijd gesteund door de Verenigde Staten.", "Beide regimes kwamen aan de macht door vrije verkiezingen voor het parlement."], u:"Totalitair betekent: de staat wil alle terreinen van het leven beheersen. Een planeconomie had alleen de DDR, en de DDR kwam niet door vrije verkiezingen tot stand." },
+      { v:"Waarom had de beurskrach van 1929 in Duitsland zulke grote politieke gevolgen?", o:["De democratie was al wankel: weinig vertrouwen, en extremisten profiteerden.", "Duitsland was het enige land ter wereld dat door de crisis werd getroffen.", "De beurskrach begon in Berlijn en trof daarom Duitsland het hardst.", "De crisis kwam door de Ostpolitik, die Duitsland afhankelijk maakte."], u:"Een economische crisis wordt een politieke crisis als het vertrouwen in de democratie al zwak is. De dolkstootlegende en de afkeer van Versailles hadden dat vertrouwen ondermijnd." },
+      { v:"Waarom slaagde de omwenteling in de DDR in 1989, terwijl de opstand van 1953 mislukte?", o:["In 1989 greep Moskou niet in, want Gorbatsjov had de Brezjnevdoctrine losgelaten.", "In 1989 had de DDR geen geheime politie meer die demonstranten kon oppakken.", "In 1953 was er nog geen muur, dus vluchtten de opstandelingen naar het Westen.", "In 1989 grepen de Verenigde Staten militair in om de DDR-burgers te helpen."], u:"Het verschil zat in de houding van Moskou. De Stasi bestond in 1989 nog, en de Verenigde Staten grepen niet in." },
+      { v:"Brandt voerde een Ostpolitik en zette zich tegelijk in voor Europese integratie. Hoe hangt dat samen?", o:["Zo stelde hij het Westen gerust dat de BRD in het westerse kamp bleef.", "Hij wilde de DDR via Europese integratie lid maken van de Europese Gemeenschap.", "Hij wilde de Europese integratie gebruiken als wapen tegen de Sovjet-Unie.", "Hij gaf het streven naar Duitse eenheid op en zocht een identiteit in Europa."], u:"Om de goede verhouding met het Westen te waarborgen, koppelde Brandt de Ostpolitik aan Europese integratie. Het streven naar eenheid gaf de BRD niet op." },
+      { v:"Kohl accepteerde de invoering van de euro. Welke verklaring past bij de context?", o:["Het was een ruil: Frankrijk steunde de hereniging, Duitsland bond zich aan Europa.", "Duitsland had na de hereniging geen eigen munt meer en moest er een kiezen.", "De Sovjet-Unie eiste de euro als voorwaarde voor haar steun aan de hereniging.", "De DDR had de euro al ingevoerd en de BRD moest zich daarbij aansluiten."], u:"De syllabus noemt het een ruil voor Franse steun. Voor Frankrijk was belangrijk dat een herenigd Duitsland deel bleef van een sterk Europa." },
+      { v:"West-Duitsland werd in de jaren 1950 een stabiele democratie; de Republiek van Weimar niet. Welke verklaring past het best?", o:["De BRD had het Wirtschaftswunder en westerse steun; Weimar had crisis en wantrouwen.", "De BRD hoefde geen herstelbetalingen te doen; verder was er geen enkel verschil.", "Weimar had geen grondwet en geen parlement; de BRD had die allebei wel.", "De BRD werd in de jaren 1950 bestuurd en beschermd door de Sovjet-Unie."], u:"Welvaart en westerse steun gaven de BRD draagvlak. Weimar had juist met economische tegenslag en een gebrek aan vertrouwen te maken." },
+      { v:"In de BRD ontstond in de jaren 1970 links terrorisme. Welke twee oorzaken noemt de context?", o:["Kritiek op de consumptiecultuur en de beperkt gebleven denazificatie.", "De bouw van de Berlijnse muur en de Ostpolitik van bondskanselier Brandt.", "De oliecrisis van 1973 en de hoge werkloosheid onder jongeren in de BRD.", "De hereniging van Duitsland en de invoering van de euro als munt."], u:"Jongeren verweten de generatie van hun ouders materialisme en zwijgen over het naziverleden. Groepen als de Baader-Meinhof Gruppe kregen steun vanuit de DDR." },
+      { v:"De BRD en de DDR gingen verschillend om met het naziverleden. Welke beschrijving klopt?", o:["De BRD keek vooral vooruit naar wederopbouw; de DDR noemde zich erfgenaam van het verzet.", "De BRD noemde zich een antifascistische staat; de DDR zweeg over het naziverleden.", "Beide staten weigerden na 1945 elke medewerking aan de denazificatie door de bezetters.", "De DDR liet de verwerking van het naziverleden helemaal over aan de Bondsrepubliek."], u:"Twee staten, twee verhalen: de BRD keek vooruit naar welvaart, de DDR gebruikte het antifascisme als fundament van haar staat." }
+    ]
+  };
+
+  /* ---------- Nederland 1948-2008 ---------- */
+  CTX.nl = {
+    id:'nl', naam:'Nederland 1948-2008', od:'contextenhavo: nederland', vol:'Nederland 1948-2008',
+    tijd:[
+      [1948, "1948", "Nederland krijgt Marshallhulp voor de wederopbouw", "vwo"],
+      [1949, "1949", "Nederland draagt de soevereiniteit over aan Indonesië", "hv", "In welk jaar droeg Nederland de soevereiniteit over aan Indonesië?"],
+      [1956, "1956", "Er komt een einde aan de wettelijke handelingsonbekwaamheid van getrouwde vrouwen", "hv", "In welk jaar kwam er een einde aan de wettelijke handelingsonbekwaamheid van getrouwde vrouwen?"],
+      [1957, "1957", "De AOW wordt ingevoerd", "hv", "In welk jaar werd de AOW ingevoerd?"],
+      [1959, "1959", "In Groningen wordt aardgas gevonden", "vwo"],
+      [1966, "1966", "D'66 wordt opgericht", "vwo"],
+      [1973, "1973", "De oliecrisis maakt een einde aan jarenlange economische groei", "hv", "In welk jaar maakte de oliecrisis een einde aan jarenlange economische groei?"],
+      [1975, "1975", "Suriname wordt onafhankelijk", "hv", "In welk jaar werd Suriname onafhankelijk?"],
+      [1980, "rond 1980", "Een economische crisis zet de samenleving en de verzorgingsstaat onder druk", "hv"],
+      [1982, "1982", "Het eerste kabinet-Lubbers treedt aan en kiest voor bezuinigingen", "vwo"],
+      [1983, "1983", "Een grote demonstratie in Den Haag tegen de plaatsing van kruisraketten", "vwo"],
+      [1985, "1985", "Het akkoord van Schengen over vrij verkeer van personen", "vwo"],
+      [1992, "1992", "Het Verdrag van Maastricht legt de basis voor de Europese Unie en de euro", "hv"],
+      [1994, "1994", "De Algemene Wet Gelijke Behandeling treedt in werking", "vwo"],
+      [1995, "1995", "De val van Srebrenica", "hv"],
+      [2001, "2001", "Terreuraanslagen van 11 september in de Verenigde Staten", "hv", "In welk jaar waren de terreuraanslagen van 11 september?"],
+      [2001.3, "2001", "Nederland regelt als eerste land het huwelijk voor paren van gelijk geslacht", "vwo"],
+      [2002, "2002", "De moord op de politicus Pim Fortuyn", "hv", "In welk jaar werd de politicus Pim Fortuyn vermoord?"],
+      [2008, "2008", "Een nieuwe economische crisis breekt uit", "hv", "In welk jaar brak de nieuwe economische crisis uit die de tegenstellingen in de samenleving opnieuw liet zien?"]
+    ].map(T),
+    oorzaak:[
+      ["De Marshallhulp", "Steun bij de snelle wederopbouw van Nederland", "hv", "marshall"],
+      ["Geleide loonpolitiek van de rooms-rode regeringen", "De export en de werkgelegenheid werden gestimuleerd", "hv", "loon"],
+      ["Toenemende welvaart in de jaren 1950", "Politici en sociale partners konden samen bouwen aan een verzorgingsstaat", "hv", "vzs"],
+      ["Vanaf het begin van de jaren 1960 stegen de lonen sterk", "Er ontstond een consumptiemaatschappij", "hv", "consumptie"],
+      ["Jongeren kregen meer vrije tijd en geld", "Er ontstond een eigen jongerencultuur", "hv", "jeugd"],
+      ["De ontzuiling van het sociale en politieke leven", "Nieuwe partijen en omroepen kwamen op, zoals D'66 en Veronica", "hv", "ontzuiling"],
+      ["De dekolonisatie van Indonesië en Suriname", "Groepen migranten kwamen, al dan niet vrijwillig, naar Nederland", "hv", "dekol"],
+      ["Gastarbeiders uit Turkije en Marokko kregen recht op gezinshereniging", "Hun gezinnen kwamen ook naar Nederland", "hv", "gezin"],
+      ["De oliecrisis van 1973", "Er kwam een einde aan jarenlange economische groei", "hv", "olie"],
+      ["De economische crisis van de jaren 1980", "Er kwam kritiek op de verzorgingsstaat, die te bureaucratisch en te duur werd gevonden", "hv", "kritiek"],
+      ["Kritiek op de verzorgingsstaat", "De regeringen-Lubbers bezuinigden en privatiseerden staatsbedrijven", "hv", "lubbers"],
+      ["Na de Koude Oorlog werden de NAVO en de Europese Unie sterk uitgebreid", "De Nederlandse invloed in Europa werd kleiner", "hv", "invloed"],
+      ["De val van Srebrenica", "Nederland werd terughoudender in zijn internationale ambities", "hv", "srebrenica"],
+      ["Het Verdrag van Schengen", "Vrij verkeer van personen binnen Europa", "hv", "schengen"],
+      ["De terreuraanslagen van 11 september 2001 en de moord op Pim Fortuyn", "Angst en grotere tegenstellingen in de samenleving", "hv", "polarisatie"],
+      ["De anticonceptiepil, nieuwe echtscheidingswetgeving en meer onderwijs voor meisjes", "Grote veranderingen in de positie van vrouwen", "hv", "vrouw"],
+      ["Plannen om kruisraketten in Nederland te plaatsen", "Grote demonstraties tegen kernwapens", "hv", "kruis"],
+      ["De vondst van aardgas in Groningen en het herstel van de Duitse economie", "Nederland profiteerde van economische groei", "vwo", "gas"],
+      ["Een kleinere rol van de overheid, een grotere rol van de commercie en de ontzuiling", "Verdergaande individualisering", "vwo", "individu"],
+      ["Toenemende polarisatie over migratie en de islam rond 2000", "Vanaf 2002 kwam er beleid gericht op integratie of assimilatie van migranten", "vwo", "integratie"],
+      ["De introductie van internet, de mobiele telefoon en sociale netwerken", "De leefstijl van jongeren en ouderen raakte meer geglobaliseerd", "vwo", "digitaal"]
+    ].map(O),
+    stel:[
+      { n:'hv', s:"Direct na de Tweede Wereldoorlog verdween de verzuiling in Nederland.", o:["Onjuist, want de verzuilde verhoudingen werden eerst juist hersteld.", "Onjuist, want Nederland is in de 20e eeuw nooit verzuild geweest.", "Juist, want de Duitse bezetting had alle zuilen vernietigd.", "Juist, want direct na 1945 kwamen D'66 en Veronica op."], u:"Na 1945 keerden de oude zuilen terug. D'66 en Veronica horen bij de ontzuiling, vanaf de jaren 1960." },
+      { n:'hv', s:"Na 1945 bleef Nederland een neutraliteitspolitiek voeren.", o:["Onjuist, want Nederland koos in de Koude Oorlog voor het Westen.", "Onjuist, want Nederland sloot in 1945 een bondgenootschap met de Sovjet-Unie.", "Juist, want Nederland was ook in de Eerste Wereldoorlog neutraal gebleven.", "Juist, want Nederland weigerde de Marshallhulp van de Verenigde Staten."], u:"Nederland koos na de oorlog duidelijk voor het Westen, onder meer als lid van de NAVO en door Europese samenwerking. Dat het vroeger neutraal was, zegt niets over de periode na 1945." },
+      { n:'hv', s:"De rooms-rode regeringen stimuleerden met geleide loonpolitiek de export en de werkgelegenheid.", o:["Juist, want door de lonen laag te houden waren Nederlandse producten goedkoop in het buitenland.", "Juist, want de lonen werden zo snel mogelijk verhoogd.", "Onjuist, want geleide loonpolitiek werd pas in de jaren 1980 ingevoerd.", "Onjuist, want de rooms-rode regeringen bemoeiden zich niet met de economie."], u:"Met geleide loonpolitiek bepaalden overheid en sociale partners samen de lonen. Lage lonen hielden de export concurrerend. Vanaf het begin van de jaren 1960 stegen de lonen juist sterk." },
+      { n:'hv', s:"De invoering van de AOW in 1957 was een stap in de opbouw van de verzorgingsstaat.", o:["Juist, want daarna werd de sociale wetgeving verder uitgebreid.", "Juist, want de AOW maakte een einde aan de geleide loonpolitiek.", "Onjuist, want de verzorgingsstaat werd pas na 1980 opgebouwd.", "Onjuist, want de AOW was een maatregel van de regeringen-Lubbers."], u:"Na 1980 werd de verzorgingsstaat juist beperkt, onder Lubbers. De AOW van 1957 is het startpunt van de uitbreiding." },
+      { n:'hv', s:"In de jaren 1960 verzetten provo's en hippies zich tegen de consumptiemaatschappij.", o:["Juist, want zij bespotten het gezag van oudere generaties en eisten meer inspraak.", "Juist, want zij wilden de verzuiling herstellen.", "Onjuist, want provo's en hippies waren een jongerenbeweging uit de jaren 1980.", "Onjuist, want zij streden vooral voor lagere lonen."], u:"Provo's en hippies horen bij de jaren 1960. De punk- en kraakbeweging kwamen pas op tijdens de crisis rond 1980." },
+      { n:'hv', s:"Begin jaren 1950 was Nederland een immigratieland.", o:["Onjuist, want veel Nederlanders vertrokken naar Australië en Canada.", "Onjuist, want er kwam toen niemand naar Nederland en niemand ging weg.", "Juist, want vanaf de jaren 1950 kwamen er grote groepen uit Turkije en Marokko.", "Juist, want Nederland was toen al een land met veel gastarbeiders."], u:"Begin jaren 1950 was Nederland een emigratieland: veel mensen trokken naar Australië, Nieuw-Zeeland en Canada. Gastarbeiders uit Turkije en Marokko kwamen pas vanaf de jaren 1960." },
+      { n:'hv', s:"Vanaf de jaren 1960 kwamen gastarbeiders eerst uit Turkije en Marokko, later uit Zuid-Europa.", o:["Onjuist, want zij kwamen eerst uit Zuid-Europa en later uit Turkije en Marokko.", "Onjuist, want gastarbeiders kwamen alleen uit Suriname.", "Juist, want Turkije en Marokko lagen het dichtst bij Nederland.", "Juist, want de Zuid-Europese landen waren toen nog geen lid van de EGKS."], u:"De volgorde was Zuid-Europa (Italië, Spanje) en daarna Turkije en Marokko. Migranten uit Suriname kwamen door de dekolonisatie, niet als gastarbeider." },
+      { n:'hv', s:"De oliecrisis van 1973 maakte een einde aan jarenlange economische groei.", o:["Juist, want daarna volgde rond 1980 een economische crisis.", "Juist, want na de oliecrisis begon de wederopbouw van Nederland.", "Onjuist, want na 1973 groeide de economie juist sneller dan ooit.", "Onjuist, want de oliecrisis trof alleen de Verenigde Staten."], u:"De oliecrisis was een keerpunt. De gevolgen werden pas rond 1980 echt voelbaar in een crisis die de verzorgingsstaat onder druk zette." },
+      { n:'hv', s:"De regeringen-Lubbers breidden de verzorgingsstaat verder uit.", o:["Onjuist, want zij bezuinigden en privatiseerden staatsbedrijven.", "Onjuist, want Lubbers was al premier in de jaren 1950.", "Juist, want het poldermodel zorgde voor hogere uitkeringen.", "Juist, want na 1980 werd de verzorgingsstaat goedkoper en dus groter."], u:"Lubbers koos voor een liberaal beleid: bezuinigen en privatiseren. Het poldermodel zorgde voor politieke en economische rust, niet voor hogere uitkeringen." },
+      { n:'hv', s:"Het Verdrag van Maastricht werd afgesloten onder Nederlands voorzitterschap.", o:["Juist, en het legde de basis voor de Europese Unie en de invoering van de euro.", "Juist, en daarmee werd Nederland lid van de NAVO.", "Onjuist, want Nederland was tegen verdere Europese samenwerking.", "Onjuist, want het verdrag regelde de onafhankelijkheid van Suriname."], u:"Nederland was voorstander van verdere Europese samenwerking. Als handelsland profiteerde het van de Europese markt." },
+      { n:'hv', s:"Rond 2000 nam de polarisatie in Nederland af.", o:["Onjuist, want niet iedereen profiteerde en het migratiedebat werd heftig.", "Onjuist, want rond 2000 was er in Nederland geen economische groei.", "Juist, want vrijwel alle partijen steunden toen het multiculturalisme.", "Juist, want de economie bloeide tot 2008 en dat bracht iedereen rust."], u:"Ondanks de economische bloei voelden mensen een kloof tussen burgers en politiek. Steun voor het multiculturalisme was er tot het einde van de jaren 1990, daarna niet meer." },
+      { n:'hv', s:"Internationaal liep Nederland voorop met de regeling van het homohuwelijk en euthanasie.", o:["Juist, want dat gaf het beeld van een vrije, tolerante samenleving.", "Juist, want het waren maatregelen van de rooms-rode regeringen.", "Onjuist, want die wetten kwamen er in Nederland pas na 2008.", "Onjuist, want Nederland volgde daarin de Verenigde Staten."], u:"Rond 2000 regelde Nederland als eerste land het homohuwelijk en euthanasie. Dat past bij de individualisering en de liberale tijdgeest." },
+      { n:'hv', s:"De gabbercultuur was een politieke protestbeweging tegen de bestaande orde.", o:["Onjuist, want de gabbercultuur was apolitiek.", "Onjuist, want gabber was een Amerikaanse muziekstroming.", "Juist, want zij verzette zich met geweld tegen de woningnood.", "Juist, want zij kwam voort uit de provo's."], u:"Het was de kraakbeweging die zich, soms met geweld, tegen de woningnood verzette. Gabber ontstond in Nederland en was niet politiek." },
+      { n:'hv', s:"Tot het einde van de jaren 1990 steunden vrijwel alle politieke partijen het idee van een multiculturele samenleving.", o:["Juist, maar vanaf 2002 kwam er beleid gericht op integratie.", "Juist, en die steun bleef bij alle partijen bestaan tot 2008.", "Onjuist, want vanaf de jaren 1950 werd al assimilatie geëist.", "Onjuist, want er woonden in Nederland toen nog geen migranten."], u:"Rond 2000 sloeg het debat om. Na de aanslagen van 2001 en de moord op Fortuyn in 2002 kwam er een ander beleid." },
+      { n:'hv', s:"De punk- en kraakbeweging kwamen op tijdens de economische crisis rond 1980.", o:["Juist, want krakers bekritiseerden de woningnood in die crisis.", "Juist, want zij verzetten zich tegen de geleide loonpolitiek.", "Onjuist, want punk en krakers hoorden bij de jaren 1950.", "Onjuist, want punk en krakers kwamen pas op na 2002."], u:"Werkloosheid en woningnood tijdens de crisis rond 1980 vormden de voedingsbodem voor punk en kraakacties." },
+      { n:'vwo', s:"De individualisering na 1978 was alleen een gevolg van de toenemende welvaart.", o:["Onjuist, want ook een kleinere overheid, meer commercie en ontzuiling speelden mee.", "Onjuist, want er was na 1978 helemaal geen sprake van individualisering.", "Juist, want welvaart is de enige oorzaak van sociaal-culturele verandering.", "Juist, want de overheid stimuleerde individualisering met geleide loonpolitiek."], u:"Een monocausale verklaring is bijna altijd te smal. De context noemt drie factoren naast elkaar, gesteund door wetten zoals het gedoogbeleid en de Algemene Wet Gelijke Behandeling." },
+      { n:'vwo', s:"Het idee van de maakbare samenleving bleef na 1978 leidend in de Nederlandse politiek.", o:["Onjuist, want een liberaal vertrouwen in de zelfredzaamheid van burgers werd dominant.", "Onjuist, want het idee van de maakbare samenleving ontstond pas na 2002.", "Juist, want de overheid bleef de verzorgingsstaat uitbreiden.", "Juist, want het poldermodel was een vorm van maakbaarheid."], u:"Van maakbaarheid (de overheid stuurt naar meer gelijkheid) naar zelfredzaamheid (burgers zorgen voor zichzelf): dat is de grote verschuiving tussen de twee helften van de context." },
+      { n:'vwo', s:"Het poldermodel van de jaren 1980 sloot aan bij een Nederlandse traditie van overleg.", o:["Juist, want al in de jaren 1950 overlegden overheid en sociale partners.", "Juist, want de verzuiling was in de jaren 1980 weer volledig hersteld.", "Onjuist, want het poldermodel was een volledige breuk met het verleden.", "Onjuist, want in het poldermodel besliste de overheid alles alleen."], u:"Overleg tussen overheid, werkgevers en werknemers liep als een rode draad door de hele periode: een voorbeeld van continuïteit." },
+      { n:'vwo', s:"Na de val van Srebrenica zag Nederland zich meer dan ooit als gidsland.", o:["Onjuist, want daarna werd Nederland terughoudender in zijn ambities.", "Onjuist, want Nederland heeft zich nooit als gidsland gezien.", "Juist, want Nederland liep in die tijd voorop met het homohuwelijk.", "Juist, want de demonstraties tegen kruisraketten volgden daarna."], u:"Het gidsland-idee hoort bij de periode tot in de jaren 1980. De demonstraties tegen kruisraketten vonden vóór Srebrenica plaats." },
+      { n:'vwo', s:"De economische groei tot 2008 kwam alle groepen in Nederland gelijk ten goede.", o:["Onjuist, want er was ook een toename van sociale verschillen en niet iedereen profiteerde.", "Onjuist, want er was tussen 1990 en 2008 geen economische groei.", "Juist, want Nederland behoorde tot de meest gelijkwaardige landen van de wereld.", "Juist, want de verzorgingsstaat werd na 1980 uitgebreid."], u:"Nederland bleef internationaal een gelijkwaardig land, maar de verschillen binnen Nederland groeiden. Beide horen in een genuanceerd antwoord." }
+    ],
+    begrip:[
+      ["De indeling van de samenleving in groepen (katholiek, protestants, socialistisch, liberaal) met elk hun eigen partijen, omroepen en scholen", ["verzuiling", "de verzuiling", "zuilen"], "Na 1945 werden de verzuilde verhoudingen aanvankelijk hersteld."],
+      ["Het verdwijnen van de scheiding van de samenleving in zuilen, na de jaren 1950", ["ontzuiling", "de ontzuiling"], "De ontzuiling maakte ruimte voor nieuwe partijen en omroepen zoals D'66 en Veronica."],
+      ["Het herstel van Nederland na de Tweede Wereldoorlog", ["wederopbouw", "de wederopbouw"], "Bij de snelle wederopbouw bood de Marshallhulp steun."],
+      ["De sterke stijging van het aantal geboorten direct na de Tweede Wereldoorlog", ["babyboom", "geboortegolf", "de babyboom"], "Na de babyboom zette de natuurlijke bevolkingsgroei zich voort."],
+      ["Het beleid waarbij overheid en sociale partners de lonen laag hielden om de export te stimuleren", ["geleide loonpolitiek", "geleide loonpolitiek", "loonpolitiek"], "Met geleide loonpolitiek stimuleerden de rooms-rode regeringen de export en de werkgelegenheid."],
+      ["Het idee dat de overheid de samenleving kan sturen naar meer gelijkheid", ["maakbare samenleving", "maakbaarheid", "de maakbare samenleving", "maakbaarheidsdenken"], "Het idee van de maakbare samenleving was leidend in de jaren 1950 tot 1970."],
+      ["Een staat die zorgt voor de bestaanszekerheid van burgers, bijvoorbeeld bij ouderdom, ziekte of werkloosheid", ["verzorgingsstaat", "de verzorgingsstaat", "welvaartsstaat"], "Door de toenemende welvaart konden politici en sociale partners bouwen aan een verzorgingsstaat."],
+      ["De wet uit 1957 die alle ouderen een pensioen gaf", ["AOW", "Algemene Ouderdomswet", "de AOW"], "Na de invoering van de AOW werd sociale wetgeving verder uitgebreid."],
+      ["Een samenleving waarin veel mensen veel kopen, zoals apparaten en vakanties", ["consumptiemaatschappij", "consumptiesamenleving", "consumentenmaatschappij"], "Vanaf de jaren 1960 ontstond in Nederland een consumptiemaatschappij."],
+      ["De jongeren uit eind jaren 1950 met een eigen stijl, onder invloed van popmuziek uit Engeland en de Verenigde Staten", ["nozems", "nozem", "de nozems"], "De nozems waren een van de eerste jongerenbewegingen."],
+      ["De jongerenbeweging uit de jaren 1960 die met ludieke acties het gezag bespotte en inspraak eiste", ["provo's", "provos", "provo", "Provo"], "Provo's en hippies verzetten zich tegen de consumptiemaatschappij."],
+      ["De wettelijke positie van getrouwde vrouwen tot 1956: zij mochten zonder hun man geen contracten sluiten", ["handelingsonbekwaamheid", "handelingsonbekwaam"], "In 1956 kwam een einde aan de handelingsonbekwaamheid van getrouwde vrouwen."],
+      ["De feministische actiegroep met de leus Baas in eigen buik", ["Dolle Mina", "Dolle Mina's", "de Dolle Mina"], "Dolle Mina en Man Vrouw Maatschappij hoorden bij de tweede feministische golf."],
+      ["Arbeiders die vanaf de jaren 1960 uit Zuid-Europa, Turkije en Marokko werden ingehuurd", ["gastarbeiders", "gastarbeider"], "De gastarbeiders kregen later het recht op gezinshereniging."],
+      ["Het recht van migranten om hun vrouw en kinderen naar Nederland te laten komen", ["gezinshereniging"], "Door gezinshereniging werd tijdelijke arbeidsmigratie blijvende migratie."],
+      ["Het overleg tussen overheid, werkgevers en werknemers dat in de jaren 1980 voor politieke en economische rust zorgde", ["poldermodel", "het poldermodel"], "Het poldermodel garandeerde rust bij de bezuinigingen van de regeringen-Lubbers."],
+      ["Het verkopen van staatsbedrijven aan particulieren", ["privatisering", "privatiseren"], "De regeringen-Lubbers privatiseerden staatsbedrijven."],
+      ["De premier van de kabinetten die in de jaren 1980 bezuinigden en de verzorgingsstaat beperkten", ["Lubbers", "Ruud Lubbers"], "Regeringen onder Lubbers kozen voor een liberaal beleid."],
+      ["Het verdrag dat de basis legde voor de Europese Unie en de euro", ["Verdrag van Maastricht", "Maastricht", "het Verdrag van Maastricht"], "Het werd afgesloten onder Nederlands voorzitterschap."],
+      ["Het beleid om het gebruik en de verkoop van softdrugs onder voorwaarden niet te vervolgen", ["gedoogbeleid", "gedogen", "het gedoogbeleid"], "Het gedoogbeleid ondersteunde de individualisering."],
+      ["Het beeld dat Nederland zelf had, tot in de jaren 1980: een land dat andere landen moreel de weg wijst", ["gidsland", "het gidsland"], "Na de val van Srebrenica werd Nederland terughoudender."],
+      ["De wapens waartegen in de jaren 1980 grote demonstraties werden gehouden", ["kruisraketten", "kruisvluchtwapens", "kernwapens", "kruisraket"], "In 1983 demonstreerden honderdduizenden mensen in Den Haag tegen kruisraketten."],
+      ["De beweging die leegstaande panden bezette uit protest tegen de woningnood", ["kraakbeweging", "krakers", "de kraakbeweging"], "De kraakbeweging verzette zich soms met geweld tegen de bestaande orde."],
+      ["Het verdrag dat vanaf het midden van de jaren 1980 vrij verkeer van personen binnen Europa mogelijk maakte", ["Schengen", "Verdrag van Schengen", "akkoord van Schengen", "Schengenakkoord", "Schengenverdrag"], "Schengen bevorderde de internationale oriëntatie van Europese burgers."],
+      ["De politicus die in 2002 werd vermoord", ["Pim Fortuyn", "Fortuyn"], "De moord op Fortuyn joeg angst aan en vergrootte de tegenstellingen."],
+      ["Het groter worden van tegenstellingen tussen groepen in de samenleving, zoals rond 2000", ["polarisatie"], "Rond 2000 nam de polarisatie in Nederland toe."],
+      ["Een samenleving waarin groepen met verschillende culturen naast elkaar leven, met erkenning van elkaars eigenheid", ["multiculturele samenleving", "multiculturalisme", "pluriforme samenleving", "multiculturele maatschappij"], "Tot het einde van de jaren 1990 steunden vrijwel alle partijen dit idee."],
+      ["Het verschijnsel dat mensen steeds meer als individu hun eigen keuzes maken, los van groepen als de zuil of de kerk", ["individualisering"], "Een kleinere overheid, meer commercie en de ontzuiling maakten verdergaande individualisering mogelijk.", "vwo"],
+      ["De wet die discriminatie verbiedt, bijvoorbeeld op grond van godsdienst, geslacht of afkomst, en in 1994 in werking trad", ["Algemene Wet Gelijke Behandeling", "AWGB", "Wet Gelijke Behandeling"], "De Algemene Wet Gelijke Behandeling ondersteunde de individualisering en gelijke rechten.", "vwo"]
+    ].map(B),
+    diep:[
+      { v:"Vergelijk 1948-1978 met 1978-2008. Welke verandering in de rol van de overheid is juist?", o:["Van maakbaarheid en uitbouw van de verzorgingsstaat naar bezuinigen en zelfredzaamheid.", "Van een kleine overheid naar een overheid die met geleide loonpolitiek de lonen bepaalde.", "Van samenwerking in Europa en de NAVO terug naar de oude neutraliteitspolitiek.", "Van een verzorgingsstaat naar een nachtwakersstaat zonder enige sociale wetgeving."], u:"De verzorgingsstaat werd beperkt, niet afgeschaft. Geleide loonpolitiek hoort juist bij de eerste periode." },
+      { v:"Welke continuïteit loopt door de hele periode 1948-2008?", o:["Nederland was steeds voorstander van Europese samenwerking, waar het als handelsland van profiteerde.", "Nederland bleef de hele periode een verzuilde samenleving.", "Nederland bleef de hele periode een emigratieland.", "De multiculturele samenleving werd de hele periode door alle partijen gesteund."], u:"Van het begin van de Europese samenwerking na 1945 tot Maastricht: Nederland koos steeds voor Europa. De andere uitspraken gelden maar voor een deel van de periode." },
+      { v:"Waarom past de komst van migranten uit Suriname rond 1975 bij twee kenmerkende aspecten van tijdvak 10?", o:["Het komt door de dekolonisatie en maakt de samenleving pluriformer en multicultureel.", "Het komt door de Koude Oorlog en draagt bij aan de eenwording van Europa.", "Het komt door de toenemende welvaart en hoort bij de wapenwedloop tussen de blokken.", "Het komt door de oliecrisis van 1973 en hoort bij de eenwording van Europa."], u:"Een gebeurtenis kan bij meer kenmerkende aspecten passen. Hier: dekolonisatie als oorzaak, een pluriforme samenleving als gevolg." },
+      { v:"Een historicus noemt de jaren rond 2002 een breuk in het Nederlandse migratiebeleid. Welk gegeven ondersteunt dat?", o:["Tot eind jaren 1990 steunden bijna alle partijen het multiculturalisme; vanaf 2002 niet.", "Vanaf 2002 kwamen er helemaal geen migranten meer naar Nederland toe.", "In 2002 werd het Verdrag van Schengen over vrij verkeer van personen gesloten.", "In 2002 kregen gastarbeiders voor het eerst het recht op gezinshereniging."], u:"Een breuk toon je aan met een duidelijk verschil tussen voor en na. Schengen dateert uit het midden van de jaren 1980 en gezinshereniging uit de jaren daarvoor." },
+      { v:"Welke verklaring past bij de kleinere Nederlandse invloed in Europa in de jaren 1990?", o:["Na de Koude Oorlog breidden EU en NAVO sterk uit, dus woog Nederland minder.", "Nederland trad in de jaren 1990 uit de Europese Unie en verloor zo zijn stem.", "Nederland weigerde het Verdrag van Maastricht te tekenen en stond daarna buitenspel.", "Door de oliecrisis kon Nederland zijn bijdrage aan Europa niet meer betalen."], u:"Meer lidstaten betekent relatief minder invloed voor een klein land. Nederland bleef voorstander van Europese samenwerking." },
+      { v:"Rond 1980 kwam de verzorgingsstaat onder druk. Welke redenering verklaart dat het best?", o:["Door de crisis waren er meer uitkeringen nodig, terwijl de inkomsten daalden.", "Door de babyboom waren er rond 1980 juist te weinig ouderen om te verzorgen.", "Door de geleide loonpolitiek stegen de lonen rond 1980 veel te snel.", "Door het Verdrag van Maastricht mocht Nederland geen uitkeringen meer betalen."], u:"Meer uitgaven en minder inkomsten tegelijk: daardoor werd de verzorgingsstaat te duur gevonden, en kwam er kritiek dat hij ook te bureaucratisch was." },
+      { v:"Na de jaren 1960 raakte de jeugdcultuur 'gefragmenteerd'. Wat wordt daarmee bedoeld?", o:["Jongeren van verschillende sociale en etnische achtergronden kregen elk een eigen stijl.", "Jongeren hadden na de jaren 1960 helemaal geen eigen cultuur meer.", "Alle jongeren volgden voortaan dezelfde Amerikaanse popmuziek en mode.", "Jongeren sloten zich weer aan bij de omroep en vereniging van hun eigen zuil."], u:"Gefragmenteerd betekent: in stukken uiteengevallen. In plaats van één jongerencultuur ontstonden er veel naast elkaar, wat past bij een pluriforme samenleving." },
+      { v:"Rond 2000 behoorde Nederland tot de welvarendste landen, en toch nam de polarisatie toe. Welke verklaring geeft de context?", o:["Niet iedereen profiteerde van de groei en er groeide een kloof met de politiek.", "De welvaart daalde rond 2000 snel, waardoor veel mensen hun baan verloren.", "De verzuiling keerde rond 2000 terug en zette de zuilen tegenover elkaar.", "Nederland was rond 2000 weer een emigratieland geworden, waar mensen vertrokken."], u:"Welvaart gemiddeld zegt niets over de verdeling. Groeiende sociale verschillen en onvrede over politiek, Europa en migratie verklaren de polarisatie." }
+    ]
+  };
+
+  /* ================= kenmerkende aspecten tijdvak 5 tot en met 10 (havo, nummering van de syllabus) ================= */
+  var KA = [
+    [18, 5, "het begin van de Europese overzeese expansie"],
+    [19, 5, "het veranderende mens- en wereldbeeld van de renaissance en het begin van een nieuwe wetenschappelijke belangstelling"],
+    [20, 5, "de hernieuwde oriëntatie op het erfgoed van de klassieke Oudheid"],
+    [21, 5, "de protestantse reformatie die splitsing van de christelijke kerk in West-Europa tot gevolg had"],
+    [22, 5, "het conflict in de Nederlanden dat resulteerde in de stichting van een Nederlandse staat"],
+    [23, 6, "het streven van vorsten naar absolute macht"],
+    [24, 6, "de bijzondere plaats in staatkundig opzicht en de bloei in economisch en cultureel opzicht van de Nederlandse Republiek"],
+    [25, 6, "wereldwijde handelscontacten, handelskapitalisme en het begin van een wereldeconomie"],
+    [26, 6, "de wetenschappelijke revolutie"],
+    [27, 7, "rationeel optimisme en ‘verlicht denken’ dat werd toegepast op alle terreinen van de samenleving: godsdienst, politiek, economie en sociale verhoudingen"],
+    [28, 7, "voortbestaan van het ancien régime met pogingen om het vorstelijk bestuur op eigentijdse verlichte wijze vorm te geven (verlicht absolutisme)"],
+    [29, 7, "uitbouw van de Europese overheersing, met name in de vorm van plantagekoloniën en de daarmee verbonden trans-Atlantische slavenhandel, en de opkomst van het abolitionisme"],
+    [30, 7, "de democratische revoluties in westerse landen met als gevolg discussies over grondwetten, grondrechten en staatsburgerschap"],
+    [31, 8, "de industriële revolutie die in de westerse wereld de basis legde voor een industriële samenleving"],
+    [32, 8, "discussies over de ‘sociale kwestie’"],
+    [33, 8, "de moderne vorm van imperialisme die verband hield met de industrialisatie"],
+    [34, 8, "de opkomst van emancipatiebewegingen"],
+    [35, 8, "voortschrijdende democratisering, met deelname van steeds meer mannen en vrouwen aan het politieke proces"],
+    [36, 8, "de opkomst van politiek-maatschappelijke stromingen: liberalisme, nationalisme, socialisme, confessionalisme en feminisme"],
+    [37, 9, "de rol van moderne propaganda- en communicatiemiddelen en vormen van massaorganisatie"],
+    [38, 9, "het in praktijk brengen van de totalitaire ideologieën communisme en fascisme/nationaalsocialisme"],
+    [39, 9, "de crisis van het wereldkapitalisme"],
+    [40, 9, "het voeren van twee wereldoorlogen"],
+    [41, 9, "racisme en discriminatie die leidden tot genocide, in het bijzonder op de joden"],
+    [42, 9, "de Duitse bezetting van Nederland"],
+    [43, 9, "verwoestingen op niet eerder vertoonde schaal door massavernietigingswapens en de betrokkenheid van de burgerbevolking bij oorlogvoering"],
+    [44, 9, "vormen van verzet tegen het West-Europese imperialisme"],
+    [45, 10, "de verdeling van de wereld in twee ideologische blokken in de greep van een wapenwedloop en de daaruit voortvloeiende dreiging van een atoomoorlog"],
+    [46, 10, "de dekolonisatie die een eind maakte aan de westerse hegemonie in de wereld"],
+    [47, 10, "de eenwording van Europa"],
+    [48, 10, "de toenemende westerse welvaart die vanaf de jaren zestig van de twintigste eeuw aanleiding gaf tot ingrijpende sociaal-culturele veranderingsprocessen"],
+    [49, 10, "de ontwikkeling van pluriforme en multiculturele samenlevingen"]
+  ].map(function(a){ return { nr:a[0], tv:a[1], t:a[2] }; });
+  var KAnr = {}; KA.forEach(function(k){ KAnr[k.nr] = k; });
+  /* gebeurtenis, het passende aspect, alle aspecten die er ook bij zouden kunnen passen (geen afleider), waarom, niveau */
+  var KAEV = [
+    ["Eind 16e eeuw verkennen de Engelsen Noord-Amerika als uitvalsbasis in de strijd met Spanje en als mogelijke kolonie.", 18, [18, 21, 25], "Engeland begint met expansie overzee; dat begin hoort bij tijdvak 5."],
+    ["De East India Company drijft vanuit factorijen handel met de Mogol-vorsten in India.", 25, [25, 18, 33, 24], "Een handelscompagnie die winst haalt uit handel tussen werelddelen: handelskapitalisme en wereldhandel."],
+    ["De Royal African Company verdient aan de driehoekshandel: slaafgemaakten worden naar Barbados en Jamaica gebracht.", 29, [29, 25]],
+    ["Engelse kolonisten in het zuiden van Noord-Amerika laten slaafgemaakten op plantages tabak verbouwen voor de export.", 29, [29, 25]],
+    ["In verlichte en religieuze kringen groeit verzet tegen de slavenhandel, die in 1807 in het Britse Rijk wordt verboden.", 29, [29, 27, 34], "Het abolitionisme is uitdrukkelijk deel van dit aspect."],
+    ["De dertien koloniën komen in 1776 in opstand en vormen een federale staat, de Verenigde Staten.", 30, [30, 27]],
+    ["Kolonisten beroepen zich op natuurlijke rechten en volkssoevereiniteit om belasting van het Britse parlement af te wijzen.", 27, [27, 30], "Verlichte ideeën worden toegepast op de politiek."],
+    ["Met de spinning jenny en de stoommachine verschuift de productie van huis naar fabriek.", 31, [31]],
+    ["Fabrieksarbeiders leven in snelgroeiende steden onder slechte omstandigheden; de overheid probeert vanaf 1833 met de Factory Acts excessen te voorkomen.", 32, [32, 31], "Het debat over de vraag of en hoe de overheid de nood van arbeiders moet aanpakken, is de sociale kwestie."],
+    ["Robert Owen zet zich in voor betere omstandigheden voor arbeiders, en arbeiders dwingen via vakbonden meer rechten af.", 32, [32, 36, 34, 35]],
+    ["Na 1870 breiden de Britten hun rijk verder uit op zoek naar nieuwe markten voor hun industrie.", 33, [33, 31]],
+    ["Spoorwegen, stoomschepen en het Suezkanaal maken een strakkere Britse controle over India mogelijk.", 33, [33, 31]],
+    ["Met de Reform Bill van 1832 krijgen Britse ondernemers meer politieke invloed.", 35, [35, 36]],
+    ["Hoogopgeleide Indiërs richten in 1885 het Indian National Congress op en eisen gelijke kansen in het bestuur.", 34, [34, 44, 36], "Een groep die gelijke rechten en kansen eist, is een emancipatiebeweging."],
+    ["Britse ondernemers willen vrijhandel en een zo klein mogelijke rol voor de overheid.", 36, [36, 31, 25, 33], "Dit is liberalisme, een van de genoemde politiek-maatschappelijke stromingen.", "vwo"],
+    ["De beurskrach van 1929 trekt Duitsland in een diepe economische crisis met massale werkloosheid.", 39, [39]],
+    ["De NSDAP groeit met grootscheepse propaganda en paramilitair vertoon uit tot een massaorganisatie.", 37, [37, 38]],
+    ["Na 1933 nazificeren de nazi's met terreur en propaganda de hele samenleving.", 38, [38, 37, 41]],
+    ["Joden worden systematisch uitgesloten van het openbare leven en uiteindelijk naar vernietigingskampen getransporteerd.", 41, [41, 42, 40, 38]],
+    ["In Nederland zetten de Duitsers de rechtsstaat buiten werking en voeren zij arbeidsdienst in.", 42, [42, 40, 38]],
+    ["Na de inval in Polen in 1939 verklaren Groot-Brittannië en Frankrijk Duitsland de oorlog.", 40, [40, 38]],
+    ["Tijdens de Blokkade van Berlijn in 1948 houden de Amerikanen West-Berlijn met een luchtbrug in leven.", 45, [45]],
+    ["De bouw van de Berlijnse muur in 1961 stopt de vlucht van DDR-burgers naar het Westen.", 45, [45, 38]],
+    ["Onder Ulbricht wordt de DDR een dictatuur naar Sovjetmodel, met strenge controle door de Stasi.", 38, [38, 45, 37]],
+    ["De Bondsrepubliek wordt in de jaren 1950 lid van de EGKS.", 47, [47, 45]],
+    ["In ruil voor Franse steun voor de hereniging accepteert Kohl de invoering van de euro.", 47, [47, 45]],
+    ["Nederland draagt in 1949 de soevereiniteit over aan Indonesië.", 46, [46, 44]],
+    ["Suriname wordt in 1975 onafhankelijk van Nederland.", 46, [46, 49]],
+    ["Provo's en hippies verzetten zich in de jaren 1960 tegen de consumptiemaatschappij en eisen inspraak.", 48, [48, 49]],
+    ["Dolle Mina strijdt voor gelijke rechten en kansen voor vrouwen; de anticonceptiepil wordt geaccepteerd.", 48, [48, 34, 36]],
+    ["In veel huishoudens doen wasmachine en televisie hun intrede, en steeds meer mensen gaan op vakantie naar het buitenland.", 48, [48]],
+    ["Gastarbeiders uit Turkije en Marokko krijgen het recht op gezinshereniging.", 49, [49, 48]],
+    ["Vrijwel alle politieke partijen steunen tot het einde van de jaren 1990 het idee van een multiculturele samenleving.", 49, [49, 48]],
+    ["In 1983 demonstreren honderdduizenden mensen in Den Haag tegen de plaatsing van kruisraketten.", 45, [45, 48]],
+    ["Het Verdrag van Maastricht legt de basis voor de Europese Unie en de euro.", 47, [47]],
+    ["Brandt probeert met zijn Ostpolitik de relatie met de DDR en andere Oost-Europese landen te verbeteren.", 45, [45, 47], "De Ostpolitik is een poging om de scherpe tegenstelling tussen de twee blokken te verzachten.", "vwo"],
+    ["Luther verspreidt zijn kritiek op de katholieke kerk; in grote delen van Duitsland ontstaan protestantse kerken.", 21, [21, 19]],
+    ["In 1581 zweren de opstandige gewesten met het Plakkaat van Verlatinge hun vorst Filips II af.", 22, [22, 21]],
+    ["Lodewijk XIV regeert zonder de Staten-Generaal bijeen te roepen en laat het paleis van Versailles bouwen.", 23, [23]],
+    ["Isaac Newton beschrijft de zwaartekracht op basis van waarnemen, rekenen en experimenteren.", 26, [26, 19]],
+    ["Frederik de Grote van Pruisen voert hervormingen door in de geest van de Verlichting, maar houdt alle macht zelf.", 28, [28, 27, 23]],
+    ["In 1789 roept de Franse Nationale Vergadering de rechten van de mens en de burger uit.", 30, [30, 27]],
+    ["In 1945 verwoesten atoombommen de Japanse steden Hiroshima en Nagasaki.", 43, [43, 40, 45]],
+    ["Gandhi leidt in 1930 een geweldloze zoutmars tegen de Britse heerschappij in India.", 44, [44, 46, 34]],
+    ["In de Republiek bloeien in de 17e eeuw handel, schilderkunst en wetenschap, terwijl in de meeste landen vorsten regeren.", 24, [24, 25, 26]],
+    ["De humanist Erasmus bestudeert Griekse en Latijnse teksten uit de Oudheid.", 20, [20, 19]],
+    ["Een Spaanse expeditie onder leiding van Magelhaes vaart van 1519 tot 1522 voor het eerst rond de wereld.", 18, [18, 19]]
+  ].map(function(a){ return { t:a[0], ka:a[1], past:a[2], w:a[3] || '', n:a[4] || 'hv' }; });
+
+  /* ================= bronnen ================= */
+  /* echt: een korte uitspraak die echt zo is gedaan (vertaald); anders voor deze oefening geschreven, naar wat er in die tijd speelde.
+     vragen: { n, v, o:[goed, fout, fout, fout], u } */
+  var BRON = [
+    { id:'churchill', echt:true, tekst:"Van Stettin aan de Oostzee tot Triëst aan de Adriatische Zee is een ijzeren gordijn neergedaald over het continent.", wie:"Winston Churchill, Brits oud-premier en leider van de oppositie", waar:"toespraak in Fulton (Verenigde Staten)", jaar:"1946",
+      vragen:[
+        { n:'hv', v:"Leg uit dat deze bron past bij het ontstaan van de Koude Oorlog.", o:["Hij beschrijft hoe Europa verdeeld raakt in een oostelijk en een westelijk blok.", "Hij beschrijft hoe Duitsland zich in 1946 onvoorwaardelijk overgaf aan de geallieerden.", "Hij roept op tot een nieuwe oorlog tegen het verslagen Duitsland.", "Hij beschrijft de bouw van de Berlijnse muur door de DDR."], u:"Het ijzeren gordijn is de scheidslijn tussen de twee blokken. De muur werd pas in 1961 gebouwd, en de overgave was in 1945." },
+        { n:'vwo', v:"Is deze bron betrouwbaar als bewijs dat de Sovjet-Unie heel Oost-Europa wilde beheersen?", o:["Niet zonder meer: hij was een westerse tegenstander van het communisme.", "Ja, want als premier in de oorlog kende hij alle plannen van Stalin.", "Ja, want een toespraak van een staatsman is altijd een objectieve bron.", "Nee, want in 1946 bestond de Sovjet-Unie nog helemaal niet."], u:"De standplaats van de maker bepaalt wat hij ziet en zegt. Voor de westerse kijk op de Sovjet-Unie is de bron wel bruikbaar." }
+      ] },
+    { id:'ulbricht', echt:true, tekst:"Niemand heeft de bedoeling een muur te bouwen.", wie:"Walter Ulbricht, leider van de DDR, op een persconferentie", waar:"Oost-Berlijn", jaar:"15 juni 1961",
+      vragen:[
+        { n:'hv', v:"Bij welk kenmerkend aspect past de muur waar Ulbricht over spreekt het best?", o:["De verdeling van de wereld in twee ideologische blokken in de greep van een wapenwedloop en de daaruit voortvloeiende dreiging van een atoomoorlog.", "De toenemende westerse welvaart die vanaf de jaren zestig van de twintigste eeuw aanleiding gaf tot ingrijpende sociaal-culturele veranderingsprocessen.", "Verwoestingen op niet eerder vertoonde schaal door massavernietigingswapens en de betrokkenheid van de burgerbevolking bij oorlogvoering.", "De democratische revoluties in westerse landen met als gevolg discussies over grondwetten, grondrechten en staatsburgerschap."], u:"De Berlijnse muur scheidde het communistische Oostblok van het Westen: het meest zichtbare teken van de deling in twee blokken." },
+        { n:'hv', v:"Toon aan dat deze uitspraak niet betrouwbaar was.", o:["Twee maanden later, in augustus 1961, werd de Berlijnse muur gebouwd.", "Ulbricht was geen leider van de DDR.", "De muur werd al in 1953 gebouwd.", "Ulbricht sprak in West-Berlijn, dus hij wist niets van de plannen."], u:"Aantonen doe je met een feit dat de uitspraak weerlegt: op 13 augustus 1961 begon de bouw van de muur." },
+        { n:'vwo', v:"Waarom zei Ulbricht dit in juni 1961, gezien zijn standplaats?", o:["Hij wilde voorkomen dat nog meer mensen vluchtten voor de grens dicht ging.", "Hij wilde de West-Duitsers uitnodigen om in de DDR te komen wonen.", "Hij was zelf tegen de muur en probeerde de bouw tegen te houden.", "Hij wilde laten zien dat de DDR de Ostpolitik van Brandt steunde."], u:"Een aankondiging van een muur had een vluchtgolf veroorzaakt. De Ostpolitik kwam pas later, onder Brandt." }
+      ] },
+    { id:'kennedy', echt:true, tekst:"Ich bin ein Berliner.", wie:"John F. Kennedy, president van de Verenigde Staten", waar:"toespraak voor een grote menigte in West-Berlijn", jaar:"1963",
+      vragen:[
+        { n:'hv', v:"Welke gebeurtenis van twee jaar eerder maakte deze toespraak in West-Berlijn extra beladen?", o:["De bouw van de Berlijnse muur in 1961.", "De Blokkade van Berlijn in 1948.", "De oprichting van de DDR in 1949.", "De opstand in de DDR in 1953."], u:"In 1961 werd de muur gebouwd; in 1963 kwam Kennedy naar de afgesloten stad. De andere gebeurtenissen liggen verder terug." },
+        { n:'hv', v:"Welke boodschap wilde Kennedy met deze uitspraak afgeven?", o:["De VS staan achter West-Berlijn en laten de stad niet aan het Oostblok over.", "De VS willen dat Berlijn de hoofdstad wordt van een herenigd en neutraal Duitsland.", "Kennedy wil laten zien dat hij zelf Duitse voorouders uit Berlijn heeft.", "De VS kondigen aan dat zij hun troepen uit West-Europa terugtrekken."], u:"West-Berlijn lag als westerse enclave midden in de DDR. Kennedy sprak er twee jaar na de bouw van de muur." },
+        { n:'vwo', v:"In 1961 grepen de Verenigde Staten niet in bij de bouw van de muur. Hoe past deze toespraak van 1963 daarbij?", o:["De VS accepteerden de Sovjetinvloed in het Oosten, maar verdedigden West-Berlijn wel.", "De toespraak kondigde aan dat de Verenigde Staten de muur zouden laten afbreken.", "Kennedy erkende met deze toespraak de DDR als een zelfstandige, gelijkwaardige staat.", "De toespraak laat zien dat Kennedy de bouw van de muur in 1961 had gesteund."], u:"Geen oorlog riskeren om de muur, wel duidelijk maken waar de grens van het westerse blok lag: dat is de logica van de Koude Oorlog." }
+      ] },
+    { id:'reagan', echt:true, tekst:"Meneer Gorbatsjov, breek deze muur af!", wie:"Ronald Reagan, president van de Verenigde Staten", waar:"toespraak bij de Brandenburger Tor, West-Berlijn", jaar:"1987",
+      vragen:[
+        { n:'hv', v:"Leg uit waarom Reagan zich in 1987 juist tot Gorbatsjov richtte.", o:["Gorbatsjov beloofde openheid en hervorming; Reagan vroeg hem dat hier te tonen.", "Gorbatsjov was in 1987 de partijleider van de DDR en bestuurde Oost-Berlijn.", "Gorbatsjov had in 1961 als leider van de Sovjet-Unie de muur laten bouwen.", "Gorbatsjov was in 1987 bondskanselier van de Bondsrepubliek Duitsland."], u:"De leider van de DDR was in 1987 Honecker. Maar de DDR hing af van de Sovjet-Unie, en Gorbatsjov sprak van hervormingen." },
+        { n:'vwo', v:"Is deze bron bruikbaar om te onderzoeken hoe DDR-burgers in 1987 over de muur dachten?", o:["Nee, een Amerikaanse president sprak hier vooral een westers publiek toe.", "Ja, want Reagan stond vlak bij de muur en zag wat DDR-burgers dachten.", "Ja, want alle Berlijners in Oost en West dachten in 1987 hetzelfde.", "Nee, want in 1987 stond de Berlijnse muur er al niet meer."], u:"Vraag je bij een bron altijd af waarvoor hij bruikbaar is. Voor het standpunt van de Verenigde Staten is deze bron heel geschikt, voor de mening van DDR-burgers niet." }
+      ] },
+    { id:'dagboek', echt:false, tekst:"Gisteravond stond half Prenzlauer Berg bij de grensovergang aan de Bornholmer Straße. Opeens ging de slagboom omhoog. Ik heb gehuild op de Kurfürstendamm, met een wildvreemde man uit Hamburg.", wie:"een vrouw uit Oost-Berlijn, in haar dagboek", waar:"Oost-Berlijn", jaar:"november 1989",
+      vragen:[
+        { n:'hv', v:"Over welke gebeurtenis schrijft zij?", o:["De val van de Berlijnse muur op 9 november 1989.", "De hereniging van Duitsland in 1990.", "De Blokkade van Berlijn in 1948.", "De bouw van de Berlijnse muur in 1961."], u:"De grens ging open en zij kon naar de Kurfürstendamm in West-Berlijn: dat kon pas na de opening van de grens op 9 november 1989." },
+        { n:'vwo', v:"Is dit dagboek betrouwbaar voor de vraag hoe DDR-burgers de val van de muur beleefden?", o:["Voor haar eigen beleving wel, maar één vrouw is niet representatief.", "Nee, want een dagboek is per definitie een onbetrouwbare bron.", "Ja, want zij schrijft namens alle inwoners van Oost-Berlijn.", "Nee, want zij woonde in West-Berlijn en zag de DDR niet."], u:"Een dagboek is vaak eerlijk over de eigen ervaring, maar zegt weinig over wat anderen voelden. Dat onderscheid tussen betrouwbaarheid en representativiteit komt op het examen vaak terug." }
+      ] },
+    { id:'affiche', echt:false, tekst:"Een verkiezingsaffiche van de NSDAP: een lange rij werkloze mannen met lege handen, en daarboven in grote letters de belofte van werk en brood.", wie:"de NSDAP (beschrijving van een affiche)", waar:"Duitsland", jaar:"1932",
+      vragen:[
+        { n:'hv', v:"Leg uit waarom deze boodschap in 1932 veel Duitse kiezers aansprak.", o:["Na de beurskrach van 1929 waren miljoenen Duitsers werkloos.", "In 1932 bloeide de Duitse economie dankzij het Dawesplan nog volop.", "De NSDAP was in 1932 al aan de macht en deelde zelf werk uit.", "In 1932 voerde Duitsland oorlog met Polen en was er voedseltekort."], u:"De crisis maakte de belofte van werk en welvaart aantrekkelijk; de NSDAP profiteerde van de instabiliteit." },
+        { n:'hv', v:"Bij welk kenmerkend aspect past dit affiche het best?", o:["De rol van moderne propaganda- en communicatiemiddelen en vormen van massaorganisatie.", "De dekolonisatie die een eind maakte aan de westerse hegemonie in de wereld.", "Het voeren van twee wereldoorlogen.", "De opkomst van emancipatiebewegingen."], u:"Een affiche dat met een eenvoudige beeldboodschap grote groepen kiezers wil winnen, is moderne propaganda." },
+        { n:'vwo', v:"Is dit affiche betrouwbaar voor wat de NSDAP werkelijk van plan was?", o:["Nee, het is propaganda; over dictatuur en antisemitisme zwijgt het.", "Ja, want de NSDAP maakte het affiche zelf en kende haar eigen plannen.", "Ja, want na 1933 kwam er inderdaad meer werk in Duitsland.", "Nee, want in 1932 waren verkiezingsaffiches nog verboden."], u:"Een bron van de partij zelf is bruikbaar om te zien hoe zij kiezers wilde winnen, maar niet als volledig beeld van haar plannen. Dat er later meer werk was, maakt het affiche nog geen betrouwbare bron voor de bedoelingen." }
+      ] },
+    { id:'officier', echt:false, tekst:"Sinds de opstand vertrouwen we onze eigen soldaten niet meer. Deze mensen begrijpen alleen een harde hand. Zonder ons zou dit land in chaos vervallen.", wie:"een Britse officier in het Brits-Indische leger, in een brief naar huis", waar:"Bengalen", jaar:"1858",
+      vragen:[
+        { n:'hv', v:"Bij welk kenmerkend aspect past de Britse heerschappij over India die uit deze brief spreekt het best?", o:["De moderne vorm van imperialisme die verband hield met de industrialisatie.", "Wereldwijde handelscontacten, handelskapitalisme en het begin van een wereldeconomie.", "Voortschrijdende democratisering, met deelname van steeds meer mannen en vrouwen aan het politieke proces.", "Vormen van verzet tegen het West-Europese imperialisme."], u:"De brief komt uit 1858, tijdvak 8. Verzet tegen het imperialisme (tijdvak 9) gaat over het nationale verzet in de 20e eeuw; de officier beschrijft juist de Britse overheersing." },
+        { n:'hv', v:"Welke opstand bedoelt de officier?", o:["De opstand van ontevreden Indiase soldaten in 1857.", "De opstand van de dertien koloniën in 1776.", "De oprichting van het Indian National Congress in 1885.", "De opstand in de DDR in 1953."], u:"Het Brits-Indische leger bestond uit Indiase soldaten onder Britse officieren. In 1857 kwamen ontevreden soldaten in opstand." },
+        { n:'vwo', v:"Welke uitspraak over de standplaats van de officier is juist?", o:["Als Brit die net een opstand meemaakte, voelt hij zich superieur aan Indiërs.", "Als Indiase soldaat wil hij de Britten waarschuwen voor een nieuwe opstand.", "Hij is een neutrale waarnemer, want hij schrijft alleen een privébrief.", "Hij steunt het Indian National Congress en de eis van gelijke kansen."], u:"Ook een privébrief is gekleurd door wie je bent. Het idee dat de Britten de wereld moesten beschaven, hoorde bij hun zelfbeeld." }
+      ] },
+    { id:'congress', echt:false, tekst:"Wij vragen niet om het vertrek van de Britten. Wij vragen een eerlijke kans: dat een Indiër die even goed is opgeleid als een Brit, ook dezelfde functie in het bestuur van zijn eigen land kan krijgen.", wie:"een advocaat, lid van het Indian National Congress, in een toespraak", waar:"Bombay", jaar:"1885",
+      vragen:[
+        { n:'hv', v:"Toon aan dat deze bron past bij de eerste doelen van het Indian National Congress.", o:["Hij vraagt gelijke kansen in het Brits-Indische bestuur, geen vertrek.", "Hij eist dat de Britten India onmiddellijk en voorgoed verlaten.", "Hij roept de Indiase soldaten op tot een nieuwe gewapende opstand.", "Hij wil dat India net als Amerika een onafhankelijke federale staat wordt."], u:"In eerste instantie streefde het Congress naar gelijke kansen. De Britten gaven daar niet aan toe." },
+        { n:'vwo', v:"Leg uit waarom juist hoogopgeleide Indiërs deze eis stelden.", o:["Zij waren net zo opgeleid als Britten, maar kregen niet dezelfde kansen.", "Zij hadden geen onderwijs gehad en wilden dat alsnog van de Britten krijgen.", "Zij waren Britse migranten die al generaties lang in India woonden.", "Zij waren officieren uit het Brits-Indische leger die promotie wilden."], u:"De Britten voerden Engels onderwijs in vanuit een gevoel van superioriteit; de opgeleide elite gebruikte dat juist om gelijke kansen te eisen." }
+      ] },
+    { id:'boston', echt:false, tekst:"Een parlement waarin wij geen enkele stem hebben, heeft niet het recht ons belasting op te leggen. De vrijheid is ons door de natuur gegeven, niet door een koning.", wie:"een kolonist, in een pamflet", waar:"Boston", jaar:"1774",
+      vragen:[
+        { n:'hv', v:"Welke gebeurtenis volgde twee jaar na dit pamflet?", o:["De dertien koloniën kwamen in opstand en verklaarden zich onafhankelijk.", "Het Britse parlement verbood de slavenhandel in het hele Britse Rijk.", "De Pilgrim Fathers stichtten hun nederzetting in Noord-Amerika.", "Het verdrag van Allahabad gaf de East India Company macht in India."], u:"1774 plus twee is 1776: de opstand en de onafhankelijkheidsverklaring. Het verbod op de slavenhandel volgde in 1807, de Pilgrim Fathers kwamen in 1620 en Allahabad was in 1765." },
+        { n:'hv', v:"Welk Verlicht idee gebruikt de schrijver?", o:["Natuurlijke rechten en volkssoevereiniteit: geen belasting zonder stem.", "Het absolutisme: de koning bepaalt alles en het volk gehoorzaamt.", "De planeconomie: de staat bepaalt wat er gemaakt en verkocht wordt.", "De maakbare samenleving: de overheid stuurt naar meer gelijkheid."], u:"Vrijheid als natuurlijk recht, en macht die van het volk komt: de kolonisten gebruikten Verlichte ideeën tegen Groot-Brittannië." },
+        { n:'vwo', v:"Is dit pamflet bruikbaar om te laten zien hoe alle kolonisten in 1774 dachten?", o:["Nee, er waren ook kolonisten die trouw bleven aan de Britse kroon.", "Ja, want alle kolonisten betaalden belasting en waren het dus eens.", "Ja, want pamfletten werden vooraf door de Britse regering gecontroleerd.", "Nee, want in 1774 woonden er nog geen kolonisten in Boston."], u:"Een pamflet wil overtuigen en geeft één kant. Kolonisten die loyaal bleven aan de kroon, de loyalisten, kwamen er niet in aan het woord." }
+      ] },
+    { id:'inspecteur', echt:false, tekst:"In de spinnerij werken jonge kinderen van de vroege ochtend tot de avond, in hete en stoffige zalen. Wie in slaap valt, wordt gestraft. Veel fabrikanten houden zich niet aan de wet.", wie:"een Britse fabrieksinspecteur, in een rapport aan de regering", waar:"Manchester", jaar:"1840",
+      vragen:[
+        { n:'hv', v:"Op de naleving van welke wetten moest deze inspecteur letten?", o:["De Factory Acts.", "De Reform Bill.", "De graanwetten (Corn Laws).", "Het verbod op de slavenhandel."], u:"Vanaf 1833 probeerde de overheid met de Factory Acts excessen in fabrieken te voorkomen, en inspecteurs moesten daarop toezien." },
+        { n:'hv', v:"Bij welk kenmerkend aspect past deze bron het best?", o:["Discussies over de ‘sociale kwestie’.", "De democratische revoluties in westerse landen.", "Het begin van de Europese overzeese expansie.", "De eenwording van Europa."], u:"De slechte omstandigheden van arbeiders, en de vraag wat de overheid daaraan moest doen, vormen de sociale kwestie." },
+        { n:'vwo', v:"Waarom is dit rapport een bruikbare bron over de naleving van de Factory Acts?", o:["Hij moest in opdracht van de overheid de naleving controleren en zag het zelf.", "Hij was zelf eigenaar van de spinnerij en kende het bedrijf dus van binnen.", "Rapporten aan de regering zijn altijd volledig objectief en compleet.", "Hij werkte zelf als kinderarbeider in deze spinnerij in Manchester."], u:"De Factory Act van 1833 stelde inspecteurs aan. Wel blijft een kritische vraag: zag hij alleen de ergste fabrieken?" }
+      ] },
+    { id:'provo', echt:false, tekst:"Een stelletje lanterfanters met lange haren heeft vandaag de huwelijksstoet met een rookbom bekogeld. Waar blijven het fatsoen en het respect voor ons koningshuis?", wie:"een columnist, in een dagblad", waar:"Amsterdam", jaar:"maart 1966",
+      vragen:[
+        { n:'hv', v:"Welke jongerenbeweging bedoelt de columnist?", o:["De provo's, die met ludieke acties het gezag bespotten.", "De nozems, die eind jaren 1950 op brommers rondhingen.", "De krakers, die leegstaande panden bezetten tegen de woningnood.", "De gabbers, die apolitiek feestten op harde dansmuziek."], u:"Bij het huwelijk van prinses Beatrix in maart 1966 gooiden provo's een rookbom naar de gouden koets." },
+        { n:'vwo', v:"Toon aan dat de columnist het gezag van oudere generaties verdedigt.", o:["Hij noemt de jongeren lanterfanters en eist fatsoen en respect.", "Hij steunt de eis van de jongeren om meer inspraak in de politiek.", "Hij beschrijft de gebeurtenis neutraal en zonder een eigen oordeel.", "Hij roept op om een nieuwe politieke partij voor jongeren op te richten."], u:"Woorden als lanterfanters en de vraag naar fatsoen laten zien dat hij de jongeren afwijst en het bestaande gezag verdedigt." }
+      ] },
+    { id:'dollemina', echt:true, tekst:"Baas in eigen buik.", wie:"leus van de feministische actiegroep Dolle Mina", waar:"Nederland", jaar:"rond 1970",
+      vragen:[
+        { n:'hv', v:"Bij welk kenmerkend aspect past deze leus het best?", o:["De toenemende westerse welvaart die vanaf de jaren zestig van de twintigste eeuw aanleiding gaf tot ingrijpende sociaal-culturele veranderingsprocessen.", "De verdeling van de wereld in twee ideologische blokken in de greep van een wapenwedloop en de daaruit voortvloeiende dreiging van een atoomoorlog.", "Rationeel optimisme en ‘verlicht denken’ dat werd toegepast op alle terreinen van de samenleving: godsdienst, politiek, economie en sociale verhoudingen.", "De democratische revoluties in westerse landen met als gevolg discussies over grondwetten, grondrechten en staatsburgerschap."], u:"De tweede feministische golf, met groepen als Dolle Mina, hoort bij de sociaal-culturele veranderingen vanaf de jaren 1960." },
+        { n:'vwo', v:"Welke ontwikkeling maakte de eis van Dolle Mina in deze tijd mogelijk?", o:["De pil, meer onderwijs voor meisjes en welvaart gaven vrouwen meer keuze.", "Vrouwen kregen in 1970 voor het eerst kiesrecht en konden zo meebeslissen.", "De verzuiling gaf vrouwen in de jaren 1960 meer persoonlijke vrijheid.", "De oliecrisis dwong vrouwen om buitenshuis te gaan werken."], u:"Het vrouwenkiesrecht bestond al sinds 1919. De pil en de groeiende onderwijsdeelname van meisjes veranderden de positie van vrouwen snel." }
+      ] },
+    { id:'gastarbeider', echt:false, tekst:"Ik kwam in 1970 voor twee jaar, om geld te verdienen voor een huis in mijn dorp. Toen mijn vrouw en kinderen in 1976 ook kwamen, wist ik: we blijven hier.", wie:"een man uit Marokko, in een interview", waar:"Rotterdam", jaar:"2005",
+      vragen:[
+        { n:'hv', v:"Bij welk kenmerkend aspect past deze bron het best?", o:["De ontwikkeling van pluriforme en multiculturele samenlevingen.", "De dekolonisatie die een eind maakte aan de westerse hegemonie in de wereld.", "De crisis van het wereldkapitalisme.", "De eenwording van Europa."], u:"Een gastarbeider die met zijn gezin blijft, maakt Nederland meer pluriform. Marokko was geen Nederlandse kolonie, dus dekolonisatie past hier niet." },
+        { n:'hv', v:"Welke regeling maakte het mogelijk dat zijn gezin naar Nederland kwam?", o:["Gezinshereniging.", "Het Verdrag van Schengen.", "De AOW.", "Het gedoogbeleid."], u:"Gastarbeiders kregen later het recht op gezinshereniging. Daardoor werd tijdelijke arbeidsmigratie blijvende migratie." },
+        { n:'vwo', v:"Het interview werd in 2005 afgenomen, lang na de gebeurtenissen. Wat betekent dat voor de betrouwbaarheid?", o:["Hij kan dingen vergeten of kleuren met kennis van nu; toch telt zijn ervaring.", "Het interview is daardoor volledig onbetrouwbaar en dus niet bruikbaar.", "Het is juist volledig betrouwbaar, want hij weet nu hoe het afliep.", "Het maakt voor een bron niet uit wanneer een interview is afgenomen."], u:"Een terugblik is gekleurd door het geheugen en door wat er later gebeurde, zoals het debat over integratie rond 2002. Het is een bron over herinnering en ervaring." }
+      ] },
+    { id:'minister', echt:false, tekst:"De verzorgingsstaat is te duur en te log geworden. Mensen moeten weer leren op eigen benen te staan. De overheid moet kleiner, en wat de markt beter kan, moet de markt doen.", wie:"een minister in een kabinet-Lubbers, in een toespraak", waar:"Den Haag", jaar:"1983",
+      vragen:[
+        { n:'hv', v:"Op welke ontwikkeling reageert de minister in 1983?", o:["De economische crisis rond 1980, die de verzorgingsstaat onder druk zette.", "De oliecrisis van 1973, die het begin van de wederopbouw was.", "De invoering van de AOW, die net had plaatsgevonden.", "Het Verdrag van Maastricht, dat de verzorgingsstaat verbood."], u:"Rond 1980 was er een economische crisis; daarna kwam kritiek op de verzorgingsstaat. De AOW kwam in 1957 en Maastricht in 1992." },
+        { n:'hv', v:"Toon aan dat deze bron past bij het beleid van de jaren 1980.", o:["Hij wil een kleinere overheid en taken overlaten aan de markt.", "Hij wil de verzorgingsstaat verder uitbreiden met nieuwe uitkeringen.", "Hij wil de lonen weer laag houden met een geleide loonpolitiek.", "Hij wil de verzuiling herstellen, met eigen scholen per zuil."], u:"Kritiek op een te dure en bureaucratische verzorgingsstaat leidde onder Lubbers tot bezuinigingen en privatisering." },
+        { n:'vwo', v:"Met welk idee uit de jaren 1950 en 1960 breekt deze minister?", o:["De maakbare samenleving, waarin de overheid stuurt naar gelijkheid.", "De neutraliteitspolitiek, die Nederland buiten conflicten hield.", "De multiculturele samenleving, waarin groepen naast elkaar leven.", "Het poldermodel, waarin overheid en sociale partners overleggen."], u:"Van maakbaarheid naar zelfredzaamheid. Het poldermodel hoort juist bij de jaren 1980 en sluit aan bij overleg." }
+      ] },
+    { id:'luchtbrug', echt:false, tekst:"Elke paar minuten komt er een vliegtuig over ons huis, op weg naar Tempelhof. Moeder zegt dat er meel en kolen in zitten. Zonder die vliegtuigen hadden we deze winter niets.", wie:"een jongen van twaalf, in een brief aan zijn oom", waar:"West-Berlijn", jaar:"december 1948",
+      vragen:[
+        { n:'hv', v:"Bij welk kenmerkend aspect past deze bron het best?", o:["De verdeling van de wereld in twee ideologische blokken in de greep van een wapenwedloop en de daaruit voortvloeiende dreiging van een atoomoorlog.", "De toenemende westerse welvaart die vanaf de jaren zestig van de twintigste eeuw aanleiding gaf tot ingrijpende sociaal-culturele veranderingsprocessen.", "De democratische revoluties in westerse landen met als gevolg discussies over grondwetten, grondrechten en staatsburgerschap.", "Voortbestaan van het ancien régime met pogingen om het vorstelijk bestuur op eigentijdse verlichte wijze vorm te geven (verlicht absolutisme)."], u:"De Blokkade van Berlijn was een van de eerste crises van de Koude Oorlog, tussen het westerse en het communistische blok." },
+        { n:'hv', v:"Welke gebeurtenis beschrijft de jongen?", o:["De luchtbrug tijdens de Blokkade van Berlijn.", "De bombardementen op Berlijn in de Tweede Wereldoorlog.", "De val van de Berlijnse muur.", "De bouw van de Berlijnse muur."], u:"Toen de Sovjet-Unie in 1948 de wegen naar West-Berlijn blokkeerde, bevoorraadden de Amerikanen de stad door de lucht." },
+        { n:'vwo', v:"Leg uit waarom de luchtbrug ook een propagandaoverwinning voor het Westen was.", o:["Het Westen hielp de Berlijners, terwijl de Sovjet-Unie de stad wilde uithongeren.", "De luchtbrug maakte een einde aan de deling van Duitsland in twee staten.", "Door de luchtbrug werd in 1949 de DDR opgericht in de sovjetzone.", "De luchtbrug werd door de Sovjet-Unie zelf georganiseerd en betaald."], u:"De beelden van hulpvliegtuigen tegenover een blokkade versterkten het beeld van het Westen als beschermer. De DDR werd een jaar later opgericht, maar niet door de luchtbrug." }
+      ] },
+    { id:'kniefall', echt:true, tekst:"Een foto: bondskanselier Willy Brandt knielt bij het monument voor de opstand in het getto van Warschau.", wie:"persfoto (beschrijving)", waar:"Warschau, Polen", jaar:"december 1970",
+      vragen:[
+        { n:'hv', v:"Bij welk beleid van Brandt past dit gebaar?", o:["De Ostpolitik, voor betere relaties met Oost-Europese landen.", "De integratie van de BRD in de NAVO en het westerse blok.", "De invoering van de euro als gemeenschappelijke munt.", "De bouw van de Berlijnse muur om de vlucht te stoppen."], u:"Een gebaar van schuld en verzoening tegenover Polen hoorde bij de Ostpolitik, tijdens de detente." },
+        { n:'vwo', v:"Waarom kon zo'n gebaar in 1970 wel, en zou het in de BRD van de jaren 1950 minder voor de hand hebben gelegen?", o:["In de jaren 1950 lag de nadruk op wederopbouw; rond 1970 kwam ruimte voor kritiek.", "In de jaren 1950 bestond Polen nog niet als zelfstandige staat in Europa.", "In de jaren 1950 was de BRD nog lid van het Warschaupact en de Comecon.", "In de jaren 1950 was Brandt nog de leider van de DDR in Oost-Berlijn."], u:"Vergelijken in de tijd: de nadruk op wederopbouw in de jaren 1950 tegenover de detente en de kritiek van jongeren rond 1970." }
+      ] },
+    { id:'kruisraket', echt:false, tekst:"Op een spandoek in een stoet van honderdduizenden mensen: Tegen de kruisraketten. Nederland gidsland, geen doelwit.", wie:"spandoek bij een demonstratie (beschrijving)", waar:"Den Haag", jaar:"oktober 1983",
+      vragen:[
+        { n:'hv', v:"Bij welk kenmerkend aspect past deze demonstratie het best?", o:["De verdeling van de wereld in twee ideologische blokken in de greep van een wapenwedloop en de daaruit voortvloeiende dreiging van een atoomoorlog.", "De democratische revoluties in westerse landen met als gevolg discussies over grondwetten, grondrechten en staatsburgerschap.", "Voortbestaan van het ancien régime met pogingen om het vorstelijk bestuur op eigentijdse verlichte wijze vorm te geven (verlicht absolutisme).", "De dekolonisatie die een eind maakte aan de westerse hegemonie in de wereld."], u:"Kruisraketten waren kernwapens van de NAVO; de angst voor een atoomoorlog hoort bij de wapenwedloop van de Koude Oorlog." },
+        { n:'vwo', v:"Wat zegt het woord gidsland op het spandoek over het Nederlandse zelfbeeld in de jaren 1980?", o:["Veel Nederlanders vonden dat hun land anderen moreel de weg moest wijzen.", "Nederland wilde de leiding van de NAVO overnemen van de Verenigde Staten.", "Nederland wilde uit de Europese Gemeenschap en de NAVO stappen.", "Nederland zag zichzelf nog steeds als een koloniale grootmacht."], u:"Het gidsland-idee hoort bij de periode tot in de jaren 1980; na Srebrenica werd Nederland terughoudender." }
+      ] }
+  ];
+
+  /* ================= opgaven maken ================= */
+  /* op volgorde: havo vier gebeurtenissen verspreid over de context, vwo vijf die dicht bij elkaar liggen */
+  function volgorde(c, niv){
+    var alles = c.tijd.slice().sort(function(a, b){ return a.j - b.j; }), keus = [];
+    if (vwo(niv)){
+      for (var poging = 0; poging < 20 && keus.length < 5; poging++){
+        keus = []; var gezien = {};
+        for (var i = Math.floor(Math.random() * (alles.length - 4)); i < alles.length && keus.length < 5; i++){ if (!gezien[alles[i].d]){ gezien[alles[i].d] = 1; keus.push(alles[i]); } }
+      }
+    } else {
+      var hv = H(alles.filter(function(e){ return e.n === 'hv'; })), jaren = {};
+      hv.forEach(function(e){ var y = Math.floor(e.j); if (keus.length < 4 && !jaren[y]){ jaren[y] = 1; keus.push(e); } });
+    }
+    keus.sort(function(a, b){ return a.j - b.j; });
+    return {
+      vorm:'sleep', klas:'hc-volg', sleutel:'vo-' + c.id + '-' + keus.map(function(e){ return e.j; }).join('-'),
+      vraag:'Zet deze gebeurtenissen uit ' + c.vol + ' in de goede volgorde, van vroeg naar laat.',
+      opdracht: vwo(niv) ? 'Ze liggen dicht bij elkaar. Denk aan oorzaak en gevolg: wat moest er eerst gebeuren?' : 'Het vroegste komt bovenaan, bij 1.',
+      kaarten: keus.map(function(e, i){ return { id:'e' + i, tekst:S(e.t) }; }),
+      vakken: keus.map(function(e, i){ return { id:'p' + i, max:1, hoort:['e' + i] }; }),
+      sleepuit:'Op een telefoon: tik een gebeurtenis aan en dan het cijfer.',
+      uitleg:'De goede volgorde: ' + keus.map(function(e){ return '<b>' + S(e.d) + '</b> ' + S(e.t); }).join('; ') + '.',
+      antwoordTekst: keus.map(function(e){ return e.d + ': ' + e.t; }).join(' > ')
+    };
+  }
+  /* oorzaak en gevolg koppelen: havo drie paren, vwo vier */
+  function oorzaak(c, niv){
+    var n = vwo(niv) ? 4 : 3, lijst = H(vwo(niv) ? c.oorzaak : c.oorzaak.filter(function(x){ return x.n === 'hv'; })), keus = [], grp = {};
+    if (vwo(niv)){ var vw = lijst.filter(function(x){ return x.n === 'vwo'; }); if (vw.length){ keus.push(vw[0]); grp[vw[0].grp] = 1; } }
+    lijst.forEach(function(x){ if (keus.length < n && !grp[x.grp] && keus.indexOf(x) < 0){ grp[x.grp] = 1; keus.push(x); } });
+    var ids = keus.map(function(x){ return c.oorzaak.indexOf(x); });
+    return {
+      vorm:'sleep', klas:'hc-lijst', sleutel:'og-' + c.id + '-' + ids.slice().sort(function(a, b){ return a - b; }).join('-'),
+      vraag:'Welke oorzaak hoort bij welk gevolg? ' + cap(c.vol) + '.',
+      opdracht:'Zet bij elk gevolg de oorzaak die het verklaart.',
+      kaarten: keus.map(function(x, i){ return { id:'o' + i, tekst:S(x.o) }; }),
+      vakken: keus.map(function(x, i){ return { id:'g' + i, naam:S(x.g), max:1, hoort:['o' + i] }; }),
+      sleepuit:'Op een telefoon: tik een oorzaak aan en dan het gevolg.',
+      uitleg: keus.map(function(x){ return S(x.o) + ' &rarr; ' + S(x.g) + '.'; }).join('<br>'),
+      antwoordTekst: keus.map(function(x){ return x.o + ' > ' + x.g; }).join('; ')
+    };
+  }
+  function stelling(c, niv){
+    var p = poel(c.stel, niv, .55), x = kies(p), i = c.stel.indexOf(x);
+    return {
+      vorm:'meerkeuze', sleutel:'st-' + c.id + '-' + i,
+      vraag:'Is deze bewering juist of onjuist? Kies het antwoord met de goede redenering.',
+      beeld: vak('bewering', '<p>' + S(x.s) + '</p>'),
+      opties: x.o.map(S), goed:0, uitleg:S(x.u)
+    };
+  }
+  function begrip(c, niv){
+    var x = kies(poel(c.begrip, niv, .35)), i = c.begrip.indexOf(x);
+    return {
+      vorm:'invul', sleutel:'be-' + c.id + '-' + i,
+      vraag:'Welk begrip of welke naam wordt hier bedoeld?',
+      opdracht:'Het antwoord is één begrip of naam uit ' + c.vol + '.',
+      beeld: vak('omschrijving', '<p>' + S(x.v) + '</p>'),
+      velden:[{ label:'begrip of naam', antwoord:x.a, type:'tekst', breed:true, toon:x.a[0] }],
+      uitleg:'Het goede antwoord is <b>' + S(x.a[0]) + '</b>. ' + S(x.u), antwoordTekst:x.a[0]
+    };
+  }
+  function jaartal(c, niv){
+    var p = c.tijd.filter(function(e){ return e.vr && (vwo(niv) || e.n === 'hv'); });
+    if (vwo(niv) && Math.random() < .5){ var vw = p.filter(function(e){ return e.n === 'vwo'; }); if (vw.length) p = vw; }
+    var e = kies(p), y = Math.floor(e.j);
+    return {
+      vorm:'invul', sleutel:'ja-' + c.id + '-' + e.j,
+      vraag:S(e.vr), opdracht:'Een jaartal uit de syllabus: zo breng je de goede chronologie aan.',
+      velden:[{ label:'jaar', antwoord:y, toon:String(y) }],
+      uitleg:'<b>' + y + '</b>: ' + S(e.t) + '.', antwoordTekst:String(y)
+    };
+  }
+  function diep(c){
+    var x = kies(c.diep), i = c.diep.indexOf(x);
+    return { vorm:'meerkeuze', sleutel:'di-' + c.id + '-' + i, vraag:S(x.v), beeld:x.b ? vak('situatie', '<p>' + S(x.b) + '</p>') : '', opties:x.o.map(S), goed:0, uitleg:S(x.u) };
+  }
+  function context(id, niv){
+    var c = CTX[id], r = Math.random(), o;
+    if (vwo(niv)) o = r < .15 ? volgorde(c, niv) : r < .3 ? oorzaak(c, niv) : r < .55 ? stelling(c, niv) : r < .65 ? begrip(c, niv) : r < .72 ? jaartal(c, niv) : diep(c);
+    else o = r < .2 ? volgorde(c, niv) : r < .4 ? oorzaak(c, niv) : r < .65 ? stelling(c, niv) : r < .85 ? begrip(c, niv) : jaartal(c, niv);
+    o.onderdeel = c.od; o.onderdeelNaam = c.naam;
+    return o;
+  }
+
+  /* kenmerkende aspecten: welk aspect past bij deze gebeurtenis? */
+  function kaTekst(k){ return cap(k.t); }
+  function kaWaarom(e){ var k = KAnr[e.ka]; return 'Dit past bij kenmerkend aspect ' + k.nr + ' (tijdvak ' + k.tv + '): ' + S(k.t) + '.' + (e.w ? ' ' + S(e.w) : ''); }
+  function kaKies(niv){
+    var p = KAEV.filter(function(e){ return vwo(niv) || e.n === 'hv'; });
+    return p;
+  }
+  function kaMeerkeuze(niv){
+    var e = kies(kaKies(niv)), goed = KAnr[e.ka];
+    var kandidaat = KA.filter(function(k){ return e.past.indexOf(k.nr) < 0 && (!vwo(niv) || Math.abs(k.tv - goed.tv) <= 1); });
+    /* havo: een afleider uit hetzelfde tijdvak als het kan, de rest van elders; vwo: alles dichtbij */
+    var zelf = H(kandidaat.filter(function(k){ return k.tv === goed.tv; })), rest = H(kandidaat.filter(function(k){ return k.tv !== goed.tv; }));
+    var af = vwo(niv) ? H(kandidaat).slice(0, 3) : zelf.slice(0, 1).concat(rest).slice(0, 3);
+    /* het goede antwoord mag niet opvallen door zijn lengte: minstens één afleider is ongeveer even lang */
+    var lang = goed.t.length / 1.2, maxAf = Math.max.apply(null, af.map(function(k){ return k.t.length; }));
+    if (maxAf < lang){
+      var even = H(kandidaat.filter(function(k){ return k.t.length >= lang && af.indexOf(k) < 0; }));
+      if (!even.length) even = H(KA.filter(function(k){ return k.t.length >= lang && e.past.indexOf(k.nr) < 0; }));
+      if (even.length) af[af.length - 1] = even[0];
+    }
+    return {
+      vorm:'meerkeuze', sleutel:'ka-' + KAEV.indexOf(e),
+      vraag:'Bij welk kenmerkend aspect past deze gebeurtenis het best?',
+      beeld: vak('gebeurtenis', '<p>' + S(e.t) + '</p>'),
+      opties:[kaTekst(goed)].concat(af.map(kaTekst)).map(S), goed:0,
+      uitleg: kaWaarom(e)
+    };
+  }
+  function kaSleep(niv){
+    var p = H(kaKies(niv)), keus = [];
+    p.forEach(function(e){
+      if (keus.length >= 3) return;
+      var ok = keus.every(function(x){ return x.ka !== e.ka && x.past.indexOf(e.ka) < 0 && e.past.indexOf(x.ka) < 0; });
+      if (ok) keus.push(e);
+    });
+    var ids = keus.map(function(e){ return KAEV.indexOf(e); });
+    return {
+      vorm:'sleep', klas:'hc-lijst', sleutel:'kas-' + ids.slice().sort(function(a, b){ return a - b; }).join('-'),
+      vraag:'Welke gebeurtenis past bij welk kenmerkend aspect?',
+      opdracht:'Zet elke gebeurtenis bij het kenmerkend aspect waar hij het best bij past.',
+      kaarten: keus.map(function(e, i){ return { id:'k' + i, tekst:S(e.t) }; }),
+      vakken: keus.map(function(e, i){ return { id:'a' + i, naam:S(kaTekst(KAnr[e.ka])), max:1, hoort:['k' + i] }; }),
+      sleepuit:'Op een telefoon: tik een gebeurtenis aan en dan het kenmerkend aspect.',
+      uitleg: keus.map(function(e){ return S(e.t) + ' &rarr; aspect ' + e.ka + ' (tijdvak ' + KAnr[e.ka].tv + ').'; }).join('<br>'),
+      antwoordTekst: keus.map(function(e){ return e.t + ' > ' + e.ka; }).join('; ')
+    };
+  }
+  function kenmerkend(niv){
+    var o = Math.random() < (vwo(niv) ? .45 : .25) ? kaSleep(niv) : kaMeerkeuze(niv);
+    o.onderdeel = 'contextenhavo: kenmerkende aspecten'; o.onderdeelNaam = 'kenmerkende aspecten';
+    return o;
+  }
+
+  /* bronvragen */
+  function bronBeeld(b){
+    return '<div class="hc-vak hc-bron"><p class="hc-kop">bron</p><blockquote>' + (b.echt && !/^Een foto/.test(b.tekst) ? '&lsquo;' + S(b.tekst) + '&rsquo;' : S(b.tekst)) + '</blockquote>' +
+      '<p class="hc-bij"><b>Maker:</b> ' + S(b.wie) + '. <b>Plaats:</b> ' + S(b.waar) + '. <b>Tijd:</b> ' + S(b.jaar) + '.<br>' +
+      (b.echt ? 'Een echte bron, vertaald of beschreven.' : 'Voor deze oefening geschreven, naar wat er in die tijd speelde.') + '</p></div>';
+  }
+  function bron(niv){
+    var lijst = [];
+    BRON.forEach(function(b, bi){ b.vragen.forEach(function(q, qi){ lijst.push({ b:b, q:q, k:bi + '-' + qi }); }); });
+    var p = lijst.filter(function(x){ return x.q.n === 'hv'; });
+    if (vwo(niv)){ var vw = lijst.filter(function(x){ return x.q.n === 'vwo'; }); p = Math.random() < .7 ? vw : lijst; }
+    var x = kies(p);
+    return {
+      vorm:'meerkeuze', sleutel:'br-' + x.k, onderdeel:'contextenhavo: bronnen', onderdeelNaam:'bronvragen',
+      vraag:S(x.q.v), beeld:bronBeeld(x.b), opties:x.q.o.map(S), goed:0, uitleg:S(x.q.u)
+    };
+  }
+
+  var DELEN = ['brits', 'duits', 'nl', 'ka', 'bron'];
+  function maakOpgave(soort, niv){
+    if (soort === 'ka') return kenmerkend(niv);
+    if (soort === 'bron') return bron(niv);
+    return context(soort, niv);
+  }
+
+  VAKSPEL.maak({
+    id:'contextenhavo', naam:'Historische contexten havo', vak:'ges', kleur:'#8c3f2b',
+    hand:'jaartallen, oorzaken en bronnen',
+    lead:'De drie historische contexten van het centraal examen geschiedenis havo: het Britse Rijk van 1585 tot 1900, Duitsland in Europa van 1918 tot 1991 en Nederland van 1948 tot 2008. Je zet gebeurtenissen op volgorde, koppelt oorzaak en gevolg, beoordeelt beweringen met een redenering, kent de begrippen en jaartallen uit de syllabus, koppelt gebeurtenissen aan kenmerkende aspecten en werkt met bronnen.',
+    leerdoel:'Je kent de drie historische contexten van het havo-examen: de ontwikkelingen, oorzaken en gevolgen, begrippen, personen en jaartallen, en je gebruikt ze om kenmerkende aspecten te herkennen en bronnen te beoordelen.',
+    hoe:[
+      { kop:'Drie contexten', tekst:'Het <b>Britse Rijk</b> (1585-1900), <b>Duitsland in Europa</b> (1918-1991) en <b>Nederland</b> (1948-2008). De jaartallen uit de syllabus zijn keerpunten: die moet je kennen.' },
+      { kop:'Redeneren', tekst:'Bij een bewering kies je juist of onjuist <b>met de goede reden</b>. Bij een bron let je op de maker, het jaar en de plaats: waarvoor is hij betrouwbaar, en waarvoor niet?' },
+      { kop:'Havo en vwo', tekst:'Op havo oefen je de stof uit de syllabus. Op vwo liggen de gebeurtenissen dichter bij elkaar, zijn er meer paren, en vergelijk je en verklaar je meer, met de extra stof over Duitsland uit het vwo-examen.' }
+    ],
+    keuzes:[
+      { id:'niveau', kop:'hoe moeilijk', std:'hv', items:[
+        { id:'hv', naam:'havo', uit:'De stof van de syllabus havo: jaartallen, oorzaak en gevolg, beweringen, begrippen, kenmerkende aspecten en bronvragen.' },
+        { id:'vwo', naam:'vwo', uit:'Verder uitgediept: vijf gebeurtenissen dicht bij elkaar, vier paren oorzaak en gevolg, vergelijken en verklaren, betrouwbaarheid en standplaats, en de vwo-stof over Duitsland (denazificatie, de omgang met het naziverleden, links terrorisme).' } ] },
+      { id:'soort', kop:'wat oefen je', std:'alles', items:[
+        { id:'alles', naam:'alles door elkaar' },
+        { id:'brits', naam:'het Britse Rijk', uit:'De koloniën in Amerika, India en de rol van de koloniën in de industrialisatie (1585-1900).' },
+        { id:'duits', naam:'Duitsland in Europa', uit:'Weimar en het nationaalsocialisme, de Koude Oorlog en de deling, de hereniging en Europa (1918-1991).' },
+        { id:'nl', naam:'Nederland 1948-2008', uit:'Wederopbouw, welvaart en verzorgingsstaat, ontzuiling en jongeren, migratie, Europa en polarisatie.' },
+        { id:'ka', naam:'kenmerkende aspecten', uit:'Bij welk kenmerkend aspect van tijdvak 5 tot en met 10 past een gebeurtenis?' },
+        { id:'bron', naam:'bronvragen', uit:'Een korte bron met maker, tijd en plaats: leg uit, toon aan, en is deze bron betrouwbaar?' } ] }
+    ],
+    aantal:10, minuten:9,
+    maak:function(keuze, nr){
+      var niv = keuze.niveau === 'vwo' ? 'vwo' : 'hv';
+      var soort = keuze.soort === 'alles' || DELEN.indexOf(keuze.soort) < 0 ? kies(DELEN) : keuze.soort;
+      var o = maakOpgave(soort, niv), klas = o.klas, oud = o.na;
+      o.na = function(v){ document.body.classList.toggle('hc-volg', klas === 'hc-volg'); document.body.classList.toggle('hc-lijst', klas === 'hc-lijst'); if (oud) oud(v); };
+      return o;
+    },
+    uitleg:{ doel:'De drie historische contexten van het examen geschiedenis havo: ontwikkelingen, oorzaken en gevolgen, begrippen, personen en jaartallen, kenmerkende aspecten en bronnen.', tijd:'twintig opgaven per ronde, of kies 10 of 30', bediening:'Kies het antwoord dat klopt (of druk op 1 tot 4). Bij een volgorde of een koppeling sleep je kaartjes; op een telefoon tik je een kaartje en dan het vak. Een begrip of jaartal vul je in en je drukt op Nakijken.' }
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="klas.js"></script>
+<script src="naamfilter.js"></script>
+<script src="tutorial.js"></script>
+<script src="spel.js"></script>
+</body>
+</html>

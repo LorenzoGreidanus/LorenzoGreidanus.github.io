@@ -400,7 +400,11 @@ const KLAS_SPELLEN = { race: "Vragenrace", metriek: "Het metriek stelsel", eigen
   schrijfopdracht: "De schrijfopdracht",
   bronlezen: "Lees de bron",
   rechtsstaat: "Van aangifte tot uitspraak",
-  water: "Water in Nederland" };
+  water: "Water in Nederland",
+  luisteren: "Luister goed",
+  contextenhavo: "Historische contexten havo",
+  contextenvwo: "Historische contexten vwo",
+  listening: "Listen carefully" };
 /* Hoe lang de kamer wacht voor hij iemand die wegviel ook echt weghaalt. In de
    lobby kort: herladen duurt een paar tellen. In de arena langer: een
    telefoon die even geen bereik heeft, hoort er niet meteen uit te liggen. */
