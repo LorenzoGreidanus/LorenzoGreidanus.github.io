@@ -124,6 +124,13 @@
     if (g === Math.round(g)) return 'elke stap naar rechts gaat de lijn ' + toon(g) + ' ' + op;
     return 'elke 2 stappen naar rechts gaat de lijn ' + toon(g * 2) + ' ' + op + ' (dus ' + toon(g) + ' per stap)';
   }
+  /* een negatief getal tussen haakjes als je ermee rekent: 2 × (−3) */
+  function par(x){ return x < 0 ? '(' + toon(x) + ')' : toon(x); }
+  /* y = ax + b uitgerekend voor één x, als som: 2 × (−1) + 3 = 1 */
+  function invul(a, b, x){ return toon(a) + ' × ' + par(x) + (b > 0 ? ' + ' + toon(b) : b < 0 ? ' − ' + toon(-b) : '') + ' = ' + toon(a * x + b); }
+  /* de controle met een tweede punt dat in beeld is */
+  function controleX(a, b, o){ var k = [2, 1, 3, -1, -2].filter(function(x){ var y = a * x + b; return x >= o.xmin && x <= o.xmax && y >= o.ymin && y <= o.ymax; })[0]; return k == null ? 1 : k; }
+  var ENKEL = { minuten:'minuut', maanden:'maand' };
   function stapVoor(max){ var st = [1, 2, 4, 5, 10, 20, 25, 50], i; for (i = 0; i < st.length; i++) if (max / st[i] <= 16) return st[i]; return 100; }
   var ROOSTER = { bb: { xmin:0, xmax:8, ymin:0, ymax:12, hoog:330 }, kgt: { xmin:-5, xmax:5, ymin:-8, ymax:8, hoog:340 }, hv: { xmin:-5, xmax:5, ymin:-8, ymax:8, hoog:340 } };
 
@@ -152,7 +159,19 @@
       beeld: st.kop + st.lijn(a, b) + st.staart,
       velden:[{ label: 'bij ' + x + ' ' + c.xnaam, antwoord: y, eenheid: c.eenheid }],
       uitleg: 'Ga bij ' + x + ' op de as recht omhoog tot de lijn, en dan naar links naar de andere as: daar staat ' + y + '. Klopt met rekenen: ' + (a > 0 ? b + ' + ' + a + ' × ' + x : b + ' − ' + (-a) + ' × ' + x) + ' = ' + y + '.',
-      antwoordTekst: y + ' ' + c.eenheid
+      antwoordTekst: y + ' ' + c.eenheid,
+      /* stap voor stap (vakspel.js) */
+      stappen:[
+        { tekst:'Zoek ' + x + ' ' + c.xnaam + ' op de horizontale as.', waarom:'Wat je weet (' + x + ' ' + c.xnaam + ') staat op de horizontale as. Wat je zoekt (' + c.ynaam + ') lees je af op de verticale as.',
+          hint:'Op welke as zoek je ' + x + ' ' + c.xnaam + '?' },
+        { tekst:'Ga vanaf ' + x + ' recht omhoog tot je de lijn raakt.', waarom:'Het punt op de lijn precies boven ' + x + ' hoort bij ' + x + ' ' + c.xnaam + '.',
+          hint:'Ga recht omhoog, niet schuin: precies boven ' + x + '.' },
+        { tekst:'Ga vanaf dat punt recht naar links en lees af op de verticale as: ' + y + ' ' + c.eenheid + '.', waarom:'Let op de schaal: één hokje omhoog is ' + ystap + ' ' + c.ynaam + '.',
+          hint:'Ga recht naar links. Eén hokje is ' + ystap + ' ' + c.ynaam + ': tel vanaf een getal dat erbij staat.',
+          fout:ystap > 1 ? 'Eén hokje is hier ' + ystap + ' ' + c.ynaam + ', niet 1.' : '', veld:0 },
+        { tekst:'Controleer met rekenen: de lijn begint bij ' + b + ' en gaat per ' + (ENKEL[c.xnaam] || c.xnaam) + ' ' + Math.abs(a) + (a > 0 ? ' omhoog' : ' omlaag') + '. Dus ' + (a > 0 ? b + ' + ' + a + ' × ' + x : b + ' − ' + (-a) + ' × ' + x) + ' = ' + y + '.',
+          waarom:'Aflezen kan een hokje ernaast zitten. Met rekenen weet je het zeker.' }
+      ]
     };
   }
   function aflezenKromme(niveau){
@@ -169,7 +188,14 @@
         beeld: st.kop + st.kromme(punten) + punten.map(function(p){ return st.stip(p[0], p[1]); }).join('') + st.staart,
         velden:[{ label: 'om ' + x + ' uur', antwoord: w[x], eenheid: '°C' }],
         uitleg: 'Ga bij ' + x + ' uur recht omhoog tot de stip op de grafiek, en dan naar links: daar staat ' + w[x] + ' graden.',
-        antwoordTekst: w[x] + ' °C'
+        antwoordTekst: w[x] + ' °C',
+        stappen:[
+          { tekst:'Zoek ' + x + ' uur op de horizontale as.', waarom:'De tijd staat op de horizontale as. De temperatuur lees je af op de verticale as.', hint:'Waar staat ' + x + ' uur?' },
+          { tekst:'Ga recht omhoog tot de stip boven ' + x + ' uur.', waarom:'Elk heel uur is er gemeten: daar staat een stip, en daar lees je het precies af. De lijn tussen de stippen is maar een schatting.',
+            hint:'Zoek de stip die precies boven ' + x + ' staat.' },
+          { tekst:'Ga recht naar links en lees af: ' + w[x] + ' °C.', waarom:'Bij elke 2 graden staat een getal, en elk hokje is 1 graad.',
+            hint:'Ga naar links en tel de hokjes vanaf een getal dat erbij staat: elk hokje is 1 graad.', veld:0 }
+        ]
       };
     }
     /* een bal omhoog: hoogte = v·t − 5t², een kromme */
@@ -183,7 +209,14 @@
       beeld: st2.kop + st2.kromme(pad) + st2.staart,
       velden:[{ label: 'na ' + t + ' seconden', antwoord: h, eenheid: 'meter' }],
       uitleg: 'Ga bij ' + t + ' seconden recht omhoog tot de kromme, en dan naar links: daar staat ' + h + ' meter.' + (t * 2 === tmax ? ' Dat is het hoogste punt.' : ''),
-      antwoordTekst: h + ' meter'
+      antwoordTekst: h + ' meter',
+      stappen:[
+        { tekst:'Zoek ' + t + ' seconden op de horizontale as.', waarom:'De tijd staat op de horizontale as, de hoogte op de verticale.', hint:'Waar staat ' + t + ' op de as met de seconden?' },
+        { tekst:'Ga recht omhoog tot de kromme.', waarom:'Boven ' + t + ' seconden ligt precies één punt van de kromme: de hoogte van de bal op dat moment.' + (t * 2 === tmax ? ' Hier is het hoogste punt.' : ''),
+          hint:'Ga recht omhoog vanaf ' + t + ', tot je de kromme raakt.' },
+        { tekst:'Ga recht naar links en lees af: ' + h + ' meter.', waarom:'Eén hokje omhoog is 5 meter.',
+          hint:'Ga naar links naar de verticale as. Let op: één hokje is 5 meter.', fout:'Eén hokje is hier 5 meter, niet 1.', veld:0 }
+      ]
     };
   }
   function snijpunt(){
@@ -197,7 +230,17 @@
       beeld: st.kop + st.lijn(a1, b1) + st.lijn(a2, b2, 'var(--hand)') + st.staart,
       velden:[{ label: 'x', antwoord: p }, { label: 'y', antwoord: q }],
       uitleg: 'De lijnen kruisen elkaar in (' + toon(p) + ', ' + toon(q) + '). Controle: ' + toon(a1) + ' × ' + toon(p) + ' + ' + toon(b1) + ' = ' + toon(q) + ' en ' + toon(a2) + ' × ' + toon(p) + ' + ' + toon(b2) + ' = ' + toon(q) + '.',
-      antwoordTekst: '(' + toon(p) + ', ' + toon(q) + ')'
+      antwoordTekst: '(' + toon(p) + ', ' + toon(q) + ')',
+      stappen:[
+        { tekst:'Zoek het punt waar de blauwe en de rode lijn elkaar kruisen.', waarom:'Dat punt ligt op allebei de lijnen: daar geven beide formules bij dezelfde x dezelfde y.',
+          hint:'Waar kruisen de twee lijnen elkaar?' },
+        { tekst:'Ga vanaf het snijpunt recht naar de x-as: x = ' + toon(p) + '.', waarom:'Je leest eerst x af, net als bij een punt (x, y).',
+          hint:'Ga vanaf het snijpunt recht omhoog of omlaag naar de x-as.', veld:0 },
+        { tekst:'Ga vanaf het snijpunt recht naar de y-as: y = ' + toon(q) + '.', waarom:'De y is de hoogte van het snijpunt.',
+          hint:'Ga vanaf het snijpunt recht naar links of rechts naar de y-as.', veld:1 },
+        { tekst:'Controleer door x = ' + toon(p) + ' in beide formules in te vullen: ' + invul(a1, b1, p) + ' en ' + invul(a2, b2, p) + '.',
+          waarom:'Komt er twee keer dezelfde y uit, dan ligt het punt echt op allebei de lijnen.' }
+      ]
     };
   }
   function aflezen(niveau){
@@ -215,13 +258,15 @@
   function formuleBij(niveau){
     var l = lijnVoor(niveau), a = l.a, b = l.b, o = ROOSTER[niveau], st = stelsel(Object.assign({ xnaam:'x', ynaam:'y' }, o));
     /* afleiders: verwisseld, een teken anders, een stap ernaast */
-    var kandidaten = [[b, a], [-a, b], [a, -b], [a + 1, b], [a - 1, b], [a, b + 1], [a, b - 1], [a * 2, b]];
-    var gezien = { }, opties = [formule(a, b)]; gezien[opties[0]] = 1;
+    /* de derde waarde zegt welke fout het is: startgetal, helling of omgewisseld (voor stap voor stap) */
+    var kandidaten = [[b, a, 'wissel'], [-a, b, 'helling'], [a, -b, 'start'], [a + 1, b, 'helling'], [a - 1, b, 'helling'], [a, b + 1, 'start'], [a, b - 1, 'start'], [a * 2, b, 'helling']];
+    var gezien = { }, opties = [formule(a, b)], soort = ['goed']; gezien[opties[0]] = 1;
     H(kandidaten).forEach(function(k){
       if (opties.length >= 4 || k[0] === 0) return;
       if (niveau === 'bb' && (k[0] < 0 || k[1] < 0)) return;
-      var f = formule(k[0], k[1]); if (gezien[f]) return; gezien[f] = 1; opties.push(f);
+      var f = formule(k[0], k[1]); if (gezien[f]) return; gezien[f] = 1; opties.push(f); soort.push(k[2]);
     });
+    function welke(w){ return soort.map(function(x, i){ return x === w ? i : -1; }).filter(function(i){ return i >= 0; }); }
     return {
       onderdeel:'grafieken: formule bij grafiek', onderdeelNaam:'formule bij grafiek', vorm:'meerkeuze', sleutel:'fb' + a + '_' + b,
       vraag: 'Welke formule hoort bij deze lijn?',
@@ -229,7 +274,15 @@
       beeld: st.kop + st.lijn(a, b) + st.staart,
       opties: opties, goed: 0,
       uitleg: 'De lijn snijdt de y-as bij ' + toon(b) + ': dat is het startgetal. En ' + hellingZin(a) + ': de helling is ' + toon(a) + '. Dus ' + formule(a, b) + '.',
-      antwoordTekst: formule(a, b)
+      antwoordTekst: formule(a, b),
+      stappen:[
+        { tekst:'Kijk waar de lijn de y-as snijdt: bij y = ' + toon(b) + '. Dat is het startgetal.', waarom:'Op de y-as is x = 0. Vul je x = 0 in, dan blijft alleen het startgetal over.',
+          hint:'Bij welke y snijdt de lijn de verticale as?', optie:welke('start') },
+        { tekst:'Ga vanaf (0, ' + toon(b) + ') naar rechts: ' + hellingZin(a) + '. De helling is ' + toon(a) + '.',
+          waarom:'De helling is hoeveel y verandert als x 1 groter wordt. Gaat de lijn naar rechts omlaag, dan is de helling negatief.',
+          hint:'Ga vanaf (0, ' + toon(b) + ') ' + (a === Math.round(a) ? 'een stap' : 'twee stappen') + ' naar rechts. Hoeveel gaat de lijn omhoog of omlaag?', optie:welke('helling') },
+        { tekst:'Zet ze in y = helling × x + startgetal: ' + formule(a, b) + '.', waarom:'Het getal voor de x is de helling; het losse getal is het startgetal.', optie:welke('wissel') }
+      ]
     };
   }
 
@@ -243,12 +296,38 @@
     } while (punten.length < 3 && ++poging < 40);
     var f = formule(a, b);
     function opLijn(x, y){ return Math.abs(a * x + b - y) < 1e-9; }
+    /* stap voor stap: vanaf (0, b) met de helling naar twee andere roosterpunten */
+    var dx = a === Math.round(a) ? 1 : 2, buren = [];
+    [1, 2, -1, -2, 3, -3, 4, -4].forEach(function(k){ var px = k * dx, py = a * px + b; if (px >= o.xmin && px <= o.xmax && py >= o.ymin && py <= o.ymax && py === Math.round(py)) buren.push([px, py]); });
+    var drie = [[0, b]].concat(buren).slice(0, 3);
+    if (drie.length < 3) drie = punten.slice(0, 3);
+    function pt(p){ return '(' + toon(p[0]) + ', ' + toon(p[1]) + ')'; }
     return {
       onderdeel:'grafieken: tekenen', onderdeelNaam:'tekenen', vorm:'eigen', sleutel:'tk' + a + '_' + b,
       vraag: 'Teken de grafiek van <b>' + f + '</b>.',
       opdracht: 'Tik minstens drie roosterpunten aan die op de lijn liggen. Nog eens tikken haalt een stip weer weg.',
       uitleg: 'Het startgetal is ' + toon(b) + ': de lijn gaat door (0, ' + toon(b) + '). De helling is ' + toon(a) + ': ' + hellingZin(a) + '. Punten op de lijn: ' + punten.slice(0, 3).map(function(p){ return '(' + toon(p[0]) + ', ' + toon(p[1]) + ')'; }).join(', ') + '.',
       antwoordTekst: 'bijvoorbeeld ' + punten.slice(0, 3).map(function(p){ return '(' + toon(p[0]) + ', ' + toon(p[1]) + ')'; }).join(', '),
+      stappen:[
+        { tekst:'Het startgetal is ' + toon(b) + ': zet een stip op de y-as, in (0, ' + toon(b) + ').', waarom:'Bij x = 0 blijft van de formule alleen het startgetal over: y = ' + toon(b) + '.',
+          hint:b ? 'Waar snijdt de lijn de y-as? Kijk naar het losse getal in de formule.' : 'Er staat geen los getal in de formule. Wat is y dan bij x = 0?' },
+        { tekst:'De helling is ' + toon(a) + ': ' + hellingZin(a) + '. Zo kom je bij een tweede stip: ' + pt(drie[1]) + '.',
+          waarom:'Vanaf elke stip op de lijn kom je met de helling bij de volgende.' + (drie[1][0] < 0 ? ' Ga je naar links, dan gaat het andersom.' : ''),
+          hint:'Ga vanaf (0, ' + toon(b) + ') ' + dx + (dx === 1 ? ' stap' : ' stappen') + ' naar ' + (drie[1][0] < 0 ? 'links' : 'rechts') + '. Hoeveel omhoog of omlaag?' },
+        { tekst:'Doe het nog een keer voor een derde stip: ' + pt(drie[2]) + '. Liggen de drie stippen op één rechte lijn, dan is het goed.',
+          waarom:'Met drie stippen zie je of je je vergist hebt: een stip die uit de rij valt, klopt niet.' }
+      ],
+      /* welke stap misging: een stip op de y-as ernaast is het startgetal; klopt het begin wel, dan de helling; te weinig stippen is stap 3 */
+      foutStap: function(vak){
+        var g = Array.prototype.map.call(vak.querySelectorAll('.stip.aan'), function(c){ return c.getAttribute('data-k').split(',').map(Number); });
+        if (!g.length) return -1;
+        if (g.some(function(q){ return q[0] === 0 && q[1] !== b; })) return 0;
+        var mis = g.filter(function(q){ return !opLijn(q[0], q[1]); });
+        if (!mis.length) return g.length < 3 ? 2 : -1;
+        var start = mis[0][1] - a * mis[0][0];
+        if (mis.length > 1 && !g.some(function(q){ return q[0] === 0; }) && mis.every(function(q){ return Math.abs(q[1] - a * q[0] - start) < 1e-9; })) return 0;
+        return 1;
+      },
       teken: function(el, api){
         var st = stelsel(Object.assign({ xnaam:'x', ynaam:'y' }, o)), stippen = '', doelen = '', px, py;
         for (px = o.xmin; px <= o.xmax; px++) for (py = o.ymin; py <= o.ymax; py++){
@@ -277,6 +356,8 @@
         function tik(p){ var d = raster.querySelector('.rp[data-k="' + p[0] + ',' + p[1] + '"]'); if (d) d.dispatchEvent(new MouseEvent('click', { bubbles:true })); }
         el.proef = function(){ punten.slice(0, 3).forEach(tik); knop.click(); };
         el.proefFout = function(){ var q = [o.xmin, o.ymin]; if (opLijn(q[0], q[1])) q = [o.xmax, o.ymin]; if (opLijn(q[0], q[1])) q = [o.xmin, o.ymax]; tik(q); knop.click(); };
+        /* stap voor stap: bij voordoen staan de drie stippen er, met de lijn erdoor */
+        el.voordoe = function(){ drie.forEach(function(p){ var c = raster.querySelector('.stip[data-k="' + p[0] + ',' + p[1] + '"]'); if (c) c.classList.add('aan', 'goed'); }); raster.querySelector('.na').innerHTML = st.lijn(a, b, 'var(--goed)'); tel(); };
       }
     };
   }
@@ -292,7 +373,8 @@
       var st = stelsel(Object.assign({ xnaam:'x', ynaam:'y' }, o));
       beeld = st.kop + st.lijn(a, b) + st.staart; bron = 'deze lijn';
     }
-    var stap = xs && xs[1] - xs[0] === 2 ? 2 : 1;
+    var stap = xs && xs[1] - xs[0] === 2 ? 2 : 1, cx = viaTabel ? xs[xs.length - 1] : controleX(a, b, o);
+    var hellingFout = viaTabel && stap === 2 ? 'In deze tabel gaat x met 2 tegelijk omhoog. Deel het verschil in y daarom nog door 2.' : a < 0 ? 'Gaat y omlaag, dan is de helling negatief: ' + toon(a) + ', niet ' + toon(-a) + '.' : '';
     return {
       onderdeel:'grafieken: helling en startgetal', onderdeelNaam:'helling en startgetal', vorm:'invul', sleutel:'hs' + a + '_' + b + (viaTabel ? 't' : 'g'),
       vraag: 'Wat is het startgetal en wat is de helling van ' + bron + '?',
@@ -301,7 +383,17 @@
       velden:[{ label:'startgetal', antwoord: b }, { label:'helling', antwoord: a, tol: 0.001 }],
       uitleg: (viaTabel ? 'Bij x = 0 hoort y = ' + toon(b) + ': het startgetal. Van x = 0 naar x = ' + stap + ' gaat y van ' + toon(b) + ' naar ' + toon(a * stap + b) + ', dat is ' + toon(a * stap) + (stap === 2 ? ' per 2 stappen, dus ' + toon(a) + ' per stap' : '') + ': de helling.'
         : 'De lijn snijdt de y-as bij ' + toon(b) + ': het startgetal. En ' + hellingZin(a) + ': de helling is ' + toon(a) + '.') + ' De formule is ' + formule(a, b) + '.',
-      antwoordTekst: 'startgetal ' + toon(b) + ', helling ' + toon(a)
+      antwoordTekst: 'startgetal ' + toon(b) + ', helling ' + toon(a),
+      stappen:[
+        viaTabel ? { tekst:'Zoek in de tabel x = 0: daar staat y = ' + toon(b) + '. Dat is het startgetal.', waarom:'Het startgetal is de y bij x = 0: daar snijdt de lijn de y-as.', hint:'Zoek de kolom met x = 0.', veld:0 }
+          : { tekst:'Kijk waar de lijn de y-as snijdt: bij y = ' + toon(b) + '. Dat is het startgetal.', waarom:'Op de y-as is x = 0. Het startgetal is de y bij x = 0.', hint:'Waar snijdt de lijn de verticale as?', veld:0 },
+        viaTabel ? { tekst:'Kijk hoeveel y verandert als x ' + stap + ' groter wordt: van ' + toon(b) + ' naar ' + toon(a * stap + b) + ', dat is ' + (a > 0 ? '+' : '') + toon(a * stap) + (stap === 2 ? ' voor 2 stappen, dus per stap ' + toon(a * stap) + ' ÷ 2 = ' + toon(a) : '') + '. De helling is ' + toon(a) + '.',
+            waarom:'De helling is wat er bij y bij komt (of af gaat) als x 1 groter wordt.', hint:'Kijk van x = 0 naar x = ' + stap + ': hoeveel gaat y omhoog of omlaag?' + (stap === 2 ? ' Let op: dat zijn 2 stappen.' : ''), fout:hellingFout, veld:1 }
+          : { tekst:'Ga vanaf (0, ' + toon(b) + ') naar rechts: ' + hellingZin(a) + '. De helling is ' + toon(a) + '.',
+            waarom:'De helling is hoeveel de lijn stijgt of daalt als x 1 groter wordt.', hint:'Ga vanaf (0, ' + toon(b) + ') ' + (a === Math.round(a) ? 'een stap' : 'twee stappen') + ' naar rechts. Gaat de lijn omhoog of omlaag, en hoeveel?', fout:hellingFout, veld:1 },
+        { tekst:'Controleer met een ander punt: bij x = ' + toon(cx) + ' geeft ' + formule(a, b) + ': ' + invul(a, b, cx) + '. ' + (viaTabel ? 'Dat staat ook in de tabel.' : 'De lijn gaat daar ook doorheen.'),
+          waarom:'Klopt de formule bij een tweede punt, dan kloppen startgetal en helling allebei.' }
+      ]
     };
   }
 

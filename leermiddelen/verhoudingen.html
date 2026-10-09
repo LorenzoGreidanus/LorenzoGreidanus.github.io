@@ -105,7 +105,7 @@ body.groot .vtabel input{height:62px;font-size:1.4rem}
     /* o: { boven, onder, kolommen:[{b, o, vraagB, vraagO}], s, uitleg, vraag, onderdeel } */
     return {
       onderdeel: o.onderdeel, onderdeelNaam: o.onderdeelNaam, vraag: o.vraag, opdracht: o.opdracht || 'Vul de lege vakjes in. Een komma mag: 2,5.',
-      uitleg: o.uitleg, antwoordTekst: o.antwoordTekst, vorm: 'eigen', sleutel: o.sleutel,
+      uitleg: o.uitleg, antwoordTekst: o.antwoordTekst, vorm: 'eigen', sleutel: o.sleutel, stappen: o.stappen,
       beeld: strook(o),
       teken: function(el, api){
         el.innerHTML = '<div style="overflow-x:auto;max-width:100%"><table class="vtabel"><tr><th>' + S(o.boven) + '</th>' + o.kolommen.map(function(k, i){
@@ -133,20 +133,53 @@ body.groot .vtabel input{height:62px;font-size:1.4rem}
         /* voor de proef: het goede antwoord invullen en nakijken */
         el.proef = function(){ Array.prototype.forEach.call(invoer, function(inp){ inp.value = inp.getAttribute('data-a'); }); knop.click(); };
         el.proefFout = function(){ Array.prototype.forEach.call(invoer, function(inp){ inp.value = '999'; }); knop.click(); };
+        /* stap voor stap: bij voordoen staat het antwoord in de vakjes */
+        el.voordoe = function(){ Array.prototype.forEach.call(invoer, function(inp){ inp.value = net(parseFloat(inp.getAttribute('data-a'))); inp.classList.add('goed'); }); };
       }
     };
+  }
+
+  /* hoe de situatie in een zin klinkt: 3 broodjes, 2 kilo kaas, pasta voor 4 personen, 3 uur met de fiets */
+  function hoeveel(s, ding, n){
+    if (s.boven === 'aantal') return n + ' ' + ding;
+    if (s.boven === 'personen') return ding + ' voor ' + n + ' personen';
+    if (s.boven === 'uur' || s.boven === 'minuten') return n + ' ' + s.boven + ' met ' + ding;
+    return n + ' ' + s.boven + ' ' + ding;
+  }
+  function cap(t){ return t.charAt(0).toUpperCase() + t.slice(1); }
+  function metEenheid(s, x){ return toon(s, x) + (s.eenheidOnder ? '' : ' ' + s.onder); }
+  /* een getal met alle cijfers achter de komma (tot drie): 0,125 en niet 0,13 */
+  function precies(x){ return String(Math.round(x * 1000) / 1000).replace('.', ','); }
+  /* de stap die bij elke tabel terugkomt: schat of het antwoord groter of kleiner moet zijn */
+  function schatStap(s, van, naar, A, B){
+    var meer = naar > van;
+    return { tekst:'Controleer: ' + naar + ' is ' + (meer ? 'meer' : 'minder') + ' dan ' + van + ', dus ' + toon(s, B) + ' moet ' + (meer ? 'meer' : 'minder') + ' zijn dan ' + toon(s, A) + '. Dat klopt.',
+      waarom:'Met een schatting vang je een rekenfout: hoe meer je boven hebt, hoe meer er onder bij hoort.',
+      hint:'Moet het getal bij ' + naar + ' meer of minder zijn dan ' + toon(s, A) + '?' };
   }
 
   /* 1. via 1: van een aantal naar 1, en dan naar een ander aantal */
   function via1(niveau){
     var s = kies(SITUATIES), ding = kies(s.dingen), per = perVan(s, niveau, ding);
     var a = niveau === 'bb' ? kies([2, 4, 5, 10]) : tussen(2, 12), b = tussen(2, 15); while (b === a) b = tussen(2, 15);
-    var kol = [{ b:a, o:Math.round(a * per * 100) / 100 }, { b:1, o:per, vraagO:true }, { b:b, o:Math.round(b * per * 100) / 100, vraagO:true }];
+    var A = Math.round(a * per * 100) / 100, B = Math.round(b * per * 100) / 100;
+    var kol = [{ b:a, o:A }, { b:1, o:per, vraagO:true }, { b:b, o:B, vraagO:true }];
     return tabelOpgave({ s:s, boven:s.boven, onder:s.onder, kolommen:kol, onderdeel:'verhoudingstabel: via 1', onderdeelNaam:'via 1',
       sleutel:'via1' + a + '-' + b + '-' + per,
-      vraag: a + ' ' + s.boven + ' ' + (s.boven === 'uur' || s.boven === 'minuten' ? 'met ' : '') + ding + (s.boven === 'personen' ? '' : '') + ': ' + toon(s, a * per) + (s.eenheidOnder ? '' : ' ' + s.onder) + '. Hoeveel is dat voor 1, en voor ' + b + '?',
-      uitleg: 'Eerst naar 1: ' + toon(s, a * per) + ' ÷ ' + a + ' = ' + toon(s, per) + '. Dan keer ' + b + ': ' + toon(s, per) + ' × ' + b + ' = ' + toon(s, b * per) + '.',
-      antwoordTekst: '1 → ' + toon(s, per) + ', ' + b + ' → ' + toon(s, b * per) });
+      vraag: cap(hoeveel(s, ding, a)) + ': ' + metEenheid(s, A) + '. Hoeveel is dat voor 1, en voor ' + b + '?',
+      uitleg: 'Eerst naar 1: ' + toon(s, A) + ' ÷ ' + a + ' = ' + toon(s, per) + '. Dan keer ' + b + ': ' + toon(s, per) + ' × ' + b + ' = ' + toon(s, B) + '.',
+      antwoordTekst: '1 → ' + toon(s, per) + ', ' + b + ' → ' + toon(s, B),
+      /* stap voor stap (vakspel.js): veld is het invulvakje, van links naar rechts */
+      stappen:[
+        { tekst:'Ga eerst naar 1. Van ' + a + ' naar 1 is gedeeld door ' + a + ', dus onder ook: ' + toon(s, A) + ' ÷ ' + a + ' = ' + toon(s, per) + '.',
+          waarom:'Wat je boven doet, doe je onder ook. Zo blijft de verhouding gelijk.',
+          hint:'Van ' + a + ' naar 1: door welk getal deel je boven? Deel onder door hetzelfde getal.',
+          fout:'Deel het getal onder door het getal boven (' + toon(s, A) + ' ÷ ' + a + '), niet andersom.', veld:0 },
+        { tekst:'Ga dan van 1 naar ' + b + ': dat is keer ' + b + '. Onder ook: ' + toon(s, per) + ' × ' + b + ' = ' + toon(s, B) + '.',
+          waarom:'Vanaf 1 kom je bij elk getal: ' + b + ' keer zoveel boven is ' + b + ' keer zoveel onder.',
+          hint:'Van 1 naar ' + b + ' is keer ' + b + '. Doe dat onder ook, met het getal dat bij 1 hoort.', veld:1 },
+        schatStap(s, a, b, A, B)
+      ] });
   }
   /* 2. keer en gedeeld door: een tabel met een handige stap */
   function keerDelen(niveau){
@@ -154,24 +187,61 @@ body.groot .vtabel input{height:62px;font-size:1.4rem}
     var a = kies([2, 3, 4, 5, 6, 8]), k = niveau === 'bb' ? kies([2, 3, 10]) : kies([2, 3, 4, 5, 10]);
     var b = a * k, c = niveau === 'hv' ? a * k * kies([2, 3]) / kies([2, 4]) : b * kies([2, 3]);
     if (c === b || c === a || c !== Math.round(c)) c = b * 2;
-    var kol = [{ b:a, o:Math.round(a * per * 100) / 100 }, { b:b, o:Math.round(b * per * 100) / 100, vraagO:true }, { b:c, o:Math.round(c * per * 100) / 100, vraagO:true }];
+    var A = Math.round(a * per * 100) / 100, B = Math.round(b * per * 100) / 100, C = Math.round(c * per * 100) / 100;
+    var kol = [{ b:a, o:A }, { b:b, o:B, vraagO:true }, { b:c, o:C, vraagO:true }];
+    /* de tweede stap: keer, gedeeld door, of (bij 12 naar 18) eerst delen en dan keer */
+    var tweede;
+    if (c % b === 0) tweede = 'Van ' + b + ' naar ' + c + ' is keer ' + (c / b) + '. Onder ook: ' + toon(s, B) + ' × ' + (c / b) + ' = ' + toon(s, C) + '.';
+    else if (b % c === 0) tweede = 'Van ' + b + ' naar ' + c + ' is gedeeld door ' + (b / c) + '. Onder ook: ' + toon(s, B) + ' ÷ ' + (b / c) + ' = ' + toon(s, C) + '.';
+    else {
+      for (var d = 2; d < b && !(b % d === 0 && c % (b / d) === 0); d++);
+      var m = c / (b / d), tussenB = Math.round(B / d * 100) / 100;
+      tweede = 'Van ' + b + ' naar ' + c + ' gaat niet in één handige stap. Deel eerst door ' + d + ' (' + b + ' wordt ' + (b / d) + ') en doe dan keer ' + m + ' (' + (b / d) + ' wordt ' + c + '). Onder ook: ' + toon(s, B) + ' ÷ ' + d + ' = ' + toon(s, tussenB) + ', en ' + toon(s, tussenB) + ' × ' + m + ' = ' + toon(s, C) + '.';
+    }
     return tabelOpgave({ s:s, boven:s.boven, onder:s.onder, kolommen:kol, onderdeel:'verhoudingstabel: keer en delen', onderdeelNaam:'keer en delen',
       sleutel:'kd' + a + '-' + b + '-' + c + '-' + per,
-      vraag: 'Bij ' + a + ' ' + s.boven + ' (' + ding + ') hoort ' + toon(s, a * per) + (s.eenheidOnder ? '' : ' ' + s.onder) + '. Vul de tabel aan.',
-      uitleg: 'Van ' + a + ' naar ' + b + ' is keer ' + k + ', dus ' + toon(s, a * per) + ' × ' + k + ' = ' + toon(s, b * per) + '. Van ' + b + ' naar ' + c + ' is keer ' + net(c / b) + ': ' + toon(s, c * per) + '. Wat je boven doet, doe je onder ook.',
-      antwoordTekst: b + ' → ' + toon(s, b * per) + ', ' + c + ' → ' + toon(s, c * per) });
+      vraag: 'Bij ' + hoeveel(s, ding, a) + ' hoort ' + metEenheid(s, A) + '. Vul de tabel aan.',
+      uitleg: 'Van ' + a + ' naar ' + b + ' is keer ' + k + ', dus ' + toon(s, A) + ' × ' + k + ' = ' + toon(s, B) + '. Van ' + b + ' naar ' + c + ' is keer ' + net(c / b) + ': ' + toon(s, C) + '. Wat je boven doet, doe je onder ook.',
+      antwoordTekst: b + ' → ' + toon(s, B) + ', ' + c + ' → ' + toon(s, C),
+      stappen:[
+        { tekst:'Van ' + a + ' naar ' + b + ' is keer ' + k + '. Onder ook: ' + toon(s, A) + ' × ' + k + ' = ' + toon(s, B) + '.',
+          waarom:'Wat je boven doet, doe je onder ook. Zo blijft de verhouding gelijk.',
+          hint:'Met welk getal ga je boven van ' + a + ' naar ' + b + '? Doe onder hetzelfde.',
+          fout:'In een verhoudingstabel tel je niet iets op, je doet keer of gedeeld door. Van ' + a + ' naar ' + b + ' is niet plus ' + (b - a) + ', maar keer ' + k + '.', veld:0 },
+        { tekst:tweede,
+          waarom:'Je mag elke stap nemen die handig is, als je onder maar precies hetzelfde doet als boven.',
+          hint:'Hoe kom je boven van ' + b + ' naar ' + c + '? Lukt het niet in één keer, ga dan eerst naar een kleiner getal.', veld:1 },
+        { tekst:'Controleer via 1: ' + toon(s, A) + ' ÷ ' + a + ' = ' + toon(s, per) + ', en ' + toon(s, per) + ' × ' + c + ' = ' + toon(s, C) + '.',
+          waarom:'Via 1 kom je altijd uit, ook als je de handige stap niet ziet.',
+          hint:'Reken het na via 1: wat hoort er bij 1, en dan bij ' + c + '?' }
+      ] });
   }
   /* 3. terug: het aantal vinden bij een bedrag */
   function terug(niveau){
     var s = kies(SITUATIES), ding = kies(s.dingen), per = perVan(s, niveau, ding);
     var a = tussen(2, 8), b = niveau === 'bb' ? a * kies([2, 3, 5]) : tussen(3, 20); while (b === a) b = tussen(3, 20);
-    var kol = [{ b:a, o:Math.round(a * per * 100) / 100 }, { b:1, o:per, vraagO:true }, { b:b, o:Math.round(b * per * 100) / 100, vraagB:true }];
+    var A = Math.round(a * per * 100) / 100, B = Math.round(b * per * 100) / 100;
+    var kol = [{ b:a, o:A }, { b:1, o:per, vraagO:true }, { b:b, o:B, vraagB:true }];
+    var wat = s.boven === 'aantal' ? ding : s.boven;
     return tabelOpgave({ s:s, boven:s.boven, onder:s.onder, kolommen:kol, onderdeel:'verhoudingstabel: terugrekenen', onderdeelNaam:'terugrekenen',
       sleutel:'tr' + a + '-' + b + '-' + per,
-      vraag: a + ' ' + s.boven + ' (' + ding + ') is ' + toon(s, a * per) + (s.eenheidOnder ? '' : ' ' + s.onder) + '. Hoeveel ' + s.boven + ' hoort er bij ' + toon(s, b * per) + (s.eenheidOnder ? '' : ' ' + s.onder) + '?',
-      opdracht: 'Vul eerst in wat bij 1 hoort. Dan het aantal bij ' + toon(s, b * per) + '.',
-      uitleg: 'Bij 1 hoort ' + toon(s, per) + '. ' + toon(s, b * per) + ' ÷ ' + toon(s, per) + ' = ' + b + '. Delen door wat bij 1 hoort geeft het aantal.',
-      antwoordTekst: '1 → ' + toon(s, per) + ', ' + toon(s, b * per) + ' → ' + b + ' ' + s.boven });
+      vraag: cap(hoeveel(s, ding, a)) + ': ' + metEenheid(s, A) + '. Bij hoeveel ' + wat + ' hoort ' + metEenheid(s, B) + '?',
+      opdracht: 'Vul eerst in wat bij 1 hoort. Dan het aantal bij ' + toon(s, B) + '.',
+      uitleg: 'Bij 1 hoort ' + toon(s, per) + '. ' + toon(s, B) + ' ÷ ' + toon(s, per) + ' = ' + b + '. Delen door wat bij 1 hoort geeft het aantal.',
+      antwoordTekst: '1 → ' + toon(s, per) + ', ' + toon(s, B) + ' → ' + b + ' ' + s.boven,
+      /* het vakje boven (het aantal) is veld 0, het vakje bij 1 is veld 1 */
+      stappen:[
+        { tekst:'Ga eerst naar 1: ' + toon(s, A) + ' ÷ ' + a + ' = ' + toon(s, per) + '.',
+          waarom:'Bij 1 zie je wat er bij één hoort. Vanaf daar kun je elke kant op rekenen, ook terug.',
+          hint:'Deel ' + toon(s, A) + ' door ' + a + '.', veld:1 },
+        { tekst:'Hoe vaak past ' + toon(s, per) + ' in ' + toon(s, B) + '? ' + toon(s, B) + ' ÷ ' + toon(s, per) + ' = ' + b + '. Dus bij ' + toon(s, B) + ' hoort ' + b + '.',
+          waarom:'Onder ga je van ' + toon(s, per) + ' naar ' + toon(s, B) + ': dat is keer ' + b + '. Boven doe je hetzelfde: 1 × ' + b + ' = ' + b + '.',
+          hint:'Onder ga je van ' + toon(s, per) + ' naar ' + toon(s, B) + '. Keer hoeveel is dat? Deel om het te vinden.',
+          fout:'Hier deel je, want je zoekt hoe vaak het getal bij 1 erin past. Wie vermenigvuldigt, krijgt een veel te groot getal.', veld:0 },
+        { tekst:'Controleer door weer vooruit te rekenen: ' + toon(s, per) + ' × ' + b + ' = ' + toon(s, B) + '. Klopt.',
+          waarom:'Terugrekenen controleer je altijd met de gewone kant op.',
+          hint:'Reken vooruit: geeft het getal bij 1 keer jouw antwoord precies ' + toon(s, B) + '?' }
+      ] });
   }
   /* 4. recept: van een aantal personen naar een ander aantal, twee ingrediënten */
   var RECEPTEN = [
@@ -183,14 +253,27 @@ body.groot .vtabel input{height:62px;font-size:1.4rem}
   function recept(niveau){
     var r = kies(RECEPTEN), van = kies([2, 4]), naar = niveau === 'bb' ? van * kies([2, 3]) : kies([3, 5, 6, 8, 10]); while (naar === van) naar = kies([3, 5, 6, 8, 10]);
     var d = H(r.delen).slice(0, 2), f = naar / van;
+    function hv(x, g){ return precies(g) + (x[2] ? ' ' + x[2] : ''); }
+    function stapIng(x, i){
+      return { tekst:cap(x[0]) + ': ' + hv(x, x[1]) + ' × ' + precies(f) + ' = ' + hv(x, x[1] * f) + '.',
+        waarom:'Via 1 persoon kan ook: ' + precies(x[1]) + ' ÷ ' + van + ' = ' + precies(x[1] / van) + ', en dat keer ' + naar + ' is ' + precies(x[1] * f) + '.',
+        hint:'Doe de ' + x[0] + ' keer ' + precies(f) + '.', veld:i };
+    }
     return {
       onderdeel:'verhoudingstabel: recept', onderdeelNaam:'recept', vorm:'invul', sleutel:'re' + r.naam + van + '-' + naar + d[0][0],
       vraag: 'Een recept voor ' + r.naam + ' is voor ' + van + ' personen. Je maakt het voor <b>' + naar + ' personen</b>.',
       opdracht: 'Voor ' + van + ' personen: ' + d.map(function(x){ return net(x[1]) + (x[2] ? ' ' + x[2] : '') + ' ' + x[0]; }).join(' en ') + '. Hoeveel heb je nodig voor ' + naar + '?',
-      beeld: '<table class="vrecept"><tr><th>personen</th><td>' + van + '</td><td>1</td><td>' + naar + '</td></tr>' + d.map(function(x){ return '<tr><th>' + S(x[0]) + '</th><td>' + net(x[1]) + (x[2] ? ' ' + x[2] : '') + '</td><td>' + net(x[1] / van) + (x[2] ? ' ' + x[2] : '') + '</td><td>?</td></tr>'; }).join('') + '</table>',
+      beeld: '<table class="vrecept"><tr><th>personen</th><td>' + van + '</td><td>1</td><td>' + naar + '</td></tr>' + d.map(function(x){ return '<tr><th>' + S(x[0]) + '</th><td>' + net(x[1]) + (x[2] ? ' ' + x[2] : '') + '</td><td>' + precies(x[1] / van) + (x[2] ? ' ' + x[2] : '') + '</td><td>?</td></tr>'; }).join('') + '</table>',
       velden: d.map(function(x){ return { label: x[0], antwoord: Math.round(x[1] * f * 100) / 100, tol: 0.01, eenheid: x[2] }; }),
-      uitleg: 'Via 1 persoon: ' + d.map(function(x){ return net(x[1]) + ' ÷ ' + van + ' = ' + net(x[1] / van) + ', keer ' + naar + ' = ' + net(x[1] * f) + (x[2] ? ' ' + x[2] : '') + ' ' + x[0]; }).join('; ') + '.',
-      antwoordTekst: d.map(function(x){ return net(x[1] * f) + (x[2] ? ' ' + x[2] : '') + ' ' + x[0]; }).join(', ')
+      uitleg: 'Via 1 persoon: ' + d.map(function(x){ return net(x[1]) + ' ÷ ' + van + ' = ' + precies(x[1] / van) + ', keer ' + naar + ' = ' + net(x[1] * f) + (x[2] ? ' ' + x[2] : '') + ' ' + x[0]; }).join('; ') + '.',
+      antwoordTekst: d.map(function(x){ return net(x[1] * f) + (x[2] ? ' ' + x[2] : '') + ' ' + x[0]; }).join(', '),
+      stappen:[
+        { tekst:'Zoek de factor: van ' + van + ' naar ' + naar + ' personen is keer ' + precies(f) + (f === Math.round(f) ? '' : ' (' + naar + ' ÷ ' + van + ')') + '.',
+          waarom:'Alle ingrediënten gaan met dezelfde factor keer, anders smaakt het anders.',
+          hint:'Hoeveel keer zoveel personen zijn het? Deel ' + naar + ' door ' + van + '.' },
+        stapIng(d[0], 0),
+        stapIng(d[1], 1)
+      ]
     };
   }
 

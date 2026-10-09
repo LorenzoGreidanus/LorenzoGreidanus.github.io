@@ -25,7 +25,53 @@
                   en api.uit(tekst); het spel roept klaar() als het antwoord er is.
    misserBeeld:false houdt een versierend plaatje uit de lijst met missers op het eindscherm.
    onderdeel is waar KLAS.tel op telt (per onderdeel goed/gesteld, voor het
-   klasoverzicht). niveau voor de klas komt uit keuze.niveau. */
+   klasoverzicht). niveau voor de klas komt uit keuze.niveau.
+
+   STAP VOOR STAP, de begeleide stand: de knop op het startscherm, of ?begeleid=1 in het
+   adres (samen met ?n=, ?soort=, ?aantal= enzovoort). Per onderdeel (de items van de keuze
+   'soort', zonder 'alles'; staat soort vast in het adres, dan alleen dat onderdeel) gaat het
+   zoals een docent het aan het bord doet:
+     1. voordoen: een uitgewerkt voorbeeld, stap voor stap, met bij elke stap waarom;
+     2. samen doen: opgaven met de stappen als steiger. Bij de eerste staat stap 1 er al,
+        daarna vraag je zelf een stap als je vastloopt, een per keer, nooit meteen het antwoord;
+     3. zelf doen: de steiger valt weg. Na drie keer goed zonder hint door naar het volgende
+        onderdeel; twee keer mis op rij en de stappen komen even terug.
+   Na een fout: de uitleg van precies de stap die misging, en een vergelijkbare opgave (zelfde
+   vorm, zelfde onderdeel en evenveel stappen, als dat lukt).
+   Het telt niet voor beste scores, de klas of Mijn voortgang. Munten wel, voor wat zelf goed was.
+
+   Stappen aanleveren kan het makkelijkst in de opgave zelf, waar de getallen al bekend zijn:
+
+     return { onderdeel, vraag, vorm:'invul', velden:[{ label:'bij 1', antwoord:2.5 }, { label:'bij 8', antwoord:20 }], uitleg,
+       stappen:[
+         { tekst:'Deel door 3: 7,50 ÷ 3 = 2,50.', waarom:'Bij 1 hoort een derde van wat bij 3 hoort.', hint:'Deel 7,50 door 3.', veld:0 },
+         { tekst:'Keer 8: 2,50 × 8 = 20.', waarom:'Bij 8 hoort acht keer zoveel als bij 1.', hint:'Hoeveel keer zoveel is 8 als 1?', veld:1 }
+       ] };
+
+     tekst   wat je doet, met de getallen van deze opgave (html mag)
+     waarom  waarom die stap klopt (niet verplicht, maar daar zit de uitleg)
+     hint    wat de leerling bij samen doen ziet, zonder de uitkomst (het waarom komt dan pas bij
+             de uitwerking). Zonder hint krijgt hij tekst en waarom, en dan niet die van de laatste
+             stap: die geeft het antwoord weg
+     fout    de bekende fout bij deze stap; staat erbij als het daar misging (niet verplicht)
+     veld    bij welk invulvak deze stap hoort: de index van de input in het antwoordvak, vanaf 0
+             (bij een eigen vorm met inputs ook; een input met de klasse fout is mis)
+     optie   bij meerkeuze: de index (of een lijst) van de foute opties die uit deze stap komen
+     kaart   bij slepen: de id's van de kaartjes die deze stap neerlegt
+   Met veld, optie of kaart ziet de motor bij een fout welke stap misging. Anders kan de opgave
+   het zelf zeggen: foutStap:function(antwoordvak){ return index of -1; }.
+
+   Of los van de opgaven, in de configuratie (alles niet verplicht):
+     begeleid:{
+       stappen:function(opgave, keuze){ return [{ tekst, waarom }, …]; },   als de opgave zelf geen stappen heeft
+       voorbeeld:function(onderdeel, keuze){ return opgave; },               een vaste voorbeeldopgave per onderdeel
+       onderdelen:{ via1:{ uit:'…' }, recept:false },                        uit staat bij voordoen; false slaat over
+       samen:2, zelf:3, keuze:'soort'                                        hoeveel goed per fase; welke keuze de onderdelen geeft
+     }
+   Een eigen vorm kan in teken el.voordoe = function(){ … } zetten: dat vult bij voordoen het
+   antwoord in, net als el.proef voor de proefscripts. maak krijgt in deze stand keuze.begeleid
+   ('voordoen', 'samen' of 'zelf') mee. Zonder stappen knipt de motor de uitleg van de opgave in
+   zinnen: zo heeft elk vakspel de stand meteen, maar duidelijk minder uitgebreid. */
 /* de nagekeken g in de kop, net als op de andere pagina's; merk.js tekent hem opnieuw als je er met de muis overheen gaat */
 var MERK = "<svg class=\"ng teken\" viewBox=\"0 0 256 256\" width=\"34\" height=\"34\" aria-hidden=\"true\" focusable=\"false\" style=\"width:100%;height:100%;overflow:visible;transform:scale(1.3)\"><style>.ng .ngr{stroke:#204ECF}.ng .ngv{stroke:#F26749}:root[data-theme=\"dark\"] .ng .ngr{stroke:#83A5F2}@media(prefers-color-scheme:dark){:root:not([data-theme=\"light\"]) .ng .ngr{stroke:#83A5F2}}.ng.teken .ngr{stroke-dasharray:100;animation:ng-ring .6s cubic-bezier(.6,0,.3,1) .15s both}.ng.teken .ngv{stroke-dasharray:100;animation:ng-vink .34s cubic-bezier(.3,0,.2,1) .67s both}@keyframes ng-ring{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}@keyframes ng-vink{from{stroke-dashoffset:100;opacity:0}1%{opacity:1}to{stroke-dashoffset:0;opacity:1}}@media(prefers-reduced-motion:reduce){.ng.teken .ngr,.ng.teken .ngv{animation:none}}</style><g transform=\"translate(8 0)\" fill=\"none\" stroke-width=\"32\"><path class=\"ngr\" pathLength=\"100\" d=\"M163.3 123A50 50 0 1 0 76.7 73A50 50 0 1 0 163.3 123Z\"/><path class=\"ngv\" pathLength=\"100\" d=\"M163.3 123L114.2 208L82.2 176\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></g></svg>";
 if (!document.querySelector('script[src$="merk.js"]')) { var merkScript = document.createElement('script'); merkScript.src = '/leermiddelen/merk.js'; document.head.appendChild(merkScript); }
@@ -124,9 +170,12 @@ window.VAKSPEL = (function(){
         '<div class="aantalrij"><p class="eyebrow" id="kop-aantal">hoeveel opgaven</p><div class="keuze" id="keuze-aantal" role="group" aria-labelledby="kop-aantal">' +
           AANTALLEN.map(function(n){ return '<button type="button" data-n="' + n + '" aria-pressed="false">' + n + '</button>'; }).join('') + '</div><p class="keuzeuit" id="uit-aantal"></p></div>' +
         '<div class="startknoppen"><button class="btn" id="startBtn" type="button">Start</button>' +
-        '<button class="btn tweede" id="oneindigBtn" type="button" title="Zoveel opgaven als je wilt, je stopt zelf">Oneindig oefenen</button></div>' +
+        '<button class="btn tweede" id="oneindigBtn" type="button" title="Zoveel opgaven als je wilt, je stopt zelf">Oneindig oefenen</button>' +
+        '<button class="btn tweede" id="begeleidBtn" type="button" title="Eerst een voorbeeld, dan samen met de stappen, dan zelf">Stap voor stap</button></div>' +
       '</section>' +
       '<section class="wrap speelvak hide" id="scherm-spel">' +
+        /* stap voor stap: de onderdelen en de drie fasen, in plaats van de balk met punten */
+        '<div class="vs-beg hide" id="begKop"></div>' +
         '<div class="balk" id="balk"></div>' +
         '<div class="voort"><i id="voortIn"></i></div>' +
         '<div class="kaart">' +
@@ -134,9 +183,11 @@ window.VAKSPEL = (function(){
           '<p class="vraag" id="vraag"></p>' +
           '<p class="opdracht" id="opdracht"></p>' +
           '<div class="beeld" id="beeld"></div>' +
+          '<div class="vs-steiger hide" id="steiger"></div>' +
           '<div class="antwoordvak" id="antwoordvak"></div>' +
           '<div id="reactie" role="status" aria-live="polite"></div>' +
-          '<div class="verder hide" id="verder"><button type="button" class="stop hide" id="stopBtn">Stoppen</button><button type="button" id="verderBtn">Volgende &rarr;</button></div>' +
+          '<p class="vs-sr" id="stapMeld" role="status" aria-live="polite"></p>' +
+          '<div class="verder hide" id="verder"><button type="button" class="stop hide" id="stopBtn">Stoppen</button><button type="button" class="stop hide" id="begVbBtn">Nog een voorbeeld</button><button type="button" id="verderBtn">Volgende &rarr;</button></div>' +
         '</div>' +
       '</section>' +
       /* het eindscherm: de eindkaart van spel.js zet de score bovenaan en heeft de knop voor een nieuwe ronde;
@@ -240,6 +291,7 @@ window.VAKSPEL = (function(){
     nivToast.classList.add('aan'); clearTimeout(nivKlok); nivKlok = setTimeout(function(){ nivToast.classList.remove('aan'); }, 4200);
   }
   function start(zo){
+    begUit();
     oneindig = !!zo;
     cfg.aantal = aantal;
     nivNu = keuze.niveau || null; nivReeks = 0;
@@ -267,11 +319,13 @@ window.VAKSPEL = (function(){
   }
   function naarStart(){
     bezig = false;
+    begUit();
     $('scherm-spel').classList.add('hide'); $('scherm-einde').classList.add('hide'); $('scherm-start').classList.remove('hide');
     opnieuwKnop(false);
     window.scrollTo({ top:0, behavior:'auto' });
   }
   function volgende(){
+    if (beg){ begVerder(); return; }
     if (!oneindig && nr >= cfg.aantal){ einde(); return; }
     nr++;
     /* niet steeds dezelfde, maar in een lange sessie mag er na een tijd weer een terugkomen */
@@ -282,6 +336,10 @@ window.VAKSPEL = (function(){
     if (opgave.sleutel) vorigeSleutels.push(opgave.sleutel);
     bezig = true;
     balk();
+    tekenOpgave();
+  }
+  /* de opgave in de kaart zetten: vraag, beeld en de antwoordvorm (ook voor stap voor stap) */
+  function tekenOpgave(){
     $('onderdeelUit').textContent = opgave.onderdeelNaam || opgave.onderdeel || '';
     $('vraag').innerHTML = opgave.vraag || '';
     $('opdracht').innerHTML = opgave.opdracht || '';
@@ -290,7 +348,8 @@ window.VAKSPEL = (function(){
     $('beeld').classList.toggle('hide', !opgave.beeld);
     $('reactie').innerHTML = '';
     $('verder').classList.add('hide');
-    var vak = $('antwoordvak'); vak.innerHTML = '';
+    /* voordoe hoort bij de vorige opgave in eigen vorm: weg ermee */
+    var vak = $('antwoordvak'); vak.innerHTML = ''; vak.voordoe = null;
     if (opgave.vorm === 'meerkeuze') meerkeuze(vak);
     else if (opgave.vorm === 'invul') invul(vak);
     else if (opgave.vorm === 'sleep') sleep(vak);
@@ -494,6 +553,8 @@ window.VAKSPEL = (function(){
   function klaar(isGoed, extra, deels){
     if (!bezig) return;
     bezig = false;
+    /* stap voor stap telt niet mee: geen punten, geen missers, niets naar de klas */
+    if (beg){ begKlaar(isGoed, extra, deels); return; }
     var w = opgave.punten || 10;
     /* bij een sleepvraag: ligt meer dan de helft goed, dan is het bijna, met punten naar rato */
     var bijna = !isGoed && deels && deels.van > 1 && deels.goed * 2 >= deels.van;
@@ -603,6 +664,317 @@ window.VAKSPEL = (function(){
       if (!beste || mis > beste.mis || (mis === beste.mis && p < beste.p)) beste = { p:p, mis:mis, c:c, naam:c[2], id:it.id, keuze:'soort' };
     });
     return beste;
+  }
+
+  /* ---------- stap voor stap: voordoen, samen doen, zelf doen (zie bovenaan) ----------
+     Dezelfde kaart en dezelfde antwoordvormen als een gewone ronde, met daarboven de
+     onderdelen en de drie fasen, en tussen het beeld en het antwoord de steiger: de stappen.
+     beg: { delen, i, fase, st:{ eigen, lijst }, samenGoed, zelfGoed, foutRij, hulp, gegeven,
+     vorigeFout, laatste, mis, verder, uitslag:[{ naam, zelf, gedaan, hint, klaar }] } */
+  var beg = null, begTeller = 0;
+  function begAantal(n, std){ return typeof n === 'number' && n > 0 ? Math.round(n) : std; }
+  function begCfg(){ return cfg.begeleid || {}; }
+  /* de onderdelen: de items van de keuze soort, zonder alles. Zette de docent er een vast, dan alleen dat */
+  function begDelen(){
+    var b = begCfg(), kid = b.keuze || 'soort', ob = b.onderdelen || {};
+    var sk = (cfg.keuzes || []).filter(function(k){ return k.id === kid; })[0];
+    var lijst = sk ? sk.items.filter(function(it){ return it.id !== 'alles' && ob[it.id] !== false; }) : [];
+    var rij = sk && $('keuze-' + kid);
+    if (rij && rij.classList.contains('hide') && keuze[kid] !== 'alles') lijst = lijst.filter(function(it){ return it.id === keuze[kid]; });
+    if (!lijst.length) return [{ id:'', keuze:'', naam:cfg.naam, uit:'' }];
+    return lijst.map(function(it){ var e = ob[it.id] || {}; return { id:it.id, keuze:kid, naam:it.naam, uit:e.uit || schoon(it.uit || '') }; });
+  }
+  function begStart(){
+    if (!cfg) return;
+    beg = { delen:begDelen(), i:0, uitslag:[], eerste:true };
+    /* koos de leerling op het startscherm één onderdeel, dan begint hij daar */
+    var kid = beg.delen[0].keuze, i = kid ? beg.delen.map(function(d){ return d.id; }).indexOf(keuze[kid]) : -1;
+    nr = 0; oneindig = false;
+    $('scherm-start').classList.add('hide'); $('scherm-einde').classList.add('hide'); $('scherm-spel').classList.remove('hide');
+    $('scherm-spel').classList.add('begeleid');
+    $('balk').classList.add('hide'); $('voortIn').parentNode.classList.add('hide');
+    $('begKop').classList.remove('hide');
+    if (nivToast){ clearTimeout(nivKlok); nivToast.classList.remove('aan'); }
+    opnieuwKnop(false);
+    begDeel(i > 0 ? i : 0);
+  }
+  /* terug naar een gewone ronde of het startscherm: start() en naarStart() roepen dit altijd */
+  function begUit(){
+    beg = null;
+    if (!$('scherm-spel')) return;
+    $('scherm-spel').classList.remove('begeleid');
+    $('begKop').classList.add('hide'); $('begKop').innerHTML = '';
+    $('steiger').classList.add('hide'); $('steiger').innerHTML = '';
+    $('balk').classList.remove('hide'); $('begVbBtn').classList.add('hide');
+    var vak = $('antwoordvak'); vak.removeAttribute('inert'); vak.classList.remove('vs-voordoet');
+  }
+  function begDeel(i){
+    beg.i = i; beg.samenGoed = 0; beg.zelfGoed = 0; beg.foutRij = 0; beg.vorigeFout = false; beg.laatste = null;
+    if (!beg.uitslag[i]) beg.uitslag[i] = { naam:beg.delen[i].naam, zelf:0, gedaan:0, hint:0, klaar:false };
+    begVoordoen();
+  }
+  function begKeuze(fase){
+    var k = Object.assign({}, keuze), d = beg.delen[beg.i];
+    if (d.keuze) k[d.keuze] = d.id;
+    k.begeleid = fase;
+    return k;
+  }
+  /* een opgave van dit onderdeel; na een fout een die erop lijkt: dezelfde vorm, hetzelfde
+     onderdeel en evenveel stappen (meestal hetzelfde soort som), als dat lukt */
+  function begMaak(fase, lijkOp){
+    var k = begKeuze(fase), b = begCfg(), o = null, reserve = null, reserveAnders = true;
+    if (vorigeSleutels.length > 40) vorigeSleutels.splice(0, vorigeSleutels.length - 40);
+    if (fase === 'voordoen' && typeof b.voorbeeld === 'function') o = b.voorbeeld(beg.delen[beg.i].id, k) || null;
+    for (var p = 0; !o && p < 14; p++){
+      var x = cfg.maak(Object.assign({}, k), ++begTeller);
+      if (!x) continue;
+      var oud = !!(x.sleutel && vorigeSleutels.indexOf(x.sleutel) >= 0);
+      var anders = !!(lijkOp && (x.vorm !== lijkOp.vorm || (x.onderdeel || '') !== (lijkOp.onderdeel || '') || (x.stappen || []).length !== (lijkOp.stappen || []).length));
+      if ((oud || anders) && p < 12){ if (!reserve || (reserveAnders && !anders)){ reserve = x; reserveAnders = anders; } continue; }
+      o = x;
+    }
+    o = o || reserve;
+    if (o && o.sleutel) vorigeSleutels.push(o.sleutel);
+    return o;
+  }
+  /* de stappen van een opgave: van de opgave zelf, van begeleid.stappen, of de uitleg in zinnen */
+  function begStappen(o){
+    var l = Array.isArray(o.stappen) && o.stappen.length ? o.stappen : null, b = begCfg();
+    if (!l && typeof b.stappen === 'function') l = b.stappen(o, begKeuze(beg.fase)) || null;
+    var eigen = !!(l && l.length);
+    if (!eigen) l = begZinnen(o.uitleg);
+    return { eigen:eigen, lijst:l.map(function(s){ return typeof s === 'string' ? { tekst:s } : s; }).filter(function(s){ return s && s.tekst; }) };
+  }
+  /* de uitleg in zinnen; niet knippen na een rangnummer (1.) of een afkorting (bijv.) */
+  function begZinnen(html){
+    var t = String(html || '').replace(/<(div|svg|ol|ul|table)\b[\s\S]*$/i, '').replace(/<br\s*\/?>|<\/(p|li|h\d)>/gi, '\n')
+      .replace(/<(?!\/?(b|i|em|strong|sub|sup)\b)[^>]*>/gi, '');
+    var uit = [];
+    t.split('\n').forEach(function(regel){
+      var re = /[.!?]\s+(?=[A-ZÀ-Ý0-9‘“'"(<])/g, m, begin = 0;
+      while ((m = re.exec(regel))){
+        var stuk = regel.slice(begin, m.index + 1).trim();
+        if (/^\d+[.)]$/.test(stuk) || /\b(bijv|bv|o\.a|enz|nr|ca|d\.w\.z|vs|blz)\.$/i.test(stuk)) continue;
+        if (stuk) uit.push(stuk);
+        begin = m.index + m[0].length;
+      }
+      var rest = regel.slice(begin).trim(); if (rest) uit.push(rest);
+    });
+    return uit;
+  }
+  /* bij samen doen geeft een hint nooit het antwoord: de laatste stap alleen als hij een eigen hint heeft */
+  function begHintbaar(l){ return !l.length ? 0 : l[l.length - 1].hint ? l.length : l.length - 1; }
+  function begAntwoord(o){
+    if (o.vorm === 'meerkeuze' && o.opties) return o.opties[o.goed];
+    if (o.antwoordTekst) return schoon(kaleTekst(o.antwoordTekst));
+    if (o.vorm === 'invul') return o.velden.map(function(v){ return schoon((v.label ? v.label + ': ' : '') + toonAntwoord(v)); }).join('; ');
+    if (o.vorm === 'sleep') return o.vakken.map(function(v, i){ return schoon(kaleTekst(v.naam) || 'vak ' + (i + 1)) + ': ' + (v.hoort || []).map(function(id){ var k = o.kaarten.filter(function(x){ return x.id === id; })[0]; return k ? k.tekst : ''; }).join(', '); }).join('; ');
+    return '';
+  }
+  /* een stap in de lijst; bij samen doen alleen de hint als die er is (het waarom verraadt vaak de uitkomst) */
+  function begLi(s, i, hint, klasse){
+    var alleenHint = hint && s.hint;
+    return '<li' + (klasse ? ' class="' + klasse + '"' : '') + '><i aria-hidden="true">' + (i + 1) + '</i><div><span class="vs-sr">Stap ' + (i + 1) + ': </span>' + (alleenHint ? s.hint : s.tekst) +
+      (s.waarom && !alleenHint ? '<span class="vs-waarom"><b>Waarom:</b> ' + s.waarom + '</span>' : '') + '</div></li>';
+  }
+  function begSlot(o){ return '<li class="slot"><i aria-hidden="true">&#10003;</i><div>Het antwoord: <b>' + begAntwoord(o) + '</b></div></li>'; }
+  function begSteiger(kop, intro, knop, stil){
+    var st = $('steiger');
+    st.innerHTML = '<p class="eyebrow' + (kop ? '' : ' hide') + '" id="steigerKop">' + kop + '</p>' + [].concat(intro || []).filter(Boolean).map(function(t){ return '<p class="vs-intro">' + t + '</p>'; }).join('') +
+      '<ol class="vs-denk" id="stapLijst"></ol><p class="vs-noot hide" id="stapNoot"></p>' +
+      '<div class="vs-stapknop"><button type="button" class="vs-knop' + (stil ? ' stil' : '') + '" id="stapBtn">' + knop + '</button></div>';
+    st.classList.remove('hide', 'vs-dicht');
+  }
+  /* een nieuwe stap erbij: hardop voor een schermlezer, en in beeld als hij onder de rand valt */
+  function begErbij(html){
+    var l = $('stapLijst'); l.insertAdjacentHTML('beforeend', html);
+    var li = l.lastElementChild, meld = $('stapMeld');
+    meld.textContent = ''; setTimeout(function(){ meld.textContent = (li.querySelector('div') || li).textContent; }, 40);
+    var zacht = !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+    if (li.getBoundingClientRect().bottom > innerHeight - 90) li.scrollIntoView({ block:'center', behavior: zacht ? 'smooth' : 'auto' });
+  }
+  /* bij voordoen het antwoord invullen in de antwoordvorm zelf */
+  function begVulIn(o, vak){
+    function met(sel, attr, w){ return Array.prototype.filter.call(vak.querySelectorAll(sel), function(x){ return x.getAttribute(attr) === String(w); })[0]; }
+    if (typeof vak.voordoe === 'function'){ vak.voordoe(); return; }
+    if (o.vorm === 'meerkeuze'){ var g = met('.optie', 'data-i', o.goed); if (g) g.classList.add('juist'); }
+    else if (o.vorm === 'invul'){
+      var inv = vak.querySelectorAll('input');
+      o.velden.forEach(function(v, i){ if (!inv[i]) return; inv[i].value = typeof v.antwoord === 'number' && v.type !== 'tekst' ? String(v.antwoord).replace('.', ',') : (v.toon || (Array.isArray(v.antwoord) ? v.antwoord[0] : v.antwoord)); inv[i].classList.add('goed'); });
+    } else if (o.vorm === 'sleep') o.vakken.forEach(function(v){
+      var doel = met('.sleepdoel', 'data-id', v.id); if (!doel) return;
+      (v.hoort || []).forEach(function(id){ var k = met('.sleepkaart', 'data-id', id); if (k){ doel.querySelector('.inhoud').appendChild(k); k.classList.add('goed'); } });
+    });
+  }
+  /* de kop: de onderdelen (aantikken om te wisselen) en de drie fasen, met bij zelf doen de bolletjes */
+  function begKopTeken(){
+    var fasen = [['voordoen', 'voordoen'], ['samen', 'samen doen'], ['zelf', 'zelf doen']], nu = ['voordoen', 'samen', 'zelf'].indexOf(beg.fase), n = begAantal(begCfg().zelf, 3);
+    $('begKop').innerHTML = (beg.delen.length > 1 ? '<div class="vs-delen" role="group" aria-label="Onderdelen">' + beg.delen.map(function(d, i){
+        var u = beg.uitslag[i], af = u && u.klaar;
+        return '<button type="button" data-i="' + i + '" class="' + (i === beg.i ? 'nu' : af ? 'klaar' : '') + '"' + (i === beg.i ? ' aria-current="step"' : '') + '>' + schoon(d.naam) + (af ? '<span class="vs-sr"> (af)</span>' : '') + '</button>';
+      }).join('') + '</div>' : '') +
+      '<ol class="vs-fasen" aria-label="Fasen">' + fasen.map(function(f, i){
+        return '<li class="' + (i === nu ? 'nu' : i < nu ? 'af' : '') + '"' + (i === nu ? ' aria-current="step"' : '') + '><i aria-hidden="true">' + (i + 1) + '</i><span>' + f[1] + '</span>' +
+          (f[0] === 'zelf' ? '<span class="vs-bol" aria-hidden="true">' + Array.apply(null, Array(n)).map(function(x, j){ return '<span' + (j < beg.zelfGoed ? ' class="aan"' : '') + '></span>'; }).join('') + '</span><span class="vs-sr">, ' + beg.zelfGoed + ' van de ' + n + ' zelf goed</span>' : '') + '</li>';
+      }).join('') + '</ol>';
+    var aan = $('begKop').querySelector('.vs-delen .nu'), rij = aan && aan.parentNode;
+    if (aan && rij.scrollWidth > rij.clientWidth) rij.scrollLeft = aan.offsetLeft - rij.offsetLeft - 12;
+  }
+  /* 1. voordoen: het uitgewerkte voorbeeld, een stap per klik, en dan het antwoord ingevuld */
+  function begVoordoen(){
+    beg.fase = 'voordoen'; beg.verder = null; beg.mis = -1; beg.hulp = 0;
+    var d = beg.delen[beg.i], o = begMaak('voordoen');
+    if (!o){ begEinde(); return; }
+    opgave = o; bezig = false; nr++;
+    tekenOpgave();
+    var vak = $('antwoordvak'); vak.setAttribute('inert', ''); vak.classList.add('vs-voordoet');
+    beg.st = begStappen(o);
+    $('onderdeelUit').textContent = 'voordoen' + (d.id ? ' · ' + d.naam : '');
+    begKopTeken();
+    var intro = [beg.eerste ? 'Eerst zie je hoe het gaat, stap voor stap en met waarom. Daarna maak je er een met de stappen als hulp, en dan zelf.' : '', d.uit];
+    beg.eerste = false;
+    var l = beg.st.lijst, st = 0;
+    begSteiger('zo pak je het aan', intro, l.length ? 'Eerste stap' : 'Laat het antwoord zien');
+    var knop = $('stapBtn');
+    knop.addEventListener('click', function(){
+      if (!beg || beg.fase !== 'voordoen') return;
+      if (st < l.length){ begErbij(begLi(l[st], st)); st++; knop.textContent = st < l.length ? 'Volgende stap' : 'Het antwoord'; return; }
+      begErbij(begSlot(o));
+      begVulIn(o, vak);
+      knop.parentNode.classList.add('hide');
+      begVerderKnop('Nu jij, met hulp', function(){ begOpgave('samen'); });
+    });
+    setTimeout(function(){ try { knop.focus({ preventScroll:true }); } catch (e){} }, 60);
+  }
+  /* 2. en 3. samen doen en zelf doen: een gewone opgave, met of zonder steiger */
+  function begOpgave(fase){
+    beg.fase = fase; beg.hulp = 0; beg.mis = -1; beg.gegeven = 0;
+    var d = beg.delen[beg.i], o = begMaak(fase, beg.vorigeFout ? beg.laatste : null);
+    if (!o){ begEinde(); return; }
+    beg.laatste = o;
+    var vak = $('antwoordvak'); vak.removeAttribute('inert'); vak.classList.remove('vs-voordoet');
+    opgave = o; bezig = true; nr++;
+    tekenOpgave();
+    beg.st = begStappen(o);
+    $('onderdeelUit').textContent = (fase === 'samen' ? 'samen doen' : 'zelf doen') + (d.id ? ' · ' + d.naam : '');
+    begKopTeken();
+    var l = beg.st.lijst, n = begHintbaar(l), zelf = fase === 'zelf';
+    if (!zelf){
+      begSteiger('de stappen', !beg.st.eigen && d.uit ? '<b>Tip:</b> ' + d.uit : '', 'Geef een stap', true);
+      /* de eerste opgave, en na een fout: stap 1 staat er al */
+      if (n && (beg.samenGoed === 0 || beg.vorigeFout)){ $('stapLijst').innerHTML = begLi(l[0], 0, true); beg.gegeven = 1; }
+      if (!n && !beg.st.eigen && !d.uit) $('steiger').classList.add('hide');
+    } else {
+      /* de steiger is weg; alleen een knop voor wie echt vastzit */
+      begSteiger('', '', 'Ik zit vast: geef een stap', true);
+      $('steiger').classList.add('vs-dicht');
+      if (!n) $('steiger').classList.add('hide');
+    }
+    var knop = $('stapBtn');
+    knop.parentNode.classList.toggle('hide', beg.gegeven >= n);
+    knop.addEventListener('click', function(){
+      if (!bezig || !beg || beg.gegeven >= n) return;
+      if (zelf){ $('steiger').classList.remove('vs-dicht'); $('steigerKop').textContent = 'de stappen'; $('steigerKop').classList.remove('hide'); }
+      beg.hulp++;
+      begErbij(begLi(l[beg.gegeven], beg.gegeven, true));
+      beg.gegeven++;
+      var noot = $('stapNoot');
+      if (zelf){ noot.textContent = 'Met een hint telt deze niet als zelf goed.'; noot.classList.remove('hide'); }
+      if (beg.gegeven >= n){
+        knop.parentNode.classList.add('hide');
+        if (!zelf){ noot.textContent = 'Meer stappen zijn er niet: de laatste stap is het antwoord zelf.'; noot.classList.remove('hide'); }
+        var eerst = vak.querySelector('input:not([disabled]), .optie, .sleepkaart, button');
+        if (eerst) eerst.focus({ preventScroll:true });
+      } else knop.textContent = 'Nog een stap';
+    });
+  }
+  /* welke stap misging: wat de opgave zelf zegt, of via veld, optie en kaart */
+  function begMisStap(o, l){
+    var vak = $('antwoordvak');
+    if (typeof o.foutStap === 'function'){ var r = o.foutStap(vak); return typeof r === 'number' && l[r] ? r : -1; }
+    var inv = vak.querySelectorAll('input'), mis = vak.querySelector('.optie.mis'), gekozen = mis ? +mis.getAttribute('data-i') : null;
+    var kaarten = Array.prototype.map.call(vak.querySelectorAll('.sleepkaart.fout'), function(k){ return k.getAttribute('data-id'); });
+    for (var i = 0; i < l.length; i++){
+      var s = l[i];
+      if (s.veld != null && [].concat(s.veld).some(function(v){ return inv[v] && inv[v].classList.contains('fout'); })) return i;
+      if (s.optie != null && gekozen !== null && [].concat(s.optie).indexOf(gekozen) >= 0) return i;
+      if (s.kaart != null && [].concat(s.kaart).some(function(id){ return kaarten.indexOf(id) >= 0; })) return i;
+    }
+    return -1;
+  }
+  function begVolgendDeel(){
+    for (var j = 1; j <= beg.delen.length; j++){ var k = (beg.i + j) % beg.delen.length; if (!beg.uitslag[k] || !beg.uitslag[k].klaar) return k; }
+    return -1;
+  }
+  function begVerderKnop(tekst, fn, voorbeeld){
+    beg.verder = fn;
+    $('verderBtn').textContent = tekst;
+    $('begVbBtn').classList.toggle('hide', !voorbeeld);
+    $('stopBtn').classList.remove('hide');
+    $('verder').classList.remove('hide');
+    setTimeout(function(){ $('verderBtn').focus({ preventScroll:true }); inBeeld(); }, 30);
+  }
+  function begVerder(){ var f = beg && beg.verder; if (!f) return; beg.verder = null; $('begVbBtn').classList.add('hide'); f(); }
+  /* nagekeken: wat er goed of mis ging, bij een fout de stap waar het misging, en waar het heen gaat */
+  function begKlaar(isGoed, extra, deels){
+    var b = begCfg(), fase = beg.fase, u = beg.uitslag[beg.i], l = beg.st.lijst, zelfZonder = fase === 'zelf' && !beg.hulp;
+    var nodigSamen = begAantal(b.samen, 2), nodigZelf = begAantal(b.zelf, 3);
+    var bijna = !isGoed && deels && deels.van > 1 && deels.goed * 2 >= deels.van;
+    u.gedaan++; if (beg.hulp) u.hint++;
+    beg.mis = isGoed ? -1 : begMisStap(opgave, l);
+    if (fase === 'samen' && isGoed) beg.samenGoed++;
+    if (fase === 'zelf'){ if (isGoed){ beg.foutRij = 0; if (zelfZonder){ beg.zelfGoed++; u.zelf++; } } else beg.foutRij++; }
+    beg.vorigeFout = !isGoed;
+    /* waar het heen gaat */
+    var naar, noot = '';
+    if (fase === 'samen'){
+      naar = !isGoed ? ['Een vergelijkbare opgave', function(){ begOpgave('samen'); }, true]
+        : beg.samenGoed >= nodigSamen ? ['Nu zelf, zonder hulp', function(){ begOpgave('zelf'); }]
+        : ['Volgende opgave', function(){ begOpgave('samen'); }];
+    } else if (beg.zelfGoed >= nodigZelf){
+      u.klaar = true;
+      noot = '<p class="vs-af">Dit onderdeel zit erin: ' + nodigZelf + ' keer goed zonder hulp.</p>';
+      var volg = begVolgendDeel();
+      naar = volg >= 0 ? ['Volgende onderdeel: ' + beg.delen[volg].naam, function(){ begDeel(volg); }] : ['Naar het overzicht', begEinde];
+    } else if (!isGoed && beg.foutRij >= 2){
+      /* twee keer mis op rij: de steiger komt terug, voor één opgave */
+      beg.samenGoed = Math.max(0, nodigSamen - 1); beg.foutRij = 0;
+      noot = '<p>Twee keer mis op rij. Je krijgt de stappen weer even als hulp.</p>';
+      naar = ['Nog een keer met hulp', function(){ begOpgave('samen'); }, true];
+    } else naar = [!isGoed ? 'Een vergelijkbare opgave' : 'Volgende opgave', function(){ begOpgave('zelf'); }];
+    var s = beg.mis >= 0 ? l[beg.mis] : null;
+    var kop = isGoed ? (fase === 'zelf' ? (zelfZonder ? 'Goed, helemaal zelf!' : 'Goed, met hulp. Deze telt nog niet als zelf goed.') : beg.hulp ? 'Goed, met ' + (beg.hulp === 1 ? 'één stap' : beg.hulp + ' stappen') + ' als hulp.' : 'Goed!')
+      : bijna ? 'Bijna: ' + deels.goed + ' van de ' + deels.van + ' goed.' : 'Niet goed.';
+    var h = '<div class="uitslagregel ' + (isGoed ? 'goed' : bijna ? 'bijna' : 'fout') + '"><b>' + (isGoed && window.NAGEKEKEN ? NAGEKEKEN.svg({ maat: 24, teken: true }) : '') + kop + '</b>' + (extra ? '<p>' + extra + '</p>' : '');
+    if (s) h += '<div class="vs-misstap"><p class="eyebrow">hier ging het mis: stap ' + (beg.mis + 1) + '</p><p>' + s.tekst + '</p>' + (s.fout ? '<p><b>Let op:</b> ' + s.fout + '</p>' : '') + (s.waarom ? '<p class="vs-waarom"><b>Waarom:</b> ' + s.waarom + '</p>' : '') + '</div>';
+    else if (!isGoed && beg.st.eigen) h += '<p>Loop de stappen hierboven na: waar wijkt jouw antwoord af?</p>';
+    /* zonder eigen stappen: de uitleg van het spel zelf, met plaatje en al */
+    if (!beg.st.eigen && opgave.uitleg) h += '<div class="waarom">' + opgave.uitleg + '</div>';
+    $('reactie').innerHTML = h + noot + '</div>';
+    /* met eigen stappen: de hele uitwerking in de steiger, de foute stap gemarkeerd; bij zelf goed hoeft dat niet */
+    if (beg.st.eigen && l.length && !(isGoed && fase === 'zelf')){
+      $('steiger').classList.remove('hide', 'vs-dicht');
+      $('steiger').innerHTML = '<p class="eyebrow">zo gaat het, stap voor stap</p><ol class="vs-denk">' + l.map(function(x, i){ return begLi(x, i, false, i === beg.mis ? 'mis' : ''); }).join('') + begSlot(opgave) + '</ol>';
+    } else $('steiger').classList.add('hide');
+    begKopTeken();
+    begVerderKnop(naar[0], naar[1], naar[2]);
+  }
+  /* het overzicht: per onderdeel af of niet; munten voor wat zelf goed was, verder telt het nergens mee */
+  function begEinde(){
+    if (!beg) return;
+    var b = beg, lijst = b.uitslag.filter(Boolean), af = lijst.filter(function(u){ return u.klaar; }).length, zelf = lijst.reduce(function(s, u){ return s + u.zelf; }, 0);
+    bezig = false;
+    begUit();
+    $('scherm-spel').classList.add('hide'); $('scherm-einde').classList.remove('hide');
+    opnieuwKnop(false);
+    $('eindKop').textContent = b.delen.length > 1 ? 'Stap voor stap: ' + af + ' van de ' + b.delen.length + ' onderdelen af.' : af ? 'Stap voor stap: dit zit erin.' : 'Stap voor stap: gestopt.';
+    $('eindBand').textContent = (zelf ? 'Je had ' + zelf + (zelf === 1 ? ' opgave' : ' opgaven') + ' goed zonder hulp. ' : '') +
+      'Dit was oefenen met hulp: het telt niet voor je beste score of voor de klas. ' + (af === b.delen.length ? 'Probeer nu een gewone ronde.' : 'De onderdelen die nog niet af zijn, kun je later stap voor stap afmaken.');
+    $('groei').classList.add('hide'); $('zwakst').classList.add('hide'); $('missers').innerHTML = '';
+    $('perdeel').innerHTML = lijst.map(function(u){ return '<span class="' + (u.klaar ? 'g' : 'm') + '">' + schoon(u.naam) + '<b>' + (u.klaar ? 'af' : 'nog niet af') + '</b> <small>' + u.zelf + ' zelf goed</small></span>'; }).join('');
+    if (window.SPEL && SPEL.einde) SPEL.einde({ spel:cfg.id, vak:cfg.vak, kop:'stap voor stap', compact:true, klas:false, goed:zelf, reeks:0, sleutel:'stapvoorstap',
+      opnieuw:function(){ start(false); }, opnieuwTekst:'Nu een gewone ronde' });
+    window.scrollTo({ top:0, behavior:'auto' });
   }
 
   /* ---------- de tutorial: drie stappen die bij elk vakspel kloppen ---------- */
@@ -723,17 +1095,24 @@ window.VAKSPEL = (function(){
     $('zelfVoor').addEventListener('click', function(e){ var b = e.target.closest('button'); if (!b) return; var z = +b.getAttribute('data-z'); zelfVoor = zelfVoor === z ? null : z;
       Array.prototype.forEach.call(this.querySelectorAll('button'), function(x){ var aan = +x.getAttribute('data-z') === zelfVoor; x.classList.toggle('on', aan); x.setAttribute('aria-pressed', aan ? 'true' : 'false'); }); });
     $('oneindigBtn').addEventListener('click', function(){ start(true); });
-    $('stopBtn').addEventListener('click', function(){ if (!bezig) einde(); });
+    $('stopBtn').addEventListener('click', function(){ if (bezig) return; if (beg) begEinde(); else einde(); });
+    /* stap voor stap: met de knop, of met ?begeleid=1 van de docent meteen */
+    $('begeleidBtn').addEventListener('click', function(){ begStart(); });
+    $('begVbBtn').addEventListener('click', function(){ if (beg && !bezig){ beg.verder = null; $('begVbBtn').classList.add('hide'); begVoordoen(); } });
+    $('begKop').addEventListener('click', function(e){ var b = e.target.closest('.vs-delen button'); if (b && beg) begDeel(+b.getAttribute('data-i')); });
     /* de docent linkt met ?oneindig=1: dan is Start meteen oneindig */
     if (oneindigUrl){ $('startBtn').textContent = 'Start: oneindig oefenen'; $('oneindigBtn').classList.add('hide'); }
     $('verderBtn').addEventListener('click', function(){ if (!bezig) volgende(); });
     /* ?start=1: de opdracht van de docent in de leeromgeving aangeklikt, dus meteen beginnen */
-    if (/[?&]start=1\b/.test(location.search)) setTimeout(function(){ start(oneindigUrl); }, 0);
+    /* een spel met een eigen leerroute (begeleid:false) heeft deze knop niet nodig */
+    if (cfg.begeleid === false) $('begeleidBtn').classList.add('hide');
+    if (cfg.begeleid !== false && /[?&]begeleid=1\b/.test(location.search)) setTimeout(function(){ begStart(); }, 0);
+    else if (/[?&]start=1\b/.test(location.search)) setTimeout(function(){ start(oneindigUrl); }, 0);
     /* nog een ronde: meteen, met dezelfde keuzes; wie iets anders wil, gaat via Opnieuw naar het startscherm */
     $('nogBtn').addEventListener('click', function(){ start(oneindig); });
     $('opnieuwBtn').addEventListener('click', function(){
       /* midden in een ronde: eerst vragen, want je raakt je antwoorden kwijt */
-      var bezigMet = !$('scherm-spel').classList.contains('hide') && nr > 0;
+      var bezigMet = !$('scherm-spel').classList.contains('hide') && (nr > 0 || !!beg);
       if (bezigMet && !opnieuwZeker){ opnieuwKnop(true); return; }
       naarStart();
     });
@@ -744,7 +1123,11 @@ window.VAKSPEL = (function(){
       var inInvoer = /INPUT|TEXTAREA|SELECT/.test((e.target && e.target.tagName) || '');
       /* Enter of spatie gaat door, behalve op een andere knop (Opnieuw, Stoppen): die doet zijn eigen ding */
       var opKnop = e.target && e.target.closest && e.target.closest('button, a, summary');
-      if (!bezig && (e.key === 'Enter' || e.key === ' ') && !inInvoer && (!opKnop || opKnop.id === 'verderBtn')){ e.preventDefault(); volgende(); return; }
+      if (!bezig && (e.key === 'Enter' || e.key === ' ') && !inInvoer && (!opKnop || opKnop.id === 'verderBtn')){
+        /* stap voor stap: Enter gaat alleen door als Volgende er staat, niet midden in een voorbeeld */
+        if (beg && $('verder').classList.contains('hide')) return;
+        e.preventDefault(); volgende(); return;
+      }
       if (bezig && opgave && opgave.vorm === 'meerkeuze' && !inInvoer && /^[1-9]$/.test(e.key)){
         var knoppen = $('antwoordvak').querySelectorAll('.optie'), k = knoppen[parseInt(e.key, 10) - 1]; if (k){ e.preventDefault(); k.click(); }
       }
@@ -762,5 +1145,6 @@ window.VAKSPEL = (function(){
 
   return { maak: maak, husselen: husselen, schoon: schoon, getal: getal,
            /* voor de proefscripts */
-           _werkbladItem: function(o){ return werkbladItem(o); }, _opgave: function(){ return opgave; }, _cfg: function(){ return cfg; }, _keuze: function(){ return keuze; }, _stand: function(){ return { nr:nr, goed:goed, fout:fout, punten:punten, bezig:bezig, od:od }; } };
+           _werkbladItem: function(o){ return werkbladItem(o); }, _opgave: function(){ return opgave; }, _cfg: function(){ return cfg; }, _keuze: function(){ return keuze; },
+           _beg: function(){ return beg ? { fase:beg.fase, deel:beg.delen[beg.i].id, delen:beg.delen.length, samenGoed:beg.samenGoed, zelfGoed:beg.zelfGoed, hulp:beg.hulp, stappen:beg.st ? beg.st.lijst.length : 0, eigen:beg.st ? beg.st.eigen : false, mis:beg.mis } : null; }, _stand: function(){ return { nr:nr, goed:goed, fout:fout, punten:punten, bezig:bezig, od:od }; } };
 })();

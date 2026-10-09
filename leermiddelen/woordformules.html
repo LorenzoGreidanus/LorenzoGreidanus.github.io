@@ -202,7 +202,13 @@ body.groot .wf-regel .t{line-height:60px}
   function vakjes(o){
     return {
       onderdeel:o.onderdeel, onderdeelNaam:o.onderdeelNaam, vraag:o.vraag, opdracht:o.opdracht || 'Vul de vakjes in. Een komma of een punt mag.',
-      beeld:o.beeld, uitleg:o.uitleg, antwoordTekst:o.antwoordTekst, sleutel:o.sleutel, vorm:'eigen',
+      beeld:o.beeld, uitleg:o.uitleg, antwoordTekst:o.antwoordTekst, sleutel:o.sleutel, vorm:'eigen', stappen:o.stappen,
+      /* stap voor stap (vakspel.js): vak in een stap is het nummer van het vakje ({0}, {1}, ...), niet de plek op het scherm */
+      foutStap:function(vak){
+        var mis = Array.prototype.map.call(vak.querySelectorAll('input.fout'), function(inp){ return +inp.getAttribute('data-i'); });
+        for (var j = 0; j < (o.stappen || []).length; j++) if (o.stappen[j].vak != null && [].concat(o.stappen[j].vak).some(function(v){ return mis.indexOf(v) >= 0; })) return j;
+        return -1;
+      },
       teken:function(el, api){
         el.innerHTML = '<div class="wf-vak">' + o.html.replace(/\{(\d+)\}/g, function(m, i){
           var v = o.vakken[+i];
@@ -228,6 +234,8 @@ body.groot .wf-regel .t{line-height:60px}
         /* voor de proef: de goede getallen invullen, of overal iets fouts */
         el.proef = function(){ inv.forEach(function(inp){ inp.value = String(o.vakken[+inp.getAttribute('data-i')].a).replace('.', ','); }); knop.click(); };
         el.proefFout = function(){ inv.forEach(function(inp){ inp.value = '9999'; }); knop.click(); };
+        /* stap voor stap: bij voordoen staan de goede getallen in de vakjes */
+        el.voordoe = function(){ inv.forEach(function(inp){ var v = o.vakken[+inp.getAttribute('data-i')]; inp.value = v.toon || net(v.a); inp.classList.add('goed'); }); };
       }
     };
   }
@@ -243,16 +251,37 @@ body.groot .wf-regel .t{line-height:60px}
     return v;
   }
   /* meerkeuze met formules: het goede antwoord en verleidelijke fouten */
-  function formuleOpties(l, niveau, extra){
+  /* soorten (niet verplicht) krijgt per keuze welke fout het is: stap, start, wissel of teken (voor stap voor stap) */
+  function formuleOpties(l, niveau, extra, soorten){
     var c = l.c, goedF = F(l), gezien = {}, opties = [goedF]; gezien[goedF] = 1;
-    var kand = (extra || []).concat([[l.b, l.a, l.d], [l.a, l.b, !l.d], [l.a, rond(l.b + l.a), l.d], [rond(l.a * 2), l.b, l.d], [l.a, 0, false], [rond(l.a + 1), l.b, l.d]]);
+    if (soorten) soorten.push('goed');
+    var kand = (extra || []).concat([[l.b, l.a, l.d, 'wissel'], [l.a, l.b, !l.d, 'teken'], [l.a, rond(l.b + l.a), l.d, 'start'], [rond(l.a * 2), l.b, l.d, 'stap'], [l.a, 0, false, 'start'], [rond(l.a + 1), l.b, l.d, 'stap']]);
     kand.forEach(function(k){
       if (opties.length >= 4 || k[0] <= 0 || k[1] < 0) return;
       if (niveau === 'bb' && k[2]) return;
       var f = formule(c, k[0], k[1], k[2]); if (gezien[f]) return; gezien[f] = 1; opties.push(f);
+      if (soorten) soorten.push(k[3] || '');
     });
     return opties;
   }
+  /* ---------- stap voor stap ----------
+     Een stap kan optie hebben met de soort fout ('stap', 'start', 'wissel', 'teken') of met indexen;
+     hier worden dat de indexen van de foute keuzes. Bij de vakjes gaat optie eruit, bij meerkeuze vak. */
+  /* het uur, het kaartje: elk uur, maar elke week */
+  var HET = ['uur', 'kaartje'];
+  function elk(c){ return HET.indexOf(c.x1) >= 0 ? 'elk ' : 'elke '; }
+  function cap(t){ return t.charAt(0).toUpperCase() + t.slice(1); }
+  function welke(soorten, w){ return soorten.map(function(x, i){ return x === w ? i : -1; }).filter(function(i){ return i > 0; }); }
+  function stapLijst(lijst, soorten){
+    return lijst.map(function(st){
+      var x = Object.assign({}, st);
+      if (x.optie != null){ if (soorten) x.optie = [].concat(x.optie).reduce(function(r, w){ return r.concat(typeof w === 'number' ? [w] : welke(soorten, w)); }, []); else delete x.optie; }
+      if (soorten) delete x.vak;
+      if (!x.fout) delete x.fout;
+      return x;
+    });
+  }
+
   function tabelHtml(c, xs, ys){
     return '<table class="wf-t"><tr><th>' + S(c.xm) + '</th>' + xs.map(function(x){ return '<td>' + net(x) + '</td>'; }).join('') + '</tr>' +
       '<tr><th>' + S(c.ye) + '</th>' + ys.map(function(y){ return '<td>' + N(c, y) + '</td>'; }).join('') + '</tr></table>';
@@ -337,23 +366,34 @@ body.groot .wf-regel .t{line-height:60px}
     var l = lijn(niveau), c = l.c, xs = kiesXs(niveau, l), ys = xs.map(function(x){ return yv(l, x); }), f = F(l);
     var uitleg = stapUitleg(l, xs[0], ys[0], xs[1], ys[1]) + ' ' + startUitleg(l, xs[0], ys[0]) + ' Dus ' + wf(f) + '.';
     var basis = { onderdeel:'woordformules: tabel naar formule', onderdeelNaam:'van tabel naar formule', beeld:tabelHtml(c, xs, ys), antwoordTekst:f };
+    var x0 = xs[0], y0 = ys[0], dx = rond(xs[1] - xs[0]);
+    var stappen = [
+      { tekst:stapUitleg(l, x0, y0, xs[1], ys[1]), waarom:'Het getal per stap is wat er bij komt (of af gaat) als het ' + c.x + ' 1 groter wordt. Bij een lineair verband is dat overal in de tabel hetzelfde.',
+        hint:'Hoeveel komt er ' + (l.d ? 'af' : 'bij') + ' van de ene kolom naar de volgende? En hoeveel ' + c.xm + ' is die stap?',
+        fout:dx > 1 ? 'De stap in de tabel is ' + net(dx) + ' ' + c.xm + ', niet 1. Deel het verschil daarom nog door ' + net(dx) + '.' : '', vak:0, optie:'stap' },
+      { tekst:startUitleg(l, x0, y0), waarom:'Het startgetal is wat er bij 0 ' + c.xm + ' al is, voordat de eerste stap begint.',
+        hint:x0 ? 'De tabel begint bij ' + net(x0) + ' ' + xmVan(c, x0) + '. Reken terug naar 0: hoeveel stappen is dat, en hoeveel ' + (l.d ? 'komt er dan bij' : 'gaat er dan af') + '?' : 'Welke waarde hoort bij 0 ' + c.xm + '?',
+        fout:x0 ? 'Het eerste getal in de tabel (' + N(c, y0) + ') is niet het startgetal: dat hoort bij ' + net(x0) + ' ' + xmVan(c, x0) + ', niet bij 0.' : '', vak:1, optie:'start' },
+      { tekst:'Zet ze in de formule: ' + wf(f) + '.', waarom:l.d ? 'Het wordt minder: het startgetal staat vooraan en het getal per stap gaat er ' + elk(c) + c.x1 + ' af.' : 'Het getal per stap staat voor × ' + c.x + '; het startgetal tel je er één keer bij.',
+        optie:['wissel', 'teken'] }
+    ];
     if (Math.random() < 0.65){
       return vakjes(Object.assign(basis, {
         sleutel:'tf' + c.id + l.a + '_' + l.b + '_' + xs.join(''),
         vraag:'De tabel hoort bij ' + c.wat + '. Maak de woordformule.',
         opdracht:'Vul het getal per stap en het startgetal in. Een komma of een punt mag.',
         html:sjabloon(c, l.d, 0, 1), vakken:formuleVakken(l, [], 0, 1),
-        uitleg:uitleg
+        uitleg:uitleg, stappen:stapLijst(stappen)
       }));
     }
     var extra = [];
-    if (xs[0]) extra.push([l.a, ys[0], l.d]);
-    if (xs[1] - xs[0] > 1) extra.push([rond(Math.abs(ys[1] - ys[0])), l.b, l.d]);
-    var opties = formuleOpties(l, niveau, extra);
+    if (xs[0]) extra.push([l.a, ys[0], l.d, 'start']);
+    if (xs[1] - xs[0] > 1) extra.push([rond(Math.abs(ys[1] - ys[0])), l.b, l.d, 'stap']);
+    var soorten = [], opties = formuleOpties(l, niveau, extra, soorten);
     return Object.assign(basis, {
       vorm:'meerkeuze', sleutel:'tm' + c.id + l.a + '_' + l.b + '_' + xs.join(''),
       vraag:'De tabel hoort bij ' + c.wat + '. Welke woordformule hoort erbij?',
-      opties:opties, goed:0,
+      opties:opties, goed:0, stappen:stapLijst(stappen, soorten),
       uitleg:uitleg + (xs[0] ? '' : xs[1] - xs[0] > 1 ? ' Let op: de stappen in de tabel zijn ' + net(xs[1] - xs[0]) + ' ' + c.xm + ', dus je deelt nog.' : ' Het getal per stap staat voor × ' + c.x + '; het startgetal staat er los bij.')
     });
   }
@@ -373,8 +413,24 @@ body.groot .wf-regel .t{line-height:60px}
       var y = yv(l, x), r = rond(l.d ? l.b - y : y - l.b);
       return 'bij ' + N(c, y) + ' ' + c.ye + ': ' + (l.d ? N(c, l.b) + ' − ' + N(c, y) : N(c, y) + ' − ' + N(c, l.b)) + ' = ' + N(c, r) + ', en ' + N(c, r) + ' ÷ ' + N(c, l.a) + ' = ' + net(x) + ' ' + xmVan(c, x);
     }).join('; ');
-    var y0 = yv(l, terug[0]);
-    return vakjes({
+    var y0 = yv(l, terug[0]), stappen = [];
+    voor.forEach(function(x, j){
+      var y = yv(l, x);
+      stappen.push({ tekst:(j ? 'Hetzelfde bij ' + net(x) + ' ' + xmVan(c, x) + ': ' : 'Vul ' + net(x) + ' ' + xmVan(c, x) + ' in de formule in: ') + (l.d ? N(c, l.b) + ' − ' + N(c, l.a) + ' × ' + net(x) : N(c, l.a) + ' × ' + net(x) + ' + ' + N(c, l.b)) + ' = ' + N(c, y) + '.',
+        waarom:'Eerst de keersom: ' + N(c, l.a) + ' × ' + net(x) + ' = ' + N(c, rond(l.a * x)) + '. Dan ' + (l.d ? 'haal je dat van het startgetal af' : 'tel je het startgetal erbij') + '.',
+        hint:j ? 'Doe hetzelfde met ' + net(x) + '.' : 'Zet ' + net(x) + ' op de plek van ' + c.x + ' in de formule. Eerst de keersom, dan ' + (l.d ? 'min' : 'plus') + '.', vak:j });
+    });
+    terug.forEach(function(x, j){
+      var i = voor.length + j, y = yv(l, x), r = rond(l.d ? l.b - y : y - l.b);
+      stappen.push({ tekst:'Terugrekenen bij ' + N(c, y) + ' ' + c.ye + ': ' + (l.d ? 'er is al ' + N(c, l.b) + ' − ' + N(c, y) + ' = ' + N(c, r) + ' af.' : 'haal eerst het startgetal eraf: ' + N(c, y) + ' − ' + N(c, l.b) + ' = ' + N(c, r) + '.'),
+        waarom:l.d ? 'Je begon met ' + N(c, l.b) + '. Het verschil met ' + N(c, y) + ' is wat er in totaal af is gegaan.' : 'Het startgetal was er vanaf het begin al: dat deel komt niet van de ' + c.xm + '.',
+        hint:l.d ? 'Hoeveel is er al af, vergeleken met het begin (' + N(c, l.b) + ')?' : 'Wat moet er eerst van ' + N(c, y) + ' af voordat je deelt?',
+        fout:l.d ? 'Meteen ' + N(c, y) + ' ÷ ' + N(c, l.a) + ' doen is fout: ' + N(c, y) + ' is wat er nog over is, niet wat er af is gegaan.' : 'Meteen ' + N(c, y) + ' ÷ ' + N(c, l.a) + ' doen is fout: dan reken je het startgetal mee.', vak:i });
+      stappen.push({ tekst:'Deel door het getal per stap: ' + N(c, r) + ' ÷ ' + N(c, l.a) + ' = ' + net(x) + ' ' + xmVan(c, x) + '.',
+        waarom:cap(elk(c)) + c.x1 + ' gaat er ' + N(c, l.a) + (l.d ? ' af' : ' bij') + '. Zo vaak als dat in ' + N(c, r) + ' past, zoveel ' + c.xm + ' zijn het.',
+        hint:'Hoe vaak past ' + N(c, l.a) + ' in ' + N(c, r) + '?', vak:i });
+    });
+    return vakjes({ stappen:stapLijst(stappen),
       onderdeel:'woordformules: formule naar tabel', onderdeelNaam:'van formule naar tabel',
       sleutel:'ft' + c.id + l.a + '_' + l.b + '_' + voor.join('') + '_' + terug.join(''),
       vraag:'Bij ' + c.wat + ' hoort de formule ' + wf(f) + '. Vul de tabel in.',
@@ -395,7 +451,18 @@ body.groot .wf-regel .t{line-height:60px}
     var vakken = [{ a:yA, naam:c.ye + ' bij ' + xA + ' ' + xmVan(c, xA), toon:N(c, yA) }, { a:yB, naam:c.ye + ' bij ' + xB + ' ' + xmVan(c, xB), toon:N(c, yB) }];
     formuleVakken(l, vakken, 2, 3);
     var schaal = r.ystap !== 1 || r.xstap !== 1 ? ' Let op de schaal: één hokje omhoog is ' + N(c, r.ystap) + ' ' + c.ye + (r.xstap !== 1 ? ' en één hokje opzij is ' + r.xstap + ' ' + c.xm : '') + '.' : '';
-    return vakjes({
+    function lees(x, y, i){
+      return { tekst:'Lees af bij ' + net(x) + ' ' + xmVan(c, x) + ': ga recht omhoog naar de stip op de lijn, dan naar links. Daar staat ' + N(c, y) + ' ' + c.ye + '.',
+        waarom:schaal ? schaal.trim() : 'De stippen liggen precies op roosterpunten: daar lees je het exact af.',
+        hint:'Ga bij ' + net(x) + ' recht omhoog tot de stip op de lijn, en dan naar links.' + (r.ystap !== 1 ? ' Eén hokje is ' + N(c, r.ystap) + ' ' + c.ye + '.' : ''), vak:i };
+    }
+    var stappen = [lees(xA, yA, 0), lees(xB, yB, 1),
+      { tekst:stapUitleg(l, xA, yA, xB, yB), waarom:'Het getal per stap is wat er per ' + c.x1 + ' bij komt of af gaat. Over meer ' + c.xm + ' tegelijk deel je door het aantal ' + c.xm + '.',
+        hint:'Hoeveel ' + c.ye + ' verschillen de twee punten, en over hoeveel ' + c.xm + '?', fout:xB - xA > 1 ? 'Tussen de punten zit ' + net(xB - xA) + ' ' + c.xm + '. Deel het verschil daarom door ' + net(xB - xA) + '.' : '', vak:2 },
+      { tekst:'De lijn begint op de verticale as bij ' + N(c, l.b) + ': dat is het startgetal.', waarom:'Bij 0 ' + c.xm + ' is er nog geen stap gezet; wat er dan al is, is het startgetal.',
+        hint:'Waar begint de lijn op de verticale as?', vak:3 },
+      { tekst:'De formule: ' + wf(f) + '.', waarom:'Het getal per stap staat voor × ' + c.x + '. Het startgetal staat ' + (l.d ? 'vooraan, en het getal per stap gaat eraf.' : 'erachter, met een plus.') }];
+    return vakjes({ stappen:stapLijst(stappen),
       onderdeel:'woordformules: grafiek en formule', onderdeelNaam:'grafiek en formule',
       sleutel:'ga' + c.id + l.a + '_' + l.b + '_' + xA + '_' + xB,
       vraag:'De grafiek hoort bij ' + c.wat + '. Lees twee punten af en maak de woordformule.',
@@ -414,11 +481,11 @@ body.groot .wf-regel .t{line-height:60px}
     var b2 = l.d ? (b - 2 * ys >= 0 ? b - 2 * ys : b - ys) : (b + 2 * ys <= r.ymax - ys ? b + 2 * ys : b - 2 * ys >= 0 ? b - 2 * ys : b + ys);
     var eind = rond(b - a * r.xmax);
     var kand = [
-      { f:function(x){ return l.d ? b - 2 * a * x : b + 2 * a * x; }, uit:'begint ook bij ' + N(c, b) + ', maar ' + (l.d ? 'daalt' : 'stijgt') + ' twee keer zo snel' },
-      { f:function(x){ return l.d ? b2 - a * x : b2 + a * x; }, uit:(l.d ? 'daalt' : 'stijgt') + ' even snel, maar begint bij ' + N(c, b2) },
-      l.d ? { f:function(x){ return eind + a * x; }, uit:'stijgt, terwijl het bij deze formule juist minder wordt' }
-          : { f:function(x){ return a * x; }, uit:'begint bij 0: daar ontbreekt het startgetal' },
-      l.d ? null : { f:function(x){ return a + b * x; }, uit:'heeft het startgetal en het getal per stap omgewisseld' }
+      { f:function(x){ return l.d ? b - 2 * a * x : b + 2 * a * x; }, uit:'begint ook bij ' + N(c, b) + ', maar ' + (l.d ? 'daalt' : 'stijgt') + ' twee keer zo snel', w:'stap' },
+      { f:function(x){ return l.d ? b2 - a * x : b2 + a * x; }, uit:(l.d ? 'daalt' : 'stijgt') + ' even snel, maar begint bij ' + N(c, b2), w:'start' },
+      l.d ? { f:function(x){ return eind + a * x; }, uit:'stijgt, terwijl het bij deze formule juist minder wordt', w:'stap' }
+          : { f:function(x){ return a * x; }, uit:'begint bij 0: daar ontbreekt het startgetal', w:'start' },
+      l.d ? null : { f:function(x){ return a + b * x; }, uit:'heeft het startgetal en het getal per stap omgewisseld', w:'start' }
     ].filter(Boolean);
     function zichtbaar(h){ for (var k = 0; k <= 20; k++){ var y = h(r.xmax * k / 20); if (y >= 0 && y <= r.ymax) return true; } return false; }
     function anders(h, p){ return Math.abs(h(0) - p(0)) > 1e-6 || Math.abs(h(r.xmax) - p(r.xmax)) > 1e-6; }
@@ -429,12 +496,22 @@ body.groot .wf-regel .t{line-height:60px}
     var beeld = st.kop + gekozen.map(function(q, i){ return st.lijn(q.f, KLEUR[i]); }).join('') +
       st.letters(gekozen.map(function(q, i){ return { f:q.f, t:LETTER[i], k:KLEUR[i] }; })) + st.staart;
     var gi = 0; gekozen.forEach(function(q, i){ if (q.goed) gi = i; });
+    function lijnen(w){ return gekozen.map(function(q, i){ return q.w === w ? i : -1; }).filter(function(i){ return i >= 0; }); }
+    var xs1 = r.dx, ys1 = yv(l, xs1);
     return {
       onderdeel:'woordformules: grafiek en formule', onderdeelNaam:'grafiek en formule', vorm:'meerkeuze', vasteVolgorde:true,
       sleutel:'gk' + c.id + a + '_' + b + gekozen.length,
       vraag:'Bij ' + c.wat + ' hoort de formule ' + wf(f) + '. Welke lijn hoort bij deze formule?',
       opdracht:'Kijk waar de lijn begint en hoeveel hij per stap omhoog of omlaag gaat.',
       beeld:beeld, opties:gekozen.map(function(q, i){ return 'lijn ' + LETTER[i]; }), goed:gi, antwoordTekst:'lijn ' + LETTER[gi],
+      stappen:[
+        { tekst:'Het startgetal is ' + N(c, b) + ': de goede lijn begint bij 0 ' + c.xm + ' op ' + N(c, b) + '.', waarom:'Het getal dat los in de formule staat, is er al bij 0 ' + c.xm + '.',
+          hint:'Welk getal staat los in de formule? Op welke hoogte begint de lijn dan?', optie:lijnen('start') },
+        { tekst:'Het getal per stap is ' + N(c, a) + ': ' + c.per + ' gaat de lijn ' + N(c, a) + (l.d ? ' omlaag' : ' omhoog') + '. Bij ' + net(xs1) + ' ' + xmVan(c, xs1) + ' moet de lijn dus op ' + N(c, ys1) + ' zijn.',
+          waarom:l.d ? 'Er staat een min voor het getal per stap: de lijn gaat naar rechts omlaag.' : 'Hoe groter het getal per stap, hoe steiler de lijn.',
+          hint:'Reken met de formule uit waar de lijn bij ' + net(xs1) + ' ' + xmVan(c, xs1) + ' moet zijn.', optie:lijnen('stap') },
+        { tekst:'Alleen lijn ' + LETTER[gi] + ' begint bij ' + N(c, b) + ' en gaat ' + c.per + ' ' + N(c, a) + (l.d ? ' omlaag' : ' omhoog') + '.', waarom:'Controleer altijd allebei: een lijn met het goede startgetal kan nog de verkeerde helling hebben.' }
+      ],
       uitleg:'Het startgetal is ' + N(c, b) + ': de goede lijn begint bij ' + N(c, b) + ' op de verticale as. Het getal per stap is ' + N(c, a) + ': ' + c.per + ' gaat de lijn ' + N(c, a) + (l.d ? ' omlaag' : ' omhoog') + '. Dat is lijn ' + LETTER[gi] + '. ' +
         gekozen.map(function(q, i){ return q.goed ? '' : 'Lijn ' + LETTER[i] + ' ' + q.uit + '.'; }).filter(Boolean).join(' ')
     };
@@ -452,9 +529,25 @@ body.groot .wf-regel .t{line-height:60px}
         beeld:'<div class="wf-sit">' + c.zin2(net(x1), N(c, y1), net(x2), N(c, y2)) + '</div>',
         opdracht:'Reken eerst uit hoeveel er per stap bij komt of af gaat. Een komma of een punt mag.',
         html:sjabloon(c, l.d, 0, 1), vakken:formuleVakken(l, [], 0, 1),
-        uitleg:stapUitleg(l, x1, y1, x2, y2) + ' ' + startUitleg(l, x1, y1) + ' Dus ' + wf(f) + '.'
+        uitleg:stapUitleg(l, x1, y1, x2, y2) + ' ' + startUitleg(l, x1, y1) + ' Dus ' + wf(f) + '.',
+        stappen:stapLijst([
+          { tekst:stapUitleg(l, x1, y1, x2, y2), waarom:'Tussen de twee situaties verschilt alleen het aantal ' + c.xm + '. Wat er bij komt of af gaat, komt dus van die extra ' + c.xm + '.',
+            hint:'Hoeveel ' + c.ye + ' verschillen de twee situaties, en hoeveel ' + c.xm + '?', fout:x2 - x1 > 1 ? 'Deel het verschil door ' + net(x2 - x1) + ': zoveel ' + c.xm + ' zit ertussen.' : '', vak:0 },
+          { tekst:startUitleg(l, x1, y1), waarom:'Het startgetal hoort bij 0 ' + c.xm + '. Je rekent terug vanaf een punt dat je kent.',
+            hint:'Reken terug van ' + net(x1) + ' ' + xmVan(c, x1) + ' naar 0: ' + net(x1) + ' keer het getal per stap ' + (l.d ? 'erbij' : 'eraf') + '.',
+            fout:'Het startgetal is niet ' + N(c, y1) + ': dat hoort bij ' + net(x1) + ' ' + xmVan(c, x1) + ', niet bij 0.', vak:1 },
+          { tekst:'De formule: ' + wf(f) + '.', waarom:l.d ? 'Het wordt minder: het startgetal vooraan, en het getal per stap gaat eraf.' : 'Het getal per stap staat voor × ' + c.x + '; het startgetal tel je er één keer bij.' }
+        ])
       }));
     }
+    var stappenZin = [
+      { tekst:'Zoek wat er al is bij 0 ' + c.xm + ': ' + N(c, l.b) + '. Dat is het startgetal.', waarom:l.d ? 'Daarmee begin je; daarna gaat er steeds iets af.' : 'Dat betaal of heb je één keer, hoe lang het ook duurt.',
+        hint:'Welk getal is er al voordat ' + (HET.indexOf(c.x1) >= 0 ? 'het' : 'de') + ' eerste ' + c.x1 + ' begint?', vak:1, optie:'start' },
+      { tekst:'Zoek wat er ' + c.per + (l.d ? ' af gaat' : ' bij komt') + ': ' + N(c, l.a) + '. Dat is het getal per stap.', waarom:'Dit getal komt bij ' + elk(c) + c.x1 + ' opnieuw, dus het staat voor × ' + c.x + '.',
+        hint:'Welk getal komt er bij ' + elk(c) + c.x1 + ' opnieuw ' + (l.d ? 'af' : 'bij') + '?', vak:0, optie:'stap' },
+      { tekst:'Zet ze in de formule: ' + wf(f) + '.', waarom:l.d ? 'Het wordt minder, dus het startgetal staat vooraan en er staat een min voor het getal per stap.' : 'Het getal per stap staat voor × ' + c.x + '; het startgetal tel je er één keer bij.',
+        optie:['wissel', 'teken'] }
+    ];
     var uit = l.d ? 'Je begint met ' + N(c, l.b) + ': dat is het startgetal, het getal vooraan. ' + c.per.charAt(0).toUpperCase() + c.per.slice(1) + ' gaat er ' + N(c, l.a) + ' af: dat is het getal per stap, en er staat een min voor. Dus ' + wf(f) + '.'
       : 'Wat er ' + c.per + ' bij komt, ' + N(c, l.a) + ', is het getal per stap: dat zet je voor × ' + c.x + '. Wat er bij 0 ' + c.xm + ' al is, ' + N(c, l.b) + ', is het startgetal. Dus ' + wf(f) + '.';
     var sit = '<div class="wf-sit">' + c.zin(N(c, l.a), N(c, l.b)) + '</div>';
@@ -462,12 +555,13 @@ body.groot .wf-regel .t{line-height:60px}
       return vakjes(Object.assign(basis, {
         sleutel:'sv' + c.id + l.a + '_' + l.b, vraag:'Maak de woordformule bij deze situatie.', beeld:sit,
         opdracht:'Vul het getal per stap en het startgetal in. Een komma of een punt mag.',
-        html:sjabloon(c, l.d, 0, 1), vakken:formuleVakken(l, [], 0, 1), uitleg:uit
+        html:sjabloon(c, l.d, 0, 1), vakken:formuleVakken(l, [], 0, 1), uitleg:uit, stappen:stapLijst(stappenZin)
       }));
     }
+    var soorten = [];
     return Object.assign(basis, {
       vorm:'meerkeuze', sleutel:'sm' + c.id + l.a + '_' + l.b, vraag:'Welke woordformule hoort bij deze situatie?', beeld:sit,
-      opties:formuleOpties(l, niveau), goed:0,
+      opties:formuleOpties(l, niveau, null, soorten), goed:0, stappen:stapLijst(stappenZin, soorten),
       uitleg:uit + (l.d ? ' Met een plus erin zou het steeds meer worden, en het wordt juist minder.' : ' Het startgetal staat niet voor × ' + c.x + ': dat getal tel je maar één keer.')
     });
   }
@@ -529,9 +623,17 @@ body.groot .wf-regel .t{line-height:60px}
   }
   function verbandBB(){
     var soort = Math.random() < 0.5 ? 'even' : 'stijgend', l = lineairVoor('bb', soort), bron = kies(['tabel', 'tabel', 'grafiek', 'situatie']);
-    var v = verbandLineair('bb', l, bron), gi = soort === 'even' ? 0 : 1;
+    var v = verbandLineair('bb', l, bron), gi = soort === 'even' ? 0 : 1, c = l.c;
     return { onderdeel:'woordformules: welk verband', onderdeelNaam:'welk verband', vorm:'meerkeuze', vasteVolgorde:true,
-      sleutel:'vb' + bron + l.c.id + l.a + '_' + l.b, vraag:v.vraag, beeld:v.beeld, opties:OPT_BB, goed:gi, antwoordTekst:OPT_BB[gi], uitleg:v.uit };
+      sleutel:'vb' + bron + l.c.id + l.a + '_' + l.b, vraag:v.vraag, beeld:v.beeld, opties:OPT_BB, goed:gi, antwoordTekst:OPT_BB[gi], uitleg:v.uit,
+      stappen:[
+        { tekst:'Kijk of er steeds evenveel bij komt: ' + c.per + ' komt er ' + N(c, l.a) + ' bij. Dus het is lineair.', waarom:'Steeds evenveel erbij geeft een rechte lijn: een lineair verband.',
+          hint:'Komt er bij ' + elk(c) + c.x1 + ' evenveel bij?' },
+        { tekst:'Kijk wat er bij 0 ' + c.xm + ' hoort: ' + (l.even ? '0' : N(c, l.b)) + '.', waarom:'Recht evenredig kan alleen als er bij 0 ook 0 hoort: dan is er geen startgetal.',
+          hint:'Hoeveel ' + c.ye + ' is er bij 0 ' + c.xm + '?', optie:[1 - gi] },
+        { tekst:(l.even ? 'Bij 0 hoort 0, en twee keer zoveel ' + c.xm + ' is twee keer zoveel' : 'Er is een startgetal, dus twee keer zoveel ' + c.xm + ' is niet twee keer zoveel') + ': bij 2 ' + c.xm + ' ' + N(c, yv(l, 2)) + ', bij 4 ' + c.xm + ' ' + N(c, yv(l, 4)) + '. ' + (l.even ? 'Recht evenredig.' : 'Lineair, maar niet recht evenredig.'),
+          waarom:'Recht evenredig is een lineair verband zonder startgetal: de grafiek is een rechte lijn door 0.' }
+      ] };
   }
   function verbandKGT(){
     var soort = kies(['even', 'stijgend', 'dalend', 'niet']), bron = kies(['tabel', 'tabel', 'grafiek', 'situatie']), o;
@@ -544,12 +646,29 @@ body.groot .wf-regel .t{line-height:60px}
         beeld = st.kop + st.kromme(n.f) + n.xs.map(function(x){ return st.stip(x, n.f(x)); }).join('') + st.staart;
       } else beeld = '<div class="wf-sit">' + n.zin + '</div>';
       o = { vraag:'Welk verband is er tussen ' + n.x + ' en ' + n.y + '?', beeld:beeld, uit:n.uit + ' Het is dus ook niet recht evenredig of lineair dalend: dat zijn allebei rechte lijnen.', goed:3, sleutel:'vk' + bron + n.t };
+      var vs = n.xs.map(function(x){ return rond(n.f(x)); }), vers = [1, 2, 3].map(function(i){ return rond(vs[i] - vs[i - 1]); }), af = vers[0] < 0;
+      function ny(y){ return n.geld ? geld(y) : net(y); }
+      o.stappen = [
+        { tekst:bron === 'grafiek' ? 'Kijk naar de vorm: de grafiek is geen rechte lijn, maar gebogen.'
+            : 'Bekijk een paar waarden: ' + n.xs.slice(0, 4).map(function(x, i){ return net(x) + ' → ' + ny(vs[i]); }).join(', ') + '. Er ' + (af ? 'gaat' : 'komt') + ' eerst ' + ny(Math.abs(vers[0])) + (af ? ' af' : ' bij') + ', dan ' + ny(Math.abs(vers[1])) + ', dan ' + ny(Math.abs(vers[2])) + ': niet steeds evenveel.',
+          waarom:'Alleen als er steeds evenveel bij komt of af gaat, is het verband lineair, met een rechte lijn als grafiek.',
+          hint:bron === 'grafiek' ? 'Is de grafiek een rechte lijn?' : 'Komt er bij elke stap evenveel bij of af?', optie:[0, 1, 2] },
+        { tekst:'Dus het verband is niet lineair. ' + (n.soort === 'kwadratisch' ? 'Het gaat steeds sneller, zoals bij een kwadraat.' : 'Het gaat steeds keer hetzelfde getal.'),
+          waarom:'Recht evenredig en lineair dalend zijn ook rechte lijnen; die vallen dus ook af.' } ];
     } else {
-      var l = lineairVoor('kgt', soort), v = verbandLineair('kgt', l, bron);
+      var l = lineairVoor('kgt', soort), v = verbandLineair('kgt', l, bron), c = l.c;
       o = { vraag:v.vraag, beeld:v.beeld, uit:v.uit, goed:soort === 'even' ? 0 : soort === 'stijgend' ? 1 : 2, sleutel:'vk' + bron + l.c.id + l.a + '_' + l.b };
+      o.stappen = [
+        { tekst:'Kijk of er steeds evenveel ' + (l.d ? 'af gaat' : 'bij komt') + ': ' + c.per + (l.d ? ' gaat er ' : ' komt er ') + N(c, l.a) + (l.d ? ' af' : ' bij') + '. Dus het is lineair.', waarom:'Steeds evenveel erbij of eraf: dan is de grafiek een rechte lijn.',
+          hint:'Komt er bij ' + elk(c) + c.x1 + ' evenveel bij of gaat er evenveel af?', optie:[3] },
+        { tekst:'Wordt het meer of minder? ' + (l.d ? 'Minder, dus dalend.' : 'Meer, dus stijgend.'), waarom:'Een dalend verband is een rechte lijn die naar rechts omlaag gaat.',
+          hint:'Wordt het meer of minder als het ' + c.x + ' groter wordt?', optie:l.d ? [0, 1] : [2] },
+        l.d ? { tekst:'Dalend kan nooit recht evenredig zijn: bij 0 ' + c.xm + ' hoort ' + N(c, l.b) + ', niet 0. Dus lineair en dalend.', waarom:'Recht evenredig: bij 0 hoort 0, en twee keer zoveel is twee keer zoveel.' }
+          : { tekst:'Kijk bij 0 ' + c.xm + ': ' + (l.even ? 'daar hoort 0 bij. Recht evenredig.' : 'daar hoort al ' + N(c, l.b) + ' bij. Lineair en stijgend, maar niet recht evenredig.'), waarom:'Recht evenredig: bij 0 hoort 0, en twee keer zoveel is twee keer zoveel.', optie:l.even ? [1] : [0] }
+      ];
     }
     return { onderdeel:'woordformules: welk verband', onderdeelNaam:'welk verband', vorm:'meerkeuze', vasteVolgorde:true,
-      sleutel:o.sleutel, vraag:o.vraag, beeld:o.beeld, opties:OPT_KGT, goed:o.goed, antwoordTekst:OPT_KGT[o.goed], uitleg:o.uit };
+      sleutel:o.sleutel, vraag:o.vraag, beeld:o.beeld, opties:OPT_KGT, goed:o.goed, antwoordTekst:OPT_KGT[o.goed], uitleg:o.uit, stappen:o.stappen };
   }
   /* havo en vwo: het soort verband aan de formule of de tabel zien, de groeifactor, en rekenen met de formule */
   var UIT_HV = {
@@ -577,9 +696,21 @@ body.groot .wf-regel .t{line-height:60px}
       function(){ C = kies([180, 240, 360]); return 'p = ' + C + ' ÷ n, met p het bedrag in euro dat ieder betaalt als n vrienden samen een busje huren'; },
       function(){ C = kies([24, 36, 48]); return 'b = ' + C + ' ÷ l, met b de breedte en l de lengte in cm van een rechthoek van ' + C + ' cm²'; }])();
     var gi = { lineair:0, kwadratisch:1, exponentieel:2, omgekeerd:3 }[type], deel = f.split(', met ');
+    /* de variabele: de laatste losse letter in de formule (t, m, z, v, n of l) */
+    var letters = deel[0].replace(/<[^>]+>/g, ' ').match(/\b[a-zA-Z]\b/g) || ['x'], v = letters[letters.length - 1];
+    var WAAR = { lineair:v + ' staat alleen keer een getal: geen kwadraat, geen exponent en geen deelstreep.', kwadratisch:'Er staat ' + v + '²: de variabele in het kwadraat.',
+      exponentieel:v + ' staat in de exponent, rechtsboven het getal.', omgekeerd:v + ' staat onder de deelstreep: een vast getal gedeeld door ' + v + '.' };
+    var WAAROM = { lineair:'Keer een vast getal betekent: per stap steeds evenveel erbij of eraf.', kwadratisch:'Bij een kwadraat is de exponent het vaste getal 2 en staat de variabele eronder. Dat is kwadratisch, niet exponentieel.',
+      exponentieel:'Staat de variabele in de exponent, dan gaat het elke stap keer hetzelfde getal.', omgekeerd:'Twee keer zo groot geeft de helft: het product van de twee blijft hetzelfde.' };
     return { onderdeel:'woordformules: welk verband', onderdeelNaam:'welk verband', vorm:'meerkeuze', vasteVolgorde:true,
       sleutel:'vf' + f.slice(0, 40), vraag:'Welk soort verband hoort bij deze formule?', beeld:'<div class="wf-sit">' + wf(deel[0]) + '<br>met ' + deel[1] + '.</div>',
-      opties:OPT_HV, goed:gi, antwoordTekst:OPT_HV[gi], uitleg:UIT_HV[type] };
+      opties:OPT_HV, goed:gi, antwoordTekst:OPT_HV[gi], uitleg:UIT_HV[type],
+      stappen:[
+        { tekst:'Zoek de variabele: ' + v + '. Kijk waar die in de formule staat.', waarom:'Het soort verband hangt af van wat er met de variabele gebeurt: keer een getal, in het kwadraat, in de exponent of onder een deelstreep.',
+          hint:'Welke letter verandert er in deze situatie?' },
+        { tekst:WAAR[type], waarom:WAAROM[type], hint:'Staat ' + v + ' keer een getal, in het kwadraat, in de exponent of onder de deelstreep?', optie:[0, 1, 2, 3].filter(function(i){ return i !== gi; }) },
+        { tekst:'Dus: ' + OPT_HV[gi] + '.', waarom:UIT_HV[type] }
+      ] };
   }
   function hvTabelSoort(type){
     var xs = [0, 1, 2, 3, 4], ys, k, c0, s, g, C, a, b, uit;
@@ -595,21 +726,54 @@ body.groot .wf-regel .t{line-height:60px}
   }
   function hvTabelType(){
     var type = kies(['lineair', 'kwadratisch', 'exponentieel', 'omgekeerd']), t = hvTabelSoort(type), gi = { lineair:0, kwadratisch:1, exponentieel:2, omgekeerd:3 }[type];
+    var ys = t.ys, vers = [1, 2, 3, 4].map(function(i){ return rond(ys[i] - ys[i - 1]); }), tweede;
+    if (type === 'lineair') tweede = { tekst:'De verschillen zijn gelijk; verder zoeken hoeft niet.', waarom:'Bij kwadratisch en exponentieel worden de verschillen steeds groter of kleiner.' };
+    else if (type === 'kwadratisch') tweede = { tekst:'Bereken de verschillen van de verschillen: ' + [1, 2, 3].map(function(i){ return net(rond(vers[i] - vers[i - 1])); }).join(', ') + '. Die zijn gelijk.',
+      waarom:'Bij een kwadratisch verband nemen de verschillen elke stap met hetzelfde getal toe.', hint:'Hoeveel worden de verschillen elke keer groter?', optie:[2] };
+    else if (type === 'exponentieel') tweede = { tekst:'Deel elk getal door het vorige: ' + [1, 2, 3].map(function(i){ return net(ys[i]) + ' ÷ ' + net(ys[i - 1]) + ' = ' + net(rond(ys[i] / ys[i - 1])); }).join(', ') + '. Steeds ' + net(t.g) + '.',
+      waarom:'Steeds keer hetzelfde getal is exponentieel, met dat getal als groeifactor.', hint:'Deel een getal door het getal ervoor. Komt er steeds hetzelfde uit?', optie:[1] };
+    else tweede = { tekst:'Vermenigvuldig x en y in elke kolom: ' + t.xs.slice(0, 4).map(function(x, i){ return x + ' × ' + net(ys[i]) + ' = ' + net(rond(x * ys[i])); }).join(', ') + '. Steeds hetzelfde.',
+      waarom:'Is x × y steeds hetzelfde, dan geeft twee keer zo groot de helft: omgekeerd evenredig.', hint:'Doe x keer y in elke kolom.', optie:[1, 2] };
     return { onderdeel:'woordformules: welk verband', onderdeelNaam:'welk verband', vorm:'meerkeuze', vasteVolgorde:true,
       sleutel:'vt' + type + t.ys.join('_'), vraag:'Welk soort verband hoort bij deze tabel?', beeld:tabelHtml({ xm:'x', ye:'y' }, t.xs, t.ys),
       opdracht:'Kijk naar de verschillen, naar de verhoudingen (deel een getal door het vorige) of naar x × y.',
-      opties:OPT_HV, goed:gi, antwoordTekst:OPT_HV[gi], uitleg:t.uit };
+      opties:OPT_HV, goed:gi, antwoordTekst:OPT_HV[gi], uitleg:t.uit,
+      stappen:[
+        { tekst:'Bereken de verschillen in de onderste rij: ' + vers.map(net).join(', ') + '. ' + (type === 'lineair' ? 'Steeds hetzelfde: lineair.' : 'Niet steeds hetzelfde, dus niet lineair.'),
+          waarom:'Gelijke verschillen betekent: per stap steeds evenveel erbij of eraf. Dat is lineair.', hint:'Wat komt er van elke kolom naar de volgende bij?', optie:type === 'lineair' ? [1, 2, 3] : [0] },
+        tweede,
+        { tekst:'Dus: ' + OPT_HV[gi] + '.', waarom:t.uit }
+      ] };
   }
   function hvRekenen(){
     var keus = kies(['groeifactor', 'volgende', 'formule']), basis = { onderdeel:'woordformules: welk verband', onderdeelNaam:'welk verband' };
     if (keus === 'groeifactor'){
       var t = hvTabelSoort('exponentieel');
+      basis.stappen = [
+        { tekst:'Deel een getal door het getal ervoor: ' + net(t.ys[1]) + ' ÷ ' + net(t.ys[0]) + ' = ' + net(t.g) + '.', waarom:'Bij exponentiële groei gaat het elke stap keer hetzelfde getal: de groeifactor.',
+          hint:'Deel het tweede getal door het eerste.', fout:'Het verschil (' + net(rond(t.ys[1] - t.ys[0])) + ') is niet de groeifactor: bij exponentieel gaat het keer, niet plus.', vak:0 },
+        { tekst:'Controleer met een ander paar: ' + net(t.ys[3]) + ' ÷ ' + net(t.ys[2]) + ' = ' + net(rond(t.ys[3] / t.ys[2])) + '.', waarom:'Is het bij elk paar hetzelfde, dan is het echt exponentieel.' + (t.g < 1 ? ' Een groeifactor kleiner dan 1 hoort bij een afname.' : ''),
+          hint:'Doe hetzelfde met twee andere getallen naast elkaar.' }
+      ];
       return vakjes(Object.assign(basis, { sleutel:'hg' + t.ys.join('_'), vraag:'Bij deze tabel hoort een exponentieel verband. Wat is de groeifactor?',
         beeld:tabelHtml({ xm:'x', ye:'y' }, t.xs, t.ys), html:'<div class="wf-regel"><span class="t">groeifactor:</span>{0}</div>', vakken:[{ a:t.g, naam:'groeifactor', toon:net(t.g) }], antwoordTekst:net(t.g),
         uitleg:t.uit + ' Neem niet het verschil (' + net(t.ys[1]) + ' − ' + net(t.ys[0]) + '): bij exponentiële groei is dat niet steeds hetzelfde.' + (t.g < 1 ? ' Een groeifactor kleiner dan 1 hoort bij een afname.' : '') }));
     }
     if (keus === 'volgende'){
       var type = kies(['kwadratisch', 'exponentieel']), q = hvTabelSoort(type), y5 = type === 'kwadratisch' ? rond(q.k * 25 + q.c0) : rond(q.s * Math.pow(q.g, 5));
+      var laatst = rond(q.ys[4] - q.ys[3]), volgVers = rond(laatst + 2 * q.k);
+      basis.stappen = type === 'kwadratisch' ? [
+        { tekst:'Bereken de verschillen: ' + [1, 2, 3, 4].map(function(i){ return net(rond(q.ys[i] - q.ys[i - 1])); }).join(', ') + '.', waarom:'Er komt niet steeds evenveel bij; kijk dus hoe de verschillen veranderen.',
+          hint:'Wat komt er van kolom naar kolom bij?' },
+        { tekst:'De verschillen worden steeds ' + net(2 * q.k) + ' groter. Het volgende verschil is ' + net(laatst) + ' + ' + net(2 * q.k) + ' = ' + net(volgVers) + '.', waarom:'Bij een kwadratisch verband groeien de verschillen elke stap met hetzelfde getal.',
+          hint:'Met hoeveel groeit het verschil elke keer?', fout:'Het laatste verschil (' + net(laatst) + ') nog eens erbij tellen is fout: het verschil groeit.', vak:0 },
+        { tekst:'Tel het op: ' + net(q.ys[4]) + ' + ' + net(volgVers) + ' = ' + net(y5) + '.', waarom:'Het volgende getal is het laatste getal plus het volgende verschil.', vak:0 }
+      ] : [
+        { tekst:'Deel een getal door het vorige: ' + net(q.ys[1]) + ' ÷ ' + net(q.ys[0]) + ' = ' + net(q.g) + '. Dat is de groeifactor.', waarom:'Bij exponentieel gaat het elke stap keer hetzelfde getal.',
+          hint:'Deel het tweede getal door het eerste.' },
+        { tekst:'Doe het laatste getal keer de groeifactor: ' + net(q.ys[4]) + ' × ' + net(q.g) + ' = ' + net(y5) + '.', waarom:'Eén stap verder is nog een keer keer ' + net(q.g) + '.',
+          hint:'Doe ' + net(q.ys[4]) + ' keer de groeifactor.', fout:'Het laatste verschil erbij tellen is fout: het gaat keer ' + net(q.g) + ', niet plus.', vak:0 }
+      ];
       var hoe = type === 'kwadratisch' ? 'De verschillen worden steeds ' + net(2 * q.k) + ' groter. Het laatste verschil was ' + net(rond(q.ys[4] - q.ys[3])) + ', het volgende is ' + net(rond(q.ys[4] - q.ys[3] + 2 * q.k)) + '. Dus ' + net(q.ys[4]) + ' + ' + net(rond(q.ys[4] - q.ys[3] + 2 * q.k)) + ' = ' + net(y5) + '.'
         : 'Steeds keer ' + net(q.g) + ': ' + net(q.ys[4]) + ' × ' + net(q.g) + ' = ' + net(y5) + '.';
       return vakjes(Object.assign(basis, { sleutel:'hv' + type + q.ys.join('_'), vraag:'Ga in dezelfde regelmaat verder. Welk getal hoort bij x = 5?',
@@ -618,16 +782,30 @@ body.groot .wf-regel .t{line-height:60px}
     }
     var v = kies([
       function(){ var p = kies([[200, 1.5, 2], [200, 1.5, 3], [500, 1.2, 2], [625, 1.2, 3], [300, 2, 4], [800, 0.5, 3], [2500, 0.8, 2], [1250, 0.8, 3]]);
-        var y = rond(p[0] * Math.pow(p[1], p[2])); return { f:'N = ' + p[0] + ' × ' + net(p[1]) + '<sup>t</sup>', met:'N het aantal en t de tijd in uren', vr:'Bereken N als t = ' + p[2] + '.', l:'N =', a:y,
+        var y = rond(p[0] * Math.pow(p[1], p[2])), mt = kom(Math.pow(p[1], p[2])); return { f:'N = ' + p[0] + ' × ' + net(p[1]) + '<sup>t</sup>', met:'N het aantal en t de tijd in uren', vr:'Bereken N als t = ' + p[2] + '.', l:'N =', a:y,
+          st:[{ tekst:'Vul t = ' + p[2] + ' in: N = ' + p[0] + ' × ' + net(p[1]) + '<sup>' + p[2] + '</sup>.', waarom:'De t staat in de exponent: ' + net(p[1]) + ' wordt ' + p[2] + ' keer met zichzelf vermenigvuldigd.', hint:'Zet ' + p[2] + ' op de plek van t.' },
+            { tekst:'Reken eerst de macht uit: ' + net(p[1]) + '<sup>' + p[2] + '</sup> = ' + mt + '.', waarom:'Eerst machtsverheffen, dan vermenigvuldigen.', hint:'Reken eerst ' + Array.apply(null, Array(p[2])).map(function(){ return net(p[1]); }).join(' × ') + ' uit.',
+              fout:'Niet ' + net(p[1]) + ' × ' + p[2] + ' doen: de t is een exponent, geen factor.', vak:0 },
+            { tekst:'Dan keer ' + p[0] + ': ' + p[0] + ' × ' + mt + ' = ' + net(y) + '.', waarom:'Het beginaantal ' + p[0] + ' groeit met de factor die je net uitrekende.', vak:0 }],
           uit:'Vul t = ' + p[2] + ' in: ' + net(p[1]) + '<sup>' + p[2] + '</sup> = ' + kom(Math.pow(p[1], p[2])) + ', en ' + p[0] + ' × ' + kom(Math.pow(p[1], p[2])) + ' = ' + net(y) + '. Eerst de macht, dan keer ' + p[0] + '. Niet ' + net(p[1]) + ' × ' + p[2] + ' doen: de t is een exponent.' }; },
       function(){ var k = kies([15, 20, 25, 30]), t = kies([1, 2, 3]), y = k * t - 5 * t * t; return { f:'h = ' + k + ' × t − 5 × t²', met:'h de hoogte van een bal in meter en t de tijd in seconden', vr:'Hoe hoog is de bal na ' + t + ' seconden?', l:'h =', a:y,
+          st:[{ tekst:'Vul t = ' + t + ' in: h = ' + k + ' × ' + t + ' − 5 × ' + t + '².', waarom:'Overal waar t staat, komt ' + t + '.', hint:'Zet ' + t + ' op elke plek van t.' },
+            { tekst:'Reken de delen uit: ' + k + ' × ' + t + ' = ' + (k * t) + ', en ' + t + '² = ' + (t * t) + ', dus 5 × ' + (t * t) + ' = ' + (5 * t * t) + '.', waarom:'Eerst het kwadraat, dan keer 5. Het kwadraat hoort alleen bij de t.',
+              hint:'Reken eerst ' + t + '² uit, en doe dat dan keer 5.', fout:'Niet (5 × ' + t + ')² doen: het kwadraat hoort alleen bij de t.', vak:0 },
+            { tekst:'Haal ze van elkaar af: ' + (k * t) + ' − ' + (5 * t * t) + ' = ' + y + ' meter.', waarom:'Wat de bal omhoog gaat, min wat de zwaartekracht eraf haalt.', vak:0 }],
           uit:'Vul t = ' + t + ' in: ' + k + ' × ' + t + ' = ' + (k * t) + ' en 5 × ' + t + '² = 5 × ' + (t * t) + ' = ' + (5 * t * t) + '. Dus h = ' + (k * t) + ' − ' + (5 * t * t) + ' = ' + y + ' meter. Eerst het kwadraat, dan keer 5.' }; },
       function(){ var k = kies([0.005, 0.01]), sn = kies([50, 80, 100, 120]), y = rond(k * sn * sn); return { f:'r = ' + kom(k) + ' × v²', met:'r de remweg in meter en v de snelheid in km per uur', vr:'Hoe lang is de remweg bij ' + sn + ' km per uur?', l:'r =', a:y,
+          st:[{ tekst:'Vul v = ' + sn + ' in: r = ' + kom(k) + ' × ' + sn + '².', waarom:'De snelheid komt op de plek van v.', hint:'Zet ' + sn + ' op de plek van v.' },
+            { tekst:'Eerst het kwadraat: ' + sn + '² = ' + sn + ' × ' + sn + ' = ' + (sn * sn) + '.', waarom:'Het kwadraat hoort alleen bij de v, en een macht gaat voor keer.',
+              hint:'Reken eerst ' + sn + ' × ' + sn + ' uit.', fout:'Niet eerst ' + kom(k) + ' × ' + sn + ' en dat in het kwadraat: het kwadraat hoort alleen bij de v.', vak:0 },
+            { tekst:'Dan keer ' + kom(k) + ': ' + kom(k) + ' × ' + (sn * sn) + ' = ' + net(y) + ' meter.', waarom:'Zo blijft de volgorde goed: eerst de macht, dan keer.', vak:0 }],
           uit:'Vul v = ' + sn + ' in: ' + sn + '² = ' + (sn * sn) + ', en ' + kom(k) + ' × ' + (sn * sn) + ' = ' + net(y) + ' meter. Niet eerst ' + kom(k) + ' × ' + sn + ' en dat in het kwadraat: het kwadraat hoort alleen bij de v.' }; },
       function(){ var C = kies([120, 180, 240, 360]), sn = kies([40, 60, 80, 90, 120].filter(function(x){ return heel(C / x * 4); })), y = rond(C / sn); return { f:'t = ' + C + ' ÷ v', met:'t de reistijd in uren en v de snelheid in km per uur', vr:'Hoe lang duurt de reis bij ' + sn + ' km per uur?', l:'t =', a:y,
+          st:[{ tekst:'Vul v = ' + sn + ' in: t = ' + C + ' ÷ ' + sn + '.', waarom:'De snelheid komt op de plek van v, onder de deelstreep.', hint:'Zet ' + sn + ' op de plek van v.' },
+            { tekst:'Reken uit: ' + C + ' ÷ ' + sn + ' = ' + net(y) + ' uur.', waarom:'Hoe harder je rijdt, hoe korter de reis: twee keer zo hard is de helft van de tijd.', hint:'Deel ' + C + ' door ' + sn + '.', vak:0 }],
           uit:'Vul v = ' + sn + ' in: ' + C + ' ÷ ' + sn + ' = ' + net(y) + ' uur. Twee keer zo hard rijden halveert de reistijd: omgekeerd evenredig.' }; }])();
     return vakjes(Object.assign(basis, { sleutel:'hf' + v.f + v.vr, vraag:v.vr, beeld:'<div class="wf-sit">' + wf(v.f) + '<br>met ' + v.met + '.</div>',
-      html:'<div class="wf-regel"><span class="t">' + v.l + '</span>{0}</div>', vakken:[{ a:v.a, naam:'antwoord', toon:net(v.a) }], antwoordTekst:net(v.a), uitleg:v.uit }));
+      html:'<div class="wf-regel"><span class="t">' + v.l + '</span>{0}</div>', vakken:[{ a:v.a, naam:'antwoord', toon:net(v.a) }], antwoordTekst:net(v.a), uitleg:v.uit, stappen:v.st }));
   }
   function verband(niveau){
     if (niveau === 'bb') return verbandBB();
@@ -673,16 +851,27 @@ body.groot .wf-regel .t{line-height:60px}
     }
     beeld += '</div>';
     var waarom = 'B is in het begin ' + geld(db) + ' euro duurder, maar ' + geld(da) + ' euro ' + c.per + ' goedkoper. Dat verschil is weg na ' + geld(db) + ' ÷ ' + geld(da) + ' = ' + net(v.xs) + ' ' + c.xm + '.';
+    var verschilStap = { tekst:'Vergelijk de formules: B is in het begin € ' + geld(db) + ' duurder, maar ' + c.per + ' € ' + geld(da) + ' goedkoper.', waarom:cap(elk(c)) + c.x1 + ' haalt B dus € ' + geld(da) + ' van zijn achterstand in.',
+      hint:'Vergelijk de startgetallen van A en B, en hun getallen per stap.' };
     if (vanaf){
       var m = Math.ceil(v.xs), m0 = m - 1;
       return vakjes(Object.assign(basis, { sleutel:'vv' + c.id + v.a1 + '_' + v.a2 + '_' + v.b1 + '_' + v.b2, beeld:beeld,
         vraag:c.doe + ' een heel aantal ' + c.xm + '. Vanaf hoeveel ' + c.xm + ' is B goedkoper dan A?',
+        stappen:[verschilStap,
+          { tekst:'Even duur zou het zijn na ' + geld(db) + ' ÷ ' + geld(da) + ' ≈ ' + net(v.xs) + ' ' + c.xm + '. Dat is geen heel aantal.', waarom:'Je deelt de achterstand van B door wat B per ' + c.x1 + ' inhaalt.',
+            hint:'Hoeveel ' + c.xm + ' duurt het tot B de € ' + geld(db) + ' heeft ingehaald?', vak:0 },
+          { tekst:'Kijk naar de hele getallen eromheen. Bij ' + m0 + ' ' + c.xm + ' kost A € ' + geld(kostA(v, m0)) + ' en B € ' + geld(kostB(v, m0)) + '. Bij ' + m + ' ' + c.xm + ' kost A € ' + geld(kostA(v, m)) + ' en B € ' + geld(kostB(v, m)) + '. Vanaf ' + m + ' ' + c.xm + ' is B goedkoper.',
+            waarom:'Je rekent met hele ' + c.xm + '. Na het moment dat ze even duur zijn, is B goedkoper.', vak:0 }],
         html:'<div class="wf-regel"><span class="t">vanaf</span>{0}<span class="t">' + c.xm + '</span></div>', vakken:[{ a:m, naam:'aantal ' + c.xm, toon:String(m) }], antwoordTekst:m + ' ' + c.xm,
         uitleg:'Gelijk zou het zijn bij ' + geld(db) + ' ÷ ' + geld(da) + ' ≈ ' + net(v.xs) + ' ' + c.xm + ', en dat is geen heel aantal. Controleer de hele getallen eromheen: bij ' + m0 + ' ' + c.xm + ' kost A € ' + geld(kostA(v, m0)) + ' en B € ' + geld(kostB(v, m0)) + ', dus A is nog goedkoper. Bij ' + m + ' ' + c.xm + ' kost A € ' + geld(kostA(v, m)) + ' en B € ' + geld(kostB(v, m)) + ': nu is B goedkoper. Dus vanaf ' + m + ' ' + c.xm + '.' }));
     }
     if (Math.random() < 0.55){
       return vakjes(Object.assign(basis, { sleutel:'ve' + c.id + v.a1 + '_' + v.a2 + '_' + v.b1 + '_' + v.xs, beeld:beeld,
         vraag:'Bij hoeveel ' + c.xm + ' zijn A en B even duur?',
+        stappen:[verschilStap,
+          { tekst:'Het verschil is weg na ' + geld(db) + ' ÷ ' + geld(da) + ' = ' + net(v.xs) + ' ' + c.xm + '.', waarom:'Je deelt de achterstand van B door wat B per ' + c.x1 + ' inhaalt.',
+            hint:niveau === 'bb' ? 'Zoek in de tabel de kolom waar A en B hetzelfde kosten. Of deel het verschil in startgetal door het verschil per ' + c.x1 + '.' : 'Deel de € ' + geld(db) + ' door wat B per ' + c.x1 + ' inhaalt.', vak:0 },
+          { tekst:'Controleer: bij ' + net(v.xs) + ' ' + c.xm + ' kost A € ' + geld(kostA(v, v.xs)) + ' en B € ' + geld(kostB(v, v.xs)) + '. Even duur.', waarom:'Invullen in beide formules laat zien of het klopt.' }],
         opdracht:niveau === 'bb' ? 'Zoek in de tabel waar A en B hetzelfde kosten.' : 'Maak een tabel, of reken uit hoe snel het verschil kleiner wordt.',
         html:'<div class="wf-regel"><span class="t">bij</span>{0}<span class="t">' + c.xm + '</span></div>', vakken:[{ a:v.xs, naam:'aantal ' + c.xm, toon:net(v.xs) }], antwoordTekst:net(v.xs) + ' ' + c.xm,
         uitleg:'Bij ' + net(v.xs) + ' ' + c.xm + ' kost A ' + geld(v.a1) + ' × ' + net(v.xs) + (v.b1 ? ' + ' + geld(v.b1) : '') + ' = € ' + geld(kostA(v, v.xs)) + ' en B ' + geld(v.a2) + ' × ' + net(v.xs) + ' + ' + geld(v.b2) + ' = € ' + geld(kostB(v, v.xs)) + ': even duur. ' + waarom }));
@@ -692,6 +881,14 @@ body.groot .wf-regel .t{line-height:60px}
     var opties = ['A is goedkoper', 'B is goedkoper', 'ze zijn even duur'];
     return Object.assign(basis, { vorm:'meerkeuze', vasteVolgorde:true, sleutel:'vm' + c.id + v.a1 + '_' + v.a2 + '_' + v.b1 + '_' + v.xs + '_' + X, beeld:beeld,
       vraag:c.doe + ' ' + X + ' ' + xmVan(c, X) + '. Wat klopt?', opties:opties, goed:gi, antwoordTekst:opties[gi],
+      stappen:[
+        { tekst:'Reken A uit bij ' + X + ' ' + xmVan(c, X) + ': ' + geld(v.a1) + ' × ' + X + (v.b1 ? ' + ' + geld(v.b1) : '') + ' = € ' + geld(yA) + '.', waarom:'Vul hetzelfde aantal ' + c.xm + ' in beide formules in; dan vergelijk je echte bedragen.',
+          hint:'Vul ' + X + ' in bij formule A.' },
+        { tekst:'Reken B uit: ' + geld(v.a2) + ' × ' + X + ' + ' + geld(v.b2) + ' = € ' + geld(yB) + '.', waarom:'B begint duurder, maar is ' + c.per + ' goedkoper. Daarom hangt het af van het aantal ' + c.xm + '.',
+          hint:'Vul ' + X + ' in bij formule B.' },
+        { tekst:'Vergelijk: ' + (gi === 2 ? 'ze zijn even duur.' : (gi === 0 ? 'A' : 'B') + ' is goedkoper.') + ' Tot ' + net(v.xs) + ' ' + c.xm + ' is A goedkoper, daarna B.', waarom:'Kijk niet alleen naar het startgetal of alleen naar het getal per stap.',
+          optie:[0, 1, 2].filter(function(i){ return i !== gi; }) }
+      ],
       uitleg:'Bij ' + X + ' ' + xmVan(c, X) + ' kost A € ' + geld(yA) + ' en B € ' + geld(yB) + '. ' + waarom + ' Tot ' + net(v.xs) + ' ' + c.xm + ' is A goedkoper, daarna B. Kijk dus niet alleen naar het startgetal of alleen naar het getal per stap.' });
   }
   function kaarsen(basis){
@@ -703,6 +900,13 @@ body.groot .wf-regel .t{line-height:60px}
       vraag:'Twee kaarsen worden tegelijk aangestoken. Na hoeveel uur zijn ze even lang?',
       beeld:'<div class="wf-sit"><b>Kaars A:</b> ' + wf(formule(c, a1, b1, true)) + '<br><b>Kaars B:</b> ' + wf(formule(c, a2, b2, true)) + '</div>',
       opdracht:'Een komma of een punt mag.',
+      stappen:[
+        { tekst:'Kaars B is ' + net(rond(b2 - b1)) + ' cm langer, maar brandt elk uur ' + net(da) + ' cm sneller op.', waarom:'Elk uur wordt het verschil in lengte ' + net(da) + ' cm kleiner.',
+          hint:'Vergelijk de startlengtes, en hoeveel elke kaars per uur korter wordt.' },
+        { tekst:'Het verschil is weg na ' + net(rond(b2 - b1)) + ' ÷ ' + net(da) + ' = ' + net(xs) + ' uur.', waarom:'Je deelt het verschil door hoeveel het per uur kleiner wordt.',
+          hint:'Deel het verschil in lengte door hoeveel het per uur kleiner wordt.', vak:0 },
+        { tekst:'Controleer: A is dan ' + net(b1) + ' − ' + net(a1) + ' × ' + net(xs) + ' = ' + net(lA) + ' cm, en B ' + net(b2) + ' − ' + net(a2) + ' × ' + net(xs) + ' = ' + net(lA) + ' cm.', waarom:'Even lang betekent: beide formules geven dezelfde lengte.' }
+      ],
       html:'<div class="wf-regel"><span class="t">na</span>{0}<span class="t">uur</span></div>', vakken:[{ a:xs, naam:'aantal uur', toon:net(xs), tol:0.01 }], antwoordTekst:net(xs) + ' uur',
       uitleg:'Kaars B is ' + net(rond(b2 - b1)) + ' cm langer, maar wordt elk uur ' + net(da) + ' cm meer korter. Het verschil is weg na ' + net(rond(b2 - b1)) + ' ÷ ' + net(da) + ' = ' + net(xs) + ' uur. Controle: A is dan ' + net(b1) + ' − ' + net(a1) + ' × ' + net(xs) + ' = ' + net(lA) + ' cm, en B ' + net(b2) + ' − ' + net(a2) + ' × ' + net(xs) + ' = ' + net(lA) + ' cm.' }));
   }
