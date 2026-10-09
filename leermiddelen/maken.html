@@ -38,6 +38,63 @@
 .zinfout{color:var(--fout);font-size:.85rem;grid-column:2 / -1;margin:-2px 0 2px}
 .dicteeniveau{max-width:320px}
 @media(max-width:420px){.zinrij{grid-template-columns:22px minmax(0,1fr) 44px 44px;gap:4px}}
+/* vragen uit de site (maken-kiezer.js): een venster met bovenin de keuzes, dan de lijst, onderaan de knoppen */
+.uitsite{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin-top:14px;padding-top:14px;border-top:1px solid var(--rand)}
+.uitsite .tip{flex:1 1 220px}
+#uitSiteMelding:empty{display:none}
+/* een lange vraag die is ingeklapt (een regel, met puntjes) mag de lijst niet breder maken dan de kaart */
+#items{grid-template-columns:minmax(0,1fr)}
+#items .item{min-width:0}
+html.kzopen{overflow:hidden}
+.kiezer{width:min(760px,100% - 32px);max-width:none;max-height:min(880px,100% - 40px);padding:0;border:1px solid var(--rand);border-radius:18px;background:var(--kaart);color:var(--ink);box-shadow:var(--schaduw)}
+.kiezer[open]{display:flex;flex-direction:column}
+.kiezer::backdrop{background:rgba(15,26,61,.55)}
+.kzkop{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 12px 10px 20px;border-bottom:1px solid var(--rand)}
+.kzkop h2{font-size:1.25rem}
+.kzsluit{border:none;background:none;color:var(--muted);min-width:44px;min-height:44px;border-radius:10px;font-size:1.5rem;line-height:1;padding:0}
+.kzsluit:hover{color:var(--ink);background:var(--kaart2)}
+.kzmidden{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;padding:14px 20px 18px;display:grid;gap:12px;align-content:start}
+.kzfilters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px}
+.kzbreed,.kzdeel{grid-column:1 / -1}
+@media(min-width:700px){.kzfilters{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,2fr)}.kzfilters .kzdeel{grid-column:auto}}
+.kzbalk{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 12px}
+.kzaantal{font-size:.9rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.kzlijst{display:grid;gap:6px}
+.kzlijst .leeg{padding:18px}
+.kzvraag{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1.5px solid var(--rand2);border-radius:14px;cursor:pointer;min-height:44px}
+.kzvraag:hover{border-color:var(--ocean)}
+.kzvraag.aan{border-color:var(--ocean);background:var(--kies)}
+.kzvraag.al{opacity:.6;cursor:default}
+.kzvraag.al:hover{border-color:var(--rand2)}
+.kzvraag input{width:20px;height:20px;margin:2px 0 0;accent-color:var(--ocean);flex:none;cursor:inherit}
+.kzvraag input:focus-visible{outline:3px solid var(--focusring);outline-offset:3px}
+/* het plaatje op wit, met de inktkleur van overdag: zo ziet het er ook in de toets uit */
+.kzbeeld{flex:none;width:64px;height:48px;display:grid;place-items:center;border-radius:8px;background:#fff;color:#14224C;border:1px solid var(--rand);overflow:hidden;padding:2px}
+.kzbeeld img{max-width:100%;max-height:100%;display:block}
+.kzbeeld svg{width:100%;height:100%;display:block}
+.kztekst{display:grid;gap:3px;min-width:0;flex:1 1 auto}
+.kzv{font-weight:600;line-height:1.35;overflow-wrap:anywhere}
+.kzgoed{font-size:.9rem;color:var(--goed);overflow-wrap:anywhere}
+.kzgoedlabel{font-weight:700}
+.kzlabels{display:flex;flex-wrap:wrap;gap:4px}
+.kzlabels span{font-size:.75rem;font-weight:600;border-radius:999px;padding:2px 8px;background:var(--kaart2);color:var(--muted)}
+.kzmeer{justify-self:start;margin-top:4px}
+.kzvoet{border-top:1px solid var(--rand);padding:10px 20px calc(12px + env(safe-area-inset-bottom));background:var(--kaart)}
+.kzvoet .melding{margin:0 0 8px}
+.kzvoet .melding:empty{display:none}
+@media(max-width:560px){
+  .kiezer{width:100%;height:100%;max-height:none;margin:0;border:0;border-radius:0}
+  .kzkop{padding:8px 6px 8px 16px}
+  .kzmidden{padding:12px 16px 16px}
+  .kzvoet{padding-left:16px;padding-right:16px}
+  .kzvoet .rij{gap:8px}
+  .kzvoet .rij .knop{flex:1 1 auto}
+  /* het kruisje bovenin sluit ook: zo blijft er meer plek voor de lijst */
+  #kzAnnuleer{display:none}
+}
+@media(max-width:420px){
+  .kzfilters{grid-template-columns:minmax(0,1fr)}
+}
 </style>
 <script src="/vangnet.js" defer></script>
 <script src="/leermiddelen/merk.js" defer></script>
@@ -127,6 +184,11 @@
         <div class="items" id="items" style="margin-top:10px"></div>
         <p class="tip" style="margin-top:14px">Vraag erbij:</p>
         <div class="soortknoppen" id="soortknoppen" style="margin-top:6px"></div>
+        <div class="uitsite">
+          <button class="knop klein" id="uitSite" type="button" aria-haspopup="dialog">Vragen uit de site</button>
+          <span class="tip">Kies kant-en-klare vragen uit de oefenstof van de spellen, per vak, onderwerp en niveau.</span>
+        </div>
+        <p class="melding" id="uitSiteMelding" role="status" aria-live="polite"></p>
       </div>
 
       <!-- dictee: de tekst plakken, de pagina verdeelt hem in zinnen -->
@@ -185,6 +247,7 @@
 <script src="profiel.js"></script>
 <script src="voorlezen.js"></script>
 <script src="eigen.js"></script>
+<script src="maken-kiezer.js"></script>
 <script src="voorbeeldtoetsen.js"></script>
 <script src="nakijk.js"></script>
 <script src="uitslag.js"></script>
@@ -288,7 +351,7 @@
     $('bewerkKop').textContent = soort === 'dictee' ? (code ? 'Bewerken: dictee' : 'Nieuw dictee') : (code ? 'Bewerken: ' : 'Nieuwe ') + (soort === 'lijst' ? 'woordenlijst' : 'oefening of toets');
     $('deelvak').classList.add('hide'); $('probeer').disabled = !code;
     $('inleverWaarschuw').classList.add('hide');
-    melding($('bewaarMelding'), '');
+    melding($('bewaarMelding'), ''); melding($('uitSiteMelding'), '');
     [].forEach.call(document.querySelectorAll('#bewerkvak .item.fout'), wisFout);
     $('naam').removeAttribute('aria-invalid');
     toonTerugzien(); groeiAlles(); zetVies(false);
@@ -385,6 +448,29 @@
     $('items').insertAdjacentHTML('beforeend', itemHtml({ vorm: b.getAttribute('data-nieuw') }));
     nummer(); zetVies(true); groeiAlles();
     var laatste = $('items').lastElementChild; laatste.scrollIntoView({ block:'nearest' }); var eerste = laatste.querySelector('input,textarea'); if (eerste) eerste.focus();
+  });
+  /* Vragen uit de site (maken-kiezer.js): kiezen uit de oefenstof van de spellen.
+     Ze komen onderaan als gewone vragen, die je daarna nog kunt aanpassen. */
+  $('uitSite').addEventListener('click', function(){
+    melding($('uitSiteMelding'), '');
+    KIEZER.open({
+      knop: this, vak: $('vak').value,
+      al: function(){ return [].map.call($('items').children, function(it){ var x = lees(it); return KIEZER.sleutel(x.vraag, x.vorm === 'mk' ? x.goed : x.vorm === 'open' ? (x.antwoorden || [])[0] : ''); }); },
+      plaatjesVrij: function(){ return Math.max(0, 12 - $('items').querySelectorAll('.afbvak.heeft').length); },
+      ruimte: function(){ return Math.max(0, 200 - $('items').children.length); },
+      klaar: function(items, info){
+        var mis = info.mislukt ? ' ' + (info.mislukt === 1 ? 'Een vraag kon niet mee' : info.mislukt + ' vragen konden niet mee') + ', omdat het plaatje niet lukte.' : '';
+        if (!items.length){ melding($('uitSiteMelding'), 'Er is niets bijgekomen.' + mis + ' Probeer het opnieuw.', 'fout'); return; }
+        var eerst = $('items').children.length;
+        $('items').insertAdjacentHTML('beforeend', items.map(itemHtml).join(''));
+        var nieuw = [].slice.call($('items').children, eerst);
+        /* een hele rij tegelijk komt ingeklapt binnen: eerst het overzicht, dan de details */
+        if (items.length >= 3) nieuw.forEach(function(it){ klap(it, true); });
+        if (!$('vak').value && info.vakken.length === 1) $('vak').value = info.vakken[0];
+        nummer(); zetVies(true); groeiAlles();
+        melding($('uitSiteMelding'), (items.length === 1 ? 'Een vraag' : items.length + ' vragen') + ' erbij gezet, onderaan de lijst' + (items.length >= 3 ? '. Met + klap je een vraag uit om hem aan te passen.' : '.') + mis, 'goed');
+      }
+    });
   });
   /* zo lang als de server bewaart (server/materiaal.js): langer typen verdwijnt anders stil bij het opslaan */
   var MAX_VELD = { vraag:300, uitleg:300, goed:150, tekst:1200 };
