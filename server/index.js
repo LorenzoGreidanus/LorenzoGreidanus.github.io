@@ -25,7 +25,7 @@ export { Account } from "./account.js";
 export { Zombiekamer, Veld } from "./stad.js";
 /* De personages van De stad: een object per speler, alleen voor de potjes (geen route) */
 export { Stadheld } from "./stad.js";
-import { behandel as accountBehandel, ingelogd as accountIngelogd, mogelijk as accountMogelijk, isEigenaar, naamVan as accountNaam, kenmerkVan as accountKenmerk } from "./account.js";
+import { behandel as accountBehandel, ingelogd as accountIngelogd, mogelijk as accountMogelijk, isEigenaar, naamVan as accountNaam, kenmerkVan as accountKenmerk, eigenaarVan as accountEigenaar } from "./account.js";
 const KLASSEMENTEN = { toren: true, zwaard: true, dag: true, mijnwerker: true, poortrace: true, kaarttoren: true };   /* dag: per datum een lijst, dag-2026-09-19 */
 
 /* Een browser stuurt bij elk POST en bij elke WebSocket mee vanaf welke site
@@ -301,7 +301,10 @@ async function verdeel(req, env, ctx){
         if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
         if (!await magDoor(env, req, "profiel-sync", 900, 60)) return json({ fout: "even wachten" }, 429);
         let inz; try { inz = await leesJson(req); } catch (e){ return json({ fout: "geen geldig profiel" }, 400); }
-        return stub.fetch("https://profiel/sync", { method: "POST", body: JSON.stringify(inz || {}) });
+        /* wie er is ingelogd komt uit het sessiekoekje, nooit uit het bericht */
+        const ei = await accountEigenaar(req, env);
+        return stub.fetch("https://profiel/sync", { method: "POST", body: JSON.stringify({ profiel: inz && inz.profiel, klasWeg: !!(inz && inz.klasWeg),
+          wie: ei ? ei.id : "", eigenaar: ei && ei.code === code ? ei.id : "" }) });
       }
       return json({ fout: "onbekend" }, 404);
     }

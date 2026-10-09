@@ -348,7 +348,7 @@ window.SPEL = (function(){
       var reeksX = reeksFactor(o.reeks);
       var nMunt = Math.max(0, Math.round(o.goed * (o.muntFactor || 1) * MUNT_PER_GOED * reeksX + (o.muntBonus || 0)));
       var reeksTekst = reeksX > 1 ? ' (reeks van ' + o.reeks + ': ×' + String(reeksX).replace('.', ',') + ')' : '';
-      if (nMunt && PROFIEL.ingelogd()){ PROFIEL.muntenErbij(nMunt); muntHtml = '<p class="munten"><b>+' + nMunt + ' <span class="ico ico-munt" role="img" aria-label="munten" title="munten"></span></b>' + reeksTekst + ' je hebt er nu ' + PROFIEL.munten() + ' <a href="index.html?winkel=1">naar de winkel</a></p>'; }
+      if (nMunt && PROFIEL.ingelogd()){ PROFIEL.muntenErbij(nMunt); muntHtml = '<p class="munten"><b>+' + nMunt + ' <span class="ico ico-munt" role="img" aria-label="munten" title="munten"></span></b>' + reeksTekst + ' je hebt er nu ' + PROFIEL.munten() + (PROFIEL.wie && PROFIEL.wie() ? ', op het account van ' + schoon(PROFIEL.wie()) + ' <a href="index.html">niet jij?</a>' : '') + ' <a href="index.html?winkel=1">naar de winkel</a></p>'; }
       /* Bij nul sterren zegt dit scherm niets over gemiste munten. Een
          leerling die het niet haalde heeft geen aanbieding nodig. */
       else if (nMunt && sterren !== 0 && PROFIEL.accountMogelijk()) muntHtml = '<p class="munten stil">' + nMunt + ' <span class="ico ico-munt" role="img" aria-label="munten" title="munten"></span> gemist. ' +

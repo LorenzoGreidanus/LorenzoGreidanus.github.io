@@ -147,6 +147,21 @@ export async function kenmerkVan(req, env){
   if (!mogelijk(env)) return "";
   try { const s = await sessie(env, req); return s && s.id ? String(s.id) : ""; } catch (e){ return ""; }
 }
+/* Wie er is ingelogd en welke speelcode aan dat account hangt, of null.
+   index.js laat een profiel dat bij een account hoort alleen bijwerken door
+   dat account: anders kan iedereen die de acht letters kent je munten
+   uitgeven en je gezichtje veranderen. */
+export async function eigenaarVan(req, env){
+  if (!mogelijk(env)) return null;
+  try {
+    const s = await sessie(env, req);
+    if (!s) return null;
+    const r = await (await account(env, s.id)).fetch("https://account/lees");
+    if (!r.ok) return null;
+    const j = await r.json();
+    return { id: String(s.id), code: String((j && j.code) || "") };
+  } catch (e){ console.warn("account: eigenaar opzoeken mislukt", e && e.message); return null; }
+}
 export function mogelijk(env){ return !!(env.MS_CLIENT_ID && env.MS_CLIENT_SECRET && env.SESSIE_GEHEIM); }
 function basis(env){ return String(env.MS_AANMELDBASIS || "https://login.microsoftonline.com").replace(/\/+$/, ""); }
 function huurder(env){ return String(env.MS_TENANT || "common"); }
@@ -291,6 +306,10 @@ export async function behandel(req, env, url, hulp){
     /* alleen een speelcode die bestaat */
     const pr = await env.PROFIEL.get(env.PROFIEL.idFromName(code)).fetch("https://profiel/lees");
     if (!pr.ok) return json({ fout: "geen profiel met deze code" }, 404);
+    /* een speelcode hoort bij hoogstens een account: twee leerlingen op dezelfde
+       schoollaptop mogen niet samen op een profiel uitkomen */
+    const pe = await env.PROFIEL.get(env.PROFIEL.idFromName(code)).fetch("https://profiel/eigenaar", { method: "POST", body: JSON.stringify({ id: s.id }) });
+    if (pe.status === 409) return json({ fout: "Deze speelcode hoort al bij een ander account. Kies een nieuwe." }, 409);
     const rk = await (await account(env, s.id)).fetch("https://account/koppel", { method: "POST", body: JSON.stringify({ code }) });
     const jk = await rk.json().catch(() => ({}));
     if (rk.ok && jk.beheer) await allesVrij(env, code);

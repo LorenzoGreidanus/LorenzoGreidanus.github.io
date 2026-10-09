@@ -161,7 +161,7 @@ window.PROFIEL = (function(){
   /* kopen: de server rekent af en zegt wat je nu hebt */
   function koop(id){
     var c = code(); if (!c || !ingelogd()) return Promise.reject(new Error('Log eerst in met Microsoft.'));
-    clearTimeout(timer);
+    stopWacht();
     var delta = wachtend();
     var pr = verzamel(); pr.koop = [id];
     return vraag('/api/profiel/' + c, 'PUT', { profiel:pr }).then(function(j){
@@ -175,7 +175,7 @@ window.PROFIEL = (function(){
      als het wapen daarna niet in je kast staat was er niet genoeg. */
   function koopWapen(id){
     var c = code(); if (!c || !ingelogd()) return Promise.reject(new Error('Log eerst in met Microsoft.'));
-    clearTimeout(timer);
+    stopWacht();
     var delta = wachtend();
     var pr = verzamel(); pr.koopWapen = [id];
     return vraag('/api/profiel/' + c, 'PUT', { profiel:pr }).then(function(j){
@@ -233,20 +233,45 @@ window.PROFIEL = (function(){
   }
   function vraag(url, methode, body){
     return fetch(url, { method:methode, headers:{ 'content-type':'application/json' }, body: body ? JSON.stringify(body) : undefined })
-      .then(function(r){ return r.json().then(function(j){ if (!r.ok) throw new Error(j && j.fout ? j.fout : 'Het lukte niet.'); return j; }); });
+      .then(function(r){ return r.json().then(function(j){ if (!r.ok){ var e = new Error(j && j.fout ? j.fout : 'Het lukte niet.'); e.vast = !!(j && j.vast); throw e; } return j; }); });
   }
+  /* Na een geslaagde melding: wat er onderweg was is aangekomen. Een trofee
+     gaat pas uit de wachtrij als hij echt in het bezit staat, want de server
+     laat er per melding maar een door; de rest komt bij de volgende. */
+  function aangekomen(delta, vr, j){
+    lsZet('lg-munten-wacht', String(Math.max(0, wachtend() - delta)));
+    var bz = (j && j.profiel && j.profiel.bezit) || {};
+    var kreeg = vr.filter(function(x){ return bz[x]; });
+    lsZet('lg-vrij-wacht', JSON.stringify(vrijWacht().filter(function(x){ return kreeg.indexOf(x) < 0; })));
+    return kreeg.length;
+  }
+  /* Deze code hoort bij een account en dat is niet wie hier is ingelogd (een
+     schoollaptop waar de vorige leerling zijn code liet staan). Dan gaat de
+     code van dit apparaat af, en de munten en spullen van die ander ook. */
+  function vastgezet(){
+    var p = lees(); delete p.code; zet(p);
+    lsZet('lg-munten', String(wachtend())); lsZet('lg-bezit', '{}');
+    zeg();
+    /* is hier wel iemand ingelogd, dan krijgt dit apparaat diens eigen code */
+    account(true).then(function(a){ if (a && a.ingelogd && a.code) koppel(a.code).catch(function(){}); });
+  }
+  function stopWacht(){ clearTimeout(timer); if (wachtKlaar){ wachtKlaar(null); wachtKlaar = null; } }
   function maak(){
+    var delta = wachtend(), vr = vrijWacht();
     return vraag('/api/profiel', 'POST', { profiel:verzamel() }).then(function(j){
-      var p = lees(); p.code = j.code; zet(p); pasToe(j.profiel); return j;
+      var p = lees(); p.code = j.code; zet(p); aangekomen(delta, vr, j); pasToe(j.profiel); return j;
     });
   }
   function koppel(c){
     c = String(c || '').toUpperCase().replace(/[^A-Z]/g, '');
     if (c.length !== 8) return Promise.reject(new Error('Een speelcode heeft acht letters.'));
     return vraag('/api/profiel/' + c, 'GET').then(function(j){
+      /* een code die aan een account hangt, neem je alleen mee door met dat account in te loggen */
+      if (j.vast && !(accountStand && accountStand.ingelogd && accountStand.code === c)) throw new Error('Deze speelcode hoort bij een Microsoft-account. Log in met dat account, dan staat alles er.');
       var p = lees(); p.code = c; zet(p); pasToe(j.profiel);
       /* en wat hier al stond gaat er meteen bij */
-      return vraag('/api/profiel/' + c, 'PUT', { profiel:verzamel() }).then(function(j2){ pasToe(j2.profiel); return j2; });
+      var delta = wachtend(), vr = vrijWacht();
+      return vraag('/api/profiel/' + c, 'PUT', { profiel:verzamel() }).then(function(j2){ aangekomen(delta, vr, j2); pasToe(j2.profiel); return j2; });
     });
   }
   function sync(){
@@ -264,7 +289,13 @@ window.PROFIEL = (function(){
         var pr = verzamel(), hash = JSON.stringify(pr), sinds = Date.now() - (parseInt(ls('lg-sync-t') || '0', 10) || 0);
         /* hetzelfde als de vorige keer, korter dan een half uur geleden, en niets onderweg: dan hoeft de server het niet te horen */
         if (hash === ls('lg-sync-hash') && sinds < 1800000 && !delta && !vr.length && !dw.length){ res(null); return; }
-        vraag('/api/profiel/' + c, 'PUT', { profiel:pr }).then(function(j){ lsZet('lg-munten-wacht', String(Math.max(0, wachtend() - delta))); lsZet('lg-vrij-wacht', JSON.stringify(vrijWacht().filter(function(x){ return vr.indexOf(x) < 0; }))); lsZet('lg-klas-docent-weg', JSON.stringify(docentWegWacht().filter(function(x){ return dw.indexOf(x) < 0; }))); pasToe(j.profiel); lsZet('lg-sync-hash', JSON.stringify(verzamel())); lsZet('lg-sync-t', String(Date.now())); res(j); }).catch(function(){ res(null); });
+        vraag('/api/profiel/' + c, 'PUT', { profiel:pr }).then(function(j){
+          var kreeg = aangekomen(delta, vr, j);
+          lsZet('lg-klas-docent-weg', JSON.stringify(docentWegWacht().filter(function(x){ return dw.indexOf(x) < 0; })));
+          pasToe(j.profiel); lsZet('lg-sync-hash', JSON.stringify(verzamel())); lsZet('lg-sync-t', String(Date.now())); res(j);
+          /* nog trofeeën onderweg en er kwam er net een door: meteen de volgende */
+          if (kreeg && vrijWacht().length) setTimeout(sync, 1500);
+        }).catch(function(e){ if (e && e.vast) vastgezet(); res(null); });
       }, 600);
     });
   }
@@ -272,7 +303,7 @@ window.PROFIEL = (function(){
   /* de klaskoppeling is losgemaakt: ook uit het profiel op de server halen */
   function klasWeg(){
     var c = code(); if (!c) return Promise.resolve(null);
-    clearTimeout(timer);
+    stopWacht();
     return vraag('/api/profiel/' + c, 'PUT', { profiel:verzamel(), klasWeg:true }).then(function(j){ pasToe(j.profiel); return j; }).catch(function(){ return null; });
   }
 
@@ -341,5 +372,5 @@ window.PROFIEL = (function(){
   }, 400);
   return { bewaart:bewaart, lees:lees, code:code, avatar:avatar, zetAvatar:zetAvatar, maak:maak, koppel:koppel, sync:sync, wis:wis, verzamel:verzamel, op:op,
     wapens:wapens, uitrusting:uitrusting, zetUitrusting:zetUitrusting, koopWapen:koopWapen,
-    klasWeg:klasWeg, account:account, klassenAfstemmen:klassenAfstemmen, munten:munten, bezit:bezit, ingelogd:ingelogd, accountMogelijk:accountMogelijk, muntenErbij:muntenErbij, koop:koop, vrijspeel:vrijspeel, oudLeerling:oudLeerling, accountNeemCode:accountNeemCode, accountNieuweCode:accountNieuweCode, accountVlag:function(){ return accountVlag; }, winkelVlag:function(){ return winkelVlag; }, accountAfstemmen:accountAfstemmen, inlogAdres:inlogAdres, uitloggen:uitloggen, accountWeg:accountWeg, docentWeg:docentWeg };
+    klasWeg:klasWeg, account:account, klassenAfstemmen:klassenAfstemmen, munten:munten, bezit:bezit, ingelogd:ingelogd, accountMogelijk:accountMogelijk, muntenErbij:muntenErbij, koop:koop, vrijspeel:vrijspeel, oudLeerling:oudLeerling, accountNeemCode:accountNeemCode, accountNieuweCode:accountNieuweCode, accountVlag:function(){ return accountVlag; }, winkelVlag:function(){ return winkelVlag; }, accountAfstemmen:accountAfstemmen, inlogAdres:inlogAdres, uitloggen:uitloggen, accountWeg:accountWeg, docentWeg:docentWeg, wie:function(){ return accountStand && accountStand.ingelogd ? String(accountStand.naam || '') : ''; } };
 })();

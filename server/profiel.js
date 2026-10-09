@@ -166,9 +166,27 @@ export class Profiel extends DurableObject {
     if (!this.stand) return json({ fout: "geen profiel met deze code" }, 404);
     if (url.pathname === "/lees"){
       await this.bewaar();
-      return json({ ok: true, code: this.stand.code, profiel: zonderSleutels(this.stand.profiel), gemaakt: this.stand.gemaakt });
+      /* vast: dit profiel hoort bij een account, dus alleen dat account mag het bijwerken */
+      return json({ ok: true, code: this.stand.code, profiel: zonderSleutels(this.stand.profiel), gemaakt: this.stand.gemaakt, vast: !!this.stand.eigenaar });
+    }
+    /* Het account dat deze code neemt. Een code die al bij een ander account
+       hoort blijft daar: anders kan een tweede leerling op dezelfde laptop
+       "ja, die is van mij" zeggen en daarna de munten van de eerste uitgeven. */
+    if (url.pathname === "/eigenaar"){
+      const id = String(inz.id || "").slice(0, 80);
+      if (!id) return json({ fout: "geen account" }, 400);
+      if (this.stand.eigenaar && this.stand.eigenaar !== id) return json({ fout: "hoort bij een ander account" }, 409);
+      this.stand.eigenaar = id;
+      await this.bewaar();
+      return json({ ok: true });
     }
     if (url.pathname === "/sync"){
+      /* index.js zegt wie er is ingelogd (wie) en of die bij deze code hoort
+         (eigenaar); een profiel zonder eigenaar krijgt hier alsnog de zijne */
+      const wie = String(inz.wie || ""), eig = String(inz.eigenaar || "");
+      if (eig && !this.stand.eigenaar) this.stand.eigenaar = eig;
+      if (this.stand.eigenaar && wie !== this.stand.eigenaar)
+        return json({ fout: "Deze speelcode hoort bij een Microsoft-account. Log in met dat account om hem te gebruiken.", vast: true }, 403);
       const nieuw = voegSamen(this.stand.profiel, netjes(inz.profiel), !!inz.klasWeg, !!this.stand.alles);
       if (JSON.stringify(nieuw).length > MAX_TEKST) return json({ fout: "profiel te groot" }, 413);
       this.stand.profiel = nieuw;
