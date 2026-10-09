@@ -228,6 +228,7 @@ button.post:active{transform:scale(.995)}
 .post .ptekst .fclabel{display:inline-block;margin-right:6px;border-radius:999px;padding:0 8px;font-size:.74rem;font-weight:700;background:var(--fout-bg);color:var(--fout)}
 .pbeeld{position:relative;display:block;margin:10px 14px 0;border-radius:14px;overflow:hidden;aspect-ratio:12/7;background:#d9dde6}
 .pbeeld svg.tek{display:block;width:100%;height:100%}
+.pbeeld img.tek,.tb .tbbeeld img{display:block;width:100%;height:100%;object-fit:cover}
 .tek text{font-family:'Poppins',system-ui,sans-serif}
 .pacties{display:flex;flex-wrap:wrap;gap:4px 14px;padding:10px 14px 12px;font-size:.82rem;color:var(--muted)}
 .pacties>span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
@@ -434,7 +435,7 @@ button.post:active{transform:scale(.995)}
 .kmotto{font-style:italic;font-size:.95rem;margin-top:6px}
 .kvoor{display:grid;gap:16px;border-bottom:1px solid #1d1b17;padding:16px 0 14px}
 @media(min-width:720px){.kvoor{grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);align-items:start}}
-.kfoto svg{display:block;width:100%;height:auto;filter:grayscale(1) contrast(1.08) brightness(1.03);border:1px solid #1d1b17}
+.kfoto svg,.kfoto img{display:block;width:100%;height:auto;filter:grayscale(1) contrast(1.08) brightness(1.03);border:1px solid #1d1b17}
 .kbijschrift{font-size:.78rem;font-style:italic;color:#5a5245;margin-top:5px}
 .kvoor h3{font-size:clamp(1.5rem,4.2vw,2.3rem);line-height:1.1}
 .kvoor p{margin-top:8px;font-size:1rem;line-height:1.5}
@@ -868,7 +869,10 @@ var TIPS = [
   ['Meldt een bekende nieuwssite het ook?', 'Groot nieuws staat nooit maar op een plek.'],
   ['Twijfel je? Deel dan niet.', 'Niet doorsturen is ook een keuze, en vaak de beste.']
 ];
-/* de plaatjes bij de berichten, in platte stijl (240 bij 140) */
+/* De plaatjes bij de berichten: illustraties in gerucht-beeld/<id>.webp,
+   960 breed in 16:9. De tekeningen hieronder blijven voor de beschrijving
+   (alt) en als terugval voor een bericht zonder eigen plaatje. */
+var FOTO = { bieb:1, bomen:1, fietsen:1, haai:1, kletskoek:1, munten:1, pinguin:1, pretpark:1, school:1, slaap:1, sneeuw:1, soep:1, tanden:1, telefoon:1, trein:1, voetbal:1, water:1, wifi:1, zwembad:1 };
 var TEKENING = {
   _:['Een plaatje bij het bericht', '<rect width="240" height="140" fill="#D6ECEF"/><circle cx="120" cy="70" r="30" fill="#0f7c8c" opacity=".3"/>'],
   zwembad:['Een buitenbad bij zonsondergang, met een klok die op negen uur staat',
@@ -1110,6 +1114,7 @@ var TEKENING = {
   }
   function beeld(m, extra){
     var t = TEKENING[m.id] || TEKENING._;
+    if (FOTO[m.id]) return '<img class="tek" src="gerucht-beeld/' + m.id + '.webp" alt="' + schoon(t[0]) + '" decoding="async"' + (extra || '') + '>';
     return '<svg class="tek" viewBox="0 0 240 140" preserveAspectRatio="xMidYMid slice" role="img" aria-label="' + schoon(t[0]) + '"' + (extra || '') + '>' + t[1] + '</svg>';
   }
   function oordeelVan(m){
@@ -1574,7 +1579,9 @@ var TEKENING = {
   function beeldVoor(pid, m, altijd){
     var t = TEKENING[m.id] || TEKENING._, b = { id:'gerucht-' + m.id, alt:t[0] };
     var gs = beeldNaar[pid] = beeldNaar[pid] || {};
-    if (altijd || !gs[m.id]){ b.svg = '<svg viewBox="0 0 240 140" preserveAspectRatio="xMidYMid slice" role="img" aria-label="' + schoon(t[0]) + '">' + t[1] + '</svg>'; gs[m.id] = true; }
+    /* een illustratie gaat als bestandsnaam mee, niet als tekening: de telefoon haalt hem zelf */
+    if (FOTO[m.id]) b.src = m.id + '.webp';
+    else if (altijd || !gs[m.id]){ b.svg = '<svg viewBox="0 0 240 140" preserveAspectRatio="xMidYMid slice" role="img" aria-label="' + schoon(t[0]) + '">' + t[1] + '</svg>'; gs[m.id] = true; }
     return b;
   }
   function onthuld(m){ return m.r < ronde || stap !== 'open'; }
