@@ -321,12 +321,14 @@ async function verdeel(req, env, ctx){
       return beheer().fetch("https://beheer/tel", { method: "POST", body: JSON.stringify(inz || {}) });
     }
     /* alleen de beheerder: lezen en opruimen, met de geheime sleutel (wrangler secret put BEHEER) */
-    const bm = p.match(/^\/api\/beheer\/(meldingen|tellers|melding-weg|tel-zet)\/?$/);
+    /* tickets: GET /api/beheer/tickets, POST /api/beheer/ticket (nieuw of bijwerken), POST /api/beheer/ticket-weg */
+    const bm = p.match(/^\/api\/beheer\/(meldingen|tellers|melding-weg|tel-zet|tickets|ticket|ticket-weg)\/?$/);
     if (bm){
       const nee = await beheerToegang(env, req); if (nee) return nee;
-      if (bm[1] === "melding-weg" || bm[1] === "tel-zet"){
+      if (bm[1] === "melding-weg" || bm[1] === "tel-zet" || bm[1] === "ticket" || bm[1] === "ticket-weg"){
+        if (req.method !== "POST") return json({ fout: "alleen POST" }, 405);
         let opdr; try { opdr = await leesJson(req); } catch (e){ return json({ fout: "geen geldige opdracht" }, 400); }
-        return beheer().fetch("https://beheer/" + (bm[1] === "tel-zet" ? "tel-zet" : "weg"), { method: "POST", body: JSON.stringify(opdr || {}) });
+        return beheer().fetch("https://beheer/" + (bm[1] === "melding-weg" ? "weg" : bm[1]), { method: "POST", body: JSON.stringify(opdr || {}) });
       }
       return beheer().fetch("https://beheer/" + bm[1]);
     }

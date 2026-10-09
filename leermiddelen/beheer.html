@@ -165,6 +165,48 @@ details.los.gevaar summary{color:var(--fouttekst,var(--fout))}
 #sleutelkaart.klaar{padding:6px 16px}
 tr.spel td:first-child b::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--crab);margin-right:7px;vertical-align:1px}
 tr.site td:first-child b::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--vista);margin-right:7px;vertical-align:1px}
+/* tickets: wat er nog gerepareerd moet worden en wat er nieuw kan komen */
+.tkop{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+#tZoek{max-width:200px}
+.tform{background:var(--kaart2);border-radius:16px;padding:16px;margin-top:14px;display:grid;gap:12px}
+.tform h3{font-size:1.05rem}
+.tform .vak{display:grid;gap:4px;font-size:.85rem;font-weight:600;color:var(--muted);min-width:0}
+.tform .veld{width:100%;color:var(--ink);font-weight:400;min-height:44px}
+.tform textarea.veld{font:inherit;font-size:1rem;resize:vertical;min-height:120px;line-height:1.45}
+.tvelden{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.ticket{border-top:1px solid var(--rand);padding:14px 0}
+.ticket:first-child{border-top:none}
+.ticket .kop{display:flex;gap:6px 8px;align-items:baseline;flex-wrap:wrap}
+.ticket .kop b{overflow-wrap:anywhere;margin-right:2px}
+.ticket.st-klaar .kop b{color:var(--muted)}
+.ticket .meta{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;margin-top:4px;color:var(--muted);font-size:.85rem}
+.ticket .meta code{background:var(--kaart2);border-radius:6px;padding:1px 6px;font-size:.82rem;color:var(--ink);overflow-wrap:anywhere}
+.ticket .omschr{margin-top:8px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:.93rem}
+.ticket .omschr.kort{display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
+.ticket .meer{border:none;background:none;color:var(--ink);font-weight:600;font-size:.85rem;text-decoration:underline;text-underline-offset:3px;min-height:44px;padding:0 2px}
+.ticket .acties{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center}
+.ticket.weg{opacity:.45}
+.ticket.licht{animation:tlicht 1.6s ease-out 1}
+@keyframes tlicht{0%{background:color-mix(in srgb,var(--amber) 30%,transparent)}100%{background:transparent}}
+@media(prefers-reduced-motion:reduce){.ticket.licht{animation:none;outline:2px solid var(--amber)}}
+/* labels: de soort op een vaste merkkleur met vaste donkere tekst, de prioriteit als rand */
+.label{display:inline-block;font-size:.72rem;font-weight:700;border-radius:999px;padding:1px 8px;white-space:nowrap;color:#14224C;border:1.5px solid transparent}
+.label.bug{background:var(--crab)}
+.label.nieuw{background:var(--vista)}
+.label.verbetering{background:var(--amber)}
+.label.hoog{background:none;border-color:var(--fouttekst,var(--fout));color:var(--fouttekst,var(--fout))}
+.label.laag{background:none;border-color:var(--rand2);color:var(--muted)}
+/* de status: drie knoppen naast elkaar, één klik zet hem om */
+.stand{display:inline-flex;border:1.5px solid var(--rand2);border-radius:12px;overflow:hidden}
+.stand button{border:none;background:var(--kaart);color:var(--muted);min-height:44px;padding:0 12px;font-size:.85rem;font-weight:600}
+.stand button+button{border-left:1.5px solid var(--rand2)}
+.stand button:hover{color:var(--ink)}
+.stand button[aria-pressed="true"]{background:var(--ink);color:var(--room)}
+.stand button[aria-pressed="true"][data-st="bezig"]{background:var(--amber);color:#14224C}
+.stand button[aria-pressed="true"][data-st="klaar"]{background:var(--goed);color:#fff}
+details.tklaar{margin-top:16px;border-top:1px solid var(--rand2)}
+details.tklaar summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center;color:var(--muted)}
+#tStatus.fout{color:var(--fouttekst,var(--fout));font-weight:600}
 /* zichtbare focus voor wie met het toetsenbord werkt */
 :focus-visible{outline:3px solid var(--focusring,#B4701A);outline-offset:3px}
 </style>
@@ -179,7 +221,7 @@ tr.site td:first-child b::before{content:'';display:inline-block;width:8px;heigh
 <main class="wrap">
   <p class="eyebrow">alleen voor de beheerder</p>
   <h1>Beheer</h1>
-  <p class="tip" style="max-width:64ch">Meldingen bij vragen, de gebruikstelling per pagina en het opruimen van het klassement. Alles hier vraagt de beheersleutel (gezet met <code>npx wrangler secret put BEHEER</code>); die blijft in deze browser staan.</p>
+  <p class="tip" style="max-width:64ch">Meldingen bij vragen, tickets voor wat nog moet gebeuren, de gebruikstelling per pagina en het opruimen van het klassement. Alles hier vraagt de beheersleutel (gezet met <code>npx wrangler secret put BEHEER</code>); die blijft in deze browser staan.</p>
   <form class="kaart" id="sleutelkaart">
     <div class="rij">
       <label class="sronly" for="sleutel">Beheersleutel</label>
@@ -193,6 +235,7 @@ tr.site td:first-child b::before{content:'';display:inline-block;width:8px;heigh
 
   <div class="tabs" id="tabs" role="tablist" aria-label="Onderdelen">
     <button type="button" role="tab" id="tabknop-meldingen" aria-controls="tab-meldingen" aria-selected="true" data-tab="meldingen" class="on">Meldingen<small id="telMeldingen"></small></button>
+    <button type="button" role="tab" id="tabknop-tickets" aria-controls="tab-tickets" aria-selected="false" data-tab="tickets">Tickets<small id="telTickets"></small></button>
     <button type="button" role="tab" id="tabknop-gebruik" aria-controls="tab-gebruik" aria-selected="false" data-tab="gebruik">Gebruik</button>
     <button type="button" role="tab" id="tabknop-klassement" aria-controls="tab-klassement" aria-selected="false" data-tab="klassement">Klassement</button>
   </div>
@@ -203,6 +246,29 @@ tr.site td:first-child b::before{content:'';display:inline-block;width:8px;heigh
     <p class="tip" id="mStatus" role="status" aria-live="polite"></p>
     <div id="meldingen" style="margin-top:10px"><p class="leeg">Nog niet geladen.</p></div>
     <div id="storingen"></div>
+  </section>
+
+  <section class="kaart hide" id="tab-tickets" role="tabpanel" aria-labelledby="tabknop-tickets">
+    <div class="tkop"><h2>Tickets</h2><button class="knop" id="tNieuw" type="button" aria-expanded="false" aria-controls="tForm">Nieuw ticket</button></div>
+    <p class="tip">Wat er nog gerepareerd moet worden en wat er nieuw kan komen. De tickets staan op de server, dus je ziet op elk apparaat hetzelfde. Een melding bij een vraag zet je met één knop om in een ticket.</p>
+    <form class="tform hide" id="tForm" novalidate>
+      <h3 id="tFormKop">Nieuw ticket</h3>
+      <label class="vak">Titel<input id="tTitel" class="veld" maxlength="120" autocomplete="off" placeholder="Wat moet er gebeuren?"></label>
+      <div class="tvelden">
+        <label class="vak">Soort<select id="tSoort" class="veld"><option value="bug">Bug</option><option value="nieuw">Nieuw</option><option value="verbetering">Verbetering</option></select></label>
+        <label class="vak">Prioriteit<select id="tPrio" class="veld"><option value="hoog">Hoog</option><option value="normaal" selected>Normaal</option><option value="laag">Laag</option></select></label>
+        <label class="vak">Status<select id="tStand" class="veld"><option value="open">Open</option><option value="bezig">Bezig</option><option value="klaar">Klaar</option></select></label>
+        <label class="vak">Pagina of spel<input id="tWaar" class="veld" maxlength="120" list="tWaarLijst" autocomplete="off" placeholder="bijvoorbeeld toren.html"></label>
+      </div>
+      <datalist id="tWaarLijst"></datalist>
+      <label class="vak">Omschrijving<textarea id="tTekst" class="veld" rows="5" maxlength="4000" placeholder="Wat zie je, wat zou je willen, waar zit het?"></textarea></label>
+      <div class="rij"><button class="knop" id="tOpslaan" type="submit">Opslaan</button><button class="knop stil" id="tAnnuleer" type="button">Annuleren</button></div>
+    </form>
+    <div class="knopjes" id="tStatusKnop" role="group" aria-label="Filter op status"><button type="button" data-tst="alles" class="on">Alles</button><button type="button" data-tst="open">Open</button><button type="button" data-tst="bezig">Bezig</button><button type="button" data-tst="klaar">Klaar</button></div>
+    <div class="knopjes" id="tSoortKnop" role="group" aria-label="Filter op soort" style="margin-top:8px"><button type="button" data-tso="alles" class="on">Alle soorten</button><button type="button" data-tso="bug">Bugs</button><button type="button" data-tso="nieuw">Nieuw</button><button type="button" data-tso="verbetering">Verbeteringen</button>
+      <label class="los"><span class="sronly">Zoek in de tickets</span><input id="tZoek" class="veld klein" type="search" placeholder="Zoek in de tickets"></label></div>
+    <p class="tip" id="tStatus" role="status" aria-live="polite"></p>
+    <div id="tickets" style="margin-top:6px"><p class="leeg">Nog niet geladen.</p></div>
   </section>
 
   <section class="kaart hide" id="tab-gebruik" role="tabpanel" aria-labelledby="tabknop-gebruik">
@@ -263,7 +329,7 @@ tr.site td:first-child b::before{content:'';display:inline-block;width:8px;heigh
   }
   function kiesTab(naam){
     Array.prototype.forEach.call($('tabs').querySelectorAll('button'), function(x){ var aan = x.getAttribute('data-tab') === naam; x.classList.toggle('on', aan); x.setAttribute('aria-selected', aan ? 'true' : 'false'); });
-    ['meldingen', 'gebruik', 'klassement'].forEach(function(t){ $('tab-' + t).classList.toggle('hide', t !== naam); });
+    ['meldingen', 'tickets', 'gebruik', 'klassement'].forEach(function(t){ $('tab-' + t).classList.toggle('hide', t !== naam); });
     try { localStorage.setItem('lg-beheer-tab', naam); } catch (e){}
   }
   Array.prototype.forEach.call($('tabs').querySelectorAll('button'), function(b){
@@ -325,6 +391,7 @@ tr.site td:first-child b::before{content:'';display:inline-block;width:8px;heigh
       groepen[k].lijst.push(m);
     });
     volgorde.sort(function(x, y){ return groepen[y].lijst.length - groepen[x].lijst.length || groepen[y].lijst[0].t - groepen[x].lijst[0].t; });
+    meldingGroepen = volgorde.map(function(k){ return groepen[k]; });
     $('meldingen').innerHTML = volgorde.length ? volgorde.map(function(k, gi){
       var g = groepen[k], n = g.lijst.length, m0 = g.lijst[0];
       /* de nieuwste melding met opties heeft de meeste informatie */
@@ -337,8 +404,10 @@ tr.site td:first-child b::before{content:'';display:inline-block;width:8px;heigh
         '<div class="waar"></div>' +
         opmerkingen(g.lijst) +
         '<div class="acties"><button type="button" class="knop stil klein" data-weg="' + g.lijst.map(function(m){ return schoon(m.id); }).join(',') + '" data-wat="' + schoon((g.vraag || 'de melding').slice(0, 60)) + '">' + (n > 1 ? 'Alle ' + n + ' afgehandeld' : 'Afgehandeld') + '</button>' +
-        (g.vraag ? '<button type="button" class="knop stil klein" data-kopie="' + schoon(g.vraag) + '">Kopieer de vraag</button>' : '') + '</div></div>';
+        (g.vraag ? '<button type="button" class="knop stil klein" data-kopie="' + schoon(g.vraag) + '">Kopieer de vraag</button>' : '') +
+        '<button type="button" class="knop stil klein" data-maakticket="' + gi + '">Maak er een ticket van</button></div></div>';
     }).join('') : '<p class="leeg">Geen meldingen. Mooi zo.</p>';
+    meldingTicketKnoppen();
     /* waar staat hij: opzoeken in de vragenbank, ook voor meldingen van voor de opties meekwamen */
     Array.prototype.forEach.call($('meldingen').querySelectorAll('.melding[data-vraag]'), function(el){
       var tekst = el.getAttribute('data-vraag'); if (!tekst) return;
@@ -374,10 +443,185 @@ tr.site td:first-child b::before{content:'';display:inline-block;width:8px;heigh
   $('tab-meldingen').addEventListener('click', function(e){
     var b = e.target.closest('button'); if (!b) return;
     if (b.hasAttribute('data-weg')) afhandelen(b);
+    if (b.hasAttribute('data-ticketid')) toonTicket(b.getAttribute('data-ticketid'));
+    else if (b.hasAttribute('data-maakticket')) ticketVanMelding(b);
     if (b.hasAttribute('data-kopie')) kopieer(b.getAttribute('data-kopie')).then(function(){
       $('mStatus').className = 'tip'; $('mStatus').textContent = 'De vraag staat op je klembord; zoek hem met Ctrl+F in het bestand.';
     }, function(){ $('mStatus').className = 'tip fout'; $('mStatus').textContent = 'Kopiëren lukte niet in deze browser.'; });
   });
+  /* ---------- Tickets: wat er nog gerepareerd moet worden en wat er nieuw kan komen ----------
+     De lijst staat op de server (beheer.js). Wat je verandert staat meteen in
+     beeld; lukt het opslaan niet, dan gaat het terug en zegt de pagina dat. */
+  var tickets = null, meldingGroepen = [], tFilter = { status:'alles', soort:'alles' }, tBewerk = null, tKlaarOpen = false, tUitgeklapt = {};
+  var TSOORT = { bug:'Bug', nieuw:'Nieuw', verbetering:'Verbetering' }, TSTAND = { open:'Open', bezig:'Bezig', klaar:'Klaar' };
+  var PRIOVOLG = { hoog:0, normaal:1, laag:2 }, STANDVOLG = { bezig:0, open:1, klaar:2 };
+  function tStatus(tekst, fout){ $('tStatus').className = 'tip' + (fout ? ' fout' : ''); $('tStatus').textContent = tekst; }
+  function vindTicket(id){ return (tickets || []).filter(function(t){ return t.id === id; })[0]; }
+  function zetTicket(t){ var i = (tickets || []).map(function(x){ return x.id; }).indexOf(t.id); if (i >= 0) tickets[i] = t; else tickets.push(t); }
+  /* bezig boven open, daarbinnen hoog eerst, dan het laatst bijgewerkte; klaar alleen op datum */
+  function ticketVolgorde(a, b){ return STANDVOLG[a.status] - STANDVOLG[b.status] || (a.status === 'klaar' ? 0 : PRIOVOLG[a.prio] - PRIOVOLG[b.prio]) || b.bij - a.bij; }
+  /* een titel als zin: een punt erachter, tenzij er al een leesteken staat */
+  function punt(t){ return /[.?!…]$/.test(t) ? t : t + '.'; }
+  function langer(t){ return t.length > 320 || t.split('\n').length > 5; }
+  function ticketHtml(t){
+    var tijd = new Date(t.t).toLocaleString('nl-NL'), bij = t.bij - t.t > 60000;
+    return '<article class="ticket st-' + schoon(t.status) + '" id="ticket-' + schoon(t.id) + '" data-id="' + schoon(t.id) + '">' +
+      '<div class="kop"><b>' + schoon(t.titel) + '</b><span class="label ' + schoon(t.soort) + '">' + (TSOORT[t.soort] || '') + '</span>' +
+        (t.prio === 'hoog' ? '<span class="label hoog">hoge prioriteit</span>' : t.prio === 'laag' ? '<span class="label laag">lage prioriteit</span>' : '') + '</div>' +
+      '<div class="meta">' + (t.waar ? '<code>' + schoon(t.waar) + '</code>' : '') +
+        '<span title="' + schoon(tijd) + '">aangemaakt ' + datumKort(t.t) + '</span>' +
+        (bij ? '<span title="' + schoon(new Date(t.bij).toLocaleString('nl-NL')) + '">bijgewerkt ' + datumKort(t.bij) + '</span>' : '') +
+        (t.van && t.van.length ? '<span>uit ' + (t.van.length === 1 ? 'een melding' : t.van.length + ' meldingen') + '</span>' : '') + '</div>' +
+      (t.tekst ? '<p class="omschr' + (langer(t.tekst) && !tUitgeklapt[t.id] ? ' kort' : '') + '">' + schoon(t.tekst) + '</p>' +
+        (langer(t.tekst) ? '<button type="button" class="meer" data-meer aria-expanded="' + (tUitgeklapt[t.id] ? 'true' : 'false') + '">' + (tUitgeklapt[t.id] ? 'Minder tonen' : 'Hele omschrijving') + '</button>' : '') : '') +
+      '<div class="acties"><div class="stand" role="group" aria-label="Status van ' + schoon(t.titel) + '">' +
+        ['open', 'bezig', 'klaar'].map(function(s){ return '<button type="button" data-st="' + s + '" aria-pressed="' + (t.status === s ? 'true' : 'false') + '">' + TSTAND[s] + '</button>'; }).join('') + '</div>' +
+        '<button type="button" class="knop stil klein" data-bewerk>Bewerken</button>' +
+        '<button type="button" class="knop stil klein" data-tweg aria-label="Weghalen: ' + schoon(t.titel) + '">Weghalen</button></div></article>';
+  }
+  function tekenTickets(){
+    if (!tickets){ $('telTickets').textContent = ''; return; }
+    var n = { open:0, bezig:0, klaar:0 };
+    tickets.forEach(function(t){ n[t.status]++; });
+    $('telTickets').textContent = n.open + n.bezig ? ' ' + (n.open + n.bezig) : '';
+    Array.prototype.forEach.call($('tStatusKnop').querySelectorAll('[data-tst]'), function(k){
+      var s = k.getAttribute('data-tst'); k.textContent = (s === 'alles' ? 'Alles' : TSTAND[s]) + ' ' + (s === 'alles' ? tickets.length : n[s]);
+    });
+    var zoek = plat($('tZoek').value);
+    var lijst = tickets.filter(function(t){
+      return (tFilter.soort === 'alles' || t.soort === tFilter.soort) && (tFilter.status === 'alles' || t.status === tFilter.status) &&
+        (!zoek || plat(t.titel + ' ' + t.tekst + ' ' + t.waar).indexOf(zoek) >= 0);
+    }).sort(ticketVolgorde);
+    if (!tickets.length){ $('tickets').innerHTML = '<p class="leeg">Nog geen tickets. Klik op Nieuw ticket, of zet een melding om in een ticket.</p>'; return; }
+    if (!lijst.length){ $('tickets').innerHTML = '<p class="leeg">Geen tickets die hierbij passen.</p>'; return; }
+    /* bij Alles: open en bezig bovenaan, klaar ingeklapt eronder */
+    var actief = tFilter.status === 'alles' ? lijst.filter(function(t){ return t.status !== 'klaar'; }) : lijst;
+    var klaar = tFilter.status === 'alles' ? lijst.filter(function(t){ return t.status === 'klaar'; }) : [];
+    $('tickets').innerHTML = (actief.length ? actief.map(ticketHtml).join('') : '<p class="leeg">Niets meer open. Mooi zo.</p>') +
+      (klaar.length ? '<details class="tklaar" id="tKlaar"' + (tKlaarOpen ? ' open' : '') + '><summary>Klaar (' + klaar.length + ')</summary>' + klaar.map(ticketHtml).join('') + '</details>' : '');
+    if ($('tKlaar')) $('tKlaar').addEventListener('toggle', function(){ tKlaarOpen = this.open; });
+  }
+  /* het formulier: leeg voor een nieuw ticket, ingevuld om te bewerken */
+  function openTicketForm(t){
+    tBewerk = t ? t.id : null;
+    if (!$('tWaarLijst').options.length) $('tWaarLijst').innerHTML = Object.keys(NAMEN).filter(function(p){ return /\.html$/.test(p); }).map(function(p){ return '<option value="' + schoon(p.replace(/^\/(leermiddelen\/)?/, '')) + '">' + schoon(NAMEN[p]) + '</option>'; }).join('');
+    $('tFormKop').textContent = t ? 'Ticket bewerken' : 'Nieuw ticket';
+    $('tTitel').value = t ? t.titel : ''; $('tSoort').value = t ? t.soort : 'bug'; $('tPrio').value = t ? t.prio : 'normaal';
+    $('tStand').value = t ? t.status : 'open'; $('tWaar').value = t ? t.waar : ''; $('tTekst').value = t ? t.tekst : '';
+    $('tForm').classList.remove('hide'); $('tNieuw').setAttribute('aria-expanded', 'true');
+    $('tForm').scrollIntoView({ block:'nearest', behavior:'smooth' });
+    $('tTitel').focus({ preventScroll:true });
+  }
+  function sluitTicketForm(){ tBewerk = null; $('tForm').classList.add('hide'); $('tNieuw').setAttribute('aria-expanded', 'false'); }
+  /* een ticket in beeld brengen, ook als een filter of de ingeklapte lijst hem verstopt */
+  function toonTicket(id){
+    var t = vindTicket(id); if (!t) return;
+    kiesTab('tickets');
+    if (!$('ticket-' + id)){
+      tFilter = { status:'alles', soort:'alles' }; $('tZoek').value = '';
+      ['tStatusKnop', 'tSoortKnop'].forEach(function(g){ Array.prototype.forEach.call($(g).querySelectorAll('button'), function(x, i){ x.classList.toggle('on', i === 0); }); });
+    }
+    if (t.status === 'klaar') tKlaarOpen = true;
+    tekenTickets();
+    var el = $('ticket-' + id); if (!el) return;
+    el.scrollIntoView({ block:'center', behavior:'smooth' });
+    el.classList.remove('licht'); void el.offsetWidth; el.classList.add('licht');
+  }
+  /* een melding die al een ticket is: de knop wordt Bekijk het ticket */
+  function meldingTicketKnoppen(){
+    Array.prototype.forEach.call($('meldingen').querySelectorAll('[data-maakticket]'), function(b){
+      var g = meldingGroepen[+b.getAttribute('data-maakticket')]; if (!g) return;
+      var ids = g.lijst.map(function(m){ return m.id; });
+      var t = (tickets || []).filter(function(t){ return (t.van || []).some(function(v){ return ids.indexOf(v) >= 0; }); })[0];
+      if (t){ b.setAttribute('data-ticketid', t.id); b.textContent = 'Bekijk het ticket'; }
+      else { b.removeAttribute('data-ticketid'); b.textContent = 'Maak er een ticket van'; }
+    });
+  }
+  function bewaarTicket(body){
+    return haal('/api/beheer/ticket', { method:'POST', body:JSON.stringify(body) }).then(function(x){
+      if (!x.ok || !x.j.ticket) throw new Error(x.j && x.j.fout || '');
+      zetTicket(x.j.ticket); return x.j.ticket;
+    });
+  }
+  /* van een melding een ticket: de vraag, wat er stond en wat leerlingen schreven gaan mee als omschrijving */
+  function ticketVanMelding(b){
+    var g = meldingGroepen[+b.getAttribute('data-maakticket')]; if (!g) return;
+    if (!tickets){ $('mStatus').className = 'tip fout'; $('mStatus').textContent = 'De tickets zijn niet geladen; klik op Opnieuw laden en probeer het nog eens.'; return; }
+    var m0 = g.lijst[0], mq = g.lijst.filter(function(m){ return m.opties && m.opties.length; })[0] || m0;
+    var el = b.closest('.melding'), code = el && el.querySelector('.waar code');
+    var spellen = {}; g.lijst.forEach(function(m){ if (m.spel) spellen[SPELNAAM[m.spel] || m.spel] = 1; });
+    var opm = g.lijst.filter(function(m){ return m.opmerking; }).map(function(m){ return '- ' + m.opmerking; });
+    var regels = [];
+    if (g.vraag) regels.push('Vraag: ' + g.vraag);
+    if (mq.opties && mq.opties.length) regels.push('Opties: ' + mq.opties.join(' / '));
+    if (mq.goed) regels.push('Goed gerekend: ' + mq.goed);
+    var waarIn = [Object.keys(spellen).join(', '), VAKNAAM[mq.vak || m0.vak] || mq.vak || m0.vak, mq.onderdeel, m0.niveau].filter(Boolean).join(', ');
+    if (waarIn) regels.push('Gemeld in: ' + waarIn);
+    if (opm.length) regels.push('', g.lijst.length > 1 ? 'Wat leerlingen schreven:' : 'Wat de leerling schreef:', opm.join('\n'));
+    var vraagKort = (g.vraag || m0.opmerking || '').replace(/\s+/g, ' ').trim();
+    var body = { titel:(g.vraag ? 'Vraag klopt niet: ' : 'Melding: ') + (vraagKort.length > 90 ? vraagKort.slice(0, 89) + '…' : vraagKort),
+      soort:'bug', status:'open', prio:g.lijst.length >= 3 ? 'hoog' : 'normaal', tekst:regels.join('\n'),
+      waar:code ? code.textContent : (m0.pad || ''), van:g.lijst.map(function(m){ return m.id; }) };
+    b.disabled = true;
+    bewaarTicket(body).then(function(t){
+      b.disabled = false; tekenTickets(); meldingTicketKnoppen();
+      $('mStatus').className = 'tip'; $('mStatus').textContent = 'Ticket gemaakt: ' + punt(t.titel) + ' De melding blijft staan tot je hem afhandelt.';
+    }).catch(function(f){
+      b.disabled = false;
+      $('mStatus').className = 'tip fout'; $('mStatus').textContent = 'Een ticket maken lukte niet' + (f && f.message ? ': ' + f.message : '; controleer je verbinding') + '.';
+    });
+  }
+  $('tNieuw').addEventListener('click', function(){ if (!tickets){ tStatus('Laad eerst de tickets met de beheersleutel.', true); return; } openTicketForm(null); });
+  $('tAnnuleer').addEventListener('click', function(){ sluitTicketForm(); $('tNieuw').focus(); });
+  $('tForm').addEventListener('keydown', function(e){ if (e.key === 'Escape'){ sluitTicketForm(); $('tNieuw').focus(); } });
+  $('tForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    var body = { titel:$('tTitel').value.trim(), soort:$('tSoort').value, prio:$('tPrio').value, status:$('tStand').value, waar:$('tWaar').value.trim(), tekst:$('tTekst').value };
+    if (!body.titel){ tStatus('Geef het ticket een titel.', true); $('tTitel').focus(); return; }
+    if (tBewerk) body.id = tBewerk;
+    var knop = $('tOpslaan'); knop.disabled = true; knop.setAttribute('aria-busy', 'true');
+    bewaarTicket(body).then(function(t){
+      knop.disabled = false; knop.removeAttribute('aria-busy');
+      tStatus((body.id ? 'Bijgewerkt: ' : 'Toegevoegd: ') + punt(t.titel));
+      sluitTicketForm(); toonTicket(t.id); meldingTicketKnoppen();
+    }).catch(function(f){
+      knop.disabled = false; knop.removeAttribute('aria-busy');
+      tStatus('Opslaan lukte niet' + (f && f.message ? ': ' + f.message : '; controleer je verbinding') + '.', true);
+    });
+  });
+  $('tickets').addEventListener('click', function(e){
+    var b = e.target.closest('button'); if (!b) return;
+    var el = b.closest('.ticket'), t = el && vindTicket(el.getAttribute('data-id')); if (!t) return;
+    if (b.hasAttribute('data-meer')){ tUitgeklapt[t.id] = !tUitgeklapt[t.id]; tekenTickets(); var k = $('ticket-' + t.id); if (k) k.querySelector('[data-meer]').focus(); return; }
+    if (b.hasAttribute('data-bewerk')){ openTicketForm(t); return; }
+    /* status: meteen omzetten, terug als de server nee zegt */
+    if (b.hasAttribute('data-st')){
+      var nieuw = b.getAttribute('data-st'), oud = t.status; if (nieuw === oud) return;
+      zetTicket(Object.assign({}, t, { status:nieuw })); tekenTickets();
+      var terug = $('ticket-' + t.id); if (terug) terug.querySelector('[data-st="' + nieuw + '"]').focus();
+      bewaarTicket({ id:t.id, status:nieuw }).then(function(n){ tStatus('Op ' + TSTAND[nieuw].toLowerCase() + ' gezet: ' + punt(n.titel)); tekenTickets(); var k = $('ticket-' + t.id); if (k) k.querySelector('[data-st="' + nieuw + '"]').focus(); })
+        .catch(function(f){ zetTicket(t); tekenTickets(); tStatus('De status zetten lukte niet' + (f && f.message ? ': ' + f.message : '; controleer je verbinding') + '.', true); });
+      return;
+    }
+    if (b.hasAttribute('data-tweg')){
+      if (!confirm('Het ticket "' + t.titel + '" weghalen? Dit kan niet terug.')) return;
+      b.disabled = true; el.classList.add('weg');
+      haal('/api/beheer/ticket-weg', { method:'POST', body:JSON.stringify({ id:t.id }) }).then(function(x){
+        if (!x.ok) throw new Error(x.j && x.j.fout || '');
+        tickets = tickets.filter(function(y){ return y.id !== t.id; });
+        if (tBewerk === t.id) sluitTicketForm();
+        tStatus('Weggehaald: ' + punt(t.titel)); tekenTickets(); meldingTicketKnoppen();
+      }).catch(function(f){ b.disabled = false; el.classList.remove('weg'); tStatus('Weghalen lukte niet' + (f && f.message ? ': ' + f.message : '; controleer je verbinding') + '.', true); });
+    }
+  });
+  [['tStatusKnop', 'data-tst', 'status'], ['tSoortKnop', 'data-tso', 'soort']].forEach(function(g){
+    Array.prototype.forEach.call($(g[0]).querySelectorAll('[' + g[1] + ']'), function(k){ k.addEventListener('click', function(){
+      tFilter[g[2]] = k.getAttribute(g[1]);
+      Array.prototype.forEach.call($(g[0]).querySelectorAll('[' + g[1] + ']'), function(x){ x.classList.toggle('on', x === k); });
+      tekenTickets();
+    }); });
+  });
+  $('tZoek').addEventListener('input', tekenTickets);
   /* nette namen voor de paden; wat niet in de lijst staat krijgt de bestandsnaam */
   var NAMEN = { '/':'Voorpagina', '/nieuw.html':'Wat is nieuw', '/over.html':'Over', '/privacy.html':'Privacy', '/voorwaarden.html':'Voorwaarden', '/404.html':'Niet gevonden',
     '/leermiddelen/':'Oefenen en spelen', '/leermiddelen/klas.html':'Klasoverzicht', '/leermiddelen/klasquiz.html':'Klasquiz', '/leermiddelen/beheer.html':'Beheer', '/leermiddelen/lesbrieven.html':'Lesbrieven', '/leermiddelen/mee.html':'Meedoen', '/leermiddelen/strijd.html':'Klasstrijd',
@@ -482,21 +726,27 @@ tr.site td:first-child b::before{content:'';display:inline-block;width:8px;heigh
     /* de eerste keer staat er nog niets: dan het skelet; bij opnieuw laden blijft het oude staan tot het nieuwe er is */
     if (!geladen){
       $('meldingen').innerHTML = skelet('Meldingen', blokken(3, 'skelet-kaart', 104).replace(/--h:104px/g, '--h:104px;margin-bottom:10px'));
+      $('tickets').innerHTML = skelet('Tickets', blokken(4, 'skelet-rij', 96));
       $('gTegels').innerHTML = skelet('Tellingen', '<div class="tegels" style="margin-top:0">' + blokken(4, 'skelet-kaart', 74) + '</div>').replace('class="skelet-vak"', 'class="skelet-vak" style="grid-column:1/-1"');
       $('gebruik').innerHTML = new Array(7).join('<tr aria-hidden="true"><td colspan="6"><i class="skelet skelet-regel" style="--b:92%"></i></td></tr>');
     }
     function klaar(){ knop.disabled = false; knop.removeAttribute('aria-busy'); }
     function mislukt(){
       if (geladen) return;
-      $('meldingen').innerHTML = '<p class="leeg">Nog niet geladen.</p>'; $('gTegels').innerHTML = '';
+      $('meldingen').innerHTML = '<p class="leeg">Nog niet geladen.</p>'; $('gTegels').innerHTML = ''; $('tickets').innerHTML = '<p class="leeg">Nog niet geladen.</p>';
       $('gebruik').innerHTML = '<tr><td colspan="6" class="leeg">Nog niet geladen.</td></tr>';
     }
-    Promise.all([haal('/api/beheer/meldingen'), haal('/api/beheer/tellers')]).then(function(x){
+    /* de tickets mogen mislukken zonder de rest mee te nemen */
+    var haalTickets = haal('/api/beheer/tickets').catch(function(){ return { ok:false, status:0, j:{} }; });
+    Promise.all([haal('/api/beheer/meldingen'), haal('/api/beheer/tellers'), haalTickets]).then(function(x){
       klaar();
       if (!x[0].ok){ mislukt(); $('status').className = 'tip fout'; $('status').textContent = x[0].status === 403 ? 'De sleutel klopt niet, of hij is nog niet gezet op de server.' : (x[0].j.fout || 'Laden lukte niet.'); return; }
       geladen = true;
       $('status').className = 'tip'; $('status').textContent = 'Geladen om ' + new Date().toLocaleTimeString('nl-NL');
       $('sleutelkaart').classList.add('klaar');
+      /* eerst de tickets: dan weten de meldingen welke al een ticket zijn */
+      if (x[2].ok && Array.isArray(x[2].j.tickets)){ tickets = x[2].j.tickets; tekenTickets(); }
+      else if (!tickets){ $('tickets').innerHTML = '<p class="leeg">De tickets laden lukte niet. Klik op Opnieuw laden om het nog eens te proberen.</p>'; }
       tekenMeldingen(x[0].j.meldingen || []);
       tekenGebruik(x[1].ok ? (x[1].j.tellers || {}) : {});
     }).catch(function(){ klaar(); mislukt(); $('status').className = 'tip fout'; $('status').textContent = 'Geen verbinding met de server. Controleer je internet en klik opnieuw op Laden.'; });
