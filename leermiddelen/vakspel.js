@@ -793,6 +793,31 @@ window.VAKSPEL = (function(){
     var zacht = !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
     if (li.getBoundingClientRect().bottom > innerHeight - 90) li.scrollIntoView({ block:'center', behavior: zacht ? 'smooth' : 'auto' });
   }
+  /* bij voordoen: de waarde die in een invulvak hoort, zoals een leerling hem typt */
+  function begWaarde(v){ return typeof v.antwoord === 'number' && v.type !== 'tekst' ? String(v.antwoord).replace('.', ',') : (v.toon || (Array.isArray(v.antwoord) ? v.antwoord[0] : v.antwoord)); }
+  /* bij voordoen: wat bij deze stap hoort meteen in de antwoordvorm. Een invulvak wordt letter voor
+     letter getypt en dan groen; kaartjes gaan naar hun vak. Het vak van de volgende stap licht op. */
+  function begStapIn(o, vak, s, volgende){
+    Array.prototype.forEach.call(vak.querySelectorAll('.vs-hier'), function(x){ x.classList.remove('vs-hier'); });
+    var inv = vak.querySelectorAll('input'), rustig = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (s && s.veld != null) [].concat(s.veld).forEach(function(i){
+      /* invul: uit de velden; een eigen vorm: el.voordoeVeld(i), of het data-a van het invulvak */
+      var el = inv[i]; if (!el) return;
+      var v = o.vorm === 'invul' ? o.velden[i] : null, w = v ? begWaarde(v) : typeof vak.voordoeVeld === 'function' ? vak.voordoeVeld(i) : el.getAttribute('data-a');
+      if (w == null || w === '') return;
+      var t = o.vorm === 'invul' ? String(w) : String(w).replace('.', ','), k = 0;
+      el.classList.add('vs-typt');
+      (function tik(){ if (!el.isConnected) return; k++; el.value = rustig ? t : t.slice(0, k);
+        if (!rustig && k < t.length) setTimeout(tik, 70); else { el.classList.remove('vs-typt'); el.classList.add('goed'); } })();
+    });
+    if (s && s.kaart && o.vorm === 'sleep') [].concat(s.kaart).forEach(function(id){
+      var k = Array.prototype.filter.call(vak.querySelectorAll('.sleepkaart'), function(x){ return x.getAttribute('data-id') === String(id); })[0];
+      var v = (o.vakken || []).filter(function(x){ return (x.hoort || []).indexOf(id) >= 0; })[0];
+      var doel = v && Array.prototype.filter.call(vak.querySelectorAll('.sleepdoel'), function(x){ return x.getAttribute('data-id') === String(v.id); })[0];
+      if (k && doel){ doel.querySelector('.inhoud').appendChild(k); k.classList.add('goed'); }
+    });
+    if (volgende && volgende.veld != null) [].concat(volgende.veld).forEach(function(i){ if (inv[i] && !inv[i].value) inv[i].classList.add('vs-hier'); });
+  }
   /* bij voordoen het antwoord invullen in de antwoordvorm zelf */
   function begVulIn(o, vak){
     function met(sel, attr, w){ return Array.prototype.filter.call(vak.querySelectorAll(sel), function(x){ return x.getAttribute(attr) === String(w); })[0]; }
@@ -800,7 +825,7 @@ window.VAKSPEL = (function(){
     if (o.vorm === 'meerkeuze'){ var g = met('.optie', 'data-i', o.goed); if (g) g.classList.add('juist'); }
     else if (o.vorm === 'invul'){
       var inv = vak.querySelectorAll('input');
-      o.velden.forEach(function(v, i){ if (!inv[i]) return; inv[i].value = typeof v.antwoord === 'number' && v.type !== 'tekst' ? String(v.antwoord).replace('.', ',') : (v.toon || (Array.isArray(v.antwoord) ? v.antwoord[0] : v.antwoord)); inv[i].classList.add('goed'); });
+      o.velden.forEach(function(v, i){ if (!inv[i]) return; inv[i].value = begWaarde(v); inv[i].classList.remove('vs-hier', 'vs-typt'); inv[i].classList.add('goed'); });
     } else if (o.vorm === 'sleep') o.vakken.forEach(function(v){
       var doel = met('.sleepdoel', 'data-id', v.id); if (!doel) return;
       (v.hoort || []).forEach(function(id){ var k = met('.sleepkaart', 'data-id', id); if (k){ doel.querySelector('.inhoud').appendChild(k); k.classList.add('goed'); } });
@@ -836,9 +861,11 @@ window.VAKSPEL = (function(){
     var l = beg.st.lijst, st = 0;
     begSteiger('zo pak je het aan', intro, l.length ? 'Eerste stap' : 'Laat het antwoord zien');
     var knop = $('stapBtn');
+    /* het vak van de eerste stap licht alvast op: daar komt straks het antwoord */
+    begStapIn(o, vak, null, l[0]);
     knop.addEventListener('click', function(){
       if (!beg || beg.fase !== 'voordoen') return;
-      if (st < l.length){ begErbij(begLi(l[st], st)); st++; knop.textContent = st < l.length ? 'Volgende stap' : 'Het antwoord'; return; }
+      if (st < l.length){ begErbij(begLi(l[st], st)); begStapIn(o, vak, l[st], l[st + 1]); st++; knop.textContent = st < l.length ? 'Volgende stap' : 'Het antwoord'; return; }
       begErbij(begSlot(o));
       begVulIn(o, vak);
       knop.parentNode.classList.add('hide');

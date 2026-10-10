@@ -76,6 +76,26 @@ window.LEERROUTE = (function(){
     });
   }
 
+  /* Na het laden krijgt elke groep met drie of meer doelen een laatste doel
+     "Alles door elkaar": elke som komt uit een ander doel van de groep, zodat
+     je oefent zonder te weten welke manier of regel er nu aan de beurt is. */
+  function mixen(){
+    GROEPEN.forEach(function(g){
+      var eigen = g.doelen.filter(function(d){ return !d.mix; });
+      if (eigen.length < 3 || OP_ID[g.id + '-mix']) return;
+      var d = { id:g.id + '-mix', mix:true, naam:'Alles door elkaar', kort:'Alles uit ' + g.naam.toLowerCase() + ' gemengd, zoals in een toets',
+        uit:'<p>Hier komen alle doelen van <b>' + schoon(g.naam.toLowerCase()) + '</b> door elkaar. Bij elke som zie je uit welk doel hij komt, maar je kiest zelf hoe je hem aanpakt.</p><p>Zo oefen je wat in een toets gebeurt: je weet niet van tevoren welke soort som er komt.</p><ul>' +
+          eigen.map(function(x){ return '<li>' + schoon(x.naam) + '</li>'; }).join('') + '</ul>',
+        wanneer:'je de losse doelen van deze groep geoefend hebt en wilt weten of je alles door elkaar kunt.',
+        maak:function(R){
+          var x = eigen[Math.floor(Math.random() * eigen.length)], o = x.maak(R);
+          o.context = '<span class="lr-uitdoel">uit: ' + schoon(x.naam) + '</span>' + (o.context ? '<br>' + o.context : '');
+          return o;
+        } };
+      d.vak = g.vak; d.groep = g; g.doelen.push(d); DOELEN.push(d); OP_ID[d.id] = d;
+    });
+  }
+
   /* ---------- hulpjes ---------- */
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
   function $(id){ return document.getElementById(id); }
@@ -269,6 +289,50 @@ window.LEERROUTE = (function(){
     });
   }
   function status(id){ return lees()[id] | 0; }
+
+  /* ---------- kerndoelen (leerroute/kerndoelen.js) ---------- */
+  function KDN(){ return window.LR_KERNDOELEN || null; }
+  function kdCodes(g){ var K = KDN(); if (g.kd && g.kd.length) return g.kd; return K && K.koppel[g.id] ? K.koppel[g.id] : []; }
+  /* 'rw10A.c' wordt { kd:'rw10', zin:'rw10A', nr:'10', letter:'A', deel:'c' } */
+  function kdDelen(code){ var m = /^([a-z]+)(\d+)([A-Z])(?:\.([a-z]))?$/.exec(code) || []; return { kd:m[1] + m[2], zin:m[1] + m[2] + m[3], nr:m[2], letter:m[3], deel:m[4] || '' }; }
+  function kdKort(code){ var d = kdDelen(code); return d.nr + d.letter + (d.deel ? d.deel : ''); }
+  function kdPillen(g){
+    var K = KDN(), c = kdCodes(g); if (!c.length) return '';
+    return '<p class="lr-kdrij"><span>kerndoel</span>' + c.map(function(code){ var d = kdDelen(code);
+      return '<a class="lr-kd' + (K.hv[code] ? ' hv' : '') + '" href="#k=' + d.zin + '" title="' + schoon('Kerndoel ' + d.nr + d.letter + (d.deel ? ', onderdeel ' + d.deel : '') + ': ' + (K.deel[code] || K.zin[d.zin] || '')) + '">' + kdKort(code) + '</a>'; }).join('') + '</p>';
+  }
+  function kdBlok(g){
+    var K = KDN(), c = kdCodes(g); if (!c.length) return '';
+    var perZin = {};
+    c.forEach(function(code){ var d = kdDelen(code); (perZin[d.zin] = perZin[d.zin] || []).push(code); });
+    var n0 = V.niveaus.filter(function(x){ return x.id === g.niveau; })[0];
+    return '<details class="lr-kdblok"><summary><b>Kerndoel' + (c.length > 1 ? 'en' : '') + '</b> ' + Object.keys(perZin).map(function(z){ var d = kdDelen(z + '.x'); return d.nr + d.letter; }).join(', ') +
+      ' <span>· ' + (g.niveau === 'basis' ? 'fundament, onder 1F' : 'referentieniveau ' + schoon(n0 ? n0.naam : g.niveau)) + '</span></summary>' +
+      Object.keys(perZin).map(function(z){ var d = kdDelen(z + '.x');
+        return '<p><b>Kerndoel ' + d.nr + '</b> ' + schoon(K.kd[d.kd] || '') + ' <b>Doelzin ' + d.letter + '</b> ' + schoon(K.zin[z] || '') + '</p><ul>' +
+          perZin[z].map(function(code){ var e = kdDelen(code); return e.deel ? '<li><b>' + e.deel + '.</b> ' + schoon(K.deel[code] || '') + (K.hv[code] ? ' <i>(aanvulling havo en vwo)</i>' : '') + '</li>' : ''; }).join('') + '</ul>';
+      }).join('') +
+      '<p class="lr-kdbron">Uit het Uitvoeringsbesluit WVO 2020, bijlage 1, sinds 1 augustus 2026. <a href="#kerndoelen">Alle kerndoelen bij deze leerroute</a></p></details>';
+  }
+  /* onderaan het overzicht: per doelzin de onderdelen en welke groepen eraan werken */
+  function kdVerantwoording(gr){
+    var K = KDN(); if (!K) return '';
+    var perZin = {}, volgordeZin = [];
+    gr.forEach(function(g){ kdCodes(g).forEach(function(code){ var d = kdDelen(code);
+      if (!perZin[d.zin]){ perZin[d.zin] = {}; volgordeZin.push(d.zin); }
+      (perZin[d.zin][code] = perZin[d.zin][code] || []).push(g); }); });
+    volgordeZin.sort(function(a, b){ var x = kdDelen(a + '.x'), y = kdDelen(b + '.x'); return (+x.nr - +y.nr) || (x.letter < y.letter ? -1 : 1); });
+    return '<section class="lr-verant" id="kerndoelen"><h2>Kerndoelen bij deze leerroute</h2>' +
+      '<p class="lr-lead">De groepen hierboven zijn gekoppeld aan de kerndoelen voor ' + (vak === 'rekenen' ? 'rekenen en wiskunde (10 tot en met 17)' : 'Nederlands (1 tot en met 9)') +
+      ' zoals ze sinds 1 augustus 2026 in de wet staan, tot op het onderdeel van de doelzin. De niveaus (fundament, 1F, 2F, 3F) volgen het referentiekader taal en rekenen. Per groep staan alleen de onderdelen waar hij echt aan werkt.</p>' +
+      volgordeZin.map(function(z){ var d = kdDelen(z + '.x');
+        return '<div class="lr-kdzin" id="k-' + z + '"><h3>Kerndoel ' + d.nr + d.letter + '</h3><p>' + schoon(K.kd[d.kd] || '') + ' ' + schoon(K.zin[z] || '') + '</p><ul>' +
+          Object.keys(perZin[z]).sort().map(function(code){ var e = kdDelen(code);
+            return '<li><span><b>' + e.deel + '.</b> ' + schoon(K.deel[code] || '') + (K.hv[code] ? ' <i>(aanvulling havo en vwo)</i>' : '') + '</span><span class="lr-kdgr">' +
+              perZin[z][code].map(function(g){ return '<a href="#g=' + g.id + '">' + schoon(g.naam) + '</a>'; }).join('') + '</span></li>'; }).join('') + '</ul></div>';
+      }).join('') +
+      '<p class="lr-kdbron">Bron: <a href="' + K.wet + '">Uitvoeringsbesluit WVO 2020, bijlage 1</a>, ingevoerd door het <a href="' + K.bron + '">Besluit vernieuwde kerndoelen Nederlands en rekenen en wiskunde (Stb. 2026, 198)</a>. De teksten zijn letterlijk overgenomen.</p></section>';
+  }
   function bol(s){ return '<i class="lr-bol s' + s + '" aria-hidden="true">' + (s === 2 ? '<svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></svg>' : '') + '</i>'; }
   var STATUS = ['nog niet geoefend', 'bezig', 'beheerst'];
 
@@ -294,7 +358,7 @@ window.LEERROUTE = (function(){
         gd.forEach(function(g){
           var k = g.doelen.filter(function(d){ return v[d.id] === 2; }).length;
           h += '<article class="lr-groep" id="g-' + g.id + '"><div class="lr-gkop"><h3>' + schoon(g.naam) + '</h3><span class="lr-tel' + (k === g.doelen.length ? ' af' : '') + '">' + k + '/' + g.doelen.length + '</span></div>' +
-            (g.uit ? '<p class="lr-guit">' + schoon(g.uit) + '</p>' : '') +
+            (g.uit ? '<p class="lr-guit">' + schoon(g.uit) + '</p>' : '') + kdPillen(g) +
             '<ol class="lr-doelen">' + g.doelen.map(function(d){ var s = v[d.id] | 0;
               return '<li><a href="#d=' + d.id + '" title="' + STATUS[s] + '">' + bol(s) + '<span><b>' + schoon(d.naam) + '</b>' + (d.kort ? '<small>' + schoon(d.kort) + '</small>' : '') + '</span></a></li>'; }).join('') + '</ol></article>';
         });
@@ -302,6 +366,7 @@ window.LEERROUTE = (function(){
       });
       h += '</section>';
     });
+    h += kdVerantwoording(gr);
     wortel.innerHTML = h;
     if (naarId){ var el = $(naarId); if (el){ el.scrollIntoView({ block:'start' }); return; } }
     scrollTo(0, 0);
@@ -354,7 +419,7 @@ window.LEERROUTE = (function(){
     kaart().innerHTML = '<p class="eyebrow">1 · de uitleg</p>' +
       '<div class="lr-uit">' + (D.uit || '') + '</div>' +
       (vb ? '<div class="lr-beeld">' + vb + '</div>' : '') +
-      (D.wanneer ? '<p class="lr-wanneer"><b>Handig als</b> ' + schoon(D.wanneer) + '</p>' : '') +
+      (D.wanneer ? '<p class="lr-wanneer"><b>Handig als</b> ' + schoon(D.wanneer) + '</p>' : '') + kdBlok(D.groep) +
       knoppen(['<button class="btn" type="button" id="lrVerder">Laat zien hoe het gaat</button>', '<a class="linkbtn" href="#g=' + D.groep.id + '">Terug naar de leerroute</a>']) + broers();
     $('lrVerder').addEventListener('click', function(){ startFase(2); });
   }
@@ -367,16 +432,51 @@ window.LEERROUTE = (function(){
   }
   function antVan(st){ return st.opties ? st.opties[st.goed] : st.info ? null : eerste(st.antwoord); }
   /* 2: voordoen. Elke klik een stap erbij, het plaatje groeit mee */
-  function voordoen(){
-    var st = op.stappen || [], b = beeldVan(op, n), af = n >= st.length;
+  /* 2: voordoen. Net als samen: elke stap met zijn invulvak of keuzeknoppen. Het vak dat
+     aan de beurt is licht op; bij Volgende stap typt de motor het antwoord erin, en het
+     wordt groen. Zo zie je precies waar je straks wat invult. */
+  var typKlok = null;
+  function voordoenVak(s, stand){
+    /* stand: 'leeg' (nog niet aan de beurt), 'nu' (licht op, nog leeg), 'typ' (wordt nu ingevuld), 'vol' (al ingevuld) */
+    var ant = antVan(s);
+    if (s.opties) return '<div class="lr-opties lr-voor" role="group" aria-label="keuzes">' + s.opties.map(function(t, i){
+      return '<button type="button" class="lr-optie' + (i === s.goed && (stand === 'vol' || stand === 'typ') ? ' goed' + (stand === 'typ' ? ' tik' : '') : '') + '" disabled>' + schoon(t) + '</button>'; }).join('') + '</div>';
+    return '<span class="lr-invul lr-voor"><input type="text" disabled tabindex="-1" aria-label="invulvak" value="' + (stand === 'vol' ? schoon(ant) : '') + '"' +
+      ' class="' + (stand === 'vol' ? 'goed' : stand === 'nu' ? 'wacht' : stand === 'typ' ? 'wacht typ' : '') + '"' + (stand === 'typ' ? ' data-typ="' + schoon(ant) + '"' : '') + '>' +
+      (s.eenheid ? '<span class="lr-eenh">' + schoon(s.eenheid) + '</span>' : '') + '</span>';
+  }
+  function voordoen(typNu){
+    clearTimeout(typKlok);
+    var st = op.stappen || [], af = n >= st.length, b = beeldVan(op, typNu ? n - 1 : n);
     kaart().innerHTML = '<p class="eyebrow">2 · kijk hoe het gaat</p>' + vraagBlok(op) +
       (b ? '<div class="lr-beeld" aria-live="polite">' + b + '</div>' : '') +
-      '<ol class="lr-stappen">' + st.slice(0, n).map(function(s, i){ return '<li class="' + (i === n - 1 ? 'nieuw' : '') + '">' + stapTekst(s, antVan(s)) + (s.hint && s.info ? '' : (s.waarom ? '<small>' + s.waarom + '</small>' : '')) + '</li>'; }).join('') + '</ol>' +
+      '<ol class="lr-stappen">' + st.map(function(s, i){
+        if (s.info) return i < n ? '<li class="klaar' + (i === n - 1 ? ' nieuw' : '') + '">' + stapTekst(s) + '</li>' : '<li class="later" aria-hidden="true"><span class="lr-stekst">…</span></li>';
+        var typ = typNu && i === n - 1, stand = typ ? 'typ' : i < n ? 'vol' : i === n ? 'nu' : 'leeg';
+        if (stand === 'leeg') return '<li class="later" aria-hidden="true"><span class="lr-stekst">…</span></li>';
+        return '<li class="' + (stand === 'nu' ? 'nu' : 'klaar') + (typ ? ' nieuw' : '') + '">' + stapTekst(s) + voordoenVak(s, stand) +
+          (stand === 'vol' && s.waarom ? '<small>' + s.waarom + '</small>' : '') +
+          (stand === 'nu' ? '<p class="lr-hier">' + (s.opties ? 'Hier kies je straks het goede antwoord.' : 'Hier vul je straks het antwoord in.') + '</p>' : '') + '</li>';
+      }).join('') + '</ol>' +
       (af ? '<p class="lr-eind">Het antwoord: <b>' + schoon(eindAnt(op)) + (op.eenheid ? ' ' + schoon(op.eenheid) : '') + '</b></p>' : '') +
       knoppen(af ? ['<button class="btn" type="button" id="lrVerder">Nu samen</button>', '<button class="btn tweede" type="button" id="lrNog">Nog een voorbeeld</button>']
-                 : ['<button class="btn" type="button" id="lrStap">' + (n ? 'Volgende stap' : 'Eerste stap') + '</button>', '<button class="linkbtn" type="button" id="lrAlles">Alles in een keer</button>']);
+                 : ['<button class="btn" type="button" id="lrStap">' + (n ? 'Volgende stap' : 'Vul de eerste stap in') + '</button>', '<button class="linkbtn" type="button" id="lrAlles">Alles in een keer</button>']);
+    /* het antwoord letter voor letter in het vak, dan groen en het plaatje erbij */
+    var inp = kaart().querySelector('input[data-typ]');
+    if (inp){
+      var tekst = inp.getAttribute('data-typ'), k = 0, rustig = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var klaar = function(){ inp.value = tekst; inp.classList.remove('wacht', 'typ'); inp.classList.add('goed'); var bl = kaart().querySelector('.lr-beeld'), nb = beeldVan(op, n); if (bl && nb) bl.innerHTML = nb; };
+      if (rustig) klaar();
+      else (function tik(){ if (!inp.isConnected) return; k++; inp.value = tekst.slice(0, k); if (k < tekst.length) typKlok = setTimeout(tik, 70 + Math.random() * 60); else typKlok = setTimeout(klaar, 160); })();
+    } else if (typNu){ var bl = kaart().querySelector('.lr-beeld'), nb = beeldVan(op, n); if (bl && nb) bl.innerHTML = nb; }
+    var nu = kaart().querySelector('.lr-stappen li.nu, .lr-stappen li.nieuw');
+    if (nu && nu.getBoundingClientRect().bottom > innerHeight - 120) nu.scrollIntoView({ block:'center', behavior:'smooth' });
     if (af){ $('lrVerder').addEventListener('click', function(){ startFase(3); }); $('lrNog').addEventListener('click', function(){ op = nieuweOpgave(); n = 0; voordoen(); }); $('lrVerder').focus({ preventScroll:true }); }
-    else { $('lrStap').addEventListener('click', function(){ n++; voordoen(); }); $('lrAlles').addEventListener('click', function(){ n = st.length; voordoen(); }); $('lrStap').focus({ preventScroll:true }); }
+    else {
+      $('lrStap').addEventListener('click', function(){ n++; voordoen(true); });
+      $('lrAlles').addEventListener('click', function(){ n = st.length; voordoen(); });
+      $('lrStap').focus({ preventScroll:true });
+    }
   }
   function eindAnt(o){ if (o.opties) return o.opties[o.goed]; if (o.antwoord != null) return eerste(o.antwoord); var st = o.stappen || []; for (var i = st.length - 1; i >= 0; i--){ var a = antVan(st[i]); if (a != null) return a; } return ''; }
   function invoerHtml(st, id){
@@ -524,6 +624,8 @@ window.LEERROUTE = (function(){
     if ((m = /^d=([a-z0-9-]+)$/.exec(h))) openDoel(m[1]);
     else if ((m = /^g=([a-z0-9-]+)$/.exec(h))) overzicht('g-' + m[1]);
     else if ((m = /^n=([a-z0-9]+)$/i.exec(h))) overzicht('n-' + m[1]);
+    else if ((m = /^k=([a-z]+\d+[A-Z])$/.exec(h))) overzicht('k-' + m[1]);
+    else if (h === 'kerndoelen') overzicht('kerndoelen');
     else overzicht();
   }
   function laad(lijst, klaar){
@@ -541,7 +643,7 @@ window.LEERROUTE = (function(){
     document.documentElement.style.setProperty('--vak', V.kleur);
     var naam = document.querySelector('.lgnaam > span'); if (naam) naam.textContent = V.naam + ': de leerroute';
     wortel.innerHTML = '<p class="lr-laden">De leerroute laden…</p>';
-    laad(BESTANDEN[vak], function(){ route(); window.addEventListener('hashchange', route); });
+    laad(['kerndoelen'].concat(BESTANDEN[vak]), function(){ mixen(); route(); window.addEventListener('hashchange', route); });
   }
-  return { voeg:voeg, start:start, R:R, teken:teken, _klopt:klopt, _staat:function(){ return { op:op, n:n, fase:fase, eind:op ? eindAnt(op) : null }; }, _doelen:function(){ return DOELEN; }, _groepen:function(){ return GROEPEN; }, VAKKEN:VAKKEN, BESTANDEN:BESTANDEN };
+  return { voeg:voeg, start:start, R:R, teken:teken, _klopt:klopt, _mixen:mixen, _staat:function(){ return { op:op, n:n, fase:fase, eind:op ? eindAnt(op) : null }; }, _doelen:function(){ return DOELEN; }, _groepen:function(){ return GROEPEN; }, VAKKEN:VAKKEN, BESTANDEN:BESTANDEN };
 })();

@@ -2,8 +2,14 @@
    de site staat, in plaats van alles zelf te typen. De bron is de vragenbank
    van de spellen: bank-<vak>.js, met de opgaven van de vakspellen erbij
    (bank-spellen.js). Een bank komt pas binnen als je het vak kiest; zo blijft
-   maken.html licht. Rekenen doet niet mee: die sommen maakt de computer elke
-   keer nieuw, er is geen vaste lijst om uit te kiezen.
+   maken.html licht.
+
+   Rekenen heeft geen vaste lijst: die sommen maakt de computer elke keer nieuw.
+   Daarom halen we rekenen (en Nederlands nog een keer) uit de leerroute
+   (leerroute.js en leerroute/<vak>-*.js): elk doel maakt een paar sommen, met
+   het eindantwoord en de stappen als uitleg. Ze komen als open vraag in de
+   toets, of als meerkeuze als het doel zelf keuzes geeft. Een som die alleen
+   met het plaatje te begrijpen is (een klok, een grafiek), laten we weg.
 
    Wat eruit komt is een gewone vraag in de vorm van maken.html: meerkeuze met
    het goede antwoord, de foute antwoorden door elkaar en de uitleg van de bank.
@@ -106,8 +112,58 @@ window.KIEZER = (function(){
   }
   function openVraag(x){ var o = openVan(x); return o && o.v ? kaal(o.v) : x.v; }
 
+  /* ---------- de leerroute: rekenen en Nederlands ---------- */
+  var LR_VAKKEN = [{ id:'lr-rekenen', vak:'rekenen', naam:'Rekenen (leerroute)' }, { id:'lr-nederlands', vak:'nederlands', naam:'Nederlands (leerroute)' }];
+  var LR_LADEN = null, LR_GROEP = {};
+  var LR_BEELD = /\b(hieronder|plaatje|afbeelding|grafiek|diagram|klok|figuur|tekening|rooster|getallenlijn|strook|tabel|de lijn|het rad|de zak|bouwsel|uitslag)\b/i;
+  function laadScript(src){ return new Promise(function(klaar){ var e = document.createElement('script'); e.src = src; e.onload = e.onerror = function(){ klaar(); }; document.head.appendChild(e); }); }
+  function laadLeerroute(){
+    if (LR_LADEN) return LR_LADEN;
+    LR_LADEN = (window.LEERROUTE ? Promise.resolve() : laadScript('leerroute.js')).then(function(){
+      if (!window.LEERROUTE) throw new Error('geen leerroute');
+      var lijst = [].concat(LEERROUTE.BESTANDEN.rekenen, LEERROUTE.BESTANDEN.nederlands);
+      return lijst.reduce(function(p, b){ return p.then(function(){ return laadScript('leerroute/' + b + '.js'); }); }, Promise.resolve());
+    });
+    return LR_LADEN;
+  }
+  /* een antwoord ook zoals een leerling het typt: 1,5 en 1.5, zonder euroteken */
+  function lrVarianten(a){
+    var uit = [];
+    [].concat(a).forEach(function(x){
+      x = kaal(x); if (!x) return;
+      [x, x.replace(/^€\s*/, ''), x.replace(/\u2212/g, '-'), /^-?[\d.]+,\d+$/.test(x.replace(/^€\s*/, '')) ? x.replace(/^€\s*/, '').replace(/\./g, '').replace(',', '.') : '']
+        .forEach(function(y){ if (y && uit.indexOf(y) < 0) uit.push(y); });
+    });
+    return uit.slice(0, MAX.antwoorden);
+  }
+  function bereidLeerroute(id){
+    if (KLAAR[id]) return KLAAR[id];
+    var lv = LR_VAKKEN.filter(function(x){ return x.id === id; })[0], uit = [], weg = 0, R = LEERROUTE.R, NIV = { basis:1, '1F':1, '2F':2, '3F':3 };
+    LEERROUTE._doelen().filter(function(d){ return d.vak === lv.vak && !d.mix; }).forEach(function(d){
+      var gezien = {};
+      LR_GROEP[d.groep.id] = d.groep;
+      for (var p = 0; p < 12 && Object.keys(gezien).length < 6; p++){
+        var o; try { o = d.maak(R); } catch (e){ weg++; continue; }
+        var v = kaal((o.context ? o.context + ' ' : '') + (o.vraagHtml || o.vraag));
+        if (gezien[v]) continue;
+        gezien[v] = 1;
+        var st = o.stappen || [], laatste = st[st.length - 1] || {};
+        var goed = o.opties ? o.opties[o.goed] : o.antwoord != null ? [].concat(o.antwoord)[0] : laatste.opties ? laatste.opties[laatste.goed] : laatste.antwoord != null ? [].concat(laatste.antwoord)[0] : '';
+        goed = kaal(goed);
+        var opties = o.opties || (o.antwoord == null && laatste.opties ? laatste.opties : null);
+        var uitleg = st.map(function(x){ var a = x.opties ? x.opties[x.goed] : x.info ? '' : [].concat(x.antwoord)[0]; var t = kaal(x.tekst); a = a != null ? kaal(a) : ''; return a && t.indexOf('…') >= 0 ? t.replace('…', a) : t + (a ? ' ' + a : ''); }).join('; ');
+        if (!v || !goed || v.length > MAX.vraag || goed.length > MAX.goed || LR_BEELD.test(v) || o.zelfBeeld || (o.controle && !opties)){ weg++; continue; }
+        var x = { id:id + ':' + d.id + ':' + p, vak:id, lr:true, v:v, goed:goed, uitleg:kortUitleg('Zo: ' + uitleg.replace(/[.!?]$/, '') + '.'), t:d.groep.id, n:0, niv:NIV[d.groep.niveau] || 0, beeld:'', doel:d.naam, h:'' };
+        if (opties){ x.fout = opties.map(kaal).filter(function(y){ return y && y.toLowerCase() !== goed.toLowerCase(); }).slice(0, MAX.fout); if (!x.fout.length){ weg++; continue; } }
+        else { x.fout = []; x.antwoorden = lrVarianten(o.antwoord != null ? o.antwoord : laatste.antwoord); if (!x.antwoorden.length) x.antwoorden = [goed]; }
+        uit.push(x);
+      }
+    });
+    return (KLAAR[id] = { lijst: uit, weg: weg });
+  }
+
   /* het onderdeel van een vraag, met de naam uit bank.js */
-  function deelNaam(vak, t){ var o = ((window.ONDERDELEN && ONDERDELEN[vak]) || []).filter(function(x){ return x.id === t; })[0]; return o ? o.naam : t; }
+  function deelNaam(vak, t){ if (/^lr-/.test(vak)) return LR_GROEP[t] ? LR_GROEP[t].naam : t; var o = ((window.ONDERDELEN && ONDERDELEN[vak]) || []).filter(function(x){ return x.id === t; })[0]; return o ? o.naam : t; }
   var NIVONAAM = { 1:'vmbo-bb', 2:'vmbo-kgt en tl', 3:'havo', 4:'vwo' };
 
   /* ---------- het venster ---------- */
@@ -121,9 +177,9 @@ window.KIEZER = (function(){
         '<div class="kzkop"><h2 id="kzKop">Vragen uit de site</h2>' +
           '<button class="kzsluit" type="button" id="kzSluit" aria-label="Sluiten zonder vragen toe te voegen">&times;</button></div>' +
         '<div class="kzmidden" id="kzMidden">' +
-          '<p class="tip" id="kzUitleg">Kies uit de oefenstof van de spellen op deze site. De vragen komen als gewone vragen in je toets, met de uitleg erbij, en je kunt ze daarna nog aanpassen. Rekenen staat er niet bij: die sommen maakt de computer elke keer nieuw.</p>' +
+          '<p class="tip" id="kzUitleg">Kies uit de oefenstof van de spellen op deze site. De vragen komen als gewone vragen in je toets, met de uitleg erbij, en je kunt ze daarna nog aanpassen. Rekenen komt uit de leerroute: daar maakt elk doel nieuwe sommen, met de uitwerking als uitleg.</p>' +
           '<div class="kzfilters">' +
-            '<label class="veldnaam">Vak<select class="veld" id="kzVak"><option value="">kies een vak</option>' + vakken.map(function(v){ return '<option value="' + v.id + '">' + schoon(v.naam) + '</option>'; }).join('') + '</select></label>' +
+            '<label class="veldnaam">Vak<select class="veld" id="kzVak"><option value="">kies een vak</option>' + vakken.map(function(v){ return '<option value="' + v.id + '">' + schoon(v.naam) + '</option>'; }).join('') + LR_VAKKEN.map(function(v){ return '<option value="' + v.id + '">' + schoon(v.naam) + '</option>'; }).join('') + '</select></label>' +
             '<label class="veldnaam">Niveau<select class="veld" id="kzNiveau"><option value="">alle niveaus</option>' + niv + '</select></label>' +
             '<label class="veldnaam kzdeel">Onderwerp<select class="veld" id="kzDeel" disabled><option value="">kies eerst een vak</option></select></label>' +
             '<label class="veldnaam kzbreed">Zoeken<input class="veld" type="search" id="kzZoek" placeholder="zoek in vragen en antwoorden" autocomplete="off"></label>' +
@@ -212,11 +268,12 @@ window.KIEZER = (function(){
     if (!vak){ $('kzLijst').innerHTML = '<p class="leeg">Kies een vak, dan zie je hier de vragen.</p>'; $('kzAantal').setAttribute('data-zicht', ''); stand(); return; }
     $('kzLijst').setAttribute('aria-busy', 'true');
     $('kzLijst').innerHTML = '<p class="leeg">Vragen ophalen…</p>';
-    Promise.all([BANK.zorg(vak), laadOpen(vak)]).then(function(){
+    var lr = /^lr-/.test(vak);
+    (lr ? laadLeerroute() : Promise.all([BANK.zorg(vak), laadOpen(vak)])).then(function(){
       if (vakNu !== vak) return;
-      var b = bereid(vak);
+      var b = lr ? bereidLeerroute(vak) : bereid(vak);
       b.lijst.forEach(function(x){ OP_ID[x.id] = x; });
-      vulDelen(vak, b.lijst);
+      if (lr) vulDelenLr(vak, b.lijst); else vulDelen(vak, b.lijst);
       $('kzOpenRij').classList.toggle('hide', !b.lijst.some(openVan));
       $('kzLijst').removeAttribute('aria-busy');
       teken();
@@ -244,6 +301,16 @@ window.KIEZER = (function(){
     });
     $('kzDeel').innerHTML = h; $('kzDeel').disabled = false;
   }
+  function vulDelenLr(vak, lijst){
+    var tel = {}, volg = []; lijst.forEach(function(x){ if (!tel[x.t]){ tel[x.t] = 0; volg.push(x.t); } tel[x.t]++; });
+    var NIV = [['basis', 'Fundament'], ['1F', '1F'], ['2F', '2F'], ['3F', '3F']];
+    var h = '<option value="">alle onderwerpen (' + lijst.length + ')</option>';
+    NIV.forEach(function(n){
+      var g = volg.filter(function(t){ return LR_GROEP[t] && LR_GROEP[t].niveau === n[0]; });
+      if (g.length) h += '<optgroup label="' + n[1] + '">' + g.map(function(t){ return '<option value="' + schoon(t) + '">' + schoon(LR_GROEP[t].naam) + ' (' + tel[t] + ')</option>'; }).join('') + '</optgroup>';
+    });
+    $('kzDeel').innerHTML = h; $('kzDeel').disabled = false;
+  }
   /* niveau: wat bij dat niveau past, zoals in het werkblad; vanaf een niveau lager */
   function filter(){
     var b = KLAAR[vakNu]; if (!b) return [];
@@ -262,18 +329,19 @@ window.KIEZER = (function(){
     return '<span class="kzbeeld" aria-hidden="true">' + x.beeld.svg + '</span>';
   }
   function rijHtml(x){
-    var al = alInToets(x), aan = !!gekozen[x.id], open = $('kzOpen').checked && openAntwoorden(x).length;
+    var al = alInToets(x), aan = !!gekozen[x.id], open = x.lr ? !!x.antwoorden : $('kzOpen').checked && openAntwoorden(x).length;
     var labels = [];
     if (x.n && NIVONAAM[x.n]) labels.push('vanaf ' + NIVONAAM[x.n]);
     if (vakNu && x.vak === vakNu && !$('kzDeel').value) labels.push(deelNaam(x.vak, x.t));
+    if (x.lr) labels.push(x.doel);
     if (x.vak !== vakNu) labels.push(((window.VAKKEN || []).filter(function(v){ return v.id === x.vak; })[0] || {}).naam || x.vak);
     if (x.beeld) labels.push('met plaatje');
     if (open) labels.push('open vraag');
     if (al) labels.push('staat al in je toets');
     return '<label class="kzvraag' + (aan ? ' aan' : '') + (al ? ' al' : '') + '"><input type="checkbox" data-id="' + schoon(x.id) + '"' + (aan ? ' checked' : '') + (al ? ' disabled' : '') + '>' +
       beeldHtml(x) +
-      '<span class="kztekst"><span class="kzv">' + schoon(open ? openVraag(x) : x.v) + '</span>' +
-      '<span class="kzgoed"><span class="kzgoedlabel">Goed:</span> ' + schoon(open ? openAntwoorden(x).join(' / ') : x.goed) + '</span>' +
+      '<span class="kztekst"><span class="kzv">' + schoon(open && !x.lr ? openVraag(x) : x.v) + '</span>' +
+      '<span class="kzgoed"><span class="kzgoedlabel">Goed:</span> ' + schoon(x.lr ? (x.antwoorden ? x.antwoorden.join(' / ') : x.goed) : open ? openAntwoorden(x).join(' / ') : x.goed) + '</span>' +
       (labels.length ? '<span class="kzlabels">' + labels.map(function(l){ return '<span>' + schoon(l) + '</span>'; }).join('') + '</span>' : '') +
       '</span></label>';
   }
@@ -330,6 +398,7 @@ window.KIEZER = (function(){
     return svg.then(function(s){ return EIGEN.verklein(new Blob([maatSvg(s)], { type: 'image/svg+xml' }), 900); });
   }
   function alsItem(x, open){
+    if (x.lr) return Promise.resolve(x.antwoorden ? { vorm: 'open', vraag: x.v, antwoorden: x.antwoorden, uitleg: x.uitleg, punten: 1 } : { vorm: 'mk', vraag: x.v, goed: x.goed, fout: schud(x.fout), uitleg: x.uitleg, punten: 1 });
     var it = { vorm: 'mk', vraag: x.v, goed: x.goed, fout: schud(x.fout), uitleg: x.uitleg, punten: 1 };
     var ant = open ? openAntwoorden(x) : [];
     if (ant.length) it = { vorm: 'open', vraag: openVraag(x), antwoorden: ant, uitleg: x.uitleg, punten: 1 };
