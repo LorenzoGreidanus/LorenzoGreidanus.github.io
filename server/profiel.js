@@ -48,6 +48,10 @@ function netjes(inz){
     const s = schoon(k, 60).replace(/[^a-z0-9-]/gi, ""), v = b[k];
     if (s && v && typeof v === "object" && typeof v.w === "number" && isFinite(v.w)) p.beste[s] = { w: Math.round(v.w * 100) / 100, t: getal(v.t, 1e14) };
   });
+  /* de leerroute: per doel 1 (bezig) of 2 (beheerst) */
+  p.route = {};
+  const rt = inz.route && typeof inz.route === "object" ? inz.route : {};
+  Object.keys(rt).slice(0, 1000).forEach(k => { if (/^[a-z0-9-]{2,40}$/.test(k) && (rt[k] === 1 || rt[k] === 2)) p.route[k] = rt[k]; });
   const c = inz.campagne && typeof inz.campagne === "object" ? inz.campagne : {};
   Object.keys(c).slice(0, 30).forEach(k => { if (/^\d{1,2}$/.test(k)) p.campagne[k] = getal(c[k], 3); });
   const v = inz.vrij && typeof inz.vrij === "object" ? inz.vrij : {};
@@ -122,6 +126,9 @@ function voegSamen(oud, nieuw, klasWeg, alles){
   Object.keys(nieuw.vrij).forEach(k => { p.vrij[k] = true; });
   /* gezien is gezien: wat op een apparaat gezien is, telt overal */
   p.gezien = Object.assign({}, oud.gezien || {}, nieuw.gezien || {});
+  /* de leerroute: de hoogste stand per doel wint, van welk apparaat ook */
+  p.route = Object.assign({}, oud.route || {});
+  Object.keys(nieuw.route || {}).forEach(k => { p.route[k] = Math.max(p.route[k] | 0, nieuw.route[k] | 0); });
   return p;
 }
 

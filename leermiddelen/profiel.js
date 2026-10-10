@@ -63,7 +63,8 @@ window.PROFIEL = (function(){
     var klas = null; try { klas = JSON.parse(ls('lg-klas') || 'null'); } catch (e){}
     var uit = null; try { uit = JSON.parse(ls('lg-uitrusting') || 'null'); } catch (e){}
     var gezien = {}; try { gezien = JSON.parse(ls('lg-gezien') || '{}') || {}; } catch (e){}
-    return { avatar:avatar(), beste:beste, campagne:campagne, vrij:vrij, klas:klas && klas.code ? klas : null, niveau:ls('lg-niveau') || '', muntDelta:wachtend(), vrijspeel:vrijWacht(), uitrusting:uit, gezien:gezien,
+    var route = {}; try { route = JSON.parse(ls('lg-route') || '{}') || {}; } catch (e){}
+    return { avatar:avatar(), route:route, beste:beste, campagne:campagne, vrij:vrij, klas:klas && klas.code ? klas : null, niveau:ls('lg-niveau') || '', muntDelta:wachtend(), vrijspeel:vrijWacht(), uitrusting:uit, gezien:gezien,
              /* de klassleutels gaan niet meer mee in het profiel: die horen bij het
                 account, zie klassenAfstemmen() */
              docentWeg:docentWegWacht(), fouten:foutenKort() };
@@ -203,6 +204,13 @@ window.PROFIEL = (function(){
       var gz = {}; try { gz = JSON.parse(ls('lg-gezien') || '{}') || {}; } catch (e){}
       Object.keys(pr.gezien).forEach(function(k){ if (pr.gezien[k]) gz[k] = true; });
       lsZet('lg-gezien', JSON.stringify(gz));
+    }
+    /* de leerroute: de hoogste stand per doel wint */
+    if (pr.route && typeof pr.route === 'object'){
+      var rt = {}; try { rt = JSON.parse(ls('lg-route') || '{}') || {}; } catch (e){}
+      var anders = false;
+      Object.keys(pr.route).forEach(function(k){ var w = pr.route[k] | 0; if (w > (rt[k] | 0)){ rt[k] = w; anders = true; } });
+      if (anders) lsZet('lg-route', JSON.stringify(rt));
     }
     Object.keys(pr.beste || {}).forEach(function(k){
       var mijn = null; try { mijn = JSON.parse(ls('lg-beste-' + k) || 'null'); } catch (e){}
