@@ -172,6 +172,30 @@ th{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--mu
 tr:last-child td{border-bottom:none}
 td.getal{font-variant-numeric:tabular-nums;text-align:right}
 .leeg{padding:22px;color:var(--muted);text-align:center}
+/* de leerroute: per leerling en per groep */
+.rbalk{display:flex;align-items:center;gap:8px;min-width:150px}
+.rbalk .baan{flex:1;height:10px;border-radius:99px;background:var(--rand);overflow:hidden;display:flex}
+.rbalk .baan i{display:block;height:100%}
+.rbalk .baan i.b{background:#2f7d52}.rbalk .baan i.z{background:#EA9836}
+.rbalk b{font-variant-numeric:tabular-nums;font-size:.86rem;white-space:nowrap}
+.rniv{font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap}
+.rniv b{color:var(--ink)}
+.rkop{margin:26px 0 6px;font-size:1.05rem}
+.rgroep{border:1px solid var(--rand);border-radius:14px;margin-top:8px;background:var(--kaart)}
+.rgroep summary{display:grid;grid-template-columns:minmax(140px,1fr) minmax(120px,240px) 92px;gap:10px;align-items:center;padding:10px 14px;cursor:pointer;min-height:44px;list-style:none}
+.rgroep summary::-webkit-details-marker{display:none}
+.rgroep summary .naam{font-weight:600}
+.rgroep summary .naam small{display:block;font-weight:400;color:var(--muted);font-size:.78rem}
+.rgroep summary .pct{text-align:right;font-variant-numeric:tabular-nums;font-size:.86rem;color:var(--muted)}
+.rgroep .tabelvak{margin:0 12px 12px}
+.rwie{font-size:.84rem;line-height:1.5}
+.rwie span{display:inline-block;border-radius:99px;padding:0 8px;margin:1px 2px 1px 0;background:var(--kaart2)}
+.rwie span.b{background:#e7f3ec;color:#1f6b41}
+:root[data-theme="dark"] .rwie span.b{background:#1f3a2c;color:#8fd8ac}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .rwie span.b{background:#1f3a2c;color:#8fd8ac}}
+.rlegenda{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.84rem;color:var(--muted);margin-top:10px}
+.rlegenda i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:6px}
+@media(max-width:560px){.rgroep summary{grid-template-columns:1fr 70px}.rgroep summary .rbalk{grid-column:1 / -1;order:3}}
 .samen{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-top:12px}
 .opdrachtvak{background:var(--kaart2);border-radius:16px;padding:14px 16px}
 /* het dashboard: wie je bent, je klassen, en daaronder de kaarten voor de rest van het docentwerk */
@@ -766,6 +790,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
       <button type="button" role="tab" id="tab-kort" data-tab="kort" aria-controls="paneel-kort">Overzicht</button>
       <button type="button" role="tab" id="tab-od" data-tab="od" aria-controls="paneel-od">Per vak en onderdeel</button>
       <button type="button" role="tab" id="tab-ll" data-tab="ll" aria-controls="paneel-ll">Per leerling</button>
+      <button type="button" role="tab" id="tab-route" data-tab="route" aria-controls="paneel-route">Leerroute</button>
       <button type="button" role="tab" id="tab-potjes" data-tab="potjes" aria-controls="paneel-potjes">Alle potjes</button>
       <button type="button" role="tab" id="tab-inst" data-tab="inst" aria-controls="paneel-inst">Opdrachten en instellingen</button>
     </div>
@@ -811,6 +836,12 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     <div class="paneel" role="tabpanel" id="paneel-ll" aria-labelledby="tab-ll" hidden>
       <p class="tip">Per leerling eerst wat hij beheerst: 80% of meer goed over minstens tien vragen in een onderdeel. Bijna is 60 tot 80%, nog niet is minder. Tik op de getallen voor de onderdelen. Dan per vak de categorieën; tik een vak aan voor de onderdelen eronder. Dan per niveau het percentage goed, bij spellen die hun niveau melden (Tekstdetective, Zwaardvechter, Vragenrace). Daaronder per spel het beste potje, hoeveel potjes en of het de goede kant op gaat.</p>
       <div class="samen" id="samen"></div>
+    </div>
+
+    <div class="paneel" role="tabpanel" id="paneel-route" aria-labelledby="tab-route" hidden>
+      <p class="tip">Hoe ver je leerlingen zijn in <a href="leerroute.html?vak=rekenen">de leerroute</a>. Een doel is <b>beheerst</b> bij vijf van de zes goed zonder hulp, <b>bezig</b> als het geoefend is maar nog niet beheerst. De stand komt binnen zodra een gekoppelde leerling een doel afrondt of de leerroute opent, ook wat hij eerder al beheerste.</p>
+      <div class="filterrij" style="margin-top:12px"><span class="filternaam">Vak</span><div class="chips" id="routeVak" role="group" aria-label="Vak van de leerroute"></div></div>
+      <div id="routeLijst"></div>
     </div>
 
     <div class="paneel" role="tabpanel" id="paneel-potjes" aria-labelledby="tab-potjes" hidden>
@@ -996,7 +1027,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
   function $(id){ return document.getElementById(id); }
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
   /* welk getal per spel de maat is, en hoe het heet */
-  var MAAT = { toren:{ v:'ronde', l:'rondes' }, zwaard:{ v:'ronde', l:'rondes' },
+  var MAAT = { leerroute:{ v:'ronde', l:'van 6 zelf goed' }, toren:{ v:'ronde', l:'rondes' }, zwaard:{ v:'ronde', l:'rondes' },
     mijnwerker:{ v:'ronde', l:'m diep' }, poortrace:{ v:'ronde', l:'poorten goed' }, kaarttoren:{ v:'ronde', l:'verdiepingen' }, race:{ v:'punten', l:'punten' }, klasquiz:{ v:'punten', l:'punten' },
     rekenen:{ v:'punten', l:'punten' }, balans:{ v:'ronde', l:'opgelost' }, handel:{ v:'punten', l:'gulden' }, jagers:{ v:'punten', l:'mensen' },
     feodalisme:{ v:'punten', l:'punten' }, leenmannen:{ v:'punten', l:'procent' }, stad:{ v:'ronde', l:'niveau' }, vergadering:{ v:'ronde', l:'dagen' },
@@ -1068,7 +1099,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     var d = new Date(t), nu = new Date(), dag = Math.round((nu.setHours(0, 0, 0, 0) - new Date(d).setHours(0, 0, 0, 0)) / 86400000);
     return dag === 0 ? 'vandaag' : dag === 1 ? 'gisteren' : d.toLocaleDateString('nl-NL', { day:'numeric', month:'short' });
   }
-  var SPELLEN = { eigen:'Eigen oefening', toren:'Torenverdediging', zwaard:'Zwaardvechter', mijnwerker:'Mijnwerker', poortrace:'Poortrace', kaarttoren:'Kaarttoren', race:'Vragenrace', klasquiz:'Klasquiz', rekenen:'Rekenrace', balans:'De balans', werkwoorden:'Werkwoordrace', irregular:'Irregular verbs', vlaggen:'Vlaggen', landenvormen:'Landenvormen', topografie:'Topografie', lichaam:'Het lichaam', tijdvakken:'Tijdvakken sorteren', bronnenlab:'Bronnenlab', jagers:'Blijven of doorlopen', feodalisme:'Feodalisme', leenmannen:'Verdeel je rijk', stad:'Arena', handel:'De handelsroute', vergadering:'De vergadering', zinsbouw:'Zinsbouw', tekstdetective:'De tekstdetective', uitverkoop:'De uitverkoop', breukenbakker:'De breukenbakker',
+  var SPELLEN = { leerroute:'Leerroute', eigen:'Eigen oefening', toren:'Torenverdediging', zwaard:'Zwaardvechter', mijnwerker:'Mijnwerker', poortrace:'Poortrace', kaarttoren:'Kaarttoren', race:'Vragenrace', klasquiz:'Klasquiz', rekenen:'Rekenrace', balans:'De balans', werkwoorden:'Werkwoordrace', irregular:'Irregular verbs', vlaggen:'Vlaggen', landenvormen:'Landenvormen', topografie:'Topografie', lichaam:'Het lichaam', tijdvakken:'Tijdvakken sorteren', bronnenlab:'Bronnenlab', jagers:'Blijven of doorlopen', feodalisme:'Feodalisme', leenmannen:'Verdeel je rijk', stad:'Arena', handel:'De handelsroute', vergadering:'De vergadering', zinsbouw:'Zinsbouw', tekstdetective:'De tekstdetective', uitverkoop:'De uitverkoop', breukenbakker:'De breukenbakker',
     dhte:'Het DHTE-schema', vlakken:'Vlakken herkennen', organisme:'Bouw het organisme', dag:'Dagelijkse uitdaging', fouten:'Oefen je fouten', verhoudingen:'De verhoudingstabel', metriek:'Het metriek stelsel', cijferen:'Cijferend vermenigvuldigen en delen', klok:'Klokkijken en tijdrekenen', schatten:'Schatten en afronden', grafieken:'Grafieken en formules', pythagoras:'De stelling van Pythagoras', hoeken:'Hoeken meten en berekenen', phrasal:'Phrasal verbs en collocations', translate:'Translate the sentence', klimaatgrafiek:'Klimaatgrafieken', kaartvaardigheid:'Kaartvaardigheden', voedselweb:'Voedselketen en voedselweb', huishoudboekje:'Het huishoudboekje', dictee:'Dictee', dictation:'Dictation', coordinaten:'Schatzoeken met coördinaten', kruisen:'Kruisingsschema', bevolkingspiramide:'Bevolkingspiramides', vraagenaanbod:'Vraag en aanbod', verkiezingen:'Verkiezingen en zetels', oorzaakgevolg:'Oorzaak en gevolg', wiebenik:'Wie ben ik?', reading:'Reading', tijdkaart:'De kaart door de tijd', samenvatten:'Samenvatten', woordenschat:'Woordenschat in context', signaalwoorden:'Signaalwoorden en verbanden', register:'Formeel of informeel', partijen:'Welke partij is dit?', democratie:'Democratie', afwegen:'Twee kanten', alinea:'Bouw een alinea', onderzoek:'Het eerlijke experiment', redeneren:'Denk als een historicus', situaties:'English in real life', voordoen:'Eerst kijken, dan zelf', begrijpend:'Begrijpend lezen', woordformules:'Tabel, grafiek en formule', bedrijf:'Werk, bedrijf en wereld', afweer:'Afweer en evolutie', ruimte:'Ruimtefiguren', schrijfopdracht:'De schrijfopdracht', bronlezen:'Lees de bron', rechtsstaat:'Van aangifte tot uitspraak', water:'Water in Nederland', luisteren:'Luister goed', contextenhavo:'Historische contexten havo', contextenvwo:'Historische contexten vwo', listening:'Listen carefully', examreading:'Exam reading', stofwisseling:'Stofwisseling', strijd:'Klasstrijd' };
   var NIVEAUS = { bb:'vmbo-bb', kgt:'vmbo-kgt/tl', havo:'havo', vwo:'vwo', hv:'havo/vwo' };
   var NIVEAUVOLGORDE = ['bb', 'kgt', 'havo', 'hv', 'vwo'];
@@ -1433,6 +1464,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
   }
   function teken(){
     tekenGekoppeld();
+    tekenRoute();
     /* de kop voor op papier: welke klas, welke code, wanneer afgedrukt */
     var pk = $('printkop');
     if (pk){
@@ -2193,7 +2225,7 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
   /* ---------- tabbladen ----------
      Welk tabblad open staat wordt onthouden; met de pijltjes ga je van het ene
      naar het andere, zoals bij tabbladen hoort. */
-  var TABS = ['kort', 'od', 'll', 'potjes', 'inst'];
+  var TABS = ['kort', 'od', 'll', 'route', 'potjes', 'inst'];
   function zetTab(t, focus){
     if (TABS.indexOf(t) < 0) t = 'kort';
     TABS.forEach(function(x){
@@ -2217,6 +2249,94 @@ footer{padding:30px 0;color:var(--muted);font-size:.86rem}
     });
   });
   (function(){ var t = 'kort'; try { t = localStorage.getItem('lg-klas-tab') || 'kort'; } catch (e){} zetTab(t); })();
+
+  /* ---------- de leerroute ----------
+     De doelen komen uit de leerroute zelf (leerroute.js en leerroute/<vak>-*.js), pas als
+     de docent dit tabblad opent: zo blijft het klasoverzicht licht, en kloppen de doelen
+     altijd met wat de leerlingen zien. De stand per leerling staat in data.leerlingen[].route. */
+  var routeVak = 'rekenen', ROUTE_KAT = {}, ROUTE_LAAD = {};
+  try { routeVak = localStorage.getItem('lg-klas-routevak') === 'nederlands' ? 'nederlands' : 'rekenen'; } catch (e){}
+  function laadScript(src){ return new Promise(function(klaar){ var e = document.createElement('script'); e.src = src; e.onload = e.onerror = function(){ klaar(); }; document.head.appendChild(e); }); }
+  function routeKat(v){
+    if (ROUTE_KAT[v]) return Promise.resolve(ROUTE_KAT[v]);
+    if (ROUTE_LAAD[v]) return ROUTE_LAAD[v];
+    ROUTE_LAAD[v] = (window.LEERROUTE ? Promise.resolve() : laadScript('leerroute.js')).then(function(){
+      if (!window.LEERROUTE) throw new Error('geen leerroute');
+      return LEERROUTE.BESTANDEN[v].reduce(function(p, b){ return p.then(function(){ return laadScript('leerroute/' + b + '.js'); }); }, Promise.resolve());
+    }).then(function(){
+      var V = LEERROUTE.VAKKEN[v], ni = {}, di = {};
+      V.niveaus.forEach(function(n, i){ ni[n.id] = i; }); V.domeinen.forEach(function(d, i){ di[d.id] = i; });
+      var gr = LEERROUTE._groepen().filter(function(g){ return g.vak === v && g.doelen.some(function(d){ return !d.mix; }); })
+        .sort(function(a, b){ return (ni[a.niveau] - ni[b.niveau]) || ((di[a.domein] || 0) - (di[b.domein] || 0)) || (a.volg - b.volg); })
+        .map(function(g){ return { id:g.id, naam:g.naam, niveau:g.niveau, doelen:g.doelen.filter(function(d){ return !d.mix; }).map(function(d){ return { id:d.id, naam:d.naam }; }) }; });
+      return (ROUTE_KAT[v] = { niveaus:V.niveaus, groepen:gr });
+    });
+    return ROUTE_LAAD[v];
+  }
+  /* de demoklas: een verzonnen stand, steeds dezelfde per naam */
+  function demoRoute(naam, kat){
+    var h = 7; for (var i = 0; i < naam.length; i++) h = (h * 31 + naam.charCodeAt(i)) % 9973;
+    var r = {}, ver = 0.25 + (h % 50) / 100, alle = [];
+    kat.groepen.forEach(function(g){ g.doelen.forEach(function(d){ alle.push(d.id); }); });
+    alle.forEach(function(id, k){ var p = k / alle.length, ruis = ((h * 7 + k * 13) % 23) / 23; if (p < ver * 0.75 && ruis > 0.12) r[id] = 2; else if (p < ver * 1.1 && ruis > 0.45) r[id] = 1; });
+    return r;
+  }
+  function tekenRoute(){
+    if (!$('routeVak')) return;
+    $('routeVak').innerHTML = [['rekenen', 'Rekenen'], ['nederlands', 'Nederlands']].map(function(v){ return '<button type="button" data-rv="' + v[0] + '" aria-pressed="' + (v[0] === routeVak) + '"' + (v[0] === routeVak ? ' class="on"' : '') + '>' + v[1] + '</button>'; }).join('');
+    Array.prototype.forEach.call($('routeVak').querySelectorAll('[data-rv]'), function(b){
+      b.addEventListener('click', function(){ routeVak = b.getAttribute('data-rv'); try { localStorage.setItem('lg-klas-routevak', routeVak); } catch (e){} tekenRoute(); });
+    });
+    var vak = routeVak, doel = $('routeLijst');
+    if (!data){ doel.innerHTML = '<p class="leeg">Kies of maak eerst een klas.</p>'; return; }
+    if (!ROUTE_KAT[vak]) doel.innerHTML = '<p class="leeg">De leerroute laden…</p>';
+    routeKat(vak).then(function(kat){ if (vak === routeVak) tekenRouteMet(kat); }, function(){ doel.innerHTML = '<p class="leeg">De leerroute kon niet geladen worden. Probeer het later nog eens.</p>'; });
+  }
+  function tekenRouteMet(kat){
+    var vak = routeVak, demo = data && data.code === 'DEMO', ids = {};
+    kat.groepen.forEach(function(g){ g.doelen.forEach(function(d){ ids[d.id] = g; }); });
+    var totaal = Object.keys(ids).length;
+    var ll = ((data && data.leerlingen) || []).map(function(x){
+      var r = demo ? demoRoute(x.naam, kat) : (x.route || {}), b = 0, z = 0, per = {};
+      kat.niveaus.forEach(function(n){ per[n.id] = [0, 0]; });
+      kat.groepen.forEach(function(g){ g.doelen.forEach(function(d){ per[g.niveau][1]++; if (r[d.id] === 2){ b++; per[g.niveau][0]++; } else if (r[d.id] === 1) z++; }); });
+      return { naam:x.naam, r:r, b:b, z:z, per:per };
+    });
+    var actief = ll.filter(function(x){ return x.b || x.z; });
+    var doel = $('routeLijst'), open = {};
+    Array.prototype.forEach.call(doel.querySelectorAll('.rgroep[open]'), function(d){ open[d.getAttribute('data-g')] = 1; });
+    if (!actief.length){
+      doel.innerHTML = '<p class="leeg">Nog geen leerling van deze klas heeft de leerroute ' + (vak === 'rekenen' ? 'rekenen' : 'Nederlands') + ' gebruikt sinds hij gekoppeld is. Stuur ze naar <a href="leerroute.html?vak=' + vak + '">de leerroute</a>: wat ze daar oefenen, verschijnt hier.</p>';
+      return;
+    }
+    function balk(b, z, n){ var pb = n ? b / n * 100 : 0, pz = n ? z / n * 100 : 0;
+      return '<span class="rbalk"><span class="baan" aria-hidden="true"><i class="b" style="width:' + pb.toFixed(1) + '%"></i><i class="z" style="width:' + pz.toFixed(1) + '%"></i></span><b>' + b + ' / ' + n + '</b></span>'; }
+    actief.sort(function(a, c){ return c.b - a.b || c.z - a.z || a.naam.localeCompare(c.naam, 'nl'); });
+    var niv = kat.niveaus.filter(function(n){ return actief[0].per[n.id][1]; });
+    var h = '<div class="rlegenda"><span><i style="background:#2f7d52"></i>beheerst</span><span><i style="background:#EA9836"></i>bezig</span><span>' + actief.length + ' van de ' + ll.length + ' leerlingen gebruiken de leerroute ' + (vak === 'rekenen' ? 'rekenen' : 'Nederlands') + '</span></div>' +
+      '<div class="tabelvak"><table><thead><tr><th>Leerling</th><th>Beheerst van de ' + totaal + ' doelen</th>' + niv.map(function(n){ return '<th>' + schoon(n.naam) + '</th>'; }).join('') + '<th>Bezig</th></tr></thead><tbody>' +
+      actief.map(function(x){ return '<tr><td>' + schoon(x.naam) + '</td><td>' + balk(x.b, x.z, totaal) + '</td>' +
+        niv.map(function(n){ var p = x.per[n.id]; return '<td class="rniv"><b>' + p[0] + '</b> / ' + p[1] + '</td>'; }).join('') + '<td class="getal">' + x.z + '</td></tr>'; }).join('') +
+      '</tbody></table></div>';
+    /* per groep: hoeveel van de klas er al is, en per doel wie */
+    kat.niveaus.forEach(function(n){
+      var gn = kat.groepen.filter(function(g){ return g.niveau === n.id; }); if (!gn.length) return;
+      h += '<h3 class="rkop">' + schoon(n.naam) + '</h3>';
+      gn.forEach(function(g){
+        var b = 0, z = 0, n2 = g.doelen.length * actief.length, wieKlaar = 0;
+        actief.forEach(function(x){ var alle = true; g.doelen.forEach(function(d){ if (x.r[d.id] === 2) b++; else { alle = false; if (x.r[d.id] === 1) z++; } }); if (alle) wieKlaar++; });
+        h += '<details class="rgroep" data-g="' + g.id + '"' + (open[g.id] ? ' open' : '') + '><summary><span class="naam">' + schoon(g.naam) + '<small>' + g.doelen.length + ' doelen · ' + wieKlaar + ' van de ' + actief.length + ' leerlingen helemaal klaar</small></span>' + balk(b, z, n2) +
+          '<span class="pct">' + (n2 ? Math.round(b / n2 * 100) : 0) + '% beheerst</span></summary>' +
+          '<div class="tabelvak"><table><thead><tr><th>Doel</th><th>Beheerst</th><th>Bezig</th><th>Nog niet</th></tr></thead><tbody>' +
+          g.doelen.map(function(d){
+            var bw = actief.filter(function(x){ return x.r[d.id] === 2; }), zw = actief.filter(function(x){ return x.r[d.id] === 1; });
+            return '<tr><td>' + schoon(d.naam) + '</td><td class="rwie">' + (bw.map(function(x){ return '<span class="b">' + schoon(x.naam) + '</span>'; }).join('') || '·') + '</td>' +
+              '<td class="rwie">' + (zw.map(function(x){ return '<span>' + schoon(x.naam) + '</span>'; }).join('') || '·') + '</td><td class="getal">' + (actief.length - bw.length - zw.length) + '</td></tr>';
+          }).join('') + '</tbody></table></div></details>';
+      });
+    });
+    doel.innerHTML = h;
+  }
 
   /* ---------- wie ben je: inloggen met Microsoft hoort bij het docentwerk ---------- */
   var MSLOGO = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="0" y="0" width="7.5" height="7.5" fill="#F25022"/><rect x="8.5" y="0" width="7.5" height="7.5" fill="#7FBA00"/><rect x="0" y="8.5" width="7.5" height="7.5" fill="#00A4EF"/><rect x="8.5" y="8.5" width="7.5" height="7.5" fill="#FFB900"/></svg>';

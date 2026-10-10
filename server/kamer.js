@@ -109,7 +109,7 @@ const OPDRACHT_SPELLEN = { race: true, toren: true, zwaard: true, dictee: true, 
 /* Ook elke losse oefening uit de klas (de vakspellen en de oefenspellen) kan een
    opdracht zijn, met de keuzes van de docent in kz (n=kgt&soort=...&aantal=20).
    Niet de spellen die geen eigen uitslag per leerling hebben. */
-const GEEN_OPDRACHT = { klasquiz: 1, dag: 1, fouten: 1, eigen: 1, stad: 1 };
+const GEEN_OPDRACHT = { klasquiz: 1, dag: 1, fouten: 1, eigen: 1, stad: 1, leerroute: 1 };
 function magOpdracht(spel){ return !!(OPDRACHT_SPELLEN[spel] || (KLAS_SPELLEN[spel] && !GEEN_OPDRACHT[spel])); }
 /* Het dictee als opdracht. Drie bronnen: de tekst van deze week (per niveau,
    uit de tekstbank van dictee.html), een vaste tekst uit die bank (dt: t-bb-01),
@@ -350,7 +350,7 @@ function goedVan(r){
   return Math.min(r.ronde | 0, 250);
 }
 /* spellen zonder kamer die wel bij een klas melden */
-const KLAS_SPELLEN = { race: "Vragenrace", metriek: "Het metriek stelsel", eigen: "Eigen oefening", klasquiz: "Klasquiz", dag: "Dagelijkse uitdaging", fouten: "Oefen je fouten", rekenen: "Rekenrace", balans: "De balans", werkwoorden: "Werkwoordrace", irregular: "Irregular verbs", vlaggen: "Vlaggen", landenvormen: "Landenvormen", topografie: "Topografie", lichaam: "Het lichaam", tijdvakken: "Tijdvakken sorteren", bronnenlab: "Bronnenlab", jagers: "Blijven of doorlopen", feodalisme: "Feodalisme", leenmannen: "Verdeel je rijk", stad: "Arena", handel: "De handelsroute", vergadering: "De vergadering", zinsbouw: "Zinsbouw", tekstdetective: "De tekstdetective", uitverkoop: "De uitverkoop", breukenbakker: "De breukenbakker",
+const KLAS_SPELLEN = { leerroute: "Leerroute", race: "Vragenrace", metriek: "Het metriek stelsel", eigen: "Eigen oefening", klasquiz: "Klasquiz", dag: "Dagelijkse uitdaging", fouten: "Oefen je fouten", rekenen: "Rekenrace", balans: "De balans", werkwoorden: "Werkwoordrace", irregular: "Irregular verbs", vlaggen: "Vlaggen", landenvormen: "Landenvormen", topografie: "Topografie", lichaam: "Het lichaam", tijdvakken: "Tijdvakken sorteren", bronnenlab: "Bronnenlab", jagers: "Blijven of doorlopen", feodalisme: "Feodalisme", leenmannen: "Verdeel je rijk", stad: "Arena", handel: "De handelsroute", vergadering: "De vergadering", zinsbouw: "Zinsbouw", tekstdetective: "De tekstdetective", uitverkoop: "De uitverkoop", breukenbakker: "De breukenbakker",
   /* Deze meldden hun uitslag wel, maar stonden hier niet, dus de klas kreeg ze
      nooit te zien: de melding werd geweigerd met "onbekend spel". */
   dhte: "Het DHTE-schema", vlakken: "Vlakken herkennen", organisme: "Bouw het organisme",
@@ -1849,12 +1849,27 @@ export class Kamer extends DurableObject {
         st.resultaten.forEach(r => { if (r.sid === k) r.sid = eerste; });
         if (!l[eerste].ms && l[k].ms) l[eerste].ms = l[k].ms;
         if (!l[eerste].acc && l[k].acc) l[eerste].acc = l[k].acc;
+        if (l[k].route){ const r = l[eerste].route = l[eerste].route || {}; Object.keys(l[k].route).forEach(d => { if ((r[d] | 0) < l[k].route[d]) r[d] = l[k].route[d]; }); }
         delete l[k];
       });
     });
     /* quizuitslagen die de docent eerder invoerde onder een eigen kenmerk, bij de leerling met die bijnaam zetten */
     const perNaam = {}; Object.keys(l).forEach(k => { perNaam[normNaam(l[k].naam)] = k; if (l[k].ms && !perNaam[normNaam(l[k].ms)]) perNaam[normNaam(l[k].ms)] = k; });
     st.resultaten.forEach(r => { if (/^kq-/.test(r.sid) && perNaam[normNaam(r.naam)]) r.sid = perNaam[normNaam(r.naam)]; });
+  }
+  /* De leerroute: per doel 1 (bezig) of 2 (beheerst). De leerling stuurt zijn hele stand mee;
+     de hoogste stand per doel wint, zodat niets terugvalt. */
+  zetRoute(kort, route){
+    if (!route || typeof route !== "object") return;
+    const ll = this.stand.leerlingen[kort]; if (!ll) return;
+    const r = ll.route = ll.route || {};
+    let n = Object.keys(r).length;
+    Object.keys(route).slice(0, 1200).forEach(k => {
+      const w = route[k];
+      if (!/^[a-z0-9-]{2,40}$/.test(k) || (w !== 1 && w !== 2)) return;
+      if (!r[k]){ if (n >= 1000) return; n++; }
+      if ((r[k] | 0) < w) r[k] = w;
+    });
   }
   async meld(inz){
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
@@ -1880,6 +1895,11 @@ export class Kamer extends DurableObject {
     const msM = schoon(inz.ms, 40);
     if (msM) this.stand.leerlingen[kort].ms = msM;
     if (acc) this.stand.leerlingen[kort].acc = acc;
+    if (spel === "leerroute"){
+      this.zetRoute(kort, inz.route);
+      /* stil: alleen de stand bijwerken (bij het openen van de leerroute), geen potje */
+      if (inz.stil){ await this.zetAlarm({ wat: "opruimen" }, KLAS_SLAAPT); await this.bewaar(); return json({ ok: true }); }
+    }
     this.voegToe(Object.assign({ sid: kort, naam: nette(inz.naam, "Leerling"), av: schoonAv(inz.av), spel, ronde: getal(inz.ronde, 250), punten: getal(inz.punten, 5000),
                    niveau: schoon(inz.niveau, 10), vak: schoon(inz.vak, 10), od: schoonOd(inz.od), t: Date.now() }, spel === "dictee" ? dicteeVelden(inz) : {}));
     this.telFk(kort, schoonFk(inz.fk));
@@ -2348,7 +2368,7 @@ export class Kamer extends DurableObject {
     this.samenvoegen();
     const gespeeld = new Set((this.stand.resultaten || []).map(r => r.sid));
     const l = this.stand.leerlingen || {};
-    return Object.keys(l).map(s => ({ id: s, naam: l[s].ms || l[s].naam, bijnaam: l[s].ms ? l[s].naam : "", av: l[s].av || "", ms: l[s].ms || "", sinds: l[s].sinds, gespeeld: gespeeld.has(s) }))
+    return Object.keys(l).map(s => ({ id: s, naam: l[s].ms || l[s].naam, bijnaam: l[s].ms ? l[s].naam : "", av: l[s].av || "", ms: l[s].ms || "", sinds: l[s].sinds, gespeeld: gespeeld.has(s), route: l[s].route || {} }))
       .sort((a, b) => a.naam.localeCompare(b.naam, "nl"));
   }
   aanwezig(sid){ return this.ctx.getWebSockets(sid).length > 0; }

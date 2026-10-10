@@ -58,8 +58,8 @@ window.LEERROUTE = (function(){
   };
   /* welke inhoudsbestanden bij een vak horen, in deze volgorde geladen */
   var BESTANDEN = {
-    rekenen:['rekenen-basis', 'rekenen-tafels', 'rekenen-getallen', 'rekenen-verhoudingen', 'rekenen-meten'],
-    nederlands:['nederlands-spelling', 'nederlands-werkwoorden', 'nederlands-grammatica', 'nederlands-lezen', 'nederlands-schrijven']
+    rekenen:['rekenen-basis', 'rekenen-tafels', 'rekenen-getallen', 'rekenen-verhoudingen', 'rekenen-meten', 'rekenen-meetkunde', 'rekenen-algebra', 'rekenen-data'],
+    nederlands:['nederlands-spelling', 'nederlands-werkwoorden', 'nederlands-grammatica', 'nederlands-lezen', 'nederlands-schrijven', 'nederlands-bronnen', 'nederlands-taal', 'nederlands-literatuur']
   };
   var SAMEN = 3, ZELF = 6, BEHEERST = 5;
 
@@ -276,6 +276,21 @@ window.LEERROUTE = (function(){
     v[id] = s;
     try { localStorage.setItem('lg-route', JSON.stringify(v)); } catch (e){}
     try { if (window.PROFIEL && PROFIEL.sync) PROFIEL.sync(); } catch (e){}
+  }
+
+  /* ---------- de klas ----------
+     Is de leerling aan een klas gekoppeld (klas.js), dan gaat na elke ronde Zelf een melding
+     naar de klas, met de hele stand van de leerroute: zo ziet de docent in het klasoverzicht
+     welke doelen bezig en beheerst zijn. Bij het openen gaat de stand stil mee als hij
+     veranderd is sinds de vorige melding (bijvoorbeeld op een ander apparaat beheerst). */
+  function meldKlas(extra){
+    try {
+      if (!window.KLAS || !KLAS.lees || !KLAS.lees()) return;
+      var route = lees(), sleutel = KLAS.lees().code + ':' + JSON.stringify(route).length + ':' + Object.keys(route).filter(function(k){ return route[k] === 2; }).length;
+      if (extra.stil){ if (localStorage.getItem('lg-route-klas') === sleutel || !Object.keys(route).length) return; }
+      KLAS.meld(Object.assign({ spel:'leerroute', vak:vak, route:route }, extra));
+      localStorage.setItem('lg-route-klas', sleutel);
+    } catch (e){}
   }
 
   /* ---------- de pagina ---------- */
@@ -604,6 +619,7 @@ window.LEERROUTE = (function(){
   function eind(){
     var ok = zelfGoed >= BEHEERST;
     zet(D.id, ok ? 2 : 1);
+    meldKlas({ ronde:zelfGoed, punten:ok ? 1 : 0, niveau:D.groep.niveau });
     var alle = doelenVan(), i = alle.indexOf(D), v = lees(), volgende = null;
     for (var j = i + 1; j < alle.length; j++) if (v[alle[j].id] !== 2){ volgende = alle[j]; break; }
     toonDoel();
@@ -643,7 +659,7 @@ window.LEERROUTE = (function(){
     document.documentElement.style.setProperty('--vak', V.kleur);
     var naam = document.querySelector('.lgnaam > span'); if (naam) naam.textContent = V.naam + ': de leerroute';
     wortel.innerHTML = '<p class="lr-laden">De leerroute laden…</p>';
-    laad(['kerndoelen'].concat(BESTANDEN[vak]), function(){ mixen(); route(); window.addEventListener('hashchange', route); });
+    laad(['kerndoelen'].concat(BESTANDEN[vak]), function(){ mixen(); setTimeout(function(){ meldKlas({ stil:true }); }, 1500); route(); window.addEventListener('hashchange', route); });
   }
   return { voeg:voeg, start:start, R:R, teken:teken, _klopt:klopt, _mixen:mixen, _staat:function(){ return { op:op, n:n, fase:fase, eind:op ? eindAnt(op) : null }; }, _doelen:function(){ return DOELEN; }, _groepen:function(){ return GROEPEN; }, VAKKEN:VAKKEN, BESTANDEN:BESTANDEN };
 })();
