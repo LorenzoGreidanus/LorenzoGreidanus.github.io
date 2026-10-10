@@ -778,11 +778,17 @@ function klokVraag(r){
 function metriekVraag(r){
   var L = kies([['km', 'hm', 'dam', 'm', 'dm', 'cm', 'mm'], ['kg', 'hg', 'dag', 'g', 'dg', 'cg', 'mg'], ['kl', 'hl', 'dal', 'l', 'dl', 'cl', 'ml']]);
   var gewoon = r <= 1 ? [0, 3, 5, 6] : [0, 1, 2, 3, 4, 5, 6];
-  var i = kies(gewoon), j = kies(gewoon.filter(function(x){ return x !== i && Math.abs(x - i) <= (r <= 1 ? 3 : 6); }));
-  var f = Math.pow(10, j - i), g = r <= 1 ? kies([1, 2, 5, 10, 25]) : r === 2 ? kies([1.5, 2, 3.5, 7, 12, 0.5, 45]) : kies([0.35, 1.25, 7.5, 0.08, 62.5, 3.75]);
+  var i = kies(gewoon), g = r <= 1 ? kies([1, 2, 5, 10, 25]) : r === 2 ? kies([1.5, 2, 3.5, 7, 12, 0.5, 45]) : kies([0.35, 1.25, 7.5, 0.08, 62.5, 3.75]);
+  /* Alleen sprongen waarbij het antwoord een net getal blijft: niet kleiner dan
+     een duizendste en niet langer dan vier cijfers achter de komma. Eerst kon
+     0,35 mm in km gevraagd worden, en dan was het antwoord "0 km". */
+  var netjes = function(x){ var v = g * Math.pow(10, x - i); return v >= 0.001 && v <= 1e6 && Math.abs(Math.round(v * 1e4) / 1e4 - v) < 1e-9; };
+  var kan = gewoon.filter(function(x){ return x !== i && Math.abs(x - i) <= (r <= 1 ? 3 : 6) && netjes(x); });
+  var j = kan.length ? kies(kan) : (i > 0 ? i - 1 : i + 1);
+  var f = Math.pow(10, j - i);
   var goed = Math.round(g * f * 1e6) / 1e6;
   function net(x){ return String(x).replace('.', ','); }
-  var fouten = [goed * 10, goed / 10, goed * 100, goed / 100, g].filter(function(x){ return x !== goed; }).map(function(x){ return net(Math.round(x * 1e6) / 1e6) + ' ' + L[j]; });
+  var fouten = [goed * 10, goed / 10, goed * 100, goed / 100, g].filter(function(x){ return x !== goed && x >= 0.0001; }).map(function(x){ return net(Math.round(x * 1e6) / 1e6) + ' ' + L[j]; });
   return bouw(net(g) + ' ' + L[i] + ' = hoeveel ' + L[j] + '?', net(goed) + ' ' + L[j], function(){ return kies(fouten); },
     'Van ' + L[i] + ' naar ' + L[j] + ' is ' + Math.abs(j - i) + ' treden ' + (j > i ? 'omlaag: keer ' + net(f) : 'omhoog: gedeeld door ' + net(1 / f)) + '. ' + net(g) + ' ' + L[i] + ' = ' + net(goed) + ' ' + L[j] + '.', 'metriek');
 }
@@ -796,7 +802,8 @@ function schatVraag(r){
   }
   var a = 100 + rnd(900), b = 100 + rnd(900), teken = r >= 2 && rnd(2) === 0 ? '\u00d7' : '+';
   if (teken === '\u00d7'){ b = 2 + rnd(48); }
-  var ra = Math.round(a / 100) * 100, rb = teken === '+' ? Math.round(b / 100) * 100 : Math.round(b / 10) * 10, s2 = teken === '+' ? ra + rb : ra * rb;
+  /* bij keer blijft een getal onder de tien staan: 3 afronden op tientallen gaf 0 */
+  var ra = Math.round(a / 100) * 100, rb = teken === '+' ? Math.round(b / 100) * 100 : b < 10 ? b : Math.round(b / 10) * 10, s2 = teken === '+' ? ra + rb : ra * rb;
   var fouten2 = [s2 * 10, s2 / 10, s2 + (teken === '+' ? 200 : 1000), s2 - (teken === '+' ? 200 : 1000)].filter(function(x){ return x > 0 && x !== s2; });
   return bouw('Ongeveer hoeveel is ' + a + ' ' + teken + ' ' + b + '?', 'ongeveer ' + s2, function(){ return 'ongeveer ' + kies(fouten2); }, 'Rond af: ' + ra + ' ' + teken + ' ' + rb + ' = ' + s2 + '. Precies is het ' + (teken === '+' ? a + b : a * b) + '.', 'schatten');
 }

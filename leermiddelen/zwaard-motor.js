@@ -86,7 +86,7 @@ const LAAT = { vanaf:15, munten:1.25 };
 /* Twee aanvallen achter elkaar: met deze kans doet een baas meteen nog een aanval ('tussen' seconden
    nadat de eerste over is). Daarna is hij 'rust' seconden moe: hij doet niets, er staat een groene
    ring om hem heen en je raakt hem harder (NACHTMERRIE.moeX). */
-const REEKS = { kans:0.4, tussen:0.3, rust:2.4 };
+const REEKS = { kans:0.4, tussen:0.3, rust:1.6 };
 /* Vanaf deze ronde komen de halen en de muur van een baas in twee fasen. */
 const TWEEFASEN = 10;
 function laatExtra(ronde){ return ronde >= LAAT.vanaf ? LAAT.munten : 1; }
@@ -128,13 +128,17 @@ const BAZEN = [
 /* De aanvallen. Elke aanval heeft eerst een waarschuwing die je op de grond
    ziet, en dan het moment dat het raakt. Alle maten zijn in arenapunten. */
 const AANVAL = {
-  pauze:function(n){ return Math.max(0.55, 1.6 - n * 0.03); },   /* seconden tussen twee aanvallen: kort, en steeds korter */
+  /* Seconden tussen twee aanvallen: kort, en steeds korter. Was 1,6 min 0,03 per ronde, maar
+     dan stond er een derde tot de helft van een baasgevecht niets op het veld en kon je
+     ongestoord doorslaan (gemeten door de motor los te laten lopen). */
+  pauze:function(n){ return Math.max(0.45, 1.15 - n * 0.02); },
   korter:function(n){ return Math.max(0.5, 1 - n * 0.012); },    /* de waarschuwing krimpt langzaam, nooit onder een halve seconde */
-  /* Onder de helft van zijn leven wordt hij kwaad. Dat maakt hem niet sneller
-     maar juist trager: hij haalt wijder uit en je ziet het langer aankomen.
-     Eerder liep hier alles tegelijk omhoog en was de tweede helft van een
-     baasgevecht voor de meeste leerlingen niet meer te doen. */
-  boosPauze:1.35,                                                /* kwaad: langer wachten tussen twee aanvallen */
+  /* Onder de helft van zijn leven wordt hij kwaad. Eerder liep hier alles tegelijk
+     omhoog en was de tweede helft van een baasgevecht voor de meeste leerlingen
+     niet meer te doen. Daarna werd hij kwaad juist trager, en dat maakte de tweede
+     helft weer te makkelijk. Nu wacht hij even lang als eerst, maar zie je elke
+     aanval wat langer aankomen. */
+  boosPauze:1,                                                   /* kwaad: even lang wachten tussen twee aanvallen */
   boosKorter:1.15,                                               /* kwaad: de waarschuwing blijft langer staan */
   boosOverlap:1,                                                 /* kwaad: de volgende aanval wacht netjes op de vorige */
   boosDubbel:0.12,                                               /* kwaad: nog maar zelden twee tegelijk */
@@ -456,10 +460,11 @@ function maak(opties){
     }
     zeg('spawn', soort, eerste);
   }
-  /* Een baas heeft een kwart meer leven dan vroeger. Het gevecht was voor wie
-     zijn uitrusting op orde had in een halve minuut voorbij, en dan heb je geen
-     baasgevecht maar een grote fout. */
-  var BAASLEVEN = 1.25;
+  /* Een baas heeft veertig procent meer leven dan vroeger (eerst een kwart, in
+     oktober 2026 nog wat meer). Het gevecht was voor wie zijn uitrusting op orde
+     had in een halve minuut voorbij, en dan heb je geen baasgevecht maar een
+     grote fout. */
+  var BAASLEVEN = 1.4;
   /* De nachtmerrie: alleen jij en de baas. Hij valt aan in salvo's: een paar
      aanvallen vlak achter elkaar, en daarna een kort moment waarin hij moe is.
      Dan krijgt hij extra schade: dat is je kans om terug te slaan. Per fase

@@ -101,9 +101,15 @@ var EIGEN = (function(){
      een ander apparaat. Niet ingelogd: dan blijft hij hier, en dat is genoeg. */
   function afstemmen(){
     if (typeof fetch !== 'function') return Promise.resolve(null);
-    var hier = mijn(), w = lees(WEG, []);
-    return vraag('/api/account/materiaal', 'POST', { materiaal: hier, weg: w })
+    /* niet ingelogd: niets te vragen (anders staat er voor elke bezoeker een fout in de console) */
+    var wie = window.PROFIEL && PROFIEL.account ? PROFIEL.account() : Promise.resolve({ ingelogd: true });
+    return wie.then(function(a){
+      if (!a || !a.ingelogd) return null;
+      var hier = mijn(), w = lees(WEG, []);
+      return vraag('/api/account/materiaal', 'POST', { materiaal: hier, weg: w });
+    })
       .then(function(j){
+        if (!j) return null;
         zet(WEG, []);
         var heb = {}; mijn().forEach(function(x){ heb[x.code] = x; });
         (j.materiaal || []).forEach(function(x){ if (!heb[x.code]) heb[x.code] = x; });
