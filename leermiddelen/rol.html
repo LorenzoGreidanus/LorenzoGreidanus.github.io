@@ -183,6 +183,15 @@ body.app-aan{background:var(--kbg)}
 .kgestuurd:empty{display:none}
 .kgestuurd.nog{color:var(--amber-t)}
 /* de aanwijzing na het checken klapt open onder de post */
+/* de check in vier tegels: wie, wat, wanneer, waar (het Kringel-ontwerp) */
+.wtegels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
+.wtegel{background:var(--kaart);border:1.5px solid var(--rand);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.wtegel b{display:inline-flex;align-items:center;gap:6px;font-size:.8rem;font-weight:700;color:var(--gr-tekst);letter-spacing:0;text-transform:none}
+.wtegel b svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.wtegel span{font-size:.92rem;line-height:1.4}
+.wtegel.breed{grid-column:1 / -1}
+@media(max-width:420px){.wtegels{grid-template-columns:1fr}}
+.kcheck .wtegels{margin-top:6px}
 .kcheck{margin:10px 10px 0;border-radius:14px;padding:12px 14px;background:var(--amber-bg);color:var(--ink);border-left:4px solid #EA9836}
 .kcheck.open{animation:kopen .38s var(--ease)}
 @keyframes kopen{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
@@ -541,6 +550,17 @@ body.app-aan.vb-hapert .vb-balk{bottom:calc(76px + env(safe-area-inset-bottom,0p
     if (window.AVATAR) return '<span class="kav" style="' + st + '" aria-hidden="true">' + AVATAR.svg(String(zaad || '?').replace(/^@/, ''), maat, a && a.spec ? a.spec : '') + '</span>';
     return '<span class="kav" style="' + st + ';background:#0f7c8c" aria-hidden="true">' + schoon(String(zaad || '?').replace(/^@/, '').charAt(0).toUpperCase()) + '</span>';
   }
+  /* een aanwijzing met de kopjes Wie, Wat, Wanneer en Waar wordt vier tegels (zoals in Het gerucht) */
+  var WICO = { wie:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>', wat:'<circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/>',
+    wanneer:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', waar:'<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>' };
+  function wTegels(tekst){
+    var re = /(Wie|Wat|Wanneer en waar|Wanneer|Waar): /g, m, delen = [], vorig = null, begin = 0;
+    while ((m = re.exec(tekst))){ if (vorig) vorig.t = tekst.slice(begin, m.index).trim(); vorig = { w:m[1], t:'' }; delen.push(vorig); begin = re.lastIndex; }
+    if (vorig) vorig.t = tekst.slice(begin).trim();
+    if (delen.length < 2) return '<p>' + schoon(tekst) + '</p>';
+    return '<div class="wtegels">' + delen.map(function(d, i){ var k = d.w.split(' ')[0].toLowerCase();
+      return '<div class="wtegel' + (delen.length % 2 && i === delen.length - 1 ? ' breed' : '') + '"><b><svg viewBox="0 0 24 24" aria-hidden="true">' + WICO[k] + '</svg>' + schoon(d.w) + '</b><span>' + schoon(d.t.charAt(0).toUpperCase() + d.t.slice(1)) + '</span></div>'; }).join('') + '</div>';
+  }
   var LABELICO = { factcheck:'waarschuw', nep:'waarschuw', trending:'trend', aanbevolen:'ster', klopt:'vink', satire:'info', misleidend:'waarschuw', eigen:'pen', info:'info' };
   var ACTKLEUR = { deel:'#204ECF', nee:'#5b6480', check:'#EA9836', vlag:'#6b3fa0' };
   var app = { tab:'tijdlijn', keys:null, top:null, badge:false, plaats:{}, geplaatst:{}, haak:false };
@@ -576,7 +596,7 @@ body.app-aan.vb-hapert .vb-balk{bottom:calc(76px + env(safe-area-inset-bottom,0p
     if (t && (t.gezien !== undefined || t.gedeeld !== undefined)) h += '<p class="ktel">' + (t.gezien !== undefined ? '<span>' + ki('oog') + '<b>' + getal(t.gezien) + '</b> keer gezien</span>' : '') + (t.gedeeld !== undefined ? '<span>' + ki('deel') + '<b>' + getal(t.gedeeld) + '</b> keer gedeeld</span>' : '') + '</p>';
     if (p.aanwijzing){
       var aw = typeof p.aanwijzing === 'string' ? { tekst:p.aanwijzing } : p.aanwijzing;
-      h += '<div class="kcheck' + (open ? ' open' : '') + '"><p class="kcheckkop">' + ki('vergroot') + schoon(aw.kop || 'Jouw check') + '</p><p>' + schoon(aw.tekst || '') + '</p>' + (aw.meer ? '<p class="kmeer">' + schoon(aw.meer) + '</p>' : '') + '</div>';
+      h += '<div class="kcheck' + (open ? ' open' : '') + '"><p class="kcheckkop">' + ki('vergroot') + schoon(aw.kop || 'Jouw check') + '</p>' + wTegels(aw.tekst || '') + (aw.meer ? '<p class="kmeer">' + schoon(aw.meer) + '</p>' : '') + '</div>';
     }
     if (acties.length){
       h += '<div class="kacties" role="group" aria-label="Wat doe je met dit bericht?">' + acties.map(function(a){
