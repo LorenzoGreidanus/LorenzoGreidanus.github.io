@@ -88,7 +88,7 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .landvak svg{display:block;width:100%;height:auto;touch-action:manipulation}
 .landsvg .plek:hover rect{opacity:.08 !important;stroke:var(--ocean) !important}
 .landtip{font-size:.84rem;color:var(--muted);margin-bottom:18px;max-width:65ch}
-/* Het blad onder het landschap: op een telefoon is een poppetje te klein om
+/* Het blad onder het landschap: op een telefoon is een gezichtje te klein om
    raak te tikken, dus een tik op een plek opent hier twee grote knoppen. */
 .plekblad{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 10px;padding:8px 8px 8px 14px;
   background:var(--kaart,#fff);border:2px solid var(--ocean);border-radius:16px}
@@ -275,7 +275,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
     <h2 class="eyebrow" style="margin-top:22px">stuur je ploegen het land in</h2>
     <div class="landvak" id="landvak"></div>
     <div class="plekblad" id="plekblad" role="group" aria-label="Ploegen op deze plek" hidden></div>
-    <p class="landtip" id="landtip" role="status" aria-live="polite">Tik op een plek om er een ploeg heen te sturen, tik op een poppetje om hem terug te roepen, of gebruik de knoppen min en plus hieronder. Op elk bordje staat wat die plek oplevert. Na het jaar zie je per plek hoeveel het werd.</p>
+    <p class="landtip" id="landtip" role="status" aria-live="polite">Tik op een plek om er een ploeg heen te sturen, tik op een gezichtje om die ploeg terug te roepen, of gebruik de knoppen min en plus hieronder. Op elk bordje staat wat die plek oplevert. Na het jaar zie je per plek hoeveel het werd.</p>
     <div class="klussen" id="klussen"></div>
     <div class="plan">
       <span class="schat" id="schat" aria-live="polite"></span>
@@ -390,13 +390,13 @@ var SEIZOEN = {
   winter:{ lucht:'#e8eef5', gras:'#e6e6e2', bos:'#8fa08a', akker:'#e0dfd6', water:'#c6d6e4' }
 };
 
-function poppetje(x, y, kleur, schaal){
-  var s = schaal || 1;
-  return '<g transform="translate(' + x + ',' + y + ') scale(' + s + ')">' +
-    '<ellipse cx="0" cy="2" rx="6" ry="2.4" fill="rgba(20,34,76,.22)"/>' +
-    '<path d="M0,-18 l-5,10 h10 z" fill="' + kleur + '"/>' +
-    '<circle cx="0" cy="-21" r="3.4" fill="#e3b98f" stroke="#6f5545" stroke-width="1"/>' +
-    '<path d="M-4,-8 l-2,8 M4,-8 l2,8" stroke="' + kleur + '" stroke-width="2.2" stroke-linecap="round"/>' +
+/* Een mens in het landschap is een gezichtje uit avatar.js met een ring in de
+   kleur van wat hij doet. Het gezicht staat op de grond: x en y zijn de voeten. */
+function gezichtje(x, y, seed, kleur, r, stemming){
+  return '<g transform="translate(' + x + ',' + y + ')">' +
+    '<ellipse cx="0" cy="1" rx="' + (r * 0.7).toFixed(1) + '" ry="' + (r * 0.24).toFixed(1) + '" fill="rgba(20,34,76,.2)"/>' +
+    '<circle cy="' + (-r - 1) + '" r="' + (r + 1.6) + '" fill="' + kleur + '" stroke="#fff" stroke-width="1.2"/>' +
+    '<g transform="translate(0,' + (-r - 1) + ') scale(' + (r / 50).toFixed(3) + ')">' + AVATAR.inhoud(seed, '', stemming || '') + '</g>' +
     '</g>';
 }
 
@@ -574,17 +574,12 @@ function tekenLand(st, verd, seizoen, actief, labels, oogst){
      of zieke groep aankomen zonder de meters te lezen. */
   var mensen = Math.max(0, Math.round(st.mensen || 0));
   var gez = Math.max(0, Math.min(100, st.gezondheid == null ? 100 : st.gezondheid));
-  var huid = gez >= 75 ? '#e3b98f' : gez >= 55 ? '#d9ab7c' : '#c99a72';
-  var jas  = gez >= 75 ? '#7a5c48' : gez >= 55 ? '#8a7256' : '#9a8a72';
+  var kampKleur = gez >= 75 ? '#7a5c48' : gez >= 55 ? '#a08a66' : '#b8ab92';
+  var kampStem = gez >= 75 ? '' : gez >= 55 ? 'denkt' : 'sip';
   var perRij = 7;
   for (var m = 0; m < Math.min(mensen, 14); m++){
-    var mx = 762 + (m % perRij) * 19, my = 206 + Math.floor(m / perRij) * 17;
-    s += '<g transform="translate(' + mx + ',' + my + ') scale(.62)" opacity="' +
-      (gez < 55 ? '.8' : '1') + '">' +
-      '<ellipse cx="0" cy="2" rx="6" ry="2.4" fill="rgba(20,34,76,.18)"/>' +
-      '<path d="M0,-18 l-5,10 h10 z" fill="' + jas + '"/>' +
-      '<circle cx="0" cy="-21" r="3.4" fill="' + huid + '" stroke="#6f5545" stroke-width="1"/>' +
-      '</g>';
+    var mx = 762 + (m % perRij) * 19, my = 213 + Math.floor(m / perRij) * 17;
+    s += gezichtje(mx, my, 'kamp ' + m, kampKleur, 7, kampStem);
   }
   if (mensen > 14){
     s += '<text x="' + (762 + perRij * 19 - 6) + '" y="228" font-size="11" font-weight="600" ' +
@@ -606,8 +601,8 @@ function tekenLand(st, verd, seizoen, actief, labels, oogst){
   /* De ploegen, op een rij vooraan in hun eigen plek. Ze worden pas na de
      klikvlakken op het bord gezet: stonden ze eronder, dan ving het vlak van
      de plek de tik en stuurde je er een ploeg bij in plaats van er een terug
-     te roepen. Elk poppetje krijgt een onzichtbaar vlak zo breed als zijn plek
-     in de rij, want het poppetje zelf is op een telefoon vijf pixels breed. */
+     te roepen. Elk gezichtje krijgt een onzichtbaar vlak zo breed als zijn plek
+     in de rij, want het gezichtje zelf is op een telefoon maar een paar pixels breed. */
   var ploegS = '';
   PLEKKEN.forEach(function(p){
     var n = verd[p.id] || 0;
@@ -618,7 +613,7 @@ function tekenLand(st, verd, seizoen, actief, labels, oogst){
       ploegS += '<g class="ploeg" data-p="' + p.id + '" data-i="' + i2 + '" style="cursor:pointer">' +
         '<rect x="' + (px - stap / 2).toFixed(1) + '" y="' + (py - 80).toFixed(1) + '" width="' + stap.toFixed(1) +
         '" height="100" rx="8" fill="#fff" opacity="0"/>' +
-        poppetje(px, py, '#204ECF', 1.05) + '</g>';
+        gezichtje(px, py, 'ploeg ' + p.id + ' ' + i2, '#204ECF', 10) + '</g>';
     }
   });
 
@@ -826,8 +821,8 @@ function jaarDoen(s, v, geluk){
     tekenAlles();
     /* de tip past bij het scherm: pas nu het landschap in beeld is, weet je hoe breed het is */
     document.getElementById('landtip').textContent = smalLand()
-      ? 'Tik op een plek of een poppetje. Onder het landschap komen dan knoppen om een ploeg erheen te sturen of terug te roepen. Op elk bordje staat wat die plek oplevert.'
-      : 'Tik op een plek om er een ploeg heen te sturen, tik op een poppetje om hem terug te roepen, of gebruik de knoppen min en plus hieronder. Op elk bordje staat wat die plek oplevert. Na het jaar zie je per plek hoeveel het werd.';
+      ? 'Tik op een plek of een gezichtje. Onder het landschap komen dan knoppen om een ploeg erheen te sturen of terug te roepen. Op elk bordje staat wat die plek oplevert.'
+      : 'Tik op een plek om er een ploeg heen te sturen, tik op een gezichtje om die ploeg terug te roepen, of gebruik de knoppen min en plus hieronder. Op elk bordje staat wat die plek oplevert. Na het jaar zie je per plek hoeveel het werd.';
     scrollTo({top:0,behavior:'auto'});
   }
 
@@ -889,10 +884,10 @@ function jaarDoen(s, v, geluk){
   }
   function roepTerug(id){ if (verd[id] > 0){ verd[id]--; tekenAlles(); } }
 
-  /* Op een telefoon is het landschap zo smal dat een poppetje een tikvlak van
+  /* Op een telefoon is het landschap zo smal dat een gezichtje een tikvlak van
      veertien bij veertig pixels krijgt. Dan opent een tik op een plek of een
-     poppetje het blad onder het landschap, met knoppen van 44 pixels. Op een
-     breed scherm werkt een tik meteen, behalve op een poppetje in een volle
+     gezichtje het blad onder het landschap, met knoppen van 44 pixels. Op een
+     breed scherm werkt een tik meteen, behalve op een gezichtje in een volle
      rij dat toch smaller is dan 44 pixels. */
   var bladPlek = null;
   function smalLand(){
