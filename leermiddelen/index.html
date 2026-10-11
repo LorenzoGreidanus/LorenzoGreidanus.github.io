@@ -820,6 +820,8 @@ main.bbmodus:not(.bbstart) #klasstrip,main.bbmodus:not(.bbstart) #verder,main.bb
 .bbbegin em{display:block;font-family:'Caveat',cursive;font-style:normal;font-weight:700;font-size:1.2rem;color:#C4452A;line-height:1}
 .bbbegin b{display:block;font-size:1.05rem}
 .bbbegin i{flex:none;font-style:normal;display:inline-flex;align-items:center;min-height:44px;padding:0 18px;border-radius:999px;background:var(--crab);color:#14224C;font-weight:700;box-shadow:0 3px 0 #8f2e1a}
+.bbfilter{position:relative;z-index:1;display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin-top:10px;font-size:.92rem;font-weight:600}
+.bbfilter button{min-height:40px;padding:0 14px;border:none;border-radius:999px;background:rgba(255,255,255,.22);color:inherit;font:inherit;font-weight:700;cursor:pointer}
 .bbterugnormaal{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:10px 14px;border-radius:16px;background:var(--kaart);border:1px solid var(--rand);font-size:.92rem}
 .bbterugnormaal button{border:none;background:none;color:var(--link,#204ECF);font:inherit;font-weight:600;text-decoration:underline;text-underline-offset:3px;min-height:44px;padding:0;cursor:pointer}
 :root[data-theme="dark"] .bbbegin em{color:#F9A58F}
@@ -2280,11 +2282,16 @@ var SPELLEN = [
       return;
     }
     var v = vakVan(stand.vak), eerst = beginSpel(stand.vak, lijst), aantal = lijst.length;
+    /* kwam je binnen met een soort of tijdvak in de link (?tv=5), dan zeg dat, met een knop om het weg te halen */
+    var filter = [stand.soort !== 'alles' ? soortNaam(stand.soort).toLowerCase() : '', stand.tv && tvVan(stand.tv) ? 'tijdvak ' + stand.tv + ' (' + tvVan(stand.tv).naam.toLowerCase() + ')' : ''].filter(Boolean);
     doel.innerHTML = '<div class="bbkop" style="--vk:' + v.kleur + ';--vt:' + letterOp(v.kleur) + '">' +
       '<button type="button" class="bbterug" id="bbTerug">' + PIJL_TERUG + 'Alle vakken</button>' +
       '<p class="hand">' + aantal + (aantal === 1 ? ' spel' : ' spellen') + '</p><h2>' + schoon(v.naam) + '</h2>' +
+      (filter.length ? '<p class="bbfilter">Alleen ' + schoon(filter.join(', ')) + ' <button type="button" id="bbFilterUit">Alle spellen van ' + schoon(inZin(v.naam)) + '</button></p>' : '') +
       (eerst ? '<a class="bbbegin" href="' + linkNaar(eerst) + '" data-start="' + eerst.bestand + '">' + tegel(eerst) + '<span><em>begin hier</em><b>' + schoon(eerst.naam) + '</b></span><i>Start</i></a>' : '') +
       '</div>';
+    var fu = $('bbFilterUit');
+    if (fu) fu.addEventListener('click', function(){ stand.soort = 'alles'; stand.tv = 0; alles(); });
     $('bbTerug').addEventListener('click', function(){
       stand.vak = 'alle'; stand.soort = 'alles'; stand.tv = 0; alles();
       $('main').scrollIntoView({ block:'start', behavior: magBewegen ? 'smooth' : 'auto' });
