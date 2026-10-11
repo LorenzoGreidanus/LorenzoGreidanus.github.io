@@ -101,13 +101,13 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .rol .aantal{font-size:2.6rem;font-weight:700;line-height:1.1}
 .rol span{display:block;font-size:.83rem;opacity:.92;margin-top:6px}
 .waarschuw{background:var(--fout-bg);border-radius:16px;padding:14px 18px;margin-top:16px;font-size:.9rem;color:#8d3320;text-align:left}
-/* in het donker: lichte tekst op het donkere vlak, en de rijen poppetjes zonder kaart erachter (basis.css geeft elke .rij er een) */
-:root[data-theme="dark"] :is(.groep.mag .glabel em,.eff .op,.balkuitleg.haalt,.sm em.op,.wg .op,.wrij .op){color:#8fd8ac}
+/* in het donker: lichte tekst op het donkere vlak, en de tellers zonder kaart erachter (basis.css geeft elke .rij er een) */
+:root[data-theme="dark"] :is(.eff .op,.balkuitleg.haalt,.sm em.op,.wg .op,.wrij .op){color:#8fd8ac}
 :root[data-theme="dark"] :is(.eff .af,.sm em.af,.wg .af,.wrij .af){color:#f0a090}
 :root[data-theme="dark"] .waarschuw{color:#f6c2b6}
-:root[data-theme="dark"] .groep .rij,:root[data-theme="dark"] .teller .rij{background:transparent;box-shadow:none;border:0;padding:0}
-:root[data-theme="dark"] .groep{border-color:rgba(243,239,233,.1)}
-@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) :is(.groep.mag .glabel em,.eff .op,.balkuitleg.haalt,.sm em.op,.wg .op,.wrij .op){color:#8fd8ac}:root:not([data-theme="light"]) :is(.eff .af,.sm em.af,.wg .af,.wrij .af){color:#f0a090}:root:not([data-theme="light"]) .waarschuw{color:#f6c2b6}:root:not([data-theme="light"]) .groep .rij,:root:not([data-theme="light"]) .teller .rij{background:transparent;box-shadow:none;border:0;padding:0}:root:not([data-theme="light"]) .groep{border-color:rgba(243,239,233,.1)}}
+:root[data-theme="dark"] .teller .rij{background:transparent;box-shadow:none;border:0;padding:0}
+:root[data-theme="dark"] .pnyxvak{border-color:rgba(243,239,233,.1)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) :is(.eff .op,.balkuitleg.haalt,.sm em.op,.wg .op,.wrij .op){color:#8fd8ac}:root:not([data-theme="light"]) :is(.eff .af,.sm em.af,.wg .af,.wrij .af){color:#f0a090}:root:not([data-theme="light"]) .waarschuw{color:#f6c2b6}:root:not([data-theme="light"]) .teller .rij{background:transparent;box-shadow:none;border:0;padding:0}:root:not([data-theme="light"]) .pnyxvak{border-color:rgba(243,239,233,.1)}}
 
 /* ---------- speelscherm ---------- */
 .speelkop{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;padding:14px 0 0}
@@ -132,32 +132,75 @@ body.groot .wet h2{font-size:2.2rem}
 
 .stemvak{background:#fff;border:3px solid var(--amber);border-radius:24px;padding:clamp(18px,3vw,26px);margin-top:14px;text-align:center}
 
-/* ---------- de klas in beeld ----------
-   Een poppetje per leerling, gegroepeerd per rol. Wie mag stemmen steekt zijn
-   hand op en heeft de kleur van zijn rol. Wie niet mag stemmen laat de hand
-   zakken en wordt grijs. Het getal blijft eronder staan, want de docent moet
-   nog steeds handen kunnen tellen. */
-.klasvloer{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:14px}
-.groep{background:var(--room);border:1px solid rgba(20,34,76,.07);border-radius:18px;
-  padding:12px 14px 10px;display:flex;flex-direction:column;align-items:center;gap:8px}
-.groep .rij{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;max-width:260px}
-.glabel{font-size:.78rem;color:var(--muted);line-height:1.3}
-.glabel b{color:var(--ink);font-size:.95rem}
-.glabel em{display:block;font-style:normal;font-size:.72rem;font-weight:600;color:var(--muted)}
-.groep.mag .glabel em{color:var(--goed)}
-.pop{display:block;width:clamp(19px,2.6vw,27px);flex:none}
-.pop svg{display:block;width:100%;height:auto;overflow:visible}
-.pop .hoofd,.pop .romp{fill:var(--k)}
-.pop .arm{fill:none;stroke:var(--k);stroke-width:2.7;stroke-linecap:round;
-  transform-box:view-box;transform-origin:16.2px 15.5px}
-.pop.uit .hoofd,.pop.uit .romp{fill:#cfcabd}
-.pop.uit .arm{stroke:#cfcabd;transform:rotate(126deg)}
-/* De vertraging per poppetje maakt van een machtswissel een golf door de klas
-   in plaats van een schakelaar die omgaat. */
-.pop .hoofd,.pop .romp,.pop .arm{
-  transition:fill .4s var(--ease),stroke .4s var(--ease),
-             transform .55s cubic-bezier(.34,1.56,.64,1);
-  transition-delay:calc(var(--i,0) * 26ms)}
+/* ---------- de Pnyx ----------
+   De heuvel waar Athene vergaderde, met de klas erop. Elke leerling is een
+   gezichtje met een ring in de kleur van zijn rol. Wie mag stemmen staat
+   binnen het touw en steekt zijn hand op; wie niet mag, staat grijs aan de
+   rand. Verandert de bestuursvorm, dan lopen de gezichtjes naar hun nieuwe
+   plek en gaat het touw strakker of losser. De vertraging per gezichtje maakt
+   er een golf door de klas van in plaats van een schakelaar die omgaat. */
+:root{--pbg:#FDFAF6;--pvloer:#F4EADD;--pterras:#EADCC9;--pbema:#E2D3C0;--pbema-ink:#6b5a45;--ptouw:#c0442c;--zsteen:#D9CBB8;--pgrijs:#B9B2A8}
+:root[data-theme="dark"]{--pbg:#14214a;--pvloer:#1b2a58;--pterras:#24356a;--pbema:#2c3d72;--pbema-ink:#c9d2ea;--ptouw:#ef7a5e;--zsteen:#4a5a8c;--pgrijs:#5d6890}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--pbg:#14214a;--pvloer:#1b2a58;--pterras:#24356a;--pbema:#2c3d72;--pbema-ink:#c9d2ea;--ptouw:#ef7a5e;--zsteen:#4a5a8c;--pgrijs:#5d6890}}
+.pnyxvak{background:var(--pbg);border:1px solid rgba(20,34,76,.10);border-radius:24px;padding:12px 14px 10px;margin-top:14px}
+.pkop{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.pkop .hand{font-size:1.45rem;line-height:1}
+.ppil{display:inline-flex;align-items:center;gap:7px;padding:6px 13px;border-radius:999px;background:var(--kaart,#fff);border:1.5px solid rgba(20,34,76,.13);font-size:.82rem;font-weight:600}
+.ppil .vormico{width:17px;height:17px}
+.ppil.woord{background:var(--ink);color:var(--room);border-color:var(--ink)}
+.pnyx{display:block;width:100%;height:auto;margin:4px auto 0;overflow:visible}
+.pvloer{fill:var(--pvloer)}
+.pterras{fill:none;stroke:var(--pterras);stroke-width:58}
+.ptouw circle{fill:none;stroke:var(--ptouw);stroke-width:4;stroke-dasharray:10 7;stroke-linecap:round;transition:r .9s var(--ease)}
+.pbema{fill:var(--pbema)}
+.pbema-t{font-size:11px;font-weight:700;letter-spacing:.14em;fill:var(--pbema-ink);text-anchor:middle}
+.ptroon{opacity:0;transition:opacity .4s var(--ease)}
+.ptroon.aan{opacity:1}
+.ptroon circle{fill:none;stroke:var(--pgrijs);stroke-width:2.5;stroke-dasharray:6 5}
+.pz{transition:transform .9s var(--ease);transition-delay:calc(var(--i,0) * 22ms)}
+.pring{fill:#fff;stroke:var(--rk);stroke-width:3.5;transition:stroke .4s var(--ease)}
+.pgz{transition:opacity .5s var(--ease),filter .5s var(--ease)}
+.pz.uit .pring{stroke:var(--pgrijs);stroke-width:2.5}
+.pz.uit.burger .pring{stroke:var(--rk);stroke-opacity:.55}
+.pz.uit .pgz{opacity:.6;filter:grayscale(.75)}
+.phand,.pvink,.pkroon{transform-box:fill-box;transform-origin:center;transform:scale(0);transition:transform .45s cubic-bezier(.34,1.56,.64,1)}
+.phand circle{fill:#14224C;stroke:#fff;stroke-width:2.5}
+.phand path{fill:none;stroke:#fff;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.pz.mag .phand{transform:scale(1)}
+.pvink circle{fill:#1f7a4a;stroke:#fff;stroke-width:2.5}
+.pz.uit .pvink circle{fill:#7d8496}
+.pvink path{fill:none;stroke:#fff;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round}
+.pz.gestemd .pvink{transform:scale(1)}
+.pkroon path{fill:#EA9836;stroke:#14224C;stroke-width:1.4;stroke-linejoin:round}
+.pz.heer .pkroon{transform:scale(1)}
+.pz.woord .pring{stroke-width:5;animation:pwoord 1.6s ease-in-out infinite}
+@keyframes pwoord{50%{stroke-width:9}}
+.pspook{fill:none;stroke:var(--rk);stroke-width:2.5;stroke-dasharray:6 5;opacity:.7;animation:pspook 9s ease-in forwards}
+@keyframes pspook{0%,70%{opacity:.7}100%{opacity:0}}
+.plegenda{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 18px;margin-top:4px;font-size:.78rem;color:var(--muted)}
+.plegenda span{display:inline-flex;align-items:center;gap:6px}
+.plegenda i{width:14px;height:14px;border-radius:50%;flex:none}
+.plegenda .lh{background:#14224C;box-shadow:0 0 0 2px #fff,0 0 0 3px rgba(20,34,76,.25)}
+.plegenda .lr{border:2px solid var(--pgrijs);background:transparent}
+.plegenda .lt{width:22px;height:0;border-radius:0;border-top:3px dashed var(--ptouw)}
+body.groot .plegenda{font-size:1rem}
+body.groot .ppil{font-size:1.05rem}
+
+/* het speelveld: links de Pnyx en de zuilen, rechts wat er nu gebeurt */
+.spelgrid{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);gap:18px;align-items:start}
+.pnyxkolom{display:grid;gap:0;min-width:0}
+.spelrechts{min-width:0}
+@media(min-width:901px){
+  .pnyxkolom{position:sticky;top:64px}
+  .pnyxkolom .pnyx{width:min(100%,calc((100vh - 360px) * 1.43))}
+}
+@media(max-width:900px){
+  .spelgrid{grid-template-columns:minmax(0,1fr);gap:0}
+  .spelrechts{display:contents}
+  .spelrechts .vormbanner{order:1}
+  .pnyxkolom{order:2}
+  #vak{order:3}
+}
 
 .tellers{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px;max-width:560px;margin-inline:auto}
 .teller{background:var(--room);border-radius:18px;padding:14px}
@@ -171,17 +214,20 @@ body.groot .wet h2{font-size:2.2rem}
 :root[data-theme="dark"] .stemwijze button.on{background:var(--ocean);color:#fff;border-color:var(--ocean)}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .stemwijze button{background:#182652;border-color:rgba(243,239,233,.28);color:var(--ink)}:root:not([data-theme="light"]) .stemwijze button.on{background:var(--ocean);color:#fff;border-color:var(--ocean)}}
 .teller b{font-size:2.2rem;min-width:2.5ch;font-variant-numeric:tabular-nums}
+.tellers{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:480px){.tellers{gap:8px}.teller{padding:12px 6px}.teller .rij{gap:4px}.teller button{width:40px;height:40px}.teller b{font-size:1.8rem;min-width:2ch}}
 .stemhulp{font-size:.86rem;color:var(--muted);margin-top:12px}
 
-/* De balk vult zich terwijl de docent telt. De streep staat op de helft, dus
-   je ziet aankomen of de wet het haalt nog voor je klaar bent met tellen. */
-.stembalk{position:relative;height:16px;border-radius:999px;background:rgba(20,34,76,.09);
-  overflow:hidden;margin:14px auto 0;max-width:560px;display:flex}
-.stembalk i{display:block;height:100%;width:0;transition:width .3s var(--ease)}
-.stembalk .v{background:var(--goed)}
-.stembalk .t{background:var(--fout)}
-.drempel{position:absolute;top:0;bottom:0;left:50%;width:3px;background:#fff;
-  box-shadow:0 0 0 1px rgba(20,34,76,.35);transform:translateX(-50%)}
+/* Elke stem is een steentje in de goot: groen voor, rood tegen, leeg wie nog
+   niet geteld is. De streep staat bij de meerderheid, dus je ziet aankomen of
+   de wet het haalt nog voor je klaar bent met tellen. */
+.goot{position:relative;display:grid;grid-template-columns:repeat(var(--n,14),minmax(0,1fr));gap:4px;
+  max-width:min(100%,calc(var(--n,14) * 30px));margin:14px auto 0;padding:8px 10px;border-radius:999px;background:var(--pterras)}
+.steen{display:block;aspect-ratio:1;border-radius:50%;background:var(--room);box-shadow:inset 0 1px 2px rgba(20,34,76,.2);
+  transition:background .25s var(--ease),transform .35s cubic-bezier(.34,1.56,.64,1)}
+.steen.v{background:#1f7a4a;box-shadow:inset 0 -3px 0 rgba(0,0,0,.18);transform:scale(1.08)}
+.steen.t{background:#c0442c;box-shadow:inset 0 -3px 0 rgba(0,0,0,.18);transform:scale(1.08)}
+.gstreep{position:absolute;top:-6px;bottom:-6px;width:3px;margin-left:-1.5px;border-radius:2px;background:var(--ink)}
 .balkuitleg{font-size:.82rem;color:var(--muted);margin-top:7px;min-height:1.3em}
 .balkuitleg.haalt{color:var(--goed);font-weight:600}
 .vraagbuiten{background:var(--sand);border-radius:16px;padding:13px 17px;margin-top:14px;font-size:.9rem;text-align:left}
@@ -249,17 +295,9 @@ body.groot .stemvak{border-width:5px;padding:clamp(22px,3.5vw,34px)}
 body.groot .vormbanner{border-width:5px;padding:22px}
 body.groot .vormbanner b{font-size:2.6rem}
 body.groot .vormbanner p{font-size:1.15rem}
-body.groot .pop{width:clamp(26px,3.4vw,40px)}
-body.groot .groep{padding:16px 18px 13px}
-body.groot .groep .rij{max-width:340px;gap:7px}
-body.groot .pop.uit .hoofd,body.groot .pop.uit .romp{fill:#b1aa99}
-body.groot .pop.uit .arm{stroke:#b1aa99}
-body.groot .glabel{font-size:1rem}
-body.groot .glabel b{font-size:1.3rem}
-body.groot .glabel em{font-size:.9rem}
 body.groot .stemhulp{font-size:1.15rem}
 body.groot .balkuitleg{font-size:1.05rem}
-body.groot .stembalk{height:22px;max-width:680px}
+body.groot .goot{max-width:min(100%,calc(var(--n,14) * 40px));gap:6px}
 body.groot .tellers{max-width:700px;gap:20px}
 body.groot .teller .lab{font-size:1.05rem}
 body.groot .teller button{width:64px;height:64px;font-size:1.8rem;border-width:2px}
@@ -346,22 +384,28 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
 .wiewint{margin-top:10px}
 body.groot .eff span{font-size:.95rem;padding:5px 13px 5px 9px}
 
-/* de metertjes onder de banner */
+/* De zuilen onder de Pnyx: hoe het de drie groepen en de stad vergaat. Een
+   besluit laat ze groeien of krimpen, met even het verschil erboven. */
 .standvak{margin-top:10px}
-.stand{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px 14px;background:var(--kaart,#fff);border:1px solid rgba(20,34,76,.10);border-radius:18px;padding:11px 16px}
-.sm{display:flex;flex-direction:column;gap:5px;min-width:0}
-.sm .mnaam{display:flex;justify-content:space-between;gap:6px;font-size:.74rem;font-weight:600;color:var(--muted);white-space:nowrap}
-.sm .mn{overflow:hidden;text-overflow:ellipsis;min-width:0}
-.sm em{flex:none}
-.sm em{font-style:normal;animation:smknip 4s var(--ease) forwards}
-.sm em.op{color:var(--goed)} .sm em.af{color:var(--fout)}
-@keyframes smknip{0%,70%{opacity:1}100%{opacity:0}}
-.sm .mbalk{height:10px;border-radius:999px;background:rgba(20,34,76,.10);overflow:hidden}
-.sm .mbalk i{display:block;height:100%;border-radius:999px;transition:width .9s var(--ease)}
-.sm.stad .mbalk i{opacity:.75}
-@media(max-width:700px){.stand{grid-template-columns:repeat(3,minmax(0,1fr))}}
-body.groot .sm .mnaam{font-size:.95rem}
-body.groot .sm .mbalk{height:14px}
+.stand{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;align-items:end;padding:6px 6px 0}
+.sm{display:flex;flex-direction:column;align-items:center;min-width:0}
+.sm em{font-style:normal;font-size:.74rem;font-weight:700;padding:1px 8px;border-radius:999px;min-height:1.5em;opacity:0}
+.sm em.op,.sm em.af{animation:smknip 5s var(--ease) forwards}
+.sm em.op{color:var(--goed);background:rgba(47,125,82,.12)} .sm em.af{color:var(--fout);background:rgba(192,68,44,.12)}
+@keyframes smknip{0%{opacity:0;transform:translateY(6px)}8%,75%{opacity:1;transform:none}100%{opacity:0}}
+.sm .zw{font-size:.9rem;font-weight:700;font-variant-numeric:tabular-nums;margin:1px 0 3px}
+.sm .zs{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:146px;width:100%}
+.sm .schacht{height:calc(var(--v,50) * .92px)}
+@media(max-width:600px){.sm .zs{height:112px}.sm .schacht{height:calc(var(--v,50) * .6px)}}
+#rolvloer{max-width:780px;margin-inline:auto}
+.sm .kap{display:block;flex:none;width:min(62px,70%);height:9px;border-radius:4px 4px 2px 2px;background:var(--zsteen)}
+.sm .schacht{display:block;flex:none;width:min(40px,46%);min-height:2px;transition:height .9s var(--ease);
+  background-image:repeating-linear-gradient(90deg,rgba(255,255,255,.24) 0 3px,transparent 3px 10px)}
+.sm .voet{display:block;width:min(58px,66%);height:7px;border-radius:2px;background:var(--zsteen)}
+.sm .mn{margin-top:6px;font-size:.74rem;font-weight:600;color:var(--muted);text-align:center;line-height:1.2;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+body.groot .sm .mn{font-size:.95rem}
+body.groot .sm .zw{font-size:1.15rem}
+body.groot .sm em{font-size:.95rem}
 
 /* een bron bij de kwestie */
 .bron{margin:16px 0 0;padding:12px 16px 12px 18px;border-left:4px solid var(--amber);background:rgba(234,152,54,.10);border-radius:4px 14px 14px 4px}
@@ -539,9 +583,16 @@ body.groot .schaduw{font-size:1.15rem}
     <span class="eyebrow" id="stemming"></span>
   </div>
   <div class="balkje"><i id="balkFill"></i></div>
-  <div class="vormbanner" id="vormbanner"></div>
-  <div class="standvak" id="standvak" aria-label="Hoe het de groepen en de stad vergaat"></div>
-  <div id="vak"></div>
+  <div class="spelgrid">
+    <div class="pnyxkolom">
+      <div class="pnyxvak" id="spelPnyx"></div>
+      <div class="standvak" id="standvak" aria-label="Hoe het de groepen en de stad vergaat"></div>
+    </div>
+    <div class="spelrechts">
+      <div class="vormbanner" id="vormbanner"></div>
+      <div id="vak"></div>
+    </div>
+  </div>
 </section>
 
 <section class="wrap hide einde" id="scherm-einde">
@@ -584,9 +635,8 @@ var ROLLEN = [
   { id:'buiten', naam:'Geen burger', ev:'zonder burgerrecht', mv:'zonder burgerrecht', kleur:'#5b6480',
     kaartje:'Je bent vrouw, slaaf of van elders gekomen. Je woont hier, je werkt hier, je betaalt mee. Stemmen doe je nooit.' }
 ];
-/* "1 oude familie" maar "2 oude families", en dan ook "mag" of "mogen". */
+/* "1 oude familie" maar "2 oude families". */
 function aantalRol(n, r){ return n + ' ' + (n === 1 ? r.ev : r.mv); }
-function magLabel(n, mag){ return n === 1 ? (mag ? 'mag stemmen' : 'stemt niet') : (mag ? 'mogen stemmen' : 'stemmen niet'); }
 
 /* Bij elke vorm hoort een teken: een kroon, een zuil, een weegschaal, een
    zwaard en een opgestoken hand. Het icoon staat op de banner, in de kopbalk
@@ -866,48 +916,201 @@ var KWESTIES = [
     return '<svg class="vormico" viewBox="0 0 24 24" aria-hidden="true">' + VORMEN[id].ico + '</svg>';
   }
 
-  /* ---------- de klas in beeld ----------
-     Een poppetje per leerling. Mag hij stemmen, dan staat de hand omhoog en
-     heeft hij de kleur van zijn rol. Mag hij niet, dan zakt de hand en wordt
-     hij grijs. De doorlopende index i bepaalt de vertraging van de animatie,
-     zodat een machtswissel als een golf door de klas loopt. */
-  function poppetje(kleur, mag, i){
-    return '<span class="pop' + (mag ? '' : ' uit') + '" style="--k:' + kleur + ';--i:' + i + '">' +
-      '<svg viewBox="0 0 22 30" aria-hidden="true">' +
-        '<circle class="hoofd" cx="11" cy="5.6" r="4.4"/>' +
-        '<path class="romp" d="M11 11.6c-3.5 0-6.1 2.5-6.1 5.8V30h12.2V17.4c0-3.3-2.6-5.8-6.1-5.8z"/>' +
-        '<path class="arm" d="M16.2 15.5 18.6 8.6"/>' +
-      '</svg></span>';
-  }
+  /* ---------- de Pnyx ----------
+     De klas op de heuvel waar Athene vergaderde. Wie mag stemmen staat binnen
+     het touw, in halve kringen rond de spreeksteen, met de hand omhoog. Wie
+     niet mag, staat grijs aan de rand. Elk gezichtje blijft hetzelfde element,
+     zodat het bij een machtswissel naar zijn nieuwe plek loopt in plaats van
+     te verspringen, en het touw gaat mee strakker of losser.
+     Op telefoons is het ieders eigen gezicht, met de hoed, bril of rand uit de
+     winkel. Bij handen tellen zijn er geen accounts: dan vaste gezichtjes. */
+  var PX = 430, PY = 560, SVGNS = 'http://www.w3.org/2000/svg', pnyxTeller = 0;
+  var BINNEN = [{ r:190, a0:18, a1:162 }, { r:260, a0:18, a1:162 }, { r:330, a0:18, a1:162 }];
+  var RAND = [{ r:410, a0:10, a1:170 }, { r:468, a0:30, a1:150 }, { r:524, a0:52, a1:128 }];
+  var HANDPAD = /d="([^"]+)"/.exec(VORMEN.democratie.ico)[1];
+  var KROONPAD = 'M4.5 18.5h15l1.2-9.6-5.2 3.9L12 5.2l-3.5 7.6-5.2-3.9z';
+  /* wat er nu op de heuvel te zien is: de vorm (even de oude, tijdens een
+     wissel), het voorstel waar de groepen blij of sip van worden, wie er
+     gestemd heeft, wie het woord heeft en hoe de stemming afliep */
+  var pnyxNu = {}, spelPnyx = null, rolPnyx = null;
 
-  function klasvloer(vormId){
-    var stemt = VORMEN[vormId].stemt, i = 0;
-    return '<div class="klasvloer">' + ROLLEN.map(function(r){
-      var n = verdeling[r.id] || 0;
-      if (!n) return '';
-      var mag = stemt.indexOf(r.id) !== -1, pops = '';
-      for (var j = 0; j < n; j++){ pops += poppetje(r.kleur, mag, i++); }
-      return '<div class="groep' + (mag ? ' mag' : '') + '" data-rol="' + r.id + '" data-n="' + n + '">' +
-        '<div class="rij">' + pops + '</div>' +
-        '<span class="glabel"><b>' + n + '</b> ' + (n === 1 ? r.ev : r.mv) +
-        '<em>' + magLabel(n, mag) + '</em></span></div>';
-    }).join('') + '</div>';
-  }
-
-  /* Een bestaande klasvloer omzetten naar een andere bestuursvorm, zonder hem
-     opnieuw te tekenen. Alleen zo kunnen de poppetjes overvloeien in plaats
-     van te verspringen. */
-  function zetVloer(wortel, vormId){
-    var stemt = VORMEN[vormId].stemt;
-    Array.prototype.forEach.call(wortel.querySelectorAll('.groep'), function(g){
-      var mag = stemt.indexOf(g.getAttribute('data-rol')) !== -1;
-      g.classList.toggle('mag', mag);
-      var em = g.querySelector('.glabel em');
-      if (em) em.textContent = magLabel(+g.getAttribute('data-n'), mag);
-      Array.prototype.forEach.call(g.querySelectorAll('.pop'), function(p){
-        p.classList.toggle('uit', !mag);
-      });
+  function capVan(rr, f){ return Math.max(1, Math.floor(rr.r * (rr.a1 - rr.a0) * Math.PI / 180 / (f + 6))); }
+  /* n plekken over een paar kringen: binnen naar verhouding verdeeld, aan de
+     rand eerst de voorste kring vol */
+  function plekken(n, rijen, f, voorAf){
+    var caps = rijen.map(function(rr){ return capVan(rr, f); }), som = caps.reduce(function(a, b){ return a + b; }, 0);
+    if (n > som) return null;
+    var tel = caps.map(function(){ return 0; }), rest = n;
+    if (voorAf) caps.forEach(function(c, i){ tel[i] = Math.min(c, rest); rest -= tel[i]; });
+    else {
+      caps.forEach(function(c, i){ tel[i] = Math.min(c, Math.round(n * c / som)); rest -= tel[i]; });
+      for (var i = 0; rest && i < 300; i++){
+        var j = i % caps.length;
+        if (rest > 0 && tel[j] < caps[j]){ tel[j]++; rest--; } else if (rest < 0 && tel[j] > 0){ tel[j]--; rest++; }
+      }
+    }
+    var uit = [];
+    rijen.forEach(function(rr, i){
+      for (var j = 0; j < tel[i]; j++){
+        var a = (rr.a1 - (rr.a1 - rr.a0) * (j + .5) / tel[i]) * Math.PI / 180;
+        uit.push({ x:Math.round(PX + rr.r * Math.cos(a)), y:Math.round(PY - rr.r * Math.sin(a)), a:a });
+      }
     });
+    return uit.sort(function(p, q){ return q.a - p.a; });
+  }
+  /* Hoe minder er mogen stemmen, hoe minder kringen binnen het touw, en hoe
+     strakker het touw. Past de klas niet, dan worden de gezichtjes kleiner. */
+  function indeling(nIn, nUit){
+    for (var f = 56; f >= 26; f -= 6){
+      var caps = BINNEN.map(function(rr){ return capVan(rr, f); }), k = 1;
+      while (k < 3 && nIn > .75 * caps.slice(0, k).reduce(function(a, b){ return a + b; }, 0)) k++;
+      var b = plekken(nIn, BINNEN.slice(0, k), f, false), u = plekken(nUit, RAND, f, true);
+      if (b && u) return { f:f, binnen:b, rand:u, touw:BINNEN[k - 1].r + 36 };
+    }
+    return null;
+  }
+  /* wie er op de heuvel staat: de telefoons, of bij handen tellen de verdeling */
+  function personen(){
+    var uit = [];
+    if (kamer && gestart){
+      ROLLEN.forEach(function(r){
+        spelers.filter(function(sp){ return rolVan[sp.sid] === r.id; })
+          .sort(function(a, b){ return String(a.naam).localeCompare(String(b.naam)); })
+          .forEach(function(sp){ uit.push({ id:sp.sid, rol:r.id, naam:sp.naam || '', av:sp.av || '', echt:true }); });
+      });
+      return uit;
+    }
+    var i = 0;
+    ROLLEN.forEach(function(r){
+      for (var j = 0; j < (verdeling[r.id] || 0); j++, i++) uit.push({ id:'l' + i, rol:r.id, naam:'leerling ' + (i + 1), av:'', echt:false });
+    });
+    return uit;
+  }
+  function stemmingVan(p){
+    var u = pnyxNu.uitslag;
+    if (u && u.stem && u.stem[p.id]) return (u.stem[p.id] === 'voor') === u.aangenomen ? 'blij' : 'sip';
+    var c = pnyxNu.eff; if (!c || p.rol === 'buiten') return '';
+    var d = c[p.rol] || 0;
+    return d >= 4 ? 'blij' : d <= -4 ? 'sip' : '';
+  }
+  function heeftWoord(p){ var w = pnyxNu.woord; return !!w && (w.pid ? w.pid === p.id : w.rol === p.rol); }
+
+  function maakPnyx(el){
+    var clip = 'ptouwclip' + (++pnyxTeller);
+    el.classList.add('pnyxvak');
+    el.innerHTML = '<div class="pkop"><span class="hand">de Pnyx</span><span class="ppil"></span></div>' +
+      '<svg class="pnyx" viewBox="0 0 860 600">' +
+        '<defs><clipPath id="' + clip + '"><rect width="860" height="' + PY + '"/></clipPath></defs>' +
+        '<path class="pvloer" d="M60 ' + PY + 'A370 370 0 0 1 800 ' + PY + 'Z"/>' +
+        BINNEN.map(function(rr){ return '<path class="pterras" d="M' + (PX - rr.r) + ' ' + PY + 'A' + rr.r + ' ' + rr.r + ' 0 0 1 ' + (PX + rr.r) + ' ' + PY + '"/>'; }).join('') +
+        '<g class="ptouw" clip-path="url(#' + clip + ')"><circle cx="' + PX + '" cy="' + PY + '" r="368"/></g>' +
+        '<rect class="pbema" x="' + (PX - 66) + '" y="' + (PY - 18) + '" width="132" height="58" rx="8"/>' +
+        '<text class="pbema-t" x="' + PX + '" y="' + (PY + 16) + '">SPREEKSTEEN</text>' +
+        '<g class="ptroon" transform="translate(' + PX + ' ' + (PY - 120) + ')"><circle r="30"/>' +
+          '<path transform="translate(-15 -62) scale(1.25)" d="' + KROONPAD + '" fill="#EA9836" stroke="#14224C" stroke-width="1.4" stroke-linejoin="round"/></g>' +
+        '<g class="pspoken"></g><g class="pmensen"></g></svg>' +
+      '<div class="plegenda"><span><i class="lh"></i>hand omhoog: je stem telt</span><span><i class="lt"></i>het touw</span><span><i class="lr"></i>aan de rand: geen stem</span></div>';
+    return { svg:el.querySelector('svg'), mensen:el.querySelector('.pmensen'), spoken:el.querySelector('.pspoken'),
+             pil:el.querySelector('.ppil'), touw:el.querySelector('.ptouw circle'), troon:el.querySelector('.ptroon'), f:0, staat:{} };
+  }
+  function bouwMens(p, f){
+    var R = f / 2, k = Math.max(.62, f / 56).toFixed(2), r = rol(p.rol);
+    return '<title>' + ROLSPEL.schoon(p.echt ? p.naam + ', ' + r.ev : r.naam) + '</title>' +
+      '<circle class="pring" r="' + (R + 1.5) + '"/>' +
+      '<g class="pgz" transform="scale(' + (f / 100).toFixed(3) + ')"></g>' +
+      '<g transform="translate(' + (R * .78).toFixed(1) + ' ' + (-R * .8).toFixed(1) + ') scale(' + k + ')"><g class="phand"><circle r="12"/><path transform="translate(-9.6 -10.4) scale(.8)" d="' + HANDPAD + '"/></g></g>' +
+      '<g transform="translate(' + (R * .78).toFixed(1) + ' ' + (R * .74).toFixed(1) + ') scale(' + k + ')"><g class="pvink"><circle r="10"/><path d="M-4.5 .5l3 3 6-6.5"/></g></g>' +
+      '<g transform="translate(0 ' + (-R - 6).toFixed(1) + ') scale(' + k + ')"><g class="pkroon"><path transform="translate(-18 -26) scale(1.5)" d="' + KROONPAD + '"/></g></g>';
+  }
+  function schuifBeeld(inst, doel){
+    var van = inst.top == null ? doel : inst.top, t0 = performance.now(), duur = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 900;
+    inst.top = doel;
+    cancelAnimationFrame(inst.raf);
+    (function stap(nu){
+      var t = duur ? Math.min(1, (nu - t0) / duur) : 1, e = 1 - Math.pow(1 - t, 3), y = Math.round(van + (doel - van) * e);
+      inst.svg.setAttribute('viewBox', '0 ' + y + ' 860 ' + (600 - y));
+      if (t < 1) inst.raf = requestAnimationFrame(stap);
+    })(t0);
+  }
+  function tekenPnyx(inst, vormId){
+    if (!inst || !window.AVATAR || !AVATAR.inhoud) return;
+    var v = VORMEN[vormId], ps = personen(), heer = v.alleen && kamer ? heerser : null;
+    var binnen = [], rand = [], troon = null;
+    ps.forEach(function(p){
+      if (v.alleen){ if (p.id === heer) troon = p; else rand.push(p); return; }
+      (v.stemt.indexOf(p.rol) >= 0 ? binnen : rand).push(p);
+    });
+    var ind = indeling(binnen.length, rand.length); if (!ind) return;
+    var pos = {};
+    binnen.forEach(function(p, i){ pos[p.id] = { x:ind.binnen[i].x, y:ind.binnen[i].y, mag:true }; });
+    rand.forEach(function(p, i){ pos[p.id] = { x:ind.rand[i].x, y:ind.rand[i].y, mag:false }; });
+    if (troon) pos[troon.id] = { x:PX, y:PY - 120, mag:false, heer:true };
+    if (inst.f !== ind.f){ inst.mensen.innerHTML = ''; inst.staat = {}; inst.f = ind.f; }
+    var nieuw = [], hier = {};
+    ps.forEach(function(p, i){
+      var q = pos[p.id], st = inst.staat[p.id];
+      hier[p.id] = true;
+      if (!st){
+        var g = document.createElementNS(SVGNS, 'g');
+        g.innerHTML = bouwMens(p, ind.f);
+        g.style.transform = 'translate(' + PX + 'px,' + (PY + 70) + 'px)';
+        g.style.setProperty('--rk', rol(p.rol).kleur);
+        inst.mensen.appendChild(g);
+        st = inst.staat[p.id] = { g:g, stm:null };
+        nieuw.push(st);
+      } else if (st.mag && !q.mag && !q.heer){
+        /* wie zijn stem kwijtraakt, laat een stippelcirkel achter op zijn oude plek */
+        var sp = document.createElementNS(SVGNS, 'circle');
+        sp.setAttribute('class', 'pspook'); sp.setAttribute('cx', st.x); sp.setAttribute('cy', st.y); sp.setAttribute('r', ind.f / 2);
+        sp.style.setProperty('--rk', rol(p.rol).kleur);
+        inst.spoken.appendChild(sp);
+        setTimeout(function(){ if (sp.parentNode) sp.parentNode.removeChild(sp); }, 9500);
+      }
+      var stm = stemmingVan(p);
+      if (st.stm !== stm){ st.g.querySelector('.pgz').innerHTML = AVATAR.inhoud(p.naam || p.id, p.av, stm); st.stm = stm; }
+      st.g.setAttribute('class', 'pz' + (q.heer ? ' heer' : q.mag ? ' mag' : ' uit') + (p.rol !== 'buiten' ? ' burger' : '') +
+        (pnyxNu.gestemd && pnyxNu.gestemd[p.id] ? ' gestemd' : '') + (heeftWoord(p) ? ' woord' : ''));
+      st.g.style.setProperty('--i', i);
+      st.x = q.x; st.y = q.y; st.mag = q.mag; st.doel = 'translate(' + q.x + 'px,' + q.y + 'px)';
+      if (nieuw.indexOf(st) < 0) st.g.style.transform = st.doel;
+    });
+    Object.keys(inst.staat).forEach(function(id){
+      if (hier[id]) return;
+      var g = inst.staat[id].g; if (g.parentNode) g.parentNode.removeChild(g);
+      delete inst.staat[id];
+    });
+    /* nieuwe gezichtjes lopen vanaf de spreeksteen naar hun plek */
+    if (nieuw.length){
+      void inst.svg.getBoundingClientRect();
+      requestAnimationFrame(function(){ nieuw.forEach(function(st){ st.g.style.transform = st.doel; }); });
+    }
+    var r = v.alleen ? 158 : ind.touw;
+    inst.touw.style.r = r + 'px'; inst.touw.setAttribute('r', r);
+    /* niet meer heuvel tonen dan er mensen op staan; schuift mee als de rand groeit of krimpt */
+    var hoogst = Math.min(PY - r, troon ? PY - 120 : PY);
+    ind.binnen.concat(ind.rand).forEach(function(q){ if (q.y < hoogst) hoogst = q.y; });
+    schuifBeeld(inst, Math.max(0, Math.floor(hoogst - ind.f / 2 - 24)));
+    inst.troon.classList.toggle('aan', !!v.alleen && !troon);
+    var woord = pnyxNu.woord;
+    inst.pil.classList.toggle('woord', !!woord);
+    inst.pil.innerHTML = woord ? 'Het woord: ' + ROLSPEL.schoon(woord.tekst)
+      : vormico(vormId) + (v.alleen ? (troon ? ROLSPEL.schoon(troon.naam) + ' beslist alleen' : 'Eén leerling beslist alleen')
+        : binnen.length + ' van de ' + ps.length + ' mogen stemmen');
+    inst.svg.setAttribute('role', 'img');
+    inst.svg.setAttribute('aria-label', v.alleen
+      ? 'Niemand stemt. ' + (troon ? ROLSPEL.schoon(troon.naam) + ' zit op de troon, ' : 'De troon bij de spreeksteen beslist, ') + 'de andere ' + rand.length + ' staan aan de rand.'
+      : binnen.length + ' leerlingen staan binnen het touw en mogen stemmen, ' + rand.length + ' staan aan de rand.');
+  }
+  /* De heuvel op het rollenscherm gaat weg zodra het spel begint: twee keer
+     dezelfde gezichtjes in de pagina betekent twee keer dezelfde id's. */
+  function ruimRolPnyx(){
+    var el = document.getElementById('rolvloer');
+    el.innerHTML = ''; el.classList.remove('pnyxvak'); rolPnyx = null;
+  }
+  function werkPnyx(){
+    if (!s) return;
+    if (!spelPnyx) spelPnyx = maakPnyx(document.getElementById('spelPnyx'));
+    tekenPnyx(spelPnyx, pnyxNu.vorm || s.vorm);
   }
 
   /* ---------- de kaart ---------- */
@@ -1075,7 +1278,10 @@ var KWESTIES = [
         '<span>' + r.kaartje + '</span></div>';
     }).join('');
 
-    document.getElementById('rolvloer').innerHTML = klasvloer(p.vorm);
+    /* de klas op de heuvel, zoals hij bij de eerste wet staat */
+    pnyxNu = {};
+    rolPnyx = maakPnyx(document.getElementById('rolvloer'));
+    tekenPnyx(rolPnyx, p.vorm);
 
     var nu = VORMEN[p.vorm].stemt.reduce(function(a, r){ return a + verdeling[r]; }, 0);
     document.getElementById('rolUit').innerHTML =
@@ -1108,8 +1314,9 @@ var KWESTIES = [
     elStart.classList.add('hide'); elRollen.classList.remove('hide');
     document.getElementById('rolKop').textContent = 'Doe mee op je telefoon of laptop';
     document.getElementById('rolUit').textContent = 'Ga naar de code hieronder. Zodra iedereen erbij is, verdeelt het bord de rollen over de apparaten en begint de vergadering. Wie later binnenkomt, wordt geen burger.';
-    /* het vloerplaatje en de waarschuwing horen bij het handen tellen */
-    document.getElementById('rolvloer').innerHTML = ''; document.getElementById('waarschuw').innerHTML = '';
+    /* de heuvel en de waarschuwing horen bij het handen tellen; op telefoons
+       staat de klas pas op de heuvel als de rollen verdeeld zijn */
+    ruimRolPnyx(); document.getElementById('waarschuw').innerHTML = '';
     document.getElementById('vloerKop').classList.add('hide');
     document.getElementById('waarschuw').classList.add('hide');
     document.getElementById('naarSpel').disabled = true;
@@ -1178,20 +1385,24 @@ var KWESTIES = [
   }
   function standNaam(k){ var r = rol(k); return r ? r.mv : k === 'welvaart' ? 'welvaart' : 'macht'; }
   function standKleur(k){ var r = rol(k); return r ? r.kleur : k === 'welvaart' ? '#204ECF' : '#5b6480'; }
+  /* de hoogte van een zuil staat in --v; het getal en het verschil rijden erop mee */
   function standHtml(){
     return '<div class="stand">' + STANDK.map(function(k){
-      return '<div class="sm' + (rol(k) ? '' : ' stad') + '" data-k="' + k + '" title="' + (rol(k) ? rol(k).mv : standNaam(k) + ' van de stad') + '"><span class="mnaam"><span class="mn">' + standNaam(k) + '</span><em></em></span>' +
-        '<span class="mbalk"><i style="width:' + s.stand[k] + '%;background:' + standKleur(k) + '"></i></span></div>';
+      return '<div class="sm' + (rol(k) ? '' : ' stad') + '" data-k="' + k + '" title="' + (rol(k) ? rol(k).mv : standNaam(k) + ' van de stad') + '">' +
+        '<span class="zs"><em></em><b class="zw">' + s.stand[k] + '</b><i class="kap"></i>' +
+        '<i class="schacht" style="--v:' + s.stand[k] + ';background-color:' + standKleur(k) + '"></i></span>' +
+        '<i class="voet"></i><span class="mn">' + standNaam(k) + '</span></div>';
     }).join('') + '</div>';
   }
-  /* de metertjes bijwerken; met delta staat er even +18 of -6 bij */
+  /* de zuilen bijwerken; met delta staat er even +18 of -6 boven */
   function tekenStand(delta){
     var el = document.getElementById('standvak'); if (!el || !s) return;
     zorgStand();
     if (!el.querySelector('.stand')) el.innerHTML = standHtml();
     STANDK.forEach(function(k){
       var m = el.querySelector('[data-k="' + k + '"]'); if (!m) return;
-      m.querySelector('i').style.width = s.stand[k] + '%';
+      m.querySelector('.schacht').style.setProperty('--v', s.stand[k]);
+      m.querySelector('.zw').textContent = s.stand[k];
       var em = m.querySelector('em'), d = (delta && delta[k]) || 0;
       em.textContent = d ? (d > 0 ? '+' : '') + d : '';
       em.className = d > 0 ? 'op' : d < 0 ? 'af' : '';
@@ -1274,7 +1485,7 @@ var KWESTIES = [
       '<button class="btn" type="button" id="momentDicht">Verder</button></div>';
     el.classList.remove('hide');
     gong();
-    function dicht(){ el.classList.add('hide'); el.innerHTML = ''; document.removeEventListener('keydown', toets); var v = document.getElementById('verder'); if (v) v.focus({ preventScroll:true }); }
+    function dicht(){ el.classList.add('hide'); el.innerHTML = ''; document.removeEventListener('keydown', toets); var v = document.getElementById('verder'); if (v) v.focus({ preventScroll:true }); if (o.naDicht) setTimeout(o.naDicht, 250); }
     function toets(e){ if (e.key === 'Escape') dicht(); }
     document.getElementById('momentDicht').addEventListener('click', dicht);
     document.addEventListener('keydown', toets);
@@ -1342,14 +1553,18 @@ var KWESTIES = [
         var over = 30, kl = b.querySelector('.klok');
         b.classList.add('loopt'); b.classList.remove('klaar');
         kl.textContent = '0:30';
+        /* op de heuvel licht op wie het woord heeft: de spreker, of bij handen tellen zijn hele groep */
+        var sp = sprekers[parseInt(b.getAttribute('data-i'), 10)];
+        pnyxNu.woord = sp.pid ? { pid:sp.pid, tekst:naamVan(sp.pid) } : { rol:sp.rol.id, tekst:sp.rol.id === 'buiten' ? 'wie geen burger is' : sp.rol.mv };
+        werkPnyx();
         pleitKlok = setInterval(function(){
           over--;
           kl.textContent = '0:' + (over < 10 ? '0' : '') + Math.max(0, over);
-          if (over <= 0){ clearInterval(pleitKlok); b.classList.remove('loopt'); b.classList.add('klaar'); }
+          if (over <= 0){ clearInterval(pleitKlok); b.classList.remove('loopt'); b.classList.add('klaar'); pnyxNu.woord = null; werkPnyx(); }
         }, 1000);
       });
     });
-    document.getElementById('naarStem').addEventListener('click', function(){ clearInterval(pleitKlok); toonStemming(k); });
+    document.getElementById('naarStem').addEventListener('click', function(){ clearInterval(pleitKlok); pnyxNu.woord = null; toonStemming(k); werkPnyx(); });
     if (kamer){
       var lijst = [];
       spelers.forEach(function(sp){
@@ -1374,14 +1589,14 @@ var KWESTIES = [
       heerser = kand[Math.floor(Math.random() * kand.length)].sid;
     }
     var h = '<div class="wet"><h2>' + k.titel + '</h2><p class="verhaal"><b>Het voorstel:</b> ' + gekozen.t + '</p>' + effChips(gekozen) + '</div>' +
-      '<div class="stemvak"><p class="eyebrow">wie mag hier nu over stemmen</p>' + klasvloer(s.vorm) +
+      '<div class="stemvak"><p class="eyebrow">de stemming</p>' +
       (v.alleen
         ? '<p class="stemhulp">Er wordt niet gestemd. <b>' + ROLSPEL.schoon(naamVan(heerser)) + '</b> is ' + (s.vorm === 'tirannie' ? 'de tiran' : 'de koning') + ' en beslist alleen, op zijn telefoon. ' +
           'De rest laat op zijn eigen scherm weten wat de stad ervan vindt. Dat telt niet, maar gaat de heerser twee keer tegen de stad in, dan komt er een opstand.</p>' + onrustHtml()
-        : '<p class="stemhulp">Wie mag stemmen, stemt op zijn eigen scherm. Er zijn <b>' + aantalStemmers() + '</b> stemgerechtigden, dus je hebt er <b>' + (Math.floor(aantalStemmers() / 2) + 1) + '</b> nodig. ' +
-          'Wie niet mag stemmen, stemt toch: dat telt niet mee, maar straks zie je hoe het was uitgevallen als iedereen had gestemd. De stemming sluit vanzelf als alle stemgerechtigden gestemd hebben.</p>') +
+        : '<p class="stemhulp">Wie binnen het touw staat, stemt op zijn eigen scherm. Er zijn <b>' + aantalStemmers() + '</b> stemgerechtigden, dus je hebt er <b>' + (Math.floor(aantalStemmers() / 2) + 1) + '</b> nodig. ' +
+          'Wie aan de rand staat, stemt toch: dat telt niet mee, maar straks zie je hoe het was uitgevallen als iedereen had gestemd. Wie gestemd heeft, krijgt op de heuvel een vinkje. De stemming sluit vanzelf als alle stemgerechtigden gestemd hebben.</p>') +
       '<div class="rollen-stem"><div><b id="tVoor">0</b><span>voor</span></div><div><b id="tTegen">0</b><span>tegen</span></div><div><b id="tNog">' + (v.alleen ? 1 : aantalStemmers()) + '</b><span>nog niet gestemd</span></div></div>' +
-      '<div class="stembalk"><i class="v" id="balkVoor"></i><i class="t" id="balkTegen"></i><b class="drempel"></b></div><p class="balkuitleg" id="balkUit"></p>' +
+      (v.alleen ? '' : gootHtml()) + '<p class="balkuitleg" id="balkUit"></p>' +
       '<p class="schaduwtel" id="schaduwTel"></p>' +
       '<div style="margin-top:16px"><button class="btn klein" id="tel" type="button">' + (v.alleen ? 'Beslis zonder de heerser' : 'Sluit de stemming nu') + '</button></div>' +
       '<div class="vraagbuiten"><b>terwijl je toch bezig bent</b>Vraag een van de ' + verdeling.buiten + ' leerlingen die geen burger zijn wat zij van deze wet vinden. Zij ondergaan hem wel. Daarna gaat de stemming gewoon door zonder hen.</div></div>';
@@ -1416,7 +1631,7 @@ var KWESTIES = [
     var v = VORMEN[s.vorm], r = rolVan[pid] || 'buiten';
     var mag = v.alleen ? pid === heerser : v.stemt.indexOf(r) >= 0;
     if (d.keuze !== 'voor' && d.keuze !== 'tegen') return;
-    if (d.vraag === stemId + 's'){ if (!mag){ schaduw[pid] = d.keuze; werkSchaduw(); } return; }
+    if (d.vraag === stemId + 's'){ if (!mag){ schaduw[pid] = d.keuze; werkSchaduw(); vinkjes(); } return; }
     if (d.vraag !== stemId || !mag) return;
     stemmen[pid] = d.keuze;
     werkBalkTel();
@@ -1430,6 +1645,14 @@ var KWESTIES = [
     var e = document.getElementById('tVoor'); if (!e) return;
     e.textContent = voor; document.getElementById('tTegen').textContent = tegen; document.getElementById('tNog').textContent = Math.max(0, max - voor - tegen);
     if (!v.alleen) werkBalk();
+    vinkjes();
+  }
+  /* wie op zijn telefoon gestemd heeft, krijgt op de heuvel een vinkje; aan de rand een grijs */
+  function vinkjes(){
+    var g = {};
+    Object.keys(stemmen).forEach(function(p){ g[p] = true; });
+    Object.keys(schaduw).forEach(function(p){ g[p] = true; });
+    pnyxNu.gestemd = g; werkPnyx();
   }
   function schaduwTel(){
     var t = { voor:0, tegen:0 };
@@ -1471,6 +1694,9 @@ var KWESTIES = [
     }
     elRollen.classList.add('hide'); elSpel.classList.remove('hide');
     document.getElementById('standvak').innerHTML = '';
+    /* de klas loopt opnieuw de heuvel op */
+    ruimRolPnyx(); pnyxNu = {};
+    if (spelPnyx){ spelPnyx.mensen.innerHTML = ''; spelPnyx.spoken.innerHTML = ''; spelPnyx.staat = {}; }
     toonWet();
     scrollTo({top:0, behavior:'auto'});
   }
@@ -1491,12 +1717,14 @@ var KWESTIES = [
     document.getElementById('stemming').textContent = v.alleen
       ? 'niemand stemt' : aantalStemmers() + ' van de ' + klas + ' leerlingen mogen stemmen';
     tekenStand();
+    werkPnyx();
   }
 
   function toonWet(){
     if (nr >= rij.length){ toonEinde(); return; }
     zorgStand();
     gekozen = null; voor = 0; tegen = 0; zVoor = 0; zTegen = 0; fase = 'kiezen';
+    pnyxNu = {};
     bewaarNu();
     tekenBanner();
     var k = rij[nr];
@@ -1509,8 +1737,15 @@ var KWESTIES = [
     h += '</div></div>';
     document.getElementById('vak').innerHTML = h;
     Array.prototype.forEach.call(document.querySelectorAll('.voorstel'), function(b){
+      /* even laten zien wie erop vooruitgaat, nog voor er gekozen is */
+      function proef(){ if (fase === 'kiezen'){ pnyxNu.eff = k.keuzes[parseInt(b.getAttribute('data-i'), 10)]; werkPnyx(); } }
+      function terug(){ if (fase === 'kiezen'){ pnyxNu.eff = null; werkPnyx(); } }
+      b.addEventListener('mouseenter', proef); b.addEventListener('focus', proef);
+      b.addEventListener('mouseleave', terug); b.addEventListener('blur', terug);
       b.addEventListener('click', function(){
         gekozen = k.keuzes[parseInt(b.getAttribute('data-i'), 10)];
+        /* wie erop vooruitgaat kijkt blij, wie erop achteruitgaat sip */
+        pnyxNu.eff = gekozen; werkPnyx();
         toonPleidooi(k);
       });
     });
@@ -1534,8 +1769,7 @@ var KWESTIES = [
     var v = VORMEN[s.vorm], nietStemmers = v.alleen ? klas - 1 : klas - aantalStemmers();
     var h = '<div class="wet"><h2>' + k.titel + '</h2>' +
       '<p class="verhaal"><b>Het voorstel:</b> ' + gekozen.t + '</p>' + effChips(gekozen) + '</div>' +
-      '<div class="stemvak"><p class="eyebrow">wie mag hier nu over stemmen</p>' +
-      klasvloer(s.vorm);
+      '<div class="stemvak"><p class="eyebrow">tel de handen</p>';
     if (v.alleen){
       h += '<p class="stemhulp">Er wordt niet gestemd. Wijs een leerling aan als ' +
         (s.vorm === 'tirannie' ? 'tiran' : 'koning') + ' en laat die alleen beslissen. ' +
@@ -1544,12 +1778,10 @@ var KWESTIES = [
         '<div style="margin-top:16px"><button class="btn klein" id="alleenJa" type="button">De heerser voert het voorstel uit</button> ' +
         '<button class="btn ghost klein" id="alleenNee" type="button">De heerser wijst het af</button></div>';
     } else {
-      h += '<p class="stemhulp">Alleen de poppetjes met de hand omhoog stemmen mee. Tel de handen in de klas en tik ze hieronder in. ' +
+      h += '<p class="stemhulp">Alleen wie op de heuvel binnen het touw staat, met de hand omhoog, stemt mee. Tel de handen in de klas en tik ze hieronder in. ' +
         'Er zijn <b>' + aantalStemmers() + '</b> stemgerechtigden, dus je hebt er <b>' +
         (Math.floor(aantalStemmers() / 2) + 1) + '</b> nodig.</p>' +
-        tellers('voor', 'tegen', '') +
-        '<div class="stembalk"><i class="v" id="balkVoor"></i><i class="t" id="balkTegen"></i>' +
-          '<b class="drempel"></b></div>' +
+        tellers('voor', 'tegen', '') + gootHtml() +
         '<p class="balkuitleg" id="balkUit"></p>' +
         (nietStemmers > 0 ? '<details class="zonder"><summary>Tel ook de ' + nietStemmers + ' zonder stemrecht: hun stem telt niet, maar je ziet straks wat het had uitgemaakt</summary>' +
           tellers('zonder stemrecht: voor', 'zonder stemrecht: tegen', 'z') + '</details>' : '') +
@@ -1593,12 +1825,20 @@ var KWESTIES = [
 
   /* De balk vult zich terwijl de docent telt: groen voor, rood tegen, de rest
      heeft nog niets gedaan. De streep op de helft laat zien of het genoeg is. */
+  function gootHtml(){
+    var max = aantalStemmers() || 1, nodig = Math.floor(max / 2) + 1, h = '';
+    for (var i = 0; i < max; i++) h += '<i class="steen"></i>';
+    return '<div class="goot" id="goot" style="--n:' + max + '" role="img" aria-label="Nog geen stemmen geteld">' + h +
+      '<b class="gstreep" style="left:calc(10px + (100% - 16px) * ' + nodig + ' / ' + max + ' - 2px)"></b></div>';
+  }
   function werkBalk(){
     var max = aantalStemmers() || 1;
-    var bv = document.getElementById('balkVoor');
-    if (!bv) return;
-    bv.style.width = (voor / max * 100) + '%';
-    document.getElementById('balkTegen').style.width = (tegen / max * 100) + '%';
+    var goot = document.getElementById('goot');
+    if (!goot) return;
+    Array.prototype.forEach.call(goot.querySelectorAll('.steen'), function(st, i){
+      st.className = 'steen' + (i < voor ? ' v' : i >= max - tegen ? ' t' : '');
+    });
+    goot.setAttribute('aria-label', voor + ' voor en ' + tegen + ' tegen van de ' + max + ' stemgerechtigden.');
     var nodig = Math.floor(max / 2) + 1, uit = document.getElementById('balkUit');
     if (voor + tegen === 0){
       uit.textContent = ''; uit.classList.remove('haalt');
@@ -1650,6 +1890,19 @@ var KWESTIES = [
 
     var om = volgendeGebeurtenis();
 
+    /* Op de heuvel: wie erop vooruitgaat kijkt blij, wie erop achteruitgaat
+       sip. Op telefoons weten we wie wat stemde: wie won lacht, wie verloor
+       niet. Verschuift de macht, dan blijft de klas staan zoals hij stond tot
+       het moment voorbij is, en loopt dan pas naar de nieuwe plekken. */
+    var stemKaart = null;
+    if (kamer){
+      stemKaart = {};
+      Object.keys(schaduw).forEach(function(p){ stemKaart[p] = schaduw[p]; });
+      Object.keys(stemmen).forEach(function(p){ stemKaart[p] = stemmen[p]; });
+    }
+    var wissel = om && !om.zelfde && !om.helotenopstand;
+    pnyxNu = { eff:werkelijk, uitslag:stemKaart ? { stem:stemKaart, aangenomen:aangenomen } : null, vorm:wissel ? om.van : null };
+
     var h = '<div class="uitslag' + (aangenomen ? '' : ' nee') + '">' +
       '<h3>' + (alleen && aangenomen ? 'De heerser voert het uit'
               : aangenomen ? 'Aangenomen' : 'Verworpen') + '</h3>' +
@@ -1680,12 +1933,9 @@ var KWESTIES = [
           (v2.stemt.length
             ? 'Dat zijn ' + v2.stemt.map(function(r){ return aantalRol(verdeling[r], rol(r)); }).join(', ').replace(/, ([^,]*)$/, ' en $1') +
               ', samen ' + aantalNu + ' van de ' + klas + ' leerlingen. ' +
-              'Kijk wie er zijn hand niet meer mag opsteken, en wie ineens wel.'
+              'Kijk op de heuvel wie er naar de rand loopt, en wie ineens binnen het touw staat.'
             : 'Niemand steekt nog een hand op. Wijs een leerling aan die alles beslist.') +
-          '</div>' +
-          /* De klas staat er eerst nog zoals hij was. Een halve tel later gaan
-             de handen omlaag of omhoog, een voor een. */
-          '<div id="wisselvloer">' + klasvloer(om.van) + '</div>';
+          '</div>';
       }
       h += '</div>';
     }
@@ -1703,8 +1953,13 @@ var KWESTIES = [
       kamer.alle({ soort:'uitslag', kop: aangenomen ? 'aangenomen' : 'verworpen', titel: alleen && aangenomen ? 'De heerser voert het uit' : aangenomen ? 'Aangenomen' : 'Verworpen', tekst: reden || werkelijk.t, regels: regels });
     }
 
-    var wv = document.getElementById('wisselvloer');
-    if (wv) setTimeout(function(){ zetVloer(wv, om.naar); }, 700);
+    /* als het moment dicht gaat, loopt de klas naar zijn nieuwe plek */
+    function wisselOpDeHeuvel(){
+      if (pnyxNu.vorm == null) return;
+      pnyxNu.vorm = null; werkPnyx();
+      var kol = document.getElementById('spelPnyx');
+      if (kol && innerWidth <= 900) kol.scrollIntoView({ behavior:'smooth', block:'start' });
+    }
 
     document.getElementById('verder').addEventListener('click', function(){
       nr++;
@@ -1718,7 +1973,8 @@ var KWESTIES = [
       var v3 = VORMEN[om.naar];
       moment({ vorm:om.naar, boven:'de macht verschuift: ' + v3.naam.toLowerCase(), kop:om.kop,
         tekst:v3.stemt.length ? vanafNu(v3) : 'Vanaf nu stemt niemand meer. Een leerling beslist alles alleen.',
-        opdracht:v3.stemt.length ? 'Wie nu mag stemmen: ga staan. Wie dat niet meer mag: blijf zitten.' : 'Iedereen blijft zitten. Wijs een leerling aan die alles beslist.' });
+        opdracht:v3.stemt.length ? 'Wie nu mag stemmen: ga staan. Wie dat niet meer mag: blijf zitten.' : 'Iedereen blijft zitten. Wijs een leerling aan die alles beslist.',
+        naDicht:wisselOpDeHeuvel });
     } else if (opstand){
       moment({ vorm:vormNu, boven:'opstand in de stad', kop:opstand.oud + ' wordt verjaagd',
         tekst:'Twee keer ging de heerser tegen de stad in. Zo vielen veel Griekse tirannen: zonder steun van de stad hield niemand het lang vol.',
@@ -1745,7 +2001,7 @@ var KWESTIES = [
     return v.alleen ? pid === heerser : v.stemt.indexOf(r) >= 0;
   }
   function toonOstracisme(){
-    fase = 'ostra'; s.ostraGedaan = true; ostraStem = {}; ostraTel = {};
+    fase = 'ostra'; s.ostraGedaan = true; ostraStem = {}; ostraTel = {}; pnyxNu = {};
     KANDIDATEN.forEach(function(c){ ostraTel[c.id] = 0; });
     bewaarNu();
     var v = VORMEN[s.vorm];
@@ -1791,6 +2047,7 @@ var KWESTIES = [
   function ostraActie(pid, d){
     if (fase !== 'ostra' || !magOstra(pid) || !KANDIDATEN.some(function(c){ return c.id === d.keuze; })) return;
     ostraStem[pid] = d.keuze;
+    pnyxNu.gestemd = pnyxNu.gestemd || {}; pnyxNu.gestemd[pid] = true; werkPnyx();
     KANDIDATEN.forEach(function(c){ ostraTel[c.id] = 0; });
     Object.keys(ostraStem).forEach(function(p){ ostraTel[ostraStem[p]]++; });
     KANDIDATEN.forEach(function(c){ var e = document.getElementById('os-' + c.id); if (e) e.textContent = ostraTel[c.id]; });
