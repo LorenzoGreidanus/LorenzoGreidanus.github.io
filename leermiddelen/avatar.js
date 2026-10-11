@@ -132,7 +132,7 @@ window.AVATAR = (function(){
     c:['licht perzik', 'perzik', 'karamel', 'bruin', 'donkerbruin', 'roze', 'zonnegeel', 'mint', 'lila', 'framboos', 'grijs'],
     f:['geen', 'oortjes', 'bloem', 'wolkje', 'voelsprieten', 'knotje', 'kattenoren']
   };
-  var PATROON = /^v(\d{1,2})k(\d)o(\d{1,2})m(\d)e(\d)(?:c(\d{1,2}))?(?:x(\d{1,2}))?(?:w(\d))?(?:h(\d{1,2}))?(?:r(\d{1,2}))?(?:z(\d{1,2}))?(?:b(\d{1,2}))?(?:a(\d{1,2}))?(?:q(\d{1,2}))?(?:f(\d))?(?:p(\d{1,2}))?$/;
+  var PATROON = /^v(\d{1,2})k(\d)o(\d{1,2})m(\d)e(\d)(?:c(\d{1,2}))?(?:x(\d{1,2}))?(?:w(\d))?(?:h(\d{1,2}))?(?:r(\d{1,2}))?(?:z(\d{1,2}))?(?:b(\d{1,2}))?(?:a(\d{1,2}))?(?:q(\d{1,2}))?(?:f(\d))?(?:p(\d{1,2}))?(?:g(\d{1,2}))?$/;
   /* achter het gezichtje kan cosmetica staan: h (hoed), r (rand), z (zwaard), b, a, q, f en p (pijlboog), uit de winkel */
   function ontleed(spec){
     spec = String(spec || '');
@@ -140,13 +140,13 @@ window.AVATAR = (function(){
     /* Een spec die ergens onderweg is afgekapt (een oude server die er 24 tekens van bewaarde):
        haal er van achteren af tot hij weer klopt, dan blijft het gezicht en valt hooguit een bril weg. */
     for (var i = 0; !m && i < 16 && spec.length > 10 && /^v\d{1,2}k\do\d{1,2}m\de\d/.test(spec); i++){ spec = spec.replace(/[a-z]\d*$/, ''); m = PATROON.exec(spec); }
-    return m ? { v:+m[1], k:+m[2], o:+m[3], m:+m[4], e:+m[5], c:+(m[6] || 0), x:+(m[7] || 0), w:+(m[8] || 0), h:+(m[9] || 0), r:+(m[10] || 0), z:+(m[11] || 0), b:+(m[12] || 0), a:+(m[13] || 0), q:+(m[14] || 0), f:+(m[15] || 0), p:+(m[16] || 0) } : null; }
+    return m ? { v:+m[1], k:+m[2], o:+m[3], m:+m[4], e:+m[5], c:+(m[6] || 0), x:+(m[7] || 0), w:+(m[8] || 0), h:+(m[9] || 0), r:+(m[10] || 0), z:+(m[11] || 0), b:+(m[12] || 0), a:+(m[13] || 0), q:+(m[14] || 0), f:+(m[15] || 0), p:+(m[16] || 0), g:+(m[17] || 0) } : null; }
   function maak(o){
     /* x en w (haar) bestaan nog in het patroon, voor codes van even, maar worden niet meer gemaakt of getekend */
     var c = (o.c | 0) % (KLEUREN2.length + 1);
     return 'v' + (o.v % KEUZES.vormen) + 'k' + (o.k % KEUZES.kleuren) + 'o' + (o.o % KEUZES.ogen) + 'm' + (o.m % KEUZES.monden) + 'e' + (o.e % KEUZES.extras) +
       (c ? 'c' + c : '') +
-      (o.h ? 'h' + o.h : '') + (o.r ? 'r' + o.r : '') + (o.z ? 'z' + o.z : '') + (o.b ? 'b' + o.b : '') + (o.a ? 'a' + o.a : '') + (o.q ? 'q' + o.q : '') + (o.f ? 'f' + (o.f % KEUZES.figuren) : '') + (o.p ? 'p' + o.p : '');
+      (o.h ? 'h' + o.h : '') + (o.r ? 'r' + o.r : '') + (o.z ? 'z' + o.z : '') + (o.b ? 'b' + o.b : '') + (o.a ? 'a' + o.a : '') + (o.q ? 'q' + o.q : '') + (o.f ? 'f' + (o.f % KEUZES.figuren) : '') + (o.p ? 'p' + o.p : '') + (o.g ? 'g' + o.g : '');
   }
   /* Een lichte rand om een los stuk (hoed, trofee), zodat het ook op een donkere achtergrond
      te zien is. Het is dezelfde tekening nog een keer, maar dan als dikke witte omtrek eronder; wat
@@ -199,7 +199,48 @@ window.AVATAR = (function(){
     if (n === 20) return '<path d="M-27,-29 L-30,-50 L-20,-40 L-10,-54 L0,-42 L10,-54 L20,-40 L30,-50 L27,-29 Z" fill="#F7931E" stroke="#c96a1c" stroke-width="2" stroke-linejoin="round"/><path d="M-27,-34 h54" stroke="#fff" stroke-width="2.4" opacity=".75"/><circle cx="-10" cy="-47" r="2.2" fill="#fff"/><circle cx="10" cy="-47" r="2.2" fill="#fff"/><circle cx="0" cy="-38" r="2.4" fill="#204ECF"/>';
     /* strohoed voor de zomer: een brede rand met een rood lint */
     if (n === 21) return '<path d="M-46,-27 q46,-14 92,0 q-10,6 -46,6 q-36,0 -46,-6 z" fill="#e8c877" stroke="#b8924a" stroke-width="1.6" stroke-linejoin="round"/><path d="M-22,-31 q0,-22 22,-22 q22,0 22,22 z" fill="#e8c877" stroke="#b8924a" stroke-width="1.6"/><path d="M-22,-34 q22,-5 44,0" fill="none" stroke="#c0442c" stroke-width="4"/><path d="M-36,-26 q36,-9 72,0 M-14,-46 q14,-4 28,0" fill="none" stroke="#b8924a" stroke-width="1" opacity=".6"/>';
+    /* Pruisische punthelm, voor Bismarck (g3): geen winkelhoed, hij hoort bij het personage */
+    if (n === 22) return '<path d="M-30,-30 C-30,-54 -15,-60 0,-60 C15,-60 30,-54 30,-30 Z" fill="#2a3142" stroke="#151a26" stroke-width="2" stroke-linejoin="round"/>' +
+      '<path d="M-22,-46 q8,-9 18,-11" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".28"/>' +
+      '<path d="M-5,-59 L0,-76 L5,-59 Z" fill="#E1B94F" stroke="#a8831f" stroke-width="1.4" stroke-linejoin="round"/>' +
+      '<path d="M-8,-41 L0,-52 L8,-41 L0,-34 Z" fill="#E1B94F" stroke="#a8831f" stroke-width="1.4" stroke-linejoin="round"/>' +
+      '<path d="M-36,-29 q36,-7 72,0 q-8,7 -36,6 q-28,1 -36,-6 z" fill="#151a26"/><path d="M-31,-31 q31,-6 62,0" fill="none" stroke="#E1B94F" stroke-width="2.2"/>';
     return '';
+  }
+  /* Personages (g): kenmerken van een echt persoon, zoals de leiders in De Conferentie van Berlijn.
+     Ze liggen net als de mond op de bol, dus ze draaien en kijken mee, maar ze vallen niet binnen de
+     omtrek: een baard mag onder het gezicht uit hangen. Elk stuk is [x, y, tekening] met de tekening in
+     gezichtsmaten; (x, y) is de plek op de bol waar het stuk aan vastzit. Niet in de winkel. */
+  function persoon(n){
+    var grijs = 'fill="#A3A9B3" stroke="#6E7480" stroke-width="1.4" stroke-linejoin="round"';
+    var wit = 'fill="#E2E0D8" stroke="#9C988C" stroke-width="1.4" stroke-linejoin="round"';
+    var zwart = 'fill="#3A2E2A" stroke="#1f1714" stroke-width="1.4" stroke-linejoin="round"';
+    /* 1 Lord Salisbury: kale kruin, grijze plukken opzij, een volle grijze baard */
+    if (n === 1) return [
+      [-34, -6, '<path d="M-35,-18 C-41,-10 -40,2 -35,8 C-33,0 -33,-8 -31,-14 Z" ' + grijs + '/>'],
+      [34, -6, '<path d="M35,-18 C41,-10 40,2 35,8 C33,0 33,-8 31,-14 Z" ' + grijs + '/>'],
+      [0, 20, '<path d="M-34,2 C-38,28 -20,54 0,56 C20,54 38,28 34,2 C28,14 16,20 0,20 C-16,20 -28,14 -34,2 Z" fill="#9AA0AA" stroke="#6E7480" stroke-width="1.6" stroke-linejoin="round"/>' +
+        '<path d="M-18,30 q4,8 2,16 M0,28 v18 M18,30 q-4,8 -2,16" fill="none" stroke="#7A818C" stroke-width="1.6" stroke-linecap="round"/>'],
+      [0, 11, '<path d="M-17,12 Q-8,5 0,9 Q8,5 17,12 Q8,18 0,15 Q-8,18 -17,12 Z" fill="#858C97" stroke="#6E7480" stroke-width="1.4" stroke-linejoin="round"/>']];
+    /* 2 Jules Ferry: donker haar met een scheiding, grote bakkebaarden en een snor, een gladde kin */
+    if (n === 2) return [
+      [0, -30, '<path d="M-40,-16 C-44,-38 -20,-50 2,-48 C24,-48 44,-38 40,-16 C34,-28 22,-34 6,-33 L2,-40 L-4,-33 C-18,-33 -32,-28 -40,-16 Z" ' + zwart + '/>'],
+      [-34, 8, '<path d="M-44,-10 C-48,10 -40,28 -24,32 C-20,24 -22,16 -28,10 C-34,4 -40,-2 -44,-10 Z" ' + zwart + '/>'],
+      [34, 8, '<path d="M44,-10 C48,10 40,28 24,32 C20,24 22,16 28,10 C34,4 40,-2 44,-10 Z" ' + zwart + '/>'],
+      [0, 11, '<path d="M-26,12 Q-12,4 0,9 Q12,4 26,12 Q14,18 0,14 Q-14,18 -26,12 Z" ' + zwart + '/>'],
+      [0, 23, '<path d="M-5,23 q5,3 10,0" fill="none" stroke="' + INKT + '" stroke-width="3.5" stroke-linecap="round"/>']];
+    /* 3 Otto von Bismarck: de punthelm (hoed 22) en een grote witte walrussnor */
+    if (n === 3) return [
+      [0, 10, '<path d="M-28,10 C-22,-2 -8,0 0,5 C8,0 22,-2 28,10 C26,22 14,24 8,16 Q0,12 -8,16 C-14,24 -26,22 -28,10 Z" fill="#ECEAE2" stroke="#9C988C" stroke-width="1.6" stroke-linejoin="round"/>' +
+        '<path d="M-18,6 l3,8 M-8,5 l1,8 M8,5 l-1,8 M18,6 l-3,8" fill="none" stroke="#B5B2A8" stroke-width="1.4" stroke-linecap="round"/>']];
+    /* 4 Leopold II: kaal met witte plukken en een lange puntbaard (geen neus: gezichtjes hebben er geen) */
+    if (n === 4) return [
+      [-34, -7, '<path d="M-35,-20 C-41,-12 -40,0 -35,6 C-33,-2 -33,-10 -31,-16 Z" ' + wit + '/>'],
+      [34, -7, '<path d="M35,-20 C41,-12 40,0 35,6 C33,-2 33,-10 31,-16 Z" ' + wit + '/>'],
+      [0, 22, '<path d="M-31,8 C-31,36 -12,66 0,80 C12,66 31,36 31,8 C24,18 12,22 0,22 C-12,22 -24,18 -31,8 Z" fill="#E2E0D8" stroke="#9C988C" stroke-width="1.6" stroke-linejoin="round"/>' +
+        '<path d="M-12,32 Q-6,52 0,72 M12,32 Q6,52 0,72 M0,30 V60" fill="none" stroke="#B9B6AC" stroke-width="1.5" stroke-linecap="round"/>'],
+      [0, 16, '<path d="M-20,16 Q-8,8 0,13 Q8,8 20,16 Q8,22 0,18 Q-8,22 -20,16 Z" fill="#CFCCC2" stroke="#9C988C" stroke-width="1.4" stroke-linejoin="round"/>']];
+    return [];
   }
   /* de trofeeën, rechtsonder bij het gezicht */
   function trofee(n){
@@ -293,7 +334,7 @@ window.AVATAR = (function(){
      Let op: de volgorde van de trekkingen hieronder is heilig, anders krijgt iedereen zonder
      eigen keuze ineens een ander gezichtje. Nieuwe dingen trekken niets uit r(). */
   var modellen = {}, aantalModellen = 0;
-  var LEEG = { v:0, k:0, o:0, m:0, e:0, c:0, x:0, w:0, h:0, r:0, z:0, b:0, a:0, q:0, f:0 };
+  var LEEG = { v:0, k:0, o:0, m:0, e:0, c:0, x:0, w:0, h:0, r:0, z:0, b:0, a:0, q:0, f:0, g:0 };
   function model(naam, spec){
     var sleutel = (spec || '') + '|' + String(naam || '').toLowerCase().trim();
     if (modellen[sleutel]) return modellen[sleutel];
@@ -471,10 +512,13 @@ window.AVATAR = (function(){
     /* alleen een heel donker gezicht krijgt een lichte rand, anders valt het weg op een donkere pagina */
     if (m.helder < 0.3) s += '<path d="' + m.d + '" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="' + f1(rim * 2) + '" stroke-linejoin="round"/>';
     s += '<path d="' + m.d + '" fill="' + kleur + '"/><path d="' + m.d + '" fill="url(#' + id + 's)"/><path d="' + m.d + '" fill="url(#' + id + 'g)"/></g>';
-    s += '<g clip-path="url(#' + id + 'k)">' + (leeft ? ogen : '<g class="av-ogen" style="animation-delay:-' + m.d2 + 's">' + ogen + '</g>') + rest + '</g>' + los + '</g></g>';
+    /* een personage: baard, snor, haar, op de bol maar buiten de omtrek */
+    var kenmerk = '';
+    if (sp.g) persoon(sp.g).forEach(function(d){ kenmerk += stuk(d[0], d[1], '<g transform="translate(' + (-d[0]) + ',' + (-d[1]) + ')">' + d[2] + '</g>'); });
+    s += '<g clip-path="url(#' + id + 'k)">' + (leeft ? ogen : '<g class="av-ogen" style="animation-delay:-' + m.d2 + 's">' + ogen + '</g>') + rest + '</g>' + kenmerk + los + '</g></g>';
     /* uit de winkel: eerst de rand (hij ligt om het gezicht), dan de hoed of de krul op de kruin */
     if (sp.r) s += rand(sp.r);
-    var hd = sp.h ? hoed(sp.h) : '';
+    var hd = sp.h ? hoed(sp.h) : sp.g === 3 ? hoed(22) : '';
     if (hd || e === 2){
       var T = rot(0, -44, 14), plek = 'translate(' + f(T[0]) + ',' + f(T[1] + 44) + ') rotate(' + f(st.yaw * .3) + ',0,' + f(M.top) + ')';
       var op = hd ? '<g transform="' + hoedPlek(M, 0, 1) + '"><g class="av-hoed">' + halo(hd, rim * 2) + hd + '</g></g>'

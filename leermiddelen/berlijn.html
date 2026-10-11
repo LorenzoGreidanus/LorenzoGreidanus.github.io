@@ -220,6 +220,11 @@ header{position:sticky;top:0;z-index:30;background:var(--room);border-bottom:1px
 .blok{background:var(--kaart);border:1px solid var(--rand);border-radius:20px;padding:18px}
 .beurtkop{display:flex;align-items:center;gap:10px}
 .beurtkop .vlag{width:20px;height:20px;border-radius:6px;flex:none}
+/* de leiders als gezichtje, in de kleur van hun land; een helm of baard mag buiten de ring komen */
+.vlag.gzv{display:inline-grid;place-items:center;border-radius:50%;vertical-align:middle;flex:none}
+.vlag.gzv svg{display:block;overflow:visible}
+.speler .vlag.gzv,.uitslagkaart .vlag.gzv{width:34px;height:34px;margin-right:10px}
+.beurtkop .vlag.gzv{width:52px;height:52px;border-radius:50%}
 .beurtkop b{font-size:1.1rem;line-height:1.2}
 .beurtkop span{display:block;font-size:.8rem;color:var(--muted)}
 .meters{display:flex;gap:8px;margin-top:12px}
@@ -487,7 +492,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
     <div class="paneel">
       <div class="blok">
         <div class="beurtkop">
-          <span class="vlag" id="beurtVlag"></span>
+          <span class="vlag gzv" id="beurtVlag"></span>
           <div><b id="beurtNaam">...</b><span id="beurtWie"></span></div>
         </div>
         <div class="meters">
@@ -700,7 +705,7 @@ var BUREN = {
    Elk doel heeft een controlefunctie die kijkt naar de eindkaart.
    --------------------------------------------------------------------------- */
 var MACHTEN = [
-  { id:'vk', naam:'Verenigd Koninkrijk', wie:'Lord Salisbury', kleur:'#c0442c',
+  { id:'vk', naam:'Verenigd Koninkrijk', wie:'Lord Salisbury', kleur:'#c0442c', gezicht:'v9k0o9m2e5c2g1',
     inzet:'Britse handel beschermen: vrije vaart op de Niger, het Suezkanaal veilig, en een keten bezittingen van de Kaap naar het noorden.',
     doelen:[
       { t:'Zorg dat de Nigerdelta in jouw handen is', p:4, wijst:['niger'], check:function(s){ return s.van('niger') === 'vk'; } },
@@ -709,7 +714,7 @@ var MACHTEN = [
       { t:'Bouw een keten vanaf de Kaap: verbind minstens drie gebieden', p:5, wijst:['kaap','betsjoeana','zambezi','nyassa','meren'],
         check:function(s){ return s.keten('vk') >= 3; } }
     ] },
-  { id:'fr', naam:'Frankrijk', wie:'Jules Ferry', kleur:'#204ECF',
+  { id:'fr', naam:'Frankrijk', wie:'Jules Ferry', kleur:'#204ECF', gezicht:'v1k0o0m2e5c1g2',
     inzet:'Het Franse rijk in West-Afrika aaneensluiten, en voorkomen dat een ander Marokko krijgt en zo Algerije bedreigt.',
     doelen:[
       { t:'Neem de westelijke Sahara, de schakel tussen Algerije en Senegal', p:5, wijst:['sahara'],
@@ -719,7 +724,7 @@ var MACHTEN = [
       { t:'Zorg dat Marokko niet bij een andere mogendheid terechtkomt', p:4, wijst:['marokko'],
         check:function(s){ var b = s.van('marokko'); return b === 'fr' || b === null; } }
     ] },
-  { id:'du', naam:'Duitsland', wie:'Otto von Bismarck', kleur:'#5b6480',
+  { id:'du', naam:'Duitsland', wie:'Otto von Bismarck', kleur:'#5b6480', gezicht:'v8k0o9m2e5c2g3',
     inzet:'Duitsland kwam laat en wil vooral dat geen enkele mogendheid te machtig wordt. Een paar kolonies erbij is mooi meegenomen.',
     doelen:[
       { t:'Neem Kameroen, waar Duitse handelaren al verdragen sloten', p:4, wijst:['kameroen'],
@@ -729,7 +734,7 @@ var MACHTEN = [
       { t:'Houd het evenwicht: niemand mag meer dan acht gebieden hebben', p:5,
         check:function(s){ return s.meeste() <= 8; } }
     ] },
-  { id:'be', naam:'Leopold II', wie:'koning van België, voor zichzelf', kleur:'#EA9836',
+  { id:'be', naam:'Leopold II', wie:'koning van België, voor zichzelf', kleur:'#EA9836', gezicht:'v9k0o0m2e5c1g4',
     inzet:'Leopold onderhandelt niet namens België maar voor zijn eigen vereniging. Hij wil het Congobekken, en internationale erkenning.',
     doelen:[
       { t:'Krijg het Congobekken in handen', p:7, wijst:['congo'], check:function(s){ return s.van('congo') === 'be'; } },
@@ -1193,7 +1198,7 @@ var NOODREM = 30;
     var d = document.createElement('div');
     d.className = 'speler';
     /* Alleen wie het is: wat hij wil staat in het spel naast de kaart, als hij aan zet is. */
-    d.innerHTML = '<b><span class="vlag" style="background:' + m.kleur + '"></span>' + m.naam + '</b>' +
+    d.innerHTML = '<b>' + leider(m, 30) + m.naam + '</b>' +
       '<p>' + m.wie + '</p>' +
       '<div class="wissel"><button type="button" class="on">Leerling</button><button type="button">Computer</button></div>';
     var kn = d.querySelectorAll('.wissel button');
@@ -1559,12 +1564,17 @@ var NOODREM = 30;
 
   /* ---------- beurten ---------- */
   function huidige(){ return MACHTEN[beurt % MACHTEN.length]; }
+  /* het gezichtje van de leider (avatar.js, personage g), in een ring in de kleur van zijn land */
+  function leider(m, maat){
+    return '<span class="vlag gzv" style="background:' + m.kleur + '">' + (m.gezicht ? AVATAR.svg(m.wie, maat, m.gezicht) : '') + '</span>';
+  }
 
   function nieuweBeurt(){
     gekozen = null;
     bewaarNu();
     var m = huidige();
     document.getElementById('beurtVlag').style.background = m.kleur;
+    document.getElementById('beurtVlag').innerHTML = m.gezicht ? AVATAR.svg(m.wie, 46, m.gezicht) : '';
     document.getElementById('beurtNaam').textContent = m.naam;
     document.getElementById('beurtWie').textContent = m.wie + (mens[m.id] ? '' : ' (computer)');
     document.getElementById('beurtInzet').textContent = m.inzet;
@@ -1916,7 +1926,7 @@ var NOODREM = 30;
     }).sort(function(a, b){ return b.punten - a.punten; });
 
     scores.forEach(function(s){
-      html += '<div class="uitslagkaart"><h3><span class="vlag" style="background:' + s.m.kleur + '"></span>' +
+      html += '<div class="uitslagkaart"><h3>' + leider(s.m, 30) +
         s.m.naam + '<span class="punt">' + s.punten + ' punten</span></h3>' + s.regels +
         '<div class="doel"><i></i><span>Opbrengst van je gebieden</span><b>' + s.eco + ' pt</b></div></div>';
     });
