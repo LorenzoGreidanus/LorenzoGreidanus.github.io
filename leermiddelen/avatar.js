@@ -431,6 +431,16 @@ window.AVATAR = (function(){
       return '<ellipse cx="' + f(P[0]) + '" cy="' + f(P[1]) + '" rx="' + f(ex * schaal) + '" ry="' + f(ey * schaal) + '"' + attr + dicht + '>';
     });
   }
+  /* Volume: elk gevuld stuk krijgt dezelfde schaduw aan de rand en hetzelfde licht linksboven als het
+     gezicht (de verlopen id+'s' en id+'g'), zodat een hoed of baard net zo bol oogt als het hoofd. */
+  function volume(svg, id){
+    return svg.replace(/<(path|circle|ellipse)\b([^>]*?)\/>/g, function(heel, tag, attr){
+      var vul = / fill="([^"]*)"/.exec(attr);
+      if (!vul || vul[1] === 'none' || /^url/.test(vul[1])) return heel;
+      var vorm = attr.replace(/ (fill|stroke|stroke-width|stroke-linejoin|stroke-linecap|stroke-dasharray|opacity|fill-opacity|stroke-opacity)="[^"]*"/g, '');
+      return heel + '<' + tag + vorm + ' fill="url(#' + id + 's)"/><' + tag + vorm + ' fill="url(#' + id + 'g)"/>';
+    });
+  }
   function teken(m, st, id, leeft, schaduw, maat){
     var sp = m.sp, stm = st.stemming || '', M = m.M;
     var Rf = m.bol, ya = st.yaw * Math.PI / 180, pa = st.pitch * Math.PI / 180, cy = Math.cos(ya), sy = Math.sin(ya), cp = Math.cos(pa), sn = Math.sin(pa);
@@ -570,7 +580,7 @@ window.AVATAR = (function(){
           return f(P[0]) + ',' + f(P[1]);
         }) + '"';
       });
-      if (d[2]) binnen += t; else kenmerk += halo(t, 3.5) + t;
+      if (d[2]) binnen += volume(t, id); else kenmerk += halo(t, 3.5) + volume(t, id);
     });
     s += '<g clip-path="url(#' + id + 'k)">' + (leeft ? ogen : '<g class="av-ogen" style="animation-delay:-' + m.d2 + 's">' + ogen + '</g>') + rest + binnen + '</g>' + kenmerk + los + '</g></g>';
     /* uit de winkel: eerst de rand (hij ligt om het gezicht), dan de hoed of de krul op de kruin */
@@ -588,7 +598,7 @@ window.AVATAR = (function(){
           var X = hs * x, Y = hy + hs * (y + 30), P = rot(X, Y, Math.sqrt(Math.max(Rc * Rc - X * X, 0)));
           return [P[0], P[1]];
         }, hs);
-        s += '<g' + adem + '><g' + beweeg + '><g class="av-hoed">' + halo(hp, rim * 2) + hp + '</g></g></g>';
+        s += '<g' + adem + '><g' + beweeg + '><g class="av-hoed">' + halo(hp, rim * 2) + volume(hp, id) + '</g></g></g>';
       } else {
         s += '<g' + adem + '><g' + beweeg + '><g transform="' + plek + '"><path d="M2,' + f1(M.top + 3) + ' q4,-12 14,-6 q-8,-2 -10,6" fill="none" stroke="' + meng(kleur, INKT, 0.25) + '" stroke-width="5" stroke-linecap="round"/></g></g></g>';
       }
