@@ -244,6 +244,37 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 /* Leer eerst de regels, onder de startknoppen */
 .leertrucs{text-align:center;margin-top:20px}
 .leertrucsuit{font-size:.85rem;color:var(--muted);max-width:480px;margin:8px auto 0}
+/* ---------- leg het uit ---------- */
+.foutwoord{text-decoration:underline wavy var(--fout);text-underline-offset:6px;color:var(--fout);font-weight:700}
+#stapvak{max-width:760px;margin:18px auto 0}
+.stapopdracht{font-size:1.02rem;margin-bottom:10px}
+.wplan{margin:0 0 12px;padding:0;list-style:none;counter-reset:w;display:flex;flex-wrap:wrap;gap:6px}
+.wplan li{counter-increment:w;display:inline-flex;align-items:center;gap:6px;font-size:.8rem;padding:4px 10px 4px 4px;border-radius:999px;background:rgba(20,34,76,.06);color:var(--muted)}
+.wplan li::before{content:counter(w);width:20px;height:20px;border-radius:50%;display:inline-grid;place-items:center;font-size:.7rem;font-weight:700;background:rgba(20,34,76,.12)}
+.wplan li.nu{color:var(--ink);font-weight:600}
+.wplan li.nu::before{background:var(--ocean);color:#fff}
+.wplan li.af::before{content:'\2713';background:var(--goed);color:#fff}
+.wstap{background:var(--kaart,#fff);border:1px solid rgba(20,34,76,.10);border-radius:20px;padding:14px 16px;margin-bottom:10px}
+.wstap h3{font-size:1rem;display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.wstap h3 span{width:26px;height:26px;border-radius:9px;display:grid;place-items:center;background:var(--ocean);color:#fff;font-size:.85rem;flex:none}
+.wopts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+.wkeuze{padding:12px 12px;font-size:1rem;border-radius:16px}
+.wfb{margin-top:8px;font-size:.92rem;min-height:1.2em}
+.wfb.ja{color:var(--goed)}.wfb.nee{color:var(--fout)}
+.wantw{border:2px dashed rgba(20,34,76,.18);border-radius:18px;padding:12px 16px;margin-top:4px}
+.wantw>span{font-size:.72rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.wantw p{margin-top:6px;line-height:1.6}
+.wantw .nieuw{background:color-mix(in srgb,#E1A93A 28%,transparent);border-radius:4px}
+.typrij{display:flex;gap:8px;flex-wrap:wrap}
+.wtyp{flex:1 1 200px;min-width:0;font:inherit;font-size:1.15rem;padding:12px 14px;border-radius:14px;border:2px solid rgba(20,34,76,.18);background:var(--kaart,#fff);color:inherit}
+.wtyp.kort{flex:0 0 90px;text-align:center}
+.wtyp:focus{outline:none;border-color:var(--ocean)}
+.wtyp.ja{border-color:var(--goed);background:var(--goed-bg);color:var(--goed)}
+.wcheck{flex:0 0 auto;padding:12px 18px}
+.woorden{display:flex;flex-wrap:wrap;gap:6px}
+.wwoord{font:inherit;font-size:1.05rem;padding:8px 12px;border-radius:12px;border:2px solid rgba(20,34,76,.14);background:var(--kaart,#fff);color:inherit;cursor:pointer}
+.wwoord.ja{border-color:var(--goed);background:var(--goed-bg);color:var(--goed)}
+.wwoord.nee{border-color:var(--fout);background:var(--fout-bg);color:var(--fout)}
 </style>
 <link rel="stylesheet" href="basis.css">
 <link rel="stylesheet" href="spel.css">
@@ -374,11 +405,42 @@ var ONDERDELEN = [
   { id:'vt',    naam:'Verleden tijd',      uitleg:'Werkte of werkde? Hier oefen je met het kofschip.' },
   { id:'vd',    naam:'Voltooid deelwoord', uitleg:'Ik heb gewerkt, ik heb geopend. Met ge ervoor en t of d erachter.' },
   { id:'val',   naam:'De d of t val',      uitleg:'Gebeurt of gebeurd? Dezelfde klank, twee betekenissen.' },
+  { id:'uitleg', naam:'Leg het uit',       uitleg:'Een zin met een fout werkwoord: laat met de stam en ’t kofschip stap voor stap zien waarom het fout is.' },
   { id:'alles', naam:'Alles door elkaar',  uitleg:'Alle onderdelen gemengd. Zo werkt het ook op een toets.' }
 ];
 
 /* De lijst staat in bank.js (OPGAVEN_WERKWOORDEN), zodat de andere spellen dezelfde gegevens gebruiken. */
 var OPGAVEN = OPGAVEN_WERKWOORDEN;
+
+/* ============================================================================
+   LEG HET UIT: een zin met een fout werkwoord, en stap voor stap laat je met
+   de stam en 't kofschip zien waarom het fout is. Elke goede stap zet een
+   stukje in Jouw uitleg; aan het eind staat de hele uitleg er, zoals je hem
+   op een toets opschrijft.
+   s:'vt' of 'vd' gaat met 't kofschip, s:'tt' met het onderwerp.
+   hele = het hele werkwoord, stam = de ik-vorm, letter = de letter die voor
+   't kofschip telt (bij verhuizen de z, niet de s), val = de letter waarmee
+   je je kunt vergissen. v = vanaf welk niveau (1 bb, 2 kgt, 3 havo/vwo).
+   ============================================================================ */
+var UITLEGOPGAVEN = [
+  { v:1, s:'vt', zin:'Gisteren werkde ik de hele middag in de tuin.', fout:'werkde', goed:'werkte', hele:'werken', stam:'werk', letter:'k' },
+  { v:1, s:'vt', zin:'Vorige week fietsde Noor naar Utrecht.', fout:'fietsde', goed:'fietste', hele:'fietsen', stam:'fiets', letter:'s' },
+  { v:1, s:'vt', zin:'Mijn moeder belte de school op.', fout:'belte', goed:'belde', hele:'bellen', stam:'bel', letter:'l' },
+  { v:1, s:'vt', zin:'De kinderen speelte buiten tot het donker werd.', fout:'speelte', goed:'speelden', hele:'spelen', stam:'speel', letter:'l', meer:true },
+  { v:2, s:'vt', zin:'Vorig jaar verhuiste onze buren naar Groningen.', fout:'verhuiste', goed:'verhuisden', hele:'verhuizen', stam:'verhuis', letter:'z', val:'s', meer:true },
+  { v:2, s:'vt', zin:'Mijn opa leefte in een klein dorp.', fout:'leefte', goed:'leefde', hele:'leven', stam:'leef', letter:'v', val:'f' },
+  { v:3, s:'vt', zin:'Zij praatde de hele avond over haar vakantie.', fout:'praatde', goed:'praatte', hele:'praten', stam:'praat', letter:'t' },
+  { v:3, s:'vt', zin:'Hij antwoordte niet op mijn vraag.', fout:'antwoordte', goed:'antwoordde', hele:'antwoorden', stam:'antwoord', letter:'d' },
+  { v:1, s:'vd', zin:'Ik heb mijn huiswerk al gemaakd.', fout:'gemaakd', goed:'gemaakt', hele:'maken', stam:'maak', letter:'k' },
+  { v:1, s:'vd', zin:'Heb jij dat nieuwe liedje al gehoort?', fout:'gehoort', goed:'gehoord', hele:'horen', stam:'hoor', letter:'r' },
+  { v:2, s:'vd', zin:'We hebben de hele dag gefietsd.', fout:'gefietsd', goed:'gefietst', hele:'fietsen', stam:'fiets', letter:'s' },
+  { v:2, s:'vd', zin:'Mijn tante is vorige maand verhuist.', fout:'verhuist', goed:'verhuisd', hele:'verhuizen', stam:'verhuis', letter:'z', val:'s', zonderGe:true },
+  { v:1, s:'tt', zin:'Hij vind het nieuwe spel heel leuk.', fout:'vind', goed:'vindt', hele:'vinden', stam:'vind', onderwerp:'hij', regel:'hij', anders:['het', 'spel'] },
+  { v:1, s:'tt', zin:'Ik wordt volgende week dertien.', fout:'wordt', goed:'word', hele:'worden', stam:'word', onderwerp:'ik', regel:'ik', anders:['week', 'dertien'] },
+  { v:2, s:'tt', zin:'Wordt jij ook zo moe van die toets?', fout:'Wordt', goed:'Word', hele:'worden', stam:'word', onderwerp:'jij', regel:'jijachter', anders:['toets', 'moe'] },
+  { v:2, s:'tt', zin:'Jij antwoord altijd als eerste.', fout:'antwoord', goed:'antwoordt', hele:'antwoorden', stam:'antwoord', onderwerp:'jij', regel:'jijvoor', anders:['altijd', 'eerste'] },
+  { v:2, s:'tt', zin:'Het gebeurd niet vaak dat de bus te laat is.', fout:'gebeurd', goed:'gebeurt', hele:'gebeuren', stam:'gebeur', onderwerp:'het', regel:'hij', anders:['bus', 'vaak'] }
+];
 
 var NIVEAUS = [
   { id:'bb',  naam:'vmbo-bb',        tot:1, uitleg:'De basisregels, met korte zinnen.' },
@@ -417,7 +479,8 @@ var RACE = { start:60, erbij:4, eraf:6 };
       elUit   = document.getElementById('uitleg'),
       elStartBtn = document.getElementById('startBtn');
 
-  function isRace(){ return modus && modus.id === 'race'; }
+  /* leg het uit gaat altijd zonder klok: uitleggen kost tijd */
+  function isRace(){ return modus && modus.id === 'race' && !(onderdeel && onderdeel.id === 'uitleg'); }
   function lees(){ try { return JSON.parse(localStorage.getItem(SLEUTEL) || '{}'); } catch (e){ return {}; } }
   function schrijf(d){ try { localStorage.setItem(SLEUTEL, JSON.stringify(d)); return true; } catch (e){ return false; } }
 
@@ -461,6 +524,7 @@ var RACE = { start:60, erbij:4, eraf:6 };
   function selectie(){
     if (!niveau || !onderdeel) return [];
     var tot = (NIVEAUS.filter(function(x){ return x.id === slim.niveau(); })[0] || niveau).tot;
+    if (onderdeel.id === 'uitleg') return UITLEGOPGAVEN.filter(function(op){ return op.v <= tot; });
     return OPGAVEN.filter(function(op){
       return op.v <= tot && (onderdeel.id === 'alles' || op.s === onderdeel.id);
     });
@@ -469,7 +533,7 @@ var RACE = { start:60, erbij:4, eraf:6 };
   /* Leer eerst de regels (leer.js, leer-taal.js): bij een gekozen onderdeel alleen die regel */
   document.getElementById('leerBtn').addEventListener('click', function(){
     if (!window.LEER || !window.LEER_WERKWOORDEN) return;
-    var L = LEER_WERKWOORDEN, keus = { tt:[L[0], L[3]], vt:[L[1]], vd:[L[2]], val:[L[3], L[2]] };
+    var L = LEER_WERKWOORDEN, keus = { tt:[L[0], L[3]], vt:[L[1]], vd:[L[2]], val:[L[3], L[2]], uitleg:[L[1], L[2], L[0]] };
     LEER.open({ titel:'De regels van de werkwoordspelling', hand:'eerst de regel, dan de race', lessen:(onderdeel && keus[onderdeel.id]) || L, verberg:[document.getElementById('scherm-start')], klaarTekst:'Nu de Werkwoordrace',
       intro:'Bij werkwoorden hoor je vaak niet hoe je ze schrijft: werkt en werkd klinken hetzelfde. Met een paar vaste stappen weet je het toch altijd zeker.',
       klaar:function(){ if (elStartBtn && !elStartBtn.disabled) elStartBtn.click(); } });
@@ -568,6 +632,7 @@ var RACE = { start:60, erbij:4, eraf:6 };
     elUit.className = 'uitleg';
     elUit.textContent = '';
     elRegel.innerHTML = '';
+    elKeuzes.classList.remove('hide'); if (elStap) elStap.classList.add('hide');
 
     if (isRace() || oneindig){
       huidig = trek();
@@ -575,6 +640,8 @@ var RACE = { start:60, erbij:4, eraf:6 };
       if (nr >= rij.length){ toonEinde(); return; }
       huidig = rij[nr];
     }
+
+    if (onderdeel.id === 'uitleg'){ toonUitleg(huidig); tekenTeller(); return; }
 
     /* De goede vorm staat in de opgaven meestal vooraan. Hier wisselen we de
        volgorde, anders leren leerlingen op plek te gokken in plaats van te denken. */
@@ -609,6 +676,136 @@ var RACE = { start:60, erbij:4, eraf:6 };
       document.getElementById('scoreLabel').textContent =
         'Zin ' + Math.min(nr + 1, rij.length) + ' van ' + rij.length + ' \u00b7 ' + goed + ' goed';
     }
+  }
+
+  /* ---------- leg het uit: het stappenplan ----------
+     Geen meerkeuze: je typt zelf het hele werkwoord, de stam, de letter die
+     telt en de goede vorm. Het onderwerp tik je aan in de zin. Alleen een
+     echte ja-of-nee-vraag (zit de letter in 't kofschip, komt er een t
+     achter) heeft twee knoppen. Een fout geeft een gerichte hint; na twee
+     keer fout zie je het antwoord en typ je het over. De opgave telt als
+     goed als je elke stap in een keer goed had. */
+  var KOF = ['t', 'k', 'f', 's', 'ch', 'p'];
+  function stappenVan(o){
+    var kof = KOF.indexOf(o.letter) >= 0, st = [], h = {};
+    if (o.s === 'tt'){
+      st.push({ type:'wijs', v:'Tik in de zin het onderwerp aan.', goed:o.onderwerp, u:'Het onderwerp is wie of wat iets doet: ' + o.onderwerp + '.', mis:'Vraag je af: wie of wat doet hier iets? Dat is het onderwerp.', z:'Het onderwerp is ' + o.onderwerp + '.' });
+      h = {}; h[o.hele] = 'Dat is het hele werkwoord. De stam is de ik-vorm.'; h[o.stam + 't'] = 'Zonder t: de stam is de ik-vorm.';
+      st.push({ type:'typ', v:'Wat is de stam? Typ de ik-vorm.', goed:o.stam, hint:h, mis:'De stam is de ik-vorm: ik ...', u:'De stam is de ik-vorm: ik ' + o.stam + '.', z:'De stam is ' + o.stam + '.' });
+      var metT = o.regel === 'hij' || o.regel === 'jijvoor';
+      var waarom = o.regel === 'ik' ? 'Bij ik schrijf je alleen de stam' : o.regel === 'jijachter' ? 'Jij staat achter het werkwoord: dan schrijf je alleen de stam' : o.regel === 'jijvoor' ? 'Jij staat vóór het werkwoord: dan schrijf je de stam + t' : 'Bij ' + o.onderwerp + ' schrijf je de stam + t';
+      st.push({ type:'twee', v:'Komt er bij ' + o.onderwerp + (o.regel === 'jijachter' ? ' (achter het werkwoord)' : '') + ' een t achter de stam?',
+        o:[{ t:'Ja, stam + t', goed:metT }, { t:'Nee, alleen de stam', goed:!metT }], u:waarom + '.', mis:'Kijk naar het onderwerp: ik krijgt alleen de stam, hij, zij, het en jij vóór het werkwoord krijgen stam + t, jij áchter het werkwoord alleen de stam.', z:waarom + ',' });
+      h = {}; h[o.fout.toLowerCase()] = 'Dat is de vorm uit de zin, en die was fout.';
+      st.push({ type:'typ', v:'Schrijf de goede vorm.', goed:o.goed, hint:h, mis:metT ? 'De stam + t.' : 'Alleen de stam.', u:'Juist.', z:'dus: ' + o.goed + '.' });
+      return st;
+    }
+    var vd = o.s === 'vd';
+    h = {}; h[o.goed.toLowerCase()] = vd ? 'Dat is het voltooid deelwoord. Het hele werkwoord eindigt op -en.' : 'Dat is de verleden tijd. Het hele werkwoord eindigt op -en.';
+    h[o.fout.toLowerCase()] = 'Dat is het woord uit de zin. Het hele werkwoord eindigt op -en: wij ...';
+    st.push({ type:'typ', v:'Wat is het hele werkwoord?', goed:o.hele, hint:h, mis:'Het hele werkwoord eindigt op -en, zoals in "wij ..." nu.', u:'Klopt: ' + o.hele + '. Daar begin je altijd mee.', z:'Het hele werkwoord is ' + o.hele + '.' });
+    h = {}; h[o.hele] = 'Dat is het hele werkwoord. De stam is de ik-vorm.'; h[o.stam + 't'] = 'Zonder t: de stam is de ik-vorm.';
+    if (o.val) h[o.stam.slice(0, -1) + o.letter] = 'Bijna: in de stam schrijf je een ' + o.val + ', want een woord eindigt nooit op een ' + o.letter + '.';
+    st.push({ type:'typ', v:'Wat is de stam? Typ de ik-vorm.', goed:o.stam, hint:h, mis:'De stam is de ik-vorm: ik ...', u:'De stam is de ik-vorm: ik ' + o.stam + '.', z:'De stam is ' + o.stam + '.' });
+    h = {}; if (o.val) h[o.val] = 'Dat is de valkuil. In de stam schrijf je een ' + o.val + ', maar in ' + o.hele + ' hoor je een ' + o.letter + '. Die telt.';
+    st.push({ type:'typ', v:'Welke letter telt voor ’t kofschip? Typ hem.', goed:o.letter, kort:true, hint:h, mis:o.val ? 'Kijk naar het hele werkwoord: ' + o.hele + '.' : 'De laatste letter van de stam.',
+      u:o.val ? 'Klopt: je kijkt naar het hele werkwoord. ' + o.hele + ' heeft een ' + o.letter + '.' : 'Klopt: de laatste letter van ' + o.stam + ' is een ' + o.letter + '.',
+      z:o.val ? 'Bij ' + o.hele + ' telt de ' + o.letter + ' uit het hele werkwoord.' : 'De laatste letter van de stam is een ' + o.letter + '.' });
+    st.push({ type:'twee', v:'Zit de ' + o.letter + ' in ’t kofschip?', o:[{ t:'Ja', goed:kof }, { t:'Nee', goed:!kof }],
+      u:'’t kofschip is t, k, f, s, ch, p. De ' + o.letter + (kof ? ' zit erin.' : ' zit er niet in.'), mis:'’t kofschip is t, k, f, s, ch, p.', z:kof ? 'Die zit in ’t kofschip,' : 'Die zit niet in ’t kofschip,' });
+    h = {}; h[o.fout.toLowerCase()] = 'Dat is de vorm uit de zin, en die was fout.';
+    st.push({ type:'typ', v:'Schrijf de goede vorm.', goed:o.goed, hint:h,
+      mis:vd ? 'Het voltooid deelwoord eindigt op een ' + (kof ? 't' : 'd') + (o.zonderGe ? ', en krijgt hier geen ge-.' : '.') : 'De verleden tijd krijgt -' + (kof ? 'te' : 'de') + (o.meer ? 'n, want het zijn er meer' : '') + '.', u:'Juist.',
+      z:vd ? 'dus het voltooid deelwoord eindigt op een ' + (kof ? 't' : 'd') + ': ' + o.goed + '.' : 'dus de verleden tijd krijgt -' + (kof ? 'te' : 'de') + (o.meer ? 'n' : '') + ': ' + o.goed + '.' });
+    return st;
+  }
+  var elStap = null;
+  function norm(t){ return String(t || '').trim().toLowerCase().replace(/[.,!?;:"“”]/g, '').replace(/’/g, "'"); }
+  function toonUitleg(o){
+    if (!elStap){ elStap = document.createElement('div'); elStap.id = 'stapvak'; elKeuzes.parentNode.insertBefore(elStap, elKeuzes.nextSibling); }
+    elKeuzes.innerHTML = ''; elKeuzes.classList.add('hide'); elStap.classList.remove('hide');
+    elZin.innerHTML = schoonW(o.zin).replace(schoonW(o.fout), '<span class="foutwoord">' + schoonW(o.fout) + '</span>');
+    var st = stappenVan(o), zinnen = [], perfect = true;
+    elStap.innerHTML = '<p class="stapopdracht">Leg stap voor stap uit waarom <b>' + schoonW(o.fout) + '</b> fout is' + (o.s === 'tt' ? '.' : ', met ’t kofschip.') + '</p>' +
+      '<ol class="wplan">' + st.map(function(s, i){ return '<li data-i="' + i + '">' + schoonW(s.v.replace(/ Typ.*$| Tik.*$/, '')) + '</li>'; }).join('') + '</ol>' +
+      st.map(function(s, i){ return '<section class="wstap' + (i ? ' hide' : '') + '" data-i="' + i + '"><h3><span>' + (i + 1) + '</span>' + schoonW(s.v) + '</h3><div class="wopts"></div><p class="wfb" role="status" aria-live="polite"></p></section>'; }).join('') +
+      '<div class="wantw"><span>jouw uitleg</span><p></p></div>';
+    var plan = elStap.querySelectorAll('.wplan li'), secs = elStap.querySelectorAll('.wstap'), antw = elStap.querySelector('.wantw p');
+    function zetPlan(i){ Array.prototype.forEach.call(plan, function(li, n){ li.className = n < i ? 'af' : n === i ? 'nu' : ''; }); }
+    function zetAntw(){ antw.innerHTML = ['“' + schoonW(o.fout) + '” is fout.'].concat(zinnen.map(schoonW)).map(function(t, i, a){ return '<span' + (i === a.length - 1 && i ? ' class="nieuw"' : '') + '>' + t + '</span>'; }).join(' '); }
+    zetPlan(0); zetAntw();
+    st.forEach(function(s, i){
+      var sec = secs[i], vak = sec.querySelector('.wopts'), fb = sec.querySelector('.wfb'), fout = 0;
+      function goedGedaan(){
+        sec.dataset.klaar = '1';
+        Array.prototype.forEach.call(sec.querySelectorAll('button,input'), function(c){ c.disabled = true; });
+        fb.className = 'wfb ja'; fb.textContent = s.u;
+        if (s.z) zinnen.push(s.z);
+        zetAntw();
+        if (i + 1 < st.length){
+          secs[i + 1].classList.remove('hide'); zetPlan(i + 1);
+          var inv = secs[i + 1].querySelector('input'); if (inv) try { inv.focus({ preventScroll:true }); } catch (e){}
+          if (window.SPEL && SPEL.inBeeld) SPEL.inBeeld(secs[i + 1]);
+        } else { zetPlan(st.length); klaarUitleg(o, perfect); }
+      }
+      function mis(tekst){
+        if (!fout) perfect = false;
+        fout++;
+        fb.className = 'wfb nee';
+        fb.textContent = tekst + (fout >= 2 && s.type === 'typ' ? ' Het is: ' + s.goed + '. Typ het over.' : '');
+      }
+      if (s.type === 'typ'){
+        vak.className = 'wopts typrij';
+        vak.innerHTML = '<input class="wtyp' + (s.kort ? ' kort' : '') + '" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="' + schoonW(s.v) + '"><button type="button" class="keuze wkeuze wcheck">Controleer</button>';
+        var inp = vak.querySelector('input'), knop = vak.querySelector('button');
+        var check = function(){
+          if (sec.dataset.klaar || bezig) return;
+          var w = norm(inp.value); if (!w) return;
+          if (w === norm(s.goed)){ inp.classList.add('ja'); goedGedaan(); return; }
+          inp.classList.remove('ja'); mis((s.hint && s.hint[w]) || s.mis);
+          inp.select();
+        };
+        knop.addEventListener('click', check);
+        inp.addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); e.stopPropagation(); check(); } });
+      } else if (s.type === 'twee'){
+        s.o.forEach(function(x){
+          var b = document.createElement('button');
+          b.type = 'button'; b.className = 'keuze wkeuze'; b.textContent = x.t;
+          b.addEventListener('click', function(){
+            if (sec.dataset.klaar || bezig) return;
+            if (x.goed){ b.classList.add('ja'); goedGedaan(); } else { b.classList.add('nee'); b.disabled = true; mis(s.mis); }
+          });
+          vak.appendChild(b);
+        });
+      } else {
+        /* aanwijzen: de woorden van de zin als knopjes */
+        vak.className = 'wopts woorden';
+        o.zin.split(/\s+/).forEach(function(woord){
+          var b = document.createElement('button');
+          b.type = 'button'; b.className = 'wwoord'; b.textContent = woord;
+          b.addEventListener('click', function(){
+            if (sec.dataset.klaar || bezig) return;
+            if (norm(woord) === norm(s.goed)){ b.classList.add('ja'); goedGedaan(); } else { b.classList.add('nee'); mis(s.mis); }
+          });
+          vak.appendChild(b);
+        });
+      }
+    });
+    var eerste = secs[0].querySelector('input'); if (eerste) try { eerste.focus({ preventScroll:true }); } catch (e){}
+  }
+  function schoonW(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+  function klaarUitleg(o, ok){
+    bezig = true; totaal++;
+    if (window.KLAS && KLAS.tel) KLAS.tel(od, 'werkwoordspelling uitleggen', ok);
+    if (ok){ goed++; reeks++; besteReeks = Math.max(besteReeks, reeks); } else { reeks = 0; fouten.push({ zin:o.zin.replace(o.fout, o.goed), gekozen:o.fout, regel:o.s === 'tt' ? 'onderwerp en stam' : '’t kofschip' }); }
+    var gat = elZin.querySelector('.foutwoord'); if (gat){ gat.textContent = o.goed; gat.className = 'gat ja'; }
+    elUit.className = 'uitleg ' + (ok ? 'ja' : 'nee');
+    elUit.textContent = ok ? 'Elke stap in een keer goed. Zo schrijf je het op een toets op.' : 'Klaar. Een paar stappen gingen niet in een keer goed: lees je uitleg nog eens rustig.';
+    tekenTeller();
+    var rijV = document.getElementById('volgendeRij'), knopV = document.getElementById('volgendeBtn');
+    rijV.hidden = false;
+    try { knopV.focus({ preventScroll:true }); } catch (e){ knopV.focus(); }
+    if (window.SPEL && SPEL.inBeeld) SPEL.inBeeld(rijV);
   }
 
   /* ---------- antwoord ---------- */
