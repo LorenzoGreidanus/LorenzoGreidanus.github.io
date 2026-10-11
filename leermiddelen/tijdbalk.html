@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="/manifest.json">
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>
+(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();
+</script>
+<title>De tijdbalk van de klas &middot; meneer Greidanus</title>
+<meta name="description" content="Iedereen krijgt een gebeurtenis en legt die in het goede tijdvak. Op het bord groeit de tijdbalk van de hele klas; je mag wisselen tot de kaarten omgaan. Drie rondes, ongeveer tien minuten.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="De tijdbalk van de klas">
+<meta property="og:description" content="Iedereen krijgt een gebeurtenis en legt die in het goede tijdvak. Op het bord groeit de tijdbalk van de hele klas; je mag wisselen tot de kaarten omgaan. Drie rondes, ongeveer tien minuten.">
+<meta property="og:url" content="https://meneergreidanus.nl/leermiddelen/tijdbalk.html">
+<meta property="og:image" content="https://meneergreidanus.nl/icoon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="stylesheet" href="spel.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M52.7 12.8 C76.7 13.2 89.8 29.7 88.7 52 C87.5 75.9 72.5 94.6 49.4 93.5 C25.5 92.3 8 75.6 10.8 51.9 C13.6 28.1 29.5 12.5 52.7 12.8Z' fill='%235b6480'/><g transform='translate(50 51) scale(2.2) translate(-12 -12)' fill='none' stroke='%2314224C' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'><path d='M3 12h18'/><path d='M6 9v6M10 10v4M14 9v6M18 10v4'/></g></svg>">
+<style>
+:root{--crab:#F26749;--amber:#EA9836;--ocean:#204ECF;--vista:#83A5F2;--sand:#FCDED6;--room:#FBF6F1;
+  --ink:#14224C;--muted:#5b6480;--kaart:#fff;--kaart2:#f4efe8;--rand:rgba(20,34,76,.10);--rand2:rgba(20,34,76,.16);
+  --goed:#1f6b41;--goed-bg:#e7f3ec;--fout:#a8371f;--fout-bg:#fdecea;--hand:#D9522F;--link:#204ECF;--schaduw:0 10px 26px rgba(20,34,76,.08);--ease:cubic-bezier(.22,.61,.36,1)}
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--room:#0F1A3D;--ink:#F3EFE9;--muted:#B3BBD0;--kaart:#182652;--kaart2:#1f2f5e;--rand:rgba(243,239,233,.12);--rand2:rgba(243,239,233,.2);--goed:#8fd8ac;--goed-bg:#1f3a2c;--fout:#f0a090;--fout-bg:#3a1f1b;--sand:#3a2f3a;--schaduw:0 14px 34px rgba(0,0,0,.35);--hand:#F26749;--link:#9FB8FF}
+}
+:root[data-theme="dark"]{--room:#0F1A3D;--ink:#F3EFE9;--muted:#B3BBD0;--kaart:#182652;--kaart2:#1f2f5e;--rand:rgba(243,239,233,.12);--rand2:rgba(243,239,233,.2);--goed:#8fd8ac;--goed-bg:#1f3a2c;--fout:#f0a090;--fout-bg:#3a1f1b;--sand:#3a2f3a;--schaduw:0 14px 34px rgba(0,0,0,.35);--hand:#F26749;--link:#9FB8FF;color-scheme:dark}
+:root[data-theme="light"]{color-scheme:light}
+*{box-sizing:border-box}
+/* de site belooft tikdoelen van 44 beeldpunten; het vak groeit, de tekst niet */
+.mark{min-height:44px}
+footer a{display:inline-flex;align-items:center;min-height:44px;padding:0 2px}
+/* geselecteerde tekst: zand met donkerblauw, in beide standen hetzelfde */
+::selection{background:#FCDED6;color:#14224C}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100svh;background:var(--room);color:var(--ink);line-height:1.5;font-family:'Poppins',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;font-weight:600;line-height:1.14;letter-spacing:-.02em}
+p{margin:0}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;touch-action:manipulation}
+.hide{display:none !important}
+.eindtitel{font-size:clamp(1.7rem,5vw,2.4rem)}
+.eyebrow{font-size:.72rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.hand{font-family:'Caveat',cursive;font-weight:600;color:var(--hand)}
+.wrap{width:min(100% - 24px,900px);margin-inline:auto}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;flex-wrap:wrap}
+/* ---------------------------------------------------------------------------
+   Het logo beweegt als je erover gaat: het vakje kantelt en krijgt een losse
+   vorm, de letters tuimelen een rondje om, er springt een stip naast en de
+   naam krijgt een streep. Zo zie je dat het logo de weg terug is.
+   --------------------------------------------------------------------------- */
+.mark{position:relative;display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;font-weight:600}
+.lgmark{position:relative;display:inline-flex;flex:none}
+.mark .lgmark i{width:34px;height:34px;border-radius:10px;background:#83A5F2;color:#14224C;display:flex;align-items:center;justify-content:center;gap:1px;
+  font-style:normal;font-size:.9rem;
+  transition:transform 420ms cubic-bezier(.34,1.56,.64,1),border-radius 420ms cubic-bezier(.34,1.56,.64,1),box-shadow 300ms ease}
+.lgdot{position:absolute;right:-3px;top:-3px;width:10px;height:10px;border-radius:50%;background:var(--crab);transform:scale(0);
+  transition:transform 380ms cubic-bezier(.34,1.56,.64,1) 120ms}
+.mark:hover .lgmark i,.mark:focus-visible .lgmark i{
+  border-radius:58% 42% 47% 53% / 44% 52% 48% 56%;transform:scale(1.08) rotate(-6deg);box-shadow:0 10px 18px rgba(32,78,207,.24)}
+.mark:hover .lgdot,.mark:focus-visible .lgdot{transform:scale(1)}
+/* alleen de twee letters tuimelen, niet het vakje eromheen */
+.mark:hover .lgmark i span,.mark:focus-visible .lgmark i span{animation:lgtuimel 620ms cubic-bezier(.45,0,.25,1) 1 both}
+.mark:hover .lgmark i span:nth-child(2),.mark:focus-visible .lgmark i span:nth-child(2){animation-delay:90ms}
+@keyframes lgtuimel{0%{transform:rotate(0deg) scale(1)}55%{transform:rotate(230deg) scale(.86)}100%{transform:rotate(360deg) scale(1)}}
+.mark .lgnaam{display:inline-flex;flex-direction:column;gap:2px}
+.mark .lgstreep{display:block;height:3px;width:0;border-radius:999px;background:var(--crab);
+  transition:width 420ms cubic-bezier(.22,1,.36,1) 60ms}
+.mark:hover .lgstreep,.mark:focus-visible .lgstreep{width:100%}
+/* Zweeft naast het logo in plaats van ruimte op te eisen: anders houdt een
+   lange zin de kopbalk uit elkaar terwijl hij onzichtbaar is. */
+.lghoi{position:absolute;left:calc(100% + 8px);top:50%;font-family:'Caveat',cursive;font-size:1.35rem;font-weight:700;color:var(--hand,#D9522F);
+  opacity:0;transform:translateY(-42%) rotate(3deg);transform-origin:left center;
+  transition:opacity 300ms ease 160ms,transform 420ms cubic-bezier(.34,1.56,.64,1) 160ms;pointer-events:none;white-space:nowrap}
+.mark:hover .lghoi,.mark:focus-visible .lghoi{opacity:1;transform:translateY(-58%) rotate(-6deg)}
+@media(max-width:900px){.lghoi{display:none}}
+@media(prefers-reduced-motion:reduce){.lgmark i,.lgdot,.lgmark span,.lgstreep,.lghoi{transition:none !important;animation:none !important}}
+.hd-right{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
+.linkbtn{background:var(--kaart);border:1.5px solid var(--rand2);border-radius:999px;color:var(--ink);text-decoration:none;font-weight:600;font-size:.82rem;padding:8px 14px;min-height:44px;display:inline-flex;align-items:center}
+.themaknop{width:44px;height:44px;border-radius:999px;border:1.5px solid var(--rand2);background:var(--kaart);color:var(--ink);display:inline-grid;place-items:center;padding:0}
+.themaknop svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.themaknop .zon{display:none}
+:root[data-theme="dark"] .themaknop .maan{display:none}
+:root[data-theme="dark"] .themaknop .zon{display:block}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .themaknop .maan{display:none}:root:not([data-theme="light"]) .themaknop .zon{display:block}}
+.kaart{background:var(--kaart);border:1px solid var(--rand);border-radius:20px;padding:20px;box-shadow:var(--schaduw)}
+.knop{border:none;border-radius:14px;padding:12px 18px;font-weight:600;background:var(--ocean);color:#fff;box-shadow:0 6px 0 rgba(20,34,76,.14);transition:transform .12s var(--ease)}
+.knop:active{transform:translateY(3px)}
+.knop:disabled{opacity:.5;cursor:default;box-shadow:none}
+.knop.crab{background:var(--crab);color:#14224C}
+.knop.groot{font-size:1.2rem;padding:16px 26px;border-radius:18px}
+.knop.stil{background:var(--kaart);color:var(--ink);border:1.5px solid var(--rand2);box-shadow:none}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button{border:1.5px solid var(--rand2);background:var(--kaart);border-radius:999px;padding:8px 13px;font-weight:500;font-size:.92rem;min-height:44px}
+.chips button.on{background:var(--ocean);color:#fff;border-color:var(--ocean)}
+.stap{margin-top:14px}
+.stap>b{display:block;margin-bottom:6px}
+.tip{color:var(--muted);font-size:.9rem}
+.lead{color:var(--muted);max-width:62ch;margin-top:8px}
+/* het tafereel boven aan het startscherm: een plat plaatje in de kleuren van
+   het spel, dat in de donkere stand zijn eigen tinten krijgt */
+.tafereel{position:relative;margin:20px 0 4px;border-radius:22px;overflow:hidden;border:1px solid var(--rand);box-shadow:var(--schaduw);background:var(--sc-lucht)}
+.tafereel svg{display:block;width:100%;height:auto}
+:root{--sc-lucht:#FCEFE4;--sc-grond:#F3E3D3;--sc-ink:#14224C;--sc-licht:#fff;--sc-zacht:#E6DCF2;--sc-diep:#dcd0c2}
+:root[data-theme="dark"]{--sc-lucht:#16224C;--sc-grond:#1d2c5e;--sc-ink:#F3EFE9;--sc-licht:#2a3a72;--sc-zacht:#33305e;--sc-diep:#111c40}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--sc-lucht:#16224C;--sc-grond:#1d2c5e;--sc-ink:#F3EFE9;--sc-licht:#2a3a72;--sc-zacht:#33305e;--sc-diep:#111c40}}
+@media(max-width:520px){.tafereel{border-radius:18px;margin-top:16px}}
+/* op een telefoon valt het tafereel op het startscherm weg, zodat de knop voor de klas in beeld staat */
+@media(max-width:560px){#scherm-start .tafereel{display:none}}
+.uitleg{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:18px 0}
+.uitleg div{background:var(--kaart);border:1px solid var(--rand);border-radius:16px;padding:14px}
+.uitleg i{width:26px;height:26px;border-radius:9px;display:grid;place-items:center;font-style:normal;font-weight:600;margin-bottom:6px}
+.uitleg b{display:block;margin-bottom:4px}
+.uitleg span{font-size:.88rem;color:var(--muted)}
+/* de balk met de tellers */
+.balkje{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px;margin-bottom:12px}
+.meter{background:var(--kaart);border:1px solid var(--rand);border-radius:14px;padding:10px 12px;text-align:center}
+.meter b{display:block;font-size:1.5rem;line-height:1.1;font-variant-numeric:tabular-nums}
+.meter span{font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.voortbalk{height:8px;border-radius:999px;background:var(--rand);overflow:hidden;margin-bottom:14px}
+.voortbalk i{display:block;height:100%;width:100%;background:#83A5F2;border-radius:999px;transform:scaleX(0);transform-origin:left center;transition:transform .3s var(--ease)}
+.opdrachtkop{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.terugkoppeling{margin-top:12px;font-size:.95rem;min-height:1.4em;border-radius:14px}
+.terugkoppeling.goed{background:var(--goed-bg);color:var(--goed);padding:12px 14px;font-weight:600}
+.terugkoppeling.fout{background:var(--fout-bg);color:var(--fout);padding:12px 14px;font-weight:600}
+.terugkoppeling .regel{display:block;font-weight:400;color:var(--ink);margin-top:4px;font-size:.9rem}
+.knoprij{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+/* einde */
+.cijfers{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:14px 0}
+.cijfers div{background:var(--kaart2);border-radius:14px;padding:12px;text-align:center}
+.cijfers b{display:block;font-size:1.6rem;line-height:1.1}
+.cijfers span{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.fouten{margin-top:14px}
+.fouten div{border-top:1px solid var(--rand);padding:9px 0;font-size:.92rem}
+.fouten b{display:block}
+.fouten span{color:var(--muted)}
+.klasnoot{margin-top:8px;font-size:.9rem;color:var(--muted)}
+footer{padding:26px 0;color:var(--muted);font-size:.86rem}
+@media(prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+/* zichtbare focus voor wie met het toetsenbord werkt */
+:focus-visible{outline:3px solid var(--focusring,#B4701A);outline-offset:3px}
+/* ---------- de tijdbalk ----------
+   Tien vakken naast elkaar, elk in de kleur van zijn tijdvak. De kaarten
+   zijn kleine kaartjes met een gezicht; goed wordt groen, fout krijgt een
+   rode rand en schuift naar zijn plek. */
+.spelkop{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.spelkop h2{font-size:clamp(1.4rem,3vw,2rem)}
+.spelkop .lead{margin-top:4px}
+.stand{font-size:.9rem;color:var(--muted);font-weight:600}
+.balk{display:grid;grid-template-columns:repeat(10,minmax(118px,1fr));gap:6px;overflow-x:auto;padding:4px 2px 12px;scroll-snap-type:x proximity}
+.vak{display:flex;flex-direction:column;gap:6px;min-width:0;background:color-mix(in srgb,var(--tvk) 9%,var(--kaart));border-radius:16px;padding:6px;border-top:5px solid var(--tvk);min-height:260px;scroll-snap-align:start}
+.vkop{display:grid;gap:1px;text-align:left;border:0;background:transparent;padding:4px 4px 6px;border-radius:10px;color:var(--ink);cursor:default}
+body.handen .vkop{cursor:pointer;background:color-mix(in srgb,var(--tvk) 16%,transparent)}
+body.handen .vkop:hover{background:color-mix(in srgb,var(--tvk) 30%,transparent)}
+.vkop b{width:26px;height:26px;border-radius:9px;display:grid;place-items:center;background:var(--tvk);color:#fff;font-size:.85rem}
+.vkop span{font-weight:700;font-size:.8rem;line-height:1.2;margin-top:4px}
+.vkop small{font-size:.7rem;color:var(--muted)}
+.vakkaarten{display:flex;flex-direction:column;gap:6px}
+.tk{position:relative;display:grid;grid-template-columns:auto 1fr;gap:6px;align-items:start;background:var(--kaart);border:1.5px solid var(--rand2);border-radius:12px;padding:6px 7px;font-size:.76rem;line-height:1.3;
+  box-shadow:0 2px 0 rgba(20,34,76,.06);transition:transform .7s cubic-bezier(.34,1.2,.64,1),border-color .4s,background .4s}
+.tk .tkg svg{display:block;width:26px;height:26px}
+.tk .tkt{min-width:0}
+.tk .tkj{grid-column:1 / -1;font-weight:800;font-size:.74rem;font-variant-numeric:tabular-nums}
+.tk .tkj s{color:var(--fout);font-weight:700;margin-left:4px}
+.tk.goed{border-color:#1f7a4a;background:var(--goed-bg)}
+.tk.fout{border-color:#c0442c;background:var(--fout-bg)}
+.tk.gekozen{box-shadow:0 0 0 3px var(--ocean)}
+body.handen .tk{cursor:pointer}
+.stapel{margin-bottom:12px}
+.stapelkaarten{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.stapelkaarten .tk{max-width:240px}
+.uitslag{margin-top:14px;border-radius:16px;padding:14px;background:var(--kaart2)}
+.uitslag>b{display:block;font-size:1.2rem;margin:2px 0}
+.uitslag .fouten{margin-top:8px}
+.uitslag .fouten div{border-top:1px solid var(--rand);padding:8px 0;font-size:.9rem}
+.uitslag .fouten b{display:block}
+.uitslag .fouten span{color:var(--muted)}
+.eindbalk{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:14px}
+.eindvak{background:var(--kaart);border:1px solid var(--rand);border-top:5px solid var(--tvk);border-radius:16px;padding:12px 14px}
+.eindvak ol{margin:8px 0 0;padding:0;list-style:none;display:grid;gap:6px}
+.eindvak li{font-size:.86rem;line-height:1.35;padding-left:10px;border-left:3px solid #1f7a4a}
+.eindvak li.fout{border-left-color:#c0442c}
+.eindvak li span{font-weight:800;font-variant-numeric:tabular-nums}
+.vragen{margin-top:16px}
+.vragen div{border-top:1px solid var(--rand);padding:9px 0;font-size:.92rem}
+.vragen b{display:block}
+.vragen span{color:var(--muted)}
+body.bord .tk{font-size:clamp(.78rem,.85vw,1rem)}
+body.bord .vkop span{font-size:clamp(.8rem,.9vw,1.05rem)}
+body.bord .uitslag .fouten div{font-size:clamp(.95rem,1.05vw,1.2rem)}
+@media(prefers-reduced-motion:no-preference){
+  @keyframes tkIn{from{opacity:0;transform:translateY(-8px) scale(.96)}to{opacity:1;transform:none}}
+  .vakkaarten .tk{animation:tkIn .35s cubic-bezier(.22,.61,.36,1) both}
+}
+.tk .tkt{overflow-wrap:anywhere;hyphens:auto}
+/* ---------------------------------------------------------------------------
+   De knop voor licht en donker draait een rondje, het plaatje krimpt halverwege
+   weg zodat de maan ongemerkt een zon wordt, en er gaat een ring naar buiten in
+   de kleur van waar je heen gaat. De pagina verkleurt mee in plaats van te
+   knipperen. Wie beweging heeft uitgezet krijgt de oude, directe wissel.
+   --------------------------------------------------------------------------- */
+.themaknop{position:relative}
+.themaknop.draait{animation:themadraai .62s cubic-bezier(.34,1.56,.64,1)}
+.themaknop.draait svg{animation:themaplaatje .62s cubic-bezier(.34,1.56,.64,1)}
+.themaknop.draait::after{content:"";position:absolute;inset:-3px;border-radius:999px;
+  border:3px solid #EA9836;animation:themaring .62s cubic-bezier(.2,.7,.3,1) forwards;pointer-events:none}
+:root[data-theme="dark"] .themaknop.draait::after{border-color:#83A5F2}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .themaknop.draait::after{border-color:#83A5F2}}
+@keyframes themadraai{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@keyframes themaplaatje{0%{transform:scale(1);opacity:1}42%{transform:scale(.2);opacity:.15}100%{transform:scale(1);opacity:1}}
+@keyframes themaring{from{transform:scale(.85);opacity:1}to{transform:scale(2.4);opacity:0}}
+/* ---------- kop: de code en de knop voor het digibord ---------- */
+.kopcode{display:inline-flex;align-items:baseline;gap:8px;font-size:.72rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.kopcode b{font-size:1.2rem;letter-spacing:.2em;color:var(--ink)}
+@media(max-width:700px){.bordknop{display:none}}
+/* Stoppen, eerste tik: de knop vraagt of je het zeker weet */
+.linkbtn.zeker{border-color:var(--fout);color:var(--fout)}
+/* ---------- de bordstand (verbinding.js) ----------
+   Vanzelf op een breed scherm, beeldvullend met de knop Digibord: breder,
+   en letters die je achter in het lokaal kunt lezen. */
+body.bord .wrap{width:min(100% - 48px,1500px)}
+body.bord .lead{font-size:clamp(1.05rem,1.4vw,1.5rem);max-width:none}
+body.bord .opdrachtkop{font-size:clamp(.85rem,1vw,1.1rem)}
+body.bord h2{font-size:clamp(1.8rem,2.6vw,3rem)}
+body.bord .tip{font-size:clamp(.95rem,1.2vw,1.3rem)}
+body.bord .knop{font-size:clamp(1rem,1.2vw,1.35rem)}
+body.bord .logvak{font-size:clamp(.95rem,1.1vw,1.2rem)}
+:root.themawisselt body{transition:background-color .34s ease,color .34s ease}
+@media(prefers-reduced-motion:reduce){
+  .themaknop.draait,.themaknop.draait svg,.themaknop.draait::after{animation:none}
+  :root.themawisselt body{transition:none}
+}
+</style>
+<script src="/vangnet.js" defer></script>
+<script src="wakker.js"></script>
+<script src="/leermiddelen/merk.js" defer></script>
+</head>
+<body>
+<header class="wrap">
+  <a class="mark" href="index.html"><span class="lgmark"><i class="lgblob" style="background:none;box-shadow:none;border:0;border-radius:0;padding:0"><svg class="ng teken" viewBox="0 0 256 256" width="34" height="34" aria-hidden="true" focusable="false" style="width:100%;height:100%;overflow:visible;transform:scale(1.3)"><style>.ng .ngr{stroke:#204ECF}.ng .ngv{stroke:#F26749}:root[data-theme="dark"] .ng .ngr{stroke:#83A5F2}@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .ng .ngr{stroke:#83A5F2}}.ng.teken .ngr{stroke-dasharray:100;animation:ng-ring .6s cubic-bezier(.6,0,.3,1) .15s both}.ng.teken .ngv{stroke-dasharray:100;animation:ng-vink .34s cubic-bezier(.3,0,.2,1) .67s both}@keyframes ng-ring{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}@keyframes ng-vink{from{stroke-dashoffset:100;opacity:0}1%{opacity:1}to{stroke-dashoffset:0;opacity:1}}@media(prefers-reduced-motion:reduce){.ng.teken .ngr,.ng.teken .ngv{animation:none}}</style><g transform="translate(8 0)" fill="none" stroke-width="32"><path class="ngr" pathLength="100" d="M163.3 123A50 50 0 1 0 76.7 73A50 50 0 1 0 163.3 123Z"/><path class="ngv" pathLength="100" d="M163.3 123L114.2 208L82.2 176" stroke-linecap="round" stroke-linejoin="round"/></g></svg></i></span><span class="lgnaam"><span>De tijdbalk</span><span class="lgstreep"></span></span><span class="lghoi">alle spellen</span></a>
+  <span class="hd-right">
+    <span class="kopcode hide" id="kopCode">code <b id="kopCodeB"></b></span>
+    <a class="linkbtn" href="index.html">Leeromgeving</a>
+    <button class="linkbtn bordknop hide" type="button" aria-pressed="false">Digibord</button>
+    <button class="linkbtn hide" id="stopBtn" type="button">Stoppen</button>
+    <button class="themaknop" id="themaknop" type="button" aria-label="Schakel naar donker" title="Donker of licht">
+      <svg class="maan" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+      <svg class="zon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>
+    </button>
+  </span>
+</header>
+
+<main class="wrap">
+  <section id="scherm-start">
+    <p class="hand" style="font-size:1.6rem">tien tijdvakken, één klas</p>
+    <h1>De tijdbalk van de klas</h1>
+    <p class="lead">Iedereen krijgt een gebeurtenis op de telefoon en legt die in het goede tijdvak. Op het bord groeit de tijdbalk van de hele klas. Klopt het geheel? Je mag wisselen tot de kaarten worden omgedraaid. Drie rondes, ongeveer tien minuten.</p>
+    <div class="tafereel"><svg viewBox="0 0 800 250" role="img" aria-label="Een tijdbalk met tien gekleurde vakken en kaartjes met gezichtjes erin">
+  <rect width="800" height="250" fill="var(--sc-lucht)"/>
+  <g font-family="Poppins,Arial,sans-serif" font-weight="700" font-size="13" fill="#fff" text-anchor="middle">
+    <g transform="translate(40 40)"><rect width="66" height="170" rx="12" fill="#8a6a45" opacity=".18"/><rect width="66" height="8" rx="4" fill="#8a6a45"/><circle cx="33" cy="28" r="12" fill="#8a6a45"/><text x="33" y="33">1</text></g>
+    <g transform="translate(112 40)"><rect width="66" height="170" rx="12" fill="#a0455f" opacity=".18"/><rect width="66" height="8" rx="4" fill="#a0455f"/><circle cx="33" cy="28" r="12" fill="#a0455f"/><text x="33" y="33">2</text></g>
+    <g transform="translate(184 40)"><rect width="66" height="170" rx="12" fill="#6b4f8a" opacity=".18"/><rect width="66" height="8" rx="4" fill="#6b4f8a"/><circle cx="33" cy="28" r="12" fill="#6b4f8a"/><text x="33" y="33">3</text></g>
+    <g transform="translate(256 40)"><rect width="66" height="170" rx="12" fill="#2f6f8f" opacity=".18"/><rect width="66" height="8" rx="4" fill="#2f6f8f"/><circle cx="33" cy="28" r="12" fill="#2f6f8f"/><text x="33" y="33">4</text></g>
+    <g transform="translate(328 40)"><rect width="66" height="170" rx="12" fill="#2f8a55" opacity=".18"/><rect width="66" height="8" rx="4" fill="#2f8a55"/><circle cx="33" cy="28" r="12" fill="#2f8a55"/><text x="33" y="33">5</text></g>
+    <g transform="translate(400 40)"><rect width="66" height="170" rx="12" fill="#E1A93A" opacity=".2"/><rect width="66" height="8" rx="4" fill="#E1A93A"/><circle cx="33" cy="28" r="12" fill="#E1A93A"/><text x="33" y="33" fill="#14224C">6</text></g>
+    <g transform="translate(472 40)"><rect width="66" height="170" rx="12" fill="#c0442c" opacity=".18"/><rect width="66" height="8" rx="4" fill="#c0442c"/><circle cx="33" cy="28" r="12" fill="#c0442c"/><text x="33" y="33">7</text></g>
+    <g transform="translate(544 40)"><rect width="66" height="170" rx="12" fill="#5b6480" opacity=".18"/><rect width="66" height="8" rx="4" fill="#5b6480"/><circle cx="33" cy="28" r="12" fill="#5b6480"/><text x="33" y="33">8</text></g>
+    <g transform="translate(616 40)"><rect width="66" height="170" rx="12" fill="#204ECF" opacity=".18"/><rect width="66" height="8" rx="4" fill="#204ECF"/><circle cx="33" cy="28" r="12" fill="#204ECF"/><text x="33" y="33">9</text></g>
+    <g transform="translate(688 40)"><rect width="66" height="170" rx="12" fill="#9A55B8" opacity=".18"/><rect width="66" height="8" rx="4" fill="#9A55B8"/><circle cx="33" cy="28" r="12" fill="#9A55B8"/><text x="33" y="33">10</text></g>
+  </g>
+  <g>
+    <g transform="translate(46 96)"><rect width="54" height="34" rx="7" fill="var(--sc-licht)" stroke="#1f7a4a" stroke-width="2"/><g transform="translate(14 17)"><circle r="10" fill="#8a6a45"/><g data-gz="tijdbalk een" data-st="blij" transform="scale(0.18)"></g></g><rect x="28" y="11" width="20" height="4" rx="2" fill="var(--sc-ink)" opacity=".3"/><rect x="28" y="19" width="14" height="4" rx="2" fill="var(--sc-ink)" opacity=".3"/></g>
+    <g transform="translate(190 140)"><rect width="54" height="34" rx="7" fill="var(--sc-licht)" stroke="#1f7a4a" stroke-width="2"/><g transform="translate(14 17)"><circle r="10" fill="#6b4f8a"/><g data-gz="tijdbalk twee" transform="scale(0.18)"></g></g><rect x="28" y="11" width="20" height="4" rx="2" fill="var(--sc-ink)" opacity=".3"/><rect x="28" y="19" width="14" height="4" rx="2" fill="var(--sc-ink)" opacity=".3"/></g>
+    <g transform="translate(406 96)"><rect width="54" height="34" rx="7" fill="var(--sc-licht)" stroke="#1f7a4a" stroke-width="2"/><g transform="translate(14 17)"><circle r="10" fill="#E1A93A"/><g data-gz="tijdbalk drie" data-st="blij" transform="scale(0.18)"></g></g><rect x="28" y="11" width="20" height="4" rx="2" fill="var(--sc-ink)" opacity=".3"/><rect x="28" y="19" width="14" height="4" rx="2" fill="var(--sc-ink)" opacity=".3"/></g>
+    <g transform="translate(550 140)"><rect width="54" height="34" rx="7" fill="var(--sc-licht)" stroke="#c0442c" stroke-width="2"/><g transform="translate(14 17)"><circle r="10" fill="#5b6480"/><g data-gz="tijdbalk vier" data-st="oeps" transform="scale(0.18)"></g></g><rect x="28" y="11" width="20" height="4" rx="2" fill="var(--sc-ink)" opacity=".3"/><rect x="28" y="19" width="14" height="4" rx="2" fill="var(--sc-ink)" opacity=".3"/></g>
+    <path d="M604 157C624 140 636 120 650 112" fill="none" stroke="#c0442c" stroke-width="2.5" stroke-dasharray="4 5" stroke-linecap="round"/>
+    <path d="M644 108l9 2-3 8" fill="none" stroke="#c0442c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <g transform="translate(694 96)"><rect width="54" height="34" rx="7" fill="var(--sc-licht)" stroke="#1f7a4a" stroke-width="2"/><g transform="translate(14 17)"><circle r="10" fill="#9A55B8"/><g data-gz="tijdbalk vijf" transform="scale(0.18)"></g></g><rect x="28" y="11" width="20" height="4" rx="2" fill="var(--sc-ink)" opacity=".3"/><rect x="28" y="19" width="14" height="4" rx="2" fill="var(--sc-ink)" opacity=".3"/></g>
+  </g>
+</svg></div>
+    <script>/* de gezichtjes in het startplaatje komen uit avatar.js */document.querySelectorAll('.tafereel [data-gz]').forEach(function(g){ g.innerHTML = AVATAR.inhoud(g.getAttribute('data-gz'), '', g.getAttribute('data-st') || ''); });</script>
+    <div class="uitleg">
+      <div><i style="background:var(--crab);color:#14224C">1</i><b>Maak een code</b><span>Op het digibord. Leerlingen doen mee met een code. Zonder apparaten kan ook: de docent legt de kaarten op aanwijzen van de klas.</span></div>
+      <div><i style="background:var(--amber);color:#14224C">2</i><b>Leg je kaart</b><span>Iedereen krijgt een gebeurtenis en kiest het tijdvak. Je ziet de kaarten van de anderen en mag wisselen.</span></div>
+      <div><i style="background:var(--ocean);color:#fff">3</i><b>Omdraaien</b><span>De kaarten draaien om, foute kaarten schuiven naar hun plek, en elke kaart krijgt zijn jaartal.</span></div>
+    </div>
+    <div class="kaart">
+      <div class="stap"><b>Hoe speel je het</b><div class="chips" id="modus">
+        <button type="button" data-m="telefoon" class="on">Op telefoon of laptop</button>
+        <button type="button" data-m="handen">Aan het bord, zonder telefoons</button>
+      </div></div>
+      <div class="stap" id="telefoonvak">
+        <button class="knop" id="openBtn" type="button">Maak een code voor de klas</button>
+        <p class="tip" id="kamerFout" style="color:var(--fout);margin-top:6px"></p>
+        <div id="lobbyvak" class="hide"></div>
+      </div>
+      <div class="stap"><button class="knop crab groot" id="startBtn" type="button">Deel de kaarten uit</button></div>
+    </div>
+  </section>
+
+  <section id="scherm-spel" class="hide">
+    <div class="spelkop"><div><p class="opdrachtkop" id="rondeKop"></p><h2>Leg elke kaart in het goede tijdvak</h2><p class="lead" id="rondeTekst"></p></div><p class="stand" id="stand"></p></div>
+    <div class="stapel" id="stapel"></div>
+    <div class="balk" id="balk"></div>
+    <div id="uitslag"></div>
+    <div class="knoprij">
+      <button class="knop crab" id="onthulBtn" type="button">Draai de kaarten om</button>
+      <button class="knop crab hide" id="verderBtn" type="button">Volgende ronde</button>
+    </div>
+  </section>
+
+  <section id="scherm-einde" class="hide">
+    <p class="hand" style="font-size:1.6rem">de hele tijdbalk</p>
+    <h2 id="eindKop" class="eindtitel">Klaar</h2>
+    <p class="lead" id="eindUit"></p>
+    <div class="cijfers" id="eindCijfers"></div>
+    <div class="eindbalk" id="eindBalk"></div>
+    <div class="vragen">
+      <p class="eyebrow">om samen over te praten</p>
+      <div><b>Welke kaart lag het verst ernaast?</b><span>Waarom dacht de klas dat hij daar hoorde? Wat had je kunnen helpen?</span></div>
+      <div><b>Zoek een oorzaak en een gevolg</b><span>Kies twee kaarten op de tijdbalk die met elkaar te maken hebben. Welke was de oorzaak, welke het gevolg?</span></div>
+      <div><b>Wat hoort bij elkaar?</b><span>Kies een tijdvak met meerdere kaarten. Welk kenmerkend aspect laten ze samen zien?</span></div>
+    </div>
+    <div class="knoprij"><button class="knop crab groot" id="nogBtn" type="button">Nog een keer</button></div>
+  </section>
+</main>
+<footer class="wrap">De tijdbalk van de klas hoort bij de leeromgeving van meneer Greidanus. De gebeurtenissen zijn dezelfde als bij Tijdvakken sorteren.</footer>
+
+<script src="klas.js"></script>
+<script src="melding.js"></script>
+<script src="verbinding.js"></script>
+<script src="rollen.js"></script>
+<script src="bank.js"></script>
+<script>
+/* ============================================================================
+   DE TIJDBALK VAN DE KLAS
+   Iedereen krijgt een gebeurtenis en legt die op het bord in een tijdvak. Je
+   ziet de kaarten van de anderen binnenkomen en mag wisselen tot de docent
+   onthult. Dan schuiven de foute kaarten naar hun plek, krijgt elke kaart
+   zijn jaartal, en staat de klas samen op één tijdbalk. Drie rondes.
+   De gebeurtenissen komen uit bank.js (GEBEURTENISSEN_TIJDVAKKEN), dezelfde
+   als bij Tijdvakken sorteren.
+   ============================================================================ */
+var TIJDVAKKEN = [
+  { n:1, naam:'Jagers en boeren', periode:'tot 3000 v.Chr.' }, { n:2, naam:'Grieken en Romeinen', periode:'3000 v.Chr. tot 500' },
+  { n:3, naam:'Monniken en ridders', periode:'500 tot 1000' }, { n:4, naam:'Steden en staten', periode:'1000 tot 1500' },
+  { n:5, naam:'Ontdekkers en hervormers', periode:'1500 tot 1600' }, { n:6, naam:'Regenten en vorsten', periode:'1600 tot 1700' },
+  { n:7, naam:'Pruiken en revoluties', periode:'1700 tot 1800' }, { n:8, naam:'Burgers en stoommachines', periode:'1800 tot 1900' },
+  { n:9, naam:'Wereldoorlogen', periode:'1900 tot 1950' }, { n:10, naam:'Televisie en computer', periode:'1950 tot nu' }
+];
+var TVKLEUR = ['#8a6a45', '#a0455f', '#6b4f8a', '#2f6f8f', '#2f8a55', '#E1A93A', '#c0442c', '#5b6480', '#204ECF', '#9A55B8'];
+var RONDEN = 3, PER_BORD = 8;
+
+(function(){
+  'use strict';
+  function $(id){ return document.getElementById(id); }
+  function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+  var rustig = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var GEB = (window.GEBEURTENISSEN_TIJDVAKKEN || []).map(function(g, i){ return { id:'g' + i, tv:g.tv, jaar:g.jaar, tekst:g.tekst, waarom:g.waarom }; });
+  /* een jaartal als getal, om binnen een tijdvak te kunnen sorteren */
+  function jaarGetal(j){
+    var s = String(j).replace(/\./g, ''), m = /(\d+)/.exec(s); if (!m) return 0;
+    var n = +m[1]; return /v\.?\s*Chr/i.test(s) ? -n : n;
+  }
+
+  var modus = 'telefoon';
+  var kamer = null, kamerInfo = null, spelers = [];
+  var ronde = 0, kaarten = {}, keuze = {}, onthuld = false, gebruikt = {}, uitslagen = [], gekozenKaart = null, alleKaarten = [];
+  var score = {};
+
+  function trek(n){
+    var vrij = GEB.filter(function(g){ return !gebruikt[g.id]; });
+    if (vrij.length < n){ gebruikt = {}; vrij = GEB.slice(); }
+    for (var i = vrij.length - 1; i > 0; i--){ var j = Math.floor(Math.random() * (i + 1)); var t = vrij[i]; vrij[i] = vrij[j]; vrij[j] = t; }
+    var uit = vrij.slice(0, n); uit.forEach(function(g){ gebruikt[g.id] = true; }); return uit;
+  }
+  /* wie heeft welke kaart: op telefoons de leerlingen, aan het bord een stapel van acht */
+  function houders(){
+    if (modus === 'telefoon') return spelers.map(function(s){ return { id:s.sid, naam:s.naam || '?', av:s.av || '' }; });
+    return Object.keys(kaarten).map(function(k){ return { id:k, naam:'', av:null }; });
+  }
+  function deel(){
+    kaarten = {}; keuze = {}; onthuld = false; gekozenKaart = null;
+    if (modus === 'telefoon'){ var g = trek(spelers.length); spelers.forEach(function(s, i){ kaarten[s.sid] = g[i]; }); }
+    else trek(PER_BORD).forEach(function(g, i){ kaarten['bord' + i] = g; });
+  }
+  function kaartVoor(sp){
+    var g = kaarten[sp.sid];
+    if (!g) return { soort:'wacht', titel:'Je doet mee', tekst:'Bij de volgende ronde krijg je een kaart.' };
+    return { soort:'vraag', id:'r' + ronde, kop:'ronde ' + (ronde + 1) + ' van ' + RONDEN, titel:g.tekst, tekst:'In welk tijdvak gebeurde dit? Je kaart komt meteen op het bord.',
+      opties:TIJDVAKKEN.map(function(t){ return { id:'t' + t.n, tekst:t.n + '. ' + t.naam, onder:t.periode, kleur:TVKLEUR[t.n - 1] }; }),
+      meer:'Je mag wisselen tot de docent de kaarten omdraait. Kijk ook naar de kaarten van de anderen: klopt de volgorde?' };
+  }
+
+  /* ---------- het bord ----------
+     Tien vakken naast elkaar. Elke kaart ligt in het vak dat gekozen is; na
+     het onthullen schuift hij naar het goede vak (met FLIP, zodat je het ziet
+     gebeuren) en krijgt hij zijn jaartal. */
+  function kaartHtml(h, g){
+    var tv = onthuld ? g.tv : keuze[h.id], goed = onthuld ? keuze[h.id] === g.tv : null;
+    return '<div class="tk' + (goed === true ? ' goed' : goed === false ? ' fout' : '') + (gekozenKaart === h.id ? ' gekozen' : '') + '" data-k="' + schoon(h.id) + '">' +
+      (h.av !== null ? '<span class="tkg">' + AVATAR.svg(h.naam, 26, h.av, { stemming: goed === true ? 'blij' : goed === false ? 'oeps' : '' }) + '</span>' : '') +
+      '<span class="tkt">' + schoon(g.tekst) + '</span>' +
+      (onthuld ? '<span class="tkj">' + schoon(g.jaar) + (goed === false && keuze[h.id] ? ' <s>lag bij ' + keuze[h.id] + '</s>' : goed === false ? ' <s>?</s>' : '') + '</span>' : '') + '</div>';
+  }
+  function teken(){
+    var hs = houders(), vak = {}, los = [];
+    TIJDVAKKEN.forEach(function(t){ vak[t.n] = []; });
+    hs.forEach(function(h){ var g = kaarten[h.id]; if (!g) return; var tv = onthuld ? g.tv : keuze[h.id]; if (tv) vak[tv].push(h); else los.push(h); });
+    if (onthuld) Object.keys(vak).forEach(function(n){ vak[n].sort(function(a, b){ return jaarGetal(kaarten[a.id].jaar) - jaarGetal(kaarten[b.id].jaar); }); });
+    /* FLIP: waar stond elke kaart */
+    var oud = {};
+    Array.prototype.forEach.call($('balk').querySelectorAll('.tk'), function(e){ oud[e.getAttribute('data-k')] = e.getBoundingClientRect(); });
+    $('balk').innerHTML = TIJDVAKKEN.map(function(t){
+      return '<section class="vak" data-tv="' + t.n + '" style="--tvk:' + TVKLEUR[t.n - 1] + '"><button type="button" class="vkop" data-tv="' + t.n + '"' + (modus === 'handen' && !onthuld ? '' : ' tabindex="-1"') + '><b>' + t.n + '</b><span>' + schoon(t.naam) + '</span><small>' + schoon(t.periode) + '</small></button>' +
+        '<div class="vakkaarten">' + vak[t.n].map(function(h){ return kaartHtml(h, kaarten[h.id]); }).join('') + '</div></section>';
+    }).join('');
+    $('stapel').innerHTML = los.length ? '<p class="eyebrow">' + (modus === 'handen' ? 'tik een kaart aan en dan het tijdvak' : 'nog niet gelegd') + '</p><div class="stapelkaarten">' + los.map(function(h){ return kaartHtml(h, kaarten[h.id]); }).join('') + '</div>' : '';
+    if (!rustig) Array.prototype.forEach.call($('balk').querySelectorAll('.tk'), function(e){
+      var r0 = oud[e.getAttribute('data-k')]; if (!r0) return;
+      var r1 = e.getBoundingClientRect(), dx = r0.left - r1.left, dy = r0.top - r1.top; if (!dx && !dy) return;
+      e.style.transition = 'none'; e.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+      e.getBoundingClientRect(); e.style.transition = ''; e.style.transform = '';
+    });
+    var n = hs.filter(function(h){ return kaarten[h.id]; }).length, gelegd = hs.filter(function(h){ return kaarten[h.id] && keuze[h.id]; }).length;
+    $('stand').textContent = onthuld ? '' : gelegd + ' van de ' + n + ' kaarten liggen op de tijdbalk';
+    if (modus === 'handen') koppelHanden();
+  }
+  function koppelHanden(){
+    Array.prototype.forEach.call(document.querySelectorAll('#stapel .tk, #balk .tk'), function(e){
+      e.setAttribute('tabindex', onthuld ? '-1' : '0'); e.setAttribute('role', 'button');
+      e.addEventListener('click', function(){ if (onthuld) return; gekozenKaart = e.getAttribute('data-k'); teken(); });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#balk .vkop'), function(b){
+      b.addEventListener('click', function(){ if (onthuld || !gekozenKaart) return; keuze[gekozenKaart] = +b.getAttribute('data-tv');
+        var vrij = houders().filter(function(h){ return !keuze[h.id]; }); gekozenKaart = vrij.length ? vrij[0].id : null; teken(); });
+    });
+  }
+
+  /* ---------- de ronde ---------- */
+  function volgende(){
+    if (ronde >= RONDEN){ einde(); return; }
+    deel();
+    $('rondeKop').textContent = 'Ronde ' + (ronde + 1) + ' van ' + RONDEN;
+    $('rondeTekst').textContent = modus === 'telefoon' ? 'Iedereen heeft een gebeurtenis op de telefoon. Leg hem in het goede tijdvak. Je ziet de kaarten van de anderen binnenkomen: klopt het geheel?' : 'Lees de bovenste kaart voor. De klas zegt in welk tijdvak hij hoort: tik de kaart aan en dan het tijdvak.';
+    if (modus === 'handen'){ var h = houders(); gekozenKaart = h.length ? h[0].id : null; }
+    $('uitslag').innerHTML = '';
+    $('onthulBtn').classList.remove('hide'); $('verderBtn').classList.add('hide');
+    teken();
+    if (modus === 'telefoon' && kamer) spelers.forEach(function(sp){ kamer.naar(sp.sid, kaartVoor(sp)); });
+    bewaarNu();
+  }
+  function onthul(){
+    if (onthuld) return;
+    onthuld = true;
+    var hs = houders().filter(function(h){ return kaarten[h.id]; });
+    var goed = hs.filter(function(h){ return keuze[h.id] === kaarten[h.id].tv; });
+    var fout = hs.filter(function(h){ return keuze[h.id] !== kaarten[h.id].tv; });
+    uitslagen.push({ goed:goed.length, totaal:hs.length });
+    hs.forEach(function(h){ alleKaarten.push({ g:kaarten[h.id], goed:keuze[h.id] === kaarten[h.id].tv, keuze:keuze[h.id] || 0, naam:h.naam });
+      if (modus === 'telefoon'){ var s = score[h.id] = score[h.id] || { goed:0, totaal:0 }; s.totaal++; if (keuze[h.id] === kaarten[h.id].tv) s.goed++; } });
+    teken();
+    var pct = hs.length ? Math.round(goed.length / hs.length * 100) : 0;
+    $('uitslag').innerHTML = '<div class="uitslag"><p class="eyebrow">ronde ' + (ronde + 1) + '</p><b>' + goed.length + ' van de ' + hs.length + ' kaarten goed (' + pct + '%)</b>' +
+      (fout.length ? '<div class="fouten"><p class="eyebrow">waarom hoort hij daar</p>' + fout.map(function(h){ var g = kaarten[h.id];
+        return '<div><b>' + schoon(g.tekst) + '</b><span>' + schoon(g.jaar) + ', tijdvak ' + g.tv + ' (' + schoon(TIJDVAKKEN[g.tv - 1].naam) + '). ' + schoon(g.waarom) + '</span></div>'; }).join('') + '</div>' : '<p>Alles goed. De hele tijdbalk klopt.</p>') + '</div>';
+    if (modus === 'telefoon' && kamer){
+      spelers.forEach(function(sp){
+        var g = kaarten[sp.sid]; if (!g) return;
+        var ok = keuze[sp.sid] === g.tv;
+        kamer.naar(sp.sid, { soort:'uitslag', kop:ok ? 'goed' : 'net niet', titel:g.tekst, tekst:g.jaar + ': tijdvak ' + g.tv + ', ' + TIJDVAKKEN[g.tv - 1].naam + '.', regels:[g.waarom, 'De klas had ' + goed.length + ' van de ' + hs.length + ' goed.'] });
+      });
+    }
+    $('onthulBtn').classList.add('hide'); $('verderBtn').classList.remove('hide');
+    $('verderBtn').textContent = ronde + 1 >= RONDEN ? 'Naar de hele tijdbalk' : 'Volgende ronde';
+    bewaarNu(true);
+  }
+  function einde(){
+    ROLSPEL.vergeet('tijdbalk');
+    $('scherm-spel').classList.add('hide'); $('scherm-einde').classList.remove('hide'); $('stopBtn').classList.add('hide');
+    var goed = uitslagen.reduce(function(s, u){ return s + u.goed; }, 0), tot = uitslagen.reduce(function(s, u){ return s + u.totaal; }, 0);
+    $('eindKop').textContent = tot ? 'De klas legde ' + goed + ' van de ' + tot + ' kaarten goed' : 'De tijdbalk is gestopt';
+    $('eindCijfers').innerHTML = uitslagen.map(function(u, i){ return '<div><b>' + (u.totaal ? Math.round(u.goed / u.totaal * 100) : 0) + '%</b><span>ronde ' + (i + 1) + '</span></div>'; }).join('');
+    /* de hele tijdbalk: alle kaarten van de les, op jaartal */
+    var per = {}; alleKaarten.forEach(function(k){ (per[k.g.tv] = per[k.g.tv] || []).push(k); });
+    $('eindBalk').innerHTML = TIJDVAKKEN.filter(function(t){ return per[t.n]; }).map(function(t){
+      return '<div class="eindvak" style="--tvk:' + TVKLEUR[t.n - 1] + '"><b>' + t.n + '. ' + schoon(t.naam) + '</b><ol>' + per[t.n].sort(function(a, b){ return jaarGetal(a.g.jaar) - jaarGetal(b.g.jaar); }).map(function(k){
+        return '<li class="' + (k.goed ? 'goed' : 'fout') + '"><span>' + schoon(k.g.jaar) + '</span> ' + schoon(k.g.tekst) + '</li>'; }).join('') + '</ol></div>';
+    }).join('');
+    /* het lastigste tijdvak: waar de meeste kaarten fout lagen */
+    var mis = {}; alleKaarten.forEach(function(k){ if (!k.goed){ mis[k.g.tv] = (mis[k.g.tv] || 0) + 1; } });
+    var lastig = Object.keys(mis).sort(function(a, b){ return mis[b] - mis[a]; })[0];
+    $('eindUit').textContent = lastig ? 'De meeste fouten zaten in tijdvak ' + lastig + ', ' + TIJDVAKKEN[lastig - 1].naam.toLowerCase() + '. Daar valt nog wat te halen.' : (tot ? 'Geen enkele kaart lag verkeerd. Een foutloze tijdbalk.' : '');
+    if (modus === 'telefoon' && kamer){
+      spelers.forEach(function(sp){ var s = score[sp.sid]; kamer.naar(sp.sid, { soort:'uitslag', kop:'de tijdbalk is klaar', titel:s ? 'Jij had ' + s.goed + ' van de ' + s.totaal + ' goed' : 'Bedankt voor het meedoen', tekst:'De klas had ' + goed + ' van de ' + tot + ' goed.', regels:[] }); });
+      kamer.stop();
+    }
+    stopZeker(false); $('kopCode').classList.add('hide');
+    scrollTo({ top:0, behavior:'auto' });
+  }
+
+  /* ---------- de kamer ---------- */
+  function tekenLobby(){
+    if (!kamerInfo) return;
+    ROLSPEL.lobby($('lobbyvak'), kamerInfo.code, spelers, spelers.length < 2 ? 'Met twee of meer apparaten wordt het een echte tijdbalk.' : 'Iedereen erbij? Deel de kaarten uit.');
+  }
+  function actie(pid, d){
+    if (onthuld || !d || d.vraag !== 'r' + ronde || !kaarten[pid]) return;
+    var n = +String(d.keuze || '').replace('t', ''); if (!(n >= 1 && n <= 10)) return;
+    keuze[pid] = n; teken();
+  }
+  var naSpelers = null;
+  function koppel(k){
+    kamerInfo = k;
+    kamer = ROLSPEL.host({ game:'tijdbalk', code:k.code, sleutel:k.sleutel,
+      onSpelers:function(l){
+        spelers = l; tekenLobby();
+        if (naSpelers){ var f = naSpelers; naSpelers = null; f(); return; }
+        if (!$('scherm-spel').classList.contains('hide') && modus === 'telefoon' && !onthuld){
+          spelers.forEach(function(s){ if (!kaarten[s.sid]){ var g = trek(1)[0]; kaarten[s.sid] = g; kamer.naar(s.sid, kaartVoor(s)); } });
+          teken();
+        } else if (!$('scherm-spel').classList.contains('hide')) teken();
+      }, onActie:actie });
+  }
+  function openKamer(){
+    $('kamerFout').textContent = '';
+    $('openBtn').disabled = true; $('openBtn').setAttribute('aria-busy', 'true');
+    ROLSPEL.maak('tijdbalk').then(function(k){
+      $('openBtn').removeAttribute('aria-busy');
+      koppel(k);
+      $('lobbyvak').classList.remove('hide'); $('startBtn').classList.remove('hide');
+      tekenLobby();
+      setTimeout(function(){ $('telefoonvak').scrollIntoView({ block:'start', behavior: rustig ? 'auto' : 'smooth' }); }, 60);
+      bordAan();
+    }).catch(function(e){
+      $('openBtn').disabled = false; $('openBtn').removeAttribute('aria-busy');
+      $('kamerFout').textContent = e.message || 'De kamer kon niet gemaakt worden.';
+    });
+  }
+  function zetModus(m){
+    modus = m; document.body.classList.toggle('handen', m === 'handen');
+    Array.prototype.forEach.call($('modus').querySelectorAll('button'), function(b){ b.classList.toggle('on', b.getAttribute('data-m') === m); });
+    $('telefoonvak').classList.toggle('hide', m !== 'telefoon');
+    $('startBtn').classList.toggle('hide', m === 'telefoon' && !kamer);
+  }
+  function toonSpel(){
+    $('scherm-start').classList.add('hide'); $('scherm-einde').classList.add('hide');
+    $('scherm-spel').classList.remove('hide'); $('stopBtn').classList.remove('hide'); $('lobbyvak').classList.add('hide');
+  }
+  function start(){
+    ronde = 0; uitslagen = []; alleKaarten = []; score = {}; gebruikt = {};
+    toonSpel();
+    if (modus === 'telefoon' && kamer) kamer.start();
+    volgende(); bordAan(); kopCode();
+    scrollTo({ top:0, behavior:'auto' });
+  }
+  zetModus('telefoon');
+  Array.prototype.forEach.call($('modus').querySelectorAll('button'), function(b){ b.addEventListener('click', function(){ zetModus(b.getAttribute('data-m')); }); });
+  $('openBtn').addEventListener('click', openKamer);
+  $('startBtn').addEventListener('click', start);
+  $('nogBtn').addEventListener('click', function(){ location.reload(); });
+  $('onthulBtn').addEventListener('click', onthul);
+  $('verderBtn').addEventListener('click', function(){ ronde++; volgende(); });
+  var zekerKlok = null;
+  function stopZeker(aan){
+    clearTimeout(zekerKlok);
+    $('stopBtn').classList.toggle('zeker', !!aan);
+    $('stopBtn').textContent = aan ? 'Zeker? Tik nog eens' : 'Stoppen';
+    if (aan) zekerKlok = setTimeout(function(){ stopZeker(false); }, 3000);
+  }
+  $('stopBtn').addEventListener('click', function(){
+    if ($('stopBtn').classList.contains('zeker')){ stopZeker(false); einde(); return; }
+    stopZeker(true);
+  });
+  var bord = VERBINDING.bord({ knoppen:'.bordknop' });
+  function bordAan(){ Array.prototype.forEach.call(document.querySelectorAll('.bordknop'), function(b){ b.classList.remove('hide'); }); bord.aan(); }
+  function kopCode(){
+    var aan = !!(kamerInfo && modus === 'telefoon' && !$('scherm-spel').classList.contains('hide'));
+    if (aan) $('kopCodeB').textContent = kamerInfo.code;
+    $('kopCode').classList.toggle('hide', !aan);
+  }
+  VERBINDING.toetsen(function(){
+    if (!$('scherm-start').classList.contains('hide')) return kamer ? VERBINDING.drukOp($('startBtn')) : false;
+    if (!$('scherm-spel').classList.contains('hide')) return VERBINDING.drukOp($('verderBtn')) || VERBINDING.drukOp($('onthulBtn'));
+    return false;
+  });
+  /* ---------- verder na herladen ---------- */
+  function bewaarNu(na){
+    ROLSPEL.bewaar('tijdbalk', modus === 'telefoon' ? kamerInfo : null,
+      { modus:modus, ronde:na ? ronde + 1 : ronde, uitslagen:uitslagen, alleKaarten:alleKaarten, score:score, gebruikt:gebruikt });
+  }
+  ROLSPEL.hervat('tijdbalk', $('scherm-start'), function(b){
+    var st = b.stand;
+    zetModus(st.modus || 'telefoon');
+    ronde = st.ronde | 0; uitslagen = st.uitslagen || []; alleKaarten = st.alleKaarten || []; score = st.score || {}; gebruikt = st.gebruikt || {};
+    toonSpel();
+    if (b.kamer && modus === 'telefoon'){ naSpelers = volgende; koppel(b.kamer); }
+    else volgende();
+    bordAan(); kopCode();
+    scrollTo({ top:0, behavior:'auto' });
+  });
+})();
+</script>
+<script src="thema.js"></script>
+<script src="spel.js"></script>
+<script>SPEL.uitleg({ doel:"Gebeurtenissen in het goede tijdvak leggen en samen een kloppende tijdbalk maken.", tijd:"ongeveer tien minuten, klassikaal", bediening:"Het bord toont de tijdbalk. Leerlingen leggen hun kaart op hun eigen scherm, of de docent legt de kaarten op aanwijzen van de klas.", meer:'.uitleg' });</script>
+</body>
+</html>
