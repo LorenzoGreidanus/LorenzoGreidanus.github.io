@@ -514,7 +514,7 @@ window.AVATAR = (function(){
     s += '<path d="' + m.d + '" fill="' + kleur + '"/><path d="' + m.d + '" fill="url(#' + id + 's)"/><path d="' + m.d + '" fill="url(#' + id + 'g)"/></g>';
     /* een personage: baard, snor, haar, op de bol maar buiten de omtrek */
     var kenmerk = '';
-    if (sp.g) persoon(sp.g).forEach(function(d){ kenmerk += stuk(d[0], d[1], '<g transform="translate(' + (-d[0]) + ',' + (-d[1]) + ')">' + d[2] + '</g>'); });
+    if (sp.g) persoon(sp.g).forEach(function(d){ kenmerk += stuk(d[0], d[1], '<g transform="translate(' + (-d[0]) + ',' + (-d[1]) + ')">' + halo(d[2], 3.5) + d[2] + '</g>'); });
     s += '<g clip-path="url(#' + id + 'k)">' + (leeft ? ogen : '<g class="av-ogen" style="animation-delay:-' + m.d2 + 's">' + ogen + '</g>') + rest + '</g>' + kenmerk + los + '</g></g>';
     /* uit de winkel: eerst de rand (hij ligt om het gezicht), dan de hoed of de krul op de kruin */
     if (sp.r) s += rand(sp.r);
