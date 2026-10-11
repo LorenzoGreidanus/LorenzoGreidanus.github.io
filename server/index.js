@@ -25,7 +25,7 @@ export { Account } from "./account.js";
 export { Zombiekamer, Veld } from "./stad.js";
 /* De personages van De stad: een object per speler, alleen voor de potjes (geen route) */
 export { Stadheld } from "./stad.js";
-import { behandel as accountBehandel, ingelogd as accountIngelogd, mogelijk as accountMogelijk, isEigenaar, naamVan as accountNaam, kenmerkVan as accountKenmerk, eigenaarVan as accountEigenaar } from "./account.js";
+import { behandel as accountBehandel, ingelogd as accountIngelogd, mogelijk as accountMogelijk, isEigenaar, naamVan as accountNaam, kenmerkVan as accountKenmerk, eigenaarVan as accountEigenaar, zorgVoorCode as accountZorgVoorCode, verhuisCode as accountVerhuisCode } from "./account.js";
 const KLASSEMENTEN = { toren: true, zwaard: true, dag: true, mijnwerker: true, poortrace: true, kaarttoren: true };   /* dag: per datum een lijst, dag-2026-09-19 */
 
 /* Een browser stuurt bij elk POST en bij elke WebSocket mee vanaf welke site
@@ -289,6 +289,28 @@ async function verdeel(req, env, ctx){
       }
       return json({ fout: "probeer het nog eens" }, 503);
     }
+    /* Ingelogd: het profiel van het account. De speelcode komt van de server,
+       nooit uit de browser; zo kan een apparaat niet op een verkeerde code
+       uitkomen. Het antwoord noemt de code, zodat de browser hem kan tonen. */
+    if (p === "/api/profiel/mijn" || p === "/api/profiel/mijn/"){
+      if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
+      if (!await magDoor(env, req, req.method === "GET" ? "profiel-lees" : "profiel-sync", req.method === "GET" ? 400 : 900, 60)) return json({ fout: "even wachten" }, 429);
+      const ei = await accountEigenaar(req, env);
+      if (!ei) return json({ fout: "niet ingelogd", uit: true }, 401);
+      let code = ei.code;
+      try {
+        if (!code) code = await accountZorgVoorCode(env, ei.id, "");
+        /* het profiel achter de code is verlopen (een jaar niet gebruikt): dan een nieuwe */
+        else if ((await env.PROFIEL.get(env.PROFIEL.idFromName(code)).fetch("https://profiel/lees")).status === 404) code = await accountZorgVoorCode(env, ei.id, "", true);
+      } catch (e){ return json({ fout: "even geen speelcode, probeer het zo nog eens" }, 503); }
+      const stub = env.PROFIEL.get(env.PROFIEL.idFromName(code));
+      if (req.method === "GET") return stub.fetch("https://profiel/lees");
+      if (req.method === "PUT"){
+        let inz; try { inz = await leesJson(req); } catch (e){ return json({ fout: "geen geldig profiel" }, 400); }
+        return stub.fetch("https://profiel/sync", { method: "POST", body: JSON.stringify({ profiel: inz && inz.profiel, klasWeg: !!(inz && inz.klasWeg), wie: ei.id, eigenaar: ei.id }) });
+      }
+      return json({ fout: "onbekend" }, 404);
+    }
     const pm = p.match(/^\/api\/profiel\/([A-Za-z]{8})\/?$/);
     if (pm){
       const code = pm[1].toUpperCase();
@@ -322,9 +344,15 @@ async function verdeel(req, env, ctx){
     }
     /* alleen de beheerder: lezen en opruimen, met de geheime sleutel (wrangler secret put BEHEER) */
     /* tickets: GET /api/beheer/tickets, POST /api/beheer/ticket (nieuw of bijwerken), POST /api/beheer/ticket-weg */
-    const bm = p.match(/^\/api\/beheer\/(meldingen|tellers|melding-weg|tel-zet|tickets|ticket|ticket-weg)\/?$/);
+    /* speelcode: POST { oud, nu } hangt een oude speelcode weer aan het account dat nu code nu heeft */
+    const bm = p.match(/^\/api\/beheer\/(meldingen|tellers|melding-weg|tel-zet|tickets|ticket|ticket-weg|speelcode)\/?$/);
     if (bm){
       const nee = await beheerToegang(env, req); if (nee) return nee;
+      if (bm[1] === "speelcode"){
+        if (req.method !== "POST") return json({ fout: "alleen POST" }, 405);
+        let opdr; try { opdr = await leesJson(req); } catch (e){ return json({ fout: "geen geldige opdracht" }, 400); }
+        return accountVerhuisCode(env, opdr && opdr.oud, opdr && opdr.nu);
+      }
       if (bm[1] === "melding-weg" || bm[1] === "tel-zet" || bm[1] === "ticket" || bm[1] === "ticket-weg"){
         if (req.method !== "POST") return json({ fout: "alleen POST" }, 405);
         let opdr; try { opdr = await leesJson(req); } catch (e){ return json({ fout: "geen geldige opdracht" }, 400); }

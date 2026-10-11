@@ -313,6 +313,17 @@ details.tklaar summary{cursor:pointer;font-weight:600;min-height:44px;display:fl
       </div>
     </details>
   </section>
+
+  <section class="kaart">
+    <h2>Speelcode terugzetten</h2>
+    <p class="tip">Is iemand zijn munten en spullen kwijt na het inloggen? Dan staat alles nog onder de oude speelcode. Vul die in, en de code die de leerling nu in de lade ziet. Het account krijgt de oude code terug; de leerling hoeft alleen de pagina te herladen.</p>
+    <div class="rij" style="margin-top:8px">
+      <label class="sronly" for="scOud">Oude speelcode</label><input id="scOud" class="veld" placeholder="oude code" maxlength="8" autocapitalize="characters" spellcheck="false">
+      <label class="sronly" for="scNu">Speelcode van nu</label><input id="scNu" class="veld" placeholder="code van nu" maxlength="8" autocapitalize="characters" spellcheck="false">
+      <button class="knop" id="scZet" type="button">Terugzetten</button>
+    </div>
+    <p class="tip" id="scStatus" role="status" aria-live="polite"></p>
+  </section>
 </main>
 <script src="bank.js"></script>
 <script src="naamfilter.js"></script>
@@ -327,6 +338,15 @@ details.tklaar summary{cursor:pointer;font-weight:600;min-height:44px;display:fl
   function haal(pad, opties){
     return fetch(pad, Object.assign({ headers:kop() }, opties || {})).then(function(r){ return r.json().then(function(j){ return { ok:r.ok, status:r.status, j:j }; }); });
   }
+  /* een oude speelcode weer aan het account hangen */
+  $('scZet').addEventListener('click', function(){
+    var oud = $('scOud').value.trim().toUpperCase(), nu = $('scNu').value.trim().toUpperCase();
+    if (!/^[A-Z]{8}$/.test(oud) || !/^[A-Z]{8}$/.test(nu)){ $('scStatus').textContent = 'Twee speelcodes van acht letters.'; return; }
+    $('scZet').disabled = true; $('scStatus').textContent = 'Even wachten…';
+    haal('/api/beheer/speelcode', { method:'POST', body:JSON.stringify({ oud:oud, nu:nu }) }).then(function(r){
+      $('scStatus').textContent = r.ok ? 'Gelukt: het account heeft weer code ' + oud + '.' : (r.j && r.j.fout) || 'Dat lukte niet.';
+    }).catch(function(){ $('scStatus').textContent = 'Geen verbinding.'; }).then(function(){ $('scZet').disabled = false; });
+  });
   function kiesTab(naam){
     Array.prototype.forEach.call($('tabs').querySelectorAll('button'), function(x){ var aan = x.getAttribute('data-tab') === naam; x.classList.toggle('on', aan); x.setAttribute('aria-selected', aan ? 'true' : 'false'); });
     ['meldingen', 'tickets', 'gebruik', 'klassement'].forEach(function(t){ $('tab-' + t).classList.toggle('hide', t !== naam); });

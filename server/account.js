@@ -29,10 +29,12 @@
    Routes (in index.js):
      GET  /api/account            { mogelijk, ingelogd, naam, code }
      GET  /api/account/inloggen   stuurt door naar Microsoft (?terug=/pad)
-     GET  /api/account/terug      Microsoft komt hier terug met een code
-     POST /api/account/koppel     { code } de speelcode aan het account hangen
+     GET  /api/account/terug      Microsoft komt hier terug met een code; het account krijgt
+                                  hier zijn speelcode als het er nog geen had (zorgVoorCode)
      POST /api/account/uitloggen  het koekje weg
-     DELETE /api/account          het account bij ons weg (de speelcode blijft) */
+     DELETE /api/account          het account bij ons weg (de speelcode blijft, van niemand)
+   Ingelogd lees en bewaar je het profiel via /api/profiel/mijn (index.js): de
+   server zoekt de speelcode bij het account, de browser noemt hem niet. */
 import { DurableObject } from "cloudflare:workers";
 
 const SESSIE_DAGEN = 90;
@@ -209,6 +211,65 @@ async function controleer(env, token, nonce){
 }
 
 async function account(env, id){ return env.ACCOUNT.get(env.ACCOUNT.idFromName(id)); }
+function profiel(env, code){ return env.PROFIEL.get(env.PROFIEL.idFromName(code)); }
+const CODELETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+function nieuweSpeelcode(){
+  const r = crypto.getRandomValues(new Uint8Array(8));
+  let c = ""; for (let i = 0; i < 8; i++) c += CODELETTERS[r[i] % CODELETTERS.length];
+  return c;
+}
+
+/* Elk account heeft precies één speelcode, en die kiest de server, nooit de
+   browser. De eerste keer wordt het de code van het apparaat waarop je
+   inlogt, als die nog bij geen ander account hoort: dan neem je mee wat je
+   daar al speelde. Anders maakt de server zelf een nieuwe. Daarna blijft hij.
+   Met opnieuw (het profiel achter de code bestaat niet meer) komt er een
+   nieuwe voor in de plaats. Geeft de code terug. */
+export async function zorgVoorCode(env, id, apparaat, opnieuw){
+  const acc = await account(env, id);
+  const a = await (await acc.fetch("https://account/lees")).json().catch(() => ({}));
+  if (a.code && !opnieuw) return a.code;
+  let code = "";
+  if (!opnieuw && /^[A-Z]{8}$/.test(apparaat || "")){
+    const r = await profiel(env, apparaat).fetch("https://profiel/eigenaar", { method: "POST", body: JSON.stringify({ id }) });
+    if (r.ok) code = apparaat;
+  }
+  for (let poging = 0; !code && poging < 6; poging++){
+    const c = nieuweSpeelcode();
+    const r = await profiel(env, c).fetch("https://profiel/maak", { method: "POST", body: JSON.stringify({ code: c, profiel: {}, eigenaar: id }) });
+    if (r.ok) code = c;
+  }
+  if (!code) throw new Error("geen vrije speelcode");
+  /* alsLeeg: logt hetzelfde account op twee plekken tegelijk in, dan wint de eerste */
+  const rk = await acc.fetch("https://account/koppel", { method: "POST", body: JSON.stringify({ code, alsLeeg: !opnieuw }) });
+  const jk = await rk.json().catch(() => ({}));
+  if (!rk.ok || !jk.code) throw new Error("koppelen mislukt");
+  if (jk.beheer) await allesVrij(env, jk.code);
+  return jk.code;
+}
+
+/* Voor de beheerder: een oude speelcode weer aan een account hangen, met
+   alles wat erop staat. Het account vind je via de speelcode die het nu
+   heeft (die staat in de lade van de leerling). De leerling hoeft daarna
+   niets te doen: bij de volgende keer dat de site iets bewaart, staat de
+   oude code er weer. */
+export async function verhuisCode(env, oud, nu){
+  oud = String(oud || "").toUpperCase(); nu = String(nu || "").toUpperCase();
+  if (!/^[A-Z]{8}$/.test(oud) || !/^[A-Z]{8}$/.test(nu)) return json({ fout: "twee speelcodes van acht letters" }, 400);
+  if (oud === nu) return json({ fout: "dat is dezelfde code" }, 400);
+  const re = await profiel(env, nu).fetch("https://profiel/eigenaar-lees");
+  if (!re.ok) return json({ fout: "de huidige code bestaat niet" }, 404);
+  const id = String((await re.json().catch(() => ({}))).eigenaar || "");
+  if (!id) return json({ fout: "de huidige code hoort bij geen account" }, 404);
+  const ro = await profiel(env, oud).fetch("https://profiel/lees");
+  if (!ro.ok) return json({ fout: "de oude code bestaat niet (meer)" }, 404);
+  await profiel(env, oud).fetch("https://profiel/eigenaar", { method: "POST", body: JSON.stringify({ id, forceer: true }) });
+  const rk = await (await account(env, id)).fetch("https://account/koppel", { method: "POST", body: JSON.stringify({ code: oud }) });
+  const jk = await rk.json().catch(() => ({}));
+  if (!rk.ok) return json({ fout: "het account bestaat niet meer" }, 404);
+  if (jk.beheer) await allesVrij(env, oud);
+  return json({ ok: true, code: oud });
+}
 async function sessie(env, req){
   if (!mogelijk(env)) return null;
   const s = await lees(env, koekjes(req)[SESSIE_KOEKJE]);
@@ -239,7 +300,9 @@ export async function behandel(req, env, url, hulp){
     const state = willekeur(24), nonce = willekeur(24), verifier = willekeur(48);
     const challenge = b64url(await sha256(verifier));
     const terug = schoonTerug(url.searchParams.get("terug"));
-    const pak = await teken(env, { state, nonce, verifier, terug, tot: Date.now() + AANMELD_SECONDEN * 1000 });
+    /* de speelcode die op het apparaat staat: een nieuw account neemt die over */
+    const apparaat = String(url.searchParams.get("code") || "").toUpperCase();
+    const pak = await teken(env, { state, nonce, verifier, terug, apparaat: /^[A-Z]{8}$/.test(apparaat) ? apparaat : "", tot: Date.now() + AANMELD_SECONDEN * 1000 });
     const q = new URLSearchParams({
       client_id: env.MS_CLIENT_ID, response_type: "code", redirect_uri: terugAdres(url), response_mode: "query",
       /* prompt=login: altijd zelf inloggen, ook op een schoollaptop waar de vorige leerling nog bij Microsoft ingelogd is */
@@ -282,7 +345,10 @@ export async function behandel(req, env, url, hulp){
     const beheer = await isBeheer(claims);
     const r2 = await (await account(env, id)).fetch("https://account/aanmelden", { method: "POST", body: JSON.stringify({ naam, beheer }) });
     if (!r2.ok) return naar("fout");
-    if (beheer){ const a2 = await r2.json().catch(() => ({})); await allesVrij(env, a2.code); }
+    try {
+      const code = await zorgVoorCode(env, id, pak.apparaat || "");
+      if (beheer) await allesVrij(env, code);
+    } catch (e){ console.warn("account: geen speelcode", e && e.message); return naar("fout"); }
     const sessieKoekje = await teken(env, { id, tot: Date.now() + SESSIE_DAGEN * 86400 * 1000 });
     const h = new Headers({ location: url.origin + metVlag(terug, "in"), "cache-control": "no-store" });
     h.append("set-cookie", koekje(SESSIE_KOEKJE, sessieKoekje, url, SESSIE_DAGEN * 86400));
@@ -293,27 +359,6 @@ export async function behandel(req, env, url, hulp){
   if (p === "/api/account/uitloggen" && req.method === "POST"){
     if (!hulp.eigenSite()) return json({ fout: "niet vanaf deze site" }, 403);
     return json({ ok: true }, 200, { "set-cookie": weg(SESSIE_KOEKJE, url) });
-  }
-
-  if (p === "/api/account/koppel" && req.method === "POST"){
-    if (!hulp.eigenSite()) return json({ fout: "niet vanaf deze site" }, 403);
-    if (!await hulp.magDoor("account-koppel", 200, 60)) return json({ fout: "even wachten" }, 429);
-    const s = await sessie(env, req);
-    if (!s) return json({ fout: "niet ingelogd" }, 401);
-    let inz; try { inz = await req.json(); } catch (e){ return json({ fout: "geen geldige code" }, 400); }
-    const code = String(inz && inz.code || "").toUpperCase();
-    if (!/^[A-Z]{8}$/.test(code)) return json({ fout: "geen geldige code" }, 400);
-    /* alleen een speelcode die bestaat */
-    const pr = await env.PROFIEL.get(env.PROFIEL.idFromName(code)).fetch("https://profiel/lees");
-    if (!pr.ok) return json({ fout: "geen profiel met deze code" }, 404);
-    /* een speelcode hoort bij hoogstens een account: twee leerlingen op dezelfde
-       schoollaptop mogen niet samen op een profiel uitkomen */
-    const pe = await env.PROFIEL.get(env.PROFIEL.idFromName(code)).fetch("https://profiel/eigenaar", { method: "POST", body: JSON.stringify({ id: s.id }) });
-    if (pe.status === 409) return json({ fout: "Deze speelcode hoort al bij een ander account. Kies een nieuwe." }, 409);
-    const rk = await (await account(env, s.id)).fetch("https://account/koppel", { method: "POST", body: JSON.stringify({ code }) });
-    const jk = await rk.json().catch(() => ({}));
-    if (rk.ok && jk.beheer) await allesVrij(env, code);
-    return json(jk, rk.status);
   }
 
   /* de eigen vragensets van de ingelogde docent: ophalen en bijwerken.
@@ -366,7 +411,11 @@ export async function behandel(req, env, url, hulp){
     if (!hulp.eigenSite()) return json({ fout: "niet vanaf deze site" }, 403);
     const s = await sessie(env, req);
     if (!s) return json({ fout: "niet ingelogd" }, 401);
-    await (await account(env, s.id)).fetch("https://account/weg", { method: "POST", body: "{}" });
+    /* de speelcode blijft bestaan en is daarna weer van niemand, zodat hij zonder account bruikbaar is */
+    const stub = await account(env, s.id);
+    const a = await (await stub.fetch("https://account/lees")).json().catch(() => ({}));
+    if (/^[A-Z]{8}$/.test(a.code || "")) await profiel(env, a.code).fetch("https://profiel/eigenaar", { method: "POST", body: JSON.stringify({ id: "", forceer: true }) }).catch(() => null);
+    await stub.fetch("https://account/weg", { method: "POST", body: "{}" });
     return json({ ok: true }, 200, { "set-cookie": weg(SESSIE_KOEKJE, url) });
   }
   return json({ fout: "onbekend" }, 404);
@@ -465,9 +514,8 @@ export class Account extends DurableObject {
     if (url.pathname === "/koppel"){
       const code = String(inz.code || "").toUpperCase();
       if (!/^[A-Z]{8}$/.test(code)) return json({ fout: "geen geldige code" }, 400);
-      this.stand.code = code;
-      await this.bewaar();
-      return json({ ok: true, code, beheer: !!this.stand.beheer });
+      if (!(inz.alsLeeg && this.stand.code)){ this.stand.code = code; await this.bewaar(); }
+      return json({ ok: true, code: this.stand.code, beheer: !!this.stand.beheer });
     }
     if (url.pathname === "/weg"){
       await this.ctx.storage.deleteAll();

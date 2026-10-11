@@ -2630,7 +2630,7 @@ var SPELLEN = [
 (function(){
   var vak0 = document.getElementById('profielvak'); if (!vak0 || !window.PROFIEL || !window.AVATAR) return;
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
-  var open = false, codeOpen = false, koppelOpen = false, melding = '', acc = null, accMelding = '', accVraag = '', winkelOpen = false, winkelMelding = '';
+  var open = false, codeOpen = false, koppelOpen = false, melding = '', acc = null, accMelding = '', winkelOpen = false, winkelMelding = '';
   /* de knop die nu op de server wacht; teken() bouwt de lade opnieuw, dus hij wordt daar weer bezig gezet */
   var wachtOp = '';
   if (PROFIEL.winkelVlag && PROFIEL.winkelVlag()) winkelOpen = true;
@@ -2740,8 +2740,9 @@ var SPELLEN = [
       html += '<div class="codevak2">';
       if (code){
         html += '<span class="code" id="pfCodeTekst">' + schoon(code) + '</span><button type="button" class="klein" id="pfKopieer">Kopieer</button> ' +
-          '<button type="button" class="klein" id="pfVergeet">Haal van dit apparaat</button>' +
-          '<p>Vul deze code in op een ander apparaat (onder Meenemen, dan Ik heb al een code) en je gezichtje, beste scores, sterren en klascode staan daar ook. Schrijf hem in je agenda: er is geen wachtwoord en geen manier om hem terug te vragen.</p>';
+          (acc && acc.ingelogd ? '<p>Deze code hoort bij je Microsoft-account. Log op een ander apparaat in en alles staat er; de code zelf hoef je niet te onthouden.</p>'
+          : '<button type="button" class="klein" id="pfVergeet">Haal van dit apparaat</button>' +
+          '<p>Vul deze code in op een ander apparaat (onder Meenemen, dan Ik heb al een code) en je gezichtje, beste scores, sterren en klascode staan daar ook. Schrijf hem in je agenda: er is geen wachtwoord en geen manier om hem terug te vragen.</p>');
       } else if (koppelOpen){
         html += '<div class="invulrij"><input id="pfInvoer" maxlength="8" placeholder="ACHT LETTERS" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Speelcode"><button type="button" id="pfKoppel">Koppelen</button></div>' +
           '<p>Wat op dit apparaat staat gaat erbij; het beste van allebei blijft. <button type="button" class="klein" id="pfTerug">Terug</button></p>';
@@ -2762,8 +2763,6 @@ var SPELLEN = [
         html += '<span class="bewaarkop">Bewaar je voortgang</span><a class="ms" href="' + PROFIEL.inlogAdres() + '" id="pfMs">' + MSLOGO + 'Inloggen met Microsoft</a>' +
           '<small><b>Zo blijft je voortgang bewaard.</b> Je munten, je reeks van dagen, je beste scores en je foutenmap hangen dan aan je account in plaats van aan deze browser. Met je schoolaccount of een Microsoft-account; de site ziet geen wachtwoord en geen e-mail.</small>';
       }
-      if (accVraag) html += '<small><b>Op dit apparaat staat al speelcode ' + schoon(accVraag) + '. Is die van jou?</b></small>' +
-        '<button type="button" class="klein" id="pfJaCode">Ja, die is van mij</button><button type="button" class="klein" id="pfNeeCode">Nee, geef mij een nieuwe</button>';
       if (accMelding) html += '<small><b>' + schoon(accMelding) + '</b></small>';
       /* wie niet kan of wil inloggen: de speelcode als andere manier */
       if (!acc.ingelogd && !code && !codeOpen) html += '<button type="button" class="linkje" id="pfSpeelcode">Liever zonder account? Neem je voortgang mee met een speelcode</button>';
@@ -2831,19 +2830,9 @@ var SPELLEN = [
       /* uitloggen op een gedeelde laptop: ook je speelcode en klas van dit apparaat halen; inloggen brengt ze terug */
       PROFIEL.uitloggen().then(function(){
         PROFIEL.wis(); if (window.KLAS && KLAS.wisLokaal) KLAS.wisLokaal();
-        accMelding = 'Uitgelogd. Je speelcode en klas zijn van dit apparaat gehaald; log in en alles staat er weer.';
+        accMelding = 'Uitgelogd. Je speelcode, munten en klas zijn van dit apparaat gehaald; log in en alles staat er weer.';
         return PROFIEL.account(true);
       }).then(function(a){ acc = a; teken(); });
-    });
-    knop('pfJaCode', function(el){
-      el.disabled = true; var c = accVraag;
-      PROFIEL.accountNeemCode(c).then(function(){ accVraag = ''; accMelding = 'Gekoppeld.'; return PROFIEL.account(true); })
-        .catch(function(e){ accMelding = e.message; return PROFIEL.account(true); }).then(function(a){ acc = a; teken(); });
-    });
-    knop('pfNeeCode', function(el){
-      el.disabled = true;
-      PROFIEL.accountNieuweCode().then(function(){ accVraag = ''; location.reload(); })
-        .catch(function(e){ accMelding = e.message; return PROFIEL.account(true).then(function(a){ acc = a; teken(); }); });
     });
     knop('pfAccWeg', function(el){
       if (!confirm('Je Microsoft-account bij deze site weghalen? Je speelcode en je voortgang blijven bestaan; alleen de koppeling verdwijnt.')) return;
@@ -2865,7 +2854,6 @@ var SPELLEN = [
       accMelding = 'Even kijken…'; codeOpen = true;
       PROFIEL.accountAfstemmen().then(function(r){
         if (r.nieuw){ location.reload(); return; }
-        if (r.vraag){ accVraag = r.code; accMelding = ''; return PROFIEL.account(true).then(function(a){ acc = a; teken(); }); }
         accMelding = 'Ingelogd.'; return PROFIEL.account(true).then(function(a){ acc = a; teken(); });
       }).catch(function(e){ accMelding = 'Ingelogd, maar het koppelen lukte niet: ' + e.message; return PROFIEL.account(true).then(function(a){ acc = a; teken(); }); });
       return;

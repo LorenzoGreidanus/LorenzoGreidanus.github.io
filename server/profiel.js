@@ -28,7 +28,7 @@ function getal(x, max){ x = Number(x); return isFinite(x) ? Math.max(0, Math.min
 /* Alleen wat we kennen komt het profiel in, met een plafond per veld. */
 function netjes(inz){
   inz = inz && typeof inz === "object" ? inz : {};
-  const p = { avatar: schoonAvatar(inz.avatar), beste: {}, campagne: {}, vrij: {}, klas: null, niveau: schoon(inz.niveau, 6),
+  const p = { avatar: schoonAvatar(inz.avatar), avatarT: getal(inz.avatarT, 1e14), beste: {}, campagne: {}, vrij: {}, klas: null, niveau: schoon(inz.niveau, 6),
               /* munten erbij en aankopen zijn wensen van dit apparaat; de server houdt het saldo */
               muntDelta: getal(inz.muntDelta, 600), koop: (Array.isArray(inz.koop) ? inz.koop : []).slice(0, 6).map(x => schoon(x, 4)).filter(x => COSMETICA.vind(x)),
               /* trofeeën die het spel meldt: alleen wat een baas oplevert */
@@ -76,7 +76,11 @@ function voegSamen(oud, nieuw, klasWeg, alles){
   const sinds = Math.max(0, nu - (typeof oud.muntKlok === "number" ? oud.muntKlok : nu));
   const buidel = Math.min(MUNT_BUIDEL, (typeof oud.muntBuidel === "number" ? oud.muntBuidel : MUNT_START) + sinds / 60000 * MUNT_PER_MIN);
   const erbij = Math.max(0, Math.min(nieuw.muntDelta | 0, Math.floor(buidel)));
-  const p = { avatar: nieuw.avatar || oud.avatar || "", beste: Object.assign({}, oud.beste), campagne: Object.assign({}, oud.campagne),
+  /* Het gezichtje: het laatst gekozene wint, op welk apparaat ook. avatarT is
+     wanneer het gekozen werd; een apparaat dat het niet meestuurt telt als 0. */
+  const nieuwGezicht = !!nieuw.avatar && (nieuw.avatarT || 0) >= (oud.avatarT || 0);
+  const p = { avatar: nieuwGezicht ? nieuw.avatar : (oud.avatar || nieuw.avatar || ""), avatarT: nieuwGezicht ? (nieuw.avatarT || 0) : (oud.avatarT || 0),
+              beste: Object.assign({}, oud.beste), campagne: Object.assign({}, oud.campagne),
               vrij: Object.assign({}, oud.vrij), klas: nieuw.klas || (klasWeg ? null : oud.klas) || null, niveau: nieuw.niveau || oud.niveau || "",
               munten: Math.max(0, (oud.munten | 0) + erbij), muntBuidel: buidel - erbij, muntKlok: nu,
               bezit: Object.assign({}, oud.bezit), wapens: Object.assign({}, oud.wapens), docent: [] };
@@ -166,6 +170,8 @@ export class Profiel extends DurableObject {
       const code = String(inz.code || "").toUpperCase();
       if (!/^[A-Z]{8}$/.test(code)) return json({ fout: "geen geldige code" }, 400);
       this.stand = { code, gemaakt: Date.now(), laatst: Date.now(), profiel: voegSamen({ beste: {}, campagne: {}, vrij: {}, bezit: {}, wapens: {}, munten: 0 }, netjes(inz.profiel), false) };
+      /* de server maakt bij het inloggen zelf een code voor het account: die heeft meteen zijn eigenaar */
+      if (inz.eigenaar) this.stand.eigenaar = String(inz.eigenaar).slice(0, 80);
       if (JSON.stringify(this.stand).length > MAX_TEKST) return json({ fout: "profiel te groot" }, 413);
       await this.bewaar();
       return json({ ok: true, code, profiel: this.stand.profiel });
@@ -181,11 +187,17 @@ export class Profiel extends DurableObject {
        "ja, die is van mij" zeggen en daarna de munten van de eerste uitgeven. */
     if (url.pathname === "/eigenaar"){
       const id = String(inz.id || "").slice(0, 80);
-      if (!id) return json({ fout: "geen account" }, 400);
-      if (this.stand.eigenaar && this.stand.eigenaar !== id) return json({ fout: "hoort bij een ander account" }, 409);
-      this.stand.eigenaar = id;
+      /* forceer komt alleen van de beheerder (een code terugzetten) of van een
+         account dat wordt weggehaald (id leeg: de code is weer van niemand) */
+      if (!id && !inz.forceer) return json({ fout: "geen account" }, 400);
+      if (!inz.forceer && this.stand.eigenaar && this.stand.eigenaar !== id) return json({ fout: "hoort bij een ander account" }, 409);
+      if (id) this.stand.eigenaar = id; else delete this.stand.eigenaar;
       await this.bewaar();
       return json({ ok: true });
+    }
+    /* voor de beheerder: bij welk account hoort deze code (de hash, niet wie het is) */
+    if (url.pathname === "/eigenaar-lees"){
+      return json({ ok: true, eigenaar: this.stand.eigenaar || "" });
     }
     if (url.pathname === "/sync"){
       /* index.js zegt wie er is ingelogd (wie) en of die bij deze code hoort

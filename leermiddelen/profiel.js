@@ -16,11 +16,19 @@
      PROFIEL.bewaart()          of dit apparaat uberhaupt iets kan opslaan
    Optioneel, als de site inloggen met Microsoft aan heeft staan:
      PROFIEL.account()          belofte met { mogelijk, ingelogd, naam, code }
-     PROFIEL.accountAfstemmen() na het inloggen: de speelcode van het account hier zetten,
-                                of de code van hier aan het account hangen (belofte met { nieuw })
+     PROFIEL.accountAfstemmen() de speelcode van het account hier zetten (belofte met { nieuw });
+                                gebeurt ook vanzelf bij elke pagina waarop je ingelogd bent
      PROFIEL.inlogAdres()       waar de knop Inloggen met Microsoft heen gaat
-     PROFIEL.uitloggen()        het koekje weg; de speelcode blijft hier staan
-     PROFIEL.accountWeg()       het account bij de server weg (de speelcode blijft) */
+     PROFIEL.uitloggen()        het koekje weg, en de code, munten en spullen van dit apparaat
+     PROFIEL.accountWeg()       het account bij de server weg (de speelcode blijft)
+
+   Eén regel voor wie is ingelogd: je account is je profiel. De browser kiest
+   geen speelcode; hij leest en bewaart via /api/profiel/mijn en de server
+   zoekt de code bij het account. De eerste keer dat je inlogt, krijgt je
+   account de code van dit apparaat (als die van niemand anders is). Wat er
+   ook misgaat (geen verbinding, een verlopen sessie), er wordt hier nooit
+   iets gewist: alleen uitloggen haalt de munten en spullen van het apparaat.
+   Het gezichtje: het laatst gekozene wint (avatarT), op welk apparaat ook. */
 window.PROFIEL = (function(){
   'use strict';
   var SLEUTEL = 'lg-profiel', timer = null, luisteraars = [];
@@ -45,7 +53,12 @@ window.PROFIEL = (function(){
   function lsZet(k, v){ try { localStorage.setItem(k, v); } catch (e){} }
   function code(){ return String(lees().code || ''); }
   function avatar(){ return String(lees().avatar || ''); }
-  function zetAvatar(spec){ var p = lees(); p.avatar = spec || ''; zet(p); zeg(); sync(); }
+  function zetAvatar(spec){ var p = lees(); p.avatar = spec || ''; p.avatarT = Date.now(); zet(p); zeg(); sync(); }
+  /* Een gezichtje van voor avatarT bestond: heel oud, maar ouder dan niets.
+     Zo wint het van een profiel op de server dat ook geen tijd heeft. */
+  (function(){ var p = lees(); if (p.avatar && !p.avatarT){ p.avatarT = 1; zet(p); } })();
+  /* hoort de code op dit apparaat bij een account (dan bewaart alleen dat account hem) */
+  function vanAccount(){ return !!lees().acc; }
   function op(fn){ luisteraars.push(fn); }
   function zeg(){ luisteraars.forEach(function(fn){ try { fn(); } catch (e){} }); }
 
@@ -64,7 +77,7 @@ window.PROFIEL = (function(){
     var uit = null; try { uit = JSON.parse(ls('lg-uitrusting') || 'null'); } catch (e){}
     var gezien = {}; try { gezien = JSON.parse(ls('lg-gezien') || '{}') || {}; } catch (e){}
     var route = {}; try { route = JSON.parse(ls('lg-route') || '{}') || {}; } catch (e){}
-    return { avatar:avatar(), route:route, beste:beste, campagne:campagne, vrij:vrij, klas:klas && klas.code ? klas : null, niveau:ls('lg-niveau') || '', muntDelta:wachtend(), vrijspeel:vrijWacht(), uitrusting:uit, gezien:gezien,
+    return { avatar:avatar(), avatarT:lees().avatarT || 0, route:route, beste:beste, campagne:campagne, vrij:vrij, klas:klas && klas.code ? klas : null, niveau:ls('lg-niveau') || '', muntDelta:wachtend(), vrijspeel:vrijWacht(), uitrusting:uit, gezien:gezien,
              /* de klassleutels gaan niet meer mee in het profiel: die horen bij het
                 account, zie klassenAfstemmen() */
              docentWeg:docentWegWacht(), fouten:foutenKort() };
@@ -161,11 +174,11 @@ window.PROFIEL = (function(){
   }
   /* kopen: de server rekent af en zegt wat je nu hebt */
   function koop(id){
-    var c = code(); if (!c || !ingelogd()) return Promise.reject(new Error('Log eerst in met Microsoft.'));
+    if (!ingelogd()) return Promise.reject(new Error('Log eerst in met Microsoft.'));
     stopWacht();
     var delta = wachtend();
     var pr = verzamel(); pr.koop = [id];
-    return vraag('/api/profiel/' + c, 'PUT', { profiel:pr }).then(function(j){
+    return stuur({ profiel:pr }).then(function(j){
       lsZet('lg-munten-wacht', String(Math.max(0, wachtend() - delta)));
       pasToe(j.profiel);
       if (!(j.profiel && j.profiel.bezit && j.profiel.bezit[id])) throw new Error('Niet genoeg munten.');
@@ -175,11 +188,11 @@ window.PROFIEL = (function(){
   /* Een wapen kopen voor De stad. Net als een hoed: de server rekent af, en
      als het wapen daarna niet in je kast staat was er niet genoeg. */
   function koopWapen(id){
-    var c = code(); if (!c || !ingelogd()) return Promise.reject(new Error('Log eerst in met Microsoft.'));
+    if (!ingelogd()) return Promise.reject(new Error('Log eerst in met Microsoft.'));
     stopWacht();
     var delta = wachtend();
     var pr = verzamel(); pr.koopWapen = [id];
-    return vraag('/api/profiel/' + c, 'PUT', { profiel:pr }).then(function(j){
+    return stuur({ profiel:pr }).then(function(j){
       lsZet('lg-munten-wacht', String(Math.max(0, wachtend() - delta)));
       pasToe(j.profiel);
       if (!(j.profiel && j.profiel.wapens && j.profiel.wapens[id])) throw new Error('Niet genoeg munten.');
@@ -234,14 +247,15 @@ window.PROFIEL = (function(){
     if (Array.isArray(pr.fouten) && pr.fouten.length){
       try { var heb = {}; (JSON.parse(ls('lg-fouten') || '[]') || []).forEach(function(x){ heb[x.h] = true; }); var nieuw = pr.fouten.filter(function(x){ return x && x.h && !heb[x.h]; }); if (nieuw.length) lsZet('lg-fouten-kort', JSON.stringify(nieuw)); } catch (e){}
     }
-    var p = lees(); if (pr.avatar) p.avatar = pr.avatar; zet(p);
+    /* het gezichtje van de server alleen als het minstens zo nieuw is als dat van hier */
+    var p = lees(); if (pr.avatar && (!p.avatar || (pr.avatarT || 0) >= (p.avatarT || 0))){ p.avatar = pr.avatar; p.avatarT = pr.avatarT || 0; } zet(p);
     if (typeof pr.munten === 'number') lsZet('lg-munten', String(Math.max(0, Math.round(pr.munten)) + wachtend()));
     if (pr.bezit && typeof pr.bezit === 'object'){ var bz = Object.assign({}, pr.bezit); vrijWacht().forEach(function(x){ bz[x] = true; }); lsZet('lg-bezit', JSON.stringify(bz)); }
     zeg();
   }
   function vraag(url, methode, body){
     return fetch(url, { method:methode, headers:{ 'content-type':'application/json' }, body: body ? JSON.stringify(body) : undefined })
-      .then(function(r){ return r.json().then(function(j){ if (!r.ok){ var e = new Error(j && j.fout ? j.fout : 'Het lukte niet.'); e.vast = !!(j && j.vast); throw e; } return j; }); });
+      .then(function(r){ return r.json().then(function(j){ if (!r.ok){ var e = new Error(j && j.fout ? j.fout : 'Het lukte niet.'); e.vast = !!(j && j.vast); e.uit = !!(j && j.uit); throw e; } return j; }); });
   }
   /* Na een geslaagde melding: wat er onderweg was is aangekomen. Een trofee
      gaat pas uit de wachtrij als hij echt in het bezit staat, want de server
@@ -253,37 +267,57 @@ window.PROFIEL = (function(){
     lsZet('lg-vrij-wacht', JSON.stringify(vrijWacht().filter(function(x){ return kreeg.indexOf(x) < 0; })));
     return kreeg.length;
   }
-  /* Deze code hoort bij een account en dat is niet wie hier is ingelogd (een
-     schoollaptop waar de vorige leerling zijn code liet staan). Dan gaat de
-     code van dit apparaat af, en de munten en spullen van die ander ook. */
-  function vastgezet(){
-    var p = lees(); delete p.code; zet(p);
-    lsZet('lg-munten', String(wachtend())); lsZet('lg-bezit', '{}');
+  /* Wat bij een account hoort van dit apparaat halen: de code, de munten, de
+     spullen en het gezichtje. Bij uitloggen, en als hier iemand anders inlogt
+     dan wiens code er stond (een gedeelde laptop). Beste scores en sterren
+     blijven staan, die zijn van het apparaat. */
+  function vanApparaat(){
+    var p = lees(); delete p.code; delete p.acc; delete p.avatar; delete p.avatarT; zet(p);
+    ['lg-munten', 'lg-munten-wacht', 'lg-bezit', 'lg-vrij-wacht', 'lg-wapens', 'lg-uitrusting', 'lg-sync-hash'].forEach(function(k){ try { localStorage.removeItem(k); } catch (e){} });
     zeg();
-    /* is hier wel iemand ingelogd, dan krijgt dit apparaat diens eigen code */
-    account(true).then(function(a){ if (a && a.ingelogd && a.code) koppel(a.code).catch(function(){}); });
+  }
+  /* waar het profiel heen gaat: ingelogd naar het account, anders naar de code */
+  function stuur(body){
+    var url = ingelogd() ? '/api/profiel/mijn' : '/api/profiel/' + code();
+    return vraag(url, 'PUT', body).then(function(j){ neemCode(j); return j; }).catch(function(e){
+      /* de sessie is verlopen: dan ben je niet meer ingelogd, maar er gaat niets weg */
+      if (e && e.uit){ accountStand = { mogelijk:true, ingelogd:false }; zeg(); }
+      /* een code die bij een account hoort, bewaart alleen dat account: dan stoppen we, zonder iets te wissen */
+      if (e && e.vast){ var p = lees(); p.acc = true; zet(p); zeg(); }
+      throw e;
+    });
+  }
+  /* de server zegt welke code bij het account hoort; die tonen we hier */
+  function neemCode(j){
+    if (!j || !j.code || !ingelogd()) return;
+    var p = lees(); if (p.code === j.code && p.acc) return;
+    p.code = j.code; p.acc = true; zet(p); zeg();
   }
   function stopWacht(){ clearTimeout(timer); if (wachtKlaar){ wachtKlaar(null); wachtKlaar = null; } }
+  /* een speelcode zonder account; ingelogd heb je die al */
   function maak(){
+    if (ingelogd()) return sync();
     var delta = wachtend(), vr = vrijWacht();
     return vraag('/api/profiel', 'POST', { profiel:verzamel() }).then(function(j){
-      var p = lees(); p.code = j.code; zet(p); aangekomen(delta, vr, j); pasToe(j.profiel); return j;
+      var p = lees(); p.code = j.code; delete p.acc; zet(p); aangekomen(delta, vr, j); pasToe(j.profiel); return j;
     });
   }
   function koppel(c){
+    if (ingelogd()) return Promise.reject(new Error('Je bent ingelogd: je speelcode komt van je account.'));
     c = String(c || '').toUpperCase().replace(/[^A-Z]/g, '');
     if (c.length !== 8) return Promise.reject(new Error('Een speelcode heeft acht letters.'));
     return vraag('/api/profiel/' + c, 'GET').then(function(j){
       /* een code die aan een account hangt, neem je alleen mee door met dat account in te loggen */
-      if (j.vast && !(accountStand && accountStand.ingelogd && accountStand.code === c)) throw new Error('Deze speelcode hoort bij een Microsoft-account. Log in met dat account, dan staat alles er.');
-      var p = lees(); p.code = c; zet(p); pasToe(j.profiel);
+      if (j.vast) throw new Error('Deze speelcode hoort bij een Microsoft-account. Log in met dat account, dan staat alles er.');
+      var p = lees(); p.code = c; delete p.acc; zet(p); pasToe(j.profiel);
       /* en wat hier al stond gaat er meteen bij */
       var delta = wachtend(), vr = vrijWacht();
       return vraag('/api/profiel/' + c, 'PUT', { profiel:verzamel() }).then(function(j2){ aangekomen(delta, vr, j2); pasToe(j2.profiel); return j2; });
     });
   }
   function sync(){
-    var c = code(); if (!c) return Promise.resolve(null);
+    /* geen code en zeker niet ingelogd: niets te bewaren */
+    if (!code() && accountStand && !accountStand.ingelogd) return Promise.resolve(null);
     clearTimeout(timer);
     /* De vorige sync stond nog te wachten en wordt nu ingehaald. Zijn belofte
        moet wel aflopen, anders blijft wie erop wacht eeuwig hangen. */
@@ -292,27 +326,32 @@ window.PROFIEL = (function(){
       wachtKlaar = res;
       timer = setTimeout(function(){
         wachtKlaar = null;
-        var delta = wachtend();
-        var vr = vrijWacht(), dw = docentWegWacht();
-        var pr = verzamel(), hash = JSON.stringify(pr), sinds = Date.now() - (parseInt(ls('lg-sync-t') || '0', 10) || 0);
-        /* hetzelfde als de vorige keer, korter dan een half uur geleden, en niets onderweg: dan hoeft de server het niet te horen */
-        if (hash === ls('lg-sync-hash') && sinds < 1800000 && !delta && !vr.length && !dw.length){ res(null); return; }
-        vraag('/api/profiel/' + c, 'PUT', { profiel:pr }).then(function(j){
-          var kreeg = aangekomen(delta, vr, j);
-          lsZet('lg-klas-docent-weg', JSON.stringify(docentWegWacht().filter(function(x){ return dw.indexOf(x) < 0; })));
-          pasToe(j.profiel); lsZet('lg-sync-hash', JSON.stringify(verzamel())); lsZet('lg-sync-t', String(Date.now())); res(j);
-          /* nog trofeeën onderweg en er kwam er net een door: meteen de volgende */
-          if (kreeg && vrijWacht().length) setTimeout(sync, 1500);
-        }).catch(function(e){ if (e && e.vast) vastgezet(); res(null); });
+        /* eerst weten of er iemand is ingelogd: dat bepaalt waar het heen gaat */
+        account().then(function(){
+          /* een code van een account zonder dat account ingelogd: niets doen */
+          if (!ingelogd() && (vanAccount() || !code())){ res(null); return; }
+          var delta = wachtend();
+          var vr = vrijWacht(), dw = docentWegWacht();
+          var pr = verzamel(), hash = JSON.stringify(pr) + (ingelogd() ? '|in' : ''), sinds = Date.now() - (parseInt(ls('lg-sync-t') || '0', 10) || 0);
+          /* hetzelfde als de vorige keer, korter dan een half uur geleden, en niets onderweg: dan hoeft de server het niet te horen */
+          if (hash === ls('lg-sync-hash') && sinds < 1800000 && !delta && !vr.length && !dw.length){ res(null); return; }
+          stuur({ profiel:pr }).then(function(j){
+            var kreeg = aangekomen(delta, vr, j);
+            lsZet('lg-klas-docent-weg', JSON.stringify(docentWegWacht().filter(function(x){ return dw.indexOf(x) < 0; })));
+            pasToe(j.profiel); lsZet('lg-sync-hash', JSON.stringify(verzamel()) + (ingelogd() ? '|in' : '')); lsZet('lg-sync-t', String(Date.now())); res(j);
+            /* nog trofeeën onderweg en er kwam er net een door: meteen de volgende */
+            if (kreeg && vrijWacht().length) setTimeout(sync, 1500);
+          }).catch(function(){ res(null); });
+        });
       }, 600);
     });
   }
-  function wis(){ var p = lees(); delete p.code; zet(p); zeg(); }
+  function wis(){ var p = lees(); delete p.code; delete p.acc; zet(p); zeg(); }
   /* de klaskoppeling is losgemaakt: ook uit het profiel op de server halen */
   function klasWeg(){
-    var c = code(); if (!c) return Promise.resolve(null);
+    if (!code() && !ingelogd()) return Promise.resolve(null);
     stopWacht();
-    return vraag('/api/profiel/' + c, 'PUT', { profiel:verzamel(), klasWeg:true }).then(function(j){ pasToe(j.profiel); return j; }).catch(function(){ return null; });
+    return stuur({ profiel:verzamel(), klasWeg:true }).then(function(j){ pasToe(j.profiel); return j; }).catch(function(){ return null; });
   }
 
   /* inloggen met Microsoft: de server weet of het aan staat en wie er ingelogd is.
@@ -335,50 +374,52 @@ window.PROFIEL = (function(){
       .catch(function(){ accountBezig = null; return accountStand || { mogelijk:false, ingelogd:false, onbekend:true }; });
     return accountBezig;
   }
-  function inlogAdres(){ return '/api/account/inloggen?terug=' + encodeURIComponent(location.pathname); }
-  /* na het inloggen: het account heeft een speelcode, of nog niet */
+  /* de code van dit apparaat gaat mee: een nieuw account neemt hem over */
+  function inlogAdres(){
+    var c = vanAccount() ? '' : code();
+    return '/api/account/inloggen?terug=' + encodeURIComponent(location.pathname) + (c ? '&code=' + c : '');
+  }
+  /* Ingelogd: de code van het account hier zetten en het profiel ophalen. Stond
+     hier de code van een ander account, dan gaat wat daarvan was eerst weg.
+     Eén keer per pagina; daarna doet sync het bijhouden. */
+  var afstemBezig = null;
   function accountAfstemmen(){
-    return account(true).then(function(a){
-      if (!a.ingelogd) return { nieuw:false };
+    if (afstemBezig) return afstemBezig;
+    afstemBezig = account(true).then(function(a){
+      if (!a || !a.ingelogd) return { nieuw:false };
       klassenAfstemmen();
-      var hier = code();
-      if (a.code && a.code !== hier){
-        /* het account kent een code: die nemen we hier over (wat hier stond gaat erbij) */
-        return koppel(a.code).then(function(){ return { nieuw:true }; });
-      }
-      if (!a.code){
-        /* een speelcode die hier al stond kan van een ander zijn (schoollaptop): dat vraagt de lade */
-        if (hier) return { nieuw:false, vraag:true, code:hier };
-        return maak().then(function(){ return vraag('/api/account/koppel', 'POST', { code:code() }); })
-          .then(function(){ accountStand = null; return { nieuw:true }; });
-      }
-      return { nieuw:false };
+      var p = lees();
+      if (p.acc && p.code && a.code && p.code !== a.code) vanApparaat();
+      /* ook als de code al klopt: ophalen, want op een ander apparaat kan er iets veranderd zijn */
+      return vraag('/api/profiel/mijn', 'GET').then(function(j){
+        var wissel = lees().code !== j.code;
+        neemCode(j); pasToe(j.profiel);
+        /* en wat hier al stond gaat er meteen bij */
+        return sync().then(function(){ return { nieuw:wissel }; });
+      });
+    });
+    afstemBezig.catch(function(){ afstemBezig = null; });
+    return afstemBezig;
+  }
+  function uitloggen(){ return vraag('/api/account/uitloggen', 'POST', {}).then(function(){ accountStand = null; afstemBezig = null; vanApparaat(); }); }
+  function accountWeg(){
+    return fetch('/api/account', { method:'DELETE' }).then(function(r){ return r.json(); }).then(function(j){
+      if (j && j.fout) throw new Error(j.fout);
+      /* de speelcode blijft, en is nu weer zonder account te gebruiken */
+      var p = lees(); delete p.acc; zet(p); accountStand = null; afstemBezig = null; zeg();
     });
   }
-  /* het antwoord op die vraag: ja, die code is van mij; of nee, geef me een nieuwe */
-  function accountNeemCode(c){
-    return vraag('/api/account/koppel', 'POST', { code:c || code() }).then(function(){ accountStand = null; zeg(); });
-  }
-  function accountNieuweCode(){
-    wis();
-    return maak().then(function(){ return vraag('/api/account/koppel', 'POST', { code:code() }); }).then(function(){ accountStand = null; zeg(); });
-  }
-  function uitloggen(){ return vraag('/api/account/uitloggen', 'POST', {}).then(function(){ accountStand = null; zeg(); }); }
-  function accountWeg(){
-    return fetch('/api/account', { method:'DELETE' }).then(function(r){ return r.json(); }).then(function(j){ if (j && j.fout) throw new Error(j.fout); accountStand = null; zeg(); });
-  }
-  /* bij het laden even samenvoegen, als er een code is */
-  if (code() && typeof fetch === 'function'){ setTimeout(function(){ sync(); }, 1500); }
-  /* en even kijken of er iemand is ingelogd, want dan tellen de munten */
+  /* bij het laden: wie is ingelogd, dan de code van het account; anders even samenvoegen als er een code is */
   /* En als die eerste vraag mislukt (wifi die even wegvalt), proberen we het
      na vier seconden nog een keer: anders telt een heel potje niet mee. */
-  if (typeof fetch === 'function' && !accountStand) setTimeout(function(){
+  if (typeof fetch === 'function') setTimeout(function(){
     account().then(function(a){
       if (a && a.onbekend) setTimeout(function(){ account(true); }, 4000);
-      else if (a && a.ingelogd) klassenAfstemmen();
+      else if (a && a.ingelogd){ accountAfstemmen().then(function(r){ if (r && r.nieuw) zeg(); }).catch(function(){}); return; }
+      if (code()) sync();
     });
   }, 400);
   return { bewaart:bewaart, lees:lees, code:code, avatar:avatar, zetAvatar:zetAvatar, maak:maak, koppel:koppel, sync:sync, wis:wis, verzamel:verzamel, op:op,
     wapens:wapens, uitrusting:uitrusting, zetUitrusting:zetUitrusting, koopWapen:koopWapen,
-    klasWeg:klasWeg, account:account, klassenAfstemmen:klassenAfstemmen, munten:munten, bezit:bezit, ingelogd:ingelogd, accountMogelijk:accountMogelijk, muntenErbij:muntenErbij, koop:koop, vrijspeel:vrijspeel, oudLeerling:oudLeerling, accountNeemCode:accountNeemCode, accountNieuweCode:accountNieuweCode, accountVlag:function(){ return accountVlag; }, winkelVlag:function(){ return winkelVlag; }, accountAfstemmen:accountAfstemmen, inlogAdres:inlogAdres, uitloggen:uitloggen, accountWeg:accountWeg, docentWeg:docentWeg, wie:function(){ return accountStand && accountStand.ingelogd ? String(accountStand.naam || '') : ''; } };
+    klasWeg:klasWeg, account:account, klassenAfstemmen:klassenAfstemmen, munten:munten, bezit:bezit, ingelogd:ingelogd, accountMogelijk:accountMogelijk, muntenErbij:muntenErbij, koop:koop, vrijspeel:vrijspeel, oudLeerling:oudLeerling, accountVlag:function(){ return accountVlag; }, winkelVlag:function(){ return winkelVlag; }, accountAfstemmen:accountAfstemmen, inlogAdres:inlogAdres, uitloggen:uitloggen, accountWeg:accountWeg, docentWeg:docentWeg, wie:function(){ return accountStand && accountStand.ingelogd ? String(accountStand.naam || '') : ''; } };
 })();
