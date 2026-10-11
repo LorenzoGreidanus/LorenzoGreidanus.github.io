@@ -107,7 +107,7 @@ window.SPEL = (function(){
      De spellen met een eigen uitleg in uitleg/<spel>.js. De speler zelf
      (stappen.js) en de inhoud komen pas binnen als iemand erom vraagt. */
   var MET_STAPPEN = [
-    'balans', 'berlijn', 'breukenbakker', 'bronnenlab', 'crisis', 'dag', 'dhte', 'feodalisme', 'fouten',
+    'balans', 'berlijn', 'breukenbakker', 'bronnenlab', 'crisis', 'dag', 'dhte', 'eiland', 'feodalisme', 'fouten',
     'handel', 'irregular', 'jagers', 'landenvormen', 'leenmannen', 'lichaam', 'meetlat', 'organisme', 'polis',
     'race', 'rekenen', 'stad', 'stadsontwerp', 'standen', 'tekstdetective', 'tijdvakken', 'topografie', 'toren',
     'uitverkoop', 'vergadering', 'vlaggen', 'vlakken', 'werkwoorden', 'zinsbouw', 'zwaard'
