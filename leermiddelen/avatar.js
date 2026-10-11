@@ -219,11 +219,11 @@ window.AVATAR = (function(){
     var grijs = 'fill="#A3A9B3" stroke="#6E7480" stroke-width="1.4" stroke-linejoin="round"';
     var wit = 'fill="#E2E0D8" stroke="#9C988C" stroke-width="1.4" stroke-linejoin="round"';
     var zwart = 'fill="#3A2E2A" stroke="#1f1714" stroke-width="1.4" stroke-linejoin="round"';
-    /* 1 Lord Salisbury: kale kruin, grijze plukken opzij, een volle grijze baard */
+    /* 1 Lord Salisbury: kale kruin, grijze plukken opzij, een volle grijze baard (binnen de omtrek, zoals alles van een gezichtje) */
     if (n === 1) return [
       [0, '<path d="M-35,-18 C-41,-10 -40,2 -35,8 C-33,0 -33,-8 -31,-14 Z M35,-18 C41,-10 40,2 35,8 C33,0 33,-8 31,-14 Z" ' + grijs + '/>', 1],
-      [24, '<path d="M-34,2 C-38,28 -20,54 0,56 C20,54 38,28 34,2 C28,14 16,20 0,20 C-16,20 -28,14 -34,2 Z" fill="#9AA0AA" stroke="#6E7480" stroke-width="1.6" stroke-linejoin="round"/>' +
-        '<path d="M-18,30 Q-14,38 -16,46 M0,28 L0,46 M18,30 Q14,38 16,46" fill="none" stroke="#7A818C" stroke-width="1.6" stroke-linecap="round"/>'],
+      [24, '<path d="M-37,0 C-39,26 -20,48 0,50 C20,48 39,26 37,0 C28,12 16,18 0,18 C-16,18 -28,12 -37,0 Z" fill="#9AA0AA" stroke="#6E7480" stroke-width="1.6" stroke-linejoin="round"/>' +
+        '<path d="M-18,28 Q-14,35 -16,42 M0,26 L0,43 M18,28 Q14,35 16,42" fill="none" stroke="#7A818C" stroke-width="1.6" stroke-linecap="round"/>', 1],
       [0, '<path d="M-17,12 Q-8,5 0,9 Q8,5 17,12 Q8,18 0,15 Q-8,18 -17,12 Z" fill="#858C97" stroke="#6E7480" stroke-width="1.4" stroke-linejoin="round"/>']];
     /* 2 Jules Ferry: donker haar met een scheiding (hoed 23), grote bakkebaarden en een snor, een gladde kin */
     if (n === 2) return [
@@ -237,8 +237,8 @@ window.AVATAR = (function(){
     /* 4 Leopold II: kaal met witte plukken en een lange puntbaard (geen neus: gezichtjes hebben er geen) */
     if (n === 4) return [
       [0, '<path d="M-35,-20 C-41,-12 -40,0 -35,6 C-33,-2 -33,-10 -31,-16 Z M35,-20 C41,-12 40,0 35,6 C33,-2 33,-10 31,-16 Z" ' + wit + '/>', 1],
-      [24, '<path d="M-31,8 C-31,36 -12,66 0,80 C12,66 31,36 31,8 C24,18 12,22 0,22 C-12,22 -24,18 -31,8 Z" fill="#E2E0D8" stroke="#9C988C" stroke-width="1.6" stroke-linejoin="round"/>' +
-        '<path d="M-12,32 Q-6,52 0,72 M12,32 Q6,52 0,72 M0,30 L0,60" fill="none" stroke="#B9B6AC" stroke-width="1.5" stroke-linecap="round"/>'],
+      [24, '<path d="M-31,6 C-31,28 -13,42 0,50 C13,42 31,28 31,6 C24,17 12,21 0,21 C-12,21 -24,17 -31,6 Z" fill="#E2E0D8" stroke="#9C988C" stroke-width="1.6" stroke-linejoin="round"/>' +
+        '<path d="M-12,29 Q-6,38 0,46 M12,29 Q6,38 0,46 M0,27 L0,42" fill="none" stroke="#B9B6AC" stroke-width="1.5" stroke-linecap="round"/>', 1],
       [0, '<path d="M-20,16 Q-8,8 0,13 Q8,8 20,16 Q8,22 0,18 Q-8,22 -20,16 Z" fill="#CFCCC2" stroke="#9C988C" stroke-width="1.4" stroke-linejoin="round"/>']];
     return [];
   }
