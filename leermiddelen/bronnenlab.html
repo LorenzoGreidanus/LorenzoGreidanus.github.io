@@ -350,7 +350,7 @@ html.raak .toetsen{display:none}
 .stapkop{background:var(--kaart,#fff);border:1px solid var(--randje);border-radius:24px;padding:18px 20px;margin-bottom:14px}
 .stapkop h3{font-size:1.15rem;margin:8px 0 10px;line-height:1.3}
 .standen{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
-.stand{border:1.5px solid var(--randje2);background:var(--kaart,#fff);color:inherit;border-radius:999px;padding:7px 14px;font:inherit;font-weight:600;font-size:.86rem;min-height:40px;cursor:pointer}
+.stand-oud{border:1.5px solid var(--randje2);background:var(--kaart,#fff);color:inherit;border-radius:999px;padding:7px 14px;font:inherit;font-weight:600;font-size:.86rem;min-height:40px;cursor:pointer}
 .stand.on{background:var(--ocean);border-color:var(--ocean);color:#fff}
 .stand:disabled{cursor:default}
 .stand:disabled:not(.on){opacity:.45}
@@ -369,9 +369,27 @@ html.raak .toetsen{display:none}
 @media(prefers-reduced-motion:no-preference){
   @keyframes zinErbij{from{background:color-mix(in srgb,#E1A93A 60%,transparent)}to{background:color-mix(in srgb,#E1A93A 28%,transparent)}}
   .antwoordbox .nieuw{animation:zinErbij .9s ease both}
-  .stapvraag{animation:uitslagOp .3s ease both}
+
 }
 @keyframes uitslagOp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.wijstekst{line-height:2.05;margin:4px 0 6px;font-size:1rem}
+.stuk{display:inline;font:inherit;color:inherit;background:transparent;border:0;padding:3px 2px;margin:0;border-radius:6px;cursor:pointer;
+  box-decoration-break:clone;-webkit-box-decoration-break:clone;border-bottom:2px dotted var(--randje2);text-align:left}
+.stuk:hover:not(:disabled){background:color-mix(in srgb,var(--ocean) 12%,transparent)}
+.stuk.raak{background:var(--goed-bg);border-bottom-color:var(--goed);color:#1f5c3c;font-weight:600}
+.stuk.mis{background:var(--fout-bg);border-bottom-color:var(--fout)}
+.stuk:disabled{cursor:default}
+.nogvinden{font-size:.86rem;color:var(--muted);margin:0}
+.schrijfvak{width:100%;font:inherit;font-size:1rem;line-height:1.5;padding:12px 14px;border-radius:14px;border:1.5px solid var(--randje2);background:var(--kaart,#fff);color:inherit;resize:vertical;margin:4px 0 8px}
+.schrijfvak:focus{outline:none;border-color:var(--ocean)}
+.btn.klein{padding:9px 16px;font-size:.92rem}
+.modelvak,.model{margin-top:10px;border-radius:14px;padding:12px 14px;background:color-mix(in srgb,#E1A93A 14%,transparent)}
+.modelvak p,.model p{margin:4px 0}
+.vraagje{font-weight:600;margin-top:8px !important}
+.checkvak{margin-top:12px}
+.checkje{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--randje);cursor:pointer}
+.checkje input{width:20px;height:20px;margin-top:2px;flex:none;accent-color:var(--goed)}
+.checkvak .afronden{margin-top:12px}
 </style>
 <link rel="stylesheet" href="basis.css">
 <link rel="stylesheet" href="spel.css">
@@ -2185,145 +2203,120 @@ BRONNEN = BRONNEN.concat(ECHTE, ECHTE2, VAARDIG);
 
 /* ============================================================================
    STAPPENPLANNEN: van examenvraag naar antwoord, stap voor stap
-   Een examenvraag als "Leg uit dat deze bron niet betrouwbaar is" los je op
-   met een vast stappenplan per vaardigheid. Elke goede stap levert een stukje
-   van het antwoord op; aan het eind staat je antwoord er in hele zinnen, en
-   kies je welk antwoord je op een toets zou opschrijven.
-   PLANNEN: per vaardigheid de vaste stappen (zo leer je het plan).
-   STAPOPGAVEN: per bron de examenvraag en per stap de keuzes. bron is de
-   titel van een bron uit BRONNEN; zin is wat een goede keuze aan het
-   antwoord toevoegt.
+   Geen meerkeuze. Bij een wijs-stap tik je in de bron het stukje aan dat
+   het bewijs is (wijs = stukjes tekst die goed zijn, min = hoeveel je er
+   moet vinden). Bij een schrijf-stap schrijf je zelf een zin en vergelijk
+   je die met het model. Aan het eind schrijf je je hele antwoord en loop je
+   het na met de checklist (check). zin is wat de stap aan het modelantwoord
+   toevoegt.
    ============================================================================ */
 var PLANNEN = {
   betrouwbaar:{ naam:'Betrouwbaarheid', stappen:['Wie maakte de bron, en wanneer?', 'Was de maker erbij?', 'Had de maker een reden om het mooier of erger voor te stellen?'] },
   standplaats:{ naam:'Standplaatsgebondenheid', stappen:['Wie is de maker, en bij welke groep hoort die?', 'Welke woorden laten zien wat de maker ervan vindt?', 'Hoe hangt die mening samen met de groep van de maker?'] },
   oorzaak:{ naam:'Oorzaak en gevolg', stappen:['Wat is het gevolg waar het om gaat?', 'Welke oorzaken noemt de bron?', 'Hoe leidt de oorzaak tot het gevolg?'] },
   propaganda:{ naam:'Propaganda', stappen:['Wie maakte de bron, en wat wil de maker bereiken?', 'Met welke beelden of woorden probeert de maker dat?', 'Wat laat de bron weg?'] },
-  representatief:{ naam:'Representativiteit', stappen:['Wie maakte de bron, en wat zag die?', 'Voor wie geldt dit beeld, en voor wie niet?', 'Waarom zegt de bron weinig over de grote groep?'] },
-  toonaan:{ naam:'Toon aan', stappen:['Wat moet je precies aantonen?', 'Welk stukje van de bron laat dat zien?', 'Hoe laat dat stukje het zien?'] }
+  representatief:{ naam:'Representativiteit', stappen:['Wie maakte de bron?', 'Wat zag de maker, en hoe?', 'Waarom zegt de bron weinig over de grote groep?'] },
+  toonaan:{ naam:'Toon aan', stappen:['Welk stukje van de bron laat het zien?', 'Wat is de reden of de uitzondering?', 'Hoe laat dat zien wat je moet aantonen?'] }
 };
 var STAPOPGAVEN = [
   { bron:'Caesar over zijn oorlog in Gallië', plan:'betrouwbaar',
     opdracht:'Leg uit dat deze bron niet betrouwbaar is als je wilt weten hoe dapper de Romeinen vochten.',
     begin:'De bron is niet betrouwbaar voor hoe dapper de Romeinen vochten.',
     stappen:[
-      [{ t:'Caesar zelf, terwijl hij nog oorlog voerde', goed:true, uitleg:'Klopt: onder het citaat staat dat de veldheer het zelf schreef, terwijl hij nog vocht.', zin:'Caesar schreef hem zelf, terwijl hij nog oorlog voerde.' },
-       { t:'Een Romeinse soldaat, jaren na de oorlog', uitleg:'Kijk onder het citaat: het boek is geschreven door de veldheer zelf.' },
-       { t:'Een historicus van nu', uitleg:'De bron is van ongeveer 50 v.Chr. Een historicus van nu schrijft geen citaat in de derde persoon over zichzelf.' }],
-      [{ t:'Ja, hij voerde zelf het bevel', goed:true, uitleg:'Hij was erbij. Dat maakt hem een ooggetuige, maar een ooggetuige is nog niet vanzelf eerlijk.', zin:'Hij was er dus bij,' },
-       { t:'Nee, hij hoorde het van zijn officieren', uitleg:'In de bron grijpt Caesar zelf een schild en loopt naar de voorste linie. Hij was er wel bij.' }],
-      [{ t:'Ja: hij wilde in Rome laten zien wat een goede veldheer hij was', goed:true, uitleg:'Het boek werd in Rome verspreid terwijl hij nog vocht. Hij had er belang bij dat iedereen las hoe goed het ging.', zin:'maar hij had er belang bij om zichzelf en zijn soldaten zo goed mogelijk neer te zetten, want het boek werd in Rome verspreid.' },
-       { t:'Nee: een veldheer schrijft altijd eerlijk op wat er gebeurt', uitleg:'Juist een veldheer wil dat thuis gelezen wordt hoe goed hij het doet. Let op "tien keer zo talrijk" en "weinig" gesneuveld.' },
-       { t:'Ja: hij had een hekel aan zijn soldaten', uitleg:'Hij prijst zijn soldaten juist. Het belang zit in zijn eigen naam in Rome.' }]
+      { vraag:'Tik in de bron aan wie hem maakte, en wanneer.', wijs:['geschreven door de veldheer zelf', 'terwijl hij nog aan het vechten was'], mis:'Kijk onder het citaat: daar staat wie het boek schreef.',
+        uitleg:'Caesar schreef het zelf, terwijl hij nog vocht.', zin:'Caesar schreef hem zelf, terwijl hij nog oorlog voerde.' },
+      { vraag:'Tik aan waaruit blijkt dat hij erbij was.', wijs:['Caesar zelf greep een schild'], mis:'Zoek in het citaat wat Caesar zelf doet.',
+        uitleg:'Hij grijpt zelf een schild: hij was erbij. Een ooggetuige is nog niet vanzelf eerlijk.', zin:'Hij was er dus bij,' },
+      { vraag:'Tik aan wat laat zien dat hij er belang bij had om het mooi voor te stellen.', wijs:['in Rome verspreid', 'tien keer zo talrijk', 'sneuvelden er weinig'], mis:'Waar werd het boek gelezen, en wanneer? En waar overdrijft hij?',
+        uitleg:'Het boek werd in Rome gelezen terwijl hij nog vocht: hij wilde laten zien wat een goede veldheer hij was. Daarom overdrijft hij.', zin:'maar hij had er belang bij om zichzelf en zijn soldaten zo goed mogelijk neer te zetten, want het boek werd in Rome verspreid terwijl hij nog vocht.' }
     ],
-    fout:['De bron is niet betrouwbaar, want hij is meer dan tweeduizend jaar oud.', 'De bron is betrouwbaar, want Caesar was er zelf bij.'],
-    foutUitleg:['Hoe oud een bron is, zegt niets over of de maker eerlijk was. Het gaat om de maker en zijn belang.', 'Erbij zijn is niet genoeg: Caesar had er belang bij om zichzelf mooi neer te zetten.'] },
+    check:['Je noemt wie de bron maakte en wanneer.', 'Je zegt dat hij erbij was, maar dat dat niet genoeg is.', 'Je legt uit welk belang hij had.', 'Je eindigt met waarom de bron daardoor niet betrouwbaar is.'] },
 
   { bron:'Een schilderij van een zeeslag, tachtig jaar later', plan:'betrouwbaar',
     opdracht:'Leg uit dat dit schilderij niet betrouwbaar is als bron over hoe de Slag op de Zuiderzee precies verliep.',
     begin:'Het schilderij is niet betrouwbaar voor hoe de slag precies verliep.',
     stappen:[
-      [{ t:'Een schilder in 1660, in opdracht van het stadsbestuur van Hoorn', goed:true, uitleg:'Klopt: tachtig jaar na de slag, voor de raadzaal van Hoorn.', zin:'Het is in 1660 geschilderd, in opdracht van het stadsbestuur van Hoorn.' },
-       { t:'Een matroos die in 1573 meevocht', uitleg:'De matroos staat op het schilderij, maar heeft het niet gemaakt. Kijk naar wie de schilder was.' },
-       { t:'De Spaanse admiraal, na zijn nederlaag', uitleg:'Het Spaanse vlaggenschip staat in brand op het schilderij; de opdracht kwam van Hoorn.' }],
-      [{ t:'Nee, hij was in 1573 nog niet geboren', goed:true, uitleg:'Hij kon de slag niet zelf gezien hebben: hij schilderde wat anderen vertelden of wat hij zich voorstelde.', zin:'De schilder was in 1573 nog niet geboren, dus hij was er niet bij.' },
-       { t:'Ja, hij zat op een van de schepen', uitleg:'In de bron staat dat de schilder in 1573 nog niet geboren was.' }],
-      [{ t:'Ja: het moest in de raadzaal de overwinning van Hoorn vieren', goed:true, uitleg:'Een schilderij voor de raadzaal moest de stad trots maken. Dan laat je de Hollanders zo heldhaftig mogelijk zien.', zin:'Het moest in de raadzaal de overwinning vieren, dus de schilder liet de Hollanders zo heldhaftig mogelijk zien.' },
-       { t:'Nee: een schilder schildert altijd wat hij ziet', uitleg:'Deze schilder zag niets van de slag. En een opdrachtgever bepaalt mee wat er op het doek komt.' },
-       { t:'Ja: hij was zelf Spaans', uitleg:'Daar staat niets over in de bron. Het belang zit bij de opdrachtgever: het stadsbestuur van Hoorn.' }]
+      { vraag:'Tik in de bron aan voor wie het schilderij gemaakt werd.', wijs:['in opdracht van het stadsbestuur van Hoorn'], mis:'Zoek wie de opdracht gaf.',
+        uitleg:'Het stadsbestuur van Hoorn gaf de opdracht, in 1660.', zin:'Het is in 1660 geschilderd, in opdracht van het stadsbestuur van Hoorn.' },
+      { vraag:'Tik aan waaruit blijkt dat de schilder er niet bij was.', wijs:['nog niet geboren'], mis:'Wat staat er over de schilder in 1573?',
+        uitleg:'De schilder was in 1573 nog niet geboren.', zin:'De schilder was in 1573 nog niet geboren, dus hij was er niet bij.' },
+      { vraag:'Tik aan wat laat zien dat de opdrachtgever een mooi beeld wilde.', wijs:['voor de raadzaal', 'redt een Hollandse matroos een drenkeling', 'wapperende vlaggen'], mis:'Waar moest het schilderij hangen? En hoe zie je de Hollanders?',
+        uitleg:'Het hing in de raadzaal en moest de stad trots maken. Dan laat je de Hollanders zo heldhaftig mogelijk zien.', zin:'Het moest in de raadzaal de overwinning vieren, dus de schilder liet de Hollanders zo heldhaftig mogelijk zien.' }
     ],
-    fout:['Het schilderij is betrouwbaar, want het is heel precies geschilderd.', 'Het schilderij is niet betrouwbaar, want schilderijen zijn altijd verzonnen.'],
-    foutUitleg:['Precies schilderen is iets anders dan precies weten wat er gebeurde. De schilder was er niet bij.', 'Niet elk schilderij is verzonnen. Je moet uitleggen waarom juist dit schilderij niet betrouwbaar is: maker, tijd en belang.'] },
+    check:['Je noemt wie het schilderij maakte en voor wie.', 'Je zegt dat de schilder er niet bij was.', 'Je legt uit welk belang de opdrachtgever had.', 'Je eindigt met waarom het schilderij daardoor niet betrouwbaar is.'] },
 
   { bron:'Twee brieven over dezelfde beeldenstorm', plan:'standplaats',
     opdracht:'Leg uit dat de schrijver van brief een standplaatsgebonden is.',
     begin:'Brief een is standplaatsgebonden.',
     stappen:[
-      [{ t:'Een katholieke pastoor, die schrijft aan zijn bisschop', goed:true, uitleg:'Klopt: hij hoort bij de katholieke kerk, en juist die kerk werd aangevallen.', zin:'De schrijver is een katholieke pastoor.' },
-       { t:'Een calvinistische lakenkoopman', uitleg:'Dat is de schrijver van brief twee.' },
-       { t:'Een beeldenstormer', uitleg:'De schrijver van brief een is juist tegen de beeldenstorm. Kijk wie de brief schreef.' }],
-      [{ t:'"woeste bende", "dronken lieden en landlopers", "ketters"', goed:true, uitleg:'Dat zijn woorden met een oordeel: zo praat je over mensen die je afkeurt.', zin:'Hij noemt de beeldenstormers een woeste bende, dronken lieden en ketters.' },
-       { t:'"rechtschapen burgers", "ordelijk", "het ware geloof"', uitleg:'Die woorden staan in brief twee, van de calvinist.' },
-       { t:'"gisteren", "de kerk", "het altaar"', uitleg:'Dat zijn feiten zonder oordeel. Zoek de woorden waarin de schrijver laat merken wat hij ervan vindt.' }],
-      [{ t:'Als katholiek ziet hij de beelden als heilig, dus hij keurt de beeldenstorm af', goed:true, uitleg:'Zijn geloof bepaalt hoe hij de gebeurtenis ziet: dat is standplaatsgebondenheid.', zin:'Als katholiek vond hij de beelden heilig; daarom beschrijft hij de beeldenstormers zo negatief.' },
-       { t:'Hij was erbij, dus hij weet hoe het echt ging', uitleg:'Erbij zijn zegt niets over hoe hij erover denkt. Bij standplaatsgebondenheid gaat het om zijn positie.' },
-       { t:'Hij schrijft lang na de gebeurtenis', uitleg:'Hij schrijft "gisteren", dus vlak erna. Het gaat om zijn geloof, niet om de tijd.' }]
+      { vraag:'Tik in de bron aan wie brief een schreef.', wijs:['van een katholieke pastoor aan zijn bisschop'], mis:'Het staat vlak voor het citaat van brief een.',
+        uitleg:'Een katholieke pastoor: hij hoort bij de kerk die werd aangevallen.', zin:'De schrijver is een katholieke pastoor.' },
+      { vraag:'Tik de woorden aan waaruit blijkt wat hij ervan vindt. Vind er twee.', min:2, wijs:['woeste bende', 'dronken lieden en landlopers', 'opgehitst door ketters', 'geschonden'], mis:'Zoek woorden met een oordeel, in brief een.',
+        uitleg:'Dat zijn woorden met een oordeel: zo praat je over mensen die je afkeurt.', zin:'Hij noemt de beeldenstormers een woeste bende, dronken lieden en ketters.' },
+      { type:'schrijf', vraag:'Hoe hangt zijn mening samen met wie hij is? Schrijf het in een zin.', model:'Als katholiek vond hij de beelden heilig; daarom beschrijft hij de beeldenstormers zo negatief.', zin:'Als katholiek vond hij de beelden heilig; daarom beschrijft hij de beeldenstormers zo negatief.' }
     ],
-    fout:['Brief een is standplaatsgebonden, want de pastoor liegt.', 'Brief een is standplaatsgebonden, want het is een brief.'],
-    foutUitleg:['Standplaatsgebonden is niet hetzelfde als liegen. Het betekent dat zijn positie kleurt hoe hij het ziet.', 'Een brief kan heel zakelijk zijn. Je moet laten zien hoe de positie van de schrijver zijn oordeel kleurt.'] },
+    check:['Je noemt wie de schrijver is en bij welke groep hij hoort.', 'Je noemt woorden uit de brief die zijn oordeel laten zien.', 'Je legt het verband: door zijn geloof ziet hij het zo.'] },
 
   { bron:'Een pamflet over de duurte van het brood', plan:'oorzaak',
-    opdracht:'Leg met de bron uit welke twee oorzaken de schrijver noemt voor de hoge broodprijs.', slot:'',
+    opdracht:'Leg met de bron uit welke twee oorzaken de schrijver noemt voor de hoge broodprijs.',
     begin:'',
     stappen:[
-      [{ t:'Het brood kost de helft van een dagloon', goed:true, uitleg:'Dat is het gevolg waar de vraag over gaat: de hoge broodprijs.', zin:'Het brood is zo duur dat het de helft van een dagloon kost.' },
-       { t:'De bestorming van de Bastille', uitleg:'Die kwam een paar dagen later en staat niet in het pamflet zelf. De vraag gaat over de broodprijs.' },
-       { t:'De feesten aan het hof', uitleg:'Die noemt de schrijver wel, maar dat is niet het gevolg waar de vraag over gaat.' }],
-      [{ t:'De mislukte oogst, en graanhandelaren die hun voorraad vasthouden', goed:true, uitleg:'Klopt: twee oorzaken, een uit de natuur en een van mensen.', zin:'Volgens de schrijver komt dat doordat de oogst mislukt is door hagel en een strenge winter, en doordat de graanhandelaren hun voorraden vasthouden.' },
-       { t:'De feesten van het hof', uitleg:'Dat staat er wel, maar het verklaart niet waarom het brood duur is. Het gaat over waarom het volk boos is.' },
-       { t:'De bestorming van de Bastille', uitleg:'Die was later, en was eerder een gevolg van de onrust dan een oorzaak van de broodprijs.' }],
-      [{ t:'Er is minder graan te koop, en wat schaars is, wordt duur', goed:true, uitleg:'Zo leg je het verband: van oorzaak via schaarste naar een hoge prijs.', zin:'Daardoor is er minder graan te koop, en wat schaars is, wordt duur.' },
-       { t:'De bakkers willen meer verdienen', uitleg:'Dat staat niet in de bron. Gebruik de oorzaken die de schrijver noemt.' }]
+      { vraag:'Tik in de bron het gevolg aan waar de vraag over gaat.', wijs:['Het brood kost nu de helft van een dagloon'], mis:'De vraag gaat over de broodprijs.',
+        uitleg:'Het brood kost de helft van een dagloon.', zin:'Het brood is zo duur dat het de helft van een dagloon kost.' },
+      { vraag:'Tik de twee oorzaken aan die de schrijver noemt.', min:2, wijs:['De oogst is mislukt door hagel en een strenge winter', 'de graanhandelaren houden hun voorraden vast'], mis:'De feesten van het hof maken het volk boos, maar maken ze het brood duur? Zoek wat het graan schaars maakt.',
+        uitleg:'Een oorzaak uit de natuur en een van mensen.', zin:'Volgens de schrijver komt dat doordat de oogst mislukt is door hagel en een strenge winter, en doordat de graanhandelaren hun voorraden vasthouden.' },
+      { type:'schrijf', vraag:'Hoe leiden die oorzaken tot het dure brood? Schrijf het in een zin.', model:'Daardoor is er minder graan te koop, en wat schaars is, wordt duur.', zin:'Daardoor is er minder graan te koop, en wat schaars is, wordt duur.' }
     ],
-    fout:['Het brood is duur, want het hof geeft miljoenen uit aan feesten.', 'Het brood is duur door de Franse Revolutie.'],
-    foutUitleg:['De feesten maken het volk boos, maar ze verklaren niet de broodprijs.', 'De revolutie begon pas daarna. De vraag is welke oorzaken de schrijver in het pamflet noemt.'] },
+    check:['Je noemt het gevolg: de hoge broodprijs.', 'Je noemt allebei de oorzaken uit de bron.', 'Je legt het verband met een woord als doordat, daardoor of omdat.'] },
 
   { bron:'Een wervingsaffiche voor het Oostfront', plan:'propaganda',
     opdracht:'Leg uit dat dit affiche propaganda is.',
     begin:'Het affiche is propaganda.',
     stappen:[
-      [{ t:'Het Vrijwilligerslegioen Nederland, om jonge mannen te laten tekenen voor het Oostfront', goed:true, uitleg:'De maker wil iets van je: dat je gaat vechten. Dat staat klein in de hoek.', zin:'Het is gemaakt door het Vrijwilligerslegioen Nederland om jonge mannen over te halen om aan het Oostfront te vechten.' },
-       { t:'Een krant, om te laten zien hoe de oorlog ging', uitleg:'In de hoek staat wie het affiche uitgaf. Een affiche dat oproept tot vechten wil iets anders dan een krant.' },
-       { t:'Het verzet, om te waarschuwen tegen de Duitsers', uitleg:'Het affiche roept juist op om mee te vechten aan Duitse kant.' }],
-      [{ t:'Een vastberaden soldaat, een opgaande zon en woorden als "voor uw gezin, voor Europa"', goed:true, uitleg:'Beeld en woorden maken de oorlog mooi en eervol: zo werkt propaganda.', zin:'Een vastberaden soldaat, een opgaande zon en woorden als "voor uw gezin, voor Europa" laten de oorlog mooi en eervol lijken.' },
-       { t:'Het aantal soldaten dat al gesneuveld is', uitleg:'Dat staat er juist niet op. Kijk naar wat je wel ziet: de soldaat, de zon, de woorden.' }],
-      [{ t:'Dat soldaten aan het Oostfront sneuvelden, en voor wie ze eigenlijk vochten', goed:true, uitleg:'Propaganda laat weg wat afschrikt. Veel Nederlandse vrijwilligers kwamen niet terug.', zin:'Wat afschrikt, zoals dat veel vrijwilligers sneuvelden, laat het weg.' },
-       { t:'Niets: het affiche vertelt het hele verhaal', uitleg:'Geen enkel affiche vertelt het hele verhaal, en dit affiche wil je juist overhalen.' }]
+      { vraag:'Tik in de bron aan wie het affiche maakte.', wijs:['uitgegeven door de Vrijwilligerslegioen Nederland'], mis:'Het staat klein in de hoek.',
+        uitleg:'Het Vrijwilligerslegioen wilde jonge mannen laten tekenen voor het Oostfront.', zin:'Het is gemaakt door het Vrijwilligerslegioen Nederland om jonge mannen over te halen om aan het Oostfront te vechten.' },
+      { vraag:'Tik twee beelden of woorden aan waarmee de maker je overhaalt.', min:2, wijs:['vastberaden', 'opgaande zon', 'golvend korenland', 'Voor uw gezin', 'voor Europa', 'Strijdt mee tegen het bolsjewisme'], mis:'Kijk naar wat de oorlog mooi of eervol laat lijken.',
+        uitleg:'Beeld en woorden maken de oorlog mooi en eervol: zo werkt propaganda.', zin:'Een vastberaden soldaat, een opgaande zon en woorden als "voor uw gezin, voor Europa" laten de oorlog mooi en eervol lijken.' },
+      { type:'schrijf', vraag:'Wat laat het affiche weg? Schrijf het in een zin.', model:'Dat veel vrijwilligers aan het Oostfront sneuvelden, en voor wie ze eigenlijk vochten.', zin:'Wat afschrikt, zoals dat veel vrijwilligers sneuvelden, laat het weg.' }
     ],
-    fout:['Het affiche is propaganda, want het is gemaakt in de oorlog.', 'Het affiche is propaganda, want er staat een soldaat op.'],
-    foutUitleg:['Niet alles uit de oorlog is propaganda. Je moet laten zien wat de maker wil en hoe hij dat doet.', 'Een soldaat alleen maakt het geen propaganda. Leg uit wat de maker wil bereiken en hoe beeld en woorden daarvoor zorgen.'] },
+    check:['Je noemt wie het affiche maakte en wat die wilde.', 'Je noemt beelden of woorden uit de bron die je overhalen.', 'Je noemt wat het affiche weglaat.'] },
 
   { bron:'Dagboek van een fabrikantsdochter', plan:'representatief',
     opdracht:'Leg uit dat deze bron niet representatief is voor hoe arbeiders in 1885 in een fabriek werkten.',
     begin:'De bron is niet representatief voor hoe arbeiders in de fabriek werkten.',
     stappen:[
-      [{ t:'De dochter van de fabrikant, die op zondag met haar vader ging kijken', goed:true, uitleg:'Ze kwam als bezoeker, en dan ook nog als dochter van de baas.', zin:'De schrijver is de dochter van de fabrikant, die op zondag met haar vader een kijkje nam.' },
-       { t:'Een arbeidster die in de fabriek werkte', uitleg:'Onder het fragment staat wie het schreef: een meisje van zestien uit een rijke familie.' }],
-      [{ t:'Voor een rijk gezin op bezoek, niet voor de arbeiders zelf', goed:true, uitleg:'Zij ziet de fabriek van buitenaf. Hoe het voor de arbeiders was, beschrijft ze niet.', zin:'Ze beschrijft hoe het er voor een rijk gezin op bezoek uitzag, niet hoe de arbeiders het zelf hadden.' },
-       { t:'Voor alle mensen in de stad', uitleg:'Zij schrijft "er is geen gelukkiger stad", maar dat is haar indruk vanuit de tuin, niet van iedereen.' }],
-      [{ t:'De arbeiders groetten de dochter van hun baas beleefd; wat ze echt vonden, zag zij niet', goed:true, uitleg:'Tegenover de familie van je baas ben je beleefd. Dat zegt niets over hoe zwaar het werk was.', zin:'Tegenover de dochter van hun baas lieten de arbeiders zich van hun beste kant zien, dus over hun werk en leven zegt de bron weinig.' },
-       { t:'Het is maar één dag uit een dagboek', uitleg:'Dat klopt ook, maar het belangrijkste is wie er kijkt: een buitenstaander uit de familie van de baas.' }]
+      { vraag:'Tik in de bron aan wie het dagboek schreef.', wijs:['dochter van een textielfabrikant'], mis:'Het staat onder het fragment.',
+        uitleg:'De dochter van de fabrikant: de familie van de baas.', zin:'De schrijver is de dochter van de fabrikant.' },
+      { vraag:'Tik aan wanneer en hoe zij de fabriek zag.', wijs:['Zondag', 'Vader nam ons mee naar de fabriek'], mis:'Werkte zij er? Zoek wanneer en met wie ze kwam.',
+        uitleg:'Op zondag, als bezoeker, met haar vader.', zin:'Ze kwam op zondag even kijken, met haar vader.' },
+      { type:'schrijf', vraag:'Waarom zegt dit weinig over hoe de arbeiders het hadden? Schrijf het in een zin.', model:'Tegenover de dochter van hun baas lieten de arbeiders zich van hun beste kant zien; hoe zwaar hun werk was, zag zij niet.', zin:'Tegenover de dochter van hun baas lieten de arbeiders zich van hun beste kant zien, dus over hun werk en leven zegt de bron weinig.' }
     ],
-    fout:['De bron is niet representatief, want het is een dagboek.', 'De bron is representatief, want ze was zelf in de fabriek.'],
-    foutUitleg:['Ook een dagboek kan representatief zijn. Het gaat erom van wie het is en voor wie het beeld geldt.', 'Erbij zijn als bezoeker is iets anders dan er werken. Haar beeld geldt niet voor de arbeiders.'] },
+    check:['Je noemt wie de schrijver is.', 'Je zegt dat zij de fabriek als bezoeker zag.', 'Je legt uit waarom dat beeld niet geldt voor de arbeiders.'] },
 
   { bron:'Het Plakkaat van Verlatinghe', plan:'toonaan',
-    opdracht:'Toon met de bron aan dat de Opstand in de Nederlanden uitliep op een breuk met de koning.', slot:'Daarmee breken ze met de koning.',
+    opdracht:'Toon met de bron aan dat de Opstand in de Nederlanden uitliep op een breuk met de koning.',
     begin:'',
     stappen:[
-      [{ t:'Dat de Nederlanden de koning niet meer als hun heer erkenden', goed:true, uitleg:'Klopt: een breuk met de koning betekent dat je hem niet meer als vorst ziet.', zin:'' },
-       { t:'Dat de Nederlanden een oorlog wonnen', uitleg:'Daar gaat de vraag niet over. Je moet een breuk met de koning aantonen.' }],
-      [{ t:'"De Staten-Generaal verklaren dat zij Filips II niet langer als hun heer erkennen"', goed:true, uitleg:'Dat stukje laat de breuk het duidelijkst zien.', zin:'In de bron verklaren de Staten-Generaal dat zij Filips II niet langer als hun heer erkennen.' },
-       { t:'"Er volgt een lange lijst"', uitleg:'De lijst legt uit waarom, maar het stukje dat de breuk zelf laat zien, is de verklaring dat ze hem niet meer erkennen.' }],
-      [{ t:'Een vorst die zijn onderdanen als slaven behandelt, mag volgens hen worden afgezet, en dat doen ze', goed:true, uitleg:'Zo verbind je het stukje met de vraag: ze zetten de koning af, met een reden.', zin:'Ze vinden dat een vorst die zijn onderdanen als slaven behandelt, mag worden afgezet, en dat doen ze met Filips.' },
-       { t:'Filips II stierf in 1581', uitleg:'Filips leefde tot 1598. Het gaat om wat de Staten-Generaal besloten.' }]
+      { vraag:'Tik het stukje aan dat de breuk met de koning laat zien.', wijs:['niet langer als hun heer erkennen'], mis:'Zoek wat de Staten-Generaal over Filips II verklaren.',
+        uitleg:'Ze erkennen Filips niet meer als hun heer.', zin:'In de bron verklaren de Staten-Generaal dat zij Filips II niet langer als hun heer erkennen.' },
+      { vraag:'Tik de reden aan die ze geven.', wijs:['een vorst er is voor zijn onderdanen', 'als slaven behandelt door hen mag worden afgezet'], mis:'Waarom mag een vorst volgens hen worden afgezet?',
+        uitleg:'Een vorst die zijn onderdanen als slaven behandelt, mag worden afgezet.', zin:'Ze vinden dat een vorst die zijn onderdanen als slaven behandelt, mag worden afgezet,' },
+      { type:'schrijf', vraag:'Hoe laat dit de breuk met de koning zien? Schrijf het in een zin.', model:'Ze zetten Filips af als hun vorst: daarmee breken ze met de koning.', zin:'en dat doen ze met Filips. Daarmee breken ze met de koning.' }
     ],
-    fout:['De Opstand liep uit op een breuk, want er was een oorlog.', 'In 1581 kwam de Opstand.'],
-    foutUitleg:['Je gebruikt de bron niet. Bij "toon aan" moet je een stukje uit de bron noemen.', 'Dat klopt niet en het toont niets aan met de bron.'] },
+    check:['Je noemt een stukje uit de bron.', 'Je noemt de reden die de Staten geven.', 'Je legt uit dat dit een breuk met de koning is.'] },
 
   { bron:'Het Kinderwetje van Van Houten', plan:'toonaan',
-    opdracht:'Toon met de bron aan dat het Kinderwetje kinderarbeid niet helemaal verbood.', slot:'Kinderarbeid was dus niet helemaal verboden.',
+    opdracht:'Toon met de bron aan dat het Kinderwetje kinderarbeid niet helemaal verbood.',
     begin:'',
     stappen:[
-      [{ t:'Dat kinderen na de wet in sommige gevallen nog steeds mochten werken', goed:true, uitleg:'Precies: niet helemaal verbieden betekent dat er nog werk toegestaan bleef.', zin:'' },
-       { t:'Dat de wet niets veranderde', uitleg:'De wet verbood wel iets: loondienst onder de twaalf. De vraag is wat er níet verboden werd.' }],
-      [{ t:'"Werk in de landbouw en huishoudelijk werk vallen er niet onder"', goed:true, uitleg:'Dat zijn de uitzonderingen in de wet zelf.', zin:'In de wet staan uitzonderingen: werk in de landbouw en huishoudelijk werk vallen er niet onder.' },
-       { t:'"Kinderen onder de twaalf mogen niet in loondienst werken"', uitleg:'Dat is wat de wet wel verbood. Zoek het stukje dat laat zien wat nog mocht.' }],
-      [{ t:'Op de boerderij en in huis mochten kinderen dus blijven werken, en niemand controleerde de wet', goed:true, uitleg:'Zo laat je met de bron zien dat het verbod gaten had.', zin:'Op de boerderij en in huis mochten kinderen dus blijven werken. Er staat ook niet in wie moest controleren of de wet werd nageleefd.' },
-       { t:'Kinderen vonden het werk leuk', uitleg:'Dat staat niet in de bron. Gebruik wat er in de wet staat.' }]
+      { vraag:'Tik aan wat de wet wel verbiedt.', wijs:['verbiedt kinderen onder de twaalf jaar in loondienst'], mis:'Begin bij het eerste wat de wet zegt.',
+        uitleg:'Kinderen onder de twaalf mogen niet in loondienst werken.', zin:'De wet verbiedt kinderen onder de twaalf om in loondienst te werken,' },
+      { vraag:'Tik de uitzonderingen aan.', wijs:['werk in de landbouw en huishoudelijk werk vallen er niet onder'], mis:'Zoek wat er níet onder de wet valt.',
+        uitleg:'Landbouw en huishoudelijk werk vallen er niet onder.', zin:'maar werk in de landbouw en huishoudelijk werk vallen er niet onder.' },
+      { vraag:'Tik nog een zwakke plek van de wet aan.', wijs:['geen bepaling in over wie moet controleren'], mis:'Wie zorgt ervoor dat de wet wordt nageleefd?',
+        uitleg:'Niemand hoefde te controleren of de wet werd nageleefd.', zin:'Er staat ook niet in wie moest controleren of de wet werd nageleefd. Kinderarbeid was dus niet helemaal verboden.' }
     ],
-    fout:['Het Kinderwetje verbood kinderarbeid niet helemaal, want het was maar een klein wetje.', 'Het Kinderwetje verbood alle kinderarbeid onder de twaalf.'],
-    foutUitleg:['De naam zegt niets. Bij "toon aan" noem je een stukje uit de bron.', 'Niet alle: de uitzonderingen in de wet laten zien dat landbouw en huishoudelijk werk nog mochten.'] }
+    check:['Je noemt wat de wet verbood.', 'Je noemt de uitzonderingen uit de bron.', 'Je trekt de conclusie: kinderarbeid was niet helemaal verboden.'] }
 ];
 STAPOPGAVEN.forEach(function(o){
   var b = BRONNEN.filter(function(x){ return x.titel === o.bron; })[0];
@@ -2895,11 +2888,11 @@ var ECHTE_ALT = {
   }
 
   /* ---------- een stappenplan opbouwen ----------
-     Drie standen: Stap voor stap (elke stap kiezen, een fout mag je
-     herstellen, alleen je eerste keuze telt), Laat zien hoe het moet (het
-     bord doet het voor, zonder punten) en Zelf (meteen het eindantwoord
-     kiezen; bij een fout doet het spel de stappen alsnog voor). Elke goede
-     stap zet een zin in Jouw antwoord. */
+     Geen meerkeuze. Bij een wijs-stap staat de bron in stukjes en tik je aan
+     waar het bewijs staat; een fout geeft een hint. Bij een schrijf-stap
+     schrijf je zelf een zin en zet je hem daarna naast het model. Aan het
+     eind schrijf je je hele antwoord, loop je de checklist na en zie je het
+     modelantwoord. Wat telt: aanwijzen in een keer goed, en de checklist. */
   function telAntwoord(ok, bron, nr, tekst){
     gedaan++;
     if (window.KLAS && KLAS.tel) KLAS.tel(od, 'werken met bronnen', ok);
@@ -2907,108 +2900,118 @@ var ECHTE_ALT = {
     resultaten.push({ bron:bron.titel, vraag:nr, tekst:tekst, goed:ok });
     werkTellerBij();
   }
+  function kaal(t){ return String(t || '').toLowerCase().replace(/[“”"'’.,;:!?]/g, '').replace(/\s+/g, ' ').trim(); }
+  /* de bron in stukjes: op leestekens, zodat je een zinsdeel kunt aantikken */
+  function stukken(tekst){
+    var uit = [], r = /[^.,;:!?]+[.,;:!?]*["”]?\s*/g, m;
+    while ((m = r.exec(tekst))) if (m[0].trim()) uit.push(m[0]);
+    return uit;
+  }
+  function raak(stuk, wijs){
+    var k = kaal(stuk);
+    for (var i = 0; i < wijs.length; i++){ var w = kaal(wijs[i]); if (k.indexOf(w) >= 0 || (k.length >= 8 && w.indexOf(k) >= 0)) return i; }
+    return -1;
+  }
   function maakStappen(b){
     var o = b.stap, plan = PLANNEN[o.plan], wrap = document.createElement('div');
     wrap.className = 'stappenplan';
-    var model = [o.begin].concat(o.stappen.map(function(s){ return s.filter(function(x){ return x.goed; })[0].zin; }), [o.slot]).filter(Boolean).join(' ');
-    var eind = husselen([{ t:model, goed:true, uitleg:'Dit antwoord noemt je oordeel en onderbouwt het met de bron, stap voor stap.' }].concat(o.fout.map(function(t, i){ return { t:t, uitleg:o.foutUitleg[i] }; })));
+    var model = [o.begin].concat(o.stappen.map(function(s){ return s.zin; })).filter(Boolean).join(' ');
+    var tekst = String(b.tekst || '').replace(/<[^>]+>/g, '');
     wrap.innerHTML =
       '<section class="stapkop"><span class="badge vaardig">' + plan.naam + '</span><h3>' + schoon(o.opdracht) + '</h3>' +
-        '<div class="standen" role="group" aria-label="Hoe wil je het doen?"><button type="button" class="stand" data-s="voor">Laat zien hoe het moet</button><button type="button" class="stand on" data-s="samen">Stap voor stap</button><button type="button" class="stand" data-s="zelf">Zelf</button></div>' +
         '<ol class="plan">' + plan.stappen.map(function(s, i){ return '<li data-i="' + i + '">' + schoon(s) + '</li>'; }).join('') + '<li data-i="' + plan.stappen.length + '">Schrijf je antwoord op</li></ol></section>' +
       o.stappen.map(function(st, i){
-        return '<section class="vraag stapvraag' + (i ? ' hide' : '') + '" data-i="' + i + '"><div class="kop"><span class="nr">' + (i + 1) + '</span><h3>' + schoon(plan.stappen[i]) + '</h3></div><div class="opties"></div><div class="feedback" role="status" aria-live="polite"></div></section>';
+        return '<section class="vraag stapvraag' + (i ? ' hide' : '') + '" data-i="' + i + '"><div class="kop"><span class="nr">' + (i + 1) + '</span><h3>' + schoon(st.vraag) + '</h3></div>' +
+          (st.type === 'schrijf'
+            ? '<textarea class="schrijfvak" rows="3" placeholder="Schrijf hier je zin"></textarea><button type="button" class="btn klein vergelijk">Vergelijk met het model</button><div class="modelvak hide"></div>'
+            : '<p class="wijstekst">' + stukken(tekst).map(function(s, k){ return '<button type="button" class="stuk" data-k="' + k + '">' + schoon(s) + '</button>'; }).join('') + '</p>' + (st.min > 1 ? '<p class="nogvinden"></p>' : '')) +
+          '<div class="feedback" role="status" aria-live="polite"></div></section>';
       }).join('') +
-      '<section class="antwoordbox"><span class="eyebrow">jouw antwoord</span><p class="antw"><span class="leeg">Na elke goede stap komt hier een stukje bij.</span></p></section>' +
-      '<section class="vraag stapvraag eindvraag hide" data-i="eind"><div class="kop"><span class="nr">' + (o.stappen.length + 1) + '</span><h3>Welk antwoord schrijf je op een toets?</h3></div><div class="opties"></div><div class="feedback" role="status" aria-live="polite"></div></section>';
+      '<section class="antwoordbox"><span class="eyebrow">wat je tot nu toe hebt</span><p class="antw"><span class="leeg">Na elke stap komt hier een stukje bij.</span></p></section>' +
+      '<section class="vraag stapvraag eindvraag hide" data-i="eind"><div class="kop"><span class="nr">' + (o.stappen.length + 1) + '</span><h3>Schrijf nu je antwoord op, zoals op een toets.</h3></div>' +
+        '<textarea class="schrijfvak eind" rows="5" placeholder="' + schoon(o.begin || 'Begin met je antwoord op de vraag') + '"></textarea>' +
+        '<button type="button" class="btn klein klaarschrijf">Klaar, loop het na</button>' +
+        '<div class="checkvak hide"><p class="eyebrow">loop je antwoord na</p>' + o.check.map(function(c, i){ return '<label class="checkje"><input type="checkbox" data-c="' + i + '"><span>' + schoon(c) + '</span></label>'; }).join('') +
+          '<div class="model"><p class="eyebrow">zo kan het</p><p>' + schoon(model) + '</p></div><button type="button" class="btn klein afronden">Klaar met deze bron</button></div>' +
+        '<div class="feedback" role="status" aria-live="polite"></div></section>';
 
-    var stand = 'samen', zinnen = [], klaarStap = {};
-    var secties = wrap.querySelectorAll('.stapvraag:not(.eindvraag)'), eindSec = wrap.querySelector('.eindvraag');
+    var zinnen = [], secties = wrap.querySelectorAll('.stapvraag:not(.eindvraag)'), eindSec = wrap.querySelector('.eindvraag');
     function zetPlan(i){ Array.prototype.forEach.call(wrap.querySelectorAll('.plan li'), function(li){ var n = +li.getAttribute('data-i'); li.className = n < i ? 'af' : n === i ? 'nu' : ''; }); }
     function zetAntwoord(){
-      var p = wrap.querySelector('.antw'), tekst = [o.begin].concat(zinnen).filter(Boolean);
-      p.innerHTML = tekst.length ? tekst.map(function(t, i){ return '<span' + (i === tekst.length - 1 && zinnen.length ? ' class="nieuw"' : '') + '>' + schoon(t) + '</span>'; }).join(' ') : '<span class="leeg">Na elke goede stap komt hier een stukje bij.</span>';
+      var p = wrap.querySelector('.antw'), t = [o.begin].concat(zinnen).filter(Boolean);
+      p.innerHTML = t.length ? t.map(function(x, i){ return '<span' + (i === t.length - 1 && zinnen.length ? ' class="nieuw"' : '') + '>' + schoon(x) + '</span>'; }).join(' ') : '<span class="leeg">Na elke stap komt hier een stukje bij.</span>';
     }
-    function opties(sec, lijst, bijGoed, telmee){
-      var vak = sec.querySelector('.opties'), fb = sec.querySelector('.feedback'), eerste = true;
-      lijst.forEach(function(x, k){
-        var knop = document.createElement('button');
-        knop.className = 'opt'; knop.type = 'button';
-        knop.innerHTML = '<kbd>' + (k + 1) + '</kbd><span>' + schoon(x.t) + '</span>';
-        knop.addEventListener('click', function(){
-          if (sec.dataset.klaar) return;
-          if (eerste && telmee()) telAntwoord(!!x.goed, b, sec.getAttribute('data-i') === 'eind' ? 'antwoord' : 'stap ' + (+sec.getAttribute('data-i') + 1), sec.querySelector('h3').textContent);
-          eerste = false;
-          knop.classList.add(x.goed ? 'goed' : 'fout');
-          fb.className = 'feedback on ' + (x.goed ? 'ja' : 'nee');
-          fb.innerHTML = '<b>' + (x.goed ? 'Goed' : 'Nog niet') + '</b>' + schoon(x.uitleg || '') + (x.goed ? '' : ' <span class="opnieuw">Kies nog een keer.</span>');
-          if (!x.goed){ knop.disabled = true; fb.scrollIntoView({ block:'nearest', behavior:zacht() }); return; }
-          sec.dataset.klaar = '1';
-          Array.prototype.forEach.call(vak.children, function(c){ c.disabled = true; });
-          bijGoed(x);
-        });
-        vak.appendChild(knop);
-      });
-    }
-    function volgendeStap(i){
-      zetPlan(i);
+    function verder(i){
       var sec = i < secties.length ? secties[i] : eindSec;
-      sec.classList.remove('hide');
-      if (stand !== 'voor') setTimeout(function(){ sec.scrollIntoView({ block:'nearest', behavior:zacht() }); }, 60);
+      zetPlan(i); sec.classList.remove('hide');
+      setTimeout(function(){ sec.scrollIntoView({ block:'nearest', behavior:zacht() }); var t = sec.querySelector('textarea'); if (t) try { t.focus({ preventScroll:true }); } catch (e){} }, 60);
     }
     Array.prototype.forEach.call(secties, function(sec, i){
-      opties(sec, husselen(o.stappen[i].slice()), function(x){
-        if (x.zin) zinnen.push(x.zin);
-        if (i === secties.length - 1 && o.slot) zinnen.push(o.slot);
-        zetAntwoord(); volgendeStap(i + 1);
-      }, function(){ return stand === 'samen'; });
-    });
-    opties(eindSec, eind, function(){ zetPlan(plan.stappen.length + 1); checkKlaar(); }, function(){ return stand !== 'voor'; });
-    /* het spel doet de stappen voor: elke stap het goede antwoord, met de uitleg */
-    function doeVoor(){
-      var rij = Array.prototype.slice.call(secties).concat([eindSec]), i = 0;
-      (function stap(){
-        if (i >= rij.length) return;
-        var sec = rij[i];
-        sec.classList.remove('hide');
-        if (sec.dataset.klaar){ i++; stap(); return; }
-        var juist = sec === eindSec ? model : o.stappen[i].filter(function(x){ return x.goed; })[0].t;
-        var knop = Array.prototype.filter.call(sec.querySelectorAll('.opt'), function(k){ return k.querySelector('span').textContent === juist; })[0];
-        setTimeout(function(){ if (knop){ knop.disabled = false; knop.click(); } i++; setTimeout(stap, 700); }, 500);
-      })();
-    }
-    Array.prototype.forEach.call(wrap.querySelectorAll('.stand'), function(k){
-      k.addEventListener('click', function(){
-        var s = k.getAttribute('data-s');
-        if (s === stand || eindSec.dataset.klaar) return;
-        Array.prototype.forEach.call(wrap.querySelectorAll('.stand'), function(x){ x.classList.toggle('on', x === k); x.disabled = true; });
-        stand = s;
-        if (s === 'voor') doeVoor();
-        if (s === 'zelf'){
-          /* meteen het eindantwoord; de stappen gaan dicht */
-          Array.prototype.forEach.call(secties, function(sec){ if (!sec.dataset.klaar){ sec.dataset.klaar = '1'; sec.classList.add('hide'); } });
-          wrap.querySelector('.antwoordbox').classList.add('hide');
-          volgendeStap(secties.length);
-          var fb = eindSec.querySelector('.feedback');
-          Array.prototype.forEach.call(eindSec.querySelectorAll('.opt'), function(knop, idx){
-            knop.addEventListener('click', function(){
-              if (eind[idx].goed || wrap.dataset.geholpen) return;
-              /* fout: dan alsnog de stappen, als hulp */
-              wrap.dataset.geholpen = '1';
-              fb.innerHTML += '<div class="verdieping">Zo kom je er stap voor stap. Kijk daarna nog eens welk antwoord klopt.</div>';
-              wrap.querySelector('.antwoordbox').classList.remove('hide');
-              zinnen = o.stappen.map(function(st){ return st.filter(function(x){ return x.goed; })[0].zin; }).concat([o.slot]).filter(Boolean); zetAntwoord();
-              Array.prototype.forEach.call(secties, function(sec){ sec.classList.remove('hide'); });
-            });
-          });
-        }
+      var st = o.stappen[i], fb = sec.querySelector('.feedback'), eerste = true;
+      function klaar(){
+        sec.dataset.klaar = '1';
+        if (st.zin) zinnen.push(st.zin);
+        zetAntwoord(); verder(i + 1);
+      }
+      if (st.type === 'schrijf'){
+        var ta = sec.querySelector('textarea'), knop = sec.querySelector('.vergelijk'), mv = sec.querySelector('.modelvak');
+        knop.addEventListener('click', function(){
+          if (sec.dataset.klaar) return;
+          if (kaal(ta.value).length < 8){ fb.className = 'feedback on nee'; fb.innerHTML = '<b>Schrijf eerst een hele zin</b>Probeer het in je eigen woorden. Daarna zie je het model.'; return; }
+          mv.classList.remove('hide');
+          mv.innerHTML = '<p class="eyebrow">het model</p><p>' + schoon(st.model) + '</p><p class="vraagje">Zegt jouw zin ongeveer hetzelfde?</p>' +
+            '<button type="button" class="btn klein ja">Ja</button> <button type="button" class="btn klein ghost nee">Nee, ik neem het model over</button>';
+          knop.classList.add('hide'); ta.readOnly = true; fb.className = 'feedback';
+          mv.querySelector('.ja').addEventListener('click', function(){ if (sec.dataset.klaar) return; telAntwoord(true, b, 'stap ' + (i + 1), st.vraag); mv.querySelectorAll('button').forEach(function(x){ x.disabled = true; }); klaar(); });
+          mv.querySelector('.nee').addEventListener('click', function(){ if (sec.dataset.klaar) return; telAntwoord(false, b, 'stap ' + (i + 1), st.vraag); mv.querySelectorAll('button').forEach(function(x){ x.disabled = true; }); klaar(); });
+        });
+        return;
+      }
+      var nodig = st.min || 1, gevonden = {}, nog = sec.querySelector('.nogvinden');
+      if (nog) nog.textContent = 'Nog ' + nodig + ' te vinden.';
+      Array.prototype.forEach.call(sec.querySelectorAll('.stuk'), function(knop){
+        knop.addEventListener('click', function(){
+          if (sec.dataset.klaar) return;
+          var hit = raak(knop.textContent, st.wijs);
+          if (hit < 0 || gevonden[knop.getAttribute('data-k')]){
+            if (hit < 0){
+              if (eerste){ telAntwoord(false, b, 'stap ' + (i + 1), st.vraag); eerste = false; }
+              knop.classList.add('mis'); setTimeout(function(){ knop.classList.remove('mis'); }, 900);
+              fb.className = 'feedback on nee'; fb.innerHTML = '<b>Daar staat het niet</b>' + schoon(st.mis);
+            }
+            return;
+          }
+          gevonden[knop.getAttribute('data-k')] = true; knop.classList.add('raak');
+          var n = Object.keys(gevonden).length;
+          if (n < nodig){ if (nog) nog.textContent = 'Goed. Nog ' + (nodig - n) + ' te vinden.'; fb.className = 'feedback'; return; }
+          if (eerste){ telAntwoord(true, b, 'stap ' + (i + 1), st.vraag); eerste = false; }
+          if (nog) nog.textContent = '';
+          fb.className = 'feedback on ja'; fb.innerHTML = '<b>Gevonden</b>' + schoon(st.uitleg);
+          Array.prototype.forEach.call(sec.querySelectorAll('.stuk'), function(x){ x.disabled = true; });
+          klaar();
+        });
       });
     });
-    zetPlan(0);
-    /* de eerste keuze in een stap legt de stand vast */
-    wrap.addEventListener('click', function(e){
-      if (e.target.closest && e.target.closest('.opt')) Array.prototype.forEach.call(wrap.querySelectorAll('.stand'), function(x){ x.disabled = true; });
+    /* het eindantwoord: zelf schrijven, nalopen, en het model ernaast */
+    var eindTa = eindSec.querySelector('textarea'), cv = eindSec.querySelector('.checkvak'), efb = eindSec.querySelector('.feedback');
+    eindSec.querySelector('.klaarschrijf').addEventListener('click', function(){
+      if (kaal(eindTa.value).length < 20){ efb.className = 'feedback on nee'; efb.innerHTML = '<b>Schrijf eerst je antwoord</b>Gebruik wat je hierboven gevonden hebt. Een paar zinnen is genoeg.'; return; }
+      efb.className = 'feedback'; eindTa.readOnly = true; this.classList.add('hide'); cv.classList.remove('hide');
+      zetPlan(plan.stappen.length);
+      setTimeout(function(){ cv.scrollIntoView({ block:'nearest', behavior:zacht() }); }, 60);
     });
+    cv.querySelector('.afronden').addEventListener('click', function(){
+      if (eindSec.dataset.klaar) return;
+      var aan = cv.querySelectorAll('input:checked').length, alles = o.check.length;
+      telAntwoord(aan === alles, b, 'antwoord', 'eigen antwoord');
+      eindSec.dataset.klaar = '1';
+      cv.querySelectorAll('input,button').forEach(function(x){ x.disabled = true; });
+      efb.className = 'feedback on ' + (aan === alles ? 'ja' : 'nee');
+      efb.innerHTML = aan === alles ? '<b>Compleet</b>Je antwoord heeft alles wat erin hoort.' : '<b>Bijna</b>Je antwoord mist nog ' + (alles - aan) + (alles - aan === 1 ? ' onderdeel' : ' onderdelen') + '. Vergelijk het met het model en kijk wat je de volgende keer toevoegt.';
+      zetPlan(plan.stappen.length + 1);
+      checkKlaar();
+    });
+    zetPlan(0);
     return wrap;
   }
 
