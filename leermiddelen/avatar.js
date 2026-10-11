@@ -385,6 +385,52 @@ window.AVATAR = (function(){
 
   /* De tekening. leeft: zonder de css-beweging (dan doet avatar.js het zelf, per beeldje).
      maat: hoe groot hij op het scherm komt, voor de dikte van de lichte rand. */
+  /* Een pad met alleen absolute punten (M L C Q Z), zodat elk punt apart verplaatst kan worden. */
+  function absPad(d){
+    var tok = String(d).match(/[MmLlHhVvCcSsQqTtAaZz]|-?(?:\d*\.\d+|\d+\.?)/g) || [], i = 0, cmd = '', vorig = '';
+    var x = 0, y = 0, x0 = 0, y0 = 0, kx = 0, ky = 0, uit = [];
+    var ARIT = { M:2, L:2, H:1, V:1, C:6, S:4, Q:4, T:2, A:7 };
+    function getal(){ return +tok[i++]; }
+    while (i < tok.length){
+      if (/[a-z]/i.test(tok[i])){ cmd = tok[i++]; if (/z/i.test(cmd)){ uit.push(['Z']); x = x0; y = y0; vorig = 'Z'; continue; } }
+      var C = cmd.toUpperCase(), rel = cmd !== C, n = ARIT[C];
+      if (!n || i + n > tok.length || /[a-z]/i.test(tok[i])){ i++; continue; }
+      var bx = rel ? x : 0, by = rel ? y : 0, a, b2, c, dd, e2, g;
+      if (C === 'M'){ x = bx + getal(); y = by + getal(); x0 = x; y0 = y; uit.push(['M', x, y]); cmd = rel ? 'l' : 'L'; }
+      else if (C === 'L'){ x = bx + getal(); y = by + getal(); uit.push(['L', x, y]); }
+      else if (C === 'H'){ x = bx + getal(); uit.push(['L', x, y]); }
+      else if (C === 'V'){ y = by + getal(); uit.push(['L', x, y]); }
+      else if (C === 'C'){ a = bx + getal(); b2 = by + getal(); c = bx + getal(); dd = by + getal(); x = bx + getal(); y = by + getal(); uit.push(['C', a, b2, c, dd, x, y]); kx = c; ky = dd; }
+      else if (C === 'S'){ a = /[CS]/.test(vorig) ? 2 * x - kx : x; b2 = /[CS]/.test(vorig) ? 2 * y - ky : y; c = bx + getal(); dd = by + getal(); x = bx + getal(); y = by + getal(); uit.push(['C', a, b2, c, dd, x, y]); kx = c; ky = dd; }
+      else if (C === 'Q'){ a = bx + getal(); b2 = by + getal(); x = bx + getal(); y = by + getal(); uit.push(['Q', a, b2, x, y]); kx = a; ky = b2; }
+      else if (C === 'T'){ a = /[QT]/.test(vorig) ? 2 * x - kx : x; b2 = /[QT]/.test(vorig) ? 2 * y - ky : y; x = bx + getal(); y = by + getal(); uit.push(['Q', a, b2, x, y]); kx = a; ky = b2; }
+      else if (C === 'A'){ i += 5; e2 = bx + getal(); g = by + getal(); x = e2; y = g; uit.push(['L', x, y]); }
+      vorig = C;
+    }
+    return uit;
+  }
+  /* Een tekening (hoed) punt voor punt verplaatsen met kaart(x, y) -> [x, y]: paden, cirkels, ellipsen
+     en rechthoeken. Lijndiktes schalen mee met schaal. */
+  function verplaats(svg, kaart, schaal){
+    return svg.replace(/<(path|circle|ellipse|rect|g)\b([^>]*?)(\/?)>/g, function(heel, tag, attr, dicht){
+      function neem(n){ var m = new RegExp('\\s' + n + '="([^"]*)"').exec(attr); if (m) attr = attr.replace(m[0], ''); return m ? m[1] : null; }
+      var sw = neem('stroke-width'); if (sw !== null) attr += ' stroke-width="' + f(+sw * schaal) + '"';
+      if (tag === 'g') return '<g' + attr + dicht + '>';
+      var dx = 0, dy = 0, tr = neem('transform'), t = tr && /translate\(([-\d.]+)[ ,]+([-\d.]+)\)/.exec(tr);
+      if (t){ dx = +t[1]; dy = +t[2]; }
+      function pt(x, y){ var P = kaart(x + dx, y + dy); return f(P[0]) + ',' + f(P[1]); }
+      if (tag === 'path') return '<path d="' + absPad(neem('d')).map(function(s){
+        var u = s[0]; for (var j = 1; j < s.length; j += 2) u += (j > 1 ? ' ' : '') + pt(s[j], s[j + 1]); return u; }).join(' ') + '"' + attr + dicht + '>';
+      if (tag === 'rect'){
+        var rx = +neem('x') || 0, ry = +neem('y') || 0, w = +neem('width') || 0, h = +neem('height') || 0; neem('rx'); neem('ry');
+        return '<path d="M' + pt(rx, ry) + ' L' + pt(rx + w, ry) + ' L' + pt(rx + w, ry + h) + ' L' + pt(rx, ry + h) + ' Z"' + attr + dicht + '>';
+      }
+      var cx = +neem('cx') || 0, cyy = +neem('cy') || 0, P = kaart(cx + dx, cyy + dy);
+      if (tag === 'circle'){ var r = +neem('r') || 0; return '<circle cx="' + f(P[0]) + '" cy="' + f(P[1]) + '" r="' + f(r * schaal) + '"' + attr + dicht + '>'; }
+      var ex = +neem('rx') || 0, ey = +neem('ry') || 0;
+      return '<ellipse cx="' + f(P[0]) + '" cy="' + f(P[1]) + '" rx="' + f(ex * schaal) + '" ry="' + f(ey * schaal) + '"' + attr + dicht + '>';
+    });
+  }
   function teken(m, st, id, leeft, schaduw, maat){
     var sp = m.sp, stm = st.stemming || '', M = m.M;
     var Rf = m.bol, ya = st.yaw * Math.PI / 180, pa = st.pitch * Math.PI / 180, cy = Math.cos(ya), sy = Math.sin(ya), cp = Math.cos(pa), sn = Math.sin(pa);
@@ -534,9 +580,18 @@ window.AVATAR = (function(){
       /* de hoed draait mee met het hoofd: het vlak van de hoed (op diepte 24, ongeveer het voorhoofd) gaat door dezelfde draaiing
          als de bol, dus hij schuift opzij en wordt smaller als het hoofd wegdraait, net als het gezicht */
       var plek = 'matrix(' + [cy, -sy * sn, 0, cp, 24 * sy, 24 * cy * sn].map(f).join(',') + ')';
-      var op = hd ? '<g transform="' + hoedPlek(M, 0, 1) + '"><g class="av-hoed">' + halo(hd, rim * 2) + hd + '</g></g>'
-                  : '<path d="M2,' + f1(M.top + 3) + ' q4,-12 14,-6 q-8,-2 -10,6" fill="none" stroke="' + meng(kleur, INKT, 0.25) + '" stroke-width="5" stroke-linecap="round"/>';
-      s += '<g' + adem + '><g' + beweeg + '><g transform="' + plek + '">' + op + '</g></g></g>';
+      if (hd){
+        /* De hoed gaat punt voor punt rond het hoofd: elk punt ligt op een cilinder om het hoofd en draait
+           mee, zodat je bij het wegdraaien echt de zijkant van de hoed ziet. Zelfde plek en maat als hoedPlek. */
+        var hs = Math.max(0.85, Math.min(1.12, M.bovenBreed / 33)), hy = M.top + 16, Rc = Rf * 0.95;
+        var hp = verplaats(hd, function(x, y){
+          var X = hs * x, Y = hy + hs * (y + 30), P = rot(X, Y, Math.sqrt(Math.max(Rc * Rc - X * X, 0)));
+          return [P[0], P[1]];
+        }, hs);
+        s += '<g' + adem + '><g' + beweeg + '><g class="av-hoed">' + halo(hp, rim * 2) + hp + '</g></g></g>';
+      } else {
+        s += '<g' + adem + '><g' + beweeg + '><g transform="' + plek + '"><path d="M2,' + f1(M.top + 3) + ' q4,-12 14,-6 q-8,-2 -10,6" fill="none" stroke="' + meng(kleur, INKT, 0.25) + '" stroke-width="5" stroke-linecap="round"/></g></g></g>';
+      }
     }
     if (sp.b) s += trofee(sp.b);
     return s;
