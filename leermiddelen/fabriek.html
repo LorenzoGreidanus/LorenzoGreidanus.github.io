@@ -267,7 +267,14 @@ html:root .groep .rij .kies.on{background:var(--ocean);border-color:var(--ocean)
 .fig{transition:transform .9s cubic-bezier(.3,.7,.3,1),opacity .5s ease}
 #scene.stil .fig{transition:none}
 .fig .lijf,.fig .hoofd{stroke:var(--sc-figrand);stroke-width:1.6}
-.fig .bordje,.fig .hoed{display:none}
+.fig .bordje,.fig .hoed,.fig .prijs{display:none}
+.fig.metprijs .prijs{display:inline}
+.fig .ring{filter:drop-shadow(0 1.5px 1.5px rgba(20,34,76,.25))}
+.huis .loonbalk{opacity:0;transition:opacity .6s ease .8s}
+.huis.metloon .loonbalk{opacity:1}
+.huis .lb{transition:width 1s cubic-bezier(.22,.61,.36,1) 1s}
+.huis .lb.ok{fill:#1f7a4a}.huis .lb.tk{fill:#c0442c}
+.munt{fill:#E1A93A;stroke:#B07C1E;stroke-width:1.4;transition:transform 1.3s cubic-bezier(.45,.05,.4,1),opacity .4s ease 1.1s}
 .fig.staakt .bordje{display:inline}
 .fig.weg{opacity:.42}
 .fig.baas .hoed{display:inline}
@@ -761,6 +768,7 @@ var LONEN = [6, 8, 10, 12], UREN = [10, 12, 14];
     var fi = 0;
     spelers.forEach(function(s){
       var a = maakActor(s.sid, s.naam, rol[s.sid]);
+      a.av = s.av || '';
       if (a.soort === 'fab'){ a.fid = S.fabs[fi].id; S.fabs[fi].eig = a.id; fi++; }
       S.act[a.id] = a; S.volg.push(a.id);
     });
@@ -786,12 +794,13 @@ var LONEN = [6, 8, 10, 12], UREN = [10, 12, 14];
       var tot = arbeiders().length + 1;
       var soort = Object.keys(doel).sort(function(x, y){ return (tel[x] - doel[x] * tot) - (tel[y] - doel[y] * tot); })[0];
       var a = maakActor(s.sid, s.naam, soort);
+      a.av = s.av || '';
       S.act[a.id] = a; S.volg.push(a.id);
       schrijf(s.naam + ' doet mee als ' + SOORT[soort].naam.toLowerCase() + '.');
       kamer.naar(s.sid, rolKaart(a));
       kamer.naar(s.sid, kaartVoor(a));
     });
-    spelers.forEach(function(s){ var a = S.act[s.sid]; if (a) a.naam = s.naam; });
+    spelers.forEach(function(s){ var a = S.act[s.sid]; if (a){ a.naam = s.naam; a.av = s.av || a.av || ''; } });
   }
 
   function start(){
@@ -1487,7 +1496,7 @@ var LONEN = [6, 8, 10, 12], UREN = [10, 12, 14];
      onderaan de huisjes van de gezinnen. Het beeld wordt één keer gebouwd;
      daarna lopen de poppetjes (met een zachte overgang) naar hun plek en gaan
      lampen, ramen en schoorstenen aan of uit. */
-  var SCN = { key:'', m:null, fig:{}, kid:{}, huis:{}, fab:{} };
+  var SCN = { key:'', m:null, fig:{}, kid:{}, huis:{}, fab:{}, wie:{}, fase:'' };
   function scMaat(){
     var cw = $('stad').clientWidth || 800, smal = cw < 560;
     var W = smal ? 640 : 900, n = Math.max(1, S.fabs.length), N = arbeiders().length;
@@ -1498,64 +1507,103 @@ var LONEN = [6, 8, 10, 12], UREN = [10, 12, 14];
     return { smal:smal, W:W, H:straat + rijen * 98 + 4, n:n, landW:landW, schoolW:schoolW, fx0:fx0, slot:slot, basis:basis, per:per, hw:hw, straat:straat };
   }
   function f1(v){ return Math.round(v * 10) / 10; }
-  function figuur(id, kleur, kind, baas){
-    return '<g class="fig' + (baas ? ' baas' : '') + '" id="' + id + '"><g transform="scale(' + (kind ? .95 : 1.3) + ')">' +
-      '<g class="bordje"><path d="M7 -10V-41" stroke="#6b3a2c" stroke-width="1.8"/><rect x="-1" y="-53" width="22" height="14" rx="1" fill="#fbf7ee" stroke="#a8371f" stroke-width="1.6"/><path d="M3 -48h14M3 -43.5h9" stroke="#a8371f" stroke-width="1.5"/></g>' +
-      '<path class="lijf" d="M-7 0V-11a7 7 0 0 1 14 0V0z" fill="' + kleur + '"/>' +
-      '<circle class="hoofd" cy="-22.5" r="5.6" fill="#E7C3A0"/>' +
-      '<g class="hoed"><rect x="-4.6" y="-38" width="9.2" height="10" fill="#1d1b17"/><rect x="-8" y="-29.5" width="16" height="2.4" fill="#1d1b17"/></g>' +
-      '<path class="kruis" d="M8 -40l8 8M16 -40l-8 8" stroke="#a8371f" stroke-width="2.6" stroke-linecap="round"/>' +
+  /* Een mens in de stad is een gezichtje met een ring in de kleur van zijn
+     soort, geen poppetje. Op telefoons is het het eigen gezicht van de leerling,
+     met hoed of bril uit de winkel; aan het bord een vast gezicht per gezin. De
+     fabrikeur draagt een hoge hoed. De voet van het gezicht staat op (0,0). */
+  function gezichtVan(id){
+    var a = S.act[id];
+    if (a) return { seed:a.p ? a.p.n + ' ' + a.p.ach : a.naam, av:a.av || '' };
+    return { seed:String(id), av:'' };
+  }
+  function figuur(id, kleur, kind, baas, wie){
+    var r = kind ? 10.5 : 14, g = wie || { seed:id, av:'' };
+    SCN.wie[id] = g;
+    return '<g class="fig' + (baas ? ' baas' : '') + '" id="' + id + '"><g transform="translate(0 ' + f1(-r - 2) + ')">' +
+      '<g class="bordje"><path d="M' + f1(r - 2) + ' -2V' + f1(-r - 18) + '" stroke="#6b3a2c" stroke-width="1.8"/><rect x="' + f1(r - 8) + '" y="' + f1(-r - 30) + '" width="26" height="15" rx="1.5" fill="#fbf7ee" stroke="#a8371f" stroke-width="1.6"/><path d="M' + f1(r - 4) + ' ' + f1(-r - 25) + 'h18M' + f1(r - 4) + ' ' + f1(-r - 20) + 'h11" stroke="#a8371f" stroke-width="1.5"/></g>' +
+      '<circle class="ring" r="' + f1(r + 1.4) + '" fill="#fff" stroke="' + kleur + '" stroke-width="2.6"/>' +
+      '<g class="gz" data-st="-" transform="scale(' + (r / 50).toFixed(3) + ')"></g>' +
+      '<g class="hoed"><rect x="' + f1(-r * .5) + '" y="' + f1(-r - 12) + '" width="' + f1(r) + '" height="11" rx="1.5" fill="#14224C"/><rect x="' + f1(-r * .5) + '" y="' + f1(-r - 5) + '" width="' + f1(r) + '" height="2.4" fill="#a8371f"/><rect x="' + f1(-r * .9) + '" y="' + f1(-r - 2) + '" width="' + f1(r * 1.8) + '" height="3" rx="1.5" fill="#14224C"/></g>' +
+      '<path class="kruis" d="M' + f1(r - 3) + ' ' + f1(-r - 3) + 'l8 8M' + f1(r + 5) + ' ' + f1(-r - 3) + 'l-8 8" stroke="#a8371f" stroke-width="2.6" stroke-linecap="round"/>' +
+      '<g class="prijs"><rect x="-17" y="' + f1(-r - 19) + '" width="34" height="14" rx="4" fill="#FBF4E4" stroke="#14224C" stroke-width="1.2"/><text x="0" y="' + f1(-r - 8.6) + '" font-size="9.5" font-weight="700" text-anchor="middle" fill="#14224C"></text></g>' +
       '</g></g>';
   }
+  /* het gezicht met een stemming: blij of sip na de uitslag */
+  function zetGezicht(el, stemming){
+    if (!el || !window.AVATAR) return;
+    var gz = el.querySelector('.gz'); if (!gz) return;
+    stemming = stemming || '';
+    if (gz.getAttribute('data-st') === stemming) return;
+    var w = SCN.wie[el.id] || { seed:el.id, av:'' };
+    gz.innerHTML = AVATAR.inhoud(w.seed, w.av, stemming);
+    gz.setAttribute('data-st', stemming);
+  }
   function bouwScene(m){
-    var W = m.W, H = m.H, b = m.basis, h = '';
+    var W = m.W, H = m.H, b = m.basis, h = '', INK = '#14224C';
+    /* stof voor de tekening: baksteen, dakpannen, leien, keien en akkers; de
+       kleuren lopen mee met licht en donker, de vormen niet */
     h += '<defs><linearGradient id="scLucht" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--sc-lucht)"/><stop offset="1" style="stop-color:var(--sc-lucht2)"/></linearGradient>' +
       '<radialGradient id="scGloed"><stop offset="0" stop-color="#FFE39A" stop-opacity=".95"/><stop offset="1" stop-color="#FFE39A" stop-opacity="0"/></radialGradient>' +
-      '<pattern id="scKei" width="16" height="9" patternUnits="userSpaceOnUse"><rect width="16" height="9" style="fill:var(--sc-straat)"/><rect x="1" y="1" width="6.5" height="3" rx="1.4" style="fill:var(--sc-kei)"/><rect x="9" y="1" width="6" height="3" rx="1.4" style="fill:var(--sc-kei)"/><rect x="5" y="5.5" width="7" height="3" rx="1.4" style="fill:var(--sc-kei)"/></pattern></defs>';
+      '<pattern id="scKei" width="18" height="11" patternUnits="userSpaceOnUse"><rect width="18" height="11" style="fill:var(--sc-straat)"/><rect x="1" y="1" width="7.5" height="4" rx="2" style="fill:var(--sc-kei)"/><rect x="10" y="1" width="7" height="4" rx="2" style="fill:var(--sc-kei)"/><rect x="-3" y="6.5" width="7" height="4" rx="2" style="fill:var(--sc-kei)"/><rect x="5.5" y="6.5" width="8" height="4" rx="2" style="fill:var(--sc-kei)"/><rect x="15" y="6.5" width="7" height="4" rx="2" style="fill:var(--sc-kei)"/></pattern>' +
+      '<pattern id="scSteen" width="16" height="8" patternUnits="userSpaceOnUse"><rect width="16" height="8" style="fill:var(--sc-steen)"/><path d="M0 .5h16M0 4.5h16M.5 0v4M8.5 4v4" stroke="#000" stroke-opacity=".16" stroke-width="1"/><rect x="2" y="1.5" width="4" height="2" fill="#fff" opacity=".08"/></pattern>' +
+      '<pattern id="scMuur" width="14" height="7" patternUnits="userSpaceOnUse"><rect width="14" height="7" style="fill:var(--sc-muur)"/><path d="M0 .5h14M0 4h14M.5 0v3.5M7.5 3.5v3.5" stroke="#000" stroke-opacity=".15" stroke-width="1"/></pattern>' +
+      '<pattern id="scPan" width="10" height="7" patternUnits="userSpaceOnUse"><rect width="10" height="7" style="fill:var(--sc-dak)"/><path d="M0 7q5-5 10 0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="1.4"/></pattern>' +
+      '<pattern id="scLei" width="12" height="6" patternUnits="userSpaceOnUse"><rect width="12" height="6" fill="#3E4A6E"/><path d="M0 5.5h12M6 0v5.5" stroke="#2C3655" stroke-width="1"/></pattern>' +
+      '<pattern id="scAkker" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(-24)"><rect width="14" height="14" style="fill:var(--sc-akker)"/><rect width="7" height="14" style="fill:var(--sc-akker2)"/></pattern></defs>';
     /* lucht, sterren en maan of zon */
     h += '<rect width="' + W + '" height="' + (b + 40) + '" fill="url(#scLucht)"/>';
     h += '<g class="sterren" fill="#FBF6F1">' + [[40, 22], [120, 48], [210, 18], [300, 40], [390, 14], [470, 52], [560, 26], [650, 44], [720, 16], [800, 36], [860, 60], [250, 70], [610, 80]].filter(function(p){ return p[0] < W - 20; }).map(function(p, i){ return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + (i % 3 ? 1.1 : 1.6) + '"/>'; }).join('') + '</g>';
-    h += '<circle cx="' + (W - 54) + '" cy="44" r="17" fill="#FCE3A0" opacity=".75"/>';
+    h += '<circle cx="' + (W - 54) + '" cy="44" r="18" fill="#F6C26B" opacity=".9"/><circle cx="' + (W - 54) + '" cy="44" r="25" fill="none" stroke="#F6C26B" stroke-width="2" opacity=".4"/>';
+    h += '<g fill="#fff" opacity=".55"><path d="M' + f1(W * .1) + ' 70a14 14 0 0 1 26-7 12 12 0 0 1 22 5h-48z"/><path d="M' + f1(W * .55) + ' 46a12 12 0 0 1 22-6 10 10 0 0 1 19 4h-41z"/></g>';
     /* in de verte: daken, schoorstenen en de kerktoren */
     var vx = m.fx0 + m.slot * m.n * 0.45;
     h += '<path d="M0 ' + (b - 40) + 'L' + f1(vx - 120) + ' ' + (b - 40) + 'V' + (b - 66) + 'h10V' + (b - 40) + 'H' + f1(vx - 40) + 'l14 -16 14 16H' + f1(vx - 2) + 'V' + (b - 92) + 'l9 -50 9 50V' + (b - 40) + 'H' + f1(vx + 70) + 'V' + (b - 74) + 'h9V' + (b - 40) + 'H' + W + 'V' + b + 'H0Z" style="fill:var(--sc-ver)"/>';
     h += '<rect class="crisiswaas" width="' + W + '" height="' + (b + 40) + '" fill="#5a524a"/>';
-    /* het land: een heuvel met akkers en een boerderij */
+    /* het land: een heuvel met akkers, een boerderij en hooibergen */
     var lw = m.landW;
-    h += '<path d="M0 ' + (b - 44) + 'Q' + f1(lw * 0.55) + ' ' + (b - 78) + ' ' + (lw + 26) + ' ' + (b - 26) + 'V' + (b + 44) + 'H0Z" style="fill:var(--sc-akker)"/>';
-    for (var v = 0; v < 6; v++) h += '<path d="M' + f1(4 + v * lw / 6) + ' ' + (b + 42) + 'L' + f1(18 + v * lw / 5.2) + ' ' + (b - 44 + Math.abs(v - 2.5) * 5) + '" style="stroke:var(--sc-akker2)" stroke-width="2.4" fill="none"/>';
-    h += '<g transform="translate(10 ' + (b - 62) + ')"><path d="M0 22L18 6 36 22V36H0Z" style="fill:var(--sc-muur)"/><path d="M-3 23L18 3 39 23" fill="none" style="stroke:var(--sc-dak)" stroke-width="5" stroke-linejoin="round"/><rect x="14" y="24" width="8" height="12" style="fill:var(--sc-dak)"/></g>';
-    h += '<text class="serif" x="' + f1(lw / 2 + 6) + '" y="' + (b - 84) + '" font-size="15" font-style="italic" text-anchor="middle" style="fill:var(--sc-ink)" opacity=".75">het land</text>';
+    h += '<path d="M0 ' + (b - 44) + 'Q' + f1(lw * 0.55) + ' ' + (b - 78) + ' ' + (lw + 26) + ' ' + (b - 26) + 'V' + (b + 44) + 'H0Z" fill="url(#scAkker)"/>';
+    h += '<path d="M0 ' + (b - 44) + 'Q' + f1(lw * 0.55) + ' ' + (b - 78) + ' ' + (lw + 26) + ' ' + (b - 26) + '" fill="none" stroke="' + INK + '" stroke-width="2"/>';
+    h += '<g transform="translate(10 ' + (b - 62) + ')" stroke="' + INK + '" stroke-width="1.6" stroke-linejoin="round"><rect x="2" y="18" width="38" height="18" fill="#E9DCCB"/><path d="M-3 19L21 2 45 19z" fill="url(#scPan)"/><path d="M17 36V27h8v9" fill="#7E3220"/></g>';
+    h += '<g stroke="' + INK + '" stroke-width="1.6" stroke-linejoin="round"><path d="M' + f1(lw * .62) + ' ' + (b - 30) + 'c3-16 7-24 13-26 6 2 10 10 13 26z" fill="#E6B85C"/><path d="M' + f1(lw * .62 + 18) + ' ' + (b - 28) + 'c2-11 5-17 10-18 5 1 8 7 10 18z" fill="#DDAE4E"/></g>';
+    h += '<text class="hand" x="' + f1(lw / 2 + 4) + '" y="' + (b - 84) + '" font-size="20" text-anchor="middle" style="fill:var(--sc-ink)" opacity=".8">het land</text>';
     /* de grond en de straat met keien */
     h += '<rect y="' + b + '" width="' + W + '" height="' + (H - b) + '" style="fill:var(--sc-grond)"/>';
     h += '<rect y="' + (b + 44) + '" width="' + W + '" height="' + (m.straat - b - 48) + '" fill="url(#scKei)"/>';
-    h += '<path d="M0 ' + (b + 44) + 'H' + W + 'M0 ' + (m.straat - 4) + 'H' + W + '" style="stroke:var(--sc-ink)" stroke-opacity=".18" stroke-width="2"/>';
-    /* de school, rechts */
-    var sx = W - m.schoolW + 10, sw = m.schoolW - 22;
-    h += '<g><rect x="' + f1(sx + sw / 2 - 7) + '" y="' + (b - 104) + '" width="14" height="22" style="fill:var(--sc-muur)"/><path d="M' + f1(sx + sw / 2 - 10) + ' ' + (b - 104) + 'L' + f1(sx + sw / 2) + ' ' + (b - 116) + 'L' + f1(sx + sw / 2 + 10) + ' ' + (b - 104) + 'Z" style="fill:var(--sc-dak)"/><circle cx="' + f1(sx + sw / 2) + '" cy="' + (b - 94) + '" r="3.6" fill="#C9A227"/>' +
-      '<path d="M' + (sx - 4) + ' ' + (b - 62) + 'L' + f1(sx + sw / 2) + ' ' + (b - 86) + 'L' + (sx + sw + 4) + ' ' + (b - 62) + 'Z" style="fill:var(--sc-dak)"/><rect x="' + sx + '" y="' + (b - 62) + '" width="' + sw + '" height="62" style="fill:var(--sc-muur)"/>' +
-      '<rect x="' + f1(sx + 6) + '" y="' + (b - 56) + '" width="' + f1(sw - 12) + '" height="13" fill="#fbf7ee" opacity=".92"/><text class="serif" x="' + f1(sx + sw / 2) + '" y="' + (b - 46) + '" font-size="10" font-weight="700" letter-spacing="2" text-anchor="middle" fill="#1d1b17">SCHOOL</text>' +
-      [0.18, 0.62].map(function(p){ return '<rect x="' + f1(sx + sw * p) + '" y="' + (b - 36) + '" width="' + f1(sw * 0.2) + '" height="16" rx="1" style="fill:var(--sc-raam)"/>'; }).join('') +
-      '<rect x="' + f1(sx + sw / 2 - 7) + '" y="' + (b - 22) + '" width="14" height="22" rx="7" style="fill:var(--sc-dak)"/></g>';
-    /* de fabrieken */
+    h += '<path d="M0 ' + (b + 44) + 'H' + W + 'M0 ' + (m.straat - 4) + 'H' + W + '" stroke="' + INK + '" stroke-opacity=".55" stroke-width="2"/>';
+    /* de school, rechts, met een klokkentorentje */
+    var sx = W - m.schoolW + 10, sw = m.schoolW - 22, smid = sx + sw / 2;
+    h += '<g stroke="' + INK + '" stroke-width="1.6" stroke-linejoin="round">' +
+      '<rect x="' + f1(smid - 8) + '" y="' + (b - 106) + '" width="16" height="22" fill="#E9DCCB"/><path d="M' + f1(smid - 11) + ' ' + (b - 106) + 'L' + f1(smid) + ' ' + (b - 118) + 'L' + f1(smid + 11) + ' ' + (b - 106) + 'Z" fill="url(#scPan)"/><circle cx="' + f1(smid) + '" cy="' + (b - 96) + '" r="3.4" fill="#F6C26B" stroke-width="1"/>' +
+      '<path d="M' + (sx - 5) + ' ' + (b - 62) + 'L' + f1(smid) + ' ' + (b - 88) + 'L' + (sx + sw + 5) + ' ' + (b - 62) + 'Z" fill="url(#scPan)"/><rect x="' + sx + '" y="' + (b - 62) + '" width="' + sw + '" height="62" fill="url(#scMuur)"/>' +
+      '<circle cx="' + f1(smid) + '" cy="' + (b - 70) + '" r="6" fill="#FBF6F1"/><path d="M' + f1(smid) + ' ' + (b - 70) + 'v-4M' + f1(smid) + ' ' + (b - 70) + 'l3 2" stroke-width="1.2" fill="none"/>' +
+      '<rect x="' + f1(sx + 6) + '" y="' + (b - 56) + '" width="' + f1(sw - 12) + '" height="13" fill="#fbf7ee" stroke-width="1.2"/>' +
+      [0.12, 0.66].map(function(p){ return '<path d="M' + f1(sx + sw * p) + ' ' + (b - 18) + 'v-14a' + f1(sw * 0.11) + ' ' + f1(sw * 0.11) + ' 0 0 1 ' + f1(sw * 0.22) + ' 0v14z" fill="#C9D8F7" stroke-width="1.2"/>'; }).join('') +
+      '<path d="M' + f1(smid - 7) + ' ' + b + 'v-14a7 7 0 0 1 14 0v14z" fill="#EA9836"/></g>' +
+      '<text class="serif" x="' + f1(smid) + '" y="' + (b - 46) + '" font-size="10" font-weight="700" letter-spacing="2" text-anchor="middle" fill="#1d1b17">SCHOOL</text>';
+    /* de fabrieken: baksteen, sheddaken van lei met glas aan de noordkant, en een ronde schoorsteen */
     S.fabs.forEach(function(fb, j){
       var x0 = m.fx0 + j * m.slot, sl = m.slot, gx = x0 + sl / 2;
       var cap = fb.groot === null ? 4 : (fb.groot ? S.cap.groot : S.cap.klein), rijen = cap > 6 ? 2 : 1;
       var fw = Math.min(sl - 8, sl * (fb.groot === null ? .8 : fb.groot ? .92 : .74)), fl = gx - fw / 2;
       var fh = rijen === 2 ? 118 : fb.groot ? 108 : 94, top = b - fh, k = fw > 130 ? 4 : 3, tw = fw / k;
-      var g = '<g class="fab" id="fab-' + fb.id + '"><g class="gebouw">';
-      var cx = fl + fw - 13, ct = top - 50;
-      g += '<rect x="' + f1(cx - 7) + '" y="' + ct + '" width="14" height="' + (b - ct) + '" style="fill:var(--sc-steen)"/><rect x="' + f1(cx - 9.5) + '" y="' + (ct - 4) + '" width="19" height="7" style="fill:var(--sc-steen)"/><path d="M' + f1(cx - 7) + ' ' + (ct + 14) + 'h14" stroke="#1d1b17" stroke-opacity=".25" stroke-width="2.5"/>';
-      var d = 'M' + f1(fl) + ' ' + b + 'V' + (top + 18);
-      for (var t = 0; t < k; t++) d += 'L' + f1(fl + t * tw) + ' ' + top + 'L' + f1(fl + (t + 1) * tw) + ' ' + (top + 18);
-      d += 'V' + b + 'Z';
-      g += '<path d="' + d + '" style="fill:var(--sc-steen)"/>';
-      for (t = 0; t < k; t++) g += '<path d="M' + f1(fl + t * tw + 1.5) + ' ' + (top + 2) + 'V' + (top + 16) + '" stroke="#FCE3A0" stroke-opacity=".55" stroke-width="2.4"/>';
-      g += '<rect x="' + f1(fl) + '" y="' + (top + 20) + '" width="' + f1(fw) + '" height="5" fill="' + fb.kleur + '"/>';
-      var cols = Math.ceil(cap / rijen), ruim = fw - 32, ww = Math.max(7, Math.min(16, ruim / cols - 5)), wh = rijen === 2 ? 13 : 19, stap = ruim / cols;
+      var g = '<g class="fab" id="fab-' + fb.id + '"><g class="gebouw" stroke="' + INK + '" stroke-linejoin="round">';
+      var cx = fl + fw - 16, ct = top - 54;
+      g += '<path d="M' + f1(cx - 9) + ' ' + b + 'L' + f1(cx - 6) + ' ' + ct + 'H' + f1(cx + 6) + 'L' + f1(cx + 9) + ' ' + b + 'Z" fill="url(#scSteen)" stroke-width="1.8"/>' +
+        '<path d="M' + f1(cx - 6.5) + ' ' + (ct + 14) + 'h13M' + f1(cx - 7.2) + ' ' + (ct + 34) + 'h14.4" stroke="#7E3220" stroke-width="3.5"/>' +
+        '<path d="M' + f1(cx - 9) + ' ' + (ct + 2) + 'h18l-2 -7h-14z" fill="#3E4A6E" stroke-width="1.6"/>';
+      for (var t = 0; t < k; t++){
+        var tx = fl + t * tw;
+        g += '<path d="M' + f1(tx) + ' ' + (top + 19) + 'V' + top + 'L' + f1(tx + tw) + ' ' + (top + 19) + 'Z" fill="url(#scLei)" stroke-width="1.6"/>';
+        g += '<path d="M' + f1(tx + 1) + ' ' + (top + 17) + 'V' + (top + 3) + 'l' + f1(Math.min(7, tw * .2)) + ' 4.5V' + (top + 17) + 'z" fill="#B9CDF7" stroke-width="1"/>';
+      }
+      g += '<rect x="' + f1(fl) + '" y="' + (top + 19) + '" width="' + f1(fw) + '" height="' + (fh - 19) + '" fill="url(#scSteen)" stroke-width="1.8"/>';
+      g += '<rect x="' + f1(fl - 3) + '" y="' + (top + 17) + '" width="' + f1(fw + 6) + '" height="6" fill="' + fb.kleur + '" stroke-width="1.5"/>';
+      g += '<g stroke="none" fill="#000" opacity=".14"><rect x="' + f1(fl) + '" y="' + (top + 23) + '" width="6" height="' + (fh - 23) + '"/><rect x="' + f1(fl + fw - 6) + '" y="' + (top + 23) + '" width="6" height="' + (fh - 23) + '"/><rect x="' + f1(fl) + '" y="' + (b - 6) + '" width="' + f1(fw) + '" height="6"/></g>';
+      var cols = Math.ceil(cap / rijen), ruim = fw - 32, ww = Math.max(8, Math.min(24, ruim / cols - 8)), wh = rijen === 2 ? 15 : 26, stap = ruim / cols;
       for (var w = 0; w < cap; w++){
-        var rr = Math.floor(w / cols), cc = w % cols;
-        g += '<rect class="raam" data-i="' + w + '" x="' + f1(fl + 6 + cc * stap + (stap - ww) / 2) + '" y="' + (top + 34 + rr * (wh + 6)) + '" width="' + f1(ww) + '" height="' + wh + '" rx="1.5"/>';
+        var rr = Math.floor(w / cols), cc = w % cols, wx = fl + 6 + cc * stap + (stap - ww) / 2, wy = top + 34 + rr * (wh + 6);
+        g += '<path d="M' + f1(wx - 2) + ' ' + f1(wy + wh + 1) + 'V' + f1(wy + ww / 2) + 'a' + f1(ww / 2 + 2) + ' ' + f1(ww / 2 + 2) + ' 0 0 1 ' + f1(ww + 4) + ' 0V' + f1(wy + wh + 1) + 'z" fill="#FBF6F1" stroke-width="1.2"/>';
+        g += '<rect class="raam" data-i="' + w + '" x="' + f1(wx) + '" y="' + f1(wy + 1) + '" width="' + f1(ww) + '" height="' + (wh - 1) + '" rx="' + f1(Math.min(ww / 2, 5)) + '" stroke="none"/>';
       }
       g += '</g>';
       /* de rook: meer wolkjes als de fabriek meer maakt */
@@ -1565,61 +1613,69 @@ var LONEN = [6, 8, 10, 12], UREN = [10, 12, 14];
       for (t = 0; t <= 4; t++) g += '<path d="M' + f1(fl + t * fw / 4) + ' ' + b + 'V' + (top - 8) + '"/>';
       for (t = 1; t <= 3; t++) g += '<path d="M' + f1(fl - 4) + ' ' + f1(b - t * fh / 3.3) + 'H' + f1(fl + fw + 4) + '"/>';
       g += '</g>';
-      /* het hek en de poort */
+      /* de muur met het hek en de poort */
       var pl = Math.max(28, Math.min(30, sl / 4));
       var hy = b + 38, hl = gx - pl / 2 - 6, hr = gx + pl / 2 + 6;
       g += '<path d="M' + f1(x0 + 2) + ' ' + b + 'H' + f1(x0 + sl - 2) + 'V' + hy + 'H' + f1(x0 + 2) + 'Z" style="fill:var(--sc-straat)" opacity=".55"/>';
-      g += '<g style="stroke:var(--sc-ink)" stroke-opacity=".45" stroke-width="1.6" fill="none"><path d="M' + f1(x0 + 4) + ' ' + (hy - 14) + 'H' + f1(hl) + 'M' + f1(hr) + ' ' + (hy - 14) + 'H' + f1(x0 + sl - 4) + 'M' + f1(x0 + 4) + ' ' + hy + 'H' + f1(hl) + 'M' + f1(hr) + ' ' + hy + 'H' + f1(x0 + sl - 4) + '"/>';
-      for (var p = x0 + 6; p < x0 + sl - 4; p += 8) if (p < hl || p > hr) g += '<path d="M' + f1(p) + ' ' + (hy - 19) + 'V' + (hy + 2) + '"/>';
+      g += '<g stroke="' + INK + '" stroke-width="1.4"><rect x="' + f1(x0 + 4) + '" y="' + (hy - 6) + '" width="' + f1(hl - x0 - 4) + '" height="8" fill="url(#scSteen)"/><rect x="' + f1(hr) + '" y="' + (hy - 6) + '" width="' + f1(x0 + sl - 4 - hr) + '" height="8" fill="url(#scSteen)"/></g>';
+      g += '<g stroke="' + INK + '" stroke-width="1.5" fill="none"><path d="M' + f1(x0 + 4) + ' ' + (hy - 18) + 'H' + f1(hl) + 'M' + f1(hr) + ' ' + (hy - 18) + 'H' + f1(x0 + sl - 4) + '"/>';
+      for (var p = x0 + 7; p < x0 + sl - 5; p += 8) if (p < hl - 2 || p > hr + 2) g += '<path d="M' + f1(p) + ' ' + (hy - 22) + 'V' + (hy - 6) + '"/>';
       g += '</g>';
-      g += '<rect x="' + f1(hl) + '" y="' + (hy - 34) + '" width="6" height="38" style="fill:var(--sc-steen)" stroke="#1d1b17" stroke-opacity=".3"/><rect x="' + f1(gx + pl / 2) + '" y="' + (hy - 34) + '" width="6" height="38" style="fill:var(--sc-steen)" stroke="#1d1b17" stroke-opacity=".3"/>' +
-        '<path d="M' + f1(hl - 1) + ' ' + (hy - 34) + 'h8M' + f1(gx + pl / 2 - 1) + ' ' + (hy - 34) + 'h8" stroke="#1d1b17" stroke-opacity=".5" stroke-width="2.5"/>';
-      g += '<g class="dicht" style="stroke:var(--sc-ink)" stroke-opacity=".7" stroke-width="1.6">' + [0, 1, 2, 3, 4].map(function(i){ return '<path d="M' + f1(gx - pl / 2 + 3 + i * (pl - 6) / 4) + ' ' + (hy - 26) + 'V' + (hy + 2) + '"/>'; }).join('') + '<path d="M' + f1(gx - pl / 2) + ' ' + (hy - 18) + 'H' + f1(gx + pl / 2) + 'M' + f1(gx - pl / 2) + ' ' + (hy - 6) + 'H' + f1(gx + pl / 2) + '"/></g>';
-      g += '<g class="open" style="stroke:var(--sc-ink)" stroke-opacity=".7" stroke-width="1.6" fill="none"><path d="M' + f1(gx - pl / 2) + ' ' + (hy - 26) + 'l-9 8v22l9 -2zM' + f1(gx + pl / 2) + ' ' + (hy - 26) + 'l9 8v22l-9 -2z"/></g>';
+      g += '<g stroke="' + INK + '" stroke-width="1.5"><rect x="' + f1(hl) + '" y="' + (hy - 36) + '" width="7" height="40" fill="url(#scSteen)"/><rect x="' + f1(gx + pl / 2 - 1) + '" y="' + (hy - 36) + '" width="7" height="40" fill="url(#scSteen)"/>' +
+        '<rect x="' + f1(hl - 1.5) + '" y="' + (hy - 39) + '" width="10" height="4" fill="#3E4A6E"/><rect x="' + f1(gx + pl / 2 - 2.5) + '" y="' + (hy - 39) + '" width="10" height="4" fill="#3E4A6E"/></g>';
+      g += '<g class="dicht" stroke="' + INK + '" stroke-width="1.6">' + [0, 1, 2, 3, 4].map(function(i){ return '<path d="M' + f1(gx - pl / 2 + 3 + i * (pl - 6) / 4) + ' ' + (hy - 28) + 'V' + (hy + 2) + '"/>'; }).join('') + '<path d="M' + f1(gx - pl / 2 + 6) + ' ' + (hy - 20) + 'H' + f1(gx + pl / 2) + 'M' + f1(gx - pl / 2 + 6) + ' ' + (hy - 6) + 'H' + f1(gx + pl / 2) + '"/></g>';
+      g += '<g class="open" stroke="' + INK + '" stroke-width="1.6" fill="none"><path d="M' + f1(gx - pl / 2 + 6) + ' ' + (hy - 28) + 'l-11 8v24l11 -2zM' + f1(gx + pl / 2) + ' ' + (hy - 28) + 'l11 8v24l-11 -2z"/></g>';
       var nw = Math.min(100, sl - 14);
-      g += '<g class="poortnaam"><rect x="' + f1(gx - nw / 2) + '" y="' + (b - 30) + '" width="' + f1(nw) + '" height="22" rx="3" fill="' + fb.kleur + '" stroke="#1d1b17" stroke-opacity=".35"/><text class="serif" x="' + f1(gx) + '" y="' + (b - 14.5) + '" font-size="' + (nw < 80 ? 11.5 : 13.5) + '" font-weight="700" text-anchor="middle" fill="#FBF6F1">' + schoon(fb.naam) + '</text></g>';
-      /* het briefje op de poort: naast de poort als er plaats is, anders op de poort zelf */
+      g += '<g class="poortnaam"><rect x="' + f1(gx - nw / 2) + '" y="' + (b - 30) + '" width="' + f1(nw) + '" height="22" rx="3" fill="' + fb.kleur + '" stroke="' + INK + '" stroke-width="1.6"/><text class="serif" x="' + f1(gx) + '" y="' + (b - 14.5) + '" font-size="' + (nw < 80 ? 11.5 : 13.5) + '" font-weight="700" text-anchor="middle" fill="#FBF6F1">' + schoon(fb.naam) + '</text></g>';
+      /* het briefje op de poort */
       var bw = 66, bh = 50, bx = gx - bw / 2, by = hy - 42;
-      g += '<g class="briefje"><rect x="' + f1(bx) + '" y="' + f1(by) + '" width="' + bw + '" height="' + bh + '" rx="1.5" fill="#fbf7ee" stroke="#6d6455" stroke-width="1.2" transform="rotate(-2.5 ' + f1(bx + bw / 2) + ' ' + f1(by + bh / 2) + ')"/><circle cx="' + f1(bx + bw / 2) + '" cy="' + f1(by + 4) + '" r="2.2" fill="#a8371f"/>' +
+      g += '<g class="briefje"><rect x="' + f1(bx) + '" y="' + f1(by) + '" width="' + bw + '" height="' + bh + '" rx="1.5" fill="#fbf7ee" stroke="' + INK + '" stroke-width="1.4" transform="rotate(-2.5 ' + f1(bx + bw / 2) + ' ' + f1(by + bh / 2) + ')"/><circle cx="' + f1(bx + bw / 2) + '" cy="' + f1(by + 4) + '" r="2.4" fill="#a8371f"/>' +
         '<text class="serif" text-anchor="middle" fill="#1d1b17"><tspan class="b1" x="' + f1(bx + bw / 2) + '" y="' + f1(by + 21) + '" font-size="17" font-weight="700"></tspan><tspan class="b2" x="' + f1(bx + bw / 2) + '" y="' + f1(by + 35) + '" font-size="12.5"></tspan><tspan class="b3" x="' + f1(bx + bw / 2) + '" y="' + f1(by + 46) + '" font-size="11.5" fill="#5a5245"></tspan></text></g>';
       /* een spandoek op het hek als er gestaakt wordt */
       var sw2 = Math.min(86, sl / 2 - bw / 2 - 12), sx2 = x0 + 6;
-      g += '<g class="spandoek"><rect x="' + f1(sx2) + '" y="' + (hy - 17) + '" width="' + f1(sw2) + '" height="18" fill="#a8371f"/><text x="' + f1(sx2 + sw2 / 2) + '" y="' + (hy - 4) + '" font-size="' + (sw2 < 60 ? 8.5 : 10.5) + '" font-weight="700" letter-spacing="1" text-anchor="middle" fill="#FBF6F1">STAKING</text></g>';
+      g += '<g class="spandoek"><rect x="' + f1(sx2) + '" y="' + (hy - 19) + '" width="' + f1(sw2) + '" height="18" fill="#a8371f" stroke="' + INK + '" stroke-width="1.2"/><text x="' + f1(sx2 + sw2 / 2) + '" y="' + (hy - 6) + '" font-size="' + (sw2 < 60 ? 8.5 : 10.5) + '" font-weight="700" letter-spacing="1" text-anchor="middle" fill="#FBF6F1">STAKING</text></g>';
       g += '</g>';
       h += g;
     });
-    /* lantaarns langs de straat */
+    /* gaslantaarns langs de straat */
     for (var l = 0; l <= m.n; l++){
       var lx = m.fx0 + l * m.slot;
-      h += '<g><path d="M' + f1(lx) + ' ' + (b + 46) + 'V' + (b + 4) + '" stroke="#3b3530" stroke-width="2.4"/><path d="M' + f1(lx - 5) + ' ' + (b + 4) + 'h10l-2 -10h-6z" fill="#3b3530"/><circle cx="' + f1(lx) + '" cy="' + (b - 1) + '" r="2.8" fill="#FCE3A0"/></g>';
+      h += '<g stroke="' + INK + '" stroke-linejoin="round"><path d="M' + f1(lx) + ' ' + (b + 46) + 'V' + (b + 6) + '" stroke-width="2.6"/><path d="M' + f1(lx - 6) + ' ' + (b + 6) + 'h12l-2.5 -12h-7z" fill="#F6D58A" stroke-width="1.8"/><path d="M' + f1(lx - 7) + ' ' + (b - 6) + 'h14l-7 -5z" fill="' + INK + '" stroke-width="1"/></g>';
     }
-    /* de huisjes van de gezinnen */
+    /* de huizen van de gezinnen: Twentse arbeiderswoningen met pannen, luiken en een deur in de kleur van de soort */
     var x0h = (W - m.per * m.hw) / 2;
     arbeiders().forEach(function(a, i){
-      var r = Math.floor(i / m.per), c = i % m.per, hx = x0h + c * m.hw, hw = m.hw, yb = m.straat + r * 98 + 72, wx = hx + 12;
+      var r = Math.floor(i / m.per), c = i % m.per, hx = x0h + c * m.hw, hw = m.hw, yb = m.straat + r * 98 + 72, wx = hx + 15;
       var naam = S.modus === 'handen' ? (a.p ? a.p.ach : a.naam) : a.naam, max = Math.max(5, Math.floor(hw / 6.6));
       if (naam.length > max) naam = naam.slice(0, max - 1) + '…';
       h += '<g class="huis" id="huis-' + schoon(a.id) + '">' +
         '<circle class="gloed" cx="' + f1(wx + 9) + '" cy="' + (yb - 25) + '" r="24" fill="url(#scGloed)"/>' +
-        '<rect x="' + f1(hx + 6) + '" y="' + (yb - 38) + '" width="' + f1(hw - 12) + '" height="38" style="fill:var(--sc-muur)"/>' +
-        '<rect x="' + f1(hx + hw * 0.64) + '" y="' + (yb - 62) + '" width="6" height="14" style="fill:var(--sc-dak)"/>' +
-        '<path d="M' + f1(hx + 2) + ' ' + (yb - 37) + 'L' + f1(hx + hw / 2) + ' ' + (yb - 63) + 'L' + f1(hx + hw - 2) + ' ' + (yb - 37) + 'Z" style="fill:var(--sc-dak)"/>' +
-        '<rect class="ruit" x="' + f1(wx) + '" y="' + (yb - 32) + '" width="18" height="15" rx="1.5" style="stroke:var(--sc-dak)" stroke-width="1.6"/>' +
+        '<g stroke="' + INK + '" stroke-linejoin="round">' +
+        '<rect x="' + f1(hx + hw * 0.66) + '" y="' + (yb - 66) + '" width="8" height="18" fill="url(#scMuur)" stroke-width="1.4"/><rect x="' + f1(hx + hw * 0.66 - 1.5) + '" y="' + (yb - 68) + '" width="11" height="3.5" fill="#3E4A6E" stroke-width="1.2"/>' +
+        '<path d="M' + f1(hx + 1) + ' ' + (yb - 37) + 'L' + f1(hx + hw / 2) + ' ' + (yb - 64) + 'L' + f1(hx + hw - 1) + ' ' + (yb - 37) + 'Z" fill="url(#scPan)" stroke-width="1.6"/>' +
+        '<rect x="' + f1(hx + 6) + '" y="' + (yb - 38) + '" width="' + f1(hw - 12) + '" height="38" fill="url(#scMuur)" stroke-width="1.6"/>' +
+        '<rect x="' + f1(wx - 7) + '" y="' + (yb - 33) + '" width="5.5" height="17" fill="#2f7d52" stroke-width="1"/><rect x="' + f1(wx + 19.5) + '" y="' + (yb - 33) + '" width="5.5" height="17" fill="#2f7d52" stroke-width="1"/>' +
+        '</g>' +
+        '<rect class="ruit" x="' + f1(wx) + '" y="' + (yb - 32) + '" width="18" height="15" rx="1.5" stroke="' + INK + '" stroke-width="1.6"/>' +
         '<circle class="lamp" cx="' + f1(wx + 9) + '" cy="' + (yb - 22) + '" r="2.6" fill="#fff6d0"/>' +
         '<path class="getouw" d="M' + f1(wx + 2.5) + ' ' + (yb - 30) + 'v12M' + f1(wx + 15.5) + ' ' + (yb - 30) + 'v12M' + f1(wx + 2.5) + ' ' + (yb - 27) + 'h13M' + f1(wx + 2.5) + ' ' + (yb - 21) + 'h13" stroke="#C9A227" stroke-width="1.6"/>' +
-        '<path d="M' + f1(wx + 9) + ' ' + (yb - 32) + 'v15M' + f1(wx) + ' ' + (yb - 24.5) + 'h18" style="stroke:var(--sc-dak)" stroke-width="1.2"/>' +
-        '<path d="M' + f1(hx + hw - 21) + ' ' + yb + 'V' + (yb - 17) + 'a6 6 0 0 1 12 0V' + yb + 'Z" fill="' + SOORT[a.soort].kleur + '"/>' +
+        '<path d="M' + f1(wx + 9) + ' ' + (yb - 32) + 'v15M' + f1(wx) + ' ' + (yb - 24.5) + 'h18" stroke="' + INK + '" stroke-width="1.1"/>' +
+        '<rect x="' + f1(wx - 2) + '" y="' + (yb - 17) + '" width="22" height="3" fill="#E9DCCB" stroke="' + INK + '" stroke-width="1"/>' +
+        '<path d="M' + f1(hx + hw - 23) + ' ' + yb + 'V' + (yb - 17) + 'a7 7 0 0 1 14 0V' + yb + 'Z" fill="' + SOORT[a.soort].kleur + '" stroke="' + INK + '" stroke-width="1.6"/>' +
         '<g class="bord"><ellipse cx="' + f1(wx + 9) + '" cy="' + (yb - 24) + '" rx="12" ry="5" fill="#fff" stroke="#8a7f78" stroke-width="1.4"/><ellipse cx="' + f1(wx + 9) + '" cy="' + (yb - 24) + '" rx="6.5" ry="2.5" fill="none" stroke="#b9ad9f" stroke-width="1.2"/></g>' +
-        '<text x="' + f1(hx + hw / 2) + '" y="' + (yb + 19) + '" font-size="11.5" font-weight="500" text-anchor="middle" style="fill:var(--sc-ink)">' + schoon(naam) + '</text></g>';
+        '<text x="' + f1(hx + hw / 2) + '" y="' + (yb + 15) + '" font-size="11.5" font-weight="600" text-anchor="middle" style="fill:var(--sc-ink)">' + schoon(naam) + '</text>' +
+        /* de loonbalk: wat het gezin verdiende, met een streep op wat het nodig had */
+        '<g class="loonbalk"><rect x="' + f1(hx + 10) + '" y="' + (yb + 20) + '" width="' + f1(hw - 20) + '" height="6" rx="3" fill="#000" opacity=".12"/><rect class="lb" x="' + f1(hx + 10) + '" y="' + (yb + 20) + '" width="0" height="6" rx="3"/><rect class="ln" x="' + f1(hx + 10) + '" y="' + (yb + 17) + '" width="2.5" height="12" rx="1" style="fill:var(--sc-ink)"/></g></g>';
     });
     /* de mensen: eerst de fabrikanten, dan de gezinnen en hun oudste kind */
     h += '<g id="scFigs">';
-    S.fabs.forEach(function(fb){ h += figuur('baas-' + fb.id, '#3b3530', false, true); });
+    SCN.wie = {};
+    S.fabs.forEach(function(fb){ var e = eigenaarVan(fb); h += figuur('baas-' + fb.id, fb.kleur, false, true, e && S.modus === 'telefoon' ? gezichtVan(e.id) : { seed:'fabrikeur ' + fb.naam, av:'' }); });
     arbeiders().forEach(function(a){
-      if (a.soort !== 'kind') h += figuur('kid-' + schoon(a.id), '#EA9836', true);
-      h += figuur('fig-' + schoon(a.id), SOORT[a.soort].kleur, a.soort === 'kind');
+      if (a.soort !== 'kind') h += figuur('kid-' + schoon(a.id), '#EA9836', true, false, { seed:(a.p ? a.p.kind : 'kind') + ' ' + (a.p ? a.p.ach : a.id), av:'' });
+      h += figuur('fig-' + schoon(a.id), SOORT[a.soort].kleur, a.soort === 'kind', false, gezichtVan(a.id));
     });
-    h += '</g>';
+    h += '<g id="scMunten"></g></g>';
     var svg = $('scene');
     svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
     svg.classList.add('stil');
@@ -1627,6 +1683,7 @@ var LONEN = [6, 8, 10, 12], UREN = [10, 12, 14];
     SCN.fig = {}; SCN.kid = {}; SCN.huis = {}; SCN.fab = {};
     arbeiders().forEach(function(a){ SCN.fig[a.id] = svg.querySelector('#fig-' + cssId(a.id)); SCN.kid[a.id] = svg.querySelector('#kid-' + cssId(a.id)); SCN.huis[a.id] = svg.querySelector('#huis-' + cssId(a.id)); });
     S.fabs.forEach(function(fb){ SCN.fab[fb.id] = svg.querySelector('#fab-' + fb.id); });
+    Array.prototype.forEach.call(svg.querySelectorAll('#scFigs .fig'), function(el){ zetGezicht(el, ''); });
     requestAnimationFrame(function(){ requestAnimationFrame(function(){ svg.classList.remove('stil'); }); });
   }
   function cssId(id){ return window.CSS && CSS.escape ? CSS.escape(String(id)) : String(id).replace(/[^\w-]/g, '\\$&'); }
@@ -1637,17 +1694,26 @@ var LONEN = [6, 8, 10, 12], UREN = [10, 12, 14];
     function slotX(fid){ return m.fx0 + S.fabs.indexOf(fabVan(fid)) * m.slot; }
     function binnen(fid){
       var k = (tel.binnen[fid] = (tel.binnen[fid] || 0) + 1) - 1, x0 = slotX(fid), gx = x0 + m.slot / 2, plek = [];
-      for (var l = gx - 44; l >= x0 + 8; l -= 16) plek.push(l);
+      for (var l = gx - 52; l >= x0 + 8; l -= 28) plek.push(l);
       var links = plek.length, rechts = [];
-      for (var r = gx + 44; r <= x0 + m.slot - 32; r += 16) rechts.push(r);
+      for (var r = gx + 52; r <= x0 + m.slot - 32; r += 28) rechts.push(r);
       var rij = [];
       for (var i = 0; i < Math.max(links, rechts.length); i++){ if (i < links) rij.push(plek[i]); if (i < rechts.length) rij.push(rechts[i]); }
       if (!rij.length) rij.push(gx);
-      return [rij[k % rij.length], b + 30 - Math.floor(k / rij.length) * 11];
+      return [rij[k % rij.length], b + 30 - Math.floor(k / rij.length) * 14];
     }
-    function poort(fid){ var k = tel.poort[fid] = (tel.poort[fid] || 0) + 1; return grid(slotX(fid) + 4, m.slot - 8, k - 1, 22, b + 80, 18); }
-    function land(){ return grid(4, m.landW - 6, tel.land++, 20, b + 14, 17); }
-    function school(){ return grid(m.W - m.schoolW + 6, m.schoolW - 10, tel.school++, 13, b + 30, 14); }
+    /* de rij voor de poort: wie het goedkoopst is, staat vooraan, want die gaat er het eerst in */
+    function poort(fid, rang){ var k = rang !== undefined ? rang : (tel.poort[fid] = (tel.poort[fid] || 0) + 1) - 1; return grid(slotX(fid) + 4, m.slot - 8, k, 30, b + 82, 32); }
+    function land(){ return grid(4, m.landW - 6, tel.land++, 28, b + 16, 30); }
+    function school(){ return grid(m.W - m.schoolW + 6, m.schoolW - 10, tel.school++, 22, b + 30, 26); }
+    var rangVan = {};
+    if (fase === 'b'){
+      var rijen = {};
+      arbeiders().forEach(function(a){ var pl = S.kb[a.id] || (S.modus === 'handen' ? standaardPlek(a) : null); if (pl && fabVan(pl)) (rijen[pl] = rijen[pl] || []).push(a); });
+      Object.keys(rijen).forEach(function(fid){
+        rijen[fid].sort(function(x, y){ return SOORT[x.soort].factor - SOORT[y.soort].factor; }).forEach(function(a, n){ rangVan[a.id] = n; });
+      });
+    }
     function huis(i){ var r = Math.floor(i / m.per), c = i % m.per, x0 = (m.W - m.per * m.hw) / 2; return [x0 + c * m.hw + m.hw - 15, m.straat + r * 98 + 73]; }
     function zet(el, p, cls, i){
       if (!el) return;
@@ -1666,7 +1732,13 @@ var LONEN = [6, 8, 10, 12], UREN = [10, 12, 14];
         else if (plek === 'school') pos = school();
         else thuis = /^thuis|^spoel/.test(plek || '');
       } else if (fase === 'b' && plek){
-        if (fabVan(plek)) pos = poort(plek);
+        if (fabVan(plek)){
+          pos = poort(plek, rangVan[a.id]);
+          /* het prijskaartje: wat deze persoon de fabrikant per week kost */
+          var ab0 = fabVan(plek).aanbod, pk = SCN.fig[a.id] && SCN.fig[a.id].querySelector('.prijs text');
+          if (pk) pk.textContent = gld(weekloon(ab0.loon, a.soort, ab0.uren)).replace('ƒ ', 'ƒ');
+          cls = ' metprijs';
+        }
         else if (plek === 'staak' && fabVan(a.fab)){ pos = poort(a.fab); cls = ' staakt'; tel.staak++; }
         else if (plek === 'land') pos = land();
         else if (plek === 'school') pos = school();
@@ -1676,6 +1748,9 @@ var LONEN = [6, 8, 10, 12], UREN = [10, 12, 14];
       var hp = huis(i);
       if (!pos) pos = hp;
       zet(SCN.fig[a.id], pos, cls, i);
+      /* na de uitslag: blij als het gezin genoeg had, sip als het tekortkwam of werd weggestuurd */
+      zetGezicht(SCN.fig[a.id], x ? (x.genoeg ? 'blij' : 'sip') : '');
+      if (SCN.kid[a.id]) zetGezicht(SCN.kid[a.id], x ? (x.genoeg ? 'blij' : 'sip') : '');
       /* het oudste kind: naar school, mee met de ouder, of thuis */
       if (SCN.kid[a.id]){
         var keuze = x && x.kind ? x.kind.keuze : fase === 'b' ? a.kindKeuze : null, kp;
@@ -1687,9 +1762,40 @@ var LONEN = [6, 8, 10, 12], UREN = [10, 12, 14];
       var hu = SCN.huis[a.id];
       if (hu){
         var lx = S.uit && S.uit.act[a.id];
-        hu.setAttribute('class', 'huis' + (lx ? (lx.genoeg ? ' genoeg' : ' honger') : '') + (thuis ? ' thuis' : ''));
+        hu.setAttribute('class', 'huis' + (lx ? (lx.genoeg ? ' genoeg' : ' honger') : '') + (thuis ? ' thuis' : '') + (u && x ? ' metloon' : ''));
+        /* de loonbalk: verdiend tegen nodig, op een schaal tot anderhalf keer wat nodig is */
+        if (u && x){
+          var lb = hu.querySelector('.lb'), ln = hu.querySelector('.ln'), bg = hu.querySelector('.loonbalk rect');
+          var bw = +bg.getAttribute('width'), bx = +bg.getAttribute('x'), schaal = Math.max(x.behoefte * 1.5, x.inkomen, 0.1);
+          lb.setAttribute('width', f1(bw * Math.min(1, x.inkomen / schaal)));
+          lb.setAttribute('class', 'lb ' + (x.genoeg ? 'ok' : 'tk'));
+          ln.setAttribute('x', f1(bx + bw * x.behoefte / schaal - 1));
+          hu.querySelector('.loonbalk').setAttribute('aria-label', gld(x.inkomen) + ' verdiend, ' + gld(x.behoefte) + ' nodig');
+        }
       }
     });
+    /* De loonzakjes: zodra de uitslag er is, vliegen er muntjes van de poort
+       van elke fabriek naar de huizen van wie er werkte. */
+    if (u && SCN.fase !== 'u'){
+      var mg = svg.querySelector('#scMunten'), stil = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (mg && !stil){
+        mg.innerHTML = '';
+        arbeiders().forEach(function(a, i){
+          var x = u.act[a.id]; if (!x || !x.fab || x.naarHuis || !fabVan(x.fab)) return;
+          var van = [slotX(x.fab) + m.slot / 2, b + 40], naar = huis(i);
+          for (var k = 0; k < 3; k++){
+            var c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            c.setAttribute('r', '4.5'); c.setAttribute('class', 'munt');
+            c.style.transform = 'translate(' + f1(van[0]) + 'px,' + f1(van[1]) + 'px)';
+            c.style.transitionDelay = (i * 90 + k * 140) + 'ms';
+            mg.appendChild(c);
+            (function(c, naar){ requestAnimationFrame(function(){ requestAnimationFrame(function(){ c.style.transform = 'translate(' + f1(naar[0] - 30) + 'px,' + f1(naar[1] - 40) + 'px)'; c.style.opacity = '0'; }); }); })(c, naar);
+          }
+        });
+        setTimeout(function(){ if (mg) mg.innerHTML = ''; }, 3200);
+      }
+    }
+    SCN.fase = fase;
     /* de fabrieken: poort, ramen, rook en het briefje */
     S.fabs.forEach(function(fb){
       var g = SCN.fab[fb.id]; if (!g) return;
