@@ -531,7 +531,9 @@ window.AVATAR = (function(){
     if (sp.r) s += rand(sp.r);
     var hd = sp.h ? hoed(sp.h) : sp.g === 3 ? hoed(22) : sp.g === 2 ? hoed(23) : '';
     if (hd || e === 2){
-      var T = rot(0, -44, 14), plek = 'translate(' + f(T[0]) + ',' + f(T[1] + 44) + ') rotate(' + f(st.yaw * .3) + ',0,' + f(M.top) + ')';
+      /* de hoed draait mee met het hoofd: het vlak van de hoed (op diepte 24, ongeveer het voorhoofd) gaat door dezelfde draaiing
+         als de bol, dus hij schuift opzij en wordt smaller als het hoofd wegdraait, net als het gezicht */
+      var plek = 'matrix(' + [cy, -sy * sn, 0, cp, 24 * sy, 24 * cy * sn].map(f).join(',') + ')';
       var op = hd ? '<g transform="' + hoedPlek(M, 0, 1) + '"><g class="av-hoed">' + halo(hd, rim * 2) + hd + '</g></g>'
                   : '<path d="M2,' + f1(M.top + 3) + ' q4,-12 14,-6 q-8,-2 -10,6" fill="none" stroke="' + meng(kleur, INKT, 0.25) + '" stroke-width="5" stroke-linecap="round"/>';
       s += '<g' + adem + '><g' + beweeg + '><g transform="' + plek + '">' + op + '</g></g></g>';
