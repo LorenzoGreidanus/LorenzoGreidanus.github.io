@@ -154,7 +154,15 @@
         return keuze;
       },
       maak: function(keuze, n){
-        return vraag(spel, { t:'werkblad-maak', keuze:keuze, n:n }).then(function(b){ return (b.items || []).map(papierItem); });
+        /* Het spel houdt dubbele opgaven zelf tegen, maar twee opgaven met een andere
+           sleutel kunnen er op papier precies hetzelfde uitzien; die maar een keer. */
+        return vraag(spel, { t:'werkblad-maak', keuze:keuze, n:n }).then(function(b){
+          var gezien = {};
+          return (b.items || []).filter(function(it){
+            var k = String(it.vraag) + '|' + String(it.opties || '').replace(/<b>[a-z]<\/b>/g, '').split('</span>').sort().join('|');
+            if (gezien[k]) return false; gezien[k] = true; return true;
+          }).map(papierItem);
+        });
       },
       teken: function(w){
         var niv = w.niveauNaam || '';

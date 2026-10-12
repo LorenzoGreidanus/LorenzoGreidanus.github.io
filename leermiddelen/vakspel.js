@@ -1041,7 +1041,9 @@ window.VAKSPEL = (function(){
       var lijst = o.opties.map(function(t, i){ return { t:t, i:i }; }); if (!o.vasteVolgorde) lijst = husselen(lijst);
       var opties = '<div class="opties">' + lijst.map(function(x, k){ return '<span><b>' + LET[k] + '</b>' + x.t + '</span>'; }).join('') + '</div>';
       var k2 = 0; lijst.forEach(function(x, k){ if (x.i === o.goed) k2 = k; });
-      var goedTekst = String(o.opties[o.goed]).replace(/<[^>]+>/g, '').trim() || o.antwoordTekst || '';
+      /* als tekst, niet als html: een keuze met aanhalingstekens of een ampersand stond anders als &quot; op het antwoordblad */
+      var tmp = document.createElement('div'); tmp.innerHTML = String(o.opties[o.goed]);
+      var goedTekst = tmp.textContent.replace(/\s+/g, ' ').trim() || o.antwoordTekst || '';
       antwoord = LET[k2] + '. ' + goedTekst;
       /* open kan alleen als de keuzes kort zijn en de vraag niet over de keuzes zelf gaat ("welke versie past") */
       var tekst = String(o.vraag || '').replace(/<[^>]+>/g, '');
