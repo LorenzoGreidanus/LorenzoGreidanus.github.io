@@ -113,6 +113,25 @@ button{cursor:pointer;touch-action:manipulation}
 .lat input{width:100%;accent-color:var(--ocean);height:44px}
 .lat .einden{display:flex;justify-content:space-between;font-size:.8rem;color:var(--muted)}
 .lat .waarde{text-align:center;font-size:2rem;font-weight:700;margin-top:4px}
+/* een getal intypen: groot vak met wat ervoor en erna hoort (euro, procent, m²) */
+.getalvak{display:flex;align-items:center;gap:8px;margin-top:14px;border:2px solid var(--rand2);border-radius:16px;background:var(--kaart2);padding:6px 14px}
+.getalvak:focus-within{border-color:var(--ocean)}
+.getalvak span{font-size:1.5rem;font-weight:700;color:var(--muted);flex:none}
+.getalvak input{flex:1;min-width:0;border:none;background:none;outline:none;font-size:2rem;font-weight:700;color:var(--ink);padding:6px 0;text-align:right}
+.getalfout{color:var(--fout);font-size:.88rem;margin-top:6px;min-height:1.2em}
+/* een zin of korte tekst schrijven */
+.tekstvak{width:100%;margin-top:14px;border:2px solid var(--rand2);border-radius:16px;background:var(--kaart2);color:var(--ink);padding:12px 14px;font-size:1.05rem;line-height:1.45;resize:vertical}
+.tekstvak:focus{border-color:var(--ocean);outline:none}
+.tekstteller{display:flex;justify-content:space-between;gap:10px;font-size:.8rem;color:var(--muted);margin-top:4px}
+.tekstteller .fout{margin:0;min-height:0}
+/* een volgorde maken: tik de stukken aan in de goede volgorde */
+.vlg-rij{display:flex;flex-wrap:wrap;gap:8px;min-height:58px;margin-top:14px;padding:10px;border:2px dashed var(--rand2);border-radius:16px}
+.vlg-rij:empty::before{content:attr(data-leeg);color:var(--muted);font-size:.9rem;align-self:center}
+.vlg-stuk{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:8px 12px;border-radius:12px;border:2px solid var(--rand2);background:var(--kaart2);font-weight:600;font-size:1rem;text-align:left}
+.vlg-rij .vlg-stuk{background:var(--ocean);border-color:var(--ocean);color:#fff}
+.vlg-rij .vlg-stuk b{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.25);font-size:.75rem}
+.vlg-bak{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.vlg-bak .vlg-stuk:disabled{opacity:.3}
 .wacht{text-align:center;padding:26px 10px}
 .wacht .stip{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--ocean);margin:0 3px;animation:stip 1.2s infinite}
 .wacht .stip:nth-child(2){animation-delay:.2s}.wacht .stip:nth-child(3){animation-delay:.4s}
@@ -848,6 +867,32 @@ body.app-aan.vb-hapert .vb-balk{bottom:calc(76px + env(safe-area-inset-bottom,0p
       h = '<p class="eyebrow">' + schoon(d.kop || 'jouw oordeel') + '</p><h2>' + schoon(d.titel || '') + '</h2>' + (d.tekst ? '<p class="tekst">' + schoon(d.tekst) + '</p>' : '') +
         '<div class="lat"><div class="waarde" id="latWaarde">' + w + '</div><input type="range" min="0" max="100" value="' + w + '" id="latIn" aria-label="Schuif"><div class="einden"><span>' + schoon(d.links || '') + '</span><span>' + schoon(d.rechts || '') + '</span></div></div>' +
         '<button class="knop" id="latZend" type="button"' + (d.dicht ? ' disabled' : '') + '>' + schoon(d.knop || 'Zet mijn merkteken') + '</button><p class="gestuurd" id="gestuurd" role="status">' + (gekozen[d.id] !== undefined ? 'Verstuurd. Schuif en druk nog eens als je wilt wisselen.' : '') + '</p>';
+    } else if (d.soort === 'getal'){
+      /* een getal: met een komma mag het een kommagetal zijn; voor en na staat wat erbij hoort */
+      var gw = gekozen[d.id] !== undefined ? gekozen[d.id] : (d.waarde !== undefined && d.waarde !== null ? d.waarde : '');
+      gw = gw === '' || !isFinite(Number(gw)) ? '' : String(gw).replace('.', ',');
+      h = '<p class="eyebrow">' + schoon(d.kop || 'jouw antwoord') + '</p><h2>' + schoon(d.titel || '') + '</h2>' + (d.tekst ? '<p class="tekst">' + schoon(d.tekst) + '</p>' : '') +
+        '<label class="getalvak">' + (d.voor ? '<span>' + schoon(d.voor) + '</span>' : '') +
+        '<input id="getalIn" type="text" inputmode="' + (d.komma ? 'decimal' : 'numeric') + '" autocomplete="off" maxlength="12" value="' + schoon(gw) + '" aria-label="' + schoon(d.titel || 'Getal') + '"' + (d.dicht ? ' disabled' : '') + '>' +
+        (d.na ? '<span>' + schoon(d.na) + '</span>' : '') + '</label><p class="getalfout" id="getalFout" role="alert"></p>' +
+        '<button class="knop" id="getalZend" type="button"' + (d.dicht ? ' disabled' : '') + '>' + schoon(d.knop || 'Verstuur') + '</button><p class="gestuurd" id="gestuurd" role="status">' + (gekozen[d.id] !== undefined ? 'Verstuurd. Pas aan en druk nog eens als je wilt wisselen.' : '') + '</p>' +
+        (d.meer ? '<p class="meer">' + schoon(d.meer) + '</p>' : '');
+    } else if (d.soort === 'tekst'){
+      /* een korte tekst; wat de klas te zien krijgt gaat door het naamfilter (hier en in de kamer) */
+      var tmax = Math.max(10, Math.min(200, d.max | 0 || 140)), tw = gekozen[d.id] !== undefined ? gekozen[d.id] : '';
+      h = '<p class="eyebrow">' + schoon(d.kop || 'jouw tekst') + '</p><h2>' + schoon(d.titel || '') + '</h2>' + (d.tekst ? '<p class="tekst">' + schoon(d.tekst) + '</p>' : '') +
+        '<textarea class="tekstvak" id="tekstIn" rows="' + (d.regels > 1 ? Math.min(6, d.regels | 0) : 2) + '" maxlength="' + tmax + '" placeholder="' + schoon(d.plaats || 'Schrijf hier') + '" aria-label="' + schoon(d.titel || 'Jouw tekst') + '"' + (d.dicht ? ' disabled' : '') + '>' + schoon(tw) + '</textarea>' +
+        '<div class="tekstteller"><p class="fout" id="tekstFout" role="alert"></p><span id="tekstTel">' + String(tw).length + ' / ' + tmax + '</span></div>' +
+        '<button class="knop" id="tekstZend" type="button"' + (d.dicht ? ' disabled' : '') + '>' + schoon(d.knop || 'Verstuur') + '</button><p class="gestuurd" id="gestuurd" role="status">' + (gekozen[d.id] !== undefined ? 'Verstuurd. Pas aan en druk nog eens als je wilt wisselen.' : '') + '</p>' +
+        (d.meer ? '<p class="meer">' + schoon(d.meer) + '</p>' : '');
+    } else if (d.soort === 'volgorde'){
+      /* stukken in de goede volgorde: tik ze aan, tik in de rij om er een terug te zetten */
+      var vitems = (d.items || []).slice(0, 12);
+      h = '<p class="eyebrow">' + schoon(d.kop || 'zet ze in volgorde') + '</p><h2>' + schoon(d.titel || '') + '</h2>' + (d.tekst ? '<p class="tekst">' + schoon(d.tekst) + '</p>' : '') +
+        '<div class="vlg-rij" id="vlgRij" data-leeg="' + schoon(d.leeg || 'Tik hieronder de stukken aan, het eerste eerst.') + '" aria-live="polite"></div>' +
+        '<div class="vlg-bak" id="vlgBak">' + vitems.map(function(o){ return '<button type="button" class="vlg-stuk" data-id="' + schoon(o.id) + '"' + (d.dicht ? ' disabled' : '') + '>' + schoon(o.tekst) + '</button>'; }).join('') + '</div>' +
+        '<button class="knop" id="vlgZend" type="button" disabled>' + schoon(d.knop || 'Verstuur deze volgorde') + '</button><p class="gestuurd" id="gestuurd" role="status"></p>' +
+        (d.meer ? '<p class="meer">' + schoon(d.meer) + '</p>' : '');
     } else if (d.soort === 'uitslag'){
       h = '<div class="uitslag"><p class="eyebrow">' + schoon(d.kop || 'uitslag') + '</p><h2>' + schoon(d.titel || '') + '</h2>' + (d.tekst ? '<p class="tekst">' + schoon(d.tekst) + '</p>' : '') +
         (d.regels && d.regels.length ? '<ul>' + d.regels.map(function(r){ return '<li>' + schoon(r) + '</li>'; }).join('') + '</ul>' : '') + '</div>';
@@ -879,6 +924,65 @@ body.app-aan.vb-hapert .vb-balk{bottom:calc(76px + env(safe-area-inset-bottom,0p
         zegGestuurd(weg, tekst);
         if (navigator.vibrate) navigator.vibrate(30);
       });
+    }
+    var gi = $('getalIn');
+    if (gi){
+      var zendGetal = function(){
+        var ruw = gi.value.replace(/\s|€|%/g, '').replace(',', '.');
+        var g = ruw === '' ? NaN : Number(ruw);
+        if (!isFinite(g)){ $('getalFout').textContent = 'Typ een getal' + (d.komma ? ', met een komma als dat nodig is.' : '.'); return; }
+        if (!d.komma && Math.round(g) !== g){ $('getalFout').textContent = 'Hier hoort een heel getal, zonder komma.'; return; }
+        if (d.min !== undefined && g < d.min){ $('getalFout').textContent = 'Dat is te weinig: het kleinste is ' + String(d.min).replace('.', ',') + '.'; return; }
+        if (d.max !== undefined && g > d.max){ $('getalFout').textContent = 'Dat is te veel: het grootste is ' + String(d.max).replace('.', ',') + '.'; return; }
+        $('getalFout').textContent = '';
+        gekozen[d.id] = g;
+        var nett = (d.voor ? d.voor + ' ' : '') + (d.voor === '€' && Math.round(g) !== g ? g.toFixed(2) : String(g)).replace('.', ',') + (d.na ? ' ' + d.na : '');
+        var tekst = 'Verstuurd: ' + nett + '. Pas aan en druk nog eens als je wilt wisselen.';
+        var weg = stuur({ t:'actie', d:{ vraag:d.id, getal:g } }, { daarna:function(){ if (nu === d) zegGestuurd(true, tekst); } });
+        zegGestuurd(weg, tekst);
+        if (navigator.vibrate) navigator.vibrate(30);
+      };
+      $('getalZend').addEventListener('click', zendGetal);
+      gi.addEventListener('keydown', function(e){ if (e.key === 'Enter') zendGetal(); });
+      gi.addEventListener('input', function(){ $('getalFout').textContent = ''; });
+    }
+    var ti = $('tekstIn');
+    if (ti){
+      var tmx = parseInt(ti.getAttribute('maxlength'), 10) || 140;
+      ti.addEventListener('input', function(){ $('tekstTel').textContent = ti.value.length + ' / ' + tmx; $('tekstFout').textContent = ''; });
+      $('tekstZend').addEventListener('click', function(){
+        var t = ti.value.replace(/\s+/g, ' ').trim();
+        if (t.length < (d.min || 2)){ $('tekstFout').textContent = 'Schrijf iets meer.'; return; }
+        if (window.NAAMFILTER && NAAMFILTER.vies && NAAMFILTER.vies(t)){ $('tekstFout').textContent = 'Dat kan niet op het bord. Schrijf het anders.'; return; }
+        gekozen[d.id] = t;
+        var tekst = 'Verstuurd. Pas aan en druk nog eens als je wilt wisselen.';
+        var weg = stuur({ t:'actie', d:{ vraag:d.id, tekst:t } }, { daarna:function(){ if (nu === d) zegGestuurd(true, tekst); } });
+        zegGestuurd(weg, tekst);
+        if (navigator.vibrate) navigator.vibrate(30);
+      });
+    }
+    var vr = $('vlgRij');
+    if (vr){
+      var gekozenVlg = [];
+      var tekenVlg = function(){
+        vr.innerHTML = gekozenVlg.map(function(id, i){
+          var o = (d.items || []).filter(function(x){ return String(x.id) === id; })[0] || { tekst:id };
+          return '<button type="button" class="vlg-stuk" data-terug="' + schoon(id) + '" aria-label="' + schoon(o.tekst) + ', plek ' + (i + 1) + '. Tik om terug te zetten."><b>' + (i + 1) + '</b>' + schoon(o.tekst) + '</button>';
+        }).join('');
+        Array.prototype.forEach.call($('vlgBak').children, function(b){ b.disabled = !!d.dicht || gekozenVlg.indexOf(b.getAttribute('data-id')) >= 0; });
+        $('vlgZend').disabled = !!d.dicht || gekozenVlg.length !== (d.items || []).slice(0, 12).length;
+      };
+      $('vlgBak').addEventListener('click', function(e){ var b = e.target.closest('[data-id]'); if (!b || b.disabled) return; gekozenVlg.push(b.getAttribute('data-id')); tekenVlg(); });
+      vr.addEventListener('click', function(e){ var b = e.target.closest('[data-terug]'); if (!b || d.dicht) return; gekozenVlg.splice(gekozenVlg.indexOf(b.getAttribute('data-terug')), 1); tekenVlg(); });
+      $('vlgZend').addEventListener('click', function(){
+        gekozen[d.id] = gekozenVlg.slice();
+        var tekst = 'Verstuurd. Tik in de rij om iets te verschuiven en stuur opnieuw als je wilt.';
+        var weg = stuur({ t:'actie', d:{ vraag:d.id, volgorde:gekozenVlg.slice() } }, { daarna:function(){ if (nu === d) zegGestuurd(true, tekst); } });
+        zegGestuurd(weg, tekst);
+        if (navigator.vibrate) navigator.vibrate(30);
+      });
+      if (Array.isArray(gekozen[d.id])) gekozenVlg = gekozen[d.id].slice();
+      tekenVlg();
     }
   }
   /* wie een code in de link heeft, hoeft alleen nog een bijnaam */

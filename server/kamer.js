@@ -20,7 +20,7 @@
    daarna weer bij de constructor. De WebSockets overleven dat slapen wel (de
    hibernation API); wie erbij hoort staat in de bijlage van elke socket. */
 import { DurableObject } from "cloudflare:workers";
-import { nette, verboden } from "./naamfilter.js";
+import { nette, verboden, vies } from "./naamfilter.js";
 /* de motor van Zwaardvechter: hetzelfde bestand dat de browser laadt */
 import ZWAARDMOTOR from "../leermiddelen/zwaard-motor.js";
 import TORENMOTOR from "../leermiddelen/toren-motor.js";
@@ -94,7 +94,9 @@ const RACE_POS_MS = 500, RACE_POS_BUURT = 3000;
 /* spellen met rollen op telefoons: het bord draait het spel, de kamer deelt kaarten uit en geeft acties door */
 const SPELLEN_ROLLEN = { polis: "De vergadering van de klas", meetlat: "Langs de meetlat", staten: "De vergadering", berlijn: "De Conferentie van Berlijn", standen: "Stem per stand", crisis: "De crisis", teken: "Tekenslag",
   markt: "De markt", ecosysteem: "Het ecosysteem", rivier: "Langs de rivier", gemeenteraad: "De gemeenteraad",
-  uitbraak: "De uitbraak", klimaattop: "De klimaattop", fabriek: "De fabriek", gerucht: "Het gerucht", eiland: "Het eiland", voc: "De VOC-beurs", tijdbalk: "De tijdbalk", archief: "Het archief" };
+  uitbraak: "De uitbraak", klimaattop: "De klimaattop", fabriek: "De fabriek", gerucht: "Het gerucht", eiland: "Het eiland", voc: "De VOC-beurs", tijdbalk: "De tijdbalk", archief: "Het archief",
+  schoolreis: "De schoolreis", schoolplein: "Het nieuwe schoolplein", peiling: "De peiling", kermis: "De kermis", abonnement: "De abonnementenoorlog",
+  zinsdelen: "De zin in stukken", redactie: "De redactie", debat: "Het debat", mysterie: "Het mysterie", arrivals: "Arrivals" };
 const KAART_MAX = 12000, BORD_MAX = 40000, ACTIE_MAX = 4000;
 const KLAS_SLAAPT = 400 * 24 * 60 * 60 * 1000; /* een klascode blijft tot de docent hem opheft, of tot hij ruim een jaar niet gebruikt is */
 const KLAS_MAX = 3000, KLAS_BYTES = 700000;   /* uitslagen: hoogstens zoveel, en samen hoogstens zoveel tekens */
@@ -906,6 +908,12 @@ export class Kamer extends DurableObject {
     if (!sp || st.fase === "einde") return;
     if (m.t === "actie"){
       if (m.d === undefined) return;
+      /* Een getypte tekst kan op het bord komen: kort houden, en wat niet door het
+         naamfilter komt gaat leeg door, met een vlag, zodat het bord het overslaat. */
+      if (m.d && typeof m.d === "object" && typeof m.d.tekst === "string"){
+        const t = m.d.tekst.replace(/\s+/g, " ").trim().slice(0, 200);
+        m.d = Object.assign({}, m.d, vies(t) ? { tekst: "", geweigerd: true } : { tekst: t });
+      }
       const s = JSON.stringify({ t: "actie", van: sp.pid, naam: sp.naam, d: m.d });
       if (s.length > ACTIE_MAX) return;
       this.ctx.getWebSockets("host").forEach(w => { try { w.send(s); } catch (e){} });

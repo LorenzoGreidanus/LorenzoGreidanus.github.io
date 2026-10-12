@@ -25,8 +25,13 @@
      { soort:'lat', id, titel, tekst, links, rechts, waarde }        een schuif van 0 tot 100
      { soort:'lijst', id, titel, tekst, items:[{ id, tekst, onder, kleur }] } tik er een aan
      { soort:'wacht', titel, tekst }                                  alleen lezen
+     { soort:'getal', id, titel, tekst, voor:'€', na:'m²', komma, min, max, knop, waarde }   een getal intypen
+     { soort:'tekst', id, titel, tekst, plaats, max (tot 200), regels, min, knop }   een korte tekst; gaat door het naamfilter
+     { soort:'volgorde', id, titel, tekst, items:[{ id, tekst }] (tot 12), leeg, knop }   tik de stukken in volgorde
      { soort:'uitslag', titel, tekst, regels:[...] }
-   Een actie van de telefoon: { vraag:id, keuze:optieId } of { vraag:id, waarde:n }. */
+   Een actie van de telefoon: { vraag:id, keuze:optieId }, { vraag:id, waarde:n }, { vraag:id, getal:n },
+   { vraag:id, tekst:'...' } (met geweigerd:true en een lege tekst als het filter hem tegenhield) of
+   { vraag:id, volgorde:[id, id, ...] }. */
 window.ROLSPEL = (function(){
   'use strict';
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }

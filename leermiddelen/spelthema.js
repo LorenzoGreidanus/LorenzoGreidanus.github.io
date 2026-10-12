@@ -135,7 +135,8 @@ window.SPELTHEMA = (function(){
     paneel:'#FBF6F1', paneelInk:'#14224C', paneelRand:'0', zacht:'#5b6480', tegel:'#FFFFFF', vak:'#FFFFFF', vakRand:'rgba(20,34,76,.10)' };
   var OOK = { staten:'vergadering', polis:'vergaderklas' };
   function voor(id){
-    var t = THEMA[OOK[id] || id];
+    /* SPELTHEMA_TEST: alleen voor het testen van een nieuw spel, voordat het hier staat */
+    var t = THEMA[OOK[id] || id] || (window.SPELTHEMA_TEST && window.SPELTHEMA_TEST[id]);
     if (!t) return null;
     var uit = { id:OOK[id] || id }, k;
     for (k in THEMA_BASIS) uit[k] = THEMA_BASIS[k];
