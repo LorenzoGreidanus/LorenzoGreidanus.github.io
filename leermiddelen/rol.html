@@ -7,6 +7,7 @@
 <link rel="manifest" href="/manifest.json">
 <script src="avatar.js"></script>
 <script src="profiel.js"></script>
+<script src="spelthema.js"></script>
 <link rel="apple-touch-icon" href="/icoon-192.png">
 <script>(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
 <title>Jouw rol &middot; meneer Greidanus</title>
@@ -58,6 +59,33 @@ button{cursor:pointer;touch-action:manipulation}
 .rol .doel b{display:block;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;opacity:.85;margin-bottom:2px}
 .rol ul.zo{margin:8px 0 0;padding-left:18px;font-size:.88rem;line-height:1.45}
 .rol ul.zo li+li{margin-top:2px}
+/* de rolkaart komt binnen als een kaart die wordt omgedraaid */
+.rol.onthul{animation:onthul .55s cubic-bezier(.2,.9,.3,1.2) both}
+@keyframes onthul{from{transform:perspective(700px) rotateY(80deg) scale(.92);opacity:0}to{transform:none;opacity:1}}
+/* Het spel in zijn eigen wereld, net als het deelnamescherm op het bord:
+   een strook bovenin in de kleuren en het patroon van het spel, en een
+   welkom in de kleuren van het codevak. Die kleuren liggen vast (papier blijft
+   papier), ook in donker; de kaarten met vragen volgen gewoon het thema. */
+.spelband{position:relative;overflow:hidden;display:flex;align-items:center;gap:10px;border-radius:20px;padding:12px 14px;margin-top:4px}
+.spelband .sb-badge{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;transform:rotate(-4deg);flex:none}
+.spelband .sb-badge svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.spelband .sb-logo svg{width:36px;height:36px;display:block}
+.spelband .sb-tekst{min-width:0;position:relative}
+.spelband b{display:block;font-weight:700;font-size:1rem;line-height:1.2}
+.spelband .sb-hand{display:block;font-family:Caveat,cursive;font-weight:600;font-size:1.2rem;line-height:1.1}
+.spelband .sb-onder{position:absolute;left:0;right:0;bottom:0;height:7px}
+.welkom{border-radius:22px;padding:22px 20px 20px;margin-top:12px;text-align:center;border:1.5px solid var(--wk-rand)}
+.welkom .wk-hand{font-family:Caveat,cursive;font-weight:700;font-size:1.5rem;line-height:1}
+.welkom .wk-gz{display:block;width:max-content;margin:22px auto 4px}
+.welkom .wk-naam{font-weight:700;font-size:1.05rem}
+#nu.metwelkom{background:none;border:0;padding:0}
+.nu .welkom h2{font-size:1.7rem;line-height:1.08;margin-top:12px}
+.welkom .wk-zin{font-size:.95rem;line-height:1.45;margin-top:8px}
+.welkom .wk-straks{display:inline-block;margin-top:14px;padding:8px 14px;border-radius:14px;background:var(--wk-vak);border:1.5px solid var(--wk-rand);font-size:.9rem;line-height:1.35}
+.welkom .wk-straks b{display:block;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;opacity:.8}
+.welkom .stip{background:currentColor}
+.welkom .wk-noot{font-family:Caveat,cursive;font-weight:700;font-size:1.45rem;line-height:1.1;margin-top:10px}
+@media(prefers-reduced-motion:reduce){.rol.onthul{animation:none}}
 /* de kaart van dit moment */
 .nu h2{font-size:1.25rem;line-height:1.25;margin-top:4px}
 .nu p.tekst{color:var(--muted);font-size:.95rem;margin-top:8px}
@@ -329,6 +357,7 @@ body.app-aan.vb-hapert .vb-balk{bottom:calc(76px + env(safe-area-inset-bottom,0p
   </section>
 
   <section id="s-spel" class="hide">
+    <div id="spelband"></div>
     <div id="rolkaart"></div>
     <div id="nu" class="kaart nu"></div>
   </section>
@@ -348,7 +377,7 @@ body.app-aan.vb-hapert .vb-balk{bottom:calc(76px + env(safe-area-inset-bottom,0p
     if (!s){ var r = new Uint8Array(12); crypto.getRandomValues(r); s = Array.prototype.map.call(r, function(b){ return ('0' + b.toString(16)).slice(-2); }).join(''); try { localStorage.setItem('lg-quiz-sid', s); } catch (e){} }
     return s;
   }
-  var verb = null, code = '', naam = '', rol = null, nu = null, gekozen = {}, klaar = false;
+  var verb = null, code = '', naam = '', rol = null, nu = null, gekozen = {}, klaar = false, thema = null;
 
   /* ---------- meedoen ---------- */
   var param = /[?&]k=([A-Za-z]{4})/.exec(location.search);
@@ -383,7 +412,9 @@ body.app-aan.vb-hapert .vb-balk{bottom:calc(76px + env(safe-area-inset-bottom,0p
       if (!x.ok || x.j.spel !== 'rollen'){ $('joinFout').textContent = 'Geen spel met deze code. Kijk of je hem goed hebt overgenomen.'; return; }
       $('s-join').classList.add('hide'); $('s-spel').classList.remove('hide');
       $('kopNaam').innerHTML = (window.AVATAR ? AVATAR.svg(naam, 28, window.PROFIEL ? PROFIEL.avatar() : '') : '') + schoon(naam);
-      toon({ soort:'wacht', titel:'Je doet mee', tekst:'Wacht tot het bord begint. Je rol komt hier vanzelf.' });
+      thema = window.SPELTHEMA ? SPELTHEMA.voor(x.j.game) : null;
+      tekenBand();
+      toon({ soort:'wacht', welkom:true, titel:'Je doet mee', tekst:'Wacht tot het bord begint. Je rol komt hier vanzelf.' });
       verbind();
     }).catch(function(){ vrij(); $('joinFout').textContent = 'Geen verbinding. Kijk of je internet hebt en probeer het opnieuw.'; });
   }
@@ -456,7 +487,38 @@ body.app-aan.vb-hapert .vb-balk{bottom:calc(76px + env(safe-area-inset-bottom,0p
       (rol.doel ? '<div class="doel"><b>jouw doel</b>' + schoon(rol.doel) + '</div>' : '') +
       (rol.punten && rol.punten.length ? '<ul class="zo">' + rol.punten.slice(0, 6).map(function(p){ return '<li>' + schoon(p) + '</li>'; }).join('') + '</ul>' : '') + '</div>';
   }
-  function tekenRol(){ $('rolkaart').innerHTML = rolHtml(); }
+  /* de eerste keer (of bij een nieuwe rol) draait de kaart om */
+  var getoondeRol = '';
+  function tekenRol(){
+    $('rolkaart').innerHTML = rolHtml();
+    var sleutel = rol ? (rol.rol || '') + '|' + (rol.titel || '') : '';
+    var k = $('rolkaart').firstChild;
+    if (k && sleutel !== getoondeRol) k.classList.add('onthul');
+    getoondeRol = sleutel;
+  }
+  /* ---------- het spel in zijn eigen wereld ---------- */
+  function tekenBand(){
+    var el = $('spelband'); if (!el) return;
+    if (!thema){ el.innerHTML = ''; return; }
+    var t = thema;
+    el.innerHTML = '<div class="spelband" style="background-color:' + t.bg + ';background-image:' + t.patroon + ';background-size:' + t.maat + ';color:' + t.ink + '">' +
+      (t.logo ? '<span class="sb-logo">' + t.logo + '</span>' : '<span class="sb-badge" style="background:' + t.badge + ';color:' + t.badgeInk + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + t.icoon + '"/></svg></span>') +
+      '<span class="sb-tekst"><b>' + schoon(t.merk) + (t.sub ? ' \u00b7 ' + schoon(t.sub) : '') + '</b><span class="sb-hand" style="color:' + t.hand + '">' + schoon(t.handTekst) + '</span></span>' +
+      (t.onder ? '<i class="sb-onder" style="background:' + t.onder + '"></i>' : '') + '</div>';
+  }
+  function welkomHtml(d){
+    var t = thema;
+    return '<div class="welkom" style="background:' + t.paneel + ';color:' + t.paneelInk + ';--wk-vak:' + t.vak + ';--wk-rand:' + t.vakRand + '">' +
+      '<p class="wk-hand" style="color:' + t.noot + '">je zit erin</p>' +
+      '<span class="wk-gz">' + (window.AVATAR ? AVATAR.svg(naam, 84, window.PROFIEL ? PROFIEL.avatar() : '', { leef:true }) : '') + '</span>' +
+      '<p class="wk-naam">' + schoon(naam) + '</p>' +
+      '<h2 style="font-family:' + t.kopFont + ';font-weight:' + t.kopGewicht + ';letter-spacing:' + t.kopSpatie + '">' + schoon(t.kop) + '</h2>' +
+      '<p class="wk-zin">' + schoon(t.zin) + '</p>' +
+      '<p class="wk-straks"><b>zo meteen</b>' + schoon(t.stap3) + '</p>' +
+      '<p style="margin-top:14px;font-size:.92rem">' + schoon(d.tekst || '') + '</p>' +
+      '<p style="margin-top:8px"><span class="stip"></span><span class="stip"></span><span class="stip"></span></p>' +
+      '<p class="wk-noot" style="color:' + t.noot + '">' + schoon(t.nootTekst) + '</p></div>';
+  }
 
   /* ---------- de app: een tijdlijn van een sociaal netwerk ----------
      { soort:'feed', app:{ naam, kleur, accent, logo (svg) }, kop, tekst,
@@ -765,6 +827,9 @@ body.app-aan.vb-hapert .vb-balk{bottom:calc(76px + env(safe-area-inset-bottom,0p
     if (d.soort === 'feed'){ tekenFeed(d); return; }
     if (document.body.classList.contains('app-aan')) appAan(false);
     var el = $('nu'), h = '';
+    if (d.soort === 'wacht' && d.welkom && thema){
+      el.innerHTML = welkomHtml(d); el.classList.add('metwelkom'); return;
+    }
     if (d.soort === 'wacht'){
       h = '<div class="wacht"><p class="eyebrow">' + schoon(d.titel || 'even wachten') + '</p><p style="margin-top:8px;font-size:1.05rem">' + schoon(d.tekst || '') + '</p><p style="margin-top:14px"><span class="stip"></span><span class="stip"></span><span class="stip"></span></p></div>';
     } else if (d.soort === 'vraag' || d.soort === 'lijst'){
@@ -791,6 +856,7 @@ body.app-aan.vb-hapert .vb-balk{bottom:calc(76px + env(safe-area-inset-bottom,0p
     } else {
       h = '<h2>' + schoon(d.titel || '') + '</h2>' + (d.tekst ? '<p class="tekst">' + schoon(d.tekst) + '</p>' : '');
     }
+    el.classList.remove('metwelkom');
     el.innerHTML = h;
     Array.prototype.forEach.call(el.querySelectorAll('.optie'), function(b){
       b.addEventListener('click', function(){
