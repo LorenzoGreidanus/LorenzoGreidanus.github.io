@@ -683,8 +683,16 @@ export class Kamer extends DurableObject {
       if (rol === "speler"){
         const sp = this.stand.spelers[sid];
         if (this.stand.bord) this.stuur(server, { t: "bord", d: this.stand.bord });
+        if (sp && sp.rolkaart) this.stuur(server, { t: "kaart", d: sp.rolkaart });
         if (sp && sp.kaart) this.stuur(server, { t: "kaart", d: sp.kaart });
         if (this.stand.fase === "einde") this.stuur(server, { t: "einde" });
+      }
+      /* Wat telefoons stuurden terwijl het bord weg was (herladen, wifi), komt
+         nu alsnog aan, in de volgorde waarin het kwam. */
+      if (rol === "host" && Array.isArray(this.stand.wachtrij) && this.stand.wachtrij.length){
+        const rij = this.stand.wachtrij; this.stand.wachtrij = [];
+        rij.forEach(s => { try { server.send(s); } catch (e){} });
+        this.ctx.waitUntil(this.bewaar());
       }
       this.zegSpelers();
       return new Response(null, { status: 101, webSocket: client });
@@ -879,7 +887,9 @@ export class Kamer extends DurableObject {
           if (!sp || k.d === undefined) continue;
           const s = JSON.stringify({ t: "kaart", d: k.d });
           if (s.length > KAART_MAX) continue;
-          sp.kaart = k.d;
+          /* De rolkaart blijft apart staan: werd hij de laatste kaart, dan was hij
+             na de volgende vraag weg voor een telefoon die even de verbinding kwijt was. */
+          if (k.d && typeof k.d === "object" && k.d.soort === "rol") sp.rolkaart = k.d; else sp.kaart = k.d;
           this.ctx.getWebSockets(sid).forEach(w => { try { w.send(s); } catch (e){} });
         }
         await this.bewaar();
@@ -916,7 +926,19 @@ export class Kamer extends DurableObject {
       }
       const s = JSON.stringify({ t: "actie", van: sp.pid, naam: sp.naam, d: m.d });
       if (s.length > ACTIE_MAX) return;
-      this.ctx.getWebSockets("host").forEach(w => { try { w.send(s); } catch (e){} });
+      const borden = this.ctx.getWebSockets("host");
+      if (!borden.length){
+        /* Het bord is even weg: de telefoon zegt "Verstuurd", dus dan moet het ook aankomen.
+           Hoogstens tweehonderd en 40.000 tekens (de stand moet in een bewaarvak
+           passen), de oudste eerst eruit. */
+        const rij = (Array.isArray(st.wachtrij) ? st.wachtrij : []).concat([s]).slice(-200);
+        let tekens = rij.reduce((n, x) => n + x.length, 0);
+        while (rij.length > 1 && tekens > 40000) tekens -= rij.shift().length;
+        st.wachtrij = rij;
+        await this.bewaar();
+        return;
+      }
+      borden.forEach(w => { try { w.send(s); } catch (e){} });
     }
   }
   opTempo(ws, wie, lengte){
@@ -2392,7 +2414,7 @@ export class Kamer extends DurableObject {
     if (this.rollen){
       return Object.assign(basis, { game: st.game, gestart: st.gestart, spelers: Object.keys(st.spelers).map(sid => {
         const sp = st.spelers[sid];
-        return { sid: sp.pid, naam: sp.naam, av: sp.av || "", aan: this.aanwezig(sid), rol: sp.kaart && sp.kaart.rol ? sp.kaart.rol : null };
+        return { sid: sp.pid, naam: sp.naam, av: sp.av || "", aan: this.aanwezig(sid), rol: sp.rolkaart && sp.rolkaart.rol ? sp.rolkaart.rol : sp.kaart && sp.kaart.rol ? sp.kaart.rol : null };
       }).sort((a, b) => a.naam.localeCompare(b.naam)) });
     }
     return Object.assign(basis, { onderdeel: st.onderdeel, i: st.i, n: st.vragen.length, tijd: st.tijd,
