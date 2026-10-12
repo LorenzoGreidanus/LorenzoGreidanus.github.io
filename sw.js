@@ -20,8 +20,13 @@
 
    Wat hij niet aanraakt: de spelkamers en het klassement (/api/, /ws/, /q),
    want die moeten altijd live zijn. */
-var VERSIE = "v374";
-var KERN = "kern-" + VERSIE, VOORRAAD = "voorraad-" + VERSIE;
+var VERSIE = "v375";
+/* KERN en VAST horen bij een versie. VOORRAAD niet: daar staan de pagina's en
+   scripts die van het net kwamen, en die worden bij elk bezoek ververst (eerst
+   het net). Vroeger hoorde ook die bij een versie, en dan was na elke nieuwe
+   versie alles wat een leerling ooit speelde weg: zonder wifi startte het
+   niet meer, en het eerste bezoek was weer helemaal koud. */
+var KERN = "kern-" + VERSIE, VAST = "vast-" + VERSIE, VOORRAAD = "voorraad";
 /* hoe lang er op het net gewacht wordt voor de voorraad het overneemt */
 var NETGEDULD = 3000;
 var STARTSET = [
@@ -38,7 +43,7 @@ self.addEventListener("install", function(e){
 
 self.addEventListener("activate", function(e){
   e.waitUntil(caches.keys().then(function(namen){
-    return Promise.all(namen.filter(function(n){ return n !== KERN && n !== VOORRAAD; }).map(function(n){ return caches.delete(n); }));
+    return Promise.all(namen.filter(function(n){ return n !== KERN && n !== VAST && n !== VOORRAAD; }).map(function(n){ return caches.delete(n); }));
   }).then(function(){ return self.clients.claim(); }));
 });
 
@@ -59,7 +64,7 @@ self.addEventListener("fetch", function(e){
 
   /* wat nooit verandert: uit de voorraad, anders ophalen en bewaren */
   if (vast(url)){
-    e.respondWith(caches.open(VOORRAAD).then(function(c){
+    e.respondWith(caches.open(VAST).then(function(c){
       return c.match(req).then(function(r){
         return r || fetch(req).then(function(vers){ if (vers && vers.ok) c.put(req, vers.clone()); return vers; });
       });

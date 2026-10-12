@@ -744,8 +744,13 @@ window.AVATAR = (function(){
       /* kleine gezichtjes hoeven niet elk beeldje: dertig keer per seconde is genoeg */
       if (!a.klein || t - a.klein > 1){ a.klein = t; a.maat = a.el.getBoundingClientRect().width || 40; }
       if (a.maat < 64 && t - a.laatst < 1 / 30) continue;
-      var sig = rustig ? a.stemming + a.st.yaw + ',' + a.st.pitch : '';
-      if (rustig && sig === a.sig) continue;
+      /* Opnieuw tekenen kost het meeste: de hele svg gaat opnieuw in de pagina.
+         Dus alleen als het gezicht er zichtbaar anders uitziet. De standen
+         worden daarvoor afgerond; een kwart graad of een paar procent van een
+         oog zie je niet, en in rust scheelt het zo de helft van het werk. */
+      var sig = a.stemming;
+      for (var sk in a.st) if (typeof a.st[sk] === 'number') sig += ',' + Math.round(a.st[sk] * (sk === 'sq' ? 400 : sk === 'yaw' || sk === 'pitch' || sk === 'roll' || sk === 'hop' ? 4 : 40));
+      if (sig === a.sig) continue;
       a.sig = sig; a.laatst = t;
       a.el.innerHTML = teken(a.m, a.st, a.id, true, a.schaduw, a.maat);
     }
