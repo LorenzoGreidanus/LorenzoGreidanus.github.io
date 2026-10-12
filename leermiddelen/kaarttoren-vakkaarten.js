@@ -9,12 +9,16 @@
      plus   wat er verandert als de kaart verbeterd is
      zeld   0 gewoon, 1 zeldzaam; de eerste van elk vak is je startkaart
      w      hoe graag de speelbot hem kiest (1 tot 10)
-     fig    het plaatje: persoon, plek of ding
+     fig    het plaatje: persoon (een gezichtje), plek, ding of muziek
    De effecten staan als korte rijtjes: ['s', 6] is 6 schade, ['s', 3, 2] is
    3 schade twee keer, ['sl', [3, 4, 5]] is drie klappen van 3, 4 en 5,
    ['b', 5] blok, ['t', 1] trek een kaart, ['e', 1] energie, ['k', 1] kracht,
    ['z', 2] maakt de tegenstander zwak, ['w', 2] maakt hem wankel,
-   ['h', 4] herstel, ['m', 3] munten, ['pb', 3] elke beurt 3 blok. */
+   ['h', 4] herstel, ['m', 3] munten, ['pb', 3] elke beurt 3 blok, en de nieuwe
+   van versie 2: ['gs', 4, 2] 4 schade plus 2 per goed antwoord in dit gevecht,
+   ['gb', 4, 2] hetzelfde met blok, ['pg', 2] na elk goed antwoord 2 blok,
+   ['dv', 1] je volgende vraagkaart telt dubbel. Een kaart met vraag stelt een
+   extra vraag. Elk vak heeft er negen. */
 var KAARTTOREN_VAKKAARTEN = {
   ges: [
     { id:'oranje', naam:'Willem van Oranje', fig:'persoon', kost:1, soort:'aanval', zeld:0, w:6,
@@ -37,7 +41,13 @@ var KAARTTOREN_VAKKAARTEN = {
       doe:[['b', 3], ['t', 1]], plus:{ doe:[['b', 5], ['t', 1]] } },
     { id:'nightingale', naam:'Florence Nightingale', fig:'persoon', kost:1, soort:'verdediging', zeld:1, w:7,
       bij:'Verpleegkundige die rond 1855 liet zien dat schone ziekenzalen levens redden.',
-      doe:[['h', 5], ['b', 4]], plus:{ doe:[['h', 7], ['b', 6]] }, eenmalig:true }
+      doe:[['h', 5], ['b', 4]], plus:{ doe:[['h', 7], ['b', 6]] }, eenmalig:true },
+    { id:'anne', naam:'Anne Frank', fig:'persoon', kost:1, soort:'verdediging', zeld:0, w:6,
+      bij:'Schreef in de Tweede Wereldoorlog een dagboek in het Achterhuis in Amsterdam. Het werd na de oorlog uitgegeven.',
+      doe:[['gb', 4, 2]], plus:{ doe:[['gb', 6, 3]] } },
+    { id:'hunebed', naam:'Het hunebed', fig:'plek', kost:2, soort:'verdediging', zeld:0, w:6,
+      bij:'Hunebedden in Drenthe zijn zo’n 5000 jaar oud. Boeren uit de prehistorie bouwden ze als graf.',
+      doe:[['b', 11], ['z', 1]], plus:{ doe:[['b', 15], ['z', 1]] } }
   ],
   aard: [
     { id:'nijl', naam:'De Nijl', fig:'plek', kost:1, soort:'aanval', zeld:0, w:6,
@@ -60,7 +70,13 @@ var KAARTTOREN_VAKKAARTEN = {
       doe:[['pb', 4]], plus:{ doe:[['pb', 6]] } },
     { id:'kilimanjaro', naam:'De Kilimanjaro', fig:'plek', kost:1, soort:'speciaal', zeld:1, w:7,
       bij:'De hoogste berg van Afrika (5895 meter), in Tanzania.',
-      doe:[['k', 1], ['s', 4]], plus:{ doe:[['k', 2], ['s', 4]] } }
+      doe:[['k', 1], ['s', 4]], plus:{ doe:[['k', 2], ['s', 4]] } },
+    { id:'rijn', naam:'De Rijn', fig:'plek', kost:1, soort:'aanval', zeld:0, w:6,
+      bij:'Ontspringt in Zwitserland en stroomt via Duitsland bij Lobith Nederland binnen.',
+      doe:[['gs', 5, 2]], plus:{ doe:[['gs', 7, 3]] } },
+    { id:'evenaar', naam:'De evenaar', fig:'plek', kost:0, soort:'speciaal', zeld:0, w:6,
+      bij:'Een denkbeeldige lijn om het midden van de aarde. Daar zijn dag en nacht het hele jaar ongeveer even lang.',
+      doe:[['t', 1]], slim:[['e', 1]], plus:{ doe:[['t', 2]] } }
   ],
   bio: [
     { id:'mendel', naam:'Gregor Mendel', fig:'persoon', kost:1, soort:'aanval', zeld:0, w:6,
@@ -83,7 +99,13 @@ var KAARTTOREN_VAKKAARTEN = {
       doe:[['s', 9], ['w', 2]], plus:{ doe:[['s', 12], ['w', 2]] } },
     { id:'linnaeus', naam:'Carl Linnaeus', fig:'persoon', kost:1, soort:'verdediging', zeld:0, w:5,
       bij:'Gaf elke plant- en diersoort een naam in twee delen, zoals Homo sapiens.',
-      doe:[['b', 6], ['z', 1]], plus:{ doe:[['b', 8], ['z', 2]] } }
+      doe:[['b', 6], ['z', 1]], plus:{ doe:[['b', 8], ['z', 2]] } },
+    { id:'hart', naam:'Het hart', fig:'ding', kost:1, soort:'speciaal', zeld:1, w:7, blijvend:true,
+      bij:'Een spier die je bloed rondpompt. In rust klopt het bij volwassenen ongeveer 60 tot 100 keer per minuut.',
+      doe:[['pg', 2]], plus:{ doe:[['pg', 3]] } },
+    { id:'fotosynthese', naam:'Fotosynthese', fig:'ding', kost:1, soort:'aanval', zeld:0, w:6,
+      bij:'Planten maken met zonlicht, water en koolstofdioxide hun eigen suiker. Daarbij komt zuurstof vrij.',
+      doe:[['gs', 3, 2]], slim:[['h', 2]], plus:{ doe:[['gs', 5, 3]] } }
   ],
   eco: [
     { id:'smith', naam:'Adam Smith', fig:'persoon', kost:1, soort:'aanval', zeld:0, w:6,
@@ -103,7 +125,16 @@ var KAARTTOREN_VAKKAARTEN = {
       doe:[['s', 5, 3]], plus:{ doe:[['s', 6, 3]] } },
     { id:'beurs', naam:'De beurs van Amsterdam', fig:'plek', kost:1, soort:'aanval', zeld:1, w:6,
       bij:'Begon in 1602 met de handel in aandelen van de VOC. Een van de oudste beurzen ter wereld.',
-      doe:[['s', 6], ['m', 4]], plus:{ doe:[['s', 9], ['m', 5]] } }
+      doe:[['s', 6], ['m', 4]], plus:{ doe:[['s', 9], ['m', 5]] } },
+    { id:'euro', naam:'De euro', fig:'ding', kost:1, soort:'verdediging', zeld:0, w:6,
+      bij:'Sinds 1 januari 2002 betaal je in Nederland met euromunten en eurobiljetten. Daarvoor was het de gulden.',
+      doe:[['b', 6], ['m', 2]], plus:{ doe:[['b', 9], ['m', 3]] } },
+    { id:'dnb', naam:'De Nederlandsche Bank', fig:'plek', kost:2, soort:'verdediging', zeld:0, w:6,
+      bij:'De centrale bank van Nederland, opgericht in 1814. Ze houdt toezicht op de banken.',
+      doe:[['gb', 8, 2]], plus:{ doe:[['gb', 11, 3]] } },
+    { id:'veiling', naam:'De bloemenveiling', fig:'plek', kost:1, soort:'aanval', zeld:1, w:7,
+      bij:'In Aalsmeer worden bloemen verkocht met de klok: de prijs zakt tot een koper drukt. Dat heet mijnen.',
+      doe:[['sl', [6, 4, 2]]], plus:{ doe:[['sl', [9, 6, 3]]] } }
   ],
   wis: [
     { id:'euclides', naam:'Euclides', fig:'persoon', kost:1, soort:'verdediging', zeld:0, w:6,
@@ -123,7 +154,16 @@ var KAARTTOREN_VAKKAARTEN = {
       doe:[['b', 10], ['s', 6]], plus:{ doe:[['b', 12], ['s', 9]] } },
     { id:'fibonacci', naam:'Fibonacci', fig:'persoon', kost:1, soort:'aanval', zeld:1, w:7,
       bij:'Bekend van de rij 1, 1, 2, 3, 5, 8. Zijn boek uit 1202 maakte onze cijfers in Europa bekend.',
-      doe:[['sl', [1, 1, 2, 3, 5]]], plus:{ doe:[['sl', [1, 2, 3, 5, 8]]] } }
+      doe:[['sl', [1, 1, 2, 3, 5]]], plus:{ doe:[['sl', [1, 2, 3, 5, 8]]] } },
+    { id:'descartes', naam:'René Descartes', fig:'persoon', kost:1, soort:'aanval', zeld:0, w:6,
+      bij:'Bedacht het assenstelsel met een x-as en een y-as. Hij woonde jarenlang in Nederland.',
+      doe:[['s', 5], ['w', 1]], slim:[['s', 3]], plus:{ doe:[['s', 8], ['w', 1]] } },
+    { id:'pi', naam:'Het getal pi', fig:'ding', kost:1, soort:'aanval', zeld:1, w:7,
+      bij:'De omtrek van een cirkel gedeeld door de middellijn. Pi is ongeveer 3,14.',
+      doe:[['sl', [3, 1, 4, 1, 5]]], plus:{ doe:[['sl', [3, 1, 4, 1, 5, 9]]] } },
+    { id:'noether', naam:'Emmy Noether', fig:'persoon', kost:1, soort:'speciaal', zeld:0, w:6,
+      bij:'Duitse wiskundige (1882-1935) met belangrijke ontdekkingen in de algebra.',
+      doe:[['k', 1], ['t', 1]], plus:{ doe:[['k', 2], ['t', 1]] } }
   ],
   ned: [
     { id:'annie', naam:'Annie M.G. Schmidt', fig:'persoon', kost:1, soort:'verdediging', zeld:0, w:6,
@@ -143,7 +183,16 @@ var KAARTTOREN_VAKKAARTEN = {
       doe:[['b', 8]], plus:{ doe:[['b', 11]] } },
     { id:'schrijver', naam:'Het Boekenweekgeschenk', fig:'ding', kost:1, soort:'aanval', zeld:1, w:6,
       bij:'Elk jaar in de Boekenweek krijg je bij aankoop van boeken een gratis boekje.',
-      doe:[['s', 8]], slim:[['s', 5]], plus:{ doe:[['s', 11]] } }
+      doe:[['s', 8]], slim:[['s', 5]], plus:{ doe:[['s', 11]] } },
+    { id:'bruna', naam:'Dick Bruna', fig:'persoon', kost:1, soort:'verdediging', zeld:0, w:6,
+      bij:'Schreef en tekende de boekjes over Nijntje. Het eerste verscheen in 1955.',
+      doe:[['b', 6]], slim:[['h', 2]], plus:{ doe:[['b', 9]] } },
+    { id:'groeneboekje', naam:'Het Groene Boekje', fig:'ding', kost:0, soort:'speciaal', zeld:0, w:6,
+      bij:'De officiële Woordenlijst Nederlandse Taal: hierin staat hoe je woorden schrijft.',
+      doe:[['dv', 1]], slim:[['t', 1]], plus:{ doe:[['dv', 1], ['t', 1]] } },
+    { id:'reve', naam:'Gerard Reve', fig:'persoon', kost:2, soort:'aanval', zeld:0, w:6,
+      bij:'Schreef De Avonden (1947), over tien dagen uit het leven van Frits van Egters.',
+      doe:[['s', 12]], slim:[['k', 1]], plus:{ doe:[['s', 16]] } }
   ],
   eng: [
     { id:'shakespeare', naam:'William Shakespeare', fig:'persoon', kost:1, soort:'aanval', zeld:0, w:6,
@@ -163,7 +212,16 @@ var KAARTTOREN_VAKKAARTEN = {
       doe:[['s', 5], ['b', 5]], plus:{ doe:[['s', 7], ['b', 7]] } },
     { id:'stonehenge', naam:'Stonehenge', fig:'plek', kost:2, soort:'speciaal', zeld:1, w:7, blijvend:true,
       bij:'Een kring van enorme stenen in Engeland, zo’n 4500 jaar oud.',
-      doe:[['pb', 4]], plus:{ doe:[['pb', 6]] } }
+      doe:[['pb', 4]], plus:{ doe:[['pb', 6]] } },
+    { id:'dickens', naam:'Charles Dickens', fig:'persoon', kost:1, soort:'aanval', zeld:0, w:6,
+      bij:'Engelse schrijver van onder meer Oliver Twist en A Christmas Carol.',
+      doe:[['gs', 4, 2]], plus:{ doe:[['gs', 6, 3]] } },
+    { id:'oed', naam:'The Oxford English Dictionary', fig:'ding', kost:1, soort:'speciaal', zeld:0, w:6,
+      bij:'Een groot woordenboek van het Engels. Het eerste deel verscheen in 1884.',
+      doe:[['t', 2], ['b', 2]], plus:{ doe:[['t', 2], ['b', 5]] } },
+    { id:'beatles', naam:'The Beatles', fig:'muziek', kost:2, soort:'aanval', zeld:1, w:7,
+      bij:'Popgroep uit Liverpool. In de jaren zestig werden ze wereldberoemd.',
+      doe:[['s', 4, 4]], plus:{ doe:[['s', 5, 4]] } }
   ],
   burg: [
     { id:'thorbecke', naam:'Thorbecke', fig:'persoon', kost:1, soort:'verdediging', zeld:0, w:6,
@@ -183,7 +241,16 @@ var KAARTTOREN_VAKKAARTEN = {
       doe:[['z', 3]], slim:[['b', 4]], plus:{ doe:[['z', 3], ['b', 4]] } },
     { id:'artikel1', naam:'Artikel 1', fig:'ding', kost:1, soort:'verdediging', zeld:0, w:5,
       bij:'Het eerste artikel van de Grondwet: wie in Nederland is, wordt in gelijke gevallen gelijk behandeld.',
-      doe:[['b', 8]], plus:{ doe:[['b', 11]] } }
+      doe:[['b', 8]], plus:{ doe:[['b', 11]] } },
+    { id:'grondwet', naam:'De Grondwet', fig:'ding', kost:2, soort:'verdediging', zeld:0, w:6,
+      bij:'De belangrijkste wet van Nederland. Hierin staan de grondrechten, zoals de vrijheid van meningsuiting.',
+      doe:[['b', 10], ['pb', 2]], plus:{ doe:[['b', 13], ['pb', 2]] } },
+    { id:'kiesrecht', naam:'Het kiesrecht', fig:'ding', kost:1, soort:'aanval', zeld:0, w:6,
+      bij:'Sinds 1919 hebben vrouwen in Nederland kiesrecht. Nu mag iedereen met de Nederlandse nationaliteit vanaf 18 jaar stemmen.',
+      vraag:{ goed:[['s', 12]], fout:[['s', 4]] }, plus:{ vraag:{ goed:[['s', 16]], fout:[['s', 6]] } } },
+    { id:'gandhi', naam:'Mahatma Gandhi', fig:'persoon', kost:1, soort:'verdediging', zeld:0, w:6,
+      bij:'Streed zonder geweld voor de onafhankelijkheid van India. In 1947 werd India onafhankelijk van Groot-Brittannië.',
+      doe:[['b', 5]], slim:[['z', 2]], plus:{ doe:[['b', 8]] } }
   ],
   reken: [
     { id:'stevin', naam:'Simon Stevin', fig:'persoon', kost:1, soort:'aanval', zeld:0, w:6,
@@ -203,7 +270,16 @@ var KAARTTOREN_VAKKAARTEN = {
       doe:[['e', 1], ['t', 1]], plus:{ doe:[['e', 2], ['t', 1]] } },
     { id:'breukstreep', naam:'De breukstreep', fig:'ding', kost:1, soort:'verdediging', zeld:0, w:5,
       bij:'De streep in een breuk betekent gedeeld door: 3/4 is 3 gedeeld door 4.',
-      doe:[['b', 6]], slim:[['b', 4]], plus:{ doe:[['b', 9]] } }
+      doe:[['b', 6]], slim:[['b', 4]], plus:{ doe:[['b', 9]] } },
+    { id:'negen', naam:'De tafel van negen', fig:'ding', kost:1, soort:'aanval', zeld:0, w:6,
+      bij:'Van 9 × 1 tot en met 9 × 10 tellen de cijfers van de uitkomst op tot 9: 9 × 7 = 63 en 6 + 3 = 9.',
+      doe:[['s', 3, 3]], slim:[['b', 3]], plus:{ doe:[['s', 4, 3]] } },
+    { id:'komma', naam:'De komma', fig:'ding', kost:1, soort:'verdediging', zeld:0, w:6,
+      bij:'In Nederland schrijf je 2,5 met een komma. In Engelstalige landen is het 2.5, met een punt.',
+      doe:[['b', 5]], slim:[['b', 5]], plus:{ doe:[['b', 8]] } },
+    { id:'gauss', naam:'Carl Friedrich Gauss', fig:'persoon', kost:1, soort:'aanval', zeld:1, w:7,
+      bij:'Telde als schoolkind volgens het verhaal in een flits alle getallen van 1 tot en met 100 op: 5050.',
+      vraag:{ goed:[['s', 15], ['t', 1]], fout:[['s', 5]] }, plus:{ vraag:{ goed:[['s', 20], ['t', 1]], fout:[['s', 7]] } } }
   ],
   /* een eigen woordenlijst van de docent: geen mensen of plekken, wel oefenkaarten */
   eigen: [
@@ -218,7 +294,22 @@ var KAARTTOREN_VAKKAARTEN = {
       doe:[['s', 12]], plus:{ doe:[['s', 16]] } },
     { id:'hardop', naam:'Hardop herhalen', fig:'ding', kost:0, soort:'speciaal', zeld:1, w:7,
       bij:'Wat je hardop zegt, onthoud je beter dan wat je alleen leest.',
-      doe:[['t', 1], ['e', 1]], plus:{ doe:[['t', 2], ['e', 1]] }, eenmalig:true }
+      doe:[['t', 1], ['e', 1]], plus:{ doe:[['t', 2], ['e', 1]] }, eenmalig:true },
+    { id:'samenvatting', naam:'Samenvatting', fig:'ding', kost:1, soort:'verdediging', zeld:0, w:6,
+      bij:'Het belangrijkste in je eigen woorden, op één blaadje.',
+      doe:[['gb', 4, 2]], plus:{ doe:[['gb', 6, 3]] } },
+    { id:'woordweb', naam:'Woordweb', fig:'ding', kost:1, soort:'speciaal', zeld:0, w:6,
+      bij:'Een woord in het midden, en alles wat erbij hoort eromheen.',
+      doe:[['t', 2]], plus:{ kost:0 } },
+    { id:'overhoren', naam:'Overhoren', fig:'ding', kost:1, soort:'aanval', zeld:0, w:6,
+      bij:'Iemand anders vraagt je de woorden op. Zo merk je wat je al weet.',
+      vraag:{ goed:[['s', 13]], fout:[['s', 4]] }, plus:{ vraag:{ goed:[['s', 18]], fout:[['s', 6]] } } },
+    { id:'gespreid', naam:'Gespreid herhalen', fig:'ding', kost:1, soort:'speciaal', zeld:1, w:7, blijvend:true,
+      bij:'Elke dag een beetje herhalen werkt beter dan alles op de laatste avond.',
+      doe:[['pg', 3]], plus:{ doe:[['pg', 4]] } },
+    { id:'tekening', naam:'Tekening erbij', fig:'ding', kost:1, soort:'aanval', zeld:0, w:6,
+      bij:'Een klein plaatje bij een woord helpt je het te onthouden.',
+      doe:[['s', 5], ['w', 1]], plus:{ doe:[['s', 8], ['w', 1]] } }
   ]
 };
 if (typeof module !== 'undefined' && module.exports) module.exports = KAARTTOREN_VAKKAARTEN;
