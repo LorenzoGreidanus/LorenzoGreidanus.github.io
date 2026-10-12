@@ -48,6 +48,25 @@ window.SPEL = (function(){
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
   function lees(k){ try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e){ return null; } }
   function zet(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch (e){} }
+  /* Wat je gedaan hebt, voor de volgende stap in de leeromgeving. Een spel
+     telt als gedaan zodra het af is (einde), of na een minuut echt spelen:
+     een paar tikken of toetsen. Alleen in deze browser, hoogstens 300 spellen. */
+  function gedaan(af){
+    var l = lees('lg-gedaan'); if (!l || typeof l !== 'object') l = {};
+    var x = l[bestand] || {};
+    if (af) x.af = (x.af | 0) + 1; else x.n = (x.n | 0) + 1;
+    x.t = Date.now(); l[bestand] = x;
+    var k = Object.keys(l);
+    if (k.length > 300) k.sort(function(a, b){ return (l[a].t || 0) - (l[b].t || 0); }).slice(0, k.length - 300).forEach(function(z){ delete l[z]; });
+    zet('lg-gedaan', l);
+  }
+  (function(){
+    var tik = 0, klaar = false;
+    function telt(){ tik++; }
+    document.addEventListener('pointerdown', telt, true);
+    document.addEventListener('keydown', telt, true);
+    setTimeout(function kijk(){ if (klaar) return; if (tik >= 4){ klaar = true; gedaan(false); } else setTimeout(kijk, 15000); }, 60000);
+  })();
   function naamVanSpel(){
     var h = document.querySelector('#scherm-start h1') || document.querySelector('h1');
     return (h ? h.textContent : document.title).trim();
@@ -324,6 +343,7 @@ window.SPEL = (function(){
   function einde(o){
     o = o || {};
     var sectie = $(o.in || 'scherm-einde');
+    gedaan(true);
     if (!sectie) return null;
     var oud = sectie.querySelector('.eindkaart'); if (oud) oud.parentNode.removeChild(oud);
     var waarde = typeof o.waarde === 'number' ? o.waarde : (typeof o.score === 'number' ? o.score : null);
@@ -502,6 +522,74 @@ window.SPEL = (function(){
     return totaal;
   }
   schoonKlassementen();
+
+  /* ---------- Lees voor, in elk spel ----------
+     Voor vmbo-bb staat linksonder in elk spel dezelfde knop. Zet je hem aan,
+     dan leest het spel elke zin voor waar je op tikt: de vraag, een antwoord,
+     de uitleg. Knoppen en links blijven gewoon werken. De stem is die van de
+     browser (voorlezen.js); er gaat niets de deur uit. Aan of uit geldt tot
+     de tab dicht gaat. */
+  var SPELHIER = (document.currentScript && document.currentScript.src || '').replace(/spel\.js[^\/]*$/, '');
+  var SPREKER = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 9.5h3.2L12 5.4v13.2L7.2 14.5H4z"/><path d="M15.8 9.2a4 4 0 0 1 0 5.6"/><path d="M18.4 6.6a7.6 7.6 0 0 1 0 10.8"/></svg>';
+  function tikLees(){
+    var niveau = '';
+    try { niveau = localStorage.getItem('lg-niveau') || ''; } catch (e){}
+    if (niveau !== 'bb' || document.getElementById('tiklees') || document.body.classList.contains('bord')) return;
+    function bouw(){
+      if (!window.VOORLEES || !VOORLEES.kan() || document.getElementById('tiklees')) return;
+      var aan = false;
+      try { aan = sessionStorage.getItem('lg-tiklees') === '1'; } catch (e){}
+      var st = document.createElement('style');
+      st.textContent = '.tiklees{position:fixed;left:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:60;display:inline-flex;align-items:center;gap:8px;' +
+        'min-width:52px;min-height:52px;padding:0 14px;border:none;border-radius:999px;background:#14224C;color:#fff;font:600 .92rem Poppins,system-ui,sans-serif;' +
+        'box-shadow:0 6px 16px rgba(20,34,76,.28);cursor:pointer}' +
+        '.tiklees svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}' +
+        '.tiklees[aria-pressed="true"]{background:#F6B65A;color:#14224C}' +
+        '.tiklees span{white-space:nowrap}' +
+        '.tikleest-nu{outline:3px solid #F6B65A !important;outline-offset:3px;border-radius:6px}' +
+        'html.tikleest body{cursor:help}' +
+        ':root[data-theme="dark"] .tiklees:not([aria-pressed="true"]){background:#F3EFE9;color:#14224C}' +
+        '@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .tiklees:not([aria-pressed="true"]){background:#F3EFE9;color:#14224C}}' +
+        '@media(max-width:700px){html.metlees body{padding-bottom:calc(72px + env(safe-area-inset-bottom,0px))}}' +
+        '@media print{.tiklees{display:none}}';
+      document.head.appendChild(st);
+      var b = document.createElement('button');
+      b.type = 'button'; b.id = 'tiklees'; b.className = 'tiklees';
+      function zetKnop(){
+        b.setAttribute('aria-pressed', aan ? 'true' : 'false');
+        b.setAttribute('aria-label', aan ? 'Voorlezen staat aan: tik op een zin. Druk om uit te zetten.' : 'Lees voor: tik daarna op een zin');
+        b.innerHTML = SPREKER + (aan ? '<span>Tik op een zin</span>' : '');
+        document.documentElement.classList.toggle('tikleest', aan);
+      }
+      b.addEventListener('click', function(e){
+        e.stopPropagation();
+        aan = !aan;
+        try { sessionStorage.setItem('lg-tiklees', aan ? '1' : '0'); } catch (x){}
+        VOORLEES.stop();
+        zetKnop();
+        if (aan) VOORLEES.spreek({ v:'Tik op een zin, dan lees ik hem voor.', taal:'nl-NL' });
+      });
+      zetKnop();
+      document.body.appendChild(b);
+      document.documentElement.classList.add('metlees');
+      var vorige = null;
+      document.addEventListener('click', function(e){
+        if (!aan) return;
+        var el = e.target && e.target.closest ? e.target.closest('p,h1,h2,h3,h4,li,label,button,a,td,th,summary,figcaption,blockquote,dd,dt,[role=button]') : null;
+        if (!el || el === b || b.contains(el)) return;
+        var t = (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim();
+        if (!t || t.length > 600) return;
+        var lang = ((el.closest('[lang]') || document.documentElement).getAttribute('lang') || 'nl').toLowerCase();
+        var taal = /^en/.test(lang) ? 'en-GB' : /^de/.test(lang) ? 'de-DE' : /^fr/.test(lang) ? 'fr-FR' : 'nl-NL';
+        if (vorige) vorige.classList.remove('tikleest-nu');
+        el.classList.add('tikleest-nu'); vorige = el;
+        VOORLEES.spreek({ v:t, taal:taal, klaar:function(){ el.classList.remove('tikleest-nu'); } });
+      }, true);
+    }
+    if (window.VOORLEES) bouw();
+    else { var sc = document.createElement('script'); sc.src = SPELHIER + 'voorlezen.js'; sc.addEventListener('load', bouw); document.head.appendChild(sc); }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tikLees); else tikLees();
 
   return {
     raak: raak, uitleg:uitleg, stappen:stappen, einde:einde, bestand:bestand, naamMag:naamMag, schoonKlassementen:schoonKlassementen,

@@ -824,6 +824,24 @@ main.eenvoudig:not(.eenstart):not(.eenzoek) #klasstrip,main.eenvoudig:not(.eenst
 .beginhier span{flex:1;min-width:0}
 .beginhier em{display:block;font-family:'Caveat',cursive;font-style:normal;font-weight:700;font-size:1.2rem;color:#C4452A;line-height:1}
 .beginhier b{display:block;font-size:1.05rem}
+/* de voortgang in de leerlijn: een balkje en hoeveel je er deed */
+.voortgang{display:block;height:8px;border-radius:999px;background:rgba(20,34,76,.12);overflow:hidden;margin-top:8px;max-width:260px}
+.voortgang span{display:block;height:100%;border-radius:999px;background:#1f7a4a}
+.voortgangtekst{display:block;font-size:.78rem;font-weight:600;color:var(--muted);margin-top:3px}
+.beginhier small{display:block;font-size:.84rem;color:var(--muted);line-height:1.3}
+.beginhier.klaar{display:block}
+.llchip{position:relative}
+.llchip .llvink{position:absolute;right:-6px;top:-7px;width:20px;height:20px;border-radius:50%;background:#1f7a4a;color:#fff;font-size:.7rem;display:grid;place-items:center;box-shadow:0 0 0 2px var(--kaart)}
+.verderkaart.volgendekaart{grid-column:1 / -1;background:#E2F3E8}
+.verderkaart.volgendekaart em{color:#1f6a40}
+.verderkaart.volgendekaart .voortgang{background:rgba(20,34,76,.14)}
+.verderkaart.volgendekaart .voortgangtekst{color:#3c4a3f}
+:root[data-theme="dark"] .voortgang{background:rgba(243,239,233,.16)}
+:root[data-theme="dark"] .voortgang span{background:#8fd8ac}
+:root[data-theme="dark"] .verderkaart.volgendekaart{background:#1f3a2c}
+:root[data-theme="dark"] .verderkaart.volgendekaart em{color:#8fd8ac}
+:root[data-theme="dark"] .verderkaart.volgendekaart .voortgangtekst{color:#C9D8CD}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .voortgang{background:rgba(243,239,233,.16)}:root:not([data-theme="light"]) .voortgang span{background:#8fd8ac}:root:not([data-theme="light"]) .verderkaart.volgendekaart{background:#1f3a2c}:root:not([data-theme="light"]) .verderkaart.volgendekaart em{color:#8fd8ac}:root:not([data-theme="light"]) .verderkaart.volgendekaart .voortgangtekst{color:#C9D8CD}}
 .beginhier i{flex:none;font-style:normal;display:inline-flex;align-items:center;min-height:44px;padding:0 18px;border-radius:999px;background:var(--crab);color:#14224C;font-weight:700;box-shadow:0 3px 0 #8f2e1a}
 .eenvoudigterug{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:10px 14px;border-radius:16px;background:var(--kaart);border:1px solid var(--rand);font-size:.92rem}
 .eenvoudigterug button{border:none;background:none;color:var(--link,#204ECF);font:inherit;font-weight:600;text-decoration:underline;text-underline-offset:3px;min-height:44px;padding:0;cursor:pointer}
@@ -2359,7 +2377,7 @@ var SPELLEN = [
     return i >= 0 && i < n ? i : 0;
   }
   function leerlijnHtml(vakId, lijst){
-    var L = LEERLIJN[vakId], v = vakVan(vakId), opNaam = {}, gebruikt = {}, nu = llStapNu(vakId, L.stappen.length);
+    var L = LEERLIJN[vakId], v = vakVan(vakId), opNaam = {}, gebruikt = {}, nu = llStapNu(vakId, L.stappen.length), al = gedaanLijst();
     lijst.forEach(function(sp){ opNaam[sp.bestand] = sp; });
     var h = '<section class="sectie leerlijn" style="--vk:' + v.kleur + '"><div class="sectiekop"><i style="background:' + v.kleur + '"><svg viewBox="0 0 24 24" aria-hidden="true">' + v.ico + '</svg></i>' +
       '<div class="kopje"><h2>' + schoon(v.naam) + ': van basis naar examen</h2><p class="onder">Begin bij stap 1: elke stap bouwt voort op de vorige. Bij elk onderwerp staat op welk examen het terugkomt' + (stand.niveau ? ', en jouw examen is gemarkeerd' : '') + '.</p></div></div>' +
@@ -2374,7 +2392,7 @@ var SPELLEN = [
         sp.forEach(function(x){ gebruikt[x.bestand] = 1; });
         var ex = exTekst(d.ex), mijn = mijnExamen(d.ex);
         h += '<div class="lldom' + (mijn ? ' mijn' : '') + '"><div class="lldkop"><b>' + schoon(d.naam) + '</b>' + (ex ? '<span class="llex">' + (mijn ? 'jouw examen' : 'examen') + ': ' + schoon(ex) + '</span>' : '') + '</div><div class="llspel">' +
-          sp.map(function(x){ return '<a class="llchip" href="' + linkNaar(x) + '" data-start="' + x.bestand + '" title="' + schoon(knip(x.wat).kort) + '">' + tegel(x) + '<span>' + schoon(x.naam) + '</span></a>'; }).join('') +
+          sp.map(function(x){ var ok = al(x.bestand); return '<a class="llchip' + (ok ? ' gedaan' : '') + '" href="' + linkNaar(x) + '" data-start="' + x.bestand + '" title="' + schoon(knip(x.wat).kort) + (ok ? ' (gedaan)' : '') + '">' + tegel(x) + '<span>' + schoon(x.naam) + '</span>' + (ok ? '<b class="llvink" aria-label="gedaan">\u2713</b>' : '') + '</a>'; }).join('') +
           od.map(function(o){ var race = { bestand:'race.html', param:'deel=' + encodeURIComponent(o[0]) };
             return '<a class="llchip llrace" href="' + linkNaar(race) + '" data-start="race.html" title="Vragenrace over ' + schoon(o[1]) + '"><span class="llq" aria-hidden="true">?</span><span>Vragen: ' + schoon(o[1]) + '</span></a>'; }).join('') +
           (!sp.length && !od.length ? '<span class="llleeg">Hier komt nog een oefening.</span>' : '') + '</div></div>';
@@ -2431,6 +2449,53 @@ var SPELLEN = [
   var DRAAI = [-1, 0.8, -0.6, 1.2, -1.2, 0.6, -0.8, 1, -0.5, 0.9];
   var PIJL_TERUG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';
   /* het spel om mee te beginnen: de eerste stap van de leerlijn, anders het eerste oefenspel */
+  /* ---------- wat je al gedaan hebt ----------
+     spel.js houdt het bij in lg-gedaan; wie al eerder speelde heeft ook een
+     beste score (lg-beste-) of een groeilijn (lg-groei-) in deze browser. */
+  function gedaanLijst(){
+    var g = {}, sleutels = [];
+    try { var l = JSON.parse(localStorage.getItem('lg-gedaan') || '{}') || {}; Object.keys(l).forEach(function(b){ g[b + '.html'] = 1; }); } catch (e){}
+    try { for (var i = 0; i < localStorage.length; i++){ var k = localStorage.key(i); if (/^lg-(beste|groei)-/.test(k)) sleutels.push(k.replace(/^lg-(beste|groei)-/, '')); } } catch (e){}
+    return function(bestand){
+      if (g[bestand]) return true;
+      var id = bestand.replace('.html', '');
+      return sleutels.some(function(k){ return k === id || k.indexOf(id + '-') === 0; });
+    };
+  }
+  /* De volgende stap in de leerlijn van een vak: het eerste spel dat je nog
+     niet deed, in de volgorde van de stappen. Met hoeveel je er al deed. */
+  function volgendeStap(vakId, lijst){
+    var L = window.LEERLIJN && LEERLIJN[vakId];
+    if (!L || !L.stappen) return null;
+    var op = {}, al = gedaanLijst(), alle = [], uit = { sp:null, gedaan:0, van:L.stappen.length };
+    lijst.forEach(function(sp){ if (!isBreed(sp)) op[sp.bestand] = sp; });
+    L.stappen.forEach(function(st, i){
+      st.dom.forEach(function(d){
+        d.sp.forEach(function(b){
+          var sp = op[b]; if (!sp || alle.indexOf(sp) >= 0) return;
+          alle.push(sp);
+          if (al(b)) uit.gedaan++;
+          else if (!uit.sp){ uit.sp = sp; uit.nr = i + 1; uit.stap = st.naam; uit.dom = d.naam; }
+        });
+      });
+    });
+    if (!alle.length) return null;
+    uit.totaal = alle.length;
+    return uit;
+  }
+  function voortgangHtml(v){
+    var pct = Math.round(v.gedaan / v.totaal * 100);
+    return '<span class="voortgang" role="img" aria-label="' + v.gedaan + ' van de ' + v.totaal + ' oefeningen uit de leerlijn gedaan"><span style="width:' + Math.max(pct, v.gedaan ? 4 : 0) + '%"></span></span>' +
+      '<small class="voortgangtekst">' + v.gedaan + ' van ' + v.totaal + ' gedaan</small>';
+  }
+  /* de spellen van een vak zoals de vakpagina ze toont, met het niveau en het leerjaar */
+  function lijstVoorVak(vakId){
+    var oud = { vak:stand.vak, soort:stand.soort, tv:stand.tv, zoek:stand.zoek };
+    stand.vak = vakId; stand.soort = 'alles'; stand.tv = 0; stand.zoek = '';
+    var l = gefilterd();
+    stand.vak = oud.vak; stand.soort = oud.soort; stand.tv = oud.tv; stand.zoek = oud.zoek;
+    return l;
+  }
   function beginSpel(vakId, lijst){
     if (vakId === 'overal') return lijst.filter(function(sp){ return sp.bestand === 'toren.html'; })[0] || lijst[0] || null;
     var eigen = lijst.filter(function(sp){ return !isBreed(sp); });
@@ -2505,13 +2570,18 @@ var SPELLEN = [
     var v = stand.vak !== 'alle' ? tegelVak(stand.vak) : null;
     var kop = v ? { naam:v.naam, kleur:v.kleur } : { naam:(SOORTKOP[stand.soort] || ['Alle spellen'])[0], kleur:(SOORTKOP[stand.soort] || [0, '#204ECF'])[1] };
     var eerst = v ? beginSpel(stand.vak, lijst) : null, aantal = lijst.length;
+    var vs = v && v.id !== 'overal' && !filter0() ? volgendeStap(stand.vak, lijst) : null;
+    function filter0(){ return stand.soort !== 'alles' || !!stand.tv; }
     /* kwam je binnen met een soort of tijdvak in de link (?tv=5), dan zeg dat, met een knop om het weg te halen */
     var filter = !v ? [] : [stand.soort !== 'alles' ? soortNaam(stand.soort).toLowerCase() : '', stand.tv && tvVan(stand.tv) ? 'tijdvak ' + stand.tv + ' (' + tvVan(stand.tv).naam.toLowerCase() + ')' : ''].filter(Boolean);
     doel.innerHTML = '<div class="vakkop' + (v && v.id === 'overal' ? ' overal' : '') + '" style="' + vakStijl(kop.kleur) + '">' +
       '<button type="button" class="vakterug" id="vakTerug">' + PIJL_TERUG + 'Alle vakken</button>' +
       '<p class="hand">' + aantal + (aantal === 1 ? ' spel' : ' spellen') + '</p><h2>' + schoon(kop.naam) + '</h2>' +
       (filter.length ? '<p class="vakfilter">Alleen ' + schoon(filter.join(', ')) + ' <button type="button" id="vakFilterUit">Alle spellen van ' + schoon(inZin(v.naam)) + '</button></p>' : '') +
-      (eerst ? '<a class="beginhier" href="' + linkNaar(eerst) + '" data-start="' + eerst.bestand + '">' + tegel(eerst) + '<span><em>begin hier</em><b>' + schoon(eerst.naam) + '</b></span><i>Start</i></a>' : '') +
+      (vs && vs.sp ? '<a class="beginhier volgende" href="' + linkNaar(vs.sp) + '" data-start="' + vs.sp.bestand + '">' + tegel(vs.sp) +
+          '<span><em>' + (vs.gedaan ? 'jouw volgende stap' : 'begin hier') + '</em><b>' + schoon(vs.sp.naam) + '</b><small>stap ' + vs.nr + ' van ' + vs.van + ': ' + schoon(vs.stap) + '</small>' + voortgangHtml(vs) + '</span><i>Start</i></a>' :
+        vs ? '<p class="beginhier volgende klaar"><span><em>alles gedaan!</em><b>Je deed elke oefening uit de leerlijn van ' + schoon(inZin(v.naam)) + '</b><small>Speel ze nog eens voor een betere score, of probeer iets om te beleven.</small>' + voortgangHtml(vs) + '</span></p>' :
+        eerst ? '<a class="beginhier" href="' + linkNaar(eerst) + '" data-start="' + eerst.bestand + '">' + tegel(eerst) + '<span><em>begin hier</em><b>' + schoon(eerst.naam) + '</b></span><i>Start</i></a>' : '') +
       '</div>';
     var fu = $('vakFilterUit');
     if (fu) fu.addEventListener('click', function(){ stand.soort = 'alles'; stand.tv = 0; alles(); });
@@ -2695,6 +2765,11 @@ var SPELLEN = [
       '<span><em>' + (reeks >= 2 ? 'houd je reeks vast!' : 'even herhalen') + '</em><b>Vandaag herhalen</b><small>' + herhaal + (herhaal === 1 ? ' vraag' : ' vragen') + ' die je eerder fout had</small></span><i>Start</i></a>';
     else if (dag && !alInLes(dag)) s += '<a class="verderkaart dagkaart" href="' + linkNaar(dag) + '" data-start="dag.html"><span class="vlamrond">' + VLAM + '</span>' +
       '<span><em>' + (reeks >= 2 ? 'houd je reeks vast!' : 'elke dag een nieuwe') + '</em><b>Uitdaging van vandaag</b><small>Een paar minuten' + (reeks >= 2 ? ' · ' + reeks + ' dagen op rij' : '') + '</small></span><i>Start</i></a>';
+    /* de volgende stap in het vak van wat je laatst speelde, als dat vak een leerlijn heeft */
+    var vakNu = sp && !isBreed(sp) ? vakkenVan(sp).filter(function(id){ return window.LEERLIJN && LEERLIJN[id]; })[0] : null;
+    var vs = vakNu ? volgendeStap(vakNu, lijstVoorVak(vakNu)) : null;
+    if (vs && vs.sp && vs.sp !== sp) s += '<a class="verderkaart volgendekaart" href="' + linkNaar(vs.sp) + '" data-start="' + vs.sp.bestand + '">' + tegel(vs.sp) +
+      '<span><em>jouw volgende stap in ' + schoon(inZin(vakVan(vakNu).naam)) + '</em><b>' + schoon(vs.sp.naam) + '</b><small>stap ' + vs.nr + ' van ' + vs.van + ': ' + schoon(vs.stap) + '</small>' + voortgangHtml(vs) + '</span><i>Start</i></a>';
     var ook = lijst.slice(1);
     if (ook.length) s += '<p class="verderook">Ook laatst gespeeld: ' + ook.map(function(x){ return '<a href="' + linkNaar(x) + '" data-start="' + x.bestand + '">' + schoon(x.naam) + '</a>'; }).join(' · ') + '</p>';
     return s;
