@@ -106,7 +106,7 @@ window.LEERROUTE = (function(){
   var BESTANDEN = {
     rekenen:['rekenen-basis', 'rekenen-tafels', 'rekenen-getallen', 'rekenen-verhoudingen', 'rekenen-meten', 'rekenen-meetkunde', 'rekenen-algebra', 'rekenen-data'],
     nederlands:['nederlands-spelling', 'nederlands-werkwoorden', 'nederlands-grammatica', 'nederlands-lezen', 'nederlands-schrijven', 'nederlands-bronnen', 'nederlands-taal', 'nederlands-literatuur'],
-    engels:['engels-grammatica', 'engels-woorden', 'engels-lezen'],
+    engels:['engels-grammatica', 'engels-woorden', 'engels-lezen', 'engels-schrijven'],
     wiskunde:['wiskunde-algebra', 'wiskunde-verbanden', 'wiskunde-meetkunde', 'wiskunde-statistiek'],
     aardrijkskunde:['aardrijkskunde-kaart', 'aardrijkskunde-wereld'],
     biologie:['biologie-onderzoek', 'biologie-leven'],
