@@ -20,7 +20,7 @@
 
    Wat hij niet aanraakt: de spelkamers en het klassement (/api/, /ws/, /q),
    want die moeten altijd live zijn. */
-var VERSIE = "v380";
+var VERSIE = "v381";
 /* KERN en VAST horen bij een versie. VOORRAAD niet: daar staan de pagina's en
    scripts die van het net kwamen, en die worden bij elk bezoek ververst (eerst
    het net). Vroeger hoorde ook die bij een versie, en dan was na elke nieuwe
@@ -31,7 +31,7 @@ var KERN = "kern-" + VERSIE, VAST = "vast-" + VERSIE, VOORRAAD = "voorraad";
 var NETGEDULD = 3000;
 var STARTSET = [
   "/leermiddelen/", "/leermiddelen/index.html", "/leermiddelen/mee.html", "/leermiddelen/basis.css", "/leermiddelen/thema.js",
-  "/leermiddelen/strijd.js", "/leermiddelen/naamfilter.js", "/leermiddelen/adaptief.js", "/leermiddelen/klas.js", "/leermiddelen/categorie.js", "/leermiddelen/crisis-spel.js", "/leermiddelen/crisis-team.html", "/leermiddelen/spel.js", "/leermiddelen/nagekeken.js", "/leermiddelen/merk.js", "/leermiddelen/spel.css", "/leermiddelen/voorlezen.js", "/leermiddelen/iconen.css", "/leermiddelen/cosmetica.js", "/leermiddelen/wapens.js", "/leermiddelen/avatar.js", "/leermiddelen/podium.js", "/leermiddelen/mijnwerker.html", "/leermiddelen/mijnwerker-motor.js", "/leermiddelen/poortrace.html", "/leermiddelen/poortrace-motor.js", "/leermiddelen/poortrace-regels.js", "/leermiddelen/werkblad-dictee.js", "/leermiddelen/kaarttoren.html", "/leermiddelen/kaarttoren.css", "/leermiddelen/kaarttoren-motor.js", "/leermiddelen/kaarttoren-vakkaarten.js", "/leermiddelen/kaarttoren-figuren.js", "/leermiddelen/kaarttoren-scherm.js", "/leermiddelen/kaarttoren-decor.js", "/leermiddelen/verbinding.js", "/leermiddelen/rekenmanieren.js", "/leermiddelen/werkblad-manieren.js", "/leermiddelen/spelthema.js", "/leermiddelen/profiel.js", "/leermiddelen/bank.js", "/fonts.css", "/manifest.json", "/vangnet.js"
+  "/leermiddelen/strijd.js", "/leermiddelen/naamfilter.js", "/leermiddelen/adaptief.js", "/leermiddelen/klas.js", "/leermiddelen/categorie.js", "/leermiddelen/crisis-spel.js", "/leermiddelen/crisis-team.html", "/leermiddelen/spel.js", "/leermiddelen/nagekeken.js", "/leermiddelen/merk.js", "/leermiddelen/spel.css", "/leermiddelen/voorlezen.js", "/leermiddelen/iconen.css", "/leermiddelen/cosmetica.js", "/leermiddelen/wapens.js", "/leermiddelen/avatar.js", "/leermiddelen/podium.js", "/leermiddelen/mijnwerker.html", "/leermiddelen/mijnwerker-motor.js", "/leermiddelen/poortrace.html", "/leermiddelen/poortrace-motor.js", "/leermiddelen/poortrace-regels.js", "/leermiddelen/werkblad-dictee.js", "/leermiddelen/kaarttoren.html", "/leermiddelen/kaarttoren.css", "/leermiddelen/kaarttoren-motor.js", "/leermiddelen/kaarttoren-vakkaarten.js", "/leermiddelen/kaarttoren-figuren.js", "/leermiddelen/kaarttoren-scherm.js", "/leermiddelen/kaarttoren-decor.js", "/leermiddelen/verbinding.js", "/leermiddelen/rekenmanieren.js", "/leermiddelen/werkblad-manieren.js", "/leermiddelen/werkblad-route.js", "/leermiddelen/spelthema.js", "/leermiddelen/profiel.js", "/leermiddelen/bank.js", "/fonts.css", "/manifest.json", "/vangnet.js"
 ];
 
 self.addEventListener("install", function(e){
