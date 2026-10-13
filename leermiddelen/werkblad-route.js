@@ -15,7 +15,7 @@
   /* het vak van de werkbladen naar het vak van de leerroute */
   var ROUTEVAK = { reken:'rekenen', ned:'nederlands', eng:'engels', wis:'wiskunde', aard:'aardrijkskunde', bio:'biologie', eco:'economie', ges:'geschiedenis', burg:'mens' };
   /* welke vakken al inhoud hebben; de rest komt erbij zodra hun bestanden er zijn */
-  var MET_INHOUD = ['rekenen', 'nederlands'];
+  var MET_INHOUD = ['rekenen', 'nederlands', 'engels', 'wiskunde', 'aardrijkskunde', 'biologie', 'economie', 'geschiedenis', 'mens'];
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
   function kaal(h){ var d = document.createElement('div'); d.innerHTML = String(h == null ? '' : h); return d.textContent.replace(/\s+/g, ' ').trim(); }
 
@@ -161,7 +161,7 @@
         var antwoorden = w.items.map(function(x){
           var op = x.op, eind = eindAntwoord(op);
           return '<li><span class="goed">' + (op.opties ? 'abcdef'.charAt(op.goed) + '. ' : '') + schoon(eind) + (op.eenheid ? ' ' + schoon(op.eenheid) : '') + '</span>' +
-            (w.uitleg ? '<div class="rw-ant"><ol>' + op.stappen.filter(function(s){ return !s.info; }).map(function(s){ return '<li>' + kaal(s.tekst) + ' <b>' + schoon(stapAntwoord(s)) + '</b></li>'; }).join('') + '</ol></div>' : '') + '</li>';
+            (w.uitleg ? '<div class="rw-ant"><ol>' + op.stappen.filter(function(s){ return !s.info; }).map(function(s){ return '<li>' + schoon(kaal(s.tekst)) + ' <b>' + schoon(stapAntwoord(s)) + '</b></li>'; }).join('') + '</ol></div>' : '') + '</li>';
         }).join('');
         return { titel:'Werkblad stap voor stap: ' + d.naam, sub:niveauNaam(vak, d.groep.niveau) + ' · ' + d.groep.naam + ' · ' + w.items.length + ' opgaven', klasse:'stappen',
           intro:k.stappen ? 'Werk elke opgave uit met de stappen eronder. Schrijf bij elke stap je antwoord op de lijn.' : 'Reken of werk elke opgave uit. Schrijf je antwoord op de lijn.', boven:boven, vragen:vragen, antwoorden:antwoorden };

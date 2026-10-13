@@ -1274,7 +1274,7 @@ body>header.wrap,body>footer.wrap{width:min(100% - 24px,1360px)}
         <p class="hand" aria-hidden="true">doe mee</p>
         <p class="bordstap" id="bordKop">Ga naar</p>
         <p class="bordadres">meneergreidanus.nl/<wbr>leermiddelen</p>
-        <p class="bordstap">Tik rechtsboven op het rondje met het gezichtje en vul deze code in:</p>
+        <p class="bordstap">Vul in het blauwe vak <b>Doe mee met een code</b> deze code en je bijnaam in:</p>
         <p class="bordcode" id="bordCode">····</p>
         <p class="bordtel" id="bordTel" aria-live="polite"></p>
       </div>
@@ -1315,7 +1315,7 @@ body>header.wrap,body>footer.wrap{width:min(100% - 24px,1360px)}
         <h2><span class="nr">2</span>Zo koppelen leerlingen zich</h2>
         <div class="stappen">
           <div><i>1</i><span>Ze gaan naar <b id="linkTekst">meneergreidanus.nl/leermiddelen</b>.</span></div>
-          <div><i>2</i><span>Onder <b>klascode van je docent</b> vullen ze de code en een bijnaam in en tikken op koppelen. Dat hoeft maar een keer per apparaat.</span></div>
+          <div><i>2</i><span>In het blauwe vak <b>Doe mee met een code</b> vullen ze de code en een bijnaam in en tikken op <b>Doe mee</b>. Dat hoeft maar een keer per apparaat.</span></div>
           <div><i>3</i><span>Vanaf dan meldt elk spel zijn einduitslag hier: ronde of aantal goed, punten, niveau en vak, en bij de vragenspellen ook per onderdeel hoeveel er goed ging. De uitslag van een Klasquiz zet je er zelf in, met een knop op het eindscherm van de quiz.</span></div>
         </div>
         <p class="tip" style="margin-top:12px">De bijnaam gaat door hetzelfde filter als in de Klasquiz. Spreek met de klas af welke bijnaam ze gebruiken, dan herken je iedereen.</p>
@@ -1686,7 +1686,7 @@ body>header.wrap,body>footer.wrap{width:min(100% - 24px,1360px)}
     var l = (data && data.leerlingen) || [];
     tekenSamen(l);
     if (!l.length){
-      doel.innerHTML = '<p class="leeg">Nog niemand gekoppeld. Laat je klas de code invullen in de leeromgeving, bij het rondje met het gezichtje rechtsboven.</p>';
+      doel.innerHTML = '<p class="leeg">Nog niemand gekoppeld. Laat je klas de code invullen in de leeromgeving, in het blauwe vak Doe mee met een code.</p>';
       return;
     }
     var nog = l.filter(function(x){ return !x.gespeeld; }).length;
@@ -2629,7 +2629,10 @@ body>header.wrap,body>footer.wrap{width:min(100% - 24px,1360px)}
      de docent dit tabblad opent: zo blijft het klasoverzicht licht, en kloppen de doelen
      altijd met wat de leerlingen zien. De stand per leerling staat in data.leerlingen[].route. */
   var routeVak = 'rekenen', ROUTE_KAT = {}, ROUTE_LAAD = {};
-  try { routeVak = localStorage.getItem('lg-klas-routevak') === 'nederlands' ? 'nederlands' : 'rekenen'; } catch (e){}
+  /* de vakken met een leerroute, in de volgorde van de leeromgeving */
+  var ROUTE_VAKKEN = [['rekenen', 'Rekenen'], ['nederlands', 'Nederlands'], ['engels', 'Engels'], ['wiskunde', 'Wiskunde'], ['aardrijkskunde', 'Aardrijkskunde'],
+    ['biologie', 'Biologie'], ['economie', 'Economie'], ['geschiedenis', 'Geschiedenis'], ['mens', 'Mens en maatschappij']];
+  try { var rv0 = localStorage.getItem('lg-klas-routevak'); if (ROUTE_VAKKEN.some(function(v){ return v[0] === rv0; })) routeVak = rv0; } catch (e){}
   function laadScript(src){ return new Promise(function(klaar){ var e = document.createElement('script'); e.src = src; e.onload = e.onerror = function(){ klaar(); }; document.head.appendChild(e); }); }
   function routeKat(v){
     if (ROUTE_KAT[v]) return Promise.resolve(ROUTE_KAT[v]);
@@ -2657,7 +2660,7 @@ body>header.wrap,body>footer.wrap{width:min(100% - 24px,1360px)}
   }
   function tekenRoute(){
     if (!$('routeVak')) return;
-    $('routeVak').innerHTML = [['rekenen', 'Rekenen'], ['nederlands', 'Nederlands']].map(function(v){ return '<button type="button" data-rv="' + v[0] + '" aria-pressed="' + (v[0] === routeVak) + '"' + (v[0] === routeVak ? ' class="on"' : '') + '>' + v[1] + '</button>'; }).join('');
+    $('routeVak').innerHTML = ROUTE_VAKKEN.map(function(v){ return '<button type="button" data-rv="' + v[0] + '" aria-pressed="' + (v[0] === routeVak) + '"' + (v[0] === routeVak ? ' class="on"' : '') + '>' + v[1] + '</button>'; }).join('');
     Array.prototype.forEach.call($('routeVak').querySelectorAll('[data-rv]'), function(b){
       b.addEventListener('click', function(){ routeVak = b.getAttribute('data-rv'); try { localStorage.setItem('lg-klas-routevak', routeVak); } catch (e){} tekenRoute(); });
     });

@@ -54,12 +54,65 @@ window.LEERROUTE = (function(){
         { id:'3F', naam:'3F', uit:'Het niveau voor havo en vwo: tekststructuren, argumentatie, samenvatten, formeel schrijven en de lastigste spelling.' } ],
       domeinen:[ { id:'spelling', naam:'Spelling' }, { id:'werkwoorden', naam:'Werkwoordspelling' }, { id:'grammatica', naam:'Grammatica' },
         { id:'leestekens', naam:'Leestekens en hoofdletters' }, { id:'woordenschat', naam:'Woordenschat' }, { id:'lezen', naam:'Lezen' },
-        { id:'fictie', naam:'Verhalen en gedichten' }, { id:'schrijven', naam:'Schrijven' }, { id:'mondeling', naam:'Spreken en luisteren' } ] }
+        { id:'fictie', naam:'Verhalen en gedichten' }, { id:'schrijven', naam:'Schrijven' }, { id:'mondeling', naam:'Spreken en luisteren' } ] },
+    engels: { naam:'Engels', kleur:'#0B8CA6', hand:'elke regel, stap voor stap',
+      lead:'Van de eerste zinnetjes tot examenteksten: elke grammaticaregel, spellingregel en leesstrategie, eerst uitgelegd, dan voorgedaan, dan samen en dan zelf.',
+      niveaus:[
+        { id:'A1', naam:'A1', lab:'ERK-niveau A1', uit:'De basis: je stelt jezelf voor, gebruikt de eenvoudigste tijden en zinnen, en leest korte berichtjes.' },
+        { id:'A2', naam:'A2', lab:'ERK-niveau A2', uit:'Het niveau van de onderbouw: de verleden tijd, vragen en ontkenningen, en korte teksten over het dagelijks leven.' },
+        { id:'B1', naam:'B1', lab:'ERK-niveau B1', uit:'Het niveau van het vmbo-examen: alle gewone tijden, de passieve vorm, voorwaardezinnen en zakelijke teksten.' },
+        { id:'B2', naam:'B2', lab:'ERK-niveau B2', uit:'Het niveau van havo en vwo: lastige tijden en constructies, formeel schrijven en examenteksten met een betoog.' } ],
+      domeinen:[ { id:'grammatica', naam:'Grammatica' }, { id:'woorden', naam:'Woorden en spelling' }, { id:'lezen', naam:'Lezen' }, { id:'schrijven', naam:'Schrijven' } ] },
+    wiskunde: { naam:'Wiskunde', kleur:'#C2417A', hand:'elke methode, stap voor stap',
+      lead:'Van haakjes wegwerken tot goniometrie: elke methode en elk stappenplan, eerst uitgelegd, dan voorgedaan, dan samen en dan zelf.',
+      niveaus:[
+        { id:'onderbouw', naam:'Onderbouw', lab:'onderbouw', uit:'Klas 1 en 2: negatieve getallen, formules, vergelijkingen, hoeken en de eerste grafieken.' },
+        { id:'vmbo', naam:'Bovenbouw vmbo', lab:'bovenbouw vmbo', uit:'Het vmbo-examen: Pythagoras, goniometrie, lineaire en kwadratische verbanden, inhoud en statistiek.' },
+        { id:'havo', naam:'Havo', lab:'havo', uit:'Het havo-examen: algebra, functies, afgeleiden, kansrekening en meetkunde.' },
+        { id:'vwo', naam:'Vwo', lab:'vwo', uit:'Het vwo-examen: exponentiële en logaritmische functies, differentieren, goniometrische functies en bewijzen.' } ],
+      domeinen:[ { id:'algebra', naam:'Getallen en algebra' }, { id:'verbanden', naam:'Verbanden en grafieken' }, { id:'meetkunde', naam:'Meetkunde' }, { id:'statistiek', naam:'Statistiek en kans' } ] },
+    aardrijkskunde: { naam:'Aardrijkskunde', kleur:'#8C5A2B', hand:'elke vaardigheid, stap voor stap',
+      lead:'Kaartlezen, klimaatgrafieken, bevolkingscijfers en meer: elke vaardigheid, eerst uitgelegd, dan voorgedaan, dan samen en dan zelf.',
+      niveaus:[
+        { id:'onderbouw', naam:'Onderbouw', lab:'onderbouw', uit:'Klas 1 en 2: kaarten en atlas, windrichtingen, schaal, weer en klimaat, bevolking.' },
+        { id:'bovenbouw', naam:'Bovenbouw', lab:'bovenbouw', uit:'De examenjaren: klimaatgrafieken lezen, bevolkingsgroei en piramides, het graadnet en tijdzones, bronnen combineren.' } ],
+      domeinen:[ { id:'kaart', naam:'Kaartvaardigheden' }, { id:'klimaat', naam:'Weer en klimaat' }, { id:'bevolking', naam:'Bevolking en ruimte' }, { id:'aarde', naam:'Aarde, landschap en water' } ] },
+    biologie: { naam:'Biologie', kleur:'#2f7d52', hand:'elke vaardigheid, stap voor stap',
+      lead:'Onderzoek doen, de microscoop, kruisingen en voedselwebben: elke vaardigheid en regel, eerst uitgelegd, dan voorgedaan, dan samen en dan zelf.',
+      niveaus:[
+        { id:'onderbouw', naam:'Onderbouw', lab:'onderbouw', uit:'Klas 1 en 2: onderzoek doen, de microscoop, cellen, ordenen en voedselketens.' },
+        { id:'bovenbouw', naam:'Bovenbouw', lab:'bovenbouw', uit:'De examenjaren: erfelijkheid en kruisingen, ecologie, het lichaam en grafieken en tabellen uit onderzoek.' } ],
+      domeinen:[ { id:'onderzoek', naam:'Onderzoek doen' }, { id:'cel', naam:'Cellen en de microscoop' }, { id:'erfelijkheid', naam:'Erfelijkheid' }, { id:'ecologie', naam:'Ecologie' }, { id:'lichaam', naam:'Het lichaam' } ] },
+    economie: { naam:'Economie', kleur:'#6F8420', hand:'elke berekening, stap voor stap',
+      lead:'Procenten, btw, indexcijfers, winst en break-even: elke berekening en elke redenering, eerst uitgelegd, dan voorgedaan, dan samen en dan zelf.',
+      niveaus:[
+        { id:'onderbouw', naam:'Onderbouw', lab:'onderbouw', uit:'Klas 1 en 2: geld en budget, procenten en korting, sparen en lenen, vraag en aanbod.' },
+        { id:'bovenbouw', naam:'Bovenbouw', lab:'bovenbouw', uit:'De examenjaren: btw, indexcijfers, procentuele verandering, kosten, opbrengst, winst en break-even, en de rol van de overheid.' } ],
+      domeinen:[ { id:'geld', naam:'Rekenen met geld' }, { id:'consument', naam:'Consument en huishouden' }, { id:'markt', naam:'Markt en prijs' }, { id:'bedrijf', naam:'Bedrijf: kosten en winst' }, { id:'overheid', naam:'Overheid en belasting' } ] },
+    geschiedenis: { naam:'Geschiedenis', kleur:'#204ECF', hand:'elke vaardigheid, stap voor stap',
+      lead:'Tijd en chronologie, bronnen en historisch redeneren: elke vaardigheid, eerst uitgelegd, dan voorgedaan, dan samen en dan zelf.',
+      niveaus:[
+        { id:'onderbouw', naam:'Onderbouw', lab:'onderbouw', uit:'Klas 1 en 2: eeuwen en jaartallen, de tien tijdvakken, bronnen herkennen en oorzaak en gevolg.' },
+        { id:'bovenbouw', naam:'Bovenbouw', lab:'bovenbouw', uit:'De examenjaren: bronnen beoordelen, standplaatsgebondenheid, kenmerkende aspecten herkennen en historisch redeneren.' } ],
+      domeinen:[ { id:'tijd', naam:'Tijd en chronologie' }, { id:'bronnen', naam:'Werken met bronnen' }, { id:'redeneren', naam:'Historisch redeneren' } ] },
+    mens: { naam:'Mens en maatschappij', kleur:'#7B5CC4', hand:'elke vaardigheid, stap voor stap',
+      lead:'Verkiezingen en zetels, de rechtsstaat, media en argumenteren: elke vaardigheid, eerst uitgelegd, dan voorgedaan, dan samen en dan zelf.',
+      niveaus:[
+        { id:'onderbouw', naam:'Onderbouw', lab:'onderbouw', uit:'Klas 1 en 2: regels en rechten, democratie, verkiezingen en nieuws beoordelen.' },
+        { id:'bovenbouw', naam:'Bovenbouw', lab:'bovenbouw', uit:'De examenjaren: zetelverdeling, de trias politica, de strafzaak, standpunten en argumenten, en cijfers over de samenleving.' } ],
+      domeinen:[ { id:'politiek', naam:'Politiek en verkiezingen' }, { id:'recht', naam:'Recht en rechtsstaat' }, { id:'samenleving', naam:'Samenleving en media' }, { id:'denken', naam:'Denken en argumenteren' } ] }
   };
   /* welke inhoudsbestanden bij een vak horen, in deze volgorde geladen */
   var BESTANDEN = {
     rekenen:['rekenen-basis', 'rekenen-tafels', 'rekenen-getallen', 'rekenen-verhoudingen', 'rekenen-meten', 'rekenen-meetkunde', 'rekenen-algebra', 'rekenen-data'],
-    nederlands:['nederlands-spelling', 'nederlands-werkwoorden', 'nederlands-grammatica', 'nederlands-lezen', 'nederlands-schrijven', 'nederlands-bronnen', 'nederlands-taal', 'nederlands-literatuur']
+    nederlands:['nederlands-spelling', 'nederlands-werkwoorden', 'nederlands-grammatica', 'nederlands-lezen', 'nederlands-schrijven', 'nederlands-bronnen', 'nederlands-taal', 'nederlands-literatuur'],
+    engels:['engels-grammatica', 'engels-woorden', 'engels-lezen'],
+    wiskunde:['wiskunde-algebra', 'wiskunde-verbanden', 'wiskunde-meetkunde', 'wiskunde-statistiek'],
+    aardrijkskunde:['aardrijkskunde-kaart', 'aardrijkskunde-wereld'],
+    biologie:['biologie-onderzoek', 'biologie-leven'],
+    economie:['economie-geld', 'economie-bedrijf'],
+    geschiedenis:['geschiedenis-tijd', 'geschiedenis-bronnen'],
+    mens:['mens-politiek', 'mens-samenleving']
   };
   var SAMEN = 3, ZELF = 6, BEHEERST = 5;
 
@@ -322,7 +375,7 @@ window.LEERROUTE = (function(){
     c.forEach(function(code){ var d = kdDelen(code); (perZin[d.zin] = perZin[d.zin] || []).push(code); });
     var n0 = V.niveaus.filter(function(x){ return x.id === g.niveau; })[0];
     return '<details class="lr-kdblok"><summary><b>Kerndoel' + (c.length > 1 ? 'en' : '') + '</b> ' + Object.keys(perZin).map(function(z){ var d = kdDelen(z + '.x'); return d.nr + d.letter; }).join(', ') +
-      ' <span>· ' + (g.niveau === 'basis' ? 'fundament, onder 1F' : 'referentieniveau ' + schoon(n0 ? n0.naam : g.niveau)) + '</span></summary>' +
+      ' <span>· ' + (n0 && n0.lab ? schoon(n0.lab) : g.niveau === 'basis' ? 'fundament, onder 1F' : 'referentieniveau ' + schoon(n0 ? n0.naam : g.niveau)) + '</span></summary>' +
       Object.keys(perZin).map(function(z){ var d = kdDelen(z + '.x');
         return '<p><b>Kerndoel ' + d.nr + '</b> ' + schoon(K.kd[d.kd] || '') + ' <b>Doelzin ' + d.letter + '</b> ' + schoon(K.zin[z] || '') + '</p><ul>' +
           perZin[z].map(function(code){ var e = kdDelen(code); return e.deel ? '<li><b>' + e.deel + '.</b> ' + schoon(K.deel[code] || '') + (K.hv[code] ? ' <i>(aanvulling havo en vwo)</i>' : '') + '</li>' : ''; }).join('') + '</ul>';
@@ -337,6 +390,7 @@ window.LEERROUTE = (function(){
       if (!perZin[d.zin]){ perZin[d.zin] = {}; volgordeZin.push(d.zin); }
       (perZin[d.zin][code] = perZin[d.zin][code] || []).push(g); }); });
     volgordeZin.sort(function(a, b){ var x = kdDelen(a + '.x'), y = kdDelen(b + '.x'); return (+x.nr - +y.nr) || (x.letter < y.letter ? -1 : 1); });
+    if (!volgordeZin.length || (vak !== 'rekenen' && vak !== 'nederlands')) return '';
     return '<section class="lr-verant" id="kerndoelen"><h2>Kerndoelen bij deze leerroute</h2>' +
       '<p class="lr-lead">De groepen hierboven zijn gekoppeld aan de kerndoelen voor ' + (vak === 'rekenen' ? 'rekenen en wiskunde (10 tot en met 17)' : 'Nederlands (1 tot en met 9)') +
       ' zoals ze sinds 1 augustus 2026 in de wet staan, tot op het onderdeel van de doelzin. De niveaus (fundament, 1F, 2F, 3F) volgen het referentiekader taal en rekenen. Per groep staan alleen de onderdelen waar hij echt aan werkt.</p>' +
@@ -429,11 +483,12 @@ window.LEERROUTE = (function(){
       b.map(function(d){ return '<li><a href="#d=' + d.id + '">' + bol(v[d.id] | 0) + schoon(d.naam) + '</a></li>'; }).join('') + '</ul></div>';
   }
   function uitleg(){
-    var vb = D.beeld || '';
-    if (!vb){ try { var o = D.maak(R); vb = beeldVan(o, (o.stappen || []).length); } catch (e){} }
+    var vb = D.beeld || '', bijv = '';
+    /* zonder vast plaatje: een uitgewerkte opgave, met erboven welke (anders lijkt het bij het voorbeeld in de tekst te horen) */
+    if (!vb){ try { var o = D.maak(R); vb = beeldVan(o, (o.stappen || []).length); if (vb && (o.vraagHtml || o.vraag)) bijv = '<p class="lr-bijv">Nog een voorbeeld, helemaal uitgewerkt: <b>' + (o.vraagHtml || schoon(o.vraag)) + '</b></p>'; } catch (e){} }
     kaart().innerHTML = '<p class="eyebrow">1 · de uitleg</p>' +
       '<div class="lr-uit">' + (D.uit || '') + '</div>' +
-      (vb ? '<div class="lr-beeld">' + vb + '</div>' : '') +
+      bijv + (vb ? '<div class="lr-beeld">' + vb + '</div>' : '') +
       (D.wanneer ? '<p class="lr-wanneer"><b>Handig als</b> ' + schoon(D.wanneer) + '</p>' : '') + kdBlok(D.groep) +
       knoppen(['<button class="btn" type="button" id="lrVerder">Laat zien hoe het gaat</button>', '<a class="linkbtn" href="#g=' + D.groep.id + '">Terug naar de leerroute</a>']) + broers();
     $('lrVerder').addEventListener('click', function(){ startFase(2); });
@@ -456,7 +511,7 @@ window.LEERROUTE = (function(){
     var ant = antVan(s);
     if (s.opties) return '<div class="lr-opties lr-voor" role="group" aria-label="keuzes">' + s.opties.map(function(t, i){
       return '<button type="button" class="lr-optie' + (i === s.goed && (stand === 'vol' || stand === 'typ') ? ' goed' + (stand === 'typ' ? ' tik' : '') : '') + '" disabled>' + schoon(t) + '</button>'; }).join('') + '</div>';
-    return '<span class="lr-invul lr-voor"><input type="text" disabled tabindex="-1" aria-label="invulvak" value="' + (stand === 'vol' ? schoon(ant) : '') + '"' +
+    return '<span class="lr-invul lr-voor"><input type="text" disabled tabindex="-1" aria-label="invulvak"' + (String(ant).length > 8 ? ' style="width:calc(' + String(ant).length + 'ch + 2.5em)"' : '') + ' value="' + (stand === 'vol' ? schoon(ant) : '') + '"' +
       ' class="' + (stand === 'vol' ? 'goed' : stand === 'nu' ? 'wacht' : stand === 'typ' ? 'wacht typ' : '') + '"' + (stand === 'typ' ? ' data-typ="' + schoon(ant) + '"' : '') + '>' +
       (s.eenheid ? '<span class="lr-eenh">' + schoon(s.eenheid) + '</span>' : '') + '</span>';
   }
