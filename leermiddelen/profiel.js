@@ -105,11 +105,22 @@ window.PROFIEL = (function(){
   /* de klassen van de docent op dit apparaat (code + sleutel), en welke hij hier vergat */
   function docentLijst(){ try { var l = JSON.parse(ls('lg-klas-docent') || '[]'); return Array.isArray(l) ? l.filter(function(k){ return k && k.code && k.sleutel; }) : []; } catch (e){ return []; } }
   function docentWegWacht(){ try { return JSON.parse(ls('lg-klas-docent-weg') || '[]') || []; } catch (e){ return []; } }
+  /* Weghalen moet op twee plekken aankomen: in het profiel (docentWeg hierboven, via sync) en in de
+     klassen van het account (via klassenAfstemmen). Elk heeft een eigen wachtlijst, anders wist de een
+     de lijst voordat de ander hem zag en zet het account de klas weer terug. */
+  function lijstVan(k){ try { var l = JSON.parse(ls(k) || '[]'); return Array.isArray(l) ? l : []; } catch (e){ return []; } }
+  function accWegWacht(){ return lijstVan('lg-klas-docent-weg-acc'); }
+  /* wat dit apparaat vergat, blijft vergeten tot de klas hier zelf weer wordt toegevoegd (een nieuwe
+     code, of de link van een collega): zo zet een oud profiel of een ander apparaat hem niet terug */
+  function vergeten(){
+    var dl = docentLijst();
+    return lijstVan('lg-klas-docent-vergeten').filter(function(c){ return !dl.some(function(k){ return k.code === c; }); });
+  }
   /* de foutenmap: alleen kenmerk, vak, bak en dag gaan mee; de tekst haalt fouten.html weer uit de bank */
   function foutenKort(){ try { var l = JSON.parse(ls('lg-fouten') || '[]'); return Array.isArray(l) ? l.slice(-120).map(function(x){ return { h:String(x.h || ''), vak:String(x.vak || ''), b:x.b | 0, d:x.d | 0 }; }) : []; } catch (e){ return []; } }
   /* klassen uit een lijst erbij zetten op dit apparaat, behalve wat hier net vergeten is */
   function neemKlassenOver(lijst){
-    var dl = docentLijst(), dw = docentWegWacht(), erbij = false;
+    var dl = docentLijst(), dw = docentWegWacht().concat(accWegWacht(), vergeten()), erbij = false;
     (lijst || []).forEach(function(k){
       if (!k || !k.code || !k.sleutel) return;
       if (dw.indexOf(k.code) >= 0 || dl.some(function(x){ return x.code === k.code; })) return;
@@ -124,17 +135,27 @@ window.PROFIEL = (function(){
      een klascode maken kan alleen ingelogd. */
   function klassenAfstemmen(){
     if (!ingelogd() || typeof fetch !== 'function') return Promise.resolve(null);
-    var mijne = docentLijst(), weg = docentWegWacht();
+    var mijne = docentLijst(), weg = accWegWacht();
+    /* opgeruimd: wat hier weer bij de klassen staat, is niet meer vergeten */
+    lsZet('lg-klas-docent-vergeten', JSON.stringify(vergeten()));
     var vraagje = (mijne.length || weg.length)
       ? vraag('/api/account/klassen', 'POST', { klassen:mijne, weg:weg })
       : vraag('/api/account/klassen', 'GET');
     return vraagje.then(function(j){
-      if (weg.length) lsZet('lg-klas-docent-weg', '[]');
+      /* alleen wat de server echt kreeg van de wachtlijst af; een mislukte vraag komt in de catch */
+      if (weg.length && j && j.ok) lsZet('lg-klas-docent-weg-acc', JSON.stringify(accWegWacht().filter(function(x){ return weg.indexOf(x) < 0; })));
       if (j && Array.isArray(j.klassen)) neemKlassenOver(j.klassen);
       return j;
     }).catch(function(){ return null; });
   }
-  function docentWeg(code){ var w = docentWegWacht(); if (w.indexOf(code) < 0) w.push(code); lsZet('lg-klas-docent-weg', JSON.stringify(w)); return sync(); }
+  function docentWeg(code){
+    [['lg-klas-docent-weg', docentWegWacht()], ['lg-klas-docent-weg-acc', accWegWacht()], ['lg-klas-docent-vergeten', lijstVan('lg-klas-docent-vergeten')]].forEach(function(p){
+      if (p[1].indexOf(code) < 0) p[1].push(code);
+      lsZet(p[0], JSON.stringify(p[1].slice(-60)));
+    });
+    klassenAfstemmen();
+    return sync();
+  }
   /* een trofee vrijspelen (een baas verslagen): meteen in bezit, en bij de volgende sync naar de server */
   function vrijspeel(id){
     if (!ingelogd() || !id) return false;
