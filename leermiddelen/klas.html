@@ -7,6 +7,7 @@
 <script src="avatar.js"></script>
 <script src="profiel.js"></script>
 <script src="voorbeeldtoetsen.js"></script>
+<script src="rekenmanieren.js"></script>
 <script src="eigen.js"></script>
 <link rel="apple-touch-icon" href="/icoon-192.png">
 <script>
@@ -520,6 +521,10 @@ td.getal{font-variant-numeric:tabular-nums;text-align:right}
 /* zestien pixels op een telefoon: Safari zoomt anders in bij het aantikken */
 @media(max-width:640px){.opdrachtvorm .veld{font-size:16px}}
 .minlabel{display:inline-flex;align-items:center;gap:6px;font-size:.92rem;white-space:nowrap}
+/* de rekenmanieren: vier keuzes naast elkaar, op een telefoon onder elkaar */
+.manierrij{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin:8px 0}
+.manierrij label{display:grid;gap:4px;font-size:.84rem;font-weight:600;min-width:0}
+.manierrij select{width:100%;min-width:0}
 /* op een smalle telefoon mag het klasdoel (samen ... goede antwoorden per week) over twee regels */
 @media(max-width:480px){.opdrachtvorm .minlabel{white-space:normal;flex-wrap:wrap}}
 .opdrachtstand{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:8px}
@@ -1228,6 +1233,13 @@ body>header.wrap,body>footer.wrap{width:min(100% - 24px,1360px)}
             </div>
             <p class="tip" id="doelStand" role="status" aria-live="polite"></p>
           </div>
+          <div class="stap opdrachtvak" id="manierVak">
+            <b>Rekenmanieren van jullie methode</b>
+            <p class="tip" data-uitleg="manieren">Een grote som kun je op meer manieren uitrekenen. Kies per bewerking de manier van jullie rekenmethode; leerlingen zien die dan in de uitleg van de spellen en op hun werkbladen. Een leerling kan zelf een andere kiezen. <a href="manieren.html">Bekijk alle manieren stap voor stap</a>.</p>
+            <div class="manierrij" id="manierKeuze"></div>
+            <div class="rij opdrachtvorm"><button class="knop klein" id="manierZet" type="button">Opslaan</button></div>
+            <p class="tip" id="manierStand" role="status" aria-live="polite"></p>
+          </div>
           <div class="stap opdrachtvak" id="echtVak">
             <b>Echte namen</b>
             <p class="tip" data-uitleg="namen">Leerlingen spelen met een bijnaam. Zet hier wie dat is. Alleen jij ziet deze namen, en een collega met wie je de klas deelt: in het overzicht, bij de opdrachten en in de CSV. Leerlingen zien ze nooit.</p>
@@ -1816,6 +1828,7 @@ body>header.wrap,body>footer.wrap{width:min(100% - 24px,1360px)}
     tekenVoorLes();
     tekenBespreek();
     tekenDoel();
+    tekenManieren();
     tekenEcht();
     /* alleen bij het openen van een klas overnemen; anders overschrijft een verversing wat je net aanklikte */
     if (data && huidig && keuzeVoor !== huidig.code){ keuzeVoor = huidig.code; keuzeSpellen = Array.isArray(data.spellen) ? data.spellen.map(function(x){ return x === 'zombie' ? 'stad' : x; }) : []; lesmodus = !!data.lesmodus; lesmodusTot = data.lesmodusTot || 0; tekenKeuze(); }
@@ -2342,6 +2355,34 @@ body>header.wrap,body>footer.wrap{width:min(100% - 24px,1360px)}
       .then(function(r){ return r.json(); })
       .then(function(j){ bezig(knop, false); if (j && j.fout){ $('doelStand').textContent = j.fout; return; } if (data) data.klasdoel = j.klasdoel; tekenDoel(); tekenVoorLes(); })
       .catch(function(){ bezig(knop, false); $('doelStand').textContent = 'Opslaan lukte niet: geen verbinding. Controleer je internet en probeer het opnieuw.'; });
+  });
+
+  /* ---------- de rekenmanieren van de methode ----------
+     Per bewerking de manier die leerlingen in de uitleg zien (rekenmanieren.js).
+     Alleen bij het openen van een klas invullen, net als het klasdoel. */
+  var manierVoor = null;
+  function tekenManieren(){
+    var RM = window.REKENMANIEREN, vak = $('manierKeuze'); if (!RM || !vak) return;
+    if (data && huidig && manierVoor === huidig.code) return;
+    manierVoor = huidig ? huidig.code : null;
+    var m = (data && data.manieren) || {};
+    vak.innerHTML = RM.BEWERKINGEN.map(function(b){
+      return '<label>' + b.teken + ' ' + b.naam + '<select class="veld" data-manier="' + b.id + '"><option value="">geen voorkeur</option>' +
+        RM.MANIEREN[b.id].map(function(x){ return '<option value="' + x.id + '"' + (m[b.id] === x.id ? ' selected' : '') + '>' + x.naam + '</option>'; }).join('') + '</select></label>';
+    }).join('');
+    var n = Object.keys(m).length;
+    $('manierStand').textContent = n ? 'Gekozen voor ' + n + (n === 1 ? ' bewerking.' : ' bewerkingen.') : 'Nog niets gekozen: leerlingen zien eerst de eerste manier en kiezen zelf.';
+  }
+  $('manierZet').addEventListener('click', function(){
+    if (!huidig) return;
+    if (DEMO){ nietInDemo(document.activeElement); return; }
+    var keuze = {}, knop = $('manierZet');
+    [].forEach.call(document.querySelectorAll('[data-manier]'), function(s){ if (s.value) keuze[s.getAttribute('data-manier')] = s.value; });
+    $('manierStand').textContent = 'Opslaan\u2026'; bezig(knop, true);
+    fetch('/api/klas/' + huidig.code + '/instelling', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ sleutel:huidig.sleutel, manieren:keuze }) })
+      .then(function(r){ return r.json(); })
+      .then(function(j){ bezig(knop, false); if (j && j.fout){ $('manierStand').textContent = j.fout; return; } if (data) data.manieren = j.manieren || {}; manierVoor = null; tekenManieren(); $('manierStand').textContent = 'Opgeslagen. ' + $('manierStand').textContent; })
+      .catch(function(){ bezig(knop, false); $('manierStand').textContent = 'Opslaan lukte niet: geen verbinding. Controleer je internet en probeer het opnieuw.'; });
   });
 
   /* ---------- echte namen ----------

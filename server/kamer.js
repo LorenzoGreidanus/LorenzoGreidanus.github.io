@@ -2186,6 +2186,10 @@ export class Kamer extends DurableObject {
     const muur = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
     return Date.UTC(+p.year, +p.month - 1, +p.day + 1, 0, 0, 0) - (muur - Math.floor(nu / 1000) * 1000);
   }
+  /* De rekenmanieren van de methode van de school, per bewerking (rekenmanieren.js).
+     De leerlingen zien die manier in de uitleg, tenzij ze zelf een andere kozen. */
+  static get MANIEREN(){ return { plus: ["rijgen", "splitsen", "compenseren", "kolom", "cijferend"], min: ["rijgen", "aanvullen", "compenseren", "kolom", "cijferend"],
+    keer: ["splitsen", "hokjes", "kolom", "cijferend", "compenseren", "verdubbelen"], deel: ["hap", "staart", "splitsen"] }; }
   async instelling(inz){
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
     if (!inz || inz.sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
@@ -2194,13 +2198,18 @@ export class Kamer extends DurableObject {
       this.stand.lesmodus = inz.lesmodus;
       if (inz.lesmodus) this.stand.lesmodusTot = Kamer.eindVanDeDag(Date.now()); else delete this.stand.lesmodusTot;
     }
+    if (inz.manieren && typeof inz.manieren === "object"){
+      const m = {}, M = Kamer.MANIEREN;
+      Object.keys(M).forEach(b => { const v = String(inz.manieren[b] || ""); if (M[b].includes(v)) m[b] = v; });
+      if (Object.keys(m).length) this.stand.manieren = m; else delete this.stand.manieren;
+    }
     /* het klasdoel: zoveel goede antwoorden deze week, samen; 0 zet het uit */
     if (inz.klasdoel !== undefined){
       const d = getal(inz.klasdoel, 20000);
       if (d > 0) this.stand.klasdoel = d; else delete this.stand.klasdoel;
     }
     await this.bewaar();
-    return json({ ok: true, spellen: this.stand.spellen || [], lesmodus: this.lesmodusAan(), lesmodusTot: this.lesmodusAan() ? (this.stand.lesmodusTot || 0) : 0, klasdoel: this.klasdoelStand() });
+    return json({ ok: true, spellen: this.stand.spellen || [], lesmodus: this.lesmodusAan(), lesmodusTot: this.lesmodusAan() ? (this.stand.lesmodusTot || 0) : 0, klasdoel: this.klasdoelStand(), manieren: this.stand.manieren || {} });
   }
   /* De periodes van de docent: zelf ingestelde stukken van het jaar, met een
      naam en een begin- en einddatum. Ze doen niets met wat er bewaard wordt;
@@ -2278,7 +2287,7 @@ export class Kamer extends DurableObject {
     if (this.isWeg(s)) return json({ fout: WEG_FOUT, weg: true }, 410);
     /* een tweede apparaat dat al is samengevoegd, ziet de voortgang van de leerling zelf */
     if (this.stand.alias && this.stand.alias[s]) s = this.stand.alias[s];
-    const opzet = { spellen: this.stand.spellen || [], lesmodus: this.lesmodusAan(), naam: this.stand.naam,
+    const opzet = { spellen: this.stand.spellen || [], lesmodus: this.lesmodusAan(), naam: this.stand.naam, manieren: this.stand.manieren || {},
       /* zat deze leerling bij de eigenaar van de site in de klas? */
       oudleerling: !!this.stand.vanEigenaar, klasdoel: this.klasdoelStand(s) };
     const mijn = this.stand.resultaten.filter(r => r.sid === s);
@@ -2380,7 +2389,7 @@ export class Kamer extends DurableObject {
     const nu = Date.now(), eigenlijk = this.opdrachtLijst(), extra = roosterOpdracht(eigenlijk, this.stand.rooster, nu);
     const opdrachten = eigenlijk.concat(extra ? [extra] : []).map(o => opdrachtNu(o, nu, this.stand.rooster));
     return json({ code: this.stand.code, naam: this.stand.naam, gemaakt: this.stand.gemaakt, opdracht: opdrachten[0] || null, opdrachten,
-                  klasdoel: this.klasdoelStand(),
+                  klasdoel: this.klasdoelStand(), manieren: this.stand.manieren || {},
                   spellen: this.stand.spellen || [], lesmodus: this.lesmodusAan(), lesmodusTot: this.lesmodusAan() ? (this.stand.lesmodusTot || 0) : 0,
                   periodes: this.stand.periodes || [], echt: this.stand.echt || {}, fk: this.fkLijst(),
                   rooster: this.stand.rooster || {}, roosterNu: (roosterNu(this.stand.rooster, nu) || {}).week || "",

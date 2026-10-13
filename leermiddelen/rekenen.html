@@ -96,6 +96,7 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .rekenuitleg.nee{background:var(--fout-bg);color:var(--ink)}
 .rekenuitleg .truc{display:block;margin-top:4px}
 .rekenuitleg .heel{white-space:nowrap}
+.rekenuitleg a.andersom{display:inline-flex;align-items:center;min-height:44px;font-weight:600;color:var(--link,#204ECF)}
 /* strakker onder elkaar, zodat Start op een laptop en een telefoon in beeld staat */
 #scherm-start.oefen{padding-top:30px}
 .start .kies{gap:10px;margin-top:10px}
@@ -363,6 +364,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 
 <script src="tafels-leer.js"></script>
 <script src="leer.js"></script>
+<script src="rekenmanieren.js"></script>
 <script src="leer-rekenen.js"></script>
 <script src="tutorial.js"></script>
 <script src="tutorials.js"></script>
@@ -871,11 +873,19 @@ function maakOpties(goed, decimalen){
       });
       uit.appendChild(r);
     }
-    /* bij een grote keersom: splitsen in stukken die je met de tafels uitrekent */
-    if (huidige.soort === 'grote keersom' && window.LEER_REKENEN){
-      var ka = huidige.a, kb = huidige.b;
-      if (kb < 10) trucRegel('Splits:', LEER_REKENEN.delenVan(ka).map(function(x){ return x + ' \u00d7 ' + kb + ' = ' + (x * kb); }).concat(['samen ' + (ka * kb)]));
-      else trucRegel('Splits:', [ka + ' \u00d7 ' + (kb - kb % 10) + ' = ' + (ka * (kb - kb % 10)), ka + ' \u00d7 ' + (kb % 10) + ' = ' + (ka * (kb % 10)), 'samen ' + (ka * kb)]);
+    /* Een grote keersom, of plus en min met grotere getallen: de uitwerking in de
+       manier die de leerling (of de docent voor de klas) koos, met een link naar
+       de andere manieren (rekenmanieren.js). Zonder die keuze: splitsen. */
+    var hk = window.REKENMANIEREN && REKENMANIEREN.herken(String(huidige.vraag).replace(/\s*=.*$/, ''));
+    if (hk && (huidige.soort === 'grote keersom' || ((hk.bew === 'plus' || hk.bew === 'min') && Math.max(hk.a, hk.b) >= 20 && hk.b >= 10))){
+      var rk = REKENMANIEREN.reken(hk.bew, hk.a, hk.b, REKENMANIEREN.mijn(hk.bew) || (hk.bew === 'keer' ? 'splitsen' : 'rijgen'));
+      if (rk && rk.stappen.length <= 7){
+        trucRegel(rk.manier.naam + ':', rk.stappen.map(function(x){ return x.tekst; }));
+        var am = document.createElement('a'); am.className = 'truc andersom';
+        am.href = 'manieren.html?som=' + hk.a + (hk.bew === 'keer' ? 'x' : hk.bew === 'plus' ? '%2B' : '-') + hk.b;
+        am.textContent = 'Bekijk andere manieren'; am.target = '_blank'; am.rel = 'noopener';
+        uit.appendChild(am);
+      }
     }
     /* bij een tafelsom het trucje erbij (tafels-leer.js): de tafel van 4 is die van 2, maar dan dubbel.
        Alleen bij keer: een deelsom heeft dezelfde soort ("tafel van 2"), maar daar past het trucje niet. */
