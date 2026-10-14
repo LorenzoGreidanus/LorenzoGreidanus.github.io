@@ -51,9 +51,9 @@ const BAASRONDE = 5;
 /* Hoe hard een klap aankomt naarmate de rondes vorderen: groei per ronde, vanaf ronde
    'vanaf' extra groei en een deel van je maximale leven erbij. 'fout' is een factor op
    alles wat geen baas is (klappen, schoten, granaten). */
-/* Sinds v390 zonder extra groei na ronde 12: de gewone rondes blijven te doen, de bazen zijn de
-   drempels (zie hun kracht). */
-const MOEITE = { groei:0.035, laat:0, vanaf:12, deel:0, fout:1 };
+/* Sinds v391 een milde extra groei na ronde 12: een gewone ronde kost dan zo'n 15 tot 20% van je
+   leven, en de bazen blijven de drempels (zie hun kracht). */
+const MOEITE = { groei:0.035, laat:0.015, vanaf:12, deel:0.006, fout:1 };
 /* Samen spelen: per aantal spelers (1, 2, 3, 4) hoeveel fouten er komen, hoe
    taai ze zijn, hoe snel ze binnenkomen en hoeveel leven de baas heeft, als
    keer zoveel als alleen. Afgesteld met een simulatie met bots, zo dat een
@@ -107,43 +107,42 @@ const REEKS = { kans:0.4, tussen:0.3, rust:1.6 };
 /* Vanaf deze ronde komen de halen en de muur van een baas in twee fasen. */
 const TWEEFASEN = 10;
 function laatExtra(ronde){ return ronde >= LAAT.vanaf ? LAAT.munten : 1; }
-/* kracht: een factor op de schade van zijn aanvallen. Sinds v390 zijn de bazen de
-   drempels van het spel en de gewone rondes het vlakke stuk ertussen. Afgesteld met een
-   simulatie op de lijn die de gebruiker tekende: van wie begint haalt ongeveer 90% ronde 6,
-   73% ronde 16, 55% ronde 21, een derde ronde 26, 14% ronde 36, en De Metronoom (40) is
-   het eind. De Inktvlek en De Zwerm zijn rustpunten. De nachtmerrie heeft eigen maten. */
+/* kracht: een factor op de schade van zijn aanvallen. Afgesteld (v391) met een simulatie:
+   elke baas laat ongeveer 15 tot 30% vallen van wie hem bereikt, De Discobal zo'n 45%, en
+   De Metronoom (40) is het eindgevecht. De kracht is lager dan je zou denken omdat de schade
+   ook met de ronde groeit (MOEITE). De nachtmerrie heeft eigen maten. */
 /* De negen bazen. Om de vijf rondes komt de volgende aan de beurt, en na de
    negende begint de rij opnieuw op een hogere ronde en dus taaier. De laatste
    twee (ronde 35 en 40) schieten niets: alles gebeurt op de vloer, op de maat,
    en wie stilstaat wordt geraakt. 'tempo' maakt de pauze tussen twee aanvallen korter. */
 const BAZEN = [
-  { id:'fout',    naam:'De Grote Fout', kleur:'#4a1230', vorm:'ster',  hp:26, kracht:1.6, r:46, schade:26, schild:0.35,
+  { id:'fout',    naam:'De Grote Fout', kleur:'#4a1230', vorm:'ster',  hp:26, kracht:1.72, r:46, schade:26, schild:0.35,
     aanvallen:['cirkel', 'laser', 'kegel', 'spiraal', 'baan', 'tik'],
     wat:'Cirkels op de grond, een laser die om hem heen draait, een waaier recht voor zich uit en een spiraal van propjes.' },
-  { id:'inkt',    naam:'De Inktvlek',   kleur:'#1b3a8f', vorm:'vlek',  hp:14, kracht:0.35, r:50, schade:24, schild:0.3,
+  { id:'inkt',    naam:'De Inktvlek',   kleur:'#1b3a8f', vorm:'vlek',  hp:16, kracht:0.65, r:50, schade:24, schild:0.3,
     aanvallen:['plas', 'kegel', 'cirkel', 'regen', 'golf', 'krimp'],
     wat:'Spat inkt over de vloer die blijft liggen, spuit een waaier voor zich uit en laat het plofjes regenen. Steeds minder plek om te staan.' },
-  { id:'pen',     naam:'De Rode Pen',   kleur:'#c0442c', vorm:'pen',   hp:17, kracht:0.55, r:42, schade:26, schild:0.35,
+  { id:'pen',     naam:'De Rode Pen',   kleur:'#c0442c', vorm:'pen',   hp:17, kracht:0.36, r:42, schade:26, schild:0.35,
     aanvallen:['baan', 'kruis', 'laser', 'muur', 'cirkel', 'kegel'],
     wat:'Streept de arena door met rechte halen, zet er kruisen doorheen en veegt een streep over de vloer met een gat erin.' },
-  { id:'prop',    naam:'De Prop',       kleur:'#8a7350', vorm:'prop',  hp:19, kracht:1.6, r:52, schade:28, schild:0.4,
+  { id:'prop',    naam:'De Prop',       kleur:'#8a7350', vorm:'prop',  hp:19, kracht:0.46, r:52, schade:28, schild:0.4,
     aanvallen:['kogel', 'golf', 'baan', 'bom', 'cirkel', 'regen'],
     wat:'Schiet propjes in alle richtingen, rolt over de vloer en gooit bommen die in scherven uiteenspatten.' },
-  { id:'klok',    naam:'De Klok',       kleur:'#6b3fa0', vorm:'klok',  hp:17, kracht:3.5, r:46, schade:24, schild:0.35,
+  { id:'klok',    naam:'De Klok',       kleur:'#6b3fa0', vorm:'klok',  hp:17, kracht:0.6, r:46, schade:24, schild:0.35,
     aanvallen:['wijzers', 'tik', 'krimp', 'spiraal', 'laser', 'kegel'],
     wat:'Twee wijzers draaien rond, de uren tikken een voor een af, de ring loopt naar binnen en de seconden spiralen naar buiten.' },
-  { id:'zwerm',   naam:'De Zwerm',      kleur:'#7d1f12', vorm:'zwerm', hp:22, r:48, schade:22, schild:0.3,
+  { id:'zwerm',   naam:'De Zwerm',      kleur:'#7d1f12', vorm:'zwerm', hp:22, kracht:0.94, r:48, schade:22, schild:0.3,
     aanvallen:['kogel', 'krimp', 'cirkel', 'bom', 'regen', 'spiraal'],
     wat:'Barst uit elkaar in propjes, sluit je in met een ring en gooit bommen. Veel tegelijk in de lucht.' },
-  { id:'disco',   naam:'De Discobal',   kleur:'#9A55B8', vorm:'bal',   hp:15, kracht:5, r:48, schade:24, schild:0.35, tempo:0.7,
+  { id:'disco',   naam:'De Discobal',   kleur:'#9A55B8', vorm:'bal',   hp:15, kracht:0.96, r:48, schade:24, schild:0.35, tempo:0.7,
     aanvallen:['vloer', 'lichten', 'golf', 'veeg', 'raster', 'cirkel'],
     wat:'Een dansvloer die op de maat oplicht, lichtbundels die rondgaan en strepen die over de vloer vegen. Blijf bewegen.' },
-  { id:'metronoom', naam:'De Metronoom', kleur:'#1f6b5c', vorm:'metronoom', hp:14, kracht:8, r:46, schade:25, schild:0.35, tempo:0.65,
+  { id:'metronoom', naam:'De Metronoom', kleur:'#1f6b5c', vorm:'metronoom', hp:14, kracht:1.03, r:46, schade:25, schild:0.35, tempo:0.65,
     aanvallen:['slinger', 'baan', 'kruis', 'veeg', 'raster', 'tik'],
     wat:'Een slinger die van links naar rechts over de arena zwaait, rechte halen en kruisen zoals De Rode Pen, strepen die over de vloer vegen en een raster in de maat. Blijf in beweging.' },
   /* De Blauwe Pen: de aanvallen van De Rode Pen, maar heftiger (zie 'heftig' in zetAanval): meer
      strepen, dubbele kruisen, drie muren, drie stralen, drie waaiers, meer cirkels, en vaker twee tegelijk. */
-  { id:'blauwepen', naam:'De Blauwe Pen', kleur:'#2458d6', vorm:'pen', hp:18, kracht:8, r:44, schade:28, schild:0.4, tempo:0.8, heftig:true, dubbel:0.3,
+  { id:'blauwepen', naam:'De Blauwe Pen', kleur:'#2458d6', vorm:'pen', hp:18, kracht:1.2, r:44, schade:28, schild:0.4, tempo:0.8, heftig:true, dubbel:0.3,
     aanvallen:['baan', 'kruis', 'laser', 'muur', 'cirkel', 'kegel'],
     wat:'De grote broer van De Rode Pen. Dezelfde halen, kruisen, stralen en muren, maar meer tegelijk en sneller achter elkaar.' }
 ];
