@@ -561,7 +561,7 @@ body.groot .meter b{font-size:1.45rem}
 
   <div class="uitleg">
     <div><i style="background:var(--crab);color:#14224C">1</i><b>Bewegen, ontwijken en slaan</b><span>Pijltjes of WASD om te lopen, of houd je vinger op de arena en loop erheen. Spatie of de knop Ontwijk maakt een sprong waarbij niets je raakt. Je wapen slaat vanzelf naar de dichtstbijzijnde fout die binnen bereik komt. Met Q of de knop ernaast wissel je tussen het zwaard, dat hard toeslaat van dichtbij, en pijl en boog, die van ver raakt maar ongeveer de helft doet.</span></div>
-    <div><i style="background:var(--amber);color:#14224C">2</i><b>Elke ronde meer</b><span>Meer fouten, snellere, dikkere en fouten met een schild. Raakt een fout je, dan kost dat leven; op nul is het klaar.</span></div>
+    <div><i style="background:var(--amber);color:#14224C">2</i><b>Elke ronde meer</b><span>Meer fouten, snellere, dikkere en fouten met een schild. Raakt een fout je, dan kost dat leven. Op nul val je, en dan krijg je een keer een nieuwe kans: je begint opnieuw bij je checkpoint, met alles wat je kocht. Versla je een baas, dan schuift het checkpoint op en heb je die kans weer. Samen help je een maat die neerligt op door twee seconden op diegene te gaan staan.</span></div>
     <div><i style="background:#4a1230">B</i><b>Elke vijfde ronde een baas</b><span>Er zijn er negen, en ze komen om de beurt: De Grote Fout, De Inktvlek, De Rode Pen, De Prop, De Klok, De Zwerm, in ronde 35 en 40 De Discobal en De Metronoom, die niets schieten maar je laten dansen, en in ronde 45 De Blauwe Pen, de grote broer van De Rode Pen. Elk heeft zijn eigen aanvallen, en die zie je op de grond aankomen: cirkels die ontploffen, een draaiende laser, een golf, inkt die blijft liggen, strepen dwars over de vloer, propjes in het rond, tikkende uren en een ring die zich sluit. Loop eruit, of spring er met Ontwijk doorheen. Elke baas heeft er vier: verder ook een regen van plofjes, een muur die over de vloer veegt, een spiraal van propjes en bommen die in scherven uiteenspatten. Soms doet hij twee aanvallen vlak na elkaar; daarna is hij even moe (een groene ring om hem heen) en raak je hem harder: dat is je kans. Onder de helft van zijn leven wordt hij kwaad: hij haalt wijder uit, maar hij doet er langer over en je ziet het langer aankomen. Af en toe komen er dan twee tegelijk.</span></div>
     <div><i style="background:var(--ocean)">3</i><b>Vragen zijn munten</b><span>Na elke ronde vijf vragen voor de klas, en hoe verder je komt hoe meer. Goed is munten, op rij goed is meer munten. Weet je het te goed, dan gaan de vragen een niveau omhoog. Fouten die je velt laten ook wat vallen.</span></div>
     <div><i style="background:#6b3fa0">4</i><b>Uitrusting</b><span>Tussen de rondes koop je in de winkel: zwaard, bereik, tempo, harnas, laarzen, werpmes, pijlboog, critical en een drankje. Alles heeft acht niveaus (critical zes) en geldt alleen voor dit gevecht. Vanaf ronde 15 krijg je een kwart meer munten.</span></div>
@@ -1237,6 +1237,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   var co = { aan:false, mij:0, neer:false, klaar:false, maatKlaar:false, dashVraag:false, wapenVraag:0, laatsteSprong:-1e9, laatsteStil:true, laatsteBlok:false,
              zendKlok:0, laatsteInvoer:'', laatsteZendTijd:0, inNr:0, verzonden:{}, lag:80, laatsteFase:'', pakketten:0, laatstePakket:0,
              maatNaam:'', maatAv:'' };
+  /* het checkpoint: vanaf welke ronde je opnieuw mag, en of die kans er nog is */
+  var cpStand = { ronde:1, kans:1 };
   var maat = null;   /* de ander: { naam, av, sp, stats:{ bereik, harnas }, hp, maxHp, neer } (de eerste maat, voor teksten) */
   var maten = {};    /* alle anderen, op hun nummer in de motor: { naam, av, sp, stats, hp, maxHp, neer, klaar } */
   function alleMaten(){ return Object.keys(maten).map(function(k){ return maten[k]; }).filter(function(m){ return !m.weg; }); }
@@ -1365,6 +1367,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     munten += P.munten - muntWas; muntWas = P.munten;
     geveld += P.geveld - geveldWas; geveldWas = P.geveld;
     zones = W.zones; if (W.baasGeveld) baasWeg = W.baasGeveld;
+    if (W.cp) cpStand = W.cp;
   }
   /* wat de motor te vertellen heeft, als hij hier draait */
   var HAAK = {
@@ -1386,6 +1389,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     vragen: function(){ spiegel(); naarVragen(); },
     rapen: function(nog){ document.getElementById('arenatip').textContent = 'De ronde is gehaald. Nog ' + nog + ' seconde' + (nog === 1 ? '' : 'n') + ' om de munten op te rapen.'; },
     einde: function(){ spiegel(); einde(); },
+    terug: function(r){ tipTekst('Gevallen! Je krijgt nog een kans: zo begin je opnieuw in ronde ' + r + ', met alles wat je kocht.'); },
+    checkpoint: function(r){ spiegel(); tipTekst('Daar ga je weer: ronde ' + r + '. Je kans is gebruikt; versla de volgende baas voor een nieuwe.'); tekenHud(); },
     baasWeg: function(f){
       baasWeg = W ? W.ronde : ronde;
       /* onthouden welke baas je versloeg: dat bepaalt welke nachtmerrie je mag proberen */
@@ -1545,7 +1550,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     document.getElementById('opnieuwBtn').classList.remove('hide'); opnieuwTerug();
     if (co.aan){
       /* samen: de motor draait in de kamer; wij sturen toetsen en tekenen wat terugkomt */
-      W = null; fase = 'ronde'; ronde = 1;
+      W = null; fase = 'ronde'; ronde = 1; cpStand = { ronde:1, kans:1 };
       sp = ZWAARDMOTOR.nieuweSp(ARENA.b / 2 + (co.mij - ((co.spelers ? co.spelers.length : 2) - 1) / 2) * 70, ARENA.h / 2);
       zendNet({ k:'stats', s:mijnStats(), hp:hp });
       document.getElementById('arenatip').textContent = 'Samen! Het begint zodra de kamer de eerste stand stuurt.';
@@ -1557,6 +1562,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       if (terug){
         /* de motor staat na de ronde die je haalde, tussen de rondes in */
         W.ronde = terug.ronde; W.fase = 'vragen'; W.baasGeveld = baasWeg;
+        if (Array.isArray(terug.cp) && getal(terug.cp[0], 1, 501) && Math.floor(terug.cp[0]) === terug.cp[0]) W.cp = { ronde:terug.cp[0], kans:terug.cp[1] ? 1 : 0 };
+        W.hoogste = getal(terug.hoogste, terug.ronde, 500) ? Math.floor(terug.hoogste) : terug.ronde;
         sp.crit = !!terug.crit; sp.wapen = terug.wapen === 'boog' ? 'boog' : 'zwaard';
         spiegel(); hervatFase(terug);
       } else { W.volgendeRonde(); spiegel(); }
@@ -2036,7 +2043,15 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       } else if (d.f === 'einde'){
         ronde = d.r; if (mijA){ hp = mijA[10]; maxHp = mijA[11]; }
         einde(); return;
+      } else if (d.f === 'terug'){
+        co.vanTerug = true;
+        tipTekst('Jullie liggen allemaal neer. Nog een kans: jullie beginnen opnieuw in ronde ' + (d.cp ? d.cp[0] : d.r) + ', met alles wat jullie kochten.');
       }
+    }
+    if (d.cp){
+      /* net weer begonnen vanaf het checkpoint */
+      if (d.f === 'ronde' && co.vanTerug){ co.vanTerug = false; tipTekst('Daar gaan jullie weer: ronde ' + d.r + '. De kans is gebruikt; versla de volgende baas voor een nieuwe.'); }
+      cpStand = { ronde:d.cp[0], kans:d.cp[1] };
     }
     ronde = d.r; teSpawnen = d.ts; tijdInRonde = d.t || 0;
     if (d.bg) baasWeg = d.bg;
@@ -2051,7 +2066,10 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     if (mijA){
       sp.x = mijA[0]; sp.y = mijA[1]; uitpak(sp, mijA);
       if (fase === 'ronde'){ hp = mijA[10]; maxHp = mijA[11]; }
-      co.neer = !!mijA[13];
+      var wasNeer = co.neer;
+      co.neer = !!mijA[13]; co.opstaan = mijA[27] || 0;
+      if (fase === 'ronde' && co.neer && !wasNeer && alleMaten().some(function(m){ return !m.neer; })) tipTekst('Je ligt neer. Een maat helpt je op door ' + ZWAARDMOTOR.OPHELP.tijd + ' seconden op je te gaan staan.');
+      if (fase === 'ronde' && !co.neer && wasNeer) tipTekst('Je staat weer op. Ga door!');
       munten += mijA[17] - muntWas; muntWas = mijA[17];
       geveld += mijA[18] - geveldWas; geveldWas = mijA[18];
       /* hoe lang mijn toets onderweg was: van versturen tot de eerste stand
@@ -2074,7 +2092,9 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
         if (!maat) maat = m2;
       }
       uitpak(m2.sp, hijA); zetDoel(m2.sp, hijA[0], hijA[1], st, hijA[2]);
-      m2.hp = hijA[10]; m2.maxHp = hijA[11]; m2.stats.harnas = hijA[12]; m2.neer = !!hijA[13]; m2.weg = hijA[13] === 2; m2.stats.bereik = hijA[14]; m2.klaar = !!hijA[20];
+      m2.hp = hijA[10]; m2.maxHp = hijA[11]; m2.stats.harnas = hijA[12]; var maatWasNeer = m2.neer;
+      m2.neer = !!hijA[13]; m2.weg = hijA[13] === 2; m2.opstaan = hijA[27] || 0;
+      if (fase === 'ronde' && m2.neer && !maatWasNeer && !m2.weg && !co.neer) tipTekst(m2.naam + ' ligt neer. Ga ' + ZWAARDMOTOR.OPHELP.tijd + ' seconden bij ' + m2.naam + ' staan, dan staat ' + m2.naam + ' weer op.'); m2.stats.bereik = hijA[14]; m2.klaar = !!hijA[20];
     }
     co.maatKlaar = alleMaten().length > 0 && wieNietKlaar().length === 0;
     if (fase !== 'ronde') return;
@@ -2316,6 +2336,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       '<div class="meter"><i>' + ico('doel', 'nog te gaan') + '</i><b>' + (fouten.length + Math.max(0, teSpawnen)) + '</b></div>' +
       '<div class="meter"><i>' + ico('zwaard', 'geveld') + '</i><b>' + geveld + '</b></div>' +
       '<div class="meter"><i>' + ico('ster', 'critical') + '</i><b>' + (sp.crit ? 'klaar!' : (reeks % COMBO) + ' / ' + COMBO) + '</b></div>' +
+      (!nachtmerrie ? '<div class="meter" title="Val je, dan begin je een keer opnieuw bij deze ronde. Een verslagen baas geeft een nieuwe kans."><i>Checkpoint</i><b>' + (cpStand.kans ? 'ronde ' + cpStand.ronde : 'gebruikt') + '</b></div>' : '') +
       (stijl === 'wacht' ? '<div class="meter"><i>Blok</i><b>' + (sp.blokTijd || 0).toFixed(1).replace('.', ',') + ' s</b></div>' : '');
     if (h !== hudWas){
       if (!hudVak) hudVak = document.getElementById('hud');
@@ -2625,6 +2646,19 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     return s;
   }
 
+  /* Om wie neerligt: een groene stippelring waar je op moet staan, en een
+     boog die volloopt terwijl iemand erop staat. */
+  function ophelpRing(sp2, op, pols){
+    var x = sp2.x.toFixed(1), y = sp2.y.toFixed(1), r = ZWAARDMOTOR.OPHELP.afstand, deel = Math.min(1, op / ZWAARDMOTOR.OPHELP.tijd);
+    var h = '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="rgba(47,138,78,.1)" stroke="#2f8a4e" stroke-width="2.5" stroke-dasharray="7 6" opacity="' + (0.55 + Math.sin(pols * 5) * 0.25).toFixed(2) + '"/>';
+    if (deel > 0){
+      var omtrek = 2 * Math.PI * (r - 6);
+      h += '<circle cx="' + x + '" cy="' + y + '" r="' + (r - 6) + '" fill="none" stroke="#2f8a4e" stroke-width="7" stroke-linecap="round" transform="rotate(-90 ' + x + ' ' + y + ')"' +
+        ' stroke-dasharray="' + (omtrek * deel).toFixed(1) + ' ' + omtrek.toFixed(1) + '"/>';
+    }
+    return h;
+  }
+
   function tekenArena(){
     /* De vloer verandert nooit, dus die wordt een keer neergezet in de laag
        eronder in plaats van elk beeld opnieuw ingelezen. */
@@ -2898,8 +2932,9 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     });
     /* de spelers: jij, en samen ook je maat */
     var mijnSp = voorspel.aan ? Object.assign({}, sp, { x:voorspel.x, y:voorspel.y }) : sp;
-    var lijstSp = [{ s:mijnSp, ber:zwaardBereik(), harnas:stat('harnas'), neer:co.neer, naam:null }];
-    if (co.aan) alleMaten().forEach(function(m){ lijstSp.push({ s:m.sp, ber:m.stats.bereik, harnas:m.stats.harnas, neer:m.neer, naam:m.naam, av:m.av }); });
+    var lijstSp = [{ s:mijnSp, ber:zwaardBereik(), harnas:stat('harnas'), neer:co.neer, naam:null, op:co.opstaan }];
+    if (co.aan) alleMaten().forEach(function(m){ lijstSp.push({ s:m.sp, ber:m.stats.bereik, harnas:m.stats.harnas, neer:m.neer, naam:m.naam, av:m.av, op:m.opstaan }); });
+    if (co.aan && fase === 'ronde') lijstSp.forEach(function(Q){ if (Q.neer) s += ophelpRing(Q.s, Q.op || 0, pols); });
     lijstSp.forEach(function(Q){ s += tekenSpeler(Q.s, Q.ber, Q.harnas, Q.neer, Q.naam, pols, Q.av); });
     s += lucht;
     /* de balk van de baas staat boven de arena, buiten het speelveld */
@@ -3188,7 +3223,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       hp:Math.round(hp), maxHp:maxHp, munten:munten, geveld:geveld, level:level, vaardig:vaardig,
       reeks:reeks, besteReeks:besteReeks, goed:goedAantal, fout:foutAantal, od:perOnderdeel, tweede:tweedeKansOver, baasWeg:baasWeg,
       crit:!!(sp && sp.crit), wapen:sp && sp.wapen, slim:slim.stand(), gezien:alGezien, trofeeLater:trofeeLater, knoei:geknoeid,
-      bezig:!!bezig, hpRonde:Math.round(hp) };
+      bezig:!!bezig, hpRonde:Math.round(hp), cp:W.cp ? [W.cp.ronde, W.cp.kans] : null, hoogste:W.hoogste || ronde };
     schrijfPotje();
   }
   /* in een ronde: het leven gaat in het bewaarde potje alleen omlaag (bij het wegklikken, en om de twee seconden) */

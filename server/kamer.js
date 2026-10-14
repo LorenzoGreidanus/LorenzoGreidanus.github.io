@@ -1117,7 +1117,7 @@ export class Kamer extends DurableObject {
           W.stap(MOTORSTAP);
           this.motorTik++;
           if (W.fase === "einde"){ this.motorZend(); this.motorStop(); return; }
-          if (this.motorTik % (W.fase === "ronde" ? MOTOR_STAND_OM : MOTOR_STIL_OM) === 0) this.motorZend();
+          if (this.motorTik % (W.fase === "ronde" || W.fase === "terug" ? MOTOR_STAND_OM : MOTOR_STIL_OM) === 0) this.motorZend();
           /* niemand meer aan de lijn: even wachten, dan ophouden */
           if (this.motorTik % 60 === 0){
             if (this.ctx.getWebSockets("speler").length === 0){ this.motorLeeg += 1000; if (this.motorLeeg >= MOTOR_ZONDER_SPELERS) this.motorStop(); }

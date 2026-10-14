@@ -34,6 +34,12 @@
 const ARENA = { b:1100, h:620, rand:26 };
 /* 'boog' is de wijdte van de zwaai in graden; 'pijlboog' is het tweede wapen:
    minder schade en trager, maar het raakt van ver. */
+/* Het checkpoint: val je, dan begin je een keer opnieuw bij deze ronde, met
+   alles wat je kocht en vol leven. Na een verslagen baas schuift het op naar
+   de ronde erna en heb je die kans weer. Samen: sta op het lichaam van een
+   maat en na OPHELP.tijd seconden staat die weer op. */
+const CHECKPOINT = { wacht:2 };
+const OPHELP = { tijd:2, afstand:52, leven:0.5 };
 const SPELER = { r:22, hp:125, snelheid:200, zwaard:{ schade:16, bereik:82, tempo:0.55 }, boog:130,
                  pijlboog:{ deel:0.55, bereik:330, tempo:1.2, snel:620 } };
 /* Ontwijken: een korte sprong in je looprichting, even onkwetsbaar, en dan
@@ -255,6 +261,7 @@ function maak(opties){
     fouten:[], messen:[], munt:[], pluis:[], cijfers:[], aanvallen:[],
     teSpawnen:0, spawnKlok:0, tijdInRonde:0, rondeUit:0, raapTeller:-1, extra:0, geveld:0, nr:0,
     zones:[], baasGeveld:0, tik:0,
+    cp:{ ronde:1, kans:1 }, hoogste:0, terugKlok:0,
     spelers:[]
   };
   (opties.spelers && opties.spelers.length ? opties.spelers : [{ naam:'jij' }]).forEach(function(o, i){
@@ -354,6 +361,7 @@ function maak(opties){
   /* ---------- de rondes ---------- */
   W.volgendeRonde = function(){
     W.ronde++;
+    W.hoogste = Math.max(W.hoogste || 0, W.ronde);
     W.fase = 'ronde'; W.pauze = false;
     W.fouten = []; W.messen = []; W.munt = []; W.pluis = []; W.cijfers = []; W.aanvallen = [];
     W.spelers.forEach(function(P, i){
@@ -362,6 +370,7 @@ function maak(opties){
       s.x = ARENA.b / 2 + (samen ? (i - (W.spelers.length - 1) / 2) * 70 : 0); s.y = ARENA.h / 2;
       s.raak = 0; s.klok = 0; s.mesKlok = 0; s.dash = 0; s.dashKlok = 0;
       if (P.neer && !P.weg){ P.neer = false; P.hp = Math.max(1, Math.round(P.maxHp / 2)); }
+      P.opstaan = 0;
       P.klaar = false; P.inv = { dx:0, dy:0 }; P.dashVraag = false; P.wapenVraag = 0;
     });
     /* in een baasronde komen er minder gewone fouten bij: de baas is het werk */
@@ -1010,9 +1019,41 @@ function maak(opties){
     if (W.spelers.every(function(Q){ return Q.neer; })) einde();
   }
   function einde(){
-    if (W.fase === 'einde') return;
+    if (W.fase === 'einde' || W.fase === 'terug') return;
+    /* nog een kans: even stil, en dan opnieuw vanaf het checkpoint */
+    if (!W.nachtmerrie && !W.geenCheckpoint && W.cp && W.cp.kans > 0 && W.spelers.some(function(P){ return !P.weg; })){
+      W.cp.kans = 0;
+      W.fase = 'terug'; W.terugKlok = CHECKPOINT.wacht; W.aanvallen = [];
+      W.cijfers.push({ x:ARENA.b / 2, y:ARENA.h / 2 - 70, tekst:'Terug naar ronde ' + W.cp.ronde, leven:CHECKPOINT.wacht, kleur:'#204ECF' });
+      zeg('terug', W.cp.ronde);
+      return;
+    }
     W.fase = 'einde';
+    /* de ronde die telt is de verste die je haalde, ook na een checkpoint */
+    W.ronde = Math.max(W.ronde, W.hoogste || 0);
     zeg('einde');
+  }
+  /* opnieuw vanaf het checkpoint: iedereen staat op, vol leven, en even onraakbaar */
+  function naarCheckpoint(){
+    W.ronde = W.cp.ronde - 1; W.extra = 0;
+    W.spelers.forEach(function(P){ if (!P.weg){ P.neer = false; P.hp = P.maxHp; } });
+    W.volgendeRonde();
+    W.spelers.forEach(function(P){ if (!P.weg) P.sp.raak = 1.5; });
+    zeg('checkpoint', W.ronde);
+  }
+  /* Ophelpen: een levende maat staat op het lichaam. Loopt hij weg, dan zakt
+     de teller weer langzaam terug. */
+  function ophelpen(dt){
+    var levend = levenden();
+    W.spelers.forEach(function(P){
+      if (!P.neer || P.weg){ P.opstaan = 0; return; }
+      var hulp = levend.filter(function(Q){ return Math.hypot(Q.sp.x - P.sp.x, Q.sp.y - P.sp.y) < OPHELP.afstand; })[0];
+      P.opstaan = hulp ? (P.opstaan || 0) + dt : Math.max(0, (P.opstaan || 0) - dt / 2);
+      if (P.opstaan < OPHELP.tijd) return;
+      P.opstaan = 0; P.neer = false; P.hp = Math.max(1, Math.round(P.maxHp * OPHELP.leven)); P.sp.raak = 1.2;
+      W.cijfers.push({ x:P.sp.x, y:P.sp.y - 40, tekst:P.naam + ' staat weer op', leven:1.6, kleur:'#2f8a4e' });
+      zeg('op', P, hulp);
+    });
   }
   function raak(f, schade, vanaf, P, pijl){
     var crit = !!(P && P.sp.crit);
@@ -1047,7 +1088,13 @@ function maak(opties){
         }
       }
       if (f.baas){
-        W.baasGeveld = W.ronde; zeg('baasWeg', f);
+        W.baasGeveld = W.ronde;
+        if (!W.nachtmerrie){
+          W.cp = { ronde:W.ronde + 1, kans:1 };
+          W.cijfers.push({ x:f.x, y:f.y + f.r + 30, tekst:'Checkpoint: ronde ' + W.cp.ronde, leven:2.2, kleur:'#204ECF' });
+          zeg('cpNieuw', W.cp.ronde);
+        }
+        zeg('baasWeg', f);
         W.aanvallen = [];
         W.cijfers.push({ x:f.x, y:f.y - f.r - 20, tekst:(f.def ? f.def.naam : 'De baas') + ' is geveld', leven:2.2, kleur:(f.def ? f.def.kleur : '#4a1230') });
         for (var b2 = 0; b2 < 22; b2++){
@@ -1074,11 +1121,17 @@ function maak(opties){
   }
   W.stap = function(dt){
     W.tik++;
+    if (W.fase === 'terug' && !W.pauze){
+      deeltjes(dt); W.terugKlok -= dt;
+      if (W.terugKlok <= 0) naarCheckpoint();
+      return;
+    }
     if (W.fase !== 'ronde' || W.pauze){ deeltjes(dt); return; }
     var ronde = W.ronde;
     W.tijdInRonde += dt;
     var spelers = W.spelers;
     spelers.forEach(function(P){ beweeg(P, dt); });
+    if (samen) ophelpen(dt);
 
     /* spawnen; met twee in de arena komen ze sneller */
     if (W.teSpawnen > 0){
@@ -1282,11 +1335,13 @@ function maak(opties){
             Math.round(P.hp), Math.round(P.maxHp), P.stats.harnas, P.weg ? 2 : P.neer ? 1 : 0, Math.round(P.stats.bereik), r2(s2.dashKlok), s2.wapen === 'boog' ? 1 : 0,
             P.munten, P.geveld, P.inNr, P.klaar ? 1 : 0, s2.blok ? 1 : 0, r1(s2.blokTijd), s2.crit ? 1 : 0, P.stijl || '',
             /* hoeveel tikken zijn laatste toetsen al gelden, en of hij op het ijs staat */
-            W.tik - (P.inTik || 0), s2.opIjs ? 1 : 0];
+            W.tik - (P.inTik || 0), s2.opIjs ? 1 : 0,
+            /* hoe ver een maat met ophelpen is, van 0 tot OPHELP.tijd */
+            r2(P.opstaan || 0)];
   }
   W.pakket = function(){
     /* tk: de tik van de kamer, zodat de browser de standen op de klok van de kamer kan zetten */
-    return { k:'st', f:W.fase, r:W.ronde, ts:W.teSpawnen, t:r2(W.tijdInRonde), p:W.pauze ? 1 : 0, bg:W.baasGeveld, tk:W.tik,
+    return { k:'st', f:W.fase, r:W.ronde, ts:W.teSpawnen, t:r2(W.tijdInRonde), p:W.pauze ? 1 : 0, bg:W.baasGeveld, tk:W.tik, cp:[W.cp.ronde, W.cp.kans],
       zo:W.zones.map(function(z){ return [z.soort, r1(z.x), r1(z.y), z.r || 0, z.w || 0, z.h || 0, z.id]; }),
       sp:W.spelers.map(inpak),
       /* bij wie schiet ook de klokken van het laden en het stilstaan, voor de loop die mikt en terugslaat */
@@ -1304,7 +1359,7 @@ function maak(opties){
   return W;
 }
 
-g.ZWAARDMOTOR = { maak:maak, ARENA:ARENA, SPELER:SPELER, DASH:DASH, FOUTEN:FOUTEN, BAZEN:BAZEN, AANVAL:AANVAL, BAASRONDE:BAASRONDE, muurStand:muurStand, STIJLEN:STIJLEN, BLOK:BLOK, LAAT:LAAT, REEKS:REEKS, laatExtra:laatExtra, golfGat:golfGat, vloerAan:vloerAan, vloerTel:vloerTel, slingerStand:slingerStand, GEVAAR:GEVAAR, CRIT:CRIT,
+g.ZWAARDMOTOR = { maak:maak, ARENA:ARENA, SPELER:SPELER, DASH:DASH, FOUTEN:FOUTEN, BAZEN:BAZEN, AANVAL:AANVAL, BAASRONDE:BAASRONDE, CHECKPOINT:CHECKPOINT, OPHELP:OPHELP, muurStand:muurStand, STIJLEN:STIJLEN, BLOK:BLOK, LAAT:LAAT, REEKS:REEKS, laatExtra:laatExtra, golfGat:golfGat, vloerAan:vloerAan, vloerTel:vloerTel, slingerStand:slingerStand, GEVAAR:GEVAAR, CRIT:CRIT,
                   MUNT_VAL:MUNT_VAL, RAAKPAUZE:RAAKPAUZE, RAAPTIJD:RAAPTIJD, aantalInRonde:aantalInRonde, foutHp:foutHp, baasVan:baasVan, basisStats:basisStats, nieuweSp:nieuweSp };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 if (typeof module !== 'undefined' && module.exports) module.exports = globalThis.ZWAARDMOTOR;
