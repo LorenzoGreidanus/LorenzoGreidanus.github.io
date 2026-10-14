@@ -169,8 +169,162 @@ window.PAASEI = (function(){
     if (nieuw && window.VERNIEUWGEZICHT) VERNIEUWGEZICHT();
   }
 
+  /* ---------- bijzondere dagen: een strook versiering boven de groet en een hoedje op het gezichtje ----------
+     index.html zet window.LG_DAG (koning, april, sint, kerst, nieuw, halloween, zomer, nacht); ?dag=... om te bekijken. */
+  var r1 = function(n){ return Math.round(n * 10) / 10; };
+  function touw(B, y0, zak){
+    var A = [-6, y0], M = [B / 2, y0 + 4], C = [B + 6, y0];
+    function boog(P, Q, t){
+      var cx = (P[0] + Q[0]) / 2, cy = (P[1] + Q[1]) / 2 + zak * 2;
+      var x = (1 - t) * (1 - t) * P[0] + 2 * t * (1 - t) * cx + t * t * Q[0], y = (1 - t) * (1 - t) * P[1] + 2 * t * (1 - t) * cy + t * t * Q[1];
+      var dx = 2 * (1 - t) * (cx - P[0]) + 2 * t * (Q[0] - cx), dy = 2 * (1 - t) * (cy - P[1]) + 2 * t * (Q[1] - cy), l = Math.hypot(dx, dy);
+      return { x:x, y:y, nx:-dy / l, ny:dx / l };
+    }
+    return {
+      pad:'M' + A + ' Q' + [(A[0] + M[0]) / 2, (A[1] + M[1]) / 2 + zak * 2] + ' ' + M + ' Q' + [(M[0] + C[0]) / 2, (M[1] + C[1]) / 2 + zak * 2] + ' ' + C,
+      punt:function(t){ return t < .5 ? boog(A, M, t * 2) : boog(M, C, t * 2 - 1); }
+    };
+  }
+  var VLEUGEL = 'M-3 -2 C-7 -10 -15 -12 -24 -8 C-21 -5 -21 -1 -20 2 C-17 -1 -15 0 -13 3 C-11 0 -8 0 -6 3 C-5 1 -4 0 -3 1 Z';
+  function vleer(x, y, ver, duur, v, s){
+    return '<g transform="translate(' + x + ' ' + y + ') scale(' + s + ')"><g class="pe-vlucht" style="--ver:' + ver + 'px;animation-duration:' + duur + 's;animation-delay:' + v + 's"><g class="pe-dobber">' +
+      '<g class="pe-vl"><path d="' + VLEUGEL + '" fill="currentColor"/></g><g class="pe-vr"><path d="' + VLEUGEL + '" fill="currentColor" transform="scale(-1 1)"/></g>' +
+      '<ellipse cx="0" cy="2" rx="4" ry="6" fill="currentColor"/><circle cx="0" cy="-5" r="4" fill="currentColor"/><path d="M-3.4 -7 L-4.2 -12.5 L-1 -8.4 Z M3.4 -7 L4.2 -12.5 L1 -8.4 Z" fill="currentColor"/>' +
+      '<circle cx="-1.5" cy="-5.4" r=".9" fill="#FFD166"/><circle cx="1.5" cy="-5.4" r=".9" fill="#FFD166"/></g></g></g>';
+  }
+  function pijl(x, y, kleur, v, groot){
+    var s = []; for (var k = 0; k < 10; k++){ var h = k * Math.PI / 5; s.push('M' + r1(Math.cos(h) * groot * .35) + ' ' + r1(Math.sin(h) * groot * .35) + ' L' + r1(Math.cos(h) * groot) + ' ' + r1(Math.sin(h) * groot)); }
+    return '<g transform="translate(' + x + ' ' + y + ')"><path class="pe-spoor" style="animation-delay:' + v + 's" d="M0 70 L0 6" stroke="' + kleur + '" stroke-width="2.4" stroke-linecap="round"/>' +
+      '<g class="pe-knal" style="animation-delay:' + v + 's"><path d="' + s.join(' ') + '" stroke="' + kleur + '" stroke-width="2.6" stroke-linecap="round"/><circle r="2.6" fill="' + kleur + '"/></g></g>';
+  }
+  function strook(dag, B){
+    var R = B - 60, s = '', i, t, p;
+    if (dag === 'koning'){
+      var T = touw(B, 8, 13), KL = ['#F7931E', '#AE1C28', '#FFFFFF', '#21468B'], n = Math.max(8, Math.round(B / 28));
+      s += '<path d="' + T.pad + '" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".55"/><g stroke="#14224C" stroke-width="1" stroke-linejoin="round">';
+      for (i = 0; i < n; i++){
+        var t1 = .02 + i * (.96 / n), t2 = t1 + .96 / n * .7;
+        if (Math.abs((t1 + t2) / 2 - .5) < .015) continue;
+        var a = T.punt(t1), b = T.punt(t2), m = T.punt((t1 + t2) / 2);
+        s += '<path class="pe-vlag" style="animation-delay:' + r1(i * .13) + 's;transform-origin:' + r1(m.x) + 'px ' + r1(m.y) + 'px" d="M' + r1(a.x) + ' ' + r1(a.y) + ' L' + r1(b.x) + ' ' + r1(b.y) + ' L' + r1(m.x + m.nx * 24) + ' ' + r1(m.y + m.ny * 24) + ' Z" fill="' + KL[i % 4] + '"/>';
+      }
+      s += '</g>';
+    } else if (dag === 'kerst'){
+      var K = touw(B, 8, 13), LK = ['#F26749', '#FFD166', '#83A5F2', '#2f9e8f'], nl = Math.max(8, Math.round(B / 34));
+      s += '<path d="' + K.pad + '" fill="none" stroke="#2f7d52" stroke-width="2.4"/>';
+      for (i = 0; i < nl; i++){
+        t = .03 + i * (.94 / (nl - 1)); if (Math.abs(t - .5) < .015) continue;
+        p = K.punt(t);
+        s += '<g transform="translate(' + r1(p.x) + ' ' + r1(p.y) + ') rotate(' + r1(Math.atan2(p.ny, p.nx) * 180 / Math.PI - 90) + ')"><rect x="-3" y="0" width="6" height="6" rx="1" fill="#2f3b5c"/>' +
+          '<ellipse class="pe-lamp" style="animation-delay:' + r1(i * .35 % 2.1) + 's" cx="0" cy="13" rx="5.2" ry="8" fill="' + LK[i % 4] + '" stroke="#14224C" stroke-width="1"/></g>';
+      }
+    } else if (dag === 'nieuw'){
+      s += pijl(R - 140, 34, '#F26749', 0, 22) + pijl(R - 60, 26, '#204ECF', .7, 26) + pijl(R + 10, 44, '#EA9836', 1.4, 18) + pijl(R - 100, 60, '#83A5F2', 2.1, 14) +
+        '<text x="' + (R - 230) + '" y="66" font-family="Caveat, cursive" font-weight="600" font-size="34" fill="#D9522F" transform="rotate(-6 ' + (R - 200) + ' 56)">' + (new Date().getFullYear() + (new Date().getMonth() === 11 ? 1 : 0)) + '</text>';
+    } else if (dag === 'sint'){
+      s += '<g fill="#A4652E" stroke="#6E3F17" stroke-width="1.2">' + [[R - 280, 26, 7, 0], [R - 220, 60, 6, .4], [R - 150, 22, 7, .9], [R - 80, 64, 5, 1.3], [R - 100, 34, 6, .6]].map(function(q){
+        return q[0] > 10 ? '<circle class="pe-noot" style="animation-delay:' + q[3] + 's" cx="' + q[0] + '" cy="' + q[1] + '" r="' + q[2] + '"/>' : ''; }).join('') + '</g>' +
+        '<g transform="translate(' + (R - 8) + ' 34)"><rect x="0" y="12" width="44" height="34" rx="4" fill="#F26749" stroke="#14224C" stroke-width="1.5"/><rect x="-3" y="3" width="50" height="12" rx="3" fill="#EA9836" stroke="#14224C" stroke-width="1.5"/><path d="M22 3 V46" stroke="#FFD166" stroke-width="5"/><path d="M22 3 C13 -9 4 -3 13 3 M22 3 C31 -9 40 -3 31 3" fill="none" stroke="#FFD166" stroke-width="3" stroke-linecap="round"/></g>';
+    } else if (dag === 'halloween'){
+      s += vleer(Math.max(30, R - 300), 30, Math.min(200, B * .4), 7, 0, 1.15) + vleer(Math.max(60, R - 250), 64, Math.min(150, B * .3), 9, -3, .9) + vleer(Math.max(90, R - 180), 20, 110, 6, -1.5, .75) +
+        '<defs><radialGradient id="pe-licht" cx="50%" cy="55%" r="65%"><stop offset="0" stop-color="#FFF6C2"/><stop offset=".45" stop-color="#FFD25A"/><stop offset="1" stop-color="#F28A12"/></radialGradient>' +
+        '<radialGradient id="pe-schil" cx="40%" cy="35%" r="75%"><stop offset="0" stop-color="#F7A23A"/><stop offset="1" stop-color="#D9661A"/></radialGradient></defs>' +
+        '<g transform="translate(' + (R + 4) + ' 50)"><path d="M-2 -24 C-3 -32 2 -38 9 -37" fill="none" stroke="#6E4A1F" stroke-width="6" stroke-linecap="round"/>' +
+        '<ellipse cx="-22" cy="4" rx="17" ry="27" fill="url(#pe-schil)" stroke="#9c4a12" stroke-width="1.4"/><ellipse cx="22" cy="4" rx="17" ry="27" fill="url(#pe-schil)" stroke="#9c4a12" stroke-width="1.4"/>' +
+        '<ellipse cx="-10" cy="3" rx="16" ry="29" fill="url(#pe-schil)" stroke="#9c4a12" stroke-width="1.2"/><ellipse cx="10" cy="3" rx="16" ry="29" fill="url(#pe-schil)" stroke="#9c4a12" stroke-width="1.2"/><ellipse cx="0" cy="2" rx="13" ry="30" fill="url(#pe-schil)" stroke="#9c4a12" stroke-width="1.2"/>' +
+        '<g fill="#5a2208" stroke="#5a2208" stroke-width="3" stroke-linejoin="round"><path d="M-23 -6 L-12 -18 L-5 -4 Q-14 -2 -23 -6 Z M5 -4 L12 -18 L23 -6 Q14 -2 5 -4 Z"/><path d="M-4 5 L0 -1 L4 5 Z"/><path d="M-24 9 Q0 20 24 9 Q19 27 0 29 Q-19 27 -24 9 Z"/></g>' +
+        '<g class="pe-gloed"><path d="M-23 -6 L-12 -18 L-5 -4 Q-14 -2 -23 -6 Z M5 -4 L12 -18 L23 -6 Q14 -2 5 -4 Z" fill="url(#pe-licht)"/><path d="M-4 5 L0 -1 L4 5 Z" fill="url(#pe-licht)"/><path d="M-24 9 Q0 20 24 9 Q19 27 0 29 Q-19 27 -24 9 Z" fill="url(#pe-licht)"/></g>' +
+        '<rect x="-6" y="11" width="7" height="6" rx="1" fill="#E07A1F"/><rect x="5" y="22" width="7" height="7" rx="1" fill="#E07A1F"/></g>';
+    } else if (dag === 'zomer'){
+      var xb = R - 110;
+      s += '<g class="pe-meeuw"><path d="M' + (xb - 160) + ' 30 q6 -6 12 0 q6 -6 12 0" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></g>' +
+        '<g class="pe-meeuw" style="animation-delay:-1.4s"><path d="M' + (xb - 110) + ' 18 q4 -4 8 0 q4 -4 8 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></g>' +
+        '<ellipse class="pe-balschaduw" cx="' + xb + '" cy="82.5" rx="11" ry="2.4" fill="currentColor" opacity=".3"/>' +
+        '<g transform="translate(' + xb + ' 70.5)"><g class="pe-bal"><circle r="11.5" fill="#FFFFFF" stroke="#14224C" stroke-width="1.4"/><path d="M0 -11.5 A11.5 11.5 0 0 1 9.4 -6.6 L0 0 Z" fill="#F26749"/><path d="M9.4 6.6 A11.5 11.5 0 0 1 0 11.5 L0 0 Z" fill="#204ECF"/><path d="M-9.4 -6.6 A11.5 11.5 0 0 1 0 -11.5 L0 0 Z" fill="#FFD166"/><path d="M-11.5 0 A11.5 11.5 0 0 1 -9.4 -6.6 L0 0 Z M0 11.5 A11.5 11.5 0 0 1 -9.4 6.6 L0 0 Z" fill="#83A5F2"/></g></g>';
+    } else if (dag === 'nacht'){
+      s += '<path d="M' + (R + 12) + ' 18 a26 26 0 1 0 24 34 a20 20 0 1 1 -24 -34 z" fill="#FFD166"/>' +
+        [[R - 200, 20, 1.8, 0], [R - 130, 50, 1.4, .8], [R - 80, 16, 1.8, 1.6], [R - 40, 70, 1.3, .4], [R - 160, 80, 1.2, 1.2], [R + 40, 86, 1.4, 2]].map(function(q){
+          return q[0] > 10 ? '<circle class="pe-twinkel" style="animation-delay:' + q[3] + 's" cx="' + q[0] + '" cy="' + q[1] + '" r="' + q[2] + '" fill="currentColor"/>' : ''; }).join('') +
+        '<text class="pe-zzz" x="58" y="84" font-family="Caveat, cursive" font-weight="600" font-size="26" fill="#83A5F2">z z z</text>';
+    } else if (dag === 'april'){
+      s += '<g transform="translate(' + (R - 30) + ' 46) rotate(10)"><rect x="0" y="0" width="86" height="36" rx="10" fill="none" stroke="#D9522F" stroke-width="2.5"/><text x="43" y="25" text-anchor="middle" font-family="Caveat, cursive" font-weight="600" font-size="26" fill="#D9522F">1 april!</text></g>';
+    }
+    return '<svg class="pe-strook-svg" aria-hidden="true" width="' + B + '" height="100" viewBox="0 0 ' + B + ' 100" style="overflow:visible">' + s + '</svg>';
+  }
+  /* hoedjes in de maten van het gezichtje (viewBox -50..50), boven op het hoofd */
+  var HOED = {
+    koning:'<path d="M-27 -32 L-30 -53 L-20 -43 L-10 -57 L0 -45 L10 -57 L20 -43 L30 -53 L27 -32 Z" fill="#F7931E" stroke="#c96a1c" stroke-width="2" stroke-linejoin="round"/><path d="M-27 -37 h54" stroke="#fff" stroke-width="2" opacity=".7"/>',
+    sint:'<path d="M-26 -33 Q-24 -60 0 -70 Q24 -60 26 -33 Z" fill="#C8102E" stroke="#8a0b20" stroke-width="1.6" stroke-linejoin="round"/><path d="M-26 -36 q26 -6 52 0" fill="none" stroke="#FFD166" stroke-width="3.5"/><path d="M0 -64 V-42 M-8 -54 H8" stroke="#FFD166" stroke-width="3" stroke-linecap="round"/>' +
+      '<g class="pe-staf"><path d="M48 48 V-48 C48 -64 66 -64 66 -52 C66 -43 57 -43 57 -49" fill="none" stroke="#a8831f" stroke-width="6" stroke-linecap="round"/><path d="M48 48 V-48 C48 -64 66 -64 66 -52 C66 -43 57 -43 57 -49" fill="none" stroke="#E1B94F" stroke-width="3.6" stroke-linecap="round"/><path d="M45.5 -20 h5 M45.5 0 h5" stroke="#a8831f" stroke-width="1.8" stroke-linecap="round"/></g>',
+    kerst:'<path d="M-31 -31 Q-27 -58 0 -63 Q24 -67 38 -46 Q30 -49 23 -47 Q27 -40 31 -31 Z" fill="#D23A2E" stroke="#9f2519" stroke-width="1.4" stroke-linejoin="round"/><rect x="-37" y="-37" width="74" height="12" rx="6" fill="#F7F3EC" stroke="#cfc4b6" stroke-width="1.3"/><circle cx="38" cy="-45" r="7.5" fill="#F7F3EC" stroke="#cfc4b6" stroke-width="1.3"/>',
+    nieuw:'<g transform="rotate(-12 0 -30)"><path d="M-17 -29 L2 -64 L17 -29 Z" fill="#204ECF" stroke="#16389a" stroke-width="1.5" stroke-linejoin="round"/><path d="M-11 -37 L13 -37 M-5 -48 L8 -48" stroke="#FFD166" stroke-width="3.4" stroke-linecap="round"/><circle cx="2" cy="-66" r="5" fill="#FFD166"/></g>',
+    halloween:'<path d="M-30 -30 q0 -26 30 -26 q30 0 30 26 z" fill="#EA9836"/><path d="M-12 -30 q0 -22 12 -24 M12 -30 q0 -22 -12 -24" fill="none" stroke="#c0442c" stroke-width="2" opacity=".55"/><path d="M-33 -30 h66" stroke="#c0442c" stroke-width="3" stroke-linecap="round"/><path d="M0 -55 q2 -9 8 -11" fill="none" stroke="#2f7d52" stroke-width="3.5" stroke-linecap="round"/>',
+    zomer:'<path d="M-46 -27 q46 -14 92 0 q-10 6 -46 6 q-36 0 -46 -6 z" fill="#e8c877" stroke="#b8924a" stroke-width="1.6" stroke-linejoin="round"/><path d="M-22 -30 q0 -22 22 -22 q22 0 22 22 z" fill="#e8c877" stroke="#b8924a" stroke-width="1.6"/><path d="M-22 -33 q22 -5 44 0" fill="none" stroke="#F26749" stroke-width="4"/>',
+    nacht:'<path d="M-31 -31 Q-25 -60 2 -62 Q26 -62 38 -44 L46 -20 Q30 -34 30 -31 Z" fill="#83A5F2" stroke="#4d6fbf" stroke-width="1.4" stroke-linejoin="round"/><rect x="-36" y="-37" width="72" height="11" rx="5.5" fill="#F3EFE9"/><circle cx="46" cy="-18" r="6" fill="#F3EFE9"/>'
+  };
+  function feestdag(){
+    var dag = window.LG_DAG, top = document.querySelector('main .top'), gez = document.getElementById('begroetGezicht');
+    if (!dag || !top) return;
+    document.documentElement.setAttribute('data-dag', dag);
+    var vak = document.createElement('div'); vak.className = 'pe-strook'; vak.setAttribute('aria-hidden', 'true');
+    /* achteraan: het eerste kind van .top heeft op een laptop een eigen rol in het raster */ top.appendChild(vak);
+    function teken(){ var B = Math.max(300, Math.min(top.clientWidth, 1100)); vak.innerHTML = strook(dag, B); }
+    teken();
+    var wacht = null; addEventListener('resize', function(){ clearTimeout(wacht); wacht = setTimeout(teken, 150); });
+    /* sneeuw bij kerst: over de bovenkant van de pagina, achter niets wat je moet lezen */
+    if (dag === 'kerst' && !rustig()){
+      var sn = document.createElement('div'); sn.className = 'pe-sneeuw'; sn.setAttribute('aria-hidden', 'true');
+      var h = ''; for (var i = 0; i < 34; i++){ var g = 3 + (i % 4) * 1.4;
+        h += '<i style="left:' + r1((i * 37.3 + (i % 3) * 11) % 100) + '%;width:' + g + 'px;height:' + g + 'px;animation-duration:' + r1(7 + (i * 1.7) % 6) + 's;animation-delay:' + r1(-(i * .73) % 9) + 's"></i>'; }
+      sn.innerHTML = h; document.body.appendChild(sn);
+    }
+    /* het hoedje: alleen als je zelf geen hoed op hebt */
+    if (gez && HOED[dag]){
+      var eigen = window.PROFIEL && PROFIEL.avatar ? String(PROFIEL.avatar() || '') : '';
+      if (/h(?!0)\d/.test(eigen.replace(/^v\d+k\d+o\d+m\d+e\d+/, ''))) return;
+      var hoedSvg = '<svg class="pe-hoed" viewBox="-50 -50 100 100" aria-hidden="true"><g transform="translate(0 -3) scale(1.1)">' + HOED[dag] + '</g></svg>';
+      var zet = function(){ if (!gez.querySelector('.pe-hoed')) gez.insertAdjacentHTML('beforeend', hoedSvg); };
+      zet();
+      if (window.MutationObserver) new MutationObserver(zet).observe(gez, { childList:true });
+    }
+  }
+  /* de opmaak en de beweging van de bijzondere dagen */
+  (function(){
+    var st = document.createElement('style');
+    st.textContent =
+      'main .top{position:relative}' +
+      'html[data-dag] main .top{padding-top:104px}' +
+      '.pe-strook{position:absolute;left:0;right:0;top:0;height:100px;pointer-events:none;color:var(--ink,#14224C);overflow:visible}' +
+      'main.lesalleen .pe-strook,main.lesalleen ~ .pe-sneeuw{display:none}' +
+      '.begroetgezicht{position:relative}' +
+      '.pe-hoed{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}' +
+      '.pe-sneeuw{position:absolute;left:0;right:0;top:0;height:640px;overflow:hidden;pointer-events:none;z-index:1}' +
+      '.pe-sneeuw i{position:absolute;top:0;border-radius:50%;background:#fff;box-shadow:0 0 0 1px rgba(20,34,76,.14);animation:pe-val linear infinite}' +
+      '@keyframes pe-val{from{transform:translate(0,-20px)}to{transform:translate(18px,660px)}}' +
+      '@keyframes pe-wapper{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}.pe-vlag{transform-box:view-box;animation:pe-wapper 2.6s ease-in-out infinite}' +
+      '@keyframes pe-gloei{0%,100%{opacity:1}50%{opacity:.45}}.pe-lamp{animation:pe-gloei 2.1s ease-in-out infinite}' +
+      '@keyframes pe-stijg{0%{stroke-dasharray:0 80;opacity:1}30%{stroke-dasharray:64 80;opacity:1}38%,100%{opacity:0}}.pe-spoor{animation:pe-stijg 2.8s ease-out infinite}' +
+      '@keyframes pe-knal{0%,30%{transform:scale(0);opacity:0}38%{transform:scale(.3);opacity:1}70%{transform:scale(1);opacity:1}100%{transform:scale(1.15);opacity:0}}.pe-knal{transform-box:fill-box;transform-origin:center;animation:pe-knal 2.8s ease-out infinite}' +
+      '@keyframes pe-tol{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-6px) rotate(20deg)}}.pe-noot{transform-box:fill-box;transform-origin:center;animation:pe-tol 2.4s ease-in-out infinite}' +
+      '@keyframes pe-vlucht{0%{transform:translateX(0) scaleX(1)}48%{transform:translateX(var(--ver)) scaleX(1)}52%{transform:translateX(var(--ver)) scaleX(-1)}96%{transform:translateX(0) scaleX(-1)}100%{transform:translateX(0) scaleX(1)}}.pe-vlucht{animation:pe-vlucht 7s ease-in-out infinite}' +
+      '@keyframes pe-dobber{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}.pe-dobber{animation:pe-dobber 1.6s ease-in-out infinite}' +
+      '@keyframes pe-kl{0%,100%{transform:rotate(0)}50%{transform:rotate(38deg) scaleY(.6)}}@keyframes pe-kr{0%,100%{transform:rotate(0)}50%{transform:rotate(-38deg) scaleY(.6)}}' +
+      '.pe-vl{transform-box:fill-box;transform-origin:right center;animation:pe-kl .42s ease-in-out infinite}.pe-vr{transform-box:fill-box;transform-origin:left center;animation:pe-kr .42s ease-in-out infinite}' +
+      '@keyframes pe-gloed{0%,100%{opacity:1;filter:drop-shadow(0 0 2px #FFF3B0) drop-shadow(0 0 6px #FFD166)}50%{opacity:.88;filter:drop-shadow(0 0 2px #FFD166)}}.pe-gloed{animation:pe-gloed 1.8s ease-in-out infinite}' +
+      '@keyframes pe-stuiter{0%{transform:translateY(0) scale(1.08,.9);animation-timing-function:cubic-bezier(.2,.7,.4,1)}12%{transform:translateY(-3px) scale(1)}50%{transform:translateY(-20px);animation-timing-function:cubic-bezier(.6,0,.8,.3)}100%{transform:translateY(0) scale(1.08,.9)}}' +
+      '.pe-bal{transform-box:fill-box;transform-origin:center bottom;animation:pe-stuiter 1.1s infinite}' +
+      '@keyframes pe-schaduw{0%,100%{transform:scaleX(1);opacity:.3}50%{transform:scaleX(.5);opacity:.12}}.pe-balschaduw{transform-box:fill-box;transform-origin:center;animation:pe-schaduw 1.1s infinite}' +
+      '@keyframes pe-meeuw{0%,100%{transform:translate(0,0)}50%{transform:translate(14px,-5px)}}.pe-meeuw{animation:pe-meeuw 5s ease-in-out infinite}' +
+      '@keyframes pe-twinkel{0%,100%{opacity:1}50%{opacity:.25}}.pe-twinkel{animation:pe-twinkel 2.4s ease-in-out infinite}' +
+      '@keyframes pe-zweef{0%,100%{transform:translateY(0);opacity:.9}50%{transform:translateY(-6px);opacity:.5}}.pe-zzz{animation:pe-zweef 3s ease-in-out infinite}' +
+      '@keyframes pe-schommel{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}.pe-staf{transform-box:fill-box;transform-origin:center bottom;animation:pe-schommel 4s ease-in-out infinite}' +
+      '@media(prefers-reduced-motion:reduce){.pe-strook *,.pe-hoed *{animation:none !important}.pe-knal{transform:none;opacity:1}.pe-sneeuw{display:none}}';
+    (document.head || document.documentElement).appendChild(st);
+  })();
+
   if (document.getElementById('groet')){
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', leeromgeving); else leeromgeving();
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', feestdag); else feestdag();
   }
   return { toast:toast, confetti:confetti, ster:ster, goud:goud, feest:feest, uit:uit };
 })();

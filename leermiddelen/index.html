@@ -3478,17 +3478,25 @@ var SPELLEN = [
   try { reeks = (JSON.parse(localStorage.getItem('lg-dagen') || '{}') || {}).reeks | 0; } catch (e){}
   var tekst = u < 12 ? 'goedemorgen' : u < 18 ? 'goedemiddag' : 'goedenavond';
   /* paaseieren in de groet: 's nachts, en een paar dagen per jaar (dan zonder naam erachter) */
-  var vandaag = new Date(), mnd = vandaag.getMonth() + 1, dag = vandaag.getDate(), bijzonder = '';
+  var vandaag = new Date(), mnd = vandaag.getMonth() + 1, dag = vandaag.getDate(), bijzonder = '', soortDag = '';
   var koningsdag = new Date(vandaag.getFullYear(), 3, 27).getDay() === 0 ? 26 : 27;
-  if (mnd === 4 && dag === koningsdag) bijzonder = 'fijne Koningsdag!';
-  else if (mnd === 4 && dag === 1) bijzonder = 'alle toetsen zijn afgelast... 1 april!';
-  else if (mnd === 12 && dag === 5) bijzonder = 'vanavond is het pakjesavond!';
-  else if (mnd === 12 && dag >= 1 && dag < 5) bijzonder = 'het is bijna pakjesavond!';
-  else if (mnd === 12 && dag >= 24 && dag <= 26) bijzonder = 'fijne kerst!';
-  else if (mnd === 1 && dag <= 7) bijzonder = 'gelukkig nieuwjaar!';
-  else if (mnd === 10 && dag === 31) bijzonder = 'boe! fijne Halloween';
-  else if ((mnd === 7 && dag >= 15) || (mnd === 8 && dag <= 20)) bijzonder = 'fijne vakantie! (oefenen mag ook)';
-  else if (u >= 23 || u < 5) bijzonder = 'zou je niet eens gaan slapen?';
+  if (mnd === 4 && dag === koningsdag) soortDag = 'koning';
+  else if (mnd === 4 && dag === 1) soortDag = 'april';
+  else if (mnd === 12 && dag >= 1 && dag <= 5) soortDag = 'sint';
+  else if (mnd === 12 && dag >= 24 && dag <= 26) soortDag = 'kerst';
+  else if ((mnd === 12 && dag === 31) || (mnd === 1 && dag <= 7)) soortDag = 'nieuw';
+  else if (mnd === 10 && dag === 31) soortDag = 'halloween';
+  else if ((mnd === 7 && dag >= 15) || (mnd === 8 && dag <= 20)) soortDag = 'zomer';
+  else if (u >= 23 || u < 5) soortDag = 'nacht';
+  /* om te bekijken: ?dag=kerst (alleen deze bekende namen) */
+  var dagAdres = (/[?&]dag=([a-z]+)/.exec(window.START_ZOEK || location.search) || [])[1];
+  if (dagAdres && /^(koning|april|sint|kerst|nieuw|halloween|zomer|nacht)$/.test(dagAdres)) soortDag = dagAdres;
+  bijzonder = { koning:'fijne Koningsdag!', april:'alle toetsen zijn afgelast... 1 april!', sint:mnd === 12 && dag === 5 ? 'vanavond is het pakjesavond!' : 'het is bijna pakjesavond!',
+    kerst:'fijne kerst!', nieuw:'gelukkig nieuwjaar!', halloween:'boe! fijne Halloween', zomer:'fijne vakantie! (oefenen mag ook)', nacht:'zou je niet eens gaan slapen?' }[soortDag] || '';
+  /* paasei.js tekent de versiering en het hoedje bij deze dag */
+  window.LG_DAG = soortDag;
+  /* 1 april: een woord van de titel staat op zijn kop */
+  if (soortDag === 'april'){ var h1 = document.querySelector('.begroet h1'); if (h1) h1.innerHTML = 'Waar heb je <span style="display:inline-block;transform:rotate(180deg)">zin</span> in?'; }
   var chip = document.getElementById('reeksChip');
   if (chip && reeks >= 2){ document.getElementById('reeksGetal').textContent = reeks; chip.classList.remove('hide'); }
   /* met een klascode weten we je bijnaam */
