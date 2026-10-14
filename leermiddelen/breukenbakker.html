@@ -148,9 +148,11 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;pa
 .terugkoppeling.fout{background:var(--fout-bg);color:var(--fout);padding:12px 14px;font-weight:600}
 .terugkoppeling .regel{display:block;font-weight:400;color:var(--ink);margin-top:4px;font-size:.9rem}
 .knoprij{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
-/* Start of oneindig: twee knoppen naast elkaar, de tweede rustiger */
-.startknoppen{display:flex;flex-wrap:wrap;gap:10px}
-.oneindiguit{margin-top:8px;font-size:.84rem;color:var(--muted)}
+/* het rustige spelmenu (sm- in spel.css), gecentreerd zoals de vakspellen */
+#scherm-start{text-align:center}
+#scherm-start .lead{margin-inline:auto}
+#scherm-start .tafereel{text-align:left}
+.sm-start .knop.groot{border-radius:999px;min-width:220px}
 .oneindigmerk{color:var(--link);font-weight:600}
 /* einde */
 .cijfers{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:14px 0}
@@ -166,22 +168,13 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 @media(prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
 /* zichtbare focus voor wie met het toetsenbord werkt */
 :focus-visible{outline:3px solid var(--focusring,#B4701A);outline-offset:3px}
-/* De keuzes voor wat je oefent zijn tegels met een plaatje, geen tekstchips:
-   twee halve taarten naast een gedeelde taart zegt sneller wat "gelijke breuken"
-   is dan die twee woorden. */
-.soortkeuze{display:grid;grid-template-columns:repeat(auto-fit,minmax(116px,1fr));gap:8px}
-.soortkeuze button{display:grid;gap:6px;justify-items:center;text-align:center;background:var(--kaart);color:var(--muted);
-  border:1.5px solid var(--rand2);border-radius:16px;padding:10px 8px 9px;min-height:84px;font-weight:600;font-size:.82rem;line-height:1.2}
-.soortkeuze button:hover{border-color:var(--vista)}
-.soortkeuze button.on{border-color:var(--link);color:var(--link);background:var(--kaart2);box-shadow:0 0 0 3px rgba(32,78,207,.12)}
+/* De keuzes voor wat je oefent zijn kaartjes met een plaatje (het raster van
+   sm-tegels in spel.css): twee halve taarten naast een gedeelde taart zegt sneller
+   wat "gelijke breuken" is dan die twee woorden. */
+#soorten>button{gap:6px}
 .soorticoon{width:66px;height:31px;display:block;color:var(--taart)}
-.soortkeuze button.on .soorticoon{color:var(--link)}
-/* op een telefoon drie naast elkaar en lager, zodat Start dichter bij de keuzes staat */
-@media(max-width:560px){
-  .soortkeuze{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
-  .soortkeuze button{min-height:0;padding:8px 4px 7px;gap:4px;font-size:.74rem}
-  .soorticoon{width:52px;height:24px}
-}
+#soorten>button.on .soorticoon{color:var(--link)}
+@media(max-width:560px){.soorticoon{width:56px;height:26px}}
 :root{--taart:#F26749;--taart2:#EA9836;--korst:#EA9836;--bord:#f6efe6;--leeg:#fbf7f2}
 :root[data-theme="dark"]{--bord:#22315f;--leeg:#1b2a56}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bord:#22315f;--leeg:#1b2a56}}
@@ -329,12 +322,14 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
       <div><i style="background:var(--amber);color:#14224C">2</i><b>Kijk naar de taart</b><span>Bij bijna elke som staat er een taart bij, zodat je ziet wat de breuk betekent.</span></div>
       <div><i style="background:var(--ocean);color:#fff">3</i><b>Tik teller en noemer in</b><span>Twee vakjes: boven de streep en onder de streep. Bij procenten is er maar een vakje.</span></div>
     </div>
-    <div class="kaart">
-      <div class="stap"><b>Wat wil je oefenen</b><div class="soortkeuze" id="soorten"></div></div>
-      <div class="stap"><b>Niveau</b><div class="chips" id="niveaus"></div><p class="tip" id="niveauUit" style="margin-top:6px"></p></div>
-      <div class="stap"><div class="startknoppen"><button class="knop crab groot" id="startBtn" type="button">Open de bakkerij</button><button class="knop stil groot" id="oneindigBtn" type="button">Oneindig oefenen</button></div>
-        <p class="oneindiguit" id="oneindigUit">Een ronde is 8 bestellingen. Oneindig: zoveel als je wilt, je stopt zelf.</p></div>
+    <p class="sm-kop" id="soortKop">wat wil je oefenen</p>
+    <div class="sm-tegels" id="soorten" role="group" aria-labelledby="soortKop"></div>
+    <div id="hoeveelRij">
+      <p class="sm-kop" id="hoeveelKop">hoeveel bestellingen</p>
+      <div class="sm-pillen" id="hoeveel" role="group" aria-labelledby="hoeveelKop"><button type="button" data-id="ronde" class="on">één ronde (8)</button><button type="button" data-id="eind">zonder eind</button></div>
+      <p class="sm-uit" id="oneindigUit"></p>
     </div>
+    <div class="sm-start" id="startRij"><button class="knop crab groot" id="startBtn" type="button">Open de bakkerij</button></div>
   </section>
 
   <section id="scherm-spel" class="hide">
@@ -402,6 +397,14 @@ var PER_RONDE = 8;
   /* Onthoudt het niveau voor de leeromgeving: je kiest het maar een keer,
      in het eerste spel dat je speelt. */
   function onthoudNiveau(n){ try { localStorage.setItem('lg-niveau', ['', 'bb', 'kgt', 'hv'][n]); } catch (e){} }
+  /* Het niveau komt uit de leeromgeving (lg-niveau), of uit het adres (?n=bb, kgt of hv):
+     dan koos de docent het, of met van=lo de leerling zelf in de leeromgeving. */
+  var NIVID = ['', 'bb', 'kgt', 'hv'], nivBron = '', nivRegel = null;
+  function beginNiveau(){
+    try { var l = NIVID.indexOf(localStorage.getItem('lg-niveau')); if (l > 0){ niveau = l; nivBron = 'lo'; } } catch (e){}
+    var m = /[?&]n=([^&#]+)/.exec(location.search), q = m ? NIVID.indexOf(decodeURIComponent(m[1])) : -1;
+    if (q > 0){ niveau = q; nivBron = /[?&]van=lo\b/.test(location.search) ? 'lo' : 'docent'; }
+  }
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
 
   var niveau = 2, soortId = '', nr = 0, goed = 0, fout = 0, reeks = 0, besteReeks = 0, foutLijst = [], huidig = null, beantwoord = false, od = {};
@@ -426,17 +429,20 @@ var PER_RONDE = 8;
     var doel = $('soorten');
     doel.innerHTML = lijst.map(function(x){
       return '<button type="button" data-id="' + schoon(x.id) + '"' + (String(x.id) === String(soortId) ? ' class="on"' : '') + '>' +
-        (x.icoon || '') + '<span>' + schoon(x.naam) + '</span></button>';
+        (x.icoon || '') + '<b>' + schoon(x.naam) + '</b></button>';
     }).join('');
     Array.prototype.forEach.call(doel.querySelectorAll('button'), function(b){
       b.addEventListener('click', function(){ soortId = b.getAttribute('data-id'); tekenKeuze(); });
     });
   }
   function tekenKeuze(){
+    if (!nivRegel && window.SPEL && SPEL.niveauRegel){
+      nivRegel = SPEL.niveauRegel($('startRij'), { items:NIVEAUS.map(function(x){ return { id:String(x.id), naam:x.naam, uit:x.uit }; }), gekozen:String(niveau), bron:nivBron,
+        kies:function(v){ niveau = parseInt(v, 10); onthoudNiveau(niveau); if (soortId && !magSoorten().some(function(s){ return s.id === soortId; })) soortId = ''; tekenKeuze(); } });
+    } else if (nivRegel) nivRegel.zet(String(niveau));
     tekenSoorten();
-    chips('niveaus', NIVEAUS, niveau, function(v){ niveau = parseInt(v, 10); onthoudNiveau(niveau); if (soortId && !magSoorten().some(function(s){ return s.id === soortId; })) soortId = ''; });
-    var n = NIVEAUS.filter(function(x){ return x.id === niveau; })[0];
-    $('niveauUit').textContent = n ? n.uit : '';
+    /* alles door elkaar over de hele breedte */
+    var hb = $('soorten').querySelector('[data-id=""]'); if (hb) hb.classList.add('heel');
   }
 
   /* de taart: n punten, waarvan er vol gekleurd zijn, extra in een tweede kleur.
@@ -604,17 +610,28 @@ var PER_RONDE = 8;
     scrollTo({ top:0, behavior:'auto' });
   }
 
+  beginNiveau();
   tekenKeuze();
+  /* spel.js laadt na dit script: de niveauregel komt zodra SPEL er is */
+  if (!nivRegel) addEventListener('DOMContentLoaded', tekenKeuze);
   /* de tutorial, een keer, zodra het spelscherm er is; de klok staat intussen stil */
   if (window.TUTORIAL && window.TUTORIALS && TUTORIALS['breuken']){
     TUTORIAL.naStart('startBtn', 'breuken', TUTORIALS['breuken'], {});
-    TUTORIAL.naStart('oneindigBtn', 'breuken', TUTORIALS['breuken'], {});
   }
-  $('startBtn').addEventListener('click', function(){ begin(oneindigUrl); });
-  $('oneindigBtn').addEventListener('click', function(){ begin(true); });
-  /* de docent linkt met ?oneindig=1: dan is Start meteen oneindig */
-  if (oneindigUrl){ $('startBtn').textContent = 'Start: oneindig oefenen'; $('oneindigBtn').classList.add('hide'); $('oneindigUit').textContent = 'Zoveel bestellingen als je wilt; je stopt zelf.'; }
-  else $('oneindigUit').textContent = 'Een ronde is ' + PER_RONDE + ' bestellingen. Oneindig: zoveel als je wilt, je stopt zelf.';
+  /* hoeveel: een ronde, of zonder eind (dan is Start oneindig) */
+  var zonderEind = oneindigUrl;
+  function tekenHoeveel(){
+    Array.prototype.forEach.call($('hoeveel').children, function(b){ b.classList.toggle('on', (b.getAttribute('data-id') === 'eind') === zonderEind); });
+    $('oneindigUit').textContent = zonderEind ? 'Zoveel bestellingen als je wilt. Je stopt zelf.' : 'Een ronde is ' + PER_RONDE + ' bestellingen, ongeveer 10 minuten.';
+  }
+  $('hoeveel').firstChild.textContent = 'één ronde (' + PER_RONDE + ')';
+  Array.prototype.forEach.call($('hoeveel').children, function(b){
+    b.addEventListener('click', function(){ zonderEind = b.getAttribute('data-id') === 'eind'; tekenHoeveel(); });
+  });
+  tekenHoeveel();
+  $('startBtn').addEventListener('click', function(){ begin(zonderEind); });
+  /* de docent linkt met ?oneindig=1: dan is Start meteen oneindig, zonder keuze voor hoeveel */
+  if (oneindigUrl){ $('startBtn').textContent = 'Start: oneindig oefenen'; $('hoeveel').classList.add('hide'); }
   $('nogBtn').addEventListener('click', function(){ begin(oneindig); });
   $('andersBtn').addEventListener('click', function(){ $('scherm-einde').classList.add('hide'); $('scherm-start').classList.remove('hide'); tekenKeuze(); });
   $('stopBtn').addEventListener('click', einde);
@@ -634,6 +651,6 @@ var PER_RONDE = 8;
 </script>
 <script src="thema.js"></script>
 <script src="spel.js"></script>
-<script>SPEL.uitleg({ doel:"Breuken herkennen, vereenvoudigen, optellen en omrekenen naar procenten.", tijd:"acht bestellingen, ongeveer 10 minuten", bediening:"Tik teller en noemer in en druk op Enter, of kies welk stuk groter is.", meer:'.uitleg', onder:true, links:true, chips:true, zeker:'stopBtn' });</script>
+<script>SPEL.uitleg({ doel:"Breuken herkennen, vereenvoudigen, optellen en omrekenen naar procenten.", tijd:"acht bestellingen, ongeveer 10 minuten", bediening:"Tik teller en noemer in en druk op Enter, of kies welk stuk groter is.", meer:'.uitleg', chips:true, zeker:'stopBtn' });</script>
 </body>
 </html>

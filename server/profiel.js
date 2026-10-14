@@ -32,7 +32,7 @@ function netjes(inz){
               /* munten erbij en aankopen zijn wensen van dit apparaat; de server houdt het saldo */
               muntDelta: getal(inz.muntDelta, 600), koop: (Array.isArray(inz.koop) ? inz.koop : []).slice(0, 6).map(x => schoon(x, 4)).filter(x => COSMETICA.vind(x)),
               /* trofeeën die het spel meldt: alleen wat een baas oplevert */
-              vrijspeel: (Array.isArray(inz.vrijspeel) ? inz.vrijspeel : []).slice(0, 12).map(x => schoon(x, 4)).filter(x => { const it = COSMETICA.vind(x); return it && (it.baas || it.oud); }),
+              vrijspeel: (Array.isArray(inz.vrijspeel) ? inz.vrijspeel : []).slice(0, 12).map(x => schoon(x, 4)).filter(x => { const it = COSMETICA.vind(x); return it && (it.baas || it.oud || it.geheim); }),
               /* de wapenwinkel van De stad: kopen is een wens, de server rekent af */
               koopWapen: (Array.isArray(inz.koopWapen) ? inz.koopWapen : []).slice(0, 3).map(x => schoon(x, 12))
                            .filter(x => { const w = WAPENKAST.vind(x); return w && w.prijs > 0; }),

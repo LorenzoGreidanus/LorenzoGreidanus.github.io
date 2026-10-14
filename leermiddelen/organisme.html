@@ -81,6 +81,8 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);
 .keuze button:hover{border-color:var(--vista)}
 .keuze button.on{border-color:var(--ocean);background:var(--ocean);color:#fff}
 .keuzeuit{font-size:.9rem;color:var(--muted);margin-top:10px;min-height:1.4em}
+/* het rustige spelmenu (sm- in spel.css): Start staat in .sm-start, dus zonder eigen marge erboven */
+#scherm-start .sm-start .btn{margin-top:0}
 .btn{margin-top:26px;background:var(--crab);color:#14224C;border:none;border-radius:999px;
   padding:15px 34px;font-weight:700;font-size:1.02rem;min-height:44px;box-shadow:0 8px 20px rgba(242,103,73,.3)}
 .btn:disabled{background:#d8d3cd;color:#14224C;box-shadow:none;cursor:not-allowed}
@@ -273,15 +275,13 @@ body.groot .uitslagregel{font-size:1.05rem}
     <div><i>3</i><b>Wat doet dit onderdeel</b><span>Een onderdeel van een cel of een orgaan, en vier taken om uit te kiezen. Bij elk antwoord staat erbij waarom het zo werkt.</span></div>
   </div>
 
-  <p class="eyebrow" id="nivKop">kies je niveau</p>
-  <div class="keuze" id="niveaus"></div>
-  <p class="keuzeuit" id="nivUit"></p>
+  <p class="sm-kop" id="deelKop">wat wil je doen</p>
+  <div class="sm-tegels compact" id="delen" role="group" aria-labelledby="deelKop"></div>
+  <p class="sm-uit" id="deelUit"></p>
 
-  <p class="eyebrow kop2" id="deelKop">wat wil je doen</p>
-  <div class="keuze" id="delen"></div>
-  <p class="keuzeuit" id="deelUit"></p>
-
-  <button class="btn" id="startBtn" type="button" disabled>Kies eerst een niveau en wat je doet</button>
+  <div class="sm-start" id="startVak">
+    <button class="btn" id="startBtn" type="button">Beginnen</button>
+  </div>
 </section>
 
 <section class="wrap speel hide" id="scherm-spel">
@@ -811,13 +811,34 @@ var TAKEN = [
       });
     });
   }
-  knoppen('niveaus', NIVEAUS, 'nivUit',  function(x){ niveau = x; });
   knoppen('delen',   DELEN,   'deelUit', function(x){ deel = x; });
+
+  /* Het niveau: uit het adres van de docent (?n=), anders uit de leeromgeving (lg-niveau),
+     anders vmbo-kgt. Het staat als regel onder Start (SPEL.niveauRegel), met wijzig. */
+  function niveauVan(id){ return NIVEAUS.filter(function(x){ return x.id === id; })[0] || null; }
+  var nivBron = '';
+  (function(){
+    var m = /[?&]n=([^&#]+)/.exec(location.search), lo = null;
+    try { lo = localStorage.getItem('lg-niveau'); } catch (e){}
+    var uitAdres = m ? niveauVan(decodeURIComponent(m[1])) : null;
+    if (uitAdres){ niveau = uitAdres; nivBron = /[?&]van=lo\b/.test(location.search) ? 'lo' : 'docent'; }
+    else if (niveauVan(lo)){ niveau = niveauVan(lo); nivBron = 'lo'; }
+    else niveau = niveauVan('kgt');
+  })();
+  /* spel.js laadt na dit script: de regel komt er zodra SPEL er is */
+  function nivRegel(){
+    if (!window.SPEL || !SPEL.niveauRegel || document.querySelector('#startVak .sm-niveau')) return;
+    SPEL.niveauRegel(document.getElementById('startVak'), {
+      items:NIVEAUS.map(function(x){ return { id:x.id, naam:x.naam, uit:x.uitleg }; }),
+      gekozen:niveau.id, bron:nivBron,
+      kies:function(id){ niveau = niveauVan(id) || niveau; } });
+  }
+  if (window.SPEL) nivRegel(); else document.addEventListener('DOMContentLoaded', nivRegel);
 
   function klaarCheck(){
     var b = document.getElementById('startBtn');
     b.disabled = !(niveau && deel);
-    b.textContent = b.disabled ? (!niveau && !deel ? 'Kies eerst een niveau en wat je doet' : !niveau ? 'Kies eerst een niveau' : 'Kies eerst wat je wilt doen') : 'Beginnen';
+    b.textContent = b.disabled ? 'Kies eerst wat je wilt doen' : 'Beginnen';
   }
 
   /* ============================================================================
@@ -1175,9 +1196,8 @@ var TAKEN = [
       if (kop) kop.textContent = woord + ': ' + lijst[i].naam + ', ' + (/[?&]van=lo\b/.test(location.search) ? 'gekozen in de leeromgeving' : 'gekozen door je docent');
     }
     /* alvast gekozen, net als in de leeromgeving: vmbo-kgt, alles door elkaar */
-    document.getElementById('niveaus').children[1].click();
     document.getElementById('delen').children[3].click();
-    vast('niveaus', NIVEAUS, param('n'), 'nivKop',  'Niveau');
+    /* het niveau (?n=) staat als regel onder Start, zie boven */
     vast('delen',   DELEN,   param('d'), 'deelKop', 'Onderdeel');
   })();
 
@@ -1192,6 +1212,6 @@ var TAKEN = [
 <script src="klas.js"></script>
 <script src="naamfilter.js"></script>
 <script src="spel.js"></script>
-<script>SPEL.uitleg({ doel:"Weten hoe een levend wezen is opgebouwd: van cel tot organisme.", tijd:"een ronde van je onderdeel, ongeveer 10 minuten", bediening:"Tik het goede antwoord, of het onderdeel dat in de tekening hoort. Met de cijfertoetsen kan het ook.", onder:true, chips:true, zeker:'opnieuwBtn' });</script>
+<script>SPEL.uitleg({ doel:"Weten hoe een levend wezen is opgebouwd: van cel tot organisme.", tijd:"een ronde van je onderdeel, ongeveer 10 minuten", bediening:"Tik het goede antwoord, of het onderdeel dat in de tekening hoort. Met de cijfertoetsen kan het ook.", chips:true, zeker:'opnieuwBtn' });</script>
 </body>
 </html>

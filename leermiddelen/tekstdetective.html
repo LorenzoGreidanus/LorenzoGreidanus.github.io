@@ -142,8 +142,11 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;pa
 .terugkoppeling .regel{display:block;font-weight:400;color:var(--ink);margin-top:4px;font-size:.9rem}
 .knoprij{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
 /* oneindig oefenen: een tweede, rustigere startknop en een labeltje bij de teller */
-.startknoppen{display:flex;flex-wrap:wrap;gap:10px}
-.oneindiguit{margin-top:10px;font-size:.84rem;color:var(--muted)}
+/* het rustige spelmenu (spel.css): het startscherm gecentreerd, zoals de vakspellen */
+#scherm-start{text-align:center}
+#scherm-start .lead{margin-inline:auto}
+#scherm-start .tafereel{max-width:760px;margin-inline:auto}
+#scherm-start .sm-start .knop{border-radius:999px;min-width:220px;font-size:1.05rem}
 .oneindigmerk{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;background:var(--sand);color:var(--ink);font-weight:600;letter-spacing:.08em}
 /* einde */
 .cijfers{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:14px 0}
@@ -313,13 +316,22 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
       <div><i style="background:var(--ocean);color:#fff">3</i><b>Tik het signaalwoord aan</b><span>Elk woord is aan te tikken. Daarna hoor je welk verband het aangeeft.</span></div>
       <div><i style="background:var(--vista);color:#14224C">4</i><b>Kies het schrijfdoel</b><span>Informatie geven, overtuigen, een mening geven, tot handelen aanzetten, amuseren of gevoelens oproepen: de zes uit het examen.</span></div>
     </div>
-    <div class="kaart">
-      <div class="stap"><b>Soort tekst</b><div class="chips schuif" id="soorten"></div></div>
-      <div class="stap"><b>Niveau</b><div class="chips" id="niveaus"></div><p class="tip" id="niveauUit" style="margin-top:6px"></p></div>
-      <div class="stap"><b>Leerjaar</b><div class="chips" id="leerjaren"></div><p class="tip" id="leerjaarUit" style="margin-top:6px"></p></div>
-      <div class="stap startknoppen"><button class="knop crab groot" id="startBtn" type="button">Begin met lezen</button><button class="knop stil groot" id="oneindigBtn" type="button">Oneindig oefenen</button></div>
-      <p class="oneindiguit" id="oneindigUit"></p>
+    <p class="sm-kop" id="soortKop">soort tekst</p>
+    <div class="sm-tegels compact" id="soorten" role="group" aria-labelledby="soortKop"></div>
+
+    <p class="sm-kop" id="leerjaarKop">leerjaar</p>
+    <div class="sm-pillen" id="leerjaren" role="group" aria-labelledby="leerjaarKop"></div>
+    <p class="sm-uit" id="leerjaarUit"></p>
+
+    <p class="sm-kop" id="hoeveelKop">hoeveel alinea’s</p>
+    <div class="sm-pillen" id="hoeveel" role="group" aria-labelledby="hoeveelKop">
+      <button type="button" data-oneindig="0" class="on">een ronde</button>
+      <button type="button" data-oneindig="1">zonder eind</button>
     </div>
+    <p class="sm-uit" id="oneindigUit"></p>
+
+    <div class="sm-start"><button class="knop crab groot" id="startBtn" type="button">Begin met lezen</button></div>
+    <div id="nivRegel"></div>
   </section>
 
   <section id="scherm-spel" class="hide">
@@ -404,17 +416,45 @@ var PER_RONDE = 6;
       b.addEventListener('click', function(){ zet(b.getAttribute('data-id')); tekenKeuze(); });
     });
   }
+  /* hoeveel: een ronde van zes of zonder eind; de docent kan met ?oneindig=1 zonder eind aanzetten */
+  var zonderEind = oneindigUrl;
   function tekenKeuze(){
     chips('soorten', [{ id:'', naam:'alle soorten tekst' }].concat(SOORTEN), soort, function(v){ soort = v; });
-    chips('niveaus', NIVEAUS, niveau, function(v){ niveau = parseInt(v, 10); onthoudNiveau(niveau); });
+    var ae = $('soorten').querySelector('[data-id=""]'); if (ae) ae.className += ' heel';
     chips('leerjaren', LEERJAREN, leerjaar, function(v){ leerjaar = v; onthoudLeerjaar(); });
-    var n = NIVEAUS.filter(function(x){ return x.id === niveau; })[0], lj = LEERJAREN.filter(function(x){ return x.id === leerjaar; })[0];
-    $('niveauUit').textContent = (n ? n.uit : '') + ' Er zijn ' + passend().length + ' alinea\u2019s die passen.';
+    var lj = LEERJAREN.filter(function(x){ return x.id === leerjaar; })[0];
     $('leerjaarUit').textContent = lj ? lj.uit : '';
-    $('startBtn').disabled = $('oneindigBtn').disabled = passend().length < 2;
-    $('oneindigUit').textContent = oneindigUrl ? 'Zoveel alinea’s als je wilt; je stopt zelf.'
-      : 'Een ronde is ' + Math.min(PER_RONDE, passend().length) + ' alinea’s. Oneindig: zoveel als je wilt, je stopt zelf.';
+    Array.prototype.forEach.call($('hoeveel').children, function(b){
+      var aan = (b.getAttribute('data-oneindig') === '1') === zonderEind;
+      b.classList.toggle('on', aan); b.setAttribute('aria-pressed', String(aan));
+    });
+    var aantal = passend().length;
+    $('hoeveel').children[0].textContent = 'een ronde (' + Math.min(PER_RONDE, aantal) + ')';
+    $('startBtn').disabled = aantal < 2;
+    $('oneindigUit').textContent = (zonderEind ? 'Zoveel alinea’s als je wilt. Je stopt zelf.' : 'Ongeveer 8 minuten.') +
+      ' Er ' + (aantal === 1 ? 'is 1 alinea' : 'zijn ' + aantal + ' alinea\u2019s') + ' die passen.';
   }
+  Array.prototype.forEach.call($('hoeveel').children, function(b){
+    b.addEventListener('click', function(){ zonderEind = b.getAttribute('data-oneindig') === '1'; tekenKeuze(); });
+  });
+
+  /* het niveau als regel onder Start: uit het adres van de docent (?n=), anders uit de
+     leeromgeving (lg-niveau), anders vmbo-kgt en tl. Wie het wijzigt, zet het ook voor de leeromgeving. */
+  var NCODE = ['', 'bb', 'kgt', 'hv'], nivBron = '';
+  (function(){
+    var m = /[?&]n=([^&]+)/.exec(location.search), w = m ? decodeURIComponent(m[1]) : '';
+    var i = NCODE.indexOf(w); if (i < 1 && /^[123]$/.test(w)) i = +w;
+    if (i > 0){ niveau = i; nivBron = /[?&]van=lo\b/.test(location.search) ? 'lo' : 'docent'; return; }
+    try { i = NCODE.indexOf(localStorage.getItem('lg-niveau') || ''); } catch (e){ i = -1; }
+    if (i > 0){ niveau = i; nivBron = 'lo'; }
+  })();
+  function niveauRegel(){
+    SPEL.niveauRegel($('nivRegel'), {
+      items: NIVEAUS.map(function(x){ return { id:NCODE[x.id], naam:x.naam, uit:x.uit }; }),
+      gekozen: NCODE[niveau], bron: nivBron,
+      kies: function(id){ niveau = NCODE.indexOf(id); onthoudNiveau(niveau); tekenKeuze(); } });
+  }
+  if (window.SPEL && SPEL.niveauRegel) niveauRegel(); else addEventListener('DOMContentLoaded', niveauRegel);
   /* De zak raakt leeg en wordt opnieuw geschud, zodat je eerst alle passende
      alinea's ziet. Na het schudden nooit meteen dezelfde alinea nog een keer. */
   function trek(){
@@ -639,12 +679,8 @@ var PER_RONDE = 6;
   /* de tutorial, een keer, zodra het spelscherm er is; de klok staat intussen stil */
   if (window.TUTORIAL && window.TUTORIALS && TUTORIALS['tekst']){
     TUTORIAL.naStart('startBtn', 'tekst', TUTORIALS['tekst'], {});
-    TUTORIAL.naStart('oneindigBtn', 'tekst', TUTORIALS['tekst'], {});
   }
-  /* de docent linkt met ?oneindig=1: dan is Start meteen oneindig */
-  if (oneindigUrl){ $('startBtn').textContent = 'Start: oneindig oefenen'; $('oneindigBtn').classList.add('hide'); }
-  $('startBtn').addEventListener('click', function(){ begin(oneindigUrl); });
-  $('oneindigBtn').addEventListener('click', function(){ begin(true); });
+  $('startBtn').addEventListener('click', function(){ begin(zonderEind); });
   $('nogBtn').addEventListener('click', function(){ begin(oneindig); });
   $('andersBtn').addEventListener('click', function(){ $('scherm-einde').classList.add('hide'); $('scherm-start').classList.remove('hide'); tekenKeuze(); });
   $('stopBtn').addEventListener('click', einde);
@@ -659,6 +695,6 @@ var PER_RONDE = 6;
 </script>
 <script src="thema.js"></script>
 <script src="spel.js"></script>
-<script>SPEL.uitleg({ doel:"De hoofdgedachte van een alinea vinden en signaalwoorden herkennen.", tijd:"zes alinea's, ongeveer 8 minuten", bediening:"Tik op een antwoord, en daarna op het woord in de tekst dat het verband aangeeft.", meer:'.uitleg', onder:true, links:true, chips:true, zeker:'stopBtn' });</script>
+<script>SPEL.uitleg({ doel:"De hoofdgedachte van een alinea vinden en signaalwoorden herkennen.", tijd:"zes alinea's, ongeveer 8 minuten", bediening:"Tik op een antwoord, en daarna op het woord in de tekst dat het verband aangeeft.", meer:'.uitleg', chips:true, zeker:'stopBtn' });</script>
 </body>
 </html>

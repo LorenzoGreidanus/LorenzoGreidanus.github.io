@@ -50,7 +50,6 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 .linkbtn{background:none;border:none;color:var(--muted);text-decoration:underline;text-underline-offset:4px;font-size:.85rem;padding:6px}
 .linkbtn:hover{color:var(--ink)}
 
-.kies{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:22px auto 0;max-width:900px}
 .btn{display:inline-block;border:none;background:var(--crab);color:#fff;font-weight:600;padding:15px 32px;border-radius:999px;
   box-shadow:0 10px 0 rgba(20,34,76,.10);margin-top:24px;transition:transform .16s var(--ease)}
 .btn:hover{transform:translateY(-2px)}
@@ -245,26 +244,16 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
   .bakken.b10 .bak span,.bakken.b6 .bak span{font-size:.72rem;margin-top:1px}
   .melding{margin-top:12px;padding:13px 15px}
 }
-/* Startscherm: niveau en manier van oefenen staan al klaar, dus Start kan
-   meteen. Op een telefoon worden de keuzekaartjes een compacte rij met alleen
-   de naam; wat de gekozen kaart inhoudt, staat er in een regel onder. Zo staat
-   Start in het eerste scherm. */
-.keuzekop{margin-top:30px}
-.nivnoot{font-size:.85rem;color:var(--muted);margin-top:6px}
-.keuzeuit{display:none}
+/* Het rustige spelmenu (sm- in spel.css): de stand als pillen, welke tijdvakken als
+   keuzelijst onder een kopje, Start in .sm-start (zonder eigen marge) en het niveau
+   als regel onder Start (SPEL.niveauRegel). */
+#scherm-start .sm-start .btn{margin-top:0}
+#scherm-start .tvkies{margin-top:0}
+#scherm-start .sm-kop label{cursor:pointer}
+#scherm-start .voetnoot{margin-top:18px;font-size:.82rem}
 @media(max-width:600px){
   #scherm-start{padding-top:18px}
   #scherm-start h1{margin:4px 0 10px}
-  .keuzekop{margin-top:20px}
-  .nivnoot{margin-top:2px}
-  .start .kies{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
-  .start #modussen{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .start .kies .kaartje{display:grid;place-items:center;min-height:48px;padding:8px 6px;border-radius:14px;text-align:center}
-  .start .kies .kaartje b{font-size:.86rem;line-height:1.25}
-  .start .kies .kaartje span{display:none}
-  .keuzeuit{display:block;font-size:.84rem;color:var(--muted);margin-top:6px;min-height:1.4em}
-  .start .tvkies{margin-top:12px}
-  .start #startBtn{margin-top:16px}
 }
 </style>
 <link rel="stylesheet" href="basis.css">
@@ -292,21 +281,19 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);
   <p class="hand" style="font-size:1.6rem">waar hoort het thuis</p>
   <h1>Tijdvakken sorteren</h1>
   <p class="lead">Je krijgt een gebeurtenis. Sleep hem naar het tijdvak waar hij thuishoort, of tik op het juiste vak.</p>
-  <p class="eyebrow keuzekop" id="nivKop">kies je niveau</p>
-  <p class="nivnoot">Voor leerjaar 1 en 2, van vmbo-bb tot vwo.</p>
-  <div class="kies" id="niveaus"></div>
-  <p class="keuzeuit" id="nivUit"></p>
+  <p class="sm-kop" id="modusKop">hoe wil je oefenen</p>
+  <div class="sm-pillen" id="modussen" role="group" aria-labelledby="modusKop"></div>
+  <p class="sm-uit" id="modusUit"></p>
 
-  <p class="eyebrow keuzekop" id="modusKop">hoe wil je oefenen</p>
-  <div class="kies" id="modussen"></div>
-  <p class="keuzeuit" id="modusUit"></p>
+  <p class="sm-kop"><label for="tvKeuze">welke tijdvakken</label></p>
   <div class="tvkies" id="tvRij">
-    <label for="tvKeuze">Welke tijdvakken</label>
     <select id="tvKeuze"></select>
   </div>
 
-  <button class="btn" id="startBtn" type="button" disabled>Start met oefenen</button>
-  <p style="margin-top:14px;font-size:.82rem;color:var(--muted)">Geen inloggen. Je scores blijven op dit apparaat.</p>
+  <div class="sm-start" id="startVak">
+    <button class="btn" id="startBtn" type="button" disabled>Start met oefenen</button>
+  </div>
+  <p class="sm-uit voetnoot">Voor leerjaar 1 en 2, van vmbo-bb tot vwo. Geen inloggen. Je scores blijven op dit apparaat.</p>
   <div id="startLijst" class="lijst"></div>
 </section>
 
@@ -530,31 +517,35 @@ var KENMERKEN = [
       elBakken = document.getElementById('bakken'), elMelding = document.getElementById('melding'),
       elNa = document.getElementById('naRonde'), elStop = document.getElementById('opnieuwBtn');
 
-  /* ---------- niveau ---------- */
-  var kiezer = document.getElementById('niveaus');
-  NIVEAUS.forEach(function(n){
-    var b = document.createElement('button');
-    b.className = 'kaartje'; b.type = 'button'; b.setAttribute('aria-pressed', 'false');
-    b.innerHTML = '<b>' + n.naam + '</b><span>' + n.uitleg + '</span>';
-    b.addEventListener('click', function(e){
-      niveau = n;
-      Array.prototype.forEach.call(kiezer.children, function(c){ c.classList.remove('on'); c.setAttribute('aria-pressed', 'false'); });
-      b.classList.add('on'); b.setAttribute('aria-pressed', 'true');
-      var p = document.getElementById('pillNiv'); p.textContent = n.naam; p.classList.remove('hide');
-      document.getElementById('nivUit').textContent = n.uitleg;
-      /* een echte tik van de leerling onthoudt het niveau voor alle spellen;
-         de standaardkeuze en een link van de docent doen dat niet */
-      if (e && e.isTrusted){ try { localStorage.setItem('lg-niveau', n.id); } catch (x){} }
-      klaarCheck();
-    });
-    kiezer.appendChild(b);
-  });
+  /* ---------- niveau ----------
+     Uit het adres (?n=, van de docent of met van=lo uit de leeromgeving), anders het
+     niveau uit de leeromgeving of een eerder spel (lg-niveau), anders vmbo-kgt. Het staat
+     als regel onder Start (SPEL.niveauRegel); wie daar zelf iets anders kiest, onthoudt
+     het voor alle spellen. Het adres en de standaardkeuze schrijven niets weg. */
+  function zetNiveau(n){
+    niveau = n;
+    var p = document.getElementById('pillNiv'); p.textContent = n.naam; p.classList.remove('hide');
+    klaarCheck();
+  }
+  var nivBron = '';
+  function niveauVan(id){ return NIVEAUS.filter(function(x){ return x.id === id; })[0] || null; }
+  function nivRegel(){
+    if (!window.SPEL || !SPEL.niveauRegel || document.querySelector('#startVak .sm-niveau')) return;
+    SPEL.niveauRegel(document.getElementById('startVak'), {
+      items:NIVEAUS.map(function(x){ return { id:x.id, naam:x.naam, uit:x.uitleg }; }),
+      gekozen:niveau.id, bron:nivBron,
+      kies:function(id){
+        var n = niveauVan(id); if (!n) return;
+        try { localStorage.setItem('lg-niveau', n.id); } catch (x){}
+        zetNiveau(n);
+      } });
+  }
 
   var modusVak = document.getElementById('modussen');
   MODUSSEN.forEach(function(m){
     var b = document.createElement('button');
-    b.className = 'kaartje'; b.type = 'button'; b.setAttribute('aria-pressed', 'false');
-    b.innerHTML = '<b>' + m.naam + '</b><span>' + m.uitleg + '</span>';
+    b.type = 'button'; b.setAttribute('aria-pressed', 'false'); b.setAttribute('data-id', m.id);
+    b.textContent = m.naam;
     b.addEventListener('click', function(){
       modus = m;
       Array.prototype.forEach.call(modusVak.children, function(c){ c.classList.remove('on'); c.setAttribute('aria-pressed', 'false'); });
@@ -572,9 +563,13 @@ var KENMERKEN = [
   (function(){
     var eerder = null;
     try { eerder = localStorage.getItem('lg-niveau'); } catch (e){}
-    var i = NIVEAUS.map(function(n){ return n.id; }).indexOf(eerder);
-    kiezer.children[i < 0 ? 1 : i].click();
+    var m = /[?&]n=([^&]+)/.exec(location.search), uitAdres = m ? niveauVan(decodeURIComponent(m[1])) : null;
+    if (uitAdres){ nivBron = /[?&]van=lo\b/.test(location.search) ? 'lo' : 'docent'; zetNiveau(uitAdres); }
+    else if (niveauVan(eerder)){ nivBron = 'lo'; zetNiveau(niveauVan(eerder)); }
+    else zetNiveau(niveauVan('kgt'));
     modusVak.children[0].click();
+    /* spel.js laadt na dit script: de regel komt er zodra SPEL er is */
+    if (window.SPEL) nivRegel(); else document.addEventListener('DOMContentLoaded', nivRegel);
   })();
 
   /* ---------- welke tijdvakken: voor een les over een paar tijdvakken ---------- */
@@ -1093,7 +1088,7 @@ var KENMERKEN = [
         }
       }
     }
-    kiesUit('niveaus', NIVEAUS, param('n'), 'nivKop', 'Niveau');
+    /* ?n= staat al als regel onder Start (zie niveau, boven) */
     var m = param('m'); if (m === 'oefen') m = 'rondes';
     kiesUit('modussen', MODUSSEN, m, 'modusKop', 'Stand');
     var t = /^(\d{1,2})(?:-(\d{1,2}))?$/.exec(param('tv') || '');
@@ -1122,6 +1117,6 @@ var KENMERKEN = [
 <script src="klas.js"></script>
 <script src="naamfilter.js"></script>
 <script src="spel.js"></script>
-<script>SPEL.uitleg({ onder:true, doel:"Zet gebeurtenissen en kenmerken in het juiste tijdvak.", tijd:"ongeveer 10 minuten", bediening:"Sleep de kaart naar het tijdvak, of tik op het tijdvak. Met Tab en Enter kan het ook." });</script>
+<script>SPEL.uitleg({ doel:"Zet gebeurtenissen en kenmerken in het juiste tijdvak.", tijd:"ongeveer 10 minuten", bediening:"Sleep de kaart naar het tijdvak, of tik op het tijdvak. Met Tab en Enter kan het ook." });</script>
 </body>
 </html>

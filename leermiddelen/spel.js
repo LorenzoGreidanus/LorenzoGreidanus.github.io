@@ -591,8 +591,40 @@ window.SPEL = (function(){
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tikLees); else tikLees();
 
+  /* ---------- het niveau als regel onder Start ----------
+     Het niveau kiest een leerling in de leeromgeving (lg-niveau). Een spel met een eigen startscherm
+     zet het als een regel onder Start, met "wijzig" om het toch te kiezen:
+       var nr = SPEL.niveauRegel(element, { items:[{ id:'bb', naam:'vmbo-bb', uit:'...' }, ...],
+                                            gekozen:'kgt', bron:'lo'|'docent'|'', kies:function(id){ ... } });
+       nr.zet(id, bron)   later iets anders laten zien
+     bron 'lo': uit de leeromgeving; 'docent': uit het adres van de docent (dan geen wijzig). */
+  function niveauRegel(waar, o){
+    if (!waar) return { zet:function(){} };
+    o = o || {};
+    var items = o.items || [], nu = o.gekozen, bron = o.bron || '';
+    var d = document.createElement('details'); d.className = 'sm-niveau';
+    waar.appendChild(d);
+    function teken(){
+      var it = items.filter(function(x){ return x.id === nu; })[0] || items[0] || { naam:'' };
+      d.classList.toggle('vast', bron === 'docent' || items.length < 2);
+      d.innerHTML = '<summary><span>Niveau <b>' + schoon(it.naam) + '</b>' + (bron === 'docent' ? ', gekozen door je docent' : bron === 'lo' ? ', uit de leeromgeving' : '') + '</span>' +
+        '<span class="sm-wijzig">wijzig</span></summary>' +
+        '<div class="sm-pillen" role="group" aria-label="Niveau">' + items.map(function(x){
+          return '<button type="button" data-id="' + schoon(x.id) + '" aria-pressed="' + (x.id === nu) + '"' + (x.id === nu ? ' class="on"' : '') + '>' + schoon(x.naam) + '</button>'; }).join('') + '</div>' +
+        (it.uit ? '<p class="sm-uit">' + schoon(it.uit) + '</p>' : '');
+    }
+    d.addEventListener('click', function(e){
+      var b = e.target.closest && e.target.closest('.sm-pillen button'); if (!b) return;
+      nu = b.getAttribute('data-id'); bron = 'zelf';
+      var open = d.open; teken(); d.open = open;
+      if (o.kies) o.kies(nu);
+    });
+    teken();
+    return { zet:function(id, b){ nu = id; if (b !== undefined) bron = b; var open = d.open; teken(); d.open = open; }, element:d };
+  }
+
   return {
-    raak: raak, uitleg:uitleg, stappen:stappen, einde:einde, bestand:bestand, naamMag:naamMag, schoonKlassementen:schoonKlassementen,
+    raak: raak, uitleg:uitleg, niveauRegel:niveauRegel, stappen:stappen, einde:einde, bestand:bestand, naamMag:naamMag, schoonKlassementen:schoonKlassementen,
     inBeeld:inBeeld, drukknoppen:drukknoppen, zeker:zeker,
     /* een naam of iets anders van de speler als tekst in de opmaak zetten;
        de klassementen van deze computer gebruiken hem */

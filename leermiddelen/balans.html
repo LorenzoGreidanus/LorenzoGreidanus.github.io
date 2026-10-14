@@ -80,6 +80,9 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
 #scherm-start .btn.ghost{color:var(--ink);border-color:color-mix(in srgb,var(--ink) 22%,transparent)}
 #scherm-start .btn.ghost:not(:disabled):hover{border-color:var(--ink)}
 .oneindiguit{margin-top:10px;font-size:.84rem;color:var(--muted)}
+/* het rustige spelmenu (sm- in spel.css): Start staat in .sm-start, zonder eigen marge */
+.sm-start .btn{margin-top:0}
+@media(min-width:561px){#niveaus{grid-template-columns:repeat(3,minmax(0,1fr));max-width:640px}}
 .oneindiglabel{margin-left:8px;padding:2px 8px;border:1.5px solid currentColor;border-radius:999px;color:var(--link)}
 
 .spelkop{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;padding:16px 0 0}
@@ -238,20 +241,25 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
   <h1>De balans</h1>
   <p class="lead">Haal aan beide kanten van de balans hetzelfde weg, tot er één zakje x over is.</p>
 
-  <p class="eyebrow" id="nivKop" style="margin-top:24px">welk niveau</p>
-  <div class="kies" id="niveaus"></div>
+  <p class="sm-kop" id="nivKop">welk niveau</p>
+  <div class="sm-tegels" id="niveaus" role="group" aria-labelledby="nivKop"></div>
 
-  <div class="stap" id="modusRij">
-    <p class="eyebrow" id="modusKop">hoe wil je spelen</p>
-    <div class="kies" id="modussen"></div>
+  <div id="modusRij">
+    <p class="sm-kop" id="modusKop">hoe wil je spelen</p>
+    <div class="sm-pillen" id="modussen" role="group" aria-labelledby="modusKop"></div>
+    <p class="sm-uit" id="modusUit"></p>
   </div>
 
-  <div class="startknoppen">
+  <div id="hoeveelRij">
+    <p class="sm-kop" id="hoeveelKop">hoeveel vergelijkingen</p>
+    <div class="sm-pillen" id="hoeveel" role="group" aria-labelledby="hoeveelKop"><button type="button" data-id="ronde" class="on">één ronde (8)</button><button type="button" data-id="eind">zonder eind</button></div>
+    <p class="sm-uit" id="oneindigUit"></p>
+  </div>
+
+  <div class="sm-start">
     <button class="btn" id="startBtn" type="button" disabled>Start</button>
-    <button class="btn ghost" id="oneindigBtn" type="button" disabled>Oneindig oefenen</button>
   </div>
-  <p class="oneindiguit" id="oneindigUit">Een ronde is 8 vergelijkingen. Oneindig: zoveel als je wilt, je stopt zelf.</p>
-  <p style="margin-top:14px;font-size:.82rem;color:var(--muted)">Geen inloggen. Alleen in de uitdaging wordt je score op dit apparaat bewaard.</p>
+  <p class="sm-uit">Geen inloggen. Alleen in de uitdaging wordt je score op dit apparaat bewaard.</p>
   <div id="startLijst" class="lijst"></div>
 </section>
 
@@ -403,8 +411,6 @@ var AANTAL = 8;
   var bezig = false, opgeslagen = false, tips = 0, wachter = null;
   /* oneindig: geen ronde van acht, doorgaan tot je zelf stopt */
   var oneindig = false, oneindigUrl = /[?&]oneindig=1\b/.test(location.search);
-  document.getElementById('oneindigUit').textContent =
-    'Een ronde is ' + AANTAL + ' vergelijkingen. Oneindig: zoveel als je wilt, je stopt zelf.';
 
   var elStart = document.getElementById('scherm-start'),
       elSpel  = document.getElementById('scherm-spel'),
@@ -417,15 +423,18 @@ var AANTAL = 8;
   function schrijf(d){ try { localStorage.setItem(SLEUTEL, JSON.stringify(d)); return true; } catch (e){ return false; } }
 
   /* ---------- keuze ---------- */
-  function knoppen(vakId, lijst, kies){
+  /* kaartjes met naam en uitleg, of pillen met de uitleg eronder in uitId */
+  function knoppen(vakId, lijst, kies, uitId){
     var vak = document.getElementById(vakId);
     lijst.forEach(function(item){
       var b = document.createElement('button');
-      b.className = 'kaartje'; b.type = 'button';
-      b.innerHTML = '<b>' + item.naam + '</b><span>' + item.uitleg + '</span>';
+      b.type = 'button';
+      if (uitId) b.textContent = item.naam;
+      else b.innerHTML = '<b>' + item.naam + '</b><span>' + item.uitleg + '</span>';
       b.addEventListener('click', function(){
         Array.prototype.forEach.call(vak.children, function(c){ c.classList.remove('on'); });
         b.classList.add('on');
+        if (uitId) document.getElementById(uitId).textContent = item.uitleg;
         kies(item);
       });
       vak.appendChild(b);
@@ -436,11 +445,35 @@ var AANTAL = 8;
     var p = document.getElementById('pillNiv'); p.textContent = n.naam; p.classList.remove('hide');
     klaarCheck();
   });
-  knoppen('modussen', MODUSSEN, function(m){ modus = m; klaarCheck(); });
+  knoppen('modussen', MODUSSEN, function(m){
+    modus = m;
+    /* de uitdaging is altijd een ronde: zonder eind is een manier van rustig oefenen */
+    if (isUitdaging() && zonderEind){ zonderEind = false; tekenHoeveel(); }
+    klaarCheck();
+  }, 'modusUit');
+
+  /* hoeveel: een ronde, of zonder eind (dan is Start oneindig, en rustig oefenen) */
+  var zonderEind = false;
+  function tekenHoeveel(){
+    Array.prototype.forEach.call(document.getElementById('hoeveel').children, function(b){
+      b.classList.toggle('on', (b.getAttribute('data-id') === 'eind') === zonderEind);
+    });
+    document.getElementById('oneindigUit').textContent = zonderEind || oneindigUrl
+      ? 'Zoveel vergelijkingen als je wilt. Je stopt zelf.'
+      : 'Een ronde is ' + AANTAL + ' vergelijkingen, ongeveer 15 minuten.';
+  }
+  document.querySelector('#hoeveel [data-id="ronde"]').textContent = 'één ronde (' + AANTAL + ')';
+  Array.prototype.forEach.call(document.getElementById('hoeveel').children, function(b){
+    b.addEventListener('click', function(){
+      zonderEind = b.getAttribute('data-id') === 'eind';
+      if (zonderEind && isUitdaging()) naarRustig();
+      tekenHoeveel();
+    });
+  });
+  tekenHoeveel();
 
   function klaarCheck(){
     /* oneindig is altijd rustig oefenen, dus daarvoor hoeft de stand nog niet gekozen */
-    document.getElementById('oneindigBtn').disabled = !niveau;
     if (oneindigUrl){
       elStartBtn.disabled = !niveau;
       elStartBtn.textContent = 'Start: oneindig oefenen';
@@ -732,7 +765,6 @@ var AANTAL = 8;
   /* ---------- verloop ---------- */
   /* de tutorial, een keer, zodra het spelscherm er is; de klok staat intussen stil */
   if (window.TUTORIAL && window.TUTORIALS && TUTORIALS['balans']) TUTORIAL.naStart('startBtn', 'balans', TUTORIALS['balans'], {});
-  if (window.TUTORIAL && window.TUTORIALS && TUTORIALS['balans']) TUTORIAL.naStart('oneindigBtn', 'balans', TUTORIALS['balans'], {});
   /* oneindig is een manier van rustig oefenen: de stand springt daarop */
   function naarRustig(){
     var k = document.getElementById('modussen').children[0];
@@ -740,10 +772,8 @@ var AANTAL = 8;
   }
   elStartBtn.addEventListener('click', function(){
     if (oneindigUrl){ if (niveau){ naarRustig(); start(true); } return; }
+    if (niveau && zonderEind){ naarRustig(); start(true); return; }
     if (niveau && modus) start(false);
-  });
-  document.getElementById('oneindigBtn').addEventListener('click', function(){
-    if (niveau){ naarRustig(); start(true); }
   });
   document.getElementById('nogeensBtn').addEventListener('click', function(){
     if (oneindig) start(true); else naarStart();
@@ -910,14 +940,13 @@ var AANTAL = 8;
     /* ?oneindig=1: Start is meteen oneindig oefenen, de stand kiezen hoeft niet */
     if (oneindigUrl){
       document.getElementById('modusRij').classList.add('hide');
-      document.getElementById('oneindigBtn').classList.add('hide');
-      document.getElementById('oneindigUit').textContent = 'Zoveel vergelijkingen als je wilt; je stopt zelf.';
+      document.getElementById('hoeveel').classList.add('hide');
       naarRustig();
+      tekenHoeveel();
       klaarCheck();
     } else if (param('m') === 'uitdaging'){
       /* de docent koos de uitdaging: dan geen oneindig oefenen ernaast */
-      document.getElementById('oneindigBtn').classList.add('hide');
-      document.getElementById('oneindigUit').classList.add('hide');
+      document.getElementById('hoeveelRij').classList.add('hide');
     }
   })();
 
@@ -932,6 +961,6 @@ var AANTAL = 8;
 <script src="klas.js"></script>
 <script src="naamfilter.js"></script>
 <script src="spel.js"></script>
-<script>SPEL.uitleg({ doel:"Los vergelijkingen op door aan beide kanten hetzelfde weg te halen, tot x alleen staat.", tijd:"acht vergelijkingen, ongeveer 15 minuten", bediening:"Kies een getal en tik dan wat je aan beide kanten doet: blokjes of zakjes weghalen, blokjes erbij, of delen. Een tip kost niets.", onder:true, chips:true, zeker:'opnieuwBtn' });</script>
+<script>SPEL.uitleg({ doel:"Los vergelijkingen op door aan beide kanten hetzelfde weg te halen, tot x alleen staat.", tijd:"acht vergelijkingen, ongeveer 15 minuten", bediening:"Kies een getal en tik dan wat je aan beide kanten doet: blokjes of zakjes weghalen, blokjes erbij, of delen. Een tip kost niets.", chips:true, zeker:'opnieuwBtn' });</script>
 </body>
 </html>

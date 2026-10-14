@@ -112,18 +112,28 @@ window.VAKSPEL = (function(){
     zelfVoor = null; Array.prototype.forEach.call(document.querySelectorAll('#zelfVoor button'), function(x){ x.classList.remove('on'); x.setAttribute('aria-pressed', 'false'); });
   }
   /* Tien opgaven was kort voor een les. Standaard nu twintig; wie snel wil, kiest tien, wie lang wil dertig (of oneindig). */
-  var AANTALLEN = [10, 20, 30], aantal = 20;
-  try { var la = +localStorage.getItem('lg-aantal'); if (AANTALLEN.indexOf(la) >= 0) aantal = la; } catch (e){}
+  /* 0 is zonder eind: zoveel als je wilt, je stopt zelf (vroeger de knop Oneindig oefenen) */
+  var AANTALLEN = [10, 20, 30, 0], aantal = 20;
+  try { var la = localStorage.getItem('lg-aantal'); if (la !== null && AANTALLEN.indexOf(+la) >= 0) aantal = +la; } catch (e){}
   function tekenAantal(){
     var v = $('keuze-aantal'); if (!v) return;
     Array.prototype.forEach.call(v.querySelectorAll('button'), function(b){ var aan = +b.getAttribute('data-n') === aantal; b.classList.toggle('on', aan); b.setAttribute('aria-pressed', aan ? 'true' : 'false'); });
-    $('uit-aantal').textContent = 'Ongeveer ' + minuten(aantal) + ' minuten.';
+    $('uit-aantal').textContent = aantal ? 'Ongeveer ' + minuten(aantal) + ' minuten.' : 'Zoveel als je wilt. Je stopt zelf.';
   }
+  function rondeAantal(){ return aantal || 20; }
   /* hoe lang een ronde duurt: een half minuutje per opgave, of naar rato van cfg.minuten
      (dat geldt voor het aantal waar het spel mee kwam; een tekst lezen duurt langer dan een som) */
   function minuten(n){
     var per = cfg && cfg.minuten ? cfg.minuten / (cfg.basisAantal || 10) : .5;
     return Math.max(3, Math.round(n * per));
+  }
+  /* paasei.js pas laden als er iets te vieren is */
+  var goudNu = false, goudBonus = 0;
+  function paasei(fn){
+    if (window.PAASEI){ fn(); return; }
+    var sc = document.createElement('script'); sc.src = (document.currentScript && document.currentScript.src || 'vakspel.js').replace(/vakspel\.js[^\/]*$/, '') + 'paasei.js';
+    sc.onload = function(){ if (window.PAASEI) fn(); };
+    document.head.appendChild(sc);
   }
   var cfg = null, keuze = {}, nr = 0, goed = 0, fout = 0, punten = 0, reeks = 0, besteReeks = 0, od = {}, missers = [], perDeel = {}, bezig = false, opgave = null;
 
@@ -156,22 +166,24 @@ window.VAKSPEL = (function(){
         '<p class="lead" id="leadTekst">' + schoon(cfg.lead || '') + '</p>' +
         /* de kaartjes met uitleg gaan achter "Alle regels" in het paneel van spel.js, zodat Start in beeld staat */
         '<div class="hoe uitleg">' + (cfg.hoe || []).map(function(h, i){ return '<div><i>' + (i + 1) + '</i><b>' + schoon(h.kop) + '</b><span>' + h.tekst + '</span></div>'; }).join('') + '</div>' +
-        (cfg.keuzes || []).map(function(k, i){
-          var rij = '<div class="keuze" id="keuze-' + k.id + '" role="group" aria-labelledby="kop-' + k.id + '"></div><p class="keuzeuit" id="uit-' + k.id + '"></p>';
+        /* wat je oefent: kaartjes in een raster. Het niveau staat niet hier maar onder Start (zie niveauHtml). */
+        (cfg.keuzes || []).filter(function(k){ return k.id !== 'niveau'; }).map(function(k, i){
+          var rij = '<div class="keuze tegels" id="keuze-' + k.id + '" role="group" aria-labelledby="kop-' + k.id + '"></div><p class="keuzeuit hide" id="uit-' + k.id + '"></p>';
           /* inklap: een keuze die de meesten laten staan, dicht achter een regel met wat er nu gekozen is */
-          if (k.inklap) return '<details class="keuzeklap' + (i ? ' kop2' : '') + '"><summary><span class="eyebrow" id="kop-' + k.id + '">' + schoon(k.kop) + '</span> <b id="nu-' + k.id + '"></b></summary>' + rij + '</details>';
-          return '<p class="eyebrow' + (i ? ' kop2' : '') + '" id="kop-' + k.id + '">' + schoon(k.kop) + '</p>' + rij;
+          if (k.inklap) return '<details class="keuzeklap kop2"><summary><span class="eyebrow" id="kop-' + k.id + '">' + schoon(k.kop) + '</span> <b id="nu-' + k.id + '"></b></summary>' + rij + '</details>';
+          return '<p class="eyebrow kopvak" id="kop-' + k.id + '">' + schoon(k.kop) + '</p>' + rij;
         }).join('') +
+        /* hoeveel opgaven per ronde: standaard 20, onthouden op dit apparaat; 0 is zonder eind */
+        '<div class="aantalrij"><p class="eyebrow kopvak" id="kop-aantal">hoeveel opgaven</p><div class="keuze" id="keuze-aantal" role="group" aria-labelledby="kop-aantal">' +
+          AANTALLEN.map(function(n){ return '<button type="button" data-n="' + n + '" aria-pressed="false"' + (n ? '' : ' class="zondereind"') + '>' + (n || 'zonder eind') + '</button>'; }).join('') + '</div><p class="keuzeuit" id="uit-aantal"></p></div>' +
         /* het leerdoel, en hoe goed je denkt dat je het al kunt: achteraf leg je dat naast je uitslag */
         '<div class="leerdoel">' + (cfg.leerdoel ? '<p class="eyebrow">wat je hier leert</p><p class="ldtekst">' + schoon(cfg.leerdoel) + '</p>' : '') +
           '<p class="ldvraag" id="ldVraag">Hoe goed kun je dit nu al? Aan het eind zie je of het klopte.</p><div class="keuze ldkeuze" id="zelfVoor" role="group" aria-labelledby="ldVraag">' +
           ZELF.map(function(z, i){ return '<button type="button" data-z="' + i + '" aria-pressed="false">' + z + '</button>'; }).join('') + '</div></div>' +
-        /* hoeveel opgaven per ronde: standaard 20, onthouden op dit apparaat */
-        '<div class="aantalrij"><p class="eyebrow" id="kop-aantal">hoeveel opgaven</p><div class="keuze" id="keuze-aantal" role="group" aria-labelledby="kop-aantal">' +
-          AANTALLEN.map(function(n){ return '<button type="button" data-n="' + n + '" aria-pressed="false">' + n + '</button>'; }).join('') + '</div><p class="keuzeuit" id="uit-aantal"></p></div>' +
         '<div class="startknoppen"><button class="btn" id="startBtn" type="button">Start</button>' +
-        '<button class="btn tweede" id="oneindigBtn" type="button" title="Zoveel opgaven als je wilt, je stopt zelf">Oneindig oefenen</button>' +
-        '<button class="btn tweede" id="begeleidBtn" type="button" title="Eerst een voorbeeld, dan samen met de stappen, dan zelf">Stap voor stap</button></div>' +
+        '<button class="btn tweede hide" id="oneindigBtn" type="button" tabindex="-1" aria-hidden="true">Oneindig oefenen</button>' +
+        '<button class="btn tweede stapvoorstap" id="begeleidBtn" type="button" title="Eerst een voorbeeld, dan samen met de stappen, dan zelf"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4v-5h4v-5h4V5h4"/></svg>Stap voor stap</button></div>' +
+        niveauHtml() +
       '</section>' +
       '<section class="wrap speelvak hide" id="scherm-spel">' +
         /* stap voor stap: de onderdelen en de drie fasen, in plaats van de balk met punten */
@@ -203,15 +215,43 @@ window.VAKSPEL = (function(){
       '<footer>meneer Greidanus &middot; ' + new Date().getFullYear() + '</footer>';
   }
 
+  /* Het niveau kiest een leerling in de leeromgeving. Hier staat het als een regel onder Start;
+     met "wijzig" klapt de keuze toch open (handig op het digibord of zonder leeromgeving). */
+  function niveauHtml(){
+    var k = (cfg.keuzes || []).filter(function(x){ return x.id === 'niveau'; })[0];
+    if (!k) return '';
+    return '<details class="niveauklap" id="niveauKlap"><summary><span class="nvregel"><span id="kop-niveau">Niveau</span> <b id="nu-niveau"></b><span id="nvBron"></span></span>' +
+      '<span class="nvwijzig">wijzig</span></summary>' +
+      '<div class="keuze" id="keuze-niveau" role="group" aria-labelledby="kop-niveau"></div><p class="keuzeuit" id="uit-niveau"></p></details>';
+  }
+  /* waar het niveau vandaan komt: de docent (in het adres), de leeromgeving, of nog niemand */
+  var nivBron = '';
+  function tekenNiveauBron(){
+    var b = $('nvBron'); if (!b) return;
+    b.textContent = nivBron === 'docent' ? ', gekozen door je docent' : nivBron === 'lo' ? ', uit de leeromgeving' : '';
+    /* van de docent, of er is maar één niveau: dan valt er niets te wijzigen */
+    var nk = (cfg.keuzes || []).filter(function(x){ return x.id === 'niveau'; })[0];
+    var klap = $('niveauKlap'); if (klap) klap.classList.toggle('vast', nivBron === 'docent' || !nk || nk.items.length < 2);
+  }
+
   /* ---------- keuzes op het startscherm ---------- */
   function tekenKeuzes(){
     (cfg.keuzes || []).forEach(function(k){
       var vak = $('keuze-' + k.id);
       if (keuze[k.id] === undefined) keuze[k.id] = k.std !== undefined ? k.std : (k.items[0] && k.items[0].id);
-      vak.innerHTML = k.items.map(function(it){ return '<button type="button" data-id="' + schoon(it.id) + '"' + (it.id === keuze[k.id] ? ' class="on" aria-pressed="true"' : ' aria-pressed="false"') + '>' + schoon(it.naam) + '</button>'; }).join('');
-      Array.prototype.forEach.call(vak.querySelectorAll('button'), function(b){ b.addEventListener('click', function(){ keuze[k.id] = b.getAttribute('data-id'); onthoud(k.id); tekenKeuzes(); }); });
-      /* een lange rij schuift op een telefoon opzij (vakspel.css); de gekozen knop blijft in beeld */
-      vak.classList.toggle('schuifrij', k.items.length >= 4);
+      var tegel = k.id !== 'niveau';
+      /* hebben alle kaartjes een regel uitleg, dan staat die op het kaartje; anders compacte kaartjes
+         en de uitleg van het gekozen kaartje eronder, zodat ze allemaal even hoog zijn */
+      var metUit = tegel && k.items.every(function(it){ return it.id === 'alles' || (it.uit && it.uit.length <= 60); });
+      vak.classList.toggle('compact', tegel && !metUit);
+      if ($('uit-' + k.id)) $('uit-' + k.id).classList.toggle('hide', metUit);
+      vak.innerHTML = k.items.map(function(it){
+        var kl = (it.id === keuze[k.id] ? 'on' : '') + (tegel && it.id === 'alles' ? ' heel' : '');
+        return '<button type="button" data-id="' + schoon(it.id) + '"' + (kl.trim() ? ' class="' + kl.trim() + '"' : '') + ' aria-pressed="' + (it.id === keuze[k.id]) + '">' +
+          (tegel ? '<b>' + schoon(it.naam) + '</b>' + (metUit && it.uit ? '<span>' + schoon(it.uit) + '</span>' : '') : schoon(it.naam)) + '</button>'; }).join('');
+      Array.prototype.forEach.call(vak.querySelectorAll('button'), function(b){ b.addEventListener('click', function(){ keuze[k.id] = b.getAttribute('data-id'); if (k.id === 'niveau') nivBron = 'zelf'; onthoud(k.id); tekenKeuzes(); tekenNiveauBron(); }); });
+      /* een lange rij pillen schuift op een telefoon opzij (vakspel.css); de kaartjes niet */
+      vak.classList.toggle('schuifrij', !tegel && k.items.length >= 4);
       var aan = vak.querySelector('.on');
       if (aan && vak.scrollWidth > vak.clientWidth){
         var dx = aan.getBoundingClientRect().left - vak.getBoundingClientRect().left;
@@ -235,7 +275,8 @@ window.VAKSPEL = (function(){
       if (k && typeof k === 'object') (cfg.keuzes || []).forEach(function(x){ if (k[x.id] !== undefined && x.items.some(function(it){ return it.id === k[x.id]; })) keuze[x.id] = k[x.id]; });
       var n = localStorage.getItem('lg-niveau');
       var nk = (cfg.keuzes || []).filter(function(x){ return x.id === 'niveau'; })[0];
-      if (n && nk && (!k || k.niveau === undefined) && nk.items.some(function(it){ return it.id === n; })) keuze.niveau = n;
+      /* het niveau uit de leeromgeving gaat voor wat dit spel de vorige keer onthield */
+      if (n && nk && nk.items.some(function(it){ return it.id === n; })){ keuze.niveau = n; nivBron = 'lo'; }
     } catch (e){}
     /* ?n=… en andere keuzes in het adres: gekozen door de docent, en dan uit beeld.
        Met van=lo komt de keuze van de leerling zelf, uit de leeromgeving. */
@@ -246,6 +287,7 @@ window.VAKSPEL = (function(){
       var w = decodeURIComponent(m[1]);
       if (!k.items.some(function(it){ return it.id === w; })) return;
       keuze[k.id] = w;
+      if (k.id === 'niveau'){ nivBron = /[?&]van=lo\b/.test(location.search) ? 'lo' : 'docent'; return; }
       var vak = $('keuze-' + k.id); if (vak) vak.classList.add('hide');
       var kop = $('kop-' + k.id); if (kop) kop.textContent = k.kop + ': ' + k.items.filter(function(it){ return it.id === w; })[0].naam + ', ' + wie;
     });
@@ -293,9 +335,9 @@ window.VAKSPEL = (function(){
   function start(zo){
     begUit();
     oneindig = !!zo;
-    cfg.aantal = aantal;
+    if (!cfg.vastAantal) cfg.aantal = rondeAantal();
     nivNu = keuze.niveau || null; nivReeks = 0;
-    nr = 0; goed = 0; fout = 0; punten = 0; reeks = 0; besteReeks = 0; od = {}; missers = []; perDeel = {};
+    nr = 0; goed = 0; fout = 0; punten = 0; reeks = 0; besteReeks = 0; od = {}; missers = []; perDeel = {}; goudBonus = 0; goudNu = false;
     $('voortIn').parentNode.classList.toggle('hide', oneindig);
     $('scherm-start').classList.add('hide'); $('scherm-einde').classList.add('hide'); $('scherm-spel').classList.remove('hide');
     opnieuwKnop(false);
@@ -337,6 +379,14 @@ window.VAKSPEL = (function(){
     bezig = true;
     balk();
     tekenOpgave();
+    /* de gouden vraag: heel soms (1 op de 150) levert een vraag dubbele munten op; je kunt hem niet afdwingen */
+    goudNu = nr > 1 && Math.random() < 1 / 150;
+    var kaartEl = document.querySelector('#scherm-spel .kaart');
+    if (kaartEl) kaartEl.classList.toggle('goud', goudNu);
+    if (goudNu){
+      $('onderdeelUit').innerHTML = '<span class="goudlabel">gouden vraag: dubbele munten</span> ' + schoon($('onderdeelUit').textContent);
+      paasei(function(){ PAASEI.goud(kaartEl); });
+    }
   }
   /* de opgave in de kaart zetten: vraag, beeld en de antwoordvorm (ook voor stap voor stap) */
   function tekenOpgave(){
@@ -558,7 +608,10 @@ window.VAKSPEL = (function(){
     var w = opgave.punten || 10;
     /* bij een sleepvraag: ligt meer dan de helft goed, dan is het bijna, met punten naar rato */
     var bijna = !isGoed && deels && deels.van > 1 && deels.goed * 2 >= deels.van;
-    if (isGoed){ goed++; reeks++; if (reeks > besteReeks) besteReeks = reeks; punten += w + (reeks >= 3 ? Math.min(5, reeks) : 0); }
+    if (isGoed){ goed++; reeks++; if (reeks > besteReeks) besteReeks = reeks; punten += w + (reeks >= 3 ? Math.min(5, reeks) : 0);
+      if (goudNu) goudBonus += 2;
+      /* tien goed op rij (en twintig, dertig...): er vliegt een sterretje langs */
+      if (reeks % 10 === 0) paasei(function(){ PAASEI.ster(); }); }
     else { fout++; reeks = 0; if (bijna) punten += Math.round(w * deels.goed / deels.van);
       /* het plaatje gaat mee (klein), anders staat er "bij welke stad hoort deze grafiek?" zonder grafiek */
       missers.push({ v: kaleTekst(opgave.vraag), j: opgave.antwoordTekst || '', hoe: kaleTekst(opgave.uitleg), beeld: misserBeeld(opgave) }); }
@@ -640,7 +693,7 @@ window.VAKSPEL = (function(){
     /* Een oneindige sessie heeft geen "beste ooit": hoe langer je doorgaat, hoe meer punten, dus een record zegt niets.
        De sterren gaan wel over hoeveel er goed was. */
     var max = (oneindig ? Math.max(gedaan, 1) : cfg.aantal) * 10 || 1, r = punten / max;
-    if (window.SPEL && SPEL.einde) SPEL.einde({ spel: cfg.id, vak: cfg.vak, od: od, goed: goed, ronde: goed, reeks: besteReeks, score: oneindig ? String(punten) : punten, label: 'punten', waarde: oneindig ? undefined : punten, max: max,
+    if (window.SPEL && SPEL.einde) SPEL.einde({ spel: cfg.id, vak: cfg.vak, od: od, goed: goed, ronde: goed, reeks: besteReeks, muntBonus: goudBonus, score: oneindig ? String(punten) : punten, label: 'punten', waarde: oneindig ? undefined : punten, max: max,
       sterren: oneindig ? (r >= .9 ? 3 : r >= .7 ? 2 : r >= .4 ? 1 : 0) : undefined,
       opnieuw: function(){ start(oneindig); }, opnieuwTekst: oneindig ? 'Verder oefenen' : 'Nog een ronde',
       ronde: goed, punten: punten, niveau: keuze.niveau || '', sleutel: Object.keys(keuze).map(function(k){ return keuze[k]; }).join('-') + (oneindig ? '-oneindig' : ''), deelTekst: goed + ' van de ' + gedaan + ' goed' + (oneindig ? ', oneindig geoefend' : '') });
@@ -1111,15 +1164,18 @@ window.VAKSPEL = (function(){
 
   function maak(c){
     if (/[?&]werkblad=1/.test(location.search)){ werkbladModus(c); return; }
-    cfg = c; cfg.basisAantal = c.aantal || 10; if (!c.vastAantal) cfg.aantal = aantal;
+    cfg = c; cfg.basisAantal = c.aantal || 10; if (!c.vastAantal) cfg.aantal = rondeAantal();
     bouw();
     herinner();
     tekenKeuzes();
+    tekenNiveauBron();
     leadKort();
-    $('startBtn').addEventListener('click', function(){ start(oneindigUrl); });
+    $('startBtn').addEventListener('click', function(){ start(oneindigUrl || !aantal); });
     $('keuze-aantal').addEventListener('click', function(e){ var b = e.target.closest('button'); if (!b) return; aantal = +b.getAttribute('data-n'); try { localStorage.setItem('lg-aantal', String(aantal)); } catch (x){} tekenAantal(); });
     /* ?aantal=20 uit een opdracht van de docent */
-    (function(){ var ma = /[?&]aantal=(\d+)/.exec(location.search); if (ma && AANTALLEN.indexOf(+ma[1]) >= 0) aantal = +ma[1]; })();
+    (function(){ var ma = /[?&]aantal=(\d+)/.exec(location.search); if (ma && AANTALLEN.indexOf(+ma[1]) >= 0 && +ma[1]) aantal = +ma[1]; })();
+    /* de docent linkt met ?oneindig=1: dan staat zonder eind al aan */
+    if (oneindigUrl) aantal = 0;
     tekenAantal();
     $('zelfVoor').addEventListener('click', function(e){ var b = e.target.closest('button'); if (!b) return; var z = +b.getAttribute('data-z'); zelfVoor = zelfVoor === z ? null : z;
       Array.prototype.forEach.call(this.querySelectorAll('button'), function(x){ var aan = +x.getAttribute('data-z') === zelfVoor; x.classList.toggle('on', aan); x.setAttribute('aria-pressed', aan ? 'true' : 'false'); }); });
@@ -1130,7 +1186,7 @@ window.VAKSPEL = (function(){
     $('begVbBtn').addEventListener('click', function(){ if (beg && !bezig){ beg.verder = null; $('begVbBtn').classList.add('hide'); begVoordoen(); } });
     $('begKop').addEventListener('click', function(e){ var b = e.target.closest('.vs-delen button'); if (b && beg) begDeel(+b.getAttribute('data-i')); });
     /* de docent linkt met ?oneindig=1: dan is Start meteen oneindig */
-    if (oneindigUrl){ $('startBtn').textContent = 'Start: oneindig oefenen'; $('oneindigBtn').classList.add('hide'); }
+    /* (?oneindig=1 zet hierboven al zonder eind aan) */
     $('verderBtn').addEventListener('click', function(){ if (!bezig) volgende(); });
     /* ?start=1: de opdracht van de docent in de leeromgeving aangeklikt, dus meteen beginnen */
     /* een spel met een eigen leerroute (begeleid:false) heeft deze knop niet nodig */

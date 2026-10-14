@@ -8,6 +8,7 @@
 <script src="cosmetica.js"></script>
 <script src="avatar.js"></script>
 <script src="profiel.js"></script>
+<script src="paasei.js" defer></script>
 <script src="leerlijn.js"></script>
 <script>/* de zoekregel van het begin: de pagina zet de filters later zelf in de adresbalk */ window.START_ZOEK = location.search;</script>
 <link rel="apple-touch-icon" href="/icoon-192.png">
@@ -3252,7 +3253,9 @@ var SPELLEN = [
       /* seizoensdingen staan alleen in hun seizoen in de winkel, of als je ze al hebt */
       var mijn = COSMETICA.ITEMS.filter(function(it){
         if (it.soort !== soort) return false;
-        if (alleenOud) return !!(it.oud && bez[it.id]);
+        if (alleenOud) return !!((it.oud || it.geheim) && bez[it.id]);
+        /* een geheim staat er pas als je het gevonden hebt */
+        if (it.geheim && !bez[it.id]) return false;
         return !it.seizoen || COSMETICA.inSeizoen(it) || bez[it.id];
       });
       if (!mijn.length) return;
@@ -3266,12 +3269,12 @@ var SPELLEN = [
           /* de boog schuin, met een pijl erop */
           beeld = '<svg class="zwaardje" viewBox="-18 -18 36 36" aria-hidden="true"><g transform="rotate(-45) translate(-6 0) scale(.82)">' + COSMETICA.boog(it.n, 0, 6, true) + '</g></svg>';
         } else { var o2 = { basis:o.basis, h:0, r:0, z:0, b:0, a:0, q:0 }; o2[soort] = it.n; beeld = AVATAR.svg('', 36, COSMETICA.bouw(o2)); }
-        var slot = (it.baas || it.oud) && !heb;
+        var slot = (it.baas || it.oud || it.geheim) && !heb;
         return '<button type="button" data-waar="' + it.id + '" class="' + (aan ? 'aan ' : '') + (heb ? 'heb' : '') + (slot ? ' slot' : '') + '"' + (slot ? ' disabled' : '') + ' title="' + schoon(it.uit) + '">' + beeld + '<b>' + schoon(it.naam) + '</b><small>' + (aan ? 'op' : heb ? 'van jou' : it.baas ? (it.verdien || 'versla de baas') : it.oud ? 'van je docent' : it.prijs + ' munten') + '</small></button>';
       }).join('') + '</div>';
     });
     if (alleenOud){
-      return s + '<p>Dit kreeg je omdat je bij meneer Greidanus in de klas zat. Tik erop om het op of af te zetten. ' +
+      return s + '<p>' + (COSMETICA.ITEMS.some(function(it){ return it.oud && PROFIEL.bezit()[it.id]; }) ? 'Dit kreeg je omdat je bij meneer Greidanus in de klas zat, of je vond het zelf.' : 'Dit vond je zelf: een geheim van de leeromgeving.') + ' Tik erop om het op of af te zetten. ' +
         'Log je in met Microsoft, dan gaat het mee naar elk apparaat.</p></div>';
     }
     s += '<p>' + (winkelMelding ? '<b>' + schoon(winkelMelding) + '</b> ' : '') + 'Munten verdien je met elk goed antwoord in de oefenspellen; een lang spel als Torenverdediging of Zwaardvechter geeft er meer per antwoord en een bonus per ronde, en een lange reeks goed op rij (5, 10, 20, 30) vermenigvuldigt ze. De trofeeën speel je vrij door in Zwaardvechter een baas te verslaan, of door dagen op rij te oefenen (het vlammetje na vijf, de lauwerkrans na veertien); de baret, de krijtcirkel en het krijtje krijg je van je docent. Tik op wat van jou is om het op of af te zetten.</p></div>';
@@ -3332,7 +3335,7 @@ var SPELLEN = [
       html += '<div class="muntrij"><span class="saldo"><span class="ico ico-munt" role="img" aria-label="munten" title="munten"></span><b>' + PROFIEL.munten() + '</b></span>' +
         '<button type="button" class="klein' + (winkelOpen ? ' aan' : '') + '" id="pfWinkel">' + (winkelOpen ? 'Winkel dicht' : 'Winkel') + '</button></div>';
       if (winkelOpen) html += winkelHtml(h);
-    } else if (window.COSMETICA && COSMETICA.ITEMS.some(function(it){ return it.oud && PROFIEL.bezit()[it.id]; })){
+    } else if (window.COSMETICA && COSMETICA.ITEMS.some(function(it){ return (it.oud || it.geheim) && PROFIEL.bezit()[it.id]; })){
       /* geen account, maar wel iets van je docent gekregen: dan hoort dat hier
          te staan, anders heb je iets wat je nergens kunt opzetten */
       html += winkelHtml(h, true);
@@ -3377,7 +3380,7 @@ var SPELLEN = [
     Array.prototype.forEach.call(vak0.querySelectorAll('[data-waar]'), function(b){
       b.addEventListener('click', function(){
         var id = b.getAttribute('data-waar'), it = COSMETICA.vind(id), heb = PROFIEL.bezit()[id], o = COSMETICA.ontleed(spec() || AVATAR.maak(huidig())) || { basis:AVATAR.maak(huidig()), h:0, r:0, z:0, b:0, a:0, q:0 };
-        if ((it.baas || it.oud) && !heb) return;
+        if ((it.baas || it.oud || it.geheim) && !heb) return;
         if (heb){ o[it.soort] = o[it.soort] === it.n ? 0 : it.n; PROFIEL.zetAvatar(COSMETICA.bouw(o)); winkelMelding = ''; teken(); return; }
         if (PROFIEL.munten() < it.prijs){ winkelMelding = 'Nog ' + (it.prijs - PROFIEL.munten()) + ' munten te gaan voor ' + it.naam.toLowerCase() + '.'; teken(); return; }
         b.disabled = true; winkelMelding = 'Even wachten\u2026'; teken();
@@ -3474,12 +3477,25 @@ var SPELLEN = [
   var u = new Date().getHours(), reeks = 0;
   try { reeks = (JSON.parse(localStorage.getItem('lg-dagen') || '{}') || {}).reeks | 0; } catch (e){}
   var tekst = u < 12 ? 'goedemorgen' : u < 18 ? 'goedemiddag' : 'goedenavond';
+  /* paaseieren in de groet: 's nachts, en een paar dagen per jaar (dan zonder naam erachter) */
+  var vandaag = new Date(), mnd = vandaag.getMonth() + 1, dag = vandaag.getDate(), bijzonder = '';
+  var koningsdag = new Date(vandaag.getFullYear(), 3, 27).getDay() === 0 ? 26 : 27;
+  if (mnd === 4 && dag === koningsdag) bijzonder = 'fijne Koningsdag!';
+  else if (mnd === 4 && dag === 1) bijzonder = 'alle toetsen zijn afgelast... 1 april!';
+  else if (mnd === 12 && dag === 5) bijzonder = 'vanavond is het pakjesavond!';
+  else if (mnd === 12 && dag >= 1 && dag < 5) bijzonder = 'het is bijna pakjesavond!';
+  else if (mnd === 12 && dag >= 24 && dag <= 26) bijzonder = 'fijne kerst!';
+  else if (mnd === 1 && dag <= 7) bijzonder = 'gelukkig nieuwjaar!';
+  else if (mnd === 10 && dag === 31) bijzonder = 'boe! fijne Halloween';
+  else if ((mnd === 7 && dag >= 15) || (mnd === 8 && dag <= 20)) bijzonder = 'fijne vakantie! (oefenen mag ook)';
+  else if (u >= 23 || u < 5) bijzonder = 'zou je niet eens gaan slapen?';
   var chip = document.getElementById('reeksChip');
   if (chip && reeks >= 2){ document.getElementById('reeksGetal').textContent = reeks; chip.classList.remove('hide'); }
   /* met een klascode weten we je bijnaam */
   var k = null; try { k = window.KLAS && KLAS.lees ? KLAS.lees() : null; } catch (e){}
   var naam = k && k.naam ? String(k.naam).trim() : '';
   if (naam) tekst += ', ' + naam + '!';
+  if (bijzonder) tekst = bijzonder;
   el.textContent = tekst;
   /* je eigen gezichtje ernaast, hetzelfde als in de lade rechtsboven */
   var g = document.getElementById('begroetGezicht');

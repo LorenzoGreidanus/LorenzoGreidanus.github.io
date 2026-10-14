@@ -185,6 +185,18 @@ window.PROFIEL = (function(){
     zeg(); sync();
     return true;
   }
+  /* Een geheim gevonden (paasei.js): net als oudLeerling op dit apparaat, en met een account ook op de server.
+     Geeft terug of het nieuw was. */
+  function geheimGevonden(id){
+    if (!window.COSMETICA) return false;
+    var it = COSMETICA.vind ? COSMETICA.vind(id) : null;
+    if (!it || !it.geheim) return false;
+    var b = bezit(); if (b[id]) return false;
+    b[id] = true; lsZet('lg-bezit', JSON.stringify(b));
+    if (ingelogd()){ var w = vrijWacht(); if (w.indexOf(id) < 0) w.push(id); lsZet('lg-vrij-wacht', JSON.stringify(w)); }
+    zeg(); sync();
+    return true;
+  }
   function accountMogelijk(){ return !!(accountStand && accountStand.mogelijk); }
   /* munten erbij: meteen zichtbaar, en bij de volgende sync naar de server */
   function muntenErbij(n){
@@ -442,5 +454,5 @@ window.PROFIEL = (function(){
   }, 400);
   return { bewaart:bewaart, lees:lees, code:code, avatar:avatar, zetAvatar:zetAvatar, maak:maak, koppel:koppel, sync:sync, wis:wis, verzamel:verzamel, op:op,
     wapens:wapens, uitrusting:uitrusting, zetUitrusting:zetUitrusting, koopWapen:koopWapen,
-    klasWeg:klasWeg, account:account, klassenAfstemmen:klassenAfstemmen, munten:munten, bezit:bezit, ingelogd:ingelogd, accountMogelijk:accountMogelijk, muntenErbij:muntenErbij, koop:koop, vrijspeel:vrijspeel, oudLeerling:oudLeerling, accountVlag:function(){ return accountVlag; }, winkelVlag:function(){ return winkelVlag; }, accountAfstemmen:accountAfstemmen, inlogAdres:inlogAdres, uitloggen:uitloggen, accountWeg:accountWeg, docentWeg:docentWeg, wie:function(){ return accountStand && accountStand.ingelogd ? String(accountStand.naam || '') : ''; } };
+    klasWeg:klasWeg, account:account, geheimGevonden:geheimGevonden, klassenAfstemmen:klassenAfstemmen, munten:munten, bezit:bezit, ingelogd:ingelogd, accountMogelijk:accountMogelijk, muntenErbij:muntenErbij, koop:koop, vrijspeel:vrijspeel, oudLeerling:oudLeerling, accountVlag:function(){ return accountVlag; }, winkelVlag:function(){ return winkelVlag; }, accountAfstemmen:accountAfstemmen, inlogAdres:inlogAdres, uitloggen:uitloggen, accountWeg:accountWeg, docentWeg:docentWeg, wie:function(){ return accountStand && accountStand.ingelogd ? String(accountStand.naam || '') : ''; } };
 })();

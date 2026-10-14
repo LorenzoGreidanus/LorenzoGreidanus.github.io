@@ -83,6 +83,8 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);
 #scherm-start .btn.tweede:disabled{opacity:.45}
 .oneindiguit{margin-top:10px;font-size:.84rem;color:var(--muted)}
 .meter.oneindigmeter{color:var(--link)}
+/* het rustige spelmenu (sm- in spel.css): Start staat in .sm-start, dus zonder eigen marge erboven */
+#scherm-start .sm-start .btn{margin-top:0}
 
 /* ---------- het spel ---------- */
 .spel{padding:18px 0 50px}
@@ -277,23 +279,26 @@ body.groot .uitslagregel{font-size:1.05rem}
     <div><i>3</i><b>Vijf op rij telt dubbel</b><span>Elk goed antwoord levert punten op. Vanaf vijf goed achter elkaar tellen ze dubbel, tot je een keer mist.</span></div>
   </div>
 
-  <p class="eyebrow" id="nivKop">kies je niveau</p>
-  <div class="keuze" id="niveaus"></div>
-  <p class="keuzeuit" id="nivUit"></p>
+  <p class="sm-kop" id="richtKop">wat krijg je te zien</p>
+  <div class="sm-tegels compact" id="richtingen" role="group" aria-labelledby="richtKop"></div>
+  <p class="sm-uit" id="richtUit"></p>
 
-  <p class="eyebrow kop2" id="richtKop">wat krijg je te zien</p>
-  <div class="keuze" id="richtingen"></div>
-  <p class="keuzeuit" id="richtUit"></p>
+  <p class="sm-kop" id="modusKop">hoe speel je</p>
+  <div class="sm-pillen" id="modussen" role="group" aria-labelledby="modusKop"></div>
+  <p class="sm-uit" id="modusUit"></p>
 
-  <p class="eyebrow kop2" id="modusKop">hoe speel je</p>
-  <div class="keuze" id="modussen"></div>
-  <p class="keuzeuit" id="modusUit"></p>
-
-  <div class="startknoppen">
-    <button class="btn" id="startBtn" type="button" disabled>Kies eerst een niveau</button>
-    <button class="btn tweede" id="oneindigBtn" type="button" disabled>Oneindig oefenen</button>
+  <div id="hoeveelVak">
+    <p class="sm-kop" id="hoeveelKop">hoeveel vragen</p>
+    <div class="sm-pillen" id="hoeveel" role="group" aria-labelledby="hoeveelKop">
+      <button type="button" data-id="ronde" class="on">één ronde (20)</button>
+      <button type="button" data-id="eind">zonder eind</button>
+    </div>
+    <p class="sm-uit" id="oneindigUit"></p>
   </div>
-  <p class="oneindiguit" id="oneindigUit"></p>
+
+  <div class="sm-start" id="startVak">
+    <button class="btn" id="startBtn" type="button">Begin met oefenen</button>
+  </div>
 </section>
 
 <section class="wrap spel hide" id="scherm-spel">
@@ -353,7 +358,7 @@ var RICHTINGEN = [
 ];
 
 var MODUSSEN = [
-  { id:'oefen', naam:'Oefenen',  uitleg:'Twintig vragen zonder klok. Na elk antwoord staat erbij waaraan je het ziet.' },
+  { id:'oefen', naam:'Oefenen',  uitleg:'Zonder klok. Na elk antwoord staat erbij waaraan je het ziet.' },
   { id:'race',  naam:'Tijdrace', uitleg:'De klok loopt. Goed levert seconden op, fout kost ze. Met klassement.' }
 ];
 
@@ -535,7 +540,7 @@ function engine(){
   function knoppen(vakId, lijst, uitId, kies){
     var vak = document.getElementById(vakId);
     vak.innerHTML = lijst.map(function(x){
-      return '<button type="button" data-id="' + x.id + '">' + x.naam + '</button>';
+      return '<button type="button" data-id="' + x.id + '"' + (x.heel ? ' class="heel"' : '') + '>' + x.naam + '</button>';
     }).join('');
     Array.prototype.forEach.call(vak.children, function(b, i){
       b.addEventListener('click', function(){
@@ -548,30 +553,50 @@ function engine(){
     });
   }
 
-  knoppen('niveaus',    NIVEAUS,    'nivUit',   function(x){ niveau = x; });
+  /* Het niveau: uit het adres van de docent (?n=), anders uit de leeromgeving (lg-niveau),
+     anders vmbo-kgt. Het staat als regel onder Start (SPEL.niveauRegel), met wijzig. */
+  function niveauVan(id){ return NIVEAUS.filter(function(x){ return x.id === id; })[0] || null; }
+  var nivBron = '';
+  (function(){
+    var m = /[?&]n=([^&#]+)/.exec(location.search), lo = null;
+    try { lo = localStorage.getItem('lg-niveau'); } catch (e){}
+    var uitAdres = m ? niveauVan(decodeURIComponent(m[1])) : null;
+    if (uitAdres){ niveau = uitAdres; nivBron = /[?&]van=lo\b/.test(location.search) ? 'lo' : 'docent'; }
+    else if (niveauVan(lo)){ niveau = niveauVan(lo); nivBron = 'lo'; }
+    else niveau = niveauVan('kgt');
+  })();
+  /* spel.js laadt na dit script: de regel komt er zodra SPEL er is */
+  function nivRegel(){
+    if (!window.SPEL || !SPEL.niveauRegel || document.querySelector('#startVak .sm-niveau')) return true;
+    SPEL.niveauRegel(document.getElementById('startVak'), {
+      items:NIVEAUS.map(function(x){ return { id:x.id, naam:x.naam, uit:x.uitleg }; }),
+      gekozen:niveau.id, bron:nivBron,
+      kies:function(id){ niveau = niveauVan(id) || niveau; } });
+    return true;
+  }
+  if (!window.SPEL) document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', nivRegel) : addEventListener('load', nivRegel);
+  else nivRegel();
   knoppen('richtingen', RICHTINGEN, 'richtUit', function(x){ richting = x; });
   knoppen('modussen',   MODUSSEN,   'modusUit', function(x){ modus = x; });
 
-  /* welke keuze er nog ontbreekt, zodat de knop zegt wat je moet doen */
-  function kiesEerst(welke){
-    var mis = welke.filter(function(x){ return !x[0]; }).map(function(x){ return x[1]; });
-    return 'Kies eerst ' + (mis.length > 1 ? mis.slice(0, -1).join(', ') + ' en ' + mis[mis.length - 1] : mis[0]);
-  }
+  /* hoeveel: een ronde van AANTAL of zonder eind (vroeger de knop Oneindig oefenen).
+     Zonder eind is altijd oefenen; in de tijdrace telt de klok, dus dan staat hoeveel er niet. */
+  var zonderEind = oneindigUrl;
+  document.querySelector('#hoeveel [data-id="ronde"]').textContent = 'één ronde (' + AANTAL + ')';
+  Array.prototype.forEach.call(document.querySelectorAll('#hoeveel button'), function(b){
+    b.addEventListener('click', function(){
+      zonderEind = b.getAttribute('data-id') === 'eind';
+      Array.prototype.forEach.call(document.querySelectorAll('#hoeveel button'), function(c){ c.classList.toggle('on', c === b); });
+      klaarCheck();
+    });
+  });
   function klaarCheck(){
     var b = document.getElementById('startBtn');
-    /* oneindig is altijd oefenen, dus daarvoor hoeft de stand nog niet gekozen */
-    document.getElementById('oneindigBtn').disabled = !(niveau && richting);
-    if (oneindigUrl){
-      b.disabled = !(niveau && richting);
-      b.textContent = b.disabled ? kiesEerst([[niveau, 'een niveau'], [richting, 'wat je ziet']]) : 'Start: oneindig oefenen';
-      return;
-    }
+    document.getElementById('hoeveelVak').classList.toggle('hide', isRace());
+    document.getElementById('oneindigUit').textContent = zonderEind ? 'Zoveel vragen als je wilt. Je stopt zelf.' : 'Ongeveer 10 minuten.';
     b.disabled = !(niveau && richting && modus);
-    b.textContent = b.disabled ? kiesEerst([[niveau, 'een niveau'], [richting, 'wat je ziet'], [modus, 'hoe je speelt']])
-      : (isRace() ? 'Start de tijdrace' : 'Begin met oefenen');
+    b.textContent = oneindigUrl ? 'Start: oneindig oefenen' : isRace() ? 'Start de tijdrace' : 'Begin met oefenen';
   }
-  document.getElementById('oneindigUit').textContent =
-    'Een ronde is ' + AANTAL + ' vragen. Oneindig: zoveel als je wilt, je stopt zelf.';
 
   /* ---------- de stapel ---------- */
   /* Meegroeiend niveau: gaat het goed, dan komen de lastigere vormen erbij;
@@ -771,18 +796,15 @@ function engine(){
   document.getElementById('stopBtn').addEventListener('click', function(){ if (bezig && oneindig) klaar(); });
   /* de tutorial, een keer, zodra het spelscherm er is; de klok staat intussen stil */
   if (window.TUTORIAL && window.TUTORIALS && TUTORIALS['vlakken']) TUTORIAL.naStart('startBtn', 'vlakken', TUTORIALS['vlakken'], { bewaar: function(){ return tijd; }, herstel: function(t){ tijd = t; laatsteTik = Date.now(); } });
-  if (window.TUTORIAL && window.TUTORIALS && TUTORIALS['vlakken']) TUTORIAL.naStart('oneindigBtn', 'vlakken', TUTORIALS['vlakken'], { bewaar: function(){ return tijd; }, herstel: function(t){ tijd = t; laatsteTik = Date.now(); } });
   /* oneindig is een manier van oefenen: de stand springt op Oefenen */
   function naarOefenen(){
     var k = document.querySelector('#modussen [data-id="oefen"]');
     if (k && (!modus || modus.id !== 'oefen')) k.click();
   }
   document.getElementById('startBtn').addEventListener('click', function(){
-    if (oneindigUrl){ if (niveau && richting){ naarOefenen(); begin(true); } return; }
-    if (niveau && richting && modus) begin(false);
-  });
-  document.getElementById('oneindigBtn').addEventListener('click', function(){
-    if (niveau && richting){ naarOefenen(); begin(true); }
+    if (!(niveau && richting && modus)) return;
+    if (oneindigUrl || (zonderEind && !isRace())){ naarOefenen(); begin(true); return; }
+    begin(false);
   });
 
   function tekenBalk(){
@@ -933,6 +955,7 @@ function engine(){
   /* ------------------------------------------------------------------
      Deelbare link vanaf de spellenpagina:
      ?n=bb, kgt of hv    ?r=heen, terug, eigen of mix    ?m=oefen of race
+     ?oneindig=1 zet zonder eind vast. Het niveau staat als regel onder Start (zie boven).
      Wat je meegeeft staat al goed en die keuze verdwijnt uit beeld.
      ------------------------------------------------------------------ */
   (function(){
@@ -952,23 +975,19 @@ function engine(){
       if (kop) kop.textContent = woord + ': ' + lijst[i].naam + ', ' + (/[?&]van=lo\b/.test(location.search) ? 'gekozen in de leeromgeving' : 'gekozen door je docent');
     }
     /* alvast gekozen, net als in de leeromgeving: vmbo-kgt, vorm naar naam, oefenen */
-    document.querySelector('#niveaus [data-id="kgt"]').click();
     document.querySelector('#richtingen [data-id="heen"]').click();
     document.querySelector('#modussen [data-id="oefen"]').click();
-    vast('niveaus',    NIVEAUS,    param('n'), 'nivKop',   'Niveau');
     vast('richtingen', RICHTINGEN, param('r'), 'richtKop', 'Te zien');
     vast('modussen',   MODUSSEN,   param('m'), 'modusKop', 'Stand');
     /* ?oneindig=1: Start is meteen oneindig oefenen, de stand kiezen hoeft niet */
+    /* ?oneindig=1: Start is meteen oneindig oefenen, de stand en hoeveel kiezen hoeft niet */
     if (oneindigUrl){
-      ['modusKop', 'modussen', 'modusUit', 'oneindigBtn'].forEach(function(id){ document.getElementById(id).classList.add('hide'); });
+      ['modusKop', 'modussen', 'modusUit', 'hoeveel'].forEach(function(id){ document.getElementById(id).classList.add('hide'); });
+      document.querySelector('#hoeveel [data-id="eind"]').click();
       naarOefenen();
-      klaarCheck();
-      document.getElementById('oneindigUit').textContent = 'Zoveel vragen als je wilt; je stopt zelf.';
-    } else if (param('m') === 'race'){
-      /* de docent koos de tijdrace: dan geen oneindig oefenen ernaast */
-      document.getElementById('oneindigBtn').classList.add('hide');
-      document.getElementById('oneindigUit').classList.add('hide');
     }
+    /* ?m=race: de docent koos de tijdrace, dan staat hoeveel er niet (klaarCheck) */
+    klaarCheck();
   })();
 
   /* Het logo terug naar de spellenpagina, met je niveau erbij. */
@@ -985,6 +1004,6 @@ engine();
 <script src="naamfilter.js"></script>
 <script src="spel.js"></script>
 <script src="voorlezen.js"></script>
-<script>SPEL.uitleg({ doel:"Herken vlakke figuren aan hun zijden en hoeken.", tijd:"twintig vragen, ongeveer 10 minuten; de tijdrace duurt een minuut", bediening:"Tik de naam die bij de figuur hoort, de figuur die bij de naam hoort, of het getal dat je telt. Druk op 1 tot 4 als dat makkelijker is.", onder:true, chips:true, zeker:'opnieuwBtn' });</script>
+<script>SPEL.uitleg({ doel:"Herken vlakke figuren aan hun zijden en hoeken.", tijd:"twintig vragen, ongeveer 10 minuten; de tijdrace duurt een minuut", bediening:"Tik de naam die bij de figuur hoort, de figuur die bij de naam hoort, of het getal dat je telt. Druk op 1 tot 4 als dat makkelijker is.", chips:true, zeker:'opnieuwBtn' });</script>
 </body>
 </html>

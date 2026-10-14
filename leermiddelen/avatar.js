@@ -199,6 +199,11 @@ window.AVATAR = (function(){
     if (n === 20) return '<path d="M-27,-29 L-30,-50 L-20,-40 L-10,-54 L0,-42 L10,-54 L20,-40 L30,-50 L27,-29 Z" fill="#F7931E" stroke="#c96a1c" stroke-width="2" stroke-linejoin="round"/><path d="M-27,-34 h54" stroke="#fff" stroke-width="2.4" opacity=".75"/><circle cx="-10" cy="-47" r="2.2" fill="#fff"/><circle cx="10" cy="-47" r="2.2" fill="#fff"/><circle cx="0" cy="-38" r="2.4" fill="#204ECF"/>';
     /* strohoed voor de zomer: een brede rand met een rood lint */
     if (n === 21) return '<path d="M-46,-27 q46,-14 92,0 q-10,6 -46,6 q-36,0 -46,-6 z" fill="#e8c877" stroke="#b8924a" stroke-width="1.6" stroke-linejoin="round"/><path d="M-22,-31 q0,-22 22,-22 q22,0 22,22 z" fill="#e8c877" stroke="#b8924a" stroke-width="1.6"/><path d="M-22,-34 q22,-5 44,0" fill="none" stroke="#c0442c" stroke-width="4"/><path d="M-36,-26 q36,-9 72,0 M-14,-46 q14,-4 28,0" fill="none" stroke="#b8924a" stroke-width="1" opacity=".6"/>';
+    /* geheim feesthoedje: een scheef koraalrood hoedje met stippen en een gouden ster, voor wie de Konami-code vond */
+    if (n === 24) return '<g transform="rotate(-14 0 -30)"><path d="M-15,-29 L0,-64 L15,-29 Z" fill="#F26749" stroke="#b9432b" stroke-width="1.5" stroke-linejoin="round"/>' +
+      '<path d="M-15,-30 q15,5 30,0" fill="none" stroke="#FFD166" stroke-width="3.2" stroke-linecap="round"/>' +
+      '<circle cx="-5" cy="-38" r="2.3" fill="#FFD166"/><circle cx="5" cy="-45" r="2.1" fill="#83A5F2"/><circle cx="-1.5" cy="-52" r="1.8" fill="#fff"/>' +
+      '<path d="M0,-75 L2.4,-70 L7.6,-69.4 L3.7,-65.8 L4.8,-60.6 L0,-63.3 L-4.8,-60.6 L-3.7,-65.8 L-7.6,-69.4 L-2.4,-70 Z" fill="#FFD166" stroke="#c9971f" stroke-width="1.1" stroke-linejoin="round"/></g>';
     /* Pruisische punthelm, voor Bismarck (g3): geen winkelhoed, hij hoort bij het personage */
     if (n === 22) return '<path d="M-30,-30 C-30,-54 -15,-60 0,-60 C15,-60 30,-54 30,-30 Z" fill="#2a3142" stroke="#151a26" stroke-width="2" stroke-linejoin="round"/>' +
       '<path d="M-22,-46 q8,-9 18,-11" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".28"/>' +

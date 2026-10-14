@@ -97,17 +97,10 @@ header{position:sticky;top:0;z-index:30;border-bottom:1px solid var(--rand);padd
   padding:15px 34px;font-weight:700;font-size:1.02rem;min-height:44px;box-shadow:0 8px 20px rgba(242,103,73,.3)}
 .btn:disabled{opacity:.5;box-shadow:none;cursor:not-allowed}
 .btn:not(:disabled):hover{transform:translateY(-1px)}
-/* Start of oneindig: twee knoppen naast elkaar, de tweede rustiger. Basis.css
-   zet in het donker elke .btn op donkerblauwe letters; die horen op crab, niet
-   op een lege knop, dus de tweede krijgt daar zijn inkt terug. */
-.startknoppen{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:26px}
-.startknoppen .btn{margin-top:0}
-.btn.tweede{background:none;color:var(--ink);border:2px solid var(--rand2);box-shadow:none;padding:13px 32px}
-.btn.tweede:not(:disabled):hover{border-color:var(--ink)}
-/* met de id erbij: basis.css weegt anders even zwaar en komt later, en dan werd het navy op navy */
-:root[data-theme="dark"] #scherm-start .btn.tweede{color:var(--ink)}
-@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) #scherm-start .btn.tweede{color:var(--ink)}}
-.oneindiguit{margin-top:10px;font-size:.84rem;color:var(--muted)}
+/* het rustige spelmenu (sm- in spel.css): Start staat in .sm-start, zonder eigen marge */
+.sm-start .btn{margin-top:0}
+/* drie onderdelen: op een laptop drie naast elkaar, op een telefoon twee kolommen (spel.css) */
+@media(min-width:561px){#onderdelen{grid-template-columns:repeat(3,minmax(0,1fr));max-width:640px}}
 .meter.oneindigmeter{color:var(--nadruk)}
 
 /* ---------- het spel ---------- */
@@ -334,16 +327,20 @@ body.groot .uitslagregel{font-size:1.05rem}
     <div><i>3</i><b>Kolom voor kolom nagekeken</b><span>Elk cijfer wordt meteen groen of rood. Bij rood staat erbij wat er in die kolom gebeurt en waarom. Tien sommen per ronde, met een klassement op deze computer.</span></div>
   </div>
 
-  <p class="eyebrow" id="nivKop">hoe groot worden de getallen</p>
-  <div class="keuze" id="niveaus"></div>
-  <p class="keuzeuit" id="nivUit"></p>
+  <p class="sm-kop" id="deelKop">wat ga je doen</p>
+  <div class="sm-tegels" id="onderdelen" role="group" aria-labelledby="deelKop"></div>
 
-  <p class="eyebrow kop2" id="deelKop">wat ga je doen</p>
-  <div class="keuze" id="onderdelen"></div>
-  <p class="keuzeuit" id="deelUit"></p>
+  <p class="sm-kop" id="nivKop">hoe groot worden de getallen</p>
+  <div class="sm-pillen" id="niveaus" role="group" aria-labelledby="nivKop"></div>
+  <p class="sm-uit" id="nivUit"></p>
 
-  <div class="startknoppen"><button class="btn" id="startBtn" type="button" disabled>Kies eerst de getallen en wat je doet</button><button class="btn tweede" id="oneindigBtn" type="button" disabled>Oneindig oefenen</button></div>
-  <p class="oneindiguit" id="oneindigUit"></p>
+  <div id="hoeveelRij">
+    <p class="sm-kop" id="hoeveelKop">hoeveel sommen</p>
+    <div class="sm-pillen" id="hoeveel" role="group" aria-labelledby="hoeveelKop"><button type="button" data-id="ronde" class="on">één ronde (10)</button><button type="button" data-id="eind">zonder eind</button></div>
+    <p class="sm-uit" id="oneindigUit"></p>
+  </div>
+
+  <div class="sm-start"><button class="btn" id="startBtn" type="button" disabled>Kies eerst de getallen en wat je doet</button></div>
 </section>
 
 <section class="wrap speelvak hide" id="scherm-spel">
@@ -428,29 +425,46 @@ var NIVEAUS = DHTEOPGAVEN.NIVEAUS,
   function vrijeVolgorde(){ return onderdeel && onderdeel.id === 'invullen'; }
 
   /* ---------- keuzeknoppen ---------- */
-  function knoppen(vakId, lijst, uitId, kies){
+  /* kaart: naam en een korte uitleg op het kaartje zelf; anders een pil met de uitleg eronder (uitId) */
+  var KORT = { invullen:'Elk cijfer in de goede kolom.', optellen:'Onder elkaar, met onthouden.', aftrekken:'Onder elkaar, met lenen.' };
+  function knoppen(vakId, lijst, uitId, kies, kaart){
     var vak = document.getElementById(vakId);
     vak.innerHTML = lijst.map(function(x){
-      return '<button type="button" data-id="' + x.id + '">' + x.naam + '</button>';
+      return '<button type="button" data-id="' + x.id + '">' + (kaart ? '<b>' + x.naam + '</b><span>' + (KORT[x.id] || x.uitleg) + '</span>' : x.naam) + '</button>';
     }).join('');
     Array.prototype.forEach.call(vak.children, function(b, i){
       b.addEventListener('click', function(){
         Array.prototype.forEach.call(vak.children, function(c){ c.classList.remove('on'); });
         b.classList.add('on');
-        document.getElementById(uitId).textContent = lijst[i].uitleg;
+        if (uitId) document.getElementById(uitId).textContent = lijst[i].uitleg;
         kies(lijst[i]);
         klaarCheck();
       });
     });
   }
   knoppen('niveaus',    NIVEAUS,    'nivUit',  function(x){ niveau = x; });
-  knoppen('onderdelen', ONDERDELEN, 'deelUit', function(x){ onderdeel = x; });
+  knoppen('onderdelen', ONDERDELEN, null,      function(x){ onderdeel = x; }, true);
+
+  /* hoeveel: een ronde van tien, of zonder eind (dan is Start oneindig) */
+  var zonderEind = oneindigUrl;
+  function tekenHoeveel(){
+    Array.prototype.forEach.call(document.getElementById('hoeveel').children, function(b){
+      b.classList.toggle('on', (b.getAttribute('data-id') === 'eind') === zonderEind);
+    });
+    document.getElementById('oneindigUit').textContent = zonderEind
+      ? 'Zoveel sommen als je wilt. Je stopt zelf.'
+      : 'Een ronde is ' + AANTAL + ' sommen, ongeveer 10 minuten.';
+  }
+  document.querySelector('#hoeveel [data-id="ronde"]').textContent = 'één ronde (' + AANTAL + ')';
+  Array.prototype.forEach.call(document.getElementById('hoeveel').children, function(b){
+    b.addEventListener('click', function(){ zonderEind = b.getAttribute('data-id') === 'eind'; tekenHoeveel(); });
+  });
+  tekenHoeveel();
 
   function klaarCheck(){
     var b = document.getElementById('startBtn');
     b.disabled = !(niveau && onderdeel);
     b.textContent = b.disabled ? (!niveau && !onderdeel ? 'Kies eerst de getallen en wat je doet' : !niveau ? 'Kies eerst hoe groot de getallen worden' : 'Kies eerst wat je gaat doen') : oneindigUrl ? 'Start: oneindig oefenen' : 'Begin met ' + onderdeel.naam.toLowerCase();
-    document.getElementById('oneindigBtn').disabled = b.disabled;
   }
 
   /* ---------- een ronde ---------- */
@@ -755,21 +769,15 @@ var NIVEAUS = DHTEOPGAVEN.NIVEAUS,
   document.getElementById('verderBtn').addEventListener('click', volgende);
   /* de tutorial, een keer, zodra het spelscherm er is; de klok staat intussen stil */
   if (window.TUTORIAL && window.TUTORIALS && TUTORIALS['dhte']) TUTORIAL.naStart('startBtn', 'dhte', TUTORIALS['dhte'], {});
-  if (window.TUTORIAL && window.TUTORIALS && TUTORIALS['dhte']) TUTORIAL.naStart('oneindigBtn', 'dhte', TUTORIALS['dhte'], {});
   document.getElementById('startBtn').addEventListener('click', function(){
-    if (niveau && onderdeel) begin(oneindigUrl);
-  });
-  document.getElementById('oneindigBtn').addEventListener('click', function(){
-    if (niveau && onderdeel) begin(true);
+    if (niveau && onderdeel) begin(zonderEind);
   });
   /* Stoppen staat er alleen in een oneindige sessie, en pas als de som af is */
   document.getElementById('stopBtn').addEventListener('click', function(){
     if (!bezig && oneindig) klaar();
   });
-  document.getElementById('oneindigUit').textContent = oneindigUrl
-    ? 'Zoveel sommen als je wilt; je stopt zelf.'
-    : 'Een ronde is ' + AANTAL + ' sommen. Oneindig: zoveel als je wilt, je stopt zelf.';
-  if (oneindigUrl) document.getElementById('oneindigBtn').classList.add('hide');
+  /* ?oneindig=1: de docent koos zonder eind, dan geen keuze voor hoeveel */
+  if (oneindigUrl) document.getElementById('hoeveel').classList.add('hide');
 
   /* ---------- einde ---------- */
   function klaar(){
@@ -944,6 +952,6 @@ var NIVEAUS = DHTEOPGAVEN.NIVEAUS,
 <script src="klas.js"></script>
 <script src="naamfilter.js"></script>
 <script src="spel.js"></script>
-<script>SPEL.uitleg({ doel:"Elk cijfer op zijn eigen plek zetten, en zo optellen en aftrekken onder elkaar.", tijd:"tien sommen, ongeveer 10 minuten", bediening:"Tik een vakje aan en typ er een cijfer in. Bij optellen en aftrekken ga je van rechts naar links; groen is goed, bij rood krijg je een tip.", onder:true, chips:true, zeker:'opnieuwBtn' });</script>
+<script>SPEL.uitleg({ doel:"Elk cijfer op zijn eigen plek zetten, en zo optellen en aftrekken onder elkaar.", tijd:"tien sommen, ongeveer 10 minuten", bediening:"Tik een vakje aan en typ er een cijfer in. Bij optellen en aftrekken ga je van rechts naar links; groen is goed, bij rood krijg je een tip.", chips:true, zeker:'opnieuwBtn' });</script>
 </body>
 </html>

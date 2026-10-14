@@ -193,19 +193,10 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   .themaknop.draait,.themaknop.draait svg,.themaknop.draait::after{animation:none}
   :root.themawisselt body{transition:none}
 }
-/* op een telefoon kleinere keuzeknoppen: de vier niveaus op een rij, zodat Start in beeld staat */
-@media(max-width:560px){
-  #scherm-start .kaart{padding:14px 12px}
-  #scherm-start .stap:first-child{margin-top:0}
-  #scherm-start .chips{gap:6px}
-  #scherm-start .chips button{padding:8px 10px;font-size:.84rem}
-  #scherm-start #niveaus{gap:5px}
-  #scherm-start #niveaus button{padding:8px 9px}
-  /* het startscherm is langer dan een telefoon: Start blijft onderin staan tot je bij het eind van de kaart bent */
-  #scherm-start .stap:last-child{position:sticky;bottom:0;z-index:2;margin:14px -12px -14px;padding:14px 12px calc(12px + env(safe-area-inset-bottom));
-    background:linear-gradient(to bottom,transparent,var(--kaart) 16px);border-radius:0 0 20px 20px}
-  #scherm-start .stap:last-child .knop{width:100%}
-}
+/* het rustige spelmenu (spel.css): het startscherm gecentreerd, zoals de vakspellen */
+#scherm-start{text-align:center}
+#scherm-start .lead{margin-inline:auto}
+#scherm-start .sm-start .knop{border-radius:999px;min-width:220px;font-size:1.05rem}
 </style>
 <script src="/vangnet.js" defer></script>
 <script src="/leermiddelen/merk.js" defer></script>
@@ -233,13 +224,20 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
       <div><i style="background:var(--amber)">2</i><b>Tik het goede antwoord</b><span>Je ziet meteen of het klopt, en bij een fout ook waarom. Daarna gaat de race door.</span></div>
       <div><i style="background:var(--ocean);color:#fff">3</i><b>Kijk terug</b><span>Aan het eind zie je je score, je langste reeks en de vragen die je fout had, met de uitleg erbij.</span></div>
     </div>
-    <div class="kaart">
-      <div class="stap"><b>Vak</b><div class="chips" id="vakken"></div></div>
-      <div class="stap"><b>Onderdeel</b><div class="chips schuif" id="onderdelen"></div><p class="tip" id="herhaalUit" style="margin-top:6px"></p></div>
-      <div class="stap"><b>Antwoorden</b><div class="chips" id="wijzen"></div><p class="tip" id="wijzeUit" style="margin-top:6px"></p></div>
-      <div class="stap"><b>Niveau</b><div class="chips" id="niveaus"></div><p class="tip" id="niveauUit" style="margin-top:6px"></p></div>
-      <div class="stap"><button class="knop crab groot" id="startBtn" type="button">Start de race</button></div>
-    </div>
+    <p class="sm-kop" id="vakKop">vak</p>
+    <div class="sm-tegels compact" id="vakken" role="group" aria-labelledby="vakKop"></div>
+    <p class="sm-uit" id="vakUit"></p>
+
+    <p class="sm-kop" id="deelKop">onderdeel</p>
+    <div class="sm-tegels compact" id="onderdelen" role="group" aria-labelledby="deelKop"></div>
+    <p class="sm-uit hide" id="herhaalUit"></p>
+
+    <p class="sm-kop" id="wijzeKop">antwoorden</p>
+    <div class="sm-pillen" id="wijzen" role="group" aria-labelledby="wijzeKop"></div>
+    <p class="sm-uit" id="wijzeUit"></p>
+
+    <div class="sm-start"><button class="knop crab groot" id="startBtn" type="button">Start de race</button></div>
+    <div id="nivRegel"></div>
   </section>
 
   <section id="scherm-spel" class="hide">
@@ -295,7 +293,11 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 /* Onthoudt het gekozen niveau voor de leeromgeving, zodat je het maar een
    keer kiest: in het eerste spel dat je speelt. */
 function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id); } catch (e){} }
-  var niveau = NIVEAUS.some(function(n){ return n.id === param('n'); }) ? param('n') : 'kgt';
+  /* het niveau: uit het adres (?n=, van de docent, of met van=lo uit de leeromgeving), anders uit
+     de leeromgeving (lg-niveau), anders vmbo-kgt en tl. hv uit de leeromgeving is hier havo. */
+  function nivId(w){ w = w === 'hv' ? 'havo' : w; return NIVEAUS.some(function(n){ return n.id === w; }) ? w : ''; }
+  var niveau = nivId(param('n')), nivBron = niveau ? (/[?&]van=lo\b/.test(location.search) ? 'lo' : 'docent') : '';
+  if (!niveau){ try { niveau = nivId(localStorage.getItem('lg-niveau') || ''); } catch (e){} if (niveau) nivBron = 'lo'; else niveau = 'kgt'; }
   var onderdeel = '';
   /* zelf typen in plaats van kiezen (typen.js), onthouden op dit apparaat */
   var typen = false; try { typen = localStorage.getItem('lg-typen') === '1'; } catch (e){}
@@ -322,23 +324,37 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     doel.innerHTML = lijst.map(function(x){ return '<button type="button" data-id="' + schoon(x.id) + '"' + (x.id === nu ? ' class="on"' : '') + '>' + schoon(x.naam) + '</button>'; }).join('');
     Array.prototype.forEach.call(doel.querySelectorAll('button'), function(b){ b.addEventListener('click', function(){ zet(b.getAttribute('data-id')); tekenKeuze(); }); });
   }
+  /* het niveau staat als regel onder Start (SPEL.niveauRegel); de uitleg erbij hangt af van het vak */
+  var nivItems = NIVEAUS.map(function(n){ return { id:n.id, naam:n.naam, uit:'' }; }), nivRegel = null;
+  function maakNiveauRegel(){
+    nivRegel = SPEL.niveauRegel($('nivRegel'), { items:nivItems, gekozen:niveau, bron:nivBron,
+      kies:function(id){ niveau = id; onthoudNiveau(id); tekenKeuze(); } });
+  }
   function tekenKeuze(){
     chips('vakken', VAK_RACE, vak, function(id){ vak = id; onderdeel = ''; });
+    var vkNu = VAK_RACE.filter(function(v){ return v.id === vak; })[0];
+    $('vakUit').textContent = vkNu && vkNu.onder ? vkNu.onder + '.' : '';
     var gehad = Object.keys(geoefend(vak));
     if (onderdeel === HERHAAL && gehad.length < 2) onderdeel = '';
     chips('onderdelen', [{ id:'', naam:'alles door elkaar' }].concat(gehad.length >= 2 ? [{ id:HERHAAL, naam:'gemengd herhalen (' + gehad.length + ')' }] : [], ONDERDELEN[vak] || []), onderdeel, function(id){ onderdeel = id; });
+    Array.prototype.forEach.call($('onderdelen').querySelectorAll('[data-id=""],[data-id="' + HERHAAL + '"]'), function(b){ b.className += ' heel'; });
     $('herhaalUit').textContent = onderdeel === HERHAAL ? 'Vragen uit de ' + gehad.length + ' onderdelen die je al oefende, door elkaar. Wat minder goed ging, komt vaker. Door elkaar herhalen onthoud je beter dan alles van één soort achter elkaar.' : '';
-    chips('niveaus', NIVEAUS, niveau, function(id){ niveau = id; onthoudNiveau(id); });
+    $('herhaalUit').classList.toggle('hide', onderdeel !== HERHAAL);
     chips('wijzen', [{ id:'kies', naam:'kiezen uit vier' }, { id:'typ', naam:'zelf typen' }], typen ? 'typ' : 'kies', function(id){ typen = id === 'typ'; try { localStorage.setItem('lg-typen', typen ? '1' : ''); } catch (e){} });
     if (window.TYPEN) TYPEN.laad(vak);
     $('wijzeUit').textContent = typen ? 'Heeft een vraag een kort antwoord, dan typ je het zelf; de rest blijft kiezen. Zelf typen is lastiger, maar zo onthoud je het beter: goed getypt geeft 5 punten extra.' : 'Op havo en vwo typ je een deel van de antwoorden toch zelf: hoe hoger het niveau, hoe vaker.';
     /* De uitleg bij het niveau hoort bij het vak: de regels uit bank.js gaan over getallen, en die zijn er alleen bij rekenen */
     var nv = NIVEAUS.filter(function(n){ return n.id === niveau; })[0];
     var vk = VAK_RACE.filter(function(v){ return v.id === vak; })[0];
-    $('niveauUit').textContent = !nv ? '' : vak === 'reken' ? nv.uitleg.replace(/\s*(Fouten|De fouten|Weinig ruimte|Normaal tempo)[^.]*\./g, '').trim()
-      : 'Vragen ' + (vk ? 'over ' + vk.naam.toLowerCase() + ' ' : '') + 'op het niveau van ' + nv.naam + '. Gaat het goed, dan worden ze vanzelf iets moeilijker.';
+    nivItems.forEach(function(it){
+      var n = NIVEAUS.filter(function(x){ return x.id === it.id; })[0];
+      it.uit = vak === 'reken' ? n.uitleg.replace(/\s*(Fouten|De fouten|Weinig ruimte|Normaal tempo)[^.]*\./g, '').trim()
+        : 'Vragen ' + (vk ? 'over ' + vk.naam.toLowerCase() + ' ' : '') + 'op het niveau van ' + n.naam + '. Gaat het goed, dan worden ze vanzelf iets moeilijker.';
+    });
+    if (nivRegel) nivRegel.zet(niveau);
   }
   tekenKeuze();
+  if (window.SPEL && SPEL.niveauRegel) maakNiveauRegel(); else addEventListener('DOMContentLoaded', maakNiveauRegel);
 
   /* ---------- de vragen: dezelfde keuze als Torenverdediging ---------- */
   var pot = [];
@@ -502,6 +518,6 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
 </script>
 <script src="thema.js"></script>
 <script src="spel.js"></script>
-<script>SPEL.uitleg({ doel:"Zoveel mogelijk vragen goed in zestig seconden.", tijd:"zestig seconden plus wat je erbij verdient, ongeveer 2 minuten", bediening:"Tik het goede antwoord, of druk op 1 tot 4. Goed geeft tijd erbij, fout kost tijd; na een fout staat de klok stil tot je op Volgende tikt.", meer:'.uitleg', onder:true, links:true, chips:true, zeker:'stopBtn' });</script>
+<script>SPEL.uitleg({ doel:"Zoveel mogelijk vragen goed in zestig seconden.", tijd:"zestig seconden plus wat je erbij verdient, ongeveer 2 minuten", bediening:"Tik het goede antwoord, of druk op 1 tot 4. Goed geeft tijd erbij, fout kost tijd; na een fout staat de klok stil tot je op Volgende tikt.", meer:'.uitleg', chips:true, zeker:'stopBtn' });</script>
 </body>
 </html>

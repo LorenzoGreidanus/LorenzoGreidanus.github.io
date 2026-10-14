@@ -28,6 +28,8 @@
     { id:'h11', soort:'h', n:11, naam:'Hazenoren',    prijs:400, uit:'alleen rond Pasen te koop (half maart tot eind april)', seizoen:[3, 15, 4, 30] },
     /* alleen voor wie bij de eigenaar van de site in de klas zat: niet te koop */
     { id:'h12', soort:'h', n:12, naam:'Baret',          prijs:0, oud:true, uit:'omdat je bij meneer Greidanus in de klas zat' },
+    /* geheim: niet te koop en pas in de winkel als je hem gevonden hebt (paasei.js, de Konami-code) */
+    { id:'h24', soort:'h', n:24, naam:'Geheim feesthoedje', prijs:0, geheim:true, uit:'gevonden: een geheim van de leeromgeving' },
     /* nieuwe hoeden: h15 tot h19 altijd te koop, h20 en h21 in hun seizoen */
     { id:'h15', soort:'h', n:15, naam:'Pet achterstevoren', prijs:350, uit:'de klep naar achteren, natuurlijk' },
     { id:'h16', soort:'h', n:16, naam:'Beanie',         prijs:300, uit:'gebreid, met een pompon' },
