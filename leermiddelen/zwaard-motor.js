@@ -48,6 +48,11 @@ const DASH = { duur:0.18, snel:950, pauze:2.2, onkwetsbaar:0.4 };
 const MUNT_VAL = 0.35;          /* kans dat een gevelde fout een munt laat vallen */
 const RAAKPAUZE = 0.8;          /* seconden onkwetsbaar na een klap */
 const BAASRONDE = 5;
+/* Samen spelen: per aantal spelers (1, 2, 3, 4) hoeveel fouten er komen, hoe
+   taai ze zijn, hoe snel ze binnenkomen en hoeveel leven de baas heeft, als
+   keer zoveel als alleen. Afgesteld met een simulatie met bots, zo dat een
+   speler in een ploeg per ronde ongeveer evenveel schade krijgt als alleen. */
+const SAMEN = { fouten:[1, 1.7, 2.35, 3], foutHp:[1, 1.15, 1.25, 1.33], tempo:[1, 1.7, 2.35, 3], baas:[1, 1.9, 2.7, 3.4] };
 /* Na de laatste fout speel je nog even door om de munten op te rapen. Ligt
    er niets meer, dan hoef je ook niet te wachten. */
 const RAAPTIJD = 5;
@@ -96,38 +101,42 @@ const REEKS = { kans:0.4, tussen:0.3, rust:1.6 };
 /* Vanaf deze ronde komen de halen en de muur van een baas in twee fasen. */
 const TWEEFASEN = 10;
 function laatExtra(ronde){ return ronde >= LAAT.vanaf ? LAAT.munten : 1; }
+/* kracht: een factor op de schade van zijn aanvallen. Leven en kracht zijn in
+   oktober 2026 afgesteld zodat de bazen geleidelijk zwaarder worden: de eerste
+   twee wat taaier, en De Prop, De Discobal, De Metronoom en De Blauwe Pen
+   geen uitschieters meer. De nachtmerrie heeft eigen maten en merkt hier niets van. */
 /* De negen bazen. Om de vijf rondes komt de volgende aan de beurt, en na de
    negende begint de rij opnieuw op een hogere ronde en dus taaier. De laatste
    twee (ronde 35 en 40) schieten niets: alles gebeurt op de vloer, op de maat,
    en wie stilstaat wordt geraakt. 'tempo' maakt de pauze tussen twee aanvallen korter. */
 const BAZEN = [
-  { id:'fout',    naam:'De Grote Fout', kleur:'#4a1230', vorm:'ster',  hp:16, r:46, schade:26, schild:0.35,
+  { id:'fout',    naam:'De Grote Fout', kleur:'#4a1230', vorm:'ster',  hp:26, r:46, schade:26, schild:0.35,
     aanvallen:['cirkel', 'laser', 'kegel', 'spiraal', 'baan', 'tik'],
     wat:'Cirkels op de grond, een laser die om hem heen draait, een waaier recht voor zich uit en een spiraal van propjes.' },
-  { id:'inkt',    naam:'De Inktvlek',   kleur:'#1b3a8f', vorm:'vlek',  hp:16, r:50, schade:24, schild:0.3,
+  { id:'inkt',    naam:'De Inktvlek',   kleur:'#1b3a8f', vorm:'vlek',  hp:21, r:50, schade:24, schild:0.3,
     aanvallen:['plas', 'kegel', 'cirkel', 'regen', 'golf', 'krimp'],
     wat:'Spat inkt over de vloer die blijft liggen, spuit een waaier voor zich uit en laat het plofjes regenen. Steeds minder plek om te staan.' },
-  { id:'pen',     naam:'De Rode Pen',   kleur:'#c0442c', vorm:'pen',   hp:18, r:42, schade:26, schild:0.35,
+  { id:'pen',     naam:'De Rode Pen',   kleur:'#c0442c', vorm:'pen',   hp:17, kracht:0.9, r:42, schade:26, schild:0.35,
     aanvallen:['baan', 'kruis', 'laser', 'muur', 'cirkel', 'kegel'],
     wat:'Streept de arena door met rechte halen, zet er kruisen doorheen en veegt een streep over de vloer met een gat erin.' },
-  { id:'prop',    naam:'De Prop',       kleur:'#8a7350', vorm:'prop',  hp:21, r:52, schade:28, schild:0.4,
+  { id:'prop',    naam:'De Prop',       kleur:'#8a7350', vorm:'prop',  hp:19, kracht:0.75, r:52, schade:28, schild:0.4,
     aanvallen:['kogel', 'golf', 'baan', 'bom', 'cirkel', 'regen'],
-    wat:'Schiet propjes in alle richtingen, rolt over de vloer en gooit bommen die in scherven uiteenspatten. Taai.' },
+    wat:'Schiet propjes in alle richtingen, rolt over de vloer en gooit bommen die in scherven uiteenspatten.' },
   { id:'klok',    naam:'De Klok',       kleur:'#6b3fa0', vorm:'klok',  hp:17, r:46, schade:24, schild:0.35,
     aanvallen:['wijzers', 'tik', 'krimp', 'spiraal', 'laser', 'kegel'],
     wat:'Twee wijzers draaien rond, de uren tikken een voor een af, de ring loopt naar binnen en de seconden spiralen naar buiten.' },
-  { id:'zwerm',   naam:'De Zwerm',      kleur:'#7d1f12', vorm:'zwerm', hp:16, r:48, schade:22, schild:0.3,
+  { id:'zwerm',   naam:'De Zwerm',      kleur:'#7d1f12', vorm:'zwerm', hp:22, r:48, schade:22, schild:0.3,
     aanvallen:['kogel', 'krimp', 'cirkel', 'bom', 'regen', 'spiraal'],
-    wat:'Barst uit elkaar in propjes, sluit je in met een ring en gooit bommen. Het minste leven, het meeste in de lucht.' },
-  { id:'disco',   naam:'De Discobal',   kleur:'#9A55B8', vorm:'bal',   hp:19, r:48, schade:24, schild:0.35, tempo:0.7,
+    wat:'Barst uit elkaar in propjes, sluit je in met een ring en gooit bommen. Veel tegelijk in de lucht.' },
+  { id:'disco',   naam:'De Discobal',   kleur:'#9A55B8', vorm:'bal',   hp:15, kracht:0.88, r:48, schade:24, schild:0.35, tempo:0.7,
     aanvallen:['vloer', 'lichten', 'golf', 'veeg', 'raster', 'cirkel'],
     wat:'Een dansvloer die op de maat oplicht, lichtbundels die rondgaan en strepen die over de vloer vegen. Blijf bewegen.' },
-  { id:'metronoom', naam:'De Metronoom', kleur:'#1f6b5c', vorm:'metronoom', hp:20, r:46, schade:25, schild:0.35, tempo:0.65,
+  { id:'metronoom', naam:'De Metronoom', kleur:'#1f6b5c', vorm:'metronoom', hp:14, kracht:0.7, r:46, schade:25, schild:0.35, tempo:0.65,
     aanvallen:['slinger', 'baan', 'kruis', 'veeg', 'raster', 'tik'],
     wat:'Een slinger die van links naar rechts over de arena zwaait, rechte halen en kruisen zoals De Rode Pen, strepen die over de vloer vegen en een raster in de maat. Blijf in beweging.' },
   /* De Blauwe Pen: de aanvallen van De Rode Pen, maar heftiger (zie 'heftig' in zetAanval): meer
      strepen, dubbele kruisen, drie muren, drie stralen, drie waaiers, meer cirkels, en vaker twee tegelijk. */
-  { id:'blauwepen', naam:'De Blauwe Pen', kleur:'#2458d6', vorm:'pen', hp:22, r:44, schade:28, schild:0.4, tempo:0.8, heftig:true, dubbel:0.3,
+  { id:'blauwepen', naam:'De Blauwe Pen', kleur:'#2458d6', vorm:'pen', hp:18, kracht:0.33, r:44, schade:28, schild:0.4, tempo:0.8, heftig:true, dubbel:0.3,
     aanvallen:['baan', 'kruis', 'laser', 'muur', 'cirkel', 'kegel'],
     wat:'De grote broer van De Rode Pen. Dezelfde halen, kruisen, stralen en muren, maar meer tegelijk en sneller achter elkaar.' }
 ];
@@ -271,7 +280,12 @@ function maak(opties){
   });
   var samen = W.spelers.length > 1;
   /* met meer spelers meer fouten en een taaiere baas: twee anderhalf keer, drie twee keer, vier tweeënhalf keer */
-  function meer(){ return 1 + 0.5 * (W.spelers.length - 1); }
+  /* een waarde uit SAMEN voor dit aantal spelers; boven de vier loopt de rij in dezelfde stappen door */
+  function schaal(soort){
+    var rij = SAMEN[soort], n = W.spelers.length, l = rij.length;
+    return n <= l ? rij[n - 1] : rij[l - 1] + (rij[l - 1] - rij[l - 2]) * (n - l);
+  }
+  function meer(){ return schaal('fouten'); }
 
   /* ---------- wat de spelers doen ---------- */
   W.zetInvoer = function(i, dx, dy, nr, blok){
@@ -380,6 +394,7 @@ function maak(opties){
     W.spawnKlok = 0.6;
     W.tijdInRonde = 0; W.rondeUit = 0; W.raapTeller = -1;
     W.zones = W.nachtmerrie ? [] : maakZones(W.ronde);
+    W.baasKracht = 1;
     W.spelers.forEach(function(P){ P.sp.blok = false; P.sp.blokTijd = P.stats.blokMax || BLOK.max; P.sp.gx = 0; P.sp.gy = 0; P.sp.vuurKlok = 0; P.sp.dashX = P.stats.dashX || 1; });
     if (W.nachtmerrie || W.ronde % BAASRONDE === 0) spawnBaas();
     zeg('ronde', W.ronde, W.teSpawnen, W.ronde % BAASRONDE === 0 ? baasVan(W.ronde) : null);
@@ -459,7 +474,7 @@ function maak(opties){
     var n = soort.aantal || 1, p = randPlek(), eerste = null;
     var sterk = W.ronde;
     for (var i = 0; i < n; i++){
-      var h = Math.round(foutHp(sterk) * soort.hp);
+      var h = Math.round(foutHp(sterk) * soort.hp * schaal('foutHp'));
       var f = { id:++W.nr, soort:soort, x:p.x + (toeval() - .5) * 30, y:p.y + (toeval() - .5) * 30,
                 hp:h, maxHp:h, r:soort.r, snel:soort.snel * (70 + sterk * 1.6), flits:0, stap:toeval() * 6,
                 schild:soort.schild || 0, slaKlok:0,
@@ -512,7 +527,9 @@ function maak(opties){
   function spawnBaas(){
     var nm = W.nachtmerrie;
     var def = nm ? nm.def : baasVan(W.ronde);
-    var h = nm ? nmLeven(def) : Math.round(foutHp(W.ronde) * def.hp * BAASLEVEN * (samen ? 0.7 + 0.3 * W.spelers.length : 1));
+    var h = nm ? nmLeven(def) : Math.round(foutHp(W.ronde) * def.hp * BAASLEVEN * schaal('baas'));
+    /* de nachtmerrie heeft een eigen maat voor de schade (NACHTMERRIE.deel) */
+    W.baasKracht = nm ? 1 : def.kracht || 1;
     var b = { id:++W.nr, soort:def, def:def, x:ARENA.b / 2, y:ARENA.h / 2, hp:h, maxHp:h, r:def.r, snel:0, flits:0, stap:0,
               schild:def.schild, slaKlok:0, baas:true, aanvalKlok:2.2, laatste:-1, eerste:true, nmFase:0, salvoOver:0, moe:0, naSalvo:false };
     W.fouten.push(b);
@@ -735,8 +752,10 @@ function maak(opties){
     if (soort === 'lichten') return A.laser.wacht + A.lichten.duur;
     return A.cirkel.wacht + A.cirkel.knal;
   }
-  /* een speler wordt getroffen door een aanval */
-  function tref(P, schade, kleur){
+  /* Een speler wordt getroffen door een aanval. vanFout: een schot, een
+     granaat of een klap van een gewone fout; anders is het de baas, en dan
+     telt zijn kracht mee (zie BAZEN). */
+  function tref(P, schade, kleur, vanFout){
     var s2 = P.sp;
     if (s2.raak > 0 || P.neer) return;
     /* De groei per ronde, en vanaf ronde 12 extra plus een stukje van je maximale leven:
@@ -746,7 +765,7 @@ function maak(opties){
        staan, dus je kunt het nog steeds ontwijken */
     var klap = W.nachtmerrie && schade < 1000
       ? Math.max(1, Math.round(P.maxHp * NACHTMERRIE.deel * schade / NACHTMERRIE.klapMaat * (s2.blok ? BLOK.deel : 1)))
-      : Math.max(1, Math.round((schade * groei + P.maxHp * 0.022 * Math.max(0, W.ronde - 12)) * NERF * P.stats.pantser * (s2.blok ? BLOK.deel : 1)));
+      : Math.max(1, Math.round((schade * groei + P.maxHp * 0.022 * Math.max(0, W.ronde - 12)) * NERF * P.stats.pantser * (s2.blok ? BLOK.deel : 1) * (vanFout ? 1 : W.baasKracht || 1)));
     P.hp -= klap; s2.raak = s2.blok ? RAAKPAUZE * 0.5 : RAAKPAUZE; s2.flits = 0.25;
     W.cijfers.push({ x:s2.x, y:s2.y - 26, tekst:(s2.blok ? 'geblokt -' : '-') + klap, leven:0.9, kleur:s2.blok ? '#204ECF' : (kleur || '#c0442c') });
     if (P.hp <= 0){ P.hp = 0; valNeer(P); }
@@ -844,7 +863,7 @@ function maak(opties){
         var gn = AANVAL.granaat, gnW = a.duur || gn.vlucht(W.ronde), gnR = a.straal || gn.r;
         if (a.t >= gnW && !a.geknald){
           a.geknald = true;
-          levend.forEach(function(P){ if (Math.hypot(P.sp.x - a.x, P.sp.y - a.y) < gnR + SPELER.r * 0.5) tref(P, gn.schade, a.kl || '#9a6a2f'); });
+          levend.forEach(function(P){ if (Math.hypot(P.sp.x - a.x, P.sp.y - a.y) < gnR + SPELER.r * 0.5) tref(P, gn.schade, a.kl || '#9a6a2f', true); });
           for (var gi = 0; gi < 9; gi++){ var gh = toeval() * Math.PI * 2, gs = 50 + toeval() * 110; W.pluis.push({ x:a.x, y:a.y, vx:Math.cos(gh) * gs, vy:Math.sin(gh) * gs, leven:0.4, kleur:gi % 2 ? '#EA9836' : (a.kl || '#9a6a2f') }); }
         }
         if (a.t >= gnW + gn.knal) a.klaar = true;
@@ -853,7 +872,7 @@ function maak(opties){
         if (a.t >= scW){
           a.x += Math.cos(a.hoek) * sc.snel * dt; a.y += Math.sin(a.hoek) * sc.snel * dt;
           levend.forEach(function(P2){
-            if (Math.hypot(P2.sp.x - a.x, P2.sp.y - a.y) < sc.r + SPELER.r * 0.8){ tref(P2, sc.schade, a.kl || '#2f7d52'); a.klaar = true; }
+            if (Math.hypot(P2.sp.x - a.x, P2.sp.y - a.y) < sc.r + SPELER.r * 0.8){ tref(P2, sc.schade, a.kl || '#2f7d52', true); a.klaar = true; }
           });
           if (a.t > scW + sc.leven || a.x < -40 || a.x > ARENA.b + 40 || a.y < -40 || a.y > ARENA.h + 40) a.klaar = true;
         }
@@ -1138,7 +1157,7 @@ function maak(opties){
       W.spawnKlok -= dt;
       if (W.spawnKlok <= 0){
         spawn(kiesFout()); W.teSpawnen -= 1;
-        W.spawnKlok = Math.max(0.25, 1.1 - ronde * 0.04) / (spelers.length > 1 ? 1.1 + 0.3 * spelers.length : 1);
+        W.spawnKlok = Math.max(0.25, 1.1 - ronde * 0.04) / schaal('tempo');
       }
     }
 
@@ -1236,6 +1255,9 @@ function maak(opties){
         var stil = !!f.soort.laden && (f.laadKlok <= f.soort.mik || f.stilKlok > 0);
         if (f.soort.afstand){
           wil = stil ? 0 : al > f.soort.afstand + 40 ? 1 : al < f.soort.afstand - 40 ? -0.9 : 0;
+          /* Nog nooit binnen geweest: eerst de arena in. Anders deinst hij voor
+             een speler bij de rand achteruit en komt hij nooit, en loopt de ronde niet af. */
+          if (!f.binnen && !stil) wil = 1;
           if (!wil && !stil){ vx = -ay / al * f.snel * 0.55 * f.zij; vy = ax / al * f.snel * 0.55 * f.zij; }
         }
         vx += ax / al * f.snel * wil; vy += ay / al * f.snel * wil;
@@ -1284,7 +1306,7 @@ function maak(opties){
         var s2 = P.sp;
         if (Math.hypot(s2.x - f.x, s2.y - f.y) < f.r + SPELER.r + 2 && s2.raak <= 0 && f.slaKlok <= 0){
           f.slaKlok = 0.6;
-          tref(P, f.soort.schade, '#c0442c');
+          tref(P, f.soort.schade, '#c0442c', !f.baas);
         }
       });
     });
@@ -1359,7 +1381,7 @@ function maak(opties){
   return W;
 }
 
-g.ZWAARDMOTOR = { maak:maak, ARENA:ARENA, SPELER:SPELER, DASH:DASH, FOUTEN:FOUTEN, BAZEN:BAZEN, AANVAL:AANVAL, BAASRONDE:BAASRONDE, CHECKPOINT:CHECKPOINT, OPHELP:OPHELP, muurStand:muurStand, STIJLEN:STIJLEN, BLOK:BLOK, LAAT:LAAT, REEKS:REEKS, laatExtra:laatExtra, golfGat:golfGat, vloerAan:vloerAan, vloerTel:vloerTel, slingerStand:slingerStand, GEVAAR:GEVAAR, CRIT:CRIT,
+g.ZWAARDMOTOR = { maak:maak, ARENA:ARENA, SPELER:SPELER, DASH:DASH, FOUTEN:FOUTEN, BAZEN:BAZEN, AANVAL:AANVAL, BAASRONDE:BAASRONDE, SAMEN:SAMEN, CHECKPOINT:CHECKPOINT, OPHELP:OPHELP, muurStand:muurStand, STIJLEN:STIJLEN, BLOK:BLOK, LAAT:LAAT, REEKS:REEKS, laatExtra:laatExtra, golfGat:golfGat, vloerAan:vloerAan, vloerTel:vloerTel, slingerStand:slingerStand, GEVAAR:GEVAAR, CRIT:CRIT,
                   MUNT_VAL:MUNT_VAL, RAAKPAUZE:RAAKPAUZE, RAAPTIJD:RAAPTIJD, aantalInRonde:aantalInRonde, foutHp:foutHp, baasVan:baasVan, basisStats:basisStats, nieuweSp:nieuweSp };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 if (typeof module !== 'undefined' && module.exports) module.exports = globalThis.ZWAARDMOTOR;
