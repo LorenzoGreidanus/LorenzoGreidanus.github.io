@@ -137,10 +137,24 @@
       return weg;
     }
     /* mag een leger van speler i naar gebied h? Eigen rijk, of aan het rijk grenzend */
+    /* Een rivier steek je over via een brug, en die ligt er waar de rivier
+       in of tegen je eigen land ligt. Tussen land van anderen, of in leeg
+       land, is een rivier een grens. */
+    function bruggenNu(){ return K.bruggen(KRT, rijkHex, function(r){ var k = st.rijken[r] ? st.sp[st.rijken[r].koning] : null; return k && k.rol === 'koning' ? k.kasteel : -1; }); }
+    function brug(r){
+      var br = r >= 0 ? bruggenNu().filter(function(x){ return x.r === r; }) : [];
+      return function(a, b){ var sl = a < b ? a + '-' + b : b + '-' + a; return br.some(function(x){ return x.sl === sl; }); };
+    }
     function bereikbaar(i, h){
-      var r = rijkVan(i); if (r < 0) return false;
+      var r = rijkVan(i); if (r < 0 || KRT.dicht[h]) return false;
       if (rijkHex(h) === r) return true;
-      return H[h].buren.some(function(b){ return rijkHex(b) === r; });
+      return H[h].buren.some(function(b){ return rijkHex(b) === r && !KRT.dicht[b]; });
+    }
+    /* een leger loopt van gebied naar gebied, om gebergte en rivieren heen */
+    function mars(eig, bev, n, van, naar){
+      var pad = KRT.pad(van, naar, brug(rijkVan(bev))); if (!pad) return false;
+      st.legers.push({ id:++st.nr, eig:eig, bev:bev, n:n, hex:-1, mars:{ van:van, naar:naar, pad:pad, t0:st.kt, t1:st.kt + Math.max(1, pad.length - 1) * R.mars } });
+      return true;
     }
 
     /* ---------- de acties van de telefoons ---------- */
@@ -154,7 +168,9 @@
         var h = d.h | 0;
         if (p.rol !== 'koning' || p.kasteel >= 0) return false;
         if (st.fase !== 'kastelen') return fout('Je kasteel staat er al.');
-        if (!(h >= 0 && h < N) || st.eig[h] >= 0) return fout('Hier is al land van een ander.');
+        if (!(h >= 0 && h < N)) return false;
+        if (KRT.dicht[h]) return fout('Op het gebergte kun je geen kasteel bouwen.');
+        if (st.eig[h] >= 0) return fout('Hier is al land van een ander.');
         var te = st.sp.some(function(q){ return q.rol === 'koning' && q.kasteel >= 0 && K.afstand(H[q.kasteel], H[h]) < R.kasteelAfstand; });
         if (te) return fout('Te dicht bij een ander kasteel. Kies een plek verderop.');
         bouwKasteel(p, h);
@@ -203,11 +219,11 @@
         var bron = st.legers.filter(function(l){ return l.id === van && l.bev === p.i && !l.mars; })[0];
         if (!bron) return fout('Daar heb je geen soldaten staan.');
         if (bron.hex === naar) return false;
-        if (!bereikbaar(p.i, naar)) return fout('Zo ver kun je niet. Je leger gaat naar je eigen land of naar land dat eraan grenst.');
+        if (KRT.dicht[naar]) return fout('Door het gebergte kan geen leger.');
+        if (!bereikbaar(p.i, naar)) return fout('Daar kun je niet komen. Je leger gaat naar je eigen land of naar land dat eraan grenst.');
         n = Math.min(n, bron.n);
+        if (!mars(bron.eig, p.i, n, bron.hex, naar)) return fout('Er is geen weg erheen: een rivier zonder brug of gebergte zit ertussen.');
         bron.n -= n;
-        var stap = Math.max(1, K.afstand(H[bron.hex], H[naar]));
-        st.legers.push({ id:++st.nr, eig:bron.eig, bev:p.i, n:n, hex:-1, mars:{ van:bron.hex, naar:naar, t0:st.kt, t1:st.kt + stap * R.mars } });
         opruimen();
         var doel = rijkHex(naar), eigen = doel === rijkVan(p.i);
         if (!eigen) log(titel(p) + ' trekt met ' + sold(n) + ' naar ' + H[naar].naam + '.', rijkVan(p.i));
@@ -276,7 +292,7 @@
     function titel(p){ return (p.rol === 'koning' ? 'Koning ' : p.rol === 'ridder' ? 'Ridder ' : 'Boer ') + p.naam; }
     function bouwKasteel(p, h){
       p.kasteel = h; st.eig[h] = p.i;
-      H[h].buren.forEach(function(b){ if (st.eig[b] < 0) st.eig[b] = p.i; });
+      H[h].buren.forEach(function(b){ if (st.eig[b] < 0 && !KRT.dicht[b]) st.eig[b] = p.i; });
       zet(p.i, p.i, R.koningSoldaten, h);
       log('Koning ' + p.naam + ' bouwt een kasteel op ' + H[h].naam + '.', p.rijk);
       zeg('kasteel', p.i, h);
@@ -288,11 +304,11 @@
         if (p.rol !== 'koning' || p.kasteel >= 0) return;
         var kies = [];
         for (var h = 0; h < N; h++){
-          if (st.eig[h] >= 0) continue;
+          if (st.eig[h] >= 0 || KRT.dicht[h]) continue;
           if (st.sp.some(function(q){ return q.rol === 'koning' && q.kasteel >= 0 && K.afstand(H[q.kasteel], H[h]) < R.kasteelAfstand; })) continue;
           kies.push(h);
         }
-        if (!kies.length) for (var h2 = 0; h2 < N; h2++) if (st.eig[h2] < 0) kies.push(h2);
+        if (!kies.length) for (var h2 = 0; h2 < N; h2++) if (st.eig[h2] < 0 && !KRT.dicht[h2]) kies.push(h2);
         bouwKasteel(p, kies[Math.floor(rnd() * kies.length)]);
         meld(p.i, 'Het bord koos een plek voor je kasteel: ' + H[p.kasteel].naam + '.', 'info');
       });
@@ -340,9 +356,8 @@
         var deel = keuze === 'alles' ? 1 : 0.5, gestuurd = 0;
         mijn.forEach(function(l){
           var n = Math.max(keuze === 'alles' ? l.n : 0, Math.floor(l.n * deel)); if (n <= 0) return;
+          if (!mars(p.i, a.van, n, l.hex, van.kasteel)) return;
           l.n -= n; gestuurd += n;
-          var stap = Math.max(1, K.afstand(H[l.hex], H[van.kasteel]));
-          st.legers.push({ id:++st.nr, eig:p.i, bev:a.van, n:n, hex:-1, mars:{ van:l.hex, naar:van.kasteel, t0:st.kt, t1:st.kt + stap * R.mars } });
         });
         opruimen();
         if (!gestuurd){ meld(p.i, 'Je hebt te weinig soldaten om de helft te sturen.', 'fout'); return true; }
@@ -537,7 +552,7 @@
       var l = [], m = [], b = [], vst = [];
       for (var h = 0; h < N; h++){ b.push(boerenOp(h).length); vst.push(st.vst[h] || 0); }
       st.legers.forEach(function(x){
-        if (x.mars) m.push([x.eig, x.bev, x.n, x.mars.van, x.mars.naar, +Math.max(0, x.mars.t1 - st.kt).toFixed(1), +(x.mars.t1 - x.mars.t0).toFixed(1), x.id]);
+        if (x.mars) m.push([x.eig, x.bev, x.n, x.mars.van, x.mars.naar, +Math.max(0, x.mars.t1 - st.kt).toFixed(1), +(x.mars.t1 - x.mars.t0).toFixed(1), x.id, x.mars.pad || [x.mars.van, x.mars.naar]]);
         else l.push([x.eig, x.bev, x.n, x.hex, x.id]);
       });
       var rest = st.fase === 'kastelen' ? Math.max(0, R.kastelenTijd - st.kt) : st.sd - (st.t % st.sd);
@@ -593,7 +608,7 @@
 
     return {
       stand:st, kaartdata:kaart, actie:actie, tik:tik, bord:bord, kaart:kaart, uitslag:uitslag, laatkomer:laatkomer,
-      begin:beginKlok, einde:einde, speler:speler, rijkVan:rijkVan, rijkHex:rijkHex, soldatenVan:soldatenVan, land:land,
+      begin:beginKlok, einde:einde, bruggen:bruggenNu, speler:speler, rijkVan:rijkVan, rijkHex:rijkHex, soldatenVan:soldatenVan, land:land,
       seizoen:seizoen, jaar:jaar, R:R, kaartVan:function(){ return KRT; },
       pauze:function(aan){ st.pauze = !!aan; }
     };

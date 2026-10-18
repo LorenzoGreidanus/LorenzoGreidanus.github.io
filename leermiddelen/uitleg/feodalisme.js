@@ -27,7 +27,7 @@ STAPPEN.les('feodalisme', function(){
       id: 'spel', naam: 'Zo speel je met de klas', uitleg: 'Drie koningen, een kaart en een klok die door de seizoenen loopt.',
       stappen: [
         { kop: 'Kastelen en land', beeld: S.formule('kasteel → land eromheen → land in leen'),
-          tekst: '<p>Drie koningen kiezen op hun telefoon een plek voor hun kasteel. Ze krijgen het land eromheen, en kunnen stukken in leen geven aan ridders.</p>' },
+          tekst: '<p>Drie koningen kiezen op hun telefoon een plek voor hun kasteel. Ze krijgen het land eromheen, en kunnen stukken in leen geven aan ridders. Door gebergte kan geen leger, en over een rivier alleen via een brug. Elk rijk heeft een brug over elke rivier die in of tegen zijn land ligt.</p>' },
         { kop: 'Ridders en boeren', beeld: S.formule('ridder: trouw en soldaten &nbsp;·&nbsp; boer: oogst'),
           tekst: '<p>Ridders zoeken een koning, zweren trouw en krijgen land. Elk voorjaar levert hun land soldaten. Boeren kiezen een heer om bij te wonen en geven hem een deel van de oogst.</p>' },
         { kop: 'De seizoenen', beeld: S.formule('lente · zomer · herfst · winter'),

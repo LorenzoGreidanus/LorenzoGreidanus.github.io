@@ -72,10 +72,50 @@ window.RIJKTEL = (function(){
   function mijnRijk(){ var s = sp(ik()); return s ? s.rijk : -1; }
   function mijnLegers(){ return B ? B.l.filter(function(l){ return l[1] === ik(); }) : []; }
   function bereikbaar(h){
-    var r = mijnRijk(); if (r < 0) return false;
+    var r = mijnRijk(); if (r < 0 || KR.dicht[h]) return false;
     if (rijkHex(h) === r) return true;
-    return KR.hex[h].buren.some(function(b){ return rijkHex(b) === r; });
+    return KR.hex[h].buren.some(function(b){ return rijkHex(b) === r && !KR.dicht[b]; });
   }
+  /* over een rivier via een brug: waar hij in of tegen je eigen land ligt */
+  function kasteelVan(r){ var k = B && B.ri[r] ? B.sp[B.ri[r][2]] : null; return k && k[1] === 0 ? k[4] : -1; }
+  function brug(a, b){
+    var r = mijnRijk(), sl = a < b ? a + '-' + b : b + '-' + a;
+    return r >= 0 && FEOKAART.bruggen(KR, rijkHex, kasteelVan).some(function(x){ return x.r === r && x.sl === sl; });
+  }
+  function pad(a, b){ return KR.pad(a, b, brug); }
+  function bruggen(r, kasteel, rijkVanHex){
+    var s = '', klaar = {};
+    FEOKAART.bruggen(KR, rijkVanHex, kasteel).forEach(function(br){
+      if (klaar[br.sl]) return; klaar[br.sl] = true;
+      var a = br.a, b = br.b;
+      var ma = FEOKAART.midden(KR.hex[a], r), mb = FEOKAART.midden(KR.hex[b], r);
+      var x = (ma.x + mb.x) / 2, y = (ma.y + mb.y) / 2, h = Math.atan2(mb.y - ma.y, mb.x - ma.x) * 180 / Math.PI, l = r * 0.54, w = r * 0.23;
+      s += '<g transform="translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ') rotate(' + h.toFixed(0) + ')" pointer-events="none">' +
+        '<rect x="' + (-l / 2).toFixed(1) + '" y="' + (-w / 2).toFixed(1) + '" width="' + l.toFixed(1) + '" height="' + w.toFixed(1) + '" rx="' + (w * 0.2).toFixed(1) + '" fill="#a7774a" stroke="#14224C" stroke-width="' + (r * 0.035).toFixed(2) + '"/>' +
+        '<path d="M' + (-l / 2).toFixed(1) + ' ' + (-w / 2).toFixed(1) + 'h' + l.toFixed(1) + 'M' + (-l / 2).toFixed(1) + ' ' + (w / 2).toFixed(1) + 'h' + l.toFixed(1) + '" stroke="#14224C" stroke-width="' + (r * 0.06).toFixed(2) + '" stroke-linecap="round"/>' +
+        '<path d="M' + (-l / 6).toFixed(1) + ' ' + (-w / 2).toFixed(1) + 'v' + w.toFixed(1) + 'M' + (l / 6).toFixed(1) + ' ' + (-w / 2).toFixed(1) + 'v' + w.toFixed(1) + '" stroke="#7a522c" stroke-width="' + (r * 0.03).toFixed(2) + '"/></g>';
+    });
+    return s;
+  }
+
+  /* een leger op zijn route: f van 0 tot 1 over de middens van de gebieden */
+  function opRoute(pad, f, r){
+    var p = pad.map(function(h){ return FEOKAART.midden(KR.hex[h], r); });
+    if (p.length < 2) return p[0];
+    var t = Math.max(0, Math.min(1, f)) * (p.length - 1), i = Math.min(p.length - 2, Math.floor(t)), d = t - i;
+    return { x:p[i].x + (p[i + 1].x - p[i].x) * d, y:p[i].y + (p[i + 1].y - p[i].y) * d };
+  }
+  function routeLijn(pad, r){ return pad.map(function(h){ var c = FEOKAART.midden(KR.hex[h], r); return c.x.toFixed(1) + ',' + c.y.toFixed(1); }).join(' '); }
+  function rivieren(r){
+    var s = '';
+    KR.rivieren.forEach(function(x, n){
+      var d = FEOKAART.rivier(KR, n, r);
+      s += '<path d="' + d + '" fill="none" stroke="#3f7fb8" stroke-width="' + (r * 0.2).toFixed(1) + '" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>' +
+        '<path d="' + d + '" fill="none" stroke="#9fcbee" stroke-width="' + (r * 0.07).toFixed(1) + '" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>';
+    });
+    return s;
+  }
+
   function tijd(s){ s = Math.max(0, Math.ceil(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
   function rest(){ return B ? Math.max(0, B.r - (B.p ? 0 : (performance.now() - bordOp) / 1000)) : 0; }
 
@@ -95,15 +135,15 @@ window.RIJKTEL = (function(){
         var w = sp(e); if (w && w.rol === 1) s += '<polygon pointer-events="none" points="' + FEOKAART.punten(h, R, 0.6) + '" fill="url(#fzLeen)"/>';
       }
     });
-    /* grenzen tussen rijken */
+    /* de grens van elk rijk: precies langs de randen, ook aan de rand van de kaart */
     H.forEach(function(h){
-      var r = rijkHex(h.i); if (r < 0 && B.e[h.i] < 0) return;
-      h.buren.forEach(function(b){
-        if (rijkHex(b) === r && (B.e[b] >= 0) === (B.e[h.i] >= 0)) return;
-        var rr = FEOKAART.rand(h, H[b], R - 1.6);
-        s += '<line pointer-events="none" x1="' + rr[0].toFixed(1) + '" y1="' + rr[1].toFixed(1) + '" x2="' + rr[2].toFixed(1) + '" y2="' + rr[3].toFixed(1) + '" stroke="' + (r >= 0 ? rijkKleur(r) : '#5b6480') + '" stroke-width="2.6" stroke-linecap="round"/>';
+      var r = rijkHex(h.i); if (B.e[h.i] < 0) return;
+      FEOKAART.randen(h, R, 1.4).forEach(function(rd){
+        if (rd.b >= 0 && B.e[rd.b] >= 0 && rijkHex(rd.b) === r) return;
+        s += '<line pointer-events="none" x1="' + rd.x1.toFixed(1) + '" y1="' + rd.y1.toFixed(1) + '" x2="' + rd.x2.toFixed(1) + '" y2="' + rd.y2.toFixed(1) + '" stroke="' + (r >= 0 ? rijkKleur(r) : '#5b6480') + '" stroke-width="2.4" stroke-linecap="round"/>';
       });
     });
+    s += rivieren(R) + bruggen(R, kasteelVan, rijkHex);
     /* mijn land, mijn huis */
     H.forEach(function(h){ if (B.e[h.i] === me) s += '<polygon pointer-events="none" points="' + FEOKAART.punten(h, R, 3) + '" fill="none" stroke="#14224C" stroke-width="1.4" stroke-dasharray="3 2"/>'; });
     /* geplunderd */
@@ -138,10 +178,10 @@ window.RIJKTEL = (function(){
     var g = el && el.querySelector('#fzMars'); if (!g || !B) return;
     var weg = (performance.now() - bordOp) / 1000, s = '', H = KR.hex;
     B.m.forEach(function(m){
-      var a = FEOKAART.midden(H[m[3]], R), b = FEOKAART.midden(H[m[4]], R);
+      var pad = m[8] || [m[3], m[4]];
       var over = Math.max(0, m[5] - (B.p ? 0 : weg)), f = m[6] > 0 ? Math.min(1, 1 - over / m[6]) : 1;
-      var x = a.x + (b.x - a.x) * f, y = a.y + (b.y - a.y) * f, s2 = sp(m[1]), kl = rijkKleur(s2 ? s2.rijk : -1);
-      s += '<line x1="' + a.x.toFixed(1) + '" y1="' + a.y.toFixed(1) + '" x2="' + b.x.toFixed(1) + '" y2="' + b.y.toFixed(1) + '" stroke="' + kl + '" stroke-width="2" stroke-dasharray="4 3"/>' +
+      var q = opRoute(pad, f, R), x = q.x, y = q.y, s2 = sp(m[1]), kl = rijkKleur(s2 ? s2.rijk : -1);
+      s += '<polyline points="' + routeLijn(pad, R) + '" fill="none" stroke-linejoin="round" stroke="' + kl + '" stroke-width="2" stroke-dasharray="4 3"/>' +
         '<g transform="translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ')"><path d="M0 -13v12" stroke="#14224C" stroke-width="1.4"/><path d="M0 -13h9l-2.5 3 2.5 3h-9" fill="' + kl + '" stroke="#14224C" stroke-width=".9"/>' +
         '<circle r="7" fill="#FBF6F1" stroke="' + kl + '" stroke-width="2"/><text y="3.2" text-anchor="middle" font-size="8.5" font-weight="700" fill="#14224C" font-family="Poppins,Arial,sans-serif">' + m[2] + '</text></g>';
     });
@@ -175,6 +215,7 @@ window.RIJKTEL = (function(){
       (so.verdedig > 1 ? '<span>goed te verdedigen</span>' : '') + '<span>' + B.b[sel] + ' van 3 boeren</span>' + (soldatenOp(sel) ? '<span>' + soldatenOp(sel) + ' soldaten</span>' : '') +
       (B.v[sel] ? '<span>versterkt</span>' : '') + (B.g.indexOf(sel) >= 0 ? '<span>geplunderd</span>' : '') + '</div>';
     var knoppen = '';
+    if (KR.dicht[sel]) return '<div class="fz-pan"><h3>' + schoon(h.naam) + '</h3><p>Gebergte. Hier woont niemand, en geen leger komt erdoor: ga eromheen.</p></div>';
     if (D.rol === 'koning' && B.f === 'kastelen' && D.kst < 0){
       var vrij = e < 0, ver = B.sp.every(function(p){ return p[4] < 0 || FEOKAART.afstand(KR.hex[p[4]], h) >= 3; });
       knoppen += '<button class="fz-knop rood" data-a="kasteel"' + (vrij && ver ? '' : ' disabled') + '>Bouw hier je kasteel<small>' + (!vrij ? 'Dit land is al van een ander.' : !ver ? 'Te dicht bij een ander kasteel.' : 'Je krijgt dit gebied en het land eromheen.') + '</small></button>';
@@ -190,22 +231,22 @@ window.RIJKTEL = (function(){
       }
       if (D.rol === 'koning' && s && s.rol === 1 && s.heer === me) knoppen += '<button class="fz-knop twee" data-a="intrek">Neem dit land terug van ' + schoon(s.naam) + '<small>Een heer mocht het leen intrekken als een vazal zijn plicht niet deed.</small></button>';
       /* soldaten sturen */
-      var mijn = mijnLegers().filter(function(l){ return l[3] !== sel; });
+      var mijn = mijnLegers().filter(function(l){ return l[3] !== sel && pad(l[3], sel); });
       if (mijn.length){
         var kan = bereikbaar(sel), eigen = rijkHex(sel) === mijnRijk();
         if (modus === 'stuur' && kan){
-          if (bron < 0 || !mijn.some(function(l){ return l[4] === bron; })){ var best = mijn.slice().sort(function(a, b){ return FEOKAART.afstand(KR.hex[a[3]], h) - FEOKAART.afstand(KR.hex[b[3]], h) || b[2] - a[2]; })[0]; bron = best[4]; aantal = 0; }
+          if (bron < 0 || !mijn.some(function(l){ return l[4] === bron; })){ var best = mijn.slice().sort(function(a, b){ return pad(a[3], sel).length - pad(b[3], sel).length || b[2] - a[2]; })[0]; bron = best[4]; aantal = 0; }
           var bl = mijn.filter(function(l){ return l[4] === bron; })[0];
           if (!aantal || aantal > bl[2]) aantal = eigen ? bl[2] : Math.max(1, Math.ceil(bl[2] * 0.7));
           knoppen += '<p class="fz-tip" style="margin-top:8px">Vanaf waar?</p><div class="fz-bron">' + mijn.map(function(l){
-            var st = Math.max(1, FEOKAART.afstand(KR.hex[l[3]], h));
+            var st = Math.max(1, pad(l[3], sel).length - 1);
             return '<button data-a="bron" data-l="' + l[4] + '" class="' + (l[4] === bron ? 'aan' : '') + '">' + schoon(KR.hex[l[3]].naam) + ': ' + l[2] + ' soldaten <small>(' + st * 4 + ' tellen lopen)</small></button>';
           }).join('') + '</div><div class="fz-stap"><button data-a="min" aria-label="Minder">&minus;</button><b>' + aantal + '</b><button data-a="plus" aria-label="Meer">+</button><span class="fz-tip">van de ' + bl[2] + '</span></div>' +
             '<button class="fz-knop rood" data-a="stuur">' + (eigen ? 'Verplaats ' + aantal + ' soldaten hierheen' : e < 0 ? 'Neem in bezit met ' + aantal + ' soldaten' : 'Val aan met ' + aantal + ' soldaten') + '</button>' +
             '<button class="fz-knop twee" data-a="terug">Toch niet</button>';
         } else if (B.s === 3) knoppen += '<p class="fz-tip" style="margin-top:8px">In de winter voer je geen oorlog.</p>';
         else knoppen += '<button class="fz-knop' + (eigen ? ' twee' : '') + '" data-a="stuurmodus"' + (kan ? '' : ' disabled') + '>' + (eigen ? 'Stuur soldaten hierheen' : e < 0 ? 'Neem dit land in bezit' : 'Val dit land aan') +
-          '<small>' + (kan ? (eigen ? 'Verplaats soldaten binnen je rijk.' : 'Je leger loopt erheen; wie de meeste soldaten heeft, wint.') : 'Te ver: alleen land dat aan je rijk grenst.') + '</small></button>';
+          '<small>' + (kan ? (eigen ? 'Verplaats soldaten binnen je rijk.' : 'Je leger loopt erheen; wie de meeste soldaten heeft, wint.') : 'Daar kom je niet: alleen land dat aan je rijk grenst.') + '</small></button>';
       }
     }
     if (D.rol === 'boer'){
@@ -245,9 +286,9 @@ window.RIJKTEL = (function(){
   }
   function hulp(){
     var t = D.rol === 'koning' ?
-      ['Jij bent koning. Het land is van jou, maar je kunt niet overal tegelijk zijn.', 'Geef land in leen aan ridders: zij zweren trouw en komen met soldaten als je ze oproept. Boeren op je eigen land geven een deel van hun oogst.', 'In de winter eten jij en al je soldaten. Te weinig voedsel? Dan lopen soldaten weg. Wie het meeste land heeft aan het eind, heeft het machtigste rijk.'] :
+      ['Jij bent koning. Het land is van jou, maar je kunt niet overal tegelijk zijn.', 'Geef land in leen aan ridders: zij zweren trouw en komen met soldaten als je ze oproept. Boeren op je eigen land geven een deel van hun oogst.', 'In de winter eten jij en al je soldaten. Te weinig voedsel? Dan lopen soldaten weg. Door gebergte komt geen leger, en over een rivier alleen via een brug: die heb je waar de rivier in of tegen je land ligt. Wie het meeste land heeft aan het eind, heeft het machtigste rijk.'] :
       D.rol === 'ridder' ?
-      ['Jij bent ridder. Zonder land heb je weinig: zoek een koning die je land in leen geeft, en zweer trouw.', 'Je land levert elke lente soldaten. Roept je koning je op, dan stuur je soldaten, of je weigert. Dan kan hij je land terugnemen.', 'Je kunt ook overlopen naar een andere koning, met je land erbij. Trouw levert punten op, land nog meer.'] :
+      ['Jij bent ridder. Zonder land heb je weinig: zoek een koning die je land in leen geeft, en zweer trouw.', 'Je land levert elke lente soldaten. Roept je koning je op, dan stuur je soldaten, of je weigert. Dan kan hij je land terugnemen.', 'Je kunt ook overlopen naar een andere koning, met je land erbij. Door gebergte komt geen leger, en over een rivier alleen via een brug. Trouw levert punten op, land nog meer.'] :
       ['Jij bent boer. Je hebt geen eigen land. Ga wonen op het land van een heer: hij beschermt je, jij geeft een deel van je oogst.', 'In de herfst wordt er geoogst. In de winter eet je familie 3 voedsel. Twee winters honger, en je trekt weg.', 'Wordt je dorp geplunderd, dan blijft er weinig van je oogst over. Kies je heer dus goed.'];
     return '<details class="fz-hulp"><summary>Wat doe jij in dit spel?</summary>' + t.map(function(x){ return '<p>' + x + '</p>'; }).join('') + '</details>';
   }
