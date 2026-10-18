@@ -9,6 +9,7 @@
 <script src="avatar.js"></script>
 <script src="profiel.js"></script>
 <script src="zwaard-motor.js"></script>
+<script src="geluid.js"></script>
 <link rel="apple-touch-icon" href="/icoon-192.png">
 <script>
 /* Opgeslagen themakeuze meteen toepassen, nog voor de pagina getekend wordt. */
@@ -547,6 +548,7 @@ body.groot .meter b{font-size:1.45rem}
         <svg class="maan" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
         <svg class="zon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>
       </button>
+      <button class="themaknop geluidknop" id="geluidBtn" type="button" aria-label="Geluid"></button>
       <button class="linkbtn hide" id="pauzeBtn" type="button">Pauze</button>
       <button class="linkbtn" id="bordBtn" type="button">Digibord</button>
       <button class="linkbtn hide" id="opnieuwBtn" type="button">Opnieuw</button>
@@ -1611,6 +1613,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   /* een nieuwe ronde: de tekst onder de arena, en de baas die binnenkomt */
   function rondeTekst(n, aantal, bz){
     fase = 'ronde'; co.klaar = false; co.maatKlaar = false;
+    geluid(bz ? 'baas' : 'ronde');
     /* Tijdens een baas is dit een regel die je in een ooghoek leest: de naam en
        wat je doet. Wat hij allemaal kan staat in de uitleg; de bediening alleen
        in de eerste ronde. */
@@ -1819,6 +1822,72 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     document.getElementById('arenatip').textContent = pauze ? 'Pauze. Druk op P of Escape om verder te gaan.' : 'Verder.';
   }
   document.getElementById('pauzeBtn').addEventListener('click', zetPauze);
+  if (window.GELUID) GELUID.knop(document.getElementById('geluidBtn'));
+  else document.getElementById('geluidBtn').classList.add('hide');
+
+  /* ---------- geluid ----------
+     Alles uit geluid.js, in code gemaakt; er staan geen geluidsbestanden op de
+     site. Na elk getekend beeld kijkt luister() wat er veranderde: een zwaai
+     die begint, een sprong, leven dat zakt, nieuwe getallen boven de fouten,
+     een aanval die oplicht of inslaat. Dat werkt alleen en samen hetzelfde. */
+  function geluid(naam, o){ if (window.GELUID) GELUID.speel(naam, o); }
+  function panX(x){ return typeof x === 'number' ? Math.max(-0.6, Math.min(0.6, (x / ARENA.b) * 1.2 - 0.6)) : 0; }
+  var oor = { zwaai:0, dash:0, hp:null, geveld:0, munten:0, cijfers:{}, messen:{}, aanvallen:{}, knal:{}, fase:'' };
+  function oorLeeg(){ oor.zwaai = 0; oor.dash = 0; oor.hp = null; oor.geveld = geveld; oor.munten = munten; oor.cijfers = {}; oor.messen = {}; oor.aanvallen = {}; oor.knal = {}; }
+  function luister(){
+    if (!window.GELUID || !GELUID.aan()) { oor.fase = fase; oor.hp = hp; oor.geveld = geveld; oor.munten = munten; oor.zwaai = sp.zwaai || 0; oor.dash = sp.dash || 0; return; }
+    if (fase !== oor.fase){ oor.fase = fase; oorLeeg(); }
+    if (fase !== 'ronde' || pauze){ oor.hp = hp; oor.geveld = geveld; oor.munten = munten; return; }
+    var nu = performance.now(), neer = co.aan ? co.neer : false;
+    /* mijn zwaard of boog, en mijn sprong */
+    var zw = sp.zwaai || 0;
+    if (zw > 0 && !(oor.zwaai > 0) && !neer) geluid(sp.wapen === 'boog' ? 'boog' : 'zwaai', { volume:0.55 });
+    oor.zwaai = zw;
+    var ds = sp.dash || 0;
+    if (ds > 0 && !(oor.dash > 0)) geluid('dash', { volume:0.7 });
+    oor.dash = ds;
+    /* geraakt: leven zakt */
+    if (oor.hp !== null && hp < oor.hp - 0.5) geluid(sp.blok ? 'blok' : 'au', { volume:0.8 });
+    oor.hp = hp;
+    /* een fout geveld, munten opgeraapt */
+    if (geveld > oor.geveld) geluid('plop', { volume:0.5, toon:0.9 + Math.random() * 0.25 });
+    oor.geveld = geveld;
+    if (munten > oor.munten) geluid('munt', { volume:0.35 });
+    oor.munten = munten;
+    /* de getallen boven de fouten: een klap, een critical, een blok, iemand die neergaat of opstaat */
+    var gezien = {};
+    cijfers.forEach(function(c){
+      var sl = c.tekst + '|' + Math.round(c.x) + '|' + c.kleur;
+      gezien[sl] = 1;
+      if (oor.cijfers[sl]) return;
+      oor.cijfers[sl] = nu;
+      var t = String(c.tekst), o = { pan:panX(c.x) };
+      if (/^CRIT/.test(t)) geluid('crit', o);
+      else if (/^geblokt/.test(t)) geluid('blok', o);
+      else if (/ligt neer$/.test(t)) geluid('neer');
+      else if (/staat weer op$/.test(t)) geluid('op');
+      else if (/^Terug naar ronde/.test(t)) geluid('checkpoint');
+      else if (/ is geveld$/.test(t)) geluid('baasweg');
+      else if (/^Fase |wordt kwaad$/.test(t)) geluid('baas', { volume:0.7 });
+      else if (/^Nu! /.test(t)) geluid('reeks', { volume:0.6 });
+      else if (t.charAt(0) === '-' && c.kleur === '#14224C') { o.volume = 0.45; o.toon = 0.92 + Math.random() * 0.16; geluid('treffer', o); }
+    });
+    /* wat er van het scherm is, mag er weer bij */
+    for (var k in oor.cijfers) if (!gezien[k] && nu - oor.cijfers[k] > 1500) delete oor.cijfers[k];
+    /* een werpmes dat vertrekt (pijlen hoor je al bij de zwaai) */
+    var mz = {};
+    messen.forEach(function(m){ mz[m.id] = 1; if (!oor.messen[m.id] && !m.pijl) geluid('mes', { volume:0.4, pan:panX(m.x) }); });
+    oor.messen = mz;
+    /* aanvallen: oplichten bij het begin, een dreun bij de inslag */
+    var az = {}, kz = {};
+    aanvallen.forEach(function(a){
+      az[a.id] = 1;
+      var vliegt = a.soort === 'kogel' || a.soort === 'schot';
+      if (!oor.aanvallen[a.id] && !vliegt) geluid('aanval', { volume:0.45, pan:panX(a.x) });
+      if (a.geknald){ kz[a.id] = 1; if (!oor.knal[a.id]) geluid('knal', { volume:0.7, pan:panX(a.x) }); }
+    });
+    oor.aanvallen = az; oor.knal = kz;
+  }
 
   /* ---------- de klok ---------- */
   /* De klok loopt op requestAnimationFrame, maar die staat stil zodra het
@@ -1856,7 +1925,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       var gedaan = 0;
       while (rest >= STAP && gedaan < 4){ rest -= STAP; doeStap(); gedaan++; }
     }
-    if (nu - laatsteTeken >= TEKEN_OM){ laatsteTeken = nu; tekenArena(); }
+    if (nu - laatsteTeken >= TEKEN_OM){ laatsteTeken = nu; tekenArena(); try { luister(); } catch (e){} }
     if (!rafId) rafId = requestAnimationFrame(tik);
   }
   /* een stap van de motor, hier in de browser */
@@ -2176,8 +2245,10 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       munten += winst;
       vraag.winst = winst;
       if (reeks % COMBO === 0){ vraag.crit = true; if (co.aan) zendNet({ k:'crit' }); else if (W) W.crit(0); }
+      geluid(vraag.crit ? 'reeks' : 'goed');
     } else if (tweedeKansOver > 0){ tweedeKansOver--; foutAantal++; vraag.winst = 0; vraag.tweedeKans = true; }
     else { reeks = 0; foutAantal++; vraag.winst = 0; }
+    if (!goed) geluid('fout');
     vragenOver--;
     bewaarPotje();
     tekenZij(); tekenHud();
@@ -2222,7 +2293,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   }
   function kiesVaardigheid(id){
     if (fase !== 'kies') return;
-    vaardig[id] = v(id) + 1;
+    vaardig[id] = v(id) + 1; geluid('kracht');
     if (id === 'leven'){ maxHp = maxLeven(); hp = maxHp; }
     keuzeOpen = null; fase = 'winkel';
     document.getElementById('arenatip').textContent = 'De winkel. Koop wat je nodig hebt en start dan ronde ' + (ronde + 1) + '.';
@@ -2235,11 +2306,11 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     var u = UITRUSTING.filter(function(x){ return x.id === id; })[0];
     if (u.los){
       if (munten < u.prijs[0] || hp >= maxHp) return;
-      munten -= u.prijs[0]; hp = Math.min(maxHp, hp + Math.round(maxHp / 2));
+      munten -= u.prijs[0]; hp = Math.min(maxHp, hp + Math.round(maxHp / 2)); geluid('kist');
     } else {
       var lv = stat(id); if (lv >= u.prijs.length) return;
       var prijs = u.prijs[lv]; if (munten < prijs) return;
-      munten -= prijs; level[id] = lv + 1;
+      munten -= prijs; level[id] = lv + 1; geluid('kist');
       if (id === 'harnas'){ var oud = maxHp; maxHp = maxLeven(); hp += maxHp - oud; }
     }
     bewaarPotje();
@@ -3063,6 +3134,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   /* ---------- einde ---------- */
   function einde(){
     if (fase === 'einde') return;
+    geluid('verloren');
     botLog('einde');
     fase = 'einde';
     /* gevallen: dit potje is voorbij, er valt niets meer te hervatten */
