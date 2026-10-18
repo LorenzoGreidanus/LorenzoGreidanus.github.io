@@ -123,16 +123,16 @@ window.RIJKTEL = (function(){
   function kaartSvg(){
     var m = FEOKAART.maat(R), H = KR.hex, s = '', me = ik();
     s += '<svg viewBox="0 0 ' + m.b.toFixed(0) + ' ' + m.h.toFixed(0) + '" role="img" aria-label="De kaart: tik een gebied aan"><defs>' +
-      '<pattern id="fzLeen" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="2.2" height="6" fill="#fff" opacity=".45"/></pattern></defs>';
+      '<pattern id="fzLeen" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="2.2" height="6" fill="#fff" opacity=".45"/></pattern>' + FEOKAART.defs('ft') + '</defs><rect width="100%" height="100%" fill="url(#ft-water)"/>';
     H.forEach(function(h){
       var so = FEOKAART.SOORTEN[h.soort], c = FEOKAART.midden(h, R);
-      s += '<polygon class="fzh" data-h="' + h.i + '" points="' + FEOKAART.punten(h, R, 0.6) + '" fill="' + so.kleur + '"/>';
-      s += FEOKAART.teken(h.soort, c.x, c.y - 3, 0.75).replace('<path', '<path pointer-events="none"');
+      s += '<polygon class="fzh" data-h="' + h.i + '" points="' + FEOKAART.punten(h, R, 0) + '" fill="url(#ft-' + h.soort + ')" stroke="#FBF6F1" stroke-opacity=".75" stroke-width=".9"/>';
+      s += FEOKAART.teken(h.soort, c.x, c.y, 0.85, h.i);
       var e = B.e[h.i];
       if (e >= 0){
         var r = rijkHex(h.i), kl = r >= 0 ? rijkKleur(r) : '#8a8f9e';
-        s += '<polygon pointer-events="none" points="' + FEOKAART.punten(h, R, 0.6) + '" fill="' + kl + '" opacity=".5"/>';
-        var w = sp(e); if (w && w.rol === 1) s += '<polygon pointer-events="none" points="' + FEOKAART.punten(h, R, 0.6) + '" fill="url(#fzLeen)"/>';
+        s += '<polygon pointer-events="none" points="' + FEOKAART.punten(h, R, 0) + '" fill="' + kl + '" opacity=".44"/>';
+        var w = sp(e); if (w && w.rol === 1) s += '<polygon pointer-events="none" points="' + FEOKAART.punten(h, R, 0) + '" fill="url(#fzLeen)"/>';
       }
     });
     /* de grens van elk rijk: precies langs de randen, ook aan de rand van de kaart */
@@ -148,24 +148,26 @@ window.RIJKTEL = (function(){
     H.forEach(function(h){ if (B.e[h.i] === me) s += '<polygon pointer-events="none" points="' + FEOKAART.punten(h, R, 3) + '" fill="none" stroke="#14224C" stroke-width="1.4" stroke-dasharray="3 2"/>'; });
     /* geplunderd */
     B.g.forEach(function(h){ var c = FEOKAART.midden(H[h], R); s += '<path pointer-events="none" d="M' + (c.x + 9) + ' ' + (c.y - 13) + 'q3 4 0 7q-3 -3 0 -7z" fill="#a8371f" opacity=".85"/>'; });
-    /* boeren: huisjes onderin */
+    var kas = {};
+    B.sp.forEach(function(p){ if (p[4] >= 0) kas[p[4]] = 1; });
+    /* boeren: boerderijen onderin */
     B.b.forEach(function(n, h){
       if (!n) return; var c = FEOKAART.midden(H[h], R);
-      for (var k = 0; k < n; k++){ var x = c.x - (n - 1) * 4.5 + k * 9, y = c.y + 12; s += '<path pointer-events="none" d="M' + (x - 3.5) + ' ' + y + 'v-3.5l3.5 -3 3.5 3v3.5z" fill="#FBF6F1" stroke="#14224C" stroke-width=".9"/>'; }
+      for (var k = 0; k < n; k++) s += FEOKAART.huis(c.x - (n - 1) * 4.4 + k * 8.8, c.y + (kas[h] ? 17.5 : 15), 0.8);
     });
     /* kastelen */
-    B.sp.forEach(function(p, i){
-      if (p[4] < 0) return; var c = FEOKAART.midden(H[p[4]], R), kl = rijkKleur(p[2]);
-      s += '<g pointer-events="none" transform="translate(' + c.x.toFixed(1) + ' ' + (c.y - 4).toFixed(1) + ') scale(1.3)"><path d="M-9 6v-10h3v3h3v-3h6v3h3v-3h3v10z" fill="#FBF6F1" stroke="#14224C" stroke-width="1.2"/><path d="M-1 -4v-8l6 2.5-6 2.5" fill="' + kl + '" stroke="#14224C" stroke-width=".8"/></g>';
+    B.sp.forEach(function(p){
+      if (p[4] < 0) return; var c = FEOKAART.midden(H[p[4]], R);
+      s += FEOKAART.kasteel(c.x, c.y - 4, 0.82, rijkKleur(p[2]));
     });
-    /* soldaten die stilstaan: een schildje met het aantal */
+    /* soldaten die stilstaan: een schild met het aantal */
     var per = {};
     B.l.forEach(function(l){ var k = l[3]; var r = sp(l[1]) ? sp(l[1]).rijk : -1; per[k] = per[k] || {}; per[k][r] = (per[k][r] || 0) + l[2]; });
     Object.keys(per).forEach(function(h){
       var c = FEOKAART.midden(H[h], R), rs = Object.keys(per[h]);
       rs.forEach(function(r, k){
-        var x = c.x - 11 + k * 15, y = c.y + 2, kl = rijkKleur(+r), n = per[h][r];
-        s += '<g pointer-events="none"><circle cx="' + x + '" cy="' + y + '" r="9" fill="' + kl + '" stroke="#14224C" stroke-width="1"/><text x="' + x + '" y="' + (y + 3.8) + '" text-anchor="middle" font-size="10.5" font-weight="700" fill="' + inkt(kl) + '" font-family="Poppins,Arial,sans-serif">' + n + '</text></g>';
+        var kl = rijkKleur(+r), x = kas[h] ? c.x - 13 + k * 26 : c.x - 7 + k * 16, y = kas[h] ? c.y + 6 : c.y + 1;
+        s += FEOKAART.schild(x, y, kas[h] ? 0.9 : 1.05, kl, per[h][r], inkt(kl));
       });
     });
     if (sel >= 0) s += '<polygon pointer-events="none" points="' + FEOKAART.punten(H[sel], R, 1.4) + '" fill="none" stroke="#14224C" stroke-width="3"/><polygon pointer-events="none" points="' + FEOKAART.punten(H[sel], R, 3.4) + '" fill="none" stroke="#fff" stroke-width="1.5"/>';
@@ -182,8 +184,7 @@ window.RIJKTEL = (function(){
       var over = Math.max(0, m[5] - (B.p ? 0 : weg)), f = m[6] > 0 ? Math.min(1, 1 - over / m[6]) : 1;
       var q = opRoute(pad, f, R), x = q.x, y = q.y, s2 = sp(m[1]), kl = rijkKleur(s2 ? s2.rijk : -1);
       s += '<polyline points="' + routeLijn(pad, R) + '" fill="none" stroke-linejoin="round" stroke="' + kl + '" stroke-width="2" stroke-dasharray="4 3"/>' +
-        '<g transform="translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ')"><path d="M0 -13v12" stroke="#14224C" stroke-width="1.4"/><path d="M0 -13h9l-2.5 3 2.5 3h-9" fill="' + kl + '" stroke="#14224C" stroke-width=".9"/>' +
-        '<circle r="7" fill="#FBF6F1" stroke="' + kl + '" stroke-width="2"/><text y="3.2" text-anchor="middle" font-size="8.5" font-weight="700" fill="#14224C" font-family="Poppins,Arial,sans-serif">' + m[2] + '</text></g>';
+        FEOKAART.vaandel(x, y, 1, kl, m[2], inkt(kl));
     });
     g.innerHTML = s;
     var kl = el.querySelector('.fz-klok em'); if (kl) kl.textContent = klokTekst();

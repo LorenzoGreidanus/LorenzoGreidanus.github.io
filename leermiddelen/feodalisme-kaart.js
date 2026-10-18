@@ -234,20 +234,85 @@
   /* in stappen: omrekenen naar kubuscoordinaten */
   function kubus(h){ var x = h.kol - (h.rij - (h.rij & 1)) / 2, z = h.rij; return { x:x, y:-x - z, z:z }; }
   function afstand(a, b){ var p = kubus(a), q = kubus(b); return Math.max(Math.abs(p.x - q.x), Math.abs(p.y - q.y), Math.abs(p.z - q.z)); }
-  /* kleine tekeningetjes per soort, om het midden van een gebied */
-  function teken(soort, x, y, s){
-    s = s || 1;
-    function n(v){ return (v * s).toFixed(1); }
-    var k = SOORTEN[soort].donker, o = 'stroke="' + k + '" stroke-width="' + (1.4 * s).toFixed(2) + '" fill="none" stroke-linecap="round" opacity=".55"';
-    if (soort === 'akker') return '<path ' + o + ' d="M' + (x - 9 * s) + ' ' + (y + 4 * s) + 'h' + n(18) + 'M' + (x - 7 * s) + ' ' + (y - 1 * s) + 'h' + n(14) + 'M' + (x - 5 * s) + ' ' + (y - 6 * s) + 'h' + n(10) + '"/>';
-    if (soort === 'weide') return '<path ' + o + ' d="M' + (x - 8 * s) + ' ' + (y + 3 * s) + 'q' + n(2) + ' ' + n(-7) + ' ' + n(4) + ' 0q' + n(2) + ' ' + n(-7) + ' ' + n(4) + ' 0M' + (x + 1 * s) + ' ' + (y + 3 * s) + 'q' + n(2) + ' ' + n(-6) + ' ' + n(4) + ' 0"/>';
-    if (soort === 'bos') return '<path fill="' + k + '" opacity=".45" d="M' + (x - 5 * s) + ' ' + (y + 6 * s) + 'l' + n(5) + ' ' + n(-13) + ' ' + n(5) + ' ' + n(13) + 'zM' + (x + 2 * s) + ' ' + (y + 7 * s) + 'l' + n(4) + ' ' + n(-10) + ' ' + n(4) + ' ' + n(10) + 'z"/>';
-    if (soort === 'berg') return '<path fill="#8f877c" d="M' + (x - 16 * s) + ' ' + (y + 9 * s) + 'l' + n(9) + ' ' + n(-17) + ' ' + n(9) + ' ' + n(17) + 'zM' + (x - 4 * s) + ' ' + (y + 9 * s) + 'l' + n(11) + ' ' + n(-23) + ' ' + n(11) + ' ' + n(23) + 'z"/>' +
-      '<path fill="#fff" d="M' + (x + 7 * s) + ' ' + (y - 14 * s) + 'l' + n(-3.6) + ' ' + n(7.5) + 'l' + n(1.8) + ' ' + n(-1.2) + 'l' + n(1.8) + ' ' + n(1.6) + 'l' + n(1.8) + ' ' + n(-1.6) + 'l' + n(1.8) + ' ' + n(1.2) + 'z' +
-      'M' + (x - 7 * s) + ' ' + (y - 8 * s) + 'l' + n(-2.8) + ' ' + n(5.3) + 'l' + n(1.4) + ' ' + n(-1) + 'l' + n(1.4) + ' ' + n(1.2) + 'l' + n(1.4) + ' ' + n(-1.2) + 'l' + n(1.4) + ' ' + n(1) + 'z"/>';
-    return '<path ' + o + ' d="M' + (x - 10 * s) + ' ' + (y + 5 * s) + 'q' + n(6) + ' ' + n(-12) + ' ' + n(11) + ' ' + n(-2) + 'q' + n(4) + ' ' + n(-6) + ' ' + n(9) + ' ' + n(2) + '"/>';
+  /* ---------- de tekeningen, gedeeld door bord en telefoon ----------
+     Alles is getekend op de maat van een gebied met straal 24 en wordt met s
+     geschaald. v (het nummer van het gebied) geeft wat afwisseling. */
+  function g(x, y, s, binnen){ return '<g transform="translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ') scale(' + (+s).toFixed(3) + ')" pointer-events="none">' + binnen + '</g>'; }
+  /* licht in het midden van elk gebied, en water rondom */
+  var LICHT = { akker:'#FAEFC8', weide:'#E6F1D2', bos:'#C3DDB4', heuvel:'#EADFC6', berg:'#DCD6CD' };
+  function defs(pre){
+    return Object.keys(SOORTEN).map(function(k){
+      return '<radialGradient id="' + pre + '-' + k + '" cx="50%" cy="42%" r="62%"><stop offset="0" stop-color="' + LICHT[k] + '"/><stop offset="1" stop-color="' + SOORTEN[k].kleur + '"/></radialGradient>';
+    }).join('') +
+      '<pattern id="' + pre + '-water" width="28" height="14" patternUnits="userSpaceOnUse"><rect width="28" height="14" fill="#bcd6e3"/><path d="M0 7q7 -4 14 0t14 0" fill="none" stroke="#a9cadb" stroke-width="1.4"/></pattern>';
   }
-  return { KOL:KOL, RIJ:RIJ, SOORTEN:SOORTEN, maak:maak, midden:midden, punten:punten, randen:randen, bruggen:bruggen, rivier:rivierPad, maat:maat, afstand:afstand, teken:teken, toeval:toeval };
+  function boom(x, y, k, donker){
+    return '<rect x="' + (x - 0.8 * k) + '" y="' + (y + 2.6 * k) + '" width="' + (1.6 * k) + '" height="' + (4.4 * k) + '" rx="' + (0.6 * k) + '" fill="#6b4a2b"/>' +
+      '<circle cx="' + x + '" cy="' + y + '" r="' + (5 * k) + '" fill="' + (donker ? '#356b3c' : '#3f7d45') + '"/>' +
+      '<circle cx="' + (x - 1.5 * k) + '" cy="' + (y - 1.6 * k) + '" r="' + (2.5 * k) + '" fill="#5f9b57"/>';
+  }
+  function teken(soort, x, y, s, v){
+    s = s || 1; v = v || 0;
+    if (soort === 'akker'){
+      var kl = v % 2 ? ['#EFD486', '#E2BA55', '#EAC86C'] : ['#E8C565', '#EFD486', '#DDB04A'];
+      return g(x, y, s, '<g transform="rotate(' + (v % 3 - 1) * 7 + ')">' +
+        '<rect x="-12" y="-10" width="24" height="5" rx="2" fill="' + kl[0] + '"/><rect x="-14" y="-4" width="28" height="5" rx="2" fill="' + kl[1] + '"/><rect x="-11" y="2" width="22" height="5" rx="2" fill="' + kl[2] + '"/>' +
+        '<path d="M-10 -7.5h20M-12 -1.5h24M-9 4.5h18" stroke="#b98d2e" stroke-width=".7" stroke-dasharray="1.6 1.8" opacity=".7"/></g>');
+    }
+    if (soort === 'weide'){
+      var gras = '<path d="M-11 6q1 -4 2 0q1 -4 2 0M6 7q1 -3.4 2 0q1 -3.4 2 0M-2 -8q1 -3.4 2 0q1 -3.4 2 0" stroke="#5f8a42" stroke-width="1" fill="none" stroke-linecap="round"/>' +
+        '<circle cx="8" cy="-4" r="1.1" fill="#fff"/><circle cx="-9" cy="-2" r="1.1" fill="#F2C94C"/>';
+      var schaap = v % 3 === 1 ? '' : '<g transform="translate(' + (v % 2 ? -1 : 2) + ' 0)"><ellipse rx="4.8" ry="3.3" fill="#fff" stroke="#14224C" stroke-width=".7"/><circle cx="-4.4" cy="-.9" r="1.8" fill="#14224C"/><path d="M-2 2.8v2.2M2 2.8v2.2" stroke="#14224C" stroke-width=".9" stroke-linecap="round"/></g>';
+      return g(x, y, s, gras + schaap);
+    }
+    if (soort === 'bos') return g(x, y, s, boom(-7, 0, 1, v % 2) + boom(6, -2, 1.15, !(v % 2)) + boom(-1, 5, 0.95, false));
+    if (soort === 'heuvel') return g(x, y, s,
+      '<path d="M-15 7c3 -11 11 -13 16 -3c3 -7 10 -7 14 3z" fill="#C9B184"/><path d="M-15 7c3 -11 11 -13 16 -3l-3 3z" fill="#DCC9A0"/><path d="M1 4c3 -7 10 -7 14 3h-6z" fill="#D5C095"/>' +
+      '<path d="M-9 -1l1.6 -1.6M-5 -3l1.6 -1.6M6 0l1.4 -1.4" stroke="#8a7347" stroke-width=".8" stroke-linecap="round"/>');
+    if (soort === 'berg') return g(x, y, s,
+      '<path d="M-17 9l8 -16 8 16z" fill="#7d756a"/><path d="M-17 9l8 -16 0 16z" fill="#988f83"/><path d="M-9 -7l-2.6 5.3 1.3 -.8 1.3 1 1.3 -1 1.3 .8z" fill="#fff"/>' +
+      '<path d="M-4 9l11 -23 11 23z" fill="#857d71"/><path d="M-4 9l11 -23 0 23z" fill="#a39b8f"/><path d="M7 -14l-3.6 7.5 1.8 -1.2 1.8 1.5 1.8 -1.5 1.8 1.2z" fill="#fff"/>');
+    return '';
+  }
+  /* een kasteel met twee torens en een donjon; daken en vaandel in de kleur van het rijk */
+  function kasteel(x, y, s, kleur){
+    var lijn = 'stroke="#14224C" stroke-width="1" stroke-linejoin="round"', kant = '';
+    for (var i = 0; i < 4; i++) kant += '<rect x="' + (-8.6 + i * 5) + '" y="-2.6" width="2.6" height="2.8" fill="#F3ECDF" ' + lijn + '/>';
+    return g(x, y, s,
+      '<ellipse cx="0" cy="10.4" rx="17" ry="3.4" fill="#14224C" opacity=".2"/>' +
+      /* de donjon achteraan, met het vaandel */
+      '<path d="M0 -15v-10" stroke="#14224C" stroke-width="1.1"/><path d="M0 -25h8.5l-2.2 2.4 2.2 2.4h-8.5z" fill="' + kleur + '" ' + lijn + '/>' +
+      '<path d="M-5.5 0v-12.6h1.6v-2.4h2.2v2.4h3.4v-2.4h2.2v2.4h1.6v12.6z" fill="#E6DCCB" ' + lijn + '/>' +
+      '<rect x="-1.1" y="-10" width="2.2" height="3.4" rx="1.1" fill="#14224C"/>' +
+      /* de muur met kantelen en de poort */
+      kant + '<rect x="-11" y="0" width="22" height="10" fill="#F3ECDF" ' + lijn + '/>' +
+      '<path d="M-7.5 4h3M4 7h3.4M-8 7.6h2" stroke="#d3c5ae" stroke-width=".8" stroke-linecap="round"/>' +
+      '<path d="M-3.4 10v-5.2a3.4 3.4 0 0 1 6.8 0v5.2z" fill="#6b4a2b" ' + lijn + '/><path d="M0 1.4v8.6" stroke="#14224C" stroke-width=".6" opacity=".5"/>' +
+      /* twee torens met spitse daken */
+      '<rect x="-16.5" y="-5" width="7" height="15" fill="#F8F2E8" ' + lijn + '/><rect x="9.5" y="-5" width="7" height="15" fill="#F8F2E8" ' + lijn + '/>' +
+      '<path d="M-17.8 -5l4.8 -10 4.8 10z" fill="' + kleur + '" ' + lijn + '/><path d="M8.2 -5l4.8 -10 4.8 10z" fill="' + kleur + '" ' + lijn + '/>' +
+      '<rect x="-14.1" y="-1.2" width="2.2" height="3.4" rx="1.1" fill="#14224C"/><rect x="11.9" y="-1.2" width="2.2" height="3.4" rx="1.1" fill="#14224C"/>');
+  }
+  /* een boerderij met een rood dak */
+  function huis(x, y, s){
+    return g(x, y, s,
+      '<path d="M-4.2 3.4v-4.8h8.4v4.8z" fill="#FBF6F1" stroke="#14224C" stroke-width=".8" stroke-linejoin="round"/>' +
+      '<path d="M-5.6 -1.2l5.6 -4.6 5.6 4.6z" fill="#c0442c" stroke="#14224C" stroke-width=".8" stroke-linejoin="round"/>' +
+      '<rect x="-1" y=".4" width="2" height="3" fill="#14224C"/>');
+  }
+  /* soldaten: een schild in de kleur van het rijk, met het aantal */
+  function schild(x, y, s, kleur, n, inkt){
+    return g(x, y, s,
+      '<path d="M0 -10.5l8.6 3.1v5.4c0 6 -3.9 9.4 -8.6 11.2c-4.7 -1.8 -8.6 -5.2 -8.6 -11.2v-5.4z" fill="' + kleur + '" stroke="#14224C" stroke-width="1.2" stroke-linejoin="round"/>' +
+      '<path d="M0 -8.4l6.6 2.4v4c0 4.6 -2.9 7.2 -6.6 8.7" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="1.1"/>' +
+      '<text y="2.9" text-anchor="middle" font-size="' + (String(n).length > 1 ? 8.6 : 9.8) + '" font-weight="700" fill="' + (inkt || '#fff') + '" font-family="Poppins,Arial,sans-serif">' + n + '</text>');
+  }
+  /* een leger onderweg: een vaandel boven het schild */
+  function vaandel(x, y, s, kleur, n, inkt){
+    return g(x, y, s, '<path d="M0 -10v-9" stroke="#14224C" stroke-width="1.2"/><path d="M0 -19h9l-2.4 2.6 2.4 2.6h-9z" fill="' + kleur + '" stroke="#14224C" stroke-width=".9" stroke-linejoin="round"/>') + schild(x, y, s, kleur, n, inkt);
+  }
+  return { KOL:KOL, RIJ:RIJ, SOORTEN:SOORTEN, maak:maak, midden:midden, punten:punten, randen:randen, bruggen:bruggen, rivier:rivierPad, maat:maat, afstand:afstand,
+           teken:teken, defs:defs, kasteel:kasteel, huis:huis, schild:schild, vaandel:vaandel, toeval:toeval };
 })();
   wereld.FEOKAART = FEOKAART;
   if (typeof module !== 'undefined' && module.exports) module.exports = FEOKAART;

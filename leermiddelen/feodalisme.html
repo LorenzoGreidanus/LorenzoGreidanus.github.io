@@ -471,12 +471,13 @@ body.bord .kaartlegenda{font-size:clamp(.82rem,.95vw,1.05rem)}
     var H = KR.hex, s = '';
     H.forEach(function(h){
       var c = FEOKAART.midden(h, r);
-      s += '<polygon points="' + FEOKAART.punten(h, r, 0.8) + '" fill="' + FEOKAART.SOORTEN[h.soort].kleur + '"/>' + FEOKAART.teken(h.soort, c.x, c.y - 4, r / 26);
+      s += '<polygon points="' + FEOKAART.punten(h, r, 0) + '" fill="url(#fb-' + h.soort + ')" stroke="#FBF6F1" stroke-opacity=".75" stroke-width="' + (r / 28).toFixed(2) + '"/>' + FEOKAART.teken(h.soort, c.x, c.y + r * 0.04, r / 24, h.i);
     });
     return s;
   }
   function namen(r){
-    return KR.hex.map(function(h){ var c = FEOKAART.midden(h, r); return '<text class="hexnaam" x="' + c.x.toFixed(1) + '" y="' + (c.y - r * 0.56).toFixed(1) + '" text-anchor="middle">' + schoon(h.naam) + '</text>'; }).join('');
+    var kas = {}; if (M) M.stand.sp.forEach(function(p){ if (p.rol === 'koning' && p.kasteel >= 0) kas[p.kasteel] = 1; });
+    return KR.hex.map(function(h){ if (kas[h.i]) return ''; var c = FEOKAART.midden(h, r); return '<text class="hexnaam" x="' + c.x.toFixed(1) + '" y="' + (c.y - r * 0.56).toFixed(1) + '" text-anchor="middle">' + schoon(h.naam) + '</text>'; }).join('');
   }
   /* wie wat heeft: kleuren, grenzen, kastelen, soldaten, boeren */
   function laag(r, b){
@@ -485,8 +486,8 @@ body.bord .kaartlegenda{font-size:clamp(.82rem,.95vw,1.05rem)}
     H.forEach(function(h){
       var e = b.e[h.i]; if (e < 0) return;
       var rh = rijkHex(h.i), kl = rh >= 0 ? rijkKleur(rh) : '#8a8f9e';
-      s += '<polygon points="' + FEOKAART.punten(h, r, 0.8) + '" fill="' + kl + '" opacity=".46"/>';
-      if (sp[e][1] === 1) s += '<polygon points="' + FEOKAART.punten(h, r, 0.8) + '" fill="url(#leen)"/>';
+      s += '<polygon points="' + FEOKAART.punten(h, r, 0) + '" fill="' + kl + '" opacity=".42"/>';
+      if (sp[e][1] === 1) s += '<polygon points="' + FEOKAART.punten(h, r, 0) + '" fill="url(#leen)"/>';
     });
     /* de grens van elk rijk: precies langs de randen, ook aan de rand van de kaart */
     H.forEach(function(h){
@@ -500,31 +501,36 @@ body.bord .kaartlegenda{font-size:clamp(.82rem,.95vw,1.05rem)}
     var k = r / 24;
     b.g.forEach(function(h){ var c = FEOKAART.midden(H[h], r); s += '<path d="M' + (c.x + 15 * k) + ' ' + (c.y - 22 * k) + 'q' + 4 * k + ' ' + 5 * k + ' 0 ' + 9 * k + 'q' + (-4 * k) + ' ' + (-4 * k) + ' 0 ' + (-9 * k) + 'z" fill="#a8371f" opacity=".9"/>'; });
     b.v.forEach(function(n, h){ if (!n) return; var c = FEOKAART.midden(H[h], r); s += '<path d="M' + (c.x - 22 * k) + ' ' + (c.y - 17 * k) + 'l' + 6 * k + ' ' + 2.4 * k + 'v' + 4 * k + 'c0 ' + 3.6 * k + ' ' + (-2.6 * k) + ' ' + 5.6 * k + ' ' + (-6 * k) + ' ' + 6.6 * k + 'c' + (-3.4 * k) + ' ' + (-1 * k) + ' ' + (-6 * k) + ' ' + (-3 * k) + ' ' + (-6 * k) + ' ' + (-6.6 * k) + 'v' + (-4 * k) + 'z" fill="#83A5F2" stroke="#14224C" stroke-width="' + (k * .9).toFixed(2) + '" transform="translate(' + 6 * k + ' 0)"/>'; });
+    var kas = {};
+    sp.forEach(function(p){ if (p[4] >= 0) kas[p[4]] = 1; });
     b.b.forEach(function(n, h){
       if (!n) return; var c = FEOKAART.midden(H[h], r);
-      for (var q = 0; q < n; q++){ var x = c.x - (n - 1) * 5.5 * k + q * 11 * k, y = c.y + 15 * k; s += '<path d="M' + (x - 4.4 * k) + ' ' + y + 'v' + (-4.6 * k) + 'l' + 4.4 * k + ' ' + (-3.8 * k) + ' ' + 4.4 * k + ' ' + 3.8 * k + 'v' + 4.6 * k + 'z" fill="#FBF6F1" stroke="#14224C" stroke-width="' + (k).toFixed(2) + '"/>'; }
+      if (kas[h]) for (var q = 0; q < n; q++) s += FEOKAART.huis(c.x - (n - 1) * 4.3 * k + q * 8.6 * k, c.y + 18 * k, 0.8 * k);
+      else for (var q2 = 0; q2 < n; q2++) s += FEOKAART.huis(c.x - (n - 1) * 5.4 * k + q2 * 10.8 * k, c.y + 15.5 * k, k);
     });
     sp.forEach(function(p, i){
       if (p[4] < 0) return;
       var c = FEOKAART.midden(H[p[4]], r), kl = rijkKleur(p[2]), pl = st.sp[i];
-      s += '<g transform="translate(' + c.x.toFixed(1) + ' ' + (c.y - 2 * k).toFixed(1) + ') scale(' + k.toFixed(3) + ')"><path d="M-11 7v-12h3.6v3.6h3.6v-3.6h7.6v3.6h3.6v-3.6h3.6v12z" fill="#FBF6F1" stroke="#14224C" stroke-width="1.3"/><path d="M-1 -5v-9l7 3-7 3" fill="' + kl + '" stroke="#14224C" stroke-width=".9"/></g>';
-      if (window.AVATAR) s += '<g transform="translate(' + (c.x + 20 * k).toFixed(1) + ' ' + (c.y + 1 * k).toFixed(1) + ')"><circle r="' + (9.5 * k).toFixed(1) + '" fill="' + kl + '" stroke="#14224C" stroke-width="1.2"/><g transform="scale(' + (0.17 * k).toFixed(3) + ')">' + AVATAR.inhoud(pl.naam, avVan[pl.pid] || '', '') + '</g></g>';
+      s += FEOKAART.kasteel(c.x, c.y - 6 * k, 0.8 * k, kl);
+      if (window.AVATAR) s += '<g transform="translate(' + (c.x + 13.5 * k).toFixed(1) + ' ' + (c.y + 6 * k).toFixed(1) + ')"><circle r="' + (6.6 * k).toFixed(1) + '" fill="' + kl + '" stroke="#14224C" stroke-width="' + (0.6 * k).toFixed(2) + '"/><g transform="scale(' + (0.118 * k).toFixed(3) + ')">' + AVATAR.inhoud(pl.naam, avVan[pl.pid] || '', '') + '</g></g>';
     });
     var per = {};
     b.l.forEach(function(l){ var h = l[3], rr = sp[l[1]] ? sp[l[1]][2] : -1; per[h] = per[h] || {}; per[h][rr] = (per[h][rr] || 0) + l[2]; });
     Object.keys(per).forEach(function(h){
       var c = FEOKAART.midden(H[h], r), rs = Object.keys(per[h]);
       rs.forEach(function(rr, q){
-        var x = c.x - 13 * k + q * 15 * k, y = c.y - 1 * k, kl = rijkKleur(+rr);
-        s += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (8.6 * k).toFixed(1) + '" fill="' + kl + '" stroke="#14224C" stroke-width="' + (1.1 * k).toFixed(2) + '"/><text x="' + x.toFixed(1) + '" y="' + (y + 3.6 * k).toFixed(1) + '" text-anchor="middle" font-size="' + (10 * k).toFixed(1) + '" font-weight="700" fill="' + inkt(kl) + '" font-family="Poppins,Arial,sans-serif">' + per[h][rr] + '</text>';
+        var kl = rijkKleur(+rr);
+        /* op een kasteel links onderaan, elders links van het midden */
+        var x = kas[h] ? c.x - 13.5 * k + q * 13 * k : c.x - 9 * k + q * 15 * k, y = kas[h] ? c.y + 6 * k : c.y + 1 * k;
+        s += FEOKAART.schild(x, y, (kas[h] ? 0.8 : 0.95) * k, kl, per[h][rr], inkt(kl));
       });
     });
     return s;
   }
   function kaartSvg(r, metNamen){
     var m = FEOKAART.maat(r), lagen = laag(r, M.bord()).split('\u0001');
-    return '<svg viewBox="0 0 ' + m.b.toFixed(0) + ' ' + m.h.toFixed(0) + '" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="leen" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="2.6" height="7" fill="#fff" opacity=".42"/></pattern></defs>' +
-      '<g>' + grond(r) + '</g><g id="laag">' + lagen[0] + '</g><g>' + rivieren(r) + '</g><g id="tekens">' + lagen[1] + '</g><g id="bruggen">' + bruggen(r, kasteelVan, function(h){ return M.rijkHex(h); }) + '</g>' + (metNamen ? '<g>' + namen(r) + '</g>' : '') + '<rect id="sneeuw" width="100%" height="100%" fill="#fff" opacity="0" pointer-events="none"/><g id="mars"></g><g id="fx"></g></svg>';
+    return '<svg viewBox="0 0 ' + m.b.toFixed(0) + ' ' + m.h.toFixed(0) + '" xmlns="http://www.w3.org/2000/svg"><defs>' + FEOKAART.defs('fb') + '<pattern id="leen" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="2.6" height="7" fill="#fff" opacity=".42"/></pattern></defs>' +
+      '<rect width="100%" height="100%" fill="url(#fb-water)"/><g>' + grond(r) + '</g><g id="laag">' + lagen[0] + '</g><g>' + rivieren(r) + '</g><g id="tekens">' + lagen[1] + '</g><g id="bruggen">' + bruggen(r, kasteelVan, function(h){ return M.rijkHex(h); }) + '</g>' + (metNamen ? '<g id="namen">' + namen(r) + '</g>' : '') + '<rect id="sneeuw" width="100%" height="100%" fill="#fff" opacity="0" pointer-events="none"/><g id="mars"></g><g id="fx"></g></svg>';
   }
   function tekenBasis(){
     var vak = $('kaartvak'); vak.innerHTML = kaartSvg(R, true);
@@ -551,8 +557,7 @@ body.bord .kaartlegenda{font-size:clamp(.82rem,.95vw,1.05rem)}
       var f = Math.max(0, Math.min(1, (st.kt - l.mars.t0) / Math.max(0.1, l.mars.t1 - l.mars.t0)));
       var q = opRoute(pad, f, R), x = q.x, y = q.y, kl = rijkKleur(M.rijkVan(l.bev));
       s += '<polyline points="' + routeLijn(pad, R) + '" fill="none" stroke-linejoin="round" stroke="' + kl + '" stroke-width="' + (2.2 * k).toFixed(1) + '" stroke-dasharray="' + (5 * k) + ' ' + (4 * k) + '"/>' +
-        '<g transform="translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ') scale(' + k.toFixed(3) + ')"><path d="M0 -15v13" stroke="#14224C" stroke-width="1.5"/><path d="M0 -15h11l-3 3.5 3 3.5h-11" fill="' + kl + '" stroke="#14224C" stroke-width="1"/>' +
-        '<circle r="8" fill="#FBF6F1" stroke="' + kl + '" stroke-width="2.4"/><text y="3.6" text-anchor="middle" font-size="9.5" font-weight="700" fill="#14224C" font-family="Poppins,Arial,sans-serif">' + l.n + '</text></g>';
+        FEOKAART.vaandel(x, y, k, kl, l.n, inkt(kl));
     });
     g.innerHTML = s;
   }
@@ -615,7 +620,7 @@ body.bord .kaartlegenda{font-size:clamp(.82rem,.95vw,1.05rem)}
       seizoen:function(z, j){ vlag(z, j); zendSnel(); },
       gevecht:function(h, gewonnen){ tel.gevecht++; if (gewonnen) tel.verovering++; knal(h, gewonnen); },
       val:function(){ tel.val++; },
-      kasteel:function(){ zendSnel(); },
+      kasteel:function(){ zendSnel(); var nm = $('namen'); if (nm) nm.innerHTML = namen(R); },
       fase:function(){ zendSnel(); },
       einde:function(){ setTimeout(einde, 30); }
     };
