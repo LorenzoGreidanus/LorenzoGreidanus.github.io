@@ -26,7 +26,9 @@ export { Zombiekamer, Veld } from "./stad.js";
 /* De personages van De stad: een object per speler, alleen voor de potjes (geen route) */
 export { Stadheld } from "./stad.js";
 import { behandel as accountBehandel, ingelogd as accountIngelogd, mogelijk as accountMogelijk, isEigenaar, naamVan as accountNaam, kenmerkVan as accountKenmerk, eigenaarVan as accountEigenaar, zorgVoorCode as accountZorgVoorCode, verhuisCode as accountVerhuisCode } from "./account.js";
-const KLASSEMENTEN = { toren: true, zwaard: true, dag: true, mijnwerker: true, poortrace: true, kaarttoren: true };   /* dag: per datum een lijst, dag-2026-09-19 */
+const KLASSEMENTEN = { toren: true, zwaard: true, dag: true, mijnwerker: true, poortrace: true, kaarttoren: true, torendag: true };   /* dag en torendag: per datum een lijst, dag-2026-09-19 */
+/* de klassementen die per datum gaan: de Dagelijkse uitdaging en de daguitdaging van Torenverdediging */
+const PER_DAG = { dag: true, torendag: true };
 
 /* Een browser stuurt bij elk POST en bij elke WebSocket mee vanaf welke site
    het komt. Alleen de site zelf (en lokaal testen) mag kamers maken, scores
@@ -118,10 +120,10 @@ async function beheerToegang(env, req){
    de klok van de browser, dus een paar dagen speling). */
 const DAG_MS = 86400000;
 function dagMag(naam, schrijven){
-  const m = /^dag-(\d{4})-(\d{2})-(\d{2})$/.exec(naam);
+  const m = /^(?:dag|torendag)-(\d{4})-(\d{2})-(\d{2})$/.exec(naam);
   if (!m) return true;
   const t = Date.UTC(+m[1], +m[2] - 1, +m[3]);
-  if (!Number.isFinite(t) || new Date(t).toISOString().slice(0, 10) !== naam.slice(4)) return false;
+  if (!Number.isFinite(t) || new Date(t).toISOString().slice(0, 10) !== naam.slice(naam.indexOf("-") + 1)) return false;
   const nu = Date.now();
   return schrijven ? Math.abs(t - nu) < 3 * DAG_MS : t >= Date.UTC(2025, 0, 1) && t < nu + 2 * DAG_MS;
 }
@@ -195,7 +197,7 @@ async function verdeel(req, env, ctx){
     /* het klassement van de hele site, per spel */
     const km = p.match(/^\/api\/klassement\/([a-z]+(?:-\d{4}-\d{2}-\d{2})?)(\/gezicht|\/bon)?\/?$/);
     if (km){
-      if (!KLASSEMENTEN[km[1].split("-")[0]] || (km[1].indexOf("-") > 0) !== (km[1].split("-")[0] === "dag")) return json({ fout: "onbekend spel" }, 404);
+      if (!KLASSEMENTEN[km[1].split("-")[0]] || (km[1].indexOf("-") > 0) !== !!PER_DAG[km[1].split("-")[0]]) return json({ fout: "onbekend spel" }, 404);
       if (req.method !== "DELETE" && !dagMag(km[1], req.method === "POST")) return json({ fout: "onbekende dag" }, 404);
       const stub = env.KLASSEMENT.get(env.KLASSEMENT.idFromName(km[1]));
       /* de beheerder haalt een rij weg: DELETE met de geheime sleutel (wrangler secret put BEHEER) */

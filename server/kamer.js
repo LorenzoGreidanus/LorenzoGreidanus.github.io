@@ -1060,7 +1060,9 @@ export class Kamer extends DurableObject {
     });
     const vrij = {};
     ["tonkla", "aap", "eiland", "archipel", "vulkaan"].forEach(k => { vrij[k] = !!((a.vb && a.vb[k]) || (b && b.vb && b.vb[k])); });
-    const W = TORENMOTOR.maak({ thema: typeof a.th === "string" ? a.th : "plein", torens: menu, vrij, rang: RANGEN[st.niveau] || Number(a.rang) || 2 });
+    /* het doel van het potje: wat de gastheer koos, anders ronde dertig */
+    const doel = Number.isFinite(Number(a.doel)) ? Math.max(0, Math.min(200, Math.round(Number(a.doel)))) : 30;
+    const W = TORENMOTOR.maak({ thema: typeof a.th === "string" ? a.th : "plein", torens: menu, vrij, rang: RANGEN[st.niveau] || Number(a.rang) || 2, doel });
     if (this.motorRonde > 1 && W.bank){ W.bank.ronde = this.motorRonde - 1; W.bank.munten += 25 * (this.motorRonde - 1); }
     this.motorRonde = 0;
     this.motor = W; this.motorSpel = "toren"; this.motorSids = lijst; this.motorTik = 0; this.motorLeeg = 0;
@@ -1143,7 +1145,7 @@ export class Kamer extends DurableObject {
     if (!W || i < 0 || !d) return;
     if (this.motorSpel === "toren"){
       /* alles wat een speler op het bord doet; de kamer past dezelfde regels toe als het bord zelf */
-      if (["bouw", "sterker", "weg", "zet", "kracht", "wegding", "dingweg", "slot", "ronde", "munt", "vrij", "pz", "snel"].indexOf(d.k) < 0) return;
+      if (["bouw", "sterker", "weg", "zet", "kracht", "wegding", "dingweg", "slot", "ronde", "munt", "vrij", "pz", "snel", "zegen", "actie", "door", "stop"].indexOf(d.k) < 0) return;
       /* Munten komen van een goed antwoord, en een vraag beantwoorden kost
          tijd. Zonder rem paste er zestigduizend munten per seconde in de
          gedeelde kas. Hoogstens een melding per anderhalve seconde en
@@ -1167,7 +1169,7 @@ export class Kamer extends DurableObject {
         this.pauzeKlok[wie.sid] = nu2;
       }
       W.voerUit(d);
-      if (d.k === "pz" || d.k === "snel" || d.k === "bouw" || d.k === "zet") this.motorZend();
+      if (d.k === "pz" || d.k === "snel" || d.k === "bouw" || d.k === "zet" || d.k === "zegen" || d.k === "actie" || d.k === "door") this.motorZend();
       return;
     }
     if (d.k === "in"){

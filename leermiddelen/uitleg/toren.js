@@ -13,7 +13,10 @@ STAPPEN.les('toren', function(){
           tekst: '<p>Tik naast het pad om een toren te zetten. Tik op het pad voor pek, voetangels of een versperring. Weghalen mag: je krijgt de helft terug.</p>' },
         { kop: 'Slim bouwen', beeld: S.formule('bochten · kruispunten · vertragen + raken'),
           tekst: '<p>Een toren in een bocht raakt de fouten langer. Pek vertraagt ze, zodat je torens vaker kunnen schieten. Meer plekken voor torens koop je erbij, elke volgende is duurder.</p>' +
-            S.bak('Hoe meer vragen je goed hebt, hoe sterker je verdediging. Oefenen en spelen gaan samen.', 'goed') }
+            S.bak('Hoe meer vragen je goed hebt, hoe sterker je verdediging. Oefenen en spelen gaan samen.', 'goed') },
+        { kop: 'Elk potje anders', beeld: S.formule('zegen · vraagkracht · richting'),
+          tekst: '<p>Na elke vijfde ronde kies je een van drie zegens. Goede antwoorden laden je vraagkracht: een bliksem, alles even bevriezen of gratis versterken. Op niveau vijf kies je per toren een richting.</p>' +
+            '<p>Durf je? Een durfvraag is moeilijker en levert dubbel op. Haal ronde dertig, of probeer de daguitdaging: dan speelt iedereen dezelfde kaart met dezelfde torens.</p>' }
       ]
     }
   ];
