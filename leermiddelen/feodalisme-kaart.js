@@ -290,7 +290,7 @@
     return g(x, y, s,
       '<ellipse cx="0" cy="10.4" rx="17" ry="3.4" fill="#14224C" opacity=".2"/>' +
       /* de donjon achteraan, met het vaandel */
-      '<path d="M0 -15v-6.4" stroke="#14224C" stroke-width="1.1"/><path d="M0 -21.4h7l-1.8 2 1.8 2h-7z" fill="' + kleur + '" ' + lijn + '/>' +
+      '<path d="M0 -12.6v-10.2" stroke="#14224C" stroke-width="1.1"/><path d="M0 -22.8h7l-1.8 2 1.8 2h-7z" fill="' + kleur + '" ' + lijn + '/>' +
       '<path d="M-5.5 0v-12.6h1.6v-2.4h2.2v2.4h3.4v-2.4h2.2v2.4h1.6v12.6z" fill="#E6DCCB" ' + lijn + '/>' +
       '<rect x="-1.1" y="-10" width="2.2" height="3.4" rx="1.1" fill="#14224C"/>' +
       /* de muur met kantelen en de poort */
