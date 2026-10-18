@@ -262,7 +262,16 @@
     if (soort === 'weide'){
       var gras = '<path d="M-11 6q1 -4 2 0q1 -4 2 0M6 7q1 -3.4 2 0q1 -3.4 2 0M-2 -8q1 -3.4 2 0q1 -3.4 2 0" stroke="#5f8a42" stroke-width="1" fill="none" stroke-linecap="round"/>' +
         '<circle cx="8" cy="-4" r="1.1" fill="#fff"/><circle cx="-9" cy="-2" r="1.1" fill="#F2C94C"/>';
-      var schaap = v % 3 === 1 ? '' : '<g transform="translate(' + (v % 2 ? -1 : 2) + ' 0)"><ellipse rx="4.8" ry="3.3" fill="#fff" stroke="#14224C" stroke-width=".7"/><circle cx="-4.4" cy="-.9" r="1.8" fill="#14224C"/><path d="M-2 2.8v2.2M2 2.8v2.2" stroke="#14224C" stroke-width=".9" stroke-linecap="round"/></g>';
+      /* een schaap: een wolk van wol, een donker kopje met oortjes, en vier pootjes */
+      var wol = [[-2.6, 0.2, 2.5], [0, -1, 2.8], [2.7, 0.1, 2.5], [-1.2, 1.4, 2.3], [1.5, 1.4, 2.3]];
+      var schaap = v % 3 === 1 ? '' : '<g transform="translate(' + (v % 2 ? -1 : 2) + ' 0)' + (v % 4 > 1 ? ' scale(-1 1)' : '') + '">' +
+        '<ellipse cy="5.4" rx="5.4" ry="1.1" fill="#14224C" opacity=".14"/>' +
+        '<path d="M-2.6 3v2.3M-1 3.2v2.1M1.4 3.2v2.1M3 3v2.3" stroke="#3b3a40" stroke-width="1" stroke-linecap="round"/>' +
+        wol.map(function(w){ return '<circle cx="' + w[0] + '" cy="' + w[1] + '" r="' + (w[2] + 0.5) + '" fill="#d9d2c6"/>'; }).join('') +
+        wol.map(function(w){ return '<circle cx="' + w[0] + '" cy="' + w[1] + '" r="' + w[2] + '" fill="#FFFDF8"/>'; }).join('') +
+        '<ellipse cx="-5.2" cy="-.6" rx="1.8" ry="2.3" fill="#3b3a40"/>' +
+        '<ellipse cx="-6.8" cy="-1.7" rx="1.1" ry=".55" fill="#3b3a40" transform="rotate(-28 -6.8 -1.7)"/><ellipse cx="-3.8" cy="-2" rx="1" ry=".5" fill="#3b3a40" transform="rotate(30 -3.8 -2)"/>' +
+        '<circle cx="-5.7" cy="-1" r=".38" fill="#fff"/></g>';
       return g(x, y, s, gras + schaap);
     }
     if (soort === 'bos') return g(x, y, s, boom(-7, 0, 1, v % 2) + boom(6, -2, 1.15, !(v % 2)) + boom(-1, 5, 0.95, false));
@@ -281,7 +290,7 @@
     return g(x, y, s,
       '<ellipse cx="0" cy="10.4" rx="17" ry="3.4" fill="#14224C" opacity=".2"/>' +
       /* de donjon achteraan, met het vaandel */
-      '<path d="M0 -15v-10" stroke="#14224C" stroke-width="1.1"/><path d="M0 -25h8.5l-2.2 2.4 2.2 2.4h-8.5z" fill="' + kleur + '" ' + lijn + '/>' +
+      '<path d="M0 -15v-6.4" stroke="#14224C" stroke-width="1.1"/><path d="M0 -21.4h7l-1.8 2 1.8 2h-7z" fill="' + kleur + '" ' + lijn + '/>' +
       '<path d="M-5.5 0v-12.6h1.6v-2.4h2.2v2.4h3.4v-2.4h2.2v2.4h1.6v12.6z" fill="#E6DCCB" ' + lijn + '/>' +
       '<rect x="-1.1" y="-10" width="2.2" height="3.4" rx="1.1" fill="#14224C"/>' +
       /* de muur met kantelen en de poort */
