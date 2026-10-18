@@ -55,7 +55,7 @@ Een site, twee kanten: de voorkant voor collega's en een aparte leeromgeving voo
 | `leermiddelen/klas.js` | De koppeling met de klas aan de kant van de leerling (`KLAS.lees/zet/wis/meld`); de spellen melden hun einduitslag via `/api/klas/CODE/meld`; een docent meldt een hele uitslag ineens (Klasquiz) via `/api/klas/CODE/melden` met de sleutel van de klas |
 | `leermiddelen/bronnenlab.html` | Bronnenonderzoek met drie vaste vragen |
 | `leermiddelen/tijdvakken.html` | Gebeurtenissen sorteren naar tijdvak |
-| `leermiddelen/feodalisme.html` | Heer, ridder of boer: keuzes met gevolgen |
+| `leermiddelen/feodalisme.html` | Klassenspel: drie koningen, ridders en boeren strijden om het land (motor in `feodalisme-motor.js`, telefoon in `feodalisme-tel.js`) |
 | `leermiddelen/handel.html` | Handelsroute met een markt die reageert op vraag en aanbod |
 | `leermiddelen/vergadering.html` | Onderhandelen met de zeven gewesten, 1672 |
 
@@ -65,7 +65,7 @@ De leeromgeving is dus gewoon een map in dezelfde repository. Bezoekers komen ui
 
 - `meneergreidanus.nl/leermiddelen/?n=bb` opent de leerlingpagina met vmbo-bb al gekozen
 - `meneergreidanus.nl/leermiddelen/bronnenlab.html?n=kgt` start meteen het juiste spel op het juiste niveau
-- `feodalisme.html?n=hv&rol=boer` en `handel.html?n=kgt&r=hanze` zetten ook de rol of route vast
+- `handel.html?n=kgt&r=hanze` zet ook de route vast
 
 In het spel verdwijnt de keuzeknop dan, met de melding dat je docent die keuze al gemaakt heeft.
 

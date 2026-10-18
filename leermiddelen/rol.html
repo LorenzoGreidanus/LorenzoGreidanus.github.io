@@ -477,6 +477,7 @@ body.app-aan.vb-hapert .vb-balk{bottom:calc(76px + env(safe-area-inset-bottom,0p
   var laatsteN = 0;
   function bericht(m){
     if (m.t === 'eruit'){ klaar = true; if (verb) verb.sluit(); status(''); toon({ soort:'wacht', titel:'Je bent uit het spel gehaald', tekst:'Je docent heeft je uit deze kamer gehaald. Was dat een vergissing? Laad deze pagina opnieuw, dan doe je weer mee.' }); return; }
+    if ((m.t === 'kaart' || m.t === 'bord') && m.d && (m.d.soort === 'rijk' || m.d.soort === 'rijkbord')){ rijk(m.d); return; }
     if (m.t === 'kaart' || m.t === 'bord'){
       var d = m.d; if (!d || typeof d !== 'object') return;
       if (d.soort === 'rol'){ rol = d; tekenRol(); if (nu && nu.soort === 'feed') tekenFeed(nu); return; }
@@ -492,6 +493,25 @@ body.app-aan.vb-hapert .vb-balk{bottom:calc(76px + env(safe-area-inset-bottom,0p
       else if (!nu || nu.soort !== 'uitslag') toon({ soort:'wacht', titel:'Het spel is afgelopen', tekst:'Kijk naar het bord.' });
       /* even wachten op een laatste kaart van het bord, dan ophangen: de kamer is klaar */
       setTimeout(function(){ if (verb) verb.sluit(); status(''); }, 4000); }
+  }
+
+  /* Feodalisme: een eigen scherm met een kaart om op te tikken (feodalisme-tel.js).
+     De kaart voor iedereen (rijkbord) en die voor jou (rijk) komen los binnen;
+     de code wordt pas geladen als het spel hem nodig heeft. */
+  var rijkRij = [], rijkLaden = false;
+  function laadScript(src, klaar){ var sc = document.createElement('script'); sc.src = src; sc.onload = klaar; document.head.appendChild(sc); }
+  function rijkApi(){ return { el:$('nu'), stuur:function(d){ return stuur({ t:'actie', d:d }); }, actief:function(){ return !!nu && nu.soort === 'rijk'; } }; }
+  function rijk(d){
+    if (d.soort === 'rijk'){
+      if (d.n) laatsteN = Math.max(laatsteN, d.n);
+      if (document.body.classList.contains('app-aan')) appAan(false);
+      nu = d;
+    }
+    if (window.RIJKTEL && window.FEOKAART){ RIJKTEL.ontvang(d, rijkApi()); return; }
+    rijkRij.push(d);
+    if (rijkLaden) return;
+    rijkLaden = true;
+    laadScript('feodalisme-kaart.js', function(){ laadScript('feodalisme-tel.js', function(){ rijkRij.splice(0).forEach(function(x){ RIJKTEL.ontvang(x, rijkApi()); }); }); });
   }
 
   /* ---------- tekenen ---------- */
@@ -843,6 +863,7 @@ body.app-aan.vb-hapert .vb-balk{bottom:calc(76px + env(safe-area-inset-bottom,0p
     if (d.soort === 'feed'){ tekenFeed(d); return; }
     if (document.body.classList.contains('app-aan')) appAan(false);
     var el = $('nu'), h = '';
+    el.classList.remove('fzaan');
     if (d.soort === 'wacht' && d.welkom && thema){
       el.innerHTML = welkomHtml(d); el.classList.add('metwelkom'); return;
     }
