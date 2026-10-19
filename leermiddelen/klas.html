@@ -1242,7 +1242,7 @@ body>header.wrap,body>footer.wrap{width:min(100% - 24px,1360px)}
           </div>
           <div class="stap opdrachtvak" id="echtVak">
             <b>Echte namen</b>
-            <p class="tip" data-uitleg="namen">Leerlingen spelen met een bijnaam. Zet hier wie dat is. Alleen jij ziet deze namen, en een collega met wie je de klas deelt: in het overzicht, bij de opdrachten en in de CSV. Leerlingen zien ze nooit.</p>
+            <p class="tip" data-uitleg="namen">Leerlingen spelen met een bijnaam. Zet hier wie dat is. Geef je twee bijnamen dezelfde echte naam, of hoort een bijnaam bij een Microsoft-account, dan staan ze in het overzicht samen in één rij. Alleen jij ziet deze namen, en een collega met wie je de klas deelt: in het overzicht, bij de opdrachten en in de CSV. Leerlingen zien ze nooit.</p>
             <div class="echtlijst" id="echtLijst"></div>
             <div class="rij" style="margin-top:10px"><button class="knop klein" id="echtZet" type="button">Namen opslaan</button></div>
             <p class="tip" id="echtStatus" role="status" aria-live="polite"></p>
@@ -1618,7 +1618,7 @@ body>header.wrap,body>footer.wrap{width:min(100% - 24px,1360px)}
     if (typeof klaar !== 'function') klaar = function(){};
     if (DEMO){
       /* wat de demo is, zegt de gele balk bovenaan al */
-      data = demoData(); $('ovUit').textContent = '';
+      data = demoData(); samenvoegen(); $('ovUit').textContent = '';
       var vb = window.VOORBEELDTOETSEN ? Object.keys(VOORBEELDTOETSEN).map(function(k){ return VOORBEELDTOETSEN[k]; }) : [];
       if (vb.length){
         $('voorbeeldvak').innerHTML = '<h3>Eigen toetsen: drie voorbeelden</h3><p class="tip">Deze klas maakte drie toetsen met sleepvragen. Probeer ze zelf, of zet er een kopie van in je eigen materiaal.</p>' +
@@ -1643,7 +1643,7 @@ body>header.wrap,body>footer.wrap{width:min(100% - 24px,1360px)}
           else ophaalFout(x.j.fout ? 'Ophalen lukte niet: ' + x.j.fout + '.' : 'Ophalen lukte niet.', 'Opnieuw proberen', haal);
           return;
         }
-        data = x.j; zonderData();
+        data = x.j; samenvoegen(); zonderData();
         /* heeft de klas op de server een andere naam (gewijzigd op een ander apparaat), dan die */
         if (data.naam && huidig && data.naam !== huidig.naam) zetNaamHier(data.naam);
         $('ovUit').textContent = data.resultaten.length + (data.resultaten.length === 1 ? ' potje gemeld' : ' potjes gemeld') + ' · bijgewerkt om ' + new Date().toLocaleTimeString('nl-NL', { hour:'2-digit', minute:'2-digit' }) + ' · ververst elke 20 seconden';
@@ -2179,13 +2179,48 @@ body>header.wrap,body>footer.wrap{width:min(100% - 24px,1360px)}
   function echtVan(n){
     if (!data || !data.echt) return '';
     var e = data.echt[n];
-    if (!e){ var l = ((data && data.leerlingen) || []).filter(function(x){ return x.naam === n && x.bijnaam; })[0]; if (l) e = data.echt[l.bijnaam]; }
+    if (!e){ var l = ((data && data.leerlingen) || []).filter(function(x){ return (x.ruw || x.naam) === n && x.bijnaam; })[0]; if (l) e = data.echt[l.bijnaam]; }
     return e && e !== n ? e : '';
   }
-  /* voor op het scherm: de echte naam met de bijnaam erachter, al schoongemaakt */
-  function wieHtml(n){ var e = echtVan(n); return e ? schoon(e) + ' <small class="naamecht">(' + schoon(n) + ')</small>' : schoon(n); }
+  /* Een leerling met meer namen in één rij. Na het laden staat elk potje en elke
+     gekoppelde leerling onder één naam: de echte naam die de docent invulde, anders
+     het Microsoft-account waaraan de bijnaam gekoppeld is, anders de bijnaam. Wat
+     alleen in hoofdletters of spaties verschilt, telt als dezelfde naam. De naam
+     zoals hij binnenkwam blijft in ruw staan: Echte namen werkt met de bijnamen
+     zelf, en er gaat niets anders naar de server. Draait opnieuw na elke verversing
+     en na het opslaan van echte namen. */
+  function samenvoegen(){
+    if (!data) return;
+    var lln = data.leerlingen || [], res = data.resultaten || [];
+    lln.forEach(function(x){ if (x.ruw === undefined) x.ruw = x.naam; });
+    res.forEach(function(r){ if (r.ruw === undefined) r.ruw = r.naam; });
+    /* een bijnaam die bij precies één Microsoft-account hoort */
+    var msVan = {}, dubbel = {};
+    lln.forEach(function(x){ if (x.bijnaam && x.ruw !== x.bijnaam){ if (msVan[x.bijnaam] && msVan[x.bijnaam] !== x.ruw) dubbel[x.bijnaam] = 1; msVan[x.bijnaam] = x.ruw; } });
+    var sleutel = function(t){ return String(t).toLowerCase().replace(/s+/g, ' ').trim(); };
+    var echt = data.echt || {}, toon = {}, ook = {};
+    function naar(n){
+      var e = echt[n] && String(echt[n]).trim();
+      if (!e && msVan[n] && !dubbel[n]) e = (echt[msVan[n]] && String(echt[msVan[n]]).trim()) || msVan[n];
+      e = e || n;
+      var k = sleutel(e);
+      /* de mooiste schrijfwijze wint: een ingevulde echte naam boven een kale bijnaam */
+      if (!toon[k] || (echt[n] && !toon[k].echt)) toon[k] = { n:e, echt:!!echt[n] };
+      if (sleutel(n) !== k){ ook[k] = ook[k] || {}; ook[k][n] = 1; }
+      return k;
+    }
+    var kl = lln.map(function(x){ return naar(x.ruw); }), kr = res.map(function(r){ return naar(r.ruw); });
+    lln.forEach(function(x, i){ x.naam = toon[kl[i]].n; });
+    res.forEach(function(r, i){ r.naam = toon[kr[i]].n; });
+    data.ook = {};
+    Object.keys(ook).forEach(function(k){ data.ook[toon[k].n] = Object.keys(ook[k]).sort(function(a, b){ return a.localeCompare(b, 'nl'); }); });
+  }
+  /* de andere namen waaronder deze leerling speelde */
+  function ookVan(n){ var o = data && data.ook && data.ook[n]; return o && o.length ? o : null; }
+  /* voor op het scherm: de naam, met de bijnamen of de oude naam erachter, al schoongemaakt */
+  function wieHtml(n){ var o = ookVan(n), e = o ? '' : echtVan(n); return e ? schoon(e) + ' <small class="naamecht">(' + schoon(n) + ')</small>' : o ? schoon(n) + ' <small class="naamecht">(' + schoon(o.join(', ')) + ')</small>' : schoon(n); }
   /* voor in tekst (mail, CSV, lijstjes met komma's) */
-  function wieTekst(n){ var e = echtVan(n); return e ? e + ' (' + n + ')' : n; }
+  function wieTekst(n){ var o = ookVan(n), e = o ? '' : echtVan(n); return e ? e + ' (' + n + ')' : o ? n + ' (' + o.join(', ') + ')' : n; }
 
   /* ---------- voor de les ----------
      Wat een docent aan het begin van de les wil weten, over deze week: wie
@@ -2393,8 +2428,8 @@ body>header.wrap,body>footer.wrap{width:min(100% - 24px,1360px)}
   var echtVoor = '', echtVies = false;
   function echtNamen(){
     var n = {};
-    ((data && data.leerlingen) || []).forEach(function(x){ n[x.naam] = 1; });
-    ((data && data.resultaten) || []).forEach(function(r){ n[r.naam] = 1; });
+    ((data && data.leerlingen) || []).forEach(function(x){ n[x.ruw || x.naam] = 1; });
+    ((data && data.resultaten) || []).forEach(function(r){ n[r.ruw || r.naam] = 1; });
     Object.keys((data && data.echt) || {}).forEach(function(k){ n[k] = 1; });
     return Object.keys(n).sort(function(a, b){ return a.localeCompare(b, 'nl'); });
   }
@@ -2421,7 +2456,7 @@ body>header.wrap,body>footer.wrap{width:min(100% - 24px,1360px)}
       .then(function(j){
         bezig(knop, false);
         if (j && j.fout){ $('echtStatus').textContent = j.fout; return; }
-        if (data) data.echt = j.echt || {};
+        if (data){ data.echt = j.echt || {}; samenvoegen(); }
         echtVies = false; echtVoor = '';
         $('echtStatus').textContent = 'Opgeslagen.';
         teken();
@@ -3264,7 +3299,7 @@ body>header.wrap,body>footer.wrap{width:min(100% - 24px,1360px)}
      geschreven, en bewaard als eigen dictee: zo heeft hij een code, werkt hij in
      dictee.html?eigen= en op het voorleesblad, en vind je hem terug bij Eigen
      materiaal). Een week zonder plan is automatisch. */
-  var DR_VOORUIT = 8, DR_MAX = 26, DR_TERUG = 6, ZIN_MAX = 200, ZINNEN_MAX = 12, DICTEE_TEKENS = 1500;
+  var DR_VOORUIT = 8, DR_MAX = 26, DR_TERUG = 6, ZIN_MAX = 200, ZINNEN_MAX = 30, DICTEE_TEKENS = 4500;
   var dR = { vooruit: DR_VOORUIT, terug: false, ed: null, eigen: {}, klok: null, pogingen: 0 };
   function dRMaandag(wk){
     var m = /^(\d{4})-W(\d{2})$/.exec(wk || ''); if (!m) return null;

@@ -56,11 +56,11 @@ function schud(a){ a = a.slice(); for (let i = a.length - 1; i > 0; i--){ const 
 function gelijk(a, b){ const n = x => String(x || "").toLowerCase().replace(/\s+/g, " ").replace(/[.!?,;:]+$/, "").trim(); return n(a) === n(b); }
 function gatenVan(tekst){ return (String(tekst || "").match(/\[([^\]]+)\]/g) || []).map(x => x.slice(1, -1).trim()); }
 
-/* Een eigen dictee: twee tot twaalf zinnen gewone tekst, die de computer aan
+/* Een eigen dictee: twee tot dertig zinnen gewone tekst, die de computer aan
    de leerling voorleest. Er mag geen opmaak in, en niets wat de klas niet hoort
    te horen: het naamfilter gaat over elk woord, net als over een bijnaam. */
 const DICTEE_NIVEAUS = { bb: 1, kgt: 1, hv: 1 };
-const ZINNEN_MIN = 2, ZINNEN_MAX = 12, ZIN_MAX = 200, DICTEE_TEKENS = 1500;
+const ZINNEN_MIN = 2, ZINNEN_MAX = 30, ZIN_MAX = 200, DICTEE_TEKENS = 4500;
 /* Het naamfilter is gemaakt voor bijnamen en kijkt ook binnen een woord. In een
    dictee staan gewone woorden waar zo'n stukje in zit (spijsvertering, homogeen)
    en woorden uit de geschiedenis- en biologieles; die mogen. */
