@@ -714,6 +714,21 @@ window.DICTEE_OPGAVEN = {
     var begin = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
     return { jaar: d.getUTCFullYear(), week: Math.ceil(((d - begin) / 86400000 + 1) / 7) };
   };
+  /* Een tekst op een gekozen lengte (docent, dictee-rooster). Korter: de eerste
+     zinnen. Langer, tot dertig: het dictee gaat verder met de volgende teksten van
+     hetzelfde niveau, in dezelfde vaste volgorde als het dictee van de week. Het
+     id blijft dat van de eerste tekst, zodat uitslagen bij elkaar blijven. */
+  D.MAXZINNEN = 30;
+  D.opLengte = function(t, n){
+    if (!t || !n) return t;
+    n = Math.min(D.MAXZINNEN, n);
+    var heel = D.tekst(t.id) || t;
+    if (heel.zinnen.length >= n) return Object.assign({}, heel, { zinnen: heel.zinnen.slice(0, n) });
+    var lijst = D.teksten.filter(function(x){ return x.n === heel.n; }).sort(function(a, b){ return a.id < b.id ? -1 : 1; });
+    var i = lijst.map(function(x){ return x.id; }).indexOf(heel.id), zinnen = heel.zinnen.slice();
+    for (var k = 1; zinnen.length < n && i >= 0 && k < lijst.length; k++) zinnen = zinnen.concat(lijst[(i + k) % lijst.length].zinnen.slice(0, n - zinnen.length));
+    return Object.assign({}, heel, { zinnen: zinnen });
+  };
   D.weektekst = function(niveau, datum){
     var n = NIV[niveau] || (typeof niveau === 'number' ? niveau : 2);
     var lijst = D.teksten.filter(function(t){ return t.n === n; }).sort(function(a, b){ return a.id < b.id ? -1 : 1; });

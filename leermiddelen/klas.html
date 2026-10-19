@@ -3331,9 +3331,11 @@ body>header.wrap,body>footer.wrap{width:min(100% - 24px,1360px)}
     if (!p || p.bron === 'auto'){
       if (!D || !D.weektekst) return null;
       var w = D.weektekst(nv, new Date(dRMaandag(wk).getTime() + 12 * 3600000)); if (!w) return null;
-      return { titel: w.titel, id: w.id, zinnen: dRZinnen(D.tekst(w.id) || w), std: w.zinnen.length };
+      /* tot dertig zinnen: na de eigen tekst gaat het dictee verder met de volgende (dictee-opgaven.js, opLengte) */
+      var wh = D.tekst(w.id) || w;
+      return { titel: w.titel, id: w.id, zinnen: dRZinnen(D.opLengte ? D.opLengte(wh, D.MAXZINNEN) : wh), std: w.zinnen.length, heel: wh.zinnen.length };
     }
-    if (p.bron === 'bank'){ var b = D && D.tekst ? D.tekst(p.tekst) : null; return b ? { titel: b.titel, id: b.id, zinnen: dRZinnen(b), std: b.zinnen.length } : null; }
+    if (p.bron === 'bank'){ var b = D && D.tekst ? D.tekst(p.tekst) : null; return b ? { titel: b.titel, id: b.id, zinnen: dRZinnen(D.opLengte ? D.opLengte(b, D.MAXZINNEN) : b), std: b.zinnen.length, heel: b.zinnen.length } : null; }
     if (!p.tekst) return null;
     var e = dR.eigen[p.tekst];
     if (e && e.zinnen) return { titel: e.naam, id: 'eigen-' + p.tekst, zinnen: e.zinnen.map(function(z, i){ return { z: z, u: (e.zu && e.zu[i]) || '' }; }), std: e.zinnen.length };
@@ -3349,7 +3351,7 @@ body>header.wrap,body>footer.wrap{width:min(100% - 24px,1360px)}
   /* wat er in de regel van een week staat */
   function dRRegel(wk, p, nv){
     var x = dRTekst(wk, nv, p), titel = (x && x.titel) || (p && p.titel) || (p && p.bron !== 'auto' ? p.tekst : 'de tekst van de week');
-    var n = p && p.n ? (x ? Math.min(p.n, x.zinnen.length) : p.n) : (x ? (p && p.bron !== 'auto' ? x.zinnen.length : x.std) : 0);
+    var n = p && p.n ? (x ? Math.min(p.n, x.zinnen.length) : p.n) : (x ? (p && p.bron !== 'auto' ? x.heel || x.zinnen.length : x.std) : 0);
     return { titel: titel, sub: DNIV[nv] + (n ? ' · ' + n + ' zinnen' : '') + ' · ' + dRBronNaam(p) };
   }
   /* de uitslagen van een week: per leerling de beste score en de woorden die de eerste keer fout gingen */
@@ -3460,7 +3462,7 @@ body>header.wrap,body>footer.wrap{width:min(100% - 24px,1360px)}
     var z = e.zelf[nv], bank = dTeksten(), volg = [nv].concat(['bb', 'kgt', 'hv'].filter(function(x){ return x !== nv; }));
     var x = p.bron === 'zelf' ? null : dRTekst(e.wk, nv, p.bron === 'auto' ? null : p);
     var eigenFout = (p.bron !== 'auto' && p.tekst && dR.eigen[p.tekst] && dR.eigen[p.tekst].fout) || '';
-    var max = x ? x.zinnen.length : 0, nu = p.n || 0, stdN = p.bron === 'auto' && x ? x.std : max;
+    var max = x ? x.zinnen.length : 0, nu = p.n || 0, stdN = p.bron === 'auto' && x ? x.std : (x && x.heel) || max;
     if (!window.DICTEE_OPGAVEN) dRWachtOpBank();
     var html = '<label class="vink"><input type="checkbox" data-drveld="uit"' + (e.uit ? ' checked' : '') + '> <span><b>Deze week geen dictee</b>, bijvoorbeeld in een vakantie of de toetsweek.</span></label>';
     if (!e.uit){
@@ -3489,16 +3491,18 @@ body>header.wrap,body>footer.wrap{width:min(100% - 24px,1360px)}
           '<small class="tip">' + z.zinnen.length + ' van hoogstens ' + ZINNEN_MAX + ' zinnen. Wordt bewaard als eigen dictee' + (z.code ? ' ' + schoon(z.code) : '') + ': je vindt hem ook bij Eigen materiaal.</small></div>';
       } else if (x && x.zinnen.length){
         var grens = nu || stdN;
-        html += '<ol class="drvoorbeeld" aria-label="De zinnen">' + x.zinnen.map(function(q, i){ return '<li' + (i >= grens ? ' class="weg"' : '') + '>' + schoon(q.z) + (q.u ? '<small>' + schoon(q.u) + '</small>' : '') + '</li>'; }).join('') + '</ol>' +
+        /* het voorbeeld tot het gekozen aantal, of tot het eind van de eigen tekst */
+        html += '<ol class="drvoorbeeld" aria-label="De zinnen">' + x.zinnen.slice(0, Math.max(grens, x.heel || 0)).map(function(q, i){ return '<li' + (i >= grens ? ' class="weg"' : '') + '>' + schoon(q.z) + (q.u ? '<small>' + schoon(q.u) + '</small>' : '') + '</li>'; }).join('') + '</ol>' +
           '<div class="rij"><button type="button" class="knop stil klein" data-drbron="zelf">Zinnen aanpassen</button><small class="tip">Zinnen en uitleg aanpassen, erbij of weghalen. Het origineel blijft zoals het is.</small></div>';
       } else if (eigenFout) html += '<p class="tip">' + schoon(eigenFout) + '</p>';
       if (p.bron !== 'zelf' && max){
         var opt = '';
         for (var k = Math.min(3, max); k <= max; k++){
           var std = p.bron === 'auto' && k === stdN;
-          opt += '<option value="' + (std ? 0 : k) + '"' + ((nu === k || (!nu && k === stdN)) ? ' selected' : '') + '>' + k + (std ? ' (standaard)' : k === max ? ' (alle)' : '') + '</option>';
+          opt += '<option value="' + (std ? 0 : k) + '"' + ((nu === k || (!nu && k === stdN)) ? ' selected' : '') + '>' + k + (std ? ' (standaard)' : x.heel && k === x.heel && k < max ? ' (hele tekst)' : k === max && !(x.heel < max) ? ' (alle)' : '') + '</option>';
         }
-        html += '<div class="rij"><label class="minlabel">aantal zinnen <select class="veld" data-drveld="n">' + opt + '</select></label></div>';
+        html += '<div class="rij"><label class="minlabel">aantal zinnen <select class="veld" data-drveld="n">' + opt + '</select></label>' +
+          (x.heel && x.heel < max ? '<small class="tip">Meer dan ' + x.heel + '? Dan gaat het dictee verder met de volgende tekst van dit niveau.</small>' : '') + '</div>';
       }
       html += '<p class="drsub">periode</p><div class="rij"><label class="minlabel">van <input class="veld" type="date" data-drveld="van" value="' + datumVeld(new Date(e.van)) + '"></label>' +
         '<label class="minlabel">tot en met <input class="veld" type="date" data-drveld="tot" value="' + datumVeld(new Date(e.tot)) + '"></label></div>' +
