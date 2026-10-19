@@ -430,6 +430,7 @@
               pos.sort(function(x, y){ return x - y; });
               var letters = 'ABCD'.slice(0, pos.length).split(''), goed = pos.indexOf(w);
               return { vraag:'Waar ligt ' + w + '?', context:'Een getallenlijn van 0 tot ' + tot + '. Bij welke letter ligt het getal?', opties:letters, goed:goed,
+                zelfBeeld:function(){ return schat(R, { tot:tot, w:w, letters:pos }); },
                 beeld:function(n){ return schat(R, { tot:tot, w:w, letters:pos, midden:n >= 1, ant:n >= 3 }); },
                 stappen:[stap1,
                   K(R, 'Ligt ' + w + ' links of rechts van ' + mid + '?', ['links van ' + mid, 'rechts van ' + mid], kant, 'Kleinere getallen liggen links. Is ' + w + ' kleiner of groter dan ' + mid + '?', { vast:true }),
@@ -437,6 +438,7 @@
             }
             var ok = function(v){ var x = parseFloat(String(v).replace(/[\s.]/g, '').replace(',', '.')); return !isNaN(x) && Math.abs(x - w) <= st; };
             return { vraag:'Welk getal hoort bij de stip?', context:'Een getallenlijn van 0 tot ' + tot + '. Schat het getal bij de stip.', antwoord:String(w), controle:ok,
+              zelfBeeld:function(){ return schat(R, { tot:tot, w:w }); },
               beeld:function(n){ return schat(R, { tot:tot, w:w, midden:n >= 1, ant:n >= 3 }); },
               stappen:[stap1,
                 K(R, 'Ligt de stip links of rechts van ' + mid + '?', ['links van ' + mid, 'rechts van ' + mid], kant, 'Kijk waar het lange streepje in het midden staat.', { vast:true }),
