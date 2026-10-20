@@ -279,6 +279,12 @@ const METEN = `(function(){
     console.log('! ' + pagina.padEnd(36) + t + ' regels onder de norm, ' + d + ' tikdoelen te klein');
     uniek.forEach(r => console.log('      ' + r));
     [...doelen.values()].forEach(r => console.log('      ' + r));
+    /* Op GitHub ook als annotatie: die staat op de pagina van de run en is
+       zonder inloggen te lezen, het log en de samenvatting niet. */
+    if (process.env.GITHUB_ACTIONS){
+      const regels = uniek.concat([...doelen.values()]).join('\n').replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+      console.log('::error title=Donkertoets ' + pagina + '::' + regels);
+    }
   }
   console.log('');
   console.log(lijst.length + " pagina's nagekeken, " + stuk + ' met iets mis.');
