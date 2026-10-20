@@ -446,7 +446,7 @@
       ':root[data-theme="dark"] .rm{--rm-acc:#83A5F2;--rm-acc2:#F58C72}' +
       '@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .rm{--rm-acc:#83A5F2;--rm-acc2:#F58C72}}' +
       '.rm-kies{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}' +
-      '.rm-kies button{min-height:40px;padding:6px 12px;border-radius:999px;border:1.5px solid var(--rand2,rgba(20,34,76,.2));background:var(--kaart,#fff);color:var(--ink,#14224C);font:inherit;font-size:.86rem;font-weight:600;cursor:pointer}' +
+      '.rm-kies button{min-height:44px;padding:6px 12px;border-radius:999px;border:1.5px solid var(--rand2,rgba(20,34,76,.2));background:var(--kaart,#fff);color:var(--ink,#14224C);font:inherit;font-size:.86rem;font-weight:600;cursor:pointer}' +
       '.rm-kies button[aria-pressed="true"]{background:var(--rm-acc);border-color:var(--rm-acc);color:#fff}' +
       ':root[data-theme="dark"] .rm-kies button[aria-pressed="true"]{color:#14224C}' +
       '@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .rm-kies button[aria-pressed="true"]{color:#14224C}}' +

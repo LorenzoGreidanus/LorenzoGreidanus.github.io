@@ -77,9 +77,14 @@ function verbind(adres){
 const METEN = `(function(){
   function rgb(s){
     if (!s) return null;
+    /* color(srgb r g b / a): de doorzichtigheid achter de schuine streep
+       telt mee. Eerst nam dit de laatste drie getallen, dus g, b en a als
+       kleur, en zonder doorzichtigheid sloeg achtergronden() de laag over. */
     if (s.indexOf('color(') === 0){
-      var n = s.match(/[-\\d.]+/g); if (!n) return null;
-      return n.slice(-3).map(function(x){ return parseFloat(x) * 255; });
+      var d = s.replace(/^color\\(\\s*[a-z0-9-]+/i, '').split('/');
+      var n = (d[0].match(/-?[\\d.]+/g) || []).slice(0, 3); if (n.length < 3) return null;
+      var a = d[1] ? parseFloat(d[1]) : 1;
+      return n.map(function(x){ return parseFloat(x) * 255; }).concat([isNaN(a) ? 1 : a]);
     }
     var n2 = s.match(/[\\d.]+/g); if (!n2) return null;
     var c = n2.map(Number);
@@ -98,17 +103,46 @@ const METEN = `(function(){
      lagen verzamelen tot er een ondoorzichtige is, en die dan van onder naar
      boven over elkaar leggen. Eerst deed deze functie dat niet en legde hij
      een laagje van 12 procent op wit; op een donkere pagina gaf dat
-     contrastfouten die er niet waren. */
-  function achtergrond(el){
-    var lagen = [], e = el;
+     contrastfouten die er niet waren.
+     Een kleurverloop (background-image) telt ook als laag. Zonder dat mat de
+     toets tekst op het hout van Meetlat en op de banner van Berlijn tegen de
+     donkere kaart eronder. Nu geeft hij elke kleur van het verloop terug, en
+     telt de slechtste. Een plaatje (url) slaat hij over, zoals vroeger. */
+  /* Tekst die direct op een canvas staat, zoals het aftellen boven de weg
+     in Poortrace: de pixels van het canvas kan de toets niet lezen, en de
+     achtergrondkleur van het speelveld eronder zegt dan niets. Ligt er
+     tussen de tekst en het canvas een (bijna) dichte kaart, dan meet hij
+     gewoon. */
+  function opCanvas(el){
+    var r = el.getBoundingClientRect();
+    var lijst = document.elementsFromPoint(r.left + r.width / 2, r.top + r.height / 2), i = -1;
+    for (var k = 0; k < lijst.length; k++) if (lijst[k].tagName === 'CANVAS'){ i = k; break; }
+    if (i < 0) return false;
+    for (var j = 0; j < i; j++){
+      var s = getComputedStyle(lijst[j]), b = rgb(s.backgroundColor);
+      if ((b && b[3] >= 0.85) || (s.backgroundImage && s.backgroundImage !== 'none')) return false;
+    }
+    return true;
+  }
+  function achtergronden(el){
+    var lagen = [], e = el, basis = [[255,255,255,1]];
     while (e){
-      var b = rgb(getComputedStyle(e).backgroundColor);
-      if (b && b[3] > 0.004){ lagen.push(b); if (b[3] >= 0.999) break; }
+      var st = getComputedStyle(e), b = rgb(st.backgroundColor), img = st.backgroundImage;
+      if (img && img !== 'none'){
+        var stops = (img.match(/rgba?\\([^)]*\\)|color\\([^)]*\\)/g) || []).map(rgb).filter(Boolean);
+        if (stops.length){
+          var onder0 = b && b[3] > 0.004 ? overElkaar(b, [255,255,255,1]) : [255,255,255,1];
+          basis = stops.map(function(s){ return overElkaar(s, onder0); });
+          break;
+        }
+      }
+      if (b && b[3] > 0.004){ lagen.push(b); if (b[3] >= 0.999){ basis = [[255,255,255,1]]; break; } }
       e = e.parentElement || (e === document.documentElement ? null : document.documentElement);
     }
-    var onder = [255,255,255,1];
-    for (var i = lagen.length - 1; i >= 0; i--) onder = overElkaar(lagen[i], onder);
-    return onder;
+    return basis.map(function(onder){
+      for (var i = lagen.length - 1; i >= 0; i--) onder = overElkaar(lagen[i], onder);
+      return onder;
+    });
   }
   function pad(el){
     var d = el.tagName.toLowerCase();
@@ -125,8 +159,11 @@ const METEN = `(function(){
     /* tikdoelen */
     if (/^(BUTTON|A|SUMMARY)$/.test(el.tagName) || el.getAttribute('role') === 'button'){
       var r = el.getBoundingClientRect();
+      /* een link midden in een zin mag zo hoog zijn als de regel; ook als die
+         zin direct in een footer of div staat, met eigen tekst eromheen */
       var inTekst = el.tagName === 'A' && el.parentElement &&
-                    /^(P|LI|SMALL|SPAN|TD)$/.test(el.parentElement.tagName);
+                    (/^(P|LI|SMALL|SPAN|TD)$/.test(el.parentElement.tagName) ||
+                     Array.prototype.some.call(el.parentElement.childNodes, function(n){ return n.nodeType === 3 && /[a-z]{2}/i.test(n.textContent); }));
       /* een spring-link naar de inhoud staat buiten beeld of is 1 bij 1 tot je hem met Tab pakt */
       var verstopt = r.right <= 0 || r.bottom <= 0 || (r.width <= 1 && r.height <= 1);
       if (r.width > 0 && r.height > 0 && (r.height < 44 || r.width < 44) && !inTekst && !verstopt){
@@ -141,11 +178,16 @@ const METEN = `(function(){
     }).map(function(n){ return n.textContent.trim(); }).join(' ');
     if (!eigen) return;
 
-    var voor = rgb(st.color); if (!voor) return;
-    var achter = achtergrond(el);
-    voor = overElkaar(voor, achter);
-    var L1 = lum(voor), L2 = lum(achter);
-    var v = (Math.max(L1,L2) + 0.05) / (Math.min(L1,L2) + 0.05);
+    var kleur = rgb(st.color); if (!kleur) return;
+    /* tekst op een knop die uit staat hoeft niet (WCAG 1.4.3: een onderdeel dat niet actief is) */
+    if (el.closest('button:disabled,[aria-disabled="true"]')) return;
+    if (opCanvas(el)) return;
+    var achters = achtergronden(el);
+    var v = Infinity;
+    achters.forEach(function(achter){
+      var voor = overElkaar(kleur, achter), L1 = lum(voor), L2 = lum(achter);
+      v = Math.min(v, (Math.max(L1,L2) + 0.05) / (Math.min(L1,L2) + 0.05));
+    });
     var px = parseFloat(st.fontSize), vet = (parseInt(st.fontWeight,10) || 400) >= 700;
     var groot = px >= 24 || (px >= 18.66 && vet);
     var norm = groot ? 3 : 4.5;
