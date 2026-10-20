@@ -37,4 +37,12 @@ jobs:
             sleep 1
           done
           echo "server of browser kwam niet op"; cat /tmp/server.log /tmp/chrome.log; exit 1
-      - run: node server/audit-donker.js http://127.0.0.1:8765
+      # De uitslag ook in de samenvatting van de run: die kan iedereen lezen,
+      # het log alleen wie is ingelogd.
+      - name: donkertoets
+        run: |
+          set +e
+          node server/audit-donker.js http://127.0.0.1:8765 | tee /tmp/donker.txt
+          uit=${PIPESTATUS[0]}
+          { echo '### Donkertoets'; echo; echo '```'; grep -v ' in orde$' /tmp/donker.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit $uit

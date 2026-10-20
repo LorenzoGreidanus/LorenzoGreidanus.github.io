@@ -127,7 +127,9 @@ const METEN = `(function(){
       var r = el.getBoundingClientRect();
       var inTekst = el.tagName === 'A' && el.parentElement &&
                     /^(P|LI|SMALL|SPAN|TD)$/.test(el.parentElement.tagName);
-      if (r.width > 0 && r.height > 0 && (r.height < 44 || r.width < 44) && !inTekst){
+      /* een spring-link naar de inhoud staat buiten beeld of is 1 bij 1 tot je hem met Tab pakt */
+      var verstopt = r.right <= 0 || r.bottom <= 0 || (r.width <= 1 && r.height <= 1);
+      if (r.width > 0 && r.height > 0 && (r.height < 44 || r.width < 44) && !inTekst && !verstopt){
         doelen.push({ sel: pad(el), t: (el.textContent||'').trim().slice(0,30),
                       b: Math.round(r.width), h: Math.round(r.height) });
       }
