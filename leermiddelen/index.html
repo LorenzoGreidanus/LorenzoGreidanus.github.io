@@ -2984,7 +2984,8 @@ var SPELLEN = [
       var oef = !OP_SPEL[o.spel] && oefSpel(o);
       var sp = oef ? [o.naam || oef.naam, oef.bestand, 'goed'] : OP_SPEL[o.spel], verlopen = o.tot < nu, maat = o.deel ? 'goed' : sp[2] || 'rondes';
       /* een losse oefening: de keuzes van de docent in de link, en start=1 zodat hij meteen begint */
-      var link = oef ? sp[1] + '?' + (o.kz ? o.kz + '&' : '') + 'start=1' : sp[1] + '?vak=' + encodeURIComponent(o.vak) + (o.deel ? '&deel=' + encodeURIComponent(o.deel) : '');
+      /* een spel: meteen=1, dan drukt het spel zelf op Start (spel.js) en zie je zijn keuzes niet */
+      var link = oef ? sp[1] + '?' + (o.kz ? o.kz + '&' : '') + 'start=1' : sp[1] + '?vak=' + encodeURIComponent(o.vak) + (o.deel ? '&deel=' + encodeURIComponent(o.deel) : '') + '&meteen=1';
       return '<div class="opstuk' + (o.gehaald || verlopen ? ' af' : '') + '">' +
         '<b>' + schoon(sp[0]) + (oef ? '' : ', ' + schoon(OP_VAK[o.vak] || o.vak)) + (o.deel ? ', ' + schoon(o.deelNaam || deelNaam(o.vak, o.deel)) : '') + ': minstens ' + o.min + ' ' + maat + '</b>' +
         '<span>' + (verlopen ? 'De tijd was tot ' : 'Tot ') + new Date(o.tot).toLocaleDateString('nl-NL', { weekday:'long', day:'numeric', month:'long' }) + '.' + (o.tekst ? ' ' + schoon(o.tekst) : '') + '</span>' +
@@ -3012,7 +3013,9 @@ var SPELLEN = [
     var q = o.bron === 'week' ? 'week=1' + (o.niveau || !o.rooster ? '&n=' + encodeURIComponent(o.niveau || 'kgt') : '')
           : o.bron === 'eigen' ? 'eigen=' + encodeURIComponent(o.code || String(o.dt || '').replace(/^eigen-/, ''))
           : 'tekst=' + encodeURIComponent(o.dt || '');
-    return 'dictee.html?' + q + '&van=opdracht';
+    /* meteen=1: het dictee begint zodra de tekst er is (spel.js). Niet als de leerling zelf nog zijn niveau moet kiezen. */
+    var kiesNog = o.bron === 'week' && !o.niveau && o.rooster;
+    return 'dictee.html?' + q + '&van=opdracht' + (kiesNog ? '' : '&meteen=1');
   }
   /* Nog niet gemeld, maar wel gemaakt op dit apparaat (de melding wacht nog op
      verbinding): het dictee bewaart zijn beste score onder de tekst. */

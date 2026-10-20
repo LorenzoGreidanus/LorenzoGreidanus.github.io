@@ -623,6 +623,31 @@ window.SPEL = (function(){
     return { zet:function(id, b){ nu = id; if (b !== undefined) bron = b; var open = d.open; teken(); d.open = open; }, element:d };
   }
 
+  /* ---------- een opdracht van de docent: meteen beginnen ----------
+     De knop van een opdracht in de leeromgeving zet meteen=1 in de link. Dan
+     ziet de leerling het startscherm niet, met zijn keuzes die hij zou kunnen
+     veranderen: zodra Start klaar is (een spel dat nog iets ophaalt, zoals de
+     tekst van het dictee, houdt de knop zo lang uit) drukt de pagina er zelf
+     op. Lukt dat niet binnen tien tellen, bijvoorbeeld omdat er nog iets
+     gekozen moet worden, dan blijft gewoon het startscherm staan. */
+  (function(){
+    if (!/[?&]meteen=1\b/.test(location.search)) return;
+    var begin = Date.now(), klaar = false;
+    /* het startscherm alvast onzichtbaar (niet weg: dan kan de knop niet gedrukt worden) */
+    var st = document.createElement('style'); st.textContent = '#scherm-start{opacity:0 !important}';
+    document.head.appendChild(st);
+    function toon(){ if (st.parentNode) st.parentNode.removeChild(st); }
+    function zichtbaar(el){ return !!(el && el.offsetParent && !el.disabled && el.getAttribute('aria-busy') !== 'true'); }
+    function kijk(){
+      if (klaar) return;
+      var b = document.getElementById('startBtn');
+      if (zichtbaar(b)){ klaar = true; b.click(); setTimeout(toon, 600); return; }
+      if (Date.now() - begin < 10000) setTimeout(kijk, 150); else toon();
+    }
+    var go = function(){ setTimeout(kijk, 250); };
+    if (document.readyState === 'complete') go(); else window.addEventListener('load', go);
+  })();
+
   return {
     raak: raak, uitleg:uitleg, niveauRegel:niveauRegel, stappen:stappen, einde:einde, bestand:bestand, naamMag:naamMag, schoonKlassementen:schoonKlassementen,
     inBeeld:inBeeld, drukknoppen:drukknoppen, zeker:zeker,
