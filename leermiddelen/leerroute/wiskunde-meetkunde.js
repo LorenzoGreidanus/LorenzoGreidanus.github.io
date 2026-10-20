@@ -18,7 +18,8 @@
   function grens(x, d){ var f = Math.abs(x) * Math.pow(10, d), r = f - Math.floor(f); return Math.abs(r - 0.5) < 0.02; }
   function metE(x, e, ook){
     x = String(x);
-    var vormen = uniek([x, x.replace(/\./g, ''), x.replace(/\./g, '').replace(',', '.')]), uit = vormen.slice();
+    /* 0,075 niet ook als 0.075: dat leest de motor als vijfenzeventig */
+    var punt = x.replace(/\./g, '').replace(',', '.'), vormen = uniek([x, x.replace(/\./g, '')].concat(/^-?\d{1,3}(\.\d{3})+$/.test(punt) ? [] : [punt])), uit = vormen.slice();
     [e].concat(ook || []).forEach(function(eh){
       if (!eh) return;
       var ee = uniek([eh, eh.replace('²', '2').replace('³', '3')]);
