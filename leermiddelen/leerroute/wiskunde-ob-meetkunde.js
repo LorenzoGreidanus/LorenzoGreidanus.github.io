@@ -1,7 +1,8 @@
 /* De leerroute wiskunde: meetkunde in de onderbouw (klas 1 tot 3).
    Soorten hoeken en hoeken met drie letters, nevenhoeken, overstaande hoeken, F- en
-   Z-hoeken, de hoekensom van een (gelijkbenige) driehoek; omtrek en oppervlakte van
-   rechthoek, driehoek, parallellogram, trapezium en cirkel, samengestelde figuren
+   Z-hoeken, de hoekensom van een (gelijkbenige) driehoek; wat cm² is en welke eenheid
+   past, omtrek en oppervlakte van rechthoek, vierkant, driehoek, parallellogram, trapezium,
+   ruit en vlieger, vierkante maten omrekenen, de cirkel, samengestelde figuren
    (erbij of eraf); inhoud en oppervlakte van balk, prisma en cilinder, inhoudsmaten;
    Pythagoras; gelijkvormigheid (factor of verhoudingstabel); spiegelen, verschuiven
    en draaien in een assenstelsel. Elke manier een eigen doel.
@@ -370,11 +371,193 @@
     return lnP(C, V, { k:K[1], w:3, stip:'7 5' }) + hoekje(V[0], V[1], kant > 0 ? 0 : 90, kant > 0 ? 90 : 180, { k:'var(--ink)' }) +
       tx(V[0] + (lk > 0 ? 8 : -8), (V[1] + C[1]) / 2, lab, { vet:true, k:K[1], a:lk > 0 ? 'start' : 'end', mid:true, fs:15 });
   }
+  function rect(x, y, w, h, o){ return pg([[x, y], [x + w, y], [x + w, y + h], [x, y + h]], o); }
+  function pijl(x1, y1, x2, y2, k){
+    var a = Math.atan2(y2 - y1, x2 - x1), p = 9;
+    return ln(x1, y1, x2, y2, { k:k, w:2.5 }) + pad('M' + n1(x2 - p * Math.cos(a - 0.45)) + ' ' + n1(y2 - p * Math.sin(a - 0.45)) + ' L' + n1(x2) + ' ' + n1(y2) + ' L' + n1(x2 - p * Math.cos(a + 0.45)) + ' ' + n1(y2 - p * Math.sin(a + 0.45)), { s:k, w:2.5 });
+  }
+  /* een uitkomst midden in een figuur, op een vlakje zodat de lijnen eronder niet storen */
+  function bord(x, y, t){ var w = String(t).length * 9 + 18; return rect(x - w / 2, y - 15, w, 30, { f:'var(--kaart)', s:K[0], w:2 }) + tx(x, y, t, { mid:true, vet:true, k:K[0], fs:16 }); }
+  /* lengte, oppervlakte en inhoud naast elkaar: 1, 2 en 3 richtingen; acc (0..2) licht op */
+  function richtingen(acc, eh){
+    eh = eh || 'cm';
+    var s = '', mid = [78, 236, 392], OND = [['lengte', '1 richting'], ['oppervlakte', '2 richtingen'], ['inhoud', '3 richtingen']];
+    if (acc >= 0) s += rect(mid[acc] - 74, 6, 148, 200, { f:K[2], fo:0.12, s:K[2], w:2 });
+    /* lengte */
+    s += ln(30, 112, 126, 112, { w:4 }) + ln(30, 104, 30, 120, { w:2.5 }) + ln(126, 104, 126, 120, { w:2.5 }) + tx(78, 92, '1 ' + eh, { vet:true, fs:16 }) + pijl(30, 136, 126, 136, K[1]);
+    /* oppervlakte */
+    s += rect(196, 62, 80, 80, { f:K[0], fo:0.18, w:2.5 }) + tx(236, 102, '1 ' + eh + '²', { mid:true, vet:true, fs:16 }) + pijl(196, 158, 276, 158, K[1]) + pijl(182, 142, 182, 62, K[1]);
+    /* inhoud: een kubus, scheef getekend */
+    var x = 352, y = 76, z = 66, dx = 26, dy = -20;
+    s += pg([[x, y], [x + z, y], [x + z + dx, y + dy], [x + dx, y + dy]], { f:K[0], fo:0.3, w:2.5 }) + pg([[x + z, y], [x + z + dx, y + dy], [x + z + dx, y + z + dy], [x + z, y + z]], { f:K[0], fo:0.1, w:2.5 }) +
+      rect(x, y, z, z, { f:K[0], fo:0.18, w:2.5 }) + tx(x + z / 2, y + z / 2, '1 ' + eh + '³', { mid:true, vet:true, fs:16 }) +
+      pijl(x, y + z + 16, x + z, y + z + 16, K[1]) + pijl(x - 14, y + z, x - 14, y, K[1]) + pijl(x + z + 10, y + z + 6, x + z + 10 + dx, y + z + 6 + dy, K[1]);
+    OND.forEach(function(o, i){ s += tx(mid[i], 180, o[0], { vet:true, fs:15, k:i === acc ? K[2] : null }) + tx(mid[i], 198, o[1], { fs:13, k:'var(--muted)' }); });
+    return svg(470, 212, s, 'een lengte van 1 ' + eh + ', een vierkant van 1 ' + eh + '² en een kubus van 1 ' + eh + '³', 480);
+  }
+  /* een rechthoek van k bij r hokjes; o.rij telt de onderste rij, o.rijen nummert de rijen */
+  function hokjesFig(k, r, o){
+    o = o || {};
+    var eh = o.eh || 'cm', u = Math.min(44, 300 / k, 190 / r), W = Math.max(300, k * u + 100), x0 = Math.max(48, (W - k * u) / 2), y0 = 44, H = y0 + r * u + 34, s = '', i;
+    s += rect(14, 10, 18, 18, { f:K[0], fo:0.25, w:2 }) + tx(40, 19, '= 1 ' + eh + '² (1 ' + eh + ' bij 1 ' + eh + ')', { a:'start', mid:true, fs:15 });
+    s += rect(x0, y0, k * u, r * u, { f:K[0], fo:0.1, s:'none', w:0 });
+    if (o.rij) s += rect(x0, y0 + (r - 1) * u, k * u, u, { f:K[2], fo:0.35, s:'none', w:0 });
+    for (i = 1; i < k; i++) s += ln(x0 + i * u, y0, x0 + i * u, y0 + r * u, { w:1.2, op:0.55 });
+    for (i = 1; i < r; i++) s += ln(x0, y0 + i * u, x0 + k * u, y0 + i * u, { w:1.2, op:0.55 });
+    s += rect(x0, y0, k * u, r * u, { w:2.5 });
+    if (o.rij) for (i = 0; i < k; i++) s += tx(x0 + (i + 0.5) * u, y0 + r * u + 17, String(i + 1), { mid:true, fs:15, k:K[2], vet:true });
+    if (o.rijen) for (i = 0; i < r; i++) s += tx(x0 - 10, y0 + (r - i - 0.5) * u, String(i + 1), { mid:true, fs:15, a:'end', k:K[3], vet:true });
+    if (o.tot) s += bord(x0 + k * u / 2, y0 + r * u / 2 - (o.rij && r < 3 ? u / 2 : 0), o.tot);
+    return svg(W, H, s, 'een rechthoek van ' + k + ' bij ' + r + ' hokjes', W);
+  }
+  /* een rechthoek (of vierkant) met maten; o.raster tekent de hokjes van 1 bij 1 */
+  function rhFig(l, b, e, o){
+    o = o || {};
+    var W = 420, H = 260, sc = Math.min(280 / l, 170 / b), w = l * sc, h = b * sc, x0 = (W - w) / 2 - 12, y0 = 40 + (180 - h) / 2, s = '', i;
+    if (o.raster) s += rect(14, 8, 16, 16, { f:K[0], fo:0.25, w:2 }) + tx(38, 16, '= 1 ' + e + '²', { a:'start', mid:true, fs:14 });
+    s += rect(x0, y0, w, h, { f:K[0], fo:0.12, s:'none', w:0 });
+    if (o.raster){ for (i = 1; i < l; i++) s += ln(x0 + i * sc, y0, x0 + i * sc, y0 + h, { w:1, op:0.4 }); for (i = 1; i < b; i++) s += ln(x0, y0 + i * sc, x0 + w, y0 + i * sc, { w:1, op:0.4 }); }
+    s += rect(x0, y0, w, h, { w:2.5 });
+    s += hoekje(x0, y0 + h, 0, 90, { k:'var(--ink)' });
+    var ver = o.vk ? 8 : 0;
+    s += tx(x0 + w / 2, y0 + h + 20 + ver, l + ' ' + e, { mid:true, vet:true, fs:16 }) + tx(x0 + w + 10 + ver, y0 + h / 2, b + ' ' + e, { mid:true, vet:true, fs:16, a:'start' });
+    if (o.vk) s += streepje([x0, y0 + h], [x0 + w, y0 + h]) + streepje([x0 + w, y0], [x0 + w, y0 + h]) + streepje([x0, y0], [x0 + w, y0]) + streepje([x0, y0], [x0, y0 + h]);
+    if (o.tot) s += bord(x0 + w / 2, y0 + h / 2, o.tot);
+    return svg(W, H, s, (o.vk ? 'een vierkant met zijden van ' : 'een rechthoek van ' + l + ' bij ') + b + ' ' + e, W);
+  }
+  /* een maat op een lijn, op een vlakje zodat de lijn er niet door loopt */
+  function plak(x, y, t, k){ k = k || K[1]; var w = String(t).length * 8.5 + 10; return rect(x - w / 2, y - 11, w, 22, { f:'var(--kaart)', s:k, w:1.5 }) + tx(x, y, t, { mid:true, vet:true, k:k, fs:15 }); }
+  /* ruit of vlieger: diagonaal d1 staat rechtop, d2 ligt; ze snijden op t onder de top. o.half kleurt wat er buiten valt */
+  function ruitFig(d1, d2, t, o){
+    o = o || {};
+    var e = o.e || 'cm', tr = pas([[0, 0], [d2, d1]], 420, 250, 36), f = tr.f, s = '';
+    var Tp = f([d2 / 2, d1]), Bt = f([d2 / 2, 0]), Lf = f([0, d1 - t]), Rt = f([d2, d1 - t]), M = f([d2 / 2, d1 - t]);
+    var H0 = f([0, d1]), H1 = f([d2, d1]), L0 = f([0, 0]), L1 = f([d2, 0]);
+    if (o.half) [[H0, Tp, Lf], [Tp, H1, Rt], [Lf, L0, Bt], [Rt, L1, Bt]].forEach(function(q){ s += pg(q, { f:K[3], fo:0.22, s:'none', w:0 }); });
+    if (o.rh) s += pg([H0, H1, L1, L0], { stip:'6 5', w:2, op:0.75 }) + tx((L0[0] + L1[0]) / 2, L0[1] + 20, d2 + ' ' + e, { mid:true, fs:14, k:'var(--muted)', vet:true }) + tx(L1[0] + 10, (H1[1] + L1[1]) / 2, d1 + ' ' + e, { mid:true, fs:14, k:'var(--muted)', vet:true, a:'start' });
+    s += pg([Tp, Rt, Bt, Lf], { f:K[0], fo:0.18, w:2.5 });
+    s += lnP(Tp, Bt, { k:K[1], w:2.5 }) + lnP(Lf, Rt, { k:K[1], w:2.5 }) + hoekje(M[0], M[1], 0, 90, { k:K[1] });
+    var wl = String(d2 + ' ' + e).length * 8.5 + 10;
+    s += plak(M[0], (M[1] + Bt[1]) / 2, d1 + ' ' + e) + (M[0] - Lf[0] > wl + 16 ? plak((Lf[0] + M[0]) / 2, M[1], d2 + ' ' + e) : plak(H0[0] - 8 - wl / 2, M[1], d2 + ' ' + e));
+    if (o.zijde) s += plak((Tp[0] + Rt[0]) / 2, (Tp[1] + Rt[1]) / 2, o.zijde, 'var(--ink)');
+    if (o.tot) s += bord(210, 274, o.tot);
+    return svg(420, 296, s, (o.vlieger ? 'een vlieger' : 'een ruit') + ' met diagonalen van ' + d1 + ' en ' + d2 + ' ' + e + ' in een rechthoek', 420);
+  }
+  /* 1 cm² in hokjes van 1 mm², of 1 m² = 100 bij 100 cm */
+  function maatFig(m, o){
+    o = o || {};
+    var x0 = 70, y0 = 24, z = 200, s = '', i, groot = m === 'm', kl = groot ? 'cm' : 'mm', st = groot ? 100 : 10, gr = groot ? 'm' : 'cm';
+    s += rect(x0, y0, z, z, { f:K[0], fo:0.1, s:'none', w:0 });
+    /* bij 1 m² is een rij hokjes van 1 cm maar een dun streepje: 100 rijen passen erin */
+    var rh = groot ? 4 : z / 10;
+    if (o.rij) s += rect(x0, y0 + z - rh, z, rh, { f:K[2], fo:groot ? 0.8 : 0.35, s:'none', w:0 });
+    if (!groot) for (i = 1; i < 10; i++) s += ln(x0 + i * z / 10, y0, x0 + i * z / 10, y0 + z, { w:1, op:0.5 }) + ln(x0, y0 + i * z / 10, x0 + z, y0 + i * z / 10, { w:1, op:0.5 });
+    s += rect(x0, y0, z, z, { w:2.5 });
+    if (!groot) s += rect(x0, y0, z / 10, z / 10, { f:K[1], fo:0.55, s:K[1], w:2 }) + pijl(x0 + z + 46, y0 + 6, x0 + z / 10 + 6, y0 + z / 20, K[1]) + tx(x0 + z + 50, y0 + 6, '1 mm²', { a:'start', mid:true, vet:true, k:K[1], fs:15 });
+    s += tx(x0 + z / 2, y0 + z + 20, '1 ' + gr + ' = ' + st + ' ' + kl, { mid:true, vet:true, fs:15 }) + tx(x0 - 8, y0 + z / 2, st + ' ' + kl, { mid:true, vet:true, fs:15, a:'end' });
+    if (o.rij) s += tx(x0 + z + 12, y0 + z - rh / 2, '1 rij: ' + T(st) + ' ' + kl + '²', { a:'start', mid:true, vet:true, k:K[2], fs:14 });
+    if (o.tot) s += tx(x0 + z + 12, y0 + z / 2 - 10, st + ' rijen ' + X + ' ' + st, { a:'start', mid:true, vet:true, fs:15 }) + tx(x0 + z + 12, y0 + z / 2 + 12, '= ' + T(st * st) + ' ' + kl + '²', { a:'start', mid:true, vet:true, k:K[0], fs:16 });
+    return svg(440, 260, s, groot ? 'een vierkante meter: 100 cm bij 100 cm' : 'een vierkante centimeter in hokjes van 1 mm²', 440);
+  }
   G.push({ groep:{ id:'wob-m-opp', niveau:'onderbouw', domein:'meetkunde', naam:'Omtrek en oppervlakte',
-      uit:'Omtrek en oppervlakte van een rechthoek, en de oppervlakte van driehoek, parallellogram en trapezium. Bij elke figuur zoek je eerst de goede basis en hoogte.' },
+      uit:'Wat een vierkante centimeter is en welke eenheid je kiest. Daarna de oppervlakte van rechthoek, vierkant, driehoek, parallellogram, trapezium, ruit en vlieger, elke vorm apart, en vierkante maten omrekenen.' },
     doelen:[
+      { id:'wob-m-opp-cm2', naam:'Wat is een vierkante centimeter?', kort:'Oppervlakte is het aantal hokjes van 1 cm bij 1 cm: rijen × hokjes per rij, in cm²',
+        uit:'<p>De <b>oppervlakte</b> zegt hoe groot een vlak is. Je meet dat met <b>hokjes</b>: vierkantjes van 1 cm bij 1 cm. Zo\'n hokje heet <b>één vierkante centimeter</b>, kort <b>1 cm²</b>.</p>' +
+          '<p>Waarom cm²? Een hokje is 1 cm lang <b>en</b> 1 cm breed. Je meet dus in <b>twee richtingen</b>: cm × cm = cm². Het kleine tweetje betekent precies dat. Een lengte meet je maar in één richting, daarom staat daar gewoon cm.</p>' +
+          '<p>Je hoeft niet elk hokje te tellen. De hokjes liggen in <b>rijen</b>. Tel hoeveel hokjes er in één rij liggen en hoeveel rijen er zijn. Doe dan <b>rijen × hokjes per rij</b>. 3 rijen van 5 hokjes is 3 × 5 = <b>15 cm²</b>.</p>' +
+          '<p>Met meters gaat het net zo: een tegel van 1 m bij 1 m is <b>1 m²</b>, één vierkante meter.</p>',
+        wanneer:'je wilt snappen wat oppervlakte is en waarom er cm² achter staat.',
+        beeld:richtingen(1, 'cm'),
+        maak:function(R){
+          var k, r; do { k = R.heel(3, 9); r = R.heel(2, 6); } while (k === r);
+          var tegel = R.heel(0, 3) === 0, e = tegel ? 'm' : 'cm', e2 = e + '²', A = k * r;
+          var bl = function(n){ return hokjesFig(k, r, { eh:e, rij:n >= 1, rijen:n >= 2, tot:n >= 4 ? A + ' ' + e2 : '' }); };
+          var tw = R.kies([['Een terras', 'het terras'], ['Een badkamervloer', 'de vloer'], ['Een schoolplein', 'het plein']]);
+          var ctx = tegel ? tw[0] + ' ligt vol tegels van 1 m bij 1 m. Elk hokje in de figuur is één tegel. Hoe groot is ' + tw[1] + '?' : R.kies([
+            'Elk hokje in de figuur is 1 cm bij 1 cm. Hoe groot is de oppervlakte van de rechthoek?',
+            'Een chocoladereep heeft stukjes van 1 cm bij 1 cm. Elk hokje in de figuur is één stukje. Hoe groot is de reep?',
+            'Een rechthoek is getekend op ruitjespapier met hokjes van 1 cm bij 1 cm. Hoe groot is de oppervlakte?',
+            'Een vel stickers heeft vierkante stickers van 1 cm bij 1 cm, zie de figuur. Hoe groot is het vel?']);
+          return { vraag:'Oppervlakte?', context:ctx, eenheid:e2, beeld:bl, zelfBeeld:bl(0), stappen:[
+            St('Hoeveel hokjes liggen er in één rij?', metE(String(k), 'hokjes'), 'Tel de hokjes in de onderste rij, van links naar rechts.', Fz([String(k)], F(String(r), 'Dat is het aantal rijen. Tel de hokjes in één rij.'))),
+            St('Hoeveel rijen liggen er op elkaar?', metE(String(r), 'rijen'), 'Tel van onder naar boven.', Fz([String(r)], F(String(k), 'Dat zijn de hokjes in één rij. Tel nu de rijen.'))),
+            kstap(R, 'Elk hokje is 1 ' + e + ' bij 1 ' + e + '. Welke eenheid hoort bij de oppervlakte?', e2, [], 'Een hokje meet je in twee richtingen: ' + e + ' ' + X + ' ' + e + ' = ' + e2 + '.', { orde:[e, e2, e + '³'], waarom:'Het tweetje betekent: in twee richtingen gemeten, naar rechts en naar boven.' }),
+            St('Oppervlakte = ' + r + ' rijen ' + X + ' ' + k + ' hokjes =', metE(String(A), e2), r + ' keer ' + k + '. Dat is evenveel als alle hokjes tellen, maar sneller.', Fz([String(A)], F(String(k + r), 'Dat is plus. Je wilt alle hokjes: doe keer.', String(2 * (k + r)), 'Dat is de omtrek: de rand. Je zoekt de hokjes binnenin.')), { e:e2, waarom:r + ' rijen van ' + k + ' hokjes van 1 ' + e2 + ' is ' + A + ' ' + e2 + '.' }) ] };
+        } },
+      { id:'wob-m-opp-eenheid', naam:'Welke eenheid: cm, cm² of cm³?', kort:'Tel de richtingen: een lengte zonder tweetje, een oppervlakte met ², een inhoud met ³',
+        uit:'<p>Een <b>lengte</b> meet je in <b>één richting</b>: hoe lang, hoe breed, hoe hoog, of de rand eromheen. De eenheid is <b>mm, cm of m</b>, zonder tweetje.</p>' +
+          '<p>Een <b>oppervlakte</b> meet je in <b>twee richtingen</b>: hoeveel hokjes erop passen. Denk aan een vloer, een muur of een scherm. De eenheid is <b>mm², cm² of m²</b>.</p>' +
+          '<p>Een <b>inhoud</b> meet je in <b>drie richtingen</b>: hoeveel kubusjes erin passen. Denk aan water in een bak of zand in een kar. De eenheid is <b>mm³, cm³ of m³</b>.</p>' +
+          '<p>Vraag jezelf dus af: meet ik een rand, een vlak of een ruimte?</p>',
+        wanneer:'je twijfelt of er cm, cm² of cm³ achter je antwoord moet.',
+        maak:function(R){
+          var SIT = [
+            ['de omtrek van een fotolijst', 0, 'cm', 'De omtrek is de rand: je meet langs een lijn.'],
+            ['hoe hoog een deur is', 0, 'm', 'Hoe hoog: je meet in één richting, van onder naar boven.'],
+            ['hoeveel hek je nodig hebt rond een tuin', 0, 'm', 'Een hek staat langs de rand: dat is een lengte.'],
+            ['hoe dik een munt is', 0, 'mm', 'Hoe dik: je meet in één richting.'],
+            ['hoe lang een mier is', 0, 'mm', 'Hoe lang: je meet in één richting.'],
+            ['hoeveel plint je nodig hebt langs de muren van je kamer', 0, 'm', 'Een plint loopt langs de rand van de vloer: een lengte.'],
+            ['hoe breed je schrift is', 0, 'cm', 'Hoe breed: je meet in één richting.'],
+            ['hoeveel vloerbedekking je nodig hebt voor je kamer', 1, 'm', 'Je bedekt de vloer: een vlak, in de lengte en de breedte.'],
+            ['hoeveel gras er op een voetbalveld ligt', 1, 'm', 'Het gras bedekt het veld: een vlak.'],
+            ['hoe groot een bladzijde van je schrift is', 1, 'cm', 'Een bladzijde is een vlak: lengte en breedte.'],
+            ['hoeveel muur je moet verven', 1, 'm', 'Verf komt op een vlak: lengte en hoogte.'],
+            ['hoe groot het scherm van je telefoon is', 1, 'cm', 'Een scherm is een vlak: lengte en breedte.'],
+            ['hoe groot het goudkleurige chipje op een bankpas is', 1, 'mm', 'Het chipje is een klein vlak: lengte en breedte.'],
+            ['hoeveel karton er nodig is voor een doos', 1, 'cm', 'Karton is een vlak: je meet alle zijkanten in lengte en breedte.'],
+            ['hoeveel water er in een aquarium past', 2, 'cm', 'Water vult een ruimte: lengte, breedte en hoogte.'],
+            ['hoeveel zand er in een zandbak gaat', 2, 'm', 'Zand vult een ruimte: lengte, breedte en diepte.'],
+            ['hoeveel beton er in een fundering gaat', 2, 'm', 'Beton vult een ruimte: drie richtingen.'],
+            ['hoeveel drinken er in een pakje past', 2, 'cm', 'Drinken vult een ruimte: drie richtingen.'],
+            ['hoeveel lucht er in een klaslokaal zit', 2, 'm', 'Lucht vult de hele ruimte: lengte, breedte en hoogte.'],
+            ['hoeveel ruimte een zandkorrel inneemt', 2, 'mm', 'Een korrel neemt ruimte in: lengte, breedte en hoogte.'] ];
+          var s = R.kies(SIT), soort = s[1], f = s[2], OPT = [f, f + '²', f + '³'], goed = OPT[soort];
+          var SOORT = ['een lengte (1 richting)', 'een oppervlakte (2 richtingen)', 'een inhoud (3 richtingen)'];
+          var bl = function(n){ return richtingen(n >= 1 ? soort : -1, f); };
+          return eindKeuze({ vraag:'Welke eenheid?', context:'Je wilt weten: ' + s[0] + '. Welke eenheid past daarbij?', beeld:bl, stappen:[
+            kstap(R, 'Wat meet je hier?', SOORT[soort], [], s[3], { orde:SOORT }),
+            kstap(R, 'Welke eenheid past bij ' + SOORT[soort].replace(/ \(.*$/, '') + '?', goed, [], [
+              'Een lengte heeft geen tweetje en geen drietje: ' + f + '.',
+              'Twee richtingen: ' + f + ' ' + X + ' ' + f + ' = ' + f + '².',
+              'Drie richtingen: ' + f + ' ' + X + ' ' + f + ' ' + X + ' ' + f + ' = ' + f + '³.'][soort], { orde:OPT, waarom:['Je meet in één richting, dus geen klein getal erachter.', 'Het tweetje staat voor twee richtingen.', 'Het drietje staat voor drie richtingen.'][soort] }) ] });
+        } },
+      { id:'wob-m-opp-rh', naam:'Oppervlakte van een rechthoek', kort:'Oppervlakte = lengte × breedte, in cm² (of m², mm²)',
+        uit:'<p>In een rechthoek liggen de hokjes in nette rijen. In één rij liggen er zoveel als de <b>lengte</b>. Er zijn zoveel rijen als de <b>breedte</b>.</p>' +
+          '<p>Dus: <b>oppervlakte = lengte × breedte</b>, kort <b>l × b</b>.</p>' +
+          '<p>De eenheid krijgt een tweetje, want je doet cm × cm = <b>cm²</b>. Zijn de maten in meter, dan krijg je m². In millimeter: mm².</p>' +
+          '<p>Een rechthoek van 6 cm bij 4 cm: 6 × 4 = <b>24 cm²</b>. Er passen 24 hokjes van 1 cm² in.</p>',
+        wanneer:'je wilt weten hoe groot een rechthoekig vlak is, zoals een vloer of een blad papier.',
+        maak:function(R){
+          var groot = R.heel(0, 3) === 0, l, b, e;
+          if (groot){ l = R.kies([20, 30, 40, 50, 60]); b = R.heel(2, 9); e = R.kies(['cm', 'mm', 'm']); }
+          else { l = R.heel(3, 15); do { b = R.heel(2, 12); } while (b >= l); e = R.kies(['cm', 'cm', 'm']); if (e === 'm' && l > 9){ l = R.heel(4, 9); b = R.heel(2, l - 1); } }
+          var e2 = e + '²', A = l * b, FORM = ['oppervlakte = l ' + X + ' b', 'oppervlakte = 2 ' + X + ' (l + b)', 'oppervlakte = l + b'];
+          var wat = e === 'm' ? (groot ? R.kies(['Een tuin', 'Een parkeerterrein', 'Een stuk grond']) : R.kies(['Een kamer', 'Een tuin', 'Een terras'])) : e === 'mm' ? 'Een strookje papier' : R.kies(['Een rechthoek', 'Een foto', 'Een kaart']);
+          var bl = function(n){ return rhFig(l, b, e, { raster:!groot, tot:n >= 3 ? A + ' ' + e2 : '' }); };
+          return { vraag:'Oppervlakte?', context:wat + ' is ' + l + ' ' + e + ' lang en ' + b + ' ' + e + ' breed. Bereken de oppervlakte.', eenheid:e2, beeld:bl, zelfBeeld:bl(0), stappen:[
+            kstap(R, 'Welke formule hoort bij de oppervlakte?', FORM[0], [], 'Zoveel rijen van zoveel hokjes: lengte keer breedte.', { orde:FORM }),
+            kstap(R, 'Welke eenheid krijgt het antwoord?', e2, [], 'Je doet ' + e + ' ' + X + ' ' + e + ', dus ' + e2 + '. Elk hokje is 1 ' + e2 + '.', { orde:[e, e2, e + '³'], waarom:'Lengte keer breedte: twee richtingen, dus het tweetje.' }),
+            St('Oppervlakte = ' + l + ' ' + X + ' ' + b + ' =', metE(String(A), e2), l + ' keer ' + b + '.', Fz([String(A)], F(String(2 * (l + b)), 'Dat is de omtrek: de rand. Doe lengte keer breedte.', String(l + b), 'Keer, niet plus.')), { e:e2 }) ] };
+        } },
+      { id:'wob-m-opp-vierkant', naam:'Oppervlakte van een vierkant', kort:'Oppervlakte = zijde × zijde, ook geschreven als zijde²',
+        uit:'<p>Een <b>vierkant</b> is een rechthoek waarvan alle vier de zijden even lang zijn. De lengte en de breedte zijn dus gelijk.</p>' +
+          '<p>Daarom: <b>oppervlakte = zijde × zijde</b>. Een vierkant met zijden van 5 cm: 5 × 5 = <b>25 cm²</b>.</p>' +
+          '<p>Een getal keer zichzelf heet een <b>kwadraat</b>: 5 × 5 = 5². Dat woord betekent eigenlijk "vierkant".</p>' +
+          '<p>Let op: doe niet 5 × 2 of 4 × 5. Dat laatste is de omtrek, de rand van het vierkant.</p>',
+        wanneer:'je de oppervlakte van een vierkant vlak zoekt, zoals een tegel of een schaakbord.',
+        maak:function(R){
+          var groot = R.heel(0, 4) === 0, z = groot ? R.kies([20, 30, 40, 50]) : R.heel(2, 15), e = groot ? R.kies(['cm', 'mm']) : R.kies(['cm', 'cm', 'm', 'mm']), e2 = e + '²', A = z * z;
+          var wat = e === 'm' ? R.kies(['Een vierkant grasveld', 'Een vierkant plein', 'Een vierkante vijver']) : e === 'mm' ? R.kies(['Een vierkant postzegeltje', 'Een vierkant stickertje']) : R.kies(['Een vierkant', 'Een vierkante tegel', 'Een vierkant notitieblaadje']);
+          var bl = function(n){ return rhFig(z, z, e, { vk:true, raster:!groot, tot:n >= 3 ? A + ' ' + e2 : '' }); };
+          return { vraag:'Oppervlakte?', context:wat + ' heeft zijden van ' + z + ' ' + e + '. Bereken de oppervlakte.', eenheid:e2, beeld:bl, zelfBeeld:bl(0), stappen:[
+            St('Alle zijden zijn even lang. Hoe breed is het vierkant?', metE(String(z), e), 'Lengte en breedte zijn gelijk: allebei ' + z + ' ' + e + '.', null, { e:e }),
+            kstap(R, 'Welke eenheid krijgt het antwoord?', e2, [], 'Je doet ' + e + ' ' + X + ' ' + e + ', dus ' + e2 + '.', { orde:[e, e2, e + '³'] }),
+            St('Oppervlakte = ' + z + ' ' + X + ' ' + z + ' =', metE(String(A), e2), z + ' keer zichzelf.', Fz([String(A)], F(String(4 * z), 'Dat is de omtrek: vier zijden. Doe zijde keer zijde.', String(2 * z), 'Je deed keer 2. Doe ' + z + ' ' + X + ' ' + z + '.')), { e:e2, waarom:z + ' ' + X + ' ' + z + ' = ' + z + '² = ' + A + ' ' + e2 + '.' }) ] };
+        } },
       { id:'wob-m-opp-rechthoek', naam:'Omtrek en oppervlakte van een rechthoek', kort:'Omtrek = 2 × (l + b), oppervlakte = l × b',
-        uit:'<p>De <b>omtrek</b> is de lengte van de rand. Een rechthoek heeft twee lengtes en twee breedtes: <b>omtrek = 2 × (l + b)</b>. De eenheid is cm of m.</p><p>De <b>oppervlakte</b> is hoeveel ruimte de figuur inneemt: <b>oppervlakte = l × b</b>. De eenheid is cm² of m².</p><p>Weet je de oppervlakte en de lengte? Dan vind je de breedte met delen: b = oppervlakte : l.</p>',
+        uit:'<p>De <b>omtrek</b> is de lengte van de rand. Een rechthoek heeft twee lengtes en twee breedtes: <b>omtrek = 2 × (l + b)</b>. De eenheid is cm of m.</p><p>De <b>oppervlakte</b> is hoeveel hokjes van 1 cm² erin passen: <b>oppervlakte = l × b</b>. De eenheid is cm² of m², want je doet cm × cm.</p><p>Weet je de oppervlakte en de lengte? Dan vind je de breedte met delen: b = oppervlakte : l.</p>',
         wanneer:'je de rand of de binnenkant van een rechthoek zoekt.',
         maak:function(R){
           var l = R.heel(4, 15), b; do { b = R.heel(2, 12); } while (b >= l);
@@ -394,17 +577,17 @@
             St('b = ' + A + ' : ' + l + ' =', metE(String(b), e), A + ' gedeeld door ' + l + '. Controle: ' + l + ' ' + X + ' ' + b + ' = ' + A + '.', Fz(metE(String(b), e), F(String(A - l), 'Delen, niet aftrekken.')), { e:e }) ] };
         } },
       { id:'wob-m-opp-driehoek', naam:'Oppervlakte van een driehoek', kort:'Oppervlakte = basis × hoogte : 2, met de hoogte loodrecht op de basis',
-        uit:'<p>Een driehoek is precies de <b>helft van een rechthoek</b> eromheen. Daarom: <b>oppervlakte = basis × hoogte : 2</b>.</p><p>De <b>hoogte</b> staat <b>loodrecht</b> op de basis: de stippellijn met het hokje. Een schuine zijde is géén hoogte.</p><p>Basis 8 cm, hoogte 5 cm: 8 × 5 = 40, en 40 : 2 = <b>20 cm²</b>.</p>',
+        uit:'<p>Teken een <b>rechthoek</b> om de driehoek: zo breed als de basis en zo hoog als de hoogte. De hoogtelijn knipt die rechthoek in twee stukken, en elk stuk is voor de helft driehoek. De driehoek is dus precies de <b>helft van de rechthoek</b>. Daarom: <b>oppervlakte = basis × hoogte : 2</b>.</p><p>De <b>hoogte</b> staat <b>loodrecht</b> op de basis: de stippellijn met het hokje. Een schuine zijde is géén hoogte.</p><p>Basis 8 cm, hoogte 5 cm: 8 × 5 = 40, en 40 : 2 = <b>20 cm²</b>.</p>',
         wanneer:'je de oppervlakte van een driehoek zoekt en de hoogte getekend is.',
         maak:function(R){
           var t = R.kies(TRIPEL), p = t[0], h = t[1], s = t[2], q = R.heel(2, 8), b = p + q, mir = R.heel(0, 1) === 1, A = b * h / 2;
           var C = [mir ? b - p : p, h];
-          var bl = tekenFig([[0, 0], [b, 0], C], { zijde:[b + ' cm', mir ? s + ' cm' : '', mir ? '' : s + ' cm'], markeer:false, W:380, H:250, extra:[[0, -0.6]], aria:'driehoek met basis ' + b + ' cm en een hoogte',
-            na:function(P, f){ var V = f([C[0], 0]); return hoogteLijn(P[2], V, mir ? -1 : 1, h + ' cm', (b - C[0]) >= C[0] ? 1 : -1); } });
-          return { vraag:'Oppervlakte?', context:'De basis is ' + b + ' cm, de hoogte (de stippellijn) is ' + h + ' cm en een schuine zijde is ' + s + ' cm. Bereken de oppervlakte van de driehoek.', eenheid:'cm²', beeld:bl, zelfBeeld:bl, stappen:[
+          var bl = function(n){ return tekenFig([[0, 0], [b, 0], C], { zijde:[b + ' cm', mir ? s + ' cm' : '', mir ? '' : s + ' cm'], markeer:false, W:380, H:250, extra:[[0, -0.6]], aria:'driehoek met basis ' + b + ' cm en een hoogte' + (n >= 2 ? ', met de rechthoek eromheen' : ''),
+            na:function(P, f){ var V = f([C[0], 0]), r = n >= 2 ? pg([P[0], P[1], f([b, h]), f([0, h])], { f:K[3], fo:0.1, stip:'6 5', w:2 }) : ''; return r + hoogteLijn(P[2], V, mir ? -1 : 1, h + ' cm', (b - C[0]) >= C[0] ? 1 : -1); } }); };
+          return { vraag:'Oppervlakte?', context:'De basis is ' + b + ' cm, de hoogte (de stippellijn) is ' + h + ' cm en een schuine zijde is ' + s + ' cm. Bereken de oppervlakte van de driehoek.', eenheid:'cm²', beeld:bl, zelfBeeld:bl(0), stappen:[
             kstap(R, 'Welke maat is de hoogte bij de basis van ' + b + ' cm?', h + ' cm', [s + ' cm'], 'De hoogte staat loodrecht op de basis: de stippellijn met het hokje.'),
-            St('basis ' + X + ' hoogte = ' + b + ' ' + X + ' ' + h + ' =', T(b * h), b + ' keer ' + h + '.', Fz([T(b * h)], F(T(b * s), 'Je nam de schuine zijde. Gebruik de hoogte.'))),
-            St('Oppervlakte = ' + (b * h) + ' : 2 =', metE(T(A), 'cm²'), 'Een driehoek is de helft van de rechthoek eromheen.', Fz(metE(T(A), 'cm²'), F(T(b * h), 'Vergeet niet te delen door 2.', T(b * s / 2), 'Je nam de schuine zijde. Gebruik de hoogte.')), { e:'cm²' }) ] };
+            St('basis ' + X + ' hoogte = ' + b + ' ' + X + ' ' + h + ' =', metE(T(b * h), 'cm²'), b + ' keer ' + h + '.', Fz([T(b * h)], F(T(b * s), 'Je nam de schuine zijde. Gebruik de hoogte.')), { waarom:'Dat is de gestippelde rechthoek om de driehoek heen: ' + b + ' cm bij ' + h + ' cm, dus ' + (b * h) + ' cm².' }),
+            St('Oppervlakte = ' + (b * h) + ' : 2 =', metE(T(A), 'cm²'), 'Een driehoek is de helft van de rechthoek eromheen.', Fz(metE(T(A), 'cm²'), F(T(b * h), 'Vergeet niet te delen door 2.', T(b * s / 2), 'Je nam de schuine zijde. Gebruik de hoogte.')), { e:'cm²', waarom:'De driehoek vult precies de helft van die rechthoek. De helft van cm² is nog steeds cm².' }) ] };
         } },
       { id:'wob-m-opp-buiten', naam:'Driehoek met de hoogte buiten de driehoek', kort:'Bij een stompe driehoek valt de hoogte buiten de driehoek: de basis blijft de zijde zelf',
         uit:'<p>Bij een <b>stompe</b> driehoek kan de hoogte <b>buiten de driehoek</b> vallen. Je verlengt de basis met een stippellijn, en de hoogte komt daar loodrecht op.</p><p>De <b>basis</b> is nog steeds alleen de zijde van de driehoek. Het verlengde stuk tel je <b>niet</b> mee.</p><p>Oppervlakte = basis × hoogte : 2, net als bij elke driehoek.</p>',
@@ -416,8 +599,8 @@
             na:function(P, f){ var V = f(voet), Bk = mir ? P[0] : P[1]; return lnP(Bk, V, { k:K[3], w:2.5, stip:'5 5' }) + tx((Bk[0] + V[0]) / 2, V[1] + 18, e + ' cm', { vet:true, k:K[3], fs:14 }) + hoogteLijn(P[2], V, mir ? 1 : -1, h + ' cm'); } });
           return { vraag:'Oppervlakte?', context:'De basis is ' + b + ' cm en de hoogte is ' + h + ' cm. De hoogte valt buiten de driehoek; het gestippelde stuk van ' + e + ' cm is het verlengde van de basis. Bereken de oppervlakte.', eenheid:'cm²', beeld:bl, zelfBeeld:bl, stappen:[
             kstap(R, 'Wat is de basis van de driehoek?', b + ' cm', [(b + e) + ' cm'], 'De basis is de zijde van de driehoek zelf. Het gestippelde verlengde hoort er niet bij.'),
-            St('basis ' + X + ' hoogte = ' + b + ' ' + X + ' ' + h + ' =', T(b * h), b + ' keer ' + h + '.', Fz([T(b * h)], F(T((b + e) * h), 'Je telde het verlengde stuk mee. De basis is ' + b + ' cm.'))),
-            St('Oppervlakte = ' + (b * h) + ' : 2 =', metE(T(A), 'cm²'), 'Een driehoek is de helft: deel door 2.', Fz(metE(T(A), 'cm²'), F(T(b * h), 'Vergeet niet te delen door 2.', T((b + e) * h / 2), 'Je telde het verlengde stuk mee. De basis is ' + b + ' cm.')), { e:'cm²' }) ] };
+            St('basis ' + X + ' hoogte = ' + b + ' ' + X + ' ' + h + ' =', metE(T(b * h), 'cm²'), b + ' keer ' + h + '.', Fz([T(b * h)], F(T((b + e) * h), 'Je telde het verlengde stuk mee. De basis is ' + b + ' cm.'))),
+            St('Oppervlakte = ' + (b * h) + ' : 2 =', metE(T(A), 'cm²'), 'Een driehoek is de helft: deel door 2.', Fz(metE(T(A), 'cm²'), F(T(b * h), 'Vergeet niet te delen door 2.', T((b + e) * h / 2), 'Je telde het verlengde stuk mee. De basis is ' + b + ' cm.')), { e:'cm²', waarom:'Twee van deze driehoeken samen vormen een parallellogram van ' + b + ' cm bij ' + h + ' cm, dus ' + (b * h) + ' cm². Eén driehoek is de helft.' }) ] };
         } },
       { id:'wob-m-opp-para', naam:'Oppervlakte van een parallellogram', kort:'Oppervlakte = basis × hoogte; de schuine zijde gebruik je niet',
         uit:'<p>Knip van een <b>parallellogram</b> aan één kant een driehoekje af en leg het aan de andere kant. Dan heb je een <b>rechthoek</b> met dezelfde basis en hoogte.</p><p>Dus: <b>oppervlakte = basis × hoogte</b>. Je deelt niet door 2.</p><p>De hoogte staat loodrecht op de basis. De schuine zijde is langer dan de hoogte; die gebruik je niet.</p>',
@@ -428,7 +611,7 @@
             na:function(P, f){ return hoogteLijn(P[3], f([p, 0]), 1, h + ' cm', 1); } });
           return { vraag:'Oppervlakte?', context:'De basis is ' + b + ' cm, de hoogte (de stippellijn) is ' + h + ' cm en de schuine zijde is ' + s + ' cm. Bereken de oppervlakte van het parallellogram.', eenheid:'cm²', beeld:bl, zelfBeeld:bl, stappen:[
             kstap(R, 'Welke maat is de hoogte?', h + ' cm', [s + ' cm'], 'De hoogte staat loodrecht op de basis: de stippellijn met het hokje.'),
-            St('Oppervlakte = basis ' + X + ' hoogte = ' + b + ' ' + X + ' ' + h + ' =', metE(T(A), 'cm²'), b + ' keer ' + h + '. Niet delen door 2: het is geen driehoek.', Fz(metE(T(A), 'cm²'), F(T(b * s), 'Je nam de schuine zijde. Gebruik de hoogte.', T(A / 2), 'Bij een parallellogram deel je niet door 2.')), { e:'cm²' }) ] };
+            St('Oppervlakte = basis ' + X + ' hoogte = ' + b + ' ' + X + ' ' + h + ' =', metE(T(A), 'cm²'), b + ' keer ' + h + '. Niet delen door 2: het is geen driehoek.', Fz(metE(T(A), 'cm²'), F(T(b * s), 'Je nam de schuine zijde. Gebruik de hoogte.', T(A / 2), 'Bij een parallellogram deel je niet door 2.')), { e:'cm²', waarom:'Schuif het driehoekje links naar rechts: een rechthoek van ' + b + ' cm bij ' + h + ' cm. Cm ' + X + ' cm = cm².' }) ] };
         } },
       { id:'wob-m-opp-trapezium', naam:'Oppervlakte van een trapezium', kort:'Oppervlakte = (a + b) : 2 × hoogte: het gemiddelde van de evenwijdige zijden keer de hoogte',
         uit:'<p>Een <b>trapezium</b> heeft twee <b>evenwijdige zijden</b>, een lange en een korte. Neem daar het <b>gemiddelde</b> van: (a + b) : 2.</p><p>Dan is de <b>oppervlakte = (a + b) : 2 × hoogte</b>. De hoogte is de afstand tussen de evenwijdige zijden.</p><p>Zijden 10 en 6 cm, hoogte 4 cm: (10 + 6) : 2 = 8, en 8 × 4 = <b>32 cm²</b>.</p>',
@@ -438,9 +621,60 @@
           var bl = tekenFig([[0, 0], [a, 0], [p + c, h], [p, h]], { zijde:[a + ' cm', '', c + ' cm', ''], markeer:false, W:400, H:240, extra:[[0, -0.6]], aria:'trapezium met evenwijdige zijden ' + a + ' en ' + c + ' cm',
             na:function(P, f){ var x = p > 0 ? p : p + c / 2; return hoogteLijn(f([x, h]), f([x, 0]), 1, h + ' cm', 1); } });
           return { vraag:'Oppervlakte?', context:'De evenwijdige zijden van het trapezium zijn ' + a + ' cm en ' + c + ' cm. De hoogte is ' + h + ' cm. Bereken de oppervlakte.', eenheid:'cm²', beeld:bl, zelfBeeld:bl, stappen:[
-            St('De evenwijdige zijden samen: ' + a + ' + ' + c + ' =', String(a + c), 'Tel de lange en de korte zijde op.'),
-            St('Het gemiddelde: ' + (a + c) + ' : 2 =', T(m), 'Deel door 2.', Fz([T(m)], F(String(a + c), 'Deel nog door 2.'))),
-            St('Oppervlakte = ' + T(m) + ' ' + X + ' ' + h + ' =', metE(T(A), 'cm²'), T(m) + ' keer de hoogte ' + h + '.', Fz(metE(T(A), 'cm²'), F(T((a + c) * h), 'Je vergat te delen door 2.', T(a * h), 'Gebruik het gemiddelde van beide zijden, niet alleen de lange.')), { e:'cm²' }) ] };
+            St('De evenwijdige zijden samen: ' + a + ' + ' + c + ' =', metE(String(a + c), 'cm'), 'Tel de lange en de korte zijde op.'),
+            St('Het gemiddelde: ' + (a + c) + ' : 2 =', metE(T(m), 'cm'), 'Deel door 2.', Fz([T(m)], F(String(a + c), 'Deel nog door 2.')), { waarom:'Een trapezium is net zo groot als een rechthoek die ' + T(m) + ' cm breed is: wat er aan de ene kant uitsteekt, past aan de andere kant in het gat.' }),
+            St('Oppervlakte = ' + T(m) + ' ' + X + ' ' + h + ' =', metE(T(A), 'cm²'), T(m) + ' keer de hoogte ' + h + '.', Fz(metE(T(A), 'cm²'), F(T((a + c) * h), 'Je vergat te delen door 2.', T(a * h), 'Gebruik het gemiddelde van beide zijden, niet alleen de lange.')), { e:'cm²', waarom:'Die rechthoek is ' + T(m) + ' cm breed en ' + h + ' cm hoog. En cm ' + X + ' cm = cm².' }) ] };
+        } },
+      { id:'wob-m-opp-ruit', naam:'Oppervlakte van een ruit en een vlieger', kort:'Oppervlakte = diagonaal × diagonaal : 2, de helft van de rechthoek eromheen',
+        uit:'<p>Een <b>ruit</b> en een <b>vlieger</b> hebben twee <b>diagonalen</b>: lijnen van hoekpunt naar hoekpunt. Ze staan loodrecht op elkaar.</p>' +
+          '<p>Teken er een <b>rechthoek</b> omheen. Die is zo breed als de ene diagonaal en zo hoog als de andere. De diagonalen verdelen de rechthoek in vier stukken. Elk stuk is voor de ene <b>helft figuur</b> en voor de andere helft een driehoekje erbuiten.</p>' +
+          '<p>De figuur is dus de <b>helft</b> van de rechthoek: <b>oppervlakte = diagonaal × diagonaal : 2</b>. De zijden heb je niet nodig.</p>' +
+          '<p>Diagonalen van 8 cm en 6 cm: 8 × 6 = 48 cm² voor de rechthoek, en 48 : 2 = <b>24 cm²</b>.</p>',
+        wanneer:'je de oppervlakte van een ruit of vlieger zoekt en de diagonalen weet.',
+        beeld:ruitFig(6, 8, 3, { rh:true, half:true }),
+        maak:function(R){
+          var ruit = R.heel(0, 1) === 0, d1, d2, t, s = null, e = 'cm', ctx;
+          if (ruit){
+            var tr = R.kies(TRIPEL.filter(function(x){ return x[2] <= 13; })); d1 = 2 * Math.min(tr[0], tr[1]); d2 = 2 * Math.max(tr[0], tr[1]); t = d1 / 2; s = tr[2]; e = R.kies(['cm', 'cm', 'm']);
+            ctx = 'Een ruit heeft diagonalen van ' + d1 + ' ' + e + ' en ' + d2 + ' ' + e + '. Elke zijde is ' + s + ' ' + e + '. Bereken de oppervlakte.';
+          } else if (R.heel(0, 2) === 0){
+            d1 = R.kies([60, 80, 100, 120]); d2 = R.kies([40, 50, 60, 70].filter(function(x){ return x < d1 && 2 * x >= d1; })); t = d1 / 4;
+            ctx = 'Een vlieger van stof heeft diagonalen van ' + d1 + ' cm en ' + d2 + ' cm. Hoeveel stof zit erin? Bereken de oppervlakte.';
+          } else {
+            d1 = R.heel(7, 14); t = R.heel(2, Math.floor((d1 - 1) / 2)); d2 = R.heel(Math.max(4, Math.ceil(d1 / 2)), Math.min(12, d1 - 1));
+            ctx = 'Een vlieger heeft diagonalen van ' + d1 + ' cm en ' + d2 + ' cm. Bereken de oppervlakte.';
+          }
+          var e2 = e + '²', RH = d1 * d2, A = RH / 2, nm = ruit ? 'ruit' : 'vlieger';
+          var bl = function(n){ return ruitFig(d1, d2, t, { e:e, vlieger:!ruit, rh:n >= 1, half:n >= 2, zijde:s ? s + ' ' + e : '', tot:n >= 3 ? T(A) + ' ' + e2 : '' }); };
+          var OPT = ['de twee diagonalen', 'twee zijden'];
+          return { vraag:'Oppervlakte?', context:ctx, eenheid:e2, beeld:bl, zelfBeeld:bl(0), stappen:[
+            kstap(R, 'Welke maten heb je nodig?', OPT[0], [], 'De ' + nm + ' past precies in een rechthoek die zo groot is als de diagonalen. De zijden heb je niet nodig.', { orde:OPT }),
+            St('De rechthoek eromheen: ' + d1 + ' ' + X + ' ' + d2 + ' =', metE(String(RH), e2), 'Zo breed als de ene diagonaal, zo hoog als de andere: ' + d1 + ' keer ' + d2 + '.', s ? Fz([String(RH)], F(String(s * s), 'Je nam de zijden. Gebruik de diagonalen.')) : null, { e:e2, waarom:'De gestippelde rechthoek is ' + d2 + ' ' + e + ' breed en ' + d1 + ' ' + e + ' hoog.' }),
+            St('De ' + nm + ' is de helft: ' + RH + ' : 2 =', metE(T(A), e2), 'Deel de rechthoek door 2.', Fz(metE(T(A), e2), F(String(RH), 'Deel nog door 2: de driehoekjes buiten de ' + nm + ' horen er niet bij.', T(RH / 4), 'De ' + nm + ' is de helft, dus deel door 2, niet door 4.')), { e:e2, waarom:'In de figuur zie je het: elk van de vier stukken van de rechthoek is half ' + nm + ' en half driehoekje erbuiten. En ' + e + ' ' + X + ' ' + e + ' = ' + e2 + '.' }) ] };
+        } },
+      { id:'wob-m-opp-om', naam:'Vierkante maten omrekenen', kort:'1 cm² = 10 × 10 = 100 mm² en 1 m² = 100 × 100 = 10.000 cm²',
+        uit:'<p>1 cm is 10 mm. Je zou denken: 1 cm² is dan 10 mm². Maar dat klopt <b>niet</b>.</p>' +
+          '<p>1 cm² is een vierkant van 10 mm <b>bij</b> 10 mm. Daar passen <b>10 rijen van 10</b> hokjes van 1 mm² in: <b>1 cm² = 10 × 10 = 100 mm²</b>. Een vierkante maat is lang <b>en</b> breed, dus de stap telt twee keer.</p>' +
+          '<p>Net zo: 1 m = 100 cm, dus <b>1 m² = 100 × 100 = 10.000 cm²</b>.</p>' +
+          '<p>Naar een <b>kleinere</b> eenheid: er passen meer hokjes in, dus <b>keer</b>. Naar een <b>grotere</b> eenheid: <b>gedeeld door</b>. 3 cm² = 300 mm², en 50.000 cm² = 5 m².</p>',
+        wanneer:'je cm² en mm², of m² en cm², door elkaar ziet.',
+        beeld:maatFig('mm', { rij:true, tot:true }),
+        maak:function(R){
+          var v = R.kies([
+            { x:[2, 3, 5, 8, 12, 25, 1.5, 2.5, 0.5, 4.2, 0.75], van:'cm²', naar:'mm²', m:'mm', f:100 },
+            { x:[300, 500, 1200, 2500, 150, 450, 50, 75, 800, 1000], van:'mm²', naar:'cm²', m:'mm', f:0.01 },
+            { x:[2, 3, 5, 1.5, 0.5, 2.5, 0.25, 4, 12], van:'m²', naar:'cm²', m:'m', f:10000 },
+            { x:[20000, 50000, 15000, 5000, 2500, 80000, 120000, 7500, 30000], van:'cm²', naar:'m²', m:'m', f:0.0001 } ]);
+          var x = R.kies(v.x), y = rnd(x * v.f, 6), keer = v.f > 1, mm = v.m === 'mm', st = mm ? 10 : 100, kw = st * st;
+          var gr = mm ? 'cm' : 'm', kl = mm ? 'mm' : 'cm';
+          var OPT = ['keer ' + T(kw), 'gedeeld door ' + T(kw), 'keer ' + st, 'gedeeld door ' + st];
+          var bl = function(n){ return maatFig(v.m, { rij:n >= 2, tot:n >= 2 }); };
+          var fx = keer ? x * st : x / st, fo = F(T(rnd(fx, 6)), 'Bij vierkante maten is de stap ' + T(kw) + ', niet ' + st + '.', T(rnd(keer ? x / kw : x * kw, 6)), 'Andersom: ' + (keer ? 'keer' : 'gedeeld door') + ' ' + T(kw) + '.');
+          return { vraag:T(x) + ' ' + v.van + ' = ? ' + v.naar, context:'Reken om.', eenheid:v.naar, beeld:bl, stappen:[
+            St('1 ' + gr + ' = hoeveel ' + kl + '?', metE(String(st), kl), mm ? 'Op je liniaal: 1 cm heeft 10 streepjes van 1 mm.' : '1 meter is 100 centimeter.', null, { e:kl }),
+            St('1 ' + gr + '² is ' + st + ' ' + kl + ' bij ' + st + ' ' + kl + '. 1 ' + gr + '² = ' + st + ' ' + X + ' ' + st + ' =', metE(T(kw), kl + '²'), st + ' rijen van ' + st + ' hokjes: ' + st + ' ' + X + ' ' + st + '.', F(String(st), 'Een ' + gr + '² is ' + st + ' ' + kl + ' lang én ' + st + ' ' + kl + ' breed. Dat zijn ' + st + ' rijen van ' + st + ': ' + st + ' ' + X + ' ' + st + '.'), { e:kl + '²', waarom:'Het vierkant is lang én breed, dus de stap van ' + st + ' telt twee keer.' }),
+            kstap(R, 'Van ' + v.van + ' naar ' + v.naar + ': wat doe je?', keer ? OPT[0] : OPT[1], [], keer ? 'Naar een kleinere eenheid: er passen meer hokjes in, dus keer ' + T(kw) + '.' : 'Naar een grotere eenheid: er passen minder in, dus gedeeld door ' + T(kw) + '.', { orde:OPT }),
+            St(T(x) + ' ' + v.van + ' = (in ' + v.naar + ')', metE(T(y), v.naar), keer ? T(x) + ' ' + X + ' ' + T(kw) + ' = ' + T(y) + '.' : T(x) + ' : ' + T(kw) + ' = ' + T(y) + '.', Fz(metE(T(y), v.naar), fo), { e:v.naar }) ] };
         } }
     ] });
 
