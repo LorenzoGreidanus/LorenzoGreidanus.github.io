@@ -1150,6 +1150,7 @@ body>header.wrap,body>footer.wrap{width:min(100% - 24px,1360px)}
                   </div>
                   <div id="opDTekst" class="hide">
                     <select id="opDTekstKeus" class="veld" aria-label="Tekst uit de lijst"></select>
+                    <label class="minlabel" style="margin-top:8px">aantal zinnen <select id="opDZinnen" class="veld"><option value="10">10 (standaard)</option><option value="15">15</option><option value="20">20</option><option value="25">25</option><option value="30">30 (hele tekst)</option></select></label>
                     <div id="opDTekstVrij" class="hide">
                       <input id="opDTekstId" class="veld" maxlength="32" placeholder="bijv. t-bb-01" aria-label="Code van de tekst" autocomplete="off" spellcheck="false">
                       <p class="tip" style="margin-top:6px">De lijst met teksten is hier nog niet te zien. Vul de code van een tekst in; je vindt hem in het dictee zelf.</p>
@@ -3045,7 +3046,7 @@ body>header.wrap,body>footer.wrap{width:min(100% - 24px,1360px)}
     if (o.bron === 'week') return p + 'week=1' + (o.niveau || pagina !== 'dictee-werkblad' ? '&n=' + encodeURIComponent(o.niveau || 'kgt') : '') +
       (pagina === 'dictee-werkblad' && huidig && o.week ? '&klas=' + encodeURIComponent(huidig.code) + '&wk=' + encodeURIComponent(o.week) : '');
     if (o.bron === 'eigen') return p + 'eigen=' + encodeURIComponent(o.code || String(o.dt || '').replace(/^eigen-/, ''));
-    return p + 'tekst=' + encodeURIComponent(o.dt || '');
+    return p + 'tekst=' + encodeURIComponent(o.dt || '') + (o.zn ? '&zinnen=' + o.zn : '');
   }
   /* de opdracht zoals hij uit het formulier komt, of { fout } */
   function dOpdracht(){
@@ -3057,6 +3058,8 @@ body>header.wrap,body>footer.wrap{width:min(100% - 24px,1360px)}
       var lijst = dTeksten().length, id = lijst ? $('opDTekstKeus').value : $('opDTekstId').value.trim().toLowerCase();
       if (!/^[a-z0-9][a-z0-9-]{1,30}$/.test(id || '') || /^eigen-/.test(id)) return { fout: lijst ? 'Kies een tekst uit de lijst.' : 'Vul de code van een tekst in, bijvoorbeeld t-bb-01.' };
       o.dt = id; o.titel = dTitelVan(id);
+      /* een tekst heeft dertig zinnen; zonder keuze krijgt de leerling de eerste tien */
+      var zn = +$('opDZinnen').value || 10; if (zn !== 10) o.zn = zn;
     } else {
       var inv = $('opDEigen').querySelector('input');
       /* wat er in het vakje getypt staat gaat voor; anders het gekozen dictee */
@@ -3124,7 +3127,7 @@ body>header.wrap,body>footer.wrap{width:min(100% - 24px,1360px)}
       var eerste = dTeksten().filter(function(x){ return x.niveau === $('opDNiveau').value; })[0];
       if (dBron === 'tekst' && eerste){ $('opDTekstKeus').value = eerste.id; dVorm(); }
     });
-    ['opDAuto', 'opDTekstKeus'].forEach(function(id){ $(id).addEventListener('change', dVorm); });
+    ['opDAuto', 'opDTekstKeus', 'opDZinnen'].forEach(function(id){ $(id).addEventListener('change', dVorm); });
     $('opDTekstId').addEventListener('input', dVorm);
     $('opDEigen').addEventListener('input', dVorm);
     dLaadBank(dVorm);
@@ -3335,7 +3338,7 @@ body>header.wrap,body>footer.wrap{width:min(100% - 24px,1360px)}
       var wh = D.tekst(w.id) || w;
       return { titel: w.titel, id: w.id, zinnen: dRZinnen(D.opLengte ? D.opLengte(wh, D.MAXZINNEN) : wh), std: w.zinnen.length, heel: wh.zinnen.length };
     }
-    if (p.bron === 'bank'){ var b = D && D.tekst ? D.tekst(p.tekst) : null; return b ? { titel: b.titel, id: b.id, zinnen: dRZinnen(D.opLengte ? D.opLengte(b, D.MAXZINNEN) : b), std: b.zinnen.length, heel: b.zinnen.length } : null; }
+    if (p.bron === 'bank'){ var b = D && D.tekst ? D.tekst(p.tekst) : null; return b ? { titel: b.titel, id: b.id, zinnen: dRZinnen(D.opLengte ? D.opLengte(b, D.MAXZINNEN) : b), std: Math.min(b.zinnen.length, D.STANDAARD || 10), heel: b.zinnen.length } : null; }
     if (!p.tekst) return null;
     var e = dR.eigen[p.tekst];
     if (e && e.zinnen) return { titel: e.naam, id: 'eigen-' + p.tekst, zinnen: e.zinnen.map(function(z, i){ return { z: z, u: (e.zu && e.zu[i]) || '' }; }), std: e.zinnen.length };
@@ -3462,7 +3465,7 @@ body>header.wrap,body>footer.wrap{width:min(100% - 24px,1360px)}
     var z = e.zelf[nv], bank = dTeksten(), volg = [nv].concat(['bb', 'kgt', 'hv'].filter(function(x){ return x !== nv; }));
     var x = p.bron === 'zelf' ? null : dRTekst(e.wk, nv, p.bron === 'auto' ? null : p);
     var eigenFout = (p.bron !== 'auto' && p.tekst && dR.eigen[p.tekst] && dR.eigen[p.tekst].fout) || '';
-    var max = x ? x.zinnen.length : 0, nu = p.n || 0, stdN = p.bron === 'auto' && x ? x.std : (x && x.heel) || max;
+    var max = x ? x.zinnen.length : 0, nu = p.n || 0, stdN = (p.bron === 'auto' || p.bron === 'bank') && x ? x.std : (x && x.heel) || max;
     if (!window.DICTEE_OPGAVEN) dRWachtOpBank();
     var html = '<label class="vink"><input type="checkbox" data-drveld="uit"' + (e.uit ? ' checked' : '') + '> <span><b>Deze week geen dictee</b>, bijvoorbeeld in een vakantie of de toetsweek.</span></label>';
     if (!e.uit){
@@ -3498,7 +3501,7 @@ body>header.wrap,body>footer.wrap{width:min(100% - 24px,1360px)}
       if (p.bron !== 'zelf' && max){
         var opt = '';
         for (var k = Math.min(3, max); k <= max; k++){
-          var std = p.bron === 'auto' && k === stdN;
+          var std = (p.bron === 'auto' || p.bron === 'bank') && k === stdN;
           opt += '<option value="' + (std ? 0 : k) + '"' + ((nu === k || (!nu && k === stdN)) ? ' selected' : '') + '>' + k + (std ? ' (standaard)' : x.heel && k === x.heel && k < max ? ' (hele tekst)' : k === max && !(x.heel < max) ? ' (alle)' : '') + '</option>';
         }
         html += '<div class="rij"><label class="minlabel">aantal zinnen <select class="veld" data-drveld="n">' + opt + '</select></label>' +

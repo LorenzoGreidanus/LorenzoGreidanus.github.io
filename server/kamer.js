@@ -2140,6 +2140,9 @@ export class Kamer extends DurableObject {
       const dt = dicteeTekst(o.dt);
       if (!dt || dt.indexOf("eigen-") === 0) return { fout: "kies een tekst uit de lijst" };
       d.dt = dt;
+      /* hoeveel zinnen van de tekst (tien tot dertig); zonder: de eerste tien */
+      const zn = getal(o.zn, 30);
+      if (zn >= 2 && zn !== 10) d.zn = zn;
     } else {
       const code = String(o.code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
       if (!/^[A-Z0-9]{6}$/.test(code)) return { fout: "een eigen dictee heeft een code van zes tekens" };

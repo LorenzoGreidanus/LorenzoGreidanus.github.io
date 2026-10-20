@@ -180,6 +180,7 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
       <div class="velden" id="bankVelden">
         <label id="niveauVeld">Niveau<select id="niveau" class="veld"><option value="bb">vmbo-bb</option><option value="kgt" selected>vmbo-kgt en tl</option><option value="hv">havo en vwo</option></select></label>
         <label id="tekstVeld" class="hide">Tekst<select id="tekst" class="veld"></select></label>
+        <label id="zinnenVeld" class="hide">Zinnen<select id="zinnen" class="veld"><option value="10">10 (standaard)</option><option value="15">15</option><option value="20">20</option><option value="25">25</option><option value="30">30 (hele tekst)</option></select></label>
         <label id="tekstIdVeld" class="hide">Code van de tekst<input id="tekstId" class="veld" maxlength="32" placeholder="bijv. t-bb-01" autocomplete="off" spellcheck="false"></label>
       </div>
       <p class="weekregel" id="weekregel" aria-live="polite"></p>
@@ -300,7 +301,7 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
       return x ? netteTekst(x) : null;
     };
     if (!p || p.bron === 'auto') return Promise.resolve(auto(p && p.n));
-    if (p.bron === 'bank'){ var b = D && D.tekst ? D.tekst(p.tekst) : null; return Promise.resolve(b ? netteTekst(D.opLengte ? D.opLengte(b, p.n) : kort(b, p.n)) : auto(0)); }
+    if (p.bron === 'bank'){ var b = D && D.tekst ? D.tekst(p.tekst) : null; return Promise.resolve(b ? netteTekst(D.opLengte ? D.opLengte(b, p.n || D.STANDAARD) : kort(b, p.n || 10)) : auto(0)); }
     if (!window.EIGEN) return Promise.resolve(auto(0));
     return EIGEN.haal(p.tekst).then(function(m){
       if (!m || m.soort !== 'dictee') throw new Error('geen dictee');
@@ -406,6 +407,7 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
     var l = ruweTeksten().map(netteTekst).filter(function(x){ return x && x.id; }), sel = $('tekst'), nu = sel.value || zoek.get('tekst') || '';
     $('tekstVeld').classList.toggle('hide', bron !== 'tekst' || !l.length);
     $('tekstIdVeld').classList.toggle('hide', bron !== 'tekst' || !!l.length);
+    $('zinnenVeld').classList.toggle('hide', bron !== 'tekst');
     if (!l.length) return;
     var n = $('niveau').value, volg = [n].concat(['bb', 'kgt', 'hv', ''].filter(function(x){ return x !== n; }));
     var html = volg.map(function(v){
@@ -451,7 +453,9 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
       else { laatste = null; $('weekregel').textContent = 'Week ' + w.nr + '.'; melding(geenBank ? 'De teksten van het dictee staan nog niet op deze pagina. Kies een eigen dictee.' : 'Voor dit niveau is er deze week geen tekst gevonden.'); }
     } else if (bron === 'tekst'){
       var id = geenBank ? $('tekstId').value.trim().toLowerCase() : $('tekst').value;
+      /* een tekst uit de lijst heeft dertig zinnen; je kiest er tien tot dertig */
       var x = id ? tekstMetId(id) : null;
+      if (x) x = kort(x, +$('zinnen').value || 10);
       laatste = x && x.zinnen.length ? x : null;
       if (!laatste) melding(geenBank ? 'De teksten van het dictee staan nog niet op deze pagina, dus een tekst uit de lijst kan nog niet. Kies een eigen dictee.' : id ? 'Deze tekst staat niet in de lijst.' : 'Kies een tekst.');
     } else {
@@ -483,6 +487,7 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
     kies();
   });
   $('tekst').addEventListener('change', kies);
+  $('zinnen').addEventListener('change', kies);
   $('tekstId').addEventListener('change', kies);
   $('metNakijk').addEventListener('change', teken);
   $('mijnDictees').addEventListener('click', function(e){ var b = e.target.closest('[data-code]'); if (b) haalEigen(b.getAttribute('data-code')); });
@@ -502,6 +507,7 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
       var t0 = tekstMetId(String(zoek.get('tekst')).toLowerCase());
       if (t0 && DNIV[t0.niveau]) $('niveau').value = t0.niveau;
       $('tekstId').value = String(zoek.get('tekst')).toLowerCase();
+      var zn0 = String(Math.min(30, +zoek.get('zinnen') || 10)); if ([].some.call($('zinnen').options, function(o){ return o.value === zn0; })) $('zinnen').value = zn0;
     }
     kies();
   }

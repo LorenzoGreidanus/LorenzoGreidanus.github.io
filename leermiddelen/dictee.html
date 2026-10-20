@@ -189,7 +189,8 @@
   var lopend = null, volgnr = 0;
   function kiesTekst(niveau){
     var n = NIV[niveau] || 2;
-    return vers('dl', D.teksten.filter(function(t){ return t.n === n; }), function(t){ return t.id; }, null);
+    var t = vers('dl', D.teksten.filter(function(t){ return t.n === n; }), function(t){ return t.id; }, null);
+    return t && D.opLengte ? D.opLengte(t, D.STANDAARD) : t;
   }
   function zinVan(z){ return typeof z === 'string' ? z : z.z; }
   /* wat je al getypt hebt, met de fouten gemarkeerd: zo blijft het een tekst en geen losse zinnen */
@@ -223,7 +224,8 @@
   var docent = null, vasteTekst = null, docentFout = '', opdracht = /[?&]van=opdracht(&|#|$)/.test(location.search);
   (function(){
     var pt = zoek('tekst'), pw = zoek('week'), pe = zoek('eigen');
-    if (pt){ vasteTekst = D.tekst(pt); if (vasteTekst) docent = { wat:'tekst' }; else docentFout = 'Deze tekst bestaat niet (meer). Je oefent nu het gewone dictee.'; }
+    /* ?zinnen=20: zoveel zinnen als de docent koos; anders de eerste tien */
+    if (pt){ vasteTekst = D.tekst(pt); if (vasteTekst && D.opLengte) vasteTekst = D.opLengte(vasteTekst, Math.min(D.MAXZINNEN, +zoek('zinnen') || 0) || D.STANDAARD); if (vasteTekst) docent = { wat:'tekst' }; else docentFout = 'Deze tekst bestaat niet (meer). Je oefent nu het gewone dictee.'; }
     else if (pw === '1') docent = { wat:'week' };
     else if (pe) docent = { wat:'eigen', code: pe.toUpperCase().replace(/[^A-Z0-9]/g, '') };
   })();
@@ -266,7 +268,7 @@
     if (roosterKlaar[nv]) return roosterKlaar[nv];
     var p = rooster.t && rooster.t[nv];
     if (!p || p.bron === 'auto') return autoTekst(nv, p && p.n);
-    if (p.bron === 'bank') return (D.opLengte ? D.opLengte(D.tekst(p.tekst), p.n) : ingekort(D.tekst(p.tekst), p.n)) || autoTekst(nv, 0);
+    if (p.bron === 'bank') return (D.opLengte ? D.opLengte(D.tekst(p.tekst), p.n || D.STANDAARD) : ingekort(D.tekst(p.tekst), p.n)) || autoTekst(nv, 0);
     return null;   /* een eigen dictee: nog onderweg */
   }
   function laadRooster(){
@@ -347,7 +349,7 @@
       return SOORTEN[soort] ? SOORTEN[soort](keuze.niveau) : werkwoorden(keuze.niveau);
     },
     uitleg:{ doel:'Goed schrijven wat je hoort: werkwoorden, lastige woorden, hoofdletters en leestekens, leenwoorden en hele teksten.',
-      tijd:'tien woorden of zinnen per ronde, of met zonder eind zo lang je wilt, steeds met nieuwe zinnen; een doorlopend dictee is een tekst van tien zinnen, het dictee van de week zeven',
+      tijd:'tien woorden of zinnen per ronde, of met zonder eind zo lang je wilt, steeds met nieuwe zinnen; een doorlopend dictee is een tekst van tien zinnen (een docent kan tot dertig kiezen), het dictee van de week zeven',
       bediening:'Hij leest vanzelf voor. Nog eens luisteren kan met Nog eens of Langzaam, samen drie keer. Typ wat je hoort en druk op Enter om na te kijken; nog een keer Enter gaat naar de volgende.' },
     tutorial:[
       { titel:'Luister', tekst:'De computer leest het woord of de zin voor. Je kunt drie keer luisteren: met Nog eens, of met Langzaam als het te snel gaat.', doel:'luisterBtn' },
