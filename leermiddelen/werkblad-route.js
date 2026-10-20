@@ -67,10 +67,37 @@
     if (op.antwoord != null) return String(antw(op.antwoord));
     var l = op.stappen.filter(function(s){ return !s.info; }); return l.length ? stapAntwoord(l[l.length - 1]) : '';
   }
-  function stapLijn(s, i){
-    if (s.info) return '<li class="rw-info">' + s.tekst + '</li>';
-    if (s.opties) return '<li>' + s.tekst + ' <span class="rw-kiesuit">' + s.opties.map(function(o){ return '<span>' + schoon(o) + '</span>'; }).join(' / ') + '</span></li>';
-    return '<li>' + s.tekst + ' <span class="lijn kort" aria-hidden="true"></span>' + (s.eenheid ? ' ' + schoon(s.eenheid) : '') + '</li>';
+  function stapLijn(s, i, tekst){
+    tekst = tekst == null ? s.tekst : tekst;
+    if (s.info) return '<li class="rw-info">' + tekst + '</li>';
+    if (s.opties) return '<li>' + tekst + ' <span class="rw-kiesuit">' + s.opties.map(function(o){ return '<span>' + schoon(o) + '</span>'; }).join(' / ') + '</span></li>';
+    return '<li>' + tekst + ' <span class="lijn kort" aria-hidden="true"></span>' + (s.eenheid ? ' ' + schoon(s.eenheid) : '') + '</li>';
+  }
+  /* Op het scherm zie je de stappen een voor een, op papier allemaal tegelijk.
+     Een latere stap noemt soms het antwoord van een eerdere (3 rijen × 8 hokjes,
+     48 : 2): dan verklapt het blad dat antwoord. Zo'n getal wordt op papier een
+     open plek. Staat hetzelfde getal er toevallig ook als gegeven, dan vult de
+     leerling op die plek toch het goede getal in. */
+  function getalVan(a){ var m = /^\s*[−-]?\d[\d.]*(,\d+)?/.exec(String(a == null ? '' : a)); return m ? m[0].trim() : ''; }
+  function verstop(html, getallen){
+    if (!getallen.length) return html;
+    return String(html).split(/(<[^>]*>)/).map(function(d){
+      if (d.charAt(0) === '<') return d;
+      getallen.forEach(function(g){
+        var re = new RegExp('(^|[^\\d.,A-Za-z−-])' + g.replace(/[.\-]/g, '\\$&') + '(?![\\d]|[.,]\\d|[A-Za-z])', 'g');
+        d = d.replace(re, function(_, voor){ return voor + '\u0001'; });
+      });
+      return d;
+    }).join('').split('\u0001').join('<span class="lijn mini" aria-hidden="true"></span>');
+  }
+  function stappenOpPapier(stappen){
+    var al = [];
+    return stappen.map(function(s, i){
+      var html = stapLijn(s, i, verstop(s.tekst, al));
+      var g = s.info || s.opties ? '' : getalVan(stapAntwoord(s));
+      if (g && al.indexOf(g) < 0) al.push(g);
+      return html;
+    }).join('');
   }
 
   /* de stijl: de plaatjes van de leerroute, met vaste kleuren voor papier */
@@ -100,6 +127,7 @@
       '.blad .lr-context,.blad .lr-uitdoel{display:block;font-size:.84rem;color:#4a5270;margin-bottom:2px}' +
       '.blad .rw-stappen{margin:8px 0 0;padding-left:22px;display:grid;gap:9px;font-size:.95rem}.blad .rw-stappen li{line-height:1.6}' +
       '.blad .rw-stappen .rw-info{list-style:none;margin-left:-22px;color:#4a5270;font-size:.88rem}' +
+      '.blad .lijn.mini{display:inline-block;width:52px;height:18px;border-bottom:1px solid #14224C;vertical-align:bottom;margin:0 3px}' +
       '.blad .rw-kiesuit span{display:inline-block;border:1.5px solid #9aa3bd;border-radius:999px;padding:0 10px;margin:0 2px;font-weight:600}' +
       '.blad .rw-eind{margin-top:8px;font-weight:600}' +
       '.blad .rw-voorbeeld{border:1.5px solid #c9d2e6;border-radius:10px;padding:12px 14px;margin:6px 0 14px;break-inside:avoid}' +
@@ -154,7 +182,7 @@
         var vragen = w.items.map(function(x){
           var op = x.op;
           return '<li class="rw-opgave">' + (op.context ? '<span class="lr-context">' + op.context + '</span>' : '') + '<span class="vr">' + vraagHtml(op) + '</span>' + beeld(op, 0) +
-            (k.stappen ? '<ol class="rw-stappen">' + op.stappen.map(stapLijn).join('') + '</ol>' : '') +
+            (k.stappen ? '<ol class="rw-stappen">' + stappenOpPapier(op.stappen) + '</ol>' : '') +
             (op.opties ? '<div class="opties">' + op.opties.map(function(o, i){ return '<span><b>' + 'abcdef'.charAt(i) + '</b>' + schoon(o) + '</span>'; }).join('') + '</div>'
               : '<p class="rw-eind">Antwoord: <span class="lijn kort" aria-hidden="true"></span>' + (op.eenheid ? ' ' + schoon(op.eenheid) : '') + '</p>') + '</li>';
         }).join('');
