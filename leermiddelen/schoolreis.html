@@ -371,6 +371,10 @@ body.bord .olet{width:42px;height:42px;font-size:1.35rem}
         <button type="button" data-n="kgt" class="on">vmbo-kgt en tl</button>
         <button type="button" data-n="havo">havo en vwo</button>
       </div><p class="tip" id="nivTip" style="margin-top:6px"></p></div>
+      <div class="stap"><b>Rekenmachine op de telefoon</b><div class="chips" id="rekenKeus">
+        <button type="button" data-r="ja" class="on" aria-pressed="true">Mag</button>
+        <button type="button" data-r="nee" aria-pressed="false">Liever niet</button>
+      </div><p class="tip" style="margin-top:6px">Een kladblaadje voor de tussenstappen staat er altijd onder het antwoord.</p></div>
       <div class="stap hide" id="handenvak">
         <p class="tip">Maak vijf groepjes: Vervoer, Overnachting, Eten, Activiteiten en Penningmeester. Elke ronde staan de drie offertes op het bord. De groepjes rekenen ze uit op papier, de penningmeester rekent aan het budget. Daarna tik jij aan wat de klas kiest.</p>
       </div>
@@ -379,7 +383,7 @@ body.bord .olet{width:42px;height:42px;font-size:1.35rem}
         <p class="tip" id="kamerFout" style="color:var(--fout);margin-top:6px"></p>
         <div id="lobbyvak" class="hide"></div>
       </div>
-      <p class="tip" style="margin-top:10px">Ongeveer een half uur, met de nabespreking. Een rekenmachine mag, dat bepaal je zelf.</p>
+      <p class="tip" style="margin-top:10px">Ongeveer een half uur, met de nabespreking.</p>
       <div class="stap"><button class="knop crab groot" id="startBtn" type="button">Vertrek: plan de reis</button></div>
     </div>
   </section>
@@ -813,13 +817,13 @@ var SR = (function(){
     penning:'M12 3v18M16.5 7.5C16 6 14.3 5 12 5c-2.8 0-4.5 1.4-4.5 3.4 0 4.6 9 2.6 9 7.2 0 2-1.8 3.4-4.5 3.4-2.4 0-4.2-1-4.6-2.7'
   };
 
-  var modus = 'telefoon', nivId = 'kgt';
+  var modus = 'telefoon', nivId = 'kgt', rekenMag = true;
   var kamer = null, kamerInfo = null, spelers = [];
   var st = nieuweStand();
   function nieuweStand(){
     return { spel:Date.now().toString(36).slice(-5), ronde:0, fase:'start', rolVan:{}, volg:[],
       letter:[{}, {}, {}, {}], antw:[{}, {}, {}, {}, {}], pantw:[{}, {}, {}, {}, {}], stem:[{}, {}, {}, {}], stemVolg:[[], [], [], []],
-      keuze:[null, null, null, null], vast:[false, false, false, false] };
+      keuze:[null, null, null, null], vast:[false, false, false, false], reken:rekenMag };
   }
   function N(){ return SR.NIV[nivId]; }
   function gekozen(r){ return st.keuze[r] ? SR.offerte(N(), r, st.keuze[r]) : null; }
@@ -882,7 +886,10 @@ var SR = (function(){
     if (u.ok) return { titel:'jouw antwoord klopt', tekst:'Jij had ' + fmt(u.g) + '. Dat klopt.' };
     return { titel:'net niet', tekst:'Jij had ' + fmt(u.g) + '. Het goede antwoord is ' + goed + '.' + (u.f ? ' Waarschijnlijk: ' + u.f.wat + '.' : ' Kijk op het bord hoe het moest.') };
   }
-  function kaartVoor(sp){
+  /* bij elke rekenkaart: een kladblaadje, en de rekenmachine als de docent die toestaat */
+  function rekenHulp(d){ if (d && d.soort === 'getal') d.reken = { machine: st.reken !== false }; return d; }
+  function kaartVoor(sp){ return rekenHulp(kaartVoor0(sp)); }
+  function kaartVoor0(sp){
     var g = st.rolVan[sp.sid], r = st.ronde, n = N();
     if (!g) return { soort:'wacht', titel:'even wachten', tekst:'Je komt zo in een groep.' };
     if (st.fase === 'reken'){
@@ -1391,6 +1398,10 @@ var SR = (function(){
   zetModus('telefoon'); zetNiveau('kgt');
   Array.prototype.forEach.call($('modus').querySelectorAll('button'), function(b){ b.addEventListener('click', function(){ zetModus(b.getAttribute('data-m')); }); });
   Array.prototype.forEach.call($('niveau').querySelectorAll('button'), function(b){ b.addEventListener('click', function(){ zetNiveau(b.getAttribute('data-n')); }); });
+  Array.prototype.forEach.call($('rekenKeus').querySelectorAll('button'), function(b){ b.addEventListener('click', function(){
+    rekenMag = b.getAttribute('data-r') === 'ja';
+    Array.prototype.forEach.call($('rekenKeus').querySelectorAll('button'), function(x){ var aan = x === b; x.classList.toggle('on', aan); x.setAttribute('aria-pressed', aan ? 'true' : 'false'); });
+  }); });
   $('openBtn').addEventListener('click', openKamer);
   $('startBtn').addEventListener('click', start);
   $('onthulBtn').addEventListener('click', onthul);

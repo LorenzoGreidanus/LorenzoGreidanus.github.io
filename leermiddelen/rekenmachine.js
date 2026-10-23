@@ -12,6 +12,10 @@
    'naar' is niet verplicht. Staat hij erbij, dan krijgt de rekenmachine een
    knop 'Neem over' die de uitkomst met een komma in dat veld zet.
 
+   'binnen' ook niet: een element waar de rekenmachine in komt te staan, in
+   plaats van zwevend rechtsonder. Op een telefoon (rol.html) schoof hij
+   anders over de vraag heen, en dan zie je de getallen niet meer.
+
    De opmaak staat in dit bestand en gebruikt de kleurtokens van de pagina
    (--kaart, --ink, --rand2 en zo), dus hij kantelt vanzelf mee met de donkere
    stand. Alleen kleuren, nooit maten.
@@ -44,7 +48,8 @@ window.REKENMACHINE = (function(){
     '.rmover{width:100%;margin-top:8px;border:none;border-radius:12px;padding:10px;font:inherit;font-weight:600;',
     '  background:var(--crab,#F26749);color:#fff;cursor:pointer;min-height:44px}',
     '.rmover[hidden]{display:none}',
-    '@media(max-width:560px){.rmvak{left:16px;right:16px;width:auto;bottom:12px}}'
+    '@media(max-width:560px){.rmvak{left:16px;right:16px;width:auto;bottom:12px}}',
+    '.rmvak.binnen{position:static;width:auto;margin-top:10px;box-shadow:none}'
   ].join('\n');
 
   var TOETSEN = [
@@ -185,6 +190,9 @@ window.REKENMACHINE = (function(){
     naarVeld = o.naar || null;
     opener = knop || null;
     bouw();
+    if (o.binnen){ o.binnen.appendChild(vak); vak.classList.add('binnen'); }
+    else if (vak.classList.contains('binnen')){ document.body.appendChild(vak); vak.classList.remove('binnen'); }
+    if (!vak.hidden && opener) opener.setAttribute('aria-expanded', 'true');
     if (!knop) return;
     knop.setAttribute('aria-expanded', 'false');
     knop.addEventListener('click', function(){ if (vak.hidden) open(); else dicht(); });

@@ -117,6 +117,10 @@ button{cursor:pointer;touch-action:manipulation}
 .getalvak{display:flex;align-items:center;gap:8px;margin-top:14px;border:2px solid var(--rand2);border-radius:16px;background:var(--kaart2);padding:6px 14px}
 .getalvak:focus-within{border-color:var(--ocean)}
 .getalvak span{font-size:1.5rem;font-weight:700;color:var(--muted);flex:none}
+/* rekenhulp bij een getal: een kladblaadje, en een rekenmachine als het bord dat toestaat (reken:{ machine:true }) */
+.hulprij{display:flex;gap:8px;margin-top:10px}.hulprij .knop{margin-top:0}
+.klad{margin-top:8px}.klad textarea{width:100%;min-height:150px;border:2px dashed var(--rand2);border-radius:14px;background:var(--kaart2);color:var(--ink);font:500 1.05rem/1.55 ui-monospace,Consolas,monospace;padding:10px 12px;resize:vertical}
+.klad textarea:focus{outline:none;border-color:var(--ocean)}
 .getalvak input{flex:1;min-width:0;border:none;background:none;outline:none;font-size:2rem;font-weight:700;color:var(--ink);padding:6px 0;text-align:right}
 .getalfout{color:var(--fout);font-size:.88rem;margin-top:6px;min-height:1.2em}
 /* een zin of korte tekst schrijven */
@@ -385,6 +389,7 @@ body.app-aan.vb-hapert .vb-balk{bottom:calc(76px + env(safe-area-inset-bottom,0p
 <footer>Rollenspel van meneer Greidanus &middot; je bijnaam en je keuzes staan alleen in deze kamer, hoogstens drie uur.</footer>
 
 <script src="naamfilter.js"></script>
+<script src="rekenmachine.js"></script>
 <script>
 (function(){
   'use strict';
@@ -397,6 +402,7 @@ body.app-aan.vb-hapert .vb-balk{bottom:calc(76px + env(safe-area-inset-bottom,0p
     return s;
   }
   var verb = null, code = '', naam = '', rol = null, nu = null, gekozen = {}, klaar = false, thema = null;
+  var klad = {}, kladOpen = {};   /* het kladblaadje per kaart, alleen op deze telefoon */
 
   /* ---------- meedoen ---------- */
   var param = /[?&]k=([A-Za-z]{4})/.exec(location.search);
@@ -860,6 +866,8 @@ body.app-aan.vb-hapert .vb-balk{bottom:calc(76px + env(safe-area-inset-bottom,0p
 
   function toon(d){
     nu = d;
+    /* de rekenmachine hoort bij een rekenkaart; bij een andere kaart gaat hij dicht */
+    if (window.REKENMACHINE && !(d.soort === 'getal' && d.reken && d.reken.machine)) REKENMACHINE.dicht();
     if (d.soort === 'feed'){ tekenFeed(d); return; }
     if (document.body.classList.contains('app-aan')) appAan(false);
     var el = $('nu'), h = '';
@@ -893,6 +901,10 @@ body.app-aan.vb-hapert .vb-balk{bottom:calc(76px + env(safe-area-inset-bottom,0p
         '<label class="getalvak">' + (d.voor ? '<span>' + schoon(d.voor) + '</span>' : '') +
         '<input id="getalIn" type="text" inputmode="' + (d.komma ? 'decimal' : 'numeric') + '" autocomplete="off" maxlength="12" value="' + schoon(gw) + '" aria-label="' + schoon(d.titel || 'Getal') + '"' + (d.dicht ? ' disabled' : '') + '>' +
         (d.na ? '<span>' + schoon(d.na) + '</span>' : '') + '</label><p class="getalfout" id="getalFout" role="alert"></p>' +
+        /* rekenhulp: het kladblaadje onthoudt wat je typte zolang deze kaart er is, ook als het bord hem opnieuw stuurt */
+        (d.reken ? '<div class="hulprij">' + (d.reken.machine ? '<button class="knop stil" id="rmKnop" type="button">Rekenmachine</button>' : '') +
+          '<button class="knop stil" id="kladKnop" type="button" aria-controls="kladVak" aria-expanded="' + (kladOpen[d.id] ? 'true' : 'false') + '">Kladblaadje</button></div><div id="rmPlek"></div>' +
+          '<div class="klad' + (kladOpen[d.id] ? '' : ' hide') + '" id="kladVak"><textarea id="kladIn" aria-label="Kladblaadje" placeholder="Reken hier tussendoor, bijvoorbeeld 28 × 12,50 = … Alleen jij ziet dit.">' + schoon(klad[d.id] || '') + '</textarea></div>' : '') +
         '<button class="knop" id="getalZend" type="button"' + (d.dicht ? ' disabled' : '') + '>' + schoon(d.knop || 'Verstuur') + '</button><p class="gestuurd" id="gestuurd" role="status">' + (gekozen[d.id] !== undefined ? 'Verstuurd. Pas aan en druk nog eens als je wilt wisselen.' : '') + '</p>' +
         (d.meer ? '<p class="meer">' + schoon(d.meer) + '</p>' : '');
     } else if (d.soort === 'tekst'){
@@ -967,6 +979,12 @@ body.app-aan.vb-hapert .vb-balk{bottom:calc(76px + env(safe-area-inset-bottom,0p
         if (navigator.vibrate) navigator.vibrate(30);
       };
       $('getalZend').addEventListener('click', zendGetal);
+      var rk = $('rmKnop'); if (rk && window.REKENMACHINE) REKENMACHINE.koppel(rk, { naar:gi, binnen:$('rmPlek') });
+      var kk = $('kladKnop');
+      if (kk){
+        kk.addEventListener('click', function(){ var op = !kladOpen[d.id]; kladOpen[d.id] = op; $('kladVak').classList.toggle('hide', !op); kk.setAttribute('aria-expanded', op ? 'true' : 'false'); if (op) $('kladIn').focus(); });
+        $('kladIn').addEventListener('input', function(){ klad[d.id] = this.value; });
+      }
       gi.addEventListener('keydown', function(e){ if (e.key === 'Enter') zendGetal(); });
       gi.addEventListener('input', function(){ $('getalFout').textContent = ''; });
     }
