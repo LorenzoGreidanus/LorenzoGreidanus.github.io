@@ -746,7 +746,7 @@ var SR = (function(){
   function penn(n, r, uit){
     var B = budget(n);
     if (r === 0) return { titel:n.penn0.titel, tekst:n.penn0.tekst, antw:n.penn0.antw, hoe:n.penn0.hoe, tol:0.005 };
-    if (n.id === 'bb') return { titel:'Hoeveel is er nog over?', tekst:'Het budget is ' + eu(B) + '. Er is al ' + eu(uit) + ' uitgegeven.', antw:rond2(B - uit), tol:0.005,
+    if (n.id === 'bb') return { titel:'Hoeveel is er nog over?', tekst:'Het budget is ' + eu(B) + '. Er is al ' + eu(uit) + ' uitgegeven.', antw:rond2(B - uit), tol:0.005, kanMin:true,
       hoe:[['nog over', eu(B) + ' − ' + eu(uit) + ' = ' + eu(rond2(B - uit))]] };
     if (n.id === 'kgt'){ var p = uit / B * 100, d = Math.round(uit / B * 10000) / 10000;
       return { titel:'Hoeveel procent van het budget is op?', tekst:'Er is al ' + eu(uit) + ' uitgegeven van de ' + eu(B) + '. Rond af op een heel procent.', antw:Math.round(p), exact:p, rond:0, na:'%',
@@ -896,7 +896,9 @@ var SR = (function(){
       var op = opgaveVan(sp.sid);
       if (!op) return { soort:'wacht', titel:'even wachten', tekst:'Kijk op het bord.' };
       if (op.soort === 'penn') return { soort:'getal', id:kaartId('p'), kop:'penningmeester · ronde ' + (r + 1), titel:op.v.titel, tekst:op.v.tekst,
-        voor:op.v.na ? '' : '€', na:op.v.na || '', komma:true, min:0, max:100000, knop:'Verstuur', meer:op.v.na ? 'Typ alleen het getal.' : hint(op.v.antw) };
+        /* over het budget is wat er over is negatief: een min mag (rol.html zet er dan een ±-knop bij) */
+        voor:op.v.na ? '' : '€', na:op.v.na || '', komma:true, min:op.v.kanMin ? -100000 : 0, max:100000, knop:'Verstuur',
+        meer:op.v.na ? 'Typ alleen het getal.' : hint(op.v.antw) + (op.v.kanMin ? ' Is er te veel uitgegeven? Zet er dan een min voor, met de knop ±.' : '') };
       if (op.soort === 'tegen') return { soort:'getal', id:kaartId('t'), kop:'tegenvaller · ' + groep(g).naam.toLowerCase(), titel:op.v.vraag,
         tekst:SR.TEGEN[nivId][SR.TEGEN_VAN[g]] + ' Jullie kozen ' + op.o.naam + '. ' + op.v.tekst, voor:'€', komma:true, min:0, max:100000, knop:'Verstuur', meer:hint(op.v.antw) };
       return { soort:'getal', id:kaartId('o'), kop:'offerte ' + op.L + ' · ' + R[r].naam.toLowerCase(), titel:op.o.naam,

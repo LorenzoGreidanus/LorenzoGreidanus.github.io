@@ -121,6 +121,7 @@ button{cursor:pointer;touch-action:manipulation}
 .hulprij{display:flex;gap:8px;margin-top:10px}.hulprij .knop{margin-top:0}
 .klad{margin-top:8px}.klad textarea{width:100%;min-height:150px;border:2px dashed var(--rand2);border-radius:14px;background:var(--kaart2);color:var(--ink);font:500 1.05rem/1.55 ui-monospace,Consolas,monospace;padding:10px 12px;resize:vertical}
 .klad textarea:focus{outline:none;border-color:var(--ocean)}
+.getalvak .tekenknop{flex:none;min-width:44px;min-height:44px;border:1.5px solid var(--rand2);border-radius:12px;background:var(--kaart);color:var(--ink);font-size:1.4rem;font-weight:700;line-height:1}
 .getalvak input{flex:1;min-width:0;border:none;background:none;outline:none;font-size:2rem;font-weight:700;color:var(--ink);padding:6px 0;text-align:right}
 .getalfout{color:var(--fout);font-size:.88rem;margin-top:6px;min-height:1.2em}
 /* een zin of korte tekst schrijven */
@@ -898,7 +899,8 @@ body.app-aan.vb-hapert .vb-balk{bottom:calc(76px + env(safe-area-inset-bottom,0p
       var gw = gekozen[d.id] !== undefined ? gekozen[d.id] : (d.waarde !== undefined && d.waarde !== null ? d.waarde : '');
       gw = gw === '' || !isFinite(Number(gw)) ? '' : String(gw).replace('.', ',');
       h = '<p class="eyebrow">' + schoon(d.kop || 'jouw antwoord') + '</p><h2>' + schoon(d.titel || '') + '</h2>' + (d.tekst ? '<p class="tekst">' + schoon(d.tekst) + '</p>' : '') +
-        '<label class="getalvak">' + (d.voor ? '<span>' + schoon(d.voor) + '</span>' : '') +
+        /* mag het negatief zijn, dan een knop voor de min: een getallentoetsenbord op de telefoon heeft er vaak geen */
+        '<label class="getalvak">' + (d.min !== undefined && d.min < 0 && !d.dicht ? '<button type="button" class="tekenknop" id="getalMin" aria-label="Min ervoor of eraf">±</button>' : '') + (d.voor ? '<span>' + schoon(d.voor) + '</span>' : '') +
         '<input id="getalIn" type="text" inputmode="' + (d.komma ? 'decimal' : 'numeric') + '" autocomplete="off" maxlength="12" value="' + schoon(gw) + '" aria-label="' + schoon(d.titel || 'Getal') + '"' + (d.dicht ? ' disabled' : '') + '>' +
         (d.na ? '<span>' + schoon(d.na) + '</span>' : '') + '</label><p class="getalfout" id="getalFout" role="alert"></p>' +
         /* rekenhulp: het kladblaadje onthoudt wat je typte zolang deze kaart er is, ook als het bord hem opnieuw stuurt */
@@ -962,7 +964,7 @@ body.app-aan.vb-hapert .vb-balk{bottom:calc(76px + env(safe-area-inset-bottom,0p
       var zendGetal = function(){
         /* Nederlands: 1.068,20 is duizend achtenzestig. Met een komma zijn punten
            duizendtallen; zonder komma ook, als ze precies groepjes van drie maken. */
-        var ruw = gi.value.replace(/\s|€|%/g, '');
+        var ruw = gi.value.replace(/\s|€|%/g, '').replace(/[−–]/g, '-');
         if (ruw.indexOf(',') >= 0) ruw = ruw.replace(/\./g, '').replace(',', '.');
         else if (/^-?\d{1,3}(\.\d{3})+$/.test(ruw)) ruw = ruw.replace(/\./g, '');
         var g = ruw === '' ? NaN : Number(ruw);
@@ -987,6 +989,13 @@ body.app-aan.vb-hapert .vb-balk{bottom:calc(76px + env(safe-area-inset-bottom,0p
       }
       gi.addEventListener('keydown', function(e){ if (e.key === 'Enter') zendGetal(); });
       gi.addEventListener('input', function(){ $('getalFout').textContent = ''; });
+      var gm = $('getalMin');
+      if (gm) gm.addEventListener('click', function(e){
+        e.preventDefault();
+        var v = gi.value.trim();
+        gi.value = /^[-−–]/.test(v) ? v.replace(/^[-−–]\s*/, '') : '-' + v;
+        $('getalFout').textContent = '';
+      });
     }
     var ti = $('tekstIn');
     if (ti){
