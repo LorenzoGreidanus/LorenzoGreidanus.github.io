@@ -347,13 +347,22 @@ async function verdeel(req, env, ctx){
     /* alleen de beheerder: lezen en opruimen, met de geheime sleutel (wrangler secret put BEHEER) */
     /* tickets: GET /api/beheer/tickets, POST /api/beheer/ticket (nieuw of bijwerken), POST /api/beheer/ticket-weg */
     /* speelcode: POST { oud, nu } hangt een oude speelcode weer aan het account dat nu code nu heeft */
-    const bm = p.match(/^\/api\/beheer\/(meldingen|tellers|melding-weg|tel-zet|tickets|ticket|ticket-weg|speelcode)\/?$/);
+    /* munten: POST { code, aantal, reden } telt munten op bij een speelcode (negatief haalt eraf, nooit onder 0); aantal 0 kijkt alleen */
+    const bm = p.match(/^\/api\/beheer\/(meldingen|tellers|melding-weg|tel-zet|tickets|ticket|ticket-weg|speelcode|munten)\/?$/);
     if (bm){
       const nee = await beheerToegang(env, req); if (nee) return nee;
       if (bm[1] === "speelcode"){
         if (req.method !== "POST") return json({ fout: "alleen POST" }, 405);
         let opdr; try { opdr = await leesJson(req); } catch (e){ return json({ fout: "geen geldige opdracht" }, 400); }
         return accountVerhuisCode(env, opdr && opdr.oud, opdr && opdr.nu);
+      }
+      if (bm[1] === "munten"){
+        if (req.method !== "POST") return json({ fout: "alleen POST" }, 405);
+        let opdr; try { opdr = await leesJson(req); } catch (e){ return json({ fout: "geen geldige opdracht" }, 400); }
+        const code = String((opdr && opdr.code) || "").toUpperCase().replace(/[^A-Z]/g, "");
+        if (!/^[A-Z]{8}$/.test(code)) return json({ fout: "een speelcode van acht letters" }, 400);
+        return env.PROFIEL.get(env.PROFIEL.idFromName(code)).fetch("https://profiel/munten", { method: "POST",
+          body: JSON.stringify({ aantal: opdr.aantal, reden: opdr.reden }) });
       }
       if (bm[1] === "melding-weg" || bm[1] === "tel-zet" || bm[1] === "ticket" || bm[1] === "ticket-weg"){
         if (req.method !== "POST") return json({ fout: "alleen POST" }, 405);

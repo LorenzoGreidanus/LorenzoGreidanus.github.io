@@ -367,7 +367,16 @@ window.PROFIEL = (function(){
           var vr = vrijWacht(), dw = docentWegWacht();
           var pr = verzamel(), hash = JSON.stringify(pr) + (ingelogd() ? '|in' : ''), sinds = Date.now() - (parseInt(ls('lg-sync-t') || '0', 10) || 0);
           /* hetzelfde als de vorige keer, korter dan een half uur geleden, en niets onderweg: dan hoeft de server het niet te horen */
-          if (hash === ls('lg-sync-hash') && sinds < 1800000 && !delta && !vr.length && !dw.length){ res(null); return; }
+          if (hash === ls('lg-sync-hash') && sinds < 1800000 && !delta && !vr.length && !dw.length){
+            /* Wel even lezen als dat vijf minuten geleden is: de server kan iets
+               veranderd hebben, zoals munten van de beheerder. Ingelogd gebeurt
+               dat al bij elke pagina (accountAfstemmen). */
+            var gelezen = Math.max(parseInt(ls('lg-sync-t') || '0', 10) || 0, parseInt(ls('lg-lees-t') || '0', 10) || 0);
+            if (ingelogd() || Date.now() - gelezen < 300000){ res(null); return; }
+            lsZet('lg-lees-t', String(Date.now()));
+            vraag('/api/profiel/' + code(), 'GET').then(function(j){ if (!j.vast) pasToe(j.profiel); res(j); }).catch(function(){ res(null); });
+            return;
+          }
           stuur({ profiel:pr }).then(function(j){
             var kreeg = aangekomen(delta, vr, j);
             lsZet('lg-klas-docent-weg', JSON.stringify(docentWegWacht().filter(function(x){ return dw.indexOf(x) < 0; })));

@@ -11,6 +11,8 @@ const LEEFT = 400 * 24 * 60 * 60 * 1000;   /* zonder gebruik: na ruim een jaar w
    levert ongeveer tien tot vijftien munten per minuut op, dus zestig raakt
    niemand die gewoon speelt. Zie de kop van dit bestand voor het waarom. */
 const MUNT_PER_MIN = 60, MUNT_BUIDEL = 2000, MUNT_START = 300;
+/* Munten van de beheerder: hoogstens tienduizend per keer, en een logboekje van vijftig. */
+const MUNT_GEEF = 10000, MUNT_LOG = 50;
 /* Trofeeën van een baas: hoogstens een per bericht en vier per uur. */
 const VRIJ_PER_UUR = 4;
 const MAX_TEKST = 24000;                    /* een profiel als JSON, ruim genoeg voor honderden spellen */
@@ -211,6 +213,25 @@ export class Profiel extends DurableObject {
       this.stand.profiel = nieuw;
       await this.bewaar();
       return json({ ok: true, code: this.stand.code, profiel: zonderSleutels(nieuw) });
+    }
+    /* De beheerder geeft munten (of haalt ze weg), buiten de buidel om. Het
+       saldo staat hier, en een apparaat meldt alleen wat erbij kwam, dus een
+       oude stand op een telefoon kan dit niet terugdraaien. Met aantal 0 kijkt
+       de beheerder alleen. De laatste vijftig keer staan in een logboekje in
+       de stand, niet in het profiel: dat gaat niet mee naar de browser. */
+    if (url.pathname === "/munten"){
+      const n = Number(inz.aantal);
+      if (!Number.isInteger(n) || Math.abs(n) > MUNT_GEEF) return json({ fout: "een heel getal tussen -" + MUNT_GEEF + " en " + MUNT_GEEF }, 400);
+      const p = this.stand.profiel || (this.stand.profiel = {});
+      const oud = Math.max(0, p.munten | 0);
+      const log = Array.isArray(this.stand.muntLog) ? this.stand.muntLog : [];
+      if (n !== 0){
+        p.munten = Math.max(0, oud + n);
+        log.push({ t: Date.now(), n: p.munten - oud, reden: schoon(inz.reden, 80).trim(), saldo: p.munten });
+        this.stand.muntLog = log.slice(-MUNT_LOG);
+        await this.bewaar();
+      }
+      return json({ ok: true, code: this.stand.code, oud, nieuw: Math.max(0, p.munten | 0), log: (this.stand.muntLog || []).slice(-10).reverse() });
     }
     /* het beheeraccount hangt aan deze code: voortaan alles vrij */
     if (url.pathname === "/alles"){

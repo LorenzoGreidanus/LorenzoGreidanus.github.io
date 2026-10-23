@@ -207,6 +207,12 @@ tr.site td:first-child b::before{content:'';display:inline-block;width:8px;heigh
 details.tklaar{margin-top:16px;border-top:1px solid var(--rand2)}
 details.tklaar summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center;color:var(--muted)}
 #tStatus.fout{color:var(--fouttekst,var(--fout));font-weight:600}
+/* munten geven: het resultaat en de laatste keren */
+#muStatus.fout{color:var(--fouttekst,var(--fout));font-weight:600}
+#muStatus b{color:var(--ink);font-variant-numeric:tabular-nums}
+#muLog table{margin-top:8px}
+#muLog td.op{color:var(--goedtekst,var(--goed))}#muLog td.af{color:var(--fouttekst,var(--fout))}
+#muLog td.reden{overflow-wrap:break-word;min-width:8ch}
 /* zichtbare focus voor wie met het toetsenbord werkt */
 :focus-visible{outline:3px solid var(--focusring,#B4701A);outline-offset:3px}
 </style>
@@ -324,6 +330,23 @@ details.tklaar summary{cursor:pointer;font-weight:600;min-height:44px;display:fl
     </div>
     <p class="tip" id="scStatus" role="status" aria-live="polite"></p>
   </section>
+
+  <section class="kaart" id="munten">
+    <h2>Munten geven</h2>
+    <p class="tip">Vul de speelcode in die de leerling in de lade ziet en hoeveel munten erbij komen. Een min ervoor haalt munten weg, nooit verder dan nul. Hoogstens tienduizend per keer. De leerling ziet het nieuwe saldo zodra hij een pagina van de site opent; zonder account kan dat tot vijf minuten duren.</p>
+    <div class="rij" style="margin-top:8px">
+      <label class="sronly" for="muCode">Speelcode</label><input id="muCode" class="veld" placeholder="speelcode" maxlength="8" autocapitalize="characters" spellcheck="false" autocomplete="off">
+      <label class="sronly" for="muAantal">Aantal munten</label><input id="muAantal" class="veld" type="number" min="-10000" max="10000" step="1" placeholder="aantal" style="width:120px">
+      <label class="sronly" for="muReden">Reden</label><input id="muReden" class="veld" placeholder="reden (mag leeg)" maxlength="80" autocomplete="off" style="flex:1;min-width:180px">
+    </div>
+    <div class="knopjes" id="muSnel" role="group" aria-label="Snel een aantal kiezen"><button type="button" data-n="10">+10</button><button type="button" data-n="50">+50</button><button type="button" data-n="100">+100</button></div>
+    <div class="rij" style="margin-top:12px">
+      <button class="knop" id="muGeef" type="button">Geven</button>
+      <button class="knop stil" id="muKijk" type="button">Saldo bekijken</button>
+    </div>
+    <p class="tip" id="muStatus" role="status" aria-live="polite"></p>
+    <div id="muLog"></div>
+  </section>
 </main>
 <script src="bank.js"></script>
 <script src="naamfilter.js"></script>
@@ -346,6 +369,47 @@ details.tklaar summary{cursor:pointer;font-weight:600;min-height:44px;display:fl
     haal('/api/beheer/speelcode', { method:'POST', body:JSON.stringify({ oud:oud, nu:nu }) }).then(function(r){
       $('scStatus').textContent = r.ok ? 'Gelukt: het account heeft weer code ' + oud + '.' : (r.j && r.j.fout) || 'Dat lukte niet.';
     }).catch(function(){ $('scStatus').textContent = 'Geen verbinding.'; }).then(function(){ $('scZet').disabled = false; });
+  });
+  /* Munten geven of weghalen bij een speelcode. Met aantal 0 kijken we alleen:
+     dan staan het saldo en de laatste keren er zonder dat er iets verandert. */
+  function muZeg(tekst, fout){ $('muStatus').innerHTML = tekst; $('muStatus').classList.toggle('fout', !!fout); }
+  function muLog(log){
+    if (!log || !log.length){ $('muLog').innerHTML = ''; return; }
+    $('muLog').innerHTML = '<p class="eyebrow" style="margin-top:14px">laatste keren door de beheerder</p><div style="overflow-x:auto"><table><thead><tr><th>Wanneer</th><th style="text-align:right">Munten</th><th style="text-align:right">Saldo</th><th>Reden</th></tr></thead><tbody>' +
+      log.map(function(x){
+        var n = x.n | 0, d = new Date(x.t || 0);
+        return '<tr><td>' + schoon(d.toLocaleDateString('nl-NL', { day:'numeric', month:'short' }) + ' ' + d.toLocaleTimeString('nl-NL', { hour:'2-digit', minute:'2-digit' })) + '</td>' +
+          '<td class="getal ' + (n < 0 ? 'af' : 'op') + '">' + (n > 0 ? '+' : '') + n + '</td><td class="getal">' + (x.saldo | 0) + '</td><td class="reden">' + (x.reden ? schoon(x.reden) : '<span class="tip">geen reden</span>') + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+  function muVraag(aantal){
+    var code = $('muCode').value.toUpperCase().replace(/[^A-Z]/g, '');
+    if (code.length !== 8){ muZeg('Een speelcode heeft acht letters.', true); $('muCode').focus(); return; }
+    $('muCode').value = code;
+    if (aantal !== 0 && Math.abs(aantal) >= 1000 && !confirm((aantal > 0 ? aantal + ' munten geven aan ' : aantal * -1 + ' munten weghalen bij ') + code + '?')) return;
+    $('muGeef').disabled = $('muKijk').disabled = true; muZeg('Even wachten…');
+    haal('/api/beheer/munten', { method:'POST', body:JSON.stringify({ code:code, aantal:aantal, reden:$('muReden').value.trim() }) }).then(function(r){
+      if (!r.ok){ muZeg(schoon((r.j && r.j.fout) || 'Dat lukte niet.'), true); return; }
+      var oud = r.j.oud | 0, nieuw = r.j.nieuw | 0;
+      if (aantal === 0) muZeg('Speelcode ' + code + ' heeft <b>' + nieuw + '</b> munten.');
+      else {
+        var echt = nieuw - oud;
+        muZeg((echt >= 0 ? 'Gegeven: ' : 'Weggehaald: ') + Math.abs(echt) + ' munten. Saldo van ' + code + ' was <b>' + oud + '</b>, is nu <b>' + nieuw + '</b>.' +
+          (echt !== aantal ? ' Verder dan nul kon niet.' : ''));
+        $('muAantal').value = ''; $('muReden').value = '';
+      }
+      muLog(r.j.log);
+    }).catch(function(){ muZeg('Geen verbinding.', true); }).then(function(){ $('muGeef').disabled = $('muKijk').disabled = false; });
+  }
+  $('muGeef').addEventListener('click', function(){
+    var t = $('muAantal').value.trim(), n = Number(t);
+    if (!t || !Number.isInteger(n) || n === 0){ muZeg('Vul een heel aantal in, bijvoorbeeld 50 of -20.', true); $('muAantal').focus(); return; }
+    if (Math.abs(n) > 10000){ muZeg('Hoogstens tienduizend per keer.', true); $('muAantal').focus(); return; }
+    muVraag(n);
+  });
+  $('muKijk').addEventListener('click', function(){ muVraag(0); });
+  Array.prototype.forEach.call($('muSnel').querySelectorAll('button'), function(b){
+    b.addEventListener('click', function(){ $('muAantal').value = b.getAttribute('data-n'); $('muAantal').focus(); });
   });
   function kiesTab(naam){
     Array.prototype.forEach.call($('tabs').querySelectorAll('button'), function(x){ var aan = x.getAttribute('data-tab') === naam; x.classList.toggle('on', aan); x.setAttribute('aria-selected', aan ? 'true' : 'false'); });
