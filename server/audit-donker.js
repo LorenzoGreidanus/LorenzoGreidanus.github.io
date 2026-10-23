@@ -250,6 +250,24 @@ const METEN = `(function(){
   /* De toestanden na het begin: op Start drukken, en de uitleg stap voor stap openen. */
   const START = "(function(){var b=[].filter.call(document.querySelectorAll('button,a.btn,a.knop'),function(x){return x.offsetParent&&!x.disabled&&(/^(start|startbtn|begin|beginbtn|speel|spelen)$/i.test(x.id)||/^(start|begin|beginnen|speel|spelen|nieuw spel)\b/i.test((x.textContent||'').trim()))})[0];if(!b)return 0;b.click();return 1})()";
   const UITLEG = "(function(){var b=document.querySelector('.stapknop,.stappen-knop');if(!b||!b.offsetParent)return 0;b.click();return 1})()";
+  /* Na een antwoord: de gekleurde knoppen en de uitleg bij goed of fout. Daar
+     ging het mis zonder dat de toets het zag (onleesbare uitleg, knoppen die
+     donker werden), want hij keek alleen naar het begin. Hij tikt de laatste
+     keuze aan (bij vier keuzes meestal fout) of typt een getal en kijkt na. */
+  const FOUT = `(function(){
+    function zicht(e){ var r = e.getBoundingClientRect(); return !!e.offsetParent && r.width > 0 && r.height > 0 && !e.disabled && !e.closest('header,footer,nav,#scherm-start'); }
+    var sel = '.opties button,.opties .optie,button.optie,.keuzes button,.antwoorden button,[data-optie],[data-antw],.kies button';
+    var l = [].filter.call(document.querySelectorAll(sel), zicht);
+    if (l.length){ l[l.length - 1].click(); return 1; }
+    var inp = [].filter.call(document.querySelectorAll('input[type=text],input[type=number],input:not([type]),textarea'), zicht)[0];
+    if (!inp) return 0;
+    inp.focus(); inp.value = '987'; inp.dispatchEvent(new Event('input', { bubbles:true }));
+    var knop = [].filter.call(document.querySelectorAll('button'), function(b){ return zicht(b) && /nakijk|controleer|check|klaar|antwoord|verstuur|^ok$/i.test((b.textContent || '').trim()); })[0];
+    if (knop) knop.click(); else inp.dispatchEvent(new KeyboardEvent('keydown', { key:'Enter', bubbles:true }));
+    return 1;
+  })()`;
+  /* ALLEEN_FOUT=1: alleen de toestand na een antwoord meten (sneller, om juist die na te lopen) */
+  const ALLEEN_FOUT = process.env.ALLEEN_FOUT === '1';
 
   const lijst = paginas();
   let totaalTekst = 0, totaalDoelen = 0, stuk = 0;
@@ -260,17 +278,20 @@ const METEN = `(function(){
     };
     for (const stand of ['light', 'dark', 'knop']){
       await laad(pagina, stand, 1280);
-      noteer(stand, '', await meet());
+      if (!ALLEEN_FOUT) noteer(stand, '', await meet());
       /* na Start alleen de tekst: tijdens een spel mogen dingen op het speelveld klein zijn */
-      if (await doe(START, 1500)) noteer(stand, 'na start', await meet());
-      if (/^leermiddelen\//.test(pagina)){
+      if (await doe(START, 1500)){
+        if (!ALLEEN_FOUT) noteer(stand, 'na start', await meet());
+        if (await doe(FOUT, 1100)) noteer(stand, 'na antwoord', await meet());
+      }
+      if (!ALLEEN_FOUT && /^leermiddelen\//.test(pagina)){
         await laad(pagina, stand, 1280);
         if (await doe(UITLEG, 900)) noteer(stand, 'uitleg', await meet());
       }
     }
     /* tikdoelen, op de telefoon en op de computer */
     const doelen = new Map();
-    for (const breed of [375, 1280]){
+    for (const breed of (ALLEEN_FOUT ? [] : [375, 1280])){
       await laad(pagina, 'dark', breed);
       ((await meet()).doelen || []).forEach(x => doelen.set(x.sel + '|' + x.t, '[tikdoel ' + breed + '] ' + x.b + '×' + x.h + '  ' + x.sel.padEnd(26) + ' ' + JSON.stringify(x.t)));
     }
