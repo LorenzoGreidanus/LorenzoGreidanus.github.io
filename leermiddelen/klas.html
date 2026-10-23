@@ -2943,6 +2943,8 @@ body>header.wrap,body>footer.wrap{width:min(100% - 24px,1360px)}
   })();
   /* de keuzes van een vakspel ophalen: het spel in een verborgen kader, zoals het werkblad */
   var oefKeuzes = {}, oefKader = null, oefWacht = null;
+  /* keuzes die al vastliggen, zoals de eigen topografie uit ?topo=CODE (maken.html) */
+  var oefVoorkeur = null;
   addEventListener('message', function(e){ var b = e.data || {}; if (!oefWacht) return; if (b.t === 'werkblad-klaar' && oefKader) oefKader.contentWindow.postMessage({ t:'werkblad-keuzes' }, '*'); if (b.t === 'werkblad-keuzes'){ var w = oefWacht; oefWacht = null; w(b.keuzes || []); } });
   function haalKeuzes(spel, klaar){
     if (oefKeuzes[spel]) return klaar(oefKeuzes[spel]);
@@ -2963,6 +2965,15 @@ body>header.wrap,body>footer.wrap{width:min(100% - 24px,1360px)}
       }).join('');
       if (keuzes && keuzes.length) h += '<label class="minlabel">ronde van <select class="veld" data-kz="aantal"><option value="10">10</option><option value="20" selected>20</option><option value="30">30</option></select> opgaven</label>';
       vak.innerHTML = h || '<span class="tip">Dit spel heeft geen keuzes om vast te zetten; de leerling begint gewoon.</span>';
+      if (oefVoorkeur){
+        Object.keys(oefVoorkeur).forEach(function(id){
+          var s = vak.querySelector('[data-kz="' + id + '"]'); if (!s) return;
+          var w = oefVoorkeur[id];
+          if (![].some.call(s.options, function(o){ return o.value === w; })) s.insertAdjacentHTML('beforeend', '<option value="' + schoon(w) + '">' + schoon(w) + '</option>');
+          s.value = w;
+        });
+        oefVoorkeur = null;
+      }
     });
   }
   function oefKz(){
@@ -3290,6 +3301,13 @@ body>header.wrap,body>footer.wrap{width:min(100% - 24px,1360px)}
     $('opSpel').value = 'dictee'; dInit(); dBron = 'eigen';
     $('opTot').value = datumVeld(zondag(Date.now()));
     dEigenKiezer(c.toUpperCase()); dVorm(); zetHoofd('opdrachten');
+  })();
+  /* ?topo=CODE (na het bewaren van eigen topografie): Topografie met die plekken als opdracht */
+  (function(){
+    var c = (/[?&]topo=([A-Za-z0-9]{6})/.exec(location.search) || [])[1];
+    if (!c || ![].some.call($('opSpel').options, function(o){ return o.value === 'topografie'; })) return;
+    $('opSpel').value = 'topografie'; oefVoorkeur = { eigen: c.toUpperCase() };
+    opVul(); zetHoofd('opdrachten');
   })();
   /* in de lijst staat een dictee met de titel uit de tekstbank: die laden zodra er een is */
   function dBankVoorLijst(){ if (opdrachtenVan(data).some(function(o){ return o.spel === 'dictee'; }) && !window.DICTEE_OPGAVEN && !dBankBezig) dLaadBank(function(){ if (data) tekenOpdracht(); }); }

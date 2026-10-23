@@ -1,7 +1,9 @@
 /* Werkblad topografie: dezelfde kaarten als in het spel (topo-kaarten.js), met
    nummers op de kaart. De leerling schrijft de naam bij elk nummer, of zet het
    nummer bij elke naam. Het niveau van het werkblad bepaalt welke plaatsen
-   meedoen: basis (v 1), uitgebreid (v 2) of alles (v 3). */
+   meedoen: basis (v 1), uitgebreid (v 2) of alles (v 3).
+   Met ?topo=CODE in het adres (een eigen set uit maken.html) kan het blad ook
+   precies de plekken van die set nemen. */
 (function(){
   'use strict';
   if (!window.KAARTEN || !window.SPELBLAD) return;
@@ -15,6 +17,20 @@
   function hussel(a){ a = a.slice(); for (var i = a.length - 1; i > 0; i--){ var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
   function soortVan(m, l){ return l.s || m.soort || 'vlak'; }
   function watVan(m, l){ return l.w || m.wat || 'land'; }
+  function setSleutel(m, l){ return m.soort === 'gemengd' ? l.n + ' (' + watVan(m, l) + ')' : l.n; }
+  /* de eigen set uit het adres: ophalen, en de keuzes opnieuw tekenen zodra hij er is */
+  var setCode = (new URLSearchParams(location.search).get('topo') || '').toUpperCase().replace(/[^A-Z0-9]/g, ''), set = null, setStand = '';
+  if (/^[A-Z0-9]{6}$/.test(setCode)){
+    setStand = 'laden';
+    fetch('/api/materiaal/' + setCode, { cache: 'no-store' })
+      .then(function(r){ return r.json().then(function(j){ if (!r.ok) throw new Error(j.fout || ''); return j; }); })
+      .then(function(j){ if (j.soort !== 'topo' || !KAARTEN[j.kaart]) throw new Error('geen set'); set = j; setStand = 'klaar'; herteken(); })
+      .catch(function(){ setStand = 'fout'; herteken(); });
+  } else setCode = '';
+  function herteken(){
+    var d = document.getElementById('delen'), b = document.getElementById('blad');
+    if (d && b && b.value === 'topografie') d.innerHTML = window.SPELBLAD.topografie.delen(set ? ['eigen'] : []);
+  }
 
   /* de kaart: ondergrond, alle onderdelen in dezelfde kleur, en een nummer bij de gekozen */
   function kaartSvg(m, items){
@@ -65,21 +81,32 @@
     naam: 'Topografie', vak: 'aard',
     aantallen: [8, 10, 12, 16, 20, 25], standaard: 12, aantalNaam: 'Aantal op de kaart',
     delenKop: 'Kaart en vorm',
-    delenTip: 'Dezelfde kaarten als in het spel. Het niveau hierboven bepaalt welke plaatsen meedoen: bb is de basis, kgt ook de minder bekende, hv de hele kaart.',
+    delenTip: 'Dezelfde kaarten als in het spel. Het niveau hierboven bepaalt welke plaatsen meedoen: bb is de basis, kgt ook de minder bekende, hv de hele kaart. Met je eigen set komen de plekken uit die set op het blad, tot het aantal dat je kiest.',
     delen: function(aan){
       var kaart = (aan || []).filter(function(id){ return KAARTEN[id]; })[0] || 'nlp', vorm = (aan || []).indexOf('nummer') >= 0 ? 'nummer' : 'naam';
-      return '<p class="kop">Welke kaart</p>' + VOLGORDE.map(function(id){ return '<label><input type="radio" name="topo-kaart" value="' + id + '"' + (id === kaart ? ' checked' : '') + '> ' + schoon(KAARTEN[id].naam) + '</label>'; }).join('') +
+      var eigen = set && (!(aan || []).some(function(id){ return KAARTEN[id]; }) || (aan || []).indexOf('eigen') >= 0);
+      var setRegel = !setCode ? '' : set
+        ? '<label><input type="radio" name="topo-kaart" value="eigen"' + (eigen ? ' checked' : '') + '> Eigen set: ' + schoon(set.naam) + ' (' + set.plekken.length + ' op de kaart ' + schoon(KAARTEN[set.kaart].naam) + ')</label>'
+        : '<p class="kop">' + (setStand === 'fout' ? 'Je eigen set kon niet laden; kies een kaart.' : 'Je eigen set ophalen\u2026') + '</p>';
+      return '<p class="kop">Welke kaart</p>' + setRegel + VOLGORDE.map(function(id){ return '<label><input type="radio" name="topo-kaart" value="' + id + '"' + (id === kaart && !eigen ? ' checked' : '') + '> ' + schoon(KAARTEN[id].naam) + '</label>'; }).join('') +
         '<p class="kop">Wat doet de leerling</p>' +
         '<label><input type="radio" name="topo-vorm" value="naam"' + (vorm === 'naam' ? ' checked' : '') + '> de naam schrijven bij elk nummer</label>' +
         '<label><input type="radio" name="topo-vorm" value="nummer"' + (vorm === 'nummer' ? ' checked' : '') + '> het nummer zetten bij elke naam</label>';
     },
     lees: function(el, rang){
       var k = el.querySelector('input[name="topo-kaart"]:checked'), v = el.querySelector('input[name="topo-vorm"]:checked');
+      if (k && k.value === 'eigen' && set) return { kaart: set.kaart, set: set.plekken, setNaam: set.naam, vorm: v ? v.value : 'naam', tot: 3 };
       return { kaart: k ? k.value : 'nlp', vorm: v ? v.value : 'naam', tot: rang <= 1 ? 1 : rang === 2 ? 2 : 3 };
     },
     maak: function(keuze, n){
       var m = KAARTEN[keuze.kaart];
       if (!m) return { fout: 'Deze kaart bestaat niet.' };
+      if (keuze.set){
+        var heeft = {}; keuze.set.forEach(function(s){ heeft[s] = true; });
+        var uitSet = hussel(m.landen.filter(function(l){ return heeft[setSleutel(m, l)]; })).slice(0, n);
+        if (!uitSet.length) return { fout: 'In deze set staan geen plekken van deze kaart.' };
+        return uitSet.map(function(l, i){ return { land: l, nr: i + 1, wat: watVan(m, l) }; });
+      }
       /* eerst wat bij het niveau hoort; zijn dat er te weinig, dan aanvullen met de volgende */
       var lijst = hussel(m.landen.filter(function(l){ return (l.v || 1) <= keuze.tot; })).concat(hussel(m.landen.filter(function(l){ return (l.v || 1) > keuze.tot; }))).slice(0, n);
       return lijst.map(function(l, i){ return { land: l, nr: i + 1, wat: watVan(m, l) }; });
@@ -98,7 +125,7 @@
         antwoorden = door.map(function(it){ return '<li><b>' + it.nr + '</b> ' + schoon(it.land.n) + '</li>'; }).join('');
       }
       return {
-        titel: 'Topografie: ' + m.naam, sub: NIVEAU[w.keuze.tot] + ' · ' + items.length + ' ' + woord,
+        titel: 'Topografie: ' + (w.keuze.setNaam || m.naam), sub: (w.keuze.setNaam ? m.naam : NIVEAU[w.keuze.tot]) + ' · ' + items.length + ' ' + woord,
         klasse: 'topo' + (vorm === 'nummer' ? ' topo-namen' : ''), intro: intro, boven: kaartSvg(m, items), vragen: vragen, antwoorden: antwoorden
       };
     }

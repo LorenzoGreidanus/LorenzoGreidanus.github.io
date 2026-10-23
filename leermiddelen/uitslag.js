@@ -12,7 +12,12 @@ var UITSLAG = (function(){
   function melding(el, tekst, soort){ el.textContent = tekst || ''; el.className = 'melding' + (soort ? ' ' + soort : ''); }
   function komma(x, n){ return x == null ? '–' : Number(x).toFixed(n == null ? 1 : n).replace('.', ','); }
   function pct(w){ return w == null ? 'nakijken' : Math.round(w * 100) + '%'; }
-  var VORMNAAM = { mk: 'Meerkeuze', open: 'Open', koppel: 'Koppelen', volgorde: 'Volgorde', groepen: 'Groepen', gaten: 'Gatentekst', aanwijzen: 'Aanwijzen' };
+  var VORMNAAM = { mk: 'Meerkeuze', open: 'Open', koppel: 'Koppelen', volgorde: 'Volgorde', groepen: 'Groepen', gaten: 'Gatentekst', aanwijzen: 'Aanwijzen',
+    topo: 'Topografie', 'topo-wijs': 'Kaart: aanwijzen', 'topo-typ': 'Kaart: typen', 'topo-kies': 'Kaart: kiezen' };
+  /* topografie telt per manier van vragen: aanwijzen, typen of kiezen */
+  function soortVan(it){ return it.vorm === 'topo' ? 'topo-' + (it.wijze || 'wijs') : it.vorm; }
+  /* bij typen en kiezen staat de plek niet in de vraag; voor de docent wel erbij */
+  function vraagVan(it){ return it.vorm === 'topo' && it.wijze !== 'wijs' ? it.vraag.replace(/ Typ de naam\.$/, '') + ' (' + it.naam + ')' : it.vraag; }
   function afbHtml(it){
     if (!it.afb) return '';
     return '<div class="paneelafb"><div class="beeld"><img alt="" src="' + schoon(EIGEN.afbAdres(code, it.afb)) + '">' +
@@ -32,6 +37,7 @@ var UITSLAG = (function(){
       case 'groepen': return it.groepen.map(function(g){ return g.naam + ': ' + (a.filter(function(x){ return x[1] === g.naam; }).map(function(x){ return x[0]; }).join(', ') || '—'); }).join('; ');
       case 'gaten': { var i = 0; return String(it.tekst).replace(/\[[^\]]+\]/g, function(){ return '[' + (a[i++] || '…') + ']'; }); }
       case 'aanwijzen': return it.plekken.map(function(p, k){ return (k + 1) + ': ' + (a[k] || '—'); }).join('; ');
+      case 'topo': return it.wijze === 'wijs' ? 'wees ' + a + ' aan' : String(a);
     }
     return String(a);
   }
@@ -87,6 +93,7 @@ var UITSLAG = (function(){
         (kl.length > 1 ? '<label class="tip">Klas <select class="veld mini" id="klasKies"><option value="">alle</option>' + kl.map(function(k){ return '<option>' + k + '</option>'; }).join('') + '</select></label>' : '') +
         '<button class="knop stil klein" type="button" id="csv">Downloaden (Excel)</button></span></div>' +
         '<div class="schuif"><table class="tabel kaartjes" id="leerlingTabel"></table></div></div>' +
+      (u.items.some(function(it){ return it.vorm === 'topo'; }) ? '<div class="kaart"><h3>Per plek</h3><p class="tip">Welk deel van de klas elke plek goed had, over alle vragen erover. De lastigste staan bovenaan.</p><div class="perplek" id="perPlek"></div></div>' : '') +
       '<div class="kaart"><h3>Per vraag</h3><p class="tip">p: het deel van de punten dat de klas haalde. rit: of wie het goed doet op de rest, het hier ook goed doet (onder 0,2 is zwak). Vink een vraag uit om hem niet mee te laten tellen.</p>' +
         '<div class="schuif"><table class="tabel kaartjes" id="vraagTabel"></table></div></div>' +
       '<div class="kaart hide" id="nakijkPaneel" tabindex="-1"></div>';
@@ -165,14 +172,37 @@ var UITSLAG = (function(){
     /* per vraag */
     $('vraagTabel').innerHTML = '<thead><tr><th>#</th><th>Vraag</th><th class="getal">Punten</th><th class="getal">p</th><th class="getal">rit</th><th>Telt mee</th><th></th></tr></thead><tbody>' +
       an.map(function(a){
-        return '<tr' + (a.telt ? '' : ' class="uit"') + '><td class="nr">' + (a.i + 1) + '</td><td class="vraagcel"><span class="soortpil">' + VORMNAAM[a.vorm] + '</span> ' + schoon(a.vraag) +
+        return '<tr' + (a.telt ? '' : ' class="uit"') + '><td class="nr">' + (a.i + 1) + '</td><td class="vraagcel"><span class="soortpil">' + VORMNAAM[soortVan(u.items[a.i])] + '</span> ' + schoon(vraagVan(u.items[a.i])) +
           (a.let ? '<small class="letop">' + schoon(a.let) + '</small>' : '') + '</td>' +
           '<td class="getal" data-l="Punten">' + a.punten + '</td><td class="getal" data-l="p">' + (a.p == null ? '–' : komma(a.p, 2)) + '<span class="pbalk"><i style="width:' + Math.round((a.p || 0) * 100) + '%"></i></span></td>' +
           '<td class="getal' + (a.rit != null && a.rit < 0.2 ? ' onv' : '') + '" data-l="rit">' + (a.rit == null ? '–' : komma(a.rit, 2)) + '</td>' +
           '<td data-l="Telt mee"><label class="vink klein"><input type="checkbox" data-telt="' + a.i + '"' + (a.telt ? ' checked' : '') + ' aria-label="Vraag ' + (a.i + 1) + ' telt mee"><span class="alleen-klein">telt mee</span></label></td>' +
           '<td class="actie"><button class="knop ' + (a.open ? '' : 'stil ') + 'klein" type="button" data-vraag="' + a.i + '">' + (a.open ? 'Nakijken (' + a.open + ')' : 'Antwoorden') + '</button></td></tr>';
       }).join('') + '</tbody>';
+    if ($('perPlek')) tekenPerPlek(rijen);
     if (paneel) tekenPaneel();
+  }
+  /* Topografie: per plek hoe vaak het goed ging, over alle vragen over die plek en
+     alle leerlingen die nu in beeld zijn (de klas uit de keuze). */
+  function tekenPerPlek(rijen){
+    var per = {}, volg = [];
+    u.items.forEach(function(it, i){
+      if (it.vorm !== 'topo' || (u.neutraal || []).indexOf(i) >= 0) return;
+      var s = it.kaart + '|' + it.plek;
+      if (!per[s]){ per[s] = { naam: it.naam, goed: 0, n: 0, wijze: {} }; volg.push(s); }
+      rijen.forEach(function(r){
+        var w = NAKIJK.waarde(r.rij, i); if (w == null) return;
+        per[s].goed += w; per[s].n++;
+        var z = per[s].wijze[it.wijze] = per[s].wijze[it.wijze] || [0, 0]; z[0] += w; z[1]++;
+      });
+    });
+    var l = volg.map(function(s){ return per[s]; }).filter(function(p){ return p.n; }).sort(function(a, b){ return a.goed / a.n - b.goed / b.n || a.naam.localeCompare(b.naam, 'nl'); });
+    var WZ = { wijs: 'aanwijzen', typ: 'typen', kies: 'kiezen' };
+    $('perPlek').innerHTML = l.length ? l.map(function(p){
+      var pc = Math.round(p.goed / p.n * 100), wz = Object.keys(p.wijze);
+      return '<div class="' + (pc < 55 ? 'onv' : '') + '"><b>' + schoon(p.naam) + '</b><span class="pbalk"><i style="width:' + pc + '%"></i></span><span class="getal">' + pc + '%</span>' +
+        '<small>' + (wz.length > 1 ? wz.map(function(w){ return WZ[w] + ' ' + Math.round(p.wijze[w][0] / p.wijze[w][1] * 100) + '%'; }).join(' · ') : (WZ[wz[0]] || '') + ', ' + p.n + (p.n === 1 ? ' antwoord' : ' antwoorden')) + '</small></div>';
+    }).join('') : '<p class="tip">Nog niets om te laten zien.</p>';
   }
   function tegel(waarde, uitleg, soort){ return '<div class="' + (soort || '') + '"><b>' + waarde + '</b><span>' + uitleg + '</span></div>'; }
 
@@ -210,7 +240,7 @@ var UITSLAG = (function(){
       h = '<div class="rij" style="justify-content:space-between"><h3>Vraag ' + (i + 1) + ' van ' + u.items.length + '</h3><span class="rij">' +
         '<button class="knop stil klein" type="button" data-stap="-1"' + (i ? '' : ' disabled') + '>Vorige</button><button class="knop stil klein" type="button" data-stap="1"' + (i < u.items.length - 1 ? '' : ' disabled') + '>Volgende</button>' +
         '<button class="knop stil klein" type="button" data-sluit>Sluiten</button></span></div>' +
-        '<p><span class="soortpil">' + VORMNAAM[it.vorm] + '</span> <b>' + schoon(it.vraag) + '</b></p>' + afbHtml(it) +
+        '<p><span class="soortpil">' + VORMNAAM[soortVan(it)] + '</span> <b>' + schoon(vraagVan(it)) + '</b></p>' + afbHtml(it) +
         '<p class="tip">Goed antwoord: ' + schoon(u.juist[i] || (it.vorm === 'open' ? 'geen, je kijkt zelf na' : '')) + (it.uitleg ? ' · ' + schoon(it.uitleg) : '') + '</p>' +
         '<button class="linkknop" type="button" data-alleenopen>' + (paneel.alleenOpen ? 'Laat alle antwoorden zien' : 'Alleen wat nog nagekeken moet worden') + '</button>' +
         '<div class="nklijst">' + (rijen.length ? rijen.map(function(r){
@@ -222,14 +252,14 @@ var UITSLAG = (function(){
       var br = b.rijen.filter(function(x){ return x.sid === r.sid; })[0];
       /* per soort vraag: waar zit het */
       var soort = {};
-      u.items.forEach(function(it, i){ var w = NAKIJK.waarde(r, i); if (w == null || (u.neutraal || []).indexOf(i) >= 0) return; var s = soort[it.vorm] = soort[it.vorm] || [0, 0]; s[0] += w * (it.punten || 1); s[1] += it.punten || 1; });
+      u.items.forEach(function(it, i){ var w = NAKIJK.waarde(r, i); if (w == null || (u.neutraal || []).indexOf(i) >= 0) return; var s = soort[soortVan(it)] = soort[soortVan(it)] || [0, 0]; s[0] += w * (it.punten || 1); s[1] += it.punten || 1; });
       h = '<div class="rij" style="justify-content:space-between"><h3>' + schoon(r.naam) + (r.klas ? ' <small class="tip">' + schoon(r.klas) + '</small>' : '') + '</h3><span class="rij">' +
         '<button class="knop gevaar klein" type="button" data-wis="' + r.sid + '">Inlevering weghalen</button><button class="knop stil klein" type="button" data-sluit>Sluiten</button></span></div>' +
         '<p>Cijfer <b>' + komma(br.cijfer) + '</b>' + (br.open ? ' (voorlopig)' : '') + ' · ' + komma(br.score, br.score % 1 ? 1 : 0) + ' van de ' + b.max + ' punten · ingeleverd ' +
           new Date(r.t).toLocaleString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</p>' +
         '<div class="soortscore">' + Object.keys(soort).map(function(v){ var s = soort[v], p = s[1] ? s[0] / s[1] : 0; return '<div><span>' + VORMNAAM[v] + '</span><span class="pbalk"><i style="width:' + Math.round(p * 100) + '%"></i></span><b>' + Math.round(p * 100) + '%</b></div>'; }).join('') + '</div>' +
         '<div class="nklijst">' + u.items.map(function(it, i){
-          return '<div class="nkrij' + ((u.neutraal || []).indexOf(i) >= 0 ? ' uit' : '') + '"><div><b>' + (i + 1) + '. ' + schoon(it.vraag) + '</b><p>' + schoon(antwoordTekst(it, r.a[i])) + '</p>' +
+          return '<div class="nkrij' + ((u.neutraal || []).indexOf(i) >= 0 ? ' uit' : '') + '"><div><b>' + (i + 1) + '. ' + schoon(vraagVan(it)) + '</b><p>' + schoon(antwoordTekst(it, r.a[i])) + '</p>' +
             (u.juist[i] ? '<small class="tip">Goed: ' + schoon(u.juist[i]) + '</small>' : '') + '</div>' + knoppen(r, i) + '</div>';
         }).join('') + '</div>';
     }
@@ -271,7 +301,7 @@ var UITSLAG = (function(){
     terug = (opts && opts.terug) || terug;
     toon('vergelijkvak');
     $('vergelijkInhoud').innerHTML = '';
-    var stukken = EIGEN.mijn().filter(function(m){ return m.soort !== 'lijst'; });
+    var stukken = EIGEN.mijn().filter(function(m){ return m.soort !== 'lijst' && m.soort !== 'dictee' && m.soort !== 'topo'; });
     if (!stukken.length){ $('vergelijkInhoud').innerHTML = '<p class="leeg">Je hebt nog geen oefeningen of toetsen gemaakt.</p>'; return; }
     melding($('vergelijkMelding'), 'Uitslagen ophalen van ' + stukken.length + (stukken.length === 1 ? ' toets' : ' toetsen') + '…');
     Promise.all(stukken.map(function(m){ return EIGEN.uitslagen(m.code).then(function(j){ return { code: m.code, naam: j.naam, u: j }; }, function(){ return null; }); }))
@@ -344,8 +374,8 @@ var UITSLAG = (function(){
           if ((u2.neutraal || []).indexOf(i) >= 0) return;
           var v = NAKIJK.waarde(r, i); if (v == null) return;
           var p = it.punten || 1;
-          var k = klas[it.vorm] = klas[it.vorm] || [0, 0]; k[0] += v * p; k[1] += p;
-          if (zelf){ var hh = hij[it.vorm] = hij[it.vorm] || [0, 0]; hh[0] += v * p; hh[1] += p; }
+          var sv = soortVan(it), k = klas[sv] = klas[sv] || [0, 0]; k[0] += v * p; k[1] += p;
+          if (zelf){ var hh = hij[sv] = hij[sv] || [0, 0]; hh[0] += v * p; hh[1] += p; }
         });
       });
     });

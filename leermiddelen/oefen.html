@@ -117,6 +117,7 @@
 <script src="klas.js"></script>
 <script src="eigen.js"></script>
 <script src="voorbeeldtoetsen.js"></script>
+<script src="topo-eigen.js"></script>
 <script>
 (function(){
   'use strict';
@@ -148,10 +149,13 @@
     EIGEN.haal(c).then(function(m){
       /* een eigen dictee maak je in het dictee, waar de computer het voorleest */
       if (m && m.soort === 'dictee'){ location.replace('dictee.html?eigen=' + encodeURIComponent(String(c).toUpperCase())); return; }
+      /* een topografieset oefen je in Topografie, op de kaart */
+      if (m && m.soort === 'topo'){ location.replace('topografie.html?eigen=' + encodeURIComponent(String(c).toUpperCase())); return; }
       $('codeKnop').disabled = false; $('codeKnop').removeAttribute('aria-busy'); melding($('codeMelding'), '');
       code = String(c).toUpperCase().replace(/[^A-Z0-9]/g, ''); mat = m;
       history.replaceState(null, '', location.pathname + '?code=' + code);
-      toonBegin();
+      /* vragen op een kaart: eerst de kaarten erbij */
+      if ((m.items || []).some(function(it){ return it.vorm === 'topo'; })) TOPO.laad(toonBegin); else toonBegin();
     }).catch(function(f){
       $('codeKnop').disabled = false; $('codeKnop').removeAttribute('aria-busy');
       scherm('codeScherm'); $('codeIn').value = String(c || '').toUpperCase();
@@ -212,8 +216,15 @@
     begin();
   });
   $('nogEens').addEventListener('click', function(){ if (isToets()){ toonBegin(); return; } begin(); });
+  /* volg[k]: welke vraag van de docent als k-de komt. Bij husselen voor elke leerling anders;
+     wat er ingeleverd wordt, staat weer in de volgorde van de docent. */
+  var volg = [];
+  function inVolgorde(l){ var uit = []; volg.forEach(function(i, k){ uit[i] = l[k]; }); return uit; }
   function begin(){
     oef = mat.soort === 'lijst' ? EIGEN.oefeningUitLijst(mat, 12) : mat;
+    volg = oef.items.map(function(x, i){ return i; });
+    if (mat.soort !== 'lijst' && mat.husselen) volg = schud(volg);
+    oef = Object.assign({}, oef, { items: volg.map(function(i){ return oef.items[i]; }) });
     nr = 0; uitslag = []; antwoorden = [];
     $('speelNaam').textContent = mat.naam;
     scherm('speelScherm'); toonVraag();
@@ -223,20 +234,21 @@
     volgorde: 'Sleep de stappen op volgorde, of gebruik de pijltjes.', groepen: 'Sleep elk woord naar de goede groep, of tik het aan en tik dan op de groep.',
     gaten: 'Sleep de woorden naar de gaten, of tik een woord aan en tik dan op een gat.',
     aanwijzen: 'Sleep elk woord naar het nummer waar het bij hoort, of tik het aan en tik dan op het nummer.' };
+  var TOPOHOE = { wijs: 'Tik de plek aan op de kaart. Inzoomen kan met de plus.', typ: 'Een kleine typefout telt niet.', kies: '' };
   function afbAdres(id){ return EIGEN.afbAdres(code, id); }
   function toonVraag(){
     var it = oef.items[nr];
     $('teller').textContent = 'Vraag ' + (nr + 1) + ' van ' + oef.items.length + (it.punten > 1 ? ' · ' + it.punten + ' punten' : '');
     $('balk').style.width = (nr / oef.items.length * 100) + '%';
     $('vraagtekst').textContent = it.vraag || '';
-    $('hoe').textContent = HOE[it.vorm] || '';
+    $('hoe').textContent = (it.vorm === 'topo' ? TOPOHOE[it.wijze] : HOE[it.vorm]) || '';
     $('terug').className = 'terug hide'; $('terug').innerHTML = '';
     $('veld').innerHTML = '';
     /* een plaatje bij de vraag; bij aanwijzen tekent de vorm het zelf, met de nummers erop */
     $('vraagafb').innerHTML = it.afb && it.vorm !== 'aanwijzen' ? '<img alt="" src="' + schoon(afbAdres(it.afb)) + '">' : '';
     huidig = VORM[it.vorm](it, $('veld'), klaarVoorNakijken, !!oef.verborgen);
     $('nakijk').textContent = toets() ? (nr === oef.items.length - 1 ? 'Inleveren' : 'Volgende') : 'Nakijken';
-    $('nakijk').classList.toggle('hide', it.vorm === 'mk' && !toets());
+    $('nakijk').classList.toggle('hide', (it.vorm === 'mk' || (it.vorm === 'topo' && it.wijze === 'kies')) && !toets());
     $('nakijk').disabled = !huidig.klaar();
     $('verder').classList.add('hide');
     $('vraagtekst').focus({ preventScroll: true });
@@ -256,7 +268,7 @@
     $('terug').className = 'terug ' + (u.punt === null ? '' : goed ? 'goed' : 'fout');
     $('terug').innerHTML = u.punt === null ? '<b>Je docent kijkt deze vraag na.</b>'
       : '<b>' + (goed && window.NAGEKEKEN ? NAGEKEKEN.svg({ maat: 24, teken: true }) + ' ' : '') + (goed ? 'Goed!' : u.punt > 0 ? 'Deels goed: ' + Math.round(u.punt * 100) + '%' : 'Niet goed') + '</b>' +
-      (!goed && u.juist ? '<span>Het goede antwoord: ' + schoon(u.juist) + '</span>' : '') + (it.uitleg ? '<span style="display:block;margin-top:4px">' + schoon(it.uitleg) + '</span>' : '');
+      (!goed && u.juist ? '<span>Het goede antwoord: ' + schoon(u.juist) + '</span>' : '') + (goed && u.bijna ? '<span>Goed gerekend. Het schrijf je als ' + schoon(u.juist) + '.</span>' : '') + (it.uitleg ? '<span style="display:block;margin-top:4px">' + schoon(it.uitleg) + '</span>' : '');
     $('nakijk').classList.add('hide');
     $('verder').textContent = nr === oef.items.length - 1 ? 'Naar de uitslag' : 'Volgende';
     $('verder').classList.remove('hide'); $('verder').focus();
@@ -295,7 +307,7 @@
       if (klas()) KLAS.meld({ spel: 'eigen', ronde: sc.heel, punten: sc.pct, vak: mat.soort === 'lijst' ? 'eigen' : 'm:' + code }, 'eindUit');
       return;
     }
-    wacht = { sid: KLAS.sid(), naam: w.naam, klas: w.klas, a: antwoorden };
+    wacht = { sid: KLAS.sid(), naam: w.naam, klas: w.klas, a: inVolgorde(antwoorden) };
     if (!isToets()) toonEind(uitslag);
     else { $('score').textContent = ''; $('eindTekst').textContent = ''; $('overzicht').innerHTML = ''; $('eindKop').textContent = 'inleveren'; $('nogEens').classList.add('hide'); scherm('eindScherm'); }
     lever();
@@ -307,7 +319,7 @@
     EIGEN.inlever(code, wacht).then(function(r){
       melding($('inleverMelding'), 'Ingeleverd. Je docent ziet je antwoorden.', 'goed');
       if (isToets()){
-        var l = oef.items.map(function(it, i){ return { vraag: it.vraag, punt: r.p[i], punten: r.punten[i] || 1, juist: r.juist ? r.juist[i] : '', uitleg: r.uitleg ? r.uitleg[i] : '' }; });
+        var l = oef.items.map(function(it, k){ var i = volg[k]; return { vraag: it.vraag, punt: r.p[i], punten: r.punten[i] || 1, juist: r.juist ? r.juist[i] : '', uitleg: r.uitleg ? r.uitleg[i] : '' }; });
         var sc = toonEind(l, !!r.juist);
         var al = ingeleverd(); if (al.indexOf(code) < 0){ al.push(code); ls('lg-ingeleverd', JSON.stringify(al.slice(-100))); }
         if (klas()) KLAS.meld({ spel: 'eigen', ronde: sc.heel, punten: sc.pct, vak: 'm:' + code }, 'eindUit');
@@ -548,6 +560,80 @@
           return { punt: n / it.stappen.length, juist: it.stappen.join(' → ') };
         } };
     }
+  };
+  /* Topografie: een plek op de kaart aanwijzen, de naam typen, of kiezen uit
+     vier namen (topo-eigen.js tekent de kaart). Bij een toets weet de pagina
+     de naam van een gekleurde plek niet: alleen waar hij ligt. Aanwijzen zegt
+     niet wat je aantikte, anders zoek je het op door rond te tikken. */
+  VORM.topo = function(it, veld, veranderd, verborgen){
+    var k = it.kaart, wijze = it.wijze || 'wijs', af = false, gekozen = null;
+    veld.innerHTML = '<div class="tk-vraag"><div class="tk-plaats"></div><div class="tk-onder"></div></div>';
+    var onder = veld.querySelector('.tk-onder');
+    var doel = wijze === 'wijs' ? (verborgen ? null : TOPO.plek(k, it.plek)) : (verborgen ? TOPO.dichtsbij(k, it.x, it.y) : (TOPO.plek(k, it.plek) || TOPO.dichtsbij(k, it.x, it.y)));
+    var kies = null;
+    var kaart = TOPO.kaart(veld.querySelector('.tk-plaats'), k, {
+      label: wijze === 'wijs' ? 'Kaart. Tik de plek aan, of kies met de pijltjes en Enter.' : 'Kaart met de gevraagde plek in oranje.',
+      toetsenbord: wijze === 'wijs',
+      tik: wijze === 'wijs' ? function(l){ if (!af && kies) kies(l); } : null
+    });
+    if (!kaart) return { klaar: function(){ return false; }, antwoord: function(){ return ''; }, nakijken: function(){ return { punt: 0, juist: it.naam || '' }; } };
+    if (doel && wijze !== 'wijs') kaart.zet(doel, 'op');
+    if (wijze === 'wijs'){
+      onder.innerHTML = '<p class="tip tk-stand" aria-live="polite">Nog niets aangewezen.</p>';
+      var stand = onder.querySelector('.tk-stand');
+      kies = function(l){
+        if (!l){ stand.textContent = 'Daar ligt niets om aan te wijzen. Tik op de plek zelf.'; return; }
+        if (gekozen) kaart.zet(gekozen, '');
+        gekozen = l; kaart.zet(l, 'gekozen');
+        stand.textContent = 'Aangewezen. Klopt het niet, tik dan een andere plek aan.';
+        veranderd();
+      };
+      return { klaar: function(){ return !!gekozen; }, antwoord: function(){ return gekozen ? TOPO.sleutel(k, gekozen) : ''; },
+        nakijken: function(toon){
+          var ok = !!gekozen && TOPO.sleutel(k, gekozen) === it.plek;
+          if (toon){
+            af = true;
+            if (gekozen && !ok) kaart.zet(gekozen, 'fout');
+            if (doel){ kaart.zet(doel, 'goed'); kaart.naar(doel); }
+            stand.textContent = ok ? 'Goed aangewezen.' : (gekozen ? 'Jij wees ' + TOPO.naamMet(k, gekozen) + ' aan. ' : '') + 'In het groen: ' + it.naam + '.';
+          }
+          return { punt: ok ? 1 : 0, juist: it.naam };
+        } };
+    }
+    if (wijze === 'kies'){
+      var knoppen = [];
+      var box = document.createElement('div'); box.className = 'keuzes tk-keuzes'; onder.appendChild(box);
+      (verborgen ? it.opties : schud([it.naam].concat(it.fout || []))).forEach(function(o){
+        var b = document.createElement('button'); b.type = 'button'; b.className = 'keuze'; b.textContent = o; b.setAttribute('aria-pressed', 'false');
+        b.addEventListener('click', function(){
+          if (b.disabled) return;
+          gekozen = o; knoppen.forEach(function(x){ x.classList.toggle('gekozen', x === b); x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+          veranderd();
+          if (!toets()) nakijken();
+        });
+        knoppen.push(b); box.appendChild(b);
+      });
+      return { klaar: function(){ return gekozen != null; }, antwoord: function(){ return gekozen; },
+        nakijken: function(toon){
+          var ok = gekozen === it.naam;
+          if (toon){
+            knoppen.forEach(function(x){ x.disabled = true; x.classList.remove('gekozen'); if (x.textContent === it.naam) x.classList.add('goed'); else if (x.textContent === gekozen) x.classList.add('fout'); });
+            if (doel) kaart.zet(doel, ok ? 'goed' : 'fout');
+          }
+          return { punt: ok ? 1 : 0, juist: it.naam };
+        } };
+    }
+    onder.innerHTML = '<form class="open tk-typ" autocomplete="off"><label class="sronly" for="topoIn">De naam</label><input class="veld" id="topoIn" maxlength="80" spellcheck="false" autocapitalize="words" placeholder="Typ de naam"></form>';
+    var inp = onder.querySelector('input');
+    inp.addEventListener('input', veranderd);
+    onder.querySelector('form').addEventListener('submit', function(e){ e.preventDefault(); if (inp.value.trim()) $('nakijk').click(); });
+    setTimeout(function(){ inp.focus({ preventScroll: true }); }, 0);
+    return { klaar: function(){ return !!inp.value.trim(); }, antwoord: function(){ return inp.value.trim(); },
+      nakijken: function(toon){
+        var oordeel = TOPO.beoordeel(inp.value, it.namen && it.namen.length ? it.namen : [it.naam]), ok = oordeel === 'goed' || oordeel === 'bijna';
+        if (toon){ inp.disabled = true; inp.style.borderColor = ok ? 'var(--goed)' : 'var(--fout)'; if (doel) kaart.zet(doel, ok ? 'goed' : 'fout'); }
+        return { punt: ok ? 1 : 0, juist: it.naam, bijna: oordeel === 'bijna' };
+      } };
   };
   /* plekken die geen knop zijn: Enter en spatie werken als tikken */
   function toetsbaar(plekken){

@@ -1,7 +1,10 @@
-/* Eigen materiaal van docenten: woordenlijsten, oefeningen (ook als toets) en dictees.
+/* Eigen materiaal van docenten: woordenlijsten, oefeningen (ook als toets), dictees
+   en topografiesets (welke plekken op een kaart leerlingen moeten kennen).
    Een docent maakt het in leermiddelen/maken.html; leerlingen openen het met
    een code van zes tekens in oefen.html, een woordenlijst ook in de spellen, en
-   een dictee in dictee.html?eigen=CODE (de uitslag gaat naar de klas, niet hierheen).
+   een dictee in dictee.html?eigen=CODE (de uitslag gaat naar de klas, niet hierheen),
+   een topografieset in topografie.html?eigen=CODE. Een topotoets is een gewone
+   oefening met vragen van de vorm topo.
 
    Elk stuk staat onder een eigen opslagsleutel, zodat er geen grens is voor
    alles samen. Wie het maakte krijgt een sleutel; alleen met die sleutel kan
@@ -38,8 +41,15 @@ const BEWAAR = 400 * DAG;                          /* ruim een jaar na het laats
 const MAX_JSON = 80000;                           /* een stuk hoogstens zoveel tekens */
 const MAX_ITEMS = 200;
 const MAX_UITSLAGEN = 400;                        /* inleveringen per stuk */
-const SOORTEN = { lijst: 1, oefening: 1, dictee: 1 };
-const VORMEN = { mk: 1, open: 1, koppel: 1, volgorde: 1, groepen: 1, gaten: 1, aanwijzen: 1 };
+const SOORTEN = { lijst: 1, oefening: 1, dictee: 1, topo: 1 };
+const VORMEN = { mk: 1, open: 1, koppel: 1, volgorde: 1, groepen: 1, gaten: 1, aanwijzen: 1, topo: 1 };
+/* De kaarten van topografie (leermiddelen/topo-kaarten.js). Een topografieset is
+   { kaart, plekken: [namen] }: welke plekken leerlingen moeten kennen. Op de gemengde
+   kaart staat bij een naam wat het is, "Groningen (stad)", want daar is Groningen
+   zowel provincie als stad. */
+const TOPO_KAARTEN = { nlp: 1, nlw: 1, nlh: 1, nlr: 1, nla: 1, eu: 1, euh: 1, wl: 1, wlh: 1 };
+const TOPO_WIJZE = { wijs: 1, typ: 1, kies: 1 };
+const TOPO_MAX = 250;
 const MAX_AFB = 12, AFB_BYTES = 400 * 1024, STUK = 96000;
 const AFB_ID = /^[A-Z0-9]{8}$/;
 
@@ -55,6 +65,30 @@ function schud(a){ a = a.slice(); for (let i = a.length - 1; i > 0; i--){ const 
 /* hoofdletters, spaties en een punt aan het eind tellen niet mee */
 function gelijk(a, b){ const n = x => String(x || "").toLowerCase().replace(/\s+/g, " ").replace(/[.!?,;:]+$/, "").trim(); return n(a) === n(b); }
 function gatenVan(tekst){ return (String(tekst || "").match(/\[([^\]]+)\]/g) || []).map(x => x.slice(1, -1).trim()); }
+/* Een getypte naam bij topografie, net zo ruim als in het spel (topografie.html):
+   hoofdletters, accenten, streepjes, spaties en een lidwoord tellen niet, en een
+   typefout mag vanaf zes letters, twee vanaf twaalf. */
+function topoPlat(s){
+  return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/^\s*(de|het|'t)\s+/, "").replace(/[^a-z0-9]/g, "");
+}
+function topoAfstand(a, b){
+  if (a === b) return 0;
+  if (Math.abs(a.length - b.length) > 2) return 9;
+  let vorige = [];
+  for (let j = 0; j <= b.length; j++) vorige[j] = j;
+  for (let i = 1; i <= a.length; i++){
+    const nu = [i];
+    for (let j = 1; j <= b.length; j++) nu[j] = Math.min(vorige[j] + 1, nu[j - 1] + 1, vorige[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    vorige = nu;
+  }
+  return vorige[b.length];
+}
+function topoGoed(gegeven, namen){
+  const g = topoPlat(gegeven);
+  if (!g) return false;
+  return namen.some(n => { const p = topoPlat(n); return p && (p === g || topoAfstand(g, p) <= (p.length >= 12 ? 2 : p.length >= 6 ? 1 : 0)); });
+}
 
 /* Een eigen dictee: twee tot dertig zinnen gewone tekst, die de computer aan
    de leerling voorleest. Er mag geen opmaak in, en niets wat de klas niet hoort
@@ -108,8 +142,13 @@ function netjes(inz){
   const soort = SOORTEN[inz.soort] ? inz.soort : null;
   if (!soort) return null;
   if (soort === "dictee") return dictee(inz);
-  const uit = { soort, naam: t(inz.naam, 80) || (soort === "lijst" ? "Woordenlijst" : "Oefening"), vak: t(inz.vak, 12) };
-  if (soort === "lijst"){
+  const uit = { soort, naam: t(inz.naam, 80) || (soort === "lijst" ? "Woordenlijst" : soort === "topo" ? "Topografie" : "Oefening"), vak: t(inz.vak, 12) };
+  if (soort === "topo"){
+    if (!TOPO_KAARTEN[inz.kaart]) return { fout: "kies een kaart" };
+    uit.kaart = inz.kaart;
+    uit.plekken = [...new Set(lijstVan(inz.plekken, TOPO_MAX, 80))];
+    if (uit.plekken.length < 2) return { fout: "kies minstens twee plekken op de kaart" };
+  } else if (soort === "lijst"){
     uit.kopA = t(inz.kopA, 30); uit.kopB = t(inz.kopB, 30);
     uit.paren = (Array.isArray(inz.paren) ? inz.paren : []).map(p => ({ a: t(p && p.a, 120), b: t(p && p.b, 120) }))
       .filter(p => p.a && p.b).slice(0, MAX_ITEMS);
@@ -119,6 +158,8 @@ function netjes(inz){
     /* een toets: zien leerlingen na het inleveren de goede antwoorden? Standaard niet,
        want dezelfde toets gaat vaak later nog naar een andere klas */
     if (uit.modus === "toets") uit.terugzien = inz.terugzien === true;
+    /* elke leerling de vragen in een eigen volgorde; de antwoorden komen in de vaste volgorde terug */
+    if (inz.husselen === true) uit.husselen = true;
     uit.items = (Array.isArray(inz.items) ? inz.items : []).map(item).filter(Boolean).slice(0, MAX_ITEMS);
     if (!uit.items.length) return { fout: "een oefening heeft minstens een vraag nodig" };
   }
@@ -164,6 +205,19 @@ function item(x){
       const plekken = (Array.isArray(x.plekken) ? x.plekken : []).map(p => ({ x: proc(p && p.x), y: proc(p && p.y), naam: t(p && p.naam, 80) })).filter(p => p.naam).slice(0, 12);
       return plekken.length >= 2 ? met({ vorm: "aanwijzen", vraag: v, plekken, extra: lijstVan(x.extra, 6, 80) }) : null;
     }
+    case "topo": {
+      /* een plek op een kaart van topografie: aanwijzen, de naam typen of kiezen uit vier.
+         x en y zijn het middelpunt op de kaart: daarmee kleurt de leerling de goede plek
+         zonder dat de naam meegaat */
+      if (!TOPO_KAARTEN[x.kaart]) return null;
+      const plek = t(x.plek, 80), naam = t(x.naam, 80) || plek;
+      const wijze = TOPO_WIJZE[x.wijze] ? x.wijze : "wijs";
+      const namen = [...new Set([naam].concat(lijstVan(x.namen, 8, 80)))];
+      const fout = lijstVan(x.fout, 5, 80).filter(f => f.toLowerCase() !== naam.toLowerCase());
+      const xy = n => Math.round(Math.max(-100, Math.min(3000, Number(n) || 0)) * 10) / 10;
+      if (!plek || (wijze === "kies" && !fout.length)) return null;
+      return met({ vorm: "topo", vraag: v, kaart: x.kaart, plek, naam, namen, wat: t(x.wat, 20), wijze, x: xy(x.x), y: xy(x.y), fout: wijze === "kies" ? fout : [] });
+    }
   }
   return null;
 }
@@ -181,6 +235,12 @@ function verborgen(it){
     case "groepen": b.groepen = it.groepen.map(g => g.naam); b.dingen = schud([].concat(...it.groepen.map(g => g.dingen))); break;
     case "gaten": b.delen = String(it.tekst).split(/\[[^\]]+\]/); b.woorden = schud(gatenVan(it.tekst).concat(it.extra || [])); break;
     case "aanwijzen": b.plekken = it.plekken.map(p => ({ x: p.x, y: p.y })); b.woorden = schud(it.plekken.map(p => p.naam).concat(it.extra || [])); break;
+    case "topo":
+      /* aanwijzen: de naam staat al in de vraag. Typen of kiezen: alleen waar de plek ligt */
+      b.kaart = it.kaart; b.wijze = it.wijze; b.wat = it.wat || "";
+      if (it.wijze !== "wijs"){ b.x = it.x; b.y = it.y; }
+      if (it.wijze === "kies") b.opties = schud([it.naam].concat(it.fout || []));
+      break;
   }
   return b;
 }
@@ -195,6 +255,7 @@ function antwoordVan(it, a){
     case "groepen": return (Array.isArray(a) ? a : []).slice(0, 40).map(p => [t(p && p[0], 80), t(p && p[1], 40)]);
     case "gaten": return lijst(a, 30, 40);
     case "aanwijzen": return lijst(a, 12, 80);
+    case "topo": return t(a, 80);
   }
   return "";
 }
@@ -213,6 +274,10 @@ function scoor(it, a){
     }
     case "gaten": { const g = gatenVan(it.tekst); const n = g.filter((w, i) => gelijk((a || [])[i], w)).length; return n / g.length; }
     case "aanwijzen": { const n = it.plekken.filter((p, i) => gelijk((a || [])[i], p.naam)).length; return n / it.plekken.length; }
+    case "topo":
+      if (it.wijze === "typ") return topoGoed(a, it.namen && it.namen.length ? it.namen : [it.naam]) ? 1 : 0;
+      if (it.wijze === "kies") return a === it.naam ? 1 : 0;
+      return a && a === it.plek ? 1 : 0;
   }
   return 0;
 }
@@ -226,6 +291,7 @@ function juistVan(it){
     case "groepen": return it.groepen.map(g => g.naam + ": " + g.dingen.join(", ")).join("; ");
     case "gaten": return String(it.tekst).replace(/\[([^\]]+)\]/g, "$1");
     case "aanwijzen": return it.plekken.map((p, i) => (i + 1) + ": " + p.naam).join("; ");
+    case "topo": return it.naam;
   }
   return "";
 }
@@ -373,8 +439,9 @@ export class Materiaal extends DurableObject {
     const uit = { code, soort: m.soort, naam: m.naam, vak: m.vak };
     if (m.soort === "lijst") Object.assign(uit, { kopA: m.kopA, kopB: m.kopB, paren: m.paren });
     else if (m.soort === "dictee") Object.assign(uit, { niveau: m.niveau || "", zinnen: m.zinnen, uitleg: m.uitleg || "" }, Array.isArray(m.zu) ? { zu: m.zu } : {});
-    else if (m.modus === "toets") Object.assign(uit, { modus: "toets", verborgen: true, items: m.items.map(verborgen) });
-    else Object.assign(uit, { modus: m.modus, items: m.items });
+    else if (m.soort === "topo") Object.assign(uit, { kaart: m.kaart, plekken: m.plekken });
+    else if (m.modus === "toets") Object.assign(uit, { modus: "toets", verborgen: true, husselen: !!m.husselen, items: m.items.map(verborgen) });
+    else Object.assign(uit, { modus: m.modus, husselen: !!m.husselen, items: m.items });
     return json(uit);
   }
   async volledig(code, inz){
@@ -411,6 +478,7 @@ export class Materiaal extends DurableObject {
   async uitslagen(code, inz){
     const { m, fout } = await this.vanMij(code, inz);
     if (fout) return fout;
+    if (!Array.isArray(m.items)) return json({ fout: "hier komen geen uitslagen binnen" }, 400);
     const lijst = await this.ctx.storage.list({ prefix: "r:" + code + ":" });
     const rijen = [...lijst.values()].map(r => ({ sid: r.sid, naam: r.naam, klas: r.klas, t: r.t, pogingen: r.pogingen || 1, a: r.a, h: r.h || {},
       p: m.items.map((it, i) => scoor(it, r.a[i])) })).sort((x, y) => x.naam.localeCompare(y.naam, "nl"));
@@ -420,6 +488,7 @@ export class Materiaal extends DurableObject {
   async nakijk(code, inz){
     const { m, fout } = await this.vanMij(code, inz);
     if (fout) return fout;
+    if (!Array.isArray(m.items)) return json({ fout: "hier valt niets na te kijken" }, 400);
     const sid = String(inz.sid || "").replace(/[^a-z0-9]/g, "").slice(0, 32);
     const i = Math.floor(Number(inz.i));
     if (!(i >= 0 && i < m.items.length)) return json({ fout: "geen geldige vraag" }, 400);

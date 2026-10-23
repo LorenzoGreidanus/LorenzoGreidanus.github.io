@@ -42,11 +42,11 @@ var NAKIJK = (function(){
     }
     return rond(Math.max(1, Math.min(10, c)), 1);
   }
-  /* de raadkans in punten: bij meerkeuze een op het aantal opties, de rest raad je niet */
+  /* de raadkans in punten: bij meerkeuze (ook kiezen bij topografie) een op het aantal opties, de rest raad je niet */
   function raadkans(u){
     var g = 0;
     u.items.forEach(function(it, i){
-      if (!telt(u, i) || it.vorm !== 'mk') return;
+      if (!telt(u, i) || !(it.vorm === 'mk' || (it.vorm === 'topo' && it.wijze === 'kies'))) return;
       var n = it.opties ? it.opties.length : 1 + (it.fout || []).length;
       g += punten(it) / Math.max(2, n);
     });

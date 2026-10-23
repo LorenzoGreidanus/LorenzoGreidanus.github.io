@@ -287,17 +287,23 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
    staat er een fel wit vlak midden in een donker scherm. Groen, rood en
    amber blijven, die lezen op allebei. */
 :root{--ring:#14224C;--grens2:#a89f90;--kaartrand:rgba(20,34,76,.10);--knoprand:rgba(20,34,76,.28);
-  --ja-tekst:#1f5c3c;--nee-tekst:#9a3520}
+  --ja-tekst:#1f5c3c;--nee-tekst:#9a3520;--buiten-land:#f3f0eb;--buiten-grens:#dcd6cc}
 :root[data-theme="dark"]{--zee:#1c2b5a;--land:#3a4670;--grens:#56628c;--grens2:#6a7598;--ring:#FBF6F1;
-  --kaartrand:rgba(243,239,233,.14);--knoprand:rgba(243,239,233,.4);--ja-tekst:#a8e6c1;--nee-tekst:#ffb8a8}
+  --kaartrand:rgba(243,239,233,.14);--knoprand:rgba(243,239,233,.4);--ja-tekst:#a8e6c1;--nee-tekst:#ffb8a8;--buiten-land:#2a3461;--buiten-grens:#3f4a76}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--zee:#1c2b5a;--land:#3a4670;--grens:#56628c;--grens2:#6a7598;--ring:#FBF6F1;
-  --kaartrand:rgba(243,239,233,.14);--knoprand:rgba(243,239,233,.4);--ja-tekst:#a8e6c1;--nee-tekst:#ffb8a8}}
+  --kaartrand:rgba(243,239,233,.14);--knoprand:rgba(243,239,233,.4);--ja-tekst:#a8e6c1;--nee-tekst:#ffb8a8;--buiten-land:#2a3461;--buiten-grens:#3f4a76}}
 /* basis.css geeft .kaartvak in donker een kaartvlak; hier is dat een navy
    rechthoek achter de kaart. De kaart heeft zelf al een vlak. */
 :root[data-theme="dark"] body .kaartvak{background:transparent}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) body .kaartvak{background:transparent}}
 .btn.ghost{background:var(--kaart,#fff)}
 .anders{margin-left:6px}
+/* Een set van de docent (?eigen=CODE): wat niet gevraagd wordt, staat lichter op
+   de kaart. Via de variabelen, zodat oplichten, goed en fout gewoon blijven werken. */
+.buiten{--land:var(--buiten-land);--grens:var(--buiten-grens)}
+.stad.buiten,.rivier.buiten{opacity:.45}
+.stad.buiten.op,.stad.buiten.naast,.rivier.buiten.op,.rivier.buiten.naast{opacity:1}
+.eigenuitleg{margin:8px auto 0;font-size:.9rem;color:var(--muted);max-width:60ch}
 /* De pil in de kop noemt de kaart; op een telefoon wordt hij afgekapt. */
 #pillNiv{max-width:44vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
@@ -327,7 +333,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
   <p class="hand" style="font-size:1.6rem">hoe heet dit land</p>
   <h1>Topografie</h1>
   <p class="lead">Er licht iets op de kaart op en jij typt hoe het heet. Of andersom: je krijgt een naam en wijst de plek aan.</p>
-  <p class="uitleg">Kies eerst een gebied, dan een kaart. Bij typen mogen spelfouten: als je er bijna bent, telt het gewoon. Wat je goed hebt, blijft groen op de kaart staan. Met de knoppen + en &minus; bij de kaart zoom je in, en met twee vingers ook.</p>
+  <p class="uitleg">Kies eerst een gebied, dan een kaart. Bij typen mogen spelfouten: als je er bijna bent, telt het gewoon. Wat je goed hebt, blijft groen op de kaart staan. Met de knoppen + en &minus; bij de kaart zoom je in, en met twee vingers ook. Kreeg je een link of code van je docent, dan oefen je precies de plekken die je docent koos.</p>
 
   <p class="eyebrow" id="gebiedKop" style="margin-top:32px">welk gebied</p>
   <div class="kies kaarten" id="gebieden"></div>
@@ -472,6 +478,13 @@ var DELEN = [
 
   var SLEUTEL = 'topo-klassement-v1';
   var kaartId = null, niveau = null, modus = null, deel = DELEN[0];
+  /* Een set van de docent (maken.html, ?eigen=CODE): alleen deze plekken worden
+     gevraagd. heeft[naam] is waar; op de gemengde kaart met wat het is erbij,
+     "Groningen (stad)", want Groningen is daar ook een provincie. */
+  var eigenSet = null, aantalMax = 0;
+  function setSleutel(k, l){ return KAARTEN[k].soort === 'gemengd' ? l.n + ' (' + (l.w || KAARTEN[k].wat) + ')' : l.n; }
+  function inSet(k, l){ return !eigenSet || k !== eigenSet.kaart || !!eigenSet.heeft[setSleutel(k, l)]; }
+  function buiten(l){ return eigenSet && kaartId === eigenSet.kaart && !inSet(kaartId, l) ? ' buiten' : ''; }
   var rij = [], nr = 0, goed = 0, totaal = 0, fouten = [], punten = 0, reeks = 0, besteReeks = 0, od = {};
   var tijd = 0, loopt = false, laatsteTik = 0, bezig = false, opgeslagen = false;
   var hintLetters = 0, pogingen = 0, huidig = null, wachter = null;
@@ -593,7 +606,7 @@ var DELEN = [
   }
 
   /* ---------- delen van de wereld ---------- */
-  function heeftDelen(k){ return !!k && gebiedVan(k) === 'Wereld' && !!KAARTEN.wl; }
+  function heeftDelen(k){ return !eigenSet && !!k && gebiedVan(k) === 'Wereld' && !!KAARTEN.wl; }
   var landVanStad = {};
   function deelLand(k, l){
     if (KAARTEN[k].soort !== 'punt') return l.n;
@@ -603,10 +616,10 @@ var DELEN = [
     return (landVanStad[l.n] = beste);
   }
   function inDeel(k, l){ return !deel.landen || !heeftDelen(k) || deel.landen.indexOf(deelLand(k, l)) >= 0; }
-  function landenNu(k){ return KAARTEN[k].landen.filter(function(l){ return inDeel(k, l); }); }
+  function landenNu(k){ return KAARTEN[k].landen.filter(function(l){ return inDeel(k, l) && inSet(k, l); }); }
   function aantalBij(k, tot){ return landenNu(k).filter(function(l){ return l.v <= tot; }).length; }
   /* Maakt de niveaukeuze verschil op deze kaart? Zo nee, dan tonen we hem niet. */
-  function niveauZinvol(k){ return aantalBij(k, 1) !== aantalBij(k, 3); }
+  function niveauZinvol(k){ return !eigenSet && aantalBij(k, 1) !== aantalBij(k, 3); }
 
   GEBIEDEN.forEach(function(g){
     var kaarten = kaartenVan(g);
@@ -681,6 +694,7 @@ var DELEN = [
   /* De pil in de kop zegt welke kaart het is, niet alleen "Uitgebreid". */
   function pilTekst(){
     if (!kaartId) return '';
+    if (eigenSet) return eigenSet.naam;
     var t = KAARTEN[kaartId].naam;
     if (deel.landen && heeftDelen(kaartId)) t = deel.naam + ', ' + woordVan(kaartId);
     if (niveau && niveauZinvol(kaartId)) t += ', ' + niveau.naam.toLowerCase();
@@ -769,11 +783,11 @@ var DELEN = [
       m.landen.forEach(function(l, i){
         if (soortVan(l) !== soortNu) return;
         if (soortNu === 'vlak'){
-          if (l.d) svg += '<path class="doel" id="l' + i + '" d="' + l.d + '"/>';
+          if (l.d) svg += '<path class="doel' + buiten(l) + '" id="l' + i + '" d="' + l.d + '"/>';
         } else if (soortNu === 'lijn'){
-          if (l.d) svg += '<path class="rivier" id="l' + i + '" d="' + l.d + '"/>';
+          if (l.d) svg += '<path class="rivier' + buiten(l) + '" id="l' + i + '" d="' + l.d + '"/>';
         } else {
-          svg += '<circle class="stad" id="l' + i + '" cx="' + l.x + '" cy="' + l.y + '" r="5"/>';
+          svg += '<circle class="stad' + buiten(l) + '" id="l' + i + '" cx="' + l.x + '" cy="' + l.y + '" r="5"/>';
         }
       });
     });
@@ -811,6 +825,9 @@ var DELEN = [
         var n = el.getAttribute('data-n') || (el.id && m.landen[+el.id.slice(1)] ? (soort() === 'punt' ? deelLand(kaartId, m.landen[+el.id.slice(1)]) : m.landen[+el.id.slice(1)].n) : '');
         return namen[n];
       });
+    } else if (eigenSet && kaartId === eigenSet.kaart){
+      /* een set: alleen het stuk waar de plekken liggen */
+      sel = Array.prototype.filter.call(elSvg.querySelectorAll('.doel,.rivier,.stad'), function(el){ var l = m.landen[+el.id.slice(1)]; return l && inSet(kaartId, l); });
     } else if (m.achter){
       sel = elSvg.querySelectorAll('.doel,.basis,.rivier,.stad');
     } else {
@@ -822,6 +839,12 @@ var DELEN = [
         x1 = Math.min(x1, b.x); y1 = Math.min(y1, b.y); x2 = Math.max(x2, b.x + b.width); y2 = Math.max(y2, b.y + b.height); } catch (e){}
     });
     if (!isFinite(x1)) return { x:0, y:0, w:m.breed, h:m.hoog };
+    /* een set van een paar steden dicht bij elkaar: niet zo ver inzoomen dat je niet meer ziet waar het is */
+    if (eigenSet){
+      var mw = m.breed * .3, mh = m.hoog * .3, cx = (x1 + x2) / 2, cy = (y1 + y2) / 2;
+      if (x2 - x1 < mw){ x1 = cx - mw / 2; x2 = cx + mw / 2; }
+      if (y2 - y1 < mh){ y1 = cy - mh / 2; y2 = cy + mh / 2; }
+    }
     var rand = Math.max(x2 - x1, y2 - y1) * .04 + 6;
     return { x:x1 - rand, y:y1 - rand, w:(x2 - x1) + 2 * rand, h:(y2 - y1) + 2 * rand };
   }
@@ -995,7 +1018,7 @@ var DELEN = [
   var gehad = {};
   function grondKlasse(l){
     var so = soortVan(l);
-    return so === 'vlak' ? 'doel' : (so === 'lijn' ? 'rivier' : 'stad');
+    return (so === 'vlak' ? 'doel' : (so === 'lijn' ? 'rivier' : 'stad')) + buiten(l);
   }
   function rustKlasse(i){
     var g = grondKlasse(KAARTEN[kaartId].landen[i]);
@@ -1146,6 +1169,8 @@ var DELEN = [
     goed = 0; totaal = 0; fouten = []; punten = 0; reeks = 0; besteReeks = 0; od = {};
     nr = 0; bezig = false; opgeslagen = false;
     rij = husselen(selectie());
+    /* een opdracht met een ronde van zoveel: niet meer dan dat */
+    if (aantalMax && !isRace()) rij = rij.slice(0, aantalMax);
     tijd = RACE.start;
     elStart.classList.add('hide'); elEinde.classList.add('hide'); elSpel.classList.remove('hide');
     elStop.classList.remove('hide'); stopTerug();
@@ -1365,7 +1390,7 @@ var DELEN = [
     scrollTo({top:0, behavior:'auto'});
   }
 
-  function deelSleutel(){ return deel.landen && heeftDelen(kaartId) ? '-' + deel.id : ''; }
+  function deelSleutel(){ return eigenSet ? '-eigen-' + eigenSet.code : deel.landen && heeftDelen(kaartId) ? '-' + deel.id : ''; }
 
   function toonEinde(){
     loopt = false; bezig = false;
@@ -1482,7 +1507,7 @@ var DELEN = [
       if (!gekozen.length) return;
       var p = document.createElement('p');
       p.className = 'eyebrow'; p.style.marginTop = '32px';
-      var vanLo = /[?&]van=lo\b/.test(location.search);
+      var vanLo = /[?&]van=lo\b/.test(location.search) && !eigenSet;
       p.textContent = (vanLo ? 'Gekozen in de leeromgeving: ' : 'Gekozen door je docent: ') + gekozen.join(' \u00b7 ') + ' ';
       var voor = document.getElementById('gebiedKop');
       if (!vanLo){ voor.parentNode.insertBefore(p, voor); return; }
@@ -1492,6 +1517,50 @@ var DELEN = [
       p.appendChild(b);
       voor.parentNode.insertBefore(p, voor);
     }
+    /* ?aantal=N: een opdracht uit het klasoverzicht met een ronde van zoveel */
+    var an = parseInt(param('aantal') || '', 10);
+    if (an > 0) aantalMax = Math.min(200, an);
+    /* ?start=1: de opdracht aangeklikt in de leeromgeving; ligt alles vast, dan meteen beginnen */
+    function meteen(){ if (/[?&]start=1\b/.test(location.search) && !elStartBtn.disabled) setTimeout(function(){ elStartBtn.click(); }, 0); }
+    function modusUitAdres(){
+      var m = param('m'), mKnop = m ? document.querySelector('#modussen [data-id="' + m + '"]') : null;
+      if (mKnop){ mKnop.click(); vooraf([], document.getElementById('modusKop'), modus.naam.toLowerCase()); }
+    }
+    /* ?eigen=CODE: de plekken die de docent koos (maken.html) */
+    var ec = (param('eigen') || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (/^[A-Z0-9]{6}$/.test(ec)){
+      var gk = document.getElementById('gebiedKop'), laadP = document.createElement('p');
+      laadP.className = 'eyebrow'; laadP.style.marginTop = '32px'; laadP.setAttribute('role', 'status'); laadP.textContent = 'De plekken van je docent ophalen\u2026';
+      gk.parentNode.insertBefore(laadP, gk); gk.style.display = 'none'; elGebieden.style.display = 'none';
+      fetch('/api/materiaal/' + ec, { cache:'no-store' })
+        .then(function(r){ return r.json().then(function(j){ if (!r.ok) throw new Error(j.fout || 'niet gevonden'); return j; }); })
+        .then(function(j){
+          if (j.soort !== 'topo' || !KAARTEN[j.kaart]) throw new Error('geen topografie');
+          var heeft = {}; (j.plekken || []).forEach(function(s){ heeft[s] = true; });
+          eigenSet = { code: ec, naam: j.naam || 'Topografie', kaart: j.kaart, heeft: heeft };
+          if (!landenNu(j.kaart).length){ eigenSet = null; throw new Error('leeg'); }
+          laadP.parentNode.removeChild(laadP); gk.style.display = ''; elGebieden.style.display = '';
+          var gKnop = elGebieden.querySelector('[data-g="' + gebiedVan(j.kaart) + '"]');
+          gKnop.click();
+          kiesKaart(j.kaart, elKaarten.querySelector('[data-k="' + j.kaart + '"]'));
+          var n = landenNu(j.kaart).length;
+          vooraf([elGebieden, gk], document.getElementById('kaartKop'), eigenSet.naam + ', ' + n + ' ' + (n === 1 ? (KAARTEN[j.kaart].wat || 'plek') : woordVan(j.kaart)));
+          modusUitAdres();
+          toonVooraf();
+          var uit = document.createElement('p'); uit.className = 'eigenuitleg';
+          uit.textContent = 'Je oefent alleen de plekken die je docent koos. De rest van de kaart is lichter, zodat je ziet waar ze liggen.';
+          var na = gk.previousElementSibling; if (na) na.parentNode.insertBefore(uit, na.nextSibling);
+          zetPil(); klaarCheck(); meteen();
+        })
+        .catch(function(){
+          laadP.textContent = 'De plekken van je docent konden niet laden. Kijk of de link klopt, of kies hieronder zelf een kaart.';
+          gk.style.display = ''; elGebieden.style.display = '';
+          zelf();
+        });
+      return;
+    }
+    zelf();
+    function zelf(){
     var k = param('k');
     if (k && KAARTEN[k]){
       var gKnop = elGebieden.querySelector('[data-g="' + gebiedVan(k) + '"]');
@@ -1508,9 +1577,29 @@ var DELEN = [
         }
       }
     }
-    var m = param('m'), mKnop = m ? document.querySelector('#modussen [data-id="' + m + '"]') : null;
-    if (mKnop){ mKnop.click(); vooraf([], document.getElementById('modusKop'), modus.naam.toLowerCase()); }
+    modusUitAdres();
     toonVooraf();
+    meteen();
+    }
+  })();
+
+  /* ?werkblad=1: het klasoverzicht vraagt in een verborgen venster welke keuzes er
+     zijn, om topografie als opdracht te zetten (klas.html, haalKeuzes). Met je
+     eigen sets van dit apparaat erbij. */
+  (function(){
+    if (!/[?&]werkblad=1/.test(location.search) || window.parent === window) return;
+    function stuur(b){ window.parent.postMessage(b, location.origin); }
+    function eigenSets(){ try { return (JSON.parse(localStorage.getItem('lg-materiaal') || '[]') || []).filter(function(m){ return m && m.soort === 'topo' && m.code; }); } catch (e){ return []; } }
+    addEventListener('message', function(e){
+      if (e.origin !== location.origin || e.source !== window.parent || (e.data || {}).t !== 'werkblad-keuzes') return;
+      var sets = eigenSets(), keuzes = [];
+      if (sets.length) keuzes.push({ id:'eigen', kop:'Eigen topografie', items: sets.map(function(m){ return { id:m.code, naam:m.naam }; }) });
+      keuzes.push({ id:'k', kop:'Kaart', items: Object.keys(KAARTEN).map(function(k){ return { id:k, naam:KAARTEN[k].naam }; }) });
+      keuzes.push({ id:'niveau', kop:'Hoeveel', items: NIVEAUS.map(function(n){ return { id:n.id, naam:n.naam }; }) });
+      keuzes.push({ id:'m', kop:'Hoe', items: MODUSSEN.map(function(m){ return { id:m.id, naam:m.naam }; }) });
+      stuur({ t:'werkblad-keuzes', id:'topografie', naam:'Topografie', keuzes:keuzes });
+    });
+    stuur({ t:'werkblad-klaar', id:'topografie' });
   })();
 
 })();
