@@ -128,7 +128,10 @@ const METEN = `(function(){
     var lagen = [], e = el, basis = [[255,255,255,1]];
     while (e){
       var st = getComputedStyle(e), b = rgb(st.backgroundColor), img = st.backgroundImage;
-      if (img && img !== 'none'){
+      /* Een volle achtergrondkleur wint: een verloop erop is dan versiering,
+         zoals de schaduwrand van een scrollvak of een stippenpatroon, en die
+         telde de toets eerst als echte achtergrond (2,64:1 waar het 7:1 was). */
+      if (img && img !== 'none' && !(b && b[3] >= 0.999)){
         var stops = (img.match(/rgba?\\([^)]*\\)|color\\([^)]*\\)/g) || []).map(rgb).filter(Boolean);
         if (stops.length){
           var onder0 = b && b[3] > 0.004 ? overElkaar(b, [255,255,255,1]) : [255,255,255,1];
