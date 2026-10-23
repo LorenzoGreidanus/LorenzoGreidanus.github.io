@@ -30,7 +30,7 @@ var PAST = {
   ges:   ['jaartallen', 'tv1', 'tv2', 'tv3', 'tv4', 'tv5', 'tv6', 'tv7', 'tv8', 'tv9', 'tv10', 'staat', 'nl1900'],
   aard:  ['topografie', 'vlaggen', 'examen-ak'],
   bio:   ['organen', 'bloed', 'vertering', 'planten', 'cellen', 'zintuigen', 'ordening', 'erfelijkheid'],
-  wis:   ['vergelijking', 'formule', 'oppervlakte', 'omtrek', 'statistiek'],
+  wis:   ['vergelijking', 'formule', 'oppervlakte', 'inhoud', 'omtrek', 'statistiek'],
   burg:  ['democratie', 'rechtsstaat', 'bestuurslagen'],
   eco:   ['examen-eco', 'vraag en aanbod'],
   eigen: ['heen', 'terug']

@@ -61,7 +61,7 @@ window.CATEGORIE = (function(){
             /* gemiddelde en schaal: rekenen met gegevens uit een tabel */
             gemiddelde:'verbanden' },
     wis:  { vergelijking:'algebra', formule:'algebra', grafiek:'verbanden', 'coördinaten':'verbanden',
-            oppervlakte:'meetkunde', omtrek:'meetkunde', hoeken:'meetkunde', pythagoras:'meetkunde', vlakken:'meetkunde',
+            oppervlakte:'meetkunde', inhoud:'meetkunde', omtrek:'meetkunde', hoeken:'meetkunde', pythagoras:'meetkunde', vlakken:'meetkunde',
             statistiek:'statistiek', 'examen-wis':'examen' },
     ges:  { jaartallen:'tijdvakken', 'wie ben ik':'tijdvakken', 'oorzaak en gevolg':'vaardig', 'werken met bronnen':'vaardig',
             staat:'staat', nl1900:'nl1900' },

@@ -90,14 +90,17 @@ for (const vak of Object.keys(BRONNEN)){
       /* Alleen vragen waar een van de vier er echt als langste uitspringt
          tellen mee. Staan er vier even lange antwoorden (bij wiskunde vaak
          vier getallen), dan valt er niets te tellen en zou zo'n vraag de
-         verhouding alleen maar vertroebelen. */
-      if (lengtes.filter(x => x === langste).length !== 1) return;
-      lengteMee++;
-      lengteKans += 1 / q.o.length;
-      if (lengtes[q.g] === langste){
-        lengteTeller++;
-        if (lengtes[q.g] >= langsteAnder + UIT_TEKENS && lengtes[q.g] >= langsteAnder * UIT_KEER){
-          waarschuwingen.push(`${waar}: het goede antwoord is ${lengtes[q.g]} tekens, de langste afleider ${langsteAnder}`);
+         verhouding alleen maar vertroebelen.
+         Dat was eerst een return, en dan sloeg de toets voor zo'n vraag ook
+         de telling per onderdeel en de controle op dubbele vragen over. */
+      if (lengtes.filter(x => x === langste).length === 1){
+        lengteMee++;
+        lengteKans += 1 / q.o.length;
+        if (lengtes[q.g] === langste){
+          lengteTeller++;
+          if (lengtes[q.g] >= langsteAnder + UIT_TEKENS && lengtes[q.g] >= langsteAnder * UIT_KEER){
+            waarschuwingen.push(`${waar}: het goede antwoord is ${lengtes[q.g]} tekens, de langste afleider ${langsteAnder}`);
+          }
         }
       }
     }

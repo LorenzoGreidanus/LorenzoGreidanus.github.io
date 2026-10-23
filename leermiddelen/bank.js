@@ -10,7 +10,7 @@ var VAKKEN = [
   {id:'ges',   naam:'Geschiedenis', mark:'G', kleur:'var(--vista-blue)', onder:'Begrippen bij de tien tijdvakken, van hunebed tot globalisering'},
   {id:'aard',  naam:'Aardrijkskunde', mark:'A', kleur:'#2f7d52', onder:'Vlaggen en landenvormen, en de examenstof vmbo: weer en klimaat, water, bevolking en ruimte'},
   {id:'bio',   naam:'Biologie',    mark:'B', kleur:'#0d7b8a', onder:'Organen, bloed, vertering, planten, cellen, zintuigen en erfelijkheid'},
-  {id:'wis',   naam:'Wiskunde',    mark:'W', kleur:'#6b3fa0', onder:'Vergelijkingen, formules, oppervlakte, hoeken, grafieken en Pythagoras'},
+  {id:'wis',   naam:'Wiskunde',    mark:'W', kleur:'#6b3fa0', onder:'Vergelijkingen, formules, oppervlakte, inhoud, hoeken, grafieken en Pythagoras'},
   {id:'burg',  naam:'Mens en maatschappij', mark:'M', kleur:'#a0455f', onder:'Burgerschap: democratie, rechtsstaat, media, Europa, samenleven, geld en werk; plus maatschappijkunde voor het examen vmbo'},
   {id:'eco',   naam:'Economie',    mark:'€', kleur:'#a3630f', onder:'Examenstof vmbo: consumptie, arbeid en productie, overheid, internationaal, natuur en milieu'}
 ];
@@ -88,7 +88,7 @@ var ONDERDELEN = {
   ges: TIJDVAKKEN.map(t => ({id: t.id, naam: t.naam})).concat([{id:'staat', naam:'staatsinrichting (examen vmbo)'}, {id:'nl1900', naam:'Nederland en de wereld vanaf 1900 (examen vmbo)'}]),
   aard: [{id:'vlaggen',naam:'vlaggen van landen'},{id:'landvormen',naam:'vormen van landen'},{id:'topografie',naam:'topografie: hoofdsteden'}],
   bio: [{id:'organen',naam:'organen'},{id:'bloed',naam:'bloed en ademhaling'},{id:'vertering',naam:'vertering en voeding'},{id:'planten',naam:'planten'},{id:'cellen',naam:'cellen'},{id:'zintuigen',naam:'zintuigen en zenuwen'},{id:'ordening',naam:'ordening en ecologie'},{id:'erfelijkheid',naam:'erfelijkheid'}],
-  wis: [{id:'vergelijking',naam:'vergelijkingen'},{id:'formule',naam:'formules'},{id:'oppervlakte',naam:'oppervlakte en inhoud'},{id:'omtrek',naam:'omtrek'},{id:'hoeken',naam:'hoeken'},{id:'grafiek',naam:'grafieken en assenstelsel'},{id:'statistiek',naam:'statistiek'},{id:'pythagoras',naam:'stelling van Pythagoras'},{id:'vlakken',naam:'vlakken herkennen'}],
+  wis: [{id:'vergelijking',naam:'vergelijkingen'},{id:'formule',naam:'formules'},{id:'oppervlakte',naam:'oppervlakte'},{id:'inhoud',naam:'inhoud'},{id:'omtrek',naam:'omtrek'},{id:'hoeken',naam:'hoeken'},{id:'grafiek',naam:'grafieken en assenstelsel'},{id:'statistiek',naam:'statistiek'},{id:'pythagoras',naam:'stelling van Pythagoras'},{id:'vlakken',naam:'vlakken herkennen'}],
   burg: [{id:'democratie',naam:'democratie en verkiezingen'},{id:'rechtsstaat',naam:'rechtsstaat en grondrechten'},{id:'media',naam:'media en nieuws'},{id:'europa',naam:'Europa en de wereld'},{id:'samenleven',naam:'samenleven'},{id:'geld',naam:'geld en werk'}]
 };
 ONDERDELEN.aard.push({id:'waarom', naam:'waarom ligt het daar'});
@@ -154,7 +154,7 @@ var IN_GROEP = {
           /* het DHTE-schema telt per onderdeel van zijn eigen spel */
           'DHTE invullen':'getallen', 'DHTE optellen':'getallen', 'DHTE aftrekken':'getallen' },
   wis:  { vergelijking:'algebra', formule:'algebra',
-          oppervlakte:'meetkunde', omtrek:'meetkunde', hoeken:'meetkunde', pythagoras:'meetkunde', vlakken:'meetkunde',
+          oppervlakte:'meetkunde', inhoud:'meetkunde', omtrek:'meetkunde', hoeken:'meetkunde', pythagoras:'meetkunde', vlakken:'meetkunde',
           grafiek:'verwerken', statistiek:'verwerken', 'co\u00f6rdinaten':'meetkunde', 'examen-wis':'examen' },
   bio:  { organen:'lichaam', bloed:'lichaam', vertering:'lichaam', zintuigen:'lichaam',
           cellen:'cellen', erfelijkheid:'cellen', planten:'natuur', ordening:'natuur', 'examen-bio':'examen',
