@@ -1216,7 +1216,7 @@ export class Kamer extends DurableObject {
     if (m.t === "start" && st.duel && st.fase === "lobby" && wie.sid === st.gastheer && Object.keys(st.spelers).length >= 2 && this.lobbyKlaar()) return this.duelAftellen();
     /* de lobby van Zwaardvechter samen: een stijl kiezen en klaar melden; vol en allemaal klaar begint het vanzelf */
     if (m.t === "lobby" && st.duel && st.fase === "lobby"){
-      if (["ridder", "schutter", "wacht"].indexOf(m.stijl) >= 0) sp.stijl = m.stijl;
+      if (["ridder", "schutter", "wacht", "hospik"].indexOf(m.stijl) >= 0) sp.stijl = m.stijl;
       sp.klaar = !!m.klaar;
       await this.bewaar();
       this.iedereen({ t: "lobby", spelers: this.strijdLijst().map(r => ({ sid: r.sid, naam: r.naam, av: r.av, stijl: r.stijl, klaar: r.klaar, aan: r.aan })) });

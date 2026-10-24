@@ -18,7 +18,7 @@
      var W = ZWAARDMOTOR.maak({ seed:123, spelers:[{ naam:'jij' }], haak:{ ... } });
      W.zetStats(0, stats, hp);   de uitrusting van een speler (uit de winkel)
      W.zetInvoer(0, dx, dy);     welke kant hij op loopt (-1..1)
-     W.ontwijk(0); W.wapen(0);   springen, wisselen tussen zwaard en boog (de schildwacht: zwaard en speer)
+     W.ontwijk(0); W.wapen(0);   springen, wisselen tussen zwaard en boog (de schildwacht: zwaard en speer; de hospik gooit zijn koffer)
      ZWAARDMOTOR.statsVan(stijl, level, vaardig)   de uitrusting uit de winkel van die klasse, voor zetStats
      W.volgendeRonde();          de volgende ronde in (na de vragen en de winkel)
      W.stap(1 / 60);             een stap van de klok
@@ -41,6 +41,19 @@ const ARENA = { b:1100, h:620, rand:26 };
    maat en na OPHELP.tijd seconden staat die weer op. */
 const CHECKPOINT = { wacht:2 };
 const OPHELP = { tijd:2, afstand:52, leven:0.5 };
+/* De hospik, de vierde klasse. Hij helpt een maat op in de helft van de tijd, van verder weg, en
+   die staat op met meer leven ('hulp'). In plaats van een boog heeft hij een EHBO-koffer: Q gooit
+   hem, als hij geladen is, naar wie hem het hardst nodig heeft binnen 'ver' punten (een maat die
+   neerligt, anders wie naar verhouding het minste leven heeft, hijzelf ook). Na 'vlucht' seconden
+   landt hij en ligt er 'duur' seconden een genezend vlak met straal 'r': wie erin staat krijgt elke
+   seconde 'heel' van zijn volle leven terug, de hospik en zijn maten. Ligt er een maat neer in het
+   vlak, dan staat die na 'op' seconden vanzelf op. De winkel maakt de koffer sneller (laad), het
+   vlak groter en sterker, en het ophelpen nog sneller (zie WINKEL en UPG).
+   Afgesteld met de simulatie (sim70.js, alleen, oktober 2026): een koffer geeft wie erin blijft staan
+   8% van zijn leven terug. Met 5% per seconde en om de 8 seconden viel de hospik alleen nooit meer;
+   zo komt hij gemiddeld even ver als de andere drie (eerste val rond ronde 27, de anderen 21 tot 30). */
+const HOSPIK = { hulp:{ tijd:1, afstand:85, leven:0.75 },
+                 koffer:{ laad:15, ver:280, vlucht:0.4, r:75, duur:4, heel:0.02, op:2.5 } };
 const SPELER = { r:22, hp:125, snelheid:200, zwaard:{ schade:16, bereik:82, tempo:0.55 }, boog:130,
                  pijlboog:{ deel:0.55, bereik:330, tempo:1.2, snel:620 } };
 /* De speer, het tweede wapen van de schildwacht (in plaats van de boog). Hij steekt recht
@@ -81,7 +94,12 @@ function moeiteRonde(n){ return n <= MOEITE.eindVanaf ? n : MOEITE.eindVanaf + (
    taai ze zijn, hoe snel ze binnenkomen en hoeveel leven de baas heeft, als
    keer zoveel als alleen. Afgesteld met een simulatie met bots, zo dat een
    speler in een ploeg per ronde ongeveer evenveel schade krijgt als alleen. */
-const SAMEN = { fouten:[1, 1.7, 2.35, 3], foutHp:[1, 1.15, 1.25, 1.33], tempo:[1, 1.7, 2.35, 3], baas:[1, 1.9, 2.7, 3.4], baasKracht:[1, 1.35, 1.55, 1.72] };
+/* 'koffer': hoe veel trager de koffer van de hospik laadt. Samen geneest een koffer meer mensen: in de
+   simulatie (oktober 2026) haalde een ridder met een hospik met dezelfde laadtijd als alleen gemiddeld
+   ronde 47 en een ridder met een schildwacht ronde 30. Met anderhalf keer zo lang laden ronde 37: een
+   ploeg met een hospik blijft merkbaar langer overeind, maar is niet de enige die ver komt. */
+const SAMEN = { fouten:[1, 1.7, 2.35, 3], foutHp:[1, 1.15, 1.25, 1.33], tempo:[1, 1.7, 2.35, 3], baas:[1, 1.9, 2.7, 3.4], baasKracht:[1, 1.35, 1.55, 1.72],
+                koffer:[1, 1.5, 1.9, 2.2] };
 /* Na de laatste fout speel je nog even door om de munten op te rapen. Ligt
    er niets meer, dan hoef je ook niet te wachten. */
 const RAAPTIJD = 5;
@@ -123,8 +141,14 @@ const GEVAAR = { vanaf:4, vuur:{ r:72, schade:5, tik:0.5 }, ijs:{ r:100, grip:1.
    schildwacht zelden ronde 20. Nu komen ze gemiddeld ongeveer even ver: de schutter valt vaker bij
    de eerste baas en bij de dansbazen, de ridder en de schildwacht in de drukke gewone rondes. */
 const STIJLEN = { ridder:{ maxHp:1.3, schade:1.15, tempo:1.15, boogSchade:0.8, wapens:['zwaard', 'boog'], hoofd:'zwaard' },
-                  schutter:{ boogSchade:0.95, boogTempo:0.85, boogBereik:1.15, maxHp:0.9, schade:0.85, wapens:['zwaard', 'boog'], hoofd:'boog' },
-                  wacht:{ maxHp:1.1, blok:true, wapens:['zwaard', 'speer'], hoofd:'speer' } };
+                  /* De schutter in oktober 2026 iets sterker (was boogSchade 0,95 en maxHp 0,9): na de snellere
+                     bazen van v420 viel hij in de simulatie gemiddeld al in ronde 21 en liet De Grote Fout (ronde 5)
+                     38% vallen. Nu 14% bij De Grote Fout en gemiddeld ronde 29, tussen de ridder (23) en de
+                     schildwacht (30); hij valt daarna nog steeds het vaakst van de drie (vooral bij De Discobal). */
+                  schutter:{ boogSchade:1, boogTempo:0.85, boogBereik:1.15, maxHp:1, schade:0.85, wapens:['zwaard', 'boog'], hoofd:'boog' },
+                  wacht:{ maxHp:1.1, blok:true, wapens:['zwaard', 'speer'], hoofd:'speer' },
+                  /* de hospik: een gewoon zwaard en de EHBO-koffer (zie HOSPIK) */
+                  hospik:{ maxHp:1, schade:0.95, wapens:['zwaard', 'koffer'], hoofd:'zwaard' } };
 const BLOK = { max:3, laad:0.5, deel:0.2, traag:0.4 };
 const CRIT = { x:2, straal:90, deel:0.5 };
 
@@ -135,16 +159,17 @@ const CRIT = { x:2, straal:90, deel:0.5 };
      ridder    zwaard, tempo, bereik, zwaai, critical, werpmes
      schutter  pijlboog, tempo, meer pijlen, doorboren
      wacht     speer, tempo, blokmeter, sterk schild, tegenstoot, werpspeer
+     hospik    zwaard, tempo, bereik, snelle koffer, sterke zalf, snelle hulp
    Het 'hoofd'-stuk (zwaard, pijlboog, speer) maakt al je wapens 35% harder per
    niveau, zoals het zwaard dat eerst voor iedereen deed. statsVan rekent het om
    naar wat zetStats wil, hier en in de simulatie hetzelfde.
    ============================================================================ */
 const WINKEL = {
-  zwaard:    { klassen:['ridder'],   prijs:[40, 70, 110, 160, 230, 320, 440, 600] },
+  zwaard:    { klassen:['ridder', 'hospik'], prijs:[40, 70, 110, 160, 230, 320, 440, 600] },
   boog:      { klassen:['schutter'], prijs:[40, 70, 110, 160, 230, 320, 440, 600] },
   speer:     { klassen:['wacht'],    prijs:[40, 70, 110, 160, 230, 320, 440, 600] },
-  tempo:     { klassen:['ridder', 'schutter', 'wacht'], prijs:[45, 80, 125, 180, 250, 340, 460, 630] },
-  bereik:    { klassen:['ridder'],   prijs:[35, 60, 95, 140, 200, 280, 380, 520] },
+  tempo:     { klassen:['ridder', 'schutter', 'wacht', 'hospik'], prijs:[45, 80, 125, 180, 250, 340, 460, 630] },
+  bereik:    { klassen:['ridder', 'hospik'], prijs:[35, 60, 95, 140, 200, 280, 380, 520] },
   zwaai:     { klassen:['ridder'],   prijs:[50, 90, 140, 200, 280, 380] },
   critical:  { klassen:['ridder'],   prijs:[60, 110, 170, 250, 350, 480] },
   mes:       { klassen:['ridder'],   prijs:[70, 100, 140, 190, 260, 350, 470, 640] },
@@ -155,14 +180,20 @@ const WINKEL = {
   tegenstoot:{ klassen:['wacht'],    prijs:[60, 110, 170, 250, 350, 480] },
   /* de werpspeer: het werpmes van de schildwacht, maar hij gaat door twee fouten heen */
   werpspeer: { klassen:['wacht'],    prijs:[70, 100, 140, 190, 260, 350, 470, 640] },
-  harnas:    { klassen:['ridder', 'schutter', 'wacht'], prijs:[50, 85, 130, 190, 270, 370, 500, 680] },
-  laarzen:   { klassen:['ridder', 'schutter', 'wacht'], prijs:[35, 60, 90, 130, 180, 250, 340, 470] }
+  /* de hospik: de koffer laadt sneller, de zalf maakt het vlak groter en sterker, en hij helpt nog sneller op */
+  koffer:    { klassen:['hospik'],   prijs:[45, 80, 125, 180, 250, 340] },
+  zalf:      { klassen:['hospik'],   prijs:[50, 90, 140, 200, 280, 380] },
+  hulp:      { klassen:['hospik'],   prijs:[40, 70, 110, 160] },
+  harnas:    { klassen:['ridder', 'schutter', 'wacht', 'hospik'], prijs:[50, 85, 130, 190, 270, 370, 500, 680] },
+  laarzen:   { klassen:['ridder', 'schutter', 'wacht', 'hospik'], prijs:[35, 60, 90, 130, 180, 250, 340, 470] }
 };
 /* hoeveel elk niveau doet */
 const UPG = { hoofd:1.35, tempo:0.88, bereik:1.12, boogBereik:1.08, zwaai:20, critical:0.1, critStraal:0.1, mesTempo:0.85, mesSchade:1.2,
               harnasHp:27.5, harnasPantser:0.088, laarzen:1.1, blokmeter:0.5, blokLaad:0.15, schild:0.92, schildTraag:0.06, tegenX:0.5, tegenTijd:0.2,
               /* de schutter: zijn boog is zijn hoofdwapen en wordt ook per niveau iets verder en vlugger */
-              boogVer:1.04, boogVlug:0.97 };
+              boogVer:1.04, boogVlug:0.97,
+              /* de hospik: laadtijd van de koffer, genezing en straal van het vlak, tijd en leven bij ophelpen */
+              koffer:0.92, zalf:1.08, zalfR:1.06, hulp:0.8, hulpLeven:0.05 };
 function klasseHeeft(stijl, id){ var w = WINKEL[id]; return !!w && w.klassen.indexOf(stijl) >= 0; }
 /* de uitrusting van een speler: stijl, de niveaus uit de winkel en de vaardigheden na een baas */
 function statsVan(stijl, level, vaardig){
@@ -190,7 +221,11 @@ function statsVan(stijl, level, vaardig){
     blokMax:BLOK.max + 2 * v('blok') + UPG.blokmeter * lv('blokmeter'), blokLaad:BLOK.laad * (1 + UPG.blokLaad * lv('blokmeter')),
     blokDeel:BLOK.deel * Math.pow(UPG.schild, lv('schild')), blokTraag:BLOK.traag + UPG.schildTraag * lv('schild'),
     tegenX:SPEER.tegen.x + UPG.tegenX * lv('tegenstoot'), tegenTijd:SPEER.tegen.venster + UPG.tegenTijd * lv('tegenstoot'),
-    dashX:1 + 0.35 * v('dash'), magneet:1 + v('magneet')
+    dashX:1 + 0.35 * v('dash'), magneet:1 + v('magneet'),
+    /* de hospik (voor de rest staan ze er ook, maar dan doen ze niets) */
+    kofferLaad:HOSPIK.koffer.laad * Math.pow(UPG.koffer, lv('koffer')), kofferHeel:HOSPIK.koffer.heel * Math.pow(UPG.zalf, lv('zalf')),
+    kofferR:HOSPIK.koffer.r * Math.pow(UPG.zalfR, lv('zalf')), hulpTijd:HOSPIK.hulp.tijd * Math.pow(UPG.hulp, lv('hulp')),
+    hulpLeven:Math.min(0.95, HOSPIK.hulp.leven + UPG.hulpLeven * lv('hulp'))
   };
 }
 /* Het late spel: vanaf ronde 15 is alles duur en taai, dus levert elke munt een kwart meer op
@@ -199,7 +234,20 @@ const LAAT = { vanaf:15, munten:1.25 };
 /* Twee aanvallen achter elkaar: met deze kans doet een baas meteen nog een aanval ('tussen' seconden
    nadat de eerste over is). Daarna is hij 'rust' seconden moe: hij doet niets, er staat een groene
    ring om hem heen en je raakt hem harder (NACHTMERRIE.moeX). */
-const REEKS = { kans:0.4, tussen:0.3, rust:1.6 };
+/* Sinds v420 vaker en sneller twee achter elkaar (was kans 0,4 en tussen 0,3): je moet blijven
+   bewegen. De rust, het moment om terug te slaan, is gelijk gebleven. */
+const REEKS = { kans:0.6, tussen:0.15, rust:1.6,
+  /* Hoe lang een reeks is: twee, drie, vier of vijf aanvallen achter elkaar. Het gewicht per
+     lengte schuift met de ronde op: in ronde 5 is vijf zeldzaam, vanaf ronde 40 komen lange
+     reeksen vaker. Na elke reeks is hij even lang moe (rust), hoe lang de reeks ook was. */
+  lengte:function(n, t){
+    var later = Math.min(1, Math.max(0, (n - 5) / 35));
+    var g = [0.55 - 0.25 * later, 0.27, 0.12 + 0.12 * later, 0.06 + 0.13 * later], som = 0, i;
+    for (i = 0; i < g.length; i++) som += g[i];
+    t *= som;
+    for (i = 0; i < g.length; i++){ if (t < g[i]) return i + 2; t -= g[i]; }
+    return 2;
+  } };
 /* Vanaf deze ronde komen de halen en de muur van een baas in twee fasen. */
 const TWEEFASEN = 10;
 function laatExtra(ronde){ return ronde >= LAAT.vanaf ? LAAT.munten : 1; }
@@ -216,6 +264,15 @@ function laatExtra(ronde){ return ronde >= LAAT.vanaf ? LAAT.munten : 1; }
    op de maat, en wie stilstaat wordt geraakt. Vanaf ronde 50 komt de school zelf:
    De Gum, De Liniaal, De Schoolbel, Het Rapport en als laatste Het Proefwerk, elk met
    een eigen aanval. 'tempo' maakt de pauze tussen twee aanvallen korter. */
+/* Het schild van een baas (het deel van je schade dat hij tegenhoudt) groeit in de late
+   rondes mee: vanaf ronde 'vanaf' komt er per ronde 'per' bij, tot hoogstens 'max' in totaal.
+   Een baas van 0,35 houdt in ronde 40 zo 0,47 tegen en vanaf ronde 55 de 0,55: de late
+   bazen zijn taaier zonder dat ze harder slaan (dat doet hun kracht). De nachtmerrie niet. */
+const BAASSCHILD = { vanaf:20, per:0.006, max:0.55 };
+function baasSchild(def, ronde){
+  var basis = def.schild || 0;
+  return Math.round(Math.min(Math.max(basis, BAASSCHILD.max), basis + Math.max(0, ronde - BAASSCHILD.vanaf) * BAASSCHILD.per) * 1000) / 1000;
+}
 const BAZEN = [
   { id:'fout',    naam:'De Grote Fout', kleur:'#4a1230', vorm:'ster',  hp:26, kracht:1.72, r:46, schade:26, schild:0.35,
     aanvallen:['cirkel', 'laser', 'kegel', 'spiraal', 'baan', 'tik'],
@@ -272,7 +329,9 @@ const AANVAL = {
   /* Seconden tussen twee aanvallen: kort, en steeds korter. Was 1,6 min 0,03 per ronde, maar
      dan stond er een derde tot de helft van een baasgevecht niets op het veld en kon je
      ongestoord doorslaan (gemeten door de motor los te laten lopen). */
-  pauze:function(n){ return Math.max(0.45, 1.15 - n * 0.02); },
+  /* Sinds v420 een derde korter (was 1,15 min 0,02 per ronde, nooit onder 0,45): de bazen
+     vallen sneller achter elkaar aan. De waarschuwing (korter) is niet veranderd. */
+  pauze:function(n){ return Math.max(0.3, 0.77 - n * 0.013); },
   korter:function(n){ return Math.max(0.5, 1 - n * 0.012); },    /* de waarschuwing krimpt langzaam, nooit onder een halve seconde */
   /* Onder de helft van zijn leven wordt hij kwaad. Eerder liep hier alles tegelijk
      omhoog en was de tweede helft van een baasgevecht voor de meeste leerlingen
@@ -413,12 +472,13 @@ function basisStats(){
            mesTempo:0, mesSchade:0, harnas:0, maxHp:SPELER.hp,
            boogSchade:SPELER.zwaard.schade * SPELER.pijlboog.deel, boogBereik:SPELER.pijlboog.bereik, boogTempo:SPELER.zwaard.tempo * SPELER.pijlboog.tempo,
            speerSchade:SPELER.zwaard.schade * SPEER.deel, speerBereik:SPEER.bereik, speerTempo:SPELER.zwaard.tempo * SPEER.tempo, zwaaiBoog:SPELER.boog,
-           tegenX:SPEER.tegen.x, tegenTijd:SPEER.tegen.venster, blokLaad:BLOK.laad, blokDeel:BLOK.deel, blokTraag:BLOK.traag, critStraal:1, pijlen:1 };
+           tegenX:SPEER.tegen.x, tegenTijd:SPEER.tegen.venster, blokLaad:BLOK.laad, blokDeel:BLOK.deel, blokTraag:BLOK.traag, critStraal:1, pijlen:1,
+           kofferLaad:HOSPIK.koffer.laad, kofferHeel:HOSPIK.koffer.heel, kofferR:HOSPIK.koffer.r, hulpTijd:HOSPIK.hulp.tijd, hulpLeven:HOSPIK.hulp.leven };
 }
 /* tegen: hoe lang de tegenstoot nog klaarstaat; stoot: de laatste stoot van de speer (0..1, voor het tekenen), tegenFlits: die was een tegenstoot */
 function nieuweSp(x, y){
   return { x:x, y:y, mikt:0, klok:0, zwaai:0, raak:0, mesKlok:0, flits:0, dash:0, dashKlok:0, dx:1, dy:0, loopt:false, wapen:'zwaard',
-           blok:false, blokTijd:BLOK.max, crit:false, gx:0, gy:0, opIjs:false, vuurKlok:0, tegen:0, tegenFlits:0 };
+           blok:false, blokTijd:BLOK.max, crit:false, gx:0, gy:0, opIjs:false, vuurKlok:0, tegen:0, tegenFlits:0, kofferKlok:0 };
 }
 function r1(v){ return Math.round(v * 10) / 10; }
 function r2(v){ return Math.round(v * 100) / 100; }
@@ -447,7 +507,7 @@ function maak(opties){
     seed:toevalZaad, ronde:0, fase:'ronde', pauze:false,
     fouten:[], messen:[], munt:[], pluis:[], cijfers:[], aanvallen:[],
     teSpawnen:0, spawnKlok:0, tijdInRonde:0, rondeUit:0, raapTeller:-1, extra:0, geveld:0, nr:0,
-    zones:[], baasGeveld:0, tik:0,
+    zones:[], baasGeveld:0, tik:0, velden:[],
     cp:{ ronde:1, kans:1 }, hoogste:0, terugKlok:0,
     spelers:[]
   };
@@ -495,7 +555,7 @@ function maak(opties){
   W.ontwijk = function(i){ var P = W.spelers[i]; if (P && W.fase === 'ronde' && !W.pauze) ontwijkMet(P.sp); };
   W.wapen = function(i){ var P = W.spelers[i]; if (P && W.fase === 'ronde' && !W.pauze) wisselWapenVan(P); };
   /* een wapen kiezen in plaats van wisselen (voor de bots en het testen) */
-  W.kiesWapen = function(i, w){ var P = W.spelers[i]; if (P && wapensVan(P).indexOf(w) >= 0 && P.sp.wapen !== w) wisselWapenVan(P); };
+  W.kiesWapen = function(i, w){ var P = W.spelers[i]; if (P && w !== 'koffer' && wapensVan(P).indexOf(w) >= 0 && P.sp.wapen !== w) wisselWapenVan(P); };
   /* Wat een waarde hoogstens mag zijn. De winkel draait in de browser, dus de
      motor krijgt de uitrusting aangereikt en kan hem niet narekenen. Zonder
      plafond was {schade:99999, maxHp:99999} genoeg om in een gedeelde arena
@@ -507,7 +567,10 @@ function maak(opties){
   /* de schutter haalt met zijn hoofdstuk en zijn stijl 1,4 keer het zwaard: zijn pijl heeft meer ruimte nodig */
   var STATS_KEER_ANDERS = { boogSchade:22, speerSchade:16, tegenX:3, tegenTijd:4, blokLaad:6, zwaaiBoog:3, critStraal:3, blokTraag:3, speerBereik:2 };
   var STATS_DAK = { mesTempo:20, mesSchade:200, harnas:100, dashX:6, pijlDoor:12, critX:8, critExtra:1, magneet:1000, blokMax:60, boogStijl:9, pijlen:6, mesDoor:4 };
+  /* de hospik: een koffer die vaker dan om de twee seconden komt, of ophelpen in een flits, deelt de winkel nooit uit */
+  var STATS_GRENS = { kofferLaad:[2, 20], kofferHeel:[0, 0.25], kofferR:[20, 160], hulpTijd:[0.3, 2], hulpLeven:[0.5, 0.95] };
   function statBinnen(k, v){
+    if (STATS_GRENS[k]) return Math.max(STATS_GRENS[k][0], Math.min(STATS_GRENS[k][1], v));
     if (k === 'pantser') return Math.max(0.05, Math.min(1, v));
     if (k === 'blokDeel') return Math.max(0.03, Math.min(1, v));
     if (STATS_KEER_ANDERS[k]){ var b0 = basisStats()[k]; return Math.max(0, Math.min(b0 * STATS_KEER_ANDERS[k], v)); }
@@ -520,12 +583,13 @@ function maak(opties){
     var P = W.spelers[i]; if (!P || !st) return;
     ['schade', 'bereik', 'tempo', 'snel', 'pantser', 'mesTempo', 'mesSchade', 'harnas', 'maxHp', 'boogSchade', 'boogBereik', 'boogTempo',
      'dashX', 'pijlDoor', 'critX', 'critExtra', 'magneet', 'blokMax', 'boogStijl',
-     'speerSchade', 'speerBereik', 'speerTempo', 'zwaaiBoog', 'tegenX', 'tegenTijd', 'blokLaad', 'blokDeel', 'blokTraag', 'critStraal', 'pijlen', 'mesDoor'].forEach(function(k){
+     'speerSchade', 'speerBereik', 'speerTempo', 'zwaaiBoog', 'tegenX', 'tegenTijd', 'blokLaad', 'blokDeel', 'blokTraag', 'critStraal', 'pijlen', 'mesDoor',
+     'kofferLaad', 'kofferHeel', 'kofferR', 'hulpTijd', 'hulpLeven'].forEach(function(k){
       if (typeof st[k] === 'number' && isFinite(st[k])) P.stats[k] = statBinnen(k, st[k]);
     });
     if (STIJLEN[st.stijl]) P.stijl = st.stijl;
-    /* het tweede wapen hoort bij de stijl: een schildwacht heeft geen boog, de rest geen speer */
-    if (P.sp.wapen !== 'zwaard' && wapensVan(P).indexOf(P.sp.wapen) < 0) P.sp.wapen = wapensVan(P)[1];
+    /* het tweede wapen hoort bij de stijl: een schildwacht heeft geen boog, de rest geen speer; de hospik houdt zijn zwaard (de koffer gooit hij) */
+    if (P.sp.wapen !== 'zwaard' && wapensVan(P).indexOf(P.sp.wapen) < 0){ var tw = wapensVan(P)[1]; P.sp.wapen = tw === 'koffer' ? 'zwaard' : tw; }
     P.sp.dashX = P.stats.dashX || 1;
     P.maxHp = P.stats.maxHp || P.maxHp;
     if (typeof hpNu === 'number' && isFinite(hpNu)) P.hp = Math.max(0, Math.min(P.maxHp, Math.round(hpNu)));
@@ -555,20 +619,68 @@ function maak(opties){
   function wapensVan(P){ return (STIJLEN[P.stijl] && STIJLEN[P.stijl].wapens) || ['zwaard', 'boog']; }
   function wisselWapenVan(P){
     var s = P.sp, w = wapensVan(P);
+    /* de hospik wisselt niet: hij gooit zijn koffer en houdt zijn zwaard in de hand */
+    if (w[1] === 'koffer'){ gooiKoffer(P); return; }
     s.wapen = s.wapen === 'zwaard' ? w[1] : 'zwaard';
     s.klok = Math.max(s.klok, 0.2);          /* even geen gratis slag bij het wisselen */
     s.zwaai = 0;
   }
   function levenden(){ return W.spelers.filter(function(P){ return !P.neer; }); }
+  /* ---------- de hospik: de koffer en het genezende vlak ---------- */
+  function gooiKoffer(P){
+    var s = P.sp, K = HOSPIK.koffer;
+    if (P.neer || P.stijl !== 'hospik' || (s.kofferKlok || 0) > 0) return;
+    /* naar wie hem het hardst nodig heeft: een maat die neerligt, anders wie naar verhouding het minste leven heeft (hijzelf ook) */
+    var doel = P, nood = P.hp / Math.max(1, P.maxHp);
+    W.spelers.forEach(function(Q){
+      if (Q === P || Q.weg || Math.hypot(Q.sp.x - s.x, Q.sp.y - s.y) > K.ver) return;
+      var n = Q.neer ? -1 : Q.hp / Math.max(1, Q.maxHp);
+      if (n < nood){ nood = n; doel = Q; }
+    });
+    s.kofferKlok = (P.stats.kofferLaad || K.laad) * schaal('koffer');
+    var v = { id:++W.nr, x:doel.sp.x, y:doel.sp.y, ox:s.x, oy:s.y, t:-K.vlucht, duur:K.duur, r:P.stats.kofferR || K.r, heel:P.stats.kofferHeel || K.heel, van:P.i };
+    W.velden.push(v);
+    zeg('koffer', v, P);
+  }
+  /* het vlak waarin deze speler nu staat (het sterkste, als er meer liggen), of niets */
+  function veldOp(P){
+    var beste = null;
+    for (var i = 0; i < W.velden.length; i++){
+      var v = W.velden[i];
+      if (v.t >= 0 && v.t < v.duur && Math.hypot(P.sp.x - v.x, P.sp.y - v.y) < v.r + SPELER.r * 0.4 && (!beste || v.heel > beste.heel)) beste = v;
+    }
+    return beste;
+  }
+  /* hoeveel van zijn volle leven deze speler nu per seconde terugkrijgt (voor de simulatie) */
+  W.heelVan = function(i){ var P = W.spelers[i], v = P && !P.neer ? veldOp(P) : null; return v ? v.heel : 0; };
+  /* De vlakken: wie erin staat geneest, en elke seconde staat er boven hem hoeveel. Twee vlakken
+     over elkaar tellen niet op: het sterkste geldt. */
+  function stapVelden(dt){
+    if (!W.velden.length) return;
+    W.velden.forEach(function(v){ v.t += dt; if (v.t >= v.duur) v.klaar = true; });
+    W.velden = W.velden.filter(function(v){ return !v.klaar; });
+    W.spelers.forEach(function(P){
+      if (P.neer || P.weg) return;
+      var v = veldOp(P); if (!v) return;
+      if (P.hp < P.maxHp){ var oud = P.hp; P.hp = Math.min(P.maxHp, P.hp + P.maxHp * v.heel * dt); P.heelTel = (P.heelTel || 0) + P.hp - oud; }
+      P.heelKlok = (P.heelKlok || 0) + dt;
+      if (P.heelKlok >= 1){
+        P.heelKlok = 0;
+        if (P.heelTel >= 1) W.cijfers.push({ x:P.sp.x, y:P.sp.y - 30, tekst:'+' + Math.round(P.heelTel), leven:0.8, kleur:'#2f8a4e' });
+        P.heelTel = 0;
+      }
+    });
+  }
 
   /* ---------- de rondes ---------- */
   W.volgendeRonde = function(){
     W.ronde++;
     W.hoogste = Math.max(W.hoogste || 0, W.ronde);
     W.fase = 'ronde'; W.pauze = false;
-    W.fouten = []; W.messen = []; W.munt = []; W.pluis = []; W.cijfers = []; W.aanvallen = [];
+    W.fouten = []; W.messen = []; W.munt = []; W.pluis = []; W.cijfers = []; W.aanvallen = []; W.velden = [];
     W.spelers.forEach(function(P, i){
       var s = P.sp;
+      s.kofferKlok = 0;   /* de hospik begint elke ronde met een geladen koffer */
       /* naast elkaar rond het midden */
       s.x = ARENA.b / 2 + (samen ? (i - (W.spelers.length - 1) / 2) * 70 : 0); s.y = ARENA.h / 2;
       s.raak = 0; s.klok = 0; s.mesKlok = 0; s.dash = 0; s.dashKlok = 0;
@@ -720,7 +832,7 @@ function maak(opties){
     /* de nachtmerrie heeft een eigen maat voor de schade (NACHTMERRIE.deel) */
     W.baasKracht = nm ? 1 : (def.kracht || 1) * schaal('baasKracht');
     var b = { id:++W.nr, soort:def, def:def, x:ARENA.b / 2, y:ARENA.h / 2, hp:h, maxHp:h, r:def.r, snel:0, flits:0, stap:0,
-              schild:def.schild, slaKlok:0, baas:true, aanvalKlok:2.2, laatste:-1, eerste:true, nmFase:0, salvoOver:0, moe:0, naSalvo:false };
+              schild:nm ? def.schild : baasSchild(def, W.ronde), slaKlok:0, baas:true, aanvalKlok:2.2, laatste:-1, eerste:true, nmFase:0, salvoOver:0, moe:0, naSalvo:false };
     W.fouten.push(b);
     /* de spelers beginnen in het midden: even opzij, anders sta je in de baas */
     W.spelers.forEach(function(P, i){ P.sp.x = ARENA.b / 2 + (i === 0 ? -150 : 150); });
@@ -1253,6 +1365,7 @@ function maak(opties){
   /* ---------- de spelers ---------- */
   function beweeg(P, dt){
     var s = P.sp;
+    if (s.kofferKlok > 0) s.kofferKlok = Math.max(0, s.kofferKlok - dt);
     if (P.neer){ s.loopt = false; return; }
     var dx = P.inv.dx, dy = P.inv.dy;
     /* de schildwacht blokkeert zolang de toets vast zit en er tijd op de meter staat */
@@ -1403,15 +1516,26 @@ function maak(opties){
     zeg('checkpoint', W.ronde);
   }
   /* Ophelpen: een levende maat staat op het lichaam. Loopt hij weg, dan zakt
-     de teller weer langzaam terug. */
+     de teller weer langzaam terug. Een hospik helpt van verder weg en sneller op, en
+     in het vlak van zijn koffer staat een maat vanzelf op (zie HOSPIK). De teller telt
+     in de seconden van gewoon ophelpen, zodat de ring in beeld altijd tot OPHELP.tijd loopt. */
   function ophelpen(dt){
     var levend = levenden();
     W.spelers.forEach(function(P){
       if (!P.neer || P.weg){ P.opstaan = 0; return; }
-      var hulp = levend.filter(function(Q){ return Math.hypot(Q.sp.x - P.sp.x, Q.sp.y - P.sp.y) < OPHELP.afstand; })[0];
-      P.opstaan = hulp ? (P.opstaan || 0) + dt : Math.max(0, (P.opstaan || 0) - dt / 2);
+      var tempo = 0, leven = OPHELP.leven, hulp = null;
+      levend.forEach(function(Q){
+        var hos = Q.stijl === 'hospik';
+        if (Math.hypot(Q.sp.x - P.sp.x, Q.sp.y - P.sp.y) >= (hos ? HOSPIK.hulp.afstand : OPHELP.afstand)) return;
+        var t = hos ? OPHELP.tijd / (Q.stats.hulpTijd || HOSPIK.hulp.tijd) : 1;
+        if (t > tempo){ tempo = t; hulp = Q; }
+        if (hos) leven = Math.max(leven, Q.stats.hulpLeven || HOSPIK.hulp.leven);
+      });
+      var v = veldOp(P);
+      if (v){ tempo = Math.max(tempo, OPHELP.tijd / HOSPIK.koffer.op); var eig = W.spelers[v.van]; leven = Math.max(leven, (eig && eig.stats.hulpLeven) || HOSPIK.hulp.leven); }
+      P.opstaan = tempo ? (P.opstaan || 0) + dt * tempo : Math.max(0, (P.opstaan || 0) - dt / 2);
       if (P.opstaan < OPHELP.tijd) return;
-      P.opstaan = 0; P.neer = false; P.hp = Math.max(1, Math.round(P.maxHp * OPHELP.leven)); P.sp.raak = 1.2;
+      P.opstaan = 0; P.neer = false; P.hp = Math.max(1, Math.round(P.maxHp * leven)); P.sp.raak = 1.2;
       W.cijfers.push({ x:P.sp.x, y:P.sp.y - 40, tekst:P.naam + ' staat weer op', leven:1.6, kleur:'#2f8a4e' });
       zeg('op', P, hulp);
     });
@@ -1492,6 +1616,7 @@ function maak(opties){
     W.tijdInRonde += dt;
     var spelers = W.spelers;
     spelers.forEach(function(P){ beweeg(P, dt); });
+    stapVelden(dt);
     if (samen) ophelpen(dt);
 
     /* spawnen; met twee in de arena komen ze sneller */
@@ -1563,9 +1688,9 @@ function maak(opties){
         baasValtAan(b, levend, boos);
         b.aanvalKlok = AANVAL.pauze(ronde) * (boos ? AANVAL.boosPauze : 1) * (W.nachtmerrie ? NACHTMERRIE.fases[b.nmFase].pauze : 1) * (b.def.tempo || 1)
                      + duurVan(b.def.aanvallen[b.laatste], b.def.heftig) * (boos ? AANVAL.boosOverlap : 1);
-        /* Twee achter elkaar: de tweede komt zodra de eerste over is, en daarna volgt het rustmoment. */
-        if (b.tweede){ b.tweede = false; b.naReeks = true; }
-        else if (toeval() < REEKS.kans){ b.tweede = true; b.aanvalKlok = REEKS.tussen; }
+        /* Een reeks: de volgende komt zodra de vorige over is, en na de laatste volgt het rustmoment. */
+        if (b.reeksNog > 0){ b.reeksNog--; if (b.reeksNog > 0) b.aanvalKlok = REEKS.tussen; else b.naReeks = true; }
+        else if (toeval() < REEKS.kans){ b.reeksNog = REEKS.lengte(ronde, toeval()) - 1; b.aanvalKlok = REEKS.tussen; }
       }
     });
     stapAanvallen(dt, levend);
@@ -1729,12 +1854,16 @@ function maak(opties){
             /* hoe ver een maat met ophelpen is, van 0 tot OPHELP.tijd */
             r2(P.opstaan || 0),
             /* de speer: of de tegenstoot klaarstaat, of de laatste stoot er een was, en hoe ver hij reikte; en de wijdte van de zwaai */
-            r2(s2.tegen || 0), r2(s2.tegenFlits || 0), Math.round(s2.stootBer || P.stats.speerBereik || SPEER.bereik), Math.round(P.stats.zwaaiBoog || SPELER.boog)];
+            r2(s2.tegen || 0), r2(s2.tegenFlits || 0), Math.round(s2.stootBer || P.stats.speerBereik || SPEER.bereik), Math.round(P.stats.zwaaiBoog || SPELER.boog),
+            /* de hospik: hoe lang zijn koffer nog laadt */
+            r1(s2.kofferKlok || 0)];
   }
   W.pakket = function(){
     /* tk: de tik van de kamer, zodat de browser de standen op de klok van de kamer kan zetten */
     return { k:'st', f:W.fase, r:W.ronde, ts:W.teSpawnen, t:r2(W.tijdInRonde), p:W.pauze ? 1 : 0, bg:W.baasGeveld, tk:W.tik, cp:[W.cp.ronde, W.cp.kans],
       zo:W.zones.map(function(z){ return [z.soort, r1(z.x), r1(z.y), z.r || 0, z.w || 0, z.h || 0, z.id]; }),
+      /* de genezende vlakken van de hospik: plek, tijd (onder nul vliegt de koffer nog), duur, straal, waar hij vandaan kwam */
+      ev:W.velden.map(function(v){ return [Math.round(v.x), Math.round(v.y), r2(v.t), r2(v.duur), Math.round(v.r), Math.round(v.ox), Math.round(v.oy), v.id]; }),
       sp:W.spelers.map(inpak),
       /* bij wie schiet ook de klokken van het laden en het stilstaan, voor de loop die mikt en terugslaat */
       /* Plekken van fouten, messen en getallen in hele punten: een tiende punt ziet niemand (de arena is
@@ -1766,7 +1895,7 @@ function maak(opties){
 
 g.ZWAARDMOTOR = { maak:maak, ARENA:ARENA, SPELER:SPELER, DASH:DASH, FOUTEN:FOUTEN, BAZEN:BAZEN, AANVAL:AANVAL, BAASRONDE:BAASRONDE, SAMEN:SAMEN, MOEITE:MOEITE, CHECKPOINT:CHECKPOINT, OPHELP:OPHELP, muurStand:muurStand, STIJLEN:STIJLEN, BLOK:BLOK, LAAT:LAAT, REEKS:REEKS, laatExtra:laatExtra, golfGat:golfGat, vloerAan:vloerAan, vloerTel:vloerTel, slingerStand:slingerStand, GEVAAR:GEVAAR, CRIT:CRIT,
                   MUNT_VAL:MUNT_VAL, RAAKPAUZE:RAAKPAUZE, RAAPTIJD:RAAPTIJD, aantalInRonde:aantalInRonde, foutHp:foutHp, baasVan:baasVan, basisStats:basisStats, nieuweSp:nieuweSp,
-                  SPEER:SPEER, PIJLEN:PIJLEN, WINKEL:WINKEL, UPG:UPG, statsVan:statsVan, klasseHeeft:klasseHeeft, NERF:NERF,
+                  SPEER:SPEER, PIJLEN:PIJLEN, HOSPIK:HOSPIK, WINKEL:WINKEL, UPG:UPG, statsVan:statsVan, klasseHeeft:klasseHeeft, NERF:NERF,
                   wachtNieuw:wachtNieuw, meetStukken:meetStukken, meetTel:meetTel, inVlak:inVlak, afstandTotLijn:afstandTotLijn };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 if (typeof module !== 'undefined' && module.exports) module.exports = globalThis.ZWAARDMOTOR;
