@@ -13,8 +13,12 @@ const LEEFT = 400 * 24 * 60 * 60 * 1000;   /* zonder gebruik: na ruim een jaar w
 const MUNT_PER_MIN = 60, MUNT_BUIDEL = 2000, MUNT_START = 300;
 /* Munten van de beheerder: hoogstens tienduizend per keer, en een logboekje van vijftig. */
 const MUNT_GEEF = 10000, MUNT_LOG = 50;
-/* Trofeeën van een baas: hoogstens een per bericht en vier per uur. */
-const VRIJ_PER_UUR = 4;
+/* Trofeeën van een baas: hoogstens een per bericht en acht per uur. Was vier,
+   maar Zwaardvechter heeft veertien bazen, en samen haalt een ploeg er in een
+   uur makkelijk drie of vier achter elkaar, met daarbij een nachtmerrie of het
+   vlammetje. Wat er niet door mag, blijft in de wachtrij van de browser staan
+   en komt bij een latere melding alsnog binnen. */
+const VRIJ_PER_UUR = 8;
 const MAX_TEKST = 24000;                    /* een profiel als JSON, ruim genoeg voor honderden spellen */
 
 function json(obj, status){
@@ -94,7 +98,7 @@ function voegSamen(oud, nieuw, klasWeg, alles){
   p.fouten = nieuw.fouten || [];
   /* het beheeraccount heeft alles: alle cosmetica en alle eilanden */
   if (alles){ COSMETICA.ITEMS.forEach(it => { p.bezit[it.id] = true; }); ["tonkla", "aap", "eiland", "archipel", "vulkaan"].forEach(k => { p.vrij[k] = true; }); }
-  /* Trofeeën van een baas: hoogstens een per melding, en vier per uur. De
+  /* Trofeeën van een baas: hoogstens een per melding, en acht per uur. De
      server ziet die baas niet sneuvelen, dus hij kan alleen op de klok letten;
      zo blijft het verslaan van een baas de weg ernaartoe. */
   p.vrijLog = (Array.isArray(oud.vrijLog) ? oud.vrijLog : []).filter(t => nu - t < 3600000).slice(-VRIJ_PER_UUR);

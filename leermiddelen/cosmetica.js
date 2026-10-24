@@ -84,12 +84,21 @@
     { id:'p5', soort:'p', n:5, naam:'Sterrenboog', prijs:2200, uit:'nachtblauw met sterretjes, en paars licht' },
     { id:'p6', soort:'p', n:6, naam:'Takkenboog',  prijs:250,  uit:'een tak met een touwtje, en veren van papier' },
     /* trofeeën: niet te koop, je speelt ze vrij door een baas in Zwaardvechter te verslaan */
-    { id:'b1', soort:'b', n:1, naam:'Sterrenkroon van De Grote Fout', prijs:0, baas:'fout',  uit:'versla De Grote Fout in Zwaardvechter' },
-    { id:'b2', soort:'b', n:2, naam:'Inktspat van De Inktvlek',      prijs:0, baas:'inkt',  uit:'versla De Inktvlek in Zwaardvechter' },
-    { id:'b3', soort:'b', n:3, naam:'Pen van De Rode Pen',           prijs:0, baas:'pen',   uit:'versla De Rode Pen in Zwaardvechter' },
-    { id:'b4', soort:'b', n:4, naam:'Propje van De Prop',            prijs:0, baas:'prop',  uit:'versla De Prop in Zwaardvechter' },
-    { id:'b5', soort:'b', n:5, naam:'Wijzerplaat van De Klok',       prijs:0, baas:'klok',  uit:'versla De Klok in Zwaardvechter' },
-    { id:'b6', soort:'b', n:6, naam:'Zwermpje van De Zwerm',         prijs:0, baas:'zwerm', uit:'versla De Zwerm in Zwaardvechter' },
+    { id:'b1', soort:'b', n:1, naam:'Sterrenkroon van De Grote Fout', prijs:0, baas:'fout',  uit:'versla De Grote Fout in Zwaardvechter, alleen of samen' },
+    { id:'b2', soort:'b', n:2, naam:'Inktspat van De Inktvlek',      prijs:0, baas:'inkt',  uit:'versla De Inktvlek in Zwaardvechter, alleen of samen' },
+    { id:'b3', soort:'b', n:3, naam:'Pen van De Rode Pen',           prijs:0, baas:'pen',   uit:'versla De Rode Pen in Zwaardvechter, alleen of samen' },
+    { id:'b4', soort:'b', n:4, naam:'Propje van De Prop',            prijs:0, baas:'prop',  uit:'versla De Prop in Zwaardvechter, alleen of samen' },
+    { id:'b5', soort:'b', n:5, naam:'Wijzerplaat van De Klok',       prijs:0, baas:'klok',  uit:'versla De Klok in Zwaardvechter, alleen of samen' },
+    { id:'b6', soort:'b', n:6, naam:'Zwermpje van De Zwerm',         prijs:0, baas:'zwerm', uit:'versla De Zwerm in Zwaardvechter, alleen of samen' },
+    /* de bazen van na ronde 30; b7 is het vlammetje (dagen op rij), dus deze beginnen bij b8 */
+    { id:'b8',  soort:'b', n:8,  naam:'Discobol van De Discobal',       prijs:0, baas:'disco',     uit:'versla De Discobal in Zwaardvechter, alleen of samen' },
+    { id:'b9',  soort:'b', n:9,  naam:'Slinger van De Metronoom',       prijs:0, baas:'metronoom', uit:'versla De Metronoom in Zwaardvechter, alleen of samen' },
+    { id:'b10', soort:'b', n:10, naam:'Vulpen van De Blauwe Pen',       prijs:0, baas:'blauwepen', uit:'versla De Blauwe Pen in Zwaardvechter, alleen of samen' },
+    { id:'b11', soort:'b', n:11, naam:'Gummetje van De Gum',            prijs:0, baas:'gum',       uit:'versla De Gum in Zwaardvechter, alleen of samen' },
+    { id:'b12', soort:'b', n:12, naam:'Liniaaltje van De Liniaal',      prijs:0, baas:'liniaal',   uit:'versla De Liniaal in Zwaardvechter, alleen of samen' },
+    { id:'b13', soort:'b', n:13, naam:'Belletje van De Schoolbel',      prijs:0, baas:'bel',       uit:'versla De Schoolbel in Zwaardvechter, alleen of samen' },
+    { id:'b14', soort:'b', n:14, naam:'Rapportje van Het Rapport',      prijs:0, baas:'rapport',   uit:'versla Het Rapport in Zwaardvechter, alleen of samen' },
+    { id:'b15', soort:'b', n:15, naam:'Beker van Het Proefwerk',        prijs:0, baas:'proefwerk', uit:'versla Het Proefwerk in Zwaardvechter, alleen of samen' },
     /* De nachtmerrie: alleen tegen een baas, met alles gekocht, en hij is veel
        taaier. Elke baas geeft een ander soort ding, zodat het opvalt dat je het
        gehaald hebt. baas:'nm-...' zorgt dat de winkel ze weigert en het
@@ -101,6 +110,14 @@
     { id:'h14', soort:'h', n:14, naam:'Propkroon',          prijs:0, baas:'nm-prop',  uit:'versla De Prop in de nachtmerrie' },
     { id:'a4',  soort:'a', n:4,  naam:'Middernacht',        prijs:0, baas:'nm-klok',  uit:'versla De Klok in de nachtmerrie' },
     { id:'r8',  soort:'r', n:8,  naam:'Zwermring',          prijs:0, baas:'nm-zwerm', uit:'versla De Zwerm in de nachtmerrie' },
+    { id:'q9',  soort:'q', n:9,  naam:'Discobril',          prijs:0, baas:'nm-disco',     uit:'versla De Discobal in de nachtmerrie' },
+    { id:'h25', soort:'h', n:25, naam:'Metronoomhoed',      prijs:0, baas:'nm-metronoom', uit:'versla De Metronoom in de nachtmerrie' },
+    { id:'r12', soort:'r', n:12, naam:'Blauwe krabbel',     prijs:0, baas:'nm-blauwepen', uit:'versla De Blauwe Pen in de nachtmerrie' },
+    { id:'a8',  soort:'a', n:8,  naam:'Gumkruimels',        prijs:0, baas:'nm-gum',       uit:'versla De Gum in de nachtmerrie' },
+    { id:'r13', soort:'r', n:13, naam:'Liniaalrand',        prijs:0, baas:'nm-liniaal',   uit:'versla De Liniaal in de nachtmerrie' },
+    { id:'a9',  soort:'a', n:9,  naam:'Veilig lokaal',      prijs:0, baas:'nm-bel',       uit:'versla De Schoolbel in de nachtmerrie' },
+    { id:'h26', soort:'h', n:26, naam:'Stempelhoed',        prijs:0, baas:'nm-rapport',   uit:'versla Het Rapport in de nachtmerrie' },
+    { id:'a10', soort:'a', n:10, naam:'Gouden stralen',     prijs:0, baas:'nm-proefwerk', uit:'versla Het Proefwerk in de nachtmerrie' },
     /* Te verdienen door dagen op rij te oefenen (spel.js kijkt na elk potje).
        Ze lopen via hetzelfde spoor als de trofeeën van een baas (baas:'reeks-..'),
        zodat de server ze doorlaat als vrijgespeeld en weigert in de winkel;

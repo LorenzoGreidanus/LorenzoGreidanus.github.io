@@ -204,6 +204,17 @@ window.AVATAR = (function(){
       '<path d="M-15,-30 q15,5 30,0" fill="none" stroke="#FFD166" stroke-width="3.2" stroke-linecap="round"/>' +
       '<circle cx="-5" cy="-38" r="2.3" fill="#FFD166"/><circle cx="5" cy="-45" r="2.1" fill="#83A5F2"/><circle cx="-1.5" cy="-52" r="1.8" fill="#fff"/>' +
       '<path d="M0,-75 L2.4,-70 L7.6,-69.4 L3.7,-65.8 L4.8,-60.6 L0,-63.3 L-4.8,-60.6 L-3.7,-65.8 L-7.6,-69.4 L-2.4,-70 Z" fill="#FFD166" stroke="#c9971f" stroke-width="1.1" stroke-linejoin="round"/></g>';
+    /* metronoomhoed van De Metronoom (nachtmerrie): het groene huisje op je hoofd, met de slinger die uitslaat */
+    if (n === 25) return '<path d="M-17,-29 L-7,-62 L7,-62 L17,-29 Z" fill="#1f6b5c" stroke="#123f36" stroke-width="1.6" stroke-linejoin="round"/>' +
+      '<path d="M-10,-33 L-4,-56 L4,-56 L10,-33 Z" fill="#F3EFE9" opacity=".9"/><path d="M-3,-51 h6 M-4,-46 h8 M-5.5,-41 h11" stroke="#1f6b5c" stroke-width="1" opacity=".6"/>' +
+      '<path d="M0,-34 L11,-66" stroke="#14224C" stroke-width="2" stroke-linecap="round"/>' +
+      '<path d="M2.6,-50.6 L7.6,-48.9 L9.5,-54.6 L4.5,-56.3 Z" fill="#EA9836" stroke="#14224C" stroke-width="1.2" stroke-linejoin="round"/>' +
+      '<path d="M-21,-29 h42" stroke="#14224C" stroke-width="4" stroke-linecap="round"/><circle cx="0" cy="-34" r="2" fill="#FFD166"/>';
+    /* stempelhoed van Het Rapport (nachtmerrie): een grote groene stempel met een houten knop */
+    if (n === 26) return '<path d="M-22,-29 L22,-29 L22,-33 L-22,-33 Z" fill="#1d5537"/>' +
+      '<path d="M-20,-33 L-20,-41 L20,-41 L20,-33 Z" fill="#2f7d52" stroke="#1d5537" stroke-width="1.6" stroke-linejoin="round"/><path d="M-12,-37 h24" stroke="#F3EFE9" stroke-width="1.6" stroke-linecap="round" opacity=".6"/>' +
+      '<path d="M-5,-41 L-4,-48 L4,-48 L5,-41 Z" fill="#a5773f" stroke="#7d5a2e" stroke-width="1.4" stroke-linejoin="round"/>' +
+      '<circle cx="0" cy="-55" r="9" fill="#a5773f" stroke="#7d5a2e" stroke-width="1.6"/><circle cx="-3" cy="-58" r="2.6" fill="#fff" opacity=".35"/>';
     /* Pruisische punthelm, voor Bismarck (g3): geen winkelhoed, hij hoort bij het personage */
     if (n === 22) return '<path d="M-30,-30 C-30,-54 -15,-60 0,-60 C15,-60 30,-54 30,-30 Z" fill="#2a3142" stroke="#151a26" stroke-width="2" stroke-linejoin="round"/>' +
       '<path d="M-22,-46 q8,-9 18,-11" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".28"/>' +
@@ -258,6 +269,39 @@ window.AVATAR = (function(){
     else if (n === 6) g = '<circle r="6" fill="#3b4759"/>' + [0, 60, 120, 180, 240, 300].map(function(a){ return '<circle transform="rotate(' + a + ') translate(0,-11)" r="3" fill="#3b4759"/>'; }).join('') + '<circle cx="-2" cy="-1.5" r="1" fill="#fff"/><circle cx="2" cy="-1.5" r="1" fill="#fff"/>';
     /* vlammetje: vijf dagen op rij geoefend */
     else if (n === 7) g = '<path d="M0,13 q-12,0 -11,-11 q1,-8 7,-13 q0,6 4,8 q1,-8 7,-12 q-1,8 5,13 q4,5 -1,11 q-4,4 -11,4z" fill="#F26749" stroke="#c0442c" stroke-width="1.4" stroke-linejoin="round"/><path d="M0,11 q-5,0 -5,-5 q0,-4 4,-7 q0,4 3,5 q3,2 3,4 q0,3 -5,3z" fill="#FFD166"/>';
+    /* discobol van De Discobal: een zilveren bol aan een touwtje, met gekleurde spiegeltjes en een glinster */
+    else if (n === 8) g = '<path d="M0,-15 v4" stroke="#14224C" stroke-width="1.4" stroke-linecap="round"/><circle r="11" fill="#c9cfe0" stroke="#14224C" stroke-width="1.5"/>' +
+      '<rect x="-6" y="-6" width="5.5" height="5.5" fill="#83A5F2"/><rect x="0.5" y="0.5" width="5.5" height="5.5" fill="#9A55B8"/><rect x="-6" y="0.5" width="5.5" height="5.5" fill="#fff"/><rect x="0.5" y="-9" width="5" height="3" fill="#F26749"/><rect x="-9.5" y="-3" width="3" height="5" fill="#EA9836"/>' +
+      '<path d="M-11,0 h22 M0,-11 v22 M-9,-6 h18 M-9,6 h18 M-6,-9 v18 M6,-9 v18" stroke="#8f9db0" stroke-width=".7" fill="none"/>' +
+      '<path d="M9,-12 l1,2.6 2.6,1 -2.6,1 -1,2.6 -1,-2.6 -2.6,-1 2.6,-1z" fill="#fff" stroke="#9A55B8" stroke-width=".6" stroke-linejoin="round"/>';
+    /* slinger van De Metronoom: het groene huisje met de slinger die uitslaat */
+    else if (n === 9) g = '<path d="M-9,12 L-4,-12 L4,-12 L9,12 Z" fill="#1f6b5c" stroke="#123f36" stroke-width="1.4" stroke-linejoin="round"/><path d="M-5,8 L-2,-7 L2,-7 L5,8 Z" fill="#F3EFE9" opacity=".85"/>' +
+      '<path d="M-10,12 h20" stroke="#14224C" stroke-width="2.4" stroke-linecap="round"/><path d="M0,8 L8,-13" stroke="#14224C" stroke-width="1.8" stroke-linecap="round"/>' +
+      '<path d="M1.8,-2.2 L5.4,-0.8 L7,-4.9 L3.4,-6.3 Z" fill="#EA9836" stroke="#14224C" stroke-width="1" stroke-linejoin="round"/><circle cy="8" r="1.6" fill="#FFD166"/>' +
+      '<path d="M-13,-9 q-2,4 0,8 M13,-12 q3,3 2,8" fill="none" stroke="#83A5F2" stroke-width="1.4" stroke-linecap="round"/>';
+    /* vulpen van De Blauwe Pen: blauw met een gouden punt, de andere kant op dan de rode pen, en een druppel inkt */
+    else if (n === 10) g = '<g transform="rotate(40)"><rect x="-3.4" y="-14" width="6.8" height="18" rx="2.4" fill="#2458d6" stroke="#16389a" stroke-width="1"/><rect x="-3.4" y="-14" width="6.8" height="6" rx="2" fill="#16389a"/>' +
+      '<path d="M2,-13 v6" stroke="#FFD166" stroke-width="1.2" stroke-linecap="round"/><path d="M-3,4 L0,13 L3,4 Z" fill="#FFD166" stroke="#c9971f" stroke-width="1" stroke-linejoin="round"/><path d="M0,7 v4" stroke="#c9971f" stroke-width=".8"/></g>' +
+      '<path d="M-10,9.5 q2.4,3 0,5 q-2.4,-2 0,-5z" fill="#2458d6"/>';
+    /* gummetje van De Gum: roze en blauw, schuin, met kruimels */
+    else if (n === 11) g = '<g transform="rotate(-20)"><rect x="-11" y="-6" width="22" height="12" rx="3" fill="#e0607e" stroke="#a83a55" stroke-width="1.4"/><path d="M2,-6 h6 q3,0 3,3 v6 q0,3 -3,3 h-6 z" fill="#83A5F2" stroke="#4a6fc2" stroke-width="1.4" stroke-linejoin="round"/>' +
+      '<path d="M-8,-3 h6" stroke="#fff" stroke-width="1.4" stroke-linecap="round" opacity=".6"/></g>' +
+      '<circle cx="-9" cy="10" r="1.5" fill="#e0607e"/><circle cx="-4.5" cy="12" r="1.1" fill="#a83a55"/><circle cx="-12.5" cy="6" r="1" fill="#e0607e"/>';
+    /* liniaaltje van De Liniaal: geel, schuin, met streepjes */
+    else if (n === 12) g = '<g transform="rotate(-35)"><rect x="-14" y="-4.5" width="28" height="9" rx="1.5" fill="#FFD166" stroke="#c9971f" stroke-width="1.4"/>' +
+      '<path d="M-10,-4.5 v4 M-6,-4.5 v2.4 M-2,-4.5 v4 M2,-4.5 v2.4 M6,-4.5 v4 M10,-4.5 v2.4" stroke="#14224C" stroke-width="1"/></g>';
+    /* belletje van De Schoolbel: blauw met een gouden klepel en geluid ernaast */
+    else if (n === 13) g = '<path d="M0,-11 q-8,0 -8,9 v4 l-3,4 h22 l-3,-4 v-4 q0,-9 -8,-9z" fill="#204ECF" stroke="#16389a" stroke-width="1.4" stroke-linejoin="round"/><circle cy="-12.5" r="2" fill="#16389a"/>' +
+      '<circle cy="9" r="2.6" fill="#FFD166" stroke="#c9971f" stroke-width="1"/><path d="M-4,-6 q-2,3 -2,7" stroke="#fff" stroke-width="1.4" fill="none" stroke-linecap="round" opacity=".45"/>' +
+      '<path d="M-13,-8 q-3,4 0,8 M13,-8 q3,4 0,8" stroke="#83A5F2" stroke-width="1.5" fill="none" stroke-linecap="round"/>';
+    /* rapportje van Het Rapport: een groen boekje met een 10 */
+    else if (n === 14) g = '<g transform="rotate(-8)"><rect x="-9" y="-12" width="18" height="23" rx="2" fill="#2f7d52" stroke="#1d5537" stroke-width="1.4"/><path d="M-6,-12 v23" stroke="#1d5537" stroke-width="1.2"/>' +
+      '<rect x="-3.5" y="-7" width="10.5" height="11" rx="1.5" fill="#F3EFE9"/><path d="M-1.4,-4 l1.4,-1.2 v8" stroke="#F26749" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<ellipse cx="3.9" cy="-1.2" rx="1.8" ry="3.3" fill="none" stroke="#F26749" stroke-width="1.5"/></g>';
+    /* beker van Het Proefwerk, het eindgevecht: goud met een ster, op een donkere voet */
+    else if (n === 15) g = '<path d="M-8,-12 q-6,0 -6,4.5 q0,4.5 6,5.5 M8,-12 q6,0 6,4.5 q0,4.5 -6,5.5" fill="none" stroke="#c9971f" stroke-width="2" stroke-linecap="round"/>' +
+      '<path d="M-8.5,-12.5 h17 v4 q0,9.5 -8.5,10.5 q-8.5,-1 -8.5,-10.5 z" fill="#FFD166" stroke="#c9971f" stroke-width="1.4" stroke-linejoin="round"/><path d="M-1.8,2 h3.6 v5 h-3.6z" fill="#c9971f"/>' +
+      '<rect x="-7.5" y="7" width="15" height="5.5" rx="1.4" fill="#14224C"/>' + ster(0, -5.5, 3.6, '#fff') + '<path d="M-5.5,-10 v4" stroke="#fff" stroke-width="1.4" stroke-linecap="round" opacity=".6"/>';
     if (!g) return '';
     return '<g transform="translate(30,26)">' + halo(g, 5) + g + '</g>';
   }
@@ -283,6 +327,26 @@ window.AVATAR = (function(){
       return '<rect x="-2.6" y="-1.5" width="5.2" height="3" rx=".8" fill="' + c[3] + '" transform="translate(' + c[0] + ',' + c[1] + ') rotate(' + c[2] + ')"/>'; }).join('');
     /* sneeuw: een winterlucht met vlokjes en een witte heuvel onderaan */
     if (n === 7) return '<circle r="49" fill="#5f86d9"/><path d="M-46,18 q22,-12 46,-4 q24,-8 46,4 a49,49 0 0 1 -92,0 z" fill="#F3F6FB"/><g fill="#fff">' + [[-34, -28, 2.2], [-20, -42, 1.6], [4, -46, 2], [26, -38, 1.8], [40, -18, 2.2], [-44, -6, 1.6], [44, 4, 1.4], [-38, 10, 1.3], [16, -44, 1.2]].map(function(c){ return '<circle cx="' + c[0] + '" cy="' + c[1] + '" r="' + c[2] + '"/>'; }).join('') + '</g>' + SCHIJFRAND;
+    /* gumkruimels van De Gum (nachtmerrie): roze, met een schoongeveegde streep en kruimels */
+    /* De gezichtjes zijn bijna even groot als de schijf: wat hieronder opvalt, ligt daarom aan de rand. */
+    /* gumkruimels van De Gum (nachtmerrie): roze, met kruimels rondom en een schoongeveegde veeg */
+    if (n === 8) return '<circle r="49" fill="#f2b3c2"/><ellipse rx="45" ry="11" transform="rotate(-35)" fill="#FDF3F5" opacity=".9"/>' +
+      [[-150, 3.4, '#e0607e'], [-120, 2.4, '#a83a55'], [-95, 3, '#e0607e'], [-60, 2.2, '#83A5F2'], [-20, 3.2, '#e0607e'], [15, 2.4, '#a83a55'], [60, 3, '#e0607e'], [95, 2.2, '#83A5F2'], [120, 3.4, '#e0607e'], [160, 2.4, '#a83a55'], [190, 3, '#e0607e'], [-175, 2, '#83A5F2']].map(function(c){
+        var a = c[0] * Math.PI / 180, r = 45.5 - c[1] * 0.3;
+        return '<ellipse cx="' + f1(Math.sin(a) * r) + '" cy="' + f1(-Math.cos(a) * r) + '" rx="' + c[1] + '" ry="' + f1(c[1] * 0.72) + '" transform="rotate(' + (c[0] * 2 % 90) + ' ' + f1(Math.sin(a) * r) + ' ' + f1(-Math.cos(a) * r) + ')" fill="' + c[2] + '"/>'; }).join('') + SCHIJFRAND;
+    /* veilig lokaal van De Schoolbel (nachtmerrie): de lokalen van bovenaf, en drie lichten groen op, zoals als de bel gaat */
+    if (n === 9){ var lk = '';
+      [-34, -17, 0, 17, 34].forEach(function(y){ [-34, -17, 0, 17, 34].forEach(function(x){
+        if (Math.sqrt(Math.pow(Math.abs(x) + 7, 2) + Math.pow(Math.abs(y) + 7, 2)) > 48) return;
+        var aan = (x === -34 && y === 17) || (x === 34 && y === -17) || (x === 17 && y === -34) || (x === 0 && y === 34);
+        lk += '<rect x="' + (x - 7) + '" y="' + (y - 7) + '" width="14" height="14" rx="2.4" fill="' + (aan ? '#3bb58f' : '#3b67de') + '" stroke="' + (aan ? '#d4f5e8' : '#83A5F2') + '" stroke-width="1.3"/>'; }); });
+      return '<circle r="49" fill="#16389a"/>' + lk + SCHIJFRAND; }
+    /* gouden stralen van Het Proefwerk (nachtmerrie): het eindgevecht gehaald, dus een gouden krans van punten om je heen */
+    if (n === 10){ var st = '';
+      for (var k = 0; k < 16; k++){ var am = k * 22.5 * Math.PI / 180, a0 = am - 0.11, a1 = am + 0.11, lang = k % 2 ? 54 : 58;
+        st += '<path d="M' + f1(Math.sin(a0) * 46) + ',' + f1(-Math.cos(a0) * 46) + ' L' + f1(Math.sin(am) * lang) + ',' + f1(-Math.cos(am) * lang) + ' L' + f1(Math.sin(a1) * 46) + ',' + f1(-Math.cos(a1) * 46) + ' Z"/>'; }
+      return '<g fill="#FFD166" stroke="#c9971f" stroke-width="1.2" stroke-linejoin="round">' + st + '</g><circle r="49" fill="#14224C" stroke="#FFD166" stroke-width="2.4"/>' +
+        '<circle r="40" fill="#FFD166" opacity=".16"/>' + ster(0, -42, 3.6, '#FFD166'); }
     return '';
   }
   /* de bril uit de winkel, over de ogen heen */
@@ -300,6 +364,14 @@ window.AVATAR = (function(){
     if (n === 7) return '<g stroke="#c9971f" stroke-width="1.6" stroke-linejoin="round"><path d="M-15,-19 l4.1,8.4 9.2,1.3 -6.6,6.5 1.6,9.2 -8.3,-4.4 -8.3,4.4 1.6,-9.2 -6.6,-6.5 9.2,-1.3z" fill="#FFD166"/><path d="M15,-19 l4.1,8.4 9.2,1.3 -6.6,6.5 1.6,9.2 -8.3,-4.4 -8.3,4.4 1.6,-9.2 -6.6,-6.5 9.2,-1.3z" fill="#FFD166"/></g><circle cx="-15" cy="-5" r="5.2" fill="#14224C"/><circle cx="15" cy="-5" r="5.2" fill="#14224C"/><path d="M-4,-7 h8" stroke="#c9971f" stroke-width="2.4" stroke-linecap="round"/><circle cx="-13" cy="-7" r="1.4" fill="#fff" opacity=".7"/><circle cx="17" cy="-7" r="1.4" fill="#fff" opacity=".7"/>';
     /* skibril: een band om je hoofd en een groot oranje glas */
     if (n === 8) return '<path d="M-46,-6 h92" stroke="#14224C" stroke-width="6" stroke-linecap="round"/><rect x="-31" y="-17" width="62" height="23" rx="11" fill="#EA9836" stroke="#14224C" stroke-width="3"/><path d="M-31,-6 q31,-8 62,0 v1 q-31,10 -62,0 z" fill="#F26749" opacity=".55"/><path d="M-22,-12 l8,-2 M16,-13 l6,-1" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".7"/>';
+    /* discobril van De Discobal (nachtmerrie): twee spiegelbollen als glazen, in een paars montuur */
+    if (n === 9) return '<g>' + [-15, 15].map(function(cx){
+        return '<circle cx="' + cx + '" cy="-5" r="10" fill="#c9cfe0"/>' +
+          '<rect x="' + (cx - 6) + '" y="-11" width="5" height="5" fill="#83A5F2"/><rect x="' + (cx + 1) + '" y="-6" width="5" height="5" fill="#9A55B8"/>' +
+          '<rect x="' + (cx - 5) + '" y="-1" width="5" height="4" fill="#fff"/><rect x="' + (cx + 1) + '" y="-12" width="4" height="4" fill="#F26749"/>' +
+          '<path d="M' + (cx - 10) + ',-5 h20 M' + cx + ',-15 v20 M' + (cx - 8) + ',-11 h16 M' + (cx - 8) + ',1 h16" stroke="#8f9db0" stroke-width=".7"/>'; }).join('') +
+      '<g fill="none" stroke="#9A55B8" stroke-width="2.6"><circle cx="-15" cy="-5" r="10"/><circle cx="15" cy="-5" r="10"/><path d="M-5,-6 h10 M-25,-7 h-7 M25,-7 h7" stroke-linecap="round"/></g>' +
+      '<path d="M-24,-17 l.9,2.2 2.2,.9 -2.2,.9 -.9,2.2 -.9,-2.2 -2.2,-.9 2.2,-.9z M24,-18 l.8,1.9 1.9,.8 -1.9,.8 -.8,1.9 -.8,-1.9 -1.9,-.8 1.9,-.8z" fill="#fff" stroke="#9A55B8" stroke-width=".6" stroke-linejoin="round"/></g>';
     return '';
   }
   function rand(n){
@@ -324,6 +396,20 @@ window.AVATAR = (function(){
     if (n === 11){ var b = '';
       [-1, 1].forEach(function(z){ for (var j = 0; j < 7; j++){ var a = 76 - j * 19; b += '<ellipse cx="4" rx="7" ry="3.2" fill="' + (j % 2 ? '#FFD166' : '#EAB53F') + '" stroke="#b8862a" stroke-width="1" transform="scale(' + z + ',1) rotate(' + a + ') translate(46,0) rotate(' + (j % 2 ? -125 : -55) + ')"/>'; } });
       return '<path d="M-8,45.3 A46,46 0 0 1 -35,-29.6 M8,45.3 A46,46 0 0 0 35,-29.6" fill="none" stroke="#b8862a" stroke-width="2.2" stroke-linecap="round"/>' + b + '<path d="M-7,48 l7,-5 7,5" fill="none" stroke="#c0442c" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>'; }
+    /* blauwe krabbel van De Blauwe Pen (nachtmerrie): met de hand rondgekrast, twee keer, een beetje bibberig */
+    if (n === 12){
+      var lus = function(r0, bib, golf, fase, van, tot){ var d = '';
+        for (var t = 0; t <= 48; t++){ var a = van + (tot - van) * t / 48, r = r0 + bib * Math.sin(golf * a + fase); d += (t ? 'L' : 'M') + f1(Math.sin(a) * r) + ',' + f1(-Math.cos(a) * r); }
+        return d; };
+      return '<path d="' + lus(46.5, 1.6, 3, 0.4, -0.3, 6.6) + '" fill="none" stroke="#83A5F2" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '<path d="' + lus(45, 2, 4, 1.7, 0.5, 7.3) + '" fill="none" stroke="#2458d6" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '<circle cx="' + f1(Math.sin(7.3) * 45.7) + '" cy="' + f1(-Math.cos(7.3) * 45.7) + '" r="2.6" fill="#16389a"/>'; }
+    /* liniaalrand van De Liniaal (nachtmerrie): een gele meetlat rond je gezicht, met streepjes */
+    if (n === 13){ var tk = '';
+      for (var i2 = 0; i2 < 60; i2++){ var hk = i2 * Math.PI / 30, ln = i2 % 5 ? 2.4 : 4.6;
+        tk += 'M' + f1(Math.sin(hk) * 49.4) + ',' + f1(-Math.cos(hk) * 49.4) + 'L' + f1(Math.sin(hk) * (49.4 - ln)) + ',' + f1(-Math.cos(hk) * (49.4 - ln)); }
+      return '<circle r="46" fill="none" stroke="#FFD166" stroke-width="7"/><circle r="49.5" fill="none" stroke="#c9971f" stroke-width="1.2"/><circle r="42.5" fill="none" stroke="#c9971f" stroke-width="1.2"/>' +
+        '<path d="' + tk + '" stroke="#14224C" stroke-width="1"/>'; }
     return '';
   }
   function f(v){ return String(Math.round(v * 100) / 100); }

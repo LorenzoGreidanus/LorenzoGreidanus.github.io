@@ -171,16 +171,22 @@ header{position:sticky;top:0;z-index:30;background:rgba(251,246,241,.94);border-
    in hoofdletters en zonder rand tot je hem kiest. */
 .deelvak .deelbreek{flex-basis:100%;height:0;margin:0;padding:0;border:none}
 /* de nachtmerrie op het startscherm */
-.nmvak{background:var(--kaart);border:1px solid var(--rand);border-radius:22px;padding:18px 20px;margin:22px auto 0;max-width:46rem;text-align:left}
+/* --kaart, --rand en --op bestaan alleen in het donker (of niet): daarom met een waarde erbij, anders stond het vak licht zonder rand */
+.nmvak{background:var(--kaart,#fff);border:1px solid var(--rand,rgba(20,34,76,.1));border-radius:22px;padding:18px 20px;margin:22px auto 0;max-width:46rem;text-align:left}
 .nmvak h3{font-size:1.08rem;margin:0 0 6px}
+.nmvak h3 small{font-size:.78rem;font-weight:600;color:var(--muted);margin-left:6px}
 .nmvak p{color:var(--muted);font-size:.92rem;margin:0 0 12px}
 .nmrij{display:flex;flex-wrap:wrap;gap:8px}
 .nmrij button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:48px;padding:9px 14px;
-  border:2px solid var(--rand);border-radius:14px;background:var(--room);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+  border:2px solid var(--rand,rgba(20,34,76,.12));border-radius:14px;background:var(--room);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
 .nmrij button b{font-size:.95rem}
 .nmrij button small{color:var(--muted);font-size:.78rem}
 .nmrij button:hover{border-color:var(--crab)}
-.nmrij button.gehaald{border-color:var(--op)}
+.nmrij button.gehaald{border-color:var(--op,#2f7d52)}
+:root[data-theme="dark"] .nmvak,:root[data-theme="dark"] .nmrij button:not(:hover):not(.gehaald){border-color:rgba(243,239,233,.16)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .nmvak,:root:not([data-theme="light"]) .nmrij button:not(:hover):not(.gehaald){border-color:rgba(243,239,233,.16)}}
+:root[data-theme="dark"] .nmrij button.gehaald{border-color:#5fbf8a}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .nmrij button.gehaald{border-color:#5fbf8a}}
 .deelvak .deelkop{font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;font-weight:700;
   border-style:dashed;opacity:.85;padding-left:12px;padding-right:12px}
 .deelvak .deelkop.on{opacity:1;border-style:solid}
@@ -1158,6 +1164,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   var stijl = 'ridder', vaardig = {}, keuzeOpen = null, tweedeKansOver = 0, zones = [], baasWeg = 0, blokToets = false, trofeeTekst = '';
   /* trofeeën die je zou krijgen als je ingelogd was: die komen op het eindscherm */
   var trofeeLater = [];
+  /* de ronde waarvan de trofee al gegeven is, zodat dezelfde baas niet twee keer telt */
+  var trofeeRonde = 0;
   /* welke baas je nu in de nachtmerrie bevecht, of niets in een gewoon potje */
   var nachtmerrie = null;
   var NMSLEUTEL = 'lg-zwaard-bazen', NMGEHAALD = 'lg-zwaard-nachtmerries';
@@ -1213,15 +1221,15 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     var gedaan = lijstUit(NMSLEUTEL), gehaald = lijstUit(NMGEHAALD);
     el.classList.remove('hide');
     if (!gedaan.length){
-      el.innerHTML = '<h3>Baas Nightmare</h3><p>Versla eerst een baas in een gewoon potje. Daarna kun je hem hier nog een keer tegenkomen, ' +
-        'maar dan alleen en met alles gekocht, en hij is een stuk sterker.</p>';
+      el.innerHTML = '<h3>Baas Nightmare</h3><p>Versla eerst een baas in een gewoon potje, alleen of samen. Daarna kun je hem hier nog een keer tegenkomen, ' +
+        'maar dan alleen en met alles gekocht, en hij is een stuk sterker. Elke baas heeft een eigen beloning voor bij je gezichtje.</p>';
       return;
     }
-    el.innerHTML = '<h3>Baas Nightmare</h3>' +
-      '<p>Alleen jij tegen de baas, met je uitrusting helemaal vol. Hij heeft zoveel leven dat je minutenlang moet raken, ' +
+    el.innerHTML = '<h3>Baas Nightmare <small>' + gedaan.filter(function(id){ return BAZEN.some(function(b){ return b.id === id; }); }).length + ' van de ' + BAZEN.length + ' bazen</small></h3>' +
+      '<p>Alleen jij tegen een baas die je al versloeg, alleen of samen, met je uitrusting helemaal vol. Hij heeft zoveel leven dat je minutenlang moet raken, ' +
       'na een klap of twaalf lig je. Hij valt aan in salvo\'s, snel achter elkaar; daarna is hij heel even moe en raak je hem harder. ' +
       'In drie fasen worden de salvo\'s langer en de momenten korter. ' +
-      'Versla je hem, dan win je iets voor bij je gezichtje.</p>' +
+      'Versla je hem, dan win je iets voor bij je gezichtje; elke baas iets anders.</p>' +
       '<div class="nmrij">' + BAZEN.filter(function(b){ return gedaan.indexOf(b.id) >= 0; }).map(function(b){
         var it = window.COSMETICA && COSMETICA.vanNachtmerrie ? COSMETICA.vanNachtmerrie(b.id) : null;
         var had = gehaald.indexOf(b.id) >= 0;
@@ -1262,6 +1270,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
   /* een baas geveld: de trofee die erbij hoort, voor wie is ingelogd */
   function trofeeVan(rondeNr){
     var def = ZWAARDMOTOR.baasVan(rondeNr), it = window.COSMETICA ? COSMETICA.vanBaas(def.id) : null;
+    /* ook samen: wie de baas mee versloeg, mag hem daarna in de nachtmerrie proberen */
+    lijstBij(NMSLEUTEL, def.id);
     if (!it) return '';
     /* Niet ingelogd: dat hoort op het eindscherm, niet op het moment dat de baas valt */
     if (!(window.PROFIEL && PROFIEL.ingelogd())){ trofeeLater.push(def.naam + ' (' + it.naam.toLowerCase() + ')'); return ''; }
@@ -1606,7 +1616,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     ronde = 0; munten = 0; level = {}; geveld = 0; reeks = 0; besteReeks = 0; goedAantal = 0; foutAantal = 0; muntWas = 0; geveldWas = 0; perOnderdeel = {};
     co.klaar = false; co.maatKlaar = false; co.neer = false; co.inNr = 0; co.lag = 80; co.laatsteSprong = -1e9; klok.af = null; co.laatsteFase = ''; co.pakketten = 0;
     co.dashVraag = false; co.wapenVraag = 0; co.laatsteInvoer = '';
-    vaardig = {}; keuzeOpen = null; tweedeKansOver = 0; zones = []; baasWeg = 0; blokToets = false; cheat = false; god = false; trofeeLater = [];
+    vaardig = {}; keuzeOpen = null; tweedeKansOver = 0; zones = []; baasWeg = 0; blokToets = false; cheat = false; god = false; trofeeLater = []; trofeeRonde = 0;
     bewaarLaatst();
     /* een nieuw potje alleen: het bewaarde potje is dan voorbij (de nachtmerrie en de kamer raken het niet aan) */
     if (!terug && !co.aan && !nmStart && !(window.STRIJD && STRIJD.actief)) wisPotje();
@@ -2197,6 +2207,18 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     var mijA = d.sp[co.mij];
     /* de tijd van deze stand op de klok van de kamer (zie standTijd) */
     var st = standTijd(d.tk, nu);
+    /* Samen: de ploeg velde een baas. Iedereen die nog meedoet, ook wie
+       neerligt, krijgt meteen de nachtmerrie van die baas, en bij de vragen
+       zijn trofee (trofeeVan in naarVragen), net als alleen. Wie vertrok krijgt
+       geen standen meer en dus ook niets. De eerste stand na het verbinden is
+       alleen het beginpunt: een baas van voor die tijd telt hier niet. */
+    co.weg = !!(mijA && mijA[13] === 2);
+    if (d.bg !== co.bgZag){
+      if (co.bgZag !== undefined && d.bg && d.bg % BAASRONDE === 0 && mijA && !co.weg){ var bdef = baasVan(d.bg); if (bdef) lijstBij(NMSLEUTEL, bdef.id); }
+      co.bgZag = d.bg;
+    }
+    /* voor de fase hieronder, want naarVragen kijkt of deze ronde een baas viel */
+    if (d.bg) baasWeg = d.bg;
     /* de fase: een nieuwe ronde, de vragen, of het einde */
     if (d.f !== co.laatsteFase){
       co.laatsteFase = d.f;
@@ -2223,7 +2245,6 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       cpStand = { ronde:d.cp[0], kans:d.cp[1] };
     }
     ronde = d.r; teSpawnen = d.ts; tijdInRonde = d.t || 0;
-    if (d.bg) baasWeg = d.bg;
     zones = (d.zo || []).map(function(a){ return { soort:a[0], x:a[1], y:a[2], r:a[3], w:a[4], h:a[5], id:a[6] }; });
     var pz = !!d.p;
     if (pz !== pauze){
@@ -2339,7 +2360,13 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     botLog('ronde-af');
     fase = 'vragen';
     tweedeKansOver = v('tweede');
-    if (ronde % BAASRONDE === 0 && baasWeg === ronde && !keuzeOpen){ keuzeOpen = trekVaardigheden(); trofeeTekst = trofeeVan(ronde); }
+    /* Een baas geveld: een vaardigheid kiezen en de trofee. De trofee hangt niet
+       aan de keuze: stond er samen nog een keuze open van de vorige baas (de
+       kamer liep al door), dan krijg je hem toch, maar een keer per ronde. */
+    if (ronde % BAASRONDE === 0 && baasWeg === ronde){
+      if (!keuzeOpen) keuzeOpen = trekVaardigheden();
+      if (trofeeRonde !== ronde && !(co.aan && co.weg)){ trofeeRonde = ronde; trofeeTekst = trofeeVan(ronde); }
+    }
     vragenOver = vragenInRonde(ronde); vragenTotaal = vragenOver;
     vraag = nieuweVraag(); geklikt = -1;
     tekenDash();
