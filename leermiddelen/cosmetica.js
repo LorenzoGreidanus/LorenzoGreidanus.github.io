@@ -40,8 +40,6 @@
     { id:'h21', soort:'h', n:21, naam:'Strohoed',       prijs:400, uit:'alleen in de zomer te koop (half juni tot eind augustus)', seizoen:[6, 15, 8, 31] },
     /* figuren: f1 tot f6, vast aan je hoofd; ze draaien mee als je gezichtje een kant op kijkt */
     { id:'f1', soort:'f', n:1, naam:'Oortjes',        prijs:500,  uit:'twee ronde oortjes, als een beertje' },
-    { id:'f2', soort:'f', n:2, naam:'Bloem',          prijs:700,  uit:'een krans van blaadjes om je hoofd' },
-    { id:'f3', soort:'f', n:3, naam:'Wolkje',         prijs:700,  uit:'zacht en bol, als een wolk' },
     { id:'f4', soort:'f', n:4, naam:'Voelsprieten',   prijs:600,  uit:'twee sprieten met een bolletje' },
     { id:'f5', soort:'f', n:5, naam:'Knotje',         prijs:400,  uit:'een knot boven op je hoofd' },
     { id:'f6', soort:'f', n:6, naam:'Kattenoren',     prijs:600,  uit:'spits, met roze binnenkant' },
