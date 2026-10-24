@@ -164,6 +164,16 @@
   }
   function isToets(){ return mat && mat.modus === 'toets'; }
   function klas(){ return window.KLAS ? KLAS.lees() : null; }
+  /* Ingelogd met Microsoft: dan lever je in onder de naam van je account en typ je
+     geen naam. Komt het antwoord binnen terwijl het beginscherm er al staat, dan
+     zetten we het meteen goed. */
+  var accNaam = '';
+  if (window.PROFIEL && PROFIEL.account) PROFIEL.account().then(function(a){
+    var n = a && a.ingelogd && a.naam ? String(a.naam).trim().replace(/\s+/g, ' ').slice(0, 40) : '';
+    if (!n || n === accNaam) return;
+    accNaam = n;
+    if (mat && $('beginScherm') && !$('beginScherm').classList.contains('hide')) toonBegin();
+  }).catch(function(){});
   function ingeleverd(){ try { return JSON.parse(ls('lg-ingeleverd') || '[]'); } catch (e){ return []; } }
   function toonBegin(){
     var lijst = mat.soort === 'lijst';
@@ -186,11 +196,12 @@
         spel('zwaard.html', 'Zwaardvechter', 'goed antwoord, harde klap') + spel('poortrace.html', 'Poortrace', 'goed antwoord, een boost') +
         spel('mijnwerker.html', 'Mijnwerker', 'goed antwoord, dieper graven') + spel('kaarttoren.html', 'Kaarttoren', 'goed antwoord, extra energie');
     }
-    /* wie ben je: van de klascode, of je typt je naam */
-    var k = klas();
-    $('naamVak').classList.toggle('hide', lijst || !!k || !!mat.voorbeeld);
-    $('alsWie').classList.toggle('hide', lijst || !k || !!mat.voorbeeld);
+    /* wie ben je: van de klascode, anders van je Microsoft-account, anders typ je je naam */
+    var k = klas(), acc = !k && accNaam;
+    $('naamVak').classList.toggle('hide', lijst || !!k || !!acc || !!mat.voorbeeld);
+    $('alsWie').classList.toggle('hide', lijst || !(k || acc) || !!mat.voorbeeld);
     if (k) $('alsWie').textContent = 'Je levert in als ' + k.naam + ', in klas ' + k.code + '.';
+    else if (acc) $('alsWie').textContent = 'Je levert in als ' + accNaam + ', met je Microsoft-account.';
     $('naamIn').value = ls('lg-oefen-naam') || '';
     $('naamLabel').textContent = isToets() ? 'Je naam (voor- en achternaam)' : 'Je naam (mag leeg)';
     $('naamTip').textContent = isToets() ? 'Zodat je docent weet van wie de toets is.' : 'Vul je hem in, dan ziet je docent je score.';
@@ -205,6 +216,7 @@
   function wie(){
     var k = klas();
     if (k) return { naam: k.naam, klas: k.code };
+    if (accNaam) return { naam: accNaam, klas: '' };
     var n = $('naamIn').value.trim().replace(/\s+/g, ' ');
     return n ? { naam: n, klas: '' } : null;
   }
