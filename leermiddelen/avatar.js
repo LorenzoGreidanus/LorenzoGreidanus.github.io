@@ -162,39 +162,6 @@ window.AVATAR = (function(){
   function halo(tekening, dik){
     return '<g' + HALO + ' stroke-width="' + f1(dik) + '">' + tekening.replace(/ (fill|stroke|stroke-width|opacity|stroke-opacity|fill-opacity|stroke-dasharray|stroke-dashoffset|fill-rule)="[^"]*"/g, '') + '</g>';
   }
-  /* Personages (g): kenmerken van een echt persoon, zoals de leiders in De Conferentie van Berlijn.
-     Elk stuk is [diepte, tekening, binnen], de tekening in gezichtsmaten en alleen met absolute punten (M L C Q Z).
-     Bij het tekenen gaat elk punt van het pad op de bol (zie teken): zo buigt een baard mee als het
-     hoofd draait, in plaats van als een plat plaatje te verschuiven. Wat buiten de bol valt, zoals een
-     baard onder de kin, hangt op 'diepte' voor het gezicht. Een stuk met binnen (plukken haar
-     opzij, bakkebaarden) blijft binnen de omtrek, anders steekt het uit als het hoofd draait. Niet in de winkel. */
-  function persoon(n){
-    var grijs = 'fill="#A3A9B3" stroke="#6E7480" stroke-width="1.4" stroke-linejoin="round"';
-    var wit = 'fill="#E2E0D8" stroke="#9C988C" stroke-width="1.4" stroke-linejoin="round"';
-    var zwart = 'fill="#3A2E2A" stroke="#1f1714" stroke-width="1.4" stroke-linejoin="round"';
-    /* 1 Lord Salisbury: kale kruin, grijze plukken opzij, een volle grijze baard (binnen de omtrek, zoals alles van een gezichtje) */
-    if (n === 1) return [
-      [0, '<path d="M-35,-18 C-41,-10 -40,2 -35,8 C-33,0 -33,-8 -31,-14 Z M35,-18 C41,-10 40,2 35,8 C33,0 33,-8 31,-14 Z" ' + grijs + '/>', 1],
-      [24, '<path d="M-28,10 C-30,28 -16,42 0,44 C16,42 30,28 28,10 C22,18 12,22 0,22 C-12,22 -22,18 -28,10 Z" fill="#9AA0AA" stroke="#6E7480" stroke-width="1.6" stroke-linejoin="round"/>' +
-        '<path d="M-12,30 Q-10,35 -11,40 M0,29 L0,40 M12,30 Q10,35 11,40" fill="none" stroke="#7A818C" stroke-width="1.6" stroke-linecap="round"/>', 1],
-      [0, '<path d="M-17,12 Q-8,5 0,9 Q8,5 17,12 Q8,18 0,15 Q-8,18 -17,12 Z" fill="#858C97" stroke="#6E7480" stroke-width="1.4" stroke-linejoin="round"/>']];
-    /* 2 Jules Ferry: donker haar met een scheiding (hoed 23), grote bakkebaarden en een snor, een gladde kin */
-    if (n === 2) return [
-      [0, '<path d="M-44,-10 C-48,10 -40,28 -24,32 C-20,24 -22,16 -28,10 C-34,4 -40,-2 -44,-10 Z M44,-10 C48,10 40,28 24,32 C20,24 22,16 28,10 C34,4 40,-2 44,-10 Z" ' + zwart + '/>', 1],
-      [0, '<path d="M-26,12 Q-12,4 0,9 Q12,4 26,12 Q14,18 0,14 Q-14,18 -26,12 Z" ' + zwart + '/>'],
-      [0, '<path d="M-5,23 Q0,26 5,23" fill="none" stroke="' + INKT + '" stroke-width="3.5" stroke-linecap="round"/>']];
-    /* 3 Otto von Bismarck: de punthelm (hoed 22) en een grote witte walrussnor */
-    if (n === 3) return [
-      [0, '<path d="M-28,10 C-22,-2 -8,0 0,5 C8,0 22,-2 28,10 C26,22 14,24 8,16 Q0,12 -8,16 C-14,24 -26,22 -28,10 Z" fill="#ECEAE2" stroke="#9C988C" stroke-width="1.6" stroke-linejoin="round"/>' +
-        '<path d="M-18,6 L-15,14 M-8,5 L-7,13 M8,5 L7,13 M18,6 L15,14" fill="none" stroke="#B5B2A8" stroke-width="1.4" stroke-linecap="round"/>']];
-    /* 4 Leopold II: kaal met witte plukken en een lange puntbaard (geen neus: gezichtjes hebben er geen) */
-    if (n === 4) return [
-      [0, '<path d="M-35,-20 C-41,-12 -40,0 -35,6 C-33,-2 -33,-10 -31,-16 Z M35,-20 C41,-12 40,0 35,6 C33,-2 33,-10 31,-16 Z" ' + wit + '/>', 1],
-      [24, '<path d="M-22,12 C-22,28 -10,40 0,48 C10,40 22,28 22,12 C17,19 9,22 0,22 C-9,22 -17,19 -22,12 Z" fill="#E2E0D8" stroke="#9C988C" stroke-width="1.6" stroke-linejoin="round"/>' +
-        '<path d="M-8,29 Q-4,37 0,44 M8,29 Q4,37 0,44" fill="none" stroke="#B9B6AC" stroke-width="1.5" stroke-linecap="round"/>', 1],
-      [0, '<path d="M-20,16 Q-8,8 0,13 Q8,8 20,16 Q8,22 0,18 Q-8,22 -20,16 Z" fill="#CFCCC2" stroke="#9C988C" stroke-width="1.4" stroke-linejoin="round"/>']];
-    return [];
-  }
   /* de trofeeën, rechtsonder bij het gezicht */
   function trofee(n){
     var g = '';
@@ -1260,13 +1227,17 @@ window.AVATAR = (function(){
     }
     return false;
   }
+  /* FIB2: dezelfde richtingen en hun tegengestelde, zodat het niet uitmaakt welk van de twee voorwerpen eerst komt */
+  var FIB2 = null;
   var FIB = (function(n){ var p = [], g = PI * (3 - Math.sqrt(5)); for (var i = 0; i < n; i++){ var y = 1 - 2 * (i + .5) / n, r = Math.sqrt(1 - y * y); p.push([Math.cos(g * i) * r, y, Math.sin(g * i) * r]); } return p; })(26);
+  FIB2 = FIB.concat(FIB.map(function(v){ return [-v[0], -v[1], -v[2]]; }));
   /* punten op het oppervlak, in het hoofd (rechtop) */
   function puntenDeel(d, S){
     var F = stelselV(K0, S), u = [], i, j;
     function ring(h, r, n, ex, ez, bx, bz){ for (var k = 0; k < n; k++){ var t = k / n * TAU; u.push(pt(F, (bx || 0) + r * Math.sin(t) * (ex || 1), h, (bz || 0) + r * Math.cos(t) * (ez || 1))); } }
     if (d.t === 'draai') d.p.forEach(function(q){ ring(q[0], q[1], q[1] ? 16 : 1, d.ex, d.ez, q[2], q[3]); });
-    else if (d.t === 'rand') [0, .5, 1].forEach(function(f){ for (var k = 0; k < 24; k++){ var t = k / 24 * TAU, sn = Math.sin(t), r = d.r0 + d.uit * f; u.push(pt(F, r * sn, d.h - (d.zak + (d.golf || 0) * sn * sn) * f, r * Math.cos(t))); } });
+    /* een rand: drie ringen, en de buitenrand ook iets boven en onder (de rand heeft een lijn om zich heen) */
+    else if (d.t === 'rand') [[0, 0], [.5, 0], [1, 0], [1, 1], [1, -1]].forEach(function(fh){ var f = fh[0]; for (var k = 0; k < 32; k++){ var t = k / 32 * TAU, sn = Math.sin(t), r = d.r0 + d.uit * f + (fh[1] ? .8 : 0); u.push(pt(F, r * sn, d.h - (d.zak + (d.golf || 0) * sn * sn) * f + fh[1], r * Math.cos(t))); } });
     else if (d.t === 'wand'){ var W = wandMaten(d); for (j = 0; j < 24; j++){ var t = j / 24 * TAU, h = W.hT(t); u.push(pt(F, d.r0 * Math.sin(t), d.h0, d.r0 * Math.cos(t)), pt(F, W.rH(h) * Math.sin(t), h, W.rH(h) * Math.cos(t))); } }
     else if (d.t === 'bol') FIB.forEach(function(v){ u.push(pt(F, d.c[0] + v[0] * d.r, d.c[1] + v[1] * d.r, d.c[2] + v[2] * d.r)); });
     else if (d.t === 'ring') for (j = 0; j < 24; j++){ var t2 = j / 24 * TAU; [[0, d.rt], [0, -d.rt], [d.rt, 0], [-d.rt, 0]].forEach(function(o){ var r = d.r + o[0]; u.push(pt(F, r * Math.sin(t2) * (d.ex || 1), d.h + o[1], r * Math.cos(t2))); }); }
@@ -1373,7 +1344,7 @@ window.AVATAR = (function(){
       /* de stukken van de hoed apart: elk stuk van de figuur moet er een scheidingsvlak mee hebben, anders is de
          tekenvolgorde niet vast te leggen (een blaadje boven een kroon, tussen de punten in) */
       var hd = hoed.delen.filter(function(d){ return d.t !== 'sticker'; }).map(function(d){ return d.t === 'haar' ? null : puntenDeel(d, d.S || hoed.S); }).filter(Boolean);
-      var los = function(d){ var P = puntenDeel(d, HOOFDSTELSEL); for (var j = 0; j < hd.length; j++) if (!scheidVlak(P, hd[j], hoed.S.u)) return false; return true; };
+      var los = function(d){ var P = puntenDeel(d, HOOFDSTELSEL); for (var j = 0; j < hd.length; j++) if (!scheidVlak(P, hd[j], hoed.S.u, 1)) return false; return true; };
       for (e = 0; e <= 1.001; e += .1){
         delen = zet(e);
         var vrij = true, i, j;
@@ -1391,7 +1362,7 @@ window.AVATAR = (function(){
       punten:function(){ var u = []; delen.forEach(function(d){ u = u.concat(puntenDeel(d, HOOFDSTELSEL)); }); return u; } };
   }
   /* een vlak tussen twee puntenwolken: de normaal n wijst van A naar B (of null als ze in elkaar zitten) */
-  function scheidVlak(A, B, op){
+  function scheidVlak(A, B, op, streng){
     /* echt gescheiden (een kier van minstens 0,3), of precies op elkaar langs de as van de hoed (een rand onder een kroon) */
     var ca = midden(A), cb = midden(B), beste = null, marge = -1e9, i;
     function kier(n){ var mx = -1e9, mn = 1e9; for (i = 0; i < A.length; i++){ var u = A[i][0] * n[0] + A[i][1] * n[1] + A[i][2] * n[2]; if (u > mx) mx = u; } for (i = 0; i < B.length; i++){ var v = B[i][0] * n[0] + B[i][1] * n[1] + B[i][2] * n[2]; if (v < mn) mn = v; } return mn - mx; }
@@ -1399,9 +1370,10 @@ window.AVATAR = (function(){
     function dichtst(L, c){ var b = L[0], bd = 1e9; L.forEach(function(p){ var d = (p[0] - c[0]) * (p[0] - c[0]) + (p[1] - c[1]) * (p[1] - c[1]) + (p[2] - c[2]) * (p[2] - c[2]); if (d < bd){ bd = d; b = p; } }); return b; }
     var a1p = dichtst(A, cb), b1p = dichtst(B, ca), a2p = dichtst(A, b1p), b2p = dichtst(B, a1p);
     /* eerst de richtingen tussen de twee; is daar al een ruime kier, dan hoeven de andere niet meer */
-    var kand = [eenh([cb[0] - ca[0], cb[1] - ca[1], cb[2] - ca[2]]), eenh([cb[0] - a1p[0], cb[1] - a1p[1], cb[2] - a1p[2]]), eenh([b1p[0] - ca[0], b1p[1] - ca[1], b1p[2] - ca[2]]), eenh([b2p[0] - a2p[0], b2p[1] - a2p[1], b2p[2] - a2p[2]])].concat(FIB);
+    var kand = [eenh([cb[0] - ca[0], cb[1] - ca[1], cb[2] - ca[2]]), eenh([cb[0] - a1p[0], cb[1] - a1p[1], cb[2] - a1p[2]]), eenh([b1p[0] - ca[0], b1p[1] - ca[1], b1p[2] - ca[2]]), eenh([b2p[0] - a2p[0], b2p[1] - a2p[1], b2p[2] - a2p[2]])].concat(FIB2);
     for (var k = 0; k < kand.length && marge < 2; k++){ var g = kier(kand[k]); if (g > marge){ marge = g; beste = kand[k]; } }
     if (marge > .3) return beste;
+    if (streng) return null;   /* streng: alleen een echte kier telt (een figuur naast een hoed) */
     var neer = [-op[0], -op[1], -op[2]], a1 = kier(op), a2 = kier(neer);
     if (Math.max(a1, a2) > -.25) return a1 > a2 ? op : neer;
     return null;
@@ -1488,10 +1460,19 @@ window.AVATAR = (function(){
   }
   /* een rij punten fijner maken, zodat het afknippen achter het hoofd netjes gaat */
   function fijn(P, max){ var u = [P[0]]; for (var i = 1; i < P.length; i++){ var a = P[i - 1], b = P[i], l = Math.sqrt(Math.pow(b[0] - a[0], 2) + Math.pow(b[1] - a[1], 2) + Math.pow(b[2] - a[2], 2)), k = Math.max(1, Math.ceil(l / max)); for (var j = 1; j <= k; j++) u.push([a[0] + (b[0] - a[0]) * j / k, a[1] + (b[1] - a[1]) * j / k, a[2] + (b[2] - a[2]) * j / k]); } return u; }
+  /* een personage met haar opzij: vanaf welke hoek (graden van voren) zit er op hoogte y haar op het hoofd */
+  function zijHaar(m, y){
+    var g = m.sp && m.sp.g, min = 999; if (!g || !PERSONEN[g]) return min;
+    PERSONEN[g]().forEach(function(def){ var P = def.zij; if (!P) return; for (var i = 0, j = P.length - 1; i < P.length; j = i++){ var a = P[j], b = P[i]; if ((a[1] > y) !== (b[1] > y)){ var u = a[0] + (y - a[1]) * (b[0] - a[0]) / (b[1] - a[1]); if (u < min) min = u; } } });
+    return min;
+  }
   /* de bovenkant van het montuur (y, omlaag positief) */
   function brilTop(n){ var B = brilVorm(n); if (B.top == null){ var t = 0; B.el.forEach(function(e){ e.seg.forEach(function(q){ for (var i = 2; i < q.length; i += 2) if (q[i] < t) t = q[i]; }); }); B.top = t; } return B.top; }
-  function bouwBril(m, H, n, hoed){
+  function bouwBril(m, H, n, hoed, baard){
     var B = brilVorm(n), Rg = 40, zF = H.Rf + 2.2, delen = [];
+    /* een snor of baard eronder: het montuur komt er net voor, nooit erdoorheen */
+    if (baard){ var bx = 0, by0 = 1e9, by1 = -1e9; B.el.forEach(function(e){ e.seg.forEach(function(q){ for (var i = 1; i < q.length; i += 2){ bx = Math.max(bx, Math.abs(q[i])); by0 = Math.min(by0, q[i + 1]); by1 = Math.max(by1, q[i + 1]); } }); });
+      baard.delen.forEach(function(st){ if (st.zij || !st.omtrek) return; st.punten3.forEach(function(p){ if (Math.abs(p[0]) < bx + 3 && p[1] > by0 - 3 && p[1] < by1 + 3) zF = Math.max(zF, p[2] + 2.6 + Rg - Math.sqrt(Math.max(Rg * Rg - p[0] * p[0], 1))); }); }); }
     function om(x, y, terug){ var t = x / Rg, R = Rg - (terug || 0); return [R * Math.sin(t), y, zF - Rg + R * Math.cos(t)]; }
     function L(p){ return [p[0], -p[1], p[2]]; }
     if (B.poot) [-1, 1].forEach(function(k){
@@ -1503,16 +1484,27 @@ window.AVATAR = (function(){
       for (var j = 1; j <= 14; j++){
         var t = j / 14, a = a0 + (a1 - a0) * t, y = yp + 7 * t * t, g = Math.abs(a) / GR, R = H.bw(y) + rp + .5;
         if (g > 86) R -= (rp + 4.5) * Math.min(1, (g - 86) / 14);
+        /* bij een personage verdwijnt het pootje onder de bakkebaard of de pluk haar opzij */
+        var gz = zijHaar(m, y); if (g > gz - 28) R -= (rp + 4.5) * Math.min(1, (g - gz + 28) / 8);
         P.push([H.bm(y) + R * Math.sin(a), y, R * Math.cos(a)]);
       }
-      delen.push({ t:'buis', pts:fijn(P.map(L), 2), r:rp, k:B.poot[2], om:1, laag:'hoofd' });
+      /* verdwijnt het pootje onder haar opzij (een personage), dan komt het na de baard en de bakkebaarden: het
+         ligt erbovenop tot het onder het haar duikt, ruim voor de rand van het hoofd */
+      delen.push({ t:'buis', pts:fijn(P.map(L), 2), r:rp, k:B.poot[2], om:1, laag:zijHaar(m, yp) < 999 || zijHaar(m, yp + 7) < 999 ? 'voor' : 'hoofd' });
     });
     /* het bandje van de skibril: strak om het hoofd, onder het glas door */
     /* onder een koptelefoon is het bandje smaller, zodat het onder de schelpen door past */
-    if (B.band){ var rb = hoed && hoed.n === 17 ? 1.6 : B.band[1], azb = hoed && hoed.n === 23 ? H.half + FERRY.dikte[2] + rb + .6 : H.Rf * .8, P2 = [], ax = Math.max(H.breedte(B.band[0]) + rb + .3, 32), rand0 = om(-31, B.band[0], 4), a1 = -Math.asin(31 / ax), az = rand0[2] / Math.cos(a1);
-      for (var g = 0; g <= 60; g++){ var t = a1 - g / 60 * (TAU + 2 * a1), c2 = Math.cos(t); P2.push(L([(c2 > 0 ? ax : ax - rb - 3.5) * Math.sin(t), B.band[0], (c2 > 0 ? az : H.Rf * .55) * c2])); }
+    if (B.band){ var gzb = zijHaar(m, B.band[0]), rb = hoed && hoed.n === 17 ? 1.6 : B.band[1], azb = hoed && hoed.n === 23 ? H.half + FERRY.dikte[2] + rb + .6 : H.Rf * .8, P2 = [], ax = Math.max(H.breedte(B.band[0]) + rb + .3, 32), rand0 = om(-31, B.band[0], 4), a1 = -Math.asin(31 / ax), az = rand0[2] / Math.cos(a1);
+      for (var g = 0; g <= 60; g++){ var t = a1 - g / 60 * (TAU + 2 * a1), c2 = Math.cos(t); var pb = [(c2 > 0 ? ax : ax - rb - 3.5) * Math.sin(t), B.band[0], (c2 > 0 ? az : H.Rf * .55) * c2];
+        /* bij een personage gaat het bandje onder de bakkebaard of de pluk haar door */
+        if (Math.atan2(Math.abs(pb[0]), pb[2]) / GR > gzb - 22){ pb[0] *= .72; pb[2] *= .72; }
+        P2.push(L(pb)); }
       delen.push({ t:'buis', pts:P2, r:rb, k:B.band[2], om:1, laag:'hoofd' }); }
-    if (B.ketting){ var Kt = B.ketting, P3 = []; kwad(Kt[0], Kt[1], Kt[2], 10).forEach(function(q){ var R3 = H.Rf + 1.2; P3.push(L([q[0], q[1], Math.sqrt(Math.max(R3 * R3 - q[0] * q[0] - q[1] * q[1], 1))])); }); delen.push({ t:'buis', pts:fijn(P3, 2), r:.75, k:Kt[3], streep:'2 2', om:1, kap:1, laag:'midden' }); }
+    /* bij een baard of snor hangt het kettinkje korter, naast het glas: anders moet het om de baard heen */
+    if (B.ketting){ var Kt = baard ? [B.ketting[0], [29.5, 7], [29.5, 11], B.ketting[3]] : B.ketting, P3 = []; kwad(Kt[0], Kt[1], Kt[2], 10).forEach(function(q){ var R3 = H.Rf + 1.2; P3.push([q[0], q[1], Math.sqrt(Math.max(R3 * R3 - q[0] * q[0] - q[1] * q[1], 1))]); });
+      /* over een snor of baard heen, niet erdoor */
+      P3 = fijn(P3, 2); if (baard) P3.forEach(function(p){ for (var e = 0; e < 40 && baard.binnen(p, 4); e++) p[2] += .5; });
+      delen.push({ t:'buis', pts:P3.map(L), r:.75, k:Kt[3], streep:'2 2', om:1, kap:1, laag:baard ? 'voor' : 'midden' }); }
     /* voor de controle: het montuur als dunne schaal om de cilinder */
     var vorm = [], top = 0; B.el.forEach(function(e){ e.seg.forEach(function(q){ for (var i = 1; i < q.length; i += 2){ vorm.push([q[i], q[i + 1]]); if (q[i + 1] < top) top = q[i + 1]; } }); });
     return { n:n, B:B, om:om, delen:delen, top:top, zF:zF, Rg:Rg, voorDeel:{ t:'brilvoor', pts:vorm.map(function(q){ return om(q[0], q[1]); }) },
@@ -1548,13 +1540,14 @@ window.AVATAR = (function(){
     if (m.d3 !== undefined) return m.d3;
     var sp = m.sp, hn = sp.h || (sp.g === 3 ? 22 : sp.g === 2 ? 23 : 0);
     /* zonder hoed, krul, bril of figuur hoeft het hoofd niet in de ruimte te worden opgemeten */
-    if (!(hn && HOEDEN[hn]) && m.extra !== 2 && !(sp.q && BRILLEN[sp.q]) && !(sp.f && FIGUREN[sp.f])) return (m.d3 = null);
-    var H = hoofd3(m), d = { hoed:null, bril:null, fig:null, krul:null };
+    if (!(hn && HOEDEN[hn]) && m.extra !== 2 && !(sp.q && BRILLEN[sp.q]) && !(sp.f && FIGUREN[sp.f]) && !(sp.g && PERSONEN[sp.g])) return (m.d3 = null);
+    var H = hoofd3(m), d = { hoed:null, bril:null, fig:null, krul:null, baard:null };
+    if (sp.g && PERSONEN[sp.g]) d.baard = bouwBaard(m, H, sp.g);
     if (hn && HOEDEN[hn]) d.hoed = bouwHoed(m, H, hn);
     else if (m.extra === 2) d.krul = bouwKrul(m, H);
-    if (sp.q && BRILLEN[sp.q]) d.bril = bouwBril(m, H, sp.q, d.hoed);
+    if (sp.q && BRILLEN[sp.q]) d.bril = bouwBril(m, H, sp.q, d.hoed, d.baard);
     if (sp.f && FIGUREN[sp.f]) d.fig = bouwFiguur(m, H, sp.f, d.hoed);
-    if (!(d.hoed || d.bril || d.fig || d.krul)) return (m.d3 = null);
+    if (!(d.hoed || d.bril || d.fig || d.krul || d.baard)) return (m.d3 = null);
     /* Voor elk paar onderdelen dat elkaar niet raakt, zoeken we een vlak dat ze scheidt. Wie aan de kant van de
        kijker van dat vlak ligt, ligt ervoor, in elke kijkrichting; daarmee leggen we de tekenvolgorde vast
        waar sorteren op diepte misgaat (een stengel op een pompoen van onderen gezien, een rand onder een kroon). */
@@ -1562,8 +1555,9 @@ window.AVATAR = (function(){
     if (d.hoed) d.hoed.delen.forEach(function(p){ if (p.t !== 'sticker') lijst.push([p, p.S || d.hoed.S]); });
     if (d.fig) d.fig.delen.forEach(function(p){ lijst.push([p, HOOFDSTELSEL]); });
     if (d.krul) lijst.push([d.krul.delen[0], HOOFDSTELSEL]);
+    if (d.baard) d.baard.delen.forEach(function(st){ lijst.push([st, null]); });
     if (d.bril) lijst.push([d.bril.voorDeel, HOOFDSTELSEL]);
-    var pts = lijst.map(function(q){ return q[0].t === 'brilvoor' ? q[0].pts : puntenDeel(q[0], q[1]); }), regels = [];
+    var pts = lijst.map(function(q){ return q[0].t === 'brilvoor' ? q[0].pts : q[0].t === 'kussen' ? q[0].punten3 : puntenDeel(q[0], q[1]); }), regels = [];
     for (var i = 0; i < lijst.length; i++) for (var j = i + 1; j < lijst.length; j++){
       var a = lijst[i][0], b = lijst[j][0];
       if (a.groep != null && a.groep === b.groep && a.zij === b.zij) continue;
@@ -1580,6 +1574,7 @@ window.AVATAR = (function(){
     var H = hoofd3(m), klein = (maat || 100) < 56;
     var C = { K:kijker(st), H:H, id:id + '3', klein:klein, sc:klein ? 1.3 : 1, rim:Math.max(1.6, Math.min(6, 120 / (maat || 100))), vast:!!leeft,
       stukken:[], halo:'', haloD:'', gm:{}, ng:0, gdefs:'', schaduw:'', nr:0, nk:0, huid:m.kleur, proef:proef || null, Rsch:H.rho + 1, eig:'', hoedVoorZ:-1e9, brilZ:-1e9 };
+    if (D.baard){ C.eig = 'baard'; tekenBaard(C, D.baard); }
     if (D.fig){ C.eig = 'figuur'; tekenDelen(C, HOOFDSTELSEL, D.fig.delen); }
     if (D.bril){ C.eig = 'bril'; tekenBril(C, D.bril); }
     if (D.krul){ C.eig = 'krul'; tekenDelen(C, HOOFDSTELSEL, D.krul.delen); }
@@ -1598,7 +1593,7 @@ window.AVATAR = (function(){
     achter.sort(function(a, b){ return a.zs - b.zs || a.nr - b.nr; });
     /* eerst de gewone volgorde: de bril, dan de hoed (de bril zit onder de hoedrand), binnen de hoed zoals
        ontworpen; dan beslissen de scheidingsvlakken waar dat in deze kijkrichting anders moet */
-    var zs = D.hoed && D.hoed.sorteer, rang = { bril:0, krul:1, figuur:2, hoed:3 };
+    var zs = D.hoed && D.hoed.sorteer, rang = { baard:-1, bril:0, krul:1, figuur:2, hoed:3 };
     voor.sort(function(a, b){ return rang[a.eig] - rang[b.eig] || (b.vooraan ? 1 : 0) - (a.vooraan ? 1 : 0) || (zs && a.eig === 'hoed' ? a.z - b.z : 0) || a.nr - b.nr; });
     if (D.regels.length){ var rg = D.regels.map(function(q){ return { a:q.a, b:q.b, bVoor:rot3(C.K, q.n)[2] > 0 }; }); schik(achter, rg); schik(voor, rg); }
     function tekst(l){ var s = ''; for (var i = 0; i < l.length; i++) s += l[i].s; return s; }
@@ -1672,6 +1667,176 @@ window.AVATAR = (function(){
       if (ok){ a.delen = delen; return; }
     }
     a.el.innerHTML = html; a.delen = delen; a.els = null;
+  }
+
+  /* ---------- personages (g): baarden, snorren en bakkebaarden als volume op het hoofd ----------
+     Elk stuk is een kussen op het oppervlak van het hoofd: een omtrek, een dikte en een kleur.
+     voor: de omtrek in de maten van het gezicht (x, y), om het hoofd gebogen (een snor, een baard).
+     zij: de omtrek als hoek rond het hoofd (graden, 0 is voor, 90 is opzij) en hoogte; hij komt aan
+     beide kanten, gespiegeld (bakkebaarden, plukken haar opzij). dik: hoe ver hij boven het hoofd uitkomt,
+     bol: hoeveel dikker hij naar de zijkant wordt (zo steken plukken opzij buiten het hoofd uit).
+     lijnen: haren als lijntjes erop. */
+  var PERSONEN = {
+    /* 1 Lord Salisbury: kale kruin, grijze plukken opzij, een volle grijze baard en een snor */
+    1:function(){ return [
+      { zij:[[68, -22], [82, -25], [95, -20], [101, -10], [100, 2], [94, 10], [84, 9], [76, 2], [70, -10]], dik:1.4, bol:3.5, k:'#A3A9B3', l:'#6E7480', lw:1.4,
+        lijnen:[[[78, -18], [88, -10], [92, 0]], [[86, -20], [96, -12], [98, -2]]], lk:'#7A818C' },
+      { voor:'M-28,10 C-30,28 -16,42 0,44 C16,42 30,28 28,10 C22,18 12,22 0,22 C-12,22 -22,18 -28,10 Z', dik:2.6, k:'#9AA0AA', l:'#6E7480', lw:1.6,
+        lijnen:['M-12,30 Q-10,35 -11,40', 'M0,29 L0,40', 'M12,30 Q10,35 11,40'], lk:'#7A818C' },
+      { voor:'M-17,12 Q-8,5 0,9 Q8,5 17,12 Q8,18 0,15 Q-8,18 -17,12 Z', dik:4.4, k:'#858C97', l:'#6E7480', lw:1.4 }]; },
+    /* 2 Jules Ferry: grote zwarte bakkebaarden (onder het haar van hoed 23), een snor en een gladde kin */
+    2:function(){ return [
+      { zij:[[62, -14], [80, -16], [96, -12], [101, 0], [99, 14], [88, 26], [66, 34], [52, 31], [47, 22], [46, 12], [52, 3], [57, -6]], dik:1.8, bol:3, k:'#3A2E2A', l:'#1f1714', lw:1.4 },
+      { voor:'M-23,12 Q-11,4 0,9 Q11,4 23,12 Q12,18 0,14 Q-12,18 -23,12 Z', dik:3.8, k:'#3A2E2A', l:'#1f1714', lw:1.4 },
+      { lijn:'M-5,23 Q0,26 5,23', dik:.6, k:INKT, w:3.5 }]; },
+    /* 3 Otto von Bismarck: de punthelm (hoed 22) en een grote witte walrussnor */
+    3:function(){ return [
+      { voor:'M-28,10 C-22,-2 -8,0 0,5 C8,0 22,-2 28,10 C26,22 14,24 8,16 Q0,12 -8,16 C-14,24 -26,22 -28,10 Z', dik:4.2, k:'#ECEAE2', l:'#9C988C', lw:1.6,
+        lijnen:['M-18,6 L-15,14', 'M-8,5 L-7,13', 'M8,5 L7,13', 'M18,6 L15,14'], lk:'#B5B2A8' }]; },
+    /* 4 Leopold II: kaal met witte plukken opzij, een lange puntbaard en een snor */
+    4:function(){ return [
+      { zij:[[68, -24], [82, -27], [95, -22], [101, -12], [100, 0], [94, 7], [84, 6], [76, -1], [70, -12]], dik:1.4, bol:3.5, k:'#E2E0D8', l:'#9C988C', lw:1.4,
+        lijnen:[[[78, -20], [88, -12], [92, -2]], [[86, -22], [96, -14], [98, -4]]], lk:'#B9B6AC' },
+      { voor:'M-22,12 C-22,28 -10,40 0,48 C10,40 22,28 22,12 C17,19 9,22 0,22 C-9,22 -17,19 -22,12 Z', dik:2.6, k:'#E2E0D8', l:'#9C988C', lw:1.6,
+        lijnen:['M-8,29 Q-4,37 0,44', 'M8,29 Q4,37 0,44'], lk:'#B9B6AC' },
+      { voor:'M-20,16 Q-8,8 0,13 Q8,8 20,16 Q8,22 0,18 Q-8,22 -20,16 Z', dik:4.4, k:'#CFCCC2', l:'#9C988C', lw:1.4 }]; }
+  };
+  /* een pad (M, L, Q, C, Z) als rij punten, ongeveer elke 2,5 eenheid een punt; elk deelpad apart */
+  function padPunten(d){
+    var uit = [], cur = null, x = 0, y = 0;
+    absPad(d).forEach(function(q){
+      var n, i, t, s;
+      if (q[0] === 'M'){ cur = [[q[1], q[2]]]; uit.push(cur); x = q[1]; y = q[2]; return; }
+      if (q[0] === 'Z') return;
+      if (q[0] === 'L'){ n = Math.max(1, Math.ceil(Math.sqrt((q[1] - x) * (q[1] - x) + (q[2] - y) * (q[2] - y)) / 2.5)); for (i = 1; i <= n; i++) cur.push([x + (q[1] - x) * i / n, y + (q[2] - y) * i / n]); x = q[1]; y = q[2]; return; }
+      var ex = q[q.length - 2], ey = q[q.length - 1], L = Math.sqrt((ex - x) * (ex - x) + (ey - y) * (ey - y));
+      n = Math.max(2, Math.ceil(L / 2.5) + 1);
+      for (i = 1; i <= n; i++){ t = i / n; s = 1 - t;
+        if (q[0] === 'Q') cur.push([s * s * x + 2 * s * t * q[1] + t * t * q[3], s * s * y + 2 * s * t * q[2] + t * t * q[4]]);
+        else cur.push([s * s * s * x + 3 * s * s * t * q[1] + 3 * s * t * t * q[3] + t * t * t * q[5], s * s * s * y + 3 * s * s * t * q[2] + 3 * s * t * t * q[4] + t * t * t * q[6]]); }
+      x = ex; y = ey;
+    });
+    uit.forEach(function(r){ if (r.length > 2){ var a = r[0], b = r[r.length - 1]; if (Math.abs(a[0] - b[0]) < .01 && Math.abs(a[1] - b[1]) < .01) r.pop(); } });
+    return uit;
+  }
+  /* het stuk om het hoofd leggen: (u, v) in de maten van het stuk naar een punt in het hoofd (x, y omlaag, z naar voren) */
+  function kussenPunt(H, st, u, v, extra){
+    var y = v, yb = st.yb;
+    if (y > yb) y = yb;
+    var w = H.bw(y), c = H.bm(y), sn, t;
+    if (st.zij){ var g = u * GR; sn = Math.sin(g); t = st.dik + st.bol * klem((u - 70) / 30, 0, 1) + (extra || 0); var R = w + t; return [c + st.zij * R * sn, v, R * Math.cos(g)]; }
+    sn = klem((u - c) / (w || 1), -1, 1); t = st.dik + (extra || 0);
+    var R2 = w + t, cs = Math.sqrt(1 - sn * sn);
+    return [c + R2 * sn, v, R2 * cs];
+  }
+  /* binnen het kussen? (p in het hoofd) */
+  function kussenBinnen(H, st, p, mg){
+    var y = Math.min(p[1], st.yb), w = H.bw(y), c = H.bm(y), dx = p[0] - c, r = Math.sqrt(dx * dx + p[2] * p[2]), u, t;
+    if (st.zij){ if (dx * st.zij <= 0) return false; u = Math.atan2(Math.abs(dx), p[2]) / GR; t = st.dik + st.bol * klem((u - 70) / 30, 0, 1); }
+    else { if (p[2] <= 0) return false; u = c + w * (dx / (r || 1)); t = st.dik; }
+    if (r < w - .5 - mg || r > w + t + (st.extra || 0) + mg) return false;
+    var omt = st.omtrek;
+    if (binnenPoly([u, p[1]], omt)) return true;
+    for (var i = 0, j = omt.length - 1; i < omt.length; j = i++){ var a = omt[j], b = omt[i], vx = b[0] - a[0], vy = b[1] - a[1], k = klem(((u - a[0]) * vx + (p[1] - a[1]) * vy) / ((vx * vx + vy * vy) || 1), 0, 1), ex = u - a[0] - vx * k, ey = p[1] - a[1] - vy * k;
+      if (ex * ex + ey * ey <= mg * mg) return true; }
+    return false;
+  }
+  var KS25 = null;
+  function bouwBaard(m, H, g){
+    if (!PERSONEN[g]) return null;
+    if (!KS25){ KS25 = []; [-25, -12.5, 0, 12.5, 25].forEach(function(y){ [-18, -9, 0, 9, 18].forEach(function(p){ KS25.push(kijker({ yaw:y, pitch:p })); }); }); }
+    /* yb: onder de kin hangt een baard recht naar beneden, in het vlak van de onderste rij van het hoofd */
+    var yb = 0; for (var yy = 0; yy < 80; yy += .5) if (H.bw(yy) > 12) yb = yy;
+    var delen = [], nr = 0, voorEx = 0;
+    PERSONEN[g]().forEach(function(def){
+      (def.zij ? [-1, 1] : [0]).forEach(function(zij){
+        var st = { zij:zij, dik:def.dik, bol:def.bol || 0, yb:yb, k:def.k, l:def.l, lw:def.lw, lk:def.lk, w:def.w, nr:nr++, t:'kussen' };
+        if (def.lijn){ st.lijn = padPunten(def.lijn)[0]; st.extra = 0; }
+        else st.omtrek = def.zij ? def.zij.slice() : padPunten(def.voor)[0];
+        st.lijnen = (def.lijnen || []).map(function(l){ return typeof l === 'string' ? padPunten(l)[0] : l; });
+        /* Een baard blijft op het hoofd: is de kin te kort (een plat of klein hoofd), dan wordt hij iets korter */
+        if (st.omtrek && !st.zij){ var y0 = 1e9, y1 = -1e9; st.omtrek.forEach(function(q){ y0 = Math.min(y0, q[1]); y1 = Math.max(y1, q[1]); });
+          if (y1 > yb - 1 && y1 > y0){ var sch = Math.max(.4, (yb - 1 - y0) / (y1 - y0)), kort = function(q){ return [q[0], y0 + (q[1] - y0) * sch]; };
+            st.omtrek = st.omtrek.map(kort); st.lijnen = st.lijnen.map(function(l){ return l.map(kort); }); } }
+        /* Het hoofd draait niet als een starre bol mee: een punt dat in een kijkrichting achter het oppervlak zou
+           komen (en niet achter de rand verdwijnt), komt in elke kijkrichting iets verder naar voren. */
+        var rij = st.lijn || st.omtrek;
+        st.ex = rij.map(function(q){
+          for (var e = 0; e < 8; e += .25){
+            var P = kussenPunt(H, st, q[0], q[1], e), ok = true;
+            for (var k = 0; k < KS25.length && ok; k++){ var v = rot3(KS25[k], P), zv = H.zf(v[0], v[1]); if (zv > 0 && v[2] < zv + .3 && Math.abs(v[0] - H.bm(v[1])) < .9 * H.bw(v[1])) ok = false; }
+            if (ok) return e;
+          }
+          return 8;
+        });
+        /* wat later komt (een snor over een baard) ligt minstens zo ver naar voren als wat eronder ligt */
+        if (!st.zij && !st.lijn){ st.ex = st.ex.map(function(e){ return Math.max(e, voorEx); }); }
+        st.extra = Math.max.apply(null, st.ex.concat([0]));
+        if (!st.zij && !st.lijn) voorEx = Math.max(voorEx, st.extra);
+        delen.push(st);
+      });
+    });
+    function pts(st){
+      var u = [], rij = st.lijn || st.omtrek;
+      rij.forEach(function(q, i){ u.push(kussenPunt(H, st, q[0], q[1], st.ex[i])); });
+      if (st.omtrek){ var bb = [1e9, 1e9, -1e9, -1e9]; st.omtrek.forEach(function(q){ bb[0] = Math.min(bb[0], q[0]); bb[1] = Math.min(bb[1], q[1]); bb[2] = Math.max(bb[2], q[0]); bb[3] = Math.max(bb[3], q[1]); });
+        var stap = st.zij ? 5 : 3; for (var a = bb[0]; a <= bb[2]; a += stap) for (var b = bb[1]; b <= bb[3]; b += 3) if (binnenPoly([a, b], st.omtrek)) u.push(kussenPunt(H, st, a, b, st.extra)); }
+      return u;
+    }
+    delen.forEach(function(st){ st.punten3 = pts(st); });
+    return { g:g, delen:delen,
+      binnen:function(p, mg){ for (var i = 0; i < delen.length; i++) if (delen[i].omtrek && kussenBinnen(H, delen[i], p, mg)) return true; return false; },
+      punten:function(){ var u = []; delen.forEach(function(st){ u = u.concat(st.punten3); }); return u; } };
+  }
+  /* het kussen in beeld: punten achter het hoofd schuiven naar de rand van het hoofd (daar verdwijnt het achterlangs) */
+  function tekenBaard(C, B){
+    var K = C.K, H = C.H;
+    function inBeeld(st, rij, ex){
+      return rij.map(function(q, i){
+        var v = rot3(K, kussenPunt(H, st, q[0], q[1], ex ? ex[i] : st.extra)), zv = H.zf(v[0], v[1]);
+        if (zv > 0 && v[2] < zv - .3){ var c = H.bm(v[1]), w = H.bw(v[1]); return [c + (v[0] >= c ? w : -w), v[1], 0, 1]; }
+        return v;
+      });
+    }
+    B.delen.forEach(function(st){
+      C.deel = st;
+      if (st.lijn){
+        var L = inBeeld(st, st.lijn, st.ex), runs = [], cur = [];
+        L.forEach(function(p){ if (p[3]){ if (cur.length > 1) runs.push(cur); cur = []; } else cur.push(p); }); if (cur.length > 1) runs.push(cur);
+        if (!runs.length) return;
+        var D0 = runs.map(function(r){ return lijnD(r); }).join(''), z0 = 0, n0 = 0; runs.forEach(function(r){ r.forEach(function(p){ z0 += p[2]; n0++; }); });
+        stuk(C, 'voor', z0 / n0, '<path d="' + D0 + '" fill="none" stroke="' + st.k + '" stroke-width="' + n1(st.w) + '" stroke-linecap="round"/>',
+          C.proef ? { caps:runs.reduce(function(u, r){ for (var j = 1; j < r.length; j++) u.push([r[j - 1], r[j], st.w / 2]); return u; }, []) } : null, bbP(runs, st.w));
+        return;
+      }
+      var O = inBeeld(st, st.omtrek, st.ex);
+      if (O.every(function(p){ return p[3]; })) return;
+      var D = C.klein ? lijnD(O, 1) : zachtD(O), lw = (st.lw || 1.4) * C.sc, z = 0;
+      O.forEach(function(p){ z += p[2]; }); z /= O.length;
+      var s = '<path d="' + D + '"' + verf(kv(C, st.k, 'B'), st.l, lw) + '/>';
+      if (!C.klein && st.lijnen.length){
+        var sl = '';
+        st.lijnen.forEach(function(l){ var R = inBeeld(st, l, null), cur = [];
+          R.forEach(function(p){ if (p[3]){ if (cur.length > 1) sl += lijnD(cur); cur = []; } else cur.push(p); }); if (cur.length > 1) sl += lijnD(cur); });
+        if (sl) s += '<path d="' + sl + '" fill="none" stroke="' + meng(st.lk, INKT, .3) + '" stroke-width="1.6" stroke-linecap="round"/>';
+      }
+      haloD(C, D);
+      /* een zachte schaduw op het gezicht, naar rechtsonder */
+      C.schaduw += '<path transform="translate(1.3,1.9)" d="' + D + '" fill="' + SCHK + '" fill-opacity=".15"/>';
+      var proef = null;
+      if (C.proef){
+        /* diepte: de punten binnen de omtrek, met hun buren in een raster tot driehoekjes */
+        var tr = [], stap = st.zij ? 5 : 3, bb = [1e9, 1e9, -1e9, -1e9];
+        st.omtrek.forEach(function(q){ bb[0] = Math.min(bb[0], q[0]); bb[1] = Math.min(bb[1], q[1]); bb[2] = Math.max(bb[2], q[0]); bb[3] = Math.max(bb[3], q[1]); });
+        var V = function(a, b){ var v = rot3(K, kussenPunt(H, st, a, b, st.extra)), zv = H.zf(v[0], v[1]); return zv > 0 && v[2] < zv - .3 ? null : v; };
+        for (var a = bb[0] - stap; a <= bb[2]; a += stap) for (var b = bb[1] - 3; b <= bb[3]; b += 3){
+          var p00 = V(a, b), p10 = V(a + stap, b), p01 = V(a, b + 3), p11 = V(a + stap, b + 3);
+          if (p00 && p10 && p11) tr.push([p00, p10, p11]); if (p00 && p11 && p01) tr.push([p00, p11, p01]);
+        }
+        proef = { poly:[O], tris:tr };
+      }
+      stuk(C, 'voor', z, s, proef, bbP([O], lw + 1));
+    });
   }
 
   function teken(m, st, id, leeft, schaduw, maat, proef){
@@ -1797,20 +1962,8 @@ window.AVATAR = (function(){
     /* alleen een heel donker gezicht krijgt een lichte rand, anders valt het weg op een donkere pagina */
     if (m.helder < 0.3) s += '<path d="' + m.d + '" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="' + f1(rim * 2) + '" stroke-linejoin="round"/>';
     s += '<path d="' + m.d + '" fill="' + kleur + '"/><path d="' + m.d + '" fill="url(#' + id + 's)"/><path d="' + m.d + '" fill="url(#' + id + 'g)"/></g>';
-    /* een personage: baard, snor, haar, op de bol maar buiten de omtrek */
+    /* een personage (g): baard, snor en plukken haar komen uit teken3d, als volume op het hoofd */
     var kenmerk = '', binnen = '';
-    /* elk punt van het pad gaat op de bol, zodat het stuk meebuigt; buiten de bol hangt het op de
-       diepte die bij het stuk hoort */
-    if (sp.g) persoon(sp.g).forEach(function(d){
-      var t = d[1].replace(/ d="([^"]*)"/g, function(_, pad){
-        return ' d="' + pad.replace(/(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/g, function(_, x, y){
-          x = +x; y = +y;
-          var P = rot(x, y, Math.max(Math.sqrt(Math.max(Rf * Rf - x * x - y * y, 0)), d[0]));
-          return f(P[0]) + ',' + f(P[1]);
-        }) + '"';
-      });
-      if (d[2]) binnen += t; else kenmerk += halo(t, 3.5) + t;
-    });
     s += '<g clip-path="url(#' + id + 'k)">' + (leeft ? ogen : '<g class="av-ogen" style="animation-delay:-' + m.d2 + 's">' + ogen + '</g>') + rest + binnen + (D3 ? D3.schaduw : '') + '</g>' + (D3 ? D3.midden : '') + kenmerk + los + '</g></g>';
     /* uit de winkel: eerst de rand (hij ligt om het gezicht) */
     if (sp.r) s += rand(sp.r);
