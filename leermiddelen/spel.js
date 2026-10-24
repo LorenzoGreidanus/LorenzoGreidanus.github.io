@@ -128,7 +128,7 @@ window.SPEL = (function(){
   var MET_STAPPEN = [
     'balans', 'berlijn', 'breukenbakker', 'bronnenlab', 'crisis', 'dag', 'dhte', 'eiland', 'feodalisme', 'fouten',
     'handel', 'irregular', 'jagers', 'landenvormen', 'leenmannen', 'lichaam', 'meetlat', 'organisme', 'polis',
-    'race', 'rekenen', 'stad', 'stadsontwerp', 'standen', 'tekstdetective', 'tijdvakken', 'topografie', 'toren',
+    'race', 'rekenen', 'republiek', 'stad', 'stadsontwerp', 'standen', 'tekstdetective', 'tijdvakken', 'topografie', 'toren',
     'uitverkoop', 'vergadering', 'vlaggen', 'voc', 'vlakken', 'werkwoorden', 'zinsbouw', 'zwaard'
   ];
   var MAP = (function(){

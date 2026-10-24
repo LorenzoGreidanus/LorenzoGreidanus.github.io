@@ -94,7 +94,7 @@ const RACE_POS_MS = 500, RACE_POS_BUURT = 3000;
 /* spellen met rollen op telefoons: het bord draait het spel, de kamer deelt kaarten uit en geeft acties door */
 const SPELLEN_ROLLEN = { feodalisme: "Feodalisme", polis: "De vergadering van de klas", meetlat: "Langs de meetlat", staten: "De vergadering", berlijn: "De Conferentie van Berlijn", standen: "Stem per stand", crisis: "De crisis", teken: "Tekenslag",
   markt: "De markt", ecosysteem: "Het ecosysteem", rivier: "Langs de rivier", gemeenteraad: "De gemeenteraad",
-  uitbraak: "De uitbraak", klimaattop: "De klimaattop", fabriek: "De fabriek", gerucht: "Het gerucht", eiland: "Het eiland", voc: "De VOC-beurs", tijdbalk: "De tijdbalk", archief: "Het archief",
+  uitbraak: "De uitbraak", klimaattop: "De klimaattop", fabriek: "De fabriek", gerucht: "Het gerucht", eiland: "Het eiland", voc: "De VOC-beurs", tijdbalk: "De tijdbalk", archief: "Het archief", republiek: "De republiek",
   schoolreis: "De schoolreis", schoolplein: "Het nieuwe schoolplein", peiling: "De peiling", kermis: "De kermis", abonnement: "De abonnementenoorlog",
   zinsdelen: "De zin in stukken", redactie: "De redactie", debat: "Het debat", mysterie: "Het mysterie", arrivals: "Arrivals" };
 const KAART_MAX = 12000, BORD_MAX = 40000, ACTIE_MAX = 4000;
@@ -563,7 +563,7 @@ export class Kamer extends DurableObject {
     try {
       const url = new URL(req.url);
       if (url.pathname === "/nieuw") return await this.nieuw(await req.json());
-      if (url.pathname === "/stand") return this.stand ? json(this.overzicht()) : json({ fout: "geen kamer met deze code" }, 404);
+      if (url.pathname === "/stand") return this.stand ? json(this.overzicht(false)) : json({ fout: "geen kamer met deze code" }, 404);
       if (url.pathname === "/meld" && req.method === "POST") return await this.meld(await req.json());
       if (url.pathname === "/melden" && req.method === "POST") return await this.melden(await req.json());
       if (url.pathname === "/quizkenmerken" && req.method === "POST") return await this.quizKenmerken(await req.json());
@@ -696,7 +696,7 @@ export class Kamer extends DurableObject {
       if (this.strijd && this.stand.duel && !this.stand.gastheer) this.stand.gastheer = sid;
       this.ctx.waitUntil(this.bewaar());
     }
-    this.stuur(server, Object.assign({ t: "welkom", rol, naam, jij: rol === "speler" ? this.pid(sid) : null }, this.overzicht()));
+    this.stuur(server, Object.assign({ t: "welkom", rol, naam, jij: rol === "speler" ? this.pid(sid) : null }, this.overzicht(rol === "host")));
     if (this.rollen){
       /* een telefoon die (terug)komt krijgt zijn kaart en het bord van dit moment */
       if (rol === "speler"){
@@ -2468,7 +2468,8 @@ export class Kamer extends DurableObject {
       .sort((a, b) => a.naam.localeCompare(b.naam, "nl"));
   }
   aanwezig(sid){ return this.ctx.getWebSockets(sid).length > 0; }
-  overzicht(){
+  /* metRol: alleen het bord (met de sleutel) ziet de geheime rollen; /stand en de telefoons niet */
+  overzicht(metRol){
     const st = this.stand, basis = { code: st.code, spel: st.spel, vak: st.vak, niveau: st.niveau, deel: st.deel || "", fase: st.fase };
     /* verhuisd naar een nieuwe kamer: wie de oude code nog intypt, kan door naar de nieuwe */
     if (st.verhuis) basis.verhuis = st.verhuis;
@@ -2480,7 +2481,7 @@ export class Kamer extends DurableObject {
     if (this.rollen){
       return Object.assign(basis, { game: st.game, gestart: st.gestart, spelers: Object.keys(st.spelers).map(sid => {
         const sp = st.spelers[sid];
-        return { sid: sp.pid, naam: sp.naam, av: sp.av || "", aan: this.aanwezig(sid), rol: sp.rolkaart && sp.rolkaart.rol ? sp.rolkaart.rol : sp.kaart && sp.kaart.rol ? sp.kaart.rol : null };
+        return { sid: sp.pid, naam: sp.naam, av: sp.av || "", aan: this.aanwezig(sid), rol: !metRol ? null : sp.rolkaart && sp.rolkaart.rol ? sp.rolkaart.rol : sp.kaart && sp.kaart.rol ? sp.kaart.rol : null };
       }).sort((a, b) => a.naam.localeCompare(b.naam)) });
     }
     return Object.assign(basis, { onderdeel: st.onderdeel, i: st.i, n: st.vragen.length, tijd: st.tijd,
@@ -2488,7 +2489,7 @@ export class Kamer extends DurableObject {
   }
   zegSpelers(){
     if (!this.stand) return;
-    this.naarHost({ t: "spelers", spelers: this.overzicht().spelers });
+    this.naarHost({ t: "spelers", spelers: this.overzicht(true).spelers });
   }
   stuur(ws, bericht){ try { ws.send(JSON.stringify(bericht)); } catch (e){} }
   iedereen(bericht){ const s = JSON.stringify(bericht); this.ctx.getWebSockets().forEach(ws => { try { ws.send(s); } catch (e){} }); }
