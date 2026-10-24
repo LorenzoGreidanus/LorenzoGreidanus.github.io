@@ -398,8 +398,9 @@
   /* een rechthoek van k bij r hokjes; o.rij telt de onderste rij, o.rijen nummert de rijen */
   function hokjesFig(k, r, o){
     o = o || {};
-    var eh = o.eh || 'cm', u = Math.min(44, 300 / k, 190 / r), W = Math.max(300, k * u + 100), x0 = Math.max(48, (W - k * u) / 2), y0 = 44, H = y0 + r * u + 34, s = '', i;
-    s += rect(14, 10, 18, 18, { f:K[0], fo:0.25, w:2 }) + tx(40, 19, '= 1 ' + eh + '² (1 ' + eh + ' bij 1 ' + eh + ')', { a:'start', mid:true, fs:15 });
+    var eh = o.eh || 'cm', u = Math.min(44, 300 / k, 190 / r), W = Math.max(300, k * u + 100), x0 = Math.max(48, (W - k * u) / 2), y0 = Math.max(44, u + 24), H = y0 + r * u + 34, s = '', i;
+    /* het voorbeeldhokje is precies zo groot als een hokje in de figuur, anders klopt "= 1 cm²" niet */
+    s += rect(14, 8, u, u, { f:K[0], fo:0.25, w:2 }) + tx(22 + u, 8 + u / 2, '= 1 ' + eh + '² (1 ' + eh + ' bij 1 ' + eh + ')', { a:'start', mid:true, fs:15 });
     s += rect(x0, y0, k * u, r * u, { f:K[0], fo:0.1, s:'none', w:0 });
     if (o.rij) s += rect(x0, y0 + (r - 1) * u, k * u, u, { f:K[2], fo:0.35, s:'none', w:0 });
     for (i = 1; i < k; i++) s += ln(x0 + i * u, y0, x0 + i * u, y0 + r * u, { w:1.2, op:0.55 });
@@ -414,11 +415,16 @@
   function rhFig(l, b, e, o){
     o = o || {};
     var W = 420, H = 260, sc = Math.min(280 / l, 170 / b), w = l * sc, h = b * sc, x0 = (W - w) / 2 - 12, y0 = 40 + (180 - h) / 2, s = '', i;
-    if (o.raster) s += rect(14, 8, 16, 16, { f:K[0], fo:0.25, w:2 }) + tx(38, 16, '= 1 ' + e + '²', { a:'start', mid:true, fs:14 });
+    /* met hokjes: het voorbeeldhokje is precies zo groot als een hokje in de figuur; de figuur schuift zo nodig omlaag */
+    if (o.raster){
+      y0 = Math.max(y0, 8 + sc + 16); H = Math.max(H, y0 + h + 40);
+      s += rect(14, 8, sc, sc, { f:K[0], fo:0.25, w:2 }) + tx(22 + sc, 8 + sc / 2, '= 1 ' + e + '²', { a:'start', mid:true, fs:14 });
+    }
     s += rect(x0, y0, w, h, { f:K[0], fo:0.12, s:'none', w:0 });
     if (o.raster){ for (i = 1; i < l; i++) s += ln(x0 + i * sc, y0, x0 + i * sc, y0 + h, { w:1, op:0.4 }); for (i = 1; i < b; i++) s += ln(x0, y0 + i * sc, x0 + w, y0 + i * sc, { w:1, op:0.4 }); }
     s += rect(x0, y0, w, h, { w:2.5 });
-    s += hoekje(x0, y0 + h, 0, 90, { k:'var(--ink)' });
+    /* de hoekmarkering niet in een raster: daar zou hij een klein hokje lijken */
+    if (!o.raster) s += hoekje(x0, y0 + h, 0, 90, { k:'var(--ink)' });
     var ver = o.vk ? 8 : 0;
     s += tx(x0 + w / 2, y0 + h + 20 + ver, l + ' ' + e, { mid:true, vet:true, fs:16 }) + tx(x0 + w + 10 + ver, y0 + h / 2, b + ' ' + e, { mid:true, vet:true, fs:16, a:'start' });
     if (o.vk) s += streepje([x0, y0 + h], [x0 + w, y0 + h]) + streepje([x0 + w, y0], [x0 + w, y0 + h]) + streepje([x0, y0], [x0 + w, y0]) + streepje([x0, y0], [x0, y0 + h]);
