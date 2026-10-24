@@ -331,7 +331,26 @@ function maatVoor(r, o){
   if (o.deel) return r.od && r.od[o.deel] ? (r.od[o.deel][0] | 0) : 0;
   return r.ronde | 0;
 }
-function haaltOpdracht(r, o){ return o.spel === "dictee" ? dicteePast(r, o) : maatVoor(r, o) >= o.min; }                        /* hoogstens zoveel gemelde potjes per klas */
+function haaltOpdracht(r, o){ return o.spel === "dictee" ? dicteePast(r, o) : maatVoor(r, o) >= o.min; }
+/* Een doel uit de leerroute als opdracht (ook een rekenmanier, zoals de
+   staartdeling: elke manier heeft een eigen doel in de leerroute). Twee
+   soorten: beheers (elk gekozen doel een vinkje: vijf van de zes zelf goed,
+   ook als dat al eerder lukte; dat staat in leerlingen[].route) of goed
+   (samen zoveel sommen zelf goed in die doelen sinds de opdracht er staat;
+   elke ronde Zelf meldt de leerroute met het doel erbij, als doel). */
+const ROUTE_VAKKEN = { rekenen: 1, nederlands: 1, engels: 1, wiskunde: 1, aardrijkskunde: 1, biologie: 1, economie: 1, geschiedenis: 1, mens: 1 };
+const ROUTE_DOEL = /^[a-z0-9-]{2,40}$/, ROUTE_DOELEN_MAX = 6, ROUTE_GOED_MAX = 120;
+function routeStand(o, leerling, uitslagen){
+  const doelen = Array.isArray(o.doelen) ? o.doelen : [];
+  if (o.wijze === "beheers"){
+    const r = (leerling && leerling.route) || {};
+    const n = doelen.filter(d => r[d] === 2).length;
+    return { waarde: n, gehaald: doelen.length > 0 && n >= doelen.length };
+  }
+  let n = 0;
+  for (const u of uitslagen || []) if (u.spel === "leerroute" && u.t >= o.sinds && u.doel && doelen.indexOf(u.doel) >= 0) n += u.ronde | 0;
+  return { waarde: n, gehaald: n >= (o.min | 0) };
+}                        /* hoogstens zoveel gemelde potjes per klas */
 /* hoogstens zoveel opdrachten tegelijk */
 const OPDRACHTEN_MAX = 5;
 /* Het begin van deze week: maandag 0:00, Nederlandse tijd bij benadering
@@ -1933,7 +1952,9 @@ export class Kamer extends DurableObject {
       if (inz.stil){ await this.zetAlarm({ wat: "opruimen" }, KLAS_SLAAPT); await this.bewaar(); return json({ ok: true }); }
     }
     this.voegToe(Object.assign({ sid: kort, naam: nette(inz.naam, "Leerling"), av: schoonAv(inz.av), spel, ronde: getal(inz.ronde, 250), punten: getal(inz.punten, 5000),
-                   niveau: schoon(inz.niveau, 10), vak: schoon(inz.vak, 10), od: schoonOd(inz.od), t: Date.now() }, spel === "dictee" ? dicteeVelden(inz) : {}));
+                   niveau: schoon(inz.niveau, 10), vak: schoon(inz.vak, 10), od: schoonOd(inz.od), t: Date.now() }, spel === "dictee" ? dicteeVelden(inz) : {},
+                   /* de leerroute zegt welk doel deze ronde Zelf was, voor een opdracht met sommen goed */
+                   spel === "leerroute" && ROUTE_DOEL.test(String(inz.doel || "")) ? { doel: String(inz.doel) } : {}));
     this.telFk(kort, schoonFk(inz.fk));
     this.snoei();
     await this.zetAlarm({ wat: "opruimen" }, KLAS_SLAAPT);
@@ -1991,8 +2012,9 @@ export class Kamer extends DurableObject {
        sessiekoekje gehaald. Is die er niet (niet ingelogd), dan blijft staan
        wat er stond: uitloggen hoort de docent niet meteen zijn zicht te kosten. */
     const ms = schoon(inz.ms, 40) || (was && was.ms) || "";
-    this.stand.leerlingen[kort] = { naam: nette(inz.naam, "Leerling"), av: schoonAv(inz.av), ms, acc: acc || (was && was.acc) || "",
-                                    sinds: was && was.sinds || Date.now(), t: Date.now() };
+    /* wat er al stond blijft (zoals de stand in de leerroute, route); anders was die na elk bezoek aan de leeromgeving weg */
+    this.stand.leerlingen[kort] = Object.assign({}, was || {}, { naam: nette(inz.naam, "Leerling"), av: schoonAv(inz.av), ms, acc: acc || (was && was.acc) || "",
+                                    sinds: was && was.sinds || Date.now(), t: Date.now() });
     await this.zetAlarm({ wat: "opruimen" }, KLAS_SLAAPT);
     await this.bewaar();
     return json({ ok: true, n: Object.keys(this.stand.leerlingen).length });
@@ -2095,6 +2117,13 @@ export class Kamer extends DurableObject {
     if (!o){ this.stand.opdrachten = []; await this.bewaar(); return json({ ok: true, opdracht: null, opdrachten: [] }); }
     if (lijst.length >= OPDRACHTEN_MAX) return json({ fout: "er staan al " + OPDRACHTEN_MAX + " opdrachten; haal er eerst een weg" }, 400);
     const spel = String(o.spel || ""), vak = String(o.vak || "").replace(/[^a-z]/g, "").slice(0, 8), deel = schoon(o.deel, 40);
+    if (spel === "leerroute"){
+      const d = this.routeOpdracht(o);
+      if (d.fout) return json({ fout: d.fout }, 400);
+      lijst.push(d);
+      await this.bewaar();
+      return json({ ok: true, opdracht: d, opdrachten: lijst.map(x => opdrachtNu(x, Date.now(), this.stand.rooster)) });
+    }
     if (!magOpdracht(spel)) return json({ fout: "dit spel kan geen opdracht zijn" }, 400);
     if (spel === "dictee"){
       const d = this.dicteeOpdracht(o);
@@ -2110,13 +2139,34 @@ export class Kamer extends DurableObject {
     const nieuw = { id: sleutelMaken(3), spel, vak, deel, deelNaam: schoon(o.deelNaam, 60), min, tot, tekst: schoon(o.tekst, 140), sinds: Date.now() };
     /* een losse oefening: de naam om te tonen en de keuzes voor in de link */
     if (!OPDRACHT_SPELLEN[spel]){
+      /* meer waarden voor een keuze gaan met een komma: soort=verm,deel */
       const kz = String(o.kz || "");
-      nieuw.kz = /^[a-z0-9=&_%.-]{0,160}$/i.test(kz) ? kz : "";
+      nieuw.kz = /^[a-z0-9=&_%.,-]{0,240}$/i.test(kz) ? kz : "";
       nieuw.naam = schoon(o.naam, 90) || KLAS_SPELLEN[spel];
     }
     lijst.push(nieuw);
     await this.bewaar();
     return json({ ok: true, opdracht: nieuw, opdrachten: lijst.map(x => opdrachtNu(x, Date.now(), this.stand.rooster)) });
+  }
+  /* Een doel uit de leerroute als opdracht, schoon en gecontroleerd (zie routeStand).
+     De namen komen van de pagina van de docent en zijn alleen om te tonen. */
+  routeOpdracht(o){
+    const lr = String(o.lr || "");
+    if (!ROUTE_VAKKEN[lr]) return { fout: "kies een vak van de leerroute" };
+    const doelen = [], namen = [];
+    (Array.isArray(o.doelen) ? o.doelen : []).forEach((d, i) => {
+      d = String(d || "");
+      if (!ROUTE_DOEL.test(d) || doelen.indexOf(d) >= 0 || doelen.length >= ROUTE_DOELEN_MAX) return;
+      doelen.push(d);
+      namen.push(schoon(Array.isArray(o.namen) ? o.namen[i] : "", 70) || d);
+    });
+    if (!doelen.length) return { fout: "kies een doel uit de leerroute" };
+    const wijze = o.wijze === "goed" ? "goed" : "beheers";
+    const min = wijze === "goed" ? getal(o.min, ROUTE_GOED_MAX) : doelen.length, tot = getal(o.tot, 4e12);
+    if (min < 1) return { fout: "het minimum is minstens 1" };
+    if (tot < Date.now() - 3600000 || tot > Date.now() + 120 * 86400000) return { fout: "kies een datum binnen vier maanden" };
+    return { id: sleutelMaken(3), spel: "leerroute", vak: lr, lr, deel: "", doelen, namen, wijze, min, tot,
+             naam: schoon(o.naam, 90) || namen.join(", ").slice(0, 90), tekst: schoon(o.tekst, 140), sinds: Date.now() };
   }
   /* Een dictee als opdracht, schoon en gecontroleerd. De titel komt van de pagina
      van de docent (uit de tekstbank of de naam van zijn eigen dictee) en is
@@ -2300,6 +2350,8 @@ export class Kamer extends DurableObject {
     /* uit het rooster: deze week geen dictee, of geen opdracht; dan ziet de leerling hem niet */
     const eigenlijk = this.opdrachtLijst(), extra = roosterOpdracht(eigenlijk, rooster, nu);
     const lijst = eigenlijk.concat(extra ? [extra] : []).map(o0 => opdrachtNu(o0, nu, rooster)).filter(o => !o.uit).map(o => {
+      /* een doel uit de leerroute: het vinkje staat bij de leerling, de sommen in zijn uitslagen */
+      if (o.spel === "leerroute"){ const rs = routeStand(o, (this.stand.leerlingen || {})[s], mijn); return Object.assign({}, o, { gehaald: rs.gehaald, beste: rs.waarde }); }
       const x = Object.assign({}, o, { gehaald: mijn.some(r => haaltOpdracht(r, o)), beste: mijn.reduce((a, r) => Math.max(a, maatVoor(r, o)), 0) });
       /* bij het dictee ook hoeveel woorden goed, van de beste keer */
       if (o.spel === "dictee"){
@@ -2403,7 +2455,7 @@ export class Kamer extends DurableObject {
                   /* ingelogd met Microsoft: de docent ziet de accountnaam, niet de bijnaam */
                   /* bij het dictee ook de tekst, de week, de woorden goed en welke fout gingen */
                   resultaten: this.stand.resultaten.map(x => Object.assign({ naam: (l => l.ms || l.naam)((this.stand.leerlingen || {})[x.sid] || {}) || x.naam, av: x.av || "", spel: x.spel, ronde: x.ronde, punten: x.punten, niveau: x.niveau, vak: x.vak, od: x.od, t: x.t },
-                    x.spel === "dictee" ? { dt: x.dt, wk: x.wk, gw: x.gw, tw: x.tw, fw: x.fw } : {})) });
+                    x.spel === "dictee" ? { dt: x.dt, wk: x.wk, gw: x.gw, tw: x.tw, fw: x.fw } : x.doel ? { doel: x.doel } : {})) });
   }
 
   /* Wie is er gekoppeld, en heeft die al iets gespeeld? Het kenmerk zelf gaat

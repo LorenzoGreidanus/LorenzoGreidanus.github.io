@@ -2969,7 +2969,7 @@ var SPELLEN = [
     function klaar(){ if (window.LESVAKBIJ) LESVAKBIJ(); }
     /* een oudere server stuurt nog een losse opdracht, met gehaald en beste ernaast */
     var lijst = (j && j.opdrachten) || (j && j.opdracht ? [Object.assign({ gehaald: j.gehaald, beste: j.beste }, j.opdracht)] : []);
-    lijst = lijst.filter(function(o){ return OP_SPEL[o.spel] || o.spel === 'dictee' || oefSpel(o); });
+    lijst = lijst.filter(function(o){ return OP_SPEL[o.spel] || o.spel === 'dictee' || (o.spel === 'leerroute' && o.doelen && o.doelen.length) || oefSpel(o); });
     /* eerst wat nog moet, dan wat gehaald is, en verlopen achteraan */
     var nu = Date.now();
     function rang(o){ return o.gehaald ? 1 : o.tot < nu ? 2 : 0; }
@@ -2981,6 +2981,7 @@ var SPELLEN = [
     if (lijst.length) html += '<p class="eyebrow">' + (lijst.length > 1 ? lijst.length + ' opdrachten' : 'opdracht') + ' van je docent</p>';
     html += lijst.map(function(o){
       if (o.spel === 'dictee') return dicteeStuk(o, nu);
+      if (o.spel === 'leerroute') return routeStuk(o, nu);
       var oef = !OP_SPEL[o.spel] && oefSpel(o);
       var sp = oef ? [o.naam || oef.naam, oef.bestand, 'goed'] : OP_SPEL[o.spel], verlopen = o.tot < nu, maat = o.deel ? 'goed' : sp[2] || 'rondes';
       /* een losse oefening: de keuzes van de docent in de link, en start=1 zodat hij meteen begint */
@@ -3004,6 +3005,25 @@ var SPELLEN = [
     vak.innerHTML = html;
     vak.classList.remove('hide');
     klaar();
+  }
+  /* Een doel uit de leerroute als opdracht, bijvoorbeeld een rekenmanier als de
+     staartdeling: de knop opent het eerste doel dat je nog niet beheerst, en daar
+     gaat het stap voor stap (uitleg, voordoen, samen, zelf). Af is beheersen (vijf
+     van de zes zelf goed) of zoveel sommen zelf goed; dat telt de server. */
+  var ROUTE_VAK = { rekenen:'rekenen', nederlands:'Nederlands', engels:'Engels', wiskunde:'wiskunde', aardrijkskunde:'aardrijkskunde', biologie:'biologie', economie:'economie', geschiedenis:'geschiedenis', mens:'mens en maatschappij' };
+  function routeStuk(o, nu){
+    var doelen = o.doelen || [], v = {}, beheers = o.wijze !== 'goed', verlopen = o.tot < nu;
+    try { v = JSON.parse(localStorage.getItem('lg-route') || '{}') || {}; } catch (e){}
+    var volgende = doelen.filter(function(d){ return v[d] !== 2; })[0] || doelen[0];
+    var nodig = beheers ? doelen.length : o.min;
+    var link = 'leerroute.html?vak=' + encodeURIComponent(ROUTE_VAK[o.lr] ? o.lr : 'rekenen') + '#d=' + encodeURIComponent(volgende);
+    var stand = o.gehaald ? '<span class="klaar">Gehaald ✓' + (beheers ? '' : ' Je hebt er ' + o.beste + ' zelf goed.') + '</span>'
+      : '<span class="nog">' + (beheers ? (doelen.length > 1 ? o.beste + ' van de ' + doelen.length + ' beheerst. ' : '') + 'Beheerst is vijf van de zes zelf goed. '
+        : (o.beste ? 'Je hebt er ' + o.beste + ' van de ' + nodig + '. ' : '')) + (verlopen ? 'Verlopen.' : 'Nog te doen.') + '</span>';
+    return '<div class="opstuk' + (o.gehaald || verlopen ? ' af' : '') + '">' +
+      '<b>' + schoon(o.naam || 'De leerroute') + ': ' + (beheers ? (doelen.length > 1 ? 'beheers ze alle ' + doelen.length : 'beheers dit doel') : 'minstens ' + o.min + ' sommen goed in Zelf') + '</b>' +
+      '<span>In de leerroute ' + schoon(ROUTE_VAK[o.lr] || '') + ', stap voor stap: uitleg, voordoen, samen en zelf. ' + (verlopen ? 'De tijd was tot ' : 'Tot ') + new Date(o.tot).toLocaleDateString('nl-NL', { weekday:'long', day:'numeric', month:'long' }) + '.' + (o.tekst ? ' ' + schoon(o.tekst) : '') + '</span>' +
+      stand + '<a class="knop" href="' + link + '">' + (o.gehaald ? 'Nog een keer' : 'Begin meteen') + '</a></div>';
   }
   /* Een dictee als opdracht: de tekst van de week (elke week een nieuwe), een
      tekst uit de lijst of een eigen dictee van de docent. De knop opent precies

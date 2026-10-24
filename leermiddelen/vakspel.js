@@ -114,6 +114,10 @@ window.VAKSPEL = (function(){
   /* Tien opgaven was kort voor een les. Standaard nu twintig; wie snel wil, kiest tien, wie lang wil dertig (of oneindig). */
   /* 0 is zonder eind: zoveel als je wilt, je stopt zelf (vroeger de knop Oneindig oefenen) */
   var AANTALLEN = [10, 20, 30, 0], aantal = 20;
+  /* wat een opdracht van de docent mag vragen (?aantal=15); staat het niet tussen de knoppen, dan komt het erbij */
+  var AANTAL_DOCENT = [5, 10, 15, 20, 25, 30, 40, 50];
+  var aantalUrl = (function(){ var m = /[?&]aantal=(\d+)/.exec(location.search); return m && AANTAL_DOCENT.indexOf(+m[1]) >= 0 ? +m[1] : 0; })();
+  if (aantalUrl && AANTALLEN.indexOf(aantalUrl) < 0) AANTALLEN = AANTALLEN.filter(function(n){ return n; }).concat(aantalUrl).sort(function(a, b){ return a - b; }).concat(0);
   try { var la = localStorage.getItem('lg-aantal'); if (la !== null && AANTALLEN.indexOf(+la) >= 0) aantal = +la; } catch (e){}
   function tekenAantal(){
     var v = $('keuze-aantal'); if (!v) return;
@@ -135,6 +139,15 @@ window.VAKSPEL = (function(){
     sc.onload = function(){ if (window.PAASEI) fn(); };
     document.head.appendChild(sc);
   }
+  /* keuzeLijst: wat de docent bij een keuze aanvinkte als het er meer zijn (soort=verm,deel);
+     per opgave trekt het spel er een uit, om de beurt in een gehusselde volgorde */
+  var keuzeLijst = {}, keuzeZak = {};
+  function trekKeuze(id){
+    var zak = keuzeZak[id];
+    if (!zak || !zak.length) zak = keuzeZak[id] = husselen(keuzeLijst[id].slice());
+    return zak.pop();
+  }
+  function enLijst(l){ return l.length < 2 ? l.join('') : l.slice(0, -1).join(', ') + ' en ' + l[l.length - 1]; }
   var cfg = null, keuze = {}, nr = 0, goed = 0, fout = 0, punten = 0, reeks = 0, besteReeks = 0, od = {}, missers = [], perDeel = {}, bezig = false, opgave = null;
 
   /* ---------- de pagina ---------- */
@@ -284,12 +297,17 @@ window.VAKSPEL = (function(){
     (cfg.keuzes || []).forEach(function(k){
       var m = new RegExp('[?&]' + (k.id === 'niveau' ? 'n' : k.id) + '=([^&#]+)').exec(location.search);
       if (!m) return;
-      var w = decodeURIComponent(m[1]);
-      if (!k.items.some(function(it){ return it.id === w; })) return;
+      /* een of meer waarden, met een komma ertussen; wat het spel niet kent valt weg */
+      var ws = decodeURIComponent(m[1]).split(',').filter(function(w, i, a){ return a.indexOf(w) === i && k.items.some(function(it){ return it.id === w; }); });
+      if (!ws.length) return;
+      if (ws.indexOf('alles') >= 0) ws = ['alles'];
+      var w = ws[0];
       keuze[k.id] = w;
       if (k.id === 'niveau'){ nivBron = /[?&]van=lo\b/.test(location.search) ? 'lo' : 'docent'; return; }
+      if (ws.length > 1){ keuzeLijst[k.id] = ws; keuzeZak[k.id] = null; } else delete keuzeLijst[k.id];
       var vak = $('keuze-' + k.id); if (vak) vak.classList.add('hide');
-      var kop = $('kop-' + k.id); if (kop) kop.textContent = k.kop + ': ' + k.items.filter(function(it){ return it.id === w; })[0].naam + ', ' + wie;
+      var namen = ws.map(function(x){ return k.items.filter(function(it){ return it.id === x; })[0].naam; });
+      var kop = $('kop-' + k.id); if (kop) kop.textContent = k.kop + ': ' + enLijst(namen) + ', ' + wie;
     });
   }
 
@@ -372,8 +390,9 @@ window.VAKSPEL = (function(){
     nr++;
     /* niet steeds dezelfde, maar in een lange sessie mag er na een tijd weer een terugkomen */
     if (vorigeSleutels.length > 40) vorigeSleutels.splice(0, vorigeSleutels.length - 40);
-    var probeer = 0;
-    do { opgave = cfg.maak(Object.assign({}, keuze, nivNu ? { niveau:nivNu } : {}), nr); probeer++; } while ((!opgave || (opgave.sleutel && vorigeSleutels.indexOf(opgave.sleutel) >= 0)) && probeer < 12);
+    var probeer = 0, deze = Object.assign({}, keuze, nivNu ? { niveau:nivNu } : {});
+    Object.keys(keuzeLijst).forEach(function(id){ deze[id] = trekKeuze(id); });
+    do { opgave = cfg.maak(Object.assign({}, deze), nr); probeer++; } while ((!opgave || (opgave.sleutel && vorigeSleutels.indexOf(opgave.sleutel) >= 0)) && probeer < 12);
     if (!opgave){ einde(); return; }
     if (opgave.sleutel) vorigeSleutels.push(opgave.sleutel);
     bezig = true;
@@ -696,7 +715,7 @@ window.VAKSPEL = (function(){
     if (window.SPEL && SPEL.einde) SPEL.einde({ spel: cfg.id, vak: cfg.vak, od: od, goed: goed, ronde: goed, reeks: besteReeks, muntBonus: goudBonus, score: oneindig ? String(punten) : punten, label: 'punten', waarde: oneindig ? undefined : punten, max: max,
       sterren: oneindig ? (r >= .9 ? 3 : r >= .7 ? 2 : r >= .4 ? 1 : 0) : undefined,
       opnieuw: function(){ start(oneindig); }, opnieuwTekst: oneindig ? 'Verder oefenen' : 'Nog een ronde',
-      ronde: goed, punten: punten, niveau: keuze.niveau || '', sleutel: Object.keys(keuze).map(function(k){ return keuze[k]; }).join('-') + (oneindig ? '-oneindig' : ''), deelTekst: goed + ' van de ' + gedaan + ' goed' + (oneindig ? ', oneindig geoefend' : '') });
+      ronde: goed, punten: punten, niveau: keuze.niveau || '', sleutel: Object.keys(keuze).map(function(k){ return keuzeLijst[k] ? keuzeLijst[k].join('+') : keuze[k]; }).join('-') + (oneindig ? '-oneindig' : ''), deelTekst: goed + ' van de ' + gedaan + ' goed' + (oneindig ? ', oneindig geoefend' : '') });
     window.scrollTo({ top:0, behavior:'auto' });
   }
   /* het onderdeel waar het het vaakst mis ging, en de keuze die precies dat onderdeel oefent */
@@ -733,7 +752,7 @@ window.VAKSPEL = (function(){
     var sk = (cfg.keuzes || []).filter(function(k){ return k.id === kid; })[0];
     var lijst = sk ? sk.items.filter(function(it){ return it.id !== 'alles' && ob[it.id] !== false; }) : [];
     var rij = sk && $('keuze-' + kid);
-    if (rij && rij.classList.contains('hide') && keuze[kid] !== 'alles') lijst = lijst.filter(function(it){ return it.id === keuze[kid]; });
+    if (rij && rij.classList.contains('hide') && keuze[kid] !== 'alles') lijst = lijst.filter(function(it){ return (keuzeLijst[kid] || [keuze[kid]]).indexOf(it.id) >= 0; });
     if (!lijst.length) return [{ id:'', keuze:'', naam:cfg.naam, uit:'' }];
     return lijst.map(function(it){ var e = ob[it.id] || {}; return { id:it.id, keuze:kid, naam:it.naam, uit:e.uit || schoon(it.uit || '') }; });
   }
@@ -1146,7 +1165,7 @@ window.VAKSPEL = (function(){
     addEventListener('message', function(e){
       if (e.origin !== location.origin || e.source !== window.parent) return;
       var b = e.data || {};
-      if (b.t === 'werkblad-keuzes') stuur({ t:'werkblad-keuzes', id:cfg.id, naam:cfg.naam, keuzes:(cfg.keuzes || []).map(function(k){ return { id:k.id, kop:k.kop, std:k.std, items:k.items.map(function(it){ return { id:it.id, naam:it.naam }; }) }; }), stijl:stijl });
+      if (b.t === 'werkblad-keuzes') stuur({ t:'werkblad-keuzes', id:cfg.id, naam:cfg.naam, meer:true, aantallen:cfg.vastAantal ? [] : AANTAL_DOCENT, keuzes:(cfg.keuzes || []).map(function(k){ return { id:k.id, kop:k.kop, std:k.std, items:k.items.map(function(it){ return { id:it.id, naam:it.naam }; }) }; }), stijl:stijl });
       if (b.t === 'werkblad-maak'){
         var items = [], gezien = {}, keuze = b.keuze || {};
         (cfg.keuzes || []).forEach(function(k){ if (keuze[k.id] === undefined) keuze[k.id] = k.std !== undefined ? k.std : k.items[0].id; });
@@ -1173,7 +1192,7 @@ window.VAKSPEL = (function(){
     $('startBtn').addEventListener('click', function(){ start(oneindigUrl || !aantal); });
     $('keuze-aantal').addEventListener('click', function(e){ var b = e.target.closest('button'); if (!b) return; aantal = +b.getAttribute('data-n'); try { localStorage.setItem('lg-aantal', String(aantal)); } catch (x){} tekenAantal(); });
     /* ?aantal=20 uit een opdracht van de docent */
-    (function(){ var ma = /[?&]aantal=(\d+)/.exec(location.search); if (ma && AANTALLEN.indexOf(+ma[1]) >= 0 && +ma[1]) aantal = +ma[1]; })();
+    if (aantalUrl) aantal = aantalUrl;
     /* de docent linkt met ?oneindig=1: dan staat zonder eind al aan */
     if (oneindigUrl) aantal = 0;
     tekenAantal();

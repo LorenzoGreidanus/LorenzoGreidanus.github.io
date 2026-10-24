@@ -675,7 +675,8 @@ window.LEERROUTE = (function(){
   function eind(){
     var ok = zelfGoed >= BEHEERST;
     zet(D.id, ok ? 2 : 1);
-    meldKlas({ ronde:zelfGoed, punten:ok ? 1 : 0, niveau:D.groep.niveau });
+    /* doel: welk doel deze ronde Zelf was, voor een opdracht van de docent met sommen goed */
+    meldKlas({ ronde:zelfGoed, punten:ok ? 1 : 0, niveau:D.groep.niveau, doel:D.id });
     var alle = doelenVan(), i = alle.indexOf(D), v = lees(), volgende = null;
     for (var j = i + 1; j < alle.length; j++) if (v[alle[j].id] !== 2){ volgende = alle[j]; break; }
     toonDoel();
