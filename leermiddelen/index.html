@@ -716,6 +716,10 @@ a:focus-visible,button:focus-visible,input:focus-visible,summary:focus-visible{o
 .llroute:hover i{filter:brightness(1.08)}
 @media(max-width:560px){.llroute{grid-template-columns:1fr}.llroute i{justify-self:start}}
 .leerlijn .sectiekop{margin-bottom:12px}
+/* Ook met <vak> onder de leerlijn: twee rijtjes knoppen, zelf oefenen en met de klas */
+.ookmet{margin-top:34px}
+.ookmet .sectiekop{margin-bottom:4px}
+.ookmet .llex{border:0;padding:0;font-size:.82rem}
 .llnav{list-style:none;margin:0 0 4px;padding:0;display:flex;flex-wrap:wrap;gap:8px}
 .llnav button{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:4px 14px 4px 5px;border-radius:999px;border:1px solid var(--rand);background:var(--kaart);color:var(--ink);font:inherit;font-size:.86rem;font-weight:600;cursor:pointer}
 .llnav button:hover{border-color:var(--vk,var(--vista))}
@@ -2456,7 +2460,7 @@ var SPELLEN = [
         sp.forEach(function(x){ gebruikt[x.bestand] = 1; });
         var ex = exTekst(d.ex), mijn = mijnExamen(d.ex);
         h += '<div class="lldom' + (mijn ? ' mijn' : '') + '"><div class="lldkop"><b>' + schoon(d.naam) + '</b>' + (ex ? '<span class="llex">' + (mijn ? 'jouw examen' : 'examen') + ': ' + schoon(ex) + '</span>' : '') + '</div><div class="llspel">' +
-          sp.map(function(x){ var ok = al(x.bestand); return '<a class="llchip' + (ok ? ' gedaan' : '') + '" href="' + linkNaar(x) + '" data-start="' + x.bestand + '" title="' + schoon(knip(x.wat).kort) + (ok ? ' (gedaan)' : '') + '">' + tegel(x) + '<span>' + schoon(x.naam) + '</span>' + (ok ? '<b class="llvink" aria-label="gedaan">\u2713</b>' : '') + '</a>'; }).join('') +
+          sp.map(function(x){ return chipHtml(x, al); }).join('') +
           od.map(function(o){ var race = { bestand:'race.html', param:'deel=' + encodeURIComponent(o[0]) };
             return '<a class="llchip llrace" href="' + linkNaar(race) + '" data-start="race.html" title="Vragenrace over ' + schoon(o[1]) + '"><span class="llq" aria-hidden="true">?</span><span>Vragen: ' + schoon(o[1]) + '</span></a>'; }).join('') +
           (!sp.length && !od.length ? '<span class="llleeg">Hier komt nog een oefening.</span>' : '') + '</div></div>';
@@ -2468,6 +2472,26 @@ var SPELLEN = [
     var rest = lijst.filter(function(sp){ return !gebruikt[sp.bestand]; });
     if (rest.length) h += sectie('', '', 'Meer bij ' + inZin(v.naam), 'om te beleven, met de klas en meer oefenen', rest.length, rest);
     return h;
+  }
+  /* een spel als knop in de leerlijn, met een vinkje als je het al deed */
+  function chipHtml(x, al){
+    var ok = al(x.bestand);
+    return '<a class="llchip' + (ok ? ' gedaan' : '') + '" href="' + linkNaar(x) + '" data-start="' + x.bestand + '" title="' + schoon(knip(x.wat).kort) + (ok ? ' (gedaan)' : '') + '">' + tegel(x) + '<span>' + schoon(x.naam) + '</span>' + (ok ? '<b class="llvink" aria-label="gedaan">✓</b>' : '') + '</a>';
+  }
+  /* Onder een vak: de spellen voor elk vak, met dit vak al gekozen. In twee groepen:
+     wat je zelf oefent en wat je docent met de klas start. In de leerlijn als rijtjes
+     knoppen, net als de stappen erboven; in Alle spellen als twee rijen kaarten. */
+  function ookMetHtml(lijst, kort){
+    var vz = inZin(vakVan(stand.vak).naam), ico = '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>', icoKlas = '<path d="M3 5h18v11H3zM8 20h8M12 16v4"/>';
+    var klas = function(sp){ return soortVan(sp) === 'samen' || OOK_SAMEN[sp.bestand.replace('.html', '')] || sp.bestand === 'strijd.html'; };
+    var zelf = lijst.filter(function(sp){ return !klas(sp); }), samen = lijst.filter(klas);
+    if (!kort) return (zelf.length ? sectie(ico, '#5b6480', 'Ook met ' + vz + ': zelf oefenen', 'spellen voor elk vak, met ' + vz + ' al gekozen', zelf.length, zelf) : '') +
+      (samen.length ? sectie(icoKlas, 'var(--ocean)', 'Ook met ' + vz + ': met de klas', 'je docent start deze, met ' + vz + ' al gekozen', samen.length, samen) : '');
+    var al = gedaanLijst();
+    var rij = function(titel, onder, l){ return l.length ? '<div class="lldom"><div class="lldkop"><b>' + schoon(titel) + '</b><span class="llex">' + schoon(onder) + '</span></div><div class="llspel">' + l.map(function(x){ return chipHtml(x, al); }).join('') + '</div></div>' : ''; };
+    return '<section class="sectie ookmet"><div class="sectiekop"><i style="background:#5b6480"><svg viewBox="0 0 24 24" aria-hidden="true">' + ico + '</svg></i>' +
+      '<div class="kopje"><h2>Ook met ' + schoon(vz) + '</h2><p class="onder">spellen voor elk vak, met ' + schoon(vz) + ' al gekozen</p></div><span>' + lijst.length + (lijst.length === 1 ? ' spel' : ' spellen') + '</span></div>' +
+      rij('Zelf oefenen', 'alleen of thuis', zelf) + rij('Met de klas', 'je docent start deze', samen) + '</section>';
   }
   /* ---------- een keuze per scherm ----------
      Eerst een vak kiezen uit grote tegels, dan de spellen van dat vak in
@@ -2771,10 +2795,7 @@ var SPELLEN = [
       var v2 = tegelVak(stand.vak) || OVERAL;
       s += sectie(v2.ico, v2.kleur, v2.naam, stand.soort !== 'alles' ? soortNaam(stand.soort).toLowerCase() : '', lijst.length, lijst);
     }
-    if (breedHier.length){
-      var v3 = inZin(vakVan(stand.vak).naam);
-      s += sectie('<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>', '#5b6480', 'Ook met ' + v3, 'spellen voor elk vak, met ' + v3 + ' al gekozen', breedHier.length, breedHier);
-    }
+    if (breedHier.length) s += ookMetHtml(breedHier, metLeerlijn && weergave === 'leerlijn');
     kleurNu = '';
     $('secties').innerHTML = s;
     Array.prototype.forEach.call($('secties').querySelectorAll('[data-weergave]'), function(b){
