@@ -63,9 +63,34 @@ button{cursor:pointer;touch-action:manipulation}
 .rol.onthul{animation:onthul .55s cubic-bezier(.2,.9,.3,1.2) both}
 @keyframes onthul{from{transform:perspective(700px) rotateY(80deg) scale(.92);opacity:0}to{transform:none;opacity:1}}
 /* een geheime rol (dek:true) staat dicht tot je erop tikt, zodat je buren niet meelezen */
-.rol-dicht{display:block;width:100%;text-align:left;border:0;font:inherit;cursor:pointer;background:#14224C repeating-linear-gradient(45deg,rgba(251,246,241,.07) 0 10px,transparent 10px 20px);color:#fff;min-height:44px;box-shadow:inset 0 0 0 1.5px rgba(251,246,241,.16)}
-.rol-dicht .onder{display:flex;align-items:center;gap:8px}
-.rol-dicht svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+/* dicht: een envelop met een lakzegel; tik en het zegel breekt */
+.rol-dicht{display:block;width:100%;min-height:236px;padding:0;border:0;font:inherit;text-align:center;cursor:pointer;color:#14224C;background:#F3E8D4;border-radius:22px;box-shadow:inset 0 0 0 1.5px rgba(20,34,76,.18),0 10px 24px rgba(20,34,76,.14)}
+.rol-dicht::before{display:none}
+.rol-dicht .env-klep{position:absolute;left:0;right:0;top:0;height:104px;background:#E7D5B5;clip-path:polygon(0 0,100% 0,50% 100%);transform-origin:50% 0;z-index:1}
+.rol-dicht .zegel{position:absolute;left:50%;top:104px;width:76px;height:76px;margin:-38px 0 0 -38px;z-index:2}
+.rol-dicht .zegel{filter:drop-shadow(0 4px 6px rgba(20,34,76,.28))}
+.rol-dicht .zegel i{position:absolute;inset:0;border-radius:50%;background:#C2412A;box-shadow:inset 0 0 0 5px #A5321E}
+.rol-dicht .zegel .zl{clip-path:polygon(0 0,53% 0,45% 38%,57% 62%,48% 100%,0 100%)}
+.rol-dicht .zegel .zr{clip-path:polygon(53% 0,100% 0,100% 100%,48% 100%,57% 62%,45% 38%)}
+.rol-dicht .zegel svg{position:absolute;left:24%;top:24%;width:52%;height:52%;fill:none;stroke:#F3E8D4;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.rol-dicht .env-tekst{position:relative;z-index:1;display:grid;gap:3px;padding:150px 20px 20px}
+.rol-dicht .env-tekst b{font-size:.72rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase}
+.rol-dicht .env-kop{font-size:1.45rem;font-weight:700;line-height:1.15}
+.rol-dicht .env-zin{font-size:.92rem}
+@media(prefers-reduced-motion:no-preference){
+  @keyframes zegelL{to{transform:translate(-34%,14%) rotate(-30deg);opacity:0}}
+  @keyframes zegelR{to{transform:translate(34%,14%) rotate(30deg);opacity:0}}
+  @keyframes klepOpen{to{transform:scaleY(.08);opacity:.5}}
+  .rol-dicht.breek .zl{animation:zegelL .38s cubic-bezier(.4,0,.8,.6) forwards}
+  .rol-dicht.breek .zr{animation:zegelR .38s cubic-bezier(.4,0,.8,.6) forwards}
+  .rol-dicht.breek .zegel svg{transition:opacity .15s;opacity:0}
+  .rol-dicht.breek .env-klep{animation:klepOpen .32s ease-in .12s forwards}
+}
+/* het embleem van een rol, rechtsboven op de kaart */
+.rol .rol-embleem{position:absolute;top:16px;right:16px;width:54px;height:54px;border-radius:16px;display:grid;place-items:center;background:rgba(255,255,255,.2)}
+.rol.licht .rol-embleem{background:rgba(20,34,76,.12)}
+.rol .rol-embleem svg{width:32px;height:32px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.rol.met-embleem>.eyebrow,.rol.met-embleem>h2,.rol.met-embleem>.onder{padding-right:64px}
 .rol .rol-verberg{display:inline-flex;align-items:center;gap:6px;margin-top:12px;min-height:44px;padding:0 16px;border:0;border-radius:999px;font:inherit;font-weight:600;font-size:.88rem;cursor:pointer;background:rgba(255,255,255,.2);color:inherit}
 .rol.licht .rol-verberg{background:rgba(20,34,76,.12)}
 /* Het spel in zijn eigen wereld, net als het deelnamescherm op het bord:
@@ -99,6 +124,11 @@ button{cursor:pointer;touch-action:manipulation}
 .opties{display:grid;gap:8px;margin-top:14px}
 .optie{border:2px solid var(--rand2);background:var(--kaart2);border-radius:16px;padding:14px 16px;text-align:left;font-weight:600;font-size:1.02rem;display:flex;gap:10px;align-items:center;min-height:52px}
 .optie i{width:12px;height:12px;border-radius:50%;flex:none;background:var(--ocean)}
+/* een stemming: grote knoppen, ook met een duim te raken */
+.opties.groot{gap:12px}
+.opties.groot .optie{min-height:88px;padding:18px 22px;border-radius:20px;font-size:1.5rem;gap:16px}
+.opties.groot .optie i{width:20px;height:20px}
+.opties.groot .optie small{font-size:.92rem}
 /* De gekozen optie krijgt de kleur van die optie (groen voor, rood tegen),
    niet voor alles hetzelfde blauw: anders zie je niet meer wat je koos.
    --ok en --okt (de letterkleur erop) zet het script per optie. */
@@ -530,15 +560,23 @@ body.app-aan.vb-hapert .vb-balk{bottom:calc(76px + env(safe-area-inset-bottom,0p
   /* ---------- tekenen ---------- */
   function rolHtml(){
     if (!rol) return '';
-    if (rol.dek && !rolOpen) return '<button type="button" class="rol rol-dicht" id="rolOpen" aria-expanded="false"><p class="eyebrow">' + schoon(rol.label || 'jouw rol') + '</p><h2>Tik om je rol te zien</h2>' +
-      '<p class="onder"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>Houd je scherm zo dat niemand meekijkt.</p></button>';
+    if (rol.dek && !rolOpen){
+      /* het zegel draagt het icoon van het spel */
+      var zp = thema && PAD.test(thema.icoon || '') ? thema.icoon : 'M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4l-5.3 3 1.2-6-4.5-4.1 6-.7z';
+      return '<button type="button" class="rol rol-dicht" id="rolOpen" aria-label="Breek het zegel en bekijk je geheime rol"><span class="env-klep" aria-hidden="true"></span>' +
+        '<span class="zegel" aria-hidden="true"><i class="zl"></i><i class="zr"></i><svg viewBox="0 0 24 24"><path d="' + zp + '"/></svg></span>' +
+        '<span class="env-tekst"><b>' + schoon(rol.label || 'jouw rol') + '</b><span class="env-kop">Verzegeld</span><span class="env-zin">Tik om het zegel te breken. Houd je scherm voor jezelf.</span></span></button>';
+    }
     var kl = /^#[0-9a-f]{6}$/i.test(rol.kleur || '') ? rol.kleur : '#204ECF', inkt = inktOp(kl);
-    return '<div class="rol' + (inkt === '#fff' ? '' : ' licht') + '" style="background:' + kl + ';color:' + inkt + '"><p class="eyebrow">' + schoon(rol.label || 'jouw rol') + '</p><h2>' + schoon(rol.titel) + '</h2>' +
+    var emb = PAD.test(rol.icoon || '') ? '<span class="rol-embleem" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="' + rol.icoon + '"/></svg></span>' : '';
+    return '<div class="rol' + (inkt === '#fff' ? '' : ' licht') + (emb ? ' met-embleem' : '') + '" style="background:' + kl + ';color:' + inkt + '">' + emb + '<p class="eyebrow">' + schoon(rol.label || 'jouw rol') + '</p><h2>' + schoon(rol.titel) + '</h2>' +
       (rol.onder ? '<p class="onder">' + schoon(rol.onder) + '</p>' : '') + (rol.tekst ? '<p class="tekst">' + schoon(rol.tekst) + '</p>' : '') +
       (rol.doel ? '<div class="doel"><b>jouw doel</b>' + schoon(rol.doel) + '</div>' : '') +
       (rol.punten && rol.punten.length ? '<ul class="zo">' + rol.punten.slice(0, 6).map(function(p){ return '<li>' + schoon(p) + '</li>'; }).join('') + '</ul>' : '') +
       (rol.dek ? '<button type="button" class="rol-verberg" id="rolDicht">Verberg mijn rol</button>' : '') + '</div>';
   }
+  /* een pad voor een icoon: alleen letters en getallen van een svg-pad, niets anders */
+  var PAD = /^[MmLlHhVvCcSsQqTtAaZz0-9 .,\-]{1,600}$/;
   /* een geheime rol gaat vanzelf weer dicht */
   var rolOpen = false, rolKlok = null;
   function zetRolOpen(aan, getikt){
@@ -555,7 +593,12 @@ body.app-aan.vb-hapert .vb-balk{bottom:calc(76px + env(safe-area-inset-bottom,0p
     var sleutel = rol ? (rol.rol || '') + '|' + (rol.titel || '') : '';
     if (rol && rol.dek && sleutel !== getoondeRol && getoondeRol) { rolOpen = false; clearTimeout(rolKlok); $('rolkaart').innerHTML = rolHtml(); }
     var ro = $('rolOpen'), rd = $('rolDicht');
-    if (ro) ro.addEventListener('click', function(){ zetRolOpen(true, true); });
+    if (ro) ro.addEventListener('click', function(){
+      if (ro.classList.contains('breek')) return;
+      var stil = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (stil){ zetRolOpen(true, true); return; }
+      ro.classList.add('breek'); setTimeout(function(){ zetRolOpen(true, true); }, 400);
+    });
     if (rd) rd.addEventListener('click', function(){ zetRolOpen(false, true); });
     var k = $('rolkaart').firstChild;
     if (k && sleutel !== getoondeRol) k.classList.add('onthul');
@@ -903,7 +946,7 @@ body.app-aan.vb-hapert .vb-balk{bottom:calc(76px + env(safe-area-inset-bottom,0p
     } else if (d.soort === 'vraag' || d.soort === 'lijst'){
       var keus = gekozen[d.id], items = d.soort === 'vraag' ? (d.opties || []) : (d.items || []);
       h = '<p class="eyebrow">' + schoon(d.kop || (d.soort === 'vraag' ? 'jij mag stemmen' : 'jouw keuze')) + '</p><h2>' + schoon(d.titel || '') + '</h2>' + (d.tekst ? '<p class="tekst">' + schoon(d.tekst) + '</p>' : '') +
-        '<div class="opties">' + items.map(function(o){
+        '<div class="opties' + (d.groot ? ' groot' : '') + '">' + items.map(function(o){
           var kl = /^#[0-9a-f]{6}$/i.test(o.kleur || '') ? o.kleur : '';
           return '<button type="button" class="optie' + (keus === o.id ? ' aan' : '') + '" data-id="' + schoon(o.id) + '"' + (keus === o.id ? ' aria-pressed="true"' : ' aria-pressed="false"') +
             (kl ? ' style="--ok:' + kl + ';--okt:' + letterOp(kl) + '"' : '') + (d.dicht ? ' disabled' : '') + '><i' + (kl ? ' style="background:' + kl + '"' : '') + '></i><span>' + schoon(o.tekst) + (o.onder ? '<small>' + schoon(o.onder) + '</small>' : '') + '</span></button>';
