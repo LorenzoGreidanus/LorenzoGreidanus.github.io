@@ -5,8 +5,8 @@
    een spel makkelijker.
 
    Een gekocht ding zit in je avatar-spec: v1k2o3m4e5 krijgt er h2 (hoed 2),
-   r1 (rand 1), z3 (zwaard 3), f2 (figuur 2) of p1 (pijlboog 1) achter. avatar.js tekent hoed en rand,
-   zwaard.html tekent het zwaard en de boog (met COSMETICA.boog en COSMETICA.pijl hieronder). De server (server/profiel.js) kent deze
+   r1 (rand 1), z3 (zwaard 3), f2 (figuur 2), p1 (pijlboog 1) of s1 (speer 1) achter. avatar.js tekent hoed en rand,
+   zwaard.html tekent het zwaard, de boog en de speer (met COSMETICA.boog, COSMETICA.pijl en COSMETICA.speer hieronder). De server (server/profiel.js) kent deze
    lijst ook: hij rekent de prijs af en haalt uit je spec wat je niet bezit.
 
    Dit bestand werkt in de browser (window.COSMETICA) en op de server (import).
@@ -81,6 +81,14 @@
     { id:'p4', soort:'p', n:4, naam:'Vuurboog',    prijs:1800, uit:'gloeit oranje, de pijlen trekken een vuurstreep' },
     { id:'p5', soort:'p', n:5, naam:'Sterrenboog', prijs:2200, uit:'nachtblauw met sterretjes, en paars licht' },
     { id:'p6', soort:'p', n:6, naam:'Takkenboog',  prijs:250,  uit:'een tak met een touwtje, en veren van papier' },
+    /* speren voor de Schildwacht in Zwaardvechter: s1 tot s7 */
+    { id:'s1', soort:'s', n:1, naam:'Bezemsteel',   prijs:250,  uit:'een bezemsteel met een punt van karton en veel plakband' },
+    { id:'s2', soort:'s', n:2, naam:'Ridderlans',   prijs:900,  uit:'blauw en wit gestreept, met een rood vaantje' },
+    { id:'s3', soort:'s', n:3, naam:'IJsspeer',     prijs:1100, uit:'een punt van ijskristal die koud blauw licht geeft' },
+    { id:'s4', soort:'s', n:4, naam:'Gouden speer', prijs:1500, uit:'van puur goud, van de punt tot het eind' },
+    { id:'s5', soort:'s', n:5, naam:'Vuurspeer',    prijs:1800, uit:'een verkoolde schacht en een punt van vuur' },
+    { id:'s6', soort:'s', n:6, naam:'Drietand',     prijs:2000, uit:'drie punten, zoals die van een zeegod' },
+    { id:'s7', soort:'s', n:7, naam:'Sterrenspeer', prijs:2200, uit:'nachtblauw met sterretjes, de punt straalt' },
     /* trofeeën: niet te koop, je speelt ze vrij door een baas in Zwaardvechter te verslaan */
     { id:'b1', soort:'b', n:1, naam:'Sterrenkroon van De Grote Fout', prijs:0, baas:'fout',  uit:'versla De Grote Fout in Zwaardvechter, alleen of samen' },
     { id:'b2', soort:'b', n:2, naam:'Inktspat van De Inktvlek',      prijs:0, baas:'inkt',  uit:'versla De Inktvlek in Zwaardvechter, alleen of samen' },
@@ -123,7 +131,7 @@
     { id:'b7',  soort:'b', n:7,  naam:'Vlammetje',          prijs:0, baas:'reeks-5',  verdien:'5 dagen op rij', uit:'oefen vijf dagen op rij' },
     { id:'r11', soort:'r', n:11, naam:'Lauwerkrans',        prijs:0, baas:'reeks-14', verdien:'14 dagen op rij', uit:'oefen veertien dagen op rij' }
   ];
-  var SOORTEN = { h:'Hoeden', f:'Figuren', q:'Brillen', a:'Achtergronden', r:'Randen', z:'Zwaarden', p:'Bogen', b:'Trofeeën' };
+  var SOORTEN = { h:'Hoeden', f:'Figuren', q:'Brillen', a:'Achtergronden', r:'Randen', z:'Zwaarden', p:'Bogen', s:'Speren', b:'Trofeeën' };
   /* is dit item nu te koop? Zonder seizoen altijd; met seizoen alleen tussen die dagen (jaar loopt gewoon door) */
   function inSeizoen(it, nu){
     if (!it || !it.seizoen) return true;
@@ -139,10 +147,10 @@
      iedereen gratis kiest: vorm, kleur, ogen, mond, extra, en sinds kort ook c (tweede rij kleuren),
      x en w (haar, niet meer in gebruik maar nog geldig). Oude specs zonder die drie blijven gewoon geldig. */
   function ontleed(spec){
-    var m = /^(v\d{1,2}k\do\d{1,2}m\de\d(?:c\d{1,2})?(?:x\d{1,2})?(?:w\d)?)(?:h(\d{1,2}))?(?:r(\d{1,2}))?(?:z(\d{1,2}))?(?:b(\d{1,2}))?(?:a(\d{1,2}))?(?:q(\d{1,2}))?(?:f(\d))?(?:p(\d{1,2}))?$/.exec(String(spec || ''));
-    return m ? { basis:m[1], h:+(m[2] || 0), r:+(m[3] || 0), z:+(m[4] || 0), b:+(m[5] || 0), a:+(m[6] || 0), q:+(m[7] || 0), f:+(m[8] || 0), p:+(m[9] || 0) } : null;
+    var m = /^(v\d{1,2}k\do\d{1,2}m\de\d(?:c\d{1,2})?(?:x\d{1,2})?(?:w\d)?)(?:h(\d{1,2}))?(?:r(\d{1,2}))?(?:z(\d{1,2}))?(?:b(\d{1,2}))?(?:a(\d{1,2}))?(?:q(\d{1,2}))?(?:f(\d))?(?:p(\d{1,2}))?(?:s(\d{1,2}))?$/.exec(String(spec || ''));
+    return m ? { basis:m[1], h:+(m[2] || 0), r:+(m[3] || 0), z:+(m[4] || 0), b:+(m[5] || 0), a:+(m[6] || 0), q:+(m[7] || 0), f:+(m[8] || 0), p:+(m[9] || 0), s:+(m[10] || 0) } : null;
   }
-  function bouw(o){ return o.basis + (o.h ? 'h' + o.h : '') + (o.r ? 'r' + o.r : '') + (o.z ? 'z' + o.z : '') + (o.b ? 'b' + o.b : '') + (o.a ? 'a' + o.a : '') + (o.q ? 'q' + o.q : '') + (o.f ? 'f' + o.f : '') + (o.p ? 'p' + o.p : ''); }
+  function bouw(o){ return o.basis + (o.h ? 'h' + o.h : '') + (o.r ? 'r' + o.r : '') + (o.z ? 'z' + o.z : '') + (o.b ? 'b' + o.b : '') + (o.a ? 'a' + o.a : '') + (o.q ? 'q' + o.q : '') + (o.f ? 'f' + o.f : '') + (o.p ? 'p' + o.p : '') + (o.s ? 's' + o.s : ''); }
   /* haal uit een spec wat niet in het bezit zit */
   function toegestaan(spec, bezit){
     var o = ontleed(spec); if (!o) return '';
@@ -155,6 +163,7 @@
     if (o.q && !bezit['q' + o.q]) o.q = 0;
     if (o.f && !bezit['f' + o.f]) o.f = 0;
     if (o.p && !bezit['p' + o.p]) o.p = 0;
+    if (o.s && !bezit['s' + o.s]) o.s = 0;
     return bouw(o);
   }
   /* De bogen. Per boog de kleuren van het hout (met een donkere rand en een lichte glans), de greep, de
@@ -216,7 +225,62 @@
       '<path d="M' + r1(bx + 3.6) + ',-2 h4.2 M' + r1(bx + 3.6) + ',1.2 h4.2" stroke="' + b.rand + '" stroke-width=".7" opacity=".6"/>';
     return s;
   }
+  /* De speren, voor de Schildwacht. Per speer de schacht (met een donkere rand en een lichte glans),
+     de kraag waar de punt vastzit, de punt zelf en de lijn eromheen. vorm is de punt: blad, lans,
+     kristal, vlam, drietand of karton. gloed geeft een waas om de punt; banden, vaan, sterren en
+     plakband zijn versiering. 0 is de speer waar iedereen mee begint. */
+  var SPEREN = [
+    { rand:'#5f4830', schacht:'#5f4830', glans:'#a5773f', glansDik:2, kraag:'#c9971f', punt:'#dfe6ee', lijn:'#5b6480', vorm:'blad' },
+    { rand:'#7a5a30', schacht:'#d9b77a', glans:'#f1dcae', kraag:'#cfd6de', punt:'#c9a46b', lijn:'#7a5a30', vorm:'karton', plakband:true },
+    { rand:'#14224C', schacht:'#204ECF', glans:'#83A5F2', kraag:'#b8c2cf', punt:'#e8edf3', lijn:'#14224C', vorm:'lans', banden:'#FCDED6', vaan:'#F26749' },
+    { rand:'#2d5b8a', schacht:'#9fd3ff', glans:'#ffffff', kraag:'#83A5F2', punt:'#e6f6ff', lijn:'#2d5b8a', vorm:'kristal', gloed:'#83A5F2' },
+    { rand:'#8a5a0f', schacht:'#e0b64a', glans:'#fff3c4', kraag:'#FFD166', punt:'#FFD166', lijn:'#8a5a0f', vorm:'blad' },
+    { rand:'#3b1a12', schacht:'#5a2418', glans:'#EA9836', kraag:'#EA9836', punt:'#F26749', kern:'#FFD166', lijn:'#7a2414', vorm:'vlam', gloed:'#EA9836' },
+    { rand:'#14224C', schacht:'#204ECF', glans:'#83A5F2', kraag:'#FFD166', punt:'#dfe6ee', lijn:'#14224C', vorm:'drietand' },
+    { rand:'#0b1430', schacht:'#14224C', glans:'#83A5F2', kraag:'#FCDED6', punt:'#ffffff', lijn:'#204ECF', vorm:'blad', gloed:'#83A5F2', sterren:true }
+  ];
+  function ss(n){ return SPEREN[n] || SPEREN[0]; }
+  /* De speer, liggend langs de x-as: de schacht van x0 tot de kraag op x1, de punt daarna (tot ongeveer x1 + 24). */
+  function speer(n, x0, x1){
+    var b = ss(n), e = x1 + 2, s = '';
+    function P(d){ return d.replace(/[-\d.]+/g, function(v){ return String(r1(+v)); }); }
+    function lijnPaar(d, dik, dun){ return '<path d="' + d + '" fill="none" stroke="' + b.lijn + '" stroke-width="' + dik + '" stroke-linecap="round" stroke-linejoin="round"/><path d="' + d + '" fill="none" stroke="' + b.punt + '" stroke-width="' + dun + '" stroke-linecap="round" stroke-linejoin="round"/>'; }
+    function vlak(d, kleur, dik){ return '<path d="' + d + '" fill="' + (kleur || b.punt) + '" stroke="' + b.lijn + '" stroke-width="' + (dik || 1.4) + '" stroke-linejoin="round"/>'; }
+    if (b.gloed) s += '<path d="M' + r1(e + 5) + ',0 L' + r1(e + 16) + ',0" stroke="' + b.gloed + '" stroke-width="18" stroke-linecap="round" opacity=".16"/>' +
+      '<path d="M' + r1(e + 3) + ',0 L' + r1(e + 19) + ',0" stroke="' + b.gloed + '" stroke-width="10" stroke-linecap="round" opacity=".3"/>';
+    /* de schacht */
+    var sch = 'M' + r1(x0) + ',0 L' + r1(e) + ',0';
+    s += '<path d="' + sch + '" stroke="' + b.rand + '" stroke-width="5.5" stroke-linecap="round"/>';
+    if (b.schacht !== b.rand) s += '<path d="' + sch + '" stroke="' + b.schacht + '" stroke-width="3.4" stroke-linecap="round"/>';
+    if (b.banden) s += '<path d="M' + r1(x0 + 3) + ',0 L' + r1(x1 - 4) + ',0" stroke="' + b.banden + '" stroke-width="3.4" stroke-dasharray="3 4"/>';
+    s += '<path d="M' + r1(x0) + ',-1 L' + r1(e) + ',-1" stroke="' + b.glans + '" stroke-width="' + (b.glansDik || 1.1) + '" stroke-linecap="round" opacity=".8"/>';
+    if (b.sterren) s += [[0.18, -0.6, 1.1], [0.42, 0.7, 0.8], [0.66, -0.5, 1]].map(function(q){ return '<circle cx="' + r1(x0 + (x1 - x0) * q[0]) + '" cy="' + q[1] + '" r="' + q[2] + '" fill="#fff"/>'; }).join('');
+    if (b.plakband){ var m = (x0 + x1) / 2; s += '<path d="M' + r1(m - 3) + ',0 h6" stroke="' + b.kraag + '" stroke-width="6.4" opacity=".9"/>'; }
+    /* een vaantje dat naar achteren wappert */
+    if (b.vaan) s += '<path d="' + P('M' + (x1 - 7) + ',-2.5 L' + (x1 - 7) + ',-11.5 L' + (x1 - 26) + ',-9.6 L' + (x1 - 19) + ',-7 L' + (x1 - 26) + ',-4.4 L' + (x1 - 12) + ',-2.5 Z') + '" fill="' + b.vaan + '" stroke="' + b.rand + '" stroke-width=".9" stroke-linejoin="round"/>';
+    /* de kraag */
+    s += '<path d="M' + r1(x1 - 3) + ',0 h6" stroke="' + b.kraag + '" stroke-width="7" stroke-linecap="round"/>';
+    if (b.plakband) s += '<path d="M' + r1(x1 - 3) + ',-3.5 v7 M' + r1(x1 + 3) + ',-3.5 v7" stroke="' + b.rand + '" stroke-width=".6" opacity=".45"/>';
+    /* de punt */
+    if (b.vorm === 'lans') s += vlak(P('M' + e + ',-5 L' + (e + 27) + ',0 L' + e + ',5 Z')) + '<path d="' + P('M' + (e + 2) + ',0 L' + (e + 23) + ',0') + '" stroke="' + b.lijn + '" stroke-width="1" opacity=".5"/>';
+    else if (b.vorm === 'kristal') s += vlak(P('M' + e + ',0 L' + (e + 7) + ',-6.5 L' + (e + 24) + ',0 L' + (e + 7) + ',6.5 Z')) +
+      '<path d="' + P('M' + (e + 7) + ',-6.5 L' + (e + 11) + ',0 L' + (e + 7) + ',6.5 M' + (e + 11) + ',0 L' + (e + 24) + ',0') + '" fill="none" stroke="' + b.lijn + '" stroke-width=".9" opacity=".6"/>' +
+      '<path d="' + P('M' + (e + 7) + ',-4.8 L' + (e + 10.4) + ',-0.7 L' + (e + 18) + ',-1.5 Z') + '" fill="#fff" opacity=".7"/>';
+    else if (b.vorm === 'vlam') s += vlak(P('M' + e + ',0 C' + (e + 3) + ',-6 ' + (e + 8) + ',-9 ' + (e + 11) + ',-6 C' + (e + 12) + ',-8.5 ' + (e + 15) + ',-8 ' + (e + 16) + ',-5.5 C' + (e + 19) + ',-4 ' + (e + 22) + ',-2 ' + (e + 25) + ',0 C' +
+        (e + 22) + ',2 ' + (e + 19) + ',4 ' + (e + 16) + ',5.5 C' + (e + 15) + ',8 ' + (e + 12) + ',8.5 ' + (e + 11) + ',6 C' + (e + 8) + ',9 ' + (e + 3) + ',6 ' + e + ',0 Z')) +
+      '<path d="' + P('M' + (e + 2) + ',0 Q' + (e + 9) + ',-4.2 ' + (e + 19) + ',0 Q' + (e + 9) + ',4.2 ' + (e + 2) + ',0 Z') + '" fill="' + b.kern + '"/>';
+    else if (b.vorm === 'drietand') s += lijnPaar(P('M' + (e + 1) + ',-8 Q' + (e - 2) + ',0 ' + (e + 1) + ',8'), 4.4, 2.4) +
+      lijnPaar(P('M' + (e + 1) + ',-8 L' + (e + 13) + ',-8 M' + (e + 1) + ',8 L' + (e + 13) + ',8 M' + e + ',0 L' + (e + 16) + ',0'), 3.8, 2) +
+      vlak(P('M' + (e + 12) + ',-10.6 L' + (e + 19) + ',-8 L' + (e + 12) + ',-5.4 Z'), null, 1) + vlak(P('M' + (e + 12) + ',5.4 L' + (e + 19) + ',8 L' + (e + 12) + ',10.6 Z'), null, 1) +
+      vlak(P('M' + (e + 15) + ',-3.6 L' + (e + 24) + ',0 L' + (e + 15) + ',3.6 Z'), null, 1);
+    else if (b.vorm === 'karton') s += vlak(P('M' + e + ',-6.5 L' + (e + 20) + ',0 L' + e + ',6.5 Z'), null, 1.2) +
+      '<path d="' + P('M' + (e + 3) + ',-2.2 L' + (e + 8) + ',1.6 L' + (e + 11) + ',-0.6') + '" fill="none" stroke="' + b.lijn + '" stroke-width=".8" opacity=".55"/>';
+    else s += vlak(P('M' + e + ',0 Q' + (e + 7) + ',-7.5 ' + (e + 20) + ',0 Q' + (e + 7) + ',7.5 ' + e + ',0 Z')) + '<path d="' + P('M' + (e + 2) + ',0 L' + (e + 17) + ',0') + '" stroke="' + b.lijn + '" stroke-width="1" opacity=".55"/>';
+    /* een sterretje dat op de punt straalt */
+    if (b.sterren) s += '<path d="' + P('M' + (e + 20) + ',-5.5 L' + (e + 21) + ',-1 L' + (e + 25.5) + ',0 L' + (e + 21) + ',1 L' + (e + 20) + ',5.5 L' + (e + 19) + ',1 L' + (e + 14.5) + ',0 L' + (e + 19) + ',-1 Z') + '" fill="#fff" opacity=".95"/>';
+    return s;
+  }
   g.COSMETICA = { ITEMS:ITEMS, SOORTEN:SOORTEN, vind:vind, vanBaas:vanBaas, vanNachtmerrie:vanNachtmerrie, ontleed:ontleed, bouw:bouw, toegestaan:toegestaan, inSeizoen:inSeizoen,
-                  BOGEN:BOGEN, boog:boog, pijl:pijl, spoor:spoor };
+                  BOGEN:BOGEN, boog:boog, pijl:pijl, spoor:spoor, SPEREN:SPEREN, speer:speer };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 if (typeof module !== 'undefined' && module.exports) module.exports = globalThis.COSMETICA;
