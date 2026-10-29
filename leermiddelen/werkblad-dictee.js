@@ -106,7 +106,7 @@
     tip:'Jij leest voor, de leerlingen schrijven. Het tweede blad is het voorleesblad: wat je voorleest, het goede antwoord en de regel. Liever een hele tekst voorlezen? Kies bij Werkblad het dictee met een hele tekst.',
     intro:'Je docent leest voor. Schrijf bij elk nummer wat je hoort. Staat er een zin met een gat, schrijf dan alleen het werkwoord in het gat.',
     voorlezen:'Zo lees je voor: noem het nummer. Een woord: zeg het woord, dan de zin, dan het woord nog een keer. Een werkwoord: lees de hele zin twee keer; de leerling schrijft alleen het werkwoord in het gat. Een zin met leestekens: lees hem in zijn geheel, dan in stukjes, en noem geen leestekens.',
-    extra:'<p class="kop">Een hele tekst</p><p class="tip" style="grid-column:1/-1">Het dictee van de week of een andere doorlopende tekst voorlezen? Kies bij Werkblad <b>Dictee: een hele tekst voorlezen</b>, of ga naar <a href="dictee-werkblad.html">Dictee om voor te lezen</a>.</p>',
+    extra:'<p class="kop">Een hele tekst</p><p class="tip" style="grid-column:1/-1">Het dictee van de week of een andere doorlopende tekst voorlezen? Kies bij Soort werkblad <b>Dictee met een hele tekst</b>, of ga naar <a href="dictee-werkblad.html">Dictee om voor te lezen</a>.</p>',
     soorten:[
       { id:'werkwoorden', bron:'werkwoorden', naam:'Werkwoorden (d, t of dt)', kop:'werkwoord in het gat', std:true,
         vraag:function(it){ return '<span class="vr zin">' + metGat(it.zin, it.woord) + '</span>'; },
@@ -155,7 +155,7 @@
     aantallen:[1], standaard:1, aantalNaam:'Aantal', geenAantal:true,
     delenKop:'Een hele tekst',
     delenTip:'Een doorlopende tekst: het dictee van de week (zeven zinnen), een tekst uit de lijst (tien tot dertig zinnen) of je eigen dictee. Je krijgt een voorleesblad met de zinnen in grote letters, een schrijfblad voor de leerlingen en een nakijkblad met de lastige woorden.',
-    delen:function(){ return '<p class="tip" style="grid-column:1/-1">Dit werkblad heeft een eigen pagina. Met <b>Maak werkblad</b> ga je erheen, op het niveau dat je hierboven koos.</p>'; },
+    delen:function(){ return '<p class="tip" style="grid-column:1/-1">Dit werkblad heeft een eigen pagina. Je opent hem met de knop bij het werkblad, op het niveau dat je hierboven koos.</p>'; },
     lees:function(el, rang){ return { niv:niv3(rang) }; },
     /* geen opgaven hier: werkblad.html opent de pagina van het voorleesdictee */
     adres:function(k){ return 'dictee-werkblad.html?n=' + DNIV[k.niv] + '&nakijk=1'; },

@@ -25,13 +25,19 @@
 <style>
 :root{--crab:#F26749;--amber:#EA9836;--ocean:#204ECF;--room:#FBF6F1;
   --ink:#14224C;--muted:#5b6480;--kaart:#fff;--kaart2:#f4efe8;--rand:rgba(20,34,76,.10);--rand2:rgba(20,34,76,.16);
-  --fout:#a8371f;--schaduw:0 10px 26px rgba(20,34,76,.08);--ease:cubic-bezier(.22,.61,.36,1);--link:#204ECF}
+  --fout:#a8371f;--schaduw:0 10px 26px rgba(20,34,76,.08);--ease:cubic-bezier(.22,.61,.36,1);--link:#204ECF;
+  /* de merkkleuren achter de vakletters (bank.js VAKKEN): die blijven in elk thema gelijk */
+  --deep-ocean:#1c3fb0;--butterscotch:#EA9836;--vista-blue:#83A5F2;
+  /* de vlakken van de keuzes en het paneel met het blad: die kantelen mee */
+  --paneel:#EFE7DE;--seg:#F1EAE2;--seg2:#E3D9CE;--seg-aan:#fff;--kies:#EEF2FC;--keus:#204ECF}
 @media(prefers-color-scheme:dark){
   :root:not([data-theme="light"]){--room:#0F1A3D;--ink:#F3EFE9;--muted:#B3BBD0;--kaart:#182652;--kaart2:#1f2f5e;--rand:rgba(243,239,233,.12);--rand2:rgba(243,239,233,.2);
-    --schaduw:0 14px 34px rgba(0,0,0,.35);--link:#9FB8FF}
+    --schaduw:0 14px 34px rgba(0,0,0,.35);--link:#9FB8FF;--fout:#FF9C85;
+    --paneel:#0A1433;--seg:rgba(243,239,233,.07);--seg2:rgba(243,239,233,.09);--seg-aan:#2a3b72;--kies:rgba(131,165,242,.16);--keus:#9FB8FF}
 }
 :root[data-theme="dark"]{--room:#0F1A3D;--ink:#F3EFE9;--muted:#B3BBD0;--kaart:#182652;--kaart2:#1f2f5e;--rand:rgba(243,239,233,.12);--rand2:rgba(243,239,233,.2);
-  --schaduw:0 14px 34px rgba(0,0,0,.35);--link:#9FB8FF}
+  --schaduw:0 14px 34px rgba(0,0,0,.35);--link:#9FB8FF;--fout:#FF9C85;
+  --paneel:#0A1433;--seg:rgba(243,239,233,.07);--seg2:rgba(243,239,233,.09);--seg-aan:#2a3b72;--kies:rgba(131,165,242,.16);--keus:#9FB8FF}
 :root[data-theme="dark"]{color-scheme:dark}
 :root[data-theme="light"]{color-scheme:light}
 *{box-sizing:border-box}
@@ -70,26 +76,132 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;pa
 .veld:focus{border-color:var(--ocean)}
 .rij{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .tip{color:var(--muted);font-size:.9rem}
-main h1{font-size:clamp(1.7rem,4vw,2.4rem);margin-top:4px}
-.intro{margin-top:8px;max-width:64ch}
+button:focus-visible,summary:focus-visible,a:focus-visible{outline:3px solid var(--focusring,#B4701A);outline-offset:2px}
+.wrap.breed{width:min(100% - 32px,1320px)}
+.wm-hand{font-family:'Caveat',cursive;font-weight:600;font-size:1.65rem;line-height:1;color:var(--hand,#D9522F);margin:2px 0 0}
+main h1{font-size:clamp(1.8rem,4vw,2.5rem);margin-top:2px}
+.intro{margin-top:6px;max-width:62ch;color:var(--muted)}
+.wm-hoe{max-width:68ch;font-size:.92rem}
+.wm-hoe summary{cursor:pointer;color:var(--link);font-weight:600;min-height:44px;display:inline-flex;align-items:center;gap:8px;list-style:none}
+.wm-hoe summary::-webkit-details-marker{display:none}
+.wm-hoe summary::before{content:'';width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg);transition:transform .15s var(--ease)}
+.wm-hoe[open] summary::before{transform:rotate(45deg)}
+.wm-hoe p{margin:0 0 8px;color:var(--muted)}
 
-/* ---------- de keuzes ---------- */
-.keuzes{margin-top:18px;display:grid;gap:16px}
-.velden{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
-.velden label{display:grid;gap:4px;font-size:.9rem;font-weight:600}
-.delen{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:2px 16px}
-.delen .kop{grid-column:1/-1;font-size:.72rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:10px}
+/* ---------- links de keuzes in drie stappen, rechts het blad ---------- */
+.wm-plek{margin:14px 0 32px;display:grid;grid-template-columns:minmax(0,1fr);gap:22px;align-items:start}
+@media(min-width:1000px){.wm-plek{grid-template-columns:minmax(380px,470px) minmax(0,1fr);gap:28px}}
+.wm-keuzes{display:grid;gap:16px;min-width:0}
+.wm-stap{display:flex;align-items:center;gap:10px;font-size:1.02rem;margin:0 0 12px;letter-spacing:-.01em}
+.wm-stap .wm-nr{width:26px;height:26px;border-radius:8px;background:var(--ink);color:var(--room);font-size:.82rem;display:grid;place-items:center;flex:none}
+/* stap 1: het vak, met de letter in de kleur van het vak */
+.wm-vakken{display:flex;flex-wrap:wrap;gap:8px}
+.wm-vakchip{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px 0 10px;border-radius:12px;border:1.5px solid var(--rand2);background:var(--kaart);font-size:.9rem;font-weight:500;flex:none;white-space:nowrap}
+.wm-vakchip[aria-pressed="true"]{border-color:var(--keus);background:var(--kies);box-shadow:inset 0 0 0 1px var(--keus);font-weight:600}
+.wm-vakchip .wm-vm{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;font-size:.75rem;font-weight:600;flex:none}
+/* stap 2: de soort werkblad als kaartjes */
+.wm-groep{font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:16px 0 8px}
+.wm-groep:first-child{margin-top:0}
+.wm-soorten{display:grid;gap:8px}
+.wm-soorten.wm-raster{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+.wm-soort{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;padding:11px 12px;border-radius:14px;border:1.5px solid var(--rand2);background:var(--kaart);min-height:64px}
+.wm-soort[aria-pressed="true"]{border-color:var(--keus);background:var(--kies);box-shadow:inset 0 0 0 1px var(--keus)}
+.wm-soort .wm-ico{width:40px;height:40px;border-radius:10px;background:#FCDED6;color:#B23A22;display:grid;place-items:center;flex:none}
+.wm-soort .wm-ico.bank{background:#DCE5FB;color:#204ECF}
+.wm-ico svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.wm-soort .wm-st{min-width:0}
+.wm-soort b{display:block;font-size:.9rem;font-weight:600;line-height:1.3}
+.wm-soort small{display:block;font-size:.8rem;color:var(--muted);line-height:1.4;margin-top:2px}
+.wm-meerknop{margin-top:6px;min-height:44px;border:0;background:none;color:var(--link);font-weight:600;font-size:.88rem;padding:0;text-align:left}
+/* stap 3: de instellingen */
+.wm-instel{display:grid;gap:16px}
+.wm-instel .wm-stap{margin:0}
+.wm-veldje{display:grid;gap:6px;min-width:0}
+.wm-lbl{font-size:.85rem;font-weight:600}
+.wm-seg{display:flex;padding:4px;border-radius:12px;background:var(--seg);gap:4px}
+.wm-seg button{flex:1 1 0;min-height:40px;border:0;border-radius:9px;background:transparent;font-size:.86rem;font-weight:500;padding:0 8px;white-space:nowrap}
+.wm-seg button[aria-pressed="true"],.wm-seg button[aria-selected="true"]{background:var(--seg-aan);box-shadow:0 1px 3px rgba(20,34,76,.15);font-weight:600}
+.wm-rij2{display:flex;gap:14px;flex-wrap:wrap}
+.wm-rij2 > #aantalVeld{flex:1 1 150px}
+.wm-rij2 > #vormVeld{flex:2 1 240px}
+.wm-teller{display:flex;align-items:center;gap:6px}
+.wm-teller button{width:44px;height:44px;border-radius:12px;border:1.5px solid var(--rand2);background:var(--kaart);font-size:1.15rem;font-weight:600;padding:0;display:grid;place-items:center}
+.wm-teller button:disabled{opacity:.4;cursor:default}
+.wm-teller output{min-width:56px;height:44px;padding:0 8px;display:grid;place-items:center;border:1.5px solid var(--rand2);border-radius:12px;font-weight:600;font-variant-numeric:tabular-nums}
+.deelkop{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+.deelkop .wm-tel{color:var(--muted);font-size:.85rem}
+.deelkop #delenKnoppen{margin-left:auto;display:inline-flex}
+.linkknop{background:none;border:none;color:var(--link);font-weight:600;padding:0 8px;min-height:44px;min-width:44px;font-size:.88rem}
+.wm-instel > .wm-veldje > .tip{font-size:.84rem;line-height:1.45}
+/* de onderdelen als knopjes; ook de eigen keuzes van een spel (checkboxes, radio's) */
+.delen{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.delen > :not(label),.delen > label:not(:has(> input[type="checkbox"],> input[type="radio"])){flex:1 1 100%}
+.delen .kop{font-size:.7rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:10px 0 2px}
 .delen .kop:first-child{margin-top:0}
-.delen label{display:flex;gap:10px;align-items:center;min-height:44px;font-size:.93rem;cursor:pointer}
-.delen input{width:20px;height:20px;accent-color:var(--ocean);flex:none}
-.deelkop{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;justify-content:space-between}
-.linkknop{background:none;border:none;color:var(--link);text-decoration:underline;padding:0 6px;min-height:44px;min-width:44px;font-size:.9rem}
-.vink{display:flex;gap:10px;align-items:center;min-height:44px;font-size:.93rem}
-.vink input{width:20px;height:20px;accent-color:var(--ocean)}
-.melding{color:var(--fout);font-size:.9rem;min-height:1.2em}
+.delen > label:has(> input[type="checkbox"],> input[type="radio"]){position:relative;display:inline-flex;align-items:center;gap:8px;min-height:40px;max-width:100%;padding:6px 14px 6px 10px;border:1.5px solid var(--rand2);border-radius:14px;background:var(--kaart);font-size:.86rem;line-height:1.3;cursor:pointer}
+.delen > label:has(> input:checked){border-color:var(--keus);background:var(--kies);box-shadow:inset 0 0 0 1px var(--keus)}
+.delen > label:has(> input:focus-visible){outline:3px solid var(--focusring,#B4701A);outline-offset:2px}
+.delen > label > input{width:18px;height:18px;margin:0;accent-color:var(--ocean);flex:none}
+/* de onderdelen van de vragenbank: pilletjes zonder vakje, gekozen is donker */
+.delen.bank > label:has(> input){border-radius:999px;padding:6px 14px}
+.delen.bank > label > input{position:absolute;opacity:0;width:1px;height:1px;margin:0;pointer-events:none}
+.delen.bank > label:has(> input:checked){background:var(--ink);color:var(--room);border-color:var(--ink);box-shadow:none}
+.delen select.veld{font-size:.92rem}
+.delen .rw-kies{font-size:.85rem}
+.vink{display:flex;gap:10px;align-items:center;min-height:44px;font-size:.92rem}
+.vink input{width:20px;height:20px;accent-color:var(--ocean);flex:none}
+@media(max-width:999px){
+  /* op een smal scherm schuiven de vakken opzij, de pagina zelf niet */
+  .wm-vakken{flex-wrap:nowrap;overflow-x:auto;margin-inline:-20px;padding:2px 20px 8px;scroll-padding-inline:20px;scrollbar-width:thin}
+}
+@media(max-width:999px) and (max-width:380px){.wm-vakken{margin-inline:-15px;padding-inline:15px}}
+
+/* ---------- het paneel met het blad ---------- */
+.wm-paneel{background:var(--paneel);border-radius:22px;padding:14px 16px 18px;min-width:0;scroll-margin-top:10px}
+.wm-paneel:focus{outline:none}
+.wm-balk{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px}
+.wm-tabs{background:var(--seg2)}
+.wm-tabs button{padding:0 14px}
+.wm-acties{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.wm-acties .knop,.wm-onderbalk .knop{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0 14px;border-radius:12px;font-size:.9rem;box-shadow:none}
+.wm-acties .knop svg,.wm-onderbalk .knop svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+#melding{color:var(--fout);font-size:.9rem;margin:0 0 10px}
+#melding:empty{display:none}
+.wm-paneel[data-stand="fout"] #melding{background:var(--kaart);color:var(--ink);border:1.5px dashed var(--rand2);border-radius:16px;padding:32px 20px;text-align:center;font-size:.95rem}
+#schermtip{margin:14px 0 0;text-align:center;font-size:.82rem}
+.wm-eigenpagina{background:var(--kaart);border-radius:18px;padding:28px 20px;text-align:center;display:grid;gap:10px;justify-items:center}
+.wm-eigenpagina .wm-ico{width:48px;height:48px;border-radius:12px;background:#FCDED6;color:#B23A22;display:grid;place-items:center}
+.wm-eigenpagina h2{font-size:1.15rem}
+.wm-eigenpagina p{color:var(--muted);max-width:44ch}
+.wm-eigenpagina .knop{text-decoration:none;display:inline-flex;align-items:center}
+@media(min-width:1000px){
+  /* het blad blijft in beeld terwijl je links kiest; het scrolt binnen het paneel */
+  .wm-paneel{position:sticky;top:12px;max-height:calc(100vh - 24px);max-height:calc(100svh - 24px);display:flex;flex-direction:column}
+  .wm-blikveld{flex:1 1 auto;min-height:0;overflow:auto;margin:0 -16px -18px;padding:2px 16px 18px;overscroll-behavior:contain}
+}
+/* op een smal scherm: een vaste balk onderaan om naar het blad te gaan of te printen */
+.wm-onderbalk{display:none}
+@media screen and (max-width:999px){
+  .wm-onderbalk{display:flex;gap:8px;position:fixed;left:0;right:0;bottom:0;z-index:20;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:var(--room);border-top:1px solid var(--rand2);box-shadow:0 -6px 18px rgba(20,34,76,.08)}
+  .wm-onderbalk .knop{flex:1 1 0;min-height:48px;font-size:.95rem}
+  .wm-onderbalk #printTel{flex:2 1 0}
+  body{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
+  .wm-acties #print{display:none}
+}
+/* op een telefoon loopt het paneel tot de rand: het blad houdt zo de breedte van het scherm */
+@media(max-width:480px){.wm-paneel{margin-inline:-16px;padding:12px 8px 14px;border-radius:0}.wm-balk .wm-tabs{flex:1 1 100%}}
+/* het blad meten zoals het op A4 komt (182 mm breed), om de bladzijden te tellen */
+.wm-meetvak{position:absolute;left:-99999px;top:0;width:688px;visibility:hidden;pointer-events:none}
+.wm-meetvak .blad{padding:0;max-width:none;box-shadow:none;border-radius:0}
+.wm-meetvak .blad > ol > li{padding-top:7px;padding-bottom:7px}
+.wm-meetvak .blad span.lijn,.wm-meetvak .blad i.lijn{height:24px}
+.wm-meetvak .blad span.lijn.twee{height:48px}
 
 /* ---------- het werkblad: papier, op elk scherm wit ---------- */
-.bladen{margin:22px 0 40px;display:grid;grid-template-columns:minmax(0,1fr);gap:22px}
+.bladen{margin:0;display:grid;grid-template-columns:minmax(0,1fr);gap:22px;transition:opacity .2s var(--ease)}
+.bladen.bezig{opacity:.45}
+/* op het scherm een blad tegelijk: het werkblad of de antwoorden; op papier allebei */
+@media screen{.bladen[data-toon="werk"] .wb-achter,.bladen[data-toon="antw"] .wb-voor{display:none}}
 /* een breed schema (cijferend, een tabel) schuift op een telefoon binnen zijn eigen vak; het blad blijft zo breed als het scherm */
 @media screen and (max-width:600px){.blad .eigen-wb,.blad .vakspel .beeld,.blad .rm-wb,.blad .rm-ant{overflow-x:auto}}
 .blad{background:#fff;color:#14224C;border-radius:6px;box-shadow:0 14px 40px rgba(20,34,76,.18);padding:clamp(18px,5vw,56px);max-width:820px;width:100%;margin-inline:auto;overflow-wrap:anywhere}
@@ -98,6 +210,8 @@ main h1{font-size:clamp(1.7rem,4vw,2.4rem);margin-top:4px}
 .blad .sub{color:#4a5270;font-size:.88rem;margin-top:2px}
 /* de stempel op het antwoordblad: de nagekeken g in een kring, in oranje inkt, iets scheef */
 .blad .stempel{color:#D9522F;transform:rotate(-8deg);margin:-10px 0 -14px;line-height:0}
+/* op het antwoordblad blijft de stempel naast de titel; bij een lange titel (stap voor stap) sprong hij naar een eigen regel, tegen de linkerrand */
+.blad.wb-achter .bkop{flex-wrap:nowrap}
 .blad .invul{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;font-size:.9rem;min-width:220px}
 .blad .invul span:nth-child(even){border-bottom:1px solid #14224C;min-width:120px}
 .blad > ol{margin:18px 0 0;padding-left:0;list-style:none;counter-reset:v}
@@ -221,10 +335,15 @@ main h1{font-size:clamp(1.7rem,4vw,2.4rem);margin-top:4px}
 
 @media print{
   @page{margin:14mm}
-  body{background:#fff;color:#14224C}
-  header,.keuzes,.intro,main>.eyebrow,main>h1,footer,.schermtip{display:none !important}
-  .wrap{width:100%}
-  .bladen{margin:0;gap:0;display:block}
+  body{background:#fff;color:#14224C;padding:0}
+  body > header,body > footer,.wm-kop,.wm-keuzes,.wm-balk,#melding,#schermtip,.wm-onderbalk,.wm-meetvak,.wm-eigenpagina{display:none !important}
+  .wrap,.wrap.breed{width:100%}
+  .wm-plek{display:block;margin:0}
+  .wm-paneel{background:none;padding:0;border-radius:0;position:static;max-height:none;display:block}
+  .wm-blikveld{overflow:visible;margin:0;padding:0}
+  .bladen{margin:0;gap:0;display:block;opacity:1 !important}
+  /* het blad dat op het scherm achter een tab zit, gaat wel mee op papier */
+  .bladen .blad{display:block !important}
   .blad{box-shadow:none;border-radius:0;padding:0;max-width:none;display:block}
   /* in een raster (grid) negeert de browser een pagina-einde; daarom hierboven gewone blokken */
   .blad + .blad{break-before:page;page-break-before:always;margin-top:0}
@@ -243,7 +362,7 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
 <script src="/leermiddelen/merk.js" defer></script>
 </head>
 <body>
-<header class="wrap">
+<header class="wrap breed">
   <a class="mark" href="klas.html"><i class="lgblob" style="background:none;box-shadow:none;border:0;border-radius:0;padding:0"><svg class="ng teken" viewBox="0 0 256 256" width="34" height="34" aria-hidden="true" focusable="false" style="width:100%;height:100%;overflow:visible;transform:scale(1.3)"><style>.ng .ngr{stroke:#204ECF}.ng .ngv{stroke:#F26749}:root[data-theme="dark"] .ng .ngr{stroke:#83A5F2}@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .ng .ngr{stroke:#83A5F2}}.ng.teken .ngr{stroke-dasharray:100;animation:ng-ring .6s cubic-bezier(.6,0,.3,1) .15s both}.ng.teken .ngv{stroke-dasharray:100;animation:ng-vink .34s cubic-bezier(.3,0,.2,1) .67s both}@keyframes ng-ring{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}@keyframes ng-vink{from{stroke-dashoffset:100;opacity:0}1%{opacity:1}to{stroke-dashoffset:0;opacity:1}}@media(prefers-reduced-motion:reduce){.ng.teken .ngr,.ng.teken .ngv{animation:none}}</style><g transform="translate(8 0)" fill="none" stroke-width="32"><path class="ngr" pathLength="100" d="M163.3 123A50 50 0 1 0 76.7 73A50 50 0 1 0 163.3 123Z"/><path class="ngv" pathLength="100" d="M163.3 123L114.2 208L82.2 176" stroke-linecap="round" stroke-linejoin="round"/></g></svg></i><span>Werkblad maken</span></a>
   <span class="hd-right">
     <a href="klas.html">Klasoverzicht</a>
@@ -254,43 +373,101 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
   </span>
 </header>
 
-<main class="wrap">
-  <p class="eyebrow">voor de docent</p>
-  <h1>Werkblad maken</h1>
-  <p class="intro">Kies een vak, de onderdelen en een niveau. Je krijgt genummerde vragen uit dezelfde vragenbank als de spellen, en op een apart blad de antwoorden. Bij elk vak kun je ook een werkblad uit een spel kiezen: alinea’s van de Tekstdetective, breuken van de Breukenbakker, sommen in het DHTE-schema, een topografiekaart met nummers, de opgaven van een van de vakspellen met het beeld erbij, of een dictee (Nederlands) of dictation (Engels) om zelf voor te lezen, met een voorleesblad. Elke keer dat je op Andere vragen tikt, komt er een nieuwe trekking.</p>
-
-  <div class="keuzes">
-    <div class="kaart">
-      <div class="velden">
-        <label>Vak<select id="vak" class="veld"></select></label>
-        <label id="bladVeld" class="hide">Werkblad<select id="blad" class="veld"></select></label>
-        <label id="niveauVeld">Niveau<select id="niveau" class="veld"></select></label>
-        <label><span id="aantalNaam">Aantal vragen</span><select id="aantal" class="veld"><option>10</option><option selected>20</option><option>30</option><option>40</option></select></label>
-        <label id="vormVeld">Soort vragen<select id="vorm" class="veld"><option value="mk">meerkeuze (a, b, c, d)</option><option value="open">open, met een lijn</option><option value="mix">meerkeuze en open door elkaar</option></select></label>
-      </div>
-      <label class="vink"><input type="checkbox" id="metUitleg" checked> Uitleg bij elk antwoord op het antwoordblad</label>
-    </div>
-    <div class="kaart">
-      <div class="deelkop">
-        <b id="delenKop">Onderdelen</b>
-        <span id="delenKnoppen"><button type="button" class="linkknop" id="alleDelen">alles</button> <button type="button" class="linkknop" id="geenDelen">niets</button></span>
-      </div>
-      <p class="tip" id="delenTip">Kies je niets, dan komt het hele vak aan bod. De vragen worden eerlijk over de gekozen onderdelen verdeeld.</p>
-      <div class="delen" id="delen" style="margin-top:8px"></div>
-    </div>
-    <div class="rij">
-      <button class="knop" id="maak" type="button">Maak werkblad</button>
-      <button class="knop stil" id="opnieuw" type="button" disabled>Andere vragen</button>
-      <button class="knop stil" id="print" type="button" disabled>Printen</button>
-    </div>
-    <p class="melding" id="melding" role="status" aria-live="polite"></p>
+<main class="wrap breed">
+  <div class="wm-kop">
+    <p class="wm-hand">voor de docent</p>
+    <h1>Werkblad maken</h1>
+    <p class="intro">Kies een vak en een soort werkblad. Je ziet meteen hoe het eruitziet; print het met het antwoordblad erbij.</p>
+    <details class="wm-hoe">
+      <summary>Hoe werkt het?</summary>
+      <p>Je krijgt genummerde vragen uit dezelfde vragenbank als de spellen, en op een apart blad de antwoorden. Bij elk vak kun je ook een werkblad uit een spel kiezen: alinea’s van de Tekstdetective, breuken van de Breukenbakker, sommen in het DHTE-schema, driehoeken om de oppervlakte van te berekenen, een topografiekaart met nummers, de opgaven van een van de vakspellen met het beeld erbij, of een dictee (Nederlands) of dictation (Engels) om zelf voor te lezen, met een voorleesblad.</p>
+      <p>Het blad past zich aan zodra je iets verandert. Met <b>Andere vragen</b> trek je een nieuwe set. Met <b>Link</b> kopieer je het adres met al je keuzes erin, zodat je hetzelfde soort werkblad later of bij een collega terugkrijgt.</p>
+      <p>Bij het printen komt het antwoordblad op een eigen pagina. Wil je een PDF, kies dan bij het printen voor Opslaan als PDF.</p>
+    </details>
   </div>
 
-  <p class="tip schermtip hide" id="schermtip">Zo ziet het er op papier uit. Het antwoordblad komt bij het printen op een eigen pagina.</p>
-  <div class="bladen" id="bladen"></div>
+  <div class="wm-plek">
+    <section class="wm-keuzes" aria-label="Keuzes">
+      <div class="kaart">
+        <h2 class="wm-stap"><span class="wm-nr" aria-hidden="true">1</span>Vak</h2>
+        <div class="wm-vakken" id="vakken" role="group" aria-label="Vak"></div>
+      </div>
+
+      <div class="kaart">
+        <h2 class="wm-stap"><span class="wm-nr" aria-hidden="true">2</span>Soort werkblad</h2>
+        <div id="soorten"></div>
+      </div>
+
+      <div class="kaart wm-instel">
+        <h2 class="wm-stap"><span class="wm-nr" aria-hidden="true">3</span>Instellingen</h2>
+        <div class="wm-veldje" id="niveauVeld">
+          <span class="wm-lbl" id="niveauLbl">Niveau</span>
+          <div class="wm-seg" id="niveauSeg" role="group" aria-labelledby="niveauLbl"></div>
+        </div>
+        <div class="wm-rij2">
+          <div class="wm-veldje" id="aantalVeld">
+            <span class="wm-lbl" id="aantalNaam">Aantal vragen</span>
+            <div class="wm-teller">
+              <button type="button" id="minder" aria-label="Minder">&#8722;</button>
+              <output id="aantalUit" aria-labelledby="aantalNaam" aria-live="polite">20</output>
+              <button type="button" id="meer" aria-label="Meer">+</button>
+            </div>
+          </div>
+          <div class="wm-veldje" id="vormVeld">
+            <span class="wm-lbl" id="vormLbl">Soort vragen</span>
+            <div class="wm-seg" id="vormSeg" role="group" aria-labelledby="vormLbl"></div>
+          </div>
+        </div>
+        <div class="wm-veldje">
+          <div class="deelkop">
+            <span class="wm-lbl" id="delenKop">Onderdelen</span>
+            <span class="wm-tel" id="delenTel"></span>
+            <span id="delenKnoppen"><button type="button" class="linkknop" id="alleDelen">Alles</button><button type="button" class="linkknop" id="geenDelen">Niets</button></span>
+          </div>
+          <p class="tip" id="delenTip"></p>
+          <div class="delen" id="delen"></div>
+        </div>
+        <label class="vink"><input type="checkbox" id="metUitleg" checked> Uitleg bij elk antwoord op het antwoordblad</label>
+      </div>
+
+      <!-- de keuzes zelf: de knoppen hierboven zetten ze; andere scripts (route, topografie, de vakspellen) lezen #blad -->
+      <div hidden>
+        <select id="vak" aria-hidden="true" tabindex="-1"></select>
+        <select id="blad" aria-hidden="true" tabindex="-1"></select>
+        <select id="niveau" aria-hidden="true" tabindex="-1"></select>
+        <select id="aantal" aria-hidden="true" tabindex="-1"><option>10</option><option selected>20</option><option>30</option><option>40</option></select>
+        <select id="vorm" aria-hidden="true" tabindex="-1"><option value="mk">meerkeuze</option><option value="open">open</option><option value="mix">door elkaar</option></select>
+      </div>
+    </section>
+
+    <section class="wm-paneel" id="paneel" aria-label="Het werkblad" tabindex="-1">
+      <div class="wm-balk">
+        <div class="wm-seg wm-tabs" id="tabs" role="tablist" aria-label="Wat je ziet">
+          <button type="button" role="tab" id="tabWerk" aria-selected="true" aria-controls="bladen">Werkblad</button>
+          <button type="button" role="tab" id="tabAntw" aria-selected="false" aria-controls="bladen" tabindex="-1">Antwoorden</button>
+        </div>
+        <div class="wm-acties">
+          <button class="knop stil" id="opnieuw" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.1" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.1" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1.1" fill="currentColor"/><circle cx="8.5" cy="15.5" r="1.1" fill="currentColor"/></svg>Andere vragen</button>
+          <button class="knop stil" id="link" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><span id="linkTekst" aria-live="polite">Link</span></button>
+          <button class="knop" id="print" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/></svg>Printen</button>
+        </div>
+      </div>
+      <p class="melding" id="melding" role="status" aria-live="polite"></p>
+      <div class="wm-blikveld" id="blikveld">
+        <div class="bladen" id="bladen" data-toon="werk" role="tabpanel" aria-labelledby="tabWerk"></div>
+        <p class="tip schermtip hide" id="schermtip">Zo ziet het er op papier uit. Bij het printen komt het antwoordblad op een eigen pagina.</p>
+      </div>
+    </section>
+  </div>
 </main>
 
-<footer class="wrap">De vragen komen uit de vragenbank van deze site, dezelfde als in Vragenrace, Torenverdediging en Zwaardvechter, en de werkbladen van een spel uit dat spel zelf. Klopt er een niet, meld hem dan in een van de spellen.</footer>
+<footer class="wrap breed">De vragen komen uit de vragenbank van deze site, dezelfde als in Vragenrace, Torenverdediging en Zwaardvechter, en de werkbladen van een spel uit dat spel zelf. Klopt er een niet, meld hem dan in een van de spellen.</footer>
+
+<div class="wm-onderbalk" id="onderbalk">
+  <button type="button" class="knop stil" id="bekijk">Bekijk</button>
+  <button type="button" class="knop" id="printTel">Printen of PDF</button>
+</div>
+<div class="wm-meetvak" id="meet" aria-hidden="true"></div>
 
 <script src="thema.js"></script>
 <script src="nagekeken.js"></script>
@@ -317,15 +494,149 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
   function schud(a){ for (var i = a.length - 1; i > 0; i--){ var j = Math.floor(Math.random() * (i + 1)), h = a[i]; a[i] = a[j]; a[j] = h; } return a; }
   var LETTERS = ['a', 'b', 'c', 'd', 'e', 'f'];
 
-  /* ---------- de keuzes, ook uit het adres (klas.html linkt hierheen met vak en onderdeel) ---------- */
+  /* ---------- de soorten werkblad: een naam, een regel uitleg en een icoon ----------
+     De volgorde hier is ook de volgorde op het scherm: de eerste vier van een
+     vak staan er meteen, de rest achter "Nog N werkbladen". Een werkblad dat
+     hier niet staat, komt achteraan met zijn eigen naam (of S.kort en S.icoon). */
+  var ICO = {
+    lijst:'<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>',
+    trap:'<path d="M3 20h5v-5h5v-5h5V5h3"/>',
+    driehoek:'<path d="M3 20h18L9 5z"/><path d="M9 5v15" stroke-dasharray="2 2.5"/>',
+    schema:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16M3 12h18"/>',
+    klok:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    taart:'<circle cx="12" cy="12" r="9"/><path d="M12 3v9h9"/>',
+    tabel:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 12h18M10 5v14"/>',
+    liniaal:'<rect x="2.5" y="8" width="19" height="8" rx="1.5"/><path d="M6.5 8v3M10.5 8v4M14.5 8v3M18.5 8v4"/>',
+    keer:'<path d="M8 4l8 8M16 4l-8 8"/><path d="M4 18h16"/>',
+    schat:'<path d="M4 9c2.5-2 5.5-2 8 0s5.5 2 8 0M4 15c2.5-2 5.5-2 8 0s5.5 2 8 0"/>',
+    grafiek:'<path d="M4 4v16h16"/><path d="M7 15l4-4 3 3 5-6"/>',
+    hoek:'<path d="M4 19h16M4 19L15 6"/><path d="M10 19a6 6 0 0 0-2-4.6"/>',
+    rooster:'<path d="M12 3v18M3 12h18"/><circle cx="16.5" cy="7.5" r="1.8"/>',
+    splits:'<circle cx="5" cy="12" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="19" cy="18" r="2"/><path d="M7 12c5 0 5-6 10-6M7 12c5 0 5 6 10 6"/>',
+    vergroot:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/>',
+    tekst:'<path d="M5 3h10l4 4v14H5z"/><path d="M9 11h6M9 15h6"/>',
+    woord:'<path d="M3 18l5-12 5 12M5 14h6"/><circle cx="17.5" cy="15" r="2.6"/><path d="M20.1 12v6"/>',
+    pijl:'<path d="M3 12h15M13 6l6 6-6 6"/>',
+    vraag:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7"/><path d="M12 17h.01"/>',
+    kaart:'<path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/>',
+    kompas:'<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>',
+    thermo:'<path d="M10 14V5a2 2 0 1 1 4 0v9a4 4 0 1 1-4 0z"/>',
+    piramide:'<path d="M10 5h4M8 9h8M6 13h12M4 17h16"/>',
+    web:'<circle cx="12" cy="5" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="18" r="2"/><path d="M11 7l-5 9M13 7l5 9M7 18h10"/>',
+    dna:'<path d="M7 3c0 6 10 6 10 9s-10 3-10 9M17 3c0 6-10 6-10 9s10 3 10 9"/><path d="M9 6.5h6M9 17.5h6"/>',
+    oor:'<path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/>',
+    pen:'<path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/>',
+    boek:'<path d="M4 5c3-1 6-1 8 1 2-2 5-2 8-1v14c-3-1-6-1-8 1-2-2-5-2-8-1z"/><path d="M12 6v14"/>',
+    praat:'<path d="M4 5h16v11H9l-5 4z"/>',
+    oog:'<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+    kolf:'<path d="M9 3h6M10 3v6L4.5 19a1.5 1.5 0 0 0 1.3 2h12.4a1.5 1.5 0 0 0 1.3-2L14 9V3"/><path d="M7 15h10"/>',
+    weegschaal:'<path d="M12 4v16M7 20h10M5 7h14"/><path d="M5 7l-3 6a3 3 0 0 0 6 0zM19 7l-3 6a3 3 0 0 0 6 0z"/>',
+    hamer:'<path d="M14.5 3.5l6 6-3 3-6-6zM11.5 9.5L4 17l3 3 7.5-7.5M3 21h9"/>',
+    euro:'<path d="M17 6.5a7 7 0 1 0 0 11"/><path d="M4 10h9M4 14h9"/>',
+    schild:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+    kubus:'<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/>',
+    druppel:'<path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z"/>',
+    blad:'<path d="M5 19C5 10 10 5 20 4c-1 10-6 15-15 15z"/><path d="M5 19l8-8"/>',
+    stem:'<rect x="4" y="11" width="16" height="9" rx="1.5"/><path d="M9 11V4h6v7M8 15h8"/>',
+    gebouw:'<path d="M3 9l9-5 9 5M5 9v9M9.5 9v9M14.5 9v9M19 9v9M3 20h18"/>',
+    zandloper:'<path d="M6 3h12M6 21h12"/><path d="M7 3c0 6 10 6 10 9s-10 3-10 9M17 3c0 6-10 6-10 9s10 3 10 9"/>'
+  };
+  function ico(n){ return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' + (ICO[n] || ICO.tekst) + '</svg>'; }
+  var BANKSOORT = ['Vragen uit de vragenbank', 'Gemengde vragen per onderdeel, open of meerkeuze. Dezelfde vragen als in de spellen.', 'lijst'];
+  var ROUTESOORT = ['Stap voor stap', 'Eén vaardigheid met uitleg, een voorgedaan voorbeeld en stappen om in te vullen.', 'trap'];
+  var DRIEHOEK = ['Driehoeken', 'Oppervlakte, met de figuur erbij', 'driehoek'];
+  var SOORT = {
+    /* rekenen */
+    driehoek:DRIEHOEK,
+    dhte:['DHTE-schema', 'Optellen en aftrekken in het schema', 'schema'],
+    klok:['Klokkijken', 'Wijzers aflezen en rekenen met tijd', 'klok'],
+    breukenbakker:['Breuken', 'Taarten en sommen uit de Breukenbakker', 'taart'],
+    manieren:['Rekenmanieren', 'Oefenen op één manier, met de vorm erbij', 'splits'],
+    verhoudingen:['Verhoudingstabel', 'Tabellen invullen, ook met recepten en prijzen', 'tabel'],
+    metriek:['Metriek stelsel', 'Omrekenen met de ladder', 'liniaal'],
+    cijferen:['Cijferen', 'Vermenigvuldigen en delen onder elkaar', 'keer'],
+    schatten:['Schatten en afronden', 'Op de getallenlijn en met mooie getallen', 'schat'],
+    bronlezen:['Lees de bron', 'Tabellen en diagrammen lezen', 'grafiek'],
+    /* wiskunde */
+    'driehoek-wis':DRIEHOEK,
+    grafieken:['Grafieken en formules', 'Aflezen, tekenen en de formule vinden', 'grafiek'],
+    pythagoras:['Pythagoras', 'Zijden berekenen, ook met ladders en daken', 'hoek'],
+    coordinaten:['Coördinaten', 'Aflezen en aanwijzen in een assenstelsel', 'rooster'],
+    hoeken:['Hoeken', 'Meten met de gradenboog en berekenen', 'hoek'],
+    ruimte:['Ruimtefiguren', 'Aanzichten, uitslagen en inhoud', 'kubus'],
+    woordformules:['Tabel, grafiek en formule', 'Woordformules maken en vergelijken', 'tabel'],
+    voordoen:['Eerst kijken, dan zelf', 'Een uitgewerkte som, daarna steeds meer zelf', 'oog'],
+    /* Nederlands */
+    tekstdetective:['Tekstdetective', 'Alinea’s met vragen over hoofdgedachte en verband', 'vergroot'],
+    dictee:['Dictee', 'Woorden en zinnen voorlezen, met een voorleesblad', 'pen'],
+    begrijpend:['Begrijpend lezen', 'Korte teksten met vragen', 'boek'],
+    dicteetekst:['Dictee met een hele tekst', 'Een doorlopende tekst, op een eigen pagina', 'tekst'],
+    samenvatten:['Samenvatten', 'Hoofdzaken en bijzaken scheiden', 'tekst'],
+    woordenschat:['Woordenschat', 'Lastige woorden in een zin', 'woord'],
+    signaalwoorden:['Signaalwoorden', 'Verbanden herkennen en kiezen', 'pijl'],
+    register:['Formeel of informeel', 'Appje of brief: de goede toon', 'praat'],
+    alinea:['Bouw een alinea', 'Kernzin, volgorde en verbindingswoorden', 'pen'],
+    schrijfopdracht:['De schrijfopdracht', 'Een e-mail of brief zoals op het examen', 'pen'],
+    luisteren:['Luister goed', 'Kijk- en luistervaardigheid', 'oor'],
+    /* Engels */
+    dictation:['Dictation', 'Woorden en zinnen voorlezen in het Engels', 'pen'],
+    phrasal:['Phrasal verbs', 'Betekenis, partikel en collocations', 'woord'],
+    reading:['Reading', 'Korte Engelse teksten met vragen', 'boek'],
+    translate:['Translate the sentence', 'Zinnen vertalen, heen en terug', 'woord'],
+    situaties:['English in real life', 'Goed reageren in echte situaties', 'praat'],
+    listening:['Listen carefully', 'Luistervragen zoals op het examen', 'oor'],
+    examreading:['Exam reading', 'Leesvaardigheid op havo- en vwo-niveau', 'boek'],
+    /* geschiedenis */
+    oorzaakgevolg:['Oorzaak en gevolg', 'Ketens en aanleidingen per tijdvak', 'pijl'],
+    tijdkaart:['De kaart door de tijd', 'Gebieden aanwijzen en dateren', 'kaart'],
+    wiebenik:['Wie ben ik?', 'Raden aan de hand van aanwijzingen', 'vraag'],
+    redeneren:['Denk als een historicus', 'Verandering, continuïteit en standpunten', 'zandloper'],
+    contextenhavo:['Historische contexten havo', 'Examenstof met bronnen', 'zandloper'],
+    contextenvwo:['Historische contexten vwo', 'Examenstof met bronnen', 'zandloper'],
+    /* aardrijkskunde */
+    topografie:['Topografie', 'Een kaart met nummers om in te vullen', 'kaart'],
+    klimaatgrafiek:['Klimaatgrafieken', 'Aflezen en het klimaattype herkennen', 'thermo'],
+    kaartvaardigheid:['Kaartvaardigheden', 'Schaal, legenda en windrichtingen', 'kompas'],
+    bevolkingspiramide:['Bevolkingspiramides', 'Groei, krimp en vergrijzing aflezen', 'piramide'],
+    water:['Water in Nederland', 'Rivieren, kust en polders', 'druppel'],
+    /* biologie */
+    voedselweb:['Voedselweb', 'Ketens van producent tot roofdier', 'web'],
+    kruisen:['Kruisingsschema', 'Erfelijkheid en kansen', 'dna'],
+    onderzoek:['Het eerlijke experiment', 'Hypothese, variabelen en conclusie', 'kolf'],
+    afweer:['Afweer en evolutie', 'Hoe je lichaam zich verdedigt', 'schild'],
+    stofwisseling:['Stofwisseling', 'Enzymen, fotosynthese en dissimilatie', 'blad'],
+    /* mens en maatschappij */
+    democratie:['Democratie', 'Trias politica en hoe een wet ontstaat', 'gebouw'],
+    verkiezingen:['Verkiezingen en zetels', 'Kiesdeler en coalities', 'stem'],
+    partijen:['Welke partij is dit?', 'Partijen herkennen aan logo en afkorting', 'vraag'],
+    rechtsstaat:['Van aangifte tot uitspraak', 'Een strafzaak volgen', 'hamer'],
+    afwegen:['Twee kanten', 'Argumenten voor en tegen afwegen', 'weegschaal'],
+    /* economie */
+    huishoudboekje:['Het huishoudboekje', 'Kasboek, vaste lasten en sparen', 'euro'],
+    vraagenaanbod:['Vraag en aanbod', 'De evenwichtsprijs aflezen', 'grafiek'],
+    bedrijf:['Werk, bedrijf en wereld', 'Loonstrook, omzet, kosten en winst', 'euro']
+  };
+  var VOLGORDE = Object.keys(SOORT);
+  function soortInfo(id){
+    if (!id) return BANKSOORT;
+    if (/^route-/.test(id)) return ROUTESOORT;
+    var S = SPELBLAD[id] || {};
+    return SOORT[id] || [S.naam || id, S.kort || '', S.icoon || 'tekst'];
+  }
+
+  /* ---------- de keuzes, ook uit het adres (klas.html linkt hierheen met vak en onderdeel) ----------
+     De keuzes zelf staan in verborgen keuzelijsten (#vak, #blad, #niveau,
+     #aantal, #vorm): de knoppen zetten ze, en de scripts van de werkbladen
+     (route, topografie, de vakspellen) lezen #blad om te weten wat er open staat. */
   var zoek = new URLSearchParams(location.search);
-  /* Eerst het vak; heeft dat vak ook werkbladen uit een spel, dan kies je
-     daarna welk werkblad: vragen uit de bank of een van die spellen. */
   $('vak').innerHTML = VAKKEN.map(function(v){ return '<option value="' + v.id + '">' + schoon(v.naam) + '</option>'; }).join('');
-  function spellenVan(vak){ return Object.keys(SPELBLAD).filter(function(id){ return SPELBLAD[id].vak === vak; }); }
+  function spellenVan(vak){
+    var ids = Object.keys(SPELBLAD).filter(function(id){ return SPELBLAD[id].vak === vak; });
+    function plek(id){ var i = VOLGORDE.indexOf(id); return i < 0 ? 999 : i; }
+    return ids.sort(function(a, b){ return plek(a) - plek(b); });
+  }
   function tekenBlad(kies){
     var ids = spellenVan($('vak').value);
-    $('bladVeld').classList.toggle('hide', !ids.length);
     $('blad').innerHTML = '<option value="">Vragen uit de vragenbank</option>' + ids.map(function(id){ return '<option value="' + id + '">' + schoon(SPELBLAD[id].naam) + '</option>'; }).join('');
     $('blad').value = kies && ids.indexOf(kies) >= 0 ? kies : '';
   }
@@ -346,38 +657,134 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
   function zetAantallen(lijst, standaard){
     $('aantal').innerHTML = lijst.map(function(n){ return '<option' + (n === standaard ? ' selected' : '') + '>' + n + '</option>'; }).join('');
   }
+  /* Tekent een script van een werkblad zijn keuzes later opnieuw (de route als
+     de vaardigheden binnen zijn, een vakspel als het venster antwoordt, de
+     eigen topografieset), dan wordt het blad opnieuw gemaakt. */
+  var kijker = window.MutationObserver ? new MutationObserver(function(){ telDelen(); plan(); }) : null;
+  if (kijker) kijker.observe($('delen'), { childList:true });
   function tekenDelen(aan){
     var vak = $('vak').value, S = spel();
     $('vormVeld').classList.toggle('hide', !!(S && !S.vormen));
     $('niveauVeld').classList.toggle('hide', !!(S && S.eigenNiveau));
     $('delenKnoppen').classList.toggle('hide', !!S);
+    $('delenTel').classList.toggle('hide', !!S);
+    $('delen').classList.toggle('bank', !S);
     $('delenKop').textContent = S ? S.delenKop : 'Onderdelen';
     $('delenTip').textContent = S ? S.delenTip : 'Kies je niets, dan komt het hele vak aan bod. De vragen worden eerlijk over de gekozen onderdelen verdeeld.';
     $('aantalNaam').textContent = S ? S.aantalNaam : 'Aantal vragen';
-    $('aantal').parentNode.classList.toggle('hide', !!(S && S.geenAantal));
+    $('aantalVeld').classList.toggle('hide', !!(S && S.geenAantal));
     zetAantallen(S ? S.aantallen : AANTAL_BANK, S ? S.standaard : 20);
-    if (S){ $('delen').innerHTML = S.delen(aan || []); if (S.vormen) $('vorm').value = 'mk'; return; }
-    $('delen').innerHTML = BANK.deelItems(vak).map(function(it){
-      if (it.soort === 'kop') return '<p class="kop">' + schoon(it.naam) + '</p>';
-      return '<label><input type="checkbox" value="' + schoon(it.id) + '"' + (aan && aan.indexOf(it.id) >= 0 ? ' checked' : '') + '> ' + schoon(it.naam) + '</label>';
-    }).join('');
-    /* rekenen stelt open sommen; bij de andere vakken is meerkeuze de gewoonte */
-    $('vorm').value = vak === 'reken' ? 'open' : 'mk';
+    if (S){ $('delen').innerHTML = S.delen(aan || []); if (S.vormen) $('vorm').value = 'mk'; }
+    else {
+      $('delen').innerHTML = BANK.deelItems(vak).map(function(it){
+        if (it.soort === 'kop') return '<p class="kop">' + schoon(it.naam) + '</p>';
+        return '<label><input type="checkbox" value="' + schoon(it.id) + '"' + (aan && aan.indexOf(it.id) >= 0 ? ' checked' : '') + '> ' + schoon(it.naam) + '</label>';
+      }).join('');
+      /* rekenen stelt open sommen; bij de andere vakken is meerkeuze de gewoonte */
+      $('vorm').value = vak === 'reken' ? 'open' : 'mk';
+    }
+    /* dit tekenen we zelf: daar hoeft de kijker niet op te reageren */
+    if (kijker) kijker.takeRecords();
+    telDelen();
   }
-  function gekozen(){ return [].map.call($('delen').querySelectorAll('input:checked'), function(x){ return x.value; }); }
+  /* ook een keuzelijst (de vaardigheid bij Stap voor stap): zo komt die mee in de link */
+  function gekozen(){ return [].map.call($('delen').querySelectorAll('input:checked, select'), function(x){ return x.value; }).filter(Boolean); }
+  function telDelen(){
+    if (spel()) return;
+    var n = $('delen').querySelectorAll('input:checked').length;
+    $('delenTel').textContent = n ? n + ' gekozen' : 'het hele vak';
+  }
   function niveauNaam(){ return (NIVEAUS.filter(function(x){ return x.id === $('niveau').value; })[0] || {}).naam || ''; }
-  $('vak').addEventListener('change', function(){ tekenBlad(''); tekenDelen([]); });
-  $('blad').addEventListener('change', function(){ tekenDelen([]); });
-  $('alleDelen').addEventListener('click', function(){ [].forEach.call($('delen').querySelectorAll('input'), function(x){ x.checked = true; }); });
-  $('geenDelen').addEventListener('click', function(){ [].forEach.call($('delen').querySelectorAll('input'), function(x){ x.checked = false; }); });
+  /* bij door elkaar is om de andere vraag open; zo kloppen werkblad en antwoordblad altijd */
+  function isOpen(vorm, i){ return vorm === 'open' || (vorm === 'mix' && i % 2 === 1); }
+  function rang(){ var n = NIVEAUS.filter(function(x){ return x.id === $('niveau').value; })[0]; return n ? n.rang : 2; }
+  function deelNaam(vak, id){ var o = (ONDERDELEN[vak] || []).filter(function(x){ return x.id === id; })[0]; return o ? o.naam : ''; }
+
+  /* ---------- de knoppen van de drie stappen ---------- */
+  /* een lichte merkkleur (geel, lichtblauw) krijgt een donkere letter */
+  function letterKleur(k){ return /butterscotch|vista-blue|#EA9836|#83A5F2/i.test(k) ? '#14224C' : '#fff'; }
+  $('vakken').innerHTML = VAKKEN.map(function(v){
+    return '<button type="button" class="wm-vakchip" data-vak="' + schoon(v.id) + '" aria-pressed="false"><span class="wm-vm" aria-hidden="true" style="background:' + schoon(v.kleur) + ';color:' + letterKleur(v.kleur) + '">' + schoon(v.mark) + '</span>' + schoon(v.naam) + '</button>';
+  }).join('');
+  $('niveauSeg').innerHTML = NIVEAUS.map(function(n){ return '<button type="button" data-v="' + n.id + '" aria-label="' + schoon(n.naam) + '" aria-pressed="false">' + schoon(n.naam.replace(/^vmbo-/, '')) + '</button>'; }).join('');
+  $('vormSeg').innerHTML = [['open', 'Open'], ['mk', 'Meerkeuze'], ['mix', 'Door elkaar']].map(function(v){ return '<button type="button" data-v="' + v[0] + '" aria-pressed="false">' + v[1] + '</button>'; }).join('');
+
+  var allesTonen = false;
+  function kaartje(id){
+    var i = soortInfo(id);
+    return '<button type="button" class="wm-soort" data-blad="' + schoon(id) + '" aria-pressed="' + (id === $('blad').value) + '"><span class="wm-ico' + (id ? '' : ' bank') + '">' + ico(i[2]) + '</span>' +
+      '<span class="wm-st"><b>' + schoon(i[0]) + '</b>' + (i[1] ? '<small>' + schoon(i[1]) + '</small>' : '') + '</span></button>';
+  }
+  function tekenSoorten(){
+    var ids = spellenVan($('vak').value), blad = $('blad').value;
+    var route = ids.filter(function(id){ return /^route-/.test(id); }), rest = ids.filter(function(id){ return !/^route-/.test(id); });
+    var h = '<p class="wm-groep" id="groepVragen">Vragen</p><div class="wm-soorten" role="group" aria-labelledby="groepVragen">' + kaartje('') + route.map(kaartje).join('') + '</div>';
+    if (rest.length){
+      /* de eerste vier meteen; staat het gekozen blad verderop, dan alles */
+      var lang = rest.length > 5, nodig = rest.indexOf(blad) >= 4, open = !lang || allesTonen || nodig;
+      var weg = rest.slice(4);
+      h += '<p class="wm-groep" id="groepSpel">Uit een spel of met een schema</p><div class="wm-soorten wm-raster" role="group" aria-labelledby="groepSpel">' + (open ? rest : rest.slice(0, 4)).map(kaartje).join('') + '</div>';
+      if (lang && !nodig) h += '<button type="button" class="wm-meerknop" id="meerSoorten" aria-expanded="' + open + '">' +
+        (open ? 'Minder tonen' : 'Nog ' + weg.length + ' werkbladen: ' + weg.slice(0, 3).map(function(id){ return soortInfo(id)[0]; }).join(', ') + (weg.length > 3 ? ', …' : '')) + '</button>';
+    }
+    var focus = document.activeElement && $('soorten').contains(document.activeElement) ? document.activeElement.getAttribute('data-blad') : null;
+    $('soorten').innerHTML = h;
+    if (focus !== null){ var f = $('soorten').querySelector('[data-blad="' + focus + '"]'); if (f) f.focus(); }
+  }
+  function zetKnoppen(){
+    function druk(lijst, attr, waarde){ [].forEach.call(lijst, function(b){ b.setAttribute('aria-pressed', String(b.getAttribute(attr) === waarde)); }); }
+    druk($('vakken').children, 'data-vak', $('vak').value);
+    druk($('soorten').querySelectorAll('.wm-soort'), 'data-blad', $('blad').value);
+    druk($('niveauSeg').children, 'data-v', $('niveau').value);
+    druk($('vormSeg').children, 'data-v', $('vorm').value);
+    var a = $('aantal'), i = a.selectedIndex;
+    $('aantalUit').textContent = a.value;
+    $('minder').disabled = i <= 0;
+    $('meer').disabled = i >= a.options.length - 1;
+  }
+  /* een keuze zetten gaat altijd via de verborgen keuzelijst, net als in de test */
+  function zet(id, v){ var e = $(id); e.value = v; e.dispatchEvent(new Event('change', { bubbles:true })); }
+
+  $('vakken').addEventListener('click', function(e){ var b = e.target.closest('[data-vak]'); if (b && b.getAttribute('data-vak') !== $('vak').value) zet('vak', b.getAttribute('data-vak')); });
+  $('soorten').addEventListener('click', function(e){
+    if (e.target.closest('#meerSoorten')){
+      var was = $('soorten').querySelectorAll('.wm-soort').length;
+      allesTonen = !allesTonen; tekenSoorten();
+      var nu = $('soorten').querySelectorAll('.wm-soort');
+      /* open: naar het eerste nieuwe kaartje; dicht: terug naar de knop */
+      if (allesTonen && nu[was]) nu[was].focus(); else if ($('meerSoorten')) $('meerSoorten').focus();
+      return;
+    }
+    var b = e.target.closest('[data-blad]');
+    if (b && b.getAttribute('data-blad') !== $('blad').value) zet('blad', b.getAttribute('data-blad'));
+  });
+  $('niveauSeg').addEventListener('click', function(e){ var b = e.target.closest('[data-v]'); if (b) zet('niveau', b.getAttribute('data-v')); });
+  $('vormSeg').addEventListener('click', function(e){ var b = e.target.closest('[data-v]'); if (b) zet('vorm', b.getAttribute('data-v')); });
+  function stapAantal(d){ var a = $('aantal'), i = a.selectedIndex + d; if (i >= 0 && i < a.options.length) zet('aantal', a.options[i].value); }
+  $('minder').addEventListener('click', function(){ stapAantal(-1); });
+  $('meer').addEventListener('click', function(){ stapAantal(1); });
+
+  $('vak').addEventListener('change', function(){ allesTonen = false; tekenBlad(''); tekenDelen([]); tekenSoorten(); zetKnoppen(); plan(); });
+  $('blad').addEventListener('change', function(){ tekenDelen([]); tekenSoorten(); zetKnoppen(); plan(); });
+  $('niveau').addEventListener('change', function(){ zetKnoppen(); plan(); });
+  $('aantal').addEventListener('change', function(){ zetKnoppen(); plan(); });
+  /* uitleg of de soort vragen omzetten hoeft geen nieuwe trekking */
+  function zelfdeBlad(){ return stand === 'klaar' && laatste && laatste.vak === $('vak').value && (laatste.spel || null) === spel(); }
+  $('vorm').addEventListener('change', function(){
+    zetKnoppen();
+    if (zelfdeBlad() && (!laatste.spel || laatste.spel.vormen)){ laatste.vorm = $('vorm').value; teken(); schrijfAdres(); }
+    else plan();
+  });
+  $('metUitleg').addEventListener('change', function(){ if (zelfdeBlad()){ laatste.uitleg = $('metUitleg').checked; teken(); } });
+  $('delen').addEventListener('change', function(){ telDelen(); plan(); });
+  $('alleDelen').addEventListener('click', function(){ [].forEach.call($('delen').querySelectorAll('input'), function(x){ x.checked = true; }); telDelen(); plan(); });
+  $('geenDelen').addEventListener('click', function(){ [].forEach.call($('delen').querySelectorAll('input'), function(x){ x.checked = false; }); telDelen(); plan(); });
+
   tekenDelen(gevraagd);
   if ([].some.call($('aantal').options, function(o){ return o.value === zoek.get('aantal'); })) $('aantal').value = zoek.get('aantal');
   if (/^(open|mk|mix)$/.test(zoek.get('vorm') || '')) $('vorm').value = zoek.get('vorm');
-  /* bij door elkaar is om de andere vraag open; zo kloppen werkblad en antwoordblad altijd */
-  function isOpen(vorm, i){ return vorm === 'open' || (vorm === 'mix' && i % 2 === 1); }
-
-  function rang(){ var n = NIVEAUS.filter(function(x){ return x.id === $('niveau').value; })[0]; return n ? n.rang : 2; }
-  function deelNaam(vak, id){ var o = (ONDERDELEN[vak] || []).filter(function(x){ return x.id === id; })[0]; return o ? o.naam : ''; }
+  tekenSoorten();
+  zetKnoppen();
 
   /* ---------- vragen trekken ----------
      Rekenen maakt zijn sommen zelf, op het niveau en voor de gekozen
@@ -440,7 +847,7 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
     if (q.vlag && /^[a-z-]{2,8}$/.test(q.vlag)) return '<div class="beeld"><img src="vlaggen/' + q.vlag + '.svg" alt="Een vlag"></div>';
     return q.svg ? '<div class="beeld">' + q.svg + '</div>' : '';
   }
-  var laatste = null;
+  var laatste = null, laatsteSoort = '', antwNaam = 'Antwoorden';
   /* Een open vraag op papier: zonder de keuzes weet een leerling bij "Welke
      zin is goed?" of "Ik ___ het antwoord al." niet wat hij moet opschrijven.
      OPENVRAAG (werkblad-spellen.js) zegt per vraag: open met een lijn, een
@@ -459,70 +866,133 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
     if (zoek.get('topo')) q.set('topo', zoek.get('topo'));
     try { history.replaceState(null, '', location.pathname + '?' + q.toString()); } catch (e){}
   }
-  function maakSpel(S){
-    var vak = $('vak').value, n = parseInt($('aantal').value, 10) || S.standaard;
-    var keuze = S.lees($('delen'), rang());
-    /* een werkblad met een eigen pagina (het dictee met een hele tekst): daarheen */
-    if (S.adres){ location.href = S.adres(keuze); return; }
-    var uitkomst = S.maak(keuze, n);
-    /* een vakspel maakt zijn opgaven in een verborgen venster: dat duurt even */
-    if (uitkomst && typeof uitkomst.then === 'function'){ $('melding').textContent = 'Opgaven maken\u2026'; wacht(true); uitkomst.then(function(items){ wacht(false); klaarSpel(S, vak, n, keuze, items); }, function(){ wacht(false); $('melding').textContent = 'Het maken lukte niet. Probeer het nog eens.'; }); return; }
-    klaarSpel(S, vak, n, keuze, uitkomst);
+  /* de keuzes in het adres, zodat je ze kunt bewaren of delen (de knop Link) */
+  function schrijfAdres(){
+    var S = spel(), n = parseInt($('aantal').value, 10) || (S ? S.standaard : 20);
+    adres($('vak').value, n, gekozen(), S ? (S.vormen ? $('vorm').value : '') : $('vorm').value);
   }
-  function klaarSpel(S, vak, n, keuze, items){
-    if (!Array.isArray(items)){ $('melding').textContent = items.fout; return; }
-    if (!items.length){ $('melding').textContent = 'Hier zijn geen opgaven voor. Kies iets anders of een ander niveau.'; return; }
-    laatste = { vak:vak, spel:S, keuze:keuze, items:items, niveauNaam:niveauNaam(), uitleg:$('metUitleg').checked, vorm:$('vorm').value, isOpen:isOpen };
-    teken();
-    $('melding').textContent = items.length < n ? 'Er waren er ' + items.length + ' die passen; meer zijn er niet voor deze keuze.' : '';
-    $('opnieuw').disabled = false; $('print').disabled = false;
-    adres(vak, n, gekozen(), S.vormen ? $('vorm').value : '');
+
+  /* ---------- vanzelf bijwerken ----------
+     Elke keuze plant een nieuw blad; komen er snel meer keuzes achter elkaar,
+     dan wordt het er een. Een beurt die is ingehaald door een nieuwere, telt
+     niet meer: een vakspel maakt zijn opgaven in een verborgen venster, en dat
+     antwoord kan binnenkomen als de docent al iets anders koos.
+     De stand staat op het paneel (data-stand): wacht, bezig, klaar, fout of pagina. */
+  var beurt = 0, klok = null, stand = '', wachters = [];
+  function zetStand(s){
+    /* kwam er intussen een nieuwe keuze bij, dan is het blad nog niet klaar */
+    if (klok && s !== 'wacht' && s !== 'bezig') s = 'wacht';
+    stand = s;
+    var p = $('paneel');
+    p.setAttribute('data-stand', s);
+    p.setAttribute('aria-busy', String(s === 'wacht' || s === 'bezig'));
+    $('print').disabled = $('printTel').disabled = s === 'fout' || s === 'pagina';
+    $('opnieuw').disabled = s === 'pagina';
+    if (s === 'klaar' || s === 'fout' || s === 'pagina'){ var w = wachters; wachters = []; w.forEach(function(f){ f(s); }); }
   }
-  /* Wachten op de vragen of de opgaven: de knop draait, en staat er nog geen
-     blad, dan een leeg blad in de vorm van het echte (fonts.css). */
-  function wacht(aan){
-    var k = $('maak'); k.disabled = aan;
-    if (aan) k.setAttribute('aria-busy', 'true'); else k.removeAttribute('aria-busy');
+  function plan(ms){ clearTimeout(klok); zetStand('wacht'); klok = setTimeout(maak, ms == null ? 350 : ms); }
+  /* Wachten op de vragen of de opgaven. Is het een ander soort blad dan er
+     staat (of staat er nog niets), dan een leeg blad in de vorm van het echte
+     (fonts.css); anders blijft het oude blad staan, wat lichter. Pas na een
+     tel: de meeste bladen zijn er meteen, en dan flitst er niets. */
+  function wacht(aan, nieuw){
     var b = $('bladen');
-    if (aan && !b.innerHTML){
-      var regels = '';
-      for (var i = 0; i < 9; i++) regels += '<i class="skelet skelet-regel" style="--b:' + [88, 64, 76, 58, 82, 70, 60, 86, 66][i] + '%"></i>';
-      b.innerHTML = '<div class="skelet-vak" role="status" data-skelet="1"><span class="skelet-sr">Werkblad maken…</span><section class="blad skeletblad" aria-hidden="true">' +
-        '<i class="skelet skelet-regel" style="--b:45%;height:1.6em"></i><i class="skelet skelet-regel" style="--b:30%"></i>' +
-        '<i class="skelet skelet-rij" style="--h:2px;margin:18px 0"></i>' + regels + '</section></div>';
-    } else if (!aan && b.querySelector('[data-skelet]')) b.innerHTML = '';
+    if (aan){
+      if (nieuw || !b.querySelector('.blad:not(.skeletblad)')){
+        var regels = '';
+        for (var i = 0; i < 9; i++) regels += '<i class="skelet skelet-regel" style="--b:' + [88, 64, 76, 58, 82, 70, 60, 86, 66][i] + '%"></i>';
+        b.classList.remove('bezig');
+        b.innerHTML = '<div class="skelet-vak" role="status" data-skelet="1"><span class="skelet-sr">Werkblad maken…</span><section class="blad skeletblad" aria-hidden="true">' +
+          '<i class="skelet skelet-regel" style="--b:45%;height:1.6em"></i><i class="skelet skelet-regel" style="--b:30%"></i>' +
+          '<i class="skelet skelet-rij" style="--h:2px;margin:18px 0"></i>' + regels + '</section></div>';
+        $('schermtip').classList.add('hide');
+      } else b.classList.add('bezig');
+    } else {
+      b.classList.remove('bezig');
+      if (b.querySelector('[data-skelet]')) b.innerHTML = '';
+    }
+  }
+  function toonWacht(mijn, nieuw, tekst){
+    setTimeout(function(){ if (mijn !== beurt || stand !== 'bezig') return; $('melding').textContent = tekst; wacht(true, nieuw); }, 120);
   }
   function maak(){
-    if (spel()) return maakSpel(spel());
-    var vak = $('vak').value, delen = gekozen(), n = parseInt($('aantal').value, 10) || 20, r = rang();
-    $('melding').textContent = 'Vragen ophalen…';
-    wacht(true);
+    clearTimeout(klok); klok = null;
+    var mijn = ++beurt, S = spel(), vak = $('vak').value, soort = vak + '|' + $('blad').value, nieuw = soort !== laatsteSoort;
+    zetStand('bezig');
+    schrijfAdres();
+    if (S) return maakSpel(S, mijn, soort, nieuw);
+    var delen = gekozen(), n = parseInt($('aantal').value, 10) || 20, r = rang(), vorm = $('vorm').value, uitleg = $('metUitleg').checked, niveau = $('niveau').value;
+    toonWacht(mijn, nieuw, 'Vragen ophalen…');
     BANK.zorg(vak).then(function(){
-      wacht(false);
+      if (mijn !== beurt) return;
       var ruw = trek(vak, delen, n, r);
-      if (!ruw.length){ $('melding').textContent = 'Hier zijn geen vragen voor. Kies een ander onderdeel of niveau.'; return; }
+      if (!ruw.length) return fout('Hier zijn geen vragen voor. Kies een ander onderdeel of niveau.');
       var vragen = ruw.map(function(q){ return klaarzetten(vak, q); });
-      laatste = { vak:vak, delen:delen, niveau:$('niveau').value, vragen:vragen, vorm:$('vorm').value, uitleg:$('metUitleg').checked };
-      teken();
-      $('melding').textContent = vragen.length < n ? 'Er waren er ' + vragen.length + ' die passen; meer staan er niet in de vragenbank voor deze keuze.' : '';
-      $('opnieuw').disabled = false; $('print').disabled = false;
-      /* de keuze in het adres, zodat je hem kunt bewaren of delen */
-      adres(vak, n, delen, laatste.vorm);
-    });
+      laatste = { vak:vak, delen:delen, niveau:niveau, vragen:vragen, vorm:vorm, uitleg:uitleg };
+      laatsteSoort = soort;
+      klaar(vragen.length < n ? 'Er waren er ' + vragen.length + ' die passen; meer staan er niet in de vragenbank voor deze keuze.' : '');
+    }, function(){ if (mijn === beurt) fout('De vragen laden lukte niet. Probeer het nog eens.'); });
   }
+  function maakSpel(S, mijn, soort, nieuw){
+    var vak = $('vak').value, n = parseInt($('aantal').value, 10) || S.standaard;
+    var keuze = S.lees($('delen'), rang());
+    /* een werkblad met een eigen pagina (het dictee met een hele tekst): de knop erheen */
+    if (S.adres) return eigenPagina(S, keuze, soort);
+    var vorm = $('vorm').value, uitleg = $('metUitleg').checked, nNaam = niveauNaam(), uitkomst;
+    try { uitkomst = S.maak(keuze, n); }
+    catch (e){ if (window.console) console.error(e); return fout('Het maken lukte niet. Kies iets anders of probeer het nog eens.'); }
+    function verder(items){ if (mijn === beurt) klaarSpel(S, vak, n, keuze, items, soort, vorm, uitleg, nNaam); }
+    /* een vakspel maakt zijn opgaven in een verborgen venster: dat duurt even */
+    if (uitkomst && typeof uitkomst.then === 'function'){
+      toonWacht(mijn, nieuw, 'Opgaven maken…');
+      uitkomst.then(verder, function(){ if (mijn === beurt) fout('Het maken lukte niet. Probeer het nog eens.'); });
+      return;
+    }
+    verder(uitkomst);
+  }
+  function klaarSpel(S, vak, n, keuze, items, soort, vorm, uitleg, nNaam){
+    if (!Array.isArray(items)) return fout((items && items.fout) || 'Het maken lukte niet. Probeer het nog eens.');
+    if (!items.length) return fout('Hier zijn geen opgaven voor. Kies iets anders of een ander niveau.');
+    laatste = { vak:vak, spel:S, keuze:keuze, items:items, niveauNaam:nNaam, uitleg:uitleg, vorm:vorm, isOpen:isOpen };
+    laatsteSoort = soort;
+    klaar(items.length < n ? 'Er waren er ' + items.length + ' die passen; meer zijn er niet voor deze keuze.' : '');
+  }
+  function klaar(tekst){ wacht(false); teken(); $('melding').textContent = tekst; zetStand('klaar'); }
+  function fout(tekst){
+    wacht(false); laatste = null; laatsteSoort = '';
+    $('bladen').innerHTML = ''; $('melding').textContent = tekst;
+    $('schermtip').classList.add('hide'); zetTabs();
+    zetStand('fout');
+  }
+  function eigenPagina(S, keuze, soort){
+    wacht(false); laatste = null; laatsteSoort = soort;
+    var info = soortInfo($('blad').value);
+    $('bladen').innerHTML = '<div class="wm-eigenpagina"><span class="wm-ico">' + ico(info[2]) + '</span><h2>' + schoon(info[0]) + '</h2>' +
+      '<p>Dit werkblad heeft een eigen pagina, met alles om voor te lezen, te schrijven en na te kijken. Het niveau dat je koos gaat mee.</p>' +
+      '<a class="knop" href="' + schoon(S.adres(keuze)) + '">Open de pagina</a></div>';
+    $('melding').textContent = '';
+    $('schermtip').classList.add('hide'); zetTabs();
+    zetStand('pagina');
+  }
+
   /* antwoordKop en antwoordIntro: bij het dictee is het tweede blad het voorleesblad van de docent */
   function papier(titel, sub, klasse, vragen, antwoorden, intro, boven, antwoordKop, antwoordIntro){
     var datum = new Date().toLocaleDateString('nl-NL', { day:'numeric', month:'long', year:'numeric' });
-    $('bladen').innerHTML =
-      '<section class="blad" aria-label="Werkblad"><div class="bkop"><div><h2>' + schoon(titel) + '</h2><p class="sub">' + schoon(sub) + '</p></div>' +
+    var b = $('bladen');
+    b.classList.remove('bezig');
+    b.innerHTML =
+      '<section class="blad wb-voor" aria-label="Werkblad"><div class="bkop"><div><h2>' + schoon(titel) + '</h2><p class="sub">' + schoon(sub) + '</p></div>' +
         '<div class="invul"><span>Naam</span><span></span><span>Klas</span><span></span><span>Datum</span><span></span></div></div>' +
         (intro ? '<p class="bladintro">' + schoon(intro) + '</p>' : '') + (boven || '') +
         '<ol' + (klasse ? ' class="' + klasse + '"' : '') + '>' + vragen + '</ol><p class="voet">meneergreidanus.nl · gemaakt op ' + datum + '</p></section>' +
-      '<section class="blad" aria-label="' + schoon(antwoordKop || 'Antwoordblad') + '"><div class="bkop"><div><h2>' + schoon(antwoordKop || 'Antwoorden') + '</h2><p class="sub">' + schoon(titel) + ' · ' + schoon(sub) + '</p></div>' +
+      '<section class="blad wb-achter" aria-label="' + schoon(antwoordKop || 'Antwoordblad') + '"><div class="bkop"><div><h2>' + schoon(antwoordKop || 'Antwoorden') + '</h2><p class="sub">' + schoon(titel) + ' · ' + schoon(sub) + '</p></div>' +
         (!antwoordKop && window.NAGEKEKEN ? '<div class="stempel">' + NAGEKEKEN.stempel({ maat: 78 }) + '</div>' : '') + '</div>' +
         (antwoordIntro ? '<p class="bladintro">' + schoon(antwoordIntro) + '</p>' : '') +
         '<ol class="antw' + (klasse ? ' ' + klasse : '') + '">' + antwoorden + '</ol><p class="voet">meneergreidanus.nl · gemaakt op ' + datum + '</p></section>';
+    antwNaam = antwoordKop || 'Antwoorden';
     $('schermtip').classList.remove('hide');
+    blz = 0; zetTabs();
+    if (window.requestAnimationFrame) requestAnimationFrame(telBladzijden); else telBladzijden();
   }
   function teken(){
     if (laatste.spel){ var b = laatste.spel.teken(laatste); papier(b.titel, b.sub, b.klasse, b.vragen, b.antwoorden, b.intro, b.boven, b.antwoordKop, b.antwoordIntro); return; }
@@ -548,14 +1018,82 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
     }).join('');
     papier(titel, sub, '', vragen, antwoorden, OPENVRAAG.uitleg(vormen));
   }
-  $('maak').addEventListener('click', maak);
+
+  /* ---------- de tabs: het werkblad of de antwoorden ----------
+     Het aantal bladzijden is een meting: het blad zo breed als op A4 (182 mm
+     tussen de marges van 14 mm) en elke 269 mm een bladzijde. */
+  var blz = 0;
+  function telBladzijden(){
+    var bl = $('bladen').querySelectorAll('.blad:not(.skeletblad)'), m = $('meet');
+    if (bl.length !== 2 || !m) return;
+    var c = bl[0].cloneNode(true);
+    c.classList.remove('wb-voor');
+    m.appendChild(c);
+    blz = Math.max(1, Math.ceil((c.getBoundingClientRect().height - 2) / 1017));
+    m.innerHTML = '';
+    zetTabs();
+  }
+  function zetTabs(){
+    var heeft = !!$('bladen').querySelector('.blad:not(.skeletblad)'), toon = $('bladen').getAttribute('data-toon');
+    $('tabs').classList.toggle('hide', !heeft);
+    $('tabWerk').textContent = 'Werkblad' + (blz ? ' · ' + blz + ' blz.' : '');
+    $('tabAntw').textContent = antwNaam;
+    [['tabWerk', 'werk'], ['tabAntw', 'antw']].forEach(function(t){
+      var aan = toon === t[1];
+      $(t[0]).setAttribute('aria-selected', String(aan));
+      $(t[0]).tabIndex = aan ? 0 : -1;
+    });
+    $('bladen').setAttribute('aria-labelledby', toon === 'antw' ? 'tabAntw' : 'tabWerk');
+  }
+  function toonTab(wat, focus){
+    $('bladen').setAttribute('data-toon', wat);
+    zetTabs();
+    if (focus) $(wat === 'antw' ? 'tabAntw' : 'tabWerk').focus();
+    var v = $('blikveld'); if (v.scrollTop) v.scrollTop = 0;
+  }
+  $('tabWerk').addEventListener('click', function(){ toonTab('werk'); });
+  $('tabAntw').addEventListener('click', function(){ toonTab('antw'); });
+  $('tabs').addEventListener('keydown', function(e){
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Home' || e.key === 'End'){
+      e.preventDefault();
+      var nu = $('bladen').getAttribute('data-toon');
+      toonTab(e.key === 'Home' ? 'werk' : e.key === 'End' ? 'antw' : nu === 'werk' ? 'antw' : 'werk', true);
+    }
+  });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ telBladzijden(); });
+
+  /* ---------- de knoppen bij het blad ---------- */
   $('opnieuw').addEventListener('click', maak);
-  $('print').addEventListener('click', function(){ window.print(); });
-  /* uitleg of de soort vragen omzetten hoeft geen nieuwe trekking */
-  $('metUitleg').addEventListener('change', function(){ if (laatste){ laatste.uitleg = $('metUitleg').checked; teken(); } });
-  $('vorm').addEventListener('change', function(){ if (laatste && laatste.vak === $('vak').value && (!laatste.spel || laatste.spel.vormen)){ laatste.vorm = $('vorm').value; teken(); } });
-  /* kwam je met een vak in het adres, dan staat het werkblad er meteen */
-  if (zoek.get('vak')) maak();
+  /* printen wacht op het blad als er nog een keuze onderweg is */
+  function printen(){
+    if (stand === 'wacht') maak();
+    if (stand === 'bezig'){ wachters.push(function(s){ if (s === 'klaar') window.print(); }); return; }
+    if (stand === 'klaar') window.print();
+  }
+  $('print').addEventListener('click', printen);
+  $('printTel').addEventListener('click', printen);
+  $('bekijk').addEventListener('click', function(){
+    var p = $('paneel'), rustig = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    p.scrollIntoView({ behavior:rustig ? 'auto' : 'smooth', block:'start' });
+    p.focus({ preventScroll:true });
+  });
+  function kopieerOud(u){
+    try {
+      var t = document.createElement('textarea'); t.value = u; t.setAttribute('readonly', ''); t.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+      document.body.appendChild(t); t.select(); var ok = document.execCommand('copy'); document.body.removeChild(t); return ok;
+    } catch (e){ return false; }
+  }
+  var linkKlok = null;
+  $('link').addEventListener('click', function(){
+    schrijfAdres();
+    var u = location.href;
+    function meld(ok){ $('linkTekst').textContent = ok ? 'Gekopieerd' : 'Kopiëren lukte niet'; clearTimeout(linkKlok); linkKlok = setTimeout(function(){ $('linkTekst').textContent = 'Link'; }, 2200); }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(u).then(function(){ meld(true); }, function(){ meld(kopieerOud(u)); });
+    else meld(kopieerOud(u));
+  });
+
+  /* het blad staat er meteen, met de keuzes uit het adres of de gewone */
+  maak();
 })();
 </script>
 </body>
