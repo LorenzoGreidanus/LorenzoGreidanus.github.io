@@ -282,35 +282,40 @@ window.PAASEI = (function(){
      Op Sinterklaas en midden in de nacht draagt elk gezichtje een hoed die niet te koop is (cosmetica.js,
      feest). Tik je er op de echte dag op, dan is hij van jou, net als het geheime feesthoedje. Bekijk je de
      dag alleen met ?dag=, dan zegt hij dat het nog niet zover is. */
-  var PAKBAAR = { sint:'mijter', nacht:'slaapmuts' };
+  var PAKBAAR = { sint:1, nacht:1 }, HOEDNAAM = { 27:'mijter', 28:'slaapmuts', 29:'pietenmuts' };
+  /* welke feesthoed een gezichtje draagt: de '+hN' achter de spec (AVATAR.feest) */
+  function hoedVan(el){ var sv = el && el.querySelector('svg'), m = /\+h(\d+)$/.exec(sv ? sv.getAttribute('data-as') || '' : ''); return m ? +m[1] : 0; }
   function laad(src){
     return new Promise(function(klaar, mis){ var sc = document.createElement('script'); sc.src = src; sc.onload = klaar; sc.onerror = mis; document.head.appendChild(sc); });
   }
-  function pak(dag, echt, waar){
-    if (!echt){ toast('<b>Nog even geduld</b> <span>Op de echte dag kun je de ' + PAKBAAR[dag] + ' hier pakken.</span>', 4200); return; }
+  function pak(n, echt, waar){
+    var naam = HOEDNAAM[n];
+    if (!naam) return;
+    if (!echt){ toast('<b>Nog even geduld</b> <span>Op de echte dag kun je de ' + naam + ' hier pakken.</span>', 4200); return; }
     var klaar = window.COSMETICA ? Promise.resolve() : laad('/leermiddelen/cosmetica.js');
     klaar.then(function(){ return window.PROFIEL ? null : laad('/leermiddelen/profiel.js'); }).then(function(){
-      var it = null; COSMETICA.ITEMS.forEach(function(x){ if (x.feest === dag) it = x; });
-      if (!it || !window.PROFIEL || !PROFIEL.geheimGevonden) return;
+      var it = COSMETICA.vind('h' + n);
+      if (!it || !it.feest || !window.PROFIEL || !PROFIEL.geheimGevonden) return;
       var nieuw = PROFIEL.geheimGevonden(it.id), b = window.PROFIEL.bezit ? PROFIEL.bezit() : {};
       confetti(waar, nieuw ? 40 : 14);
-      if (nieuw) toast('<b>Je vond de ' + PAKBAAR[dag] + '!</b> <span>Hij is nu van jou, ook na vandaag. Zet hem op in de leeromgeving, via het rondje rechtsboven.</span>', 6500);
-      else if (b[it.id]) toast('<b>Die heb je al</b> <span>Zet de ' + PAKBAAR[dag] + ' op in de leeromgeving, via het rondje rechtsboven.</span>', 4200);
+      if (nieuw) toast('<b>Je vond de ' + naam + '!</b> <span>Hij is nu van jou, ook na vandaag. Zet hem op in de leeromgeving, via het rondje rechtsboven.</span>', 6500);
+      else if (b[it.id]) toast('<b>Die heb je al</b> <span>Zet de ' + naam + ' op in de leeromgeving, via het rondje rechtsboven.</span>', 4200);
     }).catch(function(){ toast('<b>Even geen verbinding</b> <span>Probeer het zo nog eens.</span>', 4200); });
   }
-  /* maak van een gezichtje met de hoed van vandaag een knop; tip: een handgeschreven regeltje erbij */
+  /* maak van een gezichtje met de hoed van vandaag een knop; tip: een handgeschreven regeltje erbij (links, onder of boven) */
   function maakPakbaar(el, dag, echt, tip){
     if (!el || !PAKBAAR[dag] || el.closest('.pe-pak')) return;
+    var naam = HOEDNAAM[hoedVan(el)] || 'hoed';
     var knop = document.createElement('button');
     knop.type = 'button'; knop.className = 'pe-pak';
-    knop.setAttribute('aria-label', 'Pak de ' + PAKBAAR[dag]);
+    knop.setAttribute('aria-label', 'Pak de ' + naam);
     el.parentNode.insertBefore(knop, el); knop.appendChild(el);
     var stil = el.closest('[aria-hidden="true"]'); if (stil) stil.removeAttribute('aria-hidden');
-    if (tip){ var t = document.createElement('span'); t.className = 'pe-paktip' + (tip === 'onder' ? ' onder' : ''); t.setAttribute('aria-hidden', 'true'); t.textContent = 'tik op mijn ' + PAKBAAR[dag] + '!'; knop.appendChild(t); }
+    if (tip){ var t = document.createElement('span'); t.className = 'pe-paktip' + (tip === 'onder' || tip === 'boven' ? ' ' + tip : ''); t.setAttribute('aria-hidden', 'true'); t.textContent = 'tik op mijn ' + naam + '!'; knop.appendChild(t); }
     knop.addEventListener('click', function(){
       var sv = el.querySelector('svg');
       if (sv && !rustig()){ sv.classList.remove('av-juich'); void sv.getBoundingClientRect(); sv.classList.add('av-juich'); }
-      pak(dag, echt, knop);
+      pak(hoedVan(el), echt, knop);
     });
   }
   function feestdag(){
@@ -337,6 +342,7 @@ window.PAASEI = (function(){
       '.pe-pak:focus-visible{outline:3px solid #B4701A;outline-offset:4px}' +
       '.pe-paktip{position:absolute;right:calc(100% + 4px);top:12%;white-space:nowrap;font-family:"Caveat",cursive;font-weight:600;font-size:1.25rem;line-height:1;color:var(--hand,#C2462A);transform:rotate(-6deg);pointer-events:none}' +
       '@keyframes pe-wenk{0%,100%{transform:rotate(-6deg) translateY(0)}50%{transform:rotate(-6deg) translateY(-4px)}}.pe-paktip{animation:pe-wenk 2.2s ease-in-out infinite}' +
+      '.pe-paktip.boven{right:auto;top:auto;left:50%;bottom:calc(100% + 46px);transform:translateX(-50%) rotate(-4deg);animation:none}' +
       '.pe-paktip.onder{right:auto;left:50%;top:calc(100% + 6px);transform:translateX(-50%) rotate(-4deg);animation:none}' +
       '.pe-strook{position:absolute;left:0;right:0;top:0;height:100px;pointer-events:none;color:var(--ink,#14224C);overflow:visible}' +
       'main.lesalleen .pe-strook,main.lesalleen ~ .pe-sneeuw{display:none}' +

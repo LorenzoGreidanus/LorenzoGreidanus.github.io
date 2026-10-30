@@ -33,6 +33,7 @@
     /* feesthoeden: op die dag draagt elk gezichtje hem; tik erop en hij is van jou (paasei.js, feestNu hieronder) */
     { id:'h27', soort:'h', n:27, naam:'Mijter',    prijs:0, geheim:true, feest:'sint',  uit:'met staf; gevonden op Sinterklaas' },
     { id:'h28', soort:'h', n:28, naam:'Slaapmuts', prijs:0, geheim:true, feest:'nacht', uit:'gevonden midden in de nacht' },
+    { id:'h29', soort:'h', n:29, naam:'Pietenmuts', prijs:0, geheim:true, feest:'sint', uit:'met veer; gevonden op Sinterklaas' },
     /* nieuwe hoeden: h15 tot h19 altijd te koop, h20 en h21 in hun seizoen */
     { id:'h15', soort:'h', n:15, naam:'Pet achterstevoren', prijs:350, uit:'de klep naar achteren, natuurlijk' },
     { id:'h16', soort:'h', n:16, naam:'Beanie',         prijs:300, uit:'gebreid, met een pompon' },

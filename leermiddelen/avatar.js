@@ -1182,11 +1182,12 @@ window.AVATAR = (function(){
       /* de staf staat rechts naast het hoofd, iets naar voren; hij hoort bij het hoofd, niet bij de hoed. Draait het
          hoofd weg, dan gaat hij achter het hoofd langs (laag auto, zoals de schelpen van de koptelefoon) */
       var X = H.zij + 6, Z = 6, staf = fijn([[X, -52, Z], [X, 44, Z], [X, 52, Z], [X + 2.5, 58.5, Z], [X + 8, 61.5, Z], [X + 13.5, 59, Z], [X + 15.5, 53, Z], [X + 13, 48, Z], [X + 9, 47.5, Z]], 3);
-      return { kantel:5, delen:[
-      { t:'draai', p:[[0, 25], [16, 26.2], [30, 24.4], [41, 18], [50, 10], [56, 3.5], [58, 0]], ez:.6, k:'#C8102E', l:'#8a0b20', lw:1.4 },
+      /* doel en wmax: de kroon groeit in de breedte tot hij laag over het hoofd valt, zoals een echte mijter */
+      return { kantel:5, doel:.6, wmax:1.5, delen:[
+      { t:'draai', p:[[0, 32], [17.6, 33.5], [33, 31.2], [45, 23], [55, 12.8], [61.6, 4.5], [64, 0]], ez:.8, k:'#C8102E', l:'#8a0b20', lw:1.4 },
       bandS(0, 1, 6.5, '#FFD166', '#c9971f'),
-      lijnS(0, [[0, 14], [0, 44]], '#FFD166', 3.4, 1), lijnS(0, [[-16, 34], [16, 34]], '#FFD166', 3.4, 1),
-      lijnS(0, [[-60, 8], [-42, 40]], '#FFD166', 1.6, .55), lijnS(0, [[60, 8], [42, 40]], '#FFD166', 1.6, .55),
+      lijnS(0, [[0, 15], [0, 48]], '#FFD166', 3.4, 1), lijnS(0, [[-16, 37], [16, 37]], '#FFD166', 3.4, 1),
+      lijnS(0, [[-60, 9], [-42, 44]], '#FFD166', 1.6, .55), lijnS(0, [[60, 9], [42, 44]], '#FFD166', 1.6, .55),
       { t:'buis', S:HOOFDSTELSEL, pts:staf, r:2.7, k:'#E1B94F', l:'#a8831f', lw:1.2, glans:1, laag:'auto', laagPunt:[X, 0, Z] }] }; },
     /* slaapmuts (de nacht): als de kerstmuts, maar nachtblauw met sterretjes en een slap puntje */
     28:function(){ return { kantel:6, delen:[
@@ -1197,8 +1198,22 @@ window.AVATAR = (function(){
       stip(0, 0, 10, 1.5, '#FFD166'), stip(0, 40, 13, 1.3, '#FFD166'),
       { t:'bol', c:[45.3, 11.7, 0], r:7.5, k:'#F3EFE9', l:'#cfc4b6', lw:1.3 }] }; }
   };
-  /* Op een bijzondere dag krijgt een gezichtje zonder eigen hoed de hoed van die dag (zie feest hieronder) */
-  var FEESTHOED = { koning:20, sint:27, kerst:9, nieuw:8, halloween:10, zomer:21, nacht:28 };
+  /* pietenmuts (Sinterklaas): een bolle baret, scheef op het hoofd, met een witte veer */
+  /* elke Piet een eigen kleur baret en veer: vast per gezichtje (uit zijn zaad), nooit de kleur van het gezicht zelf */
+  var PIETBARET = [['#2f7d52', '#1d5537'], ['#C8102E', '#8a0b20'], ['#6b3fa0', '#3f2266'], ['#204ECF', '#16389a'], ['#EA9836', '#c96a1c'], ['#1f7a6d', '#17594f'], ['#E2466F', '#a82c4e'], ['#14224C', '#0b1433']];
+  var PIETVEER = [['#F3EFE9', '#cfc4b6'], ['#FFD166', '#c9971f'], ['#F26749', '#c0442c'], ['#83A5F2', '#4d6fbf']];
+  HOEDEN[29] = function(H, s, m){
+    var z = m && m.zaad ? m.zaad : 0, i = z % PIETBARET.length;
+    if (m && PIETBARET[i][0].toLowerCase() === String(m.kleur).toLowerCase()) i = (i + 1) % PIETBARET.length;
+    var B = PIETBARET[i], V = PIETVEER[(z >>> 5) % PIETVEER.length], band = B[0] === '#EA9836' ? '#F3EFE9' : '#FFD166';
+    return { kantel:14, rol:-12, delen:[
+      { t:'draai', p:[[0, 21], [4, 28], [9, 30.5], [14, 27.5], [18, 19.5], [20.2, 9], [20.8, 0]], k:B[0], l:B[1], lw:1.3 },
+      bandS(0, .4, 3.6, band, '#c9971f'),
+      { t:'buis', pts:[[24, 9, 10], [29, 17, 6], [33, 27, 0], [34.5, 37, -7], [33, 46, -14], [29, 52, -19]], r:4.4, r1:.9, k:V[0], l:V[1], lw:1, glans:1 },
+      { t:'bol', c:[23.5, 8, 11], r:3.4, k:'#FFD166', l:'#c9971f', lw:.9 }] }; };
+  /* Op een bijzondere dag krijgt een gezichtje zonder eigen hoed de hoed van die dag (zie feest hieronder);
+     met een rol een andere hoed: op Sinterklaas draagt een de mijter en de rest een pietenmuts */
+  var FEESTHOED = { koning:20, sint:27, kerst:9, nieuw:8, halloween:10, zomer:21, nacht:28 }, FEESTROL = { sint:{ piet:29 } };
 
   /* ---------- binnen een onderdeel? (voor het uitwijken en de controle) en punten op het oppervlak ---------- */
   function binnenDeel(d, S, p, mg){
@@ -1318,7 +1333,7 @@ window.AVATAR = (function(){
       /* de onderkant van de kroon blijft boven ongeveer twee derde van de hoogte van het hoofd */
       if (dd < .64 * H.rho){ if (++poging > 6) break; S.s *= .94; continue; }
       /* zit hij hoger dan de oude platte hoed, dan mag hij in de breedte wat ruimer: dan zakt hij verder */
-      if (def.smal || (heeftRand && m.sp && m.sp.q) || dd <= DOEL * H.rho || (S.w || 1) >= (def.wmax || WMAX) - 1e-6) break;
+      if (def.smal || (heeftRand && m.sp && m.sp.q) || dd <= (def.doel || DOEL) * H.rho || (S.w || 1) >= (def.wmax || WMAX) - 1e-6) break;
       S.w = Math.min(def.wmax || WMAX, (S.w || 1) + .03);
       /* de rand groeit niet mee: alleen de kroon wordt ruimer */
       delen.forEach(function(d){ if (d.t === 'rand'){ if (d.uit0 == null) d.uit0 = d.uit; d.uit = d.uit0 / S.w; } });
@@ -2228,7 +2243,11 @@ window.AVATAR = (function(){
   } catch (e){}
   /* _proef: alleen voor de controle op botsingen (geen deel van de gewone werking) */
   /* de spec met de hoed van een bijzondere dag erachter (koning, sint, kerst, nieuw, halloween, zomer, nacht) */
-  function feestSpec(spec, dag){ spec = String(spec || ''); return FEESTHOED[dag] && !/\+h\d+$/.test(spec) ? spec + '+h' + FEESTHOED[dag] : spec; }
+  function feestSpec(spec, dag, rol){
+    spec = String(spec || '');
+    var n = (rol && FEESTROL[dag] && FEESTROL[dag][rol]) || FEESTHOED[dag];
+    return n && !/\+h\d+$/.test(spec) ? spec + '+h' + n : spec;
+  }
   return { svg:svg, inhoud:inhoud, vul:vul, leef:leef, ontleed:ontleed, maak:maak, feest:feestSpec, FEESTHOED:FEESTHOED, KEUZES:KEUZES, NAMEN:NAMEN, KLEUREN:KLEUREN, KLEUREN2:KLEUREN2,
     _proef:{ model:model, rust:rustStaat, teken:teken, opbouw:opbouw, hoofd:hoofd3, kijker:kijker, rot:rot3, HOEDEN:HOEDEN, BRILLEN:BRILLEN, FIGUREN:FIGUREN, scheid:scheidVlak, punten:puntenDeel, stelsel:HOOFDSTELSEL } };
 })();
