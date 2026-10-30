@@ -170,7 +170,8 @@ window.PAASEI = (function(){
   }
 
   /* ---------- bijzondere dagen: een strook versiering boven de groet en een hoedje op het gezichtje ----------
-     index.html zet window.LG_DAG (koning, april, sint, kerst, nieuw, halloween, zomer, nacht); ?dag=... om te bekijken. */
+     index.html zet window.LG_DAG (koning, april, sint, kerst, nieuw, halloween, zomer, nacht); ?dag=... om te bekijken.
+     De hoed van de dag is een echte hoed op het gezichtje: AVATAR.feest(spec, dag) in avatar.js. */
   var r1 = function(n){ return Math.round(n * 10) / 10; };
   function touw(B, y0, zak){
     var A = [-6, y0], M = [B / 2, y0 + 4], C = [B + 6, y0];
@@ -251,17 +252,6 @@ window.PAASEI = (function(){
     }
     return '<svg class="pe-strook-svg" aria-hidden="true" width="' + B + '" height="100" viewBox="0 0 ' + B + ' 100" style="overflow:visible">' + s + '</svg>';
   }
-  /* hoedjes in de maten van het gezichtje (viewBox -50..50), boven op het hoofd */
-  var HOED = {
-    koning:'<path d="M-27 -32 L-30 -53 L-20 -43 L-10 -57 L0 -45 L10 -57 L20 -43 L30 -53 L27 -32 Z" fill="#F7931E" stroke="#c96a1c" stroke-width="2" stroke-linejoin="round"/><path d="M-27 -37 h54" stroke="#fff" stroke-width="2" opacity=".7"/>',
-    sint:'<path d="M-26 -33 Q-24 -60 0 -70 Q24 -60 26 -33 Z" fill="#C8102E" stroke="#8a0b20" stroke-width="1.6" stroke-linejoin="round"/><path d="M-26 -36 q26 -6 52 0" fill="none" stroke="#FFD166" stroke-width="3.5"/><path d="M0 -64 V-42 M-8 -54 H8" stroke="#FFD166" stroke-width="3" stroke-linecap="round"/>' +
-      '<g class="pe-staf"><path d="M48 48 V-48 C48 -64 66 -64 66 -52 C66 -43 57 -43 57 -49" fill="none" stroke="#a8831f" stroke-width="6" stroke-linecap="round"/><path d="M48 48 V-48 C48 -64 66 -64 66 -52 C66 -43 57 -43 57 -49" fill="none" stroke="#E1B94F" stroke-width="3.6" stroke-linecap="round"/><path d="M45.5 -20 h5 M45.5 0 h5" stroke="#a8831f" stroke-width="1.8" stroke-linecap="round"/></g>',
-    kerst:'<path d="M-31 -31 Q-27 -58 0 -63 Q24 -67 38 -46 Q30 -49 23 -47 Q27 -40 31 -31 Z" fill="#D23A2E" stroke="#9f2519" stroke-width="1.4" stroke-linejoin="round"/><rect x="-37" y="-37" width="74" height="12" rx="6" fill="#F7F3EC" stroke="#cfc4b6" stroke-width="1.3"/><circle cx="38" cy="-45" r="7.5" fill="#F7F3EC" stroke="#cfc4b6" stroke-width="1.3"/>',
-    nieuw:'<g transform="rotate(-12 0 -30)"><path d="M-17 -29 L2 -64 L17 -29 Z" fill="#204ECF" stroke="#16389a" stroke-width="1.5" stroke-linejoin="round"/><path d="M-11 -37 L13 -37 M-5 -48 L8 -48" stroke="#FFD166" stroke-width="3.4" stroke-linecap="round"/><circle cx="2" cy="-66" r="5" fill="#FFD166"/></g>',
-    halloween:'<path d="M-30 -30 q0 -26 30 -26 q30 0 30 26 z" fill="#EA9836"/><path d="M-12 -30 q0 -22 12 -24 M12 -30 q0 -22 -12 -24" fill="none" stroke="#c0442c" stroke-width="2" opacity=".55"/><path d="M-33 -30 h66" stroke="#c0442c" stroke-width="3" stroke-linecap="round"/><path d="M0 -55 q2 -9 8 -11" fill="none" stroke="#2f7d52" stroke-width="3.5" stroke-linecap="round"/>',
-    zomer:'<path d="M-46 -27 q46 -14 92 0 q-10 6 -46 6 q-36 0 -46 -6 z" fill="#e8c877" stroke="#b8924a" stroke-width="1.6" stroke-linejoin="round"/><path d="M-22 -30 q0 -22 22 -22 q22 0 22 22 z" fill="#e8c877" stroke="#b8924a" stroke-width="1.6"/><path d="M-22 -33 q22 -5 44 0" fill="none" stroke="#F26749" stroke-width="4"/>',
-    nacht:'<path d="M-31 -31 Q-25 -60 2 -62 Q26 -62 38 -44 L46 -20 Q30 -34 30 -31 Z" fill="#83A5F2" stroke="#4d6fbf" stroke-width="1.4" stroke-linejoin="round"/><rect x="-36" y="-37" width="72" height="11" rx="5.5" fill="#F3EFE9"/><circle cx="46" cy="-18" r="6" fill="#F3EFE9"/>'
-  };
   function sneeuw(){
     if (rustig() || document.querySelector('.pe-sneeuw')) return;
     var sn = document.createElement('div'); sn.className = 'pe-sneeuw'; sn.setAttribute('aria-hidden', 'true');
@@ -283,13 +273,13 @@ window.PAASEI = (function(){
     else if ((mnd === 7 && dag >= 15) || (mnd === 8 && dag <= 20)) soort = 'zomer';
     else if (u >= 23 || u < 5) soort = 'nacht';
     var adres = (/[?&]dag=([a-z]+)/.exec(zoek || '') || [])[1];
-    if (adres && HOED[adres] || adres === 'april') soort = adres;
+    if (adres && /^(koning|april|sint|kerst|nieuw|halloween|zomer|nacht)$/.test(adres)) soort = adres;
     var tekst = { koning:'fijne Koningsdag!', april:'alle toetsen zijn afgelast... 1 april!', sint:mnd === 12 && dag === 5 ? 'vanavond is het pakjesavond!' : 'het is bijna pakjesavond!',
       kerst:'fijne kerst!', nieuw:'gelukkig nieuwjaar!', halloween:mnd === 10 && dag < 31 ? 'boe! bijna Halloween' : 'boe! fijne Halloween', zomer:'fijne vakantie! (oefenen mag ook)', nacht:'zou je niet eens gaan slapen?' }[soort] || '';
     return { dag:soort, tekst:tekst };
   }
   function feestdag(){
-    var dag = window.LG_DAG, top = document.querySelector('main .top'), gez = document.getElementById('begroetGezicht');
+    var dag = window.LG_DAG, top = document.querySelector('main .top');
     if (!dag || !top) return;
     document.documentElement.setAttribute('data-dag', dag);
     var vak = document.createElement('div'); vak.className = 'pe-strook'; vak.setAttribute('aria-hidden', 'true');
@@ -299,15 +289,7 @@ window.PAASEI = (function(){
     var wacht = null; addEventListener('resize', function(){ clearTimeout(wacht); wacht = setTimeout(teken, 150); });
     /* sneeuw bij kerst: over de bovenkant van de pagina, achter niets wat je moet lezen */
     if (dag === 'kerst') sneeuw();
-    /* het hoedje: alleen als je zelf geen hoed op hebt */
-    if (gez && HOED[dag]){
-      var eigen = window.PROFIEL && PROFIEL.avatar ? String(PROFIEL.avatar() || '') : '';
-      if (/h(?!0)\d/.test(eigen.replace(/^v\d+k\d+o\d+m\d+e\d+/, ''))) return;
-      var hoedSvg = '<svg class="pe-hoed" viewBox="-50 -50 100 100" aria-hidden="true"><g transform="translate(0 -3) scale(1.1)">' + HOED[dag] + '</g></svg>';
-      var zet = function(){ if (!gez.querySelector('.pe-hoed')) gez.insertAdjacentHTML('beforeend', hoedSvg); };
-      zet();
-      if (window.MutationObserver) new MutationObserver(zet).observe(gez, { childList:true });
-    }
+    /* het hoedje van de dag zet de groet zelf op het gezichtje: een echte 3D-hoed (AVATAR.feest), alleen als je zelf geen hoed op hebt */
   }
   /* de opmaak en de beweging van de bijzondere dagen */
   (function(){
@@ -318,8 +300,7 @@ window.PAASEI = (function(){
       '.pe-strook{position:absolute;left:0;right:0;top:0;height:100px;pointer-events:none;color:var(--ink,#14224C);overflow:visible}' +
       'main.lesalleen .pe-strook,main.lesalleen ~ .pe-sneeuw{display:none}' +
       '.begroetgezicht{position:relative}' +
-      '.pe-hoed{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}' +
-      '.pe-sneeuw{position:absolute;left:0;right:0;top:0;height:640px;overflow:hidden;pointer-events:none;z-index:1}' +
+            '.pe-sneeuw{position:absolute;left:0;right:0;top:0;height:640px;overflow:hidden;pointer-events:none;z-index:1}' +
       '.pe-sneeuw i{position:absolute;top:0;border-radius:50%;background:#fff;box-shadow:0 0 0 1px rgba(20,34,76,.14);animation:pe-val linear infinite}' +
       '@keyframes pe-val{from{transform:translate(0,-20px)}to{transform:translate(18px,660px)}}' +
       '@keyframes pe-wapper{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}.pe-vlag{transform-box:view-box;animation:pe-wapper 2.6s ease-in-out infinite}' +
@@ -339,7 +320,7 @@ window.PAASEI = (function(){
       '@keyframes pe-twinkel{0%,100%{opacity:1}50%{opacity:.25}}.pe-twinkel{animation:pe-twinkel 2.4s ease-in-out infinite}' +
       '@keyframes pe-zweef{0%,100%{transform:translateY(0);opacity:.9}50%{transform:translateY(-6px);opacity:.5}}.pe-zzz{animation:pe-zweef 3s ease-in-out infinite}' +
       '@keyframes pe-schommel{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}.pe-staf{transform-box:fill-box;transform-origin:center bottom;animation:pe-schommel 4s ease-in-out infinite}' +
-      '@media(prefers-reduced-motion:reduce){.pe-strook *,.pe-hoed *{animation:none !important}.pe-knal{transform:none;opacity:1}.pe-sneeuw{display:none}}';
+      '@media(prefers-reduced-motion:reduce){.pe-strook *{animation:none !important}.pe-knal{transform:none;opacity:1}.pe-sneeuw{display:none}}';
     (document.head || document.documentElement).appendChild(st);
   })();
 
@@ -347,5 +328,5 @@ window.PAASEI = (function(){
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', leeromgeving); else leeromgeving();
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', feestdag); else feestdag();
   }
-  return { toast:toast, confetti:confetti, ster:ster, goud:goud, feest:feest, uit:uit, welkeDag:welkeDag, strook:strook, HOED:HOED, sneeuw:sneeuw };
+  return { toast:toast, confetti:confetti, ster:ster, goud:goud, feest:feest, uit:uit, welkeDag:welkeDag, strook:strook, sneeuw:sneeuw };
 })();

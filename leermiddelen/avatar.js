@@ -308,6 +308,9 @@ window.AVATAR = (function(){
   function model(naam, spec){
     var sleutel = (spec || '') + '|' + String(naam || '').toLowerCase().trim();
     if (modellen[sleutel]) return modellen[sleutel];
+    /* '+h27' achter de spec (of als hele spec) is de hoed van een feestdag: alleen als je zelf geen hoed op hebt */
+    var feest = /\+h(\d{1,2})$/.exec(spec || '');
+    if (feest) spec = spec.slice(0, feest.index);
     var sp = ontleed(spec);
     var r = toeval(sp ? 7919 * (sp.v + 1) + 17 : hash(naam));
     var kleur = KLEUREN[Math.floor(r() * KLEUREN.length)];
@@ -323,6 +326,10 @@ window.AVATAR = (function(){
     if (VORMEN[v]){ vorm = glad(VORMEN[v]()); draai = +(draai * (v === 10 ? 1.6 : .5)).toFixed(1); }
     var P = draaiPunten(vorm.pts, draai), M = maten(P), breed = 0;
     P.forEach(function(q){ if (Math.abs(q[0]) > breed) breed = Math.abs(q[0]); });
+    if (feest && !(sp && (sp.h || sp.g === 2 || sp.g === 3))){
+      var spf = {}, sl; for (sl in LEEG) spf[sl] = sp ? sp[sl] : LEEG[sl];
+      spf.h = +feest[1]; sp = spf;
+    }
     if (sp && sp.h && extra === 2) extra = -1;   /* een krul past niet onder een hoed */
     var zaad = hash((spec || '') + '|' + (naam || ''));
     if (aantalModellen > 300){ modellen = {}; aantalModellen = 0; }
@@ -1169,8 +1176,29 @@ window.AVATAR = (function(){
       { t:'doos', h0:4, h1:12, w0:20, d0:13.5, w1:20, d1:13.5, k:'#2f7d52', l:'#1d5537', lw:1.6 },
       lijnS(1, [[-12, 8], [12, 8]], '#F3EFE9', 1.6, .6),
       { t:'doos', h0:12, h1:19, w0:5, d0:5, w1:4, d1:4, k:'#a5773f', l:'#7d5a2e', lw:1.4 },
-      { t:'bol', c:[0, 28.4, 0], r:9, k:'#a5773f', l:'#7d5a2e', lw:1.6 }] }; }
+      { t:'bol', c:[0, 28.4, 0], r:9, k:'#a5773f', l:'#7d5a2e', lw:1.6 }] }; },
+    /* mijter (Sinterklaas): plat van voor naar achter, met een gouden band en een gouden kruis */
+    27:function(H){
+      /* de staf staat rechts naast het hoofd, iets naar voren; hij hoort bij het hoofd, niet bij de hoed. Draait het
+         hoofd weg, dan gaat hij achter het hoofd langs (laag auto, zoals de schelpen van de koptelefoon) */
+      var X = H.zij + 6, Z = 6, staf = fijn([[X, -52, Z], [X, 44, Z], [X, 52, Z], [X + 2.5, 58.5, Z], [X + 8, 61.5, Z], [X + 13.5, 59, Z], [X + 15.5, 53, Z], [X + 13, 48, Z], [X + 9, 47.5, Z]], 3);
+      return { kantel:5, delen:[
+      { t:'draai', p:[[0, 25], [16, 26.2], [30, 24.4], [41, 18], [50, 10], [56, 3.5], [58, 0]], ez:.6, k:'#C8102E', l:'#8a0b20', lw:1.4 },
+      bandS(0, 1, 6.5, '#FFD166', '#c9971f'),
+      lijnS(0, [[0, 14], [0, 44]], '#FFD166', 3.4, 1), lijnS(0, [[-16, 34], [16, 34]], '#FFD166', 3.4, 1),
+      lijnS(0, [[-60, 8], [-42, 40]], '#FFD166', 1.6, .55), lijnS(0, [[60, 8], [42, 40]], '#FFD166', 1.6, .55),
+      { t:'buis', S:HOOFDSTELSEL, pts:staf, r:2.7, k:'#E1B94F', l:'#a8831f', lw:1.2, glans:1, laag:'auto', laagPunt:[X, 0, Z] }] }; },
+    /* slaapmuts (de nacht): als de kerstmuts, maar nachtblauw met sterretjes en een slap puntje */
+    28:function(){ return { kantel:6, delen:[
+      { t:'draai', p:[[0, 31], [9, 28.5], [17, 23.5], [23, 17, 1, 0], [27, 12, 5, 0], [29, 8.5, 11, 0], [28.5, 6.5, 17, 0], [25.5, 5.5, 23, 0], [21, 5, 29, 0], [17, 4.5, 34, 0]], k:'#83A5F2', l:'#4d6fbf', lw:1.4 },
+      { t:'wand', h0:-5, h1:6, r0:35, r1:33.5, k:'#F3EFE9', l:'#cfc4b6', lw:1.3, glad:1 },
+      { t:'sticker', aan:0, soort:'ster', a:-22, h:14, r:4.6, k:'#FFD166', l:'#c9971f', lw:.8 },
+      { t:'sticker', aan:0, soort:'ster', a:18, h:21, r:3.4, k:'#FFD166', l:'#c9971f', lw:.7 },
+      stip(0, 0, 10, 1.5, '#FFD166'), stip(0, 40, 13, 1.3, '#FFD166'),
+      { t:'bol', c:[45.3, 11.7, 0], r:7.5, k:'#F3EFE9', l:'#cfc4b6', lw:1.3 }] }; }
   };
+  /* Op een bijzondere dag krijgt een gezichtje zonder eigen hoed de hoed van die dag (zie feest hieronder) */
+  var FEESTHOED = { koning:20, sint:27, kerst:9, nieuw:8, halloween:10, zomer:21, nacht:28 };
 
   /* ---------- binnen een onderdeel? (voor het uitwijken en de controle) en punten op het oppervlak ---------- */
   function binnenDeel(d, S, p, mg){
@@ -2199,6 +2227,8 @@ window.AVATAR = (function(){
     document.head.appendChild(st);
   } catch (e){}
   /* _proef: alleen voor de controle op botsingen (geen deel van de gewone werking) */
-  return { svg:svg, inhoud:inhoud, vul:vul, leef:leef, ontleed:ontleed, maak:maak, KEUZES:KEUZES, NAMEN:NAMEN, KLEUREN:KLEUREN, KLEUREN2:KLEUREN2,
+  /* de spec met de hoed van een bijzondere dag erachter (koning, sint, kerst, nieuw, halloween, zomer, nacht) */
+  function feestSpec(spec, dag){ spec = String(spec || ''); return FEESTHOED[dag] && !/\+h\d+$/.test(spec) ? spec + '+h' + FEESTHOED[dag] : spec; }
+  return { svg:svg, inhoud:inhoud, vul:vul, leef:leef, ontleed:ontleed, maak:maak, feest:feestSpec, FEESTHOED:FEESTHOED, KEUZES:KEUZES, NAMEN:NAMEN, KLEUREN:KLEUREN, KLEUREN2:KLEUREN2,
     _proef:{ model:model, rust:rustStaat, teken:teken, opbouw:opbouw, hoofd:hoofd3, kijker:kijker, rot:rot3, HOEDEN:HOEDEN, BRILLEN:BRILLEN, FIGUREN:FIGUREN, scheid:scheidVlak, punten:puntenDeel, stelsel:HOOFDSTELSEL } };
 })();

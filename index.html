@@ -318,8 +318,7 @@ main{position:relative;overflow-x:clip}
 .deur.leer .deurknop{background:var(--crab);color:var(--navy);box-shadow:0 6px 0 #C2462A}
 .gezichtjes{position:absolute;top:-46px;right:30px;display:flex;align-items:flex-end;gap:4px;pointer-events:none}
 .gezichtjes span{display:block;line-height:0}
-/* bijzondere dagen (paasei.js): een strook versiering boven de vraag en hoedjes op de gezichtjes */
-[data-gezicht]{position:relative}
+/* bijzondere dagen (paasei.js): een strook versiering boven de vraag */
 html[data-dag] .vraag{padding-top:clamp(96px,12vw,118px)}
 .vraag .pe-strook{left:50%;right:auto;transform:translateX(-50%);top:4px;width:min(100%,1100px)}
 .vraag .pe-strook svg{display:block;margin:0 auto}
@@ -684,21 +683,20 @@ footer{padding:64px 0 40px}
   document.getElementById('jaar').textContent = new Date().getFullYear();
 
   /* ---------- de gezichtjes: echte avatars die meekijken ---------- */
-  function gezichtjes(){
+  /* op een bijzondere dag dragen ze de echte hoed van die dag (AVATAR.feest), die draait mee met het hoofd */
+  function gezichtjes(dag){
     if (!window.AVATAR) return;
     document.querySelectorAll('[data-gezicht]').forEach(function(el){
-      var maat = +el.getAttribute('data-maat') || 48;
-      el.innerHTML = AVATAR.svg('', maat, el.getAttribute('data-gezicht'), { stemming: el.getAttribute('data-stemming') || '', leef: true });
+      var maat = +el.getAttribute('data-maat') || 48, spec = el.getAttribute('data-gezicht');
+      if (dag && AVATAR.feest) spec = AVATAR.feest(spec, dag);
+      el.innerHTML = AVATAR.svg('', maat, spec, { stemming: el.getAttribute('data-stemming') || '', leef: true });
     });
   }
-  if (window.AVATAR) gezichtjes(); else addEventListener('DOMContentLoaded', gezichtjes);
 
   /* ---------- bijzondere dagen: Sinterklaas, Halloween, kerst en meer ----------
      De dagen, de versiering en de hoedjes komen uit paasei.js, net als in de leeromgeving.
      Om te bekijken: ?dag=sint (of koning, april, kerst, nieuw, halloween, zomer, nacht). */
-  function feestdag(){
-    if (!window.PAASEI || !PAASEI.welkeDag) return;
-    var w = PAASEI.welkeDag(location.search);
+  function feestdag(w){
     if (!w.dag) return;
     document.documentElement.setAttribute('data-dag', w.dag);
     if (w.tekst) document.getElementById('groet').textContent = w.tekst;
@@ -711,17 +709,13 @@ footer{padding:64px 0 40px}
     if (w.dag === 'kerst') PAASEI.sneeuw();
     /* 1 april: een woordje van de vraag staat op zijn kop */
     if (w.dag === 'april'){ var h1 = document.getElementById('vraagKop'); h1.innerHTML = h1.innerHTML.replace('ga je', '<span class="opzijkop">ga</span> je'); }
-    /* een hoedje op elk gezichtje dat een hoofd heeft; ook als het gezichtje opnieuw getekend wordt */
-    var hoed = PAASEI.HOED[w.dag];
-    if (!hoed) return;
-    var hoedSvg = '<svg class="pe-hoed" viewBox="-50 -50 100 100" aria-hidden="true"><g transform="translate(0 -3) scale(1.1)">' + hoed + '</g></svg>';
-    document.querySelectorAll('.gezichtjes [data-gezicht], .sprekers [data-gezicht]').forEach(function(el){
-      function zet(){ if (el.querySelector('svg') && !el.querySelector('.pe-hoed')) el.insertAdjacentHTML('beforeend', hoedSvg); }
-      zet();
-      if (window.MutationObserver) new MutationObserver(zet).observe(el, { childList:true });
-    });
   }
-  if (document.readyState === 'loading') addEventListener('DOMContentLoaded', feestdag); else feestdag();
+  function start(){
+    var w = window.PAASEI && PAASEI.welkeDag ? PAASEI.welkeDag(location.search) : { dag:'', tekst:'' };
+    gezichtjes(w.dag);
+    feestdag(w);
+  }
+  if (document.readyState === 'loading') addEventListener('DOMContentLoaded', start); else start();
 
   /* ---------- de code van je docent ----------
      Vier letters is een klas of een spel op het bord: de leeromgeving vult hem in
