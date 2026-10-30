@@ -127,3 +127,22 @@ try {
     navigator.sendBeacon('/api/tel', new Blob([JSON.stringify({ p: location.pathname })], { type: 'text/plain' }));
   }
 } catch (e){}
+
+/* Printen gaat altijd in de lichte stand: papier is wit. In de donkere stand
+   bleef anders de donkere achtergrond van de pagina als rand om elk vel staan,
+   en kwam lichte tekst op wit papier. Na het printen weer de oude stand. */
+(function(){
+  var wortel = document.documentElement, oud = null, bezig = false;
+  addEventListener('beforeprint', function(){
+    if (bezig) return;
+    bezig = true; oud = wortel.getAttribute('data-theme');
+    wortel.setAttribute('data-theme', 'light');
+    try { document.dispatchEvent(new CustomEvent('themawissel', { detail: { thema: 'light', print: true } })); } catch (e){}
+  });
+  addEventListener('afterprint', function(){
+    if (!bezig) return;
+    bezig = false;
+    if (oud === null) wortel.removeAttribute('data-theme'); else wortel.setAttribute('data-theme', oud);
+    try { document.dispatchEvent(new CustomEvent('themawissel', { detail: { thema: oud || '', print: false } })); } catch (e){}
+  });
+})();
