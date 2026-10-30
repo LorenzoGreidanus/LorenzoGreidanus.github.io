@@ -276,7 +276,42 @@ window.PAASEI = (function(){
     if (adres && /^(koning|april|sint|kerst|nieuw|halloween|zomer|nacht)$/.test(adres)) soort = adres;
     var tekst = { koning:'fijne Koningsdag!', april:'alle toetsen zijn afgelast... 1 april!', sint:mnd === 12 && dag === 5 ? 'vanavond is het pakjesavond!' : 'het is bijna pakjesavond!',
       kerst:'fijne kerst!', nieuw:'gelukkig nieuwjaar!', halloween:mnd === 10 && dag < 31 ? 'boe! bijna Halloween' : 'boe! fijne Halloween', zomer:'fijne vakantie! (oefenen mag ook)', nacht:'zou je niet eens gaan slapen?' }[soort] || '';
-    return { dag:soort, tekst:tekst };
+    return { dag:soort, tekst:tekst, echt:!adres };
+  }
+  /* ---------- feesthoeden om te verdienen ----------
+     Op Sinterklaas en midden in de nacht draagt elk gezichtje een hoed die niet te koop is (cosmetica.js,
+     feest). Tik je er op de echte dag op, dan is hij van jou, net als het geheime feesthoedje. Bekijk je de
+     dag alleen met ?dag=, dan zegt hij dat het nog niet zover is. */
+  var PAKBAAR = { sint:'mijter', nacht:'slaapmuts' };
+  function laad(src){
+    return new Promise(function(klaar, mis){ var sc = document.createElement('script'); sc.src = src; sc.onload = klaar; sc.onerror = mis; document.head.appendChild(sc); });
+  }
+  function pak(dag, echt, waar){
+    if (!echt){ toast('<b>Nog even geduld</b> <span>Op de echte dag kun je de ' + PAKBAAR[dag] + ' hier pakken.</span>', 4200); return; }
+    var klaar = window.COSMETICA ? Promise.resolve() : laad('/leermiddelen/cosmetica.js');
+    klaar.then(function(){ return window.PROFIEL ? null : laad('/leermiddelen/profiel.js'); }).then(function(){
+      var it = null; COSMETICA.ITEMS.forEach(function(x){ if (x.feest === dag) it = x; });
+      if (!it || !window.PROFIEL || !PROFIEL.geheimGevonden) return;
+      var nieuw = PROFIEL.geheimGevonden(it.id), b = window.PROFIEL.bezit ? PROFIEL.bezit() : {};
+      confetti(waar, nieuw ? 40 : 14);
+      if (nieuw) toast('<b>Je vond de ' + PAKBAAR[dag] + '!</b> <span>Hij is nu van jou, ook na vandaag. Zet hem op in de leeromgeving, via het rondje rechtsboven.</span>', 6500);
+      else if (b[it.id]) toast('<b>Die heb je al</b> <span>Zet de ' + PAKBAAR[dag] + ' op in de leeromgeving, via het rondje rechtsboven.</span>', 4200);
+    }).catch(function(){ toast('<b>Even geen verbinding</b> <span>Probeer het zo nog eens.</span>', 4200); });
+  }
+  /* maak van een gezichtje met de hoed van vandaag een knop; tip: een handgeschreven regeltje erbij */
+  function maakPakbaar(el, dag, echt, tip){
+    if (!el || !PAKBAAR[dag] || el.closest('.pe-pak')) return;
+    var knop = document.createElement('button');
+    knop.type = 'button'; knop.className = 'pe-pak';
+    knop.setAttribute('aria-label', 'Pak de ' + PAKBAAR[dag]);
+    el.parentNode.insertBefore(knop, el); knop.appendChild(el);
+    var stil = el.closest('[aria-hidden="true"]'); if (stil) stil.removeAttribute('aria-hidden');
+    if (tip){ var t = document.createElement('span'); t.className = 'pe-paktip' + (tip === 'onder' ? ' onder' : ''); t.setAttribute('aria-hidden', 'true'); t.textContent = 'tik op mijn ' + PAKBAAR[dag] + '!'; knop.appendChild(t); }
+    knop.addEventListener('click', function(){
+      var sv = el.querySelector('svg');
+      if (sv && !rustig()){ sv.classList.remove('av-juich'); void sv.getBoundingClientRect(); sv.classList.add('av-juich'); }
+      pak(dag, echt, knop);
+    });
   }
   function feestdag(){
     var dag = window.LG_DAG, top = document.querySelector('main .top');
@@ -289,6 +324,7 @@ window.PAASEI = (function(){
     var wacht = null; addEventListener('resize', function(){ clearTimeout(wacht); wacht = setTimeout(teken, 150); });
     /* sneeuw bij kerst: over de bovenkant van de pagina, achter niets wat je moet lezen */
     if (dag === 'kerst') sneeuw();
+    if (PAKBAAR[dag]) maakPakbaar(document.getElementById('begroetGezicht'), dag, !/[?&]dag=/.test(window.START_ZOEK || location.search), 'onder');
     /* het hoedje van de dag zet de groet zelf op het gezichtje: een echte 3D-hoed (AVATAR.feest), alleen als je zelf geen hoed op hebt */
   }
   /* de opmaak en de beweging van de bijzondere dagen */
@@ -297,6 +333,11 @@ window.PAASEI = (function(){
     st.textContent =
       'main .top{position:relative}' +
       'html[data-dag] main .top{padding-top:104px}' +
+      '.pe-pak{position:relative;background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;cursor:pointer;border-radius:50%;line-height:0;flex:none;pointer-events:auto}' +
+      '.pe-pak:focus-visible{outline:3px solid #B4701A;outline-offset:4px}' +
+      '.pe-paktip{position:absolute;right:calc(100% + 4px);top:12%;white-space:nowrap;font-family:"Caveat",cursive;font-weight:600;font-size:1.25rem;line-height:1;color:var(--hand,#C2462A);transform:rotate(-6deg);pointer-events:none}' +
+      '@keyframes pe-wenk{0%,100%{transform:rotate(-6deg) translateY(0)}50%{transform:rotate(-6deg) translateY(-4px)}}.pe-paktip{animation:pe-wenk 2.2s ease-in-out infinite}' +
+      '.pe-paktip.onder{right:auto;left:50%;top:calc(100% + 6px);transform:translateX(-50%) rotate(-4deg);animation:none}' +
       '.pe-strook{position:absolute;left:0;right:0;top:0;height:100px;pointer-events:none;color:var(--ink,#14224C);overflow:visible}' +
       'main.lesalleen .pe-strook,main.lesalleen ~ .pe-sneeuw{display:none}' +
       '.begroetgezicht{position:relative}' +
@@ -320,7 +361,7 @@ window.PAASEI = (function(){
       '@keyframes pe-twinkel{0%,100%{opacity:1}50%{opacity:.25}}.pe-twinkel{animation:pe-twinkel 2.4s ease-in-out infinite}' +
       '@keyframes pe-zweef{0%,100%{transform:translateY(0);opacity:.9}50%{transform:translateY(-6px);opacity:.5}}.pe-zzz{animation:pe-zweef 3s ease-in-out infinite}' +
       '@keyframes pe-schommel{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}.pe-staf{transform-box:fill-box;transform-origin:center bottom;animation:pe-schommel 4s ease-in-out infinite}' +
-      '@media(prefers-reduced-motion:reduce){.pe-strook *{animation:none !important}.pe-knal{transform:none;opacity:1}.pe-sneeuw{display:none}}';
+      '@media(prefers-reduced-motion:reduce){.pe-strook *,.pe-paktip{animation:none !important}.pe-knal{transform:none;opacity:1}.pe-sneeuw{display:none}}';
     (document.head || document.documentElement).appendChild(st);
   })();
 
@@ -328,5 +369,5 @@ window.PAASEI = (function(){
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', leeromgeving); else leeromgeving();
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', feestdag); else feestdag();
   }
-  return { toast:toast, confetti:confetti, ster:ster, goud:goud, feest:feest, uit:uit, welkeDag:welkeDag, strook:strook, sneeuw:sneeuw };
+  return { toast:toast, confetti:confetti, ster:ster, goud:goud, feest:feest, uit:uit, welkeDag:welkeDag, strook:strook, sneeuw:sneeuw, maakPakbaar:maakPakbaar };
 })();

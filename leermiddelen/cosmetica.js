@@ -30,6 +30,9 @@
     { id:'h12', soort:'h', n:12, naam:'Baret',          prijs:0, oud:true, uit:'omdat je bij meneer Greidanus in de klas zat' },
     /* geheim: niet te koop en pas in de winkel als je hem gevonden hebt (paasei.js, de Konami-code) */
     { id:'h24', soort:'h', n:24, naam:'Geheim feesthoedje', prijs:0, geheim:true, uit:'gevonden: een geheim van de leeromgeving' },
+    /* feesthoeden: op die dag draagt elk gezichtje hem; tik erop en hij is van jou (paasei.js, feestNu hieronder) */
+    { id:'h27', soort:'h', n:27, naam:'Mijter',    prijs:0, geheim:true, feest:'sint',  uit:'met staf; gevonden op Sinterklaas' },
+    { id:'h28', soort:'h', n:28, naam:'Slaapmuts', prijs:0, geheim:true, feest:'nacht', uit:'gevonden midden in de nacht' },
     /* nieuwe hoeden: h15 tot h19 altijd te koop, h20 en h21 in hun seizoen */
     { id:'h15', soort:'h', n:15, naam:'Pet achterstevoren', prijs:350, uit:'de klep naar achteren, natuurlijk' },
     { id:'h16', soort:'h', n:16, naam:'Beanie',         prijs:300, uit:'gebreid, met een pompon' },
@@ -138,6 +141,19 @@
     var d = nu || new Date(), m = d.getMonth() + 1, dag = d.getDate(), s = it.seizoen;
     var na = m > s[0] || (m === s[0] && dag >= s[1]), voor = m < s[2] || (m === s[2] && dag <= s[3]);
     return s[0] <= s[2] ? (na && voor) : (na || voor);
+  }
+  /* Is het nu (Nederlandse tijd) de dag van een feesthoed? Met wat speling, want een apparaat
+     meldt een vondst soms pas later aan de server: Sinterklaas 30 november tot en met 6 december,
+     de nacht van tien uur 's avonds tot zes uur 's ochtends. */
+  function feestNu(feest, nu){
+    var d = { maand:0, dag:0, uur:0 };
+    try {
+      new Intl.DateTimeFormat('nl-NL', { timeZone:'Europe/Amsterdam', month:'numeric', day:'numeric', hour:'numeric', hourCycle:'h23' })
+        .formatToParts(nu || new Date()).forEach(function(p){ if (p.type === 'month') d.maand = +p.value; else if (p.type === 'day') d.dag = +p.value; else if (p.type === 'hour') d.uur = +p.value % 24; });
+    } catch (e){ var t = nu || new Date(); d = { maand:t.getMonth() + 1, dag:t.getDate(), uur:t.getHours() }; }
+    if (feest === 'sint') return (d.maand === 11 && d.dag === 30) || (d.maand === 12 && d.dag <= 6);
+    if (feest === 'nacht') return d.uur >= 22 || d.uur < 6;
+    return false;
   }
   function vanBaas(baasId){ for (var i = 0; i < ITEMS.length; i++) if (ITEMS[i].baas === baasId) return ITEMS[i]; return null; }
   /* wat je wint als je deze baas in de nachtmerrie verslaat */
@@ -280,7 +296,7 @@
     if (b.sterren) s += '<path d="' + P('M' + (e + 20) + ',-5.5 L' + (e + 21) + ',-1 L' + (e + 25.5) + ',0 L' + (e + 21) + ',1 L' + (e + 20) + ',5.5 L' + (e + 19) + ',1 L' + (e + 14.5) + ',0 L' + (e + 19) + ',-1 Z') + '" fill="#fff" opacity=".95"/>';
     return s;
   }
-  g.COSMETICA = { ITEMS:ITEMS, SOORTEN:SOORTEN, vind:vind, vanBaas:vanBaas, vanNachtmerrie:vanNachtmerrie, ontleed:ontleed, bouw:bouw, toegestaan:toegestaan, inSeizoen:inSeizoen,
+  g.COSMETICA = { ITEMS:ITEMS, SOORTEN:SOORTEN, vind:vind, vanBaas:vanBaas, vanNachtmerrie:vanNachtmerrie, ontleed:ontleed, bouw:bouw, toegestaan:toegestaan, inSeizoen:inSeizoen, feestNu:feestNu,
                   BOGEN:BOGEN, boog:boog, pijl:pijl, spoor:spoor, SPEREN:SPEREN, speer:speer };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 if (typeof module !== 'undefined' && module.exports) module.exports = globalThis.COSMETICA;
