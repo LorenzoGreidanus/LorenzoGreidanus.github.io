@@ -262,6 +262,32 @@ window.PAASEI = (function(){
     zomer:'<path d="M-46 -27 q46 -14 92 0 q-10 6 -46 6 q-36 0 -46 -6 z" fill="#e8c877" stroke="#b8924a" stroke-width="1.6" stroke-linejoin="round"/><path d="M-22 -30 q0 -22 22 -22 q22 0 22 22 z" fill="#e8c877" stroke="#b8924a" stroke-width="1.6"/><path d="M-22 -33 q22 -5 44 0" fill="none" stroke="#F26749" stroke-width="4"/>',
     nacht:'<path d="M-31 -31 Q-25 -60 2 -62 Q26 -62 38 -44 L46 -20 Q30 -34 30 -31 Z" fill="#83A5F2" stroke="#4d6fbf" stroke-width="1.4" stroke-linejoin="round"/><rect x="-36" y="-37" width="72" height="11" rx="5.5" fill="#F3EFE9"/><circle cx="46" cy="-18" r="6" fill="#F3EFE9"/>'
   };
+  function sneeuw(){
+    if (rustig() || document.querySelector('.pe-sneeuw')) return;
+    var sn = document.createElement('div'); sn.className = 'pe-sneeuw'; sn.setAttribute('aria-hidden', 'true');
+    var h = ''; for (var i = 0; i < 34; i++){ var g = 3 + (i % 4) * 1.4;
+      h += '<i style="left:' + r1((i * 37.3 + (i % 3) * 11) % 100) + '%;width:' + g + 'px;height:' + g + 'px;animation-duration:' + r1(7 + (i * 1.7) % 6) + 's;animation-delay:' + r1(-(i * .73) % 9) + 's"></i>'; }
+    sn.innerHTML = h; document.body.appendChild(sn);
+  }
+  /* Welke bijzondere dag is het, en wat zegt het handschrift dan? Voor de voorpagina.
+     Dezelfde dagen als de groet in leermiddelen/index.html: verander je er een, verander dan allebei. */
+  function welkeDag(zoek){
+    var nu = new Date(), mnd = nu.getMonth() + 1, dag = nu.getDate(), u = nu.getHours(), soort = '';
+    var koningsdag = new Date(nu.getFullYear(), 3, 27).getDay() === 0 ? 26 : 27;
+    if (mnd === 4 && dag === koningsdag) soort = 'koning';
+    else if (mnd === 4 && dag === 1) soort = 'april';
+    else if (mnd === 12 && dag >= 1 && dag <= 5) soort = 'sint';
+    else if (mnd === 12 && dag >= 24 && dag <= 26) soort = 'kerst';
+    else if ((mnd === 12 && dag === 31) || (mnd === 1 && dag <= 7)) soort = 'nieuw';
+    else if (mnd === 10 && dag >= 27) soort = 'halloween';
+    else if ((mnd === 7 && dag >= 15) || (mnd === 8 && dag <= 20)) soort = 'zomer';
+    else if (u >= 23 || u < 5) soort = 'nacht';
+    var adres = (/[?&]dag=([a-z]+)/.exec(zoek || '') || [])[1];
+    if (adres && HOED[adres] || adres === 'april') soort = adres;
+    var tekst = { koning:'fijne Koningsdag!', april:'alle toetsen zijn afgelast... 1 april!', sint:mnd === 12 && dag === 5 ? 'vanavond is het pakjesavond!' : 'het is bijna pakjesavond!',
+      kerst:'fijne kerst!', nieuw:'gelukkig nieuwjaar!', halloween:mnd === 10 && dag < 31 ? 'boe! bijna Halloween' : 'boe! fijne Halloween', zomer:'fijne vakantie! (oefenen mag ook)', nacht:'zou je niet eens gaan slapen?' }[soort] || '';
+    return { dag:soort, tekst:tekst };
+  }
   function feestdag(){
     var dag = window.LG_DAG, top = document.querySelector('main .top'), gez = document.getElementById('begroetGezicht');
     if (!dag || !top) return;
@@ -272,12 +298,7 @@ window.PAASEI = (function(){
     teken();
     var wacht = null; addEventListener('resize', function(){ clearTimeout(wacht); wacht = setTimeout(teken, 150); });
     /* sneeuw bij kerst: over de bovenkant van de pagina, achter niets wat je moet lezen */
-    if (dag === 'kerst' && !rustig()){
-      var sn = document.createElement('div'); sn.className = 'pe-sneeuw'; sn.setAttribute('aria-hidden', 'true');
-      var h = ''; for (var i = 0; i < 34; i++){ var g = 3 + (i % 4) * 1.4;
-        h += '<i style="left:' + r1((i * 37.3 + (i % 3) * 11) % 100) + '%;width:' + g + 'px;height:' + g + 'px;animation-duration:' + r1(7 + (i * 1.7) % 6) + 's;animation-delay:' + r1(-(i * .73) % 9) + 's"></i>'; }
-      sn.innerHTML = h; document.body.appendChild(sn);
-    }
+    if (dag === 'kerst') sneeuw();
     /* het hoedje: alleen als je zelf geen hoed op hebt */
     if (gez && HOED[dag]){
       var eigen = window.PROFIEL && PROFIEL.avatar ? String(PROFIEL.avatar() || '') : '';
@@ -326,5 +347,5 @@ window.PAASEI = (function(){
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', leeromgeving); else leeromgeving();
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', feestdag); else feestdag();
   }
-  return { toast:toast, confetti:confetti, ster:ster, goud:goud, feest:feest, uit:uit };
+  return { toast:toast, confetti:confetti, ster:ster, goud:goud, feest:feest, uit:uit, welkeDag:welkeDag, strook:strook, HOED:HOED, sneeuw:sneeuw };
 })();

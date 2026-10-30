@@ -20,7 +20,7 @@
 
    Wat hij niet aanraakt: de spelkamers en het klassement (/api/, /ws/, /q),
    want die moeten altijd live zijn. */
-var VERSIE = "v436";
+var VERSIE = "v437";
 /* KERN en VAST horen bij een versie. VOORRAAD niet: daar staan de pagina's en
    scripts die van het net kwamen, en die worden bij elk bezoek ververst (eerst
    het net). Vroeger hoorde ook die bij een versie, en dan was na elke nieuwe
