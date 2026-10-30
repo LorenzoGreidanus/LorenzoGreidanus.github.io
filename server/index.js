@@ -255,7 +255,7 @@ async function verdeel(req, env, ctx){
       if (r.ok && ctx && ctx.waitUntil) ctx.waitUntil(cache.put(req, r.clone()).catch(() => {}));
       return r;
     }
-    const mm = p.match(/^\/api\/materiaal\/([A-Za-z0-9]{6})(\/werk|\/weg|\/volledig|\/inlever|\/uitslagen|\/nakijk|\/instel|\/wisuitslag|\/afb)?\/?$/);
+    const mm = p.match(/^\/api\/materiaal\/([A-Za-z0-9]{6})(\/werk|\/weg|\/volledig|\/inlever|\/uitslagen|\/nakijk|\/instel|\/wisuitslag|\/papier|\/afb)?\/?$/);
     if (mm){
       const stub = env.MATERIAAL.get(env.MATERIAAL.idFromName("materiaal"));
       if (req.method === "GET"){
@@ -265,7 +265,7 @@ async function verdeel(req, env, ctx){
       if (req.method === "POST" && mm[2]){
         if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
         /* inleveren: een hele klas achter een schooladres tegelijk; nakijken: veel kleine klikjes */
-        const emmer = mm[2] === "/inlever" ? ["materiaal-inlever", 900] : /^\/(nakijk|uitslagen|instel|volledig)$/.test(mm[2]) ? ["materiaal-nakijk", 1500] : mm[2] === "/afb" ? ["materiaal-afb", 60] : ["materiaal-werk", 120];
+        const emmer = mm[2] === "/inlever" ? ["materiaal-inlever", 900] : /^\/(nakijk|uitslagen|instel|volledig|papier)$/.test(mm[2]) ? ["materiaal-nakijk", 1500] : mm[2] === "/afb" ? ["materiaal-afb", 60] : ["materiaal-werk", 120];
         if (!await magDoor(env, req, emmer[0], emmer[1], 600)) return json({ fout: "even wachten" }, 429);
         let inz; try { inz = await leesJson(req); } catch (e){ return json({ fout: "geen geldig materiaal" }, 400); }
         return stub.fetch("https://materiaal" + mm[2] + "?code=" + mm[1].toUpperCase(), { method: "POST", body: JSON.stringify(inz || {}) });

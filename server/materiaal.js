@@ -26,6 +26,8 @@
    POST   /nakijk?code=X        { sleutel, sid, i, punt }          -> een vraag met de hand nakijken (punt null: weer automatisch)
    POST   /instel?code=X        { sleutel, norm, neutraal, terugzien }
    POST   /wisuitslag?code=X    { sleutel, sid }                   -> een inlevering weg, dan mag die leerling opnieuw
+   POST   /papier?code=X        { sleutel, sid?, naam, klas, versie, h } -> { sid }  een papieren toets, door de docent
+                                ingevoerd: de punten per vraag (h, 0 tot 1) in de echte volgorde; met sid aanpassen
    POST   /afb?code=X           { sleutel, data: "data:image/jpeg;base64,..." } -> { id }   een plaatje bij de toets
    GET    /afb?code=X&id=Y                                         -> het plaatje zelf
 
@@ -321,6 +323,7 @@ export class Materiaal extends DurableObject {
         case "/nakijk": return await this.nakijk(code, inz);
         case "/instel": return await this.instel(code, inz);
         case "/wisuitslag": return await this.wisUitslag(code, inz);
+        case "/papier": return await this.papier(code, inz);
         case "/afb": return await this.afbZet(code, inz);
       }
       return json({ fout: "onbekend" }, 404);
@@ -480,8 +483,10 @@ export class Materiaal extends DurableObject {
     if (fout) return fout;
     if (!Array.isArray(m.items)) return json({ fout: "hier komen geen uitslagen binnen" }, 400);
     const lijst = await this.ctx.storage.list({ prefix: "r:" + code + ":" });
-    const rijen = [...lijst.values()].map(r => ({ sid: r.sid, naam: r.naam, klas: r.klas, t: r.t, pogingen: r.pogingen || 1, a: r.a, h: r.h || {},
-      p: m.items.map((it, i) => scoor(it, r.a[i])) })).sort((x, y) => x.naam.localeCompare(y.naam, "nl"));
+    /* een papieren toets heeft geen antwoorden: alleen wat de docent invoerde (h) telt */
+    const rijen = [...lijst.values()].map(r => Object.assign({ sid: r.sid, naam: r.naam, klas: r.klas, t: r.t, pogingen: r.pogingen || 1, a: r.a, h: r.h || {},
+      p: m.items.map((it, i) => r.papier ? null : scoor(it, r.a[i])) }, r.papier ? { papier: true, versie: r.versie || "A" } : {}))
+      .sort((x, y) => x.naam.localeCompare(y.naam, "nl"));
     return json({ ok: true, naam: m.naam, modus: m.modus, items: m.items, juist: m.items.map(juistVan), norm: schoonNorm(m.norm),
       neutraal: Array.isArray(m.neutraal) ? m.neutraal : [], terugzien: m.terugzien !== false, rijen });
   }
@@ -496,7 +501,8 @@ export class Materiaal extends DurableObject {
     if (!r) return json({ fout: "deze inlevering bestaat niet (meer)" }, 404);
     r.h = r.h || {};
     if (inz.punt === null || inz.punt === undefined) delete r.h[i];
-    else r.h[i] = Math.max(0, Math.min(1, Math.round(Number(inz.punt) * 100) / 100 || 0));
+    /* vier decimalen: 2 van de 3 punten blijft dan 2 punten */
+    else r.h[i] = Math.max(0, Math.min(1, Math.round(Number(inz.punt) * 10000) / 10000 || 0));
     await this.ctx.storage.put("r:" + code + ":" + sid, r);
     return json({ ok: true, h: r.h });
   }
@@ -518,6 +524,37 @@ export class Materiaal extends DurableObject {
       m.n = Math.max(0, (m.n || 1) - 1); await this.ctx.storage.put("m:" + code, m);
     }
     return json({ ok: true });
+  }
+  /* Een papieren toets: de docent voert met de sleutel de punten van een leerling in.
+     Dezelfde opslag als een inlevering, met papier en versie erbij en zonder antwoorden.
+     Zonder sid een nieuwe; met sid een bestaande papieren aanpassen (nooit een digitale). */
+  async papier(code, inz){
+    const { m, fout } = await this.vanMij(code, inz);
+    if (fout) return fout;
+    if (!Array.isArray(m.items)) return json({ fout: "hier valt niets in te voeren" }, 400);
+    const naam = t(inz.naam, 40);
+    if (!naam) return json({ fout: "vul de naam van de leerling in" }, 400);
+    const klas = t(inz.klas, 8).toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const versie = inz.versie === "B" ? "B" : "A";
+    const h = {}, bron = inz.h && typeof inz.h === "object" && !Array.isArray(inz.h) ? inz.h : {};
+    for (const k of Object.keys(bron).slice(0, MAX_ITEMS)){
+      const i = Number(k), w = bron[k];
+      if (!(Number.isInteger(i) && i >= 0 && i < m.items.length) || w === null || w === "" || !isFinite(Number(w))) continue;
+      h[i] = Math.max(0, Math.min(1, Math.round(Number(w) * 10000) / 10000));
+    }
+    let sid = String(inz.sid || "").replace(/[^a-z0-9]/g, "").slice(0, 32), oud = null;
+    if (sid){
+      oud = await this.ctx.storage.get("r:" + code + ":" + sid);
+      if (!oud) return json({ fout: "deze inlevering bestaat niet (meer)" }, 404);
+      if (!oud.papier) return json({ fout: "dit is een inlevering van de leerling zelf; die pas je aan bij Nakijken" }, 409);
+    } else {
+      if ((m.n || 0) >= MAX_UITSLAGEN) return json({ fout: "voor deze toets zijn al " + MAX_UITSLAGEN + " inleveringen binnen" }, 400);
+      do sid = "p" + willekeurig(15, "abcdefghjkmnpqrstuvwxyz23456789"); while (await this.ctx.storage.get("r:" + code + ":" + sid));
+    }
+    const r = { sid, naam, klas, t: oud ? oud.t : Date.now(), a: [], h, pogingen: 1, papier: true, versie };
+    await this.ctx.storage.put("r:" + code + ":" + sid, r);
+    if (!oud){ m.n = (m.n || 0) + 1; m.gebruikt = Date.now(); await this.ctx.storage.put("m:" + code, m); }
+    return json({ ok: true, sid, h });
   }
   /* een keer per dag: wat ruim een jaar niet geopend is, weg */
   async planOpruimen(){

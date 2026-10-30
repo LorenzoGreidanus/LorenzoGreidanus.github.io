@@ -14,6 +14,7 @@
      EIGEN.kiezer(el, opts)      -> een kiezer voor de klasspellen: je eigen lijsten als knoppen, en een vakje voor een code
                                     (opts.soort 'dictee': je eigen dictees, voor een dictee-opdracht in het klasoverzicht)
      EIGEN.volledig/uitslagen/nakijk/instel/wisUitslag(code, ...)  -> met de sleutel, voor de docent
+     EIGEN.papier(code, { sid?, naam, klas, versie, h })           -> een papieren toets invoeren of aanpassen
      EIGEN.inlever(code, { sid, naam, klas, a })                   -> de leerling levert in, de server rekent */
 var EIGEN = (function(){
   'use strict';
@@ -70,6 +71,8 @@ var EIGEN = (function(){
   function nakijk(code, sid, i, punt){ return metSleutel(code, 'nakijk', { sid: sid, i: i, punt: punt }); }
   function instel(code, x){ return metSleutel(code, 'instel', x); }
   function wisUitslag(code, sid){ return metSleutel(code, 'wisuitslag', { sid: sid }); }
+  /* een papieren toets: h zijn de punten per vraag (0 tot 1) in de echte volgorde */
+  function papier(code, x){ return metSleutel(code, 'papier', x); }
   /* een plaatje bij de toets zetten (data-url), en waar het daarna staat */
   function afbeelding(code, data){ return metSleutel(code, 'afb', { data: data }); }
   function afbAdres(code, id){ return '/api/materiaal/' + code + '/afb/' + id; }
@@ -218,7 +221,7 @@ var EIGEN = (function(){
     return { laad: laad, code: function(){ return gekozen; } };
   }
   return { haal: haal, bewaar: bewaar, weg: weg, mijn: mijn, afstemmen: afstemmen, kiezer: kiezer,
-           volledig: volledig, uitslagen: uitslagen, nakijk: nakijk, instel: instel, wisUitslag: wisUitslag, inlever: inlever,
+           volledig: volledig, uitslagen: uitslagen, nakijk: nakijk, instel: instel, wisUitslag: wisUitslag, papier: papier, inlever: inlever,
            afbeelding: afbeelding, afbAdres: afbAdres, verklein: verklein,
            vragenUitLijst: vragenUitLijst, oefeningUitLijst: oefeningUitLijst, plakken: plakken, schud: schud };
 })();

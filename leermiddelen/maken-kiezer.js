@@ -24,9 +24,25 @@
        plaatjesVrij()  hoeveel plaatjes er nog bij mogen
        ruimte()        hoeveel vragen er nog bij mogen
        klaar(items, info)  de nieuwe vragen, in het formaat van maken.html
-     KIEZER.sleutel(vraag, goed)  waaraan een vraag herkend wordt */
+     KIEZER.sleutel(vraag, goed)  waaraan een vraag herkend wordt
+
+   Werkblad maken (werkblad-samen.js) gebruikt hetzelfde venster als "Vraag
+   toevoegen", met blad: true bij de eerste keer openen. Dan zijn er drie tabs
+   (Uit het boek, Uit de vragenbank, Zelf schrijven), gelden de grenzen van een
+   toets niet (200 vragen, 12 plaatjes, een figuur die niet als plaatje kan) en
+   krijgt klaar() de vragen zoals ze op het blad komen:
+       { bron:'bank', vorm, vraag, goed, fout, antwoorden, uitleg, beeld, vak, t }
+       { bron:'boek', o, pvak, par, toets }   o is de opgave zelf, met de figuur
+     extra bij blad: plek (tekst achter de kop, "na opgave 2"), tab ('boek',
+     'bank' of 'zelf'), tabs (welke er zijn), titel, zelf: { bouw(el), toon() }
+     KIEZER.boekToets(o, vak, par)  een opgave uit het boek als toetsvraag (of met reden waarom niet)
+     KIEZER.alsBlad(x, open), KIEZER.bankLijst(vak)  de vragenbank, voor Vervangen
+     KIEZER.plaatje(beeld), KIEZER.sluit()   */
 window.KIEZER = (function(){
   'use strict';
+  /* het venster voor een werkblad of voor een toets: dat ligt vast bij de eerste keer openen */
+  var BLAD = false;
+  function waar(){ return BLAD ? 'op het blad' : 'in je toets'; }
   /* zo lang als de server bewaart (server/materiaal.js); langer kan niet mee */
   var MAX = { vraag:300, goed:150, uitleg:300, open:100, fout:5, antwoorden:8 };
   var PER_KEER = 60;          /* zoveel regels tegelijk in de lijst; daarna "Laat meer zien" */
@@ -172,12 +188,17 @@ window.KIEZER = (function(){
     if ($('kiezer')) return;
     var vakken = (window.VAKKEN || []).filter(function(v){ return window.BANK && BANK.vakken.indexOf(v.id) >= 0 && v.id !== 'eigen'; });
     var niv = (window.NIVEAUS || []).map(function(n){ return '<option value="' + n.rang + '">' + schoon(n.naam) + '</option>'; }).join('');
+    if (BLAD) basisStijl();
+    var tabBank = '<button type="button" role="tab" id="kzTabBank" aria-selected="true" aria-controls="kzMidden">' + (BLAD ? 'Uit de vragenbank' : 'Vragenbank') + '</button>';
+    var tabBoek = '<button type="button" role="tab" id="kzTabBoek" aria-selected="false" aria-controls="kzBoek" tabindex="-1">' + (BLAD ? 'Uit het boek' : 'Opdrachtenboek') + '</button>';
     document.body.insertAdjacentHTML('beforeend',
-      '<dialog class="kiezer" id="kiezer" aria-labelledby="kzKop" aria-describedby="kzUitleg">' +
-        '<div class="kzkop"><h2 id="kzKop">Vragen uit de site</h2>' +
-          '<button class="kzsluit" type="button" id="kzSluit" aria-label="Sluiten zonder vragen toe te voegen">&times;</button></div>' +
+      '<dialog class="kiezer' + (BLAD ? ' kzblad' : '') + '" id="kiezer" aria-labelledby="kzKop" aria-describedby="kzUitleg">' +
+        '<div class="kzkop">' + (BLAD ? '<h2 id="kzKop"><span id="kzTitel">Vraag toevoegen</span> <span class="kzplek" id="kzPlek"></span></h2>' : '<h2 id="kzKop">Vragen uit de site</h2>') +
+          '<div class="kztabs" role="tablist" aria-label="' + (BLAD ? 'Waar komt de vraag vandaan' : 'Bron') + '">' + (BLAD ? tabBoek + tabBank + '<button type="button" role="tab" id="kzTabZelf" aria-selected="false" aria-controls="kzZelf" tabindex="-1">Zelf schrijven</button>' : tabBank + tabBoek) + '</div>' +
+          '<button class="kzsluit" type="button" id="kzSluit" aria-label="Sluiten zonder ' + (BLAD ? 'iets op het blad te zetten' : 'vragen toe te voegen') + '">&times;</button></div>' +
         '<div class="kzmidden" id="kzMidden">' +
-          '<p class="tip" id="kzUitleg">Kies uit de oefenstof van de spellen op deze site. De vragen komen als gewone vragen in je toets, met de uitleg erbij, en je kunt ze daarna nog aanpassen. Rekenen komt uit de leerroute: daar maakt elk doel nieuwe sommen, met de uitwerking als uitleg.</p>' +
+          '<p class="tip" id="kzUitleg">' + (BLAD ? 'Kies uit de oefenstof van de spellen op deze site. De vragen komen op het blad, met het antwoord en de uitleg op het antwoordblad. Rekenen komt uit de leerroute: daar maakt elk doel nieuwe sommen.'
+            : 'Kies uit de oefenstof van de spellen op deze site. De vragen komen als gewone vragen in je toets, met de uitleg erbij, en je kunt ze daarna nog aanpassen. Rekenen komt uit de leerroute: daar maakt elk doel nieuwe sommen, met de uitwerking als uitleg.') + '</p>' +
           '<div class="kzfilters">' +
             '<label class="veldnaam">Vak<select class="veld" id="kzVak"><option value="">kies een vak</option>' + vakken.map(function(v){ return '<option value="' + v.id + '">' + schoon(v.naam) + '</option>'; }).join('') + LR_VAKKEN.map(function(v){ return '<option value="' + v.id + '">' + schoon(v.naam) + '</option>'; }).join('') + '</select></label>' +
             '<label class="veldnaam">Niveau<select class="veld" id="kzNiveau"><option value="">alle niveaus</option>' + niv + '</select></label>' +
@@ -191,9 +212,13 @@ window.KIEZER = (function(){
           '<div class="kzlijst" id="kzLijst"></div>' +
         '</div>' +
         '<div class="kzvoet"><p class="melding" id="kzMelding" role="status" aria-live="polite"></p>' +
-          '<div class="rij"><button class="knop" type="button" id="kzZet" disabled>Zet in de toets</button>' +
+          '<div class="rij"><button class="knop" type="button" id="kzZet" disabled>Zet ' + (BLAD ? 'op het blad' : 'in de toets') + '</button>' +
           '<button class="knop stil" type="button" id="kzAnnuleer">Annuleren</button></div></div>' +
+        boekHtml() +
+        (BLAD ? '<div class="kzzelf" id="kzZelf" role="tabpanel" aria-labelledby="kzTabZelf"></div>' : '') +
       '</dialog>');
+    boekKoppel();
+    if (BLAD && opt.zelf && opt.zelf.bouw) opt.zelf.bouw($('kzZelf'));
     var d = $('kiezer');
     $('kzSluit').addEventListener('click', sluit);
     $('kzAnnuleer').addEventListener('click', sluit);
@@ -239,6 +264,8 @@ window.KIEZER = (function(){
   function plaatjesGekozen(lijst){ return lijst.filter(function(id){ return vanId(id) && vanId(id).beeld; }).length; }
   /* mag dit er nog bij? anders de reden */
   function past(nieuw){
+    /* op een werkblad gelden de grenzen van een toets niet */
+    if (BLAD) return '';
     var alles = volgorde.concat(nieuw);
     if (alles.length > opt.ruimte()) return 'Een toets heeft hoogstens 200 vragen; er kunnen er nog ' + opt.ruimte() + ' bij.';
     if (plaatjesGekozen(alles) > opt.plaatjesVrij()) return 'Een toets heeft hoogstens 12 plaatjes; er kunnen er nog ' + opt.plaatjesVrij() + ' bij. Kies een vraag zonder plaatje.';
@@ -251,7 +278,8 @@ window.KIEZER = (function(){
   function stand(){
     var n = aantalGekozen();
     $('kzZet').disabled = !n || bezig;
-    $('kzZet').textContent = n ? 'Zet ' + (n === 1 ? 'de vraag' : 'de ' + n + ' vragen') + ' in de toets' : 'Zet in de toets';
+    var plek = BLAD ? ' op het blad' : ' in de toets';
+    $('kzZet').textContent = n ? 'Zet ' + (n === 1 ? 'de vraag' : 'de ' + n + ' vragen') + plek : 'Zet' + plek;
     $('kzAlleen').disabled = !n && !alleenGekozen;
     var s = $('kzAantal').getAttribute('data-zicht') || '';
     $('kzAantal').textContent = s + (n ? (s ? ' · ' : '') + n + ' gekozen' : '');
@@ -269,10 +297,8 @@ window.KIEZER = (function(){
     $('kzLijst').setAttribute('aria-busy', 'true');
     $('kzLijst').innerHTML = '<p class="leeg">Vragen ophalen…</p>';
     var lr = /^lr-/.test(vak);
-    (lr ? laadLeerroute() : Promise.all([BANK.zorg(vak), laadOpen(vak)])).then(function(){
+    laadVak(vak).then(function(b){
       if (vakNu !== vak) return;
-      var b = lr ? bereidLeerroute(vak) : bereid(vak);
-      b.lijst.forEach(function(x){ OP_ID[x.id] = x; });
       if (lr) vulDelenLr(vak, b.lijst); else vulDelen(vak, b.lijst);
       $('kzOpenRij').classList.toggle('hide', !b.lijst.some(openVan));
       $('kzLijst').removeAttribute('aria-busy');
@@ -280,6 +306,15 @@ window.KIEZER = (function(){
     }).catch(function(){
       $('kzLijst').removeAttribute('aria-busy');
       $('kzLijst').innerHTML = '<p class="leeg">De vragen konden niet geladen worden. Controleer je internet en kies het vak opnieuw.</p>';
+    });
+  }
+  /* de vragen van een vak, klaar om te kiezen (ook voor Vervangen op het werkblad) */
+  function laadVak(vak){
+    var lr = /^lr-/.test(vak);
+    return (lr ? laadLeerroute() : Promise.all([BANK.zorg(vak), laadOpen(vak)])).then(function(){
+      var b = lr ? bereidLeerroute(vak) : bereid(vak);
+      b.lijst.forEach(function(x){ OP_ID[x.id] = x; });
+      return b;
     });
   }
   /* De onderwerpen van het vak, onder dezelfde koppen als in de spellen.
@@ -337,7 +372,7 @@ window.KIEZER = (function(){
     if (x.vak !== vakNu) labels.push(((window.VAKKEN || []).filter(function(v){ return v.id === x.vak; })[0] || {}).naam || x.vak);
     if (x.beeld) labels.push('met plaatje');
     if (open) labels.push('open vraag');
-    if (al) labels.push('staat al in je toets');
+    if (al) labels.push('staat al ' + waar());
     return '<label class="kzvraag' + (aan ? ' aan' : '') + (al ? ' al' : '') + '"><input type="checkbox" data-id="' + schoon(x.id) + '"' + (aan ? ' checked' : '') + (al ? ' disabled' : '') + '>' +
       beeldHtml(x) +
       '<span class="kztekst"><span class="kzv">' + schoon(open && !x.lr ? openVraag(x) : x.v) + '</span>' +
@@ -405,10 +440,25 @@ window.KIEZER = (function(){
     if (!x.beeld) return Promise.resolve(it);
     return plaatje(x.beeld).then(function(data){ it.afbData = data; return it; }, function(){ return null; });
   }
+  /* een vraag zoals hij op een werkblad komt: de tekst, de keuzes en het beeld zelf (geen plaatje) */
+  function alsBlad(x, open){
+    var b = { bron:'bank', vak:x.vak, t:x.t, uitleg:x.uitleg, beeld:x.beeld || '', vraag:x.v, goed:x.goed };
+    if (x.lr) return Object.assign(b, x.antwoorden ? { vorm:'open', antwoorden:x.antwoorden } : { vorm:'mk', fout:schud(x.fout) });
+    var ant = open ? openAntwoorden(x) : [];
+    if (ant.length) return Object.assign(b, { vorm:'open', vraag:openVraag(x), goed:ant[0], antwoorden:ant });
+    return Object.assign(b, { vorm:'mk', fout:schud(x.fout) });
+  }
   function zet(){
     var ids = volgorde.slice(); if (!ids.length || bezig) return;
     var p = past([]); if (p){ melding(p, 'fout'); return; }
     var open = $('kzOpen').checked;
+    if (BLAD){
+      var lijst = ids.map(function(id){ return alsBlad(vanId(id), open); }), kb = opt;
+      gekozen = {}; volgorde = []; zetAlleen(false);
+      dicht();
+      kb.klaar(lijst, { vakken:[] });
+      return;
+    }
     bezig = true; stand(); $('kzZet').setAttribute('aria-busy', 'true');
     melding(plaatjesGekozen(ids) ? 'De plaatjes klaarmaken…' : '');
     Promise.all(ids.map(function(id){ return alsItem(vanId(id), open); })).then(function(items){
@@ -423,6 +473,334 @@ window.KIEZER = (function(){
     });
   }
 
+  /* ---------- het opdrachtenboek: de tweede tab ----------
+     Links de inhoud van het boek (opdrachtenboek.js), rechts opgaven die de
+     leerroute nu maakt voor de gekozen paragraaf. Wat je aanvinkt wordt een
+     gewone vraag: keuzes worden meerkeuze, een invulantwoord wordt een open
+     vraag met de goede antwoorden. Een figuur gaat mee als plaatje: de svg
+     krijgt zijn kleuren en stijl erin (OPDRACHTENBOEK.losseSvg) en wordt via
+     EIGEN.verklein een jpeg, net als een eigen plaatje; een tabel wordt eerst
+     een getekende tabel. Een figuur die niet mee kan terwijl de vraag hem
+     nodig heeft, of een tekst die te lang is voor een vraag: die opgave staat
+     er wel, maar kun je niet aanvinken, met de reden erbij. */
+  var BOEKVAK = { reken:'rekenen', ned:'nederlands', wis:'wiskunde' }, TOETSVAK = { rekenen:'reken', nederlands:'ned', wiskunde:'wis' };
+  var BOEK_PER = 6;
+  var boekAan = false, bVak = '', bPar = '', bLijst = [], bGekozen = {}, bVolg = [], bTeller = 0, bBezig = false;
+  var bLaden = null;
+  function laadBoek(){
+    if (window.OPDRACHTENBOEK) return Promise.resolve();
+    if (bLaden) return bLaden;
+    return (bLaden = laadScript('opdrachtenboek.js?v=1').then(function(){ if (!window.OPDRACHTENBOEK){ bLaden = null; throw new Error('geen boek'); } }));
+  }
+  function boekStijl(){
+    if ($('kzBoekStijl')) return;
+    var s = document.createElement('style'); s.id = 'kzBoekStijl';
+    s.textContent =
+      '.kztabs{display:flex;gap:4px;padding:4px;border-radius:12px;background:var(--kaart2);margin-right:auto;margin-left:14px}' +
+      '.kzkop{flex-wrap:wrap}' +
+      '.kztabs button{min-height:40px;padding:0 14px;border:0;border-radius:9px;background:transparent;font-size:.9rem;font-weight:500;color:var(--ink)}' +
+      '.kztabs button[aria-selected="true"]{background:var(--kaart);box-shadow:0 1px 3px rgba(20,34,76,.15);font-weight:600}' +
+      '.kiezer.kzboekaan{width:min(1180px,100% - 32px);height:min(880px,100% - 40px)}' +
+      '.kiezer.kzboekaan .kzmidden,.kiezer.kzboekaan .kzvoet{display:none}' +
+      '.kiezer:not(.kzboekaan) .kzboek{display:none}' +
+      '.kzboek{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}' +
+      '.kzb-midden{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(250px,320px) minmax(0,1fr)}' +
+      '.kzb-nav{overflow:auto;overscroll-behavior:contain;border-right:1px solid var(--rand);padding:12px 14px 16px;display:grid;gap:6px;align-content:start}' +
+      '.kzb-vakken{display:flex;gap:4px;padding:4px;border-radius:12px;background:var(--kaart2)}' +
+      '.kzb-vakken button{flex:1 1 0;min-height:38px;border:0;border-radius:9px;background:transparent;font-size:.84rem;font-weight:500;color:var(--ink);padding:0 6px}' +
+      '.kzb-vakken button[aria-pressed="true"]{background:var(--kaart);box-shadow:0 1px 3px rgba(20,34,76,.15);font-weight:600}' +
+      '.kzb-zoek{display:flex;align-items:center;gap:8px;border:1.5px solid var(--rand2);border-radius:12px;padding:0 12px;min-height:44px;background:var(--kaart)}' +
+      '.kzb-zoek:focus-within{border-color:var(--ocean)}' +
+      '.kzb-zoek svg{width:16px;height:16px;fill:none;stroke:var(--muted);stroke-width:2;flex:none}' +
+      '.kzb-zoek input{border:0;outline:0;background:none;flex:1;min-width:0;font-size:.92rem;min-height:40px;color:var(--ink)}' +
+      '.kzb-kop{font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:12px 0 2px}' +
+      '.kzb-par{display:flex;align-items:center;gap:8px;width:100%;min-height:40px;padding:4px 10px;border-radius:10px;border:0;background:none;text-align:left;font-size:.88rem;line-height:1.3;color:var(--ink)}' +
+      '.kzb-par:hover{background:var(--kaart2)}' +
+      '.kzb-par[aria-current="true"]{background:var(--kies);box-shadow:inset 0 0 0 1.5px var(--ocean);font-weight:600}' +
+      '.kzb-par small,.kzb-soort{margin-left:auto;font-size:.7rem;font-weight:600;border-radius:6px;padding:2px 6px;white-space:nowrap}' +
+      '.kzb-par small{color:var(--muted);background:var(--kaart2)}' +
+      '.kzb-par .kzb-tel{display:inline-grid;place-items:center;min-width:20px;height:20px;border-radius:999px;background:var(--ocean);color:#fff;font-size:.7rem;font-weight:600;margin-left:4px}' +
+      '.kzb-rechts{overflow:auto;overscroll-behavior:contain;padding:14px 20px 18px;display:grid;gap:10px;align-content:start}' +
+      '.kzb-rechtskop{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}' +
+      '.kzb-rechtskop h3{font-size:1.05rem;margin:0}' +
+      '.kzb-rechtskop .tip{font-size:.85rem}' +
+      '.kzb-rechtskop .knop{margin-left:auto}' +
+      '.kzb-vr{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:12px;align-items:start;padding:12px 14px;border-radius:14px;border:1.5px solid var(--rand2);background:var(--kaart);cursor:pointer}' +
+      '.kzb-vr:hover{border-color:var(--ocean)}' +
+      '.kzb-vr.aan{border-color:var(--ocean);background:var(--kies)}' +
+      '.kzb-vr.kan-niet{opacity:.65;cursor:default}' +
+      '.kzb-vr.kan-niet:hover{border-color:var(--rand2)}' +
+      '.kzb-vr input{width:18px;height:18px;margin:3px 0 0;accent-color:var(--ocean)}' +
+      '.kzb-vr input:focus-visible{outline:3px solid var(--focusring);outline-offset:3px}' +
+      '.kzb-vrt{display:grid;gap:3px;min-width:0}' +
+      '.kzb-vrt b{font-weight:500;font-size:.95rem;line-height:1.4;overflow-wrap:anywhere}' +
+      '.kzb-vrt span{font-size:.84rem;color:var(--muted);overflow-wrap:anywhere}' +
+      '.kzb-vrt .kzb-goed{color:var(--goed)}' +
+      '.kzb-vrt img{display:block;max-width:220px;max-height:120px;background:#fff;border:1px solid var(--rand);border-radius:8px;padding:4px;margin-top:4px}' +
+      '.kzb-soort{color:var(--ocean);background:var(--kies)}' +
+      '.kzb-vr.kan-niet .kzb-soort{color:var(--muted);background:var(--kaart2)}' +
+      '.kzb-leeg{color:var(--muted);padding:12px 0}' +
+      '.kzb-voet{border-top:1px solid var(--rand);padding:10px 20px calc(12px + env(safe-area-inset-bottom));display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;background:var(--kaart)}' +
+      '.kzb-voet .melding{flex:1 1 100%;margin:0}.kzb-voet .melding:empty{display:none}' +
+      '.kzb-voet .vink{min-height:40px;font-size:.88rem}' +
+      '.kzb-voet .knop:last-child{margin-left:auto}' +
+      /* smal: de inhoud bovenaan met een eigen schuifbalk, daaronder de opgaven */
+      '@media(max-width:760px){.kzb-midden{display:flex;flex-direction:column;overflow:auto}.kzb-nav{flex:none;max-height:40svh;border-right:0;border-bottom:1px solid var(--rand)}.kzb-rechts{overflow:visible}.kztabs{margin-left:0;order:3;flex:1 1 100%}}' +
+      '@media(max-width:560px){.kiezer.kzboekaan{width:100%;height:100%;max-height:none;margin:0}}';
+    document.head.appendChild(s);
+  }
+  var ZOEKIKOON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>';
+  function boekHtml(){
+    return '<div class="kzboek" id="kzBoek" role="tabpanel" aria-labelledby="kzTabBoek">' +
+      '<div class="kzb-midden">' +
+        '<nav class="kzb-nav" aria-label="Inhoud van het boek">' +
+          '<div class="kzb-vakken" role="group" aria-label="Vak van het boek">' + ['rekenen', 'nederlands', 'wiskunde'].map(function(v){ return '<button type="button" data-bvak="' + v + '" aria-pressed="false">' + { rekenen:'Rekenen', nederlands:'Nederlands', wiskunde:'Wiskunde' }[v] + '</button>'; }).join('') + '</div>' +
+          '<label class="kzb-zoek">' + ZOEKIKOON + '<input type="search" id="kzbZoek" placeholder="Zoek een onderwerp" aria-label="Zoek een onderwerp in het boek" autocomplete="off"></label>' +
+          '<div id="kzbBoom"><p class="kzb-leeg">Het boek laden…</p></div>' +
+        '</nav>' +
+        '<section class="kzb-rechts" id="kzbRechts" aria-label="Opgaven"></section>' +
+      '</div>' +
+      '<div class="kzb-voet"><p class="melding" id="kzbMelding" role="status" aria-live="polite"></p>' +
+        '<span id="kzbTel" aria-live="polite"></span>' +
+        /* op een werkblad volgt de uitleg de keuze van het blad */
+        '<label class="vink' + (BLAD ? ' hide' : '') + '"><input type="checkbox" id="kzbUitleg" checked> Met uitleg na de vraag</label>' +
+        '<button class="knop" type="button" id="kzbZet" disabled>Zet ' + (BLAD ? 'op het blad' : 'in de toets') + '</button></div>' +
+    '</div>';
+  }
+  function boekKoppel(){
+    boekStijl();
+    $('kzTabBank').addEventListener('click', function(){ kiesTab('bank'); });
+    $('kzTabBoek').addEventListener('click', function(){ kiesTab('boek'); });
+    if ($('kzTabZelf')) $('kzTabZelf').addEventListener('click', function(){ kiesTab('zelf'); });
+    /* pijltjes: naar de volgende tab die er is (bij aanpassen staat alleen Zelf schrijven er) */
+    $('kiezer').querySelector('.kztabs').addEventListener('keydown', function(e){
+      if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].indexOf(e.key) < 0) return;
+      var lijst = [].filter.call(this.querySelectorAll('[role="tab"]'), function(t){ return !t.hidden; });
+      var i = lijst.indexOf(document.activeElement); if (i < 0) return;
+      e.preventDefault();
+      var n = e.key === 'Home' ? 0 : e.key === 'End' ? lijst.length - 1 : (i + (e.key === 'ArrowRight' ? 1 : -1) + lijst.length) % lijst.length;
+      kiesTab(TABNAAM[lijst[n].id]); lijst[n].focus();
+    });
+    $('kzBoek').querySelector('.kzb-vakken').addEventListener('click', function(e){ var b = e.target.closest('[data-bvak]'); if (b && b.getAttribute('data-bvak') !== bVak) boekVak(b.getAttribute('data-bvak')); });
+    var wacht = null;
+    $('kzbZoek').addEventListener('input', function(){ clearTimeout(wacht); wacht = setTimeout(boekBoom, 140); });
+    $('kzbBoom').addEventListener('click', function(e){
+      var b = e.target.closest('[data-par]'); if (!b) return;
+      boekPar(b.getAttribute('data-par'));
+      /* op een smal scherm staan de opgaven onder de inhoud: daarheen */
+      if (window.matchMedia && matchMedia('(max-width:760px)').matches) $('kzbRechts').scrollIntoView({ block:'start' });
+    });
+    $('kzbRechts').addEventListener('click', function(e){ if (e.target.closest('#kzbAnder')) boekMaak(true); });
+    $('kzbRechts').addEventListener('change', function(e){
+      var c = e.target; if (!c.matches || !c.matches('input[data-bid]')) return;
+      var x = bLijst.filter(function(y){ return y.id === c.getAttribute('data-bid'); })[0]; if (!x) return;
+      if (c.checked){
+        var r = boekPast(x);
+        if (r){ c.checked = false; boekMelding(r, 'fout'); return; }
+        bGekozen[x.id] = x; bVolg.push(x.id);
+      } else { delete bGekozen[x.id]; bVolg = bVolg.filter(function(id){ return id !== x.id; }); }
+      c.closest('.kzb-vr').classList.toggle('aan', c.checked);
+      boekMelding(''); boekStand(); boekTellers();
+    });
+    $('kzbZet').addEventListener('click', boekZet);
+  }
+  function boekMelding(t, soort){ var m = $('kzbMelding'); m.textContent = t || ''; m.className = 'melding' + (soort ? ' ' + soort : ''); }
+  var TABNAAM = { kzTabBank:'bank', kzTabBoek:'boek', kzTabZelf:'zelf' }, tabNu = 'bank';
+  function kiesTab(naam){
+    tabNu = naam; boekAan = naam === 'boek';
+    $('kiezer').classList.toggle('kzboekaan', naam === 'boek');
+    $('kiezer').classList.toggle('kzzelfaan', naam === 'zelf');
+    Object.keys(TABNAAM).forEach(function(id){ var t = $(id); if (!t) return; var aan = TABNAAM[id] === naam; t.setAttribute('aria-selected', String(aan)); t.tabIndex = aan ? 0 : -1; });
+    if (naam === 'boek') boekOpen();
+    if (naam === 'zelf' && opt.zelf && opt.zelf.toon) opt.zelf.toon();
+  }
+  /* de tab openen: het vak van de toets, of het vak dat je eerder koos */
+  function boekOpen(){
+    $('kiezer').classList.add('kzboekaan');
+    var vak = bVak || BOEKVAK[opt && opt.vak] || 'rekenen';
+    laadBoek().then(function(){ if (vak !== bVak || !$('kzbBoom').querySelector('[data-par]')) boekVak(vak); else boekStand(); },
+      function(){ $('kzbBoom').innerHTML = '<p class="kzb-leeg">Het boek laden lukte niet. Controleer je internet en probeer het opnieuw.</p>'; });
+  }
+  function boekVak(vak){
+    bVak = vak; bPar = '';
+    [].forEach.call($('kzBoek').querySelectorAll('[data-bvak]'), function(b){ b.setAttribute('aria-pressed', String(b.getAttribute('data-bvak') === vak)); });
+    boekBoom();
+    var eerste = OPDRACHTENBOEK.paragrafen(vak)[0];
+    if (eerste) boekPar(eerste.p.id);
+  }
+  function plat(t){ return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+  /* de inhoud: per hoofdstuk de paragrafen; met een zoekwoord alleen wat past */
+  function boekBoom(){
+    var B = OPDRACHTENBOEK, w = plat($('kzbZoek').value).trim().split(/\s+/).filter(Boolean), h = '', vorige = '';
+    var tel = {}; bVolg.forEach(function(id){ var x = bGekozen[id]; if (x && x.vak === bVak) tel[x.par] = (tel[x.par] || 0) + 1; });
+    B.paragrafen(bVak).forEach(function(x){
+      if (w.length){
+        var tekst = plat([x.thema.naam, x.hoofdstuk.naam, x.p.naam].concat(x.p.doelen.map(function(id){ var d = B.doel(id); return d ? d.naam : ''; })).join(' '));
+        if (!w.every(function(z){ return tekst.indexOf(z) >= 0; })) return;
+      }
+      var kop = x.thema.naam + ' › ' + x.hoofdstuk.naam;
+      if (kop !== vorige){ h += '<p class="kzb-kop">' + schoon(kop) + '</p>'; vorige = kop; }
+      h += '<button type="button" class="kzb-par" data-par="' + schoon(x.p.id) + '"' + (x.p.id === bPar ? ' aria-current="true"' : '') + '><span>' + x.nummer + ' ' + schoon(x.p.naam) + '</span>' +
+        (tel[x.p.id] ? '<span class="kzb-tel" aria-label="' + tel[x.p.id] + ' gekozen">' + tel[x.p.id] + '</span>' : '') + '<small>' + schoon(x.p.niveau) + '</small></button>';
+    });
+    $('kzbBoom').innerHTML = h || '<p class="kzb-leeg">Niets gevonden. Zoek op een ander woord.</p>';
+  }
+  function boekTellers(){
+    var tel = {}; bVolg.forEach(function(id){ var x = bGekozen[id]; if (x && x.vak === bVak) tel[x.par] = (tel[x.par] || 0) + 1; });
+    [].forEach.call($('kzbBoom').querySelectorAll('[data-par]'), function(b){
+      var n = tel[b.getAttribute('data-par')] || 0, t = b.querySelector('.kzb-tel');
+      if (!n && t) t.remove();
+      else if (n){ if (!t){ t = document.createElement('span'); t.className = 'kzb-tel'; b.insertBefore(t, b.querySelector('small')); } t.textContent = n; t.setAttribute('aria-label', n + ' gekozen'); }
+    });
+  }
+  function boekPar(id){
+    bPar = id;
+    [].forEach.call($('kzbBoom').querySelectorAll('[data-par]'), function(b){ if (b.getAttribute('data-par') === id) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current'); });
+    boekMaak(false);
+  }
+  /* de opgaven van de paragraaf; Andere opgaven houdt wat je al hebt aangevinkt */
+  function boekMaak(ander){
+    var vak = bVak, id = bPar, x = OPDRACHTENBOEK.paragraaf(vak, id); if (!x) return;
+    var R = $('kzbRechts');
+    R.setAttribute('aria-busy', 'true');
+    R.innerHTML = kopHtml(x) + '<p class="kzb-leeg">Opgaven maken…</p>';
+    /* loopt de leerroute van de vragenbank nog (Rekenen of Nederlands uit de leerroute), dan eerst die */
+    (LR_LADEN || Promise.resolve()).then(function(){ return OPDRACHTENBOEK.laad(vak); }).then(function(){
+      if (vak !== bVak || id !== bPar) return;
+      var houd = bVolg.map(function(k){ return bGekozen[k]; }).filter(function(y){ return y.par === id && y.vak === vak; });
+      var gezien = {}; houd.forEach(function(y){ gezien[y.sl] = true; });
+      var nieuw = OPDRACHTENBOEK.opgaven(vak, id, BOEK_PER + houd.length + 2).map(function(o){ return alsToets(o, vak, id); })
+        .filter(function(y){ if (gezien[y.sl]) return false; gezien[y.sl] = true; return true; }).slice(0, Math.max(BOEK_PER - (ander ? 0 : houd.length), 2));
+      bLijst = houd.concat(nieuw);
+      R.removeAttribute('aria-busy');
+      R.innerHTML = kopHtml(x) + (bLijst.length ? bLijst.map(vrHtml).join('') : '<p class="kzb-leeg">Bij deze paragraaf lukte het niet om opgaven te maken. Kies een andere.</p>');
+      boekStand();
+    }, function(){
+      R.removeAttribute('aria-busy');
+      R.innerHTML = kopHtml(x) + '<p class="kzb-leeg">De opgaven konden niet geladen worden. Controleer je internet en kies de paragraaf opnieuw.</p>';
+    });
+  }
+  function kopHtml(x){
+    return '<div class="kzb-rechtskop"><h3>' + x.nummer + ' ' + schoon(x.p.naam) + '</h3><span class="tip">' + schoon(x.p.niveau) + ' · vink aan wat ' + waar() + ' moet</span>' +
+      '<button class="knop stil klein" type="button" id="kzbAnder">Andere opgaven</button></div>';
+  }
+
+  /* een opgave uit het boek als vraag voor de toets */
+  var MET_FIGUUR = /\b(figuur|tekening|plaatje|afbeelding|grafiek|diagram|klok|rooster|getallenlijn|strook|tabel|hieronder|deze driehoek|deze rechthoek|de lijn|bouwsel|uitslag|stip|hokje)\b/i;
+  /* twee stukken tekst als zinnen achter elkaar: een punt ertussen, en dan een hoofdletter (na een dubbele punt niet) */
+  function zinnen(a, b){
+    if (!a) return b; if (!b) return a;
+    if (/:$/.test(a)) return a + ' ' + b;
+    /* alleen een gewoon woord krijgt een hoofdletter; een formule als x + 3 = 7 niet */
+    return a + (/[.?!]$/.test(a) ? ' ' : '. ') + (/^[a-zà-ÿ]{3,}[\s:,]/.test(b) ? b.charAt(0).toUpperCase() + b.slice(1) : b);
+  }
+  function alsToets(o, vak, par){
+    var B = OPDRACHTENBOEK, x = { id:'b' + (++bTeller), vak:vak, par:par, punten:1, svg:'', reden:'', o:o };
+    if (o.soort === 'bank'){
+      var q = o.q, goed = kaal(q.o[q.g]);
+      x.vorm = 'mk'; x.vraag = kaal(q.v); x.goed = goed;
+      x.fout = q.o.map(kaal).filter(function(f, i){ return i !== q.g && f && f.toLowerCase() !== goed.toLowerCase(); }).slice(0, MAX.fout);
+      x.uitleg = kortUitleg(kaal(q.u)); x.sl = 'b|' + x.vraag + '|' + goed;
+      x.info = (x.fout.length + 1) + ' keuzes · antwoord ' + goed;
+      return check(x);
+    }
+    var op = o.op, kz = B.keuzes(op), b = B.beeld(op, 0);
+    var ctx = kaal(op.context || ''), v = kaal(B.vraagHtml(op));
+    var vraag = ctx && v.indexOf(ctx) < 0 ? zinnen(ctx, v) : v;
+    if (kz && kz.uitStap) vraag = zinnen(vraag, kaal(kz.tekst));
+    x.sl = String(op.vraag || '') + '|' + vraag + '|' + B.eind(op);
+    var st = B.echteStappen(op);
+    x.uitleg = kortUitleg('Zo: ' + st.map(function(s){ var t = kaal(s.tekst), a = kaal(B.stapAntwoord(s)); return a && t.indexOf('…') >= 0 ? t.replace('…', a) : t + (a ? ' ' + a : ''); }).join('; ').replace(/[.!?]$/, '') + '.');
+    if (kz){
+      x.vorm = 'mk'; x.goed = kaal(kz.opties[kz.goed]);
+      x.fout = kz.opties.map(kaal).filter(function(f, i){ return i !== kz.goed && f && f.toLowerCase() !== x.goed.toLowerCase(); }).slice(0, MAX.fout);
+      x.info = kz.opties.length + ' keuzes · antwoord ' + x.goed;
+      if (!x.fout.length) x.reden = 'er is maar één keuze';
+    } else {
+      x.vorm = 'open';
+      if (op.eenheid && vraag.indexOf(op.eenheid) < 0) vraag = zinnen(vraag, 'Geef het antwoord in ' + op.eenheid + '.');
+      x.antwoorden = lrVarianten(B.goedeAntwoorden(op));
+      x.goed = x.antwoorden[0] || '';
+      x.punten = st.length >= 3 ? 2 : 1;
+      x.info = 'antwoord ' + x.goed + (op.eenheid ? ' ' + op.eenheid : '');
+      if (!x.antwoorden.length) x.reden = 'het antwoord kan de computer niet nakijken';
+    }
+    x.vraag = vraag;
+    /* de figuur: een svg of tabel gaat als plaatje mee; een zin met de woorden apart staat al in de vraag */
+    if (b && !/^\s*<p class="lr-zin"/.test(b)){
+      x.fig = true;
+      var svg = B.losseSvg(b);
+      if (!svg){ var m = b.match(/<svg[\s\S]*?<\/svg>/g); if (m && m.length === 1) svg = B.losseSvg(m[0]); }
+      if (svg) x.svg = svg;
+      else if (MET_FIGUUR.test(vraag) || !kaal(B.vraagHtml(op)).replace(/[?.]/g, '').trim()) x.reden = 'de figuur kan niet mee in een toets';
+      else x.zonder = true;
+    }
+    return check(x);
+  }
+  function check(x){
+    if (!x.reden && x.vraag.length > MAX.vraag) x.reden = 'de tekst is te lang voor een toetsvraag (hoogstens ' + MAX.vraag + ' tekens)';
+    if (!x.reden && (x.goed || '').length > MAX.goed) x.reden = 'het antwoord is te lang';
+    if (!x.reden && x.vorm === 'mk' && x.fout.some(function(f){ return f.length > MAX.goed; })) x.reden = 'een keuze is te lang';
+    return x;
+  }
+  function vrHtml(x){
+    /* op een werkblad kan elke opgave mee, met de figuur zoals in het boek */
+    var reden = BLAD ? '' : x.reden;
+    var aan = !!bGekozen[x.id], kan = !reden, al = kan && opt.alSet[sleutel(x.vraag, x.goed)];
+    var meta = [x.info];
+    if (BLAD){ if (x.fig) meta.push('met figuur'); }
+    else if (x.svg) meta.push('met figuur'); else if (x.zonder) meta.push('zonder de figuur');
+    if (al) meta.push('staat al ' + waar());
+    if (reden) meta = ['kan niet mee: ' + reden];
+    return '<label class="kzb-vr' + (aan ? ' aan' : '') + (kan && !al ? '' : ' kan-niet') + '"><input type="checkbox" data-bid="' + x.id + '"' + (aan ? ' checked' : '') + (kan && !al ? '' : ' disabled') + '>' +
+      '<span class="kzb-vrt"><b>' + schoon(x.vraag) + '</b>' + (x.svg ? '<img alt="De figuur bij deze opgave" src="data:image/svg+xml;charset=utf-8,' + encodeURIComponent(x.svg) + '">' : '') +
+      '<span class="' + (reden ? '' : 'kzb-goed') + '">' + schoon(meta.join(' · ')) + '</span></span>' +
+      '<span class="kzb-soort">' + (x.vorm === 'mk' ? 'meerkeuze' : 'open') + (BLAD ? '' : ' · ' + x.punten + ' p') + '</span></label>';
+  }
+  function boekPast(x){
+    if (BLAD) return '';
+    if (bVolg.length + 1 > opt.ruimte()) return 'Een toets heeft hoogstens 200 vragen; er kunnen er nog ' + opt.ruimte() + ' bij.';
+    if (x.svg && bVolg.filter(function(id){ return bGekozen[id].svg; }).length + 1 > opt.plaatjesVrij()) return 'Een toets heeft hoogstens 12 plaatjes; er kunnen er nog ' + opt.plaatjesVrij() + ' bij. Kies een opgave zonder figuur.';
+    return '';
+  }
+  function boekStand(){
+    var n = bVolg.length, p = bVolg.reduce(function(a, id){ return a + bGekozen[id].punten; }, 0);
+    var pars = {}; bVolg.forEach(function(id){ pars[bGekozen[id].vak + bGekozen[id].par] = true; });
+    var np = Object.keys(pars).length;
+    $('kzbTel').innerHTML = n ? '<b>' + n + (n === 1 ? ' opgave' : ' opgaven') + '</b> gekozen, uit ' + np + (np === 1 ? ' paragraaf' : ' paragrafen') + (BLAD ? '' : ' · ' + p + (p === 1 ? ' punt' : ' punten')) : 'Nog niets gekozen';
+    $('kzbZet').disabled = !n || bBezig;
+    var plek = BLAD ? ' op het blad' : ' in de toets';
+    $('kzbZet').textContent = n ? 'Zet ' + (n === 1 ? 'de opgave' : n + ' opgaven') + plek : 'Zet' + plek;
+  }
+  function boekLeeg(){ bGekozen = {}; bVolg = []; if ($('kzbMelding')){ boekMelding(''); boekStand(); boekTellers(); [].forEach.call($('kzbRechts').querySelectorAll('input[data-bid]'), function(c){ c.checked = false; c.closest('.kzb-vr').classList.remove('aan'); }); } }
+  function boekZet(){
+    if (!bVolg.length || bBezig) return;
+    var uitleg = $('kzbUitleg').checked, lijst = bVolg.map(function(id){ return bGekozen[id]; });
+    if (BLAD){
+      var kb = opt, uit = lijst.map(function(x){ return { bron:'boek', o:x.o, pvak:x.vak, par:x.par, toets:toetsVan(x) }; });
+      boekLeeg(); dicht();
+      kb.klaar(uit, { vakken:[] });
+      return;
+    }
+    bBezig = true; boekStand(); $('kzbZet').setAttribute('aria-busy', 'true');
+    boekMelding(lijst.some(function(x){ return x.svg; }) ? 'De figuren klaarmaken…' : '');
+    Promise.all(lijst.map(function(x){
+      var it = x.vorm === 'mk' ? { vorm:'mk', vraag:x.vraag, goed:x.goed, fout:schud(x.fout), uitleg:uitleg ? x.uitleg : '', punten:x.punten }
+        : { vorm:'open', vraag:x.vraag, antwoorden:x.antwoorden, uitleg:uitleg ? x.uitleg : '', punten:x.punten };
+      if (!x.svg) return Promise.resolve(it);
+      return plaatje({ svg:x.svg }).then(function(data){ it.afbData = data; return it; }, function(){ return null; });
+    })).then(function(items){
+      var mislukt = items.filter(function(y){ return !y; }).length;
+      items = items.filter(Boolean);
+      var vakken = {}; lijst.forEach(function(x){ vakken[TOETSVAK[x.vak]] = true; });
+      bBezig = false; $('kzbZet').removeAttribute('aria-busy');
+      var k = opt;
+      boekLeeg();
+      dicht();
+      k.klaar(items, { vakken:Object.keys(vakken), mislukt:mislukt });
+    });
+  }
+
   function dicht(){
     var d = $('kiezer'); if (d.open) d.close();
     document.documentElement.classList.remove('kzopen');
@@ -431,10 +809,74 @@ window.KIEZER = (function(){
   function sluit(){
     if (bezig) return;
     gekozen = {}; volgorde = []; zetAlleen(false); melding('');
+    boekLeeg();
     dicht();
   }
+  /* een opgave uit het boek als toetsvraag, zonder de opgave zelf (die kan niet in localStorage) */
+  function toetsVan(x){
+    var t = { vorm:x.vorm, vraag:x.vraag, goed:x.goed, uitleg:x.uitleg, punten:x.punten };
+    if (x.vorm === 'mk') t.fout = x.fout.slice(); else t.antwoorden = (x.antwoorden || []).slice();
+    if (x.svg) t.svg = x.svg;
+    if (x.reden) t.reden = x.reden;
+    return t;
+  }
+
+  /* De stijl van het venster. In maken.html staat die in de pagina zelf; op
+     het werkblad komt hij hier vandaan, met wat maken.html uit eigen.css haalt. */
+  function basisStijl(){
+    if ($('kzBasisStijl')) return;
+    var s = document.createElement('style'); s.id = 'kzBasisStijl';
+    s.textContent =
+      'html.kzopen{overflow:hidden}' +
+      '.kiezer{width:min(1180px,100% - 32px);height:min(880px,100% - 40px);max-width:none;max-height:none;padding:0;border:1px solid var(--rand);border-radius:22px;background:var(--room);color:var(--ink);box-shadow:0 30px 80px rgba(20,34,76,.35);overflow:hidden}' +
+      '.kiezer[open]{display:flex;flex-direction:column}' +
+      '.kiezer::backdrop{background:rgba(15,26,61,.55)}' +
+      '.kzkop{display:flex;align-items:center;justify-content:space-between;gap:10px 14px;padding:12px 12px 12px 22px;border-bottom:1px solid var(--rand2);background:var(--kaart)}' +
+      '.kzkop h2{font-size:1.2rem;margin:0}' +
+      '.kzplek{font-size:.9rem;font-weight:500;color:var(--muted);letter-spacing:0}' +
+      '.kzblad .kztabs[hidden],.kzblad .kztabs [hidden]{display:none}' +
+      '.kzsluit{border:1.5px solid var(--rand2);background:var(--kaart);color:var(--ink);width:44px;height:44px;border-radius:12px;font-size:1.5rem;line-height:1;padding:0;flex:none}' +
+      '.kzsluit:hover{background:var(--kaart2)}' +
+      '.kzmidden{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;padding:14px 22px 18px;display:grid;gap:12px;align-content:start;background:var(--kaart)}' +
+      '.kzfilters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px}' +
+      '.kzbreed,.kzdeel{grid-column:1 / -1}' +
+      '@media(min-width:700px){.kzfilters{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,2fr)}.kzfilters .kzdeel{grid-column:auto}}' +
+      '.kiezer label.veldnaam{display:grid;gap:4px;font-size:.88rem;font-weight:600}' +
+      '.kiezer .knop.klein{padding:8px 12px;font-size:.88rem;border-radius:12px;min-height:44px;box-shadow:none}' +
+      '.kiezer .melding{min-height:1.4em;font-size:.92rem;margin:0}' +
+      '.kiezer .melding.fout{color:var(--fout);font-weight:600}' +
+      '.kiezer .leeg{padding:22px;border:1.5px dashed var(--rand2);border-radius:16px;color:var(--muted);text-align:center}' +
+      '.kzbalk{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 12px}' +
+      '.kzaantal{font-size:.9rem;color:var(--muted);font-variant-numeric:tabular-nums;margin:0}' +
+      '.kzlijst{display:grid;gap:6px}' +
+      '.kzvraag{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1.5px solid var(--rand2);border-radius:14px;cursor:pointer;min-height:44px}' +
+      '.kzvraag:hover{border-color:var(--ocean)}' +
+      '.kzvraag.aan{border-color:var(--ocean);background:var(--kies)}' +
+      '.kzvraag.al{opacity:.6;cursor:default}' +
+      '.kzvraag input{width:20px;height:20px;margin:2px 0 0;accent-color:var(--ocean);flex:none;cursor:inherit}' +
+      '.kzvraag input:focus-visible{outline:3px solid var(--focusring,#B4701A);outline-offset:3px}' +
+      '.kzbeeld{flex:none;width:64px;height:48px;display:grid;place-items:center;border-radius:8px;background:#fff;color:#14224C;border:1px solid var(--rand);overflow:hidden;padding:2px}' +
+      '.kzbeeld img{max-width:100%;max-height:100%;display:block}.kzbeeld svg{width:100%;height:100%;display:block}' +
+      '.kztekst{display:grid;gap:3px;min-width:0;flex:1 1 auto}' +
+      '.kzv{font-weight:600;line-height:1.35;overflow-wrap:anywhere}' +
+      '.kzgoed{font-size:.9rem;color:var(--goed);overflow-wrap:anywhere}.kzgoedlabel{font-weight:700}' +
+      '.kzlabels{display:flex;flex-wrap:wrap;gap:4px}' +
+      '.kzlabels span{font-size:.75rem;font-weight:600;border-radius:999px;padding:2px 8px;background:var(--kaart2);color:var(--muted)}' +
+      '.kzmeer{justify-self:start;margin-top:4px}' +
+      '.kzvoet{border-top:1px solid var(--rand);padding:10px 22px calc(12px + env(safe-area-inset-bottom));background:var(--kaart)}' +
+      '.kzvoet .melding{margin:0 0 8px}.kzvoet .melding:empty{display:none}' +
+      '.kiezer.kzboekaan .kzmidden,.kiezer.kzboekaan .kzvoet,.kiezer.kzzelfaan .kzmidden,.kiezer.kzzelfaan .kzvoet,.kiezer.kzzelfaan .kzboek{display:none}' +
+      '.kiezer:not(.kzzelfaan) .kzzelf{display:none}' +
+      '.kzzelf{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}' +
+      '.kzb-midden,.kzb-voet{background:var(--kaart)}' +
+      '@media(max-width:560px){.kiezer{width:100%;height:100%;max-height:none;margin:0;border:0;border-radius:0}.kzkop{padding:8px 8px 8px 16px}.kzmidden{padding:12px 16px 16px}.kzvoet{padding-left:16px;padding-right:16px}.kzvoet .rij{gap:8px}.kzvoet .rij .knop{flex:1 1 auto}#kzAnnuleer{display:none}}' +
+      '@media(max-width:420px){.kzfilters{grid-template-columns:minmax(0,1fr)}}';
+    document.head.appendChild(s);
+  }
+
   function open(o){
     opt = o || {};
+    if (!$('kiezer')) BLAD = !!opt.blad;
     bouw();
     opt.alSet = {}; (opt.al ? opt.al() : []).forEach(function(s){ opt.alSet[s] = true; });
     opt.ruimte = opt.ruimte || function(){ return 200; };
@@ -448,7 +890,26 @@ window.KIEZER = (function(){
     var vak = $('kzVak').value || (opt.vak && [].some.call($('kzVak').options, function(x){ return x.value === opt.vak; }) ? opt.vak : '');
     if (vak !== vakNu || !KLAAR[vak]){ $('kzVak').value = vak; kiesVak(vak); }
     else teken();
-    $('kzVak').focus();
+    if (BLAD){
+      /* waar de vraag komt, en welke tabs er zijn (aanpassen: alleen Zelf schrijven) */
+      $('kzTitel').textContent = opt.titel || 'Vraag toevoegen';
+      $('kzPlek').textContent = opt.plek || '';
+      var tabs = opt.tabs || ['boek', 'bank', 'zelf'];
+      Object.keys(TABNAAM).forEach(function(id){ $(id).hidden = tabs.indexOf(TABNAAM[id]) < 0; });
+      d.querySelector('.kztabs').hidden = tabs.length < 2;
+      var tab = opt.tab && tabs.indexOf(opt.tab) >= 0 ? opt.tab : tabs.indexOf(tabNu) >= 0 ? tabNu : tabs[0];
+      kiesTab(tab);
+      if (tab !== 'zelf') $(tab === 'boek' ? 'kzTabBoek' : 'kzTabBank').focus();
+      return;
+    }
+    /* stond het boek open, dan weer het boek; anders de vragenbank */
+    if (boekAan){ boekOpen(); $('kzTabBoek').focus(); } else $('kzVak').focus();
   }
-  return { open: open, sleutel: sleutel };
+  return { open: open, sleutel: sleutel, sluit: function(){ if ($('kiezer')) sluit(); },
+    tab: function(){ return tabNu; },
+    /* voor het werkblad: een opgave uit het boek als toetsvraag, en de vragenbank voor Vervangen */
+    boekToets: function(o, vak, par){ return toetsVan(alsToets(o, vak, par)); },
+    alsBlad: alsBlad,
+    bankLijst: function(vak){ return laadVak(vak).then(function(b){ return b.lijst; }); },
+    plaatje: plaatje };
 })();
