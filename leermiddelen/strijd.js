@@ -81,11 +81,14 @@ window.STRIJD = (function(){
     '#strijdSluier .afopties button.goed{background:#e6f4ec;border-color:#2f7d52;color:#1d5236}' +
     '#strijdSluier .afopties button.fout{background:#fbe9e5;border-color:#c0442c;color:#8d2f1e}' +
     '#strijdSluier .afuit{margin:12px 0 0;font-size:.95rem}' +
-    '#strijdSluier .afdoelen{display:grid;gap:8px;margin-top:10px}' +
+    '#strijdSluier .afdoelen{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin-top:10px}' +
     '#strijdSluier .afdoelen button{display:flex;align-items:center;gap:10px;text-align:left;padding:10px 14px;border-radius:14px;min-height:48px}' +
     '#strijdSluier .afdoelen button .av{flex:none;width:32px;height:32px;line-height:0}' +
     '#strijdSluier .afdoelen button .av svg{display:block;width:100%;height:100%}' +
     '#strijdSluier .afdoelen button small{margin-left:auto;color:var(--muted,#5b6785);font-weight:500}' +
+    /* een lange bijnaam wordt afgekapt; anders duwt hij de knop breder dan het paneel */
+    '#strijdSluier .afdoelen button .nm{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+    '#strijdSluier .afdoelen button small{flex:none}' +
     '#strijdSluier .afdoelen button.net{opacity:.55;cursor:default}' +
     '#strijdSluier .afanoniem{display:flex;align-items:center;gap:10px;min-height:44px;font-size:.92rem;cursor:pointer}' +
     '#strijdSluier .afanoniem input{width:20px;height:20px;flex:none;margin:0;accent-color:#204ECF}' +
@@ -96,9 +99,9 @@ window.STRIJD = (function(){
       'border:none;border-radius:999px;padding:12px 20px;min-height:48px;cursor:pointer;' +
       'background:#F26749;color:#fff;font:700 .95rem Poppins,system-ui,sans-serif;box-shadow:0 8px 24px rgba(20,34,76,.28)}' +
     '#strijdSluier .lobbyvak{display:grid;grid-template-columns:1fr;gap:8px;margin:12px 0 2px;text-align:left}' +
-    '@media(min-width:480px){#strijdSluier .lobbyvak{grid-template-columns:1fr 1fr}}' +
+    '@media(min-width:480px){#strijdSluier .lobbyvak{grid-template-columns:repeat(2,minmax(0,1fr))}}' +
     '#strijdSluier .lobbykaart{display:flex;align-items:center;gap:10px;background:#f4f7ff;' +
-      'border:2px solid transparent;border-radius:14px;padding:9px 11px;min-height:64px;box-sizing:border-box}' +
+      'border:2px solid transparent;border-radius:14px;padding:9px 11px;min-height:64px;box-sizing:border-box;min-width:0}' +
     '#strijdSluier .lobbykaart .av{flex:none;width:42px;height:42px;line-height:0}' +
     '#strijdSluier .lobbykaart .av svg{display:block;width:100%;height:100%}' +
     '#strijdSluier .lobbykaart .wie{flex:1;min-width:0}' +
@@ -149,9 +152,11 @@ window.STRIJD = (function(){
     '.duelvak .fout{color:#c0442c;font-size:.85rem;min-height:1.2em;margin-top:6px}' +
     '.sitelijst{max-width:560px;margin:18px auto 0;text-align:left;font-family:Poppins,system-ui,sans-serif}' +
     '.sitelijst h3{margin:0 0 8px;font-size:1rem;font-weight:600}' +
-    '.sitelijst .rij{display:grid;grid-template-columns:2.2em 1fr auto;gap:10px;align-items:center;background:#fff;border:1px solid rgba(20,34,76,.08);border-radius:12px;padding:7px 12px;margin-bottom:5px;font-size:.9rem}' +
+    '.sitelijst .rij{display:grid;grid-template-columns:2.2em minmax(0,1fr) auto;gap:10px;align-items:center;background:#fff;border:1px solid rgba(20,34,76,.08);border-radius:12px;padding:7px 12px;margin-bottom:5px;font-size:.9rem}' +
     '.sitelijst .rij.jij{background:#fff6dc;border-color:#EFC64A}' +
-    '.sitelijst .rij b{font-weight:600}.sitelijst .rij small{display:block;color:#5b6480;font-size:.76rem}' +
+    '.sitelijst .rij b{font-weight:600}' +
+    /* een bijnaam van zestien brede tekens past niet altijd: afkappen, de rij groeit niet mee */
+    '.sitelijst .avrij>span>b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sitelijst .rij small{display:block;color:#5b6480;font-size:.76rem}' +
     '.sitelijst .rij .nr{font-weight:700;color:#5b6480}.sitelijst .rij .pt{font-weight:700;white-space:nowrap}' +
     '.sitelijst .leeg{color:#5b6480;font-size:.88rem}' +
     '.sitelijst .naamrij{display:flex;gap:8px;margin-bottom:10px}' +
@@ -298,7 +303,7 @@ window.STRIJD = (function(){
         afDoelen.slice(0, 12).map(function(d){
         var net = keus && d.sid === afLaatst;
         return '<button type="button"' + (net ? ' disabled class="net"' : ' data-naar="' + schoon(d.sid) + '"') + '><span class="av">' +
-          (window.AVATAR ? AVATAR.svg(d.naam, 32, d.av || '') : '') + '</span>' + schoon(d.naam) +
+          (window.AVATAR ? AVATAR.svg(d.naam, 32, d.av || '') : '') + '</span><span class="nm" title="' + schoon(d.naam) + '">' + schoon(d.naam) + '</span>' +
           '<small>' + (net ? 'kreeg je vorige fouten' : 'ronde ' + (d.ronde | 0)) + '</small></button>';
       }).join('');
     }
@@ -756,7 +761,7 @@ window.STRIJD = (function(){
         if (!lijst.length) html += '<div class="leeg">Nog niemand. Wie het eerst speelt, staat bovenaan.</div>';
         lijst.forEach(function(r){
           html += '<div class="rij' + (id && r.id === id ? ' jij' : '') + '"><span class="nr">' + r.plek + '</span>' +
-            '<span class="avrij">' + (window.AVATAR ? AVATAR.svg(r.naam, 34, r.av) : '') + '<span><b>' + schoon(r.naam) + '</b><small>' + [r.waar, r.niveau, r.vak].filter(Boolean).map(schoon).join(' · ') + (r.t ? ' · ' + new Date(r.t).toLocaleDateString('nl-NL') : '') + '</small></span></span>' +
+            '<span class="avrij">' + (window.AVATAR ? AVATAR.svg(r.naam, 34, r.av) : '') + '<span><b title="' + schoon(r.naam) + '">' + schoon(r.naam) + '</b><small>' + [r.waar, r.niveau, r.vak].filter(Boolean).map(schoon).join(' · ') + (r.t ? ' · ' + new Date(r.t).toLocaleDateString('nl-NL') : '') + '</small></span></span>' +
             '<span class="pt">' + schoon(maatTekst(spel, r)) + '</span></div>';
         });
         rijen.innerHTML = html; rijen.removeAttribute('aria-busy');

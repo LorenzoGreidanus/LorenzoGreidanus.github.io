@@ -40,8 +40,9 @@ const ARENA = { b:1100, h:620, rand:26 };
    de ronde erna en heb je die kans weer. Samen: sta op het lichaam van een
    maat en na OPHELP.tijd seconden staat die weer op. */
 const CHECKPOINT = { wacht:2 };
-const OPHELP = { tijd:2, afstand:52, leven:0.5 };
-/* De hospik, de vierde klasse. Hij helpt een maat op in de helft van de tijd, van verder weg, en
+/* november 2026: ophelpen duurt voor een gewone klasse vier seconden (was twee); de hospik blijft op een seconde */
+const OPHELP = { tijd:4, afstand:52, leven:0.5 };
+/* De hospik, de vierde klasse. Hij helpt een maat op in een kwart van de tijd, van verder weg, en
    die staat op met meer leven ('hulp'). In plaats van een boog heeft hij een EHBO-koffer: Q gooit
    hem, als hij geladen is, naar wie hem het hardst nodig heeft binnen 'ver' punten (een maat die
    neerligt, anders wie naar verhouding het minste leven heeft, hijzelf ook). Na 'vlucht' seconden
@@ -51,9 +52,12 @@ const OPHELP = { tijd:2, afstand:52, leven:0.5 };
    vlak groter en sterker, en het ophelpen nog sneller (zie WINKEL en UPG).
    Afgesteld met de simulatie (sim70.js, alleen, oktober 2026): een koffer geeft wie erin blijft staan
    8% van zijn leven terug. Met 5% per seconde en om de 8 seconden viel de hospik alleen nooit meer;
-   zo komt hij gemiddeld even ver als de andere drie (eerste val rond ronde 27, de anderen 21 tot 30). */
+   zo komt hij gemiddeld even ver als de andere drie (eerste val rond ronde 27, de anderen 21 tot 30).
+   November 2026: de genezing een kwart sterker (2,5% per seconde, 10% per koffer). In de simulatie
+   (sim70.js, 90% goed, echt) haalt hij alleen nu mediaan ronde 25 tegen 22, de andere drie rond 20;
+   met 3% per seconde werd het ronde 39, en dat is meer dan een buff. */
 const HOSPIK = { hulp:{ tijd:1, afstand:85, leven:0.75 },
-                 koffer:{ laad:15, ver:280, vlucht:0.4, r:75, duur:4, heel:0.02, op:2.5 } };
+                 koffer:{ laad:15, ver:280, vlucht:0.4, r:75, duur:4, heel:0.025, op:2.5 } };
 const SPELER = { r:22, hp:125, snelheid:200, zwaard:{ schade:16, bereik:82, tempo:0.55 }, boog:130,
                  pijlboog:{ deel:0.55, bereik:330, tempo:1.2, snel:620 } };
 /* De speer, het tweede wapen van de schildwacht (in plaats van de boog). Hij steekt recht
@@ -1909,30 +1913,90 @@ function maak(opties){
             /* de hospik: hoe lang zijn koffer nog laadt */
             r1(s2.kofferKlok || 0)];
   }
-  W.pakket = function(){
+  /* alles van de stand behalve de fouten, de getallen en de aanvallen: die verschillen tussen de volle en de kleine stand */
+  function standKop(){
     /* tk: de tik van de kamer, zodat de browser de standen op de klok van de kamer kan zetten */
     return { k:'st', f:W.fase, r:W.ronde, ts:W.teSpawnen, t:r2(W.tijdInRonde), p:W.pauze ? 1 : 0, bg:W.baasGeveld, tk:W.tik, cp:[W.cp.ronde, W.cp.kans],
       zo:W.zones.map(function(z){ return [z.soort, r1(z.x), r1(z.y), z.r || 0, z.w || 0, z.h || 0, z.id]; }),
       /* de genezende vlakken van de hospik: plek, tijd (onder nul vliegt de koffer nog), duur, straal, waar hij vandaan kwam */
       ev:W.velden.map(function(v){ return [Math.round(v.x), Math.round(v.y), r2(v.t), r2(v.duur), Math.round(v.r), Math.round(v.ox), Math.round(v.oy), v.id]; }),
       sp:W.spelers.map(inpak),
-      /* bij wie schiet ook de klokken van het laden en het stilstaan, voor de loop die mikt en terugslaat */
       /* Plekken van fouten, messen en getallen in hele punten: een tiende punt ziet niemand (de arena is
          1100 breed), en zo is een stand in een drukke late ronde een kwart kleiner. */
-      /* de soort als nummer in FOUTEN (een baas als 'b:' en zijn naam), en het volle leven als 0 zolang hij niet geraakt is */
-      fo:W.fouten.map(function(f){ var hp = Math.round(f.hp), o = [Math.round(f.x), Math.round(f.y), hp, hp === f.maxHp ? 0 : f.maxHp, f.baas ? 'b:' + f.def.id : FOUTEN.indexOf(f.soort), f.r, f.flits > 0 ? 0.1 : 0, r1(f.stap), f.schild || 0, f.soort.laden ? r2(f.mikt || 0) : 0, f.id];
-        if (f.soort.laden) o.push(r2(f.laadKlok || 0), r2(f.stilKlok || 0));
-        else if (f.baas) o.push(r2(f.moe || 0));
-        return o; }),
       me:W.messen.map(function(m){ return [Math.round(m.x), Math.round(m.y), r2(m.hoek), m.pijl || 0, m.id]; }),
-      mu:W.munt.map(function(m){ return [r1(m.x), r1(m.y), m.waarde, m.id]; }),
-      ci:W.cijfers.map(function(c){ return [Math.round(c.x), Math.round(c.y), c.tekst, c.kleur, r1(c.leven)]; }),
-      aa:W.aanvallen.map(function(a){ var o = [a.soort, r1(a.x), r1(a.y), r2(a.t), r2(a.hoek || 0), a.richting || 1, r2(a.nu || 0), r1(a.straal || 0), a.geknald ? 1 : 0, r2(a.k || 1), r2(a.gat || 0), a.breed || 0, r2(a.boog || 0), r2(a.duur || 0), a.r0 || 0, a.kl || '', a.id];
-        var extra = extraVan(a);
-        if (a.ox !== undefined || extra) o.push(r1(a.ox || 0), r1(a.oy || 0));
-        /* plek 19: de lokalen van de bel, of de streep van het potlood, plat achter elkaar */
-        if (extra) o.push(extra);
-        return o; }) };
+      mu:W.munt.map(function(m){ return [r1(m.x), r1(m.y), m.waarde, m.id]; }) };
+  }
+  /* bij wie schiet ook de klokken van het laden en het stilstaan, voor de loop die mikt en terugslaat */
+  /* de soort als nummer in FOUTEN (een baas als 'b:' en zijn naam), en het volle leven als 0 zolang hij niet geraakt is */
+  function foutVol(f){ var hp = Math.round(f.hp), o = [Math.round(f.x), Math.round(f.y), hp, hp === f.maxHp ? 0 : f.maxHp, f.baas ? 'b:' + f.def.id : FOUTEN.indexOf(f.soort), f.r, f.flits > 0 ? 0.1 : 0, r1(f.stap), f.schild || 0, f.soort.laden ? r2(f.mikt || 0) : 0, f.id];
+    if (f.soort.laden) o.push(r2(f.laadKlok || 0), r2(f.stilKlok || 0));
+    else if (f.baas) o.push(r2(f.moe || 0));
+    return o; }
+  function aanvalVol(a){ var o = [a.soort, r1(a.x), r1(a.y), r2(a.t), r2(a.hoek || 0), a.richting || 1, r2(a.nu || 0), r1(a.straal || 0), a.geknald ? 1 : 0, r2(a.k || 1), r2(a.gat || 0), a.breed || 0, r2(a.boog || 0), r2(a.duur || 0), a.r0 || 0, a.kl || '', a.id];
+    var extra = extraVan(a);
+    if (a.ox !== undefined || extra) o.push(r1(a.ox || 0), r1(a.oy || 0));
+    /* plek 19: de lokalen van de bel, of de streep van het potlood, plat achter elkaar */
+    if (extra) o.push(extra);
+    return o; }
+  /* Een getal boven een fout krijgt bij het inpakken een nummer, zodat de browser het
+     maar een keer neerzet. Het nummer hoort niet bij de simulatie: die kijkt er niet naar. */
+  var ciNr = 0;
+  function cijferNummers(){ W.cijfers.forEach(function(c){ if (!c.nr) c.nr = ++ciNr; }); }
+  function cijferRij(c){ return [Math.round(c.x), Math.round(c.y), c.tekst, c.kleur, r2(c.leven), c.nr]; }
+  W.pakket = function(){
+    var d = standKop();
+    d.fo = W.fouten.map(foutVol);
+    cijferNummers();
+    d.ci = W.cijfers.map(cijferRij);
+    d.aa = W.aanvallen.map(aanvalVol);
+    return d;
+  };
+  /* ---------- de kleine stand ----------
+     Wat aan een fout of aanval niet verandert (de soort, de straal, het schild, de
+     kleur) gaat alleen mee in de eerste stand waarin hij zit; daarna alleen wat per
+     tik verandert. Een getal gaat een keer, als het ontstaat, en zweeft in de
+     browser zelf weg, net als hier in deeltjes.
+       fk  bekende fouten:   [x, y, hp, id, flits, ...]  met wie schiet mikt, laadklok, stilklok, een baas zijn moeheid
+       fn  nieuwe fouten:    de volle rij, zoals in fo
+       ak  bekende aanvallen: [x, y, t, id, nu, straal, geknald, streep van het potlood]
+       an  nieuwe aanvallen: de volle rij, zoals in aa
+       ce  nieuwe getallen:  de rij zoals in ci
+     Nullen aan het eind vallen weg. Iedereen aan de lijn krijgt dezelfde standen;
+     wie later verbindt krijgt eerst een volle stand (W.pakket), dus "bekend" geldt
+     voor iedereen tegelijk. Bij een nieuwe fase of ronde, en om de drie seconden als
+     vangnet, is de stand weer vol. v:2 zegt de browser dat de kamer kleine standen kent. */
+  var VANGNET = 180, bekendF = {}, bekendA = {}, ciVerstuurd = 0, laatsteF = null, laatsteR = null, volTik = -1e9;
+  function zonderNullen(o, min){ while (o.length > min && o[o.length - 1] === 0) o.pop(); return o; }
+  W.pakketKlein = function(vol){
+    var nf = {}, na = {};
+    W.fouten.forEach(function(f){ nf[f.id] = 1; });
+    W.aanvallen.forEach(function(a){ na[a.id] = 1; });
+    if (vol || W.fase !== laatsteF || W.ronde !== laatsteR || W.tik - volTik >= VANGNET){
+      var dv = W.pakket(); dv.v = 2;
+      bekendF = nf; bekendA = na; ciVerstuurd = ciNr; laatsteF = W.fase; laatsteR = W.ronde; volTik = W.tik;
+      return dv;
+    }
+    var d = standKop(); d.v = 2;
+    d.fk = []; d.fn = []; d.ak = []; d.an = [];
+    W.fouten.forEach(function(f){
+      if (!bekendF[f.id]){ d.fn.push(foutVol(f)); return; }
+      var o = [Math.round(f.x), Math.round(f.y), Math.round(f.hp), f.id, f.flits > 0 ? 1 : 0];
+      if (f.soort.laden) o.push(r2(f.mikt || 0), r2(f.laadKlok || 0), r2(f.stilKlok || 0));
+      else if (f.baas) o.push(r2(f.moe || 0));
+      d.fk.push(zonderNullen(o, 4));
+    });
+    W.aanvallen.forEach(function(a){
+      if (!bekendA[a.id]){ d.an.push(aanvalVol(a)); return; }
+      var o = [r1(a.x), r1(a.y), r2(a.t), a.id, r2(a.nu || 0), r1(a.straal || 0), a.geknald ? 1 : 0];
+      /* de lokalen van de bel liggen vast, de streep van het potlood groeit */
+      if (a.soort === 'krabbel') o.push(extraVan(a));
+      d.ak.push(zonderNullen(o, 4));
+    });
+    cijferNummers();
+    d.ce = [];
+    W.cijfers.forEach(function(c){ if (c.nr > ciVerstuurd) d.ce.push(cijferRij(c)); });
+    ciVerstuurd = ciNr; bekendF = nf; bekendA = na;
+    return d;
   };
   function extraVan(a){
     if (a.soort === 'bel') return [].concat.apply([], a.vakken || []);

@@ -731,7 +731,6 @@ export class Kamer extends DurableObject {
       if (this.stand.duel && this.stand.fase === "lobby" && Object.keys(this.stand.spelers).length >= this.samenMax() && this.lobbyKlaar()){
         this.ctx.waitUntil(this.duelAftellen());
       }
-      this.zegSpelers();
       if (rol === "speler") this.planStand();
     } else {
       if (rol === "speler") this.stuur(server, { t: "jouw", jouw: this.jouw(sid) });
@@ -1150,8 +1149,26 @@ export class Kamer extends DurableObject {
   }
   motorZend(){
     if (!this.motor) return;
+    if (this.motorSpel === "zwaard" && this.motor.pakketKlein) return this.zwaardZend();
     const s = JSON.stringify({ t: "net", d: this.motor.pakket() });
     this.ctx.getWebSockets("speler").forEach(ws => { try { ws.send(s); } catch (e){} });
+  }
+  /* Zwaardvechter: een pagina die kleine standen kent (nk, zie strijdBericht) krijgt
+     die; een oudere pagina uit de cache krijgt de volle stand zoals altijd. Elk
+     soort wordt een keer ingepakt, hoeveel spelers er ook zijn. */
+  zwaardZend(){
+    const W = this.motor, socks = this.ctx.getWebSockets("speler");
+    const klein = socks.filter(ws => (ws.deserializeAttachment() || {}).nk);
+    let s = null, sVol = null;
+    if (klein.length){
+      const d = W.pakketKlein();
+      s = JSON.stringify({ t: "net", d });
+      if (!d.fk) sVol = s;
+    }
+    socks.forEach(ws => {
+      if (klein.indexOf(ws) < 0 && !sVol) sVol = JSON.stringify({ t: "net", d: W.pakket() });
+      try { ws.send(klein.indexOf(ws) >= 0 ? s : sVol); } catch (e){}
+    });
   }
   motorStop(){
     if (this.motorKlok){ clearInterval(this.motorKlok); this.motorKlok = null; }
@@ -1251,6 +1268,17 @@ export class Kamer extends DurableObject {
         st.keuze = st.keuze || {}; st.keuze[wie.sid] = m.d; this.ctx.waitUntil(this.bewaar());
         if (st.fase === "bezig" && !this.motor && this.torenStart()){ if (this.motorWacht){ clearTimeout(this.motorWacht); this.motorWacht = null; } }
         return;
+      }
+      if (this.motor && this.motorSpel === "zwaard" && m.d){
+        /* nv: deze pagina kent de kleine stand. Het hoort bij deze verbinding, dus
+           een herladen pagina (misschien een oude uit de cache) begint weer zonder. */
+        if (m.d.nv === 2 && !wie.nk){ try { ws.serializeAttachment(Object.assign({}, wie, { nk: 1 })); } catch (e){} }
+        /* de browser mist iets (een fout zonder soort): een volle stand voor hem alleen, hoogstens een per seconde */
+        if (m.d.k === "vol"){
+          const nu = Date.now(); this.volKlok = this.volKlok || {};
+          if (nu - (this.volKlok[wie.sid] || 0) >= 1000){ this.volKlok[wie.sid] = nu; this.stuur(ws, { t: "net", d: this.motor.pakket() }); }
+          return;
+        }
       }
       if (this.motor){ this.motorBericht(wie, m.d); return; }
       /* van is het openbare nummer, niet het kenmerk: met het kenmerk kon de
@@ -1685,10 +1713,13 @@ export class Kamer extends DurableObject {
   }
   strijdLijst(){
     const st = this.stand, nu = Date.now();
+    /* wie er verbonden is: één keer alle sockets langs, niet per speler opnieuw */
+    const aan = new Set();
+    this.ctx.getWebSockets("speler").forEach(ws => { const w = ws.deserializeAttachment() || {}; if (w.sid) aan.add(w.sid); });
     return Object.keys(st.spelers).map(sid => {
       const sp = st.spelers[sid];
       return { sid: sp.pid, naam: sp.naam, av: sp.av || "", ronde: sp.ronde, gehaald: sp.gehaald, leven: sp.leven, punten: sp.punten,
-               af: !!sp.af, aanvallen: sp.aanvallen || 0, aan: this.aanwezig(sid), stijl: sp.stijl || "", klaar: !!sp.klaar, weg: !!sp.weg,
+               af: !!sp.af, aanvallen: sp.aanvallen || 0, aan: aan.has(sid), stijl: sp.stijl || "", klaar: !!sp.klaar, weg: !!sp.weg,
                voort: sp.voort || 0, tijd: sp.tijd || 0, bij: sp.rit ? sp.rit.bij || 0 : 0,
                /* in een race: de plek in duizendsten van een poort, de snelheid en hoe oud die melding is */
                plek: this.race ? sp.plek || 0 : undefined, vs: this.race ? sp.vs : undefined, oud: this.race && sp.plekT ? Math.min(5000, nu - sp.plekT) : undefined,
@@ -1700,8 +1731,8 @@ export class Kamer extends DurableObject {
         : (b.gehaald - a.gehaald || b.punten - a.punten || (a.af === b.af ? 0 : a.af ? 1 : -1) || a.naam.localeCompare(b.naam)))
       .map((r, i) => Object.assign(r, { rang: i + 1 }));
   }
-  standBericht(sid){
-    const lijst = this.strijdLijst();
+  standBericht(sid, lijst){
+    lijst = lijst || this.strijdLijst();
     const bezig = lijst.filter(r => !r.af).length;
     const kop = lijst[0] ? { naam: lijst[0].naam, ronde: lijst[0].ronde } : null;
     /* het bord: ook de klok van de kamer en het startschot, voor de tijd van de race */
@@ -1723,10 +1754,12 @@ export class Kamer extends DurableObject {
   }
   stuurStand(){
     if (!this.strijd) return;
-    this.naarHost(this.standBericht(null));
+    /* de lijst één keer maken: met dertig leerlingen scheelt dat dertig keer alles sorteren */
+    const lijst = this.strijdLijst();
+    this.naarHost(this.standBericht(null, lijst));
     this.ctx.getWebSockets("speler").forEach(ws => {
       const wie = ws.deserializeAttachment() || {};
-      this.stuur(ws, this.standBericht(wie.sid));
+      this.stuur(ws, this.standBericht(wie.sid, lijst));
     });
   }
   strijdEinde(sid){
