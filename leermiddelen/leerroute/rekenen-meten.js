@@ -149,9 +149,11 @@
       for (j = 1; j < h; j++) s += ln(x0, y0 + j * s0, x0 + W, y0 + j * s0, { w:1, op:0.45 }) + ln(x0 + W, y0 + j * s0, x0 + W + b * dx, y0 + j * s0 + b * dy, { w:1, op:0.45 });
       for (i = 1; i < b; i++) s += ln(x0 + i * dx, y0 + i * dy, x0 + W + i * dx, y0 + i * dy, { w:1, op:0.45 }) + ln(x0 + W + i * dx, y0 + i * dy, x0 + W + i * dx, y0 + H + i * dy, { w:1, op:0.45 });
     }
-    s += tx(x0 + W / 2, y0 + H + 24, T(l) + ' ' + e, { vet:true });
-    s += tx(x0 + W + b * dx + 10, y0 + H / 2 + b * dy + 5, T(h) + ' ' + e, { a:'start', vet:true });
-    s += tx(x0 + b * dx / 2 - 8, y0 + b * dy / 2 + 2, T(b) + ' ' + e, { a:'end', vet:true });
+    /* o.vraag: 'l', 'b' of 'h' krijgt een vraagteken in plaats van de maat */
+    function maat(v, k){ return o.vraag === k ? '?' : T(v) + ' ' + e; }
+    s += tx(x0 + W / 2, y0 + H + 24, maat(l, 'l'), { vet:true, k:o.vraag === 'l' ? K[1] : null });
+    s += tx(x0 + W + b * dx + 10, y0 + H / 2 + b * dy + 5, maat(h, 'h'), { a:'start', vet:true, k:o.vraag === 'h' ? K[1] : null });
+    s += tx(x0 + b * dx / 2 - 8, y0 + b * dy / 2 + 2, maat(b, 'b'), { a:'end', vet:true, k:o.vraag === 'b' ? K[1] : null });
     return svg(x0 + W + b * dx + 90, y0 + H + 40, s, 'balk van ' + T(l) + ' bij ' + T(b) + ' bij ' + T(h) + ' ' + e, 480);
   }
   function cirkel(waarde, isStraal, e){
@@ -313,6 +315,82 @@
     return svg(570, 160, s, 'pijlenketting heen en terug', 560);
   }
 
+  /* ---------- figuren met maten ---------- */
+  /* punten in eenheden (y omhoog) passend in een vak van W bij H, met marge m */
+  function pasIn(pts, W, H, m){
+    var xs = pts.map(function(p){ return p[0]; }), ys = pts.map(function(p){ return p[1]; });
+    var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
+    var sc = Math.min((W - 2 * m) / ((x1 - x0) || 1), (H - 2 * m) / ((y1 - y0) || 1)), ox = (W - (x1 - x0) * sc) / 2, oy = (H - (y1 - y0) * sc) / 2;
+    return function(p){ return [ox + (p[0] - x0) * sc, H - oy - (p[1] - y0) * sc]; };
+  }
+  /* een veelhoek (schermpunten) met een maat buiten elke zijde; o.streep zet een streepje op elke zijde (allemaal even lang) */
+  function veelhoek(P, zijden, o){
+    o = o || {};
+    var n = P.length, cx = 0, cy = 0, s = '', i;
+    P.forEach(function(p){ cx += p[0] / n; cy += p[1] / n; });
+    s += pg(P, { f:o.f || K[0], fo:o.fo != null ? o.fo : 0.14 });
+    for (i = 0; i < n; i++){
+      var A = P[i], B = P[(i + 1) % n], mx = (A[0] + B[0]) / 2, my = (A[1] + B[1]) / 2, L = Math.hypot(B[0] - A[0], B[1] - A[1]) || 1, nx = (B[1] - A[1]) / L, ny = -(B[0] - A[0]) / L;
+      if (nx * (mx - cx) + ny * (my - cy) < 0){ nx = -nx; ny = -ny; }
+      if (o.streep) s += ln(mx - nx * 8, my - ny * 8, mx + nx * 8, my + ny * 8, { k:K[1], w:2.5 });
+      var t = zijden[i]; if (t == null || t === '') continue;
+      var d = 15 + Math.abs(nx) * 3.8 * String(t).length;
+      s += tx(mx + nx * d, my + ny * d + 5, t, { vet:true, k:t === '?' ? K[1] : null });
+    }
+    return s;
+  }
+  /* een antwoord met π: goed met 3,14 of met de π-knop, op één of twee decimalen */
+  function metPi(ex, exPi, e){ return uniek([].concat(metE(T(r2(ex)), e), metE(T(r1(ex)), e), metE(T(r2(exPi)), e), metE(T(r1(exPi)), e))); }
+  /* een vierkantje in de rechte hoek bij V, met de benen naar A en B */
+  function rechteHoek(V, A, B, k){
+    var L1 = Math.hypot(A[0] - V[0], A[1] - V[1]) || 1, L2 = Math.hypot(B[0] - V[0], B[1] - V[1]) || 1, u = [(A[0] - V[0]) / L1 * 12, (A[1] - V[1]) / L1 * 12], v = [(B[0] - V[0]) / L2 * 12, (B[1] - V[1]) / L2 * 12];
+    return '<path d="M' + n1(V[0] + u[0]) + ' ' + n1(V[1] + u[1]) + ' L' + n1(V[0] + u[0] + v[0]) + ' ' + n1(V[1] + u[1] + v[1]) + ' L' + n1(V[0] + v[0]) + ' ' + n1(V[1] + v[1]) + '" style="fill:none;stroke:' + (k || 'var(--ink)') + ';stroke-width:1.6"/>';
+  }
+  /* een L-vormige figuur van W bij H met rechtsboven een stuk eruit (a breed bovenaan, c hoog rechtsonder); lab: welke maten erbij staan */
+  function lVorm(W, H, a, c, lab, e){
+    var hb = H - c, s0 = Math.min(300 / W, 200 / H), x0 = 64, y0 = 26, s = '';
+    function X(u){ return x0 + u * s0; } function Y(v){ return y0 + v * s0; }
+    s += pg([[X(0), Y(0)], [X(a), Y(0)], [X(a), Y(hb)], [X(W), Y(hb)], [X(W), Y(H)], [X(0), Y(H)]], { f:K[0], fo:0.14 });
+    s += tx(X(W / 2), Y(H) + 24, W + ' ' + e, { vet:true }) + tx(X(0) - 10, Y(H / 2) + 5, H + ' ' + e, { a:'end', vet:true }) + tx(X(a / 2), Y(0) - 8, a + ' ' + e, { vet:true }) + tx(X(W) + 10, Y(hb + c / 2) + 5, c + ' ' + e, { a:'start', vet:true });
+    if (lab.wb) s += tx(X((a + W) / 2), Y(hb) - 8, (W - a) + ' ' + e, { k:K[1], vet:true });
+    if (lab.hb) s += tx(X(a) + 8, Y(hb / 2) + 5, hb + ' ' + e, { a:'start', k:K[1], vet:true });
+    return svg(X(W) + 74, Y(H) + 40, s, 'figuur in de vorm van een L', 460);
+  }
+  /* een afstand-tijdgrafiek: punten [[uur, km], ...], x van 0 tot xmax in halve uren, y van 0 tot ymax met stap */
+  function ritGrafiek(pts, xmax, ymax, ystap, o){
+    o = o || {};
+    var x0 = 64, x1 = 560, yT = 24, yB = 236, s = '', v;
+    function X(t){ return x0 + t / xmax * (x1 - x0); } function Y(d){ return yB - d / ymax * (yB - yT); }
+    for (v = 0; v <= ymax + 1e-9; v += ystap){ s += ln(x0, Y(v), x1, Y(v), { w:1, op:v ? 0.28 : 1 }) + tx(x0 - 10, Y(v) + 5, T(v), { a:'end' }); }
+    for (v = 0; v <= xmax + 1e-9; v += 0.5){ s += ln(X(v), yT, X(v), yB, { w:1, op:v ? 0.2 : 1 }) + tx(X(v), yB + 22, T(v)); }
+    s += tx(x0 - 6, 12, o.as || 'afstand (km)', { a:'start' }) + tx(x1, yB + 42, 'tijd (uur)', { a:'end' });
+    s += '<polyline points="' + pts.map(function(p){ return n1(X(p[0])) + ',' + n1(Y(p[1])); }).join(' ') + '" style="fill:none;stroke:var(--lr-1);stroke-width:3.5;stroke-linejoin:round"/>';
+    (o.nadruk || []).forEach(function(d){ s += ln(X(pts[d[0]][0]), Y(pts[d[0]][1]), X(pts[d[1]][0]), Y(pts[d[1]][1]), { k:K[1], w:6 }); });
+    return svg(580, 280, s, o.aria || 'afstand-tijdgrafiek');
+  }
+  /* een dienstregeling: vier stations onder elkaar, drie treinen naast elkaar (elk half uur een) */
+  var LIJNEN = [['Zwolle', 'Deventer', 'Apeldoorn', 'Amersfoort'], ['Leiden', 'Den Haag', 'Delft', 'Rotterdam'], ['Groningen', 'Assen', 'Hoogeveen', 'Meppel'], ['Venlo', 'Roermond', 'Weert', 'Eindhoven'], ['Alkmaar', 'Zaandam', 'Amsterdam', 'Utrecht']];
+  function tT(x){ return tS(Math.floor(x / 60) % 24, x % 60); }
+  function dienst(R){
+    var st = R.kies(LIJNEN), start = 60 * R.heel(7, 15) + R.heel(0, 29), rij = [0], i;
+    for (i = 1; i < st.length; i++) rij.push(rij[i - 1] + R.heel(8, 21));
+    var t = st.map(function(x, k){ return [0, 1, 2].map(function(j){ return start + 30 * j + rij[k]; }); });
+    return { st:st, t:t, tabel:function(nad){ return R0.teken.tabel([['station', 'trein 1', 'trein 2', 'trein 3']].concat(st.map(function(x, k){ return [x].concat(t[k].map(tT)); })), { kop:true, zijkop:true, nadruk:(nad || []).map(function(p){ return [p[0] + 1, p[1] + 1]; }) }); } };
+  }
+  /* twee lijnen in één grafiek, met een legenda */
+  function tweeLijnen(xs, A, B, st, max, o){
+    o = o || {};
+    var G2 = assen({ xs:xs, max:max, stap:st, elke:o.elke || 2, as:o.as }), s = G2.s;
+    [[A, 0], [B, 1]].forEach(function(p){
+      s += '<polyline points="' + p[0].map(function(v, i){ return n1(G2.X(i)) + ',' + n1(G2.Y(v)); }).join(' ') + '" style="fill:none;stroke:' + K[p[1]] + ';stroke-width:3;stroke-linejoin:round' + (p[1] ? ';stroke-dasharray:9 6' : '') + '"/>';
+      p[0].forEach(function(v, i){ s += '<circle cx="' + n1(G2.X(i)) + '" cy="' + n1(G2.Y(v)) + '" r="4.5" style="fill:' + K[p[1]] + '"/>'; });
+    });
+    if (o.lijn) s += ln(G2.x0, G2.Y(o.lijn), G2.x1, G2.Y(o.lijn), { k:K[3], stip:true, w:2.5 });
+    if (o.kol != null) s += ln(G2.X(o.kol), G2.yT, G2.X(o.kol), G2.yB, { k:K[3], stip:true, w:2.5 });
+    s += ln(130, 288, 166, 288, { k:K[0], w:3 }) + tx(174, 293, o.naamA, { a:'start', vet:true }) + ln(330, 288, 366, 288, { k:K[1], w:3, stip:true }) + tx(374, 293, o.naamB, { a:'start', vet:true });
+    return svg(580, 304, s, o.aria || 'twee lijnen in een grafiek');
+  }
+
   LEERROUTE.voeg('rekenen', [
     /* ================= klok en tijd ================= */
     { groep:{ id:'tijd-klok', niveau:'basis', domein:'meten', naam:'Klokkijken en tijd', uit:'De wijzerklok, de digitale klok, tijdsduur en de kalender. Bij tijd tel je niet tot 100 maar tot 60: daar gaat het vaak mis.' },
@@ -428,7 +506,10 @@
                 if (n >= 1) sp.push({ van:van, naar:van + H * 60, tekst:'+' + H + ' uur' });
                 if (n >= 2) sp.push({ van:van + H * 60, naar:(hA) * 60, tekst:'+' + (60 - m1) + ' min' });
                 if (n >= 4) sp.push({ van:hA * 60, naar:tot, tekst:'+' + rest + ' min' });
-                return tijdLijn(R, van, tot, [van, van + H * 60, hA * 60, tot], sp); },
+                /* de tussentijden komen er pas bij als je ze hebt uitgerekend; de aankomsttijd is tot het eind een vraagteken */
+                var lab = [van, tot]; if (n >= 1) lab.push(van + H * 60); if (n >= 2) lab.push(hA * 60);
+                return R.teken.lijn({ van:van, tot:tot, streep:60, labels:lab, sprongen:sp, stip:[van], nieuw:true, aria:'tijdlijn',
+                  toon:function(x){ return x === tot && n < 4 ? '?' : tS(Math.floor(x / 60), x % 60); } }); },
               stappen:[
                 { tekst:'Eerst de hele uren erbij: ' + tS(h1, m1) + ' + ' + H + ' uur =', antwoord:tS(h1 + H, m1), controle:tijdC(h1 + H, m1, true), hint:'Het uur wordt ' + H + ' meer: ' + h1 + ' + ' + H + '. De minuten blijven ' + pad(m1) + '.' },
                 { tekst:'Van ' + tS(h1 + H, m1) + ' naar het hele uur ' + tS(hA, 0) + ': hoeveel minuten?', antwoord:String(60 - m1), eenheid:'min', hint:'Vul ' + m1 + ' aan tot 60.' },
@@ -470,6 +551,63 @@
                 { tekst:'Van ' + D + ' ' + MAAND[m1] + ' tot ' + d2 + ' ' + MAAND[m1 + 1] + ': hoeveel dagen?', antwoord:String(d2), eenheid:'dagen', hint:'De nieuwe maand begint bij 1. Tot de ' + d2 + 'e zijn het ' + d2 + ' dagen.' },
                 { tekst:(D - d1) + ' + ' + d2 + ' =', antwoord:metE(String(tot), 'dagen'), eenheid:'dagen', hint:'Tel de dagen van de twee maanden op.' }
               ] };
+          } }
+      ] },
+
+    /* ================= dienstregelingen en sporttijden (1F) ================= */
+    { groep:{ id:'tijd-schema', niveau:'1F', domein:'meten', naam:'Dienstregelingen en sporttijden', kd:['rw10A.b', 'rw17A.a'],
+        uit:'Tijden opzoeken in een dienstregeling, reistijden en overstappen uitrekenen, en rekenen met sporttijden in seconden en honderdsten.' },
+      doelen:[
+        { id:'tijd-dienst', naam:'Een dienstregeling lezen', kort:'Zoek de kolom van je trein en de rij van je station; reken dan de reistijd uit',
+          uit:'<p>In een <b>dienstregeling</b> staat elke trein in een eigen <b>kolom</b>. Elke <b>rij</b> is een station. Waar ze elkaar kruisen, staat hoe laat die trein bij dat station is.</p><p>Zoek eerst de kolom van jouw trein: de tijd bij het station waar je instapt. Ga in die kolom omlaag naar je eindstation.</p><p>De reistijd reken je uit zoals elke tijdsduur: eerst naar het hele uur, dan de rest. Van 8:47 tot 9:15 is 13 + 15 = 28 minuten.</p>',
+          wanneer:'je met de trein of bus reist en wilt weten hoe laat je aankomt en hoe lang je onderweg bent.',
+          maak:function(R){
+            var d = dienst(R), j = R.heel(0, 2), a = R.heel(0, 1), b = R.heel(a + 2, 3), van = d.t[a][j], naar = d.t[b][j], min = naar - van;
+            var tab = function(n){ return d.tabel(n >= 1 ? [[a, j], [b, j]] : []); };
+            return { vraag:'dienst ' + d.st[a] + ' ' + tT(van) + ' ' + d.st[b], vraagHtml:'Hoe lang duurt de reis?', context:'Je stapt in ' + d.st[a] + ' in de trein van ' + tT(van) + '. Je reist naar ' + d.st[b] + '.', eenheid:'min',
+              antwoord:duurT(min), controle:duurC(min), beeld:tab, zelfBeeld:tab(0), stappen:[
+                { tekst:'Zoek de kolom met ' + tT(van) + ' bij ' + d.st[a] + '. Hoe laat kom je met die trein in ' + d.st[b] + ' aan?', antwoord:tT(naar), controle:tijdC(Math.floor(naar / 60), naar % 60, true), hint:'Blijf in dezelfde kolom en ga omlaag tot de rij ' + d.st[b] + '.' },
+                { tekst:'Van ' + tT(van) + ' tot ' + tT(naar) + ' is hoeveel minuten?', antwoord:duurT(min), controle:duurC(min), eenheid:'min', hint:Math.floor(van / 60) === Math.floor(naar / 60) ? naar % 60 + ' − ' + van % 60 + ' minuten.' : 'Eerst naar het hele uur: ' + (60 - van % 60) + ' minuten. Dan nog ' + naar % 60 + ' minuten.' } ] };
+          } },
+        { id:'tijd-overstap', naam:'Overstappen en op tijd komen', kort:'Zoek de laatste trein die op tijd aankomt, of reken de tijd tussen aankomst en vertrek uit',
+          uit:'<p>Moet je ergens <b>uiterlijk</b> om 9:30 zijn? Kijk in de rij van je eindstation. Zoek de laatste trein die om 9:30 of eerder aankomt. Ga in die kolom omhoog: daar staat hoe laat je moet vertrekken.</p><p>Stap je <b>over</b> op een bus? Zoek hoe laat je trein aankomt. De tijd tot de bus vertrekt is je <b>overstaptijd</b>. Komt de trein om 8:52 aan en vertrekt de bus om 9:04, dan heb je 8 + 4 = 12 minuten.</p>',
+          wanneer:'je een reis plant met een afspraak of een overstap.',
+          maak:function(R){
+            var d = dienst(R), L = d.st.length - 1;
+            if (R.heel(0, 1)){
+              var j = R.heel(0, 1), aan = d.t[L][j], dl = aan + R.heel(1, Math.min(25, d.t[L][j + 1] - aan - 1));
+              var tab = function(n){ return d.tabel(n >= 2 ? [[L, j], [0, j]] : n >= 1 ? [[L, j]] : []); };
+              return { vraag:'uiterlijk ' + d.st[L] + ' ' + tT(dl) + ' ' + d.t.map(function(r){ return r.join('.'); }).join('|'), vraagHtml:'Hoe laat vertrek je uiterlijk uit ' + d.st[0] + '?', context:'Je moet uiterlijk om ' + tT(dl) + ' in ' + d.st[L] + ' zijn. Je reist met de trein uit ' + d.st[0] + '.',
+                antwoord:tT(d.t[0][j]), controle:tijdC(Math.floor(d.t[0][j] / 60), d.t[0][j] % 60, true), beeld:tab, zelfBeeld:tab(0), stappen:[
+                  { tekst:'Kijk in de rij ' + d.st[L] + '. Welke trein komt als laatste aan om ' + tT(dl) + ' of eerder? Hoe laat komt hij aan?', antwoord:tT(aan), controle:tijdC(Math.floor(aan / 60), aan % 60, true), hint:'De trein van ' + tT(d.t[L][j + 1]) + ' is te laat. Neem de trein ervoor.', fout:F(tT(d.t[L][j + 1]), 'Dan ben je te laat: ' + tT(d.t[L][j + 1]) + ' is na ' + tT(dl) + '.') },
+                  { tekst:'Ga in die kolom omhoog naar ' + d.st[0] + '. Hoe laat vertrekt die trein daar?', antwoord:tT(d.t[0][j]), controle:tijdC(Math.floor(d.t[0][j] / 60), d.t[0][j] % 60, true), hint:'Dezelfde kolom, de bovenste rij.' } ] };
+            }
+            var j2 = R.heel(0, 2), s = R.heel(1, L), aan2 = d.t[s][j2], bus = aan2 + R.heel(4, 16);
+            var tab2 = function(n){ return d.tabel(n >= 1 ? [[0, j2], [s, j2]] : []); };
+            return { vraag:'overstap ' + d.st[s] + ' ' + tT(d.t[0][j2]) + ' bus ' + tT(bus), vraagHtml:'Hoeveel minuten heb je om over te stappen?', context:'Je neemt de trein van ' + tT(d.t[0][j2]) + ' uit ' + d.st[0] + '. In ' + d.st[s] + ' stap je over op de bus. De bus vertrekt om ' + tT(bus) + '.', eenheid:'min',
+              antwoord:String(bus - aan2), controle:duurC(bus - aan2), beeld:tab2, zelfBeeld:tab2(0), stappen:[
+                { tekst:'Hoe laat komt je trein aan in ' + d.st[s] + '?', antwoord:tT(aan2), controle:tijdC(Math.floor(aan2 / 60), aan2 % 60, true), hint:'Zoek de kolom met ' + tT(d.t[0][j2]) + ' bovenaan en ga omlaag tot ' + d.st[s] + '.' },
+                { tekst:'Van ' + tT(aan2) + ' tot ' + tT(bus) + ' is hoeveel minuten?', antwoord:String(bus - aan2), controle:duurC(bus - aan2), eenheid:'min', hint:Math.floor(aan2 / 60) === Math.floor(bus / 60) ? (bus % 60) + ' − ' + (aan2 % 60) + '.' : 'Eerst naar het hele uur: ' + (60 - aan2 % 60) + ' minuten, dan nog ' + (bus % 60) + '.' } ] };
+          } },
+        { id:'tijd-sport', naam:'Sporttijden met honderdsten', kort:'Schrijf alles in seconden; boven een minuut tel je er 60 seconden bij',
+          uit:'<p>Bij sport meet je tijden in <b>seconden en honderdsten</b>: 58,90 is 58 seconden en 90 honderdsten.</p><p>Is een tijd langer dan een minuut, dan staat er bijvoorbeeld <b>1:02,35</b>: 1 minuut, 2 seconden en 35 honderdsten. Dat is 60 + 2,35 = <b>62,35 seconden</b>.</p><p>Schrijf eerst alles in seconden. Dan reken je gewoon met kommagetallen: 62,35 − 58,90 = 3,45 seconden.</p>',
+          wanneer:'je tijden van een wedstrijd vergelijkt of optelt.',
+          maak:function(R){
+            function sec(hh){ return T(hh / 100, { dec:2, vast:true }); }
+            function ant(hh){ return uniek(metE(sec(hh), 's', ['seconden', 'sec']).concat(metE(T(hh / 100), 's', ['seconden', 'sec']))); }
+            function mn(hh){ var m = Math.floor(hh / 6000), r = hh - m * 6000; return m + ':' + (r < 1000 ? '0' : '') + sec(r); }
+            var nm = R.hussel(['Lisa', 'Sem', 'Noor', 'Daan', 'Fatima', 'Milan', 'Eva', 'Yusuf']);
+            if (R.heel(0, 1)){
+              var a = R.heel(6005, 6599), b; do { b = R.heel(5600, 5995); } while (a - b < 50 || a % 100 === 0);
+              return { vraag:'zwemmen ' + mn(a) + ' en ' + sec(b), vraagHtml:'Hoeveel seconden was ' + nm[1] + ' sneller?', context:'Op de 100 meter zwemmen zwemt ' + nm[0] + ' ' + mn(a) + ' en ' + nm[1] + ' ' + sec(b) + '.', eenheid:'s', antwoord:ant(a - b), stappen:[
+                { tekst:'Schrijf ' + mn(a) + ' in seconden: 60 + ' + sec(a - 6000) + ' =', antwoord:ant(a), eenheid:'s', hint:'1 minuut is 60 seconden. Tel de seconden erachter erbij.', fout:F(sec(a + 4000), 'Een minuut is 60 seconden, geen 100.') },
+                { tekst:'Het verschil: ' + sec(a) + ' − ' + sec(b) + ' =', antwoord:ant(a - b), eenheid:'s', hint:'Zet de komma\'s onder elkaar. Of vul aan: van ' + sec(b) + ' naar 60 en dan naar ' + sec(a) + '.' } ] };
+            }
+            var t = [0, 1, 2, 3].map(function(){ return R.heel(1150, 1499); }), s1 = t[0] + t[1], s2 = t[2] + t[3];
+            return { vraag:'estafette ' + t.map(sec).join(' '), vraagHtml:'Wat is de tijd van het hele team?', context:'Vier lopers lopen elk 100 meter van de estafette. Hun tijden: ' + nm[0] + ' ' + sec(t[0]) + ', ' + nm[1] + ' ' + sec(t[1]) + ', ' + nm[2] + ' ' + sec(t[2]) + ' en ' + nm[3] + ' ' + sec(t[3]) + ' seconden.', eenheid:'s', antwoord:ant(s1 + s2), stappen:[
+              { tekst:'De eerste twee samen: ' + sec(t[0]) + ' + ' + sec(t[1]) + ' =', antwoord:ant(s1), eenheid:'s', hint:'Eerst de hele seconden, dan de honderdsten. 100 honderdsten is 1 seconde.' },
+              { tekst:'De laatste twee samen: ' + sec(t[2]) + ' + ' + sec(t[3]) + ' =', antwoord:ant(s2), eenheid:'s', hint:'Eerst de hele seconden, dan de honderdsten.' },
+              { tekst:'Alles samen: ' + sec(s1) + ' + ' + sec(s2) + ' =', antwoord:ant(s1 + s2), eenheid:'s', hint:'Tel de twee uitkomsten op.' } ] };
           } }
       ] },
 
@@ -543,6 +681,67 @@
                 { tekst:tot + ' : ' + n + ' =', antwoord:String(p), eenheid:'cent', hint:'Splits ' + tot + ' in stukken die makkelijk door ' + n + ' gaan.' },
                 { tekst:p + ' cent = € …', antwoord:G(p / 100), hint:'100 cent is € 1. Zet de komma twee plaatsen naar links.', fout:F(p, 'Dat is in centen. Schrijf het in euro\'s.') }
               ] };
+          } }
+      ] },
+
+    /* ================= geld in het huishouden (2F) ================= */
+    { groep:{ id:'geld-huis', niveau:'2F', domein:'meten', naam:'Geld in het huishouden', kd:['rw17A.a', 'rw10A.c'],
+        uit:'Rekenen met je loon en je uitgaven: uurloon, bruto en netto, en bedragen per week, per maand en per jaar.' },
+      doelen:[
+        { id:'geld-uurloon', naam:'Uurloon', kort:'Je loon is uurloon × uren; zet minuten eerst om naar een deel van een uur',
+          uit:'<p>Met een bijbaan verdien je een vast bedrag per uur: je <b>uurloon</b>. Je loon is <b>uurloon × aantal uren</b>.</p><p>Werk je ook een deel van een uur? Zet de minuten eerst om: 15 minuten is 0,25 uur, 30 minuten 0,5 uur en 45 minuten 0,75 uur. 3 uur en 30 minuten is dus 3,5 uur.</p><p>Andersom: weet je wat je verdiende en hoeveel uur je werkte? Dan is het uurloon <b>loon : uren</b>.</p>',
+          wanneer:'je wilt weten wat je met een bijbaan verdient.',
+          maak:function(R){
+            var u = R.kies([10, 10.5, 11, 11.4, 12, 12.6, 13.2, 14, 14.8]), baan = R.kies(['in de supermarkt', 'bij de bakker', 'als afwasser', 'in een snackbar', 'als vakkenvuller']);
+            if (R.heel(0, 1)){
+              var H = R.heel(2, 6), M = R.kies([15, 30, 45]), dec = M / 60, uren = H + dec, loon = Math.round(u * uren * 100) / 100;
+              return { vraag:'uurloon ' + g2(u) + ' × ' + H + ' uur ' + M, vraagHtml:'Hoeveel verdien je?', context:'Je werkt ' + baan + '. Je uurloon is ' + G(u) + '. Op zaterdag werk je ' + H + ' uur en ' + M + ' minuten.', stappen:[
+                { tekst:M + ' minuten is welk deel van een uur? Als kommagetal:', antwoord:T(dec), hint:'15 minuten is een kwart uur: 0,25. 30 minuten is 0,5. 45 minuten is 0,75.', fout:F('0,' + M, 'Een uur heeft 60 minuten, geen 100.') },
+                { tekst:'Je werkt dus ' + H + ' + ' + T(dec) + ' =', antwoord:metE(T(uren), 'uur'), eenheid:'uur', hint:'De hele uren en het deel van een uur samen.' },
+                { tekst:'Je loon: ' + g2(u) + ' × ' + T(uren) + ' =', antwoord:G(loon), hint:'Eerst ' + H + ' × ' + G(u) + ' = ' + G(H * u) + ', dan nog ' + T(dec) + ' × ' + G(u) + ' = ' + G(Math.round(dec * u * 100) / 100) + '.' } ] };
+            }
+            var H2 = R.heel(6, 16), totaal = Math.round(u * H2 * 100) / 100;
+            return { vraag:'uurloon terug ' + g2(totaal) + ' / ' + H2, vraagHtml:'Wat is je uurloon?', context:'Je werkt ' + baan + '. Deze maand werkte je ' + H2 + ' uur. Je kreeg ' + G(totaal) + '.', stappen:[
+              kstap(R, 'Hoe reken je het uurloon uit?', 'loon : uren', ['loon × uren', 'loon − uren'], 'Het uurloon is wat je voor één uur krijgt. Je verdeelt het loon over de uren.'),
+              { tekst:g2(totaal) + ' : ' + H2 + ' =', antwoord:G(u), hint:'Hoe vaak past ' + H2 + ' in ' + g2(totaal) + '? Reken eventueel in centen: ' + Math.round(totaal * 100) + ' : ' + H2 + '.' } ] };
+          } },
+        { id:'geld-loon', naam:'Bruto en netto', kort:'Netto is bruto min wat ervan af gaat: loonheffing en andere inhoudingen',
+          uit:'<p>Je <b>brutoloon</b> is wat je werkgever je in totaal betaalt. Daar gaat nog iets van af, zoals <b>loonheffing</b> (belasting) en geld voor je <b>pensioen</b>. Dat heten <b>inhoudingen</b>.</p><p>Wat overblijft is je <b>nettoloon</b>: dat komt op je rekening. Netto = bruto − inhoudingen.</p><p>Staat de loonheffing er als procent? Reken dan eerst uit hoeveel euro dat is.</p>',
+          wanneer:'je een loonstrook leest of wilt weten hoeveel je echt overhoudt.',
+          maak:function(R){
+            if (R.heel(0, 1)){
+              var B = 50 * R.heel(36, 64), L = Math.round(B * R.kies([0.12, 0.14, 0.16, 0.18])), P = R.heel(60, 150), inh = L + P, tab = R.teken.tabel([['brutoloon', G(B)], ['loonheffing', '− ' + G(L)], ['pensioen', '− ' + G(P)], ['nettoloon', '?']], { zijkop:true });
+              return { vraag:'netto ' + B + '-' + L + '-' + P, vraagHtml:'Wat is het nettoloon?', context:'Een stukje van een loonstrook, per maand.', beeld:tab, zelfBeeld:tab, stappen:[
+                { tekst:'Alle inhoudingen samen: ' + g2(L) + ' + ' + g2(P) + ' =', antwoord:G(inh), hint:'Tel de loonheffing en het pensioen op.' },
+                { tekst:'Netto: ' + g2(B) + ' − ' + g2(inh) + ' =', antwoord:G(B - inh), hint:'Het brutoloon min alle inhoudingen.', fout:F(g2(B + inh), 'De inhoudingen gaan eraf, niet erbij.') } ] };
+            }
+            var B2 = 50 * R.heel(4, 14), p = R.kies([8, 9, 10, 12]), hf = Math.round(B2 * p) / 100;
+            return { vraag:'netto ' + B2 + ' ' + p + '%', vraagHtml:'Hoeveel krijg je netto?', context:'Met je bijbaan verdien je deze maand ' + G(B2) + ' bruto. Er gaat ' + p + '% loonheffing af.', stappen:[
+              kstap(R, 'Wat is netto?', 'wat je overhoudt na de inhoudingen', ['wat je verdient voordat er iets af gaat', 'alleen de loonheffing'], 'Netto is wat er echt op je rekening komt.'),
+              { tekst:'De loonheffing: ' + p + '% van ' + g2(B2) + ' =', antwoord:G(hf), hint:'Eerst 1%: ' + g2(B2) + ' : 100 = ' + G(B2 / 100) + '. Dan keer ' + p + '.' },
+              { tekst:'Netto: ' + g2(B2) + ' − ' + g2(hf) + ' =', antwoord:G(B2 - hf), hint:'Bruto min de loonheffing.', fout:F(g2(hf), 'Dat is de loonheffing. Netto is wat overblijft.') } ] };
+          } },
+        { id:'geld-budget', naam:'Per week, per maand en per jaar', kort:'Een jaar heeft 52 weken en 12 maanden; reken via het jaar om',
+          uit:'<p>Bedragen staan vaak per week, per maand of per jaar. Om ze te vergelijken reken je ze om.</p><p>Een jaar heeft <b>52 weken</b> en <b>12 maanden</b>. Per week naar per jaar: keer 52. Per maand naar per jaar: keer 12.</p><p>Per week naar per maand? Een maand is iets meer dan 4 weken. Reken daarom via het jaar: € 15 per week is 52 × 15 = € 780 per jaar, en dat is 780 : 12 = <b>€ 65</b> per maand.</p>',
+          wanneer:'je je zakgeld, abonnementen of vaste uitgaven op een rij zet.',
+          maak:function(R){
+            var s = R.heel(0, 3);
+            if (s === 0){ var w = R.heel(5, 25), wat = R.kies(['zakgeld', 'je bijbaan', 'je krantenwijk']);
+              return { vraag:'week jaar ' + w, vraagHtml:'Hoeveel is dat per jaar?', context:'Je krijgt elke week ' + G(w).replace(',00', '') + ' van ' + wat + '.', stappen:[
+                { tekst:'Hoeveel weken heeft een jaar?', antwoord:'52', hint:'Ongeveer 4 weken per maand, maar precies: 52.', fout:F(48, 'Een maand is iets meer dan 4 weken. Een jaar heeft 52 weken.') },
+                { tekst:'52 × ' + G(w).replace(',00', '') + ' =', antwoord:G(52 * w), hint:'50 × ' + w + ' = ' + (50 * w) + ', en 2 × ' + w + ' = ' + (2 * w) + '.' } ] }; }
+            if (s === 1){ var m = R.heel(8, 45), ab = R.kies(['een telefoonabonnement', 'de sportclub', 'een streamingdienst', 'muziekles']);
+              return { vraag:'maand jaar ' + m, vraagHtml:'Hoeveel betaal je per jaar?', context:'Je betaalt ' + G(m).replace(',00', '') + ' per maand voor ' + ab + '.', stappen:[
+                { tekst:'Hoeveel maanden heeft een jaar?', antwoord:'12', hint:'Januari tot en met december.' },
+                { tekst:'12 × ' + G(m).replace(',00', '') + ' =', antwoord:G(12 * m), hint:'10 × ' + m + ' = ' + (10 * m) + ', en 2 × ' + m + ' = ' + (2 * m) + '.' } ] }; }
+            if (s === 2){ var w2 = 3 * R.heel(2, 10);
+              return { vraag:'week maand ' + w2, vraagHtml:'Hoeveel is dat gemiddeld per maand?', context:'Je krijgt elke week ' + G(w2).replace(',00', '') + ' zakgeld.', stappen:[
+                { tekst:'Per jaar: 52 × ' + G(w2).replace(',00', '') + ' =', antwoord:G(52 * w2), hint:'Een jaar heeft 52 weken.' },
+                { tekst:'Per maand: ' + G(52 * w2).replace(',00', '') + ' : 12 =', antwoord:G(52 * w2 / 12), hint:'Een jaar heeft 12 maanden.', fout:F(g2(4 * w2), 'Een maand is iets meer dan 4 weken. Reken via het jaar.') } ] }; }
+            var m3 = R.heel(9, 30), J = 12 * m3 - R.heel(2, 6) * 5, ding = R.kies(['een streamingdienst', 'de sportschool', 'een tijdschrift', 'de muziekapp']);
+            return { vraag:'jaarabo ' + J + ' maand ' + m3, vraagHtml:'Hoeveel bespaar je met het jaarabonnement?', context:'Voor ' + ding + ' kun je ' + G(m3).replace(',00', '') + ' per maand betalen, of in één keer ' + G(J).replace(',00', '') + ' voor een heel jaar.', stappen:[
+              { tekst:'Per maand betalen kost in een jaar: 12 × ' + G(m3).replace(',00', '') + ' =', antwoord:G(12 * m3), hint:'Een jaar heeft 12 maanden.' },
+              { tekst:'Het verschil: ' + G(12 * m3).replace(',00', '') + ' − ' + G(J).replace(',00', '') + ' =', antwoord:G(12 * m3 - J), hint:'Wat je per maand betaalt min het jaarabonnement.' } ] };
           } }
       ] },
 
@@ -680,6 +879,33 @@
                 om ? { tekst:'De omtrek: 2 × ' + l + ' + 2 × ' + b + ' =', antwoord:metE(2 * l + 2 * b, 'm'), eenheid:'m', hint:'Twee lange zijden en twee korte zijden.', fout:F(l * b, 'Dat is de oppervlakte. Hier gaat het om de rand.') }
                    : { tekst:'De oppervlakte: ' + l + ' × ' + b + ' =', antwoord:metE(l * b, 'm²'), eenheid:'m²', hint:'Lengte × breedte.', fout:F(2 * l + 2 * b, 'Dat is de omtrek. Hier gaat het om het vlak.') }
               ] };
+          } },
+        { id:'opp-omtrek-veelhoek', naam:'Omtrek van een veelhoek', kort:'Tel alle zijden op; zijn ze allemaal even lang, doe dan het aantal zijden keer één zijde',
+          uit:'<p>Ook bij een driehoek, een vijfhoek of een andere <b>veelhoek</b> is de omtrek de lengte van de rand: <b>alle zijden bij elkaar</b>.</p><p>Begin bij een hoek en loop de rand rond. Tel elke zijde één keer, dan sla je er geen over.</p><p>Zijn alle zijden <b>even lang</b>, zoals bij een regelmatige zeshoek met zijden van 4 cm? Dan reken je 6 × 4 = 24 cm.</p>',
+          wanneer:'je de rand zoekt van een figuur die geen rechthoek is.',
+          maak:function(R){
+            var soort = R.heel(0, 3), e = R.kies(['cm', 'm']), pts, zij, st, naam, i;
+            if (soort === 1){
+              var n = R.kies([5, 6, 8]), z = R.heel(2, 9), NM = { 5:'vijfhoek', 6:'zeshoek', 8:'achthoek' };
+              pts = []; for (i = 0; i < n; i++){ var hk = -Math.PI / 2 - Math.PI / n + i * 2 * Math.PI / n; pts.push([Math.cos(hk), Math.sin(hk)]); }
+              var f1 = pasIn(pts, 340, 230, 46), P1 = pts.map(f1), lab = P1.map(function(p, j){ return j === 0 ? z + ' ' + e : ''; }), b1 = svg(340, 230, veelhoek(P1, lab, { streep:true }), 'regelmatige ' + NM[n], 360);
+              return { vraag:'omtrek ' + NM[n] + ' ' + z + ' ' + e, vraagHtml:'Hoe groot is de omtrek?', context:'Dit is een regelmatige ' + NM[n] + ': alle zijden zijn even lang (de streepjes).', eenheid:e, beeld:b1, zelfBeeld:b1, stappen:[
+                { tekst:'Hoeveel zijden heeft een ' + NM[n] + '?', antwoord:String(n), hint:'Tel de zijden van de figuur, of kijk naar de naam.' },
+                { tekst:'Elke zijde is ' + z + ' ' + e + '. ' + n + ' × ' + z + ' =', antwoord:metE(n * z, e), eenheid:e, hint:n + ' zijden van ' + z + ' ' + e + '.', fout:F(n * z / 2, 'Je nam maar de helft van de zijden. Tel ze allemaal.') } ] };
+            }
+            if (soort === 0){
+              var a, b, c; do { a = R.heel(4, 14); b = R.heel(4, 14); c = R.heel(4, 14); } while (a + b <= c + 2 || a + c <= b + 2 || b + c <= a + 2);
+              var xC = (a * a + b * b - c * c) / (2 * a); pts = [[0, 0], [a, 0], [xC, Math.sqrt(b * b - xC * xC)]]; zij = [a, c, b]; naam = 'driehoek';
+            } else if (soort === 2){
+              var t = R.heel(4, 10), k = R.kies([1, 2]), bo = t + 6 * k; pts = [[0, 0], [bo, 0], [bo - 3 * k, 4 * k], [3 * k, 4 * k]]; zij = [bo, 5 * k, t, 5 * k]; naam = 'vierhoek';
+            } else {
+              var k2 = R.kies([1, 2]), w = 6 * k2, h = R.heel(3, 6) * k2; pts = [[0, 0], [w, 0], [w, h], [w / 2, h + 4 * k2], [0, h]]; zij = [w, h, 5 * k2, 5 * k2, h]; naam = 'vijfhoek';
+            }
+            var f = pasIn(pts, 360, 240, 48), P = pts.map(f), tot = zij.reduce(function(x, y){ return x + y; }, 0), dub = zij.filter(function(v, j){ return zij.indexOf(v) !== j; })[0];
+            var bl = svg(360, 240, veelhoek(P, zij.map(function(v){ return v + ' ' + e; })), naam + ' met maten', 380);
+            return { vraag:'omtrek ' + naam + ' ' + zij.join('-') + ' ' + e, vraagHtml:'Hoe groot is de omtrek?', context:'Bereken de omtrek van deze ' + naam + '.', eenheid:e, beeld:bl, zelfBeeld:bl, stappen:[
+              { tekst:'Hoeveel zijden heeft de figuur?', antwoord:String(zij.length), hint:'Tel de rechte stukken van de rand. Bij elke hoek begint een nieuwe zijde.' },
+              { tekst:'Tel alle zijden op: ' + zij.join(' + ') + ' =', antwoord:metE(tot, e), eenheid:e, hint:'Tel ze één voor één op.' + (dub ? ' Twee even lange zijden kun je samen nemen: 2 × ' + dub + ' = ' + (2 * dub) + '.' : ''), fout:F(tot - zij[zij.length - 1], 'Je vergat een zijde. Loop de hele rand rond.') } ] };
           } }
       ] },
 
@@ -797,6 +1023,158 @@
             return { vraag:'oppervlakte bij ' + (isR ? 'straal ' + r : 'diameter ' + d) + ' ' + e, context:'Reken met π ≈ 3,14.', eenheid:E, antwoord:ant, beeld:cirkel(isR ? r : d, isR, e), stappen:[st,
               { tekst:'Straal × straal: ' + r + ' × ' + r + ' =', antwoord:String(r * r), hint:r + ' keer zichzelf.', fout:F(2 * r, 'Dat is 2 × ' + r + '. Je moet ' + r + ' × ' + r + ' doen.') },
               { tekst:'3,14 × ' + (r * r) + ' =', antwoord:ant, eenheid:E, hint:'3 × ' + (r * r) + ' = ' + (3 * r * r) + ', en 0,14 × ' + (r * r) + ' = ' + T(0.14 * r * r) + '.' }] };
+          } },
+        { id:'opp-omtrek-samen', naam:'Omtrek van een samengestelde figuur', kort:'Reken eerst de zijden zonder maat uit en loop dan de hele rand rond',
+          uit:'<p>Bij een figuur in de vorm van een L staan niet bij alle zijden maten. Die reken je eerst uit.</p><p>Is de hele onderkant 10 m en het bovenste stuk 4 m, dan is het stuk ernaast 10 − 4 = 6 m. Zo vind je ook de hoogte die ontbreekt.</p><p>Loop daarna de hele rand rond en tel alle zes de zijden op. Handig om te weten: bij een L-vorm is de omtrek even groot als die van de rechthoek eromheen.</p>',
+          wanneer:'je de rand zoekt van een figuur die uit rechthoeken bestaat, zoals een tuin in de vorm van een L.',
+          maak:function(R){
+            var W = R.heel(6, 14), H = R.heel(5, 12), a = R.heel(2, W - 2), c = R.heel(2, H - 2), hb = H - c, wb = W - a, tot = 2 * W + 2 * H;
+            var wat = R.kies([['Een tuin in de vorm van een L.', 'Er komt een hek omheen.'], ['Een kamer met een hoek eruit.', 'Langs alle muren komen plinten.'], ['Een terras in de vorm van een L.', 'Langs de hele rand komt een rij lampjes.'], ['Een schoolplein in de vorm van een L.', 'Er komt een hek omheen.']]);
+            var pl = function(n){ return lVorm(W, H, a, c, { wb:n >= 1, hb:n >= 2 }, 'm'); };
+            return { vraag:'omtrek L ' + W + '-' + H + '-' + a + '-' + c, vraagHtml:'Hoe groot is de omtrek?', context:wat[0] + ' ' + wat[1], eenheid:'m', beeld:pl, zelfBeeld:pl(0), stappen:[
+              { tekst:'De liggende zijde rechtsboven heeft geen maat. De hele onderkant is ' + W + ' m en het stuk linksboven ' + a + ' m: ' + W + ' − ' + a + ' =', antwoord:metE(wb, 'm'), eenheid:'m', hint:'Het stuk linksboven en het stuk ernaast zijn samen even lang als de onderkant.' },
+              { tekst:'De staande zijde in het midden heeft ook geen maat: ' + H + ' − ' + c + ' =', antwoord:metE(hb, 'm'), eenheid:'m', hint:'De hele linkerkant is ' + H + ' m. De rechterkant onder is ' + c + ' m.' },
+              { tekst:'Alle zes de zijden samen: ' + [W, c, wb, hb, a, H].join(' + ') + ' =', antwoord:metE(tot, 'm'), eenheid:'m', hint:'Loop de rand rond en tel elke zijde één keer.', fout:F(W * c + a * hb, 'Dat is de oppervlakte. De omtrek is de rand.', W + H + a + c, 'Je vergat de twee zijden zonder maat.') } ] };
+          } },
+        { id:'opp-parallellogram', naam:'Oppervlakte van een parallellogram', kort:'Basis × hoogte; de hoogte staat loodrecht op de basis, de schuine zijde gebruik je niet',
+          uit:'<p>Knip van een <b>parallellogram</b> aan één kant een driehoek af en leg die aan de andere kant. Dan heb je een <b>rechthoek</b> die even groot is.</p><p>Daarom is de oppervlakte <b>basis × hoogte</b>. De hoogte is de rechte afstand van de basis tot de overkant: de stippellijn met het vierkantje. De schuine zijde gebruik je niet.</p><p>Basis 9 cm en hoogte 4 cm: 9 × 4 = 36 cm².</p>',
+          wanneer:'een figuur twee paar evenwijdige zijden heeft, maar geen rechte hoeken.',
+          maak:function(R){
+            var b = R.heel(4, 15), h = R.heel(2, 10), o = R.heel(1, Math.max(1, Math.min(b - 2, Math.round(h * 0.8)))), sch = r1(Math.sqrt(h * h + o * o)), e = R.kies(['cm', 'm']);
+            var pts = [[0, 0], [b, 0], [b + o, h], [o, h]], f = pasIn(pts, 380, 230, 48), P = pts.map(f), V = f([o, 0]);
+            var s = veelhoek(P, [b + ' ' + e, T(sch) + ' ' + e, '', '']) + ln(P[3][0], P[3][1], V[0], V[1], { k:K[1], stip:true, w:2.5 }) + rechteHoek(V, P[1], P[3], K[1]) + tx(V[0] + 8, (P[3][1] + V[1]) / 2 + 5, h + ' ' + e, { a:'start', k:K[1], vet:true });
+            var bl = svg(380, 230, s, 'parallellogram met basis, schuine zijde en hoogte', 420);
+            return { vraag:'parallellogram ' + b + '-' + h + '-' + T(sch) + ' ' + e, vraagHtml:'Bereken de oppervlakte.', context:'De basis is ' + b + ' ' + e + ', de hoogte ' + h + ' ' + e + ' en de schuine zijde ' + T(sch) + ' ' + e + '.', eenheid:e + '²', beeld:bl, zelfBeeld:bl, stappen:[
+              kstap(R, 'Welke maat heb je naast de basis nodig?', 'de hoogte: ' + h + ' ' + e, ['de schuine zijde: ' + T(sch) + ' ' + e], 'De hoogte staat recht op de basis: de stippellijn met het vierkantje.'),
+              { tekst:'Basis × hoogte: ' + b + ' × ' + h + ' =', antwoord:metE(b * h, e + '²'), eenheid:e + '²', hint:'Net als bij de rechthoek die je krijgt als je het driehoekje verplaatst.', fout:F(T(r2(b * sch)), 'Je nam de schuine zijde. Gebruik de hoogte.', T(b * h / 2), 'Een parallellogram is geen driehoek: je deelt niet door 2.') } ] };
+          } },
+        { id:'opp-driehoek-buiten', naam:'Driehoek: de hoogte buiten de driehoek', kort:'Bij een stompe driehoek valt de hoogte buiten de driehoek, op het verlengde van de basis',
+          uit:'<p>De <b>hoogte</b> is de rechte afstand van de top tot de lijn waar de basis op ligt. Bij een driehoek met een stompe hoek valt die hoogte <b>buiten</b> de driehoek.</p><p>Verleng dan de basis met een stippellijn en trek de hoogte vanaf de top recht naar beneden. De formule blijft hetzelfde: <b>basis × hoogte : 2</b>.</p><p>De lange schuine zijde gebruik je niet.</p>',
+          wanneer:'je een driehoek met een stompe hoek krijgt.',
+          maak:function(R){
+            var b, h; do { b = R.heel(3, 12); h = R.heel(3, 10); } while ((b * h) % 2);
+            var u = R.heel(2, 5), e = R.kies(['cm', 'm']), L = r1(Math.sqrt((b + u) * (b + u) + h * h));
+            var pts = [[0, 0], [b, 0], [b + u, h]], f = pasIn(pts.concat([[b + u, 0]]), 400, 230, 50), P = pts.map(f), V = f([b + u, 0]);
+            var s = ln(P[1][0], P[1][1], V[0], V[1], { stip:true, w:1.6 }) + veelhoek(P, ['basis ' + b + ' ' + e, '', T(L) + ' ' + e]) + ln(P[2][0], P[2][1], V[0], V[1], { k:K[1], stip:true, w:2.5 }) + rechteHoek(V, P[1], P[2], K[1]) + tx(V[0] + 8, (P[2][1] + V[1]) / 2 + 5, 'hoogte ' + h + ' ' + e, { a:'start', k:K[1], vet:true });
+            var bl = svg(400, 230, s, 'stompe driehoek met de hoogte buiten de driehoek', 440);
+            return { vraag:'driehoek buiten ' + b + '-' + h + '-' + u + ' ' + e, vraagHtml:'Bereken de oppervlakte.', context:'De hoogte staat buiten de driehoek, op het verlengde van de basis.', eenheid:e + '²', beeld:bl, zelfBeeld:bl, stappen:[
+              kstap(R, 'Mag je deze hoogte gebruiken bij de basis van ' + b + ' ' + e + '?', 'ja, het is de rechte afstand van de top tot de lijn van de basis', ['nee, de hoogte moet in de driehoek staan', 'nee, je gebruikt de schuine zijde van ' + T(L) + ' ' + e], 'De hoogte staat recht op de lijn waar de basis op ligt. Die lijn mag je verlengen.'),
+              { tekst:'De rechthoek: basis × hoogte = ' + b + ' × ' + h + ' =', antwoord:metE(b * h, e + '²'), eenheid:e + '²', hint:'Basis keer hoogte.' },
+              { tekst:'De driehoek is de helft: ' + (b * h) + ' : 2 =', antwoord:metE(b * h / 2, e + '²'), eenheid:e + '²', hint:'De helft van ' + (b * h) + '.', fout:F(b * h, 'Dat is de rechthoek. Deel nog door 2.', T(r2(b * L / 2)), 'Je nam de schuine zijde. Gebruik de hoogte.') } ] };
+          } },
+        { id:'opp-driehoek-kies', naam:'Driehoek: zelf de basis en de hoogte kiezen', kort:'Zoek twee zijden die loodrecht op elkaar staan; de langste zijde gebruik je dan niet',
+          uit:'<p>Een driehoek ligt niet altijd met de basis onderaan. Hij kan gedraaid zijn, en soms staan bij alle drie de zijden maten.</p><p>Zoek dan de <b>rechte hoek</b> (het vierkantje). De twee zijden die daar samenkomen staan loodrecht op elkaar: de ene is de basis, de andere de hoogte.</p><p>De langste zijde, tegenover de rechte hoek, gebruik je niet. Zijden 6, 8 en 10 cm: 6 × 8 : 2 = 24 cm².</p>',
+          wanneer:'een driehoek scheef ligt of er meer maten bij staan dan je nodig hebt.',
+          maak:function(R){
+            var tr = R.kies([[3, 4, 5], [6, 8, 10], [5, 12, 13], [9, 12, 15], [8, 15, 17], [12, 16, 20], [7, 24, 25]]), p = tr[0], q = tr[1], r = tr[2], e = R.kies(['cm', 'm']), hk = R.kies([1, -1]) * R.heel(15, 70);
+            if (R.heel(0, 1)){ var w0 = p; p = q; q = w0; }
+            var pts = [[0, 0], [p, 0], [0, q]].map(function(v){ var a = hk * Math.PI / 180; return [v[0] * Math.cos(a) - v[1] * Math.sin(a), v[0] * Math.sin(a) + v[1] * Math.cos(a)]; });
+            var f = pasIn(pts, 380, 250, 52), P = pts.map(f), s = veelhoek(P, [p + ' ' + e, r + ' ' + e, q + ' ' + e]) + rechteHoek(P[0], P[1], P[2]);
+            var bl = svg(380, 250, s, 'gedraaide rechthoekige driehoek met drie maten', 420);
+            return { vraag:'driehoek ' + p + '-' + q + '-' + r + ' ' + hk + ' ' + e, vraagHtml:'Bereken de oppervlakte.', context:'Bij alle drie de zijden staat een maat. Kies zelf de basis en de hoogte.', eenheid:e + '²', beeld:bl, zelfBeeld:bl, stappen:[
+              kstap(R, 'Welke twee zijden staan loodrecht op elkaar?', p + ' ' + e + ' en ' + q + ' ' + e, [p + ' ' + e + ' en ' + r + ' ' + e, q + ' ' + e + ' en ' + r + ' ' + e], 'Kijk bij het vierkantje: daar is de hoek recht. De twee zijden die daar samenkomen zijn de basis en de hoogte.'),
+              { tekst:'Basis × hoogte: ' + p + ' × ' + q + ' =', antwoord:metE(p * q, e + '²'), eenheid:e + '²', hint:'De twee zijden bij de rechte hoek.' },
+              { tekst:'De driehoek is de helft: ' + (p * q) + ' : 2 =', antwoord:metE(T(p * q / 2), e + '²'), eenheid:e + '²', hint:'De helft van ' + (p * q) + '.', fout:F(T(p * r / 2), 'Je nam de langste zijde. Die staat niet loodrecht op een andere zijde.', T(q * r / 2), 'Je nam de langste zijde. Die staat niet loodrecht op een andere zijde.', p * q, 'Dat is de rechthoek. Deel nog door 2.') } ] };
+          } },
+        { id:'opp-driehoek-terug', naam:'Driehoek: de hoogte of de basis terugrekenen', kort:'Doe de oppervlakte keer 2, dan heb je de rechthoek; deel die door de maat die je weet',
+          uit:'<p>Soms weet je de oppervlakte al, en zoek je de hoogte of de basis. Reken dan <b>terug</b>.</p><p>De driehoek is de helft van de rechthoek eromheen. Doe de oppervlakte dus eerst <b>keer 2</b>: dan heb je de rechthoek. Deel die door de maat die je weet.</p><p>Oppervlakte 24 cm² en basis 8 cm: de rechthoek is 48 cm². 48 : 8 = 6. De hoogte is <b>6 cm</b>.</p>',
+          wanneer:'je de oppervlakte weet en een maat zoekt.',
+          maak:function(R){
+            var b, h; do { b = R.heel(3, 14); h = R.heel(3, 12); } while ((b * h) % 2 || b === h);
+            var A = b * h / 2, zoekH = R.heel(0, 1) === 1, e = R.kies(['cm', 'm']), wet = zoekH ? b : h, zoek = zoekH ? h : b, pp = R.kies([0.3, 0.45, 0.6, 0.75]);
+            var pts = [[0, 0], [b, 0], [pp * b, h]], f = pasIn(pts, 380, 230, 48), P = pts.map(f), V = f([pp * b, 0]);
+            var s = veelhoek(P, [zoekH ? 'basis ' + b + ' ' + e : 'basis ?', '', '']) + ln(P[2][0], P[2][1], V[0], V[1], { k:K[1], stip:true, w:2.5 }) + rechteHoek(V, P[1], P[2], K[1]) + tx(V[0] + 8, (P[2][1] + V[1]) / 2 + 5, zoekH ? 'hoogte ?' : 'hoogte ' + h + ' ' + e, { a:'start', k:K[1], vet:true });
+            var bl = svg(380, 230, s, 'driehoek met een onbekende maat', 420);
+            return { vraag:'driehoek terug ' + A + ' ' + (zoekH ? 'b' : 'h') + wet + ' ' + e, vraagHtml:'Hoe ' + (zoekH ? 'hoog is de driehoek' : 'lang is de basis') + '?', context:'De oppervlakte van de driehoek is ' + T(A) + ' ' + e + '². De ' + (zoekH ? 'basis' : 'hoogte') + ' is ' + wet + ' ' + e + '.', eenheid:e, beeld:bl, zelfBeeld:bl, stappen:[
+              { tekst:'De rechthoek eromheen is twee keer zo groot: ' + T(A) + ' × 2 =', antwoord:metE(2 * A, e + '²'), eenheid:e + '²', hint:'De driehoek is de helft van de rechthoek. Dus de rechthoek is het dubbele.' },
+              { tekst:'De rechthoek is ' + wet + ' ' + e + ' bij …: ' + (2 * A) + ' : ' + wet + ' =', antwoord:metE(zoek, e), eenheid:e, hint:'Welk getal keer ' + wet + ' is ' + (2 * A) + '?', fout:F(T(A / wet), 'Je vergat eerst keer 2 te doen. De driehoek is maar de helft van de rechthoek.') } ] };
+          } },
+        { id:'opp-trapezium', naam:'Oppervlakte van een trapezium', kort:'Neem het gemiddelde van de twee evenwijdige zijden en doe dat keer de hoogte',
+          uit:'<p>Een <b>trapezium</b> heeft twee evenwijdige zijden die niet even lang zijn. Leg twee dezelfde trapezia tegen elkaar, één ondersteboven: dan krijg je een parallellogram. De trapezium is daar de helft van.</p><p>Zo kom je op: <b>(onderkant + bovenkant) : 2 × hoogte</b>. Je neemt dus het gemiddelde van de twee evenwijdige zijden, keer de hoogte.</p><p>Onderkant 10 m, bovenkant 6 m, hoogte 4 m: (10 + 6) : 2 = 8, en 8 × 4 = 32 m².</p>',
+          wanneer:'een figuur precies één paar evenwijdige zijden heeft, zoals een dijk, een dak of een stuk weg.',
+          maak:function(R){
+            var a = R.heel(6, 16), b = R.heel(2, a - 2), h = R.heel(2, 10), e = R.kies(['cm', 'm']), m = (a + b) / 2, x1 = (a - b) * R.kies([0.2, 0.5, 0.8]);
+            var pts = [[0, 0], [a, 0], [x1 + b, h], [x1, h]], f = pasIn(pts, 380, 230, 48), P = pts.map(f), V = f([x1, 0]);
+            var s = veelhoek(P, [a + ' ' + e, '', b + ' ' + e, '']) + ln(P[3][0], P[3][1], V[0], V[1], { k:K[1], stip:true, w:2.5 }) + rechteHoek(V, P[1], P[3], K[1]) + tx(V[0] + 8, (P[3][1] + V[1]) / 2 + 5, h + ' ' + e, { a:'start', k:K[1], vet:true });
+            var bl = svg(380, 230, s, 'trapezium met maten', 420);
+            return { vraag:'trapezium ' + a + '-' + b + '-' + h + ' ' + e, vraagHtml:'Bereken de oppervlakte.', context:'De evenwijdige zijden zijn ' + a + ' ' + e + ' en ' + b + ' ' + e + '. De hoogte is ' + h + ' ' + e + '.', eenheid:e + '²', beeld:bl, zelfBeeld:bl, stappen:[
+              { tekst:'De twee evenwijdige zijden samen: ' + a + ' + ' + b + ' =', antwoord:metE(a + b, e), eenheid:e, hint:'De onderkant en de bovenkant.' },
+              { tekst:'Het gemiddelde: ' + (a + b) + ' : 2 =', antwoord:metE(T(m), e), eenheid:e, hint:'De helft van ' + (a + b) + '.' },
+              { tekst:'Keer de hoogte: ' + T(m) + ' × ' + h + ' =', antwoord:metE(T(m * h), e + '²'), eenheid:e + '²', hint:T(m) + ' keer ' + h + '.', fout:F(T((a + b) * h), 'Je vergat te delen door 2.', T(a * h), 'Je nam alleen de onderkant. Neem het gemiddelde van boven en onder.') } ] };
+          } },
+        { id:'opp-rooster-schuin', naam:'Schuine figuur op roosterpapier', kort:'Teken een rechthoek eromheen en haal de driehoeken in de hoeken eraf',
+          uit:'<p>Een driehoek met <b>schuine zijden</b> op roosterpapier kun je niet goed in hokjes tellen. Gebruik dan de <b>rechthoek eromheen</b>.</p><p>Teken een rechthoek die precies om de driehoek past. In de hoeken blijven rechthoekige driehoekjes over. Elk hoekstuk is de helft van een rechthoekje.</p><p>Reken de grote rechthoek uit en haal de hoekstukken eraf. Wat overblijft is de driehoek.</p>',
+          wanneer:'een figuur op roosterpapier schuine zijden heeft.',
+          maak:function(R){
+            var w = R.heel(4, 8), h = R.heel(3, 6), p = R.heel(1, w - 1), q = R.heel(1, h - 1);
+            var t1 = p * h / 2, t2 = (w - p) * q / 2, t3 = w * (h - q) / 2, opp = w * h - t1 - t2 - t3;
+            var pl = function(n){
+              var c = 30, x0 = 16, y0 = 16, s = '', i;
+              function X(x){ return x0 + (x + 1) * c; } function Y(y){ return y0 + (h + 1 - y) * c; }
+              for (i = 0; i <= w + 2; i++) s += ln(x0 + i * c, y0, x0 + i * c, y0 + (h + 2) * c, { w:1, op:0.25 });
+              for (i = 0; i <= h + 2; i++) s += ln(x0, y0 + i * c, x0 + (w + 2) * c, y0 + i * c, { w:1, op:0.25 });
+              if (n >= 2) s += pg([[X(0), Y(0)], [X(p), Y(0)], [X(0), Y(h)]], { f:K[2], fo:0.4, w:0 });
+              if (n >= 3) s += pg([[X(p), Y(0)], [X(w), Y(0)], [X(w), Y(q)]], { f:K[3], fo:0.4, w:0 });
+              if (n >= 4) s += pg([[X(w), Y(q)], [X(w), Y(h)], [X(0), Y(h)]], { f:K[4], fo:0.4, w:0 });
+              if (n >= 1) s += rc(X(0), Y(h), w * c, h * c, { w:2, stip:true });
+              s += pg([[X(p), Y(0)], [X(w), Y(q)], [X(0), Y(h)]], { f:K[0], fo:0.35 });
+              return svg(x0 * 2 + (w + 2) * c, y0 * 2 + (h + 2) * c, s, 'driehoek met schuine zijden op roosterpapier', 420);
+            };
+            return { vraag:'rooster ' + w + '-' + h + '-' + p + '-' + q, vraagHtml:'Hoeveel cm² is de driehoek?', context:'Elk hokje is 1 cm bij 1 cm.', eenheid:'cm²', beeld:pl, zelfBeeld:pl(0), stappen:[
+              { tekst:'Teken een rechthoek die precies om de driehoek past. Hoe groot is die? ' + w + ' × ' + h + ' =', antwoord:metE(w * h, 'cm²', ['hokjes']), eenheid:'cm²', hint:'Tel hoeveel hokjes de driehoek breed en hoog is.' },
+              { tekst:'Het hoekstuk links is de helft van een rechthoek van ' + p + ' bij ' + h + ': ' + p + ' × ' + h + ' : 2 =', antwoord:metE(T(t1), 'cm²'), eenheid:'cm²', hint:'Eerst ' + p + ' × ' + h + ', dan de helft.' },
+              { tekst:'Het hoekstuk rechtsonder: ' + (w - p) + ' × ' + q + ' : 2 =', antwoord:metE(T(t2), 'cm²'), eenheid:'cm²', hint:'Het is ' + (w - p) + (w - p === 1 ? ' hokje' : ' hokjes') + ' breed en ' + q + ' hoog. Neem de helft.' },
+              { tekst:'Het hoekstuk bovenaan: ' + w + ' × ' + (h - q) + ' : 2 =', antwoord:metE(T(t3), 'cm²'), eenheid:'cm²', hint:'Het is ' + w + ' hokjes breed en ' + (h - q) + ' hoog. Neem de helft.' },
+              { tekst:'De driehoek: ' + (w * h) + ' − ' + T(t1) + ' − ' + T(t2) + ' − ' + T(t3) + ' =', antwoord:metE(T(opp), 'cm²', ['hokjes']), eenheid:'cm²', hint:'De rechthoek min de drie hoekstukken.' } ] };
+          } },
+        { id:'opp-vierkant-terug', naam:'Terugrekenen: de zijde of de lengte zoeken', kort:'Bij een vierkant zoek je het getal dat keer zichzelf de oppervlakte geeft; bij een rechthoek deel je door de breedte',
+          uit:'<p>Soms weet je de oppervlakte en zoek je een zijde. Reken dan <b>terug</b>.</p><p>Een <b>vierkant</b> van 49 m²: welk getal keer zichzelf is 49? 7 × 7 = 49, dus de zijde is <b>7 m</b>.</p><p>Een <b>rechthoek</b> van 72 m² die 6 m breed is: 6 × … = 72. Reken 72 : 6 = <b>12 m</b>.</p><p>Weet je de omtrek van een vierkant? Deel die door 4, dan heb je de zijde.</p>',
+          wanneer:'je de oppervlakte of de omtrek weet en een lengte zoekt.',
+          maak:function(R){
+            var soort = R.heel(0, 2), e = R.kies(['cm', 'm']);
+            function vk(w, h, labW, labH){ var s0 = Math.min(240 / w, 160 / h), x0 = 70, y0 = 20, s = rc(x0, y0, w * s0, h * s0, { f:K[0], fo:0.14, w:2.5 }); s += tx(x0 + w * s0 / 2, y0 + h * s0 + 24, labW, { vet:true, k:labW === '?' ? K[1] : null }) + tx(x0 - 10, y0 + h * s0 / 2 + 5, labH, { a:'end', vet:true, k:labH === '?' ? K[1] : null }); return svg(x0 + w * s0 + 40, y0 + h * s0 + 40, s, 'rechthoek of vierkant', 380); }
+            if (soort === 0){
+              var z = R.heel(3, 15), b0 = vk(1, 1, '?', '?');
+              return { vraag:'vierkant ' + (z * z) + ' ' + e + '²', vraagHtml:'Hoe lang is een zijde?', context:'Een vierkant heeft een oppervlakte van ' + (z * z) + ' ' + e + '².', eenheid:e, beeld:b0, zelfBeeld:b0, stappen:[
+                kstap(R, 'Hoe reken je de oppervlakte van een vierkant uit?', 'zijde × zijde', ['4 × zijde', 'zijde + zijde'], 'Een vierkant is een rechthoek met lengte en breedte even lang. 4 × zijde is de omtrek.'),
+                { tekst:'Welk getal keer zichzelf is ' + (z * z) + '?', antwoord:metE(z, e), eenheid:e, hint:'Denk aan de kwadraten: 5 × 5 = 25, 6 × 6 = 36, 7 × 7 = 49, 8 × 8 = 64.', fout:F(T(z * z / 4), 'Je deelde door 4. Dat hoort bij de omtrek, niet bij de oppervlakte.', T(z * z / 2), 'De helft is het niet. Zoek een getal dat keer zichzelf ' + (z * z) + ' geeft.') } ] };
+            }
+            if (soort === 1){
+              var bb = R.heel(3, 12), l; do { l = R.heel(4, 20); } while (l === bb);
+              var b1 = vk(l, bb, '?', bb + ' ' + e);
+              return { vraag:'rechthoek ' + (l * bb) + ' ' + e + '² breed ' + bb, vraagHtml:'Hoe lang is de rechthoek?', context:'Een rechthoek heeft een oppervlakte van ' + (l * bb) + ' ' + e + '². Hij is ' + bb + ' ' + e + ' breed.', eenheid:e, beeld:b1, zelfBeeld:b1, stappen:[
+                { tekst:'Lengte × ' + bb + ' = ' + (l * bb) + '. Dus de lengte is ' + (l * bb) + ' : ' + bb + ' =', antwoord:metE(l, e), eenheid:e, hint:'Welk getal keer ' + bb + ' is ' + (l * bb) + '?', fout:F(l * bb - bb, 'Je trok de breedte eraf. Bij oppervlakte is het keer, dus terug is het delen.') } ] };
+            }
+            var z2 = R.heel(3, 15), b2 = vk(1, 1, '?', '?');
+            return { vraag:'vierkant omtrek ' + (4 * z2) + ' ' + e, vraagHtml:'Hoe groot is de oppervlakte?', context:'Een vierkant heeft een omtrek van ' + (4 * z2) + ' ' + e + '.', eenheid:e + '²', beeld:b2, zelfBeeld:b2, stappen:[
+              { tekst:'Een vierkant heeft 4 even lange zijden. Eén zijde: ' + (4 * z2) + ' : 4 =', antwoord:metE(z2, e), eenheid:e, hint:'De omtrek is alle vier de zijden samen.' },
+              { tekst:'De oppervlakte: ' + z2 + ' × ' + z2 + ' =', antwoord:metE(z2 * z2, e + '²'), eenheid:e + '²', hint:'Zijde keer zijde.', fout:F(4 * z2, 'Dat is de omtrek. De oppervlakte is zijde × zijde.') } ] };
+          } },
+        { id:'opp-cirkel-deel', naam:'Halve en kwart cirkels', kort:'Reken de hele cirkel uit en neem de helft of een kwart; bij de omtrek tel je de rechte randen erbij',
+          uit:'<p>Een <b>halve cirkel</b> is de helft van een hele cirkel, een <b>kwart cirkel</b> een kwart. Reken dus eerst de hele cirkel uit en deel door 2 of door 4.</p><p>Let op bij de <b>omtrek</b>. De rand van een halve cirkel is de halve boog <b>plus de rechte rand</b>: de diameter. Bij een kwart cirkel komen er <b>twee stralen</b> bij.</p><p>Halve cirkel met straal 5 m: de oppervlakte is 3,14 × 5 × 5 : 2 = 39,25 m². De omtrek is 3,14 × 10 : 2 + 10 = 25,7 m.</p>',
+          wanneer:'je een stuk van een cirkel hebt, zoals een raam met een boog, een perk of een hoek van een veld.',
+          maak:function(R){
+            var r = R.heel(2, 12), d = 2 * r, half = R.heel(0, 1) === 1, omtrek = R.heel(0, 1) === 1, k = half ? 2 : 4, nm = half ? 'halve' : 'kwart';
+            var wat = R.kies(['Een bloemperk', 'Een speelveld', 'Een vijver', 'Een terras']);
+            var pl = (function(){
+              var cx = half ? 160 : 70, cy = 170, R0p = 130, s = '';
+              if (half) s += '<path d="M' + (cx - R0p) + ' ' + cy + ' A' + R0p + ' ' + R0p + ' 0 0 1 ' + (cx + R0p) + ' ' + cy + ' Z" style="fill:var(--lr-1);fill-opacity:.16;stroke:var(--ink);stroke-width:2.5"/>';
+              else s += '<path d="M' + cx + ' ' + cy + ' L' + (cx + R0p) + ' ' + cy + ' A' + R0p + ' ' + R0p + ' 0 0 0 ' + cx + ' ' + (cy - R0p) + ' Z" style="fill:var(--lr-1);fill-opacity:.16;stroke:var(--ink);stroke-width:2.5"/>' + rechteHoek([cx, cy], [cx + 50, cy], [cx, cy - 50]);
+              s += '<circle cx="' + cx + '" cy="' + cy + '" r="4" style="fill:var(--ink)"/>' + ln(cx, cy, cx + R0p, cy, { k:K[1], w:3 }) + tx(cx + R0p / 2, cy + 22, 'straal ' + r + ' m', { k:K[1], vet:true });
+              return svg(half ? 320 : 240, 200, s, nm + ' cirkel met straal ' + r + ' m', 340);
+            })();
+            var hele, deel, st;
+            if (!omtrek){
+              hele = 3.14 * r * r; deel = hele / k;
+              st = [ { tekst:'De hele cirkel: 3,14 × ' + r + ' × ' + r + ' =', antwoord:metPi(hele, Math.PI * r * r, 'm²'), eenheid:'m²', hint:'π × straal × straal. Eerst ' + r + ' × ' + r + ' = ' + (r * r) + '.' },
+                { tekst:'De ' + nm + ' cirkel: ' + T(r2(hele)) + ' : ' + k + ' =', antwoord:metPi(deel, Math.PI * r * r / k, 'm²'), eenheid:'m²', hint:half ? 'De helft: deel door 2.' : 'Een kwart: deel door 4.', fout:F(T(r2(hele)), 'Dat is de hele cirkel. Je hebt maar een ' + nm + '.') } ];
+              return { vraag:'opp ' + nm + ' cirkel r ' + r, vraagHtml:'Bereken de oppervlakte.', context:wat + ' heeft de vorm van een ' + nm + ' cirkel met een straal van ' + r + ' m. Reken met π ≈ 3,14.', eenheid:'m²', antwoord:st[1].antwoord, beeld:pl, zelfBeeld:pl, stappen:st };
+            }
+            hele = 3.14 * d; deel = hele / k; var recht = half ? d : 2 * r, tot = deel + recht;
+            st = [ { tekst:'De omtrek van de hele cirkel: 3,14 × ' + d + ' =', antwoord:metPi(hele, Math.PI * d, 'm'), eenheid:'m', hint:'π × diameter. De diameter is 2 × de straal: ' + d + ' m.' },
+              { tekst:(half ? 'De halve boog: ' : 'Een kwart van de boog: ') + T(r2(hele)) + ' : ' + k + ' =', antwoord:metPi(deel, Math.PI * d / k, 'm'), eenheid:'m', hint:half ? 'De helft van de boog.' : 'Een kwart van de boog.' },
+              { tekst:'Plus de rechte ' + (half ? 'rand (de diameter, ' + d + ' m)' : 'randen (twee stralen, 2 × ' + r + ' = ' + d + ' m)') + ': ' + T(r2(deel)) + ' + ' + recht + ' =', antwoord:metPi(tot, Math.PI * d / k + recht, 'm'), eenheid:'m', hint:'De rand bestaat uit de boog en de rechte stukken.', fout:F(T(r2(deel)), 'Dat is alleen de boog. De rechte rand hoort ook bij de omtrek.') } ];
+            return { vraag:'omtrek ' + nm + ' cirkel r ' + r, vraagHtml:'Bereken de omtrek.', context:wat + ' heeft de vorm van een ' + nm + ' cirkel met een straal van ' + r + ' m. Er komt een rand omheen. Reken met π ≈ 3,14.', eenheid:'m', antwoord:st[2].antwoord, beeld:pl, zelfBeeld:pl, stappen:st };
           } }
       ] },
 
@@ -860,6 +1238,42 @@
                 { tekst:h + ' cm = … dm', antwoord:metE(h / 10, 'dm'), eenheid:'dm', hint:'Deel door 10.' },
                 { tekst:(l / 10) + ' × ' + (b / 10) + ' × ' + (h / 10) + ' =', antwoord:metE(V, 'liter', ['l', 'dm³']), eenheid:'liter', hint:'Inhoud = lengte × breedte × hoogte, in dm³. En 1 dm³ = 1 liter.', fout:F(l * b * h, 'Dat is in cm³. Reken met de maten in dm.') }
               ] };
+          } },
+        { id:'inh-maten', naam:'Inhoud van een balk of kubus met maten', kort:'Reken eerst het grondvlak uit (lengte × breedte) en doe dat keer de hoogte, ook met kommagetallen',
+          uit:'<p>Blokjes tellen hoeft niet: de inhoud van een balk is <b>lengte × breedte × hoogte</b>. Reken eerst het <b>grondvlak</b> uit, lengte × breedte. Doe dat dan keer de hoogte.</p><p>Een zwembad van 25 m lang, 10 m breed en 2 m diep: het grondvlak is 25 × 10 = 250 m². De inhoud is 250 × 2 = <b>500 m³</b>.</p><p>Bij een <b>kubus</b> zijn alle ribben even lang: ribbe × ribbe × ribbe. Let op de eenheid: m × m × m geeft m³.</p>',
+          wanneer:'je de inhoud wilt weten van een bak, doos, container of zwembad.',
+          maak:function(R){
+            var it = R.kies([
+              { wat:'Een zwembad', e:'m', l:[25, 20, 15, 12.5], b:[10, 8, 12.5, 6], h:[2, 1.5, 1.2] },
+              { wat:'Een zandbak', e:'m', l:[2, 2.5, 3, 4], b:[1.5, 2, 2.5], h:[0.3, 0.4, 0.5] },
+              { wat:'Een container', e:'m', l:[6, 12], b:[2.5, 2.4], h:[2.5, 2.6] },
+              { wat:'Een schoenendoos', e:'cm', l:[30, 32, 35], b:[18, 20, 22], h:[10, 12, 15] },
+              { wat:'Een kubus', e:'cm', kubus:true }, { wat:'Een opbergkist', e:'cm', l:[80, 90, 100], b:[40, 45, 50], h:[40, 50, 60] } ]);
+            var e = it.e, E3 = e + '³', E2 = e + '²', l, b, h;
+            if (it.kubus){ l = b = h = R.heel(3, 12); } else { l = R.kies(it.l); b = R.kies(it.b); h = R.kies(it.h); if (b > l){ var w0 = b; b = l; l = w0; } }
+            var gv = Math.round(l * b * 1000) / 1000, V = Math.round(gv * h * 1000) / 1000;
+            var bl = balk(l, b, h, e, { s:Math.min(30, 230 / l, 150 / Math.max(h, 1)) });
+            return { vraag:'inhoud ' + T(l) + ' × ' + T(b) + ' × ' + T(h) + ' ' + e, context:it.kubus ? 'Een kubus heeft ribben van ' + l + ' ' + e + '.' : it.wat + ' is ' + T(l) + ' ' + e + ' lang, ' + T(b) + ' ' + e + ' breed en ' + T(h) + ' ' + e + ' ' + (/zwembad|zandbak/.test(it.wat) ? 'diep' : 'hoog') + '.', vraagHtml:'Hoeveel ' + E3 + ' is de inhoud?', eenheid:E3, beeld:bl, zelfBeeld:bl, stappen:[
+              { tekst:'Het grondvlak: ' + T(l) + ' × ' + T(b) + ' =', antwoord:metE(T(gv), E2), eenheid:E2, hint:it.kubus ? 'Ribbe × ribbe.' : 'Lengte × breedte.' + (l % 1 || b % 1 ? ' Reken eerst zonder komma en zet hem er dan weer in, of reken met de helft.' : '') },
+              { tekst:'Keer de hoogte: ' + T(gv) + ' × ' + T(h) + ' =', antwoord:metE(T(V), E3), eenheid:E3, hint:'Het grondvlak keer ' + T(h) + '.' + (h < 1 ? ' Keer een getal kleiner dan 1 maakt het kleiner.' : ''), fout:F(T(2 * (l + b)), 'Dat is een omtrek. De inhoud is lengte × breedte × hoogte.', T(gv), 'Dat is alleen het grondvlak. Doe nog keer de hoogte.') } ] };
+          } },
+        { id:'inh-terug', naam:'Inhoud terugrekenen: hoe hoog of hoe lang?', kort:'Deel de inhoud door het grondvlak, dan heb je de hoogte',
+          uit:'<p>Weet je de inhoud en zoek je de hoogte? Reken dan <b>terug</b>. Inhoud = grondvlak × hoogte, dus <b>hoogte = inhoud : grondvlak</b>.</p><p>Een aquarium van 60 cm lang en 30 cm breed. Er gaat 54 liter water in. Reken in dm: het grondvlak is 6 × 3 = 18 dm². 54 liter is 54 dm³. 54 : 18 = 3 dm. Het water staat <b>30 cm</b> hoog.</p><p>Zo vind je ook een lengte: deel de inhoud door breedte × hoogte.</p>',
+          wanneer:'je weet hoeveel erin zit en een maat zoekt.',
+          maak:function(R){
+            if (R.heel(0, 1)){
+              var L = R.heel(4, 10), B = R.heel(2, 5), Hw = R.heel(2, 6), V = L * B * Hw, wat = R.kies(['een aquarium', 'een bak', 'een watertank', 'een plantenbak']);
+              var b1 = balk(L, B, Hw, 'dm', { s:Math.min(26, 260 / L), vraag:'h' }).replace(/>(\d+) dm</g, function(a, x){ return '>' + (x * 10) + ' cm<'; });
+              return { vraag:'water ' + V + ' l in ' + L + 'x' + B, context:'Je giet ' + V + ' liter water in ' + wat + ' van ' + (10 * L) + ' cm lang en ' + (10 * B) + ' cm breed. De figuur laat het water zien.', vraagHtml:'Hoe hoog staat het water?', eenheid:'cm', beeld:b1, zelfBeeld:b1, stappen:[
+                { tekst:'Reken in dm: ' + (10 * L) + ' cm = ' + L + ' dm en ' + (10 * B) + ' cm = ' + B + ' dm. Het grondvlak: ' + L + ' × ' + B + ' =', antwoord:metE(L * B, 'dm²'), eenheid:'dm²', hint:'Lengte × breedte, in dm.' },
+                { tekst:V + ' liter = ' + V + ' dm³. De hoogte: ' + V + ' : ' + (L * B) + ' =', antwoord:metE(Hw, 'dm'), eenheid:'dm', hint:'Hoe vaak past ' + (L * B) + ' in ' + V + '?' },
+                { tekst:Hw + ' dm = … cm', antwoord:metE(10 * Hw, 'cm'), eenheid:'cm', hint:'1 dm is 10 cm.', fout:F(Hw, 'Dat is in dm. De vraag is in cm.') } ] };
+            }
+            var c = R.kies([[2, 2], [2, 2.5], [2.5, 2], [2, 3], [1.5, 2], [2.5, 2.4]]), bb = c[0], hh = c[1], ll = R.heel(3, 12), gv = Math.round(bb * hh * 100) / 100, V2 = Math.round(gv * ll * 100) / 100;
+            var b2 = balk(ll, bb, hh, 'm', { vraag:'l' });
+            return { vraag:'lengte ' + T(V2) + ' m³ ' + T(bb) + 'x' + T(hh), context:'Een container heeft een inhoud van ' + T(V2) + ' m³. Hij is ' + T(bb) + ' m breed en ' + T(hh) + ' m hoog.', vraagHtml:'Hoe lang is de container?', eenheid:'m', beeld:b2, zelfBeeld:b2, stappen:[
+              { tekst:'De voorkant: breedte × hoogte = ' + T(bb) + ' × ' + T(hh) + ' =', antwoord:metE(T(gv), 'm²'), eenheid:'m²', hint:'Dat is het vlak waar je de lengte keer doet.' },
+              { tekst:'De lengte: ' + T(V2) + ' : ' + T(gv) + ' =', antwoord:metE(ll, 'm'), eenheid:'m', hint:'Hoe vaak past ' + T(gv) + ' in ' + T(V2) + '?', fout:F(T(r2(V2 * gv)), 'Je deed keer. Terugrekenen gaat met delen.') } ] };
           } }
       ] },
 
@@ -934,6 +1348,36 @@
               kstap(R, 'Welke som hoort daarbij?', FORM[soort], fs, 'Snelheid = afstand : tijd. Afstand = snelheid × tijd. Tijd = afstand : snelheid.'), o.reken ] };
             if (o.reken.controle){ op.controle = o.reken.controle; op.antwoord = o.reken.antwoord; }
             return op;
+          } },
+        { id:'snel-grafiek', naam:'De afstand-tijdgrafiek', kort:'Een horizontaal stuk is stilstaan; hoe steiler de lijn, hoe harder je gaat',
+          uit:'<p>In een <b>afstand-tijdgrafiek</b> staat de tijd opzij en de afgelegde afstand omhoog.</p><p>Loopt de lijn <b>horizontaal</b>, dan komt er geen afstand bij: je staat <b>stil</b>. Hoe <b>steiler</b> de lijn, hoe <b>harder</b> je gaat.</p><p>De snelheid lees je af: hoeveel km in hoeveel uur, en dan afstand : tijd. Voor de <b>gemiddelde snelheid</b> over de hele rit deel je de hele afstand door de hele tijd, de pauze telt mee.</p>',
+          wanneer:'een rit in een grafiek staat en je wilt weten hoe snel of hoe lang.',
+          maak:function(R){
+            var v1, t1, v2, t2, p, d1, d2, D, Tt, soort = R.kies(['stil', 'snel', 'gem']), ok;
+            do {
+              v1 = R.kies([10, 12, 15, 16, 18, 20, 24]); t1 = R.kies([1, 1.5, 2]); v2 = R.kies([10, 12, 15, 16, 18, 20]); t2 = R.kies([0.5, 1, 1.5]); p = R.kies([0.5, 1]);
+              d1 = v1 * t1; d2 = v2 * t2; D = d1 + d2; Tt = t1 + p + t2;
+              ok = d1 % 5 === 0 && d2 % 5 === 0 && D <= 60 && (soort !== 'gem' || Math.abs(D * 10 / Tt - Math.round(D * 10 / Tt)) < 1e-9);
+            } while (!ok);
+            var pts = [[0, 0], [t1, d1], [t1 + p, d1], [Tt, D]], xmax = Math.ceil(Tt * 2) / 2 + 0.5, ymax = Math.ceil(D / 5) * 5 + 5;
+            var wie = R.kies(['Een fietser maakt een tocht.', 'Lisa fietst naar haar oma.', 'Een groep fietst een toertocht.', 'Omar fietst naar het strand.']);
+            var gr = function(nad){ return ritGrafiek(pts, xmax, ymax, 5, { nadruk:nad, aria:'afstand-tijdgrafiek van een fietstocht' }); };
+            if (soort === 'stil') return { vraag:'stil ' + pts.map(function(q){ return q.join(','); }).join(' '), vraagHtml:'Hoeveel minuten stond hij stil?', context:wie + ' De grafiek laat de afstand zien.', eenheid:'min',
+              antwoord:String(p * 60), controle:duurC(p * 60), beeld:function(n){ return gr(n >= 2 ? [[1, 2]] : []); }, zelfBeeld:gr([]), stappen:[
+                { tekst:'Waar komt er geen afstand bij? Bij welke tijd begint het horizontale stuk?', antwoord:metE(T(t1), 'uur'), eenheid:'uur', hint:'Zoek het stuk waar de lijn plat loopt. Lees de tijd eronder af.' },
+                { tekst:'Bij welke tijd gaat de lijn weer omhoog?', antwoord:metE(T(t1 + p), 'uur'), eenheid:'uur', hint:'Lees af waar het platte stuk ophoudt.' },
+                { tekst:'Hoe lang stond hij stil? In minuten:', antwoord:String(p * 60), controle:duurC(p * 60), eenheid:'min', hint:'Van ' + T(t1) + ' tot ' + T(t1 + p) + ' uur is ' + T(p) + ' uur. Een uur is 60 minuten.', fout:F(T(p), 'Dat is in uren. Schrijf het in minuten.') } ] };
+            if (soort === 'snel') return { vraag:'snel ' + pts.map(function(q){ return q.join(','); }).join(' '), vraagHtml:'Hoe hard reed hij in het eerste deel?', context:wie + ' De grafiek laat de afstand zien. Geef de snelheid in km per uur.', eenheid:'km/u',
+              beeld:function(n){ return gr(n >= 1 ? [[0, 1]] : []); }, zelfBeeld:gr([]), stappen:[
+                { tekst:'Het eerste deel stopt bij het platte stuk. Hoeveel km had hij daar gereden?', antwoord:metE(d1, 'km'), eenheid:'km', hint:'Ga vanaf het begin van het platte stuk opzij naar de as links.' },
+                { tekst:'Hoeveel uur deed hij over dat eerste deel?', antwoord:metE(T(t1), 'uur'), controle:duurC(t1 * 60, 'uur'), eenheid:'uur', hint:'Lees de tijd af onder het begin van het platte stuk. Elk hokje opzij is een half uur.' },
+                { tekst:'De snelheid: ' + d1 + ' : ' + T(t1) + ' =', antwoord:metE(v1, 'km/u', ['km per uur']), eenheid:'km/u', hint:t1 === 1 ? 'In 1 uur ' + d1 + ' km.' : t1 === 2 ? 'In 2 uur ' + d1 + ' km. In 1 uur de helft.' : 'In anderhalf uur ' + d1 + ' km. In een half uur is dat ' + T(d1 / 3) + ' km, dus in een heel uur twee keer zoveel.' } ] };
+            var vg = D / Tt;
+            return { vraag:'gem ' + pts.map(function(q){ return q.join(','); }).join(' '), vraagHtml:'Wat is de gemiddelde snelheid over de hele rit?', context:wie + ' De grafiek laat de afstand zien. De pauze telt mee. Geef de snelheid in km per uur.', eenheid:'km/u',
+              beeld:function(n){ return gr(n >= 2 ? [[0, 3]] : []); }, zelfBeeld:gr([]), stappen:[
+                { tekst:'Hoeveel km is de hele rit?', antwoord:metE(D, 'km'), eenheid:'km', hint:'Lees af waar de lijn eindigt: ga opzij naar de as links.' },
+                { tekst:'Hoeveel uur duurt de hele rit, met de pauze erbij?', antwoord:metE(T(Tt), 'uur'), controle:duurC(Tt * 60, 'uur'), eenheid:'uur', hint:'Lees de tijd af onder het eind van de lijn.' },
+                { tekst:'Gemiddeld: ' + D + ' : ' + T(Tt) + ' =', antwoord:metE(T(vg), 'km/u', ['km per uur']), eenheid:'km/u', hint:'De hele afstand gedeeld door de hele tijd.', fout:F(T(r1(D / (Tt - p))), 'Je liet de pauze weg. Die telt bij de gemiddelde snelheid mee.') } ] };
           } }
       ] },
 
@@ -1141,6 +1585,35 @@
               { tekst:'Hoeveel stijgt het ' + iv(eerst) + '?', antwoord:String(dif[eerst]), hint:'Lees beide punten af en trek ze van elkaar af: ' + vals[eerst + 1] + ' − ' + vals[eerst] + '.' },
               { tekst:'Hoeveel stijgt het ' + iv(tweede) + '?', antwoord:String(dif[tweede]), hint:'Lees beide punten af en trek ze van elkaar af: ' + vals[tweede + 1] + ' − ' + vals[tweede] + '.' },
               kstap(R, 'Wanneer stijgt de lijn het hardst?', iv(a), [0, 1, 2, 3, 4].map(iv), 'Waar de lijn het steilst omhoog gaat: daar komt het meeste bij (' + dif[a] + ').') ] });
+          } },
+        { id:'graf-twee-lijnen', naam:'Twee lijnen in één grafiek', kort:'Kijk eerst welke lijn bij wat hoort; lees dan af bij een tijd, of zoek de tijd bij een waarde',
+          uit:'<p>Soms staan er <b>twee lijnen</b> in één grafiek, bijvoorbeeld de temperatuur in twee steden. Kijk eerst in de <b>legenda</b> welke lijn bij welke stad hoort.</p><p>Wil je weten hoe warm het om 12 uur was? Ga bij 12 uur recht omhoog naar de lijn en dan opzij naar de as. Wil je weten <b>wanneer</b> het 20 °C was? Dan andersom: zoek 20 op de as links, ga opzij naar de lijn en dan recht naar beneden.</p><p>Waar de lijnen elkaar raken, is het in beide steden even warm.</p>',
+          wanneer:'een grafiek twee dingen met elkaar vergelijkt.',
+          maak:function(R){
+            var xs = ['8 uur', '10 uur', '12 uur', '14 uur', '16 uur', '18 uur'], soort = R.kies(['verschil', 'wanneer', 'even']), st = R.kies([['Utrecht', 'Groningen'], ['Maastricht', 'Den Helder'], ['Eindhoven', 'Zwolle'], ['Arnhem', 'Vlissingen']]);
+            function klem(v){ return Math.max(2, Math.min(34, v)); }
+            var A, B, k, i, ok;
+            do {
+              B = [2 * R.heel(4, 8)]; for (i = 1; i < 6; i++) B.push(klem(B[i - 1] + 2 * R.heel(-1, 2)));
+              A = []; k = R.heel(1, 4); ok = true;
+              if (soort === 'even'){ var teken = R.kies([1, -1]); for (i = 0; i < 6; i++) A.push(i === k ? B[i] : klem(B[i] + (i < k ? -teken : teken) * 2 * R.heel(1, 3))); for (i = 0; i < 6; i++) if (i !== k && A[i] === B[i]) ok = false; }
+              else { for (i = 0; i < 6; i++) A.push(klem(B[i] + 2 * R.kies([-3, -2, -1, 1, 2, 3]))); if (soort === 'verschil') ok = A[k] > B[k]; else for (i = 0; i < 5; i++) if (i !== k && i + 1 !== k && (A[i] - A[k]) * (A[i + 1] - A[k]) <= 0) ok = false; }
+            } while (!ok);
+            var pl = function(o){ return tweeLijnen(xs, A, B, 2, 36, { as:'°C', naamA:st[0], naamB:st[1], lijn:o && o.lijn, kol:o && o.kol, aria:'temperatuur in ' + st[0] + ' en ' + st[1] }); };
+            var ctx = 'De grafiek laat de temperatuur op één dag zien, in ' + st[0] + ' en in ' + st[1] + '.';
+            if (soort === 'verschil') return { vraag:'verschil ' + xs[k] + ' ' + A.join(',') + '/' + B.join(','), vraagHtml:'Hoeveel graden was het om ' + xs[k] + ' warmer in ' + st[0] + ' dan in ' + st[1] + '?', context:ctx, eenheid:'°C',
+              beeld:function(n){ return pl({ kol:n >= 1 ? k : null }); }, zelfBeeld:pl(), stappen:[
+                { tekst:'Hoe warm was het om ' + xs[k] + ' in ' + st[0] + ' (de doorgetrokken lijn)?', antwoord:metE(String(A[k]), '°C', ['graden']), eenheid:'°C', hint:'Ga bij ' + xs[k] + ' recht omhoog naar de doorgetrokken lijn en dan opzij naar de as. Elk hokje is 2 graden.' },
+                { tekst:'En in ' + st[1] + ' (de stippellijn)?', antwoord:metE(String(B[k]), '°C', ['graden']), eenheid:'°C', hint:'Nu naar de stippellijn, bij dezelfde tijd.' },
+                { tekst:A[k] + ' − ' + B[k] + ' =', antwoord:metE(String(A[k] - B[k]), '°C', ['graden']), eenheid:'°C', hint:'Het verschil tussen de twee temperaturen.' } ] };
+            if (soort === 'wanneer') return eindKeuze({ vraag:'wanneer ' + A[k] + ' ' + A.join(','), vraagHtml:'Hoe laat was het in ' + st[0] + ' precies ' + A[k] + ' °C?', context:ctx,
+              beeld:function(n){ return pl({ lijn:n >= 1 ? A[k] : null }); }, zelfBeeld:pl(), stappen:[
+                kstap(R, 'Welke lijn hoort bij ' + st[0] + '?', 'de doorgetrokken lijn', ['de stippellijn'], 'Kijk in de legenda onder de grafiek.'),
+                kstap(R, 'Zoek ' + A[k] + ' op de as links en ga opzij tot de doorgetrokken lijn. Welke tijd staat daaronder?', xs[k], xs.filter(function(x, j){ return j !== k; }).slice(0, 5), 'Ga vanaf ' + A[k] + ' recht naar rechts tot je een punt van de doorgetrokken lijn raakt. Ga dan recht naar beneden.') ] });
+            return eindKeuze({ vraag:'even ' + A.join(',') + '/' + B.join(','), vraagHtml:'Hoe laat was het in beide steden even warm?', context:ctx,
+              beeld:function(n){ return pl({ kol:n >= 1 ? k : null }); }, zelfBeeld:pl(), stappen:[
+                kstap(R, 'Waar is het in beide steden even warm?', 'waar de lijnen elkaar raken', ['waar de lijnen het hoogst zijn', 'waar de lijnen het verst uit elkaar liggen'], 'Even warm betekent: dezelfde temperatuur. Dan liggen de punten op dezelfde plek.'),
+                kstap(R, 'Hoe laat raken de lijnen elkaar?', xs[k], xs.filter(function(x, j){ return j !== k; }).slice(0, 5), 'Zoek het punt waar de doorgetrokken lijn en de stippellijn samenkomen. Lees de tijd eronder af.') ] });
           } }
       ] },
 
@@ -1216,6 +1689,54 @@
               { tekst:'Eerst opzij vanaf (0, 0). Hoeveel stappen? Naar links is min.', antwoord:T(x), hint:'Tel de hokjes van het midden naar ' + (x > 0 ? 'rechts.' : 'links. Naar links schrijf je een min ervoor.'), fout:F(T(-x), 'Let op de richting: ' + (x > 0 ? 'naar rechts is plus.' : 'naar links is min.')) },
               { tekst:'Dan omhoog of omlaag. Hoeveel stappen? Naar beneden is min.', antwoord:T(y), hint:'Tel de hokjes van de x-as naar ' + (y > 0 ? 'boven.' : 'beneden. Naar beneden schrijf je een min ervoor.'), fout:F(T(-y), 'Let op de richting: ' + (y > 0 ? 'omhoog is plus.' : 'omlaag is min.')) },
               { tekst:'De coördinaten van A zijn:', antwoord:punt(x, y), controle:puntC(x, y), hint:'Eerst opzij, dan omhoog of omlaag: (' + T(x) + ', ' + T(y) + ').', fout:F(punt(y, x), 'Je draaide ze om. Eerst opzij, dan pas omhoog of omlaag.') } ] };
+          } },
+        { id:'graf-verhaal', naam:'Een grafiek bij een verhaal', kort:'Vertaal elk stukje van het verhaal: horizontaal is gelijk blijven, steil is snel, omlaag is minder',
+          uit:'<p>Bij een verhaal hoort een grafiek. Lees het verhaal in stukjes en bedenk bij elk stukje wat de lijn doet.</p><p>Blijft iets <b>gelijk</b>, zoals bij stilstaan? Dan loopt de lijn <b>horizontaal</b>. Gaat iets <b>snel</b>? Dan is de lijn <b>steil</b>. Wordt het <b>minder</b>, of ga je terug? Dan gaat de lijn <b>omlaag</b>.</p><p>Kijk daarna welke grafiek alle stukjes in de goede volgorde heeft.</p>',
+          wanneer:'je bij een verhaal de goede grafiek moet kiezen, of een grafiek moet uitleggen.',
+          maak:function(R){
+            var V = R.kies([
+              { t:'Je fietst naar school. Halverwege wacht je even bij een stoplicht. Daarna fiets je verder.', as:'afstand', goed:[0, 4, 4, 8], fout:[[0, 3, 5, 8], [0, 4, 2, 6]], k:['Wat doet de lijn als je bij het stoplicht wacht?', 'hij loopt horizontaal', ['hij gaat omlaag', 'hij gaat steil omhoog']] },
+              { t:'Je loopt van huis naar de bakker. Je staat even in de winkel en loopt dan terug naar huis.', as:'afstand van huis', goed:[0, 5, 5, 0], fout:[[0, 5, 5, 10], [0, 5, 0, 0]], k:['Wat doet de lijn als je teruggaat naar huis?', 'hij gaat omlaag naar 0', ['hij gaat verder omhoog', 'hij loopt horizontaal']] },
+              { t:'Je schenkt hete thee in een kopje. De thee koelt eerst snel af en daarna steeds langzamer.', as:'temperatuur', goed:[9, 5.5, 3.5, 2.5, 2], fout:[[9, 8.5, 7.5, 5, 2], [9, 7.25, 5.5, 3.75, 2]], k:['Hoe ziet eerst snel en daarna steeds langzamer dalen eruit?', 'eerst steil omlaag, daarna steeds vlakker', ['eerst vlak, daarna steeds steiler omlaag', 'overal even steil omlaag']] },
+              { t:'Een vliegtuig stijgt snel op, vliegt een tijd op dezelfde hoogte en daalt dan langzaam.', as:'hoogte', goed:[0, 6, 6, 3, 0], fout:[[0, 3, 6, 6, 0], [0, 6, 6, 6, 6]], k:['Wat doet de lijn als het vliegtuig op dezelfde hoogte vliegt?', 'hij loopt horizontaal', ['hij gaat omhoog', 'hij gaat omlaag']] },
+              { t:'Je rent eerst een stuk hard. Daarna wandel je rustig verder.', as:'afstand', goed:[0, 6, 8], fout:[[0, 2, 8], [0, 6, 6]], k:['Hoe ziet hard rennen eruit in de grafiek?', 'de lijn gaat steil omhoog', ['de lijn gaat langzaam omhoog', 'de lijn loopt horizontaal']] },
+              { t:'Een kaars brandt op. Elk uur wordt hij even veel korter.', as:'lengte van de kaars', goed:[8, 6, 4, 2], fout:[[8, 8, 4, 0], [2, 4, 6, 8]], k:['Wat doet de lijn als de kaars elk uur even veel korter wordt?', 'hij gaat even steil omlaag', ['hij gaat omhoog', 'hij loopt eerst horizontaal']] } ]);
+            var L = ['A', 'B', 'C'], volg = R.hussel([0, 1, 2]), lijnen = [V.goed, V.fout[0], V.fout[1]], goedL = 'grafiek ' + L[volg.indexOf(0)];
+            var s = '';
+            volg.forEach(function(w, i){
+              var x0 = 22 + i * 192, yT = 26, yB = 136, xb = x0 + 160, y = lijnen[w];
+              s += ln(x0, yT - 6, x0, yB) + ln(x0, yB, xb + 6, yB) + tx(x0 + 4, yT - 10, V.as, { a:'start' }) + tx(xb, yB + 18, 'tijd', { a:'end' });
+              s += '<polyline points="' + y.map(function(v, j){ return n1(x0 + 6 + j * (150 / (y.length - 1))) + ',' + n1(yB - v / 10 * (yB - yT - 10)); }).join(' ') + '" style="fill:none;stroke:var(--lr-1);stroke-width:3.5;stroke-linejoin:round"/>';
+              s += tx(x0 + 80, yB + 42, 'grafiek ' + L[i], { vet:true, groot:true });
+            });
+            var bl = svg(600, 190, s, 'drie grafieken: A, B en C', 640);
+            return eindKeuze({ vraag:'verhaal ' + V.t.slice(0, 18) + ' ' + volg.join(''), vraagHtml:'Welke grafiek hoort bij het verhaal?', context:V.t, beeld:bl, zelfBeeld:bl, stappen:[
+              kstap(R, V.k[0], V.k[1], V.k[2], 'Horizontaal is gelijk blijven, steil is snel, omlaag is minder worden.'),
+              kstap(R, 'Welke grafiek heeft alle stukjes van het verhaal, in de goede volgorde?', goedL, L.map(function(x){ return 'grafiek ' + x; }), 'Loop elke grafiek van links naar rechts langs en vergelijk hem met het verhaal.') ] });
+          } },
+        { id:'graf-cirkel-aantal', naam:'Cirkeldiagram: hoeveel is het?', kort:'Neem het procent of de breuk van het totaal: zoveel hoort bij dat stuk',
+          uit:'<p>In een cirkeldiagram staat vaak een <b>procent</b> of een <b>breuk</b> bij elk stuk. Om te weten hoeveel het echt zijn, heb je het <b>totaal</b> nodig.</p><p>Zijn er 600 leerlingen en is het stuk bus 25%? Dan reken je 25% van 600. Via 1%: 600 : 100 = 6, en 25 × 6 = <b>150</b> leerlingen.</p><p>Staat er een breuk, zoals 1/3? Dan is het 1/3 van het totaal: 600 : 3 = 200.</p>',
+          wanneer:'je bij een cirkeldiagram wilt weten om hoeveel mensen of dingen het gaat.',
+          maak:function(R){
+            var th = R.kies([['leerlingen', 'Hoe komen de leerlingen naar school?', ['fiets', 'bus', 'lopend', 'auto']], ['bezoekers', 'Hoe kwamen de bezoekers naar het festival?', ['trein', 'fiets', 'auto', 'bus']], ['kinderen', 'Welke sport doen de kinderen?', ['voetbal', 'hockey', 'zwemmen', 'turnen']], ['stemmers', 'Op welk plan stemden de bewoners?', ['plan A', 'plan B', 'plan C', 'plan D']]]);
+            var cat = th[2], wat = th[0], k;
+            if (R.heel(0, 1)){
+              var N = R.kies([200, 300, 400, 500, 600, 800, 1000, 1200]), ps; do { ps = [5 * R.heel(2, 9), 5 * R.heel(2, 9), 5 * R.heel(2, 7)]; } while (ps[0] + ps[1] + ps[2] >= 95);
+              ps.push(100 - ps[0] - ps[1] - ps[2]); k = R.heel(0, 3);
+              var tp = taart(cat.map(function(c, i){ return { p:ps[i], naam:c + ': ' + ps[i] + '%', label:ps[i] + '%', nadruk:i === k }; }));
+              return { vraag:'cirkel ' + ps.join('-') + ' van ' + N + ' ' + cat[k], vraagHtml:'Hoeveel ' + wat + ' kozen ' + cat[k] + '?', context:th[1] + ' Er zijn ' + T(N) + ' ' + wat + ' gevraagd.', eenheid:wat, beeld:tp, zelfBeeld:tp, stappen:[
+                { tekst:'Het stuk ' + cat[k] + ' is ' + ps[k] + '%. Eerst 1%: ' + T(N) + ' : 100 =', antwoord:T(N / 100), hint:'Delen door 100: de komma schuift twee plaatsen naar links.' },
+                { tekst:ps[k] + '%: ' + ps[k] + ' × ' + T(N / 100) + ' =', antwoord:metE(T(ps[k] * N / 100), wat), eenheid:wat, hint:ps[k] + ' keer ' + T(N / 100) + '.', fout:F(ps[k], 'Dat is het procent. De vraag is hoeveel ' + wat + '.') } ] };
+            }
+            var set = R.kies([[[1, 2], [1, 4], [1, 4]], [[1, 2], [1, 3], [1, 6]], [[1, 4], [1, 4], [1, 8], [3, 8]], [[2, 5], [2, 5], [1, 5]], [[1, 2], [1, 8], [3, 8]], [[1, 3], [1, 3], [1, 6], [1, 6]]]);
+            var nm = set.reduce(function(a, f){ return a % f[1] === 0 ? a : a * f[1] / (function g(x, y){ return y ? g(y, x % y) : x; })(a, f[1]); }, 1), N2 = nm * R.heel(8, 40);
+            k = R.heel(0, set.length - 1);
+            var tb = taart(set.map(function(f, i){ return { p:f[0] / f[1] * 100, naam:cat[i] + ': ' + f[0] + '/' + f[1], label:f[0] + '/' + f[1], nadruk:i === k }; }));
+            var f0 = set[k], een = N2 / f0[1];
+            return { vraag:'cirkel ' + set.map(function(f){ return f.join('/'); }).join('-') + ' van ' + N2 + ' ' + cat[k], vraagHtml:'Hoeveel ' + wat + ' kozen ' + cat[k] + '?', context:th[1] + ' Er zijn ' + T(N2) + ' ' + wat + ' gevraagd.', eenheid:wat, beeld:tb, zelfBeeld:tb, stappen:f0[0] === 1 ? [
+              { tekst:'Het stuk ' + cat[k] + ' is 1/' + f0[1] + ' van het totaal: ' + T(N2) + ' : ' + f0[1] + ' =', antwoord:metE(T(een), wat), eenheid:wat, hint:'Deel het totaal door de noemer.' } ] : [
+              { tekst:'Het stuk ' + cat[k] + ' is ' + f0[0] + '/' + f0[1] + '. Eerst 1/' + f0[1] + ': ' + T(N2) + ' : ' + f0[1] + ' =', antwoord:T(een), hint:'Deel het totaal door de noemer.' },
+              { tekst:f0[0] + '/' + f0[1] + ': ' + f0[0] + ' × ' + T(een) + ' =', antwoord:metE(T(f0[0] * een), wat), eenheid:wat, hint:f0[0] + ' keer ' + T(een) + '.' } ] };
           } }
       ] },
 
@@ -1301,6 +1822,33 @@
               { tekst:'Wat is het hoogste getal?', antwoord:T(hi), hint:'Zoek het grootste getal in de rij.' },
               { tekst:'Wat is het laagste getal?', antwoord:T(lo), hint:lo < 0 ? 'Een min-getal is kleiner dan 0. Hoe groter het getal na de min, hoe lager.' : 'Zoek het kleinste getal in de rij.' },
               { tekst:T(hi) + ' − ' + (lo < 0 ? '(' + T(lo) + ')' : T(lo)) + ' =', antwoord:T(hi - lo), hint:lo < 0 ? 'Van ' + T(lo) + ' naar 0 is ' + (-lo) + ', en van 0 naar ' + T(hi) + ' is ' + T(hi) + '. Samen.' : 'Het hoogste min het laagste.', fout:lo < 0 ? F(T(hi + lo), 'Min een min-getal: je moet het verschil over de 0 heen tellen.') : {} } ] };
+          } },
+        { id:'gem-mediaan-even', naam:'De mediaan bij een even aantal', kort:'Zet de getallen op volgorde; staan er twee in het midden, dan neem je het getal precies ertussen',
+          uit:'<p>Bij een <b>even aantal</b> getallen is er geen getal precies in het midden. Er staan er dan <b>twee</b> in het midden.</p><p>Zet de getallen op volgorde. Bij 8 getallen zijn dat het 4e en het 5e getal: er staan er 3 links en 3 rechts van. De mediaan is het getal <b>precies ertussen</b>: tel ze op en deel door 2.</p><p>Zijn de middelste twee 12 en 15? Dan is de mediaan (12 + 15) : 2 = <b>13,5</b>.</p>',
+          wanneer:'je de mediaan zoekt van 6, 8 of 10 getallen.',
+          maak:function(R){
+            var n = R.kies([6, 8, 10]), l = [], i; for (i = 0; i < n; i++) l.push(R.heel(2, 40));
+            var o = l.slice().sort(function(a, b){ return a - b; }), p = n / 2, m1 = o[p - 1], m2 = o[p], med = (m1 + m2) / 2;
+            var wat = R.kies(['reistijden in minuten', 'punten bij een spel', 'bedragen zakgeld per maand, in euro', 'lengtes van sprongen, in dm', 'aantallen gelezen boeken']);
+            var tab = function(k){ return R.teken.tabel([k >= 1 ? o.map(String) : l.map(String)], { nadruk:k >= 3 ? [[0, p - 1], [0, p]] : [] }); };
+            return { vraag:rij(l), context:'Wat is de mediaan van deze ' + wat + '?', beeld:tab, stappen:[
+              { tekst:'Zet de getallen op volgorde van klein naar groot. Welk getal komt vooraan?', antwoord:String(o[0]), hint:'Zoek het kleinste getal.' },
+              { tekst:'Er zijn ' + n + ' getallen. De twee middelste staan op plek ' + p + ' en op plek …', antwoord:String(p + 1), hint:'Links van de middelste twee staan er ' + (p - 1) + ', en rechts ook ' + (p - 1) + '.' },
+              { tekst:'Welke getallen staan op plek ' + p + ' en ' + (p + 1) + '? Tel ze op: ' + m1 + ' + ' + m2 + ' =', antwoord:String(m1 + m2), hint:'Kijk in de rij op volgorde.' },
+              { tekst:'Het getal precies ertussen: ' + (m1 + m2) + ' : 2 =', antwoord:T(med), hint:'Deel door 2.', fout:F(String(m1), 'Dat is maar één van de twee middelste. Neem het getal ertussen.', String(m2), 'Dat is maar één van de twee middelste. Neem het getal ertussen.') } ] };
+          } },
+        { id:'gem-gewogen', naam:'Het gewogen gemiddelde', kort:'Doe elk cijfer keer zijn weging, tel op en deel door alle wegingen samen',
+          uit:'<p>Op je rapport tellen niet alle cijfers even zwaar. Een proefwerk telt bijvoorbeeld <b>3 keer</b> mee en een overhoring <b>1 keer</b>. Dat heet de <b>weging</b>.</p><p>Doe elk cijfer keer zijn weging en tel alles op. Deel door <b>alle wegingen samen</b>, niet door het aantal cijfers.</p><p>Een 6 (weging 1) en een 8 (weging 3): 6 + 24 = 30. De wegingen samen: 1 + 3 = 4. Gemiddeld 30 : 4 = <b>7,5</b>.</p>',
+          wanneer:'cijfers niet allemaal even zwaar meetellen, zoals op je rapport.',
+          maak:function(R){
+            var n = R.heel(3, 4), c = [], w = [], S, W, i, gem, gewoon;
+            do { c = []; w = []; for (i = 0; i < n; i++){ c.push(R.kies([4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9])); w.push(R.heel(1, 3)); } S = Math.round(c.reduce(function(a, x, j){ return a + x * w[j]; }, 0) * 100) / 100; W = w.reduce(function(a, b){ return a + b; }, 0); gem = S / W; gewoon = c.reduce(function(a, b){ return a + b; }, 0) / n; } while (w.every(function(x){ return x === w[0]; }) || Math.abs(r1(gem) - r1(gewoon)) < 0.05);
+            var rond = Math.abs(gem * 10 - Math.round(gem * 10)) > 1e-9, ant = rond ? T(r1(gem), { dec:1, vast:true }) : T(r1(gem)), soort = ['proefwerk', 'overhoring', 'presentatie', 'werkstuk'];
+            var tab = R.teken.tabel([['toets', 'cijfer', 'weging']].concat(c.map(function(x, j){ return [soort[j], T(x), w[j] + ' ×']; })), { kop:true });
+            return { vraag:'gewogen ' + c.map(T).join('-') + ' / ' + w.join('-'), vraagHtml:'Wat is je gemiddelde?', context:'Dit zijn je cijfers voor één vak, met de weging erbij.' + (rond ? ' Rond af op één decimaal.' : ''), beeld:tab, zelfBeeld:tab, antwoord:rond ? [ant, T(r1(gem))] : ant, stappen:[
+              { tekst:'Elk cijfer keer zijn weging, opgeteld: ' + c.map(function(x, j){ return T(x) + ' × ' + w[j]; }).join(' + ') + ' =', antwoord:T(S), hint:'Reken elke rij uit en tel de uitkomsten op.' },
+              { tekst:'Alle wegingen samen: ' + w.join(' + ') + ' =', antwoord:String(W), hint:'Tel de getallen in de kolom weging op.', fout:F(n, 'Dat is het aantal cijfers. Tel de wegingen op.') },
+              { tekst:T(S) + ' : ' + W + ' =' + (rond ? ' (rond af op één decimaal)' : ''), antwoord:rond ? [ant, T(r1(gem))] : ant, hint:'Deel het totaal door alle wegingen samen.', fout:F(T(r1(gewoon)), 'Dat is het gewone gemiddelde. De weging telt mee.', T(r1(S / n)), 'Deel door alle wegingen samen, niet door het aantal cijfers.') } ] };
           } }
       ] },
 

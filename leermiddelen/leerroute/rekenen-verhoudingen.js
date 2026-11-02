@@ -82,11 +82,26 @@
     }
     return s + '<rect x="' + x0 + '" y="' + y0 + '" width="' + (W - 20) + '" height="' + (H - 20) + '" class="rand"/></svg>';
   }
+  /* a ronde dingen (pizza's), elk in n gelijke stukken; kleur: van elk het eerste stuk gekleurd (wat één persoon krijgt) */
+  function pizzas(a, n, kleur){
+    var r = 30, gap = 14, per = Math.min(a, 5), W = 20 + per * (2 * r + gap) - gap, rij = Math.ceil(a / per), H = 20 + rij * (2 * r + gap) - gap, i, j;
+    var s = '<svg class="lr-svg" viewBox="0 0 ' + W + ' ' + H + '" style="max-width:' + Math.min(560, Math.round(W * 1.3)) + 'px" role="img" aria-label="' + a + ' cirkels, elk in ' + n + ' gelijke stukken">';
+    function p(v){ return Math.round(v * 10) / 10; }
+    for (i = 0; i < a; i++){
+      var cx = 10 + r + (i % per) * (2 * r + gap), cy = 10 + r + Math.floor(i / per) * (2 * r + gap);
+      for (j = 0; j < n; j++){
+        var a1 = -Math.PI / 2 + j * 2 * Math.PI / n, a2 = a1 + 2 * Math.PI / n;
+        s += '<path d="M' + cx + ' ' + cy + ' L' + p(cx + r * Math.cos(a1)) + ' ' + p(cy + r * Math.sin(a1)) + ' A' + r + ' ' + r + ' 0 0 1 ' + p(cx + r * Math.cos(a2)) + ' ' + p(cy + r * Math.sin(a2)) + ' Z" class="deel' + (kleur && j === 0 ? ' vol' : '') + '"/>';
+      }
+    }
+    return s + '</svg>';
+  }
   /* een schaallijn: stukken van s cm die elk v voorstellen; en een gemeten afstand van d cm */
-  function schaalstok(s, v, eenh, d, toonD){
+  /* kaal: alleen het eerste stuk heeft getallen (0 en v), zoals een schaallijn op een echte kaart; dan staat de echte afstand er niet al bij */
+  function schaalstok(s, v, eenh, d, toonD, kaal){
     var m = Math.max(4, Math.ceil(d / s)), px = 540 / (m * s), x0 = 30, y = 40, out = '<svg class="lr-svg" viewBox="0 0 600 ' + (toonD ? 150 : 90) + '" role="img" aria-label="schaallijn">';
     for (var i = 0; i < m; i++) out += '<rect x="' + (x0 + i * s * px) + '" y="' + y + '" width="' + (s * px) + '" height="12" class="deel' + (i % 2 ? '' : ' vol') + '"/>';
-    for (i = 0; i <= m; i++) out += '<text x="' + (x0 + i * s * px) + '" y="' + (y - 10) + '" class="getal klein">' + T.schoon(tn(i * v) + (i === m ? ' ' + eenh : '')) + '</text>';
+    for (i = 0; i <= (kaal ? 1 : m); i++) out += '<text x="' + (x0 + i * s * px) + '" y="' + (y - 10) + '" class="getal klein">' + T.schoon(tn(i * v) + (i === m || (kaal && i === 1) ? ' ' + eenh : '')) + '</text>';
     out += '<text x="' + (x0 + s * px / 2) + '" y="' + (y + 32) + '" class="getal klein">' + T.schoon(tn(s) + ' cm') + '</text>';
     if (toonD){
       var yd = 112, x2 = x0 + d * px;
@@ -237,6 +252,34 @@
             stappen:[
               kz('Welke manier is hier het handigst?', M, M[soort], hint),
               kz('Welke breuk is groter?', [br(p.a, p.b), br(p.c, p.d), 'ze zijn even groot'], g, uitleg, { waarom:uitleg }) ] });
+        } },
+      { id:'breuk-welk-deel', naam:'Welk deel is het?', kort:'Verdeel het geheel in gelijke stukken, reken uit hoeveel één stuk is en tel hoeveel stukken jouw deel is',
+        uit:'<p>Van de 24 leerlingen fietsen er 18 naar school. Welk deel van de klas is dat?</p><p>Neem een strook in 4 gelijke stukken en zet 24 onder het einde. Eén stuk is dan 24 : 4 = 6 leerlingen. 18 leerlingen zijn 18 : 6 = <b>3 stukken</b>.</p><p>Drie van de vier stukken: dat is <b>3/4</b> van de klas.</p>',
+        wanneer:'je wilt zeggen welk deel van een groep of hoeveelheid iets is.',
+        maak:function(R){
+          var n = R.kies([2, 3, 4, 5, 6, 8, 10]), t; do { t = R.heel(1, n - 1); } while (ggd(t, n) > 1); var u = R.heel(2, 12), H = n * u, P = t * u;
+          var z = R.kies([['Van de {H} leerlingen fietsen er {P} naar school.', 'van de leerlingen fietst'], ['Een zak bevat {H} snoepjes. Jij krijgt er {P}.', 'van de snoepjes krijg jij'], ['Een rit duurt {H} minuten. Je hebt er al {P} gehad.', 'van de rit heb je al gehad'],
+            ['Je hebt € {H}. Je geeft € {P} uit.', 'van je geld geef je uit'], ['Een wandeling is {H} km. Je hebt {P} km gelopen.', 'van de wandeling heb je gelopen'], ['Een boek heeft {H} bladzijden. Je hebt er {P} gelezen.', 'van het boek heb je gelezen']]);
+          return { context:z[0].replace('{H}', H).replace('{P}', P) + ' De strook is in ' + n + ' gelijke stukken verdeeld.', vraag:'Welk deel ' + z[1] + '?',
+            beeld:function(k){ var onder = []; for (var i = 0; i <= n; i++) onder.push(i === 0 ? '0' : i === n ? String(H) : k >= 1 ? String(i * u) : ''); return T.teken.strook(n, k >= 2 ? t : 0, { onder:onder }); },
+            stappen:[
+              { tekst:'Hoeveel is één stuk van de strook? ' + H + ' : ' + n + ' =', antwoord:String(u), hint:'Verdeel ' + H + ' eerlijk over ' + n + ' stukken.' },
+              { tekst:'Hoeveel stukken zijn ' + P + '? ' + P + ' : ' + u + ' =', antwoord:String(t), hint:'Hoe vaak past ' + u + ' in ' + P + '?' },
+              { tekst:t + ' van de ' + n + ' stukken. Welk deel is dat?', antwoord:[br(t, n)].concat(bvar(t, n), [br(P, H)]), hint:'Het aantal stukken boven de streep, alle stukken eronder: ' + br(t, n) + '.', fout:F(br(n, t), 'Je hebt teller en noemer omgedraaid.') } ] };
+        } },
+      { id:'breuk-als-deling', naam:'Een breuk is een deling', kort:'3 pizza\'s verdelen over 4 kinderen: iedereen krijgt 3 : 4 = 3/4 pizza',
+        uit:'<p>Je verdeelt 3 pizza\'s eerlijk over 4 kinderen. Snijd elke pizza in <b>4 gelijke stukken</b>, voor elk kind één. Elk stuk is 1/4 pizza.</p><p>Van elke pizza krijgt elk kind één stuk. Bij 3 pizza\'s zijn dat 3 stukken van 1/4: samen <b>3/4</b> pizza.</p><p>Zo zie je: <b>3 : 4 = 3/4</b>. Een breuk is een deling. Zijn er meer pizza\'s dan kinderen, dan krijgt iedereen meer dan een hele: 5 : 4 = 5/4 = 1&ensp;1/4.</p>',
+        wanneer:'je iets eerlijk verdeelt en het niet uitkomt in hele.',
+        maak:function(R){
+          var n = R.kies([3, 4, 5, 6]), a; do { a = R.heel(2, n + 3); } while (a % n === 0);
+          var it = R.kies([['pizza', 'pizza\'s', 'kinderen'], ['pannenkoek', 'pannenkoeken', 'kinderen'], ['taart', 'taarten', 'tafels'], ['ronde kaas', 'ronde kazen', 'gezinnen']]), elk = it[2] === 'tafels' ? 'elke tafel' : it[2] === 'gezinnen' ? 'elk gezin' : 'elk kind';
+          var ant = [br(a, n)].concat(bvar(a, n, a > n));
+          return { context:'Je verdeelt ' + a + ' ' + it[1] + ' eerlijk over ' + n + ' ' + it[2] + '.', vraag:'Hoeveel ' + it[0] + ' krijgt ' + elk + '?', antwoord:ant,
+            beeld:function(k){ return pizzas(a, n, k >= 2); },
+            stappen:[
+              { tekst:'Snijd elke ' + it[0] + ' in ' + n + ' gelijke stukken, voor ' + elk + ' één. Welk deel van een ' + it[0] + ' is één stuk?', antwoord:['1/' + n], hint:'Het geheel is in ' + n + ' gelijke stukken verdeeld.' },
+              { tekst:'Van elke ' + it[0] + ' krijgt ' + elk + ' één stuk. Hoeveel stukken zijn dat bij ' + a + ' ' + it[1] + '?', antwoord:String(a), hint:'Eén stuk per ' + it[0] + '.' },
+              { tekst:a + ' stukken van 1/' + n + '. Hoeveel ' + it[0] + ' is dat? (' + a + ' : ' + n + ')', antwoord:ant, hint:a + ' stukken van 1/' + n + ' is ' + br(a, n) + '.' + (a > n ? ' Dat is meer dan een hele.' : ''), fout:F(br(n, a), 'Je hebt teller en noemer omgedraaid. Het aantal ' + it[1] + ' komt boven de streep.') } ] };
         } }
     ] });
 
@@ -326,6 +369,29 @@
           var st = via ? noemerStappen(t, n) : delenStappen(t, n).slice(1);
           return { vraag:br(t, n) + ' = …', context:'Schrijf als kommagetal.',
             stappen:[ kz('Welke manier is hier het handigst?', M, M[via ? 0 : 1], via ? 'Past ' + n + ' precies in 10 of in 100?' : 'Past ' + n + ' in 10 of 100? Nee, dus ...') ].concat(st) };
+        } },
+      { id:'breuk-om-ordenen', naam:'Breuk, kommagetal en procent ordenen', kort:'Schrijf alles als kommagetal; dan zet je ze makkelijk op volgorde',
+        uit:'<p>Welke is het grootst: 3/5, 0,58 of 62%? Zo kun je ze niet vergelijken. Schrijf ze eerst allemaal op <b>dezelfde manier</b>, het handigst als <b>kommagetal</b>.</p><p>3/5 = 3 : 5 = 0,6. 62% = 0,62. En 0,58 blijft 0,58.</p><p>Vergelijk dan cijfer voor cijfer, of zet ze op de getallenlijn: 0,58, dan 0,6, dan 0,62. De volgorde van klein naar groot is dus <b>0,58, 3/5, 62%</b>.</p>',
+        wanneer:'je breuken, kommagetallen en procenten door elkaar moet vergelijken of ordenen.',
+        maak:function(R){
+          var BR = [[1, 2], [1, 4], [3, 4], [1, 5], [2, 5], [3, 5], [4, 5], [1, 8], [3, 8], [5, 8], [7, 8], [3, 10], [7, 10], [9, 10], [3, 20], [7, 20]], b, v, k, p, ok;
+          do {
+            b = R.kies(BR); v = b[0] / b[1];
+            k = Math.round((v + R.kies([-1, 1]) * R.heel(1, 8) / 100) * 100) / 100;
+            p = Math.round(v * 100) + R.kies([-1, 1]) * R.heel(1, 8);
+            var w = [v, k, p / 100].sort(function(x, y){ return x - y; });
+            ok = k > 0 && k < 1 && p > 0 && p < 100 && w[1] - w[0] >= 0.01 - 1e-9 && w[2] - w[1] >= 0.01 - 1e-9;
+          } while (!ok);
+          var items = [{ t:br(b[0], b[1]), v:v }, { t:tn(k), v:k }, { t:p + '%', v:p / 100 }], goed = items.slice().sort(function(x, y){ return x.v - y.v; });
+          function zin(l){ return 'eerst ' + l[0].t + ', dan ' + l[1].t + ', dan ' + l[2].t; }
+          var perm = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]].map(function(q){ return zin(q.map(function(i){ return items[i]; })); });
+          var g = zin(goed), fout = R.hussel(perm.filter(function(x){ return x !== g; })).slice(0, 3);
+          var pl = function(n){ var o = { van:0, tot:1, streep:0.1, labels:[0, 0.5, 1] }; if (n >= 2){ o.stip = items.map(function(x){ return x.v; }); o.labels = [0, 1].concat(o.stip); } return T.teken.lijn(o); };
+          return eindKeuze({ vraag:items.map(function(x){ return x.t; }).join(' ; '), vraagHtml:items.map(function(x){ return x.t; }).join('&ensp;&ensp;'), context:'Zet deze getallen op volgorde, van klein naar groot.', beeld:pl, zelfBeeld:pl(0),
+            stappen:[
+              { tekst:'Schrijf ' + br(b[0], b[1]) + ' als kommagetal:', antwoord:tn(v), hint:'Een breuk is een deling: ' + b[0] + ' : ' + b[1] + '. Of maak de noemer 10, 100 of 1000.' },
+              { tekst:'Schrijf ' + p + '% als kommagetal:', antwoord:tn(p / 100), hint:'Procent is van de honderd: ' + p + '% = ' + p + '/100.', fout:F(tn(p / 10), 'De komma schuift twee plaatsen, niet een.') },
+              kz('Wat is de goede volgorde, van klein naar groot?', [g].concat(fout), g, 'Vergelijk de kommagetallen ' + tn(v) + ', ' + tn(k) + ' en ' + tn(p / 100) + '. Kijk eerst naar de tienden, dan naar de honderdsten.') ] });
         } }
     ] });
 
@@ -652,6 +718,22 @@
                    { tekst:tt > 1 ? 'En ' + br(tt, nn) + ' past ' + tt + ' keer minder vaak: ' + (aa * nn) + ' : ' + tt + ' =' : 'Dus ' + vraag + ' =', antwoord:String(aa * nn / tt), hint:tt > 1 ? 'Deel door de teller ' + tt + '.' : 'Dat had je net al uitgerekend.' } ]; }
           var hint = ['Kijk naar de noemers: zijn ze gelijk? En is het plus of min?', 'Plus of min, en de noemers zijn verschillend.', 'Het is een keersom.', 'Het is een deelsom met een breuk.'][soort];
           return { vraag:vraag, stappen:[kz('Welke manier heb je hier nodig?', M, M[soort], hint)].concat(st) };
+        } },
+      { id:'breuk-gemengd-plus', naam:'Gemengde getallen optellen en aftrekken', kort:'Reken de helen en de breuken apart uit; wordt de breuk meer dan 1, haal er dan een hele uit',
+        uit:'<p>2&ensp;1/2 + 1&ensp;3/4: reken de <b>helen</b> en de <b>breuken</b> apart. De helen: 2 + 1 = 3.</p><p>De breuken: maak ze eerst gelijknamig. 1/2 = 2/4, dus 2/4 + 3/4 = 5/4. Dat is meer dan 1: 5/4 = 1&ensp;1/4.</p><p>Samen: 3 + 1&ensp;1/4 = <b>4&ensp;1/4</b>. Bij min gaat het net zo: helen min helen en breuk min breuk.</p>',
+        wanneer:'je rekent met gemengde getallen, zoals bij recepten, tijden of lengtes.',
+        maak:function(R){
+          var P = R.kies([[2, 4], [4, 2], [3, 6], [6, 3], [2, 3], [4, 8], [8, 4], [3, 4], [2, 5], [4, 4], [3, 3], [5, 10]]), c = P[0], f = P[1], N = kgv(c, f), plus = R.heel(0, 2) > 0, a, d, b, e, x, y;
+          do { a = R.heel(1, 5); d = R.heel(1, 4); b = R.heel(1, c - 1); e = R.heel(1, f - 1); x = b * N / c; y = e * N / f; }
+          while (ggd(b, c) > 1 || ggd(e, f) > 1 || (!plus && (a <= d || x <= y)) || (plus && x + y === N));
+          var H = plus ? a + d : a - d, Z = plus ? x + y : x - y, tot = H * N + Z, st = [];
+          var A1 = a + GS + br(b, c), A2 = d + GS + br(e, f), teken = plus ? '+' : MIN;
+          st.push({ tekst:'De helen: ' + a + ' ' + teken + ' ' + d + ' =', antwoord:String(H), hint:plus ? 'Tel de hele getallen op.' : 'Trek de hele getallen van elkaar af.' });
+          if (c !== N) st.push({ tekst:'Maak de breuken gelijknamig met noemer ' + N + '. ' + br(b, c) + ' = …/' + N, antwoord:String(x), hint:c + ' ' + X + ' ' + (N / c) + ' = ' + N + '. Doe de teller ook keer ' + (N / c) + '.' });
+          if (f !== N) st.push({ tekst:(c === N ? 'Maak de breuken gelijknamig met noemer ' + N + '. ' : '') + br(e, f) + ' = …/' + N, antwoord:String(y), hint:f + ' ' + X + ' ' + (N / f) + ' = ' + N + '. Doe de teller ook keer ' + (N / f) + '.' });
+          st.push({ tekst:'De breuken: ' + br(x, N) + ' ' + teken + ' ' + br(y, N) + ' =', antwoord:bvar(Z, N), hint:'De noemer blijft ' + N + '. ' + (plus ? 'Tel' : 'Trek') + ' alleen de tellers ' + (plus ? 'op' : 'af') + '.', fout:F(br(Z, 2 * N), 'De noemer blijft hetzelfde. Je ' + (plus ? 'telt' : 'trekt') + ' alleen de tellers ' + (plus ? 'op' : 'af') + '.') });
+          st.push({ tekst:'Alles samen: ' + H + ' + ' + gem(Z, N) + ' =', antwoord:bvar(tot, N, true), hint:Z > N ? gem(Z, N) + ' is meer dan 1. Tel de hele erbij: ' + (H + Math.floor(Z / N)) + ' en nog ' + gem(Z % N, N) + '.' : 'De helen en de breuk achter elkaar.' });
+          return { vraag:A1 + ' ' + teken + ' ' + A2, context:'Schrijf het antwoord als gemengd getal.', antwoord:bvar(tot, N, true), stappen:st };
         } }
     ] });
 
@@ -831,6 +913,10 @@
     ] });
 
   /* ---------- 7. Verhoudingen vergelijken (2F) ---------- */
+  /* valuta: naam, teken, koersen (1 euro = ...) */
+  var VALUTA = [['dollar', '$', [1.05, 1.08, 1.1, 1.2, 1.25]], ['pond', '£', [0.8, 0.85, 0.9]], ['Zwitserse frank', 'CHF', [0.95, 1.05]], ['Zweedse kronen', 'SEK', [11, 11.5]], ['Japanse yen', 'yen', [150, 160]]];
+  function vbd(x){ return x % 1 ? T.toon(x, { dec:2, vast:true }) : tn(x); }
+  function valAnt(x, v){ var l = [vbd(x), tn(x), vbd(x) + ' ' + v[0], v[1] + ' ' + vbd(x), vbd(x) + ' ' + v[1]]; return l.filter(function(a, i){ return l.indexOf(a) === i; }); }
   var ING = [['bloem', 'gram', 25], ['suiker', 'gram', 25], ['boter', 'gram', 25], ['pasta', 'gram', 50], ['rijst', 'gram', 50], ['melk', 'ml', 50], ['room', 'ml', 25], ['eieren', '', 1]];
   var NAMEN = [['Sam', 'Noa'], ['Daan', 'Lina'], ['Mo', 'Fleur'], ['Jesse', 'Amira'], ['Bram', 'Yara'], ['Tim', 'Sanne']];
   function tweeNamen(n, x, a, b){ var l = []; for (var i = 0; i <= n; i++) l.push(i === 0 ? a : i === x ? b : ''); return l; }
@@ -927,6 +1013,94 @@
           var soort = R.heel(0, 2), o = koopOpgave(R, soort), M = ['prijs per stuk', 'prijs per kilo', 'prijs per 100 gram'];
           var hint = ['De pakken bevatten stuks, geen grammen.', 'Kijk of de gewichten mooi in 1000 g passen.', 'Passen de gewichten mooi in 1000 g? Nee, maar het zijn wel honderdtallen.'][soort];
           return eindKeuze({ context:o.ctx, vraag:'Welk pak is de beste koop?', stappen:[kz('Hoe vergelijk je hier het handigst?', M, M[soort], hint)].concat(o.st) });
+        } },
+      { id:'verh-valuta', naam:'Wisselkoersen', kort:'Van euro naar vreemd geld is keer de koers, terug naar euro is gedeeld door de koers',
+        uit:'<p>Op reis betaal je met ander geld, zoals dollars of ponden. De <b>wisselkoers</b> zegt hoeveel je krijgt voor 1 euro. Bijvoorbeeld: 1 euro = 1,10 dollar.</p><p>Van <b>euro naar dollar</b>: elke euro wordt 1,10 dollar, dus <b>keer de koers</b>. € 200 is 200 × 1,10 = 220 dollar.</p><p>Van <b>dollar terug naar euro</b>: <b>gedeeld door de koers</b>. 330 dollar is 330 : 1,10 = € 300. Zet het in een verhoudingstabel als je twijfelt.</p>',
+        wanneer:'je op reis gaat of iets in het buitenland koopt.',
+        maak:function(R){
+          var v = R.kies(VALUTA), k = R.kies(v[2]), heen = R.heel(0, 1) === 1, E = heen ? 10 * R.heel(2, 50) : 5 * R.heel(4, 80), V = Math.round(E * k * 100) / 100;
+          var kop = ['euro', v[0]], cols = heen ? [{ b:1, o:vbd(k) }, { b:E, o:vbd(V), vul:2 }] : [{ b:1, o:vbd(k) }, { b:E, o:vbd(V), vulB:2 }];
+          var ctx = 'De koers is: 1 euro = ' + vbd(k) + ' ' + v[0] + '.';
+          if (heen) return { context:ctx + ' Je wisselt ' + ec(E * 100) + ' om naar ' + v[0] + '.', vraag:'Hoeveel ' + v[0] + ' krijg je?', eenheid:v[1], beeld:function(n){ return vtab(kop, cols, n); },
+            stappen:[
+              kz('Van euro naar ' + v[0] + ': keer of gedeeld door ' + vbd(k) + '?', [X + ' ' + vbd(k), ': ' + vbd(k)], X + ' ' + vbd(k), 'Elke euro wordt ' + vbd(k) + ' ' + v[0] + '. Dus bij ' + E + ' euro: ' + E + ' keer zoveel.'),
+              { tekst:E + ' ' + X + ' ' + vbd(k) + ' =', antwoord:valAnt(V, v), eenheid:v[1], hint:E + ' keer ' + vbd(k) + '. ' + (k > 1 ? 'Je krijgt meer ' + v[0] + ' dan je euro had.' : 'Je krijgt minder ' + v[0] + ' dan je euro had.'), fout:F(vbd(Math.round(E / k * 100) / 100), 'Je deelde. Van euro naar ' + v[0] + ' doe je keer de koers.') } ] };
+          return { context:ctx + ' Je hebt nog ' + vbd(V) + ' ' + v[0] + ' over en wisselt dat terug naar euro.', vraag:'Hoeveel euro krijg je?', beeld:function(n){ return vtab(kop, cols, n); },
+            stappen:[
+              kz('Van ' + v[0] + ' naar euro: keer of gedeeld door ' + vbd(k) + '?', [X + ' ' + vbd(k), ': ' + vbd(k)], ': ' + vbd(k), 'Voor elke ' + vbd(k) + ' ' + v[0] + ' krijg je 1 euro. Hoe vaak past ' + vbd(k) + ' in ' + vbd(V) + '?'),
+              { tekst:vbd(V) + ' : ' + vbd(k) + ' =', antwoord:[ec(E * 100), tn(E), tn(E) + ' euro'], hint:'Hoe vaak past ' + vbd(k) + ' in ' + vbd(V) + '? Controleer: ' + E + ' ' + X + ' ' + vbd(k) + ' = ' + vbd(V) + '.', fout:F(vbd(Math.round(V * k * 100) / 100), 'Je deed keer. Terug naar euro deel je door de koers.') } ] };
+        } },
+      { id:'verh-valuta-kosten', naam:'Geld wisselen met kosten', kort:'Haal de kosten van je euro\'s af voordat je omrekent, of nadat je terug hebt gerekend',
+        uit:'<p>Een wisselkantoor rekent vaak <b>kosten</b>. Die gaan van je <b>euro\'s</b> af.</p><p>Wissel je € 200 om naar pond met € 5 kosten? Dan wordt er maar € 195 omgewisseld. Bij 1 euro = 0,90 pond krijg je 195 × 0,90 = 175,50 pond.</p><p>Wissel je terug, dan reken je eerst om naar euro en haal je daarna de kosten eraf.</p>',
+        wanneer:'je geld wisselt bij een bank of wisselkantoor.',
+        maak:function(R){
+          var v = R.kies(VALUTA.slice(0, 3)), k = R.kies(v[2]), K = R.kies([2, 3, 4, 5, 6]);
+          if (R.heel(0, 1)){
+            var E = 10 * R.heel(5, 40), E2 = E - K, V = Math.round(E2 * k * 100) / 100;
+            return { context:'De koers is: 1 euro = ' + vbd(k) + ' ' + v[0] + '. Je wisselt ' + ec(E * 100) + ' om. Het wisselkantoor rekent ' + ec(K * 100) + ' kosten. Die gaan eerst van je euro\'s af.', vraag:'Hoeveel ' + v[0] + ' krijg je?', eenheid:v[1],
+              stappen:[
+                { tekst:'Hoeveel euro wordt er echt omgewisseld? ' + ec(E * 100) + ' ' + MIN + ' ' + ec(K * 100) + ' =', antwoord:ec(E2 * 100), hint:'De kosten gaan eerst van je geld af.' },
+                { tekst:vbd(E2) + ' ' + X + ' ' + vbd(k) + ' =', antwoord:valAnt(V, v), eenheid:v[1], hint:'Van euro naar ' + v[0] + ' is keer de koers.', fout:F(vbd(Math.round(E * k * 100) / 100), 'Je vergat de kosten eraf te halen.') } ] };
+          }
+          var Et = 10 * R.heel(3, 30), Vt = Math.round(Et * k * 100) / 100;
+          return { context:'De koers is: 1 euro = ' + vbd(k) + ' ' + v[0] + '. Je hebt na je reis nog ' + vbd(Vt) + ' ' + v[0] + ' over. Je wisselt dat terug naar euro. Het wisselkantoor rekent ' + ec(K * 100) + ' kosten.', vraag:'Hoeveel euro krijg je?',
+            stappen:[
+              { tekst:'Eerst naar euro: ' + vbd(Vt) + ' : ' + vbd(k) + ' =', antwoord:[ec(Et * 100), tn(Et)], hint:'Van ' + v[0] + ' naar euro deel je door de koers.' },
+              { tekst:'Min de kosten: ' + ec(Et * 100) + ' ' + MIN + ' ' + ec(K * 100) + ' =', antwoord:[ec((Et - K) * 100), tn(Et - K)], hint:'De kosten gaan van je euro\'s af.', fout:FG((Et + K) * 100, 'De kosten gaan eraf, niet erbij.') } ] };
+        } },
+      { id:'verh-taal', naam:'Verhoudingstaal: deel en geheel', kort:'Bij 3 : 2 zijn er samen 5 delen; het eerste is dus 3/5 van het geheel, niet 3/2',
+        uit:'<p>Een verhouding als <b>jongens : meisjes = 3 : 2</b> vergelijkt twee delen met elkaar. Op elke 3 jongens zijn er 2 meisjes.</p><p>Wil je weten welk deel van de <b>hele</b> klas jongen is? Tel de delen op: 3 + 2 = 5. De jongens zijn dan <b>3/5</b> van de klas. Niet 3/2: dat zijn jongens tegenover meisjes.</p><p><b>1 op de 4</b> betekent iets anders: 1 van elke 4, dus 1/4 van het geheel. Van 200 mensen is dat 200 : 4 = 50.</p>',
+        wanneer:'je een verhouding of een uitspraak als 1 op de 4 moet begrijpen.',
+        maak:function(R){
+          if (R.heel(0, 1)){
+            var x, y; do { x = R.heel(1, 5); y = R.heel(1, 5); } while (x === y || ggd(x, y) !== 1);
+            var it = R.kies([['jongens', 'meisjes', 'Welk deel van de klas is jongen?', 'In een klas'], ['siroop', 'water', 'Welk deel van de limonade is siroop?', 'In limonade'], ['rode knikkers', 'blauwe knikkers', 'Welk deel van alle knikkers is rood?', 'In een zak'], ['volwassenen', 'kinderen', 'Welk deel van de bezoekers is volwassen?', 'In de dierentuin']]);
+            return { context:it[3] + ' is de verhouding ' + it[0] + ' : ' + it[1] + ' = ' + x + ' : ' + y + '.', vraag:it[2], antwoord:bvar(x, x + y),
+              beeld:function(n){ return n >= 1 ? T.teken.strook(x + y, x, { boven:tweeNamen(x + y, x, it[0], it[1]) }) : ''; },
+              stappen:[
+                { tekst:'Hoeveel delen zijn er samen? ' + x + ' + ' + y + ' =', antwoord:String(x + y), hint:x + ' delen ' + it[0] + ' en ' + y + ' delen ' + it[1] + '.' },
+                { tekst:it[2], antwoord:bvar(x, x + y), hint:x + ' van de ' + (x + y) + ' delen: ' + br(x, x + y) + '.', fout:F(br(x, y), 'Dat is ' + it[0] + ' tegenover ' + it[1] + '. Een deel van het geheel deel je door alle delen samen.') } ] };
+          }
+          var n = R.kies([3, 4, 5, 10, 20]), t = n >= 10 ? R.kies([1, 3, 7]) : 1, H = n * R.heel(5, 40), wat = R.kies([['leerlingen', 'komt met de bus naar school', 'komen met de bus'], ['inwoners', 'heeft een hond', 'hebben een hond'], ['bezoekers', 'koopt een ijsje', 'kopen een ijsje'], ['leden', 'speelt elke week', 'spelen elke week']]);
+          var st = [{ tekst:t + ' op de ' + n + ' betekent: welk deel van het geheel?', antwoord:bvar(t, n), hint:t + ' van elke ' + n + '.', fout:F(br(t, n - t), 'Dat zijn de ' + t + ' tegenover de rest. ' + t + ' op de ' + n + ' is ' + t + ' van elke ' + n + '.') },
+            { tekst:'Eerst 1/' + n + ' van ' + H + ': ' + H + ' : ' + n + ' =', antwoord:String(H / n), hint:'Deel door ' + n + '.' }];
+          if (t > 1) st.push({ tekst:br(t, n) + ': ' + t + ' ' + X + ' ' + (H / n) + ' =', antwoord:String(t * H / n), hint:t + ' keer ' + (H / n) + '.' });
+          return { context:t + ' op de ' + n + ' ' + wat[0] + ' ' + (t > 1 ? wat[2] : wat[1]) + '. Er zijn ' + H + ' ' + wat[0] + '.', vraag:'Hoeveel ' + wat[0] + ' ' + wat[2] + '?', antwoord:String(t * H / n), stappen:st };
+        } },
+      { id:'verh-vereenvoudig', naam:'Een verhouding vereenvoudigen', kort:'Deel beide getallen door het grootste getal dat in allebei past',
+        uit:'<p>In een fruitschaal liggen 12 appels en 8 peren. De verhouding appels : peren is <b>12 : 8</b>.</p><p>Net als bij een breuk kun je een verhouding <b>vereenvoudigen</b>: deel beide getallen door hetzelfde getal. 4 past in 12 en in 8: 12 : 4 = 3 en 8 : 4 = 2.</p><p>Dus 12 : 8 = <b>3 : 2</b>. Neem het grootste getal dat in allebei past, dan ben je in één keer klaar.</p>',
+        wanneer:'je een verhouding met kleine getallen wilt schrijven, zodat je hem makkelijker ziet.',
+        maak:function(R){
+          var p, q; do { p = R.heel(1, 7); q = R.heel(1, 7); } while (p === q || ggd(p, q) !== 1);
+          var g = R.heel(2, 9), A = p * g, B = q * g, it = R.kies([['appels', 'peren', 'In een fruitschaal liggen {A} appels en {B} peren.'], ['jongens', 'meisjes', 'Bij de sportclub zijn {A} jongens en {B} meisjes lid.'], ['zand', 'cement', 'Voor beton gebruik je {A} scheppen zand en {B} scheppen cement.'], ['rode', 'witte', 'In een vaas staan {A} rode en {B} witte rozen.']]);
+          var klein = []; for (var i = 2; i < g; i++) if (g % i === 0) klein.push(i);
+          var fo = {}; klein.forEach(function(x){ fo[String(x)] = 'Dat past, maar er past een groter getal in ' + A + ' en ' + B + '.'; });
+          return { context:it[2].replace('{A}', A).replace('{B}', B), vraag:'Schrijf ' + it[0] + ' : ' + it[1] + ' zo eenvoudig mogelijk.', antwoord:[p + ' : ' + q, p + ':' + q],
+            stappen:[
+              { tekst:'De verhouding is ' + A + ' : ' + B + '. Wat is het grootste getal dat in ' + A + ' en in ' + B + ' past?', antwoord:String(g), hint:'Probeer de tafels: in welke tafel staan ' + A + ' en ' + B + ' allebei?', fout:fo },
+              { tekst:A + ' : ' + g + ' =', antwoord:String(p), hint:'Deel het eerste getal door ' + g + '.' },
+              { tekst:B + ' : ' + g + ' =', antwoord:String(q), hint:'Deel het tweede getal door ' + g + '.' },
+              { tekst:'De verhouding ' + it[0] + ' : ' + it[1] + ' is', antwoord:[p + ' : ' + q, p + ':' + q], hint:'Schrijf de twee getallen met een dubbele punt ertussen, in dezelfde volgorde.', fout:F(q + ' : ' + p, 'De volgorde moet blijven: eerst ' + it[0] + ', dan ' + it[1] + '.', q + ':' + p, 'De volgorde moet blijven: eerst ' + it[0] + ', dan ' + it[1] + '.') } ] };
+        } },
+      { id:'verh-omgekeerd', naam:'Omgekeerd evenredig', kort:'Meer van het een betekent minder van het ander: reken eerst het totaal uit en deel dat',
+        uit:'<p>4 schilders doen 6 dagen over een huis. Hoe lang doen 3 schilders erover? <b>Minder</b> schilders hebben <b>meer</b> dagen nodig. Dat heet <b>omgekeerd evenredig</b>.</p><p>Reken eerst het <b>totaal</b> uit: 4 × 6 = 24 schildersdagen werk. Dat werk blijft gelijk. Met 3 schilders: 24 : 3 = <b>8 dagen</b>.</p><p>Let op: een verhoudingstabel met keer werkt hier niet. Bij omgekeerd evenredig blijft het product gelijk.</p>',
+        wanneer:'meer van het een juist minder van het ander geeft, zoals meer werkers en minder tijd.',
+        maak:function(R){
+          var C = R.kies([
+            { a:'schilders', b:'dagen', tot:'schildersdagen werk', w:['Er zijn nu meer schilders.', 'Er zijn nu minder schilders.'], h:['Met meer schilders is het werk sneller klaar.', 'Met minder schilders duurt het langer.'], z:'{a1} schilders doen {b1} dagen over een huis.', v:'Hoeveel dagen doen {a2} schilders erover?', A:[2, 6], B:[3, 12] },
+            { a:'kinderen', b:'snoepjes', tot:'snoepjes in de zak', w:['Er zijn nu meer kinderen.', 'Er zijn nu minder kinderen.'], h:['Met meer kinderen krijgt ieder minder.', 'Met minder kinderen krijgt ieder meer.'], z:'Een zak snoep is genoeg voor {a1} kinderen die er elk {b1} krijgen.', v:'Hoeveel snoepjes krijgt elk kind als er {a2} kinderen zijn?', A:[3, 8], B:[4, 12] },
+            { a:'paarden', b:'dagen', tot:'paardendagen voer', w:['Er zijn nu meer paarden.', 'Er zijn nu minder paarden.'], h:['Meer paarden eten het voer sneller op.', 'Minder paarden doen langer met het voer.'], z:'Een voorraad voer is genoeg voor {b1} dagen bij {a1} paarden.', v:'Hoeveel dagen is hij genoeg bij {a2} paarden?', A:[2, 8], B:[6, 20] },
+            { a:'km per uur', b:'uur', tot:'de lengte van de rit in km', w:['Je rijdt nu harder.', 'Je rijdt nu langzamer.'], h:['Rijd je harder, dan ben je eerder op de plek.', 'Rijd je langzamer, dan duurt het langer.'], km:true, z:'Met {a1} km per uur doe je {b1} uur over een rit.', v:'Hoeveel uur doe je erover met {a2} km per uur?', A:[40, 120], B:[2, 6], tien:true },
+            { a:'pompen', b:'uur', tot:'pompuren', w:['Er zijn nu meer pompen.', 'Er zijn nu minder pompen.'], h:['Met meer pompen is de kelder sneller leeg.', 'Met minder pompen duurt het langer.'], z:'Met {a1} pompen is een kelder in {b1} uur leeg.', v:'Hoeveel uur duurt het met {a2} pompen?', A:[2, 6], B:[3, 12] } ]);
+          var a1, b1, a2, b2;
+          do { a1 = R.heel(C.A[0], C.A[1]); b1 = R.heel(C.B[0], C.B[1]); a2 = R.heel(C.A[0], C.A[1]); if (C.tien){ a1 = 10 * Math.round(a1 / 10); a2 = 10 * Math.round(a2 / 10); } b2 = a1 * b1 / a2; } while (a1 === a2 || b2 % 1 !== 0);
+          var meer = a2 > a1, tot = a1 * b1;
+          var tab = function(n){ return T.teken.tabel([[C.a, String(a1), String(a2)], [C.b, String(b1), n >= 3 ? String(b2) : '?']], { zijkop:true }); };
+          return { context:C.z.replace('{a1}', a1).replace('{b1}', b1), vraag:C.v.replace('{a2}', a2), eenheid:C.b, beeld:tab, zelfBeeld:tab(0),
+            stappen:[
+              kz(C.w[meer ? 0 : 1] + ' Wordt het aantal ' + C.b + ' dan meer of minder?', ['meer', 'minder'], meer ? 'minder' : 'meer', C.h[meer ? 0 : 1]),
+              { tekst:'Het totaal blijft gelijk: ' + a1 + ' ' + X + ' ' + b1 + ' =', antwoord:String(tot), hint:'Dat is het totaal: ' + C.tot + '.' },
+              { tekst:tot + ' : ' + a2 + ' =', antwoord:met(b2, C.b), eenheid:C.b, hint:C.km ? 'Hoe vaak past ' + a2 + ' km in ' + tot + ' km?' : 'Verdeel het totaal over ' + a2 + ' ' + C.a + '.', fout:F(tn(Math.round(b1 * a2 / a1 * 100) / 100), 'Je rekende alsof het meegroeit. Hier blijft het totaal gelijk, dus je deelt het totaal.') } ] };
         } }
     ] });
 
@@ -984,8 +1158,9 @@
         wanneer:'er op de kaart een schaallijn staat in plaats van een getal.',
         maak:function(R){
           var s = R.kies([1, 2]), m = R.heel(0, 1), v = m ? R.kies([100, 200, 250, 500]) : R.kies([1, 2, 5]), eenh = m ? 'm' : 'km', k = R.kies([1.5, 2, 2.5, 3, 3.5, 4, 5, 6]), d = s * k;
-          var b = schaalstok(s, v, eenh, d, true);
-          return { context:'Op de schaallijn is ' + s + ' cm in het echt ' + v + ' ' + eenh + '. Op de kaart meet je ' + tn(d) + ' cm.', vraag:'Hoe ver is het echt?', beeld:b, zelfBeeld:b,
+          var b = schaalstok(s, v, eenh, d, true, true);
+          return { context:'Op de schaallijn is ' + s + ' cm in het echt ' + v + ' ' + eenh + '. Op de kaart meet je ' + tn(d) + ' cm.', vraag:'Hoe ver is het echt?', zelfBeeld:b,
+            beeld:function(n){ return n >= 2 ? schaalstok(s, v, eenh, d, true) : b; },
             stappen:[
               { tekst:'Hoe vaak past ' + s + ' cm in ' + tn(d) + ' cm? ' + tn(d) + ' : ' + s + ' =', antwoord:tn(k), hint:'Tel de stukken van de schaallijn onder je afstand.' },
               { tekst:'Elk stuk is ' + v + ' ' + eenh + '. ' + tn(k) + ' ' + X + ' ' + v + ' =', antwoord:met(k * v, eenh), eenheid:eenh, hint:tn(k) + ' keer ' + v + '.' } ] };
@@ -1001,6 +1176,44 @@
               { tekst:'1 cm op de kaart is ' + sp(S) + ' cm. In meter:', antwoord:met(e, 'm'), eenheid:'m', hint:sp(S) + ' : 100.' },
               terug ? { tekst:'Hoe vaak past ' + sp(e) + ' m in ' + sp(d * e) + ' m? ' + sp(d * e) + ' : ' + sp(e) + ' =', antwoord:met(d, 'cm'), eenheid:'cm', hint:'Zoveel cm is het op de kaart.' }
                     : { tekst:tn(d) + ' ' + X + ' ' + sp(e) + ' m =', antwoord:met(d * e, 'm'), eenheid:'m', hint:'Keer ' + tn(d) + ', boven en onder.' } ] };
+        } },
+      { id:'schaal-lijn-getal', naam:'Schaallijn en schaalgetal', kort:'Reken het stuk van de schaallijn om naar cm en deel door de lengte van dat stuk',
+        uit:'<p>Een kaart heeft een <b>schaallijn</b> (een lijntje met stukken) of een <b>schaalgetal</b> (zoals 1 : 50 000). Je kunt ze in elkaar omrekenen.</p><p>Op de schaallijn is <b>2 cm</b> in het echt <b>1 km</b>. 1 km = 100 000 cm. Dan is 1 cm in het echt 100 000 : 2 = 50 000 cm. De schaal is <b>1 : 50 000</b>.</p><p>Andersom: bij schaal 1 : 25 000 is 1 cm in het echt 25 000 cm = 250 m. Een stuk van 2 cm op de schaallijn is dan 500 m.</p>',
+        wanneer:'je een schaallijn wilt omzetten in een schaalgetal, of andersom.',
+        maak:function(R){
+          if (R.heel(0, 1)){
+            var s = R.kies([1, 2, 4]), m = R.heel(0, 1), v = m ? R.kies([100, 200, 250, 500]) : R.kies([1, 2, 5]), eenh = m ? 'm' : 'km', cm = v * (m ? 100 : 100000), S = cm / s;
+            if (S % 1){ s = 1; S = cm; }
+            var b = schaalstok(s, v, eenh, 0, false, true), st = [{ tekst:v + ' ' + eenh + ' = … cm', antwoord:spv(cm), eenheid:'cm', hint:m ? '1 m is 100 cm.' : '1 km = 1000 m = 100 000 cm.' }];
+            if (s > 1) st.push({ tekst:'Dat is ' + s + ' cm op de kaart. Hoeveel is 1 cm op de kaart in het echt? ' + sp(cm) + ' : ' + s + ' =', antwoord:spv(S), eenheid:'cm', hint:'Deel door ' + s + '.' });
+            st.push({ tekst:'1 cm op de kaart is ' + sp(S) + ' cm in het echt. De schaal is', antwoord:schaalVar(S), hint:'Schrijf 1 : en dan het aantal cm in het echt.', fout:F('1 : ' + v, 'Reken eerst om naar cm. Op een schaal staan aan beide kanten dezelfde eenheden.') });
+            return { context:'Op de schaallijn van een kaart is ' + s + ' cm in het echt ' + v + ' ' + eenh + '.', vraag:'Wat is de schaal?', beeld:b, zelfBeeld:b, stappen:st };
+          }
+          var S2 = R.kies([10000, 20000, 25000, 50000, 100000]), s2 = R.kies([1, 2, 4]), cm2 = s2 * S2, inM = cm2 / 100, km = inM >= 1000;
+          return { context:'De schaal van een kaart is 1 : ' + sp(S2) + '. Je tekent een schaallijn met een stuk van ' + s2 + ' cm.', vraag:'Hoeveel ' + (km ? 'km' : 'm') + ' is dat stuk in het echt?', eenheid:km ? 'km' : 'm',
+            stappen:[
+              { tekst:s2 + ' cm op de kaart is in het echt ' + s2 + ' ' + X + ' ' + sp(S2) + ' =', antwoord:spv(cm2), eenheid:'cm', hint:'1 cm op de kaart is ' + sp(S2) + ' cm in het echt.' },
+              km ? { tekst:sp(cm2) + ' cm = … km', antwoord:met(inM / 1000, 'km'), eenheid:'km', hint:'100 000 cm is 1 km. Deel door 100 000.' } : { tekst:sp(cm2) + ' cm = … m', antwoord:met(inM, 'm'), eenheid:'m', hint:'100 cm is 1 m. Deel door 100.' } ] };
+        } },
+      { id:'schaal-model', naam:'Schaal bij modellen en vergrotingen', kort:'1 : 18 is verkleind, dus keer 18 voor het echt; 5 : 1 is vergroot, dus gedeeld door 5',
+        uit:'<p>Schaal zie je ook bij <b>modellen</b>. Een modelauto op schaal <b>1 : 18</b> is 18 keer zo klein als de echte auto. Is het model 25 cm, dan is de echte auto 25 × 18 = 450 cm = 4,5 m.</p><p>Bij iets kleins, zoals een insect, maak je juist een <b>vergroting</b>. Schaal <b>5 : 1</b> betekent: de tekening is 5 keer zo groot als het echt. Is de mier op de tekening 3 cm, dan is de echte mier 3 : 5 = 0,6 cm = 6 mm.</p><p>Staat het kleine getal voorop, dan is het verkleind. Staat het grote getal voorop, dan is het vergroot.</p>',
+        wanneer:'je met een model, maquette of vergrote tekening werkt.',
+        maak:function(R){
+          if (R.heel(0, 1)){
+            var it = R.kies([['Een modelauto', 18, [20, 28]], ['Een modeltrein', 87, [20, 30]], ['Een modelvliegtuig', 100, [30, 70]], ['Een maquette van een flat', 200, [12, 30], 'hoog'], ['Een modelschip', 50, [40, 80]]]), S = it[1], L = R.heel(it[2][0], it[2][1]), cm = L * S;
+            return { context:it[0] + ' is gemaakt op schaal 1 : ' + S + '. Het model is ' + L + ' cm ' + (it[3] || 'lang') + '.', vraag:'Hoe ' + (it[3] || 'lang') + ' is het in het echt, in meter?', eenheid:'m',
+              stappen:[
+                kz('Is het model groter of kleiner dan in het echt?', ['kleiner', 'groter'], 'kleiner', '1 : ' + S + ': 1 cm op het model is ' + S + ' cm in het echt.'),
+                { tekst:L + ' ' + X + ' ' + S + ' =', antwoord:met(cm, 'cm'), eenheid:'cm', hint:'In het echt is alles ' + S + ' keer zo groot.' },
+                { tekst:sp(cm) + ' cm = … m', antwoord:met(cm / 100, 'm'), eenheid:'m', hint:'100 cm is 1 m. Deel door 100.', fout:F(tn(cm / 10), 'Van cm naar m deel je door 100, niet door 10.') } ] };
+          }
+          var dier = R.kies([['een mier', 5, [2, 4]], ['een lieveheersbeestje', 4, [2, 3]], ['een vlo', 20, [3, 6]], ['een bij', 3, [3, 5]], ['een spin', 2, [2, 5]]]), k = dier[1], Lt = R.heel(dier[2][0], dier[2][1]), mm = Lt * 10;
+          while ((mm / k) % 0.5) { Lt++; mm = Lt * 10; }
+          return { context:'Een tekening van ' + dier[0] + ' is gemaakt op schaal ' + k + ' : 1. Op de tekening is het dier ' + Lt + ' cm lang.', vraag:'Hoe lang is het dier in het echt, in mm?', eenheid:'mm',
+            stappen:[
+              kz('Is de tekening groter of kleiner dan in het echt?', ['groter', 'kleiner'], 'groter', k + ' : 1: ' + k + ' cm op de tekening is 1 cm in het echt.'),
+              { tekst:Lt + ' cm = … mm', antwoord:met(mm, 'mm'), eenheid:'mm', hint:'1 cm is 10 mm.' },
+              { tekst:'In het echt ' + k + ' keer zo klein: ' + mm + ' : ' + k + ' =', antwoord:met(mm / k, 'mm'), eenheid:'mm', hint:'Deel door ' + k + '.', fout:F(mm * k, 'Je deed keer. De tekening is groter dan het echt, dus het echte dier is kleiner.') } ] };
         } }
     ] });
 
@@ -1100,6 +1313,24 @@
               { tekst:'Eerst ' + p + '% ' + (eerstOp ? 'erbij' : 'eraf') + ': ' + tn(f1) + ' ' + X + ' ' + ec(P * 100) + ' =', antwoord:ec(c1), hint:'De groeifactor is ' + tn(f1) + '.' },
               { tekst:'Dan ' + q + '% ' + (eerstOp ? 'eraf' : 'erbij') + ': ' + tn(f2) + ' ' + X + ' ' + ec(c1) + ' =', antwoord:ec(c2), hint:'Reken met het nieuwe bedrag ' + ec(c1) + ', niet met ' + ec(P * 100) + '.', fout:p === q ? FG(P * 100, 'Nee: de tweede keer reken je met het nieuwe bedrag. Dan is ' + q + '% een ander bedrag.') : {} },
               kz('Vergeleken met het begin is de prijs nu', ['hoger', 'lager', 'gelijk'], verg, 'Vergelijk ' + ec(c2) + ' met ' + ec(P * 100) + '.') ] };
+        } },
+      { id:'proc-index', naam:'Indexcijfers', kort:'Het basisjaar is 100; een index van 112 betekent 12% hoger, dus keer 1,12',
+        uit:'<p>Met een <b>indexcijfer</b> vergelijk je prijzen of aantallen met een <b>basisjaar</b>. Het basisjaar krijgt altijd index <b>100</b>.</p><p>Is de index later 112, dan is de prijs <b>12% hoger</b> dan in het basisjaar. Kostte iets toen € 5,00, dan nu 5,00 × 1,12 = € 5,60.</p><p>Andersom: weet je de prijzen, dan is de index nieuw : oud × 100. Van € 4,00 naar € 4,60 is 4,60 : 4,00 = 1,15, dus index <b>115</b>.</p>',
+        wanneer:'je cijfers uit de krant of van het CBS leest, zoals prijsstijgingen sinds een bepaald jaar.',
+        maak:function(R){
+          var it = R.kies([['een brood', [200, 350]], ['een liter melk', [100, 180]], ['een bioscoopkaartje', [900, 1400]], ['een kilo appels', [200, 400]], ['een busabonnement', [4000, 7000]]]), j0 = R.kies([2015, 2018, 2020]), j1 = j0 + R.heel(3, 6);
+          var I, P0; do { I = R.heel(103, 135); P0 = 10 * R.heel(it[1][0] / 10, it[1][1] / 10); } while ((P0 * I) % 100);
+          var P1 = P0 * I / 100;
+          if (R.heel(0, 1)) return { context:'In ' + j0 + ' kostte ' + it[0] + ' ' + ec(P0) + '. Het prijsindexcijfer is in ' + j0 + ' 100 en in ' + j1 + ' ' + I + '.', vraag:'Wat kost ' + it[0] + ' in ' + j1 + '?',
+            stappen:[
+              { tekst:'Van index 100 naar ' + I + ' is hoeveel procent erbij?', antwoord:pc(I - 100), eenheid:'%', hint:I + ' ' + MIN + ' 100.' },
+              { tekst:'De prijs gaat dus keer …', antwoord:tn(I / 100), hint:'100% + ' + (I - 100) + '% = ' + I + '% = ' + tn(I / 100) + '.', fout:F(tn((I - 100) / 100), 'Dat is alleen wat erbij komt. De prijs van eerst blijft ook.') },
+              { tekst:ec(P0) + ' ' + X + ' ' + tn(I / 100) + ' =', antwoord:ec(P1), hint:'De oude prijs keer ' + tn(I / 100) + '.' } ] };
+          return { context:'In ' + j0 + ' kostte ' + it[0] + ' ' + ec(P0) + ', in ' + j1 + ' ' + ec(P1) + '. Het basisjaar is ' + j0 + '.', vraag:'Wat is het prijsindexcijfer van ' + j1 + '?',
+            stappen:[
+              { tekst:'Het basisjaar ' + j0 + ' heeft index …', antwoord:'100', hint:'Het basisjaar krijgt altijd index 100.' },
+              { tekst:'Nieuw gedeeld door oud: ' + ec(P1) + ' : ' + ec(P0) + ' =', antwoord:tn(I / 100), hint:'Hoeveel keer zo duur is het geworden?' },
+              { tekst:tn(I / 100) + ' ' + X + ' 100 =', antwoord:String(I), hint:'Keer 100: de komma schuift twee plaatsen.', fout:F(String(I - 100), 'Dat is de stijging in procent. Het indexcijfer is ' + (I - 100) + ' meer dan 100.') } ] };
         } }
     ] });
 

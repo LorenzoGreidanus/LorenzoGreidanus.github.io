@@ -435,7 +435,7 @@ var VELDEN = {
   vr:['x','y','d','hp','maxHp','hoek','kleur','leven','slag','stap','bommen','pi','hutId'],
   la:['x','y','r','leven','vol'],
   sc:['x0','y0','x1','y1','t','draai','torenId'],
-  pl:['x','y','vx','vy','leven','kleur'],
+  pl:['x','y','vx','vy','leven','kleur','munt'],
   fl:['x','y','leven']
 };
 function kort(v){ var tp = typeof v; return tp === 'number' ? Math.round(v * 10) / 10 : (tp === 'string' || tp === 'boolean') ? v : null; }
@@ -800,7 +800,8 @@ function maak(opties){
         laatMuntZien(buit);
         for (var m2 = 0; m2 < 12; m2++){
           var hm = toeval() * Math.PI * 2, vm = 50 + toeval() * 80;
-          pluis.push({ x:q.x, y:q.y, vx:Math.cos(hm)*vm, vy:Math.sin(hm)*vm, leven:0.6, kleur:'#EFC64A' });
+          /* munt: dit is geld dat wegspat; in de Sinterklaasweek tekent de pagina het als pepernoten */
+          pluis.push({ x:q.x, y:q.y, vx:Math.cos(hm)*vm, vy:Math.sin(hm)*vm, leven:0.6, kleur:'#EFC64A', munt:1 });
         }
         cijfers.push({ x:q.x, y:q.y - 40, tekst:'+' + buit, leven:1.1, kleur:'#c9971f' });
         melding2('De spaarpot is gebroken. ' + buit + ' munten voor de klas.');

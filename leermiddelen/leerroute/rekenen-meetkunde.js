@@ -863,6 +863,110 @@
             { tekst:'Hoe vaak past de figuur precies op zichzelf bij één hele draai?', antwoord:String(f.orde), hint:f.hint, fout:f.fout || {} },
             { tekst:'De kleinste draaihoek: 360 : ' + f.orde + ' =', antwoord:gr(360 / f.orde), eenheid:'°', hint:'Een hele draai is 360°. Verdeel die in ' + f.orde + ' gelijke stukken.' }
           ] };
+        } },
+      { id:'mk-spiegel-figuur', naam:'Een hele figuur spiegelen: controleer elk punt', kort:'Spiegel elk hoekpunt apart: even ver van de lijn, recht ertegenover; verbind dan de punten',
+        uit:'<p>Een hele figuur spiegel je <b>punt voor punt</b>. Neem een hoekpunt, tel de hokjes recht naar de spiegellijn, en tel er even veel door aan de andere kant. Doe dat voor elk hoekpunt en verbind dan de punten.</p><p>Controleer daarna elk punt: ligt het beeld <b>even ver</b> van de lijn als het origineel, en <b>recht tegenover</b> het origineel? Klopt één punt niet, dan is de hele figuur scheef.</p>',
+        wanneer:'je een figuur op roosterpapier spiegelt, of het spiegelbeeld van iemand anders nakijkt.',
+        maak:function(R){
+          var staand = R.heel(0, 1) === 1, m = R.heel(4, 6), max = Math.min(m, 10 - m), zij = R.kies([-1, 1]), pts, opp, fout, wie, nep, ok;
+          function sp(p){ return staand ? [2 * m - p[0], p[1]] : [p[0], 2 * m - p[1]]; }
+          function afst(p){ return Math.abs((staand ? p[0] : p[1]) - m); }
+          do {
+            pts = [0, 1, 2].map(function(){ var d = R.heel(1, max - 1), w = R.heel(1, 9); return staand ? [m + zij * d, w] : [w, m + zij * d]; });
+            opp = Math.abs((pts[1][0] - pts[0][0]) * (pts[2][1] - pts[0][1]) - (pts[1][1] - pts[0][1]) * (pts[2][0] - pts[0][0]));
+            wie = R.heel(0, 2); fout = R.kies(['verder', 'dichter', 'opzij']);
+            var goed = sp(pts[wie]), dd = fout === 'verder' ? 1 : fout === 'dichter' ? -1 : 0, mz = -zij;
+            nep = fout === 'opzij' ? (staand ? [goed[0], goed[1] + R.kies([-1, 1])] : [goed[0] + R.kies([-1, 1]), goed[1]]) : (staand ? [goed[0] + mz * dd, goed[1]] : [goed[0], goed[1] + mz * dd]);
+            var beeld = pts.map(sp); beeld[wie] = nep;
+            ok = opp >= 6 && nep[0] >= 0 && nep[0] <= 10 && nep[1] >= 0 && nep[1] <= 10 && afst(nep) >= 1 && beeld.every(function(b, i){ return beeld.every(function(c, j){ return i === j || b[0] !== c[0] || b[1] !== c[1]; }); });
+          } while (!ok);
+          var lt = ['A', 'B', 'C'], beeldP = pts.map(sp); beeldP[wie] = nep;
+          var bl = function(n){
+            var g = rooster(10), s = g.s, P = pts.map(function(p){ return [g.X(p[0]), g.Y(p[1])]; }), Q = beeldP.map(function(p){ return [g.X(p[0]), g.Y(p[1])]; });
+            s += staand ? ln(g.X(m), g.Y(0) + 6, g.X(m), g.Y(10) - 6, { k:K[1], w:3.5, stip:'10 6' }) : ln(g.X(0) - 6, g.Y(m), g.X(10) + 6, g.Y(m), { k:K[1], w:3.5, stip:'10 6' });
+            s += pg(P, { f:K[0], fo:0.25, s:K[0], w:2.5 }) + pg(Q, { f:K[3], fo:0.15, s:K[3], w:2.5, stip:'6 4' });
+            if (n >= 4){ var G2 = sp(pts[wie]); s += stip(g.X(G2[0]), g.Y(G2[1]), K[1], '', { r:8 }); }
+            P.forEach(function(p, i){ s += stip(p[0], p[1], K[0], lt[i]); });
+            Q.forEach(function(q, i){ s += stip(q[0], q[1], K[3], lt[i] + '′'); });
+            return svg(g.w, g.h, s, 'driehoek, spiegellijn en een spiegelbeeld met een fout', 380);
+          };
+          var st = lt.map(function(L, i){ var klopt = i !== wie;
+            return kstap(R, 'Ligt ' + L + '′ even ver van de lijn als ' + L + ', en recht tegenover ' + L + '?', klopt ? 'ja' : 'nee', [klopt ? 'nee' : 'ja'], L + ' ligt ' + afst(pts[i]) + (afst(pts[i]) === 1 ? ' hokje' : ' hokjes') + ' van de lijn. Tel hoe ver ' + L + '′ ervan af ligt, en of het op dezelfde hoogte (of in dezelfde kolom) ligt.'); });
+          st.push(kstap(R, 'Welk punt van het spiegelbeeld staat fout?', lt[wie] + '′', lt.filter(function(x, i){ return i !== wie; }).map(function(x){ return x + '′'; }), 'Het punt dat niet even ver van de lijn ligt, of niet recht tegenover zijn origineel.'));
+          return eindKeuze({ vraag:'spiegelfout ' + pts.map(function(p){ return p.join(','); }).join(' ') + ' ' + m + (staand ? 's' : 'l') + ' ' + nep.join(','), vraagHtml:'Welk punt staat fout?', context:'Daan heeft de blauwe driehoek gespiegeld in de stippellijn. Eén punt van zijn spiegelbeeld staat fout.', beeld:bl, zelfBeeld:bl(0), stappen:st });
+        } }
+    ] });
+
+  /* ================= kaart lezen (1F) ================= */
+  var PLEK = [['kerk', 'de'], ['molen', 'de'], ['station', 'het'], ['school', 'de'], ['zwembad', 'het'], ['kasteel', 'het'], ['haven', 'de'], ['boerderij', 'de'], ['brug', 'de'], ['toren', 'de']];
+  var KOL = ['A', 'B', 'C', 'D', 'E', 'F'];
+  /* een kaart met rastervakken A-F (kolommen) en 1-5 (rijen, 1 bovenaan); plekken: [{ n, k, r }] */
+  function kaart(plekken, o){
+    o = o || {};
+    var c = 58, x0 = 40, y0 = 34, s = '', i;
+    s += rc(x0, y0, 6 * c, 5 * c, { f:K[3], fo:0.07, w:2 });
+    for (i = 1; i < 6; i++) s += ln(x0 + i * c, y0, x0 + i * c, y0 + 5 * c, { w:1, op:0.35 });
+    for (i = 1; i < 5; i++) s += ln(x0, y0 + i * c, x0 + 6 * c, y0 + i * c, { w:1, op:0.35 });
+    for (i = 0; i < 6; i++) s += tx(x0 + i * c + c / 2, y0 - 10, KOL[i], { vet:true });
+    for (i = 0; i < 5; i++) s += tx(x0 - 14, y0 + i * c + c / 2, String(i + 1), { vet:true, mid:true });
+    (o.vak || []).forEach(function(v){ s += rc(x0 + v[0] * c, y0 + v[1] * c, c, c, { f:K[1], fo:0.18, s:K[1], w:2.5 }); });
+    if (o.pad) for (i = 1; i < o.pad.length; i++) s += ln(x0 + o.pad[i - 1][0] * c + c / 2, y0 + o.pad[i - 1][1] * c + c / 2, x0 + o.pad[i][0] * c + c / 2, y0 + o.pad[i][1] * c + c / 2, { k:K[1], w:3.5, stip:'8 5' });
+    plekken.forEach(function(p){ var cx = x0 + p.k * c + c / 2, cy = y0 + p.r * c + c / 2 - 6; s += cir(cx, cy, 7, { f:K[0], s:'none', w:0 }) + tx(cx, cy + 21, p.n, { fs:11 }); });
+    var nx = x0 + 6 * c + 30, ny = y0 + 34;
+    s += pad('M' + nx + ' ' + (ny + 26) + ' L' + nx + ' ' + (ny - 18) + ' M' + (nx - 8) + ' ' + (ny - 8) + ' L' + nx + ' ' + (ny - 20) + ' L' + (nx + 8) + ' ' + (ny - 8), { w:3 }) + tx(nx, ny - 26, 'N', { vet:true, fs:17 });
+    return svg(x0 + 6 * c + 56, y0 + 5 * c + 16, s, 'kaart met rastervakken', 460);
+  }
+  function legPlekken(R, n){ var namen = R.hussel(PLEK).slice(0, n), vrij = [], i, j; for (i = 0; i < 6; i++) for (j = 0; j < 5; j++) vrij.push([i, j]); vrij = R.hussel(vrij); return namen.map(function(nm, k){ return { n:nm[0], d:nm[1] + ' ' + nm[0], k:vrij[k][0], r:vrij[k][1] }; }); }
+  function vakNaam(p){ return KOL[p.k] + (p.r + 1); }
+  function vakC(naam){ return function(v){ return String(v).replace(/\s+/g, '').toUpperCase() === naam; }; }
+
+  G.push({ groep:{ id:'kaart-lezen', niveau:'1F', domein:'meten', naam:'Kaart lezen', kd:['rw17A.a', 'rw15B.c'],
+    uit:'Op een kaart zoek je plekken op met rastervakken, je bepaalt in welke windrichting iets ligt en je volgt een route.' },
+    doelen:[
+      { id:'kaart-raster', naam:'Rastervakken', kort:'Eerst de letter van de kolom, dan het cijfer van de rij: B3',
+        uit:'<p>Een kaart is vaak verdeeld in <b>rastervakken</b>. Boven de kaart staan <b>letters</b> (de kolommen), aan de zijkant <b>cijfers</b> (de rijen).</p><p>Een vak noem je met eerst de <b>letter</b> en dan het <b>cijfer</b>. De kerk in de kolom C en de rij 4 ligt in vak <b>C4</b>.</p><p>In een atlas zoek je zo een plaats op: in het register staat bijvoorbeeld 23 B3, dat is bladzijde 23, vak B3.</p>',
+        wanneer:'je een plaats op een kaart of in een atlas zoekt.',
+        maak:function(R){
+          var pl = legPlekken(R, 6), doel = pl[0];
+          if (R.heel(0, 1)){
+            var b = function(n){ return kaart(pl, { vak:n >= 2 ? [[doel.k, doel.r]] : [] }); };
+            return { vraag:'raster ' + pl.map(function(p){ return p.n + vakNaam(p); }).join(' '), vraagHtml:'In welk vak ligt ' + doel.d + '?', context:'Schrijf eerst de letter en dan het cijfer, bijvoorbeeld B3.', invoer:'tekst', antwoord:vakNaam(doel), controle:vakC(vakNaam(doel)), beeld:b, zelfBeeld:b(0), stappen:[
+              { tekst:'Ga vanaf ' + doel.d + ' recht omhoog. Welke letter staat boven de kolom?', antwoord:KOL[doel.k], invoer:'tekst', controle:vakC(KOL[doel.k]), hint:'De letters staan boven de kaart.' },
+              { tekst:'Ga vanaf ' + doel.d + ' recht naar links. Welk cijfer staat naast de rij?', antwoord:String(doel.r + 1), hint:'De cijfers staan links van de kaart.' },
+              { tekst:'Het vak van ' + doel.d + ' is', antwoord:vakNaam(doel), invoer:'tekst', controle:vakC(vakNaam(doel)), hint:'Eerst de letter, dan het cijfer: ' + KOL[doel.k] + (doel.r + 1) + '.', fout:F(String(doel.r + 1) + KOL[doel.k].toLowerCase(), 'Eerst de letter, dan het cijfer.') } ] };
+          }
+          var b2 = function(n){ return kaart(pl, { vak:n >= 1 ? [[doel.k, doel.r]] : [] }); };
+          return eindKeuze({ vraag:'raster wat ' + vakNaam(doel) + ' ' + pl.map(function(p){ return p.n + vakNaam(p); }).join(' '), vraagHtml:'Wat ligt er in vak ' + vakNaam(doel) + '?', beeld:b2, zelfBeeld:b2(0), stappen:[
+            { tekst:'Zoek de kolom ' + KOL[doel.k] + ' en de rij ' + (doel.r + 1) + '. Waar ze elkaar kruisen, ligt vak ' + vakNaam(doel) + '.', info:true },
+            kstap(R, 'Wat ligt er in vak ' + vakNaam(doel) + '?', doel.d, pl.slice(1, 4).map(function(p){ return p.d; }), 'Ga in de kolom ' + KOL[doel.k] + ' omlaag tot de rij ' + (doel.r + 1) + '.') ] });
+        } },
+      { id:'kaart-wind', naam:'Windrichtingen op de kaart', kort:'Noord is boven: kijk of iets hoger of lager ligt, en meer naar rechts (oost) of naar links (west)',
+        uit:'<p>Op een kaart is <b>noord boven</b>, zuid onder, oost rechts en west links. De pijl met de N laat het zien.</p><p>In welke richting ligt de kerk vanaf het station? Ga uit van het <b>station</b>. Ligt de kerk hoger, dan is het noord. Ligt hij ook meer naar rechts, dan is het <b>noordoost</b>.</p><p>Let op de volgorde: je kijkt altijd <b>vanaf</b> de eerste plek.</p>',
+        wanneer:'je een route beschrijft of op een kaart zoekt waar iets ligt.',
+        maak:function(R){
+          var pl, a, b, dx, dy; do { pl = legPlekken(R, 5); a = pl[0]; b = pl[1]; dx = b.k - a.k; dy = a.r - b.r; } while ((dx === 0 && dy === 0) || (dx !== 0 && dy !== 0 && Math.abs(dx) !== Math.abs(dy)));
+          var ns = dy > 0 ? 'noord' : dy < 0 ? 'zuid' : '', ow = dx > 0 ? 'oost' : dx < 0 ? 'west' : '', rich = ns + ow, NAAM = { noord:'noorden', zuid:'zuiden', oost:'oosten', west:'westen', noordoost:'noordoosten', noordwest:'noordwesten', zuidoost:'zuidoosten', zuidwest:'zuidwesten' };
+          var alle = ['noorden', 'noordoosten', 'oosten', 'zuidoosten', 'zuiden', 'zuidwesten', 'westen', 'noordwesten'], goed = 'in het ' + NAAM[rich];
+          var bl = function(n){ return kaart(pl, { pad:n >= 2 ? [[a.k, a.r], [b.k, b.r]] : null }); };
+          return eindKeuze({ vraag:'wind ' + a.n + vakNaam(a) + ' ' + b.n + vakNaam(b), vraagHtml:'In welke richting ligt ' + b.d + ' vanaf ' + a.d + '?', context:'Op de kaart is noord boven.', beeld:bl, zelfBeeld:bl(0), stappen:[
+            kstap(R, 'Ligt ' + b.d + ' hoger of lager dan ' + a.d + '?', dy > 0 ? 'hoger: naar het noorden' : dy < 0 ? 'lager: naar het zuiden' : 'even hoog', ['hoger: naar het noorden', 'lager: naar het zuiden', 'even hoog'].filter(function(x){ return x !== (dy > 0 ? 'hoger: naar het noorden' : dy < 0 ? 'lager: naar het zuiden' : 'even hoog'); }), 'Vergelijk de rijen: ' + a.d + ' ligt in rij ' + (a.r + 1) + ', ' + b.d + ' in rij ' + (b.r + 1) + '. Rij 1 is het hoogst.'),
+            kstap(R, 'Ligt ' + b.d + ' meer naar rechts of naar links?', dx > 0 ? 'naar rechts: naar het oosten' : dx < 0 ? 'naar links: naar het westen' : 'recht erboven of eronder', ['naar rechts: naar het oosten', 'naar links: naar het westen', 'recht erboven of eronder'].filter(function(x){ return x !== (dx > 0 ? 'naar rechts: naar het oosten' : dx < 0 ? 'naar links: naar het westen' : 'recht erboven of eronder'); }), 'Vergelijk de kolommen: ' + KOL[a.k] + ' en ' + KOL[b.k] + '. Rechts is oost.'),
+            kstap(R, 'In welke richting ligt ' + b.d + ' vanaf ' + a.d + '?', goed, R.hussel(alle.filter(function(x){ return 'in het ' + x !== goed; })).slice(0, 3).map(function(x){ return 'in het ' + x; }), 'Zet de twee richtingen samen: eerst noord of zuid, dan oost of west.') ] });
+        } },
+      { id:'kaart-route', naam:'Een route volgen', kort:'Noord is een vak omhoog (een lager cijfer), oost is een vak naar rechts (een volgende letter)',
+        uit:'<p>Bij een route tel je de vakken. Op de kaart is noord boven. Een vak naar het <b>noorden</b> is een rij omhoog: het cijfer wordt <b>kleiner</b>. Een vak naar het <b>zuiden</b>: het cijfer wordt groter.</p><p>Een vak naar het <b>oosten</b> is naar rechts: de volgende letter. Naar het <b>westen</b> is naar links: de letter ervoor.</p><p>Je staat in C4 en loopt 2 vakken naar het noorden en 1 naar het oosten. Je komt in <b>D2</b>.</p>',
+        wanneer:'je een routebeschrijving volgt.',
+        maak:function(R){
+          var pl = legPlekken(R, 5), s0 = pl[0], dN, dO, eK, eR;
+          do { dN = R.heel(-3, 3); dO = R.heel(-4, 4); eK = s0.k + dO; eR = s0.r - dN; } while (!dN || !dO || eK < 0 || eK > 5 || eR < 0 || eR > 4);
+          var tekst = Math.abs(dN) + (Math.abs(dN) === 1 ? ' vak' : ' vakken') + ' naar het ' + (dN > 0 ? 'noorden' : 'zuiden') + ' en dan ' + Math.abs(dO) + (Math.abs(dO) === 1 ? ' vak' : ' vakken') + ' naar het ' + (dO > 0 ? 'oosten' : 'westen');
+          var eind = KOL[eK] + (eR + 1);
+          var bl = function(n){ return kaart(pl, { pad:n >= 3 ? [[s0.k, s0.r], [s0.k, eR], [eK, eR]] : null, vak:n >= 3 ? [[eK, eR]] : [] }); };
+          return { vraag:'route ' + vakNaam(s0) + ' ' + dN + ' ' + dO + ' ' + pl.map(function(p){ return p.n + vakNaam(p); }).join(' '), vraagHtml:'In welk vak kom je uit?', context:'Je start bij ' + s0.d + '. Je loopt ' + tekst + '. Schrijf het vak als letter en cijfer, bijvoorbeeld B3.', invoer:'tekst', antwoord:eind, controle:vakC(eind), beeld:bl, zelfBeeld:bl(0), stappen:[
+            { tekst:'In welk vak ligt ' + s0.d + '?', antwoord:vakNaam(s0), invoer:'tekst', controle:vakC(vakNaam(s0)), hint:'Eerst de letter boven de kolom, dan het cijfer naast de rij.' },
+            { tekst:Math.abs(dN) + ' naar het ' + (dN > 0 ? 'noorden' : 'zuiden') + ': in welke rij kom je?', antwoord:String(eR + 1), hint:dN > 0 ? 'Noord is omhoog: het cijfer wordt ' + dN + ' kleiner.' : 'Zuid is omlaag: het cijfer wordt ' + (-dN) + ' groter.' },
+            { tekst:Math.abs(dO) + ' naar het ' + (dO > 0 ? 'oosten' : 'westen') + ': in welke kolom kom je?', antwoord:KOL[eK], invoer:'tekst', controle:vakC(KOL[eK]), hint:dO > 0 ? 'Oost is naar rechts: tel ' + dO + ' letters verder.' : 'West is naar links: tel ' + (-dO) + ' letters terug.' },
+            { tekst:'Je komt uit in vak', antwoord:eind, invoer:'tekst', controle:vakC(eind), hint:'Eerst de letter, dan het cijfer.' } ] };
         } }
     ] });
 
@@ -1244,6 +1348,70 @@
             kstap(R, 'Ligt B achter de muur, tussen de kijklijnen?', verb[1] ? 'ja' : 'nee', [verb[1] ? 'nee' : 'ja'], 'Kijk of B in het gekleurde gebied ligt.'),
             kstap(R, 'Welk punt kan P niet zien?', weg, lt.filter(function(x){ return x !== weg; }), 'Het punt in het gekleurde gebied achter de muur.')
           ] });
+        } },
+      { id:'mk-aanzicht-kies', naam:'Welke tekening is het aanzicht?', kort:'Bepaal per kolom de hoogste stapel en zoek de tekening die precies zo is',
+        uit:'<p>Bij een bouwsel kun je kiezen uit een paar tekeningen. Welke is het <b>vooraanzicht</b>? Werk het eerst zelf uit met de plattegrond.</p><p>Van voren zie je in elke kolom alleen de <b>hoogste stapel</b>. Schrijf die hoogtes op, van links naar rechts. Zoek dan de tekening met precies die hoogtes.</p><p>Bij het <b>zijaanzicht van rechts</b> kijk je per rij. De voorste rij staat dan links in de tekening, de achterste rechts.</p>',
+        wanneer:'je bij een bouwsel het goede aanzicht moet kiezen.',
+        maak:function(R){
+          var H, voor, goed, fout, i;
+          function kolMax(H2){ var l = []; for (var c = 0; c < 3; c++) l.push(Math.max.apply(null, H2.map(function(r){ return r[c]; }))); return l; }
+          function rijMax(H2){ var l = []; for (var r = H2.length - 1; r >= 0; r--) l.push(Math.max.apply(null, H2[r])); return l; }
+          do {
+            H = maakH(R); voor = R.heel(0, 1) === 1; goed = voor ? kolMax(H) : rijMax(H);
+            var kand = voor ? [H[H.length - 1].slice(), goed.slice().reverse(), rijMax(H), [0, 1, 2].map(function(c){ return Math.min(4, H.reduce(function(a, r){ return a + r[c]; }, 0)); })]
+                            : [H.slice().reverse().map(function(r){ return r[2]; }), goed.slice().reverse(), kolMax(H), goed.map(function(v){ return Math.min(3, v + 1); })];
+            fout = []; kand.forEach(function(k){ var t = k.join(','); if (t !== goed.join(',') && fout.every(function(f){ return f.join(',') !== t; })) fout.push(k); });
+          } while (fout.length < 2);
+          fout = R.hussel(fout).slice(0, 2);
+          var L = ['A', 'B', 'C'], volg = R.hussel([goed].concat(fout)), letter = L[volg.indexOf(goed)];
+          var bl = function(n){
+            var s = plattegrond(H, { y:30 }), sz = 22, base = 196, x0 = 200, j, l;
+            s += voor ? pijl(16 + 66, 30 + H.length * 44 + 44, 16 + 66, 30 + H.length * 44 + 28, K[1]) : pijl(16 + 132 + 34, 30 + H.length * 22, 16 + 132 + 10, 30 + H.length * 22, K[1]);
+            volg.forEach(function(p, k){
+              var bx = x0 + k * 100, nad = n >= 3 && p === goed;
+              for (j = 0; j < p.length; j++) for (l = 0; l < p[j]; l++) s += rc(bx + j * sz, base - (l + 1) * sz, sz, sz, { f:nad ? K[3] : K[0], fo:nad ? 0.45 : 0.22, w:2 });
+              s += ln(bx - 4, base, bx + p.length * sz + 4, base, { w:2 }) + tx(bx + p.length * sz / 2, base + 24, L[k], { vet:true, fs:18 });
+            });
+            return svg(500, 232, s, 'plattegrond en drie tekeningen', 520);
+          };
+          var hoog = goed.join(', ');
+          return eindKeuze({ vraag:'aanzicht ' + (voor ? 'voor ' : 'zij ') + H.map(function(r){ return r.join(''); }).join('-') + ' ' + volg.map(function(p){ return p.join(''); }).join('/'), vraagHtml:'Welke tekening is het ' + (voor ? 'vooraanzicht' : 'zijaanzicht van rechts') + '?',
+            context:'Links de plattegrond van een bouwsel: in elk vakje staat hoeveel blokjes er op elkaar staan. Je kijkt ' + (voor ? 'recht van de voorkant' : 'recht van de rechterkant') + ' (de pijl).', beeld:bl, zelfBeeld:bl(0), stappen:[
+              kstap(R, 'Wat zie je van ' + (voor ? 'elke kolom' : 'elke rij') + ' als je ' + (voor ? 'van voren' : 'van rechts') + ' kijkt?', 'alleen de hoogste stapel', ['alle stapels opgeteld', 'alleen de stapel die het dichtst bij je staat'], 'Lagere stapels erachter vallen weg achter de hoogste.'),
+              kstap(R, 'Welke hoogtes heeft het ' + (voor ? 'vooraanzicht' : 'zijaanzicht') + ', van links naar rechts?', hoog, fout.map(function(f){ return f.join(', '); }), voor ? 'Neem per kolom het hoogste getal: ' + [0, 1, 2].map(function(c){ return 'kolom ' + (c + 1) + ': ' + H.map(function(r){ return r[c]; }).join(', '); }).join('; ') + '.' : 'Neem per rij het hoogste getal, en begin met de voorste rij: die staat van rechts gezien links.'),
+              kstap(R, 'Welke tekening is het ' + (voor ? 'vooraanzicht' : 'zijaanzicht') + '?', letter, L.filter(function(x){ return x !== letter; }), 'De tekening met de hoogtes ' + hoog + '.') ] });
+        } },
+      { id:'mk-uitslag-ruimte', naam:'Uitslagen van andere ruimtefiguren', kort:'Kijk welke vlakken in de uitslag zitten: cirkels, driehoeken, rechthoeken of vierkanten',
+        uit:'<p>Niet alleen een kubus heeft een <b>uitslag</b>. Elk ruimtefiguur met platte of opgerolde vlakken kun je openknippen.</p><p>Kijk welke vlakken je ziet. <b>Twee cirkels en een rechthoek</b>: een cilinder (de rechthoek rolt op tot de buis). <b>Twee driehoeken en drie rechthoeken</b>: een driezijdig prisma. <b>Een vierkant met vier driehoeken</b>: een piramide. <b>Een cirkel en een stuk van een cirkel</b>: een kegel.</p><p>Zes vierkanten is een kubus, zes rechthoeken een balk.</p>',
+        wanneer:'je een doos, verpakking of bouwplaat herkent of zelf ontwerpt.',
+        maak:function(R){
+          var U = {
+            kubus:{ v:'zes vierkanten', t:function(){ var c = 46, s = ''; [[1, 0], [0, 1], [1, 1], [2, 1], [3, 1], [1, 2]].forEach(function(p){ s += rc(20 + p[0] * c, 14 + p[1] * c, c, c, { f:K[0], fo:0.2, w:2.5 }); }); return svg(40 + 4 * c, 28 + 3 * c, s, 'uitslag', 300); } },
+            balk:{ v:'zes rechthoeken', t:function(){ var l = 80, b = 40, h = 30, s = '', x0 = 20, y0 = 14;
+              [[x0 + b, y0, l, b], [x0, y0 + b, b, h], [x0 + b, y0 + b, l, h], [x0 + b + l, y0 + b, b, h], [x0 + 2 * b + l, y0 + b, l, h], [x0 + b, y0 + b + h, l, b]].forEach(function(q){ s += rc(q[0], q[1], q[2], q[3], { f:K[0], fo:0.2, w:2.5 }); }); return svg(2 * x0 + 2 * b + 2 * l, 2 * y0 + 2 * b + h, s, 'uitslag', 360); } },
+            prisma:{ v:'twee driehoeken en drie rechthoeken', t:function(){ var w = 50, h = 90, x0 = 20, y0 = 50, s = '';
+              for (var i = 0; i < 3; i++) s += rc(x0 + i * w, y0, w, h, { f:K[0], fo:0.2, w:2.5 });
+              s += pg([[x0 + w, y0], [x0 + 2 * w, y0], [x0 + 1.5 * w, y0 - 43]], { f:K[2], fo:0.3, w:2.5 }) + pg([[x0 + w, y0 + h], [x0 + 2 * w, y0 + h], [x0 + 1.5 * w, y0 + h + 43]], { f:K[2], fo:0.3, w:2.5 });
+              return svg(2 * x0 + 3 * w, y0 + h + 60, s, 'uitslag', 260); } },
+            piramide:{ v:'een vierkant en vier driehoeken', t:function(){ var c = 70, x0 = 90, y0 = 90, s = rc(x0, y0, c, c, { f:K[0], fo:0.2, w:2.5 }), t = 75;
+              s += pg([[x0, y0], [x0 + c, y0], [x0 + c / 2, y0 - t]], { f:K[2], fo:0.3, w:2.5 }) + pg([[x0, y0 + c], [x0 + c, y0 + c], [x0 + c / 2, y0 + c + t]], { f:K[2], fo:0.3, w:2.5 });
+              s += pg([[x0, y0], [x0, y0 + c], [x0 - t, y0 + c / 2]], { f:K[2], fo:0.3, w:2.5 }) + pg([[x0 + c, y0], [x0 + c, y0 + c], [x0 + c + t, y0 + c / 2]], { f:K[2], fo:0.3, w:2.5 });
+              return svg(2 * x0 + c, 2 * y0 + c, s, 'uitslag', 300); } },
+            cilinder:{ v:'twee cirkels en een rechthoek', t:function(){ var w = 190, h = 80, x0 = 20, y0 = 62, r = 30, s = rc(x0, y0, w, h, { f:K[0], fo:0.2, w:2.5 });
+              s += cir(x0 + w / 2, y0 - r, r, { f:K[2], fo:0.3, w:2.5 }) + cir(x0 + w / 2, y0 + h + r, r, { f:K[2], fo:0.3, w:2.5 });
+              return svg(2 * x0 + w, y0 + h + 2 * r + 12, s, 'uitslag', 300); } },
+            kegel:{ v:'een cirkel en een stuk van een cirkel', t:function(){ var cx = 130, cy = 20, R1 = 130, a1 = 62, a2 = 118, s = '';
+              var p1 = [cx + R1 * Math.cos(a1 * RAD), cy + R1 * Math.sin(a1 * RAD)], p2 = [cx + R1 * Math.cos(a2 * RAD), cy + R1 * Math.sin(a2 * RAD)];
+              s += pad('M' + cx + ' ' + cy + ' L' + n1(p1[0]) + ' ' + n1(p1[1]) + ' A' + R1 + ' ' + R1 + ' 0 0 1 ' + n1(p2[0]) + ' ' + n1(p2[1]) + ' Z', { f:K[0], fo:0.2, w:2.5 });
+              s += cir(cx, cy + R1 + 30, 30, { f:K[2], fo:0.3, w:2.5 });
+              return svg(260, cy + R1 + 72, s, 'uitslag', 280); } } };
+          var namen = Object.keys(U), nm = R.kies(namen), bl = U[nm].t();
+          var nmFout = R.hussel(namen.filter(function(x){ return x !== nm; })).slice(0, 3), vFout = R.hussel(namen.filter(function(x){ return x !== nm; })).slice(0, 3).map(function(x){ return U[x].v; });
+          return eindKeuze({ vraag:'uitslag ' + nm, vraagHtml:'Van welk ruimtefiguur is dit de uitslag?', beeld:bl, zelfBeeld:bl, stappen:[
+            kstap(R, 'Welke vlakken zie je in de uitslag?', U[nm].v, vFout, 'Tel de vlakken en kijk naar hun vorm.'),
+            kstap(R, 'Welk ruimtefiguur kun je ervan vouwen?', nm === 'prisma' ? 'een prisma' : nm === 'piramide' ? 'een piramide' : nm === 'kubus' ? 'een kubus' : nm === 'balk' ? 'een balk' : nm === 'cilinder' ? 'een cilinder' : 'een kegel', nmFout.map(function(x){ return 'een ' + x; }), {
+              kubus:'Zes even grote vierkanten: een kubus.', balk:'Zes rechthoeken, steeds twee even grote: een balk.', prisma:'Twee driehoeken als voor- en achterkant, met drie rechthoeken ertussen: een prisma.',
+              piramide:'Een vierkant als grondvlak, met vier driehoeken die omhoog klappen tot een punt: een piramide.', cilinder:'De rechthoek rolt op tot een buis, de cirkels zijn de boven- en onderkant: een cilinder.', kegel:'Het stuk van een cirkel rolt op tot een punthoed, de cirkel is de bodem: een kegel.' }[nm]) ] });
         } }
     ] });
 

@@ -9,7 +9,8 @@
    - zeven keer snel op het logo: het speldje rolt weg en de groet protesteert.
    In de spellen (vakspel.js laadt dit bestand pas als het nodig is):
    - PAASEI.ster(): na tien goed op rij vliegt er een sterretje langs;
-   - PAASEI.goud(): de gouden vraag, met een glinstering.
+   - PAASEI.goud(): de gouden vraag, met een glinstering;
+   - PAASEI.pakjes(): de pakjesjacht van 1 tot en met 5 december (spel.js laadt dit bestand dan zelf).
    De nacht en de bijzondere dagen staan in de groet van index.html. */
 window.PAASEI = (function(){
   'use strict';
@@ -33,8 +34,10 @@ window.PAASEI = (function(){
     (document.head || document.documentElement).appendChild(st);
   })();
   function rustig(){ try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e){ return false; } }
-  /* in de lesmodus (main.lesalleen in de leeromgeving) geen verrassingen */
-  function uit(){ return !!document.querySelector('main.lesalleen, body.lesmodus'); }
+  function lsLees(k){ try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e){ return null; } }
+  /* in de lesmodus geen verrassingen: main.lesalleen in de leeromgeving; in een spel zegt lg-lesmodus het
+     (de leeromgeving zet daar het eind van de dag in zolang de lesmodus van de klas aanstaat) */
+  function uit(){ var t = lsLees('lg-lesmodus'); return !!document.querySelector('main.lesalleen, body.lesmodus') || (typeof t === 'number' && Date.now() < t); }
 
   /* een bericht onderaan, in het handschrift van de site; het gaat vanzelf weer weg */
   var toastEl = null, toastKlok = null;
@@ -267,7 +270,8 @@ window.PAASEI = (function(){
     if (mnd === 4 && dag === koningsdag) soort = 'koning';
     else if (mnd === 4 && dag === 1) soort = 'april';
     else if (mnd === 12 && dag >= 1 && dag <= 5) soort = 'sint';
-    else if (mnd === 12 && dag >= 24 && dag <= 26) soort = 'kerst';
+    /* kerst vanaf de week ervoor: in de kerstvakantie zit niemand in de klas */
+    else if (mnd === 12 && dag >= 14 && dag <= 26) soort = 'kerst';
     else if ((mnd === 12 && dag === 31) || (mnd === 1 && dag <= 7)) soort = 'nieuw';
     else if (mnd === 10 && dag >= 27) soort = 'halloween';
     else if ((mnd === 7 && dag >= 15) || (mnd === 8 && dag <= 20)) soort = 'zomer';
@@ -275,7 +279,7 @@ window.PAASEI = (function(){
     var adres = (/[?&]dag=([a-z]+)/.exec(zoek || '') || [])[1];
     if (adres && /^(koning|april|sint|kerst|nieuw|halloween|zomer|nacht)$/.test(adres)) soort = adres;
     var tekst = { koning:'fijne Koningsdag!', april:'alle toetsen zijn afgelast... 1 april!', sint:mnd === 12 && dag === 5 ? 'vanavond is het pakjesavond!' : 'het is bijna pakjesavond!',
-      kerst:'fijne kerst!', nieuw:'gelukkig nieuwjaar!', halloween:mnd === 10 && dag < 31 ? 'boe! bijna Halloween' : 'boe! fijne Halloween', zomer:'fijne vakantie! (oefenen mag ook)', nacht:'zou je niet eens gaan slapen?' }[soort] || '';
+      kerst:mnd === 12 && dag < 24 ? 'bijna kerst!' : 'fijne kerst!', nieuw:'gelukkig nieuwjaar!', halloween:mnd === 10 && dag < 31 ? 'boe! bijna Halloween' : 'boe! fijne Halloween', zomer:'fijne vakantie! (oefenen mag ook)', nacht:'zou je niet eens gaan slapen?' }[soort] || '';
     return { dag:soort, tekst:tekst, echt:!adres };
   }
   /* ---------- feesthoeden om te verdienen ----------
@@ -371,9 +375,161 @@ window.PAASEI = (function(){
     (document.head || document.documentElement).appendChild(st);
   })();
 
+  /* ---------- de pakjesjacht (Sinterklaas, 1 tot en met 5 december) ----------
+     spel.js laadt dit bestand in die week op elke spelpagina en roept pakjes() aan. Elke dag zit er in ongeveer
+     vier van de tien spellen een pakje (voor iedereen dezelfde spellen, elke dag andere). Na twintig tot zeventig
+     tellen op de pagina verschijnt het op een lege plek: niet op een knop, een veld, een tekst of het speelveld.
+     Tik erop en hij telt: lg-pakjes-JJJJ is een lijst van { s:spel, d:datum }, per spel per dag een keer. Bij
+     vijf pakjes krijg je de Cadeauhoed (h30). Niet in de lesmodus, niet op het bord van een klassenspel en niet
+     op een apparaat van een docent. Met ?dag=sint zie je er na een paar tellen een, maar dan telt hij niet. */
+  var PAKJE_KANS = .4, PAKJE_DOEL = 5, PAKJE_MAAT = 48, PAKJE_DUUR = 45000;
+  function datumVan(d){ return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function hash(t){ var h = 2166136261; for (var i = 0; i < t.length; i++){ h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+  function pakjesVan(jaar){ var l = lsLees('lg-pakjes-' + jaar); return Array.isArray(l) ? l.filter(function(p){ return p && typeof p.s === 'string' && typeof p.d === 'string'; }) : []; }
+  function spelNaam(){ return (location.pathname.split('/').pop() || '').replace(/\.html$/, '') || 'index'; }
+  /* het bord van een klassenspel (de knop Digibord), of de uitleg stap voor stap op het bord (?uitleg) */
+  function opBord(){ return !!(document.querySelector('.bordknop') || (document.body && document.body.classList.contains('bord')) || /[?&]uitleg\b/.test(location.search)); }
+  function docentHier(){ var k = lsLees('lg-klas-docent'); return Array.isArray(k) && k.length > 0; }
+  var BEZET = 'a,button,input,select,textarea,label,summary,details,canvas,svg,video,audio,iframe,img,[role="button"],[role="slider"],[role="link"],[role="checkbox"],[role="tab"],[tabindex],[contenteditable],[onclick],[draggable="true"],dialog,[role="dialog"],[aria-modal="true"],.tut,.paasei-toast,.pe-pakje';
+  /* staat hier iets waar je op moet kunnen tikken of wat je moet lezen? */
+  function bezet(el){
+    if (!el || el === document.documentElement || el === document.body) return false;
+    if (el.closest(BEZET)) return true;
+    for (var n = el.firstChild; n; n = n.nextSibling) if (n.nodeType === 3 && n.textContent.trim()) return true;
+    var cs = getComputedStyle(el);
+    return cs.cursor !== 'auto' && cs.cursor !== 'default';
+  }
+  function vrij(x, y, zelf){
+    /* ook een randje eromheen: niet tegen een knop aan */
+    var S = PAKJE_MAAT, stappen = [-6, S / 3, S * 2 / 3, S + 6];
+    for (var i = 0; i < 4; i++) for (var j = 0; j < 4; j++){
+      var l = document.elementsFromPoint(x + stappen[i], y + stappen[j]).filter(function(e){ return e !== zelf && !(zelf && zelf.contains(e)); });
+      if (bezet(l[0])) return false;
+    }
+    return true;
+  }
+  /* een lege plek in beeld, het liefst aan de rand: niet tegen de kop met knoppen en niet waar de melding onderaan komt */
+  function zoekPlek(zelf){
+    /* clientWidth: zonder de schuifbalk */
+    var W = document.documentElement.clientWidth || innerWidth, H = document.documentElement.clientHeight || innerHeight, S = PAKJE_MAAT, l = [], x, y;
+    if (W < S + 16 || H < 200) return null;
+    var nx = Math.max(2, Math.floor((W - S - 16) / 70)), ny = Math.max(2, Math.floor((H - S - 170) / 70));
+    for (var i = 0; i <= nx; i++) for (var j = 0; j <= ny; j++){
+      x = 8 + (W - S - 16) * i / nx; y = 76 + (H - S - 170) * j / ny;
+      /* hoe dichter bij de zijkant, hoe liever, met wat toeval */
+      l.push({ x:Math.round(x), y:Math.round(y), w:Math.abs(x + S / 2 - W / 2) / W + Math.random() * .25 });
+    }
+    l.sort(function(a, b){ return b.w - a.w; });
+    for (var k = 0; k < l.length; k++) if (vrij(l[k].x, l[k].y, zelf)) return l[k];
+    return null;
+  }
+  var PAKJE_SVG = '<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false">' +
+    '<path d="M24 15 C17 3 8 8 15 15 M24 15 C31 3 40 8 33 15" fill="none" stroke="#14224C" stroke-width="5.6" stroke-linecap="round"/>' +
+    '<path d="M24 15 C17 3 8 8 15 15 M24 15 C31 3 40 8 33 15" fill="none" stroke="#FFD166" stroke-width="3.4" stroke-linecap="round"/>' +
+    '<rect x="8" y="21" width="32" height="22" rx="3" fill="#F26749" stroke="#14224C" stroke-width="1.6"/>' +
+    '<rect x="5.5" y="14.5" width="37" height="9" rx="2.5" fill="#EA9836" stroke="#14224C" stroke-width="1.6"/>' +
+    '<path d="M24 15.3 V42.2" stroke="#FFD166" stroke-width="5"/><path d="M8.8 32 H39.2" stroke="#FFD166" stroke-width="4" opacity=".9"/>' +
+    '<circle cx="24" cy="15" r="3" fill="#FFD166" stroke="#14224C" stroke-width="1.4"/></svg>';
+  (function(){
+    var st = document.createElement('style');
+    st.textContent =
+      '.pe-pakje{position:fixed;z-index:88;width:' + PAKJE_MAAT + 'px;height:' + PAKJE_MAAT + 'px;padding:2px;margin:0;border:0;border-radius:14px;background:none;cursor:pointer;touch-action:manipulation;' +
+        'filter:drop-shadow(0 3px 4px rgba(20,34,76,.3));transition:left .5s cubic-bezier(.16,1,.3,1),top .5s cubic-bezier(.16,1,.3,1),opacity .4s ease}' +
+      '.pe-pakje svg{display:block;width:100%;height:100%}' +
+      '.pe-pakje:focus-visible{outline:3px solid #B4701A;outline-offset:3px}' +
+      '.pe-pakje.weg{opacity:0;pointer-events:none}' +
+      ':root[data-theme="dark"] .pe-pakje{filter:drop-shadow(0 0 5px rgba(255,209,102,.45)) drop-shadow(0 2px 3px rgba(0,0,0,.4))}' +
+      '@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .pe-pakje{filter:drop-shadow(0 0 5px rgba(255,209,102,.45)) drop-shadow(0 2px 3px rgba(0,0,0,.4))}}' +
+      '@keyframes pe-wiebel{0%,78%,100%{transform:rotate(0)}82%{transform:rotate(-10deg) translateY(-3px)}86%{transform:rotate(9deg) translateY(-3px)}90%{transform:rotate(-6deg)}94%{transform:rotate(3deg)}}' +
+      '.pe-pakje svg{animation:pe-wiebel 3.2s ease-in-out infinite;transform-origin:50% 90%}' +
+      '@media(prefers-reduced-motion:reduce){.pe-pakje,.pe-pakje svg{animation:none;transition:none}}';
+    (document.head || document.documentElement).appendChild(st);
+  })();
+  var pakjeBezig = false;
+  function pakjes(){
+    if (pakjeBezig) return;
+    var wd = welkeDag(location.search);
+    if (wd.dag !== 'sint') return;
+    pakjeBezig = true;
+    var echt = wd.echt, nu = new Date(), datum = datumVan(nu), spel = spelNaam();
+    if (echt){
+      if (docentHier()) return;
+      /* vijf gevonden, maar de hoed kwam er niet (geen verbinding): nu alsnog */
+      var bz = lsLees('lg-bezit');
+      if (pakjesVan(nu.getFullYear()).length >= PAKJE_DOEL && !(bz && bz.h30)) geefHoed(0);
+      if (pakjesVan(nu.getFullYear()).some(function(p){ return p.s === spel && p.d === datum; })) return;
+      if (hash('pakje|' + datum + '|' + spel) % 1000 >= PAKJE_KANS * 1000) return;
+    }
+    /* de tijd telt alleen als je de pagina ziet */
+    var wacht = echt ? 20000 + hash('wacht|' + datum + '|' + spel) % 50000 : 3000, gewacht = 0, vorige = Date.now();
+    var klok = setInterval(function(){
+      var t = Date.now(); if (!document.hidden) gewacht += t - vorige; vorige = t;
+      if (gewacht < wacht) return;
+      clearInterval(klok); verschijn(spel, datum, echt, 0);
+    }, 500);
+  }
+  function verschijn(spel, datum, echt, poging){
+    if (uit() || opBord()) return;
+    var plek = zoekPlek(null);
+    /* geen lege plek: zo nog eens kijken (het spel verandert van scherm) */
+    if (!plek){ if (poging < 30) setTimeout(function(){ verschijn(spel, datum, echt, poging + 1); }, 4000); return; }
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'pe-pakje'; b.innerHTML = PAKJE_SVG;
+    b.setAttribute('aria-label', 'Een pakje! Tik om het te pakken'); b.title = 'Een pakje!';
+    b.style.left = plek.x + 'px'; b.style.top = plek.y + 'px';
+    document.body.appendChild(b);
+    if (!rustig()) b.animate([{ transform:'translateY(-30px) scale(.3)', opacity:0 }, { transform:'translateY(4px) scale(1.08)', opacity:1, offset:.6 }, { transform:'none', opacity:1 }], { duration:520, easing:'cubic-bezier(.16,1,.3,1)' });
+    var klaar = false, sinds = Date.now();
+    /* het spel kan veranderen: komt er iets onder het pakje, dan schuift het naar een andere lege plek */
+    var wacht = setInterval(function(){
+      if (klaar) return;
+      if (!document.hidden && Date.now() - sinds > PAKJE_DUUR){ ruim(true); return; }
+      if (uit() || opBord()){ ruim(false); return; }
+      var x = parseFloat(b.style.left), y = parseFloat(b.style.top);
+      var binnen = x >= 0 && y >= 0 && x + PAKJE_MAAT <= (document.documentElement.clientWidth || innerWidth) && y + PAKJE_MAAT <= (document.documentElement.clientHeight || innerHeight);
+      if (binnen && vrij(x, y, b)){ b.classList.remove('weg'); return; }
+      var p = zoekPlek(b);
+      if (p){ b.style.left = p.x + 'px'; b.style.top = p.y + 'px'; b.classList.remove('weg'); } else b.classList.add('weg');
+    }, 900);
+    function ruim(zacht){
+      klaar = true; clearInterval(wacht);
+      if (zacht && !rustig()){ b.classList.add('weg'); setTimeout(function(){ b.remove(); }, 450); } else b.remove();
+    }
+    b.addEventListener('click', function(e){
+      e.preventDefault(); e.stopPropagation();
+      if (klaar) return;
+      klaar = true; clearInterval(wacht);
+      confetti(b, 26);
+      if (!rustig()){
+        var a = b.animate([{ transform:'none', opacity:1 }, { transform:'translateY(-46px) rotate(-200deg) scale(1.2)', opacity:1, offset:.55 }, { transform:'translateY(-70px) rotate(-360deg) scale(0)', opacity:0 }], { duration:700, easing:'cubic-bezier(.3,0,.2,1)', fill:'forwards' });
+        a.onfinish = function(){ b.remove(); };
+      } else b.remove();
+      gevonden(spel, datum, echt);
+    });
+  }
+  function gevonden(spel, datum, echt){
+    if (!echt){ toast('<b>Nog even geduld</b> <span>Van 1 tot en met 5 december tellen de pakjes echt.</span>', 4200); return; }
+    var jaar = datum.slice(0, 4), l = pakjesVan(jaar);
+    if (!l.some(function(p){ return p.s === spel && p.d === datum; })) l.push({ s:spel, d:datum });
+    try { localStorage.setItem('lg-pakjes-' + jaar, JSON.stringify(l.slice(-200))); } catch (e){}
+    var n = l.length;
+    if (n < PAKJE_DOEL){ toast('<b>Je vond een pakje!</b> <span>' + n + ' van ' + PAKJE_DOEL + '. Er zitten deze week meer pakjes in de spellen verstopt.</span>', 5200); return; }
+    geefHoed(n);
+  }
+  /* vijf of meer: de Cadeauhoed, als je hem nog niet hebt. n: het aantal pakjes (0: stil opnieuw proberen,
+     omdat het de vorige keer niet lukte; pakjes() kijkt daarvoor in lg-bezit) */
+  function geefHoed(n){
+    var klaar = window.COSMETICA ? Promise.resolve() : laad('/leermiddelen/cosmetica.js');
+    klaar.then(function(){ return window.PROFIEL ? null : laad('/leermiddelen/profiel.js'); }).then(function(){
+      var nieuw = window.PROFIEL && PROFIEL.geheimGevonden ? PROFIEL.geheimGevonden('h30') : false;
+      if (nieuw){ confetti(null, 44); toast('<b>' + (n === PAKJE_DOEL ? 'Vijf pakjes!' : 'Een cadeau van de Sint!') + '</b> <span>Je krijgt de Cadeauhoed: een pakje met een strik, voor op je hoofd. Zet hem op in de leeromgeving, via het rondje rechtsboven.</span>', 7500); }
+      else if (n) toast('<b>Je vond een pakje!</b> <span>Al ' + n + ' gevonden. De Cadeauhoed is al van jou.</span>', 5200);
+    }).catch(function(){ if (n) toast('<b>Je vond een pakje!</b> <span>' + n + ' gevonden. De Cadeauhoed krijg je vanzelf zodra er weer verbinding is.</span>', 6000); });
+  }
+
   if (document.getElementById('groet')){
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', leeromgeving); else leeromgeving();
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', feestdag); else feestdag();
   }
-  return { toast:toast, confetti:confetti, ster:ster, goud:goud, feest:feest, uit:uit, welkeDag:welkeDag, strook:strook, sneeuw:sneeuw, maakPakbaar:maakPakbaar };
+  return { toast:toast, confetti:confetti, ster:ster, goud:goud, feest:feest, uit:uit, welkeDag:welkeDag, strook:strook, sneeuw:sneeuw, maakPakbaar:maakPakbaar, pakjes:pakjes };
 })();

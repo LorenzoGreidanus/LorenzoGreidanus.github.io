@@ -39,6 +39,8 @@
     var lo = Math.min.apply(null, punten), hi = Math.max.apply(null, punten), g = o.g || (hi - lo > 100 ? 100 : 10);
     var van = Math.floor(lo / g) * g, tot = Math.ceil(hi / g) * g;
     if (tot === van) tot += g;
+    /* is de uitkomst zelf een rond getal, dan zou hij als uiteinde op de lijn staan: maak de lijn dan een stuk langer */
+    if (!o.labels && punten.length > 1){ if (tot === hi && hi !== punten[0]) tot += g; if (van === lo && lo !== punten[0] && van - g >= 0) van -= g; }
     return R.teken.lijn({ van:van, tot:tot, streep:tot - van <= 30 ? 1 : undefined, labels:o.labels || [van, tot], sprongen:sprongen || [], stip:o.stip || [], nieuw:true });
   }
   function lijn20(R, sprongen, stip){ return R.teken.lijn({ van:0, tot:20, streep:1, labels:[0, 10, 20], sprongen:sprongen || [], stip:stip || [], nieuw:true }); }

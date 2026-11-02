@@ -152,6 +152,11 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;pa
 .fouten div{border-top:1px solid var(--rand);padding:8px 0;font-size:.92rem}
 .fouten b{display:block}
 .fouten span{color:var(--muted)}
+/* het rijmpje van de Sint bij de score van de Sinterklaasquiz */
+.sintrijm{margin:16px 0;padding:16px 20px 12px;background:var(--kaart);border:1px solid var(--rand);border-left:5px solid #C8102E;border-radius:18px;box-shadow:var(--schaduw);max-width:540px}
+.sintrijm p{font-family:'Caveat',cursive;font-weight:600;font-size:1.45rem;line-height:1.25;color:var(--ink)}
+.sintrijm .wie{margin-top:6px;text-align:right;color:var(--hand,#D9522F)}
+.sintnoot{margin-top:12px;font-size:.92rem;color:var(--muted)}
 .klasnoot{margin-top:8px;font-size:.9rem;color:var(--muted)}
 footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 @media(max-width:600px){.vraagtekst{font-size:1.1rem}.meter b{font-size:1.25rem}}
@@ -246,6 +251,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     <!-- de eindkaart (SPEL.einde) staat bovenaan met de punten en de knop naar de spellen -->
     <h2 class="hide" id="eindKop">Klaar</h2>
     <p class="lead" id="eindUit"></p>
+    <div class="sintrijm hide" id="sintRijm"></div>
     <div class="cijfers hide" id="cijfers"></div>
     <div class="stap" id="foutenRij"><a class="knop stil" href="fouten.html">Oefen je fouten</a></div>
     <div id="siteLijst"></div>
@@ -264,6 +270,8 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 <script src="bank-wis.js"></script>
 <script src="bank-burg.js"></script>
 <script src="bank-eco.js"></script>
+<!-- van 1 tot en met 5 december: de Sinterklaasquiz -->
+<script src="sint-quiz.js"></script>
 <script src="naamfilter.js"></script>
 <script src="strijd.js"></script>
 <script src="klas.js"></script>
@@ -280,12 +288,23 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   /* de dag als sleutel: iedereen in Nederland dezelfde set, dus lokale datum */
   var nu = new Date(), DAG = nu.getFullYear() + '-' + ('0' + (nu.getMonth() + 1)).slice(-2) + '-' + ('0' + nu.getDate()).slice(-2);
   var SPEL_ID = 'dag-' + DAG, N = 10, BONUS_SEC = 10;
+  /* Van 1 tot en met 5 december is de uitdaging een Sinterklaasquiz (sint-quiz.js), met hetzelfde klassement van de dag.
+     Met ?dag=sint (en eventueel &sintdag=1 tot 5) kun je hem op een andere dag bekijken: dan telt hij nergens mee. */
+  var SINT_ECHT = nu.getMonth() === 11 && nu.getDate() >= 1 && nu.getDate() <= 5;
+  var SINT_KIJK = !SINT_ECHT && /[?&]dag=sint\b/.test(location.search);
+  var SINT = !!window.SINTQUIZ && (SINT_ECHT || SINT_KIJK);
+  var SINTDAG = SINT_ECHT ? nu.getDate() : Math.max(1, Math.min(5, parseInt((/[?&]sintdag=(\d)/.exec(location.search) || [])[1], 10) || 1));
+  if (SINT) window.LG_SINTQUIZ = { echt:SINT_ECHT, dag:SINTDAG };
   /* een vaste toevalsreeks uit de datum: dezelfde vragen en dezelfde volgorde van antwoorden voor iedereen */
   function zaad(t){ var h = 2166136261; for (var i = 0; i < t.length; i++){ h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
   function toeval(z){ var a = z >>> 0; return function(){ a = (a + 0x6D2B79F5) >>> 0; var t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
   var VOLG = ['ned', 'eng', 'ges', 'aard', 'bio', 'wis', 'burg', 'eco', 'ges', 'ned'];
   function kiesVragen(){
     var r = toeval(zaad('dag|' + DAG)), uit = [], gebruikt = {};
+    if (SINT) return SINTQUIZ.kies(SINTDAG, zaad('sint|' + nu.getFullYear())).map(function(q){
+      var volg = q.o.map(function(x, k){ return k; }).sort(function(){ return r() - 0.5; });
+      return { vak:'sint', v:q.v, o:volg.map(function(k){ return q.o[k]; }), g:volg.indexOf(0), u:q.u, t:q.t, oorspronkelijk:q };
+    });
     VOLG.forEach(function(vak){
       var bron = BRONNEN[vak] || [], nivo = NIVOS[vak] || [];
       var ids = bron.map(function(q, i){ return i; }).filter(function(i){ return nivo[i] <= 2 && !gebruikt[vak + i] && !bron[i].svg; });
@@ -298,17 +317,35 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     });
     return uit;
   }
-  function vakNaam(id){ var v = VAKKEN.filter(function(x){ return x.id === id; })[0]; return v ? v.naam : id; }
-  function gespeeld(){ try { var d = JSON.parse(localStorage.getItem('lg-dag') || 'null'); return d && d.dag === DAG ? d : null; } catch (e){ return null; } }
+  function vakNaam(id){ if (id === 'sint') return 'Sinterklaas'; var v = VAKKEN.filter(function(x){ return x.id === id; })[0]; return v ? v.naam : id; }
+  function gespeeld(){ if (SINT_KIJK) return null; try { var d = JSON.parse(localStorage.getItem('lg-dag') || 'null'); return d && d.dag === DAG ? d : null; } catch (e){ return null; } }
 
   var rij = kiesVragen(), nr = 0, goed = 0, punten = 0, vraag = null, geklikt = -1, klok = null, tijd = 0, loopt = false, wachtTimer = null, foutLijst = [], perOnderdeel = {}, reeks = 0, besteReeks = 0, t0 = 0;
   function opsomming(l){ return l.length > 1 ? l.slice(0, -1).join(', ') + ' en ' + l[l.length - 1] : l.join(''); }
   function tekenStart(){
     var g = gespeeld();
+    if (SINT){ tekenSintStart(g); return; }
     $('dagUit').textContent = g ? 'Je hebt de uitdaging van vandaag al gespeeld: ' + g.goed + ' van 10 goed, ' + g.punten + ' punten. Morgen staat er een nieuwe klaar.' : 'Tien vragen uit ' + opsomming(rij.map(function(q){ return /^(ned|eng)$/.test(q.vak) ? vakNaam(q.vak) : vakNaam(q.vak).toLowerCase(); }).filter(function(x, i, a){ return a.indexOf(x) === i; })) + '. Eén poging.';
     $('startBtn').disabled = !!g;
     $('startBtn').textContent = g ? 'Al gespeeld vandaag' : 'Start de uitdaging';
     if (window.STRIJD) STRIJD.klassement.toon('siteStartLijst', SPEL_ID);
+  }
+  /* het startscherm van de Sinterklaasquiz: dezelfde opbouw, andere woorden */
+  function tekenSintStart(g){
+    document.title = 'Sinterklaasquiz · meneer Greidanus';
+    var voet = document.querySelector('body > footer');
+    if (voet) voet.textContent = 'De dagelijkse uitdaging hoort bij de leeromgeving van meneer Greidanus. Van 1 tot en met 5 december is het een Sinterklaasquiz: dezelfde tien vragen voor iedereen, elke dag andere.';
+    var st = $('scherm-start'), kaart1 = st.querySelector('.uitleg div');
+    st.querySelector('.hand').textContent = SINT_ECHT ? (SINTDAG === 5 ? 'vanavond is het pakjesavond!' : 'van 1 tot en met 5 december') : 'een voorproefje';
+    st.querySelector('h1').textContent = 'De Sinterklaasquiz';
+    st.querySelector('.lead').textContent = 'Van 1 tot en met 5 december is de uitdaging van de dag een Sinterklaasquiz: tien vragen over de geschiedenis van het feest, elke dag andere, en je hebt één poging.';
+    if (kaart1){ kaart1.querySelector('b').textContent = 'Tien vragen over het feest'; kaart1.querySelector('span').textContent = 'Over Nicolaas van Myra, de legenden, het lekkers en hoe Sinterklaas Santa Claus werd. Bij een fout lees je meteen hoe het zit.'; }
+    $('dagKop').textContent = SINT_ECHT ? 'De Sinterklaasquiz van vandaag' : 'Voorproefje: dag ' + SINTDAG + ' van de Sinterklaasquiz';
+    $('dagUit').textContent = g ? 'Je hebt de Sinterklaasquiz van vandaag al gespeeld: ' + g.goed + ' van 10 goed, ' + g.punten + ' punten.' + (SINTDAG < 5 ? ' Morgen staan er tien nieuwe vragen klaar.' : '')
+      : SINT_ECHT ? 'Tien vragen over de geschiedenis van het Sinterklaasfeest. Eén poging.' : 'Dit telt niet mee: geen klassement, geen munten, en je uitdaging van vandaag blijft gewoon staan.';
+    $('startBtn').disabled = !!g;
+    $('startBtn').textContent = g ? 'Al gespeeld vandaag' : 'Start de Sinterklaasquiz';
+    if (window.STRIJD && SINT_ECHT) STRIJD.klassement.toon('siteStartLijst', SPEL_ID);
   }
   tekenStart();
   function tekenMeters(){
@@ -348,8 +385,9 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
       $('terug').textContent = 'Goed! +' + w + ' punten' + (bonus ? ', waarvan ' + bonus + ' voor je snelheid.' : '.'); $('terug').className = 'terugkoppeling goed';
     } else {
       reeks = 0; foutLijst.push(vraag);
-      if (window.FOUTENMAP) FOUTENMAP.noteer(vraag.oorspronkelijk, vraag.vak);
-      if (window.KLAS && KLAS.fout) KLAS.fout(vraag, i, vraag.vak);
+      /* de Sinterklaasvragen horen bij geen vak: niet in de foutenmap en niet bij de docent */
+      if (window.FOUTENMAP && !SINT) FOUTENMAP.noteer(vraag.oorspronkelijk, vraag.vak);
+      if (window.KLAS && KLAS.fout && !SINT) KLAS.fout(vraag, i, vraag.vak);
       $('terug').textContent = 'Niet goed. ' + (window.WAAROM ? WAAROM.tekst(vraag, i) : '') + (vraag.u || ''); $('terug').className = 'terugkoppeling fout';
     }
     nr++;
@@ -374,7 +412,7 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
   function einde(){
     if (!loopt) return;
     loopt = false; clearInterval(klok); clearTimeout(wachtTimer);
-    try { localStorage.setItem('lg-dag', JSON.stringify({ dag:DAG, goed:goed, punten:punten })); } catch (e){}
+    if (!SINT_KIJK) try { localStorage.setItem('lg-dag', JSON.stringify({ dag:DAG, goed:goed, punten:punten })); } catch (e){}
     $('scherm-spel').classList.add('hide'); $('scherm-einde').classList.remove('hide'); $('stopBtn').classList.add('hide');
     $('eindKop').textContent = punten + ' punten';
     $('eindUit').textContent = goed + ' van de 10 goed' + (besteReeks >= 5 ? ', met ' + besteReeks + ' op rij' : '') + '. Morgen staat er een nieuwe uitdaging klaar.';
@@ -382,13 +420,21 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
     $('fouten').innerHTML = foutLijst.length ? '<p class="eyebrow">nog even nakijken</p>' + foutLijst.map(function(q){
       return '<div><b>' + schoon(q.v) + '</b><span>Goed was: ' + schoon(q.o[q.g]) + (q.u ? ' · ' + schoon(q.u) : '') + '</span></div>';
     }).join('') : '';
-    SPEL.einde({ spel:'dag', reeks:besteReeks, goed:goed, muntBonus: goed === 10 ? 20 : 0, score:punten, waarde:punten, label:'punten', drempels:[600, 1000, 1300], klas:false, sleutel:'dag', deelTekst:punten + ' punten in de dagelijkse uitdaging', kop:'de uitdaging van vandaag',
+    if (SINT) $('eindUit').textContent = goed + ' van de 10 goed' + (besteReeks >= 5 ? ', met ' + besteReeks + ' op rij' : '') + '.' + (SINT_KIJK ? ' Dit was een voorproefje: het telt nergens mee.' : SINTDAG < 5 ? ' Morgen staan er tien nieuwe Sinterklaasvragen klaar.' : '');
+    var rijm = SINT ? SINTQUIZ.rijm(goed, SINTDAG) : null;
+    $('sintRijm').innerHTML = rijm ? '<p>' + rijm.map(schoon).join('<br>') + '</p><p class="wie">de Sint</p>' : '';
+    $('sintRijm').classList.toggle('hide', !rijm);
+    /* een voorproefje (?dag=sint) geeft geen munten en geen beste score */
+    SPEL.einde({ spel:'dag', reeks:besteReeks, goed:goed, muntBonus: goed === 10 && !SINT_KIJK ? 20 : 0, muntFactor: SINT_KIJK ? 0 : 1, score: SINT_KIJK ? String(punten) : punten, waarde: SINT_KIJK ? undefined : punten, label:'punten', drempels:[600, 1000, 1300], klas:false, sleutel:'dag',
+      deelTekst:punten + (SINT ? ' punten in de Sinterklaasquiz' : ' punten in de dagelijkse uitdaging'), kop: SINT ? 'de Sinterklaasquiz van vandaag' : 'de uitdaging van vandaag',
       /* je kunt vandaag niet nog een keer: geen knop voor nog een keer, Alle spellen is de hoofdknop */
       opnieuw:false });
-    /* staat Oefen je fouten al op de eindkaart, dan hoeft hij hier niet nog een keer; zonder fouten ook niet */
-    $('foutenRij').classList.toggle('hide', !foutLijst.length || !!document.querySelector('#scherm-einde .eindkaart a[href="fouten.html"]'));
-    if (window.STRIJD) STRIJD.klassement.vorm('siteLijst', SPEL_ID, function(){ return { ronde:goed, punten:punten, waar:'', niveau:'', vak:'alle vakken' }; });
-    if (window.KLAS) KLAS.meld({ spel:'dag', ronde:goed, punten:punten, niveau:'', vak:'', od:perOnderdeel }, 'eindUit');
+    /* staat Oefen je fouten al op de eindkaart, dan hoeft hij hier niet nog een keer; zonder fouten ook niet,
+       en bij de Sinterklaasquiz niet (die vragen gaan niet in de foutenmap) */
+    $('foutenRij').classList.toggle('hide', SINT || !foutLijst.length ||!!document.querySelector('#scherm-einde .eindkaart a[href="fouten.html"]'));
+    if (SINT_KIJK) $('siteLijst').innerHTML = '<p class="sintnoot">Een voorproefje gaat niet in het klassement. Van 1 tot en met 5 december telt het echt.</p>';
+    else if (window.STRIJD) STRIJD.klassement.vorm('siteLijst', SPEL_ID, function(){ return { ronde:goed, punten:punten, waar:'', niveau:'', vak: SINT ? 'Sinterklaasquiz' : 'alle vakken' }; });
+    if (window.KLAS && !SINT_KIJK) KLAS.meld({ spel:'dag', ronde:goed, punten:punten, niveau:'', vak:'', od:perOnderdeel }, 'eindUit');
     scrollTo({ top:0, behavior:'auto' });
   }
   /* de tutorial, een keer, zodra het spelscherm er is; de klok staat intussen stil */
@@ -400,6 +446,6 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 </script>
 <script src="thema.js"></script>
 <script src="spel.js"></script>
-<script>SPEL.uitleg({ doel:"Tien vragen die vandaag voor iedereen hetzelfde zijn, uit alle vakken. Eén poging per dag.", tijd:"tien vragen, ongeveer 5 minuten", bediening:"Tik het goede antwoord, of druk op 1 tot 4. Snel antwoorden geeft bonuspunten; na een fout ga je met Volgende verder.", meer:'.uitleg', onder:true, links:true, zeker:'stopBtn' });</script>
+<script>SPEL.uitleg({ doel: window.LG_SINTQUIZ ? "Tien vragen over de geschiedenis van het Sinterklaasfeest, vandaag voor iedereen hetzelfde. Eén poging per dag." : "Tien vragen die vandaag voor iedereen hetzelfde zijn, uit alle vakken. Eén poging per dag.", tijd:"tien vragen, ongeveer 5 minuten", bediening:"Tik het goede antwoord, of druk op 1 tot 4. Snel antwoorden geeft bonuspunten; na een fout ga je met Volgende verder.", meer:'.uitleg', onder:true, links:true, zeker:'stopBtn' });</script>
 </body>
 </html>

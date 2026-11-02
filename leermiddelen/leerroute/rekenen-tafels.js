@@ -348,7 +348,8 @@
             var a = R.heel(2, 6), b = R.heel(2, 9), lab = [];
             for (var i = 0; i <= a; i++) lab.push(i * b);
             return { vraag:a + ' × ' + b, context:'Reken het uit met sprongen op de getallenlijn.',
-              beeld:function(n){ var sp = [], tot = n >= 3 ? a : n >= 1 ? 1 : 0; for (var i = 0; i < tot; i++) sp.push({ van:i * b, naar:(i + 1) * b, tekst:'+' + b, kleur:i % 2 }); return tk.lijn({ van:0, tot:a * b, labels:lab, sprongen:sp, stip:[0], nieuw:true }); },
+              /* de lijn loopt altijd tot 10 sprongen en toont eerst alleen 0 en de eerste sprong: het eindpunt staat er pas na de laatste stap */
+              beeld:function(n){ var sp = [], tot = n >= 3 ? a : n >= 1 ? 1 : 0; for (var i = 0; i < tot; i++) sp.push({ van:i * b, naar:(i + 1) * b, tekst:'+' + b, kleur:i % 2 }); return tk.lijn({ van:0, tot:10 * b, streep:b, labels:n >= 3 ? lab : [0, b], sprongen:sp, stip:[0], nieuw:true }); },
               stappen:[
                 { tekst:'Hoe groot is elke sprong?', antwoord:S(b), hint:'Het tweede getal zegt hoe groot een sprong is.', fout:F(b, [[a, 'Dat is het aantal sprongen.']]) },
                 { tekst:'Hoeveel sprongen maak je?', antwoord:S(a), hint:'Het eerste getal zegt hoe vaak je springt.', fout:F(a, [[b, 'Dat is de grootte van een sprong.']]) },
@@ -369,7 +370,8 @@
             var tw = t === 1 ? a + ' × 1 =' : t === 2 ? 'Verdubbel ' + a + ': ' + a + ' + ' + a + ' =' : t === 5 ? 'Tel in sprongen van 5 en stop na ' + a + ' sprongen: ' + a + ' × 5 =' : 'Zet een nul achter ' + a + ': ' + a + ' × 10 =';
             var lab = []; for (var i = 0; i <= a; i++) lab.push(i * t);
             return { vraag:a + ' × ' + t,
-              beeld:function(n){ var sp = []; if (n >= 2) for (var i = 0; i < a; i++) sp.push({ van:i * t, naar:(i + 1) * t, tekst:i === 0 ? '+' + t : '', kleur:i % 2 }); return tk.lijn({ van:0, tot:a * t, labels:t === 1 || t === 2 ? null : lab, sprongen:sp, stip:[0] }); },
+              /* de lijn loopt altijd tot 12 keer: zo zie je niet aan het eind van de lijn wat de uitkomst is */
+              beeld:function(n){ var sp = []; if (n >= 2) for (var i = 0; i < a; i++) sp.push({ van:i * t, naar:(i + 1) * t, tekst:i === 0 ? '+' + t : '', kleur:i % 2 }); return tk.lijn({ van:0, tot:12 * t, streep:t, labels:n >= 2 ? lab : [0, t], sprongen:sp, stip:[0] }); },
               stappen:[
                 kiesStap(R, 'Welke regel hoort bij deze som?', REG[t], ander, 'Kijk naar het getal ' + t + ' in de som.'),
                 { tekst:tw, antwoord:S(uit), hint:t === 5 ? 'Tel per 5: ' + reeks(5, a) + ' Stop na ' + a + ' sprongen.' : t === 10 ? a + ' wordt ' + a + '0.' : t === 2 ? 'Het dubbele van ' + a + '.' : 'Eén keer ' + a + ' is gewoon ' + a + '.' } ] };

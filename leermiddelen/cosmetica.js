@@ -34,6 +34,8 @@
     { id:'h27', soort:'h', n:27, naam:'Mijter',    prijs:0, geheim:true, feest:'sint',  uit:'met staf; gevonden op Sinterklaas' },
     { id:'h28', soort:'h', n:28, naam:'Slaapmuts', prijs:0, geheim:true, feest:'nacht', uit:'gevonden midden in de nacht' },
     { id:'h29', soort:'h', n:29, naam:'Pietenmuts', prijs:0, geheim:true, feest:'sint', uit:'met veer; gevonden op Sinterklaas' },
+    /* vijf pakjes gevonden in de spellen, van 1 tot en met 5 december (de pakjesjacht in paasei.js) */
+    { id:'h30', soort:'h', n:30, naam:'Cadeauhoed', prijs:0, geheim:true, feest:'sint', uit:'een pakje met een strik; vijf pakjes gevonden in de Sinterklaasweek' },
     /* nieuwe hoeden: h15 tot h19 altijd te koop, h20 en h21 in hun seizoen */
     { id:'h15', soort:'h', n:15, naam:'Pet achterstevoren', prijs:350, uit:'de klep naar achteren, natuurlijk' },
     { id:'h16', soort:'h', n:16, naam:'Beanie',         prijs:300, uit:'gebreid, met een pompon' },
@@ -109,6 +111,8 @@
     { id:'b13', soort:'b', n:13, naam:'Belletje van De Schoolbel',      prijs:0, baas:'bel',       uit:'versla De Schoolbel in Zwaardvechter, alleen of samen' },
     { id:'b14', soort:'b', n:14, naam:'Rapportje van Het Rapport',      prijs:0, baas:'rapport',   uit:'versla Het Rapport in Zwaardvechter, alleen of samen' },
     { id:'b15', soort:'b', n:15, naam:'Beker van Het Proefwerk',        prijs:0, baas:'proefwerk', uit:'versla Het Proefwerk in Zwaardvechter, alleen of samen' },
+    /* De Stoomboot komt alleen in de Sinterklaasweek (1 tot en met 5 december) in ronde 10 (zwaard-motor.js, STOOMBOOT); de tekening staat in TROFEETEKENING hieronder */
+    { id:'b16', soort:'b', n:16, naam:'Stoombootje van De Stoomboot',   prijs:0, baas:'stoomboot', uit:'versla De Stoomboot in Zwaardvechter, alleen van 1 tot en met 5 december' },
     /* De nachtmerrie: alleen tegen een baas, met alles gekocht, en hij is veel
        taaier. Elke baas geeft een ander soort ding, zodat het opvalt dat je het
        gehaald hebt. baas:'nm-...' zorgt dat de winkel ze weigert en het
@@ -153,10 +157,26 @@
         .formatToParts(nu || new Date()).forEach(function(p){ if (p.type === 'month') d.maand = +p.value; else if (p.type === 'day') d.dag = +p.value; else if (p.type === 'hour') d.uur = +p.value % 24; });
     } catch (e){ var t = nu || new Date(); d = { maand:t.getMonth() + 1, dag:t.getDate(), uur:t.getHours() }; }
     if (feest === 'sint') return (d.maand === 11 && d.dag === 30) || (d.maand === 12 && d.dag <= 6);
+    /* de Sinterklaasweek zelf, zonder speling: pepernoten en De Stoomboot in Zwaardvechter (1 tot en met 5 december) */
+    if (feest === 'sintweek') return d.maand === 12 && d.dag >= 1 && d.dag <= 5;
     if (feest === 'nacht') return d.uur >= 22 || d.uur < 6;
     return false;
   }
   function vanBaas(baasId){ for (var i = 0; i < ITEMS.length; i++) if (ITEMS[i].baas === baasId) return ITEMS[i]; return null; }
+  /* De tekening van een trofee die nog niet in avatar.js (trofee) staat, in dezelfde maat (ongeveer
+     -14 tot 14 rond het midden): avatar.js kan hem hier ophalen met COSMETICA.trofeeTekening(n).
+     16: het stoombootje van De Stoomboot, een rode boot met een gouden bies, een witte kajuit,
+     een schoorsteen met rook en een golf eronder. */
+  var TROFEETEKENING = {
+    16: '<path d="M-14,11 q3.5,-2.6 7,0 t7,0 t7,0 t7,0" fill="none" stroke="#204ECF" stroke-width="1.8" stroke-linecap="round"/>' +
+      '<circle cx="7.5" cy="-13" r="2.4" fill="#e9edf2" stroke="#8f9db0" stroke-width=".8"/><circle cx="10.8" cy="-16" r="1.8" fill="#e9edf2" stroke="#8f9db0" stroke-width=".8"/>' +
+      '<rect x="4.4" y="-10.5" width="5" height="11" rx="1" fill="#14224C"/><rect x="4.4" y="-7.4" width="5" height="2.4" fill="#b0283a"/>' +
+      '<rect x="-8" y="-5" width="11" height="6.5" rx="1.2" fill="#FBF6F1" stroke="#6e1420" stroke-width="1"/>' +
+      '<rect x="-6.3" y="-3.4" width="2.6" height="2.6" rx=".5" fill="#83A5F2"/><rect x="-2.2" y="-3.4" width="2.6" height="2.6" rx=".5" fill="#83A5F2"/>' +
+      '<path d="M-14,1 H14 L10,9.5 H-10.5 Z" fill="#b0283a" stroke="#6e1420" stroke-width="1.4" stroke-linejoin="round"/>' +
+      '<path d="M-12.6,3.4 H12.6" stroke="#FFD166" stroke-width="1.3"/><circle cx="-6" cy="6.2" r="1.3" fill="#FBF6F1"/><circle cx="0" cy="6.2" r="1.3" fill="#FBF6F1"/><circle cx="6" cy="6.2" r="1.3" fill="#FBF6F1"/>'
+  };
+  function trofeeTekening(n){ return TROFEETEKENING[n] || ''; }
   /* wat je wint als je deze baas in de nachtmerrie verslaat */
   function vanNachtmerrie(baasId){ return vanBaas('nm-' + baasId); }
   function vind(id){ for (var i = 0; i < ITEMS.length; i++) if (ITEMS[i].id === id) return ITEMS[i]; return null; }
@@ -297,7 +317,7 @@
     if (b.sterren) s += '<path d="' + P('M' + (e + 20) + ',-5.5 L' + (e + 21) + ',-1 L' + (e + 25.5) + ',0 L' + (e + 21) + ',1 L' + (e + 20) + ',5.5 L' + (e + 19) + ',1 L' + (e + 14.5) + ',0 L' + (e + 19) + ',-1 Z') + '" fill="#fff" opacity=".95"/>';
     return s;
   }
-  g.COSMETICA = { ITEMS:ITEMS, SOORTEN:SOORTEN, vind:vind, vanBaas:vanBaas, vanNachtmerrie:vanNachtmerrie, ontleed:ontleed, bouw:bouw, toegestaan:toegestaan, inSeizoen:inSeizoen, feestNu:feestNu,
+  g.COSMETICA = { ITEMS:ITEMS, SOORTEN:SOORTEN, vind:vind, vanBaas:vanBaas, vanNachtmerrie:vanNachtmerrie, ontleed:ontleed, bouw:bouw, toegestaan:toegestaan, inSeizoen:inSeizoen, feestNu:feestNu, trofeeTekening:trofeeTekening,
                   BOGEN:BOGEN, boog:boog, pijl:pijl, spoor:spoor, SPEREN:SPEREN, speer:speer };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 if (typeof module !== 'undefined' && module.exports) module.exports = globalThis.COSMETICA;

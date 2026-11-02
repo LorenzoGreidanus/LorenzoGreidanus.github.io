@@ -648,6 +648,23 @@ window.SPEL = (function(){
     if (document.readyState === 'complete') go(); else window.addEventListener('load', go);
   })();
 
+  /* ---------- de pakjesjacht van Sinterklaas ----------
+     Van 1 tot en met 5 december (of met ?dag=sint, om te bekijken) komt paasei.js mee: die verstopt af en toe
+     een pakje in het spel (PAASEI.pakjes). De rest van het jaar laadt hier niets extra's. */
+  (function(){
+    var d = new Date();
+    if (!(d.getMonth() === 11 && d.getDate() >= 1 && d.getDate() <= 5) && !/[?&]dag=sint\b/.test(location.search)) return;
+    function start(){ if (window.PAASEI && PAASEI.pakjes) PAASEI.pakjes(); }
+    function laad(){
+      if (window.PAASEI){ start(); return; }
+      var sc = document.createElement('script');
+      sc.src = (mijnAdres || 'spel.js').replace(/spel\.js[^\/]*$/, '') + 'paasei.js';
+      sc.onload = start; document.head.appendChild(sc);
+    }
+    var mijnAdres = document.currentScript && document.currentScript.src;
+    if (document.readyState === 'complete') laad(); else window.addEventListener('load', laad);
+  })();
+
   return {
     raak: raak, uitleg:uitleg, niveauRegel:niveauRegel, stappen:stappen, einde:einde, bestand:bestand, naamMag:naamMag, schoonKlassementen:schoonKlassementen,
     inBeeld:inBeeld, drukknoppen:drukknoppen, zeker:zeker,

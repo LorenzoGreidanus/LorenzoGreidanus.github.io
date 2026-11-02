@@ -43,7 +43,7 @@ window.OPDRACHTENBOEK = (function(){
         { naam:"Getalbegrip", paragrafen:[
           { id:"getal-tellen", naam:"Tellen en getallen tot 1000", niveau:"basis", doelen:["getal-tellen", "getal-terugtellen", "getal-hte", "getal-even", "getal-vergelijken", "getal-lijn", "getal-buren"] },
           { id:"splits-vriendjes", naam:"Splitsen en aanvullen", niveau:"basis", doelen:["splits-vriendjes", "splits-tot10", "splits-tiental", "splits-honderd"] },
-          { id:"groot-lezen", naam:"Grote getallen", niveau:"1F", doelen:["groot-lezen", "groot-schrijven", "groot-plaats", "groot-ordenen", "groot-krant"] },
+          { id:"groot-lezen", naam:"Grote getallen", niveau:"1F", doelen:["groot-lezen", "groot-schrijven", "groot-plaats", "groot-ordenen", "groot-krant", "groot-rekenen"] },
           { id:"getal-afronden", naam:"Afronden", niveau:"basis/1F", doelen:["getal-afronden", "groot-afronden"] }
         ] },
         { naam:"Optellen en aftrekken", paragrafen:[
@@ -61,7 +61,7 @@ window.OPDRACHTENBOEK = (function(){
           { id:"keer-x10", naam:"Vermenigvuldigen uit het hoofd", niveau:"1F", doelen:["keer-x10", "keer-nullen", "keer-splitsen", "keer-hokjes", "keer-compenseren", "keer-verdubbel-halveer", "keer-x25", "keer-x50", "keer-kies"] },
           { id:"deel-splitsen", naam:"Delen uit het hoofd", niveau:"1F", doelen:["deel-splitsen", "deel-nullen", "deel-hap", "deel-gelijk", "deel-kies"] },
           { id:"cijf-hokjes", naam:"Vermenigvuldigen onder elkaar", niveau:"1F", doelen:["cijf-hokjes", "cijf-kolomkeer", "cijf-cijfer1", "cijf-cijfer2"] },
-          { id:"cijf-hap", naam:"Delen onder elkaar: de staartdeling", niveau:"1F", doelen:["cijf-hap", "cijf-staart", "cijf-rest", "cijf-verhaal"] }
+          { id:"cijf-hap", naam:"Delen onder elkaar: de staartdeling", niveau:"1F", doelen:["cijf-hap", "cijf-staart", "cijf-rest", "cijf-staart-komma", "cijf-verhaal"] }
         ] },
         { naam:"Kommagetallen", paragrafen:[
           { id:"komma-plaats", naam:"Kommagetallen begrijpen en vergelijken", niveau:"1F", doelen:["komma-plaats", "komma-lijn", "komma-vergelijk"] },
@@ -87,28 +87,30 @@ window.OPDRACHTENBOEK = (function(){
       ] },
       { naam:"Verhoudingen", hoofdstukken:[
         { naam:"Breuken", paragrafen:[
-          { id:"breuk-deel", naam:"Breuken begrijpen", niveau:"basis", doelen:["breuk-deel", "breuk-lijn", "breuk-gelijk"] },
+          { id:"breuk-deel", naam:"Breuken begrijpen", niveau:"basis", doelen:["breuk-deel", "breuk-welk-deel", "breuk-als-deling", "breuk-lijn", "breuk-gelijk"] },
           { id:"breuk-van-strook", naam:"Breuk van een hoeveelheid", niveau:"basis", doelen:["breuk-van-strook", "breuk-van-reken"] },
           { id:"breuk-verg-noemer", naam:"Breuken vergelijken", niveau:"basis", doelen:["breuk-verg-noemer", "breuk-verg-teller", "breuk-verg-half", "breuk-verg-kies"] },
           { id:"breuk-vereenvoudig", naam:"Breuken vereenvoudigen en gelijknamig maken", niveau:"2F", doelen:["breuk-vereenvoudig", "breuk-gelijknamig"] },
-          { id:"breuk-gemengd", naam:"Helen en gemengde getallen", niveau:"2F", doelen:["breuk-gemengd"] },
+          { id:"breuk-gemengd", naam:"Helen en gemengde getallen", niveau:"2F", doelen:["breuk-gemengd", "breuk-gemengd-plus"] },
           { id:"breuk-plus-gelijk", naam:"Breuken optellen en aftrekken", niveau:"2F", doelen:["breuk-plus-gelijk", "breuk-plus-ongelijk"] },
           { id:"breuk-keer-heel", naam:"Breuken vermenigvuldigen en delen", niveau:"2F", doelen:["breuk-keer-heel", "breuk-keer-breuk", "breuk-deel-van-deel", "breuk-delen", "breuk-reken-kies"] }
         ] },
         { naam:"Breuk, kommagetal en procent", paragrafen:[
-          { id:"breuk-om-rijtjes", naam:"Breuk, kommagetal en procent omzetten", niveau:"1F", doelen:["breuk-om-rijtjes", "breuk-om-delen", "breuk-om-noemer", "breuk-om-procent", "breuk-om-vereenvoudig", "breuk-om-kies"] }
+          { id:"breuk-om-rijtjes", naam:"Breuk, kommagetal en procent omzetten", niveau:"1F", doelen:["breuk-om-rijtjes", "breuk-om-delen", "breuk-om-noemer", "breuk-om-procent", "breuk-om-vereenvoudig", "breuk-om-kies", "breuk-om-ordenen"] }
         ] },
         { naam:"Procenten", paragrafen:[
           { id:"proc-helft", naam:"Procenten uit het hoofd", niveau:"1F", doelen:["proc-helft", "proc-kwart", "proc-tien", "proc-een", "proc-vijf", "proc-twintig", "proc-75"] },
           { id:"proc-1methode", naam:"Een percentage van een bedrag", niveau:"2F", doelen:["proc-1methode", "proc-10methode", "proc-strook", "proc-tabel", "proc-breuk", "proc-factor", "proc-kies"] },
           { id:"proc-hoeveel", naam:"Hoeveel procent is het?", niveau:"2F", doelen:["proc-hoeveel", "proc-hoeveel-tabel"] },
           { id:"proc-korting", naam:"Korting en btw", niveau:"2F", doelen:["proc-korting", "proc-korting-direct", "proc-btw-stap", "proc-btw-factor"] },
-          { id:"proc-verandering", naam:"Procentuele verandering en terugrekenen", niveau:"3F", doelen:["proc-verandering", "proc-terug-btw", "proc-terug-korting", "proc-procentpunt", "proc-na-elkaar"] },
+          { id:"proc-verandering", naam:"Procentuele verandering en terugrekenen", niveau:"3F", doelen:["proc-verandering", "proc-terug-btw", "proc-terug-korting", "proc-procentpunt", "proc-na-elkaar", "proc-index"] },
           { id:"proc-groeifactor", naam:"Groeifactor en rente", niveau:"3F", doelen:["proc-groeifactor", "proc-rente", "proc-samengesteld"] }
         ] },
         { naam:"Verhoudingen", paragrafen:[
           { id:"verh-via1", naam:"De verhoudingstabel", niveau:"1F", doelen:["verh-via1", "verh-dubbel", "verh-tien", "verh-optellen", "verh-tussen", "verh-kies"] },
           { id:"verh-recept", naam:"Recepten, verdelen en mengen", niveau:"2F", doelen:["verh-recept", "verh-verdelen", "verh-mengsel"] },
+          { id:"verh-taal", naam:"Verhoudingstaal, vereenvoudigen en omgekeerd evenredig", niveau:"2F", doelen:["verh-taal", "verh-vereenvoudig", "verh-omgekeerd"] },
+          { id:"verh-valuta", naam:"Wisselkoersen", niveau:"2F", doelen:["verh-valuta", "verh-valuta-kosten"] },
           { id:"verh-koop-stuk", naam:"Prijs per stuk en per kilo: de beste koop", niveau:"2F/3F", doelen:["verh-koop-stuk", "verh-koop-kilo", "verh-koop-100g", "verh-koop-kies", "snel-prijs"] }
         ] }
       ] },
@@ -123,25 +125,29 @@ window.OPDRACHTENBOEK = (function(){
         ] },
         { naam:"Tijd", paragrafen:[
           { id:"tijd-heel-half", naam:"Klokkijken", niveau:"basis", doelen:["tijd-heel-half", "tijd-kwart", "tijd-rond-half", "tijd-minuten", "tijd-24-uur"] },
-          { id:"tijd-duur", naam:"Rekenen met tijd", niveau:"basis", doelen:["tijd-duur", "tijd-erbij", "tijd-omrekenen", "tijd-kalender"] }
+          { id:"tijd-duur", naam:"Rekenen met tijd", niveau:"basis", doelen:["tijd-duur", "tijd-erbij", "tijd-omrekenen", "tijd-kalender"] },
+          { id:"tijd-dienst", naam:"Dienstregelingen en sporttijden", niveau:"1F", doelen:["tijd-dienst", "tijd-overstap", "tijd-sport"] }
         ] },
         { naam:"Geld", paragrafen:[
-          { id:"geld-aanvullen", naam:"Rekenen met geld", niveau:"1F", doelen:["geld-aanvullen", "geld-afronden", "geld-schatten", "geld-keer", "geld-een"] }
+          { id:"geld-aanvullen", naam:"Rekenen met geld", niveau:"1F", doelen:["geld-aanvullen", "geld-afronden", "geld-schatten", "geld-keer", "geld-een"] },
+          { id:"geld-uurloon", naam:"Geld in het huishouden: loon en budget", niveau:"2F", doelen:["geld-uurloon", "geld-loon", "geld-budget"] }
         ] },
         { naam:"Omtrek en oppervlakte", paragrafen:[
-          { id:"opp-omtrek", naam:"Omtrek en oppervlakte van de rechthoek", niveau:"1F", doelen:["opp-omtrek", "opp-hokjes", "opp-rechthoek", "opp-welke"] },
-          { id:"opp-driehoek", naam:"Oppervlakte van de driehoek", niveau:"2F", doelen:["opp-driehoek"] },
-          { id:"opp-splitsen", naam:"Samengestelde figuren", niveau:"2F", doelen:["opp-splitsen", "opp-groot-min", "opp-kies"] },
-          { id:"opp-cirkel-omtrek", naam:"De cirkel", niveau:"2F", doelen:["opp-cirkel-omtrek", "opp-cirkel"] },
+          { id:"opp-omtrek", naam:"Omtrek en oppervlakte van de rechthoek", niveau:"1F/2F", doelen:["opp-omtrek", "opp-hokjes", "opp-rechthoek", "opp-welke", "opp-vierkant-terug"] },
+          { id:"opp-omtrek-veelhoek", naam:"Omtrek van veelhoeken en samengestelde figuren", niveau:"1F/2F", doelen:["opp-omtrek-veelhoek", "opp-omtrek-samen"] },
+          { id:"opp-driehoek", naam:"Oppervlakte van de driehoek", niveau:"2F", doelen:["opp-driehoek", "opp-driehoek-buiten", "opp-driehoek-kies", "opp-driehoek-terug"] },
+          { id:"opp-parallellogram", naam:"Parallellogram en trapezium", niveau:"2F", doelen:["opp-parallellogram", "opp-trapezium"] },
+          { id:"opp-splitsen", naam:"Samengestelde figuren", niveau:"2F", doelen:["opp-splitsen", "opp-groot-min", "opp-kies", "opp-rooster-schuin"] },
+          { id:"opp-cirkel-omtrek", naam:"De cirkel", niveau:"2F", doelen:["opp-cirkel-omtrek", "opp-cirkel", "opp-cirkel-deel"] },
           { id:"opp-eenheden", naam:"Oppervlaktematen omrekenen", niveau:"2F", doelen:["opp-eenheden", "opp-are"] }
         ] },
         { naam:"Inhoud", paragrafen:[
-          { id:"inh-balk", naam:"Inhoud van de balk", niveau:"2F", doelen:["inh-balk", "inh-context"] },
+          { id:"inh-balk", naam:"Inhoud van de balk", niveau:"2F", doelen:["inh-balk", "inh-maten", "inh-context", "inh-terug"] },
           { id:"inh-eenheden", naam:"Inhoudsmaten en liters", niveau:"2F", doelen:["inh-eenheden", "inh-liter"] },
           { id:"snel-cilinder", naam:"Cilinder en prisma", niveau:"3F", doelen:["snel-cilinder", "snel-prisma"] }
         ] },
         { naam:"Snelheid en samengestelde grootheden", paragrafen:[
-          { id:"snel-tabel", naam:"Snelheid, afstand en tijd", niveau:"2F", doelen:["snel-tabel", "snel-snelheid", "snel-afstand", "snel-tijd", "snel-minuten", "snel-kies"] },
+          { id:"snel-tabel", naam:"Snelheid, afstand en tijd", niveau:"2F", doelen:["snel-tabel", "snel-snelheid", "snel-afstand", "snel-tijd", "snel-minuten", "snel-kies", "snel-grafiek"] },
           { id:"snel-ms", naam:"Van km/u naar m/s en terug", niveau:"3F", doelen:["snel-ms", "snel-kmu"] },
           { id:"snel-dichtheid", naam:"Dichtheid en verbruik", niveau:"3F", doelen:["snel-dichtheid", "snel-1op", "snel-per100"] }
         ] }
@@ -154,18 +160,19 @@ window.OPDRACHTENBOEK = (function(){
         ] },
         { naam:"Vlakke figuren en symmetrie", paragrafen:[
           { id:"mk-vierhoek", naam:"Driehoeken en vierhoeken", niveau:"1F", doelen:["mk-vierhoek", "mk-driehoek", "mk-raadsel"] },
-          { id:"mk-symas", naam:"Symmetrie", niveau:"1F", doelen:["mk-symas", "mk-spiegel", "mk-draaisym"] }
+          { id:"mk-symas", naam:"Symmetrie", niveau:"1F", doelen:["mk-symas", "mk-spiegel", "mk-spiegel-figuur", "mk-draaisym"] }
         ] },
         { naam:"Verschuiven, draaien en vergroten", paragrafen:[
           { id:"mk-verschuif", naam:"Transformaties op een rooster", niveau:"2F", doelen:["mk-verschuif", "mk-draai", "mk-vergroot"] }
         ] },
         { naam:"Ruimtefiguren en aanzichten", paragrafen:[
           { id:"mk-ruimte-naam", naam:"Ruimtefiguren", niveau:"2F", doelen:["mk-ruimte-naam", "mk-ruimte-tel"] },
-          { id:"mk-blokjes", naam:"Bouwsels en aanzichten", niveau:"2F", doelen:["mk-blokjes", "mk-aanzicht", "mk-kijklijn"] },
-          { id:"mk-uitslag-tegen", naam:"Uitslagen", niveau:"2F", doelen:["mk-uitslag-tegen", "mk-uitslag-welk", "mk-uitslag-balk"] }
+          { id:"mk-blokjes", naam:"Bouwsels en aanzichten", niveau:"2F", doelen:["mk-blokjes", "mk-aanzicht", "mk-aanzicht-kies", "mk-kijklijn"] },
+          { id:"mk-uitslag-tegen", naam:"Uitslagen", niveau:"2F", doelen:["mk-uitslag-tegen", "mk-uitslag-welk", "mk-uitslag-balk", "mk-uitslag-ruimte"] }
         ] },
         { naam:"Kaart, schaal en coördinaten", paragrafen:[
-          { id:"schaal-betekenis", naam:"Schaal en afstand", niveau:"2F", doelen:["schaal-betekenis", "schaal-naar-echt", "schaal-naar-kaart", "schaal-zelf", "schaal-lijn", "schaal-tabel"] },
+          { id:"kaart-raster", naam:"Kaart lezen", niveau:"1F", doelen:["kaart-raster", "kaart-wind", "kaart-route"] },
+          { id:"schaal-betekenis", naam:"Schaal en afstand", niveau:"2F", doelen:["schaal-betekenis", "schaal-naar-echt", "schaal-naar-kaart", "schaal-zelf", "schaal-lijn", "schaal-lijn-getal", "schaal-tabel", "schaal-model"] },
           { id:"schaal-opp-k2", naam:"Schaal, oppervlakte en inhoud", niveau:"3F", doelen:["schaal-opp-k2", "schaal-inhoud-k3", "schaal-plattegrond", "schaal-opp-kaart", "schaal-opp-kies"] },
           { id:"graf-coord", naam:"Coördinaten", niveau:"2F", doelen:["graf-coord"] }
         ] },
@@ -175,9 +182,9 @@ window.OPDRACHTENBOEK = (function(){
       ] },
       { naam:"Verbanden", hoofdstukken:[
         { naam:"Tabellen en grafieken", paragrafen:[
-          { id:"graf-tabel", naam:"Tabellen en diagrammen aflezen", niveau:"1F", doelen:["graf-tabel", "graf-staaf", "graf-lijn", "graf-beeld", "graf-stijgen"] },
-          { id:"graf-graden", naam:"Het cirkeldiagram", niveau:"2F", doelen:["graf-graden", "graf-procent"] },
-          { id:"graf-tekenen", naam:"Een grafiek tekenen en kiezen", niveau:"2F", doelen:["graf-tekenen", "graf-kiezen"] }
+          { id:"graf-tabel", naam:"Tabellen en diagrammen aflezen", niveau:"1F", doelen:["graf-tabel", "graf-staaf", "graf-lijn", "graf-beeld", "graf-stijgen", "graf-twee-lijnen"] },
+          { id:"graf-graden", naam:"Het cirkeldiagram", niveau:"2F", doelen:["graf-graden", "graf-procent", "graf-cirkel-aantal"] },
+          { id:"graf-tekenen", naam:"Een grafiek tekenen en kiezen", niveau:"2F", doelen:["graf-tekenen", "graf-kiezen", "graf-verhaal"] }
         ] },
         { naam:"Patronen", paragrafen:[
           { id:"patr-rij-plus", naam:"Patronen in rijen", niveau:"basis", doelen:["patr-rij-plus", "patr-rij-min", "patr-rij-keer", "patr-rij-figuur", "patr-rij-verschil", "patr-rij-gat"] },
@@ -203,8 +210,8 @@ window.OPDRACHTENBOEK = (function(){
           { id:"data-turven", naam:"Turven, frequentietabel en klassen", niveau:"1F", doelen:["data-turven", "data-freq", "data-klassen", "data-staaf", "data-relatief", "data-vergelijk", "data-enquete"] }
         ] },
         { naam:"Gemiddelde, mediaan en modus", paragrafen:[
-          { id:"gem-berekenen", naam:"Het gemiddelde", niveau:"2F", doelen:["gem-berekenen", "gem-frequentie", "gem-terug"] },
-          { id:"gem-mediaan", naam:"Mediaan, modus en spreiding", niveau:"2F", doelen:["gem-mediaan", "gem-modus", "gem-spreiding"] }
+          { id:"gem-berekenen", naam:"Het gemiddelde", niveau:"2F", doelen:["gem-berekenen", "gem-frequentie", "gem-gewogen", "gem-terug"] },
+          { id:"gem-mediaan", naam:"Mediaan, modus en spreiding", niveau:"2F", doelen:["gem-mediaan", "gem-mediaan-even", "gem-modus", "gem-spreiding"] }
         ] },
         { naam:"Grafieken kritisch bekijken", paragrafen:[
           { id:"data-info", naam:"Misleidende grafieken en conclusies", niveau:"2F", doelen:["data-info", "data-as", "data-schaal", "data-beeld", "data-procent", "data-conclusie", "data-oorzaak", "data-steekproef"] }

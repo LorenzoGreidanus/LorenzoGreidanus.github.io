@@ -358,6 +358,18 @@ const BAZEN = [
     aanvallen:['krabbel', 'stempel', 'bel', 'meet', 'gum', 'raster'], tip:'Het eindgevecht. Blijf lopen, ga in een lokaal als de bel gaat en stap uit wat oplicht.',
     wat:'Het eindgevecht. Een potlood krabbelt achter je aan en de streep die het trekt brandt een tel later: blijf lopen en loop niet terug over je eigen spoor. En alles van de schoolbazen: de gum, de liniaal, de bel en de stempels.' }
 ];
+/* De Sinterklaasweek (1 tot en met 5 december): in ronde SINTRONDE komt De Stoomboot in plaats van
+   De Inktvlek. De motor kijkt zelf niet op de klok. Wie de wereld maakt zegt het met opties.sint (de
+   browser als je alleen speelt, de kamer als je samen speelt), en de stand neemt het mee (si), zodat
+   iedereen dezelfde baas ziet. 2 is de echte week, 1 alleen bekijken (?dag=sint): dan geen trofee.
+   Hij gebruikt alleen aanvallen die er al zijn, in Sinterklaaskleuren: pepernoten (kogel en spiraal),
+   pakjes die knallen (cirkel en regen) en stoom in banen over het veld (baan). Hij is ongeveer even
+   zwaar als De Inktvlek: hetzelfde leven en schild, en een kracht die met de simulatie (sim70.js, met
+   ZV_SINT) is gelijkgetrokken. Verslaan levert een dubbele zak pepernoten op (zie sterf). */
+const SINTRONDE = 10;
+const STOOMBOOT = { id:'stoomboot', naam:'De Stoomboot', kleur:'#b0283a', vorm:'stoomboot', hp:16, kracht:0.85, r:54, schade:24, schild:0.3, sint:true,
+  aanvallen:['kogel', 'cirkel', 'baan', 'spiraal', 'regen'], tip:'Stap uit de stoom, ontwijk de pepernoten en loop weg bij een pakje.',
+  wat:'De Stoomboot van Sinterklaas legt aan. Hij strooit pepernoten in het rond, gooit pakjes die op de grond knallen en blaast stoom in banen over het veld.' };
 /* De aanvallen. Elke aanval heeft eerst een waarschuwing die je op de grond
    ziet, en dan het moment dat het raakt. Alle maten zijn in arenapunten. */
 const AANVAL = {
@@ -510,8 +522,11 @@ function aantalInRonde(n){ n = moeiteRonde(n); return 6 + Math.round(Math.min(n,
 /* NERF: de fouten en bazen hebben vijftien procent minder leven en doen vijftien procent minder schade */
 const NERF = 0.85;
 function foutHp(n){ var sx = sterkerX(n); n = moeiteRonde(n); var k = Math.min(n, 20); return Math.round(30 * NERF * sx * Math.pow(1.13, k - 1) * (1 + Math.max(0, n - 20) * 0.06 + Math.max(0, n - 35) * 0.05)); }
-/* welke baas hoort bij deze ronde: om de beurt, daarna weer van voren af aan */
-function baasVan(n){ return BAZEN[(Math.max(1, Math.round(n / BAASRONDE)) - 1) % BAZEN.length]; }
+/* welke baas hoort bij deze ronde: om de beurt, daarna weer van voren af aan; in de Sinterklaasweek
+   (sint, zie STOOMBOOT) is het in ronde SINTRONDE De Stoomboot */
+function baasVan(n, sint){ return sint && n === SINTRONDE ? STOOMBOOT : BAZEN[(Math.max(1, Math.round(n / BAASRONDE)) - 1) % BAZEN.length]; }
+/* een baas op zijn id (uit een stand: 'b:' en het id), ook De Stoomboot */
+function baasDef(id){ if (id === STOOMBOOT.id) return STOOMBOOT; for (var i = 0; i < BAZEN.length; i++) if (BAZEN[i].id === id) return BAZEN[i]; return null; }
 /* de uitrusting van een speler zonder winkel */
 function basisStats(){
   return { schade:SPELER.zwaard.schade, bereik:SPELER.zwaard.bereik, tempo:SPELER.zwaard.tempo, snel:SPELER.snelheid, pantser:1,
@@ -555,6 +570,8 @@ function maak(opties){
     teSpawnen:0, spawnKlok:0, tijdInRonde:0, rondeUit:0, raapTeller:-1, extra:0, geveld:0, nr:0,
     zones:[], baasGeveld:0, tik:0, velden:[],
     cp:{ ronde:1, kans:1 }, hoogste:0, terugKlok:0,
+    /* de Sinterklaasweek: 0 gewoon, 1 bekijken, 2 echt (zie STOOMBOOT); hoort bij het potje en verandert niet meer */
+    sint:opties.sint === 2 ? 2 : opties.sint ? 1 : 0,
     spelers:[]
   };
   (opties.spelers && opties.spelers.length ? opties.spelers : [{ naam:'jij' }]).forEach(function(o, i){
@@ -746,7 +763,7 @@ function maak(opties){
     W.baasKracht = 1;
     W.spelers.forEach(function(P){ P.sp.blok = false; P.sp.blokTijd = P.stats.blokMax || BLOK.max; P.sp.gx = 0; P.sp.gy = 0; P.sp.vuurKlok = 0; P.sp.dashX = P.stats.dashX || 1; });
     if (W.nachtmerrie || W.ronde % BAASRONDE === 0) spawnBaas();
-    zeg('ronde', W.ronde, W.teSpawnen, W.ronde % BAASRONDE === 0 ? baasVan(W.ronde) : null);
+    zeg('ronde', W.ronde, W.teSpawnen, W.nachtmerrie ? W.nachtmerrie.def : W.ronde % BAASRONDE === 0 ? baasVan(W.ronde, W.sint) : null);
   };
   /* De gevaren: vanaf ronde 4 een, vanaf ronde 8 twee, nooit in een baasronde en
      nooit in het midden waar je begint. De muur schuift heen en weer. */
@@ -875,7 +892,7 @@ function maak(opties){
   }
   function spawnBaas(){
     var nm = W.nachtmerrie;
-    var def = nm ? nm.def : baasVan(W.ronde);
+    var def = nm ? nm.def : baasVan(W.ronde, W.sint);
     var h = nm ? nmLeven(def) : Math.round(foutHp(W.ronde) * def.hp * BAASLEVEN * schaal('baas'));
     /* de nachtmerrie heeft een eigen maat voor de schade (NACHTMERRIE.deel) */
     W.baasKracht = nm ? 1 : (def.kracht || 1) * schaal('baasKracht');
@@ -1646,7 +1663,14 @@ function maak(opties){
         var hk = toeval() * Math.PI * 2, sn = 40 + toeval() * 90;
         W.pluis.push({ x:f.x, y:f.y, vx:Math.cos(hk) * sn, vy:Math.sin(hk) * sn, leven:0.45, kleur:f.soort.kleur });
       }
-      if (f.baas || toeval() < MUNT_VAL){
+      if (f.baas && f.def && f.def.sint){
+        /* De Stoomboot: een flinke zak pepernoten, twee keer de beloning van een baas, in zes hoopjes om hem heen */
+        var zak = Math.round((25 + W.ronde * 3) * 2 * laatExtra(W.ronde)), hoop = 6;
+        for (var z = 0; z < hoop; z++){
+          var zh = z / hoop * Math.PI * 2;
+          W.munt.push({ id:++W.nr, x:Math.round(f.x + Math.cos(zh) * 70), y:Math.round(f.y + Math.sin(zh) * 55), waarde:Math.floor(zak / hoop) + (z < zak % hoop ? 1 : 0), leven:12 });
+        }
+      } else if (f.baas || toeval() < MUNT_VAL){
         W.munt.push({ id:++W.nr, x:f.x, y:f.y, waarde:Math.round((f.baas ? 25 + W.ronde * 3 : 2 + Math.floor(W.ronde / 3)) * laatExtra(W.ronde)), leven:12 });
       }
     }
@@ -1916,7 +1940,8 @@ function maak(opties){
   /* alles van de stand behalve de fouten, de getallen en de aanvallen: die verschillen tussen de volle en de kleine stand */
   function standKop(){
     /* tk: de tik van de kamer, zodat de browser de standen op de klok van de kamer kan zetten */
-    return { k:'st', f:W.fase, r:W.ronde, ts:W.teSpawnen, t:r2(W.tijdInRonde), p:W.pauze ? 1 : 0, bg:W.baasGeveld, tk:W.tik, cp:[W.cp.ronde, W.cp.kans],
+    /* si: de Sinterklaasweek (alleen als hij aan staat, zie STOOMBOOT); een oudere pagina kijkt er niet naar */
+    var kop = { k:'st', f:W.fase, r:W.ronde, ts:W.teSpawnen, t:r2(W.tijdInRonde), p:W.pauze ? 1 : 0, bg:W.baasGeveld, tk:W.tik, cp:[W.cp.ronde, W.cp.kans],
       zo:W.zones.map(function(z){ return [z.soort, r1(z.x), r1(z.y), z.r || 0, z.w || 0, z.h || 0, z.id]; }),
       /* de genezende vlakken van de hospik: plek, tijd (onder nul vliegt de koffer nog), duur, straal, waar hij vandaan kwam */
       ev:W.velden.map(function(v){ return [Math.round(v.x), Math.round(v.y), r2(v.t), r2(v.duur), Math.round(v.r), Math.round(v.ox), Math.round(v.oy), v.id]; }),
@@ -1925,6 +1950,8 @@ function maak(opties){
          1100 breed), en zo is een stand in een drukke late ronde een kwart kleiner. */
       me:W.messen.map(function(m){ return [Math.round(m.x), Math.round(m.y), r2(m.hoek), m.pijl || 0, m.id]; }),
       mu:W.munt.map(function(m){ return [r1(m.x), r1(m.y), m.waarde, m.id]; }) };
+    if (W.sint) kop.si = W.sint;
+    return kop;
   }
   /* bij wie schiet ook de klokken van het laden en het stilstaan, voor de loop die mikt en terugslaat */
   /* de soort als nummer in FOUTEN (een baas als 'b:' en zijn naam), en het volle leven als 0 zolang hij niet geraakt is */
@@ -2004,11 +2031,12 @@ function maak(opties){
     return null;
   }
 
-  W.FOUTEN = FOUTEN; W.BAZEN = BAZEN;
+  W.FOUTEN = FOUTEN; W.BAZEN = BAZEN; W.STOOMBOOT = STOOMBOOT;
   return W;
 }
 
 g.ZWAARDMOTOR = { maak:maak, ARENA:ARENA, SPELER:SPELER, DASH:DASH, FOUTEN:FOUTEN, BAZEN:BAZEN, AANVAL:AANVAL, BAASRONDE:BAASRONDE, SAMEN:SAMEN, MOEITE:MOEITE, CHECKPOINT:CHECKPOINT, OPHELP:OPHELP, muurStand:muurStand, STIJLEN:STIJLEN, BLOK:BLOK, LAAT:LAAT, REEKS:REEKS, laatExtra:laatExtra, middenX:middenX, sterkerX:sterkerX, golfGat:golfGat, vloerAan:vloerAan, vloerTel:vloerTel, slingerStand:slingerStand, GEVAAR:GEVAAR, CRIT:CRIT,
+                  STOOMBOOT:STOOMBOOT, SINTRONDE:SINTRONDE, baasDef:baasDef,
                   MUNT_VAL:MUNT_VAL, RAAKPAUZE:RAAKPAUZE, RAAPTIJD:RAAPTIJD, aantalInRonde:aantalInRonde, foutHp:foutHp, baasVan:baasVan, basisStats:basisStats, nieuweSp:nieuweSp,
                   SPEER:SPEER, PIJLEN:PIJLEN, HOSPIK:HOSPIK, WINKEL:WINKEL, UPG:UPG, statsVan:statsVan, klasseHeeft:klasseHeeft, NERF:NERF,
                   wachtNieuw:wachtNieuw, meetStukken:meetStukken, meetTel:meetTel, inVlak:inVlak, afstandTotLijn:afstandTotLijn };

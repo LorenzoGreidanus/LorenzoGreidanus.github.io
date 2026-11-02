@@ -23,6 +23,7 @@ import { DurableObject } from "cloudflare:workers";
 import { nette, verboden, vies } from "./naamfilter.js";
 /* de motor van Zwaardvechter: hetzelfde bestand dat de browser laadt */
 import ZWAARDMOTOR from "../leermiddelen/zwaard-motor.js";
+import COSMETICA from "../leermiddelen/cosmetica.js";
 import TORENMOTOR from "../leermiddelen/toren-motor.js";
 /* de regels van Poortrace: welke vraag, welke antwoorden op de banen, hoe snel, hoeveel punten */
 import POORTREGELS from "../leermiddelen/poortrace-regels.js";
@@ -1119,7 +1120,11 @@ export class Kamer extends DurableObject {
     const eerst = st.gastheer && st.spelers[st.gastheer] ? st.gastheer : sids[0];
     this.motorSids = [eerst].concat(sids.filter(x => x !== eerst)).slice(0, SAMEN_MAX);
     if (this.motorSids.length < 2) return;
-    const W = ZWAARDMOTOR.maak({ spelers: this.motorSids.map(sid => ({ naam: st.spelers[sid].naam })) });
+    /* De Sinterklaasweek: de kamer kijkt op de klok (Nederlandse tijd, 1 tot en met 5 december) en zet het
+       in de motor; de stand neemt het mee naar iedereen (si). 2 is echt (dan is er een trofee), 1 is bekijken
+       omdat iemand ?dag=sint in de adresbalk had (zie stuurLobby in strijd.js). De motor leest zelf geen datum. */
+    const sint = COSMETICA.feestNu("sintweek") ? 2 : this.motorSids.some(sid => st.spelers[sid] && st.spelers[sid].dagSint) ? 1 : 0;
+    const W = ZWAARDMOTOR.maak({ spelers: this.motorSids.map(sid => ({ naam: st.spelers[sid].naam })), sint });
     this.motorSids.forEach((sid, i) => { const s2 = st.spelers[sid]; if (s2 && s2.stijl) W.zetStats(i, { stijl: s2.stijl }); });
     this.motor = W; this.motorSpel = "zwaard"; this.motorTik = 0; this.motorLeeg = 0;
     W.volgendeRonde();
@@ -1254,6 +1259,8 @@ export class Kamer extends DurableObject {
     if (m.t === "lobby" && st.duel && st.fase === "lobby"){
       if (["ridder", "schutter", "wacht", "hospik"].indexOf(m.stijl) >= 0) sp.stijl = m.stijl;
       sp.klaar = !!m.klaar;
+      /* ?dag=sint: deze speler wil De Stoomboot bekijken (zie motorStart) */
+      sp.dagSint = m.dag === "sint";
       await this.bewaar();
       this.iedereen({ t: "lobby", spelers: this.strijdLijst().map(r => ({ sid: r.sid, naam: r.naam, av: r.av, stijl: r.stijl, klaar: r.klaar, aan: r.aan })) });
       if (Object.keys(st.spelers).length >= this.samenMax() && this.lobbyKlaar()) return this.duelAftellen();

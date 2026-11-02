@@ -206,6 +206,8 @@ window.AVATAR = (function(){
     else if (n === 15) g = '<path d="M-8,-12 q-6,0 -6,4.5 q0,4.5 6,5.5 M8,-12 q6,0 6,4.5 q0,4.5 -6,5.5" fill="none" stroke="#c9971f" stroke-width="2" stroke-linecap="round"/>' +
       '<path d="M-8.5,-12.5 h17 v4 q0,9.5 -8.5,10.5 q-8.5,-1 -8.5,-10.5 z" fill="#FFD166" stroke="#c9971f" stroke-width="1.4" stroke-linejoin="round"/><path d="M-1.8,2 h3.6 v5 h-3.6z" fill="#c9971f"/>' +
       '<rect x="-7.5" y="7" width="15" height="5.5" rx="1.4" fill="#14224C"/>' + ster(0, -5.5, 3.6, '#fff') + '<path d="M-5.5,-10 v4" stroke="#fff" stroke-width="1.4" stroke-linecap="round" opacity=".6"/>';
+    /* nieuwere trofeeën (zoals het stoombootje van De Stoomboot) tekent cosmetica.js zelf */
+    if (!g && typeof COSMETICA !== 'undefined' && COSMETICA.trofeeTekening) g = COSMETICA.trofeeTekening(n);
     if (!g) return '';
     return '<g transform="translate(30,26)">' + halo(g, 5) + g + '</g>';
   }
@@ -1211,6 +1213,28 @@ window.AVATAR = (function(){
       bandS(0, .4, 3.6, band, '#c9971f'),
       { t:'buis', pts:[[24, 9, 10], [29, 17, 6], [33, 27, 0], [34.5, 37, -7], [33, 46, -14], [29, 52, -19]], r:4.4, r1:.9, k:V[0], l:V[1], lw:1, glans:1 },
       { t:'bol', c:[23.5, 8, 11], r:3.4, k:'#FFD166', l:'#c9971f', lw:.9 }] }; };
+  /* Cadeauhoed (vijf pakjes in de Sinterklaasweek, paasei.js): een pakje met een deksel, een lint rondom en een strik.
+     Het lint ligt als dunne platen een halve eenheid buiten de zijvlakken, zodat elk stuk een scheidingsvlak met de doos
+     heeft. doel en wmax: de doos wordt wat ruimer tot hij net over de kruin valt, zo hoog als de kerstmuts en de mijter.
+     De breedte volgt de bovenkant van het hoofd: anders blijft hij op een plat hoofd (het blok) erboven zweven. */
+  HOEDEN[30] = function(H, s, m){
+    var W = Math.max(22, m && m.M ? m.M.bovenBreed / (s || 1) / 1.45 + 5 : 22), D = W * 24 / 22;
+    var HB = 28, L = 8, o = .5, rb = 3.4, WL = W + 2.2, DL = D + 2.2, T = HB + L + o, LK = '#FFD166', LL = '#c9971f';
+    /* richt: een stuk lint aan de kant die van je af kijkt, gaat achter het hoofd (anders komt het als streepje over de doos) */
+    function plaat(pts, n){ return { t:'vlak', pts:pts, n:n, richt:n, k:LK, l:LL, lw:.9, dik:.4 }; }
+    function lintZ(z, h0, h1){ return plaat([[-rb, h0, z], [rb, h0, z], [rb, h1, z], [-rb, h1, z]], [0, 0, z > 0 ? 1 : -1]); }
+    function lintX(x, h0, h1){ return plaat([[x, h0, -rb], [x, h0, rb], [x, h1, rb], [x, h1, -rb]], [x > 0 ? 1 : -1, 0, 0]); }
+    /* de strik: twee lussen, een beetje schuin (de ene naar voren, de andere naar achteren), en een knoop */
+    function lus(k){ return { t:'buis', pts:[[2, 3.2], [6, 8], [11, 11], [16, 10], [17.5, 6], [14, 3.4], [8, 2.8], [3, 3]].map(function(q){ var x = q[0] * 1.3; return [k * x, T + (q[1] - 3) * 1.3 + 3, k * x * .35]; }),
+      r:2.3, k:LK, l:LL, lw:.9, glans:1 }; }
+    return { kantel:4, doel:.62, wmax:1.45, delen:[
+      { t:'doos', h0:0, h1:HB, w0:W, d0:D, w1:W, d1:D, k:'#F26749', l:'#b9432b', lw:1.4 },
+      { t:'doos', h0:HB, h1:HB + L, w0:WL, d0:DL, w1:WL, d1:DL, k:'#EA9836', kt:'#F2A84E', l:'#b9701f', lw:1.4 },
+      lintZ(D + o, 0, HB - .3), lintZ(-(D + o), 0, HB - .3), lintX(W + o, 0, HB - .3), lintX(-(W + o), 0, HB - .3),
+      lintZ(DL + o, HB + .3, HB + L), lintZ(-(DL + o), HB + .3, HB + L), lintX(WL + o, HB + .3, HB + L), lintX(-(WL + o), HB + .3, HB + L),
+      plaat([[-rb, T, -DL], [rb, T, -DL], [rb, T, -rb], [WL, T, -rb], [WL, T, rb], [rb, T, rb], [rb, T, DL], [-rb, T, DL], [-rb, T, rb], [-WL, T, rb], [-WL, T, -rb], [-rb, T, -rb]], [0, 1, 0]),
+      lus(-1), lus(1),
+      { t:'bol', c:[0, T + 3, 0], r:4.7, k:LK, l:LL, lw:1 }] }; };
   /* Op een bijzondere dag krijgt een gezichtje zonder eigen hoed de hoed van die dag (zie feest hieronder);
      met een rol een andere hoed: op Sinterklaas draagt een de mijter en de rest een pietenmuts */
   var FEESTHOED = { koning:20, sint:27, kerst:9, nieuw:8, halloween:10, zomer:21, nacht:28 }, FEESTROL = { sint:{ piet:29 } };

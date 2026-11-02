@@ -192,7 +192,8 @@ window.STRIJD = (function(){
     if (document.readyState === 'complete') aan(); else addEventListener('load', aan); })();
   /* de lobby van Zwaardvechter samen: mijn stijl en of ik klaar ben */
   var mijnStijl = '', mijnKlaar = false;
-  function stuurLobby(){ stuur({ t:'lobby', stijl:mijnStijl, klaar:mijnKlaar }); }
+  /* dag: wie ?dag=sint in de adresbalk heeft, vraagt de kamer om De Stoomboot van de Sinterklaasweek te laten zien (zie STOOMBOOT in zwaard-motor.js) */
+  function stuurLobby(){ var b = { t:'lobby', stijl:mijnStijl, klaar:mijnKlaar }; if (/[?&]dag=sint(&|$)/.test(location.search)) b.dag = 'sint'; stuur(b); }
   function samen(){ return duel && hooks && hooks.samen; }
 
   function zeg(tekst, goed){

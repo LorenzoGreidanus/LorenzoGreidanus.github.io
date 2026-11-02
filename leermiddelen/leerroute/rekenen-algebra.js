@@ -771,7 +771,8 @@
             var kA = E([[vA, ''], [pa, 'x']]), kB = E([[vB, ''], [pb, 'x']]), vgl = kA + ' = ' + kB, xmax = Math.max(x + 2, Math.min(12, 2 * x)), top = Math.max(vA + pa * xmax, vB + pb * xmax), st = mooi(top);
             var ctx = it.A + ' kost € ' + vA + ' per maand en € ' + pa + ' per ' + it.enk + '. ' + it.B + ' kost € ' + vB + ' per maand en € ' + pb + ' per ' + it.enk + '.';
             return { vraag:'Bij hoeveel ' + it.mv + ' even duur?', context:ctx + ' Gebruik x voor het aantal ' + it.mv + ' per maand.', eenheid:it.mv, antwoord:metE(x, it.mv),
-              beeld:function(n){ return graf({ xmax:xmax, ymax:boven(top, st), ystap:st, xnaam:it.mv, ynaam:'kosten (€)', lijnen:[{ a:pa, b:vA, k:0, naam:'A' }, { a:pb, b:vB, k:3, naam:'B' }], punten:n >= 5 ? [{ x:x, y:vA + pa * x, k:1, label:'even duur' }] : [] }); },
+              /* de grafiek pas als de vergelijking er staat: bij de vraag zou je het snijpunt al aflezen */
+              beeld:function(n){ return n < 3 ? '' : graf({ xmax:xmax, ymax:boven(top, st), ystap:st, xnaam:it.mv, ynaam:'kosten (€)', lijnen:[{ a:pa, b:vA, k:0, naam:'A' }, { a:pb, b:vB, k:3, naam:'B' }], punten:n >= 5 ? [{ x:x, y:vA + pa * x, k:1, label:'even duur' }] : [] }); },
               stappen:[
                 SC('De kosten van ' + it.A + ' bij x ' + it.mv + ':', kA, exprC(kA), 'Het vaste bedrag ' + vA + ' plus ' + pa + ' keer x.'),
                 SC('De kosten van ' + it.B + ':', kB, exprC(kB), 'Het vaste bedrag ' + vB + ' plus ' + pb + ' keer x.'),
@@ -946,10 +947,12 @@
             function yA(x){ return a1 * x + b1; } function yB(x){ return a2 * x + b2; }
             function sub(a, b, x){ return (a === 1 ? String(x) : a + ' × ' + x) + (b ? ' + ' + b : ''); }
             var fA = formS(a1, b1), fB = formS(a2, b2), top = Math.max(yA(6), yB(6)), st = mooi(top);
-            function tab(n){ return R.teken.tabel([['x'].concat(X0.map(String)), ['A'].concat(X0.map(function(x){ return x === xs && n < 1 ? '?' : String(yA(x)); })), ['B'].concat(X0.map(function(x){ return x === xs && n < 2 ? '?' : String(yB(x)); }))],
+            /* bij de vraag staan alleen x = 0 en x = 1 ingevuld; een vraagteken bij één kolom zou al zeggen waar ze snijden */
+            function cel(x, y, n, k){ return n === 0 && x > 1 ? '' : x === xs && n < k ? '?' : String(y); }
+            function tab(n){ return R.teken.tabel([['x'].concat(X0.map(String)), ['A'].concat(X0.map(function(x){ return cel(x, yA(x), n, 1); })), ['B'].concat(X0.map(function(x){ return cel(x, yB(x), n, 2); }))],
               { zijkop:true, nadruk:n >= 2 ? [[1, xs + 1], [2, xs + 1]] : [] }); }
             function pl(n){ return stapel(tab(n), n >= 3 ? graf({ xmax:6, ymax:boven(top, st), ystap:st, lijnen:[{ a:a1, b:b1, k:0, naam:'A' }, { a:a2, b:b2, k:3, naam:'B' }], punten:[{ x:xs, y:yS, k:1, label:punt(xs, yS) }] }) : ''); }
-            return { vraag:'A: ' + fA + ' en B: ' + fB, vraagHtml:'A: ' + Sch(fA) + '<br>B: ' + Sch(fB), context:'Waar snijden de lijnen van A en B? Gebruik de tabel. Schrijf het snijpunt als (x, y).', beeld:pl, zelfBeeld:tab(0), antwoord:punt(xs, yS), controle:puntC(xs, yS), invoer:'tekst',
+            return { vraag:'A: ' + fA + ' en B: ' + fB, vraagHtml:'A: ' + Sch(fA) + '<br>B: ' + Sch(fB), context:'Waar snijden de lijnen van A en B? Vul de tabel aan en zoek de x waarbij A en B hetzelfde geven. Schrijf het snijpunt als (x, y).', beeld:pl, zelfBeeld:tab(0), antwoord:punt(xs, yS), controle:puntC(xs, yS), invoer:'tekst',
               stappen:[
                 S('Vul de tabel aan. A bij x = ' + xs + ': ' + sub(a1, b1, xs) + ' =', yA(xs), 'Vul ' + xs + ' in op de plek van x in ' + fA + '.'),
                 S('B bij x = ' + xs + ': ' + sub(a2, b2, xs) + ' =', yB(xs), 'Vul ' + xs + ' in op de plek van x in ' + fB + '.'),

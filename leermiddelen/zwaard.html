@@ -963,13 +963,22 @@ const ICONEN = {
   /* Wat de baas nu doet, onder de arena, en zolang de waarschuwing op de grond
      ligt gaat het langzaam. Die waarschuwing duurt in speeltijd 'wacht' maal de
      factor k; in echte seconden is dat zoveel gedeeld door de traagheid. */
+  /* De Stoomboot doet bestaande aanvallen, maar ze zien er anders uit: dan past deze uitleg beter */
+  var STOOMUITLEG = {
+    kogel:   'Pepernoten! Ze vliegen in alle richtingen recht van de boot af. Loop tussen twee pepernoten door naar buiten.',
+    spiraal: 'Pepernoten die een voor een uit de boot komen en een draaiende spiraal maken. Loop met de draai mee, tussen twee pepernoten door.',
+    cirkel:  'Pakjes vallen op de grond, ook een bij jou. Na een tel knallen ze. Loop de cirkel uit, of spring er met Ontwijk doorheen.',
+    regen:   'Kleine pakjes die een voor een neerkomen, overal, de laatste bij jou. Blijf lopen, nooit stilstaan.',
+    baan:    'Stoom in rechte banen over het veld. Ga tussen twee banen staan, niet erin. Daarna komt er een rij dwars erop.'
+  };
   function legUit(soort, k, b){
     if (!uitlegstand || co.aan) return;
-    var t = AANVALUITLEG[soort];
+    var stoom = !!(b && b.def && b.def.sint), t = (stoom && STOOMUITLEG[soort]) || AANVALUITLEG[soort];
     if (!t) return;
     /* de eerste keer dat je deze aanval ziet is genoeg; daarna ken je hem */
-    if (alGezien['aanval:' + soort]) return;
-    alGezien['aanval:' + soort] = 1;
+    var sleutel = 'aanval:' + (stoom && STOOMUITLEG[soort] ? 'sint-' : '') + soort;
+    if (alGezien[sleutel]) return;
+    alGezien[sleutel] = 1;
     var w = (AANVAL[soort] && AANVAL[soort].wacht) || 1;
     traagMoment(w * (k || 1) / TRAAGHEID + 0.5, t, b ? { x:b.x, y:b.y, r:b.r + 26 } : null);
   }
@@ -1273,9 +1282,24 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     });
   }
 
+  /* De Sinterklaasweek (1 tot en met 5 december): pepernoten in plaats van munten en De Stoomboot in
+     ronde 10 (zie STOOMBOOT in zwaard-motor.js). 2 is echt, volgens de Nederlandse klok (feestNu in
+     cosmetica.js); 1 is bekijken met ?dag=sint in de adresbalk, en dan is er geen trofee. Alleen zet
+     deze pagina het bij het begin in de motor; samen doet de kamer dat en komt het met de stand mee (si). */
+  function sintVlag(){
+    if (window.COSMETICA && COSMETICA.feestNu && COSMETICA.feestNu('sintweek')) return 2;
+    return /[?&]dag=sint(&|$)/.test(location.search) ? 1 : 0;
+  }
+  function sintNu(){ return co.aan ? (co.sint || 0) : W ? (W.sint || 0) : sintVlag(); }
+  /* de baas van een ronde, in deze week de Stoomboot in ronde 10 */
+  function baasNu(n){ return ZWAARDMOTOR.baasVan(n, sintNu()); }
+  /* het woord voor het geld in teksten in beeld */
+  function muntWoord(){ return sintNu() ? 'pepernoten' : 'munten'; }
   /* een baas geveld: de trofee die erbij hoort, voor wie is ingelogd */
   function trofeeVan(rondeNr){
-    var def = ZWAARDMOTOR.baasVan(rondeNr), it = window.COSMETICA ? COSMETICA.vanBaas(def.id) : null;
+    var def = baasNu(rondeNr), it = window.COSMETICA ? COSMETICA.vanBaas(def.id) : null;
+    /* De Stoomboot bekijken met ?dag=sint: wel de pepernoten, geen trofee. Die is er alleen in de echte week. */
+    if (def.sint && sintNu() !== 2) return 'De Stoomboot is verslagen. De trofee is er alleen echt, van 1 tot en met 5 december.';
     /* ook samen: wie de baas mee versloeg, mag hem daarna in de nachtmerrie proberen */
     lijstBij(NMSLEUTEL, def.id);
     if (!it) return '';
@@ -1469,7 +1493,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       traagMoment((a.duur || 1.2) / TRAAGHEID + 0.4, AANVALUITLEG.granaat, { x:a.x, y:a.y, r:(a.straal || 44) + 20 });
     },
     vragen: function(){ spiegel(); naarVragen(); },
-    rapen: function(nog){ document.getElementById('arenatip').textContent = 'De ronde is gehaald. Nog ' + nog + ' seconde' + (nog === 1 ? '' : 'n') + ' om de munten op te rapen.'; },
+    rapen: function(nog){ document.getElementById('arenatip').textContent = 'De ronde is gehaald. Nog ' + nog + ' seconde' + (nog === 1 ? '' : 'n') + ' om de ' + muntWoord() + ' op te rapen.'; },
     einde: function(){ spiegel(); einde(); },
     terug: function(r){ tipTekst('Gevallen! Je krijgt nog een kans: zo begin je opnieuw in ronde ' + r + ', met alles wat je kocht.'); },
     checkpoint: function(r){ spiegel(); tipTekst('Daar ga je weer: ronde ' + r + '. Je kans is gebruikt; versla de volgende baas voor een nieuwe.'); tekenHud(); },
@@ -1645,13 +1669,13 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     document.getElementById('opnieuwBtn').classList.remove('hide'); opnieuwTerug();
     if (co.aan){
       /* samen: de motor draait in de kamer; wij sturen toetsen en tekenen wat terugkomt */
-      W = null; fase = 'ronde'; ronde = 1; cpStand = { ronde:1, kans:1 };
+      W = null; fase = 'ronde'; ronde = 1; cpStand = { ronde:1, kans:1 }; co.sint = 0;
       sp = ZWAARDMOTOR.nieuweSp(ARENA.b / 2 + (co.mij - ((co.spelers ? co.spelers.length : 2) - 1) / 2) * 70, ARENA.h / 2);
       zendNet({ k:'stats', s:mijnStats(), hp:hp });
       document.getElementById('arenatip').textContent = 'Samen! Het begint zodra de kamer de eerste stand stuurt.';
       tekenZij(); tekenHud();
     } else {
-      W = ZWAARDMOTOR.maak({ spelers:[{ naam:'jij' }], haak:HAAK });
+      W = ZWAARDMOTOR.maak({ spelers:[{ naam:'jij' }], haak:HAAK, sint:sintVlag() });
       sp = W.spelers[0].sp;
       W.zetStats(0, mijnStats(), hp);
       if (terug){
@@ -2267,8 +2291,10 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
        geen standen meer en dus ook niets. De eerste stand na het verbinden is
        alleen het beginpunt: een baas van voor die tijd telt hier niet. */
     co.weg = !!(mijA && mijA[13] === 2);
+    /* de Sinterklaasweek: de kamer zegt of hij aan staat (si, zie sintNu) */
+    co.sint = d.si === 2 ? 2 : d.si ? 1 : 0;
     if (d.bg !== co.bgZag){
-      if (co.bgZag !== undefined && d.bg && d.bg % BAASRONDE === 0 && mijA && !co.weg){ var bdef = baasVan(d.bg); if (bdef) lijstBij(NMSLEUTEL, bdef.id); }
+      if (co.bgZag !== undefined && d.bg && d.bg % BAASRONDE === 0 && mijA && !co.weg){ var bdef = baasNu(d.bg); if (bdef) lijstBij(NMSLEUTEL, bdef.id); }
       co.bgZag = d.bg;
     }
     /* voor de fase hieronder, want naarVragen kijkt of deze ronde een baas viel */
@@ -2280,7 +2306,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
         fouten = []; messen = []; munt = []; pluis = []; cijfers = []; aanvallen = []; velden = [];
         co.neer = false; voorspel.aan = false;
         ronde = d.r;
-        rondeTekst(d.r, d.ts + (d.fo || []).length, d.r % BAASRONDE === 0 ? baasVan(d.r) : null);
+        rondeTekst(d.r, d.ts + (d.fo || []).length, d.r % BAASRONDE === 0 ? baasNu(d.r) : null);
       } else if (d.f === 'vragen'){
         ronde = d.r; if (mijA){ hp = mijA[10]; maxHp = mijA[11]; }
         fouten = []; messen = []; munt = []; aanvallen = []; velden = [];
@@ -2368,7 +2394,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       if (!f){
         /* de soort komt als nummer in FOUTEN, een baas als 'b:' en zijn naam (een oudere kamer stuurt de naam) */
         var isBaas = typeof a[4] === 'string' && a[4].indexOf('b:') === 0;
-        var def = isBaas ? (BAZEN.filter(function(x){ return x.id === a[4].slice(2); })[0] || BAZEN[0]) : null;
+        var def = isBaas ? (ZWAARDMOTOR.baasDef(a[4].slice(2)) || BAZEN[0]) : null;
         var soort = def || (typeof a[4] === 'number' ? FOUTEN[a[4]] : FOUTEN.filter(function(x){ return x.id === a[4]; })[0]) || FOUTEN[0];
         f = { id:a[10], x:a[0], y:a[1], soort:soort, def:def, r:a[5], baas:isBaas, snel:0, slaKlok:0 };
       }
@@ -2491,7 +2517,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     tekenZij(); tekenHud();
     /* Voor wie niet kijkt maar luistert: goed of fout, en bij fout het goede antwoord. */
     var live = document.getElementById('zwaardLive');
-    if (live) live.textContent = goed ? 'Goed, ' + vraag.winst + ' munten.'
+    if (live) live.textContent = goed ? 'Goed, ' + vraag.winst + ' ' + muntWoord() + '.'
       : 'Niet goed. ' + (window.WAAROM ? WAAROM.tekst(vraag, i) : '') + 'Het goede antwoord is: ' + String(vraag.o[vraag.g]).replace(/<[^>]*>/g, '') + '. ' + String(vraag.u || '').replace(/<[^>]*>/g, '');
     /* Goed gaat na een tel vanzelf door. Na een fout blijft de uitleg staan:
        de knop Volgende krijgt de focus, dus Enter werkt meteen. Een klok die
@@ -2580,7 +2606,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
       }).join('') + '</div>';
       if (geklikt >= 0){
         var wasGoed = geklikt === vraag.g;
-        h += '<div class="terug">' + (wasGoed ? '<b>Goed, ' + vraag.winst + ' munten.</b> '
+        h += '<div class="terug">' + (wasGoed ? '<b>Goed, ' + vraag.winst + ' ' + muntWoord() + '.</b> '
           : (vraag.tweedeKans ? '<b>Niet goed, maar je tweede kans vangt het op: je reeks blijft staan.</b> ' : '<b>Niet goed.</b> ') + (window.WAAROM ? WAAROM.html(vraag, geklikt, hschoon) : '') +
             'Het goede antwoord is: <b class="antw">' + hschoon(vraag.o[vraag.g]) + '</b>. ') + hschoon(vraag.u || '') +
           (vraag.crit ? '<br><b>' + reeks + ' op rij: je volgende klap is een critical.</b>' : reeks > 1 ? '<br>' + reeks + ' goed op rij, dat levert extra op' + (COMBO - reeks % COMBO < COMBO ? '; nog ' + (COMBO - reeks % COMBO) + ' voor een critical' : '') + '.' : '') + '</div>';
@@ -2596,7 +2622,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
         return '<button type="button" data-kies="' + x.id + '"><i style="background:' + x.kleur + '">' + x.mark + '</i><span><b>' + x.naam + (v(x.id) ? ' (heb je ' + v(x.id) + ' keer)' : '') + '</b><small>' + x.uit + '</small></span></button>';
       }).join('') + '</div><p class="sub">Je houdt hem tot het einde van dit gevecht. Ze stapelen: dezelfde twee keer kiezen mag.</p>' + (trofeeTekst ? '<p class="sub"><b>' + trofeeTekst + '</b></p>' : '');
     } else {
-      h += '<p class="eyebrow">de winkel \u00b7 ' + munten + ' munten</p><h2>Wat koop je?</h2><p class="sub">Geldt alleen voor dit gevecht.</p>';
+      h += '<p class="eyebrow">de winkel \u00b7 ' + munten + ' ' + muntWoord() + '</p><h2>Wat koop je?</h2><p class="sub">Geldt alleen voor dit gevecht.</p>';
       h += '<div class="winkel">' + winkelVan(stijl).map(function(u){
         var lv = stat(u.id), vol = !u.los && lv >= u.prijs.length;
         var prijs = u.los ? u.prijs[0] : (vol ? null : u.prijs[lv]);
@@ -2640,7 +2666,7 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     var h =
       '<div class="meter leven"><i>' + ico('hart', 'leven') + ' ' + Math.max(0, Math.round(hp)) + ' / ' + maxHp + '</i><div class="levenbalk"><i class="' + (deel < 0.3 ? 'laag' : '') + '" style="width:' + (deel * 100).toFixed(1) + '%"></i></div></div>' +
       (co.aan ? alleMaten().map(function(m){ return '<div class="meter leven"><i class="metnaam"><span>' + hschoon(m.naam) + '</span>' + Math.max(0, Math.round(m.hp)) + ' / ' + m.maxHp + (m.neer ? ' (ligt neer)' : '') + '</i><div class="levenbalk"><i class="' + (m.hp / m.maxHp < 0.3 ? 'laag' : '') + '" style="width:' + (Math.max(0, m.hp / m.maxHp) * 100).toFixed(1) + '%"></i></div></div>'; }).join('') : '') +
-      '<div class="meter"><i>' + ico('munt', 'munten') + '</i><b>' + munten + '</b></div>' +
+      '<div class="meter"><i>' + (sintNu() ? ico('pepernoot', 'pepernoten') : ico('munt', 'munten')) + '</i><b>' + munten + '</b></div>' +
       '<div class="meter"><i>' + ico('vlag', 'ronde') + '</i><b>' + ronde + '</b></div>' +
       '<div class="meter"><i>' + ico('doel', 'nog te gaan') + '</i><b>' + (fouten.length + Math.max(0, teSpawnen)) + '</b></div>' +
       '<div class="meter"><i>' + ico('zwaard', 'geveld') + '</i><b>' + geveld + '</b></div>' +
@@ -2977,6 +3003,39 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
         '<rect x="' + n(-0.07) + '" y="' + n(-0.62) + '" width="' + n(0.14) + '" height="' + n(0.12) + '" fill="#F26749"/>' +
         '<path d="M' + p(-0.07, 0.22) + ' L0,' + n(0.4) + ' L' + p(0.07, 0.22) + ' Z" fill="#f3d9b1"/><path d="M' + p(-0.025, 0.33) + ' L0,' + n(0.4) + ' L' + p(0.025, 0.33) + ' Z" fill="#14224C"/></g>';
       return g;
+    } else if (vorm === 'stoomboot'){
+      /* De Stoomboot (alleen in de Sinterklaasweek, zie STOOMBOOT in zwaard-motor.js): een rode romp met
+         een gouden bies en patrijspoortjes, een witte kajuit, een schoorsteen met rook, een gouden vlaggetje
+         en golfjes eronder. Hij deint op het water; kwaad rookt hij harder. Er staan altijd drie wolkjes en
+         twee golven: alleen hun plek en doorzichtigheid veranderen, zo blijft de opbouw gelijk (zie zetInhoud). */
+      var dein = Math.sin(nu * 1.6) * 0.05, kantel = Math.sin(nu * 1.1) * 3, rookT = boos ? 0.9 : 0.5, vl = Math.sin(nu * 4) * 0.05;
+      var golfje = function(y, fase, o){
+        var x0 = -1.55 - ((nu * 0.22 + fase) % 0.5), d = 'M' + p(x0, y);
+        for (var gi = 0; gi < 6; gi++) d += ' q' + n(0.125) + ',' + n(-0.09) + ' ' + n(0.25) + ',0 t' + n(0.25) + ',0';
+        return '<path d="' + d + '" fill="none" stroke="#204ECF" stroke-width="' + n(0.06) + '" stroke-linecap="round" opacity="' + o + '"/>';
+      };
+      g += golfje(0.98, 0.25, 0.35);
+      g += '<g transform="translate(0,' + n(dein) + ') rotate(' + kantel.toFixed(1) + ')">';
+      for (k = 0; k < 3; k++){
+        var rk = (nu * rookT + k / 3) % 1;
+        g += '<circle cx="' + n(0.34 + rk * 0.45) + '" cy="' + n(-1.18 - rk * 0.7) + '" r="' + n(0.13 + rk * 0.2) + '" fill="#eef1f5" stroke="#8f9db0" stroke-width="' + n(0.04) + '" opacity="' + (0.9 * (1 - rk)).toFixed(2) + '"/>';
+      }
+      g += '<rect x="' + n(0.14) + '" y="' + n(-1.1) + '" width="' + n(0.38) + '" height="' + n(0.85) + '" fill="#14224C"/>' +
+        '<rect x="' + n(0.14) + '" y="' + n(-0.92) + '" width="' + n(0.38) + '" height="' + n(0.17) + '" fill="' + vul + '"/>' +
+        '<rect x="' + n(0.09) + '" y="' + n(-1.18) + '" width="' + n(0.48) + '" height="' + n(0.11) + '" rx="' + n(0.03) + '" fill="#14224C"/>' +
+        '<path d="M' + p(-0.86, -0.3) + ' V' + n(-1.16) + '" stroke="' + lijn + '" stroke-width="' + n(0.05) + '" stroke-linecap="round"/>' +
+        '<path d="M' + p(-0.86, -1.16) + ' L' + p(-0.44, -1.05 + vl) + ' L' + p(-0.86, -0.93) + ' Z" fill="#FFD166" stroke="#c9971f" stroke-width="' + n(0.03) + '" stroke-linejoin="round"/>' +
+        '<rect x="' + n(-0.72) + '" y="' + n(-0.62) + '" width="' + n(0.94) + '" height="' + n(0.76) + '" rx="' + n(0.08) + '" fill="#fbf6f1"' + rand + ' stroke-width="' + n(0.06) + '"/>' +
+        '<rect x="' + n(-0.58) + '" y="' + n(-0.47) + '" width="' + n(0.26) + '" height="' + n(0.22) + '" rx="' + n(0.04) + '" fill="#83A5F2" stroke="' + lijn + '" stroke-width="' + n(0.025) + '"/>' +
+        '<rect x="' + n(-0.18) + '" y="' + n(-0.47) + '" width="' + n(0.26) + '" height="' + n(0.22) + '" rx="' + n(0.04) + '" fill="#83A5F2" stroke="' + lijn + '" stroke-width="' + n(0.025) + '"/>' +
+        '<path d="M' + p(-1.36, 0.1) + ' L' + p(1.48, -0.02) + ' Q' + p(1.28, 0.55) + ' ' + p(0.96, 0.86) + ' L' + p(-0.98, 0.86) + ' Q' + p(-1.28, 0.55) + ' ' + p(-1.36, 0.1) + ' Z" fill="' + VUL + '"' + rand + ' stroke-width="' + n(0.1) + '"/>' +
+        '<path d="M' + p(-1.3, 0.25) + ' L' + p(1.4, 0.14) + '" stroke="#FFD166" stroke-width="' + n(0.07) + '" stroke-linecap="round"/>' +
+        '<path d="M' + p(-1.04, 0.74) + ' H' + n(1.02) + '" stroke="' + donker + '" stroke-width="' + n(0.06) + '" opacity=".6"/>' +
+        '<circle cx="' + n(-0.92) + '" cy="' + n(0.46) + '" r="' + n(0.09) + '" fill="#fbf6f1" stroke="' + lijn + '" stroke-width="' + n(0.03) + '"/>' +
+        '<circle cx="' + n(0.92) + '" cy="' + n(0.44) + '" r="' + n(0.09) + '" fill="#fbf6f1" stroke="' + lijn + '" stroke-width="' + n(0.03) + '"/>' +
+        glans(-0.72, 0.32, 0.28, 0.06, 0.35) + gezicht(0.3, 0.4, 0.16, 0.2) + '</g>';
+      g += golfje(1.04, 0, 0.6);
+      return g;
     }
     return g;
   }
@@ -3162,6 +3221,64 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     return h;
   }
 
+  /* Een pepernoot: een bruin koekje, bol van boven en plat van onder, met spikkels en een lichtvlekje.
+     Op de vloer, in de teller (iconen.css, ico-pepernoot) en als vliegende pepernoot van De Stoomboot.
+     Vaste kleuren: de vloer van de arena is in licht en donker even licht. */
+  function pepernoot(x, y, r){
+    var X = function(v){ return (x + v * r).toFixed(1); }, Y = function(v){ return (y + v * r).toFixed(1); };
+    return '<path d="M' + X(-1) + ',' + Y(0.28) + ' Q' + X(-1) + ',' + Y(-0.95) + ' ' + X(0) + ',' + Y(-0.95) + ' Q' + X(1) + ',' + Y(-0.95) + ' ' + X(1) + ',' + Y(0.28) +
+        ' Q' + X(1) + ',' + Y(0.78) + ' ' + X(0) + ',' + Y(0.78) + ' Q' + X(-1) + ',' + Y(0.78) + ' ' + X(-1) + ',' + Y(0.28) + 'Z" fill="#b5702f" stroke="#5e3418" stroke-width="' + (r * 0.19).toFixed(1) + '" stroke-linejoin="round"/>' +
+      '<ellipse cx="' + X(-0.36) + '" cy="' + Y(-0.42) + '" rx="' + (r * 0.26).toFixed(1) + '" ry="' + (r * 0.16).toFixed(1) + '" fill="#f0c995" opacity=".8"/>' +
+      '<circle cx="' + X(-0.42) + '" cy="' + Y(0.12) + '" r="' + (r * 0.12).toFixed(1) + '" fill="#5e3418" opacity=".8"/>' +
+      '<circle cx="' + X(0.3) + '" cy="' + Y(0.34) + '" r="' + (r * 0.11).toFixed(1) + '" fill="#5e3418" opacity=".8"/>' +
+      '<circle cx="' + X(0.36) + '" cy="' + Y(-0.3) + '" r="' + (r * 0.1).toFixed(1) + '" fill="#5e3418" opacity=".8"/>';
+  }
+  /* een pakje met een lint en een strik, midden op (x, y); s is de halve breedte */
+  var PAKKLEUR = [['#c8323c', '#FFD166'], ['#204ECF', '#FFD166'], ['#FFD166', '#c8323c']];
+  function pakje(x, y, s, kl){
+    var X = function(v){ return (x + v * s).toFixed(1); }, Y = function(v){ return (y + v * s).toFixed(1); }, S = function(v){ return (v * s).toFixed(1); };
+    return '<rect x="' + X(-1) + '" y="' + Y(-0.42) + '" width="' + S(2) + '" height="' + S(1.3) + '" rx="' + S(0.12) + '" fill="' + kl[0] + '" stroke="#14224C" stroke-opacity=".5" stroke-width="' + S(0.1) + '"/>' +
+      '<rect x="' + X(-1.12) + '" y="' + Y(-0.74) + '" width="' + S(2.24) + '" height="' + S(0.4) + '" rx="' + S(0.1) + '" fill="' + kl[0] + '" stroke="#14224C" stroke-opacity=".5" stroke-width="' + S(0.1) + '"/>' +
+      '<path d="M' + X(0) + ',' + Y(-0.74) + ' V' + Y(0.88) + '" stroke="' + kl[1] + '" stroke-width="' + S(0.3) + '"/>' +
+      '<ellipse cx="' + X(-0.32) + '" cy="' + Y(-0.92) + '" rx="' + S(0.32) + '" ry="' + S(0.18) + '" transform="rotate(-25 ' + X(-0.32) + ' ' + Y(-0.92) + ')" fill="' + kl[1] + '" stroke="#14224C" stroke-opacity=".4" stroke-width="' + S(0.06) + '"/>' +
+      '<ellipse cx="' + X(0.32) + '" cy="' + Y(-0.92) + '" rx="' + S(0.32) + '" ry="' + S(0.18) + '" transform="rotate(25 ' + X(0.32) + ' ' + Y(-0.92) + ')" fill="' + kl[1] + '" stroke="#14224C" stroke-opacity=".4" stroke-width="' + S(0.06) + '"/>';
+  }
+  /* De Pakjesbom van De Stoomboot (de cirkel): de waarschuwing op de grond zoals altijd, en een pakje dat
+     erin valt; bij de knal vliegen er snippers papier uit. Elk beeld dezelfde opbouw (zie zetInhoud). */
+  function pakjesbom(a){
+    var c = AANVAL.cirkel, cW = c.wacht * (a.k || 1), cr = a.straal || c.r, kl = PAKKLEUR[(a.id || 0) % PAKKLEUR.length], x = a.x.toFixed(1), y = a.y.toFixed(1);
+    if (a.t < 0) return '<circle cx="' + x + '" cy="' + y + '" r="6" fill="' + kl[0] + '" opacity=".35"/>';
+    if (!a.geknald){
+      var deel = Math.min(1, Math.max(0, a.t) / cW), hoog = (1 - deel) * 70;
+      return '<circle cx="' + x + '" cy="' + y + '" r="' + cr + '" fill="rgba(242,103,73,.16)" stroke="#F26749" stroke-width="3" stroke-dasharray="8 6"/>' +
+        '<circle cx="' + x + '" cy="' + y + '" r="' + (cr * deel).toFixed(1) + '" fill="rgba(242,103,73,.35)"/>' +
+        '<ellipse cx="' + x + '" cy="' + (a.y + cr * 0.2).toFixed(1) + '" rx="' + (cr * 0.24 * (0.5 + deel * 0.5)).toFixed(1) + '" ry="' + (cr * 0.08 * (0.5 + deel * 0.5)).toFixed(1) + '" fill="rgba(20,34,76,.22)"/>' +
+        pakje(a.x, a.y - hoog, cr * 0.2, kl);
+    }
+    var na = Math.min(1, (a.t - cW) / c.knal), h = '<circle cx="' + x + '" cy="' + y + '" r="' + (cr * (1 + na * 0.25)).toFixed(1) + '" fill="#EA9836" opacity="' + (0.85 * (1 - na)).toFixed(2) + '"/>';
+    for (var k = 0; k < 6; k++){
+      var hk = k / 6 * Math.PI * 2 + (a.id || 0), ver = cr * (0.25 + na * 0.85);
+      h += '<rect x="' + (a.x + Math.cos(hk) * ver - 5).toFixed(1) + '" y="' + (a.y + Math.sin(hk) * ver - 3).toFixed(1) + '" width="10" height="6" rx="1.5" fill="' + kl[k % 2] + '" opacity="' + (1 - na).toFixed(2) + '"/>';
+    }
+    return h;
+  }
+  /* De Stoomwolk van De Stoomboot (de baan): de waarschuwing is de gewone streep; als hij raakt, ligt er
+     een baan stoom met wolkjes langs de lijn, die opzwellen en wegtrekken. */
+  function stoomwolk(a){
+    var ba = AANVAL.baan, baW = ba.wacht * (a.k || 1), breed = a.breed || ba.breed, bn = Math.min(1, (a.t - baW) / ba.knal);
+    var cx = Math.cos(a.hoek), cy = Math.sin(a.hoek), x1 = a.x - cx * 1500, y1 = a.y - cy * 1500, x2 = a.x + cx * 1500, y2 = a.y + cy * 1500;
+    var h = '<path d="M' + x1.toFixed(1) + ',' + y1.toFixed(1) + ' L' + x2.toFixed(1) + ',' + y2.toFixed(1) + '" stroke="#c3cbd6" stroke-width="' + breed + '" opacity="' + (0.8 * (1 - bn)).toFixed(2) + '"/>';
+    /* eerst alle randen, dan alle wolkjes eroverheen: zo smelten ze samen tot een wolk met een rand eromheen */
+    var rand = '', wolk = '', o = (0.95 * (1 - bn)).toFixed(2), MAAT = [0.5, 0.38, 0.44, 0.34];
+    for (var tt = -1500, k = 0; tt <= 1500; tt += 62, k++){
+      var dw = ((k * 7) % 5 - 2) * breed * 0.07, px = a.x + cx * tt - cy * dw, py = a.y + cy * tt + cx * dw - bn * 10;
+      if (px < -40 || px > ARENA.b + 40 || py < -40 || py > ARENA.h + 40) continue;
+      var rr = breed * MAAT[k % MAAT.length] * (1 + bn * 0.45);
+      rand += '<circle cx="' + px.toFixed(1) + '" cy="' + py.toFixed(1) + '" r="' + (rr + 2.5).toFixed(1) + '" fill="#8f9db0"/>';
+      wolk += '<circle cx="' + px.toFixed(1) + '" cy="' + py.toFixed(1) + '" r="' + rr.toFixed(1) + '" fill="#f1f4f8"/>';
+    }
+    return h + '<g opacity="' + o + '">' + rand + wolk + '</g>';
+  }
   function tekenArena(){
     /* De vloer verandert nooit, dus die wordt een keer neergezet in de laag
        eronder in plaats van elk beeld opnieuw ingelezen. */
@@ -3187,16 +3304,23 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
     });
     /* de genezende vlakken van de hospik, op de grond onder de munten */
     velden.forEach(function(v){ s += tekenVeld(v, pols); });
-    /* munten op de grond */
+    /* munten op de grond; in de Sinterklaasweek pepernoten */
+    var sint = !!sintNu();
     munt.forEach(function(m){
       var wip = Math.sin(pols * 5 + m.x) * 2;
+      if (sint){ s += pepernoot(m.x, m.y + wip, 10); return; }
       s += '<circle cx="' + m.x.toFixed(1) + '" cy="' + (m.y + wip).toFixed(1) + '" r="9" fill="#FFE168" stroke="#c9971f" stroke-width="2"/>' +
            '<circle cx="' + (m.x - 2).toFixed(1) + '" cy="' + (m.y + wip - 2).toFixed(1) + '" r="2" fill="#fff" opacity=".6"/>';
     });
+    /* staat De Stoomboot in de arena, dan zien zijn aanvallen er Sinterklaas uit (zie hieronder) */
+    var stoom = false;
+    for (var si2 = 0; si2 < fouten.length; si2++) if (fouten[si2].baas && fouten[si2].def && fouten[si2].def.sint){ stoom = true; break; }
     /* de aanvallen van de baas: eerst de waarschuwing op de grond, dan de klap */
     var lucht = '';
     aanvallen.forEach(function(a){
-      if (a.soort === 'cirkel'){
+      if (a.soort === 'cirkel' && stoom){
+        s += pakjesbom(a);
+      } else if (a.soort === 'cirkel'){
         var c = AANVAL.cirkel, cW = c.wacht * (a.k || 1), deel = Math.min(1, Math.max(0, a.t) / cW), cr = a.straal || c.r;
         if (a.t < 0){
           /* nog niet aan de beurt (de regen): alleen een vaag stipje */
@@ -3246,6 +3370,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
           var kn = Math.min(1, (a.t - keW) / ke.knal);
           s += '<path d="' + pad + '" fill="#1b3a8f" opacity="' + (0.75 * (1 - kn)).toFixed(2) + '"/>';
         }
+      } else if (a.soort === 'baan' && stoom && a.t >= AANVAL.baan.wacht * (a.k || 1)){
+        s += stoomwolk(a);
       } else if (a.soort === 'baan'){
         var ba = AANVAL.baan, baW = ba.wacht * (a.k || 1), breed = a.breed || ba.breed, lang = 1500, bkl = a.kl || '#c0442c';
         var hx = Math.cos(a.hoek) * lang, hy = Math.sin(a.hoek) * lang;
@@ -3269,6 +3395,8 @@ function onthoudNiveau(id){ try { if (id) localStorage.setItem('lg-niveau', id);
           var tn = Math.min(1, (a.t - tiW) / ti.knal);
           s += '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + (ti.r * (1 + tn * 0.2)).toFixed(1) + '" fill="#b58ae0" opacity="' + (0.85 * (1 - tn)).toFixed(2) + '"/>';
         }
+      } else if (a.soort === 'kogel' && stoom){
+        s += '<circle cx="' + a.x.toFixed(1) + '" cy="' + (a.y + 3).toFixed(1) + '" r="' + (AANVAL.kogel.r + 2) + '" fill="rgba(20,34,76,.16)"/>' + pepernoot(a.x, a.y, AANVAL.kogel.r + 1);
       } else if (a.soort === 'kogel'){
         var ko = AANVAL.kogel;
         s += '<circle cx="' + a.x.toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + (ko.r + 3) + '" fill="rgba(20,34,76,.14)"/>' +

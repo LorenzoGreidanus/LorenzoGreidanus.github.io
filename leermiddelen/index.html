@@ -2364,7 +2364,10 @@ var SPELLEN = [
   }
   /* Met een klascode: wat de docent koos staat voorop. In de lesmodus is dat alles wat er te zien is. */
   var les = null;   /* { spellen:[...], lesmodus:bool, naam:'' } zodra de klas het doorgeeft */
-  window.ZETLES = function(o){ les = o; tekenSpellen(); tekenSnel(); tekenVerder(); };
+  window.ZETLES = function(o){ les = o;
+    /* de spellen weten zo ook dat de lesmodus aanstaat (tot het eind van de dag): dan geen verrassingen van paasei.js */
+    try { if (o && o.lesmodus){ var eind = new Date(); eind.setHours(23, 59, 59, 999); localStorage.setItem('lg-lesmodus', String(eind.getTime())); } else localStorage.removeItem('lg-lesmodus'); } catch (e){}
+    tekenSpellen(); tekenSnel(); tekenVerder(); };
   /* Wat de docent klaarzette staat al in het lesblok; dezelfde spellen niet nog
      een keer als snelknop of bij verder spelen. */
   function metLes(){ return !!(les && les.spellen && les.spellen.length); }
@@ -3535,7 +3538,8 @@ var SPELLEN = [
   if (mnd === 4 && dag === koningsdag) soortDag = 'koning';
   else if (mnd === 4 && dag === 1) soortDag = 'april';
   else if (mnd === 12 && dag >= 1 && dag <= 5) soortDag = 'sint';
-  else if (mnd === 12 && dag >= 24 && dag <= 26) soortDag = 'kerst';
+  /* kerst vanaf de week ervoor: in de kerstvakantie zit niemand in de klas */
+  else if (mnd === 12 && dag >= 14 && dag <= 26) soortDag = 'kerst';
   else if ((mnd === 12 && dag === 31) || (mnd === 1 && dag <= 7)) soortDag = 'nieuw';
   /* Halloween de hele week ervoor: de 31e valt vaak in het weekend, dan ziet de klas het niet */
   else if (mnd === 10 && dag >= 27) soortDag = 'halloween';
@@ -3545,7 +3549,7 @@ var SPELLEN = [
   var dagAdres = (/[?&]dag=([a-z]+)/.exec(window.START_ZOEK || location.search) || [])[1];
   if (dagAdres && /^(koning|april|sint|kerst|nieuw|halloween|zomer|nacht)$/.test(dagAdres)) soortDag = dagAdres;
   bijzonder = { koning:'fijne Koningsdag!', april:'alle toetsen zijn afgelast... 1 april!', sint:mnd === 12 && dag === 5 ? 'vanavond is het pakjesavond!' : 'het is bijna pakjesavond!',
-    kerst:'fijne kerst!', nieuw:'gelukkig nieuwjaar!', halloween:mnd === 10 && dag < 31 ? 'boe! bijna Halloween' : 'boe! fijne Halloween', zomer:'fijne vakantie! (oefenen mag ook)', nacht:'zou je niet eens gaan slapen?' }[soortDag] || '';
+    kerst:mnd === 12 && dag < 24 ? 'bijna kerst!' : 'fijne kerst!', nieuw:'gelukkig nieuwjaar!', halloween:mnd === 10 && dag < 31 ? 'boe! bijna Halloween' : 'boe! fijne Halloween', zomer:'fijne vakantie! (oefenen mag ook)', nacht:'zou je niet eens gaan slapen?' }[soortDag] || '';
   /* paasei.js tekent de versiering en het hoedje bij deze dag */
   window.LG_DAG = soortDag;
   /* 1 april: een woord van de titel staat op zijn kop */

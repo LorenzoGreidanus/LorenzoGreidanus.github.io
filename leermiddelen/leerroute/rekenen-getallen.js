@@ -114,8 +114,12 @@
     return klein(rijen, { kop:true, nadruk:nad, onder:nd ? 't = tienden, h = honderdsten, d = duizendsten' : '' });
   }
   /* getallenlijn waarop het getal bij de stip verborgen is: toon true = laten zien, false = '?', 'leeg' = niets */
-  function lijnZonder(o, verberg, toon){
-    o.toon = function(x){ return verberg.some(function(v){ return Math.abs(x - v) < 1e-9; }) ? (toon === 'leeg' ? '' : toon ? S(x) : '?') : S(x); };
+  /* rand: een verborgen getal aan het begin of eind van de lijn krijgt deze tekst (bijvoorbeeld '?') */
+  function lijnZonder(o, verberg, toon, rand){
+    o.toon = function(x){
+      if (!verberg.some(function(v){ return Math.abs(x - v) < 1e-9; })) return S(x);
+      if (rand != null && (Math.abs(x - o.van) < 1e-9 || Math.abs(x - o.tot) < 1e-9)) return rand;
+      return toon === 'leeg' ? '' : toon ? S(x) : '?'; };
     return R0.teken.lijn(o);
   }
   function regelsBeeld(regels){ return '<div class="lr-tekst">' + regels.map(function(r, i){ return '<p>' + (i ? '= ' : '') + R0.schoon(r) + '</p>'; }).join('') + '</div>'; }
@@ -190,7 +194,8 @@
             var laag = Math.floor(n / eenheid) * eenheid, hoog = laag + eenheid, c = Math.floor(n / (eenheid / 10)) % 10, op = c >= 5, ant = op ? hoog : laag;
             var naam = mil ? 'miljoenen' : 'duizendtallen', rechts = mil ? 'honderdduizendtallen' : 'honderdtallen';
             return { vraag:T(n), context:'Rond af op ' + (mil ? '<b>hele miljoenen</b>' : '<b>duizendtallen</b>') + '.',
-              beeld:function(k){ return lijnZonder({ van:laag, tot:hoog, streep:eenheid / 10, labels:[laag, hoog], stip:[n], sprongen:k >= 4 ? [{ van:n, naar:ant, tekst:'' }] : [], nieuw:true }, [n], 'leeg'); },
+              /* bij de vraag staan de ronde buren nog als vraagteken: die zoek je zelf */
+              beeld:function(k){ return lijnZonder({ van:laag, tot:hoog, streep:eenheid / 10, labels:[laag, hoog], stip:[n], sprongen:k >= 4 ? [{ van:n, naar:ant, tekst:'' }] : [], nieuw:true }, k >= 1 ? [n] : [n, laag, hoog], 'leeg', k >= 1 ? null : '?'); },
               stappen:[
                 st('Rond eerst naar beneden af: laat alles na de ' + naam + ' nul worden.', laag, 'Houd de cijfers tot en met de ' + naam + ' en maak de rest 0: ' + T(laag) + '.'),
                 st('Welk cijfer staat rechts van de ' + naam + '? (de ' + rechts + ')', c, 'In ' + T(n) + ' staan de ' + rechts + ' ' + (mil ? 'direct na de eerste punt.' : 'direct na de punt.')),
@@ -230,6 +235,25 @@
                 st(heel + ' ' + unit + ' =', heel * Math.pow(10, z), 'Zet ' + z + ' nullen achter de ' + heel + '.'),
                 st(T(rnd(deel / 100)) + ' ' + unit + ' =', deel * Math.pow(10, z - 2), T(rnd(deel / 100)) + ' is ' + deelTxt + ' ' + deelNaam + '. Eén ' + (dec === 1 ? 'tiende' : 'honderdste') + ' van een ' + unit + ' is ' + T(Math.pow(10, z - dec)) + '.'),
                 st('Samen:', n, T(heel * Math.pow(10, z)) + ' + ' + T(deel * Math.pow(10, z - 2)) + '.') ] };
+          } },
+        { id:'groot-rekenen', naam:'Rekenen met grote ronde getallen', kort:'Reken in honderden, duizenden of miljoenen: laat de nullen weg en zet ze er aan het eind weer achter',
+          uit:'<p>Met grote ronde getallen reken je slim door in een <b>grotere eenheid</b> te tellen.</p><p>3.500 + 2.700: dat is 35 honderd + 27 honderd = <b>62 honderd</b> = 6.200.</p><p>1,2 miljoen − 450.000: reken in duizenden. 1,2 miljoen is 1.200 duizend en 450.000 is 450 duizend. 1.200 − 450 = 750 duizend = <b>750.000</b>.</p>',
+          wanneer:'je rekent met getallen uit de krant, zoals bezoekers, inwoners of bedragen.',
+          maak:function(R){
+            function P(x){ return T(x, { punt:true }); }
+            var soort = R.heel(0, 2), plus = R.heel(0, 1) === 1, a, b, U, naam, aT, bT;
+            if (soort === 0){ U = 100; naam = 'honderd'; do { a = 100 * R.heel(11, 99); b = 100 * R.heel(11, 99); } while (a % 1000 === 0 || b % 1000 === 0 || (!plus && a <= b)); aT = P(a); bT = P(b); }
+            else if (soort === 1){ U = 1000; naam = 'duizend'; do { a = 1000 * R.heel(11, 99); b = 1000 * R.heel(11, 99); } while (a % 10000 === 0 || b % 10000 === 0 || (!plus && a <= b)); aT = P(a); bT = P(b); }
+            else { U = 1000; naam = 'duizend'; do { a = 100000 * R.heel(11, 49); b = 10000 * R.heel(11, 95); } while (a % 1000000 === 0 || (!plus && a <= b)); aT = T(a / 1e6) + ' miljoen'; bT = P(b); }
+            var A = a / U, B = b / U, C = plus ? A + B : A - B, uit = C * U, teken = plus ? '+' : MIN;
+            var ant = [P(uit), String(uit)]; if (uit >= 1e6 && uit % 100000 === 0) ant.push(T(uit / 1e6) + ' miljoen');
+            var ctx = R.kies(plus ? ['Een festival had op zaterdag ' + aT + ' bezoekers en op zondag ' + bT + '. Hoeveel bezoekers waren er samen?', 'Een stad heeft ' + aT + ' inwoners. Er komen ' + bT + ' inwoners bij. Hoeveel inwoners zijn het dan?']
+                                     : ['Een stad had ' + aT + ' inwoners. Er vertrokken er ' + bT + '. Hoeveel inwoners blijven er over?', 'Een museum wil ' + aT + ' bezoekers halen. Er zijn er al ' + bT + ' geweest. Hoeveel moeten er nog komen?']);
+            return { vraag:aT + ' ' + teken + ' ' + bT, context:ctx, antwoord:ant, stappen:[
+              st('Reken in ' + naam + 'en. ' + aT + ' = … ' + naam, A, soort === 2 ? '1 miljoen is 1.000 duizend. Dus ' + aT + ' is ' + T(a / 1e6) + ' ' + X + ' 1.000 duizend.' : 'Laat ' + (U === 100 ? 'twee' : 'drie') + ' nullen weg.'),
+              st(bT + ' = … ' + naam, B, 'Laat ' + (U === 100 ? 'twee' : 'drie') + ' nullen weg.'),
+              st(T(A, { punt:true }) + ' ' + teken + ' ' + T(B, { punt:true }) + ' =', C, plus ? 'Tel ze op.' : 'Trek ze van elkaar af.'),
+              st('Dat is ' + T(C, { punt:true }) + ' ' + naam + '. Als getal:', ant, 'Zet er ' + (U === 100 ? 'twee' : 'drie') + ' nullen achter.', { fout:F([[P(C * 10), 'Je zette er te weinig nullen achter.'], [P(C * U * 10), 'Je zette er te veel nullen achter.']]) }) ] };
           } }
       ] },
 
@@ -518,6 +542,25 @@
                 st('Hoeveel blijft er over? ' + N + ' ' + MIN + ' ' + q * k + ' =', r, 'Trek ' + q * k + ' van ' + N + ' af.'),
                 kz('Wat doe je met de rest van ' + r + '?', goedT, [foutT], C.op ? 'Wat overblijft, telt ook mee. Daar is er nog één voor nodig.' : 'Met ' + r + ' kun je er geen volle meer maken. Die tellen niet mee.'),
                 st('Het antwoord:', ant, C.op ? q + ' plus nog één.' : 'Alleen de volle tellen: ' + q + '.', { eenheid:C.e, fout:F([[C.op ? q : q + 1, C.op ? 'Dan blijven er ' + r + ' over. Die moeten ook mee.' : 'Met de rest van ' + r + ' kun je er geen volle maken.']]) }) ] };
+          } },
+        { id:'cijf-staart-komma', naam:'Doordelen achter de komma', kort:'Blijft er een rest over? Zet een komma in je antwoord, een 0 achter de rest, en deel verder',
+          uit:'<p>47 : 8. De 8 past 5 keer in 47 (5 × 8 = 40), er blijft <b>7</b> over. Je kunt verder delen.</p><p>Zet een <b>komma</b> achter de 5 in je antwoord en zet een <b>0</b> achter de rest: 70. 8 past 8 keer in 70, er blijft 6 over. Weer een 0 erachter: 60. 8 past 7 keer, er blijft 4 over. 40: 8 past 5 keer, er blijft 0 over.</p><p>Lees het antwoord: <b>5,875</b>. Ga door tot er niets meer over blijft.</p>',
+          wanneer:'een deling niet precies uitkomt en je het antwoord als kommagetal wilt.',
+          maak:function(R){
+            var d = K([2, 4, 5, 8, 8, 4]), N; do { N = R.heel(11, 99); } while (N % d === 0 || N < d);
+            var q = Math.floor(N / d), rest = N - q * d, stappen = [], rijen = [[String(N), String(q), String(rest)]], cijfers = '';
+            stappen.push(st('Hoe vaak past ' + d + ' helemaal in ' + N + '?', q, q + ' ' + X + ' ' + d + ' = ' + q * d + '. Past er nog een ' + d + ' bij?'));
+            stappen.push(st('Hoeveel blijft er over? ' + N + ' ' + MIN + ' ' + q * d + ' =', rest, 'Trek ' + q * d + ' van ' + N + ' af.'));
+            while (rest){
+              var cur = rest * 10, c = Math.floor(cur / d), oud = rest; rest = cur - c * d; cijfers += c;
+              stappen.push(st((cijfers.length === 1 ? 'Zet een komma in je antwoord. ' : '') + 'Zet een 0 achter de rest ' + oud + ': ' + cur + '. Hoe vaak past ' + d + ' in ' + cur + '?', c, c ? 'Zoek in de tafel van ' + d + ' het grootste getal dat niet boven ' + cur + ' komt.' : d + ' past niet in ' + cur + ': schrijf een 0 op.', { waarom:c + ' ' + X + ' ' + d + ' = ' + c * d + ', er blijft ' + rest + ' over.' }));
+              rijen.push([String(cur), String(c), String(rest)]);
+            }
+            var ant = S(N / d);
+            stappen.push(st('Lees je antwoord: eerst wat je voor de komma had, dan de cijfers die je daarna opschreef. Het antwoord:', ant, 'Voor de komma ' + q + ', achter de komma de cijfers die je bij het doordelen opschreef.', { fout:F([[q + ' rest ' + (N - q * d), 'Deel verder achter de komma: zet een 0 achter de rest.']]) }));
+            return { vraag:N + ' : ' + d, context:'Deel door tot er niets meer overblijft. Schrijf het antwoord als kommagetal.',
+              beeld:function(n){ return R.teken.tabel([['je deelt', 'past', 'blijft over']].concat(rijen.slice(0, Math.max(0, n - 1))), { kop:true }); },
+              stappen:stappen };
           } }
       ] },
 
@@ -616,7 +659,8 @@
             var lo = rnd(q / Math.pow(10, d)), hi = rnd((q + 1) / Math.pow(10, d)), naam = ['hele getallen', 'tienden', 'centen'][d];
             var welk = ['het eerste', 'het tweede', 'het derde'][d], antT = mode === 'centen' ? S2(ant) : T(ant, { dec:d, vast:true });
             return { vraag:mode === 'centen' ? '€ ' + S(x) : S(x), context:mode === 'centen' ? 'Een liter benzine kost € ' + S(x) + '. Rond af op <b>centen</b>.' : 'Rond af op <b>' + naam + '</b>.',
-              beeld:function(n){ return lijnZonder({ van:lo, tot:hi, streep:rnd((hi - lo) / 10), labels:[lo, hi], stip:[x], sprongen:n >= 3 ? [{ van:x, naar:ant, tekst:'' }] : [], nieuw:true }, [x], 'leeg'); },
+              /* bij de vraag staan de buren nog als vraagteken; ze komen erbij als je weet welk cijfer wegvalt */
+              beeld:function(n){ return lijnZonder({ van:lo, tot:hi, streep:rnd((hi - lo) / 10), labels:[lo, hi], stip:[x], sprongen:n >= 3 ? [{ van:x, naar:ant, tekst:'' }] : [], nieuw:true }, n >= 1 ? [x] : [x, lo, hi], 'leeg', n >= 1 ? null : '?'); },
               stappen:[
                 st('Welk cijfer valt als eerste weg? Dat is ' + welk + ' cijfer achter de komma.', c, 'Je houdt ' + (d ? d + (d === 1 ? ' cijfer' : ' cijfers') + ' achter de komma' : 'alleen het hele getal') + '. Kijk naar het cijfer daarna.'),
                 kz('Dat cijfer is een ' + c + '. Rond je naar boven of naar beneden af?', op ? 'naar boven' : 'naar beneden', [op ? 'naar beneden' : 'naar boven'], 'Bij 5, 6, 7, 8 of 9 naar boven. Bij 0 tot en met 4 naar beneden.'),
