@@ -163,7 +163,8 @@ var EIGEN = (function(){
   /* Geplakt uit Word, Excel of een lijstje: elke regel een paar. */
   function plakken(tekst){
     return String(tekst || '').split(/\r?\n/).map(function(r){
-      r = r.trim(); if (!r) return null;
+      /* een regel met # ervoor is een kopje of een opmerking */
+      r = r.trim(); if (!r || r.charAt(0) === '#') return null;
       var m = r.split('\t'); if (m.length < 2) m = r.split(/\s*=\s*|\s*;\s*|\s+-\s+|\s*:\s+/);
       if (m.length < 2) return null;
       var a = m[0].trim(), b = m.slice(1).join(' ').trim();

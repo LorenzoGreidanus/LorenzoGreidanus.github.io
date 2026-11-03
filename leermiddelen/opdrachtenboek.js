@@ -943,6 +943,42 @@ window.OPDRACHTENBOEK = (function(){
   };
 
   var VAKNAAM = { rekenen:'Rekenen', nederlands:'Nederlands', wiskunde:'Wiskunde' };
+  /* ---------- niveaus ----------
+     Elke paragraaf heeft een niveau uit het boek (basis, 1F, 2F, 3F; bij wiskunde onderbouw,
+     vmbo, havo, havo A, havo B, vwo A, vwo B), soms twee met een schuine streep ertussen.
+     Een schoolniveau zet een paar daarvan aan; die kun je daarna nog los aan- of uitzetten.
+     De keuze per vak blijft bewaard op dit apparaat (lg-boek-niv). */
+  var SCHOOL = [{ id:'alles', naam:'Alles' }, { id:'bb', naam:'vmbo-bb' }, { id:'kgt', naam:'vmbo-kgt en tl' }, { id:'havo', naam:'havo' }, { id:'vwo', naam:'vwo' }];
+  var REF = { rekenen:['basis', '1F', '2F', '3F'], nederlands:['basis', '1F', '2F', '3F'], wiskunde:['onderbouw', 'vmbo', 'havo', 'havo A', 'havo B', 'vwo A', 'vwo B'] };
+  /* vmbo werkt naar 2F toe, havo en vwo naar 3F (met 2F in de onderbouw) */
+  var PERSCHOOL = { taal:{ bb:['basis', '1F'], kgt:['1F', '2F'], havo:['2F', '3F'], vwo:['2F', '3F'] },
+    wiskunde:{ bb:['onderbouw', 'vmbo'], kgt:['onderbouw', 'vmbo'], havo:['onderbouw', 'havo', 'havo A', 'havo B'], vwo:['onderbouw', 'vwo A', 'vwo B'] } };
+  function refsVoor(vak, school){
+    if (!REF[vak]) return [];
+    if (!school || school === 'alles') return REF[vak].slice();
+    var t = (vak === 'wiskunde' ? PERSCHOOL.wiskunde : PERSCHOOL.taal)[school];
+    return t ? t.slice() : REF[vak].slice();
+  }
+  /* welk schoolniveau precies deze referentieniveaus aanzet, of '' als het een eigen keuze is */
+  function schoolVan(vak, refs){
+    var s = (refs || []).slice().sort().join('|'), uit = '';
+    SCHOOL.forEach(function(x){ if (!uit && refsVoor(vak, x.id).sort().join('|') === s) uit = x.id; });
+    return uit;
+  }
+  function pastNiveau(p, refs){
+    if (!refs) return true;
+    return String(p && p.niveau || '').split('/').some(function(n){ return refs.indexOf(n.trim()) >= 0; });
+  }
+  function niveauLees(vak){
+    var o = null; try { o = JSON.parse(localStorage.getItem('lg-boek-niv') || '{}')[vak] || null; } catch (e){}
+    var refs = o && Array.isArray(o.r) ? o.r.filter(function(n){ return REF[vak] && REF[vak].indexOf(n) >= 0; }) : null;
+    if (!refs || !refs.length) refs = refsVoor(vak, 'alles');
+    return { school:schoolVan(vak, refs), refs:refs };
+  }
+  function niveauBewaar(vak, refs){
+    try { var a = JSON.parse(localStorage.getItem('lg-boek-niv') || '{}') || {}; a[vak] = { r:refs }; localStorage.setItem('lg-boek-niv', JSON.stringify(a)); } catch (e){}
+  }
+  var NIVEAU = { SCHOOL:SCHOOL, REF:REF, refsVoor:refsVoor, schoolVan:schoolVan, past:pastNiveau, lees:niveauLees, bewaar:niveauBewaar };
   /* het vak van de werkbladen en de toetsen (bank.js VAKKEN) naar het vak van het boek */
   var VAN = { reken:'rekenen', ned:'nederlands', wis:'wiskunde' };
 
@@ -1176,5 +1212,5 @@ window.OPDRACHTENBOEK = (function(){
   return { vakken:['rekenen', 'nederlands', 'wiskunde'], VAKNAAM:VAKNAAM, VAN:VAN,
     boek:boek, paragraaf:paragraaf, paragrafen:paragrafen, laad:laad, doel:doel,
     opgaven:opgaven, uitleg:uitleg, beeld:beeld, eind:eind, keuzes:keuzes, goedeAntwoorden:goedeAntwoorden, echteStappen:echteStappen, stapAntwoord:stapAntwoord,
-    vraagHtml:vraagHtml, kaal:kaal, schoon:schoon, schud:schud, losseSvg:losseSvg, STIJL:STIJL };
+    vraagHtml:vraagHtml, kaal:kaal, schoon:schoon, schud:schud, losseSvg:losseSvg, STIJL:STIJL, NIVEAU:NIVEAU };
 })();

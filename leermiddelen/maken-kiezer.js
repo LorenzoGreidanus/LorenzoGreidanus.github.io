@@ -484,7 +484,8 @@ window.KIEZER = (function(){
      nodig heeft, of een tekst die te lang is voor een vraag: die opgave staat
      er wel, maar kun je niet aanvinken, met de reden erbij. */
   var BOEKVAK = { reken:'rekenen', ned:'nederlands', wis:'wiskunde' }, TOETSVAK = { rekenen:'reken', nederlands:'ned', wiskunde:'wis' };
-  var BOEK_PER = 6;
+  /* opgaven per paragraaf in beeld; Meer opgaven zet er BOEK_MEER bij */
+  var BOEK_PER = 10, BOEK_MEER = 6;
   var boekAan = false, bVak = '', bPar = '', bLijst = [], bGekozen = {}, bVolg = [], bTeller = 0, bBezig = false;
   var bLaden = null;
   function laadBoek(){
@@ -511,6 +512,15 @@ window.KIEZER = (function(){
       '.kzb-vakken button[aria-pressed="true"]{background:var(--kaart);box-shadow:0 1px 3px rgba(20,34,76,.15);font-weight:600}' +
       '.kzb-zoek{display:flex;align-items:center;gap:8px;border:1.5px solid var(--rand2);border-radius:12px;padding:0 12px;min-height:44px;background:var(--kaart)}' +
       '.kzb-zoek:focus-within{border-color:var(--ocean)}' +
+      '.kzb-niv{display:grid;gap:6px}' +
+      '.kzb-nivkies{display:flex;align-items:center;gap:8px;font-size:.82rem;font-weight:600;color:var(--muted)}' +
+      '.kzb-nivkies select{flex:1;min-width:0;min-height:40px;border:1.5px solid var(--rand2);border-radius:10px;padding:0 10px;background:var(--kaart);color:var(--ink);font:inherit;font-weight:500}' +
+      '.kzb-refs{display:flex;flex-wrap:wrap;gap:5px}' +
+      '.kzb-meerrij{display:flex;justify-content:center;margin:4px 0 8px}' +
+      '.kzb-ref{position:relative;display:inline-flex;align-items:center;min-height:32px;padding:0 10px;border-radius:999px;border:1.5px solid var(--rand2);font-size:.76rem;font-weight:600;cursor:pointer;color:var(--muted);background:var(--kaart)}' +
+      '.kzb-ref input{position:absolute;opacity:0;width:1px;height:1px;margin:0;pointer-events:none}' +
+      '.kzb-ref:has(input:checked){background:var(--ocean);border-color:var(--ocean);color:#fff}' +
+      '.kzb-ref:has(input:focus-visible){outline:3px solid var(--focusring,#B4701A);outline-offset:2px}' +
       '.kzb-zoek svg{width:16px;height:16px;fill:none;stroke:var(--muted);stroke-width:2;flex:none}' +
       '.kzb-zoek input{border:0;outline:0;background:none;flex:1;min-width:0;font-size:.92rem;min-height:40px;color:var(--ink)}' +
       '.kzb-kop{font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:12px 0 2px}' +
@@ -556,6 +566,8 @@ window.KIEZER = (function(){
         '<nav class="kzb-nav" aria-label="Inhoud van het boek">' +
           '<div class="kzb-vakken" role="group" aria-label="Vak van het boek">' + ['rekenen', 'nederlands', 'wiskunde'].map(function(v){ return '<button type="button" data-bvak="' + v + '" aria-pressed="false">' + { rekenen:'Rekenen', nederlands:'Nederlands', wiskunde:'Wiskunde' }[v] + '</button>'; }).join('') + '</div>' +
           '<label class="kzb-zoek">' + ZOEKIKOON + '<input type="search" id="kzbZoek" placeholder="Zoek een onderwerp" aria-label="Zoek een onderwerp in het boek" autocomplete="off"></label>' +
+          '<div class="kzb-niv"><label class="kzb-nivkies">Niveau <select id="kzbSchool"></select></label>' +
+            '<div class="kzb-refs" id="kzbRefs" role="group" aria-label="Niveaus in het boek"></div></div>' +
           '<div id="kzbBoom"><p class="kzb-leeg">Het boek laden…</p></div>' +
         '</nav>' +
         '<section class="kzb-rechts" id="kzbRechts" aria-label="Opgaven"></section>' +
@@ -584,13 +596,25 @@ window.KIEZER = (function(){
     $('kzBoek').querySelector('.kzb-vakken').addEventListener('click', function(e){ var b = e.target.closest('[data-bvak]'); if (b && b.getAttribute('data-bvak') !== bVak) boekVak(b.getAttribute('data-bvak')); });
     var wacht = null;
     $('kzbZoek').addEventListener('input', function(){ clearTimeout(wacht); wacht = setTimeout(boekBoom, 140); });
+    $('kzbSchool').addEventListener('change', function(){
+      if (!this.value) return;
+      bRefs = OPDRACHTENBOEK.NIVEAU.refsVoor(bVak, this.value);
+      OPDRACHTENBOEK.NIVEAU.bewaar(bVak, bRefs); boekNiveau(); boekBoom();
+    });
+    $('kzbRefs').addEventListener('change', function(e){
+      var c = e.target; if (!c.matches || !c.matches('input')) return;
+      var lijst = [].map.call(this.querySelectorAll('input:checked'), function(i){ return i.value; });
+      /* minstens een niveau aan, anders staat er niets */
+      if (!lijst.length){ c.checked = true; return; }
+      bRefs = lijst; OPDRACHTENBOEK.NIVEAU.bewaar(bVak, bRefs); boekNiveau(); boekBoom();
+    });
     $('kzbBoom').addEventListener('click', function(e){
       var b = e.target.closest('[data-par]'); if (!b) return;
       boekPar(b.getAttribute('data-par'));
       /* op een smal scherm staan de opgaven onder de inhoud: daarheen */
       if (window.matchMedia && matchMedia('(max-width:760px)').matches) $('kzbRechts').scrollIntoView({ block:'start' });
     });
-    $('kzbRechts').addEventListener('click', function(e){ if (e.target.closest('#kzbAnder')) boekMaak(true); });
+    $('kzbRechts').addEventListener('click', function(e){ if (e.target.closest('#kzbAnder')) boekMaak(true); else if (e.target.closest('#kzbMeer')) boekMeer(); });
     $('kzbRechts').addEventListener('change', function(e){
       var c = e.target; if (!c.matches || !c.matches('input[data-bid]')) return;
       var x = bLijst.filter(function(y){ return y.id === c.getAttribute('data-bid'); })[0]; if (!x) return;
@@ -622,18 +646,31 @@ window.KIEZER = (function(){
       function(){ $('kzbBoom').innerHTML = '<p class="kzb-leeg">Het boek laden lukte niet. Controleer je internet en probeer het opnieuw.</p>'; });
   }
   function boekVak(vak){
-    bVak = vak; bPar = '';
+    bVak = vak; bPar = ''; bRefs = OPDRACHTENBOEK.NIVEAU.lees(vak).refs;
     [].forEach.call($('kzBoek').querySelectorAll('[data-bvak]'), function(b){ b.setAttribute('aria-pressed', String(b.getAttribute('data-bvak') === vak)); });
+    boekNiveau();
     boekBoom();
-    var eerste = OPDRACHTENBOEK.paragrafen(vak)[0];
+    var eerste = OPDRACHTENBOEK.paragrafen(vak).filter(function(x){ return OPDRACHTENBOEK.NIVEAU.past(x.p, bRefs); })[0] || OPDRACHTENBOEK.paragrafen(vak)[0];
     if (eerste) boekPar(eerste.p.id);
+  }
+  /* het niveau: een keuzelijst met de school, en de niveaus uit het boek als schakelaars */
+  var bRefs = null;
+  function boekNiveau(){
+    var N = OPDRACHTENBOEK.NIVEAU, school = N.schoolVan(bVak, bRefs);
+    $('kzbSchool').innerHTML = N.SCHOOL.map(function(x){ return '<option value="' + x.id + '"' + (x.id === school ? ' selected' : '') + '>' + schoon(x.naam) + '</option>'; }).join('') +
+      (school ? '' : '<option value="" selected>Eigen keuze</option>');
+    $('kzbRefs').innerHTML = N.REF[bVak].map(function(r){
+      return '<label class="kzb-ref"><input type="checkbox" value="' + schoon(r) + '"' + (bRefs.indexOf(r) >= 0 ? ' checked' : '') + '>' + schoon(r) + '</label>';
+    }).join('');
   }
   function plat(t){ return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
   /* de inhoud: per hoofdstuk de paragrafen; met een zoekwoord alleen wat past */
   function boekBoom(){
     var B = OPDRACHTENBOEK, w = plat($('kzbZoek').value).trim().split(/\s+/).filter(Boolean), h = '', vorige = '';
     var tel = {}; bVolg.forEach(function(id){ var x = bGekozen[id]; if (x && x.vak === bVak) tel[x.par] = (tel[x.par] || 0) + 1; });
+    var alleNiv = !bRefs || bRefs.length === B.NIVEAU.REF[bVak].length;
     B.paragrafen(bVak).forEach(function(x){
+      if (!alleNiv && !B.NIVEAU.past(x.p, bRefs)) return;
       if (w.length){
         var tekst = plat([x.thema.naam, x.hoofdstuk.naam, x.p.naam].concat(x.p.doelen.map(function(id){ var d = B.doel(id); return d ? d.naam : ''; })).join(' '));
         if (!w.every(function(z){ return tekst.indexOf(z) >= 0; })) return;
@@ -643,7 +680,7 @@ window.KIEZER = (function(){
       h += '<button type="button" class="kzb-par" data-par="' + schoon(x.p.id) + '"' + (x.p.id === bPar ? ' aria-current="true"' : '') + '><span>' + x.nummer + ' ' + schoon(x.p.naam) + '</span>' +
         (tel[x.p.id] ? '<span class="kzb-tel" aria-label="' + tel[x.p.id] + ' gekozen">' + tel[x.p.id] + '</span>' : '') + '<small>' + schoon(x.p.niveau) + '</small></button>';
     });
-    $('kzbBoom').innerHTML = h || '<p class="kzb-leeg">Niets gevonden. Zoek op een ander woord.</p>';
+    $('kzbBoom').innerHTML = h || '<p class="kzb-leeg">' + (w.length ? 'Niets gevonden. Zoek op een ander woord.' : 'Op dit niveau staat niets in het boek. Zet een niveau aan.') + '</p>';
   }
   function boekTellers(){
     var tel = {}; bVolg.forEach(function(id){ var x = bGekozen[id]; if (x && x.vak === bVak) tel[x.par] = (tel[x.par] || 0) + 1; });
@@ -673,12 +710,26 @@ window.KIEZER = (function(){
         .filter(function(y){ if (gezien[y.sl]) return false; gezien[y.sl] = true; return true; }).slice(0, Math.max(BOEK_PER - (ander ? 0 : houd.length), 2));
       bLijst = houd.concat(nieuw);
       R.removeAttribute('aria-busy');
-      R.innerHTML = kopHtml(x) + (bLijst.length ? bLijst.map(vrHtml).join('') : '<p class="kzb-leeg">Bij deze paragraaf lukte het niet om opgaven te maken. Kies een andere.</p>');
+      R.innerHTML = kopHtml(x) + (bLijst.length ? bLijst.map(vrHtml).join('') + '<p class="kzb-meerrij"><button class="knop stil klein" type="button" id="kzbMeer">Meer opgaven</button></p>' : '<p class="kzb-leeg">Bij deze paragraaf lukte het niet om opgaven te maken. Kies een andere.</p>');
       boekStand();
     }, function(){
       R.removeAttribute('aria-busy');
       R.innerHTML = kopHtml(x) + '<p class="kzb-leeg">De opgaven konden niet geladen worden. Controleer je internet en kies de paragraaf opnieuw.</p>';
     });
+  }
+  /* meer opgaven bij dezelfde paragraaf: wat er staat blijft staan, en er komen er nieuwe onder */
+  function boekMeer(){
+    var vak = bVak, id = bPar, x = OPDRACHTENBOEK.paragraaf(vak, id); if (!x) return;
+    var gezien = {}; bLijst.forEach(function(y){ gezien[y.sl] = true; });
+    var nieuw = OPDRACHTENBOEK.opgaven(vak, id, bLijst.length + BOEK_MEER + 4).map(function(o){ return alsToets(o, vak, id); })
+      .filter(function(y){ if (gezien[y.sl]) return false; gezien[y.sl] = true; return true; }).slice(0, BOEK_MEER);
+    var knop = $('kzbMeer');
+    if (!nieuw.length){ boekMelding('Bij deze paragraaf zijn er geen andere opgaven meer te maken.'); if (knop) knop.disabled = true; return; }
+    bLijst = bLijst.concat(nieuw);
+    var plek = $('kzbRechts').querySelector('.kzb-meerrij');
+    if (plek) plek.insertAdjacentHTML('beforebegin', nieuw.map(vrHtml).join(''));
+    boekMelding(nieuw.length === 1 ? 'Er staat 1 opgave bij.' : 'Er staan ' + nieuw.length + ' opgaven bij.');
+    boekStand();
   }
   function kopHtml(x){
     return '<div class="kzb-rechtskop"><h3>' + x.nummer + ' ' + schoon(x.p.naam) + '</h3><span class="tip">' + schoon(x.p.niveau) + ' · vink aan wat ' + waar() + ' moet</span>' +

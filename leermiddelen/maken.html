@@ -530,6 +530,14 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
             <button class="knop stil" id="uitSite" type="button" aria-haspopup="dialog">Vragen uit de site</button>
           </div>
           <p class="melding" id="uitSiteMelding" role="status" aria-live="polite"></p>
+          <details class="woordplak" id="woordPlak" style="margin-top:10px">
+            <summary style="min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:600">Woordjes plakken als open vragen</summary>
+            <p class="tip">Een woord per regel: <i>braces = beugel</i>, of twee kolommen uit Excel. Meer goede antwoorden met een schuine streep: <i>spot / pimple = puistje</i>. Wat tussen haakjes staat mag erbij of weg: <i>(een) beetje</i> keurt <i>een beetje</i> en <i>beetje</i> goed.</p>
+            <label class="veldnaam"><span>De vraag bij elk woord</span><input class="veld" id="wpVraag" maxlength="120" value="Vertaal:"></label>
+            <label class="vink" style="margin-top:6px"><input type="checkbox" id="wpOm"> Andersom: vraag het rechterwoord, het linkerwoord is het antwoord</label>
+            <textarea class="veld" id="wpTekst" rows="7" placeholder="braces = beugel&#10;to describe = omschrijven&#10;slightly = (een) beetje"></textarea>
+            <div class="rij" style="margin-top:8px"><button class="knop stil klein" id="wpZet" type="button">Zet erbij</button><span class="tip" id="wpUit" role="status" aria-live="polite"></span></div>
+          </details>
         </nav>
         <section class="paneel vraagpaneel" id="vraagpaneel" aria-label="De vraag die je bewerkt">
           <div class="items" id="items"></div>
@@ -1063,6 +1071,27 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
   $('terugNaarLijst').addEventListener('click', sluit);
   $('nieuwLijst').addEventListener('click', function(){ vulLijst({ naam:'', vak:'', kopA:'', kopB:'', paren:[] }); open('lijst'); });
   $('nieuwOef').addEventListener('click', function(){ plaatjesCode = ''; vulOef({ naam:'', vak:'', modus:'oefenen', items:[] }); open('oefening'); });
+  /* Een woordenlijst klaarzetten vanuit een link: #import=toets of #import=lijst, met naam, vak en de
+     woorden (w, base64 van de tekst: een woord per regel, zoals bij Woordjes plakken). De woorden staan
+     alleen in de link, nergens op de site; de docent kijkt alles na en bewaart zelf, in zijn eigen account. */
+  function importUitAdres(){
+    if (!/^#import=/.test(location.hash)) return;
+    var q = new URLSearchParams(location.hash.slice(1)), soort = q.get('import'), tekst = '';
+    try { tekst = new TextDecoder().decode(Uint8Array.from(atob((q.get('w') || '').replace(/-/g, '+').replace(/_/g, '/')), function(c){ return c.charCodeAt(0); })); } catch (e){ return; }
+    history.replaceState(null, '', location.pathname + location.search);
+    var naam = (q.get('naam') || '').slice(0, 80), vak = q.get('vak') || '';
+    if (soort === 'lijst'){
+      var paren = EIGEN.plakken(tekst).slice(0, 300);
+      vulLijst({ naam:naam, vak:vak, kopA:q.get('a') || '', kopB:q.get('b') || '', paren:paren }); open('lijst');
+      melding($('plakUit'), paren.length + ' woorden staan klaar. Kijk ze na en bewaar de lijst.', 'goed');
+    } else if (soort === 'toets'){
+      var kop = q.get('vraag') || 'Vertaal:';
+      var items = woordRegels(tekst).slice(0, 300).map(function(p){ return { vorm:'open', vraag:kop + ' ' + p.a, antwoorden:woordVarianten(p.b), punten:1, uitleg:p.a + ' = ' + p.b }; });
+      plaatjesCode = ''; vulOef({ naam:naam, vak:vak, modus:'toets', items:items }); open('oefening');
+      melding($('uitSiteMelding'), items.length + ' vragen staan klaar. Kijk ze na en bewaar de toets.', 'goed');
+    }
+  }
+  setTimeout(importUitAdres, 0);
   $('nieuwDictee').addEventListener('click', function(){ vulDictee({ naam:'', vak:'ned', niveau:'', zinnen:[], uitleg:'' }); open('dictee'); });
   $('nieuwTopo').addEventListener('click', function(){
     var b = this; b.disabled = true; b.setAttribute('aria-busy', 'true');
@@ -1187,7 +1216,7 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
       knop: this, vak: $('vak').value,
       al: function(){ return [].map.call($('items').children, function(it){ var x = lees(it); return KIEZER.sleutel(x.vraag, x.vorm === 'mk' ? x.goed : x.vorm === 'open' ? (x.antwoorden || [])[0] : ''); }); },
       plaatjesVrij: function(){ return Math.max(0, 12 - $('items').querySelectorAll('.afbvak.heeft').length); },
-      ruimte: function(){ return Math.max(0, 200 - $('items').children.length); },
+      ruimte: function(){ return Math.max(0, 300 - $('items').children.length); },
       klaar: function(items, info){
         var mis = info.mislukt ? ' ' + (info.mislukt === 1 ? 'Een vraag kon niet mee' : info.mislukt + ' vragen konden niet mee') + ', omdat het plaatje niet lukte.' : '';
         if (!items.length){ melding($('uitSiteMelding'), 'Er is niets bijgekomen.' + mis + ' Probeer het opnieuw.', 'fout'); return; }
@@ -1198,6 +1227,49 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
         melding($('uitSiteMelding'), (items.length === 1 ? 'Een vraag' : items.length + ' vragen') + ' erbij gezet, onderaan de lijst.' + mis, 'goed');
       }
     });
+  });
+  /* Woordjes plakken als open vragen: elke regel wordt een open vraag met de goede antwoorden erbij.
+     Een schuine streep geeft meer goede antwoorden; wat tussen haakjes staat mag erbij of weg; een
+     lidwoord (de, het, een) of to bij een Engels werkwoord mag ook weg. Hoogstens acht antwoorden,
+     net als de server (server/materiaal.js). */
+  function woordVarianten(kant){
+    var uit = [];
+    function zet(x){ x = x.replace(/\s+/g, ' ').trim(); if (x && uit.indexOf(x) < 0) uit.push(x); }
+    kant.split(/\s*\/\s*/).forEach(function(stuk){
+      stuk = stuk.trim(); if (!stuk) return;
+      var met = stuk.replace(/[()]/g, ''), zonder = stuk.replace(/\([^)]*\)/g, '');
+      [met, zonder].forEach(function(v){
+        zet(v);
+        var kaal = v.replace(/^\s*(de|het|een|to|a|an|the)\s+/i, '');
+        if (kaal !== v) zet(kaal);
+      });
+    });
+    return uit.slice(0, 8);
+  }
+  function woordRegels(tekst){
+    return String(tekst || '').split(/\r?\n/).map(function(r){
+      /* een regel met # ervoor is een kopje of een opmerking */
+      r = r.trim(); if (!r || r.charAt(0) === '#') return null;
+      var d = r.indexOf('\t') >= 0 ? r.split('\t') : r.split(/\s+=\s+|\s*=\s*/);
+      if (d.length < 2) return null;
+      var a = d[0].trim(), b = d.slice(1).join(' ').trim();
+      return a && b ? { a:a, b:b } : null;
+    }).filter(Boolean);
+  }
+  $('wpZet').addEventListener('click', function(){
+    var paren = woordRegels($('wpTekst').value), om = $('wpOm').checked, kop = $('wpVraag').value.replace(/\s+/g, ' ').trim();
+    var ruimte = Math.max(0, 300 - $('items').children.length);
+    if (!paren.length){ melding($('wpUit'), 'Zet een woord per regel, zoals braces = beugel.', 'fout'); return; }
+    var items = paren.slice(0, ruimte).map(function(p){
+      var vraag = om ? p.b : p.a, ant = om ? p.a : p.b;
+      return { vorm:'open', vraag:(kop ? kop + ' ' : '') + vraag, antwoorden:woordVarianten(ant), punten:1, uitleg:vraag + ' = ' + ant };
+    });
+    if (!items.length){ melding($('wpUit'), 'Er past niets meer bij: een toets heeft hoogstens 300 vragen.', 'fout'); return; }
+    var eerst = $('items').children.length;
+    $('items').insertAdjacentHTML('beforeend', items.map(itemHtml).join(''));
+    nummer(); zetVies(true); kies(eerst, true);
+    $('wpTekst').value = '';
+    melding($('wpUit'), (items.length === 1 ? 'Een vraag' : items.length + ' vragen') + ' erbij gezet' + (paren.length > items.length ? '; ' + (paren.length - items.length) + ' pasten er niet meer bij (hoogstens 300)' : '') + '.', 'goed');
   });
   /* zo lang als de server bewaart (server/materiaal.js): langer typen verdwijnt anders stil bij het opslaan */
   var MAX_VELD = { vraag:300, uitleg:300, goed:150, tekst:1200 };

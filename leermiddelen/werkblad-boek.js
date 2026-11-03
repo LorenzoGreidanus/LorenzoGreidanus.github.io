@@ -75,6 +75,15 @@
       '.ob-niv.ob-verd{margin-left:4px}' +
       '.ob-leeg{color:var(--muted);font-size:.88rem;padding:8px 0}' +
       '.ob-instel{display:grid;gap:8px;border-top:1px solid var(--rand);padding-top:12px}' +
+      '.ob-niveau{display:grid;gap:8px}' +
+      '.ob-school{display:flex;flex-wrap:wrap;padding:4px;gap:4px;border-radius:12px;background:var(--seg)}' +
+      '.ob-refs{display:flex;flex-wrap:wrap;align-items:center;gap:6px}' +
+      '.ob-refs .wm-lbl{margin-right:2px}' +
+      '.ob-ref{position:relative;display:inline-flex;align-items:center;min-height:36px;padding:0 12px;border-radius:999px;border:1.5px solid var(--rand2);font-size:.8rem;font-weight:600;cursor:pointer;color:var(--muted);background:var(--kaart)}' +
+      '.ob-ref input{position:absolute;opacity:0;width:1px;height:1px;margin:0;pointer-events:none}' +
+      '.ob-ref:has(input:checked){background:var(--ocean);border-color:var(--ocean);color:#fff}' +
+      '.ob-ref:has(input:focus-visible){outline:3px solid var(--focusring,#B4701A);outline-offset:2px}' +
+      '.ob-uitniv{font-size:.8rem;color:var(--muted);margin:0}' +
       '.ob-seg label{flex:1 1 0;display:grid;place-items:center;min-height:40px;border-radius:9px;font-size:.86rem;font-weight:500;padding:0 8px;cursor:pointer;white-space:nowrap}' +
       '.ob-seg input{position:absolute;opacity:0;width:1px;height:1px;margin:0;pointer-events:none}' +
       '.ob-seg label:has(input:checked){background:var(--seg-aan);box-shadow:0 1px 3px rgba(20,34,76,.15);font-weight:600}' +
@@ -125,7 +134,7 @@
     var n = Object.keys(gekozen).length;
     var h = '<div class="ob-kies" data-vak="' + vak + '">' +
       '<div class="ob-boven"><label class="ob-zoek">' + IKOON.zoek + '<input type="search" class="ob-zoekveld" placeholder="Zoek een onderwerp, bijv. lijdend voorwerp" aria-label="Zoek een onderwerp in het boek" autocomplete="off"></label>' +
-      '<span class="ob-tel" aria-live="polite">' + telTekst(n) + '</span></div>' +
+      '<span class="ob-tel" aria-live="polite">' + telTekst(n) + '</span></div>' + niveauHtml(vak) +
       '<div class="ob-themas" role="tablist" aria-label="Thema">' + themas.map(function(t, ti){
         var k = tel(t, gekozen);
         return '<button type="button" role="tab" data-thema="' + ti + '" aria-selected="' + (ti === actief) + '" tabindex="' + (ti === actief ? 0 : -1) + '">' + schoon(t.naam) + '<span class="ob-aantal"' + (k ? '' : ' hidden') + '>' + k + '</span></button>';
@@ -154,6 +163,19 @@
   }
   function tel(t, gekozen){ return t.hoofdstukken.reduce(function(a, h){ return a + h.paragrafen.filter(function(p){ return gekozen[p.id]; }).length; }, 0); }
   function telTekst(n){ return n === 1 ? '1 paragraaf gekozen' : n + ' paragrafen gekozen'; }
+  /* het niveau: eerst de school, daaronder de niveaus uit het boek die daarbij horen (los aan of uit te zetten) */
+  function niveauHtml(vak){
+    var N = OPDRACHTENBOEK.NIVEAU, nu = N.lees(vak);
+    return '<div class="ob-niveau"><span class="wm-lbl" id="obNivLbl">Niveau</span>' +
+      '<div class="ob-seg ob-school" role="radiogroup" aria-labelledby="obNivLbl">' + N.SCHOOL.map(function(s){
+        return '<label><input type="radio" name="obschool" value="' + s.id + '"' + (nu.school === s.id ? ' checked' : '') + '><span>' + schoon(s.naam) + '</span></label>';
+      }).join('') + '</div>' +
+      '<div class="ob-refs" role="group" aria-label="Niveaus in het boek"><span class="wm-lbl">In het boek</span>' + N.REF[vak].map(function(r){
+        return '<label class="ob-ref"><input type="checkbox" name="obref" value="' + schoon(r) + '"' + (nu.refs.indexOf(r) >= 0 ? ' checked' : '') + '>' + schoon(r) + '</label>';
+      }).join('') + '</div>' +
+      '<p class="ob-uitniv" hidden></p></div>';
+  }
+  function refsVan(k){ return [].map.call(k.querySelectorAll('input[name="obref"]:checked'), function(i){ return i.value; }); }
 
   /* Wat er in het blok gebeurt zonder dat het blad opnieuw moet: een thema
      kiezen, zoeken, de tellers bijwerken. Het blok blijft staan, dus de kijker
@@ -179,6 +201,7 @@
   /* zoeken: in de namen van thema, hoofdstuk en paragraaf, en (als de leerroute er is) in de doelen */
   function zoeken(k, vraag){
     var B = OPDRACHTENBOEK, vak = k.getAttribute('data-vak'), w = plat(vraag).trim().split(/\s+/).filter(Boolean);
+    var refs = refsVan(k), alleNiv = refs.length === B.NIVEAU.REF[vak].length, verborgen = 0;
     k.classList.toggle('zoekt', !!w.length);
     if (!k._open) k._open = [].map.call(k.querySelectorAll('.ob-hfd'), function(d){ return d.open; });
     var tab = k.querySelector('.ob-themas [aria-selected="true"]'), actief = tab ? Number(tab.getAttribute('data-thema')) : 0;
@@ -190,8 +213,9 @@
         [].forEach.call(d.querySelectorAll('.ob-par'), function(lab, pi){
           var p = hf.paragrafen[pi];
           var tekst = plat([t.naam, hf.naam, p.naam, p.niveau].concat(p.doelen.map(function(id){ var x = B.doel(id); return x ? x.naam + ' ' + (x.kort || '') : ''; })).join(' '));
-          var ja = !w.length || w.every(function(x){ return tekst.indexOf(x) >= 0; });
+          var ja = (!w.length || w.every(function(x){ return tekst.indexOf(x) >= 0; })) && (alleNiv || B.NIVEAU.past(p, refs));
           lab.hidden = !ja; if (ja) inHfd = true;
+          if (!ja && lab.querySelector('input:checked')) verborgen++;
         });
         d.hidden = !inHfd; if (inHfd) inThema = true;
         if (w.length && inHfd) d.open = true;
@@ -200,11 +224,35 @@
       if (inThema) iets = true;
     });
     k.querySelector('.ob-leeg').hidden = iets;
+    /* gekozen paragrafen van een ander niveau blijven op het blad: dat zeggen we erbij */
+    var uitniv = k.querySelector('.ob-uitniv');
+    if (uitniv){ uitniv.hidden = !verborgen; uitniv.textContent = verborgen === 1 ? 'Er staat nog 1 gekozen paragraaf van een ander niveau op het blad.' : verborgen + ' gekozen paragrafen van een ander niveau staan nog op het blad.'; }
+    /* een thema zonder paragrafen op dit niveau: de tab blijft, maar met een zin in het vak */
+    [].forEach.call(k.querySelectorAll('.ob-thema'), function(paneel){
+      var leeg = !paneel.querySelector('.ob-hfd:not([hidden])'), z = paneel.querySelector('.ob-nivleeg');
+      if (leeg && !z){ z = document.createElement('p'); z.className = 'ob-uitniv ob-nivleeg'; z.textContent = 'In dit thema staat niets op dit niveau. Kies een ander thema of zet een niveau aan.'; paneel.appendChild(z); }
+      if (z) z.hidden = !leeg || !!w.length;
+    });
     if (!w.length){
       /* terug zoals het was, met de hoofdstukken open die open stonden */
       [].forEach.call(k.querySelectorAll('.ob-hfd'), function(d, i){ d.open = k._open[i] || !!d.querySelector('input:checked'); });
       k._open = null;
     }
+  }
+  /* het niveau wisselen: de schakelaars volgen de school, en een eigen mix zet de school uit */
+  function niveauWissel(k, e){
+    var N = OPDRACHTENBOEK.NIVEAU, vak = k.getAttribute('data-vak'), t = e.target;
+    if (t.name === 'obschool'){
+      var refs = N.refsVoor(vak, t.value);
+      [].forEach.call(k.querySelectorAll('input[name="obref"]'), function(i){ i.checked = refs.indexOf(i.value) >= 0; });
+    } else {
+      /* minstens een niveau aan, anders staat er niets */
+      if (!refsVan(k).length) t.checked = true;
+      var s = N.schoolVan(vak, refsVan(k));
+      [].forEach.call(k.querySelectorAll('input[name="obschool"]'), function(i){ i.checked = i.value === s; });
+    }
+    N.bewaar(vak, refsVan(k));
+    zoeken(k, k.querySelector('.ob-zoekveld').value);
   }
   function koppel(el){
     var k = el.querySelector('.ob-kies'); if (!k || k._gekoppeld) return; k._gekoppeld = true;
@@ -213,7 +261,10 @@
     /* het zoekveld is geen keuze voor het blad: zijn change gaat niet naar de pagina */
     veld.addEventListener('change', function(e){ e.stopPropagation(); });
     veld.addEventListener('keydown', function(e){ if (e.key === 'Enter') e.preventDefault(); });
+    /* het niveau is net als het zoekveld geen keuze voor het blad: zijn change gaat niet naar de pagina */
+    k.querySelector('.ob-niveau').addEventListener('change', function(e){ e.stopPropagation(); niveauWissel(k, e); });
     k.addEventListener('change', function(){ bijwerken(el); });
+    zoeken(k, '');
     var tabs = k.querySelector('.ob-themas');
     /* het gekozen thema in beeld, ook als het achteraan staat */
     var aan = tabs.querySelector('[aria-selected="true"]'); if (aan){ var r = aan.getBoundingClientRect(), t = tabs.getBoundingClientRect(); if (r.right > t.right) tabs.scrollLeft += r.left - t.left - 8; }
@@ -290,7 +341,7 @@
     var vak = VAKKEN[wvak];
     window.SPELBLAD['boek-' + wvak] = {
       naam:'Opdrachtenboek', vak:wvak, eigenNiveau:true,
-      aantallen:[4, 6, 8, 10], standaard:6, aantalNaam:'Opgaven per paragraaf',
+      aantallen:[4, 6, 8, 10, 12, 15, 20], standaard:6, aantalNaam:'Opgaven per paragraaf',
       delenKop:'Kies uit het boek',
       delenTip:'Zoals in een opdrachtenboek: thema, hoofdstuk en paragraaf. Elke paragraaf maakt nieuwe opgaven uit de leerroute, met uitleg en figuren.',
       delen:function(aan){
